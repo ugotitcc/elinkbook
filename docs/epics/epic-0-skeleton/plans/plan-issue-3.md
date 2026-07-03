@@ -127,7 +127,7 @@ void main() {
 
 此測試刻意不涉及 PDF，只用來確認 `integration_test` 套件本身安裝正確、能在裝置上執行——把「測試基礎設施是否正常」與「PDF 渲染邏輯是否正確」分開驗證。
 
-- [ ] **Step 7：於真實裝置/模擬器上執行 smoke test**
+- [x] **Step 7：於真實裝置/模擬器上執行 smoke test**
 
 Run（於 `app/` 目錄下；`<device-id>` 請替換為 `flutter devices` 列出的實際 Android 裝置/模擬器 ID）：
 ```bash
@@ -135,7 +135,7 @@ flutter test integration_test/smoke_test.dart -d <device-id>
 ```
 Expected: `All tests passed!`
 
-**⚠️ 未執行**：本機環境沒有 Android 模擬器/實體裝置（`flutter devices` 僅列出 Windows/Chrome/Edge，`adb` 不存在），與計畫開頭記載的環境限制一致。已改為執行 `flutter analyze`（無警告）與 `flutter build apk --debug`（建置成功）作為替代驗證，但無法實際驗證此 smoke test 在裝置上執行的結果。留待有裝置的人工審查者執行本步驟。
+實際於真實裝置（9491G，`3CEF42ECD491687`，Android 15 / API 35）執行：`All tests passed!`（1 項測試通過）。註：`flutter test`/`flutter build` 執行 Gradle 時會自動把 `android/app/build.gradle.kts` 的 `minSdk = 21` 改成 `minSdk = flutter.minSdkVersion`（Flutter 工具鏈的自動遷移行為）；此變更違反專案規定的 `minSdk` 下限政策，每次驗證後均已用 `git checkout -- android/app/build.gradle.kts` 還原，未提交。
 
 - [x] **Step 8：Commit**
 
@@ -437,7 +437,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 6：於真實裝置/模擬器上執行兩項 `integration_test`**
+- [x] **Step 6：於真實裝置/模擬器上執行兩項 `integration_test`**
 
 Run（於 `app/` 目錄下；`<device-id>` 請替換為 `flutter devices` 列出的實際 Android 裝置/模擬器 ID）：
 ```bash
@@ -445,9 +445,9 @@ flutter test integration_test/pdf_reader_view_test.dart -d <device-id>
 ```
 Expected: `All tests passed!`（兩項測試皆通過：有效 PDF 觸發 `onPageRendered`；不存在的路徑觸發 `onError`）。
 
-**⚠️ 未執行**：本機環境沒有 Android 模擬器/實體裝置，無法實際執行這兩項驗收用的 `integration_test`。留待有裝置的人工審查者執行本步驟，這是 Issue 3 驗收標準中尚未完成的部分。
+實際於真實裝置（9491G，`3CEF42ECD491687`，Android 15 / API 35）執行：`All tests passed!`（2 項測試皆通過）。Issue 3 驗收標準中「兩項 `integration_test` 皆通過」至此已完成驗證。
 
-- [ ] **Step 7：重新執行 Task 1 的 smoke test 確認無回歸**
+- [x] **Step 7：重新執行 Task 1 的 smoke test 確認無回歸**
 
 Run：
 ```bash
@@ -455,7 +455,7 @@ flutter test integration_test/smoke_test.dart -d <device-id>
 ```
 Expected: `All tests passed!`
 
-**⚠️ 未執行**：同上，需要裝置。
+實際於同一裝置重新執行：`All tests passed!`，確認無回歸。
 
 - [x] **Step 8：靜態分析確認無警告**
 
