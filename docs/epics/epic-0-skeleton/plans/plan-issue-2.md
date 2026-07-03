@@ -56,6 +56,11 @@ void main() {
   test('空字串路徑回傳 unknown（不拋出例外）', () {
     expect(detectBookFormat(''), BookFormat.unknown);
   });
+
+  test('大寫副檔名不分大小寫皆能判定成功', () {
+    expect(detectBookFormat('book.EPUB'), BookFormat.epub);
+    expect(detectBookFormat('book.PDF'), BookFormat.pdf);
+  });
 }
 ```
 
@@ -75,11 +80,12 @@ Expected: 失敗，錯誤訊息顯示找不到 `package:elinkbook/reader/book_fo
 /// 書籍檔案格式，依副檔名偵測。
 enum BookFormat { epub, pdf, unknown }
 
-/// 依檔案路徑的副檔名判斷書籍格式。無法識別的副檔名（含無副檔名、空字串）
-/// 一律回傳 [BookFormat.unknown]，絕不拋出例外。
+/// 依檔案路徑的副檔名判斷書籍格式（不分大小寫）。無法識別的副檔名（含無副
+/// 檔名、空字串）一律回傳 [BookFormat.unknown]，絕不拋出例外。
 BookFormat detectBookFormat(String path) {
-  if (path.endsWith('.epub')) return BookFormat.epub;
-  if (path.endsWith('.pdf')) return BookFormat.pdf;
+  final lowerPath = path.toLowerCase();
+  if (lowerPath.endsWith('.epub')) return BookFormat.epub;
+  if (lowerPath.endsWith('.pdf')) return BookFormat.pdf;
   return BookFormat.unknown;
 }
 ```
@@ -128,6 +134,7 @@ void main() {
       ),
     );
 
+    expect(find.text('閱讀器'), findsOneWidget);
     expect(find.text('EPUB 佔位畫面（尚未接上 Readium 原生渲染）'), findsOneWidget);
   });
 
@@ -174,6 +181,10 @@ import '../reader/book_format.dart';
 /// 內容。本階段（Issue 2）僅分派到佔位視圖；Issue 5 會把佔位視圖換成真正的
 /// 原生渲染視圖（EpubReaderView／PdfReaderView），但這個 widget 對外的建構
 /// 參數（filePath）不會改變。
+///
+/// AppBar 沿用與 LibraryScreen/SettingsScreen 一致的寫法（純 `AppBar(title:
+/// ...)`，不自訂 leading）：Flutter 會依 `Navigator.canPop()` 自動決定是否
+/// 顯示返回鍵，且點擊時使用安全的 `Navigator.maybePop()`，不需要手動處理。
 class ReaderScreen extends StatelessWidget {
   final String filePath;
 
@@ -183,6 +194,9 @@ class ReaderScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final format = detectBookFormat(filePath);
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('閱讀器'),
+      ),
       body: Center(
         child: Text(_placeholderLabel(format)),
       ),
@@ -240,3 +254,9 @@ git commit -m "Add ReaderScreen with format-based placeholder dispatch"
 - **Spec 涵蓋範圍**：對應 `issues.md` Issue 2 的兩項單元測試要求（純 Dart 格式偵測、ReaderScreen 分派邏輯）與兩項驗收標準（`flutter test` 可跑過不需模擬器、依偵測結果分派至佔位視圖）均已對應到 Task 1 與 Task 2。Issue 2 明確排除的原生渲染整合（Issue 3/4/5 範圍）未包含在本計劃中。
 - **佔位符掃描**：每個步驟皆含完整程式碼與明確指令/預期輸出，無「之後補上」等字樣；`ReaderScreen` 內部的「佔位視圖」是本工單刻意的設計產物（見 spec.md 分階段渲染的架構），不是未完成的規劃佔位符。
 - **型別/命名一致性**：`BookFormat`、`detectBookFormat`、`ReaderScreen`、`filePath` 在 Task 1 與 Task 2 之間、以及與 `spec.md` 定義的 `ReaderScreen(filePath: String)` 介面保持一致。
+
+## 文件審查回應紀錄（`review-plan-issue-2.md`）
+
+- **Important #1（副檔名大小寫）**：查證屬實，已採納。`detectBookFormat` 改為先 `toLowerCase()` 再比對，並在 Task 1 新增大寫副檔名測試案例。
+- **Important #2（ReaderScreen 缺返回機制）**：查證屬實（與 `LibraryScreen`/`SettingsScreen` 皆有 `AppBar` 不一致），已採納，但**未採用**審查報告建議的手動 `IconButton` + `Navigator.of(context).pop()` 寫法——改用跟現有兩個畫面一致的純 `AppBar(title: ...)`，讓 Flutter 依 `Navigator.canPop()` 自動決定是否顯示返回鍵並使用安全的 `Navigator.maybePop()`，避免手動處理「無法返回時呼叫 pop() 出錯」的風險。Task 2 測試新增對 AppBar 標題「閱讀器」的斷言。
+- **Minor（`trim()` 空白防禦）**：**未採納**。目前沒有具體證據顯示使用者提供的檔案路徑會帶有頭尾空白，屬投機性防禦（YAGNI）；若後續實際遇到此類輸入問題，再另行處理。
