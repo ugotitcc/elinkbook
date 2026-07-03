@@ -80,6 +80,8 @@ elinkBook（全能跨平台電子書閱讀器）是一款跨平台電子書閱�
 
 本儲存庫採用結合 BMad Method 角色分工、Matt Pocock 規格先行嚴謹度、以及 Superpowers 審查機制的規格驅動開發工作流程。可執行實作工作的有兩個角色：**Claude Code** 與 **Antigravity CLI**。切換到 Antigravity CLI 一律由人工手動指定——絕不可自行假設或觸發。若需要派出「實作者」子代理但人類尚未明確指定使用 Antigravity CLI，一律使用 Claude Code 的 subagent（也就是目前正在使用的同一個 LLM/工具），不可模擬呼叫 Antigravity。
 
+**審查一律先產出報告，嚴禁直接修改。** 不論是文件審查（`design.md`/`spec.md`/`plans/plan-issue-N.md`）或程式審查，審查者（Claude Code）必須先產出審查報告（存於該 Epic 的 `reviews/`），列出發現的問題，交由人類或原作者決定如何處理；審查者本身不得在審查當下直接修改被審查的文件或程式碼。
+
 ### 目錄結構
 
 ```
@@ -108,8 +110,8 @@ docs/
 2. **Discovery**（Claude Code，扮演 PM/Analyst）—— `/brainstorming` + `/grill-with-docs` → `docs/epics/<epic-name>/design.md`。Bug 修復則改用 `/diagnose` → `docs/epics/<epic-name>/reviews/bugfix-repro.md`。
 3. **Architecting**（Claude Code，扮演 Architect）—— 若架構有異動則撰寫 ADR，並在 `docs/epics/<epic-name>/spec.md` 中定義核心介面/型別（自此成為該 Epic 的唯一事實來源）。
 4. **Scrum Master 階段**（Claude Code）—— 將 Epic 拆解為細粒度的垂直切片工單，寫入 `docs/epics/<epic-name>/issues.md`，每個工單皆須附上所需的單元測試要求。
-5. **規劃與審查**（實作者為作者、Claude Code 為審查者）—— 實作者認領工單，撰寫 `docs/epics/<epic-name>/plans/plan-issue-<N>.md`，在開始寫程式碼前發起審查（`requesting-code-review`/`receiving-code-review`）。
-6. **TDD 實作與 QA**（實作者為作者、Claude Code 為審查者）—— 紅-綠-重構循環，接著進行程式碼審查；結果歸檔至 `docs/epics/<epic-name>/reviews/review-issue-<N>.md`；交由人類進行合併。
+5. **規劃與審查**（實作者為作者、Claude Code 為審查者）—— 實作者認領工單，撰寫 `docs/epics/<epic-name>/plans/plan-issue-<N>.md`，在開始寫程式碼前發起審查（`requesting-code-review`/`receiving-code-review`）；審查者先產出報告，不得直接修改該計劃。
+6. **TDD 實作與 QA**（實作者為作者、Claude Code 為審查者）—— 紅-綠-重構循環，接著進行程式碼審查；審查者先產出報告，不得直接修改程式碼；結果歸檔至 `docs/epics/<epic-name>/reviews/review-issue-<N>.md`；交由人類進行合併。
 7. **歸檔**（人類指定）—— 將整個 Epic 目錄搬移至 `docs/archive/<YYYY-MM-DD>-<簡稱>/`，並將其在 `docs/epics.md` 的該列狀態更新為 `Archived`、填入新路徑。
 
 ## Agent skills

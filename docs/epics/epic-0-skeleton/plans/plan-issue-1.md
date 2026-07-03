@@ -54,6 +54,8 @@ Expected: 終端機顯示 `Creating project app...` 及後續產生檔案清單�
 minSdk = 21
 ```
 
+*註：若產生的檔案為 Groovy 語法之 `build.gradle`（而非 Kotlin 語法之 `.kts`），則請找到 `minSdkVersion flutter.minSdkVersion` 並修改為 `minSdkVersion 21`。*
+
 - [ ] **Step 5：驗證專案骨架乾淨無誤**
 
 Run（於 `app/` 目錄下）：
@@ -123,11 +125,11 @@ class LibraryScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return const Scaffold(
       appBar: AppBar(
-        title: const Text('書架'),
+        title: Text('書架'),
       ),
-      body: const Center(
+      body: Center(
         child: Text('書架（佔位畫面）'),
       ),
     );
@@ -204,11 +206,11 @@ class SettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return const Scaffold(
       appBar: AppBar(
-        title: const Text('設定'),
+        title: Text('設定'),
       ),
-      body: const Center(
+      body: Center(
         child: Text('設定（佔位畫面）'),
       ),
     );
@@ -264,7 +266,8 @@ void main() {
 
     expect(find.text('設定'), findsOneWidget);
 
-    await tester.pageBack();
+    // 點擊 AppBar 的返回按鈕以代替 tester.pageBack()，增加測試強健度
+    await tester.tap(find.byType(BackButton));
     await tester.pumpAndSettle();
 
     expect(find.text('書架'), findsOneWidget);
@@ -371,9 +374,9 @@ class ElinkBookApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return const MaterialApp(
       title: 'elinkBook',
-      home: const LibraryScreen(),
+      home: LibraryScreen(),
     );
   }
 }
