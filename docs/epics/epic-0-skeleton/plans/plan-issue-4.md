@@ -117,8 +117,10 @@ android {
         isCoreLibraryDesugaringEnabled = true
     }
 
-    kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_17.toString()
+    kotlin {
+        compilerOptions {
+            jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
+        }
     }
 
     defaultConfig {
@@ -158,6 +160,8 @@ flutter {
 ```
 
 `allprojects { repositories { google(); mavenCentral() } }`（`app/android/build.gradle.kts`）已涵蓋 Readium 所需的 Maven Central，不需新增額外的 repository。
+
+**⚠️ 修正（原計劃文字有誤）**：原計劃文字保留了舊有的 `kotlinOptions { jvmTarget = ... }` 區塊，但 Step 1 把 Kotlin Gradle plugin 升級到 `2.3.20` 後，這個舊 DSL 會直接造成編譯失敗（非僅警告）：`Using 'jvmTarget: String' is an error. Please migrate to the compilerOptions DSL.`（已用 Task 1 實作時的實際建置輸出驗證，並刻意把程式碼還原成舊寫法重跑 `flutter build apk --debug` 確認：還原後必定失敗，改回新寫法後成功建置）。上方程式碼區塊已更新為正確的 `kotlin { compilerOptions { jvmTarget = ... } } ` 新 DSL；執行本計劃時請直接套用上方已修正的版本，不需要再自行除錯這個問題。
 
 - [ ] **Step 4：產生範例 EPUB 測試檔**
 
