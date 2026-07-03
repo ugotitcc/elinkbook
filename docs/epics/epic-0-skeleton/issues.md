@@ -6,7 +6,7 @@
 
 ## Issue 1：Flutter 專案初始化 + 最小導航殼
 
-**Status:** 已完成實作與審查，待人工合併（5 個任務全數通過個別審查與最終整分支審查，"Ready to merge: Yes"）。位於分支 `worktree-epic-0-issue-1`、worktree `.claude/worktrees/epic-0-issue-1/`，commit 範圍 `dd9b6d2..b36b844`，尚未合併回 `main`。
+**Status:** ✅ 已完成並合併回 `main`（PR #1，merge commit `38c93a0`）。5 個任務全數通過個別審查與最終整分支審查；額外收到的 code review 報告（`reviews/review-issue-1.md`）中 1 項 Minor（app label 大小寫）已修正（commit `5d5282a`）。分支 `worktree-epic-0-issue-1` 與其 worktree 已完成階段性任務，保留於 `.claude/worktrees/epic-0-issue-1/`。
 
 **依賴：** 無（起始工單）
 
