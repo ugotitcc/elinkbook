@@ -212,20 +212,28 @@ class PdfReaderView(
             channel.invokeMethod("onError", "缺少檔案路徑")
             return
         }
+        var pfd: ParcelFileDescriptor? = null
+        var renderer: PdfRenderer? = null
+        var page: PdfRenderer.Page? = null
         try {
             val file = File(path)
-            val pfd = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
-            val renderer = PdfRenderer(pfd)
-            val page = renderer.openPage(0)
+            pfd = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
+            renderer = PdfRenderer(pfd)
+            page = renderer.openPage(0)
             val bitmap = Bitmap.createBitmap(page.width, page.height, Bitmap.Config.ARGB_8888)
             page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
             imageView.setImageBitmap(bitmap)
-            page.close()
-            renderer.close()
-            pfd.close()
             channel.invokeMethod("onPageRendered", null)
+        } catch (e: OutOfMemoryError) {
+            channel.invokeMethod("onError", "記憶體不足，無法載入 PDF 檔案")
         } catch (e: Exception) {
             channel.invokeMethod("onError", e.message ?: "無法載入 PDF 檔案")
+        } finally {
+            // 確保任何情況下（含上方例外拋出時）原生資源都會被釋放，避免
+            // 檔案描述符/渲染器洩漏。
+            try { page?.close() } catch (ignored: Exception) {}
+            try { renderer?.close() } catch (ignored: Exception) {}
+            try { pfd?.close() } catch (ignored: Exception) {}
         }
     }
 
@@ -339,6 +347,7 @@ class _PdfReaderViewState extends State<PdfReaderView> {
 建立 `app/integration_test/pdf_reader_view_test.dart`：
 
 ```dart
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -365,27 +374,36 @@ void main() {
     final samplePath =
         await _stageAssetAsFile('test/fixtures/sample.pdf', 'sample.pdf');
 
-    var rendered = false;
+    // 用 Completer 等待原生端的非同步 callback，callback 一觸發就立刻往下走，
+    // 不需要固定等待一段時間。注意：pumpAndSettle 的參數是「每次 pump 之間
+    // 的間隔」，不是「總等待時間」，不能拿來當作 timeout 使用。
+    final completer = Completer<void>();
     String? errorMessage;
 
     await tester.pumpWidget(
       MaterialApp(
         home: PdfReaderView(
           filePath: samplePath,
-          onPageRendered: () => rendered = true,
-          onError: (message) => errorMessage = message,
+          onPageRendered: () {
+            if (!completer.isCompleted) completer.complete();
+          },
+          onError: (message) {
+            errorMessage = message;
+            if (!completer.isCompleted) completer.complete();
+          },
         ),
       ),
     );
 
-    await tester.pumpAndSettle(const Duration(seconds: 3));
+    await completer.future.timeout(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
 
-    expect(rendered, isTrue,
+    expect(errorMessage, isNull,
         reason: '應觸發 onPageRendered，但 onError 訊息為: $errorMessage');
-    expect(errorMessage, isNull);
   });
 
   testWidgets('開啟不存在的檔案路徑觸發 onError', (tester) async {
+    final completer = Completer<void>();
     var rendered = false;
     String? errorMessage;
 
@@ -396,13 +414,20 @@ void main() {
       MaterialApp(
         home: PdfReaderView(
           filePath: missingPath,
-          onPageRendered: () => rendered = true,
-          onError: (message) => errorMessage = message,
+          onPageRendered: () {
+            rendered = true;
+            if (!completer.isCompleted) completer.complete();
+          },
+          onError: (message) {
+            errorMessage = message;
+            if (!completer.isCompleted) completer.complete();
+          },
         ),
       ),
     );
 
-    await tester.pumpAndSettle(const Duration(seconds: 3));
+    await completer.future.timeout(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
 
     expect(errorMessage, isNotNull);
     expect(rendered, isFalse);
@@ -449,3 +474,9 @@ git commit -m "Add PdfReaderView native PlatformView with PdfRenderer integratio
 - **佔位符掃描**：每個步驟皆含完整程式碼與明確指令/預期輸出；PDF 產生腳本以程式動態計算位元組偏移量，避免手算錯誤；`<device-id>` 是執行時才能得知的真實環境參數（非規格缺口），已於步驟中註明替換方式。
 - **型別/命名一致性**：`PdfReaderView`、`filePath`、`onPageRendered`、`onError` 在 Flutter 與 Kotlin 兩側、以及與 `spec.md` 定義的介面保持一致；`PlatformView` 類型字串與 method channel 命名規則已在 Task 2 的 Interfaces 區塊中明確記錄，供 Issue 4（`EpubReaderView`，應沿用相同契約與類似命名慣例）與 Issue 5（`ReaderScreen` 整合）參考。
 - **環境缺口揭露**：本計劃在開頭明確標註目前開發環境沒有 Android 模擬器/裝置可用，執行前需要先解決，避免執行者誤以為所有步驟都能立即照跑。
+
+## 文件審查回應紀錄（`plan-issue-3-review.md`）
+
+- **#1（原生資源釋放與例外捕獲）**：查證屬實，已採納「用 `finally` 確保資源釋放」。**未採用**審查建議的 `catch (t: Throwable)`——改為明確分開捕獲 `OutOfMemoryError` 與 `Exception`，只處理審查報告實際點出的風險（點陣圖解碼記憶體不足），避免連 `AssertionError`/`LinkageError` 這類代表程式或環境本身有問題的錯誤都被靜默吞掉。**未採用**審查建議新增的 `pageCount == 0` 檢查——`openPage(0)` 在該情境下本來就會拋例外並被既有 catch 區塊接住、回報 `onError`，沒有任何測試要求這個情境要有專屬訊息，屬於超出目前驗收範圍的擴增（YAGNI）。
+- **#2（`pumpAndSettle` 參數誤用）**：查證屬實——`pumpAndSettle` 第一個參數是每次 pump 的間隔，不是總等待時間，原計劃寫法會讓測試不必要變慢。已採納，改用 `Completer` 等待原生端 callback，並設定 5 秒 timeout。
+- **#3（`_stageAssetAsFile` 設計）**：審查報告本身即為確認既有設計正確，無需修改。
