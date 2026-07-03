@@ -26,6 +26,7 @@ Full requirements live in `docs/prd.md`. Key points to know before implementing:
 - Bundled default fonts, all rendering fully offline via local `@font-face`: 思源黑體 and 思源宋體 (open-source SIL OFL baseline) plus three commercial-licensed fonts — 原俠正楷, 台灣圓體, 源流明體. Deleting the currently-active custom font must auto-fall-back to the default font.
 - Layout controls: line spacing, paragraph spacing, independent top/bottom/left/right margin sliders, page-turn mode (scroll vs. none), text alignment, 預設/直排/橫排 mode switch, screen-orientation lock (0/90/180/270°), and a "disable book CSS" toggle. Every numeric control (font size, weight, line/paragraph spacing, margins) needs +/- fine-adjustment buttons alongside its slider. When orientation is not locked, rotating the device must recompute pagination for the new viewport.
 - Vertical-RL layout must not let images or headings get split across a page break.
+- Punctuation must rotate/center correctly for vertical CJK typesetting, and line-breaking must follow 避頭尾 rules (forbidden line-start/line-end characters), conforming to CNS 11643 or an equivalent standard (FR-32).
 - Theme switching: Dark, Sepia, and default Light themes, coexisting with the separate E-Ink high-contrast mode.
 
 ### Navigation, annotations, bookmarks
