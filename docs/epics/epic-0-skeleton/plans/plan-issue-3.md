@@ -34,7 +34,7 @@
 - Consumes: 無（獨立於 Issue 1/2 的程式碼介面，僅需要 `app/` 專案骨架與 `LibraryScreen` 已存在，用於 smoke test）
 - Produces: `integration_test`、`path_provider` 套件依賴、已提交版本控制的 `app/test/fixtures/sample.pdf` 測試檔，供 Task 2 使用；已驗證可正常運作的 `integration_test` 執行環境，供 Task 2 與後續 Issue 4 使用。
 
-- [ ] **Step 1：新增 `integration_test` SDK 依賴**
+- [x] **Step 1：新增 `integration_test` SDK 依賴**
 
 開啟 `app/pubspec.yaml`，在 `dev_dependencies:` 區塊中，於 `flutter_test:` 之後新增：
 
@@ -43,7 +43,7 @@
     sdk: flutter
 ```
 
-- [ ] **Step 2：新增 `path_provider` 依賴（僅供測試使用）**
+- [x] **Step 2：新增 `path_provider` 依賴（僅供測試使用）**
 
 Run（於 `app/` 目錄下）：
 ```bash
@@ -51,7 +51,7 @@ flutter pub add path_provider --dev
 ```
 Expected: 終端機顯示 `path_provider` 已加入 `dev_dependencies`，並顯示實際解析到的版本號。
 
-- [ ] **Step 3：產生範例 PDF 測試檔**
+- [x] **Step 3：產生範例 PDF 測試檔**
 
 Run（於 `app/` 目錄下，需要 Python 3；本機已確認可用）：
 ```bash
@@ -83,7 +83,7 @@ print('wrote', len(pdf), 'bytes')
 ```
 Expected: 印出 `wrote <N> bytes`，且 `app/test/fixtures/sample.pdf` 檔案已建立（單頁、200x200pt 空白頁面的最小合法 PDF；位元組偏移量由腳本動態計算，保證 xref 表正確）。
 
-- [ ] **Step 4：將測試檔宣告為 Flutter asset**
+- [x] **Step 4：將測試檔宣告為 Flutter asset**
 
 開啟 `app/pubspec.yaml`，在 `flutter:` 區塊中新增 `assets:`：
 
@@ -94,7 +94,7 @@ Expected: 印出 `wrote <N> bytes`，且 `app/test/fixtures/sample.pdf` 檔案�
 
 （此測試檔會被打包進 App 的 asset bundle，僅供 `integration_test` 用來把檔案複製到裝置暫存目錄使用；若未來要避免測試檔案進入正式發布版本，屬於後續可再優化的項目，不在本工單範圍內。）
 
-- [ ] **Step 5：安裝相依套件**
+- [x] **Step 5：安裝相依套件**
 
 Run（於 `app/` 目錄下）：
 ```bash
@@ -102,7 +102,7 @@ flutter pub get
 ```
 Expected: 成功解析並安裝所有套件，無錯誤。
 
-- [ ] **Step 6：撰寫 smoke test 驗證 `integration_test` 基礎設施本身可運作**
+- [x] **Step 6：撰寫 smoke test 驗證 `integration_test` 基礎設施本身可運作**
 
 建立 `app/integration_test/smoke_test.dart`：
 
@@ -127,7 +127,7 @@ void main() {
 
 此測試刻意不涉及 PDF，只用來確認 `integration_test` 套件本身安裝正確、能在裝置上執行——把「測試基礎設施是否正常」與「PDF 渲染邏輯是否正確」分開驗證。
 
-- [ ] **Step 7：於真實裝置/模擬器上執行 smoke test**
+- [x] **Step 7：於真實裝置/模擬器上執行 smoke test**
 
 Run（於 `app/` 目錄下；`<device-id>` 請替換為 `flutter devices` 列出的實際 Android 裝置/模擬器 ID）：
 ```bash
@@ -135,7 +135,9 @@ flutter test integration_test/smoke_test.dart -d <device-id>
 ```
 Expected: `All tests passed!`
 
-- [ ] **Step 8：Commit**
+實際於真實裝置（9491G，`3CEF42ECD491687`，Android 15 / API 35）執行：`All tests passed!`（1 項測試通過）。註：`flutter test`/`flutter build` 執行 Gradle 時會自動把 `android/app/build.gradle.kts` 的 `minSdk = 21` 改成 `minSdk = flutter.minSdkVersion`（Flutter 工具鏈的自動遷移行為）；此變更違反專案規定的 `minSdk` 下限政策，每次驗證後均已用 `git checkout -- android/app/build.gradle.kts` 還原，未提交。
+
+- [x] **Step 8：Commit**
 
 ```bash
 git add app/pubspec.yaml app/pubspec.lock app/test/fixtures/sample.pdf app/integration_test/smoke_test.dart
@@ -157,7 +159,7 @@ git commit -m "Add integration_test infrastructure and sample PDF fixture"
 - Consumes: `app/test/fixtures/sample.pdf`（Task 1 產出）、`path_provider`/`integration_test`（Task 1 已加入依賴）
 - Produces: `PdfReaderView({required String filePath, required VoidCallback onPageRendered, required ValueChanged<String> onError})`（Flutter `StatefulWidget`），供 Issue 5（`ReaderScreen` 端到端整合，把佔位視圖換成本元件）使用。原生端註冊的 `PlatformView` 類型字串固定為 `"cc.ugotit.elinkbook/pdf_reader_view"`，method channel 名稱固定為 `"cc.ugotit.elinkbook/pdf_reader_view_$id"`（`$id` 為 Flutter 指派的 platform view 實例 id）——後續工單如需與原生端對接，須沿用這組命名。
 
-- [ ] **Step 1：實作原生 `PdfReaderView`（Kotlin）**
+- [x] **Step 1：實作原生 `PdfReaderView`（Kotlin）**
 
 建立 `app/android/app/src/main/kotlin/cc/ugotit/elinkbook/PdfReaderView.kt`：
 
@@ -241,7 +243,7 @@ class PdfReaderView(
 }
 ```
 
-- [ ] **Step 2：實作 `PlatformViewFactory`（Kotlin）**
+- [x] **Step 2：實作 `PlatformViewFactory`（Kotlin）**
 
 建立 `app/android/app/src/main/kotlin/cc/ugotit/elinkbook/PdfReaderViewFactory.kt`：
 
@@ -263,7 +265,7 @@ class PdfReaderViewFactory(
 }
 ```
 
-- [ ] **Step 3：在 `MainActivity.kt` 註冊 `PlatformViewFactory`**
+- [x] **Step 3：在 `MainActivity.kt` 註冊 `PlatformViewFactory`**
 
 將 `app/android/app/src/main/kotlin/cc/ugotit/elinkbook/MainActivity.kt` 整份內容改為：
 
@@ -287,7 +289,7 @@ class MainActivity : FlutterActivity() {
 }
 ```
 
-- [ ] **Step 4：實作 Flutter 端 `PdfReaderView` widget**
+- [x] **Step 4：實作 Flutter 端 `PdfReaderView` widget**
 
 建立 `app/lib/reader/pdf_reader_view.dart`：
 
@@ -342,7 +344,7 @@ class _PdfReaderViewState extends State<PdfReaderView> {
 }
 ```
 
-- [ ] **Step 5：撰寫兩項 `integration_test`**
+- [x] **Step 5：撰寫兩項 `integration_test`**
 
 建立 `app/integration_test/pdf_reader_view_test.dart`：
 
@@ -435,7 +437,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 6：於真實裝置/模擬器上執行兩項 `integration_test`**
+- [x] **Step 6：於真實裝置/模擬器上執行兩項 `integration_test`**
 
 Run（於 `app/` 目錄下；`<device-id>` 請替換為 `flutter devices` 列出的實際 Android 裝置/模擬器 ID）：
 ```bash
@@ -443,7 +445,9 @@ flutter test integration_test/pdf_reader_view_test.dart -d <device-id>
 ```
 Expected: `All tests passed!`（兩項測試皆通過：有效 PDF 觸發 `onPageRendered`；不存在的路徑觸發 `onError`）。
 
-- [ ] **Step 7：重新執行 Task 1 的 smoke test 確認無回歸**
+實際於真實裝置（9491G，`3CEF42ECD491687`，Android 15 / API 35）執行：`All tests passed!`（2 項測試皆通過）。Issue 3 驗收標準中「兩項 `integration_test` 皆通過」至此已完成驗證。
+
+- [x] **Step 7：重新執行 Task 1 的 smoke test 確認無回歸**
 
 Run：
 ```bash
@@ -451,7 +455,9 @@ flutter test integration_test/smoke_test.dart -d <device-id>
 ```
 Expected: `All tests passed!`
 
-- [ ] **Step 8：靜態分析確認無警告**
+實際於同一裝置重新執行：`All tests passed!`，確認無回歸。
+
+- [x] **Step 8：靜態分析確認無警告**
 
 Run（於 `app/` 目錄下）：
 ```bash
@@ -459,7 +465,9 @@ flutter analyze
 ```
 Expected: `No issues found!`
 
-- [ ] **Step 9：Commit**
+實際輸出：`No issues found! (ran in 2.4s)`。另外執行 `flutter build apk --debug` 成功建置（`Built build\app\outputs\flutter-apk\app-debug.apk`），確認原生 Kotlin 程式碼可正確編譯並與目前安裝的 Flutter embedding 版本相容；`flutter test`（非 integration_test 部分）12 項既有測試全數通過，無回歸。
+
+- [x] **Step 9：Commit**
 
 ```bash
 git add app/android/app/src/main/kotlin/cc/ugotit/elinkbook/PdfReaderView.kt app/android/app/src/main/kotlin/cc/ugotit/elinkbook/PdfReaderViewFactory.kt app/android/app/src/main/kotlin/cc/ugotit/elinkbook/MainActivity.kt app/lib/reader/pdf_reader_view.dart app/integration_test/pdf_reader_view_test.dart

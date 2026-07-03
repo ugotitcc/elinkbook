@@ -45,7 +45,7 @@
 
 ## Issue 3：原生 Android 模組 — `PdfReaderView`（`PdfRenderer`）
 
-**Status:** ready-for-agent
+**Status:** ✅ 已完成實作與驗證，待人工建立 PR/合併。2 個任務皆通過 TDD 流程，`flutter analyze` 乾淨，`flutter test` 12/12 通過；兩項驗收用 `integration_test`（有效 PDF 觸發 `onPageRendered`、不存在路徑觸發 `onError`）與 Task 1 的 smoke test 皆已在真實裝置（9491G，Android 15 / API 35）上執行並通過。分支 `worktree-epic-0-issue-3-pdf-reader-view`，worktree 保留於 `.claude/worktrees/epic-0-issue-3-pdf-reader-view/`。
 
 **依賴：** Issue 1
 
