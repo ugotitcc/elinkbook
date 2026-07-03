@@ -1,17 +1,17 @@
-# Domain Docs
+# Domain Docs（領域文件）
 
-How the engineering skills should consume this repo's domain documentation when exploring the codebase.
+工程相關的 skills 在探索本儲存庫程式碼時，應如何消化這裡的領域文件說明。
 
-## Before exploring, read these
+## 開始探索前，請先讀這些
 
-- **`CONTEXT.md`** at the repo root
-- **`docs/adr/`** — read ADRs that touch the area you're about to work in
+- 根目錄的 **`CONTEXT.md`**
+- **`docs/adr/`** —— 閱讀與你即將處理的區域有關的 ADR
 
-Neither exists yet in this repo. Proceed silently — don't flag their absence, don't suggest creating them upfront. The `/domain-modeling` skill creates them lazily when terms or decisions actually get resolved.
+這兩者目前在此儲存庫中都尚未建立。請默默略過，不要特別標註它們不存在、也不要主動建議先建立。`/domain-modeling` skill 會在術語或決策真正定案時才延遲建立它們。
 
-## File structure
+## 檔案結構
 
-Single-context repo:
+單一情境（Single-context）儲存庫：
 
 ```
 /
@@ -20,10 +20,10 @@ Single-context repo:
 └── docs/prd.md
 ```
 
-## Use the glossary's vocabulary
+## 使用詞彙表中的用語
 
-When your output names a domain concept, use the term as defined in `CONTEXT.md` once it exists. Until then, follow the vocabulary already established in `docs/prd.md` (e.g. CFI, 直排/橫排, 避頭尾).
+當你的輸出提到某個領域概念時，請使用 `CONTEXT.md` 中定義的用語（一旦該檔案存在）。在此之前，請沿用 `docs/prd.md` 中已建立的詞彙（例如 CFI、直排/橫排、避頭尾）。
 
-## Flag ADR conflicts
+## 標記 ADR 衝突
 
-If your output contradicts an existing ADR, surface it explicitly rather than silently overriding.
+若你的輸出與既有的 ADR 相牴觸，請明確指出，而非默默覆蓋原有決策。

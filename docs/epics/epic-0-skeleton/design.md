@@ -20,19 +20,19 @@ elinkBook 目前只有需求文件（`docs/prd.md`），完全沒有程式碼。
 
 ## User Stories
 
-1. As a developer, I want a Flutter project scaffolded targeting Android, so that there's a buildable, runnable starting point for the app.
-2. As a developer, I want Readium's Kotlin toolkit integrated as a native Android module, so that EPUB parsing/rendering relies on a mature, purpose-built library instead of custom-built parsing.
-3. As a developer, I want the Readium native reading view embedded into Flutter via a `PlatformView`, so that Flutter can host EPUB content inside its own widget tree.
-4. As a developer, I want Android's native `PdfRenderer` integrated as a `PlatformView`, so that PDF pages render natively without a third-party library dependency.
-5. As a developer, I want a single `ReaderScreen` abstraction that accepts a book file path and displays page 1, so that the rest of the app doesn't need to know which native engine is rendering a given format.
-6. As a developer, I want `ReaderScreen` to detect whether a file is EPUB or PDF and dispatch to the matching native view, so that format-specific logic stays encapsulated behind one interface.
-7. As an end user, I want to open a sample EPUB file from the library screen and see its first page rendered, so that I can confirm the app can actually display an EPUB book.
-8. As an end user, I want to open a sample PDF file from the library screen and see its first page rendered, so that I can confirm the app can actually display a PDF.
-9. As a developer, I want a minimal navigation shell (a library/bookshelf screen and a settings-screen placeholder), so that opening a book is a real user flow reachable from the app's normal entry point, not a hardcoded harness.
-10. As a developer, I want clear module boundaries between the Flutter shell and each native reading engine, so that adding iOS, TXT, or further formats later doesn't require restructuring this skeleton.
-11. As a developer, I want this skeleton runnable via the standard Flutter build/run commands on an Android emulator or device, so that there's a reproducible local development loop from day one.
-12. As a developer, I want committed sample EPUB and PDF fixture files, so that the seam's tests are repeatable in CI without depending on external downloads.
-13. As a product owner, I want the riskiest technical bets (Readium integration, PlatformView bridging, native PDF rendering) proven out early, so that subsequent feature work isn't blocked by an unproven foundation.
+1. 身為開發者，我希望有一個針對 Android 建置好的 Flutter 專案骨架，以便有一個可建置、可執行的起點。
+2. 身為開發者，我希望把 Readium 的 Kotlin toolkit 整合為原生 Android 模組，以便 EPUB 解析/渲染依賴成熟、專門打造的函式庫，而非自行拼湊的解析邏輯。
+3. 身為開發者，我希望 Readium 的原生閱讀視圖透過 `PlatformView` 嵌入 Flutter，以便 Flutter 能在自己的 widget 樹中承載 EPUB 內容。
+4. 身為開發者，我希望把 Android 原生的 `PdfRenderer` 整合為 `PlatformView`，以便 PDF 頁面能原生渲染、不依賴第三方函式庫。
+5. 身為開發者，我希望有一個單一的 `ReaderScreen` 抽象層，接受書籍檔案路徑並顯示第 1 頁，以便 App 其餘部分不需要知道是哪個原生引擎在渲染特定格式。
+6. 身為開發者，我希望 `ReaderScreen` 能偵測檔案是 EPUB 還是 PDF，並分派到對應的原生視圖，以便格式專屬的邏輯能封裝在單一介面之後。
+7. 身為終端使用者，我希望能從書架畫面開啟一個範例 EPUB 檔案並看到第一頁渲染出來，以便確認 App 真的能顯示 EPUB 書籍。
+8. 身為終端使用者，我希望能從書架畫面開啟一個範例 PDF 檔案並看到第一頁渲染出來，以便確認 App 真的能顯示 PDF。
+9. 身為開發者，我希望有一個最小可用的導航外殼（書架畫面與設定頁佔位），以便開啟一本書是從 App 正常入口就能觸及的真實使用者流程，而非寫死的測試殼。
+10. 身為開發者，我希望 Flutter 外殼與各原生閱讀引擎之間有清楚的模組邊界，以便之後新增 iOS、TXT 或其他格式時不需要重構這個骨架。
+11. 身為開發者，我希望這個骨架能透過標準的 Flutter build/run 指令在 Android 模擬器或裝置上執行，以便從第一天起就有可重現的本機開發循環。
+12. 身為開發者，我希望有已提交版本控制的範例 EPUB 與 PDF 測試檔案，以便這個 seam 的測試在 CI 中可重複執行、不依賴外部下載。
+13. 身為產品負責人，我希望最高風險的技術賭注（Readium 整合、PlatformView 橋接、原生 PDF 渲染）能及早被驗證，以便後續功能開發不會建立在未經驗證的地基上。
 
 ## Seam（已與使用者確認）
 

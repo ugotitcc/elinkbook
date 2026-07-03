@@ -1,127 +1,127 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+本檔案為 Claude Code（claude.ai/code）在此儲存庫中工作時的指引文件。
 
-## Repository state
+## 儲存庫現況
 
-This repository currently contains only a product requirements document (`docs/prd.md`). There is no source code, build system, package manifest, or test suite yet — implementation has not started. There are no commands to build, lint, or test.
+本儲存庫目前只有產品需求文件（`docs/prd.md`），尚無任何原始碼、建置系統、套件清單或測試套件——實作尚未開始。目前沒有 build/lint/test 相關指令可用。
 
-When code is added, this file should be updated with the actual commands (build/lint/test/single-test invocation) and the real project structure.
+當程式碼加入後，本檔案應更新為實際可用的指令（build/lint/test/單一測試執行方式）與真實的專案結構。
 
-## What this product is
+## 這是什麼產品
 
-elinkBook (全能跨平台電子書閱讀器) is a cross-platform ebook reader whose core differentiator is correct, high-quality support for **vertical writing (直排) Traditional Chinese typography** — including proper punctuation placement (dashes, quotes) and 避頭尾 (line-breaking rules) — plus deep layout customization and seamless cross-device sync.
+elinkBook（全能跨平台電子書閱讀器）是一款跨平台電子書閱讀器，核心差異化在於正確、高品質支援**直排（Vertical Writing）繁體中文排版**——包含正確的標點符號位置（破折號、引號）與避頭尾（換行規則）——並提供深度排版客製化與無縫跨裝置同步。
 
-Full requirements live in `docs/prd.md`. Key points to know before implementing:
+完整需求請見 `docs/prd.md`。實作前需要知道的重點：
 
-### Supported formats & rendering
-- **ePub3** (reflowable and fixed-layout), **PDF**, **TXT** are the three core formats (P0).
-- ePub: auto-detect writing direction (see FR-06); detection method itself not yet decided. Rendering stack decided — see "Tech stack (decided)" below (Readium).
-- PDF: target <2s open time for 100MB+ files; supports image filters (contrast/brightness/bold), smart/manual crop, and page-fit as default. Rendering stack decided — see "Tech stack (decided)" below (platform-native APIs).
-- TXT: auto-detect encoding and chapter headings to synthesize a hierarchical TOC with estimated page numbers (fixed-character-count pagination heuristic).
-- File import: local file picker plus Google Drive and OneDrive cloud access. Google Drive login/auth/download must keep working on devices without Google Play Services (e.g. some E-Ink readers).
+### 支援格式與渲染方式
+- **ePub3**（流式與定樣式）、**PDF**、**TXT** 為三大核心格式（P0）。
+- ePub：自動偵測排版方向（見 FR-06）；偵測方法本身尚未決定。渲染架構已定案——見下方「技術棧（已決策）」（Readium）。
+- PDF：目標為 100MB 以上檔案開啟速度小於 2 秒；支援影像濾鏡（對比度/亮度/加粗）、智慧/手動裁切，預設採用 page-fit。渲染架構已定案——見下方「技術棧（已決策）」（平台原生 API）。
+- TXT：自動偵測編碼與章節標題，合成具估算頁碼的階層式目錄（固定字元數量的分頁換算啟發式）。
+- 檔案匯入：本機檔案選擇器，並支援 Google Drive 與 OneDrive 雲端存取。Google Drive 登入/驗證/下載須在無 Google Play Services 的裝置上（例如部分 E-Ink 閱讀器）持續正常運作。
 
-### Layout & typography
-- One-tap switch between horizontal and vertical-RL layout for ePub3/TXT.
-- Bundled default fonts, all rendering fully offline via local `@font-face`: 思源黑體 and 思源宋體 (open-source SIL OFL baseline) plus three commercial-licensed fonts — 原俠正楷, 台灣圓體, 源流明體. Deleting the currently-active custom font must auto-fall-back to the default font.
-- Layout controls: line spacing, paragraph spacing, independent top/bottom/left/right margin sliders, page-turn mode (scroll vs. none), text alignment, 預設/直排/橫排 mode switch, screen-orientation lock (0/90/180/270°), and a "disable book CSS" toggle. Every numeric control (font size, weight, line/paragraph spacing, margins) needs +/- fine-adjustment buttons alongside its slider. When orientation is not locked, rotating the device must recompute pagination for the new viewport.
-- Vertical-RL layout must not let images or headings get split across a page break.
-- Punctuation must rotate/center correctly for vertical CJK typesetting, and line-breaking must follow 避頭尾 rules (forbidden line-start/line-end characters), conforming to CNS 11643 or an equivalent standard (FR-32).
-- Theme switching: Dark, Sepia, and default Light themes, coexisting with the separate E-Ink high-contrast mode.
+### 版面與排版
+- ePub3/TXT 支援橫排與直排(vertical-RL) 一鍵切換。
+- 內建預設字型皆完全離線渲染（本地 `@font-face`）：思源黑體與思源宋體（開源 SIL OFL 基礎字型），加上三款商用授權字型——原俠正楷、台灣圓體、源流明體。刪除目前使用中的自訂字型時須自動退回預設字型。
+- 版面控制項：行距、段落間距、獨立的上/下/左/右邊距滑桿、換頁模式（捲動 vs. 無）、文字對齊、螢幕方向鎖定（0/90/180/270°）、「停用書本 CSS」開關。每個數值型控制項（字體大小、字重、行距/段落間距、邊距）除滑桿外都需要 +/- 微調按鈕。當螢幕方向未鎖定時，裝置旋轉須為新的可視範圍重新計算分頁。
+- 直排(vertical-RL) 模式不得讓圖片或標題被切斷至跨頁。
+- 標點符號在直排中文排版中必須正確轉向/置中，換行須遵守避頭尾規則（禁止特定字元出現於行首/行尾），符合 CNS 11643 或同等標準（FR-32）。
+- 主題切換：深色、羊皮紙色、預設淺色主題，並與獨立的 E-Ink 高對比模式並存。
 
-### Navigation, annotations, bookmarks
-- Universal TOC component across all three formats, showing title + page number, must jump to the target location within 200ms.
-- Bookmarks store a position (EPUB: CFI; PDF: page number; TXT: character offset) + chapter name; support rename, single delete, and "delete all bookmarks for this book." Bookmark management is in MVP scope, not a later-phase item.
-- Highlights and notes are independent object types (a note does not overwrite a highlight); both must remain visually consistent when switching between vertical/horizontal layout. Support single-item edit/delete, plus bulk-delete-all for highlights and for notes separately (bulk delete gated behind a confirmation dialog).
-- Highlights support multiple colors plus a distinct "highlighter" sub-type. Highlight/note positions need finer precision than bookmarks: EPUB uses CFI, PDF uses page number + in-page coordinates (not just page number), TXT uses character offset.
-- A unified sidebar lists all highlights and notes (not bookmarks, which have their own separate list/view) with jump-to-location on tap.
-- Markdown export covers highlights, personal notes, and the bookmark list.
+### 導航、註記、書籤
+- 跨三種格式的通用目錄元件，顯示標題+頁碼，須於 200ms 內跳轉至目標位置。
+- 書籤儲存一個定位點（EPUB：CFI；PDF：頁碼；TXT：字元偏移量）+ 章節名稱；支援重新命名、單筆刪除、「刪除該書所有書籤」。書籤管理屬於 MVP 範圍，並非後續階段項目。
+- 劃線與備註是各自獨立的物件類型（備註不會覆蓋劃線）；兩者在直排/橫排切換時都須保持視覺一致。支援單筆編輯/刪除，以及劃線與備註各自的一鍵全刪（批次刪除前需經確認對話框）。
+- 劃線支援多種顏色，加上獨立的「螢光筆」子類型。劃線/備註的定位精度須高於書籤：EPUB 用 CFI，PDF 用頁碼+頁內座標（不只是頁碼），TXT 用字元偏移量。
+- 統一側邊欄列出所有劃線與備註（不含書籤，書籤有自己獨立的清單/畫面），點擊可跳轉至該位置。
+- Markdown 導出涵蓋劃線、個人備註與書籤清單。
 
-### Search
-- Full-text search across the whole library (title, author, in-book content), results within 500ms even at ~1,000-book library scale. Recommended approach: SQLite FTS5 (or equivalent) index. Search results must support jump-to-chapter, and must separate title/author matches from in-book content matches.
+### 搜尋
+- 全書庫全文檢索（書名、作者、書內內容），即使在約 1,000 本書規模下也要於 500ms 內出結果。建議做法：SQLite FTS5（或同等方案）索引。搜尋結果須支援跳轉至章節，並須將書名/作者匹配與書內內容匹配分開呈現。
 
-### Sync
-- Sync backend decision: **PocketBase** (Firebase/Supabase were considered alternatives).
-- Reading position (EPUB: CFI; PDF: page number; TXT: character offset) auto-syncs on app close / book switch, converting correctly between vertical and horizontal reading modes; target latency <2s, conflict-resolution success rate 99.9%. If the synced cloud position disagrees with the local position when a book opens, prompt the user to confirm before jumping — never overwrite silently.
-- Reading-time statistics are stored locally per day and aggregated into a ~365-day heatmap/contribution-graph view (pattern reference: Readest); tapping a cell shows that day's detail. Timing must be based on detected reading activity (page turn/scroll/long-press), excluding idle or backgrounded time.
+### 同步
+- 同步後端決策：**PocketBase**（曾考慮 Firebase/Supabase 作為替代方案）。
+- 閱讀位置（EPUB：CFI；PDF：頁碼；TXT：字元偏移量）在 App 關閉/切換書籍時自動同步，並正確處理直排/橫排模式間的轉換；目標延遲 <2 秒，衝突解決成功率 99.9%。若開啟書籍時雲端同步的位置與本機位置不一致，須先詢問使用者確認才跳轉——絕不可靜默覆蓋。
+- 閱讀時長統計每日儲存於本機，彙整成約 365 天規模的熱點圖/貢獻圖（參考模式：Readest）；點擊方格顯示當日詳情。計時須基於偵測到的實際閱讀活動（翻頁/捲動/長按），排除閒置或背景狀態的時間。
 
-### Library management
-- Bookshelf view: 6 covers per row; also a list view with metadata + progress %. The app must remember the user's last-chosen view mode.
-- Cover generation strategy: ePub → embedded cover image; PDF → first-page render; TXT → dynamically generated cover from the title text.
-- Sort by last-read (default), creation time, author, or title.
+### 圖書庫管理
+- 書架視圖：每列 6 本封面；另有含元數據+進度百分比的列表視圖。App 須記住使用者上次選擇的檢視模式。
+- 封面產生策略：ePub → 內嵌封面圖；PDF → 首頁渲染；TXT → 依書名文字動態產生封面。
+- 排序方式：最後閱讀（預設）、建立時間、作者或書名。
 
-### Explicit non-goals (out of scope)
-- No DRM circumvention (e.g., Adobe DRM).
-- No ebook store / purchase or rental flows.
-- No PDF content editing (text/image mutation).
-- No full social platform (feed, friends) — only one-way sharing of highlights/stats as images.
+### 明確排除範圍（Out of scope）
+- 不支援解除 DRM（例如 Adobe DRM）。
+- 不提供電子書商店/購買或租閱流程。
+- 不支援 PDF 內容編輯（文字/圖片修改）。
+- 不含完整社交平台（動態牆、好友）——僅支援單向分享劃線/統計圖片。
 
-### Interaction model
-- Minimal, low-chrome UI; core navigation, TOC, and basic adjustments must be reachable one-handed via configurable hot zones.
-- Navigation Zones: customizable 3×3 tap-grid with selectable mapping presets (traditional / one-handed / Kindle-like); in vertical-RL (RTL) mode, the tap-grid mapping must mirror left/right to match right-to-left page-turn logic.
-- Volume-key page turning is required; volume keys must revert to normal system volume control once the reader screen is left.
-- E-Ink-friendly high-contrast mode with reduced transition animations (avoid ghosting).
-- Mobile and desktop should share equivalent button/menu layout logic to minimize cross-device relearning.
+### 互動模式
+- 極簡、低干擾 UI；核心導航、目錄、基礎調整都須可透過可自訂的熱區單手操作。
+- 導航區域：可自訂的 3×3 點擊九宮格，提供多種對應模式（傳統/單手/類 Kindle）；直排(RTL) 模式下，熱區映射須左右鏡像以符合由右至左的翻頁邏輯。
+- 需支援音量鍵翻頁；離開閱讀畫面後，音量鍵須恢復正常系統音量控制。
+- E-Ink 友善的高對比模式，並減少過渡動畫（避免殘影）。
+- 手機版與桌面版應維持相近的按鈕/選單佈局邏輯，降低跨裝置重新學習的成本。
 
-## Working in this repo right now
+## 目前在此儲存庫中的工作方式
 
-There is no code yet. Treat tasks here as either (a) refining `docs/prd.md` itself, or (b) starting implementation via the SDD workflow below (see `docs/epics.md` for what's next).
+目前尚無任何程式碼。請將此處的任務視為：(a) 修訂 `docs/prd.md` 本身，或 (b) 透過下方的 SDD 工作流程開始實作（下一步請見 `docs/epics.md`）。
 
-### Tech stack (decided)
+### 技術棧（已決策）
 
-- **App shell**: Flutter, shared across platforms.
-- **Mobile-first, Android before iOS.** No desktop target in the first waves (see `docs/epics.md` epic-13).
-- **EPUB**: Readium's official native toolkits (`readium-kotlin-toolkit` on Android, `readium-swift-toolkit` on iOS) — not a custom parser, not a WebView library like epub.js. Rendered via Flutter `PlatformView`, using Readium's Locator (CFI-equivalent) and Decorator (highlight/note overlay) APIs.
-- **PDF**: each platform's built-in API (Android `PdfRenderer`, iOS `PDFKit`), not PDFium, rendered via `PlatformView`.
-- **TXT**: a custom lightweight vertical-CJK layout engine (separate epic — `epic-11-txt-engine`), not Readium/WebView-based, since plain text has no HTML/CSS layer to reimplement.
-- Rationale: a prior WebView-based attempt (Capacitor + epub.js) produced recurring defects in vertical-text jump-navigation and highlight/note consistency (see project history). Rebuilding EPUB's full XHTML/CSS reflow engine from scratch (to avoid WebView entirely) was rejected as infeasible for this team size — that's effectively reimplementing a browser layout engine. Readium is the middle path: WebView-based internally, but a mature, purpose-built SDK instead of DIY glue code.
+- **App 外殼**：Flutter，跨平台共用。
+- **手機優先，Android 先於 iOS。** 初期幾波不含桌面版目標（見 `docs/epics.md` 的 epic-13）。
+- **EPUB**：Readium 官方原生工具包（Android 用 `readium-kotlin-toolkit`、iOS 用 `readium-swift-toolkit`）——不是自訂解析器，也不是像 epub.js 這種 WebView 函式庫。透過 Flutter 的 `PlatformView` 渲染，使用 Readium 的 Locator（等同 CFI）與 Decorator（劃線/備註疊加）API。
+- **PDF**：各平台內建 API（Android 用 `PdfRenderer`、iOS 用 `PDFKit`），不使用 PDFium，透過 `PlatformView` 渲染。
+- **TXT**：自訂的輕量直排 CJK 排版引擎（獨立 epic —— `epic-11-txt-engine`），不採用 Readium/WebView 方案，因為純文字沒有 HTML/CSS 那層需要重新實作。
+- 理由：先前以 WebView 為主的嘗試（Capacitor + epub.js）在直排文字跳轉導航與劃線/備註一致性上反覆出現缺陷（見專案歷史）。完全自寫 EPUB 的 XHTML/CSS reflow 引擎（以徹底避開 WebView）被判定對此團隊規模不可行——那等同於重新實作一個瀏覽器排版引擎。Readium 是折衷路線：內部仍是 WebView，但是成熟、專門打造的 SDK，而非自己拼裝的膠水程式碼。
 
 ## Spec-Driven Development (SDD) 工作流程
 
-This repo follows a Spec-Driven Development workflow combining BMad Method's role separation, Matt Pocock's spec-first rigor, and Superpowers' review skills. Two implementers can execute work: **Claude Code** and **Antigravity CLI**. Switching to Antigravity CLI is always manual and human-initiated — never assume or trigger it. When a "developer" subagent is dispatched without the human explicitly invoking Antigravity CLI, use a Claude Code subagent (the same LLM/tool currently active), not a simulated Antigravity call.
+本儲存庫採用結合 BMad Method 角色分工、Matt Pocock 規格先行嚴謹度、以及 Superpowers 審查機制的規格驅動開發工作流程。可執行實作工作的有兩個角色：**Claude Code** 與 **Antigravity CLI**。切換到 Antigravity CLI 一律由人工手動指定——絕不可自行假設或觸發。若需要派出「實作者」子代理但人類尚未明確指定使用 Antigravity CLI，一律使用 Claude Code 的 subagent（也就是目前正在使用的同一個 LLM/工具），不可模擬呼叫 Antigravity。
 
-### Directory structure
+### 目錄結構
 
 ```
 docs/
-├── adr/                    # Global: architecture decision records
-├── epics/                  # Active epic sandboxes (design.md, spec.md, issues.md, plans/, reviews/)
-├── archive/                # Completed epics, moved here as <YYYY-MM-DD>-<short-name>/
-├── prd.md                  # Global: product requirements
-├── CONTEXT.md              # Global: ubiquitous language + code constraints (not created yet)
-└── epics.md                # Global: epic status board — see below
+├── adr/                    # 全域：架構決定紀錄
+├── epics/                  # 進行中的 Epic 沙盒（design.md、spec.md、issues.md、plans/、reviews/）
+├── archive/                # 已完成的 Epic，搬移至 <YYYY-MM-DD>-<簡稱>/
+├── prd.md                  # 全域：產品需求
+├── CONTEXT.md              # 全域：通用語言 + 程式碼限制（尚未建立）
+└── epics.md                # 全域：Epic 狀態看板 —— 見下方說明
 ```
 
-### `docs/epics.md` — the global status board
+### `docs/epics.md` —— 全域狀態看板
 
-Every epic gets one row: code/name, status, current storage path, linked PRD section, notes.
+每個 Epic 佔一列：代號/名稱、狀態、目前存放路徑、關聯的 PRD 章節、備註。
 
-- ⚪ **Backlog** — planned, not started, no directory yet
-- 🟡 **Active** — design/spec/coding in progress, lives under `docs/epics/<epic-name>/`
-- 🟢 **Archived** — merged and stable, moved to `docs/archive/<YYYY-MM-DD>-<short-name>/`
+- ⚪ **未開始 (Backlog)**——已規劃但尚未啟動，尚無目錄
+- 🟡 **開發中 (Active)**——設計/規格/程式撰寫進行中，存放於 `docs/epics/<epic-name>/`
+- 🟢 **已歸檔 (Archived)**——已合併且穩定，已搬移至 `docs/archive/<YYYY-MM-DD>-<簡稱>/`
 
-Register a new epic here (status `Active`, path filled in) *before* starting its Discovery phase. Update status/path to `Archived` when archiving. This file is the single place to find "what epic am I looking for and where does it currently live" — see current epic list and priority order in `docs/epics.md` itself.
+在啟動一個 Epic 的 Discovery 階段*之前*，須先在此登錄該 Epic（狀態設為 `Active`，填入路徑）。歸檔時將狀態/路徑更新為 `Archived`。這份檔案是唯一能查到「我要找的 Epic 在哪裡、目前狀態如何」的地方——目前的 Epic 清單與優先順序請見 `docs/epics.md` 本身。
 
-### Lifecycle
+### 生命週期
 
-1. **Task classification** (human): new feature/refactor → new epic; bugfix → find the affected epic, work under its `reviews/`.
-2. **Discovery** (Claude Code, as PM/Analyst) — `/brainstorming` + `/grill-with-docs` → `docs/epics/<epic-name>/design.md`. Bugfixes skip to `/diagnose` → `docs/epics/<epic-name>/reviews/bugfix-repro.md` instead.
-3. **Architecting** (Claude Code, as Architect) — write an ADR if the architecture changes, and define core interfaces/types in `docs/epics/<epic-name>/spec.md` (single source of truth for the epic from here on).
-4. **Scrum Master phase** (Claude Code) — decompose the epic into thin vertical-slice issues in `docs/epics/<epic-name>/issues.md`, each with its required unit-test coverage.
-5. **Planning & review** (implementer as author, Claude Code as reviewer) — implementer claims an issue, writes `docs/epics/<epic-name>/plans/plan-issue-<N>.md`, requests review (`requesting-code-review`/`receiving-code-review`) before coding starts.
-6. **TDD coding & QA** (implementer as author, Claude Code as reviewer) — red-green-refactor, then code review; results archived to `docs/epics/<epic-name>/reviews/review-issue-<N>.md`; hand off to the human for merge.
-7. **Archiving** (human-directed) — move the whole epic directory to `docs/archive/<YYYY-MM-DD>-<short-name>/`, update its `docs/epics.md` row to `Archived` with the new path.
+1. **任務分類**（人類）：新功能/重構 → 建立新 Epic；Bug 修復 → 找到受影響的 Epic，於其 `reviews/` 目錄下處理。
+2. **Discovery**（Claude Code，扮演 PM/Analyst）—— `/brainstorming` + `/grill-with-docs` → `docs/epics/<epic-name>/design.md`。Bug 修復則改用 `/diagnose` → `docs/epics/<epic-name>/reviews/bugfix-repro.md`。
+3. **Architecting**（Claude Code，扮演 Architect）—— 若架構有異動則撰寫 ADR，並在 `docs/epics/<epic-name>/spec.md` 中定義核心介面/型別（自此成為該 Epic 的唯一事實來源）。
+4. **Scrum Master 階段**（Claude Code）—— 將 Epic 拆解為細粒度的垂直切片工單，寫入 `docs/epics/<epic-name>/issues.md`，每個工單皆須附上所需的單元測試要求。
+5. **規劃與審查**（實作者為作者、Claude Code 為審查者）—— 實作者認領工單，撰寫 `docs/epics/<epic-name>/plans/plan-issue-<N>.md`，在開始寫程式碼前發起審查（`requesting-code-review`/`receiving-code-review`）。
+6. **TDD 實作與 QA**（實作者為作者、Claude Code 為審查者）—— 紅-綠-重構循環，接著進行程式碼審查；結果歸檔至 `docs/epics/<epic-name>/reviews/review-issue-<N>.md`；交由人類進行合併。
+7. **歸檔**（人類指定）—— 將整個 Epic 目錄搬移至 `docs/archive/<YYYY-MM-DD>-<簡稱>/`，並將其在 `docs/epics.md` 的該列狀態更新為 `Archived`、填入新路徑。
 
 ## Agent skills
 
-### Issue tracker
+### Issue tracker（工單追蹤）
 
-Local markdown under `docs/epics/<epic-name>/` (SDD epic sandbox), not Gitea. Gitea (`git.jigong.org/huthief/elinkBook`, via `tea` CLI logged in as `jigong`) remains the git remote for code only. See `docs/agents/issue-tracker.md`.
+本機 markdown，存放於 `docs/epics/<epic-name>/`（SDD Epic 沙盒），非 Gitea。Gitea（`git.jigong.org/huthief/elinkBook`，透過以 `jigong` 登入的 `tea` CLI）僅作為程式碼的 git remote 使用。詳見 `docs/agents/issue-tracker.md`。
 
-### Triage labels
+### Triage labels（分流標籤）
 
-Default label vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`) — not yet created on the repo. See `docs/agents/triage-labels.md`.
+預設標籤詞彙（`needs-triage`、`needs-info`、`ready-for-agent`、`ready-for-human`、`wontfix`）——尚未在此儲存庫上建立。詳見 `docs/agents/triage-labels.md`。
 
-### Domain docs
+### Domain docs（領域文件）
 
-Single-context — one `CONTEXT.md` + `docs/adr/` at repo root (neither exists yet). See `docs/agents/domain.md`.
+單一情境（Single-context）——根目錄一份 `CONTEXT.md` + `docs/adr/`（兩者皆尚未建立）。詳見 `docs/agents/domain.md`。
