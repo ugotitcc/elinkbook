@@ -25,7 +25,7 @@
 
 ## Issue 2：`ReaderScreen` 格式偵測邏輯
 
-**Status:** ready-for-agent
+**Status:** ✅ 已完成實作，待人工合併（PR #2：https://git.jigong.org/huthief/elinkBook/pulls/2）。2 個任務皆通過 TDD 流程，`flutter test` 12/12 通過、`flutter analyze` 乾淨。分支 `worktree-epic-0-issue-2`，worktree 保留於 `.claude/worktrees/epic-0-issue-2/`。
 
 **依賴：** Issue 1
 
