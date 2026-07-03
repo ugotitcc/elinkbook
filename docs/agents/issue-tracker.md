@@ -1,26 +1,24 @@
-# Issue tracker: Gitea
+# Issue tracker: Local Markdown (SDD Epic Sandbox)
 
-Issues and PRDs for this repo live as Gitea issues on `https://git.jigong.org/huthief/elinkBook`. Use the [`tea`](https://gitea.com/gitea/tea) CLI for all operations (logged in as `jigong`).
+Issues and specs for this repo live as markdown files under `docs/epics/<epic-name>/`, following the project's Spec-Driven Development (SDD) workflow. Gitea (`git.jigong.org/huthief/elinkBook`) remains the git remote for code, but is not used as the issue tracker.
 
 ## Conventions
 
-- **Create an issue**: `tea issues create --repo huthief/elinkBook --title "..." --description "..." --labels "..."`
-- **Read an issue**: `tea issues <index> --repo huthief/elinkBook`
-- **List issues**: `tea issues list --repo huthief/elinkBook`, filter with `--labels`/`--state` as needed
-- **Comment on an issue**: `tea comment <index> --repo huthief/elinkBook "..."`
-- **Apply / remove labels**: `tea issues create --labels "..."` at creation time, or edit the issue's labels via `tea issues edit <index> --repo huthief/elinkBook --labels "..."`
-- **Close**: `tea issues close <index> --repo huthief/elinkBook`
-
-Labels must exist on the repo before they can be applied — see `docs/agents/triage-labels.md`. The repo currently has no labels created yet.
-
-## Pull requests as a triage surface
-
-Not applicable — Gitea is used here purely as a private issue tracker for this solo project; external PRs are not a request surface.
+- `docs/epics.md` is the **global status board**: every epic gets one row (code/name, status ⚪Backlog/🟡Active/🟢Archived, current storage path, linked PRD section, notes). Register a new epic here (status `Active`, path filled in) before starting its Discovery phase; update status/path to `Archived` when it's archived. This is the single place to check "what epic am I looking for and where does it currently live."
+- One epic per directory: `docs/epics/<epic-name>/`
+- Discovery output: `docs/epics/<epic-name>/design.md`
+- Architecting output (core interfaces/types, single source of truth for the epic): `docs/epics/<epic-name>/spec.md`
+- Implementation issues (thin vertical slices), each including its required unit-test coverage: `docs/epics/<epic-name>/issues.md`
+- Per-issue implementation plans: `docs/epics/<epic-name>/plans/plan-issue-<N>.md`
+- Per-issue review records: `docs/epics/<epic-name>/reviews/review-issue-<N>.md`
+- Bugfix repro reports (bypasses design/spec phases): `docs/epics/<epic-name>/reviews/bugfix-repro.md`
+- Triage state is recorded as a `Status:` line near the top of each issue entry — see `docs/agents/triage-labels.md` for the role strings
+- Once an epic's code has fully merged and stabilized, move the whole `docs/epics/<epic-name>/` directory to `docs/archive/<YYYY-MM-DD>-<short-name>/`
 
 ## When a skill says "publish to the issue tracker"
 
-Create a Gitea issue with `tea issues create`.
+Add an entry to `docs/epics/<epic-name>/issues.md`, creating the epic's directory/file if it doesn't exist yet.
 
 ## When a skill says "fetch the relevant ticket"
 
-Run `tea issues <index> --repo huthief/elinkBook`.
+Read the relevant entry in `docs/epics/<epic-name>/issues.md`, plus its `plans/plan-issue-<N>.md` and `reviews/review-issue-<N>.md` if they exist.

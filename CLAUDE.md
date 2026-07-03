@@ -16,8 +16,8 @@ Full requirements live in `docs/prd.md`. Key points to know before implementing:
 
 ### Supported formats & rendering
 - **ePub3** (reflowable and fixed-layout), **PDF**, **TXT** are the three core formats (P0).
-- ePub: auto-detect writing direction (see FR-06). Detection method not yet decided — to be discussed separately. Rendering stack also not yet decided.
-- PDF: target <2s open time for 100MB+ files; supports image filters (contrast/brightness/bold), smart/manual crop, and page-fit as default. (Rendering stack not yet decided — to be discussed separately.)
+- ePub: auto-detect writing direction (see FR-06); detection method itself not yet decided. Rendering stack decided — see "Tech stack (decided)" below (Readium).
+- PDF: target <2s open time for 100MB+ files; supports image filters (contrast/brightness/bold), smart/manual crop, and page-fit as default. Rendering stack decided — see "Tech stack (decided)" below (platform-native APIs).
 - TXT: auto-detect encoding and chapter headings to synthesize a hierarchical TOC with estimated page numbers (fixed-character-count pagination heuristic).
 - File import: local file picker plus Google Drive and OneDrive cloud access. Google Drive login/auth/download must keep working on devices without Google Play Services (e.g. some E-Ink readers).
 
@@ -65,13 +65,58 @@ Full requirements live in `docs/prd.md`. Key points to know before implementing:
 
 ## Working in this repo right now
 
-Since there is no code yet, treat tasks here as either (a) refining `docs/prd.md` itself, or (b) scaffolding a new implementation from scratch. If scaffolding, check with the user on platform/framework choice (the PRD implies a cross-platform app with a WebView-based ePub renderer and native PDF rendering, but does not mandate a specific framework) before committing to a stack.
+There is no code yet. Treat tasks here as either (a) refining `docs/prd.md` itself, or (b) starting implementation via the SDD workflow below (see `docs/epics.md` for what's next).
+
+### Tech stack (decided)
+
+- **App shell**: Flutter, shared across platforms.
+- **Mobile-first, Android before iOS.** No desktop target in the first waves (see `docs/epics.md` epic-13).
+- **EPUB**: Readium's official native toolkits (`readium-kotlin-toolkit` on Android, `readium-swift-toolkit` on iOS) — not a custom parser, not a WebView library like epub.js. Rendered via Flutter `PlatformView`, using Readium's Locator (CFI-equivalent) and Decorator (highlight/note overlay) APIs.
+- **PDF**: each platform's built-in API (Android `PdfRenderer`, iOS `PDFKit`), not PDFium, rendered via `PlatformView`.
+- **TXT**: a custom lightweight vertical-CJK layout engine (separate epic — `epic-11-txt-engine`), not Readium/WebView-based, since plain text has no HTML/CSS layer to reimplement.
+- Rationale: a prior WebView-based attempt (Capacitor + epub.js) produced recurring defects in vertical-text jump-navigation and highlight/note consistency (see project history). Rebuilding EPUB's full XHTML/CSS reflow engine from scratch (to avoid WebView entirely) was rejected as infeasible for this team size — that's effectively reimplementing a browser layout engine. Readium is the middle path: WebView-based internally, but a mature, purpose-built SDK instead of DIY glue code.
+
+## Spec-Driven Development (SDD) 工作流程
+
+This repo follows a Spec-Driven Development workflow combining BMad Method's role separation, Matt Pocock's spec-first rigor, and Superpowers' review skills. Two implementers can execute work: **Claude Code** and **Antigravity CLI**. Switching to Antigravity CLI is always manual and human-initiated — never assume or trigger it. When a "developer" subagent is dispatched without the human explicitly invoking Antigravity CLI, use a Claude Code subagent (the same LLM/tool currently active), not a simulated Antigravity call.
+
+### Directory structure
+
+```
+docs/
+├── adr/                    # Global: architecture decision records
+├── epics/                  # Active epic sandboxes (design.md, spec.md, issues.md, plans/, reviews/)
+├── archive/                # Completed epics, moved here as <YYYY-MM-DD>-<short-name>/
+├── prd.md                  # Global: product requirements
+├── CONTEXT.md              # Global: ubiquitous language + code constraints (not created yet)
+└── epics.md                # Global: epic status board — see below
+```
+
+### `docs/epics.md` — the global status board
+
+Every epic gets one row: code/name, status, current storage path, linked PRD section, notes.
+
+- ⚪ **Backlog** — planned, not started, no directory yet
+- 🟡 **Active** — design/spec/coding in progress, lives under `docs/epics/<epic-name>/`
+- 🟢 **Archived** — merged and stable, moved to `docs/archive/<YYYY-MM-DD>-<short-name>/`
+
+Register a new epic here (status `Active`, path filled in) *before* starting its Discovery phase. Update status/path to `Archived` when archiving. This file is the single place to find "what epic am I looking for and where does it currently live" — see current epic list and priority order in `docs/epics.md` itself.
+
+### Lifecycle
+
+1. **Task classification** (human): new feature/refactor → new epic; bugfix → find the affected epic, work under its `reviews/`.
+2. **Discovery** (Claude Code, as PM/Analyst) — `/brainstorming` + `/grill-with-docs` → `docs/epics/<epic-name>/design.md`. Bugfixes skip to `/diagnose` → `docs/epics/<epic-name>/reviews/bugfix-repro.md` instead.
+3. **Architecting** (Claude Code, as Architect) — write an ADR if the architecture changes, and define core interfaces/types in `docs/epics/<epic-name>/spec.md` (single source of truth for the epic from here on).
+4. **Scrum Master phase** (Claude Code) — decompose the epic into thin vertical-slice issues in `docs/epics/<epic-name>/issues.md`, each with its required unit-test coverage.
+5. **Planning & review** (implementer as author, Claude Code as reviewer) — implementer claims an issue, writes `docs/epics/<epic-name>/plans/plan-issue-<N>.md`, requests review (`requesting-code-review`/`receiving-code-review`) before coding starts.
+6. **TDD coding & QA** (implementer as author, Claude Code as reviewer) — red-green-refactor, then code review; results archived to `docs/epics/<epic-name>/reviews/review-issue-<N>.md`; hand off to the human for merge.
+7. **Archiving** (human-directed) — move the whole epic directory to `docs/archive/<YYYY-MM-DD>-<short-name>/`, update its `docs/epics.md` row to `Archived` with the new path.
 
 ## Agent skills
 
 ### Issue tracker
 
-Gitea (`git.jigong.org/huthief/elinkBook`) via the `tea` CLI, logged in as `jigong`; no external-PR triage surface. See `docs/agents/issue-tracker.md`.
+Local markdown under `docs/epics/<epic-name>/` (SDD epic sandbox), not Gitea. Gitea (`git.jigong.org/huthief/elinkBook`, via `tea` CLI logged in as `jigong`) remains the git remote for code only. See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 
