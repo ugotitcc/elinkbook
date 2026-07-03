@@ -71,6 +71,7 @@ elinkBook（全能跨平台電子書閱讀器）是一款跨平台電子書閱�
 
 - **App 外殼**：Flutter，跨平台共用。
 - **手機優先，Android 先於 iOS。** 初期幾波不含桌面版目標（見 `docs/epics.md` 的 epic-13）。
+- **Android 最低支援版本：Android 11 (API 30)**（`minSdk = 21`，涵蓋範圍更寬鬆，見 `docs/prd.md` NFR-6）——不得將 Android 專案的 `minSdk`/相容性設定限制在比 API 30 更新的門檻。
 - **EPUB**：Readium 官方原生工具包（Android 用 `readium-kotlin-toolkit`、iOS 用 `readium-swift-toolkit`）——不是自訂解析器，也不是像 epub.js 這種 WebView 函式庫。透過 Flutter 的 `PlatformView` 渲染，使用 Readium 的 Locator（等同 CFI）與 Decorator（劃線/備註疊加）API。
 - **PDF**：各平台內建 API（Android 用 `PdfRenderer`、iOS 用 `PDFKit`），不使用 PDFium，透過 `PlatformView` 渲染。
 - **TXT**：自訂的輕量直排 CJK 排版引擎（獨立 epic —— `epic-11-txt-engine`），不採用 Readium/WebView 方案，因為純文字沒有 HTML/CSS 那層需要重新實作。

@@ -12,7 +12,7 @@
 
 - Flutter 專案位於儲存庫根目錄下的 `app/` 子目錄，套件名稱為 `elinkbook`，Android 應用程式 ID 為 `cc.ugotit.elinkbook`。
 - 本工單僅涵蓋 Android 平台（見 `docs/adr/0001-mobile-architecture.md`：Android 優先，iOS 見 `epic-13-ios`）。
-- Android `minSdk` 固定為 `21`（後續 Issue 3 會用到 `PdfRenderer`，該 API 需要 API 21+；此處先行設定以避免日後變更 minSdk 造成的相容性問題）。
+- Android `minSdk` 固定為 `21`（同時滿足兩個要求：一、`docs/prd.md` NFR-6 規定最低須支援 Android 11 / API 30 以上裝置，21 已涵蓋此範圍；二、後續 Issue 3 會用到 `PdfRenderer`，該 API 需要 API 21+）。此處先行設定以避免日後變更 minSdk 造成的相容性問題。
 - 所有畫面上的使用者可見文字須為正體中文，符合專案語言慣例。
 - 本工單不得引入任何原生模組整合（Readium、`PdfRenderer`）、任何狀態管理套件、任何真實圖書庫資料邏輯——這些分別屬於 Issue 3、Issue 4 與 `epic-1-library`。
 
