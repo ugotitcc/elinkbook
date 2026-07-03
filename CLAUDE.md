@@ -66,3 +66,17 @@ Full requirements live in `docs/prd.md`. Key points to know before implementing:
 ## Working in this repo right now
 
 Since there is no code yet, treat tasks here as either (a) refining `docs/prd.md` itself, or (b) scaffolding a new implementation from scratch. If scaffolding, check with the user on platform/framework choice (the PRD implies a cross-platform app with a WebView-based ePub renderer and native PDF rendering, but does not mandate a specific framework) before committing to a stack.
+
+## Agent skills
+
+### Issue tracker
+
+Gitea (`git.jigong.org/huthief/elinkBook`) via the `tea` CLI, logged in as `jigong`; no external-PR triage surface. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default label vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`) — not yet created on the repo. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context — one `CONTEXT.md` + `docs/adr/` at repo root (neither exists yet). See `docs/agents/domain.md`.
