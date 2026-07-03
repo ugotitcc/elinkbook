@@ -2,7 +2,7 @@
 
 | Epic 代號 & 名稱 | 當前狀態 | 實際存放路徑 | 關聯 PRD 需求章節 | 備註 |
 |---|---|---|---|---|
-| `epic-0-skeleton` 技術骨架 | ⚪ 未開始 (Backlog) | N/A | 無對應 FR，技術地基 | 已有初步 to-prd 草稿內容（Flutter+Android+EPUB(Readium)+PDF 端到端），待轉入 `spec.md` |
+| `epic-0-skeleton` 技術骨架 | 🟡 開發中 (Active) | `docs/epics/epic-0-skeleton/` | 無對應 FR，技術地基 | design.md/spec.md 已完成；ADR 0001 已記錄架構決策；下一步為 Scrum Master 階段拆 issues.md |
 | `epic-1-library` 圖書庫基礎 | ⚪ 未開始 (Backlog) | N/A | FR-01, 02, 03, 26, 27, 28, 29 | |
 | `epic-2-vertical-core` 排版切換與直排核心 | ⚪ 未開始 (Backlog) | N/A | FR-05, 06, 32 | |
 | `epic-3-fonts-layout` 字型與版面設定 | ⚪ 未開始 (Backlog) | N/A | FR-09, 10, 31 | |
