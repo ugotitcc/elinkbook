@@ -1604,12 +1604,17 @@
           </div>
         `;
       }
-    }
 
-    // 點擊書架上的書本進入閱讀器
-    function selectBook(id) {
-      AppState.selectedBook = id;
-      switchPage('reader');
+      // 還原搜尋輸入框焦點與游標位置
+      if (isSearchFocused) {
+        const searchInput = document.getElementById('search-input');
+        if (searchInput) {
+          searchInput.focus();
+          if (selectionStart !== null && selectionEnd !== null) {
+            searchInput.setSelectionRange(selectionStart, selectionEnd);
+          }
+        }
+      }
     }
 
     // 模擬螢幕左右側點擊翻頁
