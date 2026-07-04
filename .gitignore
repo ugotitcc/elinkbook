@@ -6,3 +6,5 @@ Thumbs.db
 .superpowers/
 .agents/skills/
 .claude/skills/
+docs/epics/epic-0-skeleton/reviews/
+tmp/
