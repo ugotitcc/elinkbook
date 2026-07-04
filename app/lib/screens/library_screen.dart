@@ -35,23 +35,33 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 
   Future<void> _loadBooks() async {
-    final books = await widget.repository.listBooks();
-    if (!mounted) return;
-    setState(() => _books = books);
+    try {
+      final books = await widget.repository.listBooks();
+      if (!mounted) return;
+      setState(() => _books = books);
+    } catch (_) {
+      // 如果載入失敗，把它當作空列表，顯示既有的空狀態 UI
+      if (!mounted) return;
+      setState(() => _books = []);
+    }
   }
 
   Future<void> _pickAndImportFiles() async {
-    final picked = await FilePicker.pickFiles(
-      allowMultiple: true,
-      type: FileType.custom,
-      allowedExtensions: ['epub', 'pdf', 'txt'],
-    );
-    if (picked == null || picked.files.isEmpty) return;
-    final uris =
-        picked.files.map((f) => f.identifier).whereType<String>().toList();
-    if (uris.isEmpty) return;
-    await widget.importService.importFiles(uris);
-    await _loadBooks();
+    try {
+      final picked = await FilePicker.pickFiles(
+        allowMultiple: true,
+        type: FileType.custom,
+        allowedExtensions: ['epub', 'pdf', 'txt'],
+      );
+      if (picked == null || picked.files.isEmpty) return;
+      final uris =
+          picked.files.map((f) => f.identifier).whereType<String>().toList();
+      if (uris.isEmpty) return;
+      await widget.importService.importFiles(uris);
+      await _loadBooks();
+    } catch (_) {
+      // 匯入失敗時靜默吞掉，避免異常傳播破壞 widget 樹或留下不一致狀態
+    }
   }
 
   void _openBook(Book book) {
