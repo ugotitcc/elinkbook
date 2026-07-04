@@ -30,10 +30,12 @@ class _ReaderScreenState extends State<ReaderScreen> {
   String? _errorMessage;
 
   void _handlePageRendered() {
+    if (!mounted) return;
     setState(() => _state = _RenderState.rendered);
   }
 
   void _handleError(String message) {
+    if (!mounted) return;
     setState(() {
       _state = _RenderState.error;
       _errorMessage = message;
