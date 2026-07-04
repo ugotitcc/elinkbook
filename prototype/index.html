@@ -1567,14 +1567,45 @@
           </div>
         </div>
       </div>
+      
+      <!-- 雲端進度衝突對話框 (Task 7) -->
+      <div id="sync-conflict-dialog" class="dialog-overlay" style="display: none;" onclick="event.target.id === 'sync-conflict-dialog' && closeConflictDialog()">
+        <div class="dialog-card" style="width: 290px;">
+          <div class="dialog-title" style="color: #D97706; margin-bottom: 8px;">☁️ 雲端閱讀進度衝突</div>
+          <div style="font-size: 11px; opacity: 0.8; margin-bottom: 12px; line-height: 1.5; color: var(--text-color);">
+            系統偵測到這本書在雲端的閱讀進度與本機不一致，請選擇要採用的進度：
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px;">
+            <div onclick="resolveConflict(false)" style="border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; background: rgba(0,0,0,0.06); cursor: pointer; transition: background-color 0.2s;">
+              <div style="font-weight: bold; font-size: 12px; display: flex; justify-content: space-between; align-items: center; color: var(--text-color);">
+                <span>📱 本地進度</span>
+                <span id="conflict-local-progress" style="color: var(--primary);">30%</span>
+              </div>
+              <div style="font-size: 10px; opacity: 0.6; margin-top: 4px;">更新時間：1分鐘前</div>
+            </div>
+            
+            <div onclick="resolveConflict(true)" style="border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; background: rgba(0,0,0,0.06); cursor: pointer; transition: background-color 0.2s;">
+              <div style="font-weight: bold; font-size: 12px; display: flex; justify-content: space-between; align-items: center; color: var(--text-color);">
+                <span>☁️ 雲端進度</span>
+                <span id="conflict-cloud-progress" style="color: #10B981;">85%</span>
+              </div>
+              <div style="font-size: 10px; opacity: 0.6; margin-top: 4px;">更新時間：剛才由其他裝置同步</div>
+            </div>
+          </div>
+          <div class="dialog-actions" style="justify-content: center;">
+            <button class="dialog-btn cancel" onclick="closeConflictDialog()" style="width: 100%;">暫不開啟書籍</button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
   <!-- 右側控制面板區域 -->
   <div class="control-panel">
     <h2>elinkBook 控制台</h2>
-    <div style="margin-bottom: 24px;">
+    <div style="margin-bottom: 24px; display: flex; flex-direction: column; gap: 8px;">
       <button class="btn" onclick="runAllTests()">運行自我測試 Suite</button>
+      <button class="btn" style="background: #D97706; color: #fff;" onclick="triggerSyncConflict()">☁️ 模擬雲端進度衝突 (85%)</button>
     </div>
     
     <!-- 測試套件結果 -->
@@ -1660,6 +1691,8 @@
         heatmapData: {}
       },
       readingTimerActive: false,
+      localProgress: 30,
+      cloudProgress: null,
       layout: {
         fontSize: 16,
         fontWeight: 400,
@@ -2704,11 +2737,64 @@
       updateStateMonitor();
     }
 
+    // 3.3 雲端同步與衝突解決 (Task 7)
+    function triggerSyncConflict() {
+      // 預設以目前選取或第一本書進行模擬
+      const book = AppState.books.find(b => b.id === AppState.selectedBook) || AppState.books[0];
+      AppState.cloudProgress = 85;
+      AppState.localProgress = book.progress;
+      showToast('☁️ 雲端進度已模擬設為 85%。請點選書架上的書進入閱讀器以觸發衝突對話框。');
+    }
+
+    function openConflictDialog(book) {
+      const dialog = document.getElementById('sync-conflict-dialog');
+      if (dialog) {
+        document.getElementById('conflict-local-progress').textContent = `${AppState.localProgress}%`;
+        document.getElementById('conflict-cloud-progress').textContent = `${AppState.cloudProgress}%`;
+        dialog.style.display = 'flex';
+      }
+    }
+
+    function closeConflictDialog() {
+      const dialog = document.getElementById('sync-conflict-dialog');
+      if (dialog) {
+        dialog.style.display = 'none';
+      }
+    }
+
+    function resolveConflict(useCloud) {
+      const book = AppState.books.find(b => b.id === AppState.selectedBook);
+      if (book) {
+        if (useCloud) {
+          book.progress = AppState.cloudProgress;
+          showToast('☁️ 已採用雲端進度 (85%)');
+        } else {
+          AppState.cloudProgress = AppState.localProgress; // 本地優先，覆蓋雲端
+          showToast(`📱 已採用本地進度 (${book.progress}%)`);
+        }
+        AppState.currentPageNumber = Math.max(1, Math.min(12, Math.round((book.progress / 100) * 12)));
+      }
+      
+      // 清除衝突模擬狀態並進入閱讀器
+      AppState.cloudProgress = null;
+      closeConflictDialog();
+      AppState.selectedChapter = null;
+      switchPage('reader');
+    }
+
     function selectBook(id) {
       AppState.selectedBook = id;
       const book = AppState.books.find(b => b.id === id);
       if (book) {
         book.lastReadTime = Date.now();
+        
+        // 偵測進度衝突 (Task 7)
+        if (AppState.cloudProgress !== null && AppState.cloudProgress !== book.progress) {
+          AppState.localProgress = book.progress;
+          openConflictDialog(book);
+          return;
+        }
+        
         AppState.currentPageNumber = Math.max(1, Math.min(12, Math.round((book.progress / 100) * 12)));
       }
       AppState.selectedChapter = null; // 清除搜尋特定章節的狀態
@@ -3311,6 +3397,57 @@
       AppState.currentPage = originalPage;
       AppState.readingTimerActive = originalTimerState;
       AppState.stats.lastActivity = originalLastActivity;
+    });
+
+    // 測試 12：驗證雲端與本地進度不一致時正確彈窗詢問
+    runTest('驗證雲端與本地進度不一致時正確彈窗詢問', () => {
+      const originalBook = AppState.selectedBook;
+      const book = AppState.books.find(b => b.id === '1');
+      const originalProgress = book.progress;
+      const originalCloud = AppState.cloudProgress;
+      const originalLocal = AppState.localProgress;
+      
+      // 1. 設置不一致的進度
+      book.progress = 30;
+      AppState.cloudProgress = 85;
+      AppState.localProgress = 30;
+      
+      // 2. 模擬點選書籍進入（會打開衝突 dialog）
+      selectBook('1');
+      
+      const dialog = document.getElementById('sync-conflict-dialog');
+      if (dialog.style.display !== 'flex') {
+        book.progress = originalProgress;
+        AppState.cloudProgress = originalCloud;
+        AppState.localProgress = originalLocal;
+        AppState.selectedBook = originalBook;
+        throw new Error('未能在進度衝突時彈出詢問對話框');
+      }
+      
+      // 3. 解決衝突，點選保留本地進度 (useCloud = false)
+      resolveConflict(false);
+      
+      if (book.progress !== 30) {
+        book.progress = originalProgress;
+        AppState.cloudProgress = originalCloud;
+        AppState.localProgress = originalLocal;
+        AppState.selectedBook = originalBook;
+        throw new Error('選擇保留本地進度後，進度被錯誤修改');
+      }
+      
+      if (dialog.style.display === 'flex') {
+        book.progress = originalProgress;
+        AppState.cloudProgress = originalCloud;
+        AppState.localProgress = originalLocal;
+        AppState.selectedBook = originalBook;
+        throw new Error('解決衝突後未能關閉對話框');
+      }
+      
+      // 還原狀態
+      book.progress = originalProgress;
+      AppState.cloudProgress = originalCloud;
+      AppState.localProgress = originalLocal;
+      AppState.selectedBook = originalBook;
     });
 
     // 初始渲染與自我測試
