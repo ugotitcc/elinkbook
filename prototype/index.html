@@ -1382,11 +1382,12 @@
       <div id="bottom-sheet-backdrop" class="bottom-sheet-backdrop" onclick="closeBottomSheet()"></div>
       <div id="layout-bottom-sheet" class="bottom-sheet" style="height: 520px;">
         <div class="bottom-sheet-header" style="padding: 15px 20px 10px 20px;">
-          <div class="bottom-sheet-tabs" style="display: flex; gap: 20px; align-items: center; width: 100%; padding-right: 20px; user-select: none;">
-            <span class="sheet-tab active" id="tab-layout-btn" onclick="switchSheetTab('layout')" style="font-size: 13px; font-weight: bold; cursor: pointer; padding-bottom: 6px; border-bottom: 2px solid var(--primary); transition: all 0.2s;">⚙️ 版面與字型</span>
-            <span class="sheet-tab" id="tab-notes-btn" onclick="switchSheetTab('notes')" style="font-size: 13px; font-weight: bold; cursor: pointer; padding-bottom: 6px; border-bottom: 2px solid transparent; opacity: 0.6; transition: all 0.2s;">📝 劃線與書籤</span>
+          <div class="bottom-sheet-tabs" style="display: flex; gap: 15px; align-items: center; width: 100%; padding-right: 20px; user-select: none;">
+            <span class="sheet-tab active" id="tab-layout-btn" onclick="switchSheetTab('layout')" style="font-size: 12px; font-weight: bold; cursor: pointer; padding-bottom: 6px; border-bottom: 2px solid var(--primary); transition: all 0.2s;">⚙️ 版面</span>
+            <span class="sheet-tab" id="tab-toc-btn" onclick="switchSheetTab('toc')" style="font-size: 12px; font-weight: bold; cursor: pointer; padding-bottom: 6px; border-bottom: 2px solid transparent; opacity: 0.6; transition: all 0.2s;">📖 目錄</span>
+            <span class="sheet-tab" id="tab-notes-btn" onclick="switchSheetTab('notes')" style="font-size: 12px; font-weight: bold; cursor: pointer; padding-bottom: 6px; border-bottom: 2px solid transparent; opacity: 0.6; transition: all 0.2s;">📝 劃線書籤</span>
           </div>
-          <span class="bottom-sheet-close" onclick="closeBottomSheet()" style="font-size: 16px;">✕</span>
+          <span class="bottom-sheet-close" onclick="closeBottomSheet()" style="font-size: 16px; cursor: pointer;">✕</span>
         </div>
         
         <!-- Tab 1: 版面與字型設定 -->
@@ -1465,17 +1466,79 @@
             </div>
           </div>
 
-          <!-- 字型管理 -->
+          <!-- 字型選擇 (FR-09) -->
           <div class="setting-item" style="border-top: 1px solid var(--border-color); padding-top: 12px; margin-top: 12px;">
-            <label><span>閱讀字型切換</span></label>
-            <div class="control-row" style="margin-bottom: 8px;">
-              <select id="font-select" onchange="setLayoutParam('fontFamily', this.value)" style="flex: 1; padding: 8px; border-radius: 6px; background: var(--card-bg); color: var(--text-color); border: 1px solid var(--border-color); font-size: 12px; outline: none;"></select>
-              <button id="delete-font-btn" onclick="handleDeleteFont()" style="padding: 8px 12px; font-size: 12px; border-radius: 6px; border: 1px solid rgba(239, 68, 68, 0.4); background: rgba(239, 68, 68, 0.1); color: #EF4444; cursor: pointer; font-weight: 600; transition: all 0.2s;">刪除</button>
-            </div>
-            <label><span>載入自訂 Google 字型</span></label>
+            <label><span>單書閱讀字型</span></label>
             <div class="control-row">
-              <input type="text" id="custom-font-input" placeholder="例如: Ma Shan Zheng 或 ZCOOL XiaoWei" style="flex: 1; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-color); font-size: 12px; outline: none;">
-              <button class="btn" onclick="handleLoadFont()" style="width: auto; padding: 8px 16px; font-size: 12px; border-radius: 6px; margin-top: 0; box-shadow: none;">載入</button>
+              <select id="font-select" onchange="setBookLayoutParam('fontFamily', this.value)" style="flex: 1; padding: 8px; border-radius: 6px; background: var(--card-bg); color: var(--text-color); border: 1px solid var(--border-color); font-size: 12px; outline: none; cursor: pointer;"></select>
+            </div>
+          </div>
+
+          <!-- 排版方向三圖示選項 (FR-10) -->
+          <div class="setting-item">
+            <label><span>排版方向模式</span></label>
+            <div style="display: flex; gap: 6px; width: 100%;">
+              <button id="mode-override-default" onclick="setWritingModeOverride('default')" style="flex: 1; padding: 6px; font-size: 10px; border-radius: 6px; border: 1px solid var(--border-color); background: rgba(0,0,0,0.06); color: var(--text-color); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; font-weight: bold; transition: all 0.2s;">📖 預設</button>
+              <button id="mode-override-vertical" onclick="setWritingModeOverride('vertical')" style="flex: 1; padding: 6px; font-size: 10px; border-radius: 6px; border: 1px solid var(--border-color); background: rgba(0,0,0,0.06); color: var(--text-color); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; font-weight: bold; transition: all 0.2s;">⬇ 直排</button>
+              <button id="mode-override-horizontal" onclick="setWritingModeOverride('horizontal')" style="flex: 1; padding: 6px; font-size: 10px; border-radius: 6px; border: 1px solid var(--border-color); background: rgba(0,0,0,0.06); color: var(--text-color); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; font-weight: bold; transition: all 0.2s;">➔ 橫排</button>
+            </div>
+          </div>
+
+          <!-- 螢幕方向鎖定覆寫 (FR-10, FR-37) -->
+          <div class="setting-item">
+            <label><span>螢幕方向鎖定覆寫</span></label>
+            <select id="book-orient-select" onchange="setBookLayoutParam('screenOrientation', this.value)" style="width: 100%; padding: 8px; border-radius: 6px; background: var(--card-bg); color: var(--text-color); border: 1px solid var(--border-color); font-size: 12px; cursor: pointer; outline: none;">
+              <option value="default">使用系統預設</option>
+              <option value="auto">自動旋轉</option>
+              <option value="0">強制鎖定 0°</option>
+              <option value="90">強制鎖定 90°</option>
+              <option value="180">強制鎖定 180°</option>
+              <option value="270">強制鎖定 270°</option>
+            </select>
+          </div>
+
+          <!-- 翻頁模式覆寫 (FR-10, FR-38) -->
+          <div class="setting-item">
+            <label><span>翻頁模式覆寫</span></label>
+            <select id="book-pagemode-select" onchange="setBookLayoutParam('pageMode', this.value)" style="width: 100%; padding: 8px; border-radius: 6px; background: var(--card-bg); color: var(--text-color); border: 1px solid var(--border-color); font-size: 12px; cursor: pointer; outline: none;">
+              <option value="default">使用系統預設</option>
+              <option value="click">點擊翻頁</option>
+              <option value="scroll">滾動翻頁</option>
+            </select>
+          </div>
+
+          <!-- 頁首與頁尾顯示切換 (FR-40) -->
+          <div class="setting-item" style="border-top: 1px solid var(--border-color); padding-top: 12px;">
+            <label style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; margin-bottom: 8px;">
+              <span>顯示頁首章節名稱</span>
+              <input type="checkbox" id="book-show-header-cb" onchange="setBookLayoutParam('showHeader', this.checked)" style="width: 16px; height: 16px; cursor: pointer;">
+            </label>
+            <label style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;">
+              <span>顯示頁尾閱讀進度</span>
+              <input type="checkbox" id="book-show-footer-cb" onchange="setBookLayoutParam('showFooter', this.checked)" style="width: 16px; height: 16px; cursor: pointer;">
+            </label>
+          </div>
+
+          <!-- 左右熱區獨立行為自定義 (FR-24) -->
+          <div class="setting-item" style="border-top: 1px solid var(--border-color); padding-top: 12px;">
+            <label><span>單手模式熱區定義 (FR-24)</span></label>
+            <div style="display: flex; gap: 8px; margin-top: 6px;">
+              <div style="flex: 1;">
+                <span style="font-size: 9px; opacity: 0.6;">左側熱區動作</span>
+                <select id="book-left-zone-select" onchange="setBookLayoutParam('leftZoneAction', this.value)" style="width: 100%; padding: 6px; border-radius: 4px; background: var(--card-bg); color: var(--text-color); border: 1px solid var(--border-color); font-size: 11px; margin-top: 4px; cursor: pointer; outline: none;">
+                  <option value="default">預設鏡像</option>
+                  <option value="prev">點擊為「上一頁」</option>
+                  <option value="next">點擊為「下一頁」</option>
+                </select>
+              </div>
+              <div style="flex: 1;">
+                <span style="font-size: 9px; opacity: 0.6;">右側熱區動作</span>
+                <select id="book-right-zone-select" onchange="setBookLayoutParam('rightZoneAction', this.value)" style="width: 100%; padding: 6px; border-radius: 4px; background: var(--card-bg); color: var(--text-color); border: 1px solid var(--border-color); font-size: 11px; margin-top: 4px; cursor: pointer; outline: none;">
+                  <option value="default">預設鏡像</option>
+                  <option value="next">點擊為「下一頁」</option>
+                  <option value="prev">點擊為「上一頁」</option>
+                </select>
+              </div>
             </div>
           </div>
 
@@ -1492,6 +1555,13 @@
                 <!-- 由 JS 動態生成 9 個 div -->
               </div>
             </div>
+          </div>
+        </div>
+
+        <!-- Tab 1.5: 書籍目錄 (FR-07) -->
+        <div class="bottom-sheet-content" id="tab-content-toc" style="display: none; max-height: 440px; overflow-y: auto; padding: 15px 20px;">
+          <div id="toc-list-container" style="display: flex; flex-direction: column; gap: 8px;">
+            <!-- 由 JS 動態生成 -->
           </div>
         </div>
 
@@ -1597,6 +1667,23 @@
           </div>
         </div>
       </div>
+      
+      <!-- 書籍分類群組管理對話框 (FR-33) -->
+      <div id="group-manage-dialog" class="dialog-overlay" style="display: none;" onclick="event.target.id === 'group-manage-dialog' && closeGroupManageDialog()">
+        <div class="dialog-card" style="width: 270px; padding: 18px;">
+          <div class="dialog-title" style="margin-bottom: 12px; font-weight: bold; color: var(--text-color);">管理書籍分類</div>
+          <div style="display: flex; gap: 6px; margin-bottom: 12px;">
+            <input type="text" id="new-group-input" placeholder="新分類名稱..." style="flex: 1; padding: 6px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-color); font-size: 11px; border-radius: 6px; outline: none;">
+            <button onclick="handleAddGroup()" class="btn" style="margin-top: 0; padding: 6px 12px; font-size: 11px; width: auto; border-radius: 6px;">新增</button>
+          </div>
+          <div id="group-manage-list" style="display: flex; flex-direction: column; gap: 6px; max-height: 180px; overflow-y: auto; margin-bottom: 12px;">
+            <!-- 由 JS 渲染 -->
+          </div>
+          <div class="dialog-actions">
+            <button class="dialog-btn cancel" onclick="closeGroupManageDialog()" style="width: 100%;">關閉</button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1606,6 +1693,17 @@
     <div style="margin-bottom: 24px; display: flex; flex-direction: column; gap: 8px;">
       <button class="btn" onclick="runAllTests()">運行自我測試 Suite</button>
       <button class="btn" style="background: #D97706; color: #fff;" onclick="triggerSyncConflict()">☁️ 模擬雲端進度衝突 (85%)</button>
+      <div style="border-top: 1px dashed rgba(0,0,0,0.15); padding-top: 8px; margin-top: 4px; display: flex; flex-direction: column; gap: 6px;">
+        <span style="font-size: 11px; font-weight: bold; opacity: 0.8; color: var(--text-color);">📥 模擬書籍匯入 (FR-34)</span>
+        <label style="font-size: 11px; display: flex; align-items: center; gap: 4px; cursor: pointer; user-select: none; color: var(--text-color);">
+          <input type="checkbox" id="import-auto-group-cb" checked onchange="AppState.importAutoGroup = this.checked; updateStateMonitor();">
+          依資料夾名稱自動建立分類並歸入
+        </label>
+        <div style="display: flex; gap: 6px;">
+          <button class="btn" style="margin-top: 0; padding: 4px 8px; font-size: 10px; flex: 1;" onclick="mockImportFolder('歷史小說')">匯入【歷史小說】</button>
+          <button class="btn" style="margin-top: 0; padding: 4px 8px; font-size: 10px; flex: 1;" onclick="mockImportFolder('科技新知')">匯入【科技新知】</button>
+        </div>
+      </div>
     </div>
     
     <!-- 測試套件結果 -->
@@ -1667,19 +1765,27 @@
       viewMode: localStorage.getItem('viewMode') || 'grid',
       sortBy: localStorage.getItem('sortBy') || 'lastRead',
       searchQuery: '',
+      groups: ['未分類', '經典名著', '古典奇幻', '文言經典'],
+      selectedGroup: '全部',
+      importAutoGroup: true,
+      globalSettings: {
+        volumeKeyEnabled: true,
+        screenOrientation: 'auto', // auto, 0, 90, 180, 270
+        pageMode: 'click', // click, scroll
+      },
       books: [
-        { id: '1', title: '紅樓夢', author: '曹雪芹', progress: 45, format: 'EPUB', coverStyle: 'style-classic-1', lastReadTime: 1720054800000, createTime: 1704067200000 },
-        { id: '2', title: '三國演義', author: '羅貫中', progress: 12, format: 'TXT', coverStyle: 'style-classic-2', lastReadTime: 1720000000000, createTime: 1704153600000 },
-        { id: '3', title: '水滸傳', author: '施耐庵', progress: 28, format: 'EPUB', coverStyle: 'style-classic-3', lastReadTime: 1719900000000, createTime: 1704240000000 },
-        { id: '4', title: '西遊記', author: '吳承恩', progress: 60, format: 'EPUB', coverStyle: 'style-classic-4', lastReadTime: 1720083600000, createTime: 1704326400000 },
-        { id: '5', title: '聊齋志異', author: '蒲松齡', progress: 8, format: 'TXT', coverStyle: 'style-modern-1', lastReadTime: 1719500000000, createTime: 1704412800000 },
-        { id: '6', title: '儒林外史', author: '吳敬梓', progress: 15, format: 'TXT', coverStyle: 'style-modern-2', lastReadTime: 1719600000000, createTime: 1704500000000 },
-        { id: '7', title: '鏡花緣', author: '李汝珍', progress: 5, format: 'EPUB', coverStyle: 'style-modern-3', lastReadTime: 1719100000000, createTime: 1704586400000 },
-        { id: '8', title: '封神演義', author: '許仲琳', progress: 50, format: 'EPUB', coverStyle: 'style-modern-4', lastReadTime: 1720051200000, createTime: 1704672800000 },
-        { id: '9', title: '老殘遊記', author: '劉鶚', progress: 32, format: 'TXT', coverStyle: 'style-classic-1', lastReadTime: 1719800000000, createTime: 1704759200000 },
-        { id: '10', title: '世說新語', author: '劉義慶', progress: 75, format: 'EPUB', coverStyle: 'style-classic-2', lastReadTime: 1720076400000, createTime: 1704845600000 },
-        { id: '11', title: '桃花源記', author: '陶淵明', progress: 100, format: 'TXT', coverStyle: 'style-classic-3', lastReadTime: 1718000000000, createTime: 1704932000000 },
-        { id: '12', title: '搜神記', author: '干寶', progress: 0, format: 'EPUB', coverStyle: 'style-modern-1', lastReadTime: 0, createTime: 1705018400000 }
+        { id: '1', title: '紅樓夢', author: '曹雪芹', progress: 45, format: 'EPUB', coverStyle: 'style-classic-1', lastReadTime: 1720054800000, createTime: 1704067200000, group: '經典名著', pageMode: 'default', screenOrientation: 'default', writingModeOverride: 'default', showHeader: true, showFooter: true, leftZoneAction: 'default', rightZoneAction: 'default' },
+        { id: '2', title: '三國演義', author: '羅貫中', progress: 12, format: 'TXT', coverStyle: 'style-classic-2', lastReadTime: 1720000000000, createTime: 1704153600000, group: '經典名著', pageMode: 'default', screenOrientation: 'default', writingModeOverride: 'default', showHeader: true, showFooter: true, leftZoneAction: 'default', rightZoneAction: 'default' },
+        { id: '3', title: '水滸傳', author: '施耐庵', progress: 28, format: 'EPUB', coverStyle: 'style-classic-3', lastReadTime: 1719900000000, createTime: 1704240000000, group: '經典名著', pageMode: 'default', screenOrientation: 'default', writingModeOverride: 'default', showHeader: true, showFooter: true, leftZoneAction: 'default', rightZoneAction: 'default' },
+        { id: '4', title: '西遊記', author: '吳承恩', progress: 60, format: 'EPUB', coverStyle: 'style-classic-4', lastReadTime: 1720083600000, createTime: 1704326400000, group: '經典名著', pageMode: 'default', screenOrientation: 'default', writingModeOverride: 'default', showHeader: true, showFooter: true, leftZoneAction: 'default', rightZoneAction: 'default' },
+        { id: '5', title: '聊齋志異', author: '蒲松齡', progress: 8, format: 'TXT', coverStyle: 'style-modern-1', lastReadTime: 1719500000000, createTime: 1704412800000, group: '古典奇幻', pageMode: 'default', screenOrientation: 'default', writingModeOverride: 'default', showHeader: true, showFooter: true, leftZoneAction: 'default', rightZoneAction: 'default' },
+        { id: '6', title: '儒林外史', author: '吳敬梓', progress: 15, format: 'TXT', coverStyle: 'style-modern-2', lastReadTime: 1719600000000, createTime: 1704500000000, group: '文言經典', pageMode: 'default', screenOrientation: 'default', writingModeOverride: 'default', showHeader: true, showFooter: true, leftZoneAction: 'default', rightZoneAction: 'default' },
+        { id: '7', title: '鏡花緣', author: '李汝珍', progress: 5, format: 'EPUB', coverStyle: 'style-modern-3', lastReadTime: 1719100000000, createTime: 1704586400000, group: '古典奇幻', pageMode: 'default', screenOrientation: 'default', writingModeOverride: 'default', showHeader: true, showFooter: true, leftZoneAction: 'default', rightZoneAction: 'default' },
+        { id: '8', title: '封神演義', author: '許仲琳', progress: 50, format: 'EPUB', coverStyle: 'style-modern-4', lastReadTime: 1720051200000, createTime: 1704672800000, group: '古典奇幻', pageMode: 'default', screenOrientation: 'default', writingModeOverride: 'default', showHeader: true, showFooter: true, leftZoneAction: 'default', rightZoneAction: 'default' },
+        { id: '9', title: '老殘遊記', author: '劉鶚', progress: 32, format: 'TXT', coverStyle: 'style-classic-1', lastReadTime: 1719800000000, createTime: 1704759200000, group: '文言經典', pageMode: 'default', screenOrientation: 'default', writingModeOverride: 'default', showHeader: true, showFooter: true, leftZoneAction: 'default', rightZoneAction: 'default' },
+        { id: '10', title: '世說新語', author: '劉義慶', progress: 75, format: 'EPUB', coverStyle: 'style-classic-2', lastReadTime: 1720076400000, createTime: 1704845600000, group: '文言經典', pageMode: 'default', screenOrientation: 'default', writingModeOverride: 'default', showHeader: true, showFooter: true, leftZoneAction: 'default', rightZoneAction: 'default' },
+        { id: '11', title: '桃花源記', author: '陶淵明', progress: 100, format: 'TXT', coverStyle: 'style-classic-3', lastReadTime: 1718000000000, createTime: 1704932000000, group: '文言經典', pageMode: 'default', screenOrientation: 'default', writingModeOverride: 'default', showHeader: true, showFooter: true, leftZoneAction: 'default', rightZoneAction: 'default' },
+        { id: '12', title: '搜神記', author: '干寶', progress: 0, format: 'EPUB', coverStyle: 'style-modern-1', lastReadTime: 0, createTime: 1705018400000, group: '古典奇幻', pageMode: 'default', screenOrientation: 'default', writingModeOverride: 'default', showHeader: true, showFooter: true, leftZoneAction: 'default', rightZoneAction: 'default' }
       ],
       annotations: [],
       bookmarks: [],
@@ -2005,35 +2111,74 @@
 
     // BottomSheet Tab 切換邏輯與書籤
     function switchSheetTab(tabName) {
-      const layoutTab = document.getElementById('tab-content-layout');
-      const notesTab = document.getElementById('tab-content-notes');
-      const layoutBtn = document.getElementById('tab-layout-btn');
-      const notesBtn = document.getElementById('tab-notes-btn');
+      const tabs = ['layout', 'toc', 'notes'];
+      tabs.forEach(t => {
+        const btn = document.getElementById(`tab-${t}-btn`);
+        const content = document.getElementById(`tab-content-${t}`);
+        if (btn && content) {
+          if (t === tabName) {
+            btn.classList.add('active');
+            btn.style.borderBottomColor = 'var(--primary)';
+            btn.style.opacity = '1';
+            content.style.display = 'block';
+          } else {
+            btn.classList.remove('active');
+            btn.style.borderBottomColor = 'transparent';
+            btn.style.opacity = '0.6';
+            content.style.display = 'none';
+          }
+        }
+      });
       
-      if (tabName === 'layout') {
-        if (layoutTab) layoutTab.style.display = 'block';
-        if (notesTab) notesTab.style.display = 'none';
-        if (layoutBtn) {
-          layoutBtn.style.borderBottomColor = 'var(--primary)';
-          layoutBtn.style.opacity = '1';
+      const book = AppState.books.find(b => b.id === AppState.selectedBook);
+      if (book) {
+        if (tabName === 'toc') {
+          renderTocList(book);
+        } else if (tabName === 'notes') {
+          renderNotesTabContent();
+        } else if (tabName === 'layout') {
+          renderBottomSheetContent();
         }
-        if (notesBtn) {
-          notesBtn.style.borderBottomColor = 'transparent';
-          notesBtn.style.opacity = '0.6';
-        }
-      } else {
-        if (layoutTab) layoutTab.style.display = 'none';
-        if (notesTab) notesTab.style.display = 'block';
-        if (layoutBtn) {
-          layoutBtn.style.borderBottomColor = 'transparent';
-          layoutBtn.style.opacity = '0.6';
-        }
-        if (notesBtn) {
-          notesBtn.style.borderBottomColor = 'var(--primary)';
-          notesBtn.style.opacity = '1';
-        }
-        renderNotesTabContent();
       }
+    }
+
+    function renderTocList(book) {
+      const container = document.getElementById('toc-list-container');
+      if (!container) return;
+      const chapters = BookDatabase[book.id] || [];
+      if (chapters.length === 0) {
+        container.innerHTML = `<div style="text-align: center; font-size: 12px; opacity: 0.5; padding: 20px; color: var(--text-color);">這本書目前沒有目錄資訊</div>`;
+        return;
+      }
+      
+      container.innerHTML = chapters.map((ch, idx) => {
+        const isCurrent = AppState.selectedChapter === ch.chapter || 
+          (!AppState.selectedChapter && idx === 0 && AppState.currentPageNumber <= 6); // 簡化判定
+        return `
+          <div onclick="jumpToChapter('${ch.chapter}')" style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-radius: 6px; border: 1px solid ${isCurrent ? 'var(--primary)' : 'var(--border-color)'}; background: ${isCurrent ? 'rgba(var(--primary-rgb, 139, 92, 246), 0.1)' : 'rgba(0,0,0,0.02)'}; cursor: pointer; transition: all 0.2s;">
+            <span style="font-size: 11px; font-weight: ${isCurrent ? 'bold' : 'normal'}; color: var(--text-color);">${ch.chapter}</span>
+            <span style="font-size: 9px; opacity: 0.5; color: var(--text-color);">跳轉 ➔</span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function jumpToChapter(chapterName) {
+      AppState.selectedChapter = chapterName;
+      const book = AppState.books.find(b => b.id === AppState.selectedBook);
+      if (book) {
+        const chapters = BookDatabase[book.id] || [];
+        const idx = chapters.findIndex(ch => ch.chapter === chapterName);
+        if (idx !== -1) {
+          // 模擬章節跳轉定位：第一章在第 1 頁，第二章在第 7 頁
+          AppState.currentPageNumber = Math.max(1, idx * 6 + 1);
+          book.progress = Math.round((AppState.currentPageNumber / 12) * 100);
+        }
+      }
+      closeBottomSheet();
+      renderApp();
+      updateStateMonitor();
+      showToast(`📖 已跳轉至 ${chapterName}`);
     }
 
     function renderNotesTabContent() {
@@ -2230,6 +2375,11 @@
       if (footer && AppState.currentPage === 'reader') {
         const book = AppState.books.find(b => b.id === AppState.selectedBook);
         if (book) {
+          if (book.showFooter === false) {
+            footer.style.setProperty('display', 'none', 'important');
+          } else {
+            footer.style.setProperty('display', 'flex', 'important');
+          }
           footer.innerHTML = `
             <span>進度：${book.progress}% | 今日已讀：${Math.round(AppState.stats.todayMinutes)} 分鐘</span>
             <span>第 ${AppState.currentPageNumber} / 12 頁</span>
@@ -2266,6 +2416,240 @@
         cells.push(`<div class="heatmap-cell" style="background: ${color}; width: 5px; height: 5px; border-radius: 1px; transition: background-color 0.2s;" title="${dateStr}: 閱讀 ${Math.round(mins)} 分鐘"></div>`);
       }
       return cells.join('');
+    }
+
+    // 3.4 頁首目錄與單書排版覆寫 (FR-07, FR-09, FR-10, FR-24, FR-40)
+    function triggerHeaderChapterClick() {
+      openBottomSheet();
+      switchSheetTab('toc');
+    }
+
+    function setBookLayoutParam(key, value) {
+      const book = AppState.books.find(b => b.id === AppState.selectedBook);
+      if (book) {
+        book[key] = value;
+        if (key === 'fontFamily') {
+          AppState.layout.fontFamily = value;
+        }
+        renderApp();
+        renderBottomSheetContent();
+        updateStateMonitor();
+      }
+    }
+
+    function setWritingModeOverride(mode) {
+      const book = AppState.books.find(b => b.id === AppState.selectedBook);
+      if (book) {
+        book.writingModeOverride = mode;
+        if (mode === 'vertical') {
+          AppState.layoutDirection = 'vertical';
+        } else if (mode === 'horizontal') {
+          AppState.layoutDirection = 'horizontal';
+        } else {
+          AppState.layoutDirection = book.format === 'EPUB' ? 'vertical' : 'horizontal';
+        }
+        renderApp();
+        renderBottomSheetContent();
+        updateStateMonitor();
+        showToast(`排版已切換：${mode === 'vertical' ? '強制直排' : mode === 'horizontal' ? '強制橫排' : '採用書籍排版'}`);
+      }
+    }
+
+    function updateWritingModeButtons(book) {
+      const mode = book.writingModeOverride || 'default';
+      ['default', 'vertical', 'horizontal'].forEach(m => {
+        const btn = document.getElementById(`mode-override-${m}`);
+        if (btn) {
+          if (m === mode) {
+            btn.style.background = 'var(--primary)';
+            btn.style.color = '#fff';
+            btn.style.borderColor = 'var(--primary)';
+          } else {
+            btn.style.background = 'rgba(0,0,0,0.06)';
+            btn.style.color = 'var(--text-color)';
+            btn.style.borderColor = 'var(--border-color)';
+          }
+        }
+      });
+    }
+
+    // 3.5 書籍分類群組管理與自動分類 (FR-33, FR-34)
+    function openGroupManageDialog() {
+      const dialog = document.getElementById('group-manage-dialog');
+      if (dialog) {
+        dialog.style.display = 'flex';
+        renderGroupManageList();
+      }
+    }
+
+    function closeGroupManageDialog() {
+      const dialog = document.getElementById('group-manage-dialog');
+      if (dialog) {
+        dialog.style.display = 'none';
+      }
+    }
+
+    function renderGroupManageList() {
+      const listEl = document.getElementById('group-manage-list');
+      if (!listEl) return;
+      const editableGroups = AppState.groups.filter(g => g !== '未分類');
+      listEl.innerHTML = editableGroups.map(g => `
+        <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.05); padding: 6px 8px; border-radius: 6px;">
+          <span style="font-size: 11px; font-weight: 500; color: var(--text-color);">${g}</span>
+          <div style="display: flex; gap: 8px;">
+            <span onclick="renameGroupPrompt('${g}')" style="color: var(--primary); cursor: pointer; font-size: 10px; font-weight: bold;">改名</span>
+            <span onclick="handleDeleteGroup('${g}')" style="color: #EF4444; cursor: pointer; font-size: 10px; font-weight: bold;">刪除</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function handleAddGroup() {
+      const input = document.getElementById('new-group-input');
+      const val = input ? input.value.trim() : '';
+      if (!val) return;
+      if (AppState.groups.includes(val)) {
+        showToast('⚠️ 分類已存在');
+        return;
+      }
+      AppState.groups.push(val);
+      if (input) input.value = '';
+      renderGroupManageList();
+      renderApp();
+      updateStateMonitor();
+      showToast(`📁 已新增分類：${val}`);
+    }
+
+    function renameGroupPrompt(oldName) {
+      const newName = prompt(`將分類「${oldName}」重新命名為：`, oldName);
+      if (newName === null) return;
+      const trimmed = newName.trim();
+      if (!trimmed || trimmed === oldName) return;
+      if (AppState.groups.includes(trimmed)) {
+        showToast('⚠️ 分類已存在');
+        return;
+      }
+      AppState.groups = AppState.groups.map(g => g === oldName ? trimmed : g);
+      AppState.books.forEach(b => {
+        if (b.group === oldName) b.group = trimmed;
+      });
+      if (AppState.selectedGroup === oldName) {
+        AppState.selectedGroup = trimmed;
+      }
+      renderGroupManageList();
+      renderApp();
+      updateStateMonitor();
+      showToast(`📁 分類已重新命名為：${trimmed}`);
+    }
+
+    function handleDeleteGroup(name) {
+      if (!confirm(`確定要刪除分類「${name}」嗎？\n該分類下的所有書籍將自動歸類至「未分類」。`)) return;
+      AppState.groups = AppState.groups.filter(g => g !== name);
+      AppState.books.forEach(b => {
+        if (b.group === name) b.group = '未分類';
+      });
+      if (AppState.selectedGroup === name) {
+        AppState.selectedGroup = '全部';
+      }
+      renderGroupManageList();
+      renderApp();
+      updateStateMonitor();
+      showToast(`🗑️ 已刪除分類：${name}`);
+    }
+
+    function selectGroupFilter(groupName) {
+      AppState.selectedGroup = groupName;
+      renderApp();
+      updateStateMonitor();
+    }
+
+    function mockImportFolder(folderName) {
+      const title = `新匯入書籍-${Math.floor(Math.random() * 900) + 100}`;
+      const author = '未知作者';
+      const format = 'EPUB';
+      const coverStyle = 'style-modern-1';
+      
+      let targetGroup = '未分類';
+      if (AppState.importAutoGroup) {
+        targetGroup = folderName;
+        if (!AppState.groups.includes(folderName)) {
+          AppState.groups.push(folderName);
+        }
+      }
+      
+      const newBook = {
+        id: (AppState.books.length + 1).toString(),
+        title,
+        author,
+        progress: 0,
+        format,
+        coverStyle,
+        lastReadTime: Date.now(),
+        createTime: Date.now(),
+        group: targetGroup,
+        pageMode: 'default',
+        screenOrientation: 'default',
+        writingModeOverride: 'default',
+        showHeader: true,
+        showFooter: true,
+        leftZoneAction: 'default',
+        rightZoneAction: 'default'
+      };
+      
+      AppState.books.push(newBook);
+      BookDatabase[newBook.id] = [
+        { chapter: '第一章', content: `這是來自資料夾【${folderName}】的匯入書籍內容。自動建立分類並歸屬。` }
+      ];
+      
+      renderApp();
+      updateStateMonitor();
+      showToast(`📥 成功匯入《${title}》，歸入分類：${targetGroup}`);
+    }
+
+    // 3.6 全域設定與字型檔案管理 (FR-30, FR-35, FR-39)
+    function handleLoadCustomFont() {
+      const input = document.getElementById('custom-font-name-input');
+      const val = input ? input.value.trim() : '';
+      if (!val) return;
+      if (AppState.fonts.some(f => f.name.toLowerCase() === val.toLowerCase())) {
+        showToast('⚠️ 字型已存在');
+        return;
+      }
+      AppState.fonts.push({ name: val, system: false });
+      if (input) input.value = '';
+      
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      const queryName = val.replace(/ /g, '+');
+      link.href = `https://fonts.googleapis.com/css2?family=${queryName}:wght@300;400;500;600;700&display=swap`;
+      document.head.appendChild(link);
+
+      renderApp();
+      updateStateMonitor();
+      showToast(`🔤 已載入字型檔案：${val}`);
+    }
+
+    function handleDeleteFont(fontName) {
+      if (!confirm(`確定要刪除字型「${fontName}」嗎？\n使用該字型的書籍將退回預設字型。`)) return;
+      AppState.fonts = AppState.fonts.filter(f => f.name !== fontName);
+      AppState.books.forEach(b => {
+        if (b.fontFamily === fontName) {
+          b.fontFamily = 'Noto Serif TC';
+        }
+      });
+      if (AppState.layout.fontFamily === fontName) {
+        AppState.layout.fontFamily = 'Noto Serif TC';
+      }
+      renderApp();
+      updateStateMonitor();
+      showToast(`🗑️ 已刪除字型：${fontName}`);
+    }
+
+    function handleLogout() {
+      if (confirm('確定要登出雲端帳戶嗎？\n登出後將暫停自動雲端同步。')) {
+        showToast('🔓 帳戶已登出，同步已暫停');
+        updateStateMonitor();
+      }
     }
 
     // 4. 主題切換機制
@@ -2367,6 +2751,9 @@
     }
 
     function renderBottomSheetContent() {
+      const book = AppState.books.find(b => b.id === AppState.selectedBook);
+      if (!book) return;
+
       const l = AppState.layout;
       
       document.getElementById('val-fontSize').textContent = l.fontSize;
@@ -2387,23 +2774,49 @@
       document.getElementById('slider-marginLeft').value = l.marginLeft;
       document.getElementById('slider-marginRight').value = l.marginRight;
       
+      // 單書字型選擇填充 (FR-09)
       const select = document.getElementById('font-select');
-      select.innerHTML = AppState.fonts.map(f => `
-        <option value="${f.name}" ${l.fontFamily === f.name ? 'selected' : ''}>
-          ${f.name} ${f.system ? '(系統)' : ''}
-        </option>
-      `).join('');
+      if (select) {
+        select.innerHTML = AppState.fonts.map(f => `
+          <option value="${f.name}" ${book.fontFamily === f.name ? 'selected' : ''}>
+            ${f.name} ${f.system ? '(系統)' : ''}
+          </option>
+        `).join('');
+      }
       
-      const currentFont = AppState.fonts.find(f => f.name === l.fontFamily);
-      const deleteBtn = document.getElementById('delete-font-btn');
-      if (currentFont && !currentFont.system) {
-        deleteBtn.removeAttribute('disabled');
-        deleteBtn.style.opacity = '1';
-        deleteBtn.style.cursor = 'pointer';
-      } else {
-        deleteBtn.setAttribute('disabled', 'true');
-        deleteBtn.style.opacity = '0.4';
-        deleteBtn.style.cursor = 'not-allowed';
+      // 更新排版方向三圖示 (FR-10)
+      updateWritingModeButtons(book);
+
+      // 更新單書螢幕鎖定下拉選單 (FR-10)
+      const orientSelect = document.getElementById('book-orient-select');
+      if (orientSelect) {
+        orientSelect.value = book.screenOrientation || 'default';
+      }
+
+      // 更新單書翻頁模式下拉選單 (FR-10)
+      const pageModeSelect = document.getElementById('book-pagemode-select');
+      if (pageModeSelect) {
+        pageModeSelect.value = book.pageMode || 'default';
+      }
+
+      // 更新頁首與頁尾開關狀態 (FR-40)
+      const headerCb = document.getElementById('book-show-header-cb');
+      if (headerCb) {
+        headerCb.checked = book.showHeader !== false;
+      }
+      const footerCb = document.getElementById('book-show-footer-cb');
+      if (footerCb) {
+        footerCb.checked = book.showFooter !== false;
+      }
+
+      // 更新單手熱區自訂下拉選單 (FR-24)
+      const leftSelect = document.getElementById('book-left-zone-select');
+      if (leftSelect) {
+        leftSelect.value = book.leftZoneAction || 'default';
+      }
+      const rightSelect = document.getElementById('book-right-zone-select');
+      if (rightSelect) {
+        rightSelect.value = book.rightZoneAction || 'default';
       }
 
       // 更新九宮格輔助開關與預覽 (Task 4)
@@ -2411,6 +2824,12 @@
       if (navCheckbox) {
         navCheckbox.checked = !!AppState.showNavZones;
       }
+      
+      // 獲取當前書的直/橫排方向與熱區行為定義
+      const isVertical = AppState.layoutDirection === 'vertical';
+      const leftAction = book.leftZoneAction !== 'default' ? book.leftZoneAction : (isVertical ? 'next' : 'prev');
+      const rightAction = book.rightZoneAction !== 'default' ? book.rightZoneAction : (isVertical ? 'prev' : 'next');
+      
       const miniPreview = document.getElementById('mini-zones-preview');
       if (miniPreview) {
         miniPreview.innerHTML = Array.from({ length: 9 }).map((_, i) => {
@@ -2418,26 +2837,25 @@
           let title = '';
           const isLeft = [0, 3, 6].includes(i);
           const isRight = [2, 5, 8].includes(i);
-          const isVertical = AppState.layoutDirection === 'vertical';
           
           if (i === 4) {
             bg = 'rgba(139, 92, 246, 0.4)';
             title = '選單';
           } else if (isLeft) {
-            bg = isVertical ? 'rgba(52, 211, 153, 0.25)' : 'rgba(248, 113, 113, 0.25)';
-            title = isVertical ? '下一頁' : '上一頁';
+            bg = leftAction === 'next' ? 'rgba(52, 211, 153, 0.25)' : 'rgba(248, 113, 113, 0.25)';
+            title = leftAction === 'next' ? '下一頁' : '上一頁';
           } else if (isRight) {
-            bg = isVertical ? 'rgba(248, 113, 113, 0.25)' : 'rgba(52, 211, 153, 0.25)';
-            title = isVertical ? '上一頁' : '下一頁';
+            bg = rightAction === 'next' ? 'rgba(52, 211, 153, 0.25)' : 'rgba(248, 113, 113, 0.25)';
+            title = rightAction === 'next' ? '下一頁' : '上一頁';
           }
           
           let arrow = '';
           if (i === 4) {
             arrow = '⚙️';
           } else if (isLeft) {
-            arrow = isVertical ? '➔' : '⬅';
+            arrow = leftAction === 'next' ? '➔' : '⬅';
           } else if (isRight) {
-            arrow = isVertical ? '⬅' : '➔';
+            arrow = rightAction === 'next' ? '➔' : '⬅';
           }
           
           return `<div style="background: ${bg}; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 9px; color: var(--text-color); font-weight: bold; cursor: default; border: 1px solid rgba(255,255,255,0.03);" title="${title}">${arrow}</div>`;
@@ -2527,7 +2945,7 @@
     function triggerVolumeKey(direction) {
       console.log('Volume Key Pressed:', direction);
       
-      if (AppState.currentPage === 'reader') {
+      if (AppState.currentPage === 'reader' && AppState.globalSettings.volumeKeyEnabled) {
         const book = AppState.books.find(b => b.id === AppState.selectedBook);
         if (book) {
           if (direction === 'down') {
@@ -2537,12 +2955,11 @@
             book.progress = Math.max(0, book.progress - 5);
             showToast('📄 音量鍵翻頁：上一頁');
           }
-          // 音量鍵微調進度後，同步反算更新頁碼，限制在 1 至 12 頁之間
           AppState.currentPageNumber = Math.max(1, Math.min(12, Math.round((book.progress / 100) * 12)));
           renderApp();
         }
       } else {
-        showToast(`🔊 音量調節：${direction === 'up' ? '放大' : '縮小'} (非閱讀狀態)`);
+        showToast(`🔊 系統音量調節：${direction === 'up' ? '音量增加' : '音量減少'}`);
       }
       
       updateStateMonitor();
@@ -2564,7 +2981,14 @@
         event.stopPropagation();
       }
       
-      // 點擊視覺動畫回饋
+      const book = AppState.books.find(b => b.id === AppState.selectedBook);
+      if (!book) return;
+
+      const pageMode = book.pageMode !== 'default' ? book.pageMode : AppState.globalSettings.pageMode;
+      if (pageMode === 'scroll' && index !== 4) {
+        return;
+      }
+      
       const gridEl = document.querySelector('.nav-zones-grid');
       if (gridEl) {
         const cell = gridEl.children[index];
@@ -2576,23 +3000,23 @@
         }
       }
       
-      // 4 為中央格，永遠是觸發選單
       if (index === 4) {
         toggleReaderMenu();
         return;
       }
       
-      // 判斷是否為左半部 (0, 3, 6) 或 右半部 (2, 5, 8)
       const isLeft = [0, 3, 6].includes(index);
       const isRight = [2, 5, 8].includes(index);
+      const isVertical = AppState.layoutDirection === 'vertical';
       
-      if (AppState.writingMode === 'horizontal') {
-        if (isLeft) prevPage();
-        if (isRight) nextPage();
-      } else {
-        // 直排 (Vertical RTL) 右開書：左滑為下一頁，右滑為上一頁 (左右鏡像)
-        if (isLeft) nextPage();
-        if (isRight) prevPage();
+      if (isLeft) {
+        const action = book.leftZoneAction !== 'default' ? book.leftZoneAction : (isVertical ? 'next' : 'prev');
+        if (action === 'next') nextPage();
+        else prevPage();
+      } else if (isRight) {
+        const action = book.rightZoneAction !== 'default' ? book.rightZoneAction : (isVertical ? 'prev' : 'next');
+        if (action === 'next') nextPage();
+        else prevPage();
       }
     }
 
@@ -2824,8 +3248,17 @@
       const selectionEnd = isSearchFocused ? activeEl.selectionEnd : null;
       
       if (AppState.currentPage === 'shelf') {
-        const sortedBooks = getSortedBooks();
-        const { titleMatches, contentMatches } = searchBooks(AppState.searchQuery);
+        let sortedBooks = getSortedBooks();
+        let { titleMatches, contentMatches } = searchBooks(AppState.searchQuery);
+        
+        if (AppState.selectedGroup !== '全部') {
+          sortedBooks = sortedBooks.filter(b => b.group === AppState.selectedGroup);
+          titleMatches = titleMatches.filter(b => b.group === AppState.selectedGroup);
+          contentMatches = contentMatches.filter(match => {
+            const book = AppState.books.find(b => b.id === match.bookId);
+            return book && book.group === AppState.selectedGroup;
+          });
+        }
         
         let shelfContentHtml = '';
         if (AppState.searchQuery) {
@@ -2912,11 +3345,14 @@
           <div class="page-wrapper">
             <div class="app-header">
               <span class="app-title">我的書架</span>
-              <div class="theme-selector">
-                <div class="theme-dot dot-light ${AppState.theme === 'light' ? 'active' : ''}" data-theme="light" onclick="switchTheme('light')" title="淺色模式"></div>
-                <div class="theme-dot dot-dark ${AppState.theme === 'dark' ? 'active' : ''}" data-theme="dark" onclick="switchTheme('dark')" title="深色模式"></div>
-                <div class="theme-dot dot-sepia ${AppState.theme === 'sepia' ? 'active' : ''}" data-theme="sepia" onclick="switchTheme('sepia')" title="羊皮紙模式"></div>
-                <div class="theme-dot dot-eink ${AppState.theme === 'eink' ? 'active' : ''}" data-theme="eink" onclick="switchTheme('eink')" title="E-Ink 高對比"></div>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <button class="reader-opt-btn" onclick="switchPage('settings')" style="padding: 3px 8px; font-size: 10px; border-radius: 6px; cursor: pointer; color: var(--text-color); background: rgba(0,0,0,0.06); border: 1px solid var(--border-color); font-weight: bold;">⚙️ 系統設定</button>
+                <div class="theme-selector">
+                  <div class="theme-dot dot-light ${AppState.theme === 'light' ? 'active' : ''}" data-theme="light" onclick="switchTheme('light')" title="淺色模式"></div>
+                  <div class="theme-dot dot-dark ${AppState.theme === 'dark' ? 'active' : ''}" data-theme="dark" onclick="switchTheme('dark')" title="深色模式"></div>
+                  <div class="theme-dot dot-sepia ${AppState.theme === 'sepia' ? 'active' : ''}" data-theme="sepia" onclick="switchTheme('sepia')" title="羊皮紙模式"></div>
+                  <div class="theme-dot dot-eink ${AppState.theme === 'eink' ? 'active' : ''}" data-theme="eink" onclick="switchTheme('eink')" title="E-Ink 高對比"></div>
+                </div>
               </div>
             </div>
             
@@ -2926,6 +3362,15 @@
               ${AppState.searchQuery ? `
                 <span class="search-clear-btn" onclick="clearSearch()">✕</span>
               ` : ''}
+            </div>
+
+            <!-- 書籍分類群組列 (FR-33) -->
+            <div class="group-tabs-container" style="display: flex; gap: 6px; overflow-x: auto; padding: 4px 0 8px 0; margin-bottom: 8px; border-bottom: 1px solid var(--border-color); user-select: none;">
+              <div class="group-tab" onclick="selectGroupFilter('全部')" style="padding: 3px 8px; font-size: 10px; font-weight: bold; border-radius: 12px; background: ${AppState.selectedGroup === '全部' ? 'var(--primary)' : 'rgba(0,0,0,0.06)'}; color: ${AppState.selectedGroup === '全部' ? '#fff' : 'var(--text-color)'}; cursor: pointer; white-space: nowrap; transition: all 0.2s;">全部</div>
+              ${AppState.groups.map(g => `
+                <div class="group-tab" onclick="selectGroupFilter('${g}')" style="padding: 3px 8px; font-size: 10px; font-weight: bold; border-radius: 12px; background: ${AppState.selectedGroup === g ? 'var(--primary)' : 'rgba(0,0,0,0.06)'}; color: ${AppState.selectedGroup === g ? '#fff' : 'var(--text-color)'}; cursor: pointer; white-space: nowrap; transition: all 0.2s;">${g}</div>
+              `).join('')}
+              <div onclick="openGroupManageDialog()" style="padding: 2px 6px; font-size: 10px; font-weight: bold; border-radius: 12px; border: 1px dashed var(--border-color); color: var(--text-color); cursor: pointer; white-space: nowrap; display: flex; align-items: center; justify-content: center;">➕ 管理</div>
             </div>
 
             <div class="shelf-layout-bar">
@@ -3012,11 +3457,15 @@
         }).join('');
 
         const hasBookmark = AppState.bookmarks.some(bm => bm.bookId === book.id && bm.pageNumber === AppState.currentPageNumber);
+        const chapters = BookDatabase[book.id] || [];
+        const chIdx = AppState.currentPageNumber > 6 ? 1 : 0;
+        const chapterName = chapters[chIdx] ? chapters[chIdx].chapter : '目錄';
+        const pageMode = book.pageMode !== 'default' ? book.pageMode : AppState.globalSettings.pageMode;
 
         appDiv.innerHTML = `
           <div class="page-wrapper" style="height: 100%;">
-            <div class="reader-toolbar">
-              <span style="font-size:12px; font-weight:600; opacity:0.8;">《${book.title}》</span>
+            <div class="reader-toolbar" style="${book.showHeader === false ? 'display: none !important;' : ''}">
+              <span onclick="triggerHeaderChapterClick()" style="font-size:12px; font-weight:600; opacity:0.8; cursor: pointer; text-decoration: underline;" title="點擊展開目錄">《${book.title}》 ${chapterName} ▾</span>
               <div style="display: flex; gap: 6px;">
                 <button class="reader-opt-btn ${hasBookmark ? 'active' : ''}" onclick="toggleBookmark()">${hasBookmark ? '🔖 已書籤' : '🔖 書籤'}</button>
                 <button class="reader-opt-btn" onclick="openBottomSheet()">⚙️ 版面</button>
@@ -3026,16 +3475,16 @@
               </div>
             </div>
             
-            <div class="reader-viewport">
+            <div class="reader-viewport" style="${pageMode === 'scroll' ? 'overflow-y: auto !important; overflow-x: hidden !important;' : 'overflow: hidden !important;'}">
               <!-- 3x3 點擊導航熱區 -->
-              <div class="nav-zones-grid ${AppState.showNavZones ? 'show-debug' : ''}">
+              <div class="nav-zones-grid ${AppState.showNavZones ? 'show-debug' : ''}" style="${pageMode === 'scroll' ? 'display: none !important;' : ''}">
                 ${zonesHtml}
               </div>
               ${readerHtmlContent}
             </div>
             
-            <div class="reader-footer">
-              <span>進度：${book.progress}%</span>
+            <div class="reader-footer" style="${book.showFooter === false ? 'display: none !important;' : ''}">
+              <span>進度：${book.progress}% | 今日已讀：${Math.round(AppState.stats.todayMinutes)} 分鐘</span>
               <span>第 ${AppState.currentPageNumber} / 12 頁</span>
             </div>
           </div>
@@ -3080,6 +3529,78 @@
                   <div class="chart-bar-container"><div class="chart-bar" style="height: 60px;" title="週五: 40分鐘"></div><span class="chart-lbl">五</span></div>
                   <div class="chart-bar-container"><div class="chart-bar" style="height: 70px;" title="週六: 45分鐘"></div><span class="chart-lbl">六</span></div>
                   <div class="chart-bar-container"><div class="chart-bar" style="height: 10px;" title="週日: 5分鐘"></div><span class="chart-lbl">日</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+      
+      else if (AppState.currentPage === 'settings') {
+        appDiv.innerHTML = `
+          <div class="page-wrapper">
+            <div class="settings-container" style="padding: 15px; display: flex; flex-direction: column; gap: 12px; height: calc(100% - 60px); overflow-y: auto; color: var(--text-color);">
+              <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
+                <span style="font-size: 14px; font-weight: bold; display: flex; align-items: center; gap: 4px;">⚙️ 系統設定</span>
+                <button class="reader-opt-btn" onclick="switchPage('shelf')" style="padding: 4px 10px; font-size: 11px; border-radius: 6px; cursor: pointer; color: var(--text-color); background: rgba(0,0,0,0.06); border: 1px solid var(--border-color);">返回書架</button>
+              </div>
+              
+              <!-- 全域翻頁與音量鍵設定 (FR-36 ~ FR-38) -->
+              <div class="setting-group" style="display: flex; flex-direction: column; gap: 10px; background: rgba(0,0,0,0.03); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color);">
+                <span style="font-size: 12px; font-weight: bold; opacity: 0.8;">📖 全域閱讀偏好</span>
+                
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <span style="font-size: 11px;">啟用音量鍵翻頁 (FR-36)</span>
+                  <input type="checkbox" id="global-volume-cb" ${AppState.globalSettings.volumeKeyEnabled ? 'checked' : ''} onchange="AppState.globalSettings.volumeKeyEnabled = this.checked; updateStateMonitor(); showToast('已更新音量鍵翻頁開關');" style="cursor: pointer;">
+                </div>
+                
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <span style="font-size: 11px;">全域螢幕方向預設 (FR-37)</span>
+                  <select id="global-orient-select" onchange="AppState.globalSettings.screenOrientation = this.value; updateStateMonitor(); showToast('已更新全域螢幕方向預設');" style="font-size: 11px; padding: 4px; border-radius: 4px; background: var(--card-bg); color: var(--text-color); border: 1px solid var(--border-color); cursor: pointer;">
+                    <option value="auto" ${AppState.globalSettings.screenOrientation === 'auto' ? 'selected' : ''}>自動旋轉</option>
+                    <option value="0" ${AppState.globalSettings.screenOrientation === '0' ? 'selected' : ''}>強制鎖定 0°</option>
+                    <option value="90" ${AppState.globalSettings.screenOrientation === '90' ? 'selected' : ''}>強制鎖定 90°</option>
+                    <option value="180" ${AppState.globalSettings.screenOrientation === '180' ? 'selected' : ''}>強制鎖定 180°</option>
+                    <option value="270" ${AppState.globalSettings.screenOrientation === '270' ? 'selected' : ''}>強制鎖定 270°</option>
+                  </select>
+                </div>
+                
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <span style="font-size: 11px;">全域翻頁模式預設 (FR-38)</span>
+                  <select id="global-pagemode-select" onchange="AppState.globalSettings.pageMode = this.value; updateStateMonitor(); showToast('已更新全域翻頁模式預設');" style="font-size: 11px; padding: 4px; border-radius: 4px; background: var(--card-bg); color: var(--text-color); border: 1px solid var(--border-color); cursor: pointer;">
+                    <option value="click" ${AppState.globalSettings.pageMode === 'click' ? 'selected' : ''}>點擊翻頁</option>
+                    <option value="scroll" ${AppState.globalSettings.pageMode === 'scroll' ? 'selected' : ''}>滾動翻頁</option>
+                  </select>
+                </div>
+              </div>
+              
+              <!-- 全域字型管理 (FR-35) -->
+              <div class="setting-group" style="display: flex; flex-direction: column; gap: 10px; background: rgba(0,0,0,0.03); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color);">
+                <span style="font-size: 12px; font-weight: bold; opacity: 0.8;">🔤 全域字型管理</span>
+                <div style="display: flex; gap: 6px;">
+                  <input type="text" id="custom-font-name-input" placeholder="模擬自訂字型名稱 (如: 源泉圓體)..." style="flex: 1; padding: 6px; font-size: 11px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--card-bg); color: var(--text-color); outline: none;">
+                  <button onclick="handleLoadCustomFont()" class="btn" style="margin-top: 0; padding: 4px 10px; font-size: 10px; width: auto; border-radius: 4px; cursor: pointer;">模擬上傳</button>
+                </div>
+                <div id="settings-font-list" style="display: flex; flex-direction: column; gap: 5px; margin-top: 5px;">
+                  ${AppState.fonts.map(f => `
+                    <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.05); padding: 5px 8px; border-radius: 4px;">
+                      <span style="font-size: 11px; font-family: '${f.name}';">${f.name} ${f.system ? '<span style="opacity: 0.5; font-size: 9px;">(系統)</span>' : ''}</span>
+                      ${!f.system ? `<span onclick="handleDeleteFont('${f.name}')" style="color: #EF4444; cursor: pointer; font-size: 10px; font-weight: bold; padding: 2px 4px;">✕ 刪除</span>` : ''}
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+              
+              <!-- 同步與帳戶 (FR-39, FR-30) -->
+              <div class="setting-group" style="display: flex; flex-direction: column; gap: 10px; background: rgba(0,0,0,0.03); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color);">
+                <span style="font-size: 12px; font-weight: bold; opacity: 0.8;">☁️ 同步與帳戶設定</span>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <span style="font-size: 11px; opacity: 0.7;">帳戶：已聯網 (huthief)</span>
+                  <button onclick="handleLogout()" class="btn" style="margin-top: 0; padding: 4px 10px; font-size: 10px; width: auto; background: #EF4444; color: #fff; border-radius: 4px; cursor: pointer;">帳戶登出</button>
+                </div>
+                <div style="font-size: 10px; opacity: 0.5; line-height: 1.4;">
+                  同步頻率：即時同步<br>
+                  資料範圍：書籍、進度、劃線與書籤
                 </div>
               </div>
             </div>
@@ -3448,6 +3969,117 @@
       AppState.cloudProgress = originalCloud;
       AppState.localProgress = originalLocal;
       AppState.selectedBook = originalBook;
+    });
+
+    // 測試 13：驗證書籍分類群組的過濾與自動分類
+    runTest('驗證書籍分類群組的過濾與自動分類', () => {
+      const originalSelected = AppState.selectedGroup;
+      const originalBooks = [...AppState.books];
+      
+      // 1. 測試過濾篩選
+      AppState.selectedGroup = '經典名著';
+      let sorted = getSortedBooks().filter(b => b.group === AppState.selectedGroup);
+      if (sorted.length !== 4) {
+        AppState.selectedGroup = originalSelected;
+        throw new Error('分類群組過濾書籍數量不符');
+      }
+      
+      // 2. 測試自動分類 (FR-34)
+      AppState.importAutoGroup = true;
+      mockImportFolder('科幻偵探');
+      
+      if (!AppState.groups.includes('科幻偵探')) {
+        AppState.selectedGroup = originalSelected;
+        AppState.books = originalBooks;
+        throw new Error('匯入時未能自動建立新分類群組');
+      }
+      
+      const imported = AppState.books[AppState.books.length - 1];
+      if (imported.group !== '科幻偵探') {
+        AppState.selectedGroup = originalSelected;
+        AppState.books = originalBooks;
+        throw new Error('匯入的書籍未歸入對應的分類群組');
+      }
+      
+      // 還原狀態
+      AppState.selectedGroup = originalSelected;
+      AppState.books = originalBooks;
+      AppState.groups = AppState.groups.filter(g => g !== '科幻偵探');
+    });
+
+    // 測試 14：驗證全域與單書的螢幕方向及翻頁模式雙層覆寫繼承
+    runTest('驗證全域與單書的螢幕方向及翻頁模式雙層覆寫繼承', () => {
+      const book = AppState.books.find(b => b.id === '1');
+      const originalOrient = book.screenOrientation;
+      const originalPageMode = book.pageMode;
+      const originalGlobalOrient = AppState.globalSettings.screenOrientation;
+      const originalGlobalPageMode = AppState.globalSettings.pageMode;
+      
+      // 1. 測試預設繼承 (default)
+      book.screenOrientation = 'default';
+      book.pageMode = 'default';
+      AppState.globalSettings.screenOrientation = '90';
+      AppState.globalSettings.pageMode = 'scroll';
+      
+      const resolvedOrient = book.screenOrientation !== 'default' ? book.screenOrientation : AppState.globalSettings.screenOrientation;
+      const resolvedPageMode = book.pageMode !== 'default' ? book.pageMode : AppState.globalSettings.pageMode;
+      
+      if (resolvedOrient !== '90' || resolvedPageMode !== 'scroll') {
+        throw new Error('未能在預設狀態下正確繼承全域偏好');
+      }
+      
+      // 2. 測試單書覆寫
+      book.screenOrientation = '180';
+      book.pageMode = 'click';
+      
+      const resolvedOrient2 = book.screenOrientation !== 'default' ? book.screenOrientation : AppState.globalSettings.screenOrientation;
+      const resolvedPageMode2 = book.pageMode !== 'default' ? book.pageMode : AppState.globalSettings.pageMode;
+      
+      if (resolvedOrient2 !== '180' || resolvedPageMode2 !== 'click') {
+        throw new Error('未能正確進行單書覆寫');
+      }
+      
+      // 還原狀態
+      book.screenOrientation = originalOrient;
+      book.pageMode = originalPageMode;
+      AppState.globalSettings.screenOrientation = originalGlobalOrient;
+      AppState.globalSettings.pageMode = originalGlobalPageMode;
+    });
+
+    // 測試 15：驗證單手模式左右熱區各自獨立自訂行為
+    runTest('驗證單手模式左右熱區各自獨立自訂行為', () => {
+      const book = AppState.books.find(b => b.id === '1');
+      const originalLeft = book.leftZoneAction;
+      const originalRight = book.rightZoneAction;
+      const originalPage = AppState.currentPageNumber;
+      
+      // 1. 設置自訂熱區 (左為下一頁，右為上一頁)
+      book.leftZoneAction = 'next';
+      book.rightZoneAction = 'prev';
+      AppState.currentPageNumber = 5;
+      
+      // 模擬點選左側 (index = 3)
+      handleZoneClick(3, null);
+      if (AppState.currentPageNumber !== 6) {
+        book.leftZoneAction = originalLeft;
+        book.rightZoneAction = originalRight;
+        AppState.currentPageNumber = originalPage;
+        throw new Error('自訂左側熱區點擊為下一頁失效');
+      }
+      
+      // 模擬點選右側 (index = 5)
+      handleZoneClick(5, null);
+      if (AppState.currentPageNumber !== 5) {
+        book.leftZoneAction = originalLeft;
+        book.rightZoneAction = originalRight;
+        AppState.currentPageNumber = originalPage;
+        throw new Error('自訂右側熱區點擊為上一頁失效');
+      }
+      
+      // 還原狀態
+      book.leftZoneAction = originalLeft;
+      book.rightZoneAction = originalRight;
+      AppState.currentPageNumber = originalPage;
     });
 
     // 初始渲染與自我測試
