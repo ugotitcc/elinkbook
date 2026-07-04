@@ -79,9 +79,11 @@
 - 純 Dart 單元測試：`book_metadata` channel 以 mock `MethodChannel` 驅動，驗證 EPUB/PDF/TXT 三種格式分別走對的提取路徑
 - 單元測試：詮釋資料提取失敗時的降級寫入行為（標題=檔名、`coverPath=null`）
 - 單元測試：匯入成功的書籍 `source` 欄位為 `local`，`filePath` 存放原始 URI 字串（未被複製）
+- **`integration_test`（強制，不可用 `file://` 替代）**：用真正的 `content://` URI（例如透過 `androidx.core.content.FileProvider` 或等效機制，取得一個由 ContentProvider 服務、且已呼叫 `takePersistableUriPermission` 授權的 URI，而非 `Uri.file(...)` 產生的 `file://`）呼叫 Issue 3 擴充後的 `openBook`，斷言 `onPageRendered` 觸發。理由：Issue 3 的整分支審查（`docs/epics/epic-1-library/reviews/`）指出，`AssetRetriever`/`ContentResolver` 對 `file://` 與 `content://` 內部走的是不同程式碼路徑（一個直接開檔、一個經 ContentProvider），Issue 3 只驗證了前者；本工單必須補上後者的真實驗證，不可讓 `file://` 替代測試被無聲繼承下去。
 
 **驗收標準：**
 - 上述測試以 `flutter test` 通過
+- 上述 `content://` `integration_test` 在真實裝置/模擬器上通過
 - 手動驗證：從裝置選取一個真實 EPUB/PDF 檔案，匯入後資料庫確實新增一筆對應記錄
 
 ---
