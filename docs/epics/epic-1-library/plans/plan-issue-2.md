@@ -33,7 +33,7 @@
 - Consumes: 無
 - Produces: 更新後的 `test/fixtures/sample.epub`（新增 `OEBPS/cover.png` 與對應 manifest 項目 `properties="cover-image"`），供本工單 Task 2 與既有 Issue 4/5 的 EPUB 渲染 `integration_test` 共用。既有的 `container.xml`/`nav.xhtml`/`chapter1.xhtml`/`dc:title` 結構完全不變，僅新增封面圖片，確保既有渲染測試不受影響。
 
-- [ ] **Step 1：重新產生含封面圖片的 `sample.epub`**
+- [x] **Step 1：重新產生含封面圖片的 `sample.epub`**
 
 Run（於 `app/` 目錄下，需要 Python 3；本機已確認可用）：
 
@@ -128,7 +128,7 @@ print('wrote sample.epub with cover image')
 
 Expected: 印出 `wrote sample.epub with cover image`，`app/test/fixtures/sample.epub` 已被覆蓋（結構與 epic-0 Issue 4 產生的版本相同，僅新增 `OEBPS/cover.png` 與其 manifest 項目）。
 
-- [ ] **Step 2：於真實裝置/模擬器上重新執行既有 EPUB 渲染 `integration_test`，確認無回歸**
+- [x] **Step 2：於真實裝置/模擬器上重新執行既有 EPUB 渲染 `integration_test`，確認無回歸**
 
 Run（於 `app/` 目錄下；`<device-id>` 請替換為 `flutter devices` 列出的實際 Android 裝置/模擬器 ID）：
 ```bash
@@ -136,7 +136,7 @@ flutter test integration_test/epub_reader_view_test.dart -d <device-id>
 ```
 Expected: `All tests passed!`（既有 3 項測試——有效檔案渲染、不存在路徑錯誤、損毀內容錯誤——皆不受新增封面圖片影響，維持通過）。
 
-- [ ] **Step 3：Commit**
+- [x] **Step 3：Commit**
 
 ```bash
 git add app/test/fixtures/sample.epub
@@ -156,7 +156,7 @@ git commit -m "Add cover image to sample.epub fixture for metadata extraction te
 - Consumes: `app/test/fixtures/sample.epub`（Task 1 已含封面圖片）、`app/test/fixtures/sample.pdf`（既有，無需修改）
 - Produces: 原生端註冊的 `MethodChannel` 固定為 `"elinkbook/book_metadata"`，方法 `extractMetadata(uri: String, format: String) -> Map<String, Any?>`（鍵：`title`、`author`、`coverBytes`）。供 Issue 4（`BookImportService`）直接以 `const MethodChannel('elinkbook/book_metadata')` 呼叫，不需額外的 Dart 包裝類別（本工單範圍不含 Dart 端封裝，`issues.md` Issue 4 才需要）。
 
-- [ ] **Step 1：實作原生 `BookMetadataChannel`（Kotlin）**
+- [x] **Step 1：實作原生 `BookMetadataChannel`（Kotlin）**
 
 建立 `app/android/app/src/main/kotlin/cc/ugotit/elinkbook/BookMetadataChannel.kt`：
 
@@ -350,7 +350,7 @@ class BookMetadataChannel(
 }
 ```
 
-- [ ] **Step 2：在 `MainActivity.kt` 註冊 `BookMetadataChannel`**
+- [x] **Step 2：在 `MainActivity.kt` 註冊 `BookMetadataChannel`**
 
 開啟 `app/android/app/src/main/kotlin/cc/ugotit/elinkbook/MainActivity.kt`，在類別內新增一個欄位，並在 `configureFlutterEngine` 方法的既有兩個 `registerViewFactory(...)` 呼叫之後，新增一行初始化：
 
@@ -386,7 +386,7 @@ class MainActivity : FlutterFragmentActivity() {
 
 （只新增 `private lateinit var bookMetadataChannel: BookMetadataChannel` 欄位宣告與 `configureFlutterEngine` 方法內最後一行初始化；`onCreate` 方法與其餘既有內容維持不變。）
 
-- [ ] **Step 3：撰寫 3 項 `integration_test`**
+- [x] **Step 3：撰寫 3 項 `integration_test`**
 
 建立 `app/integration_test/book_metadata_channel_test.dart`：
 
@@ -510,7 +510,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 4：於真實裝置/模擬器上執行 5 項 `integration_test`**
+- [x] **Step 4：於真實裝置/模擬器上執行 5 項 `integration_test`**
 
 Run（於 `app/` 目錄下；`<device-id>` 請替換為 `flutter devices` 列出的實際 Android 裝置/模擬器 ID）：
 ```bash
@@ -518,7 +518,7 @@ flutter test integration_test/book_metadata_channel_test.dart -d <device-id>
 ```
 Expected: `All tests passed!`（5 項測試皆通過：EPUB/PDF 檔案路徑各 1 項、錯誤路徑 1 項、EPUB/PDF file:// URI 各 1 項）。
 
-- [ ] **Step 5：重新執行既有 `integration_test` 確認無回歸**
+- [x] **Step 5：重新執行既有 `integration_test` 確認無回歸**
 
 Run：
 ```bash
@@ -530,7 +530,7 @@ flutter test integration_test/smoke_test.dart -d <device-id>
 ```
 Expected: 全部 `All tests passed!`，確認新增的 `BookMetadataChannel` 與 `MainActivity.kt` 的修改未影響既有渲染流程。
 
-- [ ] **Step 6：靜態分析與非 integration_test 全測試確認無回歸**
+- [x] **Step 6：靜態分析與非 integration_test 全測試確認無回歸**
 
 Run（於 `app/` 目錄下）：
 ```bash
@@ -539,7 +539,7 @@ flutter test
 ```
 Expected: `flutter analyze` 顯示 `No issues found!`；`flutter test` 全數通過（純 Dart/widget test，不受本工單原生程式碼異動影響）。
 
-- [ ] **Step 7：Commit**
+- [x] **Step 7：Commit**
 
 ```bash
 git add app/android/app/src/main/kotlin/cc/ugotit/elinkbook/BookMetadataChannel.kt app/android/app/src/main/kotlin/cc/ugotit/elinkbook/MainActivity.kt app/integration_test/book_metadata_channel_test.dart

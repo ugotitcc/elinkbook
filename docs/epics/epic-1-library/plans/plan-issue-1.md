@@ -31,7 +31,7 @@
 - Consumes: 無（獨立於既有程式碼，`BookFileFormat` 刻意不依賴 `app/lib/reader/book_format.dart` 的 `BookFormat`）
 - Produces: `enum BookFileFormat { epub, pdf, txt }`、`enum BookSource { local, googleDrive, oneDrive }`、`enum LibrarySortBy { lastRead, createTime, author, title }`、`class BookGroup { static const uncategorized = '未分類'; final String name; }`、`class Book { ... toMap()/fromMap() ... }`（完整欄位見下方程式碼）——供 Task 2-4 與後續 Issue 4/5 使用。
 
-- [ ] **Step 1：撰寫 `Book.toMap()`/`fromMap()` 往返測試（先寫測試，此時 import 的檔案還不存在）**
+- [x] **Step 1：撰寫 `Book.toMap()`/`fromMap()` 往返測試（先寫測試，此時 import 的檔案還不存在）**
 
 建立 `app/test/library/models/book_test.dart`：
 
@@ -109,7 +109,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：執行測試確認失敗（找不到 library 套件檔案）**
+- [x] **Step 2：執行測試確認失敗（找不到 library 套件檔案）**
 
 Run（於 `app/` 目錄下）：
 ```bash
@@ -117,7 +117,7 @@ flutter test test/library/models/book_test.dart
 ```
 Expected: 編譯錯誤，訊息包含 `Target of URI doesn't exist: 'package:elinkbook/library/models/book.dart'`（或等效的「找不到檔案」錯誤）。
 
-- [ ] **Step 3：建立列舉檔**
+- [x] **Step 3：建立列舉檔**
 
 建立 `app/lib/library/models/library_enums.dart`：
 
@@ -136,7 +136,7 @@ enum BookSource { local, googleDrive, oneDrive }
 enum LibrarySortBy { lastRead, createTime, author, title }
 ```
 
-- [ ] **Step 4：建立 `BookGroup`**
+- [x] **Step 4：建立 `BookGroup`**
 
 建立 `app/lib/library/models/book_group.dart`：
 
@@ -157,7 +157,7 @@ class BookGroup {
 }
 ```
 
-- [ ] **Step 5：建立 `Book`**
+- [x] **Step 5：建立 `Book`**
 
 建立 `app/lib/library/models/book.dart`：
 
@@ -237,7 +237,7 @@ class Book {
 }
 ```
 
-- [ ] **Step 6：執行測試確認通過**
+- [x] **Step 6：執行測試確認通過**
 
 Run：
 ```bash
@@ -245,7 +245,7 @@ flutter test test/library/models/book_test.dart
 ```
 Expected: `00:0X +3: All tests passed!`（3 項測試皆通過）。
 
-- [ ] **Step 7：靜態分析確認無警告**
+- [x] **Step 7：靜態分析確認無警告**
 
 Run（於 `app/` 目錄下）：
 ```bash
@@ -253,7 +253,7 @@ flutter analyze
 ```
 Expected: `No issues found!`
 
-- [ ] **Step 8：Commit**
+- [x] **Step 8：Commit**
 
 ```bash
 git add app/lib/library/models/library_enums.dart app/lib/library/models/book_group.dart app/lib/library/models/book.dart app/test/library/models/book_test.dart
@@ -274,7 +274,7 @@ git commit -m "Add Book/BookGroup data models for library repository"
 - Consumes: `Book`/`BookGroup`/`BookFileFormat`/`BookSource`/`LibrarySortBy`（Task 1 產出）
 - Produces: `abstract class LibraryRepository`（含本工單完整簽章，Task 3、4 陸續補上實作與測試）、`class LibraryRepositoryException implements Exception`、`class SqliteLibraryRepository implements LibraryRepository`，其中 `static Future<SqliteLibraryRepository> open(String path)` 與 `Future<void> close()` 供後續 Issue 4/5 建立/釋放資料庫連線使用；`Future<String> defaultLibraryDatabasePath()`（頂層函式）供正式環境決定 `library.db` 實際存放路徑。
 
-- [ ] **Step 1：新增 sqflite 相關依賴**
+- [x] **Step 1：新增 sqflite 相關依賴**
 
 Run（於 `app/` 目錄下）：
 ```bash
@@ -283,7 +283,7 @@ flutter pub add sqflite_common_ffi --dev
 ```
 Expected: 終端機顯示三個套件皆已成功解析並加入 `pubspec.yaml`（`sqflite`、`path` 加入 `dependencies`；`sqflite_common_ffi` 加入 `dev_dependencies`）。
 
-- [ ] **Step 2：撰寫 `LibraryRepository` 介面與例外類別（先定義介面，尚無實作）**
+- [x] **Step 2：撰寫 `LibraryRepository` 介面與例外類別（先定義介面，尚無實作）**
 
 建立 `app/lib/library/library_repository.dart`：
 
@@ -320,7 +320,7 @@ class LibraryRepositoryException implements Exception {
 }
 ```
 
-- [ ] **Step 3：撰寫基本 CRUD 的失敗測試**
+- [x] **Step 3：撰寫基本 CRUD 的失敗測試**
 
 建立 `app/test/library/sqlite_library_repository_test.dart`：
 
@@ -401,7 +401,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 4：執行測試確認失敗**
+- [x] **Step 4：執行測試確認失敗**
 
 Run（於 `app/` 目錄下）：
 ```bash
@@ -409,7 +409,7 @@ flutter test test/library/sqlite_library_repository_test.dart
 ```
 Expected: 編譯錯誤，找不到 `package:elinkbook/library/sqlite_library_repository.dart`。
 
-- [ ] **Step 5：實作 `SqliteLibraryRepository`（schema + `insertBook`/`updateBook`/`deleteBook`/`listBooks`，排序/篩選先給最小可行實作）**
+- [x] **Step 5：實作 `SqliteLibraryRepository`（schema + `insertBook`/`updateBook`/`deleteBook`/`listBooks`，排序/篩選先給最小可行實作）**
 
 建立 `app/lib/library/sqlite_library_repository.dart`：
 
@@ -577,7 +577,7 @@ class SqliteLibraryRepository implements LibraryRepository {
 
 （`renameGroup`/`deleteGroup`/`listGroups`/`upsertGroup` 的完整測試留給 Task 4；本步驟先把整個類別實作完整，Task 3、4 只需新增測試即可，避免中途再回頭改介面。）
 
-- [ ] **Step 6：執行測試確認通過**
+- [x] **Step 6：執行測試確認通過**
 
 Run：
 ```bash
@@ -585,7 +585,7 @@ flutter test test/library/sqlite_library_repository_test.dart
 ```
 Expected: `00:0X +3: All tests passed!`
 
-- [ ] **Step 7：靜態分析確認無警告**
+- [x] **Step 7：靜態分析確認無警告**
 
 Run：
 ```bash
@@ -593,7 +593,7 @@ flutter analyze
 ```
 Expected: `No issues found!`
 
-- [ ] **Step 8：Commit**
+- [x] **Step 8：Commit**
 
 ```bash
 git add app/pubspec.yaml app/pubspec.lock app/lib/library/library_repository.dart app/lib/library/sqlite_library_repository.dart app/test/library/sqlite_library_repository_test.dart
@@ -611,7 +611,7 @@ git commit -m "Add SqliteLibraryRepository with schema and basic book CRUD"
 - Consumes: `SqliteLibraryRepository`（Task 2 產出，`listBooks(sortBy:, groupFilter:)` 實作已在 Task 2 完成，本工單只補測試）
 - Produces: 無新公開介面；驗證 Task 2 已實作的排序/篩選行為符合 spec.md 要求，供 Issue 5（`LibraryScreen` 排序/分類 UI）放心依賴。
 
-- [ ] **Step 1：新增排序與分類篩選測試**
+- [x] **Step 1：新增排序與分類篩選測試**
 
 在 `app/test/library/sqlite_library_repository_test.dart` 的 `main()` 函式內、既有三項 CRUD 測試之後，新增：
 
@@ -682,7 +682,7 @@ git commit -m "Add SqliteLibraryRepository with schema and basic book CRUD"
   });
 ```
 
-- [ ] **Step 2：執行測試確認通過**
+- [x] **Step 2：執行測試確認通過**
 
 Run：
 ```bash
@@ -692,7 +692,7 @@ Expected: `00:0X +9: All tests passed!`（3 項既有 CRUD 測試 + 6 項新增�
 
 若 `author`/`title` 排序測試失敗，檢查是否為 SQLite 預設 `BINARY` collation 對中文字採 Unicode code point 排序所致——本測試選用的作者/書名文字已依 code point 順序設計（吳 U+5433 < 施 U+65BD < 羅 U+7F85；三 U+4E09 < 水 U+6C34 < 西 U+897F），若替換測試資料需重新確認對應的 code point 順序。
 
-- [ ] **Step 3：Commit**
+- [x] **Step 3：Commit**
 
 ```bash
 git add app/test/library/sqlite_library_repository_test.dart
@@ -710,7 +710,7 @@ git commit -m "Add listBooks sort and group filter tests"
 - Consumes: `SqliteLibraryRepository`（Task 2 產出，群組管理方法實作已在 Task 2 完成，本工單只補測試）
 - Produces: 無新公開介面；驗證保留群組保護、刪除/重新命名時書籍歸位邏輯符合 spec.md 要求，供 Issue 7（分類群組管理 UI）放心依賴。
 
-- [ ] **Step 1：新增群組管理測試**
+- [x] **Step 1：新增群組管理測試**
 
 在 `app/test/library/sqlite_library_repository_test.dart` 的 `main()` 函式內、Task 3 新增的測試之後，新增：
 
@@ -786,7 +786,7 @@ git commit -m "Add listBooks sort and group filter tests"
 
 記得在 `import 'package:elinkbook/library/library_repository.dart';`（若尚未 import）加入檔案開頭，供 `LibraryRepositoryException` 型別參考使用。
 
-- [ ] **Step 2：執行測試確認通過**
+- [x] **Step 2：執行測試確認通過**
 
 Run：
 ```bash
@@ -794,7 +794,7 @@ flutter test test/library/sqlite_library_repository_test.dart
 ```
 Expected: `00:0X +16: All tests passed!`（Task 2 的 3 項 + Task 3 的 6 項 + 本工單新增的 7 項）。
 
-- [ ] **Step 3：靜態分析確認無警告**
+- [x] **Step 3：靜態分析確認無警告**
 
 Run：
 ```bash
@@ -802,7 +802,7 @@ flutter analyze
 ```
 Expected: `No issues found!`
 
-- [ ] **Step 4：Commit**
+- [x] **Step 4：Commit**
 
 ```bash
 git add app/test/library/sqlite_library_repository_test.dart

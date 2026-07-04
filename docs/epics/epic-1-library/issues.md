@@ -6,7 +6,7 @@
 
 ## Issue 1：LibraryRepository 資料層（sqflite CRUD）
 
-**Status:** ready-for-agent
+**Status:** ✅ 已完成並合併回 `main`（PR #8，merge commit `3adbb68`）。4 個任務皆完成，`flutter test` 29/29 通過，`flutter analyze` 乾淨；整分支審查後另依 `reviews/review-issue-1.md` 修正 `renameGroup` 重複名稱檢查的 TOCTOU 風險（commit `d987e9f`）。完整審查報告見 `reviews/review-issue-1.md`。
 
 **依賴：** 無（起始工單，可與 Issue 2、3 平行）
 
@@ -29,7 +29,7 @@
 
 ## Issue 2：原生 `book_metadata` MethodChannel（EPUB/PDF 詮釋資料+封面提取）
 
-**Status:** ready-for-agent
+**Status:** ✅ 已完成並合併回 `main`（PR #9，merge commit `b85c8a9`）。2 個任務皆完成，新增的 5 項 `book_metadata_channel_test.dart` 測試與既有 5 項回歸測試皆於真實 Android 裝置上通過。整分支審查發現 PDF/EPUB 封面處理在主執行緒執行的 Important 問題，已修正（commit `bbf1dd7`）並複審通過。完整審查報告見 `reviews/review-issue-2.md`。
 
 **依賴：** 無（可與 Issue 1、3 平行）
 
