@@ -1,10 +1,12 @@
 package cc.ugotit.elinkbook
 
 import android.content.Context
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.pdf.PdfRenderer
 import android.net.Uri
 import android.os.ParcelFileDescriptor
+import androidx.core.content.FileProvider
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
@@ -86,6 +88,56 @@ class BookMetadataChannel(
                     "epub" -> extractEpubMetadata(path, result)
                     "pdf" -> extractPdfMetadata(path, result)
                     else -> result.error("unsupported_format", "不支援的格式：$format", null)
+                }
+            }
+            "takePersistableUriPermission" -> {
+                val uriString = call.argument<String>("uri")
+                if (uriString == null) {
+                    result.error("invalid_arguments", "缺少 uri 參數", null)
+                    return
+                }
+                try {
+                    context.contentResolver.takePersistableUriPermission(
+                        Uri.parse(uriString),
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION,
+                    )
+                    result.success(null)
+                } catch (e: Exception) {
+                    result.error("permission_failed", "無法持久化 URI 讀取權限：${e.message}", null)
+                }
+            }
+            "createTestContentUri" -> {
+                // 僅供 integration_test 使用：把裝置上真實檔案路徑透過 FileProvider
+                // 轉為 content:// URI，並自我授予 persistable 權限（模擬 SAF
+                // ACTION_OPEN_DOCUMENT 回傳的 URI 原本就帶有的授權），讓測試能驗證
+                // 真正的 content:// 路徑（而非 Issue 3 已驗證過的 file://）。正式
+                // 匯入流程（BookImportService）不會呼叫這個方法——真實的 content://
+                // URI 來自 file_picker 的 PlatformFile.identifier。
+                val path = call.argument<String>("path")
+                if (path == null) {
+                    result.error("invalid_arguments", "缺少 path 參數", null)
+                    return
+                }
+                try {
+                    val file = File(path)
+                    val uri = FileProvider.getUriForFile(
+                        context,
+                        "${context.packageName}.fileprovider",
+                        file,
+                    )
+                    context.grantUriPermission(
+                        context.packageName,
+                        uri,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                            Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION,
+                    )
+                    result.success(uri.toString())
+                } catch (e: Exception) {
+                    result.error(
+                        "test_uri_failed",
+                        "無法建立測試用 content URI：${e.message}",
+                        null,
+                    )
                 }
             }
             else -> result.notImplemented()
