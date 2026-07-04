@@ -22,7 +22,7 @@ class Book {
   final String id;
   final String title;
   final String? author;
-  final BookFormat format; // 沿用既有 book_format.dart 的 BookFormat enum
+  final BookFileFormat format; // 見下方 BookFileFormat 說明
   final String filePath;   // 檔案系統路徑或 content:// URI 字串（見 ADR 0002）
   final BookSource source; // local | googleDrive | oneDrive（本 epic 僅產生 local）
   final String? coverPath; // 本機 PNG 路徑，null 表示尚未產生/產生失敗
@@ -36,6 +36,13 @@ class BookGroup {
   final String name; // PK；'未分類' 為系統保留、不可重新命名或刪除
 }
 
+// 獨立於 reader/book_format.dart 的 BookFormat（epub/pdf/unknown，服務
+// ReaderScreen 的原生渲染分派，目前只有 epub/pdf 有對應原生視圖）。圖書庫
+// 資料層需要完整表達 FR-01 的三種支援格式（含尚未有渲染引擎的 TXT，由
+// epic-11-txt-engine 補上），因此另外定義、刻意不與 BookFormat 共用——
+// ReaderScreen 依 filePath 自行呼叫 detectBookFormat() 判斷格式，不吃
+// Book.format，因此兩個列舉之間不需要互相轉換。
+enum BookFileFormat { epub, pdf, txt }
 enum BookSource { local, googleDrive, oneDrive }
 enum LibrarySortBy { lastRead, createTime, author, title }
 enum LibraryViewMode { grid, list }

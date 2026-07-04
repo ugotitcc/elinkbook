@@ -49,7 +49,7 @@ epic-0 建立的 `EpubReaderView`/`PdfReaderView` 原生契約中，`openBook(pa
 | `author` | TEXT nullable | PDF/TXT 常缺此欄位，允許為空 |
 | `format` | TEXT | `epub` / `pdf` / `txt` |
 | `filePath` | TEXT | 檔案系統路徑或 `content://` URI（見上方架構異動） |
-| `source` | TEXT | `local` / `google_drive` / `onedrive`；本 epic 僅會產生 `local` |
+| `source` | TEXT | `local` / `googleDrive` / `oneDrive`；本 epic 僅會產生 `local` |
 | `coverPath` | TEXT nullable | 產生後封面圖檔的本機路徑（PNG，存於 App 私有目錄，封面永遠是複製產生的圖片，不受「不複製原檔」影響） |
 | `progress` | REAL | 固定 stub 為 `0`（見「範圍與排除項目」） |
 | `groupName` | TEXT | 對應 FR-33 分類群組，預設 `未分類` |
