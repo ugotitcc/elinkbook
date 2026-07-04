@@ -25,7 +25,7 @@
 
 ## Issue 2：`ReaderScreen` 格式偵測邏輯
 
-**Status:** ✅ 已完成實作，待人工合併（PR #2：https://git.jigong.org/huthief/elinkBook/pulls/2）。2 個任務皆通過 TDD 流程，`flutter test` 12/12 通過、`flutter analyze` 乾淨。分支 `worktree-epic-0-issue-2`，worktree 保留於 `.claude/worktrees/epic-0-issue-2/`。
+**Status:** ✅ 已完成並合併回 `main`（PR #2，merge commit `a9e15aa`）。2 個任務皆通過 TDD 流程，`flutter test` 12/12 通過、`flutter analyze` 乾淨。分支 `worktree-epic-0-issue-2` 與其 worktree 已完成階段性任務，保留於 `.claude/worktrees/epic-0-issue-2/`。
 
 **依賴：** Issue 1
 
@@ -45,7 +45,7 @@
 
 ## Issue 3：原生 Android 模組 — `PdfReaderView`（`PdfRenderer`）
 
-**Status:** ✅ 已完成實作與驗證，待人工建立 PR/合併。2 個任務皆通過 TDD 流程，`flutter analyze` 乾淨，`flutter test` 12/12 通過；兩項驗收用 `integration_test`（有效 PDF 觸發 `onPageRendered`、不存在路徑觸發 `onError`）與 Task 1 的 smoke test 皆已在真實裝置（9491G，Android 15 / API 35）上執行並通過。分支 `worktree-epic-0-issue-3-pdf-reader-view`，worktree 保留於 `.claude/worktrees/epic-0-issue-3-pdf-reader-view/`。
+**Status:** ✅ 已完成並合併回 `main`（PR #3，merge commit `6a37fa7`）。2 個任務皆通過 TDD 流程，`flutter analyze` 乾淨，`flutter test` 12/12 通過；兩項驗收用 `integration_test`（有效 PDF 觸發 `onPageRendered`、不存在路徑觸發 `onError`）與 Task 1 的 smoke test 皆已在真實裝置（9491G，Android 15 / API 35）上執行並通過。額外收到的 code review 報告（`reviews/review-issue-3.md`）結論為「Ready to merge: Yes」，無 Critical/Important 問題。分支 `worktree-epic-0-issue-3-pdf-reader-view` 與其 worktree 已完成階段性任務，保留於 `.claude/worktrees/epic-0-issue-3-pdf-reader-view/`。
 
 **依賴：** Issue 1
 
@@ -64,7 +64,7 @@
 
 ## Issue 4：原生 Android 模組 — `EpubReaderView`（Readium Kotlin toolkit）
 
-**Status:** ready-for-agent
+**Status:** ✅ 已完成並合併回 `main`（PR #4，merge commit `bd8b743`）。整合 Readium `kotlin-toolkit`，`flutter analyze` 乾淨，`flutter test` 12/12 通過；兩項 `integration_test`（有效 EPUB 觸發 `onPageRendered`、不存在/損毀路徑觸發 `onError`）皆已在真實裝置（9491G，Android 15 / API 35）上執行並通過。額外收到的 code review 報告（`reviews/review-issue-4.md`）中的 Important 問題（`fragmentFactory` 全域覆寫競態、`dispose()` 缺乏例外保護）與 Minor 建議（新增損毀檔案測試案例）皆已修正（commit `7956fa9`、`c840fe7`）。分支 `worktree-epic-0-issue-4-epub-reader-view` 與其 worktree 已完成階段性任務，保留於 `.claude/worktrees/epic-0-issue-4-epub-reader-view/`。
 
 **依賴：** Issue 1
 
@@ -83,7 +83,7 @@
 
 ## Issue 5：`ReaderScreen` 端到端整合（唯一 seam 完整驗證）
 
-**Status:** ready-for-agent
+**Status:** ✅ 已完成並合併回 `main`（PR #5，merge commit `bf13032`）。採用 subagent-driven-development 流程，2 個任務皆個別通過 spec 合規性與程式碼品質審查；整分支審查發現的 1 項 Important（`integration_test` 假陽性風險）已修正並在真實裝置（9491G，Android 15 / API 35）上重新驗證通過。`flutter test` 10/10 通過，`flutter analyze` 乾淨，兩項 `integration_test`（EPUB、PDF）皆通過。完整審查記錄見 `reviews/review-issue-5.md`。分支 `worktree-epic-0-issue-5-reader-screen-integration` 與其 worktree 已完成階段性任務，保留於 `.claude/worktrees/epic-0-issue-5-reader-screen-integration/`。
 
 **依賴：** Issue 2、Issue 3、Issue 4
 
@@ -102,7 +102,7 @@
 
 ## Issue 6：書架畫面串接「開啟書籍」流程
 
-**Status:** ready-for-agent
+**Status:** ✅ 已完成並合併回 `main`（PR #7，merge commit `435c20c`）。2 個任務皆完成，`flutter test` 10/10 通過，`flutter analyze` 乾淨，2 項新 `integration_test`（點擊範例 EPUB/PDF 項目導航並渲染）皆在真實裝置（9491G，Android 15 / API 35）上通過，並重跑 Issue 3/4/5 既有 `integration_test` 確認無回歸。實作過程中發現並修正計劃遺漏的 `path_provider` dependency 分類問題，以及一項測試時序假設（載入指示器前置斷言與導航轉場 `pumpAndSettle()` 之間的競態）。**此工單完成後，`epic-0-skeleton` 的端到端目標（Flutter + Android + EPUB(Readium) + PDF）已達成，可準備歸檔**。分支 `worktree-epic-0-issue-6-library-open-book` 與其 worktree 已完成階段性任務，保留於 `.claude/worktrees/epic-0-issue-6-library-open-book/`。
 
 **依賴：** Issue 1、Issue 5
 
