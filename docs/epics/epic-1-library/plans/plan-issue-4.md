@@ -939,6 +939,8 @@ flutter pub add file_picker
 ```
 Expected: 終端機顯示 `file_picker` 已成功解析並加入 `pubspec.yaml` 的 `dependencies`。
 
+⚠️ 若解析到 `file_picker` 10.x/11.x（`FilePicker` 改為 `abstract final class`、方法皆為 `static`），Step 2 程式碼中的 `FilePicker.platform.pickFiles(...)` 須改為 `FilePicker.pickFiles(...)`（不再有 `.platform` 單例存取器）；`PlatformFile.identifier` 欄位在兩個版本系列皆存在，不受影響。實測時解析到 11.0.2，已確認需要這個修正。
+
 - [ ] **Step 2：撰寫手動驗收測試小工具**
 
 建立 `app/integration_test/manual_import_acceptance_test.dart`：
@@ -986,7 +988,7 @@ void main() {
                     ElevatedButton(
                       key: const Key('manual_import_button'),
                       onPressed: () async {
-                        final picked = await FilePicker.platform.pickFiles(
+                        final picked = await FilePicker.pickFiles(
                           type: FileType.custom,
                           allowedExtensions: ['epub', 'pdf', 'txt'],
                         );
@@ -1070,3 +1072,9 @@ git commit -m "Add manual end-to-end import acceptance harness (file_picker)"
 
 - **Important（`takePersistableUriPermission` 缺乏協定檢查與 Exception 防禦）**：查證屬實——原設計未包 try-catch，任一檔案的權限持久化失敗會直接中斷整批匯入，與同一支函式裡「詮釋資料提取失敗要降級、不中斷整批」的既有設計精神矛盾。已採納，加上 `content://` scheme 判斷 + try-catch。**未完全採納**建議的復原方式（「僅記錄警告、繼續視為成功」）——改為將權限持久化失敗視為該檔案匯入失敗並略過（回傳 `null`），因為當次暫時讀取權限只在本次 App 行程存活期間有效，若假裝成功寫入資料庫，`filePath` 極可能在下次啟動後無法讀取，是比略過更糟的靜默壞資料。已於 Task 3 Step 2/4 補上對應程式碼與新測試案例（「takePersistableUriPermission 失敗時略過該檔案」），測試總數由 8 項增為 9 項。
 - **Minor（TXT 封面測試環境說明）**：查證後這個顧慮實際上不適用於本計劃的測試設計（沒有做跨平台 Golden Image 像素比對，背景色本身的差異就足以保證 bytes 相等/不相等的斷言不受字型渲染影響），但補充說明性註解本身零成本、對未來讀者有幫助，已採納，於 Task 2 Step 1 測試檔開頭補上註解。
+
+## 執行期發現（Task 4，供未來工單參考）
+
+- **`file_picker` 套件版本 API 差異**：`flutter pub add file_picker`（未鎖版本）解析到 11.0.2，`FilePicker` 已改為 `abstract final class`（純 static 方法），原計劃程式碼的 `FilePicker.platform.pickFiles(...)` 需改為 `FilePicker.pickFiles(...)`（無 `.platform` 單例存取器）；`PlatformFile.identifier` 欄位不受影響。已修正 Step 2 程式碼與新增警語。
+- **Windows 跨磁碟機代號導致 Kotlin 增量編譯失敗**：本專案位於 `U:` 磁碟，`file_picker` 的原生 Kotlin 模組原始碼位於 `C:` 磁碟的 pub cache，兩者跨磁碟機代號時 Kotlin 增量編譯器的 `RelocatableFileToPathConverter` 計算相對路徑會拋出「this and base files have different roots」而編譯失敗（Windows 專屬限制，與程式碼邏輯無關）。已在 `app/android/gradle.properties` 加入 `kotlin.incremental=false` 解決；若日後在同樣的跨磁碟機環境新增其他含原生 Kotlin 模組的套件，建議留意此設定是否仍需要。
+- **`integration_test`（Android Instrumentation）下系統檔案選擇器不可靠**：透過 `flutter test integration_test/manual_import_acceptance_test.dart` 啟動時，點擊按鈕呼叫 `FilePicker.pickFiles()` 後，跨 App 的系統文件選擇器（`ACTION_OPEN_DOCUMENT`）沒有任何回應——這是 Android Instrumentation 環境下跨 App Activity Result 較不可靠的已知限制。改用一般的 `flutter run`（非 instrumentation）啟動一個暫時性進入點（呼叫相同的 `BookImportServiceImpl.importFiles` 流程）後，系統選擇器正常運作。已在真實裝置上手動驗證：匯入 3 個真實檔案（2 EPUB + 1 PDF，含一次重複點擊產生的第 4 筆記錄）皆正確寫入 `library.db`，`filePath` 為未複製的原始 `content://` URI（`com.android.externalstorage.documents` provider），`title`/`author` 皆為正確解碼的 UTF-8 中文字串。本工單保留 `integration_test` 版本作為結構完整性/未來若 Flutter 改善此限制時的回歸測試，但「手動驗證」本身是透過上述暫時性 `flutter run` 進入點完成，該進入點未提交版本控制。
