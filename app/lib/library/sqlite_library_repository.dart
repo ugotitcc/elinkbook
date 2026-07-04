@@ -123,12 +123,12 @@ class SqliteLibraryRepository implements LibraryRepository {
       throw LibraryRepositoryException(
           '系統保留群組「${BookGroup.uncategorized}」不可重新命名');
     }
-    final existing =
-        await _db.query('groups', where: 'name = ?', whereArgs: [newName]);
-    if (existing.isNotEmpty) {
-      throw LibraryRepositoryException('分類「$newName」已存在');
-    }
     await _db.transaction((txn) async {
+      final existing =
+          await txn.query('groups', where: 'name = ?', whereArgs: [newName]);
+      if (existing.isNotEmpty) {
+        throw LibraryRepositoryException('分類「$newName」已存在');
+      }
       await txn.insert('groups', {'name': newName});
       await txn.update(
         'books',
