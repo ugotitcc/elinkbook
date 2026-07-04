@@ -6,9 +6,12 @@ import 'package:elinkbook/library/models/library_enums.dart';
 /// 供 widget test 使用的記憶體內 [LibraryRepository] 假實作，避免 widget
 /// test 依賴真實 sqflite（見 docs/epics/epic-1-library/spec.md「測試決策」）。
 class FakeLibraryRepository implements LibraryRepository {
-  FakeLibraryRepository({List<Book> initialBooks = const []})
-      : _books = List.of(initialBooks);
+  FakeLibraryRepository({
+    List<Book> initialBooks = const [],
+    this.throwOnListBooks = false,
+  }) : _books = List.of(initialBooks);
 
+  final bool throwOnListBooks;
   final List<Book> _books;
 
   @override
@@ -33,6 +36,9 @@ class FakeLibraryRepository implements LibraryRepository {
     LibrarySortBy sortBy = LibrarySortBy.lastRead,
     String? groupFilter,
   }) async {
+    if (throwOnListBooks) {
+      throw Exception('模擬資料庫錯誤');
+    }
     if (groupFilter == null) return List.of(_books);
     return _books.where((b) => b.groupName == groupFilter).toList();
   }

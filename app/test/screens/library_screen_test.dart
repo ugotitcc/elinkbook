@@ -25,4 +25,19 @@ void main() {
     );
     expect(find.byKey(const Key('library_import_button')), findsOneWidget);
   });
+
+  testWidgets('圖書庫載入資料失敗時，畫面降級顯示空清單狀態而非永遠卡在載入中', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(throwOnListBooks: true),
+          importService: FakeBookImportService(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('尚未匯入書籍'), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+  });
 }
