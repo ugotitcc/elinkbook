@@ -1437,12 +1437,18 @@
 
     // 調整版面參數
     function changeLayoutParam(param, delta) {
-      const val = AppState.layout[param] + delta;
-      if (param === 'fontSize' && (val < 12 || val > 40)) return;
-      if (param === 'fontWeight' && (val < 300 || val > 900)) return;
-      if (param === 'lineHeight' && (val < 1.2 || val > 2.5)) return;
-      if (param === 'paraSpacing' && (val < 0 || val > 40)) return;
-      if (param.startsWith('margin') && (val < 0 || val > 50)) return;
+      let val = AppState.layout[param] + delta;
+      if (param === 'fontSize') {
+        val = Math.max(12, Math.min(40, val));
+      } else if (param === 'fontWeight') {
+        val = Math.max(300, Math.min(900, val));
+      } else if (param === 'lineHeight') {
+        val = Math.max(1.2, Math.min(2.5, val));
+      } else if (param === 'paraSpacing') {
+        val = Math.max(0, Math.min(40, val));
+      } else if (param.startsWith('margin')) {
+        val = Math.max(0, Math.min(50, val));
+      }
       
       if (param === 'lineHeight') {
         AppState.layout[param] = parseFloat(val.toFixed(1));
@@ -2045,11 +2051,19 @@
       const width = rect.width;
       
       if (clickX < width / 3) {
-        // 點擊左側 1/3：上一頁
-        triggerVolumeKey('up');
+        // 點擊左側 1/3：在橫排模式為上一頁，直排(RTL)模式為下一頁
+        if (AppState.layoutDirection === 'vertical') {
+          triggerVolumeKey('down');
+        } else {
+          triggerVolumeKey('up');
+        }
       } else if (clickX > (width * 2) / 3) {
-        // 點擊右側 1/3：下一頁
-        triggerVolumeKey('down');
+        // 點擊右側 1/3：在橫排模式為下一頁，直排(RTL)模式為上一頁
+        if (AppState.layoutDirection === 'vertical') {
+          triggerVolumeKey('up');
+        } else {
+          triggerVolumeKey('down');
+        }
       } else {
         showToast('💡 點擊左右兩側可實現翻頁');
       }
@@ -2249,6 +2263,72 @@
       }
       
       AppState.layout.marginTop = originalMargin; // 還原
+    });
+
+    // 測試 9：驗證直排翻頁熱區鏡像
+    runTest('驗證直排翻頁熱區鏡像', () => {
+      const originalDirection = AppState.layoutDirection;
+      const book = AppState.books.find(b => b.id === AppState.selectedBook);
+      const originalProgress = book.progress;
+
+      // 模擬 click 事件對象
+      const mockEventLeft = {
+        currentTarget: {
+          getBoundingClientRect: () => ({ left: 0, width: 300 })
+        },
+        clientX: 50 // 點擊左側 1/3 處 (50 < 100)
+      };
+
+      const mockEventRight = {
+        currentTarget: {
+          getBoundingClientRect: () => ({ left: 0, width: 300 })
+        },
+        clientX: 250 // 點擊右側 1/3 處 (250 > 200)
+      };
+
+      // 1. 橫排模式測試
+      AppState.layoutDirection = 'horizontal';
+      book.progress = 50;
+      
+      // 橫排點左邊應為上一頁 (進度減少 5%)
+      triggerPageClick(mockEventLeft);
+      if (book.progress !== 45) {
+        AppState.layoutDirection = originalDirection;
+        book.progress = originalProgress;
+        throw new Error('橫排點擊左側未能正常執行上一頁');
+      }
+
+      // 橫排點右邊應為下一頁 (進度增加 5%)
+      triggerPageClick(mockEventRight);
+      if (book.progress !== 50) {
+        AppState.layoutDirection = originalDirection;
+        book.progress = originalProgress;
+        throw new Error('橫排點擊右側未能正常執行下一頁');
+      }
+
+      // 2. 直排模式測試
+      AppState.layoutDirection = 'vertical';
+      book.progress = 50;
+
+      // 直排點左邊應為下一頁 (進度增加 5%)
+      triggerPageClick(mockEventLeft);
+      if (book.progress !== 55) {
+        AppState.layoutDirection = originalDirection;
+        book.progress = originalProgress;
+        throw new Error('直排點擊左側未能正確執行下一頁(RTL鏡像)');
+      }
+
+      // 直排點右邊應為上一頁 (進度減少 5%)
+      triggerPageClick(mockEventRight);
+      if (book.progress !== 50) {
+        AppState.layoutDirection = originalDirection;
+        book.progress = originalProgress;
+        throw new Error('直排點擊右側未能正確執行上一頁(RTL鏡像)');
+      }
+
+      // 還原
+      AppState.layoutDirection = originalDirection;
+      book.progress = originalProgress;
     });
 
     // 初始渲染與自我測試
