@@ -88,4 +88,44 @@ void main() {
     expect(errorMessage, isNotNull);
     expect(rendered, isFalse);
   });
+
+  testWidgets('開啟內容已損毀的 EPUB 檔案觸發 onError', (tester) async {
+    // 檔案存在但內容不是合法的 EPUB（甚至不是合法的 zip）——與前一項「不存在」的測試
+    // 案例分屬不同的失敗分支：這一項會先通過 AssetRetriever.retrieve()（檔案讀得到），
+    // 再於 PublicationOpener.open() 解析失敗，驗證的是不同的 onError 觸發路徑。
+    final tempDir = await getTemporaryDirectory();
+    final corruptedFile = File(
+        '${tempDir.path}/corrupted_${DateTime.now().millisecondsSinceEpoch}.epub');
+    await corruptedFile.writeAsBytes(
+        List<int>.generate(256, (i) => i % 256), flush: true);
+    addTearDown(() async {
+      if (await corruptedFile.exists()) await corruptedFile.delete();
+    });
+
+    final completer = Completer<void>();
+    var rendered = false;
+    String? errorMessage;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: EpubReaderView(
+          filePath: corruptedFile.path,
+          onPageRendered: () {
+            rendered = true;
+            if (!completer.isCompleted) completer.complete();
+          },
+          onError: (message) {
+            errorMessage = message;
+            if (!completer.isCompleted) completer.complete();
+          },
+        ),
+      ),
+    );
+
+    await completer.future.timeout(const Duration(seconds: 10));
+    await tester.pumpAndSettle();
+
+    expect(errorMessage, isNotNull);
+    expect(rendered, isFalse);
+  });
 }

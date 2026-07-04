@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.view.View
 import android.widget.FrameLayout
 import androidx.fragment.app.FragmentActivity
+import androidx.fragment.app.FragmentFactory
 import androidx.fragment.app.add
 import androidx.fragment.app.commitNow
 import io.flutter.plugin.common.BinaryMessenger
@@ -41,10 +42,14 @@ import java.io.File
  *
  * `activity.supportFragmentManager.fragmentFactory` 是 Activity 層級的全域屬性，本類別
  * 在 attachNavigator() 覆寫它之前，會先保留原本的值，並在 dispose() 還原——避免影響
- * Activity 上其他 Fragment（例如未來若同時存在其他自訂 FragmentFactory 使用者）。本
- * App 目前的畫面設計（見 spec.md 的單一 seam）同一時間只會顯示一個原生閱讀 view，因此
- * 這個「保留一份、還原一份」的簡單作法已足夠；並非要處理多個 EpubReaderView 同時存在
- * 互相覆寫的通用情境（目前用不到，YAGNI）。
+ * Activity 上其他 Fragment。本 App 目前的畫面設計（見 spec.md 的單一 seam）同一時間只會
+ * 顯示一個原生閱讀 view，但 Flutter 的路由轉場（route transition）期間，舊畫面的
+ * PlatformView 在轉場動畫播完、正式從 widget tree 移除之前，可能與新畫面的 PlatformView
+ * 短暫並存（這是 Flutter Navigator 的正常行為，不是本類別自創的假設）。若單純「保留一份、
+ * 還原一份」，舊畫面 dispose() 時可能把新畫面剛設定好的 fragmentFactory 覆寫掉。因此
+ * dispose() 還原前會先檢查目前的 fragmentFactory 是不是仍是本實例自己安裝的那一個
+ * （identity 比對，見 installedFragmentFactory）——如果轉場期間已經被另一個實例換掉，
+ * 代表 factory 已經不是本實例的責任，直接放著不動，避免蓋掉另一個仍在使用中的實例。
  *
  * 【重要前提】上述整套「把 Fragment 掛進 Activity 層級 supportFragmentManager」的機制，
  * 成立的前提是 Flutter 的 AndroidView（見 lib/reader/epub_reader_view.dart）目前是以
@@ -74,6 +79,7 @@ class EpubReaderView(
     private val fragmentTag = "cc.ugotit.elinkbook.epub_reader_view_$id"
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private val previousFragmentFactory = activity.supportFragmentManager.fragmentFactory
+    private var installedFragmentFactory: FragmentFactory? = null
     private var publication: Publication? = null
     private var pageReported = false
     private var isDisposed = false
@@ -101,33 +107,41 @@ class EpubReaderView(
         }
         pageReported = false
         scope.launch {
-            val httpClient = DefaultHttpClient()
-            val assetRetriever = AssetRetriever(context.contentResolver, httpClient)
-            val asset = assetRetriever.retrieve(File(path)).getOrElse {
-                channel.invokeMethod("onError", "找不到檔案或檔案已損毀：$path")
-                return@launch
+            // 外層 try/catch 涵蓋整個開書流程（包含 AssetRetriever/DefaultPublicationParser
+            // 等元件的建構與呼叫）。retrieve()/open() 各自宣告的失敗（Try.Failure）已經用
+            // getOrElse 導向 onError；這裡額外攔截的是它們或周邊元件拋出的「非預期」例外
+            // （例如底層建構子本身丟出的 RuntimeException），避免變成未攔截的協程例外。
+            try {
+                val httpClient = DefaultHttpClient()
+                val assetRetriever = AssetRetriever(context.contentResolver, httpClient)
+                val asset = assetRetriever.retrieve(File(path)).getOrElse {
+                    channel.invokeMethod("onError", "找不到檔案或檔案已損毀：$path")
+                    return@launch
+                }
+                val publicationParser = DefaultPublicationParser(
+                    context,
+                    httpClient,
+                    assetRetriever,
+                    pdfFactory = null,
+                )
+                val publicationOpener = PublicationOpener(publicationParser)
+                val openedPublication = publicationOpener.open(asset, allowUserInteraction = false).getOrElse {
+                    channel.invokeMethod("onError", "無法解析 EPUB 檔案：${it.message}")
+                    return@launch
+                }
+                // openBook 是非同步流程，Flutter 端有可能在這段 await 期間就把這個
+                // PlatformView 銷毀（dispose() 已執行）。scope.cancel() 只能取消協程本身，
+                // 但 attachNavigator() 內完全是同步呼叫（沒有 suspend 呼叫點），協程機制
+                // 不會在這中間自動檢查取消狀態——若不手動檢查，可能會把 Fragment 掛到一個
+                // 已經從畫面移除、id 已不存在於 view 樹中的容器，導致例外或資源洩漏。
+                if (isDisposed) {
+                    openedPublication.close()
+                    return@launch
+                }
+                attachNavigator(openedPublication)
+            } catch (e: Exception) {
+                channel.invokeMethod("onError", "開啟 EPUB 檔案時發生未預期的錯誤：${e.message}")
             }
-            val publicationParser = DefaultPublicationParser(
-                context,
-                httpClient,
-                assetRetriever,
-                pdfFactory = null,
-            )
-            val publicationOpener = PublicationOpener(publicationParser)
-            val openedPublication = publicationOpener.open(asset, allowUserInteraction = false).getOrElse {
-                channel.invokeMethod("onError", "無法解析 EPUB 檔案：${it.message}")
-                return@launch
-            }
-            // openBook 是非同步流程，Flutter 端有可能在這段 await 期間就把這個
-            // PlatformView 銷毀（dispose() 已執行）。scope.cancel() 只能取消協程本身，
-            // 但 attachNavigator() 內完全是同步呼叫（沒有 suspend 呼叫點），協程機制
-            // 不會在這中間自動檢查取消狀態——若不手動檢查，可能會把 Fragment 掛到一個
-            // 已經從畫面移除、id 已不存在於 view 樹中的容器，導致例外或資源洩漏。
-            if (isDisposed) {
-                openedPublication.close()
-                return@launch
-            }
-            attachNavigator(openedPublication)
         }
     }
 
@@ -140,12 +154,13 @@ class EpubReaderView(
         try {
             publication = openedPublication
             val navigatorFactory = EpubNavigatorFactory(publication = openedPublication)
-            activity.supportFragmentManager.fragmentFactory =
-                navigatorFactory.createFragmentFactory(
-                    initialLocator = null,
-                    listener = this,
-                    paginationListener = this,
-                )
+            val fragmentFactory = navigatorFactory.createFragmentFactory(
+                initialLocator = null,
+                listener = this,
+                paginationListener = this,
+            )
+            installedFragmentFactory = fragmentFactory
+            activity.supportFragmentManager.fragmentFactory = fragmentFactory
             activity.supportFragmentManager.commitNow(allowStateLoss = true) {
                 add<EpubNavigatorFragment>(containerId, args = Bundle(), tag = fragmentTag)
             }
@@ -182,9 +197,22 @@ class EpubReaderView(
         scope.cancel()
         val fragment = activity.supportFragmentManager.findFragmentByTag(fragmentTag)
         if (fragment != null) {
-            activity.supportFragmentManager.commitNow(allowStateLoss = true) { remove(fragment) }
+            try {
+                activity.supportFragmentManager.commitNow(allowStateLoss = true) { remove(fragment) }
+            } catch (e: Exception) {
+                // dispose() 沒有管道能把例外回報給 Flutter（widget 已在銷毀中，channel 的
+                // 另一端未必還在聽），也絕不能讓例外從 dispose() 拋出去——那會直接讓
+                // Flutter engine 端收到未預期例外。這裡只能盡力清理，失敗就放棄，不重拋。
+            }
         }
-        activity.supportFragmentManager.fragmentFactory = previousFragmentFactory
+        // 只有目前的 fragmentFactory 仍是本實例自己安裝的那一個時才還原（identity 比對，
+        // 見上方類別註解）；若轉場期間已被另一個 EpubReaderView 覆寫，代表這個 factory
+        // 已經不是本實例的責任，不能蓋掉別人還在使用中的設定。
+        if (installedFragmentFactory != null &&
+            activity.supportFragmentManager.fragmentFactory === installedFragmentFactory
+        ) {
+            activity.supportFragmentManager.fragmentFactory = previousFragmentFactory
+        }
         publication?.close()
         publication = null
     }
