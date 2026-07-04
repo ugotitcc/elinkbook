@@ -20,7 +20,7 @@
 
 ## 目前狀態
 
-本專案目前僅有需求文件，尚未開始實作，沒有程式碼、建置系統或測試套件。
+技術骨架（Flutter + Android、EPUB 用 Readium、PDF 用平台原生 API）已完成並驗證端到端流程，程式碼位於 [`app/`](app/)。圖書庫管理、直排/橫排排版、字型與版面客製化、註記、雲端同步、全文檢索、閱讀統計等功能尚未實作，開發現況請見 [`docs/epics.md`](docs/epics.md)。
 
 完整需求請見 [`docs/prd.md`](docs/prd.md)；給 Claude Code 的開發指引請見 [`CLAUDE.md`](CLAUDE.md)。
 

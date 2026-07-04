@@ -4,9 +4,64 @@
 
 ## 儲存庫現況
 
-本儲存庫目前只有產品需求文件（`docs/prd.md`），尚無任何原始碼、建置系統、套件清單或測試套件——實作尚未開始。目前沒有 build/lint/test 相關指令可用。
+`epic-0-skeleton`（Flutter + Android 技術骨架）已完成並合併回 `main`：`app/` 目錄下是可執行、可測試的 Flutter Android App，已驗證「書架 → 點開一本書 → 原生渲染出內容」的端到端流程（EPUB 用 Readium、PDF 用 `PdfRenderer`）。`docs/prd.md` 描述的其餘功能（真正的圖書庫管理、直排/橫排排版、字型與版面客製化、註記、雲端同步、全文檢索、閱讀統計等）皆尚未實作，屬於後續 Epic（現況與優先順序見 `docs/epics.md`）。
 
-當程式碼加入後，本檔案應更新為實際可用的指令（build/lint/test/單一測試執行方式）與真實的專案結構。
+`prototype/index.html` 是一份獨立、依需求文件製作的 HTML/CSS/JS UI/UX 原型（手機外殼模擬器），後續功能性 Epic 設計畫面時應先參考它，細節見下方「UI/UX 原型參考」。
+
+## 常用指令
+
+所有指令皆在 `app/` 目錄下執行。
+
+```bash
+# 安裝/更新相依套件
+flutter pub get
+
+# 執行所有 widget/unit test（純 Dart，不需裝置/模擬器）
+flutter test
+
+# 執行單一測試檔
+flutter test test/screens/reader_screen_test.dart
+
+# 靜態分析——提交前必須乾淨（"No issues found!"）
+flutter analyze
+
+# 列出可用的真實裝置/模擬器 id
+flutter devices
+
+# integration_test：驗證原生 PlatformView 是否真的渲染出內容，
+# 必須指定真實裝置/模擬器（見下方「兩層測試架構」，一般 flutter test 做不到這件事）
+flutter test integration_test/reader_screen_test.dart -d <device-id>
+
+# 建置 debug APK
+flutter build apk --debug
+```
+
+## 高層架構
+
+### `ReaderScreen`：唯一的閱讀器 seam
+
+`app/lib/screens/reader_screen.dart` 是格式無關的統一入口：`ReaderScreen(filePath: String)` 依 `detectBookFormat()`（`app/lib/reader/book_format.dart`，依副檔名判斷 `epub`/`pdf`/`unknown`）分派到對應的原生渲染 widget：
+
+- `EpubReaderView`（`app/lib/reader/epub_reader_view.dart`）——包裝 Readium `kotlin-toolkit`
+- `PdfReaderView`（`app/lib/reader/pdf_reader_view.dart`）——包裝 `android.graphics.pdf.PdfRenderer`
+
+兩者是刻意對稱的 `AndroidView` 包裝：Dart 端建構參數固定為 `filePath`/`onPageRendered`/`onError`；原生端（`app/android/app/src/main/kotlin/cc/ugotit/elinkbook/`）皆實作同一組 method channel 契約 `openBook(path)` → `onPageRendered()`/`onError(message)`，並用對稱的檔名（`EpubReaderView.kt`+`EpubReaderViewFactory.kt`／`PdfReaderView.kt`+`PdfReaderViewFactory.kt`），在 `MainActivity.configureFlutterEngine()` 中註冊各自的 `PlatformView` 類型字串。未來新增格式（例如 TXT）應延續同一組三段式契約。
+
+`ReaderScreen` 對外的公開建構參數只有 `filePath`——載入中／錯誤狀態是內部實作細節，透過固定的 `Key('reader_loading_indicator')`／`Key('reader_error_text')` 暴露給測試觀察，刻意不新增公開 callback 參數。
+
+### `MainActivity` 為何是 `FlutterFragmentActivity`
+
+`EpubReaderView` 需要把 Readium 的 `EpubNavigatorFragment`（建構子為 `internal`，只能透過 Readium 自己的 `FragmentFactory` 建立）掛載到 Activity 層級的 `supportFragmentManager`，因此 `MainActivity` 從 Flutter 預設的 `FlutterActivity` 改為 `FlutterFragmentActivity`。`PdfReaderView` 不涉及 Fragment（純 `ImageView` 點陣圖渲染），不受此影響。
+
+### 兩層測試架構
+
+- `app/test/`——純 Dart／widget test，`flutter test` 即可執行，不需裝置。適用於格式偵測邏輯，以及不涉及原生 `PlatformView` 渲染的畫面行為。
+- `app/integration_test/`——**必須**在真實 Android 裝置/模擬器上執行（`-d <device-id>`）。一般 widget test 無法觀察 `PlatformView` 內部的真實渲染結果，因此「原生渲染是否真的成功」一律由這裡驗證：斷言方式是等待 `Key('reader_loading_indicator')` 消失且無 `Key('reader_error_text')`，而非直接掛 callback（`ReaderScreen` 對外沒有暴露 callback，見上方）。
+- 已提交版本控制的範例測試檔：`app/test/fixtures/sample.epub`／`sample.pdf`（在 `pubspec.yaml` 宣告為 asset），同時供上述測試與 `LibraryScreen` 的範例書架項目共用。
+
+### `LibraryScreen` 與範例書籍
+
+`app/lib/screens/library_screen.dart` 目前顯示固定的範例書籍清單（定義於 `app/lib/screens/sample_books.dart`：一本 EPUB、一本 PDF）——真正的圖書庫管理（匯入、詮釋資料、封面產生）屬於尚未開始的 `epic-1-library`。點擊範例項目時，`stageSampleBookFile()` 會把 Flutter asset 複製為裝置暫存目錄中的真實檔案，再導航至 `ReaderScreen`，因為原生渲染引擎需要真實的裝置檔案系統路徑、無法直接讀取 Flutter asset。
 
 ## 這是什麼產品
 
@@ -65,13 +120,17 @@ elinkBook（全能跨平台電子書閱讀器）是一款跨平台電子書閱�
 
 ## 目前在此儲存庫中的工作方式
 
-目前尚無任何程式碼。請將此處的任務視為：(a) 修訂 `docs/prd.md` 本身，或 (b) 透過下方的 SDD 工作流程開始實作（下一步請見 `docs/epics.md`）。
+請將此處的任務視為：(a) 修訂 `docs/prd.md` 本身，或 (b) 透過下方的 SDD 工作流程進行後續 Epic 的開發（下一個里程碑：`epic-1-library`，現況見 `docs/epics.md`）。
+
+### UI/UX 原型參考
+
+`prototype/index.html` 是依需求文件製作的獨立 HTML 原型（手機外殼模擬器 + 控制面板，涵蓋書架視圖、直排/橫排排版切換、多主題、版面客製化、九宮格導航熱區等）。`epic-0-skeleton` 之後的所有功能性 Epic（`epic-1` 起）在設計畫面 UI/UX 時，須先參考此原型既有的視覺與互動設計，作為 Flutter 實作的依據起點，而非重新發明。
 
 ### 技術棧（已決策）
 
 - **App 外殼**：Flutter，跨平台共用。
 - **手機優先，Android 先於 iOS。** 初期幾波不含桌面版目標（見 `docs/epics.md` 的 epic-13）。
-- **Android 最低支援版本：Android 11 (API 30)**（`minSdk = 21`，涵蓋範圍更寬鬆，見 `docs/prd.md` NFR-6）——不得將 Android 專案的 `minSdk`/相容性設定限制在比 API 30 更新的門檻。
+- **Android 最低支援版本：Android 11 (API 30)**（見 `docs/prd.md` NFR-6）——不得將 Android 專案的 `minSdk`/相容性設定限制在比 API 30 更新的門檻。實際 `minSdk` 目前是 `24`（比政策門檻寬鬆；由 Readium `kotlin-toolkit`〔要求 23〕與 `integration_test` 外掛〔要求 24〕兩者疊加後的真實下限決定，見 `app/android/app/build.gradle.kts`），不是刻意收緊。
 - **EPUB**：Readium 官方原生工具包（Android 用 `readium-kotlin-toolkit`、iOS 用 `readium-swift-toolkit`）——不是自訂解析器，也不是像 epub.js 這種 WebView 函式庫。透過 Flutter 的 `PlatformView` 渲染，使用 Readium 的 Locator（等同 CFI）與 Decorator（劃線/備註疊加）API。
 - **PDF**：各平台內建 API（Android 用 `PdfRenderer`、iOS 用 `PDFKit`），不使用 PDFium，透過 `PlatformView` 渲染。
 - **TXT**：自訂的輕量直排 CJK 排版引擎（獨立 epic —— `epic-11-txt-engine`），不採用 Readium/WebView 方案，因為純文字沒有 HTML/CSS 那層需要重新實作。
