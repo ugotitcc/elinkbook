@@ -1,57 +1,128 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
-import '../reader/book_format.dart';
+import '../library/book_import_service.dart';
+import '../library/library_repository.dart';
+import '../library/models/book.dart';
 import 'reader_screen.dart';
-import 'sample_books.dart';
 import 'settings_screen.dart';
 
-/// 書架佔位畫面：真正的圖書庫管理邏輯屬於 epic-1-library；本畫面目前顯示
-/// 固定的範例書籍清單（一本 EPUB、一本 PDF，見 sample_books.dart），點擊項目
-/// 會把對應範例檔案複製為裝置真實檔案後導航至 ReaderScreen，讓「從書架點開
-/// 一本書、看到內容渲染出來」成為從 App 正常入口即可觸及的真實使用者流程。
-class LibraryScreen extends StatelessWidget {
-  const LibraryScreen({super.key});
+/// 圖書庫主畫面：讀取 [LibraryRepository] 的真實資料，取代
+/// epic-0-skeleton 遺留的固定範例書籍清單佔位版本（見
+/// docs/epics/epic-1-library/spec.md）。書架/列表雙重呈現與書籍卡片渲染由
+/// Issue 5 Task 2 補上；本檔案先建立資料載入、空清單狀態與匯入動作骨架。
+class LibraryScreen extends StatefulWidget {
+  final LibraryRepository repository;
+  final BookImportService importService;
+
+  const LibraryScreen({
+    super.key,
+    required this.repository,
+    required this.importService,
+  });
+
+  @override
+  State<LibraryScreen> createState() => _LibraryScreenState();
+}
+
+class _LibraryScreenState extends State<LibraryScreen> {
+  List<Book>? _books;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBooks();
+  }
+
+  Future<void> _loadBooks() async {
+    final books = await widget.repository.listBooks();
+    if (!mounted) return;
+    setState(() => _books = books);
+  }
+
+  Future<void> _pickAndImportFiles() async {
+    final picked = await FilePicker.pickFiles(
+      allowMultiple: true,
+      type: FileType.custom,
+      allowedExtensions: ['epub', 'pdf', 'txt'],
+    );
+    if (picked == null || picked.files.isEmpty) return;
+    final uris =
+        picked.files.map((f) => f.identifier).whereType<String>().toList();
+    if (uris.isEmpty) return;
+    await widget.importService.importFiles(uris);
+    await _loadBooks();
+  }
+
+  void _openBook(Book book) {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => ReaderScreen(filePath: book.filePath)),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    final books = _books;
     return Scaffold(
       appBar: AppBar(
         title: const Text('書架'),
         actions: [
           IconButton(
+            key: const Key('library_import_button'),
+            icon: const Icon(Icons.add),
+            tooltip: '匯入書籍',
+            onPressed: _pickAndImportFiles,
+          ),
+          IconButton(
             icon: const Icon(Icons.settings),
             tooltip: '設定',
             onPressed: () {
               Navigator.of(context).push(
-                MaterialPageRoute(builder: (context) => const SettingsScreen()),
+                MaterialPageRoute(
+                  builder: (context) => const SettingsScreen(),
+                ),
               );
             },
           ),
         ],
       ),
-      body: ListView(
+      body: books == null
+          ? const Center(child: CircularProgressIndicator())
+          : books.isEmpty
+              ? _buildEmptyState()
+              : _buildBookList(books),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          for (final book in sampleBooks)
-            ListTile(
-              key: Key('sample_book_${book.fileName}'),
-              leading: Icon(
-                book.format == BookFormat.epub
-                    ? Icons.menu_book
-                    : Icons.picture_as_pdf,
-              ),
-              title: Text(book.title),
-              onTap: () => _openSampleBook(context, book),
-            ),
+          const Text('尚未匯入書籍'),
+          const SizedBox(height: 12),
+          ElevatedButton(
+            key: const Key('library_empty_import_button'),
+            onPressed: _pickAndImportFiles,
+            child: const Text('匯入書籍'),
+          ),
         ],
       ),
     );
   }
 
-  Future<void> _openSampleBook(BuildContext context, SampleBook book) async {
-    final filePath = await stageSampleBookFile(book);
-    if (!context.mounted) return;
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (context) => ReaderScreen(filePath: filePath)),
+  Widget _buildBookList(List<Book> books) {
+    return ListView.builder(
+      itemCount: books.length,
+      itemBuilder: (context, index) {
+        final book = books[index];
+        return ListTile(
+          key: Key('book_item_${book.id}'),
+          title: Text(book.title),
+          subtitle: Text(book.author ?? ''),
+          onTap: () => _openBook(book),
+        );
+      },
     );
   }
 }

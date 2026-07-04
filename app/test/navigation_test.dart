@@ -2,9 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/screens/library_screen.dart';
 
+import 'support/fake_book_import_service.dart';
+import 'support/fake_library_repository.dart';
+
 void main() {
   testWidgets('點擊設定圖示導航至 SettingsScreen，返回後回到 LibraryScreen', (tester) async {
-    await tester.pumpWidget(const MaterialApp(home: LibraryScreen()));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(),
+          importService: FakeBookImportService(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
 
     expect(find.text('書架'), findsOneWidget);
 
