@@ -68,14 +68,15 @@ epic-0 建立的 `EpubReaderView`/`PdfReaderView` 原生契約中，`openBook(pa
 
 1. 使用者從 `LibraryScreen` 的匯入按鈕選擇「選擇檔案（可多選）」或「選擇資料夾」。
 2. `file_picker` 設定為回傳原始 SAF URI（而非套件預設的快取複本路徑）。
-3. 原生端對取得的 URI 呼叫 `takePersistableUriPermission()`。
-4. 依副檔名分派呼叫新增的原生 `MethodChannel`（`elinkbook/book_metadata`）：`extractMetadata(uri, format)` →
+3. 依副檔名判斷格式；不支援的副檔名直接跳過該檔案，不浪費一次原生呼叫。
+4. 原生端對取得的 URI 呼叫 `takePersistableUriPermission()`（僅對 `content://` scheme；失敗則該檔案視為匯入失敗並跳過，不寫入資料庫，因為當次暫時讀取權限只在本次 App 行程存活期間有效）。
+5. 依格式分派呼叫新增的原生 `MethodChannel`（`elinkbook/book_metadata`）：`extractMetadata(uri, format)` →
    - EPUB：Readium `Publication` API 讀出 title/author/內嵌封面圖 bytes
    - PDF：`PdfRenderer` 渲染第 1 頁為點陣圖當封面；標題/作者通常缺失，缺省用檔名
    - TXT：不呼叫原生，Dart 端依書名文字動態產生封面圖（背景色+書名首字）
-5. 封面 bytes 存成 PNG 落地於 App 私有目錄，路徑寫入 `coverPath`。
-6. 寫入一筆 `books` 記錄：`filePath` 存原始 URI 字串、`source='local'`。
-7. **資料夾批次匯入 + FR-34 自動分類**：若「依資料夾名稱自動建立分類」開關開啟（預設開），批次匯入時以來源資料夾名稱建立/歸入對應 `groups` 項目；資料夾名稱與既有群組同名則直接歸入、不重複建立。
+6. 封面 bytes 存成 PNG 落地於 App 私有目錄，路徑寫入 `coverPath`。
+7. 寫入一筆 `books` 記錄：`filePath` 存原始 URI 字串、`source='local'`。
+8. **資料夾批次匯入 + FR-34 自動分類**：若「依資料夾名稱自動建立分類」開關開啟（預設開），批次匯入時以來源資料夾名稱建立/歸入對應 `groups` 項目；資料夾名稱與既有群組同名則直接歸入、不重複建立。
 
 **失效處理**：若日後開啟書籍時，原始 URI 權限已失效（檔案被移動/刪除），`ReaderScreen` 走既有的 `Key('reader_error_text')` 錯誤路徑；書架列表項目在此情況下顯示「檔案無法存取，請重新匯入」提示。
 
