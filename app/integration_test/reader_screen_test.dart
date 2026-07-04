@@ -54,6 +54,11 @@ void main() {
       MaterialApp(home: ReaderScreen(filePath: samplePath)),
     );
 
+    // 先確認載入指示器真的存在，才能保證下面「等它消失」是有意義的等待，
+    // 而不是 Key 被改名/移除後，condition 從一開始就成立、測試沒等待就
+    // silently 通過。
+    expect(find.byKey(const Key('reader_loading_indicator')), findsOneWidget);
+
     // 10 秒逾時：Readium 需非同步解析 EPUB 套件結構並啟動 WebView 導覽器，
     // 與 Issue 4 的 EpubReaderView 整合測試採用相同的逾時時間。
     await _pumpUntil(
@@ -78,6 +83,11 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(home: ReaderScreen(filePath: samplePath)),
     );
+
+    // 先確認載入指示器真的存在，才能保證下面「等它消失」是有意義的等待，
+    // 而不是 Key 被改名/移除後，condition 從一開始就成立、測試沒等待就
+    // silently 通過。
+    expect(find.byKey(const Key('reader_loading_indicator')), findsOneWidget);
 
     // 5 秒逾時：PdfRenderer 為同步點陣圖渲染，與 Issue 3 的 PdfReaderView
     // 整合測試採用相同的逾時時間。
