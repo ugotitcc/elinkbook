@@ -128,4 +128,74 @@ void main() {
     expect(errorMessage, isNotNull);
     expect(rendered, isFalse);
   });
+
+  // 使用 file:// URI 驗證原生端的 URI 解析分支邏輯（resolveAbsoluteUrl 對
+  // file:// 與 content:// 走的是完全相同的程式碼路徑）。真正 content://
+  // URI 的 SAF 權限情境（takePersistableUriPermission）留待 Issue 4 匯入
+  // 服務的手動驗收步驟做端到端驗證，本測試不涵蓋。
+  testWidgets('開啟以 file:// URI 表示的有效 EPUB 檔案觸發 onPageRendered',
+      (tester) async {
+    final samplePath =
+        await _stageAssetAsFile('test/fixtures/sample.epub', 'sample_uri.epub');
+    addTearDown(() async {
+      final file = File(samplePath);
+      if (await file.exists()) await file.delete();
+    });
+    final uriPath = Uri.file(samplePath).toString();
+
+    final completer = Completer<void>();
+    String? errorMessage;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: EpubReaderView(
+          filePath: uriPath,
+          onPageRendered: () {
+            if (!completer.isCompleted) completer.complete();
+          },
+          onError: (message) {
+            errorMessage = message;
+            if (!completer.isCompleted) completer.complete();
+          },
+        ),
+      ),
+    );
+
+    await completer.future.timeout(const Duration(seconds: 10));
+    await tester.pumpAndSettle();
+
+    expect(errorMessage, isNull,
+        reason: '應觸發 onPageRendered，但 onError 訊息為: $errorMessage');
+  });
+
+  testWidgets('開啟指向不存在資源的 content:// URI 觸發 onError', (tester) async {
+    final completer = Completer<void>();
+    var rendered = false;
+    String? errorMessage;
+
+    final missingUri =
+        'content://cc.ugotit.elinkbook.does_not_exist/${DateTime.now().millisecondsSinceEpoch}.epub';
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: EpubReaderView(
+          filePath: missingUri,
+          onPageRendered: () {
+            rendered = true;
+            if (!completer.isCompleted) completer.complete();
+          },
+          onError: (message) {
+            errorMessage = message;
+            if (!completer.isCompleted) completer.complete();
+          },
+        ),
+      ),
+    );
+
+    await completer.future.timeout(const Duration(seconds: 10));
+    await tester.pumpAndSettle();
+
+    expect(errorMessage, isNotNull);
+    expect(rendered, isFalse);
+  });
 }
