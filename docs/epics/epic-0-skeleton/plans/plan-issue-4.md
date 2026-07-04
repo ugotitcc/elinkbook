@@ -20,7 +20,7 @@
 - 本工單**不得**引入 Readium 的 DRM（`readium-lcp`）或 OPDS（`readium-opds`）模組——elinkBook 明確排除 DRM 解除（見 `docs/prd.md`「明確排除範圍」），本工單也用不到 OPDS 目錄。
 - 本工單**不得**修改 `ReaderScreen` 的分派邏輯（那是 Issue 5 的範圍）——本工單的 `EpubReaderView` 是獨立建構、獨立測試的元件，與 Issue 3 的 `PdfReaderView` 一樣。
 - 所有畫面上的使用者可見文字（例如錯誤訊息）須為正體中文。
-- **`minSdk` 須從 21 提高到 23**：Readium `kotlin-toolkit` 3.3.0 本身要求 `minSdk 23`（見 Task 1 Step 2）。這不違反專案規定——`docs/adr/0001-mobile-architecture.md`/`CLAUDE.md` 的限制是「不得將 `minSdk` 限制在比 API 30 更新的門檻」，23 仍然遠低於 30，只是把目前刻意設定的下限（21）提高到符合這個新相依套件的實際下限，並未違反「涵蓋範圍須夠寬」的政策意圖。
+- **`minSdk` 須從 21 提高到 24**（原計劃寫的是 23，經 Code Review 過程查證後修正——見下方「修正」與文件審查回應紀錄）：Readium `kotlin-toolkit` 3.3.0 本身要求 `minSdk 23`（見 Task 1 Step 2），但本專案在 Issue 3 已加入的 `integration_test` 外掛實際要求 `minSdk 24`（`processDebugMainManifest` 的 manifest merge 規則），所以兩者疊加後的真實下限是 24，不是 23。這不違反專案規定——`docs/adr/0001-mobile-architecture.md`/`CLAUDE.md` 的限制是「不得將 `minSdk` 限制在比 API 30 更新的門檻」，24 仍然遠低於 30，只是把目前刻意設定的下限（21）提高到符合這兩個相依套件疊加後的實際下限，並未違反「涵蓋範圍須夠寬」的政策意圖。
 - **Kotlin Gradle plugin 版本須從 `2.2.20` 提高到 `2.3.20`**：Readium 3.3.0 本身以 Kotlin 2.3.20 建置（見 Task 1 Step 1），為避免「函式庫用比目前專案更新的 Kotlin 編譯」造成的 metadata 不相容錯誤，需同步跟進。
 - `MainActivity` 須從 `io.flutter.embedding.android.FlutterActivity` 改為 `io.flutter.embedding.android.FlutterFragmentActivity`（見 Task 2 Step 1）——這是 Flutter 官方文件明確記載的作法，用於「需要 `FragmentActivity` 的 Android API」，不影響 Issue 3 的 `PdfReaderView`（純 `ImageView`，不涉及 Fragment）。
 - 本工單範圍不含把 `EpubNavigatorFragment` 的換頁/選字/劃線功能接上 Flutter——本工單只驗證「給一個 EPUB 檔案路徑，能渲染出起始頁」這一件事。
@@ -53,7 +53,7 @@
     id("org.jetbrains.kotlin.android") version "2.3.20" apply false
 ```
 
-- [ ] **Step 2：`minSdk` 提高至 23 + 啟用 core library desugaring**
+- [x] **Step 2：`minSdk` 提高至 24 + 啟用 core library desugaring**
 
 開啟 `app/android/app/build.gradle.kts`，把 `defaultConfig` 區塊中的：
 
@@ -64,8 +64,10 @@
 改為：
 
 ```kotlin
-        minSdk = 23
+        minSdk = 24
 ```
+
+（原計劃這裡寫的是 `23`——Readium `kotlin-toolkit` 3.3.0 本身要求的下限——但實際套用時發現 Issue 3 已加入的 `integration_test` 外掛本身要求 `minSdk 24`：`processDebugMainManifest` 的 manifest merge 檢查會直接報錯「`uses-sdk:minSdkVersion 23 cannot be smaller than version 24 declared in library [:integration_test]`」。兩個相依套件疊加後的真實下限是 24，不是 23，所以這裡直接寫 24。這個修正意外也讓下方 Step 7 提到的 `minSdk` 自動改寫問題徹底消失——見 Step 7 的說明。）
 
 同一個檔案的 `android { ... }` 區塊中，在 `compileOptions { ... }` 內新增 `isCoreLibraryDesugaringEnabled = true`，使該區塊變為：
 
@@ -77,7 +79,7 @@
     }
 ```
 
-（Readium 的 README 明確要求消費端專案啟用 core library desugaring，因為它使用了需要 desugar 才能在 `minSdk 23` 上執行的 Java API。）
+（Readium 的 README 明確要求消費端專案啟用 core library desugaring，因為它使用了需要 desugar 才能在 `minSdk 23`（Readium 本身的下限；本專案實際設定為 24，見上方 Step 2 的說明）上執行的 Java API。）
 
 - [ ] **Step 3：新增 Readium 與相關依賴**
 
@@ -117,8 +119,10 @@ android {
         isCoreLibraryDesugaringEnabled = true
     }
 
-    kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_17.toString()
+    kotlin {
+        compilerOptions {
+            jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
+        }
     }
 
     defaultConfig {
@@ -126,7 +130,7 @@ android {
         applicationId = "cc.ugotit.elinkbook"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = 23
+        minSdk = 24
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -158,6 +162,8 @@ flutter {
 ```
 
 `allprojects { repositories { google(); mavenCentral() } }`（`app/android/build.gradle.kts`）已涵蓋 Readium 所需的 Maven Central，不需新增額外的 repository。
+
+**⚠️ 修正（原計劃文字有誤）**：原計劃文字保留了舊有的 `kotlinOptions { jvmTarget = ... }` 區塊，但 Step 1 把 Kotlin Gradle plugin 升級到 `2.3.20` 後，這個舊 DSL 會直接造成編譯失敗（非僅警告）：`Using 'jvmTarget: String' is an error. Please migrate to the compilerOptions DSL.`（已用 Task 1 實作時的實際建置輸出驗證，並刻意把程式碼還原成舊寫法重跑 `flutter build apk --debug` 確認：還原後必定失敗，改回新寫法後成功建置）。上方程式碼區塊已更新為正確的 `kotlin { compilerOptions { jvmTarget = ... } } ` 新 DSL；執行本計劃時請直接套用上方已修正的版本，不需要再自行除錯這個問題。
 
 - [ ] **Step 4：產生範例 EPUB 測試檔**
 
@@ -266,7 +272,7 @@ flutter build apk --debug
 
 Expected: `✓ Built build\app\outputs\flutter-apk\app-debug.apk`。這一步驟在還沒有寫任何 Readium 相關 Kotlin 程式碼的情況下執行，目的是把「Gradle 座標/版本/`minSdk`/Kotlin 版本相容性」問題與 Task 2 的原生程式碼問題分開驗證。
 
-**⚠️ 已知的建置系統行為（根本原因，非單純巧合）**：Flutter 工具鏈內建一個一次性的專案遷移工具（`flutter_tools/lib/src/android/migrations/min_sdk_version_migration.dart`），只要偵測到 `build.gradle.kts` 裡有 `minSdk = <16 到 23 之間的任何整數>` 這種寫法，就會無條件把它改寫成 `minSdk = flutter.minSdkVersion`——而 `23` 剛好落在這個 16–23 的觸發區間內，所以每次執行 `flutter build`/`flutter test` 都會被改寫，不是只發生一次。`flutter.minSdkVersion` 這個值本身是寫死在目前安裝的 Flutter SDK 版本裡的常數（`flutter_tools/gradle/.../FlutterExtension.kt` 的 `val minSdkVersion: Int = ...`），**不是**從 `local.properties` 或任何專案設定檔讀取的，所以無法透過調整 `local.properties` 來讓 Flutter 跳過這個改寫（不同 Flutter SDK 版本這個常數的值也可能不同，若放任被改寫，等於把 `minSdk` 下限交給「當下開發者安裝的 Flutter SDK 版本」決定，可能低於 Readium 要求的 23）。因此每次執行建置/測試指令後，須用 `git diff app/android/app/build.gradle.kts` 確認 `minSdk` 欄位是否被自動改寫；若被改寫，用 `git checkout -- app/android/app/build.gradle.kts` 還原後重新套用 Step 2 與 Step 3 的變更再繼續（或者暫不還原、直接照著本步驟走完，最後在 Step 8 commit 前再檢查一次並還原）。
+**⚠️ 已知的建置系統行為（根本原因，非單純巧合——已透過改用 `minSdk = 24` 徹底解決，以下為歷史記錄）**：Flutter 工具鏈內建一個一次性的專案遷移工具（`flutter_tools/lib/src/android/migrations/min_sdk_version_migration.dart`），只要偵測到 `build.gradle.kts` 裡有 `minSdk = <16 到 23 之間的任何整數>` 這種寫法，就會無條件把它改寫成 `minSdk = flutter.minSdkVersion`。這個工單原本規劃的 `minSdk = 23` 剛好落在這個 16–23 的觸發區間內，會被每次 `flutter build`/`flutter test` 改寫；但如上方 Step 2 所述，實際的正確值其實是 `24`（`integration_test` 外掛的真實下限），而 `24` 已經超出這個遷移工具的觸發區間，**不會**再被自動改寫——這是採用 `24` 之後附帶的好處，不需要再像 Issue 3 那樣每次建置後手動 `git diff`/`git checkout` 檢查還原。`flutter.minSdkVersion` 這個值本身是寫死在目前安裝的 Flutter SDK 版本裡的常數（`flutter_tools/gradle/.../FlutterExtension.kt` 的 `val minSdkVersion: Int = ...`，本機安裝的版本剛好也是 `24`），**不是**從 `local.properties` 或任何專案設定檔讀取的，所以無法透過調整 `local.properties` 來讓 Flutter 跳過這個改寫；但既然本工單的正確值本來就該是 `24`，這個限制已不再相關。
 
 - [ ] **Step 8：Commit**
 
@@ -709,7 +715,7 @@ flutter test integration_test/epub_reader_view_test.dart -d <device-id>
 
 Expected: `All tests passed!`（兩項測試皆通過：有效 EPUB 觸發 `onPageRendered`；不存在的路徑觸發 `onError`）。
 
-**⚠️ 執行前檢查**：同 Task 1 Step 7 記錄的根本原因（Flutter 的一次性遷移工具會對 `minSdk = 16~23` 的寫法無條件改寫，`23` 剛好在觸發區間內），執行完 `flutter test` 後，用 `git diff app/android/app/build.gradle.kts` 確認 `minSdk` 是否被自動改寫成 `flutter.minSdkVersion`；若是，記得在 Step 9 commit 前還原為明確的 `23`。
+**⚠️ 執行前檢查**：Task 1 已把 `minSdk` 改為明確的 `24`（見 Task 1 Step 2 的修正說明），已超出 Flutter 一次性遷移工具的 16–23 觸發區間，不會再被自動改寫；執行完 `flutter test` 後仍可用 `git diff app/android/app/build.gradle.kts` 確認一下（預期無差異），純屬保險，不是必要步驟。
 
 - [ ] **Step 7：重新執行 Issue 3 的 `PdfReaderView` 測試與 smoke test，確認無回歸**
 
@@ -736,7 +742,7 @@ Expected: `No issues found!`
 
 - [ ] **Step 9：Commit**
 
-先確認 `minSdk` 仍為 `23`（`git diff app/android/app/build.gradle.kts` 應無差異，或差異只有你預期之外的自動改寫並已還原），再執行：
+先確認 `minSdk` 仍為 `24`（`git diff app/android/app/build.gradle.kts` 應無差異——`24` 已超出自動改寫工具的觸發區間，正常情況下不會再有意外差異），再執行：
 
 ```bash
 git add app/android/app/src/main/kotlin/cc/ugotit/elinkbook/MainActivity.kt app/android/app/src/main/kotlin/cc/ugotit/elinkbook/EpubReaderView.kt app/android/app/src/main/kotlin/cc/ugotit/elinkbook/EpubReaderViewFactory.kt app/lib/reader/epub_reader_view.dart app/integration_test/epub_reader_view_test.dart
@@ -777,3 +783,13 @@ git commit -m "Add EpubReaderView native PlatformView with Readium kotlin-toolki
 - **#2.1（`Publication` 資源洩漏）**：查證屬實（見上方查證紀錄，`Publication.close()` 是真實存在且消費端須自行呼叫的方法）。已採納：`EpubReaderView` 新增 `publication` 欄位，`dispose()` 時呼叫 `publication?.close()`。
 - **#2.2（`integration_test` 暫存檔案未清理）**：查證合理，已採納，於「開啟有效 EPUB 檔案」測試案例中用 `addTearDown` 刪除暫存檔。附註：Issue 3 的 `pdf_reader_view_test.dart` 有相同的既存缺口，但那份檔案已合併進 `main`，不屬於本次計劃審查修正範圍，若需要補上須另開後續工單處理，不在此逕行變更已合併程式碼。
 - **#3.1（`minSdk` 被 Flutter 改寫的「根本解決方案」）**：**未採用**——查證後發現審查建議的機制（透過 `local.properties`/`flutter.minSdkVersion` 設定）技術上不可行：直接讀取本機已安裝的 Flutter SDK 原始碼（`flutter_tools/gradle/.../FlutterExtension.kt`）確認 `minSdkVersion` 是寫死在該 Flutter 版本裡的 Kotlin 常數，並非讀取任何專案設定檔；而實際觸發改寫的是 `flutter_tools/lib/src/android/migrations/min_sdk_version_migration.dart` 這個一次性遷移工具，只要偵測到 `minSdk = <16~23 之間的整數>` 就會無條件改寫成 `minSdk = flutter.minSdkVersion`——`23` 剛好落在這個觸發區間內。已改為在 Task 1 Step 7 與 Task 2 Step 6 的既有提醒中補上這個根本原因說明，讓「為何每次都要檢查並還原」有明確依據，而非只是重複「這是已知行為」的模糊提醒。
+
+## 實作審查回應紀錄（`review-issue-4.md`，實作完成後的 Code Review）
+
+本輪審查對象是實作完成後的分支（`b3a2434`..`7956fa9`），發現如下：
+
+- **Important #1（Activity 全局 `FragmentFactory` 被覆寫與 Routing Transition 造成的生命週期競態風險）**：查證屬實，且比先前「多個 `EpubReaderView` 同時存在」的情境更具體、更容易在目前架構下真的發生——Flutter 的路由轉場（route transition）期間，舊畫面的 `PlatformView` 在轉場動畫播完之前本來就會與新畫面的 `PlatformView` 短暫並存，這是 Flutter Navigator 的正常行為，不是本 App 刻意設計出的多實例情境，先前 Round 1 審查回應把這個風險歸類為 YAGNI 是不夠精確的。**未完全採用**審查建議的「`companion object` 維護 `activeInstances` 計數器」方案——這對目前「同一時間最多兩個瞬間並存」的實際情境是過度設計，且引入跨實例共享的可變狀態本身需要額外的執行緒安全考量。改採審查建議中提到的另一半（identity 比對）：`EpubReaderView` 新增 `installedFragmentFactory` 欄位記錄自己安裝的是哪一個 `FragmentFactory`，`dispose()` 只在目前 Activity 的 `fragmentFactory` 仍是自己安裝的那個時才還原，否則代表已被別的實例接手，不予處理。已在 `EpubReaderView.kt` 的類別註解中說明這個競態情境與修正理由。
+- **Important #2（`dispose()` 中 `commitNow` 缺乏異常保護）**：查證屬實——`dispose()` 沒有任何管道可以把例外回報給 Flutter（widget 已在銷毀中），若 `commitNow` 拋出例外且未攔截，會直接讓例外從 `dispose()` 拋出，衝擊 Flutter engine 端。已採納：在 `dispose()` 移除 Fragment 的區塊加上 `try-catch (e: Exception)`，攔截後不重拋、也不記錄額外狀態——`dispose()` 語意上就是「盡力清理」，失敗了也必須讓流程繼續往下走完剩下的清理步驟（還原 `fragmentFactory`、關閉 `Publication`）。
+- **Minor #1（`minSdk` 自動改寫的永久解決方案：改用變數宣告繞過正則表達式）**：**技術主張查證屬實但未採用其建議的用途**——實際測試「`val projectMinSdk = 23; minSdk = projectMinSdk`」寫法：確認這個寫法真的能讓 Flutter 遷移工具的正則表達式（只匹配裸數字字面值）失效，不再自動改寫。但套用後重新建置，`flutter build apk --debug` 隨即在 manifest merge 階段失敗：`uses-sdk:minSdkVersion 23 cannot be smaller than version 24 declared in library [:integration_test]`。這揭露了一個先前被完全掩蓋的真實問題：Issue 3 加入的 `integration_test` 外掛本身要求 `minSdk 24`，而先前每一次「成功」的建置（Task 1、Task 2、上一輪修正 commit）能夠通過，其實都是因為 Flutter 的自動改寫工具在建置當下把 `minSdk` 偷偷改成 `flutter.minSdkVersion`（本機安裝的 Flutter SDK 版本剛好是 24）——已提交的原始碼雖然寫著 `23`，但從來沒有真的用 `23` 建置成功過。真正的修正不是繞過正則表達式讓 `23` 被保留下來（那樣反而會讓建置失敗），而是把 `minSdk` 改成真正正確的下限 `24`（見上方 Task 1 Step 2 的修正）。`24` 是一個超出遷移工具 16–23 觸發區間的字面值，因此也順帶徹底解決了自動改寫的問題，比 Round 1 採用的「每次建置後檢查並還原」與本輪審查建議的變數繞過法都更根本、更簡單。
+- **Minor #2（`openBook()` 協程內部缺乏頂層未捕獲異常保護）**：查證屬實——`retrieve()`/`open()` 各自宣告的失敗已用 `getOrElse` 導向 `onError`，但 `DefaultHttpClient`/`AssetRetriever`/`DefaultPublicationParser` 等元件的建構或呼叫若拋出未被 `Try` 型別包裝的非預期例外，先前確實沒有攔截。已採納：把整個 `scope.launch { ... }` 的內容包進外層 `try-catch`，攔截後導向 `onError`；`attachNavigator()` 自己既有的 `try-catch`（處理 Fragment 掛載失敗，含 `Publication` 清理）維持不動，兩者涵蓋不同的程式碼區段，不會重複觸發 `onError`。
+- **Minor #3（整合測試可加入損毀檔案的驗證）**：查證屬實，且不只是「加分項」——重新核對 `issues.md` Issue 4 的驗收標準原文「對一個不存在或損毀的檔案路徑呼叫 `openBook`，斷言 `onError` 被觸發」，明確涵蓋「不存在」與「損毀」兩種情境，但先前只測試了「不存在」，屬於驗收標準沒有完全落實，不是單純的測試涵蓋率建議。已採納：新增第三項測試，寫入 256 bytes 隨機內容到一個 `.epub` 副檔名的檔案（存在但內容不是合法 zip/EPUB），驗證觸發 `onError` 且不觸發 `onPageRendered`——這條路徑與「不存在」測試走的是不同的失敗分支（`retrieve()` 成功但 `open()` 解析失敗），驗證的是先前完全沒被涵蓋到的程式碼路徑。
