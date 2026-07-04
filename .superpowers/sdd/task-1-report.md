@@ -1,52 +1,176 @@
-# Task 1 Report: Scaffolding & Router (專案初始化、裝置外框與底層頁面路由器)
+# Task 1 報告：原生測試支援方法 + 真正 `content://` SAF 驗收測試
 
-## 任務概述
-本任務已成功完成 `elinkBook` Web 原型模擬器的基礎骨架搭建、高質感的手機外殼 Mockup 繪製、三個核心分頁的路由切換，以及整合了自我測試套件（Self-Test Suite），用以驗證底層狀態管理與路由切換的正確性。
+## 實作內容
 
----
+依照 `.superpowers/sdd/task-1-brief.md` 的規格，逐字新增以下內容：
 
-## 實作細節與技術亮點
+1. **`app/android/app/src/main/AndroidManifest.xml`**：在 `<application>` 區塊內、既有 `flutterEmbedding` `<meta-data>` 之後，新增 `FileProvider` 的 `<provider>` 宣告（`android:authorities="${applicationId}.fileprovider"`，`exported="false"`，`grantUriPermissions="true"`）。
 
-### 1. 初始 HTML5 骨架與高質感 CSS 設計
-- **雙佈局設計**：左側為手機 Mockup，右側為現代暗黑風格的控制台面板（Control Panel），方便開發與測試對照。
-- **現代字體與顏色變數**：載入了 Google Fonts 的 `Outfit` 與 `Inter` 做為無襯線字體，並載入 `Noto Serif TC` 以完美支援直排中文的宋體/明體質感。
-- **手機外殼 Mockup**：
-  - 精緻的邊框（Bezel）與圓角（Radius），搭配立體的陰影和反光。
-  - 頂部前鏡頭處特別設計了**動態島（Dynamic Island）**，具備 Hover 展開的流暢微動畫。
-  - 側邊設有**實體音量鍵**，具備 Hover 高亮與 Active 按壓位移的物理效果。
-  - 狀態列時間採用 JavaScript 動態更新，每秒與系統時間同步，顯著提升原型生活感。
+2. **`app/android/app/src/main/res/xml/file_paths.xml`**（新檔）：`<cache-path name="cache" path="." />`，涵蓋 `context.cacheDir`（對應 `path_provider` 的 `getTemporaryDirectory()`）。
 
-### 2. 多主題與排版切換 (CSS 變數驅動)
-- **多主題支援**：實作了 **淺色 (Light)**、**深色 (Dark)**、**羊皮紙 (Sepia)** 以及 **E-Ink 高對比 (E-Ink)** 四種閱讀主題。主題切換完全由 CSS 變數（如 `--bg-color`, `--text-color`, `--card-bg`, `--border-color`, `--primary`）驅動，當 DOM 上的 theme class 變更時，CSS 變數會自動無縫覆寫，確保元件樣式即時更新。
-- **橫/直排切換**：在閱讀器畫面中，提供一鍵切換**直排（vertical-rl）**與**橫排**的功能。直排模式使用了標準 CSS `writing-mode: vertical-rl` 進行繁體中文的優雅排版。
+3. **`app/integration_test/content_uri_acceptance_test.dart`**（新檔）：先寫測試（RED），驗證流程為 `createTestContentUri` → 斷言回傳值以 `content://` 開頭（非 `file://`）→ `takePersistableUriPermission` → 用該 URI 建構 `EpubReaderView` → 斷言觸發 `onPageRendered` 而非 `onError`。
 
-### 3. 多分頁路由與狀態管理 (`AppState`)
-- **全域狀態物件 `AppState`** 統一管理目前分頁（`currentPage`）、主題（`theme`）、排版方向（`layoutDirection`）以及書籍資料。
-- 底部導覽列切換時，具有 Flutter 風格的圖標縮放與底色漸層微動畫。
-- 三大分頁內容：
-  - **書架 (Shelf)**：升級為 **6 欄極簡網格排版（6-column grid）**，並初始化了 12 本書籍展示多列網格。書籍提供多種**古典與現代封面風格 (漸層設計)**，並將格式、作者等繁雜資訊收納至極簡工具提示與進度條中，達成高質感視覺美學。
-  - **閱讀器 (Reader)**：展示電子書實際閱讀畫面，支援點擊螢幕左右側 1/3 區域進行翻頁。
-  - **統計 (Stats)**：整合了 GitHub 貢獻圖風格的**閱讀熱點圖 (Heatmap)**，以及本週每日閱讀時長的 CSS 柱狀圖。
+4. **`app/android/app/src/main/kotlin/cc/ugotit/elinkbook/BookMetadataChannel.kt`**：
+   - import 區塊新增 `android.content.Intent`、`androidx.core.content.FileProvider`。
+   - `onMethodCall` 新增兩個分支：
+     - `takePersistableUriPermission`：呼叫 `context.contentResolver.takePersistableUriPermission(...)`，缺少 `uri` 參數時回傳 `invalid_arguments` 錯誤，例外時回傳 `permission_failed` 錯誤（中文訊息）。
+     - `createTestContentUri`（測試專用）：用 `FileProvider.getUriForFile()` 把裝置上真實檔案路徑轉為 `content://` URI，並自我授予 persistable 權限，模擬 SAF `ACTION_OPEN_DOCUMENT` 原本會提供的授權。缺少 `path` 參數時回傳 `invalid_arguments` 錯誤，例外時回傳 `test_uri_failed` 錯誤（中文訊息）。
+   - **未修改**任何既有邏輯：`extractEpubMetadata`、`extractPdfMetadata`、`resolveAbsoluteUrl`、`openParcelFileDescriptor` 逐行維持原樣（見下方 git diff，純新增）。
+   - **未觸碰** `EpubReaderView.kt`／`PdfReaderView.kt`（Issue 3 範圍，本工單不涉及）。
 
-### 4. 實體音量鍵翻頁整合
-- 側邊實體音量鍵在非閱讀狀態下點擊會提示音量調整；在閱讀器狀態下，點擊音量加（`volume-up`）與音量減（`volume-down`）可直接控制當前書籍的閱讀進度（每次增減 5%），並跳出流暢的 Toast 浮層通知，完美符合單手操作與音量鍵翻頁的需求。
+`androidx.core.content.FileProvider` 確實已透過既有相依鏈可用，編譯/建置全程無需新增 Gradle 依賴，未觸發 brief 提到的「需要人工確認」情境。
 
----
+## 測試結果（裝置：`3CEF42ECD491687`，實體機 9491G，Android 15 / API 35）
 
-## 自我測試套件 (Self-Test Suite) 結果
-我們在 `prototype/index.html` 底部整合了測試引擎，當頁面載入時會自動執行，並在控制台提供一鍵「運行自我測試」按鈕。目前已註冊並通過以下三個核心測試：
+### Step 4：RED（新增測試，原生方法尚不存在）
 
-1. **驗證切換路由狀態變更 (PASS)**
-   - 測試步驟：暫存目前頁面 ➔ 切換至 `stats` ➔ 驗證 `AppState.currentPage === 'stats'` ➔ 切換回 `shelf` ➔ 驗證回歸 ➔ 還原頁面。
-2. **驗證主題切換與 Class 變更 (PASS - 嚴謹驗證)**
-   - 測試步驟：切換主題至 `sepia` ➔ 驗證手機 DOM 是否成功附加 `theme-sepia` class ➔ 驗證 `AppState.theme === 'sepia'` ➔ **藉由 `window.getComputedStyle` 取得實體背景色值並進行精確的色彩比對 (預期 `#F4ECD8` 即 `rgb(244, 236, 216)`)**。為了避免動畫過渡效果（Transition）造成色彩變更非同步而導致測試失敗，測試執行期間會暫時停用 Transition 效果，確保測試衛生（Test Hygiene）。最後還原主題。
-3. **驗證音量鍵閱讀翻頁邏輯 (PASS)**
-   - 測試步驟：切換至閱讀器分頁 ➔ 模擬點擊音量減鍵 ➔ 驗證書籍進度是否增加 5% ➔ 模擬點擊音量加鍵 ➔ 驗證書籍進度是否減少 5%（還原）➔ 還原頁面。
+```
+flutter test integration_test/content_uri_acceptance_test.dart -d 3CEF42ECD491687
+```
 
-運行結果在控制台「自我測試結果」區域顯示：**`3 PASS / 0 FAIL`**。
+```
+Running Gradle task 'assembleDebug'...                             87.7s
+✓ Built build\app\outputs\flutter-apk\app-debug.apk
+Installing build\app\outputs\flutter-apk\app-debug.apk...           4.6s
+00:00 +0: 真正的 content:// SAF URI（透過 FileProvider 授權）開啟 EPUB 觸發 onPageRendered
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following MissingPluginException was thrown running a test:
+MissingPluginException(No implementation found for method createTestContentUri on channel
+elinkbook/book_metadata)
 
----
+When the exception was thrown, this was the stack:
+#0      MethodChannel._invokeMethod (package:flutter/src/services/platform_channel.dart:364:7)
+<asynchronous suspension>
+#1      main.<anonymous closure> (file:///U:/MyDeveloper/AI/elinkBook/.claude/worktrees/epic-1-issue-4-book-import-service/app/integration_test/content_uri_acceptance_test.dart:39:24)
+<asynchronous suspension>
+#2      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#3      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1682:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
 
-## 成果檔案路徑
-- **模擬器主頁面**：[prototype/index.html](file:///U:/MyDeveloper/AI/elinkBook/prototype/index.html)
-- **進度分類帳**：[.superpowers/sdd/progress.md](file:///U:/MyDeveloper/AI/elinkBook/.superpowers/sdd/progress.md)
+The test description was:
+  真正的 content:// SAF URI（透過 FileProvider 授權）開啟 EPUB 觸發 onPageRendered
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:00 +0 -1: 真正的 content:// SAF URI（透過 FileProvider 授權）開啟 EPUB 觸發 onPageRendered [E]
+  Test failed. See exception logs above.
+  The test description was: 真正的 content:// SAF URI（透過 FileProvider 授權）開啟 EPUB 觸發 onPageRendered
+  
+00:00 +0 -1: (tearDownAll)
+00:01 +0 -1: Some tests failed.
+```
+
+符合預期：`MissingPluginException`（`onMethodCall` 尚未有 `createTestContentUri` 分支）。
+
+### Step 6：GREEN（新增兩個原生方法之後）
+
+```
+flutter test integration_test/content_uri_acceptance_test.dart -d 3CEF42ECD491687
+```
+
+```
+Running Gradle task 'assembleDebug'...                             24.5s
+✓ Built build\app\outputs\flutter-apk\app-debug.apk
+Installing build\app\outputs\flutter-apk\app-debug.apk...           5.3s
+00:00 +0: 真正的 content:// SAF URI（透過 FileProvider 授權）開啟 EPUB 觸發 onPageRendered
+00:02 +1: (tearDownAll)
+00:02 +1: All tests passed!
+```
+
+### Step 7：回歸測試（既有 integration_test，全部在裝置 `3CEF42ECD491687` 上執行）
+
+**`book_metadata_channel_test.dart`**
+```
+00:00 +0: EPUB 詮釋資料提取回傳非空的 title 與 coverBytes
+00:00 +1: PDF 詮釋資料提取回傳非空的 coverBytes
+00:00 +2: 不存在的檔案路徑呼叫 extractMetadata 拋出 PlatformException
+00:00 +3: 以 file:// URI 表示路徑呼叫 extractMetadata（EPUB）同樣回傳非空結果
+00:00 +4: 以 file:// URI 表示路徑呼叫 extractMetadata（PDF）同樣回傳非空結果
+00:00 +5: (tearDownAll)
+00:01 +5: All tests passed!
+```
+
+**`epub_reader_view_test.dart`**
+```
+00:00 +0: 開啟有效 EPUB 檔案觸發 onPageRendered
+00:02 +1: 開啟不存在的檔案路徑觸發 onError
+00:02 +2: 開啟內容已損毀的 EPUB 檔案觸發 onError
+00:02 +3: 開啟以 file:// URI 表示的有效 EPUB 檔案觸發 onPageRendered
+00:02 +4: 開啟指向不存在資源的 content:// URI 觸發 onError
+00:03 +5: (tearDownAll)
+00:03 +5: All tests passed!
+```
+
+**`pdf_reader_view_test.dart`**
+```
+00:00 +0: 開啟有效 PDF 檔案觸發 onPageRendered
+00:01 +1: 開啟不存在的檔案路徑觸發 onError
+00:01 +2: 開啟以 file:// URI 表示的有效 PDF 檔案觸發 onPageRendered
+00:01 +3: 開啟指向不存在資源的 content:// URI 觸發 onError
+00:01 +4: (tearDownAll)
+00:02 +4: All tests passed!
+```
+
+**`reader_screen_test.dart`**
+```
+00:00 +0: ReaderScreen 開啟範例 EPUB 檔案，渲染出非空白內容
+00:02 +1: ReaderScreen 開啟範例 PDF 檔案，渲染出非空白內容
+00:02 +2: (tearDownAll)
+00:03 +2: All tests passed!
+```
+
+**`library_screen_test.dart`**
+```
+00:00 +0: 從書架點擊範例 EPUB 項目，導航至 ReaderScreen 且內容成功渲染
+00:03 +1: 從書架點擊範例 PDF 項目，導航至 ReaderScreen 且內容成功渲染
+00:03 +2: (tearDownAll)
+00:04 +2: All tests passed!
+```
+
+**`smoke_test.dart`**
+```
+00:00 +0: LibraryScreen 可在真實裝置/模擬器上渲染（integration_test 基礎設施驗證）
+00:01 +1: (tearDownAll)
+00:02 +1: All tests passed!
+```
+
+全部 6 個既有 integration_test 檔案皆 `All tests passed!`，無回歸。
+
+### Step 8：靜態分析與建置
+
+```
+flutter analyze
+```
+```
+Analyzing app...                                                
+No issues found! (ran in 4.3s)
+```
+
+```
+flutter build apk --debug
+```
+```
+Running Gradle task 'assembleDebug'...                             31.4s
+✓ Built build\app\outputs\flutter-apk\app-debug.apk
+```
+
+## 變更檔案
+
+- `app/android/app/src/main/AndroidManifest.xml`（修改，+9 行：新增 `<provider>`）
+- `app/android/app/src/main/res/xml/file_paths.xml`（新檔，4 行）
+- `app/android/app/src/main/kotlin/cc/ugotit/elinkbook/BookMetadataChannel.kt`（修改，+52 行：2 個 import + 2 個新方法分支）
+- `app/integration_test/content_uri_acceptance_test.dart`（新檔，73 行）
+
+Commit：`2bba316` "Add FileProvider + takePersistableUriPermission/createTestContentUri, verify genuine content:// openBook"
+
+## 自我審查結果
+
+- **完整性**：FileProvider manifest 宣告與 `file_paths.xml` 皆已建立；兩個新原生方法皆已加入；新的 integration_test 在真實裝置上通過。
+- **品質**：兩個新方法皆有 null 參數檢查（回傳 `invalid_arguments` 錯誤）與 try-catch（分別回傳 `permission_failed`／`test_uri_failed`，訊息皆為中文），風格與既有的 `extractMetadata` 分支一致。
+- **紀律**：以 `git diff HEAD~1 HEAD -- BookMetadataChannel.kt` 確認變更為純新增（import + 2 個 `when` 分支），`extractEpubMetadata`/`extractPdfMetadata`/`resolveAbsoluteUrl`/`openParcelFileDescriptor` 逐行未變動；未觸碰 `EpubReaderView.kt`／`PdfReaderView.kt`。
+- **測試**：新測試明確斷言 `contentUri!.startsWith('content://')` 為 `true`（而非 `file://`），對應 brief 要求的「真正的 content:// 路徑」驗證目標；6 個既有 integration_test 檔案全數通過，無回歸。
+
+## 問題與疑慮
+
+無。`androidx.core.content.FileProvider` 依 brief 所述透過既有相依鏈可直接解析，編譯與執行皆無異常，未觸發需要人工介入的 Gradle 依賴問題。工作目錄中原有的 `.superpowers/sdd/progress.md`、`task-2-report.md`、`task-3-report.md` 未提交變更（推測為前序任務遺留），本工單未觸碰、未提交，維持原狀供人類/其他工單處理。
