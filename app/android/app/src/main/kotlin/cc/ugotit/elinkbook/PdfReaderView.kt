@@ -83,6 +83,10 @@ class PdfReaderView(
      * [path] 含 "://" 者一律視為 URI，交給 ContentResolver 開啟（Android
      * 對 file:// scheme 有內建直接處理，不需額外註冊 ContentProvider）；
      * 否則視為檔案系統路徑，沿用既有 ParcelFileDescriptor.open() 邏輯。
+     *
+     * 已知限制：`contains("://")` 是啟發式判斷，若檔案系統路徑本身恰好含有
+     * 這個子字串會被誤判為 URI 而解析失敗。此啟發式假設路徑皆為 Android
+     * 慣例格式，在正常使用情境下風險可忽略，記錄於此供未來維護者知悉。
      */
     private fun openParcelFileDescriptor(path: String): ParcelFileDescriptor? {
         return if (path.contains("://")) {

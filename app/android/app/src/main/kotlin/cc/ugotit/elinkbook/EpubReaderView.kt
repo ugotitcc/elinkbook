@@ -209,6 +209,11 @@ class EpubReaderView(
      * （並非所有合法的 android.net.Uri 都能轉換成 Readium 的 AbsoluteUrl，
      * 例如缺少 scheme 的相對 URI），呼叫端需自行判斷 null 並導向 onError，
      * 與 assetRetriever.retrieve() 的 getOrElse 分支處理方式一致。
+     *
+     * 已知限制：`contains("://")` 是啟發式判斷，若檔案系統路徑本身恰好含有
+     * 這個子字串（例如 `/sdcard/downloads/http://book.epub`）會被誤判為
+     * URI 而解析失敗。此啟發式假設路徑皆為 Android 慣例格式，在正常使用情境
+     * 下風險可忽略，記錄於此供未來維護者知悉。
      */
     private fun resolveAbsoluteUrl(path: String): AbsoluteUrl? {
         return if (path.contains("://")) {
