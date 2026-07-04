@@ -80,7 +80,7 @@ abstract class BookImportService {
 }
 ```
 
-- 匯入流程內部依序：取得 `takePersistableUriPermission` → 依副檔名/MIME 判斷格式 → 呼叫 `book_metadata` channel 取得詮釋資料 → 落地封面 PNG → 寫入 `LibraryRepository`。
+- 匯入流程內部依序：依副檔名/MIME 判斷格式（不支援的格式直接跳過，不浪費一次原生呼叫）→ 取得 `takePersistableUriPermission`（僅對 `content://` scheme 呼叫；失敗則該檔案視為匯入失敗並跳過，不寫入資料庫）→ 呼叫 `book_metadata` channel 取得詮釋資料 → 落地封面 PNG → 寫入 `LibraryRepository`。
 - TXT 格式不呼叫原生 channel，由 Dart 端依書名文字動態產生封面。
 
 ### 原生 `book_metadata` MethodChannel 契約

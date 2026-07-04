@@ -16,7 +16,7 @@ Task 1 與 Task 4 全數驗證步驟須在真實 Android 模擬器/裝置上執�
 
 - `BookImportService`/`BookImportServiceImpl` 的介面簽章須與 `docs/epics/epic-1-library/spec.md`「`BookImportService`」章節完全一致：`Future<List<Book>> importFiles(List<String> uris, {String? folderName})`、`Future<List<Book>> importFolder(String folderUri, {bool autoGroupByFolderName = true})`。`importFolder` 本工單**不實作**（留給 `epic-1-library` Issue 8），呼叫時拋出 `UnimplementedError`。
 - `filePath` 欄位必須存放**原始、未經複製**的 URI 字串（ADR 0002 的核心決策）——**不可**把匯入的書籍檔案複製到 App 私有目錄；只有封面圖片才落地複製。
-- 匯入流程須依序：`takePersistableUriPermission` → 判斷格式 → （EPUB/PDF）呼叫 Issue 2 的 `elinkbook/book_metadata` channel `extractMetadata` 或（TXT）Dart 端動態產生封面 → 落地封面 PNG → 寫入 `LibraryRepository`（Issue 1）。
+- 匯入流程須依序：判斷格式（不支援的格式直接跳過，不浪費一次原生呼叫）→ `takePersistableUriPermission` → （EPUB/PDF）呼叫 Issue 2 的 `elinkbook/book_metadata` channel `extractMetadata` 或（TXT）Dart 端動態產生封面 → 落地封面 PNG → 寫入 `LibraryRepository`（Issue 1）。此順序已依 Task 3 審查結果（`reviews/review-issue-4.md`）修正，與 `spec.md`/`design.md` 同步更新，配合實際程式碼（先判斷格式，格式不支援時完全不呼叫任何原生方法）。
 - 單一檔案的詮釋資料提取失敗時，該筆以「檔名為標題（去除副檔名）、`coverPath=null`」降級寫入，**不得**中斷整批匯入的其餘檔案。
 - 指定 `folderName` 時，須先呼叫 `LibraryRepository.upsertGroup(folderName)` 再寫入書籍（見 Issue 1 整分支審查建議：避免 `books.groupName` 指向一個 `groups` 表裡不存在的孤兒群組）。
 - `takePersistableUriPermission` 只對 `content://` scheme 的 URI 呼叫，且須包在 try-catch 中；若持久化失敗（例如來源 URI 不支援 persistable 權限），該筆檔案視為匯入失敗並略過、不中斷整批匯入——**不可**在權限持久化失敗的情況下仍把書籍寫入 `LibraryRepository`，因為當次的暫時讀取權限只在本次 App 行程存活期間有效，寫入的 `filePath` 極可能在下次啟動後無法讀取，比略過該檔案更糟（見 `reviews/review-plan-issue-4.md`）。
