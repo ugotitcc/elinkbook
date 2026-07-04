@@ -14,6 +14,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.readium.r2.shared.publication.services.cover
 import org.readium.r2.shared.util.AbsoluteUrl
 import org.readium.r2.shared.util.getOrElse
@@ -109,13 +110,20 @@ class BookMetadataChannel(
                 val publicationOpener = PublicationOpener(publicationParser)
                 val publication =
                     publicationOpener.open(asset, allowUserInteraction = false).getOrElse {
+                        // open() 失敗時 asset 不會被 publicationOpener 接手管理，
+                        // 需自行關閉避免資源洩漏（例如 Issue 4 匯入流程對損毀檔案重試）。
+                        asset.close()
                         result.error("extraction_failed", "無法解析 EPUB 檔案：${it.message}", null)
                         return@launch
                     }
                 try {
                     val title = publication.metadata.title
                     val author = publication.metadata.authors.firstOrNull()?.name
-                    val coverBytes = publication.cover()?.let { bitmapToPngBytes(it) }
+                    // PNG 壓縮為 CPU 密集工作，移到背景執行緒避免阻塞主執行緒；
+                    // withContext 返回後會自動切回 scope 的 Main dispatcher。
+                    val coverBytes = withContext(Dispatchers.IO) {
+                        publication.cover()?.let { bitmapToPngBytes(it) }
+                    }
                     result.success(
                         mapOf(
                             "title" to title,
@@ -137,50 +145,64 @@ class BookMetadataChannel(
     }
 
     private fun extractPdfMetadata(path: String, result: MethodChannel.Result) {
-        var pfd: ParcelFileDescriptor? = null
-        var renderer: PdfRenderer? = null
-        var page: PdfRenderer.Page? = null
-        try {
-            pfd = openParcelFileDescriptor(path)
-            if (pfd == null) {
-                result.error("extraction_failed", "找不到檔案或檔案已損毀：$path", null)
-                return
+        scope.launch {
+            // PdfRenderer 開檔/渲染與 PNG 壓縮皆為阻塞/CPU 密集工作，對 PRD 要求
+            // 支援的 100MB 以上 PDF 若在主執行緒執行會造成 ANR；移至 IO
+            // dispatcher，withContext 返回後自動切回 scope 的 Main dispatcher
+            // 再呼叫 result.success()/result.error()（MethodChannel.Result 的
+            // callback 必須在平台/主執行緒呼叫）。
+            try {
+                val pngBytes = withContext(Dispatchers.IO) {
+                    var pfd: ParcelFileDescriptor? = null
+                    var renderer: PdfRenderer? = null
+                    var page: PdfRenderer.Page? = null
+                    try {
+                        pfd = openParcelFileDescriptor(path)
+                            ?: return@withContext null
+                        renderer = PdfRenderer(pfd)
+                        page = renderer.openPage(0)
+                        // 封面只是書架縮圖，不需要頁面原始解析度；限制最大尺寸避免大型
+                        // PDF（PRD 要求支援 100MB 以上檔案）造成記憶體壓力與封面檔案
+                        // 過度肥大。PdfRenderer.Page.render() 在 transform 為 null 時，
+                        // 會自動把整頁內容縮放以符合目標點陣圖尺寸，不需額外的矩陣運算。
+                        val maxDimension = 600
+                        val scale = minOf(
+                            maxDimension.toFloat() / page.width,
+                            maxDimension.toFloat() / page.height,
+                            1f,
+                        )
+                        val bitmapWidth = (page.width * scale).toInt().coerceAtLeast(1)
+                        val bitmapHeight = (page.height * scale).toInt().coerceAtLeast(1)
+                        val bitmap =
+                            Bitmap.createBitmap(bitmapWidth, bitmapHeight, Bitmap.Config.ARGB_8888)
+                        page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                        bitmapToPngBytes(bitmap)
+                    } finally {
+                        try { page?.close() } catch (ignored: Exception) {}
+                        try { renderer?.close() } catch (ignored: Exception) {}
+                        try { pfd?.close() } catch (ignored: Exception) {}
+                    }
+                }
+                if (pngBytes == null) {
+                    result.error("extraction_failed", "找不到檔案或檔案已損毀：$path", null)
+                    return@launch
+                }
+                result.success(
+                    mapOf(
+                        "title" to null,
+                        "author" to null,
+                        "coverBytes" to pngBytes,
+                    ),
+                )
+            } catch (e: OutOfMemoryError) {
+                result.error("extraction_failed", "記憶體不足，無法載入 PDF 檔案", null)
+            } catch (e: Exception) {
+                result.error(
+                    "extraction_failed",
+                    "提取 PDF 封面時發生未預期的錯誤：${e.message}",
+                    null,
+                )
             }
-            renderer = PdfRenderer(pfd)
-            page = renderer.openPage(0)
-            // 封面只是書架縮圖，不需要頁面原始解析度；限制最大尺寸避免大型
-            // PDF（PRD 要求支援 100MB 以上檔案）造成記憶體壓力與封面檔案
-            // 過度肥大。PdfRenderer.Page.render() 在 transform 為 null 時，
-            // 會自動把整頁內容縮放以符合目標點陣圖尺寸，不需額外的矩陣運算。
-            val maxDimension = 600
-            val scale = minOf(
-                maxDimension.toFloat() / page.width,
-                maxDimension.toFloat() / page.height,
-                1f,
-            )
-            val bitmapWidth = (page.width * scale).toInt().coerceAtLeast(1)
-            val bitmapHeight = (page.height * scale).toInt().coerceAtLeast(1)
-            val bitmap = Bitmap.createBitmap(bitmapWidth, bitmapHeight, Bitmap.Config.ARGB_8888)
-            page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-            result.success(
-                mapOf(
-                    "title" to null,
-                    "author" to null,
-                    "coverBytes" to bitmapToPngBytes(bitmap),
-                ),
-            )
-        } catch (e: OutOfMemoryError) {
-            result.error("extraction_failed", "記憶體不足，無法載入 PDF 檔案", null)
-        } catch (e: Exception) {
-            result.error(
-                "extraction_failed",
-                "提取 PDF 封面時發生未預期的錯誤：${e.message}",
-                null,
-            )
-        } finally {
-            try { page?.close() } catch (ignored: Exception) {}
-            try { renderer?.close() } catch (ignored: Exception) {}
-            try { pfd?.close() } catch (ignored: Exception) {}
         }
     }
 

@@ -62,7 +62,7 @@ void main() {
     final missingPath =
         '/data/local/tmp/does_not_exist_${DateTime.now().millisecondsSinceEpoch}.epub';
 
-    expect(
+    await expectLater(
       () => _channel.invokeMapMethod<String, Object?>(
         'extractMetadata',
         {'uri': missingPath, 'format': 'epub'},
