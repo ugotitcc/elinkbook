@@ -1382,10 +1382,9 @@
       <div id="bottom-sheet-backdrop" class="bottom-sheet-backdrop" onclick="closeBottomSheet()"></div>
       <div id="layout-bottom-sheet" class="bottom-sheet" style="height: 520px;">
         <div class="bottom-sheet-header" style="padding: 15px 20px 10px 20px;">
-          <div class="bottom-sheet-tabs" style="display: flex; gap: 15px; align-items: center; width: 100%; padding-right: 20px; user-select: none;">
-            <span class="sheet-tab active" id="tab-layout-btn" onclick="switchSheetTab('layout')" style="font-size: 12px; font-weight: bold; cursor: pointer; padding-bottom: 6px; border-bottom: 2px solid var(--primary); transition: all 0.2s;">⚙️ 版面</span>
-            <span class="sheet-tab" id="tab-toc-btn" onclick="switchSheetTab('toc')" style="font-size: 12px; font-weight: bold; cursor: pointer; padding-bottom: 6px; border-bottom: 2px solid transparent; opacity: 0.6; transition: all 0.2s;">📖 目錄</span>
-            <span class="sheet-tab" id="tab-notes-btn" onclick="switchSheetTab('notes')" style="font-size: 12px; font-weight: bold; cursor: pointer; padding-bottom: 6px; border-bottom: 2px solid transparent; opacity: 0.6; transition: all 0.2s;">📝 劃線書籤</span>
+          <div class="bottom-sheet-tabs" style="display: flex; gap: 20px; align-items: center; width: 100%; padding-right: 20px; user-select: none;">
+            <span class="sheet-tab active" id="tab-layout-btn" onclick="switchSheetTab('layout')" style="font-size: 13px; font-weight: bold; cursor: pointer; padding-bottom: 6px; border-bottom: 2px solid var(--primary); transition: all 0.2s;">⚙️ 版面設定</span>
+            <span class="sheet-tab" id="tab-notes-btn" onclick="switchSheetTab('notes')" style="font-size: 13px; font-weight: bold; cursor: pointer; padding-bottom: 6px; border-bottom: 2px solid transparent; opacity: 0.6; transition: all 0.2s;">📝 劃線與書籤</span>
           </div>
           <span class="bottom-sheet-close" onclick="closeBottomSheet()" style="font-size: 16px; cursor: pointer;">✕</span>
         </div>
@@ -1558,14 +1557,20 @@
           </div>
         </div>
 
-        <!-- Tab 1.5: 書籍目錄 (FR-07) -->
-        <div class="bottom-sheet-content" id="tab-content-toc" style="display: none; max-height: 440px; overflow-y: auto; padding: 15px 20px;">
-          <div id="toc-list-container" style="display: flex; flex-direction: column; gap: 8px;">
-            <!-- 由 JS 動態生成 -->
+      <!-- 獨立目錄 BottomSheet (FR-07) -->
+      <div id="toc-bottom-sheet" class="bottom-sheet" style="height: 420px;">
+        <div class="bottom-sheet-header" style="padding: 15px 20px 10px 20px;">
+          <span style="font-size: 13px; font-weight: bold; color: var(--text-color); display: flex; align-items: center; gap: 4px;">📖 書籍目錄</span>
+          <span class="bottom-sheet-close" onclick="closeTocBottomSheet()" style="font-size: 16px; cursor: pointer;">✕</span>
+        </div>
+        <div class="bottom-sheet-content" style="padding: 15px 20px; max-height: 350px; overflow-y: auto;">
+          <div id="toc-list-container-independent" style="display: flex; flex-direction: column; gap: 8px;">
+            <!-- 由 JS 渲染 -->
           </div>
         </div>
+      </div>
 
-        <!-- Tab 2: 劃線與書籤管理 (Task 5) -->
+      <!-- Tab 2: 劃線與書籤管理 (Task 5) -->
         <div class="bottom-sheet-content" id="tab-content-notes" style="display: none; max-height: 440px; overflow-y: auto; padding: 15px 20px;">
           <div style="display: flex; gap: 8px; margin-bottom: 12px;">
             <button onclick="confirmClearAllAnnotations('highlight')" class="btn" style="flex: 1; padding: 8px; font-size: 11px; margin-top: 0; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.25); color: #EF4444; border-radius: 6px; cursor: pointer; font-weight: 600;">🗑️ 一鍵清除劃線</button>
@@ -2111,7 +2116,7 @@
 
     // BottomSheet Tab 切換邏輯與書籤
     function switchSheetTab(tabName) {
-      const tabs = ['layout', 'toc', 'notes'];
+      const tabs = ['layout', 'notes'];
       tabs.forEach(t => {
         const btn = document.getElementById(`tab-${t}-btn`);
         const content = document.getElementById(`tab-content-${t}`);
@@ -2132,9 +2137,7 @@
       
       const book = AppState.books.find(b => b.id === AppState.selectedBook);
       if (book) {
-        if (tabName === 'toc') {
-          renderTocList(book);
-        } else if (tabName === 'notes') {
+        if (tabName === 'notes') {
           renderNotesTabContent();
         } else if (tabName === 'layout') {
           renderBottomSheetContent();
@@ -2142,8 +2145,25 @@
       }
     }
 
-    function renderTocList(book) {
-      const container = document.getElementById('toc-list-container');
+    // 獨立目錄 BottomSheet 控制 (FR-07)
+    function openTocBottomSheet() {
+      const book = AppState.books.find(b => b.id === AppState.selectedBook);
+      if (book) {
+        // 先關閉版面 BottomSheet，避免重疊
+        closeBottomSheet();
+        document.getElementById('bottom-sheet-backdrop').classList.add('show');
+        document.getElementById('toc-bottom-sheet').classList.add('show');
+        renderIndependentTocList(book);
+      }
+    }
+
+    function closeTocBottomSheet() {
+      document.getElementById('bottom-sheet-backdrop').classList.remove('show');
+      document.getElementById('toc-bottom-sheet').classList.remove('show');
+    }
+
+    function renderIndependentTocList(book) {
+      const container = document.getElementById('toc-list-container-independent');
       if (!container) return;
       const chapters = BookDatabase[book.id] || [];
       if (chapters.length === 0) {
@@ -2155,15 +2175,15 @@
         const isCurrent = AppState.selectedChapter === ch.chapter || 
           (!AppState.selectedChapter && idx === 0 && AppState.currentPageNumber <= 6); // 簡化判定
         return `
-          <div onclick="jumpToChapter('${ch.chapter}')" style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-radius: 6px; border: 1px solid ${isCurrent ? 'var(--primary)' : 'var(--border-color)'}; background: ${isCurrent ? 'rgba(var(--primary-rgb, 139, 92, 246), 0.1)' : 'rgba(0,0,0,0.02)'}; cursor: pointer; transition: all 0.2s;">
-            <span style="font-size: 11px; font-weight: ${isCurrent ? 'bold' : 'normal'}; color: var(--text-color);">${ch.chapter}</span>
-            <span style="font-size: 9px; opacity: 0.5; color: var(--text-color);">跳轉 ➔</span>
+          <div onclick="jumpToChapterIndependent('${ch.chapter}')" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; border-radius: 8px; border: 1px solid ${isCurrent ? 'var(--primary)' : 'var(--border-color)'}; background: ${isCurrent ? 'rgba(var(--primary-rgb, 139, 92, 246), 0.1)' : 'rgba(0,0,0,0.02)'}; cursor: pointer; transition: all 0.2s;">
+            <span style="font-size: 12px; font-weight: ${isCurrent ? 'bold' : 'normal'}; color: var(--text-color);">${ch.chapter}</span>
+            <span style="font-size: 10px; opacity: 0.5; color: var(--text-color);">跳轉 ➔</span>
           </div>
         `;
       }).join('');
     }
 
-    function jumpToChapter(chapterName) {
+    function jumpToChapterIndependent(chapterName) {
       AppState.selectedChapter = chapterName;
       const book = AppState.books.find(b => b.id === AppState.selectedBook);
       if (book) {
@@ -2175,7 +2195,7 @@
           book.progress = Math.round((AppState.currentPageNumber / 12) * 100);
         }
       }
-      closeBottomSheet();
+      closeTocBottomSheet();
       renderApp();
       updateStateMonitor();
       showToast(`📖 已跳轉至 ${chapterName}`);
@@ -2420,8 +2440,7 @@
 
     // 3.4 頁首目錄與單書排版覆寫 (FR-07, FR-09, FR-10, FR-24, FR-40)
     function triggerHeaderChapterClick() {
-      openBottomSheet();
-      switchSheetTab('toc');
+      openTocBottomSheet();
     }
 
     function setBookLayoutParam(key, value) {
@@ -2748,6 +2767,8 @@
     function closeBottomSheet() {
       document.getElementById('bottom-sheet-backdrop').classList.remove('show');
       document.getElementById('layout-bottom-sheet').classList.remove('show');
+      const toc = document.getElementById('toc-bottom-sheet');
+      if (toc) toc.classList.remove('show');
     }
 
     function renderBottomSheetContent() {
@@ -3464,14 +3485,14 @@
 
         appDiv.innerHTML = `
           <div class="page-wrapper" style="height: 100%;">
-            <div class="reader-toolbar" style="${book.showHeader === false ? 'display: none !important;' : ''}">
-              <span onclick="triggerHeaderChapterClick()" style="font-size:12px; font-weight:600; opacity:0.8; cursor: pointer; text-decoration: underline;" title="點擊展開目錄">《${book.title}》 ${chapterName} ▾</span>
+            <div class="reader-toolbar">
+              <div style="flex: 1; display: flex; align-items: center; ${book.showHeader === false ? 'opacity: 0 !important; pointer-events: none !important;' : ''}">
+                <span onclick="openTocBottomSheet()" style="font-size:12px; font-weight:600; opacity:0.8; cursor: pointer; text-decoration: underline;" title="點擊展開目錄">《${book.title}》 ${chapterName} ▾</span>
+              </div>
               <div style="display: flex; gap: 6px;">
                 <button class="reader-opt-btn ${hasBookmark ? 'active' : ''}" onclick="toggleBookmark()">${hasBookmark ? '🔖 已書籤' : '🔖 書籤'}</button>
                 <button class="reader-opt-btn" onclick="openBottomSheet()">⚙️ 版面</button>
-                <button class="reader-opt-btn" onclick="toggleWritingMode()">
-                  ${isVertical ? '➔ 橫排' : '⬇ 直排'}
-                </button>
+                <button class="reader-opt-btn" onclick="openTocBottomSheet()">📖 目錄</button>
               </div>
             </div>
             
