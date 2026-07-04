@@ -829,7 +829,7 @@
       background: var(--card-bg);
       border: 1px solid var(--border-color);
       border-radius: 12px;
-      padding: 20px;
+      padding: 0;
       display: flex;
       justify-content: center;
       align-items: stretch;
@@ -837,40 +837,36 @@
       overflow: hidden;
     }
 
-    /* 直排中文排版核心 */
-    .vertical-rl-text {
+    /* 直排與橫排核心樣式 */
+    .writing-vertical {
       writing-mode: vertical-rl;
       text-orientation: mixed;
-      font-family: 'Noto Serif TC', 'Georgia', serif;
-      font-size: 16px;
-      line-height: 1.8;
-      letter-spacing: 2px;
-      color: var(--text-color);
+      line-break: strict; /* CNS 11643 嚴格避頭尾 */
+      word-break: keep-all;
       height: 100%;
       width: 100%;
-      text-align: justify;
+      column-fill: auto;
       user-select: none;
+      box-sizing: border-box;
+      letter-spacing: 2px;
+    }
+    
+    .writing-vertical img, .writing-vertical h3 {
+      break-inside: avoid;
+      page-break-inside: avoid;
     }
 
-    .vertical-rl-text p {
-      margin-left: 1.2em;
-      text-indent: 2em;
-    }
-
-    /* 傳統橫排排版 */
-    .horizontal-text {
-      font-family: 'Inter', sans-serif;
-      font-size: 15px;
-      line-height: 1.6;
-      color: var(--text-color);
+    .writing-horizontal {
+      writing-mode: horizontal-tb;
       width: 100%;
-      text-align: justify;
+      height: 100%;
       user-select: none;
+      box-sizing: border-box;
     }
 
-    .horizontal-text p {
-      margin-bottom: 1em;
-      text-indent: 2em;
+    .writing-horizontal img, .writing-horizontal h3 {
+      break-inside: avoid;
+      page-break-inside: avoid;
     }
 
     .reader-footer {
@@ -1027,6 +1023,118 @@
       opacity: 0.5;
       margin-bottom: 2px;
     }
+
+    /* --- BottomSheet 樣式 --- */
+    .bottom-sheet-backdrop {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.4);
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s ease, visibility 0.3s ease;
+      z-index: 95;
+      border-radius: var(--phone-radius);
+      overflow: hidden;
+    }
+    .bottom-sheet-backdrop.show {
+      opacity: 1;
+      visibility: visible;
+    }
+    .bottom-sheet {
+      position: absolute;
+      left: 0; right: 0; bottom: 0;
+      background: var(--card-bg);
+      border-top: 1px solid var(--border-color);
+      border-radius: 20px 20px 0 0;
+      transform: translateY(100%);
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 96;
+      max-height: 75%;
+      display: flex;
+      flex-direction: column;
+      color: var(--text-color);
+      padding: 16px;
+      box-shadow: 0 -10px 25px rgba(0, 0, 0, 0.15);
+    }
+    .bottom-sheet.show {
+      transform: translateY(0);
+    }
+    .bottom-sheet-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .bottom-sheet-title {
+      font-weight: 600;
+      font-size: 14px;
+      font-family: 'Outfit', sans-serif;
+    }
+    .bottom-sheet-close {
+      cursor: pointer;
+      font-size: 16px;
+      opacity: 0.6;
+      padding: 4px;
+    }
+    .bottom-sheet-content {
+      overflow-y: auto;
+      flex: 1;
+      padding-right: 4px;
+      scrollbar-width: none;
+    }
+    .bottom-sheet-content::-webkit-scrollbar {
+      display: none;
+    }
+    .setting-item {
+      margin-bottom: 14px;
+    }
+    .setting-item label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      font-weight: 500;
+      opacity: 0.8;
+      margin-bottom: 6px;
+    }
+    .control-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .control-row input[type="range"] {
+      flex: 1;
+      accent-color: var(--primary);
+      height: 4px;
+      border-radius: 2px;
+      outline: none;
+      background: var(--border-color);
+      cursor: pointer;
+    }
+    .adjust-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      background: var(--card-bg);
+      color: var(--text-color);
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+    .adjust-btn:hover {
+      background: var(--border-color);
+      border-color: var(--primary);
+    }
+    .adjust-btn:active {
+      transform: scale(0.95);
+    }
   </style>
 </head>
 <body>
@@ -1081,6 +1189,104 @@
       <div id="app-toast" class="toast-overlay">
         <span>📢</span>
         <span id="toast-text">音量鍵觸發！</span>
+      </div>
+
+      <!-- BottomSheet 版面自訂面板 -->
+      <div id="bottom-sheet-backdrop" class="bottom-sheet-backdrop" onclick="closeBottomSheet()"></div>
+      <div id="layout-bottom-sheet" class="bottom-sheet">
+        <div class="bottom-sheet-header">
+          <span class="bottom-sheet-title">⚙️ 版面微調與字型</span>
+          <span class="bottom-sheet-close" onclick="closeBottomSheet()">✕</span>
+        </div>
+        <div class="bottom-sheet-content">
+          <!-- 字型大小 -->
+          <div class="setting-item">
+            <label><span>字型大小</span><span><span id="val-fontSize">16</span>px</span></label>
+            <div class="control-row">
+              <button class="adjust-btn" onclick="changeLayoutParam('fontSize', -1)">-</button>
+              <input type="range" min="12" max="40" step="1" id="slider-fontSize" oninput="setLayoutParam('fontSize', this.value)">
+              <button class="adjust-btn" onclick="changeLayoutParam('fontSize', 1)">+</button>
+            </div>
+          </div>
+          
+          <!-- 字型粗細 -->
+          <div class="setting-item">
+            <label><span>字型粗細</span><span id="val-fontWeight">400</span></label>
+            <div class="control-row">
+              <button class="adjust-btn" onclick="changeLayoutParam('fontWeight', -100)">-</button>
+              <input type="range" min="300" max="900" step="100" id="slider-fontWeight" oninput="setLayoutParam('fontWeight', this.value)">
+              <button class="adjust-btn" onclick="changeLayoutParam('fontWeight', 100)">+</button>
+            </div>
+          </div>
+
+          <!-- 行高 -->
+          <div class="setting-item">
+            <label><span>行高 (Line Height)</span><span id="val-lineHeight">1.5</span></label>
+            <div class="control-row">
+              <button class="adjust-btn" onclick="changeLayoutParam('lineHeight', -0.1)">-</button>
+              <input type="range" min="1.2" max="2.5" step="0.1" id="slider-lineHeight" oninput="setLayoutParam('lineHeight', this.value)">
+              <button class="adjust-btn" onclick="changeLayoutParam('lineHeight', 0.1)">+</button>
+            </div>
+          </div>
+
+          <!-- 段落間距 -->
+          <div class="setting-item">
+            <label><span>段落間距 (Para Spacing)</span><span><span id="val-paraSpacing">10</span>px</span></label>
+            <div class="control-row">
+              <button class="adjust-btn" onclick="changeLayoutParam('paraSpacing', -1)">-</button>
+              <input type="range" min="0" max="40" step="1" id="slider-paraSpacing" oninput="setLayoutParam('paraSpacing', this.value)">
+              <button class="adjust-btn" onclick="changeLayoutParam('paraSpacing', 1)">+</button>
+            </div>
+          </div>
+
+          <!-- 獨立邊距 -->
+          <div class="setting-item">
+            <label><span>上邊距 (Margin Top)</span><span><span id="val-marginTop">15</span>px</span></label>
+            <div class="control-row">
+              <button class="adjust-btn" onclick="changeLayoutParam('marginTop', -1)">-</button>
+              <input type="range" min="0" max="50" step="1" id="slider-marginTop" oninput="setLayoutParam('marginTop', this.value)">
+              <button class="adjust-btn" onclick="changeLayoutParam('marginTop', 1)">+</button>
+            </div>
+          </div>
+          <div class="setting-item">
+            <label><span>下邊距 (Margin Bottom)</span><span><span id="val-marginBottom">15</span>px</span></label>
+            <div class="control-row">
+              <button class="adjust-btn" onclick="changeLayoutParam('marginBottom', -1)">-</button>
+              <input type="range" min="0" max="50" step="1" id="slider-marginBottom" oninput="setLayoutParam('marginBottom', this.value)">
+              <button class="adjust-btn" onclick="changeLayoutParam('marginBottom', 1)">+</button>
+            </div>
+          </div>
+          <div class="setting-item">
+            <label><span>左邊距 (Margin Left)</span><span><span id="val-marginLeft">15</span>px</span></label>
+            <div class="control-row">
+              <button class="adjust-btn" onclick="changeLayoutParam('marginLeft', -1)">-</button>
+              <input type="range" min="0" max="50" step="1" id="slider-marginLeft" oninput="setLayoutParam('marginLeft', this.value)">
+              <button class="adjust-btn" onclick="changeLayoutParam('marginLeft', 1)">+</button>
+            </div>
+          </div>
+          <div class="setting-item">
+            <label><span>右邊距 (Margin Right)</span><span><span id="val-marginRight">15</span>px</span></label>
+            <div class="control-row">
+              <button class="adjust-btn" onclick="changeLayoutParam('marginRight', -1)">-</button>
+              <input type="range" min="0" max="50" step="1" id="slider-marginRight" oninput="setLayoutParam('marginRight', this.value)">
+              <button class="adjust-btn" onclick="changeLayoutParam('marginRight', 1)">+</button>
+            </div>
+          </div>
+
+          <!-- 字型管理 -->
+          <div class="setting-item" style="border-top: 1px solid var(--border-color); padding-top: 12px; margin-top: 12px;">
+            <label><span>閱讀字型切換</span></label>
+            <div class="control-row" style="margin-bottom: 8px;">
+              <select id="font-select" onchange="setLayoutParam('fontFamily', this.value)" style="flex: 1; padding: 8px; border-radius: 6px; background: var(--card-bg); color: var(--text-color); border: 1px solid var(--border-color); font-size: 12px; outline: none;"></select>
+              <button id="delete-font-btn" onclick="handleDeleteFont()" style="padding: 8px 12px; font-size: 12px; border-radius: 6px; border: 1px solid rgba(239, 68, 68, 0.4); background: rgba(239, 68, 68, 0.1); color: #EF4444; cursor: pointer; font-weight: 600; transition: all 0.2s;">刪除</button>
+            </div>
+            <label><span>載入自訂 Google 字型</span></label>
+            <div class="control-row">
+              <input type="text" id="custom-font-input" placeholder="例如: Ma Shan Zheng 或 ZCOOL XiaoWei" style="flex: 1; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--card-bg); color: var(--text-color); font-size: 12px; outline: none;">
+              <button class="btn" onclick="handleLoadFont()" style="width: auto; padding: 8px 16px; font-size: 12px; border-radius: 6px; margin-top: 0; box-shadow: none;">載入</button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -1161,7 +1367,23 @@
         todayMinutes: 45,
         totalMinutes: 180,
         streakDays: 5
-      }
+      },
+      layout: {
+        fontSize: 16,
+        fontWeight: 400,
+        lineHeight: 1.5,
+        paraSpacing: 10,
+        marginRight: 15,
+        marginLeft: 15,
+        marginTop: 15,
+        marginBottom: 15,
+        fontFamily: 'Noto Serif TC'
+      },
+      fonts: [
+        { name: 'Noto Serif TC', system: true },
+        { name: 'Inter', system: true },
+        { name: 'Outfit', system: true }
+      ]
     };
 
     // 2. 自我測試註冊器與核心
@@ -1203,10 +1425,182 @@
 
     // 切換閱讀器橫直排排版
     function toggleLayout() {
+      toggleWritingMode();
+    }
+
+    function toggleWritingMode() {
       AppState.layoutDirection = AppState.layoutDirection === 'vertical' ? 'horizontal' : 'vertical';
       renderApp();
       updateStateMonitor();
       showToast(AppState.layoutDirection === 'vertical' ? '已切換為「直排繁體」模式' : '已切換為「傳統橫排」模式');
+    }
+
+    // 調整版面參數
+    function changeLayoutParam(param, delta) {
+      const val = AppState.layout[param] + delta;
+      if (param === 'fontSize' && (val < 12 || val > 40)) return;
+      if (param === 'fontWeight' && (val < 300 || val > 900)) return;
+      if (param === 'lineHeight' && (val < 1.2 || val > 2.5)) return;
+      if (param === 'paraSpacing' && (val < 0 || val > 40)) return;
+      if (param.startsWith('margin') && (val < 0 || val > 50)) return;
+      
+      if (param === 'lineHeight') {
+        AppState.layout[param] = parseFloat(val.toFixed(1));
+      } else {
+        AppState.layout[param] = val;
+      }
+      
+      renderApp();
+      updateStateMonitor();
+      
+      if (document.getElementById('layout-bottom-sheet').classList.contains('show')) {
+        renderBottomSheetContent();
+      }
+    }
+
+    function setLayoutParam(param, val) {
+      let numVal = parseFloat(val);
+      if (param === 'fontSize' && (numVal < 12 || numVal > 40)) return;
+      if (param === 'fontWeight' && (numVal < 300 || numVal > 900)) return;
+      if (param === 'lineHeight' && (numVal < 1.2 || numVal > 2.5)) return;
+      if (param === 'paraSpacing' && (numVal < 0 || numVal > 40)) return;
+      if (param.startsWith('margin') && (numVal < 0 || numVal > 50)) return;
+      
+      AppState.layout[param] = param === 'fontFamily' ? val : numVal;
+      renderApp();
+      updateStateMonitor();
+      
+      if (document.getElementById('layout-bottom-sheet').classList.contains('show')) {
+        renderBottomSheetContent();
+      }
+    }
+
+    function getParagraphStyle(isVertical) {
+      const l = AppState.layout;
+      if (isVertical) {
+        return `margin-left: ${l.paraSpacing}px; margin-bottom: 0; text-indent: 2em; text-align: justify; line-break: strict; word-break: keep-all;`;
+      } else {
+        return `margin-bottom: ${l.paraSpacing}px; margin-left: 0; text-indent: 2em; text-align: justify;`;
+      }
+    }
+
+    // BottomSheet 控制
+    function openBottomSheet() {
+      document.getElementById('bottom-sheet-backdrop').classList.add('show');
+      document.getElementById('layout-bottom-sheet').classList.add('show');
+      renderBottomSheetContent();
+    }
+    
+    function closeBottomSheet() {
+      document.getElementById('bottom-sheet-backdrop').classList.remove('show');
+      document.getElementById('layout-bottom-sheet').classList.remove('show');
+    }
+
+    function renderBottomSheetContent() {
+      const l = AppState.layout;
+      
+      document.getElementById('val-fontSize').textContent = l.fontSize;
+      document.getElementById('val-fontWeight').textContent = l.fontWeight;
+      document.getElementById('val-lineHeight').textContent = l.lineHeight.toFixed(1);
+      document.getElementById('val-paraSpacing').textContent = l.paraSpacing;
+      document.getElementById('val-marginTop').textContent = l.marginTop;
+      document.getElementById('val-marginBottom').textContent = l.marginBottom;
+      document.getElementById('val-marginLeft').textContent = l.marginLeft;
+      document.getElementById('val-marginRight').textContent = l.marginRight;
+      
+      document.getElementById('slider-fontSize').value = l.fontSize;
+      document.getElementById('slider-fontWeight').value = l.fontWeight;
+      document.getElementById('slider-lineHeight').value = l.lineHeight;
+      document.getElementById('slider-paraSpacing').value = l.paraSpacing;
+      document.getElementById('slider-marginTop').value = l.marginTop;
+      document.getElementById('slider-marginBottom').value = l.marginBottom;
+      document.getElementById('slider-marginLeft').value = l.marginLeft;
+      document.getElementById('slider-marginRight').value = l.marginRight;
+      
+      const select = document.getElementById('font-select');
+      select.innerHTML = AppState.fonts.map(f => `
+        <option value="${f.name}" ${l.fontFamily === f.name ? 'selected' : ''}>
+          ${f.name} ${f.system ? '(系統)' : ''}
+        </option>
+      `).join('');
+      
+      const currentFont = AppState.fonts.find(f => f.name === l.fontFamily);
+      const deleteBtn = document.getElementById('delete-font-btn');
+      if (currentFont && !currentFont.system) {
+        deleteBtn.removeAttribute('disabled');
+        deleteBtn.style.opacity = '1';
+        deleteBtn.style.cursor = 'pointer';
+      } else {
+        deleteBtn.setAttribute('disabled', 'true');
+        deleteBtn.style.opacity = '0.4';
+        deleteBtn.style.cursor = 'not-allowed';
+      }
+    }
+
+    function loadCustomFont(fontName) {
+      if (!fontName) {
+        showToast('請輸入字型名稱');
+        return;
+      }
+      const cleanName = fontName.trim();
+      if (AppState.fonts.some(f => f.name.toLowerCase() === cleanName.toLowerCase())) {
+        showToast('該字型已存在');
+        return;
+      }
+      
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      const queryName = cleanName.replace(/ /g, '+');
+      link.href = `https://fonts.googleapis.com/css2?family=${queryName}:wght@300;400;500;600;700&display=swap`;
+      document.head.appendChild(link);
+      
+      AppState.fonts.push({ name: cleanName, system: false });
+      AppState.layout.fontFamily = cleanName;
+      
+      renderApp();
+      updateStateMonitor();
+      
+      if (document.getElementById('layout-bottom-sheet').classList.contains('show')) {
+        renderBottomSheetContent();
+      }
+      showToast(`成功載入字型: ${cleanName}`);
+    }
+
+    function deleteFont(fontName) {
+      const fontIndex = AppState.fonts.findIndex(f => f.name === fontName);
+      if (fontIndex === -1) return;
+      const font = AppState.fonts[fontIndex];
+      if (font.system) {
+        showToast('系統字型無法刪除');
+        return;
+      }
+      
+      AppState.fonts.splice(fontIndex, 1);
+      
+      if (AppState.layout.fontFamily === fontName) {
+        AppState.layout.fontFamily = 'Noto Serif TC';
+      }
+      
+      renderApp();
+      updateStateMonitor();
+      
+      if (document.getElementById('layout-bottom-sheet').classList.contains('show')) {
+        renderBottomSheetContent();
+      }
+      showToast(`已刪除字型: ${fontName}`);
+    }
+
+    function handleLoadFont() {
+      const input = document.getElementById('custom-font-input');
+      const fontName = input.value;
+      loadCustomFont(fontName);
+      input.value = '';
+    }
+    
+    function handleDeleteFont() {
+      const select = document.getElementById('font-select');
+      const fontName = select.value;
+      deleteFont(fontName);
     }
 
     // 5. Toast 訊息元件
@@ -1511,42 +1905,69 @@
       else if (AppState.currentPage === 'reader') {
         const book = AppState.books.find(b => b.id === AppState.selectedBook) || AppState.books[0];
         const isVertical = AppState.layoutDirection === 'vertical';
+        const l = AppState.layout;
+        
+        const paddingStyle = `padding: ${l.marginTop}px ${l.marginRight}px ${l.marginBottom}px ${l.marginLeft}px;`;
+        const textStyle = `font-size: ${l.fontSize}px; font-weight: ${l.fontWeight}; line-height: ${l.lineHeight}; font-family: '${l.fontFamily}', serif; color: var(--text-color);`;
         
         let readerHtmlContent = '';
         const sections = BookDatabase[book.id];
+        
         if (sections && sections.length > 0) {
           const activeSection = sections.find(s => s.chapter === AppState.selectedChapter) || sections[0];
-          readerHtmlContent = `
-            <div style="font-weight: 600; font-size: 14px; margin-bottom: 8px; color: var(--accent-theme, var(--primary)); text-align: center;">${activeSection.chapter}</div>
-            <p>${activeSection.content}</p>
-          `;
+          
+          if (isVertical) {
+            readerHtmlContent = `
+              <div class="writing-vertical" style="${paddingStyle} ${textStyle}">
+                <div style="font-weight: 600; font-size: 1.1em; margin-left: ${l.paraSpacing}px; text-align: center; color: var(--accent-theme, var(--primary)); font-family: inherit;">${activeSection.chapter}</div>
+                ${activeSection.content.split('\n').map(p => `<p style="${getParagraphStyle(true)}">${p}</p>`).join('')}
+              </div>
+            `;
+          } else {
+            readerHtmlContent = `
+              <div class="writing-horizontal" style="${paddingStyle} ${textStyle}">
+                <div style="font-weight: 600; font-size: 1.1em; margin-bottom: ${l.paraSpacing}px; text-align: center; color: var(--accent-theme, var(--primary)); font-family: inherit;">${activeSection.chapter}</div>
+                ${activeSection.content.split('\n').map(p => `<p style="${getParagraphStyle(false)}">${p}</p>`).join('')}
+              </div>
+            `;
+          }
         } else {
-          readerHtmlContent = `
-            <p>列位看官：你道此書從何而來？說起根由，雖近荒唐，細玩之，卻頗有趣味。</p>
-            <p>但按作者自云：因曾歷過一番夢幻之後，故將真事隱去，而撰此《石頭記》一書也。</p>
-            <p style="font-size: 11px; opacity: 0.5; margin-top: 12px;">（提示：點擊此處螢幕左右側，或使用左側實體音量鍵均可翻頁）</p>
-          `;
+          // 預設內容
+          const defaultParas = [
+            '列位看官：你道此書從何而來？說起根由，雖近荒唐，細玩之，卻頗有趣味。',
+            '但按作者自云：因曾歷過一番夢幻之後，故將真事隱去，而撰此《石頭記》一書也。',
+            '（提示：點擊此處螢幕左右側，或使用左側實體音量鍵均可翻頁）'
+          ];
+          
+          if (isVertical) {
+            readerHtmlContent = `
+              <div class="writing-vertical" style="${paddingStyle} ${textStyle}">
+                ${defaultParas.map(p => `<p style="${getParagraphStyle(true)}">${p}</p>`).join('')}
+              </div>
+            `;
+          } else {
+            readerHtmlContent = `
+              <div class="writing-horizontal" style="${paddingStyle} ${textStyle}">
+                ${defaultParas.map(p => `<p style="${getParagraphStyle(false)}">${p}</p>`).join('')}
+              </div>
+            `;
+          }
         }
 
         appDiv.innerHTML = `
           <div class="page-wrapper" style="height: 100%;">
             <div class="reader-toolbar">
               <span style="font-size:12px; font-weight:600; opacity:0.8;">《${book.title}》</span>
-              <button class="reader-opt-btn" onclick="toggleLayout()">
-                ${isVertical ? '➔ 切換為橫排' : '⬇ 切換為直排'}
-              </button>
+              <div style="display: flex; gap: 6px;">
+                <button class="reader-opt-btn" onclick="openBottomSheet()">⚙️ 版面</button>
+                <button class="reader-opt-btn" onclick="toggleWritingMode()">
+                  ${isVertical ? '➔ 橫排' : '⬇ 直排'}
+                </button>
+              </div>
             </div>
             
             <div class="reader-viewport" onclick="triggerPageClick(event)">
-              ${isVertical ? `
-                <div class="vertical-rl-text">
-                  ${readerHtmlContent}
-                </div>
-              ` : `
-                <div class="horizontal-text">
-                  ${readerHtmlContent}
-                </div>
-              `}
+              ${readerHtmlContent}
             </div>
             
             <div class="reader-footer">
@@ -1790,6 +2211,44 @@
       if (AppState.viewMode !== originalView) {
         throw new Error('還原 viewMode 失敗');
       }
+    });
+
+    // 測試 7：驗證字體大小微調限制範圍
+    runTest('驗證字體大小微調限制範圍', () => {
+      const originalFontSize = AppState.layout.fontSize;
+      AppState.layout.fontSize = 13;
+      changeLayoutParam('fontSize', -5); // 應該停在 12px
+      if (AppState.layout.fontSize !== 12) {
+        AppState.layout.fontSize = originalFontSize;
+        throw new Error('字體大小未能限制於最小值 12px');
+      }
+      
+      changeLayoutParam('fontSize', 50); // 應該停在 40px
+      if (AppState.layout.fontSize !== 40) {
+        AppState.layout.fontSize = originalFontSize;
+        throw new Error('字體大小未能限制於最大值 40px');
+      }
+      
+      AppState.layout.fontSize = originalFontSize; // 還原
+    });
+
+    // 測試 8：驗證邊距微調限制範圍
+    runTest('驗證邊距微調限制範圍', () => {
+      const originalMargin = AppState.layout.marginTop;
+      AppState.layout.marginTop = 48;
+      changeLayoutParam('marginTop', 5); // 應該停在 50px
+      if (AppState.layout.marginTop !== 50) {
+        AppState.layout.marginTop = originalMargin;
+        throw new Error('上邊距未能限制於最大值 50px');
+      }
+      
+      changeLayoutParam('marginTop', -60); // 應該停在 0px
+      if (AppState.layout.marginTop !== 0) {
+        AppState.layout.marginTop = originalMargin;
+        throw new Error('上邊距未能限制於最小值 0px');
+      }
+      
+      AppState.layout.marginTop = originalMargin; // 還原
     });
 
     // 初始渲染與自我測試
