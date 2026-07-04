@@ -45,6 +45,18 @@ import java.io.File
  * App 目前的畫面設計（見 spec.md 的單一 seam）同一時間只會顯示一個原生閱讀 view，因此
  * 這個「保留一份、還原一份」的簡單作法已足夠；並非要處理多個 EpubReaderView 同時存在
  * 互相覆寫的通用情境（目前用不到，YAGNI）。
+ *
+ * 【重要前提】上述整套「把 Fragment 掛進 Activity 層級 supportFragmentManager」的機制，
+ * 成立的前提是 Flutter 的 AndroidView（見 lib/reader/epub_reader_view.dart）目前是以
+ * Texture Layer Hybrid Composition（TLHC，近期 Flutter 版本中 AndroidView 的預設合成
+ * 模式）運作——在這個模式下，PlatformView 的容器確實存在於 Activity 真正的 view 階層
+ * 中，containerId 才能透過 activity.supportFragmentManager 解析到實際的 View。若未來
+ * Flutter 升級或設定變動導致改用舊式的 Virtual Display 合成模式，PlatformView 的容器
+ * 其實會位於獨立的 Presentation 視窗、不在 Activity 的 view 樹裡，containerId 將無法
+ * 解析，attachNavigator() 中的 commitNow 會失敗（並會透過 onError 回報，而不是讓例外
+ * 未被攔截導致協程崩潰）——但失敗的根本原因在當下不會有任何線索可查。由於 Flutter 並未
+ * 提供乾淨的 API 可在 Kotlin 端偵測目前是哪一種合成模式，這裡無法加執行期檢查，只能留下
+ * 這段說明，避免日後排查時毫無頭緒。
  */
 class EpubReaderView(
     private val context: Context,
@@ -120,16 +132,29 @@ class EpubReaderView(
     }
 
     private fun attachNavigator(openedPublication: Publication) {
-        publication = openedPublication
-        val navigatorFactory = EpubNavigatorFactory(publication = openedPublication)
-        activity.supportFragmentManager.fragmentFactory =
-            navigatorFactory.createFragmentFactory(
-                initialLocator = null,
-                listener = this,
-                paginationListener = this,
-            )
-        activity.supportFragmentManager.commitNow {
-            add<EpubNavigatorFragment>(containerId, args = Bundle(), tag = fragmentTag)
+        // commitNow 在 Activity 已經過了 onSaveInstanceState（例如解析完成前使用者恰好把
+        // App 切到背景）時會丟出 IllegalStateException；containerId 若因為合成模式改變
+        // 等原因無法解析到實際 View（見上方類別註解），也可能丟出 IllegalArgumentException。
+        // 兩者都必須攔截並改走 onError，否則例外會發生在 scope.launch 內成為未攔截的
+        // 協程例外，導致 Flutter 端卡住或整個 App 崩潰，繞過既有的錯誤回報機制。
+        try {
+            publication = openedPublication
+            val navigatorFactory = EpubNavigatorFactory(publication = openedPublication)
+            activity.supportFragmentManager.fragmentFactory =
+                navigatorFactory.createFragmentFactory(
+                    initialLocator = null,
+                    listener = this,
+                    paginationListener = this,
+                )
+            activity.supportFragmentManager.commitNow(allowStateLoss = true) {
+                add<EpubNavigatorFragment>(containerId, args = Bundle(), tag = fragmentTag)
+            }
+        } catch (e: Exception) {
+            // 掛載失敗時 Fragment 沒有真正附著到任何畫面上，Publication 不會再被使用，
+            // 必須主動關閉釋放資源——與 openBook() 中 isDisposed 分支的做法一致。
+            publication = null
+            openedPublication.close()
+            channel.invokeMethod("onError", "掛載 EPUB 閱讀畫面失敗：${e.message}")
         }
     }
 
