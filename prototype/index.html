@@ -52,6 +52,7 @@
       --card-bg: var(--card-bg-light);
       --border-color: var(--border-light);
       --primary: #8B5CF6;
+      --primary-rgb: 139, 92, 246;
       --accent-theme: var(--primary);
     }
 
@@ -62,6 +63,7 @@
       --card-bg: var(--card-bg-light);
       --border-color: var(--border-light);
       --primary: #8B5CF6;
+      --primary-rgb: 139, 92, 246;
       --accent-theme: var(--primary);
     }
     .device-container.theme-sepia {
@@ -70,6 +72,7 @@
       --card-bg: var(--card-bg-sepia);
       --border-color: var(--border-sepia);
       --primary: #B45309;
+      --primary-rgb: 180, 83, 9;
       --accent-theme: var(--primary);
     }
     .device-container.theme-dark {
@@ -78,6 +81,7 @@
       --card-bg: var(--card-bg-dark);
       --border-color: var(--border-dark);
       --primary: #BB86FC;
+      --primary-rgb: 187, 134, 252;
       --accent-theme: var(--primary);
     }
     .device-container.theme-eink {
@@ -86,6 +90,7 @@
       --card-bg: var(--card-bg-eink);
       --border-color: var(--border-eink);
       --primary: #000000;
+      --primary-rgb: 0, 0, 0;
       --accent-theme: var(--primary);
     }
 
@@ -1150,7 +1155,7 @@
       pointer-events: auto;
     }
     .nav-zones-grid div {
-      border: 1px dashed rgba(139, 92, 246, 0.05);
+      border: 1px dashed rgba(var(--primary-rgb, 139, 92, 246), 0.05);
       cursor: pointer;
       position: relative;
       display: flex;
@@ -1158,22 +1163,22 @@
       justify-content: center;
       font-size: 11px;
       font-weight: 500;
-      color: rgba(139, 92, 246, 0.6);
+      color: rgba(var(--primary-rgb, 139, 92, 246), 0.6);
       user-select: none;
       transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
     }
     /* 當開啟顯示熱區時，顯示虛線與背景與動作提示 */
     .nav-zones-grid.show-debug div {
-      border-color: rgba(139, 92, 246, 0.35);
-      background-color: rgba(139, 92, 246, 0.03);
+      border-color: rgba(var(--primary-rgb, 139, 92, 246), 0.35);
+      background-color: rgba(var(--primary-rgb, 139, 92, 246), 0.03);
     }
     .nav-zones-grid.show-debug div:hover {
-      background-color: rgba(139, 92, 246, 0.08);
-      color: rgba(139, 92, 246, 0.9);
+      background-color: rgba(var(--primary-rgb, 139, 92, 246), 0.08);
+      color: rgba(var(--primary-rgb, 139, 92, 246), 0.9);
     }
     /* 點擊時的短暫亮起提示 */
     .nav-zones-grid div.active-hit {
-      background-color: rgba(139, 92, 246, 0.25) !important;
+      background-color: rgba(var(--primary-rgb, 139, 92, 246), 0.25) !important;
       transition: none;
     }
   </style>
@@ -1728,12 +1733,18 @@
       console.log('Volume Key Pressed:', direction);
       
       if (AppState.currentPage === 'reader') {
-        if (direction === 'down') {
-          nextPage();
-          showToast('📄 音量鍵翻頁：下一頁');
-        } else if (direction === 'up') {
-          prevPage();
-          showToast('📄 音量鍵翻頁：上一頁');
+        const book = AppState.books.find(b => b.id === AppState.selectedBook);
+        if (book) {
+          if (direction === 'down') {
+            book.progress = Math.min(100, book.progress + 5);
+            showToast('📄 音量鍵翻頁：下一頁');
+          } else if (direction === 'up') {
+            book.progress = Math.max(0, book.progress - 5);
+            showToast('📄 音量鍵翻頁：上一頁');
+          }
+          // 音量鍵微調進度後，同步反算更新頁碼，限制在 1 至 12 頁之間
+          AppState.currentPageNumber = Math.max(1, Math.min(12, Math.round((book.progress / 100) * 12)));
+          renderApp();
         }
       } else {
         showToast(`🔊 音量調節：${direction === 'up' ? '放大' : '縮小'} (非閱讀狀態)`);
@@ -1791,10 +1802,12 @@
     }
 
     function nextPage() {
-      AppState.currentPageNumber++;
+      // 限制頁碼上限為 12 頁
+      AppState.currentPageNumber = Math.min(12, AppState.currentPageNumber + 1);
       const book = AppState.books.find(b => b.id === AppState.selectedBook);
       if (book) {
-        book.progress = Math.min(100, book.progress + 5);
+        // 同步更新當前書籍的進度
+        book.progress = Math.round((AppState.currentPageNumber / 12) * 100);
       }
       renderApp();
       updateStateMonitor();
@@ -1804,7 +1817,8 @@
       AppState.currentPageNumber = Math.max(1, AppState.currentPageNumber - 1);
       const book = AppState.books.find(b => b.id === AppState.selectedBook);
       if (book) {
-        book.progress = Math.max(0, book.progress - 5);
+        // 同步更新當前書籍的進度
+        book.progress = Math.round((AppState.currentPageNumber / 12) * 100);
       }
       renderApp();
       updateStateMonitor();
@@ -1933,7 +1947,7 @@
       const book = AppState.books.find(b => b.id === id);
       if (book) {
         book.lastReadTime = Date.now();
-        AppState.currentPageNumber = Math.max(1, Math.round((book.progress / 100) * 12));
+        AppState.currentPageNumber = Math.max(1, Math.min(12, Math.round((book.progress / 100) * 12)));
       }
       AppState.selectedChapter = null; // 清除搜尋特定章節的狀態
       switchPage('reader');
@@ -1944,7 +1958,7 @@
       const book = AppState.books.find(b => b.id === bookId);
       if (book) {
         book.lastReadTime = Date.now();
-        AppState.currentPageNumber = Math.max(1, Math.round((book.progress / 100) * 12));
+        AppState.currentPageNumber = Math.max(1, Math.min(12, Math.round((book.progress / 100) * 12)));
       }
       AppState.selectedChapter = chapter;
       switchPage('reader');
@@ -2237,30 +2251,6 @@
       }
     }
 
-    // 模擬螢幕左右側點擊翻頁
-    function triggerPageClick(event) {
-      const rect = event.currentTarget.getBoundingClientRect();
-      const clickX = event.clientX - rect.left;
-      const width = rect.width;
-      
-      if (clickX < width / 3) {
-        // 點擊左側 1/3：在橫排模式為上一頁，直排(RTL)模式為下一頁
-        if (AppState.layoutDirection === 'vertical') {
-          triggerVolumeKey('down');
-        } else {
-          triggerVolumeKey('up');
-        }
-      } else if (clickX > (width * 2) / 3) {
-        // 點擊右側 1/3：在橫排模式為下一頁，直排(RTL)模式為上一頁
-        if (AppState.layoutDirection === 'vertical') {
-          triggerVolumeKey('up');
-        } else {
-          triggerVolumeKey('down');
-        }
-      } else {
-        showToast('💡 點擊左右兩側可實現翻頁');
-      }
-    }
 
     // 10. 自我測試套件執行
     function runAllTests() {
@@ -2458,80 +2448,7 @@
       AppState.layout.marginTop = originalMargin; // 還原
     });
 
-    // 測試 9：驗證直排翻頁熱區鏡像
-    runTest('驗證直排翻頁熱區鏡像', () => {
-      const originalPage = AppState.currentPage;
-      AppState.currentPage = 'reader';
-      const originalDirection = AppState.layoutDirection;
-      const book = AppState.books.find(b => b.id === AppState.selectedBook);
-      const originalProgress = book.progress;
-
-      // 模擬 click 事件對象
-      const mockEventLeft = {
-        currentTarget: {
-          getBoundingClientRect: () => ({ left: 0, width: 300 })
-        },
-        clientX: 50 // 點擊左側 1/3 處 (50 < 100)
-      };
-
-      const mockEventRight = {
-        currentTarget: {
-          getBoundingClientRect: () => ({ left: 0, width: 300 })
-        },
-        clientX: 250 // 點擊右側 1/3 處 (250 > 200)
-      };
-
-      // 1. 橫排模式測試
-      AppState.layoutDirection = 'horizontal';
-      book.progress = 50;
-      
-      // 橫排點左邊應為上一頁 (進度減少 5%)
-      triggerPageClick(mockEventLeft);
-      if (book.progress !== 45) {
-        AppState.layoutDirection = originalDirection;
-        book.progress = originalProgress;
-        AppState.currentPage = originalPage;
-        throw new Error('橫排點擊左側未能正常執行上一頁');
-      }
-
-      // 橫排點右邊應為下一頁 (進度增加 5%)
-      triggerPageClick(mockEventRight);
-      if (book.progress !== 50) {
-        AppState.layoutDirection = originalDirection;
-        book.progress = originalProgress;
-        AppState.currentPage = originalPage;
-        throw new Error('橫排點擊右側未能正常執行下一頁');
-      }
-
-      // 2. 直排模式測試
-      AppState.layoutDirection = 'vertical';
-      book.progress = 50;
-
-      // 直排點左邊應為下一頁 (進度增加 5%)
-      triggerPageClick(mockEventLeft);
-      if (book.progress !== 55) {
-        AppState.layoutDirection = originalDirection;
-        book.progress = originalProgress;
-        AppState.currentPage = originalPage;
-        throw new Error('直排點擊左側未能正確執行下一頁(RTL鏡像)');
-      }
-
-      // 直排點右邊應為上一頁 (進度減少 5%)
-      triggerPageClick(mockEventRight);
-      if (book.progress !== 50) {
-        AppState.layoutDirection = originalDirection;
-        book.progress = originalProgress;
-        AppState.currentPage = originalPage;
-        throw new Error('直排點擊右側未能正確執行上一頁(RTL鏡像)');
-      }
-
-      // 還原
-      AppState.layoutDirection = originalDirection;
-      book.progress = originalProgress;
-      AppState.currentPage = originalPage;
-    });
-
-    // 測試 10：驗證九宮格點擊於直橫排下的翻頁鏡像映射
+    // 測試 9：驗證九宮格點擊於直橫排下的翻頁鏡像映射
     runTest('驗證九宮格點擊於直橫排下的翻頁鏡像映射', () => {
       const originalPage = AppState.currentPage;
       AppState.currentPage = 'reader';
