@@ -48,7 +48,7 @@
 
 ## Issue 3：`EpubReaderView`/`PdfReaderView` content URI 契約擴充（ADR 0002）
 
-**Status:** ready-for-agent
+**Status:** ✅ 已完成並合併回 `main`（PR #10，merge commit `9412e14`）。2 個任務皆完成，`flutter test` 通過，且新增 `file://` 與 `content://` URI 測試已於真實 Android 裝置上通過。完整審查與複審報告見 `reviews/review-issue-3.md`。
 
 **依賴：** 無（可與 Issue 1、2 平行）
 

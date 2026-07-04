@@ -33,7 +33,7 @@
 - Consumes: 無新依賴（`AbsoluteUrl`/`toAbsoluteUrl`/`toUrl` 皆來自既有的 `readium-shared` 依賴）
 - Produces: `EpubReaderView`/`openBook` 現在同時接受檔案系統路徑或 URI 字串；`resolveAbsoluteUrl(path: String): AbsoluteUrl`（私有方法，不對外曝露，僅供本檔案內部使用）。
 
-- [ ] **Step 1：新增「開啟 URI 表示的有效 EPUB 檔案」與「URI 對應到不存在資源時觸發 onError」測試**
+- [x] **Step 1：新增「開啟 URI 表示的有效 EPUB 檔案」與「URI 對應到不存在資源時觸發 onError」測試**
 
 在 `app/integration_test/epub_reader_view_test.dart` 檔案開頭的 import 區塊新增：
 
@@ -117,7 +117,7 @@ import 'dart:io';
   });
 ```
 
-- [ ] **Step 2：於真實裝置/模擬器上執行測試確認新案例失敗（原生端尚未支援 URI）**
+- [x] **Step 2：於真實裝置/模擬器上執行測試確認新案例失敗（原生端尚未支援 URI）**
 
 Run（於 `app/` 目錄下；`<device-id>` 請替換為 `flutter devices` 列出的實際 Android 裝置/模擬器 ID）：
 ```bash
@@ -125,7 +125,7 @@ flutter test integration_test/epub_reader_view_test.dart -d <device-id>
 ```
 Expected: 既有 3 項測試通過，新增的「file:// URI」測試失敗（`errorMessage` 非 null，因為原生端目前把整個 URI 字串當成檔案系統路徑傳給 `File(path)`，找不到這個檔案）。
 
-- [ ] **Step 3：擴充 `EpubReaderView.kt` 支援 URI 路徑**
+- [x] **Step 3：擴充 `EpubReaderView.kt` 支援 URI 路徑**
 
 開啟 `app/android/app/src/main/kotlin/cc/ugotit/elinkbook/EpubReaderView.kt`，在檔案開頭的 import 區塊，將：
 
@@ -175,7 +175,7 @@ import org.readium.r2.shared.util.toUrl
 
 （`import java.io.File` 已存在於既有 import 區塊，不需重複新增。）
 
-- [ ] **Step 4：於真實裝置/模擬器上重新執行測試確認全部通過**
+- [x] **Step 4：於真實裝置/模擬器上重新執行測試確認全部通過**
 
 Run：
 ```bash
@@ -183,7 +183,7 @@ flutter test integration_test/epub_reader_view_test.dart -d <device-id>
 ```
 Expected: `All tests passed!`（既有 3 項 + 新增 2 項，共 5 項測試皆通過）。
 
-- [ ] **Step 5：靜態分析與建置確認**
+- [x] **Step 5：靜態分析與建置確認**
 
 Run（於 `app/` 目錄下）：
 ```bash
@@ -192,7 +192,7 @@ flutter build apk --debug
 ```
 Expected: `flutter analyze` 顯示 `No issues found!`；`flutter build apk --debug` 成功建置，確認原生 Kotlin 程式碼可正確編譯。
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/android/app/src/main/kotlin/cc/ugotit/elinkbook/EpubReaderView.kt app/integration_test/epub_reader_view_test.dart
@@ -211,7 +211,7 @@ git commit -m "Extend EpubReaderView to accept content/file URI paths (ADR 0002)
 - Consumes: 無新依賴
 - Produces: `PdfReaderView`/`openBook` 現在同時接受檔案系統路徑或 URI 字串；`openParcelFileDescriptor(path: String): ParcelFileDescriptor?`（私有方法，不對外曝露）。
 
-- [ ] **Step 1：新增「開啟 URI 表示的有效 PDF 檔案」與「URI 對應到不存在資源時觸發 onError」測試**
+- [x] **Step 1：新增「開啟 URI 表示的有效 PDF 檔案」與「URI 對應到不存在資源時觸發 onError」測試**
 
 在 `app/integration_test/pdf_reader_view_test.dart` 既有的兩項 `testWidgets` 之後，新增兩項測試：
 
@@ -287,7 +287,7 @@ git commit -m "Extend EpubReaderView to accept content/file URI paths (ADR 0002)
   });
 ```
 
-- [ ] **Step 2：於真實裝置/模擬器上執行測試確認新案例失敗**
+- [x] **Step 2：於真實裝置/模擬器上執行測試確認新案例失敗**
 
 Run：
 ```bash
@@ -295,7 +295,7 @@ flutter test integration_test/pdf_reader_view_test.dart -d <device-id>
 ```
 Expected: 既有 2 項測試通過，新增的「file:// URI」測試失敗（`errorMessage` 非 null，因為原生端目前把整個 URI 字串當成檔案系統路徑傳給 `File(path)`，找不到這個檔案）。
 
-- [ ] **Step 3：擴充 `PdfReaderView.kt` 支援 URI 路徑**
+- [x] **Step 3：擴充 `PdfReaderView.kt` 支援 URI 路徑**
 
 開啟 `app/android/app/src/main/kotlin/cc/ugotit/elinkbook/PdfReaderView.kt`，將整份內容改為：
 
@@ -398,7 +398,7 @@ class PdfReaderView(
 }
 ```
 
-- [ ] **Step 4：於真實裝置/模擬器上重新執行測試確認全部通過**
+- [x] **Step 4：於真實裝置/模擬器上重新執行測試確認全部通過**
 
 Run：
 ```bash
@@ -406,7 +406,7 @@ flutter test integration_test/pdf_reader_view_test.dart -d <device-id>
 ```
 Expected: `All tests passed!`（既有 2 項 + 新增 2 項，共 4 項測試皆通過）。
 
-- [ ] **Step 5：重新執行 Issue 1（epic-0）既有的 EPUB/其餘 `integration_test` 確認無回歸**
+- [x] **Step 5：重新執行 Issue 1（epic-0）既有的 EPUB/其餘 `integration_test` 確認無回歸**
 
 Run：
 ```bash
@@ -417,7 +417,7 @@ flutter test integration_test/smoke_test.dart -d <device-id>
 ```
 Expected: 全部 `All tests passed!`。
 
-- [ ] **Step 6：靜態分析與建置確認**
+- [x] **Step 6：靜態分析與建置確認**
 
 Run（於 `app/` 目錄下）：
 ```bash
@@ -427,7 +427,7 @@ flutter test
 ```
 Expected: `flutter analyze` 顯示 `No issues found!`；`flutter build apk --debug` 成功建置；`flutter test`（純 Dart/widget test）全數通過，無回歸。
 
-- [ ] **Step 7：Commit**
+- [x] **Step 7：Commit**
 
 ```bash
 git add app/android/app/src/main/kotlin/cc/ugotit/elinkbook/PdfReaderView.kt app/integration_test/pdf_reader_view_test.dart
