@@ -961,14 +961,19 @@
 
     .heatmap-grid {
       display: grid;
-      grid-template-columns: repeat(12, 1fr);
-      gap: 4px;
+      grid-template-columns: repeat(53, 5px);
+      grid-template-rows: repeat(7, 5px);
+      gap: 2px;
+      justify-content: center;
+      overflow-x: auto;
+      padding-bottom: 5px;
     }
 
     .heatmap-cell {
-      aspect-ratio: 1;
-      background: var(--border-color);
-      border-radius: 3px;
+      width: 5px;
+      height: 5px;
+      background: rgba(var(--primary-rgb, 139, 92, 246), 0.08);
+      border-radius: 1px;
       cursor: pointer;
       position: relative;
       transition: transform 0.1s ease;
@@ -1650,8 +1655,11 @@
       stats: {
         todayMinutes: 45,
         totalMinutes: 180,
-        streakDays: 5
+        streakDays: 5,
+        lastActivity: Date.now(),
+        heatmapData: {}
       },
+      readingTimerActive: false,
       layout: {
         fontSize: 16,
         fontWeight: 400,
@@ -2113,6 +2121,118 @@
         }
       });
       return pContent;
+    }
+
+    // 3.2 閱讀統計活躍熱點圖與閒置計時器 (Task 6)
+    function initMockHeatmapData() {
+      const data = {};
+      const today = new Date();
+      // 隨機填入過去 365 天中的 80 天
+      for (let i = 0; i < 365; i++) {
+        if (Math.random() < 0.25) {
+          const date = new Date(today);
+          date.setDate(today.getDate() - i);
+          const dateStr = date.toISOString().split('T')[0];
+          data[dateStr] = Math.floor(Math.random() * 45) + 5; // 5-50 分鐘
+        }
+      }
+      const todayStr = today.toISOString().split('T')[0];
+      data[todayStr] = data[todayStr] || 0;
+      return data;
+    }
+
+    // 初始化模擬熱點數據
+    AppState.stats.heatmapData = initMockHeatmapData();
+
+    function triggerActivity() {
+      AppState.stats.lastActivity = Date.now();
+      if (!AppState.readingTimerActive && AppState.currentPage === 'reader') {
+        AppState.readingTimerActive = true;
+        showToast('⏰ 偵測到閱讀活動，已恢復計時');
+        renderApp();
+      }
+    }
+
+    // 全域監聽互動以重啟計時器
+    ['click', 'keypress', 'touchstart', 'scroll'].forEach(evt => {
+      document.addEventListener(evt, () => {
+        triggerActivity();
+      }, { passive: true });
+    });
+
+    function checkIdleState() {
+      if (AppState.currentPage === 'reader' && AppState.readingTimerActive) {
+        if (Date.now() - AppState.stats.lastActivity > 10000) { // 10 秒
+          AppState.readingTimerActive = false;
+          showToast('💤 閒置超過 10 秒，已暫停計時');
+          renderApp();
+        }
+      }
+    }
+
+    // 每 2 秒智慧檢查閒置
+    setInterval(checkIdleState, 2000);
+
+    function startReadingTimer() {
+      // 每秒累加閱讀時間
+      setInterval(() => {
+        if (AppState.currentPage === 'reader' && AppState.readingTimerActive) {
+          const increment = 1 / 60; // 1秒 = 1/60分鐘
+          AppState.stats.todayMinutes = parseFloat((AppState.stats.todayMinutes + increment).toFixed(2));
+          AppState.stats.totalMinutes = parseFloat((AppState.stats.totalMinutes + increment).toFixed(2));
+          
+          const todayStr = new Date().toISOString().split('T')[0];
+          AppState.stats.heatmapData[todayStr] = parseFloat(((AppState.stats.heatmapData[todayStr] || 0) + increment).toFixed(2));
+          
+          updateReaderFooterTime();
+        }
+      }, 1000);
+    }
+
+    // 啟動計時器
+    startReadingTimer();
+
+    function updateReaderFooterTime() {
+      const footer = document.querySelector('.reader-footer');
+      if (footer && AppState.currentPage === 'reader') {
+        const book = AppState.books.find(b => b.id === AppState.selectedBook);
+        if (book) {
+          footer.innerHTML = `
+            <span>進度：${book.progress}% | 今日已讀：${Math.round(AppState.stats.todayMinutes)} 分鐘</span>
+            <span>第 ${AppState.currentPageNumber} / 12 頁</span>
+          `;
+        }
+      }
+    }
+
+    function renderHeatmap() {
+      const today = new Date();
+      const cells = [];
+      const levelColors = {
+        0: 'rgba(var(--primary-rgb, 139, 92, 246), 0.08)',
+        1: 'rgba(var(--primary-rgb, 139, 92, 246), 0.35)',
+        2: 'rgba(var(--primary-rgb, 139, 92, 246), 0.6)',
+        3: 'rgba(var(--primary-rgb, 139, 92, 246), 0.8)',
+        4: 'rgba(var(--primary-rgb, 139, 92, 246), 1.0)'
+      };
+      
+      // 生成過去 364 天加上今天的貢獻圖格子 (共 365 天)
+      for (let i = 364; i >= 0; i--) {
+        const d = new Date(today);
+        d.setDate(today.getDate() - i);
+        const dateStr = d.toISOString().split('T')[0];
+        const mins = AppState.stats.heatmapData[dateStr] || 0;
+        
+        let level = 0;
+        if (mins > 30) level = 4;
+        else if (mins > 20) level = 3;
+        else if (mins > 10) level = 2;
+        else if (mins > 0) level = 1;
+        
+        const color = levelColors[level];
+        cells.push(`<div class="heatmap-cell" style="background: ${color}; width: 5px; height: 5px; border-radius: 1px; transition: background-color 0.2s;" title="${dateStr}: 閱讀 ${Math.round(mins)} 分鐘"></div>`);
+      }
+      return cells.join('');
     }
 
     // 4. 主題切換機制
@@ -2846,23 +2966,20 @@
             <div class="stats-container">
               <div class="stats-card-row">
                 <div class="stats-mini-card">
-                  <span class="stats-mini-val">${AppState.stats.todayMinutes}m</span>
+                  <span class="stats-mini-val">${Math.round(AppState.stats.todayMinutes)}m</span>
                   <span class="stats-mini-lbl">今日閱讀</span>
                 </div>
                 <div class="stats-mini-card">
-                  <span class="stats-mini-val">${AppState.stats.totalMinutes}m</span>
+                  <span class="stats-mini-val">${Math.round(AppState.stats.totalMinutes)}m</span>
                   <span class="stats-mini-lbl">累計閱讀</span>
                 </div>
               </div>
               
-              <!-- 閱讀熱點圖 Mockup -->
+              <!-- 閱讀熱點圖 (Task 6) -->
               <div class="heatmap-section">
-                <div class="heatmap-title">閱讀熱點貢獻圖 (過去 12 週)</div>
+                <div class="heatmap-title">閱讀熱點貢獻圖 (過去 365 天)</div>
                 <div class="heatmap-grid">
-                  ${Array.from({ length: 48 }).map((_, i) => {
-                    const level = (i % 7 === 0) ? 3 : (i % 5 === 0) ? 2 : (i % 3 === 0) ? 1 : 0;
-                    return `<div class="heatmap-cell level-${level}" title="第 ${i+1} 天: 閱讀 ${level * 20} 分鐘"></div>`;
-                  }).join('')}
+                  ${renderHeatmap()}
                 </div>
               </div>
 
@@ -3169,6 +3286,31 @@
       AppState.bookmarks = [];
       AppState.selectedBook = originalBook;
       AppState.currentPageNumber = originalPageNum;
+    });
+
+    // 測試 11：驗證超過10秒無活動自動判定為閒置
+    runTest('驗證超過10秒無活動自動判定為閒置', () => {
+      const originalPage = AppState.currentPage;
+      const originalTimerState = AppState.readingTimerActive;
+      const originalLastActivity = AppState.stats.lastActivity;
+      
+      AppState.currentPage = 'reader';
+      AppState.readingTimerActive = true;
+      AppState.stats.lastActivity = Date.now() - 12000; // 模擬 12 秒前是最後一次活動
+      
+      checkIdleState();
+      
+      if (AppState.readingTimerActive === true) {
+        AppState.currentPage = originalPage;
+        AppState.readingTimerActive = originalTimerState;
+        AppState.stats.lastActivity = originalLastActivity;
+        throw new Error('閒置計時器未能正常暫停');
+      }
+      
+      // 還原狀態
+      AppState.currentPage = originalPage;
+      AppState.readingTimerActive = originalTimerState;
+      AppState.stats.lastActivity = originalLastActivity;
     });
 
     // 初始渲染與自我測試
