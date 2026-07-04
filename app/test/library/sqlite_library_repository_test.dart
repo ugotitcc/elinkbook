@@ -71,4 +71,69 @@ void main() {
     final books = await repository.listBooks();
     expect(books.map((b) => b.id), ['b2']);
   });
+
+  group('listBooks 排序', () {
+    setUp(() async {
+      await repository.insertBook(_book(
+        'b1',
+        title: '西遊記',
+        author: '吳承恩',
+        createTime: 3000,
+        lastReadTime: 1000,
+      ));
+      await repository.insertBook(_book(
+        'b2',
+        title: '三國演義',
+        author: '羅貫中',
+        createTime: 1000,
+        lastReadTime: 3000,
+      ));
+      await repository.insertBook(_book(
+        'b3',
+        title: '水滸傳',
+        author: '施耐庵',
+        createTime: 2000,
+        lastReadTime: 2000,
+      ));
+    });
+
+    test('lastRead：最近閱讀優先', () async {
+      final books = await repository.listBooks(sortBy: LibrarySortBy.lastRead);
+      expect(books.map((b) => b.id).toList(), ['b2', 'b3', 'b1']);
+    });
+
+    test('createTime：最近建立優先', () async {
+      final books =
+          await repository.listBooks(sortBy: LibrarySortBy.createTime);
+      expect(books.map((b) => b.id).toList(), ['b1', 'b3', 'b2']);
+    });
+
+    test('author：依作者排序', () async {
+      final books = await repository.listBooks(sortBy: LibrarySortBy.author);
+      expect(books.map((b) => b.author).toList(), ['吳承恩', '施耐庵', '羅貫中']);
+    });
+
+    test('title：依書名排序', () async {
+      final books = await repository.listBooks(sortBy: LibrarySortBy.title);
+      expect(books.map((b) => b.title).toList(), ['三國演義', '水滸傳', '西遊記']);
+    });
+  });
+
+  test('listBooks 依 groupFilter 篩選', () async {
+    await repository.insertBook(_book('b1', groupName: '經典名著'));
+    await repository.insertBook(_book('b2', groupName: '古典奇幻'));
+
+    final books = await repository.listBooks(groupFilter: '經典名著');
+
+    expect(books.map((b) => b.id).toList(), ['b1']);
+  });
+
+  test('listBooks 不指定 groupFilter 時回傳全部', () async {
+    await repository.insertBook(_book('b1', groupName: '經典名著'));
+    await repository.insertBook(_book('b2', groupName: '古典奇幻'));
+
+    final books = await repository.listBooks();
+
+    expect(books, hasLength(2));
+  });
 }
