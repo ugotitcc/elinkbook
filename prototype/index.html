@@ -1181,6 +1181,140 @@
       background-color: rgba(var(--primary-rgb, 139, 92, 246), 0.25) !important;
       transition: none;
     }
+
+    /* 劃線高亮與個人備註 (Task 5) */
+    .highlight-span {
+      cursor: pointer;
+      border-radius: 2px;
+      transition: opacity 0.2s;
+      position: relative;
+    }
+    .highlight-span:hover {
+      opacity: 0.8;
+    }
+    .highlight-yellow { background-color: rgba(253, 224, 71, 0.45); color: #000 !important; }
+    .highlight-pink { background-color: rgba(244, 114, 182, 0.45); color: #000 !important; }
+    .highlight-blue { background-color: rgba(96, 165, 250, 0.45); color: #000 !important; }
+    .highlight-underline { border-bottom: 2px wavy var(--primary); }
+    .note-indicator {
+      cursor: pointer;
+      font-size: 11px;
+      margin-left: 2px;
+      display: inline-block;
+      vertical-align: middle;
+      animation: pulse 2s infinite;
+      user-select: none;
+    }
+    
+    #selection-menu {
+      position: absolute;
+      display: none;
+      background: rgba(30, 30, 30, 0.95);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 8px;
+      padding: 6px;
+      gap: 6px;
+      z-index: 999;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+      backdrop-filter: blur(10px);
+      align-items: center;
+      pointer-events: auto;
+    }
+    .menu-btn {
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: white;
+      cursor: pointer;
+      padding: 4px 8px;
+      font-size: 11px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background-color 0.2s;
+      font-weight: 600;
+    }
+    .menu-btn:hover {
+      background: rgba(255,255,255,0.25);
+    }
+    
+    /* Dialog 覆蓋層與卡片 */
+    .dialog-overlay {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 1500;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(4px);
+    }
+    .dialog-card {
+      background: var(--bg-color);
+      color: var(--text-color);
+      border: 1px solid var(--border-color);
+      width: 280px;
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+    }
+    .dialog-title {
+      font-size: 14px;
+      font-weight: bold;
+      margin-bottom: 12px;
+      text-align: center;
+      color: var(--primary);
+    }
+    .dialog-textarea {
+      width: 100%;
+      height: 80px;
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+      background: rgba(0,0,0,0.05);
+      color: var(--text-color);
+      font-size: 12px;
+      outline: none;
+      box-sizing: border-box;
+      resize: none;
+      margin-bottom: 15px;
+    }
+    .dialog-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+    .dialog-btn {
+      padding: 6px 16px;
+      font-size: 12px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+      transition: opacity 0.2s;
+    }
+    .dialog-btn:hover {
+      opacity: 0.8;
+    }
+    .dialog-btn.cancel {
+      background: rgba(0,0,0,0.1);
+      color: var(--text-color);
+    }
+    .dialog-btn.confirm {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    /* Tab 按鈕樣式 */
+    .sheet-tab {
+      transition: all 0.2s ease;
+    }
+    .sheet-tab.active {
+      color: var(--primary);
+    }
   </style>
 </head>
 <body>
@@ -1239,12 +1373,19 @@
 
       <!-- BottomSheet 版面自訂面板 -->
       <div id="bottom-sheet-backdrop" class="bottom-sheet-backdrop" onclick="closeBottomSheet()"></div>
-      <div id="layout-bottom-sheet" class="bottom-sheet">
-        <div class="bottom-sheet-header">
-          <span class="bottom-sheet-title">⚙️ 版面微調與字型</span>
-          <span class="bottom-sheet-close" onclick="closeBottomSheet()">✕</span>
+      <!-- BottomSheet 版面與註記自訂面板 -->
+      <div id="bottom-sheet-backdrop" class="bottom-sheet-backdrop" onclick="closeBottomSheet()"></div>
+      <div id="layout-bottom-sheet" class="bottom-sheet" style="height: 520px;">
+        <div class="bottom-sheet-header" style="padding: 15px 20px 10px 20px;">
+          <div class="bottom-sheet-tabs" style="display: flex; gap: 20px; align-items: center; width: 100%; padding-right: 20px; user-select: none;">
+            <span class="sheet-tab active" id="tab-layout-btn" onclick="switchSheetTab('layout')" style="font-size: 13px; font-weight: bold; cursor: pointer; padding-bottom: 6px; border-bottom: 2px solid var(--primary); transition: all 0.2s;">⚙️ 版面與字型</span>
+            <span class="sheet-tab" id="tab-notes-btn" onclick="switchSheetTab('notes')" style="font-size: 13px; font-weight: bold; cursor: pointer; padding-bottom: 6px; border-bottom: 2px solid transparent; opacity: 0.6; transition: all 0.2s;">📝 劃線與書籤</span>
+          </div>
+          <span class="bottom-sheet-close" onclick="closeBottomSheet()" style="font-size: 16px;">✕</span>
         </div>
-        <div class="bottom-sheet-content">
+        
+        <!-- Tab 1: 版面與字型設定 -->
+        <div class="bottom-sheet-content" id="tab-content-layout" style="display: block; max-height: 440px; overflow-y: auto;">
           <!-- 字型大小 -->
           <div class="setting-item">
             <label><span>字型大小</span><span><span id="val-fontSize">16</span>px</span></label>
@@ -1348,6 +1489,78 @@
             </div>
           </div>
         </div>
+
+        <!-- Tab 2: 劃線與書籤管理 (Task 5) -->
+        <div class="bottom-sheet-content" id="tab-content-notes" style="display: none; max-height: 440px; overflow-y: auto; padding: 15px 20px;">
+          <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+            <button onclick="confirmClearAllAnnotations('highlight')" class="btn" style="flex: 1; padding: 8px; font-size: 11px; margin-top: 0; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.25); color: #EF4444; border-radius: 6px; cursor: pointer; font-weight: 600;">🗑️ 一鍵清除劃線</button>
+            <button onclick="confirmClearAllAnnotations('comment')" class="btn" style="flex: 1; padding: 8px; font-size: 11px; margin-top: 0; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.25); color: #EF4444; border-radius: 6px; cursor: pointer; font-weight: 600;">🗑️ 一鍵清除備註</button>
+          </div>
+          <div id="notes-list-container" style="display: flex; flex-direction: column; gap: 8px; max-height: 260px; overflow-y: auto; padding-right: 4px;">
+            <!-- 由 JS 動態生成 -->
+          </div>
+          <button onclick="openMarkdownExport()" class="btn" style="width: 100%; margin-top: 15px; padding: 10px; border-radius: 8px; font-size: 12px; font-weight: bold; background: var(--primary); color: #fff; border: none; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.15);">📤 導出筆記與書籤為 Markdown</button>
+        </div>
+      </div>
+
+      <!-- 劃線選取 Floating Toolbar (Task 5) -->
+      <div id="selection-menu" style="display: none;">
+        <button class="menu-btn" onclick="applyHighlight('yellow', event)" style="background: rgba(253, 224, 71, 0.95); width: 22px; height: 22px; border-radius: 50%; color: #000; font-weight: bold; border: 1.5px solid #fff; padding: 0;" title="黃色螢光筆">🟡</button>
+        <button class="menu-btn" onclick="applyHighlight('pink', event)" style="background: rgba(244, 114, 182, 0.95); width: 22px; height: 22px; border-radius: 50%; color: #000; font-weight: bold; border: 1.5px solid #fff; padding: 0;" title="粉色螢光筆">💗</button>
+        <button class="menu-btn" onclick="applyHighlight('blue', event)" style="background: rgba(96, 165, 250, 0.95); width: 22px; height: 22px; border-radius: 50%; color: #000; font-weight: bold; border: 1.5px solid #fff; padding: 0;" title="藍色螢光筆">💙</button>
+        <button class="menu-btn" onclick="applyHighlight('underline', event)" style="padding: 2px 6px;" title="波浪下劃線">〰️</button>
+        <button class="menu-btn" onclick="applyComment(event)" style="padding: 2px 8px;" title="寫筆記備註">✍️ 備註</button>
+      </div>
+
+      <!-- 備註編輯 Dialog (Task 5) -->
+      <div id="note-edit-dialog" class="dialog-overlay" style="display: none;" onclick="event.target.id === 'note-edit-dialog' && closeNoteEditDialog()">
+        <div class="dialog-card">
+          <div class="dialog-title">新增個人備註</div>
+          <div style="font-size: 11px; opacity: 0.7; font-style: italic; margin-bottom: 12px; background: rgba(0,0,0,0.06); padding: 8px; border-radius: 6px; max-height: 50px; overflow-y: auto; word-break: break-all; color: var(--text-color);" id="note-dialog-selected-text"></div>
+          <textarea id="note-dialog-textarea" class="dialog-textarea" placeholder="輸入您的閱讀心得與筆記..."></textarea>
+          <div class="dialog-actions">
+            <button class="dialog-btn cancel" onclick="closeNoteEditDialog()">取消</button>
+            <button class="dialog-btn confirm" id="note-dialog-save-btn">儲存</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 註記動作 Dialog (Task 5) -->
+      <div id="ann-action-dialog" class="dialog-overlay" style="display: none;" onclick="event.target.id === 'ann-action-dialog' && closeActionDialog()">
+        <div class="dialog-card" style="width: 260px; padding: 18px;">
+          <div class="dialog-title" style="margin-bottom: 8px;">編輯註記</div>
+          <div style="font-size: 11px; opacity: 0.7; font-style: italic; margin-bottom: 12px; background: rgba(0,0,0,0.06); padding: 8px; border-radius: 6px; max-height: 50px; overflow-y: auto; word-break: break-all; color: var(--text-color);" id="action-dialog-text"></div>
+          <div style="display: flex; flex-direction: column; gap: 8px; width: 100%;">
+            <button onclick="editAnnComment()" class="btn" style="margin-top: 0; padding: 8px; font-size: 12px; font-weight: 500; border-radius: 6px; background: var(--primary); color: #fff; border: none; cursor: pointer;">✍️ 編輯備註文字</button>
+            <button onclick="deleteSingleAnn()" class="btn" style="margin-top: 0; padding: 8px; font-size: 12px; font-weight: 500; border-radius: 6px; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.25); color: #EF4444; cursor: pointer;">🗑️ 刪除此劃線與備註</button>
+            <button onclick="closeActionDialog()" class="btn" style="margin-top: 0; padding: 8px; font-size: 12px; font-weight: 500; border-radius: 6px; background: none; border: 1px solid var(--border-color); color: var(--text-color); cursor: pointer;">取消</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 批次清除確認 Dialog (Task 5) -->
+      <div id="clear-confirm-dialog" class="dialog-overlay" style="display: none;" onclick="event.target.id === 'clear-confirm-dialog' && closeClearConfirmDialog()">
+        <div class="dialog-card">
+          <div class="dialog-title" id="clear-confirm-title">確認清除</div>
+          <div style="font-size: 12px; opacity: 0.8; margin-bottom: 15px; line-height: 1.5; color: var(--text-color);" id="clear-confirm-text">確定要一鍵刪除當前圖書的所有註記嗎？</div>
+          <div class="dialog-actions">
+            <button class="dialog-btn cancel" onclick="closeClearConfirmDialog()">取消</button>
+            <button class="dialog-btn confirm" onclick="executeClearAll()" style="background: #EF4444; color: #fff;">確認清除</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Markdown 導出 Dialog (Task 5) -->
+      <div id="markdown-export-dialog" class="dialog-overlay" style="display: none;" onclick="event.target.id === 'markdown-export-dialog' && closeMarkdownExport()">
+        <div class="dialog-card" style="width: 320px; max-width: 90%;">
+          <div class="dialog-title">Markdown 筆記導出</div>
+          <textarea id="markdown-export-textarea" class="dialog-textarea" style="width: 100%; height: 180px; font-family: monospace; font-size: 11px; margin-bottom: 15px;" readonly></textarea>
+          <div style="display: flex; gap: 8px; width: 100%;">
+            <button class="dialog-btn confirm" onclick="copyMarkdownToClipboard()" style="flex: 1; font-size: 11px; padding: 8px; cursor: pointer;">複製</button>
+            <button class="dialog-btn confirm" onclick="downloadMarkdownFile()" style="flex: 1; font-size: 11px; padding: 8px; background: #10B981; cursor: pointer;">下載</button>
+            <button class="dialog-btn cancel" onclick="closeMarkdownExport()" style="flex: 1; font-size: 11px; padding: 8px; cursor: pointer;">關閉</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -1432,6 +1645,8 @@
         { id: '11', title: '桃花源記', author: '陶淵明', progress: 100, format: 'TXT', coverStyle: 'style-classic-3', lastReadTime: 1718000000000, createTime: 1704932000000 },
         { id: '12', title: '搜神記', author: '干寶', progress: 0, format: 'EPUB', coverStyle: 'style-modern-1', lastReadTime: 0, createTime: 1705018400000 }
       ],
+      annotations: [],
+      bookmarks: [],
       stats: {
         todayMinutes: 45,
         totalMinutes: 180,
@@ -1472,6 +1687,432 @@
       
       renderApp();
       updateStateMonitor();
+    }
+
+    // 3.1 劃線、備註與書籤管理核心 (Task 5)
+    function addAnnotation(text, type, color, comment = '') {
+      const id = Date.now().toString() + Math.random().toString(36).substr(2, 5);
+      AppState.annotations.push({
+        id,
+        bookId: AppState.selectedBook,
+        text,
+        type,
+        color,
+        comment
+      });
+      renderApp();
+      updateStateMonitor();
+      return id;
+    }
+
+    function deleteAnnotation(id) {
+      AppState.annotations = AppState.annotations.filter(a => a.id !== id);
+      renderApp();
+      updateStateMonitor();
+    }
+
+    function deleteAnnotationFromList(id, event) {
+      if (event) event.stopPropagation();
+      deleteAnnotation(id);
+      renderNotesTabContent();
+      showToast('🗑️ 註記已刪除');
+    }
+
+    function jumpToAnnotation(id, event) {
+      if (event) event.stopPropagation();
+      const ann = AppState.annotations.find(a => a.id === id);
+      if (!ann) return;
+      closeBottomSheet();
+      // 在 prototype 模擬中，我們可以直接跳轉，並給予短暫高亮提示
+      showToast(`已跳轉至劃線位置："${ann.text.substring(0, 8)}..."`);
+    }
+
+    function exportMarkdown() {
+      const book = AppState.books.find(b => b.id === AppState.selectedBook);
+      const title = book ? book.title : '未知書籍';
+      const author = book ? book.author : '未知作者';
+      
+      let md = `# 閱讀筆記：《${title}》\n`;
+      md += `*   **作者**：${author}\n`;
+      md += `*   **閱讀進度**：${book ? book.progress : 0}%\n`;
+      md += `*   **導出時間**：${new Date().toISOString().split('T')[0]}\n\n`;
+      
+      // 書籤
+      const bookBms = AppState.bookmarks.filter(bm => bm.bookId === AppState.selectedBook);
+      md += `## 🔖 書籤清單 (${bookBms.length})\n`;
+      if (bookBms.length === 0) {
+        md += `*(尚未加入書籤)*\n\n`;
+      } else {
+        bookBms.forEach(bm => {
+          md += `*   ${bm.chapter} - 第 ${bm.pageNumber} 頁 (CFI: \`${bm.cfi}\`)\n`;
+        });
+        md += `\n`;
+      }
+      
+      // 劃線與備註
+      const bookAnns = AppState.annotations.filter(a => a.bookId === AppState.selectedBook);
+      md += `## ✏️ 劃線與個人備註 (${bookAnns.length})\n`;
+      if (bookAnns.length === 0) {
+        md += `*(尚未加入任何劃線或備註)*\n\n`;
+      } else {
+        bookAnns.forEach(a => {
+          let typeLabel = a.type === 'underline' ? '下劃線' : '劃線';
+          md += `### 📌 ${typeLabel} (${a.color})\n`;
+          md += `> ${a.text}\n\n`;
+          if (a.comment) {
+            md += `*   ✍️ **個人心得備註**：${a.comment}\n\n`;
+          }
+        });
+      }
+      return md;
+    }
+
+    // 選取文字與氣泡 Floating Menu 處理
+    let currentSelection = '';
+    function handleTextSelection(event) {
+      if (AppState.currentPage !== 'reader') return;
+      const selection = window.getSelection();
+      const text = selection.toString().trim();
+      
+      if (text && text.length > 0) {
+        currentSelection = text;
+        const range = selection.getRangeAt(0);
+        const rect = range.getBoundingClientRect();
+        const menu = document.getElementById('selection-menu');
+        const device = document.querySelector('.device-container');
+        
+        if (menu && device) {
+          menu.style.display = 'flex';
+          const deviceRect = device.getBoundingClientRect();
+          
+          // 計算浮動選單相對於手機外框的位置
+          const top = rect.top - deviceRect.top - 42;
+          const left = rect.left - deviceRect.left + (rect.width - menu.offsetWidth) / 2;
+          
+          menu.style.top = `${Math.max(10, top)}px`;
+          menu.style.left = `${Math.max(10, Math.min(deviceRect.width - menu.offsetWidth - 10, left))}px`;
+        }
+      } else {
+        const menu = document.getElementById('selection-menu');
+        if (menu && !menu.contains(event.target)) {
+          menu.style.display = 'none';
+        }
+      }
+    }
+
+    document.addEventListener('mouseup', handleTextSelection);
+    document.addEventListener('touchend', handleTextSelection);
+
+    function applyHighlight(color, event) {
+      if (event) event.stopPropagation();
+      if (!currentSelection) return;
+      
+      if (color === 'underline') {
+        addAnnotation(currentSelection, 'underline', 'underline');
+        showToast('〰️ 已新增下劃線');
+      } else {
+        addAnnotation(currentSelection, 'highlight', color);
+        showToast('✏️ 已新增劃線');
+      }
+      
+      window.getSelection().removeAllRanges();
+      document.getElementById('selection-menu').style.display = 'none';
+    }
+
+    function applyComment(event) {
+      if (event) event.stopPropagation();
+      if (!currentSelection) return;
+      
+      document.getElementById('selection-menu').style.display = 'none';
+      window.getSelection().removeAllRanges();
+      
+      openNoteEditDialog('', function(commentText) {
+        if (commentText) {
+          addAnnotation(currentSelection, 'highlight', 'yellow', commentText);
+          showToast('✍️ 已儲存備註');
+        }
+      });
+    }
+
+    // 備註編輯 Dialog
+    let noteEditSaveCallback = null;
+    function openNoteEditDialog(initialText = '', callback) {
+      const dialog = document.getElementById('note-edit-dialog');
+      const textarea = document.getElementById('note-dialog-textarea');
+      const selectedTextEl = document.getElementById('note-dialog-selected-text');
+      
+      selectedTextEl.textContent = `"${currentSelection}"`;
+      textarea.value = initialText;
+      noteEditSaveCallback = callback;
+      
+      dialog.style.display = 'flex';
+      textarea.focus();
+    }
+
+    function closeNoteEditDialog() {
+      document.getElementById('note-edit-dialog').style.display = 'none';
+    }
+
+    // 綁定儲存按鈕
+    document.addEventListener('DOMContentLoaded', () => {
+      const saveBtn = document.getElementById('note-dialog-save-btn');
+      if (saveBtn) {
+        saveBtn.onclick = function() {
+          const val = document.getElementById('note-dialog-textarea').value.trim();
+          if (noteEditSaveCallback) {
+            noteEditSaveCallback(val);
+          }
+          closeNoteEditDialog();
+        };
+      }
+    });
+
+    // 註記點擊動作對話框
+    let currentActiveAnn = null;
+    function showAnnActions(annId, event) {
+      if (event) event.stopPropagation();
+      const ann = AppState.annotations.find(a => a.id === annId);
+      if (!ann) return;
+      
+      currentActiveAnn = ann;
+      document.getElementById('action-dialog-text').textContent = `"${ann.text}"`;
+      document.getElementById('ann-action-dialog').style.display = 'flex';
+    }
+
+    function closeActionDialog() {
+      document.getElementById('ann-action-dialog').style.display = 'none';
+    }
+
+    function editAnnComment() {
+      if (!currentActiveAnn) return;
+      const ann = currentActiveAnn;
+      closeActionDialog();
+      currentSelection = ann.text;
+      openNoteEditDialog(ann.comment || '', function(newText) {
+        ann.comment = newText;
+        renderApp();
+        updateStateMonitor();
+        showToast('✍️ 備註已更新');
+      });
+    }
+
+    function deleteSingleAnn() {
+      if (!currentActiveAnn) return;
+      deleteAnnotation(currentActiveAnn.id);
+      closeActionDialog();
+      showToast('🗑️ 註記已刪除');
+    }
+
+    function openCommentViewDialog(annId, event) {
+      if (event) event.stopPropagation();
+      const ann = AppState.annotations.find(a => a.id === annId);
+      if (!ann) return;
+      
+      currentActiveAnn = ann;
+      currentSelection = ann.text;
+      openNoteEditDialog(ann.comment || '', function(newText) {
+        ann.comment = newText;
+        renderApp();
+        updateStateMonitor();
+        showToast('✍️ 備註已更新');
+      });
+    }
+
+    // 批次刪除確認邏輯
+    let clearTypeCallback = null;
+    function confirmClearAllAnnotations(type) {
+      clearTypeCallback = type;
+      const count = AppState.annotations.filter(a => a.bookId === AppState.selectedBook && (type === 'highlight' ? true : !!a.comment)).length;
+      if (count === 0) {
+        showToast('⚠️ 目前沒有可清除的註記');
+        return;
+      }
+      
+      const dialog = document.getElementById('clear-confirm-dialog');
+      document.getElementById('clear-confirm-title').textContent = type === 'highlight' ? '清除所有劃線' : '清除所有備註';
+      document.getElementById('clear-confirm-text').textContent = `確定要一鍵刪除當前圖書的所有 ${type === 'highlight' ? '劃線（共 ' + count + ' 筆，包含其附帶的備註）' : '備註（共 ' + count + ' 筆，僅清除文字，保留劃線）'} 嗎？此動作無法復原。`;
+      dialog.style.display = 'flex';
+    }
+
+    function closeClearConfirmDialog() {
+      document.getElementById('clear-confirm-dialog').style.display = 'none';
+    }
+
+    function executeClearAll() {
+      const type = clearTypeCallback;
+      const bookId = AppState.selectedBook;
+      
+      if (type === 'highlight') {
+        AppState.annotations = AppState.annotations.filter(a => a.bookId !== bookId);
+        showToast('🗑️ 已清除所有劃線與備註');
+      } else {
+        AppState.annotations.forEach(a => {
+          if (a.bookId === bookId) {
+            a.comment = '';
+          }
+        });
+        showToast('🗑️ 已清除所有備註文字');
+      }
+      
+      closeClearConfirmDialog();
+      renderApp();
+      updateStateMonitor();
+      if (document.getElementById('layout-bottom-sheet').classList.contains('show')) {
+        renderNotesTabContent();
+      }
+    }
+
+    // BottomSheet Tab 切換邏輯與書籤
+    function switchSheetTab(tabName) {
+      const layoutTab = document.getElementById('tab-content-layout');
+      const notesTab = document.getElementById('tab-content-notes');
+      const layoutBtn = document.getElementById('tab-layout-btn');
+      const notesBtn = document.getElementById('tab-notes-btn');
+      
+      if (tabName === 'layout') {
+        if (layoutTab) layoutTab.style.display = 'block';
+        if (notesTab) notesTab.style.display = 'none';
+        if (layoutBtn) {
+          layoutBtn.style.borderBottomColor = 'var(--primary)';
+          layoutBtn.style.opacity = '1';
+        }
+        if (notesBtn) {
+          notesBtn.style.borderBottomColor = 'transparent';
+          notesBtn.style.opacity = '0.6';
+        }
+      } else {
+        if (layoutTab) layoutTab.style.display = 'none';
+        if (notesTab) notesTab.style.display = 'block';
+        if (layoutBtn) {
+          layoutBtn.style.borderBottomColor = 'transparent';
+          layoutBtn.style.opacity = '0.6';
+        }
+        if (notesBtn) {
+          notesBtn.style.borderBottomColor = 'var(--primary)';
+          notesBtn.style.opacity = '1';
+        }
+        renderNotesTabContent();
+      }
+    }
+
+    function renderNotesTabContent() {
+      const container = document.getElementById('notes-list-container');
+      if (!container) return;
+      
+      const bookAnns = AppState.annotations.filter(a => a.bookId === AppState.selectedBook);
+      if (bookAnns.length === 0) {
+        container.innerHTML = `<div style="text-align: center; font-size: 12px; opacity: 0.5; padding: 20px; color: var(--text-color);">這本書目前沒有劃線與備註</div>`;
+        return;
+      }
+      
+      container.innerHTML = bookAnns.map(ann => {
+        let typeLabel = ann.type === 'underline' ? '下劃線' : '劃線';
+        if (ann.comment) typeLabel = '備註';
+        
+        let colorBlock = `<div style="width: 10px; height: 10px; border-radius: 50%; background: ${ann.color === 'underline' ? 'transparent' : ann.color}; border: ${ann.color === 'underline' ? '1px dashed var(--text-color)' : 'none'};"></div>`;
+        if (ann.type === 'underline') {
+          colorBlock = `<div style="width: 12px; height: 4px; border-bottom: 2px wavy var(--primary);"></div>`;
+        }
+        
+        return `
+          <div class="note-list-card" style="border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; background: rgba(0,0,0,0.08); font-size: 12px; display: flex; flex-direction: column; gap: 6px; color: var(--text-color);">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div style="display: flex; align-items: center; gap: 6px;">
+                ${colorBlock}
+                <span style="font-weight: bold; font-size: 11px; opacity: 0.7;">${typeLabel}</span>
+              </div>
+              <div style="display: flex; gap: 8px;">
+                <span onclick="jumpToAnnotation('${ann.id}', event)" style="color: var(--primary); cursor: pointer; font-weight: 600;">跳轉 ➔</span>
+                <span onclick="deleteAnnotationFromList('${ann.id}', event)" style="color: #EF4444; cursor: pointer;">✕</span>
+              </div>
+            </div>
+            <div style="font-style: italic; opacity: 0.8; padding-left: 4px; border-left: 2px solid var(--border-color); word-break: break-all;">
+              "${ann.text}"
+            </div>
+            ${ann.comment ? `
+              <div style="background: rgba(255,255,255,0.05); padding: 6px; border-radius: 4px; font-weight: 500; font-size: 11px; border-top: 1px solid rgba(255,255,255,0.05); color: var(--text-color);">
+                💡 備註：${ann.comment}
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function toggleBookmark() {
+      const book = AppState.books.find(b => b.id === AppState.selectedBook);
+      if (!book) return;
+      
+      const existingIdx = AppState.bookmarks.findIndex(bm => bm.bookId === book.id && bm.pageNumber === AppState.currentPageNumber);
+      
+      if (existingIdx !== -1) {
+        AppState.bookmarks.splice(existingIdx, 1);
+        showToast('🔖 已移除此頁書籤');
+      } else {
+        const id = Date.now().toString();
+        const chapter = AppState.selectedChapter || '第一回';
+        AppState.bookmarks.push({
+          id,
+          bookId: book.id,
+          chapter,
+          pageNumber: AppState.currentPageNumber,
+          cfi: `epubcfi(/6/4[chap-${AppState.currentPageNumber}]!/4/2/10)` // 模擬 CFI 格式
+        });
+        showToast('🔖 已新增此頁書籤');
+      }
+      renderApp();
+      updateStateMonitor();
+    }
+
+    // Markdown 導出彈窗控制
+    function openMarkdownExport() {
+      const mdText = exportMarkdown();
+      document.getElementById('markdown-export-textarea').value = mdText;
+      document.getElementById('markdown-export-dialog').style.display = 'flex';
+    }
+    function closeMarkdownExport() {
+      document.getElementById('markdown-export-dialog').style.display = 'none';
+    }
+    function copyMarkdownToClipboard() {
+      const textarea = document.getElementById('markdown-export-textarea');
+      textarea.select();
+      document.execCommand('copy');
+      showToast('📋 已複製至剪貼簿！');
+    }
+    function downloadMarkdownFile() {
+      const mdText = document.getElementById('markdown-export-textarea').value;
+      const book = AppState.books.find(b => b.id === AppState.selectedBook);
+      const fileName = `notes-${book ? book.title : 'book'}.md`;
+      
+      const blob = new Blob([mdText], { type: 'text/markdown;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', fileName);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showToast('💾 筆記已開始下載');
+    }
+
+    // 段落高亮替換 (Task 5)
+    function applyTextAnnotations(text, bookId) {
+      let pContent = text;
+      const bookAnns = AppState.annotations.filter(a => a.bookId === bookId);
+      bookAnns.forEach(ann => {
+        if (pContent.includes(ann.text)) {
+          let highlightClass = `highlight-${ann.color}`;
+          if (ann.type === 'underline') {
+            highlightClass = 'highlight-underline';
+          }
+          
+          let noteIcon = ann.comment ? `<span class="note-indicator" onclick="openCommentViewDialog('${ann.id}', event)">📝</span>` : '';
+          const replacement = `<span class="highlight-span ${highlightClass}" onclick="showAnnActions('${ann.id}', event)">${ann.text}</span>${noteIcon}`;
+          
+          pContent = pContent.split(ann.text).join(replacement);
+        }
+      });
+      return pContent;
     }
 
     // 4. 主題切換機制
@@ -1561,6 +2202,7 @@
 
     // BottomSheet 控制
     function openBottomSheet() {
+      switchSheetTab('layout');
       document.getElementById('bottom-sheet-backdrop').classList.add('show');
       document.getElementById('layout-bottom-sheet').classList.add('show');
       renderBottomSheetContent();
@@ -2124,14 +2766,14 @@
             readerHtmlContent = `
               <div class="writing-vertical" style="${paddingStyle} ${textStyle}">
                 <div style="font-weight: 600; font-size: 1.1em; margin-left: ${l.paraSpacing}px; text-align: center; color: var(--accent-theme, var(--primary)); font-family: inherit;">${activeSection.chapter}</div>
-                ${activeSection.content.split('\n').map(p => `<p style="${getParagraphStyle(true)}">${p}</p>`).join('')}
+                ${activeSection.content.split('\n').map(p => `<p style="${getParagraphStyle(true)}">${applyTextAnnotations(p, book.id)}</p>`).join('')}
               </div>
             `;
           } else {
             readerHtmlContent = `
               <div class="writing-horizontal" style="${paddingStyle} ${textStyle}">
                 <div style="font-weight: 600; font-size: 1.1em; margin-bottom: ${l.paraSpacing}px; text-align: center; color: var(--accent-theme, var(--primary)); font-family: inherit;">${activeSection.chapter}</div>
-                ${activeSection.content.split('\n').map(p => `<p style="${getParagraphStyle(false)}">${p}</p>`).join('')}
+                ${activeSection.content.split('\n').map(p => `<p style="${getParagraphStyle(false)}">${applyTextAnnotations(p, book.id)}</p>`).join('')}
               </div>
             `;
           }
@@ -2146,13 +2788,13 @@
           if (isVertical) {
             readerHtmlContent = `
               <div class="writing-vertical" style="${paddingStyle} ${textStyle}">
-                ${defaultParas.map(p => `<p style="${getParagraphStyle(true)}">${p}</p>`).join('')}
+                ${defaultParas.map(p => `<p style="${getParagraphStyle(true)}">${applyTextAnnotations(p, book.id)}</p>`).join('')}
               </div>
             `;
           } else {
             readerHtmlContent = `
               <div class="writing-horizontal" style="${paddingStyle} ${textStyle}">
-                ${defaultParas.map(p => `<p style="${getParagraphStyle(false)}">${p}</p>`).join('')}
+                ${defaultParas.map(p => `<p style="${getParagraphStyle(false)}">${applyTextAnnotations(p, book.id)}</p>`).join('')}
               </div>
             `;
           }
@@ -2163,11 +2805,14 @@
           return `<div onclick="handleZoneClick(${i}, event)">${label}</div>`;
         }).join('');
 
+        const hasBookmark = AppState.bookmarks.some(bm => bm.bookId === book.id && bm.pageNumber === AppState.currentPageNumber);
+
         appDiv.innerHTML = `
           <div class="page-wrapper" style="height: 100%;">
             <div class="reader-toolbar">
               <span style="font-size:12px; font-weight:600; opacity:0.8;">《${book.title}》</span>
               <div style="display: flex; gap: 6px;">
+                <button class="reader-opt-btn ${hasBookmark ? 'active' : ''}" onclick="toggleBookmark()">${hasBookmark ? '🔖 已書籤' : '🔖 書籤'}</button>
                 <button class="reader-opt-btn" onclick="openBottomSheet()">⚙️ 版面</button>
                 <button class="reader-opt-btn" onclick="toggleWritingMode()">
                   ${isVertical ? '➔ 橫排' : '⬇ 直排'}
@@ -2478,6 +3123,52 @@
       AppState.currentPage = originalPage;
       AppState.currentPageNumber = originalPageNumber;
       AppState.writingMode = originalWritingMode;
+    });
+
+    // 測試 10：驗證劃線與個人備註的新增與導出功能
+    runTest('驗證劃線與個人備註的新增與導出功能', () => {
+      AppState.annotations = [];
+      AppState.bookmarks = [];
+      const originalBook = AppState.selectedBook;
+      AppState.selectedBook = '1';
+      
+      // 1. 測試新增劃線與備註
+      const id = addAnnotation('花謝花飛花滿天', 'highlight', 'pink', '黛玉名句');
+      if (AppState.annotations.length !== 1) {
+        AppState.selectedBook = originalBook;
+        throw new Error('新增註記失敗');
+      }
+      
+      // 2. 測試新增書籤
+      const originalPageNum = AppState.currentPageNumber;
+      AppState.currentPageNumber = 3;
+      toggleBookmark(); // 新增書籤
+      if (AppState.bookmarks.length !== 1) {
+        AppState.selectedBook = originalBook;
+        AppState.currentPageNumber = originalPageNum;
+        throw new Error('新增書籤失敗');
+      }
+      
+      // 3. 測試 Markdown 導出內容
+      const md = exportMarkdown();
+      if (!md.includes('花謝花飛花滿天') || !md.includes('黛玉名句') || !md.includes('第 3 頁')) {
+        AppState.selectedBook = originalBook;
+        AppState.currentPageNumber = originalPageNum;
+        throw new Error('Markdown 導出格式不符合規格');
+      }
+      
+      // 4. 測試刪除劃線
+      deleteAnnotation(id);
+      if (AppState.annotations.length !== 0) {
+        AppState.selectedBook = originalBook;
+        AppState.currentPageNumber = originalPageNum;
+        throw new Error('刪除註記失敗');
+      }
+      
+      // 還原狀態
+      AppState.bookmarks = [];
+      AppState.selectedBook = originalBook;
+      AppState.currentPageNumber = originalPageNum;
     });
 
     // 初始渲染與自我測試
