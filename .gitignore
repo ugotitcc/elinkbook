@@ -4,3 +4,5 @@ Thumbs.db
 .idea/
 .claude/worktrees/
 .superpowers/
+.agents/skills/
+.claude/skills/
