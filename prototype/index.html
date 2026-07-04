@@ -526,6 +526,163 @@
     .dot-sepia { background: #F4ECD8; border: 1px solid #D2C4A5; }
     .dot-eink { background: #E5E5E5; border: 2px solid #000; }
 
+    /* 搜尋與排序樣式 */
+    .search-bar-container {
+      position: relative;
+      margin-bottom: 14px;
+    }
+    
+    .search-input {
+      width: 100%;
+      padding: 8px 12px 8px 32px;
+      border-radius: 10px;
+      border: 1px solid var(--border-color);
+      background: var(--card-bg);
+      color: var(--text-color);
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.2s ease, background-color 0.3s, box-shadow 0.2s ease;
+      box-sizing: border-box;
+    }
+    
+    .search-input:focus {
+      border-color: var(--accent-theme, var(--primary));
+      box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15);
+    }
+    
+    .search-clear-btn {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      cursor: pointer;
+      font-size: 12px;
+      opacity: 0.5;
+      padding: 4px;
+      color: var(--text-color);
+      transition: opacity 0.2s ease;
+    }
+    
+    .search-clear-btn:hover {
+      opacity: 0.9;
+    }
+
+    .sort-select {
+      background: var(--card-bg);
+      color: var(--text-color);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 4px 8px;
+      font-size: 12px;
+      font-weight: 500;
+      font-family: inherit;
+      outline: none;
+      cursor: pointer;
+      transition: border-color 0.2s ease, background 0.3s ease, color 0.3s;
+    }
+    .sort-select:hover {
+      border-color: var(--accent-theme, var(--primary));
+    }
+    
+    /* 搜尋結果樣式 */
+    .search-match-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 10px;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+      margin-bottom: 8px;
+    }
+    
+    .search-match-card:hover {
+      transform: translateY(-1px);
+      border-color: var(--accent-theme, var(--primary));
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+
+    /* List 視圖覆寫 */
+    .shelf-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .shelf-list .book-card {
+      flex-direction: row !important;
+      align-items: center !important;
+      padding: 8px 12px !important;
+      gap: 14px !important;
+      border-radius: 10px !important;
+    }
+    .shelf-list .book-cover {
+      width: 42px !important;
+      height: 56px !important;
+      margin-bottom: 0 !important;
+      flex-shrink: 0 !important;
+    }
+    .shelf-list .book-cover-text {
+      font-size: 9px !important;
+    }
+    .shelf-list .book-info {
+      flex: 1 !important;
+      flex-direction: row !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      gap: 16px !important;
+      min-width: 0 !important;
+    }
+    .shelf-list .book-title-author {
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: flex-start !important;
+      gap: 2px !important;
+      min-width: 0 !important;
+      flex: 1 !important;
+    }
+    .shelf-list .book-title {
+      font-size: 13px !important;
+      font-weight: 600 !important;
+      white-space: nowrap !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+      text-align: left !important;
+      width: 100% !important;
+    }
+    .shelf-list .book-author {
+      display: block !important;
+      font-size: 11px !important;
+      opacity: 0.6 !important;
+      text-align: left !important;
+    }
+    .shelf-list .book-progress-wrapper {
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: flex-end !important;
+      gap: 4px !important;
+      width: 90px !important;
+      flex-shrink: 0 !important;
+    }
+    .shelf-list .progress-bar-container {
+      width: 100% !important;
+      margin-top: 0 !important;
+    }
+    .shelf-list .book-progress-text {
+      font-size: 10px !important;
+      opacity: 0.7 !important;
+      text-align: right !important;
+    }
+
+    /* Grid 視圖下的 progress */
+    .shelf-grid .book-progress-text {
+      font-size: 7px;
+      opacity: 0.6;
+      margin-top: 2px;
+      text-align: center;
+    }
+    .shelf-grid .book-progress-wrapper {
+      width: 100%;
+    }
+
     .shelf-layout-bar {
       display: flex;
       justify-content: space-between;
@@ -959,25 +1116,46 @@
   </div>
 
   <script>
+    // 0. 書籍全文模擬資料庫
+    const BookDatabase = {
+      '1': [
+        { chapter: '第一回', content: '黛玉進賈府，見過外祖母。林黛玉自幼喪母，極受憐愛。' },
+        { chapter: '第二回', content: '賈寶玉銜玉而生，性情頑劣。花謝花飛花滿天，紅消香斷有誰憐？' }
+      ],
+      '2': [
+        { chapter: '第一回', content: '宴桃園豪傑三結義，斬黃巾英雄首立功。話說天下大勢，分久必合，合久必分。' }
+      ],
+      '3': [
+        { chapter: '第一回', content: '北宋徽宗宣和年間，山東濟州鄲城縣有一好漢，姓宋名江。' }
+      ],
+      '4': [
+        { chapter: '第一回', content: '混沌未分天地亂，茫茫渺渺無人見。自從盤古破鴻蒙，開闢從茲清濁辨。' }
+      ]
+    };
+
     // 1. 全域 AppState
     const AppState = {
       currentPage: 'shelf',
       theme: 'light', // light, dark, sepia, eink
       layoutDirection: 'vertical', // vertical, horizontal
       selectedBook: '1',
+      selectedChapter: null, // 記錄搜尋跳轉時指定的章節
+      viewMode: localStorage.getItem('viewMode') || 'grid',
+      sortBy: localStorage.getItem('sortBy') || 'lastRead',
+      searchQuery: '',
       books: [
-        { id: '1', title: '紅樓夢', author: '曹雪芹', progress: 45, format: 'EPUB', coverStyle: 'style-classic-1' },
-        { id: '2', title: '三國演義', author: '羅貫中', progress: 12, format: 'TXT', coverStyle: 'style-classic-2' },
-        { id: '3', title: '水滸傳', author: '施耐庵', progress: 28, format: 'EPUB', coverStyle: 'style-classic-3' },
-        { id: '4', title: '西遊記', author: '吳承恩', progress: 60, format: 'EPUB', coverStyle: 'style-classic-4' },
-        { id: '5', title: '聊齋志異', author: '蒲松齡', progress: 8, format: 'TXT', coverStyle: 'style-modern-1' },
-        { id: '6', title: '儒林外史', author: '吳敬梓', progress: 15, format: 'TXT', coverStyle: 'style-modern-2' },
-        { id: '7', title: '鏡花緣', author: '李汝珍', progress: 5, format: 'EPUB', coverStyle: 'style-modern-3' },
-        { id: '8', title: '封神演義', author: '許仲琳', progress: 50, format: 'EPUB', coverStyle: 'style-modern-4' },
-        { id: '9', title: '老殘遊記', author: '劉鶚', progress: 32, format: 'TXT', coverStyle: 'style-classic-1' },
-        { id: '10', title: '世說新語', author: '劉義慶', progress: 75, format: 'EPUB', coverStyle: 'style-classic-2' },
-        { id: '11', title: '桃花源記', author: '陶淵明', progress: 100, format: 'TXT', coverStyle: 'style-classic-3' },
-        { id: '12', title: '搜神記', author: '干寶', progress: 0, format: 'EPUB', coverStyle: 'style-modern-1' }
+        { id: '1', title: '紅樓夢', author: '曹雪芹', progress: 45, format: 'EPUB', coverStyle: 'style-classic-1', lastReadTime: 1720054800000, createTime: 1704067200000 },
+        { id: '2', title: '三國演義', author: '羅貫中', progress: 12, format: 'TXT', coverStyle: 'style-classic-2', lastReadTime: 1720000000000, createTime: 1704153600000 },
+        { id: '3', title: '水滸傳', author: '施耐庵', progress: 28, format: 'EPUB', coverStyle: 'style-classic-3', lastReadTime: 1719900000000, createTime: 1704240000000 },
+        { id: '4', title: '西遊記', author: '吳承恩', progress: 60, format: 'EPUB', coverStyle: 'style-classic-4', lastReadTime: 1720083600000, createTime: 1704326400000 },
+        { id: '5', title: '聊齋志異', author: '蒲松齡', progress: 8, format: 'TXT', coverStyle: 'style-modern-1', lastReadTime: 1719500000000, createTime: 1704412800000 },
+        { id: '6', title: '儒林外史', author: '吳敬梓', progress: 15, format: 'TXT', coverStyle: 'style-modern-2', lastReadTime: 1719600000000, createTime: 1704500000000 },
+        { id: '7', title: '鏡花緣', author: '李汝珍', progress: 5, format: 'EPUB', coverStyle: 'style-modern-3', lastReadTime: 1719100000000, createTime: 1704586400000 },
+        { id: '8', title: '封神演義', author: '許仲琳', progress: 50, format: 'EPUB', coverStyle: 'style-modern-4', lastReadTime: 1720051200000, createTime: 1704672800000 },
+        { id: '9', title: '老殘遊記', author: '劉鶚', progress: 32, format: 'TXT', coverStyle: 'style-classic-1', lastReadTime: 1719800000000, createTime: 1704759200000 },
+        { id: '10', title: '世說新語', author: '劉義慶', progress: 75, format: 'EPUB', coverStyle: 'style-classic-2', lastReadTime: 1720076400000, createTime: 1704845600000 },
+        { id: '11', title: '桃花源記', author: '陶淵明', progress: 100, format: 'TXT', coverStyle: 'style-classic-3', lastReadTime: 1718000000000, createTime: 1704932000000 },
+        { id: '12', title: '搜神記', author: '干寶', progress: 0, format: 'EPUB', coverStyle: 'style-modern-1', lastReadTime: 0, createTime: 1705018400000 }
       ],
       stats: {
         todayMinutes: 45,
@@ -1094,11 +1272,196 @@
     setInterval(updateStatusBarTime, 1000);
     updateStatusBarTime();
 
+    // 書架輔助功能：切換視圖與排序
+    function toggleViewMode() {
+      AppState.viewMode = AppState.viewMode === 'grid' ? 'list' : 'grid';
+      localStorage.setItem('viewMode', AppState.viewMode);
+      renderApp();
+      updateStateMonitor();
+    }
+
+    function changeSortMode(mode) {
+      AppState.sortBy = mode;
+      localStorage.setItem('sortBy', mode);
+      renderApp();
+      updateStateMonitor();
+    }
+
+    function getSortedBooks() {
+      const booksCopy = [...AppState.books];
+      if (AppState.sortBy === 'lastRead') {
+        return booksCopy.sort((a, b) => (b.lastReadTime || 0) - (a.lastReadTime || 0));
+      } else if (AppState.sortBy === 'createTime') {
+        return booksCopy.sort((a, b) => (b.createTime || 0) - (a.createTime || 0));
+      } else if (AppState.sortBy === 'author') {
+        return booksCopy.sort((a, b) => a.author.localeCompare(b.author, 'zh-TW'));
+      } else if (AppState.sortBy === 'title') {
+        return booksCopy.sort((a, b) => a.title.localeCompare(b.title, 'zh-TW'));
+      }
+      return booksCopy;
+    }
+
+    // 全文與書名/作者搜尋核心
+    function searchBooks(query) {
+      AppState.searchQuery = query;
+      if (!query) return { titleMatches: [], contentMatches: [] };
+      
+      const titleMatches = AppState.books.filter(b => b.title.includes(query) || b.author.includes(query));
+      const contentMatches = [];
+      
+      Object.keys(BookDatabase).forEach(bookId => {
+        const book = AppState.books.find(b => b.id === bookId);
+        if (!book) return;
+        BookDatabase[bookId].forEach(section => {
+          if (section.content.includes(query)) {
+            const highlighted = section.content.split(query).join(`<mark style="background: rgba(139, 92, 246, 0.3); color: inherit; padding: 0 2px; border-radius: 2px;">${query}</mark>`);
+            contentMatches.push({
+              bookId,
+              bookTitle: book.title,
+              chapter: section.chapter,
+              snippet: highlighted
+            });
+          }
+        });
+      });
+      
+      return { titleMatches, contentMatches };
+    }
+
+    // Debounce 機制 (500ms)
+    let searchDebounceTimeout = null;
+    function handleSearchInput(event) {
+      const val = event.target.value;
+      clearTimeout(searchDebounceTimeout);
+      searchDebounceTimeout = setTimeout(() => {
+        AppState.searchQuery = val;
+        renderApp();
+        updateStateMonitor();
+      }, 500);
+    }
+
+    function clearSearch() {
+      AppState.searchQuery = '';
+      renderApp();
+      updateStateMonitor();
+    }
+
+    function selectBook(id) {
+      AppState.selectedBook = id;
+      const book = AppState.books.find(b => b.id === id);
+      if (book) {
+        book.lastReadTime = Date.now();
+      }
+      AppState.selectedChapter = null; // 清除搜尋特定章節的狀態
+      switchPage('reader');
+    }
+
+    function selectBookAndContent(bookId, chapter) {
+      AppState.selectedBook = bookId;
+      const book = AppState.books.find(b => b.id === bookId);
+      if (book) {
+        book.lastReadTime = Date.now();
+      }
+      AppState.selectedChapter = chapter;
+      switchPage('reader');
+      showToast(`已跳轉至《${book.title}》 ${chapter}`);
+    }
+
     // 9. APP 各分頁渲染邏輯
     function renderApp() {
       const appDiv = document.getElementById('app');
       
+      // 記錄搜尋輸入框游標與焦點狀態
+      const activeEl = document.activeElement;
+      const isSearchFocused = activeEl && activeEl.id === 'search-input';
+      const selectionStart = isSearchFocused ? activeEl.selectionStart : null;
+      const selectionEnd = isSearchFocused ? activeEl.selectionEnd : null;
+      
       if (AppState.currentPage === 'shelf') {
+        const sortedBooks = getSortedBooks();
+        const { titleMatches, contentMatches } = searchBooks(AppState.searchQuery);
+        
+        let shelfContentHtml = '';
+        if (AppState.searchQuery) {
+          shelfContentHtml = `
+            <div class="search-results" style="display: flex; flex-direction: column; gap: 16px; margin-top: 10px;">
+              <div>
+                <div style="font-size: 11px; font-weight: 600; opacity: 0.6; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">書名/作者匹配 (${titleMatches.length})</div>
+                ${titleMatches.length === 0 ? `
+                  <div style="font-size: 12px; opacity: 0.5; padding: 12px; text-align: center; border: 1px dashed var(--border-color); border-radius: 8px;">無匹配書籍</div>
+                ` : `
+                  <div class="shelf-list">
+                    ${titleMatches.map(book => `
+                      <div class="book-card" onclick="selectBook('${book.id}')">
+                        <div class="book-cover ${book.coverStyle}">
+                          <span class="book-cover-text">${book.title.substring(0, 3)}</span>
+                        </div>
+                        <div class="book-info">
+                          <div class="book-title-author">
+                            <span class="book-title">${book.title}</span>
+                            <span class="book-author">${book.author}</span>
+                          </div>
+                          <div class="book-progress-wrapper">
+                            <div class="progress-bar-container">
+                              <div class="progress-bar-fill" style="width: ${book.progress}%;"></div>
+                            </div>
+                            <div class="book-progress-text">${book.progress}%</div>
+                          </div>
+                        </div>
+                      </div>
+                    `).join('')}
+                  </div>
+                `}
+              </div>
+
+              <div>
+                <div style="font-size: 11px; font-weight: 600; opacity: 0.6; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">內容 (全文) 匹配 (${contentMatches.length})</div>
+                ${contentMatches.length === 0 ? `
+                  <div style="font-size: 12px; opacity: 0.5; padding: 12px; text-align: center; border: 1px dashed var(--border-color); border-radius: 8px;">無匹配內容</div>
+                ` : `
+                  <div style="display: flex; flex-direction: column; gap: 8px;">
+                    ${contentMatches.map(match => `
+                      <div class="search-match-card" onclick="selectBookAndContent('${match.bookId}', '${match.chapter}')">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                          <span style="font-size: 11px; font-weight: 600; color: var(--accent-theme, var(--primary));">《${match.bookTitle}》</span>
+                          <span style="font-size: 9px; opacity: 0.5;">${match.chapter}</span>
+                        </div>
+                        <div style="font-size: 11px; line-height: 1.4; opacity: 0.8; word-break: break-all;">
+                          ... ${match.snippet} ...
+                        </div>
+                      </div>
+                    `).join('')}
+                  </div>
+                `}
+              </div>
+            </div>
+          `;
+        } else {
+          shelfContentHtml = `
+            <div class="${AppState.viewMode === 'grid' ? 'shelf-grid' : 'shelf-list'}">
+              ${sortedBooks.map(book => `
+                <div class="book-card" onclick="selectBook('${book.id}')" title="${book.title} (${book.author}) - 已讀 ${book.progress}%">
+                  <div class="book-cover ${book.coverStyle}">
+                    <span class="book-cover-text">${book.title.substring(0, 3)}</span>
+                  </div>
+                  <div class="book-info">
+                    <div class="book-title-author">
+                      <span class="book-title">${book.title}</span>
+                      <span class="book-author">${book.author}</span>
+                    </div>
+                    <div class="book-progress-wrapper">
+                      <div class="progress-bar-container">
+                        <div class="progress-bar-fill" style="width: ${book.progress}%;"></div>
+                      </div>
+                      <div class="book-progress-text">${book.progress}%</div>
+                    </div>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          `;
+        }
+
         appDiv.innerHTML = `
           <div class="page-wrapper">
             <div class="app-header">
@@ -1111,36 +1474,60 @@
               </div>
             </div>
             
+            <div class="search-bar-container">
+              <input type="text" id="search-input" class="search-input" placeholder="搜尋書名、作者或內文..." value="${AppState.searchQuery || ''}" oninput="handleSearchInput(event)" />
+              <svg style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 14px; height: 14px; color: var(--text-color); opacity: 0.5; pointer-events: none;" viewBox="0 0 24 24"><path fill="currentColor" d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"/></svg>
+              ${AppState.searchQuery ? `
+                <span class="search-clear-btn" onclick="clearSearch()">✕</span>
+              ` : ''}
+            </div>
+
             <div class="shelf-layout-bar">
               <span>共 ${AppState.books.length} 本書</span>
-              <span style="color: var(--accent-theme, var(--primary)); font-weight: 500;">最後閱讀優先 ▾</span>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <select id="sort-select" class="sort-select" onchange="changeSortMode(this.value)">
+                  <option value="lastRead" ${AppState.sortBy === 'lastRead' ? 'selected' : ''}>最後閱讀優先</option>
+                  <option value="createTime" ${AppState.sortBy === 'createTime' ? 'selected' : ''}>最近新增優先</option>
+                  <option value="author" ${AppState.sortBy === 'author' ? 'selected' : ''}>按作者排序</option>
+                  <option value="title" ${AppState.sortBy === 'title' ? 'selected' : ''}>按書名排序</option>
+                </select>
+                <div class="view-mode-toggle" onclick="toggleViewMode()" style="cursor: pointer; display: flex; align-items: center; gap: 4px; color: var(--accent-theme, var(--primary)); font-size: 12px; font-weight: 500;">
+                  ${AppState.viewMode === 'grid' ? `
+                    <svg style="width: 16px; height: 16px;" viewBox="0 0 24 24"><path fill="currentColor" d="M3 5h18v2H3V5zm0 6h18v2H3v-2zm0 6h18v2H3v-2z"/></svg>
+                    <span>列表</span>
+                  ` : `
+                    <svg style="width: 16px; height: 16px;" viewBox="0 0 24 24"><path fill="currentColor" d="M4 4h4v4H4V4zm6 0h4v4h-4V4zm6 0h4v4h-4V4zM4 10h4v4H4v-4zm6 0h4v4h-4v-4zm6 0h4v4h-4v-4zM4 16h4v4H4v-4zm6 0h4v4h-4v-4zm6 0h4v4h-4v-4z"/></svg>
+                    <span>網格</span>
+                  `}
+                </div>
+              </div>
             </div>
             
-            <div class="shelf-grid">
-              ${AppState.books.map(book => `
-                <div class="book-card" onclick="selectBook('${book.id}')" title="${book.title} (${book.author}) - 已讀 ${book.progress}%">
-                  <div class="book-cover ${book.coverStyle}">
-                    <span class="book-cover-text">${book.title.substring(0, 3)}</span>
-                  </div>
-                  <div class="book-info">
-                    <span class="book-title">${book.title}</span>
-                    <div class="progress-bar-container">
-                      <div class="progress-bar-fill" style="width: ${book.progress}%;"></div>
-                    </div>
-                    <div style="font-size: 7px; opacity: 0.6; margin-top: 2px; text-align: center;">${book.progress}%</div>
-                  </div>
-                </div>
-              `).join('')}
-            </div>
+            ${shelfContentHtml}
           </div>
         `;
       } 
       
       else if (AppState.currentPage === 'reader') {
         const book = AppState.books.find(b => b.id === AppState.selectedBook) || AppState.books[0];
-        
         const isVertical = AppState.layoutDirection === 'vertical';
         
+        let readerHtmlContent = '';
+        const sections = BookDatabase[book.id];
+        if (sections && sections.length > 0) {
+          const activeSection = sections.find(s => s.chapter === AppState.selectedChapter) || sections[0];
+          readerHtmlContent = `
+            <div style="font-weight: 600; font-size: 14px; margin-bottom: 8px; color: var(--accent-theme, var(--primary)); text-align: center;">${activeSection.chapter}</div>
+            <p>${activeSection.content}</p>
+          `;
+        } else {
+          readerHtmlContent = `
+            <p>列位看官：你道此書從何而來？說起根由，雖近荒唐，細玩之，卻頗有趣味。</p>
+            <p>但按作者自云：因曾歷過一番夢幻之後，故將真事隱去，而撰此《石頭記》一書也。</p>
+            <p style="font-size: 11px; opacity: 0.5; margin-top: 12px;">（提示：點擊此處螢幕左右側，或使用左側實體音量鍵均可翻頁）</p>
+          `;
+        }
+
         appDiv.innerHTML = `
           <div class="page-wrapper" style="height: 100%;">
             <div class="reader-toolbar">
@@ -1153,15 +1540,11 @@
             <div class="reader-viewport" onclick="triggerPageClick(event)">
               ${isVertical ? `
                 <div class="vertical-rl-text">
-                  <p>列位看官：你道此書從何而來？說起根由，雖近荒唐，細玩之，卻頗有趣味。</p>
-                  <p>但按作者自云：因曾歷過一番夢幻之後，故將真事隱去，而撰此《石頭記》一書也。</p>
-                  <p>（提示：點擊此處螢幕左右側，或使用左側實體音量鍵均可翻頁）</p>
+                  ${readerHtmlContent}
                 </div>
               ` : `
                 <div class="horizontal-text">
-                  <p>列位看官：你道此書從何而來？說起根由，雖近荒唐，細玩之，卻頗有趣味。</p>
-                  <p>但按作者自云：因曾歷過一番夢幻之後，故將真事隱去，而撰此《石頭記》一書也。</p>
-                  <p>（提示：點擊此處螢幕左右側，或使用左側實體音量鍵均可翻頁）</p>
+                  ${readerHtmlContent}
                 </div>
               `}
             </div>
@@ -1346,6 +1729,62 @@
       }
 
       switchPage(originalPage); // 還原原先頁面
+    });
+
+    // 測試 4：驗證全文檢索與分類匹配
+    runTest('驗證全文檢索與分類匹配', () => {
+      const originalQuery = AppState.searchQuery;
+      
+      const results = searchBooks('黛玉');
+      if (results.contentMatches.length === 0) {
+        throw new Error('未能搜尋到內文中的黛玉');
+      }
+      if (results.contentMatches[0].bookId !== '1') {
+        throw new Error('搜尋匹配書籍ID不正確');
+      }
+      
+      AppState.searchQuery = originalQuery;
+    });
+
+    // 測試 5：驗證排序功能與持久化
+    runTest('驗證排序功能與持久化', () => {
+      const originalSort = AppState.sortBy;
+      
+      changeSortMode('title');
+      if (AppState.sortBy !== 'title') {
+        throw new Error('AppState.sortBy 未能更新為 title');
+      }
+      if (localStorage.getItem('sortBy') !== 'title') {
+        throw new Error('sortBy 未能成功持久化至 localStorage');
+      }
+      
+      const sorted = getSortedBooks();
+      for (let i = 0; i < sorted.length - 1; i++) {
+        if (sorted[i].title.localeCompare(sorted[i+1].title, 'zh-TW') > 0) {
+          throw new Error('書籍排序結果不符合書名升序');
+        }
+      }
+      
+      changeSortMode(originalSort);
+    });
+
+    // 測試 6：驗證視圖切換與持久化
+    runTest('驗證視圖切換與持久化', () => {
+      const originalView = AppState.viewMode;
+      
+      toggleViewMode();
+      const afterFirstToggle = AppState.viewMode;
+      if (afterFirstToggle === originalView) {
+        throw new Error('toggleViewMode 未能變更 viewMode');
+      }
+      if (localStorage.getItem('viewMode') !== afterFirstToggle) {
+        throw new Error('viewMode 未能成功持久化至 localStorage');
+      }
+      
+      toggleViewMode();
+      if (AppState.viewMode !== originalView) {
+        throw new Error('還原 viewMode 失敗');
+      }
     });
 
     // 初始渲染與自我測試
