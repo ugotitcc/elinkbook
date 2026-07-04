@@ -1,6 +1,7 @@
 package cc.ugotit.elinkbook
 
 import android.content.Context
+import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import android.widget.FrameLayout
@@ -23,6 +24,8 @@ import org.readium.r2.shared.publication.Locator
 import org.readium.r2.shared.publication.Publication
 import org.readium.r2.shared.util.AbsoluteUrl
 import org.readium.r2.shared.util.Url
+import org.readium.r2.shared.util.toAbsoluteUrl
+import org.readium.r2.shared.util.toUrl
 import org.readium.r2.shared.util.asset.AssetRetriever
 import org.readium.r2.shared.util.data.ReadError
 import org.readium.r2.shared.util.getOrElse
@@ -114,7 +117,12 @@ class EpubReaderView(
             try {
                 val httpClient = DefaultHttpClient()
                 val assetRetriever = AssetRetriever(context.contentResolver, httpClient)
-                val asset = assetRetriever.retrieve(File(path)).getOrElse {
+                val resolvedUrl = resolveAbsoluteUrl(path)
+                if (resolvedUrl == null) {
+                    channel.invokeMethod("onError", "無法解析檔案路徑或 URI：$path")
+                    return@launch
+                }
+                val asset = assetRetriever.retrieve(resolvedUrl).getOrElse {
                     channel.invokeMethod("onError", "找不到檔案或檔案已損毀：$path")
                     return@launch
                 }
@@ -189,6 +197,29 @@ class EpubReaderView(
         // 尚未翻到的其他頁面資源失敗不應該讓已經成功的畫面被判定為失敗。
         if (!pageReported) {
             channel.invokeMethod("onError", "頁面資源載入失敗：${error.message}")
+        }
+    }
+
+    /**
+     * [path] 可能是真實檔案系統路徑，也可能是 content:// 或 file:// URI 字串
+     * （見 docs/adr/0002-content-uri-reader-contract.md）。含 "://" 者一律
+     * 視為 URI，交給 Readium 的 Uri 解析；否則視為檔案系統路徑。
+     *
+     * 回傳型別為可為 null：`Uri.toAbsoluteUrl()` 本身宣告為 `AbsoluteUrl?`
+     * （並非所有合法的 android.net.Uri 都能轉換成 Readium 的 AbsoluteUrl，
+     * 例如缺少 scheme 的相對 URI），呼叫端需自行判斷 null 並導向 onError，
+     * 與 assetRetriever.retrieve() 的 getOrElse 分支處理方式一致。
+     *
+     * 已知限制：`contains("://")` 是啟發式判斷，若檔案系統路徑本身恰好含有
+     * 這個子字串（例如 `/sdcard/downloads/http://book.epub`）會被誤判為
+     * URI 而解析失敗。此啟發式假設路徑皆為 Android 慣例格式，在正常使用情境
+     * 下風險可忽略，記錄於此供未來維護者知悉。
+     */
+    private fun resolveAbsoluteUrl(path: String): AbsoluteUrl? {
+        return if (path.contains("://")) {
+            Uri.parse(path).toAbsoluteUrl()
+        } else {
+            File(path).toUrl(isDirectory = false)
         }
     }
 
