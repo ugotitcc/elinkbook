@@ -1,0 +1,1330 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>elinkBook Flutter APP UIUX 模擬器</title>
+  <!-- 載入現代美觀字型 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700&family=Noto+Serif+TC:wght@400;600;700&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      /* 手機外殼規格 */
+      --phone-width: 390px;
+      --phone-height: 844px;
+      --phone-radius: 46px;
+      --phone-bezel: 12px;
+      
+      /* 全域控制台顏色 (Sleek Dark Mode) */
+      --panel-bg: rgba(30, 30, 34, 0.75);
+      --panel-border: rgba(255, 255, 255, 0.08);
+      --body-bg: #0B0B0C;
+      --accent: #8B5CF6;
+      --accent-hover: #A78BFA;
+      --accent-rgb: 139, 92, 246;
+      
+      /* APP 內部顏色系統 (動態切換) */
+      --bg-color-light: #F8F9FA;
+      --text-color-light: #1A1A1A;
+      --card-bg-light: #FFFFFF;
+      --border-light: #E5E5EA;
+      
+      --bg-color-dark: #121214;
+      --text-color-dark: #E5E5E7;
+      --card-bg-dark: #1C1C1E;
+      --border-dark: #2C2C2E;
+      
+      --bg-color-sepia: #F4ECD8;
+      --text-color-sepia: #5B4636;
+      --card-bg-sepia: #FAF3E3;
+      --border-sepia: #E6DCBF;
+      
+      --bg-color-eink: #FFFFFF;
+      --text-color-eink: #000000;
+      --card-bg-eink: #FFFFFF;
+      --border-eink: #000000;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      display: flex;
+      min-height: 100vh;
+      font-family: 'Inter', 'Outfit', sans-serif;
+      background: var(--body-bg);
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(139, 92, 246, 0.1) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(3, 218, 198, 0.05) 0px, transparent 50%);
+      color: #E2E8F0;
+      padding: 40px;
+      justify-content: center;
+      align-items: center;
+      gap: 50px;
+      overflow-x: hidden;
+    }
+
+    @media (max-width: 950px) {
+      body {
+        flex-direction: column;
+        padding: 20px;
+        gap: 30px;
+      }
+    }
+
+    /* 手機裝置框架 */
+    .phone-wrapper {
+      position: relative;
+      padding: 20px 0;
+    }
+
+    .device-container {
+      position: relative;
+      width: var(--phone-width);
+      height: var(--phone-height);
+      border: var(--phone-bezel) solid #1E1E24;
+      border-radius: var(--phone-radius);
+      overflow: hidden;
+      box-shadow: 
+        0 25px 50px -12px rgba(0, 0, 0, 0.7),
+        0 0 0 1px rgba(255, 255, 255, 0.05),
+        inset 0 0 10px rgba(0, 0, 0, 0.8);
+      background: var(--bg-color);
+      color: var(--text-color);
+      transition: background 0.3s ease, color 0.3s ease;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* 實體音量鍵 */
+    .volume-btn {
+      position: absolute;
+      left: -20px;
+      width: 8px;
+      height: 55px;
+      background: linear-gradient(90deg, #3A3A42, #1E1E24);
+      border-radius: 4px 0 0 4px;
+      cursor: pointer;
+      box-shadow: -2px 2px 5px rgba(0, 0, 0, 0.4);
+      transition: transform 0.1s ease, filter 0.2s ease;
+      z-index: 10;
+    }
+
+    .volume-btn::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(255,255,255,0.05);
+      border-radius: 4px 0 0 4px;
+    }
+
+    .volume-btn:hover {
+      filter: brightness(1.2);
+    }
+
+    .volume-btn:active {
+      transform: translateX(4px);
+    }
+
+    .volume-up {
+      top: 140px;
+    }
+
+    .volume-down {
+      top: 210px;
+    }
+
+    /* 前鏡頭動態島 (Dynamic Island) */
+    .dynamic-island {
+      position: absolute;
+      top: 11px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 110px;
+      height: 28px;
+      background: #000;
+      border-radius: 20px;
+      z-index: 100;
+      box-shadow: inset 0 1px 2px rgba(255,255,255,0.1);
+      transition: width 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+    }
+
+    .dynamic-island:hover {
+      width: 130px;
+    }
+
+    /* 手機狀態列 */
+    #status-bar {
+      height: 44px;
+      background: transparent;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      padding: 0 28px 6px 28px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: -0.2px;
+      user-select: none;
+      z-index: 99;
+      color: var(--text-color);
+      opacity: 0.8;
+    }
+
+    .status-icons {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    /* APP 內容主區 */
+    .app-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      position: relative;
+      scrollbar-width: none; /* Firefox */
+    }
+
+    .app-content::-webkit-scrollbar {
+      display: none; /* Chrome/Safari */
+    }
+
+    /* 頁面過場動畫 */
+    .page-wrapper {
+      animation: pageFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    @keyframes pageFadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* 底部導覽列 */
+    .bottom-nav {
+      height: 72px;
+      display: flex;
+      border-top: 1px solid var(--border-color);
+      background: var(--nav-bg);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      position: relative;
+      width: 100%;
+      padding-bottom: 8px;
+      transition: background 0.3s ease, border 0.3s ease;
+      z-index: 90;
+    }
+
+    .nav-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-color);
+      opacity: 0.5;
+      cursor: pointer;
+      transition: opacity 0.2s ease, transform 0.2s ease, color 0.2s ease;
+      gap: 4px;
+    }
+
+    .nav-item:hover {
+      opacity: 0.8;
+    }
+
+    .nav-item.active {
+      opacity: 1;
+      color: var(--accent-theme, var(--primary));
+    }
+
+    .nav-item.active .nav-icon {
+      transform: translateY(-2px) scale(1.1);
+    }
+
+    .nav-icon {
+      width: 22px;
+      height: 22px;
+      transition: transform 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+    }
+
+    /* 虛擬 Home Indicator */
+    .home-indicator {
+      position: absolute;
+      bottom: 5px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 120px;
+      height: 4px;
+      background: var(--text-color);
+      opacity: 0.3;
+      border-radius: 2px;
+      pointer-events: none;
+    }
+
+    /* 控制面板 */
+    .control-panel {
+      width: 440px;
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 24px;
+      padding: 30px;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      box-shadow: 
+        0 30px 60px rgba(0,0,0,0.4),
+        inset 0 1px 0 rgba(255,255,255,0.05);
+      display: flex;
+      flex-direction: column;
+      align-self: stretch;
+      max-height: var(--phone-height);
+      overflow-y: auto;
+    }
+
+    .control-panel h2 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 22px;
+      font-weight: 600;
+      margin-bottom: 20px;
+      background: linear-gradient(135deg, #FFF 30%, #A78BFA 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .control-panel h2::before {
+      content: '';
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      background: var(--accent);
+      border-radius: 50%;
+      box-shadow: 0 0 10px var(--accent);
+    }
+
+    .btn {
+      background: linear-gradient(135deg, var(--accent) 0%, #6D28D9 100%);
+      border: none;
+      color: white;
+      padding: 12px 24px;
+      font-size: 14px;
+      font-weight: 600;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+      width: 100%;
+      text-align: center;
+      font-family: inherit;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
+      filter: brightness(1.1);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+    }
+
+    /* 測試套件樣式 */
+    .test-suite {
+      margin-top: 24px;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      padding-top: 20px;
+    }
+
+    .test-suite-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .test-suite-title {
+      font-size: 14px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #94A3B8;
+    }
+
+    .test-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      border-radius: 10px;
+      margin-bottom: 8px;
+      font-size: 13px;
+      transition: all 0.2s ease;
+    }
+
+    .test-item:hover {
+      background: rgba(255, 255, 255, 0.04);
+      border-color: rgba(255, 255, 255, 0.08);
+    }
+
+    .test-name {
+      color: #E2E8F0;
+      font-weight: 500;
+    }
+
+    .badge {
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .badge-pass {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34D399;
+      border: 1px solid rgba(16, 185, 129, 0.2);
+      box-shadow: 0 0 8px rgba(16, 185, 129, 0.1);
+    }
+
+    .badge-fail {
+      background: rgba(239, 68, 68, 0.15);
+      color: #F87171;
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      box-shadow: 0 0 8px rgba(239, 68, 68, 0.1);
+    }
+
+    /* 狀態監視器 */
+    .state-monitor {
+      margin-top: auto;
+      background: rgba(0,0,0,0.2);
+      border-radius: 12px;
+      padding: 16px;
+      border: 1px solid rgba(255,255,255,0.04);
+    }
+
+    .state-monitor-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: #64748B;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .state-json {
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 11px;
+      color: #38BDF8;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    /* --- APP 內部頁面細部樣式 --- */
+    
+    /* 共用導航標題 */
+    .app-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .app-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    /* 1. 書架分頁 */
+    .theme-selector {
+      display: flex;
+      gap: 6px;
+    }
+
+    .theme-dot {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+
+    .theme-dot:hover {
+      transform: scale(1.15);
+    }
+
+    .theme-dot.active {
+      border-color: var(--accent);
+      transform: scale(1.1);
+    }
+
+    .dot-light { background: #FFFFFF; border: 1px solid #CCC; }
+    .dot-dark { background: #121214; border: 1px solid #444; }
+    .dot-sepia { background: #F4ECD8; border: 1px solid #D2C4A5; }
+    .dot-eink { background: #E5E5E5; border: 2px solid #000; }
+
+    .shelf-layout-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      font-size: 12px;
+      opacity: 0.8;
+    }
+
+    .shelf-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+
+    .book-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+
+    .book-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 16px rgba(0,0,0,0.08);
+      border-color: var(--primary);
+    }
+
+    .book-cover {
+      height: 140px;
+      background: linear-gradient(135deg, #DDD, #ECECEC);
+      border-radius: 8px;
+      margin-bottom: 10px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 2px 4px 8px rgba(0,0,0,0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px;
+    }
+
+    .book-cover-text {
+      font-family: 'Noto Serif TC', serif;
+      font-weight: 700;
+      font-size: 14px;
+      text-align: center;
+      color: #333;
+      line-height: 1.3;
+    }
+
+    .book-cover.epub-cover {
+      background: linear-gradient(135deg, #C084FC, #818CF8);
+      color: white;
+    }
+
+    .book-cover.epub-cover .book-cover-text {
+      color: white;
+      writing-mode: vertical-rl;
+      letter-spacing: 2px;
+    }
+
+    .book-cover.txt-cover {
+      background: linear-gradient(135deg, #34D399, #059669);
+      color: white;
+    }
+
+    .book-cover.txt-cover .book-cover-text {
+      color: white;
+      font-size: 15px;
+    }
+
+    .book-info {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .book-title {
+      font-size: 14px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .book-meta {
+      font-size: 11px;
+      opacity: 0.6;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .format-badge {
+      font-size: 9px;
+      padding: 2px 5px;
+      border-radius: 4px;
+      font-weight: 700;
+    }
+
+    .format-epub {
+      background: rgba(139, 92, 246, 0.12);
+      color: #8B5CF6;
+    }
+
+    .format-txt {
+      background: rgba(16, 185, 129, 0.12);
+      color: #10B981;
+    }
+
+    .progress-bar-container {
+      margin-top: 8px;
+      background: var(--border-color);
+      height: 4px;
+      border-radius: 2px;
+      width: 100%;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: var(--primary);
+      transition: width 0.3s ease;
+    }
+
+    /* 2. 閱讀器分頁 */
+    .reader-container {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      flex: 1;
+    }
+
+    .reader-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .reader-opt-btn {
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+      background: var(--card-bg);
+      cursor: pointer;
+      color: var(--text-color);
+      transition: all 0.2s ease;
+    }
+
+    .reader-opt-btn:hover {
+      border-color: var(--primary);
+    }
+
+    .reader-viewport {
+      flex: 1;
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: stretch;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* 直排中文排版核心 */
+    .vertical-rl-text {
+      writing-mode: vertical-rl;
+      text-orientation: mixed;
+      font-family: 'Noto Serif TC', 'Georgia', serif;
+      font-size: 16px;
+      line-height: 1.8;
+      letter-spacing: 2px;
+      color: var(--text-color);
+      height: 100%;
+      width: 100%;
+      text-align: justify;
+      user-select: none;
+    }
+
+    .vertical-rl-text p {
+      margin-left: 1.2em;
+      text-indent: 2em;
+    }
+
+    /* 傳統橫排排版 */
+    .horizontal-text {
+      font-family: 'Inter', sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+      color: var(--text-color);
+      width: 100%;
+      text-align: justify;
+      user-select: none;
+    }
+
+    .horizontal-text p {
+      margin-bottom: 1em;
+      text-indent: 2em;
+    }
+
+    .reader-footer {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      opacity: 0.6;
+      margin-top: 10px;
+      padding: 0 4px;
+    }
+
+    /* Toast 提示 */
+    .toast-overlay {
+      position: absolute;
+      top: 60px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-20px);
+      background: rgba(0, 0, 0, 0.8);
+      color: #FFF;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 12px;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      z-index: 101;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .toast-overlay.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* 3. 統計分頁 */
+    .stats-container {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .stats-card-row {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .stats-mini-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .stats-mini-val {
+      font-size: 20px;
+      font-weight: 700;
+      font-family: 'Outfit', sans-serif;
+      color: var(--primary);
+    }
+
+    .stats-mini-lbl {
+      font-size: 11px;
+      opacity: 0.5;
+    }
+
+    /* 熱度圖 */
+    .heatmap-section {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 14px;
+    }
+
+    .heatmap-title {
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 10px;
+      opacity: 0.8;
+    }
+
+    .heatmap-grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 4px;
+    }
+
+    .heatmap-cell {
+      aspect-ratio: 1;
+      background: var(--border-color);
+      border-radius: 3px;
+      cursor: pointer;
+      position: relative;
+      transition: transform 0.1s ease;
+    }
+
+    .heatmap-cell:hover {
+      transform: scale(1.2);
+      z-index: 2;
+    }
+
+    .heatmap-cell.level-0 { opacity: 0.3; }
+    .heatmap-cell.level-1 { background: #C084FC; opacity: 0.5; }
+    .heatmap-cell.level-2 { background: #A855F7; opacity: 0.75; }
+    .heatmap-cell.level-3 { background: #7C3AED; }
+
+    /* 柱狀圖 */
+    .chart-section {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 14px;
+    }
+
+    .chart-bars {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      height: 90px;
+      padding-top: 10px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .chart-bar-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex: 1;
+      height: 100%;
+      justify-content: flex-end;
+      gap: 4px;
+    }
+
+    .chart-bar {
+      width: 12px;
+      background: linear-gradient(0deg, var(--primary) 0%, #C084FC 100%);
+      border-radius: 6px 6px 0 0;
+      transition: height 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      cursor: pointer;
+    }
+
+    .chart-bar:hover {
+      filter: brightness(1.2);
+    }
+
+    .chart-lbl {
+      font-size: 9px;
+      opacity: 0.5;
+      margin-bottom: 2px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 手機裝置 Mockup 區域 -->
+  <div class="phone-wrapper">
+    <!-- 實體音量鍵 -->
+    <div class="volume-btn volume-up" onclick="triggerVolumeKey('up')" title="音量鍵加 (上一頁)"></div>
+    <div class="volume-btn volume-down" onclick="triggerVolumeKey('down')" title="音量鍵減 (下一頁)"></div>
+    
+    <div class="device-container theme-light" id="device-shell">
+      <!-- 頂部鏡頭動態島 -->
+      <div class="dynamic-island"></div>
+      
+      <!-- 系統狀態列 -->
+      <div id="status-bar">
+        <span id="status-time">08:28</span>
+        <div class="status-icons">
+          <span>📶</span>
+          <span>🔋 98%</span>
+        </div>
+      </div>
+      
+      <!-- 畫面內容區 -->
+      <div id="app" class="app-content"></div>
+      
+      <!-- 底部導覽列 -->
+      <div class="bottom-nav">
+        <div class="nav-item active" onclick="switchPage('shelf')" id="nav-shelf">
+          <svg class="nav-icon" viewBox="0 0 24 24">
+            <path fill="currentColor" d="M19 18H5V6h3v2h8V6h3M6 4h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/>
+          </svg>
+          <span>書架</span>
+        </div>
+        <div class="nav-item" onclick="switchPage('reader')" id="nav-reader">
+          <svg class="nav-icon" viewBox="0 0 24 24">
+            <path fill="currentColor" d="M19 2H5c-1.11 0-2 .89-2 2v16c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V4c0-1.11-.9-2-2-2m-1 9H6V9h12v2m0-3H6V6h12v2m0 6H6v-2h12v2z"/>
+          </svg>
+          <span>閱讀器</span>
+        </div>
+        <div class="nav-item" onclick="switchPage('stats')" id="nav-stats">
+          <svg class="nav-icon" viewBox="0 0 24 24">
+            <path fill="currentColor" d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2m-9 14H7v-7h3v7zm4 0h-3V7h3v10zm4 0h-3v-4h3v4z"/>
+          </svg>
+          <span>統計</span>
+        </div>
+        <!-- 虛擬 Home 指示條 -->
+        <div class="home-indicator"></div>
+      </div>
+      
+      <!-- Toast 浮層 -->
+      <div id="app-toast" class="toast-overlay">
+        <span>📢</span>
+        <span id="toast-text">音量鍵觸發！</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 右側控制面板區域 -->
+  <div class="control-panel">
+    <h2>elinkBook 控制台</h2>
+    <div style="margin-bottom: 24px;">
+      <button class="btn" onclick="runAllTests()">運行自我測試 Suite</button>
+    </div>
+    
+    <!-- 測試套件結果 -->
+    <div class="test-suite">
+      <div class="test-suite-header">
+        <span class="test-suite-title">自我測試結果</span>
+        <span style="font-size: 11px; opacity:0.6;" id="test-summary">未執行</span>
+      </div>
+      <div id="test-results">
+        <div style="text-align: center; color: #64748B; font-size: 13px; padding: 20px 0;">
+          尚未點擊運行自我測試。
+        </div>
+      </div>
+    </div>
+
+    <!-- 狀態即時監控器 -->
+    <div class="state-monitor">
+      <div class="state-monitor-title">
+        <span>全域狀態 (AppState)</span>
+        <span style="color: var(--accent); font-weight: bold;">LIVE</span>
+      </div>
+      <pre id="state-json" class="state-json"></pre>
+    </div>
+  </div>
+
+  <script>
+    // 1. 全域 AppState
+    const AppState = {
+      currentPage: 'shelf',
+      theme: 'light', // light, dark, sepia, eink
+      layoutDirection: 'vertical', // vertical, horizontal
+      selectedBook: '1',
+      books: [
+        { id: '1', title: '紅樓夢 (直排範本)', author: '曹雪芹', progress: 45, format: 'EPUB' },
+        { id: '2', title: '三國演義 (大眾白話)', author: '羅貫中', progress: 12, format: 'TXT' }
+      ],
+      stats: {
+        todayMinutes: 45,
+        totalMinutes: 180,
+        streakDays: 5
+      }
+    };
+
+    // 2. 自我測試註冊器與核心
+    const tests = [];
+    function runTest(name, fn) {
+      tests.push({ name, fn });
+    }
+
+    // 3. 頁面切換機制
+    function switchPage(page) {
+      AppState.currentPage = page;
+      
+      // 更新導覽列高亮
+      document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+      const activeNav = document.getElementById(`nav-${page}`);
+      if (activeNav) activeNav.classList.add('active');
+      
+      renderApp();
+      updateStateMonitor();
+    }
+
+    // 4. 主題切換機制
+    function switchTheme(themeName) {
+      AppState.theme = themeName;
+      const shell = document.getElementById('device-shell');
+      
+      // 移除現有的主題 class
+      shell.classList.remove('theme-light', 'theme-dark', 'theme-sepia', 'theme-eink');
+      shell.classList.add(`theme-${themeName}`);
+      
+      // 更新主題按鈕狀態 (若在書架頁)
+      document.querySelectorAll('.theme-dot').forEach(el => {
+        el.classList.remove('active');
+        if (el.dataset.theme === themeName) el.classList.add('active');
+      });
+
+      // 設定 CSS 主題變數 (for active tab highlight)
+      if (themeName === 'dark') {
+        shell.style.setProperty('--accent-theme', '#BB86FC');
+        shell.style.setProperty('--border-color', 'var(--border-dark)');
+      } else if (themeName === 'sepia') {
+        shell.style.setProperty('--accent-theme', '#B45309');
+        shell.style.setProperty('--border-color', 'var(--border-sepia)');
+      } else if (themeName === 'eink') {
+        shell.style.setProperty('--accent-theme', '#000000');
+        shell.style.setProperty('--border-color', 'var(--border-eink)');
+      } else {
+        shell.style.setProperty('--accent-theme', 'var(--primary)');
+        shell.style.setProperty('--border-color', 'var(--border-light)');
+      }
+      
+      updateStateMonitor();
+    }
+
+    // 切換閱讀器橫直排排版
+    function toggleLayout() {
+      AppState.layoutDirection = AppState.layoutDirection === 'vertical' ? 'horizontal' : 'vertical';
+      renderApp();
+      updateStateMonitor();
+      showToast(AppState.layoutDirection === 'vertical' ? '已切換為「直排繁體」模式' : '已切換為「傳統橫排」模式');
+    }
+
+    // 5. Toast 訊息元件
+    function showToast(message) {
+      const toast = document.getElementById('app-toast');
+      const toastText = document.getElementById('toast-text');
+      toastText.textContent = message;
+      toast.classList.add('show');
+      
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 2000);
+    }
+
+    // 6. 實體/模擬音量鍵點擊機制 (翻頁)
+    function triggerVolumeKey(direction) {
+      console.log('Volume Key Pressed:', direction);
+      
+      if (AppState.currentPage === 'reader') {
+        const book = AppState.books.find(b => b.id === AppState.selectedBook);
+        if (direction === 'down') {
+          // 下一頁
+          if (book && book.progress < 100) {
+            book.progress = Math.min(100, book.progress + 5);
+            showToast('📄 音量鍵翻頁：下一頁');
+          } else {
+            showToast('🏁 已讀完本章節');
+          }
+        } else if (direction === 'up') {
+          // 上一頁
+          if (book && book.progress > 0) {
+            book.progress = Math.max(0, book.progress - 5);
+            showToast('📄 音量鍵翻頁：上一頁');
+          } else {
+            showToast('📍 已在第一頁');
+          }
+        }
+        renderApp();
+      } else {
+        showToast(`🔊 音量調節：${direction === 'up' ? '放大' : '縮小'} (非閱讀狀態)`);
+      }
+      
+      updateStateMonitor();
+    }
+
+    // 7. 更新狀態顯示器
+    function updateStateMonitor() {
+      document.getElementById('state-json').textContent = JSON.stringify(AppState, null, 2);
+    }
+
+    // 8. 實時更新系統狀態列時間
+    function updateStatusBarTime() {
+      const now = new Date();
+      let hours = now.getHours();
+      let minutes = now.getMinutes();
+      // 補零
+      hours = hours < 10 ? '0' + hours : hours;
+      minutes = minutes < 10 ? '0' + minutes : minutes;
+      const timeStr = `${hours}:${minutes}`;
+      const timeEl = document.getElementById('status-time');
+      if (timeEl) timeEl.textContent = timeStr;
+    }
+    setInterval(updateStatusBarTime, 1000);
+    updateStatusBarTime();
+
+    // 9. APP 各分頁渲染邏輯
+    function renderApp() {
+      const appDiv = document.getElementById('app');
+      
+      if (AppState.currentPage === 'shelf') {
+        appDiv.innerHTML = `
+          <div class="page-wrapper">
+            <div class="app-header">
+              <span class="app-title">我的書架</span>
+              <div class="theme-selector">
+                <div class="theme-dot dot-light ${AppState.theme === 'light' ? 'active' : ''}" data-theme="light" onclick="switchTheme('light')" title="淺色模式"></div>
+                <div class="theme-dot dot-dark ${AppState.theme === 'dark' ? 'active' : ''}" data-theme="dark" onclick="switchTheme('dark')" title="深色模式"></div>
+                <div class="theme-dot dot-sepia ${AppState.theme === 'sepia' ? 'active' : ''}" data-theme="sepia" onclick="switchTheme('sepia')" title="羊皮紙模式"></div>
+                <div class="theme-dot dot-eink ${AppState.theme === 'eink' ? 'active' : ''}" data-theme="eink" onclick="switchTheme('eink')" title="E-Ink 高對比"></div>
+              </div>
+            </div>
+            
+            <div class="shelf-layout-bar">
+              <span>共 ${AppState.books.length} 本書</span>
+              <span style="color: var(--accent-theme, var(--primary)); font-weight: 500;">最後閱讀優先 ▾</span>
+            </div>
+            
+            <div class="shelf-grid">
+              ${AppState.books.map(book => `
+                <div class="book-card" onclick="selectBook('${book.id}')">
+                  <div class="book-cover ${book.format === 'EPUB' ? 'epub-cover' : 'txt-cover'}">
+                    <span class="book-cover-text">${book.title.split(' ')[0]}</span>
+                  </div>
+                  <div class="book-info">
+                    <span class="book-title">${book.title}</span>
+                    <div class="book-meta">
+                      <span>${book.author}</span>
+                      <span class="format-badge ${book.format === 'EPUB' ? 'format-epub' : 'format-txt'}">${book.format}</span>
+                    </div>
+                    <div class="progress-bar-container">
+                      <div class="progress-bar-fill" style="width: ${book.progress}%; background: var(--accent-theme, var(--primary))"></div>
+                    </div>
+                    <div style="font-size: 10px; opacity: 0.6; margin-top: 4px; text-align: right;">已讀 ${book.progress}%</div>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      } 
+      
+      else if (AppState.currentPage === 'reader') {
+        const book = AppState.books.find(b => b.id === AppState.selectedBook) || AppState.books[0];
+        
+        const isVertical = AppState.layoutDirection === 'vertical';
+        
+        appDiv.innerHTML = `
+          <div class="page-wrapper" style="height: 100%;">
+            <div class="reader-toolbar">
+              <span style="font-size:12px; font-weight:600; opacity:0.8;">《${book.title}》</span>
+              <button class="reader-opt-btn" onclick="toggleLayout()">
+                ${isVertical ? '➔ 切換為橫排' : '⬇ 切換為直排'}
+              </button>
+            </div>
+            
+            <div class="reader-viewport" onclick="triggerPageClick(event)">
+              ${isVertical ? `
+                <div class="vertical-rl-text">
+                  <p>列位看官：你道此書從何而來？說起根由，雖近荒唐，細玩之，卻頗有趣味。</p>
+                  <p>但按作者自云：因曾歷過一番夢幻之後，故將真事隱去，而撰此《石頭記》一書也。</p>
+                  <p>（提示：點擊此處螢幕左右側，或使用左側實體音量鍵均可翻頁）</p>
+                </div>
+              ` : `
+                <div class="horizontal-text">
+                  <p>列位看官：你道此書從何而來？說起根由，雖近荒唐，細玩之，卻頗有趣味。</p>
+                  <p>但按作者自云：因曾歷過一番夢幻之後，故將真事隱去，而撰此《石頭記》一書也。</p>
+                  <p>（提示：點擊此處螢幕左右側，或使用左側實體音量鍵均可翻頁）</p>
+                </div>
+              `}
+            </div>
+            
+            <div class="reader-footer">
+              <span>進度：${book.progress}%</span>
+              <span>第 1 / 12 頁</span>
+            </div>
+          </div>
+        `;
+      } 
+      
+      else if (AppState.currentPage === 'stats') {
+        appDiv.innerHTML = `
+          <div class="page-wrapper">
+            <div class="app-header">
+              <span class="app-title">閱讀統計</span>
+            </div>
+            
+            <div class="stats-container">
+              <div class="stats-card-row">
+                <div class="stats-mini-card">
+                  <span class="stats-mini-val">${AppState.stats.todayMinutes}m</span>
+                  <span class="stats-mini-lbl">今日閱讀</span>
+                </div>
+                <div class="stats-mini-card">
+                  <span class="stats-mini-val">${AppState.stats.totalMinutes}m</span>
+                  <span class="stats-mini-lbl">累計閱讀</span>
+                </div>
+              </div>
+              
+              <!-- 閱讀熱點圖 Mockup -->
+              <div class="heatmap-section">
+                <div class="heatmap-title">閱讀熱點貢獻圖 (過去 12 週)</div>
+                <div class="heatmap-grid">
+                  ${Array.from({ length: 48 }).map((_, i) => {
+                    const level = (i % 7 === 0) ? 3 : (i % 5 === 0) ? 2 : (i % 3 === 0) ? 1 : 0;
+                    return `<div class="heatmap-cell level-${level}" title="第 ${i+1} 天: 閱讀 ${level * 20} 分鐘"></div>`;
+                  }).join('')}
+                </div>
+              </div>
+
+              <!-- 閱讀時長柱狀圖 -->
+              <div class="chart-section">
+                <div class="heatmap-title">本週每日閱讀 (分鐘)</div>
+                <div class="chart-bars">
+                  <div class="chart-bar-container"><div class="chart-bar" style="height: 40px;" title="週一: 20分鐘"></div><span class="chart-lbl">一</span></div>
+                  <div class="chart-bar-container"><div class="chart-bar" style="height: 80px;" title="週二: 55分鐘"></div><span class="chart-lbl">二</span></div>
+                  <div class="chart-bar-container"><div class="chart-bar" style="height: 20px;" title="週三: 10分鐘"></div><span class="chart-lbl">三</span></div>
+                  <div class="chart-bar-container"><div class="chart-bar" style="height: 90px;" title="週四: 60分鐘"></div><span class="chart-lbl">四</span></div>
+                  <div class="chart-bar-container"><div class="chart-bar" style="height: 60px;" title="週五: 40分鐘"></div><span class="chart-lbl">五</span></div>
+                  <div class="chart-bar-container"><div class="chart-bar" style="height: 70px;" title="週六: 45分鐘"></div><span class="chart-lbl">六</span></div>
+                  <div class="chart-bar-container"><div class="chart-bar" style="height: 10px;" title="週日: 5分鐘"></div><span class="chart-lbl">日</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    // 點擊書架上的書本進入閱讀器
+    function selectBook(id) {
+      AppState.selectedBook = id;
+      switchPage('reader');
+    }
+
+    // 模擬螢幕左右側點擊翻頁
+    function triggerPageClick(event) {
+      const rect = event.currentTarget.getBoundingClientRect();
+      const clickX = event.clientX - rect.left;
+      const width = rect.width;
+      
+      if (clickX < width / 3) {
+        // 點擊左側 1/3：上一頁
+        triggerVolumeKey('up');
+      } else if (clickX > (width * 2) / 3) {
+        // 點擊右側 1/3：下一頁
+        triggerVolumeKey('down');
+      } else {
+        showToast('💡 點擊左右兩側可實現翻頁');
+      }
+    }
+
+    // 10. 自我測試套件執行
+    function runAllTests() {
+      const resultsDiv = document.getElementById('test-results');
+      resultsDiv.innerHTML = '';
+      
+      let passCount = 0;
+      let failCount = 0;
+
+      tests.forEach(t => {
+        try {
+          t.fn();
+          resultsDiv.innerHTML += `
+            <div class="test-item">
+              <span class="test-name">${t.name}</span>
+              <span class="badge badge-pass">PASS</span>
+            </div>
+          `;
+          passCount++;
+        } catch (e) {
+          resultsDiv.innerHTML += `
+            <div class="test-item">
+              <span class="test-name">${t.name}</span>
+              <span class="badge badge-fail">FAIL: ${e.message}</span>
+            </div>
+          `;
+          failCount++;
+        }
+      });
+
+      const summaryEl = document.getElementById('test-summary');
+      if (summaryEl) {
+        summaryEl.innerHTML = `<span style="color:#34D399">${passCount} PASS</span> / <span style="color:#F87171">${failCount} FAIL</span>`;
+      }
+    }
+
+    // --- 測試案例註冊 ---
+
+    // 測試 1：驗證切換路由狀態變更
+    runTest('驗證切換路由狀態變更', () => {
+      const originalPage = AppState.currentPage;
+      switchPage('stats');
+      if (AppState.currentPage !== 'stats') {
+        throw new Error('路由未能成功切換至 stats');
+      }
+      switchPage('shelf');
+      if (AppState.currentPage !== 'shelf') {
+        throw new Error('路由未能成功切回 shelf');
+      }
+      switchPage(originalPage); // 還原原先頁面
+    });
+
+    // 測試 2：驗證主題切換機制與 DOM Class
+    runTest('驗證主題切換與 Class 變更', () => {
+      const originalTheme = AppState.theme;
+      switchTheme('sepia');
+      const shell = document.getElementById('device-shell');
+      if (!shell.classList.contains('theme-sepia')) {
+        throw new Error('外殼沒有成功附加 theme-sepia class');
+      }
+      if (AppState.theme !== 'sepia') {
+        throw new Error('AppState.theme 未能成功更新為 sepia');
+      }
+      switchTheme(originalTheme); // 還原原先主題
+    });
+
+    // 測試 3：驗證音量鍵與書籍閱讀進度關聯性
+    runTest('驗證音量鍵閱讀翻頁邏輯', () => {
+      const originalPage = AppState.currentPage;
+      switchPage('reader');
+      const book = AppState.books.find(b => b.id === AppState.selectedBook);
+      const originalProgress = book.progress;
+      
+      // 模擬音量減鍵 (下一頁，進度增加)
+      triggerVolumeKey('down');
+      if (book.progress !== Math.min(100, originalProgress + 5)) {
+        throw new Error('音量減鍵未能讓進度加 5%');
+      }
+
+      // 模擬音量加鍵 (上一頁，進度減少)
+      triggerVolumeKey('up');
+      if (book.progress !== originalProgress) {
+        throw new Error('音量加鍵未能還原進度');
+      }
+
+      switchPage(originalPage); // 還原原先頁面
+    });
+
+    // 初始渲染
+    switchPage('shelf');
+    switchTheme('light');
+  </script>
+</body>
+</html>
