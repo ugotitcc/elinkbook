@@ -3,6 +3,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:elinkbook/library/sqlite_library_repository.dart';
 import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
+import 'package:elinkbook/library/library_repository.dart';
 
 Book _book(
   String id, {
@@ -135,5 +136,73 @@ void main() {
     final books = await repository.listBooks();
 
     expect(books, hasLength(2));
+  });
+
+  group('群組管理', () {
+    test('upsertGroup 新增群組後出現在 listGroups', () async {
+      await repository.upsertGroup('古典奇幻');
+
+      final groups = await repository.listGroups();
+
+      expect(groups.map((g) => g.name), containsAll(['未分類', '古典奇幻']));
+    });
+
+    test('upsertGroup 對已存在的名稱不重複新增', () async {
+      await repository.upsertGroup('古典奇幻');
+      await repository.upsertGroup('古典奇幻');
+
+      final groups = await repository.listGroups();
+
+      expect(groups.where((g) => g.name == '古典奇幻'), hasLength(1));
+    });
+
+    test('deleteGroup 後，該群組下書籍改歸「未分類」', () async {
+      await repository.upsertGroup('古典奇幻');
+      await repository.insertBook(_book('b1', groupName: '古典奇幻'));
+
+      await repository.deleteGroup('古典奇幻');
+
+      final books = await repository.listBooks();
+      expect(books.single.groupName, '未分類');
+      final groups = await repository.listGroups();
+      expect(groups.map((g) => g.name), isNot(contains('古典奇幻')));
+    });
+
+    test('deleteGroup 對「未分類」拋出例外', () async {
+      expect(
+        () => repository.deleteGroup('未分類'),
+        throwsA(isA<LibraryRepositoryException>()),
+      );
+    });
+
+    test('renameGroup 成功後，書籍歸屬同步更新為新名稱', () async {
+      await repository.upsertGroup('古典奇幻');
+      await repository.insertBook(_book('b1', groupName: '古典奇幻'));
+
+      await repository.renameGroup('古典奇幻', '奇幻小說');
+
+      final books = await repository.listBooks();
+      expect(books.single.groupName, '奇幻小說');
+      final groups = await repository.listGroups();
+      expect(groups.map((g) => g.name), contains('奇幻小說'));
+      expect(groups.map((g) => g.name), isNot(contains('古典奇幻')));
+    });
+
+    test('renameGroup 對「未分類」拋出例外', () async {
+      expect(
+        () => repository.renameGroup('未分類', '新名稱'),
+        throwsA(isA<LibraryRepositoryException>()),
+      );
+    });
+
+    test('renameGroup 目標名稱已存在時拋出例外', () async {
+      await repository.upsertGroup('古典奇幻');
+      await repository.upsertGroup('文言經典');
+
+      expect(
+        () => repository.renameGroup('古典奇幻', '文言經典'),
+        throwsA(isA<LibraryRepositoryException>()),
+      );
+    });
   });
 }
