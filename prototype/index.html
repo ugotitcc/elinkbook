@@ -1135,6 +1135,47 @@
     .adjust-btn:active {
       transform: scale(0.95);
     }
+
+    /* 3x3 點擊導航熱區 (Task 4) */
+    .nav-zones-grid {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+      z-index: 10;
+      pointer-events: auto;
+    }
+    .nav-zones-grid div {
+      border: 1px dashed rgba(139, 92, 246, 0.05);
+      cursor: pointer;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 500;
+      color: rgba(139, 92, 246, 0.6);
+      user-select: none;
+      transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+    }
+    /* 當開啟顯示熱區時，顯示虛線與背景與動作提示 */
+    .nav-zones-grid.show-debug div {
+      border-color: rgba(139, 92, 246, 0.35);
+      background-color: rgba(139, 92, 246, 0.03);
+    }
+    .nav-zones-grid.show-debug div:hover {
+      background-color: rgba(139, 92, 246, 0.08);
+      color: rgba(139, 92, 246, 0.9);
+    }
+    /* 點擊時的短暫亮起提示 */
+    .nav-zones-grid div.active-hit {
+      background-color: rgba(139, 92, 246, 0.25) !important;
+      transition: none;
+    }
   </style>
 </head>
 <body>
@@ -1286,6 +1327,21 @@
               <button class="btn" onclick="handleLoadFont()" style="width: auto; padding: 8px 16px; font-size: 12px; border-radius: 6px; margin-top: 0; box-shadow: none;">載入</button>
             </div>
           </div>
+
+          <!-- 點擊導航熱區 (Task 4) -->
+          <div class="setting-item" style="border-top: 1px solid var(--border-color); padding-top: 12px; margin-top: 12px;">
+            <label style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; margin-bottom: 8px;">
+              <span>顯示九宮格點擊導航輔助線</span>
+              <input type="checkbox" id="toggle-nav-zones" onchange="toggleNavZones(this.checked)" style="width: 18px; height: 18px; accent-color: var(--accent);">
+            </label>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 8px;">
+              <span style="font-size: 11px; opacity: 0.7;">熱區行為預覽 (點擊切換/鏡像)</span>
+              <!-- 迷你九宮格 -->
+              <div id="mini-zones-preview" style="display: grid; grid-template-columns: repeat(3, 24px); grid-template-rows: repeat(3, 24px); gap: 2px; border: 1px solid var(--border-color); padding: 4px; border-radius: 6px; background: rgba(0,0,0,0.15); width: 86px; height: 86px;">
+                <!-- 由 JS 動態生成 9 個 div -->
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -1344,6 +1400,14 @@
       currentPage: 'shelf',
       theme: 'light', // light, dark, sepia, eink
       layoutDirection: 'vertical', // vertical, horizontal
+      get writingMode() {
+        return this.layoutDirection;
+      },
+      set writingMode(value) {
+        this.layoutDirection = value;
+      },
+      currentPageNumber: 1,
+      showNavZones: false,
       selectedBook: '1',
       selectedChapter: null, // 記錄搜尋跳轉時指定的章節
       viewMode: localStorage.getItem('viewMode') || 'grid',
@@ -1541,6 +1605,44 @@
         deleteBtn.style.opacity = '0.4';
         deleteBtn.style.cursor = 'not-allowed';
       }
+
+      // 更新九宮格輔助開關與預覽 (Task 4)
+      const navCheckbox = document.getElementById('toggle-nav-zones');
+      if (navCheckbox) {
+        navCheckbox.checked = !!AppState.showNavZones;
+      }
+      const miniPreview = document.getElementById('mini-zones-preview');
+      if (miniPreview) {
+        miniPreview.innerHTML = Array.from({ length: 9 }).map((_, i) => {
+          let bg = 'rgba(255,255,255,0.06)';
+          let title = '';
+          const isLeft = [0, 3, 6].includes(i);
+          const isRight = [2, 5, 8].includes(i);
+          const isVertical = AppState.layoutDirection === 'vertical';
+          
+          if (i === 4) {
+            bg = 'rgba(139, 92, 246, 0.4)';
+            title = '選單';
+          } else if (isLeft) {
+            bg = isVertical ? 'rgba(52, 211, 153, 0.25)' : 'rgba(248, 113, 113, 0.25)';
+            title = isVertical ? '下一頁' : '上一頁';
+          } else if (isRight) {
+            bg = isVertical ? 'rgba(248, 113, 113, 0.25)' : 'rgba(52, 211, 153, 0.25)';
+            title = isVertical ? '上一頁' : '下一頁';
+          }
+          
+          let arrow = '';
+          if (i === 4) {
+            arrow = '⚙️';
+          } else if (isLeft) {
+            arrow = isVertical ? '➔' : '⬅';
+          } else if (isRight) {
+            arrow = isVertical ? '⬅' : '➔';
+          }
+          
+          return `<div style="background: ${bg}; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 9px; color: var(--text-color); font-weight: bold; cursor: default; border: 1px solid rgba(255,255,255,0.03);" title="${title}">${arrow}</div>`;
+        }).join('');
+      }
     }
 
     function loadCustomFont(fontName) {
@@ -1621,35 +1723,115 @@
       }, 2000);
     }
 
-    // 6. 實體/模擬音量鍵點擊機制 (翻頁)
+    // 6. 實體/模擬音量鍵點擊機制 (翻頁) 與九宮格導航熱區 (Task 4)
     function triggerVolumeKey(direction) {
       console.log('Volume Key Pressed:', direction);
       
       if (AppState.currentPage === 'reader') {
-        const book = AppState.books.find(b => b.id === AppState.selectedBook);
         if (direction === 'down') {
-          // 下一頁
-          if (book && book.progress < 100) {
-            book.progress = Math.min(100, book.progress + 5);
-            showToast('📄 音量鍵翻頁：下一頁');
-          } else {
-            showToast('🏁 已讀完本章節');
-          }
+          nextPage();
+          showToast('📄 音量鍵翻頁：下一頁');
         } else if (direction === 'up') {
-          // 上一頁
-          if (book && book.progress > 0) {
-            book.progress = Math.max(0, book.progress - 5);
-            showToast('📄 音量鍵翻頁：上一頁');
-          } else {
-            showToast('📍 已在第一頁');
-          }
+          prevPage();
+          showToast('📄 音量鍵翻頁：上一頁');
         }
-        renderApp();
       } else {
         showToast(`🔊 音量調節：${direction === 'up' ? '放大' : '縮小'} (非閱讀狀態)`);
       }
       
       updateStateMonitor();
+    }
+
+    function toggleReaderMenu() {
+      const bottomSheet = document.getElementById('layout-bottom-sheet');
+      if (bottomSheet) {
+        if (bottomSheet.classList.contains('show')) {
+          closeBottomSheet();
+        } else {
+          openBottomSheet();
+        }
+      }
+    }
+
+    function handleZoneClick(index, event) {
+      if (event) {
+        event.stopPropagation();
+      }
+      
+      // 點擊視覺動畫回饋
+      const gridEl = document.querySelector('.nav-zones-grid');
+      if (gridEl) {
+        const cell = gridEl.children[index];
+        if (cell) {
+          cell.classList.add('active-hit');
+          setTimeout(() => {
+            cell.classList.remove('active-hit');
+          }, 150);
+        }
+      }
+      
+      // 4 為中央格，永遠是觸發選單
+      if (index === 4) {
+        toggleReaderMenu();
+        return;
+      }
+      
+      // 判斷是否為左半部 (0, 3, 6) 或 右半部 (2, 5, 8)
+      const isLeft = [0, 3, 6].includes(index);
+      const isRight = [2, 5, 8].includes(index);
+      
+      if (AppState.writingMode === 'horizontal') {
+        if (isLeft) prevPage();
+        if (isRight) nextPage();
+      } else {
+        // 直排 (Vertical RTL) 右開書：左滑為下一頁，右滑為上一頁 (左右鏡像)
+        if (isLeft) nextPage();
+        if (isRight) prevPage();
+      }
+    }
+
+    function nextPage() {
+      AppState.currentPageNumber++;
+      const book = AppState.books.find(b => b.id === AppState.selectedBook);
+      if (book) {
+        book.progress = Math.min(100, book.progress + 5);
+      }
+      renderApp();
+      updateStateMonitor();
+    }
+
+    function prevPage() {
+      AppState.currentPageNumber = Math.max(1, AppState.currentPageNumber - 1);
+      const book = AppState.books.find(b => b.id === AppState.selectedBook);
+      if (book) {
+        book.progress = Math.max(0, book.progress - 5);
+      }
+      renderApp();
+      updateStateMonitor();
+    }
+
+    function getZoneLabel(index, isVertical) {
+      if (index === 4) return '選單 ⚙️';
+      const isLeft = [0, 3, 6].includes(index);
+      const isRight = [2, 5, 8].includes(index);
+      
+      if (isVertical) {
+        if (isLeft) return '下一頁 ➔';
+        if (isRight) return '⬅ 上一頁';
+      } else {
+        if (isLeft) return '⬅ 上一頁';
+        if (isRight) return '下一頁 ➔';
+      }
+      return '';
+    }
+
+    function toggleNavZones(checked) {
+      AppState.showNavZones = checked;
+      renderApp();
+      updateStateMonitor();
+      if (document.getElementById('layout-bottom-sheet').classList.contains('show')) {
+        renderBottomSheetContent();
+      }
     }
 
     // 7. 更新狀態顯示器
@@ -1751,6 +1933,7 @@
       const book = AppState.books.find(b => b.id === id);
       if (book) {
         book.lastReadTime = Date.now();
+        AppState.currentPageNumber = Math.max(1, Math.round((book.progress / 100) * 12));
       }
       AppState.selectedChapter = null; // 清除搜尋特定章節的狀態
       switchPage('reader');
@@ -1761,6 +1944,7 @@
       const book = AppState.books.find(b => b.id === bookId);
       if (book) {
         book.lastReadTime = Date.now();
+        AppState.currentPageNumber = Math.max(1, Math.round((book.progress / 100) * 12));
       }
       AppState.selectedChapter = chapter;
       switchPage('reader');
@@ -1960,6 +2144,11 @@
           }
         }
 
+        const zonesHtml = Array.from({ length: 9 }).map((_, i) => {
+          const label = AppState.showNavZones ? getZoneLabel(i, isVertical) : '';
+          return `<div onclick="handleZoneClick(${i}, event)">${label}</div>`;
+        }).join('');
+
         appDiv.innerHTML = `
           <div class="page-wrapper" style="height: 100%;">
             <div class="reader-toolbar">
@@ -1972,13 +2161,17 @@
               </div>
             </div>
             
-            <div class="reader-viewport" onclick="triggerPageClick(event)">
+            <div class="reader-viewport">
+              <!-- 3x3 點擊導航熱區 -->
+              <div class="nav-zones-grid ${AppState.showNavZones ? 'show-debug' : ''}">
+                ${zonesHtml}
+              </div>
               ${readerHtmlContent}
             </div>
             
             <div class="reader-footer">
               <span>進度：${book.progress}%</span>
-              <span>第 1 / 12 頁</span>
+              <span>第 ${AppState.currentPageNumber} / 12 頁</span>
             </div>
           </div>
         `;
@@ -2267,6 +2460,8 @@
 
     // 測試 9：驗證直排翻頁熱區鏡像
     runTest('驗證直排翻頁熱區鏡像', () => {
+      const originalPage = AppState.currentPage;
+      AppState.currentPage = 'reader';
       const originalDirection = AppState.layoutDirection;
       const book = AppState.books.find(b => b.id === AppState.selectedBook);
       const originalProgress = book.progress;
@@ -2295,6 +2490,7 @@
       if (book.progress !== 45) {
         AppState.layoutDirection = originalDirection;
         book.progress = originalProgress;
+        AppState.currentPage = originalPage;
         throw new Error('橫排點擊左側未能正常執行上一頁');
       }
 
@@ -2303,6 +2499,7 @@
       if (book.progress !== 50) {
         AppState.layoutDirection = originalDirection;
         book.progress = originalProgress;
+        AppState.currentPage = originalPage;
         throw new Error('橫排點擊右側未能正常執行下一頁');
       }
 
@@ -2315,6 +2512,7 @@
       if (book.progress !== 55) {
         AppState.layoutDirection = originalDirection;
         book.progress = originalProgress;
+        AppState.currentPage = originalPage;
         throw new Error('直排點擊左側未能正確執行下一頁(RTL鏡像)');
       }
 
@@ -2323,12 +2521,46 @@
       if (book.progress !== 50) {
         AppState.layoutDirection = originalDirection;
         book.progress = originalProgress;
+        AppState.currentPage = originalPage;
         throw new Error('直排點擊右側未能正確執行上一頁(RTL鏡像)');
       }
 
       // 還原
       AppState.layoutDirection = originalDirection;
       book.progress = originalProgress;
+      AppState.currentPage = originalPage;
+    });
+
+    // 測試 10：驗證九宮格點擊於直橫排下的翻頁鏡像映射
+    runTest('驗證九宮格點擊於直橫排下的翻頁鏡像映射', () => {
+      const originalPage = AppState.currentPage;
+      AppState.currentPage = 'reader';
+      const originalPageNumber = AppState.currentPageNumber;
+      const originalWritingMode = AppState.writingMode;
+      
+      AppState.currentPageNumber = 10;
+      AppState.writingMode = 'horizontal';
+      handleZoneClick(3); // 橫排點左邊：上一頁
+      if (AppState.currentPageNumber !== 9) {
+        AppState.currentPageNumber = originalPageNumber;
+        AppState.writingMode = originalWritingMode;
+        AppState.currentPage = originalPage;
+        throw new Error('橫排點擊左邊未觸發上一頁');
+      }
+      
+      AppState.writingMode = 'vertical';
+      handleZoneClick(3); // 直排點左邊：下一頁 (鏡像)
+      if (AppState.currentPageNumber !== 10) {
+        AppState.currentPageNumber = originalPageNumber;
+        AppState.writingMode = originalWritingMode;
+        AppState.currentPage = originalPage;
+        throw new Error('直排點擊左邊未觸發下一頁');
+      }
+
+      // 還原狀態
+      AppState.currentPage = originalPage;
+      AppState.currentPageNumber = originalPageNumber;
+      AppState.writingMode = originalWritingMode;
     });
 
     // 初始渲染與自我測試
