@@ -7,6 +7,8 @@ import io.flutter.embedding.engine.FlutterEngine
 import org.readium.r2.navigator.epub.EpubNavigatorFragment
 
 class MainActivity : FlutterFragmentActivity() {
+    private lateinit var bookMetadataChannel: BookMetadataChannel
+
     override fun onCreate(savedInstanceState: Bundle?) {
         // Android 在 process death 後重建這個 Activity 時，會嘗試用已儲存的
         // FragmentManager 狀態還原先前掛載的 EpubNavigatorFragment；但它的建構子是
@@ -44,5 +46,7 @@ class MainActivity : FlutterFragmentActivity() {
                 "cc.ugotit.elinkbook/epub_reader_view",
                 EpubReaderViewFactory(this, flutterEngine.dartExecutor.binaryMessenger),
             )
+        bookMetadataChannel =
+            BookMetadataChannel(this, flutterEngine.dartExecutor.binaryMessenger)
     }
 }
