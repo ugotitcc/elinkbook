@@ -3,6 +3,7 @@ package cc.ugotit.elinkbook
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.pdf.PdfRenderer
+import android.net.Uri
 import android.os.ParcelFileDescriptor
 import android.view.View
 import android.widget.ImageView
@@ -15,10 +16,12 @@ import java.io.File
 /**
  * 包裝 android.graphics.pdf.PdfRenderer 的原生 PlatformView。
  * 透過 MethodChannel 接收 Flutter 的 openBook 呼叫，成功則呼叫
- * onPageRendered，失敗則呼叫 onError(message)。
+ * onPageRendered，失敗則呼叫 onError(message)。[path] 可能是真實檔案系統
+ * 路徑，也可能是 content:// 或 file:// URI 字串（見
+ * docs/adr/0002-content-uri-reader-contract.md）。
  */
 class PdfReaderView(
-    context: Context,
+    private val context: Context,
     id: Int,
     messenger: BinaryMessenger,
 ) : PlatformView, MethodChannel.MethodCallHandler {
@@ -52,8 +55,11 @@ class PdfReaderView(
         var renderer: PdfRenderer? = null
         var page: PdfRenderer.Page? = null
         try {
-            val file = File(path)
-            pfd = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
+            pfd = openParcelFileDescriptor(path)
+            if (pfd == null) {
+                channel.invokeMethod("onError", "找不到檔案或檔案已損毀：$path")
+                return
+            }
             renderer = PdfRenderer(pfd)
             page = renderer.openPage(0)
             val bitmap = Bitmap.createBitmap(page.width, page.height, Bitmap.Config.ARGB_8888)
@@ -70,6 +76,19 @@ class PdfReaderView(
             try { page?.close() } catch (ignored: Exception) {}
             try { renderer?.close() } catch (ignored: Exception) {}
             try { pfd?.close() } catch (ignored: Exception) {}
+        }
+    }
+
+    /**
+     * [path] 含 "://" 者一律視為 URI，交給 ContentResolver 開啟（Android
+     * 對 file:// scheme 有內建直接處理，不需額外註冊 ContentProvider）；
+     * 否則視為檔案系統路徑，沿用既有 ParcelFileDescriptor.open() 邏輯。
+     */
+    private fun openParcelFileDescriptor(path: String): ParcelFileDescriptor? {
+        return if (path.contains("://")) {
+            context.contentResolver.openFileDescriptor(Uri.parse(path), "r")
+        } else {
+            ParcelFileDescriptor.open(File(path), ParcelFileDescriptor.MODE_READ_ONLY)
         }
     }
 
