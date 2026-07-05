@@ -95,9 +95,15 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(Key('book_item_${importedBook.id}')));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
 
     expect(find.text('閱讀器'), findsOneWidget);
+
+    // 先確認載入指示器真的存在，才能保證下面「等它消失」是有意義的等待，
+    // 而不是 Key 被改名/移除後，condition 從一開始就成立、測試沒等待就
+    // silently 通過（與 reader_screen_test.dart 採用相同手法）。
+    expect(find.byKey(const Key('reader_loading_indicator')), findsOneWidget);
 
     // 10 秒逾時：Readium 需非同步解析 EPUB 套件結構並啟動 WebView 導覽器，
     // 與 Issue 4/5 其餘 integration_test 採用相同的逾時時間。
