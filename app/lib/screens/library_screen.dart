@@ -7,7 +7,9 @@ import '../library/book_import_service.dart';
 import '../library/library_preferences.dart';
 import '../library/library_repository.dart';
 import '../library/models/book.dart';
+import '../library/models/book_group.dart';
 import '../library/models/library_enums.dart';
+import 'library_group_management_dialog.dart';
 import 'reader_screen.dart';
 import 'settings_screen.dart';
 
@@ -32,8 +34,10 @@ class _LibraryScreenState extends State<LibraryScreen> {
   final _preferences = LibraryPreferences();
 
   List<Book>? _books;
+  List<BookGroup> _groups = const [];
   LibraryViewMode _viewMode = LibraryViewMode.grid;
   LibrarySortBy _sortBy = LibrarySortBy.lastRead;
+  String? _groupFilter;
 
   @override
   void initState() {
@@ -49,24 +53,45 @@ class _LibraryScreenState extends State<LibraryScreen> {
       _viewMode = viewMode;
       _sortBy = sortBy;
     });
-    await _loadBooks();
+    await Future.wait([_loadGroups(), _loadBooks()]);
+  }
+
+  Future<void> _loadGroups() async {
+    try {
+      final groups = await widget.repository.listGroups();
+      if (!mounted) return;
+      setState(() => _groups = groups);
+    } catch (_) {
+      // 暫時性錯誤時保留先前已載入的群組清單，避免因為單次讀取失敗就讓
+      // 畫面的分類 tab 列與目前的篩選狀態不一致（見 Issue 7 審查）。若是
+      // 第一次載入就失敗，_groups 會維持初始的空清單（連「未分類」都不
+      // 顯示）——這是「沒有最後已知正確狀態可保留」下的必然結果，安全但
+      // 不完美，之後重新整理即可恢復。
+    }
   }
 
   Future<void> _loadBooks() async {
-    // 擷取呼叫當下的排序條件；若使用者在這次非同步查詢完成前又切換了排序
-    // （連續快速點選排序選單的不同選項），較晚回應但較早發出的查詢結果會
-    // 對應到舊的排序條件，此時不應覆蓋畫面（避免顯示順序與目前選定的
-    // _sortBy 不一致）。
+    // 擷取呼叫當下的排序/分類篩選條件；若使用者在這次非同步查詢完成前又
+    // 切換了排序或分類 tab，較晚回應但較早發出的查詢結果會對應到舊條件，
+    // 此時不應覆蓋畫面（避免顯示內容與目前選定的條件不一致）。
     final requestedSortBy = _sortBy;
+    final requestedGroupFilter = _groupFilter;
     try {
-      final books = await widget.repository.listBooks(sortBy: requestedSortBy);
+      final books = await widget.repository.listBooks(
+        sortBy: requestedSortBy,
+        groupFilter: requestedGroupFilter,
+      );
       if (!mounted) return;
-      if (_sortBy != requestedSortBy) return;
+      if (_sortBy != requestedSortBy || _groupFilter != requestedGroupFilter) {
+        return;
+      }
       setState(() => _books = books);
     } catch (_) {
       // 如果載入失敗，把它當作空列表，顯示既有的空狀態 UI
       if (!mounted) return;
-      if (_sortBy != requestedSortBy) return;
+      if (_sortBy != requestedSortBy || _groupFilter != requestedGroupFilter) {
+        return;
+      }
       setState(() => _books = []);
     }
   }
@@ -103,10 +128,36 @@ class _LibraryScreenState extends State<LibraryScreen> {
     await _loadBooks();
   }
 
+  Future<void> _changeGroupFilter(String? groupFilter) async {
+    setState(() => _groupFilter = groupFilter);
+    await _loadBooks();
+  }
+
   void _openBook(Book book) {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => ReaderScreen(filePath: book.filePath)),
     );
+  }
+
+  Future<void> _openManageGroupsDialog() async {
+    await showDialog<void>(
+      context: context,
+      builder: (context) => LibraryGroupManagementDialog(
+        repository: widget.repository,
+        initialGroups: _groups,
+      ),
+    );
+    await _loadGroups();
+    if (!mounted) return;
+    // 若目前篩選中的分類已在對話框內被刪除，退回「全部」篩選，避免畫面
+    // 停留在一個已不存在的分類上（listBooks 對不存在的 groupFilter 只會
+    // 回傳空清單，容易誤以為「這個分類沒有書」而非「這個分類已被刪除」）。
+    final filterStillExists =
+        _groupFilter == null || _groups.any((g) => g.name == _groupFilter);
+    if (!filterStillExists) {
+      setState(() => _groupFilter = null);
+    }
+    await _loadBooks();
   }
 
   @override
@@ -163,9 +214,57 @@ class _LibraryScreenState extends State<LibraryScreen> {
       ),
       body: books == null
           ? const Center(child: CircularProgressIndicator())
-          : books.isEmpty
-              ? _buildEmptyState()
-              : _buildBookList(books),
+          : Column(
+              children: [
+                _buildGroupTabs(),
+                Expanded(
+                  child: books.isEmpty
+                      ? _buildEmptyState()
+                      : _buildBookList(books),
+                ),
+              ],
+            ),
+    );
+  }
+
+  Widget _buildGroupTabs() {
+    return SizedBox(
+      key: const Key('library_group_tabs'),
+      height: 48,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+            child: ChoiceChip(
+              key: const Key('library_group_tab_all'),
+              label: const Text('全部'),
+              selected: _groupFilter == null,
+              onSelected: (_) => _changeGroupFilter(null),
+            ),
+          ),
+          for (final group in _groups)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+              child: ChoiceChip(
+                key: Key('library_group_tab_${group.name}'),
+                label: Text(group.name),
+                selected: _groupFilter == group.name,
+                onSelected: (_) => _changeGroupFilter(group.name),
+              ),
+            ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+            child: ActionChip(
+              key: const Key('library_group_manage_button'),
+              avatar: const Icon(Icons.category, size: 16),
+              label: const Text('管理分類'),
+              onPressed: _openManageGroupsDialog,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
