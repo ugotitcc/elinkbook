@@ -151,7 +151,7 @@
 
 ## Issue 8：資料夾批次匯入 + 匯入自動分類
 
-**Status:** ready-for-agent
+**Status:** ✅ 已完成並合併回 `main`（PR #14，merge commit `4b1ec43`）。2 個任務皆完成，`flutter test` 66/66 通過，`flutter analyze` 乾淨；真實裝置手動驗證通過（真實資料夾含 2 個真實檔案，匯入後依資料夾名稱建立分類且書籍歸位正確）。整分支審查結論為 Ready to merge: Yes，已依建議修正 mounted 檢查與文件落差 2 項 Minor，另 2 項（匯入 UI 視覺反饋、`BookMetadataChannel` CoroutineScope 生命週期管理）評估後不採納（前者屬跨匯入路徑的範疇外加強，後者為 Issue 2 遺留技術債非本工單範疇）。完整審查報告見 `reviews/review-issue-8.md`（本機保留，依本 repo 慣例未提交版本控制），實作計畫見 `plans/plan-issue-8.md`。
 
 **依賴：** Issue 4、7
 
