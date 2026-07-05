@@ -131,7 +131,7 @@
 
 ## Issue 7：書籍分類群組管理
 
-**Status:** ready-for-agent
+**Status:** ✅ 已完成並合併回 `main`（PR #13，merge commit `873a465`）。2 個任務皆完成，`flutter test` 62/62 通過，`flutter analyze` 乾淨。整分支審查（Opus）結論為 Ready to merge: Yes；已依審查建議修正圖示重複與邊界情況註解 2 項 Minor，另 2 項（重新命名目前篩選分類時是否跟隨新名稱、新增重複分類名稱提示）評估後不採納（超出規格範圍的 UX 加強）。完整審查報告見 `reviews/review-issue-7.md`（本機保留，依本 repo 慣例未提交版本控制），實作計畫見 `plans/plan-issue-7.md`。
 
 **依賴：** Issue 1、5
 

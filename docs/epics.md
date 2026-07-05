@@ -3,7 +3,7 @@
 | Epic 代號 & 名稱 | 當前狀態 | 實際存放路徑 | 關聯 PRD 需求章節 | 備註 |
 |---|---|---|---|---|
 | `epic-0-skeleton` 技術骨架 | 🟢 已歸檔 (Archived) | `docs/archive/2026-07-04-epic-0-skeleton/` | 無對應 FR，技術地基 | Issue 1–6 全數已合併 `main`（PR #1–#5、#7）；epic 端到端目標（Flutter + Android + EPUB(Readium) + PDF）已達成並歸檔 |
-| `epic-1-library` 圖書庫基礎 | 🟡 開發中 (Active) | `docs/epics/epic-1-library/` | FR-01, 02, 03, 26, 27, 28, 29, 33, 34 | Issue 1-6/9 已完成並合併回 `main`；Issue 7-9 待處理。FR-33/34（書籍分類群組、匯入自動分類）為 2026-07-04 PRD 修訂新增 |
+| `epic-1-library` 圖書庫基礎 | 🟡 開發中 (Active) | `docs/epics/epic-1-library/` | FR-01, 02, 03, 26, 27, 28, 29, 33, 34 | Issue 1-7/9 已完成並合併回 `main`；Issue 8-9 待處理。FR-33/34（書籍分類群組、匯入自動分類）為 2026-07-04 PRD 修訂新增 |
 | `epic-2-vertical-core` 排版切換與直排核心 | ⚪ 未開始 (Backlog) | N/A | FR-05, 06, 32 | |
 | `epic-3-fonts-layout` 字型與版面設定 | ⚪ 未開始 (Backlog) | N/A | FR-09, 10, 31 | FR-09 已拆分：自訂字型上傳/管理/刪除移至 `epic-14-system-settings`（FR-35）；FR-10 新增螢幕方向/翻頁模式與 `epic-14-system-settings`（FR-37/38）之全域/單書雙層覆寫邏輯 |
 | `epic-4-pdf-enhance` PDF 專業增強 | ⚪ 未開始 (Backlog) | N/A | FR-11 | |
