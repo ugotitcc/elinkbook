@@ -6,8 +6,9 @@
 
 - **`LibraryScreen`**（Dart，取代現有佔位版本）—— 圖書庫主畫面：匯入入口、分類群組列、排序/檢視模式列、書架/列表兩種呈現。
 - **`LibraryRepository`**（Dart）—— 封裝 sqflite 存取，`books`/`groups` 兩張表的唯一存取入口。
-- **`BookImportService`**（Dart）—— 協調 `file_picker` 選檔/選資料夾、呼叫原生 `book_metadata` channel、寫入 `LibraryRepository`。
-- **原生 `book_metadata` MethodChannel**（Android，新增）—— 一次性呼叫，供匯入流程提取詮釋資料（標題/作者/封面 bytes），與既有 `openBook`/`onPageRendered`/`onError` 這組 `PlatformView` 渲染契約分開。
+- **`BookImportService`**（Dart）—— 協調 `file_picker` 選檔、呼叫原生 `book_metadata` channel、寫入 `LibraryRepository`；整個資料夾匯入則走獨立的原生 `folder_picker` channel（見 Issue 8：`file_picker` 的 `getDirectoryPath()` 在 Android 上不會回傳真正的 `content://` tree URI，改用 `ActivityResultContracts.OpenDocumentTree()`）。
+- **原生 `book_metadata` MethodChannel**（Android，新增）—— 一次性呼叫，供匯入流程提取詮釋資料（標題/作者/封面 bytes）與列舉資料夾內容（`listFolderContents`，Issue 8），與既有 `openBook`/`onPageRendered`/`onError` 這組 `PlatformView` 渲染契約分開。
+- **原生 `folder_picker` MethodChannel**（Android，Issue 8 新增）—— 用 `ActivityResultContracts.OpenDocumentTree()` 取得使用者選取資料夾的真正 tree URI 並持久化權限。
 - **`EpubReaderView`/`PdfReaderView` 原生擴充**（Android，異動既有模組）—— `openBook(path)` 依 ADR 0002 同時接受檔案系統路徑或 `content://` URI。
 - **`AboutScreen`**（Dart，新增）—— FR-29 應用程式資訊頁，獨立於圖書庫資料模型。
 

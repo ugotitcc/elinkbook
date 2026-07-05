@@ -122,6 +122,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
       final folderUri =
           await _folderPickerChannel.invokeMethod<String>('pickFolder');
       if (folderUri == null) return;
+      // pickFolder 對應真實系統資料夾選擇器，使用者操作時間可能很長；
+      // 確認畫面在這段等待期間沒有被 pop/dispose，才能安全使用 context。
+      if (!mounted) return;
       final autoGroup = await _confirmAutoGroupByFolderName();
       if (autoGroup == null) return;
       await widget.importService.importFolder(
