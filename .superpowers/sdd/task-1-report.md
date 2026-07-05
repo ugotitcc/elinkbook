@@ -1,135 +1,84 @@
-# Task 1 報告：`BookImportService.importFolder()` 核心邏輯實作
+# Task 1 實作報告：`AboutScreen` + 原生 WebView 版本查詢 + `SettingsScreen` 導航入口
 
-## 實作概要
+## 環境確認
 
-成功實現了 `BookImportService.importFolder()` 的批次資料夾匯入邏輯，包含完整的子檔案處理、自動群組建立與權限管理。所有 65 個測試通過，靜態分析無任何問題。
+- 工作目錄：`U:\MyDeveloper\AI\elinkBook\.claude\worktrees\epic-1-issue-9-about-screen`
+- 分支：`worktree-epic-1-issue-9-about-screen`（已用 `git branch --show-current` 確認，非 `main`）
 
 ## 實作內容
 
-### 1. 測試檔案修改 (`app/test/library/book_import_service_test.dart`)
+依 `.superpowers/sdd/task-1-brief.md` 逐步（TDD 紅-綠）完成：
 
-- **新增 import**：`import 'package:elinkbook/library/models/book_group.dart';`
-- **刪除過時測試**：移除了「`importFolder 尚未實作，呼叫時拋出 UnimplementedError`」的測試
-- **新增 4 個新測試**：
-  1. `批次匯入資料夾內多個檔案，皆正確寫入 LibraryRepository` — 驗證資料夾內多個檔案皆被成功匯入
-  2. `autoGroupByFolderName=true 且群組不存在時，自動建立同名群組並歸入` — 驗證自動群組建立
-  3. `autoGroupByFolderName=true 且群組已存在時，直接歸入既有群組、不重複建立` — 驗證不重複建立
-  4. `autoGroupByFolderName=false 時，匯入書籍歸入預設「未分類」` — 驗證禁用自動分組
-
-### 2. 實作檔案修改 (`app/lib/library/book_import_service_impl.dart`)
-
-#### 修改 `_importSingleFile` 方法簽章
-- **新增參數**：`bool takePermission = true`
-- **邏輯調整**：只有當 `takePermission == true` 且 URI 以 `content://` 開頭時，才呼叫 `takePersistableUriPermission`
-- **向後相容**：預設值 `true` 使現有呼叫路徑（如 `importFiles()` 內部呼叫）行為完全不變
-
-#### 實作 `importFolder()` 方法
-完整邏輯流程：
-1. **取得資料夾層級權限**：呼叫 `takePersistableUriPermission` 針對資料夾 URI
-2. **列出資料夾內容**：呼叫 `listFolderContents` 取得資料夾名稱與子檔案 URI 清單
-3. **群組處理**：若 `autoGroupByFolderName == true` 且資料夾名稱非空，建立或使用既有同名群組
-4. **批次匯入子檔案**：逐一呼叫 `_importSingleFile(uri, folderName: groupName, takePermission: false)` 匯入每個子檔案
-5. **返回結果**：返回成功匯入的書籍清單
+1. **Step 1**：`flutter pub add package_info_plus` —— 解析出 `package_info_plus: ^9.0.1`（連帶新增 `http`、`http_parser`、`package_info_plus_platform_interface`），`pubspec.yaml`／`pubspec.lock` 已更新。
+2. **Step 2**：`app/android/app/src/main/kotlin/cc/ugotit/elinkbook/MainActivity.kt` 新增 `import android.os.Build`／`import android.webkit.WebView`，並在 `configureFlutterEngine()` 內、既有 `elinkbook/folder_picker` channel 註冊之後，新增 `elinkbook/app_info` channel 與 `getSystemWebViewVersion` handler（逐字依照 brief）。既有程式碼（`bookMetadataChannel` 賦值、`folder_picker` channel）完全未變動。
+3. **Step 3-6**：建立 `app/test/screens/about_screen_test.dart`（逐字依照 brief），先確認編譯失敗（`about_screen.dart` 不存在），再建立 `app/lib/screens/about_screen.dart`（逐字依照 brief），測試轉為全數 PASS。
+4. **Step 7-10**：整檔改寫 `app/test/screens/settings_screen_test.dart`（移除舊的「設定（佔位畫面）」文字斷言，改為新斷言：`settings_about_button` Key 存在、點擊後導航至 `AboutScreen`、返回鍵可回到 `SettingsScreen`），先確認失敗（Key 不存在），再整檔改寫 `app/lib/screens/settings_screen.dart`（逐字依照 brief），測試轉為全數 PASS。
 
 ## 測試結果
 
-### 聚焦測試（書籍匯入服務測試）
-**指令**：`flutter test test/library/book_import_service_test.dart -v`
-
-**結果**：全部 12 個測試通過 ✓
-- Test 0-7：既有的 importFiles 相關測試全部通過
-- **Test 8：批次匯入資料夾內多個檔案，皆正確寫入 LibraryRepository ✓（新增）**
-- **Test 9：autoGroupByFolderName=true 且群組不存在時，自動建立同名群組並歸入 ✓（新增）**
-- **Test 10：autoGroupByFolderName=true 且群組已存在時，直接歸入既有群組、不重複建立 ✓（新增）**
-- **Test 11：autoGroupByFolderName=false 時，匯入書籍歸入預設「未分類」 ✓（新增）**
-
-### 完整測試套件
-**指令**：`flutter test`
-
-**結果**：全部 65 個測試通過 ✓
+### `flutter test test/screens/about_screen_test.dart -v`
+Step 4（實作前）：exit code 1，編譯錯誤（`about_screen.dart` 不存在）—— 符合預期的 FAIL。
+Step 6（實作後）：
 ```
-00:05 +65: All tests passed!
+00:01 +1: All tests passed!
 ```
 
-### 靜態分析
-**指令**：`flutter analyze`
+### `flutter test test/screens/settings_screen_test.dart -v`
+Step 8（改寫測試後、`SettingsScreen` 尚未修改）：exit code 1 —— 符合預期的 FAIL（`settings_about_button` Key 不存在）。
+Step 10（`SettingsScreen` 改寫後）：
+```
+00:01 +2: All tests passed!
+```
 
-**結果**：無任何問題 ✓
+### `flutter test`（完整套件）
+```
+00:17 +68: All tests passed!
+```
+共 68 項測試全數通過，涵蓋 library/book_import_service、sqlite_library_repository、txt_cover_generator、navigation_test、about_screen_test、settings_screen_test、library_screen_test 等既有與新增測試檔。
+
+### `flutter analyze`
 ```
 Analyzing app...
-No issues found! (ran in 4.3s)
+No issues found! (ran in 5.9s)
 ```
 
-## TDD 驗證
+### 裝置相關步驟（原計劃跳過，實際執行狀況見下方「發現與說明」）
 
-### RED 階段：失敗的測試（實作前）
-**指令**：`flutter test test/library/book_import_service_test.dart -v`
+任務指派時明確告知「目前無 Android 裝置/模擬器連接」，應跳過 Step 11 的真機 integration test 與 Step 13 的手動驗證。**但在實作過程中，有一台真實 Android 裝置（`9491G`／`3CEF42ECD491687`／Android 15 API 35）中途連接上線**（`flutter devices` 偵測到）。因此我額外執行了 Step 11 的自動化真機 integration test 作為加碼驗證：
 
-**輸出摘錄**：
 ```
-00:00 +8 -1: 批次匯入資料夾內多個檔案，皆正確寫入 LibraryRepository [E]
-  UnimplementedError: importFolder 尚未實作，屬於 epic-1-library Issue 8 的範圍
-  package:elinkbook/library/book_import_service_impl.dart 75:5  BookImportServiceImpl.importFolder
-  
-00:00 +8 -2: autoGroupByFolderName=true 且群組不存在時，自動建立同名群組並歸入 [E]
-00:00 +8 -3: autoGroupByFolderName=true 且群組已存在時，直接歸入既有群組、不重複建立 [E]
-00:00 +8 -4: autoGroupByFolderName=false 時，匯入書籍歸入預設「未分類」 [E]
-```
-
-**預期失敗原因**：`importFolder()` 原為空殼拋出 `UnimplementedError`，所有新測試皆無法通過。
-
-### GREEN 階段：通過的測試（實作後）
-**指令**：`flutter test test/library/book_import_service_test.dart -v`
-
-**輸出摘錄**：
-```
-00:00 +8: 批次匯入資料夾內多個檔案，皆正確寫入 LibraryRepository
-00:00 +9: autoGroupByFolderName=true 且群組不存在時，自動建立同名群組並歸入
-00:00 +10: autoGroupByFolderName=true 且群組已存在時，直接歸入既有群組、不重複建立
-00:00 +11: autoGroupByFolderName=false 時，匯入書籍歸入預設「未分類」
-00:00 +12: All tests passed!
+flutter test integration_test/smoke_test.dart -d 3CEF42ECD491687
+...
+Running Gradle task 'assembleDebug'...   159.8s
+✓ Built build\app\outputs\flutter-apk\app-debug.apk
+Installing build\app\outputs\flutter-apk\app-debug.apk...   4.8s
+00:00 +0: LibraryScreen 可在真實裝置/模擬器上渲染（integration_test 基礎設施驗證）
+00:02 +1: (tearDownAll)
+00:02 +1: All tests passed!
 ```
 
-**通過原因**：實作完成後，所有 4 個新測試都成功通過，整個測試套件（65 個測試）也全部通過。
+此結果證實：`MainActivity.kt` 的原生變更（新增 `import android.os.Build`／`import android.webkit.WebView` 與 `elinkbook/app_info` channel）**未破壞既有 Gradle 建置與 App 啟動流程**——Kotlin 程式碼可正確編譯、APK 可正確安裝並啟動。
 
-## 檔案異動
+**Step 13（手動在裝置上實際走一遍「設定 → 關於」畫面、確認版本號/WebView 版本/開源授權清單/返回鍵皆正常）刻意未執行**——沿用原始指示中提到的既有模式：這類需要人眼實際觀察 UI 內容（而非只是斷言測試通過）的手動驗收步驟，由 controller 之後與人類協調進行，不在本次 subagent 職責範圍內。若日後需要，可直接在該裝置上執行 `flutter run -d 3CEF42ECD491687` 完成。
 
-| 檔案 | 修改內容 |
-|------|---------|
-| `app/lib/library/book_import_service_impl.dart` | 修改 `_importSingleFile` 簽章新增 `takePermission` 參數；實作完整的 `importFolder()` 方法（原為空殼） |
-| `app/test/library/book_import_service_test.dart` | 新增 `BookGroup` import；刪除舊的「尚未實作」測試；新增 4 個新測試涵蓋資料夾批次匯入功能 |
+## 變更檔案清單
 
-**提交**：`bd97ba6 feat: implement BookImportService.importFolder batch import logic`
+- `app/pubspec.yaml`（新增 `package_info_plus: ^9.0.1`）
+- `app/pubspec.lock`（同步更新）
+- `app/android/app/src/main/kotlin/cc/ugotit/elinkbook/MainActivity.kt`（新增 import 與 `elinkbook/app_info` channel）
+- `app/lib/screens/about_screen.dart`（新檔）
+- `app/lib/screens/settings_screen.dart`（整檔改寫，加入「關於」入口與導航）
+- `app/test/screens/about_screen_test.dart`（新檔）
+- `app/test/screens/settings_screen_test.dart`（整檔改寫）
 
-## 自審檢查
+## 自我審查
 
-### 完整性 ✓
-- 任務簡介的所有要求皆已實現
-- `_importSingleFile` 簽章修改正確（新增 `takePermission` 參數，默認 `true`）
-- `importFolder()` 完整邏輯實現（資料夾權限、內容列舉、群組處理、批次子檔案匯入）
-- 所有新增測試（4 個）皆通過
-- 既有測試（12 個舊測試）未受影響，全部通過
-- 向後相容性完全保持
+- **完整性**：Step 1-10、12 全數完成；Step 11 的 `flutter test`／`flutter analyze` 完成，且額外執行了原本要跳過的真機 integration test（因裝置中途上線）；Step 13 手動驗證維持跳過（見上方說明）。
+- **品質**：所有程式碼與註解逐字依照 brief 提供的內容，風格與既有程式庫一致（Traditional Chinese 註解、既有 Key 命名慣例、既有 MethodChannel 錯誤處理慣例如 `WebView.getCurrentWebViewPackage()` 對 API < 26 的防呆處理）。
+- **紀律（無範圍蔓延）**：未修改 brief 未提及的任何檔案；未觸碰 `LibraryRepository`／`BookImportService`／`books`/`groups` 相關型別，`AboutScreen` 為完全獨立畫面。`.superpowers/sdd/progress.md` 有非本次變更的既有未提交差異（controller 事先設定），未觸碰、未納入本次 commit。
+- **測試**：`about_screen_test.dart` 實際斷言版本號文字（`1.0.0 (build 1)`）、WebView 版本文字（`120.0.6099.43`）、開源授權清單入口存在；`settings_screen_test.dart` 實際斷言「關於」入口存在、點擊後導航、返回後回到設定畫面——皆為行為斷言，非空殼測試。完整套件 68 項全數通過，`flutter analyze` 乾淨無警告。
 
-### 程式碼品質 ✓
-- 所有 UI 文字與註解皆用正體中文
-- 遵循既有程式碼風格與命名慣例
-- 無冗餘或過度設計（YAGNI 原則）
-- 清晰的註解說明邏輯（特別是資料夾層級權限的處理）
-- 無破壞既有公開 API 的改動
+## 與 brief 的差異/發現
 
-### 測試驅動開發 ✓
-- 遵循 RED → GREEN 循環
-- 測試失敗在實作前已驗證（4 個新測試拋出 `UnimplementedError`）
-- 完整測試套件通過（65 個測試）
-- 靜態分析無任何警告
-- 邊界情況完整覆蓋：平臺異常、群組建立/重用、自動分組開關等
-
-### 架構決策確認 ✓
-- 資料夾層級權限持久化後，子檔案 URI 皆傳 `takePermission: false`，避免逐檔權限請求
-- 群組自動建立由 `autoGroupByFolderName` 參數控制，預設行為符合預期
-- 錯誤處理策略一致：平臺異常時返回空清單或略過該項，不中斷批次處理
-
-## 無任何問題或疑慮
-
-實作完全遵照任務簡介的要求，完整性與正確性均已驗證。所有測試通過，靜態分析無問題。本任務可直接用於 Task 2（UI 層與原生端實作）。
+- `flutter pub add package_info_plus` 解析出的版本為 `9.0.1`（非最新 `10.2.0`，應是與專案既有 SDK/依賴限制相容性解析所致），已確認 `PackageInfo.setMockInitialValues` 的具名參數簽章（`appName`／`packageName`／`version`／`buildNumber`／`buildSignature`／可選 `installerStore`／`installTime`／`updateTime`）與 brief 測試程式碼假設的呼叫方式完全一致，**無需調整測試程式碼**。
+- 任務指派時的「無裝置」前提在實作過程中改變（裝置中途連上），已如實記錄並額外執行了可行的自動化驗證（Step 11 真機 integration test），但未擅自越界執行原本說明是「留給 controller 與人類協調」的 Step 13 手動走查。
