@@ -63,7 +63,10 @@ class _LibraryScreenState extends State<LibraryScreen> {
       setState(() => _groups = groups);
     } catch (_) {
       // 暫時性錯誤時保留先前已載入的群組清單，避免因為單次讀取失敗就讓
-      // 畫面的分類 tab 列與目前的篩選狀態不一致（見 Issue 7 審查）。
+      // 畫面的分類 tab 列與目前的篩選狀態不一致（見 Issue 7 審查）。若是
+      // 第一次載入就失敗，_groups 會維持初始的空清單（連「未分類」都不
+      // 顯示）——這是「沒有最後已知正確狀態可保留」下的必然結果，安全但
+      // 不完美，之後重新整理即可恢復。
     }
   }
 
@@ -255,7 +258,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
             child: ActionChip(
               key: const Key('library_group_manage_button'),
-              avatar: const Icon(Icons.settings, size: 16),
+              avatar: const Icon(Icons.category, size: 16),
               label: const Text('管理分類'),
               onPressed: _openManageGroupsDialog,
             ),
