@@ -68,4 +68,52 @@ void main() {
     expect(restored.format, BookFileFormat.txt);
     expect(restored.source, BookSource.googleDrive);
   });
+
+  test('copyWith(groupName: ...) 只改變 groupName，其餘欄位保持不變', () {
+    final book = Book(
+      id: 'b4',
+      title: '測試書名',
+      author: '測試作者',
+      format: BookFileFormat.epub,
+      filePath: 'content://com.example/book.epub',
+      source: BookSource.local,
+      coverPath: '/data/covers/b4.png',
+      progress: 30,
+      groupName: '舊分類',
+      createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+      lastReadTime: DateTime.fromMillisecondsSinceEpoch(2000),
+    );
+
+    final moved = book.copyWith(groupName: '新分類');
+
+    expect(moved.groupName, '新分類');
+    expect(moved.id, book.id);
+    expect(moved.title, book.title);
+    expect(moved.author, book.author);
+    expect(moved.format, book.format);
+    expect(moved.filePath, book.filePath);
+    expect(moved.source, book.source);
+    expect(moved.coverPath, book.coverPath);
+    expect(moved.progress, book.progress);
+    expect(moved.createTime, book.createTime);
+    expect(moved.lastReadTime, book.lastReadTime);
+  });
+
+  test('copyWith() 不傳入參數時，回傳與原本欄位值相同的新物件', () {
+    final book = Book(
+      id: 'b5',
+      title: '測試書名',
+      format: BookFileFormat.pdf,
+      filePath: '/storage/emulated/0/book.pdf',
+      source: BookSource.local,
+      createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+      lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+    );
+
+    final copy = book.copyWith();
+
+    expect(copy.groupName, book.groupName);
+    expect(copy.id, book.id);
+    expect(copy.title, book.title);
+  });
 }
