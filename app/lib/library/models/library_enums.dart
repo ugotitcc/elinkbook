@@ -10,3 +10,7 @@ enum BookSource { local, googleDrive, oneDrive }
 
 /// 書架排序方式（FR-26）。
 enum LibrarySortBy { lastRead, createTime, author, title }
+
+/// 書架檢視模式（FR-03）。切換按鈕與畫面渲染分支屬於本 issue（Issue 5）；
+/// 選擇的持久化（`SharedPreferences`，App 重啟後記住上次選擇）屬於 Issue 6。
+enum LibraryViewMode { grid, list }

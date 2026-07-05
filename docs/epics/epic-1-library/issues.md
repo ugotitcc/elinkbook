@@ -68,7 +68,7 @@
 
 ## Issue 4：`BookImportService` — 本機單檔/多檔匯入
 
-**Status:** ready-for-agent
+**Status:** ✅ 已完成並合併回 `main`（本機合併，merge commit `bf4ebec`）。4 個任務皆完成，`flutter test` 42/42 通過，`flutter analyze` 乾淨；真正 `content://` URI 的 `integration_test` 與手動端到端驗證皆已在真實裝置上通過（3 個真實檔案匯入成功寫入 `library.db`）。整分支審查發現的 Important 問題（Windows Kotlin 增量編譯 workaround 影響範圍過廣）已修正為僅限 Windows 生效。完整審查報告見 `reviews/`，實作計畫見 `plans/plan-issue-4.md`。
 
 **依賴：** Issue 1、2、3
 
