@@ -43,6 +43,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
   LibrarySortBy _sortBy = LibrarySortBy.lastRead;
   String? _groupFilter;
   Set<String>? _selectedBookIds;
+  bool _isImporting = false;
 
   @override
   void initState() {
@@ -112,10 +113,13 @@ class _LibraryScreenState extends State<LibraryScreen> {
       final uris =
           picked.files.map((f) => f.identifier).whereType<String>().toList();
       if (uris.isEmpty) return;
+      setState(() => _isImporting = true);
       await widget.importService.importFiles(uris);
       await _loadBooks();
     } catch (_) {
       // 匯入失敗時靜默吞掉，避免異常傳播破壞 widget 樹或留下不一致狀態
+    } finally {
+      if (mounted) setState(() => _isImporting = false);
     }
   }
 
@@ -129,6 +133,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
       if (!mounted) return;
       final autoGroup = await _confirmAutoGroupByFolderName();
       if (autoGroup == null) return;
+      setState(() => _isImporting = true);
       await widget.importService.importFolder(
         folderUri,
         autoGroupByFolderName: autoGroup,
@@ -137,6 +142,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
       await _loadBooks();
     } catch (_) {
       // 匯入失敗時靜默吞掉，避免異常傳播破壞 widget 樹或留下不一致狀態
+    } finally {
+      if (mounted) setState(() => _isImporting = false);
     }
   }
 
@@ -289,16 +296,40 @@ class _LibraryScreenState extends State<LibraryScreen> {
             : _buildNormalAppBar(books),
         body: books == null
             ? const Center(child: CircularProgressIndicator())
-            : Column(
+            : Stack(
                 children: [
-                  _buildGroupTabs(),
-                  Expanded(
-                    child: books.isEmpty
-                        ? _buildEmptyState()
-                        : _buildBookList(books),
+                  Column(
+                    children: [
+                      _buildGroupTabs(),
+                      Expanded(
+                        child: books.isEmpty
+                            ? _buildEmptyState()
+                            : _buildBookList(books),
+                      ),
+                    ],
                   ),
+                  if (_isImporting) _buildImportingOverlay(),
                 ],
               ),
+      ),
+    );
+  }
+
+  Widget _buildImportingOverlay() {
+    return Positioned.fill(
+      child: ColoredBox(
+        key: const Key('library_importing_overlay'),
+        color: Colors.black38,
+        child: const Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 12),
+              Text('匯入中...', style: TextStyle(color: Colors.white)),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -337,6 +368,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
           key: const Key('library_import_button'),
           icon: const Icon(Icons.add),
           tooltip: '匯入書籍',
+          enabled: !_isImporting,
           itemBuilder: (context) => [
             PopupMenuItem<void>(
               key: const Key('library_import_files_option'),
@@ -440,7 +472,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
           const SizedBox(height: 12),
           ElevatedButton(
             key: const Key('library_empty_import_button'),
-            onPressed: _pickAndImportFiles,
+            onPressed: _isImporting ? null : _pickAndImportFiles,
             child: const Text('匯入書籍'),
           ),
         ],
