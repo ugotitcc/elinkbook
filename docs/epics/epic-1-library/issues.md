@@ -111,7 +111,7 @@
 
 ## Issue 6：排序 + 檢視模式記憶
 
-**Status:** ready-for-agent
+**Status:** ✅ 已完成並合併回 `main`（PR #12，merge commit `bdc578c`）。2 個任務皆完成，`flutter test` 55/55 通過，`flutter analyze` 乾淨；App 重啟後排序/檢視模式維持選擇已於真實裝置手動確認。實作計畫經過一輪審查修正（byName 防呆 fallback、`_loadBooks()` 競態守衛、排序測試改用 widget 樹順序比對），完整審查報告見 `reviews/`（本機保留，依本 repo 慣例未提交版本控制），實作計畫見 `plans/plan-issue-6.md`。
 
 **依賴：** Issue 5
 
