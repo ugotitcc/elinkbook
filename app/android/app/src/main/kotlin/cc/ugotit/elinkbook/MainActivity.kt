@@ -1,7 +1,9 @@
 package cc.ugotit.elinkbook
 
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
+import android.webkit.WebView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.commitNow
 import io.flutter.embedding.android.FlutterFragmentActivity
@@ -93,6 +95,24 @@ class MainActivity : FlutterFragmentActivity() {
                         }
                         pendingFolderPickResult = result
                         openDocumentTreeLauncher.launch(null)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
+
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "elinkbook/app_info")
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "getSystemWebViewVersion" -> {
+                        // WebView.getCurrentWebViewPackage() 從 API 26（Android 8.0）
+                        // 才存在；本專案 minSdk 為 24，低於 API 26 的裝置一律回傳
+                        // null，交給 Dart 端顯示「無法取得」而非讓 App 崩潰。
+                        val versionName = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            WebView.getCurrentWebViewPackage()?.versionName
+                        } else {
+                            null
+                        }
+                        result.success(versionName)
                     }
                     else -> result.notImplemented()
                 }
