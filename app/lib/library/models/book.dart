@@ -70,4 +70,22 @@ class Book {
           DateTime.fromMillisecondsSinceEpoch(map['lastReadTime'] as int),
     );
   }
+
+  /// 回傳欄位值與自身相同的新物件，僅覆寫明確傳入的參數（目前只需要
+  /// 覆寫 [groupName]——供 Issue 10 的批次分類異動使用）。
+  Book copyWith({String? groupName}) {
+    return Book(
+      id: id,
+      title: title,
+      author: author,
+      format: format,
+      filePath: filePath,
+      source: source,
+      coverPath: coverPath,
+      progress: progress,
+      groupName: groupName ?? this.groupName,
+      createTime: createTime,
+      lastReadTime: lastReadTime,
+    );
+  }
 }

@@ -518,6 +518,206 @@ void main() {
 
     expect(find.byKey(const Key('library_group_tab_歷史小說')), findsOneWidget);
   });
+
+  testWidgets('長按書籍卡片後進入選取模式，且該卡片顯示為已選取狀態', (tester) async {
+    final book = _testBook(id: '1', title: '紅樓夢');
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: [book]),
+          importService: FakeBookImportService(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.longPress(find.byKey(const Key('book_item_1')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('library_selection_app_bar')), findsOneWidget);
+    expect(find.text('已選取 1 本'), findsOneWidget);
+
+    final icon = tester.widget<Icon>(
+      find.byKey(const Key('book_selection_indicator_1')),
+    );
+    expect(icon.icon, Icons.check_circle);
+  });
+
+  testWidgets('選取模式下點擊其他卡片可加選/取消選；點擊卡片不再導覽進閱讀器', (tester) async {
+    final bookA = _testBook(id: '1', title: 'A書');
+    final bookB = _testBook(id: '2', title: 'B書');
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: [bookA, bookB]),
+          importService: FakeBookImportService(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.longPress(find.byKey(const Key('book_item_1')));
+    await tester.pumpAndSettle();
+    expect(find.text('已選取 1 本'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('book_item_2')));
+    await tester.pumpAndSettle();
+    expect(find.text('已選取 2 本'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('book_item_2')));
+    await tester.pumpAndSettle();
+    expect(find.text('已選取 1 本'), findsOneWidget);
+  });
+
+  testWidgets('選取模式下點擊「✕ 取消」後恢復一般瀏覽狀態，且卡片點擊恢復導覽進閱讀器',
+      (tester) async {
+    final book = _testBook(
+      id: '1',
+      title: '紅樓夢',
+      filePath: 'content://example/1.txt',
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: [book]),
+          importService: FakeBookImportService(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.longPress(find.byKey(const Key('book_item_1')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('library_selection_app_bar')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('library_selection_cancel_button')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('library_selection_app_bar')), findsNothing);
+    expect(find.byKey(const Key('library_sort_button')), findsOneWidget);
+    expect(find.byKey(const Key('book_selection_indicator_1')), findsNothing);
+
+    await tester.tap(find.byKey(const Key('book_item_1')));
+    await tester.pumpAndSettle();
+
+    // 用 .txt 檔名讓 ReaderScreen 命中「不支援格式」分支（純 Dart 安全路徑，
+    // 不觸發 AndroidView；見 reader_screen_test.dart 既有模式），只用來證明
+    // 「導覽確實發生」，不驗證實際閱讀渲染。
+    expect(find.text('閱讀器'), findsOneWidget);
+    expect(find.text('不支援的檔案格式'), findsOneWidget);
+  });
+
+  testWidgets('選取模式下觸發系統返回鍵時退出選取模式，而非真的離開畫面', (tester) async {
+    final book = _testBook(id: '1', title: '紅樓夢');
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: [book]),
+          importService: FakeBookImportService(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.longPress(find.byKey(const Key('book_item_1')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('library_selection_app_bar')), findsOneWidget);
+
+    final navigatorState = tester.state<NavigatorState>(find.byType(Navigator));
+    await navigatorState.maybePop();
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('library_selection_app_bar')), findsNothing);
+    expect(find.text('書架'), findsOneWidget);
+  });
+
+  testWidgets('選取多本書後點擊「移動到分類」，選擇目的分類後所有已勾選書籍的分類皆更新',
+      (tester) async {
+    final bookA =
+        _testBook(id: '1', title: 'A書', groupName: BookGroup.uncategorized);
+    final bookB =
+        _testBook(id: '2', title: 'B書', groupName: BookGroup.uncategorized);
+    final repository = FakeLibraryRepository(initialBooks: [bookA, bookB]);
+    await repository.upsertGroup('奇幻');
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: repository,
+          importService: FakeBookImportService(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.longPress(find.byKey(const Key('book_item_1')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('book_item_2')));
+    await tester.pumpAndSettle();
+    expect(find.text('已選取 2 本'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('library_move_to_group_button')));
+    await tester.pumpAndSettle();
+    expect(find.text('移動到分類'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('library_move_to_group_option_奇幻')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('library_selection_app_bar')), findsNothing);
+
+    await tester.tap(find.byKey(const Key('library_group_tab_奇幻')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('book_item_1')), findsOneWidget);
+    expect(find.byKey(const Key('book_item_2')), findsOneWidget);
+  });
+
+  testWidgets('書架（grid）與列表兩種檢視皆能觸發長按進入選取模式並完成批次移動',
+      (tester) async {
+    final bookA =
+        _testBook(id: '1', title: 'A書', groupName: BookGroup.uncategorized);
+    final bookB =
+        _testBook(id: '2', title: 'B書', groupName: BookGroup.uncategorized);
+    final repository = FakeLibraryRepository(initialBooks: [bookA, bookB]);
+    await repository.upsertGroup('奇幻');
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: repository,
+          importService: FakeBookImportService(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('library_view_mode_toggle')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('library_list_view')), findsOneWidget);
+
+    await tester.longPress(find.byKey(const Key('book_item_1')));
+    await tester.pumpAndSettle();
+
+    final checkbox = tester.widget<Checkbox>(
+      find.byKey(const Key('book_selection_indicator_1')),
+    );
+    expect(checkbox.value, isTrue);
+
+    await tester.tap(find.byKey(const Key('book_item_2')));
+    await tester.pumpAndSettle();
+    expect(find.text('已選取 2 本'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('library_move_to_group_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('library_move_to_group_option_奇幻')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('library_group_tab_奇幻')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('book_item_1')), findsOneWidget);
+    expect(find.byKey(const Key('book_item_2')), findsOneWidget);
+  });
 }
 
 Book _testBook({
@@ -525,6 +725,7 @@ Book _testBook({
   required String title,
   String? author,
   String groupName = BookGroup.uncategorized,
+  String? filePath,
 }) {
   final now = DateTime.now();
   return Book(
@@ -532,7 +733,7 @@ Book _testBook({
     title: title,
     author: author,
     format: BookFileFormat.epub,
-    filePath: 'content://example/$id.epub',
+    filePath: filePath ?? 'content://example/$id.epub',
     source: BookSource.local,
     groupName: groupName,
     createTime: now,
