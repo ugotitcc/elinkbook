@@ -5,14 +5,22 @@ import 'package:elinkbook/library/models/library_enums.dart';
 
 /// 供 widget test 使用的記憶體內 [LibraryRepository] 假實作，避免 widget
 /// test 依賴真實 sqflite（見 docs/epics/epic-1-library/spec.md「測試決策」）。
+/// 群組 CRUD 的業務規則（保護「未分類」、拒絕重複名稱、刪除時書籍歸位）
+/// 與 `SqliteLibraryRepository`（Issue 1）語意一致，供 Issue 7 的分類群組
+/// 管理 widget test 驅動真實可觀察的行為。
 class FakeLibraryRepository implements LibraryRepository {
   FakeLibraryRepository({
     List<Book> initialBooks = const [],
     this.throwOnListBooks = false,
-  }) : _books = List.of(initialBooks);
+  })  : _books = List.of(initialBooks),
+        _groups = {
+          BookGroup.uncategorized,
+          for (final book in initialBooks) book.groupName,
+        };
 
   final bool throwOnListBooks;
   final List<Book> _books;
+  final Set<String> _groups;
 
   @override
   Future<Book> insertBook(Book book) async {
@@ -60,15 +68,60 @@ class FakeLibraryRepository implements LibraryRepository {
   }
 
   @override
-  Future<List<BookGroup>> listGroups() async =>
-      const [BookGroup(BookGroup.uncategorized)];
+  Future<List<BookGroup>> listGroups() async {
+    final names = _groups.toList()..sort();
+    return names.map(BookGroup.new).toList();
+  }
 
   @override
-  Future<void> upsertGroup(String name) async {}
+  Future<void> upsertGroup(String name) async {
+    _groups.add(name);
+  }
 
   @override
-  Future<void> renameGroup(String oldName, String newName) async {}
+  Future<void> renameGroup(String oldName, String newName) async {
+    if (oldName == BookGroup.uncategorized) {
+      throw LibraryRepositoryException(
+          '系統保留群組「${BookGroup.uncategorized}」不可重新命名');
+    }
+    if (_groups.contains(newName)) {
+      throw LibraryRepositoryException('分類「$newName」已存在');
+    }
+    _groups
+      ..remove(oldName)
+      ..add(newName);
+    for (var i = 0; i < _books.length; i++) {
+      if (_books[i].groupName == oldName) {
+        _books[i] = _withGroupName(_books[i], newName);
+      }
+    }
+  }
 
   @override
-  Future<void> deleteGroup(String name) async {}
+  Future<void> deleteGroup(String name) async {
+    if (name == BookGroup.uncategorized) {
+      throw LibraryRepositoryException(
+          '系統保留群組「${BookGroup.uncategorized}」不可刪除');
+    }
+    _groups.remove(name);
+    for (var i = 0; i < _books.length; i++) {
+      if (_books[i].groupName == name) {
+        _books[i] = _withGroupName(_books[i], BookGroup.uncategorized);
+      }
+    }
+  }
+
+  Book _withGroupName(Book book, String groupName) => Book(
+        id: book.id,
+        title: book.title,
+        author: book.author,
+        format: book.format,
+        filePath: book.filePath,
+        source: book.source,
+        coverPath: book.coverPath,
+        progress: book.progress,
+        groupName: groupName,
+        createTime: book.createTime,
+        lastReadTime: book.lastReadTime,
+      );
 }

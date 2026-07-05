@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:elinkbook/screens/library_screen.dart';
 import 'package:elinkbook/library/models/book.dart';
+import 'package:elinkbook/library/models/book_group.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 
 import '../support/fake_book_import_service.dart';
@@ -226,9 +227,250 @@ void main() {
 
     expect(find.byTooltip('排序：作者'), findsOneWidget);
   });
+
+  testWidgets('點擊分類 tab 後，畫面只顯示該群組的書籍；點擊「全部」顯示所有書籍',
+      (tester) async {
+    final bookA = _testBook(id: '1', title: 'A書', groupName: '奇幻');
+    final bookB = _testBook(id: '2', title: 'B書', groupName: BookGroup.uncategorized);
+    final repository = FakeLibraryRepository(initialBooks: [bookA, bookB]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: repository,
+          importService: FakeBookImportService(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('book_item_1')), findsOneWidget);
+    expect(find.byKey(const Key('book_item_2')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('library_group_tab_奇幻')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('book_item_1')), findsOneWidget);
+    expect(find.byKey(const Key('book_item_2')), findsNothing);
+
+    await tester.tap(find.byKey(const Key('library_group_tab_all')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('book_item_1')), findsOneWidget);
+    expect(find.byKey(const Key('book_item_2')), findsOneWidget);
+  });
+
+  testWidgets('管理分類對話框：新增分類後，新分類出現在 tab 列', (tester) async {
+    final repository = FakeLibraryRepository();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: repository,
+          importService: FakeBookImportService(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('library_group_manage_button')));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const Key('library_group_add_field')),
+      '奇幻',
+    );
+    await tester.tap(find.byKey(const Key('library_group_add_button')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('library_group_manage_item_奇幻')), findsOneWidget);
+
+    await tester.tap(find.text('關閉'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('library_group_tab_奇幻')), findsOneWidget);
+  });
+
+  testWidgets('管理分類對話框：刪除分類前彈出確認對話框，確認後該分類下書籍改顯示於「未分類」篩選',
+      (tester) async {
+    final book = _testBook(id: '1', title: '奇幻小說', groupName: '奇幻');
+    final repository = FakeLibraryRepository(initialBooks: [book]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: repository,
+          importService: FakeBookImportService(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('library_group_manage_button')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('library_group_delete_button_奇幻')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('刪除分類'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('library_group_delete_confirm')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('關閉'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('library_group_tab_奇幻')), findsNothing);
+
+    await tester.tap(
+      find.byKey(Key('library_group_tab_${BookGroup.uncategorized}')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('book_item_1')), findsOneWidget);
+  });
+
+  testWidgets('管理分類對話框：刪除確認對話框按下取消，分類與所屬書籍皆不受影響', (tester) async {
+    final book = _testBook(id: '1', title: '奇幻小說', groupName: '奇幻');
+    final repository = FakeLibraryRepository(initialBooks: [book]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: repository,
+          importService: FakeBookImportService(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('library_group_manage_button')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('library_group_delete_button_奇幻')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('刪除分類'), findsOneWidget);
+
+    await tester.tap(find.text('取消'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('library_group_manage_item_奇幻')), findsOneWidget);
+
+    await tester.tap(find.text('關閉'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('library_group_tab_奇幻')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('library_group_tab_奇幻')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('book_item_1')), findsOneWidget);
+  });
+
+  testWidgets('管理分類對話框：嘗試刪除「未分類」時操作被禁止（找不到刪除/重新命名按鈕）',
+      (tester) async {
+    final repository = FakeLibraryRepository();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: repository,
+          importService: FakeBookImportService(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('library_group_manage_button')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(
+        Key('library_group_delete_button_${BookGroup.uncategorized}'),
+      ),
+      findsNothing,
+    );
+    expect(
+      find.byKey(
+        Key('library_group_rename_button_${BookGroup.uncategorized}'),
+      ),
+      findsNothing,
+    );
+  });
+
+  testWidgets('管理分類對話框：重新命名分類後，tab 列顯示新名稱', (tester) async {
+    final book = _testBook(id: '1', title: '奇幻小說', groupName: '奇幻');
+    final repository = FakeLibraryRepository(initialBooks: [book]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: repository,
+          importService: FakeBookImportService(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('library_group_manage_button')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('library_group_rename_button_奇幻')));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const Key('library_group_rename_field')),
+      '科幻',
+    );
+    await tester.tap(find.byKey(const Key('library_group_rename_confirm')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('library_group_manage_item_科幻')), findsOneWidget);
+    expect(find.byKey(const Key('library_group_manage_item_奇幻')), findsNothing);
+
+    await tester.tap(find.text('關閉'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('library_group_tab_科幻')), findsOneWidget);
+  });
+
+  testWidgets('刪除目前篩選中的分類後，畫面自動退回「全部」篩選（不留在已不存在的分類）',
+      (tester) async {
+    final book = _testBook(id: '1', title: '奇幻小說', groupName: '奇幻');
+    final repository = FakeLibraryRepository(initialBooks: [book]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: repository,
+          importService: FakeBookImportService(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('library_group_tab_奇幻')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('library_group_manage_button')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('library_group_delete_button_奇幻')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('library_group_delete_confirm')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('關閉'));
+    await tester.pumpAndSettle();
+
+    // 該書已改列「未分類」；篩選應已自動退回「全部」，故仍可見
+    expect(find.byKey(const Key('book_item_1')), findsOneWidget);
+  });
 }
 
-Book _testBook({required String id, required String title, String? author}) {
+Book _testBook({
+  required String id,
+  required String title,
+  String? author,
+  String groupName = BookGroup.uncategorized,
+}) {
   final now = DateTime.now();
   return Book(
     id: id,
@@ -237,6 +479,7 @@ Book _testBook({required String id, required String title, String? author}) {
     format: BookFileFormat.epub,
     filePath: 'content://example/$id.epub',
     source: BookSource.local,
+    groupName: groupName,
     createTime: now,
     lastReadTime: now,
   );
