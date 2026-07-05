@@ -11,6 +11,7 @@ import '../library/models/book.dart';
 import '../library/models/book_group.dart';
 import '../library/models/library_enums.dart';
 import 'library_group_management_dialog.dart';
+import 'library_move_to_group_dialog.dart';
 import 'reader_screen.dart';
 import 'settings_screen.dart';
 
@@ -41,6 +42,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
   LibraryViewMode _viewMode = LibraryViewMode.grid;
   LibrarySortBy _sortBy = LibrarySortBy.lastRead;
   String? _groupFilter;
+  Set<String>? _selectedBookIds;
 
   @override
   void initState() {
@@ -188,6 +190,62 @@ class _LibraryScreenState extends State<LibraryScreen> {
     await _loadBooks();
   }
 
+  bool get _inSelectionMode => _selectedBookIds != null;
+
+  void _enterSelectionMode(String bookId) {
+    setState(() => _selectedBookIds = {bookId});
+  }
+
+  void _exitSelectionMode() {
+    setState(() => _selectedBookIds = null);
+  }
+
+  void _toggleBookSelection(String bookId) {
+    final selected = _selectedBookIds;
+    if (selected == null) return;
+    setState(() {
+      if (selected.contains(bookId)) {
+        selected.remove(bookId);
+      } else {
+        selected.add(bookId);
+      }
+    });
+  }
+
+  void _onBookTap(Book book) {
+    if (_inSelectionMode) {
+      _toggleBookSelection(book.id);
+    } else {
+      _openBook(book);
+    }
+  }
+
+  void _onBookLongPress(Book book) {
+    if (!_inSelectionMode) {
+      _enterSelectionMode(book.id);
+    }
+  }
+
+  Future<void> _moveSelectedBooksToGroup() async {
+    final selectedIds = _selectedBookIds;
+    final books = _books;
+    if (selectedIds == null || selectedIds.isEmpty || books == null) return;
+    final destination = await showDialog<String>(
+      context: context,
+      builder: (context) => LibraryMoveToGroupDialog(groups: _groups),
+    );
+    if (destination == null) return;
+    // 立即退出選取模式，而非等到逐筆寫入資料庫的迴圈結束後才退出：這個迴圈
+    // 期間「移動到分類」按鈕仍會顯示在選取模式的 App Bar 上，若不提早退出，
+    // 使用者理論上可以在寫入尚未完成時再次點擊，重複觸發本方法。
+    _exitSelectionMode();
+    for (final book in books) {
+      if (!selectedIds.contains(book.id)) continue;
+      await widget.repository.updateBook(book.copyWith(groupName: destination));
+    }
+    await _loadBooks();
+  }
+
   void _openBook(Book book) {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => ReaderScreen(filePath: book.filePath)),
@@ -218,78 +276,114 @@ class _LibraryScreenState extends State<LibraryScreen> {
   @override
   Widget build(BuildContext context) {
     final books = _books;
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('書架'),
-        actions: [
-          PopupMenuButton<LibrarySortBy>(
-            key: const Key('library_sort_button'),
-            icon: const Icon(Icons.sort),
-            tooltip: '排序：${_sortLabel(_sortBy)}',
-            enabled: books != null,
-            onSelected: _changeSortBy,
-            itemBuilder: (context) => LibrarySortBy.values
-                .map(
-                  (sortBy) => PopupMenuItem<LibrarySortBy>(
-                    key: Key('library_sort_option_${sortBy.name}'),
-                    value: sortBy,
-                    child: Text(_sortLabel(sortBy)),
+    return PopScope(
+      canPop: !_inSelectionMode,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop && _inSelectionMode) {
+          _exitSelectionMode();
+        }
+      },
+      child: Scaffold(
+        appBar: _inSelectionMode
+            ? _buildSelectionAppBar()
+            : _buildNormalAppBar(books),
+        body: books == null
+            ? const Center(child: CircularProgressIndicator())
+            : Column(
+                children: [
+                  _buildGroupTabs(),
+                  Expanded(
+                    child: books.isEmpty
+                        ? _buildEmptyState()
+                        : _buildBookList(books),
                   ),
-                )
-                .toList(),
-          ),
-          IconButton(
-            key: const Key('library_view_mode_toggle'),
-            icon: Icon(
-              _viewMode == LibraryViewMode.grid
-                  ? Icons.view_list
-                  : Icons.grid_view,
-            ),
-            tooltip: _viewMode == LibraryViewMode.grid ? '切換為列表' : '切換為書架',
-            onPressed: books == null ? null : _toggleViewMode,
-          ),
-          PopupMenuButton<void>(
-            key: const Key('library_import_button'),
-            icon: const Icon(Icons.add),
-            tooltip: '匯入書籍',
-            itemBuilder: (context) => [
-              PopupMenuItem<void>(
-                key: const Key('library_import_files_option'),
-                onTap: _pickAndImportFiles,
-                child: const Text('選擇檔案（可多選）'),
+                ],
               ),
-              PopupMenuItem<void>(
-                key: const Key('library_import_folder_option'),
-                onTap: _pickAndImportFolder,
-                child: const Text('選擇資料夾'),
-              ),
-            ],
-          ),
-          IconButton(
-            icon: const Icon(Icons.settings),
-            tooltip: '設定',
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => const SettingsScreen(),
-                ),
-              );
-            },
-          ),
-        ],
       ),
-      body: books == null
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                _buildGroupTabs(),
-                Expanded(
-                  child: books.isEmpty
-                      ? _buildEmptyState()
-                      : _buildBookList(books),
+    );
+  }
+
+  AppBar _buildNormalAppBar(List<Book>? books) {
+    return AppBar(
+      title: const Text('書架'),
+      actions: [
+        PopupMenuButton<LibrarySortBy>(
+          key: const Key('library_sort_button'),
+          icon: const Icon(Icons.sort),
+          tooltip: '排序：${_sortLabel(_sortBy)}',
+          enabled: books != null,
+          onSelected: _changeSortBy,
+          itemBuilder: (context) => LibrarySortBy.values
+              .map(
+                (sortBy) => PopupMenuItem<LibrarySortBy>(
+                  key: Key('library_sort_option_${sortBy.name}'),
+                  value: sortBy,
+                  child: Text(_sortLabel(sortBy)),
                 ),
-              ],
+              )
+              .toList(),
+        ),
+        IconButton(
+          key: const Key('library_view_mode_toggle'),
+          icon: Icon(
+            _viewMode == LibraryViewMode.grid
+                ? Icons.view_list
+                : Icons.grid_view,
+          ),
+          tooltip: _viewMode == LibraryViewMode.grid ? '切換為列表' : '切換為書架',
+          onPressed: books == null ? null : _toggleViewMode,
+        ),
+        PopupMenuButton<void>(
+          key: const Key('library_import_button'),
+          icon: const Icon(Icons.add),
+          tooltip: '匯入書籍',
+          itemBuilder: (context) => [
+            PopupMenuItem<void>(
+              key: const Key('library_import_files_option'),
+              onTap: _pickAndImportFiles,
+              child: const Text('選擇檔案（可多選）'),
             ),
+            PopupMenuItem<void>(
+              key: const Key('library_import_folder_option'),
+              onTap: _pickAndImportFolder,
+              child: const Text('選擇資料夾'),
+            ),
+          ],
+        ),
+        IconButton(
+          icon: const Icon(Icons.settings),
+          tooltip: '設定',
+          onPressed: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => const SettingsScreen(),
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  AppBar _buildSelectionAppBar() {
+    final count = _selectedBookIds?.length ?? 0;
+    return AppBar(
+      key: const Key('library_selection_app_bar'),
+      leading: IconButton(
+        key: const Key('library_selection_cancel_button'),
+        icon: const Icon(Icons.close),
+        tooltip: '取消選取',
+        onPressed: _exitSelectionMode,
+      ),
+      title: Text('已選取 $count 本'),
+      actions: [
+        IconButton(
+          key: const Key('library_move_to_group_button'),
+          icon: const Icon(Icons.drive_file_move),
+          tooltip: '移動到分類',
+          onPressed: count == 0 ? null : _moveSelectedBooksToGroup,
+        ),
+      ],
     );
   }
 
@@ -307,7 +401,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
               key: const Key('library_group_tab_all'),
               label: const Text('全部'),
               selected: _groupFilter == null,
-              onSelected: (_) => _changeGroupFilter(null),
+              onSelected:
+                  _inSelectionMode ? null : (_) => _changeGroupFilter(null),
             ),
           ),
           for (final group in _groups)
@@ -317,7 +412,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 key: Key('library_group_tab_${group.name}'),
                 label: Text(group.name),
                 selected: _groupFilter == group.name,
-                onSelected: (_) => _changeGroupFilter(group.name),
+                onSelected: _inSelectionMode
+                    ? null
+                    : (_) => _changeGroupFilter(group.name),
               ),
             ),
           Padding(
@@ -326,7 +423,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
               key: const Key('library_group_manage_button'),
               avatar: const Icon(Icons.category, size: 16),
               label: const Text('管理分類'),
-              onPressed: _openManageGroupsDialog,
+              onPressed: _inSelectionMode ? null : _openManageGroupsDialog,
             ),
           ),
         ],
@@ -352,6 +449,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 
   Widget _buildBookList(List<Book> books) {
+    final selectedIds = _selectedBookIds;
     if (_viewMode == LibraryViewMode.grid) {
       return GridView.builder(
         key: const Key('library_grid_view'),
@@ -361,19 +459,31 @@ class _LibraryScreenState extends State<LibraryScreen> {
           childAspectRatio: 0.62,
         ),
         itemCount: books.length,
-        itemBuilder: (context, index) => _BookGridTile(
-          book: books[index],
-          onTap: () => _openBook(books[index]),
-        ),
+        itemBuilder: (context, index) {
+          final book = books[index];
+          return _BookGridTile(
+            book: book,
+            selectionMode: _inSelectionMode,
+            selected: selectedIds?.contains(book.id) ?? false,
+            onTap: () => _onBookTap(book),
+            onLongPress: () => _onBookLongPress(book),
+          );
+        },
       );
     }
     return ListView.builder(
       key: const Key('library_list_view'),
       itemCount: books.length,
-      itemBuilder: (context, index) => _BookListTile(
-        book: books[index],
-        onTap: () => _openBook(books[index]),
-      ),
+      itemBuilder: (context, index) {
+        final book = books[index];
+        return _BookListTile(
+          book: book,
+          selectionMode: _inSelectionMode,
+          selected: selectedIds?.contains(book.id) ?? false,
+          onTap: () => _onBookTap(book),
+          onLongPress: () => _onBookLongPress(book),
+        );
+      },
     );
   }
 }
@@ -436,18 +546,62 @@ class _BookCover extends StatelessWidget {
 
 class _BookGridTile extends StatelessWidget {
   final Book book;
+  final bool selectionMode;
+  final bool selected;
   final VoidCallback onTap;
-  const _BookGridTile({required this.book, required this.onTap});
+  final VoidCallback onLongPress;
+
+  const _BookGridTile({
+    required this.book,
+    required this.selectionMode,
+    required this.selected,
+    required this.onTap,
+    required this.onLongPress,
+  });
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
       key: Key('book_item_${book.id}'),
       onTap: onTap,
+      onLongPress: onLongPress,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Expanded(child: _BookCover(book: book)),
+          Expanded(
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                _BookCover(book: book),
+                if (selectionMode)
+                  Align(
+                    alignment: Alignment.topRight,
+                    child: Padding(
+                      padding: const EdgeInsets.all(4),
+                      child: Container(
+                        // 半透明黑底圓圈確保勾選圖示在任何封面底色下都有
+                        // 足夠對比度（審查意見：白色圖示疊在淺色封面上會
+                        // 無法辨識）。
+                        padding: const EdgeInsets.all(2),
+                        decoration: const BoxDecoration(
+                          color: Colors.black45,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          selected
+                              ? Icons.check_circle
+                              : Icons.radio_button_unchecked,
+                          key: Key('book_selection_indicator_${book.id}'),
+                          color: selected
+                              ? Theme.of(context).colorScheme.primary
+                              : Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
           const SizedBox(height: 4),
           Text(
             book.title,
@@ -469,17 +623,50 @@ class _BookGridTile extends StatelessWidget {
 
 class _BookListTile extends StatelessWidget {
   final Book book;
+  final bool selectionMode;
+  final bool selected;
   final VoidCallback onTap;
-  const _BookListTile({required this.book, required this.onTap});
+  final VoidCallback onLongPress;
+
+  const _BookListTile({
+    required this.book,
+    required this.selectionMode,
+    required this.selected,
+    required this.onTap,
+    required this.onLongPress,
+  });
 
   @override
   Widget build(BuildContext context) {
     return ListTile(
       key: Key('book_item_${book.id}'),
+      selected: selected,
+      // 選取模式下把 Checkbox 與封面並列（而非直接取代封面）：使用者在
+      // 列表批次選取時仍需要看得到封面才能分辨是哪一本書（例如同系列不同
+      // 集數，書名文字可能高度相似），純 Checkbox 會讓列表失去辨識度
+      // （審查意見）。
       leading: SizedBox(
-        width: 48,
+        width: selectionMode ? 88 : 48,
         height: 64,
-        child: _BookCover(book: book),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (selectionMode)
+              Checkbox(
+                key: Key('book_selection_indicator_${book.id}'),
+                value: selected,
+                // 縮小點擊熱區至 40x40（預設 48x48 會讓熱區加上封面寬度
+                // 超出上方 SizedBox 的 88px 總寬，造成 RenderFlex overflow）。
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                onChanged: (_) => onTap(),
+              ),
+            SizedBox(
+              width: 48,
+              height: 64,
+              child: _BookCover(book: book),
+            ),
+          ],
+        ),
       ),
       title: Text(book.title),
       subtitle: Text(book.author ?? ''),
@@ -492,6 +679,7 @@ class _BookListTile extends StatelessWidget {
         ],
       ),
       onTap: onTap,
+      onLongPress: onLongPress,
     );
   }
 }
