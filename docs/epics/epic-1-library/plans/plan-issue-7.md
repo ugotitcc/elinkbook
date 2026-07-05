@@ -771,7 +771,6 @@ class _LibraryGroupManagementDialogState
         content: TextField(
           key: const Key('library_group_rename_field'),
           controller: controller,
-          autofocus: true,
           onSubmitted: (val) => Navigator.of(dialogContext).pop(val.trim()),
         ),
         actions: [
