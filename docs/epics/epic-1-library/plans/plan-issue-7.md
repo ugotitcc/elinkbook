@@ -772,6 +772,7 @@ class _LibraryGroupManagementDialogState
           key: const Key('library_group_rename_field'),
           controller: controller,
           autofocus: true,
+          onSubmitted: (val) => Navigator.of(dialogContext).pop(val.trim()),
         ),
         actions: [
           TextButton(
@@ -825,6 +826,7 @@ class _LibraryGroupManagementDialogState
     try {
       await widget.repository.deleteGroup(name);
       if (!mounted) return;
+      setState(() => _errorMessage = null);
       await _reloadGroups();
     } on LibraryRepositoryException catch (e) {
       setState(() => _errorMessage = e.message);
