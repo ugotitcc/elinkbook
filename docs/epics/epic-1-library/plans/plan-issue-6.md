@@ -86,6 +86,24 @@ void main() {
     expect(await prefs2.loadViewMode(), LibraryViewMode.list);
     expect(await prefs2.loadSortBy(), LibrarySortBy.author);
   });
+
+  test('已儲存的排序方式字串無法對應到任何列舉值時，loadSortBy 安全回退為預設值',
+      () async {
+    SharedPreferences.setMockInitialValues({
+      'library_sort_by': 'not_a_real_enum_value',
+    });
+    final prefs = LibraryPreferences();
+    expect(await prefs.loadSortBy(), LibrarySortBy.lastRead);
+  });
+
+  test('已儲存的檢視模式字串無法對應到任何列舉值時，loadViewMode 安全回退為預設值',
+      () async {
+    SharedPreferences.setMockInitialValues({
+      'library_view_mode': 'not_a_real_enum_value',
+    });
+    final prefs = LibraryPreferences();
+    expect(await prefs.loadViewMode(), LibraryViewMode.grid);
+  });
 }
 ```
 
@@ -115,7 +133,14 @@ class LibraryPreferences {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_sortByKey);
     if (raw == null) return LibrarySortBy.lastRead;
-    return LibrarySortBy.values.byName(raw);
+    try {
+      return LibrarySortBy.values.byName(raw);
+    } catch (_) {
+      // 儲存的字串無法對應到任何列舉值時（例如未來改了列舉名稱、或裝置上的
+      // 資料被污染），byName 會拋出 ArgumentError；安全回退為預設值，避免
+      // 呼叫端（LibraryScreen._initialize）未捕捉例外導致畫面卡在載入中。
+      return LibrarySortBy.lastRead;
+    }
   }
 
   Future<void> saveSortBy(LibrarySortBy sortBy) async {
@@ -127,7 +152,11 @@ class LibraryPreferences {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_viewModeKey);
     if (raw == null) return LibraryViewMode.grid;
-    return LibraryViewMode.values.byName(raw);
+    try {
+      return LibraryViewMode.values.byName(raw);
+    } catch (_) {
+      return LibraryViewMode.grid;
+    }
   }
 
   Future<void> saveViewMode(LibraryViewMode viewMode) async {
@@ -140,7 +169,7 @@ class LibraryPreferences {
 - [ ] **Step 5：執行測試，確認通過**
 
 Run: `flutter test test/library/library_preferences_test.dart -v`
-Expected: 全數 PASS（5 個測試）
+Expected: 全數 PASS（7 個測試）
 
 - [ ] **Step 6：改寫 `LibraryScreen`（載入/儲存檢視模式）**
 
@@ -738,27 +767,29 @@ git commit -m "feat: persist library view mode via SharedPreferences"
     );
     await tester.pumpAndSettle();
 
-    // 切到列表模式，方便用垂直位置比較先後順序
+    // 切到列表模式，讓每本書對應到一個 ListTile，方便直接比對 widget 樹順序
     await tester.tap(find.byKey(const Key('library_view_mode_toggle')));
     await tester.pumpAndSettle();
 
-    // 預設「最後閱讀」排序（新到舊）：lastReadTime 較晚的 B書應排在前面
-    final initialBPos =
-        tester.getTopLeft(find.byKey(const Key('book_item_1'))).dy;
-    final initialAPos =
-        tester.getTopLeft(find.byKey(const Key('book_item_2'))).dy;
-    expect(initialBPos, lessThan(initialAPos));
+    // 預設「最後閱讀」排序（新到舊）：lastReadTime 較晚的 B書應排在前面。直接
+    // 比對 widget 樹中 ListTile 的資料順序，不依賴渲染座標（dy）比較，避免
+    // 測試受螢幕尺寸、字型渲染或版面間距等排版細節變動影響而變得脆弱。
+    var titles = tester
+        .widgetList<ListTile>(find.byType(ListTile))
+        .map((tile) => (tile.title as Text).data)
+        .toList();
+    expect(titles, ['B書', 'A書']);
 
     await tester.tap(find.byKey(const Key('library_sort_button')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('library_sort_option_title')));
     await tester.pumpAndSettle();
 
-    final afterAPos =
-        tester.getTopLeft(find.byKey(const Key('book_item_2'))).dy;
-    final afterBPos =
-        tester.getTopLeft(find.byKey(const Key('book_item_1'))).dy;
-    expect(afterAPos, lessThan(afterBPos));
+    titles = tester
+        .widgetList<ListTile>(find.byType(ListTile))
+        .map((tile) => (tile.title as Text).data)
+        .toList();
+    expect(titles, ['A書', 'B書']);
   });
 
   testWidgets('排序方式選擇會持久化，重新建立 LibraryScreen 後仍維持上次選擇',
@@ -864,13 +895,20 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 
   Future<void> _loadBooks() async {
+    // 擷取呼叫當下的排序條件；若使用者在這次非同步查詢完成前又切換了排序
+    // （連續快速點選排序選單的不同選項），較晚回應但較早發出的查詢結果會
+    // 對應到舊的排序條件，此時不應覆蓋畫面（避免顯示順序與目前選定的
+    // _sortBy 不一致）。
+    final requestedSortBy = _sortBy;
     try {
-      final books = await widget.repository.listBooks(sortBy: _sortBy);
+      final books = await widget.repository.listBooks(sortBy: requestedSortBy);
       if (!mounted) return;
+      if (_sortBy != requestedSortBy) return;
       setState(() => _books = books);
     } catch (_) {
       // 如果載入失敗，把它當作空列表，顯示既有的空狀態 UI
       if (!mounted) return;
+      if (_sortBy != requestedSortBy) return;
       setState(() => _books = []);
     }
   }
