@@ -24,7 +24,8 @@ void main() {
 
     expect(find.text('書架'), findsOneWidget);
 
-    await tester.tap(find.byIcon(Icons.settings));
+    // 使用 tooltip 來明確指定要點擊 AppBar 的設定按鈕（而非「管理分類」chip 的圖示）
+    await tester.tap(find.byTooltip('設定'));
     await tester.pumpAndSettle();
 
     expect(find.text('設定'), findsOneWidget);

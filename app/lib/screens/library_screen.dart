@@ -7,6 +7,7 @@ import '../library/book_import_service.dart';
 import '../library/library_preferences.dart';
 import '../library/library_repository.dart';
 import '../library/models/book.dart';
+import '../library/models/book_group.dart';
 import '../library/models/library_enums.dart';
 import 'reader_screen.dart';
 import 'settings_screen.dart';
@@ -32,8 +33,10 @@ class _LibraryScreenState extends State<LibraryScreen> {
   final _preferences = LibraryPreferences();
 
   List<Book>? _books;
+  List<BookGroup> _groups = const [];
   LibraryViewMode _viewMode = LibraryViewMode.grid;
   LibrarySortBy _sortBy = LibrarySortBy.lastRead;
+  String? _groupFilter;
 
   @override
   void initState() {
@@ -49,24 +52,42 @@ class _LibraryScreenState extends State<LibraryScreen> {
       _viewMode = viewMode;
       _sortBy = sortBy;
     });
-    await _loadBooks();
+    await Future.wait([_loadGroups(), _loadBooks()]);
+  }
+
+  Future<void> _loadGroups() async {
+    try {
+      final groups = await widget.repository.listGroups();
+      if (!mounted) return;
+      setState(() => _groups = groups);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _groups = const [BookGroup(BookGroup.uncategorized)]);
+    }
   }
 
   Future<void> _loadBooks() async {
-    // 擷取呼叫當下的排序條件；若使用者在這次非同步查詢完成前又切換了排序
-    // （連續快速點選排序選單的不同選項），較晚回應但較早發出的查詢結果會
-    // 對應到舊的排序條件，此時不應覆蓋畫面（避免顯示順序與目前選定的
-    // _sortBy 不一致）。
+    // 擷取呼叫當下的排序/分類篩選條件；若使用者在這次非同步查詢完成前又
+    // 切換了排序或分類 tab，較晚回應但較早發出的查詢結果會對應到舊條件，
+    // 此時不應覆蓋畫面（避免顯示內容與目前選定的條件不一致）。
     final requestedSortBy = _sortBy;
+    final requestedGroupFilter = _groupFilter;
     try {
-      final books = await widget.repository.listBooks(sortBy: requestedSortBy);
+      final books = await widget.repository.listBooks(
+        sortBy: requestedSortBy,
+        groupFilter: requestedGroupFilter,
+      );
       if (!mounted) return;
-      if (_sortBy != requestedSortBy) return;
+      if (_sortBy != requestedSortBy || _groupFilter != requestedGroupFilter) {
+        return;
+      }
       setState(() => _books = books);
     } catch (_) {
       // 如果載入失敗，把它當作空列表，顯示既有的空狀態 UI
       if (!mounted) return;
-      if (_sortBy != requestedSortBy) return;
+      if (_sortBy != requestedSortBy || _groupFilter != requestedGroupFilter) {
+        return;
+      }
       setState(() => _books = []);
     }
   }
@@ -103,10 +124,19 @@ class _LibraryScreenState extends State<LibraryScreen> {
     await _loadBooks();
   }
 
+  Future<void> _changeGroupFilter(String? groupFilter) async {
+    setState(() => _groupFilter = groupFilter);
+    await _loadBooks();
+  }
+
   void _openBook(Book book) {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => ReaderScreen(filePath: book.filePath)),
     );
+  }
+
+  void _openManageGroupsDialog() {
+    // Task 2 會把這個方法改為真正開啟 LibraryGroupManagementDialog。
   }
 
   @override
@@ -163,9 +193,57 @@ class _LibraryScreenState extends State<LibraryScreen> {
       ),
       body: books == null
           ? const Center(child: CircularProgressIndicator())
-          : books.isEmpty
-              ? _buildEmptyState()
-              : _buildBookList(books),
+          : Column(
+              children: [
+                _buildGroupTabs(),
+                Expanded(
+                  child: books.isEmpty
+                      ? _buildEmptyState()
+                      : _buildBookList(books),
+                ),
+              ],
+            ),
+    );
+  }
+
+  Widget _buildGroupTabs() {
+    return SizedBox(
+      key: const Key('library_group_tabs'),
+      height: 48,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+            child: ChoiceChip(
+              key: const Key('library_group_tab_all'),
+              label: const Text('全部'),
+              selected: _groupFilter == null,
+              onSelected: (_) => _changeGroupFilter(null),
+            ),
+          ),
+          for (final group in _groups)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+              child: ChoiceChip(
+                key: Key('library_group_tab_${group.name}'),
+                label: Text(group.name),
+                selected: _groupFilter == group.name,
+                onSelected: (_) => _changeGroupFilter(group.name),
+              ),
+            ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+            child: ActionChip(
+              key: const Key('library_group_manage_button'),
+              avatar: const Icon(Icons.settings, size: 16),
+              label: const Text('管理分類'),
+              onPressed: _openManageGroupsDialog,
+            ),
+          ),
+        ],
+      ),
     );
   }
 

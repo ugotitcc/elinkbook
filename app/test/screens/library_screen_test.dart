@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:elinkbook/screens/library_screen.dart';
 import 'package:elinkbook/library/models/book.dart';
+import 'package:elinkbook/library/models/book_group.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 
 import '../support/fake_book_import_service.dart';
@@ -226,9 +227,46 @@ void main() {
 
     expect(find.byTooltip('排序：作者'), findsOneWidget);
   });
+
+  testWidgets('點擊分類 tab 後，畫面只顯示該群組的書籍；點擊「全部」顯示所有書籍',
+      (tester) async {
+    final bookA = _testBook(id: '1', title: 'A書', groupName: '奇幻');
+    final bookB = _testBook(id: '2', title: 'B書', groupName: BookGroup.uncategorized);
+    final repository = FakeLibraryRepository(initialBooks: [bookA, bookB]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: repository,
+          importService: FakeBookImportService(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('book_item_1')), findsOneWidget);
+    expect(find.byKey(const Key('book_item_2')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('library_group_tab_奇幻')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('book_item_1')), findsOneWidget);
+    expect(find.byKey(const Key('book_item_2')), findsNothing);
+
+    await tester.tap(find.byKey(const Key('library_group_tab_all')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('book_item_1')), findsOneWidget);
+    expect(find.byKey(const Key('book_item_2')), findsOneWidget);
+  });
 }
 
-Book _testBook({required String id, required String title, String? author}) {
+Book _testBook({
+  required String id,
+  required String title,
+  String? author,
+  String groupName = BookGroup.uncategorized,
+}) {
   final now = DateTime.now();
   return Book(
     id: id,
@@ -237,6 +275,7 @@ Book _testBook({required String id, required String title, String? author}) {
     format: BookFileFormat.epub,
     filePath: 'content://example/$id.epub',
     source: BookSource.local,
+    groupName: groupName,
     createTime: now,
     lastReadTime: now,
   );
