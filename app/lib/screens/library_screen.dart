@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../library/book_import_service.dart';
 import '../library/library_preferences.dart';
@@ -12,6 +13,8 @@ import '../library/models/library_enums.dart';
 import 'library_group_management_dialog.dart';
 import 'reader_screen.dart';
 import 'settings_screen.dart';
+
+const _folderPickerChannel = MethodChannel('elinkbook/folder_picker');
 
 /// 圖書庫主畫面：讀取 [LibraryRepository] 的真實資料，取代
 /// epic-0-skeleton 遺留的固定範例書籍清單佔位版本（見
@@ -114,6 +117,55 @@ class _LibraryScreenState extends State<LibraryScreen> {
     }
   }
 
+  Future<void> _pickAndImportFolder() async {
+    try {
+      final folderUri =
+          await _folderPickerChannel.invokeMethod<String>('pickFolder');
+      if (folderUri == null) return;
+      final autoGroup = await _confirmAutoGroupByFolderName();
+      if (autoGroup == null) return;
+      await widget.importService.importFolder(
+        folderUri,
+        autoGroupByFolderName: autoGroup,
+      );
+      await _loadGroups();
+      await _loadBooks();
+    } catch (_) {
+      // 匯入失敗時靜默吞掉，避免異常傳播破壞 widget 樹或留下不一致狀態
+    }
+  }
+
+  Future<bool?> _confirmAutoGroupByFolderName() {
+    var autoGroup = true;
+    return showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('匯入資料夾'),
+          content: CheckboxListTile(
+            key: const Key('library_import_folder_auto_group_checkbox'),
+            value: autoGroup,
+            onChanged: (value) =>
+                setDialogState(() => autoGroup = value ?? true),
+            title: const Text('依資料夾名稱自動建立分類'),
+            controlAffinity: ListTileControlAffinity.leading,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('取消'),
+            ),
+            TextButton(
+              key: const Key('library_import_folder_confirm'),
+              onPressed: () => Navigator.of(dialogContext).pop(autoGroup),
+              child: const Text('匯入'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _toggleViewMode() {
     final newMode = _viewMode == LibraryViewMode.grid
         ? LibraryViewMode.list
@@ -193,11 +245,22 @@ class _LibraryScreenState extends State<LibraryScreen> {
             tooltip: _viewMode == LibraryViewMode.grid ? '切換為列表' : '切換為書架',
             onPressed: books == null ? null : _toggleViewMode,
           ),
-          IconButton(
+          PopupMenuButton<void>(
             key: const Key('library_import_button'),
             icon: const Icon(Icons.add),
             tooltip: '匯入書籍',
-            onPressed: _pickAndImportFiles,
+            itemBuilder: (context) => [
+              PopupMenuItem<void>(
+                key: const Key('library_import_files_option'),
+                onTap: _pickAndImportFiles,
+                child: const Text('選擇檔案（可多選）'),
+              ),
+              PopupMenuItem<void>(
+                key: const Key('library_import_folder_option'),
+                onTap: _pickAndImportFolder,
+                child: const Text('選擇資料夾'),
+              ),
+            ],
           ),
           IconButton(
             icon: const Icon(Icons.settings),

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:elinkbook/screens/library_screen.dart';
+import 'package:elinkbook/library/book_import_service_impl.dart';
 import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/book_group.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
@@ -462,6 +464,59 @@ void main() {
 
     // 該書已改列「未分類」；篩選應已自動退回「全部」，故仍可見
     expect(find.byKey(const Key('book_item_1')), findsOneWidget);
+  });
+
+  testWidgets('點擊「選擇資料夾」，確認自動分類開關後，匯入資料夾內書籍並依資料夾名稱建立分類',
+      (tester) async {
+    const folderPickerChannel = MethodChannel('elinkbook/folder_picker');
+    const metadataChannel = MethodChannel('elinkbook/book_metadata');
+    addTearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(folderPickerChannel, null);
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(metadataChannel, null);
+    });
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(folderPickerChannel, (call) async {
+      if (call.method == 'pickFolder') {
+        return 'content://example/tree/folder';
+      }
+      return null;
+    });
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(metadataChannel, (call) async {
+      if (call.method == 'takePersistableUriPermission') return null;
+      if (call.method == 'listFolderContents') {
+        return {
+          'folderName': '歷史小說',
+          'fileUris': ['content://example/tree/folder/document/book1.epub'],
+        };
+      }
+      return {'title': null, 'author': null, 'coverBytes': null};
+    });
+
+    final repository = FakeLibraryRepository();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: repository,
+          importService: BookImportServiceImpl(repository: repository),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('library_import_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('library_import_folder_option')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('匯入資料夾'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('library_import_folder_confirm')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('library_group_tab_歷史小說')), findsOneWidget);
   });
 }
 

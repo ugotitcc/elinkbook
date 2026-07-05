@@ -7,6 +7,7 @@ import android.graphics.pdf.PdfRenderer
 import android.net.Uri
 import android.os.ParcelFileDescriptor
 import androidx.core.content.FileProvider
+import androidx.documentfile.provider.DocumentFile
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
@@ -138,6 +139,45 @@ class BookMetadataChannel(
                         "無法建立測試用 content URI：${e.message}",
                         null,
                     )
+                }
+            }
+            "listFolderContents" -> {
+                val uriString = call.argument<String>("uri")
+                if (uriString == null) {
+                    result.error("invalid_arguments", "缺少 uri 參數", null)
+                    return
+                }
+                // DocumentFile.listFiles() 對 DocumentProvider 發出查詢，屬於跨
+                // 行程 IPC（實質上是一次 SQLite 查詢），資料夾檔案數量多時會是
+                // 阻塞式操作；比照既有 extractEpubMetadata/extractPdfMetadata
+                // 的做法，移到 scope（Dispatchers.Main）搭配 withContext(Dispatchers.IO)
+                // 執行，避免卡住 UI 執行緒導致 Jank 或 ANR。
+                scope.launch {
+                    try {
+                        val (folderName, fileUris) = withContext(Dispatchers.IO) {
+                            val folder =
+                                DocumentFile.fromTreeUri(context, Uri.parse(uriString))
+                            if (folder == null || !folder.isDirectory) {
+                                throw IllegalArgumentException("無法讀取所選資料夾")
+                            }
+                            val uris = folder.listFiles()
+                                .filter { it.isFile }
+                                .map { it.uri.toString() }
+                            Pair(folder.name ?: "", uris)
+                        }
+                        result.success(
+                            mapOf(
+                                "folderName" to folderName,
+                                "fileUris" to fileUris,
+                            ),
+                        )
+                    } catch (e: Exception) {
+                        result.error(
+                            "list_folder_failed",
+                            "無法列出資料夾內容：${e.message}",
+                            null,
+                        )
+                    }
                 }
             }
             else -> result.notImplemented()
