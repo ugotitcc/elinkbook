@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
 import '../library/book_import_service.dart';
+import '../library/library_preferences.dart';
 import '../library/library_repository.dart';
 import '../library/models/book.dart';
 import '../library/models/library_enums.dart';
@@ -28,13 +29,22 @@ class LibraryScreen extends StatefulWidget {
 }
 
 class _LibraryScreenState extends State<LibraryScreen> {
+  final _preferences = LibraryPreferences();
+
   List<Book>? _books;
   LibraryViewMode _viewMode = LibraryViewMode.grid;
 
   @override
   void initState() {
     super.initState();
-    _loadBooks();
+    _initialize();
+  }
+
+  Future<void> _initialize() async {
+    final viewMode = await _preferences.loadViewMode();
+    if (!mounted) return;
+    setState(() => _viewMode = viewMode);
+    await _loadBooks();
   }
 
   Future<void> _loadBooks() async {
@@ -68,11 +78,11 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 
   void _toggleViewMode() {
-    setState(() {
-      _viewMode = _viewMode == LibraryViewMode.grid
-          ? LibraryViewMode.list
-          : LibraryViewMode.grid;
-    });
+    final newMode = _viewMode == LibraryViewMode.grid
+        ? LibraryViewMode.list
+        : LibraryViewMode.grid;
+    setState(() => _viewMode = newMode);
+    _preferences.saveViewMode(newMode);
   }
 
   void _openBook(Book book) {
