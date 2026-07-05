@@ -62,8 +62,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
       if (!mounted) return;
       setState(() => _groups = groups);
     } catch (_) {
-      if (!mounted) return;
-      setState(() => _groups = const [BookGroup(BookGroup.uncategorized)]);
+      // 暫時性錯誤時保留先前已載入的群組清單，避免因為單次讀取失敗就讓
+      // 畫面的分類 tab 列與目前的篩選狀態不一致（見 Issue 7 審查）。
     }
   }
 

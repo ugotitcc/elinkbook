@@ -329,6 +329,42 @@ void main() {
     expect(find.byKey(const Key('book_item_1')), findsOneWidget);
   });
 
+  testWidgets('管理分類對話框：刪除確認對話框按下取消，分類與所屬書籍皆不受影響', (tester) async {
+    final book = _testBook(id: '1', title: '奇幻小說', groupName: '奇幻');
+    final repository = FakeLibraryRepository(initialBooks: [book]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: repository,
+          importService: FakeBookImportService(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('library_group_manage_button')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('library_group_delete_button_奇幻')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('刪除分類'), findsOneWidget);
+
+    await tester.tap(find.text('取消'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('library_group_manage_item_奇幻')), findsOneWidget);
+
+    await tester.tap(find.text('關閉'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('library_group_tab_奇幻')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('library_group_tab_奇幻')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('book_item_1')), findsOneWidget);
+  });
+
   testWidgets('管理分類對話框：嘗試刪除「未分類」時操作被禁止（找不到刪除/重新命名按鈕）',
       (tester) async {
     final repository = FakeLibraryRepository();

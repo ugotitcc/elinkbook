@@ -52,12 +52,16 @@ class _LibraryGroupManagementDialogState
     if (name.isEmpty) return;
     try {
       await widget.repository.upsertGroup(name);
-      _addController.clear();
       if (!mounted) return;
+      _addController.clear();
       setState(() => _errorMessage = null);
       await _reloadGroups();
     } on LibraryRepositoryException catch (e) {
+      if (!mounted) return;
       setState(() => _errorMessage = e.message);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _errorMessage = '操作失敗，請稍後再試');
     }
   }
 
@@ -99,7 +103,11 @@ class _LibraryGroupManagementDialogState
       setState(() => _errorMessage = null);
       await _reloadGroups();
     } on LibraryRepositoryException catch (e) {
+      if (!mounted) return;
       setState(() => _errorMessage = e.message);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _errorMessage = '操作失敗，請稍後再試');
     }
   }
 
@@ -132,7 +140,11 @@ class _LibraryGroupManagementDialogState
       setState(() => _errorMessage = null);
       await _reloadGroups();
     } on LibraryRepositoryException catch (e) {
+      if (!mounted) return;
       setState(() => _errorMessage = e.message);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _errorMessage = '操作失敗，請稍後再試');
     }
   }
 
