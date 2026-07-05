@@ -71,13 +71,57 @@ class BookImportServiceImpl implements BookImportService {
   Future<List<Book>> importFolder(
     String folderUri, {
     bool autoGroupByFolderName = true,
-  }) {
-    throw UnimplementedError(
-      'importFolder 尚未實作，屬於 epic-1-library Issue 8 的範圍',
-    );
+  }) async {
+    try {
+      await _channel.invokeMethod<void>(
+        'takePersistableUriPermission',
+        {'uri': folderUri},
+      );
+    } on PlatformException {
+      return [];
+    }
+
+    Map<Object?, Object?>? contents;
+    try {
+      contents = await _channel.invokeMapMethod<Object?, Object?>(
+        'listFolderContents',
+        {'uri': folderUri},
+      );
+    } on PlatformException {
+      return [];
+    }
+    if (contents == null) return [];
+
+    final folderName = contents['folderName'] as String?;
+    final fileUris =
+        (contents['fileUris'] as List?)?.cast<String>() ?? const [];
+
+    final groupName =
+        autoGroupByFolderName && folderName != null && folderName.isNotEmpty
+            ? folderName
+            : null;
+
+    if (groupName != null) {
+      await _repository.upsertGroup(groupName);
+    }
+
+    final imported = <Book>[];
+    for (final uri in fileUris) {
+      final book = await _importSingleFile(
+        uri,
+        folderName: groupName,
+        takePermission: false,
+      );
+      if (book != null) imported.add(book);
+    }
+    return imported;
   }
 
-  Future<Book?> _importSingleFile(String uri, {String? folderName}) async {
+  Future<Book?> _importSingleFile(
+    String uri, {
+    String? folderName,
+    bool takePermission = true,
+  }) async {
     final format = detectBookFileFormat(uri);
     if (format == null) return null;
 
@@ -86,8 +130,9 @@ class BookImportServiceImpl implements BookImportService {
     // 時（例如來源 URI 不支援 persistable 權限）視為這個檔案匯入失敗並略過
     // ——不能假裝成功寫入資料庫，因為當次的暫時讀取權限只在本次 App 行程
     // 存活期間有效，寫入的 filePath 極可能在下次啟動後無法讀取，那會是比
-    // 略過更糟的靜默壞資料。
-    if (uri.startsWith('content://')) {
+    // 略過更糟的靜默壞資料。資料夾批次匯入（importFolder）的子檔案 URI 共用
+    // 資料夾層級已取得的權限，呼叫時傳入 takePermission: false 跳過這一步。
+    if (takePermission && uri.startsWith('content://')) {
       try {
         await _channel.invokeMethod<void>(
           'takePersistableUriPermission',
