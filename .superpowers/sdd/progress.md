@@ -1,6 +1,19 @@
-# Progress Ledger — Issue 7：書籍分類群組管理
+# Progress Ledger — Issue 9：應用程式「關於」頁面
 
-（先前殘留於此檔案的內容屬於 Issue 5 分支歷史，隨 `git reset --hard` 到最新 `main` 一併帶入；Issue 7 從此處重新開始記錄，Issue 5/6 的完整記錄見已合併的 `docs/epics/epic-1-library/plans/plan-issue-5.md`／`plan-issue-6.md` 與對應 PR。）
+（先前殘留於此檔案的內容屬於 Issue 7 分支歷史，隨 `git reset --hard` 到最新 `main` 一併帶入；Issue 9 從此處重新開始記錄，Issue 7/8 的完整記錄見已合併的 PR #13／#14。）
 
-- [x] Task 1：分類群組列（Tab）+ 篩選書架/列表（complete，commits 074078a..6dd520a，review clean，一次通過。**流程事故**：implementer subagent 誤把 commit 提交到 `main` 而非 worktree 分支（可能是在錯誤目錄下執行），已由 controller 發現並修正：cherry-pick 到正確分支（`6dd520a`），reset `main` 回 `074078a`（確認 `origin/main` 尚未包含該 commit，安全操作），修正後重新驗證 56/56 測試通過、`flutter analyze` 乾淨才送審。已確認 `FakeLibraryRepository` 的群組業務規則逐行對照 `SqliteLibraryRepository` 一致。Minor 未修（供 Task 2 審查參考）：(1) 「管理分類」ActionChip 沿用 `Icons.settings` 與既有設定按鈕圖示重複，導致 `navigation_test.dart` 需改用 `find.byTooltip` 消歧義（沿用計劃原文，非 implementer 偏離）；(2) `_loadGroups()` 的錯誤 fallback 會捨棄先前已載入的群組清單、整個換成只有「未分類」——Task 2 會讓 `_loadGroups()` 在對話框關閉後重複呼叫，需確認這個行為在重複呼叫情境下是否仍可接受。）
+## Task 1：`AboutScreen` + 原生 WebView 版本查詢 + `SettingsScreen` 導航入口
 
+- 狀態：**DONE**（implementer 於 session limit 中斷前已完成並提交）
+- Commit：`19c45c1` feat: add AboutScreen with version, licenses, and system WebView version
+- 測試：`flutter test` 68/68 全數通過；`flutter analyze` 無問題；額外於真實裝置（9491G／API 35）執行 Step 11 integration test 通過
+- Step 13（手動裝置驗證）：刻意跳過，留待人類協調
+- 報告：`.superpowers/sdd/task-1-report.md`
+- Task-scoped review：通過，0 Critical、1 Important（Step 13 手動裝置驗證未執行，已知不阻擋）。報告：`.superpowers/sdd/task-1-review.md`
+
+## Whole-Branch Review（全分支最終審查）
+
+- 狀態：**通過**，0 Critical、0 Important，3 Minor（皆不阻擋）
+- Ready to merge：Yes
+- 報告：`.superpowers/sdd/whole-branch-review-report.md`
+- 下一步：`superpowers:finishing-a-development-branch`（push + 建立 PR）
