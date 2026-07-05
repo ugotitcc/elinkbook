@@ -9,7 +9,6 @@ abstract class BookImportService {
   Future<List<Book>> importFiles(List<String> uris, {String? folderName});
 
   /// 匯入整個資料夾；[autoGroupByFolderName] 對應 FR-34 開關（預設 true）。
-  /// 本 epic 的 Issue 8 才會實作；Issue 4 呼叫時拋出 [UnimplementedError]。
   Future<List<Book>> importFolder(
     String folderUri, {
     bool autoGroupByFolderName = true,

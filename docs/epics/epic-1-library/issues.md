@@ -156,7 +156,7 @@
 **依賴：** Issue 4、7
 
 **描述：**
-擴充 `BookImportService`，新增 `importFolder(folderUri, {autoGroupByFolderName = true})`：用 `file_picker` 選擇整個資料夾（Android SAF 目錄選擇），批次對資料夾內每個支援格式的檔案執行 Issue 4 的單檔匯入邏輯。若 `autoGroupByFolderName` 開啟（預設開，UI 提供開關），依資料夾名稱建立/歸入對應群組；資料夾名稱與既有群組同名時直接歸入、不重複建立。
+擴充 `BookImportService`，新增 `importFolder(folderUri, {autoGroupByFolderName = true})`：選擇整個資料夾（Android SAF 目錄選擇；經對照 `file_picker` 套件實際原生原始碼確認其 `getDirectoryPath()` 在 Android 上不會回傳真正的 `content://` tree URI，改用獨立的原生 `folder_picker` channel + AndroidX `ActivityResultContracts.OpenDocumentTree()` 取得真正的 tree URI），批次對資料夾內每個支援格式的檔案執行 Issue 4 的單檔匯入邏輯。若 `autoGroupByFolderName` 開啟（預設開，UI 提供開關），依資料夾名稱建立/歸入對應群組；資料夾名稱與既有群組同名時直接歸入、不重複建立。
 
 **單元測試要求：**
 - 純 Dart 單元測試：批次匯入資料夾內多個檔案，皆正確寫入 `LibraryRepository`

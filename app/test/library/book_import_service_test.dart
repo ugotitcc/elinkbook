@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:elinkbook/library/book_import_service_impl.dart';
+import 'package:elinkbook/library/models/book_group.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/library/sqlite_library_repository.dart';
 
@@ -198,10 +199,87 @@ void main() {
     expect(groups.map((g) => g.name), contains('古典奇幻'));
   });
 
-  test('importFolder 尚未實作，呼叫時拋出 UnimplementedError', () async {
-    expect(
-      () => service.importFolder('content://example/folder'),
-      throwsA(isA<UnimplementedError>()),
+  test('批次匯入資料夾內多個檔案，皆正確寫入 LibraryRepository', () async {
+    mockChannel((call) async {
+      if (call.method == 'takePersistableUriPermission') return null;
+      if (call.method == 'listFolderContents') {
+        return {
+          'folderName': '歷史小說',
+          'fileUris': [
+            'content://example/tree/folder/document/book1.epub',
+            'content://example/tree/folder/document/book2.pdf',
+          ],
+        };
+      }
+      return {'title': null, 'author': null, 'coverBytes': null};
+    });
+
+    final books = await service.importFolder('content://example/tree/folder');
+
+    expect(books, hasLength(2));
+    final savedBooks = await repository.listBooks();
+    expect(savedBooks, hasLength(2));
+  });
+
+  test('autoGroupByFolderName=true 且群組不存在時，自動建立同名群組並歸入', () async {
+    mockChannel((call) async {
+      if (call.method == 'takePersistableUriPermission') return null;
+      if (call.method == 'listFolderContents') {
+        return {
+          'folderName': '歷史小說',
+          'fileUris': ['content://example/tree/folder/document/book1.epub'],
+        };
+      }
+      return {'title': null, 'author': null, 'coverBytes': null};
+    });
+
+    final books = await service.importFolder(
+      'content://example/tree/folder',
+      autoGroupByFolderName: true,
     );
+
+    expect(books.single.groupName, '歷史小說');
+    final groups = await repository.listGroups();
+    expect(groups.map((g) => g.name), contains('歷史小說'));
+  });
+
+  test('autoGroupByFolderName=true 且群組已存在時，直接歸入既有群組、不重複建立',
+      () async {
+    await repository.upsertGroup('歷史小說');
+    mockChannel((call) async {
+      if (call.method == 'takePersistableUriPermission') return null;
+      if (call.method == 'listFolderContents') {
+        return {
+          'folderName': '歷史小說',
+          'fileUris': ['content://example/tree/folder/document/book1.epub'],
+        };
+      }
+      return {'title': null, 'author': null, 'coverBytes': null};
+    });
+
+    await service.importFolder('content://example/tree/folder');
+
+    final groups = await repository.listGroups();
+    expect(groups.where((g) => g.name == '歷史小說'), hasLength(1));
+  });
+
+  test('autoGroupByFolderName=false 時，匯入書籍歸入預設「未分類」', () async {
+    mockChannel((call) async {
+      if (call.method == 'takePersistableUriPermission') return null;
+      if (call.method == 'listFolderContents') {
+        return {
+          'folderName': '歷史小說',
+          'fileUris': ['content://example/tree/folder/document/book1.epub'],
+        };
+      }
+      return {'title': null, 'author': null, 'coverBytes': null};
+    });
+
+    final books = await service.importFolder(
+      'content://example/tree/folder',
+      autoGroupByFolderName: false,
+    );
+
+    expect(books.single.groupName, BookGroup.uncategorized);
   });
 }

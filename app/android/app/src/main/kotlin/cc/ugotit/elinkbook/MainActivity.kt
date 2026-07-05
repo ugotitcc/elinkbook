@@ -1,13 +1,40 @@
 package cc.ugotit.elinkbook
 
+import android.content.Intent
 import android.os.Bundle
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.commitNow
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.plugin.common.MethodChannel
 import org.readium.r2.navigator.epub.EpubNavigatorFragment
 
 class MainActivity : FlutterFragmentActivity() {
     private lateinit var bookMetadataChannel: BookMetadataChannel
+
+    // 選擇資料夾的結果狀態（Issue 8）。registerForActivityResult 必須在
+    // Activity 進入 STARTED 生命週期之前呼叫，因此以類別層級屬性初始化
+    // （AndroidX 官方建議寫法），不放在 configureFlutterEngine() 內。
+    private var pendingFolderPickResult: MethodChannel.Result? = null
+
+    private val openDocumentTreeLauncher =
+        registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+            val result = pendingFolderPickResult
+            pendingFolderPickResult = null
+            if (uri != null) {
+                try {
+                    contentResolver.takePersistableUriPermission(
+                        uri,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION,
+                    )
+                } catch (e: Exception) {
+                    // 權限持久化失敗時仍回傳 URI；BookImportServiceImpl.importFolder()
+                    // 呼叫端會再嘗試一次 takePersistableUriPermission，失敗則視為
+                    // 整個資料夾無法匯入（見 docs/epics/epic-1-library/spec.md）。
+                }
+            }
+            result?.success(uri?.toString())
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // Android 在 process death 後重建這個 Activity 時，會嘗試用已儲存的
@@ -48,5 +75,27 @@ class MainActivity : FlutterFragmentActivity() {
             )
         bookMetadataChannel =
             BookMetadataChannel(this, flutterEngine.dartExecutor.binaryMessenger)
+
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "elinkbook/folder_picker")
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "pickFolder" -> {
+                        // 防禦性判斷：避免使用者在系統選取器實際開啟前重複觸發
+                        // pickFolder（例如快速連續點擊），導致前一次呼叫的
+                        // MethodChannel.Result 被覆蓋、永遠不會被 resolve。
+                        if (pendingFolderPickResult != null) {
+                            result.error(
+                                "already_active",
+                                "選取資料夾操作已在進行中",
+                                null,
+                            )
+                            return@setMethodCallHandler
+                        }
+                        pendingFolderPickResult = result
+                        openDocumentTreeLauncher.launch(null)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
     }
 }
