@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -717,6 +719,174 @@ void main() {
 
     expect(find.byKey(const Key('book_item_1')), findsOneWidget);
     expect(find.byKey(const Key('book_item_2')), findsOneWidget);
+  });
+
+  testWidgets('觸發資料夾匯入後，匯入完成前畫面顯示處理中狀態，其他匯入觸發點停用',
+      (tester) async {
+    const folderPickerChannel = MethodChannel('elinkbook/folder_picker');
+    addTearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(folderPickerChannel, null);
+    });
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(folderPickerChannel, (call) async {
+      if (call.method == 'pickFolder') {
+        return 'content://example/tree/folder';
+      }
+      return null;
+    });
+
+    final importService = FakeBookImportService();
+    final completer = Completer<List<Book>>();
+    importService.pendingCompleter = completer;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(),
+          importService: importService,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('library_import_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('library_import_folder_option')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('匯入資料夾'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('library_import_folder_confirm')));
+    // 此時 importFolder() 已開始執行但尚未完成（completer 尚未 complete）。
+    // 畫面上會出現持續動畫的 CircularProgressIndicator，不可用
+    // pumpAndSettle()（會因動畫持續排程新影格而逾時），改用固定次數的
+    // pump() 讓對話框關閉、_pickAndImportFolder 恢復執行到
+    // setState(_isImporting = true) 為止。
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.byKey(const Key('library_importing_overlay')), findsOneWidget);
+    expect(find.text('匯入中...'), findsOneWidget);
+
+    final importButton = tester.widget<PopupMenuButton<void>>(
+      find.byKey(const Key('library_import_button')),
+    );
+    expect(importButton.enabled, isFalse);
+
+    completer.complete(const []);
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('library_importing_overlay')), findsNothing);
+  });
+
+  testWidgets('觸發單檔/多檔匯入後，匯入完成前畫面顯示處理中狀態，完成後恢復正常',
+      (tester) async {
+    const filePickerChannel =
+        MethodChannel('miguelruivo.flutter.plugins.filepicker');
+    addTearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(filePickerChannel, null);
+    });
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(filePickerChannel, (call) async {
+      if (call.method == 'custom') {
+        return [
+          {
+            'name': 'book.epub',
+            'path': '/tmp/book.epub',
+            'size': 100,
+            'bytes': null,
+            'identifier': 'content://example/book.epub',
+          },
+        ];
+      }
+      return null;
+    });
+
+    final importService = FakeBookImportService();
+    final completer = Completer<List<Book>>();
+    importService.pendingCompleter = completer;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(),
+          importService: importService,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // 此時書架為空清單狀態，「library_empty_import_button」是可觸及的匯入
+    // 入口，用來一併驗證「其他匯入觸發點」在處理中也會被停用。
+    expect(find.byKey(const Key('library_empty_import_button')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('library_import_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('library_import_files_option')));
+    // FilePicker.pickFiles() 透過模擬的原生 MethodChannel 立即回傳一筆結果，
+    // 接著 importFiles() 進入 pending 狀態（completer 尚未 complete）。同樣
+    // 不可用 pumpAndSettle()，改用固定時長的 pump()。
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.byKey(const Key('library_importing_overlay')), findsOneWidget);
+    expect(find.text('匯入中...'), findsOneWidget);
+
+    final emptyImportButton = tester.widget<ElevatedButton>(
+      find.byKey(const Key('library_empty_import_button')),
+    );
+    expect(emptyImportButton.onPressed, isNull);
+
+    completer.complete(const []);
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('library_importing_overlay')), findsNothing);
+  });
+
+  testWidgets('匯入過程拋出例外時，處理中狀態仍正確解除，畫面恢復正常', (tester) async {
+    const folderPickerChannel = MethodChannel('elinkbook/folder_picker');
+    addTearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(folderPickerChannel, null);
+    });
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(folderPickerChannel, (call) async {
+      if (call.method == 'pickFolder') {
+        return 'content://example/tree/folder';
+      }
+      return null;
+    });
+
+    final importService = FakeBookImportService();
+    final completer = Completer<List<Book>>();
+    importService.pendingCompleter = completer;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(),
+          importService: importService,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('library_import_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('library_import_folder_option')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('library_import_folder_confirm')));
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.byKey(const Key('library_importing_overlay')), findsOneWidget);
+
+    completer.completeError(Exception('模擬匯入失敗'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('library_importing_overlay')), findsNothing);
   });
 }
 
