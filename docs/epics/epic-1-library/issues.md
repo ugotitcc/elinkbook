@@ -191,7 +191,7 @@
 
 ## Issue 10：已匯入書籍批次變更分類歸屬
 
-**Status:** ready-for-agent
+**Status:** ✅ 已完成並合併回 `main`（PR #16，merge commit `df855a4`）。3 個任務皆完成，`flutter test` 78/78 通過，`flutter analyze` 乾淨。實作計畫經過一輪審查修正（`_moveSelectedBooksToGroup()` 提前於寫入迴圈前呼叫 `_exitSelectionMode()` 避免重複觸發、選取模式下停用分類 tab 切換以避免可見書籍集合中途改變）。實作過程中發現 Task 1 的 implementer commit 一度誤植於 `main`（推測是 subagent session 期間 shell 工作目錄被重置所致），已由 controller cherry-pick 到正確分支並清乾淨 `main`，不影響最終結果。task-scoped review 與 whole-branch review（Opus）皆為 0 Critical/0 Important（whole-branch review 另有 2 項極輕微 Minor，審查者認為皆不成立/不影響）。本次執行環境無實體 Android 裝置，驗證方式改以 `flutter test` 模擬測試與程式碼審查把關，「手動驗證」章節（見下方驗收標準）尚待實機補做。實作計畫見 `plans/plan-issue-10.md`。
 
 **背景：** Epic 1 歸檔前的 `/grill-with-docs` 訪談中發現的功能缺口——`LibraryRepository.updateBook()`（Issue 1）與 `Book.groupName` 欄位已支援修改一本書所屬分類，但 `LibraryScreen`（Issue 5-8）沒有任何 UI 入口能觸發它。`prototype/index.html` 本身也未曾設計過這個互動（書架卡片 `onclick` 只導覽進閱讀器），故此為原型與 PRD 皆未定義過的新增需求，經人類確認後追加為 Epic 1 的第 10 張工單。
 
