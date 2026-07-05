@@ -70,7 +70,6 @@ class _LibraryGroupManagementDialogState
         content: TextField(
           key: const Key('library_group_rename_field'),
           controller: controller,
-          autofocus: true,
           onSubmitted: (val) => Navigator.of(dialogContext).pop(val.trim()),
         ),
         actions: [
@@ -87,7 +86,12 @@ class _LibraryGroupManagementDialogState
         ],
       ),
     );
-    controller.dispose();
+    // 延遲 dispose 以避免在 dialog widget 樹仍在 teardown 時存取已釋放的
+    // TextEditingController。使用 addPostFrameCallback() 確保整個 frame cycle
+    // 完成後再進行清理。
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      controller.dispose();
+    });
     if (newName == null || newName.isEmpty || newName == oldName) return;
     try {
       await widget.repository.renameGroup(oldName, newName);
