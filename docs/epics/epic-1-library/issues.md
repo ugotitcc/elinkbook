@@ -223,7 +223,7 @@
 
 ## Issue 11：匯入流程新增處理中狀態回饋
 
-**Status:** ready-for-agent
+**Status:** ✅ 已完成並合併回 `main`（PR #17，merge commit `441a1e8`）。1 個任務完成，`flutter test` 81/81 通過，`flutter analyze` 乾淨。實作計畫審查與程式碼審查各提出一次「覆蓋層需包 `AbsorbPointer` 才能阻擋手勢穿透」的建議，兩次皆評估後不採納：對照 Flutter SDK 原始碼查證，`ColoredBox` 的 render object 天生為 `HitTestBehavior.opaque`，`Stack` 的 hit-test 機制會在最上層命中後即停止往下測試；程式碼審查階段另外寫了一個一次性診斷測試實測驗證——匯入中觸發覆蓋層顯示後對底下書籍卡片長按，`flutter_test` 本身即回報該卡片「無法接收指標事件」，且選取模式確實未被進入，證實現有寫法已完全阻擋手勢穿透，無需額外元件。本次執行環境無實體 Android 裝置，驗證方式改以 `flutter test` 模擬測試與程式碼審查把關，「手動驗證」章節（見下方驗收標準）尚待實機補做。實作計畫見 `plans/plan-issue-11.md`。
 
 **背景：** Epic 1 歸檔前的 `/grill-with-docs` 訪談中，針對「漫畫類 EPUB3 封面無法正確取得」的回報進行實機重現時發現：原生封面抽取邏輯本身完全正常（已用真實裝置與真實漫畫檔案驗證），真正原因是 `LibraryScreen._pickAndImportFiles()`（`library_screen.dart:102-118`，Issue 5）與 `_pickAndImportFolder()`（`library_screen.dart:120-139`，Issue 8）呼叫 `importService.importFiles()`/`importFolder()` 時，**完全沒有顯示任何處理中的 UI 回饋**（無 spinner、無進度提示、觸發按鈕也未停用）。小檔案幾乎感覺不到，但透過真實系統檔案選擇器匯入 100MB 以上的大檔案（例如漫畫類 EPUB）時，處理可能耗時數十秒甚至超過一分鐘，這段期間畫面完全無變化，使用者會誤以為 App 當機或匯入失敗。
 
