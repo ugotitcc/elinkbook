@@ -9,6 +9,7 @@ import '../library/library_repository.dart';
 import '../library/models/book.dart';
 import '../library/models/book_group.dart';
 import '../library/models/library_enums.dart';
+import 'library_group_management_dialog.dart';
 import 'reader_screen.dart';
 import 'settings_screen.dart';
 
@@ -135,8 +136,25 @@ class _LibraryScreenState extends State<LibraryScreen> {
     );
   }
 
-  void _openManageGroupsDialog() {
-    // Task 2 會把這個方法改為真正開啟 LibraryGroupManagementDialog。
+  Future<void> _openManageGroupsDialog() async {
+    await showDialog<void>(
+      context: context,
+      builder: (context) => LibraryGroupManagementDialog(
+        repository: widget.repository,
+        initialGroups: _groups,
+      ),
+    );
+    await _loadGroups();
+    if (!mounted) return;
+    // 若目前篩選中的分類已在對話框內被刪除，退回「全部」篩選，避免畫面
+    // 停留在一個已不存在的分類上（listBooks 對不存在的 groupFilter 只會
+    // 回傳空清單，容易誤以為「這個分類沒有書」而非「這個分類已被刪除」）。
+    final filterStillExists =
+        _groupFilter == null || _groups.any((g) => g.name == _groupFilter);
+    if (!filterStillExists) {
+      setState(() => _groupFilter = null);
+    }
+    await _loadBooks();
   }
 
   @override
