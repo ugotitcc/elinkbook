@@ -172,7 +172,7 @@
 
 ## Issue 9：應用程式「關於」頁面
 
-**Status:** ready-for-agent
+**Status:** ✅ 已完成並合併回 `main`（PR #15，merge commit `b97e328`）。唯一 1 個任務完成，`flutter test` 68/68 通過，`flutter analyze` 乾淨；額外在開發過程中臨時連線的真實裝置上執行了真機 `integration_test`，確認原生變更未破壞既有建置與啟動流程。task-scoped review 與 whole-branch review（Opus）皆為 0 Critical/0 Important（whole-branch review 另有 3 項 Minor，皆不阻擋）。合併後另有一份獨立審查（`reviews/review-issue-9.md`，本次例外提交版本控制）同為 0 Critical/0 Important/0 Minor，其中 1 項「建議」（呼叫 WebView 版本查詢前以 `Platform.isAndroid` 判斷平台）評估後不採納：專案目前無 `ios/` 目錄、iOS 尚未列入任何開發階段，且既有原生 channel 呼叫（`epub_reader_view.dart`/`pdf_reader_view.dart`）皆未使用此類平台防呆、一致仰賴 try-catch 優雅降級，加入會造成風格不一致的 YAGNI 違規。實作計畫見 `plans/plan-issue-9.md`。
 
 **依賴：** 無（可獨立平行進行）
 
