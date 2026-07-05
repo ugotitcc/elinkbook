@@ -131,6 +131,101 @@ void main() {
     expect(find.byKey(const Key('library_list_view')), findsOneWidget);
     expect(find.byKey(const Key('library_grid_view')), findsNothing);
   });
+
+  testWidgets('選擇「書名」排序後，書架清單依書名字母順序重新排列', (tester) async {
+    final now = DateTime.now();
+    final bookB = Book(
+      id: '1',
+      title: 'B書',
+      author: null,
+      format: BookFileFormat.epub,
+      filePath: 'content://example/1.epub',
+      source: BookSource.local,
+      createTime: now,
+      lastReadTime: now.add(const Duration(minutes: 1)),
+    );
+    final bookA = Book(
+      id: '2',
+      title: 'A書',
+      author: null,
+      format: BookFileFormat.epub,
+      filePath: 'content://example/2.epub',
+      source: BookSource.local,
+      createTime: now,
+      lastReadTime: now,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: [bookB, bookA]),
+          importService: FakeBookImportService(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // 切到列表模式，讓每本書對應到一個 ListTile，方便直接比對 widget 樹順序
+    await tester.tap(find.byKey(const Key('library_view_mode_toggle')));
+    await tester.pumpAndSettle();
+
+    // 預設「最後閱讀」排序（新到舊）：lastReadTime 較晚的 B書應排在前面。直接
+    // 比對 widget 樹中 ListTile 的資料順序，不依賴渲染座標（dy）比較，避免
+    // 測試受螢幕尺寸、字型渲染或版面間距等排版細節變動影響而變得脆弱。
+    var titles = tester
+        .widgetList<ListTile>(find.byType(ListTile))
+        .map((tile) => (tile.title as Text).data)
+        .toList();
+    expect(titles, ['B書', 'A書']);
+
+    await tester.tap(find.byKey(const Key('library_sort_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('library_sort_option_title')));
+    await tester.pumpAndSettle();
+
+    titles = tester
+        .widgetList<ListTile>(find.byType(ListTile))
+        .map((tile) => (tile.title as Text).data)
+        .toList();
+    expect(titles, ['A書', 'B書']);
+  });
+
+  testWidgets('排序方式選擇會持久化，重新建立 LibraryScreen 後仍維持上次選擇',
+      (tester) async {
+    final book = _testBook(id: '1', title: '紅樓夢', author: '曹雪芹');
+    final repository = FakeLibraryRepository(initialBooks: [book]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: repository,
+          importService: FakeBookImportService(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('library_sort_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('library_sort_option_author')));
+    await tester.pumpAndSettle();
+
+    expect(find.byTooltip('排序：作者'), findsOneWidget);
+
+    // 模擬 App 重啟
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          key: const Key('library_screen_after_restart'),
+          repository: repository,
+          importService: FakeBookImportService(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byTooltip('排序：作者'), findsOneWidget);
+  });
 }
 
 Book _testBook({required String id, required String title, String? author}) {

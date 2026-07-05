@@ -33,6 +33,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
   List<Book>? _books;
   LibraryViewMode _viewMode = LibraryViewMode.grid;
+  LibrarySortBy _sortBy = LibrarySortBy.lastRead;
 
   @override
   void initState() {
@@ -42,19 +43,30 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
   Future<void> _initialize() async {
     final viewMode = await _preferences.loadViewMode();
+    final sortBy = await _preferences.loadSortBy();
     if (!mounted) return;
-    setState(() => _viewMode = viewMode);
+    setState(() {
+      _viewMode = viewMode;
+      _sortBy = sortBy;
+    });
     await _loadBooks();
   }
 
   Future<void> _loadBooks() async {
+    // 擷取呼叫當下的排序條件；若使用者在這次非同步查詢完成前又切換了排序
+    // （連續快速點選排序選單的不同選項），較晚回應但較早發出的查詢結果會
+    // 對應到舊的排序條件，此時不應覆蓋畫面（避免顯示順序與目前選定的
+    // _sortBy 不一致）。
+    final requestedSortBy = _sortBy;
     try {
-      final books = await widget.repository.listBooks();
+      final books = await widget.repository.listBooks(sortBy: requestedSortBy);
       if (!mounted) return;
+      if (_sortBy != requestedSortBy) return;
       setState(() => _books = books);
     } catch (_) {
       // 如果載入失敗，把它當作空列表，顯示既有的空狀態 UI
       if (!mounted) return;
+      if (_sortBy != requestedSortBy) return;
       setState(() => _books = []);
     }
   }
@@ -85,6 +97,12 @@ class _LibraryScreenState extends State<LibraryScreen> {
     _preferences.saveViewMode(newMode);
   }
 
+  Future<void> _changeSortBy(LibrarySortBy sortBy) async {
+    setState(() => _sortBy = sortBy);
+    await _preferences.saveSortBy(sortBy);
+    await _loadBooks();
+  }
+
   void _openBook(Book book) {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => ReaderScreen(filePath: book.filePath)),
@@ -98,6 +116,22 @@ class _LibraryScreenState extends State<LibraryScreen> {
       appBar: AppBar(
         title: const Text('書架'),
         actions: [
+          PopupMenuButton<LibrarySortBy>(
+            key: const Key('library_sort_button'),
+            icon: const Icon(Icons.sort),
+            tooltip: '排序：${_sortLabel(_sortBy)}',
+            enabled: books != null,
+            onSelected: _changeSortBy,
+            itemBuilder: (context) => LibrarySortBy.values
+                .map(
+                  (sortBy) => PopupMenuItem<LibrarySortBy>(
+                    key: Key('library_sort_option_${sortBy.name}'),
+                    value: sortBy,
+                    child: Text(_sortLabel(sortBy)),
+                  ),
+                )
+                .toList(),
+          ),
           IconButton(
             key: const Key('library_view_mode_toggle'),
             icon: Icon(
@@ -176,6 +210,19 @@ class _LibraryScreenState extends State<LibraryScreen> {
         onTap: () => _openBook(books[index]),
       ),
     );
+  }
+}
+
+String _sortLabel(LibrarySortBy sortBy) {
+  switch (sortBy) {
+    case LibrarySortBy.lastRead:
+      return '最後閱讀';
+    case LibrarySortBy.createTime:
+      return '建立時間';
+    case LibrarySortBy.author:
+      return '作者';
+    case LibrarySortBy.title:
+      return '書名';
   }
 }
 

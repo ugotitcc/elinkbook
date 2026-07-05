@@ -39,8 +39,24 @@ class FakeLibraryRepository implements LibraryRepository {
     if (throwOnListBooks) {
       throw Exception('模擬資料庫錯誤');
     }
-    if (groupFilter == null) return List.of(_books);
-    return _books.where((b) => b.groupName == groupFilter).toList();
+    final filtered = groupFilter == null
+        ? List.of(_books)
+        : _books.where((b) => b.groupName == groupFilter).toList();
+    filtered.sort(_comparatorFor(sortBy));
+    return filtered;
+  }
+
+  int Function(Book, Book) _comparatorFor(LibrarySortBy sortBy) {
+    switch (sortBy) {
+      case LibrarySortBy.lastRead:
+        return (a, b) => b.lastReadTime.compareTo(a.lastReadTime);
+      case LibrarySortBy.createTime:
+        return (a, b) => b.createTime.compareTo(a.createTime);
+      case LibrarySortBy.author:
+        return (a, b) => (a.author ?? '').compareTo(b.author ?? '');
+      case LibrarySortBy.title:
+        return (a, b) => a.title.compareTo(b.title);
+    }
   }
 
   @override
