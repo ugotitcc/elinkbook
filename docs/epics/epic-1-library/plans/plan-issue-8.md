@@ -382,6 +382,17 @@ class MainActivity : FlutterFragmentActivity() {
             .setMethodCallHandler { call, result ->
                 when (call.method) {
                     "pickFolder" -> {
+                        // 防禦性判斷：避免使用者在系統選取器實際開啟前重複觸發
+                        // pickFolder（例如快速連續點擊），導致前一次呼叫的
+                        // MethodChannel.Result 被覆蓋、永遠不會被 resolve。
+                        if (pendingFolderPickResult != null) {
+                            result.error(
+                                "already_active",
+                                "選取資料夾操作已在進行中",
+                                null,
+                            )
+                            return@setMethodCallHandler
+                        }
                         pendingFolderPickResult = result
                         openDocumentTreeLauncher.launch(null)
                     }
@@ -409,27 +420,37 @@ import androidx.documentfile.provider.DocumentFile
                     result.error("invalid_arguments", "缺少 uri 參數", null)
                     return
                 }
-                try {
-                    val folder = DocumentFile.fromTreeUri(context, Uri.parse(uriString))
-                    if (folder == null || !folder.isDirectory) {
-                        result.error("invalid_folder", "無法讀取所選資料夾", null)
-                        return
+                // DocumentFile.listFiles() 對 DocumentProvider 發出查詢，屬於跨
+                // 行程 IPC（實質上是一次 SQLite 查詢），資料夾檔案數量多時會是
+                // 阻塞式操作；比照既有 extractEpubMetadata/extractPdfMetadata
+                // 的做法，移到 scope（Dispatchers.Main）搭配 withContext(Dispatchers.IO)
+                // 執行，避免卡住 UI 執行緒導致 Jank 或 ANR。
+                scope.launch {
+                    try {
+                        val (folderName, fileUris) = withContext(Dispatchers.IO) {
+                            val folder =
+                                DocumentFile.fromTreeUri(context, Uri.parse(uriString))
+                            if (folder == null || !folder.isDirectory) {
+                                throw IllegalArgumentException("無法讀取所選資料夾")
+                            }
+                            val uris = folder.listFiles()
+                                .filter { it.isFile }
+                                .map { it.uri.toString() }
+                            Pair(folder.name ?: "", uris)
+                        }
+                        result.success(
+                            mapOf(
+                                "folderName" to folderName,
+                                "fileUris" to fileUris,
+                            ),
+                        )
+                    } catch (e: Exception) {
+                        result.error(
+                            "list_folder_failed",
+                            "無法列出資料夾內容：${e.message}",
+                            null,
+                        )
                     }
-                    val fileUris = folder.listFiles()
-                        .filter { it.isFile }
-                        .map { it.uri.toString() }
-                    result.success(
-                        mapOf(
-                            "folderName" to (folder.name ?: ""),
-                            "fileUris" to fileUris,
-                        ),
-                    )
-                } catch (e: Exception) {
-                    result.error(
-                        "list_folder_failed",
-                        "無法列出資料夾內容：${e.message}",
-                        null,
-                    )
                 }
             }
 ```
