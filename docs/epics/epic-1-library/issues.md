@@ -90,16 +90,16 @@
 
 ## Issue 5：`LibraryScreen` 串接真實圖書庫
 
-**Status:** ready-for-agent
+**Status:** ✅ 已完成並合併回 `main`（PR #11，merge commit `5850f36`）。3 個任務皆完成，`flutter test` 45/45 通過，`flutter analyze` 乾淨；真實裝置 `integration_test` 透過真正的 `content://` URI（Issue 4 的 `createTestContentUri`）匯入書籍後點擊可正常導航並渲染。整分支審查（Opus）結論為 Ready to merge: Yes，僅有 Minor 建議未阻擋合併。完整審查報告見 `reviews/review-issue-5.md`（本機保留，依本 repo 慣例未提交版本控制），實作計畫見 `plans/plan-issue-5.md`。
 
 **依賴：** Issue 1、4
 
 **描述：**
-把 `LibraryScreen` 從目前顯示固定範例書籍清單（`sample_books.dart`/`stageSampleBookFile()`）改為讀取 `LibraryRepository` 的真實資料：新增匯入按鈕（觸發 Issue 4 的 `BookImportService`）、書架 grid（每列 6 本）與列表兩種呈現、空清單狀態（「尚未匯入書籍」提示）、點擊書籍項目導航至既有 `ReaderScreen(filePath: ...)`（`filePath` 為資料庫中的 URI 或路徑字串，走 Issue 3 擴充後的契約）。移除 `sample_books.dart`／`stageSampleBookFile()` 遺留程式碼；`test/fixtures/sample.epub`/`sample.pdf` 保留供測試 fixture 匯入輔助流程使用。
+把 `LibraryScreen` 從目前顯示固定範例書籍清單（`sample_books.dart`/`stageSampleBookFile()`）改為讀取 `LibraryRepository` 的真實資料：新增匯入按鈕（觸發 Issue 4 的 `BookImportService`）、書架 grid（每列 6 本，僅封面+標題+進度）與列表兩種呈現（封面+標題/作者+進度）、空清單狀態（「尚未匯入書籍」提示）、點擊書籍項目導航至既有 `ReaderScreen(filePath: ...)`（`filePath` 為資料庫中的 URI 或路徑字串，走 Issue 3 擴充後的契約）。移除 `sample_books.dart`／`stageSampleBookFile()` 遺留程式碼；`test/fixtures/sample.epub`/`sample.pdf` 保留供測試 fixture 匯入輔助流程使用。
 
 **單元測試要求：**
 - Widget test：空清單狀態正確顯示「尚未匯入書籍」提示與匯入按鈕
-- Widget test：有書籍時，書架 grid 與列表兩種呈現皆能正確渲染書籍項目（標題、作者、封面、進度固定顯示 0%）
+- Widget test：有書籍時，書架 grid（標題、封面、進度固定顯示 0%）與列表（標題、作者、封面、進度固定顯示 0%）兩種呈現皆能正確渲染書籍項目
 - `integration_test`：從書架點擊一本透過 Issue 4 匯入的真實書籍項目，斷言導航至 `ReaderScreen` 且內容成功渲染（`onPageRendered` 觸發）
 
 **驗收標準：**
