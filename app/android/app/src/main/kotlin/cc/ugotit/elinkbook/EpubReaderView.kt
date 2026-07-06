@@ -20,6 +20,8 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import org.readium.r2.navigator.epub.EpubNavigatorFactory
 import org.readium.r2.navigator.epub.EpubNavigatorFragment
+import org.readium.r2.navigator.epub.EpubPreferences
+import org.readium.r2.shared.publication.Layout
 import org.readium.r2.shared.publication.Locator
 import org.readium.r2.shared.publication.Publication
 import org.readium.r2.shared.util.AbsoluteUrl
@@ -84,6 +86,7 @@ class EpubReaderView(
     private val previousFragmentFactory = activity.supportFragmentManager.fragmentFactory
     private var installedFragmentFactory: FragmentFactory? = null
     private var publication: Publication? = null
+    private var navigatorFragment: EpubNavigatorFragment? = null
     private var pageReported = false
     private var isDisposed = false
 
@@ -99,8 +102,29 @@ class EpubReaderView(
                 openBook(call.argument<String>("path"))
                 result.success(null)
             }
+            "setWritingMode" -> {
+                setWritingMode(call.argument<String>("mode"))
+                result.success(null)
+            }
             else -> result.notImplemented()
         }
+    }
+
+    /**
+     * 開書後即時切換橫直排，不重新 openBook（見
+     * docs/adr/0003-epub-reader-writing-mode-contract.md）。書本尚未成功
+     * 開啟（navigatorFragment 仍為 null）時靜默忽略——Dart 端只會在
+     * onPageRendered 觸發之後才送出這個指令，理論上不會發生。
+     *
+     * 【未來注意】這裡直接建構全新的 EpubPreferences，只有 verticalText 有值、
+     * 其餘欄位皆為預設 null。目前專案唯一會呼叫 submitPreferences() 的地方就是
+     * 這裡，所以不會有問題；但一旦 epic-3-fonts-layout 引入字型大小/行距/邊距
+     * 等其他偏好設定並也需要呼叫 submitPreferences()，這裡就必須改成與「目前
+     * 已生效的偏好設定」合併（EpubPreferences 有提供 plus() 運算子可用於合併），
+     * 否則每次切換橫直排都會把其他偏好重設回預設值。
+     */
+    private fun setWritingMode(mode: String?) {
+        navigatorFragment?.submitPreferences(EpubPreferences(verticalText = mode == "vertical"))
     }
 
     private fun openBook(path: String?) {
@@ -172,6 +196,8 @@ class EpubReaderView(
             activity.supportFragmentManager.commitNow(allowStateLoss = true) {
                 add<EpubNavigatorFragment>(containerId, args = Bundle(), tag = fragmentTag)
             }
+            navigatorFragment = activity.supportFragmentManager
+                .findFragmentByTag(fragmentTag) as? EpubNavigatorFragment
         } catch (e: Exception) {
             // 掛載失敗時 Fragment 沒有真正附著到任何畫面上，Publication 不會再被使用，
             // 必須主動關閉釋放資源——與 openBook() 中 isDisposed 分支的做法一致。
@@ -185,7 +211,27 @@ class EpubReaderView(
         if (!pageReported) {
             pageReported = true
             channel.invokeMethod("onPageRendered", null)
+            reportLayoutResolved()
         }
+    }
+
+    /**
+     * 開書完成後一次性回報版面資訊給 Dart 端（見
+     * docs/adr/0003-epub-reader-writing-mode-contract.md）：isFixedLayout
+     * 讀取 Publication 詮釋資料；writingMode 讀取 Readium 依書本語言／閱讀
+     * 方向自動解析出的結果——EpubNavigatorFragment.settings 是已解析完成的
+     * StateFlow，直接讀取目前值即可，不需自行呼叫 EpubSettingsResolver。
+     */
+    private fun reportLayoutResolved() {
+        val isFixedLayout = publication?.metadata?.layout == Layout.FIXED
+        val isVertical = navigatorFragment?.settings?.value?.verticalText ?: false
+        channel.invokeMethod(
+            "onLayoutResolved",
+            mapOf(
+                "isFixedLayout" to isFixedLayout,
+                "writingMode" to if (isVertical) "vertical" else "horizontal",
+            ),
+        )
     }
 
     override fun onPageChanged(pageIndex: Int, totalPages: Int, locator: Locator) {}
@@ -246,5 +292,6 @@ class EpubReaderView(
         }
         publication?.close()
         publication = null
+        navigatorFragment = null
     }
 }

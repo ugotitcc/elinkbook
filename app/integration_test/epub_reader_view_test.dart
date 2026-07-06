@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:elinkbook/reader/epub_reader_view.dart';
+import 'package:elinkbook/reader/writing_mode.dart';
 
 /// 把 Flutter asset 複製為裝置暫存目錄中的真實檔案，回傳其絕對路徑。
 /// Readium 的 AssetRetriever 需要真實的裝置檔案系統路徑，不能直接讀取 Flutter asset。
@@ -197,5 +198,174 @@ void main() {
 
     expect(errorMessage, isNotNull);
     expect(rendered, isFalse);
+  });
+
+  testWidgets('開啟直排 CJK 範例 EPUB，onLayoutResolved 回報直排且非定樣式',
+      (tester) async {
+    final samplePath = await _stageAssetAsFile(
+        'test/fixtures/sample.epub', 'sample_layout_vertical.epub');
+    addTearDown(() async {
+      final file = File(samplePath);
+      if (await file.exists()) await file.delete();
+    });
+
+    final completer = Completer<void>();
+    EpubLayoutInfo? layoutInfo;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: EpubReaderView(
+          filePath: samplePath,
+          onPageRendered: () {},
+          onError: (message) {
+            if (!completer.isCompleted) completer.complete();
+          },
+          onLayoutResolved: (info) {
+            layoutInfo = info;
+            if (!completer.isCompleted) completer.complete();
+          },
+        ),
+      ),
+    );
+
+    await completer.future.timeout(const Duration(seconds: 10));
+    await tester.pumpAndSettle();
+
+    expect(layoutInfo, isNotNull);
+    expect(layoutInfo!.isFixedLayout, isFalse);
+    expect(layoutInfo!.writingMode, WritingMode.vertical);
+  });
+
+  testWidgets('開啟英文範例 EPUB，onLayoutResolved 回報橫排', (tester) async {
+    final samplePath = await _stageAssetAsFile(
+        'test/fixtures/sample_horizontal.epub', 'sample_layout_horizontal.epub');
+    addTearDown(() async {
+      final file = File(samplePath);
+      if (await file.exists()) await file.delete();
+    });
+
+    final completer = Completer<void>();
+    EpubLayoutInfo? layoutInfo;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: EpubReaderView(
+          filePath: samplePath,
+          onPageRendered: () {},
+          onError: (message) {
+            if (!completer.isCompleted) completer.complete();
+          },
+          onLayoutResolved: (info) {
+            layoutInfo = info;
+            if (!completer.isCompleted) completer.complete();
+          },
+        ),
+      ),
+    );
+
+    await completer.future.timeout(const Duration(seconds: 10));
+    await tester.pumpAndSettle();
+
+    expect(layoutInfo, isNotNull);
+    expect(layoutInfo!.isFixedLayout, isFalse);
+    expect(layoutInfo!.writingMode, WritingMode.horizontal);
+  });
+
+  testWidgets('開啟定樣式範例 EPUB，onLayoutResolved 回報 isFixedLayout 為 true',
+      (tester) async {
+    final samplePath = await _stageAssetAsFile(
+        'test/fixtures/sample_fixed_layout.epub', 'sample_layout_fixed.epub');
+    addTearDown(() async {
+      final file = File(samplePath);
+      if (await file.exists()) await file.delete();
+    });
+
+    final completer = Completer<void>();
+    EpubLayoutInfo? layoutInfo;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: EpubReaderView(
+          filePath: samplePath,
+          onPageRendered: () {},
+          onError: (message) {
+            if (!completer.isCompleted) completer.complete();
+          },
+          onLayoutResolved: (info) {
+            layoutInfo = info;
+            if (!completer.isCompleted) completer.complete();
+          },
+        ),
+      ),
+    );
+
+    await completer.future.timeout(const Duration(seconds: 10));
+    await tester.pumpAndSettle();
+
+    expect(layoutInfo, isNotNull);
+    expect(layoutInfo!.isFixedLayout, isTrue);
+  });
+
+  testWidgets('開書後呼叫 setWritingMode 切換橫直排，畫面持續渲染成功',
+      (tester) async {
+    final samplePath =
+        await _stageAssetAsFile('test/fixtures/sample.epub', 'sample_switch.epub');
+    addTearDown(() async {
+      final file = File(samplePath);
+      if (await file.exists()) await file.delete();
+    });
+
+    final renderedCompleter = Completer<void>();
+    String? errorMessage;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: EpubReaderView(
+          filePath: samplePath,
+          writingMode: WritingMode.vertical,
+          onPageRendered: () {
+            if (!renderedCompleter.isCompleted) renderedCompleter.complete();
+          },
+          onError: (message) {
+            errorMessage = message;
+            if (!renderedCompleter.isCompleted) renderedCompleter.complete();
+          },
+        ),
+      ),
+    );
+    await renderedCompleter.future.timeout(const Duration(seconds: 10));
+    await tester.pumpAndSettle();
+    expect(errorMessage, isNull,
+        reason: '初次開書應成功渲染，但 onError 訊息為: $errorMessage');
+
+    // 重新 pump 同一個位置的 EpubReaderView 但改變 writingMode（filePath 不變，
+    // Flutter 會重用既有 State 並呼叫 didUpdateWidget，觸發原生 setWritingMode，
+    // 不會重新呼叫 openBook）。
+    await tester.pumpWidget(
+      MaterialApp(
+        home: EpubReaderView(
+          filePath: samplePath,
+          writingMode: WritingMode.horizontal,
+          onPageRendered: () {},
+          onError: (message) => errorMessage = message,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle(const Duration(seconds: 2));
+    expect(errorMessage, isNull, reason: '切換為橫排後不應觸發 onError');
+
+    // 再切換回直排，驗證來回切換皆穩定。
+    await tester.pumpWidget(
+      MaterialApp(
+        home: EpubReaderView(
+          filePath: samplePath,
+          writingMode: WritingMode.vertical,
+          onPageRendered: () {},
+          onError: (message) => errorMessage = message,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle(const Duration(seconds: 2));
+    expect(errorMessage, isNull, reason: '切換回直排後不應觸發 onError');
   });
 }
