@@ -100,4 +100,5 @@ class EpubReaderView extends StatefulWidget {
 - PDF——無 writing-mode 概念。
 - 版面其餘控制項（行距、段落間距、邊距、字型、換頁模式、文字對齊等）——`epic-3-fonts-layout`。
 - 九宮格導航熱區在直排模式下的左右鏡像映射邏輯——`epic-7-interaction`。
+- **橫直排選擇的持久化與「採用書籍排版／強制直排／強制橫排」三態覆寫 UI（FR-10）**——`epic-3-fonts-layout`。Issue 2 的切換按鈕僅限當次 session 即時切換，不寫入任何持久化儲存；`EpubReaderView` 的 `writingMode`/`onLayoutResolved` 介面已足夠讓 `epic-3` 之後讀取持久化設定並直接呼叫套用。
 - 若實機 QA 發現 Readium 內建樣式與 CNS 11643 有落差，具體覆寫方案的設計與實作——另立後續 issue，不阻塞本 epic 其餘 issue。
