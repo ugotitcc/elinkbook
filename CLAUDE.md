@@ -154,6 +154,8 @@ docs/
 └── epics.md                # 全域：Epic 狀態看板 —— 見下方說明
 ```
 
+新建立一個 Epic 時，須將該 Epic 的 `docs/epics/<epic-name>/reviews/` 加入根目錄 `.gitignore`（例如 `docs/epics/epic-2-vertical-core/reviews/`）——審查報告不進版控，僅作為審查當下交付給人類/原作者的暫時性產物。歸檔該 Epic 時，連同該行一併從 `.gitignore` 移除。
+
 ### `docs/epics.md` —— 全域狀態看板
 
 每個 Epic 佔一列：代號/名稱、狀態、目前存放路徑、關聯的 PRD 章節、備註。
