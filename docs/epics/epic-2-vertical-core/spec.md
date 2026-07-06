@@ -7,7 +7,7 @@
 - **`WritingMode`／`EpubLayoutInfo`**（Dart，新增，`app/lib/reader/writing_mode.dart`）—— 橫直排狀態列舉與開書後一次性回報的版面資訊。
 - **`EpubReaderView`**（Dart，異動既有 `app/lib/reader/epub_reader_view.dart`）—— 新增 `writingMode` 輸入參數與 `onLayoutResolved` 回呼，串接 ADR 0003 新增的 method channel 指令。
 - **`EpubReaderView.kt`**（Android，異動既有）—— 依 ADR 0003 新增 `setWritingMode` 處理與 `onLayoutResolved` 回呼；持有目前 navigator 實例參照供切換時呼叫 `submitPreferences()`。
-- **`ReaderScreen`**（Dart，異動既有 `app/lib/screens/reader_screen.dart`）—— 當格式為 EPUB 時，內部管理 `WritingMode?` 狀態並顯示橫排/直排切換按鈕（沿用 `prototype/index.html:1481-1482` 視覺）；`isFixedLayout` 為 `true` 時不顯示切換按鈕。**對外公開建構參數維持只有 `filePath` 不變**，橫直排切換純屬 `ReaderScreen` 內部狀態管理，不新增對外建構參數/callback（呼應 `CLAUDE.md` 既有的「`ReaderScreen` 唯一閱讀器 seam」約定）。
+- **`ReaderScreen`**（Dart，異動既有 `app/lib/screens/reader_screen.dart`）—— 當格式為 EPUB 時，內部管理 `WritingMode?`/`isFixedLayout` 狀態並在 AppBar 顯示橫排/直排切換按鈕（單一 `IconButton`，沿用 `LibraryScreen` 既有的圖示切換慣例，見 `design.md`「UI」一節的修正說明——`prototype/index.html:1481-1482` 實際上屬於 FR-10／`epic-3` 的持久化覆寫面板，非本 epic 適用）；`isFixedLayout` 為 `true` 時不顯示切換按鈕。**對外公開建構參數維持只有 `filePath` 不變**，橫直排切換純屬 `ReaderScreen` 內部狀態管理，不新增對外建構參數/callback（呼應 `CLAUDE.md` 既有的「`ReaderScreen` 唯一閱讀器 seam」約定）。
 
 `PdfReaderView`、`detectBookFormat()` 不受影響。
 

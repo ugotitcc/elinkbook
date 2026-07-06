@@ -61,7 +61,7 @@ Architecting 階段需以實際範例書驗證這套內建樣式表是否完全�
 
 ## UI
 
-沿用 `prototype/index.html` 既有的橫排/直排切換按鈕（`prototype/index.html:1481-1482` 的「⬇ 直排」／「➔ 橫排」按鈕視覺與互動模式），不重新設計介面，只需把它從純前端模擬換成真正呼叫上面新增的 `setWritingMode` method channel 指令，並依 `onWritingModeResolved` 回呼正確反映自動偵測後的初始狀態。
+**修正**：原先計畫沿用的 `prototype/index.html:1481-1482`（「⬇ 直排」／「➔ 橫排」按鈕）經查證後，其實是 FR-10 三態覆寫設定面板（📖 預設／⬇ 直排／➔ 橫排）的其中兩顆按鈕，屬於「範圍與排除項目」一節已排除給 `epic-3-fonts-layout` 的持久化覆寫 UI，並非本 epic 適用的簡易即時切換按鈕。Prototype 另有 `toggleWritingMode()` 這個 JS 函式，但沒有被任何可見元素呼叫（死程式碼），並非可沿用的既有 UI。因此本 epic 的閱讀畫面切換按鈕改為獨立設計：`ReaderScreen` AppBar 新增一顆單一 `IconButton`（沿用 `LibraryScreen` 既有的「圖示顯示切換後目標狀態＋tooltip 說明」慣例，例如 `library_view_mode_toggle` 的做法），不重新設計整體介面風格，只是不直接照搬那兩顆按鈕的既有視覺。按鈕真正呼叫 `setWritingMode` method channel 指令，並依 `onLayoutResolved` 回呼正確反映自動偵測後的初始狀態。
 
 ## 測試考量
 

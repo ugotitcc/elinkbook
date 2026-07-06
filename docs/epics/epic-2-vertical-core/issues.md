@@ -39,13 +39,19 @@
 **依賴：** Issue 1
 
 **描述：**
-在 `app/lib/screens/reader_screen.dart` 中，格式為 EPUB 時內部管理 `WritingMode? _writingMode`（初始 `null`）與 `bool _isFixedLayout`（初始 `false`）狀態：收到 `EpubReaderView` 的 `onLayoutResolved` 後更新這兩個狀態；`_isFixedLayout == false` 時顯示橫直排切換按鈕（沿用 `prototype/index.html:1481-1482` 的「⬇ 直排」／「➔ 橫排」視覺），按下時翻轉 `_writingMode` 並 `setState`，驅動 `EpubReaderView` 以新的 `writingMode` 值重建。`ReaderScreen(filePath: String)` 對外建構參數維持不變，不新增公開建構參數/callback。
+在 `app/lib/screens/reader_screen.dart` 中，格式為 EPUB 時內部管理 `WritingMode? _writingMode`（初始 `null`）與 `bool _isFixedLayout`（初始 `false`）狀態：收到 `EpubReaderView` 的 `onLayoutResolved` 後更新這兩個狀態；`_isFixedLayout == false` 時在 AppBar 顯示橫直排切換按鈕（單一 `IconButton`，見 `design.md`「UI」一節——`prototype/index.html:1481-1482` 實際上屬於 FR-10／`epic-3` 的持久化覆寫面板，本 issue 改為獨立設計的簡易切換鈕），按下時翻轉 `_writingMode` 並 `setState`，驅動 `EpubReaderView` 以新的 `writingMode` 值重建。`ReaderScreen(filePath: String)` 對外建構參數維持不變，不新增公開建構參數/callback。
 
 **單元測試要求：**
-- Widget test：`isFixedLayout == true` 時切換按鈕不顯示；`false` 時顯示
-- Widget test：收到 `onLayoutResolved(isFixedLayout: false, writingMode: vertical)` 後，按鈕初始顯示狀態正確反映為「目前是直排」
-- Widget test：按下切換按鈕後，傳給 `EpubReaderView` 的 `writingMode` 參數正確翻轉（橫→直、直→橫）
-- 沿用假的 `EpubReaderView`/channel 驅動即可，不需真實裝置
+
+**修正（依 Issue 1 的實測經驗）：** `ReaderScreen` 直接建構真正的 `EpubReaderView`（無法替換成假物件，見 `CLAUDE.md`「唯一閱讀器 seam」約定），其 `onLayoutResolved`／`onError` 等回呼只有在真實原生 `PlatformView` 建立後才會觸發，一般 `flutter test`（無裝置）無法驅動。但實測確認：純粹把 `ReaderScreen(filePath: 'test/fixtures/sample.epub')` `pumpWidget` 進 `flutter test`（無裝置）並不會卡住或報錯（`AndroidView` 在無原生引擎時單純不觸發回呼、不影響 widget 樹建構），因此「初始狀態」（`onLayoutResolved` 觸發前）仍可用一般 `flutter test` 驗證；只有「`onLayoutResolved` 觸發後的狀態轉換」需要 `integration_test` 真機驗證。
+
+- Widget test（`flutter test`，不需裝置）：EPUB 格式初始顯示切換按鈕，但因 `_writingMode` 仍為 `null`（尚未收到 `onLayoutResolved`）而處於停用狀態（`onPressed == null`）
+- Widget test（`flutter test`，不需裝置）：PDF 格式不顯示切換按鈕
+- `integration_test`（真機，使用 Issue 1 已建立的三本 fixture）：
+  - 開啟 `sample.epub`（自動判斷為直排）後，按鈕轉為啟用狀態，`tooltip` 顯示「切換為橫排」
+  - 開啟 `sample_horizontal.epub`（自動判斷為橫排）後，`tooltip` 顯示「切換為直排」
+  - 開啟 `sample_fixed_layout.epub` 後，按鈕最終不顯示（`isFixedLayout` 回報為 `true`）
+  - 開啟 `sample.epub` 後點擊切換按鈕，`tooltip` 反轉為「切換為直排」且不觸發 `onError`
 
 **驗收標準：**
 - 上述測試皆通過
