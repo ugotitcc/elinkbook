@@ -39,6 +39,16 @@ Future<void> _pumpUntil(
 bool _loadingIndicatorGone() =>
     find.byKey(const Key('reader_loading_indicator')).evaluate().isEmpty;
 
+/// 判斷橫直排切換按鈕是否已就緒（存在且可點擊）。`onLayoutResolved` 觸發前
+/// `_writingMode` 為 null，此時按鈕的 `onPressed` 亦為 null（見
+/// reader_screen.dart 的 `_buildAppBarActions`），因此以此作為「自動偵測已
+/// 完成」的觀察點。
+bool _writingModeToggleReady(WidgetTester tester) {
+  final finder = find.byKey(const Key('reader_writing_mode_toggle'));
+  if (finder.evaluate().isEmpty) return false;
+  return tester.widget<IconButton>(finder).onPressed != null;
+}
+
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
@@ -100,5 +110,117 @@ void main() {
     expect(find.byKey(const Key('reader_error_text')), findsNothing,
         reason: '應觸發 onPageRendered（載入指示器消失且無錯誤訊息），'
             '但畫面顯示了錯誤');
+  });
+
+  testWidgets('開啟直排 CJK 範例 EPUB，切換按鈕啟用且提示切換為橫排',
+      (tester) async {
+    final samplePath = await _stageAssetAsFile(
+        'test/fixtures/sample.epub', 'sample_toggle_vertical.epub');
+    addTearDown(() async {
+      final file = File(samplePath);
+      if (await file.exists()) await file.delete();
+    });
+
+    await tester.pumpWidget(
+      MaterialApp(home: ReaderScreen(filePath: samplePath)),
+    );
+
+    await _pumpUntil(
+      tester,
+      () => _writingModeToggleReady(tester),
+      timeout: const Duration(seconds: 10),
+    );
+
+    final button = tester.widget<IconButton>(
+      find.byKey(const Key('reader_writing_mode_toggle')),
+    );
+    expect(button.tooltip, '切換為橫排');
+    expect(find.byKey(const Key('reader_error_text')), findsNothing);
+  });
+
+  testWidgets('開啟英文範例 EPUB，切換按鈕啟用且提示切換為直排', (tester) async {
+    final samplePath = await _stageAssetAsFile(
+        'test/fixtures/sample_horizontal.epub', 'sample_toggle_horizontal.epub');
+    addTearDown(() async {
+      final file = File(samplePath);
+      if (await file.exists()) await file.delete();
+    });
+
+    await tester.pumpWidget(
+      MaterialApp(home: ReaderScreen(filePath: samplePath)),
+    );
+
+    await _pumpUntil(
+      tester,
+      () => _writingModeToggleReady(tester),
+      timeout: const Duration(seconds: 10),
+    );
+
+    final button = tester.widget<IconButton>(
+      find.byKey(const Key('reader_writing_mode_toggle')),
+    );
+    expect(button.tooltip, '切換為直排');
+    expect(find.byKey(const Key('reader_error_text')), findsNothing);
+  });
+
+  testWidgets('開啟定樣式範例 EPUB，切換按鈕最終不顯示', (tester) async {
+    final samplePath = await _stageAssetAsFile(
+        'test/fixtures/sample_fixed_layout.epub', 'sample_toggle_fixed.epub');
+    addTearDown(() async {
+      final file = File(samplePath);
+      if (await file.exists()) await file.delete();
+    });
+
+    await tester.pumpWidget(
+      MaterialApp(home: ReaderScreen(filePath: samplePath)),
+    );
+
+    await _pumpUntil(
+      tester,
+      () =>
+          _loadingIndicatorGone() &&
+          find.byKey(const Key('reader_writing_mode_toggle')).evaluate().isEmpty,
+      timeout: const Duration(seconds: 10),
+    );
+
+    expect(find.byKey(const Key('reader_error_text')), findsNothing);
+  });
+
+  testWidgets('點擊切換按鈕後，提示文字反轉且不觸發錯誤', (tester) async {
+    final samplePath = await _stageAssetAsFile(
+        'test/fixtures/sample.epub', 'sample_toggle_tap.epub');
+    addTearDown(() async {
+      final file = File(samplePath);
+      if (await file.exists()) await file.delete();
+    });
+
+    await tester.pumpWidget(
+      MaterialApp(home: ReaderScreen(filePath: samplePath)),
+    );
+
+    await _pumpUntil(
+      tester,
+      () => _writingModeToggleReady(tester),
+      timeout: const Duration(seconds: 10),
+    );
+
+    expect(
+      tester
+          .widget<IconButton>(find.byKey(const Key('reader_writing_mode_toggle')))
+          .tooltip,
+      '切換為橫排',
+    );
+
+    await tester.tap(find.byKey(const Key('reader_writing_mode_toggle')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(
+      tester
+          .widget<IconButton>(find.byKey(const Key('reader_writing_mode_toggle')))
+          .tooltip,
+      '切換為直排',
+    );
+    expect(find.byKey(const Key('reader_error_text')), findsNothing);
   });
 }
