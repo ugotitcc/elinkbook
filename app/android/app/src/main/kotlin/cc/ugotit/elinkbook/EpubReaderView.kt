@@ -20,6 +20,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import org.readium.r2.navigator.epub.EpubNavigatorFactory
 import org.readium.r2.navigator.epub.EpubNavigatorFragment
+import org.readium.r2.navigator.epub.EpubPreferences
 import org.readium.r2.shared.publication.Layout
 import org.readium.r2.shared.publication.Locator
 import org.readium.r2.shared.publication.Publication
@@ -101,8 +102,29 @@ class EpubReaderView(
                 openBook(call.argument<String>("path"))
                 result.success(null)
             }
+            "setWritingMode" -> {
+                setWritingMode(call.argument<String>("mode"))
+                result.success(null)
+            }
             else -> result.notImplemented()
         }
+    }
+
+    /**
+     * 開書後即時切換橫直排，不重新 openBook（見
+     * docs/adr/0003-epub-reader-writing-mode-contract.md）。書本尚未成功
+     * 開啟（navigatorFragment 仍為 null）時靜默忽略——Dart 端只會在
+     * onPageRendered 觸發之後才送出這個指令，理論上不會發生。
+     *
+     * 【未來注意】這裡直接建構全新的 EpubPreferences，只有 verticalText 有值、
+     * 其餘欄位皆為預設 null。目前專案唯一會呼叫 submitPreferences() 的地方就是
+     * 這裡，所以不會有問題；但一旦 epic-3-fonts-layout 引入字型大小/行距/邊距
+     * 等其他偏好設定並也需要呼叫 submitPreferences()，這裡就必須改成與「目前
+     * 已生效的偏好設定」合併（EpubPreferences 有提供 plus() 運算子可用於合併），
+     * 否則每次切換橫直排都會把其他偏好重設回預設值。
+     */
+    private fun setWritingMode(mode: String?) {
+        navigatorFragment?.submitPreferences(EpubPreferences(verticalText = mode == "vertical"))
     }
 
     private fun openBook(path: String?) {

@@ -305,4 +305,67 @@ void main() {
     expect(layoutInfo, isNotNull);
     expect(layoutInfo!.isFixedLayout, isTrue);
   });
+
+  testWidgets('開書後呼叫 setWritingMode 切換橫直排，畫面持續渲染成功',
+      (tester) async {
+    final samplePath =
+        await _stageAssetAsFile('test/fixtures/sample.epub', 'sample_switch.epub');
+    addTearDown(() async {
+      final file = File(samplePath);
+      if (await file.exists()) await file.delete();
+    });
+
+    final renderedCompleter = Completer<void>();
+    String? errorMessage;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: EpubReaderView(
+          filePath: samplePath,
+          writingMode: WritingMode.vertical,
+          onPageRendered: () {
+            if (!renderedCompleter.isCompleted) renderedCompleter.complete();
+          },
+          onError: (message) {
+            errorMessage = message;
+            if (!renderedCompleter.isCompleted) renderedCompleter.complete();
+          },
+        ),
+      ),
+    );
+    await renderedCompleter.future.timeout(const Duration(seconds: 10));
+    await tester.pumpAndSettle();
+    expect(errorMessage, isNull,
+        reason: '初次開書應成功渲染，但 onError 訊息為: $errorMessage');
+
+    // 重新 pump 同一個位置的 EpubReaderView 但改變 writingMode（filePath 不變，
+    // Flutter 會重用既有 State 並呼叫 didUpdateWidget，觸發原生 setWritingMode，
+    // 不會重新呼叫 openBook）。
+    await tester.pumpWidget(
+      MaterialApp(
+        home: EpubReaderView(
+          filePath: samplePath,
+          writingMode: WritingMode.horizontal,
+          onPageRendered: () {},
+          onError: (message) => errorMessage = message,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle(const Duration(seconds: 2));
+    expect(errorMessage, isNull, reason: '切換為橫排後不應觸發 onError');
+
+    // 再切換回直排，驗證來回切換皆穩定。
+    await tester.pumpWidget(
+      MaterialApp(
+        home: EpubReaderView(
+          filePath: samplePath,
+          writingMode: WritingMode.vertical,
+          onPageRendered: () {},
+          onError: (message) => errorMessage = message,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle(const Duration(seconds: 2));
+    expect(errorMessage, isNull, reason: '切換回直排後不應觸發 onError');
+  });
 }
