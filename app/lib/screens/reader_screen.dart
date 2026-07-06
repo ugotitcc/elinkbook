@@ -3,13 +3,17 @@ import 'package:flutter/material.dart';
 import '../reader/book_format.dart';
 import '../reader/epub_reader_view.dart';
 import '../reader/pdf_reader_view.dart';
+import '../reader/writing_mode.dart';
 
 /// 唯一的閱讀器顯示接縫（seam）：給定書籍檔案路徑，依偵測到的格式分派到
 /// 對應的原生渲染視圖（EpubReaderView／PdfReaderView），畫面上會渲染出該
 /// 書第 1 頁。公開建構參數僅有 [filePath]（見 spec.md 的 seam 定義）——載入
 /// 中／錯誤狀態皆為內部實作細節，透過固定的 Key（`reader_loading_indicator`
 /// ／`reader_error_text`）暴露給 integration_test 觀察，而非另外新增公開
-/// callback 參數，避免違反 spec.md 定義的唯一對外契約。
+/// callback 參數，避免違反 spec.md 定義的唯一對外契約。EPUB 格式下的橫直排
+/// 切換按鈕（`reader_writing_mode_toggle`）同理：純屬內部狀態管理，僅限當次
+/// 閱讀 session 即時切換，不持久化（見 docs/epics/epic-2-vertical-core/
+/// design.md「範圍與排除項目」——持久化與三態覆寫 UI 屬 FR-10／epic-3）。
 ///
 /// AppBar 沿用與 LibraryScreen/SettingsScreen 一致的寫法（純 `AppBar(title:
 /// ...)`，不自訂 leading）：Flutter 會依 `Navigator.canPop()` 自動決定是否
@@ -28,6 +32,8 @@ enum _RenderState { loading, rendered, error }
 class _ReaderScreenState extends State<ReaderScreen> {
   _RenderState _state = _RenderState.loading;
   String? _errorMessage;
+  WritingMode? _writingMode;
+  bool _isFixedLayout = false;
 
   void _handlePageRendered() {
     if (!mounted) return;
@@ -42,15 +48,54 @@ class _ReaderScreenState extends State<ReaderScreen> {
     });
   }
 
+  /// 【已知、可接受的行為】把自動偵測結果寫回 [_writingMode] 後，會驅動
+  /// EpubReaderView 以非 null 值重建；EpubReaderView 的 didUpdateWidget 偵測
+  /// 到「null → 非 null」的變化時，會多送一次 setWritingMode 給原生端，等於
+  /// 把 Readium 剛剛自動判斷好的值重新套用一次。這是多餘但無害的呼叫（目前
+  /// 沒有其他偏好設定會被覆蓋，見 EpubReaderView.kt 的 setWritingMode 註解），
+  /// 不特地加狀態去抑制它，避免為了避免一次無害的重複呼叫而增加複雜度。
+  void _handleLayoutResolved(EpubLayoutInfo info) {
+    if (!mounted) return;
+    setState(() {
+      _isFixedLayout = info.isFixedLayout;
+      _writingMode = info.writingMode;
+    });
+  }
+
+  void _toggleWritingMode() {
+    setState(() {
+      _writingMode = _writingMode == WritingMode.vertical
+          ? WritingMode.horizontal
+          : WritingMode.vertical;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final format = detectBookFormat(widget.filePath);
     return Scaffold(
       appBar: AppBar(
         title: const Text('閱讀器'),
+        actions: _buildAppBarActions(format),
       ),
       body: _buildBody(format),
     );
+  }
+
+  List<Widget>? _buildAppBarActions(BookFormat format) {
+    if (format != BookFormat.epub || _isFixedLayout) return null;
+    return [
+      IconButton(
+        key: const Key('reader_writing_mode_toggle'),
+        icon: Icon(
+          _writingMode == WritingMode.vertical
+              ? Icons.text_rotation_none
+              : Icons.text_rotate_vertical,
+        ),
+        tooltip: _writingMode == WritingMode.vertical ? '切換為橫排' : '切換為直排',
+        onPressed: _writingMode == null ? null : _toggleWritingMode,
+      ),
+    ];
   }
 
   Widget _buildBody(BookFormat format) {
@@ -86,8 +131,10 @@ class _ReaderScreenState extends State<ReaderScreen> {
       case BookFormat.epub:
         return EpubReaderView(
           filePath: widget.filePath,
+          writingMode: _writingMode,
           onPageRendered: _handlePageRendered,
           onError: _handleError,
+          onLayoutResolved: _handleLayoutResolved,
         );
       case BookFormat.pdf:
         return PdfReaderView(
