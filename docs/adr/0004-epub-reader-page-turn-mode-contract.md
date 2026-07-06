@@ -19,6 +19,8 @@ Issue 3 的實機驗證與根因調查（見 `docs/epics/epic-2-vertical-core/qa
 
 【未來注意，供 `epic-3-fonts-layout` 設計持久化時參考】`ReaderScreen` 的 `_pageTurnMode` 目前永遠從 `PageTurnMode.paginated` 開始，與原生端 `currentPreferences` 的預設值一致，因此 `didUpdateWidget` 的「值改變才呼叫」邏輯不會漏發送。但若未來持久化功能改成「App 啟動時直接把 `_pageTurnMode` 初始化為使用者上次選擇的值」，且該值恰好也是 `PageTurnMode.paginated`（例如使用者上次就是選分頁），仍然不會有問題；唯有當持久化值與目前寫死的初始值"剛好在某次重建間不變化"時才可能發生「初始值正確但從未真正送達原生端」的情況——這種情況目前的 `didUpdateWidget`-only 設計無法涵蓋，需要屆時額外設計「開書當下就帶入已持久化偏好」的機制（例如擴充 `openBook` 契約或在 `attachNavigator` 時代入 `initialPreferences`）。本 issue 範圍內沒有持久化功能，不需要現在解決，僅記錄於此避免日後被遺忘。
 
+【與上述同一根因的另一種觸發情境，Issue 4 review 補記】上述「初始值剛好沒變」是持久化功能才會踩到的觸發路徑；但即使沒有持久化，`_onPlatformViewCreated`（`epub_reader_view.dart`）本身也從未在 `openBook` 之後主動補送 `writingMode`/`pageTurnMode`——這其實是 Issue 1／ADR 0003 建立 `setWritingMode` 時就存在的既有行為，`pageTurnMode` 只是依設計對稱沿用同一套模式，並非 Issue 4 新引入。因此若原生 PlatformView 曾被銷毀重建（例如系統記憶體壓力或 Android 版面重組導致 native view 重新實例化）而 Dart 端 State 本身沒有被銷毀重建（`widget.pageTurnMode`/`widget.writingMode` 值未變），一樣會落入同一種「新建立的原生 view 收不到偏好設定」的情況，本質上與上一段的持久化情境是同一個根因（`didUpdateWidget`-only 同步、缺少「開書當下即代入目前偏好」機制），只是觸發路徑不需要等到持久化功能才會出現。目前專案的 `ReaderScreen` 使用模式不會觸發 PlatformView 獨立重建（見 Issue 4 code review 報告的風險評估：「此潛在風險在 Issue 4 中不會直接暴露」），故仍與上一段合併留待 epic-3 一併設計 `attachNavigator`/`initialPreferences` 機制時解決，不在本 issue 範圍內修正。
+
 ## 後果
 
 - `EpubReaderView.kt` 的 `setWritingMode` 實作方式改變（改為合併而非覆蓋），但對外行為不變（單獨呼叫 `setWritingMode` 的效果與修正前相同）。
