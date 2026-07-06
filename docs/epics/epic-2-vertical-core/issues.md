@@ -86,11 +86,16 @@
 
 **依賴：** Issue 3（本 issue 的根因分析與重現記錄）
 
-**背景：** Issue 3 的實機驗證與根因調查（見 `qa-issue-3-writing-mode-verification.md`）確認：直排（vertical-RL）閱讀模式下，`readium-navigator:3.3.0` 內建的 `cjk-vertical` ReadiumCSS 把每一欄（頁）的高度設為 CSS `100vh`，未確保其為行高（line-height）的整數倍，導致某些頁面的最後一行文字被物理裁切於欄位邊界（畫面上緣或下緣出現半個字）。此為 Readium/CSS 多欄分頁機制在直排書寫模式下的已知上游限制（`readium/swift-toolkit#804`、`readium/readium-css#141`——後者顯示上游團隊已將直排分頁的完整支援 park），並非本專案 `EpubReaderView.kt`/`EpubReaderView.dart` 的程式碼缺陷，因此無法透過本專案自行維護的 user stylesheet 覆寫徹底修復（CSS Fragmentation 規格層級限制，非樣式覆寫可解決）。
+**背景：** Issue 3 的實機驗證與根因調查（見 `qa-issue-3-writing-mode-verification.md`）研判：直排（vertical-RL）閱讀模式下，`readium-navigator:3.3.0` 內建的 `cjk-vertical` ReadiumCSS 把每一欄（頁）的高度設為 CSS `100vh`，未確保其為行高（line-height）的整數倍，可能導致某些頁面的最後一行文字被物理裁切於欄位邊界（畫面上緣或下緣出現半個字）。此為 Readium/CSS 多欄分頁機制在直排書寫模式下的已知上游限制（`readium/swift-toolkit#804`、`readium/readium-css#141`——後者顯示上游團隊已將直排分頁的完整支援 park），並非本專案 `EpubReaderView.kt`/`EpubReaderView.dart` 的程式碼缺陷，因此無法透過本專案自行維護的 user stylesheet 覆寫徹底修復（CSS Fragmentation 規格層級限制，非樣式覆寫可解決）。此段落的確切信心等級（尚未經實機交叉確認）見下一段。
 
 **信心等級說明（誠實揭露）：** 上述根因判定主要依據為靜態分析（親自重新解壓 `readium-navigator:3.3.0` AAR 讀取 `ReadiumCSS-after.css` 內容）與 upstream issue 交叉比對，並有 Task 5 緩解方案實驗佐證（`EpubPreferences(scroll = true)` 後，同一拖曳手勢可從書首一路推進到書尾，證實渲染/互動行為確實從分頁改為捲動，且捲動模式下未觀察到裁切）。但由於 Task 3 的實機重現嘗試因翻頁手勢未能成功觸發 Readium 底層翻頁，始終沒有在分頁模式下實際觀察到真正的欄位邊界，因此本結論屬於「靜態分析支持、緩解實驗佐證，但未經『分頁模式下裁切現象本身』的實機交叉確認」信心等級，細節見 `qa-issue-3-writing-mode-verification.md`「四、根因分析」結尾段落。本 issue 的測試要求（見下）在落地暫行方案時，會一併補上這項尚缺的交叉驗證。
 
-**描述：** 依 Issue 3 Task 5 已驗證可行的暫行方案（`EpubPreferences(scroll = true)`），評估並設計「直排模式預設或提供選項改用捲動渲染，避免分頁欄位裁切」的具體實作方式，與 `epic-3-fonts-layout` 既有規劃的「換頁模式（捲動 vs 無）」控制項整合（不要為此另外新增一套獨立的模式切換 UI）。需要決定：(a) 直排模式是否應該預設使用捲動模式（而非現況的分頁模式）；(b) 若使用者透過 `epic-3` 的換頁模式控制項手動選擇「分頁」，是否仍要顯示裁切風險提示；(c) 是否需要監控未來 `readium-kotlin-toolkit`/`readium-css` 版本更新是否修復此上游限制，屆時可移除本暫行方案。
+**描述：** 評估並決定下列其中一種（或組合）解決方向，與 `epic-3-fonts-layout` 既有規劃的「換頁模式（捲動 vs 無）」控制項整合（不要為此另外新增一套獨立的模式切換 UI）：
+
+- **方案一（已驗證可行）：** 依 Issue 3 Task 5 已驗證可行的暫行方案（`EpubPreferences(scroll = true)`），直排模式預設或提供選項改用捲動渲染，避免分頁欄位裁切。
+- **方案二（尚未評估，`qa-issue-3-writing-mode-verification.md`「四、根因分析」已記錄此選項）：** 移植 `readium/swift-toolkit#804` 回報者提出的修法——在字型載入完成後，用 JavaScript 把欄位容器的 `height` 對齊到行高整數倍（`Math.floor(clientHeight/lineHeight)*lineHeight`），讓分頁模式本身不再產生裁切，不需改用捲動。此方案需要額外評估是否能透過 Readium 提供的擴充點（例如 user script／CSS 注入）在不修改 Readium 原始碼的前提下實作。
+
+需要決定：(a) 採用方案一、方案二、或兩者並存供使用者選擇；(b) 若最終仍保留分頁模式作為選項，是否需要顯示裁切風險提示；(c) 是否需要監控未來 `readium-kotlin-toolkit`/`readium-css` 版本更新是否修復此上游限制，屆時可移除本暫行方案。
 
 **單元測試要求：**
 - `integration_test`（真機）：直排模式下使用捲動渲染時，翻閱 Issue 3 的 `sample_long_vertical.epub` 全書，確認無 `onError` 觸發、`onPageRendered` 正常觸發。
