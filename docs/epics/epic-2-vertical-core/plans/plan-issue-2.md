@@ -36,7 +36,7 @@ Task 2 的驗證步驟須在真實 Android 模擬器/裝置上執行——執行
 
 **背景（測試策略決策）：** `ReaderScreen` 直接建構真正的 `EpubReaderView`（無法替換成假物件——見 `CLAUDE.md`「唯一閱讀器 seam」約定，`ReaderScreen` 對外只有 `filePath`，沒有依賴注入管道）。實測確認：純粹 `pumpWidget` 一個指向 `test/fixtures/sample.epub` 的 `ReaderScreen` 在 `flutter test`（無裝置）下不會卡住或報錯——`AndroidView` 在沒有真實原生引擎時單純不觸發 `onPlatformViewCreated`，widget 樹仍正常建構。因此「初始狀態」（`onLayoutResolved` 觸發前）可以用一般 `flutter test` 驗證；「`onLayoutResolved` 觸發後的狀態轉換」則必須交給 Task 2 的 `integration_test`。
 
-- [ ] **Step 1：寫下可離線驗證的失敗測試**
+- [x] **Step 1：寫下可離線驗證的失敗測試**
 
 開啟 `app/test/screens/reader_screen_test.dart`，把整份內容改為：
 
@@ -92,7 +92,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：執行測試確認新案例失敗**
+- [x] **Step 2：執行測試確認新案例失敗**
 
 Run（於 `app/` 目錄下）：
 ```bash
@@ -100,7 +100,7 @@ flutter test test/screens/reader_screen_test.dart
 ```
 Expected：第一項（不支援格式）通過；新增的兩項因 `Key('reader_writing_mode_toggle')` 尚不存在而失敗（`findsOneWidget`/`findsNothing` 斷言失敗或編譯錯誤，視 `IconButton` import 是否已存在而定）。
 
-- [ ] **Step 3：實作 `ReaderScreen`**
+- [x] **Step 3：實作 `ReaderScreen`**
 
 把 `app/lib/screens/reader_screen.dart` 整份內容改為：
 
@@ -256,7 +256,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
 }
 ```
 
-- [ ] **Step 4：執行測試確認通過**
+- [x] **Step 4：執行測試確認通過**
 
 Run：
 ```bash
@@ -264,7 +264,7 @@ flutter test test/screens/reader_screen_test.dart
 ```
 Expected：`All tests passed!`（3 項測試）。
 
-- [ ] **Step 5：全量 `flutter test` 與 `flutter analyze` 確認無回歸**
+- [x] **Step 5：全量 `flutter test` 與 `flutter analyze` 確認無回歸**
 
 Run（於 `app/` 目錄下）：
 ```bash
@@ -273,7 +273,7 @@ flutter analyze
 ```
 Expected：`flutter test` 全數通過（含既有 84 項 + 本次新增 2 項）；`flutter analyze` 顯示 `No issues found!`。
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/lib/screens/reader_screen.dart app/test/screens/reader_screen_test.dart
@@ -293,7 +293,7 @@ git commit -m "Add writing mode toggle button to ReaderScreen"
 
 本 task 不修改任何production 程式碼——`ReaderScreen` 的實作已由 Task 1 完成，本 task 只新增在真實裝置上驗證「`onLayoutResolved` 觸發後」行為的 `integration_test`。
 
-- [ ] **Step 1：於 `integration_test/reader_screen_test.dart` 新增測試輔助函式與 4 項測試**
+- [x] **Step 1：於 `integration_test/reader_screen_test.dart` 新增測試輔助函式與 4 項測試**
 
 開啟 `app/integration_test/reader_screen_test.dart`，把開頭的 import：
 
@@ -435,7 +435,7 @@ bool _writingModeToggleReady(WidgetTester tester) {
   });
 ```
 
-- [ ] **Step 2：於真實裝置/模擬器上執行測試確認全部通過**
+- [x] **Step 2：於真實裝置/模擬器上執行測試確認全部通過**
 
 Run（於 `app/` 目錄下；`<device-id>` 請替換為 `flutter devices` 列出的實際 Android 裝置/模擬器 ID）：
 ```bash
@@ -443,7 +443,7 @@ flutter test integration_test/reader_screen_test.dart -d <device-id>
 ```
 Expected：`All tests passed!`（既有 2 項 + 新增 4 項，共 6 項測試皆通過）。
 
-- [ ] **Step 3：重新執行 Issue 1 既有的 EPUB 相關 `integration_test` 確認無回歸**
+- [x] **Step 3：重新執行 Issue 1 既有的 EPUB 相關 `integration_test` 確認無回歸**
 
 Run：
 ```bash
@@ -452,7 +452,7 @@ flutter test integration_test/library_screen_test.dart -d <device-id>
 ```
 Expected：全部 `All tests passed!`。
 
-- [ ] **Step 4：靜態分析、建置與純 Dart 測試確認**
+- [x] **Step 4：靜態分析、建置與純 Dart 測試確認**
 
 Run（於 `app/` 目錄下）：
 ```bash
@@ -462,7 +462,7 @@ flutter test
 ```
 Expected：`flutter analyze` 顯示 `No issues found!`；`flutter build apk --debug` 成功建置；`flutter test` 全數通過，無回歸。
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 git add app/integration_test/reader_screen_test.dart
