@@ -74,6 +74,7 @@ flutter:
     - test/fixtures/sample.epub
     - test/fixtures/sample_horizontal.epub
     - test/fixtures/sample_fixed_layout.epub
+    - test/fixtures/sample_long_vertical.epub
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
