@@ -34,6 +34,28 @@
 
 因此，這兩類項目**不是「符合」也不是「不符合」，而是本次 fixture 內容設計無法產生可觀察的測試情境**。若要真正驗證這兩條規則，需要一段長度足以在單一欄位內自然換行（而非每段獨立成欄）的連續文字，讓某個換行點恰好落在收尾/起頭類標點附近，藉此觀察 Readium 的 `line-break:strict` 是否確實把該標點推到下一欄，而不是留在錯誤的行首/行尾位置。本次驗證未新增此類 fixture 內容（屬於本次執行的範圍限制，記錄於此供後續複查/追加測試參考）。
 
+## 三、文字裁切問題重現
+
+**回報症狀：** 實機測試中，EPUB3 在手機/平板呈直立（portrait）狀態、採用直排（vertical-RL）閱讀模式時，畫面上下邊緣會出現部份文字被裁切的現象。
+
+**方法補充：** 沿用第一、二章相同的暫時性 `integration_test` scratch 測試檔手法。實測發現兩個與 plan-issue-3.md 原始步驟不同的技術細節，記錄於此供後續任務參考：
+
+1. **`adb shell input swipe` 在 `flutter test integration_test` 執行期間不會真正送達原生 PlatformView**：`LiveTestWidgetsFlutterBinding`（`flutter test` 使用的 binding）會攔截外部注入的觸控事件，僅印出診斷用的「Some possible finders for the widgets at Offset(...)」訊息，不會轉發給底層 WebView 處理翻頁手勢。必須改用 `WidgetTester.dragFrom()`（測試框架自己送出、會正確經由 `GestureBinding` 轉發到原生 `AndroidView` 的手勢）才能讓翻頁動作真正生效。
+2. **啟動 `flutter test` 的 host shell 環境變數不會傳遞進裝置端執行的 App 行程**：`Platform.environment` 在裝置端讀到的是裝置自己的環境，與啟動指令的主機 shell 環境無關；要切換測試用的 fixture，須直接修改 scratch 測試檔內寫死的路徑重新執行，無法透過 `FOO=bar flutter test ...` 的環境變數前綴傳遞參數給裝置端程式碼。
+
+**重現條件矩陣：**
+
+| # | 裝置 | 螢幕方向 | 書籍 | 是否出現裁切 | 裁切位置（畫面上緣／下緣／兩者皆有） | 截圖檔名 |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | `9491G`（實體） | 直立 (portrait) | sample_long_vertical.epub | 否 | 無 | `qa-issue-3-clip-row1-portrait-long.png` |
+| 2 | `9491G`（實體） | 橫向 (landscape) | sample_long_vertical.epub | 否 | 無 | `qa-issue-3-clip-row2-landscape-long.png` |
+| 3 | `9491G`（實體） | 直立 (portrait) | sample.epub（短內容） | 否 | 無 | `qa-issue-3-clip-row3-portrait-short.png` |
+| 4 | 無可用裝置，未執行 | — | — | — | 此工作環境（sandbox）無法啟動 Android 模擬器（`Pixel_9`/`Medium_Tablet` 皆已嘗試，`qemu-system-x86_64.exe` 啟動後數秒內固定以 exit code 1 結束，研判為沙盒對巢狀虛擬化的限制，見 `.superpowers/sdd/progress.md` 環境阻塞紀錄），且僅有一支實體裝置可用，無法測試第二支裝置/平板 | — |
+
+**每一列的判別重點：** 裁切若只發生在「特定頁面」而非每一頁都發生，代表症狀符合「欄位高度非行高整數倍，導致該欄最後一行卡在邊界」的假說（見 Task 4）；若每一頁都固定裁切同樣位置，則較可能是容器整體尺寸量測錯誤。**本次三列實測中，第 1～60 段內容在直立與橫向兩種方向下，皆完整顯示於同一畫面內（`sample_long_vertical.epub` 的 60 段短句在此裝置的字級/欄高設定下，未觀察到需要翻頁的欄位邊界——嘗試以 `dragFrom` 拖曳翻頁，畫面內容未發生變化，研判此裝置在目前預設字級下，欄位寬度足以一次顯示全書內容，沒有產生第二欄），因此本次測試沒有機會觀察到「欄位邊界」本身，也就沒有觀察到使用者回報的裁切現象。**
+
+**結論（重現部分）：本次在僅有的一支實體裝置、預設字級設定下，三種可測試的條件組合皆未重現使用者回報的裁切問題。** 這不代表裁切問題不存在——已知本次測試的侷限：(a) 未能讓內容產生真正的「多欄分頁」情境（fixture 段落全部很短、裝置預設字級偏小，60 段在此裝置上不需要分成多欄即可顯示完畢，見上表說明）；(b) 只有一種裝置/字級組合可供測試，使用者原始回報的裝置型號、字級設定、書籍內容皆未知，無法排除是這些因素的特定組合才會觸發裁切。Task 4 的根因分析（見下一節）改以靜態分析 ReadiumCSS 原始碼與比對 upstream 已知 issue 為主要依據，彌補本節「未能實機重現」的落差。
+
 ## 二、結論
 
 **部分符合 CNS 11643，另有兩類因 fixture 內容限制未能實際驗證：**
