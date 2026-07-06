@@ -90,6 +90,20 @@ class EpubReaderView(
     private var pageReported = false
     private var isDisposed = false
 
+    /**
+     * 目前已生效的完整偏好設定（見 docs/adr/0004-epub-reader-page-turn-mode-contract.md）。
+     * `setWritingMode`／`setPageTurnMode` 都是「合併進這個物件、再整組送出」，而不是
+     * 各自建構獨立的 EpubPreferences 覆蓋——否則兩者會互相把對方剛設定好的欄位
+     * 重設回預設值。這是 Issue 1 建立 setWritingMode 時就已預期、留待日後補上的合併
+     * 機制，本 issue 引入第二種偏好維度時一併補齊。
+     *
+     * 【未來注意】目前只有使用者手動呼叫 setWritingMode/setPageTurnMode 時才會更新
+     * 這個欄位並送出；openBook 完成當下不會主動代入任何已持久化的偏好設定。若未來
+     * epic-3-fonts-layout 引入持久化，需要額外設計「開書當下就把已持久化偏好代入
+     * currentPreferences 並送出」的機制，屆時再處理，本 issue 範圍內不需要。
+     */
+    private var currentPreferences = EpubPreferences()
+
     init {
         channel.setMethodCallHandler(this)
     }
@@ -106,6 +120,10 @@ class EpubReaderView(
                 setWritingMode(call.argument<String>("mode"))
                 result.success(null)
             }
+            "setPageTurnMode" -> {
+                setPageTurnMode(call.argument<String>("mode"))
+                result.success(null)
+            }
             else -> result.notImplemented()
         }
     }
@@ -116,15 +134,23 @@ class EpubReaderView(
      * 開啟（navigatorFragment 仍為 null）時靜默忽略——Dart 端只會在
      * onPageRendered 觸發之後才送出這個指令，理論上不會發生。
      *
-     * 【未來注意】這裡直接建構全新的 EpubPreferences，只有 verticalText 有值、
-     * 其餘欄位皆為預設 null。目前專案唯一會呼叫 submitPreferences() 的地方就是
-     * 這裡，所以不會有問題；但一旦 epic-3-fonts-layout 引入字型大小/行距/邊距
-     * 等其他偏好設定並也需要呼叫 submitPreferences()，這裡就必須改成與「目前
-     * 已生效的偏好設定」合併（EpubPreferences 有提供 plus() 運算子可用於合併），
-     * 否則每次切換橫直排都會把其他偏好重設回預設值。
+     * 與 currentPreferences 合併後才送出（見 docs/adr/0004-epub-reader-page-turn-mode-contract.md），
+     * 確保不會覆蓋 setPageTurnMode 已設定的 scroll 偏好。
      */
     private fun setWritingMode(mode: String?) {
-        navigatorFragment?.submitPreferences(EpubPreferences(verticalText = mode == "vertical"))
+        currentPreferences = currentPreferences.plus(EpubPreferences(verticalText = mode == "vertical"))
+        navigatorFragment?.submitPreferences(currentPreferences)
+    }
+
+    /**
+     * 開書後即時切換分頁／捲動換頁模式，不重新 openBook（見
+     * docs/adr/0004-epub-reader-page-turn-mode-contract.md）。書本尚未成功
+     * 開啟時靜默忽略，理由同 setWritingMode。與 currentPreferences 合併後
+     * 才送出，確保不會覆蓋 setWritingMode 已設定的 verticalText 偏好。
+     */
+    private fun setPageTurnMode(mode: String?) {
+        currentPreferences = currentPreferences.plus(EpubPreferences(scroll = mode == "scroll"))
+        navigatorFragment?.submitPreferences(currentPreferences)
     }
 
     private fun openBook(path: String?) {
