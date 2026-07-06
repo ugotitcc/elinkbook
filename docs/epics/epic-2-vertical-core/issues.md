@@ -6,7 +6,7 @@
 
 ## Issue 1：`EpubReaderView` 契約擴充——`setWritingMode` + `onLayoutResolved`
 
-**Status:** 待認領
+**Status:** ✅ 已完成並合併回 `main`（PR #18，merge commit `c150442`）。4 個 task（`WritingMode`/`EpubLayoutInfo` 值型別、測試 fixtures、`onLayoutResolved`、`setWritingMode`）皆由 subagent 依 `plans/plan-issue-1.md` 實作、個別審查通過，最終整體審查結論 Ready to merge: Yes。已知的文件同步待辦：`spec.md`/ADR 0003 對原生實作細節的描述（`EpubSettingsResolver`/`Publication.metadata.presentation.layout`、`onWritingModeResolved` 回呼名稱與形狀）與實際採用的簡化寫法（`Metadata.layout`、`EpubNavigatorFragment.settings.value.verticalText`、`onLayoutResolved({isFixedLayout, writingMode})`）有落差，尚未回頭同步。
 
 **依賴：** 無（起始工單）
 
