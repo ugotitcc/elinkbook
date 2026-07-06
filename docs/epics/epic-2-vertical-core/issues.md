@@ -61,6 +61,8 @@
 
 ## Issue 3：FR-32 避頭尾符合度驗證（CNS 11643）
 
+**Status:** ✅ 已完成並合併回 `main`（PR #22，merge commit `f9c19e3`）。依 `plans/plan-issue-3.md` 6 個 task 皆完成並個別審查通過，另有一輪全分支最終審查（結論 Ready to merge: With fixes，已套用建議修正）。結論：FR-32 六類中 4 類（破折號、刪節號、書名號、一般標點置中）驗證通過；另 2 類（收尾/起頭類標點避頭尾）因本次 fixture 內容全為短句、從未觸發跨欄位強制換行，記錄為測試覆蓋缺口而非已確認缺陷。過程中同時系統化調查了使用者實機回報的「直排模式文字上下裁切」問題，根因分析（靜態解析 ReadiumCSS + upstream issue 交叉核實）確認為 Readium 官方已知的直排 CSS 多欄分頁限制，非本專案程式碼缺陷；`scroll = true` 緩解方案已驗證可行。已新增 Issue 4（裁切問題暫行方案評估）與 Issue 5（FR-32 避頭尾長段落 fixture 補強）追蹤後續處理。驗證紀錄見 `qa-issue-3-writing-mode-verification.md`。
+
 **依賴：** Issue 1（需要直排渲染已可運作才能檢視）
 
 **描述：**
