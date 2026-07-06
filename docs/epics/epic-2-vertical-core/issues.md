@@ -84,7 +84,7 @@
 
 ## Issue 4：直排分頁「欄位高度非行高整數倍」導致文字上下裁切——暫行方案評估
 
-**Status:** ⚪ 未開始
+**Status:** ✅ 已完成。已決定直排（與橫排）模式的預設換頁行為維持分頁（Readium 預設，不改變既有使用者體驗），並在 `ReaderScreen` AppBar 新增第二顆換頁模式切換按鈕（`reader_page_turn_mode_toggle`），讓使用者可選用捲動模式規避 Issue 3 記錄的分頁欄位裁切風險——技術上對應 Issue 3 Task 5 已驗證可行的 `EpubPreferences(scroll = true)`，並修正了 Issue 1 遺留的偏好設定覆蓋問題（`EpubReaderView.kt` 改用 `currentPreferences` + `EpubPreferences.plus()` 合併，見 ADR 0004），確保橫直排切換與換頁模式切換不會互相重置對方的設定。人工裝置驗證見 `qa-issue-4-mitigation-verification.md`。持久化與三態覆寫 UI（FR-10）仍留給 `epic-3-fonts-layout`。
 
 **依賴：** Issue 3（本 issue 的根因分析與重現記錄）
 

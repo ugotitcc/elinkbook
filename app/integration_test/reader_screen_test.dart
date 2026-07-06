@@ -223,4 +223,69 @@ void main() {
     );
     expect(find.byKey(const Key('reader_error_text')), findsNothing);
   });
+
+  testWidgets('開啟範例 EPUB，換頁模式切換按鈕啟用且初始提示切換為捲動模式',
+      (tester) async {
+    final samplePath = await _stageAssetAsFile(
+        'test/fixtures/sample.epub', 'sample_page_turn_initial.epub');
+    addTearDown(() async {
+      final file = File(samplePath);
+      if (await file.exists()) await file.delete();
+    });
+
+    await tester.pumpWidget(
+      MaterialApp(home: ReaderScreen(filePath: samplePath)),
+    );
+
+    await _pumpUntil(
+      tester,
+      () => _writingModeToggleReady(tester),
+      timeout: const Duration(seconds: 10),
+    );
+
+    final button = tester.widget<IconButton>(
+      find.byKey(const Key('reader_page_turn_mode_toggle')),
+    );
+    expect(button.onPressed, isNotNull);
+    expect(button.tooltip, '切換為捲動模式');
+    expect(find.byKey(const Key('reader_error_text')), findsNothing);
+  });
+
+  testWidgets('點擊換頁模式切換按鈕後，提示文字反轉且不觸發錯誤', (tester) async {
+    final samplePath = await _stageAssetAsFile(
+        'test/fixtures/sample.epub', 'sample_page_turn_tap.epub');
+    addTearDown(() async {
+      final file = File(samplePath);
+      if (await file.exists()) await file.delete();
+    });
+
+    await tester.pumpWidget(
+      MaterialApp(home: ReaderScreen(filePath: samplePath)),
+    );
+
+    await _pumpUntil(
+      tester,
+      () => _writingModeToggleReady(tester),
+      timeout: const Duration(seconds: 10),
+    );
+
+    expect(
+      tester
+          .widget<IconButton>(find.byKey(const Key('reader_page_turn_mode_toggle')))
+          .tooltip,
+      '切換為捲動模式',
+    );
+
+    await tester.tap(find.byKey(const Key('reader_page_turn_mode_toggle')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(
+      tester
+          .widget<IconButton>(find.byKey(const Key('reader_page_turn_mode_toggle')))
+          .tooltip,
+      '切換為分頁模式',
+    );
+    expect(find.byKey(const Key('reader_error_text')), findsNothing);
+  });
 }

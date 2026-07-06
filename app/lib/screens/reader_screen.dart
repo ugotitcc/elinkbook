@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../reader/book_format.dart';
 import '../reader/epub_reader_view.dart';
+import '../reader/page_turn_mode.dart';
 import '../reader/pdf_reader_view.dart';
 import '../reader/writing_mode.dart';
 
@@ -11,8 +12,9 @@ import '../reader/writing_mode.dart';
 /// 中／錯誤狀態皆為內部實作細節，透過固定的 Key（`reader_loading_indicator`
 /// ／`reader_error_text`）暴露給 integration_test 觀察，而非另外新增公開
 /// callback 參數，避免違反 spec.md 定義的唯一對外契約。EPUB 格式下的橫直排
-/// 切換按鈕（`reader_writing_mode_toggle`）同理：純屬內部狀態管理，僅限當次
-/// 閱讀 session 即時切換，不持久化（見 docs/epics/epic-2-vertical-core/
+/// 切換按鈕（`reader_writing_mode_toggle`）與換頁模式切換按鈕
+/// （`reader_page_turn_mode_toggle`，Issue 4 新增）同理：純屬內部狀態管理，
+/// 僅限當次閱讀 session 即時切換，不持久化（見 docs/epics/epic-2-vertical-core/
 /// design.md「範圍與排除項目」——持久化與三態覆寫 UI 屬 FR-10／epic-3）。
 ///
 /// AppBar 沿用與 LibraryScreen/SettingsScreen 一致的寫法（純 `AppBar(title:
@@ -33,6 +35,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
   _RenderState _state = _RenderState.loading;
   String? _errorMessage;
   WritingMode? _writingMode;
+  PageTurnMode _pageTurnMode = PageTurnMode.paginated;
   bool _isFixedLayout = false;
 
   void _handlePageRendered() {
@@ -70,6 +73,14 @@ class _ReaderScreenState extends State<ReaderScreen> {
     });
   }
 
+  void _togglePageTurnMode() {
+    setState(() {
+      _pageTurnMode = _pageTurnMode == PageTurnMode.scroll
+          ? PageTurnMode.paginated
+          : PageTurnMode.scroll;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final format = detectBookFormat(widget.filePath);
@@ -94,6 +105,19 @@ class _ReaderScreenState extends State<ReaderScreen> {
         ),
         tooltip: _writingMode == WritingMode.vertical ? '切換為橫排' : '切換為直排',
         onPressed: _writingMode == null ? null : _toggleWritingMode,
+      ),
+      IconButton(
+        key: const Key('reader_page_turn_mode_toggle'),
+        icon: Icon(
+          _pageTurnMode == PageTurnMode.scroll ? Icons.menu_book : Icons.swap_vert,
+        ),
+        tooltip:
+            _pageTurnMode == PageTurnMode.scroll ? '切換為分頁模式' : '切換為捲動模式',
+        // 與橫直排切換按鈕共用同一個啟用條件：_writingMode 非 null 代表
+        // onLayoutResolved 已觸發，書本已成功開啟、navigatorFragment 已存在，
+        // 此時呼叫 setPageTurnMode 才有意義（見 EpubReaderView.kt 的
+        // 靜默忽略邏輯說明）。
+        onPressed: _writingMode == null ? null : _togglePageTurnMode,
       ),
     ];
   }
@@ -132,6 +156,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
         return EpubReaderView(
           filePath: widget.filePath,
           writingMode: _writingMode,
+          pageTurnMode: _pageTurnMode,
           onPageRendered: _handlePageRendered,
           onError: _handleError,
           onLayoutResolved: _handleLayoutResolved,
