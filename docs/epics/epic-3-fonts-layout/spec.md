@@ -10,7 +10,7 @@
 - **`AppThemePreferences`**（Dart，新增，`app/lib/theme/app_theme_preferences.dart`）—— 主題（三選一）與 E-Ink 高對比開關，`shared_preferences`，比照 `LibraryPreferences` 慣例。
 - **`AppFont`／`EpubTextAlign`／`ScreenOrientationSetting`**（Dart，新增，`app/lib/reader/app_font.dart`／`epub_text_align.dart`／`screen_orientation_setting.dart`）—— 列舉型別。
 - **`EpubReaderView`**（Dart，異動既有 `app/lib/reader/epub_reader_view.dart`）—— 新增 8 個版面偏好輸入參數；`_onPlatformViewCreated` 首次建構時把所有非 null 參數組成 `initialPreferences` 隨 `openBook` 送出；`didUpdateWidget` 改為偵測任何一個偏好欄位變動，統一透過單一 `setPreferences` 呼叫送出變動的欄位。
-- **`EpubReaderView.kt`**（Android，異動既有）—— `openBook` 新增 `initialPreferences: Map<String, Any?>?` 參數，`attachNavigator()` 成功後套用；新增 `setPreferences` 處理，取代既有 `setWritingMode`／`setPageTurnMode`（兩者视为 `setPreferences` 的特例，方法本身移除）。
+- **`EpubReaderView.kt`**（Android，異動既有）—— `openBook` 新增 `initialPreferences: Map<String, Any?>?` 參數，`attachNavigator()` 成功後套用；新增 `setPreferences` 處理，取代既有 `setWritingMode`／`setPageTurnMode`（兩者视为 `setPreferences` 的特例，方法本身移除）；`attachNavigator()` 建構 `EpubNavigatorFactory`/`createFragmentFactory` 時，額外組出 `EpubNavigatorFragment.Configuration`，為 5 款內建字型逐一呼叫 `addFontFamilyDeclaration(...)` 登記字型來源（見下方「自訂字型如何讓原生 WebView 實際載入」），此登記只需在 `attachNavigator()` 執行一次，與 `setPreferences`／`openBook` 的偏好設定合併邏輯無關。
 - **`ReaderScreen`**（Dart，異動既有 `app/lib/screens/reader_screen.dart`）—— 移除現有 `reader_writing_mode_toggle`／`reader_page_turn_mode_toggle` 兩顆獨立按鈕；新增「⚙️ 版面」按鈕開啟 `ReaderSettingsSheet`；開書時載入 `BookReaderPrefs`＋`GlobalReaderDefaults` 並解析出最終生效值；管理 `_autoDetectedWritingMode`（唯讀）；`dispose()` 時呼叫 `SystemChrome.setPreferredOrientations([])` 還原螢幕方向。
 - **`ReaderSettingsSheet`**（Dart，新增 widget，`app/lib/screens/reader_settings_sheet.dart`）—— Bottom Sheet UI，比照 `prototype/index.html` 第 1379-1520 行設計；每次互動即時呼叫 `BookReaderPrefsRepository.save()` 並更新 `EpubReaderView` 建構參數。
 - **`ElinkBookApp`**（Dart，異動既有 `app/lib/main.dart`）—— 啟動時載入 `AppThemePreferences`，套用對應 `ThemeData` 到 `MaterialApp`。
@@ -98,7 +98,7 @@ enum EpubTextAlign { center, justify, start, end, left, right }
 enum ScreenOrientationSetting { auto, lock0, lock90, lock180, lock270 }
 ```
 
-`AppFont` 到實際 `@font-face` family 名稱、字型檔案路徑的對應表，於 `app/pubspec.yaml` 的 `fonts:` 區塊註冊（各 1 個 Regular/VF 靜態切面，無 Bold 獨立檔案，見「已知限制」）。
+`AppFont` 到實際字型家族名稱的對應表（`app/lib/reader/app_font.dart` 新增 getter），對應原生端登記的 family 名稱字串（見下方「自訂字型如何讓原生 WebView 實際載入」，**不是**單純的 `pubspec.yaml` `fonts:` 區塊註冊——那個機制只影響 Flutter 自己的 Skia 渲染，與 Readium 內嵌 WebView 的字型載入無關，見下方修正說明）。字型檔案各 1 個 Regular/VF 靜態切面，無 Bold 獨立檔案，見「已知限制」。
 
 ### `GlobalReaderDefaults`（shared_preferences，比照 `LibraryPreferences`）
 
@@ -178,7 +178,7 @@ class EpubReaderView extends StatefulWidget {
 
 - **`openBook`**：簽章擴充為 `{'path': String, 'initialPreferences': Map<String, Any?>?}`。原生端 `openBook(path, initialPreferences)`；`attachNavigator()` 成功後，若 `initialPreferences` 非 null 且非空，組出對應 `EpubPreferences`、`plus()` 合併進 `currentPreferences`，呼叫一次 `submitPreferences()`。
 - **`setPreferences`**：取代既有 `setWritingMode`／`setPageTurnMode`，參數為完整 `Map<String, Any?>`（key 與 `initialPreferences` 相同格式），原生端組出 `EpubPreferences`、`plus()` 合併進 `currentPreferences`、呼叫 `submitPreferences()`。可在書本開啟後任何時間點呼叫。
-- **map key 對應**（Dart key → Readium `EpubPreferences` 欄位）：`writingMode`（`'vertical'|'horizontal'` → `verticalText: Boolean`）、`pageTurnMode`（`'scroll'|'paginated'` → `scroll: Boolean`）、`fontFamily`（`AppFont.name` → 對應的實際字型家族名稱字串 → `fontFamily: String`）、`fontSize`（`fontSize: Double`）、`fontWeight`（`fontWeight: Double`，已是倍率語意）、`lineHeight`、`paragraphSpacing`、`pageMargins`、`textAlign`（`EpubTextAlign.name` → Readium `TextAlign` enum）、`publisherStyles`（`Boolean`）。
+- **map key 對應**（Dart key → Readium `EpubPreferences` 欄位）：`writingMode`（`'vertical'|'horizontal'` → `verticalText: Boolean`）、`pageTurnMode`（`'scroll'|'paginated'` → `scroll: Boolean`）、`fontFamily`（`AppFont.name` → 對應的實際字型家族名稱字串（與原生端 `addFontFamilyDeclaration` 登記時使用的名稱完全一致）→ method channel 上仍是 `String`，原生端收到後包成 `FontFamily(name)` 再指派給 `EpubPreferences.fontFamily`）、`fontSize`（`fontSize: Double`）、`fontWeight`（`fontWeight: Double`，已是倍率語意）、`lineHeight`、`paragraphSpacing`、`pageMargins`、`textAlign`（`EpubTextAlign.name` → Readium `TextAlign` enum）、`publisherStyles`（`Boolean`）。
 - `openBook`/`onPageRendered`/`onError`/`onLayoutResolved` 既有行為不變（`onLayoutResolved` 觸發時機不受本次擴充影響）。
 
 ### `ReaderScreen` 內部行為異動
@@ -210,10 +210,83 @@ class EpubReaderView extends StatefulWidget {
 
 反編譯 `readium-navigator:3.3.0`（`javap -p`，見對話紀錄與 `design.md`）確認：
 
-- **`EpubPreferences` 完整欄位清單**：`fontFamily: String?`、`fontSize: Double?`、`fontWeight: Double?`、`lineHeight: Double?`、`paragraphSpacing: Double?`、`pageMargins: Double?`（**單一數值，見 ADR 0005**）、`textAlign: TextAlign?`、`publisherStyles: Boolean?`（＝停用書本 CSS 的原生對應）等，皆有原生欄位可直接使用。
+- **`EpubPreferences` 完整欄位清單**（已於 Issue 2 撰寫計劃階段對照官方原始碼 `readium/kotlin-toolkit` tag `3.3.0` 逐一核實，修正先前反編譯階段誤判的一處型別）：`fontFamily: FontFamily?`（**注意：非 `String?`**——`FontFamily` 是包一層 `String` 的 `value class`，建構時需 `FontFamily(name)`；先前反編譯階段誤判為 `String?`，已修正）、`fontSize: Double?`、`fontWeight: Double?`、`lineHeight: Double?`、`paragraphSpacing: Double?`、`pageMargins: Double?`（**單一數值，見 ADR 0005**）、`textAlign: TextAlign?`、`publisherStyles: Boolean?`（＝停用書本 CSS 的原生對應）等，皆有原生欄位可直接使用。
 - **`TextAlign` 列舉值**：`org.readium.r2.navigator.preferences.TextAlign` 共 6 個值：`CENTER, JUSTIFY, START, END, LEFT, RIGHT`（另有一個內部 CSS 渲染層同名但只有 4 值的 enum，不使用）。
 - **`fontWeight` 換算公式**：`EpubSettingsKt.class` 位元組碼確認為倍率語意，`實際 CSS font-weight = clamp(1, 1000, 400 × fontWeight)`。UI 滑桿沿用原型慣用的 300-900 CSS 數值呈現給使用者，送給原生端前需先除以 400 換算成倍率（例如 UI 顯示 700 → 送出 `fontWeight = 1.75`）。
 - **自動旋轉重新分頁**：Readium 底層 `R2WebView`（Chromium WebView）的 `onSizeChanged` 只負責重新同步目前頁面位置，CSS 多欄重新排版由 WebView 引擎本身在 view 尺寸變化時自動處理；**理論上不需要 App 端手動觸發 `submitPreferences`**，但無法單靠位元組碼簽章 100% 確認方法內部邏輯，留待「測試決策」的獨立驗證項於實機確認。
+
+### 自訂字型如何讓原生 WebView 實際載入（Issue 2 撰寫計劃階段補充驗證，已對照官方原始碼核實）
+
+**修正說明：** 本節取代先前「`pubspec.yaml` 的 `fonts:` 區塊即可讓 `fontFamily` 生效」的錯誤假設。`fonts:` 區塊只註冊給 Flutter 自己的 Skia 文字渲染管線使用（`Text`/`TextStyle` 等 widget），與 Readium 內嵌、實際渲染 EPUB 內容的原生 Chromium WebView 完全無關——WebView 不會自動看到 Flutter 註冊的字型。以下先以反編譯 `readium-navigator:3.3.0` 定位機制存在，再逐一對照 `github.com/readium/kotlin-toolkit` tag `3.3.0` 官方原始碼核實精確簽章與語意（非僅憑反編譯猜測）：
+
+- **`EpubPreferences.fontFamily` 型別更正**：官方原始碼核實為 `FontFamily?`（**不是**先前「已驗證的技術基礎」誤記的 `String?`），建構時需 `FontFamily(name)` 包裝。
+- **`org.readium.r2.navigator.preferences.FontFamily`**：`@JvmInline value class FontFamily(val name: String)`，公開建構子（`FontFamily("SourceHanSansTC")` 直接可用），並提供內建泛型常數 `FontFamily.SERIF`／`SANS_SERIF`／`CURSIVE`／`FANTASY`／`MONOSPACE` 供 `alternates`（找不到主字型時的備援）使用。
+- **`EpubNavigatorFactory.createFragmentFactory` 完整簽章**（官方原始碼核實，含全部參數名稱與預設值）：
+  ```kotlin
+  public fun createFragmentFactory(
+      initialLocator: Locator?,
+      readingOrder: List<Link>? = null,
+      initialPreferences: EpubPreferences = EpubPreferences(),
+      listener: EpubNavigatorFragment.Listener? = null,
+      paginationListener: EpubNavigatorFragment.PaginationListener? = null,
+      configuration: EpubNavigatorFragment.Configuration = EpubNavigatorFragment.Configuration(),
+  ): FragmentFactory
+  ```
+  目前 `attachNavigator()` 只具名傳入 `initialLocator`／`listener`／`paginationListener`；新增字型登記時，額外具名傳入 `configuration = <本節下方組出的 Configuration>`。
+- **`EpubNavigatorFragment.Configuration` 的 DSL 建構語法**（官方原始碼核實）：
+  ```kotlin
+  public companion object {
+      public operator fun invoke(builder: Configuration.() -> Unit): Configuration =
+          Configuration().apply(builder)
+  }
+  ```
+  故 `EpubNavigatorFragment.Configuration { ... }` 直接可用（trailing lambda）。
+- **`Configuration.addFontFamilyDeclaration` 完整簽章**（官方原始碼核實）：
+  ```kotlin
+  public fun addFontFamilyDeclaration(
+      fontFamily: FontFamily,
+      alternates: List<FontFamily> = emptyList(),
+      builderAction: (MutableFontFamilyDeclaration).() -> Unit,
+  )
+  ```
+- **`MutableFontFamilyDeclaration.addFontFace` 與 `MutableFontFaceDeclaration.addSource` 完整簽章**（官方原始碼核實）：
+  ```kotlin
+  public fun addFontFace(builderAction: MutableFontFaceDeclaration.() -> Unit)
+
+  // 兩個 addSource 多載皆有 preload 預設值 false：
+  public fun addSource(path: String, preload: Boolean = false) // path 是「解碼後路徑」，非完整 URL 字串，內部以 Url.fromDecodedPath(path) 轉換
+  public fun addSource(href: Url, preload: Boolean = false)
+  ```
+  **注意：`addSource(path: String, ...)` 的 `path` 參數是相對路徑（`Url.fromDecodedPath`），不是 `https://...` 完整 URL 字串**——先前反編譯階段的假設（需自行組出完整 URL）是錯的。
+- **`Configuration.servedAssets` 完整 KDoc**（官方原始碼核實，逐字翻譯）：「允許 EPUB 資源在 `https://readium/assets/` 底下存取的 asset 路徑樣式（pattern）清單。樣式可用簡易萬用字元，見 Android `PatternMatcher#PATTERN_SIMPLE_GLOB`；用 `.*` 可放行全部 app assets。」——**先前反編譯階段誤判網域為 `readium_assets`，正確網域是 `readium`、路徑前綴為 `/assets/`**；`addSource` 的相對路徑會被解析到這個網域/路徑底下（例如官方範例 `addSource("readium/fonts/OpenDyslexic-Regular.otf")` 是 Readium 內建無障礙字型，路徑慣例僅供參考，非本專案需沿用的固定前綴）。
+- **本專案字型檔案的實際路徑組法**：`pubspec.yaml` 需改為 `assets:` 宣告（非 `fonts:`——`fonts:` 只影響 Flutter 自己的 Skia 渲染，兩者是獨立機制，若 Issue 3 的字型選單需要 Flutter 端預覽字型外觀可另外選用性加註 `fonts:`，不影響本節機制），5 個字型檔案各自列一個 `assets:` 項目（例如 `assets/fonts/SourceHanSansTC-VF.ttf`）；原生端透過 Flutter 官方公開 API（非反編譯，穩定公開介面）`FlutterInjector.instance().flutterLoader().getLookupKeyForAsset("assets/fonts/xxx.ttf")` 換算出實際打包後的 asset 路徑（例如慣例上會是 `flutter_assets/assets/fonts/xxx.ttf`，但呼叫端不可自行假設固定前綴字串，一律透過這個 API 換算），這個換算後的字串同時用於：(a) `addSource(lookupKey, preload = true)` 的 `path` 參數；(b) `servedAssets` 清單中的對應項目（可用完整字串或涵蓋整個字型目錄的簡易萬用字元樣式）。
+- **完整登記程式碼骨架**（`attachNavigator()` 執行一次，字型集合固定、不隨後續 `setPreferences` 呼叫變動）：
+  ```kotlin
+  val loader = FlutterInjector.instance().flutterLoader()
+  val fontAssets = mapOf(
+      "SourceHanSansTC" to "assets/fonts/SourceHanSansTC-VF.ttf",
+      "SourceHanSerifTC" to "assets/fonts/SourceHanSerifTC-VF.ttf",
+      "GuanKiapTsingKhai" to "assets/fonts/GuanKiapTsingKhai.ttf",
+      "TaiwanPearl" to "assets/fonts/TaiwanPearl-Regular.ttf",
+      "GenRyuMinTW" to "assets/fonts/GenRyuMinTW-Regular.ttf",
+  )
+  val lookupKeys = fontAssets.mapValues { (_, path) -> loader.getLookupKeyForAsset(path) }
+  val configuration = EpubNavigatorFragment.Configuration {
+      servedAssets = lookupKeys.values.toList()
+      for ((familyName, lookupKey) in lookupKeys) {
+          addFontFamilyDeclaration(
+              fontFamily = FontFamily(familyName),
+              alternates = listOf(FontFamily.SANS_SERIF),
+          ) {
+              addFontFace {
+                  addSource(lookupKey, preload = true)
+              }
+          }
+      }
+  }
+  ```
+  這 5 個 family 名稱字串（`SourceHanSansTC`／`SourceHanSerifTC`／`GuanKiapTsingKhai`／`TaiwanPearl`／`GenRyuMinTW`）須與 Dart 端 `AppFont` 對應的 family 名稱 getter 回傳值逐字一致（見 `app/lib/reader/app_font.dart` 的 `familyName` getter）。
+- **殘餘風險（留待 Issue 6 實機驗證，非阻塞本 issue 撰寫）**：以上簽章與語意皆已對照官方原始碼核實（非僅反編譯猜測），但 `servedAssets` 的 `PatternMatcher` 比對字串與 `getLookupKeyForAsset` 實際回傳的路徑格式是否精確吻合、字型檔案是否真的能在 WebView 內正確渲染，只能在真實裝置上開書觀察最終確認——這與既有「自動旋轉重新分頁」殘餘風險屬同一類型（原始碼簽章正確不等於執行期行為 100% 如預期）。
 
 ## 範圍外 (Out of Scope)
 

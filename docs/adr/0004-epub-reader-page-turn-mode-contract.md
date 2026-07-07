@@ -2,7 +2,7 @@
 
 ## 狀態
 
-已採納
+已採納；`setPageTurnMode` 方法本身已被 [ADR 0006](0006-epub-reader-batch-preferences-contract.md) 取代（併入單一 `setPreferences`），本 ADR 的其餘決策（`pageTurnMode` 為呼叫端已解析值、`currentPreferences` 合併語意的最初動機等）維持有效。
 
 ## 背景
 

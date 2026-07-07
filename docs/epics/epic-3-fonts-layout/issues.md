@@ -39,11 +39,11 @@
 
 - **Dart 端（`app/lib/reader/epub_reader_view.dart`）**：新增 8 個建構參數（`fontFamily`/`fontSize`/`fontWeight`/`lineHeight`/`paragraphSpacing`/`pageMargins`/`textAlign`/`publisherStyles`，型別與既有 `writingMode`/`pageTurnMode` 皆為 nullable）；`_onPlatformViewCreated` 把所有非 null 偏好參數（含既有 `writingMode`/`pageTurnMode`）組成 `initialPreferences` map，隨 `openBook` 呼叫送出；`didUpdateWidget` 改為偵測全部 10 個欄位是否有任一變動，變動時把目前所有非 null 欄位組成 map，透過單一 `setPreferences` 呼叫送出
 - **原生端（`EpubReaderView.kt`）**：`openBook` 新增 `initialPreferences: Map<String, Any?>?` 參數，`attachNavigator()` 成功後套用（組出 `EpubPreferences`、`plus()` 合併進 `currentPreferences`、`submitPreferences()`）；新增 `setPreferences` 處理，**移除**既有 `setWritingMode`／`setPageTurnMode` 兩個方法（兩者邏輯併入 `setPreferences`）；`fontWeight` 換算公式（`400 × fontWeight`）由原生端的 Readium 內部處理，Dart 端不需要在這一層做換算（`fontWeight` 建構參數本身就是已經是倍率語意，UI 層的 300-900 → 倍率換算屬於 Issue 3 的責任）
-- **字型素材註冊**：`app/pubspec.yaml` 新增 `fonts:` 區塊，5 款字型（`app/assets/fonts/` 已放置對應檔案）各自宣告一個 `family` 名稱，`AppFont` enum 到實際 family 名稱字串的對應表（供 `fontFamily` map key 轉換使用）
+- **字型素材登記**（見 `spec.md`「自訂字型如何讓原生 WebView 實際載入」，修正先前「`pubspec.yaml` `fonts:` 區塊即可生效」的錯誤假設）：`app/pubspec.yaml` 新增 `assets:` 宣告（5 款字型檔案，供原生端 `AssetManager` 存取，非 `fonts:` 區塊——後者只影響 Flutter 自己的 Skia 渲染）；`attachNavigator()` 建構 `createFragmentFactory` 時額外組出 `EpubNavigatorFragment.Configuration`，透過 `addFontFamilyDeclaration(...)` 為 5 款字型逐一登記（`servedAssets` 需列入對應路徑；字型檔案 URL 透過 `FlutterInjector.instance().flutterLoader().getLookupKeyForAsset(...)` 換算）；`AppFont` enum 新增 family 名稱 getter（`app/lib/reader/app_font.dart`），對應原生端登記時使用的名稱字串（供 `fontFamily` map key 轉換使用）
 
 **單元測試要求：**
 - `EpubReaderView` widget test（假 `MethodChannel` handler）：驗證 `_onPlatformViewCreated` 呼叫 `openBook` 時，`initialPreferences` 正確包含所有非 null 建構參數（含 `writingMode`/`pageTurnMode`）；驗證任一偏好欄位變動時觸發 `setPreferences`，內含所有目前非 null 欄位
-- `flutter pub get` 成功、字型檔案可被正確載入（`flutter analyze` 不因新增 `fonts:` 區塊產生警告）
+- `flutter pub get` 成功、字型檔案可被正確載入（`flutter analyze` 不因新增 `assets:` 區塊產生警告）
 - **已知測試限制（沿用既有慣例）**：原生端 `openBook`/`setPreferences` 的實際 Kotlin 邏輯無法透過 `flutter test`（無裝置）驗證，原生行為驗證留給 Issue 6
 
 **驗收標準：**
@@ -133,6 +133,7 @@
 - **關鍵驗證項（自動化 `integration_test`）**：自動旋轉模式下實際旋轉真實裝置，確認 Readium／`R2WebView` 是否如反編譯推測般自動重新分頁，不需要額外手動觸發（見 `spec.md`「已驗證的技術基礎」）。若實測發現不會自動重新分頁，需記錄具體現象並另立後續 issue 補上監聽方向變化事件並手動觸發的邏輯，不阻塞本 epic 其餘部分收尾。
 - **端到端持久化驗證（人工視覺 QA）**：對同一本書依序調整多個版面設定（字型、行距、邊距、排版方向覆寫、翻頁模式覆寫、螢幕方向覆寫），關閉 App、重新開啟，確認所有設定皆被正確記住並套用（驗證 Issue 2 的 `initialPreferences` 機制在多欄位組合情境下依然正確，不只是單一欄位）
 - **字重換算與模擬粗體視覺確認**：實機觀察 5 款字型在字重滑桿調整後的實際渲染效果，確認思源黑體/宋體（Variable Font）呈現真實字重變化、其餘 3 款呈現模擬粗體效果符合預期（非渲染錯誤或崩潰）
+- **自訂字型實際載入驗證**：確認 Issue 2 登記的 `addFontFamilyDeclaration`／`servedAssets` 機制在真實裝置上確實生效——切換 5 款內建字型後畫面文字確實改變外觀（而非靜默 fallback 回瀏覽器預設字型）；若發現 `servedAssets` 的 `PatternMatcher` 比對或 `getLookupKeyForAsset` 路徑格式有誤導致字型未生效，需記錄具體現象並修正（見 `spec.md`「自訂字型如何讓原生 WebView 實際載入」的殘餘風險）
 - 彙整驗證紀錄，更新 `docs/epics/epic-3-fonts-layout/issues.md` 各 issue 最終驗收狀態
 
 **單元測試要求：**
