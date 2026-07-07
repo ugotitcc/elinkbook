@@ -11,9 +11,10 @@
 - **`AppFont`／`EpubTextAlign`／`ScreenOrientationSetting`**（Dart，新增，`app/lib/reader/app_font.dart`／`epub_text_align.dart`／`screen_orientation_setting.dart`）—— 列舉型別。
 - **`EpubReaderView`**（Dart，異動既有 `app/lib/reader/epub_reader_view.dart`）—— 新增 8 個版面偏好輸入參數；`_onPlatformViewCreated` 首次建構時把所有非 null 參數組成 `initialPreferences` 隨 `openBook` 送出；`didUpdateWidget` 改為偵測任何一個偏好欄位變動，統一透過單一 `setPreferences` 呼叫送出變動的欄位。
 - **`EpubReaderView.kt`**（Android，異動既有）—— `openBook` 新增 `initialPreferences: Map<String, Any?>?` 參數，`attachNavigator()` 成功後套用；新增 `setPreferences` 處理，取代既有 `setWritingMode`／`setPageTurnMode`（兩者视为 `setPreferences` 的特例，方法本身移除）；`attachNavigator()` 建構 `EpubNavigatorFactory`/`createFragmentFactory` 時，額外組出 `EpubNavigatorFragment.Configuration`，為 5 款內建字型逐一呼叫 `addFontFamilyDeclaration(...)` 登記字型來源（見下方「自訂字型如何讓原生 WebView 實際載入」），此登記只需在 `attachNavigator()` 執行一次，與 `setPreferences`／`openBook` 的偏好設定合併邏輯無關。
-- **`ReaderScreen`**（Dart，異動既有 `app/lib/screens/reader_screen.dart`）—— 移除現有 `reader_writing_mode_toggle`／`reader_page_turn_mode_toggle` 兩顆獨立按鈕；新增「⚙️ 版面」按鈕開啟 `ReaderSettingsSheet`；開書時載入 `BookReaderPrefs`＋`GlobalReaderDefaults` 並解析出最終生效值；管理 `_autoDetectedWritingMode`（唯讀）；`dispose()` 時呼叫 `SystemChrome.setPreferredOrientations([])` 還原螢幕方向。
+- **`ReaderScreen`**（Dart，異動既有 `app/lib/screens/reader_screen.dart`）—— 建構參數新增 `required String bookId`、`required BookReaderPrefsRepository prefsRepository`（見 ADR 0007）；移除現有 `reader_writing_mode_toggle`／`reader_page_turn_mode_toggle` 兩顆獨立按鈕；新增「⚙️ 版面」按鈕開啟 `ReaderSettingsSheet`；開書時載入 `BookReaderPrefs`＋`GlobalReaderDefaults` 並解析出最終生效值；管理 `_autoDetectedWritingMode`（唯讀）；`dispose()` 時呼叫 `SystemChrome.setPreferredOrientations([])` 還原螢幕方向。
+- **`LibraryScreen`**（Dart，異動既有 `app/lib/screens/library_screen.dart`）—— `_openBook(Book book)` 同步修改，導航時多傳入 `bookId: book.id`／`prefsRepository: widget.prefsRepository`；`LibraryScreen` 本身新增 `required BookReaderPrefsRepository prefsRepository` 建構參數（見 ADR 0007，與既有 `repository`/`importService` 平行）。
 - **`ReaderSettingsSheet`**（Dart，新增 widget，`app/lib/screens/reader_settings_sheet.dart`）—— Bottom Sheet UI，比照 `prototype/index.html` 第 1379-1520 行設計；每次互動即時呼叫 `BookReaderPrefsRepository.save()` 並更新 `EpubReaderView` 建構參數。
-- **`ElinkBookApp`**（Dart，異動既有 `app/lib/main.dart`）—— 啟動時載入 `AppThemePreferences`，套用對應 `ThemeData` 到 `MaterialApp`。
+- **`ElinkBookApp`／`main.dart`**（Dart，異動既有 `app/lib/main.dart`）—— `main()` 用具象的 `SqliteLibraryRepository`（尚未收窄為 `LibraryRepository` 介面前）建構 `BookReaderPrefsRepository(repository.database)`；`ElinkBookApp` 新增 `required BookReaderPrefsRepository prefsRepository` 建構參數，逐層傳給 `LibraryScreen`（見 ADR 0007）；啟動時另載入 `AppThemePreferences`，套用對應 `ThemeData` 到 `MaterialApp`。
 
 `PdfReaderView`、`detectBookFormat()` 不受影響；`_isFixedLayout == true` 時「⚙️ 版面」按鈕與 `ReaderSettingsSheet` 皆不顯示。
 
@@ -183,14 +184,14 @@ class EpubReaderView extends StatefulWidget {
 
 ### `ReaderScreen` 內部行為異動
 
-- 開書流程：`initState`／收到 `onLayoutResolved` 後，非同步載入 `BookReaderPrefsRepository.load(bookId)`＋`GlobalReaderDefaults`，解析：
+- 開書流程：`initState`／收到 `onLayoutResolved` 後，非同步載入 `BookReaderPrefsRepository.load(widget.bookId)`（`bookId` 為新增的必要建構參數，見 ADR 0007）＋`GlobalReaderDefaults`，解析：
   - `_writingModeOverride ?? _autoDetectedWritingMode` → 送給 `EpubReaderView.writingMode`
   - `_pageTurnModeOverride ?? globalDefaults.pageTurnMode` → 送給 `EpubReaderView.pageTurnMode`
   - `_screenOrientationOverride ?? globalDefaults.screenOrientation` → 呼叫 `SystemChrome.setPreferredOrientations(...)`
   - 其餘欄位（`fontFamily`/`fontSize`/...）無雙層解析，`BookReaderPrefs` 的值就是最終生效值，直接送給 `EpubReaderView`
 - AppBar：移除 `reader_writing_mode_toggle`／`reader_page_turn_mode_toggle`；新增 `Key('reader_layout_settings_button')`，`_isFixedLayout == true` 時不顯示，按下開啟 `ReaderSettingsSheet`（傳入目前 `BookReaderPrefs` 與 callback，選項變動時呼叫 `BookReaderPrefsRepository.save()` 並 `setState` 更新本地狀態）。
 - `dispose()`：呼叫 `SystemChrome.setPreferredOrientations([])`，還原系統預設（允許自由旋轉），不論進入時鎖定了哪個角度。
-- 對外公開建構參數 `ReaderScreen(filePath: String)` 不變。
+- 對外公開建構參數擴充為 `ReaderScreen({required String filePath, required String bookId})`（見 ADR 0007，`CLAUDE.md`「唯一的閱讀器 seam」同步更新）。
 
 ## 測試決策 (Testing Decisions)
 

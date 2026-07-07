@@ -40,14 +40,14 @@ flutter build apk --debug
 
 ### `ReaderScreen`：唯一的閱讀器 seam
 
-`app/lib/screens/reader_screen.dart` 是格式無關的統一入口：`ReaderScreen(filePath: String)` 依 `detectBookFormat()`（`app/lib/reader/book_format.dart`，依副檔名判斷 `epub`/`pdf`/`unknown`）分派到對應的原生渲染 widget：
+`app/lib/screens/reader_screen.dart` 是格式無關的統一入口：`ReaderScreen({required String filePath, required String bookId, required BookReaderPrefsRepository prefsRepository})` 依 `detectBookFormat()`（`app/lib/reader/book_format.dart`，依副檔名判斷 `epub`/`pdf`/`unknown`）分派到對應的原生渲染 widget：
 
 - `EpubReaderView`（`app/lib/reader/epub_reader_view.dart`）——包裝 Readium `kotlin-toolkit`
 - `PdfReaderView`（`app/lib/reader/pdf_reader_view.dart`）——包裝 `android.graphics.pdf.PdfRenderer`
 
 兩者是刻意對稱的 `AndroidView` 包裝：Dart 端建構參數固定為 `filePath`/`onPageRendered`/`onError`；原生端（`app/android/app/src/main/kotlin/cc/ugotit/elinkbook/`）皆實作同一組 method channel 契約 `openBook(path)` → `onPageRendered()`/`onError(message)`，並用對稱的檔名（`EpubReaderView.kt`+`EpubReaderViewFactory.kt`／`PdfReaderView.kt`+`PdfReaderViewFactory.kt`），在 `MainActivity.configureFlutterEngine()` 中註冊各自的 `PlatformView` 類型字串。未來新增格式（例如 TXT）應延續同一組三段式契約。
 
-`ReaderScreen` 對外的公開建構參數只有 `filePath`——載入中／錯誤狀態是內部實作細節，透過固定的 `Key('reader_loading_indicator')`／`Key('reader_error_text')` 暴露給測試觀察，刻意不新增公開 callback 參數。
+`ReaderScreen` 對外的公開建構參數為 `filePath`／`bookId`／`prefsRepository`（後兩者由 `epic-3-fonts-layout` Issue 3 新增；`prefsRepository` 由 `main.dart` 建構後，與 `LibraryRepository`/`BookImportService` 平行、逐層透過建構子參數傳遞下來，`LibraryRepository` 抽象介面本身不受影響，見 `docs/adr/0007-reader-screen-book-id-contract.md`）——載入中／錯誤狀態是內部實作細節，透過固定的 `Key('reader_loading_indicator')`／`Key('reader_error_text')` 暴露給測試觀察，刻意不新增公開 callback 參數。
 
 ### `MainActivity` 為何是 `FlutterFragmentActivity`
 
