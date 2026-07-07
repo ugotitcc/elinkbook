@@ -24,7 +24,12 @@ class SqliteLibraryRepository implements LibraryRepository {
   static Future<SqliteLibraryRepository> open(String path) async {
     final db = await openDatabase(
       path,
-      version: 1,
+      version: 2,
+      onConfigure: (db) async {
+        // book_reader_prefs 的 ON DELETE CASCADE 需要外鍵約束真正生效，
+        // SQLite 預設不強制外鍵，須逐連線手動開啟（見 epic-3 plan-issue-1）。
+        await db.execute('PRAGMA foreign_keys = ON');
+      },
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE groups (
@@ -47,10 +52,42 @@ class SqliteLibraryRepository implements LibraryRepository {
             lastReadTime INTEGER NOT NULL
           )
         ''');
+        await _createBookReaderPrefsTable(db);
+      },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          await _createBookReaderPrefsTable(db);
+        }
       },
     );
     return SqliteLibraryRepository._(db);
   }
+
+  static Future<void> _createBookReaderPrefsTable(Database db) async {
+    // 單書版面偏好設定（epic-3-fonts-layout FR-09/FR-10），與 books 表
+    // 1:1 關聯；所有欄位皆為 nullable，null 代表未覆寫，見
+    // docs/epics/epic-3-fonts-layout/spec.md「資料模型」。
+    await db.execute('''
+      CREATE TABLE book_reader_prefs (
+        book_id TEXT PRIMARY KEY REFERENCES books(id) ON DELETE CASCADE,
+        font_family TEXT,
+        font_size REAL,
+        font_weight REAL,
+        line_height REAL,
+        paragraph_spacing REAL,
+        page_margins REAL,
+        text_align TEXT,
+        publisher_styles INTEGER,
+        writing_mode_override TEXT,
+        page_turn_mode_override TEXT,
+        screen_orientation_override TEXT
+      )
+    ''');
+  }
+
+  /// 供 [BookReaderPrefsRepository] 等後續 repository 共用同一個資料庫連線
+  /// （`book_reader_prefs` 的外鍵約束要求與 `books` 表在同一個資料庫檔案內）。
+  Database get database => _db;
 
   Future<void> close() => _db.close();
 
