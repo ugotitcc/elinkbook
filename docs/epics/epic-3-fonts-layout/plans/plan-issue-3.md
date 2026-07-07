@@ -6,7 +6,7 @@
 
 **架構：** `ReaderSettingsSheet` 是純展示、無 I/O 的 StatefulWidget：接收目前的 `BookReaderPrefs` 與一個 `onChanged` 回呼，內部維護 8 個欄位的可變狀態，任一控制項互動後組出完整新的 `BookReaderPrefs` 透過 `onChanged` 回報。`ReaderScreen` 負責實際的持久化（`BookReaderPrefsRepository.save`）與畫面套用（更新送給 `EpubReaderView` 的建構參數）。`ReaderScreen`／`LibraryScreen`／`main.dart` 需先擴充建構參數鏈（`bookId`、`prefsRepository`）才能讓 `ReaderScreen` 有能力讀寫版面偏好設定（見 ADR 0007，此為撰寫本計劃時發現、`spec.md` 原先未交代清楚的缺口）。
 
-**技術棧：** Dart/Flutter、`sqflite_common_ffi`（widget test 中建構真實但空的 `BookReaderPrefsRepository`）、`integration_test`（真實裝置，`flutter devices` 已確認可用裝置 `9491G`）。
+**技術棧：** Dart/Flutter、`sqflite_common_ffi`（widget test 中建構真實但空的 `BookReaderPrefsRepository`）、`integration_test`（真實裝置，`flutter devices` 已確認可用裝置 9491G，ID：`3CEF42ECD491687`）。
 
 ## 全域限制條件
 
@@ -17,7 +17,7 @@
 - 字重滑桿 UI 顯示 300-900（step 100）慣用數值，`BookReaderPrefs.fontWeight` 欄位儲存的是 Readium 倍率語意（UI 值 ÷ 400）；滑桿行為對所有字型一致，不因單一字重字型而限制範圍或加提示。
 - 滑桿在 `BookReaderPrefs` 對應欄位為 `null`（尚未有持久化覆寫）時的初始顯示值：`fontSize=16`、`fontWeight` 對應 UI 顯示 `400`、`lineHeight=1.5`、`paragraphSpacing=10`、`pageMargins=15`（與 `prototype/index.html` 範例值一致）；互動前不送出這些預設值，只影響滑桿位置。
 - 文字對齊（`EpubTextAlign`，6 個選項）採圖示橫列選擇，不使用下拉選單。
-- `flutter build apk --debug`／`flutter devices` 已確認裝置 `9491G` 可用，Task 4 的 `integration_test` 須在此裝置上實際執行，不得省略或僅寫程式碼不驗證。
+- `flutter build apk --debug`／`flutter devices` 已確認裝置 9491G（ID：`3CEF42ECD491687`）可用，Task 4 的 `integration_test` 須在此裝置上實際執行，不得省略或僅寫程式碼不驗證。
 - 所有新增程式碼註解與文件維持正體中文。
 - `flutter analyze` 全程必須維持 `No issues found!`。
 
@@ -1435,6 +1435,10 @@ class _ReaderScreenState extends State<ReaderScreen> {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      // Bottom Sheet 預設的下滑關閉手勢（enableDrag: true）與 Slider 的
+      // 水平拖曳手勢在混合角度滑動時容易被手勢競技場誤判，導致使用者
+      // 調整滑桿時選單意外關閉；停用後仍可點擊背景遮罩關閉。
+      enableDrag: false,
       builder: (_) => ReaderSettingsSheet(
         prefs: _prefs,
         onChanged: _handlePrefsChanged,
@@ -1570,7 +1574,7 @@ git commit -m "Wire ReaderSettingsSheet into ReaderScreen"
 - Consumes: Task 3 完成的 `ReaderScreen`＋`ReaderSettingsSheet` 串接
 - Produces: 無新介面（純測試驗證）
 
-**⚠️ 執行前環境確認事項：** 本 Task 的驗證步驟須在真實 Android 裝置/模擬器上執行——執行前請先確認 `flutter devices`（於 `app/` 目錄下）能列出至少一個 Android 裝置/模擬器（撰寫本計劃時已確認裝置 `9491G` 可用，Android 15/API 35）。
+**⚠️ 執行前環境確認事項：** 本 Task 的驗證步驟須在真實 Android 裝置/模擬器上執行——執行前請先確認 `flutter devices`（於 `app/` 目錄下）能列出至少一個 Android 裝置/模擬器（撰寫本計劃時已確認裝置 9491G 可用，Android 15/API 35，ID：`3CEF42ECD491687`——下方指令中的裝置 ID 即指這台裝置）。
 
 - [ ] **Step 1：於 `integration_test/reader_screen_test.dart` 新增測試**
 
