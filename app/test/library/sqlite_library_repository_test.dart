@@ -205,4 +205,24 @@ void main() {
       );
     });
   });
+
+  group('book_reader_prefs schema', () {
+    test('新安裝資料庫已包含 book_reader_prefs 表，且外鍵約束會在刪除書籍時連動清除',
+        () async {
+      await repository.insertBook(_book('b1'));
+      await repository.database.insert('book_reader_prefs', {
+        'book_id': 'b1',
+        'font_size': 18.0,
+      });
+
+      await repository.deleteBook('b1');
+
+      final rows = await repository.database.query(
+        'book_reader_prefs',
+        where: 'book_id = ?',
+        whereArgs: ['b1'],
+      );
+      expect(rows, isEmpty);
+    });
+  });
 }
