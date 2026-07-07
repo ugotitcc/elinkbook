@@ -10,7 +10,7 @@
 
 ## 全域限制條件
 
-- `EpubReaderView(filePath, onPageRendered, onError, onLayoutResolved, writingMode, pageTurnMode, ...)` 既有 5 個參數的行為與語意**不變**；本 issue 只新增參數、擴充內部邏輯，不修改既有參數的既有行為。
+- `EpubReaderView(filePath, onPageRendered, onError, onLayoutResolved, writingMode, pageTurnMode, ...)` 既有 5 個參數的**名稱、型別、一般語意不變**（`writingMode`/`pageTurnMode` 仍是「呼叫端已解析好的最終生效值，null 表示不覆寫」）；本 issue 只新增參數、擴充內部批次送出邏輯。**例外（刻意，非疏漏）：** 依 ADR 0006，`initialPreferences` 機制回溯適用於 `writingMode`/`pageTurnMode`——修改前這兩者在首次 `openBook` 當下一律被忽略（等 `didUpdateWidget` 才生效），修改後若非 null 會隨 `openBook` 的 `initialPreferences` 一併送出。這是 ADR 0006 明確要解決的「持久化設定在開書當下沒有真正套用」缺口，屬於本 issue 的核心目標，不是需要避免的行為變動。
 - `setWritingMode`／`setPageTurnMode`（Dart 端呼叫、原生端方法）**移除**，邏輯併入單一 `setPreferences`（見 ADR 0006）；既有呼叫這兩個方法名稱的程式碼不得殘留。
 - `fontWeight` 建構參數本身已是 Readium 倍率語意（`1.0` = normal），本 issue 不做 UI 慣用值（300-900）↔ 倍率換算，該換算屬於 Issue 3 責任。
 - `AppFont` 到實際字型家族名稱字串的對應（`familyName`），與原生端 `addFontFamilyDeclaration` 登記時使用的名稱字串**必須逐字一致**，兩處硬編碼字串以下方 Task 1/Task 3 給定的值為準，不得自創其他命名。
