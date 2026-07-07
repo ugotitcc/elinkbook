@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'app_font.dart';
+import 'epub_text_align.dart';
 import 'page_turn_mode.dart';
 import 'writing_mode.dart';
 
@@ -8,21 +10,19 @@ import 'writing_mode.dart';
 /// 透過 AndroidView（PlatformView）嵌入畫面。給定 EPUB 檔案的裝置端絕對路徑，通知
 /// 原生端渲染起始頁；渲染成功或失敗會分別觸發 [onPageRendered] 或 [onError]。
 ///
-/// [writingMode] 為 null 時，開書當下不覆寫橫直排設定，交由 Readium 依書本
-/// 語言／閱讀方向自動判斷（判斷結果透過 [onLayoutResolved] 回報一次）；設定
-/// 為非 null 且與前次不同時，會即時呼叫原生端切換，不重新開書（見
-/// docs/adr/0003-epub-reader-writing-mode-contract.md）。
+/// 全部 10 個偏好參數（[writingMode]／[pageTurnMode] 與本類別新增的 8 個版面
+/// 偏好參數）語意一致：呼叫端傳入的皆是「已解析好的最終生效值」，`null` 代表
+/// 不覆寫、使用 Readium 預設。首次建構時，所有非 null 的偏好參數會組成一個
+/// map 隨 `openBook` 一併送出（`initialPreferences`）；之後任一偏好參數變動
+/// （[didUpdateWidget] 偵測），會把當下所有非 null 的偏好參數（不只是變動的
+/// 那個）重新組成一個 map，透過單一 `setPreferences` 呼叫送出——原生端
+/// `currentPreferences.plus()` 本身就是合併語意，送出完整目前狀態比只送變動
+/// 欄位更不容易遺漏邊界情況（見 docs/adr/0006-epub-reader-batch-preferences-contract.md）。
 ///
-/// [pageTurnMode] 語意與 [writingMode] 對稱：為 null 時不覆寫換頁模式，
-/// 沿用 Readium 預設值（分頁）；為非 null 且與前次不同時，即時呼叫原生端
-/// 切換為分頁或捲動渲染（見 docs/adr/0004-epub-reader-page-turn-mode-contract.md）。
-/// 捲動模式是 Issue 3 驗證過、用於規避直排分頁欄位裁切風險的暫行方案。
-///
-/// 【刻意的設計，非疏漏】即使首次建構時 [writingMode] 就已是非 null，開書當下
-/// 仍一律忽略它、交由自動判斷決定初始模式——[writingMode] 只用於開書後的後續
-/// 切換（透過 [didUpdateWidget] 偵測變動）。目前唯一的呼叫端 `ReaderScreen`
-/// 也一律等 [onLayoutResolved] 回報後才可能變更 [writingMode]，因此這個限制
-/// 現階段不影響任何實際情境。
+/// 【刻意的設計，非疏漏】即使首次建構時任一偏好參數就已是非 null，開書當下
+/// 仍會透過 `initialPreferences` 一併送出——這與先前版本「開書當下一律忽略
+/// writingMode／等到 didUpdateWidget 才生效」的行為不同，是 ADR 0006 明確要
+/// 解決的缺口（持久化設定在開書當下真正套用）。
 class EpubReaderView extends StatefulWidget {
   final String filePath;
   final VoidCallback onPageRendered;
@@ -30,6 +30,14 @@ class EpubReaderView extends StatefulWidget {
   final WritingMode? writingMode;
   final PageTurnMode? pageTurnMode;
   final ValueChanged<EpubLayoutInfo>? onLayoutResolved;
+  final AppFont? fontFamily;
+  final double? fontSize;
+  final double? fontWeight; // 已是 Readium 倍率語意（1.0 = normal），非 CSS 300-900 原始值
+  final double? lineHeight;
+  final double? paragraphSpacing;
+  final double? pageMargins;
+  final EpubTextAlign? textAlign;
+  final bool? publisherStyles;
 
   const EpubReaderView({
     super.key,
@@ -39,6 +47,14 @@ class EpubReaderView extends StatefulWidget {
     this.writingMode,
     this.pageTurnMode,
     this.onLayoutResolved,
+    this.fontFamily,
+    this.fontSize,
+    this.fontWeight,
+    this.lineHeight,
+    this.paragraphSpacing,
+    this.pageMargins,
+    this.textAlign,
+    this.publisherStyles,
   });
 
   @override
@@ -52,24 +68,62 @@ class _EpubReaderViewState extends State<EpubReaderView> {
     final channel = MethodChannel('cc.ugotit.elinkbook/epub_reader_view_$id');
     _channel = channel;
     channel.setMethodCallHandler(_handleMethodCall);
-    channel.invokeMethod('openBook', {'path': widget.filePath});
+    channel.invokeMethod('openBook', {
+      'path': widget.filePath,
+      'initialPreferences': _buildPreferencesMap(),
+    });
   }
 
   @override
   void didUpdateWidget(covariant EpubReaderView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    final newMode = widget.writingMode;
-    if (newMode != null && newMode != oldWidget.writingMode) {
-      _channel?.invokeMethod('setWritingMode', {
-        'mode': newMode == WritingMode.vertical ? 'vertical' : 'horizontal',
-      });
+    if (_preferencesChanged(oldWidget)) {
+      _channel?.invokeMethod('setPreferences', _buildPreferencesMap());
     }
-    final newPageTurnMode = widget.pageTurnMode;
-    if (newPageTurnMode != null && newPageTurnMode != oldWidget.pageTurnMode) {
-      _channel?.invokeMethod('setPageTurnMode', {
-        'mode': newPageTurnMode == PageTurnMode.scroll ? 'scroll' : 'paginated',
-      });
+  }
+
+  bool _preferencesChanged(EpubReaderView oldWidget) {
+    return widget.writingMode != oldWidget.writingMode ||
+        widget.pageTurnMode != oldWidget.pageTurnMode ||
+        widget.fontFamily != oldWidget.fontFamily ||
+        widget.fontSize != oldWidget.fontSize ||
+        widget.fontWeight != oldWidget.fontWeight ||
+        widget.lineHeight != oldWidget.lineHeight ||
+        widget.paragraphSpacing != oldWidget.paragraphSpacing ||
+        widget.pageMargins != oldWidget.pageMargins ||
+        widget.textAlign != oldWidget.textAlign ||
+        widget.publisherStyles != oldWidget.publisherStyles;
+  }
+
+  /// 把目前所有非 null 的偏好參數組成一個 map，key 名稱與原生端契約一致
+  /// （見 docs/epics/epic-3-fonts-layout/spec.md「原生 method channel 契約
+  /// 異動」）。`null` 值的欄位完全不出現在 map 中（而非以 `null` 出現），
+  /// 讓原生端可以直接用「key 是否存在」判斷是否覆寫。
+  Map<String, Object?> _buildPreferencesMap() {
+    final map = <String, Object?>{};
+    if (widget.writingMode != null) {
+      map['writingMode'] =
+          widget.writingMode == WritingMode.vertical ? 'vertical' : 'horizontal';
     }
+    if (widget.pageTurnMode != null) {
+      map['pageTurnMode'] =
+          widget.pageTurnMode == PageTurnMode.scroll ? 'scroll' : 'paginated';
+    }
+    if (widget.fontFamily != null) {
+      map['fontFamily'] = widget.fontFamily!.familyName;
+    }
+    if (widget.fontSize != null) map['fontSize'] = widget.fontSize;
+    if (widget.fontWeight != null) map['fontWeight'] = widget.fontWeight;
+    if (widget.lineHeight != null) map['lineHeight'] = widget.lineHeight;
+    if (widget.paragraphSpacing != null) {
+      map['paragraphSpacing'] = widget.paragraphSpacing;
+    }
+    if (widget.pageMargins != null) map['pageMargins'] = widget.pageMargins;
+    if (widget.textAlign != null) map['textAlign'] = widget.textAlign!.name;
+    if (widget.publisherStyles != null) {
+      map['publisherStyles'] = widget.publisherStyles;
+    }
+    return map;
   }
 
   Future<void> _handleMethodCall(MethodCall call) async {

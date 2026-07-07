@@ -9,6 +9,7 @@ import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.FragmentFactory
 import androidx.fragment.app.add
 import androidx.fragment.app.commitNow
+import io.flutter.FlutterInjector
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
@@ -21,6 +22,8 @@ import kotlinx.coroutines.launch
 import org.readium.r2.navigator.epub.EpubNavigatorFactory
 import org.readium.r2.navigator.epub.EpubNavigatorFragment
 import org.readium.r2.navigator.epub.EpubPreferences
+import org.readium.r2.navigator.preferences.FontFamily
+import org.readium.r2.navigator.preferences.TextAlign
 import org.readium.r2.shared.publication.Layout
 import org.readium.r2.shared.publication.Locator
 import org.readium.r2.shared.publication.Publication
@@ -91,16 +94,13 @@ class EpubReaderView(
     private var isDisposed = false
 
     /**
-     * 目前已生效的完整偏好設定（見 docs/adr/0004-epub-reader-page-turn-mode-contract.md）。
-     * `setWritingMode`／`setPageTurnMode` 都是「合併進這個物件、再整組送出」，而不是
-     * 各自建構獨立的 EpubPreferences 覆蓋——否則兩者會互相把對方剛設定好的欄位
-     * 重設回預設值。這是 Issue 1 建立 setWritingMode 時就已預期、留待日後補上的合併
-     * 機制，本 issue 引入第二種偏好維度時一併補齊。
-     *
-     * 【未來注意】目前只有使用者手動呼叫 setWritingMode/setPageTurnMode 時才會更新
-     * 這個欄位並送出；openBook 完成當下不會主動代入任何已持久化的偏好設定。若未來
-     * epic-3-fonts-layout 引入持久化，需要額外設計「開書當下就把已持久化偏好代入
-     * currentPreferences 並送出」的機制，屆時再處理，本 issue 範圍內不需要。
+     * 目前已生效的完整偏好設定（見
+     * docs/adr/0006-epub-reader-batch-preferences-contract.md）。setPreferences
+     * 與 openBook 的 initialPreferences 套用都是「合併進這個物件、再整組送出」，
+     * 而不是各自建構獨立的 EpubPreferences 覆蓋——否則後送出的欄位會把先前已
+     * 設定的其他欄位重設回預設值。openBook 完成後若 initialPreferences 非空，
+     * 會在 attachNavigator() 內立即合併套用一次，不需等待後續 setPreferences
+     * 呼叫（解決先前版本「持久化設定在開書當下沒有真正套用」的缺口）。
      */
     private var currentPreferences = EpubPreferences()
 
@@ -113,15 +113,16 @@ class EpubReaderView(
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         when (call.method) {
             "openBook" -> {
-                openBook(call.argument<String>("path"))
+                @Suppress("UNCHECKED_CAST")
+                openBook(
+                    call.argument<String>("path"),
+                    call.argument<Map<String, Any?>>("initialPreferences"),
+                )
                 result.success(null)
             }
-            "setWritingMode" -> {
-                setWritingMode(call.argument<String>("mode"))
-                result.success(null)
-            }
-            "setPageTurnMode" -> {
-                setPageTurnMode(call.argument<String>("mode"))
+            "setPreferences" -> {
+                @Suppress("UNCHECKED_CAST")
+                setPreferences(call.arguments as? Map<String, Any?>)
                 result.success(null)
             }
             else -> result.notImplemented()
@@ -129,31 +130,85 @@ class EpubReaderView(
     }
 
     /**
-     * 開書後即時切換橫直排，不重新 openBook（見
-     * docs/adr/0003-epub-reader-writing-mode-contract.md）。書本尚未成功
+     * 合併 [preferences] 進 currentPreferences 並整組送出，取代原本各自獨立的
+     * setWritingMode／setPageTurnMode（見
+     * docs/adr/0006-epub-reader-batch-preferences-contract.md）。書本尚未成功
      * 開啟（navigatorFragment 仍為 null）時靜默忽略——Dart 端只會在
      * onPageRendered 觸發之後才送出這個指令，理論上不會發生。
-     *
-     * 與 currentPreferences 合併後才送出（見 docs/adr/0004-epub-reader-page-turn-mode-contract.md），
-     * 確保不會覆蓋 setPageTurnMode 已設定的 scroll 偏好。
      */
-    private fun setWritingMode(mode: String?) {
-        currentPreferences = currentPreferences.plus(EpubPreferences(verticalText = mode == "vertical"))
+    private fun setPreferences(preferences: Map<String, Any?>?) {
+        if (preferences == null) return
+        currentPreferences = currentPreferences.plus(buildPreferencesFromMap(preferences))
         navigatorFragment?.submitPreferences(currentPreferences)
     }
 
     /**
-     * 開書後即時切換分頁／捲動換頁模式，不重新 openBook（見
-     * docs/adr/0004-epub-reader-page-turn-mode-contract.md）。書本尚未成功
-     * 開啟時靜默忽略，理由同 setWritingMode。與 currentPreferences 合併後
-     * 才送出，確保不會覆蓋 setWritingMode 已設定的 verticalText 偏好。
+     * 把 Dart 端送來的偏好設定 map（openBook 的 initialPreferences，或
+     * setPreferences 的參數，兩者格式相同）轉換為 EpubPreferences；未出現在
+     * map 中的 key 對應到該欄位的 null（交由 currentPreferences.plus() 決定
+     * 最終生效值，不覆蓋既有已設定的其他欄位）。
      */
-    private fun setPageTurnMode(mode: String?) {
-        currentPreferences = currentPreferences.plus(EpubPreferences(scroll = mode == "scroll"))
-        navigatorFragment?.submitPreferences(currentPreferences)
+    private fun buildPreferencesFromMap(map: Map<String, Any?>): EpubPreferences {
+        return EpubPreferences(
+            verticalText = (map["writingMode"] as? String)?.let { it == "vertical" },
+            scroll = (map["pageTurnMode"] as? String)?.let { it == "scroll" },
+            fontFamily = (map["fontFamily"] as? String)?.let { FontFamily(it) },
+            fontSize = (map["fontSize"] as? Number)?.toDouble(),
+            fontWeight = (map["fontWeight"] as? Number)?.toDouble(),
+            lineHeight = (map["lineHeight"] as? Number)?.toDouble(),
+            paragraphSpacing = (map["paragraphSpacing"] as? Number)?.toDouble(),
+            pageMargins = (map["pageMargins"] as? Number)?.toDouble(),
+            textAlign = (map["textAlign"] as? String)?.let { textAlignFromName(it) },
+            publisherStyles = map["publisherStyles"] as? Boolean,
+        )
     }
 
-    private fun openBook(path: String?) {
+    private fun textAlignFromName(name: String): TextAlign? {
+        return when (name) {
+            "center" -> TextAlign.CENTER
+            "justify" -> TextAlign.JUSTIFY
+            "start" -> TextAlign.START
+            "end" -> TextAlign.END
+            "left" -> TextAlign.LEFT
+            "right" -> TextAlign.RIGHT
+            else -> null
+        }
+    }
+
+    /**
+     * 登記 5 款內建字型（FR-09），讓 Readium 內嵌的 WebView 能實際載入本地
+     * asset 字型檔案（見 docs/epics/epic-3-fonts-layout/spec.md「自訂字型
+     * 如何讓原生 WebView 實際載入」）。這 5 個 family 名稱字串須與 Dart 端
+     * `AppFont.familyName`（app/lib/reader/app_font.dart）逐字一致。只需在
+     * attachNavigator() 執行一次，字型集合固定、不隨後續 setPreferences
+     * 呼叫變動。
+     */
+    private fun buildFontFamiliesConfiguration(): EpubNavigatorFragment.Configuration {
+        val loader = FlutterInjector.instance().flutterLoader()
+        val fontAssets = mapOf(
+            "SourceHanSansTC" to "assets/fonts/SourceHanSansTC-VF.ttf",
+            "SourceHanSerifTC" to "assets/fonts/SourceHanSerifTC-VF.ttf",
+            "GuanKiapTsingKhai" to "assets/fonts/GuanKiapTsingKhai.ttf",
+            "TaiwanPearl" to "assets/fonts/TaiwanPearl-Regular.ttf",
+            "GenRyuMinTW" to "assets/fonts/GenRyuMinTW-Regular.ttf",
+        )
+        val lookupKeys = fontAssets.mapValues { (_, path) -> loader.getLookupKeyForAsset(path) }
+        return EpubNavigatorFragment.Configuration {
+            servedAssets = lookupKeys.values.toList()
+            for ((familyName, lookupKey) in lookupKeys) {
+                addFontFamilyDeclaration(
+                    fontFamily = FontFamily(familyName),
+                    alternates = listOf(FontFamily.SANS_SERIF),
+                ) {
+                    addFontFace {
+                        addSource(lookupKey, preload = true)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun openBook(path: String?, initialPreferences: Map<String, Any?>?) {
         if (path == null) {
             channel.invokeMethod("onError", "缺少檔案路徑")
             return
@@ -196,14 +251,14 @@ class EpubReaderView(
                     openedPublication.close()
                     return@launch
                 }
-                attachNavigator(openedPublication)
+                attachNavigator(openedPublication, initialPreferences)
             } catch (e: Exception) {
                 channel.invokeMethod("onError", "開啟 EPUB 檔案時發生未預期的錯誤：${e.message}")
             }
         }
     }
 
-    private fun attachNavigator(openedPublication: Publication) {
+    private fun attachNavigator(openedPublication: Publication, initialPreferences: Map<String, Any?>?) {
         // commitNow 在 Activity 已經過了 onSaveInstanceState（例如解析完成前使用者恰好把
         // App 切到背景）時會丟出 IllegalStateException；containerId 若因為合成模式改變
         // 等原因無法解析到實際 View（見上方類別註解），也可能丟出 IllegalArgumentException。
@@ -216,6 +271,7 @@ class EpubReaderView(
                 initialLocator = null,
                 listener = this,
                 paginationListener = this,
+                configuration = buildFontFamiliesConfiguration(),
             )
             installedFragmentFactory = fragmentFactory
             activity.supportFragmentManager.fragmentFactory = fragmentFactory
@@ -224,6 +280,10 @@ class EpubReaderView(
             }
             navigatorFragment = activity.supportFragmentManager
                 .findFragmentByTag(fragmentTag) as? EpubNavigatorFragment
+            if (initialPreferences != null && initialPreferences.isNotEmpty()) {
+                currentPreferences = currentPreferences.plus(buildPreferencesFromMap(initialPreferences))
+                navigatorFragment?.submitPreferences(currentPreferences)
+            }
         } catch (e: Exception) {
             // 掛載失敗時 Fragment 沒有真正附著到任何畫面上，Publication 不會再被使用，
             // 必須主動關閉釋放資源——與 openBook() 中 isDisposed 分支的做法一致。

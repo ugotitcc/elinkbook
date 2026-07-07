@@ -76,6 +76,11 @@ flutter:
     - test/fixtures/sample_fixed_layout.epub
     - test/fixtures/sample_long_vertical.epub
     - test/fixtures/sample_forced_linebreak_vertical.epub
+    - assets/fonts/SourceHanSansTC-VF.ttf
+    - assets/fonts/SourceHanSerifTC-VF.ttf
+    - assets/fonts/GuanKiapTsingKhai.ttf
+    - assets/fonts/TaiwanPearl-Regular.ttf
+    - assets/fonts/GenRyuMinTW-Regular.ttf
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
