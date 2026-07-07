@@ -111,7 +111,7 @@
 
 ## Issue 5：FR-32 避頭尾換行規則——長段落 fixture 補強與重新驗證
 
-**Status:** ✅ 已完成。使用 Task 1 新建的 `sample_forced_linebreak_vertical.epub`（單一長段落 2452 字，密集安排收尾/起頭類標點，確保觸發欄位內部強制換行）重新驗證 Issue 3 遺留的兩類 FR-32 避頭尾測試覆蓋缺口。驗證結果：兩類規則皆符合 CNS 11643 預期，FR-32 六類避頭尾/標點規則驗證範圍至此全數完整覆蓋。驗證紀錄見 `qa-issue-5-fr32-forced-linebreak-verification.md`。
+**Status:** ✅ 已完成並合併回 `main`（PR #24，merge commit `5b04c27`）。使用 Task 1 新建的 `sample_forced_linebreak_vertical.epub`（單一長段落 2452 字，密集安排收尾/起頭類標點，確保觸發欄位內部強制換行）重新驗證 Issue 3 遺留的兩類 FR-32 避頭尾測試覆蓋缺口。驗證結果：兩類規則皆符合 CNS 11643 預期，FR-32 六類避頭尾/標點規則驗證範圍至此全數完整覆蓋。驗證紀錄見 `qa-issue-5-fr32-forced-linebreak-verification.md`。
 
 **依賴：** Issue 3（本 issue 為 Issue 3 驗證範圍缺口的後續補強）
 
