@@ -1,6 +1,6 @@
 # Issue 3 實作計劃：版面設定 Bottom Sheet——字型與數值型控制項
 
-> **給執行的 Agent：** 建議使用 superpowers:subagent-driven-development（推薦）或 superpowers:executing-plans 逐任務執行本計劃。步驟採用核取方塊（`- [ ]`）語法追蹤進度。
+> **給執行的 Agent：** 建議使用 superpowers:subagent-driven-development（推薦）或 superpowers:executing-plans 逐任務執行本計劃。步驟採用核取方塊（`- [x]`）語法追蹤進度。
 
 **目標：** 新增 `ReaderSettingsSheet` Bottom Sheet，讓使用者可調整單書的字型、字型大小、字重、行高、段落間距、邊距、文字對齊、停用書本 CSS 共 8 項版面偏好，每次互動即時持久化並套用到畫面。`ReaderScreen` 新增「⚙️ 版面」按鈕開啟此 Bottom Sheet。
 
@@ -40,7 +40,7 @@
 
 本 Task 純屬建構參數鏈擴充與既有呼叫端修正，**不新增任何使用者可見功能**——`ReaderScreen`／`LibraryScreen` 目前的行為完全不變，只是多了兩個尚未被使用的建構參數（`prefsRepository` 在本 Task 結束時仍未被 `ReaderScreen` 內部實際呼叫，留給 Task 3）。
 
-- [ ] **Step 1：擴充 `ReaderScreen` 建構參數**
+- [x] **Step 1：擴充 `ReaderScreen` 建構參數**
 
 開啟 `app/lib/screens/reader_screen.dart`，把：
 
@@ -121,7 +121,7 @@ class ReaderScreen extends StatefulWidget {
 }
 ```
 
-- [ ] **Step 2：擴充 `LibraryScreen` 建構參數與 `_openBook`**
+- [x] **Step 2：擴充 `LibraryScreen` 建構參數與 `_openBook`**
 
 開啟 `app/lib/screens/library_screen.dart`，把：
 
@@ -187,7 +187,7 @@ import '../reader/book_reader_prefs_repository.dart';
   }
 ```
 
-- [ ] **Step 3：擴充 `main.dart`**
+- [x] **Step 3：擴充 `main.dart`**
 
 開啟 `app/lib/main.dart`，把：
 
@@ -290,7 +290,7 @@ class ElinkBookApp extends StatelessWidget {
 }
 ```
 
-- [ ] **Step 4：修正 `app/test/screens/reader_screen_test.dart`**
+- [x] **Step 4：修正 `app/test/screens/reader_screen_test.dart`**
 
 開啟 `app/test/screens/reader_screen_test.dart`，把整份內容改為：
 
@@ -412,7 +412,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 5：修正 `app/test/screens/library_screen_test.dart`**
+- [x] **Step 5：修正 `app/test/screens/library_screen_test.dart`**
 
 開啟 `app/test/screens/library_screen_test.dart`。這個檔案有 26 處 `LibraryScreen(` 建構呼叫，全部都是這個結構（`repository:`／`importService:` 的實際值每個測試不同，但結尾固定）：
 
@@ -483,7 +483,7 @@ import 'package:elinkbook/reader/book_reader_prefs_repository.dart';
   });
 ```
 
-- [ ] **Step 6：修正 `app/integration_test/reader_screen_test.dart`**
+- [x] **Step 6：修正 `app/integration_test/reader_screen_test.dart`**
 
 開啟 `app/integration_test/reader_screen_test.dart`。這個檔案有 8 處 `MaterialApp(home: ReaderScreen(filePath: samplePath))` 建構呼叫（皆為單行）。
 
@@ -551,7 +551,7 @@ void main() {
 
 （8 處的 `samplePath` 變數名稱不變，只是每處的字面值不同——例如某些是 `sample_toggle_vertical.epub`、有些是 `sample_page_turn_tap.epub`，這些檔名/變數不受本次修正影響，維持原樣。）
 
-- [ ] **Step 7：修正 `app/integration_test/library_screen_test.dart`**
+- [x] **Step 7：修正 `app/integration_test/library_screen_test.dart`**
 
 開啟 `app/integration_test/library_screen_test.dart`。把：
 
@@ -586,7 +586,7 @@ void main() {
 import 'package:elinkbook/reader/book_reader_prefs_repository.dart';
 ```
 
-- [ ] **Step 8：執行測試確認全部通過**
+- [x] **Step 8：執行測試確認全部通過**
 
 Run（於 `app/` 目錄下）：
 ```bash
@@ -595,7 +595,7 @@ flutter analyze
 ```
 Expected：`flutter test` 全數通過，無回歸（既有 114 項）；`flutter analyze` 顯示 `No issues found!`——若有任何 `LibraryScreen`/`ReaderScreen` 呼叫遺漏 `prefsRepository`/`bookId` 參數，`flutter analyze` 會明確報出「缺少必要參數」的錯誤，據此逐一補齊，直到乾淨為止。
 
-- [ ] **Step 9：建置確認原生端無回歸**
+- [x] **Step 9：建置確認原生端無回歸**
 
 Run（於 `app/` 目錄下）：
 ```bash
@@ -603,7 +603,7 @@ flutter build apk --debug
 ```
 Expected：建置成功，無編譯錯誤（本 Task 未修改任何 Kotlin 檔案，此步驟純粹確認 Dart 端改動沒有意外破壞建置流程）。
 
-- [ ] **Step 10：Commit**
+- [x] **Step 10：Commit**
 
 ```bash
 git add app/lib/screens/reader_screen.dart app/lib/screens/library_screen.dart app/lib/main.dart app/test/screens/reader_screen_test.dart app/test/screens/library_screen_test.dart app/integration_test/reader_screen_test.dart app/integration_test/library_screen_test.dart
@@ -624,7 +624,7 @@ git commit -m "Add bookId and prefsRepository to ReaderScreen/LibraryScreen cont
 
 **背景（設計決策，已與使用者確認）：** `BookReaderPrefs` 所有欄位皆為 nullable，若採用傳統 `copyWith(T? field)` 模式，「保持原值」與「明確設為 null」無法區分（例如使用者從字型下拉選單選擇「使用書本內建字型」，語意上就是要把 `fontFamily` 設回 `null`）。與其引入 sentinel-value 或額外的 `bool clearX` 旗標增加複雜度，`ReaderSettingsSheet` 改為在內部維護 8 個獨立可變欄位（`initState` 時從 `widget.prefs` 初始化），每次任一控制項變動時，直接用目前全部 8 個欄位值＋原封不動的 3 個 Issue 4 欄位，組出一個全新的 `BookReaderPrefs` 送給 `onChanged`——不需要 `copyWith`，`BookReaderPrefs` 本身不需要任何修改。
 
-- [ ] **Step 1：撰寫失敗測試**
+- [x] **Step 1：撰寫失敗測試**
 
 建立 `app/test/screens/reader_settings_sheet_test.dart`：
 
@@ -895,7 +895,7 @@ void main() {
 void _noopOnChanged(BookReaderPrefs prefs) {}
 ```
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 Run（於 `app/` 目錄下）：
 ```bash
@@ -903,7 +903,7 @@ flutter test test/screens/reader_settings_sheet_test.dart
 ```
 Expected：FAIL，找不到 `package:elinkbook/screens/reader_settings_sheet.dart`（尚未建立）。
 
-- [ ] **Step 3：建立 `ReaderSettingsSheet`**
+- [x] **Step 3：建立 `ReaderSettingsSheet`**
 
 建立 `app/lib/screens/reader_settings_sheet.dart`：
 
@@ -1216,7 +1216,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
 }
 ```
 
-- [ ] **Step 4：執行測試確認通過**
+- [x] **Step 4：執行測試確認通過**
 
 Run：
 ```bash
@@ -1224,7 +1224,7 @@ flutter test test/screens/reader_settings_sheet_test.dart
 ```
 Expected：`All tests passed!`（8 項測試）。
 
-- [ ] **Step 5：全量測試與靜態分析確認無回歸**
+- [x] **Step 5：全量測試與靜態分析確認無回歸**
 
 Run（於 `app/` 目錄下）：
 ```bash
@@ -1233,7 +1233,7 @@ flutter analyze
 ```
 Expected：`flutter test` 全數通過（既有 114 項 + 本次新增 8 項，共 122 項）；`flutter analyze` 顯示 `No issues found!`。
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/lib/screens/reader_settings_sheet.dart app/test/screens/reader_settings_sheet_test.dart
@@ -1252,7 +1252,7 @@ git commit -m "Add ReaderSettingsSheet widget for font and numeric layout contro
 - Consumes: Task 1 完成的 `ReaderScreen(bookId, prefsRepository)`；Task 2 完成的 `ReaderSettingsSheet`
 - Produces: `Key('reader_layout_settings_button')`，供後續 issue／`integration_test` 使用
 
-- [ ] **Step 1：撰寫失敗測試**
+- [x] **Step 1：撰寫失敗測試**
 
 開啟 `app/test/screens/reader_screen_test.dart`（Task 1 已修改過，此處在既有內容基礎上新增），在 `import` 區塊新增：
 
@@ -1350,7 +1350,7 @@ import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 ```
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 Run（於 `app/` 目錄下）：
 ```bash
@@ -1358,7 +1358,7 @@ flutter test test/screens/reader_screen_test.dart
 ```
 Expected：FAIL——`Key('reader_layout_settings_button')` 尚不存在（`findsOneWidget`/`findsNothing` 斷言失敗）。
 
-- [ ] **Step 3：串接 `ReaderSettingsSheet` 到 `ReaderScreen`**
+- [x] **Step 3：串接 `ReaderSettingsSheet` 到 `ReaderScreen`**
 
 開啟 `app/lib/screens/reader_screen.dart`（Task 1 已修改過建構參數，此處在既有內容基礎上修改）。把：
 
@@ -1531,7 +1531,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
         );
 ```
 
-- [ ] **Step 4：執行測試確認通過**
+- [x] **Step 4：執行測試確認通過**
 
 Run：
 ```bash
@@ -1539,7 +1539,7 @@ flutter test test/screens/reader_screen_test.dart
 ```
 Expected：`All tests passed!`（7 項測試：Task 1 的 4 項 + 本 Task 新增的 3 項）。
 
-- [ ] **Step 5：全量測試與靜態分析確認無回歸**
+- [x] **Step 5：全量測試與靜態分析確認無回歸**
 
 Run（於 `app/` 目錄下）：
 ```bash
@@ -1548,7 +1548,7 @@ flutter analyze
 ```
 Expected：`flutter test` 全數通過（既有 122 項 + 本次新增 3 項，共 125 項）；`flutter analyze` 顯示 `No issues found!`。
 
-- [ ] **Step 6：建置確認原生端無回歸**
+- [x] **Step 6：建置確認原生端無回歸**
 
 Run（於 `app/` 目錄下）：
 ```bash
@@ -1556,7 +1556,7 @@ flutter build apk --debug
 ```
 Expected：建置成功。
 
-- [ ] **Step 7：Commit**
+- [x] **Step 7：Commit**
 
 ```bash
 git add app/lib/screens/reader_screen.dart app/test/screens/reader_screen_test.dart
@@ -1576,7 +1576,7 @@ git commit -m "Wire ReaderSettingsSheet into ReaderScreen"
 
 **⚠️ 執行前環境確認事項：** 本 Task 的驗證步驟須在真實 Android 裝置/模擬器上執行——執行前請先確認 `flutter devices`（於 `app/` 目錄下）能列出至少一個 Android 裝置/模擬器（撰寫本計劃時已確認裝置 9491G 可用，Android 15/API 35，ID：`3CEF42ECD491687`——下方指令中的裝置 ID 即指這台裝置）。
 
-- [ ] **Step 1：於 `integration_test/reader_screen_test.dart` 新增測試**
+- [x] **Step 1：於 `integration_test/reader_screen_test.dart` 新增測試**
 
 開啟 `app/integration_test/reader_screen_test.dart`（Task 1 已修改過，此處在既有內容基礎上新增）。在檔案開頭 import 區塊新增：
 
@@ -1712,7 +1712,7 @@ Book _book(String id) => Book(
 }
 ```
 
-- [ ] **Step 2：於真實裝置上執行測試確認全部通過**
+- [x] **Step 2：於真實裝置上執行測試確認全部通過**
 
 Run（於 `app/` 目錄下；裝置 ID 請以 `flutter devices` 實際列出的為準，撰寫本計劃時為 `3CEF42ECD491687`）：
 ```bash
@@ -1720,7 +1720,7 @@ flutter test integration_test/reader_screen_test.dart -d 3CEF42ECD491687
 ```
 Expected：`All tests passed!`（既有 8 項 + 本 Task 新增 2 項，共 10 項）。
 
-- [ ] **Step 3：重新執行既有 `integration_test` 套件確認無回歸**
+- [x] **Step 3：重新執行既有 `integration_test` 套件確認無回歸**
 
 Run：
 ```bash
@@ -1728,7 +1728,7 @@ flutter test integration_test/library_screen_test.dart -d 3CEF42ECD491687
 ```
 Expected：`All tests passed!`。
 
-- [ ] **Step 4：靜態分析、建置與純 Dart 測試最終確認**
+- [x] **Step 4：靜態分析、建置與純 Dart 測試最終確認**
 
 Run（於 `app/` 目錄下）：
 ```bash
@@ -1738,7 +1738,7 @@ flutter test
 ```
 Expected：`flutter analyze` 顯示 `No issues found!`；`flutter build apk --debug` 成功建置；`flutter test` 全數通過（125 項），無回歸。
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 git add app/integration_test/reader_screen_test.dart
