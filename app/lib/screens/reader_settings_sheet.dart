@@ -61,6 +61,25 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     _disableBookCss = widget.prefs.publisherStyles == false;
   }
 
+  @override
+  void didUpdateWidget(ReaderSettingsSheet oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.prefs != oldWidget.prefs) {
+      setState(() {
+        _fontFamily = widget.prefs.fontFamily;
+        _fontSize = widget.prefs.fontSize ?? _defaultFontSize;
+        _fontWeightMultiplier =
+            widget.prefs.fontWeight ?? _defaultFontWeightMultiplier;
+        _lineHeight = widget.prefs.lineHeight ?? _defaultLineHeight;
+        _paragraphSpacing =
+            widget.prefs.paragraphSpacing ?? _defaultParagraphSpacing;
+        _pageMargins = widget.prefs.pageMargins ?? _defaultPageMargins;
+        _textAlign = widget.prefs.textAlign;
+        _disableBookCss = widget.prefs.publisherStyles == false;
+      });
+    }
+  }
+
   void _notifyChanged() {
     widget.onChanged(BookReaderPrefs(
       fontFamily: _fontFamily,
@@ -242,7 +261,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
               IconButton(
                 key: Key('${keyPrefix}_decrement'),
                 icon: const Icon(Icons.remove),
-                onPressed: clampedValue - step < min
+                onPressed: clampedValue - step < min - 1e-9
                     ? null
                     : () => onChanged((clampedValue - step).clamp(min, max)),
               ),
@@ -259,7 +278,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
               IconButton(
                 key: Key('${keyPrefix}_increment'),
                 icon: const Icon(Icons.add),
-                onPressed: clampedValue + step > max
+                onPressed: clampedValue + step > max + 1e-9
                     ? null
                     : () => onChanged((clampedValue + step).clamp(min, max)),
               ),

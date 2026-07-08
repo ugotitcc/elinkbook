@@ -230,6 +230,46 @@ void main() {
     expect(result!.writingModeOverride, WritingMode.vertical);
     expect(result!.pageTurnModeOverride, PageTurnMode.scroll);
   });
+
+  testWidgets('當外部 prefs 更新時，應透過 didUpdateWidget 同步 UI state', (tester) async {
+    late void Function(BookReaderPrefs) updatePrefs;
+    
+    // 設定較大的 Viewport
+    tester.view.physicalSize = const Size(800, 1200);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: _TestSettingsSheetWrapper(
+          initialPrefs: const BookReaderPrefs(fontSize: 20),
+          onWrapperCreated: (updateFn) => updatePrefs = updateFn,
+        ),
+      ),
+    ));
+
+    expect(
+      tester
+          .widget<Slider>(
+              find.byKey(const Key('reader_settings_font_size_slider')))
+          .value,
+      20.0,
+    );
+
+    updatePrefs(const BookReaderPrefs(fontSize: 25));
+    await tester.pump();
+
+    expect(
+      tester
+          .widget<Slider>(
+              find.byKey(const Key('reader_settings_font_size_slider')))
+          .value,
+      25.0,
+    );
+  });
 }
 
 Future<void> _pumpSheet(
@@ -256,3 +296,39 @@ Future<void> _pumpSheet(
 }
 
 void _noopOnChanged(BookReaderPrefs prefs) {}
+
+class _TestSettingsSheetWrapper extends StatefulWidget {
+  final BookReaderPrefs initialPrefs;
+  final void Function(void Function(BookReaderPrefs)) onWrapperCreated;
+
+  const _TestSettingsSheetWrapper({
+    required this.initialPrefs,
+    required this.onWrapperCreated,
+  });
+
+  @override
+  State<_TestSettingsSheetWrapper> createState() => _TestSettingsSheetWrapperState();
+}
+
+class _TestSettingsSheetWrapperState extends State<_TestSettingsSheetWrapper> {
+  late BookReaderPrefs _prefs;
+
+  @override
+  void initState() {
+    super.initState();
+    _prefs = widget.initialPrefs;
+    widget.onWrapperCreated((newPrefs) {
+      setState(() {
+        _prefs = newPrefs;
+      });
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ReaderSettingsSheet(
+      prefs: _prefs,
+      onChanged: (_) {},
+    );
+  }
+}
