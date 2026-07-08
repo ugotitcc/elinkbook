@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'package:elinkbook/library/models/book.dart';
-import 'package:elinkbook/library/models/library_enums.dart';
-import 'package:elinkbook/library/sqlite_library_repository.dart';
 import 'package:elinkbook/reader/book_reader_prefs.dart';
 import 'package:elinkbook/reader/book_reader_prefs_repository.dart';
+import 'package:elinkbook/reader/epub_reader_view.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
 
 // 依 spec.md「測試決策」：ReaderScreen 分派到 EpubReaderView/PdfReaderView
@@ -16,27 +13,10 @@ import 'package:elinkbook/screens/reader_screen.dart';
 // 以及橫直排切換按鈕、換頁模式切換按鈕在 onLayoutResolved 觸發前的初始
 // 狀態（按鈕本身的顯示/隱藏、停用狀態不依賴原生回呼，可離線驗證）。
 void main() {
-  // ReaderScreen 自 Issue 3 起需要 BookReaderPrefsRepository（見
-  // docs/adr/0007-reader-screen-book-id-contract.md）。這裡用
-  // sqflite_common_ffi 的記憶體資料庫建構一個真實但空的實例——測試情境
-  // 本身不涉及版面偏好設定的讀寫，只需要滿足建構參數即可，比照
-  // BookReaderPrefsRepository 既有測試慣例（不 mock 資料層）。
-  late SqliteLibraryRepository libraryRepository;
   late BookReaderPrefsRepository prefsRepository;
 
-  setUpAll(() {
-    sqfliteFfiInit();
-    databaseFactory = databaseFactoryFfi;
-  });
-
-  setUp(() async {
-    libraryRepository =
-        await SqliteLibraryRepository.open(inMemoryDatabasePath);
-    prefsRepository = BookReaderPrefsRepository(libraryRepository.database);
-  });
-
-  tearDown(() async {
-    await libraryRepository.close();
+  setUp(() {
+    prefsRepository = FakeBookReaderPrefsRepository();
   });
 
   testWidgets('不支援格式顯示明確錯誤訊息', (tester) async {
@@ -154,7 +134,6 @@ void main() {
   });
 
   testWidgets('開啟該書已有的持久化版面偏好設定後，狀態正確載入', (tester) async {
-    await libraryRepository.insertBook(_book('b1'));
     await prefsRepository.save(
       'b1',
       const BookReaderPrefs(fontSize: 24),
@@ -169,27 +148,27 @@ void main() {
         ),
       ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
 
-    // 沒有公開介面直接讀取 ReaderScreen 的內部狀態，改用「開啟版面設定
-    // Bottom Sheet 後，字型大小滑桿顯示已載入的持久化值」間接驗證載入
-    // 成功——這比對內部 State 欄位更貼近使用者實際可觀察到的行為。
-    //
-    // 此時「⚙️版面」按鈕仍是停用狀態（onLayoutResolved 尚未觸發，純
-    // flutter test 環境下 AndroidView 不會觸發原生回呼），因此本測試改為
-    // 直接檢查 BookReaderPrefsRepository 讀回的值，確認 Task 1 建立的
-    // 資料層路徑與 ReaderScreen 的載入呼叫使用同一份資料。
-    final loaded = await prefsRepository.load('b1');
-    expect(loaded.fontSize, 24);
+    // 驗證 ReaderScreen 載入的偏好設定已正確套用並傳遞至 EpubReaderView
+    final viewFinder = find.byType(EpubReaderView);
+    expect(viewFinder, findsOneWidget);
+    final epubView = tester.widget<EpubReaderView>(viewFinder);
+    expect(epubView.fontSize, 24.0);
   });
 }
 
-Book _book(String id) => Book(
-      id: id,
-      title: '書名',
-      format: BookFileFormat.epub,
-      filePath: 'content://example/$id',
-      source: BookSource.local,
-      createTime: DateTime.fromMillisecondsSinceEpoch(1000),
-      lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
-    );
+class FakeBookReaderPrefsRepository implements BookReaderPrefsRepository {
+  final Map<String, BookReaderPrefs> _storage = {};
+
+  @override
+  Future<BookReaderPrefs> load(String bookId) async {
+    return _storage[bookId] ?? BookReaderPrefs.empty;
+  }
+
+  @override
+  Future<void> save(String bookId, BookReaderPrefs prefs) async {
+    _storage[bookId] = prefs;
+  }
+}

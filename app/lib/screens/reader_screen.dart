@@ -162,7 +162,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
             _pageTurnMode == PageTurnMode.scroll ? '切換為分頁模式' : '切換為捲動模式',
         // 與橫直排切換按鈕共用同一個啟用條件：_writingMode 非 null 代表
         // onLayoutResolved 已觸發，書本已成功開啟、navigatorFragment 已存在，
-        // 此時呼召 setPageTurnMode 才有意義（見 EpubReaderView.kt 的
+        // 此時呼叫 setPageTurnMode 才有意義（見 EpubReaderView.kt 的
         // 靜默忽略邏輯說明）。
         onPressed: _writingMode == null ? null : _togglePageTurnMode,
       ),
