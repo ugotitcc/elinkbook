@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../reader/book_format.dart';
+import '../reader/book_reader_prefs.dart';
 import '../reader/book_reader_prefs_repository.dart';
 import '../reader/epub_reader_view.dart';
 import '../reader/page_turn_mode.dart';
 import '../reader/pdf_reader_view.dart';
 import '../reader/writing_mode.dart';
+import 'reader_settings_sheet.dart';
 
 /// 唯一的閱讀器顯示接縫（seam）：給定書籍檔案路徑，依偵測到的格式分派到
 /// 對應的原生渲染 widget，畫面上會渲染出該書第 1 頁。公開建構參數為
@@ -47,6 +49,41 @@ class _ReaderScreenState extends State<ReaderScreen> {
   WritingMode? _writingMode;
   PageTurnMode _pageTurnMode = PageTurnMode.paginated;
   bool _isFixedLayout = false;
+  BookReaderPrefs _prefs = BookReaderPrefs.empty;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.prefsRepository.load(widget.bookId).then((prefs) {
+      if (!mounted) return;
+      setState(() => _prefs = prefs);
+    });
+  }
+
+  /// 版面設定 Bottom Sheet 任一控制項變動時呼叫：立即更新本地狀態（驅動
+  /// EpubReaderView 以新值重建）並非同步持久化。不 await 持久化結果——
+  /// 使用者互動的視覺回饋（畫面即時反映新設定）不應等待資料庫寫入完成，
+  /// 比照本專案其餘偏好設定寫入呼叫的既有慣例（例如 LibraryPreferences
+  /// 系列方法在 UI callback 中皆未 await）。
+  void _handlePrefsChanged(BookReaderPrefs prefs) {
+    setState(() => _prefs = prefs);
+    widget.prefsRepository.save(widget.bookId, prefs);
+  }
+
+  void _openLayoutSettings() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      // Bottom Sheet 預設的下滑關閉手勢（enableDrag: true）與 Slider 的
+      // 水平拖曳手勢在混合角度滑動時容易被手勢競技場誤判，導致使用者
+      // 調整滑桿時選單意外關閉；停用後仍可點擊背景遮罩關閉。
+      enableDrag: false,
+      builder: (_) => ReaderSettingsSheet(
+        prefs: _prefs,
+        onChanged: _handlePrefsChanged,
+      ),
+    );
+  }
 
   void _handlePageRendered() {
     if (!mounted) return;
@@ -125,9 +162,15 @@ class _ReaderScreenState extends State<ReaderScreen> {
             _pageTurnMode == PageTurnMode.scroll ? '切換為分頁模式' : '切換為捲動模式',
         // 與橫直排切換按鈕共用同一個啟用條件：_writingMode 非 null 代表
         // onLayoutResolved 已觸發，書本已成功開啟、navigatorFragment 已存在，
-        // 此時呼叫 setPageTurnMode 才有意義（見 EpubReaderView.kt 的
+        // 此時呼召 setPageTurnMode 才有意義（見 EpubReaderView.kt 的
         // 靜默忽略邏輯說明）。
         onPressed: _writingMode == null ? null : _togglePageTurnMode,
+      ),
+      IconButton(
+        key: const Key('reader_layout_settings_button'),
+        icon: const Icon(Icons.settings),
+        tooltip: '版面設定',
+        onPressed: _writingMode == null ? null : _openLayoutSettings,
       ),
     ];
   }
@@ -170,6 +213,14 @@ class _ReaderScreenState extends State<ReaderScreen> {
           onPageRendered: _handlePageRendered,
           onError: _handleError,
           onLayoutResolved: _handleLayoutResolved,
+          fontFamily: _prefs.fontFamily,
+          fontSize: _prefs.fontSize,
+          fontWeight: _prefs.fontWeight,
+          lineHeight: _prefs.lineHeight,
+          paragraphSpacing: _prefs.paragraphSpacing,
+          pageMargins: _prefs.pageMargins,
+          textAlign: _prefs.textAlign,
+          publisherStyles: _prefs.publisherStyles,
         );
       case BookFormat.pdf:
         return PdfReaderView(

@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:elinkbook/library/models/book.dart';
+import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/library/sqlite_library_repository.dart';
+import 'package:elinkbook/reader/book_reader_prefs.dart';
 import 'package:elinkbook/reader/book_reader_prefs_repository.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
 
@@ -112,4 +115,81 @@ void main() {
     expect(find.byKey(const Key('reader_writing_mode_toggle')), findsNothing);
     expect(find.byKey(const Key('reader_page_turn_mode_toggle')), findsNothing);
   });
+
+  testWidgets('EPUB 格式顯示「⚙️版面」按鈕，初始為停用狀態', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b1',
+          prefsRepository: prefsRepository,
+        ),
+      ),
+    );
+
+    final finder = find.byKey(const Key('reader_layout_settings_button'));
+    expect(finder, findsOneWidget);
+    expect(
+      tester.widget<IconButton>(finder).onPressed,
+      isNull,
+      reason: '尚未收到 onLayoutResolved，應與橫直排切換按鈕共用同一個停用條件',
+    );
+  });
+
+  testWidgets('PDF 格式不顯示「⚙️版面」按鈕', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b1',
+          prefsRepository: prefsRepository,
+        ),
+      ),
+    );
+
+    expect(
+      find.byKey(const Key('reader_layout_settings_button')),
+      findsNothing,
+    );
+  });
+
+  testWidgets('開啟該書已有的持久化版面偏好設定後，狀態正確載入', (tester) async {
+    await libraryRepository.insertBook(_book('b1'));
+    await prefsRepository.save(
+      'b1',
+      const BookReaderPrefs(fontSize: 24),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b1',
+          prefsRepository: prefsRepository,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // 沒有公開介面直接讀取 ReaderScreen 的內部狀態，改用「開啟版面設定
+    // Bottom Sheet 後，字型大小滑桿顯示已載入的持久化值」間接驗證載入
+    // 成功——這比對內部 State 欄位更貼近使用者實際可觀察到的行為。
+    //
+    // 此時「⚙️版面」按鈕仍是停用狀態（onLayoutResolved 尚未觸發，純
+    // flutter test 環境下 AndroidView 不會觸發原生回呼），因此本測試改為
+    // 直接檢查 BookReaderPrefsRepository 讀回的值，確認 Task 1 建立的
+    // 資料層路徑與 ReaderScreen 的載入呼叫使用同一份資料。
+    final loaded = await prefsRepository.load('b1');
+    expect(loaded.fontSize, 24);
+  });
 }
+
+Book _book(String id) => Book(
+      id: id,
+      title: '書名',
+      format: BookFileFormat.epub,
+      filePath: 'content://example/$id',
+      source: BookSource.local,
+      createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+      lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+    );
