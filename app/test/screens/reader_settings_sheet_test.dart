@@ -4,6 +4,7 @@ import 'package:elinkbook/reader/app_font.dart';
 import 'package:elinkbook/reader/book_reader_prefs.dart';
 import 'package:elinkbook/reader/epub_text_align.dart';
 import 'package:elinkbook/reader/page_turn_mode.dart';
+import 'package:elinkbook/reader/screen_orientation_setting.dart';
 import 'package:elinkbook/reader/writing_mode.dart';
 import 'package:elinkbook/screens/reader_settings_sheet.dart';
 
@@ -268,6 +269,107 @@ void main() {
               find.byKey(const Key('reader_settings_font_size_slider')))
           .value,
       25.0,
+    );
+  });
+
+  testWidgets(
+      'writingModeOverride 初始為 vertical 時，點擊「採用書籍排版」圖示後，'
+      'onChanged 帶入 null', (tester) async {
+    BookReaderPrefs? result;
+    await _pumpSheet(
+      tester,
+      const BookReaderPrefs(
+        writingModeOverride: WritingMode.vertical,
+      ),
+      (prefs) => result = prefs,
+    );
+
+    await tester
+        .tap(find.byKey(const Key('reader_settings_writing_mode_book')));
+    await tester.pump();
+
+    expect(result, isNotNull);
+    expect(result!.writingModeOverride, isNull);
+  });
+
+  testWidgets(
+      'writingModeOverride 初始為 null 時，點擊「強制直排」圖示後，'
+      'onChanged 帶入 WritingMode.vertical', (tester) async {
+    BookReaderPrefs? result;
+    await _pumpSheet(
+      tester,
+      BookReaderPrefs.empty,
+      (prefs) => result = prefs,
+    );
+
+    await tester.tap(
+        find.byKey(const Key('reader_settings_writing_mode_vertical')));
+    await tester.pump();
+
+    expect(result, isNotNull);
+    expect(result!.writingModeOverride, WritingMode.vertical);
+  });
+
+  testWidgets('點擊「滾動翻頁」圖示後，onChanged 帶入 PageTurnMode.scroll',
+      (tester) async {
+    BookReaderPrefs? result;
+    await _pumpSheet(
+      tester,
+      BookReaderPrefs.empty,
+      (prefs) => result = prefs,
+    );
+
+    await tester
+        .tap(find.byKey(const Key('reader_settings_page_turn_mode_scroll')));
+    await tester.pump();
+
+    expect(result, isNotNull);
+    expect(result!.pageTurnModeOverride, PageTurnMode.scroll);
+  });
+
+  testWidgets(
+      '點擊「鎖定 90°」圖示後，onChanged 帶入 ScreenOrientationSetting.lock90',
+      (tester) async {
+    BookReaderPrefs? result;
+    await _pumpSheet(
+      tester,
+      BookReaderPrefs.empty,
+      (prefs) => result = prefs,
+    );
+
+    await tester.tap(
+        find.byKey(const Key('reader_settings_screen_orientation_lock90')));
+    await tester.pump();
+
+    expect(result, isNotNull);
+    expect(
+      result!.screenOrientationOverride,
+      ScreenOrientationSetting.lock90,
+    );
+  });
+
+  testWidgets(
+      '點擊排版方向覆寫圖示後，pageTurnModeOverride／screenOrientationOverride '
+      '維持原值不被清空', (tester) async {
+    BookReaderPrefs? result;
+    await _pumpSheet(
+      tester,
+      const BookReaderPrefs(
+        pageTurnModeOverride: PageTurnMode.scroll,
+        screenOrientationOverride: ScreenOrientationSetting.lock180,
+      ),
+      (prefs) => result = prefs,
+    );
+
+    await tester.tap(
+        find.byKey(const Key('reader_settings_writing_mode_horizontal')));
+    await tester.pump();
+
+    expect(result, isNotNull);
+    expect(result!.pageTurnModeOverride, PageTurnMode.scroll);
+    expect(
+      result!.screenOrientationOverride,
+      ScreenOrientationSetting.lock180,
     );
   });
 }
