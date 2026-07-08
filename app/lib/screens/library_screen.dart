@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../library/book_import_service.dart';
+import '../reader/book_reader_prefs_repository.dart';
 import '../library/library_preferences.dart';
 import '../library/library_repository.dart';
 import '../library/models/book.dart';
@@ -23,11 +24,13 @@ const _folderPickerChannel = MethodChannel('elinkbook/folder_picker');
 class LibraryScreen extends StatefulWidget {
   final LibraryRepository repository;
   final BookImportService importService;
+  final BookReaderPrefsRepository prefsRepository;
 
   const LibraryScreen({
     super.key,
     required this.repository,
     required this.importService,
+    required this.prefsRepository,
   });
 
   @override
@@ -255,7 +258,13 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
   void _openBook(Book book) {
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => ReaderScreen(filePath: book.filePath)),
+      MaterialPageRoute(
+        builder: (_) => ReaderScreen(
+          filePath: book.filePath,
+          bookId: book.id,
+          prefsRepository: widget.prefsRepository,
+        ),
+      ),
     );
   }
 
