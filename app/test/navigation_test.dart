@@ -1,14 +1,32 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:elinkbook/library/sqlite_library_repository.dart';
+import 'package:elinkbook/reader/book_reader_prefs_repository.dart';
 import 'package:elinkbook/screens/library_screen.dart';
 
 import 'support/fake_book_import_service.dart';
 import 'support/fake_library_repository.dart';
 
 void main() {
-  setUp(() {
+  late SqliteLibraryRepository libraryRepository;
+  late BookReaderPrefsRepository prefsRepository;
+
+  setUpAll(() {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+  });
+
+  setUp(() async {
     SharedPreferences.setMockInitialValues({});
+    libraryRepository =
+        await SqliteLibraryRepository.open(inMemoryDatabasePath);
+    prefsRepository = BookReaderPrefsRepository(libraryRepository.database);
+  });
+
+  tearDown(() async {
+    await libraryRepository.close();
   });
 
   testWidgets('點擊設定圖示導航至 SettingsScreen，返回後回到 LibraryScreen', (tester) async {
@@ -17,6 +35,7 @@ void main() {
         home: LibraryScreen(
           repository: FakeLibraryRepository(),
           importService: FakeBookImportService(),
+          prefsRepository: prefsRepository,
         ),
       ),
     );

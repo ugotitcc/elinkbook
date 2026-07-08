@@ -5,6 +5,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:elinkbook/library/sqlite_library_repository.dart';
+import 'package:elinkbook/reader/book_reader_prefs_repository.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
 
 /// 把 Flutter asset 複製為裝置暫存目錄中的真實檔案，回傳其絕對路徑。原生
@@ -52,6 +55,28 @@ bool _writingModeToggleReady(WidgetTester tester) {
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
+  // ReaderScreen 自 Issue 3 起需要 BookReaderPrefsRepository（見
+  // docs/adr/0007-reader-screen-book-id-contract.md）。真實裝置上用記憶體
+  // 資料庫即可，這些既有測試情境本身不驗證版面偏好設定的持久化行為
+  // （持久化驗證見 Task 4 新增的測試）。
+  late SqliteLibraryRepository libraryRepository;
+  late BookReaderPrefsRepository prefsRepository;
+
+  setUpAll(() {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+  });
+
+  setUp(() async {
+    libraryRepository =
+        await SqliteLibraryRepository.open(inMemoryDatabasePath);
+    prefsRepository = BookReaderPrefsRepository(libraryRepository.database);
+  });
+
+  tearDown(() async {
+    await libraryRepository.close();
+  });
+
   testWidgets('ReaderScreen 開啟範例 EPUB 檔案，渲染出非空白內容', (tester) async {
     final samplePath =
         await _stageAssetAsFile('test/fixtures/sample.epub', 'sample.epub');
@@ -61,7 +86,13 @@ void main() {
     });
 
     await tester.pumpWidget(
-      MaterialApp(home: ReaderScreen(filePath: samplePath)),
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: samplePath,
+          bookId: 'b1',
+          prefsRepository: prefsRepository,
+        ),
+      ),
     );
 
     // 先確認載入指示器真的存在，才能保證下面「等它消失」是有意義的等待，
@@ -91,7 +122,13 @@ void main() {
     });
 
     await tester.pumpWidget(
-      MaterialApp(home: ReaderScreen(filePath: samplePath)),
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: samplePath,
+          bookId: 'b1',
+          prefsRepository: prefsRepository,
+        ),
+      ),
     );
 
     // 先確認載入指示器真的存在，才能保證下面「等它消失」是有意義的等待，
@@ -122,7 +159,13 @@ void main() {
     });
 
     await tester.pumpWidget(
-      MaterialApp(home: ReaderScreen(filePath: samplePath)),
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: samplePath,
+          bookId: 'b1',
+          prefsRepository: prefsRepository,
+        ),
+      ),
     );
 
     await _pumpUntil(
@@ -147,7 +190,13 @@ void main() {
     });
 
     await tester.pumpWidget(
-      MaterialApp(home: ReaderScreen(filePath: samplePath)),
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: samplePath,
+          bookId: 'b1',
+          prefsRepository: prefsRepository,
+        ),
+      ),
     );
 
     await _pumpUntil(
@@ -172,7 +221,13 @@ void main() {
     });
 
     await tester.pumpWidget(
-      MaterialApp(home: ReaderScreen(filePath: samplePath)),
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: samplePath,
+          bookId: 'b1',
+          prefsRepository: prefsRepository,
+        ),
+      ),
     );
 
     await _pumpUntil(
@@ -195,7 +250,13 @@ void main() {
     });
 
     await tester.pumpWidget(
-      MaterialApp(home: ReaderScreen(filePath: samplePath)),
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: samplePath,
+          bookId: 'b1',
+          prefsRepository: prefsRepository,
+        ),
+      ),
     );
 
     await _pumpUntil(
@@ -234,7 +295,13 @@ void main() {
     });
 
     await tester.pumpWidget(
-      MaterialApp(home: ReaderScreen(filePath: samplePath)),
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: samplePath,
+          bookId: 'b1',
+          prefsRepository: prefsRepository,
+        ),
+      ),
     );
 
     await _pumpUntil(
@@ -260,7 +327,13 @@ void main() {
     });
 
     await tester.pumpWidget(
-      MaterialApp(home: ReaderScreen(filePath: samplePath)),
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: samplePath,
+          bookId: 'b1',
+          prefsRepository: prefsRepository,
+        ),
+      ),
     );
 
     await _pumpUntil(

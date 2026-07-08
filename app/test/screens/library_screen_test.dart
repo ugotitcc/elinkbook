@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:elinkbook/library/sqlite_library_repository.dart';
+import 'package:elinkbook/reader/book_reader_prefs_repository.dart';
 import 'package:elinkbook/screens/library_screen.dart';
 import 'package:elinkbook/library/book_import_service_impl.dart';
 import 'package:elinkbook/library/models/book.dart';
@@ -14,10 +17,28 @@ import '../support/fake_book_import_service.dart';
 import '../support/fake_library_repository.dart';
 
 void main() {
-  setUp(() {
+  late SqliteLibraryRepository libraryRepository;
+  late BookReaderPrefsRepository prefsRepository;
+
+  setUpAll(() {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+  });
+
+  setUp(() async {
     // LibraryScreen.initState() 現在會呼叫 SharedPreferences.getInstance()，
     // 純 Dart widget test 環境沒有真正的原生實作，須用官方支援的測試替身。
     SharedPreferences.setMockInitialValues({});
+    // LibraryScreen 自 Issue 3 起需要 BookReaderPrefsRepository（見
+    // docs/adr/0007-reader-screen-book-id-contract.md）。這裡的測試情境
+    // 本身不涉及版面偏好設定的讀寫，只需要滿足建構參數即可。
+    libraryRepository =
+        await SqliteLibraryRepository.open(inMemoryDatabasePath);
+    prefsRepository = BookReaderPrefsRepository(libraryRepository.database);
+  });
+
+  tearDown(() async {
+    await libraryRepository.close();
   });
 
   testWidgets('圖書庫為空時顯示「尚未匯入書籍」提示與匯入按鈕', (tester) async {
@@ -26,6 +47,7 @@ void main() {
         home: LibraryScreen(
           repository: FakeLibraryRepository(),
           importService: FakeBookImportService(),
+          prefsRepository: prefsRepository,
         ),
       ),
     );
@@ -46,6 +68,7 @@ void main() {
         home: LibraryScreen(
           repository: FakeLibraryRepository(throwOnListBooks: true),
           importService: FakeBookImportService(),
+          prefsRepository: prefsRepository,
         ),
       ),
     );
@@ -63,6 +86,7 @@ void main() {
         home: LibraryScreen(
           repository: FakeLibraryRepository(initialBooks: [book]),
           importService: FakeBookImportService(),
+          prefsRepository: prefsRepository,
         ),
       ),
     );
@@ -81,6 +105,7 @@ void main() {
         home: LibraryScreen(
           repository: FakeLibraryRepository(initialBooks: [book]),
           importService: FakeBookImportService(),
+          prefsRepository: prefsRepository,
         ),
       ),
     );
@@ -107,6 +132,7 @@ void main() {
         home: LibraryScreen(
           repository: repository,
           importService: FakeBookImportService(),
+          prefsRepository: prefsRepository,
         ),
       ),
     );
@@ -128,6 +154,7 @@ void main() {
           key: const Key('library_screen_after_restart'),
           repository: repository,
           importService: FakeBookImportService(),
+          prefsRepository: prefsRepository,
         ),
       ),
     );
@@ -165,6 +192,7 @@ void main() {
         home: LibraryScreen(
           repository: FakeLibraryRepository(initialBooks: [bookB, bookA]),
           importService: FakeBookImportService(),
+          prefsRepository: prefsRepository,
         ),
       ),
     );
@@ -205,6 +233,7 @@ void main() {
         home: LibraryScreen(
           repository: repository,
           importService: FakeBookImportService(),
+          prefsRepository: prefsRepository,
         ),
       ),
     );
@@ -224,6 +253,7 @@ void main() {
           key: const Key('library_screen_after_restart'),
           repository: repository,
           importService: FakeBookImportService(),
+          prefsRepository: prefsRepository,
         ),
       ),
     );
@@ -243,6 +273,7 @@ void main() {
         home: LibraryScreen(
           repository: repository,
           importService: FakeBookImportService(),
+          prefsRepository: prefsRepository,
         ),
       ),
     );
@@ -271,6 +302,7 @@ void main() {
         home: LibraryScreen(
           repository: repository,
           importService: FakeBookImportService(),
+          prefsRepository: prefsRepository,
         ),
       ),
     );
@@ -304,6 +336,7 @@ void main() {
         home: LibraryScreen(
           repository: repository,
           importService: FakeBookImportService(),
+          prefsRepository: prefsRepository,
         ),
       ),
     );
@@ -342,6 +375,7 @@ void main() {
         home: LibraryScreen(
           repository: repository,
           importService: FakeBookImportService(),
+          prefsRepository: prefsRepository,
         ),
       ),
     );
@@ -377,6 +411,7 @@ void main() {
         home: LibraryScreen(
           repository: repository,
           importService: FakeBookImportService(),
+          prefsRepository: prefsRepository,
         ),
       ),
     );
@@ -408,6 +443,7 @@ void main() {
         home: LibraryScreen(
           repository: repository,
           importService: FakeBookImportService(),
+          prefsRepository: prefsRepository,
         ),
       ),
     );
@@ -445,6 +481,7 @@ void main() {
         home: LibraryScreen(
           repository: repository,
           importService: FakeBookImportService(),
+          prefsRepository: prefsRepository,
         ),
       ),
     );
@@ -503,6 +540,7 @@ void main() {
         home: LibraryScreen(
           repository: repository,
           importService: BookImportServiceImpl(repository: repository),
+          prefsRepository: prefsRepository,
         ),
       ),
     );
@@ -528,6 +566,7 @@ void main() {
         home: LibraryScreen(
           repository: FakeLibraryRepository(initialBooks: [book]),
           importService: FakeBookImportService(),
+          prefsRepository: prefsRepository,
         ),
       ),
     );
@@ -553,6 +592,7 @@ void main() {
         home: LibraryScreen(
           repository: FakeLibraryRepository(initialBooks: [bookA, bookB]),
           importService: FakeBookImportService(),
+          prefsRepository: prefsRepository,
         ),
       ),
     );
@@ -583,6 +623,7 @@ void main() {
         home: LibraryScreen(
           repository: FakeLibraryRepository(initialBooks: [book]),
           importService: FakeBookImportService(),
+          prefsRepository: prefsRepository,
         ),
       ),
     );
@@ -616,6 +657,7 @@ void main() {
         home: LibraryScreen(
           repository: FakeLibraryRepository(initialBooks: [book]),
           importService: FakeBookImportService(),
+          prefsRepository: prefsRepository,
         ),
       ),
     );
@@ -647,6 +689,7 @@ void main() {
         home: LibraryScreen(
           repository: repository,
           importService: FakeBookImportService(),
+          prefsRepository: prefsRepository,
         ),
       ),
     );
@@ -688,6 +731,7 @@ void main() {
         home: LibraryScreen(
           repository: repository,
           importService: FakeBookImportService(),
+          prefsRepository: prefsRepository,
         ),
       ),
     );
@@ -745,6 +789,7 @@ void main() {
         home: LibraryScreen(
           repository: FakeLibraryRepository(),
           importService: importService,
+          prefsRepository: prefsRepository,
         ),
       ),
     );
@@ -813,6 +858,7 @@ void main() {
         home: LibraryScreen(
           repository: FakeLibraryRepository(),
           importService: importService,
+          prefsRepository: prefsRepository,
         ),
       ),
     );
@@ -868,6 +914,7 @@ void main() {
         home: LibraryScreen(
           repository: FakeLibraryRepository(),
           importService: importService,
+          prefsRepository: prefsRepository,
         ),
       ),
     );

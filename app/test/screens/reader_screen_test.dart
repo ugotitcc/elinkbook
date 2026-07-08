@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:elinkbook/library/sqlite_library_repository.dart';
+import 'package:elinkbook/reader/book_reader_prefs_repository.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
 
 // 依 spec.md「測試決策」：ReaderScreen 分派到 EpubReaderView/PdfReaderView
@@ -10,10 +13,37 @@ import 'package:elinkbook/screens/reader_screen.dart';
 // 以及橫直排切換按鈕、換頁模式切換按鈕在 onLayoutResolved 觸發前的初始
 // 狀態（按鈕本身的顯示/隱藏、停用狀態不依賴原生回呼，可離線驗證）。
 void main() {
+  // ReaderScreen 自 Issue 3 起需要 BookReaderPrefsRepository（見
+  // docs/adr/0007-reader-screen-book-id-contract.md）。這裡用
+  // sqflite_common_ffi 的記憶體資料庫建構一個真實但空的實例——測試情境
+  // 本身不涉及版面偏好設定的讀寫，只需要滿足建構參數即可，比照
+  // BookReaderPrefsRepository 既有測試慣例（不 mock 資料層）。
+  late SqliteLibraryRepository libraryRepository;
+  late BookReaderPrefsRepository prefsRepository;
+
+  setUpAll(() {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+  });
+
+  setUp(() async {
+    libraryRepository =
+        await SqliteLibraryRepository.open(inMemoryDatabasePath);
+    prefsRepository = BookReaderPrefsRepository(libraryRepository.database);
+  });
+
+  tearDown(() async {
+    await libraryRepository.close();
+  });
+
   testWidgets('不支援格式顯示明確錯誤訊息', (tester) async {
     await tester.pumpWidget(
-      const MaterialApp(
-        home: ReaderScreen(filePath: 'test/fixtures/sample.txt'),
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.txt',
+          bookId: 'b1',
+          prefsRepository: prefsRepository,
+        ),
       ),
     );
 
@@ -23,8 +53,12 @@ void main() {
 
   testWidgets('EPUB 格式顯示橫直排切換按鈕，初始為停用狀態', (tester) async {
     await tester.pumpWidget(
-      const MaterialApp(
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub'),
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b1',
+          prefsRepository: prefsRepository,
+        ),
       ),
     );
 
@@ -40,8 +74,12 @@ void main() {
   testWidgets('EPUB 格式顯示換頁模式切換按鈕，初始為停用狀態且提示切換為捲動',
       (tester) async {
     await tester.pumpWidget(
-      const MaterialApp(
-        home: ReaderScreen(filePath: 'test/fixtures/sample.epub'),
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b1',
+          prefsRepository: prefsRepository,
+        ),
       ),
     );
 
@@ -62,8 +100,12 @@ void main() {
 
   testWidgets('PDF 格式不顯示橫直排切換按鈕與換頁模式切換按鈕', (tester) async {
     await tester.pumpWidget(
-      const MaterialApp(
-        home: ReaderScreen(filePath: 'test/fixtures/sample.pdf'),
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b1',
+          prefsRepository: prefsRepository,
+        ),
       ),
     );
 
