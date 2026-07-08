@@ -44,7 +44,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   late double _paragraphSpacing;
   late double _pageMargins;
   late EpubTextAlign? _textAlign;
-  late bool _disableBookCss; // publisherStyles 的反向語意
+  late bool _publisherStyles;
 
   @override
   void initState() {
@@ -58,7 +58,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
         widget.prefs.paragraphSpacing ?? _defaultParagraphSpacing;
     _pageMargins = widget.prefs.pageMargins ?? _defaultPageMargins;
     _textAlign = widget.prefs.textAlign;
-    _disableBookCss = widget.prefs.publisherStyles == false;
+    _publisherStyles = widget.prefs.publisherStyles ?? true;
   }
 
   @override
@@ -75,7 +75,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
             widget.prefs.paragraphSpacing ?? _defaultParagraphSpacing;
         _pageMargins = widget.prefs.pageMargins ?? _defaultPageMargins;
         _textAlign = widget.prefs.textAlign;
-        _disableBookCss = widget.prefs.publisherStyles == false;
+        _publisherStyles = widget.prefs.publisherStyles ?? true;
       });
     }
   }
@@ -89,7 +89,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
       paragraphSpacing: _paragraphSpacing,
       pageMargins: _pageMargins,
       textAlign: _textAlign,
-      publisherStyles: !_disableBookCss,
+      publisherStyles: _publisherStyles,
       // Issue 4 範圍的三個欄位：原樣保留，本 widget 不控制。
       writingModeOverride: widget.prefs.writingModeOverride,
       pageTurnModeOverride: widget.prefs.pageTurnModeOverride,
@@ -178,9 +178,9 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
           SwitchListTile(
             key: const Key('reader_settings_disable_book_css'),
             title: const Text('停用書本 CSS'),
-            value: _disableBookCss,
+            value: !_publisherStyles,
             onChanged: (v) => setState(() {
-              _disableBookCss = v;
+              _publisherStyles = !v;
               _notifyChanged();
             }),
           ),

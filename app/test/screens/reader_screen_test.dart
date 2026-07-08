@@ -4,6 +4,7 @@ import 'package:elinkbook/reader/book_reader_prefs.dart';
 import 'package:elinkbook/reader/book_reader_prefs_repository.dart';
 import 'package:elinkbook/reader/epub_reader_view.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
+import '../support/fake_book_reader_prefs_repository.dart';
 
 // 依 spec.md「測試決策」：ReaderScreen 分派到 EpubReaderView/PdfReaderView
 // 後，實際渲染內容存在於原生 PlatformView 之中，一般 flutter test（無真實
@@ -149,7 +150,8 @@ void main() {
       ),
     );
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
 
     // 驗證 ReaderScreen 載入的偏好設定已正確套用並傳遞至 EpubReaderView
     final viewFinder = find.byType(EpubReaderView);
@@ -157,18 +159,4 @@ void main() {
     final epubView = tester.widget<EpubReaderView>(viewFinder);
     expect(epubView.fontSize, 24.0);
   });
-}
-
-class FakeBookReaderPrefsRepository implements BookReaderPrefsRepository {
-  final Map<String, BookReaderPrefs> _storage = {};
-
-  @override
-  Future<BookReaderPrefs> load(String bookId) async {
-    return _storage[bookId] ?? BookReaderPrefs.empty;
-  }
-
-  @override
-  Future<void> save(String bookId, BookReaderPrefs prefs) async {
-    _storage[bookId] = prefs;
-  }
 }
