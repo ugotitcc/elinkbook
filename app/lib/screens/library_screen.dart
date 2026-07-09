@@ -13,7 +13,6 @@ import '../library/models/book_group.dart';
 import '../library/models/library_enums.dart';
 import 'library_group_management_dialog.dart';
 import 'library_move_to_group_dialog.dart';
-import '../theme/app_theme.dart';
 import 'reader_screen.dart';
 import 'settings_screen.dart';
 
@@ -27,21 +26,11 @@ class LibraryScreen extends StatefulWidget {
   final BookImportService importService;
   final BookReaderPrefsRepository prefsRepository;
 
-  /// 主題切換回呼（見 epic-3-fonts-layout Issue 5）。
-  final ValueChanged<AppTheme>? onThemeChanged;
-  final ValueChanged<bool>? onEinkModeChanged;
-  final AppTheme currentTheme;
-  final bool isEinkMode;
-
   const LibraryScreen({
     super.key,
     required this.repository,
     required this.importService,
     required this.prefsRepository,
-    this.onThemeChanged,
-    this.onEinkModeChanged,
-    this.currentTheme = AppTheme.light,
-    this.isEinkMode = false,
   });
 
   @override
