@@ -1,18 +1,23 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 
 import '../reader/app_font.dart';
 import '../reader/book_reader_prefs.dart';
 import '../reader/epub_text_align.dart';
+import '../reader/page_turn_mode.dart';
+import '../reader/screen_orientation_setting.dart';
+import '../reader/writing_mode.dart';
 
-/// 版面設定 Bottom Sheet（FR-09／FR-10 字型與數值型控制項），比照
-/// prototype/index.html 第 1379-1520 行設計。排版方向／翻頁模式／螢幕方向
-/// 三個覆寫選擇器屬 Issue 4，尚未加入本檔案。
+/// 版面設定 Bottom Sheet（FR-09／FR-10 字型、數值型控制項與三個持久化覆寫
+/// 選擇器），比照 prototype/index.html 第 1379-1520 行設計。
 ///
 /// 純展示、無 I/O：每次互動即時透過 [onChanged] 回報目前完整的
-/// [BookReaderPrefs]，持久化與更新 `EpubReaderView` 建構參數皆由呼叫端
-/// （`ReaderScreen`）負責。[prefs] 中本 widget 不控制的三個欄位
-/// （`writingModeOverride`／`pageTurnModeOverride`／`screenOrientationOverride`，
-/// Issue 4 範圍）在每次 [onChanged] 回呼時原樣保留，不會被清空或覆寫。
+/// [BookReaderPrefs]，持久化與更新 `EpubReaderView` 建構參數、螢幕方向鎖定
+/// 皆由呼叫端（`ReaderScreen`）負責——本 widget 只負責回報使用者選擇的覆寫
+/// 值，不負責解析「覆寫值 `??` 自動偵測結果／全域預設值」的最終生效值
+/// （見 `ReaderScreen._resolvedWritingMode`／`_resolvedPageTurnMode`／
+/// `_resolvedScreenOrientation`）。
 class ReaderSettingsSheet extends StatefulWidget {
   final BookReaderPrefs prefs;
   final ValueChanged<BookReaderPrefs> onChanged;
@@ -45,6 +50,9 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   late double _pageMargins;
   late EpubTextAlign? _textAlign;
   late bool _publisherStyles;
+  late WritingMode? _writingModeOverride;
+  late PageTurnMode? _pageTurnModeOverride;
+  late ScreenOrientationSetting? _screenOrientationOverride;
 
   @override
   void initState() {
@@ -59,6 +67,9 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     _pageMargins = widget.prefs.pageMargins ?? _defaultPageMargins;
     _textAlign = widget.prefs.textAlign;
     _publisherStyles = widget.prefs.publisherStyles ?? true;
+    _writingModeOverride = widget.prefs.writingModeOverride;
+    _pageTurnModeOverride = widget.prefs.pageTurnModeOverride;
+    _screenOrientationOverride = widget.prefs.screenOrientationOverride;
   }
 
   @override
@@ -76,6 +87,9 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
         _pageMargins = widget.prefs.pageMargins ?? _defaultPageMargins;
         _textAlign = widget.prefs.textAlign;
         _publisherStyles = widget.prefs.publisherStyles ?? true;
+        _writingModeOverride = widget.prefs.writingModeOverride;
+        _pageTurnModeOverride = widget.prefs.pageTurnModeOverride;
+        _screenOrientationOverride = widget.prefs.screenOrientationOverride;
       });
     }
   }
@@ -90,10 +104,9 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
       pageMargins: _pageMargins,
       textAlign: _textAlign,
       publisherStyles: _publisherStyles,
-      // Issue 4 範圍的三個欄位：原樣保留，本 widget 不控制。
-      writingModeOverride: widget.prefs.writingModeOverride,
-      pageTurnModeOverride: widget.prefs.pageTurnModeOverride,
-      screenOrientationOverride: widget.prefs.screenOrientationOverride,
+      writingModeOverride: _writingModeOverride,
+      pageTurnModeOverride: _pageTurnModeOverride,
+      screenOrientationOverride: _screenOrientationOverride,
     ));
   }
 
@@ -184,6 +197,12 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
               _notifyChanged();
             }),
           ),
+          const SizedBox(height: 12),
+          _buildWritingModeOverrideRow(),
+          const SizedBox(height: 12),
+          _buildScreenOrientationOverrideRow(),
+          const SizedBox(height: 12),
+          _buildPageTurnModeOverrideRow(),
         ],
       ),
     );
@@ -314,6 +333,122 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
               color: selected ? Theme.of(context).colorScheme.primary : null,
               onPressed: () => setState(() {
                 _textAlign = align;
+                _notifyChanged();
+              }),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  /// 排版方向覆寫（三態，FR-10）：`null`＝採用書籍排版（自動偵測結果，見
+  /// `ReaderScreen._resolvedWritingMode`）、`vertical`＝強制直排、
+  /// `horizontal`＝強制橫排。
+  Widget _buildWritingModeOverrideRow() {
+    const options = [
+      (null, 'book', Icons.auto_stories, '採用書籍排版'),
+      (WritingMode.vertical, 'vertical', Icons.text_rotate_vertical, '強制直排'),
+      (WritingMode.horizontal, 'horizontal', Icons.text_rotation_none, '強制橫排'),
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('排版方向模式'),
+        Wrap(
+          spacing: 4,
+          children: options.map((option) {
+            final (mode, keySuffix, icon, tooltip) = option;
+            final selected = _writingModeOverride == mode;
+            return IconButton(
+              key: Key('reader_settings_writing_mode_$keySuffix'),
+              icon: Icon(icon),
+              tooltip: tooltip,
+              color: selected ? Theme.of(context).colorScheme.primary : null,
+              onPressed: () => setState(() {
+                _writingModeOverride = mode;
+                _notifyChanged();
+              }),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  /// 翻頁模式覆寫（FR-10／FR-38，全域/單書雙層解析）：`null`＝使用全域
+  /// 預設值（見 `ReaderScreen._resolvedPageTurnMode`），非 `null`＝單書
+  /// 覆寫。
+  Widget _buildPageTurnModeOverrideRow() {
+    const options = [
+      (null, 'global', Icons.tune, '使用全域預設'),
+      (PageTurnMode.paginated, 'paginated', Icons.menu_book, '點擊翻頁'),
+      (PageTurnMode.scroll, 'scroll', Icons.swap_vert, '滾動翻頁'),
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('翻頁模式覆寫'),
+        Wrap(
+          spacing: 4,
+          children: options.map((option) {
+            final (mode, keySuffix, icon, tooltip) = option;
+            final selected = _pageTurnModeOverride == mode;
+            return IconButton(
+              key: Key('reader_settings_page_turn_mode_$keySuffix'),
+              icon: Icon(icon),
+              tooltip: tooltip,
+              color: selected ? Theme.of(context).colorScheme.primary : null,
+              onPressed: () => setState(() {
+                _pageTurnModeOverride = mode;
+                _notifyChanged();
+              }),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  /// 螢幕方向覆寫（FR-10／FR-37，全域/單書雙層解析）：`null`＝使用全域
+  /// 預設值（見 `ReaderScreen._resolvedScreenOrientation`），非 `null`＝
+  /// 單書覆寫。0°／180° 與 90°／270° 分別共用同一個 Material icon，以
+  /// `Transform.rotate` 配合角度旋轉提升視覺辨識度，tooltip 文字消歧。
+  Widget _buildScreenOrientationOverrideRow() {
+    // (setting, keySuffix, icon, tooltip, rotationAngle)
+    const options = <(
+      ScreenOrientationSetting?,
+      String,
+      IconData,
+      String,
+      double,
+    )>[
+      (null, 'global', Icons.tune, '使用全域預設', 0.0),
+      (ScreenOrientationSetting.auto, 'auto', Icons.screen_rotation, '自動旋轉', 0.0),
+      (ScreenOrientationSetting.lock0, 'lock0', Icons.stay_current_portrait, '鎖定 0°', 0.0),
+      (ScreenOrientationSetting.lock90, 'lock90', Icons.stay_current_landscape, '鎖定 90°', 0.0),
+      (ScreenOrientationSetting.lock180, 'lock180', Icons.stay_current_portrait, '鎖定 180°', pi),
+      (ScreenOrientationSetting.lock270, 'lock270', Icons.stay_current_landscape, '鎖定 270°', pi * 1.5),
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('螢幕方向鎖定覆寫'),
+        Wrap(
+          spacing: 4,
+          children: options.map((option) {
+            final (setting, keySuffix, icon, tooltip, angle) = option;
+            final selected = _screenOrientationOverride == setting;
+            final iconWidget = Icon(icon);
+            return IconButton(
+              key: Key('reader_settings_screen_orientation_$keySuffix'),
+              icon: angle == 0.0
+                  ? iconWidget
+                  : Transform.rotate(angle: angle, child: iconWidget),
+              tooltip: tooltip,
+              color: selected ? Theme.of(context).colorScheme.primary : null,
+              onPressed: () => setState(() {
+                _screenOrientationOverride = setting;
                 _notifyChanged();
               }),
             );
