@@ -178,14 +178,14 @@ docs/
 
 ## Agent skills
 
-### Issue tracker（工單追蹤）
+### Issue tracker
 
-本機 markdown，存放於 `docs/epics/<epic-name>/`（SDD Epic 沙盒），非 Gitea。Gitea（`git.jigong.org/huthief/elinkBook`，透過以 `jigong` 登入的 `tea` CLI）僅作為程式碼的 git remote 使用。詳見 `docs/agents/issue-tracker.md`。
+本機 Markdown 檔案管理，存放於各 Epic 目錄下（`docs/epics/<epic-name>/`）。詳見 [issue-tracker.md](./docs/agents/issue-tracker.md)。
 
-### Triage labels（分流標籤）
+### Triage labels
 
-預設標籤詞彙（`needs-triage`、`needs-info`、`ready-for-agent`、`ready-for-human`、`wontfix`）——尚未在此儲存庫上建立。詳見 `docs/agents/triage-labels.md`。
+採用標準的五個分流標籤（`needs-triage`、`needs-info`、`ready-for-agent`、`ready-for-human`、`wontfix`）。詳見 [triage-labels.md](./docs/agents/triage-labels.md)。
 
-### Domain docs（領域文件）
+### Domain docs
 
-單一情境（Single-context）——根目錄一份 `CONTEXT.md` + `docs/adr/`（兩者皆尚未建立）。詳見 `docs/agents/domain.md`。
+使用單一情境（single-context）配置，以根目錄的 [CONTEXT.md](./CONTEXT.md) 及 `docs/adr/` 作為架構與領域知識的唯一事實來源。詳見 [domain.md](./docs/agents/domain.md)。
