@@ -22,6 +22,7 @@ import kotlinx.coroutines.launch
 import org.readium.r2.navigator.epub.EpubNavigatorFactory
 import org.readium.r2.navigator.epub.EpubNavigatorFragment
 import org.readium.r2.navigator.epub.EpubPreferences
+import org.readium.r2.navigator.preferences.Fit
 import org.readium.r2.navigator.preferences.FontFamily
 import org.readium.r2.navigator.preferences.TextAlign
 import org.readium.r2.shared.publication.Layout
@@ -160,6 +161,7 @@ class EpubReaderView(
             pageMargins = (map["pageMargins"] as? Number)?.toDouble(),
             textAlign = (map["textAlign"] as? String)?.let { textAlignFromName(it) },
             publisherStyles = map["publisherStyles"] as? Boolean,
+            fit = Fit.CONTAIN,
         )
     }
 

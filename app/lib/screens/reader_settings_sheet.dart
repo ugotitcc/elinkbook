@@ -37,7 +37,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   // prototype/index.html 的示範數值一致；互動前不會被送出/持久化，只影響
   // 滑桿位置。
   static const _defaultFontSize = 16.0;
-  static const _defaultFontWeightMultiplier = 1.0; // UI 顯示 400
+  static const _defaultFontWeightMultiplier = 1.0; // 倍率，UI 顯示 400（1.0 × 400）
   static const _defaultLineHeight = 1.5;
   static const _defaultParagraphSpacing = 10.0;
   static const _defaultPageMargins = 15.0;
@@ -61,8 +61,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     _fontSize = widget.prefs.fontSize != null
         ? (widget.prefs.fontSize! * 16.0).roundToDouble()
         : _defaultFontSize;
-    _fontWeightMultiplier =
-        widget.prefs.fontWeight ?? _defaultFontWeightMultiplier;
+    _fontWeightMultiplier = widget.prefs.fontWeight ?? _defaultFontWeightMultiplier;
     _lineHeight = widget.prefs.lineHeight ?? _defaultLineHeight;
     _paragraphSpacing = widget.prefs.paragraphSpacing != null
         ? (widget.prefs.paragraphSpacing! * 10.0).roundToDouble()
@@ -86,8 +85,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
         _fontSize = widget.prefs.fontSize != null
             ? (widget.prefs.fontSize! * 16.0).roundToDouble()
             : _defaultFontSize;
-        _fontWeightMultiplier =
-            widget.prefs.fontWeight ?? _defaultFontWeightMultiplier;
+        _fontWeightMultiplier = widget.prefs.fontWeight ?? _defaultFontWeightMultiplier;
         _lineHeight = widget.prefs.lineHeight ?? _defaultLineHeight;
         _paragraphSpacing = widget.prefs.paragraphSpacing != null
             ? (widget.prefs.paragraphSpacing! * 10.0).roundToDouble()

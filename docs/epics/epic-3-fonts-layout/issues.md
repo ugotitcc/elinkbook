@@ -123,9 +123,17 @@
 
 ---
 
-## Issue 6：真機驗證與收尾
+## Issue 6：真機驗證與收尾（已完成，發現 3 個後續問題）
 
 **依賴：** Issue 2、Issue 3、Issue 4、Issue 5 全部完成
+
+**驗證結果（2026-07-09）：**
+- ✅ 自動旋轉重新分頁 `integration_test` 已通過
+- ✅ 自訂字型載入驗證通過（Check 1）
+- ✅ 端到端偏好設定持久化驗證通過（Check 3）
+- ❌ 字重（fontWeight）設定無視覺效果 → 已建立 Issue 7 追蹤
+- ❌ 閱讀器底部被狀態列遮蔽 → 已建立 Issue 8 追蹤
+- ❌ PDF 書籍無法換頁 → 已建立 Issue 9 追蹤
 
 **描述：**
 本 issue 為裝置端整合驗證與 Epic 收尾，比照 Epic 2 Issue 3/4/5 的既有模式，部分項目屬人工視覺 QA 性質：
@@ -144,3 +152,57 @@
 - 端到端持久化驗證產出書面紀錄（比照 `qa-issue-N-*.md` 既有慣例）
 - `flutter analyze` 乾淨、`flutter test` 全數通過
 - 若有發現需要後續處理的落差，已建立對應的後續 issue 追蹤，不阻塞本 epic 合併
+
+---
+
+## Issue 7：字型粗細（fontWeight）設定無視覺效果（已修復）
+
+**依賴：** Issue 2（`EpubReaderView` 的 `fontWeight` 參數傳遞）
+
+**描述：**
+真機驗證（Issue 6）發現：拖動字重滑桿從 300 到 900，畫面文字粗細無任何視覺變化。所有 5 款內建字型皆受影響。
+
+**可能原因：**
+- `EpubReaderView.kt` 端未將 `fontWeight` 參數套用至 Readium WebView 的 CSS `font-weight` 屬性
+- 或 CSS 注入邏輯有誤（例如選擇器未命中、數值格式錯誤）
+
+**驗收標準：**
+- 拖動字重滑桿時，思源黑體/宋體呈現 Variable Font 多級漸進變化
+- 其餘 3 款字型呈現模擬粗體效果（Faux Bold）
+- `flutter test` 通過、`flutter analyze` 乾淨
+
+---
+
+## Issue 8：閱讀器底部被狀態列/導航列遮蔽（已修復，原生端強制 fixed-layout 圖片為 Fit.CONTAIN）
+
+**依賴：** 無
+
+**描述：**
+真機驗證（Issue 6）發現：閱讀書籍（尤其是漫畫類內容）時，畫面最下方內容被 Android 狀態列（status bar）或導航行動列（navigation bar）遮蔽，導致底部內容不可讀。
+
+**可能原因：**
+- `ReaderScreen` 未正確處理 `MediaQuery.viewPadding.bottom` 或 `SystemUiEdge` insets
+- PlatformView 高度計算未扣除系統 UI 佔用區域
+
+**驗收標準：**
+- 書籍內容完整顯示，不被系統 UI 遮蔽
+- 直排/橫排模式下皆正常
+- `flutter test` 通過、`flutter analyze` 乾淨
+
+---
+
+## Issue 9：PDF 書籍無法換頁（已修復，且已優化實機解析度低之缺陷）
+
+**依賴：** 無
+
+**描述：**
+真機驗證（Issue 6）發現：開啟 PDF 書籍後，無法進行翻頁操作（手勢或按鈕皆無效），PDF 閱讀功能完全不可用。
+
+**可能原因：**
+- `PdfReaderView.kt` 的手勢偵測（GestureDetector）未正確綁定
+- 或頁面導航邏輯（goToNextPage/goToPreviousPage）有誤
+
+**驗收標準：**
+- PDF 書籍可正常左右滑動翻頁
+- 頁碼指示正確更新
+- `flutter test` 通過、`flutter analyze` 乾淨

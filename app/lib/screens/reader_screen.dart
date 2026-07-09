@@ -249,15 +249,17 @@ class _ReaderScreenState extends State<ReaderScreen> {
         ),
       );
     }
-    return Stack(
-      children: [
-        _buildNativeView(format),
-        if (_state == _RenderState.loading)
-          const Center(
-            key: Key('reader_loading_indicator'),
-            child: CircularProgressIndicator(),
-          ),
-      ],
+    return SafeArea(
+      child: Stack(
+        children: [
+          _buildNativeView(format),
+          if (_state == _RenderState.loading)
+            const Center(
+              key: Key('reader_loading_indicator'),
+              child: CircularProgressIndicator(),
+            ),
+        ],
+      ),
     );
   }
 
