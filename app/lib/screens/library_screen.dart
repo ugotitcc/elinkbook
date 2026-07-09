@@ -11,6 +11,7 @@ import '../library/library_repository.dart';
 import '../library/models/book.dart';
 import '../library/models/book_group.dart';
 import '../library/models/library_enums.dart';
+import '../theme/app_theme.dart';
 import 'library_group_management_dialog.dart';
 import 'library_move_to_group_dialog.dart';
 import 'reader_screen.dart';
@@ -25,12 +26,20 @@ class LibraryScreen extends StatefulWidget {
   final LibraryRepository repository;
   final BookImportService importService;
   final BookReaderPrefsRepository prefsRepository;
+  final AppTheme currentTheme;
+  final bool isEinkMode;
+  final ValueChanged<AppTheme>? onThemeChanged;
+  final ValueChanged<bool>? onEinkModeChanged;
 
   const LibraryScreen({
     super.key,
     required this.repository,
     required this.importService,
     required this.prefsRepository,
+    this.currentTheme = AppTheme.light,
+    this.isEinkMode = false,
+    this.onThemeChanged,
+    this.onEinkModeChanged,
   });
 
   @override
@@ -347,6 +356,24 @@ class _LibraryScreenState extends State<LibraryScreen> {
     return AppBar(
       title: const Text('書架'),
       actions: [
+        _buildThemeDot(
+            AppTheme.light, const Color(0xFFF5F5F5), 'library_theme_dot_light'),
+        _buildThemeDot(
+            AppTheme.dark, const Color(0xFF121212), 'library_theme_dot_dark'),
+        _buildThemeDot(
+            AppTheme.sepia, const Color(0xFFF4ECD8), 'library_theme_dot_sepia'),
+        const SizedBox(width: 4),
+        IconButton(
+          key: const Key('library_eink_toggle'),
+          icon: Icon(
+            widget.isEinkMode ? Icons.contrast : Icons.contrast_outlined,
+            color:
+                widget.isEinkMode ? Theme.of(context).colorScheme.primary : null,
+          ),
+          tooltip: 'E-Ink 高對比模式',
+          onPressed: () => widget.onEinkModeChanged?.call(!widget.isEinkMode),
+        ),
+        const VerticalDivider(width: 1, indent: 12, endIndent: 12),
         PopupMenuButton<LibrarySortBy>(
           key: const Key('library_sort_button'),
           icon: const Icon(Icons.sort),
@@ -403,6 +430,34 @@ class _LibraryScreenState extends State<LibraryScreen> {
           },
         ),
       ],
+    );
+  }
+
+  Widget _buildThemeDot(AppTheme theme, Color color, String key) {
+    final isSelected = widget.currentTheme == theme && !widget.isEinkMode;
+    return GestureDetector(
+      key: Key(key),
+      // E-Ink 模式下，禁用主題圓點的點擊事件（解決無效點擊反饋問題，見 review 意見）
+      onTap: widget.isEinkMode ? null : () => widget.onThemeChanged?.call(theme),
+      child: Opacity(
+        // E-Ink 模式下降低主題圓點不透明度以作視覺提示
+        opacity: widget.isEinkMode ? 0.4 : 1.0,
+        child: Container(
+          width: 24,
+          height: 24,
+          margin: const EdgeInsets.symmetric(horizontal: 4),
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: isSelected
+                  ? Theme.of(context).colorScheme.primary
+                  : Colors.grey.withValues(alpha: 0.5),
+              width: isSelected ? 2 : 1,
+            ),
+          ),
+        ),
+      ),
     );
   }
 
