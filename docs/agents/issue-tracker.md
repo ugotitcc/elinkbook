@@ -12,7 +12,7 @@
 - 各工單的實作計畫：`docs/epics/<epic-name>/plans/plan-issue-<N>.md`
 - 各工單的審查紀錄：`docs/epics/<epic-name>/reviews/review-issue-<N>.md`
 - Bug 修復重現報告（跳過 design/spec 階段）：`docs/epics/<epic-name>/reviews/bugfix-repro.md`
-- 分流狀態記錄於每筆工單條目上方的 `Status:` 那一行——角色字串請見 `docs/agents/triage-labels.md`
+- 分流狀態記錄於每筆工單條目上方的 `Status:` 那一行——角色字串請見 [triage-labels.md](./triage-labels.md)
 - 當某個 Epic 的程式碼已完全合併且穩定後，將整個 `docs/epics/<epic-name>/` 目錄搬移至 `docs/archive/<YYYY-MM-DD>-<簡稱>/`
 
 ## 當某個 skill 說「發布到工單追蹤系統」時
