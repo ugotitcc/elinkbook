@@ -332,7 +332,7 @@ class EpubReaderView(
         val isFixedLayout = publication?.metadata?.layout == Layout.FIXED
         if (!isFixedLayout) return
 
-        val webView = findWebView(this) ?: return
+        val webView = findWebView(view) ?: return
         val js = """
             (function() {
                 var style = document.createElement('style');
