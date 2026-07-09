@@ -160,6 +160,7 @@ class EpubReaderView(
             pageMargins = (map["pageMargins"] as? Number)?.toDouble(),
             textAlign = (map["textAlign"] as? String)?.let { textAlignFromName(it) },
             publisherStyles = map["publisherStyles"] as? Boolean,
+            textNormalization = true,
         )
     }
 

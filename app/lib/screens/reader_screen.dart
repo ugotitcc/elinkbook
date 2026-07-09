@@ -256,7 +256,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
         _buildNativeView(format),
         if (_isFixedLayout)
           Positioned(
-            top: 16 + MediaQuery.of(context).padding.top, // 避開頂部狀態列
+            top: 16, // SafeArea 內層，頂部已扣除狀態列，故直接設為 16 即可
             left: 16,
             child: ClipOval(
               child: Container(
@@ -278,10 +278,6 @@ class _ReaderScreenState extends State<ReaderScreen> {
       ],
     );
 
-    if (_isFixedLayout) {
-      // 固定版面（漫畫）不加 SafeArea 以便 WebView 可用 100vh 高度滿版顯示，配合漫畫 SVG 比例
-      return body;
-    }
     return SafeArea(
       child: body,
     );
