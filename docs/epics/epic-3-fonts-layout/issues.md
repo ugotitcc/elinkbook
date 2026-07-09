@@ -101,7 +101,7 @@
 
 ---
 
-## Issue 5：全域主題與 E-Ink 高對比模式
+## Issue 5：全域主題與 E-Ink 高對比模式（已完成，合併於 PR #29）
 
 **依賴：** Issue 1（`AppThemePreferences`），可與 Issue 2/3/4 平行開發
 
