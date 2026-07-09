@@ -65,6 +65,9 @@ class _ReaderScreenState extends State<ReaderScreen> {
       ScreenOrientationSetting.auto;
   bool _isFixedLayout = false;
   BookReaderPrefs _prefs = BookReaderPrefs.empty;
+  // 記錄上一次實際套用給系統的螢幕方向，避免在偏好設定頻繁變動時（例如
+  // 拖曳滑桿）重複呼叫 SystemChrome.setPreferredOrientations。
+  ScreenOrientationSetting? _lastAppliedOrientation;
 
   /// 排版方向最終生效值：單書覆寫優先於自動偵測結果。onLayoutResolved
   /// 尚未觸發、且沒有 writingModeOverride 時，回傳 null（EpubReaderView
@@ -115,9 +118,16 @@ class _ReaderScreenState extends State<ReaderScreen> {
   /// 是本 issue 撰寫計劃階段決定的慣例（0°→portraitUp、90°→landscapeLeft、
   /// 180°→portraitDown、270°→landscapeRight），實際物理旋轉是否與這組
   /// 對應一致，留待真機測試以驗收標準的人工視覺 QA 確認。
+  ///
+  /// 為避免使用者在快速拖曳滑桿時產生高頻率的 platform channel 呼叫，
+  /// 僅在 [_resolvedScreenOrientation] 與 [_lastAppliedOrientation] 不同時
+  /// 才實際呼叫 SystemChrome。
   void _applyScreenOrientation() {
+    final current = _resolvedScreenOrientation;
+    if (current == _lastAppliedOrientation) return;
+    _lastAppliedOrientation = current;
     SystemChrome.setPreferredOrientations(
-      _deviceOrientationsFor(_resolvedScreenOrientation),
+      _deviceOrientationsFor(current),
     );
   }
 

@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 
 import '../reader/app_font.dart';
@@ -410,42 +412,23 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
 
   /// 螢幕方向覆寫（FR-10／FR-37，全域/單書雙層解析）：`null`＝使用全域
   /// 預設值（見 `ReaderScreen._resolvedScreenOrientation`），非 `null`＝
-  /// 單書覆寫。0°／180° 與 90°／270° 分別共用同一個 Material icon（無法用
-  /// 單一圖示區分 4 個角度），以 tooltip 文字消歧，比照 `_buildTextAlignRow`
-  /// 的既有處理方式。
+  /// 單書覆寫。0°／180° 與 90°／270° 分別共用同一個 Material icon，以
+  /// `Transform.rotate` 配合角度旋轉提升視覺辨識度，tooltip 文字消歧。
   Widget _buildScreenOrientationOverrideRow() {
-    const options = [
-      (null, 'global', Icons.tune, '使用全域預設'),
-      (
-        ScreenOrientationSetting.auto,
-        'auto',
-        Icons.screen_rotation,
-        '自動旋轉',
-      ),
-      (
-        ScreenOrientationSetting.lock0,
-        'lock0',
-        Icons.stay_current_portrait,
-        '鎖定 0°',
-      ),
-      (
-        ScreenOrientationSetting.lock90,
-        'lock90',
-        Icons.stay_current_landscape,
-        '鎖定 90°',
-      ),
-      (
-        ScreenOrientationSetting.lock180,
-        'lock180',
-        Icons.stay_current_portrait,
-        '鎖定 180°',
-      ),
-      (
-        ScreenOrientationSetting.lock270,
-        'lock270',
-        Icons.stay_current_landscape,
-        '鎖定 270°',
-      ),
+    // (setting, keySuffix, icon, tooltip, rotationAngle)
+    const options = <(
+      ScreenOrientationSetting?,
+      String,
+      IconData,
+      String,
+      double,
+    )>[
+      (null, 'global', Icons.tune, '使用全域預設', 0.0),
+      (ScreenOrientationSetting.auto, 'auto', Icons.screen_rotation, '自動旋轉', 0.0),
+      (ScreenOrientationSetting.lock0, 'lock0', Icons.stay_current_portrait, '鎖定 0°', 0.0),
+      (ScreenOrientationSetting.lock90, 'lock90', Icons.stay_current_landscape, '鎖定 90°', 0.0),
+      (ScreenOrientationSetting.lock180, 'lock180', Icons.stay_current_portrait, '鎖定 180°', pi),
+      (ScreenOrientationSetting.lock270, 'lock270', Icons.stay_current_landscape, '鎖定 270°', pi * 1.5),
     ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -454,11 +437,14 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
         Wrap(
           spacing: 4,
           children: options.map((option) {
-            final (setting, keySuffix, icon, tooltip) = option;
+            final (setting, keySuffix, icon, tooltip, angle) = option;
             final selected = _screenOrientationOverride == setting;
+            final iconWidget = Icon(icon);
             return IconButton(
               key: Key('reader_settings_screen_orientation_$keySuffix'),
-              icon: Icon(icon),
+              icon: angle == 0.0
+                  ? iconWidget
+                  : Transform.rotate(angle: angle, child: iconWidget),
               tooltip: tooltip,
               color: selected ? Theme.of(context).colorScheme.primary : null,
               onPressed: () => setState(() {
