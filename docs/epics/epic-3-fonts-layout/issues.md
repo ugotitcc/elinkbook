@@ -4,7 +4,7 @@
 
 ---
 
-## Issue 1：資料層基礎建設——`BookReaderPrefs` 與全域偏好設定儲存
+## Issue 1：資料層基礎建設——BookReaderPrefs 與全域偏好設定儲存（已完成，合併於 PR #25）
 
 **依賴：** 無（起始工單）
 
@@ -30,7 +30,7 @@
 
 ---
 
-## Issue 2：原生契約擴充——批次偏好設定與字型素材註冊
+## Issue 2：原生契約擴充——批次偏好設定與字型素材註冊（已完成，合併於 PR #26）
 
 **依賴：** Issue 1（需要 `AppFont`/`EpubTextAlign` 等列舉型別供 map key 對應使用）
 
@@ -53,7 +53,7 @@
 
 ---
 
-## Issue 3：版面設定 Bottom Sheet——字型與數值型控制項
+## Issue 3：版面設定 Bottom Sheet——字型與數值型控制項（已完成，合併於 PR #27）
 
 **依賴：** Issue 2
 
@@ -76,7 +76,7 @@
 
 ---
 
-## Issue 4：版面設定 Bottom Sheet——三個覆寫選擇器與螢幕方向鎖定
+## Issue 4：版面設定 Bottom Sheet——三個覆寫選擇器與螢幕方向鎖定（已完成，合併於 PR #28）
 
 **依賴：** Issue 2（`setPreferences` 機制）、可與 Issue 3 平行開發（共用同一個 `ReaderSettingsSheet`，但控制項區塊獨立）
 
