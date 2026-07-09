@@ -434,22 +434,27 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 
   Widget _buildThemeDot(AppTheme theme, Color color, String key) {
-    final isSelected = widget.currentTheme == theme;
-    return InkWell(
+    final isSelected = widget.currentTheme == theme && !widget.isEinkMode;
+    return GestureDetector(
       key: Key(key),
-      onTap: () => widget.onThemeChanged?.call(theme),
-      child: Container(
-        width: 24,
-        height: 24,
-        margin: const EdgeInsets.symmetric(horizontal: 4),
-        decoration: BoxDecoration(
-          color: color,
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: isSelected
-                ? Theme.of(context).colorScheme.primary
-                : Colors.grey.withValues(alpha: 0.5),
-            width: isSelected ? 2 : 1,
+      // E-Ink 模式下，禁用主題圓點的點擊事件（解決無效點擊反饋問題，見 review 意見）
+      onTap: widget.isEinkMode ? null : () => widget.onThemeChanged?.call(theme),
+      child: Opacity(
+        // E-Ink 模式下降低主題圓點不透明度以作視覺提示
+        opacity: widget.isEinkMode ? 0.4 : 1.0,
+        child: Container(
+          width: 24,
+          height: 24,
+          margin: const EdgeInsets.symmetric(horizontal: 4),
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: isSelected
+                  ? Theme.of(context).colorScheme.primary
+                  : Colors.grey.withValues(alpha: 0.5),
+              width: isSelected ? 2 : 1,
+            ),
           ),
         ),
       ),
