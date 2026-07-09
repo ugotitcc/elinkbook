@@ -22,6 +22,8 @@ import kotlinx.coroutines.launch
 import org.readium.r2.navigator.epub.EpubNavigatorFactory
 import org.readium.r2.navigator.epub.EpubNavigatorFragment
 import org.readium.r2.navigator.epub.EpubPreferences
+import org.readium.r2.navigator.epub.css.FontStyle
+import org.readium.r2.navigator.epub.css.FontWeight
 import org.readium.r2.navigator.preferences.FontFamily
 import org.readium.r2.navigator.preferences.TextAlign
 import org.readium.r2.shared.publication.Layout
@@ -203,6 +205,13 @@ class EpubReaderView(
                 ) {
                     addFontFace {
                         addSource(lookupKey, preload = true)
+                        setFontStyle(FontStyle.NORMAL)
+                        setFontWeight(FontWeight.NORMAL)
+                    }
+                    addFontFace {
+                        addSource(lookupKey, preload = true)
+                        setFontStyle(FontStyle.NORMAL)
+                        setFontWeight(FontWeight.BOLD)
                     }
                 }
             }
@@ -299,6 +308,59 @@ class EpubReaderView(
             pageReported = true
             channel.invokeMethod("onPageRendered", null)
             reportLayoutResolved()
+        }
+        applyFixedLayoutCssInjection()
+    }
+
+    private fun findWebView(view: android.view.View): android.webkit.WebView? {
+        if (view is android.webkit.WebView) {
+            return view
+        }
+        if (view is android.view.ViewGroup) {
+            for (i in 0 until view.childCount) {
+                val child = view.getChildAt(i)
+                val result = findWebView(child)
+                if (result != null) {
+                    return result
+                }
+            }
+        }
+        return null
+    }
+
+    private fun applyFixedLayoutCssInjection() {
+        val isFixedLayout = publication?.metadata?.layout == Layout.FIXED
+        if (!isFixedLayout) return
+
+        val webView = findWebView(this) ?: return
+        val js = """
+            (function() {
+                var style = document.createElement('style');
+                style.innerHTML = `
+                    html, body {
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        width: 100vw !important;
+                        height: 100vh !important;
+                        overflow: hidden !important;
+                        display: flex !important;
+                        justify-content: center !important;
+                        align-items: center !important;
+                        background-color: transparent !important;
+                    }
+                    svg, img, iframe {
+                        max-width: 100vw !important;
+                        max-height: 100vh !important;
+                        width: auto !important;
+                        height: auto !important;
+                        object-fit: contain !important;
+                    }
+                `;
+                document.head.appendChild(style);
+            })()
+        """.trimIndent()
+        webView.post {
+            webView.evaluateJavascript(js, null)
         }
     }
 
