@@ -73,6 +73,16 @@ class _ElinkBookAppState extends State<ElinkBookApp> {
     _isEinkMode = widget.initialEinkMode;
   }
 
+  void _handleThemeChanged(AppTheme theme) {
+    setState(() => _theme = theme);
+    widget.themePreferences.saveTheme(theme);
+  }
+
+  void _handleEinkModeChanged(bool enabled) {
+    setState(() => _isEinkMode = enabled);
+    widget.themePreferences.saveEinkMode(enabled);
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeData = resolveThemeData(
@@ -86,6 +96,10 @@ class _ElinkBookAppState extends State<ElinkBookApp> {
         repository: widget.repository,
         importService: widget.importService,
         prefsRepository: widget.prefsRepository,
+        currentTheme: _theme,
+        isEinkMode: _isEinkMode,
+        onThemeChanged: _handleThemeChanged,
+        onEinkModeChanged: _handleEinkModeChanged,
       ),
     );
   }

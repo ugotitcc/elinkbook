@@ -114,8 +114,6 @@ ThemeData _buildEinkTheme() {
     onSecondary: Colors.white,
     surface: Colors.white,
     onSurface: Colors.black,
-    background: Colors.white,
-    onBackground: Colors.black,
     error: Colors.black,
     onError: Colors.white,
     outline: Colors.black,
