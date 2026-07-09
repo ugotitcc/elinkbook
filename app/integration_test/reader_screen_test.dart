@@ -268,8 +268,8 @@ void main() {
     await tester.pumpAndSettle();
 
     final reloadedPrefs = await prefsRepository.load(bookId);
-    expect(reloadedPrefs.fontSize, 17.0,
-        reason: '初始值為 null（顯示原型預設 16），點擊一次 + 按鈕後應存成 17');
+    expect(reloadedPrefs.fontSize, 1.0625,
+        reason: '初始值為 null（顯示原型預設 16），點擊一次 + 按鈕後應存成倍率 1.0625 (17/16)');
 
     await tester.pumpWidget(
       MaterialApp(

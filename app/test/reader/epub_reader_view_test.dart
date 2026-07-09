@@ -57,11 +57,11 @@ void main() {
         writingMode: WritingMode.vertical,
         pageTurnMode: PageTurnMode.scroll,
         fontFamily: AppFont.sourceHanSans,
-        fontSize: 18,
+        fontSize: 1.125,
         fontWeight: 1.75,
         lineHeight: 1.6,
-        paragraphSpacing: 12,
-        pageMargins: 20,
+        paragraphSpacing: 1.2,
+        pageMargins: 1.3333,
         textAlign: EpubTextAlign.justify,
         publisherStyles: false,
       ),
@@ -73,11 +73,11 @@ void main() {
       'writingMode': 'vertical',
       'pageTurnMode': 'scroll',
       'fontFamily': 'SourceHanSansTC',
-      'fontSize': 18.0,
+      'fontSize': 1.125,
       'fontWeight': 1.75,
       'lineHeight': 1.6,
-      'paragraphSpacing': 12.0,
-      'pageMargins': 20.0,
+      'paragraphSpacing': 1.2,
+      'pageMargins': 1.3333,
       'textAlign': 'justify',
       'publisherStyles': false,
     });
@@ -126,7 +126,7 @@ void main() {
         filePath: '/tmp/sample.epub',
         onPageRendered: _noop,
         onError: _noopError,
-        fontSize: 18,
+        fontSize: 1.125,
       ),
     ));
     await tester.pumpAndSettle();
@@ -137,7 +137,7 @@ void main() {
         filePath: '/tmp/sample.epub',
         onPageRendered: _noop,
         onError: _noopError,
-        fontSize: 20, // 變動
+        fontSize: 1.25, // 變動
         writingMode: WritingMode.vertical, // 新增一個原本是 null 的欄位
       ),
     ));
@@ -146,7 +146,7 @@ void main() {
     expect(instanceCalls, hasLength(1));
     expect(instanceCalls.single.method, 'setPreferences');
     expect(instanceCalls.single.arguments, {
-      'fontSize': 20.0,
+      'fontSize': 1.25,
       'writingMode': 'vertical',
     });
   });
@@ -177,7 +177,7 @@ void main() {
       filePath: '/tmp/sample.epub',
       onPageRendered: _noop,
       onError: _noopError,
-      fontSize: 18,
+      fontSize: 1.125,
     );
 
     await tester.pumpWidget(const MaterialApp(home: widget));

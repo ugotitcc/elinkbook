@@ -12,11 +12,11 @@ void main() {
   testWidgets('初始值正確反映傳入的 BookReaderPrefs', (tester) async {
     const prefs = BookReaderPrefs(
       fontFamily: AppFont.sourceHanSerif,
-      fontSize: 22,
-      fontWeight: 1.75, // UI 應顯示 700
+      fontSize: 1.375, // UI 22.0
+      fontWeight: 1.75, // UI 700
       lineHeight: 1.8,
-      paragraphSpacing: 20,
-      pageMargins: 25,
+      paragraphSpacing: 2.0, // UI 20.0
+      pageMargins: 1.6667, // UI 25.0
       textAlign: EpubTextAlign.justify,
       publisherStyles: false, // 停用書本 CSS 開關應為 true（反向語意）
     );
@@ -126,7 +126,7 @@ void main() {
     BookReaderPrefs? result;
     await _pumpSheet(
       tester,
-      const BookReaderPrefs(fontSize: 20, lineHeight: 1.6),
+      const BookReaderPrefs(fontSize: 1.25, lineHeight: 1.6), // UI 20.0
       (prefs) => result = prefs,
     );
 
@@ -135,7 +135,7 @@ void main() {
     await tester.pump();
 
     expect(result, isNotNull);
-    expect(result!.fontSize, 21.0);
+    expect(result!.fontSize, 1.3125); // UI 21.0
     expect(result!.lineHeight, 1.6, reason: '未被觸碰的欄位應維持原值');
   });
 
@@ -246,7 +246,7 @@ void main() {
     await tester.pumpWidget(MaterialApp(
       home: Scaffold(
         body: _TestSettingsSheetWrapper(
-          initialPrefs: const BookReaderPrefs(fontSize: 20),
+          initialPrefs: const BookReaderPrefs(fontSize: 1.25), // UI 20.0
           onWrapperCreated: (updateFn) => updatePrefs = updateFn,
         ),
       ),
@@ -260,7 +260,7 @@ void main() {
       20.0,
     );
 
-    updatePrefs(const BookReaderPrefs(fontSize: 25));
+    updatePrefs(const BookReaderPrefs(fontSize: 1.5625)); // UI 25.0
     await tester.pump();
 
     expect(

@@ -58,13 +58,18 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   void initState() {
     super.initState();
     _fontFamily = widget.prefs.fontFamily;
-    _fontSize = widget.prefs.fontSize ?? _defaultFontSize;
+    _fontSize = widget.prefs.fontSize != null
+        ? (widget.prefs.fontSize! * 16.0).roundToDouble()
+        : _defaultFontSize;
     _fontWeightMultiplier =
         widget.prefs.fontWeight ?? _defaultFontWeightMultiplier;
     _lineHeight = widget.prefs.lineHeight ?? _defaultLineHeight;
-    _paragraphSpacing =
-        widget.prefs.paragraphSpacing ?? _defaultParagraphSpacing;
-    _pageMargins = widget.prefs.pageMargins ?? _defaultPageMargins;
+    _paragraphSpacing = widget.prefs.paragraphSpacing != null
+        ? (widget.prefs.paragraphSpacing! * 10.0).roundToDouble()
+        : _defaultParagraphSpacing;
+    _pageMargins = widget.prefs.pageMargins != null
+        ? (widget.prefs.pageMargins! * 15.0).roundToDouble()
+        : _defaultPageMargins;
     _textAlign = widget.prefs.textAlign;
     _publisherStyles = widget.prefs.publisherStyles ?? true;
     _writingModeOverride = widget.prefs.writingModeOverride;
@@ -78,13 +83,18 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     if (widget.prefs != oldWidget.prefs) {
       setState(() {
         _fontFamily = widget.prefs.fontFamily;
-        _fontSize = widget.prefs.fontSize ?? _defaultFontSize;
+        _fontSize = widget.prefs.fontSize != null
+            ? (widget.prefs.fontSize! * 16.0).roundToDouble()
+            : _defaultFontSize;
         _fontWeightMultiplier =
             widget.prefs.fontWeight ?? _defaultFontWeightMultiplier;
         _lineHeight = widget.prefs.lineHeight ?? _defaultLineHeight;
-        _paragraphSpacing =
-            widget.prefs.paragraphSpacing ?? _defaultParagraphSpacing;
-        _pageMargins = widget.prefs.pageMargins ?? _defaultPageMargins;
+        _paragraphSpacing = widget.prefs.paragraphSpacing != null
+            ? (widget.prefs.paragraphSpacing! * 10.0).roundToDouble()
+            : _defaultParagraphSpacing;
+        _pageMargins = widget.prefs.pageMargins != null
+            ? (widget.prefs.pageMargins! * 15.0).roundToDouble()
+            : _defaultPageMargins;
         _textAlign = widget.prefs.textAlign;
         _publisherStyles = widget.prefs.publisherStyles ?? true;
         _writingModeOverride = widget.prefs.writingModeOverride;
@@ -94,14 +104,18 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     }
   }
 
+  double _toMultiplier(double value, double base) {
+    return ((value / base) * 10000).round() / 10000;
+  }
+
   void _notifyChanged() {
     widget.onChanged(BookReaderPrefs(
       fontFamily: _fontFamily,
-      fontSize: _fontSize,
+      fontSize: _toMultiplier(_fontSize, 16.0),
       fontWeight: _fontWeightMultiplier,
       lineHeight: _lineHeight,
-      paragraphSpacing: _paragraphSpacing,
-      pageMargins: _pageMargins,
+      paragraphSpacing: _toMultiplier(_paragraphSpacing, 10.0),
+      pageMargins: _toMultiplier(_pageMargins, 15.0),
       textAlign: _textAlign,
       publisherStyles: _publisherStyles,
       writingModeOverride: _writingModeOverride,

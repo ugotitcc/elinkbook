@@ -84,7 +84,7 @@ void main() {
   testWidgets('開啟該書已有的持久化版面偏好設定後，狀態正確載入', (tester) async {
     await prefsRepository.save(
       'b1',
-      const BookReaderPrefs(fontSize: 24),
+      const BookReaderPrefs(fontSize: 1.5),
     );
 
     await tester.pumpWidget(
@@ -103,7 +103,7 @@ void main() {
     final viewFinder = find.byType(EpubReaderView);
     expect(viewFinder, findsOneWidget);
     final epubView = tester.widget<EpubReaderView>(viewFinder);
-    expect(epubView.fontSize, 24.0);
+    expect(epubView.fontSize, 1.5);
   });
 
   testWidgets(
