@@ -208,10 +208,12 @@ class _ReaderScreenState extends State<ReaderScreen> {
   Widget build(BuildContext context) {
     final format = detectBookFormat(widget.filePath);
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('閱讀器'),
-        actions: _buildAppBarActions(format),
-      ),
+      appBar: _isFixedLayout
+          ? null // 固定版面（如漫畫）隱藏 Scaffold AppBar，改用 Stack 懸浮半透明按鈕，避免裁切大圖
+          : AppBar(
+              title: const Text('閱讀器'),
+              actions: _buildAppBarActions(format),
+            ),
       body: _buildBody(format),
     );
   }
@@ -249,17 +251,39 @@ class _ReaderScreenState extends State<ReaderScreen> {
         ),
       );
     }
-    return SafeArea(
-      child: Stack(
-        children: [
-          _buildNativeView(format),
-          if (_state == _RenderState.loading)
-            const Center(
-              key: Key('reader_loading_indicator'),
-              child: CircularProgressIndicator(),
+    final body = Stack(
+      children: [
+        _buildNativeView(format),
+        if (_isFixedLayout)
+          Positioned(
+            top: 16 + MediaQuery.of(context).padding.top, // 避開頂部狀態列
+            left: 16,
+            child: ClipOval(
+              child: Container(
+                color: Colors.black54,
+                child: IconButton(
+                  key: const Key('reader_fixed_layout_back_button'),
+                  icon: const Icon(Icons.arrow_back, color: Colors.white),
+                  tooltip: '返回',
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ),
             ),
-        ],
-      ),
+          ),
+        if (_state == _RenderState.loading)
+          const Center(
+            key: Key('reader_loading_indicator'),
+            child: CircularProgressIndicator(),
+          ),
+      ],
+    );
+
+    if (_isFixedLayout) {
+      // 固定版面（漫畫）不加 SafeArea 以便 WebView 可用 100vh 高度滿版顯示，配合漫畫 SVG 比例
+      return body;
+    }
+    return SafeArea(
+      child: body,
     );
   }
 
