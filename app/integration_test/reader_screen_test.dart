@@ -9,8 +9,11 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:elinkbook/library/sqlite_library_repository.dart';
 import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
+import 'package:elinkbook/reader/book_reader_prefs.dart';
 import 'package:elinkbook/reader/book_reader_prefs_repository.dart';
+import 'package:elinkbook/reader/screen_orientation_setting.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
+import 'package:elinkbook/screens/reader_settings_sheet.dart';
 
 /// 把 Flutter asset 複製為裝置暫存目錄中的真實檔案，回傳其絕對路徑。原生
 /// 渲染引擎（Readium／PdfRenderer）都需要真實的裝置檔案系統路徑，不能直接
@@ -44,12 +47,13 @@ Future<void> _pumpUntil(
 bool _loadingIndicatorGone() =>
     find.byKey(const Key('reader_loading_indicator')).evaluate().isEmpty;
 
-/// 判斷橫直排切換按鈕是否已就緒（存在且可點擊）。`onLayoutResolved` 觸發前
-/// `_writingMode` 為 null，此時按鈕的 `onPressed` 亦為 null（見
-/// reader_screen.dart 的 `_buildAppBarActions`），因此以此作為「自動偵測已
-/// 完成」的觀察點。
-bool _writingModeToggleReady(WidgetTester tester) {
-  final finder = find.byKey(const Key('reader_writing_mode_toggle'));
+/// 判斷「⚙️版面」按鈕是否已就緒（存在且可點擊）。`onLayoutResolved` 觸發前
+/// `_autoDetectedWritingMode` 為 null，此時按鈕的 `onPressed` 亦為 null
+/// （見 reader_screen.dart 的 `_buildAppBarActions`），因此以此作為「自動
+/// 偵測已完成」的觀察點——取代 Issue 4 移除的 `reader_writing_mode_toggle`
+/// 讀取信號。
+bool _layoutSettingsButtonReady(WidgetTester tester) {
+  final finder = find.byKey(const Key('reader_layout_settings_button'));
   if (finder.evaluate().isEmpty) return false;
   return tester.widget<IconButton>(finder).onPressed != null;
 }
@@ -70,7 +74,7 @@ void main() {
   // ReaderScreen 自 Issue 3 起需要 BookReaderPrefsRepository（見
   // docs/adr/0007-reader-screen-book-id-contract.md）。真實裝置上用記憶體
   // 資料庫即可，這些既有測試情境本身不驗證版面偏好設定的持久化行為
-  // （持久化驗證見 Task 4 新增的測試）。
+  // （持久化驗證見既有的 Bottom Sheet 互動測試）。
   late SqliteLibraryRepository libraryRepository;
   late BookReaderPrefsRepository prefsRepository;
 
@@ -107,13 +111,8 @@ void main() {
       ),
     );
 
-    // 先確認載入指示器真的存在，才能保證下面「等它消失」是有意義的等待，
-    // 而不是 Key 被改名/移除後，condition 從一開始就成立、測試沒等待就
-    // silently 通過。
     expect(find.byKey(const Key('reader_loading_indicator')), findsOneWidget);
 
-    // 10 秒逾時：Readium 需非同步解析 EPUB 套件結構並啟動 WebView 導覽器，
-    // 與 Issue 4 的 EpubReaderView 整合測試採用相同的逾時時間。
     await _pumpUntil(
       tester,
       _loadingIndicatorGone,
@@ -143,13 +142,8 @@ void main() {
       ),
     );
 
-    // 先確認載入指示器真的存在，才能保證下面「等它消失」是有意義的等待，
-    // 而不是 Key 被改名/移除後，condition 從一開始就成立、測試沒等待就
-    // silently 通過。
     expect(find.byKey(const Key('reader_loading_indicator')), findsOneWidget);
 
-    // 5 秒逾時：PdfRenderer 為同步點陣圖渲染，與 Issue 3 的 PdfReaderView
-    // 整合測試採用相同的逾時時間。
     await _pumpUntil(
       tester,
       _loadingIndicatorGone,
@@ -161,70 +155,7 @@ void main() {
             '但畫面顯示了錯誤');
   });
 
-  testWidgets('開啟直排 CJK 範例 EPUB，切換按鈕啟用且提示切換為橫排',
-      (tester) async {
-    final samplePath = await _stageAssetAsFile(
-        'test/fixtures/sample.epub', 'sample_toggle_vertical.epub');
-    addTearDown(() async {
-      final file = File(samplePath);
-      if (await file.exists()) await file.delete();
-    });
-
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: 'b1',
-          prefsRepository: prefsRepository,
-        ),
-      ),
-    );
-
-    await _pumpUntil(
-      tester,
-      () => _writingModeToggleReady(tester),
-      timeout: const Duration(seconds: 10),
-    );
-
-    final button = tester.widget<IconButton>(
-      find.byKey(const Key('reader_writing_mode_toggle')),
-    );
-    expect(button.tooltip, '切換為橫排');
-    expect(find.byKey(const Key('reader_error_text')), findsNothing);
-  });
-
-  testWidgets('開啟英文範例 EPUB，切換按鈕啟用且提示切換為直排', (tester) async {
-    final samplePath = await _stageAssetAsFile(
-        'test/fixtures/sample_horizontal.epub', 'sample_toggle_horizontal.epub');
-    addTearDown(() async {
-      final file = File(samplePath);
-      if (await file.exists()) await file.delete();
-    });
-
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: 'b1',
-          prefsRepository: prefsRepository,
-        ),
-      ),
-    );
-
-    await _pumpUntil(
-      tester,
-      () => _writingModeToggleReady(tester),
-      timeout: const Duration(seconds: 10),
-    );
-
-    final button = tester.widget<IconButton>(
-      find.byKey(const Key('reader_writing_mode_toggle')),
-    );
-    expect(button.tooltip, '切換為直排');
-    expect(find.byKey(const Key('reader_error_text')), findsNothing);
-  });
-
-  testWidgets('開啟定樣式範例 EPUB，切換按鈕最終不顯示', (tester) async {
+  testWidgets('開啟定樣式範例 EPUB，⚙️版面按鈕最終不顯示', (tester) async {
     final samplePath = await _stageAssetAsFile(
         'test/fixtures/sample_fixed_layout.epub', 'sample_toggle_fixed.epub');
     addTearDown(() async {
@@ -246,131 +177,13 @@ void main() {
       tester,
       () =>
           _loadingIndicatorGone() &&
-          find.byKey(const Key('reader_writing_mode_toggle')).evaluate().isEmpty,
+          find
+              .byKey(const Key('reader_layout_settings_button'))
+              .evaluate()
+              .isEmpty,
       timeout: const Duration(seconds: 10),
     );
 
-    expect(find.byKey(const Key('reader_error_text')), findsNothing);
-  });
-
-  testWidgets('點擊切換按鈕後，提示文字反轉且不觸發錯誤', (tester) async {
-    final samplePath = await _stageAssetAsFile(
-        'test/fixtures/sample.epub', 'sample_toggle_tap.epub');
-    addTearDown(() async {
-      final file = File(samplePath);
-      if (await file.exists()) await file.delete();
-    });
-
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: 'b1',
-          prefsRepository: prefsRepository,
-        ),
-      ),
-    );
-
-    await _pumpUntil(
-      tester,
-      () => _writingModeToggleReady(tester),
-      timeout: const Duration(seconds: 10),
-    );
-
-    expect(
-      tester
-          .widget<IconButton>(find.byKey(const Key('reader_writing_mode_toggle')))
-          .tooltip,
-      '切換為橫排',
-    );
-
-    await tester.tap(find.byKey(const Key('reader_writing_mode_toggle')));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
-
-    expect(
-      tester
-          .widget<IconButton>(find.byKey(const Key('reader_writing_mode_toggle')))
-          .tooltip,
-      '切換為直排',
-    );
-    expect(find.byKey(const Key('reader_error_text')), findsNothing);
-  });
-
-  testWidgets('開啟範例 EPUB，換頁模式切換按鈕啟用且初始提示切換為捲動模式',
-      (tester) async {
-    final samplePath = await _stageAssetAsFile(
-        'test/fixtures/sample.epub', 'sample_page_turn_initial.epub');
-    addTearDown(() async {
-      final file = File(samplePath);
-      if (await file.exists()) await file.delete();
-    });
-
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: 'b1',
-          prefsRepository: prefsRepository,
-        ),
-      ),
-    );
-
-    await _pumpUntil(
-      tester,
-      () => _writingModeToggleReady(tester),
-      timeout: const Duration(seconds: 10),
-    );
-
-    final button = tester.widget<IconButton>(
-      find.byKey(const Key('reader_page_turn_mode_toggle')),
-    );
-    expect(button.onPressed, isNotNull);
-    expect(button.tooltip, '切換為捲動模式');
-    expect(find.byKey(const Key('reader_error_text')), findsNothing);
-  });
-
-  testWidgets('點擊換頁模式切換按鈕後，提示文字反轉且不觸發錯誤', (tester) async {
-    final samplePath = await _stageAssetAsFile(
-        'test/fixtures/sample.epub', 'sample_page_turn_tap.epub');
-    addTearDown(() async {
-      final file = File(samplePath);
-      if (await file.exists()) await file.delete();
-    });
-
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: 'b1',
-          prefsRepository: prefsRepository,
-        ),
-      ),
-    );
-
-    await _pumpUntil(
-      tester,
-      () => _writingModeToggleReady(tester),
-      timeout: const Duration(seconds: 10),
-    );
-
-    expect(
-      tester
-          .widget<IconButton>(find.byKey(const Key('reader_page_turn_mode_toggle')))
-          .tooltip,
-      '切換為捲動模式',
-    );
-
-    await tester.tap(find.byKey(const Key('reader_page_turn_mode_toggle')));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
-
-    expect(
-      tester
-          .widget<IconButton>(find.byKey(const Key('reader_page_turn_mode_toggle')))
-          .tooltip,
-      '切換為分頁模式',
-    );
     expect(find.byKey(const Key('reader_error_text')), findsNothing);
   });
 
@@ -396,7 +209,7 @@ void main() {
 
     await _pumpUntil(
       tester,
-      () => _writingModeToggleReady(tester),
+      () => _layoutSettingsButtonReady(tester),
       timeout: const Duration(seconds: 10),
     );
 
@@ -435,7 +248,7 @@ void main() {
 
     await _pumpUntil(
       tester,
-      () => _writingModeToggleReady(tester),
+      () => _layoutSettingsButtonReady(tester),
       timeout: const Duration(seconds: 10),
     );
 
@@ -477,5 +290,256 @@ void main() {
     expect(find.byKey(const Key('reader_error_text')), findsNothing,
         reason: '帶著已持久化的 fontSize=17 重新開書，應正常渲染、不觸發 onError'
             '（驗證 EpubReaderView 的 initialPreferences 機制在真實裝置上正確運作）');
+  });
+
+  testWidgets('點擊排版方向覆寫圖示「強制直排」後，畫面持續渲染成功、無 onError',
+      (tester) async {
+    final samplePath = await _stageAssetAsFile(
+        'test/fixtures/sample.epub', 'sample_writing_mode_override.epub');
+    addTearDown(() async {
+      final file = File(samplePath);
+      if (await file.exists()) await file.delete();
+    });
+    await libraryRepository.insertBook(_book('b_writing_mode_override'));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: samplePath,
+          bookId: 'b_writing_mode_override',
+          prefsRepository: prefsRepository,
+        ),
+      ),
+    );
+
+    await _pumpUntil(
+      tester,
+      () => _layoutSettingsButtonReady(tester),
+      timeout: const Duration(seconds: 10),
+    );
+
+    await tester.tap(find.byKey(const Key('reader_layout_settings_button')));
+    await tester.pumpAndSettle();
+
+    final verticalButton = find.byKey(const Key('reader_settings_writing_mode_vertical'));
+    final sheetScrollable = find.descendant(
+      of: find.byType(ReaderSettingsSheet),
+      matching: find.byType(Scrollable),
+    );
+    await tester.scrollUntilVisible(verticalButton, 50.0, scrollable: sheetScrollable);
+    await tester.drag(sheetScrollable, const Offset(0, -100));
+    await tester.pumpAndSettle();
+    await tester.tap(verticalButton);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.byKey(const Key('reader_error_text')), findsNothing,
+        reason: '點擊「強制直排」覆寫圖示後畫面應持續渲染成功，不應觸發 onError');
+  });
+
+  testWidgets('點擊翻頁模式覆寫圖示「滾動翻頁」後，畫面持續渲染成功、無 onError',
+      (tester) async {
+    final samplePath = await _stageAssetAsFile(
+        'test/fixtures/sample.epub', 'sample_page_turn_mode_override.epub');
+    addTearDown(() async {
+      final file = File(samplePath);
+      if (await file.exists()) await file.delete();
+    });
+    await libraryRepository.insertBook(_book('b_page_turn_mode_override'));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: samplePath,
+          bookId: 'b_page_turn_mode_override',
+          prefsRepository: prefsRepository,
+        ),
+      ),
+    );
+
+    await _pumpUntil(
+      tester,
+      () => _layoutSettingsButtonReady(tester),
+      timeout: const Duration(seconds: 10),
+    );
+
+    await tester.tap(find.byKey(const Key('reader_layout_settings_button')));
+    await tester.pumpAndSettle();
+
+    final scrollButton = find.byKey(const Key('reader_settings_page_turn_mode_scroll'));
+    final sheetScrollable = find.descendant(
+      of: find.byType(ReaderSettingsSheet),
+      matching: find.byType(Scrollable),
+    );
+    await tester.scrollUntilVisible(scrollButton, 50.0, scrollable: sheetScrollable);
+    await tester.drag(sheetScrollable, const Offset(0, -100));
+    await tester.pumpAndSettle();
+    await tester.tap(scrollButton);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.byKey(const Key('reader_error_text')), findsNothing,
+        reason: '點擊「滾動翻頁」覆寫圖示後畫面應持續渲染成功，不應觸發 onError');
+  });
+
+  testWidgets(
+      '未覆寫螢幕方向時，進入 ReaderScreen 後依全域預設值呼叫 '
+      'SystemChrome.setPreferredOrientations（auto→空列表）', (tester) async {
+    final calls = <MethodCall>[];
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+      calls.add(call);
+      return null;
+    });
+    addTearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, null);
+    });
+
+    final samplePath = await _stageAssetAsFile(
+        'test/fixtures/sample.epub', 'sample_orientation_default.epub');
+    addTearDown(() async {
+      final file = File(samplePath);
+      if (await file.exists()) await file.delete();
+    });
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: samplePath,
+          bookId: 'b_orientation_default',
+          prefsRepository: prefsRepository,
+        ),
+      ),
+    );
+
+    await _pumpUntil(
+      tester,
+      () =>
+          calls.any((c) => c.method == 'SystemChrome.setPreferredOrientations'),
+      timeout: const Duration(seconds: 10),
+    );
+
+    final call = calls.firstWhere(
+      (c) => c.method == 'SystemChrome.setPreferredOrientations',
+    );
+    expect(call.arguments, isEmpty,
+        reason: 'ScreenOrientationSetting.auto（未覆寫時的全域預設值）'
+            '應對應空列表（允許全部方向）');
+  });
+
+  testWidgets(
+      'screenOrientationOverride=lock90 時，SystemChrome.setPreferredOrientations '
+      '帶入 landscapeLeft', (tester) async {
+    final calls = <MethodCall>[];
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+      calls.add(call);
+      return null;
+    });
+    addTearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, null);
+    });
+
+    const bookId = 'b_orientation_lock90';
+    await libraryRepository.insertBook(_book(bookId));
+    await prefsRepository.save(
+      bookId,
+      const BookReaderPrefs(
+        screenOrientationOverride: ScreenOrientationSetting.lock90,
+      ),
+    );
+
+    final samplePath = await _stageAssetAsFile(
+        'test/fixtures/sample.epub', 'sample_orientation_lock90.epub');
+    addTearDown(() async {
+      final file = File(samplePath);
+      if (await file.exists()) await file.delete();
+    });
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: samplePath,
+          bookId: bookId,
+          prefsRepository: prefsRepository,
+        ),
+      ),
+    );
+
+    await _pumpUntil(
+      tester,
+      () =>
+          calls.any((c) => c.method == 'SystemChrome.setPreferredOrientations'),
+      timeout: const Duration(seconds: 10),
+    );
+
+    final call = calls.firstWhere(
+      (c) => c.method == 'SystemChrome.setPreferredOrientations',
+    );
+    expect(call.arguments, ['DeviceOrientation.landscapeLeft']);
+  });
+
+  testWidgets('離開 ReaderScreen 後，SystemChrome.setPreferredOrientations([]) 被呼叫還原',
+      (tester) async {
+    final calls = <MethodCall>[];
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+      calls.add(call);
+      return null;
+    });
+    addTearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, null);
+    });
+
+    const bookId = 'b_orientation_dispose';
+    await libraryRepository.insertBook(_book(bookId));
+    await prefsRepository.save(
+      bookId,
+      const BookReaderPrefs(
+        screenOrientationOverride: ScreenOrientationSetting.lock0,
+      ),
+    );
+
+    final samplePath = await _stageAssetAsFile(
+        'test/fixtures/sample.epub', 'sample_orientation_dispose.epub');
+    addTearDown(() async {
+      final file = File(samplePath);
+      if (await file.exists()) await file.delete();
+    });
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: samplePath,
+          bookId: bookId,
+          prefsRepository: prefsRepository,
+        ),
+      ),
+    );
+
+    await _pumpUntil(
+      tester,
+      () =>
+          calls.any((c) => c.method == 'SystemChrome.setPreferredOrientations'),
+      timeout: const Duration(seconds: 10),
+    );
+    calls.clear();
+
+    // 離開畫面（觸發 ReaderScreen.dispose()），比照既有「關閉重開該書」
+    // 測試模擬使用者離開閱讀器的既有手法。
+    await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
+    await tester.pumpAndSettle();
+
+    expect(
+      calls.any((c) =>
+          c.method == 'SystemChrome.setPreferredOrientations' &&
+          (c.arguments as List).isEmpty),
+      isTrue,
+      reason: 'dispose() 應呼叫 SystemChrome.setPreferredOrientations([]) '
+          '還原系統預設，不論進入時鎖定了哪個角度',
+    );
   });
 }
