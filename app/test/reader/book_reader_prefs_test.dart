@@ -146,4 +146,36 @@ void main() {
     expect(pdfMap['font_size'], isNull);
     expect(pdfMap['writing_mode_override'], isNull);
   });
+
+  test('copyWith 只更新指定欄位，其餘欄位保留原值', () {
+    const original = BookReaderPrefs(
+      fontSize: 18,
+      pdfFitMode: PdfFitMode.fitWidth,
+      pdfContrast: 10,
+      pdfCropMode: PdfCropMode.autoDetect,
+    );
+
+    final updated = original.copyWith(
+      pdfCropRect:
+          const PdfCropRect(left: 0.05, top: 0.05, right: 0.95, bottom: 0.95),
+    );
+
+    expect(updated.fontSize, 18);
+    expect(updated.pdfFitMode, PdfFitMode.fitWidth);
+    expect(updated.pdfContrast, 10);
+    expect(updated.pdfCropMode, PdfCropMode.autoDetect);
+    expect(
+      updated.pdfCropRect,
+      const PdfCropRect(left: 0.05, top: 0.05, right: 0.95, bottom: 0.95),
+    );
+  });
+
+  test('copyWith 不傳任何參數時，回傳與原本欄位值完全相同（但非同一個 identity）的物件',
+      () {
+    const original = BookReaderPrefs(fontSize: 18, pdfContrast: -20);
+    final copy = original.copyWith();
+
+    expect(copy, original);
+    expect(identical(copy, original), isFalse);
+  });
 }

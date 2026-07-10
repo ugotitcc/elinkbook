@@ -167,4 +167,50 @@ class BookReaderPrefs {
         pdfCropMode,
         pdfCropRect,
       );
+
+  /// 只更新明確傳入的欄位，其餘欄位沿用目前值（`newValue ?? this.value`
+  /// 語意，不支援「明確清成 null」——需要清空欄位的情境（例如
+  /// `ReaderSettingsSheet` 的排版方向三態選擇器）請繼續用既有的整列
+  /// 建構方式，不要用這個方法，見 epic-4 plan-issue-5.md Global
+  /// Constraints「copyWith 語意」的說明。
+  BookReaderPrefs copyWith({
+    AppFont? fontFamily,
+    double? fontSize,
+    double? fontWeight,
+    double? lineHeight,
+    double? paragraphSpacing,
+    double? pageMargins,
+    EpubTextAlign? textAlign,
+    bool? publisherStyles,
+    WritingMode? writingModeOverride,
+    PageTurnMode? pageTurnModeOverride,
+    ScreenOrientationSetting? screenOrientationOverride,
+    PdfFitMode? pdfFitMode,
+    double? pdfContrast,
+    double? pdfBrightness,
+    double? pdfBoldStrength,
+    PdfCropMode? pdfCropMode,
+    PdfCropRect? pdfCropRect,
+  }) {
+    return BookReaderPrefs(
+      fontFamily: fontFamily ?? this.fontFamily,
+      fontSize: fontSize ?? this.fontSize,
+      fontWeight: fontWeight ?? this.fontWeight,
+      lineHeight: lineHeight ?? this.lineHeight,
+      paragraphSpacing: paragraphSpacing ?? this.paragraphSpacing,
+      pageMargins: pageMargins ?? this.pageMargins,
+      textAlign: textAlign ?? this.textAlign,
+      publisherStyles: publisherStyles ?? this.publisherStyles,
+      writingModeOverride: writingModeOverride ?? this.writingModeOverride,
+      pageTurnModeOverride: pageTurnModeOverride ?? this.pageTurnModeOverride,
+      screenOrientationOverride:
+          screenOrientationOverride ?? this.screenOrientationOverride,
+      pdfFitMode: pdfFitMode ?? this.pdfFitMode,
+      pdfContrast: pdfContrast ?? this.pdfContrast,
+      pdfBrightness: pdfBrightness ?? this.pdfBrightness,
+      pdfBoldStrength: pdfBoldStrength ?? this.pdfBoldStrength,
+      pdfCropMode: pdfCropMode ?? this.pdfCropMode,
+      pdfCropRect: pdfCropRect ?? this.pdfCropRect,
+    );
+  }
 }
