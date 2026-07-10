@@ -779,4 +779,104 @@ void main() {
     final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
     expect(pdfView.contrast, 5);
   });
+
+  testWidgets('PDF 調整加粗強度後畫面持續渲染成功、無 onError', (tester) async {
+    final samplePath = await _stageAssetAsFile(
+        'test/fixtures/sample.pdf', 'sample_pdf_bold.pdf');
+    addTearDown(() async {
+      final file = File(samplePath);
+      if (await file.exists()) await file.delete();
+    });
+    const bookId = 'b_pdf_bold';
+    await libraryRepository.insertBook(_book(bookId, format: BookFileFormat.pdf));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: samplePath,
+          bookId: bookId,
+          prefsRepository: prefsRepository,
+        ),
+      ),
+    );
+
+    await _pumpUntil(
+      tester,
+      () => _layoutSettingsButtonReady(tester),
+      timeout: const Duration(seconds: 10),
+    );
+
+    await tester.tap(find.byKey(const Key('reader_layout_settings_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('pdf_settings_tab_filters')));
+    await tester.pumpAndSettle();
+
+    await tester
+        .tap(find.byKey(const Key('pdf_settings_bold_strength_increment')));
+    // boldStrength 變動觸發完整重新渲染，比 contrast/brightness 更重，給予
+    // 較長的 settle 時間。
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(find.byKey(const Key('reader_error_text')), findsNothing,
+        reason: '調整加粗強度後畫面應持續渲染成功，不應觸發 onError');
+  });
+
+  testWidgets('調整 PDF 加粗強度後關閉重開該書，設定被正確記住', (tester) async {
+    final samplePath = await _stageAssetAsFile(
+        'test/fixtures/sample.pdf', 'sample_pdf_bold_persist.pdf');
+    addTearDown(() async {
+      final file = File(samplePath);
+      if (await file.exists()) await file.delete();
+    });
+    const bookId = 'b_pdf_bold_persist';
+    await libraryRepository.insertBook(_book(bookId, format: BookFileFormat.pdf));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: samplePath,
+          bookId: bookId,
+          prefsRepository: prefsRepository,
+        ),
+      ),
+    );
+
+    await _pumpUntil(
+      tester,
+      () => _layoutSettingsButtonReady(tester),
+      timeout: const Duration(seconds: 10),
+    );
+
+    await tester.tap(find.byKey(const Key('reader_layout_settings_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('pdf_settings_tab_filters')));
+    await tester.pumpAndSettle();
+    await tester
+        .tap(find.byKey(const Key('pdf_settings_bold_strength_increment')));
+    await tester.pump(const Duration(seconds: 1));
+
+    final saved = await prefsRepository.load(bookId);
+    expect(saved.pdfBoldStrength, closeTo(0.1, 0.001)); // 預設 0，點一次 +10（UI）換算 +0.1
+
+    await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
+    await tester.pump();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: samplePath,
+          bookId: bookId,
+          prefsRepository: prefsRepository,
+        ),
+      ),
+    );
+    await _pumpUntil(
+      tester,
+      _loadingIndicatorGone,
+      timeout: const Duration(seconds: 10),
+    );
+
+    final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+    expect(pdfView.boldStrength, closeTo(0.1, 0.001));
+  });
 }
