@@ -139,6 +139,69 @@ void main() {
 
     expect(notified?.pdfBrightness, lessThan(0));
   });
+
+  testWidgets('濾鏡分頁存在加粗強度滑桿，初始值反映 prefs（0..1 換算為 0..100 顯示）',
+      (tester) async {
+    await _pumpSheet(
+      tester,
+      const BookReaderPrefs(pdfBoldStrength: 0.6),
+      (_) {},
+    );
+
+    await tester.tap(find.byKey(const Key('pdf_settings_tab_filters')));
+    await tester.pumpAndSettle();
+
+    expect(
+      tester
+          .widget<Slider>(
+              find.byKey(const Key('pdf_settings_bold_strength_slider')))
+          .value,
+      60,
+    );
+  });
+
+  testWidgets('prefs.pdfBoldStrength 為 null 時，滑桿顯示預設值 0', (tester) async {
+    await _pumpSheet(tester, BookReaderPrefs.empty, (_) {});
+
+    await tester.tap(find.byKey(const Key('pdf_settings_tab_filters')));
+    await tester.pumpAndSettle();
+
+    expect(
+      tester
+          .widget<Slider>(
+              find.byKey(const Key('pdf_settings_bold_strength_slider')))
+          .value,
+      0,
+    );
+  });
+
+  testWidgets('拖動加粗強度滑桿後，onChanged 帶入新的 pdfBoldStrength（0..1），其餘 PDF 欄位不變',
+      (tester) async {
+    BookReaderPrefs? notified;
+    await _pumpSheet(
+      tester,
+      const BookReaderPrefs(
+        pdfFitMode: PdfFitMode.fitWidth,
+        pdfContrast: 10,
+        pdfBrightness: -5,
+        pdfBoldStrength: 0,
+      ),
+      (prefs) => notified = prefs,
+    );
+
+    await tester.tap(find.byKey(const Key('pdf_settings_tab_filters')));
+    await tester.pumpAndSettle();
+
+    await tester
+        .tap(find.byKey(const Key('pdf_settings_bold_strength_increment')));
+    await tester.pump();
+
+    expect(notified?.pdfBoldStrength, greaterThan(0));
+    // 關鍵回歸檢查：加粗滑桿變動不應清空其他已追蹤的 PDF 欄位。
+    expect(notified?.pdfFitMode, PdfFitMode.fitWidth);
+    expect(notified?.pdfContrast, 10);
+    expect(notified?.pdfBrightness, -5);
+  });
 }
 
 Future<void> _pumpSheet(

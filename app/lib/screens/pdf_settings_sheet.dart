@@ -34,6 +34,7 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
   late PdfFitMode _fitMode;
   late double _contrast;
   late double _brightness;
+  late double _boldStrength; // 內部儲存為 UI 顯示用的 0..100，送出前才換算回 0..1
 
   @override
   void initState() {
@@ -42,6 +43,7 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
     _fitMode = widget.prefs.pdfFitMode ?? PdfFitMode.pageFit;
     _contrast = widget.prefs.pdfContrast ?? 0;
     _brightness = widget.prefs.pdfBrightness ?? 0;
+    _boldStrength = (widget.prefs.pdfBoldStrength ?? 0) * 100;
   }
 
   @override
@@ -55,6 +57,7 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
       pdfFitMode: _fitMode,
       pdfContrast: _contrast,
       pdfBrightness: _brightness,
+      pdfBoldStrength: _boldStrength / 100,
     ));
   }
 
@@ -159,6 +162,18 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
             step: 5,
             onChanged: (v) => setState(() {
               _brightness = v;
+              _notifyChanged();
+            }),
+          ),
+          _buildSliderRow(
+            keyPrefix: 'pdf_settings_bold_strength',
+            label: '加粗強度',
+            value: _boldStrength,
+            min: 0,
+            max: 100,
+            step: 10,
+            onChanged: (v) => setState(() {
+              _boldStrength = v;
               _notifyChanged();
             }),
           ),
