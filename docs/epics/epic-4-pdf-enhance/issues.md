@@ -32,7 +32,9 @@
 
 ## Issue 2：PDF 設定入口與 Fit 模式端到端（已完成）
 
-**Status:** ✅ 已完成。`PdfSettingsSheet` 三分頁骨架與顯示分頁（Fit 模式三選一）、`PdfReaderView`（Dart＋原生）的 `fitMode` 契約與三種縮放邏輯、`ReaderScreen` 齒輪按鈕擴充至 PDF 皆已完成並經真機驗證。刻意簡化：Fit Width／真實比例 1:1 超出畫面的部分不可捲動，留待後續 issue 評估。完整計劃見 `plans/plan-issue-2.md`。
+**Status:** ✅ 已完成，但有一項已知殘餘風險未在真機上完整驗證（見下方說明）。`PdfSettingsSheet` 三分頁骨架與顯示分頁（Fit 模式三選一）、`PdfReaderView`（Dart＋原生）的 `fitMode` 契約與三種縮放邏輯、`ReaderScreen` 齒輪按鈕擴充至 PDF 皆已完成，13 個 `integration_test`（含 3 個本 issue 新增）於真機（9491G，Android 15）全數通過，涵蓋「開啟設定→切換三種 Fit 模式→無 onError」與「切換設定→關閉重開→持久化值正確」兩類情境。刻意簡化：Fit Width／真實比例 1:1 超出畫面的部分不可捲動，留待後續 issue 評估。
+
+**已知殘餘風險（未解決，留待後續觀察或追蹤）**：`PdfReaderView.kt` 的 `applyFitMode()` 在 `fitWidth` 分支依賴 `imageView.width` 於呼叫當下已完成量測；本 issue 的 3 個真機測試涵蓋的是「書本已渲染完成後才切換 fit 模式」與「重開書後檢查 Dart 端 `PdfReaderView.fitMode` 屬性值」，**並未涵蓋「開書當下 `initialPreferences` 就已經是 `fitWidth`（例如使用者上次關書前選的是 Fit Width，這次重新打開）」這個真正的冷啟動情境**——這正是原始碼註解裡標註「殘餘風險」所指的情況，本次測試設計沒有實際觸發也沒有排除它。若之後真機使用時發現「重開一本先前設定為 Fit Width 的書，第一次顯示沒有套用縮放（需要手動重新進設定才生效）」，需依原始碼註解的建議補上 `ViewTreeObserver.OnGlobalLayoutListener` 之類的重新量測機制，另立 issue 修正。完整計劃見 `plans/plan-issue-2.md`。
 
 **依賴：** Issue 1（需要 `PdfFitMode` 等型別供 map key 對應使用）
 
