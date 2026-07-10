@@ -92,7 +92,7 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
   Widget _buildDisplayTab(BuildContext context) {
     const options = [
       (PdfFitMode.pageFit, 'page_fit', Icons.fit_screen, 'Page-fit（整頁）'),
-      (PdfFitMode.fitWidth, 'fit_width', Icons.swap_horiz, 'Fit Width（項寬）'),
+      (PdfFitMode.fitWidth, 'fit_width', Icons.swap_horiz, 'Fit Width（頁寬）'),
       (PdfFitMode.actualSize, 'actual_size', Icons.crop_original, '真實比例 1:1'),
     ];
     return Padding(
