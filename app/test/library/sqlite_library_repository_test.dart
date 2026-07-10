@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path/path.dart' as p;
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:elinkbook/library/sqlite_library_repository.dart';
 import 'package:elinkbook/library/models/book.dart';
@@ -43,6 +46,25 @@ void main() {
 
   tearDown(() async {
     await repository.close();
+  });
+
+  test('全新安裝的 book_reader_prefs 表包含 PDF 欄位（version 3 起 onCreate 已含括）',
+      () async {
+    // 直接查詢 sqlite_master 的欄位清單，避免依賴 BookReaderPrefsRepository
+    // （schema 是否正確就緒是本測試檔的職責，CRUD 邏輯正確性由
+    // book_reader_prefs_repository_test.dart 負責）。
+    final columns =
+        await repository.database.rawQuery('PRAGMA table_info(book_reader_prefs)');
+    final columnNames = columns.map((c) => c['name'] as String).toSet();
+
+    expect(columnNames, containsAll([
+      'pdf_fit_mode',
+      'pdf_contrast',
+      'pdf_brightness',
+      'pdf_bold_strength',
+      'pdf_crop_mode',
+      'pdf_crop_rect',
+    ]));
   });
 
   test('insertBook 後可用 listBooks 取回', () async {
@@ -224,5 +246,101 @@ void main() {
       );
       expect(rows, isEmpty);
     });
+  });
+
+  test('既有 version 2 裝置升級後，book_reader_prefs 新增 PDF 欄位且既有資料不受影響',
+      () async {
+    final tempDir =
+        await Directory.systemTemp.createTemp('elinkbook_migration_test');
+    addTearDown(() => tempDir.delete(recursive: true));
+    final dbPath = p.join(tempDir.path, 'test.db');
+
+    // 模擬「已存在於 version 2」的舊資料庫：手動以 version 2 當時的
+    // schema（不含 PDF 欄位）建立，不透過 SqliteLibraryRepository.open()
+    // （該方法目前的 onCreate 已經是 version 3 的最終 schema，無法用來
+    // 重現「舊裝置」情境）。
+    final oldDb = await databaseFactory.openDatabase(
+      dbPath,
+      options: OpenDatabaseOptions(
+        version: 2,
+        onConfigure: (db) async {
+          await db.execute('PRAGMA foreign_keys = ON');
+        },
+        onCreate: (db, version) async {
+          await db.execute('CREATE TABLE groups (name TEXT PRIMARY KEY)');
+          await db.insert('groups', {'name': '未分類'});
+          await db.execute('''
+            CREATE TABLE books (
+              id TEXT PRIMARY KEY,
+              title TEXT NOT NULL,
+              author TEXT,
+              format TEXT NOT NULL,
+              filePath TEXT NOT NULL,
+              source TEXT NOT NULL,
+              coverPath TEXT,
+              progress REAL NOT NULL DEFAULT 0,
+              groupName TEXT NOT NULL DEFAULT '未分類',
+              createTime INTEGER NOT NULL,
+              lastReadTime INTEGER NOT NULL
+            )
+          ''');
+          await db.execute('''
+            CREATE TABLE book_reader_prefs (
+              book_id TEXT PRIMARY KEY REFERENCES books(id) ON DELETE CASCADE,
+              font_family TEXT,
+              font_size REAL,
+              font_weight REAL,
+              line_height REAL,
+              paragraph_spacing REAL,
+              page_margins REAL,
+              text_align TEXT,
+              publisher_styles INTEGER,
+              writing_mode_override TEXT,
+              page_turn_mode_override TEXT,
+              screen_orientation_override TEXT
+            )
+          ''');
+        },
+      ),
+    );
+    await oldDb.insert('books', {
+      'id': 'b1',
+      'title': '既有書籍',
+      'format': 'epub',
+      'filePath': 'content://example/b1',
+      'source': 'local',
+      'progress': 0.0,
+      'groupName': '未分類',
+      'createTime': 1000,
+      'lastReadTime': 1000,
+    });
+    await oldDb.insert('book_reader_prefs', {
+      'book_id': 'b1',
+      'font_size': 18.0,
+    });
+    await oldDb.close();
+
+    // 重新以目前版本開啟同一個檔案，觸發 onUpgrade（oldVersion=2 →
+    // newVersion=3），驗證既有 EPUB 資料不受影響、且新欄位可用。
+    final upgraded = await SqliteLibraryRepository.open(dbPath);
+    addTearDown(() => upgraded.close());
+
+    final row = (await upgraded.database
+            .query('book_reader_prefs', where: 'book_id = ?', whereArgs: ['b1']))
+        .single;
+    expect(row['font_size'], 18.0); // 既有 EPUB 資料不受影響
+    expect(row['pdf_fit_mode'], isNull); // 新欄位存在且預設 NULL
+
+    // 證明欄位真的可寫入（不只是巧合為 null），確認 ALTER TABLE 確實生效。
+    await upgraded.database.update(
+      'book_reader_prefs',
+      {'pdf_fit_mode': 'fitWidth'},
+      where: 'book_id = ?',
+      whereArgs: ['b1'],
+    );
+    final updated = (await upgraded.database
+            .query('book_reader_prefs', where: 'book_id = ?', whereArgs: ['b1']))
+        .single;
+    expect(updated['pdf_fit_mode'], 'fitWidth');
   });
 }
