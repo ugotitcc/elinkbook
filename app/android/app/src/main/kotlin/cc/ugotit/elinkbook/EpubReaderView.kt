@@ -4,6 +4,9 @@ import android.content.Context
 import android.net.Uri
 import android.os.Bundle
 import android.view.View
+import android.view.ViewGroup
+import android.view.ViewTreeObserver
+import android.webkit.WebView
 import android.widget.FrameLayout
 import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.FragmentFactory
@@ -142,6 +145,214 @@ class EpubReaderView(
         if (preferences == null) return
         currentPreferences = currentPreferences.plus(buildPreferencesFromMap(preferences))
         navigatorFragment?.submitPreferences(currentPreferences)
+        applyFontWeightCascade()
+    }
+
+    /**
+     * 在 View 樹中尋找所有符合型別 [T] 的 View（深度優先，回傳全部相符項目、
+     * 不是只有第一個）。用於直接存取 Readium Fragment 內部、未透過
+     * EpubNavigatorFragment 公開 API 暴露的原生元件（WebView），見
+     * [applyFontWeightCascade]／[applyFxlFitScale] 的說明。
+     *
+     * 【為什麼是「全部」而不是「第一個」】真機驗證發現分頁書籍（不論固定版面或
+     * 流動式）在 Readium 的 `R2ViewPager` 內部同時保留了目前頁的前後相鄰頁面（
+     * `adb shell dumpsys activity --view-hierarchy` 確認同時存在 3 個
+     * `R2BasicWebView` 實例，各自的 `R2FXLLayout` 父容器以左右並排、透過父層
+     * ViewPager 位移捲動決定哪一個落在可視範圍內），單純找「View 樹中第一個
+     * WebView」不保證是目前實際顯示的那一頁——這正是先前版本「有些頁面縮放
+     * 正確、有些頁面完全沒套用」的根因。改成對「找到的每一個 WebView」都套用
+     * 同一套邏輯（各自依自己的量測高度計算縮放比／各自注入 CSS），不論最終
+     * 哪一個落在可視範圍內都已經處理過，不需要额外判斷「目前是哪一個」。
+     * 實際遞迴委派給 [findViewsByClass]——reified inline function 不能直接
+     * 遞迴呼叫自己。
+     */
+    private inline fun <reified T : View> findViewsByType(view: View): List<T> {
+        val result = mutableListOf<View>()
+        findViewsByClass(view, T::class.java, result)
+        @Suppress("UNCHECKED_CAST")
+        return result as List<T>
+    }
+
+    private fun findViewsByClass(view: View, clazz: Class<*>, result: MutableList<View>) {
+        if (clazz.isInstance(view)) {
+            result.add(view)
+        }
+        if (view is ViewGroup) {
+            for (i in 0 until view.childCount) {
+                findViewsByClass(view.getChildAt(i), clazz, result)
+            }
+        }
+    }
+
+    /**
+     * 補強 Readium `EpubPreferences.fontWeight` 的已知缺口（見 /diagnose 對
+     * readium-navigator:3.3.0 的反編譯分析）：Readium 內建機制只把換算後的
+     * CSS `font-weight` 值設在 `<html>` 上（透過 inline style + `!important`），
+     * 但 ReadiumCSS 本身沒有像 `--USER__fontSize` 那樣，提供一條把數值強制
+     * 往下蓋到 `p`/`div`/`li` 等實際內文元素的規則——導致只要書本自己的 CSS
+     * 對段落/標題有任何 `font-weight` 宣告（非常常見），就會直接蓋掉 `<html>`
+     * 繼承下來的值，使用者看不到效果。這裡改用我們自己注入的 `<style>`
+     * 直接以 `!important` 強制蓋到常見文字元素，僅在 `currentPreferences`
+     * 有非 null 的 fontWeight 時才注入，未設定時移除先前注入的規則（避免殘留
+     * 影響下一本沒有覆寫字重的書）。
+     *
+     * 【對「所有」WebView 套用，不是只有第一個】見 [findViewsByType] 說明——
+     * Readium 的 `R2ViewPager` 會同時保留目前頁前後相鄰的頁面，各自都是獨立的
+     * WebView 實例；只處理「View 樹中第一個 WebView」不保證涵蓋到使用者實際
+     * 翻到、正在看的那一頁。
+     */
+    private fun applyFontWeightCascade() {
+        val webViews = findViewsByType<WebView>(container)
+        if (webViews.isEmpty()) return
+        val fontWeight = currentPreferences.fontWeight
+        val js = if (fontWeight != null) {
+            val cssValue = (fontWeight * 400).coerceIn(1.0, 1000.0).toInt()
+            """
+            (function() {
+                var style = document.getElementById('elinkbook-font-weight-cascade');
+                if (!style) {
+                    style = document.createElement('style');
+                    style.id = 'elinkbook-font-weight-cascade';
+                    document.head.appendChild(style);
+                }
+                style.textContent = 'body, p, div, li, span, td, th, blockquote, dd, dt, a, h1, h2, h3, h4, h5, h6 { font-weight: $cssValue !important; }';
+            })();
+            """.trimIndent()
+        } else {
+            """
+            (function() {
+                var style = document.getElementById('elinkbook-font-weight-cascade');
+                if (style) style.remove();
+            })();
+            """.trimIndent()
+        }
+        webViews.forEach { webView -> webView.post { webView.evaluateJavascript(js, null) } }
+    }
+
+    /**
+     * 補強固定版面（漫畫）內容仍會被系統列裁切、橫放更嚴重、不會自動縮放的問題
+     * （見 /diagnose 對 readium-navigator:3.3.0 內建
+     * `readium_navigator_fragment_fxllayout_single.xml`/`_double.xml` 原始碼的
+     * 分析）：該版面把 WebView 設為 `layout_height="wrap_content"`，寬度以
+     * `layout_weight` 對齊可用寬度，但高度只依內容本身的天然比例撐開，完全不管
+     * 外層容器（已正確扣除狀態列/Taskbar）實際還剩多少高度可用——多出來的部分
+     * 由外層 ScrollView 吸收成可捲動區域，而非縮小內容去符合可視範圍，因此畫面
+     * 靜止時看起來就像被裁掉一截。
+     *
+     * Readium 官方提供 `R2FXLLayout`（本身有 `setScale()` 手勢縮放 API）包著這個
+     * WebView，理論上是更「正規」的縮放入口，但該類別在 Kotlin 模組層級宣告為
+     * internal（javap 看到的 `public` 只是 JVM bytecode 層級的可見度，不代表
+     * Kotlin 原始碼開放給外部模組引用），我們無法在自己的模組直接參照該型別、
+     * 也不方便用反射硬呼叫其 internal API。改用 `android.view.View` 本身就有的
+     * `scaleX`/`scaleY`/`pivotX`/`pivotY` 屬性直接對 WebView 做等比縮放——這是
+     * View 基底類別的公開屬性，不受 Readium 內部可見度限制，純視覺變形，不影響
+     * WebView 自身的版面/捲動狀態。以 [container]（Flutter 已正確給定、扣除
+     * 系統列的真實容器）的高度作為縮放基準，而非嘗試存取 R2FXLLayout 的高度。
+     *
+     * 【殘留裁切與旋轉不重算的後續修正】真機驗證發現只套用一次（`onPageLoaded()`
+     * 當下）不夠：
+     * 1. 套用當下畫面仍殘留一小截裁切——不是縮放計算本身的四捨五入誤差（那頂多
+     *    是次像素等級，不會有肉眼可見的裁切），而是時機問題：`onPageLoaded()`
+     *    觸發時，WebView `wrap_content` 高度不保證已經完全撐開到最終值（內部
+     *    圖片解碼/reflow 可能還在進行），當下讀到的高度偏小，算出來的縮放比例
+     *    就會偏大（縮得不夠）。
+     * 2. 旋轉裝置後畫面沒有重新縮放——`MainActivity` 宣告了
+     *    `configChanges="orientation|screenSize|..."`，旋轉不會重建 Activity／
+     *    Fragment，`onPageLoaded()` 不會再次觸發，先前算好的縮放比例是舊方向的
+     *    數值，套用在新方向的 WebView 天然高度上就會算錯。
+     *
+     * 兩者的共同解法是「持續監聽版面真正改變的時機、每次都重新計算」，而不是
+     * 「賭一個固定時間點」。改用 `container`（穩定存在、不隨翻頁重建）的
+     * `ViewTreeObserver.OnGlobalLayoutListener`：只要 View 樹的量測/版面發生變化
+     * 就會觸發（包含旋轉造成 `container` 尺寸改變、WebView 內容延遲撐高、換頁
+     * 換成新的 WebView 實例等），每次觸發都重新尋找目前的 WebView 並重新計算——
+     * `scaleX`/`scaleY` 只是繪製階段變形、不會觸發新的 layout pass，不會造成
+     * listener 自我觸發的無限迴圈。監聽器在 [dispose] 中移除。
+     *
+     * 【第三輪修正：同時存在多個 WebView】真機用
+     * `adb shell dumpsys activity --view-hierarchy` 檢查發現：Readium 的
+     * `R2ViewPager` 會同時保留目前頁的前後相鄰頁面，各自是獨立的
+     * `R2FXLLayout`／`R2BasicWebView` 實例（並排放在同一個橫向捲動的內部容器
+     * 裡，由 ViewPager 本身位移決定哪一個落在可視範圍）——先前版本用
+     * `findViewByType`（單數、只回傳第一個）只會處理到 View 樹裡排序最前面的
+     * 那一個，翻到的頁面若不是那一個就完全沒被縮放，正好對應「有些頁沒問題、
+     * 翻到第 7-9 頁又出現裁切」的隨機性。改用 [findViewsByType]（複數）對
+     * *每一個* 找到的 WebView 個別計算並套用縮放，不論最終哪一個落在可視範圍
+     * 內都已經處理過。
+     *
+     * 【第四輪修正：pivot 沒有校正 Readium 既有的置中位移】真機測試某些頁面
+     * 改用 `pivotX=width/2, pivotY=0` 縮放後，畫面變成頂端被裁切、底部反而多出
+     * 一截空白——用 `adb shell dumpsys activity --view-hierarchy` 檢查發現，
+     * Readium 內建 XML（`RelativeLayout` 包 `LinearLayout[layout_centerInParent]`
+     * 包 WebView）本身就會依內容高度把 WebView 在 `RelativeLayout` 內垂直置中，
+     * 因此 WebView 進入這個函式時，量測到的 `top` 早就不是 0——可能已經是負值
+     * （這一頁的天然高度比 `RelativeLayout` 的可用高度更高，置中後往上位移）。
+     * `pivotY=0` 是以 WebView *自己* 的（已經帶著這個位移的）左上角為錨點縮放，
+     * 縮放後那個位移仍原封不動地保留在畫面上，导致縮小後的內容仍然頂端出畫面、
+     * 底部反而空出「被吃掉的縮放比例」。
+     *
+     * 改成不依賴 pivot 的相對位移語意，而是直接用 `getLocationOnScreen()` 量出
+     * WebView 與 [container] 目前實際的螢幕座標差，反推出「要讓縮放後的內容
+     * 剛好水平和垂直置中在 container 裡」所需要的 `translationX`/`translationY`
+     * 補償值——不論 Readium 自己的置中邏輯把 WebView 的原始 layout 位置擺在哪裡，
+     * 都能算出正確的最終位置，不必去猜測/校正它的內部位移規則。
+     */
+    private var fxlLayoutListener: ViewTreeObserver.OnGlobalLayoutListener? = null
+
+    private fun applyFxlFitScale() {
+        val isFixedLayout = publication?.metadata?.layout == Layout.FIXED
+        if (!isFixedLayout) {
+            removeFxlLayoutListener()
+            return
+        }
+        if (fxlLayoutListener != null) return
+        val listener = ViewTreeObserver.OnGlobalLayoutListener {
+            val availableWidth = container.width
+            val availableHeight = container.height
+            if (availableWidth <= 0 || availableHeight <= 0) return@OnGlobalLayoutListener
+            val containerLoc = IntArray(2)
+            container.getLocationOnScreen(containerLoc)
+            for (webView in findViewsByType<WebView>(container)) {
+                val contentWidth = webView.width
+                val contentHeight = webView.height
+                if (contentWidth <= 0 || contentHeight <= 0) continue
+                val fitScale = minOf(
+                    availableWidth.toFloat() / contentWidth.toFloat(),
+                    availableHeight.toFloat() / contentHeight.toFloat(),
+                ).coerceAtMost(1f)
+
+                // 先歸零位移、以左上角為錨點，量出這一輪「未經校正」的原始 layout
+                // 位置（pivot 在 (0,0) 時縮放不會移動錨點本身，所以量到的位置就是
+                // Readium 自己排版（含它內部的置中位移）算出來的原始位置）。
+                webView.translationX = 0f
+                webView.translationY = 0f
+                webView.pivotX = 0f
+                webView.pivotY = 0f
+                webView.scaleX = fitScale
+                webView.scaleY = fitScale
+                val webViewLoc = IntArray(2)
+                webView.getLocationOnScreen(webViewLoc)
+                val currentLeft = (webViewLoc[0] - containerLoc[0]).toFloat()
+                val currentTop = (webViewLoc[1] - containerLoc[1]).toFloat()
+
+                // 縮放後的內容尺寸若小於可用空間，置中留白（水平/垂直皆可能發生，
+                // 對應 Fit.CONTAIN 的語意）。
+                val scaledWidth = contentWidth * fitScale
+                val scaledHeight = contentHeight * fitScale
+                val desiredLeft = (availableWidth - scaledWidth) / 2f
+                val desiredTop = (availableHeight - scaledHeight) / 2f
+
+                webView.translationX = desiredLeft - currentLeft
+                webView.translationY = desiredTop - currentTop
+            }
+        }
+        fxlLayoutListener = listener
+        container.viewTreeObserver.addOnGlobalLayoutListener(listener)
+    }
+
+    private fun removeFxlLayoutListener() {
+        fxlLayoutListener?.let { container.viewTreeObserver.removeOnGlobalLayoutListener(it) }
+        fxlLayoutListener = null
     }
 
     /**
@@ -162,7 +373,6 @@ class EpubReaderView(
             pageMargins = (map["pageMargins"] as? Number)?.toDouble(),
             textAlign = (map["textAlign"] as? String)?.let { textAlignFromName(it) },
             publisherStyles = map["publisherStyles"] as? Boolean,
-            textNormalization = true,
         )
     }
 
@@ -185,6 +395,16 @@ class EpubReaderView(
      * `AppFont.familyName`（app/lib/reader/app_font.dart）逐字一致。只需在
      * attachNavigator() 執行一次，字型集合固定、不隨後續 setPreferences
      * 呼叫變動。
+     *
+     * 【單一靜態字重字型的模擬粗體】見 /diagnose 分析：原俠正楷／台灣圓體／
+     * 源流明體這 3 款字型檔案本身只有一種字重，不像思源黑體/宋體（`-VF` 結尾，
+     * 真正的 Variable Font）能真的變粗。若對這 3 款也額外註冊一個指向同一份
+     * 檔案的 `FontWeight.BOLD` face，瀏覽器會誤以為「已經有對應這個字重的正確
+     * 字面」而**抑制**其內建的模擬粗體（synthetic bold）合成——等於字重滑桿對
+     * 這 3 款完全沒有視覺效果。因此只對 [variableWeightFamilies] 中的真變數
+     * 字型註冊 NORMAL+BOLD 兩個 face；其餘單一靜態字重字型只註冊一個 face，
+     * 讓瀏覽器預設的 `font-synthesis` 在字重滑桿要求較粗的值時，自動套用模擬
+     * 粗體。
      */
     private fun buildFontFamiliesConfiguration(): EpubNavigatorFragment.Configuration {
         val loader = FlutterInjector.instance().flutterLoader()
@@ -195,6 +415,7 @@ class EpubReaderView(
             "TaiwanPearl" to "assets/fonts/TaiwanPearl-Regular.ttf",
             "GenRyuMinTW" to "assets/fonts/GenRyuMinTW-Regular.ttf",
         )
+        val variableWeightFamilies = setOf("SourceHanSansTC", "SourceHanSerifTC")
         val lookupKeys = fontAssets.mapValues { (_, path) -> loader.getLookupKeyForAsset(path) }
         return EpubNavigatorFragment.Configuration {
             servedAssets = lookupKeys.values.toList()
@@ -208,10 +429,12 @@ class EpubReaderView(
                         setFontStyle(FontStyle.NORMAL)
                         setFontWeight(FontWeight.NORMAL)
                     }
-                    addFontFace {
-                        addSource(lookupKey, preload = true)
-                        setFontStyle(FontStyle.NORMAL)
-                        setFontWeight(FontWeight.BOLD)
+                    if (familyName in variableWeightFamilies) {
+                        addFontFace {
+                            addSource(lookupKey, preload = true)
+                            setFontStyle(FontStyle.NORMAL)
+                            setFontWeight(FontWeight.BOLD)
+                        }
                     }
                 }
             }
@@ -309,59 +532,8 @@ class EpubReaderView(
             channel.invokeMethod("onPageRendered", null)
             reportLayoutResolved()
         }
-        applyFixedLayoutCssInjection()
-    }
-
-    private fun findWebView(view: android.view.View): android.webkit.WebView? {
-        if (view is android.webkit.WebView) {
-            return view
-        }
-        if (view is android.view.ViewGroup) {
-            for (i in 0 until view.childCount) {
-                val child = view.getChildAt(i)
-                val result = findWebView(child)
-                if (result != null) {
-                    return result
-                }
-            }
-        }
-        return null
-    }
-
-    private fun applyFixedLayoutCssInjection() {
-        val isFixedLayout = publication?.metadata?.layout == Layout.FIXED
-        if (!isFixedLayout) return
-
-        val webView = findWebView(view) ?: return
-        val js = """
-            (function() {
-                var style = document.createElement('style');
-                style.innerHTML = `
-                    html, body {
-                        margin: 0 !important;
-                        padding: 0 !important;
-                        width: 100vw !important;
-                        height: 100vh !important;
-                        overflow: hidden !important;
-                        display: flex !important;
-                        justify-content: center !important;
-                        align-items: center !important;
-                        background-color: transparent !important;
-                    }
-                    svg, img, iframe {
-                        max-width: 100vw !important;
-                        max-height: 100vh !important;
-                        width: auto !important;
-                        height: auto !important;
-                        object-fit: contain !important;
-                    }
-                `;
-                document.head.appendChild(style);
-            })()
-        """.trimIndent()
-        webView.post {
-            webView.evaluateJavascript(js, null)
-        }
+        applyFontWeightCascade()
+        applyFxlFitScale()
     }
 
     /**
@@ -421,6 +593,7 @@ class EpubReaderView(
     override fun dispose() {
         isDisposed = true
         scope.cancel()
+        removeFxlLayoutListener()
         val fragment = activity.supportFragmentManager.findFragmentByTag(fragmentTag)
         if (fragment != null) {
             try {

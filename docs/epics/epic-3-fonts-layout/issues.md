@@ -155,39 +155,57 @@
 
 ---
 
-## Issue 7：字型粗細（fontWeight）設定無視覺效果（已修復）
+## Issue 7：字型粗細（fontWeight）設定無視覺效果（已修復，真機確認）
 
 **依賴：** Issue 2（`EpubReaderView` 的 `fontWeight` 參數傳遞）
 
 **描述：**
-真機驗證（Issue 6）發現：拖動字重滑桿從 300 到 900，畫面文字粗細無任何視覺變化。所有 5 款內建字型皆受影響。
+真機驗證（Issue 6）發現：拖動字重滑桿從 300 到 900，畫面文字粗細無任何視覺變化。所有 5 款內建字型皆受影響。`a2e1cc3` commit 曾一度修正（Dart 端維持 Readium 倍率語意，換算公式正確），但緊接著的 `197a013` commit（「啟用 textNormalization for font weight」）引入新的迴歸，導致問題再次出現；第一輪 `/diagnose`（移除 `textNormalization=true`）後真機再次回報仍無效，經第二輪 `/diagnose` 找到更深一層的根因。
 
-**可能原因：**
-- `EpubReaderView.kt` 端未將 `fontWeight` 參數套用至 Readium WebView 的 CSS `font-weight` 屬性
-- 或 CSS 注入邏輯有誤（例如選擇器未命中、數值格式錯誤）
+**根因一（`textNormalization=true` 的迴歸，已修）：** 反編譯 `readium-navigator:3.3.0` 的 `classes.jar`（`EpubSettingsKt`）確認：`fontOverride`（CSS 旗標 `readium-font-on`）判斷式為 `(fontFamily != null) || textNormalization`，`a11yNormalize`（CSS 旗標 `readium-a11y-on`）則直接等於 `textNormalization`——導致這兩個旗標永遠為真。內建的 `ReadiumCSS-after.css` 有規則 `:root[style*=readium-font-on][style*=readium-a11y-on]{font-weight:400!important}`，永遠命中並蓋掉字重滑桿送出的值。已移除 `EpubReaderView.kt` 中寫死的 `textNormalization = true`。
 
-**驗收標準：**
-- 拖動字重滑桿時，思源黑體/宋體呈現 Variable Font 多級漸進變化
-- 其餘 3 款字型呈現模擬粗體效果（Faux Bold）
+**根因二（Readium `fontWeight` preference 本身缺少往下蓋規則，已修）：** 移除 `textNormalization` 後，真機用 WebView 遠端除錯（Chrome DevTools Protocol）確認 `<html>`／`<body>` 的 `font-weight` 確實正確算出使用者設定值，但仍回報「無效」——因為 ReadiumCSS 對 `fontSize`/`lineHeight`/`paraSpacing` 都有把值強制往下蓋到 `p`/`div`/`li` 等內文元素的規則（例如 `dd,div,li,p,pre{font-size:1rem!important}`），唯獨 `font-weight` 沒有對應規則，只設在 `<html>`、靠繼承往下傳——書本自己 CSS 對段落/標題只要有任何 `font-weight` 宣告（很常見），繼承就不會發生，使用者看不到效果。已在 `EpubReaderView.kt` 新增 `applyFontWeightCascade()`，比照 Readium 自己對 `fontSize` 的作法，額外注入一個 `<style>` 強制把值蓋到 `body, p, div, li, span, td, th, blockquote, dd, dt, a, h1~h6`，並在換頁與滑桿即時調整時都重新套用。詳細分析見 `plans/plan-issue-7.md`。
+
+**驗收結果（真機，Chrome DevTools Protocol 直接量測）：**
+- `htmlComputedFontWeight`／`bodyComputedFontWeight` 正確算出滑桿值（含 `!important`）
+- 注入的 `<style id="elinkbook-font-weight-cascade">` 內容正確反映滑桿值，強制套用到內文元素選擇器清單
 - `flutter test` 通過、`flutter analyze` 乾淨
+
+**根因三（原俠正楷／台灣圓體／源流明體 3 款單一靜態字重字型完全無反應，已修）：** 這 3 款字型檔案本身只有一種靜態字重，唯一能有效果的方式是靠瀏覽器內建的模擬粗體（synthetic bold）。但 `buildFontFamiliesConfiguration()` 原本對全部 5 款字型無差別註冊了 `FontWeight.NORMAL`＋`FontWeight.BOLD` 兩個 `@font-face`，對這 3 款字型而言兩個宣告指向同一份檔案——瀏覽器誤以為「已經有對應這個字重的正確字面」而抑制了原本會自動套用的模擬粗體。已改成只有思源黑體/宋體（真 Variable Font，`variableWeightFamilies` 集合）才註冊雙 face，其餘 3 款只註冊一個 face，讓瀏覽器預設的 `font-synthesis` 接手。真機用 CDP 查詢 `document.fonts` 確認：3 款靜態字重字型現在只各自註冊單一 400 字重 face、2 款變數字型維持 400+700 雙 face。詳細分析見 `plans/plan-issue-7.md`。
 
 ---
 
-## Issue 8：閱讀器底部被狀態列/導航列遮蔽（已修復，原生端強制 fixed-layout 圖片為 Fit.CONTAIN）
+## Issue 8：閱讀器底部被狀態列/導航列遮蔽（已修復，真機確認）
 
 **依賴：** 無
 
 **描述：**
-真機驗證（Issue 6）發現：閱讀書籍（尤其是漫畫類內容）時，畫面最下方內容被 Android 狀態列（status bar）或導航行動列（navigation bar）遮蔽，導致底部內容不可讀。
+真機驗證（Issue 6）發現：閱讀書籍（尤其是漫畫類內容）時，畫面最下方內容被 Android 狀態列（status bar）或導航行動列（navigation bar）遮蔽，導致底部內容不可讀。`197a013` commit 的 `SafeArea` 對流動式 EPUB／PDF 已解決此問題，但固定版面（漫畫）後續真機驗證仍回報「上下仍會被切到一些，橫放時更嚴重、不會自動縮放」；第一輪 `/diagnose`（移除 `applyFixedLayoutCssInjection()`）後真機再次回報仍會裁切，經第二輪 `/diagnose` 找到 Readium 官方原始碼層級的根因。
 
-**可能原因：**
-- `ReaderScreen` 未正確處理 `MediaQuery.viewPadding.bottom` 或 `SystemUiEdge` insets
-- PlatformView 高度計算未扣除系統 UI 佔用區域
+**根因一（`applyFixedLayoutCssInjection()` 與原生 `Fit.CONTAIN` 打架，已修）：** `9a1f0c8` commit 針對固定版面額外注入的 CSS 強制 `html, body { width:100vw; height:100vh }`，是跟 `SafeArea` 給的原生容器真實尺寸完全獨立的 WebView 內部視口單位，與原生 `Fit.CONTAIN`（`a2e1cc3`）互相打架。已移除 `applyFixedLayoutCssInjection()`／`findWebView()` 兩個函式與其呼叫點。
 
-**驗收標準：**
-- 書籍內容完整顯示，不被系統 UI 遮蔽
-- 直排/橫排模式下皆正常
-- `flutter test` 通過、`flutter analyze` 乾淨
+**根因二（Readium 固定版面 XML 版面本身只做 fit-by-width，不做 fit-by-height，已修）：** 移除注入的 CSS 後，真機用 WebView 遠端除錯確認固定版面頁面的 WebView 實際 Android View 高度仍是全螢幕高度（2401px，對照同裝置流動式 EPUB 正確地是 2116px），證明問題不在我們自己的 Kotlin 邏輯。直接讀取 `readium/kotlin-toolkit` 3.3.0 官方原始碼（`readium_navigator_fragment_fxllayout_single.xml`）確認：內層 `R2BasicWebView` 用 `layout_height="wrap_content"`，配合 `useWideViewPort`/`loadWithOverviewMode` 只做「縮放至符合可用寬度」，完全沒有同時考慮可用高度的邏輯——超出外層 `ScrollView` 可視範圍的部分變成預設不可見的可捲動區域，而非被縮小。這是 Readium 3.3.0 內建資源本身的行為，不在我們的原始碼樹裡。已在 `EpubReaderView.kt` 新增 `applyFxlFitScale()`：換頁時找到內層 WebView，比較 `container.height`（Flutter 給定、已扣除系統列的真實可用高度）與 WebView 實際測量高度，透過 `View.scaleX`/`scaleY`/`pivotX`/`pivotY`（純視覺變形，不觸碰 Readium 內部狀態）等比縮小到剛好塞進可用高度。詳細分析見 `plans/plan-issue-8.md`。
+
+**驗收結果（真機，第一版）：**
+- 修正前：漫畫封面頁滿版貼齊螢幕邊緣，最下面一列內容被裝置常駐 Taskbar 遮住一截
+- 修正後：同一頁完整置中顯示、四邊有正確留白，不再被 Taskbar 遮蔽；旋轉至橫向後同樣完整置中顯示，符合 `Fit.CONTAIN` 等比縮放語意
+- **但**使用者後續真機測試翻到書中其他頁，回報「仍有部份切到」
+
+**根因三（殘留裁切＋旋轉不重算，已修）：** 不是四捨五入誤差，是兩個時機問題：(1) `onPageLoaded()` 觸發當下 WebView `wrap_content` 高度可能還沒完全撐開（圖片解碼/reflow 未完成），讀到偏小的高度導致縮放比例偏大（縮得不夠）；(2) `MainActivity` 宣告 `configChanges="orientation|screenSize|..."`，旋轉不會重建 Activity/Fragment，`onPageLoaded()` 不會再次觸發，縮放比例停留在舊方向的數值。已把 `applyFxlFitScale()` 改成在 `container`（穩定存在、不隨翻頁重建）上掛 `ViewTreeObserver.OnGlobalLayoutListener`，只要 View 樹版面發生變化（旋轉、內容延遲撐高、換頁換新 WebView 實例）就重新計算縮放比，`dispose()` 時移除監聽器。詳細分析見 `plans/plan-issue-8.md`。
+
+**驗收結果（此輪，僅用封面頁測試）：**
+- 漫畫封面頁直向完整置中顯示，四邊留白正確；旋轉至橫向後立即重新等比縮放，四邊留白正確
+- **但**使用者提供實際 `葬送的芙莉蓮 11.epub`，指出「封面算第一頁的話，第 7, 8, 9 頁會出現切到的情況」且「旋轉螢幕時不會重新縮放」，經第四、五輪 `/diagnose` 找到兩個更深的根因。
+
+**根因四（View 樹中同時存在多個 WebView，只處理到第一個，已修）：** 直接用使用者提供的檔案 `adb push` 到裝置、用 Chrome DevTools Protocol 監看 URL 搭配 `adb shell input swipe` 精準定位到第 7 頁截圖，重現裁切。`adb shell dumpsys activity --view-hierarchy` 檢查發現 Readium 的 `R2ViewPager` 為了讓翻頁動畫流暢，同時保留了目前頁前後相鄰的頁面——**同時存在 3 個獨立的 `R2BasicWebView` 實例**。先前 `findViewByType`（單數）只回傳 View 樹中第一個符合型別的節點，不保證是使用者實際翻到、正在顯示的那一頁；封面頁剛好在樹裡排序靠前所以第一輪測試看起來修好了，翻到第 7-9 頁後「目前顯示的那一頁」不再是第一個，就完全沒被套用縮放。已新增 `findViewsByType`（複數），`applyFxlFitScale()`／`applyFontWeightCascade()` 都改成對「找到的每一個 WebView」個別套用邏輯。
+
+**根因五（pivot 縮放沒有校正 Readium 內部的置中位移，已修）：** 改成處理全部 WebView 後，部分頁面變成**頂端**裁切、底部多出不成比例的空白。原因是 Readium 內建 XML（`RelativeLayout` 包 `LinearLayout[layout_centerInParent]` 包 WebView）本身就會依內容高度把 WebView 在 `RelativeLayout` 內垂直置中，WebView 進入函式時量測到的 `top` 可能早就不是 0；先前 `pivotY=0` 是以 WebView *自己*（已經帶著這個位移的）左上角為錨點縮放，位移會原封不動保留在畫面上。已改用 `View.getLocationOnScreen()` 直接量出 WebView 與容器的實際螢幕座標差，反推出讓縮放後內容置中所需的 `translationX`／`translationY` 補償值；縮放比例也改成 `min(可用寬度/內容寬度, 可用高度/內容高度)`（真正雙軸 `Fit.CONTAIN`）。詳細分析見 `plans/plan-issue-8.md`。
+
+**驗收結果（真機，最終版，使用者提供的實際檔案）：**
+- 第 7 頁（使用者原始回報的裁切頁面）：完整可見，四邊留白正確
+- 隨機再抽測的另一頁：同樣完整可見、四邊留白正確
+- 同一頁旋轉至橫向：立即重新置中，四邊留白正確
+- `flutter test integration_test/epub_reader_view_test.dart` 真機 9/9 全過、`flutter analyze` 乾淨
 
 ---
 
