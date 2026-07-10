@@ -5,6 +5,8 @@ import 'package:elinkbook/reader/book_reader_prefs.dart';
 import 'package:elinkbook/reader/book_reader_prefs_repository.dart';
 import 'package:elinkbook/reader/epub_reader_view.dart';
 import 'package:elinkbook/reader/page_turn_mode.dart';
+import 'package:elinkbook/reader/pdf_fit_mode.dart';
+import 'package:elinkbook/reader/pdf_reader_view.dart';
 import 'package:elinkbook/reader/writing_mode.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
 import '../support/fake_book_reader_prefs_repository.dart';
@@ -64,7 +66,7 @@ void main() {
     );
   });
 
-  testWidgets('PDF 格式不顯示「⚙️版面」按鈕', (tester) async {
+  testWidgets('PDF 格式顯示「⚙️版面」按鈕，初始為停用狀態', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         home: ReaderScreen(
@@ -75,9 +77,14 @@ void main() {
       ),
     );
 
+    final finder = find.byKey(const Key('reader_layout_settings_button'));
+    expect(finder, findsOneWidget);
     expect(
-      find.byKey(const Key('reader_layout_settings_button')),
-      findsNothing,
+      tester.widget<IconButton>(finder).onPressed,
+      isNull,
+      reason: '尚未收到 onPageRendered（純 flutter test 環境下 AndroidView 不會'
+          '觸發原生回呼），按鈕應為停用狀態，比照 EPUB 齒輪按鈕的既有測試限制'
+          '（見本檔案第 46-65 行）',
     );
   });
 
@@ -209,5 +216,50 @@ void main() {
     final epubView =
         tester.widget<EpubReaderView>(find.byType(EpubReaderView));
     expect(epubView.pageTurnMode, PageTurnMode.scroll);
+  });
+
+  testWidgets('開啟該書已有的持久化 pdfFitMode 後，PdfReaderView.fitMode 正確載入',
+      (tester) async {
+    await prefsRepository.save(
+      'b1',
+      const BookReaderPrefs(pdfFitMode: PdfFitMode.actualSize),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b1',
+          prefsRepository: prefsRepository,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final viewFinder = find.byType(PdfReaderView);
+    expect(viewFinder, findsOneWidget);
+    final pdfView = tester.widget<PdfReaderView>(viewFinder);
+    expect(pdfView.fitMode, PdfFitMode.actualSize);
+  });
+
+  testWidgets('尚未持久化 pdfFitMode 時，PdfReaderView.fitMode 採用預設值 pageFit',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b1',
+          prefsRepository: prefsRepository,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+    expect(pdfView.fitMode, PdfFitMode.pageFit);
   });
 }

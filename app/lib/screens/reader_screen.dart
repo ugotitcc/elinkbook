@@ -7,9 +7,11 @@ import '../reader/book_reader_prefs_repository.dart';
 import '../reader/epub_reader_view.dart';
 import '../reader/global_reader_defaults.dart';
 import '../reader/page_turn_mode.dart';
+import '../reader/pdf_fit_mode.dart';
 import '../reader/pdf_reader_view.dart';
 import '../reader/screen_orientation_setting.dart';
 import '../reader/writing_mode.dart';
+import 'pdf_settings_sheet.dart';
 import 'reader_settings_sheet.dart';
 
 /// 唯一的閱讀器顯示接縫（seam）：給定書籍檔案路徑，依偵測到的格式分派到
@@ -82,6 +84,9 @@ class _ReaderScreenState extends State<ReaderScreen> {
   /// 螢幕方向最終生效值：單書覆寫優先於全域預設值。
   ScreenOrientationSetting get _resolvedScreenOrientation =>
       _prefs.screenOrientationOverride ?? _globalScreenOrientation;
+
+  /// Fit 模式最終生效值：單書持久化，無全域預設層（design.md 決策 #8）。
+  PdfFitMode get _resolvedPdfFitMode => _prefs.pdfFitMode ?? PdfFitMode.pageFit;
 
   @override
   void initState() {
@@ -175,6 +180,18 @@ class _ReaderScreenState extends State<ReaderScreen> {
     );
   }
 
+  void _openPdfSettings() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      enableDrag: false,
+      builder: (_) => PdfSettingsSheet(
+        prefs: _prefs,
+        onChanged: _handlePrefsChanged,
+      ),
+    );
+  }
+
   void _handlePageRendered() {
     if (!mounted) return;
     setState(() => _state = _RenderState.rendered);
@@ -219,20 +236,37 @@ class _ReaderScreenState extends State<ReaderScreen> {
   }
 
   List<Widget>? _buildAppBarActions(BookFormat format) {
-    if (format != BookFormat.epub || _isFixedLayout) return null;
-    return [
-      IconButton(
-        key: const Key('reader_layout_settings_button'),
-        icon: const Icon(Icons.settings),
-        tooltip: '版面設定',
-        // _autoDetectedWritingMode 非 null 代表 onLayoutResolved 已觸發，
-        // 書本已成功開啟、navigatorFragment 已存在，此時開啟版面設定並呼叫
-        // setPreferences 才有意義（見 EpubReaderView.kt 的靜默忽略邏輯
-        // 說明）。
-        onPressed:
-            _autoDetectedWritingMode == null ? null : _openLayoutSettings,
-      ),
-    ];
+    if (_isFixedLayout) return null;
+    switch (format) {
+      case BookFormat.epub:
+        return [
+          IconButton(
+            key: const Key('reader_layout_settings_button'),
+            icon: const Icon(Icons.settings),
+            tooltip: '版面設定',
+            // _autoDetectedWritingMode 非 null 代表 onLayoutResolved 已觸發，
+            // 書本已成功開啟、navigatorFragment 已存在，此時開啟版面設定並
+            // 呼叫 setPreferences 才有意義（見 EpubReaderView.kt 的靜默忽略
+            // 邏輯說明）。
+            onPressed:
+                _autoDetectedWritingMode == null ? null : _openLayoutSettings,
+          ),
+        ];
+      case BookFormat.pdf:
+        return [
+          IconButton(
+            key: const Key('reader_layout_settings_button'),
+            icon: const Icon(Icons.settings),
+            tooltip: '版面設定',
+            // _state == rendered 代表 onPageRendered 已觸發，PDF 已成功
+            // 開啟，此時開啟版面設定並呼叫 setPdfPreferences 才有意義，比照
+            // EPUB 分支的既有判斷原則。
+            onPressed: _state == _RenderState.rendered ? _openPdfSettings : null,
+          ),
+        ];
+      case BookFormat.unknown:
+        return null;
+    }
   }
 
   Widget _buildBody(BookFormat format) {
@@ -307,6 +341,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
           filePath: widget.filePath,
           onPageRendered: _handlePageRendered,
           onError: _handleError,
+          fitMode: _resolvedPdfFitMode,
         );
       case BookFormat.unknown:
         return const SizedBox.shrink();
