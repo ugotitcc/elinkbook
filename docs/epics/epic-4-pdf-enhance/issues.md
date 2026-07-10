@@ -19,7 +19,7 @@
 - `book_reader_prefs` 表 `ALTER TABLE` 新增上述 6 欄位（見 `spec.md` 的 SQL 定義），`BookReaderPrefsRepository` 的既有 `load`/`save` 邏輯不需改動（全欄位 nullable、`Map` 驅動）
 
 **單元測試要求：**
-- 純 Dart unit test：`PdfFitMode`／`PdfCropMode` 的 `byName` 失敗回退行為；`PdfCropRect` 建構、相等性、`toJson`/`fromJson` round-trip
+- 純 Dart unit test：`PdfFitMode`／`PdfCropMode` 為 `byName` 直接映射（無回退），比照 `BookReaderPrefs` 既有 5 個 enum 欄位（`AppFont`／`EpubTextAlign`／`WritingMode`／`PageTurnMode`／`ScreenOrientationSetting`）的既有慣例，不需要獨立測試檔（`byName` 失敗回退僅用於 `GlobalReaderDefaults`/`AppThemePreferences` 等 `shared_preferences` 設定，與本表無關）；`PdfCropRect` 建構、相等性、`toJson`/`fromJson` round-trip
 - `BookReaderPrefs`：新 6 欄位的 `toMap`/`fromMap` round-trip；驗證 EPUB 讀取時 PDF 欄位恆為 `null`，反之亦然
 - `BookReaderPrefsRepository`：既有 `save()`/`load()` round-trip 測試擴充涵蓋新欄位；資料庫 migration 後既有 EPUB 資料列不受影響（新欄位讀回 `NULL`）
 
