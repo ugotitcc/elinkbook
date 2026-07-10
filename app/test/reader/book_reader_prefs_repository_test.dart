@@ -7,6 +7,9 @@ import 'package:elinkbook/reader/app_font.dart';
 import 'package:elinkbook/reader/book_reader_prefs.dart';
 import 'package:elinkbook/reader/book_reader_prefs_repository.dart';
 import 'package:elinkbook/reader/writing_mode.dart';
+import 'package:elinkbook/reader/pdf_crop_mode.dart';
+import 'package:elinkbook/reader/pdf_crop_rect.dart';
+import 'package:elinkbook/reader/pdf_fit_mode.dart';
 
 void main() {
   setUpAll(() {
@@ -51,6 +54,40 @@ void main() {
     await repository.save('b1', prefs);
 
     expect(await repository.load('b1'), prefs);
+  });
+
+  test('save 寫入 PDF 欄位後，load 讀回相同的值', () async {
+    const prefs = BookReaderPrefs(
+      pdfFitMode: PdfFitMode.actualSize,
+      pdfContrast: 25,
+      pdfBrightness: -15,
+      pdfBoldStrength: 0.6,
+      pdfCropMode: PdfCropMode.manual,
+      pdfCropRect:
+          PdfCropRect(left: 0.05, top: 0.1, right: 0.95, bottom: 0.9),
+    );
+
+    await repository.save('b1', prefs);
+
+    expect(await repository.load('b1'), prefs);
+  });
+
+  test('同一本書同時儲存 EPUB 與 PDF 欄位，round-trip 皆保留（雖然實務上一本書只會用到其一）',
+      () async {
+    const prefs = BookReaderPrefs(
+      fontSize: 18,
+      writingModeOverride: WritingMode.vertical,
+      pdfFitMode: PdfFitMode.fitWidth,
+      pdfCropMode: PdfCropMode.autoDetect,
+    );
+
+    await repository.save('b1', prefs);
+
+    final loaded = await repository.load('b1');
+    expect(loaded.fontSize, 18);
+    expect(loaded.writingModeOverride, WritingMode.vertical);
+    expect(loaded.pdfFitMode, PdfFitMode.fitWidth);
+    expect(loaded.pdfCropMode, PdfCropMode.autoDetect);
   });
 
   test('save 覆寫既有偏好設定（同一本書再次呼叫 save）', () async {

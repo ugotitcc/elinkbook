@@ -2,6 +2,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/reader/app_font.dart';
 import 'package:elinkbook/reader/book_reader_prefs.dart';
 import 'package:elinkbook/reader/epub_text_align.dart';
+import 'package:elinkbook/reader/pdf_crop_mode.dart';
+import 'package:elinkbook/reader/pdf_crop_rect.dart';
+import 'package:elinkbook/reader/pdf_fit_mode.dart';
 import 'package:elinkbook/reader/screen_orientation_setting.dart';
 import 'package:elinkbook/reader/page_turn_mode.dart';
 import 'package:elinkbook/reader/writing_mode.dart';
@@ -20,6 +23,12 @@ void main() {
     expect(prefs.writingModeOverride, isNull);
     expect(prefs.pageTurnModeOverride, isNull);
     expect(prefs.screenOrientationOverride, isNull);
+    expect(prefs.pdfFitMode, isNull);
+    expect(prefs.pdfContrast, isNull);
+    expect(prefs.pdfBrightness, isNull);
+    expect(prefs.pdfBoldStrength, isNull);
+    expect(prefs.pdfCropMode, isNull);
+    expect(prefs.pdfCropRect, isNull);
   });
 
   test('兩個欄位值完全相同的 BookReaderPrefs 視為相等', () {
@@ -40,6 +49,33 @@ void main() {
   test('任一欄位值不同時視為不相等', () {
     const a = BookReaderPrefs(fontSize: 18);
     const b = BookReaderPrefs(fontSize: 20);
+    expect(a, isNot(b));
+  });
+
+  test('PDF 欄位值完全相同的 BookReaderPrefs 視為相等', () {
+    const a = BookReaderPrefs(
+      pdfFitMode: PdfFitMode.fitWidth,
+      pdfContrast: 20,
+      pdfBrightness: -10,
+      pdfBoldStrength: 0.5,
+      pdfCropMode: PdfCropMode.manual,
+      pdfCropRect: PdfCropRect(left: 0.1, top: 0.1, right: 0.9, bottom: 0.9),
+    );
+    const b = BookReaderPrefs(
+      pdfFitMode: PdfFitMode.fitWidth,
+      pdfContrast: 20,
+      pdfBrightness: -10,
+      pdfBoldStrength: 0.5,
+      pdfCropMode: PdfCropMode.manual,
+      pdfCropRect: PdfCropRect(left: 0.1, top: 0.1, right: 0.9, bottom: 0.9),
+    );
+    expect(a, b);
+    expect(a.hashCode, b.hashCode);
+  });
+
+  test('PDF 欄位任一不同時視為不相等', () {
+    const a = BookReaderPrefs(pdfContrast: 20);
+    const b = BookReaderPrefs(pdfContrast: 30);
     expect(a, isNot(b));
   });
 
@@ -73,5 +109,41 @@ void main() {
     final map = prefs.toMap('book-2');
     final restored = BookReaderPrefs.fromMap(map);
     expect(restored, prefs);
+  });
+
+  test('PDF 欄位的 toMap／fromMap round-trip 保留所有欄位', () {
+    const prefs = BookReaderPrefs(
+      pdfFitMode: PdfFitMode.actualSize,
+      pdfContrast: 15.5,
+      pdfBrightness: -5.5,
+      pdfBoldStrength: 0.75,
+      pdfCropMode: PdfCropMode.autoDetect,
+      pdfCropRect: PdfCropRect(left: 0.02, top: 0.03, right: 0.98, bottom: 0.97),
+    );
+
+    final map = prefs.toMap('book-3');
+    expect(map['pdf_fit_mode'], 'actualSize');
+    expect(map['pdf_contrast'], 15.5);
+    expect(map['pdf_brightness'], -5.5);
+    expect(map['pdf_bold_strength'], 0.75);
+    expect(map['pdf_crop_mode'], 'autoDetect');
+    expect(map['pdf_crop_rect'], isA<String>());
+
+    final restored = BookReaderPrefs.fromMap(map);
+    expect(restored, prefs);
+  });
+
+  test('EPUB 讀取時 PDF 欄位恆為 null，反之 PDF 讀取時 EPUB 欄位恆為 null', () {
+    const epubOnly = BookReaderPrefs(fontSize: 18, pdfContrast: null);
+    final epubMap = epubOnly.toMap('book-4');
+    expect(epubMap['pdf_fit_mode'], isNull);
+    expect(epubMap['pdf_contrast'], isNull);
+    expect(epubMap['pdf_crop_rect'], isNull);
+
+    const pdfOnly = BookReaderPrefs(pdfContrast: 10, fontSize: null);
+    final pdfMap = pdfOnly.toMap('book-5');
+    expect(pdfMap['font_family'], isNull);
+    expect(pdfMap['font_size'], isNull);
+    expect(pdfMap['writing_mode_override'], isNull);
   });
 }
