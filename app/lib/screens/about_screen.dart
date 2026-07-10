@@ -18,12 +18,14 @@ class _AboutScreenState extends State<AboutScreen> {
   String _versionText = '讀取中...';
   String? _versionForLicensePage;
   String _webViewVersion = '讀取中...';
+  String _buildTimeText = '讀取中...';
 
   @override
   void initState() {
     super.initState();
     _loadPackageInfo();
     _loadWebViewVersion();
+    _loadBuildTime();
   }
 
   Future<void> _loadPackageInfo() async {
@@ -37,6 +39,19 @@ class _AboutScreenState extends State<AboutScreen> {
     } catch (_) {
       if (!mounted) return;
       setState(() => _versionText = '無法取得版本號');
+    }
+  }
+
+  Future<void> _loadBuildTime() async {
+    try {
+      final buildTime = await _appInfoChannel.invokeMethod<String>(
+        'getBuildTime',
+      );
+      if (!mounted) return;
+      setState(() => _buildTimeText = buildTime ?? '無法取得');
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _buildTimeText = '無法取得');
     }
   }
 
@@ -64,6 +79,13 @@ class _AboutScreenState extends State<AboutScreen> {
             subtitle: Text(
               _versionText,
               key: const Key('about_screen_version_text'),
+            ),
+          ),
+          ListTile(
+            title: const Text('編譯時間'),
+            subtitle: Text(
+              _buildTimeText,
+              key: const Key('about_screen_build_time_text'),
             ),
           ),
           ListTile(

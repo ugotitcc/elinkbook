@@ -320,6 +320,11 @@ class EpubReaderView(
                     availableWidth.toFloat() / contentWidth.toFloat(),
                     availableHeight.toFloat() / contentHeight.toFloat(),
                 ).coerceAtMost(1f)
+                android.util.Log.d(
+                    "DEBUG-oddeven",
+                    "webView=${System.identityHashCode(webView)} url=${webView.url} " +
+                        "contentW=$contentWidth contentH=$contentHeight fitScale=$fitScale",
+                )
 
                 // 先歸零位移、以左上角為錨點，量出這一輪「未經校正」的原始 layout
                 // 位置（pivot 在 (0,0) 時縮放不會移動錨點本身，所以量到的位置就是

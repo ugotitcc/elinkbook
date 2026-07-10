@@ -123,7 +123,7 @@
 
 ---
 
-## Issue 6：真機驗證與收尾（已完成，發現 3 個後續問題）
+## Issue 6：真機驗證與收尾（已完成，發現 3 個後續問題；追加編譯時間資訊需求已完成）
 
 **依賴：** Issue 2、Issue 3、Issue 4、Issue 5 全部完成
 
@@ -134,6 +134,15 @@
 - ❌ 字重（fontWeight）設定無視覺效果 → 已建立 Issue 7 追蹤
 - ❌ 閱讀器底部被狀態列遮蔽 → 已建立 Issue 8 追蹤
 - ❌ PDF 書籍無法換頁 → 已建立 Issue 9 追蹤
+
+**追加需求（2026-07-10，`/grill-with-docs` 分流決議，併入本 issue 範圍）：**
+「關於」頁面（`AboutScreen`，`app/lib/screens/about_screen.dart`）目前只顯示版本號＋build number，缺少編譯時間戳記——真機測試時常需要先確認手上安裝的到底是哪一次建置，僅靠 versionName/buildNumber 無法分辨同一版號的多次重新建置。
+
+- **時間來源**：Gradle 建置當下的系統時間（非 git commit 時間），透過 `app/android/app/build.gradle.kts` 的 `buildConfigField` 在 `defaultConfig` 或 `release`/`debug` 各 buildType 注入一個字串常數（例如 `BUILD_TIME`），每次執行 `flutter build apk`/`flutter run` 都會重新產生。
+- **暴露方式**：比照既有的 `elinkbook/app_info` method channel（`MainActivity.kt` 已有 `getSystemWebViewVersion` case）新增一個 `getBuildTime` case，回傳 `BuildConfig.BUILD_TIME` 給 Dart 端。
+- **顯示位置**：`AboutScreen` 現有「版本」`ListTile` 的 subtitle 追加編譯時間（或另開一個 `ListTile`），沿用既有的 `_loadPackageInfo`/`_loadWebViewVersion` 非同步載入＋失敗降級為「無法取得」的既有模式。
+
+**實作結果（已完成）：** `app/android/app/build.gradle.kts` 新增 `buildFeatures { buildConfig = true }`＋`buildConfigField("String", "BUILD_TIME", ...)`（注意：`SimpleDateFormat`/`Date` 需在檔案最上層用 `import java.text.SimpleDateFormat`/`import java.util.Date` 引入，直接在 `defaultConfig {}` 內用完整類別路徑 `java.text.SimpleDateFormat` 會編譯失敗，是 Gradle Kotlin DSL 已知限制）；`MainActivity.kt` 的 `elinkbook/app_info` channel 新增 `getBuildTime` case 回傳 `BuildConfig.BUILD_TIME`；`AboutScreen` 新增「編譯時間」`ListTile`（`Key('about_screen_build_time_text')`），透過 `_loadBuildTime()` 非同步載入、失敗降級「無法取得」。`flutter test`／`flutter analyze` 皆通過，已建置 debug APK 並安裝至真機驗證。
 
 **描述：**
 本 issue 為裝置端整合驗證與 Epic 收尾，比照 Epic 2 Issue 3/4/5 的既有模式，部分項目屬人工視覺 QA 性質：
@@ -223,4 +232,24 @@
 **驗收標準：**
 - PDF 書籍可正常左右滑動翻頁
 - 頁碼指示正確更新
+
+---
+
+## Issue 10：漫畫（固定版面 EPUB）奇數頁與偶數頁縮放大小不一致（調查中，已擱置）
+
+**依賴：** Issue 8（`applyFxlFitScale()`）
+
+**描述：**
+`/grill-with-docs`（2026-07-10）分流的第 3 項需求：使用者回報單頁模式下瀏覽漫畫時，奇數頁與偶數頁的縮放比例看起來不一致。使用者要求先確認根因，若可行則在本 epic 階段一併修正。
+
+**已排除的假設：** 解壓縮使用者提供的 `葬送的芙莉蓮 11.epub` 逐頁比對，p-001 至 p-014 全數宣告完全相同的 `<meta name="viewport" content="width=1066, height=1600">` 與 SVG `viewBox="0 0 1066 1600"`——排除「奇偶頁本身版面尺寸不同」這個假設。
+
+**已就緒但尚未執行的偵錯手段：** `EpubReaderView.kt` 的 `applyFxlFitScale()` 內已加上暫時性除錯日誌（`Log.d("DEBUG-oddeven", ...)`，含 `webView` identity hash、`url`、`contentWidth`/`contentHeight`、`fitScale`），可透過 `adb logcat` 在真機上連續翻頁時擷取，比對相鄰頁 `fitScale` 數值差異以確認根因（例如是否與 Issue 8 根因四提到的「`R2ViewPager` 同時保留多個相鄰 WebView 實例」之間的分頁時序有關）。
+
+**目前狀態：** 2026-07-10 討論決議**擱置**，待本 epic 其餘收尾項目（Issue 6 追加的編譯時間資訊等）完成後再回頭执行真機日誌擷取與根因確認。`DEBUG-oddeven` 日誌暫時保留在程式碼中，待本 issue 結案時依 `/diagnose` Phase 6 清理規範移除。
+
+**驗收標準：**
+- 真機擷取 `DEBUG-oddeven` 日誌，確認奇偶頁 `fitScale`（或其他相關數值）是否確實不同、找出根因
+- 若根因可在本 epic 範圍內修正，完成修正並移除除錯日誌；若根因超出本 epic 範圍，記錄結論並視情況另立新 issue／epic
+- `flutter analyze` 乾淨、既有 `integration_test` 不迴歸
 - `flutter test` 通過、`flutter analyze` 乾淨

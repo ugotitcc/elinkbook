@@ -18,6 +18,7 @@ void main() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(_appInfoChannel, (call) async {
       if (call.method == 'getSystemWebViewVersion') return '120.0.6099.43';
+      if (call.method == 'getBuildTime') return '2026-07-10 13:00:00';
       return null;
     });
   });
@@ -27,7 +28,7 @@ void main() {
         .setMockMethodCallHandler(_appInfoChannel, null);
   });
 
-  testWidgets('AboutScreen 正確渲染版本號與 WebView 版本', (tester) async {
+  testWidgets('AboutScreen 正確渲染版本號、編譯時間與 WebView 版本', (tester) async {
     await tester.pumpWidget(const MaterialApp(home: AboutScreen()));
     await tester.pumpAndSettle();
 
@@ -38,6 +39,11 @@ void main() {
     );
     expect(find.text('1.0.0 (build 1)'), findsOneWidget);
     expect(
+      find.byKey(const Key('about_screen_build_time_text')),
+      findsOneWidget,
+    );
+    expect(find.text('2026-07-10 13:00:00'), findsOneWidget);
+    expect(
       find.byKey(const Key('about_screen_webview_version_text')),
       findsOneWidget,
     );
@@ -47,5 +53,24 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('開源授權清單'), findsOneWidget);
+  });
+
+  testWidgets('getBuildTime 呼叫失敗時降級顯示「無法取得」', (tester) async {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(_appInfoChannel, (call) async {
+      if (call.method == 'getSystemWebViewVersion') return '120.0.6099.43';
+      if (call.method == 'getBuildTime') {
+        throw PlatformException(code: 'unavailable');
+      }
+      return null;
+    });
+
+    await tester.pumpWidget(const MaterialApp(home: AboutScreen()));
+    await tester.pumpAndSettle();
+
+    final buildTimeText = tester.widget<Text>(
+      find.byKey(const Key('about_screen_build_time_text')),
+    );
+    expect(buildTimeText.data, '無法取得');
   });
 }

@@ -114,6 +114,7 @@ class MainActivity : FlutterFragmentActivity() {
                         }
                         result.success(versionName)
                     }
+                    "getBuildTime" -> result.success(BuildConfig.BUILD_TIME)
                     else -> result.notImplemented()
                 }
             }

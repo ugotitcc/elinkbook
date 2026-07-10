@@ -13,6 +13,7 @@ class FakeBookImportService implements BookImportService {
   @override
   Future<List<Book>> importFiles(
     List<String> uris, {
+    List<String?>? displayNames,
     String? folderName,
   }) {
     final completer = pendingCompleter;

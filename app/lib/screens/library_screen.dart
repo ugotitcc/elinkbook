@@ -122,11 +122,16 @@ class _LibraryScreenState extends State<LibraryScreen> {
         allowedExtensions: ['epub', 'pdf', 'txt'],
       );
       if (picked == null || picked.files.isEmpty) return;
-      final uris =
-          picked.files.map((f) => f.identifier).whereType<String>().toList();
+      // uris／displayNames 必須用同一次過濾（f.identifier != null）建立，
+      // 保持逐一對應——分開各自 map 再各自過濾會在有檔案 identifier 為 null
+      // 時位移量不同，導致 displayNames[i] 對應到錯誤的 uris[i]。
+      final pickedWithUri =
+          picked.files.where((f) => f.identifier != null).toList();
+      final uris = pickedWithUri.map((f) => f.identifier!).toList();
       if (uris.isEmpty) return;
+      final displayNames = pickedWithUri.map((f) => f.name).toList();
       setState(() => _isImporting = true);
-      await widget.importService.importFiles(uris);
+      await widget.importService.importFiles(uris, displayNames: displayNames);
       await _loadBooks();
     } catch (_) {
       // 匯入失敗時靜默吞掉，避免異常傳播破壞 widget 樹或留下不一致狀態

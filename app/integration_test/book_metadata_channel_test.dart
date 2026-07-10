@@ -39,6 +39,34 @@ void main() {
     expect((result['coverBytes'] as Uint8List).isNotEmpty, isTrue);
   });
 
+  testWidgets(
+      'EPUB 封面圖僅能透過 spine 首頁的 alternates 到達時（例如 EBPAJ 規範的 '
+      'SVG 包裹封面頁）仍能正確提取 coverBytes', (tester) async {
+    // 真機用使用者提供的實際漫畫 EPUB 驗證發現：Readium 內建的
+    // ResourceCoverService 只在 manifest.resources／readingOrder 頂層搜尋
+    // rel=cover 的連結，不會往下查詢每個連結各自的 alternates。這個 fixture
+    // 複製該書的封面宣告結構：manifest 內的封面圖片（properties=
+    // "cover-image"）本身不在 spine 上，只被 spine 首頁（一個內嵌 SVG 引用
+    // 該圖片的 XHTML 頁面，透過 fallback 屬性關聯）的 alternates 引用，導致
+    // publication.cover() 回傳 null（見 BookMetadataChannel.kt 的
+    // findFallbackCoverBitmap 退路邏輯）。
+    final samplePath = await _stageAssetAsFile(
+        'test/fixtures/sample_fxl_svg_cover.epub', 'sample_fxl_svg_cover.epub');
+    addTearDown(() async {
+      final file = File(samplePath);
+      if (await file.exists()) await file.delete();
+    });
+
+    final result = await _channel.invokeMapMethod<String, Object?>(
+      'extractMetadata',
+      {'uri': samplePath, 'format': 'epub'},
+    );
+
+    expect(result, isNotNull);
+    expect(result!['coverBytes'], isNotNull);
+    expect((result['coverBytes'] as Uint8List).isNotEmpty, isTrue);
+  });
+
   testWidgets('PDF 詮釋資料提取回傳非空的 coverBytes', (tester) async {
     final samplePath =
         await _stageAssetAsFile('test/fixtures/sample.pdf', 'sample.pdf');

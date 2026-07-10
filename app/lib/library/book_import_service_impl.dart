@@ -32,7 +32,16 @@ String titleFromFileName(String uriOrPath) {
 }
 
 String _lastPathComponent(String uriOrPath) {
-  final decoded = Uri.decodeFull(uriOrPath);
+  // displayName 可能是未經 percent-encoding 的原始檔名（例如 file_picker 的
+  // PlatformFile.name，見呼叫端註解），Uri.decodeFull 對這類不含合法
+  // percent-encoding 序列的字串會拋出 FormatException（即使字串本身完全
+  // 沒有 '%' 字元）；此時視為不需解碼，直接使用原字串。
+  String decoded;
+  try {
+    decoded = Uri.decodeFull(uriOrPath);
+  } on ArgumentError {
+    decoded = uriOrPath;
+  }
   final normalized = decoded.replaceAll('\\', '/');
   final segments = normalized.split('/');
   return segments.isNotEmpty ? segments.last : normalized;
@@ -42,17 +51,21 @@ class BookImportServiceImpl implements BookImportService {
   BookImportServiceImpl({
     required LibraryRepository repository,
     Directory? coversDirectory,
+    Directory? importedBooksDirectory,
   })  : _repository = repository,
-        _coversDirectory = coversDirectory;
+        _coversDirectory = coversDirectory,
+        _importedBooksDirectory = importedBooksDirectory;
 
   static const _channel = MethodChannel('elinkbook/book_metadata');
 
   final LibraryRepository _repository;
   final Directory? _coversDirectory;
+  final Directory? _importedBooksDirectory;
 
   @override
   Future<List<Book>> importFiles(
     List<String> uris, {
+    List<String?>? displayNames,
     String? folderName,
   }) async {
     if (folderName != null) {
@@ -60,8 +73,14 @@ class BookImportServiceImpl implements BookImportService {
     }
 
     final imported = <Book>[];
-    for (final uri in uris) {
-      final book = await _importSingleFile(uri, folderName: folderName);
+    for (var i = 0; i < uris.length; i++) {
+      final displayName =
+          (displayNames != null && i < displayNames.length) ? displayNames[i] : null;
+      final book = await _importSingleFile(
+        uris[i],
+        displayName: displayName,
+        folderName: folderName,
+      );
       if (book != null) imported.add(book);
     }
     return imported;
@@ -119,32 +138,63 @@ class BookImportServiceImpl implements BookImportService {
 
   Future<Book?> _importSingleFile(
     String uri, {
+    String? displayName,
     String? folderName,
     bool takePermission = true,
   }) async {
-    final format = detectBookFileFormat(uri);
+    // 優先用呼叫端提供的真實檔名（例如 file_picker 的 PlatformFile.name）
+    // 判斷格式，URI 本身當退路。部分文件提供者（例如媒體庫文件提供者
+    // com.android.providers.media.documents，使用者透過系統選擇器的
+    // 「最近」／媒體索引視圖選檔時常見）回傳的 URI 只帶不透明數字文件 ID
+    // （例如 .../document/document%3A1000001716），完全不含檔名／副檔名
+    // ——只看 URI 判斷格式在這種情況下必定回傳 null，導致整個檔案在最前面
+    // 就被靜默跳過（真機驗證發現的實際症狀：選檔正確返回、匯入沒有拋出
+    // 任何例外，但書架永遠是空的）。資料夾匯入（importFolder）目前仍只有
+    // URI 可用（DocumentFile 的 uri 路徑對 externalstorage 這類本機提供者
+    // 通常仍保留可辨識檔名），沒有另外提供 displayName 時退回原本行為。
+    final format =
+        (displayName != null ? detectBookFileFormat(displayName) : null) ??
+            detectBookFileFormat(uri);
     if (format == null) return null;
 
+    final id = '${DateTime.now().microsecondsSinceEpoch}-${uri.hashCode}';
+
     // 只對 content:// scheme 持久化權限（file_picker 在 Android 上一定回傳
-    // content:// URI；此判斷主要防禦測試/除錯情境誤傳純路徑）。持久化失敗
-    // 時（例如來源 URI 不支援 persistable 權限）視為這個檔案匯入失敗並略過
-    // ——不能假裝成功寫入資料庫，因為當次的暫時讀取權限只在本次 App 行程
-    // 存活期間有效，寫入的 filePath 極可能在下次啟動後無法讀取，那會是比
-    // 略過更糟的靜默壞資料。資料夾批次匯入（importFolder）的子檔案 URI 共用
+    // content:// URI；此判斷主要防禦測試/除錯情境誤傳純路徑）。部分文件
+    // 提供者（例如媒體庫文件提供者 com.android.providers.media.documents，
+    // 相對於標準的外部儲存文件提供者）在某些裝置/Android 版本上不保證核發
+    // 可持久化授權，`takePersistableUriPermission` 會拋出 PlatformException；
+    // 此時不能直接放棄匯入（先前版本的行為——真機驗證發現這會讓匯入功能
+    // 在部分裝置上整個無法使用），改為退而求其次：把檔案內容複製一份到
+    // App 私有儲存空間，改用這份本機複本的真實檔案路徑，不再依賴來源
+    // content:// URI 在下次啟動後是否還能讀取——複製失敗才視為這個檔案
+    // 匯入失敗並略過。資料夾批次匯入（importFolder）的子檔案 URI 共用
     // 資料夾層級已取得的權限，呼叫時傳入 takePermission: false 跳過這一步。
+    var resolvedUri = uri;
     if (takePermission && uri.startsWith('content://')) {
+      var permissionGranted = true;
       try {
         await _channel.invokeMethod<void>(
           'takePersistableUriPermission',
           {'uri': uri},
         );
       } on PlatformException {
-        return null;
+        permissionGranted = false;
+      }
+      // 即使權限持久化成功，若來源 URI 本身不含可辨識副檔名（例如媒體庫
+      // 文件提供者的不透明數字 ID），ReaderScreen 開啟時仍是依 filePath
+      // 的副檔名判斷格式（detectBookFormat，與這裡的 format 判斷各自獨立
+      // 運作）——filePath 若維持原始 URI，開啟時會判定為不支援的格式。
+      // 因此只要 URI 本身沒有可辨識副檔名，就一律複製一份到本機、以正確
+      // 副檔名命名，讓匯入與開啟兩處的格式判斷全程一致。
+      if (!permissionGranted || detectBookFileFormat(uri) == null) {
+        final localPath = await _copyToLocalStorage(uri, id, format);
+        if (localPath == null) return null;
+        resolvedUri = localPath;
       }
     }
 
-    final id = '${DateTime.now().microsecondsSinceEpoch}-${uri.hashCode}';
-    final fallbackTitle = titleFromFileName(uri);
+    final fallbackTitle = titleFromFileName(displayName ?? uri);
     final now = DateTime.now();
 
     var title = fallbackTitle;
@@ -158,7 +208,7 @@ class BookImportServiceImpl implements BookImportService {
       try {
         final metadata = await _channel.invokeMapMethod<String, Object?>(
           'extractMetadata',
-          {'uri': uri, 'format': format.name},
+          {'uri': resolvedUri, 'format': format.name},
         );
         final extractedTitle = metadata?['title'] as String?;
         if (extractedTitle != null && extractedTitle.isNotEmpty) {
@@ -179,7 +229,7 @@ class BookImportServiceImpl implements BookImportService {
       title: title,
       author: author,
       format: format,
-      filePath: uri,
+      filePath: resolvedUri,
       source: BookSource.local,
       coverPath: coverPath,
       groupName: folderName ?? BookGroup.uncategorized,
@@ -188,6 +238,27 @@ class BookImportServiceImpl implements BookImportService {
     );
 
     return _repository.insertBook(book);
+  }
+
+  /// [takePersistableUriPermission] 失敗時的退路：把 [uri] 的內容複製一份到
+  /// App 私有文件目錄下的 `imported_books/` 子目錄，回傳複本的真實檔案路徑；
+  /// 複製失敗（例如來源 URI 這次連暫時讀取都失敗）回傳 null。
+  Future<String?> _copyToLocalStorage(
+    String uri,
+    String id,
+    BookFileFormat format,
+  ) async {
+    final importedDir = await _resolveImportedBooksDirectory();
+    final destinationPath = p.join(importedDir.path, '$id.${format.name}');
+    try {
+      await _channel.invokeMethod<void>(
+        'copyContentUriToFile',
+        {'uri': uri, 'destinationPath': destinationPath},
+      );
+      return destinationPath;
+    } on PlatformException {
+      return null;
+    }
   }
 
   Future<String> _landCover(Uint8List bytes, String bookId) async {
@@ -201,6 +272,18 @@ class BookImportServiceImpl implements BookImportService {
     if (_coversDirectory != null) return _coversDirectory;
     final docsDir = await getApplicationDocumentsDirectory();
     final dir = Directory(p.join(docsDir.path, 'covers'));
+    if (!await dir.exists()) await dir.create(recursive: true);
+    return dir;
+  }
+
+  Future<Directory> _resolveImportedBooksDirectory() async {
+    final dir = _importedBooksDirectory ??
+        Directory(
+          p.join(
+            (await getApplicationDocumentsDirectory()).path,
+            'imported_books',
+          ),
+        );
     if (!await dir.exists()) await dir.create(recursive: true);
     return dir;
   }

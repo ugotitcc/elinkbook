@@ -1,9 +1,15 @@
+import java.text.SimpleDateFormat
+import java.util.Date
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
+
+// 建置當下的系統時間，供 BuildConfig.BUILD_TIME 使用（見下方 defaultConfig）。
+val buildTimeString: String = SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(Date())
 
 android {
     namespace = "cc.ugotit.elinkbook"
@@ -22,6 +28,10 @@ android {
         }
     }
 
+    buildFeatures {
+        buildConfig = true
+    }
+
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "cc.ugotit.elinkbook"
@@ -31,6 +41,11 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        // 每次執行 Gradle 建置當下的系統時間，供「關於」頁面顯示，方便真機測試時
+        // 確認手上安裝的是哪一次建置（見 docs/epics/epic-3-fonts-layout/issues.md
+        // Issue 6 追加需求）。
+        buildConfigField("String", "BUILD_TIME", "\"$buildTimeString\"")
     }
 
     buildTypes {

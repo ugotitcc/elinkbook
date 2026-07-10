@@ -107,6 +107,34 @@ class BookMetadataChannel(
                     result.error("permission_failed", "無法持久化 URI 讀取權限：${e.message}", null)
                 }
             }
+            "copyContentUriToFile" -> {
+                // [takePersistableUriPermission] 失敗時的退路（見
+                // book_import_service_impl.dart 的 _copyToLocalStorage 說明）：
+                // 把 uri 目前這次暫時的讀取權限用掉，將內容複製一份到 App 私有
+                // 儲存空間，之後改讀這份複本，不再依賴來源 URI 的長期可讀性。
+                val uriString = call.argument<String>("uri")
+                val destinationPath = call.argument<String>("destinationPath")
+                if (uriString == null || destinationPath == null) {
+                    result.error("invalid_arguments", "缺少 uri 或 destinationPath 參數", null)
+                    return
+                }
+                scope.launch {
+                    try {
+                        withContext(Dispatchers.IO) {
+                            val input = context.contentResolver.openInputStream(Uri.parse(uriString))
+                                ?: throw java.io.IOException("無法開啟來源 URI 的輸入串流：$uriString")
+                            input.use { source ->
+                                File(destinationPath).outputStream().use { destination ->
+                                    source.copyTo(destination)
+                                }
+                            }
+                        }
+                        result.success(null)
+                    } catch (e: Exception) {
+                        result.error("copy_failed", "複製檔案至本機儲存失敗：${e.message}", null)
+                    }
+                }
+            }
             "createTestContentUri" -> {
                 // 僅供 integration_test 使用：把裝置上真實檔案路徑透過 FileProvider
                 // 轉為 content:// URI，並自我授予 persistable 權限（模擬 SAF
@@ -211,10 +239,12 @@ class BookMetadataChannel(
                 try {
                     val title = publication.metadata.title
                     val author = publication.metadata.authors.firstOrNull()?.name
-                    // PNG 壓縮為 CPU 密集工作，移到背景執行緒避免阻塞主執行緒；
-                    // withContext 返回後會自動切回 scope 的 Main dispatcher。
+                    // PNG 壓縮與封面退路的 I/O／解碼皆為耗時工作，移到背景執行緒避免
+                    // 阻塞主執行緒；withContext 返回後會自動切回 scope 的 Main
+                    // dispatcher。
                     val coverBytes = withContext(Dispatchers.IO) {
-                        publication.cover()?.let { bitmapToPngBytes(it) }
+                        val bitmap = publication.cover() ?: findFallbackCoverBitmap(publication)
+                        bitmap?.let { bitmapToPngBytes(it) }
                     }
                     result.success(
                         mapOf(
@@ -302,5 +332,36 @@ class BookMetadataChannel(
         val stream = ByteArrayOutputStream()
         bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
         return stream.toByteArray()
+    }
+
+    /**
+     * [org.readium.r2.shared.publication.services.cover] 的預設
+     * `ResourceCoverService` 只在 `manifest.resources`／`readingOrder` 頂層
+     * 搜尋 `rel=cover` 的連結，不會往下查詢每個連結各自的 `alternates`。部分
+     * 固定版面漫畫（例如遵循 EBPAJ／日系電子漫畫規範的 EPUB）封面圖僅透過
+     * spine 首頁（SVG 包裹頁面）的 `fallback`／`alternates` 才能找到——manifest
+     * 內雖然有 `properties="cover-image"` 的宣告，但該連結本身不在 spine
+     * 上，只被首頁的 alternates 引用，導致 `publication.cover()` 回傳 null
+     * （真機用真實檔案驗證確認：`readingOrder` 首項的 `alternates` 內確實有一個
+     * `rels=[cover]` 的連結，但頂層 `resources`／`readingOrder` 皆無）。
+     * 這裡額外遍歷 `readingOrder`／`resources` 各自的 `alternates`，找出
+     * `rel=cover` 的連結後自行讀取＋解碼，作為 Readium 內建邏輯的退路。
+     */
+    private suspend fun findFallbackCoverBitmap(
+        publication: org.readium.r2.shared.publication.Publication,
+    ): Bitmap? {
+        val coverLink =
+            (publication.manifest.readingOrder + publication.manifest.resources)
+                .asSequence()
+                .flatMap { it.alternates.asSequence() }
+                .firstOrNull { it.rels.contains("cover") }
+                ?: return null
+        val resource = publication.get(coverLink) ?: return null
+        return try {
+            val bytes = resource.read().getOrElse { null } ?: return null
+            android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+        } finally {
+            resource.close()
+        }
     }
 }

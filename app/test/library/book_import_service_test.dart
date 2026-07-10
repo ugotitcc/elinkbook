@@ -20,18 +20,27 @@ void main() {
 
   late SqliteLibraryRepository repository;
   late Directory coversDir;
+  late Directory importedBooksDir;
   late BookImportServiceImpl service;
 
   setUp(() async {
     repository = await SqliteLibraryRepository.open(inMemoryDatabasePath);
     coversDir = Directory.systemTemp.createTempSync('book_import_test_covers');
-    service =
-        BookImportServiceImpl(repository: repository, coversDirectory: coversDir);
+    importedBooksDir =
+        Directory.systemTemp.createTempSync('book_import_test_imported');
+    service = BookImportServiceImpl(
+      repository: repository,
+      coversDirectory: coversDir,
+      importedBooksDirectory: importedBooksDir,
+    );
   });
 
   tearDown(() async {
     await repository.close();
     if (coversDir.existsSync()) coversDir.deleteSync(recursive: true);
+    if (importedBooksDir.existsSync()) {
+      importedBooksDir.deleteSync(recursive: true);
+    }
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(_channel, null);
   });
@@ -159,8 +168,9 @@ void main() {
     expect(books.single.title, '有效書籍');
   });
 
-  test('takePersistableUriPermission 失敗時略過該檔案，不寫入資料庫、不中斷整批匯入',
-      () async {
+  test(
+      'takePersistableUriPermission 失敗但複製到本機儲存成功時，'
+      '改用本機複本路徑繼續完成匯入（不再直接略過）', () async {
     mockChannel((call) async {
       final args = call.arguments as Map;
       if (call.method == 'takePersistableUriPermission') {
@@ -169,6 +179,38 @@ void main() {
               code: 'permission_failed', message: '模擬權限持久化失敗');
         }
         return null;
+      }
+      if (call.method == 'copyContentUriToFile') return null; // 模擬複製成功
+      return {'title': '有效書籍', 'author': null, 'coverBytes': null};
+    });
+
+    final books = await service.importFiles([
+      'content://example/no_permission.epub',
+      'content://example/valid.pdf',
+    ]);
+
+    expect(books, hasLength(2));
+    expect(
+      books[0].filePath,
+      isNot(startsWith('content://')),
+      reason: '權限持久化失敗後應改存本機複本路徑，不是原始 content:// URI',
+    );
+  });
+
+  test(
+      'takePersistableUriPermission 與複製到本機儲存都失敗時，'
+      '真的略過該檔案，不寫入資料庫、不中斷整批匯入', () async {
+    mockChannel((call) async {
+      final args = call.arguments as Map;
+      if (call.method == 'takePersistableUriPermission') {
+        if ((args['uri'] as String).contains('no_permission')) {
+          throw PlatformException(
+              code: 'permission_failed', message: '模擬權限持久化失敗');
+        }
+        return null;
+      }
+      if (call.method == 'copyContentUriToFile') {
+        throw PlatformException(code: 'copy_failed', message: '模擬複製失敗');
       }
       return {'title': '有效書籍', 'author': null, 'coverBytes': null};
     });
@@ -180,6 +222,48 @@ void main() {
 
     expect(books, hasLength(1));
     expect(books.single.title, '有效書籍');
+  });
+
+  test(
+      'URI 為不透明文件 ID（不含可辨識副檔名，例如媒體庫文件提供者）時，'
+      '改用 displayNames 判斷格式仍能成功匯入', () async {
+    mockChannel((call) async {
+      if (call.method == 'takePersistableUriPermission') return null;
+      if (call.method == 'extractMetadata') {
+        expect((call.arguments as Map)['format'], 'epub');
+        return {'title': '葬送的芙莉蓮', 'author': null, 'coverBytes': null};
+      }
+      return null;
+    });
+
+    // 真機驗證發現的實際情境：content:// 最後一段是不透明數字 ID，完全不含
+    // 副檔名（見 book_import_service_impl.dart 對
+    // com.android.providers.media.documents 的說明）；若只看 URI，
+    // detectBookFileFormat 必定回傳 null，整個檔案會在最前面就被靜默跳過。
+    const opaqueUri =
+        'content://com.android.providers.media.documents/document/document%3A1000001716';
+    final books = await service.importFiles(
+      [opaqueUri],
+      displayNames: ['葬送的芙莉蓮 11.epub'],
+    );
+
+    expect(books, hasLength(1));
+    expect(books.single.format, BookFileFormat.epub);
+    expect(books.single.title, '葬送的芙莉蓮');
+  });
+
+  test('displayNames 為 null（未提供）時退回只看 URI 判斷格式，行為與先前版本一致',
+      () async {
+    mockChannel((call) async {
+      if (call.method == 'takePersistableUriPermission') return null;
+      return {'title': null, 'author': null, 'coverBytes': null};
+    });
+
+    final books =
+        await service.importFiles(['content://example/book.epub']);
+
+    expect(books, hasLength(1));
+    expect(books.single.format, BookFileFormat.epub);
   });
 
   test('指定 folderName 時自動建立分類並歸入，書籍 groupName 對應資料夾名稱',
