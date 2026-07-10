@@ -141,6 +141,15 @@ class PdfReaderView(
 
         try {
             val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+            // Bitmap.createBitmap() 預設是全透明（ARGB 皆為 0），而
+            // PdfRenderer.Page.render() 只會畫出 PDF 內容本身有實際筆劃的
+            // 像素，頁面「空白背景」區域若 PDF 本身沒有明確畫白色矩形，會
+            // 維持透明、不會被填成不透明白色。applyFilters() 的
+            // ColorMatrixColorFilter 第 4 列（alpha）是單位矩陣（保留原始
+            // alpha），因此透明像素無論 contrast／brightness 設多少都不會
+            // 產生視覺變化——必須在渲染前先手動填滿不透明白色背景，濾鏡才能
+            // 對「背景」區域也生效（見 task-4-diagnose-report.md 根因分析）。
+            bitmap.eraseColor(android.graphics.Color.WHITE)
             val matrix = android.graphics.Matrix().apply {
                 postScale(scale, scale)
             }
@@ -152,6 +161,8 @@ class PdfReaderView(
             // 如果發生 OutOfMemory，回退到原始尺寸渲染以確保不會崩潰
             try {
                 val fallbackBitmap = Bitmap.createBitmap(page.width, page.height, Bitmap.Config.ARGB_8888)
+                // 同上，回退路徑也需要先填滿不透明白色背景。
+                fallbackBitmap.eraseColor(android.graphics.Color.WHITE)
                 page.render(fallbackBitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
                 imageView.setImageBitmap(fallbackBitmap)
                 applyFitMode()

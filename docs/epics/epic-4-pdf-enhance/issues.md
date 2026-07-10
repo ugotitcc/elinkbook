@@ -64,13 +64,21 @@
 
 ---
 
-## Issue 3：影像濾鏡——對比度／亮度（自動化測試通過，但真機視覺驗證發現濾鏡未實際生效）
+## Issue 3：影像濾鏡——對比度／亮度（bug 已修復並重新真機驗證）
 
-**Status:** ⚠️ 自動化測試皆通過，但 Task 3 的真機人工視覺確認發現一個嚴重落差：**對比度/亮度濾鏡的數值變更會正確存入 UI 與資料庫，但在真實裝置的渲染畫面上沒有任何可辨識的視覺變化**。`PdfReaderView`（Dart＋原生）新增 `contrast`／`brightness` 契約、`PdfSettingsSheet` 濾鏡分頁新增對比度/亮度滑桿、`ColorMatrixColorFilter` 套用邏輯皆已完成且通過既有單元測試。真機 `integration_test` 15/15 全數通過（`app/integration_test/reader_screen_test.dart`，含本次新增的 2 個測試，於裝置 9491G／Android 15 執行）。
+**Status:** ✅ 真機視覺驗證發現的 bug 已診斷出根因並修復，重新完成真機視覺驗證。
 
-**但**依本 issue 要求執行的真機截圖視覺比對（不只是跑測試斷言，而是實際用 Read 工具檢視截圖）發現：把對比度與亮度都拉到 -100（依 `applyFilters()` 的 ColorMatrix 公式，此組合應使整頁變成純黑色，是極端且不可能被忽略的視覺變化)，用 Python PIL 對基準截圖與調整後截圖做像素級 diff，排除狀態列/導覽列後的內容區域 **完全逐位元組相同（diff bbox = None）**——即使完全關閉並重新開書（重新走 `openBook` + `initialPreferences` 路徑，非僅 `setPdfPreferences` 即時更新路徑）畫面依然沒有變化。已排除以下可能性：(a) 數值未持久化——重開設定面板/重開書後確認皆顯示 -100/-100；(b) Dart 端 widget 未收到新值——`PdfReaderView.contrast`/`brightness` 建構參數與 `didUpdateWidget` 邏輯經程式碼檢視確認正確傳遞。問題應出在原生端 `PdfReaderView.kt` 的 `applyFilters()` 呼叫路徑或 `imageView.colorFilter` 賦值未真正觸發重繪，但根因尚未確認，需要後續 issue 診斷修復（建議另立 bugfix issue，優先於 Issue 7 收尾前處理，因為 Issue 7 的端到端組合驗證會再次踩到同一個問題）。
+**問題回顧**：Task 3 的真機人工視覺確認發現對比度/亮度濾鏡數值正確存入 UI 與資料庫，但畫面上沒有任何可辨識的視覺變化，即使推到最極端值（-100/-100，理論上應使整頁全黑）也毫無變化。
 
-完整計劃見 `plans/plan-issue-3.md`；真機驗證完整記錄（含截圖路徑、逐步操作、程式碼檢視細節）見 `.superpowers/sdd/task-3-report.md`。
+**根因（Task 4 診斷確認）**：**不是** Flutter PlatformView 合成或原生端重繪機制的問題（這條路徑經多組非對稱數值測試——如 `brightness=+100` 讓文字明顯洗白——直接證實完全正常）。真正的根因是 `PdfReaderView.kt` 的 `renderCurrentPage()` 用 `Bitmap.createBitmap()` 建立目的地 Bitmap 時預設**全透明**，而 `PdfRenderer.Page.render()` 只會畫出 PDF 內容本身有筆劃的像素，「空白背景」區域若 PDF 本身未明確畫白色矩形，會維持透明。`applyFilters()` 的 `ColorMatrixColorFilter` alpha 列是單位矩陣（保留原始 alpha），因此透明背景像素無論 contrast／brightness 設多少都不會產生視覺變化；疊加上「已經是黑色的文字像素在 -100/-100 這個特定組合下濾鏡後還是黑色」，兩者合起來造成「調到最極端值畫面卻毫無反應」的錯覺。
+
+**修復**：在 `renderCurrentPage()` 建立 Bitmap 後、呼叫 `page.render()` 前，加入 `bitmap.eraseColor(Color.WHITE)`（正常路徑與 OOM 回退路徑皆補上）。`applyFilters()`／`setPdfPreferences()`／`openBook()` 等既有邏輯完全未變動——原本的資料流與呼叫時機本來就是對的，不需要任何「強制重繪」補丁。
+
+**重新驗證（僅涵蓋對比度與亮度，未重測 Fit Mode）**：在真機（9491G／Android 15）上以 UI 滑桿實際操作至 -100/-100，畫面渲染為完整純黑矩形；並用像素級量化比對（基準 vs. 調整後，內容區域取樣 9120 點，7638 點／約 84% 色差顯著），確認修復有效。完整診斷過程、各假說驗證結果、迴歸測試證據見 `.superpowers/sdd/task-4-diagnose-report.md`。
+
+**Issue 2（Fit Mode）評估**：本次根因與 Flutter 合成機制無關，屬像素 alpha 透明度問題，Fit Mode 的 `applyFitMode()` 只調整 `scaleType`／`imageMatrix`（座標變換層），不涉及像素色彩/alpha，因此不受同一根因影響，無需額外修復或重新驗證（診斷過程已間接證明重繪機制本身正常，此疑慮已排除）。
+
+完整計劃見 `plans/plan-issue-3.md`；原始真機視覺驗證發現 bug 的記錄見 `.superpowers/sdd/task-3-report.md`；bug 診斷與修復記錄見 `.superpowers/sdd/task-4-diagnose-report.md`。
 
 **依賴：** Issue 2（共用 `PdfSettingsSheet`／`setPdfPreferences` 骨架）；可與 Issue 4、5 平行開發
 
