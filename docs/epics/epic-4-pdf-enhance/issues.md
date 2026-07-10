@@ -4,9 +4,9 @@
 
 ---
 
-## Issue 1：資料層基礎建設——PDF 版面偏好設定儲存
+## Issue 1：資料層基礎建設——PDF 版面偏好設定儲存（已完成）
 
-**Status:** ready-for-agent
+**Status:** ✅ 已完成。`PdfFitMode`／`PdfCropMode`／`PdfCropRect` 三個基礎型別、`BookReaderPrefs` 6 個新欄位、`book_reader_prefs` 資料庫 schema 升級至 version 3（含既有 version 2 裝置的 `ALTER TABLE` 升級路徑）、`BookReaderPrefsRepository` round-trip 驗證皆已完成。`flutter test`／`flutter analyze` 皆通過。完整計劃見 `plans/plan-issue-1.md`。
 
 **依賴：** 無（起始工單）
 
