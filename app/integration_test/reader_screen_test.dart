@@ -677,4 +677,106 @@ void main() {
     final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
     expect(pdfView.fitMode, PdfFitMode.actualSize);
   });
+
+  testWidgets('PDF 調整對比度／亮度後畫面持續渲染成功、無 onError', (tester) async {
+    final samplePath = await _stageAssetAsFile(
+        'test/fixtures/sample.pdf', 'sample_pdf_filters.pdf');
+    addTearDown(() async {
+      final file = File(samplePath);
+      if (await file.exists()) await file.delete();
+    });
+    const bookId = 'b_pdf_filters';
+    await libraryRepository.insertBook(_book(bookId, format: BookFileFormat.pdf));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: samplePath,
+          bookId: bookId,
+          prefsRepository: prefsRepository,
+        ),
+      ),
+    );
+
+    await _pumpUntil(
+      tester,
+      () => _layoutSettingsButtonReady(tester),
+      timeout: const Duration(seconds: 10),
+    );
+
+    await tester.tap(find.byKey(const Key('reader_layout_settings_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('pdf_settings_tab_filters')));
+    await tester.pumpAndSettle();
+
+    for (final keySuffix in ['contrast_increment', 'brightness_decrement']) {
+      for (var i = 0; i < 3; i++) {
+        await tester.tap(find.byKey(Key('pdf_settings_$keySuffix')));
+        await tester.pump();
+      }
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.byKey(const Key('reader_error_text')), findsNothing,
+          reason: '調整 $keySuffix 後畫面應持續渲染成功，不應觸發 onError');
+    }
+  });
+
+  testWidgets('調整 PDF 對比度／亮度後關閉重開該書，設定被正確記住', (tester) async {
+    final samplePath = await _stageAssetAsFile(
+        'test/fixtures/sample.pdf', 'sample_pdf_filters_persist.pdf');
+    addTearDown(() async {
+      final file = File(samplePath);
+      if (await file.exists()) await file.delete();
+    });
+    const bookId = 'b_pdf_filters_persist';
+    await libraryRepository.insertBook(_book(bookId, format: BookFileFormat.pdf));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: samplePath,
+          bookId: bookId,
+          prefsRepository: prefsRepository,
+        ),
+      ),
+    );
+
+    await _pumpUntil(
+      tester,
+      () => _layoutSettingsButtonReady(tester),
+      timeout: const Duration(seconds: 10),
+    );
+
+    await tester.tap(find.byKey(const Key('reader_layout_settings_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('pdf_settings_tab_filters')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('pdf_settings_contrast_increment')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    final saved = await prefsRepository.load(bookId);
+    expect(saved.pdfContrast, 5); // 預設 0，點一次 +5
+
+    await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
+    await tester.pump();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: samplePath,
+          bookId: bookId,
+          prefsRepository: prefsRepository,
+        ),
+      ),
+    );
+    await _pumpUntil(
+      tester,
+      _loadingIndicatorGone,
+      timeout: const Duration(seconds: 10),
+    );
+
+    final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+    expect(pdfView.contrast, 5);
+  });
 }

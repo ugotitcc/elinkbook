@@ -64,9 +64,13 @@
 
 ---
 
-## Issue 3：影像濾鏡——對比度／亮度
+## Issue 3：影像濾鏡——對比度／亮度（自動化測試通過，但真機視覺驗證發現濾鏡未實際生效）
 
-**Status:** ready-for-agent
+**Status:** ⚠️ 自動化測試皆通過，但 Task 3 的真機人工視覺確認發現一個嚴重落差：**對比度/亮度濾鏡的數值變更會正確存入 UI 與資料庫，但在真實裝置的渲染畫面上沒有任何可辨識的視覺變化**。`PdfReaderView`（Dart＋原生）新增 `contrast`／`brightness` 契約、`PdfSettingsSheet` 濾鏡分頁新增對比度/亮度滑桿、`ColorMatrixColorFilter` 套用邏輯皆已完成且通過既有單元測試。真機 `integration_test` 15/15 全數通過（`app/integration_test/reader_screen_test.dart`，含本次新增的 2 個測試，於裝置 9491G／Android 15 執行）。
+
+**但**依本 issue 要求執行的真機截圖視覺比對（不只是跑測試斷言，而是實際用 Read 工具檢視截圖）發現：把對比度與亮度都拉到 -100（依 `applyFilters()` 的 ColorMatrix 公式，此組合應使整頁變成純黑色，是極端且不可能被忽略的視覺變化)，用 Python PIL 對基準截圖與調整後截圖做像素級 diff，排除狀態列/導覽列後的內容區域 **完全逐位元組相同（diff bbox = None）**——即使完全關閉並重新開書（重新走 `openBook` + `initialPreferences` 路徑，非僅 `setPdfPreferences` 即時更新路徑）畫面依然沒有變化。已排除以下可能性：(a) 數值未持久化——重開設定面板/重開書後確認皆顯示 -100/-100；(b) Dart 端 widget 未收到新值——`PdfReaderView.contrast`/`brightness` 建構參數與 `didUpdateWidget` 邏輯經程式碼檢視確認正確傳遞。問題應出在原生端 `PdfReaderView.kt` 的 `applyFilters()` 呼叫路徑或 `imageView.colorFilter` 賦值未真正觸發重繪，但根因尚未確認，需要後續 issue 診斷修復（建議另立 bugfix issue，優先於 Issue 7 收尾前處理，因為 Issue 7 的端到端組合驗證會再次踩到同一個問題）。
+
+完整計劃見 `plans/plan-issue-3.md`；真機驗證完整記錄（含截圖路徑、逐步操作、程式碼檢視細節）見 `.superpowers/sdd/task-3-report.md`。
 
 **依賴：** Issue 2（共用 `PdfSettingsSheet`／`setPdfPreferences` 骨架）；可與 Issue 4、5 平行開發
 
