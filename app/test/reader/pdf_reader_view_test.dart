@@ -226,6 +226,71 @@ void main() {
       'brightness': 25.0,
     });
   });
+
+  testWidgets(
+      '_onPlatformViewCreated 呼叫 openBook 時，initialPreferences 包含 boldStrength',
+      (tester) async {
+    final calls = await _pumpPdfReaderView(
+      tester,
+      const PdfReaderView(
+        filePath: '/tmp/sample.pdf',
+        onPageRendered: _noop,
+        onError: _noopError,
+        boldStrength: 0.5,
+      ),
+    );
+
+    final openBookCall = calls.firstWhere((c) => c.method == 'openBook');
+    expect(openBookCall.arguments['initialPreferences'], {'boldStrength': 0.5});
+  });
+
+  testWidgets('boldStrength 變動時，didUpdateWidget 呼叫 setPdfPreferences',
+      (tester) async {
+    final binaryMessenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    final instanceCalls = <MethodCall>[];
+
+    binaryMessenger.setMockMethodCallHandler(SystemChannels.platform_views,
+        (call) async {
+      if (call.method == 'create') {
+        final id = (call.arguments as Map<Object?, Object?>)['id'] as int;
+        binaryMessenger.setMockMethodCallHandler(
+          MethodChannel('cc.ugotit.elinkbook/pdf_reader_view_$id'),
+          (call) async {
+            instanceCalls.add(call);
+            return null;
+          },
+        );
+        return 0;
+      }
+      return null;
+    });
+
+    await tester.pumpWidget(const MaterialApp(
+      home: PdfReaderView(
+        filePath: '/tmp/sample.pdf',
+        onPageRendered: _noop,
+        onError: _noopError,
+        boldStrength: 0.2,
+      ),
+    ));
+    await tester.pumpAndSettle();
+    instanceCalls.clear();
+
+    await tester.pumpWidget(const MaterialApp(
+      home: PdfReaderView(
+        filePath: '/tmp/sample.pdf',
+        onPageRendered: _noop,
+        onError: _noopError,
+        boldStrength: 0.8, // 變動
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(instanceCalls, hasLength(1));
+    expect(instanceCalls.single.method, 'setPdfPreferences');
+    expect(instanceCalls.single.arguments, {'boldStrength': 0.8});
+  });
 }
 
 void _noop() {}

@@ -26,6 +26,7 @@ class PdfReaderView extends StatefulWidget {
   final PdfFitMode? fitMode;
   final double? contrast;
   final double? brightness;
+  final double? boldStrength;
 
   const PdfReaderView({
     super.key,
@@ -38,6 +39,7 @@ class PdfReaderView extends StatefulWidget {
     this.fitMode,
     this.contrast,
     this.brightness,
+    this.boldStrength,
   });
 
   @override
@@ -62,7 +64,8 @@ class _PdfReaderViewState extends State<PdfReaderView> {
     super.didUpdateWidget(oldWidget);
     if (widget.fitMode != oldWidget.fitMode ||
         widget.contrast != oldWidget.contrast ||
-        widget.brightness != oldWidget.brightness) {
+        widget.brightness != oldWidget.brightness ||
+        widget.boldStrength != oldWidget.boldStrength) {
       _channel?.invokeMethod('setPdfPreferences', _buildPreferencesMap());
     }
   }
@@ -74,6 +77,7 @@ class _PdfReaderViewState extends State<PdfReaderView> {
     if (widget.fitMode != null) map['fitMode'] = widget.fitMode!.name;
     if (widget.contrast != null) map['contrast'] = widget.contrast;
     if (widget.brightness != null) map['brightness'] = widget.brightness;
+    if (widget.boldStrength != null) map['boldStrength'] = widget.boldStrength;
     return map;
   }
 

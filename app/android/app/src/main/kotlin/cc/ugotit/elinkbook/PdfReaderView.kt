@@ -49,6 +49,18 @@ class PdfReaderView(
     private var contrast: Float = 0f
     private var brightness: Float = 0f
 
+    // Dart boldStrength 值，0..1，預設 0（無加粗），與
+    // BookReaderPrefs.pdfBoldStrength 為 null 時的語意一致。
+    private var boldStrength: Float = 0f
+
+    companion object {
+        // 加粗（型態學膨脹）運算的效能策略常數，見 spec.md/design.md「已知
+        // 風險」與本 issue 計劃的「效能策略」段落：對縮小版工作副本做膨脹，
+        // 而非對全解析度 bitmap 直接運算。
+        private const val BOLD_DOWNSCALE_FACTOR = 0.25f
+        private const val BOLD_MAX_RADIUS = 3
+    }
+
     init {
         channel.setMethodCallHandler(this)
     }
@@ -83,18 +95,28 @@ class PdfReaderView(
     }
 
     /**
-     * 合併 [preferences] 到目前生效狀態並套用（fitMode／contrast／
-     * brightness，之後 Issue 4-6 會擴充加粗/裁切欄位）。書本尚未成功開啟
-     * （renderer 仍為 null）時仍安全執行——applyFitMode()／applyFilters()
-     * 內部若沒有已渲染的 bitmap 會靜默不做事。
+     * 合併 [preferences] 到目前生效狀態並套用。fitMode／contrast／
+     * brightness 屬於輕量顯示層調整（不需重新解碼 PDF），但
+     * boldStrength 變動需要完整重新渲染（型態學膨脹是對 bitmap 像素本身
+     * 的運算，不像 ColorMatrixColorFilter 是非破壞性的顯示層濾鏡）。
      */
     private fun setPdfPreferences(preferences: Map<String, Any?>?) {
         if (preferences == null) return
         (preferences["fitMode"] as? String)?.let { fitMode = it }
         (preferences["contrast"] as? Number)?.let { contrast = it.toFloat() }
         (preferences["brightness"] as? Number)?.let { brightness = it.toFloat() }
-        applyFitMode()
-        applyFilters()
+        val boldChanged = (preferences["boldStrength"] as? Number)?.let {
+            val newValue = it.toFloat()
+            val changed = newValue != boldStrength
+            boldStrength = newValue
+            changed
+        } ?: false
+        if (boldChanged) {
+            renderCurrentPage()
+        } else {
+            applyFitMode()
+            applyFilters()
+        }
     }
 
     private fun openBook(path: String?, initialPreferences: Map<String, Any?>?) {
@@ -105,6 +127,7 @@ class PdfReaderView(
         (initialPreferences?.get("fitMode") as? String)?.let { fitMode = it }
         (initialPreferences?.get("contrast") as? Number)?.let { contrast = it.toFloat() }
         (initialPreferences?.get("brightness") as? Number)?.let { brightness = it.toFloat() }
+        (initialPreferences?.get("boldStrength") as? Number)?.let { boldStrength = it.toFloat() }
         var pfd: ParcelFileDescriptor? = null
         try {
             pfd = openParcelFileDescriptor(path)
@@ -154,7 +177,8 @@ class PdfReaderView(
                 postScale(scale, scale)
             }
             page.render(bitmap, null, matrix, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-            imageView.setImageBitmap(bitmap)
+            val finalBitmap = if (boldStrength > 0f) applyBoldEffect(bitmap) else bitmap
+            imageView.setImageBitmap(finalBitmap)
             applyFitMode()
             applyFilters()
         } catch (e: OutOfMemoryError) {
@@ -244,6 +268,66 @@ class PdfReaderView(
             )
         )
         imageView.colorFilter = android.graphics.ColorMatrixColorFilter(colorMatrix)
+    }
+
+    /**
+     * 型態學膨脹（加粗），對 bitmap 做「取鄰域內最小亮度值」的膨脹運算，
+     * 讓深色筆畫（文字）向外擴張、變粗變黑（見 docs/epics/epic-4-pdf-enhance/
+     * plans/plan-issue-4.md「演算法決策」：全 API 24+ 統一用同一套手動像素
+     * 陣列運算，不分 API 24-30／31+ 兩條路徑）。
+     *
+     * 效能策略：先縮小到 [BOLD_DOWNSCALE_FACTOR] 工作尺寸做膨脹運算，再放大
+     * 回原尺寸，避免對全解析度 bitmap 直接做二維鄰域掃描造成明顯延遲（決策
+     * #13 已授權濾鏡效能寬鬆處理）。
+     */
+    private fun applyBoldEffect(source: Bitmap): Bitmap {
+        val workWidth = (source.width * BOLD_DOWNSCALE_FACTOR).toInt().coerceAtLeast(1)
+        val workHeight = (source.height * BOLD_DOWNSCALE_FACTOR).toInt().coerceAtLeast(1)
+        val working = Bitmap.createScaledBitmap(source, workWidth, workHeight, true)
+        val radius = (boldStrength * BOLD_MAX_RADIUS).toInt().coerceIn(1, BOLD_MAX_RADIUS)
+        val dilated = dilate(working, radius)
+        val result = Bitmap.createScaledBitmap(dilated, source.width, source.height, true)
+        working.recycle()
+        dilated.recycle()
+        return result
+    }
+
+    /**
+     * 對 [bitmap] 做半徑 [radius] 的膨脹（取 (2*radius+1)^2 鄰域內每個色版
+     * 的最小值，讓深色像素向外擴張）。邊界像素以 coerceIn 夾到合法範圍內
+     * （等同邊緣複製，非補零），避免邊框產生非預期的暗色/亮色偽影。
+     */
+    private fun dilate(bitmap: Bitmap, radius: Int): Bitmap {
+        val width = bitmap.width
+        val height = bitmap.height
+        val pixels = IntArray(width * height)
+        bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
+        val result = IntArray(width * height)
+        for (y in 0 until height) {
+            for (x in 0 until width) {
+                var minR = 255
+                var minG = 255
+                var minB = 255
+                for (dy in -radius..radius) {
+                    val ny = (y + dy).coerceIn(0, height - 1)
+                    for (dx in -radius..radius) {
+                        val nx = (x + dx).coerceIn(0, width - 1)
+                        val p = pixels[ny * width + nx]
+                        val r = (p shr 16) and 0xFF
+                        val g = (p shr 8) and 0xFF
+                        val b = p and 0xFF
+                        if (r < minR) minR = r
+                        if (g < minG) minG = g
+                        if (b < minB) minB = b
+                    }
+                }
+                val a = (pixels[y * width + x] shr 24) and 0xFF
+                result[y * width + x] = (a shl 24) or (minR shl 16) or (minG shl 8) or minB
+            }
+        }
+        val out = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        out.setPixels(result, 0, width, 0, 0, width, height)
+        return out
     }
 
     private fun nextPage() {

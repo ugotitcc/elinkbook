@@ -344,6 +344,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
           fitMode: _resolvedPdfFitMode,
           contrast: _prefs.pdfContrast,
           brightness: _prefs.pdfBrightness,
+          boldStrength: _prefs.pdfBoldStrength,
         );
       case BookFormat.unknown:
         return const SizedBox.shrink();
