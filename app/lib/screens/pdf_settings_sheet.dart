@@ -32,12 +32,16 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
   late PdfFitMode _fitMode;
+  late double _contrast;
+  late double _brightness;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     _fitMode = widget.prefs.pdfFitMode ?? PdfFitMode.pageFit;
+    _contrast = widget.prefs.pdfContrast ?? 0;
+    _brightness = widget.prefs.pdfBrightness ?? 0;
   }
 
   @override
@@ -47,7 +51,11 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
   }
 
   void _notifyChanged() {
-    widget.onChanged(BookReaderPrefs(pdfFitMode: _fitMode));
+    widget.onChanged(BookReaderPrefs(
+      pdfFitMode: _fitMode,
+      pdfContrast: _contrast,
+      pdfBrightness: _brightness,
+    ));
   }
 
   @override
@@ -78,7 +86,7 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
                 controller: _tabController,
                 children: [
                   _buildDisplayTab(context),
-                  _buildPlaceholderTab('濾鏡功能即將推出'),
+                  _buildFiltersTab(),
                   _buildPlaceholderTab('裁切功能即將推出'),
                 ],
               ),
@@ -118,6 +126,97 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
                 }),
               );
             }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFiltersTab() {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildSliderRow(
+            keyPrefix: 'pdf_settings_contrast',
+            label: '對比度',
+            value: _contrast,
+            min: -100,
+            max: 100,
+            step: 5,
+            onChanged: (v) => setState(() {
+              _contrast = v;
+              _notifyChanged();
+            }),
+          ),
+          _buildSliderRow(
+            keyPrefix: 'pdf_settings_brightness',
+            label: '亮度',
+            value: _brightness,
+            min: -100,
+            max: 100,
+            step: 5,
+            onChanged: (v) => setState(() {
+              _brightness = v;
+              _notifyChanged();
+            }),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 比照 `ReaderSettingsSheet._buildSliderRow` 的既有樣式（滑桿＋±微調
+  /// 按鈕），本 widget 依 design.md 決策 #10 不與 `ReaderSettingsSheet`
+  /// 共用元件，故獨立實作一份同樣式的 helper。
+  Widget _buildSliderRow({
+    required String keyPrefix,
+    required String label,
+    required double value,
+    required double min,
+    required double max,
+    required double step,
+    required ValueChanged<double> onChanged,
+  }) {
+    final divisions = ((max - min) / step).round();
+    final clampedValue = value.clamp(min, max);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [Text(label), Text(clampedValue.round().toString())],
+          ),
+          Row(
+            children: [
+              IconButton(
+                key: Key('${keyPrefix}_decrement'),
+                icon: const Icon(Icons.remove),
+                onPressed: clampedValue - step < min - 1e-9
+                    ? null
+                    : () => onChanged((clampedValue - step).clamp(min, max)),
+              ),
+              Expanded(
+                child: Slider(
+                  key: Key('${keyPrefix}_slider'),
+                  value: clampedValue,
+                  min: min,
+                  max: max,
+                  divisions: divisions,
+                  onChanged: (v) => onChanged(v.clamp(min, max)),
+                ),
+              ),
+              IconButton(
+                key: Key('${keyPrefix}_increment'),
+                icon: const Icon(Icons.add),
+                onPressed: clampedValue + step > max + 1e-9
+                    ? null
+                    : () => onChanged((clampedValue + step).clamp(min, max)),
+              ),
+            ],
           ),
         ],
       ),

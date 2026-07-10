@@ -55,6 +55,90 @@ void main() {
 
     expect(callCount, 0);
   });
+
+  testWidgets('濾鏡分頁存在對比度／亮度滑桿，初始值反映 prefs', (tester) async {
+    await _pumpSheet(
+      tester,
+      const BookReaderPrefs(pdfContrast: 30, pdfBrightness: -20),
+      (_) {},
+    );
+
+    // 切到濾鏡分頁
+    await tester.tap(find.byKey(const Key('pdf_settings_tab_filters')));
+    await tester.pumpAndSettle();
+
+    expect(
+      tester
+          .widget<Slider>(
+              find.byKey(const Key('pdf_settings_contrast_slider')))
+          .value,
+      30,
+    );
+    expect(
+      tester
+          .widget<Slider>(
+              find.byKey(const Key('pdf_settings_brightness_slider')))
+          .value,
+      -20,
+    );
+  });
+
+  testWidgets('prefs.pdfContrast／pdfBrightness 為 null 時，滑桿顯示預設值 0',
+      (tester) async {
+    await _pumpSheet(tester, BookReaderPrefs.empty, (_) {});
+
+    await tester.tap(find.byKey(const Key('pdf_settings_tab_filters')));
+    await tester.pumpAndSettle();
+
+    expect(
+      tester
+          .widget<Slider>(
+              find.byKey(const Key('pdf_settings_contrast_slider')))
+          .value,
+      0,
+    );
+    expect(
+      tester
+          .widget<Slider>(
+              find.byKey(const Key('pdf_settings_brightness_slider')))
+          .value,
+      0,
+    );
+  });
+
+  testWidgets('拖動對比度滑桿後，onChanged 帶入新的 pdfContrast，其餘 PDF 欄位不變',
+      (tester) async {
+    BookReaderPrefs? notified;
+    await _pumpSheet(
+      tester,
+      const BookReaderPrefs(pdfContrast: 0, pdfBrightness: 15),
+      (prefs) => notified = prefs,
+    );
+
+    await tester.tap(find.byKey(const Key('pdf_settings_tab_filters')));
+    await tester.pumpAndSettle();
+
+    await tester
+        .tap(find.byKey(const Key('pdf_settings_contrast_increment')));
+    await tester.pump();
+
+    expect(notified?.pdfContrast, greaterThan(0));
+    expect(notified?.pdfBrightness, 15);
+  });
+
+  testWidgets('拖動亮度滑桿後，onChanged 帶入新的 pdfBrightness', (tester) async {
+    BookReaderPrefs? notified;
+    await _pumpSheet(tester, BookReaderPrefs.empty, (prefs) => notified = prefs);
+
+    await tester.tap(find.byKey(const Key('pdf_settings_tab_filters')));
+    await tester.pumpAndSettle();
+
+    await tester
+        .tap(find.byKey(const Key('pdf_settings_brightness_decrement')));
+    await tester.pump();
+
+    expect(notified?.pdfBrightness, lessThan(0));
+  });
 }
 
 Future<void> _pumpSheet(
