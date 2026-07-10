@@ -1,14 +1,19 @@
 import 'app_font.dart';
 import 'epub_text_align.dart';
 import 'page_turn_mode.dart';
+import 'pdf_crop_mode.dart';
+import 'pdf_crop_rect.dart';
+import 'pdf_fit_mode.dart';
 import 'screen_orientation_setting.dart';
 import 'writing_mode.dart';
 
-/// 單一書籍的版面偏好設定（FR-09／FR-10），對應 `book_reader_prefs` 表的
-/// 一列（見 spec.md「資料模型」）。所有欄位皆為 nullable：`null` 代表未
-/// 覆寫，由呼叫端依各欄位語意決定回退值（書本內建樣式、Readium 預設，
-/// 或——僅限 [pageTurnModeOverride]／[screenOrientationOverride]——全域
-/// 預設值，見 `GlobalReaderDefaults`）。
+/// 單一書籍的版面偏好設定（FR-09／FR-10／FR-11），對應 `book_reader_prefs`
+/// 表的一列（見 docs/epics/epic-4-pdf-enhance/spec.md「資料模型」）。所有
+/// 欄位皆為 nullable：`null` 代表未覆寫，由呼叫端依各欄位語意決定回退值
+/// （書本內建樣式、Readium 預設，或——僅限 [pageTurnModeOverride]／
+/// [screenOrientationOverride]——全域預設值，見 `GlobalReaderDefaults`）。
+/// `pdf` 前綴的 6 個欄位為 PDF 專屬，皆為單書持久化、無全域預設層（見
+/// epic-4 design.md 決策 #2／#8）。
 class BookReaderPrefs {
   final AppFont? fontFamily;
   final double? fontSize;
@@ -22,6 +27,13 @@ class BookReaderPrefs {
   final PageTurnMode? pageTurnModeOverride; // null=使用全域預設
   final ScreenOrientationSetting? screenOrientationOverride; // null=使用全域預設
 
+  final PdfFitMode? pdfFitMode; // null=pageFit（預設）
+  final double? pdfContrast; // -100..100，null=0（無調整）
+  final double? pdfBrightness; // -100..100，null=0（無調整）
+  final double? pdfBoldStrength; // 0..1，null=0（無加粗）
+  final PdfCropMode? pdfCropMode; // null=none（不裁切）
+  final PdfCropRect? pdfCropRect; // pdfCropMode != none 時才有意義
+
   const BookReaderPrefs({
     this.fontFamily,
     this.fontSize,
@@ -34,6 +46,12 @@ class BookReaderPrefs {
     this.writingModeOverride,
     this.pageTurnModeOverride,
     this.screenOrientationOverride,
+    this.pdfFitMode,
+    this.pdfContrast,
+    this.pdfBrightness,
+    this.pdfBoldStrength,
+    this.pdfCropMode,
+    this.pdfCropRect,
   });
 
   /// 無任何覆寫，等同資料庫無對應列時的狀態。
@@ -54,6 +72,12 @@ class BookReaderPrefs {
       'writing_mode_override': writingModeOverride?.name,
       'page_turn_mode_override': pageTurnModeOverride?.name,
       'screen_orientation_override': screenOrientationOverride?.name,
+      'pdf_fit_mode': pdfFitMode?.name,
+      'pdf_contrast': pdfContrast,
+      'pdf_brightness': pdfBrightness,
+      'pdf_bold_strength': pdfBoldStrength,
+      'pdf_crop_mode': pdfCropMode?.name,
+      'pdf_crop_rect': pdfCropRect?.toJson(),
     };
   }
 
@@ -87,6 +111,18 @@ class BookReaderPrefs {
           ? null
           : ScreenOrientationSetting.values
               .byName(map['screen_orientation_override'] as String),
+      pdfFitMode: map['pdf_fit_mode'] == null
+          ? null
+          : PdfFitMode.values.byName(map['pdf_fit_mode'] as String),
+      pdfContrast: (map['pdf_contrast'] as num?)?.toDouble(),
+      pdfBrightness: (map['pdf_brightness'] as num?)?.toDouble(),
+      pdfBoldStrength: (map['pdf_bold_strength'] as num?)?.toDouble(),
+      pdfCropMode: map['pdf_crop_mode'] == null
+          ? null
+          : PdfCropMode.values.byName(map['pdf_crop_mode'] as String),
+      pdfCropRect: map['pdf_crop_rect'] == null
+          ? null
+          : PdfCropRect.fromJson(map['pdf_crop_rect'] as String),
     );
   }
 
@@ -103,7 +139,13 @@ class BookReaderPrefs {
       other.publisherStyles == publisherStyles &&
       other.writingModeOverride == writingModeOverride &&
       other.pageTurnModeOverride == pageTurnModeOverride &&
-      other.screenOrientationOverride == screenOrientationOverride;
+      other.screenOrientationOverride == screenOrientationOverride &&
+      other.pdfFitMode == pdfFitMode &&
+      other.pdfContrast == pdfContrast &&
+      other.pdfBrightness == pdfBrightness &&
+      other.pdfBoldStrength == pdfBoldStrength &&
+      other.pdfCropMode == pdfCropMode &&
+      other.pdfCropRect == pdfCropRect;
 
   @override
   int get hashCode => Object.hash(
@@ -118,5 +160,11 @@ class BookReaderPrefs {
         writingModeOverride,
         pageTurnModeOverride,
         screenOrientationOverride,
+        pdfFitMode,
+        pdfContrast,
+        pdfBrightness,
+        pdfBoldStrength,
+        pdfCropMode,
+        pdfCropRect,
       );
 }
