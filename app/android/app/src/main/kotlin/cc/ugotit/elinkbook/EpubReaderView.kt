@@ -299,6 +299,21 @@ class EpubReaderView(
      */
     private var fxlLayoutListener: ViewTreeObserver.OnGlobalLayoutListener? = null
 
+    /**
+     * 整本固定版面書籍統一套用的縮放比例，只在第一次成功量到有效頁面尺寸時計算，
+     * 之後同一本書所有頁面一律沿用這個值，不再每頁各自重算（見 Issue 10）。
+     *
+     * 真機用 `葬送的芙莉蓮 11.epub`（192 頁）搭配除錯日誌逐頁比對確認：绝大多數
+     * 頁面的 XHTML `<meta name="viewport">` 宣告一致為 `height=1600`，但 p-185／
+     * p-186 這兩頁的來源檔案本身宣告的是 `height=1606`（高了 6px）；若各頁各自
+     * 依「這一頁量到的實際內容高度」獨立計算 `fitScale`，這兩頁會因為內容比其他
+     * 頁「稍高」而被多縮一點（`0.93112` vs 其餘頁面的 `0.93461`），使用者翻到那
+     * 兩頁時會感覺畫面明顯變小——縮放計算本身沒有錯，是來源檔案裡少數頁面宣告
+     * 尺寸與全書不一致所致。改為整本書統一套用第一頁量到的縮放比例，讓少數頁面
+     * 的宣告尺寸誤差不會反映成翻頁時的縮放跳動。
+     */
+    private var cachedFxlFitScale: Float? = null
+
     private fun applyFxlFitScale() {
         val isFixedLayout = publication?.metadata?.layout == Layout.FIXED
         if (!isFixedLayout) {
@@ -316,15 +331,10 @@ class EpubReaderView(
                 val contentWidth = webView.width
                 val contentHeight = webView.height
                 if (contentWidth <= 0 || contentHeight <= 0) continue
-                val fitScale = minOf(
+                val fitScale = cachedFxlFitScale ?: minOf(
                     availableWidth.toFloat() / contentWidth.toFloat(),
                     availableHeight.toFloat() / contentHeight.toFloat(),
-                ).coerceAtMost(1f)
-                android.util.Log.d(
-                    "DEBUG-oddeven",
-                    "webView=${System.identityHashCode(webView)} url=${webView.url} " +
-                        "contentW=$contentWidth contentH=$contentHeight fitScale=$fitScale",
-                )
+                ).coerceAtMost(1f).also { cachedFxlFitScale = it }
 
                 // 先歸零位移、以左上角為錨點，量出這一輪「未經校正」的原始 layout
                 // 位置（pivot 在 (0,0) 時縮放不會移動錨點本身，所以量到的位置就是
@@ -358,6 +368,7 @@ class EpubReaderView(
     private fun removeFxlLayoutListener() {
         fxlLayoutListener?.let { container.viewTreeObserver.removeOnGlobalLayoutListener(it) }
         fxlLayoutListener = null
+        cachedFxlFitScale = null
     }
 
     /**

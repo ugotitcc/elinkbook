@@ -123,7 +123,7 @@
 
 ---
 
-## Issue 6：真機驗證與收尾（已完成，發現 3 個後續問題；追加編譯時間資訊需求已完成）
+## Issue 6：真機驗證與收尾（已完成，發現 3 個後續問題；追加編譯時間資訊需求已完成並經真機驗證）
 
 **依賴：** Issue 2、Issue 3、Issue 4、Issue 5 全部完成
 
@@ -235,21 +235,29 @@
 
 ---
 
-## Issue 10：漫畫（固定版面 EPUB）奇數頁與偶數頁縮放大小不一致（調查中，已擱置）
+## Issue 10：漫畫（固定版面 EPUB）奇數頁與偶數頁縮放大小不一致（已修復，真機確認）
 
 **依賴：** Issue 8（`applyFxlFitScale()`）
 
 **描述：**
 `/grill-with-docs`（2026-07-10）分流的第 3 項需求：使用者回報單頁模式下瀏覽漫畫時，奇數頁與偶數頁的縮放比例看起來不一致。使用者要求先確認根因，若可行則在本 epic 階段一併修正。
 
-**已排除的假設：** 解壓縮使用者提供的 `葬送的芙莉蓮 11.epub` 逐頁比對，p-001 至 p-014 全數宣告完全相同的 `<meta name="viewport" content="width=1066, height=1600">` 與 SVG `viewBox="0 0 1066 1600"`——排除「奇偶頁本身版面尺寸不同」這個假設。
+**初步排除的假設（範圍不足，後續證實不完整）：** 解壓縮使用者提供的 `葬送的芙莉蓮 11.epub` 逐頁比對，僅抽查 p-001 至 p-014 全數宣告完全相同的 `<meta name="viewport" content="width=1066, height=1600">` 與 SVG `viewBox="0 0 1066 1600"`，一度排除「奇偶頁本身版面尺寸不同」這個假設——但這次抽查沒有涵蓋到接近書末的頁面，後續證實這個排除是誤判（見下方根因）。
 
-**已就緒但尚未執行的偵錯手段：** `EpubReaderView.kt` 的 `applyFxlFitScale()` 內已加上暫時性除錯日誌（`Log.d("DEBUG-oddeven", ...)`，含 `webView` identity hash、`url`、`contentWidth`/`contentHeight`、`fitScale`），可透過 `adb logcat` 在真機上連續翻頁時擷取，比對相鄰頁 `fitScale` 數值差異以確認根因（例如是否與 Issue 8 根因四提到的「`R2ViewPager` 同時保留多個相鄰 WebView 實例」之間的分頁時序有關）。
+**根因（真機日誌＋原始檔案比對確認）：** 透過 `EpubReaderView.kt` 的 `applyFxlFitScale()` 內暫時加上的除錯日誌（含 `webView` identity hash、`url`、`contentWidth`/`contentHeight`、`fitScale`、`container` 尺寸），在真機上實際連續翻閱全書 192 頁並用 `adb logcat` 擷取比對，發現：全書 192 頁中絕大多數頁面（含前段與後段多數頁面）`contentHeight` 皆為 `2401`px、`fitScale` 皆為 `0.9346106`，唯獨 **p-185、p-186 這兩頁**（接近書末）`contentHeight` 為 `2410`px、`fitScale` 為 `0.93112034`——比對原始檔案 XHTML 原始碼確認：p-185.xhtml／p-186.xhtml 的 `<meta name="viewport">` 宣告的是 `height=1606`，比全書其餘頁面統一使用的 `height=1600` 多了 6px。`applyFxlFitScale()` 依「這一頁實際量到的內容高度」逐頁獨立計算縮放比例，這兩頁因內容比其他頁「稍高」而被多縮一點，造成使用者翻到這兩頁時感覺畫面明顯變小——**縮放計算邏輯本身沒有錯，是來源 EPUB 檔案裡少數頁面（p-185/186）宣告尺寸與全書其餘頁面不一致所致，非程式邏輯錯誤**。
 
-**目前狀態：** 2026-07-10 討論決議**擱置**，待本 epic 其餘收尾項目（Issue 6 追加的編譯時間資訊等）完成後再回頭执行真機日誌擷取與根因確認。`DEBUG-oddeven` 日誌暫時保留在程式碼中，待本 issue 結案時依 `/diagnose` Phase 6 清理規範移除。
+**除錯過程中的插曲（與本 bug 無關，但值得記錄）：** 真機日誌擷取期間一度發現裝置上 App 啟動卡在 splash screen 不動、以及自動化滑動翻頁工具（`flutter test integration_test`／`adb shell input swipe`）在此裝置環境下完全無法觸發原生 `R2ViewPager` 翻頁——最終排除為除錯過程本身反覆解除安裝/重裝、以及測試 instrumentation 環境與正常執行環境觸控事件傳遞方式不同所致的環境雜訊，改用「正常安裝 App＋使用者手動翻頁、背景 `adb logcat` 擷取」的方式取得真正有效的資料，與 Issue 10 本身的根因無關。
+
+**修正：** `applyFxlFitScale()` 改為整本書只在第一次成功量到有效頁面尺寸時計算 `fitScale`（新增 `cachedFxlFitScale` 欄位快取），之後同一本書的所有頁面一律沿用這個值，不再逐頁各自重算；換書（`removeFxlLayoutListener()` 被呼叫，例如切換非固定版面書籍或 `dispose()`）時重置快取，確保下一本固定版面書籍會重新計算屬於它自己的縮放比例。這樣即使原始檔案裡少數頁面宣告尺寸有微小誤差，讀者體驗到的縮放比例仍是全書一致，不會在特定頁面出現縮放跳動。
+
+**驗收結果（真機，使用者提供的實際檔案）：**
+- 已確認全書 192 頁中 p-185/186 與其餘頁面宣告尺寸不一致（`height=1606` vs `height=1600`）為唯一根因
+- 修正後全書統一套用第一頁量到的 `fitScale`，翻頁時不再出現縮放大小跳動
+- `flutter test integration_test/epub_reader_view_test.dart` 真機 9/9 全過、`flutter test`（純 Dart）146/146 全過、`flutter analyze` 乾淨
+- 暫時性除錯日誌（`DEBUG-oddeven`）已全數移除（`grep -rn "DEBUG-oddeven"` 確認乾淨）
 
 **驗收標準：**
-- 真機擷取 `DEBUG-oddeven` 日誌，確認奇偶頁 `fitScale`（或其他相關數值）是否確實不同、找出根因
-- 若根因可在本 epic 範圍內修正，完成修正並移除除錯日誌；若根因超出本 epic 範圍，記錄結論並視情況另立新 issue／epic
-- `flutter analyze` 乾淨、既有 `integration_test` 不迴歸
-- `flutter test` 通過、`flutter analyze` 乾淨
+- ✅ 真機擷取 `DEBUG-oddeven` 日誌，確認奇偶頁 `fitScale` 是否確實不同、找出根因
+- ✅ 根因在本 epic 範圍內修正，完成修正並移除除錯日誌
+- ✅ `flutter analyze` 乾淨、既有 `integration_test` 不迴歸
+- ✅ `flutter test` 通過、`flutter analyze` 乾淨
