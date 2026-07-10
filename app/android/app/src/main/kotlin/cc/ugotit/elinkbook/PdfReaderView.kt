@@ -216,9 +216,9 @@ class PdfReaderView(
      * 不影響結果，但依慣例排在 applyFitMode() 之後（見 spec.md「裁切 →
      * fit 模式縮放 → 濾鏡」的管線順序）。
      *
-     * 標準對比度/亮度 ColorMatrix 公式：先以 128（灰階中點）為軸心縮放對比
-     * 度，再疊加亮度位移，確保 contrast=0／brightness=0 時是單位矩陣（無
-     * 視覺變化）。
+     * 標準對比度/亮度 ColorMatrix 公式：先以 127.5（8-bit 色階灰階中點）為
+     * 軸心縮放對比度，再疊加亮度位移，確保 contrast=0／brightness=0 時是
+     * 單位矩陣（無視覺變化）。
      */
     private fun applyFilters() {
         val contrastFactor = (100f + contrast) / 100f // -100→0.0，0→1.0，100→2.0
