@@ -1,0 +1,188 @@
+# Epic 4 — PDF 專業增強：工單清單 (Issues)
+
+依 `spec.md`（搭配 `design.md`、`reviews/design-review.md`）拆解出的細粒度垂直切片工單。Issue 1 為起始工單；Issue 2 依賴 Issue 1；Issue 3、4、5 依賴 Issue 2，三者可平行進行；Issue 6 依賴 Issue 5（共用裁切分頁與 `PdfCropRect` 渲染套用邏輯）；Issue 7 為收尾工單，依賴 Issue 3、4、6 全部完成。
+
+---
+
+## Issue 1：資料層基礎建設——PDF 版面偏好設定儲存
+
+**Status:** ready-for-agent
+
+**依賴：** 無（起始工單）
+
+**描述：**
+建立本 epic 全部後續 issue 共用的資料模型與持久化機制，純 Dart、不涉及原生程式碼、不需要真實裝置：
+
+- 新增列舉型別：`PdfFitMode`（`app/lib/reader/pdf_fit_mode.dart`，`pageFit`/`fitWidth`/`actualSize` 三值）、`PdfCropMode`（`app/lib/reader/pdf_crop_mode.dart`，`none`/`autoDetect`/`manual` 三值）
+- 新增 `PdfCropRect`（`app/lib/reader/pdf_crop_rect.dart`）：不可變資料類別，`left`/`top`/`right`/`bottom` 皆為 0.0-1.0 相對座標，含 `toJson()`/`PdfCropRect.fromJson()`
+- `BookReaderPrefs`（`app/lib/reader/book_reader_prefs.dart`）新增 6 個 nullable 欄位：`pdfFitMode`／`pdfContrast`／`pdfBrightness`／`pdfBoldStrength`／`pdfCropMode`／`pdfCropRect`，`toMap`/`fromMap`/`==`/`hashCode` 依既有模式平行擴充（見 `spec.md`「資料模型」）
+- `book_reader_prefs` 表 `ALTER TABLE` 新增上述 6 欄位（見 `spec.md` 的 SQL 定義），`BookReaderPrefsRepository` 的既有 `load`/`save` 邏輯不需改動（全欄位 nullable、`Map` 驅動）
+
+**單元測試要求：**
+- 純 Dart unit test：`PdfFitMode`／`PdfCropMode` 的 `byName` 失敗回退行為；`PdfCropRect` 建構、相等性、`toJson`/`fromJson` round-trip
+- `BookReaderPrefs`：新 6 欄位的 `toMap`/`fromMap` round-trip；驗證 EPUB 讀取時 PDF 欄位恆為 `null`，反之亦然
+- `BookReaderPrefsRepository`：既有 `save()`/`load()` round-trip 測試擴充涵蓋新欄位；資料庫 migration 後既有 EPUB 資料列不受影響（新欄位讀回 `NULL`）
+
+**驗收標準：**
+- 上述測試皆通過
+- `flutter analyze` 乾淨
+- 本 issue 完全不需要真實裝置即可驗收
+
+---
+
+## Issue 2：PDF 設定入口與 Fit 模式端到端
+
+**Status:** ready-for-agent
+
+**依賴：** Issue 1（需要 `PdfFitMode` 等型別供 map key 對應使用）
+
+**描述：**
+建立 PDF 專屬的設定入口與 method channel 骨架，並實作 Fit 模式（決策 #6/#7/#8）作為第一個端到端可驗證的功能：
+
+- **Dart 端（`app/lib/reader/pdf_reader_view.dart`）**：新增 `fitMode: PdfFitMode?` 建構參數；`_onPlatformViewCreated` 把非 null 偏好參數組成 `initialPreferences` 隨 `openBook` 送出；新增 `didUpdateWidget` 偵測欄位變動、透過 `setPdfPreferences` 送出（合併語意，比照 EPUB `setPreferences` 慣例，見 `docs/archive/2026-07-10-epic-3-fonts-layout/spec.md`）
+- **原生端（`PdfReaderView.kt`）**：`openBook` 新增 `initialPreferences: Map<String, Any?>?` 參數；新增 `setPdfPreferences` handler；`renderCurrentPage()` 依 `fitMode` 套用縮放邏輯——`pageFit`（明確設定等效於目前 `ImageView` 預設 `FIT_CENTER` 的行為，不再依賴隱式預設值）、`fitWidth`（頁寬滿版、可視高度不足時可捲動）、`actualSize`（1 PDF point = 1 Android dp，見 `design.md`「已知風險」的 DPI 定義）
+- 新建 `PdfSettingsSheet`（`app/lib/screens/pdf_settings_sheet.dart`）骨架：三分頁結構（顯示／濾鏡／裁切），本 issue 只實作**顯示分頁**（Fit 模式三選一圖示按鈕），其餘兩分頁留空白佔位供 Issue 3-6 填入
+- `ReaderScreen`（`app/lib/screens/reader_screen.dart`）：`_buildAppBarActions` 條件擴充為 `format == epub || format == pdf`；新增 `_openPdfSettings()`，依 `format` 分派開啟 `ReaderSettingsSheet`（EPUB，既有）或 `PdfSettingsSheet`（PDF，新增）；開書流程於 `format == pdf` 時載入 `BookReaderPrefs.pdfFitMode` 並傳給 `PdfReaderView`；新增 `_handlePdfPrefsChanged(BookReaderPrefs)`，`setState` 更新本地狀態並呼叫 `prefsRepository.save()`
+
+**單元測試要求：**
+- `PdfReaderView` widget test（假 `MethodChannel` handler）：`_onPlatformViewCreated` 呼叫 `openBook` 時 `initialPreferences` 正確包含 `fitMode`；`fitMode` 變動觸發 `setPdfPreferences`
+- `PdfSettingsSheet` widget test：顯示分頁三選一切換正確觸發 `onChanged`
+- `ReaderScreen` widget test：AppBar 齒輪按鈕於 `format == pdf` 時顯示；點擊後開啟 `PdfSettingsSheet`（非 `ReaderSettingsSheet`）
+- **已知測試限制**：原生端 `setPdfPreferences`/縮放邏輯無法透過 `flutter test` 驗證，留給本 issue 的 `integration_test`
+
+**驗收標準：**
+- 上述測試皆通過
+- `flutter analyze` 乾淨
+- `integration_test`（真實裝置）：開啟 PDF、切換三種 Fit 模式，畫面依序正確反映；關閉重開該書後設定被記住
+
+---
+
+## Issue 3：影像濾鏡——對比度／亮度
+
+**Status:** ready-for-agent
+
+**依賴：** Issue 2（共用 `PdfSettingsSheet`／`setPdfPreferences` 骨架）；可與 Issue 4、5 平行開發
+
+**描述：**
+在 Issue 2 建立的 `PdfSettingsSheet` 濾鏡分頁新增對比度、亮度兩支控制項：
+
+- **原生端（`PdfReaderView.kt`）**：`renderCurrentPage()` 渲染管線新增濾鏡套用階段（裁切 → fit 模式縮放 → 濾鏡，見 `spec.md`），對比度/亮度透過 `ColorMatrixColorFilter` 套用於 `imageView`
+- **Dart 端**：`PdfReaderView` 新增 `contrast`／`brightness: double?` 建構參數（-100..100），納入 `initialPreferences`／`setPdfPreferences` 機制
+- `PdfSettingsSheet` 濾鏡分頁新增對比度、亮度滑桿：依決策 #11，拖動時即時呼叫 `onChanged`（即時預覽），鬆手後才由 `ReaderScreen._handlePdfPrefsChanged` 寫入持久化（沿用「setState 立即反映、不 await 持久化」既有慣例）
+
+**單元測試要求：**
+- `PdfReaderView` widget test：`contrast`/`brightness` 變動觸發 `setPdfPreferences`
+- `PdfSettingsSheet` widget test：兩支滑桿拖動時觸發 `onChanged`，數值正確傳遞
+
+**驗收標準：**
+- 上述測試皆通過
+- `flutter analyze` 乾淨
+- `integration_test`（真實裝置）：調整對比度/亮度後畫面持續渲染成功、無 `onError`；關閉重開後設定值正確記住
+- **獨立驗證項（人工視覺 QA）**：對比度/亮度變化在真實掃描件 PDF 上的視覺效果符合預期
+
+---
+
+## Issue 4：影像濾鏡——加粗
+
+**Status:** ready-for-agent
+
+**依賴：** Issue 2（共用骨架）；可與 Issue 3、5 平行開發
+
+**描述：**
+在 `PdfSettingsSheet` 濾鏡分頁新增加粗（型態學膨脹）控制項。本 issue 技術風險明顯高於 Issue 3（設計審查 `reviews/design-review.md` Finding 1.1）——`minSdk = 24`，而 Android 高效能形態學運算 API `RenderEffect` 需 API 31，中間 7 個 API 版本需自行實作像素級膨脹運算，`ColorMatrix` 無法達成（僅逐像素線性色彩轉換，非空間鄰域運算）：
+
+- 實作者需先依效能實測決定 API 24-30 的膨脹演算法（例如簡易卷積、限制在縮小取樣版本上運算等，見 `design.md`「已知風險」），並依決策 #13（NFR-1 不涵蓋濾鏡效能，允許翻頁後短暫延遲完成處理）驗證可接受度；若 API 31+ 裝置與 API 24-30 裝置需要不同實作路徑，需明確記錄於 `plans/plan-issue-4.md`
+- **原生端**：`renderCurrentPage()` 濾鏡套用階段新增加粗處理（對已套用裁切/fit/對比度/亮度的最終 Bitmap 做膨脹）
+- **Dart 端**：`PdfReaderView` 新增 `boldStrength: double?` 建構參數（0..1），納入既有偏好機制
+- `PdfSettingsSheet` 濾鏡分頁新增加粗強度滑桿，互動模式同 Issue 3（即時預覽、鬆手持久化）
+
+**單元測試要求：**
+- `PdfReaderView` widget test：`boldStrength` 變動觸發 `setPdfPreferences`
+- `PdfSettingsSheet` widget test：加粗滑桿拖動觸發 `onChanged`
+
+**驗收標準：**
+- 上述測試皆通過
+- `flutter analyze` 乾淨
+- `integration_test`（真實裝置，**至少涵蓋一台 API 24-30 裝置與一台 API 31+ 裝置**，若受限於可用測試裝置無法涵蓋兩者，需在 `plans/plan-issue-4.md` 明確記錄限制）：調整加粗強度後畫面持續渲染成功、無明顯卡頓或崩潰
+- **獨立驗證項（人工視覺 QA）**：加粗效果在淡色掃描件 PDF 上是否有效改善可讀性；100MB 以上 PDF 啟用加粗後翻頁效能主觀可接受（決策 #13 寬鬆門檻，非量化門檻）
+
+---
+
+## Issue 5：智慧自動裁切
+
+**Status:** ready-for-agent
+
+**依賴：** Issue 2（共用骨架）；可與 Issue 3、4 平行開發
+
+**描述：**
+實作裁切分頁的前兩個選項（不裁切／智慧自動），建立本 epic 的裁切渲染管線基礎，供 Issue 6（手動選區）複用：
+
+- 實作者需依 `design.md`「已知風險」決定邊界偵測演算法（近似白/黑判斷閾值、取樣頁數）；設計審查 Finding 1.3 建議的「多頁取樣＋保守交集」為候選方案，非強制採用
+- **原生端（`PdfReaderView.kt`）**：`cropMode = autoDetect` 且尚無快取矩形時，首次渲染時取樣計算，透過新增的 `onCropRectComputed` method channel（原生 → Dart）回傳；`renderCurrentPage()` 渲染管線新增裁切套用階段（依 `PdfCropRect` 調整 `PdfRenderer.Page.render()` 的 `Matrix` 平移/縮放，只渲染指定區域並放大填滿），置於 fit 模式縮放與濾鏡之前（決策已定案，見 `spec.md`）
+- **Dart 端**：`PdfReaderView` 新增 `cropMode: PdfCropMode?`／`cropRect: PdfCropRect?` 建構參數、`onCropRectComputed: ValueChanged<PdfCropRect>?` callback
+- `PdfSettingsSheet` 裁切分頁新增「不裁切」／「智慧自動」二選項（「手動選區」選項在 Issue 6 加入，本 issue 先不顯示或顯示為停用狀態）
+- `ReaderScreen`：`onCropRectComputed` 觸發時寫入 `BookReaderPrefs.pdfCropRect`，避免下次開書重新計算
+
+**單元測試要求：**
+- `PdfReaderView` widget test：`cropMode`/`cropRect` 變動觸發 `setPdfPreferences`；收到原生端 `onCropRectComputed` 時正確觸發回呼
+- `PdfSettingsSheet` widget test：裁切分頁二選項切換觸發 `onChanged`
+- `ReaderScreen` widget test：`onCropRectComputed` 回呼正確寫入 `BookReaderPrefs` 並持久化
+
+**驗收標準：**
+- 上述測試皆通過
+- `flutter analyze` 乾淨
+- `integration_test`（真實裝置）：切換至智慧自動裁切，畫面正確裁切並套用；關閉重開該書，確認**不重新計算**（比對兩次 `book_reader_prefs` 查詢的 `pdf_crop_rect` 值一致）
+
+---
+
+## Issue 6：手動選區裁切
+
+**Status:** ready-for-agent
+
+**依賴：** Issue 5（共用裁切分頁與 `PdfCropRect` 渲染套用邏輯）
+
+**描述：**
+實作裁切分頁的第三個選項（手動選區），本 epic 技術風險最高的一塊（設計審查 Finding 1.2 的核心決策——Native 而非 Flutter 全螢幕畫面，見 `design.md` 決策 #14）：
+
+- 新建 `CropOverlayView.kt`（`app/android/app/src/main/kotlin/cc/ugotit/elinkbook/CropOverlayView.kt`）：自訂 `View`，疊加於 `PdfReaderView` 的 `imageView` 之上，繪製可拖拉四角控制點的裁切框並處理觸控事件，只在裁切互動模式下加入 View 樹
+- **原生端（`PdfReaderView.kt`）**：新增 `enterCropEditMode`／`exitCropEditMode` method channel handler（進入時加入 `CropOverlayView` 並暫停 `nextPage`/`previousPage` 回應，離開時移除並恢復）；新增 `onCropRectSelected` method channel（使用者拖拉後點擊確認時觸發，回傳相對座標矩形）
+- **Dart 端（`PdfReaderView`）**：新增 `cropEditModeActive: bool`（預設 `false`）宣告式建構參數，`didUpdateWidget` 偵測 `false → true` 時送出 `enterCropEditMode`、`true → false` 時送出 `exitCropEditMode`；新增 `onCropRectSelected: ValueChanged<PdfCropRect>?` callback
+- `PdfSettingsSheet`：新增 `onRequestManualCrop: VoidCallback` 建構參數，裁切分頁「手動選區」選項點擊時觸發（`PdfSettingsSheet` 本身不直接操作 `PdfReaderView`，維持既有單向資料流）；啟用先前 Issue 5 顯示為停用的第三選項
+- `ReaderScreen`：新增 `_handleRequestManualCrop()`（關閉 `PdfSettingsSheet`、`setState(() => _cropEditModeActive = true)`）與 `_handleCropRectSelected(PdfCropRect)`（`setState(() => _cropEditModeActive = false)`，更新 `BookReaderPrefs`（`pdfCropMode = manual`、`pdfCropRect = rect`）並持久化，重新開啟 `PdfSettingsSheet`）
+
+**單元測試要求：**
+- `PdfReaderView` widget test：`cropEditModeActive` 由 `false→true`／`true→false` 時分別觸發 `enterCropEditMode`／`exitCropEditMode`；收到 `onCropRectSelected` 時正確觸發回呼
+- `PdfSettingsSheet` widget test：裁切分頁「手動選區」點擊觸發 `onRequestManualCrop`
+- `ReaderScreen` widget test：`_handleRequestManualCrop`／`_handleCropRectSelected` 正確驅動 `_cropEditModeActive` 狀態機與 `BookReaderPrefs` 持久化呼叫
+- **已知測試限制**：`CropOverlayView.kt` 的觸控拖拉邏輯無法透過 `flutter test` 驗證（沿用既有慣例，見 `docs/archive/2026-07-10-epic-3-fonts-layout/issues.md` Issue 2 對原生邏輯測試限制的既有處理方式），留給本 issue 的 `integration_test`
+
+**驗收標準：**
+- 上述測試皆通過
+- `flutter analyze` 乾淨
+- `integration_test`（真實裝置）：點選「手動選區」進入裁切互動模式，確認翻頁手勢暫停回應；拖拉四角控制點後點擊確認，`book_reader_prefs.pdf_crop_mode`/`pdf_crop_rect` 正確寫入，畫面套用新裁切結果並恢復正常閱讀模式（翻頁手勢恢復）
+
+---
+
+## Issue 7：真機驗證與收尾
+
+**Status:** ready-for-agent
+
+**依賴：** Issue 3、Issue 4、Issue 6 全部完成（Issue 5 已被 Issue 6 涵蓋，Issue 1/2 為前置基礎）
+
+**描述：**
+本 issue 為裝置端整合驗證與 Epic 收尾，比照 `epic-3-fonts-layout` Issue 6 的既有模式，部分項目屬人工視覺 QA 性質：
+
+- **端到端組合驗證（人工視覺 QA）**：對同一本 PDF 依序調整所有版面設定（Fit 模式、對比度、亮度、加粗、裁切模式），關閉 App、重新開啟，確認所有設定皆被正確記住並套用（驗證 Issue 2-6 的 `initialPreferences` 機制在多欄位組合情境下依然正確，不只是單一欄位）
+- **NFR-1 基礎效能驗證**：100MB 以上 PDF 在無濾鏡/無裁切時的基礎開啟時間 < 2 秒（決策 #13 範圍，不含濾鏡/裁切的效能不強制同一門檻）
+- **加粗效能風險複驗**：依 Issue 4 驗收標準的裝置矩陣（API 24-30／API 31+），確認加粗在兩種裝置上皆無明顯卡頓或崩潰，若 Issue 4 階段未能涵蓋完整裝置矩陣，本 issue 需補齊
+- 彙整驗證紀錄，更新 `docs/epics/epic-4-pdf-enhance/issues.md` 各 issue 最終驗收狀態
+- 若驗證中發現需要後續處理的落差，比照 `epic-3-fonts-layout` 慣例（Issue 6 發現 Issue 7/8/9），另立後續 issue 追蹤，不阻塞本 epic 合併
+
+**單元測試要求：**
+- 無新增自動化單元測試（本 issue 以整合/裝置驗證為主）
+
+**驗收標準：**
+- 端到端組合持久化驗證產出書面紀錄（比照 `qa-issue-N-*.md` 既有慣例）
+- NFR-1 基礎效能驗證產出明確結論（達標／未達標，若未達標需記錄具體數字並評估是否阻塞收尾）
+- `flutter analyze` 乾淨、`flutter test` 全數通過
+- 若有發現需要後續處理的落差，已建立對應的後續 issue 追蹤，不阻塞本 epic 合併
