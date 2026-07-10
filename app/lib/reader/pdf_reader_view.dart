@@ -24,6 +24,8 @@ class PdfReaderView extends StatefulWidget {
   final VoidCallback? onPreviousPage;
   final ValueChanged<int>? onPageChanged;
   final PdfFitMode? fitMode;
+  final double? contrast;
+  final double? brightness;
 
   const PdfReaderView({
     super.key,
@@ -34,6 +36,8 @@ class PdfReaderView extends StatefulWidget {
     this.onPreviousPage,
     this.onPageChanged,
     this.fitMode,
+    this.contrast,
+    this.brightness,
   });
 
   @override
@@ -56,7 +60,9 @@ class _PdfReaderViewState extends State<PdfReaderView> {
   @override
   void didUpdateWidget(covariant PdfReaderView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.fitMode != oldWidget.fitMode) {
+    if (widget.fitMode != oldWidget.fitMode ||
+        widget.contrast != oldWidget.contrast ||
+        widget.brightness != oldWidget.brightness) {
       _channel?.invokeMethod('setPdfPreferences', _buildPreferencesMap());
     }
   }
@@ -66,6 +72,8 @@ class _PdfReaderViewState extends State<PdfReaderView> {
   Map<String, Object?> _buildPreferencesMap() {
     final map = <String, Object?>{};
     if (widget.fitMode != null) map['fitMode'] = widget.fitMode!.name;
+    if (widget.contrast != null) map['contrast'] = widget.contrast;
+    if (widget.brightness != null) map['brightness'] = widget.brightness;
     return map;
   }
 

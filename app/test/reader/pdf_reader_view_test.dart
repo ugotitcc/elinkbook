@@ -153,6 +153,79 @@ void main() {
 
     expect(instanceCalls, isEmpty);
   });
+
+  testWidgets(
+      '_onPlatformViewCreated 呼叫 openBook 時，initialPreferences 包含 contrast／brightness',
+      (tester) async {
+    final calls = await _pumpPdfReaderView(
+      tester,
+      const PdfReaderView(
+        filePath: '/tmp/sample.pdf',
+        onPageRendered: _noop,
+        onError: _noopError,
+        contrast: 20.0,
+        brightness: -15.0,
+      ),
+    );
+
+    final openBookCall = calls.firstWhere((c) => c.method == 'openBook');
+    expect(openBookCall.arguments['initialPreferences'], {
+      'contrast': 20.0,
+      'brightness': -15.0,
+    });
+  });
+
+  testWidgets('contrast／brightness 變動時，didUpdateWidget 呼叫 setPdfPreferences',
+      (tester) async {
+    final binaryMessenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    final instanceCalls = <MethodCall>[];
+
+    binaryMessenger.setMockMethodCallHandler(SystemChannels.platform_views,
+        (call) async {
+      if (call.method == 'create') {
+        final id = (call.arguments as Map<Object?, Object?>)['id'] as int;
+        binaryMessenger.setMockMethodCallHandler(
+          MethodChannel('cc.ugotit.elinkbook/pdf_reader_view_$id'),
+          (call) async {
+            instanceCalls.add(call);
+            return null;
+          },
+        );
+        return 0;
+      }
+      return null;
+    });
+
+    await tester.pumpWidget(const MaterialApp(
+      home: PdfReaderView(
+        filePath: '/tmp/sample.pdf',
+        onPageRendered: _noop,
+        onError: _noopError,
+        contrast: 10.0,
+      ),
+    ));
+    await tester.pumpAndSettle();
+    instanceCalls.clear();
+
+    await tester.pumpWidget(const MaterialApp(
+      home: PdfReaderView(
+        filePath: '/tmp/sample.pdf',
+        onPageRendered: _noop,
+        onError: _noopError,
+        contrast: 10.0,
+        brightness: 25.0, // 新增一個原本是 null 的欄位
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(instanceCalls, hasLength(1));
+    expect(instanceCalls.single.method, 'setPdfPreferences');
+    expect(instanceCalls.single.arguments, {
+      'contrast': 10.0,
+      'brightness': 25.0,
+    });
+  });
 }
 
 void _noop() {}

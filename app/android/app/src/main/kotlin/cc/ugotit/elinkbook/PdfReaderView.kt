@@ -44,6 +44,11 @@ class PdfReaderView(
     // 預設 "pageFit"，與 BookReaderPrefs.pdfFitMode 為 null 時的語意一致。
     private var fitMode: String = "pageFit"
 
+    // Dart contrast／brightness 值，-100..100，預設 0（無調整），與
+    // BookReaderPrefs.pdfContrast/pdfBrightness 為 null 時的語意一致。
+    private var contrast: Float = 0f
+    private var brightness: Float = 0f
+
     init {
         channel.setMethodCallHandler(this)
     }
@@ -78,15 +83,18 @@ class PdfReaderView(
     }
 
     /**
-     * 合併 [preferences] 到目前生效狀態並套用（目前只有 fitMode 一個欄位，
-     * 之後 Issue 3-6 會擴充濾鏡/裁切欄位）。書本尚未成功開啟
-     * （renderer 仍為 null）時仍安全執行——applyFitMode() 內部若沒有已渲染
-     * 的 bitmap 會靜默不做事。
+     * 合併 [preferences] 到目前生效狀態並套用（fitMode／contrast／
+     * brightness，之後 Issue 4-6 會擴充加粗/裁切欄位）。書本尚未成功開啟
+     * （renderer 仍為 null）時仍安全執行——applyFitMode()／applyFilters()
+     * 內部若沒有已渲染的 bitmap 會靜默不做事。
      */
     private fun setPdfPreferences(preferences: Map<String, Any?>?) {
         if (preferences == null) return
         (preferences["fitMode"] as? String)?.let { fitMode = it }
+        (preferences["contrast"] as? Number)?.let { contrast = it.toFloat() }
+        (preferences["brightness"] as? Number)?.let { brightness = it.toFloat() }
         applyFitMode()
+        applyFilters()
     }
 
     private fun openBook(path: String?, initialPreferences: Map<String, Any?>?) {
@@ -95,6 +103,8 @@ class PdfReaderView(
             return
         }
         (initialPreferences?.get("fitMode") as? String)?.let { fitMode = it }
+        (initialPreferences?.get("contrast") as? Number)?.let { contrast = it.toFloat() }
+        (initialPreferences?.get("brightness") as? Number)?.let { brightness = it.toFloat() }
         var pfd: ParcelFileDescriptor? = null
         try {
             pfd = openParcelFileDescriptor(path)
@@ -137,6 +147,7 @@ class PdfReaderView(
             page.render(bitmap, null, matrix, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
             imageView.setImageBitmap(bitmap)
             applyFitMode()
+            applyFilters()
         } catch (e: OutOfMemoryError) {
             // 如果發生 OutOfMemory，回退到原始尺寸渲染以確保不會崩潰
             try {
@@ -144,6 +155,7 @@ class PdfReaderView(
                 page.render(fallbackBitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
                 imageView.setImageBitmap(fallbackBitmap)
                 applyFitMode()
+                applyFilters()
             } catch (ignored: Exception) {}
         }
 
@@ -195,6 +207,32 @@ class PdfReaderView(
                 imageView.scaleType = ImageView.ScaleType.FIT_CENTER
             }
         }
+    }
+
+    /**
+     * 依 [contrast]／[brightness] 設定 imageView 的 colorFilter，與
+     * applyFitMode() 的 scaleType／imageMatrix 是完全獨立的顯示層機制
+     * （ColorMatrixColorFilter 作用於像素色彩，不影響座標變換），呼叫順序
+     * 不影響結果，但依慣例排在 applyFitMode() 之後（見 spec.md「裁切 →
+     * fit 模式縮放 → 濾鏡」的管線順序）。
+     *
+     * 標準對比度/亮度 ColorMatrix 公式：先以 128（灰階中點）為軸心縮放對比
+     * 度，再疊加亮度位移，確保 contrast=0／brightness=0 時是單位矩陣（無
+     * 視覺變化）。
+     */
+    private fun applyFilters() {
+        val contrastFactor = (100f + contrast) / 100f // -100→0.0，0→1.0，100→2.0
+        val brightnessOffset = brightness * 2.55f // -100..100 映射到約 -255..255 的像素位移範圍
+        val translate = brightnessOffset + (255f - contrastFactor * 255f) / 2f
+        val colorMatrix = android.graphics.ColorMatrix(
+            floatArrayOf(
+                contrastFactor, 0f, 0f, 0f, translate,
+                0f, contrastFactor, 0f, 0f, translate,
+                0f, 0f, contrastFactor, 0f, translate,
+                0f, 0f, 0f, 1f, 0f,
+            )
+        )
+        imageView.colorFilter = android.graphics.ColorMatrixColorFilter(colorMatrix)
     }
 
     private fun nextPage() {
