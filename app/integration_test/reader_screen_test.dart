@@ -11,7 +11,10 @@ import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/reader/book_reader_prefs.dart';
 import 'package:elinkbook/reader/book_reader_prefs_repository.dart';
+import 'package:elinkbook/reader/pdf_fit_mode.dart';
+import 'package:elinkbook/reader/pdf_reader_view.dart';
 import 'package:elinkbook/reader/screen_orientation_setting.dart';
+import 'package:elinkbook/screens/pdf_settings_sheet.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
 import 'package:elinkbook/screens/reader_settings_sheet.dart';
 
@@ -58,10 +61,10 @@ bool _layoutSettingsButtonReady(WidgetTester tester) {
   return tester.widget<IconButton>(finder).onPressed != null;
 }
 
-Book _book(String id) => Book(
+Book _book(String id, {BookFileFormat format = BookFileFormat.epub}) => Book(
       id: id,
       title: '書名',
-      format: BookFileFormat.epub,
+      format: format,
       filePath: 'content://example/$id',
       source: BookSource.local,
       createTime: DateTime.fromMillisecondsSinceEpoch(1000),
@@ -541,5 +544,137 @@ void main() {
       reason: 'dispose() 應呼叫 SystemChrome.setPreferredOrientations([]) '
           '還原系統預設，不論進入時鎖定了哪個角度',
     );
+  });
+
+  testWidgets('PDF 點擊「⚙️版面」按鈕開啟 PdfSettingsSheet（非 ReaderSettingsSheet）',
+      (tester) async {
+    final samplePath = await _stageAssetAsFile(
+        'test/fixtures/sample.pdf', 'sample_pdf_settings_open.pdf');
+    addTearDown(() async {
+      final file = File(samplePath);
+      if (await file.exists()) await file.delete();
+    });
+    const bookId = 'b_pdf_settings_open';
+    await libraryRepository.insertBook(_book(bookId, format: BookFileFormat.pdf));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: samplePath,
+          bookId: bookId,
+          prefsRepository: prefsRepository,
+        ),
+      ),
+    );
+
+    await _pumpUntil(
+      tester,
+      () => _layoutSettingsButtonReady(tester),
+      timeout: const Duration(seconds: 10),
+    );
+
+    await tester.tap(find.byKey(const Key('reader_layout_settings_button')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(PdfSettingsSheet), findsOneWidget);
+    expect(find.byType(ReaderSettingsSheet), findsNothing);
+  });
+
+  testWidgets('PDF 切換三種 Fit 模式，畫面持續渲染成功、無 onError', (tester) async {
+    final samplePath = await _stageAssetAsFile(
+        'test/fixtures/sample.pdf', 'sample_pdf_fit_mode.pdf');
+    addTearDown(() async {
+      final file = File(samplePath);
+      if (await file.exists()) await file.delete();
+    });
+    const bookId = 'b_pdf_fit_mode';
+    await libraryRepository.insertBook(_book(bookId, format: BookFileFormat.pdf));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: samplePath,
+          bookId: bookId,
+          prefsRepository: prefsRepository,
+        ),
+      ),
+    );
+
+    await _pumpUntil(
+      tester,
+      () => _layoutSettingsButtonReady(tester),
+      timeout: const Duration(seconds: 10),
+    );
+
+    await tester.tap(find.byKey(const Key('reader_layout_settings_button')));
+    await tester.pumpAndSettle();
+
+    for (final keySuffix in ['fit_width', 'actual_size', 'page_fit']) {
+      await tester.tap(find.byKey(Key('pdf_settings_fit_mode_$keySuffix')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.byKey(const Key('reader_error_text')), findsNothing,
+          reason: '切換至 $keySuffix 後畫面應持續渲染成功，不應觸發 onError');
+    }
+  });
+
+  testWidgets('調整 PDF Fit 模式後關閉重開該書，設定被正確記住', (tester) async {
+    final samplePath = await _stageAssetAsFile(
+        'test/fixtures/sample.pdf', 'sample_pdf_fit_mode_persist.pdf');
+    addTearDown(() async {
+      final file = File(samplePath);
+      if (await file.exists()) await file.delete();
+    });
+    const bookId = 'b_pdf_fit_mode_persist';
+    await libraryRepository.insertBook(_book(bookId, format: BookFileFormat.pdf));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: samplePath,
+          bookId: bookId,
+          prefsRepository: prefsRepository,
+        ),
+      ),
+    );
+
+    await _pumpUntil(
+      tester,
+      () => _layoutSettingsButtonReady(tester),
+      timeout: const Duration(seconds: 10),
+    );
+
+    await tester.tap(find.byKey(const Key('reader_layout_settings_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('pdf_settings_fit_mode_actual_size')));
+    await tester.pump();
+    // 給非同步的 BookReaderPrefsRepository.save() 足夠時間完成寫入。
+    await tester.pump(const Duration(milliseconds: 500));
+
+    final saved = await prefsRepository.load(bookId);
+    expect(saved.pdfFitMode, PdfFitMode.actualSize);
+
+    // 關閉重開，確認 initialPreferences 機制真正生效（不只是 UI 顯示）。
+    await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
+    await tester.pump();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: samplePath,
+          bookId: bookId,
+          prefsRepository: prefsRepository,
+        ),
+      ),
+    );
+    await _pumpUntil(
+      tester,
+      _loadingIndicatorGone,
+      timeout: const Duration(seconds: 10),
+    );
+
+    final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+    expect(pdfView.fitMode, PdfFitMode.actualSize);
   });
 }

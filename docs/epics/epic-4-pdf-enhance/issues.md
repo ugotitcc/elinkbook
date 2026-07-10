@@ -30,9 +30,9 @@
 
 ---
 
-## Issue 2：PDF 設定入口與 Fit 模式端到端
+## Issue 2：PDF 設定入口與 Fit 模式端到端（已完成）
 
-**Status:** ready-for-agent
+**Status:** ✅ 已完成。`PdfSettingsSheet` 三分頁骨架與顯示分頁（Fit 模式三選一）、`PdfReaderView`（Dart＋原生）的 `fitMode` 契約與三種縮放邏輯、`ReaderScreen` 齒輪按鈕擴充至 PDF 皆已完成並經真機驗證。刻意簡化：Fit Width／真實比例 1:1 超出畫面的部分不可捲動，留待後續 issue 評估。完整計劃見 `plans/plan-issue-2.md`。
 
 **依賴：** Issue 1（需要 `PdfFitMode` 等型別供 map key 對應使用）
 
