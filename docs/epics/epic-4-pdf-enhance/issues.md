@@ -16,7 +16,7 @@
 - 新增列舉型別：`PdfFitMode`（`app/lib/reader/pdf_fit_mode.dart`，`pageFit`/`fitWidth`/`actualSize` 三值）、`PdfCropMode`（`app/lib/reader/pdf_crop_mode.dart`，`none`/`autoDetect`/`manual` 三值）
 - 新增 `PdfCropRect`（`app/lib/reader/pdf_crop_rect.dart`）：不可變資料類別，`left`/`top`/`right`/`bottom` 皆為 0.0-1.0 相對座標，含 `toJson()`/`PdfCropRect.fromJson()`
 - `BookReaderPrefs`（`app/lib/reader/book_reader_prefs.dart`）新增 6 個 nullable 欄位：`pdfFitMode`／`pdfContrast`／`pdfBrightness`／`pdfBoldStrength`／`pdfCropMode`／`pdfCropRect`，`toMap`/`fromMap`/`==`/`hashCode` 依既有模式平行擴充（見 `spec.md`「資料模型」）
-- `book_reader_prefs` 表 `ALTER TABLE` 新增上述 6 欄位（見 `spec.md` 的 SQL 定義），`BookReaderPrefsRepository` 的既有 `load`/`save` 邏輯不需改動（全欄位 nullable、`Map` 驅動）
+- `book_reader_prefs` 表新增上述 6 欄位（見 `spec.md` 的 SQL 定義），依裝置狀態分兩條路徑：全新安裝走 `CREATE TABLE`（`onCreate`）一步到位；既有 version 2 裝置走 `ALTER TABLE ADD COLUMN`（`onUpgrade`）逐欄補上，兩者互斥不重疊，`BookReaderPrefsRepository` 的既有 `load`/`save` 邏輯不需改動（全欄位 nullable、`Map` 驅動）
 
 **單元測試要求：**
 - 純 Dart unit test：`PdfFitMode`／`PdfCropMode` 為 `byName` 直接映射（無回退），比照 `BookReaderPrefs` 既有 5 個 enum 欄位（`AppFont`／`EpubTextAlign`／`WritingMode`／`PageTurnMode`／`ScreenOrientationSetting`）的既有慣例，不需要獨立測試檔（`byName` 失敗回退僅用於 `GlobalReaderDefaults`/`AppThemePreferences` 等 `shared_preferences` 設定，與本表無關）；`PdfCropRect` 建構、相等性、`toJson`/`fromJson` round-trip
