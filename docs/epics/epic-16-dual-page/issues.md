@@ -157,6 +157,7 @@
 - **`EpubReaderView.kt`**：
   - `buildPreferencesFromMap()` 新增 `spread = spreadFromDualPageMode(...)`，將 `dualPageMode` 三態字串對應到 Readium `EpubPreferences.spread`（`org.readium.r2.navigator.preferences.Spread` enum：`"auto"→Spread.AUTO`、`"always"→Spread.ALWAYS`、`"never"→Spread.NEVER`）
   - `applyFxlFitScale()` 雙頁適配：偵測到 spread 生效（2 個以上可見 WebView）時，縮放基準 `availableWidth` 改為「container 寬度 / 2」，依 WebView 螢幕左右順序分別套用對應半寬區塊的置中位移；`cachedFxlFitScale` 快取鍵新增「是否為 spread 模式」維度，單/雙頁切換或裝置旋轉時使快取失效重算
+  - **就地實作，不預先抽離**：架構審查（`tmp/epic-16/reviews/architecture-review-1783800246.html` Candidate #3，Speculative 等級）建議把此縮放邏輯抽成獨立 `EpubFxlScaler` 模組；本 issue 維持在 `applyFxlFitScale()` 內就地擴充（YAGNI），僅在實作過程中若判斷該函式已過度龐雜、難以驗證時才回頭評估抽離，並記錄於本 issue 的完成備註（見 `docs/epics.md` 對應 Backlog 列）
 - **`ReaderScreen`**：EPUB 且 `isFixedLayout == true` 時，於畫面右上角新增圓形半透明懸浮設定按鈕（`Key('reader_fixed_layout_settings_button')`，對稱於左上角 `Key('reader_fixed_layout_back_button')`），點擊開啟 `FxlSettingsSheet`（打破「固定版面不顯示設定齒輪」的既有慣例，因為固定版面整個 Scaffold AppBar 被隱藏）
 - 新建 `FxlSettingsSheet`（`app/lib/screens/fxl_settings_sheet.dart`）：精簡版 Bottom Sheet，提供「雙頁模式」三態切換選項（僅預留 FR-42 全螢幕開關的 UI 擴充空間，本 issue **不**實作 FR-42 功能本身）
 

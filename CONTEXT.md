@@ -51,3 +51,11 @@ _Avoid_: 跨頁組、頁面組
 **固定版面（Fixed-Layout, FXL）**：
 EPUB 的一種排版形式，每頁有固定尺寸（寬×高），內容不隨螢幕大小重排——常見於漫畫、童書、食譜。與「流式（Reflowable）」互斥。由 Readium 的 `onLayoutResolved` 回報 `isFixedLayout: true` 偵測。
 _Avoid_: 固定排版、定版式
+
+**閱讀偏好管理器（ReaderPrefsManager）**：
+整合全域預設值（SharedPreferences）與單書版面偏好設定（SQLite）的深模組。負責載入、寫入與優先級覆寫解析邏輯，對閱讀器（ReaderScreen）提供單一介面，隱藏底層多個數據倉庫。
+_Avoid_: 偏好設定服務、設定 Facade
+
+**生效閱讀偏好（ResolvedPreferences）**：
+表示閱讀偏好管理器解析後的最終生效偏好設定。其屬性大多為 non-nullable（例如確定的翻頁模式、邊距與字型），直接提供給閱讀器原生視圖套用，不含「是否覆寫」的 nullable 狀態。
+_Avoid_: 最終偏好、生效設定
