@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/reader/book_reader_prefs.dart';
 import 'package:elinkbook/reader/pdf_fit_mode.dart';
+import 'package:elinkbook/reader/pdf_crop_mode.dart';
+import 'package:elinkbook/reader/pdf_crop_rect.dart';
 import 'package:elinkbook/screens/pdf_settings_sheet.dart';
 
 void main() {
@@ -201,6 +203,58 @@ void main() {
     expect(notified?.pdfFitMode, PdfFitMode.fitWidth);
     expect(notified?.pdfContrast, 10);
     expect(notified?.pdfBrightness, -5);
+  });
+
+  testWidgets('裁切分頁存在不裁切／智慧自動二選項，手動選區顯示但停用', (tester) async {
+    await _pumpSheet(tester, BookReaderPrefs.empty, (_) {});
+
+    await tester.tap(find.byKey(const Key('pdf_settings_tab_crop')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('pdf_settings_crop_mode_none')), findsOneWidget);
+    expect(
+        find.byKey(const Key('pdf_settings_crop_mode_auto')), findsOneWidget);
+    final manualButton = tester.widget<IconButton>(
+        find.byKey(const Key('pdf_settings_crop_mode_manual')));
+    expect(manualButton.onPressed, isNull, reason: '手動選區留待 Issue 6 實作，本 issue 顯示為停用狀態');
+  });
+
+  testWidgets('點擊智慧自動選項後，onChanged 帶入 pdfCropMode=autoDetect', (tester) async {
+    BookReaderPrefs? notified;
+    await _pumpSheet(tester, BookReaderPrefs.empty, (prefs) => notified = prefs);
+
+    await tester.tap(find.byKey(const Key('pdf_settings_tab_crop')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('pdf_settings_crop_mode_auto')));
+    await tester.pump();
+
+    expect(notified?.pdfCropMode, PdfCropMode.autoDetect);
+  });
+
+  testWidgets(
+      '已持久化 pdfCropRect 時，調整其他分頁的滑桿不會清空 pdfCropRect（關鍵回歸檢查）',
+      (tester) async {
+    BookReaderPrefs? notified;
+    const existingCropRect =
+        PdfCropRect(left: 0.02, top: 0.03, right: 0.98, bottom: 0.97);
+    await _pumpSheet(
+      tester,
+      const BookReaderPrefs(
+        pdfCropMode: PdfCropMode.autoDetect,
+        pdfCropRect: existingCropRect,
+        pdfContrast: 0,
+      ),
+      (prefs) => notified = prefs,
+    );
+
+    await tester.tap(find.byKey(const Key('pdf_settings_tab_filters')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('pdf_settings_contrast_increment')));
+    await tester.pump();
+
+    expect(notified?.pdfContrast, greaterThan(0));
+    expect(notified?.pdfCropMode, PdfCropMode.autoDetect);
+    expect(notified?.pdfCropRect, existingCropRect); // 關鍵斷言：未被清空
   });
 }
 

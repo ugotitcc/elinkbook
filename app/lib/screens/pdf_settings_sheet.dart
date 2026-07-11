@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../reader/book_reader_prefs.dart';
 import '../reader/pdf_fit_mode.dart';
+import '../reader/pdf_crop_mode.dart';
 
 /// PDF 專屬版面設定 Bottom Sheet（FR-11），三分頁結構：顯示／濾鏡／裁切，
 /// 見 docs/epics/epic-4-pdf-enhance/design.md 決策 #10（不與 EPUB 用的
@@ -35,6 +36,7 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
   late double _contrast;
   late double _brightness;
   late double _boldStrength; // 內部儲存為 UI 顯示用的 0..100，送出前才換算回 0..1
+  late PdfCropMode _cropMode;
 
   @override
   void initState() {
@@ -44,6 +46,7 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
     _contrast = widget.prefs.pdfContrast ?? 0;
     _brightness = widget.prefs.pdfBrightness ?? 0;
     _boldStrength = (widget.prefs.pdfBoldStrength ?? 0) * 100;
+    _cropMode = widget.prefs.pdfCropMode ?? PdfCropMode.none;
   }
 
   @override
@@ -58,6 +61,12 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
       pdfContrast: _contrast,
       pdfBrightness: _brightness,
       pdfBoldStrength: _boldStrength / 100,
+      pdfCropMode: _cropMode,
+      // pdfCropRect 由原生端計算、透過 ReaderScreen.onCropRectComputed
+      // 另一條路徑寫入，本分頁不直接控制，但必須原樣帶回（讀取目前的
+      // widget.prefs，不是本地狀態），否則使用者調整本分頁任何一個控制項
+      // 都會把已算好的裁切矩形靜默清空成 null。
+      pdfCropRect: widget.prefs.pdfCropRect,
     ));
   }
 
@@ -90,7 +99,7 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
                 children: [
                   _buildDisplayTab(context),
                   _buildFiltersTab(),
-                  _buildPlaceholderTab('裁切功能即將推出'),
+                  _buildCropTab(context),
                 ],
               ),
             ),
@@ -182,6 +191,50 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
     );
   }
 
+  Widget _buildCropTab(BuildContext context) {
+    const options = [
+      (PdfCropMode.none, 'none', Icons.crop_free, '不裁切'),
+      (PdfCropMode.autoDetect, 'auto', Icons.auto_fix_high, '智慧自動'),
+    ];
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('裁切模式'),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 4,
+            children: [
+              ...options.map((option) {
+                final (mode, keySuffix, icon, tooltip) = option;
+                final selected = _cropMode == mode;
+                return IconButton(
+                  key: Key('pdf_settings_crop_mode_$keySuffix'),
+                  icon: Icon(icon),
+                  tooltip: tooltip,
+                  color:
+                      selected ? Theme.of(context).colorScheme.primary : null,
+                  onPressed: () => setState(() {
+                    _cropMode = mode;
+                    _notifyChanged();
+                  }),
+                );
+              }),
+              // 手動選區：Issue 6 才實作，本 issue 顯示為停用狀態預留位置。
+              const IconButton(
+                key: Key('pdf_settings_crop_mode_manual'),
+                icon: Icon(Icons.crop),
+                tooltip: '手動選區（即將推出）',
+                onPressed: null,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   /// 比照 `ReaderSettingsSheet._buildSliderRow` 的既有樣式（滑桿＋±微調
   /// 按鈕），本 widget 依 design.md 決策 #10 不與 `ReaderSettingsSheet`
   /// 共用元件，故獨立實作一份同樣式的 helper。
@@ -236,9 +289,5 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
         ],
       ),
     );
-  }
-
-  Widget _buildPlaceholderTab(String message) {
-    return Center(child: Text(message));
   }
 }
