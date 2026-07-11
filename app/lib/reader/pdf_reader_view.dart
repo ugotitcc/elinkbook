@@ -32,6 +32,8 @@ class PdfReaderView extends StatefulWidget {
   final PdfCropMode? cropMode;
   final PdfCropRect? cropRect;
   final ValueChanged<PdfCropRect>? onCropRectComputed;
+  final bool cropEditModeActive;
+  final ValueChanged<PdfCropRect>? onCropRectSelected;
 
   const PdfReaderView({
     super.key,
@@ -48,6 +50,8 @@ class PdfReaderView extends StatefulWidget {
     this.cropMode,
     this.cropRect,
     this.onCropRectComputed,
+    this.cropEditModeActive = false,
+    this.onCropRectSelected,
   });
 
   @override
@@ -76,6 +80,11 @@ class _PdfReaderViewState extends State<PdfReaderView> {
         widget.boldStrength != oldWidget.boldStrength ||
         widget.cropMode != oldWidget.cropMode) {
       _channel?.invokeMethod('setPdfPreferences', _buildPreferencesMap());
+    }
+    if (widget.cropEditModeActive != oldWidget.cropEditModeActive) {
+      _channel?.invokeMethod(
+        widget.cropEditModeActive ? 'enterCropEditMode' : 'exitCropEditMode',
+      );
     }
   }
 
@@ -114,6 +123,15 @@ class _PdfReaderViewState extends State<PdfReaderView> {
       case 'onCropRectComputed':
         final args = call.arguments as Map<Object?, Object?>;
         widget.onCropRectComputed?.call(PdfCropRect(
+          left: (args['left'] as num).toDouble(),
+          top: (args['top'] as num).toDouble(),
+          right: (args['right'] as num).toDouble(),
+          bottom: (args['bottom'] as num).toDouble(),
+        ));
+        break;
+      case 'onCropRectSelected':
+        final args = call.arguments as Map<Object?, Object?>;
+        widget.onCropRectSelected?.call(PdfCropRect(
           left: (args['left'] as num).toDouble(),
           top: (args['top'] as num).toDouble(),
           right: (args['right'] as num).toDouble(),

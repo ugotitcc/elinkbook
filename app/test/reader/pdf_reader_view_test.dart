@@ -408,6 +408,182 @@ void main() {
     expect(received,
         const PdfCropRect(left: 0.02, top: 0.03, right: 0.98, bottom: 0.97));
   });
+
+  testWidgets('cropEditModeActive 由 false 變 true 時，didUpdateWidget 呼叫 enterCropEditMode',
+      (tester) async {
+    final binaryMessenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    final instanceCalls = <MethodCall>[];
+
+    binaryMessenger.setMockMethodCallHandler(SystemChannels.platform_views,
+        (call) async {
+      if (call.method == 'create') {
+        final id = (call.arguments as Map<Object?, Object?>)['id'] as int;
+        binaryMessenger.setMockMethodCallHandler(
+          MethodChannel('cc.ugotit.elinkbook/pdf_reader_view_$id'),
+          (call) async {
+            instanceCalls.add(call);
+            return null;
+          },
+        );
+        return 0;
+      }
+      return null;
+    });
+
+    await tester.pumpWidget(const MaterialApp(
+      home: PdfReaderView(
+        filePath: '/tmp/sample.pdf',
+        onPageRendered: _noop,
+        onError: _noopError,
+      ),
+    ));
+    await tester.pumpAndSettle();
+    instanceCalls.clear();
+
+    await tester.pumpWidget(const MaterialApp(
+      home: PdfReaderView(
+        filePath: '/tmp/sample.pdf',
+        onPageRendered: _noop,
+        onError: _noopError,
+        cropEditModeActive: true, // 變動
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(instanceCalls, hasLength(1));
+    expect(instanceCalls.single.method, 'enterCropEditMode');
+    expect(instanceCalls.single.arguments, isNull);
+  });
+
+  testWidgets('cropEditModeActive 由 true 變 false 時，didUpdateWidget 呼叫 exitCropEditMode',
+      (tester) async {
+    final binaryMessenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    final instanceCalls = <MethodCall>[];
+
+    binaryMessenger.setMockMethodCallHandler(SystemChannels.platform_views,
+        (call) async {
+      if (call.method == 'create') {
+        final id = (call.arguments as Map<Object?, Object?>)['id'] as int;
+        binaryMessenger.setMockMethodCallHandler(
+          MethodChannel('cc.ugotit.elinkbook/pdf_reader_view_$id'),
+          (call) async {
+            instanceCalls.add(call);
+            return null;
+          },
+        );
+        return 0;
+      }
+      return null;
+    });
+
+    await tester.pumpWidget(const MaterialApp(
+      home: PdfReaderView(
+        filePath: '/tmp/sample.pdf',
+        onPageRendered: _noop,
+        onError: _noopError,
+        cropEditModeActive: true,
+      ),
+    ));
+    await tester.pumpAndSettle();
+    instanceCalls.clear();
+
+    await tester.pumpWidget(const MaterialApp(
+      home: PdfReaderView(
+        filePath: '/tmp/sample.pdf',
+        onPageRendered: _noop,
+        onError: _noopError,
+        cropEditModeActive: false, // 變動
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(instanceCalls, hasLength(1));
+    expect(instanceCalls.single.method, 'exitCropEditMode');
+    expect(instanceCalls.single.arguments, isNull);
+  });
+
+  testWidgets('cropEditModeActive 未變動時，不觸發 enterCropEditMode／exitCropEditMode',
+      (tester) async {
+    final binaryMessenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    final instanceCalls = <MethodCall>[];
+
+    binaryMessenger.setMockMethodCallHandler(SystemChannels.platform_views,
+        (call) async {
+      if (call.method == 'create') {
+        final id = (call.arguments as Map<Object?, Object?>)['id'] as int;
+        binaryMessenger.setMockMethodCallHandler(
+          MethodChannel('cc.ugotit.elinkbook/pdf_reader_view_$id'),
+          (call) async {
+            instanceCalls.add(call);
+            return null;
+          },
+        );
+        return 0;
+      }
+      return null;
+    });
+
+    final widget = const PdfReaderView(
+      filePath: '/tmp/sample.pdf',
+      onPageRendered: _noop,
+      onError: _noopError,
+      cropEditModeActive: false,
+    );
+    await tester.pumpWidget(MaterialApp(home: widget));
+    await tester.pumpAndSettle();
+    instanceCalls.clear();
+
+    await tester.pumpWidget(MaterialApp(home: widget));
+    await tester.pumpAndSettle();
+
+    expect(instanceCalls, isEmpty);
+  });
+
+  testWidgets('收到原生端 onCropRectSelected 時，正確觸發回呼', (tester) async {
+    PdfCropRect? received;
+    final binaryMessenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    MethodChannel? instanceChannel;
+
+    binaryMessenger.setMockMethodCallHandler(SystemChannels.platform_views,
+        (call) async {
+      if (call.method == 'create') {
+        final id = (call.arguments as Map<Object?, Object?>)['id'] as int;
+        instanceChannel =
+            MethodChannel('cc.ugotit.elinkbook/pdf_reader_view_$id');
+        binaryMessenger.setMockMethodCallHandler(
+            instanceChannel!, (call) async => null);
+        return 0;
+      }
+      return null;
+    });
+
+    await tester.pumpWidget(MaterialApp(
+      home: PdfReaderView(
+        filePath: '/tmp/sample.pdf',
+        onPageRendered: _noop,
+        onError: _noopError,
+        onCropRectSelected: (rect) => received = rect,
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    final codec = instanceChannel!.codec;
+    final data = codec.encodeMethodCall(const MethodCall('onCropRectSelected', {
+      'left': 0.1,
+      'top': 0.15,
+      'right': 0.9,
+      'bottom': 0.85,
+    }));
+    await binaryMessenger.handlePlatformMessage(
+        instanceChannel!.name, data, (_) {});
+
+    expect(received,
+        const PdfCropRect(left: 0.1, top: 0.15, right: 0.9, bottom: 0.85));
+  });
 }
 
 void _noop() {}
