@@ -212,3 +212,23 @@
 - NFR-1 基礎效能驗證產出明確結論（達標／未達標，若未達標需記錄具體數字並評估是否阻塞收尾）
 - `flutter analyze` 乾淨、`flutter test` 全數通過
 - 若有發現需要後續處理的落差，已建立對應的後續 issue 追蹤，不阻塞本 epic 合併
+
+---
+
+## Issue 8：技術債／架構深化——PdfReaderView.kt 影像處理邏輯抽離為 PdfImageProcessor（待開始）
+
+**Status:** ⚪ 待開始。2026-07-12 依架構審查（`tmp/epic-16/reviews/architecture-review-1783800246.html` Candidate #2，推薦強度 Worth Exploring）新增，於 Epic 16 正式開發前先行清理此技術債（見 `docs/epics.md`）。完整計劃見 `plans/plan-issue-8.md`。
+
+**依賴：** 無（Issue 1-7 完成後的獨立技術債重構，不新增功能，不影響既有 method channel 契約）
+
+**描述：**
+Issue 1-7 完成後 `PdfReaderView.kt` 已達 646 行，除了 PlatformView 生命週期與 Method Channel 通訊，還硬編碼了加粗（型態學膨脹）像素運算、對比度/亮度 `ColorMatrix` 計算、智慧自動裁切白邊掃描（`detectCropRect`）三塊像素級影像處理邏輯，與 View 樹強耦合、無法做 JVM 單元測試（只能靠真機 `integration_test` 慢速驗證）。本 issue 將這三塊邏輯抽成獨立 pure-Kotlin 模組 `PdfImageProcessor`（`app/android/app/src/main/kotlin/cc/ugotit/elinkbook/PdfImageProcessor.kt`），核心像素運算改寫成 `IntArray`-based 純函式，可在純 JVM 環境（`app/android/app/src/test`）直接單元測試，不需要真機/模擬器；`PdfReaderView.kt`／`CropOverlayView.kt` 改為呼叫該模組，`CropRect` 資料類別隨之搬移。這是抽離重構，不是新功能，所有既有視覺效果與行為必須維持一致。
+
+**單元測試要求：**
+- 新增 JVM 單元測試（`app/android/app/src/test/kotlin/cc/ugotit/elinkbook/PdfImageProcessorTest.kt`，本專案第一批原生 Kotlin 單元測試）：型態學膨脹核心（`dilatePixels`）、智慧裁切邊界偵測核心（`detectCropRectFromPixels`）、對比度/亮度 ColorMatrix 計算（`contrastBrightnessColorMatrix`）
+- 不新增 Dart 測試（本 issue 不涉及 Dart 端）
+
+**驗收標準：**
+- 上述 JVM 單元測試皆通過（`./gradlew testDebugUnitTest`，於 `app/android` 目錄執行）
+- `flutter analyze` 乾淨
+- `integration_test`（真實裝置）：重新執行 Issue 2-6 既有涵蓋 Fit 模式／對比度／亮度／加粗／智慧裁切／手動裁切的測試，確認抽離重構後行為與抽離前完全一致，無回歸
