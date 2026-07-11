@@ -77,11 +77,13 @@ flutter:
     - test/fixtures/sample_long_vertical.epub
     - test/fixtures/sample_forced_linebreak_vertical.epub
     - test/fixtures/sample_fxl_svg_cover.epub
-    - assets/fonts/SourceHanSansTC-VF.ttf
-    - assets/fonts/SourceHanSerifTC-VF.ttf
     - assets/fonts/GuanKiapTsingKhai.ttf
-    - assets/fonts/TaiwanPearl-Regular.ttf
-    - assets/fonts/GenRyuMinTW-Regular.ttf
+    # 開發期暫停用（建置速度優化，其餘 4 款字型檔約 134MB）：檔案暫存於
+    # tmp/fonts/（見 tmp/fonts/README.md 的恢復步驟），正式建置前需恢復。
+    # - assets/fonts/SourceHanSansTC-VF.ttf
+    # - assets/fonts/SourceHanSerifTC-VF.ttf
+    # - assets/fonts/TaiwanPearl-Regular.ttf
+    # - assets/fonts/GenRyuMinTW-Regular.ttf
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
