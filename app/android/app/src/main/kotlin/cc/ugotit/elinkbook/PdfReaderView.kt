@@ -53,6 +53,20 @@ class PdfReaderView(
     // BookReaderPrefs.pdfBoldStrength 為 null 時的語意一致。
     private var boldStrength: Float = 0f
 
+    // Dart PdfCropMode.name 對應字串（'none'／'autoDetect'／'manual'），
+    // 預設 "none"，與 BookReaderPrefs.pdfCropMode 為 null 時的語意一致。
+    private var cropMode: String = "none"
+
+    // 目前生效的裁切矩形（相對座標 0.0-1.0）。autoDetect 模式下由
+    // detectCropRect() 首次計算後快取於此（決策 #3，全書統一比例、不逐頁
+    // 重算）；也可能由 Dart 端透過 initialPreferences/setPdfPreferences
+    // 直接帶入已持久化的值（避免重開書又重新計算一次）。
+    private var cropRect: CropRect? = null
+
+    /** 裁切矩形（相對座標 0.0-1.0），Kotlin 內部用資料類別，對應 Dart
+     * PdfCropRect 的欄位。*/
+    private data class CropRect(val left: Float, val top: Float, val right: Float, val bottom: Float)
+
     companion object {
         // 加粗（型態學膨脹）運算的效能策略常數，見 spec.md/design.md「已知
         // 風險」與本 issue 計劃的「效能策略」段落：對縮小版工作副本做膨脹，
@@ -111,12 +125,30 @@ class PdfReaderView(
             boldStrength = newValue
             changed
         } ?: false
-        if (boldChanged) {
+        val cropChanged = (preferences["cropMode"] as? String)?.let {
+            val changed = it != cropMode
+            cropMode = it
+            changed
+        } ?: false
+        parseCropRect(preferences["cropRect"])?.let { cropRect = it }
+        if (boldChanged || cropChanged) {
             renderCurrentPage()
         } else {
             applyFitMode()
             applyFilters()
         }
+    }
+
+    /** 從 method channel map 解析裁切矩形，格式不符時回傳 null（靜默忽略，
+     * 比照其餘欄位的 `as? Number` 容錯風格）。*/
+    @Suppress("UNCHECKED_CAST")
+    private fun parseCropRect(raw: Any?): CropRect? {
+        val map = raw as? Map<String, Any?> ?: return null
+        val left = (map["left"] as? Number)?.toFloat() ?: return null
+        val top = (map["top"] as? Number)?.toFloat() ?: return null
+        val right = (map["right"] as? Number)?.toFloat() ?: return null
+        val bottom = (map["bottom"] as? Number)?.toFloat() ?: return null
+        return CropRect(left, top, right, bottom)
     }
 
     private fun openBook(path: String?, initialPreferences: Map<String, Any?>?) {
@@ -128,6 +160,8 @@ class PdfReaderView(
         (initialPreferences?.get("contrast") as? Number)?.let { contrast = it.toFloat() }
         (initialPreferences?.get("brightness") as? Number)?.let { brightness = it.toFloat() }
         (initialPreferences?.get("boldStrength") as? Number)?.let { boldStrength = it.toFloat() }
+        (initialPreferences?.get("cropMode") as? String)?.let { cropMode = it }
+        parseCropRect(initialPreferences?.get("cropRect"))?.let { cropRect = it }
         var pfd: ParcelFileDescriptor? = null
         try {
             pfd = openParcelFileDescriptor(path)
@@ -155,12 +189,50 @@ class PdfReaderView(
         val renderer = renderer ?: return
         val page = renderer.openPage(currentPageIndex)
 
-        // 取得螢幕密度（density）來計算高解析度的 Bitmap，至少為 2.0 倍以保證清晰度，最高限制為 3.0 倍以避免 OutOfMemory
+        // 智慧自動裁切：尚無快取矩形時，先用一次全頁、無縮放的渲染取樣
+        // 偵測邊界，計算結果快取於 cropRect 並回傳給 Dart 端持久化（決策
+        // #3，全書統一比例、不逐頁重算）。
+        if (cropMode == "autoDetect" && cropRect == null) {
+            val detectBitmap =
+                Bitmap.createBitmap(page.width, page.height, Bitmap.Config.ARGB_8888)
+            detectBitmap.eraseColor(android.graphics.Color.WHITE)
+            page.render(detectBitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+            val detected = detectCropRect(detectBitmap)
+            detectBitmap.recycle()
+            cropRect = detected
+            channel.invokeMethod(
+                "onCropRectComputed",
+                mapOf(
+                    "left" to detected.left.toDouble(),
+                    "top" to detected.top.toDouble(),
+                    "right" to detected.right.toDouble(),
+                    "bottom" to detected.bottom.toDouble(),
+                ),
+            )
+        }
+
         val density = context.resources.displayMetrics.density
         val scale = density.coerceIn(2.0f, 3.0f)
 
-        val width = (page.width * scale).toInt()
-        val height = (page.height * scale).toInt()
+        val effectiveCrop = if (cropMode != "none") cropRect else null
+        val renderLeft: Float
+        val renderTop: Float
+        val renderWidth: Float
+        val renderHeight: Float
+        if (effectiveCrop != null) {
+            renderLeft = effectiveCrop.left * page.width
+            renderTop = effectiveCrop.top * page.height
+            renderWidth = (effectiveCrop.right - effectiveCrop.left) * page.width
+            renderHeight = (effectiveCrop.bottom - effectiveCrop.top) * page.height
+        } else {
+            renderLeft = 0f
+            renderTop = 0f
+            renderWidth = page.width.toFloat()
+            renderHeight = page.height.toFloat()
+        }
+
+        val width = (renderWidth * scale).toInt().coerceAtLeast(1)
+        val height = (renderHeight * scale).toInt().coerceAtLeast(1)
 
         try {
             val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
@@ -174,6 +246,12 @@ class PdfReaderView(
             // 對「背景」區域也生效（見 task-4-diagnose-report.md 根因分析）。
             bitmap.eraseColor(android.graphics.Color.WHITE)
             val matrix = android.graphics.Matrix().apply {
+                // 先把裁切區域的左上角平移到原點，再統一縮放——順序不可顛倒
+                // （Android Matrix 的 post* 方法依呼叫順序疊加：先
+                // postTranslate 再 postScale，等同「先平移、再縮放」）。
+                // effectiveCrop 為 null 時 renderLeft/renderTop 皆為 0，
+                // 退化為既有（無裁切）行為，不影響 Issue 2-4 既有邏輯。
+                postTranslate(-renderLeft, -renderTop)
                 postScale(scale, scale)
             }
             page.render(bitmap, null, matrix, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
@@ -195,6 +273,57 @@ class PdfReaderView(
         }
 
         page.close()
+    }
+
+    /**
+     * 智慧自動裁切邊界偵測（見 plans/plan-issue-5.md Global Constraints
+     * 「邊界偵測演算法」）：由四個邊緣向內掃描，找第一個「非全白」的
+     * 列/行視為內容邊界，加一點邊距避免裁得太緊。單頁取樣，每 4 個像素
+     * 跳著檢查一次以加速掃描。
+     */
+    private fun detectCropRect(bitmap: Bitmap): CropRect {
+        val width = bitmap.width
+        val height = bitmap.height
+        val whiteThreshold = 245
+        val margin = 0.01f
+        val step = 4
+
+        fun isRowContent(y: Int): Boolean {
+            var x = 0
+            while (x < width) {
+                val p = bitmap.getPixel(x, y)
+                val minChannel = minOf((p shr 16) and 0xFF, (p shr 8) and 0xFF, p and 0xFF)
+                if (minChannel < whiteThreshold) return true
+                x += step
+            }
+            return false
+        }
+
+        fun isColContent(x: Int): Boolean {
+            var y = 0
+            while (y < height) {
+                val p = bitmap.getPixel(x, y)
+                val minChannel = minOf((p shr 16) and 0xFF, (p shr 8) and 0xFF, p and 0xFF)
+                if (minChannel < whiteThreshold) return true
+                y += step
+            }
+            return false
+        }
+
+        var top = 0
+        while (top < height - 1 && !isRowContent(top)) top++
+        var bottom = height - 1
+        while (bottom > top && !isRowContent(bottom)) bottom--
+        var left = 0
+        while (left < width - 1 && !isColContent(left)) left++
+        var right = width - 1
+        while (right > left && !isColContent(right)) right--
+
+        val relLeft = (left.toFloat() / width - margin).coerceIn(0f, 1f)
+        val relTop = (top.toFloat() / height - margin).coerceIn(0f, 1f)
+        val relRight = (right.toFloat() / width + margin).coerceIn(0f, 1f)
+        val relBottom = (bottom.toFloat() / height + margin).coerceIn(0f, 1f)
+        return CropRect(relLeft, relTop, relRight, relBottom)
     }
 
     /**

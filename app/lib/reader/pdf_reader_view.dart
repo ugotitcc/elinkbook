@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'pdf_crop_mode.dart';
+import 'pdf_crop_rect.dart';
 import 'pdf_fit_mode.dart';
 
 /// 包裝原生 Android PdfReaderView 的 Flutter widget，透過 AndroidView
@@ -27,6 +29,9 @@ class PdfReaderView extends StatefulWidget {
   final double? contrast;
   final double? brightness;
   final double? boldStrength;
+  final PdfCropMode? cropMode;
+  final PdfCropRect? cropRect;
+  final ValueChanged<PdfCropRect>? onCropRectComputed;
 
   const PdfReaderView({
     super.key,
@@ -40,6 +45,9 @@ class PdfReaderView extends StatefulWidget {
     this.contrast,
     this.brightness,
     this.boldStrength,
+    this.cropMode,
+    this.cropRect,
+    this.onCropRectComputed,
   });
 
   @override
@@ -65,7 +73,8 @@ class _PdfReaderViewState extends State<PdfReaderView> {
     if (widget.fitMode != oldWidget.fitMode ||
         widget.contrast != oldWidget.contrast ||
         widget.brightness != oldWidget.brightness ||
-        widget.boldStrength != oldWidget.boldStrength) {
+        widget.boldStrength != oldWidget.boldStrength ||
+        widget.cropMode != oldWidget.cropMode) {
       _channel?.invokeMethod('setPdfPreferences', _buildPreferencesMap());
     }
   }
@@ -78,6 +87,15 @@ class _PdfReaderViewState extends State<PdfReaderView> {
     if (widget.contrast != null) map['contrast'] = widget.contrast;
     if (widget.brightness != null) map['brightness'] = widget.brightness;
     if (widget.boldStrength != null) map['boldStrength'] = widget.boldStrength;
+    if (widget.cropMode != null) map['cropMode'] = widget.cropMode!.name;
+    if (widget.cropRect != null) {
+      map['cropRect'] = {
+        'left': widget.cropRect!.left,
+        'top': widget.cropRect!.top,
+        'right': widget.cropRect!.right,
+        'bottom': widget.cropRect!.bottom,
+      };
+    }
     return map;
   }
 
@@ -92,6 +110,15 @@ class _PdfReaderViewState extends State<PdfReaderView> {
       case 'onPageChanged':
         final pageIndex = call.arguments as int;
         widget.onPageChanged?.call(pageIndex);
+        break;
+      case 'onCropRectComputed':
+        final args = call.arguments as Map<Object?, Object?>;
+        widget.onCropRectComputed?.call(PdfCropRect(
+          left: (args['left'] as num).toDouble(),
+          top: (args['top'] as num).toDouble(),
+          right: (args['right'] as num).toDouble(),
+          bottom: (args['bottom'] as num).toDouble(),
+        ));
         break;
     }
   }

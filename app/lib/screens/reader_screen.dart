@@ -7,6 +7,7 @@ import '../reader/book_reader_prefs_repository.dart';
 import '../reader/epub_reader_view.dart';
 import '../reader/global_reader_defaults.dart';
 import '../reader/page_turn_mode.dart';
+import '../reader/pdf_crop_rect.dart';
 import '../reader/pdf_fit_mode.dart';
 import '../reader/pdf_reader_view.dart';
 import '../reader/screen_orientation_setting.dart';
@@ -163,6 +164,17 @@ class _ReaderScreenState extends State<ReaderScreen> {
     setState(() => _prefs = prefs);
     widget.prefsRepository.save(widget.bookId, prefs);
     _applyScreenOrientation();
+  }
+
+  /// 智慧自動裁切首次計算出矩形時觸發（原生端 onCropRectComputed），只
+  /// 更新 pdfCropRect 這一個欄位，其餘欄位透過 copyWith 保留原值——這與
+  /// _handlePrefsChanged（整列覆寫語意）刻意不同，因為這裡的呼叫端
+  /// （PdfReaderView 原生回呼）本來就只知道新計算出的矩形，不該也不會
+  /// 附帶其餘欄位的完整狀態。
+  void _handleCropRectComputed(PdfCropRect rect) {
+    final updated = _prefs.copyWith(pdfCropRect: rect);
+    setState(() => _prefs = updated);
+    widget.prefsRepository.save(widget.bookId, updated);
   }
 
   void _openLayoutSettings() {
@@ -345,6 +357,9 @@ class _ReaderScreenState extends State<ReaderScreen> {
           contrast: _prefs.pdfContrast,
           brightness: _prefs.pdfBrightness,
           boldStrength: _prefs.pdfBoldStrength,
+          cropMode: _prefs.pdfCropMode,
+          cropRect: _prefs.pdfCropRect,
+          onCropRectComputed: _handleCropRectComputed,
         );
       case BookFormat.unknown:
         return const SizedBox.shrink();
