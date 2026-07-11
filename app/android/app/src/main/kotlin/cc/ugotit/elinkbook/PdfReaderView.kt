@@ -388,6 +388,15 @@ class PdfReaderView(
             // 只透過 channel 通知 Dart 端，不在此處自行移除 overlay——
             // 移除動作統一等待 Dart 送回 exitCropEditMode 才執行（見
             // plan-issue-6.md Global Constraints）。
+            //
+            // 修復真機驗證發現的重新調整裁切框 bug：僅通知 Dart 端不足夠，
+            // manual 模式下重新選取矩形時 cropMode 不會變動，didUpdateWidget
+            // 不會送出 setPdfPreferences，原生端 cropRect 欄位若不在此處直接更新，
+            // 會停留在舊矩形直到下次 setPdfPreferences/openBook 才更新（即重開書
+            // 前，畫面不會反映新選取結果）。在此直接更新原生端狀態，讓
+            // exitCropEditMode() 稍後呼叫的 renderCurrentPage() 使用正確矩形。
+            cropRect = result
+            cropMode = "manual"
             channel.invokeMethod(
                 "onCropRectSelected",
                 mapOf(

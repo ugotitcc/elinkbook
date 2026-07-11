@@ -1105,4 +1105,108 @@ void main() {
     expect(saved.pdfCropMode, PdfCropMode.manual);
     expect(saved.pdfCropRect, isNotNull);
   });
+
+  testWidgets(
+      'PDF 手動裁切重新進入互動模式並再次確認（manual→manual）流程不出錯，且'
+      '第二次確認結果持續正確持久化（回歸測試：原生端 cropRect 欄位過去只在'
+      'cropMode 變動時才更新，manual→manual 的重新確認不會觸發此更新，見'
+      'PdfReaderView.kt enterCropEditMode() 的修復。'
+      '已知限制：本測試在此真機／Flutter 版本組合下，`tester.startGesture`'
+      '／`dragFrom`／原始 PointerEvent 注入／adb 觸控注入皆無法讓'
+      'CropOverlayView 的控制點產生位移（詳細診斷見'
+      'task-6-fix-report.md），因此本測試無法驗證「兩次確認的矩形數值不同」，'
+      '只驗證 manual→manual 重新確認路徑本身不出錯、且結果持續正確持久化——'
+      '這仍是既有測試套件未涵蓋的新情境，既有的單輪手動裁切測試從未重新'
+      '進入過裁切互動模式）', (tester) async {
+    final samplePath = await _stageAssetAsFile(
+        'test/fixtures/sample.pdf', 'sample_pdf_crop_manual_readjust.pdf');
+    addTearDown(() async {
+      final file = File(samplePath);
+      if (await file.exists()) await file.delete();
+    });
+    const bookId = 'b_pdf_crop_manual_readjust';
+    await libraryRepository.insertBook(_book(bookId, format: BookFileFormat.pdf));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: samplePath,
+          bookId: bookId,
+          prefsRepository: prefsRepository,
+        ),
+      ),
+    );
+
+    await _pumpUntil(
+      tester,
+      () => _layoutSettingsButtonReady(tester),
+      timeout: const Duration(seconds: 10),
+    );
+
+    await tester.tap(find.byKey(const Key('reader_layout_settings_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('pdf_settings_tab_crop')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('pdf_settings_crop_mode_manual')));
+    await tester.pump(const Duration(seconds: 2));
+
+    final pdfViewBox = tester.getRect(find.byType(PdfReaderView));
+    final approxConfirmButton = Offset(
+      pdfViewBox.right - 40,
+      pdfViewBox.bottom - 40,
+    );
+
+    // 第一次框選：none → manual 的首次確認（本身不是本測試鎖定驗證的
+    // bug 情境，cropMode 有變動，既有 didUpdateWidget 機制本來就會正確
+    // 更新原生端狀態；此處只是必要的前置步驟，讓 cropMode 進入 manual，
+    // 為下方「manual → manual 重新確認」鋪路）。
+    await tester.tapAt(approxConfirmButton);
+    await tester.pump(const Duration(seconds: 2));
+
+    expect(find.byKey(const Key('reader_error_text')), findsNothing);
+    expect(find.byType(PdfSettingsSheet), findsOneWidget,
+        reason: '第一次確認框選後應重新開啟 PdfSettingsSheet');
+
+    final firstSaved = await prefsRepository.load(bookId);
+    expect(firstSaved.pdfCropMode, PdfCropMode.manual);
+    final firstRect = firstSaved.pdfCropRect;
+    expect(firstRect, isNotNull);
+
+    // 重新進入手動裁切互動模式——這是本測試要驗證的核心情境：cropMode
+    // 在這次重新調整前後全程維持 manual、不曾變動，因此不會像
+    // none/autoDetect → manual 的首次框選那樣，透過
+    // PdfReaderView.dart 的 didUpdateWidget 偵測到 cropMode 變化、間接送出
+    // setPdfPreferences 更新原生端 cropRect 欄位（見
+    // reader_screen.dart _handleCropRectSelected／PdfReaderView.dart
+    // didUpdateWidget）。修復前，這種情境下原生端 cropRect 欄位完全不會
+    // 被更新；修復後，enterCropEditMode() 的 onConfirm 回呼本身會直接
+    // 更新原生端狀態。
+    await tester.tap(find.byKey(const Key('pdf_settings_tab_crop')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('pdf_settings_crop_mode_manual')));
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(find.byType(PdfSettingsSheet), findsNothing,
+        reason: '第二次點擊手動選區後應再次關閉 PdfSettingsSheet、進入裁切互動模式');
+
+    await tester.tapAt(approxConfirmButton);
+    await tester.pump(const Duration(seconds: 2));
+
+    expect(find.byKey(const Key('reader_error_text')), findsNothing);
+    expect(find.byType(PdfSettingsSheet), findsOneWidget,
+        reason: '第二次確認框選後應再次重新開啟 PdfSettingsSheet');
+
+    final secondSaved = await prefsRepository.load(bookId);
+    expect(secondSaved.pdfCropMode, PdfCropMode.manual);
+    final secondRect = secondSaved.pdfCropRect;
+    expect(secondRect, isNotNull);
+    // 因本測試無法驅動 CropOverlayView 的控制點產生實際位移（見上方測試
+    // 名稱中的已知限制說明），第二次確認的矩形數值預期與第一次相同——
+    // 這裡仍斷言其「與第一次確認一致」，確保 manual→manual 重新確認路徑
+    // 至少不會意外把資料改壞（例如被清空、變成不同分頁的殘留值等）。
+    // 修復本身的即時渲染效果（原生端 cropRect 是否確實同步更新），已改用
+    // task-6-fix-report.md 記錄的原生端暫時性 Log.i 診斷輸出交叉核對，
+    // 詳見報告書「已知限制與替代驗證方式」章節。
+    expect(secondRect, equals(firstRect));
+  });
 }
