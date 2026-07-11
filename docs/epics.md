@@ -19,6 +19,7 @@
 | `epic-12-social` 社群分享 | ⚪ 未開始 (Backlog) | N/A | FR-21 | P3，最低優先 |
 | `epic-13-ios` iOS 移植 | ⚪ 未開始 (Backlog) | N/A | 無直接對應 FR | 待 Android 版本（epic-0/2/3/4/5）穩定後啟動 |
 | `epic-15-storage-permission` 傳統儲存權限機制 | ⚪ 未開始 (Backlog) | N/A | 無直接對應 FR，補強 FR-01/FR-33/34 匯入流程 | 目前檔案/資料夾匯入完全依賴 SAF（Storage Access Framework）逐次選取授權，`AndroidManifest.xml` 未宣告任何儲存權限，故「設定 → 應用程式 → elinkBook」看不到可切換的權限項目；部分裝置在 App 重新安裝、或系統選擇器書籤被清除後，選擇器會落回無法選取的儲存根目錄（Android 11+ 限制），使用者需重新在選擇器內手動導覽至子資料夾才能恢復。2026-07-10 真機測試時發現並記錄，待評估是否新增傳統執行期儲存權限（例如 `MANAGE_EXTERNAL_STORAGE` 或 `READ_MEDIA_*`）作為輔助/退路方案，改善此體驗 |
+| `epic-4-pdf-enhance`（技術債）加粗濾鏡裝置矩陣複驗 | ⚪ 未開始 (Backlog) | N/A | FR-11 | Issue 4 驗收標準要求 API 24-30／API 31+ 裝置矩陣複驗加粗（型態學膨脹）效能與穩定性，全程開發環境僅有 API 35 裝置可用，Issue 7 收尾時正式記錄為已知殘留風險。待未來取得額外測試裝置（尤其 API 24-30 範圍，`minSdk=24`）時執行 |
 
 **狀態燈號定義**：
 - ⚪ **未開始 (Backlog)**：已被規劃但尚未啟動。無實際目錄。
