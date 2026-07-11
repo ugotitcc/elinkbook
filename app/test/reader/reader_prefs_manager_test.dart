@@ -14,16 +14,16 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/library/sqlite_library_repository.dart';
+import '../support/fake_book_reader_prefs_repository.dart';
 
 void main() {
   group('resolve()（純同步，不需要資料庫/SharedPreferences）', () {
     late ReaderPrefsManagerImpl manager;
 
-    setUp(() async {
-      sqfliteFfiInit();
-      databaseFactory = databaseFactoryFfi;
-      final repo = await SqliteLibraryRepository.open(inMemoryDatabasePath);
-      manager = ReaderPrefsManagerImpl(BookReaderPrefsRepository(repo.database));
+    setUp(() {
+      manager = ReaderPrefsManagerImpl(
+        FakeBookReaderPrefsRepository(),
+      );
     });
 
     test('全部欄位皆未覆寫時，回傳的 non-null 欄位皆為既存安全預設值', () {

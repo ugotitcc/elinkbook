@@ -371,4 +371,43 @@ void main() {
             '關閉；刻意不新增「取消並還原」語意，維持 spec.md 已鎖定的簡化'
             '狀態機決策——見本檔案 _handleRequestManualCrop 的文件註解）');
   });
+
+  testWidgets(
+      'onLayoutResolved 觸發後，EpubReaderView.writingMode 帶入自動偵測到的直排方向（C2 接線）',
+      (tester) async {
+    // 不預設任何 writingModeOverride，讓自動偵測值決定結果
+    final manager = FakeReaderPrefsManager();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b1',
+          prefsManager: manager,
+        ),
+      ),
+    );
+    // 等待 initState 的 async load 完成
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    // 比照同檔既有 PDF 測試直接呼叫公開 callback prop 的手法
+    //（onPageRendered: reader_screen_test.dart:317），
+    // EpubReaderView.onLayoutResolved 是公開的 ValueChanged<EpubLayoutInfo>?
+    // callback prop（epub_reader_view.dart:32），可在純 flutter test 中直接呼叫。
+    tester
+        .widget<EpubReaderView>(find.byType(EpubReaderView))
+        .onLayoutResolved!(
+      const EpubLayoutInfo(
+        isFixedLayout: false,
+        writingMode: WritingMode.vertical,
+      ),
+    );
+    await tester.pump();
+
+    expect(
+      tester.widget<EpubReaderView>(find.byType(EpubReaderView)).writingMode,
+      WritingMode.vertical,
+    );
+  });
 }
