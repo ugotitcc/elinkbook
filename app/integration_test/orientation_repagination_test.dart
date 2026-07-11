@@ -11,6 +11,8 @@ import 'package:elinkbook/library/sqlite_library_repository.dart';
 import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/reader/book_reader_prefs_repository.dart';
+import 'package:elinkbook/reader/reader_prefs_manager.dart';
+import 'package:elinkbook/reader/reader_prefs_manager_impl.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
 
 Future<String> _stageAssetAsFile(String assetPath, String fileName) async {
@@ -53,7 +55,7 @@ void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   late SqliteLibraryRepository libraryRepository;
-  late BookReaderPrefsRepository prefsRepository;
+  late ReaderPrefsManager prefsManager;
 
   setUpAll(() {
     sqfliteFfiInit();
@@ -63,7 +65,9 @@ void main() {
   setUp(() async {
     libraryRepository =
         await SqliteLibraryRepository.open(inMemoryDatabasePath);
-    prefsRepository = BookReaderPrefsRepository(libraryRepository.database);
+    prefsManager = ReaderPrefsManagerImpl(
+      BookReaderPrefsRepository(libraryRepository.database),
+    );
   });
 
   tearDown(() async {
@@ -87,7 +91,7 @@ void main() {
         home: ReaderScreen(
           filePath: samplePath,
           bookId: 'b_repage_1',
-          prefsRepository: prefsRepository,
+          prefsManager: prefsManager,
         ),
       ),
     );

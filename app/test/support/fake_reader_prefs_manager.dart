@@ -4,6 +4,7 @@ import 'package:elinkbook/reader/reader_prefs_manager.dart';
 import 'package:elinkbook/reader/reader_prefs_manager_impl.dart';
 import 'package:elinkbook/reader/resolved_preferences.dart';
 import 'package:elinkbook/reader/writing_mode.dart';
+import 'fake_book_reader_prefs_repository.dart';
 
 /// 供 `reader_screen_test.dart` 使用的假 [ReaderPrefsManager]：`load`／
 /// `save*` 皆為純記憶體內操作；`resolve` 直接委派給
@@ -20,7 +21,7 @@ class FakeReaderPrefsManager implements ReaderPrefsManager {
     this.globalPrefs = const GlobalReaderPrefs.initial(),
   }) : bookPrefsByBookId = bookPrefsByBookId ?? {};
 
-  final _delegate = ReaderPrefsManagerImpl(null as dynamic);
+  final _delegate = ReaderPrefsManagerImpl(FakeBookReaderPrefsRepository());
 
   @override
   Future<LoadedPrefs> load(String bookId) async {

@@ -11,6 +11,8 @@ import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/reader/book_reader_prefs.dart';
 import 'package:elinkbook/reader/book_reader_prefs_repository.dart';
+import 'package:elinkbook/reader/reader_prefs_manager.dart';
+import 'package:elinkbook/reader/reader_prefs_manager_impl.dart';
 import 'package:elinkbook/reader/pdf_crop_mode.dart';
 import 'package:elinkbook/reader/pdf_fit_mode.dart';
 import 'package:elinkbook/reader/pdf_reader_view.dart';
@@ -80,7 +82,7 @@ void main() {
   // 資料庫即可，這些既有測試情境本身不驗證版面偏好設定的持久化行為
   // （持久化驗證見既有的 Bottom Sheet 互動測試）。
   late SqliteLibraryRepository libraryRepository;
-  late BookReaderPrefsRepository prefsRepository;
+  late ReaderPrefsManager prefsManager;
 
   setUpAll(() {
     sqfliteFfiInit();
@@ -90,7 +92,9 @@ void main() {
   setUp(() async {
     libraryRepository =
         await SqliteLibraryRepository.open(inMemoryDatabasePath);
-    prefsRepository = BookReaderPrefsRepository(libraryRepository.database);
+    prefsManager = ReaderPrefsManagerImpl(
+      BookReaderPrefsRepository(libraryRepository.database),
+    );
   });
 
   tearDown(() async {
@@ -110,7 +114,7 @@ void main() {
         home: ReaderScreen(
           filePath: samplePath,
           bookId: 'b1',
-          prefsRepository: prefsRepository,
+          prefsManager: prefsManager,
         ),
       ),
     );
@@ -141,7 +145,7 @@ void main() {
         home: ReaderScreen(
           filePath: samplePath,
           bookId: 'b1',
-          prefsRepository: prefsRepository,
+          prefsManager: prefsManager,
         ),
       ),
     );
@@ -172,7 +176,7 @@ void main() {
         home: ReaderScreen(
           filePath: samplePath,
           bookId: 'b1',
-          prefsRepository: prefsRepository,
+          prefsManager: prefsManager,
         ),
       ),
     );
@@ -206,7 +210,7 @@ void main() {
         home: ReaderScreen(
           filePath: samplePath,
           bookId: 'b_settings_1',
-          prefsRepository: prefsRepository,
+          prefsManager: prefsManager,
         ),
       ),
     );
@@ -245,7 +249,7 @@ void main() {
         home: ReaderScreen(
           filePath: samplePath,
           bookId: bookId,
-          prefsRepository: prefsRepository,
+          prefsManager: prefsManager,
         ),
       ),
     );
@@ -271,7 +275,7 @@ void main() {
     await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
     await tester.pumpAndSettle();
 
-    final reloadedPrefs = await prefsRepository.load(bookId);
+    final reloadedPrefs = (await prefsManager.load(bookId)).bookPrefs;
     expect(reloadedPrefs.fontSize, 1.0625,
         reason: '初始值為 null（顯示原型預設 16），點擊一次 + 按鈕後應存成倍率 1.0625 (17/16)');
 
@@ -280,7 +284,7 @@ void main() {
         home: ReaderScreen(
           filePath: samplePath,
           bookId: bookId,
-          prefsRepository: prefsRepository,
+          prefsManager: prefsManager,
         ),
       ),
     );
@@ -311,7 +315,7 @@ void main() {
         home: ReaderScreen(
           filePath: samplePath,
           bookId: 'b_writing_mode_override',
-          prefsRepository: prefsRepository,
+          prefsManager: prefsManager,
         ),
       ),
     );
@@ -356,7 +360,7 @@ void main() {
         home: ReaderScreen(
           filePath: samplePath,
           bookId: 'b_page_turn_mode_override',
-          prefsRepository: prefsRepository,
+          prefsManager: prefsManager,
         ),
       ),
     );
@@ -412,7 +416,7 @@ void main() {
         home: ReaderScreen(
           filePath: samplePath,
           bookId: 'b_orientation_default',
-          prefsRepository: prefsRepository,
+          prefsManager: prefsManager,
         ),
       ),
     );
@@ -448,7 +452,7 @@ void main() {
 
     const bookId = 'b_orientation_lock90';
     await libraryRepository.insertBook(_book(bookId));
-    await prefsRepository.save(
+    await prefsManager.saveBookPrefs(
       bookId,
       const BookReaderPrefs(
         screenOrientationOverride: ScreenOrientationSetting.lock90,
@@ -467,7 +471,7 @@ void main() {
         home: ReaderScreen(
           filePath: samplePath,
           bookId: bookId,
-          prefsRepository: prefsRepository,
+          prefsManager: prefsManager,
         ),
       ),
     );
@@ -500,7 +504,7 @@ void main() {
 
     const bookId = 'b_orientation_dispose';
     await libraryRepository.insertBook(_book(bookId));
-    await prefsRepository.save(
+    await prefsManager.saveBookPrefs(
       bookId,
       const BookReaderPrefs(
         screenOrientationOverride: ScreenOrientationSetting.lock0,
@@ -519,7 +523,7 @@ void main() {
         home: ReaderScreen(
           filePath: samplePath,
           bookId: bookId,
-          prefsRepository: prefsRepository,
+          prefsManager: prefsManager,
         ),
       ),
     );
@@ -563,7 +567,7 @@ void main() {
         home: ReaderScreen(
           filePath: samplePath,
           bookId: bookId,
-          prefsRepository: prefsRepository,
+          prefsManager: prefsManager,
         ),
       ),
     );
@@ -596,7 +600,7 @@ void main() {
         home: ReaderScreen(
           filePath: samplePath,
           bookId: bookId,
-          prefsRepository: prefsRepository,
+          prefsManager: prefsManager,
         ),
       ),
     );
@@ -635,7 +639,7 @@ void main() {
         home: ReaderScreen(
           filePath: samplePath,
           bookId: bookId,
-          prefsRepository: prefsRepository,
+          prefsManager: prefsManager,
         ),
       ),
     );
@@ -653,7 +657,7 @@ void main() {
     // 給非同步的 BookReaderPrefsRepository.save() 足夠時間完成寫入。
     await tester.pump(const Duration(milliseconds: 500));
 
-    final saved = await prefsRepository.load(bookId);
+    final saved = (await prefsManager.load(bookId)).bookPrefs;
     expect(saved.pdfFitMode, PdfFitMode.actualSize);
 
     // 關閉重開，確認 initialPreferences 機制真正生效（不只是 UI 顯示）。
@@ -665,7 +669,7 @@ void main() {
         home: ReaderScreen(
           filePath: samplePath,
           bookId: bookId,
-          prefsRepository: prefsRepository,
+          prefsManager: prefsManager,
         ),
       ),
     );
@@ -694,7 +698,7 @@ void main() {
         home: ReaderScreen(
           filePath: samplePath,
           bookId: bookId,
-          prefsRepository: prefsRepository,
+          prefsManager: prefsManager,
         ),
       ),
     );
@@ -737,7 +741,7 @@ void main() {
         home: ReaderScreen(
           filePath: samplePath,
           bookId: bookId,
-          prefsRepository: prefsRepository,
+          prefsManager: prefsManager,
         ),
       ),
     );
@@ -756,7 +760,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
 
-    final saved = await prefsRepository.load(bookId);
+    final saved = (await prefsManager.load(bookId)).bookPrefs;
     expect(saved.pdfContrast, 5); // 預設 0，點一次 +5
 
     await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
@@ -767,7 +771,7 @@ void main() {
         home: ReaderScreen(
           filePath: samplePath,
           bookId: bookId,
-          prefsRepository: prefsRepository,
+          prefsManager: prefsManager,
         ),
       ),
     );
@@ -796,7 +800,7 @@ void main() {
         home: ReaderScreen(
           filePath: samplePath,
           bookId: bookId,
-          prefsRepository: prefsRepository,
+          prefsManager: prefsManager,
         ),
       ),
     );
@@ -837,7 +841,7 @@ void main() {
         home: ReaderScreen(
           filePath: samplePath,
           bookId: bookId,
-          prefsRepository: prefsRepository,
+          prefsManager: prefsManager,
         ),
       ),
     );
@@ -856,7 +860,7 @@ void main() {
         .tap(find.byKey(const Key('pdf_settings_bold_strength_increment')));
     await tester.pump(const Duration(seconds: 1));
 
-    final saved = await prefsRepository.load(bookId);
+    final saved = (await prefsManager.load(bookId)).bookPrefs;
     expect(saved.pdfBoldStrength, closeTo(0.1, 0.001)); // 預設 0，點一次 +10（UI）換算 +0.1
 
     await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
@@ -867,7 +871,7 @@ void main() {
         home: ReaderScreen(
           filePath: samplePath,
           bookId: bookId,
-          prefsRepository: prefsRepository,
+          prefsManager: prefsManager,
         ),
       ),
     );
@@ -896,7 +900,7 @@ void main() {
         home: ReaderScreen(
           filePath: samplePath,
           bookId: bookId,
-          prefsRepository: prefsRepository,
+          prefsManager: prefsManager,
         ),
       ),
     );
@@ -936,7 +940,7 @@ void main() {
         home: ReaderScreen(
           filePath: samplePath,
           bookId: bookId,
-          prefsRepository: prefsRepository,
+          prefsManager: prefsManager,
         ),
       ),
     );
@@ -954,7 +958,7 @@ void main() {
     await tester.tap(find.byKey(const Key('pdf_settings_crop_mode_auto')));
     await tester.pump(const Duration(seconds: 1));
 
-    final firstRect = (await prefsRepository.load(bookId)).pdfCropRect;
+    final firstRect = (await prefsManager.load(bookId)).bookPrefs.pdfCropRect;
     expect(firstRect, isNotNull, reason: '智慧自動裁切應已計算出矩形並持久化');
 
     // 關閉重開，確認 initialPreferences 帶入已持久化的 cropRect，原生端
@@ -967,7 +971,7 @@ void main() {
         home: ReaderScreen(
           filePath: samplePath,
           bookId: bookId,
-          prefsRepository: prefsRepository,
+          prefsManager: prefsManager,
         ),
       ),
     );
@@ -978,7 +982,7 @@ void main() {
     );
     await tester.pump(const Duration(seconds: 1));
 
-    final secondRect = (await prefsRepository.load(bookId)).pdfCropRect;
+    final secondRect = (await prefsManager.load(bookId)).bookPrefs.pdfCropRect;
     expect(secondRect, firstRect,
         reason: '重開書後 pdf_crop_rect 應與第一次計算的值完全一致，代表沒有重新計算');
   });
@@ -999,7 +1003,7 @@ void main() {
         home: ReaderScreen(
           filePath: samplePath,
           bookId: bookId,
-          prefsRepository: prefsRepository,
+          prefsManager: prefsManager,
         ),
       ),
     );
@@ -1049,7 +1053,7 @@ void main() {
         home: ReaderScreen(
           filePath: samplePath,
           bookId: bookId,
-          prefsRepository: prefsRepository,
+          prefsManager: prefsManager,
         ),
       ),
     );
@@ -1101,7 +1105,7 @@ void main() {
     expect(find.byType(PdfSettingsSheet), findsOneWidget,
         reason: '確認框選後應重新開啟 PdfSettingsSheet 顯示套用結果');
 
-    final saved = await prefsRepository.load(bookId);
+    final saved = (await prefsManager.load(bookId)).bookPrefs;
     expect(saved.pdfCropMode, PdfCropMode.manual);
     expect(saved.pdfCropRect, isNotNull);
   });
@@ -1132,7 +1136,7 @@ void main() {
         home: ReaderScreen(
           filePath: samplePath,
           bookId: bookId,
-          prefsRepository: prefsRepository,
+          prefsManager: prefsManager,
         ),
       ),
     );
@@ -1167,7 +1171,7 @@ void main() {
     expect(find.byType(PdfSettingsSheet), findsOneWidget,
         reason: '第一次確認框選後應重新開啟 PdfSettingsSheet');
 
-    final firstSaved = await prefsRepository.load(bookId);
+    final firstSaved = (await prefsManager.load(bookId)).bookPrefs;
     expect(firstSaved.pdfCropMode, PdfCropMode.manual);
     final firstRect = firstSaved.pdfCropRect;
     expect(firstRect, isNotNull);
@@ -1196,7 +1200,7 @@ void main() {
     expect(find.byType(PdfSettingsSheet), findsOneWidget,
         reason: '第二次確認框選後應再次重新開啟 PdfSettingsSheet');
 
-    final secondSaved = await prefsRepository.load(bookId);
+    final secondSaved = (await prefsManager.load(bookId)).bookPrefs;
     expect(secondSaved.pdfCropMode, PdfCropMode.manual);
     final secondRect = secondSaved.pdfCropRect;
     expect(secondRect, isNotNull);
@@ -1227,7 +1231,7 @@ void main() {
         home: ReaderScreen(
           filePath: samplePath,
           bookId: bookId,
-          prefsRepository: prefsRepository,
+          prefsManager: prefsManager,
         ),
       ),
     );
@@ -1277,7 +1281,7 @@ void main() {
 
     // 從資料庫直接讀出持久化結果（不透過畫面重建，排除「畫面剛好還沒
     // rebuild」這種偽陽性）。
-    final saved = await prefsRepository.load(bookId);
+    final saved = (await prefsManager.load(bookId)).bookPrefs;
     expect(saved.pdfFitMode, PdfFitMode.fitWidth);
     expect(saved.pdfContrast, greaterThan(0));
     expect(saved.pdfBrightness, greaterThan(0));
@@ -1297,7 +1301,7 @@ void main() {
         home: ReaderScreen(
           filePath: samplePath,
           bookId: bookId,
-          prefsRepository: prefsRepository,
+          prefsManager: prefsManager,
         ),
       ),
     );

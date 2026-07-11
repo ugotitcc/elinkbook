@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:elinkbook/reader/book_reader_prefs.dart';
-import 'package:elinkbook/reader/book_reader_prefs_repository.dart';
 import 'package:elinkbook/reader/epub_reader_view.dart';
 import 'package:elinkbook/reader/page_turn_mode.dart';
 import 'package:elinkbook/reader/pdf_crop_mode.dart';
@@ -12,7 +10,7 @@ import 'package:elinkbook/reader/pdf_reader_view.dart';
 import 'package:elinkbook/reader/writing_mode.dart';
 import 'package:elinkbook/screens/pdf_settings_sheet.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
-import '../support/fake_book_reader_prefs_repository.dart';
+import '../support/fake_reader_prefs_manager.dart';
 
 // 依 spec.md「測試決策」：ReaderScreen 分派到 EpubReaderView/PdfReaderView
 // 後，實際渲染內容存在於原生 PlatformView 之中，一般 flutter test（無真實
@@ -23,14 +21,10 @@ import '../support/fake_book_reader_prefs_repository.dart';
 // 翻頁模式雙層解析邏輯（後者不依賴 onLayoutResolved，可離線驗證，見
 // docs/epics/epic-3-fonts-layout/plans/plan-issue-4.md）。
 void main() {
-  late BookReaderPrefsRepository prefsRepository;
+  late FakeReaderPrefsManager prefsManager;
 
   setUp(() {
-    prefsRepository = FakeBookReaderPrefsRepository();
-    // ReaderScreen 自 Issue 4 起會呼叫 GlobalReaderDefaults（內部使用
-    // SharedPreferences.getInstance()），純 Dart widget test 環境沒有真正
-    // 的原生實作，須用官方支援的測試替身，比照 LibraryScreen 既有慣例。
-    SharedPreferences.setMockInitialValues({});
+    prefsManager = FakeReaderPrefsManager();
   });
 
   testWidgets('不支援格式顯示明確錯誤訊息', (tester) async {
@@ -39,7 +33,7 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.txt',
           bookId: 'b1',
-          prefsRepository: prefsRepository,
+          prefsManager: prefsManager,
         ),
       ),
     );
@@ -54,7 +48,7 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b1',
-          prefsRepository: prefsRepository,
+          prefsManager: prefsManager,
         ),
       ),
     );
@@ -75,7 +69,7 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.pdf',
           bookId: 'b1',
-          prefsRepository: prefsRepository,
+          prefsManager: prefsManager,
         ),
       ),
     );
@@ -92,7 +86,7 @@ void main() {
   });
 
   testWidgets('開啟該書已有的持久化版面偏好設定後，狀態正確載入', (tester) async {
-    await prefsRepository.save(
+    await prefsManager.saveBookPrefs(
       'b1',
       const BookReaderPrefs(fontSize: 1.5),
     );
@@ -102,7 +96,7 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b1',
-          prefsRepository: prefsRepository,
+          prefsManager: prefsManager,
         ),
       ),
     );
@@ -119,7 +113,7 @@ void main() {
   testWidgets(
       'writingModeOverride 已持久化時，即使尚未收到 onLayoutResolved，'
       'EpubReaderView.writingMode 仍採用覆寫值', (tester) async {
-    await prefsRepository.save(
+    await prefsManager.saveBookPrefs(
       'b1',
       const BookReaderPrefs(writingModeOverride: WritingMode.vertical),
     );
@@ -129,7 +123,7 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b1',
-          prefsRepository: prefsRepository,
+          prefsManager: prefsManager,
         ),
       ),
     );
@@ -161,7 +155,7 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b1',
-          prefsRepository: prefsRepository,
+          prefsManager: prefsManager,
         ),
       ),
     );
@@ -175,16 +169,16 @@ void main() {
   });
 
   testWidgets('全域預設值已改為 scroll 時，未覆寫的書籍採用該全域值', (tester) async {
-    SharedPreferences.setMockInitialValues({
-      'global_reader_page_turn_mode': 'scroll',
-    });
+    prefsManager.globalPrefs = prefsManager.globalPrefs.copyWith(
+      pageTurnMode: PageTurnMode.scroll,
+    );
 
     await tester.pumpWidget(
       MaterialApp(
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b1',
-          prefsRepository: prefsRepository,
+          prefsManager: prefsManager,
         ),
       ),
     );
@@ -198,7 +192,7 @@ void main() {
   });
 
   testWidgets('pageTurnModeOverride 已持久化時，優先於全域預設值', (tester) async {
-    await prefsRepository.save(
+    await prefsManager.saveBookPrefs(
       'b1',
       const BookReaderPrefs(pageTurnModeOverride: PageTurnMode.scroll),
     );
@@ -208,7 +202,7 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b1',
-          prefsRepository: prefsRepository,
+          prefsManager: prefsManager,
         ),
       ),
     );
@@ -223,7 +217,7 @@ void main() {
 
   testWidgets('開啟該書已有的持久化 pdfFitMode 後，PdfReaderView.fitMode 正確載入',
       (tester) async {
-    await prefsRepository.save(
+    await prefsManager.saveBookPrefs(
       'b1',
       const BookReaderPrefs(pdfFitMode: PdfFitMode.actualSize),
     );
@@ -233,7 +227,7 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.pdf',
           bookId: 'b1',
-          prefsRepository: prefsRepository,
+          prefsManager: prefsManager,
         ),
       ),
     );
@@ -254,7 +248,7 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.pdf',
           bookId: 'b1',
-          prefsRepository: prefsRepository,
+          prefsManager: prefsManager,
         ),
       ),
     );
@@ -274,7 +268,7 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.pdf',
           bookId: 'b1',
-          prefsRepository: prefsRepository,
+          prefsManager: prefsManager,
         ),
       ),
     );
@@ -312,7 +306,7 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.pdf',
           bookId: 'b1',
-          prefsRepository: prefsRepository,
+          prefsManager: prefsManager,
         ),
       ),
     );
@@ -337,9 +331,9 @@ void main() {
     expect(find.byType(PdfSettingsSheet), findsOneWidget,
         reason: '確認框選後應重新開啟 PdfSettingsSheet 顯示套用結果（見 spec.md）');
 
-    final saved = await prefsRepository.load('b1');
-    expect(saved.pdfCropMode, PdfCropMode.manual);
-    expect(saved.pdfCropRect, selectedRect);
+    final saved = await prefsManager.load('b1');
+    expect(saved.bookPrefs.pdfCropMode, PdfCropMode.manual);
+    expect(saved.bookPrefs.pdfCropRect, selectedRect);
   });
 
   testWidgets(
@@ -350,7 +344,7 @@ void main() {
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.pdf',
           bookId: 'b1',
-          prefsRepository: prefsRepository,
+          prefsManager: prefsManager,
         ),
       ),
     );

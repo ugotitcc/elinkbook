@@ -3,14 +3,12 @@ import 'package:flutter/services.dart';
 
 import '../reader/book_format.dart';
 import '../reader/book_reader_prefs.dart';
-import '../reader/book_reader_prefs_repository.dart';
 import '../reader/epub_reader_view.dart';
-import '../reader/global_reader_defaults.dart';
-import '../reader/page_turn_mode.dart';
 import '../reader/pdf_crop_mode.dart';
 import '../reader/pdf_crop_rect.dart';
-import '../reader/pdf_fit_mode.dart';
 import '../reader/pdf_reader_view.dart';
+import '../reader/reader_prefs_manager.dart';
+import '../reader/resolved_preferences.dart';
 import '../reader/screen_orientation_setting.dart';
 import '../reader/writing_mode.dart';
 import 'pdf_settings_sheet.dart';
@@ -18,7 +16,7 @@ import 'reader_settings_sheet.dart';
 
 /// 唯一的閱讀器顯示接縫（seam）：給定書籍檔案路徑，依偵測到的格式分派到
 /// 對應的原生渲染 widget，畫面上會渲染出該書第 1 頁。公開建構參數為
-/// [filePath]／[bookId]／[prefsRepository]（`bookId`／`prefsRepository` 由
+/// [filePath]／[bookId]／[prefsManager]（`bookId`／`prefsManager` 由
 /// epic-3-fonts-layout Issue 3 新增，供讀寫單書版面偏好設定使用，見
 /// docs/adr/0007-reader-screen-book-id-contract.md）——載入中／錯誤狀態是
 /// 內部實作細節，透過固定的 `Key('reader_loading_indicator')`／
@@ -27,9 +25,7 @@ import 'reader_settings_sheet.dart';
 /// `reader_page_turn_mode_toggle`，Epic 2 建立的過渡方案）已於
 /// epic-3-fonts-layout Issue 4 整併進「⚙️版面」按鈕開啟的
 /// `ReaderSettingsSheet`，改為三個持久化的覆寫選擇器（排版方向／翻頁模式／
-/// 螢幕方向，見 [_ReaderScreenState._resolvedWritingMode]／
-/// [_ReaderScreenState._resolvedPageTurnMode]／
-/// [_ReaderScreenState._resolvedScreenOrientation]）。
+/// 螢幕方向，見 [_ReaderScreenState._resolved]）。
 ///
 /// AppBar 沿用與 LibraryScreen/SettingsScreen 一致的寫法（純 `AppBar(title:
 /// ...)`，不自訂 leading）：Flutter 會依 `Navigator.canPop()` 自動決定是否
@@ -37,13 +33,13 @@ import 'reader_settings_sheet.dart';
 class ReaderScreen extends StatefulWidget {
   final String filePath;
   final String bookId;
-  final BookReaderPrefsRepository prefsRepository;
+  final ReaderPrefsManager prefsManager;
 
   const ReaderScreen({
     super.key,
     required this.filePath,
     required this.bookId,
-    required this.prefsRepository,
+    required this.prefsManager,
   });
 
   @override
@@ -53,22 +49,16 @@ class ReaderScreen extends StatefulWidget {
 enum _RenderState { loading, rendered, error }
 
 class _ReaderScreenState extends State<ReaderScreen> {
-  final _globalDefaults = GlobalReaderDefaults();
-
   _RenderState _state = _RenderState.loading;
   String? _errorMessage;
   // 自動偵測結果（來自 onLayoutResolved），唯讀、不持久化，每次開書重新
   // 偵測（見 docs/epics/epic-3-fonts-layout/design.md「架構異動：新增
   // book_reader_prefs 資料表」）。
   WritingMode? _autoDetectedWritingMode;
-  // 全域預設值（GlobalReaderDefaults，shared_preferences），供未覆寫的
-  // 書籍回退使用；初始值與擴充前的硬編碼預設一致（paginated／auto），
-  // 避免非同步載入完成前出現行為落差。
-  PageTurnMode _globalPageTurnMode = PageTurnMode.paginated;
-  ScreenOrientationSetting _globalScreenOrientation =
-      ScreenOrientationSetting.auto;
   bool _isFixedLayout = false;
   BookReaderPrefs _prefs = BookReaderPrefs.empty;
+  LoadedPrefs? _loaded;
+  ResolvedPreferences? _resolved;
   // 手動裁切互動模式是否進行中（決策 #14），驅動 PdfReaderView 的宣告式
   // cropEditModeActive prop；只有 PDF 分支會用到，EPUB 分支永遠是 false。
   bool _cropEditModeActive = false;
@@ -76,39 +66,18 @@ class _ReaderScreenState extends State<ReaderScreen> {
   // 拖曳滑桿）重複呼叫 SystemChrome.setPreferredOrientations。
   ScreenOrientationSetting? _lastAppliedOrientation;
 
-  /// 排版方向最終生效值：單書覆寫優先於自動偵測結果。onLayoutResolved
-  /// 尚未觸發、且沒有 writingModeOverride 時，回傳 null（EpubReaderView
-  /// 會以 Readium 預設值渲染）。
-  WritingMode? get _resolvedWritingMode =>
-      _prefs.writingModeOverride ?? _autoDetectedWritingMode;
-
-  /// 翻頁模式最終生效值：單書覆寫優先於全域預設值。
-  PageTurnMode get _resolvedPageTurnMode =>
-      _prefs.pageTurnModeOverride ?? _globalPageTurnMode;
-
-  /// 螢幕方向最終生效值：單書覆寫優先於全域預設值。
-  ScreenOrientationSetting get _resolvedScreenOrientation =>
-      _prefs.screenOrientationOverride ?? _globalScreenOrientation;
-
-  /// Fit 模式最終生效值：單書持久化，無全域預設層（design.md 決策 #8）。
-  PdfFitMode get _resolvedPdfFitMode => _prefs.pdfFitMode ?? PdfFitMode.pageFit;
-
   @override
   void initState() {
     super.initState();
-    // 單書偏好設定與兩項全域預設值彼此獨立、互不依賴，一次併發載入完成
-    // 後才更新狀態並套用螢幕方向鎖定——避免分開 await 造成畫面在載入期間
-    // 出現多段不同時機的中繼閃爍。
-    Future.wait([
-      widget.prefsRepository.load(widget.bookId),
-      _globalDefaults.loadPageTurnMode(),
-      _globalDefaults.loadScreenOrientation(),
-    ]).then((results) {
+    widget.prefsManager.load(widget.bookId).then((loaded) {
       if (!mounted) return;
       setState(() {
-        _prefs = results[0] as BookReaderPrefs;
-        _globalPageTurnMode = results[1] as PageTurnMode;
-        _globalScreenOrientation = results[2] as ScreenOrientationSetting;
+        _prefs = loaded.bookPrefs;
+        _loaded = loaded;
+        _resolved = widget.prefsManager.resolve(
+          loaded,
+          autoDetectedWritingMode: _autoDetectedWritingMode,
+        );
       });
       _applyScreenOrientation();
     });
@@ -123,21 +92,22 @@ class _ReaderScreenState extends State<ReaderScreen> {
     super.dispose();
   }
 
-  /// 依 [_resolvedScreenOrientation] 呼叫 SystemChrome 套用真實 OS 層級
+  /// 依 [_resolved] 的 screenOrientation 呼叫 SystemChrome 套用真實 OS 層級
   /// 鎖定（非僅內容排版層級的假象）。角度與 [DeviceOrientation] 的對應
   /// 是本 issue 撰寫計劃階段決定的慣例（0°→portraitUp、90°→landscapeLeft、
   /// 180°→portraitDown、270°→landscapeRight），實際物理旋轉是否與這組
   /// 對應一致，留待真機測試以驗收標準的人工視覺 QA 確認。
   ///
   /// 為避免使用者在快速拖曳滑桿時產生高頻率的 platform channel 呼叫，
-  /// 僅在 [_resolvedScreenOrientation] 與 [_lastAppliedOrientation] 不同時
+  /// 僅在 screenOrientation 與 [_lastAppliedOrientation] 不同時
   /// 才實際呼叫 SystemChrome。
   void _applyScreenOrientation() {
-    final current = _resolvedScreenOrientation;
-    if (current == _lastAppliedOrientation) return;
-    _lastAppliedOrientation = current;
+    final resolved = _resolved;
+    if (resolved == null) return;
+    if (resolved.screenOrientation == _lastAppliedOrientation) return;
+    _lastAppliedOrientation = resolved.screenOrientation;
     SystemChrome.setPreferredOrientations(
-      _deviceOrientationsFor(current),
+      _deviceOrientationsFor(resolved.screenOrientation),
     );
   }
 
@@ -165,8 +135,22 @@ class _ReaderScreenState extends State<ReaderScreen> {
   /// 完成，比照本專案其餘偏好設定寫入呼叫的既有慣例（例如
   /// LibraryPreferences 系列方法在 UI callback 中皆未 await）。
   void _handlePrefsChanged(BookReaderPrefs prefs) {
-    setState(() => _prefs = prefs);
-    widget.prefsRepository.save(widget.bookId, prefs);
+    setState(() {
+      _prefs = prefs;
+      final loaded = _loaded;
+      if (loaded != null) {
+        final newLoaded = LoadedPrefs(
+          bookPrefs: prefs,
+          globalPrefs: loaded.globalPrefs,
+        );
+        _loaded = newLoaded;
+        _resolved = widget.prefsManager.resolve(
+          newLoaded,
+          autoDetectedWritingMode: _autoDetectedWritingMode,
+        );
+      }
+    });
+    widget.prefsManager.saveBookPrefs(widget.bookId, prefs);
     _applyScreenOrientation();
   }
 
@@ -177,8 +161,22 @@ class _ReaderScreenState extends State<ReaderScreen> {
   /// 附帶其餘欄位的完整狀態。
   void _handleCropRectComputed(PdfCropRect rect) {
     final updated = _prefs.copyWith(pdfCropRect: rect);
-    setState(() => _prefs = updated);
-    widget.prefsRepository.save(widget.bookId, updated);
+    setState(() {
+      _prefs = updated;
+      final loaded = _loaded;
+      if (loaded != null) {
+        final newLoaded = LoadedPrefs(
+          bookPrefs: updated,
+          globalPrefs: loaded.globalPrefs,
+        );
+        _loaded = newLoaded;
+        _resolved = widget.prefsManager.resolve(
+          newLoaded,
+          autoDetectedWritingMode: _autoDetectedWritingMode,
+        );
+      }
+    });
+    widget.prefsManager.saveBookPrefs(widget.bookId, updated);
   }
 
   /// 手動選區裁切請求（決策 #14）：關閉目前開啟的 PdfSettingsSheet、切換
@@ -207,8 +205,20 @@ class _ReaderScreenState extends State<ReaderScreen> {
     setState(() {
       _cropEditModeActive = false;
       _prefs = updated;
+      final loaded = _loaded;
+      if (loaded != null) {
+        final newLoaded = LoadedPrefs(
+          bookPrefs: updated,
+          globalPrefs: loaded.globalPrefs,
+        );
+        _loaded = newLoaded;
+        _resolved = widget.prefsManager.resolve(
+          newLoaded,
+          autoDetectedWritingMode: _autoDetectedWritingMode,
+        );
+      }
     });
-    widget.prefsRepository.save(widget.bookId, updated);
+    widget.prefsManager.saveBookPrefs(widget.bookId, updated);
     _openPdfSettings();
   }
 
@@ -254,7 +264,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
   }
 
   /// 【已知、可接受的行為】把自動偵測結果寫回 [_autoDetectedWritingMode]
-  /// 後，若當下沒有 writingModeOverride，[_resolvedWritingMode] 會從 null
+  /// 後，若當下沒有 writingModeOverride，[_resolved] 的 writingMode 會從 null
   /// 變成非 null，驅動 EpubReaderView 以非 null 值重建；EpubReaderView 的
   /// didUpdateWidget 偵測到「null → 非 null」的變化時，會多送一次
   /// setPreferences 給原生端，等於把 Readium 剛剛自動判斷好的值重新套用
@@ -266,6 +276,13 @@ class _ReaderScreenState extends State<ReaderScreen> {
     setState(() {
       _isFixedLayout = info.isFixedLayout;
       _autoDetectedWritingMode = info.writingMode;
+      final loaded = _loaded;
+      if (loaded != null) {
+        _resolved = widget.prefsManager.resolve(
+          loaded,
+          autoDetectedWritingMode: info.writingMode,
+        );
+      }
     });
   }
 
@@ -344,7 +361,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
     }
     final body = Stack(
       children: [
-        _buildNativeView(format),
+        if (_resolved != null) _buildNativeView(format),
         if (_isFixedLayout)
           Positioned(
             top: 16, // SafeArea 內層，頂部已扣除狀態列，故直接設為 16 即可
@@ -375,35 +392,36 @@ class _ReaderScreenState extends State<ReaderScreen> {
   }
 
   Widget _buildNativeView(BookFormat format) {
+    final resolved = _resolved!;
     switch (format) {
       case BookFormat.epub:
         return EpubReaderView(
           filePath: widget.filePath,
-          writingMode: _resolvedWritingMode,
-          pageTurnMode: _resolvedPageTurnMode,
+          writingMode: resolved.writingMode,
+          pageTurnMode: resolved.pageTurnMode,
           onPageRendered: _handlePageRendered,
           onError: _handleError,
           onLayoutResolved: _handleLayoutResolved,
-          fontFamily: _prefs.fontFamily,
-          fontSize: _prefs.fontSize,
-          fontWeight: _prefs.fontWeight,
-          lineHeight: _prefs.lineHeight,
-          paragraphSpacing: _prefs.paragraphSpacing,
-          pageMargins: _prefs.pageMargins,
-          textAlign: _prefs.textAlign,
-          publisherStyles: _prefs.publisherStyles,
+          fontFamily: resolved.fontFamily,
+          fontSize: resolved.fontSize,
+          fontWeight: resolved.fontWeight,
+          lineHeight: resolved.lineHeight,
+          paragraphSpacing: resolved.paragraphSpacing,
+          pageMargins: resolved.pageMargins,
+          textAlign: resolved.textAlign,
+          publisherStyles: resolved.publisherStyles,
         );
       case BookFormat.pdf:
         return PdfReaderView(
           filePath: widget.filePath,
           onPageRendered: _handlePageRendered,
           onError: _handleError,
-          fitMode: _resolvedPdfFitMode,
-          contrast: _prefs.pdfContrast,
-          brightness: _prefs.pdfBrightness,
-          boldStrength: _prefs.pdfBoldStrength,
-          cropMode: _prefs.pdfCropMode,
-          cropRect: _prefs.pdfCropRect,
+          fitMode: resolved.pdfFitMode,
+          contrast: resolved.pdfContrast,
+          brightness: resolved.pdfBrightness,
+          boldStrength: resolved.pdfBoldStrength,
+          cropMode: resolved.pdfCropMode,
+          cropRect: resolved.pdfCropRect,
           onCropRectComputed: _handleCropRectComputed,
           cropEditModeActive: _cropEditModeActive,
           onCropRectSelected: _handleCropRectSelected,

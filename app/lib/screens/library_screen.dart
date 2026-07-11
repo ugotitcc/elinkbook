@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../library/book_import_service.dart';
-import '../reader/book_reader_prefs_repository.dart';
+import '../reader/reader_prefs_manager.dart';
 import '../library/library_preferences.dart';
 import '../library/library_repository.dart';
 import '../library/models/book.dart';
@@ -25,7 +25,7 @@ const _folderPickerChannel = MethodChannel('elinkbook/folder_picker');
 class LibraryScreen extends StatefulWidget {
   final LibraryRepository repository;
   final BookImportService importService;
-  final BookReaderPrefsRepository prefsRepository;
+  final ReaderPrefsManager prefsManager;
   final AppTheme currentTheme;
   final bool isEinkMode;
   final ValueChanged<AppTheme>? onThemeChanged;
@@ -35,7 +35,7 @@ class LibraryScreen extends StatefulWidget {
     super.key,
     required this.repository,
     required this.importService,
-    required this.prefsRepository,
+    required this.prefsManager,
     this.currentTheme = AppTheme.light,
     this.isEinkMode = false,
     this.onThemeChanged,
@@ -276,7 +276,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
         builder: (_) => ReaderScreen(
           filePath: book.filePath,
           bookId: book.id,
-          prefsRepository: widget.prefsRepository,
+          prefsManager: widget.prefsManager,
         ),
       ),
     );
