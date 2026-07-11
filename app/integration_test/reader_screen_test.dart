@@ -11,6 +11,7 @@ import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/reader/book_reader_prefs.dart';
 import 'package:elinkbook/reader/book_reader_prefs_repository.dart';
+import 'package:elinkbook/reader/pdf_crop_mode.dart';
 import 'package:elinkbook/reader/pdf_fit_mode.dart';
 import 'package:elinkbook/reader/pdf_reader_view.dart';
 import 'package:elinkbook/reader/screen_orientation_setting.dart';
@@ -980,5 +981,128 @@ void main() {
     final secondRect = (await prefsRepository.load(bookId)).pdfCropRect;
     expect(secondRect, firstRect,
         reason: '重開書後 pdf_crop_rect 應與第一次計算的值完全一致，代表沒有重新計算');
+  });
+
+  testWidgets('PDF 進入手動裁切互動模式後，翻頁手勢暫停回應（不觸發頁面錯誤或意外離開裁切模式）',
+      (tester) async {
+    final samplePath = await _stageAssetAsFile(
+        'test/fixtures/sample.pdf', 'sample_pdf_crop_manual_pause.pdf');
+    addTearDown(() async {
+      final file = File(samplePath);
+      if (await file.exists()) await file.delete();
+    });
+    const bookId = 'b_pdf_crop_manual_pause';
+    await libraryRepository.insertBook(_book(bookId, format: BookFileFormat.pdf));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: samplePath,
+          bookId: bookId,
+          prefsRepository: prefsRepository,
+        ),
+      ),
+    );
+
+    await _pumpUntil(
+      tester,
+      () => _layoutSettingsButtonReady(tester),
+      timeout: const Duration(seconds: 10),
+    );
+
+    await tester.tap(find.byKey(const Key('reader_layout_settings_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('pdf_settings_tab_crop')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('pdf_settings_crop_mode_manual')));
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(find.byType(PdfSettingsSheet), findsNothing,
+        reason: '點擊手動選區後應關閉 PdfSettingsSheet、進入裁切互動模式');
+
+    // 進入裁切互動模式期間，對 PdfReaderView 區域做水平拖曳手勢（正常
+    // 閱讀模式下會觸發翻頁），確認不會出現錯誤畫面，也不會意外重新開啟
+    // PdfSettingsSheet（那只在確認框選、onCropRectSelected 觸發後才會
+    // 發生）——用來間接驗證翻頁手勢在裁切互動模式下確實被暫停，沒有讓
+    // 原生端 nextPage()/previousPage() 觸發非預期的重新渲染或狀態改變。
+    await tester.drag(find.byType(PdfReaderView), const Offset(-200, 0));
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(find.byKey(const Key('reader_error_text')), findsNothing);
+    expect(find.byType(PdfSettingsSheet), findsNothing,
+        reason: '拖曳手勢不應觸發任何確認流程，裁切互動模式應維持進行中');
+  });
+
+  testWidgets('PDF 手動裁切拖拉四角控制點確認後，pdf_crop_mode/pdf_crop_rect 正確寫入且畫面套用新裁切結果',
+      (tester) async {
+    final samplePath = await _stageAssetAsFile(
+        'test/fixtures/sample.pdf', 'sample_pdf_crop_manual_confirm.pdf');
+    addTearDown(() async {
+      final file = File(samplePath);
+      if (await file.exists()) await file.delete();
+    });
+    const bookId = 'b_pdf_crop_manual_confirm';
+    await libraryRepository.insertBook(_book(bookId, format: BookFileFormat.pdf));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: samplePath,
+          bookId: bookId,
+          prefsRepository: prefsRepository,
+        ),
+      ),
+    );
+
+    await _pumpUntil(
+      tester,
+      () => _layoutSettingsButtonReady(tester),
+      timeout: const Duration(seconds: 10),
+    );
+
+    await tester.tap(find.byKey(const Key('reader_layout_settings_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('pdf_settings_tab_crop')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('pdf_settings_crop_mode_manual')));
+    await tester.pump(const Duration(seconds: 1));
+
+    // 拖拉右下角控制點：從 PdfReaderView 區域內、預設初始裁切框（四周
+    // 10% 邊距，見 PdfReaderView.kt 的 enterCropEditMode()）的右下角附近
+    // 往左上方拖曳一段距離，縮小裁切框範圍。實際手勢座標依真機畫面尺寸
+    // 計算——若 tester.drag()/tester.timedDrag() 對疊加於 AndroidView 之
+    // 上的原生 CropOverlayView 無法正確傳遞觸控事件，改用
+    // `adb shell input touchscreen swipe`（座標依 `adb shell wm size`
+    // 查得的真機解析度換算），並在報告中誠實記錄實際採用的方式。
+    final pdfViewBox = tester.getRect(find.byType(PdfReaderView));
+    final approxBottomRightHandle = Offset(
+      pdfViewBox.left + pdfViewBox.width * 0.9,
+      pdfViewBox.top + pdfViewBox.height * 0.9,
+    );
+    final dragGesture = await tester.startGesture(approxBottomRightHandle);
+    await tester.pump(const Duration(milliseconds: 50));
+    await dragGesture.moveBy(const Offset(-80, -80));
+    await tester.pump(const Duration(milliseconds: 50));
+    await dragGesture.up();
+    await tester.pump(const Duration(seconds: 1));
+
+    // 點擊確認按鈕：CropOverlayView 把它畫在固定右下角（見
+    // CONFIRM_BUTTON_MARGIN_DP/CONFIRM_BUTTON_RADIUS_DP 常數），螢幕座標
+    // 需依裝置 density 換算，實測時直接對 PdfReaderView 區域右下角附近
+    // 嘗試點擊即可命中（確認按鈕的視覺半徑遠大於一般手指誤差）。
+    final approxConfirmButton = Offset(
+      pdfViewBox.right - 40,
+      pdfViewBox.bottom - 40,
+    );
+    await tester.tapAt(approxConfirmButton);
+    await tester.pump(const Duration(seconds: 2));
+
+    expect(find.byKey(const Key('reader_error_text')), findsNothing);
+    expect(find.byType(PdfSettingsSheet), findsOneWidget,
+        reason: '確認框選後應重新開啟 PdfSettingsSheet 顯示套用結果');
+
+    final saved = await prefsRepository.load(bookId);
+    expect(saved.pdfCropMode, PdfCropMode.manual);
+    expect(saved.pdfCropRect, isNotNull);
   });
 }

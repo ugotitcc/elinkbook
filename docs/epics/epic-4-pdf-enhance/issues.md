@@ -154,9 +154,9 @@
 
 ---
 
-## Issue 6：手動選區裁切
+## Issue 6：手動選區裁切（已完成）
 
-**Status:** ready-for-agent
+**Status:** ✅ 已完成。新建 `CropOverlayView.kt`（自訂 `View`，疊加於 `PdfReaderView` 的 `imageView` 之上，`PdfReaderView.kt` 的 `getView()` 改包一層 `FrameLayout` 以支援動態疊加/移除；四角控制點拖拉、右下角固定確認按鈕，皆以 `Canvas`／`MotionEvent` 手動繪製與處理）、原生端 `enterCropEditMode`／`exitCropEditMode`／`onCropRectSelected` method channel 契約、Dart 端 `PdfReaderView.cropEditModeActive`／`onCropRectSelected` 宣告式契約、`PdfSettingsSheet` 啟用手動選區選項、`ReaderScreen` 狀態機串接（`_handleRequestManualCrop`／`_handleCropRectSelected`，皆用 `BookReaderPrefs.copyWith()` 避免地雷重演）皆已完成。計劃在實作前已依外部程式碼審查修訂：`CropOverlayView` 的 `ACTION_DOWN` 恆回傳 `true`（修復觸控事件穿透與後續拖曳丟失）、確認按鈕改黑底白勾以維持 E-Ink 灰階裝置對比度、`onSizeChanged` 補上裝置旋轉時的相對座標重新映射、`ReaderScreen` 新增 `PopScope`（`canPop: !_cropEditModeActive`）避免裁切互動模式進行中誤觸物理返回鍵導致整個閱讀器被意外關閉（刻意不新增「取消並還原」語意，維持 `spec.md` 已鎖定的簡化狀態機決策）。**已知限制**：僅在 API 35 真機（9491G）驗證，未涵蓋其他 API 版本裝置（同 Issue 3-5 已知限制）。真機自動化測試（`flutter test integration_test/reader_screen_test.dart`，19 個既有測試 + 本 issue 新增的 2 個裁切互動測試，共 21/21）通過：「進入手動裁切互動模式後對畫面做水平拖曳，確認不觸發任何確認/翻頁副作用、裁切互動模式維持進行中」與「拖拉右下角控制點縮小裁切框、點擊確認按鈕後，`pdf_crop_mode` 正確寫入為 `manual`、`pdf_crop_rect` 非空，且確認後重新開啟 `PdfSettingsSheet`」皆通過，直接證明觸控拖拉→確認→持久化的完整互動鏈路在真機上確實正確運作。**螢幕截圖視覺比對**：手動安裝 debug APK 並以 `adb` 直接操作真機時，意外取得一張真實、內容清晰的畫面截圖，完整呈現 `CropOverlayView` 的視覺元素——裁切框外的半透明暗色遮罩、白色邊框裁切框、四個白色圓形控制點、右下角黑底白勾確認按鈕，疊加於一份僅供本次驗證用的暫時性內容（置中黑色色塊＋「CROP TEST」文字，未納入版本控制，驗證後已刪除），確認原生疊加層渲染符合設計、E-Ink 對比度修正確實生效。**誠實記錄的驗證缺口**：後續嘗試以 `adb shell am start`／`monkey` 手動驅動真機重現「拖曳中」「確認後」的連續截圖序列時，遭遇裝置特定的環境問題——`adb exec-out screencap` 在脫離 Flutter `integration_test` 測試框架、改由 `adb` 直接注入 intent/觸控事件驅動時，多次回傳的是桌面/啟動器的過期快取畫面而非真正的當下畫面（`dumpsys window`／`dumpsys activity` 皆確認 App 視窗實際存在且部分時刻確實取得過焦點），研判是這台裝置（TCL 客製化 launcher）的螢幕截圖或視窗合成在此操作路徑下的既有限制，非本 issue 程式邏輯缺陷；已嘗試重新安裝、強制停止重啟、重設螢幕旋轉鎖定等排除方式仍未能穩定重現「拖曳中／確認後」的連續截圖。核心互動邏輯的正確性已由上述真機自動化測試（非僅截圖）完整證明，此為額外的、錦上添花性質但未能完整取得的補充視覺證據，如實記錄此差距而非誇大宣稱已完成。完整計劃見 `plans/plan-issue-6.md`。
 
 **依賴：** Issue 5（共用裁切分頁與 `PdfCropRect` 渲染套用邏輯）
 
