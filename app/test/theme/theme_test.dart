@@ -7,14 +7,15 @@ import 'package:elinkbook/theme/app_theme.dart';
 import 'package:elinkbook/theme/app_theme_preferences.dart';
 import 'package:elinkbook/screens/library_screen.dart';
 import 'package:elinkbook/library/sqlite_library_repository.dart';
-import 'package:elinkbook/reader/book_reader_prefs_repository.dart';
+import 'package:elinkbook/reader/reader_prefs_manager.dart';
 
 import '../support/fake_book_import_service.dart';
 import '../support/fake_library_repository.dart';
+import '../support/fake_reader_prefs_manager.dart';
 
 void main() {
   late SqliteLibraryRepository sqliteRepo;
-  late BookReaderPrefsRepository prefsRepository;
+  late ReaderPrefsManager prefsManager;
 
   setUpAll(() {
     sqfliteFfiInit();
@@ -23,7 +24,7 @@ void main() {
 
   setUp(() async {
     sqliteRepo = await SqliteLibraryRepository.open(inMemoryDatabasePath);
-    prefsRepository = BookReaderPrefsRepository(sqliteRepo.database);
+    prefsManager = FakeReaderPrefsManager();
   });
 
   tearDown(() async {
@@ -45,7 +46,7 @@ void main() {
       ElinkBookApp(
         repository: FakeLibraryRepository(),
         importService: FakeBookImportService(),
-        prefsRepository: prefsRepository,
+        prefsManager: prefsManager,
         initialTheme: theme,
         initialEinkMode: eink,
       ),
@@ -72,7 +73,7 @@ void main() {
       ElinkBookApp(
         repository: FakeLibraryRepository(),
         importService: FakeBookImportService(),
-        prefsRepository: prefsRepository,
+        prefsManager: prefsManager,
         initialTheme: theme,
         initialEinkMode: eink,
       ),
@@ -96,7 +97,7 @@ void main() {
         home: LibraryScreen(
           repository: FakeLibraryRepository(),
           importService: FakeBookImportService(),
-          prefsRepository: prefsRepository,
+          prefsManager: prefsManager,
           currentTheme: AppTheme.light,
           isEinkMode: false,
           onThemeChanged: (theme) => receivedTheme = theme,
@@ -122,7 +123,7 @@ void main() {
         home: LibraryScreen(
           repository: FakeLibraryRepository(),
           importService: FakeBookImportService(),
-          prefsRepository: prefsRepository,
+          prefsManager: prefsManager,
           currentTheme: AppTheme.light,
           isEinkMode: false,
           onThemeChanged: (_) {},

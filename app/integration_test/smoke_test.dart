@@ -4,6 +4,8 @@ import 'package:integration_test/integration_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:elinkbook/library/sqlite_library_repository.dart';
 import 'package:elinkbook/reader/book_reader_prefs_repository.dart';
+import 'package:elinkbook/reader/reader_prefs_manager.dart';
+import 'package:elinkbook/reader/reader_prefs_manager_impl.dart';
 import 'package:elinkbook/screens/library_screen.dart';
 
 import '../test/support/fake_book_import_service.dart';
@@ -13,7 +15,7 @@ void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   late SqliteLibraryRepository libraryRepository;
-  late BookReaderPrefsRepository prefsRepository;
+  late ReaderPrefsManager prefsManager;
 
   setUpAll(() {
     sqfliteFfiInit();
@@ -23,7 +25,9 @@ void main() {
   setUp(() async {
     libraryRepository =
         await SqliteLibraryRepository.open(inMemoryDatabasePath);
-    prefsRepository = BookReaderPrefsRepository(libraryRepository.database);
+    prefsManager = ReaderPrefsManagerImpl(
+      BookReaderPrefsRepository(libraryRepository.database),
+    );
   });
 
   tearDown(() async {
@@ -37,7 +41,7 @@ void main() {
         home: LibraryScreen(
           repository: FakeLibraryRepository(),
           importService: FakeBookImportService(),
-          prefsRepository: prefsRepository,
+          prefsManager: prefsManager,
         ),
       ),
     );

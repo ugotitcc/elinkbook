@@ -5,6 +5,8 @@ import 'library/book_import_service_impl.dart';
 import 'library/library_repository.dart';
 import 'library/sqlite_library_repository.dart';
 import 'reader/book_reader_prefs_repository.dart';
+import 'reader/reader_prefs_manager.dart';
+import 'reader/reader_prefs_manager_impl.dart';
 import 'screens/library_screen.dart';
 import 'theme/app_theme.dart';
 import 'theme/app_theme_data.dart';
@@ -26,11 +28,12 @@ Future<void> main() async {
   // SqliteLibraryRepository 具象型別才有的 .database getter（見
   // docs/adr/0007-reader-screen-book-id-contract.md）。
   final prefsRepository = BookReaderPrefsRepository(repository.database);
+  final prefsManager = ReaderPrefsManagerImpl(prefsRepository);
   runApp(
     ElinkBookApp(
       repository: repository,
       importService: importService,
-      prefsRepository: prefsRepository,
+      prefsManager: prefsManager,
       initialTheme: initialTheme,
       initialEinkMode: initialEinkMode,
       themePreferences: themePreferences,
@@ -43,7 +46,7 @@ Future<void> main() async {
 class ElinkBookApp extends StatefulWidget {
   final LibraryRepository repository;
   final BookImportService importService;
-  final BookReaderPrefsRepository prefsRepository;
+  final ReaderPrefsManager prefsManager;
   final AppThemePreferences themePreferences;
   final AppTheme initialTheme;
   final bool initialEinkMode;
@@ -52,7 +55,7 @@ class ElinkBookApp extends StatefulWidget {
     super.key,
     required this.repository,
     required this.importService,
-    required this.prefsRepository,
+    required this.prefsManager,
     this.initialTheme = AppTheme.light,
     this.initialEinkMode = false,
     AppThemePreferences? themePreferences,
@@ -95,7 +98,7 @@ class _ElinkBookAppState extends State<ElinkBookApp> {
       home: LibraryScreen(
         repository: widget.repository,
         importService: widget.importService,
-        prefsRepository: widget.prefsRepository,
+        prefsManager: widget.prefsManager,
         currentTheme: _theme,
         isEinkMode: _isEinkMode,
         onThemeChanged: _handleThemeChanged,

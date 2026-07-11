@@ -3,15 +3,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:elinkbook/library/sqlite_library_repository.dart';
-import 'package:elinkbook/reader/book_reader_prefs_repository.dart';
+import 'package:elinkbook/reader/reader_prefs_manager.dart';
 import 'package:elinkbook/screens/library_screen.dart';
 
 import 'support/fake_book_import_service.dart';
 import 'support/fake_library_repository.dart';
+import 'support/fake_reader_prefs_manager.dart';
 
 void main() {
   late SqliteLibraryRepository libraryRepository;
-  late BookReaderPrefsRepository prefsRepository;
+  late ReaderPrefsManager prefsManager;
 
   setUpAll(() {
     sqfliteFfiInit();
@@ -22,7 +23,7 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     libraryRepository =
         await SqliteLibraryRepository.open(inMemoryDatabasePath);
-    prefsRepository = BookReaderPrefsRepository(libraryRepository.database);
+    prefsManager = FakeReaderPrefsManager();
   });
 
   tearDown(() async {
@@ -35,7 +36,7 @@ void main() {
         home: LibraryScreen(
           repository: FakeLibraryRepository(),
           importService: FakeBookImportService(),
-          prefsRepository: prefsRepository,
+          prefsManager: prefsManager,
         ),
       ),
     );

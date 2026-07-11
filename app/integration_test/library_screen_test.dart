@@ -9,6 +9,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:elinkbook/library/book_import_service_impl.dart';
 import 'package:elinkbook/library/sqlite_library_repository.dart';
 import 'package:elinkbook/reader/book_reader_prefs_repository.dart';
+import 'package:elinkbook/reader/reader_prefs_manager_impl.dart';
 import 'package:elinkbook/screens/library_screen.dart';
 
 const _metadataChannel = MethodChannel('elinkbook/book_metadata');
@@ -90,7 +91,9 @@ void main() {
         home: LibraryScreen(
           repository: repository,
           importService: importService,
-          prefsRepository: BookReaderPrefsRepository(repository.database),
+          prefsManager: ReaderPrefsManagerImpl(
+            BookReaderPrefsRepository(repository.database),
+          ),
         ),
       ),
     );
