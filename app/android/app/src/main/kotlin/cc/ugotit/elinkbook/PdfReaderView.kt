@@ -6,6 +6,7 @@ import android.graphics.pdf.PdfRenderer
 import android.net.Uri
 import android.os.ParcelFileDescriptor
 import android.view.View
+import android.widget.FrameLayout
 import android.widget.ImageView
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
@@ -33,6 +34,21 @@ class PdfReaderView(
     messenger: BinaryMessenger,
 ) : PlatformView, MethodChannel.MethodCallHandler {
     private val imageView: ImageView = ImageView(context)
+
+    // 手動裁切互動模式（決策 #14）需要在 imageView 之上疊加
+    // CropOverlayView，因此 getView() 回傳的根 View 從單一 ImageView 改為
+    // 包一層 FrameLayout；未進入裁切互動模式時，rootView 只有 imageView
+    // 這一個子 View，畫面與改動前完全一致。
+    private val rootView: FrameLayout = FrameLayout(context).apply {
+        addView(
+            imageView,
+            FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT,
+            ),
+        )
+    }
+
     private val channel: MethodChannel =
         MethodChannel(messenger, "cc.ugotit.elinkbook/pdf_reader_view_$id")
 
@@ -60,12 +76,22 @@ class PdfReaderView(
     // 目前生效的裁切矩形（相對座標 0.0-1.0）。autoDetect 模式下由
     // detectCropRect() 首次計算後快取於此（決策 #3，全書統一比例、不逐頁
     // 重算）；也可能由 Dart 端透過 initialPreferences/setPdfPreferences
-    // 直接帶入已持久化的值（避免重開書又重新計算一次）。
+    // 直接帶入已持久化的值（避免重開書又重新計算一次）；manual 模式下由
+    // 使用者透過 CropOverlayView 框選後經 exitCropEditMode 流程間接更新
+    // （見 enterCropEditMode()/CropOverlayView 的 onConfirm 回呼）。
     private var cropRect: CropRect? = null
 
+    // 手動裁切互動模式是否進行中（決策 #14）：由 Dart 端
+    // cropEditModeActive prop 的宣告式變化驅動（enterCropEditMode／
+    // exitCropEditMode method channel 呼叫），true 時 nextPage()／
+    // previousPage() 暫停回應，避免翻頁手勢與拖拉裁切框互相干擾。
+    private var cropEditModeActive: Boolean = false
+    private var cropOverlayView: CropOverlayView? = null
+
     /** 裁切矩形（相對座標 0.0-1.0），Kotlin 內部用資料類別，對應 Dart
-     * PdfCropRect 的欄位。*/
-    private data class CropRect(val left: Float, val top: Float, val right: Float, val bottom: Float)
+     * PdfCropRect 的欄位。套件內可見（非 private）供 CropOverlayView.kt
+     * 使用（同套件 cc.ugotit.elinkbook，Kotlin 不需額外 import）。*/
+    data class CropRect(val left: Float, val top: Float, val right: Float, val bottom: Float)
 
     companion object {
         // 加粗（型態學膨脹）運算的效能策略常數，見 spec.md/design.md「已知
@@ -79,7 +105,7 @@ class PdfReaderView(
         channel.setMethodCallHandler(this)
     }
 
-    override fun getView(): View = imageView
+    override fun getView(): View = rootView
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         when (call.method) {
@@ -102,6 +128,14 @@ class PdfReaderView(
             }
             "previousPage" -> {
                 previousPage()
+                result.success(null)
+            }
+            "enterCropEditMode" -> {
+                enterCropEditMode()
+                result.success(null)
+            }
+            "exitCropEditMode" -> {
+                exitCropEditMode()
                 result.success(null)
             }
             else -> result.notImplemented()
@@ -327,6 +361,104 @@ class PdfReaderView(
     }
 
     /**
+     * 進入手動裁切互動模式（決策 #14）：暫時以「完整未裁切頁面」重新渲染
+     * （不管目前 cropMode 設定為何），讓使用者能從整頁範圍框選，避免
+     * 「裁切一個已經被裁切過的畫面」造成的座標混淆；並疊加
+     * CropOverlayView 讓使用者拖拉四角控制點。翻頁手勢在此模式下停用
+     * （見 nextPage()/previousPage() 頂端的 cropEditModeActive 判斷）。
+     *
+     * 由 onMethodCall 的 "enterCropEditMode" case 呼叫，只在 Dart 端
+     * cropEditModeActive prop 由 false 變 true 時觸發（宣告式，見
+     * PdfReaderView.dart 的 didUpdateWidget）。
+     */
+    private fun enterCropEditMode() {
+        cropEditModeActive = true
+        val renderer = renderer ?: return
+        val page = renderer.openPage(currentPageIndex)
+        val pageWidth = page.width
+        val pageHeight = page.height
+        page.close()
+
+        // 初始框選範圍：若已有裁切矩形（無論來自先前的自動或手動裁切）
+        // 沿用之，讓使用者「微調」既有選區；否則預設置中、四周各留 10%
+        // 邊距。
+        val initial = cropRect ?: CropRect(0.1f, 0.1f, 0.9f, 0.9f)
+
+        val overlay = CropOverlayView(context, pageWidth, pageHeight, initial) { result ->
+            // 只透過 channel 通知 Dart 端，不在此處自行移除 overlay——
+            // 移除動作統一等待 Dart 送回 exitCropEditMode 才執行（見
+            // plan-issue-6.md Global Constraints）。
+            channel.invokeMethod(
+                "onCropRectSelected",
+                mapOf(
+                    "left" to result.left.toDouble(),
+                    "top" to result.top.toDouble(),
+                    "right" to result.right.toDouble(),
+                    "bottom" to result.bottom.toDouble(),
+                ),
+            )
+        }
+        cropOverlayView = overlay
+        rootView.addView(
+            overlay,
+            FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT,
+            ),
+        )
+
+        renderFullPageForCropPreview()
+    }
+
+    /**
+     * 離開手動裁切互動模式：移除 overlay、恢復翻頁手勢，並依目前（可能
+     * 已透過 onCropRectSelected 流程更新過 cropMode/cropRect 的）狀態呼叫
+     * renderCurrentPage() 重新渲染畫面套用結果。
+     *
+     * 由 onMethodCall 的 "exitCropEditMode" case 呼叫，只在 Dart 端
+     * cropEditModeActive prop 由 true 變 false 時觸發——正常情況下這只會
+     * 在 Dart 端收到 onCropRectSelected 後才發生（見 plan-issue-6.md
+     * Global Constraints，原生端本身絕不主動呼叫這個方法自己清理）。
+     */
+    private fun exitCropEditMode() {
+        cropEditModeActive = false
+        cropOverlayView?.let { rootView.removeView(it) }
+        cropOverlayView = null
+        renderCurrentPage()
+    }
+
+    /**
+     * 裁切編輯模式下的預覽渲染：忽略目前 cropMode，永遠顯示完整頁面、
+     * 固定 FIT_CENTER，讓 CropOverlayView 的 FIT_CENTER letterbox 座標
+     * 換算單純化（見 CropOverlayView.computeContentBounds()）。刻意獨立
+     * 於 renderCurrentPage()——後者的裁切/fit/濾鏡管線邏輯與此處「一律
+     * 顯示全頁、不套用任何濾鏡」的需求不同，混在一起會讓兩者都變複雜。
+     */
+    private fun renderFullPageForCropPreview() {
+        val renderer = renderer ?: return
+        val page = renderer.openPage(currentPageIndex)
+        val density = context.resources.displayMetrics.density
+        val scale = density.coerceIn(2.0f, 3.0f)
+        val width = (page.width * scale).toInt().coerceAtLeast(1)
+        val height = (page.height * scale).toInt().coerceAtLeast(1)
+        try {
+            val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+            bitmap.eraseColor(android.graphics.Color.WHITE)
+            val matrix = android.graphics.Matrix().apply { postScale(scale, scale) }
+            page.render(bitmap, null, matrix, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+            imageView.setImageBitmap(bitmap)
+            imageView.scaleType = ImageView.ScaleType.FIT_CENTER
+            imageView.colorFilter = null
+        } catch (e: OutOfMemoryError) {
+            // 記憶體不足時放棄預覽渲染，overlay 仍會顯示（背景沿用上一次
+            // 畫面），使用者仍可框選，只是背景畫面可能是舊的；不影響裁切
+            // 結果正確性（結果仍是相對頁面座標，與背景畫面是否為最新版本
+            // 無關）。
+        }
+        page.close()
+    }
+
+    /**
      * 依 [fitMode] 設定 imageView 的 scaleType／matrix，決定已渲染的 bitmap
      * 如何顯示在畫面上（見 docs/epics/epic-4-pdf-enhance/design.md 決策
      * #6/#7/#8）。只調整顯示層，不重新渲染 bitmap，因此可在
@@ -460,6 +592,7 @@ class PdfReaderView(
     }
 
     private fun nextPage() {
+        if (cropEditModeActive) return
         if (currentPageIndex < totalPages - 1) {
             currentPageIndex++
             renderCurrentPage()
@@ -468,6 +601,7 @@ class PdfReaderView(
     }
 
     private fun previousPage() {
+        if (cropEditModeActive) return
         if (currentPageIndex > 0) {
             currentPageIndex--
             renderCurrentPage()
@@ -493,6 +627,8 @@ class PdfReaderView(
     }
 
     override fun dispose() {
+        cropOverlayView?.let { rootView.removeView(it) }
+        cropOverlayView = null
         renderer?.close()
         renderer = null
         channel.setMethodCallHandler(null)
