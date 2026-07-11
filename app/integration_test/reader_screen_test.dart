@@ -879,4 +879,106 @@ void main() {
     final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
     expect(pdfView.boldStrength, closeTo(0.1, 0.001));
   });
+
+  testWidgets('PDF 切換至智慧自動裁切，畫面持續渲染成功、無 onError', (tester) async {
+    final samplePath = await _stageAssetAsFile(
+        'test/fixtures/sample.pdf', 'sample_pdf_crop.pdf');
+    addTearDown(() async {
+      final file = File(samplePath);
+      if (await file.exists()) await file.delete();
+    });
+    const bookId = 'b_pdf_crop';
+    await libraryRepository.insertBook(_book(bookId, format: BookFileFormat.pdf));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: samplePath,
+          bookId: bookId,
+          prefsRepository: prefsRepository,
+        ),
+      ),
+    );
+
+    await _pumpUntil(
+      tester,
+      () => _layoutSettingsButtonReady(tester),
+      timeout: const Duration(seconds: 10),
+    );
+
+    await tester.tap(find.byKey(const Key('reader_layout_settings_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('pdf_settings_tab_crop')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('pdf_settings_crop_mode_auto')));
+    // 首次切到 autoDetect 會觸發偵測＋完整重新渲染，給予較長的 settle
+    // 時間。
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(find.byKey(const Key('reader_error_text')), findsNothing,
+        reason: '切換至智慧自動裁切後畫面應持續渲染成功，不應觸發 onError');
+  });
+
+  testWidgets('智慧自動裁切計算後關閉重開該書，pdf_crop_rect 不重新計算（值一致）',
+      (tester) async {
+    final samplePath = await _stageAssetAsFile(
+        'test/fixtures/sample.pdf', 'sample_pdf_crop_persist.pdf');
+    addTearDown(() async {
+      final file = File(samplePath);
+      if (await file.exists()) await file.delete();
+    });
+    const bookId = 'b_pdf_crop_persist';
+    await libraryRepository.insertBook(_book(bookId, format: BookFileFormat.pdf));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: samplePath,
+          bookId: bookId,
+          prefsRepository: prefsRepository,
+        ),
+      ),
+    );
+
+    await _pumpUntil(
+      tester,
+      () => _layoutSettingsButtonReady(tester),
+      timeout: const Duration(seconds: 10),
+    );
+
+    await tester.tap(find.byKey(const Key('reader_layout_settings_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('pdf_settings_tab_crop')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('pdf_settings_crop_mode_auto')));
+    await tester.pump(const Duration(seconds: 1));
+
+    final firstRect = (await prefsRepository.load(bookId)).pdfCropRect;
+    expect(firstRect, isNotNull, reason: '智慧自動裁切應已計算出矩形並持久化');
+
+    // 關閉重開，確認 initialPreferences 帶入已持久化的 cropRect，原生端
+    // 不會因為是全新 PlatformView 實例就重新偵測一次。
+    await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
+    await tester.pump();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: samplePath,
+          bookId: bookId,
+          prefsRepository: prefsRepository,
+        ),
+      ),
+    );
+    await _pumpUntil(
+      tester,
+      _loadingIndicatorGone,
+      timeout: const Duration(seconds: 10),
+    );
+    await tester.pump(const Duration(seconds: 1));
+
+    final secondRect = (await prefsRepository.load(bookId)).pdfCropRect;
+    expect(secondRect, firstRect,
+        reason: '重開書後 pdf_crop_rect 應與第一次計算的值完全一致，代表沒有重新計算');
+  });
 }
