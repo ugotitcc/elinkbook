@@ -1209,4 +1209,120 @@ void main() {
     // 詳見報告書「已知限制與替代驗證方式」章節。
     expect(secondRect, equals(firstRect));
   });
+
+  testWidgets(
+      'PDF 依序調整 Fit 模式/對比度/亮度/加粗/裁切模式後關閉重開，全部欄位皆正確記住並套用（組合持久化收尾驗證）',
+      (tester) async {
+    final samplePath = await _stageAssetAsFile(
+        'test/fixtures/sample.pdf', 'sample_pdf_e2e_combo.pdf');
+    addTearDown(() async {
+      final file = File(samplePath);
+      if (await file.exists()) await file.delete();
+    });
+    const bookId = 'b_pdf_e2e_combo';
+    await libraryRepository.insertBook(_book(bookId, format: BookFileFormat.pdf));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: samplePath,
+          bookId: bookId,
+          prefsRepository: prefsRepository,
+        ),
+      ),
+    );
+
+    await _pumpUntil(
+      tester,
+      () => _layoutSettingsButtonReady(tester),
+      timeout: const Duration(seconds: 10),
+    );
+
+    await tester.tap(find.byKey(const Key('reader_layout_settings_button')));
+    await tester.pumpAndSettle();
+
+    // 顯示分頁：Fit 模式改為 Fit Width。
+    await tester.tap(find.byKey(const Key('pdf_settings_fit_mode_fit_width')));
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // 濾鏡分頁：對比度／亮度／加粗強度皆各按一次「+」微調鈕，確保三個欄位
+    // 都偏離預設值 0，才能有效驗證彼此不會互相清空。
+    await tester.tap(find.byKey(const Key('pdf_settings_tab_filters')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('pdf_settings_contrast_increment')));
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.byKey(const Key('pdf_settings_brightness_increment')));
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.byKey(const Key('pdf_settings_bold_strength_increment')));
+    await tester.pump(const Duration(milliseconds: 300));
+
+    // 裁切分頁：切到智慧自動（不使用手動選區——依 Global Constraints，本
+    // issue 不重複驗證 Issue 6 的觸控互動邏輯）。
+    await tester.tap(find.byKey(const Key('pdf_settings_tab_crop')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('pdf_settings_crop_mode_auto')));
+    await tester.pump(const Duration(seconds: 1));
+
+    // 關閉設定，記錄目前畫面上 PdfReaderView 的完整生效值，作為「調整完成
+    // 當下」的基準，稍後與「重開書後」比對。
+    await tester.tap(find.byKey(const Key('pdf_settings_tab_display')));
+    await tester.pumpAndSettle();
+
+    final beforeClose = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+    expect(beforeClose.fitMode, PdfFitMode.fitWidth);
+    expect(beforeClose.contrast, greaterThan(0));
+    expect(beforeClose.brightness, greaterThan(0));
+    expect(beforeClose.boldStrength, greaterThan(0));
+    expect(beforeClose.cropMode, PdfCropMode.autoDetect);
+
+    // 從資料庫直接讀出持久化結果（不透過畫面重建，排除「畫面剛好還沒
+    // rebuild」這種偽陽性）。
+    final saved = await prefsRepository.load(bookId);
+    expect(saved.pdfFitMode, PdfFitMode.fitWidth);
+    expect(saved.pdfContrast, greaterThan(0));
+    expect(saved.pdfBrightness, greaterThan(0));
+    expect(saved.pdfBoldStrength, greaterThan(0));
+    expect(saved.pdfCropMode, PdfCropMode.autoDetect);
+    expect(saved.pdfCropRect, isNotNull,
+        reason: '智慧自動裁切應已計算出矩形並隨其餘欄位一併持久化');
+
+    // 關閉重開，驗證 initialPreferences 在「多欄位同時非 null」的情境下
+    // 依然完整無遺漏地送出——這是本任務要補上的、Issue 2-6 各自單欄位
+    // 測試從未涵蓋過的組合情境。
+    await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
+    await tester.pump();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: samplePath,
+          bookId: bookId,
+          prefsRepository: prefsRepository,
+        ),
+      ),
+    );
+    await _pumpUntil(
+      tester,
+      _loadingIndicatorGone,
+      timeout: const Duration(seconds: 10),
+    );
+    await tester.pump(const Duration(seconds: 1));
+
+    final afterReopen = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+    expect(afterReopen.fitMode, beforeClose.fitMode,
+        reason: '重開書後 fitMode 應與關閉前一致');
+    expect(afterReopen.contrast, beforeClose.contrast,
+        reason: '重開書後 contrast 應與關閉前一致');
+    expect(afterReopen.brightness, beforeClose.brightness,
+        reason: '重開書後 brightness 應與關閉前一致');
+    expect(afterReopen.boldStrength, beforeClose.boldStrength,
+        reason: '重開書後 boldStrength 應與關閉前一致');
+    expect(afterReopen.cropMode, beforeClose.cropMode,
+        reason: '重開書後 cropMode 應與關閉前一致');
+    expect(afterReopen.cropRect, beforeClose.cropRect,
+        reason: '重開書後 cropRect 應與關閉前一致，且不因重開書而重新計算'
+            '（見 Issue 5 決策 #3：全書統一比例，不逐頁重算、不重開書重算）');
+
+    expect(find.byKey(const Key('reader_error_text')), findsNothing);
+  });
 }
