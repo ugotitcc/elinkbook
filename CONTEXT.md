@@ -39,3 +39,15 @@ _Avoid_: 自動裁切、智慧裁切
 **裁切模式（Crop Mode）**：
 PDF 頁面裁切的三選一設定：不裁切、智慧自動裁切、手動選區裁切。三者互斥；手動選區裁切由使用者於全螢幕裁切編輯模式框選矩形，同樣全書統一套用。單書持久化於 `book_reader_prefs`。
 _Avoid_: 裁切設定
+
+**雙頁模式（Dual-Page Mode）**：
+EPUB 固定版面與 PDF 的並排顯示設定，三態：自動（橫向時啟用、直向時關閉）、永遠雙頁、永遠單頁。單書持久化於 `book_reader_prefs`，不做內容啟發式判斷，由使用者手動控制。流式 EPUB 不適用。
+_Avoid_: 雙頁顯示、兩頁模式、分頁模式
+
+**Spread（跨頁）**：
+雙頁模式下同時顯示的一組頁面（通常為相鄰兩頁）。封面獨立時第 1 頁為單頁 spread，之後為雙頁 spread (2,3)(4,5)…。PDF 的翻頁步進以 spread 為單位（一次換一個完整 spread）。EPUB 固定版面的 spread 配對由 Readium 依 `page-spread-left/right` metadata 處理。
+_Avoid_: 跨頁組、頁面組
+
+**固定版面（Fixed-Layout, FXL）**：
+EPUB 的一種排版形式，每頁有固定尺寸（寬×高），內容不隨螢幕大小重排——常見於漫畫、童書、食譜。與「流式（Reflowable）」互斥。由 Readium 的 `onLayoutResolved` 回報 `isFixedLayout: true` 偵測。
+_Avoid_: 固定排版、定版式
