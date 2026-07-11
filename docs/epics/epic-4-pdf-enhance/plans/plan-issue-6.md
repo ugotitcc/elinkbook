@@ -23,6 +23,7 @@
   2. `detectCropRect()`（智慧自動裁切）在近乎全白的頁面上可能算出退化矩形，此為 Issue 5 已知殘留風險，與本 issue（手動選區）無直接關聯，不在本 issue 範圍內處理。
 - **原生端無法透過 `flutter test` 驗證觸控拖拉邏輯**（spec.md「測試決策」，沿用既有慣例，見 `docs/archive/2026-07-10-epic-3-fonts-layout/issues.md` Issue 2）：`CropOverlayView.kt` 的手勢/繪製邏輯只能透過真機 `integration_test`（Task 5）與人工視覺確認驗證，Task 2 的驗收標準是「編譯成功＋不影響既有 19 個真機測試」，不要求（也無法要求）該任務自己產出觸控邏輯的自動化測試。
 - **螢幕截圖視覺比對為必要步驟，不是可選項**（本 epic 自 Issue 3 起確立的紀律）：Task 5 的真機驗證除了 `integration_test` 綠燈之外，必須實際用 `Read` 工具檢視螢幕截圖並在報告中誠實描述看到的畫面內容；若受限於環境無法完成某項視覺確認，必須在報告中誠實記錄，不得宣稱已完成。
+- **本計劃已依外部審查報告（`tmp/epic-4/reviews/review-plan-issue-6.md`）修訂**：`CropOverlayView.kt` 的 `onTouchEvent` 在 `ACTION_DOWN` 恆回傳 `true`（避免事件穿透與後續 `ACTION_MOVE`/`ACTION_UP` 丟失）、確認按鈕改為黑底白勾以維持 E-Ink 高對比可辨識度（不新增主題感知管線）、`onSizeChanged` 補上旋轉時的相對座標重新映射、`ReaderScreen` 新增 `PopScope` 於裁切互動模式進行中吞掉返回鍵（見 Task 2 Step 1、Task 4 Step 1／Step 7）。**審查報告同時建議新增獨立「取消」按鈕（捨棄變更、退回原本 `cropMode`），但此建議與 spec.md 第 123 行已鎖定的決策衝突（「取消操作視同一種 onCropRectSelected 結果，不新增獨立取消語意，避免狀態機複雜化」）——已與人類確認維持原規格，不新增取消鈕，改以上述 `PopScope` 處理返回鍵誤觸的風險**。審查報告另建議 `renderFullPageForCropPreview()` 的預覽 Bitmap 應手動 `recycle()`，評估後不採納：`exitCropEditMode()` 移除 overlay 後緊接呼叫 `renderCurrentPage()`，會立即 `imageView.setImageBitmap(newBitmap)` 覆蓋舊 bitmap 使其可被 GC 回收，且本檔案自 Issue 2 起所有既有 render 路徑皆未手動呼叫 `recycle()`，手動加入反而有「bitmap 仍被系統引用時提前 recycle」的崩潰風險，與既有慣例不一致。
 
 ---
 
@@ -419,8 +420,12 @@ class CropOverlayView(
         strokeWidth = 2f * density
     }
     private val handlePaint = Paint().apply { color = Color.WHITE; style = Paint.Style.FILL }
-    private val confirmBgPaint =
-        Paint().apply { color = Color.parseColor("#4CAF50"); style = Paint.Style.FILL }
+    // 確認按鈕刻意採用黑底白勾（而非審查報告原始草稿中的綠色），確保在
+    // E-Ink 16 階灰階裝置（見 AppThemePreferences 的 E-Ink 高對比模式）與
+    // 一般彩色螢幕上都維持清楚可辨的對比度，不需要另外新增主題感知管線
+    // （PdfReaderView 契約目前完全不感知主題，見 spec.md，本 issue 不新增
+    // 這類管線，改用不依賴主題資訊即可維持高對比的固定配色）。
+    private val confirmBgPaint = Paint().apply { color = Color.BLACK; style = Paint.Style.FILL }
     private val confirmCheckPaint = Paint().apply {
         color = Color.WHITE
         style = Paint.Style.STROKE
@@ -435,11 +440,7 @@ class CropOverlayView(
     // 裁切框目前狀態（View 像素座標，限制在 contentBounds 內）。
     private var cropRectPx = RectF()
 
-    // 只在第一次 onSizeChanged（初次 layout）時套用初始矩形，之後若因裝置
-    // 旋轉等原因再次觸發 onSizeChanged，保留使用者當下已調整的框選狀態
-    // （已知限制：旋轉當下 contentBounds 改變但 cropRectPx 未重新夾範圍，
-    // 見 plan-issue-6.md「已知限制」，本 issue 不處理裁切編輯中旋轉裝置的
-    // 情境，屬刻意簡化範圍）。
+    // 只在第一次 onSizeChanged（初次 layout）時套用初始矩形。
     private var pendingInitialRect: PdfReaderView.CropRect? = initialRelativeRect
 
     private var activeHandle: Handle? = null
@@ -447,17 +448,40 @@ class CropOverlayView(
 
     private enum class Handle { TOP_LEFT, TOP_RIGHT, BOTTOM_LEFT, BOTTOM_RIGHT }
 
+    /**
+     * 裝置旋轉等原因造成 View 尺寸變化時，重新計算 contentBounds；若已經
+     * 在編輯中途（pendingInitialRect 已為 null，代表初始矩形已套用過），
+     * 先用「舊」contentBounds 把目前的裁切框換算回相對座標（0.0-1.0），
+     * 再用「新」contentBounds 換算回像素座標，讓裁切框的相對位置與比例
+     * 不受旋轉影響（審查意見 2.2：避免旋轉後裁切框停留在舊的絕對像素
+     * 位置、與新版面完全錯位）。
+     */
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
+        val oldBounds = contentBounds
         contentBounds = computeContentBounds(w, h)
-        val rect = pendingInitialRect ?: return
-        cropRectPx = RectF(
-            contentBounds.left + rect.left * contentBounds.width(),
-            contentBounds.top + rect.top * contentBounds.height(),
-            contentBounds.left + rect.right * contentBounds.width(),
-            contentBounds.top + rect.bottom * contentBounds.height(),
-        )
-        pendingInitialRect = null
+
+        val rect = pendingInitialRect
+        if (rect != null) {
+            cropRectPx = RectF(
+                contentBounds.left + rect.left * contentBounds.width(),
+                contentBounds.top + rect.top * contentBounds.height(),
+                contentBounds.left + rect.right * contentBounds.width(),
+                contentBounds.top + rect.bottom * contentBounds.height(),
+            )
+            pendingInitialRect = null
+        } else if (oldBounds.width() > 0f && oldBounds.height() > 0f) {
+            val relLeft = (cropRectPx.left - oldBounds.left) / oldBounds.width()
+            val relTop = (cropRectPx.top - oldBounds.top) / oldBounds.height()
+            val relRight = (cropRectPx.right - oldBounds.left) / oldBounds.width()
+            val relBottom = (cropRectPx.bottom - oldBounds.top) / oldBounds.height()
+            cropRectPx = RectF(
+                contentBounds.left + relLeft * contentBounds.width(),
+                contentBounds.top + relTop * contentBounds.height(),
+                contentBounds.left + relRight * contentBounds.width(),
+                contentBounds.top + relBottom * contentBounds.height(),
+            )
+        }
     }
 
     /**
@@ -524,10 +548,16 @@ class CropOverlayView(
                 val dyConfirm = event.y - confirmCy
                 if (dxConfirm * dxConfirm + dyConfirm * dyConfirm <= confirmRadiusPx * confirmRadiusPx) {
                     confirmPressed = true
-                    return true
+                } else {
+                    activeHandle = nearestHandle(event.x, event.y)
                 }
-                activeHandle = nearestHandle(event.x, event.y)
-                return activeHandle != null
+                // 本 View 是裁切互動期間的獨佔遮罩層，ACTION_DOWN 恆回傳
+                // true 攔截並消費事件——若回傳 false（例如沒有精確命中控制
+                // 點或確認按鈕），Android 觸控分發機制會導致本 View 收不到
+                // 該手勢後續的 ACTION_MOVE/ACTION_UP，且事件會穿透到底層
+                // imageView，可能引發非預期的翻頁/縮放手勢（審查意見
+                // 1.1：ACTION_DOWN 事件穿透與後續事件丟失）。
+                return true
             }
             MotionEvent.ACTION_MOVE -> {
                 val handle = activeHandle ?: return false
@@ -1225,6 +1255,42 @@ git commit -m "feat(epic-4): PdfSettingsSheet 啟用裁切分頁手動選區選�
     expect(saved.pdfCropMode, PdfCropMode.manual);
     expect(saved.pdfCropRect, selectedRect);
   });
+
+  testWidgets(
+      '進入手動裁切互動模式後，PopScope.canPop 為 false（返回鍵不應退出整個閱讀器）',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b1',
+          prefsRepository: prefsRepository,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    expect(tester.widget<PopScope>(find.byType(PopScope)).canPop, isTrue,
+        reason: '尚未進入裁切互動模式時，返回鍵應正常運作（可以離開閱讀器）');
+
+    tester.widget<PdfReaderView>(find.byType(PdfReaderView)).onPageRendered();
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('reader_layout_settings_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('pdf_settings_tab_crop')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('pdf_settings_crop_mode_manual')));
+    await tester.pumpAndSettle();
+
+    expect(tester.widget<PopScope>(find.byType(PopScope)).canPop, isFalse,
+        reason: '裁切互動模式進行中，返回鍵不應把整個 ReaderScreen 一併 '
+            'pop 掉（審查意見 2.1(b)：避免誤觸返回鍵導致整個閱讀器被意外'
+            '關閉；刻意不新增「取消並還原」語意，維持 spec.md 已鎖定的簡化'
+            '狀態機決策——見本檔案 _handleRequestManualCrop 的文件註解）');
+  });
 ```
 
 新增檔案頂端的 import（第 1-16 行區塊）：
@@ -1252,7 +1318,7 @@ import '../support/fake_book_reader_prefs_repository.dart';
 - [ ] **Step 2：執行測試，確認 FAIL**
 
 Run: `cd app && flutter test test/screens/reader_screen_test.dart`
-Expected: FAIL（`PdfReaderView` 沒有 `cropEditModeActive`/`onCropRectSelected` 會先被 Task 1 補上，此處會是 `PdfSettingsSheet` 缺少 `onRequestManualCrop` 導致 `ReaderScreen` 內部呼叫處編譯失敗，或手動選區按鈕仍是停用狀態導致 `tester.tap` 找不到可互動的按鈕／`_cropEditModeActive` 狀態未定義的執行期錯誤）。
+Expected: FAIL（`PdfReaderView` 沒有 `cropEditModeActive`/`onCropRectSelected` 會先被 Task 1 補上，此處會是 `PdfSettingsSheet` 缺少 `onRequestManualCrop` 導致 `ReaderScreen` 內部呼叫處編譯失敗，或手動選區按鈕仍是停用狀態導致 `tester.tap` 找不到可互動的按鈕／`_cropEditModeActive` 狀態未定義的執行期錯誤／`PopScope` 尚未包裹 `Scaffold` 導致 `find.byType(PopScope)` 找不到任何 widget）。
 
 - [ ] **Step 3：修改 `app/lib/screens/reader_screen.dart`——新增 import 與狀態欄位**
 
@@ -1363,12 +1429,41 @@ import 'reader_settings_sheet.dart';
         );
 ```
 
-- [ ] **Step 7：執行測試，確認 PASS**
+- [ ] **Step 7：修改 `build()`——用 `PopScope` 包裹 `Scaffold`，裁切互動模式進行中時吞掉返回鍵**
+
+把第 237-248 行的 `build()` 改為：
+
+```dart
+  @override
+  Widget build(BuildContext context) {
+    final format = detectBookFormat(widget.filePath);
+    return PopScope(
+      // 手動裁切互動模式進行中時，返回鍵不應把整個 ReaderScreen 一併 pop
+      // 掉——原生端裁切互動模式沒有使用者手勢可以主動觸發離開（見 spec.md
+      // 第 123 行「不會主動由使用者手勢觸發」），這裡單純吞掉返回鍵手勢，
+      // 讓使用者留在裁切模式，必須透過畫面上的原生確認按鈕才能離開（審查
+      // 意見 2.1(b)：避免誤觸返回鍵導致整個閱讀器被意外關閉；刻意不在此
+      // 新增「取消並還原」語意，維持 spec.md 已鎖定的簡化狀態機決策）。
+      canPop: !_cropEditModeActive,
+      child: Scaffold(
+        appBar: _isFixedLayout
+            ? null // 固定版面（如漫畫）隱藏 Scaffold AppBar，改用 Stack 懸浮半透明按鈕，避免裁切大圖
+            : AppBar(
+                title: const Text('閱讀器'),
+                actions: _buildAppBarActions(format),
+              ),
+        body: _buildBody(format),
+      ),
+    );
+  }
+```
+
+- [ ] **Step 8：執行測試，確認 PASS**
 
 Run: `cd app && flutter test test/screens/reader_screen_test.dart`
 Expected: 全數 PASS。
 
-- [ ] **Step 8：執行完整測試套件與 `flutter analyze`**
+- [ ] **Step 9：執行完整測試套件與 `flutter analyze`**
 
 Run: `cd app && flutter test`
 Expected: 全數 PASS，無回歸。
@@ -1376,11 +1471,11 @@ Expected: 全數 PASS，無回歸。
 Run: `cd app && flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 9：Commit**
+- [ ] **Step 10：Commit**
 
 ```bash
 git add app/lib/screens/reader_screen.dart app/test/screens/reader_screen_test.dart
-git commit -m "feat(epic-4): ReaderScreen 串接手動裁切互動模式狀態機"
+git commit -m "feat(epic-4): ReaderScreen 串接手動裁切互動模式狀態機，PopScope 防止裁切中返回鍵誤退出"
 ```
 
 ---
