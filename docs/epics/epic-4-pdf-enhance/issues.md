@@ -160,6 +160,11 @@
 
 **依賴：** Issue 5（共用裁切分頁與 `PdfCropRect` 渲染套用邏輯）
 
+**承接 Issue 5 整體審查的提醒**：
+- `PdfReaderView.dart` 的 `didUpdateWidget` 目前只比較 `cropMode`、刻意不比較 `cropRect`（因為 Issue 5 唯一會寫入 `cropRect` 的來源是原生端主動回呼，原生本身已持有該值，無需再送回）。本 issue 讓使用者能在 `cropMode` 已經是 `manual` 的情況下重新選取新的裁切框——此時 `cropMode` 不會變動，若沿用現有比較邏輯，`setPdfPreferences` 不會觸發、原生端收不到新矩形。需將 `cropRect` 一併納入 `didUpdateWidget` 比較（或改用其他方式強制送出）。
+- 原生端 `renderCurrentPage()` 的 `effectiveCrop` 判斷式（`cropMode != "none"` 即套用 `cropRect`）已可正確處理 `manual` 模式＋已提供矩形的渲染，本 issue 主要工作在互動疊加層 UI 與 method channel 串接，渲染管線本身不需改動。
+- Issue 5 驗證時發現 `detectCropRect()`（智慧自動裁切）在近乎全白的頁面上可能算出退化（極薄或反轉）的矩形，屬於已知殘留風險；雖與手動選區邏輯無直接關聯，但若本 issue 需要複用邊界偵測或矩形驗證邏輯，留意此邊界情況。
+
 **描述：**
 實作裁切分頁的第三個選項（手動選區），本 epic 技術風險最高的一塊（設計審查 Finding 1.2 的核心決策——Native 而非 Flutter 全螢幕畫面，見 `design.md` 決策 #14）：
 
