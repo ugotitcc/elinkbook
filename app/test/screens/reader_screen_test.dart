@@ -5,9 +5,12 @@ import 'package:elinkbook/reader/book_reader_prefs.dart';
 import 'package:elinkbook/reader/book_reader_prefs_repository.dart';
 import 'package:elinkbook/reader/epub_reader_view.dart';
 import 'package:elinkbook/reader/page_turn_mode.dart';
+import 'package:elinkbook/reader/pdf_crop_mode.dart';
+import 'package:elinkbook/reader/pdf_crop_rect.dart';
 import 'package:elinkbook/reader/pdf_fit_mode.dart';
 import 'package:elinkbook/reader/pdf_reader_view.dart';
 import 'package:elinkbook/reader/writing_mode.dart';
+import 'package:elinkbook/screens/pdf_settings_sheet.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
 import '../support/fake_book_reader_prefs_repository.dart';
 
@@ -261,5 +264,117 @@ void main() {
 
     final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
     expect(pdfView.fitMode, PdfFitMode.pageFit);
+  });
+
+  testWidgets(
+      '點擊手動選區後，關閉 PdfSettingsSheet 並將 cropEditModeActive 傳入 PdfReaderView',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b1',
+          prefsRepository: prefsRepository,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    // 模擬原生端 onPageRendered，讓「⚙️版面」按鈕轉為可點擊狀態（純
+    // flutter test 環境下 AndroidView 不會真正觸發原生回呼，比照本檔案
+    // 既有測試對「尚未收到 onPageRendered」情境的說明，見第 69-89 行）。
+    tester.widget<PdfReaderView>(find.byType(PdfReaderView)).onPageRendered();
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('reader_layout_settings_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('pdf_settings_tab_crop')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('pdf_settings_crop_mode_manual')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(PdfSettingsSheet), findsNothing);
+    expect(
+      tester
+          .widget<PdfReaderView>(find.byType(PdfReaderView))
+          .cropEditModeActive,
+      isTrue,
+    );
+  });
+
+  testWidgets(
+      '收到 onCropRectSelected 後，退出裁切模式、寫入 pdfCropMode=manual 並持久化、重新開啟 PdfSettingsSheet',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b1',
+          prefsRepository: prefsRepository,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    tester.widget<PdfReaderView>(find.byType(PdfReaderView)).onPageRendered();
+    await tester.pump();
+
+    const selectedRect =
+        PdfCropRect(left: 0.1, top: 0.15, right: 0.9, bottom: 0.85);
+    tester
+        .widget<PdfReaderView>(find.byType(PdfReaderView))
+        .onCropRectSelected!(selectedRect);
+    await tester.pumpAndSettle();
+
+    final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+    expect(pdfView.cropEditModeActive, isFalse);
+    expect(pdfView.cropMode, PdfCropMode.manual);
+    expect(pdfView.cropRect, selectedRect);
+    expect(find.byType(PdfSettingsSheet), findsOneWidget,
+        reason: '確認框選後應重新開啟 PdfSettingsSheet 顯示套用結果（見 spec.md）');
+
+    final saved = await prefsRepository.load('b1');
+    expect(saved.pdfCropMode, PdfCropMode.manual);
+    expect(saved.pdfCropRect, selectedRect);
+  });
+
+  testWidgets(
+      '進入手動裁切互動模式後，PopScope.canPop 為 false（返回鍵不應退出整個閱讀器）',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b1',
+          prefsRepository: prefsRepository,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    expect(tester.widget<PopScope>(find.byType(PopScope)).canPop, isTrue,
+        reason: '尚未進入裁切互動模式時，返回鍵應正常運作（可以離開閱讀器）');
+
+    tester.widget<PdfReaderView>(find.byType(PdfReaderView)).onPageRendered();
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('reader_layout_settings_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('pdf_settings_tab_crop')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('pdf_settings_crop_mode_manual')));
+    await tester.pumpAndSettle();
+
+    expect(tester.widget<PopScope>(find.byType(PopScope)).canPop, isFalse,
+        reason: '裁切互動模式進行中，返回鍵不應把整個 ReaderScreen 一併 '
+            'pop 掉（審查意見 2.1(b)：避免誤觸返回鍵導致整個閱讀器被意外'
+            '關閉；刻意不新增「取消並還原」語意，維持 spec.md 已鎖定的簡化'
+            '狀態機決策——見本檔案 _handleRequestManualCrop 的文件註解）');
   });
 }

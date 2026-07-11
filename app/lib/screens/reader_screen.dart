@@ -7,6 +7,7 @@ import '../reader/book_reader_prefs_repository.dart';
 import '../reader/epub_reader_view.dart';
 import '../reader/global_reader_defaults.dart';
 import '../reader/page_turn_mode.dart';
+import '../reader/pdf_crop_mode.dart';
 import '../reader/pdf_crop_rect.dart';
 import '../reader/pdf_fit_mode.dart';
 import '../reader/pdf_reader_view.dart';
@@ -68,6 +69,9 @@ class _ReaderScreenState extends State<ReaderScreen> {
       ScreenOrientationSetting.auto;
   bool _isFixedLayout = false;
   BookReaderPrefs _prefs = BookReaderPrefs.empty;
+  // 手動裁切互動模式是否進行中（決策 #14），驅動 PdfReaderView 的宣告式
+  // cropEditModeActive prop；只有 PDF 分支會用到，EPUB 分支永遠是 false。
+  bool _cropEditModeActive = false;
   // 記錄上一次實際套用給系統的螢幕方向，避免在偏好設定頻繁變動時（例如
   // 拖曳滑桿）重複呼叫 SystemChrome.setPreferredOrientations。
   ScreenOrientationSetting? _lastAppliedOrientation;
@@ -177,6 +181,37 @@ class _ReaderScreenState extends State<ReaderScreen> {
     widget.prefsRepository.save(widget.bookId, updated);
   }
 
+  /// 手動選區裁切請求（決策 #14）：關閉目前開啟的 PdfSettingsSheet、切換
+  /// 至裁切互動模式（宣告式，觸發 PdfReaderView.didUpdateWidget 送出
+  /// enterCropEditMode）。context 用的是 State 自身的 context，Navigator
+  /// 會沿同一個 Navigator 找到目前最上層的路由（即 showModalBottomSheet
+  /// 推入的 PdfSettingsSheet）並將其關閉。
+  void _handleRequestManualCrop() {
+    Navigator.of(context).pop();
+    setState(() => _cropEditModeActive = true);
+  }
+
+  /// 使用者在原生裁切互動模式完成框選確認時觸發（PdfReaderView 原生
+  /// onCropRectSelected 回呼）：退出裁切互動模式（宣告式，觸發
+  /// PdfReaderView.didUpdateWidget 送出 exitCropEditMode）、把結果寫入
+  /// BookReaderPrefs（pdfCropMode 固定為 manual、pdfCropRect 為框選
+  /// 結果，透過 copyWith 只更新這兩個欄位，其餘欄位保留原值，比照
+  /// _handleCropRectComputed 的既有模式），持久化後重新開啟
+  /// PdfSettingsSheet 讓使用者看到套用後的結果（見 spec.md「ReaderScreen
+  /// 內部行為異動」）。
+  void _handleCropRectSelected(PdfCropRect rect) {
+    final updated = _prefs.copyWith(
+      pdfCropMode: PdfCropMode.manual,
+      pdfCropRect: rect,
+    );
+    setState(() {
+      _cropEditModeActive = false;
+      _prefs = updated;
+    });
+    widget.prefsRepository.save(widget.bookId, updated);
+    _openPdfSettings();
+  }
+
   void _openLayoutSettings() {
     showModalBottomSheet<void>(
       context: context,
@@ -200,7 +235,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
       builder: (_) => PdfSettingsSheet(
         prefs: _prefs,
         onChanged: _handlePrefsChanged,
-        onRequestManualCrop: () {}, // TODO(Task 4): wire to enter crop mode
+        onRequestManualCrop: _handleRequestManualCrop,
       ),
     );
   }
@@ -237,14 +272,23 @@ class _ReaderScreenState extends State<ReaderScreen> {
   @override
   Widget build(BuildContext context) {
     final format = detectBookFormat(widget.filePath);
-    return Scaffold(
-      appBar: _isFixedLayout
-          ? null // 固定版面（如漫畫）隱藏 Scaffold AppBar，改用 Stack 懸浮半透明按鈕，避免裁切大圖
-          : AppBar(
-              title: const Text('閱讀器'),
-              actions: _buildAppBarActions(format),
-            ),
-      body: _buildBody(format),
+    return PopScope(
+      // 手動裁切互動模式進行中時，返回鍵不應把整個 ReaderScreen 一併 pop
+      // 掉——原生端裁切互動模式沒有使用者手勢可以主動觸發離開（見 spec.md
+      // 第 123 行「不會主動由使用者手勢觸發」），這裡單純吞掉返回鍵手勢，
+      // 讓使用者留在裁切模式，必須透過畫面上的原生確認按鈕才能離開（審查
+      // 意見 2.1(b)：避免誤觸返回鍵導致整個閱讀器被意外關閉；刻意不在此
+      // 新增「取消並還原」語意，維持 spec.md 已鎖定的簡化狀態機決策）。
+      canPop: !_cropEditModeActive,
+      child: Scaffold(
+        appBar: _isFixedLayout
+            ? null // 固定版面（如漫畫）隱藏 Scaffold AppBar，改用 Stack 懸浮半透明按鈕，避免裁切大圖
+            : AppBar(
+                title: const Text('閱讀器'),
+                actions: _buildAppBarActions(format),
+              ),
+        body: _buildBody(format),
+      ),
     );
   }
 
@@ -361,6 +405,8 @@ class _ReaderScreenState extends State<ReaderScreen> {
           cropMode: _prefs.pdfCropMode,
           cropRect: _prefs.pdfCropRect,
           onCropRectComputed: _handleCropRectComputed,
+          cropEditModeActive: _cropEditModeActive,
+          onCropRectSelected: _handleCropRectSelected,
         );
       case BookFormat.unknown:
         return const SizedBox.shrink();
