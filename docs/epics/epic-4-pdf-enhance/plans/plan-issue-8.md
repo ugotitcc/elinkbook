@@ -10,7 +10,8 @@
 
 ## Global Constraints
 
-- 這是抽離重構，不是新功能：`PdfImageProcessor` 內的演算法邏輯（膨脹核心迴圈、裁切邊界掃描迴圈、ColorMatrix 公式）必須與 `PdfReaderView.kt` 現有實作逐行等價——不得在搬移過程中「順手」調整演算法、常數或行為，即使發現看起來可以改進的地方。
+- 這是抽離重構，不是新功能：`PdfImageProcessor` 內的演算法邏輯（膨脹核心迴圈、裁切邊界掃描迴圈、ColorMatrix 公式）必須與 `PdfReaderView.kt` 現有實作逐行等價——不得在搬移過程中「順手」調整演算法、常數或行為，即使發現看起來可以改進的地方。**唯一明確授權的例外**：`applyBoldEffect()` 新增 `working !== source`／`dilated !== result` 的 `recycle()` 防禦性判斷（Task 1 Step 4）——這是修正一個原本就存在於 `PdfReaderView.kt` 舊實作的潛在 Fatal Crash（`Bitmap.createScaledBitmap()` 在目的地尺寸與來源完全相同時，Android SDK 會直接回傳來源實例本身，未加防禦的 `recycle()` 會誤將呼叫端仍持有的來源 Bitmap 一併釋放），依 `tmp/epic-4/reviews/plan-issue-8-review.md` 2.1（唯一列為 🔴 必須修正的發現）加入，對任何正常尺寸輸入的既有行為零影響。
+- 本計劃已依 `tmp/epic-4/reviews/plan-issue-8-review.md` 審查意見修訂：2.1（`Bitmap.recycle()` 防禦性判斷）已採納；3.2（補齊全黑網格／單點內容／1×1 極端尺寸三項邊界測試）已採納，見 Task 1/Task 2；3.1（欄掃描的 cache miss 效能，審查本身結論為「不需調整演算法，僅需註解備忘」）已採納為程式碼註解，未變更演算法。
 - 新增的 JVM 單元測試一律針對 `internal` 的 `IntArray`-based 純函式（`detectCropRectFromPixels`／`dilatePixels`），不引入 Robolectric 或任何 Android 框架模擬依賴——`Bitmap` 相關的薄包裝函式（`detectCropRect`／`dilate`／`applyBoldEffect`）本身不新增自動化測試，其正確性由 Task 4 的既有真機 `integration_test` 回歸把關（沿用 Epic 4 Issue 3-7 既有測試，見 Task 4）。
 - 本次刻意不處理、維持現狀的既有技術債（範圍不重疊，見 `docs/epics.md`）：
   - `density.coerceIn(2.0f, 3.0f)` 縮放係數重複、`bitmap.eraseColor(Color.WHITE)` 白底邏輯重複——這些出現在 `renderCurrentPage()`/`renderFullPageForCropPreview()`/`applyFitMode()` 的 PDF 頁面渲染/縮放邏輯裡，不屬於本次抽離範圍（智慧裁切/加粗/濾鏡的像素處理邏輯）。
@@ -125,6 +126,19 @@ class PdfImageProcessorTest {
         assertEquals(BLACK, result[1 * 3 + 1]) // (1,1) 中心：alpha=0xFF 保留，RGB 仍黑
         assertEquals(BLACK, result[2 * 3 + 2]) // (2,2) 對角遠端：alpha=0xFF 保留，RGB 被拉黑
     }
+
+    @Test
+    fun `寬高為 1 的極端尺寸下 dilatePixels 不拋出例外，結果等同單像素恆等`() {
+        // 對應 applyBoldEffect() 內 Bitmap.createScaledBitmap() 短路回傳同一
+        // 實例的邊界情境（見 Task 1 Step 4 的 recycle() 防禦性判斷）：來源
+        // 寬高皆為 1px 時，coerceIn(0, 0) 讓鄰域掃描永遠落在唯一的 (0,0)
+        // 像素，不論 radius 多大都不會索引越界。
+        val pixels = intArrayOf(BLACK)
+
+        val result = PdfImageProcessor.dilatePixels(pixels, width = 1, height = 1, radius = 3)
+
+        assertEquals(listOf(BLACK), result.toList())
+    }
 }
 ```
 
@@ -182,8 +196,22 @@ object PdfImageProcessor {
         val radius = (strength * BOLD_MAX_RADIUS).toInt().coerceIn(1, BOLD_MAX_RADIUS)
         val dilated = dilate(working, radius)
         val result = Bitmap.createScaledBitmap(dilated, source.width, source.height, true)
-        working.recycle()
-        dilated.recycle()
+        // Bitmap.createScaledBitmap() 在目的地尺寸與來源完全相同時，Android
+        // SDK 會直接回傳來源實例本身（省略複製，見 Bitmap.createBitmap(src,
+        // x, y, w, h, matrix, filter) 原始碼：整張複製且矩陣為單位矩陣時直接
+        // return source）。若不加防禦判斷，working.recycle() 可能誤將呼叫端
+        // 仍持有的 source 一併釋放，dilated.recycle() 同理可能誤釋放正要回傳
+        // 的 result，導致「Canvas: trying to use a recycled bitmap」的 Fatal
+        // Crash。僅在來源寬高皆為 1px（BOLD_DOWNSCALE_FACTOR=0.25f 搭配
+        // coerceAtLeast(1) 時的極端邊界，例如使用者手動裁切框選到極小範圍）
+        // 才會觸發，但修正成本為零，見 tmp/epic-4/reviews/plan-issue-8-review.md
+        // 2.1。
+        if (working !== source) {
+            working.recycle()
+        }
+        if (dilated !== result) {
+            dilated.recycle()
+        }
         return result
     }
 
@@ -239,7 +267,7 @@ object PdfImageProcessor {
 ./gradlew testDebugUnitTest --tests "cc.ugotit.elinkbook.PdfImageProcessorTest"
 ```
 
-Expected：`BUILD SUCCESSFUL`，2 個測試（`radius 為 0 時...`／`radius 為 1 時...`）皆通過。
+Expected：`BUILD SUCCESSFUL`，3 個測試（`radius 為 0 時...`／`radius 為 1 時...`／`寬高為 1 的極端尺寸下...`）皆通過。
 
 - [ ] **Step 6：Commit**
 
@@ -301,6 +329,43 @@ git commit -m "feat(epic-4): 新增 PdfImageProcessor 與 JVM 單元測試框架
         assertEquals(0.89f, result.top, 1e-4f)
         assertEquals(0.91f, result.right, 1e-4f)
         assertEquals(0.91f, result.bottom, 1e-4f)
+    }
+
+    @Test
+    fun `全黑網格時內容從四邊緣即被偵測到，left top 因負邊距被 coerceIn 夾到 0`() {
+        val pixels = buildPixels(10, 10) { _, _ -> BLACK }
+
+        val result = PdfImageProcessor.detectCropRectFromPixels(pixels, width = 10, height = 10)
+
+        // 每一列/行在第一個取樣點（x=0／y=0）就偵測到內容，掃描迴圈的「往內
+        // 收縮」條件從未成立：top/left 停在初始值 0，bottom/right 停在初始值
+        // width-1/height-1=9（與「全白網格」情境的終值數字上相同，但成因相
+        // 反——全白是「掃到底找不到內容」，全黑是「一開始就找到內容不必再
+        // 掃」）。relLeft/relTop 因此為 0 - CROP_MARGIN，驗證 coerceIn(0f, 1f)
+        // 下限確實生效。
+        assertEquals(0f, result.left, 1e-4f)
+        assertEquals(0f, result.top, 1e-4f)
+        assertEquals(0.91f, result.right, 1e-4f)
+        assertEquals(0.91f, result.bottom, 1e-4f)
+    }
+
+    @Test
+    fun `唯一內容像素落在原點時四邊掃描收斂到同一列行，驗證邊距下限與掃描步進`() {
+        val pixels = buildPixels(10, 10) { x, y -> if (x == 0 && y == 0) BLACK else WHITE }
+
+        val result = PdfImageProcessor.detectCropRectFromPixels(pixels, width = 10, height = 10)
+
+        // 全圖只有 (0,0) 這一個內容像素，恰好同時是 isRowContent／isColContent
+        // 的第一個取樣點（x=0／y=0，不受 CROP_SCAN_STEP=4 跳步影響，證明
+        // (0,0) 這個邊界情況不會被跳步掃描漏掉）。因為這是唯一含內容的列與
+        // 行，「由上往下找內容列」與「由下往上找內容列」都收斂在同一列
+        // （top=bottom=0），左右掃描同理（left=right=0）；relLeft/relTop 的
+        // 下限被 coerceIn(0f, 1f) 夾到 0，relRight/relBottom 則是
+        // (0/10 + CROP_MARGIN) = 0.01。
+        assertEquals(0f, result.left, 1e-4f)
+        assertEquals(0f, result.top, 1e-4f)
+        assertEquals(0.01f, result.right, 1e-4f)
+        assertEquals(0.01f, result.bottom, 1e-4f)
     }
 ```
 
@@ -375,6 +440,11 @@ object PdfImageProcessor {
             return false
         }
 
+        // 注意：pixels 是 row-major 陣列，這裡以固定 x、遞增 y 做縱向掃描，
+        // 記憶體存取並非連續（每次跳整個 width），會比同一橫向掃描多出
+        // cache miss。維持現狀不調整演算法——單頁只在渲染或進入裁切模式時
+        // 執行一次，且 CROP_SCAN_STEP 已跳步採樣，效能影響可忽略（見
+        // tmp/epic-4/reviews/plan-issue-8-review.md 3.1）。
         fun isColContent(x: Int): Boolean {
             var y = 0
             while (y < height) {
@@ -409,7 +479,7 @@ object PdfImageProcessor {
 ./gradlew testDebugUnitTest --tests "cc.ugotit.elinkbook.PdfImageProcessorTest"
 ```
 
-Expected：`BUILD SUCCESSFUL`，4 個測試（Task 1 的 2 個 + 本 Task 的 2 個）皆通過。
+Expected：`BUILD SUCCESSFUL`，7 個測試（Task 1 的 3 個 + 本 Task 的 4 個）皆通過。
 
 - [ ] **Step 5：Commit**
 
@@ -514,7 +584,7 @@ Expected：編譯失敗，錯誤訊息包含 `unresolved reference: contrastBrig
 ./gradlew testDebugUnitTest --tests "cc.ugotit.elinkbook.PdfImageProcessorTest"
 ```
 
-Expected：`BUILD SUCCESSFUL`，6 個測試全數通過。
+Expected：`BUILD SUCCESSFUL`，9 個測試全數通過。
 
 - [ ] **Step 5：Commit**
 
@@ -736,7 +806,7 @@ Expected：`No issues found!`（本 Task 未變動任何 Dart 程式碼，此步
 ./gradlew testDebugUnitTest --tests "cc.ugotit.elinkbook.PdfImageProcessorTest"
 ```
 
-Expected：`BUILD SUCCESSFUL`，6 個測試全數通過。
+Expected：`BUILD SUCCESSFUL`，9 個測試全數通過。
 
 - [ ] **Step 7：真機回歸驗證（integration_test）**
 
@@ -785,6 +855,8 @@ git commit -m "refactor(epic-4): PdfReaderView/CropOverlayView 改用 PdfImagePr
 **Placeholder scan：** 已逐一檢查，所有 Step 皆含完整可執行程式碼與明確指令/預期輸出，無 TBD／「依需要調整」等佔位敘述。
 
 **Type consistency：** `PdfImageProcessor.CropRect`／`detectCropRect`／`detectCropRectFromPixels`／`dilate`／`dilatePixels`／`applyBoldEffect`／`contrastBrightnessColorMatrix` 的簽章在 Task 1-3（定義處）與 Task 4（呼叫處）、以及 `CropOverlayView.kt` 的型別參照皆一致核對過。
+
+**外部審查：** `tmp/epic-4/reviews/plan-issue-8-review.md`（2026-07-12）核准本計劃，發現一項 🔴 必須修正（`Bitmap.recycle()` 別名風險，已驗證為真實存在的 Android SDK 行為，非審查者誤判）與兩項 🟡 建議（邊界測試補充、cache locality 註解）。三項皆已採納並反映於上方 Task 1/Task 2 內容（詳見 Global Constraints「唯一明確授權的例外」段落）；JVM 單元測試總數由原本的 6 個增至 9 個。
 
 ---
 
