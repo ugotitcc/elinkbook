@@ -200,6 +200,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
       builder: (_) => PdfSettingsSheet(
         prefs: _prefs,
         onChanged: _handlePrefsChanged,
+        onRequestManualCrop: () {}, // TODO(Task 4): wire to enter crop mode
       ),
     );
   }

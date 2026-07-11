@@ -205,7 +205,7 @@ void main() {
     expect(notified?.pdfBrightness, -5);
   });
 
-  testWidgets('裁切分頁存在不裁切／智慧自動二選項，手動選區顯示但停用', (tester) async {
+  testWidgets('裁切分頁存在不裁切／智慧自動／手動選區三個選項', (tester) async {
     await _pumpSheet(tester, BookReaderPrefs.empty, (_) {});
 
     await tester.tap(find.byKey(const Key('pdf_settings_tab_crop')));
@@ -214,9 +214,31 @@ void main() {
     expect(find.byKey(const Key('pdf_settings_crop_mode_none')), findsOneWidget);
     expect(
         find.byKey(const Key('pdf_settings_crop_mode_auto')), findsOneWidget);
-    final manualButton = tester.widget<IconButton>(
-        find.byKey(const Key('pdf_settings_crop_mode_manual')));
-    expect(manualButton.onPressed, isNull, reason: '手動選區留待 Issue 6 實作，本 issue 顯示為停用狀態');
+    expect(
+        find.byKey(const Key('pdf_settings_crop_mode_manual')), findsOneWidget);
+  });
+
+  testWidgets('點擊手動選區按鈕後，觸發 onRequestManualCrop（不直接改變 pdfCropMode）',
+      (tester) async {
+    var requestCount = 0;
+    BookReaderPrefs? notified;
+    await _pumpSheet(
+      tester,
+      BookReaderPrefs.empty,
+      (prefs) => notified = prefs,
+      onRequestManualCrop: () => requestCount++,
+    );
+
+    await tester.tap(find.byKey(const Key('pdf_settings_tab_crop')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('pdf_settings_crop_mode_manual')));
+    await tester.pump();
+
+    expect(requestCount, 1);
+    // 手動選區的實際框選結果由 ReaderScreen 端的裁切互動模式流程另外
+    // 提供（見 spec.md「ReaderScreen 內部行為異動」），本分頁點擊「手動
+    // 選區」本身不直接呼叫 onChanged／改變 pdfCropMode。
+    expect(notified, isNull);
   });
 
   testWidgets('點擊智慧自動選項後，onChanged 帶入 pdfCropMode=autoDetect', (tester) async {
@@ -261,14 +283,18 @@ void main() {
 Future<void> _pumpSheet(
   WidgetTester tester,
   BookReaderPrefs prefs,
-  ValueChanged<BookReaderPrefs> onChanged,
-) async {
+  ValueChanged<BookReaderPrefs> onChanged, {
+  VoidCallback onRequestManualCrop = _noopVoid,
+}) async {
   await tester.pumpWidget(MaterialApp(
     home: Scaffold(
       body: PdfSettingsSheet(
         prefs: prefs,
         onChanged: onChanged,
+        onRequestManualCrop: onRequestManualCrop,
       ),
     ),
   ));
 }
+
+void _noopVoid() {}

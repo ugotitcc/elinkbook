@@ -6,23 +6,26 @@ import '../reader/pdf_crop_mode.dart';
 
 /// PDF 專屬版面設定 Bottom Sheet（FR-11），三分頁結構：顯示／濾鏡／裁切，
 /// 見 docs/epics/epic-4-pdf-enhance/design.md 決策 #10（不與 EPUB 用的
-/// `ReaderSettingsSheet` 共用元件）。本 issue（Issue 2）僅實作「顯示」分頁
-/// （Fit 模式三選一）；「濾鏡」「裁切」分頁為 Issue 3-6 預留的空白佔位。
+/// `ReaderSettingsSheet` 共用元件）。三分頁（Fit 模式、濾鏡、裁切模式）
+/// 皆已完整實作。
 ///
 /// 純展示、無 I/O：每次選擇立即透過 [onChanged] 回報目前完整的
-/// [BookReaderPrefs]（本 issue 只包含 [BookReaderPrefs.pdfFitMode] 欄位，
-/// 其餘 PDF 欄位由 Issue 3-6 各自擴充 [_notifyChanged]，比照
-/// `ReaderSettingsSheet._notifyChanged` 的既有模式——只需重建目前已追蹤的
-/// 本地狀態欄位，因為同一本書不會同時是 EPUB 又是 PDF，未追蹤的欄位維持
-/// null 不影響實際使用情境）。持久化由呼叫端（`ReaderScreen`）負責。
+/// [BookReaderPrefs]（`_notifyChanged` 只需重建目前已追蹤的本地狀態欄位
+/// ＋ 原樣帶回 [BookReaderPrefs.pdfCropRect]——因為同一本書不會同時是
+/// EPUB 又是 PDF，未追蹤的 EPUB 欄位維持 null 不影響實際使用情境）。
+/// 「手動選區」選項點擊時透過 [onRequestManualCrop] 通知呼叫端
+/// （`PdfSettingsSheet` 本身不直接操作 `PdfReaderView`，維持既有單向資料
+/// 流，見 spec.md「模組」段落）；持久化由呼叫端（`ReaderScreen`）負責。
 class PdfSettingsSheet extends StatefulWidget {
   final BookReaderPrefs prefs;
   final ValueChanged<BookReaderPrefs> onChanged;
+  final VoidCallback onRequestManualCrop;
 
   const PdfSettingsSheet({
     super.key,
     required this.prefs,
     required this.onChanged,
+    required this.onRequestManualCrop,
   });
 
   @override
@@ -221,12 +224,15 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
                   }),
                 );
               }),
-              // 手動選區：Issue 6 才實作，本 issue 顯示為停用狀態預留位置。
-              const IconButton(
-                key: Key('pdf_settings_crop_mode_manual'),
-                icon: Icon(Icons.crop),
-                tooltip: '手動選區（即將推出）',
-                onPressed: null,
+              // 手動選區：點擊只通知呼叫端進入裁切互動模式（不直接改變
+              // _cropMode／呼叫 _notifyChanged），實際的 pdfCropMode=manual
+              // 與 pdfCropRect 由 ReaderScreen 在使用者完成框選確認後才
+              // 一併寫入（見 spec.md「ReaderScreen 內部行為異動」）。
+              IconButton(
+                key: const Key('pdf_settings_crop_mode_manual'),
+                icon: const Icon(Icons.crop),
+                tooltip: '手動選區',
+                onPressed: widget.onRequestManualCrop,
               ),
             ],
           ),
