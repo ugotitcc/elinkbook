@@ -157,7 +157,7 @@
 - **`EpubReaderView.kt`**：
   - `buildPreferencesFromMap()` 新增 `spread = spreadFromDualPageMode(...)`，將 `dualPageMode` 三態字串對應到 Readium `EpubPreferences.spread`（`org.readium.r2.navigator.preferences.Spread` enum：`"auto"→Spread.AUTO`、`"always"→Spread.ALWAYS`、`"never"→Spread.NEVER`）
   - `applyFxlFitScale()` 雙頁適配：偵測到 spread 生效（2 個以上可見 WebView）時，縮放基準 `availableWidth` 改為「container 寬度 / 2」，依 WebView 螢幕左右順序分別套用對應半寬區塊的置中位移；`cachedFxlFitScale` 快取鍵新增「是否為 spread 模式」維度，單/雙頁切換或裝置旋轉時使快取失效重算
-  - **就地實作，不預先抽離**：架構審查（`tmp/epic-16/reviews/architecture-review-1783800246.html` Candidate #3，Speculative 等級）建議把此縮放邏輯抽成獨立 `EpubFxlScaler` 模組；本 issue 維持在 `applyFxlFitScale()` 內就地擴充（YAGNI），僅在實作過程中若判斷該函式已過度龐雜、難以驗證時才回頭評估抽離，並記錄於本 issue 的完成備註（見 `docs/epics.md` 對應 Backlog 列）
+  - **改用已抽離的 `EpubFxlScaler`，不再就地實作**：本段原描述「就地實作，不預先抽離」已被 Issue 8（2026-07-12 已完成，見該 issue）取代——`EpubFxlScaler`（`app/android/app/src/main/kotlin/cc/ugotit/elinkbook/EpubFxlScaler.kt`）已存在且為無狀態 pure-Kotlin 模組，本 issue 新增的雙頁縮放邏輯應在 `EpubFxlScaler` 內擴充純函式（例如新增接受「每頁可用寬度」的多載或新函式），而非退回在 `EpubReaderView.kt` 內就地擴充；`cachedFxlFitScale` 快取鍵新增「是否為 spread 模式」維度仍留在 `EpubReaderView.kt`（實例狀態，不搬入 `EpubFxlScaler`）。開工前應重新閱讀 `EpubFxlScaler.kt` 當時的函式簽章，確認擴充方式與既有 `computeFitScale`/`computeCenteringTranslation` 相容
 - **`ReaderScreen`**：EPUB 且 `isFixedLayout == true` 時，於畫面右上角新增圓形半透明懸浮設定按鈕（`Key('reader_fixed_layout_settings_button')`，對稱於左上角 `Key('reader_fixed_layout_back_button')`），點擊開啟 `FxlSettingsSheet`（打破「固定版面不顯示設定齒輪」的既有慣例，因為固定版面整個 Scaffold AppBar 被隱藏）
 - 新建 `FxlSettingsSheet`（`app/lib/screens/fxl_settings_sheet.dart`）：精簡版 Bottom Sheet，提供「雙頁模式」三態切換選項（僅預留 FR-42 全螢幕開關的 UI 擴充空間，本 issue **不**實作 FR-42 功能本身）
 
@@ -200,9 +200,9 @@
 
 ---
 
-## Issue 8：技術債／架構深化——EpubReaderView.kt FXL 縮放邏輯抽離為 EpubFxlScaler
+## Issue 8：技術債／架構深化——EpubReaderView.kt FXL 縮放邏輯抽離為 EpubFxlScaler（已完成）
 
-**Status:** ready-for-agent
+**Status:** ✅ 已完成。依 `plans/plan-issue-8.md` Task 1-3 完成實作：新增 `EpubFxlScaler.kt`（`computeFitScale`／`computeCenteringTranslation`，7 個 JVM 單元測試全數通過）、`EpubReaderView.kt` 的 `applyFxlFitScale()` 改呼叫該模組。`/superpowers:requesting-code-review` 逐 commit 審查（範圍 `36d0279..6efd4e3`）核准，確認抽離公式與原內嵌算式逐行等價、`EpubFxlScaler` 確實無狀態、`cachedFxlFitScale` 行為未變、對外 method channel 契約未受影響（Ready to merge: With fixes，僅 Minor 文件收尾事項）。真機 `integration_test/epub_reader_view_test.dart` 回歸驗證 9/9 全數通過（含「開啟定樣式範例 EPUB，onLayoutResolved 回報 isFixedLayout 為 true」）。
 
 **依賴：** 無（獨立技術債重構，不新增功能，不影響既有 method channel 契約，可於 Issue 6 之前或之後任何時間點執行）
 
@@ -216,6 +216,7 @@
 - 不新增 Dart 測試（本 issue 不涉及 Dart 端）
 
 **驗收標準：**
-- 上述 JVM 單元測試皆通過（`./gradlew testDebugUnitTest`，於 `app/android` 目錄執行）
-- `flutter analyze` 乾淨
-- `integration_test`（真實裝置）：重新執行既有涵蓋定樣式 EPUB 開書的測試（`epub_reader_view_test.dart` 「開啟定樣式範例 EPUB，onLayoutResolved 回報 isFixedLayout 為 true」），並人工視覺確認固定版面書籍縮放/置中效果與抽離前一致，無回歸
+- 上述 JVM 單元測試皆通過（`./gradlew testDebugUnitTest`，於 `app/android` 目錄執行）—— ✅ 已於真機連線的開發環境以 `./gradlew :app:testDebugUnitTest --tests "cc.ugotit.elinkbook.EpubFxlScalerTest"` 實際執行，`BUILD SUCCESSFUL`，7/7 通過
+- `flutter analyze` 乾淨 —— ✅ 已確認
+- `integration_test`（真實裝置）：重新執行既有涵蓋定樣式 EPUB 開書的測試（`epub_reader_view_test.dart` 「開啟定樣式範例 EPUB，onLayoutResolved 回報 isFixedLayout 為 true」）—— ✅ 已在真機（`9491G`，Android 15）執行 `flutter test integration_test/epub_reader_view_test.dart`，9/9 全數通過
+- 人工視覺確認固定版面書籍縮放/置中效果與抽離前一致，無回歸 —— ⚠️ **未完成，待人類補做**：曾嘗試以 `adb screencap` 自動截圖驗證（暫時性測試檔，已於驗證後刪除，未進版控），但此開發用真機（TCL 機型，`com.tcl.android.launcher`）在 `flutter test integration_test` 執行期間會被系統啟動器搶回前景焦點（`dumpsys` 確認 `mCurrentFocus`/`topResumedActivity` 為 launcher 而非測試中的 App），導致無法用 adb 截到 App 畫面本身，非本次程式改動造成的問題。由於程式碼審查已確認抽離公式與原邏輯逐行等價、且自動化整合測試（含 `isFixedLayout` 判定）無回歸，此項風險評估為低，但仍建議人類在方便時手動開啟一本固定版面（漫畫）EPUB，肉眼比對縮放/置中效果，補齊此項驗收標準
