@@ -262,9 +262,9 @@ Issue 1-7 完成後 `PdfReaderView.kt` 已達 646 行，除了 PlatformView 生�
 
 ---
 
-## Issue 10：技術債／架構深化——PdfReaderView.kt fitMode/cropMode 改用 Kotlin enum 取代 String
+## Issue 10：技術債／架構深化——PdfReaderView.kt fitMode/cropMode 改用 Kotlin enum 取代 String（已完成）
 
-**Status:** ready-for-agent
+**Status:** ✅ 已完成。依 `plans/plan-issue-10.md` Task 1-3 於獨立 worktree（`.worktrees/epic-4-issue-10`）完成實作：`PdfReaderView` 新增巢狀 `internal enum class PdfFitMode`／`PdfCropMode`（各附 `fromWireValue()`，新增 10 個 JVM 單元測試，共 30 個測試全數通過），`setPdfPreferences()`／`openBook()`／`renderCurrentPage()`／`enterCropEditMode()`／`applyFitMode()` 全數改用 enum 比對，`applyFitMode()` 順勢改為編譯器強制窮舉的 3 分支 `when`；Method Channel 資料交換格式與 Dart 端零改動。一份*計劃*審查（`tmp/epic-4/reviews/plan-issue-10-review.md`）誤判巢狀 enum 會因外層類別實作 `PlatformView` 而在純 JVM 測試觸發 `NoClassDefFoundError`，已用結構相同的最小可重現範例實測推翻該主張（`BUILD SUCCESSFUL`，0 錯誤），計劃維持原巢狀設計未修改。`/superpowers:requesting-code-review` *程式碼*審查核准（`tmp/epic-4/reviews/plan-issue-10-code-review.md`，Ready to merge: Yes），`flutter analyze` 乾淨，真機 `integration_test` 回歸（`reader_screen_test.dart` 23/23、`pdf_reader_view_test.dart` 4/4，共 27/27）全數通過，已透過 PR #35 合併回 `main`。
 
 **依賴：** 無（Issue 8-9 完成後的獨立技術債重構，不新增功能；本 issue 的目的是在正式進入 `epic-16-dual-page` 前把這項技術債收尾）
 
