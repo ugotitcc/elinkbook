@@ -114,4 +114,35 @@ class PdfImageProcessorTest {
         assertEquals(0.01f, result.right, 1e-4f)
         assertEquals(0.01f, result.bottom, 1e-4f)
     }
+
+    // ---- contrastBrightnessColorMatrix ----
+
+    @Test
+    fun `contrast 與 brightness 皆為 0 時回傳單位矩陣（無視覺變化）`() {
+        val matrix = PdfImageProcessor.contrastBrightnessColorMatrix(contrast = 0f, brightness = 0f)
+
+        val expected = floatArrayOf(
+            1f, 0f, 0f, 0f, 0f,
+            0f, 1f, 0f, 0f, 0f,
+            0f, 0f, 1f, 0f, 0f,
+            0f, 0f, 0f, 1f, 0f,
+        )
+        assertArrayEquals(expected, matrix, 1e-4f)
+    }
+
+    @Test
+    fun `contrast=50 brightness=20 時依標準公式算出對應的 ColorMatrix 係數`() {
+        val matrix = PdfImageProcessor.contrastBrightnessColorMatrix(contrast = 50f, brightness = 20f)
+
+        // contrastFactor = (100+50)/100 = 1.5
+        // brightnessOffset = 20 * 2.55 = 51.0
+        // translate = 51.0 + (255 - 1.5*255)/2 = 51.0 - 63.75 = -12.75
+        val expected = floatArrayOf(
+            1.5f, 0f, 0f, 0f, -12.75f,
+            0f, 1.5f, 0f, 0f, -12.75f,
+            0f, 0f, 1.5f, 0f, -12.75f,
+            0f, 0f, 0f, 1f, 0f,
+        )
+        assertArrayEquals(expected, matrix, 1e-4f)
+    }
 }

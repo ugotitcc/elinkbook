@@ -167,4 +167,22 @@ object PdfImageProcessor {
         val relBottom = (bottom.toFloat() / height + CROP_MARGIN).coerceIn(0f, 1f)
         return CropRect(relLeft, relTop, relRight, relBottom)
     }
+
+    /**
+     * 標準對比度/亮度 ColorMatrix 公式：先以 127.5（8-bit 色階灰階中點）為
+     * 軸心縮放對比度，再疊加亮度位移，確保 contrast=0／brightness=0 時是
+     * 單位矩陣（無視覺變化）。回傳值可直接傳入
+     * android.graphics.ColorMatrix(FloatArray) 建構子。
+     */
+    fun contrastBrightnessColorMatrix(contrast: Float, brightness: Float): FloatArray {
+        val contrastFactor = (100f + contrast) / 100f // -100→0.0，0→1.0，100→2.0
+        val brightnessOffset = brightness * 2.55f // -100..100 映射到約 -255..255 的像素位移範圍
+        val translate = brightnessOffset + (255f - contrastFactor * 255f) / 2f
+        return floatArrayOf(
+            contrastFactor, 0f, 0f, 0f, translate,
+            0f, contrastFactor, 0f, 0f, translate,
+            0f, 0f, contrastFactor, 0f, translate,
+            0f, 0f, 0f, 1f, 0f,
+        )
+    }
 }
