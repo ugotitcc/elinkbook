@@ -67,6 +67,8 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
     implementation("androidx.fragment:fragment-ktx:1.8.9")
     implementation("androidx.documentfile:documentfile:1.0.1")
+
+    testImplementation("junit:junit:4.13.2")
 }
 
 flutter {
