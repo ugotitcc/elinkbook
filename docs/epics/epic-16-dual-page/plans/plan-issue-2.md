@@ -195,17 +195,56 @@ import 'dual_page_mode.dart';
       other.dualPageDirection == dualPageDirection;
 ```
 
-`hashCode`（原第 150-169 行）在 `pdfCropRect,` 之後新增：
+`hashCode`（原第 150-169 行）——**改用 `Object.hashAll([...])` 取代 `Object.hash(...)`**：`Object.hash()` 的 Dart SDK 簽章硬性上限是 20 個位置參數（`object1`...`object20`，見 `dart-sdk/lib/core/object.dart`）；現有 17 個欄位加上本次新增的 3 個雙頁欄位，剛好是 20 個，雖然仍在上限內可編譯，但已無任何餘裕——未來任何 Epic 只要再替 `BookReaderPrefs` 新增一個欄位就會立刻超過上限而編譯失敗。`Object.hashAll(Iterable<Object?>)` 接受不限長度的 List，且 SDK 文件明訂「傳入相同順序的參數集合時，回傳結果與 `Object.hash()` 完全一致」，是純粹的無風險替換，藉本次一併把這個即將觸頂的限制排除：
 
+原本：
 ```dart
+  int get hashCode => Object.hash(
+        fontFamily,
+        fontSize,
+        fontWeight,
+        lineHeight,
+        paragraphSpacing,
+        pageMargins,
+        textAlign,
+        publisherStyles,
+        writingModeOverride,
+        pageTurnModeOverride,
+        screenOrientationOverride,
+        pdfFitMode,
+        pdfContrast,
+        pdfBrightness,
+        pdfBoldStrength,
+        pdfCropMode,
+        pdfCropRect,
+      );
+```
+
+改為：
+```dart
+  int get hashCode => Object.hashAll([
+        fontFamily,
+        fontSize,
+        fontWeight,
+        lineHeight,
+        paragraphSpacing,
+        pageMargins,
+        textAlign,
+        publisherStyles,
+        writingModeOverride,
+        pageTurnModeOverride,
+        screenOrientationOverride,
+        pdfFitMode,
+        pdfContrast,
+        pdfBrightness,
+        pdfBoldStrength,
+        pdfCropMode,
         pdfCropRect,
         dualPageMode,
         dualPageCoverAlone,
         dualPageDirection,
-      );
+      ]);
 ```
-
-（移除原本 `pdfCropRect,` 後方緊接的 `);`，改成上面這樣把新欄位插入、`);` 移到最後。）
 
 `copyWith()`（原第 176-215 行）具名參數列表在 `PdfCropRect? pdfCropRect,` 之後新增：
 
