@@ -87,6 +87,31 @@ class PdfReaderView(
     private var cropEditModeActive: Boolean = false
     private var cropOverlayView: CropOverlayView? = null
 
+    /**
+     * PDF 頁面顯示縮放模式（FR-11），對應 Dart PdfFitMode 列舉
+     * （`app/lib/reader/pdf_fit_mode.dart`）透過 Method Channel 傳來的
+     * `.name` 字串（'pageFit'／'fitWidth'／'actualSize'）。原生端原本
+     * 直接以 String 儲存並用字串比對（Primitive Obsession，見
+     * tmp/epic-4/reviews/code-review-report.md），改用此列舉提高型別
+     * 安全性，見 docs/epics/epic-4-pdf-enhance/plans/plan-issue-10.md。
+     */
+    internal enum class PdfFitMode {
+        PAGE_FIT, FIT_WIDTH, ACTUAL_SIZE;
+
+        companion object {
+            /** 未知或非 String 的原始值一律正規化為 [PAGE_FIT]（預設），
+             * 與抽離前 applyFitMode() 的 when...else 退回 pageFit 行為的
+             * 語意完全等價——原本任何不等於 "fitWidth"／"actualSize" 的
+             * 字串（含 null／未知垃圾值）都會落到 else 分支，本函式維持
+             * 相同的「其餘一律視為 pageFit」語意。*/
+            fun fromWireValue(value: String?): PdfFitMode = when (value) {
+                "fitWidth" -> FIT_WIDTH
+                "actualSize" -> ACTUAL_SIZE
+                else -> PAGE_FIT
+            }
+        }
+    }
+
     init {
         channel.setMethodCallHandler(this)
     }
