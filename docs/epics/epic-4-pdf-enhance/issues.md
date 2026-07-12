@@ -232,3 +232,30 @@ Issue 1-7 完成後 `PdfReaderView.kt` 已達 646 行，除了 PlatformView 生�
 - 上述 JVM 單元測試皆通過（`./gradlew testDebugUnitTest`，於 `app/android` 目錄執行）
 - `flutter analyze` 乾淨
 - `integration_test`（真實裝置）：重新執行 Issue 2-6 既有涵蓋 Fit 模式／對比度／亮度／加粗／智慧裁切／手動裁切的測試，確認抽離重構後行為與抽離前完全一致，無回歸
+
+---
+
+## Issue 9：技術債／架構深化——PdfReaderView.kt 縮放係數與白底 Bitmap 建立邏輯重複
+
+**Status:** ready-for-agent
+
+**依賴：** 無（Issue 8 完成後的獨立技術債重構，不新增功能，不影響既有 method channel 契約；本 issue 的目的是在正式進入 `epic-16-dual-page` 前把這項技術債收尾）
+
+**描述：**
+獨立程式碼審查（`tmp/epic-4/reviews/code-review-report.md`，2026-07-12）在 Issue 8 把智慧裁切／加粗／濾鏡三塊像素處理邏輯抽離為 `PdfImageProcessor` 之後，於 `PdfReaderView.kt` 仍發現兩處殘留的 Duplicated Code（plan-issue-8.md Global Constraints 明確記錄為「本次刻意不處理、範圍不重疊」的既有技術債，見 `docs/epics.md`）：
+
+1. 縮放係數 `density.coerceIn(2.0f, 3.0f)` 重複硬編碼於 `renderCurrentPage()`、`renderFullPageForCropPreview()`、`applyFitMode()` 的 `actualSize` 分支三處，`actualSize` 分支處留有原作者「隱式耦合，修改時務必同步」的警語註解——代表此重複風險當時已知，僅以註解守門，未實際抽出共用邏輯。
+2. 建立不透明白底 Bitmap（`Bitmap.createBitmap(...)` + `eraseColor(Color.WHITE)`）邏輯重複於 4 處：`renderCurrentPage()` 的智慧裁切偵測分支、主渲染流程、OOM Fallback 流程、`renderFullPageForCropPreview()`。
+
+本 issue 把這兩塊邏輯分別抽成 `PdfImageProcessor` 的共用純函式 `pageRenderScale(density: Float): Float` 與 `createOpaqueWhiteBitmap(width: Int, height: Int): Bitmap`，`PdfReaderView.kt` 對應呼叫點改呼叫共用函式，消除重複與隱式耦合警語所描述的風險本身。這是低風險、機械式的抽離重構，不是新功能，所有既有視覺效果與行為必須維持一致。完整計劃見 `plans/plan-issue-9.md`。
+
+**單元測試要求：**
+- 新增 JVM 單元測試（`PdfImageProcessorTest.kt` 內新增測試群組）：`pageRenderScale()` 涵蓋 density 低於下限被夾到 2.0、剛好等於下限、落在區間內原樣返回、高於上限被夾到 3.0 四種情況
+- `createOpaqueWhiteBitmap()` 依賴真實 `android.graphics.Bitmap` 方法，比照 `PdfImageProcessor` 既有 `applyBoldEffect()`／`dilate()`／`detectCropRect()` 慣例，不在純 JVM 環境下單元測試，正確性由既有真機 `integration_test` 回歸把關
+- 不新增 Dart 測試（本 issue 不涉及 Dart 端）
+
+**驗收標準：**
+- 上述 JVM 單元測試皆通過（`./gradlew testDebugUnitTest`，於 `app/android` 目錄執行）
+- `flutter analyze` 乾淨
+- `integration_test`（真實裝置）：重新執行既有涵蓋 PDF Fit 模式／對比度／亮度／加粗／智慧裁切／手動裁切的測試（`reader_screen_test.dart`／`pdf_reader_view_test.dart`），確認抽離重構後行為與抽離前完全一致，無回歸
+- `PdfReaderView.kt` 頂端已無用的 `import android.graphics.Bitmap` 已移除；`applyFitMode()` `actualSize` 分支過期的「隱式耦合，修改時務必同步」警語註解已同步更新，不再誤導後續維護者
