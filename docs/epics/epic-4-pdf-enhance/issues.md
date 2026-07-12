@@ -259,3 +259,26 @@ Issue 1-7 完成後 `PdfReaderView.kt` 已達 646 行，除了 PlatformView 生�
 - `flutter analyze` 乾淨
 - `integration_test`（真實裝置）：重新執行既有涵蓋 PDF Fit 模式／對比度／亮度／加粗／智慧裁切／手動裁切的測試（`reader_screen_test.dart`／`pdf_reader_view_test.dart`），確認抽離重構後行為與抽離前完全一致，無回歸
 - `PdfReaderView.kt` 頂端已無用的 `import android.graphics.Bitmap` 已移除；`applyFitMode()` `actualSize` 分支過期的「隱式耦合，修改時務必同步」警語註解已同步更新，不再誤導後續維護者
+
+---
+
+## Issue 10：技術債／架構深化——PdfReaderView.kt fitMode/cropMode 改用 Kotlin enum 取代 String
+
+**Status:** ready-for-agent
+
+**依賴：** 無（Issue 8-9 完成後的獨立技術債重構，不新增功能；本 issue 的目的是在正式進入 `epic-16-dual-page` 前把這項技術債收尾）
+
+**描述：**
+獨立程式碼審查（`tmp/epic-4/reviews/code-review-report.md`，2026-07-12）指出 Primitive Obsession：`PdfReaderView.kt` 原生端 `fitMode`／`cropMode` 宣告為 `String` 並直接字串比對（例如 `cropMode == "autoDetect"`），未對應到 Kotlin `Enum`，型別安全性較弱。`docs/epics.md` 對應 Backlog 列原本記錄「待 Epic 16 PDF 側 issue 完成後再做」，**本 issue 是人類明確決定提前於 Epic 16 開始前執行**（不等待 Epic 16 PDF 側 issue 落地），以減少帶入 Epic 16 的技術債。
+
+Method Channel 的資料交換格式（Dart `PdfFitMode`/`PdfCropMode`透過 `.name` 送出的字串字面值 `'pageFit'`/`'fitWidth'`/`'actualSize'`、`'none'`/`'autoDetect'`/`'manual'`）維持完全不變，Dart 端不需任何修改——只在原生端收到字串的當下立即解析為 Kotlin `enum class`（巢狀於 `PdfReaderView` 內，比照既有 `CropOverlayView.Handle` 巢狀 enum 慣例），內部狀態與後續所有比對邏輯改用 enum，徹底消除字串比對與型別不安全風險。完整計劃見 `plans/plan-issue-10.md`。
+
+**單元測試要求：**
+- 新增 JVM 單元測試（新檔案 `PdfReaderViewTest.kt`）：`PdfFitMode.fromWireValue()`／`PdfCropMode.fromWireValue()` 涵蓋合法字面值、`null`、未知字串三種情況
+- 不新增 Dart 測試（本 issue 不涉及 Dart 端，wire 格式不變）
+
+**驗收標準：**
+- 上述 JVM 單元測試皆通過（`./gradlew testDebugUnitTest`，於 `app/android` 目錄執行）
+- `flutter analyze` 乾淨
+- `integration_test`（真實裝置）：重新執行既有涵蓋 PDF Fit 模式／智慧自動裁切／手動裁切的測試（`reader_screen_test.dart`），確認改用 enum 後行為與改動前完全一致，無回歸
+- `PdfReaderView.kt` 內所有 `fitMode`/`cropMode` 相關的字串比對（`== "..."`、`!= "..."`）已全數改為 enum 比對，且無殘留字串常數
