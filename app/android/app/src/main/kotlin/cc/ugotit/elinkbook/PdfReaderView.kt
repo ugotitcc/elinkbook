@@ -112,6 +112,37 @@ class PdfReaderView(
         }
     }
 
+    /**
+     * PDF 頁面裁切模式（FR-11），對應 Dart PdfCropMode 列舉
+     * （`app/lib/reader/pdf_crop_mode.dart`）透過 Method Channel 傳來的
+     * `.name` 字串（'none'／'autoDetect'／'manual'）。抽離理由同
+     * [PdfFitMode]。
+     */
+    internal enum class PdfCropMode {
+        NONE, AUTO_DETECT, MANUAL;
+
+        companion object {
+            /**
+             * 未知或非 String 的原始值正規化為 [NONE]。
+             *
+             * 【與逐行等價原則的唯一已知落差，經人類明確授權的例外，見
+             * plan-issue-10.md Global Constraints】抽離前 renderCurrentPage()
+             * 用 `cropMode != "none"` 判斷是否套用裁切，任何不等於 "none"
+             * 的原始字串（含未知垃圾值）都會被視為「裁切生效」；抽離後
+             * fromWireValue() 把未知值正規化為 NONE（視為不裁切），行為並
+             * 不完全等價。此差異在正式產品路徑中不可觸及——Dart 端唯一
+             * 呼叫來源 PdfCropMode.name（見 app/lib/reader/pdf_crop_mode.dart）
+             * 只會產生 'none'／'autoDetect'／'manual' 三個合法字面值之一，
+             * 不會送出其他字串，因此屬於零風險的死碼路徑差異。
+             */
+            fun fromWireValue(value: String?): PdfCropMode = when (value) {
+                "autoDetect" -> AUTO_DETECT
+                "manual" -> MANUAL
+                else -> NONE
+            }
+        }
+    }
+
     init {
         channel.setMethodCallHandler(this)
     }
