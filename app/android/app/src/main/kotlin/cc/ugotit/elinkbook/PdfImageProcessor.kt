@@ -30,6 +30,10 @@ object PdfImageProcessor {
     private const val BOLD_DOWNSCALE_FACTOR = 0.25f
     private const val BOLD_MAX_RADIUS = 3
 
+    // PDF 頁面渲染縮放係數的夾限範圍，見 pageRenderScale()。
+    private const val PAGE_RENDER_MIN_SCALE = 2.0f
+    private const val PAGE_RENDER_MAX_SCALE = 3.0f
+
     /**
      * 型態學膨脹（加粗），對 [source] 做「取鄰域內最小亮度值」的膨脹運算，
      * 讓深色筆畫（文字）向外擴張、變粗變黑。[strength] 為 0..1，對應原
@@ -185,4 +189,17 @@ object PdfImageProcessor {
             0f, 0f, 0f, 1f, 0f,
         )
     }
+
+    /**
+     * PDF 頁面渲染縮放係數：以裝置螢幕密度 [density] 為基準，夾限在
+     * [PAGE_RENDER_MIN_SCALE]（2.0）到 [PAGE_RENDER_MAX_SCALE]（3.0）之間，
+     * 避免極端 density 值造成渲染解析度過低（模糊）或過高（記憶體/效能問題）。
+     * `PdfReaderView.kt` 的 `renderCurrentPage()`／`renderFullPageForCropPreview()`／
+     * `applyFitMode()` 的 `actualSize` 分支原本各自重複硬編碼
+     * `density.coerceIn(2.0f, 3.0f)`，此為抽離後的單一事實來源（見
+     * docs/epics.md「PdfReaderView.kt 縮放係數與白底 Bitmap 建立邏輯重複」列、
+     * docs/epics/epic-4-pdf-enhance/plans/plan-issue-9.md）。
+     */
+    fun pageRenderScale(density: Float): Float =
+        density.coerceIn(PAGE_RENDER_MIN_SCALE, PAGE_RENDER_MAX_SCALE)
 }
