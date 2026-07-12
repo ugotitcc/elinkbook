@@ -1,4 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:elinkbook/reader/dual_page_direction.dart';
+import 'package:elinkbook/reader/dual_page_mode.dart';
 import 'package:elinkbook/reader/page_turn_mode.dart';
 import 'package:elinkbook/reader/pdf_crop_mode.dart';
 import 'package:elinkbook/reader/pdf_fit_mode.dart';
@@ -26,11 +28,17 @@ void main() {
       pdfBoldStrength: 0,
       pdfCropMode: PdfCropMode.none,
       pdfCropRect: null,
+      dualPageMode: DualPageMode.auto,
+      dualPageCoverAlone: true,
+      dualPageDirection: DualPageDirection.ltr,
     );
 
     expect(resolved.fontSize, isNull);
     expect(resolved.textAlign, isNull);
     expect(resolved.pageTurnMode, PageTurnMode.paginated);
     expect(resolved.pdfFitMode, PdfFitMode.pageFit);
+    expect(resolved.dualPageMode, DualPageMode.auto);
+    expect(resolved.dualPageCoverAlone, isTrue);
+    expect(resolved.dualPageDirection, DualPageDirection.ltr);
   });
 }

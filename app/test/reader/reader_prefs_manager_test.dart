@@ -2,6 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:elinkbook/reader/book_reader_prefs.dart';
 import 'package:elinkbook/reader/book_reader_prefs_repository.dart';
+import 'package:elinkbook/reader/dual_page_direction.dart';
+import 'package:elinkbook/reader/dual_page_mode.dart';
 import 'package:elinkbook/reader/global_reader_prefs.dart';
 import 'package:elinkbook/reader/page_turn_mode.dart';
 import 'package:elinkbook/reader/pdf_crop_mode.dart';
@@ -43,6 +45,9 @@ void main() {
       expect(resolved.pdfBoldStrength, 0);
       expect(resolved.pdfCropMode, PdfCropMode.none);
       expect(resolved.pdfCropRect, isNull);
+      expect(resolved.dualPageMode, DualPageMode.auto);
+      expect(resolved.dualPageCoverAlone, isTrue);
+      expect(resolved.dualPageDirection, DualPageDirection.ltr);
     });
 
     test('單書覆寫存在時，優先套用單書覆寫，忽略全域預設', () {
@@ -52,6 +57,9 @@ void main() {
           screenOrientationOverride: ScreenOrientationSetting.lock90,
           pdfFitMode: PdfFitMode.fitWidth,
           pdfContrast: 20,
+          dualPageMode: DualPageMode.always,
+          dualPageCoverAlone: false,
+          dualPageDirection: DualPageDirection.rtl,
         ),
         globalPrefs: const GlobalReaderPrefs.initial(),
       );
@@ -61,6 +69,9 @@ void main() {
       expect(resolved.screenOrientation, ScreenOrientationSetting.lock90);
       expect(resolved.pdfFitMode, PdfFitMode.fitWidth);
       expect(resolved.pdfContrast, 20);
+      expect(resolved.dualPageMode, DualPageMode.always);
+      expect(resolved.dualPageCoverAlone, isFalse);
+      expect(resolved.dualPageDirection, DualPageDirection.rtl);
     });
 
     test('單書覆寫為 null 時，正確退回全域預設（非硬編碼初始值，證明真的有讀 globalPrefs）',
