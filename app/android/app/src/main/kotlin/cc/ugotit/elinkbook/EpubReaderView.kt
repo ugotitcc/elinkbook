@@ -331,10 +331,12 @@ class EpubReaderView(
                 val contentWidth = webView.width
                 val contentHeight = webView.height
                 if (contentWidth <= 0 || contentHeight <= 0) continue
-                val fitScale = cachedFxlFitScale ?: minOf(
-                    availableWidth.toFloat() / contentWidth.toFloat(),
-                    availableHeight.toFloat() / contentHeight.toFloat(),
-                ).coerceAtMost(1f).also { cachedFxlFitScale = it }
+                val fitScale = cachedFxlFitScale ?: EpubFxlScaler.computeFitScale(
+                    availableWidth = availableWidth,
+                    availableHeight = availableHeight,
+                    contentWidth = contentWidth,
+                    contentHeight = contentHeight,
+                ).also { cachedFxlFitScale = it }
 
                 // 先歸零位移、以左上角為錨點，量出這一輪「未經校正」的原始 layout
                 // 位置（pivot 在 (0,0) 時縮放不會移動錨點本身，所以量到的位置就是
@@ -350,15 +352,17 @@ class EpubReaderView(
                 val currentLeft = (webViewLoc[0] - containerLoc[0]).toFloat()
                 val currentTop = (webViewLoc[1] - containerLoc[1]).toFloat()
 
-                // 縮放後的內容尺寸若小於可用空間，置中留白（水平/垂直皆可能發生，
-                // 對應 Fit.CONTAIN 的語意）。
-                val scaledWidth = contentWidth * fitScale
-                val scaledHeight = contentHeight * fitScale
-                val desiredLeft = (availableWidth - scaledWidth) / 2f
-                val desiredTop = (availableHeight - scaledHeight) / 2f
-
-                webView.translationX = desiredLeft - currentLeft
-                webView.translationY = desiredTop - currentTop
+                val translation = EpubFxlScaler.computeCenteringTranslation(
+                    availableWidth = availableWidth,
+                    availableHeight = availableHeight,
+                    contentWidth = contentWidth,
+                    contentHeight = contentHeight,
+                    scale = fitScale,
+                    currentLeft = currentLeft,
+                    currentTop = currentTop,
+                )
+                webView.translationX = translation.x
+                webView.translationY = translation.y
             }
         }
         fxlLayoutListener = listener
