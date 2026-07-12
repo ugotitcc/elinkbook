@@ -3,6 +3,7 @@ Thumbs.db
 .vscode/
 .idea/
 .claude/worktrees/
+.worktrees/
 .superpowers/
 .agents/skills/
 .claude/skills/
