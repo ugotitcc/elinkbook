@@ -32,7 +32,7 @@
 
 ## Issue 2：資料層基礎建設——雙頁偏好設定儲存
 
-**Status:** ready-for-agent
+**Status:** ✅ 已完成。依 `plans/plan-issue-2.md` Task 1-2 完成實作：新增 `DualPageMode`/`DualPageDirection` 列舉、`BookReaderPrefs` 新增 3 個雙頁欄位（`toMap`/`fromMap`/`==`/`hashCode` 依既有模式平行擴充，`hashCode` 順勢改用 `Object.hashAll` 取代 `Object.hash`，避免其 20 參數上限被本次新增欄位頂到）、`book_reader_prefs` 表升級至 schema version 4（`onUpgrade` 從互斥 `if/else if` 改為累加式 `if`，確保停留在 version 2 的裝置跳級到 version 4 時，PDF 欄位與雙頁欄位兩段遷移皆會執行，並附專屬回歸測試驗證此情境）。`/superpowers:requesting-code-review` 程式碼審查核准（Ready to merge: Yes，無 Critical/Important 問題），44 個新增/相關測試＋全專案 213 個測試全數通過，`flutter analyze` 乾淨。已於 branch `epic-16/dual-page-prefs-storage`（commit `934623d`）完成，待人類合併。
 
 **依賴：** 無（起始工單，可與 Issue 1 平行）
 
@@ -42,7 +42,7 @@
 - 新增列舉型別：`DualPageMode`（`app/lib/reader/dual_page_mode.dart`，`auto`/`always`/`never` 三值）、`DualPageDirection`（`app/lib/reader/dual_page_direction.dart`，`ltr`/`rtl` 二值）
 - `BookReaderPrefs`（`app/lib/reader/book_reader_prefs.dart`）新增 3 個 nullable 欄位：`dualPageMode`／`dualPageCoverAlone`／`dualPageDirection`，`copyWith`/`toMap`/`fromMap`/`==`/`hashCode` 依既有模式平行擴充（見 `spec.md`「資料模型」）
 - `book_reader_prefs` 表新增上述 3 欄位（見 `spec.md` 的 SQL 定義：`dual_page_mode TEXT`／`dual_page_cover_alone INTEGER`／`dual_page_direction TEXT`），依裝置狀態分兩條路徑：全新安裝走 `CREATE TABLE`（`onCreate`）一步到位；既有裝置走 `ALTER TABLE ADD COLUMN`（`onUpgrade`）逐欄補上，兩者互斥不重疊，`BookReaderPrefsRepository` 的既有 `load`/`save` 邏輯不需改動（全欄位 nullable、`Map` 驅動）
-- **重要**：本 issue 只建立資料層，`_resolvedDualPageMode`／`_resolvedDualPageCoverAlone`／`_resolvedDualPageDirection` 等 null-合併 getter 屬於 `ReaderScreen` 的職責，留給 Issue 3（見 `spec.md` I-3／「Null 預設值解析」）
+- **重要**：本 issue 只建立資料層，`ResolvedPreferences.dualPageMode`／`dualPageCoverAlone`／`dualPageDirection` 的 Null 預設值解析（`ReaderPrefsManagerImpl.resolve()`）屬於後續職責，留給 Issue 3（見 `spec.md` I-3／「Null 預設值解析」；因 `docs/superpowers/plans/2026-07-12-refactor-reader-prefs-manager.md` 已完成的 `ReaderPrefsManager` 重構，此處不再是 `ReaderScreen` 上的 `_resolvedXxx` getter，見 spec.md 該段落 2026-07-12 同步更新的說明）
 
 **單元測試要求：**
 - 純 Dart unit test：`DualPageMode`／`DualPageDirection` 為 `byName` 直接映射（無回退），比照 `BookReaderPrefs` 既有 enum 欄位（如 `PdfFitMode`／`PdfCropMode`）的既有慣例，不需要獨立測試檔
@@ -67,7 +67,7 @@
 
 - **`ReaderScreen`**（`app/lib/screens/reader_screen.dart`）：
   - 方向偵測：`build()` 中透過 `MediaQuery.of(context).orientation == Orientation.landscape` 判斷，存為 `bool isLandscape`，下傳給 `PdfReaderView`（本 issue）／`EpubReaderView`（Issue 6 消費，本 issue 只需確保偵測邏輯是共用的，不要把它寫死在 PDF 專屬程式碼路徑裡）
-  - 新增 `_resolvedDualPageMode => _prefs.dualPageMode ?? DualPageMode.auto`、`_resolvedDualPageCoverAlone => _prefs.dualPageCoverAlone ?? true`、`_resolvedDualPageDirection => _prefs.dualPageDirection ?? DualPageDirection.ltr` 三個 getter（比照既有 `_resolvedPdfFitMode` 慣例），永遠下傳非 null 值
+  - 新增 `ResolvedPreferences.dualPageMode: DualPageMode`／`dualPageCoverAlone: bool`／`dualPageDirection: DualPageDirection`（皆 non-nullable）三個欄位，並在 `ReaderPrefsManagerImpl.resolve()` 中依 `book.dualPageMode ?? DualPageMode.auto` 等既有 `pdfFitMode` 慣例解析（見 spec.md「Null 預設值解析」——`ReaderPrefsManager` 重構後，Null 合併解析邏輯已從 `ReaderScreen` 搬到 `ReaderPrefsManager` 深模組，不再是 `_resolvedXxx` getter）；`ReaderScreen` 透過 `resolved.dualPageMode` 等欄位讀取已解析值後下傳，永遠是非 null 值
 - **`PdfReaderView`**（Dart，`app/lib/reader/pdf_reader_view.dart`）：建構子新增 `dualPageMode`／`dualPageCoverAlone`／`dualPageDirection`／`isLandscape` 參數（皆由 `ReaderScreen` 解析為非 null 值後傳入）；`didUpdateWidget` 偵測任一變動時透過 `setPdfPreferences` 送出
 - **`PdfReaderView.kt`**：`renderCurrentPage()` 更名為 `renderCurrentSpread()`（同步改名全部 5 處呼叫點：`setPdfPreferences`／`openBook`／`exitCropEditMode`／`nextPage`／`previousPage`），完整實作 `spec.md` 演算法步驟 1-6：
   1. 雙頁啟用判斷（`always`，或 `auto` 且 `isLandscape`，且未處於裁切編輯模式）
@@ -83,7 +83,7 @@
 **單元測試要求：**
 - `PdfReaderView` widget test：`isLandscape`/`dualPageMode` 變動觸發 `setPdfPreferences`；`initialPreferences` 正確包含新欄位
 - `PdfSettingsSheet` widget test：雙頁模式三態切換正確觸發 `onChanged`
-- `ReaderScreen` widget test：裝置轉橫向時 `isLandscape` 正確下傳給 `PdfReaderView` 建構參數；3 個 `_resolved…` getter 對 null 值正確做預設合併
+- `ReaderScreen` widget test：裝置轉橫向時 `isLandscape` 正確下傳給 `PdfReaderView` 建構參數；`ResolvedPreferences` 的 3 個雙頁欄位對 null 值正確做預設合併（透過 `ReaderPrefsManagerImpl.resolve()` 驗證，而非 `ReaderScreen` 上的 getter）
 - **已知測試限制**：原生端 `renderCurrentSpread()` 的拼接／OOM 回退邏輯無法透過 `flutter test` 驗證，留給本 issue 的 `integration_test`
 
 **驗收標準：**
