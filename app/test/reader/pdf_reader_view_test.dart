@@ -5,6 +5,8 @@ import 'package:elinkbook/reader/pdf_crop_mode.dart';
 import 'package:elinkbook/reader/pdf_crop_rect.dart';
 import 'package:elinkbook/reader/pdf_fit_mode.dart';
 import 'package:elinkbook/reader/pdf_reader_view.dart';
+import 'package:elinkbook/reader/dual_page_direction.dart';
+import 'package:elinkbook/reader/dual_page_mode.dart';
 
 /// 驅動 [PdfReaderView] 底層 AndroidView 完成建立流程所需的最小 mock，比照
 /// `epub_reader_view_test.dart` 的 `_pumpEpubReaderView` 模式。
@@ -52,10 +54,16 @@ void main() {
 
     final openBookCall = calls.firstWhere((c) => c.method == 'openBook');
     expect(openBookCall.arguments['path'], '/tmp/sample.pdf');
-    expect(openBookCall.arguments['initialPreferences'], {'fitMode': 'fitWidth'});
+    expect(openBookCall.arguments['initialPreferences'], {
+      'fitMode': 'fitWidth',
+      'dualPageMode': 'auto',
+      'dualPageCoverAlone': true,
+      'dualPageDirection': 'ltr',
+      'isLandscape': false,
+    });
   });
 
-  testWidgets('fitMode 為 null 時，initialPreferences 為空 map（而非 null）',
+  testWidgets('fitMode 為 null 時，initialPreferences 僅包含雙頁/橫向的預設值（不再是空 map）',
       (tester) async {
     final calls = await _pumpPdfReaderView(
       tester,
@@ -67,7 +75,12 @@ void main() {
     );
 
     final openBookCall = calls.firstWhere((c) => c.method == 'openBook');
-    expect(openBookCall.arguments['initialPreferences'], <String, Object?>{});
+    expect(openBookCall.arguments['initialPreferences'], {
+      'dualPageMode': 'auto',
+      'dualPageCoverAlone': true,
+      'dualPageDirection': 'ltr',
+      'isLandscape': false,
+    });
   });
 
   testWidgets('fitMode 變動時，didUpdateWidget 呼叫 setPdfPreferences 並帶入新值',
@@ -115,7 +128,13 @@ void main() {
 
     expect(instanceCalls, hasLength(1));
     expect(instanceCalls.single.method, 'setPdfPreferences');
-    expect(instanceCalls.single.arguments, {'fitMode': 'actualSize'});
+    expect(instanceCalls.single.arguments, {
+      'fitMode': 'actualSize',
+      'dualPageMode': 'auto',
+      'dualPageCoverAlone': true,
+      'dualPageDirection': 'ltr',
+      'isLandscape': false,
+    });
   });
 
   testWidgets('fitMode 未變動時，didUpdateWidget 不觸發任何 setPdfPreferences 呼叫',
@@ -174,6 +193,10 @@ void main() {
     expect(openBookCall.arguments['initialPreferences'], {
       'contrast': 20.0,
       'brightness': -15.0,
+      'dualPageMode': 'auto',
+      'dualPageCoverAlone': true,
+      'dualPageDirection': 'ltr',
+      'isLandscape': false,
     });
   });
 
@@ -226,6 +249,10 @@ void main() {
     expect(instanceCalls.single.arguments, {
       'contrast': 10.0,
       'brightness': 25.0,
+      'dualPageMode': 'auto',
+      'dualPageCoverAlone': true,
+      'dualPageDirection': 'ltr',
+      'isLandscape': false,
     });
   });
 
@@ -243,7 +270,13 @@ void main() {
     );
 
     final openBookCall = calls.firstWhere((c) => c.method == 'openBook');
-    expect(openBookCall.arguments['initialPreferences'], {'boldStrength': 0.5});
+    expect(openBookCall.arguments['initialPreferences'], {
+      'boldStrength': 0.5,
+      'dualPageMode': 'auto',
+      'dualPageCoverAlone': true,
+      'dualPageDirection': 'ltr',
+      'isLandscape': false,
+    });
   });
 
   testWidgets('boldStrength 變動時，didUpdateWidget 呼叫 setPdfPreferences',
@@ -291,7 +324,13 @@ void main() {
 
     expect(instanceCalls, hasLength(1));
     expect(instanceCalls.single.method, 'setPdfPreferences');
-    expect(instanceCalls.single.arguments, {'boldStrength': 0.8});
+    expect(instanceCalls.single.arguments, {
+      'boldStrength': 0.8,
+      'dualPageMode': 'auto',
+      'dualPageCoverAlone': true,
+      'dualPageDirection': 'ltr',
+      'isLandscape': false,
+    });
   });
 
   testWidgets(
@@ -312,6 +351,10 @@ void main() {
     expect(openBookCall.arguments['initialPreferences'], {
       'cropMode': 'autoDetect',
       'cropRect': {'left': 0.05, 'top': 0.1, 'right': 0.95, 'bottom': 0.9},
+      'dualPageMode': 'auto',
+      'dualPageCoverAlone': true,
+      'dualPageDirection': 'ltr',
+      'isLandscape': false,
     });
   });
 
@@ -360,7 +403,13 @@ void main() {
 
     expect(instanceCalls, hasLength(1));
     expect(instanceCalls.single.method, 'setPdfPreferences');
-    expect(instanceCalls.single.arguments, {'cropMode': 'autoDetect'});
+    expect(instanceCalls.single.arguments, {
+      'cropMode': 'autoDetect',
+      'dualPageMode': 'auto',
+      'dualPageCoverAlone': true,
+      'dualPageDirection': 'ltr',
+      'isLandscape': false,
+    });
   });
 
   testWidgets('收到原生端 onCropRectComputed 時，正確觸發回呼', (tester) async {
@@ -583,6 +632,229 @@ void main() {
 
     expect(received,
         const PdfCropRect(left: 0.1, top: 0.15, right: 0.9, bottom: 0.85));
+  });
+
+  testWidgets(
+      '_onPlatformViewCreated 呼叫 openBook 時，initialPreferences 正確包含非預設的雙頁/橫向欄位',
+      (tester) async {
+    final calls = await _pumpPdfReaderView(
+      tester,
+      const PdfReaderView(
+        filePath: '/tmp/sample.pdf',
+        onPageRendered: _noop,
+        onError: _noopError,
+        dualPageMode: DualPageMode.always,
+        dualPageCoverAlone: false,
+        dualPageDirection: DualPageDirection.rtl,
+        isLandscape: true,
+      ),
+    );
+
+    final openBookCall = calls.firstWhere((c) => c.method == 'openBook');
+    expect(openBookCall.arguments['initialPreferences'], {
+      'dualPageMode': 'always',
+      'dualPageCoverAlone': false,
+      'dualPageDirection': 'rtl',
+      'isLandscape': true,
+    });
+  });
+
+  testWidgets('dualPageMode 變動時，didUpdateWidget 呼叫 setPdfPreferences 並帶入完整最新狀態',
+      (tester) async {
+    final binaryMessenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    final instanceCalls = <MethodCall>[];
+
+    binaryMessenger.setMockMethodCallHandler(SystemChannels.platform_views,
+        (call) async {
+      if (call.method == 'create') {
+        final id = (call.arguments as Map<Object?, Object?>)['id'] as int;
+        binaryMessenger.setMockMethodCallHandler(
+          MethodChannel('cc.ugotit.elinkbook/pdf_reader_view_$id'),
+          (call) async {
+            instanceCalls.add(call);
+            return null;
+          },
+        );
+        return 0;
+      }
+      return null;
+    });
+
+    await tester.pumpWidget(const MaterialApp(
+      home: PdfReaderView(
+        filePath: '/tmp/sample.pdf',
+        onPageRendered: _noop,
+        onError: _noopError,
+      ),
+    ));
+    await tester.pumpAndSettle();
+    instanceCalls.clear();
+
+    await tester.pumpWidget(const MaterialApp(
+      home: PdfReaderView(
+        filePath: '/tmp/sample.pdf',
+        onPageRendered: _noop,
+        onError: _noopError,
+        dualPageMode: DualPageMode.always, // 變動
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(instanceCalls, hasLength(1));
+    expect(instanceCalls.single.method, 'setPdfPreferences');
+    expect(instanceCalls.single.arguments, {
+      'dualPageMode': 'always',
+      'dualPageCoverAlone': true,
+      'dualPageDirection': 'ltr',
+      'isLandscape': false,
+    });
+  });
+
+  testWidgets('isLandscape 變動時，didUpdateWidget 呼叫 setPdfPreferences',
+      (tester) async {
+    final binaryMessenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    final instanceCalls = <MethodCall>[];
+
+    binaryMessenger.setMockMethodCallHandler(SystemChannels.platform_views,
+        (call) async {
+      if (call.method == 'create') {
+        final id = (call.arguments as Map<Object?, Object?>)['id'] as int;
+        binaryMessenger.setMockMethodCallHandler(
+          MethodChannel('cc.ugotit.elinkbook/pdf_reader_view_$id'),
+          (call) async {
+            instanceCalls.add(call);
+            return null;
+          },
+        );
+        return 0;
+      }
+      return null;
+    });
+
+    await tester.pumpWidget(const MaterialApp(
+      home: PdfReaderView(
+        filePath: '/tmp/sample.pdf',
+        onPageRendered: _noop,
+        onError: _noopError,
+      ),
+    ));
+    await tester.pumpAndSettle();
+    instanceCalls.clear();
+
+    await tester.pumpWidget(const MaterialApp(
+      home: PdfReaderView(
+        filePath: '/tmp/sample.pdf',
+        onPageRendered: _noop,
+        onError: _noopError,
+        isLandscape: true, // 變動
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(instanceCalls, hasLength(1));
+    expect(instanceCalls.single.method, 'setPdfPreferences');
+    expect(instanceCalls.single.arguments, {
+      'dualPageMode': 'auto',
+      'dualPageCoverAlone': true,
+      'dualPageDirection': 'ltr',
+      'isLandscape': true,
+    });
+  });
+
+  testWidgets('dualPageCoverAlone／dualPageDirection 變動時，didUpdateWidget 呼叫 setPdfPreferences',
+      (tester) async {
+    final binaryMessenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    final instanceCalls = <MethodCall>[];
+
+    binaryMessenger.setMockMethodCallHandler(SystemChannels.platform_views,
+        (call) async {
+      if (call.method == 'create') {
+        final id = (call.arguments as Map<Object?, Object?>)['id'] as int;
+        binaryMessenger.setMockMethodCallHandler(
+          MethodChannel('cc.ugotit.elinkbook/pdf_reader_view_$id'),
+          (call) async {
+            instanceCalls.add(call);
+            return null;
+          },
+        );
+        return 0;
+      }
+      return null;
+    });
+
+    await tester.pumpWidget(const MaterialApp(
+      home: PdfReaderView(
+        filePath: '/tmp/sample.pdf',
+        onPageRendered: _noop,
+        onError: _noopError,
+      ),
+    ));
+    await tester.pumpAndSettle();
+    instanceCalls.clear();
+
+    await tester.pumpWidget(const MaterialApp(
+      home: PdfReaderView(
+        filePath: '/tmp/sample.pdf',
+        onPageRendered: _noop,
+        onError: _noopError,
+        dualPageCoverAlone: false, // 變動
+        dualPageDirection: DualPageDirection.rtl, // 變動
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(instanceCalls, hasLength(1));
+    expect(instanceCalls.single.method, 'setPdfPreferences');
+    expect(instanceCalls.single.arguments, {
+      'dualPageMode': 'auto',
+      'dualPageCoverAlone': false,
+      'dualPageDirection': 'rtl',
+      'isLandscape': false,
+    });
+  });
+
+  testWidgets('雙頁/橫向欄位皆未變動時，didUpdateWidget 不觸發任何 setPdfPreferences 呼叫',
+      (tester) async {
+    final binaryMessenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    final instanceCalls = <MethodCall>[];
+
+    binaryMessenger.setMockMethodCallHandler(SystemChannels.platform_views,
+        (call) async {
+      if (call.method == 'create') {
+        final id = (call.arguments as Map<Object?, Object?>)['id'] as int;
+        binaryMessenger.setMockMethodCallHandler(
+          MethodChannel('cc.ugotit.elinkbook/pdf_reader_view_$id'),
+          (call) async {
+            instanceCalls.add(call);
+            return null;
+          },
+        );
+        return 0;
+      }
+      return null;
+    });
+
+    final widget = const PdfReaderView(
+      filePath: '/tmp/sample.pdf',
+      onPageRendered: _noop,
+      onError: _noopError,
+      dualPageMode: DualPageMode.always,
+      dualPageCoverAlone: false,
+      dualPageDirection: DualPageDirection.rtl,
+      isLandscape: true,
+    );
+    await tester.pumpWidget(MaterialApp(home: widget));
+    await tester.pumpAndSettle();
+    instanceCalls.clear();
+
+    await tester.pumpWidget(MaterialApp(home: widget));
+    await tester.pumpAndSettle();
+
+    expect(instanceCalls, isEmpty);
   });
 }
 
