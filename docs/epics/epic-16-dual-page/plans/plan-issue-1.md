@@ -6,7 +6,7 @@
 
 **Architecture:** 本 issue 不產出長期功能程式碼。以「暫時性程式碼插樁（temporary instrumentation）→ 真機觀察→ 記錄證據 → 還原插樁 → 只保留書面報告（與必要時的 spec.md 修訂）」的節奏依序驗證 4 個問題。插樁程式碼**不進版本控制**（驗證後 `git checkout --` 還原），只有 `reviews/spike-readium-spread.md` 報告與（若有必要的）`spec.md` 修訂會被 commit。
 
-**Tech Stack:** Kotlin（`EpubReaderView.kt`、`EpubFxlScaler.kt`——後者已由 `epic-16-dual-page` Issue 8 於本計劃撰寫後、Task 4 演算法插樁前新增並合併回 `main`，見下方 Task 4 說明）、Readium `kotlin-toolkit` 3.3.0（`org.readium.r2.navigator.preferences.Spread` enum：`AUTO`/`ALWAYS`/`NEVER`）、`adb`／真機（9491G，device id `3CEF42ECD491687`，Android 15 / API 35）。
+**Tech Stack:** Kotlin（`EpubReaderView.kt`、`EpubFxlScaler.kt`——後者已由 `epic-16-dual-page` Issue 8 於本計劃撰寫後、Task 4 演算法插樁前新增並合併回 `main`，見下方 Task 4 說明）、Readium `kotlin-toolkit` 3.3.0（`org.readium.r2.navigator.preferences.Spread` enum：`AUTO`/`ALWAYS`/`NEVER`）、`adb`／真機（9491G，device id `3CEF42ECD491687`，Android 15 / API 35）——本計劃全程 `adb` 指令皆明確帶 `-s 3CEF42ECD491687`，刻意避免多裝置/模擬器同時連線時的歧義；若執行環境確認僅連接這一台裝置，`-s <device-id>` 參數可省略，指令行為不變。
 
 ## Global Constraints
 
@@ -325,12 +325,20 @@ adb -s 3CEF42ECD491687 shell settings put system accelerometer_rotation 1
             }.sortedBy { it.rawLeft }
 
             measured.forEachIndexed { index, m ->
-                val fitScale = cachedFxlFitScale ?: EpubFxlScaler.computeFitScale(
+                // TEMP-SPIKE(epic-16-issue-1)：刻意不讀寫 cachedFxlFitScale。
+                // 若沿用該欄位，直向單頁開書時會先以整個 availableWidth
+                // 算出並快取縮放比例；轉橫向後 perPageWidth 已改為半寬，
+                // 但命中快取會沿用直向時算出的比例（約為正確值的兩倍），
+                // 導致雙頁重疊、Q4 被誤判為失敗。插樁版本每次都重新計算，
+                // 確保比例永遠反映當下的 perPageWidth；快取失效時機本身
+                // 屬於 Issue 6 正式規格的範圍（見 spec.md I-2），不在本
+                // Spike 驗證範圍內。
+                val fitScale = EpubFxlScaler.computeFitScale(
                     availableWidth = perPageWidth,
                     availableHeight = availableHeight,
                     contentWidth = m.contentWidth,
                     contentHeight = m.contentHeight,
-                ).also { if (index == 0) cachedFxlFitScale = it }
+                )
                 m.webView.pivotX = 0f
                 m.webView.pivotY = 0f
                 m.webView.scaleX = fitScale
@@ -363,7 +371,7 @@ adb -s 3CEF42ECD491687 shell settings put system accelerometer_rotation 1
     }
 ```
 
-**已知的驗證期簡化，不代表正式規格**：`cachedFxlFitScale` 沿用全書單一快取（本 issue 未處理「單/雙頁切換或旋轉時快取失效」，那是 Issue 6 依 `spec.md` I-2 的正式範圍）；本次只驗證「兩個 WebView 是否真的並排不重疊」這一件事。
+**已知的驗證期簡化，不代表正式規格**：插樁版本刻意完全不讀寫 `cachedFxlFitScale`（每次都重新計算，理由見上方程式碼註解），故不會受直向/橫向切換的快取污染影響，但也代表本次驗證**不涵蓋**快取機制本身的正確性；Issue 6 正式實作時仍需依 `spec.md` I-2 設計「快取鍵新增是否為 spread 模式維度、單雙頁切換或旋轉時使快取失效」的完整方案，不能直接照搬本插樁「乾脆不快取」的簡化版本。本次只驗證「兩個 WebView 是否真的並排不重疊」這一件事。
 
 - [ ] **Step 2：重新建置並安裝**
 
