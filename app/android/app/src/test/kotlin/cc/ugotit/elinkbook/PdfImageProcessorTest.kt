@@ -1,5 +1,6 @@
 package cc.ugotit.elinkbook
 
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -60,5 +61,57 @@ class PdfImageProcessorTest {
         val result = PdfImageProcessor.dilatePixels(pixels, width = 1, height = 1, radius = 3)
 
         assertEquals(listOf(BLACK), result.toList())
+    }
+
+    // ---- detectCropRectFromPixels ----
+
+    @Test
+    fun `10x10 網格中央 6x6 黑色區塊被正確偵測為裁切邊界（含 1% 邊距）`() {
+        val pixels = buildPixels(10, 10) { x, y ->
+            if (x in 2..7 && y in 2..7) BLACK else WHITE
+        }
+
+        val result = PdfImageProcessor.detectCropRectFromPixels(pixels, width = 10, height = 10)
+
+        assertEquals(0.19f, result.left, 1e-4f)
+        assertEquals(0.19f, result.top, 1e-4f)
+        assertEquals(0.71f, result.right, 1e-4f)
+        assertEquals(0.71f, result.bottom, 1e-4f)
+    }
+
+    @Test
+    fun `全白網格（無內容）時掃描收斂到角落退化矩形，不拋例外`() {
+        val pixels = buildPixels(10, 10) { _, _ -> WHITE }
+
+        val result = PdfImageProcessor.detectCropRectFromPixels(pixels, width = 10, height = 10)
+
+        assertEquals(0.89f, result.left, 1e-4f)
+        assertEquals(0.89f, result.top, 1e-4f)
+        assertEquals(0.91f, result.right, 1e-4f)
+        assertEquals(0.91f, result.bottom, 1e-4f)
+    }
+
+    @Test
+    fun `全黑網格時內容從四邊緣即被偵測到，left top 因負邊距被 coerceIn 夾到 0`() {
+        val pixels = buildPixels(10, 10) { _, _ -> BLACK }
+
+        val result = PdfImageProcessor.detectCropRectFromPixels(pixels, width = 10, height = 10)
+
+        assertEquals(0f, result.left, 1e-4f)
+        assertEquals(0f, result.top, 1e-4f)
+        assertEquals(0.91f, result.right, 1e-4f)
+        assertEquals(0.91f, result.bottom, 1e-4f)
+    }
+
+    @Test
+    fun `唯一內容像素落在原點時四邊掃描收斂到同一列行，驗證邊距下限與掃描步進`() {
+        val pixels = buildPixels(10, 10) { x, y -> if (x == 0 && y == 0) BLACK else WHITE }
+
+        val result = PdfImageProcessor.detectCropRectFromPixels(pixels, width = 10, height = 10)
+
+        assertEquals(0f, result.left, 1e-4f)
+        assertEquals(0f, result.top, 1e-4f)
+        assertEquals(0.01f, result.right, 1e-4f)
+        assertEquals(0.01f, result.bottom, 1e-4f)
     }
 }

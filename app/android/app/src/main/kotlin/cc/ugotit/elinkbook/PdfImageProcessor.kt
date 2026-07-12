@@ -14,6 +14,16 @@ import android.graphics.Bitmap
  */
 object PdfImageProcessor {
 
+    /** 裁切矩形（相對座標 0.0-1.0）。原本是 PdfReaderView 的巢狀類別，隨影像
+     * 處理邏輯一併移至此處——CropOverlayView.kt 與 PdfReaderView.kt 皆改參照
+     * PdfImageProcessor.CropRect。*/
+    data class CropRect(val left: Float, val top: Float, val right: Float, val bottom: Float)
+
+    // 智慧自動裁切邊界偵測參數，見 detectCropRectFromPixels() 演算法說明。
+    private const val CROP_WHITE_THRESHOLD = 245
+    private const val CROP_MARGIN = 0.01f
+    private const val CROP_SCAN_STEP = 4
+
     // 加粗（型態學膨脹）運算的效能策略常數：對縮小版工作副本做膨脹，而非對
     // 全解析度 bitmap 直接運算（見 docs/archive/2026-07-10-epic-3-fonts-layout/
     // 之前的 epic-4-pdf-enhance Issue 4「演算法決策」）。
@@ -96,5 +106,65 @@ object PdfImageProcessor {
             }
         }
         return result
+    }
+
+    /**
+     * 智慧自動裁切邊界偵測：由四個邊緣向內掃描，找第一個「非全白」的列/行
+     * 視為內容邊界，加一點邊距避免裁得太緊。單頁取樣，每 [CROP_SCAN_STEP]
+     * 個像素跳著檢查一次以加速掃描。
+     */
+    fun detectCropRect(bitmap: Bitmap): CropRect {
+        val width = bitmap.width
+        val height = bitmap.height
+        val pixels = IntArray(width * height)
+        bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
+        return detectCropRectFromPixels(pixels, width, height)
+    }
+
+    /** [detectCropRect] 的純像素陣列核心，可脫離 Bitmap 直接單元測試。
+     * [pixels] 為 row-major、每個元素是 ARGB 打包後的 Int（與
+     * Bitmap.getPixels() 的輸出格式一致）。*/
+    internal fun detectCropRectFromPixels(pixels: IntArray, width: Int, height: Int): CropRect {
+        fun isRowContent(y: Int): Boolean {
+            var x = 0
+            while (x < width) {
+                val p = pixels[y * width + x]
+                val minChannel = minOf((p shr 16) and 0xFF, (p shr 8) and 0xFF, p and 0xFF)
+                if (minChannel < CROP_WHITE_THRESHOLD) return true
+                x += CROP_SCAN_STEP
+            }
+            return false
+        }
+
+        // 注意：pixels 是 row-major 陣列，這裡以固定 x、遞增 y 做縱向掃描，
+        // 記憶體存取並非連續（每次跳整個 width），會比同一橫向掃描多出
+        // cache miss。維持現狀不調整演算法——單頁只在渲染或進入裁切模式時
+        // 執行一次，且 CROP_SCAN_STEP 已跳步採樣，效能影響可忽略（見
+        // tmp/epic-4/reviews/plan-issue-8-review.md 3.1）。
+        fun isColContent(x: Int): Boolean {
+            var y = 0
+            while (y < height) {
+                val p = pixels[y * width + x]
+                val minChannel = minOf((p shr 16) and 0xFF, (p shr 8) and 0xFF, p and 0xFF)
+                if (minChannel < CROP_WHITE_THRESHOLD) return true
+                y += CROP_SCAN_STEP
+            }
+            return false
+        }
+
+        var top = 0
+        while (top < height - 1 && !isRowContent(top)) top++
+        var bottom = height - 1
+        while (bottom > top && !isRowContent(bottom)) bottom--
+        var left = 0
+        while (left < width - 1 && !isColContent(left)) left++
+        var right = width - 1
+        while (right > left && !isColContent(right)) right--
+
+        val relLeft = (left.toFloat() / width - CROP_MARGIN).coerceIn(0f, 1f)
+        val relTop = (top.toFloat() / height - CROP_MARGIN).coerceIn(0f, 1f)
+        val relRight = (right.toFloat() / width + CROP_MARGIN).coerceIn(0f, 1f)
+        val relBottom = (bottom.toFloat() / height + CROP_MARGIN).coerceIn(0f, 1f)
+        return CropRect(relLeft, relTop, relRight, relBottom)
     }
 }
