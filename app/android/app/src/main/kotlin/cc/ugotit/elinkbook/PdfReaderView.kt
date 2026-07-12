@@ -55,9 +55,9 @@ class PdfReaderView(
     private var currentPageIndex: Int = 0
     private var totalPages: Int = 0
 
-    // Dart PdfFitMode.name 對應字串（'pageFit'／'fitWidth'／'actualSize'），
-    // 預設 "pageFit"，與 BookReaderPrefs.pdfFitMode 為 null 時的語意一致。
-    private var fitMode: String = "pageFit"
+    // 解析自 Dart PdfFitMode.name 字串，預設 PAGE_FIT，與
+    // BookReaderPrefs.pdfFitMode 為 null 時的語意一致。
+    private var fitMode: PdfFitMode = PdfFitMode.PAGE_FIT
 
     // Dart contrast／brightness 值，-100..100，預設 0（無調整），與
     // BookReaderPrefs.pdfContrast/pdfBrightness 為 null 時的語意一致。
@@ -68,9 +68,9 @@ class PdfReaderView(
     // BookReaderPrefs.pdfBoldStrength 為 null 時的語意一致。
     private var boldStrength: Float = 0f
 
-    // Dart PdfCropMode.name 對應字串（'none'／'autoDetect'／'manual'），
-    // 預設 "none"，與 BookReaderPrefs.pdfCropMode 為 null 時的語意一致。
-    private var cropMode: String = "none"
+    // 解析自 Dart PdfCropMode.name 字串，預設 NONE，與
+    // BookReaderPrefs.pdfCropMode 為 null 時的語意一致。
+    private var cropMode: PdfCropMode = PdfCropMode.NONE
 
     // 目前生效的裁切矩形（相對座標 0.0-1.0）。autoDetect 模式下由
     // detectCropRect() 首次計算後快取於此（決策 #3，全書統一比例、不逐頁
@@ -192,7 +192,7 @@ class PdfReaderView(
      */
     private fun setPdfPreferences(preferences: Map<String, Any?>?) {
         if (preferences == null) return
-        (preferences["fitMode"] as? String)?.let { fitMode = it }
+        (preferences["fitMode"] as? String)?.let { fitMode = PdfFitMode.fromWireValue(it) }
         (preferences["contrast"] as? Number)?.let { contrast = it.toFloat() }
         (preferences["brightness"] as? Number)?.let { brightness = it.toFloat() }
         val boldChanged = (preferences["boldStrength"] as? Number)?.let {
@@ -202,8 +202,9 @@ class PdfReaderView(
             changed
         } ?: false
         val cropChanged = (preferences["cropMode"] as? String)?.let {
-            val changed = it != cropMode
-            cropMode = it
+            val newValue = PdfCropMode.fromWireValue(it)
+            val changed = newValue != cropMode
+            cropMode = newValue
             changed
         } ?: false
         parseCropRect(preferences["cropRect"])?.let { cropRect = it }
@@ -232,11 +233,11 @@ class PdfReaderView(
             channel.invokeMethod("onError", "缺少檔案路徑")
             return
         }
-        (initialPreferences?.get("fitMode") as? String)?.let { fitMode = it }
+        (initialPreferences?.get("fitMode") as? String)?.let { fitMode = PdfFitMode.fromWireValue(it) }
         (initialPreferences?.get("contrast") as? Number)?.let { contrast = it.toFloat() }
         (initialPreferences?.get("brightness") as? Number)?.let { brightness = it.toFloat() }
         (initialPreferences?.get("boldStrength") as? Number)?.let { boldStrength = it.toFloat() }
-        (initialPreferences?.get("cropMode") as? String)?.let { cropMode = it }
+        (initialPreferences?.get("cropMode") as? String)?.let { cropMode = PdfCropMode.fromWireValue(it) }
         parseCropRect(initialPreferences?.get("cropRect"))?.let { cropRect = it }
         var pfd: ParcelFileDescriptor? = null
         try {
@@ -268,7 +269,7 @@ class PdfReaderView(
         // 智慧自動裁切：尚無快取矩形時，先用一次全頁、無縮放的渲染取樣
         // 偵測邊界，計算結果快取於 cropRect 並回傳給 Dart 端持久化（決策
         // #3，全書統一比例、不逐頁重算）。
-        if (cropMode == "autoDetect" && cropRect == null) {
+        if (cropMode == PdfCropMode.AUTO_DETECT && cropRect == null) {
             val detectBitmap = PdfImageProcessor.createOpaqueWhiteBitmap(page.width, page.height)
             page.render(detectBitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
             val detected = PdfImageProcessor.detectCropRect(detectBitmap)
@@ -288,7 +289,7 @@ class PdfReaderView(
         val density = context.resources.displayMetrics.density
         val scale = PdfImageProcessor.pageRenderScale(density)
 
-        val effectiveCrop = if (cropMode != "none") cropRect else null
+        val effectiveCrop = if (cropMode != PdfCropMode.NONE) cropRect else null
         val renderLeft: Float
         val renderTop: Float
         val renderWidth: Float
@@ -374,7 +375,7 @@ class PdfReaderView(
             // 前，畫面不會反映新選取結果）。在此直接更新原生端狀態，讓
             // exitCropEditMode() 稍後呼叫的 renderCurrentPage() 使用正確矩形。
             cropRect = result
-            cropMode = "manual"
+            cropMode = PdfCropMode.MANUAL
             channel.invokeMethod(
                 "onCropRectSelected",
                 mapOf(
@@ -462,7 +463,7 @@ class PdfReaderView(
      */
     private fun applyFitMode() {
         when (fitMode) {
-            "fitWidth" -> {
+            PdfFitMode.FIT_WIDTH -> {
                 val viewWidth = imageView.width
                 val bitmapWidth = imageView.drawable?.intrinsicWidth ?: 0
                 if (viewWidth <= 0 || bitmapWidth <= 0) return
@@ -470,7 +471,7 @@ class PdfReaderView(
                 imageView.scaleType = ImageView.ScaleType.MATRIX
                 imageView.imageMatrix = android.graphics.Matrix().apply { setScale(scale, scale) }
             }
-            "actualSize" -> {
+            PdfFitMode.ACTUAL_SIZE -> {
                 val bitmapWidth = imageView.drawable?.intrinsicWidth ?: 0
                 if (bitmapWidth <= 0) return
                 val density = context.resources.displayMetrics.density
@@ -484,7 +485,7 @@ class PdfReaderView(
                 imageView.scaleType = ImageView.ScaleType.MATRIX
                 imageView.imageMatrix = android.graphics.Matrix().apply { setScale(displayScale, displayScale) }
             }
-            else -> { // "pageFit"（預設）
+            PdfFitMode.PAGE_FIT -> {
                 imageView.scaleType = ImageView.ScaleType.FIT_CENTER
             }
         }
