@@ -1,7 +1,6 @@
 package cc.ugotit.elinkbook
 
 import android.content.Context
-import android.graphics.Bitmap
 import android.graphics.pdf.PdfRenderer
 import android.net.Uri
 import android.os.ParcelFileDescriptor
@@ -214,9 +213,7 @@ class PdfReaderView(
         // 偵測邊界，計算結果快取於 cropRect 並回傳給 Dart 端持久化（決策
         // #3，全書統一比例、不逐頁重算）。
         if (cropMode == "autoDetect" && cropRect == null) {
-            val detectBitmap =
-                Bitmap.createBitmap(page.width, page.height, Bitmap.Config.ARGB_8888)
-            detectBitmap.eraseColor(android.graphics.Color.WHITE)
+            val detectBitmap = PdfImageProcessor.createOpaqueWhiteBitmap(page.width, page.height)
             page.render(detectBitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
             val detected = PdfImageProcessor.detectCropRect(detectBitmap)
             detectBitmap.recycle()
@@ -233,7 +230,7 @@ class PdfReaderView(
         }
 
         val density = context.resources.displayMetrics.density
-        val scale = density.coerceIn(2.0f, 3.0f)
+        val scale = PdfImageProcessor.pageRenderScale(density)
 
         val effectiveCrop = if (cropMode != "none") cropRect else null
         val renderLeft: Float
@@ -256,16 +253,7 @@ class PdfReaderView(
         val height = (renderHeight * scale).toInt().coerceAtLeast(1)
 
         try {
-            val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-            // Bitmap.createBitmap() 預設是全透明（ARGB 皆為 0），而
-            // PdfRenderer.Page.render() 只會畫出 PDF 內容本身有實際筆劃的
-            // 像素，頁面「空白背景」區域若 PDF 本身沒有明確畫白色矩形，會
-            // 維持透明、不會被填成不透明白色。applyFilters() 的
-            // ColorMatrixColorFilter 第 4 列（alpha）是單位矩陣（保留原始
-            // alpha），因此透明像素無論 contrast／brightness 設多少都不會
-            // 產生視覺變化——必須在渲染前先手動填滿不透明白色背景，濾鏡才能
-            // 對「背景」區域也生效（見 task-4-diagnose-report.md 根因分析）。
-            bitmap.eraseColor(android.graphics.Color.WHITE)
+            val bitmap = PdfImageProcessor.createOpaqueWhiteBitmap(width, height)
             val matrix = android.graphics.Matrix().apply {
                 // 先把裁切區域的左上角平移到原點，再統一縮放——順序不可顛倒
                 // （Android Matrix 的 post* 方法依呼叫順序疊加：先
@@ -283,9 +271,7 @@ class PdfReaderView(
         } catch (e: OutOfMemoryError) {
             // 如果發生 OutOfMemory，回退到原始尺寸渲染以確保不會崩潰
             try {
-                val fallbackBitmap = Bitmap.createBitmap(page.width, page.height, Bitmap.Config.ARGB_8888)
-                // 同上，回退路徑也需要先填滿不透明白色背景。
-                fallbackBitmap.eraseColor(android.graphics.Color.WHITE)
+                val fallbackBitmap = PdfImageProcessor.createOpaqueWhiteBitmap(page.width, page.height)
                 page.render(fallbackBitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
                 imageView.setImageBitmap(fallbackBitmap)
                 applyFitMode()
@@ -383,12 +369,11 @@ class PdfReaderView(
         val renderer = renderer ?: return
         val page = renderer.openPage(currentPageIndex)
         val density = context.resources.displayMetrics.density
-        val scale = density.coerceIn(2.0f, 3.0f)
+        val scale = PdfImageProcessor.pageRenderScale(density)
         val width = (page.width * scale).toInt().coerceAtLeast(1)
         val height = (page.height * scale).toInt().coerceAtLeast(1)
         try {
-            val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-            bitmap.eraseColor(android.graphics.Color.WHITE)
+            val bitmap = PdfImageProcessor.createOpaqueWhiteBitmap(width, height)
             val matrix = android.graphics.Matrix().apply { postScale(scale, scale) }
             page.render(bitmap, null, matrix, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
             imageView.setImageBitmap(bitmap)
@@ -433,13 +418,12 @@ class PdfReaderView(
                 val bitmapWidth = imageView.drawable?.intrinsicWidth ?: 0
                 if (bitmapWidth <= 0) return
                 val density = context.resources.displayMetrics.density
-                // 與 renderCurrentPage() 算 bitmap 尺寸時使用的同一個 scale，
-                // 換算回「1 PDF point = 1 dp」的真實顯示比例。【隱式耦合，
-                // 修改時務必同步】這裡的 density.coerceIn(2.0f, 3.0f) 必須與
-                // renderCurrentPage() 內算 width/height 用的 scale 算式保持
-                // 完全一致，否則 actualSize 換算出的比例會失準；若未來調整
-                // renderCurrentPage() 的 scale 策略，這裡要同步更新。
-                val bitmapRenderScale = density.coerceIn(2.0f, 3.0f)
+                // 與 renderCurrentPage() 算 bitmap 尺寸時使用的同一個
+                // PdfImageProcessor.pageRenderScale()，換算回「1 PDF point =
+                // 1 dp」的真實顯示比例。兩處呼叫同一個共用函式，不再是各自
+                // 硬編碼、需要手動同步的隱式耦合（見
+                // docs/epics/epic-4-pdf-enhance/plans/plan-issue-9.md）。
+                val bitmapRenderScale = PdfImageProcessor.pageRenderScale(density)
                 val displayScale = density / bitmapRenderScale
                 imageView.scaleType = ImageView.ScaleType.MATRIX
                 imageView.imageMatrix = android.graphics.Matrix().apply { setScale(displayScale, displayScale) }

@@ -145,4 +145,34 @@ class PdfImageProcessorTest {
         )
         assertArrayEquals(expected, matrix, 1e-4f)
     }
+
+    // ---- pageRenderScale ----
+
+    @Test
+    fun `density 低於下限 2_0 時夾限為 2_0`() {
+        val scale = PdfImageProcessor.pageRenderScale(density = 1.0f)
+
+        assertEquals(2.0f, scale, 1e-4f)
+    }
+
+    @Test
+    fun `density 剛好等於下限 2_0 時原樣返回`() {
+        val scale = PdfImageProcessor.pageRenderScale(density = 2.0f)
+
+        assertEquals(2.0f, scale, 1e-4f)
+    }
+
+    @Test
+    fun `density 落在區間內時原樣返回，不夾限`() {
+        val scale = PdfImageProcessor.pageRenderScale(density = 2.75f)
+
+        assertEquals(2.75f, scale, 1e-4f)
+    }
+
+    @Test
+    fun `density 高於上限 3_0 時夾限為 3_0`() {
+        val scale = PdfImageProcessor.pageRenderScale(density = 4.0f)
+
+        assertEquals(3.0f, scale, 1e-4f)
+    }
 }
