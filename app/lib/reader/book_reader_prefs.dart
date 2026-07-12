@@ -1,4 +1,6 @@
 import 'app_font.dart';
+import 'dual_page_direction.dart';
+import 'dual_page_mode.dart';
 import 'epub_text_align.dart';
 import 'page_turn_mode.dart';
 import 'pdf_crop_mode.dart';
@@ -34,6 +36,10 @@ class BookReaderPrefs {
   final PdfCropMode? pdfCropMode; // null=none（不裁切）
   final PdfCropRect? pdfCropRect; // pdfCropMode != none 時才有意義
 
+  final DualPageMode? dualPageMode; // null=auto（橫向自動雙頁）
+  final bool? dualPageCoverAlone; // null=true（封面獨立，僅 PDF 有效）
+  final DualPageDirection? dualPageDirection; // null=ltr（僅 PDF 有效）
+
   const BookReaderPrefs({
     this.fontFamily,
     this.fontSize,
@@ -52,6 +58,9 @@ class BookReaderPrefs {
     this.pdfBoldStrength,
     this.pdfCropMode,
     this.pdfCropRect,
+    this.dualPageMode,
+    this.dualPageCoverAlone,
+    this.dualPageDirection,
   });
 
   /// 無任何覆寫，等同資料庫無對應列時的狀態。
@@ -78,6 +87,10 @@ class BookReaderPrefs {
       'pdf_bold_strength': pdfBoldStrength,
       'pdf_crop_mode': pdfCropMode?.name,
       'pdf_crop_rect': pdfCropRect?.toJson(),
+      'dual_page_mode': dualPageMode?.name,
+      'dual_page_cover_alone':
+          dualPageCoverAlone == null ? null : (dualPageCoverAlone! ? 1 : 0),
+      'dual_page_direction': dualPageDirection?.name,
     };
   }
 
@@ -123,6 +136,16 @@ class BookReaderPrefs {
       pdfCropRect: map['pdf_crop_rect'] == null
           ? null
           : PdfCropRect.fromJson(map['pdf_crop_rect'] as String),
+      dualPageMode: map['dual_page_mode'] == null
+          ? null
+          : DualPageMode.values.byName(map['dual_page_mode'] as String),
+      dualPageCoverAlone: map['dual_page_cover_alone'] == null
+          ? null
+          : (map['dual_page_cover_alone'] as int) == 1,
+      dualPageDirection: map['dual_page_direction'] == null
+          ? null
+          : DualPageDirection.values
+              .byName(map['dual_page_direction'] as String),
     );
   }
 
@@ -145,10 +168,13 @@ class BookReaderPrefs {
       other.pdfBrightness == pdfBrightness &&
       other.pdfBoldStrength == pdfBoldStrength &&
       other.pdfCropMode == pdfCropMode &&
-      other.pdfCropRect == pdfCropRect;
+      other.pdfCropRect == pdfCropRect &&
+      other.dualPageMode == dualPageMode &&
+      other.dualPageCoverAlone == dualPageCoverAlone &&
+      other.dualPageDirection == dualPageDirection;
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
         fontFamily,
         fontSize,
         fontWeight,
@@ -166,7 +192,10 @@ class BookReaderPrefs {
         pdfBoldStrength,
         pdfCropMode,
         pdfCropRect,
-      );
+        dualPageMode,
+        dualPageCoverAlone,
+        dualPageDirection,
+      ]);
 
   /// 只更新明確傳入的欄位，其餘欄位沿用目前值（`newValue ?? this.value`
   /// 語意，不支援「明確清成 null」——需要清空欄位的情境（例如
@@ -191,6 +220,9 @@ class BookReaderPrefs {
     double? pdfBoldStrength,
     PdfCropMode? pdfCropMode,
     PdfCropRect? pdfCropRect,
+    DualPageMode? dualPageMode,
+    bool? dualPageCoverAlone,
+    DualPageDirection? dualPageDirection,
   }) {
     return BookReaderPrefs(
       fontFamily: fontFamily ?? this.fontFamily,
@@ -211,6 +243,9 @@ class BookReaderPrefs {
       pdfBoldStrength: pdfBoldStrength ?? this.pdfBoldStrength,
       pdfCropMode: pdfCropMode ?? this.pdfCropMode,
       pdfCropRect: pdfCropRect ?? this.pdfCropRect,
+      dualPageMode: dualPageMode ?? this.dualPageMode,
+      dualPageCoverAlone: dualPageCoverAlone ?? this.dualPageCoverAlone,
+      dualPageDirection: dualPageDirection ?? this.dualPageDirection,
     );
   }
 }
