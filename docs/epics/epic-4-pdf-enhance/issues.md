@@ -235,9 +235,9 @@ Issue 1-7 完成後 `PdfReaderView.kt` 已達 646 行，除了 PlatformView 生�
 
 ---
 
-## Issue 9：技術債／架構深化——PdfReaderView.kt 縮放係數與白底 Bitmap 建立邏輯重複
+## Issue 9：技術債／架構深化——PdfReaderView.kt 縮放係數與白底 Bitmap 建立邏輯重複（已完成）
 
-**Status:** ready-for-agent
+**Status:** ✅ 已完成。依 `plans/plan-issue-9.md` Task 1-3 於獨立 worktree（`.worktrees/epic-4-issue-9`）完成實作：`PdfImageProcessor` 新增 `pageRenderScale()`／`createOpaqueWhiteBitmap()`（新增 4 個 JVM 單元測試，共 13 個測試全數通過），`PdfReaderView.kt` 的 3 處縮放係數＋4 處白底 Bitmap 呼叫點皆改用共用函式，過期的隱式耦合警語註解已同步更新，`import android.graphics.Bitmap` 已移除。`/superpowers:requesting-code-review` 逐行核對抽離公式與原內嵌算式等價（`tmp/epic-4/reviews/plan-issue-9-code-review.md`），`flutter analyze` 乾淨，真機 `integration_test` 回歸（`pdf_reader_view_test.dart` 4/4、`reader_screen_test.dart` 23/23）全數通過（Ready to merge: Yes），已透過 PR #34 合併回 `main`。
 
 **依賴：** 無（Issue 8 完成後的獨立技術債重構，不新增功能，不影響既有 method channel 契約；本 issue 的目的是在正式進入 `epic-16-dual-page` 前把這項技術債收尾）
 
