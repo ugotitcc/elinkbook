@@ -289,6 +289,11 @@ class _ReaderScreenState extends State<ReaderScreen> {
   @override
   Widget build(BuildContext context) {
     final format = detectBookFormat(widget.filePath);
+    // 方向偵測（spec.md「方向偵測契約」）：在 build() 中統一偵測，格式無關
+    // 共用，不寫死在 PDF 專屬程式碼路徑裡——EPUB 分支（Issue 6）之後會消費
+    // 同一個 isLandscape 值。
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
     return PopScope(
       // 手動裁切互動模式進行中時，返回鍵不應把整個 ReaderScreen 一併 pop
       // 掉——原生端裁切互動模式沒有使用者手勢可以主動觸發離開（見 spec.md
@@ -304,7 +309,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
                 title: const Text('閱讀器'),
                 actions: _buildAppBarActions(format),
               ),
-        body: _buildBody(format),
+        body: _buildBody(format, isLandscape),
       ),
     );
   }
@@ -343,7 +348,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
     }
   }
 
-  Widget _buildBody(BookFormat format) {
+  Widget _buildBody(BookFormat format, bool isLandscape) {
     if (format == BookFormat.unknown) {
       return const Center(child: Text('不支援的檔案格式'));
     }
@@ -361,7 +366,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
     }
     final body = Stack(
       children: [
-        if (_resolved != null) _buildNativeView(format),
+        if (_resolved != null) _buildNativeView(format, isLandscape),
         if (_isFixedLayout)
           Positioned(
             top: 16, // SafeArea 內層，頂部已扣除狀態列，故直接設為 16 即可
@@ -391,7 +396,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
     );
   }
 
-  Widget _buildNativeView(BookFormat format) {
+  Widget _buildNativeView(BookFormat format, bool isLandscape) {
     final resolved = _resolved!;
     switch (format) {
       case BookFormat.epub:
@@ -425,6 +430,10 @@ class _ReaderScreenState extends State<ReaderScreen> {
           onCropRectComputed: _handleCropRectComputed,
           cropEditModeActive: _cropEditModeActive,
           onCropRectSelected: _handleCropRectSelected,
+          dualPageMode: resolved.dualPageMode,
+          dualPageCoverAlone: resolved.dualPageCoverAlone,
+          dualPageDirection: resolved.dualPageDirection,
+          isLandscape: isLandscape,
         );
       case BookFormat.unknown:
         return const SizedBox.shrink();
