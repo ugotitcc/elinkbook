@@ -79,7 +79,7 @@ class PdfReaderView(
     // 直接帶入已持久化的值（避免重開書又重新計算一次）；manual 模式下由
     // 使用者透過 CropOverlayView 框選後經 exitCropEditMode 流程間接更新
     // （見 enterCropEditMode()/CropOverlayView 的 onConfirm 回呼）。
-    private var cropRect: CropRect? = null
+    private var cropRect: PdfImageProcessor.CropRect? = null
 
     // 手動裁切互動模式是否進行中（決策 #14）：由 Dart 端
     // cropEditModeActive prop 的宣告式變化驅動（enterCropEditMode／
@@ -87,19 +87,6 @@ class PdfReaderView(
     // previousPage() 暫停回應，避免翻頁手勢與拖拉裁切框互相干擾。
     private var cropEditModeActive: Boolean = false
     private var cropOverlayView: CropOverlayView? = null
-
-    /** 裁切矩形（相對座標 0.0-1.0），Kotlin 內部用資料類別，對應 Dart
-     * PdfCropRect 的欄位。套件內可見（非 private）供 CropOverlayView.kt
-     * 使用（同套件 cc.ugotit.elinkbook，Kotlin 不需額外 import）。*/
-    data class CropRect(val left: Float, val top: Float, val right: Float, val bottom: Float)
-
-    companion object {
-        // 加粗（型態學膨脹）運算的效能策略常數，見 spec.md/design.md「已知
-        // 風險」與本 issue 計劃的「效能策略」段落：對縮小版工作副本做膨脹，
-        // 而非對全解析度 bitmap 直接運算。
-        private const val BOLD_DOWNSCALE_FACTOR = 0.25f
-        private const val BOLD_MAX_RADIUS = 3
-    }
 
     init {
         channel.setMethodCallHandler(this)
@@ -176,13 +163,13 @@ class PdfReaderView(
     /** 從 method channel map 解析裁切矩形，格式不符時回傳 null（靜默忽略，
      * 比照其餘欄位的 `as? Number` 容錯風格）。*/
     @Suppress("UNCHECKED_CAST")
-    private fun parseCropRect(raw: Any?): CropRect? {
+    private fun parseCropRect(raw: Any?): PdfImageProcessor.CropRect? {
         val map = raw as? Map<String, Any?> ?: return null
         val left = (map["left"] as? Number)?.toFloat() ?: return null
         val top = (map["top"] as? Number)?.toFloat() ?: return null
         val right = (map["right"] as? Number)?.toFloat() ?: return null
         val bottom = (map["bottom"] as? Number)?.toFloat() ?: return null
-        return CropRect(left, top, right, bottom)
+        return PdfImageProcessor.CropRect(left, top, right, bottom)
     }
 
     private fun openBook(path: String?, initialPreferences: Map<String, Any?>?) {
@@ -231,7 +218,7 @@ class PdfReaderView(
                 Bitmap.createBitmap(page.width, page.height, Bitmap.Config.ARGB_8888)
             detectBitmap.eraseColor(android.graphics.Color.WHITE)
             page.render(detectBitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-            val detected = detectCropRect(detectBitmap)
+            val detected = PdfImageProcessor.detectCropRect(detectBitmap)
             detectBitmap.recycle()
             cropRect = detected
             channel.invokeMethod(
@@ -289,7 +276,7 @@ class PdfReaderView(
                 postScale(scale, scale)
             }
             page.render(bitmap, null, matrix, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-            val finalBitmap = if (boldStrength > 0f) applyBoldEffect(bitmap) else bitmap
+            val finalBitmap = if (boldStrength > 0f) PdfImageProcessor.applyBoldEffect(bitmap, boldStrength) else bitmap
             imageView.setImageBitmap(finalBitmap)
             applyFitMode()
             applyFilters()
@@ -307,57 +294,6 @@ class PdfReaderView(
         }
 
         page.close()
-    }
-
-    /**
-     * 智慧自動裁切邊界偵測（見 plans/plan-issue-5.md Global Constraints
-     * 「邊界偵測演算法」）：由四個邊緣向內掃描，找第一個「非全白」的
-     * 列/行視為內容邊界，加一點邊距避免裁得太緊。單頁取樣，每 4 個像素
-     * 跳著檢查一次以加速掃描。
-     */
-    private fun detectCropRect(bitmap: Bitmap): CropRect {
-        val width = bitmap.width
-        val height = bitmap.height
-        val whiteThreshold = 245
-        val margin = 0.01f
-        val step = 4
-
-        fun isRowContent(y: Int): Boolean {
-            var x = 0
-            while (x < width) {
-                val p = bitmap.getPixel(x, y)
-                val minChannel = minOf((p shr 16) and 0xFF, (p shr 8) and 0xFF, p and 0xFF)
-                if (minChannel < whiteThreshold) return true
-                x += step
-            }
-            return false
-        }
-
-        fun isColContent(x: Int): Boolean {
-            var y = 0
-            while (y < height) {
-                val p = bitmap.getPixel(x, y)
-                val minChannel = minOf((p shr 16) and 0xFF, (p shr 8) and 0xFF, p and 0xFF)
-                if (minChannel < whiteThreshold) return true
-                y += step
-            }
-            return false
-        }
-
-        var top = 0
-        while (top < height - 1 && !isRowContent(top)) top++
-        var bottom = height - 1
-        while (bottom > top && !isRowContent(bottom)) bottom--
-        var left = 0
-        while (left < width - 1 && !isColContent(left)) left++
-        var right = width - 1
-        while (right > left && !isColContent(right)) right--
-
-        val relLeft = (left.toFloat() / width - margin).coerceIn(0f, 1f)
-        val relTop = (top.toFloat() / height - margin).coerceIn(0f, 1f)
-        val relRight = (right.toFloat() / width + margin).coerceIn(0f, 1f)
-        val relBottom = (bottom.toFloat() / height + margin).coerceIn(0f, 1f)
-        return CropRect(relLeft, relTop, relRight, relBottom)
     }
 
     /**
@@ -382,7 +318,7 @@ class PdfReaderView(
         // 初始框選範圍：若已有裁切矩形（無論來自先前的自動或手動裁切）
         // 沿用之，讓使用者「微調」既有選區；否則預設置中、四周各留 10%
         // 邊距。
-        val initial = cropRect ?: CropRect(0.1f, 0.1f, 0.9f, 0.9f)
+        val initial = cropRect ?: PdfImageProcessor.CropRect(0.1f, 0.1f, 0.9f, 0.9f)
 
         val overlay = CropOverlayView(context, pageWidth, pageHeight, initial) { result ->
             // 只透過 channel 通知 Dart 端，不在此處自行移除 overlay——
@@ -519,85 +455,15 @@ class PdfReaderView(
      * applyFitMode() 的 scaleType／imageMatrix 是完全獨立的顯示層機制
      * （ColorMatrixColorFilter 作用於像素色彩，不影響座標變換），呼叫順序
      * 不影響結果，但依慣例排在 applyFitMode() 之後（見 spec.md「裁切 →
-     * fit 模式縮放 → 濾鏡」的管線順序）。
-     *
-     * 標準對比度/亮度 ColorMatrix 公式：先以 127.5（8-bit 色階灰階中點）為
-     * 軸心縮放對比度，再疊加亮度位移，確保 contrast=0／brightness=0 時是
-     * 單位矩陣（無視覺變化）。
+     * fit 模式縮放 → 濾鏡」的管線順序）。實際 ColorMatrix 計算邏輯已搬至
+     * PdfImageProcessor.contrastBrightnessColorMatrix()。
      */
     private fun applyFilters() {
-        val contrastFactor = (100f + contrast) / 100f // -100→0.0，0→1.0，100→2.0
-        val brightnessOffset = brightness * 2.55f // -100..100 映射到約 -255..255 的像素位移範圍
-        val translate = brightnessOffset + (255f - contrastFactor * 255f) / 2f
-        val colorMatrix = android.graphics.ColorMatrix(
-            floatArrayOf(
-                contrastFactor, 0f, 0f, 0f, translate,
-                0f, contrastFactor, 0f, 0f, translate,
-                0f, 0f, contrastFactor, 0f, translate,
-                0f, 0f, 0f, 1f, 0f,
+        imageView.colorFilter = android.graphics.ColorMatrixColorFilter(
+            android.graphics.ColorMatrix(
+                PdfImageProcessor.contrastBrightnessColorMatrix(contrast, brightness)
             )
         )
-        imageView.colorFilter = android.graphics.ColorMatrixColorFilter(colorMatrix)
-    }
-
-    /**
-     * 型態學膨脹（加粗），對 bitmap 做「取鄰域內最小亮度值」的膨脹運算，
-     * 讓深色筆畫（文字）向外擴張、變粗變黑（見 docs/epics/epic-4-pdf-enhance/
-     * plans/plan-issue-4.md「演算法決策」：全 API 24+ 統一用同一套手動像素
-     * 陣列運算，不分 API 24-30／31+ 兩條路徑）。
-     *
-     * 效能策略：先縮小到 [BOLD_DOWNSCALE_FACTOR] 工作尺寸做膨脹運算，再放大
-     * 回原尺寸，避免對全解析度 bitmap 直接做二維鄰域掃描造成明顯延遲（決策
-     * #13 已授權濾鏡效能寬鬆處理）。
-     */
-    private fun applyBoldEffect(source: Bitmap): Bitmap {
-        val workWidth = (source.width * BOLD_DOWNSCALE_FACTOR).toInt().coerceAtLeast(1)
-        val workHeight = (source.height * BOLD_DOWNSCALE_FACTOR).toInt().coerceAtLeast(1)
-        val working = Bitmap.createScaledBitmap(source, workWidth, workHeight, true)
-        val radius = (boldStrength * BOLD_MAX_RADIUS).toInt().coerceIn(1, BOLD_MAX_RADIUS)
-        val dilated = dilate(working, radius)
-        val result = Bitmap.createScaledBitmap(dilated, source.width, source.height, true)
-        working.recycle()
-        dilated.recycle()
-        return result
-    }
-
-    /**
-     * 對 [bitmap] 做半徑 [radius] 的膨脹（取 (2*radius+1)^2 鄰域內每個色版
-     * 的最小值，讓深色像素向外擴張）。邊界像素以 coerceIn 夾到合法範圍內
-     * （等同邊緣複製，非補零），避免邊框產生非預期的暗色/亮色偽影。
-     */
-    private fun dilate(bitmap: Bitmap, radius: Int): Bitmap {
-        val width = bitmap.width
-        val height = bitmap.height
-        val pixels = IntArray(width * height)
-        bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
-        val result = IntArray(width * height)
-        for (y in 0 until height) {
-            for (x in 0 until width) {
-                var minR = 255
-                var minG = 255
-                var minB = 255
-                for (dy in -radius..radius) {
-                    val ny = (y + dy).coerceIn(0, height - 1)
-                    for (dx in -radius..radius) {
-                        val nx = (x + dx).coerceIn(0, width - 1)
-                        val p = pixels[ny * width + nx]
-                        val r = (p shr 16) and 0xFF
-                        val g = (p shr 8) and 0xFF
-                        val b = p and 0xFF
-                        if (r < minR) minR = r
-                        if (g < minG) minG = g
-                        if (b < minB) minB = b
-                    }
-                }
-                val a = (pixels[y * width + x] shr 24) and 0xFF
-                result[y * width + x] = (a shl 24) or (minR shl 16) or (minG shl 8) or minB
-            }
-        }
-        val out = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        out.setPixels(result, 0, width, 0, 0, width, height)
-        return out
     }
 
     private fun nextPage() {

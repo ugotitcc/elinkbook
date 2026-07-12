@@ -27,8 +27,8 @@ class CropOverlayView(
     context: Context,
     private val pageWidthPx: Int,
     private val pageHeightPx: Int,
-    initialRelativeRect: PdfReaderView.CropRect,
-    private val onConfirm: (PdfReaderView.CropRect) -> Unit,
+    initialRelativeRect: PdfImageProcessor.CropRect,
+    private val onConfirm: (PdfImageProcessor.CropRect) -> Unit,
 ) : View(context) {
 
     companion object {
@@ -73,7 +73,7 @@ class CropOverlayView(
     private var cropRectPx = RectF()
 
     // 只在第一次 onSizeChanged（初次 layout）時套用初始矩形。
-    private var pendingInitialRect: PdfReaderView.CropRect? = initialRelativeRect
+    private var pendingInitialRect: PdfImageProcessor.CropRect? = initialRelativeRect
 
     private var activeHandle: Handle? = null
     private var confirmPressed = false
@@ -259,11 +259,11 @@ class CropOverlayView(
         }
     }
 
-    private fun currentRelativeRect(): PdfReaderView.CropRect {
+    private fun currentRelativeRect(): PdfImageProcessor.CropRect {
         val left = ((cropRectPx.left - contentBounds.left) / contentBounds.width()).coerceIn(0f, 1f)
         val top = ((cropRectPx.top - contentBounds.top) / contentBounds.height()).coerceIn(0f, 1f)
         val right = ((cropRectPx.right - contentBounds.left) / contentBounds.width()).coerceIn(0f, 1f)
         val bottom = ((cropRectPx.bottom - contentBounds.top) / contentBounds.height()).coerceIn(0f, 1f)
-        return PdfReaderView.CropRect(left, top, right, bottom)
+        return PdfImageProcessor.CropRect(left, top, right, bottom)
     }
 }
