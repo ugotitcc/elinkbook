@@ -25,8 +25,8 @@ object PdfImageProcessor {
     private const val CROP_SCAN_STEP = 4
 
     // 加粗（型態學膨脹）運算的效能策略常數：對縮小版工作副本做膨脹，而非對
-    // 全解析度 bitmap 直接運算（見 docs/archive/2026-07-10-epic-3-fonts-layout/
-    // 之前的 epic-4-pdf-enhance Issue 4「演算法決策」）。
+    // 全解析度 bitmap 直接運算（見 docs/epics/epic-4-pdf-enhance/plans/
+    // plan-issue-4.md「演算法決策」）。
     private const val BOLD_DOWNSCALE_FACTOR = 0.25f
     private const val BOLD_MAX_RADIUS = 3
 

@@ -10,7 +10,9 @@
 
 ## Global Constraints
 
-- 這是抽離重構，不是新功能：`PdfImageProcessor` 內的演算法邏輯（膨脹核心迴圈、裁切邊界掃描迴圈、ColorMatrix 公式）必須與 `PdfReaderView.kt` 現有實作逐行等價——不得在搬移過程中「順手」調整演算法、常數或行為，即使發現看起來可以改進的地方。**唯一明確授權的例外**：`applyBoldEffect()` 新增 `working !== source`／`dilated !== result` 的 `recycle()` 防禦性判斷（Task 1 Step 4）——這是修正一個原本就存在於 `PdfReaderView.kt` 舊實作的潛在 Fatal Crash（`Bitmap.createScaledBitmap()` 在目的地尺寸與來源完全相同時，Android SDK 會直接回傳來源實例本身，未加防禦的 `recycle()` 會誤將呼叫端仍持有的來源 Bitmap 一併釋放），依 `tmp/epic-4/reviews/plan-issue-8-review.md` 2.1（唯一列為 🔴 必須修正的發現）加入，對任何正常尺寸輸入的既有行為零影響。
+- 這是抽離重構，不是新功能：`PdfImageProcessor` 內的演算法邏輯（膨脹核心迴圈、裁切邊界掃描迴圈、ColorMatrix 公式）必須與 `PdfReaderView.kt` 現有實作逐行等價——不得在搬移過程中「順手」調整演算法、常數或行為，即使發現看起來可以改進的地方。**第一項明確授權的例外**：`applyBoldEffect()` 新增 `working !== source`／`dilated !== result` 的 `recycle()` 防禦性判斷（Task 1 Step 4）——這是修正一個原本就存在於 `PdfReaderView.kt` 舊實作的潛在 Fatal Crash（`Bitmap.createScaledBitmap()` 在目的地尺寸與來源完全相同時，Android SDK 會直接回傳來源實例本身，未加防禦的 `recycle()` 會誤將呼叫端仍持有的來源 Bitmap 一併釋放），依 `tmp/epic-4/reviews/plan-issue-8-review.md` 2.1（唯一列為 🔴 必須修正的發現）加入，對任何正常尺寸輸入的既有行為零影響。
+
+- **第二項明確授權的例外**：`detectCropRect(bitmap: Bitmap)` 包裝函式的像素存取模式，從舊版 `PdfReaderView.detectCropRect()` 的「惰性逐點取樣（`bitmap.getPixel(x, y)`，僅存取演算法實際需要的取樣點）」改為新版 `PdfImageProcessor.detectCropRect()` 的「強制全頁一次性 bulk 讀取（`bitmap.getPixels()` 將整頁拷貝至 `IntArray` 後再交給 `detectCropRectFromPixels`）」。這是為了讓核心邊界掃描邏輯（`detectCropRectFromPixels`）可脫離 `Bitmap` 依賴、以 `IntArray` 純函式形式接受 JVM 單元測試（本 Issue 的核心目標）所必需付出的代價。由於 `detectCropRect` 只在 `cropMode == "autoDetect" && cropRect == null` 時對單一頁面執行一次且結果快取、不逐頁重算，此存取模式變更的實際效能影響在短期內可忽略，但已不符合「逐行等價」的原始陳述，故在此明確揭露並授權。
 - 本計劃已依 `tmp/epic-4/reviews/plan-issue-8-review.md` 審查意見修訂：2.1（`Bitmap.recycle()` 防禦性判斷）已採納；3.2（補齊全黑網格／單點內容／1×1 極端尺寸三項邊界測試）已採納，見 Task 1/Task 2；3.1（欄掃描的 cache miss 效能，審查本身結論為「不需調整演算法，僅需註解備忘」）已採納為程式碼註解，未變更演算法。
 - 新增的 JVM 單元測試一律針對 `internal` 的 `IntArray`-based 純函式（`detectCropRectFromPixels`／`dilatePixels`），不引入 Robolectric 或任何 Android 框架模擬依賴——`Bitmap` 相關的薄包裝函式（`detectCropRect`／`dilate`／`applyBoldEffect`）本身不新增自動化測試，其正確性由 Task 4 的既有真機 `integration_test` 回歸把關（沿用 Epic 4 Issue 3-7 既有測試，見 Task 4）。
 - 本次刻意不處理、維持現狀的既有技術債（範圍不重疊，見 `docs/epics.md`）：
@@ -122,7 +124,7 @@ class PdfImageProcessorTest {
 
         // 中心黑點的 3x3 鄰域（radius=1，邊界 coerceIn 夾取）在這個網格大小下，
         // 涵蓋了每一個像素的鄰域查詢範圍，因此全部 9 個像素的 RGB 都被拉黑。
-        assertEquals(-0x55000000, result[0 * 3 + 0]) // (0,0)：alpha=0xAA 保留，RGB 變黑 → 0xAA000000
+        assertEquals(0xAA shl 24, result[0 * 3 + 0]) // (0,0)：alpha=0xAA 保留，RGB 變黑 → 0xAA000000
         assertEquals(BLACK, result[1 * 3 + 1]) // (1,1) 中心：alpha=0xFF 保留，RGB 仍黑
         assertEquals(BLACK, result[2 * 3 + 2]) // (2,2) 對角遠端：alpha=0xFF 保留，RGB 被拉黑
     }
