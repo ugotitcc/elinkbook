@@ -197,3 +197,25 @@
 - FR-41「不留空白」於 PDF 與 EPUB FXL 兩條路線皆有明確視覺確認結論
 - `flutter analyze` 乾淨、`flutter test` 全數通過
 - 若有發現需要後續處理的落差，已建立對應的後續 issue 追蹤，不阻塞本 epic 合併
+
+---
+
+## Issue 8：技術債／架構深化——EpubReaderView.kt FXL 縮放邏輯抽離為 EpubFxlScaler
+
+**Status:** ready-for-agent
+
+**依賴：** 無（獨立技術債重構，不新增功能，不影響既有 method channel 契約，可於 Issue 6 之前或之後任何時間點執行）
+
+**描述：**
+`EpubReaderView.kt` 的 `applyFxlFitScale()`（固定版面縮放計算）目前與 `WebView`/`ViewTreeObserver` 等 Android View 型別強耦合，無法脫離真機/模擬器做 JVM 單元測試。架構審查（`tmp/epic-16/reviews/architecture-review-1783800246.html` Candidate #3，Speculative 等級）建議把其中的純數值計算部分抽離成獨立 `EpubFxlScaler` 模組；`docs/epics.md` 對應 Backlog 列與本文件 Issue 6 原描述皆記錄此抽離原本設計為「Issue 6 落地、且 `applyFxlFitScale()` 判斷已過度龐雜後才視情況執行」的順序。**本 issue 是人類明確決定提前於 Issue 6 之前執行**（不等待 Issue 6 落地才判斷是否需要），完整計劃見 `plans/plan-issue-8.md`。比照 `epic-4-pdf-enhance` Issue 8 已驗證過的抽離模式：把 `computeFitScale()`／`computeCenteringTranslation()` 兩個純數值計算函式抽到 `EpubFxlScaler`（`app/android/app/src/main/kotlin/cc/ugotit/elinkbook/EpubFxlScaler.kt`），`EpubReaderView.kt` 保留所有需要真實 View 環境的部分（`WebView` 量測、`ViewTreeObserver` 監聽、`scaleX`/`scaleY`/`translationX`/`translationY` 賦值、`cachedFxlFitScale` 實例狀態），只把計算結果的公式部分交給新模組。這是抽離重構，不是新功能，所有既有視覺效果與行為必須維持一致。
+
+**對 Issue 6 的影響（重要）：** Issue 6 原描述「就地實作，不預先抽離」的順序已被本 issue 取代——Issue 6 開工時 `EpubFxlScaler` 已存在，Issue 6 新增的雙頁（spread）縮放邏輯（`cachedFxlFitScale` 快取鍵新增「是否為 spread 模式」維度、依 WebView 左右順序套用半寬區塊置中位移）應改為在 `EpubFxlScaler` 內擴充純函式（例如新增 `computeFitScale`/`computeCenteringTranslation` 的多載版本，或替換為接受 spread 相關參數的新函式簽章），而非退回在 `EpubReaderView.kt` 內就地擴充。Issue 6 實作者開工前應重新閱讀本 issue 完成後的 `EpubFxlScaler.kt`，確認新函式簽章設計。
+
+**單元測試要求：**
+- 新增 JVM 單元測試（`app/android/app/src/test/kotlin/cc/ugotit/elinkbook/EpubFxlScalerTest.kt`，沿用 `epic-4-pdf-enhance` Issue 8 已建立的 JVM 測試基礎設施，`build.gradle.kts` 已有 `testImplementation("junit:junit:4.13.2")`，不需重複新增）：`computeFitScale()`（寬/高各自為縮放瓶頸的情況、內容小於容器時不放大）、`computeCenteringTranslation()`（原始位置在原點、原始位置非原點含負值偏移的情況）
+- 不新增 Dart 測試（本 issue 不涉及 Dart 端）
+
+**驗收標準：**
+- 上述 JVM 單元測試皆通過（`./gradlew testDebugUnitTest`，於 `app/android` 目錄執行）
+- `flutter analyze` 乾淨
+- `integration_test`（真實裝置）：重新執行既有涵蓋定樣式 EPUB 開書的測試（`epub_reader_view_test.dart` 「開啟定樣式範例 EPUB，onLayoutResolved 回報 isFixedLayout 為 true」），並人工視覺確認固定版面書籍縮放/置中效果與抽離前一致，無回歸
