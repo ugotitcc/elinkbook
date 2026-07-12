@@ -215,9 +215,9 @@
 
 ---
 
-## Issue 8：技術債／架構深化——PdfReaderView.kt 影像處理邏輯抽離為 PdfImageProcessor（待開始）
+## Issue 8：技術債／架構深化——PdfReaderView.kt 影像處理邏輯抽離為 PdfImageProcessor（已完成）
 
-**Status:** ⚪ 待開始。2026-07-12 依架構審查（`tmp/epic-16/reviews/architecture-review-1783800246.html` Candidate #2，推薦強度 Worth Exploring）新增，於 Epic 16 正式開發前先行清理此技術債（見 `docs/epics.md`）。完整計劃見 `plans/plan-issue-8.md`。
+**Status:** ✅ 已完成。2026-07-12 依架構審查（`tmp/epic-16/reviews/architecture-review-1783800246.html` Candidate #2，推薦強度 Worth Exploring）新增，計劃經兩輪審查（`plan-issue-8-review.md`／`plan-issue-8-review-round2.md`）後核准，於獨立 worktree（`worktree-epic-4-issue-8-pdf-image-processor`）依 Task 1-4 完成實作並修復兩輪審查全部發現（`plan-issue-8-fix-review.md` 複審確認 4 項發現皆已正確修復），已透過 PR #33 合併回 `main`。完整計劃見 `plans/plan-issue-8.md`。
 
 **依賴：** 無（Issue 1-7 完成後的獨立技術債重構，不新增功能，不影響既有 method channel 契約）
 
