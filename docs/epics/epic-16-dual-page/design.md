@@ -80,7 +80,8 @@ DualPageDirection: ltr | rtl
 |------|---------|------|
 | `BookReaderPrefs` | 擴充 | 新增 3 個 nullable 欄位 + `copyWith` / `toMap` / `fromMap` |
 | `BookReaderPrefsRepository` | 擴充 | SQLite schema migration 新增 3 欄 |
-| `ReaderScreen` | 擴充 | 新增方向偵測（`MediaQuery.orientation` 或 `OrientationBuilder`）並透過 `isLandscape` 參數下傳（見 `spec.md`「方向偵測契約」）；3 個雙頁欄位新增 `_resolved…` null-合併 getter（見 `spec.md` I-3）；EPUB FXL 時於畫面右上角顯示半透明懸浮齒輪按鈕（對稱於左上角返回鍵），點擊開啟 `FxlSettingsSheet` |
+| `ReaderScreen` | 擴充 | 新增方向偵測（`MediaQuery.orientation` 或 `OrientationBuilder`）並透過 `isLandscape` 參數下傳（見 `spec.md`「方向偵測契約」）；讀取 `ResolvedPreferences` 新增的 3 個雙頁欄位（見下列 `ResolvedPreferences`／`ReaderPrefsManagerImpl` 列與 `spec.md` I-3，2026-07-12 依 `ReaderPrefsManager` 重構同步修訂，不再是 `ReaderScreen` 自身的 `_resolved…` getter）；EPUB FXL 時於畫面右上角顯示半透明懸浮齒輪按鈕（對稱於左上角返回鍵），點擊開啟 `FxlSettingsSheet` |
+| `ResolvedPreferences`／`ReaderPrefsManagerImpl` | 擴充 | `docs/superpowers/plans/2026-07-12-refactor-reader-prefs-manager.md`（發生於本文件撰寫之後）新增的深模組，本 epic 沿用其既有模式：`ResolvedPreferences` 新增 `dualPageMode`／`dualPageCoverAlone`／`dualPageDirection` 三個 non-nullable 欄位，`ReaderPrefsManagerImpl.resolve()` 比照既有 `pdfFitMode` 慣例新增對應的 `?? 預設值` 合併邏輯 |
 | `PdfReaderView.dart` | 擴充 | 新增 `dualPageMode`/`dualPageCoverAlone`/`dualPageDirection`/`isLandscape` 建構參數，`didUpdateWidget` 偵測變動送出 `setPdfPreferences` |
 | `PdfReaderView.kt` | 核心改動 | `renderCurrentPage()` → `renderCurrentSpread()`（含 5 處呼叫點同步改名，見 `spec.md` M-2）；雙頁模式下拼接兩頁 Bitmap＋拼接階段 OOM 回退單頁；`nextPage`/`previousPage` 前進步進 2、後退對稱處理封面邊界（避免負索引，見 `spec.md` C-4）；`enterCropEditMode()` 暫時切回單頁 |
 | `EpubReaderView.dart` | 擴充 | 新增 `dualPageMode`、`isLandscape` 建構參數 |
