@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../reader/book_reader_prefs.dart';
+import '../reader/dual_page_mode.dart';
 import '../reader/pdf_fit_mode.dart';
 import '../reader/pdf_crop_mode.dart';
 
@@ -40,6 +41,7 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
   late double _brightness;
   late double _boldStrength; // 內部儲存為 UI 顯示用的 0..100，送出前才換算回 0..1
   late PdfCropMode _cropMode;
+  late DualPageMode _dualPageMode;
 
   @override
   void initState() {
@@ -50,6 +52,7 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
     _brightness = widget.prefs.pdfBrightness ?? 0;
     _boldStrength = (widget.prefs.pdfBoldStrength ?? 0) * 100;
     _cropMode = widget.prefs.pdfCropMode ?? PdfCropMode.none;
+    _dualPageMode = widget.prefs.dualPageMode ?? DualPageMode.auto;
   }
 
   @override
@@ -70,6 +73,13 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
       // widget.prefs，不是本地狀態），否則使用者調整本分頁任何一個控制項
       // 都會把已算好的裁切矩形靜默清空成 null。
       pdfCropRect: widget.prefs.pdfCropRect,
+      dualPageMode: _dualPageMode,
+      // dualPageCoverAlone／dualPageDirection 的 UI 控制項留給 Issue 4
+      // （見 docs/epics/epic-16-dual-page/issues.md），本分頁尚未追蹤這兩個
+      // 欄位的本地狀態，原樣帶回既有值，避免使用者調整雙頁模式或其他分頁時
+      // 被靜默清空。
+      dualPageCoverAlone: widget.prefs.dualPageCoverAlone,
+      dualPageDirection: widget.prefs.dualPageDirection,
     ));
   }
 
@@ -113,10 +123,15 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
   }
 
   Widget _buildDisplayTab(BuildContext context) {
-    const options = [
+    const fitOptions = [
       (PdfFitMode.pageFit, 'page_fit', Icons.fit_screen, 'Page-fit（整頁）'),
       (PdfFitMode.fitWidth, 'fit_width', Icons.swap_horiz, 'Fit Width（頁寬）'),
       (PdfFitMode.actualSize, 'actual_size', Icons.crop_original, '真實比例 1:1'),
+    ];
+    const dualPageOptions = [
+      (DualPageMode.auto, 'auto', Icons.stay_current_landscape, '自動（橫向雙頁）'),
+      (DualPageMode.always, 'always', Icons.view_column, '永遠雙頁'),
+      (DualPageMode.never, 'never', Icons.crop_portrait, '永遠單頁'),
     ];
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -127,7 +142,7 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
           const SizedBox(height: 8),
           Wrap(
             spacing: 4,
-            children: options.map((option) {
+            children: fitOptions.map((option) {
               final (mode, keySuffix, icon, tooltip) = option;
               final selected = _fitMode == mode;
               return IconButton(
@@ -137,6 +152,26 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
                 color: selected ? Theme.of(context).colorScheme.primary : null,
                 onPressed: () => setState(() {
                   _fitMode = mode;
+                  _notifyChanged();
+                }),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 16),
+          const Text('雙頁模式'),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 4,
+            children: dualPageOptions.map((option) {
+              final (mode, keySuffix, icon, tooltip) = option;
+              final selected = _dualPageMode == mode;
+              return IconButton(
+                key: Key('pdf_settings_dual_page_mode_$keySuffix'),
+                icon: Icon(icon),
+                tooltip: tooltip,
+                color: selected ? Theme.of(context).colorScheme.primary : null,
+                onPressed: () => setState(() {
+                  _dualPageMode = mode;
                   _notifyChanged();
                 }),
               );
