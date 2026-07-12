@@ -24,7 +24,7 @@ class SqliteLibraryRepository implements LibraryRepository {
   static Future<SqliteLibraryRepository> open(String path) async {
     final db = await openDatabase(
       path,
-      version: 3,
+      version: 4,
       onConfigure: (db) async {
         // book_reader_prefs 的 ON DELETE CASCADE 需要外鍵約束真正生效，
         // SQLite 預設不強制外鍵，須逐連線手動開啟（見 epic-3 plan-issue-1）。
@@ -57,15 +57,22 @@ class SqliteLibraryRepository implements LibraryRepository {
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
           // 舊裝置從未有過 book_reader_prefs 表，_createBookReaderPrefsTable
-          // 目前的 CREATE TABLE 已包含全部欄位（含 PDF），一步到位，不需要
-          // 額外再跑 _addPdfReaderPrefsColumns（該表根本還不存在，ALTER TABLE
-          // 會找不到表而失敗）。
+          // 目前的 CREATE TABLE 已包含全部欄位（含 PDF、雙頁），一步到位，
+          // 不需要再跑後續的 ALTER TABLE（該表在這之前根本不存在）。
           await _createBookReaderPrefsTable(db);
-        } else if (oldVersion < 3) {
+          return;
+        }
+        if (oldVersion < 3) {
           // 裝置已經是 version 2：book_reader_prefs 表已存在但缺少 PDF
-          // 欄位，只能用 ALTER TABLE 補上，不能重新 CREATE TABLE（會因
-          // 表已存在而拋出例外）。
+          // 欄位，只能用 ALTER TABLE 補上。注意這裡改用 if 而非
+          // else if——version 2 的裝置跳級到 version 4 時，還需要緊接著
+          // 執行下方 oldVersion < 4 的雙頁欄位遷移，兩段都要跑到。
           await _addPdfReaderPrefsColumns(db);
+        }
+        if (oldVersion < 4) {
+          // 裝置已經是 version 3：book_reader_prefs 表已有 PDF 欄位但缺少
+          // 雙頁欄位，只能用 ALTER TABLE 補上。
+          await _addDualPageColumns(db);
         }
       },
     );
@@ -74,8 +81,9 @@ class SqliteLibraryRepository implements LibraryRepository {
 
   static Future<void> _createBookReaderPrefsTable(Database db) async {
     // 單書版面偏好設定（epic-3-fonts-layout FR-09/FR-10、epic-4-pdf-enhance
-    // FR-11），與 books 表 1:1 關聯；所有欄位皆為 nullable，null 代表未
-    // 覆寫，見 docs/epics/epic-4-pdf-enhance/spec.md「資料模型」。
+    // FR-11、epic-16-dual-page FR-41），與 books 表 1:1 關聯；所有欄位皆為
+    // nullable，null 代表未覆寫，見 docs/epics/epic-4-pdf-enhance/spec.md
+    // 「資料模型」與 docs/epics/epic-16-dual-page/spec.md「資料模型」。
     await db.execute('''
       CREATE TABLE book_reader_prefs (
         book_id TEXT PRIMARY KEY REFERENCES books(id) ON DELETE CASCADE,
@@ -95,7 +103,10 @@ class SqliteLibraryRepository implements LibraryRepository {
         pdf_brightness REAL,
         pdf_bold_strength REAL,
         pdf_crop_mode TEXT,
-        pdf_crop_rect TEXT
+        pdf_crop_rect TEXT,
+        dual_page_mode TEXT,
+        dual_page_cover_alone INTEGER,
+        dual_page_direction TEXT
       )
     ''');
   }
@@ -117,6 +128,18 @@ class SqliteLibraryRepository implements LibraryRepository {
         .execute('ALTER TABLE book_reader_prefs ADD COLUMN pdf_crop_mode TEXT');
     await db
         .execute('ALTER TABLE book_reader_prefs ADD COLUMN pdf_crop_rect TEXT');
+  }
+
+  static Future<void> _addDualPageColumns(Database db) async {
+    // 橫向雙頁顯示（epic-16-dual-page FR-41）新增的 3 個欄位，補追加到
+    // 既有（version 3 起已存在）的 book_reader_prefs 表，見
+    // docs/epics/epic-16-dual-page/spec.md「資料模型」。
+    await db.execute(
+        'ALTER TABLE book_reader_prefs ADD COLUMN dual_page_mode TEXT');
+    await db.execute(
+        'ALTER TABLE book_reader_prefs ADD COLUMN dual_page_cover_alone INTEGER');
+    await db.execute(
+        'ALTER TABLE book_reader_prefs ADD COLUMN dual_page_direction TEXT');
   }
 
   /// 供 [BookReaderPrefsRepository] 等後續 repository 共用同一個資料庫連線

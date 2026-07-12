@@ -6,6 +6,8 @@ import 'package:elinkbook/library/sqlite_library_repository.dart';
 import 'package:elinkbook/reader/app_font.dart';
 import 'package:elinkbook/reader/book_reader_prefs.dart';
 import 'package:elinkbook/reader/book_reader_prefs_repository.dart';
+import 'package:elinkbook/reader/dual_page_direction.dart';
+import 'package:elinkbook/reader/dual_page_mode.dart';
 import 'package:elinkbook/reader/writing_mode.dart';
 import 'package:elinkbook/reader/pdf_crop_mode.dart';
 import 'package:elinkbook/reader/pdf_crop_rect.dart';
@@ -65,6 +67,18 @@ void main() {
       pdfCropMode: PdfCropMode.manual,
       pdfCropRect:
           PdfCropRect(left: 0.05, top: 0.1, right: 0.95, bottom: 0.9),
+    );
+
+    await repository.save('b1', prefs);
+
+    expect(await repository.load('b1'), prefs);
+  });
+
+  test('save 寫入雙頁欄位後，load 讀回相同的值', () async {
+    const prefs = BookReaderPrefs(
+      dualPageMode: DualPageMode.always,
+      dualPageCoverAlone: false,
+      dualPageDirection: DualPageDirection.rtl,
     );
 
     await repository.save('b1', prefs);

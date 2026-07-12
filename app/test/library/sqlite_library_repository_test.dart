@@ -64,6 +64,9 @@ void main() {
       'pdf_bold_strength',
       'pdf_crop_mode',
       'pdf_crop_rect',
+      'dual_page_mode',
+      'dual_page_cover_alone',
+      'dual_page_direction',
     ]));
   });
 
@@ -342,5 +345,195 @@ void main() {
             .query('book_reader_prefs', where: 'book_id = ?', whereArgs: ['b1']))
         .single;
     expect(updated['pdf_fit_mode'], 'fitWidth');
+  });
+
+  test('既有 version 3 裝置升級後，book_reader_prefs 新增雙頁欄位且既有 PDF 資料不受影響',
+      () async {
+    final tempDir =
+        await Directory.systemTemp.createTemp('elinkbook_migration_v3_test');
+    addTearDown(() => tempDir.delete(recursive: true));
+    final dbPath = p.join(tempDir.path, 'test.db');
+
+    // 模擬「已存在於 version 3」的舊資料庫：手動以 version 3 當時的
+    // schema（含 PDF 欄位、不含雙頁欄位）建立。
+    final oldDb = await databaseFactory.openDatabase(
+      dbPath,
+      options: OpenDatabaseOptions(
+        version: 3,
+        onConfigure: (db) async {
+          await db.execute('PRAGMA foreign_keys = ON');
+        },
+        onCreate: (db, version) async {
+          await db.execute('CREATE TABLE groups (name TEXT PRIMARY KEY)');
+          await db.insert('groups', {'name': '未分類'});
+          await db.execute('''
+            CREATE TABLE books (
+              id TEXT PRIMARY KEY,
+              title TEXT NOT NULL,
+              author TEXT,
+              format TEXT NOT NULL,
+              filePath TEXT NOT NULL,
+              source TEXT NOT NULL,
+              coverPath TEXT,
+              progress REAL NOT NULL DEFAULT 0,
+              groupName TEXT NOT NULL DEFAULT '未分類',
+              createTime INTEGER NOT NULL,
+              lastReadTime INTEGER NOT NULL
+            )
+          ''');
+          await db.execute('''
+            CREATE TABLE book_reader_prefs (
+              book_id TEXT PRIMARY KEY REFERENCES books(id) ON DELETE CASCADE,
+              font_family TEXT,
+              font_size REAL,
+              font_weight REAL,
+              line_height REAL,
+              paragraph_spacing REAL,
+              page_margins REAL,
+              text_align TEXT,
+              publisher_styles INTEGER,
+              writing_mode_override TEXT,
+              page_turn_mode_override TEXT,
+              screen_orientation_override TEXT,
+              pdf_fit_mode TEXT,
+              pdf_contrast REAL,
+              pdf_brightness REAL,
+              pdf_bold_strength REAL,
+              pdf_crop_mode TEXT,
+              pdf_crop_rect TEXT
+            )
+          ''');
+        },
+      ),
+    );
+    await oldDb.insert('books', {
+      'id': 'b1',
+      'title': '既有書籍',
+      'format': 'pdf',
+      'filePath': 'content://example/b1',
+      'source': 'local',
+      'progress': 0.0,
+      'groupName': '未分類',
+      'createTime': 1000,
+      'lastReadTime': 1000,
+    });
+    await oldDb.insert('book_reader_prefs', {
+      'book_id': 'b1',
+      'pdf_fit_mode': 'fitWidth',
+      'pdf_contrast': 10.0,
+    });
+    await oldDb.close();
+
+    // 重新以目前版本開啟同一個檔案，觸發 onUpgrade（oldVersion=3 →
+    // newVersion=4），驗證既有 PDF 資料不受影響、且雙頁新欄位可用。
+    final upgraded = await SqliteLibraryRepository.open(dbPath);
+    addTearDown(() => upgraded.close());
+
+    final row = (await upgraded.database
+            .query('book_reader_prefs', where: 'book_id = ?', whereArgs: ['b1']))
+        .single;
+    expect(row['pdf_fit_mode'], 'fitWidth'); // 既有 PDF 資料不受影響
+    expect(row['pdf_contrast'], 10.0);
+    expect(row['dual_page_mode'], isNull); // 新欄位存在且預設 NULL
+
+    // 證明欄位真的可寫入（不只是巧合為 null），確認 ALTER TABLE 確實生效。
+    await upgraded.database.update(
+      'book_reader_prefs',
+      {'dual_page_mode': 'always', 'dual_page_cover_alone': 0},
+      where: 'book_id = ?',
+      whereArgs: ['b1'],
+    );
+    final updated = (await upgraded.database
+            .query('book_reader_prefs', where: 'book_id = ?', whereArgs: ['b1']))
+        .single;
+    expect(updated['dual_page_mode'], 'always');
+    expect(updated['dual_page_cover_alone'], 0);
+  });
+
+  test('既有 version 2 裝置直接升級到 version 4，PDF 欄位與雙頁欄位皆補齊（累加式 onUpgrade 驗證）',
+      () async {
+    final tempDir = await Directory.systemTemp
+        .createTemp('elinkbook_migration_v2_to_v4_test');
+    addTearDown(() => tempDir.delete(recursive: true));
+    final dbPath = p.join(tempDir.path, 'test.db');
+
+    // 模擬「已存在於 version 2」的舊資料庫：手動以 version 2 當時的
+    // schema（不含 PDF 欄位、不含雙頁欄位）建立。這是本測試存在的理由——
+    // 驗證 onUpgrade 從互斥的 if/else if 改為累加式 if 之後，oldVersion=2
+    // 跳級到 newVersion=4 時，PDF 欄位遷移（oldVersion<3）與雙頁欄位遷移
+    // （oldVersion<4）兩段都會執行，不會因為只命中其中一個分支而漏掉。
+    final oldDb = await databaseFactory.openDatabase(
+      dbPath,
+      options: OpenDatabaseOptions(
+        version: 2,
+        onConfigure: (db) async {
+          await db.execute('PRAGMA foreign_keys = ON');
+        },
+        onCreate: (db, version) async {
+          await db.execute('CREATE TABLE groups (name TEXT PRIMARY KEY)');
+          await db.insert('groups', {'name': '未分類'});
+          await db.execute('''
+            CREATE TABLE books (
+              id TEXT PRIMARY KEY,
+              title TEXT NOT NULL,
+              author TEXT,
+              format TEXT NOT NULL,
+              filePath TEXT NOT NULL,
+              source TEXT NOT NULL,
+              coverPath TEXT,
+              progress REAL NOT NULL DEFAULT 0,
+              groupName TEXT NOT NULL DEFAULT '未分類',
+              createTime INTEGER NOT NULL,
+              lastReadTime INTEGER NOT NULL
+            )
+          ''');
+          await db.execute('''
+            CREATE TABLE book_reader_prefs (
+              book_id TEXT PRIMARY KEY REFERENCES books(id) ON DELETE CASCADE,
+              font_family TEXT,
+              font_size REAL,
+              font_weight REAL,
+              line_height REAL,
+              paragraph_spacing REAL,
+              page_margins REAL,
+              text_align TEXT,
+              publisher_styles INTEGER,
+              writing_mode_override TEXT,
+              page_turn_mode_override TEXT,
+              screen_orientation_override TEXT
+            )
+          ''');
+        },
+      ),
+    );
+    await oldDb.insert('books', {
+      'id': 'b1',
+      'title': '既有書籍',
+      'format': 'epub',
+      'filePath': 'content://example/b1',
+      'source': 'local',
+      'progress': 0.0,
+      'groupName': '未分類',
+      'createTime': 1000,
+      'lastReadTime': 1000,
+    });
+    await oldDb.insert('book_reader_prefs', {'book_id': 'b1', 'font_size': 18.0});
+    await oldDb.close();
+
+    final upgraded = await SqliteLibraryRepository.open(dbPath);
+    addTearDown(() => upgraded.close());
+
+    final columns = await upgraded.database
+        .rawQuery('PRAGMA table_info(book_reader_prefs)');
+    final columnNames = columns.map((c) => c['name'] as String).toSet();
+    expect(
+      columnNames,
+      containsAll(['pdf_fit_mode', 'dual_page_mode', 'dual_page_cover_alone']),
+    );
+
+    final row = (await upgraded.database
+            .query('book_reader_prefs', where: 'book_id = ?', whereArgs: ['b1']))
+        .single;
+    expect(row['font_size'], 18.0); // 既有 EPUB 資料不受影響
   });
 }

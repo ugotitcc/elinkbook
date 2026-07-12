@@ -7,6 +7,8 @@ import 'package:elinkbook/reader/pdf_crop_rect.dart';
 import 'package:elinkbook/reader/pdf_fit_mode.dart';
 import 'package:elinkbook/reader/screen_orientation_setting.dart';
 import 'package:elinkbook/reader/page_turn_mode.dart';
+import 'package:elinkbook/reader/dual_page_direction.dart';
+import 'package:elinkbook/reader/dual_page_mode.dart';
 import 'package:elinkbook/reader/writing_mode.dart';
 
 void main() {
@@ -29,6 +31,9 @@ void main() {
     expect(prefs.pdfBoldStrength, isNull);
     expect(prefs.pdfCropMode, isNull);
     expect(prefs.pdfCropRect, isNull);
+    expect(prefs.dualPageMode, isNull);
+    expect(prefs.dualPageCoverAlone, isNull);
+    expect(prefs.dualPageDirection, isNull);
   });
 
   test('兩個欄位值完全相同的 BookReaderPrefs 視為相等', () {
@@ -177,5 +182,60 @@ void main() {
 
     expect(copy, original);
     expect(identical(copy, original), isFalse);
+  });
+
+  test('雙頁欄位值完全相同的 BookReaderPrefs 視為相等', () {
+    const a = BookReaderPrefs(
+      dualPageMode: DualPageMode.always,
+      dualPageCoverAlone: false,
+      dualPageDirection: DualPageDirection.rtl,
+    );
+    const b = BookReaderPrefs(
+      dualPageMode: DualPageMode.always,
+      dualPageCoverAlone: false,
+      dualPageDirection: DualPageDirection.rtl,
+    );
+    expect(a, b);
+    expect(a.hashCode, b.hashCode);
+  });
+
+  test('雙頁欄位任一不同時視為不相等', () {
+    const a = BookReaderPrefs(dualPageMode: DualPageMode.always);
+    const b = BookReaderPrefs(dualPageMode: DualPageMode.never);
+    expect(a, isNot(b));
+  });
+
+  test('雙頁欄位的 toMap／fromMap round-trip 保留所有欄位', () {
+    const prefs = BookReaderPrefs(
+      dualPageMode: DualPageMode.never,
+      dualPageCoverAlone: false,
+      dualPageDirection: DualPageDirection.rtl,
+    );
+
+    final map = prefs.toMap('book-6');
+    expect(map['dual_page_mode'], 'never');
+    expect(map['dual_page_cover_alone'], 0);
+    expect(map['dual_page_direction'], 'rtl');
+
+    final restored = BookReaderPrefs.fromMap(map);
+    expect(restored, prefs);
+  });
+
+  test('dualPageCoverAlone 為 true／false／null 皆正確 round-trip（避免布林值 0/1 轉換錯誤）',
+      () {
+    const withTrue = BookReaderPrefs(dualPageCoverAlone: true);
+    final trueMap = withTrue.toMap('book-7');
+    expect(trueMap['dual_page_cover_alone'], 1);
+    expect(BookReaderPrefs.fromMap(trueMap).dualPageCoverAlone, isTrue);
+
+    const withFalse = BookReaderPrefs(dualPageCoverAlone: false);
+    final falseMap = withFalse.toMap('book-8');
+    expect(falseMap['dual_page_cover_alone'], 0);
+    expect(BookReaderPrefs.fromMap(falseMap).dualPageCoverAlone, isFalse);
+
+    const withNull = BookReaderPrefs.empty;
+    final nullMap = withNull.toMap('book-9');
+    expect(nullMap['dual_page_cover_alone'], isNull);
+    expect(BookReaderPrefs.fromMap(nullMap).dualPageCoverAlone, isNull);
   });
 }
