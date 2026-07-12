@@ -41,4 +41,36 @@ object EpubFxlScaler {
             availableHeight.toFloat() / contentHeight.toFloat(),
         ).coerceAtMost(1f)
     }
+
+    /** [computeCenteringTranslation] 的回傳值：縮放後內容需要疊加的水平/垂直位移
+     * （對應 `View.translationX`/`translationY`），使縮放後內容在可用容器內置中。*/
+    data class Translation(val x: Float, val y: Float)
+
+    /**
+     * 依可用容器尺寸（[availableWidth]／[availableHeight]）、內容原始尺寸
+     * （[contentWidth]／[contentHeight]）、已算好的縮放係數 [scale]，以及內容目前
+     * （未經校正、由呼叫端透過 `View.getLocationOnScreen()` 量測所得）相對容器的
+     * 原始位置（[currentLeft]／[currentTop]），計算需要疊加的 translationX/Y，使
+     * 縮放後的內容剛好水平和垂直置中在容器裡。
+     *
+     * [currentLeft]／[currentTop] 可能非零、甚至為負值——呼叫端的排版系統（例如
+     * Readium 內建 XML 對 WebView 做的置中）可能在這個函式執行前就已經把內容擺在
+     * 某個非原點的位置；本函式不假設呼叫端的排版邏輯，只單純計算「從目前位置到
+     * 置中位置」所需要的位移量，不論起點在哪裡都能算出正確的最終位置。
+     */
+    fun computeCenteringTranslation(
+        availableWidth: Int,
+        availableHeight: Int,
+        contentWidth: Int,
+        contentHeight: Int,
+        scale: Float,
+        currentLeft: Float,
+        currentTop: Float,
+    ): Translation {
+        val scaledWidth = contentWidth * scale
+        val scaledHeight = contentHeight * scale
+        val desiredLeft = (availableWidth - scaledWidth) / 2f
+        val desiredTop = (availableHeight - scaledHeight) / 2f
+        return Translation(desiredLeft - currentLeft, desiredTop - currentTop)
+    }
 }

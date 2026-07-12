@@ -63,4 +63,62 @@ class EpubFxlScalerTest {
 
         assertEquals(0.5f, scale, 1e-4f)
     }
+
+    // ---- computeCenteringTranslation ----
+
+    @Test
+    fun `原始位置在原點時，置中位移等於容器與縮放後內容尺寸差的一半`() {
+        // available 1000x1000、content 800x800、scale=1.0（縮放後仍是 800x800）、
+        // currentLeft/currentTop=0（尚未有任何位移）：置中位移 = (1000-800)/2 = 100。
+        val translation = EpubFxlScaler.computeCenteringTranslation(
+            availableWidth = 1000,
+            availableHeight = 1000,
+            contentWidth = 800,
+            contentHeight = 800,
+            scale = 1.0f,
+            currentLeft = 0f,
+            currentTop = 0f,
+        )
+
+        assertEquals(100f, translation.x, 1e-4f)
+        assertEquals(100f, translation.y, 1e-4f)
+    }
+
+    @Test
+    fun `原始位置非原點（含負值偏移）時，置中位移會扣掉目前已有的偏移量`() {
+        // available 1080x1600、content 1080x1920、scale=0.75（縮放後 810x1440）：
+        // desiredLeft=(1080-810)/2=135，desiredTop=(1600-1440)/2=80。
+        // currentLeft=50（Readium 排版已有的水平偏移）、currentTop=-20（垂直方向
+        // 已往上偏移，對應 EpubReaderView.kt 註解描述的「WebView 天然高度比容器
+        // 可用高度更高、置中後往上位移」情境）：
+        // x = 135 - 50 = 85；y = 80 - (-20) = 100。
+        val translation = EpubFxlScaler.computeCenteringTranslation(
+            availableWidth = 1080,
+            availableHeight = 1600,
+            contentWidth = 1080,
+            contentHeight = 1920,
+            scale = 0.75f,
+            currentLeft = 50f,
+            currentTop = -20f,
+        )
+
+        assertEquals(85f, translation.x, 1e-4f)
+        assertEquals(100f, translation.y, 1e-4f)
+    }
+
+    @Test
+    fun `縮放後內容剛好等於容器尺寸且無原始偏移時，置中位移為零`() {
+        val translation = EpubFxlScaler.computeCenteringTranslation(
+            availableWidth = 1200,
+            availableHeight = 900,
+            contentWidth = 1200,
+            contentHeight = 900,
+            scale = 1.0f,
+            currentLeft = 0f,
+            currentTop = 0f,
+        )
+
+        assertEquals(0f, translation.x, 1e-4f)
+        assertEquals(0f, translation.y, 1e-4f)
+    }
 }
