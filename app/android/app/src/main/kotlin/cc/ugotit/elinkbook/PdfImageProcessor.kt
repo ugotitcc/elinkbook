@@ -202,4 +202,29 @@ object PdfImageProcessor {
      */
     fun pageRenderScale(density: Float): Float =
         density.coerceIn(PAGE_RENDER_MIN_SCALE, PAGE_RENDER_MAX_SCALE)
+
+    /**
+     * 建立一張 [width]x[height] 的不透明白底 ARGB_8888 Bitmap。
+     * `Bitmap.createBitmap()` 預設是全透明（ARGB 皆為 0），而
+     * `PdfRenderer.Page.render()` 只會畫出 PDF 內容本身有實際筆劃的像素，頁面
+     * 「空白背景」區域若 PDF 本身沒有明確畫白色矩形，會維持透明、不會被填成
+     * 不透明白色。`applyFilters()` 的 `ColorMatrixColorFilter` 第 4 列
+     * （alpha）是單位矩陣（保留原始 alpha），因此透明像素無論 contrast／
+     * brightness 設多少都不會產生視覺變化——必須在渲染前先手動填滿不透明
+     * 白色背景，濾鏡才能對「背景」區域也生效（見 task-4-diagnose-report.md
+     * 根因分析）。`PdfReaderView.kt` 原本在智慧裁切偵測、主渲染流程、OOM
+     * Fallback 流程、`renderFullPageForCropPreview()` 四處各自重複呼叫
+     * `Bitmap.createBitmap(...)` + `eraseColor(Color.WHITE)`，此為抽離後的
+     * 單一事實來源（見 docs/epics/epic-4-pdf-enhance/plans/plan-issue-9.md）。
+     *
+     * 與 [applyBoldEffect]／[dilate]／[detectCropRect] 相同，本函式直接呼叫
+     * 真實 `android.graphics.Bitmap` 方法，無法在純 JVM 環境單元測試（需要
+     * Robolectric 或真機），依專案既有慣例不新增自動化測試，正確性由既有真機
+     * `integration_test` 回歸把關（見 plan-issue-9.md Task 3）。
+     */
+    fun createOpaqueWhiteBitmap(width: Int, height: Int): Bitmap {
+        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        bitmap.eraseColor(android.graphics.Color.WHITE)
+        return bitmap
+    }
 }
