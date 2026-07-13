@@ -101,9 +101,9 @@
 
 ## Issue 4：PDF 封面獨立開關 + 閱讀方向（LTR/RTL）
 
-**依賴：** Issue 3
+**Status:** ✅ 已完成。依 `plans/plan-issue-4.md` Task 1-5 完成實作：`DualPageDirection` 全域固定預設值由 `ltr` 改為 `rtl`（Dart／Kotlin／JVM 測試／`spec.md` 四端一致翻轉）；`PdfSettingsSheet`「顯示」分頁新增「封面獨立顯示」開關與「頁面方向」LTR/RTL 二選一（`_buildDisplayTab()` 改用 `SingleChildScrollView` 包裹，避免固定 `height: 400` 下的 RenderFlex overflow）；`integration_test` 新增封面獨立關閉時的翻頁步進驗證與封面獨立/頁面方向持久化驗證。`/superpowers:requesting-code-review` 審查（`tmp/epic-16/reviews/review-issue-4-integrated.md`）核准，無 Critical/Important（程式碼層級）問題；236 個 `flutter test`（較 Issue 3 新增 9 個）全數通過、`flutter analyze` 乾淨、原生端 JVM 測試 BUILD SUCCESSFUL、兩個 `integration_test` 檔案在真機（`3CEF42ECD491687`，Android 15）重新驗證共 31 個測試全數通過。已於 branch `epic-16/dual-page-issue4`（3 個 commit）完成，經 PR #39 合併進 `epic-16/dual-page-issue3`，再合併回 `main`（commit `183b7c0`）。
 
-**Status:** ready-for-agent
+**依賴：** Issue 3
 
 **描述：**
 在 `PdfSettingsSheet` 補齊 Issue 3 原生端已支援、但尚未開放使用者調整的兩個控制項：
@@ -111,8 +111,8 @@
 - `PdfSettingsSheet`「顯示」分頁新增「封面獨立」開關（預設開啟）與「頁面方向」二選一（左到右／右到左，預設左到右）
 - 本 issue 不需異動原生端邏輯（Issue 3 已一次到位實作），純粹是 UI 曝光 + 端到端驗證這兩個既有但未被測試覆蓋的路徑
 
-**待決設計問題（Issue 3 真機驗證時發現，記錄於此供本 issue 開始時討論）：**
-`dualPageDirection` 目前預設值固定為 `ltr`，不論書籍是橫排還是直排（`WritingMode`）。但直排（vertical-RL）書籍慣例上應是右到左翻頁——也就是右頁顯示較小 index（較早）、左頁顯示較大 index（較晚），恰好對應 `rtl` 配對結果。目前規劃是使用者透過本 issue 新增的「頁面方向」控制項手動切換，每本直排書都要自己調整一次；是否應該改為依書籍偵測到的 `WritingMode` 自動預設（直排 → 預設 `rtl`，橫排 → 預設 `ltr`），而非純手動、固定預設 `ltr`，尚未決定，留待本 issue 實際開工時一併討論確認。
+**待決設計問題（Issue 3 真機驗證時發現，已於本 issue 開工前確認）：**
+`dualPageDirection` 原預設值固定為 `ltr`，不論書籍是橫排還是直排。人類決策：維持純手動控制（不新增 `WritingMode` 自動偵測——PDF 目前無任何直排/橫排偵測訊號來源，做自動偵測屬全新功能，超出本 issue 範圍），但把全域固定預設值從 `ltr` 改為 `rtl`（Task 1），已完整實作。
 
 **已結案的審查疑慮（`tmp/epic-16/reviews/review-plan-issue-4.md` 提出，`/grill-with-docs` 已釐清，不需修正）：**
 該審查將 `PdfSettingsSheet.initState()` 把 nullable 的 `dualPageCoverAlone`／`dualPageDirection`（以及既有的 `dualPageMode`／`pdfFitMode`／`pdfContrast`／`pdfBrightness`／`pdfBoldStrength`／`pdfCropMode`）用 `??` 具現化為非 null 本地狀態，列為 Standards 硬性違反（違反 `AGENTS.md`「null = 不覆寫」慣例）。經查證：
