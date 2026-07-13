@@ -11,6 +11,7 @@ import '../reader/reader_prefs_manager.dart';
 import '../reader/resolved_preferences.dart';
 import '../reader/screen_orientation_setting.dart';
 import '../reader/writing_mode.dart';
+import 'fxl_settings_sheet.dart';
 import 'pdf_settings_sheet.dart';
 import 'reader_settings_sheet.dart';
 
@@ -250,6 +251,17 @@ class _ReaderScreenState extends State<ReaderScreen> {
     );
   }
 
+  void _openFxlSettings() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => FxlSettingsSheet(
+        prefs: _prefs,
+        onChanged: _handlePrefsChanged,
+      ),
+    );
+  }
+
   void _handlePageRendered() {
     if (!mounted) return;
     setState(() => _state = _RenderState.rendered);
@@ -383,6 +395,22 @@ class _ReaderScreenState extends State<ReaderScreen> {
               ),
             ),
           ),
+        if (_isFixedLayout)
+          Positioned(
+            top: 16,
+            right: 16,
+            child: ClipOval(
+              child: Container(
+                color: Colors.black54,
+                child: IconButton(
+                  key: const Key('reader_fixed_layout_settings_button'),
+                  icon: const Icon(Icons.settings, color: Colors.white),
+                  tooltip: '版面設定',
+                  onPressed: _openFxlSettings,
+                ),
+              ),
+            ),
+          ),
         if (_state == _RenderState.loading)
           const Center(
             key: Key('reader_loading_indicator'),
@@ -415,6 +443,8 @@ class _ReaderScreenState extends State<ReaderScreen> {
           pageMargins: resolved.pageMargins,
           textAlign: resolved.textAlign,
           publisherStyles: resolved.publisherStyles,
+          dualPageMode: resolved.dualPageMode,
+          isLandscape: isLandscape,
         );
       case BookFormat.pdf:
         return PdfReaderView(
