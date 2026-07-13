@@ -88,6 +88,7 @@ flutter build apk --debug                       # 建置 debug APK
 - **ADR**：`docs/adr/NNNN-<title>.md`
 - **Method Channel 契約**：對稱三段式（openBook → onPageRendered/onError）
 - **偏好設定**：null = 不覆寫，使用預設值；非 null = 覆寫
+- **`plans/plan-issue-<N>.md` 進度追蹤**：Task 底下的 Step 一旦完成，須把該 Step 前面的 `- [ ]` 改為 `- [x]`，讓計劃檔案即時反映開發進度
 
 ## Gotchas
 

@@ -58,9 +58,10 @@
 
 ## Issue 3：方向偵測基礎建設 + PDF 雙頁核心渲染
 
-**依賴：** Issue 2
+**Status:** ✅ 已完成。依 `plans/plan-issue-3.md` Task 1-7 完成實作：`ReaderScreen` 新增 `isLandscape` 方向偵測（格式無關共用）＋ `ResolvedPreferences`/`ReaderPrefsManagerImpl.resolve()` 雙頁 Null 預設值解析；`PdfReaderView`（Dart）新增 4 個雙頁/橫向建構參數；`PdfSettingsSheet` 新增「雙頁模式」三態控制項；`PdfReaderView.kt` 新增 `DualPageMode`/`DualPageDirection` 列舉與雙頁純函式（`isDualPageEnabled`/`pairIndices`/`nextPageStep`/`previousPageStep`，24 個 JVM 單元測試）；`renderCurrentPage()` 更名 `renderCurrentSpread()`，完整實作拼接／封面獨立配對／LTR-RTL 配對／OOM 回退／C-4 對稱翻頁步進／頁碼回報（spec.md 演算法步驟 1-6）；新增雙頁測試 PDF fixture 與 `integration_test/pdf_dual_page_test.dart`。`/superpowers:requesting-code-review` 兩輪審查（`tmp/epic-16/reviews/review-issue-3-integrated.md`／`review-issue-3-integrated-round2.md`）：Round 1 的 1 項 Critical（Task 7 缺失）與 2 項 Important（`renderCurrentSpread()`/`stitchBitmaps()` OOM 回退時點陣圖洩漏）皆修正並複驗通過；真機接上後另發現 Task 7 原始 `integration_test`（`tester.drag()` 模擬手勢）在 Flutter 3.41.9 + Android 15 (API 35) 組合下因測試工具本身無法把合成/`adb` 觸控事件送達 `AndroidView` 疊加的手勢層而必定失敗（與既有 `CropOverlayView` 拖曳測試限制同類，非功能性回歸，`flutter run` 手指實際滑動已確認翻頁正常），已改寫為 `(tester.state(...) as dynamic).nextPage()`/`.previousPage()` 動態呼叫繞過手勢層，真機複驗 6/6 全數通過。全專案 227 個 `flutter test` 全數通過、`flutter analyze` 乾淨、原生端 34 個 JVM 測試（含新增 24 個）全數通過。**最終結論：Ready to merge: Yes**。已於 branch `epic-16/dual-page-issue3`（共 9 個 commit，最新 `8a63e68`）完成，待人類合併。
+**驗收標準逐項對照**：下方「驗收標準」5 項中，前 4 項（auto/always/never 行為、封面獨立配對步進、C-4 對稱回退）皆已由 `integration_test` 真機驗證涵蓋；「奇數總頁數最後一頁落單」實際以**偶數**（6 頁）fixture 驗證——`plan-issue-3.md` Task 7 已記錄此推導過程（`dualPageCoverAlone=true` 預設下錨點序列恆為奇數，落單情境實際發生在總頁數為偶數時，非驗收標準字面所述的「奇數」），驗證的是相同的「最後一個 spread 落單、另一側留白」行為，非字面偏差；FR-41「頁間無可見間距」屬像素/視覺層級正確性，無法透過 `integration_test` 自動化驗證（見 Task 7「已知測試限制」），本 issue 只驗證了「橫向+auto 觸發雙頁拼接」的結構性行為，**像素層級確認留給 Issue 7**。
 
-**Status:** ready-for-agent
+**依賴：** Issue 2
 
 **描述：**
 建立方向偵測共用基礎設施，並實作 PDF 雙頁渲染核心管線——本 epic 技術風險最高的部分之一，因為 `renderCurrentSpread()` 的拼接／步進／OOM 回退邏輯彼此緊密耦合於同一函式，須一次到位、不可切成半成品：

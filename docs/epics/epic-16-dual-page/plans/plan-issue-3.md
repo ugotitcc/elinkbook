@@ -8,6 +8,29 @@
 
 **Tech Stack:** Flutter/Dart、Kotlin（`android.graphics.pdf.PdfRenderer`）、JUnit 4（JVM 單元測試，`app/android` 既有基礎設施）。
 
+## 開發狀態（已完成，2026-07-13）
+
+Task 1-7 全數完成並提交，branch `epic-16/dual-page-issue3`，共 9 個 commit：
+
+```
+934623d feat(epic-16): book_reader_prefs 表升級至 version 4，新增雙頁欄位（累加式 onUpgrade 修正）— Issue 2，前置依賴
+c4438b4 feat(epic-16): ResolvedPreferences/ReaderPrefsManagerImpl 新增雙頁 Null 預設值解析 — Task 1
+a3ec83c feat(epic-16): PdfReaderView 新增雙頁/橫向建構參數 — Task 2
+5623c63 feat(epic-16): ReaderScreen 新增 isLandscape 方向偵測並接線至 PdfReaderView — Task 3
+909d447 feat(epic-16): PdfSettingsSheet 顯示分頁新增雙頁模式三態控制項 — Task 4
+b9e89b5 feat(epic-16): PdfReaderView.kt 新增 DualPageMode/DualPageDirection 列舉與雙頁純函式（JVM 測試）— Task 5
+694a5ad feat(epic-16): PdfReaderView.kt renderCurrentSpread() 完整雙頁演算法（拼接/OOM回退/C-4翻頁步進）— Task 6
+5b61e90 test(epic-16): 新增雙頁測試 PDF fixture 與 integration_test 真機驗證 — Task 7
+ff23288 fix(epic-16): renderCurrentSpread()/stitchBitmaps() OOM 回退時點陣圖洩漏修補 — 審查修正
+8a63e68 test(epic-16): 整合測試改用 dynamic 呼叫 nextPage/previousPage 以繞過手勢穿透限制 — 審查修正
+```
+
+**審查歷程**：`/superpowers:requesting-code-review` 兩輪審查，皆存於 `tmp/epic-16/reviews/`：
+- Round 1（`review-issue-3-integrated.md`）：1 項 Critical（Task 7 完全未實作）、2 項 Important（`renderCurrentSpread()`/`stitchBitmaps()` OOM 回退時點陣圖洩漏）。
+- Round 2（`review-issue-3-integrated-round2.md`）：Round 1 三項皆修正完成並複驗通過；真機接上後另外發現 Task 7 原始 `integration_test`（`tester.drag()` 模擬手勢）在 Flutter 3.41.9 + Android 15 (API 35) 這個組合下必定失敗——診斷後確認是測試工具本身無法把合成/`adb` 觸控事件送達 `AndroidView` 疊加的手勢層（與本專案既有 `CropOverlayView` 拖曳測試限制同類），非功能性回歸（`flutter run` 手指實際滑動已確認翻頁正常）。改寫 `integration_test/pdf_dual_page_test.dart`，直接以 `(tester.state(find.byType(PdfReaderView)) as dynamic).nextPage()`/`.previousPage()` 動態呼叫繞過手勢層，複驗真機 6/6 全數通過。**最終結論：Ready to merge: Yes**。
+
+**與計劃原文的已知落差**：下方 Task 7 Step 2 的 `integration_test/pdf_dual_page_test.dart` 程式碼區塊是撰寫計劃當下的原始設計（用 `tester.drag()` 模擬滑動手勢），實際落地程式碼已依上述審查發現改寫為 `_nextPage(tester)`/`_previousPage(tester)` 動態呼叫版本，不再依賴手勢模擬；計劃步驟本身（撰寫測試→跑測試→真機驗證→commit 的流程）仍如實對應到最終提交，僅測試「如何觸發翻頁」的實作手法有變動，行為驗證的目標（翻頁步進量、C-4 對稱規則、OOM 回退）未變。
+
 ## Global Constraints
 
 - **前置狀態（已確認完成，非假設）**：Issue 2（`docs/epics/epic-16-dual-page/plans/plan-issue-2.md`）已完成實作並經 `/superpowers:requesting-code-review` 審查核准（Ready to merge: Yes，branch `epic-16/dual-page-prefs-storage`，commit `934623d`，無 Critical/Important 問題）——`DualPageMode`（`app/lib/reader/dual_page_mode.dart`，`auto`/`always`/`never`）、`DualPageDirection`（`app/lib/reader/dual_page_direction.dart`，`ltr`/`rtl`）、`BookReaderPrefs.dualPageMode`/`dualPageCoverAlone`/`dualPageDirection`（皆 nullable）、`book_reader_prefs` 表對應 3 欄位（schema version 4）皆已存在，本計劃可直接依賴。
@@ -33,7 +56,7 @@
 - Consumes：Issue 2 產出的 `DualPageMode`/`DualPageDirection` enum、`BookReaderPrefs.dualPageMode`/`dualPageCoverAlone`/`dualPageDirection`（皆 nullable）
 - Produces：`ResolvedPreferences.dualPageMode: DualPageMode`／`dualPageCoverAlone: bool`／`dualPageDirection: DualPageDirection`（皆 non-nullable，供 Task 3 的 `ReaderScreen` 讀取）；`ReaderPrefsManagerImpl.resolve()` 對這 3 個新欄位套用 `?? DualPageMode.auto`／`?? true`／`?? DualPageDirection.ltr`
 
-- [ ] **Step 1：撰寫失敗測試——擴充 `resolved_preferences_test.dart`**
+- [x] **Step 1：撰寫失敗測試——擴充 `resolved_preferences_test.dart`**
 
 把整份檔案改為：
 
@@ -84,7 +107,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：執行測試，確認失敗**
+- [x] **Step 2：執行測試，確認失敗**
 
 ```bash
 cd app
@@ -93,7 +116,7 @@ flutter test test/reader/resolved_preferences_test.dart
 
 Expected：FAIL——編譯錯誤，`ResolvedPreferences` 建構子沒有 `dualPageMode`/`dualPageCoverAlone`/`dualPageDirection` 具名參數。
 
-- [ ] **Step 3：修改 `resolved_preferences.dart`**
+- [x] **Step 3：修改 `resolved_preferences.dart`**
 
 把 import 區塊（第 1-8 行）改為：
 
@@ -129,7 +152,7 @@ import 'writing_mode.dart';
 
 （`this.pdfCropRect,` 前一行 `required this.pdfCropMode,` 維持不變；`pdfCropRect` 本身非 required，保留原樣。）
 
-- [ ] **Step 4：執行測試，確認通過**
+- [x] **Step 4：執行測試，確認通過**
 
 ```bash
 flutter test test/reader/resolved_preferences_test.dart
@@ -137,7 +160,7 @@ flutter test test/reader/resolved_preferences_test.dart
 
 Expected：PASS。
 
-- [ ] **Step 5：撰寫失敗測試——擴充 `reader_prefs_manager_test.dart`**
+- [x] **Step 5：撰寫失敗測試——擴充 `reader_prefs_manager_test.dart`**
 
 把 import 區塊（第 1-17 行）中 `import 'package:elinkbook/reader/book_reader_prefs_repository.dart';` 之後新增：
 
@@ -182,7 +205,7 @@ import 'package:elinkbook/reader/dual_page_mode.dart';
     });
 ```
 
-- [ ] **Step 6：執行測試，確認失敗**
+- [x] **Step 6：執行測試，確認失敗**
 
 ```bash
 flutter test test/reader/reader_prefs_manager_test.dart
@@ -190,7 +213,7 @@ flutter test test/reader/reader_prefs_manager_test.dart
 
 Expected：FAIL——`resolved.dualPageMode` 等欄位不存在（編譯錯誤）或 `ResolvedPreferences` 建構缺少必要參數。
 
-- [ ] **Step 7：修改 `reader_prefs_manager_impl.dart`**
+- [x] **Step 7：修改 `reader_prefs_manager_impl.dart`**
 
 把 import 區塊（第 1-12 行）中 `import 'book_reader_prefs_repository.dart';` 之後新增：
 
@@ -226,7 +249,7 @@ import 'dual_page_mode.dart';
     );
 ```
 
-- [ ] **Step 8：執行測試，確認通過**
+- [x] **Step 8：執行測試，確認通過**
 
 ```bash
 flutter test test/reader/reader_prefs_manager_test.dart test/reader/resolved_preferences_test.dart
@@ -234,7 +257,7 @@ flutter test test/reader/reader_prefs_manager_test.dart test/reader/resolved_pre
 
 Expected：全數 PASS。
 
-- [ ] **Step 9：Commit**
+- [x] **Step 9：Commit**
 
 ```bash
 git add app/lib/reader/resolved_preferences.dart app/lib/reader/reader_prefs_manager_impl.dart app/test/reader/resolved_preferences_test.dart app/test/reader/reader_prefs_manager_test.dart
@@ -253,7 +276,7 @@ git commit -m "feat(epic-16): ResolvedPreferences/ReaderPrefsManagerImpl 新增�
 - Consumes：Issue 2 的 `DualPageMode`/`DualPageDirection` enum
 - Produces：`PdfReaderView` 建構子新增 `dualPageMode: DualPageMode`（預設 `DualPageMode.auto`）／`dualPageCoverAlone: bool`（預設 `true`）／`dualPageDirection: DualPageDirection`（預設 `DualPageDirection.ltr`）／`isLandscape: bool`（預設 `false`）四個 non-nullable 參數；`_buildPreferencesMap()` 一律包含 `dualPageMode`/`dualPageCoverAlone`/`dualPageDirection`/`isLandscape` 四個 wire key（供 Task 3 的 `ReaderScreen` 與 Task 6 的原生端消費）
 
-- [ ] **Step 1：撰寫失敗測試——更新既有 9 個 exact-map 斷言並新增雙頁測試**
+- [x] **Step 1：撰寫失敗測試——更新既有 9 個 exact-map 斷言並新增雙頁測試**
 
 在 `app/test/reader/pdf_reader_view_test.dart` 開頭 import 區塊，`import 'package:elinkbook/reader/pdf_crop_mode.dart';` 之後新增：
 
@@ -674,7 +697,7 @@ import 'package:elinkbook/reader/dual_page_mode.dart';
   });
 ```
 
-- [ ] **Step 2：執行測試，確認失敗**
+- [x] **Step 2：執行測試，確認失敗**
 
 ```bash
 cd app
@@ -683,7 +706,7 @@ flutter test test/reader/pdf_reader_view_test.dart
 
 Expected：FAIL——新測試因 `PdfReaderView` 沒有 `dualPageMode`/`dualPageCoverAlone`/`dualPageDirection`/`isLandscape` 具名參數而編譯失敗；既有 9 個更新過的測試因目前 `_buildPreferencesMap()` 尚未加入新 key 而斷言失敗。
 
-- [ ] **Step 3：修改 `pdf_reader_view.dart`**
+- [x] **Step 3：修改 `pdf_reader_view.dart`**
 
 把 import 區塊（第 1-6 行）改為：
 
@@ -788,7 +811,7 @@ import 'pdf_fit_mode.dart';
   }
 ```
 
-- [ ] **Step 4：執行測試，確認通過**
+- [x] **Step 4：執行測試，確認通過**
 
 ```bash
 flutter test test/reader/pdf_reader_view_test.dart
@@ -796,7 +819,7 @@ flutter test test/reader/pdf_reader_view_test.dart
 
 Expected：全數 PASS。
 
-- [ ] **Step 5：`flutter analyze`**
+- [x] **Step 5：`flutter analyze`**
 
 ```bash
 flutter analyze
@@ -804,7 +827,7 @@ flutter analyze
 
 Expected："No issues found!"
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/lib/reader/pdf_reader_view.dart app/test/reader/pdf_reader_view_test.dart
@@ -823,7 +846,7 @@ git commit -m "feat(epic-16): PdfReaderView 新增雙頁/橫向建構參數"
 - Consumes：Task 1 的 `resolved.dualPageMode`/`dualPageCoverAlone`/`dualPageDirection`；Task 2 的 `PdfReaderView` 新建構參數
 - Produces：`ReaderScreen.build()` 透過 `MediaQuery.of(context).orientation` 算出 `bool isLandscape`（格式無關、共用），下傳給 PDF 分支的 `PdfReaderView`（EPUB 分支消費 `isLandscape` 屬 Issue 6 範圍，本 issue 不新增）
 
-- [ ] **Step 1：撰寫失敗測試——擴充 `reader_screen_test.dart`**
+- [x] **Step 1：撰寫失敗測試——擴充 `reader_screen_test.dart`**
 
 在 `app/test/screens/reader_screen_test.dart` 開頭 import 區塊，`import 'package:elinkbook/reader/book_reader_prefs.dart';` 之後新增：
 
@@ -931,7 +954,7 @@ import 'package:elinkbook/reader/dual_page_mode.dart';
   });
 ```
 
-- [ ] **Step 2：執行測試，確認失敗**
+- [x] **Step 2：執行測試，確認失敗**
 
 ```bash
 cd app
@@ -940,7 +963,7 @@ flutter test test/screens/reader_screen_test.dart
 
 Expected：FAIL——`PdfReaderView.isLandscape`/`dualPageMode` 等欄位目前恆為建構參數預設值（因 `ReaderScreen` 尚未接線），前兩個橫向/直向測試會失敗（`isLandscape` 恆為 `false`，橫向測試斷言 `isTrue` 失敗）；後兩個雙頁欄位測試目前也會失敗（`ReaderScreen` 尚未把 `resolved.dualPageMode` 等傳入）。
 
-- [ ] **Step 3：修改 `reader_screen.dart`**
+- [x] **Step 3：修改 `reader_screen.dart`**
 
 把 `build()`（原第 289-310 行）改為：
 
@@ -1066,7 +1089,7 @@ Expected：FAIL——`PdfReaderView.isLandscape`/`dualPageMode` 等欄位目前�
   }
 ```
 
-- [ ] **Step 4：執行測試，確認通過**
+- [x] **Step 4：執行測試，確認通過**
 
 ```bash
 flutter test test/screens/reader_screen_test.dart
@@ -1074,7 +1097,7 @@ flutter test test/screens/reader_screen_test.dart
 
 Expected：全數 PASS。
 
-- [ ] **Step 5：`flutter analyze`**
+- [x] **Step 5：`flutter analyze`**
 
 ```bash
 flutter analyze
@@ -1082,7 +1105,7 @@ flutter analyze
 
 Expected："No issues found!"
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/lib/screens/reader_screen.dart app/test/screens/reader_screen_test.dart
@@ -1101,7 +1124,7 @@ git commit -m "feat(epic-16): ReaderScreen 新增 isLandscape 方向偵測並接
 - Consumes：`BookReaderPrefs.dualPageMode`（Issue 2）
 - Produces：「顯示」分頁新增「雙頁模式」三態選項（`Key('pdf_settings_dual_page_mode_auto'/'always'/'never')`），點擊觸發 `onChanged` 回傳更新後的 `BookReaderPrefs`；`dualPageCoverAlone`/`dualPageDirection` 原樣透傳（本 issue 不提供 UI 控制，UI 控制留給 Issue 4）
 
-- [ ] **Step 1：撰寫失敗測試——擴充 `pdf_settings_sheet_test.dart`**
+- [x] **Step 1：撰寫失敗測試——擴充 `pdf_settings_sheet_test.dart`**
 
 在 `app/test/screens/pdf_settings_sheet_test.dart` 開頭 import 區塊，`import 'package:elinkbook/reader/book_reader_prefs.dart';` 之後新增：
 
@@ -1180,7 +1203,7 @@ import 'package:elinkbook/reader/dual_page_mode.dart';
   });
 ```
 
-- [ ] **Step 2：執行測試，確認失敗**
+- [x] **Step 2：執行測試，確認失敗**
 
 ```bash
 cd app
@@ -1189,7 +1212,7 @@ flutter test test/screens/pdf_settings_sheet_test.dart
 
 Expected：FAIL——找不到 `Key('pdf_settings_dual_page_mode_auto'/'always'/'never')`；`notified?.dualPageMode` 恆為 `null`。
 
-- [ ] **Step 3：修改 `pdf_settings_sheet.dart`**
+- [x] **Step 3：修改 `pdf_settings_sheet.dart`**
 
 把 import 區塊（第 1-6 行）改為：
 
@@ -1302,7 +1325,7 @@ import '../reader/pdf_crop_mode.dart';
   }
 ```
 
-- [ ] **Step 4：執行測試，確認通過**
+- [x] **Step 4：執行測試，確認通過**
 
 ```bash
 flutter test test/screens/pdf_settings_sheet_test.dart
@@ -1310,7 +1333,7 @@ flutter test test/screens/pdf_settings_sheet_test.dart
 
 Expected：全數 PASS。
 
-- [ ] **Step 5：`flutter analyze`**
+- [x] **Step 5：`flutter analyze`**
 
 ```bash
 flutter analyze
@@ -1318,7 +1341,7 @@ flutter analyze
 
 Expected："No issues found!"
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/lib/screens/pdf_settings_sheet.dart app/test/screens/pdf_settings_sheet_test.dart
@@ -1337,7 +1360,7 @@ git commit -m "feat(epic-16): PdfSettingsSheet 顯示分頁新增雙頁模式三
 - Consumes：無（本 task 是原生端的起始工作）
 - Produces：`PdfReaderView.DualPageMode`（`AUTO`/`ALWAYS`/`NEVER`，含 `fromWireValue`）、`PdfReaderView.DualPageDirection`（`LTR`/`RTL`，含 `fromWireValue`）；`companion object` 純函式 `isDualPageEnabled(dualPageMode, isLandscape, cropEditModeActive): Boolean`、`pairIndices(anchor, direction): Pair<Int, Int>`、`nextPageStep(currentPageIndex, dualPageEnabled, coverAlone): Int`、`previousPageStep(currentPageIndex, dualPageEnabled, coverAlone): Int`，供 Task 6 的 `renderCurrentSpread()`/`nextPage()`/`previousPage()` 呼叫
 
-- [ ] **Step 1：撰寫失敗測試——擴充 `PdfReaderViewTest.kt`**
+- [x] **Step 1：撰寫失敗測試——擴充 `PdfReaderViewTest.kt`**
 
 在 `app/android/app/src/test/kotlin/cc/ugotit/elinkbook/PdfReaderViewTest.kt` 檔案最後一個 `@Test` 函式（`fromWireValue 傳入未知字串時正規化為 NONE...`）之後、`}`（class 結尾）之前，新增以下測試：
 
@@ -1554,7 +1577,7 @@ git commit -m "feat(epic-16): PdfSettingsSheet 顯示分頁新增雙頁模式三
     }
 ```
 
-- [ ] **Step 2：執行測試，確認失敗**
+- [x] **Step 2：執行測試，確認失敗**
 
 ```bash
 cd app/android
@@ -1563,7 +1586,7 @@ cd app/android
 
 Expected：編譯失敗——`PdfReaderView.DualPageMode`/`DualPageDirection`/`isDualPageEnabled`/`pairIndices`/`nextPageStep`/`previousPageStep` 尚不存在。
 
-- [ ] **Step 3：修改 `PdfReaderView.kt`——新增列舉與 companion object 純函式**
+- [x] **Step 3：修改 `PdfReaderView.kt`——新增列舉與 companion object 純函式**
 
 在巢狀列舉 `PdfCropMode`（原第 121-144 行）的結尾 `}` 之後、`init {`（原第 146 行）之前，新增：
 
@@ -1673,7 +1696,7 @@ Expected：編譯失敗——`PdfReaderView.DualPageMode`/`DualPageDirection`/`i
     }
 ```
 
-- [ ] **Step 4：執行測試，確認通過**
+- [x] **Step 4：執行測試，確認通過**
 
 ```bash
 ./gradlew :app:testDebugUnitTest --tests "cc.ugotit.elinkbook.PdfReaderViewTest"
@@ -1681,7 +1704,7 @@ Expected：編譯失敗——`PdfReaderView.DualPageMode`/`DualPageDirection`/`i
 
 Expected：`BUILD SUCCESSFUL`，全數新增測試皆通過。
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 cd U:\MyDeveloper\AI\elinkBook
@@ -1702,7 +1725,7 @@ git commit -m "feat(epic-16): PdfReaderView.kt 新增 DualPageMode/DualPageDirec
 
 本 task 不需要 Dart 測試（不涉及 Method Channel 契約異動，Task 2 已涵蓋），原生渲染正確性由 Task 7 的 `integration_test` 把關（比照 `PdfImageProcessor`/`EpubFxlScaler` 既有慣例：像素級渲染邏輯無法脫離真機做自動化單元測試）。
 
-- [ ] **Step 1：新增 `Bitmap` import**
+- [x] **Step 1：新增 `Bitmap` import**
 
 把檔案開頭 import 區塊（第 1-14 行）改為：
 
@@ -1724,7 +1747,7 @@ import io.flutter.plugin.platform.PlatformView
 import java.io.File
 ```
 
-- [ ] **Step 2：新增雙頁/橫向狀態欄位 + `dualPageEnabled` 共用計算屬性**
+- [x] **Step 2：新增雙頁/橫向狀態欄位 + `dualPageEnabled` 共用計算屬性**
 
 在 `private var cropOverlayView: CropOverlayView? = null`（原第 88 行）之後新增：
 
@@ -1757,7 +1780,7 @@ import java.io.File
         get() = isDualPageEnabled(dualPageMode, isLandscape, cropEditModeActive)
 ```
 
-- [ ] **Step 3：`setPdfPreferences()` 新增雙頁欄位解析**
+- [x] **Step 3：`setPdfPreferences()` 新增雙頁欄位解析**
 
 把 `setPdfPreferences()`（原第 193-217 行）改為：
 
@@ -1818,7 +1841,7 @@ import java.io.File
     }
 ```
 
-- [ ] **Step 4：`openBook()` 解析雙頁欄位 + 改呼叫 `renderCurrentSpread()`**
+- [x] **Step 4：`openBook()` 解析雙頁欄位 + 改呼叫 `renderCurrentSpread()`**
 
 把 `openBook()`（原第 231-263 行）改為：
 
@@ -1859,7 +1882,7 @@ import java.io.File
     }
 ```
 
-- [ ] **Step 5：以 `renderCurrentSpread()` 及其輔助函式取代 `renderCurrentPage()`**
+- [x] **Step 5：以 `renderCurrentSpread()` 及其輔助函式取代 `renderCurrentPage()`**
 
 把整個 `renderCurrentPage()` 方法（原第 265-340 行，從 `private fun renderCurrentPage() {` 到緊接在其後、`enterCropEditMode()` 之前的結尾 `}`）替換為以下 6 個方法：
 
@@ -2027,7 +2050,7 @@ import java.io.File
     }
 ```
 
-- [ ] **Step 6：`exitCropEditMode()` 改呼叫 `renderCurrentSpread()`**
+- [x] **Step 6：`exitCropEditMode()` 改呼叫 `renderCurrentSpread()`**
 
 把 `exitCropEditMode()`（原第 411-416 行）內的 `renderCurrentPage()` 改為 `renderCurrentSpread()`：
 
@@ -2040,7 +2063,7 @@ import java.io.File
     }
 ```
 
-- [ ] **Step 7：`nextPage()`/`previousPage()` 改用步進純函式（C-4 對稱規則）**
+- [x] **Step 7：`nextPage()`/`previousPage()` 改用步進純函式（C-4 對稱規則）**
 
 把 `nextPage()`/`previousPage()`（原第 510-526 行）改為：
 
@@ -2068,7 +2091,7 @@ import java.io.File
     }
 ```
 
-- [ ] **Step 8：JVM 單元測試回歸 + 編譯檢查**
+- [x] **Step 8：JVM 單元測試回歸 + 編譯檢查**
 
 ```bash
 cd app/android
@@ -2078,7 +2101,7 @@ cd app/android
 
 Expected：`BUILD SUCCESSFUL`（Task 5 的純函式測試不受影響；`compileDebugKotlin` 確認新增的 `renderCurrentSpread()` 等方法編譯無誤，無法在此階段以自動化測試涵蓋像素渲染正確性，留給 Task 7）。
 
-- [ ] **Step 9：Commit**
+- [x] **Step 9：Commit**
 
 ```bash
 cd U:\MyDeveloper\AI\elinkBook
@@ -2100,7 +2123,7 @@ git commit -m "feat(epic-16): PdfReaderView.kt renderCurrentSpread() 完整雙�
 
 **已知測試限制**：拼接後點陣圖「頁間無可見間距」（FR-41 核心驗收點）與拼接 OOM 回退的像素級正確性，無法透過 Flutter `integration_test` 直接檢視原生 `ImageView` 的 bitmap 內容（比照本專案既有慣例：PDF 裁切/濾鏡的像素級效果向來也只能透過真機肉眼確認或暫時性原生端 log 交叉核對，見 `tmp/epic-4/reviews/`／`task-6-fix-report.md` 先例，不在自動化 `integration_test` 中做 bitmap 像素比對）。本 task 的 `integration_test` 改以「結構性、可自動化驗證」的方式覆蓋 Issue 3 驗收標準：翻頁步進量（透過 `onPageChanged` 回報值序列）證明雙頁/單頁切換、封面獨立配對、C-4 對稱回退、以及最後一個 spread 落單時不越界不崩潰；FR-41「頁間無可見間距」的真機肉眼/截圖確認，留給 Issue 7（`issues.md` 已將此列為 Issue 7 自己的驗收項目）。
 
-- [ ] **Step 1：產生 6 頁測試用 PDF fixture**
+- [x] **Step 1：產生 6 頁測試用 PDF fixture**
 
 以下 Python 腳本已驗證可產生 byte-exact 的 xref 偏移量（比照既有 `app/test/fixtures/sample.pdf` 的手工極簡 PDF 風格，只是頁數從 1 頁擴充為 6 頁、每頁 MediaBox 300×400pt）。在儲存庫根目錄執行：
 
@@ -2152,7 +2175,7 @@ Expected：輸出 `915 bytes written`，並在 `app/test/fixtures/sample_dual_pa
     - test/fixtures/sample_dual_page.pdf
 ```
 
-- [ ] **Step 2：撰寫 `integration_test/pdf_dual_page_test.dart`**
+- [x] **Step 2：撰寫 `integration_test/pdf_dual_page_test.dart`**
 
 ```dart
 import 'dart:async';
@@ -2356,7 +2379,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 3：於真實裝置執行 integration_test**
+- [x] **Step 3：於真實裝置執行 integration_test**
 
 ```bash
 cd app
@@ -2366,7 +2389,7 @@ flutter test integration_test/pdf_dual_page_test.dart -d <device-id>
 
 Expected：全數測試通過（真實裝置，`<device-id>` 替換為 `flutter devices` 列出的實際 id）。
 
-- [ ] **Step 4：全專案回歸測試 + `flutter analyze`**
+- [x] **Step 4：全專案回歸測試 + `flutter analyze`**
 
 ```bash
 flutter test
@@ -2375,7 +2398,7 @@ flutter analyze
 
 Expected：`flutter test` 全數 PASS（含 Task 1-4 新增/修改的所有測試，以及既有全部測試不受影響）；`flutter analyze` "No issues found!"。
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 cd U:\MyDeveloper\AI\elinkBook
