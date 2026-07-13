@@ -435,26 +435,27 @@ class PdfReaderView(
             renderSingleSpread(currentPageIndex)
             return
         }
-        // leftBitmap／rightBitmap 宣告在 try 區塊之外（而非直接用 val 綁在
-        // try 內部），是為了讓 catch 區塊也能存取到「渲染到一半、已成功
-        // 配置」的半頁點陣圖——若 leftBitmap 配置成功後，緊接著渲染
-        // rightBitmap 或 stitchBitmaps() 拼接才拋出 OutOfMemoryError，
-        // leftBitmap 若無法在 catch 中被 recycle()，會在 Java heap 永久
-        // 洩漏，使緊接著的單頁 OOM 回退因記憶體更緊繃而更容易再次失敗
-        // （`/superpowers:requesting-code-review` 對本計劃的審查意見 Finding 1）。
+        // leftBitmap／rightBitmap／stitched 宣告在 try 區塊之外（而非直接
+        // 用 val 綁在 try 內部），是為了讓 catch 區塊也能存取到「渲染到
+        // 一半、已成功配置」的點陣圖——若 leftBitmap 配置成功後，緊接著
+        // 渲染 rightBitmap 或 stitchBitmaps() 拼接才拋出 OutOfMemoryError，
+        // 已配置的點陣圖若無法在 catch 中被 recycle()，會在 Java heap 永久
+        // 洩漏，使緊接著的單頁 OOM 回退因記憶體更緊繃而更容易再次失敗。
         var leftBitmap: Bitmap? = null
         var rightBitmap: Bitmap? = null
+        var stitched: Bitmap? = null
         try {
             val (leftIndex, rightIndex) = pairIndices(currentPageIndex, dualPageDirection)
             leftBitmap = if (leftIndex in 0 until totalPages) renderPageBitmap(leftIndex) else null
             rightBitmap = if (rightIndex in 0 until totalPages) renderPageBitmap(rightIndex) else null
-            val stitched = stitchBitmaps(leftBitmap, rightBitmap)
+            stitched = stitchBitmaps(leftBitmap, rightBitmap)
             displayFinalBitmap(stitched)
         } catch (e: OutOfMemoryError) {
             // 拼接階段記憶體不足，依 spec.md 步驟 5 回退為只渲染
             // currentPageIndex 單頁（不進行拼接），onPageChanged 仍回報
             // currentPageIndex（呼叫端 nextPage()/previousPage() 負責）。
-            // 防禦性釋放任何已成功配置的半頁點陣圖，避免記憶體洩漏。
+            // 防禦性釋放任何已成功配置的點陣圖，避免記憶體洩漏。
+            stitched?.recycle()
             leftBitmap?.recycle()
             rightBitmap?.recycle()
             renderSingleSpread(currentPageIndex)
@@ -560,17 +561,26 @@ class PdfReaderView(
         val reference = left ?: right!!
         val leftBmp = left ?: PdfImageProcessor.createOpaqueWhiteBitmap(reference.width, reference.height)
         val rightBmp = right ?: PdfImageProcessor.createOpaqueWhiteBitmap(reference.width, reference.height)
-        val width = leftBmp.width + rightBmp.width
-        val height = maxOf(leftBmp.height, rightBmp.height)
-        val canvasBitmap = PdfImageProcessor.createOpaqueWhiteBitmap(width, height)
-        val canvas = android.graphics.Canvas(canvasBitmap)
-        canvas.drawBitmap(leftBmp, 0f, 0f, null)
-        canvas.drawBitmap(rightBmp, leftBmp.width.toFloat(), 0f, null)
-        // 拼接完成後兩個半頁點陣圖已無用途，優先釋放以降低雙頁拼接的記憶體
-        // 峰值（正是最容易觸發 OOM 的階段，見 spec.md「已知限制」）。
-        leftBmp.recycle()
-        rightBmp.recycle()
-        return canvasBitmap
+        try {
+            val width = leftBmp.width + rightBmp.width
+            val height = maxOf(leftBmp.height, rightBmp.height)
+            val canvasBitmap = PdfImageProcessor.createOpaqueWhiteBitmap(width, height)
+            val canvas = android.graphics.Canvas(canvasBitmap)
+            canvas.drawBitmap(leftBmp, 0f, 0f, null)
+            canvas.drawBitmap(rightBmp, leftBmp.width.toFloat(), 0f, null)
+            // 拼接完成後兩個半頁點陣圖已無用途，優先釋放以降低雙頁拼接的記憶體
+            // 峰值（正是最容易觸發 OOM 的階段，見 spec.md「已知限制」）。
+            leftBmp.recycle()
+            rightBmp.recycle()
+            return canvasBitmap
+        } catch (e: OutOfMemoryError) {
+            // 畫布配置時記憶體不足，先釋放合成出來的白色填充點陣圖再往外
+            // 拋出，讓呼叫端 renderCurrentSpread() 的 catch 區塊能接手處理
+            // （recycle stitched/leftBitmap/rightBitmap 後回退單頁）。
+            leftBmp.recycle()
+            rightBmp.recycle()
+            throw e
+        }
     }
 
     /**
