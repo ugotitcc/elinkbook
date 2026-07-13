@@ -157,9 +157,17 @@
 
 ## Issue 6：EPUB FXL 雙頁——Readium Spread 整合 + `FxlSettingsSheet`
 
+**Status:** ✅ 已完成
+
 **依賴：** Issue 1（Spread 驗證結論決定走 Readium 內建 `spread` 或退回自行實作）、Issue 2（資料層）
 
-**Status:** ready-for-agent
+
+**完成摘要：** 依 `reviews/spike-readium-spread-webview-count.md` 補充驗證結果（推翻 Issue 1 原始「僅單一 WebView」結論），改採 Readium 內建 `Spread` 路線。完成 Task 1-5：
+- Task 1（Kotlin `DualPageMode` 列舉 + `spread` 切換）：4 JVM 測試通過
+- Task 2（`applyFxlFitScale()` 支援雙 WebView 縮放/置中）：編譯確認、回歸測試通過
+- Task 3（Dart `dualPageMode`/`isLandscape` 參數）：6 widget 測試通過 + `flutter analyze` 乾淨
+- Task 4（`FxlSettingsSheet` + ReaderScreen 懸浮按鈕）：3+19 widget 測試通過
+- Task 5（真機整合測試檔案已建立 + docs/spec.md 收尾更新）：需真機執行
 
 **描述：**
 實作 EPUB 固定版面（漫畫）的雙頁顯示，實作路線依 Issue 1 的驗證結論而定（預設走 `spec.md` 記載的 Readium 內建 `Spread` enum 路線；若 Issue 1 驗證失敗，改依 Issue 1 記錄的退回方案）：

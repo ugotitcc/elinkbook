@@ -109,12 +109,16 @@ enum DualPageDirection { ltr, rtl }
 
 1. **Readium `Spread.AUTO`/`Spread.ALWAYS` 是否無間距**：真機驗證啟用後頁間是否有可見間距（FR-41 硬性要求「不留空白」）。若無法消除間距，回退方案：改用與 PDF 相同的「拼接」策略（即 EPUB FXL 頁面各自渲染為圖片後手動並排），需另立工單並重新評估 `applyFxlFitScale()` 相關段落。
    > **Issue 1 驗證結果（2026-07-12）：⚠️ 部分通過**——`Spread.ALWAYS` 使 WebView 寬度 = 螢幕寬度 × 50%（直向 800/1600、橫向 1200/2400），但僅建立一個 WebView（無 `firstWebView`/`secondWebView` 配對）。FR-41「不留空白」若指雙頁並排中間無縫隙則 N/A（僅單頁）；若指整體畫面無非內容空白則不通過（兩側各 25% 空白）。退回方案：Issue 6 需自行管理雙 WebView 的建立與配置，不依賴 Readium 內建 spread 機制（提醒：本結論主要基於漫畫素材，建議 Issue 6 啟動時先以控制組的一般 spread 頁進行二次確認）。
+> >
+> > **補充驗證（2026-07-13，`reviews/spike-readium-spread-webview-count.md`）：先前結論已被推翻。** Issue 1 原始驗證只測試到封面頁（page: center，Readium 規範下本就只會是單頁），翻到非封面配對頁面後，Readium 確實會自動建立 2 個無縫並排的 WebView（`x=0`/`x=1200`，container 寬度 2400）。原「需自行管理雙 WebView」的退回方案已撤銷，`plans/plan-issue-6.md` 改回簡化路線：原生端只需切換 `spread` 並修正 `applyFxlFitScale()` 偵測到 2 個 WebView 時的縮放/置中運算。
 2. **`Spread.AUTO` 是否等同「橫向才雙頁」**：若 Readium 的 `AUTO` 語意與螢幕方向無關（例如依內容尺寸比例判斷），則 EPUB 側需改為直接依 `isLandscape` 手動在 `ALWAYS`/`NEVER` 間切換，不使用 `AUTO`。
    > **Issue 1 驗證結果（2026-07-12）：❌ 失敗**——`Spread.AUTO` 不被 `EpubPreferences` 接受（`require(spread in listOf(null, Spread.NEVER, Spread.ALWAYS))`），設定後觸發 `IllegalArgumentException`。退回方案（已確定）：EPUB 側**手動依 `isLandscape` 切換** `Spread.ALWAYS`（橫向）/ `Spread.NEVER`（直向），不使用 `Spread.AUTO`。
 3. **`page-spread-left/right` metadata 配對是否正確**：驗證多本實際漫畫 FXL EPUB 的頁面配對結果符合預期（尤其含蝴蝶頁/跨頁大圖的邊界情況）。
    > **Issue 1 驗證結果（2026-07-12）：⚠️ 元資料正確，渲染未驗證**——漫畫 manifest 確認 `readingProgression=rtl`、封面 `page=center`、其後嚴格交替 `page=left`/`page=right`。但因 Readium FXL 僅建立單一 WebView（見 Q1），無法驗證配對渲染是否正確。延後至 Issue 6 建立雙頁顯示後再驗證。
 4. **`applyFxlFitScale()` 雙頁下是否真的不再重疊**：驗證「已知限制」與模組節所述的半寬置中演算法在真機上確實讓兩個 WebView 並排而非重疊。
    > **Issue 1 驗證結果（2026-07-12）：⚠️ 未測試**——前提（雙 WebView 存在）不成立（見 Q1），無法驗證。延後至 Issue 6 解決 WebView 管理問題後再驗證（實作時可參考 reviews 報告中 Task 4 的 slotLeft 演算法草稿做為起點）。
+> >
+> > **補充驗證（2026-07-13，`reviews/spike-readium-spread-webview-count.md`）：** 補充 Spike 確認 Readium 在翻頁至非封面頁面後自動建立 2 個 WebView，Item 1 的補充結論同步更新此項：`applyFxlFitScale()` 已在 Issue 6 實作中依此結論改寫（可見性篩選 + 排序後 index 分配 slot + slotOffsetX 換算），不再需要自行管理雙 WebView。
 
 若上述任一項驗證失敗，對應工單需改為「退回自行實作」路線，並在 issue 拆解前更新本文件對應段落——不得由實作者在工單執行階段自行決定退回與否。
 
