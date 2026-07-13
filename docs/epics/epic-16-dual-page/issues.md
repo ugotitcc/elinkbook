@@ -245,3 +245,32 @@
 - `flutter analyze` 乾淨 —— ✅ 已確認
 - `integration_test`（真實裝置）：重新執行既有涵蓋定樣式 EPUB 開書的測試（`epub_reader_view_test.dart` 「開啟定樣式範例 EPUB，onLayoutResolved 回報 isFixedLayout 為 true」）—— ✅ 已在真機（`9491G`，Android 15）執行 `flutter test integration_test/epub_reader_view_test.dart`，9/9 全數通過
 - 人工視覺確認固定版面書籍縮放/置中效果與抽離前一致，無回歸 —— ⚠️ **未完成，待人類補做**：曾嘗試以 `adb screencap` 自動截圖驗證（暫時性測試檔，已於驗證後刪除，未進版控），但此開發用真機（TCL 機型，`com.tcl.android.launcher`）在 `flutter test integration_test` 執行期間會被系統啟動器搶回前景焦點（`dumpsys` 確認 `mCurrentFocus`/`topResumedActivity` 為 launcher 而非測試中的 App），導致無法用 adb 截到 App 畫面本身，非本次程式改動造成的問題。由於程式碼審查已確認抽離公式與原邏輯逐行等價、且自動化整合測試（含 `isFixedLayout` 判定）無回歸，此項風險評估為低，但仍建議人類在方便時手動開啟一本固定版面（漫畫）EPUB，肉眼比對縮放/置中效果，補齊此項驗收標準
+
+---
+
+## Issue 9：EPUB FXL 換頁熱區（暫代版）——取代原生滑動手勢
+
+**Status:** ready-for-agent
+
+**依賴：** Issue 6（EPUB FXL 雙頁，已完成）
+
+**描述：**
+Issue 6 完成後的真機視覺 QA 發現：EPUB FXL 每次換頁時，Readium 原生滑動手勢會讓相鄰預載頁面先以未縮放/不正確尺寸短暫出現，等滑動完全停下後才「閃」一下縮小套用正確的 `applyFxlFitScale()` 結果，影響閱讀體驗。依 `/grill-with-docs` 討論確認根因：Android WebView 對「尚未真正可視」的內容會主動不做預先渲染/圖片解碼（Readium kotlin-toolkit 官方 [GitHub Discussion #513](https://github.com/readium/kotlin-toolkit/discussions/513) 已記錄同一類已知、目前未解決的問題），無法單靠調整我們自己監聽器的觸發時機解決，因為問題根源在 Android WebView／Readium 預載機制內部。另外，E-Ink 裝置上滑動換頁動畫容易產生殘影，使用者通常會關閉這類動畫效果。
+
+依討論定案的方向：**只針對 FXL（`isFixedLayout == true`）**，改用「三欄點擊熱區」（見 `CONTEXT.md`「FXL 換頁熱區（暫代版）」）取代原生滑動手勢換頁，直接呼叫 Readium 既有的 `goForward(animated = false)`／`goBackward(animated = false)`（不使用動畫，繞開「揭露未縮放內容」的可見時間窗口，理論上能連根拔除跳動，而非只是碰運氣改善）；流式 EPUB 不受影響，維持原生手勢與文字選取能力。**這是範圍受限的暫代方案，不是** PRD 完整的可自訂 3×3 九宮格系統（傳統/單手/類 Kindle 多種對應模式、RTL 鏡像）——後者是獨立的未來 Epic，本 issue 不實作。
+
+- **`EpubReaderView.kt`**：`onMethodCall()` 新增 `"nextPage"`／`"previousPage"` case，分別呼叫 `navigatorFragment?.goForward(animated = false)`／`navigatorFragment?.goBackward(animated = false)`（`EpubNavigatorFragment` 本身已實作 `OverflowableNavigator`，這兩個方法無需新增任何自訂配對邏輯，直接沿用 Readium 既有的 spread 步進判斷）。
+- **`EpubReaderView`（Dart）**：內部新增 `_isFixedLayout` 狀態（由既有 `onLayoutResolved` 回呼得知，預設 `false`）；新增 `nextPage()`／`previousPage()` 公開方法（比照 `PdfReaderView` 既有慣例，供測試以 `tester.state(...) as dynamic` 呼叫）；新增建構參數 `onToggleFixedLayoutControls: VoidCallback?`；`build()` 於 `_isFixedLayout == true` 時，用 `Stack` 在 `AndroidView` 上疊加三欄透明點擊熱區（左 1/3＝上一頁、右 1/3＝下一頁、中間 1/3＝觸發 `onToggleFixedLayoutControls`）；`_isFixedLayout == false`（預設、流式 EPUB）時完全不疊加，原生手勢/文字選取不受任何影響。
+- **`ReaderScreen`**：新增 `_fixedLayoutControlsVisible` 狀態（預設 `true`）；`_buildNativeView()` 傳入 `onToggleFixedLayoutControls: () => setState(() => _fixedLayoutControlsVisible = !_fixedLayoutControlsVisible)`；`_buildBody()` 內兩個懸浮按鈕（`reader_fixed_layout_back_button`／`reader_fixed_layout_settings_button`）的顯示條件從 `if (_isFixedLayout)` 改為 `if (_isFixedLayout && _fixedLayoutControlsVisible)`。
+
+**單元測試要求：**
+- `EpubReaderView` widget test：模擬 `onLayoutResolved` 回呼使 `_isFixedLayout` 變為 `true` 後，左／右／中三個熱區點擊分別觸發 `previousPage`／`nextPage` method channel 呼叫、`onToggleFixedLayoutControls` callback；`_isFixedLayout` 維持預設 `false`（未收到 `onLayoutResolved`）時不疊加熱區。
+- `ReaderScreen` widget test：點擊中間熱區後懸浮按鈕消失；再點一次恢復顯示。
+- **已知測試限制**：`goForward(animated=false)`／`goBackward(animated=false)` 呼叫後的實際換頁效果與動畫消除效果無法透過 `flutter test` 驗證，留給本 issue 的 `integration_test` 與真機人工視覺 QA。
+
+**驗收標準：**
+- 上述測試皆通過
+- `flutter analyze` 乾淨
+- `integration_test`（真實裝置，使用真實漫畫 FXL EPUB 素材）：點擊左／右熱區正確換頁（單頁與雙頁模式皆需驗證）、無滑動動畫、翻頁不崩潰
+- 人工視覺確認：真機換頁時不再出現「先停下再閃一下縮小」的跳動；點擊中間熱區正確切換懸浮按鈕顯示/隱藏
+- 若驗證後跳動仍未完全消除，記錄實際觀察結果與可能殘餘原因於本工單，不強行視為完全解決
