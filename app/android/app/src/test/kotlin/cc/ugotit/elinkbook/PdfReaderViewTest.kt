@@ -126,15 +126,15 @@ class PdfReaderViewTest {
     }
 
     @Test
-    fun `DualPageDirection fromWireValue 傳入 null 時回傳預設值 LTR`() {
+    fun `DualPageDirection fromWireValue 傳入 null 時回傳預設值 RTL`() {
         val direction = PdfReaderView.DualPageDirection.fromWireValue(null)
-        assertEquals(PdfReaderView.DualPageDirection.LTR, direction)
+        assertEquals(PdfReaderView.DualPageDirection.RTL, direction)
     }
 
     @Test
-    fun `DualPageDirection fromWireValue 傳入未知字串時回傳預設值 LTR`() {
+    fun `DualPageDirection fromWireValue 傳入未知字串時回傳預設值 RTL`() {
         val direction = PdfReaderView.DualPageDirection.fromWireValue("unknown-garbage")
-        assertEquals(PdfReaderView.DualPageDirection.LTR, direction)
+        assertEquals(PdfReaderView.DualPageDirection.RTL, direction)
     }
 
     // ---- isDualPageEnabled ----

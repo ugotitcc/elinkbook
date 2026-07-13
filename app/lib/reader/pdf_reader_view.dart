@@ -60,7 +60,7 @@ class PdfReaderView extends StatefulWidget {
     this.onCropRectSelected,
     this.dualPageMode = DualPageMode.auto,
     this.dualPageCoverAlone = true,
-    this.dualPageDirection = DualPageDirection.ltr,
+    this.dualPageDirection = DualPageDirection.rtl,
     this.isLandscape = false,
   });
 

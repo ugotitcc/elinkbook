@@ -104,7 +104,7 @@ class ReaderPrefsManagerImpl implements ReaderPrefsManager {
       pdfCropRect: book.pdfCropRect,
       dualPageMode: book.dualPageMode ?? DualPageMode.auto,
       dualPageCoverAlone: book.dualPageCoverAlone ?? true,
-      dualPageDirection: book.dualPageDirection ?? DualPageDirection.ltr,
+      dualPageDirection: book.dualPageDirection ?? DualPageDirection.rtl,
     );
   }
 }

@@ -495,7 +495,7 @@ void main() {
   });
 
   testWidgets(
-      '尚未持久化雙頁偏好設定時，PdfReaderView 的雙頁參數採用預設值（auto／true／ltr）',
+      '尚未持久化雙頁偏好設定時，PdfReaderView 的雙頁參數採用預設值（auto／true／rtl）',
       (tester) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -513,6 +513,6 @@ void main() {
     final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
     expect(pdfView.dualPageMode, DualPageMode.auto);
     expect(pdfView.dualPageCoverAlone, isTrue);
-    expect(pdfView.dualPageDirection, DualPageDirection.ltr);
+    expect(pdfView.dualPageDirection, DualPageDirection.rtl);
   });
 }

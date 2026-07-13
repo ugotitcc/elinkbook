@@ -96,9 +96,10 @@ class PdfReaderView(
     // BookReaderPrefs.dualPageCoverAlone 為 null 時的語意一致。
     private var dualPageCoverAlone: Boolean = true
 
-    // 解析自 Dart DualPageDirection.name 字串，預設 LTR，與
+    // 解析自 Dart DualPageDirection.name 字串，預設 RTL（Issue 4 決策：
+    // elinkBook 全域固定預設為右到左，見 issues.md Issue 4），與
     // BookReaderPrefs.dualPageDirection 為 null 時的語意一致。
-    private var dualPageDirection: DualPageDirection = DualPageDirection.LTR
+    private var dualPageDirection: DualPageDirection = DualPageDirection.RTL
 
     // 目前裝置是否為橫向（ReaderScreen 透過 MediaQuery 偵測後下傳，見
     // spec.md「方向偵測契約」），預設 false（直向）。
@@ -198,11 +199,12 @@ class PdfReaderView(
         LTR, RTL;
 
         companion object {
-            /** 未知或非 String 的原始值一律正規化為 [LTR]（預設），與
+            /** 未知或非 String 的原始值一律正規化為 [RTL]（預設，Issue 4
+             * 決策：elinkBook 全域固定預設為右到左），與
              * BookReaderPrefs.dualPageDirection 為 null 時的語意一致。*/
             fun fromWireValue(value: String?): DualPageDirection = when (value) {
-                "rtl" -> RTL
-                else -> LTR
+                "ltr" -> LTR
+                else -> RTL
             }
         }
     }
