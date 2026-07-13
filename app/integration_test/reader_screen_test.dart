@@ -15,6 +15,7 @@ import 'package:elinkbook/reader/reader_prefs_manager.dart';
 import 'package:elinkbook/reader/reader_prefs_manager_impl.dart';
 import 'package:elinkbook/reader/pdf_crop_mode.dart';
 import 'package:elinkbook/reader/dual_page_direction.dart';
+import 'package:elinkbook/reader/dual_page_mode.dart';
 import 'package:elinkbook/reader/pdf_fit_mode.dart';
 import 'package:elinkbook/reader/pdf_reader_view.dart';
 import 'package:elinkbook/reader/screen_orientation_setting.dart';
@@ -1417,5 +1418,86 @@ void main() {
         reason: '重開書後 dualPageDirection 應與關閉前一致');
 
     expect(find.byKey(const Key('reader_error_text')), findsNothing);
+  });
+
+  testWidgets(
+      'PDF 雙頁模式下執行手動裁切確認流程，裁切與雙頁設定值皆正確持久化（Issue 5）',
+      (tester) async {
+    final samplePath = await _stageAssetAsFile(
+        'test/fixtures/sample.pdf', 'sample_pdf_crop_dual_page.pdf');
+    addTearDown(() async {
+      final file = File(samplePath);
+      if (await file.exists()) await file.delete();
+    });
+    const bookId = 'b_pdf_crop_dual_page';
+    await libraryRepository
+        .insertBook(_book(bookId, format: BookFileFormat.pdf));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: samplePath,
+          bookId: bookId,
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+
+    await _pumpUntil(
+      tester,
+      () => _layoutSettingsButtonReady(tester),
+      timeout: const Duration(seconds: 10),
+    );
+
+    await tester.tap(find.byKey(const Key('reader_layout_settings_button')));
+    await tester.pumpAndSettle();
+
+    // 顯示分頁（預設分頁，不需切換）：先切到「永遠雙頁」，確保進入裁切
+    // 編輯模式前雙頁已生效，才能真正驗證「裁切互動不清空雙頁設定」。
+    await tester
+        .tap(find.byKey(const Key('pdf_settings_dual_page_mode_always')));
+    await tester.pump(const Duration(milliseconds: 300));
+
+    // 裁切分頁：進入手動選區互動模式。
+    await tester.tap(find.byKey(const Key('pdf_settings_tab_crop')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('pdf_settings_crop_mode_manual')));
+    await tester.pump(const Duration(seconds: 1));
+
+    // 拖拉右下角控制點（比照既有手動裁切測試的既知限制：在此真機／
+    // Flutter 版本組合下，拖曳動作不一定能讓控制點實際位移，見既有測試
+    // 「PDF 手動裁切拖拉四角控制點確認後...」的既有註解），作為手勢序列
+    // 的一部分執行，不假設它一定造成矩形改變。
+    final pdfViewBox = tester.getRect(find.byType(PdfReaderView));
+    final approxBottomRightHandle = Offset(
+      pdfViewBox.left + pdfViewBox.width * 0.9,
+      pdfViewBox.top + pdfViewBox.height * 0.9,
+    );
+    final dragGesture = await tester.startGesture(approxBottomRightHandle);
+    await tester.pump(const Duration(milliseconds: 50));
+    await dragGesture.moveBy(const Offset(-80, -80));
+    await tester.pump(const Duration(milliseconds: 50));
+    await dragGesture.up();
+    await tester.pump(const Duration(seconds: 1));
+
+    // 點擊確認按鈕：CropOverlayView 把它畫在固定右下角，確認按鈕的視覺
+    // 半徑遠大於一般手指誤差，直接對區域右下角嘗試點擊即可命中。
+    final approxConfirmButton = Offset(
+      pdfViewBox.right - 40,
+      pdfViewBox.bottom - 40,
+    );
+    await tester.tapAt(approxConfirmButton);
+    await tester.pump(const Duration(seconds: 2));
+
+    expect(find.byKey(const Key('reader_error_text')), findsNothing);
+    expect(find.byType(PdfSettingsSheet), findsOneWidget,
+        reason: '確認框選後應重新開啟 PdfSettingsSheet 顯示套用結果');
+
+    // 關鍵回歸檢查：裁切流程確認後，先前設定的雙頁模式不應被靜默清空
+    // （spec.md 決策 #10——裁切與雙頁是各自獨立的欄位，互不影響）。
+    final saved = (await prefsManager.load(bookId)).bookPrefs;
+    expect(saved.pdfCropMode, PdfCropMode.manual);
+    expect(saved.pdfCropRect, isNotNull);
+    expect(saved.dualPageMode, DualPageMode.always);
   });
 }
