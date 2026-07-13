@@ -244,4 +244,129 @@ void main() {
 
     expect(find.byKey(const Key('reader_error_text')), findsNothing);
   });
+
+  testWidgets(
+      '裁切編輯模式中，雙頁模式下的翻頁暫停回應（Issue 5，spec.md 決策 #10）',
+      (tester) async {
+    final path = await stagePath('sample_dual_page_crop_pause.pdf');
+    final pageChanges = <int>[];
+    final completer = Completer<void>();
+
+    Widget buildView(bool cropEditModeActive) => MaterialApp(
+          home: PdfReaderView(
+            filePath: path,
+            onPageRendered: () {
+              if (!completer.isCompleted) completer.complete();
+            },
+            onError: (message) => fail('不應觸發 onError：$message'),
+            onPageChanged: pageChanges.add,
+            dualPageMode: DualPageMode.always,
+            cropEditModeActive: cropEditModeActive,
+          ),
+        );
+
+    await tester.pumpWidget(buildView(false));
+    await completer.future.timeout(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
+
+    // 進入裁切編輯模式：cropEditModeActive false -> true 觸發原生端
+    // enterCropEditMode()。
+    await tester.pumpWidget(buildView(true));
+    await tester.pumpAndSettle();
+
+    // 裁切編輯模式中呼叫 nextPage()/previousPage() 應為 no-op——原生端
+    // nextPage()/previousPage() 頂端的既有 cropEditModeActive 守衛，本測試
+    // 針對「雙頁模式生效時」這個情境明確驗證（spec.md 決策 #10）。
+    _nextPage(tester);
+    await tester.pumpAndSettle();
+    expect(pageChanges, isEmpty);
+
+    _previousPage(tester);
+    await tester.pumpAndSettle();
+    expect(pageChanges, isEmpty);
+
+    // 退出裁切編輯模式：恢復雙頁翻頁能力。
+    await tester.pumpWidget(buildView(false));
+    await tester.pumpAndSettle();
+
+    _nextPage(tester);
+    await tester.pumpAndSettle();
+    expect(pageChanges, [1]); // always 模式，封面步進 1，證明翻頁已恢復
+  });
+
+  testWidgets(
+      '裁切編輯模式中裝置旋轉（isLandscape 變動 + 真實 Surface 尺寸變動）不觸發例外（Issue 5，Task 1 修正，涵蓋 spec.md 審查修正 I-6）',
+      (tester) async {
+    // 審查修正（tmp/epic-16/reviews/review-plan-issue-5.md Finding 3）：
+    // 僅改變 Dart 端 isLandscape 語意旗標不會觸發原生 CropOverlayView 的
+    // onSizeChanged()（該方法只在 View 真正被重新 layout、尺寸實際改變時
+    // 才會呼叫）；spec.md「旋轉發生在手動裁切編輯模式中（審查修正
+    // I-6）」明文要求驗證這個既有的旋轉重算邏輯，因此本測試搭配
+    // tester.binding.setSurfaceSize() 一併模擬真實尺寸變動（比照 Issue 3
+    // reader_screen_test.dart 既有的橫向/直向切換手法：橫向
+    // Size(800, 400)、直向 Size(400, 800)），讓 isLandscape 旗標與實際
+    // Surface 尺寸同步變化，才能真正觸發到 onSizeChanged()。
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final path = await stagePath('sample_dual_page_crop_rotate.pdf');
+    final pageChanges = <int>[];
+    final errors = <String>[];
+    final completer = Completer<void>();
+
+    Widget buildView({
+      required bool cropEditModeActive,
+      required bool isLandscape,
+    }) =>
+        MaterialApp(
+          home: PdfReaderView(
+            filePath: path,
+            onPageRendered: () {
+              if (!completer.isCompleted) completer.complete();
+            },
+            onError: errors.add,
+            onPageChanged: pageChanges.add,
+            dualPageMode: DualPageMode.auto,
+            isLandscape: isLandscape,
+            cropEditModeActive: cropEditModeActive,
+          ),
+        );
+
+    await tester.binding.setSurfaceSize(const Size(800, 400)); // 橫向
+    await tester.pumpWidget(
+        buildView(cropEditModeActive: false, isLandscape: true));
+    await completer.future.timeout(const Duration(seconds: 5));
+    await tester.pumpAndSettle();
+
+    // 進入裁切編輯模式（此時裝置為橫向、auto 模式下雙頁生效中）。
+    await tester.pumpWidget(
+        buildView(cropEditModeActive: true, isLandscape: true));
+    await tester.pumpAndSettle();
+
+    // 模擬裁切編輯模式中裝置旋轉為直向：同時改變 Surface 尺寸與
+    // isLandscape 旗標，觸發 setPdfPreferences 與原生 CropOverlayView 的
+    // onSizeChanged()，驗證不會拋出 onError（Task 1 修正前，setPdfPreferences
+    // 會呼叫 renderCurrentSpread() 或 applyFitMode()/applyFilters() 而非
+    // renderFullPageForCropPreview()，雖然本身不會直接拋錯，但會讓
+    // CropOverlayView 座標假設與畫面不同步——onSizeChanged() 內部重算結果
+    // 是否像素正確仍留待人類真機 QA，本測試只保證不出現例外/崩潰的結構性
+    // 回歸）。
+    await tester.binding.setSurfaceSize(const Size(400, 800)); // 直向
+    await tester.pumpWidget(
+        buildView(cropEditModeActive: true, isLandscape: false));
+    await tester.pumpAndSettle();
+
+    expect(errors, isEmpty);
+    expect(find.byKey(const Key('reader_error_text')), findsNothing);
+
+    // 退出裁切編輯模式，確認裁切互動全程結束後畫面仍可正常運作（旋轉後
+    // isLandscape=false，auto 模式應恢復單頁，步進 1）。
+    await tester.pumpWidget(
+        buildView(cropEditModeActive: false, isLandscape: false));
+    await tester.pumpAndSettle();
+
+    _nextPage(tester);
+    await tester.pumpAndSettle();
+    expect(pageChanges, [1]);
+    expect(errors, isEmpty);
+  });
 }

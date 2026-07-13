@@ -341,6 +341,31 @@ class PdfReaderView(
         } ?: false
         parseCropRect(preferences["cropRect"])?.let { cropRect = it }
         val dualPageChanged = applyDualPagePreferences(preferences)
+        // 裁切編輯模式中（cropEditModeActive）畫面必須維持
+        // enterCropEditMode() 設定的「全頁、未裁切、FIT_CENTER、無濾鏡」
+        // 預覽狀態，不能被本次偏好變動觸發的任何重新渲染覆蓋掉——提升為
+        // 整個方法最前面的守衛，不論原本會落入下方哪個分支，一律優先呼叫
+        // renderFullPageForCropPreview() 並提前 return。
+        //
+        // 這個守衛同時堵住兩個入口：(1) isLandscape（裝置旋轉時由
+        // ReaderScreen 透過 MediaQuery 偵測送出，與裁切互動完全無關）改變
+        // 觸發 dualPageChanged=true 時，若呼叫 renderCurrentSpread()，
+        // dualPageEnabled 會因 cropEditModeActive=true 而判定為 false，改
+        // 渲染 renderSingleSpread()（套用目前 cropMode/濾鏡、非
+        // FIT_CENTER）；(2) 僅 contrast/brightness 變動、三個 *Changed 旗標
+        // 皆為 false 時，會落入下方 else 分支呼叫 applyFitMode()（可能把
+        // scaleType 改成 MATRIX）與 applyFilters()（套用 colorFilter），兩者
+        // 都會直接覆蓋 renderFullPageForCropPreview() 設定的 FIT_CENTER／
+        // colorFilter=null 狀態。兩種情況都會讓 CropOverlayView 的座標假設
+        // 與實際畫面不同步（epic-16-dual-page Issue 5 發現，spec.md 決策
+        // #10／I-8 的安全延伸；`/superpowers:requesting-code-review` 對本
+        // 計劃的審查意見 Finding 4 指出原始修法只堵了 if 分支的
+        // renderCurrentSpread() 入口，遺漏了 else 分支的 applyFitMode()／
+        // applyFilters()，此處改為統一在方法最前面攔截，兩個入口一次堵死）。
+        if (cropEditModeActive) {
+            renderFullPageForCropPreview()
+            return
+        }
         if (boldChanged || cropChanged || dualPageChanged) {
             renderCurrentSpread()
         } else {
