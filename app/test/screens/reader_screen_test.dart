@@ -10,6 +10,7 @@ import 'package:elinkbook/reader/pdf_crop_rect.dart';
 import 'package:elinkbook/reader/pdf_fit_mode.dart';
 import 'package:elinkbook/reader/pdf_reader_view.dart';
 import 'package:elinkbook/reader/writing_mode.dart';
+import 'package:elinkbook/screens/fxl_settings_sheet.dart';
 import 'package:elinkbook/screens/pdf_settings_sheet.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
 import '../support/fake_reader_prefs_manager.dart';
@@ -514,5 +515,39 @@ void main() {
     expect(pdfView.dualPageMode, DualPageMode.auto);
     expect(pdfView.dualPageCoverAlone, isTrue);
     expect(pdfView.dualPageDirection, DualPageDirection.rtl);
+  });
+
+  testWidgets(
+      'EPUB 固定版面開書後，畫面右上角出現懸浮設定按鈕，點擊能開啟 FxlSettingsSheet',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample_fixed_layout.epub',
+          bookId: 'b1',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    // 純 flutter test 環境沒有真實裝置能觸發原生端 onLayoutResolved，直接呼叫
+    // EpubReaderView 目前已知的 onLayoutResolved callback 模擬原生端回報，比照
+    // 本檔案既有測試對「無法在此層級驅動原生渲染」的既定限制處理方式。
+    final view = tester.widget<EpubReaderView>(find.byType(EpubReaderView));
+    view.onLayoutResolved?.call(
+      const EpubLayoutInfo(isFixedLayout: true, writingMode: WritingMode.horizontal),
+    );
+    await tester.pump();
+
+    expect(find.byKey(const Key('reader_fixed_layout_settings_button')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('reader_fixed_layout_settings_button')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.byType(FxlSettingsSheet), findsOneWidget);
   });
 }
