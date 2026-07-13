@@ -58,7 +58,7 @@ void main() {
       'fitMode': 'fitWidth',
       'dualPageMode': 'auto',
       'dualPageCoverAlone': true,
-      'dualPageDirection': 'ltr',
+      'dualPageDirection': 'rtl',
       'isLandscape': false,
     });
   });
@@ -78,7 +78,7 @@ void main() {
     expect(openBookCall.arguments['initialPreferences'], {
       'dualPageMode': 'auto',
       'dualPageCoverAlone': true,
-      'dualPageDirection': 'ltr',
+      'dualPageDirection': 'rtl',
       'isLandscape': false,
     });
   });
@@ -132,7 +132,7 @@ void main() {
       'fitMode': 'actualSize',
       'dualPageMode': 'auto',
       'dualPageCoverAlone': true,
-      'dualPageDirection': 'ltr',
+      'dualPageDirection': 'rtl',
       'isLandscape': false,
     });
   });
@@ -195,7 +195,7 @@ void main() {
       'brightness': -15.0,
       'dualPageMode': 'auto',
       'dualPageCoverAlone': true,
-      'dualPageDirection': 'ltr',
+      'dualPageDirection': 'rtl',
       'isLandscape': false,
     });
   });
@@ -251,7 +251,7 @@ void main() {
       'brightness': 25.0,
       'dualPageMode': 'auto',
       'dualPageCoverAlone': true,
-      'dualPageDirection': 'ltr',
+      'dualPageDirection': 'rtl',
       'isLandscape': false,
     });
   });
@@ -274,7 +274,7 @@ void main() {
       'boldStrength': 0.5,
       'dualPageMode': 'auto',
       'dualPageCoverAlone': true,
-      'dualPageDirection': 'ltr',
+      'dualPageDirection': 'rtl',
       'isLandscape': false,
     });
   });
@@ -328,7 +328,7 @@ void main() {
       'boldStrength': 0.8,
       'dualPageMode': 'auto',
       'dualPageCoverAlone': true,
-      'dualPageDirection': 'ltr',
+      'dualPageDirection': 'rtl',
       'isLandscape': false,
     });
   });
@@ -353,7 +353,7 @@ void main() {
       'cropRect': {'left': 0.05, 'top': 0.1, 'right': 0.95, 'bottom': 0.9},
       'dualPageMode': 'auto',
       'dualPageCoverAlone': true,
-      'dualPageDirection': 'ltr',
+      'dualPageDirection': 'rtl',
       'isLandscape': false,
     });
   });
@@ -407,7 +407,7 @@ void main() {
       'cropMode': 'autoDetect',
       'dualPageMode': 'auto',
       'dualPageCoverAlone': true,
-      'dualPageDirection': 'ltr',
+      'dualPageDirection': 'rtl',
       'isLandscape': false,
     });
   });
@@ -706,7 +706,7 @@ void main() {
     expect(instanceCalls.single.arguments, {
       'dualPageMode': 'always',
       'dualPageCoverAlone': true,
-      'dualPageDirection': 'ltr',
+      'dualPageDirection': 'rtl',
       'isLandscape': false,
     });
   });
@@ -758,7 +758,7 @@ void main() {
     expect(instanceCalls.single.arguments, {
       'dualPageMode': 'auto',
       'dualPageCoverAlone': true,
-      'dualPageDirection': 'ltr',
+      'dualPageDirection': 'rtl',
       'isLandscape': true,
     });
   });
