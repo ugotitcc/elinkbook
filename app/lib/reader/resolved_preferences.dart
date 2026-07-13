@@ -1,4 +1,6 @@
 import 'app_font.dart';
+import 'dual_page_direction.dart';
+import 'dual_page_mode.dart';
 import 'epub_text_align.dart';
 import 'page_turn_mode.dart';
 import 'pdf_crop_mode.dart';
@@ -40,6 +42,10 @@ class ResolvedPreferences {
   final PdfCropMode pdfCropMode;
   final PdfCropRect? pdfCropRect; // pdfCropMode == none 時為 null，既有語意
 
+  final DualPageMode dualPageMode;
+  final bool dualPageCoverAlone;
+  final DualPageDirection dualPageDirection;
+
   const ResolvedPreferences({
     this.writingMode,
     this.fontFamily,
@@ -58,5 +64,8 @@ class ResolvedPreferences {
     required this.pdfBoldStrength,
     required this.pdfCropMode,
     this.pdfCropRect,
+    required this.dualPageMode,
+    required this.dualPageCoverAlone,
+    required this.dualPageDirection,
   });
 }

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/reader/book_reader_prefs.dart';
+import 'package:elinkbook/reader/dual_page_direction.dart';
+import 'package:elinkbook/reader/dual_page_mode.dart';
 import 'package:elinkbook/reader/epub_reader_view.dart';
 import 'package:elinkbook/reader/page_turn_mode.dart';
 import 'package:elinkbook/reader/pdf_crop_mode.dart';
@@ -409,5 +411,108 @@ void main() {
       tester.widget<EpubReaderView>(find.byType(EpubReaderView)).writingMode,
       WritingMode.vertical,
     );
+  });
+
+  testWidgets('裝置為橫向時，isLandscape 正確下傳給 PdfReaderView 建構參數',
+      (tester) async {
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.binding.setSurfaceSize(const Size(800, 400)); // 橫向
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b1',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+    expect(pdfView.isLandscape, isTrue);
+  });
+
+  testWidgets('裝置為直向時，isLandscape 正確下傳為 false', (tester) async {
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.binding.setSurfaceSize(const Size(400, 800)); // 直向
+    // 確保 MediaQuery 收到新的 surface size
+    tester.view.physicalSize = const Size(400, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+    await tester.pump();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b1',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+    expect(pdfView.isLandscape, isFalse);
+  });
+
+  testWidgets('開啟該書已有的持久化雙頁偏好設定後，PdfReaderView 的雙頁參數正確載入',
+      (tester) async {
+    await prefsManager.saveBookPrefs(
+      'b1',
+      const BookReaderPrefs(
+        dualPageMode: DualPageMode.always,
+        dualPageCoverAlone: false,
+        dualPageDirection: DualPageDirection.rtl,
+      ),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b1',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+    expect(pdfView.dualPageMode, DualPageMode.always);
+    expect(pdfView.dualPageCoverAlone, isFalse);
+    expect(pdfView.dualPageDirection, DualPageDirection.rtl);
+  });
+
+  testWidgets(
+      '尚未持久化雙頁偏好設定時，PdfReaderView 的雙頁參數採用預設值（auto／true／ltr）',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b1',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+    expect(pdfView.dualPageMode, DualPageMode.auto);
+    expect(pdfView.dualPageCoverAlone, isTrue);
+    expect(pdfView.dualPageDirection, DualPageDirection.ltr);
   });
 }

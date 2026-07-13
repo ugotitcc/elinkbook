@@ -2,6 +2,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'book_reader_prefs.dart';
 import 'book_reader_prefs_repository.dart';
+import 'dual_page_direction.dart';
+import 'dual_page_mode.dart';
 import 'global_reader_prefs.dart';
 import 'page_turn_mode.dart';
 import 'pdf_crop_mode.dart';
@@ -100,6 +102,9 @@ class ReaderPrefsManagerImpl implements ReaderPrefsManager {
       pdfBoldStrength: book.pdfBoldStrength ?? 0,
       pdfCropMode: book.pdfCropMode ?? PdfCropMode.none,
       pdfCropRect: book.pdfCropRect,
+      dualPageMode: book.dualPageMode ?? DualPageMode.auto,
+      dualPageCoverAlone: book.dualPageCoverAlone ?? true,
+      dualPageDirection: book.dualPageDirection ?? DualPageDirection.ltr,
     );
   }
 }

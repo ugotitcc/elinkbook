@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/reader/book_reader_prefs.dart';
+import 'package:elinkbook/reader/dual_page_mode.dart';
 import 'package:elinkbook/reader/pdf_fit_mode.dart';
 import 'package:elinkbook/reader/pdf_crop_mode.dart';
 import 'package:elinkbook/reader/pdf_crop_rect.dart';
@@ -277,6 +278,73 @@ void main() {
     expect(notified?.pdfContrast, greaterThan(0));
     expect(notified?.pdfCropMode, PdfCropMode.autoDetect);
     expect(notified?.pdfCropRect, existingCropRect); // 關鍵斷言：未被清空
+  });
+
+  testWidgets('顯示分頁新增雙頁模式三個選項按鈕', (tester) async {
+    await _pumpSheet(tester, BookReaderPrefs.empty, (_) {});
+
+    expect(find.byKey(const Key('pdf_settings_dual_page_mode_auto')),
+        findsOneWidget);
+    expect(find.byKey(const Key('pdf_settings_dual_page_mode_always')),
+        findsOneWidget);
+    expect(find.byKey(const Key('pdf_settings_dual_page_mode_never')),
+        findsOneWidget);
+  });
+
+  testWidgets('點擊永遠雙頁選項後，onChanged 帶入 dualPageMode=always',
+      (tester) async {
+    BookReaderPrefs? notified;
+    await _pumpSheet(tester, BookReaderPrefs.empty, (prefs) => notified = prefs);
+
+    await tester.tap(find.byKey(const Key('pdf_settings_dual_page_mode_always')));
+    await tester.pump();
+
+    expect(notified?.dualPageMode, DualPageMode.always);
+  });
+
+  testWidgets('點擊永遠單頁選項後，onChanged 帶入 dualPageMode=never',
+      (tester) async {
+    BookReaderPrefs? notified;
+    await _pumpSheet(
+      tester,
+      const BookReaderPrefs(dualPageMode: DualPageMode.always),
+      (prefs) => notified = prefs,
+    );
+
+    await tester.tap(find.byKey(const Key('pdf_settings_dual_page_mode_never')));
+    await tester.pump();
+
+    expect(notified?.dualPageMode, DualPageMode.never);
+  });
+
+  testWidgets('prefs.dualPageMode 為 null 時（未持久化過），不因為初始 build 就觸發 onChanged',
+      (tester) async {
+    var callCount = 0;
+    await _pumpSheet(tester, BookReaderPrefs.empty, (_) => callCount++);
+
+    expect(callCount, 0);
+  });
+
+  testWidgets(
+      '已持久化 dualPageMode 時，調整濾鏡分頁不會清空 dualPageMode（回歸檢查）',
+      (tester) async {
+    BookReaderPrefs? notified;
+    await _pumpSheet(
+      tester,
+      const BookReaderPrefs(
+        dualPageMode: DualPageMode.always,
+        pdfContrast: 0,
+      ),
+      (prefs) => notified = prefs,
+    );
+
+    await tester.tap(find.byKey(const Key('pdf_settings_tab_filters')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('pdf_settings_contrast_increment')));
+    await tester.pump();
+
+    expect(notified?.pdfContrast, greaterThan(0));
+    expect(notified?.dualPageMode, DualPageMode.always); // 關鍵斷言：未被清空
   });
 }
 

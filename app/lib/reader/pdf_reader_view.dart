@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import 'pdf_crop_mode.dart';
 import 'pdf_crop_rect.dart';
 import 'pdf_fit_mode.dart';
+import 'dual_page_direction.dart';
+import 'dual_page_mode.dart';
 
 /// 包裝原生 Android PdfReaderView 的 Flutter widget，透過 AndroidView
 /// （PlatformView）嵌入畫面。給定 PDF 檔案的裝置端絕對路徑，通知原生端
@@ -34,6 +36,10 @@ class PdfReaderView extends StatefulWidget {
   final ValueChanged<PdfCropRect>? onCropRectComputed;
   final bool cropEditModeActive;
   final ValueChanged<PdfCropRect>? onCropRectSelected;
+  final DualPageMode dualPageMode;
+  final bool dualPageCoverAlone;
+  final DualPageDirection dualPageDirection;
+  final bool isLandscape;
 
   const PdfReaderView({
     super.key,
@@ -52,6 +58,10 @@ class PdfReaderView extends StatefulWidget {
     this.onCropRectComputed,
     this.cropEditModeActive = false,
     this.onCropRectSelected,
+    this.dualPageMode = DualPageMode.auto,
+    this.dualPageCoverAlone = true,
+    this.dualPageDirection = DualPageDirection.ltr,
+    this.isLandscape = false,
   });
 
   @override
@@ -78,7 +88,11 @@ class _PdfReaderViewState extends State<PdfReaderView> {
         widget.contrast != oldWidget.contrast ||
         widget.brightness != oldWidget.brightness ||
         widget.boldStrength != oldWidget.boldStrength ||
-        widget.cropMode != oldWidget.cropMode) {
+        widget.cropMode != oldWidget.cropMode ||
+        widget.dualPageMode != oldWidget.dualPageMode ||
+        widget.dualPageCoverAlone != oldWidget.dualPageCoverAlone ||
+        widget.dualPageDirection != oldWidget.dualPageDirection ||
+        widget.isLandscape != oldWidget.isLandscape) {
       _channel?.invokeMethod('setPdfPreferences', _buildPreferencesMap());
     }
     if (widget.cropEditModeActive != oldWidget.cropEditModeActive) {
@@ -105,6 +119,13 @@ class _PdfReaderViewState extends State<PdfReaderView> {
         'bottom': widget.cropRect!.bottom,
       };
     }
+    // 以下 4 個欄位由 ReaderScreen 解析為非 null 值後才會建構本 widget（見
+    // docs/epics/epic-16-dual-page/spec.md「Null 預設值解析」），一律無
+    // 條件放入 map，不比照上方其餘可選欄位的 null 判斷模式。
+    map['dualPageMode'] = widget.dualPageMode.name;
+    map['dualPageCoverAlone'] = widget.dualPageCoverAlone;
+    map['dualPageDirection'] = widget.dualPageDirection.name;
+    map['isLandscape'] = widget.isLandscape;
     return map;
   }
 
