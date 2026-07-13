@@ -1,12 +1,27 @@
 # Epic 16 Issue 4 — PDF 封面獨立開關 + 閱讀方向（LTR/RTL）Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** 在 `PdfSettingsSheet` 補齊 Issue 3 原生端已支援、但尚未開放使用者調整的兩個控制項（「封面獨立」開關、「頁面方向」LTR/RTL 二選一），並把 `DualPageDirection` 的全域固定預設值從 `ltr` 改為 `rtl`。
 
 **Architecture:** 沿用 `PdfSettingsSheet` 既有的「本地 State 欄位 + `_notifyChanged()` 組回完整 `BookReaderPrefs` + Wrap/IconButton 或 SwitchListTile 選項列」模式（比照既有 Fit 模式／雙頁模式／裁切模式）。原生端（`PdfReaderView.kt`）與 Method Channel 契約在 Issue 3 已一次到位實作完成，本 issue 純粹是 UI 曝光 + 端到端驗證；唯一涉及原生端的變動是 Task 1 的預設值翻轉（更新內部 fallback 常數與其 KDoc，不影響任何既有行為路徑，因為 `openBook`/`setPdfPreferences` 的 wire map 一律無條件包含 `dualPageDirection` 欄位，原生端這個 fallback 在正常流程中不會被觸發，只在其自身的單元測試中被直接呼叫驗證）。
 
 **Tech Stack:** Flutter/Dart、Kotlin（`PdfReaderView.kt`）、`flutter_test`／`integration_test`（真機）。
+
+## 開發狀態（已完成，2026-07-13）
+
+Task 1-5 全數完成並提交，branch `epic-16/dual-page-issue4`，共 3 個 commit：
+
+```
+11b5656 feat(epic-16): DualPageDirection 全域固定預設值由 ltr 改為 rtl（Issue 4 決策）
+9a6108e feat(epic-16): PdfSettingsSheet 顯示分頁新增封面獨立開關 + 頁面方向 LTR/RTL 二選一
+750d05c test(epic-16): 整合測試新增封面獨立關閉步進驗證 + 封面獨立/頁面方向持久化驗證
+```
+
+**審查歷程**：`/superpowers:requesting-code-review` 審查，存於 `tmp/epic-16/reviews/review-issue-4-integrated.md`：
+- 無 Critical 或 Important（程式碼層級）問題；唯一 Important 級別項目為「plan checkbox 尚未依新規則更新」，即本文件的收尾。
+- Strengths：Task 1-5 的 Dart／Kotlin 程式碼與計劃逐字對齊；`DualPageDirection` 預設值翻轉四端一致（Dart／Kotlin／JVM 測試／`spec.md`）；實作者主動修正計劃本身的疏漏——`SingleChildScrollView` 包裹 `_buildDisplayTab()` 後新增 `ensureVisible()` 以確保 `tester.tap()` 穩定觸發。
+- 與計劃原文的已知差異：（1）commit 顆粒度比計劃粗（3 個而非 5 個）；（2）`SingleChildScrollView` 僅解決「顯示」分頁，「濾鏡」分頁理論上仍有溢出風險，建議列為未來技術債。
 
 ## Global Constraints
 
@@ -37,7 +52,7 @@
 - Consumes：Issue 3 既有的 `DualPageDirection` enum、`ReaderPrefsManagerImpl.resolve()`、`PdfReaderView`（Dart／Kotlin）
 - Produces：`book.dualPageDirection` 為 `null`（未持久化過）時，`ResolvedPreferences.dualPageDirection` 與 `PdfReaderView` 建構子預設值一律解析為 `DualPageDirection.rtl`（非 `ltr`），供 Task 3 的 `PdfSettingsSheet` 初始狀態與 Task 5 的持久化測試依賴
 
-- [ ] **Step 1：撰寫失敗測試——更新 `reader_prefs_manager_test.dart` 的預設值斷言**
+- [x] **Step 1：撰寫失敗測試——更新 `reader_prefs_manager_test.dart` 的預設值斷言**
 
 把第 50 行：
 
@@ -53,7 +68,7 @@
 
 （此行位於測試 `'全部欄位皆未覆寫時，回傳的 non-null 欄位皆為既存安全預設值'` 內，第 53 行 `'單書覆寫存在時，優先套用單書覆寫，忽略全域預設'` 測試已明確傳入 `dualPageDirection: DualPageDirection.rtl` 並斷言 `resolved.dualPageDirection == DualPageDirection.rtl`，不受本次預設值翻轉影響，不需修改。）
 
-- [ ] **Step 2：撰寫失敗測試——更新 `pdf_reader_view_test.dart` 全部 11 處預設值斷言**
+- [x] **Step 2：撰寫失敗測試——更新 `pdf_reader_view_test.dart` 全部 11 處預設值斷言**
 
 檔案中所有 `'dualPageDirection': 'ltr',`（共 11 處，皆為完全相同的字串與縮排）改為 `'dualPageDirection': 'rtl',`：
 
@@ -69,7 +84,7 @@
 
 （`DualPageDirection.rtl` 的 3 處既有明確覆寫測試——測試 `'_onPlatformViewCreated 呼叫 openBook 時，initialPreferences 正確包含非預設的雙頁/橫向欄位'`、`'dualPageCoverAlone／dualPageDirection 變動時，didUpdateWidget 呼叫 setPdfPreferences'`、`'雙頁/橫向欄位皆未變動時，didUpdateWidget 不觸發任何 setPdfPreferences 呼叫'`——原本就明確傳入 `dualPageDirection: DualPageDirection.rtl` 並斷言 wire 值為 `'rtl'`，不受影響、不需修改。）
 
-- [ ] **Step 3：撰寫失敗測試——更新 `reader_screen_test.dart` 的預設值斷言與測試名稱**
+- [x] **Step 3：撰寫失敗測試——更新 `reader_screen_test.dart` 的預設值斷言與測試名稱**
 
 把第 497-517 行：
 
@@ -125,7 +140,7 @@
 
 （第 467-495 行的 `'開啟該書已有的持久化雙頁偏好設定後...'` 測試已明確持久化 `dualPageDirection: DualPageDirection.rtl` 並斷言讀回 `DualPageDirection.rtl`，不受影響。）
 
-- [ ] **Step 4：執行測試，確認三個檔案的新斷言皆失敗**
+- [x] **Step 4：執行測試，確認三個檔案的新斷言皆失敗**
 
 ```bash
 cd app
@@ -134,7 +149,7 @@ flutter test test/reader/reader_prefs_manager_test.dart test/reader/pdf_reader_v
 
 Expected：FAIL——三個檔案的預設值斷言皆因生產程式碼仍回傳/送出 `ltr` 而失敗。
 
-- [ ] **Step 5：修改 `reader_prefs_manager_impl.dart`**
+- [x] **Step 5：修改 `reader_prefs_manager_impl.dart`**
 
 把 `resolve()` 方法尾端：
 
@@ -148,7 +163,7 @@ Expected：FAIL——三個檔案的預設值斷言皆因生產程式碼仍回�
       dualPageDirection: book.dualPageDirection ?? DualPageDirection.rtl,
 ```
 
-- [ ] **Step 6：修改 `pdf_reader_view.dart`**
+- [x] **Step 6：修改 `pdf_reader_view.dart`**
 
 把建構子中：
 
@@ -162,7 +177,7 @@ Expected：FAIL——三個檔案的預設值斷言皆因生產程式碼仍回�
     this.dualPageDirection = DualPageDirection.rtl,
 ```
 
-- [ ] **Step 7：執行測試，確認通過**
+- [x] **Step 7：執行測試，確認通過**
 
 ```bash
 flutter test test/reader/reader_prefs_manager_test.dart test/reader/pdf_reader_view_test.dart test/screens/reader_screen_test.dart
@@ -170,7 +185,7 @@ flutter test test/reader/reader_prefs_manager_test.dart test/reader/pdf_reader_v
 
 Expected：全數 PASS。
 
-- [ ] **Step 8：更新文件與註解一致性——`dual_page_direction.dart`／`book_reader_prefs.dart`**
+- [x] **Step 8：更新文件與註解一致性——`dual_page_direction.dart`／`book_reader_prefs.dart`**
 
 把 `app/lib/reader/dual_page_direction.dart` 整份檔案改為：
 
@@ -195,7 +210,7 @@ enum DualPageDirection { ltr, rtl }
   final DualPageDirection? dualPageDirection; // null=rtl（僅 PDF 有效）
 ```
 
-- [ ] **Step 9：`flutter analyze`，確認乾淨**
+- [x] **Step 9：`flutter analyze`，確認乾淨**
 
 ```bash
 flutter analyze
@@ -203,7 +218,7 @@ flutter analyze
 
 Expected："No issues found!"
 
-- [ ] **Step 10：撰寫失敗測試——更新 `PdfReaderViewTest.kt` 的兩個 fallback 預設值測試**
+- [x] **Step 10：撰寫失敗測試——更新 `PdfReaderViewTest.kt` 的兩個 fallback 預設值測試**
 
 把 `app/android/app/src/test/kotlin/cc/ugotit/elinkbook/PdfReaderViewTest.kt` 第 128-138 行：
 
@@ -239,7 +254,7 @@ Expected："No issues found!"
 
 （`傳入 rtl 時回傳 RTL`／`傳入 ltr 時回傳 LTR` 兩個測試驗證的是明確傳入值的正確映射，與預設值無關，不需修改。）
 
-- [ ] **Step 11：執行測試，確認失敗**
+- [x] **Step 11：執行測試，確認失敗**
 
 ```bash
 cd android
@@ -248,7 +263,7 @@ cd android
 
 Expected：兩個新斷言 FAIL（`AssertionError`，實際值仍為 `LTR`）。
 
-- [ ] **Step 12：修改 `PdfReaderView.kt`**
+- [x] **Step 12：修改 `PdfReaderView.kt`**
 
 把第 91-101 行：
 
@@ -331,7 +346,7 @@ Expected：兩個新斷言 FAIL（`AssertionError`，實際值仍為 `LTR`）。
     }
 ```
 
-- [ ] **Step 13：執行測試，確認通過**
+- [x] **Step 13：執行測試，確認通過**
 
 ```bash
 ./gradlew :app:testDebugUnitTest --tests "cc.ugotit.elinkbook.PdfReaderViewTest"
@@ -339,7 +354,7 @@ Expected：兩個新斷言 FAIL（`AssertionError`，實際值仍為 `LTR`）。
 
 Expected：`BUILD SUCCESSFUL`，全數測試（含 Task 1 修改的 2 個）通過。
 
-- [ ] **Step 14：更新 `spec.md` 的兩處 `ltr` 預設值描述**
+- [x] **Step 14：更新 `spec.md` 的兩處 `ltr` 預設值描述**
 
 把 `docs/epics/epic-16-dual-page/spec.md` 第 16 行內，`並在 ReaderPrefsManagerImpl.resolve()...` 這句中的：
 
@@ -365,7 +380,7 @@ ALTER TABLE book_reader_prefs ADD COLUMN dual_page_direction TEXT;      -- DualP
 ALTER TABLE book_reader_prefs ADD COLUMN dual_page_direction TEXT;      -- DualPageDirection.name，NULL = rtl（Issue 4 決策後的預設，原為 ltr）
 ```
 
-- [ ] **Step 15：全專案回歸測試**
+- [x] **Step 15：全專案回歸測試**
 
 ```bash
 cd app
@@ -375,7 +390,7 @@ flutter analyze
 
 Expected：`flutter test` 全數 PASS（含本 Task 修改的 3 個檔案與既有全部測試）；`flutter analyze` "No issues found!"。
 
-- [ ] **Step 16：Commit**
+- [x] **Step 16：Commit**
 
 ```bash
 cd U:\MyDeveloper\AI\elinkBook
@@ -397,7 +412,7 @@ git commit -m "feat(epic-16): DualPageDirection 全域固定預設值由 ltr 改
 
 **審查修正（`tmp/epic-16/reviews/review-plan-issue-4.md`）**：外層 Bottom Sheet 固定 `height: 400`（見 `build()` 的 `SizedBox`），`_buildDisplayTab()` 原本是無捲動能力的 `Padding > Column`；Task 2 起持續在此分頁新增控制項（本 Task 的 `SwitchListTile` + Task 3 的頁面方向選單），內容總高度粗估將超出固定高度、觸發 `RenderFlex overflow` 崩潰。本 Task 一併把 `_buildDisplayTab()` 的 `Column` 包進 `SingleChildScrollView`（見 Step 5），並新增一個直接驗證不拋例外的回歸測試（見 Step 1 最後一個測試）。
 
-- [ ] **Step 1：撰寫失敗測試——擴充 `pdf_settings_sheet_test.dart`**
+- [x] **Step 1：撰寫失敗測試——擴充 `pdf_settings_sheet_test.dart`**
 
 在 `app/test/screens/pdf_settings_sheet_test.dart` 檔案最後一個測試（`'已持久化 dualPageMode 時，調整濾鏡分頁不會清空 dualPageMode（回歸檢查）'`）之後、`}`（`main()` 結尾）之前，新增以下 5 個測試：
 
@@ -461,7 +476,7 @@ git commit -m "feat(epic-16): DualPageDirection 全域固定預設值由 ltr 改
   });
 ```
 
-- [ ] **Step 2：執行測試，確認失敗**
+- [x] **Step 2：執行測試，確認失敗**
 
 ```bash
 cd app
@@ -470,7 +485,7 @@ flutter test test/screens/pdf_settings_sheet_test.dart
 
 Expected：FAIL——找不到 `Key('pdf_settings_dual_page_cover_alone')`；`notified?.dualPageCoverAlone` 恆為 `null`（overflow 測試本身在此階段預期通過，因為固定高度尚未被新內容撐爆；改動 `_buildDisplayTab()` 後才會實際驗證到 Step 5 的修正）。
 
-- [ ] **Step 3：修改 `pdf_settings_sheet.dart`——新增本地狀態欄位與 `initState`**
+- [x] **Step 3：修改 `pdf_settings_sheet.dart`——新增本地狀態欄位與 `initState`**
 
 在 State 欄位宣告區塊，`late DualPageMode _dualPageMode;` 之後新增：
 
@@ -484,7 +499,7 @@ Expected：FAIL——找不到 `Key('pdf_settings_dual_page_cover_alone')`；`no
     _dualPageCoverAlone = widget.prefs.dualPageCoverAlone ?? true;
 ```
 
-- [ ] **Step 4：修改 `_notifyChanged()`**
+- [x] **Step 4：修改 `_notifyChanged()`**
 
 把：
 
@@ -512,7 +527,7 @@ Expected：FAIL——找不到 `Key('pdf_settings_dual_page_cover_alone')`；`no
     ));
 ```
 
-- [ ] **Step 5：修改 `_buildDisplayTab()`——包進 `SingleChildScrollView` 並新增 SwitchListTile**
+- [x] **Step 5：修改 `_buildDisplayTab()`——包進 `SingleChildScrollView` 並新增 SwitchListTile**
 
 把整個 `_buildDisplayTab()` 方法：
 
@@ -660,7 +675,7 @@ Expected：FAIL——找不到 `Key('pdf_settings_dual_page_cover_alone')`；`no
   }
 ```
 
-- [ ] **Step 6：執行測試，確認通過**
+- [x] **Step 6：執行測試，確認通過**
 
 ```bash
 flutter test test/screens/pdf_settings_sheet_test.dart
@@ -668,7 +683,7 @@ flutter test test/screens/pdf_settings_sheet_test.dart
 
 Expected：全數 PASS。
 
-- [ ] **Step 7：`flutter analyze`**
+- [x] **Step 7：`flutter analyze`**
 
 ```bash
 flutter analyze
@@ -676,7 +691,7 @@ flutter analyze
 
 Expected："No issues found!"
 
-- [ ] **Step 8：Commit**
+- [x] **Step 8：Commit**
 
 ```bash
 git add app/lib/screens/pdf_settings_sheet.dart app/test/screens/pdf_settings_sheet_test.dart
@@ -695,7 +710,7 @@ git commit -m "feat(epic-16): PdfSettingsSheet 顯示分頁新增封面獨立開
 - Consumes：`BookReaderPrefs.dualPageDirection`（Issue 2，nullable，Task 1 之後 null=rtl）
 - Produces：「顯示」分頁新增「頁面方向」二選一（`Key('pdf_settings_dual_page_direction_ltr'/'rtl')`），點擊觸發 `onChanged` 回傳更新後的 `BookReaderPrefs`
 
-- [ ] **Step 1：撰寫失敗測試——擴充 `pdf_settings_sheet_test.dart`**
+- [x] **Step 1：撰寫失敗測試——擴充 `pdf_settings_sheet_test.dart`**
 
 在 `app/test/screens/pdf_settings_sheet_test.dart` 開頭 import 區塊，`import 'package:elinkbook/reader/dual_page_mode.dart';` 之後新增：
 
@@ -763,7 +778,7 @@ import 'package:elinkbook/reader/dual_page_direction.dart';
   });
 ```
 
-- [ ] **Step 2：執行測試，確認失敗**
+- [x] **Step 2：執行測試，確認失敗**
 
 ```bash
 cd app
@@ -772,7 +787,7 @@ flutter test test/screens/pdf_settings_sheet_test.dart
 
 Expected：FAIL——找不到 `Key('pdf_settings_dual_page_direction_ltr'/'rtl')`；`notified?.dualPageDirection` 恆為呼叫端原樣傳回的值，未反映使用者點擊。
 
-- [ ] **Step 3：修改 `pdf_settings_sheet.dart`——新增匯入與本地狀態欄位**
+- [x] **Step 3：修改 `pdf_settings_sheet.dart`——新增匯入與本地狀態欄位**
 
 把 import 區塊：
 
@@ -809,7 +824,7 @@ import '../reader/pdf_crop_mode.dart';
     _dualPageDirection = widget.prefs.dualPageDirection ?? DualPageDirection.rtl;
 ```
 
-- [ ] **Step 4：修改 `_notifyChanged()`**
+- [x] **Step 4：修改 `_notifyChanged()`**
 
 把：
 
@@ -829,7 +844,7 @@ import '../reader/pdf_crop_mode.dart';
     ));
 ```
 
-- [ ] **Step 5：修改 `_buildDisplayTab()`——新增頁面方向選項**
+- [x] **Step 5：修改 `_buildDisplayTab()`——新增頁面方向選項**
 
 在 `_buildDisplayTab()` 開頭的 `const dualPageOptions = [...]` 之後新增：
 
@@ -911,7 +926,7 @@ import '../reader/pdf_crop_mode.dart';
   }
 ```
 
-- [ ] **Step 6：執行測試，確認通過**
+- [x] **Step 6：執行測試，確認通過**
 
 ```bash
 flutter test test/screens/pdf_settings_sheet_test.dart
@@ -919,7 +934,7 @@ flutter test test/screens/pdf_settings_sheet_test.dart
 
 Expected：全數 PASS。
 
-- [ ] **Step 7：全專案回歸 + `flutter analyze`**
+- [x] **Step 7：全專案回歸 + `flutter analyze`**
 
 ```bash
 flutter test
@@ -928,7 +943,7 @@ flutter analyze
 
 Expected：`flutter test` 全數 PASS；`flutter analyze` "No issues found!"。
 
-- [ ] **Step 8：Commit**
+- [x] **Step 8：Commit**
 
 ```bash
 git add app/lib/screens/pdf_settings_sheet.dart app/test/screens/pdf_settings_sheet_test.dart
@@ -948,7 +963,7 @@ git commit -m "feat(epic-16): PdfSettingsSheet 顯示分頁新增頁面方向 LT
 
 **已知測試限制**：本 task 驗證的是「封面是否被視為 spread 一部分」的結構性證據（翻頁步進量從 1 變 2），而非「畫面是否真的無縫拼接兩頁點陣圖」的像素層級正確性——後者留給 Issue 7 的真機肉眼/截圖確認（比照 Issue 3 `plan-issue-3.md` Task 7 的既有慣例）。
 
-- [ ] **Step 1：撰寫失敗測試——擴充 `pdf_dual_page_test.dart`**
+- [x] **Step 1：撰寫失敗測試——擴充 `pdf_dual_page_test.dart`**
 
 在 `app/integration_test/pdf_dual_page_test.dart` 檔案最後一個測試（`'auto 模式：裝置從橫向轉回直向時，恢復單頁步進...'`）之後、`}`（`main()` 結尾）之前，新增以下測試：
 
@@ -980,7 +995,7 @@ git commit -m "feat(epic-16): PdfSettingsSheet 顯示分頁新增頁面方向 LT
   });
 ```
 
-- [ ] **Step 2：於真實裝置執行 integration_test**
+- [x] **Step 2：於真實裝置執行 integration_test**
 
 ```bash
 cd app
@@ -990,7 +1005,7 @@ flutter test integration_test/pdf_dual_page_test.dart -d <device-id>
 
 Expected：全數測試通過（含既有 Issue 3 的 6 個測試與本 task 新增的 1 個，共 7 個）。
 
-- [ ] **Step 3：Commit**
+- [x] **Step 3：Commit**
 
 ```bash
 cd U:\MyDeveloper\AI\elinkBook
@@ -1009,7 +1024,7 @@ git commit -m "test(epic-16): pdf_dual_page_test 新增封面獨立關閉時的�
 - Consumes：Task 2-3 的 `PdfSettingsSheet` UI（`Key('pdf_settings_dual_page_cover_alone')`／`Key('pdf_settings_dual_page_direction_ltr'/'rtl')`）；既有 `ReaderScreen`／`prefsManager`／`_stageAssetAsFile`／`_book`／`_layoutSettingsButtonReady`／`_pumpUntil`／`_loadingIndicatorGone` 頂層 helper
 - Produces：真機可驗證的「調整封面獨立開關與頁面方向後關閉重開，兩個新設定值正確持久化」端到端回歸測試，對應 `issues.md` Issue 4 第三項驗收標準
 
-- [ ] **Step 1：撰寫失敗測試——擴充 `reader_screen_test.dart`**
+- [x] **Step 1：撰寫失敗測試——擴充 `reader_screen_test.dart`**
 
 在 `app/integration_test/reader_screen_test.dart` 開頭 import 區塊，`import 'package:elinkbook/reader/pdf_crop_mode.dart';` 之後新增：
 
@@ -1105,7 +1120,7 @@ import 'package:elinkbook/reader/dual_page_direction.dart';
   });
 ```
 
-- [ ] **Step 2：於真實裝置執行 integration_test**
+- [x] **Step 2：於真實裝置執行 integration_test**
 
 ```bash
 cd app
@@ -1114,7 +1129,7 @@ flutter test integration_test/reader_screen_test.dart -d <device-id>
 
 Expected：全數測試通過（含既有測試與本 task 新增的 1 個）。
 
-- [ ] **Step 3：全專案回歸測試 + `flutter analyze`**
+- [x] **Step 3：全專案回歸測試 + `flutter analyze`**
 
 ```bash
 flutter test
@@ -1123,7 +1138,7 @@ flutter analyze
 
 Expected：`flutter test` 全數 PASS（含 Task 1-3 新增/修改的所有測試，以及既有全部測試不受影響）；`flutter analyze` "No issues found!"。
 
-- [ ] **Step 4：Commit**
+- [x] **Step 4：Commit**
 
 ```bash
 cd U:\MyDeveloper\AI\elinkBook
