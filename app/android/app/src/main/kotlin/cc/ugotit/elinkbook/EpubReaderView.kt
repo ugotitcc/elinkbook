@@ -201,7 +201,10 @@ class EpubReaderView(
             if (it != isLandscape) changed = true
             isLandscape = it
         }
-        if (changed) cachedFxlFitScale = null
+        if (changed) {
+            cachedFxlFitScale = null
+            cachedFxlFitScaleIsSpread = null
+        }
     }
 
     /**
@@ -369,6 +372,7 @@ class EpubReaderView(
      * 的宣告尺寸誤差不會反映成翻頁時的縮放跳動。
      */
     private var cachedFxlFitScale: Float? = null
+    private var cachedFxlFitScaleIsSpread: Boolean? = null
 
     private fun applyFxlFitScale() {
         val isFixedLayout = publication?.metadata?.layout == Layout.FIXED
@@ -378,15 +382,57 @@ class EpubReaderView(
         }
         if (fxlLayoutListener != null) return
         val listener = ViewTreeObserver.OnGlobalLayoutListener {
-            val availableWidth = container.width
-            val availableHeight = container.height
-            if (availableWidth <= 0 || availableHeight <= 0) return@OnGlobalLayoutListener
+            val allWebViews = findViewsByType<WebView>(container)
+            // R2ViewPager 在單頁模式下也會同時保留前後相鄰頁面的 WebView（見本
+            // 檔案類別 KDoc「為什麼是『全部』而不是『第一個』」，真機驗證確認
+            // 同時存在 3 個 R2BasicWebView 實例，各自的 R2FXLLayout 以左右並排、
+            // 由 ViewPager 位移決定哪一個落在可視範圍內）。量測「目前是否為雙頁
+            // 並排」之前，先把所有找到的 WebView 的 translationX/Y 歸零——若不
+            // 歸零，getLocationOnScreen() 量到的會是「上一輪計算殘留的位移」而非
+            // 真正的原始 layout 位置，污染下面的可見性判斷與排序（pivot 固定為
+            // (0,0) 時 scale 不影響量測到的左上角座標，只有 translationX/Y 需要
+            // 歸零，不需要在這裡連 scale 也重置）。
+            allWebViews.forEach {
+                it.translationX = 0f
+                it.translationY = 0f
+            }
             val containerLoc = IntArray(2)
             container.getLocationOnScreen(containerLoc)
-            for (webView in findViewsByType<WebView>(container)) {
+
+            // 只用「找到的 WebView 數量」判斷雙頁狀態會被 R2ViewPager 預載在
+            // 螢幕外的相鄰頁面誤導（單頁模式下常態就有 3 個）。改為兩個條件都
+            // 成立才視為雙頁並排：(1) 偏好設定本身啟用雙頁（isDualPageEnabled，
+            // 排除「單頁模式下巧合抓到 ≥2 個螢幕外 WebView」的誤判），(2) 篩選出
+            // 真正落在 container 可視範圍內的 WebView 且數量 ≥ 2（排除「雙頁
+            // 偏好生效但目前停在封面頁（page: center），Readium 本身只給 1 個
+            // WebView」的情況）。可見性篩選後依 x 座標由小到大排序，用排序後的
+            // index 判斷左右 slot，而非數值閾值比較（過渡瞬間的量測誤差可能讓
+            // 閾值判斷失準，見審查意見 Important #1）。
+            val visibleWebViews = allWebViews.filter { webView ->
+                val webViewLoc = IntArray(2)
+                webView.getLocationOnScreen(webViewLoc)
+                val currentLeft = webViewLoc[0] - containerLoc[0]
+                val contentWidth = webView.width
+                contentWidth > 0 && currentLeft + contentWidth > 0 && currentLeft < container.width
+            }.sortedBy { webView ->
+                val webViewLoc = IntArray(2)
+                webView.getLocationOnScreen(webViewLoc)
+                webViewLoc[0]
+            }
+            val isDualPageActive = isDualPageEnabled(dualPageMode, isLandscape)
+            val isSpread = isDualPageActive && visibleWebViews.size >= 2
+            if (cachedFxlFitScaleIsSpread != isSpread) {
+                cachedFxlFitScale = null
+                cachedFxlFitScaleIsSpread = isSpread
+            }
+            val availableWidth = if (isSpread) container.width / 2 else container.width
+            val availableHeight = container.height
+            if (availableWidth <= 0 || availableHeight <= 0) return@OnGlobalLayoutListener
+
+            visibleWebViews.forEachIndexed { index, webView ->
                 val contentWidth = webView.width
                 val contentHeight = webView.height
-                if (contentWidth <= 0 || contentHeight <= 0) continue
+                if (contentWidth <= 0 || contentHeight <= 0) return@forEachIndexed
                 val fitScale = cachedFxlFitScale ?: EpubFxlScaler.computeFitScale(
                     availableWidth = availableWidth,
                     availableHeight = availableHeight,
@@ -394,11 +440,6 @@ class EpubReaderView(
                     contentHeight = contentHeight,
                 ).also { cachedFxlFitScale = it }
 
-                // 先歸零位移、以左上角為錨點，量出這一輪「未經校正」的原始 layout
-                // 位置（pivot 在 (0,0) 時縮放不會移動錨點本身，所以量到的位置就是
-                // Readium 自己排版（含它內部的置中位移）算出來的原始位置）。
-                webView.translationX = 0f
-                webView.translationY = 0f
                 webView.pivotX = 0f
                 webView.pivotY = 0f
                 webView.scaleX = fitScale
@@ -408,16 +449,25 @@ class EpubReaderView(
                 val currentLeft = (webViewLoc[0] - containerLoc[0]).toFloat()
                 val currentTop = (webViewLoc[1] - containerLoc[1]).toFloat()
 
+                // 雙頁模式下，右側 WebView 的置中運算必須在「它自己的半寬 slot」
+                // 座標系裡進行，否則 computeCenteringTranslation 會把它往 slot 0
+                // （螢幕左半邊）置中。做法：換算前先把 currentLeft 減去 slot 起點
+                // （0 或 availableWidth），算出 slot 內的相對位移後，再加回 slot
+                // 起點還原成螢幕絕對座標——computeCenteringTranslation 本身完全
+                // 不需要知道「slot」這個概念，簽章不受影響。slot 依排序後的
+                // index 分配（index 0 = 左，1 = 右），不使用數值閾值判斷。
+                val slotOffsetX = if (isSpread && index == 1) availableWidth.toFloat() else 0f
+
                 val translation = EpubFxlScaler.computeCenteringTranslation(
                     availableWidth = availableWidth,
                     availableHeight = availableHeight,
                     contentWidth = contentWidth,
                     contentHeight = contentHeight,
                     scale = fitScale,
-                    currentLeft = currentLeft,
+                    currentLeft = currentLeft - slotOffsetX,
                     currentTop = currentTop,
                 )
-                webView.translationX = translation.x
+                webView.translationX = translation.x + slotOffsetX
                 webView.translationY = translation.y
             }
         }
@@ -429,6 +479,7 @@ class EpubReaderView(
         fxlLayoutListener?.let { container.viewTreeObserver.removeOnGlobalLayoutListener(it) }
         fxlLayoutListener = null
         cachedFxlFitScale = null
+        cachedFxlFitScaleIsSpread = null
     }
 
     /**
