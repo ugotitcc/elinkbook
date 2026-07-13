@@ -218,4 +218,30 @@ void main() {
         reason: '旋轉切換不應觸發 onError；PlatformView 是否因旋轉重建屬 '
             'Issue 7 的真機視覺驗證範圍，本測試只驗證 preferences 傳遞路徑不出錯');
   });
+
+  testWidgets(
+      'auto 模式橫向：封面獨立關閉時，index 0 也步進 2（不再獨立配對，Issue 4）',
+      (tester) async {
+    final path = await stagePath('sample_dual_page_cover_not_alone.pdf');
+    final pageChanges = <int>[];
+    await pumpAndWaitRendered(
+      tester,
+      path,
+      pageChanges,
+      isLandscape: true,
+      dualPageCoverAlone: false,
+    );
+
+    // 封面獨立關閉：index 0 不再是獨立單頁，與 index 1 配對成 [0,1]，
+    // 步進行為比照非封面情境恆為 2。
+    _nextPage(tester);
+    await tester.pumpAndSettle();
+    expect(pageChanges, [2]); // 跳到 [2,3]，而非封面獨立開啟時的步進 1
+
+    _nextPage(tester);
+    await tester.pumpAndSettle();
+    expect(pageChanges, [2, 4]); // 繼續步進 2 到 [4,5]
+
+    expect(find.byKey(const Key('reader_error_text')), findsNothing);
+  });
 }

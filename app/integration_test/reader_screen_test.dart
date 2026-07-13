@@ -14,6 +14,7 @@ import 'package:elinkbook/reader/book_reader_prefs_repository.dart';
 import 'package:elinkbook/reader/reader_prefs_manager.dart';
 import 'package:elinkbook/reader/reader_prefs_manager_impl.dart';
 import 'package:elinkbook/reader/pdf_crop_mode.dart';
+import 'package:elinkbook/reader/dual_page_direction.dart';
 import 'package:elinkbook/reader/pdf_fit_mode.dart';
 import 'package:elinkbook/reader/pdf_reader_view.dart';
 import 'package:elinkbook/reader/screen_orientation_setting.dart';
@@ -1326,6 +1327,94 @@ void main() {
     expect(afterReopen.cropRect, beforeClose.cropRect,
         reason: '重開書後 cropRect 應與關閉前一致，且不因重開書而重新計算'
             '（見 Issue 5 決策 #3：全書統一比例，不逐頁重算、不重開書重算）');
+
+    expect(find.byKey(const Key('reader_error_text')), findsNothing);
+  });
+
+  testWidgets(
+      'PDF 調整封面獨立開關與頁面方向後關閉重開，兩個新設定值正確持久化（Issue 4）',
+      (tester) async {
+    final samplePath = await _stageAssetAsFile(
+        'test/fixtures/sample.pdf', 'sample_pdf_issue4_persist.pdf');
+    addTearDown(() async {
+      final file = File(samplePath);
+      if (await file.exists()) await file.delete();
+    });
+    const bookId = 'b_pdf_issue4_persist';
+    await libraryRepository
+        .insertBook(_book(bookId, format: BookFileFormat.pdf));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: samplePath,
+          bookId: bookId,
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+
+    await _pumpUntil(
+      tester,
+      () => _layoutSettingsButtonReady(tester),
+      timeout: const Duration(seconds: 10),
+    );
+
+    await tester.tap(find.byKey(const Key('reader_layout_settings_button')));
+    await tester.pumpAndSettle();
+
+    // 顯示分頁預設就是開啟時的分頁，不需額外切換。關閉「封面獨立」開關、
+    // 切換頁面方向為左到右（Task 1 已把全域固定預設值改為 rtl，這裡刻意
+    // 切到 ltr，同時驗證「非預設值」也能正確持久化，而不只是巧合地與
+    // 預設值相同）。
+    await tester.ensureVisible(
+        find.byKey(const Key('pdf_settings_dual_page_cover_alone')));
+    await tester
+        .tap(find.byKey(const Key('pdf_settings_dual_page_cover_alone')));
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.ensureVisible(
+        find.byKey(const Key('pdf_settings_dual_page_direction_ltr')));
+    await tester
+        .tap(find.byKey(const Key('pdf_settings_dual_page_direction_ltr')));
+    await tester.pump(const Duration(milliseconds: 300));
+
+    final beforeClose =
+        tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+    expect(beforeClose.dualPageCoverAlone, isFalse);
+    expect(beforeClose.dualPageDirection, DualPageDirection.ltr);
+
+    // 從資料庫直接讀出持久化結果（不透過畫面重建，排除「畫面剛好還沒
+    // rebuild」這種偽陽性）。
+    final saved = (await prefsManager.load(bookId)).bookPrefs;
+    expect(saved.dualPageCoverAlone, isFalse);
+    expect(saved.dualPageDirection, DualPageDirection.ltr);
+
+    // 關閉重開，驗證兩個新設定值持久化。
+    await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
+    await tester.pump();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: samplePath,
+          bookId: bookId,
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await _pumpUntil(
+      tester,
+      _loadingIndicatorGone,
+      timeout: const Duration(seconds: 10),
+    );
+    await tester.pump(const Duration(seconds: 1));
+
+    final afterReopen =
+        tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+    expect(afterReopen.dualPageCoverAlone, beforeClose.dualPageCoverAlone,
+        reason: '重開書後 dualPageCoverAlone 應與關閉前一致');
+    expect(afterReopen.dualPageDirection, beforeClose.dualPageDirection,
+        reason: '重開書後 dualPageDirection 應與關閉前一致');
 
     expect(find.byKey(const Key('reader_error_text')), findsNothing);
   });
