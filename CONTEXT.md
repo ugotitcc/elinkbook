@@ -59,3 +59,7 @@ _Avoid_: 偏好設定服務、設定 Facade
 **生效閱讀偏好（ResolvedPreferences）**：
 表示閱讀偏好管理器解析後的最終生效偏好設定。其屬性大多為 non-nullable（例如確定的翻頁模式、邊距與字型），直接提供給閱讀器原生視圖套用，不含「是否覆寫」的 nullable 狀態。
 _Avoid_: 最終偏好、生效設定
+
+**設定面板草稿具現化原則（Settings Sheet Draft Concretization Rule）**：
+判斷「版面設定 Bottom Sheet」（`PdfSettingsSheet`／`ReaderSettingsSheet`）的本地 State 欄位該不該保留 `BookReaderPrefs` 的 nullable「未覆寫」語意，依據是該欄位**是否存在次要權威來源可回退**（全域預設值、書籍自動偵測值等）——有次要來源時，本地狀態應維持 nullable，並提供一個「不覆寫／採用書籍內建」的重置選項（例如 `ReaderSettingsSheet` 的 `_writingModeOverride`）；無次要來源、null 與具體預設值解析結果永遠相同時（例如 PDF 相關欄位——`docs/epics.md` 已明文排除 PDF/雙頁欄位於 `epic-14-system-settings` 全域預設層之外），本地狀態在 `initState()` 用 `??` 具現化為非 null 值是安全的，不視為違反「null = 不覆寫」慣例。
+_Avoid_: null 語意破壞（脫離「是否存在次要權威來源」這個前提單獨評斷時容易誤判）

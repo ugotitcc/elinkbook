@@ -110,6 +110,16 @@
 - `PdfSettingsSheet`「顯示」分頁新增「封面獨立」開關（預設開啟）與「頁面方向」二選一（左到右／右到左，預設左到右）
 - 本 issue 不需異動原生端邏輯（Issue 3 已一次到位實作），純粹是 UI 曝光 + 端到端驗證這兩個既有但未被測試覆蓋的路徑
 
+**待決設計問題（Issue 3 真機驗證時發現，記錄於此供本 issue 開始時討論）：**
+`dualPageDirection` 目前預設值固定為 `ltr`，不論書籍是橫排還是直排（`WritingMode`）。但直排（vertical-RL）書籍慣例上應是右到左翻頁——也就是右頁顯示較小 index（較早）、左頁顯示較大 index（較晚），恰好對應 `rtl` 配對結果。目前規劃是使用者透過本 issue 新增的「頁面方向」控制項手動切換，每本直排書都要自己調整一次；是否應該改為依書籍偵測到的 `WritingMode` 自動預設（直排 → 預設 `rtl`，橫排 → 預設 `ltr`），而非純手動、固定預設 `ltr`，尚未決定，留待本 issue 實際開工時一併討論確認。
+
+**已結案的審查疑慮（`tmp/epic-16/reviews/review-plan-issue-4.md` 提出，`/grill-with-docs` 已釐清，不需修正）：**
+該審查將 `PdfSettingsSheet.initState()` 把 nullable 的 `dualPageCoverAlone`／`dualPageDirection`（以及既有的 `dualPageMode`／`pdfFitMode`／`pdfContrast`／`pdfBrightness`／`pdfBoldStrength`／`pdfCropMode`）用 `??` 具現化為非 null 本地狀態，列為 Standards 硬性違反（違反 `AGENTS.md`「null = 不覆寫」慣例）。經查證：
+1. 這是 `PdfSettingsSheet` 從 Issue 3（甚至更早）就存在的既定寫法，8 個欄位皆同一模式，不是本 issue 新增的缺陷。
+2. `ReaderSettingsSheet`（EPUB）已有可參照的既定原則：本地狀態是否該保留 nullable，取決於該欄位是否存在「全域預設值」或「書籍自動偵測值」等次要權威來源可回退——有次要來源時才保留 nullable 並提供「不覆寫」重置選項（如 `writingModeOverride`）；無次要來源、null 與具體預設值解析結果永遠相同時，具現化是安全的（如既有的字型大小/行距等滑桿欄位）。此原則已寫入 `CONTEXT.md`。
+3. `docs/epics.md` 對 `epic-4-pdf-enhance` 已有明文決定：「濾鏡/裁切/Fit 模式皆單書持久化（無全域預設，不併入 epic-14）」；`epic-14-system-settings` 那一列列出的全域/單書雙層覆寫 FR 清單（FR-35/36/37/38/39/42）亦不含 FR-41（雙頁顯示）。即 PDF／雙頁相關欄位比照既有模式，明文排除於全域預設層之外，屬於第 2 點「無次要來源」的情況，null 具現化不構成語意破壞，也沒有可預見會變成問題的規劃路徑。
+- **結論：不修正，不需再排程檢視。** 若未來 `epic-14` 範圍變動、真的替 PDF/雙頁欄位加上全域預設層，該工作本身就需要重新設計 `PdfSettingsSheet`（含新增「重置」UI），屆時審查會自然重新抓到這個問題，現在不需要預埋提示。
+
 **單元測試要求：**
 - `PdfSettingsSheet` widget test：「封面獨立」開關與「頁面方向」選項切換正確觸發 `onChanged`
 
