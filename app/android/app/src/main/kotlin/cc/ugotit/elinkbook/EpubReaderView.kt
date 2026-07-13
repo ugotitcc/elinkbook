@@ -28,6 +28,7 @@ import org.readium.r2.navigator.epub.EpubPreferences
 import org.readium.r2.navigator.epub.css.FontStyle
 import org.readium.r2.navigator.epub.css.FontWeight
 import org.readium.r2.navigator.preferences.FontFamily
+import org.readium.r2.navigator.preferences.Spread
 import org.readium.r2.navigator.preferences.TextAlign
 import org.readium.r2.shared.publication.Layout
 import org.readium.r2.shared.publication.Locator
@@ -86,6 +87,33 @@ class EpubReaderView(
     EpubNavigatorFragment.Listener,
     EpubNavigatorFragment.PaginationListener {
 
+    /**
+     * 橫向雙頁顯示觸發模式（epic-16-dual-page），對應 Dart DualPageMode 列舉
+     * （`app/lib/reader/dual_page_mode.dart`）透過 Method Channel 傳來的
+     * `.name` 字串（'auto'／'always'／'never'）。與 PdfReaderView.DualPageMode
+     * 是各自獨立的巢狀型別，比照既有慣例（見 PdfReaderView.kt）。
+     */
+    internal enum class DualPageMode {
+        AUTO, ALWAYS, NEVER;
+
+        companion object {
+            fun fromWireValue(value: String?): DualPageMode = when (value) {
+                "always" -> ALWAYS
+                "never" -> NEVER
+                else -> AUTO
+            }
+        }
+    }
+
+    companion object {
+        /** 雙頁顯示是否應該生效：`always` 一律生效；`auto` 僅橫向生效；`never`
+         * 一律不生效。用於決定送給 Readium 的 `Spread` 值（見
+         * [buildPreferencesFromMap]），非 Readium API 本身的邏輯。*/
+        internal fun isDualPageEnabled(dualPageMode: DualPageMode, isLandscape: Boolean): Boolean =
+            dualPageMode == DualPageMode.ALWAYS ||
+                (dualPageMode == DualPageMode.AUTO && isLandscape)
+    }
+
     private val containerId = View.generateViewId()
     private val container = FrameLayout(context).apply { this.id = containerId }
     private val channel = MethodChannel(messenger, "cc.ugotit.elinkbook/epub_reader_view_$id")
@@ -108,6 +136,12 @@ class EpubReaderView(
      * 呼叫（解決先前版本「持久化設定在開書當下沒有真正套用」的缺口）。
      */
     private var currentPreferences = EpubPreferences()
+
+    /** 雙頁顯示模式（預設 AUTO），由 [applyDualPagePreferences] 更新。 */
+    private var dualPageMode: DualPageMode = DualPageMode.AUTO
+
+    /** 裝置是否為橫向，由 [applyDualPagePreferences] 更新。 */
+    private var isLandscape: Boolean = false
 
     init {
         channel.setMethodCallHandler(this)
@@ -143,9 +177,31 @@ class EpubReaderView(
      */
     private fun setPreferences(preferences: Map<String, Any?>?) {
         if (preferences == null) return
+        applyDualPagePreferences(preferences)
         currentPreferences = currentPreferences.plus(buildPreferencesFromMap(preferences))
         navigatorFragment?.submitPreferences(currentPreferences)
         applyFontWeightCascade()
+    }
+
+    /**
+     * 解析 [preferences] 中的 dualPageMode／isLandscape 欄位並更新對應欄位；
+     * 任一欄位實際改變時使 FXL 縮放快取失效——單頁/雙頁切換或裝置旋轉時，
+     * container 可用寬度的計算基準（見 applyFxlFitScale()）都會改變，沿用舊的
+     * 快取值會算錯縮放比例。必須在 [buildPreferencesFromMap] 之前呼叫（後者會
+     * 讀取剛更新的 dualPageMode／isLandscape 欄位來計算 spread）。
+     */
+    private fun applyDualPagePreferences(preferences: Map<String, Any?>) {
+        var changed = false
+        (preferences["dualPageMode"] as? String)?.let {
+            val newValue = DualPageMode.fromWireValue(it)
+            if (newValue != dualPageMode) changed = true
+            dualPageMode = newValue
+        }
+        (preferences["isLandscape"] as? Boolean)?.let {
+            if (it != isLandscape) changed = true
+            isLandscape = it
+        }
+        if (changed) cachedFxlFitScale = null
     }
 
     /**
@@ -393,6 +449,7 @@ class EpubReaderView(
             pageMargins = (map["pageMargins"] as? Number)?.toDouble(),
             textAlign = (map["textAlign"] as? String)?.let { textAlignFromName(it) },
             publisherStyles = map["publisherStyles"] as? Boolean,
+            spread = if (isDualPageEnabled(dualPageMode, isLandscape)) Spread.ALWAYS else Spread.NEVER,
         )
     }
 
@@ -534,6 +591,7 @@ class EpubReaderView(
             navigatorFragment = activity.supportFragmentManager
                 .findFragmentByTag(fragmentTag) as? EpubNavigatorFragment
             if (initialPreferences != null && initialPreferences.isNotEmpty()) {
+                applyDualPagePreferences(initialPreferences)
                 currentPreferences = currentPreferences.plus(buildPreferencesFromMap(initialPreferences))
                 navigatorFragment?.submitPreferences(currentPreferences)
             }
