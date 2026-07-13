@@ -1,6 +1,7 @@
 package cc.ugotit.elinkbook
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.graphics.pdf.PdfRenderer
 import android.net.Uri
 import android.os.ParcelFileDescriptor
@@ -140,6 +141,109 @@ class PdfReaderView(
                 "manual" -> MANUAL
                 else -> NONE
             }
+        }
+    }
+
+    /**
+     * 橫向雙頁顯示觸發模式（FR-41，epic-16-dual-page），對應 Dart
+     * DualPageMode 列舉（`app/lib/reader/dual_page_mode.dart`）透過
+     * Method Channel 傳來的 `.name` 字串（'auto'／'always'／'never'）。
+     */
+    internal enum class DualPageMode {
+        AUTO, ALWAYS, NEVER;
+
+        companion object {
+            /** 未知或非 String 的原始值一律正規化為 [AUTO]（預設），與
+             * BookReaderPrefs.dualPageMode 為 null 時的既有語意一致。*/
+            fun fromWireValue(value: String?): DualPageMode = when (value) {
+                "always" -> ALWAYS
+                "never" -> NEVER
+                else -> AUTO
+            }
+        }
+    }
+
+    /**
+     * PDF 雙頁顯示的頁面配對閱讀方向（FR-41），對應 Dart DualPageDirection
+     * 列舉（`app/lib/reader/dual_page_direction.dart`）透過 Method Channel
+     * 傳來的 `.name` 字串（'ltr'／'rtl'）。
+     */
+    internal enum class DualPageDirection {
+        LTR, RTL;
+
+        companion object {
+            /** 未知或非 String 的原始值一律正規化為 [LTR]（預設），與
+             * BookReaderPrefs.dualPageDirection 為 null 時的語意一致。*/
+            fun fromWireValue(value: String?): DualPageDirection = when (value) {
+                "rtl" -> RTL
+                else -> LTR
+            }
+        }
+    }
+
+    companion object {
+        /**
+         * 雙頁顯示是否應該生效（spec.md renderCurrentSpread() 步驟 1）：
+         * `always` 一律生效；`auto` 僅在橫向時生效；`never` 一律不生效；
+         * 手動裁切編輯模式中一律強制視為不生效（spec.md I-8）。抽成
+         * internal 純函式（不依賴任何 Android View/Bitmap），可脫離真機
+         * 直接以 JVM 單元測試涵蓋——本 epic 技術風險最高的 C-4 對稱規則
+         * 即靠這組純函式把邏輯與必須真機驗證的像素渲染切開。
+         */
+        internal fun isDualPageEnabled(
+            dualPageMode: DualPageMode,
+            isLandscape: Boolean,
+            cropEditModeActive: Boolean,
+        ): Boolean {
+            if (cropEditModeActive) return false
+            return dualPageMode == DualPageMode.ALWAYS ||
+                (dualPageMode == DualPageMode.AUTO && isLandscape)
+        }
+
+        /**
+         * 依 [direction] 決定 spread 左右頁的 index 配對（spec.md
+         * renderCurrentSpread() 步驟 3）：[anchor] 是目前的
+         * currentPageIndex；`ltr` 時左頁＝anchor、右頁＝anchor+1，`rtl`
+         * 時左右對調。回傳 Pair(leftIndex, rightIndex)，呼叫端仍需自行
+         * 檢查各 index 是否落在 `0 until totalPages` 範圍內（超出範圍的
+         * 一側以白色背景留白）。
+         */
+        internal fun pairIndices(anchor: Int, direction: DualPageDirection): Pair<Int, Int> =
+            if (direction == DualPageDirection.RTL) {
+                Pair(anchor + 1, anchor)
+            } else {
+                Pair(anchor, anchor + 1)
+            }
+
+        /**
+         * 雙頁模式生效時，`nextPage()` 的翻頁步進量（審查修正 C-4）：目前
+         * 顯示第 0 頁封面且 [coverAlone] 開啟時步進 1（跳到 spread
+         * `[1,2]`），其餘情境步進 2；雙頁未生效時維持既有單頁步進 1。
+         */
+        internal fun nextPageStep(
+            currentPageIndex: Int,
+            dualPageEnabled: Boolean,
+            coverAlone: Boolean,
+        ): Int {
+            if (!dualPageEnabled) return 1
+            return if (currentPageIndex == 0 && coverAlone) 1 else 2
+        }
+
+        /**
+         * 雙頁模式生效時，`previousPage()` 的翻頁步進量（審查修正 C-4，
+         * 後退到封面的對稱規則）：目前 spread 左頁 index 為 1 且
+         * [coverAlone] 開啟時（即目前在 `[1,2]`）步進 1（回到封面
+         * index 0），其餘情境步進 2；雙頁未生效時維持既有單頁步進 1。
+         * 呼叫端仍須確認 `currentPageIndex - step >= 0` 才可實際翻頁，
+         * 避免對負數 index 呼叫 `openPage()`。
+         */
+        internal fun previousPageStep(
+            currentPageIndex: Int,
+            dualPageEnabled: Boolean,
+            coverAlone: Boolean,
+        ): Int {
+            if (!dualPageEnabled) return 1
+            return if (currentPageIndex == 1 && coverAlone) 1 else 2
         }
     }
 
