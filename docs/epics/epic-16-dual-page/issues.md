@@ -136,9 +136,9 @@
 
 ## Issue 5：PDF 手動裁切 × 雙頁互動安全
 
-**依賴：** Issue 3
+**Status:** ✅ 已完成。依 `plans/plan-issue-5.md` Task 1-3 完成實作：規劃階段透過程式碼分析確認 Issue 3 既有架構（`enterCropEditMode()`／`exitCropEditMode()`／`nextPage()`/`previousPage()` 自 Issue 3 起未被異動過）已自動滿足本 issue 描述的三項需求；另外發現並修補一個 issues.md 未描述的真實風險（人類確認列入範圍）：`setPdfPreferences()` 收到偏好變動時未檢查 `cropEditModeActive`，裝置旋轉或純濾鏡調整皆可能在裁切編輯模式中覆蓋 `renderFullPageForCropPreview()` 設定的預覽狀態，讓 `CropOverlayView` 座標假設與畫面不同步——已將 `cropEditModeActive` 守衛提升至 `setPdfPreferences()` 最前面、提前 `return`，一次堵死兩個入口。新增 `integration_test` 涵蓋翻頁暫停、裝置旋轉（含真實 `Surface` 尺寸變動，驗證 `CropOverlayView.onSizeChanged()`）、雙頁模式下手動裁切確認流程的持久化驗證。`/superpowers:requesting-code-review` 審查（`tmp/epic-16/reviews/review-issue-5-integrated.md`）核准，實作與計劃逐字對齊、零偏離，無 Critical/Important 問題；236 個 `flutter test` 全數通過、`flutter analyze` 乾淨、原生端 JVM 測試 BUILD SUCCESSFUL、兩個 `integration_test` 檔案在真機（`3CEF42ECD491687`，Android 15）驗證共 34 個測試全數通過。已於 branch `epic-16/crop-dual-page-safety`（3 個 commit）完成，經 PR #40 合併回 `main`（commit `10f65de`）。
 
-**Status:** ready-for-agent
+**依賴：** Issue 3
 
 **描述：**
 整合既有裁切功能（`epic-4-pdf-enhance` 已完成的 `CropOverlayView`／`enterCropEditMode`）與雙頁模式的交互（決策 #10／`spec.md` I-8）：

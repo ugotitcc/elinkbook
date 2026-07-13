@@ -10,6 +10,18 @@
 
 **Tech Stack:** Kotlin（`PdfReaderView.kt`）、`integration_test`（真機，本 issue 全部驗證皆需真機，無可脫離裝置的純邏輯異動）。
 
+## 開發狀態（已完成，2026-07-13）
+
+Task 1-3 全數完成並提交，branch `epic-16/crop-dual-page-safety`，共 3 個 commit：
+
+```
+332d71d fix(epic-16): setPdfPreferences() 裁切編輯模式中改呼叫 renderFullPageForCropPreview()，避免裝置旋轉造成 CropOverlayView 座標不同步 — Task 1
+d2fc8b3 test(epic-16): pdf_dual_page_test 新增裁切編輯模式的翻頁暫停與裝置旋轉安全驗證 — Task 2
+5fd7db4 test(epic-16): reader_screen_test 新增雙頁模式下手動裁切確認流程的持久化驗證 — Task 3
+```
+
+**審查歷程**：`/superpowers:requesting-code-review` 審查（`tmp/epic-16/reviews/review-issue-5-integrated.md`）：實作與計劃逐字對齊，零偏離（3 個檔案、232 行新增），無 Critical／Important 問題，僅 2 項 Minor（既有慣例延續，不需處理）。236 個 `flutter test` 全數通過、`flutter analyze` 乾淨、原生端 JVM 測試 BUILD SUCCESSFUL、兩個 `integration_test` 檔案在真機（`3CEF42ECD491687`，Android 15）重新驗證共 34 個測試全數通過。**最終結論：Ready to merge: Yes**。已透過 PR #40 合併回 `main`（commit `10f65de`）。
+
 ## Global Constraints
 
 - **前置狀態（已確認完成，非假設）**：Issue 3、Issue 4 皆已完成並合併回 `main`（Issue 3：PR #38；Issue 4：PR #39 併入 `epic-16/dual-page-issue3` 再合併回 `main`，commit `183b7c0`）。`PdfReaderView`（Dart／Kotlin）已支援 `dualPageMode`／`dualPageCoverAlone`／`dualPageDirection`／`isLandscape`／`cropEditModeActive`／`onCropRectSelected` 完整建構參數與原生渲染邏輯，`DualPageDirection` 全域固定預設值為 `rtl`。本計劃在 `main` 上繼續開工。
@@ -33,7 +45,7 @@
 
 本 task 的效果是像素層級的（畫面顯示內容是否維持裁切預覽狀態），無法透過自動化測試直接斷言渲染結果本身，因此不採用「先寫失敗測試」的標準 TDD 順序——先做程式碼修改，Task 2 補上「不出現例外」的結構性回歸測試（弱保證，但是這類原生 View 渲染邏輯在本 epic 一貫的驗證上限，見 Global Constraints）。
 
-- [ ] **Step 1：修改 `setPdfPreferences()`**
+- [x] **Step 1：修改 `setPdfPreferences()`**
 
 把 `app/android/app/src/main/kotlin/cc/ugotit/elinkbook/PdfReaderView.kt` 的 `setPdfPreferences()` 方法（第 325-350 行）：
 
@@ -122,7 +134,7 @@
     }
 ```
 
-- [ ] **Step 2：編譯檢查**
+- [x] **Step 2：編譯檢查**
 
 ```bash
 cd app/android
@@ -131,7 +143,7 @@ cd app/android
 
 Expected：`BUILD SUCCESSFUL`。
 
-- [ ] **Step 3：既有 JVM 單元測試回歸**
+- [x] **Step 3：既有 JVM 單元測試回歸**
 
 ```bash
 ./gradlew :app:testDebugUnitTest --tests "cc.ugotit.elinkbook.PdfReaderViewTest"
@@ -139,7 +151,7 @@ Expected：`BUILD SUCCESSFUL`。
 
 Expected：`BUILD SUCCESSFUL`，全數既有測試（34 個）不受影響（本 task 未變動任何 companion object 純函式，`setPdfPreferences()` 是 instance method，不在 JVM 測試涵蓋範圍內，維持 Issue 3 既定的「像素渲染邏輯留給 integration_test」分工）。
 
-- [ ] **Step 4：Commit**
+- [x] **Step 4：Commit**
 
 ```bash
 cd U:\MyDeveloper\AI\elinkBook
@@ -160,7 +172,7 @@ git commit -m "fix(epic-16): setPdfPreferences() 裁切編輯模式中改呼叫 
 
 **已知測試限制**：本 task 驗證的是「翻頁是否確實被暫停」「是否觸發例外」這類結構性事實，不是「畫面是否真的顯示裁切預覽」這種像素層級事實（見 Global Constraints）。
 
-- [ ] **Step 1：撰寫失敗測試——擴充 `pdf_dual_page_test.dart`**
+- [x] **Step 1：撰寫失敗測試——擴充 `pdf_dual_page_test.dart`**
 
 在 `app/integration_test/pdf_dual_page_test.dart` 檔案最後一個測試（`'auto 模式橫向：封面獨立關閉時，index 0 也步進 2（不再獨立配對，Issue 4）'`）之後、`}`（`main()` 結尾）之前，新增以下 2 個測試：
 
@@ -291,7 +303,7 @@ git commit -m "fix(epic-16): setPdfPreferences() 裁切編輯模式中改呼叫 
   });
 ```
 
-- [ ] **Step 2：於真實裝置執行 integration_test，確認 Task 1 修正前會失敗**
+- [x] **Step 2：於真實裝置執行 integration_test，確認 Task 1 修正前會失敗**
 
 若想先驗證測試本身有意義，可暫時 `git stash` Task 1 的修改後執行：
 
@@ -303,7 +315,7 @@ flutter test integration_test/pdf_dual_page_test.dart -d <device-id>
 
 Expected（Task 1 修正前）：兩個新測試中，第一個（翻頁暫停）應仍會通過（`cropEditModeActive` 守衛本身在 Task 1 之前就存在，不受本次修正影響）；第二個（裝置旋轉）在 Task 1 修正前也不會拋出例外或斷言失敗（因為本測試只斷言「不出現例外」這個弱保證，這是像素層級限制下能做到的最強驗證，見 Global Constraints）——若已執行 `git stash`，記得 `git stash pop` 還原 Task 1 的修正再繼續。
 
-- [ ] **Step 3：於真實裝置執行 integration_test，確認全數通過**
+- [x] **Step 3：於真實裝置執行 integration_test，確認全數通過**
 
 ```bash
 flutter test integration_test/pdf_dual_page_test.dart -d <device-id>
@@ -311,7 +323,7 @@ flutter test integration_test/pdf_dual_page_test.dart -d <device-id>
 
 Expected：全數測試通過（含既有 7 個與本 task 新增的 2 個，共 9 個）。
 
-- [ ] **Step 4：Commit**
+- [x] **Step 4：Commit**
 
 ```bash
 cd U:\MyDeveloper\AI\elinkBook
@@ -330,7 +342,7 @@ git commit -m "test(epic-16): pdf_dual_page_test 新增裁切編輯模式的翻�
 - Consumes：既有 `PdfSettingsSheet` 顯示分頁 `Key('pdf_settings_dual_page_mode_always')`（Issue 3）；既有裁切分頁 `Key('pdf_settings_crop_mode_manual')`（epic-4）；既有 `ReaderScreen`／`prefsManager`／`_stageAssetAsFile`／`_book`／`_layoutSettingsButtonReady`／`_pumpUntil` 頂層 helper
 - Produces：真機可驗證的「雙頁模式下執行手動裁切確認，裁切與雙頁設定值皆正確持久化、互不清空」端到端回歸測試，對應 `issues.md` Issue 5 驗收標準第 1 點
 
-- [ ] **Step 1：撰寫失敗測試——擴充 `reader_screen_test.dart`**
+- [x] **Step 1：撰寫失敗測試——擴充 `reader_screen_test.dart`**
 
 在 `app/integration_test/reader_screen_test.dart` 開頭 import 區塊，`import 'package:elinkbook/reader/dual_page_direction.dart';` 之後新增：
 
@@ -423,7 +435,7 @@ import 'package:elinkbook/reader/dual_page_mode.dart';
   });
 ```
 
-- [ ] **Step 2：於真實裝置執行 integration_test**
+- [x] **Step 2：於真實裝置執行 integration_test**
 
 ```bash
 cd app
@@ -432,7 +444,7 @@ flutter test integration_test/reader_screen_test.dart -d <device-id>
 
 Expected：全數測試通過（含既有測試與本 task 新增的 1 個）。
 
-- [ ] **Step 3：全專案回歸測試 + `flutter analyze`**
+- [x] **Step 3：全專案回歸測試 + `flutter analyze`**
 
 ```bash
 flutter test
@@ -441,7 +453,7 @@ flutter analyze
 
 Expected：`flutter test` 全數 PASS（含 Task 1-3 相關的所有測試，以及既有全部測試不受影響）；`flutter analyze` "No issues found!"。
 
-- [ ] **Step 4：Commit**
+- [x] **Step 4：Commit**
 
 ```bash
 cd U:\MyDeveloper\AI\elinkBook
