@@ -38,7 +38,7 @@ class BookReaderPrefs {
 
   final DualPageMode? dualPageMode; // null=auto（橫向自動雙頁）
   final bool? dualPageCoverAlone; // null=true（封面獨立，僅 PDF 有效）
-  final DualPageDirection? dualPageDirection; // null=ltr（僅 PDF 有效）
+  final DualPageDirection? dualPageDirection; // null=rtl（僅 PDF 有效）
 
   const BookReaderPrefs({
     this.fontFamily,

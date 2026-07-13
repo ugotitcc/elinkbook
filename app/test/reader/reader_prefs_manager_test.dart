@@ -47,7 +47,7 @@ void main() {
       expect(resolved.pdfCropRect, isNull);
       expect(resolved.dualPageMode, DualPageMode.auto);
       expect(resolved.dualPageCoverAlone, isTrue);
-      expect(resolved.dualPageDirection, DualPageDirection.ltr);
+      expect(resolved.dualPageDirection, DualPageDirection.rtl);
     });
 
     test('單書覆寫存在時，優先套用單書覆寫，忽略全域預設', () {
