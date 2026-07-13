@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/reader/book_reader_prefs.dart';
 import 'package:elinkbook/reader/dual_page_mode.dart';
+import 'package:elinkbook/reader/dual_page_direction.dart';
 import 'package:elinkbook/reader/pdf_fit_mode.dart';
 import 'package:elinkbook/reader/pdf_crop_mode.dart';
 import 'package:elinkbook/reader/pdf_crop_rect.dart';
@@ -345,6 +346,127 @@ void main() {
 
     expect(notified?.pdfContrast, greaterThan(0));
     expect(notified?.dualPageMode, DualPageMode.always); // 關鍵斷言：未被清空
+  });
+
+  testWidgets('顯示分頁新增封面獨立開關', (tester) async {
+    await _pumpSheet(tester, BookReaderPrefs.empty, (_) {});
+
+    expect(find.byKey(const Key('pdf_settings_dual_page_cover_alone')),
+        findsOneWidget);
+  });
+
+  testWidgets('封面獨立開關初始值反映 prefs（未持久化時預設開啟）', (tester) async {
+    await _pumpSheet(tester, BookReaderPrefs.empty, (_) {});
+
+    expect(
+      tester
+          .widget<SwitchListTile>(
+              find.byKey(const Key('pdf_settings_dual_page_cover_alone')))
+          .value,
+      isTrue,
+    );
+  });
+
+  testWidgets('關閉封面獨立開關後，onChanged 帶入 dualPageCoverAlone=false',
+      (tester) async {
+    BookReaderPrefs? notified;
+    await _pumpSheet(tester, BookReaderPrefs.empty, (prefs) => notified = prefs);
+
+    await tester
+        .tap(find.byKey(const Key('pdf_settings_dual_page_cover_alone')));
+    await tester.pump();
+
+    expect(notified?.dualPageCoverAlone, isFalse);
+  });
+
+  testWidgets(
+      '已持久化 dualPageCoverAlone=false 時，調整雙頁模式不會清空該欄位（回歸檢查）',
+      (tester) async {
+    BookReaderPrefs? notified;
+    await _pumpSheet(
+      tester,
+      const BookReaderPrefs(dualPageCoverAlone: false),
+      (prefs) => notified = prefs,
+    );
+
+    await tester
+        .tap(find.byKey(const Key('pdf_settings_dual_page_mode_always')));
+    await tester.pump();
+
+    expect(notified?.dualPageMode, DualPageMode.always);
+    expect(notified?.dualPageCoverAlone, isFalse); // 關鍵斷言：未被清空
+  });
+
+  testWidgets(
+      '顯示分頁新增控制項後仍可正常渲染，不觸發 RenderFlex overflow（審查修正）',
+      (tester) async {
+    await _pumpSheet(tester, BookReaderPrefs.empty, (_) {});
+    await tester.pump();
+
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('顯示分頁新增頁面方向兩個選項按鈕', (tester) async {
+    await _pumpSheet(tester, BookReaderPrefs.empty, (_) {});
+
+    expect(find.byKey(const Key('pdf_settings_dual_page_direction_ltr')),
+        findsOneWidget);
+    expect(find.byKey(const Key('pdf_settings_dual_page_direction_rtl')),
+        findsOneWidget);
+  });
+
+  testWidgets('點擊左到右選項後，onChanged 帶入 dualPageDirection=ltr', (tester) async {
+    BookReaderPrefs? notified;
+    await _pumpSheet(
+      tester,
+      const BookReaderPrefs(dualPageDirection: DualPageDirection.rtl),
+      (prefs) => notified = prefs,
+    );
+
+    // 方向選項在顯示分頁底部，需先捲動才能點擊
+    await tester.ensureVisible(
+        find.byKey(const Key('pdf_settings_dual_page_direction_ltr')));
+    await tester.tap(find.byKey(const Key('pdf_settings_dual_page_direction_ltr')));
+    await tester.pump();
+
+    expect(notified?.dualPageDirection, DualPageDirection.ltr);
+  });
+
+  testWidgets(
+      '點擊右到左選項後，onChanged 帶入 dualPageDirection=rtl（未持久化時預設即為 rtl）',
+      (tester) async {
+    BookReaderPrefs? notified;
+    await _pumpSheet(tester, BookReaderPrefs.empty, (prefs) => notified = prefs);
+
+    // 方向選項在顯示分頁底部，需先捲動才能點擊
+    await tester.ensureVisible(
+        find.byKey(const Key('pdf_settings_dual_page_direction_rtl')));
+    await tester.tap(find.byKey(const Key('pdf_settings_dual_page_direction_rtl')));
+    await tester.pump();
+
+    expect(notified?.dualPageDirection, DualPageDirection.rtl);
+  });
+
+  testWidgets(
+      '已持久化 dualPageDirection=ltr 時，調整封面獨立開關不會清空該欄位（回歸檢查）',
+      (tester) async {
+    BookReaderPrefs? notified;
+    await _pumpSheet(
+      tester,
+      const BookReaderPrefs(dualPageDirection: DualPageDirection.ltr),
+      (prefs) => notified = prefs,
+    );
+
+    // 封面獨立開關在顯示分頁中間偏下，需先捲動才能點擊
+    await tester.ensureVisible(
+        find.byKey(const Key('pdf_settings_dual_page_cover_alone')));
+    await tester
+        .tap(find.byKey(const Key('pdf_settings_dual_page_cover_alone')));
+    await tester.pump();
+
+    expect(notified?.dualPageCoverAlone, isFalse);
+    expect(notified?.dualPageDirection,
+        DualPageDirection.ltr); // 關鍵斷言：未被清空
   });
 }
 

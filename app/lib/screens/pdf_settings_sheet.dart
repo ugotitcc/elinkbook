@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../reader/book_reader_prefs.dart';
+import '../reader/dual_page_direction.dart';
 import '../reader/dual_page_mode.dart';
 import '../reader/pdf_fit_mode.dart';
 import '../reader/pdf_crop_mode.dart';
@@ -42,6 +43,8 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
   late double _boldStrength; // 內部儲存為 UI 顯示用的 0..100，送出前才換算回 0..1
   late PdfCropMode _cropMode;
   late DualPageMode _dualPageMode;
+  late bool _dualPageCoverAlone;
+  late DualPageDirection _dualPageDirection;
 
   @override
   void initState() {
@@ -53,6 +56,8 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
     _boldStrength = (widget.prefs.pdfBoldStrength ?? 0) * 100;
     _cropMode = widget.prefs.pdfCropMode ?? PdfCropMode.none;
     _dualPageMode = widget.prefs.dualPageMode ?? DualPageMode.auto;
+    _dualPageCoverAlone = widget.prefs.dualPageCoverAlone ?? true;
+    _dualPageDirection = widget.prefs.dualPageDirection ?? DualPageDirection.rtl;
   }
 
   @override
@@ -74,12 +79,8 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
       // 都會把已算好的裁切矩形靜默清空成 null。
       pdfCropRect: widget.prefs.pdfCropRect,
       dualPageMode: _dualPageMode,
-      // dualPageCoverAlone／dualPageDirection 的 UI 控制項留給 Issue 4
-      // （見 docs/epics/epic-16-dual-page/issues.md），本分頁尚未追蹤這兩個
-      // 欄位的本地狀態，原樣帶回既有值，避免使用者調整雙頁模式或其他分頁時
-      // 被靜默清空。
-      dualPageCoverAlone: widget.prefs.dualPageCoverAlone,
-      dualPageDirection: widget.prefs.dualPageDirection,
+      dualPageCoverAlone: _dualPageCoverAlone,
+      dualPageDirection: _dualPageDirection,
     ));
   }
 
@@ -133,51 +134,105 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
       (DualPageMode.always, 'always', Icons.view_column, '永遠雙頁'),
       (DualPageMode.never, 'never', Icons.crop_portrait, '永遠單頁'),
     ];
+    const directionOptions = [
+      (
+        DualPageDirection.ltr,
+        'ltr',
+        Icons.format_textdirection_l_to_r,
+        '左到右',
+      ),
+      (
+        DualPageDirection.rtl,
+        'rtl',
+        Icons.format_textdirection_r_to_l,
+        '右到左（日漫慣例）',
+      ),
+    ];
     return Padding(
       padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Fit 模式'),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 4,
-            children: fitOptions.map((option) {
-              final (mode, keySuffix, icon, tooltip) = option;
-              final selected = _fitMode == mode;
-              return IconButton(
-                key: Key('pdf_settings_fit_mode_$keySuffix'),
-                icon: Icon(icon),
-                tooltip: tooltip,
-                color: selected ? Theme.of(context).colorScheme.primary : null,
-                onPressed: () => setState(() {
-                  _fitMode = mode;
-                  _notifyChanged();
-                }),
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 16),
-          const Text('雙頁模式'),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 4,
-            children: dualPageOptions.map((option) {
-              final (mode, keySuffix, icon, tooltip) = option;
-              final selected = _dualPageMode == mode;
-              return IconButton(
-                key: Key('pdf_settings_dual_page_mode_$keySuffix'),
-                icon: Icon(icon),
-                tooltip: tooltip,
-                color: selected ? Theme.of(context).colorScheme.primary : null,
-                onPressed: () => setState(() {
-                  _dualPageMode = mode;
-                  _notifyChanged();
-                }),
-              );
-            }).toList(),
-          ),
-        ],
+      // 外層 Bottom Sheet 是固定 height: 400（見 build() 的 SizedBox），
+      // 本分頁持續新增控制項會讓內容總高度有機會超出固定高度；改用
+      // SingleChildScrollView 包裹，避免觸發 RenderFlex overflow（審查
+      // 修正，見 tmp/epic-16/reviews/review-plan-issue-4.md）。
+      child: SingleChildScrollView(
+        key: const Key('pdf_settings_display_scroll'),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Fit 模式'),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 4,
+              children: fitOptions.map((option) {
+                final (mode, keySuffix, icon, tooltip) = option;
+                final selected = _fitMode == mode;
+                return IconButton(
+                  key: Key('pdf_settings_fit_mode_$keySuffix'),
+                  icon: Icon(icon),
+                  tooltip: tooltip,
+                  color:
+                      selected ? Theme.of(context).colorScheme.primary : null,
+                  onPressed: () => setState(() {
+                    _fitMode = mode;
+                    _notifyChanged();
+                  }),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 16),
+            const Text('雙頁模式'),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 4,
+              children: dualPageOptions.map((option) {
+                final (mode, keySuffix, icon, tooltip) = option;
+                final selected = _dualPageMode == mode;
+                return IconButton(
+                  key: Key('pdf_settings_dual_page_mode_$keySuffix'),
+                  icon: Icon(icon),
+                  tooltip: tooltip,
+                  color:
+                      selected ? Theme.of(context).colorScheme.primary : null,
+                  onPressed: () => setState(() {
+                    _dualPageMode = mode;
+                    _notifyChanged();
+                  }),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 16),
+            SwitchListTile(
+              key: const Key('pdf_settings_dual_page_cover_alone'),
+              title: const Text('封面獨立顯示'),
+              value: _dualPageCoverAlone,
+              onChanged: (v) => setState(() {
+                _dualPageCoverAlone = v;
+                _notifyChanged();
+              }),
+            ),
+            const SizedBox(height: 16),
+            const Text('頁面方向'),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 4,
+              children: directionOptions.map((option) {
+                final (direction, keySuffix, icon, tooltip) = option;
+                final selected = _dualPageDirection == direction;
+                return IconButton(
+                  key: Key('pdf_settings_dual_page_direction_$keySuffix'),
+                  icon: Icon(icon),
+                  tooltip: tooltip,
+                  color:
+                      selected ? Theme.of(context).colorScheme.primary : null,
+                  onPressed: () => setState(() {
+                    _dualPageDirection = direction;
+                    _notifyChanged();
+                  }),
+                );
+              }).toList(),
+            ),
+          ],
+        ),
       ),
     );
   }
