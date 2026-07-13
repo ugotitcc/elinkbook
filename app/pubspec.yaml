@@ -71,6 +71,7 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
     - test/fixtures/sample.pdf
+    - test/fixtures/sample_dual_page.pdf
     - test/fixtures/sample.epub
     - test/fixtures/sample_horizontal.epub
     - test/fixtures/sample_fixed_layout.epub
