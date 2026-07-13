@@ -422,10 +422,13 @@ git commit -m "feat(epic-16): EpubReaderView 依 dualPageMode/isLandscape 切換
                 // 雙頁模式下，右側 WebView 的置中運算必須在「它自己的半寬 slot」
                 // 座標系裡進行，否則 computeCenteringTranslation 會把它往 slot 0
                 // （螢幕左半邊）置中。做法：換算前先把 currentLeft 減去 slot 起點
-                // （0 或 availableWidth），算出 slot 內的相對位移後，再加回 slot
-                // 起點還原成螢幕絕對座標——computeCenteringTranslation 本身完全
-                // 不需要知道「slot」這個概念，簽章不受影響。slot 依排序後的
-                // index 分配（index 0 = 左，1 = 右），不使用數值閾值判斷。
+                // （0 或 availableWidth），讓函式誤以為自己是在 slot 內部（座標
+                // 原點在 slot 起點）計算——回傳值 translation.x = desiredLeft（相對
+                // slot 起點）- 傳入的 currentLeft（已扣掉 slot 起點），展開後等於
+                // 「絕對期望位置 - 原始 currentLeft」，本來就已經是可以直接疊加在
+                // 原始位置上的正確絕對位移，不能再額外加回 slotOffsetX（那樣會把
+                // 右側 WebView 多平移一個 slot 寬度、直接推出可視範圍外）。slot
+                // 依排序後的 index 分配（index 0 = 左，1 = 右），不使用數值閾值判斷。
                 val slotOffsetX = if (isSpread && index == 1) availableWidth.toFloat() else 0f
 
                 val translation = EpubFxlScaler.computeCenteringTranslation(
@@ -437,7 +440,7 @@ git commit -m "feat(epic-16): EpubReaderView 依 dualPageMode/isLandscape 切換
                     currentLeft = currentLeft - slotOffsetX,
                     currentTop = currentTop,
                 )
-                webView.translationX = translation.x + slotOffsetX
+                webView.translationX = translation.x
                 webView.translationY = translation.y
             }
         }
@@ -1124,6 +1127,22 @@ git commit -m "test(epic-16): Issue 6 真機整合測試 + spec.md/issues.md 收
 - **Important #2（已修正）**：`applyDualPagePreferences()`（Task 1）原本只清 `cachedFxlFitScale`，未同步清 `cachedFxlFitScaleIsSpread`，會讓「快取值是否對應目前 spread 狀態」這組不變量短暫不一致。已在 Task 2 新增 Step 3 補上同步清除。
 - **Minor #1（隨 Critical 修正一併解決）**：可見性篩選後只對篩選出的 WebView 做縮放/置中運算，不再對螢幕外的預載 WebView 做多餘計算。
 - **額外修正（審查報告未提及，驗證程式碼時發現）**：審查建議的程式碼在篩選/排序階段量測 `getLocationOnScreen()` 時，尚未歸零 `translationX`/`translationY`——若上一輪計算已對某個 WebView 套用過位移，量到的會是「上一輪殘留的位移後座標」而非原始 layout 位置，污染本輪的可見性判斷與排序。已在篩選/排序之前，對所有找到的 WebView（含螢幕外的）先歸零 `translationX`/`translationY`（`pivotX`/`pivotY` 恆為 `(0,0)` 時 `scale` 不影響量測到的左上角座標，不需要在這裡連 scale 也重置）。
+
+## Bugfix 紀錄（2026-07-14，真機人工視覺 QA 發現）
+
+依本計劃實作並合併後，人類在真機上實際開啟真實漫畫素材測試，回報：翻頁至非封面內頁、滑動結束套用 fit 縮放後，**右側 WebView 內容消失（變成空白）**；封面單頁一開始也是空白，兩者回報為同一根因。
+
+依 `superpowers:systematic-debugging` 完整跑過 Phase 1-4：因真機環境本身在本次除錯過程中出現螢幕休眠／系統 UI 焦點異常等問題，無法即時取得新的真機日誌佐證，改以嚴謹手動代入數值逐步推導 `applyFxlFitScale()` 的座標運算，確認根因並以最小改動修正：
+
+**根因**：Task 2 的 `webView.translationX = translation.x + slotOffsetX` 重複疊加了 `slotOffsetX`。`EpubFxlScaler.computeCenteringTranslation()` 收到的 `currentLeft` 參數已經預先扣掉 `slotOffsetX`（讓函式誤以為自己是在 slot 內部座標系計算），其回傳的 `translation.x` 展開後已經等於「絕對期望位置 - 原始 currentLeft」——本身就是可以直接疊加在原始位置上的正確絕對位移。呼叫端後續再把 `slotOffsetX` 加回去，等於把右側 WebView 多平移了一個 slot 寬度（例如 container 寬度 2400、slot 寬度 1200 時，右側 WebView 會被多推移 1200px，直接推出螢幕右緣之外），因此翻到非封面內頁後右側內容消失；索引 0（左側）因為 `slotOffsetX` 恆為 0，不受影響，此路徑本身沒有 bug——這與人類回報「左側正常、只有右側消失」的現象完全吻合。封面頁的空白現象則是同一個計算路徑在 `isSpread` 被（螢幕外預載 WebView）短暫誤判為 `true` 時，同樣的多餘位移邏輯造成。
+
+**修正**：`webView.translationX = translation.x + slotOffsetX` 改為 `webView.translationX = translation.x`（移除多餘的 `+ slotOffsetX`）。已在 `.worktrees/epic-16-issue-6` 套用，`./gradlew :app:compileDebugKotlin`／`:app:testDebugUnitTest`／`flutter analyze` 皆通過。
+
+**人類真機複驗（2026-07-14）：通過。** 封面頁正常顯示、翻頁至內頁後左右兩頁正常顯示且無縫並排，FR-41 核心驗收點確認通過。
+
+**已記錄的後續追蹤項（不阻塞本 issue 完成，留待後續優化/新 issue）：**
+1. 每次換頁時會有縮放動作（fit 重新計算/套用的視覺跳動）影響閱讀體驗，需要後續排查優化。
+2. 未來考慮讓 PDF／EPUB 漫畫在橫向雙頁模式（甚至單頁模式）下改為全版面沉浸顯示（隱藏系統狀態列與導覽列），對應 `FxlSettingsSheet` 已預留但未實作的 FR-42 全螢幕開關 UI 擴充空間。
 
 ## Execution Handoff
 

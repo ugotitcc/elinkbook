@@ -452,10 +452,16 @@ class EpubReaderView(
                 // 雙頁模式下，右側 WebView 的置中運算必須在「它自己的半寬 slot」
                 // 座標系裡進行，否則 computeCenteringTranslation 會把它往 slot 0
                 // （螢幕左半邊）置中。做法：換算前先把 currentLeft 減去 slot 起點
-                // （0 或 availableWidth），算出 slot 內的相對位移後，再加回 slot
-                // 起點還原成螢幕絕對座標——computeCenteringTranslation 本身完全
-                // 不需要知道「slot」這個概念，簽章不受影響。slot 依排序後的
-                // index 分配（index 0 = 左，1 = 右），不使用數值閾值判斷。
+                // （0 或 availableWidth），讓函式誤以為自己是在 slot 內部（座標
+                // 原點在 slot 起點）計算——回傳值 translation.x = desiredLeft（相對
+                // slot 起點）- 傳入的 currentLeft（已扣掉 slot 起點），展開後等於
+                // 「絕對期望位置 - 原始 currentLeft」，本來就已經是可以直接疊加在
+                // 原始位置上的正確絕對位移，不能再額外加回 slotOffsetX（那樣會把
+                // 右側 WebView 多平移一個 slot 寬度、直接推出可視範圍外——這正是
+                // 真機測試發現「翻頁後右側內容消失」的根因，見
+                // docs/epics/epic-16-dual-page/plans/plan-issue-6.md 審查修正
+                // 紀錄之後的 bugfix 說明）。slot 依排序後的 index 分配（index 0 =
+                // 左，1 = 右），不使用數值閾值判斷。
                 val slotOffsetX = if (isSpread && index == 1) availableWidth.toFloat() else 0f
 
                 val translation = EpubFxlScaler.computeCenteringTranslation(
@@ -467,7 +473,7 @@ class EpubReaderView(
                     currentLeft = currentLeft - slotOffsetX,
                     currentTop = currentTop,
                 )
-                webView.translationX = translation.x + slotOffsetX
+                webView.translationX = translation.x
                 webView.translationY = translation.y
             }
         }
