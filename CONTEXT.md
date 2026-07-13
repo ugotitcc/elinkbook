@@ -61,7 +61,7 @@ _Avoid_: 偏好設定服務、設定 Facade
 _Avoid_: 最終偏好、生效設定
 
 **FXL 換頁熱區（暫代版）（FXL Tap-Zone Navigation, Interim）**：
-固定版面（FXL）EPUB 專屬的最小化點擊換頁機制：畫面左／右各 1/3 寬度熱區點擊觸發上一頁／下一頁（呼叫 Readium `goForward(animated=false)`/`goBackward(animated=false)`，不使用滑動動畫），中間 1/3 熱區切換懸浮控制項（返回鍵／設定鍵）顯示或隱藏。用來取代原生滑動手勢，避免 E-Ink 裝置換頁動畫殘留殘影，也繞開 FXL 相鄰頁 WebView 預載零尺寸造成的縮放跳動（見 `epic-16-dual-page` 已知限制）。左右熱區固定不隨閱讀方向鏡像、不可自訂，僅適用於 FXL；流式 EPUB 不受影響、維持原生手勢。**與 PRD「可自訂 3×3 點擊九宮格」（傳統/單手/類 Kindle 多種對應模式、RTL 鏡像）是不同東西**——後者是尚未開始的獨立功能，本機制只是範圍受限的暫時方案。
+固定版面（FXL）EPUB 專屬的最小化點擊換頁機制：畫面左／右各 1/3 寬度熱區點擊觸發上一頁／下一頁（呼叫 Readium `goForward(animated=false)`/`goBackward(animated=false)`，不使用滑動動畫，換頁後懸浮控制項一律自動收起），中間 1/3 熱區切換懸浮控制項（返回鍵／設定鍵）顯示或隱藏（切換語意，與左右熱區的「強制收起」不同）。用來取代原生滑動手勢，避免 E-Ink 裝置換頁動畫殘留殘影，也繞開 FXL 相鄰頁 WebView 預載零尺寸造成的縮放跳動（見 `epic-16-dual-page` 已知限制）。左右熱區固定不隨閱讀方向鏡像、不可自訂，僅適用於 FXL；流式 EPUB 不受影響、維持原生手勢。熱區疊加層會擋住底層 WebView 的所有觸控（含 FXL 內嵌超連結，若有的話），刻意接受的暫代方案限制。**與 PRD「可自訂 3×3 點擊九宮格」（傳統/單手/類 Kindle 多種對應模式、RTL 鏡像）是不同東西**——後者是尚未開始的獨立功能，本機制只是範圍受限的暫時方案。
 _Avoid_: 九宮格、熱區導航（皆容易與 PRD 完整版混淆，應明確加註「暫代版」或「FXL 專屬」）
 
 **設定面板草稿具現化原則（Settings Sheet Draft Concretization Rule）**：

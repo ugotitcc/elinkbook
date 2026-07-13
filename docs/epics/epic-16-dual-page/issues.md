@@ -260,17 +260,19 @@ Issue 6 完成後的真機視覺 QA 發現：EPUB FXL 每次換頁時，Readium 
 依討論定案的方向：**只針對 FXL（`isFixedLayout == true`）**，改用「三欄點擊熱區」（見 `CONTEXT.md`「FXL 換頁熱區（暫代版）」）取代原生滑動手勢換頁，直接呼叫 Readium 既有的 `goForward(animated = false)`／`goBackward(animated = false)`（不使用動畫，繞開「揭露未縮放內容」的可見時間窗口，理論上能連根拔除跳動，而非只是碰運氣改善）；流式 EPUB 不受影響，維持原生手勢與文字選取能力。**這是範圍受限的暫代方案，不是** PRD 完整的可自訂 3×3 九宮格系統（傳統/單手/類 Kindle 多種對應模式、RTL 鏡像）——後者是獨立的未來 Epic，本 issue 不實作。
 
 - **`EpubReaderView.kt`**：`onMethodCall()` 新增 `"nextPage"`／`"previousPage"` case，分別呼叫 `navigatorFragment?.goForward(animated = false)`／`navigatorFragment?.goBackward(animated = false)`（`EpubNavigatorFragment` 本身已實作 `OverflowableNavigator`，這兩個方法無需新增任何自訂配對邏輯，直接沿用 Readium 既有的 spread 步進判斷）。
-- **`EpubReaderView`（Dart）**：內部新增 `_isFixedLayout` 狀態（由既有 `onLayoutResolved` 回呼得知，預設 `false`）；新增 `nextPage()`／`previousPage()` 公開方法（比照 `PdfReaderView` 既有慣例，供測試以 `tester.state(...) as dynamic` 呼叫）；新增建構參數 `onToggleFixedLayoutControls: VoidCallback?`；`build()` 於 `_isFixedLayout == true` 時，用 `Stack` 在 `AndroidView` 上疊加三欄透明點擊熱區（左 1/3＝上一頁、右 1/3＝下一頁、中間 1/3＝觸發 `onToggleFixedLayoutControls`）；`_isFixedLayout == false`（預設、流式 EPUB）時完全不疊加，原生手勢/文字選取不受任何影響。
-- **`ReaderScreen`**：新增 `_fixedLayoutControlsVisible` 狀態（預設 `true`）；`_buildNativeView()` 傳入 `onToggleFixedLayoutControls: () => setState(() => _fixedLayoutControlsVisible = !_fixedLayoutControlsVisible)`；`_buildBody()` 內兩個懸浮按鈕（`reader_fixed_layout_back_button`／`reader_fixed_layout_settings_button`）的顯示條件從 `if (_isFixedLayout)` 改為 `if (_isFixedLayout && _fixedLayoutControlsVisible)`。
+- **`EpubReaderView`（Dart）**：內部新增 `_isFixedLayout` 狀態（由既有 `onLayoutResolved` 回呼得知，預設 `false`）；新增 `nextPage()`／`previousPage()` 公開方法（比照 `PdfReaderView` 既有慣例，供測試以 `tester.state(...) as dynamic` 呼叫）；新增建構參數 `onToggleFixedLayoutControls: VoidCallback?`（中間熱區觸發，切換顯示/隱藏）與 `onFixedLayoutPageTurn: VoidCallback?`（左/右熱區換頁時觸發，用於自動收起懸浮控制項，人類決策 2026-07-14）；`build()` 於 `_isFixedLayout == true` 時，於 `Stack` 中疊加三欄透明點擊熱區（左 1/3＝上一頁、右 1/3＝下一頁、中間 1/3＝觸發 `onToggleFixedLayoutControls`）——**`AndroidView` 必須永遠是 `Stack` 的第一個子節點、熱區疊加層為條件式存在的第二個子節點**（`/superpowers:requesting-code-review` 審查修正：不可依 `_isFixedLayout` 條件式切換 `build()` 回傳的根 widget 型別，否則會讓 Flutter 銷毀重建底層原生 `EpubReaderView.kt` 實例）；`_isFixedLayout == false`（預設、流式 EPUB）時熱區疊加層不存在，原生手勢/文字選取不受任何影響。
+- **`ReaderScreen`**：新增 `_fixedLayoutControlsVisible` 狀態（預設 `true`）；`_buildNativeView()` 傳入 `onToggleFixedLayoutControls: () => setState(() => _fixedLayoutControlsVisible = !_fixedLayoutControlsVisible)`（切換語意）與 `onFixedLayoutPageTurn: () => setState(() => _fixedLayoutControlsVisible = false)`（強制隱藏語意，換頁後一律收起，不論收起前是顯示或隱藏）；`_buildBody()` 內兩個懸浮按鈕（`reader_fixed_layout_back_button`／`reader_fixed_layout_settings_button`）的顯示條件從 `if (_isFixedLayout)` 改為 `if (_isFixedLayout && _fixedLayoutControlsVisible)`。
+
+**已知取捨（`/superpowers:requesting-code-review` 審查意見記錄）**：三欄熱區疊加層覆蓋整個 `AndroidView` 範圍，會擋住底層 Readium WebView 的所有觸控事件，若 FXL 書籍內嵌超連結等 HTML 互動元素將失效——目前鎖定的使用情境（FXL 漫畫）通常沒有這類元素，此為刻意接受的暫代方案限制。雙指縮放（pinch-to-zoom）手勢是否也一併攔截，待人類實機確認目前版本是否已支援後再決定，本 issue 初版**不**攔截。
 
 **單元測試要求：**
-- `EpubReaderView` widget test：模擬 `onLayoutResolved` 回呼使 `_isFixedLayout` 變為 `true` 後，左／右／中三個熱區點擊分別觸發 `previousPage`／`nextPage` method channel 呼叫、`onToggleFixedLayoutControls` callback；`_isFixedLayout` 維持預設 `false`（未收到 `onLayoutResolved`）時不疊加熱區。
-- `ReaderScreen` widget test：點擊中間熱區後懸浮按鈕消失；再點一次恢復顯示。
+- `EpubReaderView` widget test：模擬 `onLayoutResolved` 回呼使 `_isFixedLayout` 變為 `true` 後，左／右／中三個熱區點擊分別觸發 `previousPage`／`nextPage` method channel 呼叫、`onToggleFixedLayoutControls` callback；左／右熱區點擊皆應觸發 `onFixedLayoutPageTurn`、中間熱區不應觸發它；`_isFixedLayout` 維持預設 `false`（未收到 `onLayoutResolved`）時不疊加熱區。
+- `ReaderScreen` widget test：點擊中間熱區後懸浮按鈕消失、再點一次恢復顯示；點擊左／右熱區換頁後懸浮按鈕自動收起。
 - **已知測試限制**：`goForward(animated=false)`／`goBackward(animated=false)` 呼叫後的實際換頁效果與動畫消除效果無法透過 `flutter test` 驗證，留給本 issue 的 `integration_test` 與真機人工視覺 QA。
 
 **驗收標準：**
 - 上述測試皆通過
 - `flutter analyze` 乾淨
 - `integration_test`（真實裝置，使用真實漫畫 FXL EPUB 素材）：點擊左／右熱區正確換頁（單頁與雙頁模式皆需驗證）、無滑動動畫、翻頁不崩潰
-- 人工視覺確認：真機換頁時不再出現「先停下再閃一下縮小」的跳動；點擊中間熱區正確切換懸浮按鈕顯示/隱藏
+- 人工視覺確認：真機換頁時不再出現「先停下再閃一下縮小」的跳動；點擊中間熱區正確切換懸浮按鈕顯示/隱藏；點擊左/右熱區換頁後懸浮按鈕自動收起
 - 若驗證後跳動仍未完全消除，記錄實際觀察結果與可能殘餘原因於本工單，不強行視為完全解決

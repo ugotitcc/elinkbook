@@ -122,7 +122,7 @@ git commit -m "feat(epic-16): EpubReaderView 新增 nextPage/previousPage method
 
 **Interfaces:**
 - Consumes：Task 1 的原生 `"nextPage"`/`"previousPage"` method channel。
-- Produces：`EpubReaderView` 新增建構參數 `onToggleFixedLayoutControls: VoidCallback?`；新增公開方法 `nextPage()`/`previousPage()`（供 Task 4 `integration_test` 與測試以 `tester.state(...) as dynamic` 呼叫）；新增 `Key`：`epub_fxl_tap_zone_previous`／`epub_fxl_tap_zone_toggle_controls`／`epub_fxl_tap_zone_next`（供 Task 3 的 `ReaderScreen` 測試使用）。
+- Produces：`EpubReaderView` 新增建構參數 `onToggleFixedLayoutControls: VoidCallback?`（中間熱區觸發，切換顯示/隱藏）與 `onFixedLayoutPageTurn: VoidCallback?`（左/右熱區換頁時觸發，用於自動收起懸浮控制項，人類決策見 `tmp/epic-16/reviews/review-plan-issue-9.md` 之後的討論）；新增公開方法 `nextPage()`/`previousPage()`（供 Task 4 `integration_test` 與測試以 `tester.state(...) as dynamic` 呼叫）；新增 `Key`：`epub_fxl_tap_zone_previous`／`epub_fxl_tap_zone_toggle_controls`／`epub_fxl_tap_zone_next`（供 Task 3 的 `ReaderScreen` 測試使用）。
 
 - [ ] **Step 1: 新增建構參數**
 
@@ -130,12 +130,14 @@ git commit -m "feat(epic-16): EpubReaderView 新增 nextPage/previousPage method
 
 ```dart
   final VoidCallback? onToggleFixedLayoutControls;
+  final VoidCallback? onFixedLayoutPageTurn;
 ```
 
 建構子新增：
 
 ```dart
     this.onToggleFixedLayoutControls,
+    this.onFixedLayoutPageTurn,
 ```
 
 - [ ] **Step 2: State 新增 `_isFixedLayout` 追蹤與 `nextPage()`/`previousPage()` 方法**
@@ -178,14 +180,23 @@ class _EpubReaderViewState extends State<EpubReaderView> {
         break;
 ```
 
-在 `_handleMethodCall()` 之後新增（比照 `PdfReaderView` 既有的 `nextPage()`/`previousPage()` 命名慣例）：
+在 `_handleMethodCall()` 之後新增（比照 `PdfReaderView` 既有的 `nextPage()`/`previousPage()` 命名慣例；換頁時一併觸發 `onFixedLayoutPageTurn`，讓 `ReaderScreen` 自動收起懸浮控制項，提供更沉浸的閱讀體驗——人類決策，見 `tmp/epic-16/reviews/review-plan-issue-9.md` 之後的討論）：
 
 ```dart
-  /// 導航至下一頁／spread（僅 FXL 三欄熱區呼叫，見 build()）。
-  void nextPage() => _channel?.invokeMethod('nextPage');
+  /// 導航至下一頁／spread（僅 FXL 三欄熱區呼叫，見 build()）。換頁後一併觸發
+  /// [EpubReaderView.onFixedLayoutPageTurn]，讓呼叫端（ReaderScreen）自動收起
+  /// 懸浮控制項——這與中間熱區的 [EpubReaderView.onToggleFixedLayoutControls]
+  /// 是切換語意（toggle）刻意不同，換頁一律「收起」，不論收起前是顯示或隱藏。
+  void nextPage() {
+    _channel?.invokeMethod('nextPage');
+    widget.onFixedLayoutPageTurn?.call();
+  }
 
-  /// 導航至上一頁／spread。
-  void previousPage() => _channel?.invokeMethod('previousPage');
+  /// 導航至上一頁／spread，同上一併觸發 [EpubReaderView.onFixedLayoutPageTurn]。
+  void previousPage() {
+    _channel?.invokeMethod('previousPage');
+    widget.onFixedLayoutPageTurn?.call();
+  }
 ```
 
 - [ ] **Step 3: `build()` 疊加三欄熱區**
@@ -207,63 +218,86 @@ class _EpubReaderViewState extends State<EpubReaderView> {
 ```dart
   @override
   Widget build(BuildContext context) {
-    final androidView = AndroidView(
-      viewType: 'cc.ugotit.elinkbook/epub_reader_view',
-      onPlatformViewCreated: _onPlatformViewCreated,
-    );
-    if (!_isFixedLayout) return androidView;
-    // FXL 專屬的三欄點擊熱區（暫代版，見 CONTEXT.md「FXL 換頁熱區（暫代版）」／
-    // docs/epics/epic-16-dual-page/issues.md Issue 9）：取代原生滑動手勢換頁，
-    // 避免 E-Ink 裝置動畫殘影，並繞開 Android WebView 對尚未可視的預載頁面
-    // 延後渲染造成的縮放跳動（Readium kotlin-toolkit 已知問題，非本專案可控）。
-    // 流式 EPUB（_isFixedLayout == false）完全不受影響，維持原生手勢。
+    // 【重要，審查修正】AndroidView 必須永遠是 Stack 的第一個子節點，不可依
+    // _isFixedLayout 條件式地整個切換 build() 的根 widget 型別（例如
+    // `if (!_isFixedLayout) return androidView; return Stack(...)`）——
+    // Flutter 的 widget 比對是看同一位置的 widget runtimeType 是否相同，
+    // 一旦根 widget 從 AndroidView 變成 Stack，Flutter 會直接 unmount 舊的
+    // AndroidView element、mount 一個全新的，導致底層原生 EpubReaderView.kt
+    // 實例被銷毀重建、重新 openBook()（重新解析整本書、畫面閃爍）。改成
+    // AndroidView 永遠留在 Stack 的第一個子節點位置，熱區疊加層只作為
+    // 「條件式存在的第二個子節點」，讓 AndroidView 在 _isFixedLayout
+    // 由 false 變 true（或反過來）時都能被 Flutter 複用、不重建。
     //
-    // 每個熱區同時提供 onTap 與（no-op 的）onHorizontalDragStart/onVerticalDragStart
-    // ——沒有後兩者的話，一段「越過臨界距離的拖曳」手勢會被 Flutter 的手勢競技場
-    // 判定為不是點擊、讓底層原生 AndroidView 有機會接手（等於滑動手勢還是繞過我們
-    // 直接落到 Readium 的 WebView，觸發它自己的滑動換頁，等於沒解決問題）。加上
-    // 這兩個 no-op 回呼，讓我們的 GestureDetector 對任何觸控序列（不論最終是否
-    // 判定為點擊）都搶到手勢競技場的勝利，原生層完全收不到觸控事件。
+    // 【已知取捨，記錄於此供未來維護者知悉】三欄熱區疊加層覆蓋整個
+    // AndroidView 範圍，會擋住底層 Readium WebView 的所有觸控事件——若 FXL
+    // 書籍內嵌超連結或其他 HTML 互動元素，這些功能在熱區生效期間會失效。
+    // 目前鎖定的使用情境（FXL 漫畫）通常沒有這類互動元素，此為刻意接受的
+    // 暫代方案限制，非本 issue 需要解決的問題。
     return Stack(
       children: [
-        androidView,
-        Positioned.fill(
-          child: Row(
-            children: [
-              Expanded(
-                child: GestureDetector(
-                  key: const Key('epub_fxl_tap_zone_previous'),
-                  behavior: HitTestBehavior.opaque,
-                  onTap: previousPage,
-                  onHorizontalDragStart: (_) {},
-                  onVerticalDragStart: (_) {},
-                ),
-              ),
-              Expanded(
-                child: GestureDetector(
-                  key: const Key('epub_fxl_tap_zone_toggle_controls'),
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => widget.onToggleFixedLayoutControls?.call(),
-                  onHorizontalDragStart: (_) {},
-                  onVerticalDragStart: (_) {},
-                ),
-              ),
-              Expanded(
-                child: GestureDetector(
-                  key: const Key('epub_fxl_tap_zone_next'),
-                  behavior: HitTestBehavior.opaque,
-                  onTap: nextPage,
-                  onHorizontalDragStart: (_) {},
-                  onVerticalDragStart: (_) {},
-                ),
-              ),
-            ],
-          ),
+        AndroidView(
+          viewType: 'cc.ugotit.elinkbook/epub_reader_view',
+          onPlatformViewCreated: _onPlatformViewCreated,
         ),
+        if (_isFixedLayout)
+          // FXL 專屬的三欄點擊熱區（暫代版，見 CONTEXT.md「FXL 換頁熱區
+          // （暫代版）」／docs/epics/epic-16-dual-page/issues.md Issue 9）：
+          // 取代原生滑動手勢換頁，避免 E-Ink 裝置動畫殘影，並繞開 Android
+          // WebView 對尚未可視的預載頁面延後渲染造成的縮放跳動（Readium
+          // kotlin-toolkit 已知問題，非本專案可控）。流式 EPUB
+          // （_isFixedLayout == false）完全不受影響，維持原生手勢。
+          //
+          // 每個熱區同時提供 onTap 與（no-op 的）onHorizontalDragStart/
+          // onVerticalDragStart——沒有後兩者的話，一段「越過臨界距離的拖曳」
+          // 手勢會被 Flutter 的手勢競技場判定不是點擊，讓底層原生
+          // AndroidView 有機會接手（等於滑動手勢還是繞過我們直接落到
+          // Readium 的 WebView，觸發它自己的滑動換頁，等於沒解決問題）。
+          // 加上這兩個 no-op 回呼，讓我們的 GestureDetector 對任何觸控
+          // 序列（不論最終是否判定為點擊）都搶到手勢競技場的勝利，原生層
+          // 完全收不到觸控事件。（雙指縮放/pinch-to-zoom 刻意不攔截，見
+          // Task 2 Step 3 之後的「待確認事項」。）
+          Positioned.fill(
+            child: Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    key: const Key('epub_fxl_tap_zone_previous'),
+                    behavior: HitTestBehavior.opaque,
+                    onTap: previousPage,
+                    onHorizontalDragStart: (_) {},
+                    onVerticalDragStart: (_) {},
+                  ),
+                ),
+                Expanded(
+                  child: GestureDetector(
+                    key: const Key('epub_fxl_tap_zone_toggle_controls'),
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => widget.onToggleFixedLayoutControls?.call(),
+                    onHorizontalDragStart: (_) {},
+                    onVerticalDragStart: (_) {},
+                  ),
+                ),
+                Expanded(
+                  child: GestureDetector(
+                    key: const Key('epub_fxl_tap_zone_next'),
+                    behavior: HitTestBehavior.opaque,
+                    onTap: nextPage,
+                    onHorizontalDragStart: (_) {},
+                    onVerticalDragStart: (_) {},
+                  ),
+                ),
+              ],
+            ),
+          ),
       ],
     );
   }
 ```
+
+**待確認事項（審查意見，需人類決定，本計劃不自行假設）**：
+- 是否要在雙指縮放（`onScaleStart`）也一併攔截，讓熱區疊加層阻斷所有手勢穿透？這會連 pinch-to-zoom 都一併擋掉——若 Readium 目前對 FXL 內容本就支援 pinch-zoom 放大細節，攔截後會是一項功能倒退。**尚待人類實機確認「目前版本 FXL 頁面雙指縮放是否已經有作用」後才能決定**：若目前本來就沒有反應，加上 `onScaleStart` 純屬防禦性措施、無成本；若目前確實可以放大，則需要人類明確同意犧牲這個功能才能加上去。本計劃目前**不**包含 `onScaleStart`，待確認後再決定是否於 Task 2 補上一行。
+- ~~是否要在點擊左/右熱區換頁時，一併把懸浮控制項自動收起（更沉浸的閱讀體驗）？~~ **已決定：採用**，見下方 Step 2/3 新增的 `onFixedLayoutPageTurn` 回呼與 Task 3 的對應串接。
 
 - [ ] **Step 4: 撰寫 widget test**
 
@@ -297,6 +331,7 @@ class _EpubReaderViewState extends State<EpubReaderView> {
     });
 
     var toggleCalled = 0;
+    var pageTurnCalled = 0;
     await tester.pumpWidget(
       MaterialApp(
         home: EpubReaderView(
@@ -304,6 +339,7 @@ class _EpubReaderViewState extends State<EpubReaderView> {
           onPageRendered: _noop,
           onError: _noopError,
           onToggleFixedLayoutControls: () => toggleCalled++,
+          onFixedLayoutPageTurn: () => pageTurnCalled++,
         ),
       ),
     );
@@ -341,6 +377,9 @@ class _EpubReaderViewState extends State<EpubReaderView> {
     expect(instanceCalls.map((c) => c.method).toList(),
         ['nextPage', 'previousPage']);
     expect(toggleCalled, 1);
+    expect(pageTurnCalled, 2,
+        reason: '左右熱區各觸發一次換頁，onFixedLayoutPageTurn 應各被呼叫一次，'
+            '中間熱區（純顯示切換）不應觸發它');
   });
 
   testWidgets('isFixedLayout 維持預設 false 時，不疊加三欄熱區', (tester) async {
@@ -387,7 +426,7 @@ git commit -m "feat(epic-16): EpubReaderView(Dart) 新增 FXL 三欄點擊熱區
 - Modify: `app/test/screens/reader_screen_test.dart`
 
 **Interfaces:**
-- Consumes：Task 2 的 `EpubReaderView.onToggleFixedLayoutControls`。
+- Consumes：Task 2 的 `EpubReaderView.onToggleFixedLayoutControls`／`onFixedLayoutPageTurn`。
 - Produces：無新增對外介面，純粹是 `ReaderScreen` 內部狀態串接。
 
 - [ ] **Step 1: 新增 `_fixedLayoutControlsVisible` 狀態**
@@ -416,7 +455,7 @@ git commit -m "feat(epic-16): EpubReaderView(Dart) 新增 FXL 三欄點擊熱區
 
 （共兩處，`Positioned` 內容本身不變。）
 
-- [ ] **Step 3: `_buildNativeView()` 傳入 `onToggleFixedLayoutControls`**
+- [ ] **Step 3: `_buildNativeView()` 傳入 `onToggleFixedLayoutControls`／`onFixedLayoutPageTurn`**
 
 找到 `_buildNativeView()` 內 `EpubReaderView(...)` 建構呼叫，在其既有參數列末（`isLandscape: isLandscape,` 之後）新增：
 
@@ -424,6 +463,12 @@ git commit -m "feat(epic-16): EpubReaderView(Dart) 新增 FXL 三欄點擊熱區
           onToggleFixedLayoutControls: () => setState(
             () => _fixedLayoutControlsVisible = !_fixedLayoutControlsVisible,
           ),
+          // 換頁時一律收起懸浮控制項（更沉浸的閱讀體驗，人類決策，見
+          // tmp/epic-16/reviews/review-plan-issue-9.md 之後的討論）——與上面的
+          // onToggleFixedLayoutControls 刻意不同：這裡不論收起前是顯示或隱藏，
+          // 一律強制設為 false，不是切換（toggle）語意。
+          onFixedLayoutPageTurn: () =>
+              setState(() => _fixedLayoutControlsVisible = false),
 ```
 
 - [ ] **Step 4: 撰寫 widget test**
@@ -510,6 +555,71 @@ git commit -m "feat(epic-16): EpubReaderView(Dart) 新增 FXL 三欄點擊熱區
       findsOneWidget,
     );
   });
+
+  testWidgets('固定版面點擊左/右熱區換頁後，懸浮按鈕自動收起', (tester) async {
+    final binaryMessenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    late MethodChannel instanceChannel;
+
+    binaryMessenger.setMockMethodCallHandler(SystemChannels.platform_views,
+        (call) async {
+      if (call.method == 'create') {
+        final id = (call.arguments as Map<Object?, Object?>)['id'] as int;
+        instanceChannel =
+            MethodChannel('cc.ugotit.elinkbook/epub_reader_view_$id');
+        binaryMessenger.setMockMethodCallHandler(
+          instanceChannel,
+          (call) async => null,
+        );
+        return 0;
+      }
+      return null;
+    });
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample_fixed_layout.epub',
+          bookId: 'b1',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final byteData = instanceChannel.codec.encodeMethodCall(
+      const MethodCall('onLayoutResolved', {
+        'isFixedLayout': true,
+        'writingMode': 'horizontal',
+      }),
+    );
+    await binaryMessenger.handlePlatformMessage(
+      instanceChannel.name,
+      byteData,
+      (data) {},
+    );
+    await tester.pump();
+
+    expect(
+      find.byKey(const Key('reader_fixed_layout_back_button')),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.byKey(const Key('epub_fxl_tap_zone_next')));
+    await tester.pump();
+
+    expect(
+      find.byKey(const Key('reader_fixed_layout_back_button')),
+      findsNothing,
+      reason: '點擊右熱區換頁後，懸浮控制項應自動收起',
+    );
+    expect(
+      find.byKey(const Key('reader_fixed_layout_settings_button')),
+      findsNothing,
+    );
+  });
 ```
 
 - [ ] **Step 5: 執行測試**
@@ -520,7 +630,7 @@ flutter test test/screens/reader_screen_test.dart
 flutter analyze
 ```
 
-Expected: 全數通過（既有測試 + 新增 1 個）；`flutter analyze` 顯示 `No issues found!`。
+Expected: 全數通過（既有測試 + 新增 2 個）；`flutter analyze` 顯示 `No issues found!`。
 
 - [ ] **Step 6: Commit**
 
@@ -683,7 +793,15 @@ git commit -m "test(epic-16): Issue 9 真機整合測試 + spec.md/issues.md 收
 
 **占位符掃描**：全文無 TBD/待補/「同 Task N」等字樣，每個 Step 皆含可直接使用的完整程式碼；Task 4 Step 3/5/6 雖然要求「依實際結果填入」，但這是驗收/文件步驟本質使然（結果需要真機驗證才能得知），不是遺漏程式碼。
 
-**型別一致性**：`onToggleFixedLayoutControls: VoidCallback?`／`nextPage()`／`previousPage()` 在 Task 2 定義後，Task 3（`ReaderScreen` 呼叫 `onToggleFixedLayoutControls`）、Task 4（`integration_test` 呼叫 `onToggleFixedLayoutControls`／點擊 `epub_fxl_tap_zone_*` 系列 Key）的引用皆逐字相符；三個 Key 名稱（`epub_fxl_tap_zone_previous`/`_toggle_controls`/`_next`）在 Task 2-4 全程一致。
+**型別一致性**：`onToggleFixedLayoutControls: VoidCallback?`／`onFixedLayoutPageTurn: VoidCallback?`／`nextPage()`／`previousPage()` 在 Task 2 定義後，Task 3（`ReaderScreen` 呼叫兩個回呼、語意刻意不同——前者 toggle、後者強制設為 `false`）、Task 4（`integration_test` 呼叫 `onToggleFixedLayoutControls`／點擊 `epub_fxl_tap_zone_*` 系列 Key）的引用皆逐字相符；三個 Key 名稱（`epub_fxl_tap_zone_previous`/`_toggle_controls`/`_next`）在 Task 2-4 全程一致。
+
+## 審查修正紀錄（`tmp/epic-16/reviews/review-plan-issue-9.md`）
+
+- **Critical（確認屬實，已修正）**：原 Task 2 Step 3 的 `build()` 依 `_isFixedLayout` 條件式切換回傳的根 widget 型別（`AndroidView` vs `Stack`），會讓 Flutter 在型別改變時直接 unmount 舊的 `AndroidView` element、mount 全新的，導致底層原生 `EpubReaderView.kt` 實例被銷毀重建、重新 `openBook()`（畫面閃爍、重新解析整本書）。已改為 `AndroidView`永遠是 `Stack` 的第一個子節點、熱區疊加層改為條件式存在的第二個子節點，確保 `_isFixedLayout` 變動時 `AndroidView` 被複用不重建。
+- **Recommendation 採納**：於 `build()` 新增註解，記錄「熱區疊加層會擋住 FXL 內嵌超連結等 HTML 互動元素」的已知取捨。
+- **Recommendation 採納（人類決策，2026-07-14）**：「翻頁時自動收起懸浮控制項」——已新增 `onFixedLayoutPageTurn: VoidCallback?`（Task 2）並在 `ReaderScreen` 串接為強制隱藏（Task 3），左右熱區換頁後懸浮控制項自動收起；中間熱區的 `onToggleFixedLayoutControls` 維持切換語意不變。
+- **Recommendation 列為待人類決定，不自行採納**：「攔截雙指縮放手勢」（`onScaleStart`）——需先由人類實機確認目前版本 FXL 頁面雙指縮放是否已有作用，才能判斷加上去是純防禦性措施還是真的犧牲功能，見 Task 2 Step 3 之後的「待確認事項」，本計劃暫不包含。
+- **Recommendation 不採納**：`nextPage()`/`previousPage()` 加 try-catch 包裝——與本計劃明講要對稱模仿的 `PdfReaderView.dart` 既有 fire-and-forget `invokeMethod` 慣例不一致，且無實際問題證據支持，不採納。
 
 ## Execution Handoff
 
