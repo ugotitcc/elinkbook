@@ -19,6 +19,28 @@ Future<String> _stageAssetAsFile(String assetPath, String fileName) async {
   return file.path;
 }
 
+/// 直接呼叫 [PdfReaderView] 內部（private `_PdfReaderViewState`）的
+/// `nextPage()`/`previousPage()`，繞過 `onHorizontalDragEnd` 手勢偵測層。
+///
+/// 該手勢層是本 issue 未異動的既有程式碼，真機驗證（`flutter run` 手動滑動）
+/// 已確認功能正常；但在 Flutter 3.41.9 + Android 15 (API 35) 這個組合下，
+/// 不論是 `tester.drag()` 合成手勢還是 `adb shell input touchscreen swipe`
+/// 真實 OS 觸控注入，皆無法讓 `onHorizontalDragEnd` 觸發（診斷過程見
+/// `tmp/epic-16/reviews/review-issue-3-integrated-round2.md`「Round 2 補充」）
+/// ——與本專案既有的 `CropOverlayView` 拖曳控制點測試限制同類。本檔案要驗證的
+/// 目標是 Issue 3 新增的雙頁配對／翻頁步進邏輯本身，不是這層既有手勢偵測，
+/// 故改為直接呼叫。`nextPage`/`previousPage` 雖定義在 private 類別上，但
+/// 方法名稱本身無底線前綴，Dart 的存取限制只看識別字，不看宣告類別是否
+/// private，透過 `dynamic` 動態呼叫可在不更動任何 production 程式碼公開
+/// API 的前提下取用。
+void _nextPage(WidgetTester tester) {
+  (tester.state(find.byType(PdfReaderView)) as dynamic).nextPage();
+}
+
+void _previousPage(WidgetTester tester) {
+  (tester.state(find.byType(PdfReaderView)) as dynamic).previousPage();
+}
+
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
@@ -64,12 +86,12 @@ void main() {
     await pumpAndWaitRendered(tester, path, pageChanges, isLandscape: true);
 
     // 第 0 頁封面 -> 往後翻步進 1 到 [1,2]
-    await tester.drag(find.byType(PdfReaderView), const Offset(-200, 0));
+    _nextPage(tester);
     await tester.pumpAndSettle();
     expect(pageChanges, [1]);
 
     // [1,2] -> 再往後翻步進 2 到 [3,4]
-    await tester.drag(find.byType(PdfReaderView), const Offset(-200, 0));
+    _nextPage(tester);
     await tester.pumpAndSettle();
     expect(pageChanges, [1, 3]);
   });
@@ -80,12 +102,12 @@ void main() {
     final pageChanges = <int>[];
     await pumpAndWaitRendered(tester, path, pageChanges, isLandscape: true);
 
-    await tester.drag(find.byType(PdfReaderView), const Offset(-200, 0));
+    _nextPage(tester);
     await tester.pumpAndSettle();
     expect(pageChanges, [1]);
 
     // 從 [1,2] 往回翻 -> 回到封面 index 0
-    await tester.drag(find.byType(PdfReaderView), const Offset(200, 0));
+    _previousPage(tester);
     await tester.pumpAndSettle();
     expect(pageChanges, [1, 0]);
     expect(find.byKey(const Key('reader_error_text')), findsNothing);
@@ -100,13 +122,13 @@ void main() {
     await pumpAndWaitRendered(tester, path, pageChanges, isLandscape: true);
 
     for (var i = 0; i < 3; i++) {
-      await tester.drag(find.byType(PdfReaderView), const Offset(-200, 0));
+      _nextPage(tester);
       await tester.pumpAndSettle();
     }
     expect(pageChanges, [1, 3, 5]); // 最後落在 index 5（落單）
 
     // 已達最後一個 spread，再往後翻應為 no-op（不越界、不再觸發 onPageChanged）
-    await tester.drag(find.byType(PdfReaderView), const Offset(-200, 0));
+    _nextPage(tester);
     await tester.pumpAndSettle();
     expect(pageChanges, [1, 3, 5]);
     expect(find.byKey(const Key('reader_error_text')), findsNothing);
@@ -124,11 +146,11 @@ void main() {
       isLandscape: false, // 直向，但 always 仍應強制雙頁
     );
 
-    await tester.drag(find.byType(PdfReaderView), const Offset(-200, 0));
+    _nextPage(tester);
     await tester.pumpAndSettle();
     expect(pageChanges, [1]); // 封面 -> 步進 1，證明雙頁已生效
 
-    await tester.drag(find.byType(PdfReaderView), const Offset(-200, 0));
+    _nextPage(tester);
     await tester.pumpAndSettle();
     expect(pageChanges, [1, 3]); // 步進 2，確認雙頁持續生效
   });
@@ -145,11 +167,11 @@ void main() {
       isLandscape: true, // 橫向，但 never 仍應強制單頁
     );
 
-    await tester.drag(find.byType(PdfReaderView), const Offset(-200, 0));
+    _nextPage(tester);
     await tester.pumpAndSettle();
     expect(pageChanges, [1]);
 
-    await tester.drag(find.byType(PdfReaderView), const Offset(-200, 0));
+    _nextPage(tester);
     await tester.pumpAndSettle();
     expect(pageChanges, [1, 2]); // 步進恆為 1，而非雙頁的 2
   });
@@ -179,7 +201,7 @@ void main() {
     await completer.future.timeout(const Duration(seconds: 5));
     await tester.pumpAndSettle();
 
-    await tester.drag(find.byType(PdfReaderView), const Offset(-200, 0));
+    _nextPage(tester);
     await tester.pumpAndSettle();
     expect(pageChanges, [1]); // 橫向：雙頁生效，封面步進 1
 
@@ -188,7 +210,7 @@ void main() {
     await tester.pumpWidget(buildView(false));
     await tester.pumpAndSettle();
 
-    await tester.drag(find.byType(PdfReaderView), const Offset(-200, 0));
+    _nextPage(tester);
     await tester.pumpAndSettle();
     expect(pageChanges, [1, 2]); // 直向：單頁步進恢復為 1（index1 -> index2）
 
