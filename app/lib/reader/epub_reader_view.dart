@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'app_font.dart';
+import 'dual_page_mode.dart';
 import 'epub_text_align.dart';
 import 'page_turn_mode.dart';
 import 'writing_mode.dart';
@@ -38,6 +39,8 @@ class EpubReaderView extends StatefulWidget {
   final double? pageMargins;
   final EpubTextAlign? textAlign;
   final bool? publisherStyles;
+  final DualPageMode dualPageMode;
+  final bool isLandscape;
 
   const EpubReaderView({
     super.key,
@@ -55,6 +58,8 @@ class EpubReaderView extends StatefulWidget {
     this.pageMargins,
     this.textAlign,
     this.publisherStyles,
+    this.dualPageMode = DualPageMode.auto,
+    this.isLandscape = false,
   });
 
   @override
@@ -92,7 +97,9 @@ class _EpubReaderViewState extends State<EpubReaderView> {
         widget.paragraphSpacing != oldWidget.paragraphSpacing ||
         widget.pageMargins != oldWidget.pageMargins ||
         widget.textAlign != oldWidget.textAlign ||
-        widget.publisherStyles != oldWidget.publisherStyles;
+        widget.publisherStyles != oldWidget.publisherStyles ||
+        widget.dualPageMode != oldWidget.dualPageMode ||
+        widget.isLandscape != oldWidget.isLandscape;
   }
 
   /// 把目前所有非 null 的偏好參數組成一個 map，key 名稱與原生端契約一致
@@ -123,6 +130,8 @@ class _EpubReaderViewState extends State<EpubReaderView> {
     if (widget.publisherStyles != null) {
       map['publisherStyles'] = widget.publisherStyles;
     }
+    map['dualPageMode'] = widget.dualPageMode.name;
+    map['isLandscape'] = widget.isLandscape;
     return map;
   }
 

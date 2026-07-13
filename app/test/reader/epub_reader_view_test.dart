@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/reader/app_font.dart';
+import 'package:elinkbook/reader/dual_page_mode.dart';
 import 'package:elinkbook/reader/epub_reader_view.dart';
 import 'package:elinkbook/reader/epub_text_align.dart';
 import 'package:elinkbook/reader/page_turn_mode.dart';
@@ -80,10 +81,12 @@ void main() {
       'pageMargins': 1.3333,
       'textAlign': 'justify',
       'publisherStyles': false,
+      'dualPageMode': 'auto',
+      'isLandscape': false,
     });
   });
 
-  testWidgets('所有偏好欄位皆為 null 時，initialPreferences 為空 map（而非 null）',
+  testWidgets('所有偏好欄位皆為 null 時，initialPreferences 只含 dualPageMode/isLandscape',
       (tester) async {
     final calls = await _pumpEpubReaderView(
       tester,
@@ -95,7 +98,10 @@ void main() {
     );
 
     final openBookCall = calls.firstWhere((c) => c.method == 'openBook');
-    expect(openBookCall.arguments['initialPreferences'], <String, Object?>{});
+    expect(openBookCall.arguments['initialPreferences'], {
+      'dualPageMode': 'auto',
+      'isLandscape': false,
+    });
   });
 
   testWidgets(
@@ -148,6 +154,8 @@ void main() {
     expect(instanceCalls.single.arguments, {
       'fontSize': 1.25,
       'writingMode': 'vertical',
+      'dualPageMode': 'auto',
+      'isLandscape': false,
     });
   });
 
@@ -188,6 +196,74 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(instanceCalls, isEmpty);
+  });
+
+  testWidgets('dualPageMode/isLandscape 一律出現在 initialPreferences（非 null 慣例）',
+      (tester) async {
+    final calls = await _pumpEpubReaderView(
+      tester,
+      const EpubReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        dualPageMode: DualPageMode.always,
+        isLandscape: true,
+      ),
+    );
+
+    final openBookCall = calls.firstWhere((c) => c.method == 'openBook');
+    final prefs = openBookCall.arguments['initialPreferences'] as Map;
+    expect(prefs['dualPageMode'], 'always');
+    expect(prefs['isLandscape'], true);
+  });
+
+  testWidgets('dualPageMode 變動時 didUpdateWidget 觸發 setPreferences',
+      (tester) async {
+    final binaryMessenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    final instanceCalls = <MethodCall>[];
+
+    binaryMessenger.setMockMethodCallHandler(SystemChannels.platform_views,
+        (call) async {
+      if (call.method == 'create') {
+        final id = (call.arguments as Map<Object?, Object?>)['id'] as int;
+        binaryMessenger.setMockMethodCallHandler(
+          MethodChannel('cc.ugotit.elinkbook/epub_reader_view_$id'),
+          (call) async {
+            instanceCalls.add(call);
+            return null;
+          },
+        );
+        return 0;
+      }
+      return null;
+    });
+
+    await tester.pumpWidget(const MaterialApp(
+      home: EpubReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+      ),
+    ));
+    await tester.pumpAndSettle();
+    instanceCalls.clear();
+
+    await tester.pumpWidget(const MaterialApp(
+      home: EpubReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        dualPageMode: DualPageMode.always,
+        isLandscape: true,
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(instanceCalls, hasLength(1));
+    expect(instanceCalls.single.method, 'setPreferences');
+    expect(instanceCalls.single.arguments['dualPageMode'], 'always');
+    expect(instanceCalls.single.arguments['isLandscape'], true);
   });
 }
 
