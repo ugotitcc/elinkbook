@@ -550,4 +550,102 @@ void main() {
 
     expect(find.byType(FxlSettingsSheet), findsOneWidget);
   });
+
+  testWidgets('固定版面點擊中間熱區可切換懸浮按鈕顯示/隱藏', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample_fixed_layout.epub',
+          bookId: 'b1',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    // 直接呼叫 onLayoutResolved 模擬原生端回報 isFixedLayout=true
+    final view = tester.widget<EpubReaderView>(find.byType(EpubReaderView));
+    view.onLayoutResolved?.call(
+      const EpubLayoutInfo(isFixedLayout: true, writingMode: WritingMode.horizontal),
+    );
+    await tester.pump();
+
+    expect(
+      find.byKey(const Key('reader_fixed_layout_back_button')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('reader_fixed_layout_settings_button')),
+      findsOneWidget,
+    );
+
+    // 直接呼叫 onToggleFixedLayoutControls 模擬中間熱區觸發
+    view.onToggleFixedLayoutControls?.call();
+    await tester.pump();
+
+    expect(
+      find.byKey(const Key('reader_fixed_layout_back_button')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const Key('reader_fixed_layout_settings_button')),
+      findsNothing,
+    );
+
+    // 再次觸發切換顯示
+    view.onToggleFixedLayoutControls?.call();
+    await tester.pump();
+
+    expect(
+      find.byKey(const Key('reader_fixed_layout_back_button')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('reader_fixed_layout_settings_button')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('固定版面點擊左/右熱區換頁後，懸浮按鈕自動收起', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample_fixed_layout.epub',
+          bookId: 'b1',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    // 直接呼叫 onLayoutResolved 模擬原生端回報 isFixedLayout=true
+    final view = tester.widget<EpubReaderView>(find.byType(EpubReaderView));
+    view.onLayoutResolved?.call(
+      const EpubLayoutInfo(isFixedLayout: true, writingMode: WritingMode.horizontal),
+    );
+    await tester.pump();
+
+    expect(
+      find.byKey(const Key('reader_fixed_layout_back_button')),
+      findsOneWidget,
+    );
+
+    // 直接呼叫 onFixedLayoutPageTurn 模擬換頁觸發
+    view.onFixedLayoutPageTurn?.call();
+    await tester.pump();
+
+    expect(
+      find.byKey(const Key('reader_fixed_layout_back_button')),
+      findsNothing,
+      reason: '換頁後，懸浮控制項應自動收起',
+    );
+    expect(
+      find.byKey(const Key('reader_fixed_layout_settings_button')),
+      findsNothing,
+    );
+  });
 }
