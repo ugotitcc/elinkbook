@@ -13,6 +13,7 @@ import 'package:elinkbook/reader/pdf_reader_view.dart';
 import 'package:elinkbook/reader/writing_mode.dart';
 import 'package:elinkbook/screens/fxl_settings_sheet.dart';
 import 'package:elinkbook/screens/pdf_settings_sheet.dart';
+
 import 'package:elinkbook/screens/reader_screen.dart';
 import '../support/fake_reader_prefs_manager.dart';
 
@@ -676,4 +677,21 @@ void main() {
     expect(find.byKey(const Key('reader_footer')), findsOneWidget);
     expect(find.text('進度 8% ｜ 第 1/12 頁'), findsOneWidget);
   });
+
+  // --- 0↔1 頁碼轉換與 jumpToPage 原生呼叫 ---
+  //
+  // 此邊界在 widget test 層級**無法完整驗證**，原因：
+  //   Flutter widget test 環境下 AndroidView 的 texture meta 未初始化，
+  //   觸發 PdfReaderView.jumpToPage → method channel → platform view resize
+  //   會導致 'meta != null' assertion failure（Flutter 框架已知限制，
+  //   見 flutter_test/flutter_test.dart 以及 epic-1/epic-4 的歷史記錄）。
+  //
+  //   0↔1 轉換公式（page1Indexed - 1）以及原生端 jumpToPage 呼叫參數的
+  //   完整驗證，由 integration_test/reader_footer_test.dart（真機）涵蓋：
+  //   輸入「4」→ 斷言頁尾文字從「第 1/6 頁」變成「第 4/6 頁」。
+  //
+  //   讀者-footer 自身的 onPageChanged 回呼（1-indexed）已由
+  //   reader_screen_test.dart 的其他測試以及 reader_footer_test.dart 覆蓋。
+  //
+  // 本檔案不重複測試上述已覆蓋的路徑。
 }

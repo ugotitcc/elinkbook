@@ -38,24 +38,36 @@ void main() {
 
   testWidgets('輸入框送出跳頁後，主動收起鍵盤/輸入框焦點（審查修正）',
       (tester) async {
-    // 簡化測試：只驗證輸入框送出後的文字更新，不驗證焦點狀態
-    // （焦點測試在有 Material ancestor 的環境下行為不同）
-    int? received;
     await tester.pumpWidget(MaterialApp(
       home: Scaffold(
         body: ReaderFooter(
           currentPage: 5,
           totalPages: 20,
-          onPageChanged: (page) => received = page,
+          onPageChanged: (_) {},
         ),
       ),
     ));
+
+    // 點擊輸入框取得焦點
+    await tester.tap(find.byKey(const Key('reader_footer_jump_input')));
+    await tester.pump();
+
+    // 驗證點擊後有 widget 持有焦點（TextField 內部的 Focus 節點）
+    final focusedBefore = FocusManager.instance.primaryFocus;
+    expect(focusedBefore, isNotNull,
+        reason: '點擊輸入框後應有 widget 取得焦點');
 
     await tester.enterText(find.byKey(const Key('reader_footer_jump_input')), '12');
     await tester.testTextInput.receiveAction(TextInputAction.done);
     await tester.pump();
 
-    expect(received, 12, reason: '送出跳頁後應觸發 onPageChanged');
+    // 送出跳頁後，FocusScope.of(context).unfocus() 應清除焦點。
+    // 驗證 primaryFocus 不再指向原本的 TextField 節點。
+    final focusedAfter = FocusManager.instance.primaryFocus;
+    // unfocus() 後焦點應被清除（null）或轉移到其他 widget
+    expect(focusedAfter != focusedBefore,
+        isTrue,
+        reason: '送出跳頁後焦點應離開輸入框（主動收起鍵盤/焦點）');
   });
 
   testWidgets('輸入框輸入超出範圍的頁碼時，箝制在合法範圍內', (tester) async {
