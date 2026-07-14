@@ -14,6 +14,13 @@
 
 在 PDF 閱讀畫面新增頁尾元件，顯示閱讀進度（百分比）與目前頁碼／總頁數，沿用既有已完備的精確頁碼基礎設施（現有的頁索引／總頁數追蹤，不需新增估算邏輯）。同時建立跳頁互動元件——輸入框與滑桿雙向同步：拖曳滑桿即時更新輸入框顯示的數字，輸入框確認輸入後同步更新滑桿位置，任一方觸發最終跳頁動作。此元件須設計為可被後續工單（Issue 3）複用於 EPUB，不要寫死成 PDF 專屬。
 
+**介面契約（審查修正）**：跳頁 UI 元件須為與格式無關的通用元件，只接收以下最小屬性，不得接收任何 PDF 專屬的 controller 或底層讀取器物件：
+- `currentPage`（int，目前頁碼）
+- `totalPages`（int，總頁數）
+- `onPageChanged`（`ValueChanged<int>`，使用者確認跳頁時的回呼）
+
+呼叫端（PDF 專屬的頁碼取得/跳頁邏輯）負責把這三個值餵給元件、並在 `onPageChanged` 回呼中執行實際的原生跳頁呼叫，元件本身不知道呼叫端是 PDF 還是 EPUB。
+
 本工單完成時，頁尾為一律顯示（顯示／隱藏開關留給 Issue 5），且僅套用於 PDF；EPUB 讀取畫面本工單不動它。
 
 **單元測試要求：**
@@ -28,7 +35,7 @@
 - [ ] PDF 閱讀畫面底部顯示頁尾，含進度百分比與「目前頁碼／總頁數」
 - [ ] 頁尾提供跳頁輸入框，輸入合法頁碼並確認後正確跳轉
 - [ ] 頁尾提供跳頁滑桿，拖曳後正確跳轉，且與輸入框數字雙向同步
-- [ ] 跳頁 UI 元件的實作方式可被 Issue 3 直接複用（不含 PDF 專屬的頁碼取得邏輯寫死在元件內部）
+- [ ] 跳頁 UI 元件只接收 `currentPage`／`totalPages`／`onPageChanged` 三個與格式無關的屬性，不含任何 PDF 專屬的頁碼取得邏輯或 controller 寫死在元件內部（審查修正）
 - [ ] 上述測試皆通過，`flutter analyze` 乾淨，既有測試無回歸
 - [ ] 真機整合測試涵蓋跳頁的實際渲染結果（跳轉後畫面確實顯示目標頁）
 
@@ -90,7 +97,7 @@ Dart 端依目前生效的版面參數（字體大小、行距、段落間距、
 **單元測試要求：**
 
 - 純 Dart unit test：估算演算法本身（給定字元數、版面參數，驗證估算總頁數與目前頁碼的計算邏輯正確）。
-- 原生端單元測試（純邏輯、不需真機）：若字元加總邏輯可抽出為無狀態純函式，需比照專案既有的原生端單元測試慣例覆蓋。
+- 原生端單元測試（純邏輯、不需真機，審查修正補上具體慣例）：**先確認**字元加總邏輯是否能抽出為不依賴 Android／Readium 執行環境的無狀態純 Kotlin 函式（走訪 `Publication.readingOrder` 逐一取得 resource 內容涉及 Readium 的 `Resource` API，不確定能否完全脫離真機/模擬器環境，不像 `PdfImageProcessor` 單純是數學運算）。**若可行**，比照專案既有慣例（`PdfImageProcessor`／`EpubFxlScaler` 先例）以 JUnit 撰寫，測試檔放在 `app/android/app/src/test/kotlin/cc/ugotit/elinkbook/`，以 `./gradlew :app:testDebugUnitTest` 執行；**若不可行**（必須依賴真實 Readium `Publication` 物件），改以 `integration_test` 涵蓋，於工單完成說明中明確記錄採用哪一種、理由為何。
 - widget test：版面設定（字體大小／行距／邊距等）變動時，觸發估算重新計算並反映到頁尾顯示。
 - 整合層測試：驗證背景計算不阻塞主執行緒（例如開書後畫面立即可互動，計算結果延後才顯示，不會卡住載入流程）。
 
@@ -155,7 +162,7 @@ PDF 格式下，目錄入口完全不顯示（不是顯示後出現空狀態）�
 
 **What to build：**
 
-在版面偏好設定資料模型新增頁首／頁尾各自獨立的顯示/隱藏欄位（含對應 schema migration），預設皆為顯示，單書持久化（比照既有版面偏好設定的持久化模式）。
+在版面偏好設定資料模型新增頁首／頁尾各自獨立的顯示/隱藏欄位（含對應 schema migration），預設皆為顯示，單書持久化（比照既有版面偏好設定的持久化模式）。**Migration 須維持累加式版本判斷**（`if (oldVersion < N)`，非互斥 `if/else if`，審查修正，比照 Issue 2/3 的既有原則），確保裝置從任何舊版本跳級升級時，本工單新增的欄位遷移不會被跳過。
 
 頁首開啟時取代現有的 App 頂部標題列——標題區改為顯示目前章節名稱，可點擊展開 Issue 4 建立的目錄清單；既有的版面設定入口維持可用。頁首關閉時回到現行的靜態標題列。
 
@@ -182,3 +189,11 @@ PDF 格式下，目錄入口完全不顯示（不是顯示後出現空狀態）�
 - [ ] 真機整合測試涵蓋流式 EPUB／PDF 切換頁首頁尾開關的端到端行為
 
 **Blocked by：** Issue 1, Issue 4
+
+---
+
+## 審查修正紀錄（`tmp/epic-5/reviews/issues-review.md`）
+
+- **Important（部分不採納）**：審查建議把 Issue 2、Issue 3 的 `books` 表 schema 變更合併成同一次 migration，避免短期內連續遞增版本號。查證後不採納合併——這個專案既有慣例（`book_reader_prefs` 表過去在不同 Epic/Issue 間，PDF 欄位、雙頁欄位分別各自獨立遞增 schema version）已多次示範「多個獨立工單各自遞增版本」是正常模式，累加式 `if (oldVersion < N)` 機制本來就是為此設計；合併 migration 會讓 Issue 2 無法獨立於 Issue 3 完成合併，破壞刻意設計的垂直切片獨立性（Issue 2 目前對 Issue 3 無相依）。**採納的部分**：「須維持累加式版本判斷、避免跳級升級遺漏遷移」的提醒已於 Issue 2/3 寫明，Issue 5（也異動 schema）先前漏寫，已補上。
+- **Important（確認屬實，已修正）**：Issue 1 的跳頁 UI 元件缺乏明確介面契約，有被實作者寫死成 PDF 專屬的風險。已補上具體介面契約（`currentPage`／`totalPages`／`onPageChanged` 三個與格式無關的屬性）。
+- **Minor（確認屬實，已修正，保留原有但書）**：Issue 3 原生端單元測試已補上具體慣例（JUnit、`app/android/app/src/test/kotlin/cc/ugotit/elinkbook/`、`./gradlew :app:testDebugUnitTest`），但保留「先確認字元加總邏輯是否真能抽離為不依賴 Readium 執行環境的純函式」的但書——與 `PdfImageProcessor` 單純數學運算不同，此處涉及走訪 `Publication.readingOrder` 的 Resource API，若不可行則改以 `integration_test` 涵蓋。
