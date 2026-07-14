@@ -304,6 +304,10 @@ class PdfReaderView(
                 previousPage()
                 result.success(null)
             }
+            "jumpToPage" -> {
+                (call.arguments as? Int)?.let { jumpToPage(it) }
+                result.success(null)
+            }
             "enterCropEditMode" -> {
                 enterCropEditMode()
                 result.success(null)
@@ -438,6 +442,9 @@ class PdfReaderView(
             currentPageIndex = 0
             renderCurrentSpread()
             channel.invokeMethod("onPageRendered", null)
+            // Epic 5 Issue 1：開書完成當下立即回報一次初始頁碼狀態，讓
+            // Dart 端（ReaderFooter）不需要等到第一次翻頁才知道總頁數。
+            notifyPageChanged()
         } catch (e: OutOfMemoryError) {
             channel.invokeMethod("onError", "記憶體不足，無法載入 PDF 檔案")
         } catch (e: Exception) {
@@ -796,7 +803,7 @@ class PdfReaderView(
         if (newIndex < totalPages) {
             currentPageIndex = newIndex
             renderCurrentSpread()
-            channel.invokeMethod("onPageChanged", currentPageIndex)
+            notifyPageChanged()
         }
     }
 
@@ -807,8 +814,39 @@ class PdfReaderView(
         if (newIndex >= 0) {
             currentPageIndex = newIndex
             renderCurrentSpread()
-            channel.invokeMethod("onPageChanged", currentPageIndex)
+            notifyPageChanged()
         }
+    }
+
+    /**
+     * 跳轉至指定頁碼（Epic 5 Issue 1，FR-23）。目標超出 `0 until totalPages`
+     * 範圍時靜默忽略（Dart 端 ReaderFooter 已先做過範圍箝制，這裡是原生端
+     * 的最後一道防線，比照既有 nextPage()/previousPage() 邊界檢查風格）。
+     * 裁切編輯模式中忽略跳頁請求，比照既有 nextPage()/previousPage() 的
+     * cropEditModeActive 守衛。已知限制：雙頁模式生效中跳頁不做 spread
+     * 邊界對齊，見 plan-issue-1.md Global Constraints。
+     */
+    private fun jumpToPage(pageIndex: Int) {
+        if (cropEditModeActive) return
+        if (pageIndex !in 0 until totalPages) return
+        if (pageIndex == currentPageIndex) return
+        currentPageIndex = pageIndex
+        renderCurrentSpread()
+        notifyPageChanged()
+    }
+
+    /**
+     * 統一的 onPageChanged 回報 helper（Epic 5 Issue 1 新增）：把目前頁碼與
+     * 總頁數一併送給 Dart 端，供 ReaderFooter 顯示「第 N/M 頁」。原本只送
+     * 單純 Int 頁碼，Dart 端無法得知總頁數，Issue 1 之前從未被 ReaderScreen
+     * 實際消費過（僅有的呼叫端 PdfReaderView.dart 定義了回呼但整條鏈路沒人
+     * 接線），故變更 wire 格式不影響任何既有生效功能。
+     */
+    private fun notifyPageChanged() {
+        channel.invokeMethod(
+            "onPageChanged",
+            mapOf("pageIndex" to currentPageIndex, "totalPages" to totalPages),
+        )
     }
 
     /**

@@ -27,7 +27,7 @@
 **Interfaces:**
 - Produces：PDF method channel（`cc.ugotit.elinkbook/pdf_reader_view_$id`）的 `"onPageChanged"` 事件，wire 格式從單純 `Int` 改為 `Map<String, Int>`（`{"pageIndex": Int, "totalPages": Int}`）；新增 `"jumpToPage"` method channel case，接收 `Int` 參數。
 
-- [ ] **Step 1：新增共用的 `onPageChanged` 發送 helper**
+- [x] **Step 1：新增共用的 `onPageChanged` 發送 helper**
 
 找到 `app/android/app/src/main/kotlin/cc/ugotit/elinkbook/PdfReaderView.kt` 的 `nextPage()`／`previousPage()`（約第 792-812 行）：
 
@@ -95,7 +95,7 @@
     }
 ```
 
-- [ ] **Step 2：開書完成後立即送出一次初始頁碼狀態**
+- [x] **Step 2：開書完成後立即送出一次初始頁碼狀態**
 
 找到 `openBook()`（約第 417-450 行）內的：
 
@@ -120,7 +120,7 @@
             notifyPageChanged()
 ```
 
-- [ ] **Step 3：新增 `jumpToPage` 私有方法與 method channel case**
+- [x] **Step 3：新增 `jumpToPage` 私有方法與 method channel case**
 
 在 `previousPage()` 之後（Step 1 修改完的位置）新增：
 
@@ -167,7 +167,7 @@
             "enterCropEditMode" -> {
 ```
 
-- [ ] **Step 4：編譯確認**
+- [x] **Step 4：編譯確認**
 
 ```bash
 cd app/android
@@ -176,7 +176,7 @@ cd app/android
 
 Expected: `BUILD SUCCESSFUL`。
 
-- [ ] **Step 5：既有回歸測試**
+- [x] **Step 5：既有回歸測試**
 
 ```bash
 cd ../../app
@@ -185,7 +185,7 @@ flutter analyze
 
 Expected: `No issues found!`（本 Task 只異動 Kotlin，Dart 端尚未跟進解析新 wire 格式，`flutter analyze` 此時不會發現問題；真正的整合驗證留給 Task 2 完成後）。
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/android/app/src/main/kotlin/cc/ugotit/elinkbook/PdfReaderView.kt
