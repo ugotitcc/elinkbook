@@ -1500,4 +1500,150 @@ void main() {
     expect(saved.pdfCropRect, isNotNull);
     expect(saved.dualPageMode, DualPageMode.always);
   });
+
+  testWidgets(
+      'PDF 依序調整雙頁模式/封面獨立/方向/Fit模式/濾鏡/裁切模式後關閉重開，8 個欄位皆正確記住並套用、彼此不互相清空（Issue 7 收尾組合驗證）',
+      (tester) async {
+    final samplePath = await _stageAssetAsFile(
+        'test/fixtures/sample.pdf', 'sample_pdf_issue7_combo.pdf');
+    addTearDown(() async {
+      final file = File(samplePath);
+      if (await file.exists()) await file.delete();
+    });
+    const bookId = 'b_pdf_issue7_combo';
+    await libraryRepository.insertBook(_book(bookId, format: BookFileFormat.pdf));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: samplePath,
+          bookId: bookId,
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+
+    await _pumpUntil(
+      tester,
+      () => _layoutSettingsButtonReady(tester),
+      timeout: const Duration(seconds: 10),
+    );
+
+    await tester.tap(find.byKey(const Key('reader_layout_settings_button')));
+    await tester.pumpAndSettle();
+
+    // 顯示分頁（預設開啟）：依序調整雙頁模式／封面獨立／方向／Fit 模式，
+    // 皆偏離各自的預設值（auto/true/rtl/pageFit），確保稍後能有效驗證
+    // 「非預設值」也被正確持久化，而非巧合地與預設值相同。
+    await tester.ensureVisible(
+        find.byKey(const Key('pdf_settings_dual_page_mode_always')));
+    await tester.tap(find.byKey(const Key('pdf_settings_dual_page_mode_always')));
+    await tester.pump(const Duration(milliseconds: 300));
+
+    await tester.ensureVisible(
+        find.byKey(const Key('pdf_settings_dual_page_cover_alone')));
+    await tester.tap(find.byKey(const Key('pdf_settings_dual_page_cover_alone')));
+    await tester.pump(const Duration(milliseconds: 300));
+
+    await tester.ensureVisible(
+        find.byKey(const Key('pdf_settings_dual_page_direction_ltr')));
+    await tester.tap(find.byKey(const Key('pdf_settings_dual_page_direction_ltr')));
+    await tester.pump(const Duration(milliseconds: 300));
+
+    await tester.ensureVisible(
+        find.byKey(const Key('pdf_settings_fit_mode_fit_width')));
+    await tester.tap(find.byKey(const Key('pdf_settings_fit_mode_fit_width')));
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // 濾鏡分頁：對比度／亮度／加粗強度皆各按一次「+」微調鈕，確保三個欄位
+    // 都偏離預設值 0。
+    await tester.tap(find.byKey(const Key('pdf_settings_tab_filters')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('pdf_settings_contrast_increment')));
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.byKey(const Key('pdf_settings_brightness_increment')));
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.byKey(const Key('pdf_settings_bold_strength_increment')));
+    await tester.pump(const Duration(milliseconds: 300));
+
+    // 裁切分頁：切到智慧自動（不使用手動選區——本 issue 不重複驗證 Issue 6
+    // 的觸控互動邏輯，比照 epic-4-pdf-enhance Issue 7 的既有 Global
+    // Constraints 慣例）。
+    await tester.tap(find.byKey(const Key('pdf_settings_tab_crop')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('pdf_settings_crop_mode_auto')));
+    await tester.pump(const Duration(seconds: 1));
+
+    // 切回顯示分頁讓畫面穩定，再讀取目前生效值作為「調整完成當下」的基準。
+    await tester.tap(find.byKey(const Key('pdf_settings_tab_display')));
+    await tester.pumpAndSettle();
+
+    final beforeClose = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+    expect(beforeClose.dualPageMode, DualPageMode.always);
+    expect(beforeClose.dualPageCoverAlone, isFalse);
+    expect(beforeClose.dualPageDirection, DualPageDirection.ltr);
+    expect(beforeClose.fitMode, PdfFitMode.fitWidth);
+    expect(beforeClose.contrast, greaterThan(0));
+    expect(beforeClose.brightness, greaterThan(0));
+    expect(beforeClose.boldStrength, greaterThan(0));
+    expect(beforeClose.cropMode, PdfCropMode.autoDetect);
+
+    // 從資料庫直接讀出持久化結果（不透過畫面重建，排除「畫面剛好還沒
+    // rebuild」這種偽陽性）。
+    final saved = (await prefsManager.load(bookId)).bookPrefs;
+    expect(saved.dualPageMode, DualPageMode.always);
+    expect(saved.dualPageCoverAlone, isFalse);
+    expect(saved.dualPageDirection, DualPageDirection.ltr);
+    expect(saved.pdfFitMode, PdfFitMode.fitWidth);
+    expect(saved.pdfContrast, greaterThan(0));
+    expect(saved.pdfBrightness, greaterThan(0));
+    expect(saved.pdfBoldStrength, greaterThan(0));
+    expect(saved.pdfCropMode, PdfCropMode.autoDetect);
+    expect(saved.pdfCropRect, isNotNull,
+        reason: '智慧自動裁切應已計算出矩形並隨其餘 7 個欄位一併持久化');
+
+    // 關閉重開，驗證 initialPreferences 在「8 個欄位同時非 null」的情境下
+    // 依然完整無遺漏地送出——這是本任務要補上的、Issue 2-6 各自單欄位/半組
+    // 測試從未涵蓋過的完整組合情境。
+    await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
+    await tester.pump();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: samplePath,
+          bookId: bookId,
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await _pumpUntil(
+      tester,
+      _loadingIndicatorGone,
+      timeout: const Duration(seconds: 10),
+    );
+    await tester.pump(const Duration(seconds: 1));
+
+    final afterReopen = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+    expect(afterReopen.dualPageMode, beforeClose.dualPageMode,
+        reason: '重開書後 dualPageMode 應與關閉前一致');
+    expect(afterReopen.dualPageCoverAlone, beforeClose.dualPageCoverAlone,
+        reason: '重開書後 dualPageCoverAlone 應與關閉前一致');
+    expect(afterReopen.dualPageDirection, beforeClose.dualPageDirection,
+        reason: '重開書後 dualPageDirection 應與關閉前一致');
+    expect(afterReopen.fitMode, beforeClose.fitMode,
+        reason: '重開書後 fitMode 應與關閉前一致');
+    expect(afterReopen.contrast, beforeClose.contrast,
+        reason: '重開書後 contrast 應與關閉前一致');
+    expect(afterReopen.brightness, beforeClose.brightness,
+        reason: '重開書後 brightness 應與關閉前一致');
+    expect(afterReopen.boldStrength, beforeClose.boldStrength,
+        reason: '重開書後 boldStrength 應與關閉前一致');
+    expect(afterReopen.cropMode, beforeClose.cropMode,
+        reason: '重開書後 cropMode 應與關閉前一致');
+    expect(afterReopen.cropRect, beforeClose.cropRect,
+        reason: '重開書後 cropRect 應與關閉前一致，且不因重開書而重新計算');
+
+    expect(find.byKey(const Key('reader_error_text')), findsNothing);
+  });
 }
