@@ -204,7 +204,14 @@
 
 **依賴：** Issue 4、Issue 5、Issue 6 全部完成
 
-**Status:** ready-for-agent
+**Status:** ✅ 已完成。依 `plans/plan-issue-7.md` Task 1-4 完成收尾與驗證。
+
+**完成摘要：**
+- **Task 1 的 8 欄位組合持久化測試**：於 `integration_test/reader_screen_test.dart` 中成功新增完整組合持久化測試並執行 PASS，驗證雙頁模式、封面獨立、閱讀方向、Fit模式、對比度、亮度、加粗強度與裁切模式等 8 個偏好設定欄位可同時正確套用與持久化。
+- **Task 2 的 FR-41 兩路線拼接驗收**：PDF 路線經 `measure_fr41_gap.py` 量測 `gap_px = 0`，確認無縫拼接；EPUB FXL 路線引用 Issue 6 真機視覺驗收結論（修改 `applyFxlFitScale()` 對 translationX 重複疊加問題後確認無縫並排）。兩路線皆通過 FR-41 核心驗收。
+- **Task 3 的裝置旋轉重建驗收**：PDF 與 EPUB 原生 View 皆未觸發額外的 `openBook` 呼叫且無黑屏，確認 PlatformView 不因裝置旋轉而重建。
+- **後續追蹤問題**：本次驗證過程中「無」發現其他殘留缺陷或需要另立的 issue。
+- **詳細報告**：請參閱 QA 報告 [qa-issue-7-report.md](file:///U:/MyDeveloper/AI/elinkBook/.worktrees/epic-16-issue-7/docs/epics/epic-16-dual-page/reviews/qa-issue-7-report.md) 以供追溯。
 
 **描述：**
 比照 `epic-4-pdf-enhance` Issue 7 的既有模式，本 issue 為裝置端整合驗證與 Epic 收尾，部分項目屬人工視覺 QA 性質：

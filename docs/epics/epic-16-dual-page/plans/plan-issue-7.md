@@ -33,7 +33,7 @@
 
 既有的兩個相關測試——`reader_screen_test.dart` 第 1219 行「Fit 模式/對比度/亮度/加粗/裁切模式」組合測試（`epic-4-pdf-enhance` Issue 7 建立）與第 1335 行「封面獨立開關與頁面方向」測試（Issue 4 建立）——分別驗證了兩組欄位各自的組合持久化，但**從未在同一次操作序列中同時涵蓋全部 8 個欄位**，也就從未驗證過「調整雙頁相關欄位」與「調整既有 Fit/濾鏡/裁切欄位」彼此不會互相清空（`PdfSettingsSheet._notifyChanged()` 目前是單一 `_PdfSettingsSheetState` 統一持有全部本地狀態後一次送出，理論上不會重演 Issue 4/5 review 曾抓到的「地雷」模式，但本 issue 是這個假設在真機上的最後一次系統性覆核，不能只靠程式碼閱讀判斷）。本任務新增一個涵蓋全部 8 欄位的組合測試，不修改既有兩個測試。
 
-- [ ] **Step 1：撰寫測試**
+- [x] **Step 1：撰寫測試**
 
 在 `app/integration_test/reader_screen_test.dart` 檔案最後一個 `testWidgets`（第 1502 行結尾 `});`）之後、`}`（`main()` 結尾，第 1503 行）之前新增：
 
@@ -183,7 +183,7 @@
   });
 ```
 
-- [ ] **Step 2：真機執行自動化測試**
+- [x] **Step 2：真機執行自動化測試**
 
 Run: `cd app && flutter devices`（確認裝置 id，本環境預期為 `3CEF42ECD491687`）
 Run: `cd app && flutter test integration_test/reader_screen_test.dart -d <device-id>`
@@ -191,7 +191,7 @@ Expected: 全數 PASS（既有測試 + 本任務新增的 1 個）。
 
 若失敗，**依失敗的欄位判斷是否為「地雷」模式重演**（某個分頁的 `_notifyChanged()` 未把其餘分頁已設定的欄位原樣帶回）——若是，這是需要建立後續 issue 追蹤的真實缺陷（見 Global Constraints「若驗證發現需要後續處理的落差」），不要為了讓測試通過而弱化斷言內容。
 
-- [ ] **Step 3：`flutter analyze` 與完整測試套件**
+- [x] **Step 3：`flutter analyze` 與完整測試套件**
 
 Run: `cd app && flutter analyze`
 Expected: `No issues found!`
@@ -199,7 +199,7 @@ Expected: `No issues found!`
 Run: `cd app && flutter test`
 Expected: 全數 PASS，無回歸。
 
-- [ ] **Step 4：Commit**
+- [x] **Step 4：Commit**
 
 ```bash
 git add app/integration_test/reader_screen_test.dart
@@ -220,7 +220,7 @@ git commit -m "test(epic-16): Issue 7 PDF 8 欄位組合持久化收尾驗證（
 
 `pdf_dual_page_test.dart` 目前只驗證翻頁步進的索引邏輯（`onPageChanged` 回報值），從未驗證拼接後的畫面本身是否真的無縫——這正是 `issues.md` Issue 3 完成說明明文承認的缺口。本任務用一份左右頁各為單一鮮明對比色的專屬測試 PDF，讓「拼接處是否有間隙」可以用像素量測直接驗證，而非僅憑肉眼主觀判斷。
 
-- [ ] **Step 0：安裝 Python 依賴**
+- [x] **Step 0：安裝 Python 依賴**
 
 ```bash
 pip install fpdf2 pillow
@@ -228,7 +228,7 @@ pip install fpdf2 pillow
 
 Expected：成功安裝（或確認已安裝），供 Step 1 的 `fpdf` 與 Step 5 的 `PIL`（Pillow）匯入使用。
 
-- [ ] **Step 1：產生雙色測試 PDF（本機，Python）**
+- [x] **Step 1：產生雙色測試 PDF（本機，Python）**
 
 在 scratchpad 目錄（或任何本機暫存位置，確保不在 `app/` 或任何會被 `git add` 的路徑下）執行：
 
@@ -259,7 +259,7 @@ pdf.output("fr41_gap_test.pdf")
 Run: `python generate_fr41_gap_test_pdf.py`
 Expected: 產生 `fr41_gap_test.pdf`（2 頁）。
 
-- [ ] **Step 2：推送至真機**
+- [x] **Step 2：推送至真機**
 
 ```bash
 adb devices  # 確認 device id
@@ -268,7 +268,7 @@ adb -s <device-id> push fr41_gap_test.pdf /sdcard/Android/data/cc.ugotit.elinkbo
 
 Expected: `push` 指令成功回報已傳輸的位元組數。
 
-- [ ] **Step 3：建立暫時性 `flutter run` 除錯進入點**
+- [x] **Step 3：建立暫時性 `flutter run` 除錯進入點**
 
 在 `app/lib/` 新建（**暫時性、驗證後刪除、不納入版本控制**）：
 
@@ -305,7 +305,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 4：執行並截圖**
+- [x] **Step 4：執行並截圖**
 
 ```bash
 cd app
@@ -322,7 +322,7 @@ Expected: 產生 `fr41_screenshot.png`。截圖完成後回到 `flutter run` 終
 
 用 `Read` 工具實際檢視 `fr41_screenshot.png`，確認畫面上確實可見紅、藍兩個色塊左右並排，沒有整片異常色彩或渲染失敗的跡象（若截圖本身就異常，代表測試素材或 harness 有問題，需排查後重新截圖，不進入 Step 5 的量測）。
 
-- [ ] **Step 5：像素量測分析（本機，Python + Pillow）**
+- [x] **Step 5：像素量測分析（本機，Python + Pillow）**
 
 ```python
 # measure_fr41_gap.py
@@ -368,7 +368,7 @@ else:
 Run: `python measure_fr41_gap.py`
 Expected: 輸出 `gap_px` 數值與 PASS/FAIL 判讀。把完整輸出記錄下來，供 Step 6 寫入 QA 報告。
 
-- [ ] **Step 6：撰寫 QA 報告，記錄 PDF 與 EPUB FXL 兩路線結論**
+- [x] **Step 6：撰寫 QA 報告，記錄 PDF 與 EPUB FXL 兩路線結論**
 
 新建 `docs/epics/epic-16-dual-page/reviews/qa-issue-7-report.md`，內容至少包含：
 
@@ -395,7 +395,7 @@ Expected: 輸出 `gap_px` 數值與 PASS/FAIL 判讀。把完整輸出記錄下�
 - 結論：PASS（沿用 Issue 6 結論，本 issue 不重複執行）。
 ```
 
-- [ ] **Step 7：清理暫時性檔案**
+- [x] **Step 7：清理暫時性檔案**
 
 ```bash
 rm app/lib/dev_fr41_pdf_harness.dart
@@ -406,7 +406,7 @@ rm fr41_gap_test.pdf fr41_screenshot.png generate_fr41_gap_test_pdf.py measure_f
 Run: `cd U:\MyDeveloper\AI\elinkBook && git status --short`
 Expected：確認 `app/lib/dev_fr41_pdf_harness.dart` 不再出現於輸出中；`docs/epics/epic-16-dual-page/reviews/qa-issue-7-report.md` 為唯一新增的未追蹤檔案。
 
-- [ ] **Step 8：Commit**
+- [x] **Step 8：Commit**
 
 ```bash
 git add docs/epics/epic-16-dual-page/reviews/qa-issue-7-report.md
@@ -428,7 +428,7 @@ git commit -m "docs(epic-16): Issue 7 FR-41 核心驗收確認（PDF 像素量�
 
 `spec.md`「方向偵測契約」第 4 點要求「本 epic 實作時須以真機旋轉驗證兩個 View 皆不重建（沒有黑屏或重新 `openBook`）」，但目前只有 `pdf_dual_page_test.dart` 的旋轉測試明確註記「PlatformView 是否因旋轉重建屬 Issue 7 的真機視覺驗證範圍，本測試只驗證 preferences 傳遞路徑不出錯」——真正的重建驗證從未在真機上執行過。本任務用暫時性 `Log.d` 插樁在 `openBook()` 起始處留下標記，若旋轉後標記重新出現，代表原生端確實重新開書（重建），這是比「肉眼看有沒有黑屏閃爍」更可靠的證據。
 
-- [ ] **Step 1：加入暫時性插樁——`PdfReaderView.kt`**
+- [x] **Step 1：加入暫時性插樁——`PdfReaderView.kt`**
 
 找到 `app/android/app/src/main/kotlin/cc/ugotit/elinkbook/PdfReaderView.kt:417`：
 
@@ -445,7 +445,7 @@ git commit -m "docs(epic-16): Issue 7 FR-41 核心驗收確認（PDF 像素量�
         if (path == null) {
 ```
 
-- [ ] **Step 2：加入暫時性插樁——`EpubReaderView.kt`**
+- [x] **Step 2：加入暫時性插樁——`EpubReaderView.kt`**
 
 找到 `app/android/app/src/main/kotlin/cc/ugotit/elinkbook/EpubReaderView.kt:591`：
 
@@ -462,7 +462,7 @@ git commit -m "docs(epic-16): Issue 7 FR-41 核心驗收確認（PDF 像素量�
         if (path == null) {
 ```
 
-- [ ] **Step 3：編譯確認**
+- [x] **Step 3：編譯確認**
 
 ```bash
 cd app/android
@@ -471,7 +471,7 @@ cd app/android
 
 Expected: `BUILD SUCCESSFUL`。
 
-- [ ] **Step 4：建立暫時性 `flutter run` 除錯進入點——PDF**
+- [x] **Step 4：建立暫時性 `flutter run` 除錯進入點——PDF**
 
 在 `app/lib/` 新建（**暫時性、驗證後刪除、不納入版本控制**）：
 
@@ -508,7 +508,7 @@ Future<void> main() async {
 
 （本 harness 沿用 Task 2 推送到裝置的 `fr41_gap_test.pdf`，若該檔案已於 Task 2 Step 7 清理，需重新執行 Task 2 Step 1-2 產生並推送一次；或改用任意已在裝置上的 PDF 路徑亦可，本測試不關心內容，只關心 `openBook()` 呼叫次數。）
 
-- [ ] **Step 5：建立暫時性 `flutter run` 除錯進入點——EPUB**
+- [x] **Step 5：建立暫時性 `flutter run` 除錯進入點——EPUB**
 
 在 `app/lib/` 新建（**暫時性、驗證後刪除、不納入版本控制**）：
 
@@ -548,7 +548,7 @@ Future<void> main() async {
 adb -s <device-id> push app/test/fixtures/sample_fixed_layout.epub /sdcard/Android/data/cc.ugotit.elinkbook/files/dev_rotation.epub
 ```
 
-- [ ] **Step 6：執行並旋轉裝置，觀察 logcat——PDF**
+- [x] **Step 6：執行並旋轉裝置，觀察 logcat——PDF**
 
 ```bash
 adb -s <device-id> logcat -c   # 清空既有 log
@@ -576,7 +576,7 @@ Expected：旋轉前後 `Q7-ROTATE-CHECK` 的筆數應維持在 **1 筆**（不�
 
 回到 `flutter run` 終端機按 `q` 結束程序。
 
-- [ ] **Step 7：執行並旋轉裝置，觀察 logcat——EPUB**
+- [x] **Step 7：執行並旋轉裝置，觀察 logcat——EPUB**
 
 重複 Step 6 的流程，改用：
 
@@ -588,14 +588,14 @@ flutter run -t lib/dev_rotation_epub_harness.dart -d <device-id>
 
 Expected：同樣應維持 **1 筆** `EpubReaderView.openBook() called`，旋轉前後不新增。
 
-- [ ] **Step 8：還原暫時性插樁**
+- [x] **Step 8：還原暫時性插樁**
 
 把 Step 1、Step 2 新增的兩行 `android.util.Log.d(...)` 註解刪除，確認 `PdfReaderView.kt`／`EpubReaderView.kt` 回到插樁前的原始內容。
 
 Run: `git diff app/android/app/src/main/kotlin/cc/ugotit/elinkbook/PdfReaderView.kt app/android/app/src/main/kotlin/cc/ugotit/elinkbook/EpubReaderView.kt`
 Expected：無任何差異輸出（完全還原）。
 
-- [ ] **Step 9：清理暫時性檔案**
+- [x] **Step 9：清理暫時性檔案**
 
 ```bash
 rm app/lib/dev_rotation_pdf_harness.dart app/lib/dev_rotation_epub_harness.dart
@@ -605,7 +605,7 @@ adb -s <device-id> shell rm /sdcard/Android/data/cc.ugotit.elinkbook/files/dev_r
 Run: `cd U:\MyDeveloper\AI\elinkBook && git status --short`
 Expected：`app/lib/dev_rotation_pdf_harness.dart`／`dev_rotation_epub_harness.dart` 不再出現；`PdfReaderView.kt`／`EpubReaderView.kt` 不再顯示為已修改。
 
-- [ ] **Step 10：把結果補進 QA 報告**
+- [x] **Step 10：把結果補進 QA 報告**
 
 在 `docs/epics/epic-16-dual-page/reviews/qa-issue-7-report.md` 新增一段：
 
@@ -621,7 +621,7 @@ Expected：`app/lib/dev_rotation_pdf_harness.dart`／`dev_rotation_epub_harness.
   契約」第 4 點 / FAIL：發現重建情形，已另立 issue-<N> 追蹤>
 ```
 
-- [ ] **Step 11：`flutter analyze` 與完整測試套件最終確認**
+- [x] **Step 11：`flutter analyze` 與完整測試套件最終確認**
 
 Run: `cd app && flutter analyze`
 Expected: `No issues found!`
@@ -629,7 +629,7 @@ Expected: `No issues found!`
 Run: `cd app && flutter test`
 Expected: 全數 PASS。
 
-- [ ] **Step 12：Commit**
+- [x] **Step 12：Commit**
 
 ```bash
 git add docs/epics/epic-16-dual-page/reviews/qa-issue-7-report.md
@@ -650,7 +650,7 @@ git commit -m "docs(epic-16): Issue 7 裝置旋轉行為確認（PDF/EPUB Platfo
 - Consumes：Task 1-3 的產出（測試結果、QA 報告）
 - Produces：無
 
-- [ ] **Step 1：更新 `docs/epics/epic-16-dual-page/issues.md`——Issue 7 標題與完成說明**
+- [x] **Step 1: 更新 docs/epics/epic-16-dual-page/issues.md——Issue 7 標題與完成說明**
 
 把 Issue 7 的 `**Status:**`（現為 `ready-for-agent`）改為完成狀態，比照 Issue 3-6、Issue 9 既有的完成說明風格，內容需涵蓋：
 - Task 1 的 8 欄位組合持久化測試結果（測試名稱、PASS/FAIL）
@@ -659,11 +659,11 @@ git commit -m "docs(epic-16): Issue 7 裝置旋轉行為確認（PDF/EPUB Platfo
 - 若本 issue 過程中發現任何新問題，需註明已建立哪個後續 issue 追蹤（若無發現，明確寫「無」，不要含糊帶過）
 - 引用 QA 報告路徑 `reviews/qa-issue-7-report.md` 供後續追溯
 
-- [ ] **Step 2：更新 `docs/epics.md`——Epic 16 狀態列**
+- [x] **Step 2: 更新 docs/epics.md——Epic 16 狀態列**
 
 在 `docs/epics.md` 的 `epic-16-dual-page` 那一列備註最後，新增一句總結 Issue 7 收尾的結論（FR-41 兩路線確認結果、裝置旋轉確認結果），並註明：**Epic 16 全部 9 個 Issue（Issue 1-9）皆已完成**。狀態燈號本身維持 `🟡 開發中 (Active)`，**不要自行改成 `🟢 已歸檔 (Archived)`**——依 Global Constraints，歸檔動作需要人類明確指定，本步驟只負責把狀態列更新到「所有 Issue 皆已完成，可供人類決定何時歸檔」的乾淨狀態。
 
-- [ ] **Step 3：`flutter analyze` 與完整測試套件最終確認**
+- [x] **Step 3: `flutter analyze` 與完整測試套件最終確認**
 
 Run: `cd app && flutter analyze`
 Expected: `No issues found!`
@@ -671,7 +671,7 @@ Expected: `No issues found!`
 Run: `cd app && flutter test`
 Expected: 全數 PASS。
 
-- [ ] **Step 4：Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add docs/epics/epic-16-dual-page/issues.md docs/epics.md
