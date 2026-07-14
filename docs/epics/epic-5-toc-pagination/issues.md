@@ -6,7 +6,7 @@
 
 ## Issue 1：PDF 頁碼顯示 + 跳頁
 
-**Status:** ✅ 已完成（待真機驗證最後一項驗收標準）
+**Status:** ✅ 已完成
 
 **依賴：** 無（起始工單，可與 Issue 2 平行）
 
@@ -37,7 +37,7 @@
 - [x] 頁尾提供跳頁滑桿，拖曳後正確跳轉，且與輸入框數字雙向同步
 - [x] 跳頁 UI 元件只接收 `currentPage`／`totalPages`／`onPageChanged` 三個與格式無關的屬性，不含任何 PDF 專屬的頁碼取得邏輯或 controller 寫死在元件內部（審查修正）
 - [x] 上述測試皆通過，`flutter analyze` 乾淨，既有測試無回歸
-- [ ] 真機整合測試涵蓋跳頁的實際渲染結果（跳轉後畫面確實顯示目標頁）
+- [x] 真機整合測試涵蓋跳頁的實際渲染結果（跳轉後畫面確實顯示目標頁）——已於裝置上執行 `integration_test/reader_footer_test.dart`，`All tests passed!`
 
 **Blocked by：** None - can start immediately
 
