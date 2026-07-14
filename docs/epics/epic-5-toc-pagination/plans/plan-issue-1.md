@@ -4,7 +4,7 @@
 
 **Goal:** 在 PDF 閱讀畫面新增頁尾（進度百分比 + 目前頁碼／總頁數）與跳頁互動元件（輸入框 + 滑桿雙向同步），並建立可被 Issue 3（EPUB）直接複用的格式無關頁尾元件。
 
-**Architecture:** 原生端（`PdfReaderView.kt`）擴充既有的 `onPageChanged` 回報，從單純的頁碼索引改為同時攜帶總頁數，並新增 `jumpToPage` method channel case；Dart 端新增 `PdfPageInfo` 值物件承接這個回報，`PdfReaderView`（Dart）新增公開方法 `jumpToPage(int)`（比照既有 `nextPage()`/`previousPage()` 的既有慣例，供 `ReaderScreen` 透過 `GlobalKey` + `as dynamic` 呼叫——這是既有整合測試已經在用的技巧，`_PdfReaderViewState` 刻意維持 private，只讓不帶底線前綴的方法可被 `dynamic` 動態呼叫）；新建格式無關的 `ReaderFooter` widget（只接收 `currentPage`／`totalPages`／`onPageChanged` 三個屬性，不含任何 PDF 專屬邏輯，供 Issue 3 直接複用於 EPUB）；`ReaderScreen._buildBody()` 從純 `Stack` 改為 `Column`（`Expanded` 包住既有 Stack，頁尾另外佔一列並擠壓閱讀區域高度，比照 `prototype/index.html` 的 `.reader-footer` 既有版面配置慣例，而非浮動疊加）。
+**Architecture:** 原生端（`PdfReaderView.kt`）擴充既有的 `onPageChanged` 回報，從單純的頁碼索引改為同時攜帶總頁數，並新增 `jumpToPage` method channel case；Dart 端新增 `PdfPageInfo` 值物件承接這個回報，`PdfReaderView`（Dart）的私有 State 新增 `jumpToPage(int)` 實例方法（比照既有 `nextPage()`/`previousPage()` 命名慣例），並在 `PdfReaderView` 這個公開 Widget 類別上新增**強型別的 `static jumpToPage(GlobalKey<State<PdfReaderView>>, int)` helper**（審查修正：production code 不使用 `as dynamic` 跨越 private State 邊界呼叫——本專案目前完全沒有在 `--obfuscate` release 建置下驗證過 `as dynamic` 動態呼叫私有類別方法的行為，且 `dynamic` 呼叫搭配 tree-shaking／混淆是 Flutter 社群已知的潛在崩潰風險類別；`as dynamic` 僅保留在既有整合測試技巧中，測試碼不會被編進 release APK，風險不適用），供 `ReaderScreen` 透過強型別 static helper 呼叫；新建格式無關的 `ReaderFooter` widget（只接收 `currentPage`／`totalPages`／`onPageChanged` 三個屬性，不含任何 PDF 專屬邏輯，供 Issue 3 直接複用於 EPUB）；`ReaderScreen._buildBody()` 從純 `Stack` 改為 `Column`（`Expanded` 包住既有 Stack，頁尾另外佔一列並擠壓閱讀區域高度，比照 `prototype/index.html` 的 `.reader-footer` 既有版面配置慣例，而非浮動疊加）。
 
 **Tech Stack:** Flutter（Dart）、Kotlin、`integration_test`（真機）。
 
@@ -203,7 +203,7 @@ git commit -m "feat(epic-5): PdfReaderView.kt onPageChanged 攜帶總頁數 + �
 
 **Interfaces:**
 - Consumes：Task 1 的 `"onPageChanged"` 新 wire 格式（`{"pageIndex": int, "totalPages": int}`）、新增的 `"jumpToPage"` method channel。
-- Produces：`PdfPageInfo` 值物件（`pageIndex`／`totalPages`，皆 0-indexed／實際總數）；`PdfReaderView.onPageChanged` 簽章由 `ValueChanged<int>?` 改為 `ValueChanged<PdfPageInfo>?`；`PdfReaderView` 新增公開方法 `jumpToPage(int pageIndex)`（0-indexed，比照既有 `nextPage()`/`previousPage()` 命名慣例，供 Task 4 的 `ReaderScreen` 透過 `GlobalKey` + `as dynamic` 呼叫）。
+- Produces：`PdfPageInfo` 值物件（`pageIndex`／`totalPages`，皆 0-indexed／實際總數）；`PdfReaderView.onPageChanged` 簽章由 `ValueChanged<int>?` 改為 `ValueChanged<PdfPageInfo>?`；`_PdfReaderViewState` 新增實例方法 `jumpToPage(int pageIndex)`（0-indexed，比照既有 `nextPage()`/`previousPage()` 命名慣例）；`PdfReaderView`（公開 Widget 類別）新增**強型別 static helper** `static void jumpToPage(GlobalKey<State<PdfReaderView>> key, int pageIndex)`（審查修正，供 Task 4 的 `ReaderScreen` 安全呼叫，不使用 `as dynamic`）。
 
 - [ ] **Step 1：新建 `PdfPageInfo` 值物件**
 
@@ -278,7 +278,7 @@ import 'pdf_page_info.dart';
         break;
 ```
 
-- [ ] **Step 4：新增 `jumpToPage()` 公開方法**
+- [ ] **Step 4：新增 `jumpToPage()` 實例方法 + 強型別 static helper（審查修正）**
 
 找到既有的：
 
@@ -301,8 +301,42 @@ import 'pdf_page_info.dart';
 
   /// 跳轉至指定頁碼（0-indexed，Epic 5 Issue 1，FR-23）。呼叫端（見
   /// ReaderScreen）負責把 ReaderFooter 的 1-indexed 使用者輸入轉換為
-  /// 0-indexed 後才呼叫本方法。
+  /// 0-indexed 後才呼叫本方法。外部呼叫請一律透過 [PdfReaderView.jumpToPage]
+  /// 這個強型別 static helper，不要用 `as dynamic` 直接呼叫本實例方法
+  /// （審查修正，見 Global Constraints）。
   void jumpToPage(int pageIndex) => _channel?.invokeMethod('jumpToPage', pageIndex);
+```
+
+找到 `class PdfReaderView extends StatefulWidget` 的建構子與 `createState()`：
+
+```dart
+  @override
+  State<PdfReaderView> createState() => _PdfReaderViewState();
+}
+```
+
+改為（在 `createState()` 之後新增 static helper，此為公開 Widget 類別，同檔案內可存取 private 的 `_PdfReaderViewState`）：
+
+```dart
+  @override
+  State<PdfReaderView> createState() => _PdfReaderViewState();
+
+  /// 供外部（`ReaderScreen`）安全呼叫 [_PdfReaderViewState.jumpToPage] 的
+  /// 強型別 static helper（審查修正，`/superpowers:requesting-code-review`）：
+  /// 不使用 `as dynamic` 跨越 State 的 private 邊界——本專案目前完全沒有
+  /// 在 `--obfuscate` release 建置下驗證過 `dynamic` 呼叫私有類別方法的
+  /// 行為，`dynamic` 呼叫搭配 tree-shaking／混淆是 Flutter 社群已知的潛在
+  /// 崩潰風險類別（method 只被 dynamic 呼叫連結時，可能被視為未使用而被
+  /// tree-shaking 移除，或在混淆重新命名後找不到對應符號）。[key] 對應的
+  /// State 若尚未掛載或型別不符（例如原生 View 尚未建立），靜默忽略，比照
+  /// `nextPage()`/`previousPage()` 既有的 fire-and-forget 慣例。
+  static void jumpToPage(GlobalKey<State<PdfReaderView>> key, int pageIndex) {
+    final state = key.currentState;
+    if (state is _PdfReaderViewState) {
+      state.jumpToPage(pageIndex);
+    }
+  }
+}
 ```
 
 - [ ] **Step 5：撰寫 widget test**
@@ -357,10 +391,18 @@ import 'package:elinkbook/reader/pdf_page_info.dart';
     expect(received, const PdfPageInfo(pageIndex: 3, totalPages: 20));
   });
 
-  testWidgets('jumpToPage() 呼叫原生端 jumpToPage method channel', (tester) async {
+  testWidgets(
+      'PdfReaderView.jumpToPage()（強型別 static helper）呼叫原生端 jumpToPage method channel',
+      (tester) async {
+    // 審查修正：測試改為驅動真正的公開 API（static helper + GlobalKey），
+    // 而非只測 private State 的 `as dynamic` 呼叫——production code
+    // （ReaderScreen）實際上會呼叫的是這個 static helper，測試應驗證這條
+    // 真正會被使用的路徑。
+    final key = GlobalKey<State<PdfReaderView>>();
     final calls = await _pumpPdfReaderView(
       tester,
-      const PdfReaderView(
+      PdfReaderView(
+        key: key,
         filePath: '/tmp/sample.pdf',
         onPageRendered: _noop,
         onError: _noopError,
@@ -368,7 +410,7 @@ import 'package:elinkbook/reader/pdf_page_info.dart';
     );
     calls.clear();
 
-    (tester.state(find.byType(PdfReaderView)) as dynamic).jumpToPage(7);
+    PdfReaderView.jumpToPage(key, 7);
     await tester.pump();
 
     expect(calls, hasLength(1));
@@ -492,6 +534,9 @@ class _ReaderFooterState extends State<ReaderFooter> {
       _sliderValue = clamped.toDouble();
     });
     widget.onPageChanged(clamped);
+    // 審查修正：跳頁完成後主動收起鍵盤與輸入框焦點，避免鍵盤持續佔用畫面
+    // 遮擋閱讀內容。
+    FocusScope.of(context).unfocus();
   }
 
   @override
@@ -528,11 +573,16 @@ class _ReaderFooterState extends State<ReaderFooter> {
                   min: 1,
                   max: widget.totalPages > 1 ? widget.totalPages.toDouble() : 2,
                   divisions: widget.totalPages > 1 ? widget.totalPages - 1 : 1,
-                  onChanged: (v) => setState(() {
-                    _sliderValue = v;
-                    _inputController.text = '${v.round()}';
-                  }),
-                  onChangeEnd: _handleSliderChangeEnd,
+                  // 審查修正：總頁數只有 1 頁時，拖曳滑桿沒有實際意義（無處
+                  // 可跳），停用（onChanged/onChangeEnd 皆傳 null）讓 Slider
+                  // 視覺上呈現不可互動狀態，比只靠 max/divisions 防呆更直覺。
+                  onChanged: widget.totalPages > 1
+                      ? (v) => setState(() {
+                            _sliderValue = v;
+                            _inputController.text = '${v.round()}';
+                          })
+                      : null,
+                  onChangeEnd: widget.totalPages > 1 ? _handleSliderChangeEnd : null,
                 ),
               ),
             ],
@@ -581,6 +631,37 @@ void main() {
     await tester.pump();
 
     expect(received, 12);
+  });
+
+  testWidgets('輸入框送出跳頁後，主動收起鍵盤/輸入框焦點（審查修正）',
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: ReaderFooter(
+        currentPage: 5,
+        totalPages: 20,
+        onPageChanged: (_) {},
+      ),
+    ));
+
+    await tester.tap(find.byKey(const Key('reader_footer_jump_input')));
+    await tester.pump();
+    expect(
+      Focus.of(tester.element(find.byKey(const Key('reader_footer_jump_input'))))
+          .hasFocus,
+      isTrue,
+      reason: '點擊輸入框後應先取得焦點，作為稍後驗證「送出後失去焦點」的基準',
+    );
+
+    await tester.enterText(find.byKey(const Key('reader_footer_jump_input')), '12');
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pump();
+
+    expect(
+      Focus.of(tester.element(find.byKey(const Key('reader_footer_jump_input'))))
+          .hasFocus,
+      isFalse,
+      reason: '送出跳頁後應主動收起焦點/鍵盤',
+    );
   });
 
   testWidgets('輸入框輸入超出範圍的頁碼時，箝制在合法範圍內', (tester) async {
@@ -647,6 +728,23 @@ void main() {
     expect(find.text('8'), findsOneWidget);
     expect(find.text('進度 40% ｜ 第 8/20 頁'), findsOneWidget);
   });
+
+  testWidgets('總頁數只有 1 頁時，滑桿停用（onChanged 為 null）', (tester) async {
+    // 審查修正：totalPages <= 1 時拖曳跳頁沒有實際意義，Slider 應停用
+    // （視覺上呈現不可互動狀態），而不只是靠 max/divisions 防呆撐住。
+    await tester.pumpWidget(MaterialApp(
+      home: ReaderFooter(
+        currentPage: 1,
+        totalPages: 1,
+        onPageChanged: (_) {},
+      ),
+    ));
+
+    final slider =
+        tester.widget<Slider>(find.byKey(const Key('reader_footer_jump_slider')));
+    expect(slider.onChanged, isNull);
+    expect(slider.onChangeEnd, isNull);
+  });
 }
 ```
 
@@ -658,7 +756,7 @@ flutter test test/screens/reader_footer_test.dart
 flutter analyze
 ```
 
-Expected: 5 個測試全數通過；`flutter analyze` 顯示 `No issues found!`。
+Expected: 7 個測試全數通過；`flutter analyze` 顯示 `No issues found!`。
 
 - [ ] **Step 4：Commit**
 
@@ -700,9 +798,9 @@ import 'reader_footer.dart';
   // PDF 目前頁碼/總頁數狀態，由 PdfReaderView.onPageChanged 回報驅動頁尾
   // 顯示（Epic 5 Issue 1）。EPUB 讀取畫面本 issue 不使用此欄位。
   PdfPageInfo? _pdfPageInfo;
-  // 用於呼叫 PdfReaderView 的 jumpToPage()（比照既有整合測試
-  // tester.state(...) as dynamic 的既有技巧，PdfReaderView 的 State 類別
-  // 刻意維持 private，只有不帶底線前綴的方法可被 dynamic 動態呼叫）。
+  // 用於呼叫 PdfReaderView.jumpToPage(key, pageIndex) 這個強型別 static
+  // helper（審查修正，見 Task 2 Step 4——不使用 as dynamic 跨 State 私有
+  // 邊界呼叫，避免 release 混淆／tree-shaking 風險）。
   final _pdfReaderViewKey = GlobalKey<State<PdfReaderView>>();
 ```
 
@@ -762,8 +860,8 @@ import 'reader_footer.dart';
               currentPage: _pdfPageInfo!.pageIndex + 1,
               totalPages: _pdfPageInfo!.totalPages,
               onPageChanged: (page1Indexed) {
-                (_pdfReaderViewKey.currentState as dynamic)
-                    ?.jumpToPage(page1Indexed - 1);
+                // 審查修正：透過強型別 static helper 呼叫，不使用 as dynamic。
+                PdfReaderView.jumpToPage(_pdfReaderViewKey, page1Indexed - 1);
               },
             ),
         ],
@@ -1007,7 +1105,13 @@ git commit -m "test(epic-5): Issue 1 真機整合測試 + issues.md/docs/epics.m
 
 **占位符掃描**：全文無 TBD/待補字樣，每個 Step 皆含可直接使用的完整程式碼。Task 4 Step 4 的括號說明是驗收步驟本質使然（真機驗證留給 Task 5），非遺漏程式碼。
 
-**型別一致性**：`PdfPageInfo(pageIndex, totalPages)` 在 Task 2 定義後，Task 4（`_pdfPageInfo!.pageIndex`／`_pdfPageInfo!.totalPages`）引用一致；`ReaderFooter(currentPage, totalPages, onPageChanged)` 在 Task 3 定義後，Task 4 呼叫端逐字相符（含 0↔1 轉換：`pageIndex + 1` 傳入、`page1Indexed - 1` 傳給 `jumpToPage`）；`jumpToPage(int)` 在 Task 1（Kotlin）／Task 2（Dart）／Task 4（呼叫端）三處簽章一致（皆 0-indexed）。
+**型別一致性**：`PdfPageInfo(pageIndex, totalPages)` 在 Task 2 定義後，Task 4（`_pdfPageInfo!.pageIndex`／`_pdfPageInfo!.totalPages`）引用一致；`ReaderFooter(currentPage, totalPages, onPageChanged)` 在 Task 3 定義後，Task 4 呼叫端逐字相符（含 0↔1 轉換：`pageIndex + 1` 傳入、`page1Indexed - 1` 傳給 `jumpToPage`）；`jumpToPage(int)` 在 Task 1（Kotlin）／Task 2（Dart `_PdfReaderViewState` 實例方法）／Task 4（呼叫端）三處簽章一致（皆 0-indexed）；`PdfReaderView.jumpToPage(GlobalKey<State<PdfReaderView>>, int)` 這個 static helper（審查修正新增）在 Task 2 Step 4 定義、Step 5 測試、Task 4 Step 1（`GlobalKey` 宣告）／Step 3（呼叫）四處型別與呼叫方式一致。
+
+## 審查修正紀錄（`tmp/epic-5/reviews/plan-issue-1-review.md`）
+
+- **Critical（確認屬實，已修正）**：Task 4 原始設計用 `(_pdfReaderViewKey.currentState as dynamic)?.jumpToPage(...)` 跨越 `PdfReaderView` 私有 State 邊界呼叫，在 release 混淆／tree-shaking 建置下有已知的崩潰風險類別（本專案目前完全沒有在 `--obfuscate` 建置下驗證過此模式，且 production code 之前也沒有 `as dynamic` 的既有先例，純粹是把測試技巧誤搬進 production code）。已改為在 `PdfReaderView` 公開類別上新增強型別 `static jumpToPage(GlobalKey<State<PdfReaderView>>, int)` helper（Task 2 Step 4），`ReaderScreen`／測試皆改為呼叫這個型別安全的公開 API，`as dynamic` 只保留在既有整合測試對 `nextPage()`/`previousPage()` 的既有用法（測試碼不編進 release APK，風險不適用，本次未變動）。
+- **Important（確認屬實，已修正）**：`ReaderFooter` 輸入框送出跳頁後鍵盤/焦點未收起，會持續遮擋畫面。已於 `_handleInputSubmitted` 補上 `FocusScope.of(context).unfocus()`，並新增對應測試驗證送出後失去焦點。
+- **Minor（確認屬實，已修正）**：`totalPages == 1` 時 Slider 的 `divisions`/`max` 防呆值雖不會崩潰，但拖曳沒有實際意義。已改為 `totalPages <= 1` 時 `onChanged`/`onChangeEnd` 皆傳 `null`，讓 Slider 視覺呈現不可互動狀態，並新增對應測試。
 
 ## Execution Handoff
 
