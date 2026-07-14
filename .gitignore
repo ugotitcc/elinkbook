@@ -8,7 +8,6 @@ Thumbs.db
 .agents/skills/
 .claude/skills/
 docs/epics/epic-0-skeleton/reviews/
-docs/epics/epic-4-pdf-enhance/reviews/
 tmp/
 app/android/.kotlin/sessions/kotlin-compiler-12120238411686333762.salive
 agent/skills/ask-matt/SKILL.md
