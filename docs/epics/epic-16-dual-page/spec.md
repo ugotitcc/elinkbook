@@ -167,4 +167,6 @@ enum DualPageDirection { ltr, rtl }
 - **裁切矩形為全書共用、非逐頁偵測**（審查修正 I-5）：雙頁模式下左右頁套用的是同一個 `cropRect`（現行 `PdfReaderView.kt` 的 autoDetect 本就是全書統一矩形，非逐頁重算）。當左右頁天然白邊寬度不同（常見於掃描書）時，可能導致裁切不理想（切到內容或留白不均）；本 epic 不新增 per-page 裁切偵測（YAGNI）。
 - **裁切切換視覺閃爍**：進入手動裁切時會強制從雙頁切換為單頁預覽，這在視覺上會有一次瞬時閃爍，此為設計上的折衷（YAGNI），不進行額外的平滑動畫處理。
 - **EPUB FXL 換頁縮放跳動（2026-07-14 記錄，待優化）**：真機視覺驗收確認 Issue 6 bug 修正後雙頁並排/無縫隙已正確，但每次換頁時會觀察到一次縮放動作（`applyFxlFitScale()` 的 `OnGlobalLayoutListener` 重新觸發套用 `scaleX`/`scaleY`/`translationX`/`translationY`），略為影響閱讀體驗。根因尚未排查（可能與 `cachedFxlFitScale` 重新計算時機、或換頁瞬間 WebView 尺寸量測時序有關），留待後續 issue 處理，不阻塞 Issue 6 完成。
+
+  > **後續處理（Issue 9，2026-07-14 討論定案）：** 依 `/grill-with-docs` 分析，根因確認為 Android WebView 對尚未可視的預載頁面不做預先渲染/圖片解碼（Readium kotlin-toolkit 官方 [Discussion #513](https://github.com/readium/kotlin-toolkit/discussions/513) 已記錄同一類已知、未解決問題），無法單靠調整監聽時機解決。改採「三欄點擊熱區取代原生滑動手勢、`goForward`/`goBackward(animated=false)` 直接換頁」（見 `plans/plan-issue-9.md`），繞開動畫揭露未縮放內容的可見時間窗口。真機驗證結論：（待 Task 4 Step 3 執行後填入）。
 - **PDF／EPUB 漫畫全版面沉浸顯示（2026-07-14 記錄，未來考慮）**：目前 PDF／EPUB 固定版面在橫向雙頁（甚至單頁）模式下仍保留系統狀態列與導覽列。未來可考慮讓這兩種格式在此情境下改為全版面沉浸顯示（隱藏系統列），與 `FxlSettingsSheet` 已預留但未實作的 FR-42 全螢幕開關 UI 擴充空間相關，屬獨立於本 epic 範圍的後續功能，留待後續規劃。

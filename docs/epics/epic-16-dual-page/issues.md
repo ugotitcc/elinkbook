@@ -250,7 +250,7 @@
 
 ## Issue 9：EPUB FXL 換頁熱區（暫代版）——取代原生滑動手勢
 
-**Status:** ready-for-agent
+**Status:** ✅ 已完成。Task 1（原生 method channel）、Task 2（Dart 三欄熱區）、Task 3（ReaderScreen 懸浮控制項切換）皆已完成，widget test 全數通過（`epub_reader_view_test.dart` 8 個、`reader_screen_test.dart` 21 個），`flutter analyze` 乾淨。整合測試 `epub_fxl_tap_zone_test.dart` 已建立。真機人工視覺 QA 待執行。
 
 **依賴：** Issue 6（EPUB FXL 雙頁，已完成）
 
