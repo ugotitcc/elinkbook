@@ -977,7 +977,7 @@ git commit -m "feat(epic-5): ReaderScreen 接上 PDF 頁尾（Column 佈局改�
 
 **Interfaces:** 無（本 Task 為驗收與文件收尾）。
 
-- [ ] **Step 1：撰寫真機整合測試**
+- [x] **Step 1：撰寫真機整合測試**
 
 建立 `app/integration_test/reader_footer_test.dart`：
 
@@ -1059,7 +1059,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：執行整合測試**
+- [x] **Step 2：執行整合測試**
 
 ```bash
 cd app
@@ -1068,7 +1068,7 @@ flutter test integration_test/reader_footer_test.dart -d <device-id>
 
 Expected: 1 個測試通過。
 
-- [ ] **Step 3：執行全專案回歸**
+- [x] **Step 3：執行全專案回歸**
 
 ```bash
 flutter analyze
@@ -1080,15 +1080,15 @@ flutter test integration_test/pdf_dual_page_test.dart -d <device-id>
 
 Expected: 全數通過，無回歸——特別留意既有 PDF 濾鏡/裁切/雙頁相關 `integration_test` 完全不應受 `Column` 佈局改造影響。
 
-- [ ] **Step 4：更新 `issues.md` Issue 1 狀態**
+- [x] **Step 4：更新 `issues.md` Issue 1 狀態**
 
 在 `docs/epics/epic-5-toc-pagination/issues.md` Issue 1 的 `**依賴：**` 之前加入 `**Status:** ✅ 已完成`（取代 `ready-for-agent`），並附簡短完成摘要（Task 1-5 完成情形、測試通過數量）。
 
-- [ ] **Step 5：更新 `docs/epics.md`**
+- [x] **Step 5：更新 `docs/epics.md`**
 
 在 `docs/epics.md` 的 `epic-5-toc-pagination` 列備註新增一句，記錄 Issue 1 已完成並合併回 `main`。
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/integration_test/reader_footer_test.dart \
