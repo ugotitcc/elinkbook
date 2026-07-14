@@ -250,7 +250,7 @@
 
 ## Issue 9：EPUB FXL 換頁熱區（暫代版）——取代原生滑動手勢
 
-**Status:** ✅ 已完成。Task 1（原生 method channel）、Task 2（Dart 三欄熱區）、Task 3（ReaderScreen 懸浮控制項切換）皆已完成，widget test 全數通過（`epub_reader_view_test.dart` 8 個、`reader_screen_test.dart` 21 個），`flutter analyze` 乾淨。整合測試 `epub_fxl_tap_zone_test.dart` 已建立，惟 Task 4 Step 2/4 列出的真機 `integration_test` 尚未實際於裝置上執行，留待後續補做。真機人工視覺 QA（Task 4 Step 3）已完成並確認：橫向雙頁與單頁模式下，點擊左/右熱區換頁皆無縮放跳動，點擊中間熱區懸浮控制項顯示/隱藏切換正常。
+**Status:** ✅ 已完成。Task 1（原生 method channel）、Task 2（Dart 三欄熱區）、Task 3（ReaderScreen 懸浮控制項切換）皆已完成，widget test 全數通過（`epub_reader_view_test.dart` 8 個、`reader_screen_test.dart` 21 個），`flutter analyze` 乾淨。Task 4 Step 4 全套回歸已於真機（`9491G`，Android 15）重新執行並全數通過：`flutter analyze` 乾淨、`flutter test` 全專案 246 個測試通過、`integration_test/epub_reader_view_test.dart` 9/9、`integration_test/reader_screen_test.dart` 25/25、`integration_test/epub_dual_page_test.dart` 2/2，皆無回歸；真機整合測試 `epub_fxl_tap_zone_test.dart`（Task 4 Step 2）亦已於裝置上執行通過。真機人工視覺 QA（Task 4 Step 3）已完成並確認：橫向雙頁與單頁模式下，點擊左/右熱區換頁皆無縮放跳動，點擊中間熱區懸浮控制項顯示/隱藏切換正常。
 
 **依賴：** Issue 6（EPUB FXL 雙頁，已完成）
 
