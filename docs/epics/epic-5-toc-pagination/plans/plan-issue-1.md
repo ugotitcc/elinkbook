@@ -27,7 +27,7 @@
 **Interfaces:**
 - Produces：PDF method channel（`cc.ugotit.elinkbook/pdf_reader_view_$id`）的 `"onPageChanged"` 事件，wire 格式從單純 `Int` 改為 `Map<String, Int>`（`{"pageIndex": Int, "totalPages": Int}`）；新增 `"jumpToPage"` method channel case，接收 `Int` 參數。
 
-- [ ] **Step 1：新增共用的 `onPageChanged` 發送 helper**
+- [x] **Step 1：新增共用的 `onPageChanged` 發送 helper**
 
 找到 `app/android/app/src/main/kotlin/cc/ugotit/elinkbook/PdfReaderView.kt` 的 `nextPage()`／`previousPage()`（約第 792-812 行）：
 
@@ -95,7 +95,7 @@
     }
 ```
 
-- [ ] **Step 2：開書完成後立即送出一次初始頁碼狀態**
+- [x] **Step 2：開書完成後立即送出一次初始頁碼狀態**
 
 找到 `openBook()`（約第 417-450 行）內的：
 
@@ -120,7 +120,7 @@
             notifyPageChanged()
 ```
 
-- [ ] **Step 3：新增 `jumpToPage` 私有方法與 method channel case**
+- [x] **Step 3：新增 `jumpToPage` 私有方法與 method channel case**
 
 在 `previousPage()` 之後（Step 1 修改完的位置）新增：
 
@@ -167,7 +167,7 @@
             "enterCropEditMode" -> {
 ```
 
-- [ ] **Step 4：編譯確認**
+- [x] **Step 4：編譯確認**
 
 ```bash
 cd app/android
@@ -176,7 +176,7 @@ cd app/android
 
 Expected: `BUILD SUCCESSFUL`。
 
-- [ ] **Step 5：既有回歸測試**
+- [x] **Step 5：既有回歸測試**
 
 ```bash
 cd ../../app
@@ -185,7 +185,7 @@ flutter analyze
 
 Expected: `No issues found!`（本 Task 只異動 Kotlin，Dart 端尚未跟進解析新 wire 格式，`flutter analyze` 此時不會發現問題；真正的整合驗證留給 Task 2 完成後）。
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/android/app/src/main/kotlin/cc/ugotit/elinkbook/PdfReaderView.kt
@@ -205,7 +205,7 @@ git commit -m "feat(epic-5): PdfReaderView.kt onPageChanged 攜帶總頁數 + �
 - Consumes：Task 1 的 `"onPageChanged"` 新 wire 格式（`{"pageIndex": int, "totalPages": int}`）、新增的 `"jumpToPage"` method channel。
 - Produces：`PdfPageInfo` 值物件（`pageIndex`／`totalPages`，皆 0-indexed／實際總數）；`PdfReaderView.onPageChanged` 簽章由 `ValueChanged<int>?` 改為 `ValueChanged<PdfPageInfo>?`；`_PdfReaderViewState` 新增實例方法 `jumpToPage(int pageIndex)`（0-indexed，比照既有 `nextPage()`/`previousPage()` 命名慣例）；`PdfReaderView`（公開 Widget 類別）新增**強型別 static helper** `static void jumpToPage(GlobalKey<State<PdfReaderView>> key, int pageIndex)`（審查修正，供 Task 4 的 `ReaderScreen` 安全呼叫，不使用 `as dynamic`）。
 
-- [ ] **Step 1：新建 `PdfPageInfo` 值物件**
+- [x] **Step 1：新建 `PdfPageInfo` 值物件**
 
 建立 `app/lib/reader/pdf_page_info.dart`（比照既有 `EpubLayoutInfo`——`app/lib/reader/writing_mode.dart`——的既有樣式，純記憶體內回呼用值物件，不需要 JSON 序列化）：
 
@@ -235,7 +235,7 @@ class PdfPageInfo {
 }
 ```
 
-- [ ] **Step 2：`PdfReaderView` 建構參數簽章變更**
+- [x] **Step 2：`PdfReaderView` 建構參數簽章變更**
 
 在 `app/lib/reader/pdf_reader_view.dart` 新增 import：
 
@@ -255,7 +255,7 @@ import 'pdf_page_info.dart';
   final ValueChanged<PdfPageInfo>? onPageChanged;
 ```
 
-- [ ] **Step 3：`_handleMethodCall` 解析新 wire 格式**
+- [x] **Step 3：`_handleMethodCall` 解析新 wire 格式**
 
 找到 `_handleMethodCall()` 內：
 
@@ -278,7 +278,7 @@ import 'pdf_page_info.dart';
         break;
 ```
 
-- [ ] **Step 4：新增 `jumpToPage()` 實例方法 + 強型別 static helper（審查修正）**
+- [x] **Step 4：新增 `jumpToPage()` 實例方法 + 強型別 static helper（審查修正）**
 
 找到既有的：
 
@@ -339,7 +339,7 @@ import 'pdf_page_info.dart';
 }
 ```
 
-- [ ] **Step 5：撰寫 widget test**
+- [x] **Step 5：撰寫 widget test**
 
 在 `app/test/reader/pdf_reader_view_test.dart` 新增 import：
 
@@ -419,7 +419,7 @@ import 'package:elinkbook/reader/pdf_page_info.dart';
   });
 ```
 
-- [ ] **Step 6：執行測試**
+- [x] **Step 6：執行測試**
 
 ```bash
 cd app
@@ -429,7 +429,7 @@ flutter analyze
 
 Expected: 22 個測試（既有 20 個 + 新增 2 個）全數通過；`flutter analyze` 顯示 `No issues found!`。
 
-- [ ] **Step 7：Commit**
+- [x] **Step 7：Commit**
 
 ```bash
 git add app/lib/reader/pdf_page_info.dart app/lib/reader/pdf_reader_view.dart app/test/reader/pdf_reader_view_test.dart
@@ -448,7 +448,7 @@ git commit -m "feat(epic-5): PdfReaderView(Dart) 新增 PdfPageInfo、onPageChan
 - Consumes：無（純展示元件，不依賴任何格式特定型別）。
 - Produces：`ReaderFooter` widget，建構參數 `currentPage`（int，**1-indexed**）、`totalPages`（int）、`onPageChanged`（`ValueChanged<int>`，回呼值同樣 **1-indexed**）——依審查修正的介面契約，不接收任何 PDF/EPUB 專屬的 controller 或底層讀取器物件。新增 `Key`：`reader_footer`（根節點）、`reader_footer_progress_text`（進度/頁碼文字）、`reader_footer_jump_input`（輸入框）、`reader_footer_jump_slider`（滑桿）。
 
-- [ ] **Step 1：撰寫 widget 實作**
+- [x] **Step 1：撰寫 widget 實作**
 
 建立 `app/lib/screens/reader_footer.dart`：
 
@@ -594,7 +594,7 @@ class _ReaderFooterState extends State<ReaderFooter> {
 }
 ```
 
-- [ ] **Step 2：撰寫 widget test**
+- [x] **Step 2：撰寫 widget test**
 
 建立 `app/test/screens/reader_footer_test.dart`：
 
@@ -748,7 +748,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 3：執行測試**
+- [x] **Step 3：執行測試**
 
 ```bash
 cd app
@@ -758,7 +758,7 @@ flutter analyze
 
 Expected: 7 個測試全數通過；`flutter analyze` 顯示 `No issues found!`。
 
-- [ ] **Step 4：Commit**
+- [x] **Step 4：Commit**
 
 ```bash
 git add app/lib/screens/reader_footer.dart app/test/screens/reader_footer_test.dart
@@ -777,7 +777,7 @@ git commit -m "feat(epic-5): 新建格式無關的 ReaderFooter widget（頁碼�
 - Consumes：Task 2 的 `PdfReaderView.onPageChanged`（`ValueChanged<PdfPageInfo>?`）／`jumpToPage(int)`；Task 3 的 `ReaderFooter`。
 - Produces：無新增對外介面，純粹是 `ReaderScreen` 內部狀態與版面串接。
 
-- [ ] **Step 1：新增 `_pdfPageInfo` 狀態與 `GlobalKey`**
+- [x] **Step 1：新增 `_pdfPageInfo` 狀態與 `GlobalKey`**
 
 在 `app/lib/screens/reader_screen.dart` 新增 import：
 
@@ -804,7 +804,7 @@ import 'reader_footer.dart';
   final _pdfReaderViewKey = GlobalKey<State<PdfReaderView>>();
 ```
 
-- [ ] **Step 2：`_buildNativeView()` 的 PDF 分支接上 `key` 與 `onPageChanged`**
+- [x] **Step 2：`_buildNativeView()` 的 PDF 分支接上 `key` 與 `onPageChanged`**
 
 找到 `_buildNativeView()` 內 `case BookFormat.pdf:` 的 `PdfReaderView(...)` 建構呼叫：
 
@@ -832,7 +832,7 @@ import 'reader_footer.dart';
           },
 ```
 
-- [ ] **Step 3：`_buildBody()` 改為 `Column`，新增 PDF 頁尾**
+- [x] **Step 3：`_buildBody()` 改為 `Column`，新增 PDF 頁尾**
 
 找到 `_buildBody()` 現行結尾：
 
@@ -870,7 +870,7 @@ import 'reader_footer.dart';
   }
 ```
 
-- [ ] **Step 4：撰寫 widget test**
+- [x] **Step 4：撰寫 widget test**
 
 在 `app/test/screens/reader_screen_test.dart` 新增（放在既有 PDF 相關測試之後）：
 
@@ -947,7 +947,7 @@ import 'reader_footer.dart';
   });
 ```
 
-- [ ] **Step 5：執行測試**
+- [x] **Step 5：執行測試**
 
 ```bash
 cd app
@@ -959,7 +959,7 @@ flutter analyze
 
 Expected: 全數通過；`flutter analyze` 顯示 `No issues found!`；既有 EPUB 相關測試（固定版面、流式）零回歸——特別留意 `Stack` 改 `Column` 後，EPUB 分支（`format != BookFormat.pdf`）的既有版面（AppBar、載入指示器、固定版面懸浮按鈕）視覺結構不變，只是外層多包一層 `Column`／`Expanded`，不影響既有測試斷言。
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/lib/screens/reader_screen.dart app/test/screens/reader_screen_test.dart
@@ -977,7 +977,7 @@ git commit -m "feat(epic-5): ReaderScreen 接上 PDF 頁尾（Column 佈局改�
 
 **Interfaces:** 無（本 Task 為驗收與文件收尾）。
 
-- [ ] **Step 1：撰寫真機整合測試**
+- [x] **Step 1：撰寫真機整合測試**
 
 建立 `app/integration_test/reader_footer_test.dart`：
 
@@ -1059,7 +1059,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：執行整合測試**
+- [x] **Step 2：執行整合測試**
 
 ```bash
 cd app
@@ -1068,7 +1068,7 @@ flutter test integration_test/reader_footer_test.dart -d <device-id>
 
 Expected: 1 個測試通過。
 
-- [ ] **Step 3：執行全專案回歸**
+- [x] **Step 3：執行全專案回歸**
 
 ```bash
 flutter analyze
@@ -1080,15 +1080,15 @@ flutter test integration_test/pdf_dual_page_test.dart -d <device-id>
 
 Expected: 全數通過，無回歸——特別留意既有 PDF 濾鏡/裁切/雙頁相關 `integration_test` 完全不應受 `Column` 佈局改造影響。
 
-- [ ] **Step 4：更新 `issues.md` Issue 1 狀態**
+- [x] **Step 4：更新 `issues.md` Issue 1 狀態**
 
 在 `docs/epics/epic-5-toc-pagination/issues.md` Issue 1 的 `**依賴：**` 之前加入 `**Status:** ✅ 已完成`（取代 `ready-for-agent`），並附簡短完成摘要（Task 1-5 完成情形、測試通過數量）。
 
-- [ ] **Step 5：更新 `docs/epics.md`**
+- [x] **Step 5：更新 `docs/epics.md`**
 
 在 `docs/epics.md` 的 `epic-5-toc-pagination` 列備註新增一句，記錄 Issue 1 已完成並合併回 `main`。
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/integration_test/reader_footer_test.dart \

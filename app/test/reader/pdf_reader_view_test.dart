@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/reader/pdf_crop_mode.dart';
 import 'package:elinkbook/reader/pdf_crop_rect.dart';
 import 'package:elinkbook/reader/pdf_fit_mode.dart';
+import 'package:elinkbook/reader/pdf_page_info.dart';
 import 'package:elinkbook/reader/pdf_reader_view.dart';
 import 'package:elinkbook/reader/dual_page_direction.dart';
 import 'package:elinkbook/reader/dual_page_mode.dart';
@@ -855,6 +856,74 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(instanceCalls, isEmpty);
+  });
+
+  testWidgets('開書完成後，收到原生端 onPageChanged 事件時正確解析 PdfPageInfo',
+      (tester) async {
+    PdfPageInfo? received;
+    final binaryMessenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    MethodChannel? instanceChannel;
+
+    binaryMessenger.setMockMethodCallHandler(SystemChannels.platform_views,
+        (call) async {
+      if (call.method == 'create') {
+        final id = (call.arguments as Map<Object?, Object?>)['id'] as int;
+        instanceChannel =
+            MethodChannel('cc.ugotit.elinkbook/pdf_reader_view_$id');
+        binaryMessenger.setMockMethodCallHandler(
+            instanceChannel!, (call) async => null);
+        return 0;
+      }
+      return null;
+    });
+
+    await tester.pumpWidget(MaterialApp(
+      home: PdfReaderView(
+        filePath: '/tmp/sample.pdf',
+        onPageRendered: _noop,
+        onError: _noopError,
+        onPageChanged: (info) => received = info,
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    final codec = instanceChannel!.codec;
+    final data = codec.encodeMethodCall(const MethodCall('onPageChanged', {
+      'pageIndex': 3,
+      'totalPages': 20,
+    }));
+    await binaryMessenger.handlePlatformMessage(
+        instanceChannel!.name, data, (_) {});
+
+    expect(received, const PdfPageInfo(pageIndex: 3, totalPages: 20));
+  });
+
+  testWidgets(
+      'PdfReaderView.jumpToPage()（強型別 static helper）呼叫原生端 jumpToPage method channel',
+      (tester) async {
+    // 審查修正：測試改為驅動真正的公開 API（static helper + GlobalKey），
+    // 而非只測 private State 的 `as dynamic` 呼叫——production code
+    // （ReaderScreen）實際上會呼叫的是這個 static helper，測試應驗證這條
+    // 真正會被使用的路徑。
+    final key = GlobalKey<State<PdfReaderView>>();
+    final calls = await _pumpPdfReaderView(
+      tester,
+      PdfReaderView(
+        key: key,
+        filePath: '/tmp/sample.pdf',
+        onPageRendered: _noop,
+        onError: _noopError,
+      ),
+    );
+    calls.clear();
+
+    PdfReaderView.jumpToPage(key, 7);
+    await tester.pump();
+
+    expect(calls, hasLength(1));
+    expect(calls.single.method, 'jumpToPage');
+    expect(calls.single.arguments, 7);
   });
 }
 
