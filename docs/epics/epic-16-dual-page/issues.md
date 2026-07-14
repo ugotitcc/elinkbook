@@ -6,7 +6,7 @@
 
 ## Issue 1：Spike——Readium Spread 行為驗證與收斂關卡
 
-**Status:** ready-for-agent
+**Status:** ✅ 已完成。依驗收標準完成真機插樁驗證，4 項問題皆有明確結論與證據，寫入 `reviews/spike-readium-spread.md`（2026-07-12，已於 `main` commit `8ec6dbd` 一併回填 `spec.md`「待驗證風險與收斂關卡」段落）：Q1（頁間間距）初判「僅建立單一半寬 WebView」；Q2（`Spread.AUTO`）❌ 失敗，確認 Readium 3.3.0 `EpubPreferences` 不接受 `AUTO`（`require(spread in listOf(null, NEVER, ALWAYS))`），退回方案（手動依 `isLandscape` 切換 `ALWAYS`/`NEVER`）已確定；Q3（page-spread metadata 配對）確認元資料正確（封面 `page=center`、其後嚴格交替 `left`/`right`），渲染層面延後驗證；Q4（半寬置中）因前提不成立未在本次真機執行，但演算法草稿已記錄供後續參考。Issue 6 開工前另以 `reviews/spike-readium-spread-webview-count.md`（2026-07-13，`main` commit `f3e594e`）補充驗證，**推翻 Q1 初判**：翻頁至非封面配對頁後，Readium 會自動建立左右並排的雙 WebView（無需自行管理雙 PlatformView），此結論已同步更新 `spec.md`。所有結論皆已被 Issue 6 實際採用並真機驗證通過（見 Issue 6「真機視覺驗收」）。暫時性插樁程式碼已還原、測試素材已從裝置清除，`git status` 乾淨。
 
 **依賴：** 無（起始工單，可與 Issue 2 平行）
 
