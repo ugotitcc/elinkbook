@@ -448,7 +448,7 @@ git commit -m "feat(epic-5): PdfReaderView(Dart) 新增 PdfPageInfo、onPageChan
 - Consumes：無（純展示元件，不依賴任何格式特定型別）。
 - Produces：`ReaderFooter` widget，建構參數 `currentPage`（int，**1-indexed**）、`totalPages`（int）、`onPageChanged`（`ValueChanged<int>`，回呼值同樣 **1-indexed**）——依審查修正的介面契約，不接收任何 PDF/EPUB 專屬的 controller 或底層讀取器物件。新增 `Key`：`reader_footer`（根節點）、`reader_footer_progress_text`（進度/頁碼文字）、`reader_footer_jump_input`（輸入框）、`reader_footer_jump_slider`（滑桿）。
 
-- [ ] **Step 1：撰寫 widget 實作**
+- [x] **Step 1：撰寫 widget 實作**
 
 建立 `app/lib/screens/reader_footer.dart`：
 
@@ -594,7 +594,7 @@ class _ReaderFooterState extends State<ReaderFooter> {
 }
 ```
 
-- [ ] **Step 2：撰寫 widget test**
+- [x] **Step 2：撰寫 widget test**
 
 建立 `app/test/screens/reader_footer_test.dart`：
 
@@ -748,7 +748,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 3：執行測試**
+- [x] **Step 3：執行測試**
 
 ```bash
 cd app
@@ -758,7 +758,7 @@ flutter analyze
 
 Expected: 7 個測試全數通過；`flutter analyze` 顯示 `No issues found!`。
 
-- [ ] **Step 4：Commit**
+- [x] **Step 4：Commit**
 
 ```bash
 git add app/lib/screens/reader_footer.dart app/test/screens/reader_footer_test.dart
