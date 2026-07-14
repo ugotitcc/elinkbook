@@ -67,7 +67,7 @@ void main() {
             if (!completer.isCompleted) completer.complete();
           },
           onError: (message) => fail('不應觸發 onError：$message'),
-          onPageChanged: pageChanges.add,
+          onPageChanged: (info) => pageChanges.add(info.pageIndex),
           dualPageMode: dualPageMode,
           dualPageCoverAlone: dualPageCoverAlone,
           dualPageDirection: dualPageDirection,
@@ -191,7 +191,7 @@ void main() {
               if (!completer.isCompleted) completer.complete();
             },
             onError: errors.add,
-            onPageChanged: pageChanges.add,
+            onPageChanged: (info) => pageChanges.add(info.pageIndex),
             dualPageMode: DualPageMode.auto,
             isLandscape: isLandscape,
           ),
@@ -259,7 +259,7 @@ void main() {
               if (!completer.isCompleted) completer.complete();
             },
             onError: (message) => fail('不應觸發 onError：$message'),
-            onPageChanged: pageChanges.add,
+            onPageChanged: (info) => pageChanges.add(info.pageIndex),
             dualPageMode: DualPageMode.always,
             cropEditModeActive: cropEditModeActive,
           ),
@@ -324,7 +324,7 @@ void main() {
               if (!completer.isCompleted) completer.complete();
             },
             onError: errors.add,
-            onPageChanged: pageChanges.add,
+            onPageChanged: (info) => pageChanges.add(info.pageIndex),
             dualPageMode: DualPageMode.auto,
             isLandscape: isLandscape,
             cropEditModeActive: cropEditModeActive,

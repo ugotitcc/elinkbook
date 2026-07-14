@@ -205,7 +205,7 @@ git commit -m "feat(epic-5): PdfReaderView.kt onPageChanged 攜帶總頁數 + �
 - Consumes：Task 1 的 `"onPageChanged"` 新 wire 格式（`{"pageIndex": int, "totalPages": int}`）、新增的 `"jumpToPage"` method channel。
 - Produces：`PdfPageInfo` 值物件（`pageIndex`／`totalPages`，皆 0-indexed／實際總數）；`PdfReaderView.onPageChanged` 簽章由 `ValueChanged<int>?` 改為 `ValueChanged<PdfPageInfo>?`；`_PdfReaderViewState` 新增實例方法 `jumpToPage(int pageIndex)`（0-indexed，比照既有 `nextPage()`/`previousPage()` 命名慣例）；`PdfReaderView`（公開 Widget 類別）新增**強型別 static helper** `static void jumpToPage(GlobalKey<State<PdfReaderView>> key, int pageIndex)`（審查修正，供 Task 4 的 `ReaderScreen` 安全呼叫，不使用 `as dynamic`）。
 
-- [ ] **Step 1：新建 `PdfPageInfo` 值物件**
+- [x] **Step 1：新建 `PdfPageInfo` 值物件**
 
 建立 `app/lib/reader/pdf_page_info.dart`（比照既有 `EpubLayoutInfo`——`app/lib/reader/writing_mode.dart`——的既有樣式，純記憶體內回呼用值物件，不需要 JSON 序列化）：
 
@@ -235,7 +235,7 @@ class PdfPageInfo {
 }
 ```
 
-- [ ] **Step 2：`PdfReaderView` 建構參數簽章變更**
+- [x] **Step 2：`PdfReaderView` 建構參數簽章變更**
 
 在 `app/lib/reader/pdf_reader_view.dart` 新增 import：
 
@@ -255,7 +255,7 @@ import 'pdf_page_info.dart';
   final ValueChanged<PdfPageInfo>? onPageChanged;
 ```
 
-- [ ] **Step 3：`_handleMethodCall` 解析新 wire 格式**
+- [x] **Step 3：`_handleMethodCall` 解析新 wire 格式**
 
 找到 `_handleMethodCall()` 內：
 
@@ -278,7 +278,7 @@ import 'pdf_page_info.dart';
         break;
 ```
 
-- [ ] **Step 4：新增 `jumpToPage()` 實例方法 + 強型別 static helper（審查修正）**
+- [x] **Step 4：新增 `jumpToPage()` 實例方法 + 強型別 static helper（審查修正）**
 
 找到既有的：
 
@@ -339,7 +339,7 @@ import 'pdf_page_info.dart';
 }
 ```
 
-- [ ] **Step 5：撰寫 widget test**
+- [x] **Step 5：撰寫 widget test**
 
 在 `app/test/reader/pdf_reader_view_test.dart` 新增 import：
 
@@ -419,7 +419,7 @@ import 'package:elinkbook/reader/pdf_page_info.dart';
   });
 ```
 
-- [ ] **Step 6：執行測試**
+- [x] **Step 6：執行測試**
 
 ```bash
 cd app
@@ -429,7 +429,7 @@ flutter analyze
 
 Expected: 22 個測試（既有 20 個 + 新增 2 個）全數通過；`flutter analyze` 顯示 `No issues found!`。
 
-- [ ] **Step 7：Commit**
+- [x] **Step 7：Commit**
 
 ```bash
 git add app/lib/reader/pdf_page_info.dart app/lib/reader/pdf_reader_view.dart app/test/reader/pdf_reader_view_test.dart

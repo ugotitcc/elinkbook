@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'pdf_crop_mode.dart';
 import 'pdf_crop_rect.dart';
 import 'pdf_fit_mode.dart';
+import 'pdf_page_info.dart';
 import 'dual_page_direction.dart';
 import 'dual_page_mode.dart';
 
@@ -26,7 +27,7 @@ class PdfReaderView extends StatefulWidget {
   final ValueChanged<String> onError;
   final VoidCallback? onNextPage;
   final VoidCallback? onPreviousPage;
-  final ValueChanged<int>? onPageChanged;
+  final ValueChanged<PdfPageInfo>? onPageChanged;
   final PdfFitMode? fitMode;
   final double? contrast;
   final double? brightness;
@@ -66,6 +67,22 @@ class PdfReaderView extends StatefulWidget {
 
   @override
   State<PdfReaderView> createState() => _PdfReaderViewState();
+
+  /// 供外部（`ReaderScreen`）安全呼叫 [_PdfReaderViewState.jumpToPage] 的
+  /// 強型別 static helper（審查修正，`/superpowers:requesting-code-review`）：
+  /// 不使用 `as dynamic` 跨越 State 的 private 邊界——本專案目前完全沒有
+  /// 在 `--obfuscate` release 建置下驗證過 `dynamic` 呼叫私有類別方法的
+  /// 行為，`dynamic` 呼叫搭配 tree-shaking／混淆是 Flutter 社群已知的潛在
+  /// 崩潰風險類別（method 只被 dynamic 呼叫連結時，可能被視為未使用而被
+  /// tree-shaking 移除，或在混淆重新命名後找不到對應符號）。[key] 對應的
+  /// State 若尚未掛載或型別不符（例如原生 View 尚未建立），靜默忽略，比照
+  /// `nextPage()`/`previousPage()` 既有的 fire-and-forget 慣例。
+  static void jumpToPage(GlobalKey<State<PdfReaderView>> key, int pageIndex) {
+    final state = key.currentState;
+    if (state is _PdfReaderViewState) {
+      state.jumpToPage(pageIndex);
+    }
+  }
 }
 
 class _PdfReaderViewState extends State<PdfReaderView> {
@@ -138,8 +155,11 @@ class _PdfReaderViewState extends State<PdfReaderView> {
         widget.onError(call.arguments as String);
         break;
       case 'onPageChanged':
-        final pageIndex = call.arguments as int;
-        widget.onPageChanged?.call(pageIndex);
+        final args = call.arguments as Map<Object?, Object?>;
+        widget.onPageChanged?.call(PdfPageInfo(
+          pageIndex: args['pageIndex'] as int,
+          totalPages: args['totalPages'] as int,
+        ));
         break;
       case 'onCropRectComputed':
         final args = call.arguments as Map<Object?, Object?>;
@@ -167,6 +187,13 @@ class _PdfReaderViewState extends State<PdfReaderView> {
 
   /// 導航至上一頁
   void previousPage() => _channel?.invokeMethod('previousPage');
+
+  /// 跳轉至指定頁碼（0-indexed，Epic 5 Issue 1，FR-23）。呼叫端（見
+  /// ReaderScreen）負責把 ReaderFooter 的 1-indexed 使用者輸入轉換為
+  /// 0-indexed 後才呼叫本方法。外部呼叫請一律透過 [PdfReaderView.jumpToPage]
+  /// 這個強型別 static helper，不要用 `as dynamic` 直接呼叫本實例方法
+  /// （審查修正，見 Global Constraints）。
+  void jumpToPage(int pageIndex) => _channel?.invokeMethod('jumpToPage', pageIndex);
 
   @override
   Widget build(BuildContext context) {
