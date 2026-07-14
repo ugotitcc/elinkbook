@@ -777,7 +777,7 @@ git commit -m "feat(epic-5): 新建格式無關的 ReaderFooter widget（頁碼�
 - Consumes：Task 2 的 `PdfReaderView.onPageChanged`（`ValueChanged<PdfPageInfo>?`）／`jumpToPage(int)`；Task 3 的 `ReaderFooter`。
 - Produces：無新增對外介面，純粹是 `ReaderScreen` 內部狀態與版面串接。
 
-- [ ] **Step 1：新增 `_pdfPageInfo` 狀態與 `GlobalKey`**
+- [x] **Step 1：新增 `_pdfPageInfo` 狀態與 `GlobalKey`**
 
 在 `app/lib/screens/reader_screen.dart` 新增 import：
 
@@ -804,7 +804,7 @@ import 'reader_footer.dart';
   final _pdfReaderViewKey = GlobalKey<State<PdfReaderView>>();
 ```
 
-- [ ] **Step 2：`_buildNativeView()` 的 PDF 分支接上 `key` 與 `onPageChanged`**
+- [x] **Step 2：`_buildNativeView()` 的 PDF 分支接上 `key` 與 `onPageChanged`**
 
 找到 `_buildNativeView()` 內 `case BookFormat.pdf:` 的 `PdfReaderView(...)` 建構呼叫：
 
@@ -832,7 +832,7 @@ import 'reader_footer.dart';
           },
 ```
 
-- [ ] **Step 3：`_buildBody()` 改為 `Column`，新增 PDF 頁尾**
+- [x] **Step 3：`_buildBody()` 改為 `Column`，新增 PDF 頁尾**
 
 找到 `_buildBody()` 現行結尾：
 
@@ -870,7 +870,7 @@ import 'reader_footer.dart';
   }
 ```
 
-- [ ] **Step 4：撰寫 widget test**
+- [x] **Step 4：撰寫 widget test**
 
 在 `app/test/screens/reader_screen_test.dart` 新增（放在既有 PDF 相關測試之後）：
 
@@ -947,7 +947,7 @@ import 'reader_footer.dart';
   });
 ```
 
-- [ ] **Step 5：執行測試**
+- [x] **Step 5：執行測試**
 
 ```bash
 cd app
@@ -959,7 +959,7 @@ flutter analyze
 
 Expected: 全數通過；`flutter analyze` 顯示 `No issues found!`；既有 EPUB 相關測試（固定版面、流式）零回歸——特別留意 `Stack` 改 `Column` 後，EPUB 分支（`format != BookFormat.pdf`）的既有版面（AppBar、載入指示器、固定版面懸浮按鈕）視覺結構不變，只是外層多包一層 `Column`／`Expanded`，不影響既有測試斷言。
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/lib/screens/reader_screen.dart app/test/screens/reader_screen_test.dart

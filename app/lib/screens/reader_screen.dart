@@ -6,6 +6,7 @@ import '../reader/book_reader_prefs.dart';
 import '../reader/epub_reader_view.dart';
 import '../reader/pdf_crop_mode.dart';
 import '../reader/pdf_crop_rect.dart';
+import '../reader/pdf_page_info.dart';
 import '../reader/pdf_reader_view.dart';
 import '../reader/reader_prefs_manager.dart';
 import '../reader/resolved_preferences.dart';
@@ -13,6 +14,7 @@ import '../reader/screen_orientation_setting.dart';
 import '../reader/writing_mode.dart';
 import 'fxl_settings_sheet.dart';
 import 'pdf_settings_sheet.dart';
+import 'reader_footer.dart';
 import 'reader_settings_sheet.dart';
 
 /// 唯一的閱讀器顯示接縫（seam）：給定書籍檔案路徑，依偵測到的格式分派到
@@ -66,6 +68,13 @@ class _ReaderScreenState extends State<ReaderScreen> {
   // 手動裁切互動模式是否進行中（決策 #14），驅動 PdfReaderView 的宣告式
   // cropEditModeActive prop；只有 PDF 分支會用到，EPUB 分支永遠是 false。
   bool _cropEditModeActive = false;
+  // PDF 目前頁碼/總頁數狀態，由 PdfReaderView.onPageChanged 回報驅動頁尾
+  // 顯示（Epic 5 Issue 1）。EPUB 讀取畫面本 issue 不使用此欄位。
+  PdfPageInfo? _pdfPageInfo;
+  // 用於呼叫 PdfReaderView.jumpToPage(key, pageIndex) 這個強型別 static
+  // helper（審查修正，見 Task 2 Step 4——不使用 as dynamic 跨 State 私有
+  // 邊界呼叫，避免 release 混淆／tree-shaking 風險）。
+  final _pdfReaderViewKey = GlobalKey<State<PdfReaderView>>();
   // 記錄上一次實際套用給系統的螢幕方向，避免在偏好設定頻繁變動時（例如
   // 拖曳滑桿）重複呼叫 SystemChrome.setPreferredOrientations。
   ScreenOrientationSetting? _lastAppliedOrientation;
@@ -423,7 +432,25 @@ class _ReaderScreenState extends State<ReaderScreen> {
     );
 
     return SafeArea(
-      child: body,
+      child: Column(
+        children: [
+          Expanded(child: body),
+          // 頁尾佔用固定版面空間、擠壓上方閱讀區域高度（比照
+          // prototype/index.html 的 .reader-footer 既有設計，非浮動疊加
+          // 層）。本 issue 只接 PDF；EPUB 留給 Issue 3。此階段頁尾一律
+          // 顯示，顯示/隱藏開關留給 Issue 5（BookReaderPrefs.showFooter
+          // 尚未存在）。
+          if (format == BookFormat.pdf && _pdfPageInfo != null)
+            ReaderFooter(
+              currentPage: _pdfPageInfo!.pageIndex + 1,
+              totalPages: _pdfPageInfo!.totalPages,
+              onPageChanged: (page1Indexed) {
+                // 審查修正：透過強型別 static helper 呼叫，不使用 as dynamic。
+                PdfReaderView.jumpToPage(_pdfReaderViewKey, page1Indexed - 1);
+              },
+            ),
+        ],
+      ),
     );
   }
 
@@ -460,6 +487,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
         );
       case BookFormat.pdf:
         return PdfReaderView(
+          key: _pdfReaderViewKey,
           filePath: widget.filePath,
           onPageRendered: _handlePageRendered,
           onError: _handleError,
@@ -476,6 +504,10 @@ class _ReaderScreenState extends State<ReaderScreen> {
           dualPageCoverAlone: resolved.dualPageCoverAlone,
           dualPageDirection: resolved.dualPageDirection,
           isLandscape: isLandscape,
+          onPageChanged: (info) {
+            if (!mounted) return;
+            setState(() => _pdfPageInfo = info);
+          },
         );
       case BookFormat.unknown:
         return const SizedBox.shrink();

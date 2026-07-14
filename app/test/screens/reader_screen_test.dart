@@ -8,6 +8,7 @@ import 'package:elinkbook/reader/page_turn_mode.dart';
 import 'package:elinkbook/reader/pdf_crop_mode.dart';
 import 'package:elinkbook/reader/pdf_crop_rect.dart';
 import 'package:elinkbook/reader/pdf_fit_mode.dart';
+import 'package:elinkbook/reader/pdf_page_info.dart';
 import 'package:elinkbook/reader/pdf_reader_view.dart';
 import 'package:elinkbook/reader/writing_mode.dart';
 import 'package:elinkbook/screens/fxl_settings_sheet.dart';
@@ -647,5 +648,32 @@ void main() {
       find.byKey(const Key('reader_fixed_layout_settings_button')),
       findsNothing,
     );
+  });
+
+  testWidgets('PDF 開書後，收到原生端 onPageChanged 回報時，頁尾正確顯示',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b_footer_test',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    // 模擬原生端回報頁碼：直接呼叫 PdfReaderView widget 上的 onPageChanged
+    // callback（比照既有 EPUB 測試直接呼叫 onLayoutResolved 的模式），
+    // 驗證 ReaderScreen 正確驅動 ReaderFooter 顯示。
+    final pdfView =
+        tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+    pdfView.onPageChanged?.call(const PdfPageInfo(pageIndex: 0, totalPages: 12));
+    await tester.pump();
+
+    expect(find.byKey(const Key('reader_footer')), findsOneWidget);
+    expect(find.text('進度 8% ｜ 第 1/12 頁'), findsOneWidget);
   });
 }
