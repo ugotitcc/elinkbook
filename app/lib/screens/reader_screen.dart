@@ -57,6 +57,9 @@ class _ReaderScreenState extends State<ReaderScreen> {
   // book_reader_prefs 資料表」）。
   WritingMode? _autoDetectedWritingMode;
   bool _isFixedLayout = false;
+  // 固定版面（FXL）懸浮控制項（返回鍵／設定鍵）是否顯示，由 EpubReaderView
+  // 三欄熱區的中間熱區觸發切換（見 epic-16-dual-page Issue 9）。預設顯示。
+  bool _fixedLayoutControlsVisible = true;
   BookReaderPrefs _prefs = BookReaderPrefs.empty;
   LoadedPrefs? _loaded;
   ResolvedPreferences? _resolved;
@@ -379,7 +382,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
     final body = Stack(
       children: [
         if (_resolved != null) _buildNativeView(format, isLandscape),
-        if (_isFixedLayout)
+        if (_isFixedLayout && _fixedLayoutControlsVisible)
           Positioned(
             top: 16, // SafeArea 內層，頂部已扣除狀態列，故直接設為 16 即可
             left: 16,
@@ -395,7 +398,7 @@ class _ReaderScreenState extends State<ReaderScreen> {
               ),
             ),
           ),
-        if (_isFixedLayout)
+        if (_isFixedLayout && _fixedLayoutControlsVisible)
           Positioned(
             top: 16,
             right: 16,
@@ -445,6 +448,15 @@ class _ReaderScreenState extends State<ReaderScreen> {
           publisherStyles: resolved.publisherStyles,
           dualPageMode: resolved.dualPageMode,
           isLandscape: isLandscape,
+          onToggleFixedLayoutControls: () => setState(
+            () => _fixedLayoutControlsVisible = !_fixedLayoutControlsVisible,
+          ),
+          // 換頁時一律收起懸浮控制項（更沉浸的閱讀體驗，人類決策，見
+          // tmp/epic-16/reviews/review-plan-issue-9.md 之後的討論）——與上面的
+          // onToggleFixedLayoutControls 刻意不同：這裡不論收起前是顯示或隱藏，
+          // 一律強制設為 false，不是切換（toggle）語意。
+          onFixedLayoutPageTurn: () =>
+              setState(() => _fixedLayoutControlsVisible = false),
         );
       case BookFormat.pdf:
         return PdfReaderView(
