@@ -16,7 +16,10 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/library/sqlite_library_repository.dart';
+import 'package:elinkbook/reader/reading_position.dart';
+import 'package:elinkbook/reader/reading_position_repository.dart';
 import '../support/fake_book_reader_prefs_repository.dart';
+import '../support/fake_reading_position_repository.dart';
 
 void main() {
   group('resolve()（純同步，不需要資料庫/SharedPreferences）', () {
@@ -25,6 +28,7 @@ void main() {
     setUp(() {
       manager = ReaderPrefsManagerImpl(
         FakeBookReaderPrefsRepository(),
+        FakeReadingPositionRepository(),
       );
     });
 
@@ -146,7 +150,7 @@ void main() {
       libraryRepository =
           await SqliteLibraryRepository.open(inMemoryDatabasePath);
       manager =
-          ReaderPrefsManagerImpl(BookReaderPrefsRepository(libraryRepository.database));
+          ReaderPrefsManagerImpl(BookReaderPrefsRepository(libraryRepository.database), ReadingPositionRepository(libraryRepository.database));
       await libraryRepository.insertBook(Book(
         id: 'b1',
         title: '書名',
@@ -193,6 +197,18 @@ void main() {
       });
       final loaded = await manager.load('b1');
       expect(loaded.globalPrefs, const GlobalReaderPrefs.initial());
+    });
+
+    test('尚未儲存過位置時，load 回傳 ReadingPosition() 預設值', () async {
+      final loaded = await manager.load('b1');
+      expect(loaded.readingPosition, const ReadingPosition());
+    });
+
+    test('saveReadingPosition 寫入後，load 讀回相同的位置', () async {
+      const position = ReadingPosition(pdfPageIndex: 3, progress: 0.5);
+      await manager.saveReadingPosition('b1', position);
+      final loaded = await manager.load('b1');
+      expect(loaded.readingPosition, position);
     });
   });
 }

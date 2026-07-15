@@ -7,6 +7,7 @@ import 'library/sqlite_library_repository.dart';
 import 'reader/book_reader_prefs_repository.dart';
 import 'reader/reader_prefs_manager.dart';
 import 'reader/reader_prefs_manager_impl.dart';
+import 'reader/reading_position_repository.dart';
 import 'screens/library_screen.dart';
 import 'theme/app_theme.dart';
 import 'theme/app_theme_data.dart';
@@ -28,7 +29,10 @@ Future<void> main() async {
   // SqliteLibraryRepository 具象型別才有的 .database getter（見
   // docs/adr/0007-reader-screen-book-id-contract.md）。
   final prefsRepository = BookReaderPrefsRepository(repository.database);
-  final prefsManager = ReaderPrefsManagerImpl(prefsRepository);
+  final prefsManager = ReaderPrefsManagerImpl(
+    prefsRepository,
+    ReadingPositionRepository(repository.database),
+  );
   runApp(
     ElinkBookApp(
       repository: repository,

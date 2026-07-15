@@ -13,6 +13,7 @@ import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/reader/book_reader_prefs_repository.dart';
 import 'package:elinkbook/reader/reader_prefs_manager.dart';
 import 'package:elinkbook/reader/reader_prefs_manager_impl.dart';
+import 'package:elinkbook/reader/reading_position_repository.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
 
 Future<String> _stageAssetAsFile(String assetPath, String fileName) async {
@@ -67,6 +68,7 @@ void main() {
         await SqliteLibraryRepository.open(inMemoryDatabasePath);
     prefsManager = ReaderPrefsManagerImpl(
       BookReaderPrefsRepository(libraryRepository.database),
+      ReadingPositionRepository(libraryRepository.database),
     );
   });
 
