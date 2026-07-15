@@ -271,15 +271,26 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 
   void _openBook(Book book) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => ReaderScreen(
-          filePath: book.filePath,
-          bookId: book.id,
-          prefsManager: widget.prefsManager,
-        ),
-      ),
-    );
+    Navigator.of(context)
+        .push(
+          MaterialPageRoute(
+            builder: (_) => ReaderScreen(
+              filePath: book.filePath,
+              bookId: book.id,
+              prefsManager: widget.prefsManager,
+            ),
+          ),
+        )
+        .then((_) {
+      // 【審查修正】ReaderScreen 內離開/背景時會把最新閱讀進度與定位寫入
+      // 資料庫（見 Task 6），但 _books 這份記憶體快照不會自動跟著更新。
+      // 若不在此重新載入，_books 仍持有進入閱讀器前的舊 Book 物件；之後
+      // 任何以 _books 為來源的整列 updateBook()（例如
+      // _moveSelectedBooksToGroup()）會用舊值覆蓋掉剛剛寫入的最新進度，
+      // 造成資料遺失（`/superpowers:requesting-code-review` Critical 2）。
+      // 這裡不檢查 mounted——_loadBooks() 內部已有等效保護（見其既有實作）。
+      _loadBooks();
+    });
   }
 
   Future<void> _openManageGroupsDialog() async {
