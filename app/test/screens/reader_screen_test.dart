@@ -694,4 +694,59 @@ void main() {
   //   reader_screen_test.dart 的其他測試以及 reader_footer_test.dart 覆蓋。
   //
   // 本檔案不重複測試上述已覆蓋的路徑。
+
+  // --- Epic 5 Issue 2：閱讀位置記憶 ---
+
+  testWidgets('PDF 收到 onPageChanged 後離開畫面（dispose），正確寫入 ReadingPosition',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b_dispose_test',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    // 模擬原生端回報頁碼：直接呼叫 PdfReaderView widget 上的 onPageChanged
+    // callback（比照既有「PDF 開書後，收到原生端 onPageChanged 回報時，
+    // 頁尾正確顯示」的模式），驗證 dispose() 時正確寫入 ReadingPosition。
+    final pdfView =
+        tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+    pdfView.onPageChanged?.call(const PdfPageInfo(pageIndex: 3, totalPages: 10));
+    await tester.pump();
+
+    // 導覽離開 ReaderScreen，觸發 dispose()。
+    await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
+    await tester.pump();
+
+    expect(prefsManager.savedReadingPositionCalls, hasLength(1));
+    final saved = prefsManager.savedReadingPositionCalls.single;
+    expect(saved.key, 'b_dispose_test');
+    expect(saved.value.pdfPageIndex, 3);
+    expect(saved.value.progress, 0.4); // (3+1)/10
+  });
+
+  testWidgets('尚未收到任何 onPageChanged 時，dispose 不呼叫 saveReadingPosition（避免覆寫既有記錄）',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b_no_position',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+
+    await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
+    await tester.pump();
+
+    expect(prefsManager.savedReadingPositionCalls, isEmpty);
+  });
 }

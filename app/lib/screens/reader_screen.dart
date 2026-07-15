@@ -3,11 +3,13 @@ import 'package:flutter/services.dart';
 
 import '../reader/book_format.dart';
 import '../reader/book_reader_prefs.dart';
+import '../reader/epub_position_info.dart';
 import '../reader/epub_reader_view.dart';
 import '../reader/pdf_crop_mode.dart';
 import '../reader/pdf_crop_rect.dart';
 import '../reader/pdf_page_info.dart';
 import '../reader/pdf_reader_view.dart';
+import '../reader/reading_position.dart';
 import '../reader/reader_prefs_manager.dart';
 import '../reader/resolved_preferences.dart';
 import '../reader/screen_orientation_setting.dart';
@@ -51,7 +53,7 @@ class ReaderScreen extends StatefulWidget {
 
 enum _RenderState { loading, rendered, error }
 
-class _ReaderScreenState extends State<ReaderScreen> {
+class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver {
   _RenderState _state = _RenderState.loading;
   String? _errorMessage;
   // 自動偵測結果（來自 onLayoutResolved），唯讀、不持久化，每次開書重新
@@ -71,6 +73,14 @@ class _ReaderScreenState extends State<ReaderScreen> {
   // PDF 目前頁碼/總頁數狀態，由 PdfReaderView.onPageChanged 回報驅動頁尾
   // 顯示（Epic 5 Issue 1）。EPUB 讀取畫面本 issue 不使用此欄位。
   PdfPageInfo? _pdfPageInfo;
+  // EPUB 目前定位狀態，由 EpubReaderView.onLocatorChanged 回報（Epic 5
+  // Issue 2）。寫入本機資料庫時讀取此欄位的最新值，比照 _pdfPageInfo
+  // 對 PDF 的既有作法。
+  EpubPositionInfo? _epubPositionInfo;
+  // 開書時讀到的既有位置記錄（若有），只在 initState 賦值一次，之後
+  // 不變——僅用於 _buildNativeView() 建構 EpubReaderView/PdfReaderView
+  // 時傳入 initialLocatorJson/initialPageIndex 這兩個一次性開書起始值。
+  ReadingPosition? _initialPosition;
   // 用於呼叫 PdfReaderView.jumpToPage(key, pageIndex) 這個強型別 static
   // helper（審查修正，見 Task 2 Step 4——不使用 as dynamic 跨 State 私有
   // 邊界呼叫，避免 release 混淆／tree-shaking 風險）。
@@ -82,11 +92,13 @@ class _ReaderScreenState extends State<ReaderScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     widget.prefsManager.load(widget.bookId).then((loaded) {
       if (!mounted) return;
       setState(() {
         _prefs = loaded.bookPrefs;
         _loaded = loaded;
+        _initialPosition = loaded.readingPosition;
         _resolved = widget.prefsManager.resolve(
           loaded,
           autoDetectedWritingMode: _autoDetectedWritingMode,
@@ -98,11 +110,64 @@ class _ReaderScreenState extends State<ReaderScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    // 離開閱讀畫面時觸發一次位置寫入（spec.md「本機閱讀位置記憶」寫入
+    // 時機之一）。不 await——dispose() 是同步方法，且這是離開畫面前的
+    // 最後一次呼叫，不需要等待其完成，比照既有 _handlePrefsChanged 不
+    // await saveBookPrefs 的既有慣例。
+    _writeCurrentPosition();
     // 還原系統預設（允許自由旋轉），不論進入閱讀器時鎖定了哪個角度，比照
     // 音量鍵離開閱讀介面後恢復正常系統音量控制的既有處理原則，避免鎖定
     // 狀態外溢到書架等其他畫面。
     SystemChrome.setPreferredOrientations(const []);
     super.dispose();
+  }
+
+  /// App 進入背景時觸發一次位置寫入（spec.md「本機閱讀位置記憶」寫入
+  /// 時機之二）。只在 [AppLifecycleState.paused]（真正進入背景）觸發，
+  /// 不含 [AppLifecycleState.inactive]（如系統對話框短暫遮蓋等過渡狀態）
+  /// ——避免非真正離開情境也觸發資料庫寫入。
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) {
+      _writeCurrentPosition();
+    }
+  }
+
+  /// 依目前格式讀取對應的持續追蹤狀態（PDF: [_pdfPageInfo]，EPUB:
+  /// [_epubPositionInfo]），組成 [ReadingPosition] 後透過 prefsManager
+  /// 寫入。尚未收到任何位置回報（例如書籍尚未成功開啟）時靜默不寫入，
+  /// 避免用「無資料」覆蓋掉資料庫中既有的正確記錄。
+  void _writeCurrentPosition() {
+    final format = detectBookFormat(widget.filePath);
+    switch (format) {
+      case BookFormat.pdf:
+        final info = _pdfPageInfo;
+        if (info == null) return;
+        widget.prefsManager.saveReadingPosition(
+          widget.bookId,
+          ReadingPosition(
+            pdfPageIndex: info.pageIndex,
+            progress: info.totalPages > 0
+                ? (info.pageIndex + 1) / info.totalPages
+                : 0,
+          ),
+        );
+        break;
+      case BookFormat.epub:
+        final info = _epubPositionInfo;
+        if (info == null) return;
+        widget.prefsManager.saveReadingPosition(
+          widget.bookId,
+          ReadingPosition(
+            epubLocatorJson: info.locatorJson,
+            progress: info.progression ?? 0,
+          ),
+        );
+        break;
+      case BookFormat.unknown:
+        return;
+    }
   }
 
   /// 依 [_resolved] 的 screenOrientation 呼叫 SystemChrome 套用真實 OS 層級
@@ -484,11 +549,17 @@ class _ReaderScreenState extends State<ReaderScreen> {
           // 一律強制設為 false，不是切換（toggle）語意。
           onFixedLayoutPageTurn: () =>
               setState(() => _fixedLayoutControlsVisible = false),
+          initialLocatorJson: _initialPosition?.epubLocatorJson,
+          onLocatorChanged: (info) {
+            if (!mounted) return;
+            _epubPositionInfo = info;
+          },
         );
       case BookFormat.pdf:
         return PdfReaderView(
           key: _pdfReaderViewKey,
           filePath: widget.filePath,
+          initialPageIndex: _initialPosition?.pdfPageIndex,
           onPageRendered: _handlePageRendered,
           onError: _handleError,
           fitMode: resolved.pdfFitMode,
