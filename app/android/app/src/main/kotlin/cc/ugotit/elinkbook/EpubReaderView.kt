@@ -32,6 +32,7 @@ import org.readium.r2.navigator.preferences.Spread
 import org.readium.r2.navigator.preferences.TextAlign
 import org.readium.r2.shared.publication.Layout
 import org.readium.r2.shared.publication.Locator
+import org.json.JSONObject
 import org.readium.r2.shared.publication.Publication
 import org.readium.r2.shared.util.AbsoluteUrl
 import org.readium.r2.shared.util.Url
@@ -156,6 +157,7 @@ class EpubReaderView(
                 openBook(
                     call.argument<String>("path"),
                     call.argument<Map<String, Any?>>("initialPreferences"),
+                    call.argument<String>("initialLocatorJson"),
                 )
                 result.success(null)
             }
@@ -588,7 +590,11 @@ class EpubReaderView(
         }
     }
 
-    private fun openBook(path: String?, initialPreferences: Map<String, Any?>?) {
+    private fun openBook(
+        path: String?,
+        initialPreferences: Map<String, Any?>?,
+        initialLocatorJson: String?,
+    ) {
         if (path == null) {
             channel.invokeMethod("onError", "缺少檔案路徑")
             return
@@ -631,14 +637,18 @@ class EpubReaderView(
                     openedPublication.close()
                     return@launch
                 }
-                attachNavigator(openedPublication, initialPreferences)
+                attachNavigator(openedPublication, initialPreferences, initialLocatorJson)
             } catch (e: Exception) {
                 channel.invokeMethod("onError", "開啟 EPUB 檔案時發生未預期的錯誤：${e.message}")
             }
         }
     }
 
-    private fun attachNavigator(openedPublication: Publication, initialPreferences: Map<String, Any?>?) {
+    private fun attachNavigator(
+        openedPublication: Publication,
+        initialPreferences: Map<String, Any?>?,
+        initialLocatorJson: String?,
+    ) {
         // commitNow 在 Activity 已經過了 onSaveInstanceState（例如解析完成前使用者恰好把
         // App 切到背景）時會丟出 IllegalStateException；containerId 若因為合成模式改變
         // 等原因無法解析到實際 View（見上方類別註解），也可能丟出 IllegalArgumentException。
@@ -647,8 +657,11 @@ class EpubReaderView(
         try {
             publication = openedPublication
             val navigatorFactory = EpubNavigatorFactory(publication = openedPublication)
+            val initialLocator = initialLocatorJson?.let {
+                Locator.fromJSON(JSONObject(it))
+            }
             val fragmentFactory = navigatorFactory.createFragmentFactory(
-                initialLocator = null,
+                initialLocator = initialLocator,
                 listener = this,
                 paginationListener = this,
                 configuration = buildFontFamiliesConfiguration(),
@@ -703,7 +716,23 @@ class EpubReaderView(
         )
     }
 
-    override fun onPageChanged(pageIndex: Int, totalPages: Int, locator: Locator) {}
+    /**
+     * epic-5-toc-pagination Issue 2：填入原本永遠不會被呼叫的死程式碼
+     * （spec.md User Story 21）。Readium 每次目前定位變動（開書、翻頁、
+     * 目錄跳轉）時呼叫本方法；這裡不直接寫資料庫（寫入時機固定為
+     * ReaderScreen.dispose()／App 進入背景，見 spec.md「本機閱讀位置
+     * 記憶」），只把目前定位推送給 Dart 端快取於記憶體中，等寫入時機到
+     * 達時才由 Dart 端讀取快取值寫入資料庫。
+     */
+    override fun onPageChanged(pageIndex: Int, totalPages: Int, locator: Locator) {
+        channel.invokeMethod(
+            "onLocatorChanged",
+            mapOf(
+                "locatorJson" to locator.toJSON().toString(),
+                "progression" to locator.locations.totalProgression,
+            ),
+        )
+    }
 
     override fun onExternalLinkActivated(url: AbsoluteUrl) {}
 
