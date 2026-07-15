@@ -925,6 +925,42 @@ void main() {
     expect(calls.single.method, 'jumpToPage');
     expect(calls.single.arguments, 7);
   });
+
+  testWidgets(
+      '_onPlatformViewCreated 呼叫 openBook 時，initialPageIndex 非 null 時正確帶入',
+      (tester) async {
+    final calls = await _pumpPdfReaderView(
+      tester,
+      const PdfReaderView(
+        filePath: '/tmp/sample.pdf',
+        onPageRendered: _noop,
+        onError: _noopError,
+        initialPageIndex: 4,
+      ),
+    );
+
+    final openBookCall = calls.firstWhere((c) => c.method == 'openBook');
+    expect(openBookCall.arguments['initialPageIndex'], 4);
+  });
+
+  testWidgets('initialPageIndex 為 null 時，openBook 的 arguments 不包含該 key',
+      (tester) async {
+    final calls = await _pumpPdfReaderView(
+      tester,
+      const PdfReaderView(
+        filePath: '/tmp/sample.pdf',
+        onPageRendered: _noop,
+        onError: _noopError,
+      ),
+    );
+
+    final openBookCall = calls.firstWhere((c) => c.method == 'openBook');
+    expect(
+      (openBookCall.arguments as Map<Object?, Object?>)
+          .containsKey('initialPageIndex'),
+      isFalse,
+    );
+  });
 }
 
 void _noop() {}

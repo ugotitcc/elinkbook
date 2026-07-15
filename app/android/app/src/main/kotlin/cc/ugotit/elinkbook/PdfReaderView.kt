@@ -288,6 +288,7 @@ class PdfReaderView(
                 openBook(
                     call.argument<String>("path"),
                     call.argument<Map<String, Any?>>("initialPreferences"),
+                    call.argument<Int>("initialPageIndex"),
                 )
                 result.success(null)
             }
@@ -418,7 +419,11 @@ class PdfReaderView(
         return PdfImageProcessor.CropRect(left, top, right, bottom)
     }
 
-    private fun openBook(path: String?, initialPreferences: Map<String, Any?>?) {
+    private fun openBook(
+        path: String?,
+        initialPreferences: Map<String, Any?>?,
+        initialPageIndex: Int?,
+    ) {
         if (path == null) {
             channel.invokeMethod("onError", "缺少檔案路徑")
             return
@@ -439,7 +444,15 @@ class PdfReaderView(
             }
             renderer = PdfRenderer(pfd)
             totalPages = renderer!!.pageCount
-            currentPageIndex = 0
+            // epic-5-toc-pagination Issue 2：若有既有位置記錄且落在有效範圍
+            // 內，以此為起始頁；否則（首次開書、記錄超出範圍）固定從頭開始，
+            // 比照既有 jumpToPage() 的邊界檢查風格。
+            currentPageIndex =
+                if (initialPageIndex != null && initialPageIndex in 0 until totalPages) {
+                    initialPageIndex
+                } else {
+                    0
+                }
             renderCurrentSpread()
             channel.invokeMethod("onPageRendered", null)
             // Epic 5 Issue 1：開書完成當下立即回報一次初始頁碼狀態，讓
