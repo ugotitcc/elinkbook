@@ -1976,7 +1976,7 @@ git commit -m "feat(epic-5): ReaderScreen 整合本機閱讀位置記憶（開�
 - Consumes：Task 1-6 完成後，`ReadingPositionRepository`/`ReaderPrefsManager.saveReadingPosition` 已會在 `ReaderScreen.dispose()` 時寫入 `books` 表。
 - Produces：無新公開介面，純內部行為修正。
 
-- [ ] **Step 1：`_openBook()` 於返回後重新載入書籍清單**
+- [x] **Step 1：`_openBook()` 於返回後重新載入書籍清單**
 
 `app/lib/screens/library_screen.dart` 的 `_openBook()`（約第 273-283 行）改為：
 
@@ -2005,7 +2005,7 @@ git commit -m "feat(epic-5): ReaderScreen 整合本機閱讀位置記憶（開�
   }
 ```
 
-- [ ] **Step 2：撰寫 widget test，驗證返回書架後清單確實重新載入**
+- [x] **Step 2：撰寫 widget test，驗證返回書架後清單確實重新載入**
 
 在 `library_screen_test.dart` 新增（緊接既有「有書籍時，書架 grid 呈現正確渲染書籍項目」測試之後即可）：
 
@@ -2059,7 +2059,7 @@ git commit -m "feat(epic-5): ReaderScreen 整合本機閱讀位置記憶（開�
   });
 ```
 
-- [ ] **Step 3：執行測試確認通過**
+- [x] **Step 3：執行測試確認通過**
 
 ```bash
 cd app && flutter test test/screens/library_screen_test.dart
@@ -2073,7 +2073,7 @@ cd app && flutter analyze
 
 Expected: `No issues found!`
 
-- [ ] **Step 4：Commit**
+- [x] **Step 4：Commit**
 
 ```bash
 git add app/lib/screens/library_screen.dart app/test/screens/library_screen_test.dart
@@ -2090,7 +2090,7 @@ git commit -m "fix(epic-5): LibraryScreen 返回閱讀器後重新載入書籍�
 **Interfaces:**
 - Consumes：Task 1-7 全部完成後的完整功能。
 
-- [ ] **Step 1：撰寫 PDF 端到端測試（開書→跳頁→pop 觸發 dispose→重開→驗證起始頁）**
+- [x] **Step 1：撰寫 PDF 端到端測試（開書→跳頁→pop 觸發 dispose→重開→驗證起始頁）**
 
 ```dart
 import 'dart:io';
