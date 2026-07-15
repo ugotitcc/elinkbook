@@ -87,7 +87,8 @@ class EpubReaderView(
     messenger: BinaryMessenger,
 ) : PlatformView,
     MethodChannel.MethodCallHandler,
-    EpubNavigatorFragment.Listener {
+    EpubNavigatorFragment.Listener,
+    EpubNavigatorFragment.PaginationListener {
 
     /**
      * 橫向雙頁顯示觸發模式（epic-16-dual-page），對應 Dart DualPageMode 列舉
@@ -664,6 +665,7 @@ class EpubReaderView(
             val fragmentFactory = navigatorFactory.createFragmentFactory(
                 initialLocator = initialLocator,
                 listener = this,
+                paginationListener = this,
                 configuration = buildFontFamiliesConfiguration(),
             )
             installedFragmentFactory = fragmentFactory
@@ -674,11 +676,25 @@ class EpubReaderView(
             navigatorFragment = activity.supportFragmentManager
                 .findFragmentByTag(fragmentTag) as? EpubNavigatorFragment
             // 訂閱 currentLocator StateFlow（Navigator 介面的公開屬性），取代
-            // PaginationListener.onPageChanged——後者在 FXL（固定版面）書籍中
-            // 不會被呼叫（Readium 內部的 notifyCurrentLocation() 在 FXL 頁面
-            // 時 currentReflowablePageFragment 為 null，會跳過 onPageChanged
-            // 呼叫）。currentLocator 在 _currentLocator.setValue() 之後無條件
-            // 更新，不論 FXL 或 reflowable 都能正確取得最新定位。
+            // PaginationListener.onPageChanged 作為 onLocatorChanged 的觸發來源
+            // ——後者在 FXL（固定版面）書籍中不會被呼叫（Readium 內部的
+            // notifyCurrentLocation() 在 FXL 頁面時 currentReflowablePageFragment
+            // 為 null，會跳過 onPageChanged 呼叫），但 currentLocator 在
+            // _currentLocator.setValue() 之後無條件更新，不論 FXL 或 reflowable
+            // 都能正確取得最新定位（本審查修正不再覆寫 onPageChanged——interface
+            // 對它有 default no-op 實作，不覆寫也能合法實作 PaginationListener）。
+            //
+            // 【審查修正】此處刻意不再從這裡手動呼叫 onPageLoaded()——onPageLoaded
+            // 是 PaginationListener 的另一個方法，由 Readium 在每個 WebView 各自
+            // 載入完成時各別呼叫（見下方 override fun onPageLoaded()），對 FXL
+            // 頁面本來就會正確觸發，不受 currentReflowablePageFragment 為 null
+            // 的限制（FXL 頁面內部本來就用 WebView 渲染，只是走 R2FXLPageFragment
+            // 而非 R2EpubPageFragment）。先前在此手動呼叫 onPageLoaded() 會把它的
+            // 觸發時機從「每個 WebView 各自載入完成」改成「currentLocator 這個
+            // 經過 100ms debounce、以定位變動為單位的訊號」，導致 applyFxlFitScale()
+            // 依賴的首次量測時機被打亂，造成橫排雙頁 FXL 版面計算錯誤（中間空白、
+            // 頁序顛倒）。onLocatorChanged 的推送與 onPageLoaded() 是兩個獨立的
+            // 訊號來源，不需要綁在一起觸發。
             navigatorFragment?.currentLocator
                 ?.onEach { locator ->
                     channel.invokeMethod(
@@ -704,6 +720,14 @@ class EpubReaderView(
         }
     }
 
+    /**
+     * epic-5-toc-pagination Issue 2 審查修正：恢復為 PaginationListener 的
+     * override（原本一度被改成手動呼叫的 private 函式，見上方 attachNavigator()
+     * 內的說明）。Readium 對每個 WebView（含 FXL 頁面內部的 WebView）各自載入
+     * 完成時都會呼叫本方法，不受「currentReflowablePageFragment 為 null」的
+     * FXL 限制影響（那個限制只影響 onPageChanged，見 PaginationListener 介面
+     * 說明）。
+     */
     override fun onPageLoaded() {
         if (!pageReported) {
             pageReported = true
