@@ -48,6 +48,33 @@ void main() {
     await repository.close();
   });
 
+  test('insertBook/updateBook 正確保存 epubLocator／pdfPageIndex，listBooks 讀回相同值',
+      () async {
+    await repository.insertBook(_book('b1'));
+
+    await repository.updateBook(_book('b1').copyWith());
+    // Book.copyWith 不支援覆寫 epubLocator/pdfPageIndex（見 Task 1 Step 1
+    // 說明），改用完整建構子組出待寫入的 Book。
+    final withPosition = Book(
+      id: 'b1',
+      title: '書名',
+      format: BookFileFormat.epub,
+      filePath: 'content://example/b1',
+      source: BookSource.local,
+      progress: 0.42,
+      epubLocator: '{"href":"/chap1.xhtml","locations":{"totalProgression":0.42}}',
+      createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+      lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+    );
+    await repository.updateBook(withPosition);
+
+    final books = await repository.listBooks();
+    expect(books.single.progress, 0.42);
+    expect(books.single.epubLocator,
+        '{"href":"/chap1.xhtml","locations":{"totalProgression":0.42}}');
+    expect(books.single.pdfPageIndex, isNull);
+  });
+
   test('全新安裝的 book_reader_prefs 表包含 PDF 欄位（version 3 起 onCreate 已含括）',
       () async {
     // 直接查詢 sqlite_master 的欄位清單，避免依賴 BookReaderPrefsRepository
@@ -250,6 +277,89 @@ void main() {
       expect(rows, isEmpty);
     });
   });
+  test('既有 version 1 裝置（無 book_reader_prefs 表）跳級升級到 version 5，兩張表皆正確補齊',
+      () async {
+    final tempDir = await Directory.systemTemp
+        .createTemp('elinkbook_migration_v1_to_v5_test');
+    addTearDown(() => tempDir.delete(recursive: true));
+    final dbPath = p.join(tempDir.path, 'test.db');
+
+    // 模擬「已存在於 version 1」的最原始資料庫：只有 groups/books 兩張
+    // 表，完全沒有 book_reader_prefs 表，books 表也不含
+    // epubLocator/pdfPageIndex 欄位。這是 onUpgrade 分支結構最容易出錯
+    // 的起點（見 Critical 1 審查修正）。
+    final oldDb = await databaseFactory.openDatabase(
+      dbPath,
+      options: OpenDatabaseOptions(
+        version: 1,
+        onConfigure: (db) async {
+          await db.execute('PRAGMA foreign_keys = ON');
+        },
+        onCreate: (db, version) async {
+          await db.execute('CREATE TABLE groups (name TEXT PRIMARY KEY)');
+          await db.insert('groups', {'name': '未分類'});
+          await db.execute('''
+            CREATE TABLE books (
+              id TEXT PRIMARY KEY,
+              title TEXT NOT NULL,
+              author TEXT,
+              format TEXT NOT NULL,
+              filePath TEXT NOT NULL,
+              source TEXT NOT NULL,
+              coverPath TEXT,
+              progress REAL NOT NULL DEFAULT 0,
+              groupName TEXT NOT NULL DEFAULT '未分類',
+              createTime INTEGER NOT NULL,
+              lastReadTime INTEGER NOT NULL
+            )
+          ''');
+        },
+      ),
+    );
+    await oldDb.insert('books', {
+      'id': 'b1',
+      'title': '最早期書籍',
+      'format': 'epub',
+      'filePath': 'content://example/b1',
+      'source': 'local',
+      'progress': 0.0,
+      'groupName': '未分類',
+      'createTime': 1000,
+      'lastReadTime': 1000,
+    });
+    await oldDb.close();
+
+    // 重新以目前版本開啟同一個檔案，觸發 onUpgrade（oldVersion=1 →
+    // newVersion=5）。若 Critical 1 的 `return` 缺陷仍存在，
+    // _addReadingPositionColumns 不會被執行，下方對 epubLocator 的
+    // UPDATE 會直接拋出 `no such column` 例外，測試失敗。
+    final upgraded = await SqliteLibraryRepository.open(dbPath);
+    addTearDown(() => upgraded.close());
+
+    // book_reader_prefs 表須存在且已是最終版 schema（一步到位）。
+    final prefsColumns = await upgraded.database
+        .rawQuery('PRAGMA table_info(book_reader_prefs)');
+    expect(
+      prefsColumns.map((c) => c['name'] as String).toSet(),
+      containsAll(['pdf_fit_mode', 'dual_page_mode']),
+    );
+
+    // books 表須正確補上位置欄位，且既有書籍資料不受影響。
+    final books = await upgraded.listBooks();
+    expect(books.single.title, '最早期書籍');
+    expect(books.single.epubLocator, isNull);
+    expect(books.single.pdfPageIndex, isNull);
+
+    // 證明欄位真的可寫入（不只是巧合為 null），確認 ALTER TABLE 確實生效。
+    await upgraded.database.update(
+      'books',
+      {'epubLocator': '{"href":"/c1.xhtml"}'},
+      where: 'id = ?',
+      whereArgs: ['b1'],
+    );
+    final updated = await upgraded.listBooks();
+    expect(updated.single.epubLocator, '{"href":"/c1.xhtml"}');
+  });
 
   test('既有 version 2 裝置升級後，book_reader_prefs 新增 PDF 欄位且既有資料不受影響',
       () async {
@@ -448,6 +558,87 @@ void main() {
         .single;
     expect(updated['dual_page_mode'], 'always');
     expect(updated['dual_page_cover_alone'], 0);
+  });
+
+  test('既有 version 4 裝置升級後，books 表新增位置欄位且既有書籍資料不受影響',
+      () async {
+    final tempDir = await Directory.systemTemp
+        .createTemp('elinkbook_migration_v4_to_v5_test');
+    addTearDown(() => tempDir.delete(recursive: true));
+    final dbPath = p.join(tempDir.path, 'test.db');
+
+    // 模擬「已存在於 version 4」的舊資料庫：手動以 version 4 當時的
+    // schema（books 表不含 epubLocator/pdfPageIndex）建立，不透過
+    // SqliteLibraryRepository.open()（該方法目前的 onCreate 已經是
+    // version 5 的最終 schema，無法用來重現「舊裝置」情境）。
+    final oldDb = await databaseFactory.openDatabase(
+      dbPath,
+      options: OpenDatabaseOptions(
+        version: 4,
+        onConfigure: (db) async {
+          await db.execute('PRAGMA foreign_keys = ON');
+        },
+        onCreate: (db, version) async {
+          await db.execute('CREATE TABLE groups (name TEXT PRIMARY KEY)');
+          await db.insert('groups', {'name': '未分類'});
+          await db.execute('''
+            CREATE TABLE books (
+              id TEXT PRIMARY KEY,
+              title TEXT NOT NULL,
+              author TEXT,
+              format TEXT NOT NULL,
+              filePath TEXT NOT NULL,
+              source TEXT NOT NULL,
+              coverPath TEXT,
+              progress REAL NOT NULL DEFAULT 0,
+              groupName TEXT NOT NULL DEFAULT '未分類',
+              createTime INTEGER NOT NULL,
+              lastReadTime INTEGER NOT NULL
+            )
+          ''');
+          await db.execute('''
+            CREATE TABLE book_reader_prefs (
+              book_id TEXT PRIMARY KEY REFERENCES books(id) ON DELETE CASCADE,
+              font_size REAL,
+              pdf_fit_mode TEXT,
+              dual_page_mode TEXT
+            )
+          ''');
+        },
+      ),
+    );
+    await oldDb.insert('books', {
+      'id': 'b1',
+      'title': '既有書籍',
+      'format': 'epub',
+      'filePath': 'content://example/b1',
+      'source': 'local',
+      'progress': 0.0,
+      'groupName': '未分類',
+      'createTime': 1000,
+      'lastReadTime': 1000,
+    });
+    await oldDb.close();
+
+    // 重新以目前版本開啟同一個檔案，觸發 onUpgrade（oldVersion=4 →
+    // newVersion=5），驗證既有書籍資料不受影響、且新欄位可用。
+    final upgraded = await SqliteLibraryRepository.open(dbPath);
+    addTearDown(() => upgraded.close());
+
+    final books = await upgraded.listBooks();
+    expect(books.single.title, '既有書籍'); // 既有資料不受影響
+    expect(books.single.epubLocator, isNull); // 新欄位存在且預設 NULL
+    expect(books.single.pdfPageIndex, isNull);
+
+    // 證明欄位真的可寫入（不只是巧合為 null），確認 ALTER TABLE 確實生效。
+    await upgraded.database.update(
+      'books',
+      {'epubLocator': '{"href":"/c1.xhtml"}'},
+      where: 'id = ?',
+      whereArgs: ['b1'],
+    );
+    final updated = await upgraded.listBooks();
+    expect(updated.single.epubLocator, '{"href":"/c1.xhtml"}');
   });
 
   test('既有 version 2 裝置直接升級到 version 4，PDF 欄位與雙頁欄位皆補齊（累加式 onUpgrade 驗證）',
