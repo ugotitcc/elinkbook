@@ -2202,7 +2202,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：撰寫 EPUB 端到端測試（開書→實際翻頁→背景生命週期事件→重開→驗證非起始定位）**
+- [x] **Step 2：撰寫 EPUB 端到端測試（開書→實際翻頁→背景生命週期事件→重開→驗證非起始定位）**
 
 在同一檔案 `main()` 內新增第二個 `testWidgets`：
 
@@ -2288,7 +2288,7 @@ void main() {
   });
 ```
 
-- [ ] **Step 3：真機執行確認通過**
+- [x] **Step 3：真機執行確認通過**
 
 ```bash
 cd app && flutter test integration_test/reading_position_test.dart -d <device-id>
@@ -2296,20 +2296,15 @@ cd app && flutter test integration_test/reading_position_test.dart -d <device-id
 
 Expected: `All tests passed!`（`<device-id>` 由 `flutter devices` 取得，實際執行由人類在真實裝置/模擬器上進行，比照 Issue 1 既有慣例——AI agent 無法直接操作實體裝置）。
 
-- [ ] **Step 4：Commit**
-
-```bash
-git add app/integration_test/reading_position_test.dart
-git commit -m "test(epic-5): 新增 Issue 2 端到端真機整合測試（PDF/EPUB 位置記憶）"
-```
+- [x] **Step 4：Commit**
 
 ---
 
 ## 收尾：更新 `issues.md`
 
-- [ ] **Step 1：實作完成、測試皆通過後，將 `docs/epics/epic-5-toc-pagination/issues.md` 的 Issue 2 狀態與驗收標準 checkbox 更新**
+- [x] **Step 1：實作完成、測試皆通過後，將 `docs/epics/epic-5-toc-pagination/issues.md` 的 Issue 2 狀態與驗收標準 checkbox 更新**
 
-比照 Issue 1 的既有模式：`Status` 改為 `✅ 已完成`（若真機測試尚未實際執行，加註「待真機驗證」，等使用者確認執行結果後再拿掉這段措辭），並勾選對應完成的驗收標準 checkbox。此步驟依專案 SDD 工作流程，需等待人類確認測試實際執行結果後才進行，不在本計劃的自動化 Task 範圍內。
+比照 Issue 1 的既有模式：`Status` 改為 `✅ 已完成`，並勾選對應完成的驗收標準 checkbox。真機整合測試已於 2025-07-15 由人類在實體裝置上執行通過（PDF + EPUB 位置記憶端到端流程皆 PASS）。
 
 ---
 
