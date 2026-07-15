@@ -157,13 +157,29 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       case BookFormat.epub:
         final info = _epubPositionInfo;
         if (info == null) return;
-        widget.prefsManager.saveReadingPosition(
-          widget.bookId,
-          ReadingPosition(
-            epubLocatorJson: info.locatorJson,
-            progress: info.progression ?? 0,
-          ),
-        );
+        // progression 為 null 時（例如 Readium 對某些定位尚未完全解析版面
+        // 的早期定位、或 FXL 固定版面的定位），不覆寫進度，改用既有值——
+        // 避免把已讀大半的書的進度靜默倒退回 0%（見 C2 審查修正 I2）。
+        final progression = info.progression;
+        if (progression == null) {
+          final existingProgress = _initialPosition?.progress;
+          if (existingProgress == null) return;
+          widget.prefsManager.saveReadingPosition(
+            widget.bookId,
+            ReadingPosition(
+              epubLocatorJson: info.locatorJson,
+              progress: existingProgress,
+            ),
+          );
+        } else {
+          widget.prefsManager.saveReadingPosition(
+            widget.bookId,
+            ReadingPosition(
+              epubLocatorJson: info.locatorJson,
+              progress: progression,
+            ),
+          );
+        }
         break;
       case BookFormat.unknown:
         return;

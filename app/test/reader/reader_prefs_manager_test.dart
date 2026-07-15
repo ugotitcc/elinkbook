@@ -149,8 +149,10 @@ void main() {
       SharedPreferences.setMockInitialValues({});
       libraryRepository =
           await SqliteLibraryRepository.open(inMemoryDatabasePath);
-      manager =
-          ReaderPrefsManagerImpl(BookReaderPrefsRepository(libraryRepository.database), ReadingPositionRepository(libraryRepository.database));
+      manager = ReaderPrefsManagerImpl(
+        BookReaderPrefsRepository(libraryRepository.database),
+        ReadingPositionRepository(libraryRepository.database),
+      );
       await libraryRepository.insertBook(Book(
         id: 'b1',
         title: '書名',

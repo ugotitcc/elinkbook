@@ -21,6 +21,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import org.readium.r2.navigator.epub.EpubNavigatorFactory
 import org.readium.r2.navigator.epub.EpubNavigatorFragment
@@ -85,8 +87,7 @@ class EpubReaderView(
     messenger: BinaryMessenger,
 ) : PlatformView,
     MethodChannel.MethodCallHandler,
-    EpubNavigatorFragment.Listener,
-    EpubNavigatorFragment.PaginationListener {
+    EpubNavigatorFragment.Listener {
 
     /**
      * 橫向雙頁顯示觸發模式（epic-16-dual-page），對應 Dart DualPageMode 列舉
@@ -663,7 +664,6 @@ class EpubReaderView(
             val fragmentFactory = navigatorFactory.createFragmentFactory(
                 initialLocator = initialLocator,
                 listener = this,
-                paginationListener = this,
                 configuration = buildFontFamiliesConfiguration(),
             )
             installedFragmentFactory = fragmentFactory
@@ -673,6 +673,23 @@ class EpubReaderView(
             }
             navigatorFragment = activity.supportFragmentManager
                 .findFragmentByTag(fragmentTag) as? EpubNavigatorFragment
+            // 訂閱 currentLocator StateFlow（Navigator 介面的公開屬性），取代
+            // PaginationListener.onPageChanged——後者在 FXL（固定版面）書籍中
+            // 不會被呼叫（Readium 內部的 notifyCurrentLocation() 在 FXL 頁面
+            // 時 currentReflowablePageFragment 為 null，會跳過 onPageChanged
+            // 呼叫）。currentLocator 在 _currentLocator.setValue() 之後無條件
+            // 更新，不論 FXL 或 reflowable 都能正確取得最新定位。
+            navigatorFragment?.currentLocator
+                ?.onEach { locator ->
+                    channel.invokeMethod(
+                        "onLocatorChanged",
+                        mapOf(
+                            "locatorJson" to locator.toJSON().toString(),
+                            "progression" to locator.locations.totalProgression,
+                        ),
+                    )
+                }
+                ?.launchIn(scope)
             if (initialPreferences != null && initialPreferences.isNotEmpty()) {
                 applyDualPagePreferences(initialPreferences)
                 currentPreferences = currentPreferences.plus(buildPreferencesFromMap(initialPreferences))
@@ -712,24 +729,6 @@ class EpubReaderView(
             mapOf(
                 "isFixedLayout" to isFixedLayout,
                 "writingMode" to if (isVertical) "vertical" else "horizontal",
-            ),
-        )
-    }
-
-    /**
-     * epic-5-toc-pagination Issue 2：填入原本永遠不會被呼叫的死程式碼
-     * （spec.md User Story 21）。Readium 每次目前定位變動（開書、翻頁、
-     * 目錄跳轉）時呼叫本方法；這裡不直接寫資料庫（寫入時機固定為
-     * ReaderScreen.dispose()／App 進入背景，見 spec.md「本機閱讀位置
-     * 記憶」），只把目前定位推送給 Dart 端快取於記憶體中，等寫入時機到
-     * 達時才由 Dart 端讀取快取值寫入資料庫。
-     */
-    override fun onPageChanged(pageIndex: Int, totalPages: Int, locator: Locator) {
-        channel.invokeMethod(
-            "onLocatorChanged",
-            mapOf(
-                "locatorJson" to locator.toJSON().toString(),
-                "progression" to locator.locations.totalProgression,
             ),
         )
     }

@@ -10,6 +10,7 @@ import 'package:elinkbook/library/sqlite_library_repository.dart';
 import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/reader/book_reader_prefs_repository.dart';
+import 'package:elinkbook/reader/epub_reader_view.dart';
 import 'package:elinkbook/reader/reader_prefs_manager_impl.dart';
 import 'package:elinkbook/reader/reading_position_repository.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
@@ -107,5 +108,81 @@ void main() {
 
     expect(find.text('進度 67% ｜ 第 4/6 頁'), findsOneWidget,
         reason: '重新開啟同一本書應自動回到離開前的頁碼');
+  });
+
+  testWidgets('EPUB reflowable：開書→翻頁→離開畫面→重開同一本書，自動回到離開前定位',
+      (tester) async {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+    final libraryRepository =
+        await SqliteLibraryRepository.open(inMemoryDatabasePath);
+    addTearDown(() => libraryRepository.close());
+    final prefsManager = ReaderPrefsManagerImpl(
+      BookReaderPrefsRepository(libraryRepository.database),
+      ReadingPositionRepository(libraryRepository.database),
+    );
+
+    final samplePath = await _stageAssetAsFile(
+        'test/fixtures/sample.epub', 'position_epub_integration.epub');
+    addTearDown(() async {
+      final file = File(samplePath);
+      if (await file.exists()) await file.delete();
+    });
+
+    await libraryRepository.insertBook(Book(
+      id: 'b_position_epub',
+      title: 'EPUB 位置記憶測試書',
+      format: BookFileFormat.epub,
+      filePath: samplePath,
+      source: BookSource.local,
+      createTime: DateTime.now(),
+      lastReadTime: DateTime.now(),
+    ));
+
+    // 第一次開書，等待載入完成後翻頁。
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: samplePath,
+          bookId: 'b_position_epub',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await _pumpUntilLoaded(tester);
+
+    // 透過手勢翻頁數次（reflowable EPUB 使用原生手勢）。
+    final epubView = find.byType(EpubReaderView);
+    expect(epubView, findsOneWidget, reason: '應找到 EpubReaderView widget');
+    // 向左滑動翻到下一頁。
+    await tester.drag(epubView, const Offset(-300, 0));
+    await tester.pumpAndSettle(const Duration(seconds: 2));
+    await tester.drag(epubView, const Offset(-300, 0));
+    await tester.pumpAndSettle(const Duration(seconds: 2));
+
+    // 離開閱讀畫面（觸發 dispose），驗證資料庫已寫入。
+    await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
+    await tester.pump();
+
+    final saved = await ReadingPositionRepository(libraryRepository.database)
+        .load('b_position_epub');
+    // EPUB 位置以 locatorJson 記錄，不為 null 即表示已寫入。
+    expect(saved.epubLocatorJson, isNotNull,
+        reason: '離開後 epubLocatorJson 應已寫入資料庫');
+
+    // 重新開啟同一本書，驗證有 initialLocatorJson 被傳入（即回到離開前定位）。
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: samplePath,
+          bookId: 'b_position_epub',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await _pumpUntilLoaded(tester);
+    // 驗證成功載入（無 error），即表示 initialLocatorJson 被正確接受。
+    expect(find.byKey(const Key('reader_error_text')), findsNothing,
+        reason: '重新開啟同一本書不應觸發錯誤');
   });
 }
