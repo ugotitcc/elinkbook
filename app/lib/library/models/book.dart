@@ -33,6 +33,11 @@ class Book {
   /// PDF 頁索引（0-indexed），`null` 代表尚無記錄。與 [epubLocator] 互斥。
   final int? pdfPageIndex;
 
+  /// 全書字元數快取（epic-5-toc-pagination Issue 3，spec.md「分頁估算
+  /// 模組」決策 #16），僅 EPUB 有值。`null` 代表尚未計算過，開書時原生端
+  /// 據此觸發一次背景計算；非 `null` 則直接讀取快取，不重新走訪全書。
+  final int? totalCharacterCount;
+
   final String groupName;
   final DateTime createTime;
   final DateTime lastReadTime;
@@ -48,6 +53,7 @@ class Book {
     this.progress = 0,
     this.epubLocator,
     this.pdfPageIndex,
+    this.totalCharacterCount,
     this.groupName = BookGroup.uncategorized,
     required this.createTime,
     required this.lastReadTime,
@@ -65,6 +71,7 @@ class Book {
       'progress': progress,
       'epubLocator': epubLocator,
       'pdfPageIndex': pdfPageIndex,
+      'totalCharacterCount': totalCharacterCount,
       'groupName': groupName,
       'createTime': createTime.millisecondsSinceEpoch,
       'lastReadTime': lastReadTime.millisecondsSinceEpoch,
@@ -83,6 +90,7 @@ class Book {
       progress: (map['progress'] as num).toDouble(),
       epubLocator: map['epubLocator'] as String?,
       pdfPageIndex: map['pdfPageIndex'] as int?,
+      totalCharacterCount: map['totalCharacterCount'] as int?,
       groupName: map['groupName'] as String,
       createTime: DateTime.fromMillisecondsSinceEpoch(map['createTime'] as int),
       lastReadTime:

@@ -24,7 +24,7 @@ class SqliteLibraryRepository implements LibraryRepository {
   static Future<SqliteLibraryRepository> open(String path) async {
     final db = await openDatabase(
       path,
-      version: 5,
+      version: 6,
       onConfigure: (db) async {
         // book_reader_prefs 的 ON DELETE CASCADE 需要外鍵約束真正生效，
         // SQLite 預設不強制外鍵，須逐連線手動開啟（見 epic-3 plan-issue-1）。
@@ -49,6 +49,7 @@ class SqliteLibraryRepository implements LibraryRepository {
             progress REAL NOT NULL DEFAULT 0,
             epubLocator TEXT,
             pdfPageIndex INTEGER,
+            totalCharacterCount INTEGER,
             groupName TEXT NOT NULL DEFAULT '${BookGroup.uncategorized}',
             createTime INTEGER NOT NULL,
             lastReadTime INTEGER NOT NULL
@@ -89,6 +90,13 @@ class SqliteLibraryRepository implements LibraryRepository {
           // oldVersion < 5 就必須執行，不能被 book_reader_prefs 表的建立
           // /升級分支影響。
           await _addReadingPositionColumns(db);
+        }
+        if (oldVersion < 6) {
+          // epic-5-toc-pagination Issue 3：全書字元數快取欄位，補追加到
+          // 既有（version 1 起已存在）的 books 表。刻意放在上方 if/else
+          // 之外、無條件檢查，比照 oldVersion < 5 區塊的既有原則——不論
+          // 裝置目前處於哪個舊版本，只要 oldVersion < 6 就必須執行。
+          await _addTotalCharacterCountColumn(db);
         }
       },
     );
@@ -164,6 +172,13 @@ class SqliteLibraryRepository implements LibraryRepository {
     // docs/epics/epic-5-toc-pagination/spec.md「本機閱讀位置記憶」。
     await db.execute('ALTER TABLE books ADD COLUMN epubLocator TEXT');
     await db.execute('ALTER TABLE books ADD COLUMN pdfPageIndex INTEGER');
+  }
+
+  static Future<void> _addTotalCharacterCountColumn(Database db) async {
+    // 全書字元數快取（epic-5-toc-pagination Issue 3）新增的 1 個欄位，
+    // 補追加到既有（version 1 起已存在）的 books 表，見
+    // docs/epics/epic-5-toc-pagination/spec.md「分頁估算模組」決策 #16。
+    await db.execute('ALTER TABLE books ADD COLUMN totalCharacterCount INTEGER');
   }
 
   /// 供 [BookReaderPrefsRepository] 等後續 repository 共用同一個資料庫連線

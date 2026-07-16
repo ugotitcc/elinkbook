@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../reader/book_format.dart';
 import '../reader/book_reader_prefs.dart';
+import '../reader/epub_page_estimator.dart';
 import '../reader/epub_position_info.dart';
 import '../reader/epub_reader_view.dart';
 import '../reader/pdf_crop_mode.dart';
@@ -77,6 +78,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   // Issue 2）。寫入本機資料庫時讀取此欄位的最新值，比照 _pdfPageInfo
   // 對 PDF 的既有作法。
   EpubPositionInfo? _epubPositionInfo;
+  // EPUB 全書字元數快取，由 LoadedPrefs.totalCharacterCount 載入（若有）
+  // 或 EpubReaderView.onCharacterCountReady 回報更新（Epic 5 Issue 3）。
+  // null 代表尚未計算完成，此時 EPUB 頁尾不顯示（比照 PDF 頁尾等待
+  // _pdfPageInfo 非 null 的既有模式）。
+  int? _totalCharacterCount;
   // 開書時讀到的既有位置記錄（若有），只在 initState 賦值一次，之後
   // 不變——僅用於 _buildNativeView() 建構 EpubReaderView/PdfReaderView
   // 時傳入 initialLocatorJson/initialPageIndex 這兩個一次性開書起始值。
@@ -85,6 +91,10 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   // helper（審查修正，見 Task 2 Step 4——不使用 as dynamic 跨 State 私有
   // 邊界呼叫，避免 release 混淆／tree-shaking 風險）。
   final _pdfReaderViewKey = GlobalKey<State<PdfReaderView>>();
+  // 用於呼叫 EpubReaderView.jumpToProgression(key, progression) 這個強型別
+  // static helper（Epic 5 Issue 3），比照 _pdfReaderViewKey 對 PDF 的既有
+  // 作法。
+  final _epubReaderViewKey = GlobalKey<State<EpubReaderView>>();
   // 記錄上一次實際套用給系統的螢幕方向，避免在偏好設定頻繁變動時（例如
   // 拖曳滑桿）重複呼叫 SystemChrome.setPreferredOrientations。
   ScreenOrientationSetting? _lastAppliedOrientation;
@@ -99,6 +109,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         _prefs = loaded.bookPrefs;
         _loaded = loaded;
         _initialPosition = loaded.readingPosition;
+        _totalCharacterCount = loaded.totalCharacterCount;
         _resolved = widget.prefsManager.resolve(
           loaded,
           autoDetectedWritingMode: _autoDetectedWritingMode,
@@ -236,6 +247,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         final newLoaded = LoadedPrefs(
           bookPrefs: prefs,
           globalPrefs: loaded.globalPrefs,
+          readingPosition: loaded.readingPosition,
+          totalCharacterCount: loaded.totalCharacterCount,
         );
         _loaded = newLoaded;
         _resolved = widget.prefsManager.resolve(
@@ -262,6 +275,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         final newLoaded = LoadedPrefs(
           bookPrefs: updated,
           globalPrefs: loaded.globalPrefs,
+          readingPosition: loaded.readingPosition,
+          totalCharacterCount: loaded.totalCharacterCount,
         );
         _loaded = newLoaded;
         _resolved = widget.prefsManager.resolve(
@@ -304,6 +319,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         final newLoaded = LoadedPrefs(
           bookPrefs: updated,
           globalPrefs: loaded.globalPrefs,
+          readingPosition: loaded.readingPosition,
+          totalCharacterCount: loaded.totalCharacterCount,
         );
         _loaded = newLoaded;
         _resolved = widget.prefsManager.resolve(
@@ -389,6 +406,15 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         );
       }
     });
+  }
+
+  /// 原生端背景計算全書字元數完成時觸發（Epic 5 Issue 3）：更新本地狀態
+  /// 驅動頁尾重新渲染，並持久化快取值——不 await，比照本類別其餘持久化
+  /// 呼叫的既有慣例（見 _handlePrefsChanged）。
+  void _handleCharacterCountReady(int totalCharacterCount) {
+    if (!mounted) return;
+    setState(() => _totalCharacterCount = totalCharacterCount);
+    widget.prefsManager.saveTotalCharacterCount(widget.bookId, totalCharacterCount);
   }
 
   @override
@@ -518,9 +544,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           Expanded(child: body),
           // 頁尾佔用固定版面空間、擠壓上方閱讀區域高度（比照
           // prototype/index.html 的 .reader-footer 既有設計，非浮動疊加
-          // 層）。本 issue 只接 PDF；EPUB 留給 Issue 3。此階段頁尾一律
-          // 顯示，顯示/隱藏開關留給 Issue 5（BookReaderPrefs.showFooter
-          // 尚未存在）。
+          // 層）。此階段頁尾一律顯示，顯示/隱藏開關留給 Issue 5
+          // （BookReaderPrefs.showFooter 尚未存在）。
           if (format == BookFormat.pdf && _pdfPageInfo != null)
             ReaderFooter(
               currentPage: _pdfPageInfo!.pageIndex + 1,
@@ -530,8 +555,45 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                 PdfReaderView.jumpToPage(_pdfReaderViewKey, page1Indexed - 1);
               },
             ),
+          if (format == BookFormat.epub &&
+              !_isFixedLayout &&
+              _totalCharacterCount != null &&
+              _resolved != null)
+            _buildEpubFooter(_resolved!, _totalCharacterCount!),
         ],
       ),
+    );
+  }
+
+  /// EPUB 估算頁碼頁尾（Epic 5 Issue 3）：依目前生效版面參數＋全書字元數
+  /// 快取換算總頁數，再依 _epubPositionInfo 的全書進度比例換算目前頁碼；
+  /// 任一版面參數變動時，本方法在下一次 build() 會以新的 [resolved] 重新
+  /// 計算，不需要額外的快取/失效邏輯（見 spec.md「估計頁數重算時機」）。
+  Widget _buildEpubFooter(ResolvedPreferences resolved, int totalCharacterCount) {
+    final charsPerScreen = EpubPageEstimator.estimateCharsPerScreen(
+      fontSize: resolved.fontSize,
+      lineHeight: resolved.lineHeight,
+      paragraphSpacing: resolved.paragraphSpacing,
+      pageMargins: resolved.pageMargins,
+    );
+    final totalPages = EpubPageEstimator.estimateTotalPages(
+      totalCharacterCount: totalCharacterCount,
+      charsPerScreen: charsPerScreen,
+    );
+    final currentPage = EpubPageEstimator.estimateCurrentPage(
+      progression: _epubPositionInfo?.progression,
+      totalPages: totalPages,
+    );
+    return ReaderFooter(
+      currentPage: currentPage,
+      totalPages: totalPages,
+      onPageChanged: (targetPage) {
+        final progression = EpubPageEstimator.estimateProgression(
+          targetPage: targetPage,
+          totalPages: totalPages,
+        );
+        EpubReaderView.jumpToProgression(_epubReaderViewKey, progression);
+      },
     );
   }
 
@@ -540,6 +602,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     switch (format) {
       case BookFormat.epub:
         return EpubReaderView(
+          key: _epubReaderViewKey,
           filePath: widget.filePath,
           writingMode: resolved.writingMode,
           pageTurnMode: resolved.pageTurnMode,
@@ -568,8 +631,10 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           initialLocatorJson: _initialPosition?.epubLocatorJson,
           onLocatorChanged: (info) {
             if (!mounted) return;
-            _epubPositionInfo = info;
+            setState(() => _epubPositionInfo = info);
           },
+          totalCharacterCount: _totalCharacterCount,
+          onCharacterCountReady: _handleCharacterCountReady,
         );
       case BookFormat.pdf:
         return PdfReaderView(

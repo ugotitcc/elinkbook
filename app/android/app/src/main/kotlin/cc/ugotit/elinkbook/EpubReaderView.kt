@@ -24,6 +24,8 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlin.math.roundToInt
 import org.readium.r2.navigator.epub.EpubNavigatorFactory
 import org.readium.r2.navigator.epub.EpubNavigatorFragment
 import org.readium.r2.navigator.epub.EpubPreferences
@@ -37,6 +39,7 @@ import org.readium.r2.shared.publication.Locator
 import org.json.JSONObject
 import org.readium.r2.shared.publication.Publication
 import org.readium.r2.shared.publication.ReadingProgression
+import org.readium.r2.shared.publication.services.positions
 import org.readium.r2.shared.util.AbsoluteUrl
 import org.readium.r2.shared.util.Url
 import org.readium.r2.shared.util.toAbsoluteUrl
@@ -161,6 +164,7 @@ class EpubReaderView(
                     call.argument<String>("path"),
                     call.argument<Map<String, Any?>>("initialPreferences"),
                     call.argument<String>("initialLocatorJson"),
+                    call.argument<Int>("totalCharacterCount"),
                 )
                 result.success(null)
             }
@@ -180,6 +184,13 @@ class EpubReaderView(
             }
             "previousPage" -> {
                 navigatorFragment?.goBackward(animated = false)
+                result.success(null)
+            }
+            "jumpToProgression" -> {
+                val progression = call.argument<Double>("progression")
+                if (progression != null) {
+                    jumpToProgression(progression)
+                }
                 result.success(null)
             }
             else -> result.notImplemented()
@@ -630,6 +641,7 @@ class EpubReaderView(
         path: String?,
         initialPreferences: Map<String, Any?>?,
         initialLocatorJson: String?,
+        initialTotalCharacterCount: Int?,
     ) {
         if (path == null) {
             channel.invokeMethod("onError", "缺少檔案路徑")
@@ -673,7 +685,7 @@ class EpubReaderView(
                     openedPublication.close()
                     return@launch
                 }
-                attachNavigator(openedPublication, initialPreferences, initialLocatorJson)
+                attachNavigator(openedPublication, initialPreferences, initialLocatorJson, initialTotalCharacterCount)
             } catch (e: Exception) {
                 channel.invokeMethod("onError", "開啟 EPUB 檔案時發生未預期的錯誤：${e.message}")
             }
@@ -684,6 +696,7 @@ class EpubReaderView(
         openedPublication: Publication,
         initialPreferences: Map<String, Any?>?,
         initialLocatorJson: String?,
+        initialTotalCharacterCount: Int?,
     ) {
         // commitNow 在 Activity 已經過了 onSaveInstanceState（例如解析完成前使用者恰好把
         // App 切到背景）時會丟出 IllegalStateException；containerId 若因為合成模式改變
@@ -745,12 +758,89 @@ class EpubReaderView(
                 currentPreferences = currentPreferences.plus(buildPreferencesFromMap(initialPreferences))
                 navigatorFragment?.submitPreferences(currentPreferences)
             }
+            // epic-5-toc-pagination Issue 3：僅在尚無快取值時才觸發背景字元數
+            // 計算，之後每次開書直接沿用 Dart 端傳入的快取值，不重新走訪全書
+            // （見 spec.md「執行緒與快取」）。
+            if (initialTotalCharacterCount == null) {
+                computeTotalCharacterCountInBackground(openedPublication)
+            }
         } catch (e: Exception) {
             // 掛載失敗時 Fragment 沒有真正附著到任何畫面上，Publication 不會再被使用，
             // 必須主動關閉釋放資源——與 openBook() 中 isDisposed 分支的做法一致。
             publication = null
             openedPublication.close()
             channel.invokeMethod("onError", "掛載 EPUB 閱讀畫面失敗：${e.message}")
+        }
+    }
+
+    /**
+     * 全書字元數背景計算（epic-5-toc-pagination Issue 3，spec.md「分頁估算
+     * 模組」決策 #16）：於 Dispatchers.IO 走訪 readingOrder 逐一取得
+     * resource 內容並以 EpubCharacterCounter 計算字元數後加總，避免阻塞
+     * 主執行緒；僅在尚無快取值時觸發（見 attachNavigator() 呼叫處）。
+     *
+     * `Publication.get(link: Link): Resource?`／`Resource.read(): Try<ByteArray,
+     * ReadError>`／`Resource` 需顯式 `close()` 三件事，皆已由本檔案同目錄下
+     * `BookMetadataChannel.kt`（`findFallbackCoverBitmap()`，約第 350-366 行）
+     * 的既有、已編譯執行的程式碼驗證過，不需要另外反編譯確認。
+     * 下方寫法沿用同一組簽章與 `getOrElse { null } ?: <跳轉>` 慣例——`getOrElse`
+     * 的 lambda 內不可直接寫 `continue`（Kotlin 對 inline 函式的 non-local
+     * `break`/`continue` 有嚴格限制，即使是 inline function 也不允許，寫
+     * `getOrElse { continue }` 會編譯失敗），須先在 lambda 內回傳 `null`，
+     * 於 lambda 外再以 `?: continue` 跳出。若計算過程任何一步失敗，靜默放棄
+     * 不回報 onError——這是背景增強功能，計算失敗不應該讓已成功開啟的書籍
+     * 畫面跟著顯示錯誤（比照本檔案既有對「非致命背景工作」的錯誤處理原則）。
+     */
+    private fun computeTotalCharacterCountInBackground(publicationForCounting: Publication) {
+        scope.launch(Dispatchers.IO) {
+            try {
+                var total = 0
+                for (link in publicationForCounting.readingOrder) {
+                    if (isDisposed) return@launch
+                    val resource = publicationForCounting.get(link) ?: continue
+                    try {
+                        val bytes = resource.read().getOrElse { null } ?: continue
+                        total += EpubCharacterCounter.countCharacters(bytes.toString(Charsets.UTF_8))
+                    } finally {
+                        // Resource 實作 Closeable，背景計算可能遍歷數十至數百個
+                        // resource，不關閉會導致檔案描述符洩漏（比照
+                        // BookMetadataChannel.kt findFallbackCoverBitmap() 的既有
+                        // try/finally 模式）。
+                        resource.close()
+                    }
+                }
+                if (isDisposed) return@launch
+                withContext(Dispatchers.Main) {
+                    if (!isDisposed) channel.invokeMethod("onCharacterCountReady", total)
+                }
+            } catch (e: Exception) {
+                // 背景估算失敗不影響已成功開啟的書籍畫面，靜默放棄（見本方法 KDoc）。
+            }
+        }
+    }
+
+    /**
+     * 依全書進度比例（[progression]，0.0-1.0，由 Dart 端 EpubPageEstimator
+     * 估算）跳轉到最接近的 Locator。沿用 Readium 既有的
+     * `Publication.positions()` API（design.md 決策 #5 已確認存在）挑選最
+     * 接近的 Locator 後呼叫 `Navigator.go()`——刻意不另外發明字元偏移量對應
+     * Locator 的複雜機制。
+     *
+     * 若 Publication 尚未載入（navigatorFragment 為 null）或 positions 為空，
+     * 靜默忽略——Dart 端只會在 onPageRendered 觸發之後才送出這個指令。
+     */
+    private fun jumpToProgression(progression: Double) {
+        val nav = navigatorFragment ?: return
+        val pub = publication ?: return
+        scope.launch(Dispatchers.IO) {
+            val positions = pub.positions()
+            if (isDisposed || positions.isEmpty()) return@launch
+            val index = (progression * (positions.size - 1)).roundToInt()
+                .coerceIn(0, positions.size - 1)
+            val locator = positions[index]
+            withContext(Dispatchers.Main) {
+                if (!isDisposed) nav.go(locator, animated = false)
+            }
         }
     }
 

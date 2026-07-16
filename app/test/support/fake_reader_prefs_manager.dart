@@ -6,6 +6,7 @@ import 'package:elinkbook/reader/reading_position.dart';
 import 'package:elinkbook/reader/resolved_preferences.dart';
 import 'package:elinkbook/reader/writing_mode.dart';
 import 'fake_book_reader_prefs_repository.dart';
+import 'fake_epub_character_count_repository.dart';
 import 'fake_reading_position_repository.dart';
 
 /// 供 `reader_screen_test.dart` 使用的假 [ReaderPrefsManager]：`load`／
@@ -15,21 +16,26 @@ import 'fake_reading_position_repository.dart';
 class FakeReaderPrefsManager implements ReaderPrefsManager {
   final Map<String, BookReaderPrefs> bookPrefsByBookId;
   final Map<String, ReadingPosition> readingPositionByBookId;
+  final Map<String, int> totalCharacterCountByBookId;
   GlobalReaderPrefs globalPrefs;
   final List<String> savedBookPrefsCalls = [];
   final List<GlobalReaderPrefs> savedGlobalPrefsCalls = [];
   final List<MapEntry<String, ReadingPosition>> savedReadingPositionCalls = [];
+  final List<MapEntry<String, int>> savedTotalCharacterCountCalls = [];
 
   FakeReaderPrefsManager({
     Map<String, BookReaderPrefs>? bookPrefsByBookId,
     Map<String, ReadingPosition>? readingPositionByBookId,
+    Map<String, int>? totalCharacterCountByBookId,
     this.globalPrefs = const GlobalReaderPrefs.initial(),
   })  : bookPrefsByBookId = bookPrefsByBookId ?? {},
-        readingPositionByBookId = readingPositionByBookId ?? {};
+        readingPositionByBookId = readingPositionByBookId ?? {},
+        totalCharacterCountByBookId = totalCharacterCountByBookId ?? {};
 
   final _delegate = ReaderPrefsManagerImpl(
     FakeBookReaderPrefsRepository(),
     FakeReadingPositionRepository(),
+    FakeEpubCharacterCountRepository(),
   );
 
   @override
@@ -39,6 +45,7 @@ class FakeReaderPrefsManager implements ReaderPrefsManager {
       globalPrefs: globalPrefs,
       readingPosition:
           readingPositionByBookId[bookId] ?? const ReadingPosition(),
+      totalCharacterCount: totalCharacterCountByBookId[bookId],
     );
   }
 
@@ -58,6 +65,13 @@ class FakeReaderPrefsManager implements ReaderPrefsManager {
   Future<void> saveReadingPosition(String bookId, ReadingPosition position) async {
     readingPositionByBookId[bookId] = position;
     savedReadingPositionCalls.add(MapEntry(bookId, position));
+  }
+
+  @override
+  Future<void> saveTotalCharacterCount(
+      String bookId, int totalCharacterCount) async {
+    totalCharacterCountByBookId[bookId] = totalCharacterCount;
+    savedTotalCharacterCountCalls.add(MapEntry(bookId, totalCharacterCount));
   }
 
   @override

@@ -5,6 +5,7 @@ import 'library/book_import_service_impl.dart';
 import 'library/library_repository.dart';
 import 'library/sqlite_library_repository.dart';
 import 'reader/book_reader_prefs_repository.dart';
+import 'reader/epub_character_count_repository.dart';
 import 'reader/reader_prefs_manager.dart';
 import 'reader/reader_prefs_manager_impl.dart';
 import 'reader/reading_position_repository.dart';
@@ -32,6 +33,7 @@ Future<void> main() async {
   final prefsManager = ReaderPrefsManagerImpl(
     prefsRepository,
     ReadingPositionRepository(repository.database),
+    EpubCharacterCountRepository(repository.database),
   );
   runApp(
     ElinkBookApp(
