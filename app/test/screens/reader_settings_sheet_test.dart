@@ -372,6 +372,86 @@ void main() {
       ScreenOrientationSetting.lock180,
     );
   });
+
+  testWidgets('頁首/頁尾開關初始值反映 prefs（未持久化時預設開啟）', (tester) async {
+    await _pumpSheet(tester, BookReaderPrefs.empty, (_) {});
+
+    expect(
+      tester
+          .widget<SwitchListTile>(
+              find.byKey(const Key('reader_settings_show_header')))
+          .value,
+      isTrue,
+    );
+    expect(
+      tester
+          .widget<SwitchListTile>(
+              find.byKey(const Key('reader_settings_show_footer')))
+          .value,
+      isTrue,
+    );
+  });
+
+  testWidgets('已持久化 showHeader=false 時，頁首開關初始值反映為關閉', (tester) async {
+    await _pumpSheet(
+      tester,
+      const BookReaderPrefs(showHeader: false),
+      (_) {},
+    );
+
+    expect(
+      tester
+          .widget<SwitchListTile>(
+              find.byKey(const Key('reader_settings_show_header')))
+          .value,
+      isFalse,
+    );
+  });
+
+  testWidgets('關閉頁首開關後，onChanged 帶入 showHeader=false 且不影響 showFooter',
+      (tester) async {
+    BookReaderPrefs? result;
+    await _pumpSheet(tester, BookReaderPrefs.empty, (prefs) => result = prefs);
+
+    await tester.tap(find.byKey(const Key('reader_settings_show_header')));
+    await tester.pump();
+
+    expect(result, isNotNull);
+    expect(result!.showHeader, isFalse);
+    expect(result!.showFooter, isTrue);
+  });
+
+  testWidgets('關閉頁尾開關後，onChanged 帶入 showFooter=false 且不影響 showHeader',
+      (tester) async {
+    BookReaderPrefs? result;
+    await _pumpSheet(tester, BookReaderPrefs.empty, (prefs) => result = prefs);
+
+    await tester.tap(find.byKey(const Key('reader_settings_show_footer')));
+    await tester.pump();
+
+    expect(result, isNotNull);
+    expect(result!.showFooter, isFalse);
+    expect(result!.showHeader, isTrue);
+  });
+
+  testWidgets('切換頁首/頁尾開關不會清空其他既有覆寫欄位（回歸檢查）', (tester) async {
+    BookReaderPrefs? result;
+    await _pumpSheet(
+      tester,
+      const BookReaderPrefs(
+        writingModeOverride: WritingMode.vertical,
+        pageTurnModeOverride: PageTurnMode.scroll,
+      ),
+      (prefs) => result = prefs,
+    );
+
+    await tester.tap(find.byKey(const Key('reader_settings_show_header')));
+    await tester.pump();
+
+    expect(result, isNotNull);
+    expect(result!.writingModeOverride, WritingMode.vertical);
+    expect(result!.pageTurnModeOverride, PageTurnMode.scroll);
+  });
 }
 
 Future<void> _pumpSheet(
