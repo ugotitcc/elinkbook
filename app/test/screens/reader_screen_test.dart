@@ -1006,6 +1006,10 @@ void main() {
       const EpubLayoutInfo(isFixedLayout: false, writingMode: WritingMode.horizontal),
     );
     await tester.pump();
+    // 審查修正：目錄按鈕的啟用條件額外要求 _tocLoaded，該旗標由
+    // EpubReaderView.loadTableOfContents() 這個 async 呼叫的 .then()
+    // callback 設定，需要多一次 pump 讓其 microtask 完成、觸發 setState。
+    await tester.pump();
 
     final finder = find.byKey(const Key('reader_toc_button'));
     expect(tester.widget<IconButton>(finder).onPressed, isNotNull);
@@ -1038,6 +1042,9 @@ void main() {
     epubView.onLayoutResolved?.call(
       const EpubLayoutInfo(isFixedLayout: false, writingMode: WritingMode.horizontal),
     );
+    await tester.pump();
+    // 審查修正：多一次 pump 讓 loadTableOfContents() 的 .then() callback
+    // 完成、_tocLoaded 變為 true，目錄按鈕才會真正可點擊。
     await tester.pump();
 
     await tester.tap(find.byKey(const Key('reader_toc_button')));

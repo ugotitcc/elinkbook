@@ -90,6 +90,14 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   // 背景抓取（見 _handleLayoutResolved）。樹狀結構不隨版面設定變動，開書
   // 期間只抓取一次，不需要每次版面參數變動都重新請求。
   List<TocEntry> _tocEntries = const [];
+  // 審查修正：背景抓取是否已完成（不論結果是否為空清單）。目錄按鈕的
+  // onPressed 須同時檢查這個旗標，而不是只檢查 _autoDetectedWritingMode
+  // 非 null——否則使用者可能在按鈕剛變成可點擊、但 loadTableOfContents()
+  // 尚未回應的極短窗口內點擊，開啟一個完全空白、且無法與「本書真的沒有
+  // 目錄」區分的 Bottom Sheet。比照既有「⚙️版面設定」按鈕的既定模式
+  // （等待相關非同步就緒訊號才啟用），不引入本專案目前沒有的「Bottom
+  // Sheet 內顯示載入中」UI 型態。
+  bool _tocLoaded = false;
   // 供 TocBottomSheet 訂閱、在已開啟的目錄畫面即時反映全書字元數背景計算
   // 完成事件（spec.md「目錄模組」載入中狀態決策）——與 _totalCharacterCount
   // 這個驅動頁尾 rebuild 的既有欄位（Issue 3）刻意分開維護，避免耦合兩條
@@ -456,10 +464,13 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     // `_tocEntries.isEmpty` 這道檢查純粹是把「只抓取一次」這句話從隱含假設
     // 變成程式碼本身強制執行的行為，零成本、無副作用；即使原生端的一次性
     // 觸發機制未來被改動，這裡也不會退化成重複請求。
-    if (!info.isFixedLayout && _tocEntries.isEmpty) {
+    if (!info.isFixedLayout && _tocEntries.isEmpty && !_tocLoaded) {
       EpubReaderView.loadTableOfContents(_epubReaderViewKey).then((entries) {
         if (!mounted) return;
-        setState(() => _tocEntries = entries);
+        setState(() {
+          _tocEntries = entries;
+          _tocLoaded = true;
+        });
       });
     }
   }
@@ -511,9 +522,14 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             key: const Key('reader_toc_button'),
             icon: const Icon(Icons.menu_book),
             tooltip: '目錄',
-            // 沿用與「⚙️版面」按鈕一致的啟用條件——_autoDetectedWritingMode
-            // 非 null 代表 onLayoutResolved 已觸發，書本已成功開啟。
-            onPressed: _autoDetectedWritingMode == null ? null : _openToc,
+            // 沿用與「⚙️版面」按鈕一致的啟用條件（_autoDetectedWritingMode
+            // 非 null 代表 onLayoutResolved 已觸發，書本已成功開啟），並
+            // 額外要求 _tocLoaded（審查修正）——避免使用者在背景抓取
+            // 完成前點擊，開啟一個無法與「本書真的沒有目錄」區分的空白
+            // Bottom Sheet。
+            onPressed: (_autoDetectedWritingMode == null || !_tocLoaded)
+                ? null
+                : _openToc,
           ),
           IconButton(
             key: const Key('reader_layout_settings_button'),
