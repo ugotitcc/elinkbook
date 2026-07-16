@@ -106,11 +106,64 @@ class _NotesBottomSheetState extends State<NotesBottomSheet>
   }
 
   Widget _buildBookmarksTab() {
-    return ListView.builder(
-      key: const Key('notes_sheet_bookmark_list'),
-      itemCount: _bookmarks.length,
-      itemBuilder: (context, index) => _buildBookmarkRow(_bookmarks[index]),
+    final existing = _bookmarkAtCurrentPosition;
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: OutlinedButton.icon(
+            key: const Key('notes_sheet_bookmark_toggle'),
+            icon: Icon(existing != null ? Icons.star : Icons.star_border),
+            label: Text(existing != null ? '已加入此頁書籤' : '加入此頁書籤'),
+            onPressed: _toggleBookmark,
+          ),
+        ),
+        Expanded(
+          child: ListView.builder(
+            key: const Key('notes_sheet_bookmark_list'),
+            itemCount: _bookmarks.length,
+            itemBuilder: (context, index) =>
+                _buildBookmarkRow(_bookmarks[index]),
+          ),
+        ),
+      ],
     );
+  }
+
+  /// 目前位置是否已有書籤——EPUB／FXL 比對 epubLocatorJson 是否完全相同
+  /// 字串，PDF 比對 pdfPageIndex 是否相同（見 Global Constraints「書籤
+  /// toggle 的相等性判斷」，審查修正 1.1）。
+  bool _matchesCurrentPosition(Bookmark bookmark) {
+    final pdfPageIndex = widget.currentPosition.pdfPageIndex;
+    if (pdfPageIndex != null) return bookmark.pdfPageIndex == pdfPageIndex;
+    final epubLocatorJson = widget.currentPosition.epubLocatorJson;
+    if (epubLocatorJson != null) {
+      return bookmark.epubLocatorJson == epubLocatorJson;
+    }
+    return false;
+  }
+
+  Bookmark? get _bookmarkAtCurrentPosition {
+    for (final bookmark in _bookmarks) {
+      if (_matchesCurrentPosition(bookmark)) return bookmark;
+    }
+    return null;
+  }
+
+  Future<void> _toggleBookmark() async {
+    final existing = _bookmarkAtCurrentPosition;
+    if (existing != null) {
+      await widget.bookmarksRepository.delete(existing.id!);
+    } else {
+      await widget.bookmarksRepository.insert(Bookmark(
+        bookId: widget.bookId,
+        name: Bookmark.defaultName(widget.currentPosition),
+        epubLocatorJson: widget.currentPosition.epubLocatorJson,
+        progression: widget.currentPosition.progression,
+        pdfPageIndex: widget.currentPosition.pdfPageIndex,
+      ));
+    }
+    await _loadBookmarks();
   }
 
   Widget _buildBookmarkRow(Bookmark bookmark) {

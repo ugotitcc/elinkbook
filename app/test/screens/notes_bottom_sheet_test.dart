@@ -81,4 +81,72 @@ void main() {
 
     expect(selected?.name, '第一章');
   });
+
+  testWidgets('尚未有書籤時，toggle 按鈕顯示「加入此頁書籤」', (tester) async {
+    final repository = FakeBookmarksRepository();
+    await _pumpSheet(
+      tester,
+      repository: repository,
+      currentPosition: const BookmarkPositionContext(pdfPageIndex: 4),
+    );
+
+    expect(find.text('加入此頁書籤'), findsOneWidget);
+  });
+
+  testWidgets('點擊 toggle 按鈕後新增書籤，清單即時反映', (tester) async {
+    final repository = FakeBookmarksRepository();
+    await _pumpSheet(
+      tester,
+      repository: repository,
+      currentPosition: const BookmarkPositionContext(pdfPageIndex: 4),
+    );
+
+    await tester.tap(find.byKey(const Key('notes_sheet_bookmark_toggle')));
+    await tester.pump();
+
+    expect(find.text('第 5 頁'), findsOneWidget);
+    expect(find.text('已加入此頁書籤'), findsOneWidget);
+  });
+
+  testWidgets('已有書籤時再次點擊 toggle 按鈕，移除該筆書籤', (tester) async {
+    final repository = FakeBookmarksRepository();
+    await repository.insert(
+      const Bookmark(bookId: 'b1', name: '第 5 頁', pdfPageIndex: 4),
+    );
+    await _pumpSheet(
+      tester,
+      repository: repository,
+      currentPosition: const BookmarkPositionContext(pdfPageIndex: 4),
+    );
+
+    expect(find.text('已加入此頁書籤'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('notes_sheet_bookmark_toggle')));
+    await tester.pump();
+
+    expect(find.text('第 5 頁'), findsNothing);
+    expect(find.text('加入此頁書籤'), findsOneWidget);
+  });
+
+  testWidgets('EPUB 情境下 toggle 依 epubLocatorJson 精確比對', (tester) async {
+    final repository = FakeBookmarksRepository();
+    await repository.insert(const Bookmark(
+      bookId: 'b1',
+      name: '別處',
+      epubLocatorJson: '{"href":"/other.xhtml"}',
+    ));
+    await _pumpSheet(
+      tester,
+      repository: repository,
+      currentPosition: const BookmarkPositionContext(
+        epubLocatorJson: '{"href":"/c1.xhtml"}',
+        progression: 0.1,
+      ),
+    );
+
+    expect(
+      find.text('加入此頁書籤'),
+      findsOneWidget,
+      reason: '不同 locatorJson 不應視為同一位置',
+    );
+  });
 }
