@@ -45,7 +45,7 @@
 
 ## Issue 2：本機閱讀位置記憶（EPUB + PDF）
 
-**Status:** ✅ 已完成（含程式碼審查修正 C1/C2/I2/M1/M2）
+**Status:** ✅ 已完成並合併（PR #45，`feat/epic-5-issue2-reading-position` → `main`）——含程式碼審查修正 C1（FXL 位置記憶改用 `currentLocator` StateFlow）／C2（補上 EPUB reflowable 端到端整合測試）／C3（恢復 `onPageLoaded` 原生觸發路徑；另外反編譯確認並修正一個 `epic-16-dual-page` 既有的橫排雙頁 FXL 排版問題——中縫空白與 RTL 頁序顛倒，經真機驗證有效，一併納入本次合併）／I2（EPUB 進度 `null` 防呆）／M1／M2。真機測試（EPUB／PDF 位置記憶、FXL 雙頁排版）皆已由人類與 `adb` 直接操作雙重驗證。
 
 **依賴：** 無（可與 Issue 1 平行）
 
