@@ -6,7 +6,7 @@
 
 ## Issue 1：書籤管理 + 統一「筆記」入口（Bottom Sheet 外殼）
 
-**Status:** ready-for-agent
+**Status:** ✅ 已完成並合併（PR #49，`feat/epic6-issue1-bookmarks-notes-entry` → `main`）——依 `plans/plan-issue-1.md` 8 個 Task 實作：`bookmarks` 表與累加式 v7→v8 schema migration（`onCreate`／`onUpgrade` 皆呼叫 `_createBookmarksTable`）、`BookmarksRepository`（CRUD，`COALESCE(pdf_page_index, progression)` 跨格式排序）、`Bookmark`／`BookmarkPositionContext`／`defaultName` 純函式（EPUB 用章節名稱＋進度百分比、PDF 用「第 N 頁」、FXL 因副檔名是 `.epub` 且無法取頁碼而退回進度百分比）、`NotesBottomSheet`（雙分頁籤外殼，「🔖 書籤」完整可用＋「✏️ 劃線與備註」空狀態佔位符）、書籤 toggle／重新命名／單筆刪除／批次刪除（確認對話框）、`ReaderScreen` 接線「📚 筆記」AppBar 入口，`bookmarksRepository` 以可選具名參數貫穿 `LibraryScreen`／`main.dart`，零回歸（既有 43＋27＋5 處呼叫端不受影響）。經 8 個 Task 逐一審查（僅 Task 7 有 2 項 ⚠️ 由 controller 自行釐清，非缺陷）與最終整體分支審查（Important：EPUB 📚 筆記按鈕加上 `_epubPositionInfo` 就緒判斷，避免 `onLayoutResolved`／`onLocatorChanged` 兩條獨立非同步回呼順序不保證時寫入無定位資訊的壞書籤，比照既有 `_tocLoaded` 防呆模式；Minor：`NotesBottomSheet` 的 `TextEditingController` 洩漏，改由 State 生命週期管理）一輪修正；`flutter test`（全專案 386 個）全過、`flutter analyze` 乾淨。**真機整合測試（`integration_test/notes_bookmark_test.dart`，涵蓋 EPUB／PDF）已撰寫但尚未於實機執行**——因合併當下無 Android 裝置可用，Step 2（`-d <device-id>` 真機執行）延後，待裝置就緒後補做。
 
 **依賴：** 無（起始工單）
 
@@ -33,15 +33,15 @@
 
 **驗收標準：**
 
-- [ ] `bookmarks` 表與累加式 migration 正確建立：`onCreate`（全新安裝）與 `onUpgrade`（既有裝置升級）皆會建表，兩條路徑皆不拋出 `no such table`
-- [ ] `BookmarksRepository` CRUD 正確運作
-- [ ] AppBar 新增「📚 筆記」按鈕（流式 EPUB／PDF），開啟帶兩分頁籤的 Bottom Sheet
-- [ ] 「🔖 書籤」分頁完整可用：清單依位置排序、200ms 內跳轉、重新命名、單筆刪除、批次刪除（需確認）
-- [ ] 書籤新增/移除為 toggle 語意，同頁/位置最多一筆，二態按鈕正確反映狀態
-- [ ] EPUB 預設書籤名稱含章節名稱＋進度百分比；PDF 預設名稱為「第 N 頁」
-- [ ] 「✏️ 劃線與備註」分頁顯示空狀態佔位符
-- [ ] 上述測試皆通過，`flutter analyze` 乾淨
-- [ ] 真機整合測試涵蓋 EPUB／PDF 書籤新增與跳轉的端到端流程
+- [x] `bookmarks` 表與累加式 migration 正確建立：`onCreate`（全新安裝）與 `onUpgrade`（既有裝置升級）皆會建表，兩條路徑皆不拋出 `no such table`
+- [x] `BookmarksRepository` CRUD 正確運作
+- [x] AppBar 新增「📚 筆記」按鈕（流式 EPUB／PDF），開啟帶兩分頁籤的 Bottom Sheet
+- [x] 「🔖 書籤」分頁完整可用：清單依位置排序、200ms 內跳轉、重新命名、單筆刪除、批次刪除（需確認）
+- [x] 書籤新增/移除為 toggle 語意，同頁/位置最多一筆，二態按鈕正確反映狀態
+- [x] EPUB 預設書籤名稱含章節名稱＋進度百分比；PDF 預設名稱為「第 N 頁」
+- [x] 「✏️ 劃線與備註」分頁顯示空狀態佔位符
+- [x] 上述測試皆通過，`flutter analyze` 乾淨
+- [ ] 真機整合測試涵蓋 EPUB／PDF 書籤新增與跳轉的端到端流程（測試檔已撰寫，尚待裝置就緒後實際執行）
 
 **Blocked by：** None - can start immediately
 
