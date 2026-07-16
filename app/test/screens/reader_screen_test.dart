@@ -14,6 +14,7 @@ import 'package:elinkbook/reader/writing_mode.dart';
 import 'package:elinkbook/screens/fxl_settings_sheet.dart';
 import 'package:elinkbook/screens/pdf_settings_sheet.dart';
 
+import 'package:elinkbook/reader/epub_position_info.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
 import '../support/fake_reader_prefs_manager.dart';
 
@@ -748,5 +749,153 @@ void main() {
     await tester.pump();
 
     expect(prefsManager.savedReadingPositionCalls, isEmpty);
+  });
+
+  // --- Epic 5 Issue 3：EPUB 頁碼顯示 + 跳頁 ---
+
+  testWidgets('EPUB reflowable 開書後，收到 onCharacterCountReady 回報時，頁尾正確顯示估算頁碼',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_epub_footer_test',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final epubView = tester.widget<EpubReaderView>(find.byType(EpubReaderView));
+    // 先回報非固定版面（頁尾只在流式 EPUB 顯示）。
+    epubView.onLayoutResolved?.call(
+      const EpubLayoutInfo(isFixedLayout: false, writingMode: WritingMode.horizontal),
+    );
+    await tester.pump();
+    // 模擬原生端背景計算完成，回報全書字元數。
+    epubView.onCharacterCountReady?.call(5000);
+    await tester.pump();
+
+    expect(find.byKey(const Key('reader_footer')), findsOneWidget);
+    // 預設版面參數下 estimateCharsPerScreen() = 500，5000/500 = 10 頁；
+    // 尚未收到 onLocatorChanged，estimateCurrentPage(null, 10) = 1。
+    expect(find.text('進度 10% ｜ 第 1/10 頁'), findsOneWidget);
+  });
+
+  testWidgets('EPUB 收到 onLocatorChanged 的 progression 後，頁尾目前頁碼正確更新',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_epub_footer_progression',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final epubView = tester.widget<EpubReaderView>(find.byType(EpubReaderView));
+    epubView.onLayoutResolved?.call(
+      const EpubLayoutInfo(isFixedLayout: false, writingMode: WritingMode.horizontal),
+    );
+    await tester.pump();
+    epubView.onCharacterCountReady?.call(5000); // 總頁數 10
+    await tester.pump();
+    epubView.onLocatorChanged?.call(
+      const EpubPositionInfo(locatorJson: '{"href":"/c1.xhtml"}', progression: 0.5),
+    );
+    await tester.pump();
+
+    expect(find.text('進度 50% ｜ 第 5/10 頁'), findsOneWidget);
+  });
+
+  testWidgets('EPUB 固定版面（FXL）開書後，即使收到 onCharacterCountReady 也不顯示頁尾',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample_fixed_layout.epub',
+          bookId: 'b_epub_fxl_no_footer',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final epubView = tester.widget<EpubReaderView>(find.byType(EpubReaderView));
+    epubView.onLayoutResolved?.call(
+      const EpubLayoutInfo(isFixedLayout: true, writingMode: WritingMode.horizontal),
+    );
+    await tester.pump();
+    epubView.onCharacterCountReady?.call(5000);
+    await tester.pump();
+
+    expect(find.byKey(const Key('reader_footer')), findsNothing);
+  });
+
+  testWidgets('版面設定（字型大小）不同時，EPUB 頁尾估算總頁數正確反映',
+      (tester) async {
+    // 直接以 fontSize: 2.0（加倍）建立 FakeReaderPrefsManager，驗證
+    // _buildEpubFooter 在不同版面參數下正確重新估算總頁數——繞過 Bottom
+    // Sheet 互動（測試環境 viewport 無法可靠容納 Bottom Sheet 內容）。
+    prefsManager = FakeReaderPrefsManager(
+      bookPrefsByBookId: {
+        'b_epub_footer_recalc': const BookReaderPrefs(fontSize: 2.0),
+      },
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_epub_footer_recalc',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final epubView = tester.widget<EpubReaderView>(find.byType(EpubReaderView));
+    epubView.onLayoutResolved?.call(
+      const EpubLayoutInfo(isFixedLayout: false, writingMode: WritingMode.horizontal),
+    );
+    await tester.pump();
+    epubView.onCharacterCountReady?.call(5000);
+    await tester.pump();
+
+    // fontSize 倍率 2.0 → estimateCharsPerScreen 從 500 降為 125 →
+    // totalPages 從 10 變成 40。
+    expect(find.text('進度 3% ｜ 第 1/40 頁'), findsOneWidget);
+  });
+
+  testWidgets('PDF 頁尾行為不受本工單影響（既有回歸驗證）', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b_pdf_regression',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+    pdfView.onPageChanged?.call(const PdfPageInfo(pageIndex: 0, totalPages: 12));
+    await tester.pump();
+
+    expect(find.byKey(const Key('reader_footer')), findsOneWidget);
+    expect(find.text('進度 8% ｜ 第 1/12 頁'), findsOneWidget);
   });
 }

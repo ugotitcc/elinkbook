@@ -727,4 +727,165 @@ void main() {
         .single;
     expect(row['font_size'], 18.0); // 既有 EPUB 資料不受影響
   });
+
+  test('全新安裝的 books 表包含 totalCharacterCount 欄位（version 6 起 onCreate 已含括）',
+      () async {
+    await repository.insertBook(_book('b_char_count').copyWith());
+    await repository.database.update(
+      'books',
+      {'totalCharacterCount': 55000},
+      where: 'id = ?',
+      whereArgs: ['b_char_count'],
+    );
+
+    final books = await repository.listBooks();
+    expect(books.single.totalCharacterCount, 55000);
+  });
+
+  test('既有 version 5 裝置升級到 version 6，totalCharacterCount 欄位正確補上、既有資料不受影響',
+      () async {
+    final tempDir = await Directory.systemTemp
+        .createTemp('elinkbook_migration_v5_to_v6_test');
+    addTearDown(() => tempDir.delete(recursive: true));
+    final dbPath = p.join(tempDir.path, 'test.db');
+
+    // 模擬「已存在於 version 5」的舊資料庫：手動以 version 5 當時的
+    // schema（books 表不含 totalCharacterCount）建立，不透過
+    // SqliteLibraryRepository.open()（該方法目前的 onCreate 已經是
+    // version 6 的最終 schema，無法用來重現「舊裝置」情境）。
+    final oldDb = await databaseFactory.openDatabase(
+      dbPath,
+      options: OpenDatabaseOptions(
+        version: 5,
+        onConfigure: (db) async {
+          await db.execute('PRAGMA foreign_keys = ON');
+        },
+        onCreate: (db, version) async {
+          await db.execute('CREATE TABLE groups (name TEXT PRIMARY KEY)');
+          await db.insert('groups', {'name': '未分類'});
+          await db.execute('''
+            CREATE TABLE books (
+              id TEXT PRIMARY KEY,
+              title TEXT NOT NULL,
+              author TEXT,
+              format TEXT NOT NULL,
+              filePath TEXT NOT NULL,
+              source TEXT NOT NULL,
+              coverPath TEXT,
+              progress REAL NOT NULL DEFAULT 0,
+              epubLocator TEXT,
+              pdfPageIndex INTEGER,
+              groupName TEXT NOT NULL DEFAULT '未分類',
+              createTime INTEGER NOT NULL,
+              lastReadTime INTEGER NOT NULL
+            )
+          ''');
+          await db.insert('books', {
+            'id': 'b1',
+            'title': 'Version 5 既有書籍',
+            'format': 'epub',
+            'filePath': 'content://example/b1',
+            'source': 'local',
+            'progress': 0.3,
+            'groupName': '未分類',
+            'createTime': 1000,
+            'lastReadTime': 1000,
+          });
+        },
+      ),
+    );
+    await oldDb.close();
+
+    // 重新以目前版本開啟同一個檔案，觸發 onUpgrade（oldVersion=5 →
+    // newVersion=6），驗證既有書籍資料不受影響、且新欄位可用。
+    final upgraded = await SqliteLibraryRepository.open(dbPath);
+    addTearDown(() => upgraded.close());
+
+    final books = await upgraded.listBooks();
+    expect(books.single.title, 'Version 5 既有書籍'); // 既有資料不受影響
+    expect(books.single.progress, 0.3);
+    expect(books.single.totalCharacterCount, isNull); // 新欄位存在且預設 NULL
+
+    // 證明欄位真的可寫入（不只是巧合為 null），確認 ALTER TABLE 確實生效。
+    await upgraded.database.update(
+      'books',
+      {'totalCharacterCount': 88888},
+      where: 'id = ?',
+      whereArgs: ['b1'],
+    );
+    final updated = await upgraded.listBooks();
+    expect(updated.single.totalCharacterCount, 88888);
+  });
+
+  test('既有 version 1 裝置跳級升級到 version 6，全部遷移依序執行、既有資料不受影響',
+      () async {
+    final tempDir = await Directory.systemTemp
+        .createTemp('elinkbook_migration_v1_to_v6_test');
+    addTearDown(() => tempDir.delete(recursive: true));
+    final dbPath = p.join(tempDir.path, 'test.db');
+
+    // 模擬「已存在於 version 1」的最原始資料庫：只有 groups/books 兩張
+    // 表，完全沒有 book_reader_prefs 表，books 表也不含
+    // epubLocator/pdfPageIndex/totalCharacterCount 欄位。
+    final oldDb = await databaseFactory.openDatabase(
+      dbPath,
+      options: OpenDatabaseOptions(
+        version: 1,
+        onConfigure: (db) async {
+          await db.execute('PRAGMA foreign_keys = ON');
+        },
+        onCreate: (db, version) async {
+          await db.execute('CREATE TABLE groups (name TEXT PRIMARY KEY)');
+          await db.insert('groups', {'name': '未分類'});
+          await db.execute('''
+            CREATE TABLE books (
+              id TEXT PRIMARY KEY,
+              title TEXT NOT NULL,
+              author TEXT,
+              format TEXT NOT NULL,
+              filePath TEXT NOT NULL,
+              source TEXT NOT NULL,
+              coverPath TEXT,
+              progress REAL NOT NULL DEFAULT 0,
+              groupName TEXT NOT NULL DEFAULT '未分類',
+              createTime INTEGER NOT NULL,
+              lastReadTime INTEGER NOT NULL
+            )
+          ''');
+          await db.insert('books', {
+            'id': 'b1',
+            'title': '最早期書籍',
+            'format': 'epub',
+            'filePath': 'content://example/b1',
+            'source': 'local',
+            'progress': 0,
+            'groupName': '未分類',
+            'createTime': 1000,
+            'lastReadTime': 1000,
+          });
+        },
+      ),
+    );
+    await oldDb.close();
+
+    // 重新以目前版本開啟同一個檔案，觸發 onUpgrade（oldVersion=1 →
+    // newVersion=6）。
+    final upgraded = await SqliteLibraryRepository.open(dbPath);
+    addTearDown(() => upgraded.close());
+
+    final books = await upgraded.listBooks();
+    expect(books.single.title, '最早期書籍');
+    expect(books.single.epubLocator, isNull);
+    expect(books.single.pdfPageIndex, isNull);
+    expect(books.single.totalCharacterCount, isNull);
+
+    await upgraded.database.update(
+      'books',
+      {'totalCharacterCount': 12345},
+      where: 'id = ?',
+      whereArgs: ['b1'],
+    );
+    final updated = await upgraded.listBooks();
+    expect(updated.single.totalCharacterCount, 12345);
+  });
 }

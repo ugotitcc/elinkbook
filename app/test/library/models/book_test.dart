@@ -116,4 +116,37 @@ void main() {
     expect(copy.id, book.id);
     expect(copy.title, book.title);
   });
+
+  test('totalCharacterCount 欄位可正確往返（Issue 3 新增）', () {
+    final book = Book(
+      id: 'b6',
+      title: 'EPUB 書籍',
+      format: BookFileFormat.epub,
+      filePath: '/storage/emulated/0/book.epub',
+      source: BookSource.local,
+      totalCharacterCount: 123456,
+      createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+      lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+    );
+
+    final restored = Book.fromMap(book.toMap());
+
+    expect(restored.totalCharacterCount, 123456);
+  });
+
+  test('totalCharacterCount 未設定時，往返後仍為 null（代表尚未計算過）', () {
+    final book = Book(
+      id: 'b7',
+      title: 'EPUB 書籍',
+      format: BookFileFormat.epub,
+      filePath: '/storage/emulated/0/book2.epub',
+      source: BookSource.local,
+      createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+      lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+    );
+
+    final restored = Book.fromMap(book.toMap());
+
+    expect(restored.totalCharacterCount, isNull);
+  });
 }

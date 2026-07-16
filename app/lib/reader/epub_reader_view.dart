@@ -62,6 +62,14 @@ class EpubReaderView extends StatefulWidget {
   /// 收起前是顯示或隱藏，一律強制收起（非切換語意）。
   final VoidCallback? onFixedLayoutPageTurn;
 
+  /// 全書字元數快取（epic-5-toc-pagination Issue 3）。`null` 代表尚未計算過，
+  /// 原生端會觸發背景計算；非 `null` 則直接沿用快取值，不重新走訪全書。
+  final int? totalCharacterCount;
+
+  /// 原生端背景字元數計算完成時觸發（epic-5-toc-pagination Issue 3），
+  /// 傳回全書字元數。供呼叫端（ReaderScreen）寫入快取。
+  final ValueChanged<int>? onCharacterCountReady;
+
   const EpubReaderView({
     super.key,
     required this.filePath,
@@ -84,7 +92,22 @@ class EpubReaderView extends StatefulWidget {
     this.onFixedLayoutPageTurn,
     this.initialLocatorJson,
     this.onLocatorChanged,
+    this.totalCharacterCount,
+    this.onCharacterCountReady,
   });
+
+  /// 跳轉到指定全書進度比例（0.0-1.0），由 Dart 端 EpubPageEstimator
+  /// 估算目標頁碼後換算。強型別 static helper，比照 PdfReaderView.jumpToPage
+  /// 模式（見 Global Constraints「跨 State 私有邊界呼叫」）。
+  static void jumpToProgression(
+      GlobalKey<State<EpubReaderView>> key, double progression) {
+    final state = key.currentState;
+    if (state is _EpubReaderViewState) {
+      state._channel?.invokeMethod('jumpToProgression', {
+        'progression': progression,
+      });
+    }
+  }
 
   @override
   State<EpubReaderView> createState() => _EpubReaderViewState();
@@ -103,6 +126,8 @@ class _EpubReaderViewState extends State<EpubReaderView> {
       'initialPreferences': _buildPreferencesMap(),
       if (widget.initialLocatorJson != null)
         'initialLocatorJson': widget.initialLocatorJson,
+      if (widget.totalCharacterCount != null)
+        'totalCharacterCount': widget.totalCharacterCount,
     });
   }
 
@@ -187,6 +212,9 @@ class _EpubReaderViewState extends State<EpubReaderView> {
           locatorJson: args['locatorJson'] as String,
           progression: (args['progression'] as num?)?.toDouble(),
         ));
+        break;
+      case 'onCharacterCountReady':
+        widget.onCharacterCountReady?.call(call.arguments as int);
         break;
     }
   }
