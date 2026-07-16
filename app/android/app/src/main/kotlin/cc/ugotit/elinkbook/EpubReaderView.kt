@@ -35,6 +35,7 @@ import org.readium.r2.navigator.preferences.FontFamily
 import org.readium.r2.navigator.preferences.Spread
 import org.readium.r2.navigator.preferences.TextAlign
 import org.readium.r2.shared.publication.Layout
+import org.readium.r2.shared.publication.Link
 import org.readium.r2.shared.publication.Locator
 import org.json.JSONObject
 import org.readium.r2.shared.publication.Publication
@@ -190,6 +191,35 @@ class EpubReaderView(
                 val progression = call.argument<Double>("progression")
                 if (progression != null) {
                     jumpToProgression(progression)
+                }
+                result.success(null)
+            }
+            "getTableOfContents" -> {
+                scope.launch(Dispatchers.IO) {
+                    val toc = buildTocPayloadSafely()
+                    withContext(Dispatchers.Main) {
+                        // 審查修正：比照 computeTotalCharacterCountInBackground()／
+                        // jumpToProgression() 既有的 isDisposed 防護慣例——協程
+                        // 完成前 View 若已被銷毀，不應再呼叫 result.success()。
+                        if (!isDisposed) result.success(toc)
+                    }
+                }
+            }
+            "jumpToLocator" -> {
+                val locatorJson = call.argument<String>("locatorJson")
+                if (locatorJson != null) {
+                    try {
+                        val locator = Locator.fromJSON(JSONObject(locatorJson))
+                        // fromJSON 回傳 Locator?，null 時靜默忽略（JSON 格式
+                        // 缺少必要欄位）——比照本檔案既有對非致命錯誤的處理原則。
+                        if (locator != null) {
+                            navigatorFragment?.go(locator, animated = false)
+                        }
+                    } catch (e: Exception) {
+                        // 無效的 locatorJson（例如 JSON 格式錯誤）靜默忽略，
+                        // 比照本檔案既有對非致命錯誤的處理原則——目錄跳轉
+                        // 失敗不應該讓已成功開啟的書籍畫面顯示錯誤。
+                    }
                 }
                 result.success(null)
             }
@@ -841,6 +871,63 @@ class EpubReaderView(
             withContext(Dispatchers.Main) {
                 if (!isDisposed) nav.go(locator, animated = false)
             }
+        }
+    }
+
+    /**
+     * 目錄樹狀結構一次性讀取 + 序列化（epic-5-toc-pagination Issue 4，
+     * spec.md「目錄模組」）：走訪 `Publication.tableOfContents`（巢狀
+     * `List<Link>`），對每個節點透過 `Publication.locatorFromLink()` 建構
+     * 可供 `Navigator.go()` 使用的精確 Locator（含錨點，非僅解析到
+     * resource 起始位置）。
+     *
+     * 頁碼估算所需的全書進度比例優先取用該 Locator 本身的
+     * `totalProgression`；若為 `null`（Readium 內部對 `locatorFromLink()`
+     * 產生的 Locator 是否必然填入 `totalProgression` 沒有文件保證），退而
+     * 求其次比對 `Publication.positions()`（`jumpToProgression()` 已建立
+     * 的既有先例）中 `href` 相同的第一個位置，取其 `totalProgression`
+     * 作為近似值；兩者皆查無時保持 `null`，Dart 端顯示佔位符，不視為
+     * 錯誤（見 spec.md「目錄模組」載入中狀態決策）。
+     *
+     * 【審查修正】`positions()` 依 href 查找的部分改為先建一份
+     * `Map<Url, Locator>`（`associateBy`）再以 O(1) 查表，而非對每個目錄
+     * 節點各自線性掃描整個 `positionsList`（O(章節數 × 全書切分位置數)）。
+     * `distinctBy { it.href }` 保留每個 href 第一次出現的位置，與原本
+     * `firstOrNull { it.href == ... }` 語意等價（`distinctBy` 依走訪順序
+     * 保留首個符合者）。
+     *
+     * 於 `Dispatchers.IO` 執行——`positions()` 本身是 suspend 函式，且
+     * 巢狀走訪＋逐節點查表在章節數量極多的書籍上仍可能有感知得到的延遲，
+     * 統一放背景執行緒避免阻塞主執行緒（比照
+     * `computeTotalCharacterCountInBackground()` 的既有原則）。任何一步
+     * 失敗（例如 `publication` 尚未成功開啟）皆回傳空清單，靜默降級，不
+     * 回報 `onError`——目錄讀取失敗不應該讓已成功開啟的書籍畫面顯示錯誤。
+     */
+    private suspend fun buildTocPayloadSafely(): List<Map<String, Any?>> {
+        val pub = publication ?: return emptyList()
+        return try {
+            val positionsMap = pub.positions().distinctBy { it.href }.associateBy { it.href }
+            buildTocEntries(pub.tableOfContents, pub, positionsMap)
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    private fun buildTocEntries(
+        links: List<Link>,
+        pub: Publication,
+        positionsMap: Map<Url, Locator>,
+    ): List<Map<String, Any?>> {
+        return links.map { link ->
+            val locator = pub.locatorFromLink(link)
+            val progression = locator?.locations?.totalProgression
+                ?: positionsMap[locator?.href]?.locations?.totalProgression
+            mapOf(
+                "title" to (link.title ?: ""),
+                "locatorJson" to (locator?.toJSON()?.toString() ?: ""),
+                "progression" to progression,
+                "children" to buildTocEntries(link.children, pub, positionsMap),
+            )
         }
     }
 
