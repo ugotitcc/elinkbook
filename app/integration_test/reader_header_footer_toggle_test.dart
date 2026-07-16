@@ -6,6 +6,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:elinkbook/library/models/book.dart';
+import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/library/sqlite_library_repository.dart';
 import 'package:elinkbook/reader/book_reader_prefs.dart';
 import 'package:elinkbook/reader/book_reader_prefs_repository.dart';
@@ -50,6 +52,17 @@ void main() {
       final file = File(samplePath);
       if (await file.exists()) await file.delete();
     });
+
+    // 必須先插入書籍，否則 prefs 寫入會因 FOREIGN KEY 約束失敗
+    await libraryRepository.insertBook(Book(
+      id: 'b_header_toggle_integration',
+      title: '預設測試書',
+      format: BookFileFormat.epub,
+      filePath: samplePath,
+      source: BookSource.local,
+      createTime: DateTime.now(),
+      lastReadTime: DateTime.now(),
+    ));
 
     await tester.pumpWidget(
       MaterialApp(
@@ -96,18 +109,29 @@ void main() {
     );
     addTearDown(() => libraryRepository.close());
 
-    // 預先寫入 showHeader=false 的單書偏好。
-    await prefsManager.saveBookPrefs(
-      'b_header_off_integration',
-      const BookReaderPrefs(showHeader: false),
-    );
-
     final samplePath = await _stageAssetAsFile(
         'test/fixtures/sample.epub', 'reader_header_off_integration.epub');
     addTearDown(() async {
       final file = File(samplePath);
       if (await file.exists()) await file.delete();
     });
+
+    // 必須先插入書籍，否則 prefs 寫入會因 FOREIGN KEY 約束失敗
+    await libraryRepository.insertBook(Book(
+      id: 'b_header_off_integration',
+      title: '頁首關閉測試書',
+      format: BookFileFormat.epub,
+      filePath: samplePath,
+      source: BookSource.local,
+      createTime: DateTime.now(),
+      lastReadTime: DateTime.now(),
+    ));
+
+    // 預先寫入 showHeader=false 的單書偏好。
+    await prefsManager.saveBookPrefs(
+      'b_header_off_integration',
+      const BookReaderPrefs(showHeader: false),
+    );
 
     await tester.pumpWidget(
       MaterialApp(
@@ -153,17 +177,28 @@ void main() {
     );
     addTearDown(() => libraryRepository.close());
 
-    await prefsManager.saveBookPrefs(
-      'b_footer_off_integration',
-      const BookReaderPrefs(showFooter: false),
-    );
-
     final samplePath = await _stageAssetAsFile(
         'test/fixtures/sample.epub', 'reader_footer_off_integration.epub');
     addTearDown(() async {
       final file = File(samplePath);
       if (await file.exists()) await file.delete();
     });
+
+    // 必須先插入書籍，否則 prefs 寫入會因 FOREIGN KEY 約束失敗
+    await libraryRepository.insertBook(Book(
+      id: 'b_footer_off_integration',
+      title: '頁尾關閉測試書',
+      format: BookFileFormat.epub,
+      filePath: samplePath,
+      source: BookSource.local,
+      createTime: DateTime.now(),
+      lastReadTime: DateTime.now(),
+    ));
+
+    await prefsManager.saveBookPrefs(
+      'b_footer_off_integration',
+      const BookReaderPrefs(showFooter: false),
+    );
 
     await tester.pumpWidget(
       MaterialApp(
@@ -204,17 +239,28 @@ void main() {
     );
     addTearDown(() => libraryRepository.close());
 
-    await prefsManager.saveBookPrefs(
-      'b_pdf_footer_off_integration',
-      const BookReaderPrefs(showFooter: false),
-    );
-
     final samplePath = await _stageAssetAsFile(
         'test/fixtures/sample.pdf', 'reader_pdf_footer_off_integration.pdf');
     addTearDown(() async {
       final file = File(samplePath);
       if (await file.exists()) await file.delete();
     });
+
+    // 必須先插入書籍，否則 prefs 寫入會因 FOREIGN KEY 約束失敗
+    await libraryRepository.insertBook(Book(
+      id: 'b_pdf_footer_off_integration',
+      title: 'PDF 頁尾關閉測試書',
+      format: BookFileFormat.pdf,
+      filePath: samplePath,
+      source: BookSource.local,
+      createTime: DateTime.now(),
+      lastReadTime: DateTime.now(),
+    ));
+
+    await prefsManager.saveBookPrefs(
+      'b_pdf_footer_off_integration',
+      const BookReaderPrefs(showFooter: false),
+    );
 
     await tester.pumpWidget(
       MaterialApp(
