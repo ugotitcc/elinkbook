@@ -38,7 +38,7 @@
   - `TocNavigator.findCurrentPath(List<TocEntry> entries, double? currentProgression) -> List<TocEntry>`。
 - Consumes：無外部相依。供 Task 3（Dart `EpubReaderView`）、Task 4（`TocBottomSheet`）、Task 5（`ReaderScreen`）使用。
 
-- [ ] **Step 1: 寫失敗測試（`TocEntry.fromWire`）**
+- [x] **Step 1: 寫失敗測試（`TocEntry.fromWire`）**
 
 ```dart
 import 'package:flutter_test/flutter_test.dart';
@@ -101,12 +101,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run（於 `app/` 目錄）：`flutter test test/reader/toc_entry_test.dart`
 Expected: FAIL（`toc_entry.dart` 不存在，編譯錯誤）。
 
-- [ ] **Step 3: 撰寫 `TocEntry` 最小實作**
+- [x] **Step 3: 撰寫 `TocEntry` 最小實作**
 
 ```dart
 /// EPUB 目錄樹狀清單的單一節點（epic-5-toc-pagination Issue 4，spec.md
@@ -157,12 +157,12 @@ class TocEntry {
 }
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `flutter test test/reader/toc_entry_test.dart`
 Expected: PASS（全數綠燈）。
 
-- [ ] **Step 5: 寫失敗測試（`TocNavigator.findCurrentPath`）**
+- [x] **Step 5: 寫失敗測試（`TocNavigator.findCurrentPath`）**
 
 ```dart
 import 'package:flutter_test/flutter_test.dart';
@@ -212,12 +212,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 6: 執行測試確認失敗**
+- [x] **Step 6: 執行測試確認失敗**
 
 Run: `flutter test test/reader/toc_navigator_test.dart`
 Expected: FAIL（`toc_navigator.dart` 不存在，編譯錯誤）。
 
-- [ ] **Step 7: 撰寫 `TocNavigator` 最小實作**
+- [x] **Step 7: 撰寫 `TocNavigator` 最小實作**
 
 ```dart
 import 'toc_entry.dart';
@@ -261,12 +261,12 @@ class TocNavigator {
 }
 ```
 
-- [ ] **Step 8: 執行測試確認通過**
+- [x] **Step 8: 執行測試確認通過**
 
 Run: `flutter test test/reader/toc_navigator_test.dart`
 Expected: PASS（全數綠燈）。
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add app/lib/reader/toc_entry.dart app/lib/reader/toc_navigator.dart app/test/reader/toc_entry_test.dart app/test/reader/toc_navigator_test.dart
@@ -287,7 +287,7 @@ git commit -m "feat(epic5-issue4): 新增 TocEntry 資料模型與 TocNavigator 
 
 本 Task 用到的 `Publication.tableOfContents: List<Link>`／`Publication.locatorFromLink(Link): Locator`／`Locator.locations.totalProgression: Double?`／`Locator.href: Url` 皆已對照 `readium-shared:3.3.0` 的 `readium-shared-3.3.0-api.jar`（`javap -p` 反編譯 `Publication.class`／`Link.class`／`Locator.class`／`Locator$Locations.class`）逐一確認簽章存在，不需要另外的驗證任務——`Publication.locatorFromLink(Link)` 的存在，正是 design.md「已知風險」列出的「需在 Architecting 階段確認 Readium 是否有便利 API...可直接取用」的解答。
 
-- [ ] **Step 1: 新增 import**
+- [x] **Step 1: 新增 import**
 
 於檔案頂端既有 `import` 區塊新增（`import org.readium.r2.shared.publication.Locator` 之前）：
 
@@ -295,7 +295,7 @@ git commit -m "feat(epic5-issue4): 新增 TocEntry 資料模型與 TocNavigator 
 import org.readium.r2.shared.publication.Link
 ```
 
-- [ ] **Step 2: `onMethodCall` 新增 `getTableOfContents`／`jumpToLocator` 指令**
+- [x] **Step 2: `onMethodCall` 新增 `getTableOfContents`／`jumpToLocator` 指令**
 
 於 `onMethodCall` 的 `"jumpToProgression"` 分支之後新增：
 
@@ -329,7 +329,7 @@ import org.readium.r2.shared.publication.Link
 
 （`getTableOfContents` 分支不呼叫 `result.success(null)`——結果透過協程內的 `withContext(Dispatchers.Main) { result.success(toc) }` 非同步回傳，`MethodChannel.Result` 只需被呼叫恰好一次，不要求在 `onMethodCall` 同步返回前完成。`jumpToLocator` 則是同步呼叫 `navigatorFragment?.go()`，不透過背景協程分派——比照既有 `nextPage()`/`previousPage()` 分支的同步風格，避免額外的 dispatcher 跳轉開銷影響 FR-08 的 200ms 跳轉時限。）
 
-- [ ] **Step 3: 新增 `buildTocPayloadSafely()`／`buildTocEntries()`**
+- [x] **Step 3: 新增 `buildTocPayloadSafely()`／`buildTocEntries()`**
 
 於 `jumpToProgression()` 函式之後、`onPageLoaded()` override 之前新增：
 
@@ -392,12 +392,12 @@ import org.readium.r2.shared.publication.Link
     }
 ```
 
-- [ ] **Step 4: 編譯驗證**
+- [x] **Step 4: 編譯驗證**
 
 Run（於 `app/` 目錄）：`flutter build apk --debug`
 Expected: 建置成功（`BUILD SUCCESSFUL`），無 Kotlin 編譯錯誤。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/android/app/src/main/kotlin/cc/ugotit/elinkbook/EpubReaderView.kt
@@ -417,7 +417,7 @@ git commit -m "feat(epic5-issue4): EpubReaderView.kt 新增 getTableOfContents �
   - `EpubReaderView.loadTableOfContents(GlobalKey<State<EpubReaderView>> key) -> Future<List<TocEntry>>`（static helper）。
   - `EpubReaderView.jumpToLocator(GlobalKey<State<EpubReaderView>> key, String locatorJson)`（static helper）。
 
-- [ ] **Step 1: 新增 import**
+- [x] **Step 1: 新增 import**
 
 於 `app/lib/reader/epub_reader_view.dart` 頂端既有 `import` 區塊新增（`import 'epub_position_info.dart';` 之後）：
 
@@ -425,7 +425,7 @@ git commit -m "feat(epic5-issue4): EpubReaderView.kt 新增 getTableOfContents �
 import 'toc_entry.dart';
 ```
 
-- [ ] **Step 2: 新增 static helpers**
+- [x] **Step 2: 新增 static helpers**
 
 於既有 `static void jumpToProgression(...)` 方法之後新增（皆在 `EpubReaderView` class 內、`createState()` 之前）：
 
@@ -466,12 +466,12 @@ import 'toc_entry.dart';
   }
 ```
 
-- [ ] **Step 3: 靜態分析驗證**
+- [x] **Step 3: 靜態分析驗證**
 
 Run（於 `app/` 目錄）：`flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add app/lib/reader/epub_reader_view.dart
@@ -494,7 +494,7 @@ git commit -m "feat(epic5-issue4): EpubReaderView 新增 loadTableOfContents 與
 
 **渲染策略（審查修正）**：不在 `build()` 內遞迴走訪整棵樹直接產生 `ListView(children: [...])`——那樣會在每次 build 當下就把「目前展開狀態下應可見」的所有節點一次性實例化成 widget，章節數量多時無法享有 `ListView` 的延遲載入（lazy rendering）優勢。改為維護一份已依目前展開狀態攤平好的 `List<_FlatTocRow>`（每列只記錄 `TocEntry` 本身與縮排深度），只在展開/收起狀態改變時（`_toggleExpanded`）重新計算一次，`build()` 改用 `ListView.builder` 依索引向這份攤平清單取值——螢幕外的列不會被提前建構。
 
-- [ ] **Step 1: 寫失敗測試**
+- [x] **Step 1: 寫失敗測試**
 
 ```dart
 import 'package:flutter/foundation.dart';
@@ -706,12 +706,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/screens/toc_bottom_sheet_test.dart`
 Expected: FAIL（`toc_bottom_sheet.dart` 不存在，編譯錯誤）。
 
-- [ ] **Step 3: 撰寫 `TocBottomSheet` 最小實作**
+- [x] **Step 3: 撰寫 `TocBottomSheet` 最小實作**
 
 ```dart
 import 'package:flutter/foundation.dart';
@@ -909,17 +909,17 @@ class _TocBottomSheetState extends State<TocBottomSheet> {
 }
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `flutter test test/screens/toc_bottom_sheet_test.dart`
 Expected: PASS（全數綠燈）。
 
-- [ ] **Step 5: 靜態分析驗證**
+- [x] **Step 5: 靜態分析驗證**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/screens/toc_bottom_sheet.dart app/test/screens/toc_bottom_sheet_test.dart
@@ -937,7 +937,7 @@ git commit -m "feat(epic5-issue4): 新增 TocBottomSheet 目錄樹狀清單 widg
 **Interfaces:**
 - Consumes: `TocEntry`／`TocNavigator`（Task 1）、`EpubReaderView.loadTableOfContents`／`.jumpToLocator`（Task 3）、`TocBottomSheet`（Task 4）。
 
-- [ ] **Step 1: 寫失敗測試**
+- [x] **Step 1: 寫失敗測試**
 
 於 `app/test/screens/reader_screen_test.dart` 的 `import` 區塊新增：
 
@@ -1086,12 +1086,12 @@ import 'package:elinkbook/screens/toc_bottom_sheet.dart';
   });
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/screens/reader_screen_test.dart`
 Expected: FAIL（`reader_toc_button` 不存在、`TocBottomSheet` 從未被開啟，找不到對應 widget）。
 
-- [ ] **Step 3: 修改 `ReaderScreen`**
+- [x] **Step 3: 修改 `ReaderScreen`**
 
 編輯 `app/lib/screens/reader_screen.dart`，新增 import（於既有 `import '../reader/reading_position.dart';` 之後）：
 
@@ -1234,7 +1234,7 @@ import 'toc_bottom_sheet.dart';
         ];
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `flutter test test/screens/reader_screen_test.dart`
 Expected: PASS（全數綠燈，含既有測試）。
@@ -1245,7 +1245,7 @@ Expected: 全數 PASS。
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/lib/screens/reader_screen.dart app/test/screens/reader_screen_test.dart
