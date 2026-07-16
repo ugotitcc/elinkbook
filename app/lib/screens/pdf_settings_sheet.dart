@@ -45,6 +45,7 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
   late DualPageMode _dualPageMode;
   late bool _dualPageCoverAlone;
   late DualPageDirection _dualPageDirection;
+  late bool _showFooter;
 
   @override
   void initState() {
@@ -58,6 +59,7 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
     _dualPageMode = widget.prefs.dualPageMode ?? DualPageMode.auto;
     _dualPageCoverAlone = widget.prefs.dualPageCoverAlone ?? true;
     _dualPageDirection = widget.prefs.dualPageDirection ?? DualPageDirection.rtl;
+    _showFooter = widget.prefs.showFooter ?? true;
   }
 
   @override
@@ -81,6 +83,7 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
       dualPageMode: _dualPageMode,
       dualPageCoverAlone: _dualPageCoverAlone,
       dualPageDirection: _dualPageDirection,
+      showFooter: _showFooter,
     ));
   }
 
@@ -207,6 +210,15 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
               value: _dualPageCoverAlone,
               onChanged: (v) => setState(() {
                 _dualPageCoverAlone = v;
+                _notifyChanged();
+              }),
+            ),
+            SwitchListTile(
+              key: const Key('pdf_settings_show_footer'),
+              title: const Text('顯示頁尾'),
+              value: _showFooter,
+              onChanged: (v) => setState(() {
+                _showFooter = v;
                 _notifyChanged();
               }),
             ),

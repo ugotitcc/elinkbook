@@ -53,6 +53,8 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   late WritingMode? _writingModeOverride;
   late PageTurnMode? _pageTurnModeOverride;
   late ScreenOrientationSetting? _screenOrientationOverride;
+  late bool _showHeader;
+  late bool _showFooter;
 
   @override
   void initState() {
@@ -74,6 +76,8 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     _writingModeOverride = widget.prefs.writingModeOverride;
     _pageTurnModeOverride = widget.prefs.pageTurnModeOverride;
     _screenOrientationOverride = widget.prefs.screenOrientationOverride;
+    _showHeader = widget.prefs.showHeader ?? true;
+    _showFooter = widget.prefs.showFooter ?? true;
   }
 
   @override
@@ -98,6 +102,8 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
         _writingModeOverride = widget.prefs.writingModeOverride;
         _pageTurnModeOverride = widget.prefs.pageTurnModeOverride;
         _screenOrientationOverride = widget.prefs.screenOrientationOverride;
+        _showHeader = widget.prefs.showHeader ?? true;
+        _showFooter = widget.prefs.showFooter ?? true;
       });
     }
   }
@@ -119,6 +125,8 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
       writingModeOverride: _writingModeOverride,
       pageTurnModeOverride: _pageTurnModeOverride,
       screenOrientationOverride: _screenOrientationOverride,
+      showHeader: _showHeader,
+      showFooter: _showFooter,
     ));
   }
 
@@ -206,6 +214,25 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
             value: !_publisherStyles,
             onChanged: (v) => setState(() {
               _publisherStyles = !v;
+              _notifyChanged();
+            }),
+          ),
+          const SizedBox(height: 12),
+          SwitchListTile(
+            key: const Key('reader_settings_show_header'),
+            title: const Text('顯示頁首'),
+            value: _showHeader,
+            onChanged: (v) => setState(() {
+              _showHeader = v;
+              _notifyChanged();
+            }),
+          ),
+          SwitchListTile(
+            key: const Key('reader_settings_show_footer'),
+            title: const Text('顯示頁尾'),
+            value: _showFooter,
+            onChanged: (v) => setState(() {
+              _showFooter = v;
               _notifyChanged();
             }),
           ),

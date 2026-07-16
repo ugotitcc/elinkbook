@@ -40,6 +40,9 @@ class BookReaderPrefs {
   final bool? dualPageCoverAlone; // null=true（封面獨立，僅 PDF 有效）
   final DualPageDirection? dualPageDirection; // null=rtl（僅 PDF 有效）
 
+  final bool? showHeader; // null=true（預設顯示頁首，僅 EPUB 有效，見 spec.md「頁首/頁尾顯示切換」）
+  final bool? showFooter; // null=true（預設顯示頁尾，EPUB／PDF 皆有效）
+
   const BookReaderPrefs({
     this.fontFamily,
     this.fontSize,
@@ -61,6 +64,8 @@ class BookReaderPrefs {
     this.dualPageMode,
     this.dualPageCoverAlone,
     this.dualPageDirection,
+    this.showHeader,
+    this.showFooter,
   });
 
   /// 無任何覆寫，等同資料庫無對應列時的狀態。
@@ -91,6 +96,8 @@ class BookReaderPrefs {
       'dual_page_cover_alone':
           dualPageCoverAlone == null ? null : (dualPageCoverAlone! ? 1 : 0),
       'dual_page_direction': dualPageDirection?.name,
+      'show_header': showHeader == null ? null : (showHeader! ? 1 : 0),
+      'show_footer': showFooter == null ? null : (showFooter! ? 1 : 0),
     };
   }
 
@@ -146,6 +153,10 @@ class BookReaderPrefs {
           ? null
           : DualPageDirection.values
               .byName(map['dual_page_direction'] as String),
+      showHeader:
+          map['show_header'] == null ? null : (map['show_header'] as int) == 1,
+      showFooter:
+          map['show_footer'] == null ? null : (map['show_footer'] as int) == 1,
     );
   }
 
@@ -171,7 +182,9 @@ class BookReaderPrefs {
       other.pdfCropRect == pdfCropRect &&
       other.dualPageMode == dualPageMode &&
       other.dualPageCoverAlone == dualPageCoverAlone &&
-      other.dualPageDirection == dualPageDirection;
+      other.dualPageDirection == dualPageDirection &&
+      other.showHeader == showHeader &&
+      other.showFooter == showFooter;
 
   @override
   int get hashCode => Object.hashAll([
@@ -195,6 +208,8 @@ class BookReaderPrefs {
         dualPageMode,
         dualPageCoverAlone,
         dualPageDirection,
+        showHeader,
+        showFooter,
       ]);
 
   /// 只更新明確傳入的欄位，其餘欄位沿用目前值（`newValue ?? this.value`
@@ -223,6 +238,8 @@ class BookReaderPrefs {
     DualPageMode? dualPageMode,
     bool? dualPageCoverAlone,
     DualPageDirection? dualPageDirection,
+    bool? showHeader,
+    bool? showFooter,
   }) {
     return BookReaderPrefs(
       fontFamily: fontFamily ?? this.fontFamily,
@@ -246,6 +263,8 @@ class BookReaderPrefs {
       dualPageMode: dualPageMode ?? this.dualPageMode,
       dualPageCoverAlone: dualPageCoverAlone ?? this.dualPageCoverAlone,
       dualPageDirection: dualPageDirection ?? this.dualPageDirection,
+      showHeader: showHeader ?? this.showHeader,
+      showFooter: showFooter ?? this.showFooter,
     );
   }
 }

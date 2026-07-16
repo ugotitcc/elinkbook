@@ -24,7 +24,7 @@ class SqliteLibraryRepository implements LibraryRepository {
   static Future<SqliteLibraryRepository> open(String path) async {
     final db = await openDatabase(
       path,
-      version: 6,
+      version: 7,
       onConfigure: (db) async {
         // book_reader_prefs 的 ON DELETE CASCADE 需要外鍵約束真正生效，
         // SQLite 預設不強制外鍵，須逐連線手動開啟（見 epic-3 plan-issue-1）。
@@ -81,6 +81,14 @@ class SqliteLibraryRepository implements LibraryRepository {
           if (oldVersion < 4) {
             await _addDualPageColumns(db);
           }
+          if (oldVersion < 7) {
+            // epic-5-toc-pagination Issue 5：頁首/頁尾顯示切換新增的 2 個
+            // 欄位，補追加到既有（version 2 起已存在）的 book_reader_prefs
+            // 表。放在 else 分支內（oldVersion >= 2）——因為 oldVersion < 2
+            // 時 _createBookReaderPrefsTable 已一步到位建表含
+            // show_header/show_footer，不需要再 ALTER TABLE。
+            await _addHeaderFooterColumns(db);
+          }
         }
         if (oldVersion < 5) {
           // epic-5-toc-pagination Issue 2：本機閱讀位置記憶新增的 2 個
@@ -130,7 +138,9 @@ class SqliteLibraryRepository implements LibraryRepository {
         pdf_crop_rect TEXT,
         dual_page_mode TEXT,
         dual_page_cover_alone INTEGER,
-        dual_page_direction TEXT
+        dual_page_direction TEXT,
+        show_header INTEGER,
+        show_footer INTEGER
       )
     ''');
   }
@@ -179,6 +189,22 @@ class SqliteLibraryRepository implements LibraryRepository {
     // 補追加到既有（version 1 起已存在）的 books 表，見
     // docs/epics/epic-5-toc-pagination/spec.md「分頁估算模組」決策 #16。
     await db.execute('ALTER TABLE books ADD COLUMN totalCharacterCount INTEGER');
+  }
+
+  static Future<void> _addHeaderFooterColumns(Database db) async {
+    // 頁首/頁尾顯示切換（epic-5-toc-pagination Issue 5）新增的 2 個欄位，
+    // 補追加到既有（version 2 起已存在）的 book_reader_prefs 表，見
+    // docs/epics/epic-5-toc-pagination/spec.md「頁首/頁尾顯示切換」。
+    // 僅在表已存在時才執行 ALTER TABLE（某些測試情境下 oldVersion >= 2
+    // 但 book_reader_prefs 表可能不存在，見 v5→v6 升級測試）。
+    final tables = await db.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='book_reader_prefs'");
+    if (tables.isNotEmpty) {
+      await db.execute(
+          'ALTER TABLE book_reader_prefs ADD COLUMN show_header INTEGER');
+      await db.execute(
+          'ALTER TABLE book_reader_prefs ADD COLUMN show_footer INTEGER');
+    }
   }
 
   /// 供 [BookReaderPrefsRepository] 等後續 repository 共用同一個資料庫連線

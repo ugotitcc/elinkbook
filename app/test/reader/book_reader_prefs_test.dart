@@ -238,4 +238,58 @@ void main() {
     expect(nullMap['dual_page_cover_alone'], isNull);
     expect(BookReaderPrefs.fromMap(nullMap).dualPageCoverAlone, isNull);
   });
+
+  test('頁首/頁尾欄位 BookReaderPrefs.empty 為 null（未覆寫，交由 ResolvedPreferences 決定預設值 true）',
+      () {
+    const prefs = BookReaderPrefs.empty;
+    expect(prefs.showHeader, isNull);
+    expect(prefs.showFooter, isNull);
+  });
+
+  test('頁首/頁尾欄位值完全相同的 BookReaderPrefs 視為相等', () {
+    const a = BookReaderPrefs(showHeader: false, showFooter: true);
+    const b = BookReaderPrefs(showHeader: false, showFooter: true);
+    expect(a, b);
+    expect(a.hashCode, b.hashCode);
+  });
+
+  test('頁首/頁尾欄位任一不同時視為不相等', () {
+    const a = BookReaderPrefs(showHeader: true);
+    const b = BookReaderPrefs(showHeader: false);
+    expect(a, isNot(b));
+  });
+
+  test('showHeader／showFooter 為 true／false／null 皆正確 toMap／fromMap round-trip（避免布林值 0/1 轉換錯誤）',
+      () {
+    const withTrue = BookReaderPrefs(showHeader: true, showFooter: true);
+    final trueMap = withTrue.toMap('book-10');
+    expect(trueMap['show_header'], 1);
+    expect(trueMap['show_footer'], 1);
+    expect(BookReaderPrefs.fromMap(trueMap).showHeader, isTrue);
+    expect(BookReaderPrefs.fromMap(trueMap).showFooter, isTrue);
+
+    const withFalse = BookReaderPrefs(showHeader: false, showFooter: false);
+    final falseMap = withFalse.toMap('book-11');
+    expect(falseMap['show_header'], 0);
+    expect(falseMap['show_footer'], 0);
+    expect(BookReaderPrefs.fromMap(falseMap).showHeader, isFalse);
+    expect(BookReaderPrefs.fromMap(falseMap).showFooter, isFalse);
+
+    const withNull = BookReaderPrefs.empty;
+    final nullMap = withNull.toMap('book-12');
+    expect(nullMap['show_header'], isNull);
+    expect(nullMap['show_footer'], isNull);
+    expect(BookReaderPrefs.fromMap(nullMap).showHeader, isNull);
+    expect(BookReaderPrefs.fromMap(nullMap).showFooter, isNull);
+  });
+
+  test('copyWith 更新 showHeader／showFooter 時，其餘欄位保留原值', () {
+    const original =
+        BookReaderPrefs(fontSize: 18, showHeader: true, showFooter: true);
+    final updated = original.copyWith(showFooter: false);
+
+    expect(updated.fontSize, 18);
+    expect(updated.showHeader, isTrue);
+    expect(updated.showFooter, isFalse);
+  });
 }

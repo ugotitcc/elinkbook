@@ -468,6 +468,62 @@ void main() {
     expect(notified?.dualPageDirection,
         DualPageDirection.ltr); // 關鍵斷言：未被清空
   });
+
+  testWidgets('頁尾開關初始值反映 prefs（未持久化時預設開啟）', (tester) async {
+    await _pumpSheet(tester, BookReaderPrefs.empty, (_) {});
+
+    expect(
+      tester
+          .widget<SwitchListTile>(
+              find.byKey(const Key('pdf_settings_show_footer')))
+          .value,
+      isTrue,
+    );
+  });
+
+  testWidgets('已持久化 showFooter=false 時，頁尾開關初始值反映為關閉', (tester) async {
+    await _pumpSheet(
+      tester,
+      const BookReaderPrefs(showFooter: false),
+      (_) {},
+    );
+
+    expect(
+      tester
+          .widget<SwitchListTile>(
+              find.byKey(const Key('pdf_settings_show_footer')))
+          .value,
+      isFalse,
+    );
+  });
+
+  testWidgets('關閉頁尾開關後，onChanged 帶入 showFooter=false', (tester) async {
+    BookReaderPrefs? notified;
+    await _pumpSheet(tester, BookReaderPrefs.empty, (prefs) => notified = prefs);
+
+    await tester.ensureVisible(
+        find.byKey(const Key('pdf_settings_show_footer')));
+    await tester.tap(find.byKey(const Key('pdf_settings_show_footer')));
+    await tester.pump();
+
+    expect(notified?.showFooter, isFalse);
+  });
+
+  testWidgets('已持久化 showFooter=false 時，調整雙頁模式不會清空該欄位（回歸檢查）',
+      (tester) async {
+    BookReaderPrefs? notified;
+    await _pumpSheet(
+      tester,
+      const BookReaderPrefs(showFooter: false),
+      (prefs) => notified = prefs,
+    );
+
+    await tester.tap(find.byKey(const Key('pdf_settings_dual_page_mode_always')));
+    await tester.pump();
+
+    expect(notified?.dualPageMode, DualPageMode.always);
+    expect(notified?.showFooter, isFalse, reason: '關鍵斷言：未被清空');
+  });
 }
 
 Future<void> _pumpSheet(

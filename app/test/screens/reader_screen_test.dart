@@ -1067,4 +1067,272 @@ void main() {
 
     expect(find.byType(TocBottomSheet), findsNothing);
   });
+
+  // --- Epic 5 Issue 5：頁首/頁尾顯示切換 ---
+
+  testWidgets('EPUB reflowable 預設（未持久化）showHeader=true，開書後 AppBar 標題為可點擊的章節標題元件',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_header_default',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final epubView = tester.widget<EpubReaderView>(find.byType(EpubReaderView));
+    epubView.onLayoutResolved?.call(
+      const EpubLayoutInfo(isFixedLayout: false, writingMode: WritingMode.horizontal),
+    );
+    await tester.pump();
+
+    expect(find.byKey(const Key('reader_appbar_chapter_title')), findsOneWidget);
+    expect(find.byKey(const Key('reader_appbar_static_title')), findsNothing);
+    // 「⚙️版面」按鈕仍在 actions 內，頁首開關不影響既有版面設定入口
+    expect(find.byKey(const Key('reader_layout_settings_button')), findsOneWidget);
+  });
+
+  testWidgets('已持久化 showHeader=false 時，AppBar 標題維持靜態「閱讀器」文字',
+      (tester) async {
+    await prefsManager.saveBookPrefs(
+      'b_header_off',
+      const BookReaderPrefs(showHeader: false),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_header_off',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final epubView = tester.widget<EpubReaderView>(find.byType(EpubReaderView));
+    epubView.onLayoutResolved?.call(
+      const EpubLayoutInfo(isFixedLayout: false, writingMode: WritingMode.horizontal),
+    );
+    await tester.pump();
+
+    expect(find.byKey(const Key('reader_appbar_static_title')), findsOneWidget);
+    expect(find.text('閱讀器'), findsOneWidget);
+    expect(find.byKey(const Key('reader_appbar_chapter_title')), findsNothing);
+    expect(find.byKey(const Key('reader_toc_button')), findsOneWidget,
+        reason: '頁首關閉不影響目錄按鈕仍存在於 actions');
+  });
+
+  testWidgets('PDF 開書後，AppBar 標題恆為靜態「閱讀器」文字（頁首概念僅限 EPUB）',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b_pdf_header',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byKey(const Key('reader_appbar_static_title')), findsOneWidget);
+    expect(find.byKey(const Key('reader_appbar_chapter_title')), findsNothing);
+  });
+
+  testWidgets('頁首啟用且目錄背景抓取完成後，點擊 AppBar 標題可開啟 TocBottomSheet',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_header_tap',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final epubView = tester.widget<EpubReaderView>(find.byType(EpubReaderView));
+    epubView.onLayoutResolved?.call(
+      const EpubLayoutInfo(isFixedLayout: false, writingMode: WritingMode.horizontal),
+    );
+    await tester.pump();
+    // 比照既有目錄按鈕測試：_tocLoaded 由 loadTableOfContents() 的 .then()
+    // callback 設定，需要多一次 pump 讓其 microtask 完成。
+    await tester.pump();
+
+    final titleFinder = find.byKey(const Key('reader_appbar_chapter_title'));
+    expect(tester.widget<InkWell>(titleFinder).onTap, isNotNull);
+
+    await tester.tap(titleFinder);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.byType(TocBottomSheet), findsOneWidget);
+  });
+
+  testWidgets('showFooter=false 時，EPUB 頁尾即使收到 onCharacterCountReady 也不顯示',
+      (tester) async {
+    await prefsManager.saveBookPrefs(
+      'b_footer_off_epub',
+      const BookReaderPrefs(showFooter: false),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_footer_off_epub',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final epubView = tester.widget<EpubReaderView>(find.byType(EpubReaderView));
+    epubView.onLayoutResolved?.call(
+      const EpubLayoutInfo(isFixedLayout: false, writingMode: WritingMode.horizontal),
+    );
+    await tester.pump();
+    epubView.onCharacterCountReady?.call(5000);
+    await tester.pump();
+
+    expect(find.byKey(const Key('reader_footer')), findsNothing);
+    // 頁尾關閉不影響頁首（預設開啟）——驗證兩者互相獨立。
+    expect(find.byKey(const Key('reader_appbar_chapter_title')), findsOneWidget);
+  });
+
+  testWidgets('showFooter=false 時，PDF 頁尾即使收到 onPageChanged 也不顯示',
+      (tester) async {
+    await prefsManager.saveBookPrefs(
+      'b_footer_off_pdf',
+      const BookReaderPrefs(showFooter: false),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b_footer_off_pdf',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+    pdfView.onPageChanged?.call(const PdfPageInfo(pageIndex: 0, totalPages: 12));
+    await tester.pump();
+
+    expect(find.byKey(const Key('reader_footer')), findsNothing);
+  });
+
+  testWidgets('showHeader=true 且 showFooter=false 組合：頁首顯示章節標題元件、頁尾不顯示',
+      (tester) async {
+    await prefsManager.saveBookPrefs(
+      'b_header_on_footer_off',
+      const BookReaderPrefs(showHeader: true, showFooter: false),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_header_on_footer_off',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final epubView = tester.widget<EpubReaderView>(find.byType(EpubReaderView));
+    epubView.onLayoutResolved?.call(
+      const EpubLayoutInfo(isFixedLayout: false, writingMode: WritingMode.horizontal),
+    );
+    await tester.pump();
+    epubView.onCharacterCountReady?.call(5000);
+    await tester.pump();
+
+    expect(find.byKey(const Key('reader_appbar_chapter_title')), findsOneWidget);
+    expect(find.byKey(const Key('reader_footer')), findsNothing);
+  });
+
+  testWidgets('showHeader=false 且 showFooter=true 組合：頁首為靜態文字、頁尾顯示',
+      (tester) async {
+    await prefsManager.saveBookPrefs(
+      'b_header_off_footer_on',
+      const BookReaderPrefs(showHeader: false, showFooter: true),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_header_off_footer_on',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final epubView = tester.widget<EpubReaderView>(find.byType(EpubReaderView));
+    epubView.onLayoutResolved?.call(
+      const EpubLayoutInfo(isFixedLayout: false, writingMode: WritingMode.horizontal),
+    );
+    await tester.pump();
+    epubView.onCharacterCountReady?.call(5000);
+    await tester.pump();
+
+    expect(find.byKey(const Key('reader_appbar_static_title')), findsOneWidget);
+    expect(find.byKey(const Key('reader_footer')), findsOneWidget);
+  });
+
+  testWidgets('EPUB 固定版面（FXL）開書後，即使 showHeader=false/showFooter=false，懸浮返回/設定按鈕仍正常顯示（FXL 完全不受影響）',
+      (tester) async {
+    await prefsManager.saveBookPrefs(
+      'b_fxl_untouched',
+      const BookReaderPrefs(showHeader: false, showFooter: false),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample_fixed_layout.epub',
+          bookId: 'b_fxl_untouched',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final epubView = tester.widget<EpubReaderView>(find.byType(EpubReaderView));
+    epubView.onLayoutResolved?.call(
+      const EpubLayoutInfo(isFixedLayout: true, writingMode: WritingMode.horizontal),
+    );
+    await tester.pump();
+
+    expect(find.byType(AppBar), findsNothing, reason: 'FXL 不建構 Scaffold AppBar，頁首邏輯不適用');
+    expect(find.byKey(const Key('reader_fixed_layout_back_button')), findsOneWidget);
+    expect(find.byKey(const Key('reader_fixed_layout_settings_button')), findsOneWidget);
+  });
 }

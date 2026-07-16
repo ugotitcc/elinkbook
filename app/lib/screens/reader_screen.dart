@@ -505,11 +505,36 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         appBar: _isFixedLayout
             ? null // 固定版面（如漫畫）隱藏 Scaffold AppBar，改用 Stack 懸浮半透明按鈕，避免裁切大圖
             : AppBar(
-                title: const Text('閱讀器'),
+                title: _buildAppBarTitle(format),
                 actions: _buildAppBarActions(format),
               ),
         body: _buildBody(format, isLandscape),
       ),
+    );
+  }
+
+  /// 頁首顯示切換（epic-5-toc-pagination Issue 5，spec.md「頁首/頁尾顯示
+  /// 切換」）：`showHeader == false` 或非 EPUB 格式時維持既有的靜態標題；
+  /// `showHeader == true`（含尚未載入完成前的安全預設值，見
+  /// `ResolvedPreferences.showHeader`）時改用目前章節名稱，可點擊開啟目錄
+  /// （沿用 Issue 4 的 `TocNavigator.findCurrentPath`／`_openToc`）。章節
+  /// 名稱在目錄背景抓取完成（`_tocLoaded`）前一律回退顯示「閱讀器」佔位
+  /// 文字，`onTap` 同步以 `_tocLoaded` 防呆，比照 `_buildAppBarActions` 的
+  /// 目錄按鈕既有 gating 條件，避免點擊到空白 Bottom Sheet。
+  Widget _buildAppBarTitle(BookFormat format) {
+    final showHeader = format == BookFormat.epub && (_resolved?.showHeader ?? true);
+    if (!showHeader) {
+      return const Text('閱讀器', key: Key('reader_appbar_static_title'));
+    }
+    final currentPath = TocNavigator.findCurrentPath(
+      _tocEntries,
+      _epubPositionInfo?.progression,
+    );
+    final chapterTitle = currentPath.isEmpty ? '閱讀器' : currentPath.last.title;
+    return InkWell(
+      key: const Key('reader_appbar_chapter_title'),
+      onTap: (_autoDetectedWritingMode == null || !_tocLoaded) ? null : _openToc,
+      child: Text(chapterTitle, overflow: TextOverflow.ellipsis),
     );
   }
 
@@ -625,9 +650,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           Expanded(child: body),
           // 頁尾佔用固定版面空間、擠壓上方閱讀區域高度（比照
           // prototype/index.html 的 .reader-footer 既有設計，非浮動疊加
-          // 層）。此階段頁尾一律顯示，顯示/隱藏開關留給 Issue 5
-          // （BookReaderPrefs.showFooter 尚未存在）。
-          if (format == BookFormat.pdf && _pdfPageInfo != null)
+          // 層）。顯示/隱藏由 showFooter 控制（epic-5-toc-pagination
+          // Issue 5），false 時整個 if 條件不成立、完全不佔用版面空間。
+          if (format == BookFormat.pdf &&
+              _pdfPageInfo != null &&
+              (_resolved?.showFooter ?? true))
             ReaderFooter(
               currentPage: _pdfPageInfo!.pageIndex + 1,
               totalPages: _pdfPageInfo!.totalPages,
@@ -639,7 +666,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           if (format == BookFormat.epub &&
               !_isFixedLayout &&
               _totalCharacterCount != null &&
-              _resolved != null)
+              _resolved != null &&
+              _resolved!.showFooter)
             _buildEpubFooter(_resolved!, _totalCharacterCount!),
         ],
       ),
