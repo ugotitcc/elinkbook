@@ -840,17 +840,8 @@ void main() {
     expect(find.byKey(const Key('reader_footer')), findsNothing);
   });
 
-  testWidgets('版面設定（字型大小）不同時，EPUB 頁尾估算總頁數正確反映',
+  testWidgets('版面設定（字型大小）變動後，EPUB 頁尾估算總頁數即時重新計算',
       (tester) async {
-    // 直接以 fontSize: 2.0（加倍）建立 FakeReaderPrefsManager，驗證
-    // _buildEpubFooter 在不同版面參數下正確重新估算總頁數——繞過 Bottom
-    // Sheet 互動（測試環境 viewport 無法可靠容納 Bottom Sheet 內容）。
-    prefsManager = FakeReaderPrefsManager(
-      bookPrefsByBookId: {
-        'b_epub_footer_recalc': const BookReaderPrefs(fontSize: 2.0),
-      },
-    );
-
     await tester.pumpWidget(
       MaterialApp(
         home: ReaderScreen(
@@ -865,6 +856,7 @@ void main() {
     await tester.pump();
 
     final epubView = tester.widget<EpubReaderView>(find.byType(EpubReaderView));
+    epubView.onPageRendered();
     epubView.onLayoutResolved?.call(
       const EpubLayoutInfo(isFixedLayout: false, writingMode: WritingMode.horizontal),
     );
@@ -872,7 +864,33 @@ void main() {
     epubView.onCharacterCountReady?.call(5000);
     await tester.pump();
 
-    // fontSize 倍率 2.0 → estimateCharsPerScreen 從 500 降為 125 →
+    expect(find.text('進度 10% ｜ 第 1/10 頁'), findsOneWidget);
+
+    // 開啟版面設定，把字型大小從 16 調到 32（加倍），觸發真正的
+    // _handlePrefsChanged → setState → rebuild 路徑（而非直接建構帶有
+    // fontSize 覆寫值的 FakeReaderPrefsManager）。ReaderSettingsSheet 透過
+    // onChanged 立即呼叫 ReaderScreen._handlePrefsChanged（見
+    // reader_settings_sheet.dart _notifyChanged()），不需要關閉 Bottom
+    // Sheet——底下的 ReaderScreen（含頁尾）仍在 widget tree 中並隨之
+    // rebuild，find.text() 不受 Bottom Sheet 疊加在視覺上層影響。
+    //
+    // 【先前失敗原因，記錄供未來維護者知悉】原本此處省略了
+    // onPageRendered()，導致 _state 停留在 loading、Stack 內的
+    // CircularProgressIndicator（不定長動畫）持續繪製，任何後續
+    // pumpAndSettle() 永遠不會收斂而逾時——這才是先前版本改用
+    // FakeReaderPrefsManager 預先帶入 fontSize 覆寫值、完全繞開 Bottom
+    // Sheet 互動的真正原因，並非 Bottom Sheet 本身在測試環境下無法渲染。
+    await tester.tap(find.byKey(const Key('reader_layout_settings_button')));
+    await tester.pumpAndSettle();
+    // 每次點擊之間須 pump 一次，讓 ReaderSettingsSheet 以新的 _fontSize 值
+    // 重新 build——否則 IconButton.onPressed 閉包捕捉到的仍是上一次 build
+    // 當下的 clampedValue，16 次點擊會重複套用同一個遞增結果，而非累加。
+    for (var i = 0; i < 16; i++) {
+      await tester.tap(find.byKey(const Key('reader_settings_font_size_increment')));
+      await tester.pump();
+    }
+
+    // fontSize 倍率變成 2.0 → estimateCharsPerScreen 從 500 降為 125 →
     // totalPages 從 10 變成 40。
     expect(find.text('進度 3% ｜ 第 1/40 頁'), findsOneWidget);
   });
