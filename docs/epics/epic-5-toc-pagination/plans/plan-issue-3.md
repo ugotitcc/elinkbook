@@ -1758,7 +1758,7 @@ import '../reader/epub_page_estimator.dart';
   }
 ```
 
-- [ ] **Step 4: 修正既有 3 個方法重建 `LoadedPrefs` 時遺漏 `readingPosition`／`totalCharacterCount`（審查修正）**
+- [x] **Step 4: 修正既有 3 個方法重建 `LoadedPrefs` 時遺漏 `readingPosition`／`totalCharacterCount`（審查修正）**
 
 `_handlePrefsChanged`／`_handleCropRectComputed`／`_handleCropRectSelected` 這 3 個既有方法（Issue 2 起即存在，本 Task 前面的 Step 未曾修改）在 `setState` 內重建 `newLoaded` 時，只帶了 `bookPrefs`／`globalPrefs` 兩個欄位，`readingPosition`／`totalCharacterCount`（Task 4 新增）皆會被重設為預設值（`ReadingPosition()`／`null`）。目前 `ReaderPrefsManagerImpl.resolve()` 只讀 `bookPrefs`／`globalPrefs`，`_buildEpubFooter`／`_writeCurrentPosition()` 也都讀取獨立的 `_totalCharacterCount`／`_epubPositionInfo` state 欄位而非 `_loaded.totalCharacterCount`／`_loaded.readingPosition`，因此這個缺口目前對外部可觀察行為沒有影響，不需要（也無法在不深入私有欄位的前提下）另外寫黑盒測試驗證。修正它純粹是為了讓 `_loaded` 物件本身保持內部一致，避免未來有新程式碼直接讀 `_loaded.readingPosition`／`.totalCharacterCount` 時得到過期的預設值。
 
@@ -1795,7 +1795,7 @@ import '../reader/epub_page_estimator.dart';
         );
 ```
 
-- [ ] **Step 5: 執行測試確認通過**
+- [x] **Step 5: 執行測試確認通過**
 
 Run: `flutter test test/screens/reader_screen_test.dart`
 Expected: PASS（全數綠燈，含既有測試）。
@@ -1806,12 +1806,16 @@ Expected: 全數 PASS。
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+實際執行：`flutter test`（全專案 302 個測試）`All tests passed!`；`flutter analyze` `No issues found!`。
+
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/screens/reader_screen.dart app/test/screens/reader_screen_test.dart
 git commit -m "feat(epic-5-issue3): ReaderScreen 接上 EPUB 估算頁碼頁尾與跳頁"
 ```
+
+實際 commit：Task 1-7 的原始實作於 `23495b3`／`bb78e31` 完成並提交；Step 4（`LoadedPrefs` 三方法修正）在原始實作中即已到位，經審查（`tmp/epic-5/reviews/code-review-report.md`）核對屬實；Step 4 的 Bottom Sheet 互動測試在獨立審查（`tmp/epic-5/reviews/plan-issue-3-review.md` 之後的分支審查）中發現被靜默替換為較弱版本，已於 `a3ebd72` 恢復並修正兩處根因（漏呼叫 `onPageRendered()`、連續點擊未逐次 pump）。
 
 ---
 
@@ -1823,7 +1827,7 @@ git commit -m "feat(epic-5-issue3): ReaderScreen 接上 EPUB 估算頁碼頁尾�
 **Interfaces:**
 - Consumes: Task 7 的完整 `ReaderScreen` 行為；`test/fixtures/sample_long_vertical.epub`（既有素材，作為「較大」EPUB 驗證背景計算不卡頓）、`test/fixtures/sample.epub`（既有素材）。
 
-- [ ] **Step 1: 寫真機整合測試**
+- [x] **Step 1: 寫真機整合測試**
 
 ```dart
 import 'dart:io';
@@ -1990,7 +1994,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: 於真實裝置/模擬器執行**
+- [x] **Step 2: 於真實裝置/模擬器執行**
 
 Run（於 `app/` 目錄，先以 `flutter devices` 取得裝置 id）：
 ```bash
@@ -1998,7 +2002,9 @@ flutter test integration_test/epub_pagination_test.dart -d <device-id>
 ```
 Expected: `All tests passed!`（兩個 test case 皆綠燈；若第一個測試因裝置效能導致背景計算時間超過 15 秒逾時，適度放寬 `_pumpUntilFooterVisible` 的 `Duration(seconds: 15)` 上限，不需調整其餘邏輯）。
 
-- [ ] **Step 3: Commit**
+實際執行（`3CEF42ECD491687`，Android 15）：`All tests passed!`（2/2，約 13 秒）。實作時發現計畫原文兩處需修正（審查修正，見 commit 訊息）：`EpubCharacterCountRepository.save()` 是 partial UPDATE，books 表若無對應書籍列會靜默無效果，兩個測試案例開書前皆補上 `insertBook()`；`ReaderFooter` 實際輸出格式為「進度 xx% ｜ 第 N/M 頁」，跳頁測試改用 `contains` 比對而非精確 `find.text('第 N/M 頁')`。
+
+- [x] **Step 3: Commit**
 
 ```bash
 git add app/integration_test/epub_pagination_test.dart
