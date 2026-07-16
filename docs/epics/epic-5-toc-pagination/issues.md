@@ -78,7 +78,7 @@
 
 ## Issue 3：EPUB 頁碼顯示 + 跳頁（含全書字元數背景計算基礎設施）
 
-**Status:** ready-for-agent
+**Status:** ✅ 已完成並合併（PR #46，`feature/epic-5-issue3-toc-pagination` → `main`）——依 `plans/plan-issue-3.md` 8 個 Task 實作：原生端 `EpubReaderView.kt` 新增背景協程（`Dispatchers.IO`）走訪 `Publication.readingOrder`，透過純 Kotlin `EpubCharacterCounter` 計算全書字元數並快取於 `books.totalCharacterCount`（累加式 schema migration 至 version 6）；Dart 端純函式 `EpubPageEstimator` 依版面參數換算估計總頁數／目前頁碼；跳頁沿用 Readium 既有 `Publication.positions()` 新增 `jumpToProgression` method channel 指令；`ReaderScreen` 複用 Issue 1 的格式無關 `ReaderFooter` 元件，使其也能顯示 EPUB 估算頁碼與跳頁。經計畫審查（Critical：Kotlin non-local `continue` 編譯錯誤；Important：原生 `Resource` 未關閉洩漏檔案描述符；已對照 `BookMetadataChannel.kt` 既有先例修正並簡化/移除原本的反編譯驗證 Task）與分支程式碼審查（Critical：Task 8 真機整合測試僅手動跑過即刪除、未入版控；Important：第一版 `jumpToProgression()` 有實際編譯錯誤〔第二個 commit 修正〕、版面設定重算測試被靜默替換成繞過 Bottom Sheet 互動的較弱版本〔查明真正根因為漏呼叫 `onPageRendered()` 與連續點擊未逐次 `pump()`，非原註解宣稱的 viewport 限制〕）兩輪修正；`flutter test`（全專案 302 個）全過、`flutter analyze` 乾淨、原生 JUnit（`EpubCharacterCounterTest`）全過、真機整合測試（`3CEF42ECD491687`，Android 15）`All tests passed!`（2/2，涵蓋大型 EPUB 開書不卡頓、快取重用、跳頁後畫面確實顯示目標頁）。
 
 **依賴：** Issue 1（複用其頁尾／跳頁 UI 元件，不重新實作）
 
@@ -103,16 +103,16 @@ Dart 端依目前生效的版面參數（字體大小、行距、段落間距、
 
 **驗收標準：**
 
-- [ ] 開啟 EPUB 後，頁尾顯示估算的「目前頁碼／總頁數」
-- [ ] 全書字元數計算於背景執行緒進行，開書當下畫面不卡頓
-- [ ] 全書字元數計算結果快取，同一本書第二次開啟不重新計算
-- [ ] 版面設定變動後，估算頁數／目前頁碼即時重新計算並反映
-- [ ] EPUB 可透過 Issue 1 的跳頁輸入框／滑桿正確跳轉
-- [ ] 既有從未被呼叫過的分頁回報死程式碼已清理或替換
-- [ ] 上述測試皆通過，`flutter analyze` 乾淨，既有測試無回歸
-- [ ] 真機整合測試涵蓋大型 EPUB 素材開書不卡頓、跳頁後畫面確實顯示目標位置
+- [x] 開啟 EPUB 後，頁尾顯示估算的「目前頁碼／總頁數」
+- [x] 全書字元數計算於背景執行緒進行，開書當下畫面不卡頓
+- [x] 全書字元數計算結果快取，同一本書第二次開啟不重新計算
+- [x] 版面設定變動後，估算頁數／目前頁碼即時重新計算並反映
+- [x] EPUB 可透過 Issue 1 的跳頁輸入框／滑桿正確跳轉
+- [x] 既有從未被呼叫過的分頁回報死程式碼已清理或替換（查證確認已於 Issue 2 的 C3 審查修正 commit `fe9827a` 移除，本工單不需重複動作）
+- [x] 上述測試皆通過，`flutter analyze` 乾淨，既有測試無回歸
+- [x] 真機整合測試涵蓋大型 EPUB 素材開書不卡頓、跳頁後畫面確實顯示目標位置
 
-**Blocked by：** Issue 1
+**Blocked by：** Issue 1（已完成）
 
 ---
 
@@ -150,7 +150,7 @@ PDF 格式下，目錄入口完全不顯示（不是顯示後出現空狀態）�
 - [ ] 上述測試皆通過，`flutter analyze` 乾淨
 - [ ] 真機整合測試涵蓋開啟真實多章節 EPUB、展開/收起目錄、點選跳轉的端到端流程
 
-**Blocked by：** Issue 3
+**Blocked by：** Issue 3（已完成，可開始）
 
 ---
 
