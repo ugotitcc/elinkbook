@@ -1377,7 +1377,38 @@ void main() {
     expect(tester.widget<IconButton>(finder).onPressed, isNull);
   });
 
-  testWidgets('EPUB 收到 onLayoutResolved 後，📚 按鈕可點擊，點擊後開啟 NotesBottomSheet',
+  testWidgets(
+      'EPUB 只收到 onLayoutResolved（尚未收到 onLocatorChanged）時，📚 按鈕仍為停用狀態'
+      '（審查修正：避免定位資料未就緒時寫入無定位資訊的壞書籤）', (tester) async {
+    final bookmarksRepository = FakeBookmarksRepository();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_notes_epub_no_locator_yet',
+          prefsManager: prefsManager,
+          bookmarksRepository: bookmarksRepository,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final epubView = tester.widget<EpubReaderView>(find.byType(EpubReaderView));
+    epubView.onLayoutResolved?.call(
+      const EpubLayoutInfo(
+        isFixedLayout: false,
+        writingMode: WritingMode.horizontal,
+      ),
+    );
+    await tester.pump();
+
+    final finder = find.byKey(const Key('reader_notes_button'));
+    expect(tester.widget<IconButton>(finder).onPressed, isNull);
+  });
+
+  testWidgets('EPUB 收到 onLayoutResolved 與 onLocatorChanged 後，📚 按鈕可點擊，點擊後開啟 NotesBottomSheet',
       (tester) async {
     final bookmarksRepository = FakeBookmarksRepository();
     await tester.pumpWidget(
@@ -1400,6 +1431,10 @@ void main() {
         isFixedLayout: false,
         writingMode: WritingMode.horizontal,
       ),
+    );
+    await tester.pump();
+    epubView.onLocatorChanged?.call(
+      const EpubPositionInfo(locatorJson: '{"href":"/c1.xhtml"}', progression: 0.1),
     );
     await tester.pump();
 

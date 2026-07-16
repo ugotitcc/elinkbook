@@ -37,6 +37,15 @@ class _NotesBottomSheetState extends State<NotesBottomSheet>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
   List<Bookmark> _bookmarks = [];
+  // 重新命名對話框使用的 TextEditingController（審查修正：修補洩漏）。
+  // 刻意不在 _renameBookmark 的 showDialog 呼叫結束後立即 dispose——
+  // showDialog 回傳的 Future 會在 Navigator.pop() 當下就完成，早於
+  // AlertDialog 的退場轉場動畫實際跑完，此時其底下的 TextField 仍會在
+  // 後續幾個 frame 被重新 build，若此時已 dispose 會拋出
+  // 「TextEditingController used after being disposed」。故改為交由本
+  // State 自己的生命週期保管：每次重新命名時若有前一個實例則先 dispose，
+  // 並在 [dispose] 一併清理，確保退場動畫跑完後仍安全、且不會永久洩漏。
+  TextEditingController? _renameController;
 
   @override
   void initState() {
@@ -48,6 +57,7 @@ class _NotesBottomSheetState extends State<NotesBottomSheet>
   @override
   void dispose() {
     _tabController.dispose();
+    _renameController?.dispose();
     super.dispose();
   }
 
@@ -180,7 +190,11 @@ class _NotesBottomSheetState extends State<NotesBottomSheet>
   }
 
   Future<void> _renameBookmark(Bookmark bookmark) async {
+    // 前一次重新命名的 controller 若還沒被回收（正常情況下對話框是 modal，
+    // 不會有並行呼叫），先行 dispose 避免累積多個未釋放的實例。
+    _renameController?.dispose();
     final controller = TextEditingController(text: bookmark.name);
+    _renameController = controller;
     final newName = await showDialog<String>(
       context: context,
       builder: (dialogContext) => AlertDialog(

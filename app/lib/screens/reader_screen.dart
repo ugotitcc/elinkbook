@@ -619,7 +619,16 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
               key: const Key('reader_notes_button'),
               icon: const Icon(Icons.bookmarks),
               tooltip: '筆記',
-              onPressed: _autoDetectedWritingMode == null
+              // 除了 _autoDetectedWritingMode（onLayoutResolved 已觸發）之外，
+              // 額外要求 _epubPositionInfo 非 null（審查修正）——這兩個回呼
+              // 來自原生端兩條各自獨立、無先後順序保證的非同步路徑
+              // （onLayoutResolved／onLocatorChanged），若只檢查前者，使用者
+              // 可能在 onLocatorChanged 尚未觸發過任何一次的極短窗口內點擊
+              // 「新增書籤」，寫入一筆 epubLocatorJson/progression 皆為 null
+              // 的壞書籤（之後永遠無法被跳轉、判定為已加書籤或移除）。比照
+              // 目錄按鈕 _tocLoaded 的既有防呆模式（見上方 reader_toc_button
+              // 註解），同一種競速問題、不同欄位。
+              onPressed: (_autoDetectedWritingMode == null || _epubPositionInfo == null)
                   ? null
                   : () => _openNotesSheet(format),
             ),
