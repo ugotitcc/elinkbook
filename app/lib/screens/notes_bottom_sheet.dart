@@ -111,11 +111,24 @@ class _NotesBottomSheetState extends State<NotesBottomSheet>
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: OutlinedButton.icon(
-            key: const Key('notes_sheet_bookmark_toggle'),
-            icon: Icon(existing != null ? Icons.star : Icons.star_border),
-            label: Text(existing != null ? '已加入此頁書籤' : '加入此頁書籤'),
-            onPressed: _toggleBookmark,
+          child: Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  key: const Key('notes_sheet_bookmark_toggle'),
+                  icon: Icon(existing != null ? Icons.star : Icons.star_border),
+                  label: Text(existing != null ? '已加入此頁書籤' : '加入此頁書籤'),
+                  onPressed: _toggleBookmark,
+                ),
+              ),
+              IconButton(
+                key: const Key('notes_sheet_delete_all_bookmarks'),
+                icon: const Icon(Icons.delete_sweep),
+                tooltip: '刪除該書所有書籤',
+                onPressed:
+                    _bookmarks.isEmpty ? null : _confirmDeleteAllBookmarks,
+              ),
+            ],
           ),
         ),
         Expanded(
@@ -166,11 +179,86 @@ class _NotesBottomSheetState extends State<NotesBottomSheet>
     await _loadBookmarks();
   }
 
+  Future<void> _renameBookmark(Bookmark bookmark) async {
+    final controller = TextEditingController(text: bookmark.name);
+    final newName = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('重新命名書籤'),
+        content: TextField(
+          key: const Key('notes_sheet_rename_field'),
+          controller: controller,
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            key: const Key('notes_sheet_rename_confirm'),
+            onPressed: () => Navigator.of(dialogContext).pop(controller.text),
+            child: const Text('儲存'),
+          ),
+        ],
+      ),
+    );
+    if (newName == null || newName.trim().isEmpty) return;
+    await widget.bookmarksRepository.rename(bookmark.id!, newName.trim());
+    await _loadBookmarks();
+  }
+
+  Future<void> _deleteBookmark(Bookmark bookmark) async {
+    await widget.bookmarksRepository.delete(bookmark.id!);
+    await _loadBookmarks();
+  }
+
+  Future<void> _confirmDeleteAllBookmarks() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('確定要刪除全部書籤嗎？（共 ${_bookmarks.length} 筆）'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            key: const Key('notes_sheet_delete_all_bookmarks_confirm'),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('刪除'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    await widget.bookmarksRepository.deleteAllForBook(widget.bookId);
+    await _loadBookmarks();
+  }
+
   Widget _buildBookmarkRow(Bookmark bookmark) {
     return ListTile(
       key: Key('notes_sheet_bookmark_${bookmark.id}'),
       title: Text(bookmark.name),
       onTap: () => widget.onBookmarkSelected(bookmark),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            key: Key('notes_sheet_bookmark_rename_${bookmark.id}'),
+            icon: const Icon(Icons.edit),
+            tooltip: '重新命名',
+            onPressed: () => _renameBookmark(bookmark),
+          ),
+          IconButton(
+            key: Key('notes_sheet_bookmark_delete_${bookmark.id}'),
+            icon: const Icon(Icons.delete),
+            tooltip: '刪除',
+            onPressed: () => _deleteBookmark(bookmark),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -149,4 +149,87 @@ void main() {
       reason: '不同 locatorJson 不應視為同一位置',
     );
   });
+
+  testWidgets('重新命名書籤後清單顯示新名稱', (tester) async {
+    final repository = FakeBookmarksRepository();
+    final id = await repository.insert(
+      const Bookmark(bookId: 'b1', name: '舊名稱', progression: 0.1),
+    );
+    await _pumpSheet(tester, repository: repository);
+
+    await tester.tap(find.byKey(Key('notes_sheet_bookmark_rename_$id')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('notes_sheet_rename_field')),
+      '新名稱',
+    );
+    await tester.tap(find.byKey(const Key('notes_sheet_rename_confirm')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('新名稱'), findsOneWidget);
+    expect(find.text('舊名稱'), findsNothing);
+  });
+
+  testWidgets('單筆刪除書籤後清單即時消失，不需確認', (tester) async {
+    final repository = FakeBookmarksRepository();
+    final id = await repository.insert(
+      const Bookmark(bookId: 'b1', name: '待刪除', progression: 0.1),
+    );
+    await _pumpSheet(tester, repository: repository);
+
+    await tester.tap(find.byKey(Key('notes_sheet_bookmark_delete_$id')));
+    await tester.pump();
+
+    expect(find.text('待刪除'), findsNothing);
+  });
+
+  testWidgets('批次刪除按鈕在無書籤時停用', (tester) async {
+    final repository = FakeBookmarksRepository();
+    await _pumpSheet(tester, repository: repository);
+
+    final button = tester.widget<IconButton>(
+      find.byKey(const Key('notes_sheet_delete_all_bookmarks')),
+    );
+    expect(button.onPressed, isNull);
+  });
+
+  testWidgets('批次刪除顯示確認對話框，取消不刪除', (tester) async {
+    final repository = FakeBookmarksRepository();
+    await repository
+        .insert(const Bookmark(bookId: 'b1', name: 'A', progression: 0.1));
+    await repository
+        .insert(const Bookmark(bookId: 'b1', name: 'B', progression: 0.5));
+    await _pumpSheet(tester, repository: repository);
+
+    await tester
+        .tap(find.byKey(const Key('notes_sheet_delete_all_bookmarks')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('共 2 筆'), findsOneWidget);
+
+    await tester.tap(find.text('取消'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('A'), findsOneWidget);
+    expect(find.text('B'), findsOneWidget);
+  });
+
+  testWidgets('批次刪除確認後清單清空', (tester) async {
+    final repository = FakeBookmarksRepository();
+    await repository
+        .insert(const Bookmark(bookId: 'b1', name: 'A', progression: 0.1));
+    await repository
+        .insert(const Bookmark(bookId: 'b1', name: 'B', progression: 0.5));
+    await _pumpSheet(tester, repository: repository);
+
+    await tester
+        .tap(find.byKey(const Key('notes_sheet_delete_all_bookmarks')));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const Key('notes_sheet_delete_all_bookmarks_confirm')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('A'), findsNothing);
+    expect(find.text('B'), findsNothing);
+  });
 }
