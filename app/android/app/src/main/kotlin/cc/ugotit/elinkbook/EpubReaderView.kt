@@ -39,6 +39,7 @@ import org.readium.r2.shared.publication.Locator
 import org.json.JSONObject
 import org.readium.r2.shared.publication.Publication
 import org.readium.r2.shared.publication.ReadingProgression
+import org.readium.r2.shared.publication.services.positions
 import org.readium.r2.shared.util.AbsoluteUrl
 import org.readium.r2.shared.util.Url
 import org.readium.r2.shared.util.toAbsoluteUrl
@@ -831,13 +832,16 @@ class EpubReaderView(
     private fun jumpToProgression(progression: Double) {
         val nav = navigatorFragment ?: return
         val pub = publication ?: return
-        val positions = pub.positions()
-        if (positions.isEmpty()) return
-        // 找到 totalProgression 最接近目標值的 Locator
-        val target = positions.minByOrNull { locator ->
-            kotlin.math.abs((locator.locations.totalProgression ?: 0.0) - progression)
-        } ?: return
-        nav.go(target, animated = false)
+        scope.launch(Dispatchers.IO) {
+            val positions = pub.positions()
+            if (isDisposed || positions.isEmpty()) return@launch
+            val index = (progression * (positions.size - 1)).roundToInt()
+                .coerceIn(0, positions.size - 1)
+            val locator = positions[index]
+            withContext(Dispatchers.Main) {
+                if (!isDisposed) nav.go(locator, animated = false)
+            }
+        }
     }
 
     /**
