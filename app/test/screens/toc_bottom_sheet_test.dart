@@ -21,6 +21,8 @@ const _testResolved = ResolvedPreferences(
   dualPageMode: DualPageMode.auto,
   dualPageCoverAlone: true,
   dualPageDirection: DualPageDirection.rtl,
+  showHeader: true,
+  showFooter: true,
 );
 
 void main() {

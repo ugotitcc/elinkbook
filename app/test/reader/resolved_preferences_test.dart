@@ -31,6 +31,8 @@ void main() {
       dualPageMode: DualPageMode.auto,
       dualPageCoverAlone: true,
       dualPageDirection: DualPageDirection.ltr,
+      showHeader: true,
+      showFooter: true,
     );
 
     expect(resolved.fontSize, isNull);

@@ -46,6 +46,9 @@ class ResolvedPreferences {
   final bool dualPageCoverAlone;
   final DualPageDirection dualPageDirection;
 
+  final bool showHeader;
+  final bool showFooter;
+
   const ResolvedPreferences({
     this.writingMode,
     this.fontFamily,
@@ -67,5 +70,7 @@ class ResolvedPreferences {
     required this.dualPageMode,
     required this.dualPageCoverAlone,
     required this.dualPageDirection,
+    required this.showHeader,
+    required this.showFooter,
   });
 }

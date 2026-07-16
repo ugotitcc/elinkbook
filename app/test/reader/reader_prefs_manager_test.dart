@@ -53,6 +53,8 @@ void main() {
       expect(resolved.dualPageMode, DualPageMode.auto);
       expect(resolved.dualPageCoverAlone, isTrue);
       expect(resolved.dualPageDirection, DualPageDirection.rtl);
+      expect(resolved.showHeader, isTrue);
+      expect(resolved.showFooter, isTrue);
     });
 
     test('單書覆寫存在時，優先套用單書覆寫，忽略全域預設', () {
@@ -65,6 +67,8 @@ void main() {
           dualPageMode: DualPageMode.always,
           dualPageCoverAlone: false,
           dualPageDirection: DualPageDirection.rtl,
+          showHeader: false,
+          showFooter: false,
         ),
         globalPrefs: const GlobalReaderPrefs.initial(),
       );
@@ -77,6 +81,8 @@ void main() {
       expect(resolved.dualPageMode, DualPageMode.always);
       expect(resolved.dualPageCoverAlone, isFalse);
       expect(resolved.dualPageDirection, DualPageDirection.rtl);
+      expect(resolved.showHeader, isFalse);
+      expect(resolved.showFooter, isFalse);
     });
 
     test('單書覆寫為 null 時，正確退回全域預設（非硬編碼初始值，證明真的有讀 globalPrefs）',
