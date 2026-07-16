@@ -5,6 +5,7 @@ import 'app_font.dart';
 import 'dual_page_mode.dart';
 import 'epub_position_info.dart';
 import 'epub_text_align.dart';
+import 'toc_entry.dart';
 import 'page_turn_mode.dart';
 import 'writing_mode.dart';
 
@@ -105,6 +106,41 @@ class EpubReaderView extends StatefulWidget {
     if (state is _EpubReaderViewState) {
       state._channel?.invokeMethod('jumpToProgression', {
         'progression': progression,
+      });
+    }
+  }
+
+  /// 讀取全書目錄樹狀結構（epic-5-toc-pagination Issue 4）。與
+  /// [jumpToProgression] 不同，這是請求/回應語意（回傳 `Future`），非
+  /// fire-and-forget；`ReaderScreen` 於書本開啟後（`onLayoutResolved`
+  /// 回報非固定版面時）預先呼叫一次並快取結果，樹狀結構本身不隨版面設定
+  /// 變動而改變，不需重新抓取。原生端呼叫失敗或本 State 尚未掛載（例如
+  /// 純 `flutter_test` 環境下 `_channel` 恆為 `null`，AndroidView 未真正
+  /// 建立）時回傳空清單，不拋出例外。
+  static Future<List<TocEntry>> loadTableOfContents(
+    GlobalKey<State<EpubReaderView>> key,
+  ) async {
+    final state = key.currentState;
+    if (state is! _EpubReaderViewState) return const [];
+    final raw = await state._channel
+        ?.invokeMethod<List<Object?>>('getTableOfContents');
+    if (raw == null) return const [];
+    return raw
+        .map((e) => TocEntry.fromWire(e as Map<Object?, Object?>))
+        .toList();
+  }
+
+  /// 依目錄項目的序列化 Locator 跳轉（epic-5-toc-pagination Issue 4），比照
+  /// [jumpToProgression] 的強型別 static helper 模式，不使用 `as dynamic`
+  /// 跨越 State 的 private 邊界。
+  static void jumpToLocator(
+    GlobalKey<State<EpubReaderView>> key,
+    String locatorJson,
+  ) {
+    final state = key.currentState;
+    if (state is _EpubReaderViewState) {
+      state._channel?.invokeMethod('jumpToLocator', {
+        'locatorJson': locatorJson,
       });
     }
   }
