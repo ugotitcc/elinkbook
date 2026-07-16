@@ -36,6 +36,7 @@ import org.readium.r2.shared.publication.Layout
 import org.readium.r2.shared.publication.Locator
 import org.json.JSONObject
 import org.readium.r2.shared.publication.Publication
+import org.readium.r2.shared.publication.ReadingProgression
 import org.readium.r2.shared.util.AbsoluteUrl
 import org.readium.r2.shared.util.Url
 import org.readium.r2.shared.util.toAbsoluteUrl
@@ -466,6 +467,23 @@ class EpubReaderView(
                 val currentLeft = (webViewLoc[0] - containerLoc[0]).toFloat()
                 val currentTop = (webViewLoc[1] - containerLoc[1]).toFloat()
 
+                // 【頁序修正，實驗性】Readium 對 FXL 雙頁的原生排版（R2FXLPageFragment
+                // 的 firstWebView/secondWebView 綁定）完全不考慮書籍宣告的
+                // page-progression-direction：無論書籍是 RTL 或 LTR，「較早的頁面」
+                // 一律綁定 firstWebView、physically 落在螢幕左側（已用 javap 反編譯
+                // EpubNavigatorFragment 的頁面配對迴圈、R2PagerAdapter.getItem()、
+                // R2FXLPageFragment.Companion.newInstance()／onCreateView() 逐層確認，
+                // 全程沒有任何 ReadingProgression 判斷）。對 RTL 漫畫（較早的頁面應
+                // 讀者「先看到」、也就是應該落在螢幕右側）而言，這會讓雙頁順序視覺上
+                // 反過來。我們自己的排序邏輯（visibleWebViews.sortedBy { x 座標 }）
+                // 只是「觀察」Android 實際排出來的物理位置，並不能改變 Readium 的原生
+                // 綁定，所以真正的修正點在這裡：不要直接用 sortedBy 產生的 index 決定
+                // 視覺上要放哪一個 slot，而是在 RTL 時反轉——把 index 0（物理最左、
+                // Readium 認定的「較早頁面」）透過 translationX 直接搬到螢幕右半的
+                // slot，反之亦然。
+                val isRtl = publication?.metadata?.readingProgression == ReadingProgression.RTL
+                val visualSlot = if (isSpread && isRtl) 1 - index else index
+
                 // 雙頁模式下，右側 WebView 的置中運算必須在「它自己的半寬 slot」
                 // 座標系裡進行，否則 computeCenteringTranslation 會把它往 slot 0
                 // （螢幕左半邊）置中。做法：換算前先把 currentLeft 減去 slot 起點
@@ -477,21 +495,37 @@ class EpubReaderView(
                 // 右側 WebView 多平移一個 slot 寬度、直接推出可視範圍外——這正是
                 // 真機測試發現「翻頁後右側內容消失」的根因，見
                 // docs/epics/epic-16-dual-page/plans/plan-issue-6.md 審查修正
-                // 紀錄之後的 bugfix 說明）。slot 依排序後的 index 分配（index 0 =
-                // 左，1 = 右），不使用數值閾值判斷。
-                val slotOffsetX = if (isSpread && index == 1) availableWidth.toFloat() else 0f
+                // 紀錄之後的 bugfix 說明）。slot 依 [visualSlot] 分配（0 = 左，
+                // 1 = 右），不使用數值閾值判斷。
+                val slotOffsetX = if (isSpread && visualSlot == 1) availableWidth.toFloat() else 0f
 
-                val translation = EpubFxlScaler.computeCenteringTranslation(
-                    availableWidth = availableWidth,
-                    availableHeight = availableHeight,
-                    contentWidth = contentWidth,
-                    contentHeight = contentHeight,
-                    scale = fitScale,
-                    currentLeft = currentLeft - slotOffsetX,
-                    currentTop = currentTop,
-                )
-                webView.translationX = translation.x
-                webView.translationY = translation.y
+                if (isSpread) {
+                    // 【中縫空白修正，實驗性】雙頁模式下不使用 EpubFxlScaler.computeCenteringTranslation
+                    // 的「各自獨立置中」語意——那會讓左頁向左、右頁向右各自留出對稱邊界，
+                    // 兩者加總在螢幕中線處形成一道明顯的空白縫隙。改為讓兩頁貼齊中線（book
+                    // spine）：左側 slot（visualSlot 0）貼右邊界（緊靠中線），右側 slot
+                    // （visualSlot 1）貼左邊界（緊靠中線），垂直方向仍維持置中。currentLeft
+                    // 已在傳入前扣除 slotOffsetX（見上方既有註解），所以這裡的 desiredLeft
+                    // 是「相對各自 slot 起點」的目標位置，與既有的 slotOffsetX 扣除邏輯相容。
+                    val scaledWidth = contentWidth * fitScale
+                    val scaledHeight = contentHeight * fitScale
+                    val desiredLeft = if (visualSlot == 0) availableWidth - scaledWidth else 0f
+                    val desiredTop = (availableHeight - scaledHeight) / 2f
+                    webView.translationX = desiredLeft - (currentLeft - slotOffsetX)
+                    webView.translationY = desiredTop - currentTop
+                } else {
+                    val translation = EpubFxlScaler.computeCenteringTranslation(
+                        availableWidth = availableWidth,
+                        availableHeight = availableHeight,
+                        contentWidth = contentWidth,
+                        contentHeight = contentHeight,
+                        scale = fitScale,
+                        currentLeft = currentLeft,
+                        currentTop = currentTop,
+                    )
+                    webView.translationX = translation.x
+                    webView.translationY = translation.y
+                }
             }
         }
         fxlLayoutListener = listener
