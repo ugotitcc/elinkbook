@@ -62,7 +62,7 @@
 
 - 資料模型：每筆書籤含書籍定位資訊（EPUB：CFI；PDF：頁碼）、名稱、所屬書籍。
 - 新增/移除為 toggle 語意——同一頁/位置最多一筆，UI 上以二態按鈕呈現（已加/未加）。
-- 預設名稱：EPUB 用目前章節名稱（沿用 `epic-5-toc-pagination` 既有的 `TocNavigator` 目前章節判定邏輯），PDF／FXL 用「第 N 頁」；建立後使用者可於書籤清單中個別重新命名。
+- 預設名稱：EPUB 用「目前章節名稱＋全書進度百分比」（例如「第二章 (35%)」，沿用 `epic-5-toc-pagination` 既有的 `TocNavigator` 目前章節判定邏輯取得章節名稱），避免同一章節橫跨多個分頁畫面時，多筆書籤預設名稱完全相同、清單無法辨識（審查修正，見 `tmp/epic-6/reviews/spec_review.md` 1.3）；PDF／FXL 用「第 N 頁」（頁碼本身已保證每頁至多一筆、天生唯一，不需額外加註）。建立後使用者可於書籤清單中個別重新命名。
 - 書籤清單依書中位置順序排序（EPUB 用 `progression` 比例、PDF/FXL 用頁碼），非依建立時間。
 - 單筆刪除即時生效；批次「刪除該書所有書籤」須先跳出確認對話框（標準 `AlertDialog`，顯示筆數）。
 - 點選清單項目須於 200ms 內跳轉至對應位置。
@@ -73,7 +73,7 @@
 - **劃線樣式**：兩種獨立子類型——「螢光筆」（背景底色填滿，黃/粉/藍三色可選）、「底線」（波浪底線，固定使用當前主題 `primary` 色，不提供顏色選擇）。建立後不可變更，需要改色時刪除該筆重新劃線。
 - **備註**：可獨立於劃線存在（選取範圍後可以只加備註、不劃線）。內容為自由文字，建立後可編輯。
 - **純備註畫面指示**（無劃線時）：固定樣式，不佔用劃線的顏色語意——EPUB 透過 Readium Decorator 疊加淡灰底＋行內小圖示；PDF 用淡灰色半透明矩形＋右上角 📌 圖示釘標，可點擊開啟備註內容。
-- **PDF 選取範圍座標傳遞**：原生端以相對於目前 View 寬高的百分比值（非絕對像素）透過 method channel 回傳框選矩形給 Dart 端，Dart 端以 `Overlay` 定位浮動工具列於選取矩形上方。框選進行中若使用者縮放或平移畫面，直接取消目前選取狀態、收起浮動工具列，不即時重算矩形座標。
+- **PDF 選取範圍座標傳遞（審查修正，見 `tmp/epic-6/reviews/spec_review.md` 1.2）**：原生端以相對於「PDF 頁面內容實際顯示範圍」（`CropOverlayView.kt` 既有的 `computeContentBounds()` FIT_CENTER letterbox 數學，扣除頁面比例與 View 比例不一致時產生的黑邊）的百分比值（非絕對像素、且**不是**相對於整個原生 View 容器寬高）透過 method channel 回傳框選矩形給 Dart 端，確保裝置旋轉或版面調整時座標仍能正確還原至頁面實際內容位置。Dart 端以 `Overlay` 定位浮動工具列於選取矩形上方。框選進行中若使用者縮放或平移畫面，直接取消目前選取狀態、收起浮動工具列，不即時重算矩形座標。
 - **PDF 原生渲染同步**：Dart 端完成劃線/備註的新增/編輯/刪除後，須透過 method channel 通知原生端（`refreshAnnotations()` 或等義指令）重新讀取目前頁面的標記資料並重繪 Bitmap 快取，避免畫面殘留或未即時反映變更。
 - **刪除顆粒度**：單筆項目刪除為「整筆一起刪」（同範圍的劃線+備註一併消失），不提供只刪其中一個的操作；編輯備註文字則保留獨立入口。批次「刪除該書所有劃線」／「刪除該書所有備註」各自獨立、互不影響對方（皆需確認對話框）：若某筆原為「劃線+備註」合併存在，批次刪除劃線只清除劃線本身，該筆備註若仍有內容會自然退化成「純備註」項目繼續留在清單裡（由 `highlight_id` 外鍵 `ON DELETE SET NULL` 的資料庫層行為保證，見「資料模型關聯」）。
 
@@ -81,6 +81,7 @@
 
 - `bookmarks`、`highlights`、`notes` 三張表皆以 `book_id` 外鍵關聯至既有 `books` 表（沿用 `book_reader_prefs` 的既有關聯模式）。
 - `notes` 表新增可為空的 `highlight_id` 欄位，`REFERENCES highlights(id) ON DELETE SET NULL`（比照本專案既有 `book_reader_prefs.book_id REFERENCES books(id) ON DELETE CASCADE` 的 FK 慣例）。建立「劃線+備註」時先建立 `highlight` 再建立 `note` 並指向其 `id`；純備註則 `highlight_id` 自始為 `null`。`highlight_id IS NULL` 即為 UI 判斷「套用純備註畫面指示」的唯一依據，無論是自始未建立劃線、或劃線遭批次刪除後退化而來，判斷邏輯一致。
+- **外鍵約束生效機制與建表順序（審查修正，見 `tmp/epic-6/reviews/spec_review.md` 1.1）**：本專案的 `sqlite_library_repository.dart` 在 `onConfigure` 已對每個資料庫連線執行 `PRAGMA foreign_keys = ON`（`epic-3-fonts-layout` 既有基礎設施，`book_reader_prefs.book_id` 的 `ON DELETE CASCADE` 即依賴此設定），此為連線層級設定、對本 epic 新增的三張表自動生效，**不需要**額外重新宣告。Migration 腳本撰寫順序仍建議先建立 `highlights` 表、再建立引用它的 `notes` 表——SQLite 本身允許 FK 參照的父表在子表 `CREATE TABLE` 當下尚未存在（FK 只在 `INSERT` 時才實際檢查），故此非技術上的硬性要求，但依此順序撰寫可讓程式碼可讀性更好（讀者不需往後翻閱即可確認 FK 參照對象已定義），予以採納作為程式碼慣例。
 - 側邊欄清單合併顯示：同一選取範圍若同時有 `highlight` 與指向它的 `note`，清單以一筆呈現，同時顯示劃線樣式與備註摘要。
 
 ### 統一入口與 Bottom Sheet
@@ -98,6 +99,7 @@
 ### 批次刪除確認
 
 - 書籤／劃線／備註三種批次刪除操作皆共用同一套標準 `AlertDialog`（標題顯示動作＋筆數，「取消」／警示色「刪除」兩個按鈕），不另外客製化視覺。
+- **批次刪除後的清單即時更新（審查修正，見 `tmp/epic-6/reviews/spec_review.md` 1.4）**：批次刪除只能從「📚 筆記」Bottom Sheet 內觸發，`showModalBottomSheet` 本身是 modal——閱讀畫面上的浮動選取工具列/備註編輯 Dialog 不可能與開啟中的 Bottom Sheet 同時互動存在，不需要額外設計「主動關閉所有其他 Dialog」的通用機制。但 Bottom Sheet 自身的清單須在批次刪除確認後**就地重新整理**（比照 `epic-5-toc-pagination` Issue 4 `TocBottomSheet` 已建立的 `ValueNotifier` 即時反映背景事件先例），不需要使用者關閉再重新開啟 Bottom Sheet 才會看到清單清空。
 
 ## Testing Decisions
 
@@ -106,6 +108,7 @@
   - **`app/test/`**（純 widget test，不需真機）：驗證書籤 toggle/重新命名/刪除的邏輯與清單排序、劃線/備註側邊欄清單的合併顯示邏輯（純資料層純函式，可直接以 `highlight_id` 是否為 `null` 驗證退化行為）、Markdown 導出內容產生邏輯（純字串組裝，不涉及檔案 I/O 或分享）、批次刪除確認對話框的顯示/取消/確認流程、FXL 情境下「劃線與備註」分頁顯示空狀態。
   - **`app/integration_test/`**（真機）：驗證 EPUB 原生選字手勢與 PDF 長按框選手勢確實能建立劃線/備註並正確渲染（Decorator／Bitmap 疊加）、PDF 劃線/備註變更後原生端重繪確實生效（無殘留）、書籤/劃線/備註清單點選後 200ms 內真正跳轉、Markdown 導出確實產生檔案並觸發系統分享（`Share.shareXFiles` 呼叫本身可斷言、實際分享 UI 由作業系統接管不強求斷言其後續畫面）。
 - PDF 長按框選手勢與既有九宮格熱區/雙頁縮放平移手勢的優先權須以真機驗證，純 widget test 環境無法可靠模擬手勢競技場（gesture arena）行為。
+- **不新增 Method Channel Mock 基礎設施（審查意見不採納，見 `tmp/epic-6/reviews/spec_review.md` 2.1）**：外部審查建議在 `app/test/` 為原生 method channel 註冊 mock 處理器以避免 `MissingPluginException`。與本專案 `CLAUDE.md` 明訂的既有兩層測試架構衝突——`app/test/` 環境下 `EpubReaderView`/`PdfReaderView` 的 `_channel` 刻意恆為 `null`（無真實 `AndroidView` 建立），既有慣例是所有原生呼叫皆以 `_channel?.invokeMethod(...)` null-safe 寫法呼叫，在純 widget test 環境下直接安全 no-op，不需要、也不引入 mock 處理器；真正的原生互動驗證一律留給 `app/integration_test/` 真機測試。本 epic 新增的劃線/備註/書籤相關原生呼叫比照此既有慣例撰寫即可，不建立第二套與既有慣例並存、職責重疊的測試基礎設施。
 - 良好測試的判準（比照專案既有測試撰寫慣例，非本 epic 新創）：只驗證外部可觀察行為（畫面上出現的元件、`ReaderScreen` 對外暴露的 Key、資料庫最終寫入的值），不斷言內部實作細節。
 - 既有的先例（`app/test/screens/reader_screen_test.dart`、`app/integration_test/reader_screen_test.dart`）已建立這種「透過 `ReaderScreen` 公開行為斷言」的測試風格，本 epic 延續，不另立新風格。
 
@@ -124,3 +127,11 @@
 - 本規格未列出具體檔案路徑、method channel 精確欄位名稱或程式碼片段，實作前請參閱 `design.md`「架構影響摘要」表格了解受影響模組的對應關係，實際簽章與型別定義留待 Scrum Master／實作計畫階段決定。
 - `highlights`／`notes` 選取範圍定位資訊（EPUB Locator JSON／PDF 頁碼+矩形座標）的欄位結構是否共用同一組 schema 定義、或各自獨立宣告等價欄位，留待實作計畫階段依實際 Repository 設計拍板，不影響本規格已定案的 `highlight_id` 關聯機制本身。
 - PDF 長按框選手勢的架構決策理由完整記錄於 [ADR 0008](../../adr/0008-pdf-annotation-long-press-gesture.md)，包含與既有裁切模式「顯式模式切換」慣例刻意不一致的說明，避免日後被誤認為疏漏而「修正」成統一模式。
+
+## 審查修正紀錄（`tmp/epic-6/reviews/spec_review.md`）
+
+- **Important（前提有誤，部分採納）**：審查指出 SQLite 外鍵約束預設未啟用、且 `notes` 建表須晚於 `highlights`。查證後 `PRAGMA foreign_keys = ON` 已於 `sqlite_library_repository.dart` 的 `onConfigure` 連線層級設定（`epic-3-fonts-layout` 既有基礎設施），對新表自動生效、非遺漏；SQLite 本身也不要求 FK 參照的父表在子表建立當下已存在。已於「資料模型關聯」補上正確的技術事實說明，同時採納「先建 `highlights` 再建 `notes`」作為程式碼可讀性慣例（非技術硬性要求）。
+- **Important（確認屬實，已修正）**：PDF 選取範圍百分比座標若相對於整個原生 View（含 letterbox 黑邊）而非頁面內容實際範圍，裝置旋轉/版面調整時會失準。已於「劃線與備註模組」補上須沿用 `CropOverlayView.kt` 既有 `computeContentBounds()` 的 letterbox-aware 座標基準。
+- **Important（確認屬實，已修正）**：EPUB 同一章節內多筆書籤的預設名稱（皆為章節名稱）在清單中無法辨識。已於「書籤模組」改為預設名稱附加全書進度百分比（例如「第二章 (35%)」）。
+- **Minor（確認屬實，範圍收斂後採納）**：批次刪除後可能存在的 UI 狀態不一致風險。已於「批次刪除確認」新增決策——Bottom Sheet 為 modal，不需要主動關閉其他 Dialog 的通用機制，但 Bottom Sheet 自身清單須在批次刪除後就地重新整理。
+- **技術建議（不採納）**：審查建議在 `app/test/` 為原生 method channel 新增 Mock 處理器。與本專案 `CLAUDE.md` 明訂的兩層測試架構（`app/test/` 刻意 `_channel` 恆為 `null`、以 null-safe 呼叫 no-op，真機互動驗證留給 `app/integration_test/`）直接衝突，會建立職責重疊的第二套測試基礎設施，予以回推不採納，已於「Testing Decisions」補充說明既有慣例延續即可。
