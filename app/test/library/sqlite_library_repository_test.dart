@@ -1014,4 +1014,125 @@ void main() {
     expect(row['show_header'], 0);
     expect(row['show_footer'], 1);
   });
+
+  test('全新安裝的 bookmarks 表可用（version 8 起 onCreate 已含括）', () async {
+    await repository.insertBook(_book('b_bookmark'));
+    final id = await repository.database.insert('bookmarks', {
+      'book_id': 'b_bookmark',
+      'name': '第一章',
+      'epub_locator_json': '{"href":"/c1.xhtml"}',
+      'progression': 0.1,
+      'pdf_page_index': null,
+    });
+    expect(id, greaterThan(0));
+
+    final rows = await repository.database
+        .query('bookmarks', where: 'book_id = ?', whereArgs: ['b_bookmark']);
+    expect(rows.single['name'], '第一章');
+  });
+
+  test('既有 version 7 裝置升級到 version 8，bookmarks 表正確建立', () async {
+    final tempDir = await Directory.systemTemp
+        .createTemp('elinkbook_migration_v7_to_v8_test');
+    addTearDown(() => tempDir.delete(recursive: true));
+    final dbPath = p.join(tempDir.path, 'test.db');
+
+    // 模擬「已存在於 version 7」的舊資料庫：手動以 version 7 當時的完整
+    // schema（books/book_reader_prefs 皆為 version 7 最終樣貌，不含
+    // bookmarks 表）建立，不透過 SqliteLibraryRepository.open()（該方法
+    // 目前的 onCreate 已經是 version 8 的最終 schema，無法用來重現「舊
+    // 裝置」情境）。
+    final oldDb = await databaseFactory.openDatabase(
+      dbPath,
+      options: OpenDatabaseOptions(
+        version: 7,
+        onConfigure: (db) async {
+          await db.execute('PRAGMA foreign_keys = ON');
+        },
+        onCreate: (db, version) async {
+          await db.execute('CREATE TABLE groups (name TEXT PRIMARY KEY)');
+          await db.insert('groups', {'name': '未分類'});
+          await db.execute('''
+            CREATE TABLE books (
+              id TEXT PRIMARY KEY,
+              title TEXT NOT NULL,
+              author TEXT,
+              format TEXT NOT NULL,
+              filePath TEXT NOT NULL,
+              source TEXT NOT NULL,
+              coverPath TEXT,
+              progress REAL NOT NULL DEFAULT 0,
+              epubLocator TEXT,
+              pdfPageIndex INTEGER,
+              totalCharacterCount INTEGER,
+              groupName TEXT NOT NULL DEFAULT '未分類',
+              createTime INTEGER NOT NULL,
+              lastReadTime INTEGER NOT NULL
+            )
+          ''');
+          await db.execute('''
+            CREATE TABLE book_reader_prefs (
+              book_id TEXT PRIMARY KEY REFERENCES books(id) ON DELETE CASCADE,
+              font_family TEXT,
+              font_size REAL,
+              font_weight REAL,
+              line_height REAL,
+              paragraph_spacing REAL,
+              page_margins REAL,
+              text_align TEXT,
+              publisher_styles INTEGER,
+              writing_mode_override TEXT,
+              page_turn_mode_override TEXT,
+              screen_orientation_override TEXT,
+              pdf_fit_mode TEXT,
+              pdf_contrast REAL,
+              pdf_brightness REAL,
+              pdf_bold_strength REAL,
+              pdf_crop_mode TEXT,
+              pdf_crop_rect TEXT,
+              dual_page_mode TEXT,
+              dual_page_cover_alone INTEGER,
+              dual_page_direction TEXT,
+              show_header INTEGER,
+              show_footer INTEGER
+            )
+          ''');
+        },
+      ),
+    );
+    await oldDb.insert('books', {
+      'id': 'b1',
+      'title': '既有書籍',
+      'format': 'epub',
+      'filePath': 'content://example/b1',
+      'source': 'local',
+      'progress': 0.0,
+      'groupName': '未分類',
+      'createTime': 1000,
+      'lastReadTime': 1000,
+    });
+    await oldDb.close();
+
+    // 重新以目前版本開啟同一個檔案，觸發 onUpgrade（oldVersion=7 →
+    // newVersion=8），驗證 bookmarks 表確實建立且可寫入。
+    final upgraded = await SqliteLibraryRepository.open(dbPath);
+    addTearDown(() => upgraded.close());
+
+    final id = await upgraded.database.insert('bookmarks', {
+      'book_id': 'b1',
+      'name': '測試書籤',
+      'epub_locator_json': null,
+      'progression': null,
+      'pdf_page_index': 3,
+    });
+    expect(id, greaterThan(0));
+
+    final rows = await upgraded.database
+        .query('bookmarks', where: 'book_id = ?', whereArgs: ['b1']);
+    expect(rows.single['name'], '測試書籤');
+
+    // 既有書籍資料不受影響。
+    final books = await upgraded.listBooks();
+    expect(books.single.title, '既有書籍');
+  });
 }

@@ -19,6 +19,8 @@ import 'package:elinkbook/screens/toc_bottom_sheet.dart';
 import 'package:elinkbook/reader/epub_position_info.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
 import '../support/fake_reader_prefs_manager.dart';
+import 'package:elinkbook/screens/notes_bottom_sheet.dart';
+import '../support/fake_bookmarks_repository.dart';
 
 // 依 spec.md「測試決策」：ReaderScreen 分派到 EpubReaderView/PdfReaderView
 // 後，實際渲染內容存在於原生 PlatformView 之中，一般 flutter test（無真實
@@ -1334,5 +1336,141 @@ void main() {
     expect(find.byType(AppBar), findsNothing, reason: 'FXL 不建構 Scaffold AppBar，頁首邏輯不適用');
     expect(find.byKey(const Key('reader_fixed_layout_back_button')), findsOneWidget);
     expect(find.byKey(const Key('reader_fixed_layout_settings_button')), findsOneWidget);
+  });
+
+  // --- Epic 6 Issue 1：書籤管理 + 統一「筆記」入口 ---
+
+  testWidgets('未提供 bookmarksRepository 時，📚 筆記按鈕不存在（既有呼叫端不受影響）',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_no_bookmarks_repo',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byKey(const Key('reader_notes_button')), findsNothing);
+  });
+
+  testWidgets(
+      'EPUB 提供 bookmarksRepository 後，📚 筆記按鈕存在，onLayoutResolved 前為停用狀態',
+      (tester) async {
+    final bookmarksRepository = FakeBookmarksRepository();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_notes_epub',
+          prefsManager: prefsManager,
+          bookmarksRepository: bookmarksRepository,
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final finder = find.byKey(const Key('reader_notes_button'));
+    expect(finder, findsOneWidget);
+    expect(tester.widget<IconButton>(finder).onPressed, isNull);
+  });
+
+  testWidgets(
+      'EPUB 只收到 onLayoutResolved（尚未收到 onLocatorChanged）時，📚 按鈕仍為停用狀態'
+      '（審查修正：避免定位資料未就緒時寫入無定位資訊的壞書籤）', (tester) async {
+    final bookmarksRepository = FakeBookmarksRepository();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_notes_epub_no_locator_yet',
+          prefsManager: prefsManager,
+          bookmarksRepository: bookmarksRepository,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final epubView = tester.widget<EpubReaderView>(find.byType(EpubReaderView));
+    epubView.onLayoutResolved?.call(
+      const EpubLayoutInfo(
+        isFixedLayout: false,
+        writingMode: WritingMode.horizontal,
+      ),
+    );
+    await tester.pump();
+
+    final finder = find.byKey(const Key('reader_notes_button'));
+    expect(tester.widget<IconButton>(finder).onPressed, isNull);
+  });
+
+  testWidgets('EPUB 收到 onLayoutResolved 與 onLocatorChanged 後，📚 按鈕可點擊，點擊後開啟 NotesBottomSheet',
+      (tester) async {
+    final bookmarksRepository = FakeBookmarksRepository();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_notes_epub_open',
+          prefsManager: prefsManager,
+          bookmarksRepository: bookmarksRepository,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final epubView = tester.widget<EpubReaderView>(find.byType(EpubReaderView));
+    epubView.onLayoutResolved?.call(
+      const EpubLayoutInfo(
+        isFixedLayout: false,
+        writingMode: WritingMode.horizontal,
+      ),
+    );
+    await tester.pump();
+    epubView.onLocatorChanged?.call(
+      const EpubPositionInfo(locatorJson: '{"href":"/c1.xhtml"}', progression: 0.1),
+    );
+    await tester.pump();
+
+    final finder = find.byKey(const Key('reader_notes_button'));
+    expect(tester.widget<IconButton>(finder).onPressed, isNotNull);
+
+    await tester.tap(finder);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.byType(NotesBottomSheet), findsOneWidget);
+  });
+
+  testWidgets(
+      'PDF 提供 bookmarksRepository 後，onPageRendered 前 📚 按鈕為停用狀態，之後可點擊',
+      (tester) async {
+    final bookmarksRepository = FakeBookmarksRepository();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b_notes_pdf',
+          prefsManager: prefsManager,
+          bookmarksRepository: bookmarksRepository,
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final finder = find.byKey(const Key('reader_notes_button'));
+    expect(tester.widget<IconButton>(finder).onPressed, isNull);
+
+    final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+    pdfView.onPageRendered();
+    await tester.pump();
+
+    expect(tester.widget<IconButton>(finder).onPressed, isNotNull);
   });
 }

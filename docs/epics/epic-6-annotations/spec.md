@@ -1,0 +1,137 @@
+# Epic 6 — 註記與知識管理：規格 (Spec)
+
+這是實作 `epic-6-annotations` 的唯一事實來源。決策的完整討論過程與理由請見 `design.md`（`/grill-with-docs` 2026-07-16，15 項決策，含依 `/superpowers:requesting-code-review` 審查報告 `tmp/epic-6/reviews/design_review.md` 補上的決策 #14/#15 與修正的決策 #8）與 [ADR 0008](../../adr/0008-pdf-annotation-long-press-gesture.md)（PDF 劃線長按觸發框選的架構決策）。本文件延續 `design.md` 的所有範圍界定，不重複列出理由，僅在此定案核心行為決策，供 Scrum Master 階段拆解工單使用。
+
+## Problem Statement
+
+使用者在閱讀 EPUB／PDF 書籍時，目前完全沒有辦法：
+
+- 標記書中某個位置供之後快速回來（無書籤功能）。
+- 標記書中某段文字重點（無劃線功能）。
+- 對書中某段文字寫下個人心得或補充說明（無備註功能）。
+- 一次查看整本書所有標記過的重點與心得（無統一清單）。
+- 把自己的閱讀筆記帶出這個 App，分享給別人或存到別處（無導出功能）。
+
+這些是讀者從「被動閱讀」進階到「主動知識管理」的核心缺口，`prototype/index.html` 已有對應的視覺骨架但尚未串接任何真實資料流或原生渲染。
+
+## Solution
+
+在既有的 `ReaderScreen` 統一入口之上，為流式 EPUB 與 PDF（書籤功能額外涵蓋固定版面 FXL）新增：
+
+1. **書籤**：每頁/每位置一筆，toggle 語意新增/移除，具名（預設章節名稱或頁碼，可重新命名），清單依書中位置排序、200ms 內跳轉，單筆與批次刪除（皆需確認）。EPUB／PDF／FXL 皆支援。
+2. **劃線**：兩種樣式（螢光筆三色底色填滿／底線固定單色），EPUB 用原生選字手勢、PDF 用長按直接拖曳框選（見 ADR 0008），僅流式 EPUB 與 PDF（FXL 排除，見「範圍界定」）。
+3. **備註**：獨立於劃線的物件類型，可脫離劃線單獨存在；純備註（無劃線）有固定樣式的畫面指示以區別於使用者自選色的劃線。範圍同劃線。
+4. **統一入口與清單**：單一「📚 筆記」按鈕（AppBar／FXL 懸浮按鈕群組），開啟帶「🔖 書籤」／「✏️ 劃線與備註」兩分頁籤的 Bottom Sheet，兩分頁資料層完全獨立、依書中位置排序，同範圍劃線+備註合併顯示成一筆。
+5. **Markdown 導出**：單本書範圍，存成實體 `.md` 檔並透過 Android 系統分享（Share Intent）分享出去。
+
+## User Stories
+
+1. 作為一個正在閱讀書籍的讀者，我想要在目前頁面/位置一鍵加入書籤，這樣我之後可以快速回到這裡。
+2. 作為一個已經在某頁加過書籤的讀者，我想要再點一次同一個書籤按鈕就能移除它，這樣我不用跑到清單裡才能取消。
+3. 作為一個管理多個書籤的讀者，我想要幫每個書籤取一個好辨識的名字，這樣清單裡一堆「第 87 頁」「第 102 頁」不會讓我搞混哪個是哪個。
+4. 作為一個回頭查看書籤的讀者，我想要點擊書籤清單裡的任一筆，200ms 內就跳轉過去，這樣導覽的等待感不明顯。
+5. 作為一個不小心加錯書籤的讀者，我想要能單筆刪除，也能一次刪光這本書所有書籤（但要先跟我確認），這樣清理起來不費工。
+6. 作為一個正在讀 EPUB 的讀者，我想要用手機原生的選字手勢直接選取一段文字並畫線，這樣操作起來跟平常在手機上選字一樣直覺。
+7. 作為一個正在讀 PDF 的讀者，我想要長按頁面某處直接開始框選一個區域來畫線，不需要先進入某個「劃線模式」，這樣操作起來跟 EPUB 一致，不用多學一個步驟。
+8. 作為一個劃線的讀者，我想要在「螢光筆」（黃/粉/藍底色）與「底線」兩種樣式之間選擇，這樣我可以依重要程度或個人習慣區分標記方式。
+9. 作為一個劃錯顏色的讀者，我可以接受只能刪除重畫、不能事後改色，因為這不是我常做的事，操作介面單純一點對我更好。
+10. 作為一個想寫心得的讀者，我想要對一段選取範圍加備註文字，不一定要同時劃線，這樣我可以純粹留言而不一定要標色。
+11. 作為一個瀏覽書中標記的讀者，我想要一眼看出「這是我特別劃線標記的重點」還是「這只是我隨手寫的備註」，這樣兩種資訊不會混在一起誤判重要性。
+12. 作為一個寫錯備註內容的讀者，我想要能編輯已寫好的備註文字，這樣不用刪掉重寫整個劃線。
+13. 作為一個想清理標記的讀者，我想要「一鍵刪除這本書所有劃線」跟「一鍵刪除這本書所有備註」是兩個各自獨立的操作（皆需先跟我確認），這樣我可以只清劃線、留著備註內容（或反過來）。
+14. 作為一個查看某段標記的讀者，我點擊清單裡的某一筆同時看到劃線顏色與備註內容合併顯示成一筆，而不是要分開找兩筆才拼湊得出「我在這裡做了什麼」。
+15. 作為一個瀏覽劃線/備註清單的讀者，我想要清單依書中出現的先後順序排列，這樣我可以照著書本身的順序回顧，而不是被建立時間打亂順序。
+16. 作為一個正在讀漫畫（FXL）的讀者，我仍然可以加書籤，因為書籤只需要記住頁碼，跟 FXL 沒有文字層無關。
+17. 作為一個正在讀漫畫（FXL）的讀者，我理解劃線/備註功能對我不可用（因為漫畫頁面沒有可選取的文字），介面上會誠實地告訴我這點，而不是讓我點了才發現什麼都不能做。
+18. 作為一個正在讀漫畫（FXL）的讀者，我想要跟一般 EPUB/PDF 一樣有個入口可以查看/管理我的書籤，而不是加了書籤卻找不到地方看清單。
+19. 作為一個想整理心得的讀者，我想要把這本書的書籤、劃線、備註一次匯出成一份 Markdown 檔案，這樣我可以帶到別的筆記軟體繼續整理。
+20. 作為一個匯出筆記的讀者，我想要直接透過手機的分享功能把檔案傳出去（例如傳到雲端筆記 App、傳給自己的 Email），而不是要先複製一大段文字自己貼過去。
+21. 作為維護此專案的工程師，我想要 `notes.highlight_id` 的可空外鍵設計能讓「刪除全部劃線後備註自動退化成純備註」這件事由資料庫本身保證一致，而不是靠應用層邏輯判斷位置字串是否吻合。
+
+## Implementation Decisions
+
+### 範圍界定（承接 `design.md`，不重複展開理由）
+
+- 書籤支援 EPUB／PDF／FXL；劃線與備註僅支援流式 EPUB／PDF（FXL 排除，Readium 對 FXL 無可選取文字層）。
+- TXT 定位不在本 epic 範圍，延後至 `epic-11-txt-engine`（比照 `epic-5-toc-pagination` FR-12 先例）。
+- 劃線建立後不可改色/改樣式，僅能刪除重畫。
+- Markdown 導出範圍固定為單本書，不支援跨書籍批次導出。
+- 雲端同步不在本 epic 範圍，屬 `epic-8-sync`；本 epic 僅建立本機資料模型供其後續擴充。
+
+### 書籤模組
+
+- 資料模型：每筆書籤含書籍定位資訊（EPUB：CFI；PDF：頁碼）、名稱、所屬書籍。
+- 新增/移除為 toggle 語意——同一頁/位置最多一筆，UI 上以二態按鈕呈現（已加/未加）。
+- 預設名稱：EPUB 用「目前章節名稱＋全書進度百分比」（例如「第二章 (35%)」，沿用 `epic-5-toc-pagination` 既有的 `TocNavigator` 目前章節判定邏輯取得章節名稱），避免同一章節橫跨多個分頁畫面時，多筆書籤預設名稱完全相同、清單無法辨識（審查修正，見 `tmp/epic-6/reviews/spec_review.md` 1.3）；PDF／FXL 用「第 N 頁」（頁碼本身已保證每頁至多一筆、天生唯一，不需額外加註）。建立後使用者可於書籤清單中個別重新命名。
+- 書籤清單依書中位置順序排序（EPUB 用 `progression` 比例、PDF/FXL 用頁碼），非依建立時間。
+- 單筆刪除即時生效；批次「刪除該書所有書籤」須先跳出確認對話框（標準 `AlertDialog`，顯示筆數）。
+- 點選清單項目須於 200ms 內跳轉至對應位置。
+
+### 劃線與備註模組
+
+- **劃線建立**：EPUB 使用原生 WebView 選字手勢；PDF 使用長按頁面直接觸發拖曳框選矩形手勢（見 [ADR 0008](../../adr/0008-pdf-annotation-long-press-gesture.md)），矩形繪製元件沿用/延伸 `epic-4-pdf-enhance` 的 `CropOverlayView.kt`。選取完成後皆浮現同一套浮動工具列（螢光筆黃/粉/藍、底線、備註）。
+- **劃線樣式**：兩種獨立子類型——「螢光筆」（背景底色填滿，黃/粉/藍三色可選）、「底線」（波浪底線，固定使用當前主題 `primary` 色，不提供顏色選擇）。建立後不可變更，需要改色時刪除該筆重新劃線。
+- **備註**：可獨立於劃線存在（選取範圍後可以只加備註、不劃線）。內容為自由文字，建立後可編輯。
+- **純備註畫面指示**（無劃線時）：固定樣式，不佔用劃線的顏色語意——EPUB 透過 Readium Decorator 疊加淡灰底＋行內小圖示；PDF 用淡灰色半透明矩形＋右上角 📌 圖示釘標，可點擊開啟備註內容。
+- **PDF 選取範圍座標傳遞（審查修正，見 `tmp/epic-6/reviews/spec_review.md` 1.2）**：原生端以相對於「PDF 頁面內容實際顯示範圍」（`CropOverlayView.kt` 既有的 `computeContentBounds()` FIT_CENTER letterbox 數學，扣除頁面比例與 View 比例不一致時產生的黑邊）的百分比值（非絕對像素、且**不是**相對於整個原生 View 容器寬高）透過 method channel 回傳框選矩形給 Dart 端，確保裝置旋轉或版面調整時座標仍能正確還原至頁面實際內容位置。Dart 端以 `Overlay` 定位浮動工具列於選取矩形上方。框選進行中若使用者縮放或平移畫面，直接取消目前選取狀態、收起浮動工具列，不即時重算矩形座標。
+- **PDF 原生渲染同步**：Dart 端完成劃線/備註的新增/編輯/刪除後，須透過 method channel 通知原生端（`refreshAnnotations()` 或等義指令）重新讀取目前頁面的標記資料並重繪 Bitmap 快取，避免畫面殘留或未即時反映變更。
+- **刪除顆粒度**：單筆項目刪除為「整筆一起刪」（同範圍的劃線+備註一併消失），不提供只刪其中一個的操作；編輯備註文字則保留獨立入口。批次「刪除該書所有劃線」／「刪除該書所有備註」各自獨立、互不影響對方（皆需確認對話框）：若某筆原為「劃線+備註」合併存在，批次刪除劃線只清除劃線本身，該筆備註若仍有內容會自然退化成「純備註」項目繼續留在清單裡（由 `highlight_id` 外鍵 `ON DELETE SET NULL` 的資料庫層行為保證，見「資料模型關聯」）。
+
+### 資料模型關聯
+
+- `bookmarks`、`highlights`、`notes` 三張表皆以 `book_id` 外鍵關聯至既有 `books` 表（沿用 `book_reader_prefs` 的既有關聯模式）。
+- `notes` 表新增可為空的 `highlight_id` 欄位，`REFERENCES highlights(id) ON DELETE SET NULL`（比照本專案既有 `book_reader_prefs.book_id REFERENCES books(id) ON DELETE CASCADE` 的 FK 慣例）。建立「劃線+備註」時先建立 `highlight` 再建立 `note` 並指向其 `id`；純備註則 `highlight_id` 自始為 `null`。`highlight_id IS NULL` 即為 UI 判斷「套用純備註畫面指示」的唯一依據，無論是自始未建立劃線、或劃線遭批次刪除後退化而來，判斷邏輯一致。
+- **外鍵約束生效機制與建表順序（審查修正，見 `tmp/epic-6/reviews/spec_review.md` 1.1）**：本專案的 `sqlite_library_repository.dart` 在 `onConfigure` 已對每個資料庫連線執行 `PRAGMA foreign_keys = ON`（`epic-3-fonts-layout` 既有基礎設施，`book_reader_prefs.book_id` 的 `ON DELETE CASCADE` 即依賴此設定），此為連線層級設定、對本 epic 新增的三張表自動生效，**不需要**額外重新宣告。Migration 腳本撰寫順序仍建議先建立 `highlights` 表、再建立引用它的 `notes` 表——SQLite 本身允許 FK 參照的父表在子表 `CREATE TABLE` 當下尚未存在（FK 只在 `INSERT` 時才實際檢查），故此非技術上的硬性要求，但依此順序撰寫可讓程式碼可讀性更好（讀者不需往後翻閱即可確認 FK 參照對象已定義），予以採納作為程式碼慣例。
+- 側邊欄清單合併顯示：同一選取範圍若同時有 `highlight` 與指向它的 `note`，清單以一筆呈現，同時顯示劃線樣式與備註摘要。
+
+### 統一入口與 Bottom Sheet
+
+- AppBar 新增單一「📚 筆記」按鈕（流式 EPUB／PDF），開啟帶「🔖 書籤」／「✏️ 劃線與備註」兩分頁籤的 Bottom Sheet；兩分頁資料層完全獨立，僅共用入口與容器外殼。
+- FXL 不使用 AppBar，於既有懸浮按鈕群組（左上返回鍵、右上設定鍵）新增兩顆懸浮按鈕：🔖 書籤 toggle（快速新增/移除目前頁書籤）、📚 筆記（開啟同一個 Bottom Sheet，「書籤」分頁功能完整，「劃線與備註」分頁顯示空狀態且不可互動）。
+- 點擊清單項目跳轉至書中對應位置後自動關閉 Bottom Sheet。
+
+### Markdown 導出
+
+- 範圍固定為「目前這一本書」，內容依序含「🔖 書籤清單」「✏️ 劃線與個人備註」兩大段落，格式沿用 `prototype/index.html` `exportMarkdown()` 已定義的格式骨架。
+- 存檔路徑：App 私有暫存目錄（`path_provider` 的 `getTemporaryDirectory()`，本專案既有依賴），不需申請任何外部儲存權限，與 Backlog 中 `epic-15-storage-permission` 完全解耦。
+- 分享機制：`share_plus` 套件的 `Share.shareXFiles`（底層以 `FileProvider` 授予接收端 App 臨時讀取權限）。
+
+### 批次刪除確認
+
+- 書籤／劃線／備註三種批次刪除操作皆共用同一套標準 `AlertDialog`（標題顯示動作＋筆數，「取消」／警示色「刪除」兩個按鈕），不另外客製化視覺。
+- **批次刪除後的清單即時更新（審查修正，見 `tmp/epic-6/reviews/spec_review.md` 1.4）**：批次刪除只能從「📚 筆記」Bottom Sheet 內觸發，`showModalBottomSheet` 本身是 modal——閱讀畫面上的浮動選取工具列/備註編輯 Dialog 不可能與開啟中的 Bottom Sheet 同時互動存在，不需要額外設計「主動關閉所有其他 Dialog」的通用機制。但 Bottom Sheet 自身的清單須在批次刪除確認後**就地重新整理**（比照 `epic-5-toc-pagination` Issue 4 `TocBottomSheet` 已建立的 `ValueNotifier` 即時反映背景事件先例），不需要使用者關閉再重新開啟 Bottom Sheet 才會看到清單清空。
+
+## Testing Decisions
+
+- **接縫沿用既有 `ReaderScreen` 單一入口**，不新增測試接縫——與專案 `CLAUDE.md` 明訂的「`ReaderScreen` 是唯一的閱讀器 seam」一致。
+- 測試分兩層，比照專案既有慣例：
+  - **`app/test/`**（純 widget test，不需真機）：驗證書籤 toggle/重新命名/刪除的邏輯與清單排序、劃線/備註側邊欄清單的合併顯示邏輯（純資料層純函式，可直接以 `highlight_id` 是否為 `null` 驗證退化行為）、Markdown 導出內容產生邏輯（純字串組裝，不涉及檔案 I/O 或分享）、批次刪除確認對話框的顯示/取消/確認流程、FXL 情境下「劃線與備註」分頁顯示空狀態。
+  - **`app/integration_test/`**（真機）：驗證 EPUB 原生選字手勢與 PDF 長按框選手勢確實能建立劃線/備註並正確渲染（Decorator／Bitmap 疊加）、PDF 劃線/備註變更後原生端重繪確實生效（無殘留）、書籤/劃線/備註清單點選後 200ms 內真正跳轉、Markdown 導出確實產生檔案並觸發系統分享（`Share.shareXFiles` 呼叫本身可斷言、實際分享 UI 由作業系統接管不強求斷言其後續畫面）。
+- PDF 長按框選手勢與既有九宮格熱區/雙頁縮放平移手勢的優先權須以真機驗證，純 widget test 環境無法可靠模擬手勢競技場（gesture arena）行為。
+- **不新增 Method Channel Mock 基礎設施（審查意見不採納，見 `tmp/epic-6/reviews/spec_review.md` 2.1）**：外部審查建議在 `app/test/` 為原生 method channel 註冊 mock 處理器以避免 `MissingPluginException`。與本專案 `CLAUDE.md` 明訂的既有兩層測試架構衝突——`app/test/` 環境下 `EpubReaderView`/`PdfReaderView` 的 `_channel` 刻意恆為 `null`（無真實 `AndroidView` 建立），既有慣例是所有原生呼叫皆以 `_channel?.invokeMethod(...)` null-safe 寫法呼叫，在純 widget test 環境下直接安全 no-op，不需要、也不引入 mock 處理器；真正的原生互動驗證一律留給 `app/integration_test/` 真機測試。本 epic 新增的劃線/備註/書籤相關原生呼叫比照此既有慣例撰寫即可，不建立第二套與既有慣例並存、職責重疊的測試基礎設施。
+- 良好測試的判準（比照專案既有測試撰寫慣例，非本 epic 新創）：只驗證外部可觀察行為（畫面上出現的元件、`ReaderScreen` 對外暴露的 Key、資料庫最終寫入的值），不斷言內部實作細節。
+- 既有的先例（`app/test/screens/reader_screen_test.dart`、`app/integration_test/reader_screen_test.dart`）已建立這種「透過 `ReaderScreen` 公開行為斷言」的測試風格，本 epic 延續，不另立新風格。
+
+## Out of Scope
+
+- TXT 定位（字元偏移量）——留待 `epic-11-txt-engine`。
+- FXL 劃線與備註——Readium 對 FXL 無可選取文字層。
+- 劃線事後改色/改樣式——僅支援刪除重畫。
+- 跨書籍批次 Markdown 導出——範圍固定為單本書。
+- 雲端同步與衝突偵測——`epic-8-sync` 職責。
+- 劃線/備註在同一選取範圍上的重疊管理（例如同一段文字被劃線兩次）——PRD 未明確定義，暫不處理。
+- 劃線/備註在直排/橫排切換間的像素級一致性保證——依賴 Readium Decorator 的內容錨定機制，非本專案自行實作，僅需在真機測試中確認基本可用性（見 `design.md` 已知風險）。
+
+## Further Notes
+
+- 本規格未列出具體檔案路徑、method channel 精確欄位名稱或程式碼片段，實作前請參閱 `design.md`「架構影響摘要」表格了解受影響模組的對應關係，實際簽章與型別定義留待 Scrum Master／實作計畫階段決定。
+- `highlights`／`notes` 選取範圍定位資訊（EPUB Locator JSON／PDF 頁碼+矩形座標）的欄位結構是否共用同一組 schema 定義、或各自獨立宣告等價欄位，留待實作計畫階段依實際 Repository 設計拍板，不影響本規格已定案的 `highlight_id` 關聯機制本身。
+- PDF 長按框選手勢的架構決策理由完整記錄於 [ADR 0008](../../adr/0008-pdf-annotation-long-press-gesture.md)，包含與既有裁切模式「顯式模式切換」慣例刻意不一致的說明，避免日後被誤認為疏漏而「修正」成統一模式。
+
+## 審查修正紀錄（`tmp/epic-6/reviews/spec_review.md`）
+
+- **Important（前提有誤，部分採納）**：審查指出 SQLite 外鍵約束預設未啟用、且 `notes` 建表須晚於 `highlights`。查證後 `PRAGMA foreign_keys = ON` 已於 `sqlite_library_repository.dart` 的 `onConfigure` 連線層級設定（`epic-3-fonts-layout` 既有基礎設施），對新表自動生效、非遺漏；SQLite 本身也不要求 FK 參照的父表在子表建立當下已存在。已於「資料模型關聯」補上正確的技術事實說明，同時採納「先建 `highlights` 再建 `notes`」作為程式碼可讀性慣例（非技術硬性要求）。
+- **Important（確認屬實，已修正）**：PDF 選取範圍百分比座標若相對於整個原生 View（含 letterbox 黑邊）而非頁面內容實際範圍，裝置旋轉/版面調整時會失準。已於「劃線與備註模組」補上須沿用 `CropOverlayView.kt` 既有 `computeContentBounds()` 的 letterbox-aware 座標基準。
+- **Important（確認屬實，已修正）**：EPUB 同一章節內多筆書籤的預設名稱（皆為章節名稱）在清單中無法辨識。已於「書籤模組」改為預設名稱附加全書進度百分比（例如「第二章 (35%)」）。
+- **Minor（確認屬實，範圍收斂後採納）**：批次刪除後可能存在的 UI 狀態不一致風險。已於「批次刪除確認」新增決策——Bottom Sheet 為 modal，不需要主動關閉其他 Dialog 的通用機制，但 Bottom Sheet 自身清單須在批次刪除後就地重新整理。
+- **技術建議（不採納）**：審查建議在 `app/test/` 為原生 method channel 新增 Mock 處理器。與本專案 `CLAUDE.md` 明訂的兩層測試架構（`app/test/` 刻意 `_channel` 恆為 `null`、以 null-safe 呼叫 no-op，真機互動驗證留給 `app/integration_test/`）直接衝突，會建立職責重疊的第二套測試基礎設施，予以回推不採納，已於「Testing Decisions」補充說明既有慣例延續即可。

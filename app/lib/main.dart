@@ -5,6 +5,7 @@ import 'library/book_import_service_impl.dart';
 import 'library/library_repository.dart';
 import 'library/sqlite_library_repository.dart';
 import 'reader/book_reader_prefs_repository.dart';
+import 'reader/bookmarks_repository.dart';
 import 'reader/epub_character_count_repository.dart';
 import 'reader/reader_prefs_manager.dart';
 import 'reader/reader_prefs_manager_impl.dart';
@@ -35,11 +36,13 @@ Future<void> main() async {
     ReadingPositionRepository(repository.database),
     EpubCharacterCountRepository(repository.database),
   );
+  final bookmarksRepository = BookmarksRepository(repository.database);
   runApp(
     ElinkBookApp(
       repository: repository,
       importService: importService,
       prefsManager: prefsManager,
+      bookmarksRepository: bookmarksRepository,
       initialTheme: initialTheme,
       initialEinkMode: initialEinkMode,
       themePreferences: themePreferences,
@@ -53,6 +56,7 @@ class ElinkBookApp extends StatefulWidget {
   final LibraryRepository repository;
   final BookImportService importService;
   final ReaderPrefsManager prefsManager;
+  final BookmarksRepository? bookmarksRepository;
   final AppThemePreferences themePreferences;
   final AppTheme initialTheme;
   final bool initialEinkMode;
@@ -62,6 +66,7 @@ class ElinkBookApp extends StatefulWidget {
     required this.repository,
     required this.importService,
     required this.prefsManager,
+    this.bookmarksRepository,
     this.initialTheme = AppTheme.light,
     this.initialEinkMode = false,
     AppThemePreferences? themePreferences,
@@ -105,6 +110,7 @@ class _ElinkBookAppState extends State<ElinkBookApp> {
         repository: widget.repository,
         importService: widget.importService,
         prefsManager: widget.prefsManager,
+        bookmarksRepository: widget.bookmarksRepository,
         currentTheme: _theme,
         isEinkMode: _isEinkMode,
         onThemeChanged: _handleThemeChanged,
