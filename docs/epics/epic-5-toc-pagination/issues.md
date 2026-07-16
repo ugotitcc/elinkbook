@@ -156,7 +156,7 @@ PDF 格式下，目錄入口完全不顯示（不是顯示後出現空狀態）�
 
 ## Issue 5：頁首／頁尾顯示切換設定
 
-**Status:** ready-for-agent
+**Status:** ✅ 已完成並合併（PR #48，`feat/epic5-issue5-header-footer-toggle` → `main`）——依 `plans/plan-issue-5.md` 7 個 Task 實作：`BookReaderPrefs` 新增 `showHeader`／`showFooter`（`bool?`，未覆寫預設顯示），SQLite `book_reader_prefs` 表新增對應欄位（`version` 6→7，累加式 `if (oldVersion < N)` 遷移，`_addHeaderFooterColumns` 對表格存在性做防呆檢查）；`ResolvedPreferences`／`ReaderPrefsManagerImpl.resolve()` 新增對應 `required bool`，安全預設 `true`；`ReaderSettingsSheet`（EPUB）新增頁首／頁尾兩個開關，`PdfSettingsSheet`（PDF）依決策只新增頁尾開關（PDF 無章節概念，頁首開關對其無實際作用）；`ReaderScreen` 新增 `_buildAppBarTitle()`，頁首開啟時 AppBar 標題改為顯示目前章節名稱（複用 Issue 4 的 `TocNavigator.findCurrentPath`），並沿用既有 `_tocLoaded` 防呆條件避免點擊到背景抓取未完成的空白目錄；EPUB／PDF 既有頁尾顯示條件各自附加 `showFooter` 判斷；FXL（固定版面）完全不受影響。經計畫審查（Critical：`ResolvedPreferences` 新增 `required` 欄位後，`resolved_preferences_test.dart`／`toc_bottom_sheet_test.dart` 既有直接建構會編譯失敗，已於 Task 3 補上修正 Step）與分支程式碼審查（Important：計畫書 Task 2 Step 3 原本要求的遷移程式碼字面版本〔`if (oldVersion < 7)` 放在 `else` 分支外層無條件執行、不做表格存在性檢查〕實際上有 bug，透過交叉比對既有 v1→v6、v5→v6 兩個回歸測試證實會分別拋出 `duplicate column name`／`no such table` 崩潰；實作已正確偏離該版本，計畫書已同步修正說明；Minor：`reader_screen.dart` 一段過時註解已更新，`plan-issue-5.md` 全部 Task checkbox 已同步勾選）兩輪修正；`flutter test`（全專案 348 個）全過、`flutter analyze` 乾淨、真機整合測試（`3CEF42ECD491687`，Android 15）`All tests passed!`（4/4，涵蓋 EPUB 預設頁首顯示章節名稱、`showHeader=false` 恢復靜態標題、`showFooter=false` 隱藏頁尾〔EPUB／PDF 各一〕）。
 
 **依賴：** Issue 1（頁尾元件已存在）、Issue 4（目錄已存在，供頁首點擊展開）
 
@@ -180,13 +180,13 @@ PDF 格式下，目錄入口完全不顯示（不是顯示後出現空狀態）�
 
 **驗收標準：**
 
-- [ ] 版面設定新增「顯示頁首」「顯示頁尾」兩個獨立開關，預設皆開啟
-- [ ] 開啟頁首時，AppBar 正確被取代為章節名稱列，點擊可展開目錄
-- [ ] 關閉頁首時，正確回到現行靜態標題 AppBar
-- [ ] 頁尾顯示/隱藏正確反映開關狀態，且與頁首開關互不影響
-- [ ] 固定版面（FXL）EPUB 完全不受本功能影響，既有浮動控制系統運作正常
-- [ ] 上述測試皆通過，`flutter analyze` 乾淨，既有測試無回歸
-- [ ] 真機整合測試涵蓋流式 EPUB／PDF 切換頁首頁尾開關的端到端行為
+- [x] 版面設定新增「顯示頁首」「顯示頁尾」兩個獨立開關，預設皆開啟
+- [x] 開啟頁首時，AppBar 正確被取代為章節名稱列，點擊可展開目錄
+- [x] 關閉頁首時，正確回到現行靜態標題 AppBar
+- [x] 頁尾顯示/隱藏正確反映開關狀態，且與頁首開關互不影響
+- [x] 固定版面（FXL）EPUB 完全不受本功能影響，既有浮動控制系統運作正常
+- [x] 上述測試皆通過，`flutter analyze` 乾淨，既有測試無回歸
+- [x] 真機整合測試涵蓋流式 EPUB／PDF 切換頁首頁尾開關的端到端行為
 
 **Blocked by：** Issue 1（已完成）、Issue 4（已完成，可開始）
 
