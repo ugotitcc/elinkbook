@@ -24,7 +24,7 @@ class SqliteLibraryRepository implements LibraryRepository {
   static Future<SqliteLibraryRepository> open(String path) async {
     final db = await openDatabase(
       path,
-      version: 4,
+      version: 5,
       onConfigure: (db) async {
         // book_reader_prefs 的 ON DELETE CASCADE 需要外鍵約束真正生效，
         // SQLite 預設不強制外鍵，須逐連線手動開啟（見 epic-3 plan-issue-1）。
@@ -47,6 +47,8 @@ class SqliteLibraryRepository implements LibraryRepository {
             source TEXT NOT NULL,
             coverPath TEXT,
             progress REAL NOT NULL DEFAULT 0,
+            epubLocator TEXT,
+            pdfPageIndex INTEGER,
             groupName TEXT NOT NULL DEFAULT '${BookGroup.uncategorized}',
             createTime INTEGER NOT NULL,
             lastReadTime INTEGER NOT NULL
@@ -60,19 +62,33 @@ class SqliteLibraryRepository implements LibraryRepository {
           // 目前的 CREATE TABLE 已包含全部欄位（含 PDF、雙頁），一步到位，
           // 不需要再跑後續的 ALTER TABLE（該表在這之前根本不存在）。
           await _createBookReaderPrefsTable(db);
-          return;
+        } else {
+          // 【審查修正】原本此處用「if (oldVersion < 2) { ...; return; }」
+          // 提前結束整個 onUpgrade，這對 book_reader_prefs 表本身是對的
+          // （表剛建好、不需要再 ALTER），但會連帶跳過下方 books 表的
+          // oldVersion < 5 遷移——version 1 裝置跳級升級到 version 5 時，
+          // books 表會缺少 epubLocator/pdfPageIndex 欄位，實際讀寫時拋出
+          // `no such column` 崩潰（`/superpowers:requesting-code-review`
+          // 審查報告 Critical 1 發現）。改為 if/else：只有當
+          // book_reader_prefs 表已存在（oldVersion >= 2）時，才需要用
+          // ALTER TABLE 逐步補上該表後續版本新增的欄位；books 表的遷移
+          // 移到 if/else 區塊外、不受此分支影響，確保任何 oldVersion 都會
+          // 執行到。
+          if (oldVersion < 3) {
+            await _addPdfReaderPrefsColumns(db);
+          }
+          if (oldVersion < 4) {
+            await _addDualPageColumns(db);
+          }
         }
-        if (oldVersion < 3) {
-          // 裝置已經是 version 2：book_reader_prefs 表已存在但缺少 PDF
-          // 欄位，只能用 ALTER TABLE 補上。注意這裡改用 if 而非
-          // else if——version 2 的裝置跳級到 version 4 時，還需要緊接著
-          // 執行下方 oldVersion < 4 的雙頁欄位遷移，兩段都要跑到。
-          await _addPdfReaderPrefsColumns(db);
-        }
-        if (oldVersion < 4) {
-          // 裝置已經是 version 3：book_reader_prefs 表已有 PDF 欄位但缺少
-          // 雙頁欄位，只能用 ALTER TABLE 補上。
-          await _addDualPageColumns(db);
+        if (oldVersion < 5) {
+          // epic-5-toc-pagination Issue 2：本機閱讀位置記憶新增的 2 個
+          // 欄位，補追加到既有（version 1 起已存在）的 books 表。刻意放在
+          // 上方 if/else 之外、無條件檢查——books 表與 book_reader_prefs
+          // 是兩張獨立的表，此欄位遷移不論裝置目前處於哪個舊版本，只要
+          // oldVersion < 5 就必須執行，不能被 book_reader_prefs 表的建立
+          // /升級分支影響。
+          await _addReadingPositionColumns(db);
         }
       },
     );
@@ -140,6 +156,14 @@ class SqliteLibraryRepository implements LibraryRepository {
         'ALTER TABLE book_reader_prefs ADD COLUMN dual_page_cover_alone INTEGER');
     await db.execute(
         'ALTER TABLE book_reader_prefs ADD COLUMN dual_page_direction TEXT');
+  }
+
+  static Future<void> _addReadingPositionColumns(Database db) async {
+    // 本機閱讀位置記憶（epic-5-toc-pagination Issue 2）新增的 2 個欄位，
+    // 補追加到既有（version 1 起已存在）的 books 表，見
+    // docs/epics/epic-5-toc-pagination/spec.md「本機閱讀位置記憶」。
+    await db.execute('ALTER TABLE books ADD COLUMN epubLocator TEXT');
+    await db.execute('ALTER TABLE books ADD COLUMN pdfPageIndex INTEGER');
   }
 
   /// 供 [BookReaderPrefsRepository] 等後續 repository 共用同一個資料庫連線

@@ -13,6 +13,7 @@ import 'package:elinkbook/reader/book_reader_prefs.dart';
 import 'package:elinkbook/reader/book_reader_prefs_repository.dart';
 import 'package:elinkbook/reader/reader_prefs_manager.dart';
 import 'package:elinkbook/reader/reader_prefs_manager_impl.dart';
+import 'package:elinkbook/reader/reading_position_repository.dart';
 import 'package:elinkbook/reader/pdf_crop_mode.dart';
 import 'package:elinkbook/reader/dual_page_direction.dart';
 import 'package:elinkbook/reader/dual_page_mode.dart';
@@ -96,6 +97,7 @@ void main() {
         await SqliteLibraryRepository.open(inMemoryDatabasePath);
     prefsManager = ReaderPrefsManagerImpl(
       BookReaderPrefsRepository(libraryRepository.database),
+      ReadingPositionRepository(libraryRepository.database),
     );
   });
 

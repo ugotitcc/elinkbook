@@ -42,6 +42,12 @@ class PdfReaderView extends StatefulWidget {
   final DualPageDirection dualPageDirection;
   final bool isLandscape;
 
+  /// 開書起始頁索引（0-indexed，epic-5-toc-pagination Issue 2）。`null`
+  /// 代表無既有位置記錄，固定從頭開始——與其餘偏好參數不同，這是「一次性
+  /// 開書起始值」，只在 `openBook` 當下送出一次，不參與
+  /// [didUpdateWidget] 的偏好設定 diff 邏輯（見 Global Constraints）。
+  final int? initialPageIndex;
+
   const PdfReaderView({
     super.key,
     required this.filePath,
@@ -63,6 +69,7 @@ class PdfReaderView extends StatefulWidget {
     this.dualPageCoverAlone = true,
     this.dualPageDirection = DualPageDirection.rtl,
     this.isLandscape = false,
+    this.initialPageIndex,
   });
 
   @override
@@ -95,6 +102,8 @@ class _PdfReaderViewState extends State<PdfReaderView> {
     channel.invokeMethod('openBook', {
       'path': widget.filePath,
       'initialPreferences': _buildPreferencesMap(),
+      if (widget.initialPageIndex != null)
+        'initialPageIndex': widget.initialPageIndex,
     });
   }
 

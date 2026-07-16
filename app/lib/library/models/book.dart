@@ -17,8 +17,21 @@ class Book {
   /// 產生後封面圖檔的本機路徑（PNG）；`null` 表示尚未產生或產生失敗。
   final String? coverPath;
 
-  /// 本 epic 固定為 `0`（真實閱讀進度回寫屬於 epic-8-sync，見 design.md）。
+  /// 閱讀進度百分比（0.0-1.0），由 epic-5-toc-pagination Issue 2 起正式
+  /// 活化——EPUB 用 Readium `Locator.locations.totalProgression`，PDF 用
+  /// `(pdfPageIndex + 1) / 總頁數`，寫入時機見 [epubLocator]/[pdfPageIndex]。
   final double progress;
+
+  /// EPUB 序列化後的 Readium `Locator`（`Locator.toJSON().toString()`），
+  /// `null` 代表尚無記錄（例如書籍從未被開啟過，或本書為 PDF 格式）。與
+  /// [pdfPageIndex] 互斥（一本書只會用到其中之一），但兩欄位皆可能同時
+  /// 為 null（見 docs/epics/epic-5-toc-pagination/spec.md「本機閱讀位置
+  /// 記憶」——位置資料是系統追蹤的狀態，故放在 Book 而非
+  /// BookReaderPrefs）。
+  final String? epubLocator;
+
+  /// PDF 頁索引（0-indexed），`null` 代表尚無記錄。與 [epubLocator] 互斥。
+  final int? pdfPageIndex;
 
   final String groupName;
   final DateTime createTime;
@@ -33,6 +46,8 @@ class Book {
     required this.source,
     this.coverPath,
     this.progress = 0,
+    this.epubLocator,
+    this.pdfPageIndex,
     this.groupName = BookGroup.uncategorized,
     required this.createTime,
     required this.lastReadTime,
@@ -48,6 +63,8 @@ class Book {
       'source': source.name,
       'coverPath': coverPath,
       'progress': progress,
+      'epubLocator': epubLocator,
+      'pdfPageIndex': pdfPageIndex,
       'groupName': groupName,
       'createTime': createTime.millisecondsSinceEpoch,
       'lastReadTime': lastReadTime.millisecondsSinceEpoch,
@@ -64,6 +81,8 @@ class Book {
       source: BookSource.values.byName(map['source'] as String),
       coverPath: map['coverPath'] as String?,
       progress: (map['progress'] as num).toDouble(),
+      epubLocator: map['epubLocator'] as String?,
+      pdfPageIndex: map['pdfPageIndex'] as int?,
       groupName: map['groupName'] as String,
       createTime: DateTime.fromMillisecondsSinceEpoch(map['createTime'] as int),
       lastReadTime:
@@ -83,6 +102,8 @@ class Book {
       source: source,
       coverPath: coverPath,
       progress: progress,
+      epubLocator: epubLocator,
+      pdfPageIndex: pdfPageIndex,
       groupName: groupName ?? this.groupName,
       createTime: createTime,
       lastReadTime: lastReadTime,

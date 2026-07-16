@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/reader/app_font.dart';
 import 'package:elinkbook/reader/dual_page_mode.dart';
+import 'package:elinkbook/reader/epub_position_info.dart';
 import 'package:elinkbook/reader/epub_reader_view.dart';
 import 'package:elinkbook/reader/epub_text_align.dart';
 import 'package:elinkbook/reader/page_turn_mode.dart';
@@ -358,6 +359,89 @@ void main() {
     expect(
       find.byKey(const Key('epub_fxl_tap_zone_toggle_controls')),
       findsNothing,
+    );
+  });
+
+  testWidgets(
+      '_onPlatformViewCreated 呼叫 openBook 時，initialLocatorJson 非 null 時正確帶入',
+      (tester) async {
+    final calls = await _pumpEpubReaderView(
+      tester,
+      const EpubReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        initialLocatorJson: '{"href":"/chap1.xhtml"}',
+      ),
+    );
+
+    final openBookCall = calls.firstWhere((c) => c.method == 'openBook');
+    expect(openBookCall.arguments['initialLocatorJson'], '{"href":"/chap1.xhtml"}');
+  });
+
+  testWidgets('initialLocatorJson 為 null 時，openBook 的 arguments 不包含該 key',
+      (tester) async {
+    final calls = await _pumpEpubReaderView(
+      tester,
+      const EpubReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+      ),
+    );
+
+    final openBookCall = calls.firstWhere((c) => c.method == 'openBook');
+    expect(
+      (openBookCall.arguments as Map<Object?, Object?>)
+          .containsKey('initialLocatorJson'),
+      isFalse,
+    );
+  });
+
+  testWidgets('收到原生端 onLocatorChanged 事件時正確解析 EpubPositionInfo',
+      (tester) async {
+    EpubPositionInfo? received;
+    final binaryMessenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    MethodChannel? instanceChannel;
+
+    binaryMessenger.setMockMethodCallHandler(SystemChannels.platform_views,
+        (call) async {
+      if (call.method == 'create') {
+        final id = (call.arguments as Map<Object?, Object?>)['id'] as int;
+        instanceChannel =
+            MethodChannel('cc.ugotit.elinkbook/epub_reader_view_$id');
+        binaryMessenger.setMockMethodCallHandler(
+            instanceChannel!, (call) async => null);
+        return 0;
+      }
+      return null;
+    });
+
+    await tester.pumpWidget(MaterialApp(
+      home: EpubReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        onLocatorChanged: (info) => received = info,
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    final codec = instanceChannel!.codec;
+    final data = codec.encodeMethodCall(const MethodCall('onLocatorChanged', {
+      'locatorJson': '{"href":"/chap2.xhtml"}',
+      'progression': 0.35,
+    }));
+    await binaryMessenger.handlePlatformMessage(
+        instanceChannel!.name, data, (_) {});
+
+    expect(
+      received,
+      const EpubPositionInfo(
+        locatorJson: '{"href":"/chap2.xhtml"}',
+        progression: 0.35,
+      ),
     );
   });
 }

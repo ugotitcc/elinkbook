@@ -21,6 +21,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import org.readium.r2.navigator.epub.EpubNavigatorFactory
 import org.readium.r2.navigator.epub.EpubNavigatorFragment
@@ -32,7 +34,9 @@ import org.readium.r2.navigator.preferences.Spread
 import org.readium.r2.navigator.preferences.TextAlign
 import org.readium.r2.shared.publication.Layout
 import org.readium.r2.shared.publication.Locator
+import org.json.JSONObject
 import org.readium.r2.shared.publication.Publication
+import org.readium.r2.shared.publication.ReadingProgression
 import org.readium.r2.shared.util.AbsoluteUrl
 import org.readium.r2.shared.util.Url
 import org.readium.r2.shared.util.toAbsoluteUrl
@@ -156,6 +160,7 @@ class EpubReaderView(
                 openBook(
                     call.argument<String>("path"),
                     call.argument<Map<String, Any?>>("initialPreferences"),
+                    call.argument<String>("initialLocatorJson"),
                 )
                 result.success(null)
             }
@@ -462,6 +467,23 @@ class EpubReaderView(
                 val currentLeft = (webViewLoc[0] - containerLoc[0]).toFloat()
                 val currentTop = (webViewLoc[1] - containerLoc[1]).toFloat()
 
+                // 【頁序修正，實驗性】Readium 對 FXL 雙頁的原生排版（R2FXLPageFragment
+                // 的 firstWebView/secondWebView 綁定）完全不考慮書籍宣告的
+                // page-progression-direction：無論書籍是 RTL 或 LTR，「較早的頁面」
+                // 一律綁定 firstWebView、physically 落在螢幕左側（已用 javap 反編譯
+                // EpubNavigatorFragment 的頁面配對迴圈、R2PagerAdapter.getItem()、
+                // R2FXLPageFragment.Companion.newInstance()／onCreateView() 逐層確認，
+                // 全程沒有任何 ReadingProgression 判斷）。對 RTL 漫畫（較早的頁面應
+                // 讀者「先看到」、也就是應該落在螢幕右側）而言，這會讓雙頁順序視覺上
+                // 反過來。我們自己的排序邏輯（visibleWebViews.sortedBy { x 座標 }）
+                // 只是「觀察」Android 實際排出來的物理位置，並不能改變 Readium 的原生
+                // 綁定，所以真正的修正點在這裡：不要直接用 sortedBy 產生的 index 決定
+                // 視覺上要放哪一個 slot，而是在 RTL 時反轉——把 index 0（物理最左、
+                // Readium 認定的「較早頁面」）透過 translationX 直接搬到螢幕右半的
+                // slot，反之亦然。
+                val isRtl = publication?.metadata?.readingProgression == ReadingProgression.RTL
+                val visualSlot = if (isSpread && isRtl) 1 - index else index
+
                 // 雙頁模式下，右側 WebView 的置中運算必須在「它自己的半寬 slot」
                 // 座標系裡進行，否則 computeCenteringTranslation 會把它往 slot 0
                 // （螢幕左半邊）置中。做法：換算前先把 currentLeft 減去 slot 起點
@@ -473,21 +495,37 @@ class EpubReaderView(
                 // 右側 WebView 多平移一個 slot 寬度、直接推出可視範圍外——這正是
                 // 真機測試發現「翻頁後右側內容消失」的根因，見
                 // docs/epics/epic-16-dual-page/plans/plan-issue-6.md 審查修正
-                // 紀錄之後的 bugfix 說明）。slot 依排序後的 index 分配（index 0 =
-                // 左，1 = 右），不使用數值閾值判斷。
-                val slotOffsetX = if (isSpread && index == 1) availableWidth.toFloat() else 0f
+                // 紀錄之後的 bugfix 說明）。slot 依 [visualSlot] 分配（0 = 左，
+                // 1 = 右），不使用數值閾值判斷。
+                val slotOffsetX = if (isSpread && visualSlot == 1) availableWidth.toFloat() else 0f
 
-                val translation = EpubFxlScaler.computeCenteringTranslation(
-                    availableWidth = availableWidth,
-                    availableHeight = availableHeight,
-                    contentWidth = contentWidth,
-                    contentHeight = contentHeight,
-                    scale = fitScale,
-                    currentLeft = currentLeft - slotOffsetX,
-                    currentTop = currentTop,
-                )
-                webView.translationX = translation.x
-                webView.translationY = translation.y
+                if (isSpread) {
+                    // 【中縫空白修正，實驗性】雙頁模式下不使用 EpubFxlScaler.computeCenteringTranslation
+                    // 的「各自獨立置中」語意——那會讓左頁向左、右頁向右各自留出對稱邊界，
+                    // 兩者加總在螢幕中線處形成一道明顯的空白縫隙。改為讓兩頁貼齊中線（book
+                    // spine）：左側 slot（visualSlot 0）貼右邊界（緊靠中線），右側 slot
+                    // （visualSlot 1）貼左邊界（緊靠中線），垂直方向仍維持置中。currentLeft
+                    // 已在傳入前扣除 slotOffsetX（見上方既有註解），所以這裡的 desiredLeft
+                    // 是「相對各自 slot 起點」的目標位置，與既有的 slotOffsetX 扣除邏輯相容。
+                    val scaledWidth = contentWidth * fitScale
+                    val scaledHeight = contentHeight * fitScale
+                    val desiredLeft = if (visualSlot == 0) availableWidth - scaledWidth else 0f
+                    val desiredTop = (availableHeight - scaledHeight) / 2f
+                    webView.translationX = desiredLeft - (currentLeft - slotOffsetX)
+                    webView.translationY = desiredTop - currentTop
+                } else {
+                    val translation = EpubFxlScaler.computeCenteringTranslation(
+                        availableWidth = availableWidth,
+                        availableHeight = availableHeight,
+                        contentWidth = contentWidth,
+                        contentHeight = contentHeight,
+                        scale = fitScale,
+                        currentLeft = currentLeft,
+                        currentTop = currentTop,
+                    )
+                    webView.translationX = translation.x
+                    webView.translationY = translation.y
+                }
             }
         }
         fxlLayoutListener = listener
@@ -588,7 +626,11 @@ class EpubReaderView(
         }
     }
 
-    private fun openBook(path: String?, initialPreferences: Map<String, Any?>?) {
+    private fun openBook(
+        path: String?,
+        initialPreferences: Map<String, Any?>?,
+        initialLocatorJson: String?,
+    ) {
         if (path == null) {
             channel.invokeMethod("onError", "缺少檔案路徑")
             return
@@ -631,14 +673,18 @@ class EpubReaderView(
                     openedPublication.close()
                     return@launch
                 }
-                attachNavigator(openedPublication, initialPreferences)
+                attachNavigator(openedPublication, initialPreferences, initialLocatorJson)
             } catch (e: Exception) {
                 channel.invokeMethod("onError", "開啟 EPUB 檔案時發生未預期的錯誤：${e.message}")
             }
         }
     }
 
-    private fun attachNavigator(openedPublication: Publication, initialPreferences: Map<String, Any?>?) {
+    private fun attachNavigator(
+        openedPublication: Publication,
+        initialPreferences: Map<String, Any?>?,
+        initialLocatorJson: String?,
+    ) {
         // commitNow 在 Activity 已經過了 onSaveInstanceState（例如解析完成前使用者恰好把
         // App 切到背景）時會丟出 IllegalStateException；containerId 若因為合成模式改變
         // 等原因無法解析到實際 View（見上方類別註解），也可能丟出 IllegalArgumentException。
@@ -647,8 +693,11 @@ class EpubReaderView(
         try {
             publication = openedPublication
             val navigatorFactory = EpubNavigatorFactory(publication = openedPublication)
+            val initialLocator = initialLocatorJson?.let {
+                Locator.fromJSON(JSONObject(it))
+            }
             val fragmentFactory = navigatorFactory.createFragmentFactory(
-                initialLocator = null,
+                initialLocator = initialLocator,
                 listener = this,
                 paginationListener = this,
                 configuration = buildFontFamiliesConfiguration(),
@@ -660,6 +709,37 @@ class EpubReaderView(
             }
             navigatorFragment = activity.supportFragmentManager
                 .findFragmentByTag(fragmentTag) as? EpubNavigatorFragment
+            // 訂閱 currentLocator StateFlow（Navigator 介面的公開屬性），取代
+            // PaginationListener.onPageChanged 作為 onLocatorChanged 的觸發來源
+            // ——後者在 FXL（固定版面）書籍中不會被呼叫（Readium 內部的
+            // notifyCurrentLocation() 在 FXL 頁面時 currentReflowablePageFragment
+            // 為 null，會跳過 onPageChanged 呼叫），但 currentLocator 在
+            // _currentLocator.setValue() 之後無條件更新，不論 FXL 或 reflowable
+            // 都能正確取得最新定位（本審查修正不再覆寫 onPageChanged——interface
+            // 對它有 default no-op 實作，不覆寫也能合法實作 PaginationListener）。
+            //
+            // 【審查修正】此處刻意不再從這裡手動呼叫 onPageLoaded()——onPageLoaded
+            // 是 PaginationListener 的另一個方法，由 Readium 在每個 WebView 各自
+            // 載入完成時各別呼叫（見下方 override fun onPageLoaded()），對 FXL
+            // 頁面本來就會正確觸發，不受 currentReflowablePageFragment 為 null
+            // 的限制（FXL 頁面內部本來就用 WebView 渲染，只是走 R2FXLPageFragment
+            // 而非 R2EpubPageFragment）。先前在此手動呼叫 onPageLoaded() 會把它的
+            // 觸發時機從「每個 WebView 各自載入完成」改成「currentLocator 這個
+            // 經過 100ms debounce、以定位變動為單位的訊號」，導致 applyFxlFitScale()
+            // 依賴的首次量測時機被打亂，造成橫排雙頁 FXL 版面計算錯誤（中間空白、
+            // 頁序顛倒）。onLocatorChanged 的推送與 onPageLoaded() 是兩個獨立的
+            // 訊號來源，不需要綁在一起觸發。
+            navigatorFragment?.currentLocator
+                ?.onEach { locator ->
+                    channel.invokeMethod(
+                        "onLocatorChanged",
+                        mapOf(
+                            "locatorJson" to locator.toJSON().toString(),
+                            "progression" to locator.locations.totalProgression,
+                        ),
+                    )
+                }
+                ?.launchIn(scope)
             if (initialPreferences != null && initialPreferences.isNotEmpty()) {
                 applyDualPagePreferences(initialPreferences)
                 currentPreferences = currentPreferences.plus(buildPreferencesFromMap(initialPreferences))
@@ -674,6 +754,14 @@ class EpubReaderView(
         }
     }
 
+    /**
+     * epic-5-toc-pagination Issue 2 審查修正：恢復為 PaginationListener 的
+     * override（原本一度被改成手動呼叫的 private 函式，見上方 attachNavigator()
+     * 內的說明）。Readium 對每個 WebView（含 FXL 頁面內部的 WebView）各自載入
+     * 完成時都會呼叫本方法，不受「currentReflowablePageFragment 為 null」的
+     * FXL 限制影響（那個限制只影響 onPageChanged，見 PaginationListener 介面
+     * 說明）。
+     */
     override fun onPageLoaded() {
         if (!pageReported) {
             pageReported = true
@@ -702,8 +790,6 @@ class EpubReaderView(
             ),
         )
     }
-
-    override fun onPageChanged(pageIndex: Int, totalPages: Int, locator: Locator) {}
 
     override fun onExternalLinkActivated(url: AbsoluteUrl) {}
 

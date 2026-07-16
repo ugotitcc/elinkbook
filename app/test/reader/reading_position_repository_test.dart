@@ -1,0 +1,87 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:elinkbook/library/models/book.dart';
+import 'package:elinkbook/library/models/library_enums.dart';
+import 'package:elinkbook/library/sqlite_library_repository.dart';
+import 'package:elinkbook/reader/reading_position.dart';
+import 'package:elinkbook/reader/reading_position_repository.dart';
+
+void main() {
+  setUpAll(() {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+  });
+
+  late SqliteLibraryRepository libraryRepository;
+  late ReadingPositionRepository repository;
+
+  setUp(() async {
+    libraryRepository =
+        await SqliteLibraryRepository.open(inMemoryDatabasePath);
+    repository = ReadingPositionRepository(libraryRepository.database);
+    await libraryRepository.insertBook(Book(
+      id: 'b1',
+      title: '書名',
+      format: BookFileFormat.epub,
+      filePath: 'content://example/b1',
+      source: BookSource.local,
+      createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+      lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+    ));
+  });
+
+  tearDown(() async {
+    await libraryRepository.close();
+  });
+
+  test('尚未儲存過位置時，load 回傳預設值（皆為 null／progress=0）', () async {
+    final position = await repository.load('b1');
+    expect(position, const ReadingPosition());
+  });
+
+  test('save 寫入 EPUB 定位後，load 讀回相同的值', () async {
+    const position = ReadingPosition(
+      epubLocatorJson:
+          '{"href":"/chap1.xhtml","locations":{"totalProgression":0.3}}',
+      progress: 0.3,
+    );
+
+    await repository.save('b1', position);
+
+    expect(await repository.load('b1'), position);
+  });
+
+  test('save 寫入 PDF 頁索引後，load 讀回相同的值', () async {
+    const position = ReadingPosition(pdfPageIndex: 4, progress: 0.67);
+
+    await repository.save('b1', position);
+
+    expect(await repository.load('b1'), position);
+  });
+
+  test('save 覆寫既有位置（同一本書再次呼叫 save）', () async {
+    await repository.save(
+        'b1', const ReadingPosition(pdfPageIndex: 1, progress: 0.1));
+    await repository.save(
+        'b1', const ReadingPosition(pdfPageIndex: 5, progress: 0.5));
+
+    final position = await repository.load('b1');
+    expect(position.pdfPageIndex, 5);
+    expect(position.progress, 0.5);
+  });
+
+  test('save 不影響書籍的其餘欄位（partial update，非整列覆寫）', () async {
+    await repository.save(
+        'b1', const ReadingPosition(pdfPageIndex: 2, progress: 0.2));
+
+    final books = await libraryRepository.listBooks();
+    expect(books.single.title, '書名'); // 未被覆寫成任何預設值
+  });
+
+  test('對應書籍列不存在時，save 靜默無效果、不拋出例外', () async {
+    await expectLater(
+      repository.save('不存在的書', const ReadingPosition(pdfPageIndex: 1)),
+      completes,
+    );
+  });
+}

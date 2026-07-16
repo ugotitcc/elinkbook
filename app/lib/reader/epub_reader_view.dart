@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import 'app_font.dart';
 import 'dual_page_mode.dart';
+import 'epub_position_info.dart';
 import 'epub_text_align.dart';
 import 'page_turn_mode.dart';
 import 'writing_mode.dart';
@@ -42,6 +43,17 @@ class EpubReaderView extends StatefulWidget {
   final DualPageMode dualPageMode;
   final bool isLandscape;
 
+  /// 開書起始定位（序列化後的 Readium Locator，epic-5-toc-pagination
+  /// Issue 2）。`null` 代表無既有位置記錄，固定從書本開頭開始——與其餘
+  /// 偏好參數不同，這是「一次性開書起始值」，只在 `openBook` 當下送出
+  /// 一次，不參與 [didUpdateWidget] 的偏好設定 diff 邏輯（見 Global
+  /// Constraints）。
+  final String? initialLocatorJson;
+
+  /// 目前定位變動時觸發（開書、翻頁、目錄跳轉），供呼叫端（ReaderScreen）
+  /// 快取最新定位，於離開/背景時寫入資料庫。
+  final ValueChanged<EpubPositionInfo>? onLocatorChanged;
+
   /// 固定版面（FXL）中間熱區觸發，切換 ReaderScreen 懸浮控制項的顯示/隱藏。
   final VoidCallback? onToggleFixedLayoutControls;
 
@@ -70,6 +82,8 @@ class EpubReaderView extends StatefulWidget {
     this.isLandscape = false,
     this.onToggleFixedLayoutControls,
     this.onFixedLayoutPageTurn,
+    this.initialLocatorJson,
+    this.onLocatorChanged,
   });
 
   @override
@@ -87,6 +101,8 @@ class _EpubReaderViewState extends State<EpubReaderView> {
     channel.invokeMethod('openBook', {
       'path': widget.filePath,
       'initialPreferences': _buildPreferencesMap(),
+      if (widget.initialLocatorJson != null)
+        'initialLocatorJson': widget.initialLocatorJson,
     });
   }
 
@@ -164,6 +180,13 @@ class _EpubReaderViewState extends State<EpubReaderView> {
         );
         setState(() => _isFixedLayout = info.isFixedLayout);
         widget.onLayoutResolved?.call(info);
+        break;
+      case 'onLocatorChanged':
+        final args = call.arguments as Map<Object?, Object?>;
+        widget.onLocatorChanged?.call(EpubPositionInfo(
+          locatorJson: args['locatorJson'] as String,
+          progression: (args['progression'] as num?)?.toDouble(),
+        ));
         break;
     }
   }

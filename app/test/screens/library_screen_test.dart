@@ -99,6 +99,63 @@ void main() {
     expect(find.text('0%'), findsOneWidget);
   });
 
+  testWidgets('從閱讀器返回書架時，重新載入書籍清單，避免後續操作以過期資料覆寫最新進度',
+      (tester) async {
+    // 使用 .txt 格式讓 ReaderScreen 命中「不支援格式」分支（純 Dart 安全路徑，
+    // 不觸發 AndroidView），確保 pumpAndSettle 能順利完成。重點是驗證
+    // Navigator.pop() 後 _openBook 的 .then() 回呼會呼叫 _loadBooks()，
+    // 與實際閱讀器渲染無關。
+    final book = _testBook(
+      id: '1',
+      title: '紅樓夢',
+      author: '曹雪芹',
+      filePath: 'content://example/1.txt',
+    );
+    final repository = FakeLibraryRepository(initialBooks: [book]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: repository,
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('0%'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('book_item_1')));
+    await tester.pumpAndSettle();
+
+    // widget test 環境無法真正渲染原生 PlatformView 觸發 ReaderScreen 的
+    // 位置寫入路徑，這裡直接呼叫 repository.updateBook 模擬「ReaderScreen
+    // 已透過 ReadingPositionRepository 把最新進度寫入資料庫」這個結果
+    // （見 Critical 2 審查意見的觸發情境）。
+    await repository.updateBook(Book(
+      id: '1',
+      title: '紅樓夢',
+      author: '曹雪芹',
+      format: BookFileFormat.txt,
+      filePath: 'content://example/1.txt',
+      source: BookSource.local,
+      progress: 0.5,
+      groupName: BookGroup.uncategorized,
+      createTime: book.createTime,
+      lastReadTime: book.lastReadTime,
+    ));
+
+    // 返回書架（點擊 ReaderScreen AppBar 的預設返回鍵，等同
+    // Navigator.pop()）。
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    expect(find.text('50%'), findsOneWidget,
+        reason: '返回書架後應重新載入書籍清單，顯示閱讀器寫入的最新進度，'
+            '而非停留在舊快照的 0%');
+  });
+
   testWidgets('切換檢視模式按鈕後，書架從 grid 切換為列表呈現', (tester) async {
     final book = _testBook(id: '1', title: '紅樓夢', author: '曹雪芹');
     await tester.pumpWidget(
