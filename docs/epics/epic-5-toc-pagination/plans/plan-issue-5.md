@@ -32,7 +32,7 @@
 **Interfaces:**
 - Produces: `BookReaderPrefs.showHeader`（`bool?`）、`BookReaderPrefs.showFooter`（`bool?`），供 Task 2（SQLite 欄位對應）、Task 3（`resolve()` 合併邏輯）、Task 4/5（設定面板讀寫）消費。
 
-- [ ] **Step 1: 寫失敗測試**
+- [x] **Step 1: 寫失敗測試**
 
 於 `app/test/reader/book_reader_prefs_test.dart` 檔案結尾（最後一個 `}` 之前）新增：
 
@@ -92,12 +92,12 @@
   });
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/reader/book_reader_prefs_test.dart`
 Expected: FAIL（編譯錯誤，`showHeader`/`showFooter` 尚未存在於 `BookReaderPrefs` 建構子）
 
-- [ ] **Step 3: 實作 `BookReaderPrefs` 欄位擴充**
+- [x] **Step 3: 實作 `BookReaderPrefs` 欄位擴充**
 
 `app/lib/reader/book_reader_prefs.dart` 第 39-42 行（`dualPageDirection` 欄位宣告之後）新增：
 
@@ -180,17 +180,17 @@ Expected: FAIL（編譯錯誤，`showHeader`/`showFooter` 尚未存在於 `BookR
 }
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `flutter test test/reader/book_reader_prefs_test.dart`
 Expected: PASS（全部測試綠燈）
 
-- [ ] **Step 5: 執行 `flutter analyze` 確認乾淨**
+- [x] **Step 5: 執行 `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/reader/book_reader_prefs.dart app/test/reader/book_reader_prefs_test.dart
@@ -209,7 +209,7 @@ git commit -m "feat(epic-5): BookReaderPrefs 新增 showHeader/showFooter 欄位
 - Consumes: Task 1 的 `show_header`/`show_footer` 欄位命名（`BookReaderPrefs.toMap`/`fromMap` 已用這兩個欄位名）。
 - Produces: `book_reader_prefs` 表新增 `show_header INTEGER`／`show_footer INTEGER` 兩欄，資料庫 `version` 由 6 提升為 7。
 
-- [ ] **Step 1: 寫失敗測試**
+- [x] **Step 1: 寫失敗測試**
 
 於 `app/test/library/sqlite_library_repository_test.dart` 檔案結尾（第 891 行，最後一個 `}` 之前）新增：
 
@@ -341,12 +341,12 @@ git commit -m "feat(epic-5): BookReaderPrefs 新增 showHeader/showFooter 欄位
   });
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/library/sqlite_library_repository_test.dart`
 Expected: FAIL（`no such column: show_header`，因為 schema 尚未更新且 `version` 仍為 6，`onUpgrade` 不會被觸發到新遷移邏輯）
 
-- [ ] **Step 3: 實作 schema migration**
+- [x] **Step 3: 實作 schema migration**
 
 `app/lib/library/sqlite_library_repository.dart` 第 27 行，`version: 6,` 改為：
 
@@ -367,27 +367,59 @@ Expected: FAIL（`no such column: show_header`，因為 schema 尚未更新且 `
   }
 ```
 
-第 94-100 行（`if (oldVersion < 6) { ... }` 區塊之後），新增第三個無條件檢查區塊：
+> **【審查修正，取代本 Step 原始版本】** 本 Step 原始版本要求把 `if (oldVersion < 7)`
+> 放在 `if (oldVersion < 2) {...} else {...}` 這組 if/else **之外**（頂層、無條件
+> 執行），且 `_addHeaderFooterColumns` 不做任何表格存在性檢查，並宣稱「結果等價」。
+> 這個宣稱是錯的：`tmp/epic-5/reviews/review-issue-5-independent.md` I-1 項透過
+> 交叉比對本檔案既有（未被本 Issue 改動）的兩個回歸測試證明，該版本會讓既有升級
+> 路徑崩潰——
+> 1. 「既有 version 1 裝置跳級升級到 version 6」測試：`oldVersion < 2` 為真，會呼叫
+>    `_createBookReaderPrefsTable(db)`（已含 `show_header`/`show_footer`）；若頂層
+>    又無條件再對同一張表 `ALTER TABLE ADD COLUMN show_header` 一次，會拋出
+>    `duplicate column name: show_header`。
+> 2. 「既有 version 5 裝置升級到 version 6」測試：該測試模擬的舊資料庫**沒有**
+>    `book_reader_prefs` 表；若沒有存在性檢查就對它執行 `ALTER TABLE`，會拋出
+>    `no such table: book_reader_prefs`。
+>
+> 下方步驟已改為分支邏輯與存在性檢查兼具的正確版本（與 `feat/epic5-issue5-header-footer-toggle`
+> 分支實際合併的程式碼一致），後續依此計畫實作/複查的人請以此為準，不要沿用舊版
+> 「頂層無條件執行」的說法。
+
+第 94-100 行（`if (oldVersion < 6) { ... }` 區塊之後），新增第三個無條件檢查區塊；並在
+第 78-83 行既有的 `if (oldVersion < 2) {...} else { if (oldVersion < 3) {...} if
+(oldVersion < 4) {...} }` 這組 `else` 分支**內**，於 `if (oldVersion < 4)` 區塊之後
+新增 `if (oldVersion < 7)` 區塊（放在 `else` 分支內的理由：`oldVersion < 2` 時
+`_createBookReaderPrefsTable` 已一步到位建表、不需要再 `ALTER TABLE`；只有
+`book_reader_prefs` 表本來就已存在（`oldVersion >= 2`）時才需要補欄位）：
 
 ```dart
+        if (oldVersion < 2) {
+          await _createBookReaderPrefsTable(db);
+        } else {
+          if (oldVersion < 3) {
+            await _addPdfReaderPrefsColumns(db);
+          }
+          if (oldVersion < 4) {
+            await _addDualPageColumns(db);
+          }
+          if (oldVersion < 7) {
+            // epic-5-toc-pagination Issue 5：頁首/頁尾顯示切換新增的 2 個
+            // 欄位，補追加到既有（version 2 起已存在）的 book_reader_prefs
+            // 表。放在 else 分支內（oldVersion >= 2）——因為 oldVersion < 2
+            // 時 _createBookReaderPrefsTable 已一步到位建表含
+            // show_header/show_footer，不需要再 ALTER TABLE。
+            await _addHeaderFooterColumns(db);
+          }
+        }
+        if (oldVersion < 5) {
+          await _addReadingPositionColumns(db);
+        }
         if (oldVersion < 6) {
           // epic-5-toc-pagination Issue 3：全書字元數快取欄位，補追加到
           // 既有（version 1 起已存在）的 books 表。刻意放在上方 if/else
           // 之外、無條件檢查，比照 oldVersion < 5 區塊的既有原則——不論
           // 裝置目前處於哪個舊版本，只要 oldVersion < 6 就必須執行。
           await _addTotalCharacterCountColumn(db);
-        }
-        if (oldVersion < 7) {
-          // epic-5-toc-pagination Issue 5：頁首/頁尾顯示切換新增的 2 個
-          // 欄位，補追加到既有（version 2 起已存在）的 book_reader_prefs
-          // 表。與上方 books 表遷移刻意放在同一層級（onUpgrade 頂層、
-          // 無條件檢查）——雖然本次新增的是 book_reader_prefs 表的欄位，
-          // 但 oldVersion < 2 分支已呼叫最新版 _createBookReaderPrefsTable
-          // 一步到位建表（已含 show_header/show_footer），此處的
-          // ALTER TABLE 只在該表本來就已存在（oldVersion >= 2）時才需要，
-          // 而 book_reader_prefs 表只要存在就必然是 oldVersion >= 2，
-          // 故放在頂層而非上方 else 分支內，寫法更單純且結果等價。
-          await _addHeaderFooterColumns(db);
         }
       },
     );
@@ -402,24 +434,30 @@ Expected: FAIL（`no such column: show_header`，因為 schema 尚未更新且 `
     // 頁首/頁尾顯示切換（epic-5-toc-pagination Issue 5）新增的 2 個欄位，
     // 補追加到既有（version 2 起已存在）的 book_reader_prefs 表，見
     // docs/epics/epic-5-toc-pagination/spec.md「頁首/頁尾顯示切換」。
-    await db.execute(
-        'ALTER TABLE book_reader_prefs ADD COLUMN show_header INTEGER');
-    await db.execute(
-        'ALTER TABLE book_reader_prefs ADD COLUMN show_footer INTEGER');
+    // 僅在表已存在時才執行 ALTER TABLE（某些測試情境下 oldVersion >= 2
+    // 但 book_reader_prefs 表可能不存在，見 v5→v6 升級測試）。
+    final tables = await db.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='book_reader_prefs'");
+    if (tables.isNotEmpty) {
+      await db.execute(
+          'ALTER TABLE book_reader_prefs ADD COLUMN show_header INTEGER');
+      await db.execute(
+          'ALTER TABLE book_reader_prefs ADD COLUMN show_footer INTEGER');
+    }
   }
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `flutter test test/library/sqlite_library_repository_test.dart`
 Expected: PASS（全部測試綠燈，含既有 v1→v6 系列遷移測試不受影響）
 
-- [ ] **Step 5: 執行 `flutter analyze` 確認乾淨**
+- [x] **Step 5: 執行 `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/library/sqlite_library_repository.dart app/test/library/sqlite_library_repository_test.dart
@@ -441,7 +479,7 @@ git commit -m "feat(epic-5): book_reader_prefs 新增 show_header/show_footer �
 - Consumes: Task 1 的 `BookReaderPrefs.showHeader`/`showFooter`（`bool?`）。
 - Produces: `ResolvedPreferences.showHeader`/`showFooter`（`required bool`，安全預設 `true`），供 Task 6（`ReaderScreen`）消費。
 
-- [ ] **Step 1: 寫失敗測試**
+- [x] **Step 1: 寫失敗測試**
 
 於 `app/test/reader/reader_prefs_manager_test.dart` 第 36-56 行的測試（`'全部欄位皆未覆寫時，回傳的 non-null 欄位皆為既存安全預設值'`）內，於 `expect(resolved.dualPageDirection, DualPageDirection.rtl);` 之後新增：
 
@@ -482,12 +520,12 @@ git commit -m "feat(epic-5): book_reader_prefs 新增 show_header/show_footer �
     });
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/reader/reader_prefs_manager_test.dart`
 Expected: FAIL（編譯錯誤，`ResolvedPreferences`/`BookReaderPrefs` 尚未有 `showHeader`/`showFooter`——`BookReaderPrefs` 部分已由 Task 1 完成，故僅 `ResolvedPreferences.showHeader` 缺失導致 `resolved.showHeader` 編譯失敗）
 
-- [ ] **Step 3: 實作 `ResolvedPreferences` 擴充**
+- [x] **Step 3: 實作 `ResolvedPreferences` 擴充**
 
 `app/lib/reader/resolved_preferences.dart` 第 45-47 行（`dualPageDirection` 欄位宣告之後）新增：
 
@@ -509,7 +547,7 @@ Expected: FAIL（編譯錯誤，`ResolvedPreferences`/`BookReaderPrefs` 尚未�
   });
 ```
 
-- [ ] **Step 4: 實作 `ReaderPrefsManagerImpl.resolve()` 擴充**
+- [x] **Step 4: 實作 `ReaderPrefsManagerImpl.resolve()` 擴充**
 
 `app/lib/reader/reader_prefs_manager_impl.dart` 第 121-130 行 `resolve()` 回傳的 `ResolvedPreferences(...)`，於 `dualPageDirection: book.dualPageDirection ?? DualPageDirection.rtl,` 之後新增：
 
@@ -524,7 +562,7 @@ Expected: FAIL（編譯錯誤，`ResolvedPreferences`/`BookReaderPrefs` 尚未�
 }
 ```
 
-- [ ] **Step 5: 修正因 `ResolvedPreferences` 新增 `required` 欄位而編譯失敗的既有測試檔案**
+- [x] **Step 5: 修正因 `ResolvedPreferences` 新增 `required` 欄位而編譯失敗的既有測試檔案**
 
 `ResolvedPreferences` 新增 `showHeader`/`showFooter` 兩個 `required bool` 欄位後，程式碼庫中所有繞過 `resolve()`、直接建構 `ResolvedPreferences(...)` 的既有測試會編譯失敗（審查意見 `tmp/epic-5/reviews/plan-issue-5-review.md` Critical 項，已核對codebase 確認為真：兩處皆為既有測試檔案、與 `resolve()` 本身無關，需個別補上欄位值）。
 
@@ -546,22 +584,22 @@ Expected: FAIL（編譯錯誤，`ResolvedPreferences`/`BookReaderPrefs` 尚未�
 );
 ```
 
-- [ ] **Step 6: 執行測試確認通過**
+- [x] **Step 6: 執行測試確認通過**
 
 Run: `flutter test test/reader/reader_prefs_manager_test.dart test/reader/resolved_preferences_test.dart test/screens/toc_bottom_sheet_test.dart`
 Expected: PASS（全部測試綠燈）
 
-- [ ] **Step 7: 執行全專案測試確認無回歸**
+- [x] **Step 7: 執行全專案測試確認無回歸**
 
 Run: `flutter test`
 Expected: 全部通過（Step 5 已補上程式碼庫中僅有的兩處既有 `ResolvedPreferences(...)` 直接建構點；若此步驟仍發現其他編譯失敗的建構點，代表 Step 5 的範圍調查有遺漏，需一併補上 `showHeader: true, showFooter: true,`）
 
-- [ ] **Step 8: 執行 `flutter analyze` 確認乾淨**
+- [x] **Step 8: 執行 `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add app/lib/reader/resolved_preferences.dart app/lib/reader/reader_prefs_manager_impl.dart app/test/reader/reader_prefs_manager_test.dart app/test/reader/resolved_preferences_test.dart app/test/screens/toc_bottom_sheet_test.dart
@@ -580,7 +618,7 @@ git commit -m "feat(epic-5): ResolvedPreferences 新增 showHeader/showFooter，
 - Consumes: Task 1 的 `BookReaderPrefs.showHeader`/`showFooter`。
 - Produces: 使用者互動後透過既有 `onChanged(BookReaderPrefs)` 回報包含 `showHeader`/`showFooter` 的完整 `BookReaderPrefs`，供 `ReaderScreen`（既有 `_handlePrefsChanged` 呼叫路徑，本 Task 不變動）持久化。
 
-- [ ] **Step 1: 寫失敗測試**
+- [x] **Step 1: 寫失敗測試**
 
 於 `app/test/screens/reader_settings_sheet_test.dart` 檔案結尾（最後一個 `}` 之前，`_pumpSheet` 定義之前）新增：
 
@@ -666,12 +704,12 @@ testWidgets('切換頁首/頁尾開關不會清空其他既有覆寫欄位（回
 });
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/screens/reader_settings_sheet_test.dart`
 Expected: FAIL（`find.byKey(const Key('reader_settings_show_header'))` 找不到對應 widget）
 
-- [ ] **Step 3: 實作 `ReaderSettingsSheet` 擴充**
+- [x] **Step 3: 實作 `ReaderSettingsSheet` 擴充**
 
 `app/lib/screens/reader_settings_sheet.dart` 第 53-55 行（State 欄位宣告，`_screenOrientationOverride` 之後）新增：
 
@@ -748,17 +786,17 @@ Expected: FAIL（`find.byKey(const Key('reader_settings_show_header'))` 找不�
           _buildWritingModeOverrideRow(),
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `flutter test test/screens/reader_settings_sheet_test.dart`
 Expected: PASS（全部測試綠燈，含既有測試不受影響）
 
-- [ ] **Step 5: 執行 `flutter analyze` 確認乾淨**
+- [x] **Step 5: 執行 `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/screens/reader_settings_sheet.dart app/test/screens/reader_settings_sheet_test.dart
@@ -777,7 +815,7 @@ git commit -m "feat(epic-5): ReaderSettingsSheet 新增顯示頁首/頁尾開關
 - Consumes: Task 1 的 `BookReaderPrefs.showFooter`（PDF 不使用 `showHeader`，見 Global Constraints）。
 - Produces: 使用者互動後透過既有 `onChanged(BookReaderPrefs)` 回報包含 `showFooter` 的完整 `BookReaderPrefs`。
 
-- [ ] **Step 1: 寫失敗測試**
+- [x] **Step 1: 寫失敗測試**
 
 於 `app/test/screens/pdf_settings_sheet_test.dart` 檔案結尾（最後一個 `}` 之前，`_pumpSheet` 定義之前）新增：
 
@@ -837,12 +875,12 @@ testWidgets('已持久化 showFooter=false 時，調整雙頁模式不會清空�
 });
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/screens/pdf_settings_sheet_test.dart`
 Expected: FAIL（`find.byKey(const Key('pdf_settings_show_footer'))` 找不到對應 widget）
 
-- [ ] **Step 3: 實作 `PdfSettingsSheet` 擴充**
+- [x] **Step 3: 實作 `PdfSettingsSheet` 擴充**
 
 `app/lib/screens/pdf_settings_sheet.dart` 第 46-47 行（State 欄位宣告，`_dualPageDirection` 之後）新增：
 
@@ -893,17 +931,17 @@ Expected: FAIL（`find.byKey(const Key('pdf_settings_show_footer'))` 找不到�
             const Text('頁面方向'),
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `flutter test test/screens/pdf_settings_sheet_test.dart`
 Expected: PASS（全部測試綠燈，含既有測試不受影響）
 
-- [ ] **Step 5: 執行 `flutter analyze` 確認乾淨**
+- [x] **Step 5: 執行 `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/screens/pdf_settings_sheet.dart app/test/screens/pdf_settings_sheet_test.dart
@@ -922,7 +960,7 @@ git commit -m "feat(epic-5): PdfSettingsSheet 新增顯示頁尾開關（不含�
 - Consumes: Task 3 的 `ResolvedPreferences.showHeader`/`showFooter`；既有 `TocNavigator.findCurrentPath(List<TocEntry>, double?)`（Issue 4）、既有 `_tocEntries`/`_tocLoaded`/`_epubPositionInfo`/`_openToc()`（Issue 4）。
 - Produces: 無新的公開介面——`ReaderScreen` 對外建構參數不變，行為變化透過既有 `Key('reader_appbar_chapter_title')`（新增）/`Key('reader_appbar_static_title')`（新增）/`Key('reader_footer')`（既有）供測試觀察。
 
-- [ ] **Step 1: 寫失敗測試**
+- [x] **Step 1: 寫失敗測試**
 
 於 `app/test/screens/reader_screen_test.dart` 檔案結尾（最後一個 `}` 之前）新增：
 
@@ -1205,12 +1243,12 @@ git commit -m "feat(epic-5): PdfSettingsSheet 新增顯示頁尾開關（不含�
   });
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/screens/reader_screen_test.dart`
 Expected: FAIL（`find.byKey(const Key('reader_appbar_chapter_title'))`/`Key('reader_appbar_static_title')` 找不到對應 widget，`AppBar.title` 目前仍是寫死的 `const Text('閱讀器')`）
 
-- [ ] **Step 3: 實作 `ReaderScreen` 接線**
+- [x] **Step 3: 實作 `ReaderScreen` 接線**
 
 `app/lib/screens/reader_screen.dart` 第 504-514 行 `build()` 內的 `Scaffold`，`title: const Text('閱讀器'),` 改為：
 
@@ -1275,22 +1313,22 @@ Expected: FAIL（`find.byKey(const Key('reader_appbar_chapter_title'))`/`Key('re
             _buildEpubFooter(_resolved!, _totalCharacterCount!),
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `flutter test test/screens/reader_screen_test.dart`
 Expected: PASS（全部測試綠燈，含既有測試不受影響——尤其第 38-51 行的 TXT 格式測試與第 53-72 行未觸發 `onLayoutResolved` 的 EPUB 測試，兩者的 AppBar 標題皆維持 `_buildAppBarTitle` 回傳的靜態文字分支，`find.text('閱讀器')` 斷言不受影響）
 
-- [ ] **Step 5: 執行全專案測試確認無回歸**
+- [x] **Step 5: 執行全專案測試確認無回歸**
 
 Run: `flutter test`
 Expected: 全部通過
 
-- [ ] **Step 6: 執行 `flutter analyze` 確認乾淨**
+- [x] **Step 6: 執行 `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app/lib/screens/reader_screen.dart app/test/screens/reader_screen_test.dart
@@ -1307,7 +1345,7 @@ git commit -m "feat(epic-5): ReaderScreen 接線頁首標題替換與頁尾顯�
 **Interfaces:**
 - Consumes: 全部前六個 Task 產出的完整資料流（`BookReaderPrefs` → SQLite → `resolve()` → `ReaderScreen`）。本 Task 不新增任何生產程式碼介面，純驗證。
 
-- [ ] **Step 1: 撰寫真機整合測試**
+- [x] **Step 1: 撰寫真機整合測試**
 
 建立 `app/integration_test/reader_header_footer_toggle_test.dart`：
 
@@ -1502,17 +1540,17 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: 於真實裝置執行測試**
+- [x] **Step 2: 於真實裝置執行測試**
 
 Run: `flutter test integration_test/reader_header_footer_toggle_test.dart -d <device-id>`（例如本專案既有的 `3CEF42ECD491687`）
 Expected: `All tests passed!`
 
-- [ ] **Step 3: 執行 `flutter analyze` 確認乾淨**
+- [x] **Step 3: 執行 `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add app/integration_test/reader_header_footer_toggle_test.dart
@@ -1523,10 +1561,10 @@ git commit -m "test(epic-5): 新增頁首/頁尾切換真機整合測試（EPUB 
 
 ## 完成後檢查（對照 issues.md 驗收條件）
 
-- [ ] 設定面板存在對應開關，預設皆為開啟（Task 4/5）
-- [ ] 頁首開啟時 AppBar 標題正確顯示可點擊的目前章節名稱（Task 6 widget test + Task 7 真機驗證真實文字內容）
-- [ ] 頁首關閉時正確恢復原本的靜態標題（Task 6）
-- [ ] 頁尾顯示與頁首顯示互不影響、可獨立切換（Task 6 兩個組合測試 + Task 7 真機驗證）
-- [ ] FXL（固定版面）完全不受影響（Task 6 專屬測試）
-- [ ] 所有新增/既有單元測試與 `flutter analyze` 皆通過、無回歸（每個 Task 的 Step 5/6）
-- [ ] 真機整合測試涵蓋 EPUB 與 PDF 兩種格式的頁首/頁尾切換端對端流程（Task 7）
+- [x] 設定面板存在對應開關，預設皆為開啟（Task 4/5）
+- [x] 頁首開啟時 AppBar 標題正確顯示可點擊的目前章節名稱（Task 6 widget test + Task 7 真機驗證真實文字內容）
+- [x] 頁首關閉時正確恢復原本的靜態標題（Task 6）
+- [x] 頁尾顯示與頁首顯示互不影響、可獨立切換（Task 6 兩個組合測試 + Task 7 真機驗證）
+- [x] FXL（固定版面）完全不受影響（Task 6 專屬測試）
+- [x] 所有新增/既有單元測試與 `flutter analyze` 皆通過、無回歸（每個 Task 的 Step 5/6）
+- [x] 真機整合測試涵蓋 EPUB 與 PDF 兩種格式的頁首/頁尾切換端對端流程（Task 7）
