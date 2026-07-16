@@ -118,7 +118,7 @@ Dart 端依目前生效的版面參數（字體大小、行距、段落間距、
 
 ## Issue 4：EPUB 目錄（TOC）樹狀清單 + 跳轉 + 估算頁碼顯示
 
-**Status:** ready-for-agent
+**Status:** ✅ 已完成並合併（PR #47，`feature/epic-5-issue4-toc-pagination` → `main`）——依 `plans/plan-issue-4.md` 6 個 Task 實作：原生端 `EpubReaderView.kt` 新增 `getTableOfContents`（一次性讀取 `Publication.tableOfContents`，透過 `Publication.locatorFromLink(Link)`〔已反編譯 `readium-shared:3.3.0` 確認存在，解決 design.md 原列為已知風險的不確定性〕為每個節點建構含錨點精度的 Locator，頁碼估算優先取用 Locator 自身 `totalProgression`，缺漏時以 O(1) `positionsMap` 查表比對 `Publication.positions()` 作為近似值）與 `jumpToLocator`（同步呼叫 `Navigator.go()`，落實 FR-08 的 200ms 時限）；Dart 端新增 `TocEntry`／`TocNavigator`（純函式，找出目前章節在樹中的祖先路徑，決定預設展開層級與高亮）與 `TocBottomSheet`（`_FlatTocRow` 攤平清單 + `ListView.builder` 延遲渲染，獨立 `ValueNotifier<int?>` 讓已開啟的目錄能在字元數背景計算完成當下即時更新頁碼）；`ReaderScreen` 新增「目錄」AppBar 按鈕，僅流式 EPUB 顯示（PDF／固定版面 FXL 皆不顯示）。經計畫審查（Critical：`node.progression` 為 `null` 時頁碼誤植為第 1 頁；Important：`buildTocEntries` 的 O(N×M) 線性搜尋、`TocBottomSheet` 缺乏延遲載入；Minor：`getTableOfContents` 缺少 `isDisposed` 防護）與分支程式碼審查（Important：目錄按鈕的啟用時機未與背景抓取完成同步，存在使用者點擊到空白 Bottom Sheet、且無法與「本書真的沒有目錄」區分的競速窗口，已新增 `_tocLoaded` 旗標修正並補上真機整合測試對應等待邏輯；Minor：整合測試檔名與既有 `epub_` 前綴慣例不符，已重新命名）兩輪修正；`flutter test`（全專案 323 個）全過、`flutter analyze` 乾淨、真機整合測試（`3CEF42ECD491687`，Android 15）`All tests passed!`（涵蓋開啟真實多章節 EPUB、展開/收起目錄、點選跳轉的端到端流程）。
 
 **依賴：** Issue 3（目錄項目頁碼顯示需要頁碼估算邏輯已可用，含計算未完成時的降級處理）
 
@@ -141,16 +141,16 @@ PDF 格式下，目錄入口完全不顯示（不是顯示後出現空狀態）�
 
 **驗收標準：**
 
-- [ ] EPUB 閱讀畫面出現目錄入口，點擊開啟樹狀目錄清單
-- [ ] 目錄正確反映書籍的多層級章節結構，可展開／收起
-- [ ] 當前章節於目錄中正確高亮
-- [ ] 每個目錄項目顯示標題與估算頁碼；計算未完成時顯示佔位符，完成後正確更新
-- [ ] 點選目錄項目後於 200ms 內跳轉至正確位置（真機量測）
-- [ ] PDF 閱讀畫面完全不出現目錄入口
-- [ ] 上述測試皆通過，`flutter analyze` 乾淨
-- [ ] 真機整合測試涵蓋開啟真實多章節 EPUB、展開/收起目錄、點選跳轉的端到端流程
+- [x] EPUB 閱讀畫面出現目錄入口，點擊開啟樹狀目錄清單
+- [x] 目錄正確反映書籍的多層級章節結構，可展開／收起
+- [x] 當前章節於目錄中正確高亮
+- [x] 每個目錄項目顯示標題與估算頁碼；計算未完成時顯示佔位符，完成後正確更新
+- [x] 點選目錄項目後於 200ms 內跳轉至正確位置（真機量測；`jumpToLocator` 同步呼叫，不透過背景協程分派）
+- [x] PDF 閱讀畫面完全不出現目錄入口
+- [x] 上述測試皆通過，`flutter analyze` 乾淨
+- [x] 真機整合測試涵蓋開啟真實多章節 EPUB、展開/收起目錄、點選跳轉的端到端流程
 
-**Blocked by：** Issue 3（已完成，可開始）
+**Blocked by：** Issue 3（已完成）
 
 ---
 
@@ -188,7 +188,7 @@ PDF 格式下，目錄入口完全不顯示（不是顯示後出現空狀態）�
 - [ ] 上述測試皆通過，`flutter analyze` 乾淨，既有測試無回歸
 - [ ] 真機整合測試涵蓋流式 EPUB／PDF 切換頁首頁尾開關的端到端行為
 
-**Blocked by：** Issue 1, Issue 4
+**Blocked by：** Issue 1（已完成）、Issue 4（已完成，可開始）
 
 ---
 
