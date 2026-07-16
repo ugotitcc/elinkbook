@@ -1,0 +1,46 @@
+/// EPUB 目錄樹狀清單的單一節點（epic-5-toc-pagination Issue 4，spec.md
+/// 「目錄模組」）：原生端一次性讀取 `Publication.tableOfContents` 後序列化
+/// 傳來，保留完整巢狀階層（[children]，不攤平）。
+///
+/// 刻意不覆寫 `==`/`hashCode`（維持預設的物件識別語意）——[TocNavigator]
+/// 回傳的「目前章節路徑」與 UI 的展開狀態集合，判斷依據都是「是否為同一個
+/// 節點物件參照」，只要 `entries` 樹狀結構本身在同一次 build 週期內沒有
+/// 被重新解析成新物件，物件識別語意就足夠正確，不需要值相等語意。
+class TocEntry {
+  final String title;
+
+  /// 原生端 `Locator.toJSON().toString()`，透過
+  /// `Publication.locatorFromLink(Link)` 建構、保留錨點精度（非僅解析到
+  /// resource 起始位置）。點選項目時原樣傳回原生端 `jumpToLocator` 還原。
+  final String locatorJson;
+
+  /// 全書閱讀進度比例（0.0-1.0），供換算估算頁碼。原生端優先取用
+  /// [locatorJson] 對應 Locator 自身的 `totalProgression`；查無則退回比對
+  /// `Publication.positions()`，仍查無時為 `null`（此時 UI 顯示佔位符，不
+  /// 視為錯誤）。
+  final double? progression;
+
+  final List<TocEntry> children;
+
+  const TocEntry({
+    required this.title,
+    required this.locatorJson,
+    this.progression,
+    this.children = const [],
+  });
+
+  /// 遞迴解析原生端 `getTableOfContents` 回傳的巢狀 map 結構。缺失的
+  /// `title`／`locatorJson` 以空字串防呆（不拋出例外），比照專案既有對
+  /// MethodChannel 回傳資料的寬容解析慣例。
+  factory TocEntry.fromWire(Map<Object?, Object?> map) {
+    final rawChildren = map['children'] as List<Object?>? ?? const [];
+    return TocEntry(
+      title: map['title'] as String? ?? '',
+      locatorJson: map['locatorJson'] as String? ?? '',
+      progression: (map['progression'] as num?)?.toDouble(),
+      children: rawChildren
+          .map((e) => TocEntry.fromWire(e as Map<Object?, Object?>))
+          .toList(),
+    );
+  }
+}
