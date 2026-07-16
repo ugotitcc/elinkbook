@@ -650,8 +650,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           Expanded(child: body),
           // 頁尾佔用固定版面空間、擠壓上方閱讀區域高度（比照
           // prototype/index.html 的 .reader-footer 既有設計，非浮動疊加
-          // 層）。此階段頁尾一律顯示，顯示/隱藏開關留給 Issue 5
-          // （BookReaderPrefs.showFooter 尚未存在）。
+          // 層）。顯示/隱藏由 showFooter 控制（epic-5-toc-pagination
+          // Issue 5），false 時整個 if 條件不成立、完全不佔用版面空間。
           if (format == BookFormat.pdf &&
               _pdfPageInfo != null &&
               (_resolved?.showFooter ?? true))
