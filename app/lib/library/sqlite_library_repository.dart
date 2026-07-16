@@ -24,7 +24,7 @@ class SqliteLibraryRepository implements LibraryRepository {
   static Future<SqliteLibraryRepository> open(String path) async {
     final db = await openDatabase(
       path,
-      version: 7,
+      version: 8,
       onConfigure: (db) async {
         // book_reader_prefs 的 ON DELETE CASCADE 需要外鍵約束真正生效，
         // SQLite 預設不強制外鍵，須逐連線手動開啟（見 epic-3 plan-issue-1）。
@@ -56,6 +56,7 @@ class SqliteLibraryRepository implements LibraryRepository {
           )
         ''');
         await _createBookReaderPrefsTable(db);
+        await _createBookmarksTable(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
@@ -105,6 +106,16 @@ class SqliteLibraryRepository implements LibraryRepository {
           // 之外、無條件檢查，比照 oldVersion < 5 區塊的既有原則——不論
           // 裝置目前處於哪個舊版本，只要 oldVersion < 6 就必須執行。
           await _addTotalCharacterCountColumn(db);
+        }
+        if (oldVersion < 8) {
+          // epic-6-annotations Issue 1：書籤功能新增的全新資料表。與上方
+          // books 表遷移刻意放在同一層級（onUpgrade 頂層、無條件檢查）——
+          // bookmarks 是全新的獨立表（非既有表新增欄位），任何 oldVersion
+          // < 8 的裝置都必然還沒有這張表，直接無條件建立即可，不像
+          // book_reader_prefs 表那樣需要判斷「表是否已存在」（那是因為
+          // book_reader_prefs 有 CREATE／ALTER 兩條分歧路徑，bookmarks
+          // 只有一條路徑）。
+          await _createBookmarksTable(db);
         }
       },
     );
@@ -205,6 +216,24 @@ class SqliteLibraryRepository implements LibraryRepository {
       await db.execute(
           'ALTER TABLE book_reader_prefs ADD COLUMN show_footer INTEGER');
     }
+  }
+
+  static Future<void> _createBookmarksTable(Database db) async {
+    // 書籤（epic-6-annotations Issue 1，spec.md「書籤模組」），與 books
+    // 表以 book_id 外鍵關聯（比照 book_reader_prefs 既有關聯模式，見
+    // docs/epics/epic-6-annotations/spec.md「資料模型關聯」）。與
+    // book_reader_prefs 不同，一本書可以有多筆書籤，故不用 book_id 當
+    // PRIMARY KEY，改用獨立的自動遞增 id。
+    await db.execute('''
+      CREATE TABLE bookmarks (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        book_id TEXT NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+        name TEXT NOT NULL,
+        epub_locator_json TEXT,
+        progression REAL,
+        pdf_page_index INTEGER
+      )
+    ''');
   }
 
   /// 供 [BookReaderPrefsRepository] 等後續 repository 共用同一個資料庫連線
