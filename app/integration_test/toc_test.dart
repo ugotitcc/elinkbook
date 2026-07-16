@@ -41,6 +41,23 @@ Future<void> _pumpUntilFooterVisible(WidgetTester tester) async {
   }
 }
 
+Future<void> _pumpUntilProgressChanged(WidgetTester tester, String oldProgressText) async {
+  final deadline = DateTime.now().add(const Duration(seconds: 10));
+  while (true) {
+    final textFinder = find.byKey(const Key('reader_footer_progress_text'));
+    if (textFinder.evaluate().isNotEmpty) {
+      final currentText = tester.widget<Text>(textFinder).data ?? '';
+      if (currentText != oldProgressText) {
+        return; // 進度已變更，跳出
+      }
+    }
+    if (DateTime.now().isAfter(deadline)) {
+      fail('等待逾時：頁尾進度文字未改變，仍為 $oldProgressText');
+    }
+    await tester.pump(const Duration(milliseconds: 100));
+  }
+}
+
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
@@ -134,7 +151,8 @@ void main() {
 
     expect(find.byType(TocBottomSheet), findsNothing, reason: '點選後應自動關閉目錄');
 
-    await _pumpUntilFooterVisible(tester);
+    // 等待 Native 跳轉並回報最新 progress 到 Dart 端使進度文字改變
+    await _pumpUntilProgressChanged(tester, initialProgressText);
     final finalProgressText =
         (tester.widget<Text>(find.byKey(const Key('reader_footer_progress_text'))))
                 .data ??
