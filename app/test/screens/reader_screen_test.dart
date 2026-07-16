@@ -13,6 +13,8 @@ import 'package:elinkbook/reader/pdf_reader_view.dart';
 import 'package:elinkbook/reader/writing_mode.dart';
 import 'package:elinkbook/screens/fxl_settings_sheet.dart';
 import 'package:elinkbook/screens/pdf_settings_sheet.dart';
+import 'package:elinkbook/reader/toc_entry.dart';
+import 'package:elinkbook/screens/toc_bottom_sheet.dart';
 
 import 'package:elinkbook/reader/epub_position_info.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
@@ -915,5 +917,154 @@ void main() {
 
     expect(find.byKey(const Key('reader_footer')), findsOneWidget);
     expect(find.text('進度 8% ｜ 第 1/12 頁'), findsOneWidget);
+  });
+
+  // --- Epic 5 Issue 4：EPUB 目錄（TOC）樹狀清單 ---
+
+  testWidgets('EPUB 格式顯示「目錄」按鈕，初始為停用狀態', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_toc_initial',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final finder = find.byKey(const Key('reader_toc_button'));
+    expect(finder, findsOneWidget);
+    expect(
+      tester.widget<IconButton>(finder).onPressed,
+      isNull,
+      reason: '尚未收到 onLayoutResolved，按鈕應為停用狀態',
+    );
+  });
+
+  testWidgets('PDF 格式下，目錄入口按鈕不存在', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b_toc_pdf',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    expect(find.byKey(const Key('reader_toc_button')), findsNothing);
+  });
+
+  testWidgets('EPUB 固定版面（FXL）開書後，目錄按鈕不存在（沿用既有 AppBar 隱藏機制）',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample_fixed_layout.epub',
+          bookId: 'b_toc_fxl',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final epubView = tester.widget<EpubReaderView>(find.byType(EpubReaderView));
+    epubView.onLayoutResolved?.call(
+      const EpubLayoutInfo(isFixedLayout: true, writingMode: WritingMode.horizontal),
+    );
+    await tester.pump();
+
+    expect(find.byKey(const Key('reader_toc_button')), findsNothing);
+  });
+
+  testWidgets(
+      'EPUB reflowable 收到 onLayoutResolved 後，目錄按鈕轉為可點擊，點擊後開啟 TocBottomSheet',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_toc_open',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final epubView = tester.widget<EpubReaderView>(find.byType(EpubReaderView));
+    epubView.onLayoutResolved?.call(
+      const EpubLayoutInfo(isFixedLayout: false, writingMode: WritingMode.horizontal),
+    );
+    await tester.pump();
+    // 審查修正：目錄按鈕的啟用條件額外要求 _tocLoaded，該旗標由
+    // EpubReaderView.loadTableOfContents() 這個 async 呼叫的 .then()
+    // callback 設定，需要多一次 pump 讓其 microtask 完成、觸發 setState。
+    await tester.pump();
+
+    final finder = find.byKey(const Key('reader_toc_button'));
+    expect(tester.widget<IconButton>(finder).onPressed, isNotNull);
+
+    await tester.tap(finder);
+    // showModalBottomSheet 動畫在 flutter test 環境下 pumpAndSettle 永遠不
+    // 會收斂（持續泵送動畫幀），改用有限幀 pump 等待動畫展開，比照本檔案
+    // 既有的 FxlSettingsSheet 開啟測試模式（第 548-554 行）。
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.byType(TocBottomSheet), findsOneWidget);
+  });
+
+  testWidgets('點選目錄項目後，TocBottomSheet 關閉', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_toc_select',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final epubView = tester.widget<EpubReaderView>(find.byType(EpubReaderView));
+    epubView.onLayoutResolved?.call(
+      const EpubLayoutInfo(isFixedLayout: false, writingMode: WritingMode.horizontal),
+    );
+    await tester.pump();
+    // 審查修正：多一次 pump 讓 loadTableOfContents() 的 .then() callback
+    // 完成、_tocLoaded 變為 true，目錄按鈕才會真正可點擊。
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('reader_toc_button')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.byType(TocBottomSheet), findsOneWidget);
+
+    // 純 flutter test 環境下 EpubReaderView._channel 恆為 null（AndroidView
+    // 未真正建立），loadTableOfContents() 回傳空清單，TocBottomSheet 內部
+    // 不會有任何可點擊的項目列——直接呼叫 TocBottomSheet.onEntrySelected
+    // 模擬使用者選取（比照本檔案既有測試對「純 flutter test 環境無法觸發
+    // 原生回呼」的既定處理方式，見 onPageRendered/onLayoutResolved 相關
+    // 既有測試）。
+    final sheet = tester.widget<TocBottomSheet>(find.byType(TocBottomSheet));
+    sheet.onEntrySelected(
+      const TocEntry(title: '測試章節', locatorJson: '{}', progression: 0.5),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.byType(TocBottomSheet), findsNothing);
   });
 }

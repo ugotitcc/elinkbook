@@ -12,6 +12,8 @@ import '../reader/pdf_page_info.dart';
 import '../reader/pdf_reader_view.dart';
 import '../reader/reading_position.dart';
 import '../reader/reader_prefs_manager.dart';
+import '../reader/toc_entry.dart';
+import '../reader/toc_navigator.dart';
 import '../reader/resolved_preferences.dart';
 import '../reader/screen_orientation_setting.dart';
 import '../reader/writing_mode.dart';
@@ -19,6 +21,7 @@ import 'fxl_settings_sheet.dart';
 import 'pdf_settings_sheet.dart';
 import 'reader_footer.dart';
 import 'reader_settings_sheet.dart';
+import 'toc_bottom_sheet.dart';
 
 /// 唯一的閱讀器顯示接縫（seam）：給定書籍檔案路徑，依偵測到的格式分派到
 /// 對應的原生渲染 widget，畫面上會渲染出該書第 1 頁。公開建構參數為
@@ -83,6 +86,25 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   // null 代表尚未計算完成，此時 EPUB 頁尾不顯示（比照 PDF 頁尾等待
   // _pdfPageInfo 非 null 的既有模式）。
   int? _totalCharacterCount;
+  // 目錄樹狀結構快取（Epic 5 Issue 4），由 onLayoutResolved 觸發一次性
+  // 背景抓取（見 _handleLayoutResolved）。樹狀結構不隨版面設定變動，開書
+  // 期間只抓取一次，不需要每次版面參數變動都重新請求。
+  List<TocEntry> _tocEntries = const [];
+  // 審查修正：背景抓取是否已完成（不論結果是否為空清單）。目錄按鈕的
+  // onPressed 須同時檢查這個旗標，而不是只檢查 _autoDetectedWritingMode
+  // 非 null——否則使用者可能在按鈕剛變成可點擊、但 loadTableOfContents()
+  // 尚未回應的極短窗口內點擊，開啟一個完全空白、且無法與「本書真的沒有
+  // 目錄」區分的 Bottom Sheet。比照既有「⚙️版面設定」按鈕的既定模式
+  // （等待相關非同步就緒訊號才啟用），不引入本專案目前沒有的「Bottom
+  // Sheet 內顯示載入中」UI 型態。
+  bool _tocLoaded = false;
+  // 供 TocBottomSheet 訂閱、在已開啟的目錄畫面即時反映全書字元數背景計算
+  // 完成事件（spec.md「目錄模組」載入中狀態決策）——與 _totalCharacterCount
+  // 這個驅動頁尾 rebuild 的既有欄位（Issue 3）刻意分開維護，避免耦合兩條
+  // 目的不同的更新路徑（頁尾靠 setState 觸發整個 ReaderScreen rebuild；
+  // 目錄靠 ValueNotifier 只更新已開啟的 Bottom Sheet 子樹，不驚動
+  // ReaderScreen 本身）。
+  final _totalCharacterCountNotifier = ValueNotifier<int?>(null);
   // 開書時讀到的既有位置記錄（若有），只在 initState 賦值一次，之後
   // 不變——僅用於 _buildNativeView() 建構 EpubReaderView/PdfReaderView
   // 時傳入 initialLocatorJson/initialPageIndex 這兩個一次性開書起始值。
@@ -110,6 +132,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         _loaded = loaded;
         _initialPosition = loaded.readingPosition;
         _totalCharacterCount = loaded.totalCharacterCount;
+        _totalCharacterCountNotifier.value = loaded.totalCharacterCount;
         _resolved = widget.prefsManager.resolve(
           loaded,
           autoDetectedWritingMode: _autoDetectedWritingMode,
@@ -122,6 +145,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _totalCharacterCountNotifier.dispose();
     // 離開閱讀畫面時觸發一次位置寫入（spec.md「本機閱讀位置記憶」寫入
     // 時機之一）。不 await——dispose() 是同步方法，且這是離開畫面前的
     // 最後一次呼叫，不需要等待其完成，比照既有 _handlePrefsChanged 不
@@ -372,6 +396,28 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     );
   }
 
+  void _openToc() {
+    final currentPath = TocNavigator.findCurrentPath(
+      _tocEntries,
+      _epubPositionInfo?.progression,
+    );
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => TocBottomSheet(
+        entries: _tocEntries,
+        initiallyExpandedEntries: currentPath.toSet(),
+        currentEntry: currentPath.isEmpty ? null : currentPath.last,
+        totalCharacterCountListenable: _totalCharacterCountNotifier,
+        resolved: _resolved!,
+        onEntrySelected: (entry) {
+          Navigator.of(context).pop();
+          EpubReaderView.jumpToLocator(_epubReaderViewKey, entry.locatorJson);
+        },
+      ),
+    );
+  }
+
   void _handlePageRendered() {
     if (!mounted) return;
     setState(() => _state = _RenderState.rendered);
@@ -406,6 +452,27 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         );
       }
     });
+    // epic-5-toc-pagination Issue 4：目錄僅支援流式 EPUB（spec.md「範圍
+    // 界定」），FXL 不預取。目錄樹狀結構不會隨版面設定變動而改變（與頁碼
+    // 估算不同，見 _buildEpubFooter 的重算邏輯），理論上只需要抓取一次。
+    //
+    // 【審查修正，防禦性保險】原生端 onLayoutResolved 目前的 pageReported
+    // 一次性 latch（見 EpubReaderView.kt openBook()/onPageLoaded()）與
+    // MainActivity 的 configChanges 宣告，已確保本方法在單次開書期間只會
+    // 被呼叫一次——旋轉螢幕、調整字型大小都不會讓它再次觸發，故目前並不
+    // 存在「每次版面重排都重複抓取目錄」的實際效能問題。加上
+    // `_tocEntries.isEmpty` 這道檢查純粹是把「只抓取一次」這句話從隱含假設
+    // 變成程式碼本身強制執行的行為，零成本、無副作用；即使原生端的一次性
+    // 觸發機制未來被改動，這裡也不會退化成重複請求。
+    if (!info.isFixedLayout && _tocEntries.isEmpty && !_tocLoaded) {
+      EpubReaderView.loadTableOfContents(_epubReaderViewKey).then((entries) {
+        if (!mounted) return;
+        setState(() {
+          _tocEntries = entries;
+          _tocLoaded = true;
+        });
+      });
+    }
   }
 
   /// 原生端背景計算全書字元數完成時觸發（Epic 5 Issue 3）：更新本地狀態
@@ -414,6 +481,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   void _handleCharacterCountReady(int totalCharacterCount) {
     if (!mounted) return;
     setState(() => _totalCharacterCount = totalCharacterCount);
+    _totalCharacterCountNotifier.value = totalCharacterCount;
     widget.prefsManager.saveTotalCharacterCount(widget.bookId, totalCharacterCount);
   }
 
@@ -450,6 +518,19 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     switch (format) {
       case BookFormat.epub:
         return [
+          IconButton(
+            key: const Key('reader_toc_button'),
+            icon: const Icon(Icons.menu_book),
+            tooltip: '目錄',
+            // 沿用與「⚙️版面」按鈕一致的啟用條件（_autoDetectedWritingMode
+            // 非 null 代表 onLayoutResolved 已觸發，書本已成功開啟），並
+            // 額外要求 _tocLoaded（審查修正）——避免使用者在背景抓取
+            // 完成前點擊，開啟一個無法與「本書真的沒有目錄」區分的空白
+            // Bottom Sheet。
+            onPressed: (_autoDetectedWritingMode == null || !_tocLoaded)
+                ? null
+                : _openToc,
+          ),
           IconButton(
             key: const Key('reader_layout_settings_button'),
             icon: const Icon(Icons.settings),
