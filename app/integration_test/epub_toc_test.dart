@@ -41,6 +41,26 @@ Future<void> _pumpUntilFooterVisible(WidgetTester tester) async {
   }
 }
 
+/// 審查修正：目錄按鈕的啟用條件除了書本開啟外，另需背景目錄抓取
+/// （`EpubReaderView.loadTableOfContents`）完成（見 `_tocLoaded`），與頁尾
+/// 出現與否（字元數背景計算完成）是兩條獨立的非同步路徑，不保證何者先
+/// 完成——不能假設頁尾出現時目錄一定也已抓取完畢，需明確等待按鈕本身轉為
+/// 可點擊，而非緊接著 `_pumpUntilFooterVisible` 就直接點擊。
+Future<void> _pumpUntilTocButtonEnabled(WidgetTester tester) async {
+  final deadline = DateTime.now().add(const Duration(seconds: 10));
+  while (true) {
+    final finder = find.byKey(const Key('reader_toc_button'));
+    if (finder.evaluate().isNotEmpty &&
+        tester.widget<IconButton>(finder).onPressed != null) {
+      return;
+    }
+    if (DateTime.now().isAfter(deadline)) {
+      fail('等待逾時：目錄按鈕未轉為可點擊狀態（背景目錄抓取未完成）');
+    }
+    await tester.pump(const Duration(milliseconds: 100));
+  }
+}
+
 Future<void> _pumpUntilProgressChanged(WidgetTester tester, String oldProgressText) async {
   final deadline = DateTime.now().add(const Duration(seconds: 10));
   while (true) {
@@ -110,6 +130,7 @@ void main() {
 
     // 開啟目錄，驗證頂層 3 章皆顯示、第二章巢狀子項預設收起（開書起始頁在
     // 第一章，第二章不在目前章節路徑內）。
+    await _pumpUntilTocButtonEnabled(tester);
     await tester.tap(find.byKey(const Key('reader_toc_button')));
     await tester.pumpAndSettle();
 
