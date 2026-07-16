@@ -1266,7 +1266,7 @@ git commit -m "feat(epic5-issue4): ReaderScreen 接上 EPUB 目錄入口與跳�
 
 既有 EPUB 測試素材（`sample.epub`／`sample_long_vertical.epub`／`sample_horizontal.epub`）的 `nav.xhtml` 皆只有單一扁平章節（"第一章"），查證確認（`unzip -p sample.epub OEBPS/nav.xhtml`）不足以驗證「多層級結構」「展開/收起」「跳轉到不同章節」——需要新建一份具備巢狀目錄的素材。
 
-- [ ] **Step 1: 建立 `sample_multi_chapter.epub` 素材**
+- [x] **Step 1: 建立 `sample_multi_chapter.epub` 素材**
 
 Run（於 `app/test/fixtures` 目錄）：
 
@@ -1365,7 +1365,7 @@ unzip -l sample_multi_chapter.epub
 
 Expected: `unzip -l` 列出 `mimetype`／`META-INF/container.xml`／`OEBPS/content.opf`／`OEBPS/nav.xhtml`／`OEBPS/chapter1.xhtml`／`OEBPS/chapter2.xhtml`／`OEBPS/chapter3.xhtml` 共 7 個檔案。
 
-- [ ] **Step 2: 宣告為 Flutter asset**
+- [x] **Step 2: 宣告為 Flutter asset**
 
 編輯 `app/pubspec.yaml`，於既有 `- test/fixtures/sample_fxl_svg_cover.epub` 之後新增：
 
@@ -1374,7 +1374,7 @@ Expected: `unzip -l` 列出 `mimetype`／`META-INF/container.xml`／`OEBPS/conte
     - test/fixtures/sample_multi_chapter.epub
 ```
 
-- [ ] **Step 3: 寫真機整合測試**
+- [x] **Step 3: 寫真機整合測試**
 
 ```dart
 import 'dart:io';
