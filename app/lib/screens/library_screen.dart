@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../library/book_import_service.dart';
+import '../reader/bookmarks_repository.dart';
 import '../reader/reader_prefs_manager.dart';
 import '../library/library_preferences.dart';
 import '../library/library_repository.dart';
@@ -26,6 +27,7 @@ class LibraryScreen extends StatefulWidget {
   final LibraryRepository repository;
   final BookImportService importService;
   final ReaderPrefsManager prefsManager;
+  final BookmarksRepository? bookmarksRepository;
   final AppTheme currentTheme;
   final bool isEinkMode;
   final ValueChanged<AppTheme>? onThemeChanged;
@@ -36,6 +38,7 @@ class LibraryScreen extends StatefulWidget {
     required this.repository,
     required this.importService,
     required this.prefsManager,
+    this.bookmarksRepository,
     this.currentTheme = AppTheme.light,
     this.isEinkMode = false,
     this.onThemeChanged,
@@ -278,6 +281,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
               filePath: book.filePath,
               bookId: book.id,
               prefsManager: widget.prefsManager,
+              bookmarksRepository: widget.bookmarksRepository,
             ),
           ),
         )

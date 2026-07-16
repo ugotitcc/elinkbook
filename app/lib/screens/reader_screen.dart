@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../reader/book_format.dart';
+import '../reader/bookmark_position_context.dart';
+import '../reader/bookmarks_repository.dart';
 import '../reader/book_reader_prefs.dart';
 import '../reader/epub_page_estimator.dart';
 import '../reader/epub_position_info.dart';
@@ -17,6 +19,7 @@ import '../reader/toc_navigator.dart';
 import '../reader/resolved_preferences.dart';
 import '../reader/screen_orientation_setting.dart';
 import '../reader/writing_mode.dart';
+import 'notes_bottom_sheet.dart';
 import 'fxl_settings_sheet.dart';
 import 'pdf_settings_sheet.dart';
 import 'reader_footer.dart';
@@ -44,11 +47,18 @@ class ReaderScreen extends StatefulWidget {
   final String bookId;
   final ReaderPrefsManager prefsManager;
 
+  /// 書籤功能的資料存取層（epic-6-annotations Issue 1）。刻意為可選參數
+  /// （非 required）——未提供時 AppBar 不顯示「📚 筆記」按鈕，行為等同
+  /// 本 Issue 之前，讓既有大量測試呼叫端不需要逐一補上這個參數（見
+  /// plan-issue-1.md Global Constraints）。
+  final BookmarksRepository? bookmarksRepository;
+
   const ReaderScreen({
     super.key,
     required this.filePath,
     required this.bookId,
     required this.prefsManager,
+    this.bookmarksRepository,
   });
 
   @override
@@ -418,6 +428,43 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     );
   }
 
+  void _openNotesSheet(BookFormat format) {
+    final repository = widget.bookmarksRepository;
+    if (repository == null) return;
+    final currentPath = TocNavigator.findCurrentPath(
+      _tocEntries,
+      _epubPositionInfo?.progression,
+    );
+    final positionContext = BookmarkPositionContext(
+      epubLocatorJson:
+          format == BookFormat.epub ? _epubPositionInfo?.locatorJson : null,
+      progression:
+          format == BookFormat.epub ? _epubPositionInfo?.progression : null,
+      pdfPageIndex: format == BookFormat.pdf ? _pdfPageInfo?.pageIndex : null,
+      chapterTitle: currentPath.isEmpty ? null : currentPath.last.title,
+    );
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => NotesBottomSheet(
+        bookId: widget.bookId,
+        bookmarksRepository: repository,
+        currentPosition: positionContext,
+        onBookmarkSelected: (bookmark) {
+          Navigator.of(context).pop();
+          if (bookmark.epubLocatorJson != null) {
+            EpubReaderView.jumpToLocator(
+              _epubReaderViewKey,
+              bookmark.epubLocatorJson!,
+            );
+          } else if (bookmark.pdfPageIndex != null) {
+            PdfReaderView.jumpToPage(_pdfReaderViewKey, bookmark.pdfPageIndex!);
+          }
+        },
+      ),
+    );
+  }
+
   void _handlePageRendered() {
     if (!mounted) return;
     setState(() => _state = _RenderState.rendered);
@@ -567,6 +614,15 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             onPressed:
                 _autoDetectedWritingMode == null ? null : _openLayoutSettings,
           ),
+          if (widget.bookmarksRepository != null)
+            IconButton(
+              key: const Key('reader_notes_button'),
+              icon: const Icon(Icons.bookmarks),
+              tooltip: '筆記',
+              onPressed: _autoDetectedWritingMode == null
+                  ? null
+                  : () => _openNotesSheet(format),
+            ),
         ];
       case BookFormat.pdf:
         return [
@@ -579,6 +635,15 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             // EPUB 分支的既有判斷原則。
             onPressed: _state == _RenderState.rendered ? _openPdfSettings : null,
           ),
+          if (widget.bookmarksRepository != null)
+            IconButton(
+              key: const Key('reader_notes_button'),
+              icon: const Icon(Icons.bookmarks),
+              tooltip: '筆記',
+              onPressed: _state == _RenderState.rendered
+                  ? () => _openNotesSheet(format)
+                  : null,
+            ),
         ];
       case BookFormat.unknown:
         return null;
