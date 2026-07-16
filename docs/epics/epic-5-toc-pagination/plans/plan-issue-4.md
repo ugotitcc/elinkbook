@@ -1513,7 +1513,7 @@ void main() {
 
 （測試中 `toc_entry_expand_l2` 這個 key 依賴 `chapter2.xhtml` 的目錄項目 Locator JSON 序列化後被 Dart 端原樣儲存於 `TocEntry.locatorJson`——實際字串內容由 Readium 決定，不保證恰好是 `l2` 這個字面值。若真機執行時因為 Locator JSON 實際內容不同導致 `find.byKey(const Key('toc_entry_expand_l2'))` 找不到元件，改用 `find.byKey(const Key('toc_entry_expand_')).first`不可行時，改為先透過 `find.text('第二章：發展')` 定位到該 `ListTile`，再用 `find.descendant(of: ..., matching: find.byType(IconButton))` 找到同一列的展開按鈕——比照本檔案在撰寫真機測試階段對「原生序列化字串內容無法在撰寫測試當下預先得知」情境的既定處理原則。）
 
-- [ ] **Step 4: 於真實裝置/模擬器執行**
+- [x] **Step 4: 於真實裝置/模擬器執行**
 
 Run（於 `app/` 目錄，先以 `flutter devices` 取得裝置 id）：
 ```bash
@@ -1521,7 +1521,9 @@ flutter test integration_test/epub_toc_test.dart -d <device-id>
 ```
 Expected: `All tests passed!`。若 Step 3 註記的 `toc_entry_expand_l2` key 因實際 Locator JSON 序列化內容不同而找不到元件，依 Step 3 註記的替代做法（`find.descendant` 從標題文字定位到同列展開按鈕）調整後重新執行。
 
-- [ ] **Step 5: Commit**
+實際執行：於真機（`3CEF42ECD491687`，Android 15）執行，`All tests passed!`；初版曾因非同步跳轉時序問題（`_pumpUntilFooterVisible` 誤判頁尾已可見而提前返回，未等到 `onLocatorChanged` 實際抵達）導致偶發假陽性，已於 `53a953a` 改用 `_pumpUntilProgressChanged`（輪詢至 `reader_footer_progress_text` 文字實際改變或 10 秒逾時 `fail()`）修正，經獨立複審確認為真實、正確的時序 bug 修復。
+
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/test/fixtures/sample_multi_chapter.epub app/pubspec.yaml app/integration_test/epub_toc_test.dart
@@ -1541,4 +1543,5 @@ git commit -m "test(epic5-issue4): 新增多章節 EPUB 素材與目錄真機整
 - 上述測試皆通過，`flutter analyze` 乾淨 → 每個 Task 的驗證 Step 皆含此要求。
 - 真機整合測試涵蓋開啟真實多章節 EPUB、展開/收起目錄、點選跳轉的端到端流程 → Task 6。
 - design.md「已知風險」的「TOC 項目跳轉的 Locator 建構」不確定性 → Task 2（已反編譯確認 `Publication.locatorFromLink(Link)` 存在，予以解決）。
-- 審查修正（`tmp/epic-5/reviews/plan-issue-4-review.md`）：`node.progression` 為 `null` 時頁碼誤植為第 1 頁（Critical）→ Task 4（`pageLabel` 判斷式一併檢查 `node.progression == null`，並新增對應測試案例）；`buildTocEntries` 的 O(N×M) 線性搜尋（Important）→ Task 2（改用 `positionsMap` 的 O(1) 查表）；`TocBottomSheet` 缺乏延遲載入（Important）→ Task 4（改用攤平清單 + `ListView.builder`）；`getTableOfContents` 缺少 `isDisposed` 防護（Minor）→ Task 2（比照既有慣例補上）；`_handleLayoutResolved` 重複抓取目錄疑慮（Important，經查證現有原生端一次性 latch 機制下並非實際問題，仍採納防禦性保險）→ Task 5（`_tocEntries.isEmpty` guard）。`jumpToLocator` 加 `Log.w`（Minor）人類決策不採納，維持既有靜默 catch 慣例。
+- 審查修正（`tmp/epic-5/reviews/plan-issue-4-review.md`，計畫審查階段）：`node.progression` 為 `null` 時頁碼誤植為第 1 頁（Critical）→ Task 4（`pageLabel` 判斷式一併檢查 `node.progression == null`，並新增對應測試案例）；`buildTocEntries` 的 O(N×M) 線性搜尋（Important）→ Task 2（改用 `positionsMap` 的 O(1) 查表）；`TocBottomSheet` 缺乏延遲載入（Important）→ Task 4（改用攤平清單 + `ListView.builder`）；`getTableOfContents` 缺少 `isDisposed` 防護（Minor）→ Task 2（比照既有慣例補上）；`_handleLayoutResolved` 重複抓取目錄疑慮（Important，經查證現有原生端一次性 latch 機制下並非實際問題，仍採納防禦性保險）→ Task 5（`_tocEntries.isEmpty` guard）。`jumpToLocator` 加 `Log.w`（Minor）人類決策不採納，維持既有靜默 catch 慣例。
+- 審查修正（`tmp/epic-5/reviews/review-issue-4-independent.md`，分支程式碼審查階段）：目錄按鈕的啟用時機未與背景抓取（`EpubReaderView.loadTableOfContents`）完成同步，存在使用者點擊到空白 Bottom Sheet、且無法與「本書真的沒有目錄」區分的競速窗口（Important）→ Task 5（新增 `_tocLoaded` 旗標，按鈕 `onPressed` 一併檢查，比照既有「⚙️版面設定」按鈕等待非同步就緒訊號才啟用的既定模式，見 commit `a5a24f5`）；整合測試檔名 `toc_test.dart` 與計畫指定、既有 `epub_` 前綴命名慣例不符（Minor）→ 重新命名為 `epub_toc_test.dart`（見 commit `a8190cc`）；本檔案 Task 6 Step 4/5 checkbox 未同步勾選（Minor）→ 已補勾（見本次變更）。
