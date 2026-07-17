@@ -8,6 +8,9 @@ import 'package:elinkbook/reader/pdf_page_info.dart';
 import 'package:elinkbook/reader/pdf_reader_view.dart';
 import 'package:elinkbook/reader/dual_page_direction.dart';
 import 'package:elinkbook/reader/dual_page_mode.dart';
+import 'package:elinkbook/reader/pdf_annotation_decoration.dart';
+import 'package:elinkbook/reader/pdf_selection_info.dart';
+import 'package:elinkbook/reader/percent_rect.dart';
 
 /// 驅動 [PdfReaderView] 底層 AndroidView 完成建立流程所需的最小 mock，比照
 /// `epub_reader_view_test.dart` 的 `_pumpEpubReaderView` 模式。
@@ -960,6 +963,249 @@ void main() {
           .containsKey('initialPageIndex'),
       isFalse,
     );
+  });
+
+  testWidgets('收到原生端 onSelectionRectComputed 事件時正確解析 PdfSelectionInfo',
+      (tester) async {
+    PdfSelectionInfo? received;
+    final binaryMessenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    MethodChannel? instanceChannel;
+
+    binaryMessenger.setMockMethodCallHandler(SystemChannels.platform_views,
+        (call) async {
+      if (call.method == 'create') {
+        final id = (call.arguments as Map<Object?, Object?>)['id'] as int;
+        instanceChannel =
+            MethodChannel('cc.ugotit.elinkbook/pdf_reader_view_$id');
+        binaryMessenger.setMockMethodCallHandler(
+            instanceChannel!, (call) async => null);
+        return 0;
+      }
+      return null;
+    });
+
+    await tester.pumpWidget(MaterialApp(
+      home: PdfReaderView(
+        filePath: '/tmp/sample.pdf',
+        onPageRendered: _noop,
+        onError: _noopError,
+        onSelectionRectComputed: (info) => received = info,
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    final codec = instanceChannel!.codec;
+    final data = codec.encodeMethodCall(const MethodCall('onSelectionRectComputed', {
+      'pageIndex': 2,
+      'left': 0.1,
+      'top': 0.2,
+      'right': 0.3,
+      'bottom': 0.4,
+    }));
+    await binaryMessenger.handlePlatformMessage(instanceChannel!.name, data, (_) {});
+
+    expect(
+      received,
+      const PdfSelectionInfo(
+        pageIndex: 2,
+        rect: PercentRect(left: 0.1, top: 0.2, right: 0.3, bottom: 0.4),
+      ),
+    );
+  });
+
+  testWidgets('收到原生端 onSelectionCanceled 事件時觸發 callback', (tester) async {
+    var canceled = false;
+    final binaryMessenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    MethodChannel? instanceChannel;
+
+    binaryMessenger.setMockMethodCallHandler(SystemChannels.platform_views,
+        (call) async {
+      if (call.method == 'create') {
+        final id = (call.arguments as Map<Object?, Object?>)['id'] as int;
+        instanceChannel =
+            MethodChannel('cc.ugotit.elinkbook/pdf_reader_view_$id');
+        binaryMessenger.setMockMethodCallHandler(
+            instanceChannel!, (call) async => null);
+        return 0;
+      }
+      return null;
+    });
+
+    await tester.pumpWidget(MaterialApp(
+      home: PdfReaderView(
+        filePath: '/tmp/sample.pdf',
+        onPageRendered: _noop,
+        onError: _noopError,
+        onSelectionCanceled: () => canceled = true,
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    final codec = instanceChannel!.codec;
+    final data = codec.encodeMethodCall(const MethodCall('onSelectionCanceled', null));
+    await binaryMessenger.handlePlatformMessage(instanceChannel!.name, data, (_) {});
+
+    expect(canceled, isTrue);
+  });
+
+  testWidgets('refreshAnnotations 呼叫 invokeMethod 並帶上序列化後的標記清單',
+      (tester) async {
+    final key = GlobalKey<State<PdfReaderView>>();
+    final binaryMessenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    final instanceCalls = <MethodCall>[];
+
+    binaryMessenger.setMockMethodCallHandler(SystemChannels.platform_views,
+        (call) async {
+      if (call.method == 'create') {
+        final id = (call.arguments as Map<Object?, Object?>)['id'] as int;
+        binaryMessenger.setMockMethodCallHandler(
+          MethodChannel('cc.ugotit.elinkbook/pdf_reader_view_$id'),
+          (call) async {
+            instanceCalls.add(call);
+            return null;
+          },
+        );
+        return 0;
+      }
+      return null;
+    });
+
+    await tester.pumpWidget(MaterialApp(
+      home: PdfReaderView(
+        key: key,
+        filePath: '/tmp/sample.pdf',
+        onPageRendered: _noop,
+        onError: _noopError,
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    PdfReaderView.refreshAnnotations(key, [
+      PdfAnnotationDecoration.forHighlight(
+        pageIndex: 1,
+        rect: const PercentRect(left: 0, top: 0, right: 1, bottom: 0.1),
+        tint: 0x73FDE047,
+        isUnderline: false,
+      ),
+    ]);
+
+    final call = instanceCalls.firstWhere((c) => c.method == 'refreshAnnotations');
+    final annotations = call.arguments['annotations'] as List;
+    expect(annotations.single['pageIndex'], 1);
+    expect(annotations.single['isNoteOnly'], isFalse);
+  });
+
+  testWidgets(
+      '長按拖曳觸發 beginAnnotationSelection／updateAnnotationSelection／endAnnotationSelection，'
+      '座標為相對 widget 自身尺寸的百分比（審查修正 1.1：手勢辨識改由 Flutter 端主導）',
+      (tester) async {
+    final binaryMessenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    final instanceCalls = <MethodCall>[];
+
+    binaryMessenger.setMockMethodCallHandler(SystemChannels.platform_views,
+        (call) async {
+      if (call.method == 'create') {
+        final id = (call.arguments as Map<Object?, Object?>)['id'] as int;
+        binaryMessenger.setMockMethodCallHandler(
+          MethodChannel('cc.ugotit.elinkbook/pdf_reader_view_$id'),
+          (call) async {
+            instanceCalls.add(call);
+            return null;
+          },
+        );
+        return 0;
+      }
+      return null;
+    });
+
+    await tester.pumpWidget(MaterialApp(
+      home: Center(
+        child: SizedBox(
+          width: 200,
+          height: 100,
+          child: PdfReaderView(
+            filePath: '/tmp/sample.pdf',
+            onPageRendered: _noop,
+            onError: _noopError,
+          ),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    final topLeft = tester.getTopLeft(find.byType(PdfReaderView));
+    final gesture = await tester.startGesture(topLeft + const Offset(20, 10));
+    // 等待超過長按判定門檻（Flutter 預設 500ms），期間手指未移動，
+    // GestureDetector 的 LongPressGestureRecognizer 應會勝出競技場。
+    await tester.pump(const Duration(milliseconds: 700));
+    await gesture.moveBy(const Offset(60, 30));
+    await tester.pump();
+    await gesture.up();
+    await tester.pump();
+
+    final begin =
+        instanceCalls.firstWhere((c) => c.method == 'beginAnnotationSelection');
+    expect((begin.arguments as Map)['xPct'] as double, closeTo(20 / 200, 0.02));
+    expect((begin.arguments as Map)['yPct'] as double, closeTo(10 / 100, 0.02));
+
+    final update = instanceCalls
+        .firstWhere((c) => c.method == 'updateAnnotationSelection');
+    expect((update.arguments as Map)['xPct'] as double, closeTo(80 / 200, 0.02));
+    expect((update.arguments as Map)['yPct'] as double, closeTo(40 / 100, 0.02));
+
+    expect(instanceCalls.any((c) => c.method == 'endAnnotationSelection'), isTrue);
+  });
+
+  testWidgets('第二指觸碰時觸發 cancelAnnotationSelection（審查修正 1.1：多指偵測改由 Dart 端負責）',
+      (tester) async {
+    final binaryMessenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    final instanceCalls = <MethodCall>[];
+
+    binaryMessenger.setMockMethodCallHandler(SystemChannels.platform_views,
+        (call) async {
+      if (call.method == 'create') {
+        final id = (call.arguments as Map<Object?, Object?>)['id'] as int;
+        binaryMessenger.setMockMethodCallHandler(
+          MethodChannel('cc.ugotit.elinkbook/pdf_reader_view_$id'),
+          (call) async {
+            instanceCalls.add(call);
+            return null;
+          },
+        );
+        return 0;
+      }
+      return null;
+    });
+
+    await tester.pumpWidget(MaterialApp(
+      home: Center(
+        child: SizedBox(
+          width: 200,
+          height: 100,
+          child: PdfReaderView(
+            filePath: '/tmp/sample.pdf',
+            onPageRendered: _noop,
+            onError: _noopError,
+          ),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    final topLeft = tester.getTopLeft(find.byType(PdfReaderView));
+    final first = await tester.startGesture(topLeft + const Offset(20, 10));
+    final second = await tester.startGesture(topLeft + const Offset(100, 60));
+    await tester.pump();
+
+    expect(instanceCalls.any((c) => c.method == 'cancelAnnotationSelection'), isTrue);
+
+    await first.up();
+    await second.up();
   });
 }
 

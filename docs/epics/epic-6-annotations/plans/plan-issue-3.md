@@ -1179,7 +1179,7 @@ git commit -m "feat(epic-6): 新增 PdfSelectionInfo／PdfAnnotationDecoration �
 - Consumes: Task 5 的 `PdfSelectionInfo`／`PdfAnnotationDecoration`。
 - Produces: `PdfReaderView` 的 `GestureDetector` 新增 `onLongPressStart`／`onLongPressMoveUpdate`／`onLongPressEnd`（與既有 `onHorizontalDragEnd` 同一個元件，由 Flutter 手勢競技場裁決長按 vs 水平滑動，見 Global Constraints「長按/拖曳的手勢辨識改由 Flutter 端 GestureDetector 主導」審查修正），觸發 `beginAnnotationSelection`／`updateAnnotationSelection`／`endAnnotationSelection` 三個新增 outgoing method call；外層新增 `Listener` 追蹤觸點數，多指觸碰時觸發 `cancelAnnotationSelection`。`onSelectionRectComputed`／`onSelectionCanceled` 建構參數（incoming）與 `PdfReaderView.refreshAnnotations(key, List<PdfAnnotationDecoration>)` 靜態方法（outgoing）維持不變，供 Task 10（`ReaderScreen`）消費；`PdfReaderView.kt`（Task 7/8/9）為其原生對應端。
 
-- [ ] **Step 1: 寫失敗測試（擴充 `pdf_reader_view_test.dart`）**
+- [x] **Step 1: 寫失敗測試（擴充 `pdf_reader_view_test.dart`）**
 
 於 `app/test/reader/pdf_reader_view_test.dart` 頂部新增 import：
 
@@ -1436,12 +1436,12 @@ import 'package:elinkbook/reader/percent_rect.dart';
   });
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/reader/pdf_reader_view_test.dart`
 Expected: FAIL（`onSelectionRectComputed`/`onSelectionCanceled` 建構參數、`refreshAnnotations` 靜態方法、`onLongPressStart`/`onLongPressMoveUpdate`/`onLongPressEnd`/`Listener` 觸控回呼皆尚不存在，編譯錯誤）
 
-- [ ] **Step 3: 擴充 `PdfReaderView`**
+- [x] **Step 3: 擴充 `PdfReaderView`**
 
 `app/lib/reader/pdf_reader_view.dart` 頂部新增 import：
 
@@ -1633,12 +1633,12 @@ import 'percent_rect.dart';
   }
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `flutter test test/reader/pdf_reader_view_test.dart`
 Expected: PASS（含既有 Issue 1-4 相關測試不受影響）
 
-- [ ] **Step 5: 執行全專案測試 + `flutter analyze` 確認乾淨**
+- [x] **Step 5: 執行全專案測試 + `flutter analyze` 確認乾淨**
 
 Run: `flutter test`
 Expected: 全數 PASS
@@ -1646,7 +1646,7 @@ Expected: 全數 PASS
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/reader/pdf_reader_view.dart app/test/reader/pdf_reader_view_test.dart
