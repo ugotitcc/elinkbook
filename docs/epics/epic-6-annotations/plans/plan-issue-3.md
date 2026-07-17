@@ -1727,10 +1727,13 @@ class PdfContentBoundsTest {
         val bounds = computeFitCenterContentBounds(
             viewWidth = 200, viewHeight = 200, contentWidthPx = 400, contentHeightPx = 100,
         )
+        // displayHeight = viewWidth / contentRatio = 200 / 4 = 50；
+        // top = (viewHeight - displayHeight) / 2 = (200 - 50) / 2 = 75（審查修正：
+        // 原始期望值 50f/100f 算式有誤，見 Task 7 實作報告）。
         assertEquals(0f, bounds.left)
         assertEquals(200f, bounds.right)
-        assertEquals(50f, bounds.top)
-        assertEquals(100f, bounds.bottom)
+        assertEquals(75f, bounds.top)
+        assertEquals(125f, bounds.bottom)
     }
 
     @Test
@@ -1738,8 +1741,11 @@ class PdfContentBoundsTest {
         val bounds = computeFitCenterContentBounds(
             viewWidth = 200, viewHeight = 200, contentWidthPx = 100, contentHeightPx = 400,
         )
-        assertEquals(50f, bounds.left)
-        assertEquals(150f, bounds.right)
+        // displayWidth = viewHeight * contentRatio = 200 * 0.25 = 50；
+        // left = (viewWidth - displayWidth) / 2 = (200 - 50) / 2 = 75（審查修正：
+        // 原始期望值 50f/150f 算式有誤，見 Task 7 實作報告）。
+        assertEquals(75f, bounds.left)
+        assertEquals(125f, bounds.right)
         assertEquals(0f, bounds.top)
         assertEquals(200f, bounds.bottom)
     }
@@ -1863,8 +1869,13 @@ class HighlightSelectionOverlayView(
      * 尚未量測完成（極早期 layout 尚未跑過 `onSizeChanged`）時回傳全零矩形，
      * 呼叫端須視為退化案例（見 Task 8 `finishHighlightSelection` 的最小
      * 尺寸檢查，全零矩形必然小於門檻、會被當成取消處理）。
+     *
+     * 【審查修正】回傳型別必須是 `internal fun`，不能是 `public`（Kotlin
+     * 編譯錯誤：public 函式不可暴露 internal 型別 `PercentRectPx`）——
+     * 本函式僅供同模組 Task 8 的 `PdfReaderView.kt` 消費，符合其實際使用
+     * 範圍，見 Task 7 實作報告。
      */
-    fun currentRelativeRect(): PercentRectPx {
+    internal fun currentRelativeRect(): PercentRectPx {
         if (contentBounds.width() <= 0f || contentBounds.height() <= 0f) {
             return PercentRectPx(0f, 0f, 0f, 0f)
         }
