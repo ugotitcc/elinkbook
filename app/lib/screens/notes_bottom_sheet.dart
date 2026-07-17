@@ -439,18 +439,29 @@ class _NotesBottomSheetState extends State<NotesBottomSheet>
     widget.onAnnotationsChanged?.call();
   }
 
-  Future<void> _confirmDeleteAllHighlights() async {
+  /// 「批次刪除全部」確認 Dialog 共用邏輯（審查修正：`_confirmDeleteAllHighlights`
+  /// 與 `_confirmDeleteAllNotes` 原本各自重複同一套 `AlertDialog` 結構，僅
+  /// 標籤文字、Key、實際刪除呼叫不同，收斂為單一輔助方法）。[itemLabel] 為
+  /// 顯示於確認標題的項目名稱（例如「劃線」／「備註」），[count] 為顯示的
+  /// 筆數，[confirmKey] 供測試辨識「刪除」按鈕，[onConfirm] 為使用者確認後
+  /// 才執行的實際刪除／重新整理／通知邏輯。
+  Future<void> _confirmDeleteAll({
+    required String itemLabel,
+    required int count,
+    required Key confirmKey,
+    required Future<void> Function() onConfirm,
+  }) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text('確定要刪除全部劃線嗎？（共 ${_highlights.length} 筆）'),
+        title: Text('確定要刪除全部$itemLabel嗎？（共 $count 筆）'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
             child: const Text('取消'),
           ),
           TextButton(
-            key: const Key('notes_sheet_delete_all_highlights_confirm'),
+            key: confirmKey,
             onPressed: () => Navigator.of(dialogContext).pop(true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: const Text('刪除'),
@@ -459,33 +470,32 @@ class _NotesBottomSheetState extends State<NotesBottomSheet>
       ),
     );
     if (confirmed != true) return;
-    await widget.highlightsRepository!.deleteAllForBook(widget.bookId);
-    await _loadAnnotations();
-    widget.onAnnotationsChanged?.call();
+    await onConfirm();
   }
 
-  Future<void> _confirmDeleteAllNotes() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text('確定要刪除全部備註嗎？（共 ${_notes.length} 筆）'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('取消'),
-          ),
-          TextButton(
-            key: const Key('notes_sheet_delete_all_notes_confirm'),
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('刪除'),
-          ),
-        ],
-      ),
+  Future<void> _confirmDeleteAllHighlights() {
+    return _confirmDeleteAll(
+      itemLabel: '劃線',
+      count: _highlights.length,
+      confirmKey: const Key('notes_sheet_delete_all_highlights_confirm'),
+      onConfirm: () async {
+        await widget.highlightsRepository!.deleteAllForBook(widget.bookId);
+        await _loadAnnotations();
+        widget.onAnnotationsChanged?.call();
+      },
     );
-    if (confirmed != true) return;
-    await widget.notesRepository!.deleteAllForBook(widget.bookId);
-    await _loadAnnotations();
-    widget.onAnnotationsChanged?.call();
+  }
+
+  Future<void> _confirmDeleteAllNotes() {
+    return _confirmDeleteAll(
+      itemLabel: '備註',
+      count: _notes.length,
+      confirmKey: const Key('notes_sheet_delete_all_notes_confirm'),
+      onConfirm: () async {
+        await widget.notesRepository!.deleteAllForBook(widget.bookId);
+        await _loadAnnotations();
+        widget.onAnnotationsChanged?.call();
+      },
+    );
   }
 }

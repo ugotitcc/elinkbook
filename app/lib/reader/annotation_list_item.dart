@@ -23,29 +23,36 @@ class AnnotationListItem {
 
 /// 合併 [highlights]／[notes] 兩份清單成單一依書中位置排序的顯示清單
 /// （spec.md「資料模型關聯」／「側邊欄清單合併顯示」）。演算法：先以
-/// `note.highlightId` 建立索引，能對應到 highlight 的 note 與該
-/// highlight 合併成一筆；`highlightId == null` 的 note 各自獨立成一筆
-/// （純備註，見 `highlight_id IS NULL` 即為純備註的既定判斷依據）；最後
-/// 依 [Highlight.progression]／[Note.progression] 由小到大排序。
+/// `note.highlightId` 建立索引，能對應到 [highlights] 清單內某筆
+/// highlight 的 note 與該 highlight 合併成一筆；其餘 note（`highlightId
+/// == null` 的純備註，見 `highlight_id IS NULL` 即為純備註的既定判斷
+/// 依據，**或** `highlightId` 未對應到 [highlights] 清單中任何一筆——
+/// 審查修正：正常呼叫路徑下不會發生，因為呼叫端一律同時查詢同一本書的
+/// 完整 highlights/notes 兩份清單，FK `ON DELETE SET NULL` 也保證真正
+/// 刪除劃線後 `highlightId` 會被資料庫清成 null；但本函式作為可獨立測試
+/// 的純函式，仍防禦性地把這種輸入不一致的情況視同純備註顯示，而非讓該筆
+/// note 完全消失在清單外）各自獨立成一筆；最後依 [Highlight.progression]／
+/// [Note.progression] 由小到大排序。
 List<AnnotationListItem> mergeAnnotations(
   List<Highlight> highlights,
   List<Note> notes,
 ) {
+  final highlightIds = highlights.map((h) => h.id).whereType<int>().toSet();
   final noteByHighlightId = <int, Note>{};
-  final pureNotes = <Note>[];
+  final standaloneNotes = <Note>[];
   for (final note in notes) {
     final highlightId = note.highlightId;
-    if (highlightId != null) {
+    if (highlightId != null && highlightIds.contains(highlightId)) {
       noteByHighlightId[highlightId] = note;
     } else {
-      pureNotes.add(note);
+      standaloneNotes.add(note);
     }
   }
 
   final items = <AnnotationListItem>[
     for (final highlight in highlights)
       AnnotationListItem(highlight: highlight, note: noteByHighlightId[highlight.id]),
-    for (final note in pureNotes) AnnotationListItem(note: note),
+    for (final note in standaloneNotes) AnnotationListItem(note: note),
   ];
   items.sort((a, b) => a._position.compareTo(b._position));
   return items;

@@ -51,6 +51,18 @@ void main() {
     expect(items.map((i) => i.highlight?.id ?? -i.note!.id!).toList(), [2, -5, 1]);
   });
 
+  test(
+      '審查修正：note.highlightId 指向的 highlight 不在傳入的 highlights 清單中時，'
+      '該筆備註仍以獨立項目顯示，不會從清單中完全消失', () {
+    final notes = [
+      const Note(id: 7, bookId: 'b1', text: '孤兒備註', progression: 0.4, highlightId: 999),
+    ];
+    final items = mergeAnnotations(const [], notes);
+    expect(items, hasLength(1));
+    expect(items.single.highlight, isNull);
+    expect(items.single.note?.id, 7);
+  });
+
   test('AnnotationListItem.key 對相同 highlight/note 組合回傳相同值', () {
     const a = AnnotationListItem(
       highlight: Highlight(id: 1, bookId: 'b1', style: HighlightStyle.underline),
