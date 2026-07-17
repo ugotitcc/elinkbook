@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../reader/annotation_list_item.dart';
 import '../reader/book_format.dart';
+import '../reader/bookmark.dart';
 import '../reader/bookmark_position_context.dart';
 import '../reader/bookmarks_repository.dart';
 import '../reader/book_reader_prefs.dart';
@@ -99,6 +100,13 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   // 固定版面（FXL）懸浮控制項（返回鍵／設定鍵）是否顯示，由 EpubReaderView
   // 三欄熱區的中間熱區觸發切換（見 epic-16-dual-page Issue 9）。預設顯示。
   bool _fixedLayoutControlsVisible = true;
+  // FXL 懸浮「🔖 書籤 toggle」按鈕圖示所需的最小狀態快取
+  // （epic-6-annotations Issue 4）：與 NotesBottomSheet 內部「🔖 書籤」
+  // 分頁各自獨立載入自己的清單（比照既有分頁按鈕 toggle 與 Bottom Sheet
+  // 清單各自管理狀態的既定模式），只負責懸浮按鈕圖示的二態顯示。載入
+  // 時機見 _handleLayoutResolved（初次開書）／_openNotesSheet（Bottom
+  // Sheet 關閉後重新整理，使用者可能在分頁裡新增/刪除書籤）。
+  List<Bookmark> _fxlBookmarks = [];
   BookReaderPrefs _prefs = BookReaderPrefs.empty;
   LoadedPrefs? _loaded;
   ResolvedPreferences? _resolved;
@@ -447,6 +455,48 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     );
   }
 
+  Future<void> _loadFxlBookmarks() async {
+    final repository = widget.bookmarksRepository;
+    if (repository == null) return;
+    final list = await repository.listByBook(widget.bookId);
+    if (!mounted) return;
+    setState(() => _fxlBookmarks = list);
+  }
+
+  /// 目前頁是否已有書籤——比較 epubLocatorJson 完全相同字串，比照
+  /// NotesBottomSheet._matchesCurrentPosition 既有邏輯（FXL 副檔名為
+  /// .epub，恆用 epubLocatorJson，不使用 pdfPageIndex，見 Global
+  /// Constraints）。
+  Bookmark? get _fxlBookmarkAtCurrentPosition {
+    final locatorJson = _epubPositionInfo?.locatorJson;
+    if (locatorJson == null) return null;
+    for (final bookmark in _fxlBookmarks) {
+      if (bookmark.epubLocatorJson == locatorJson) return bookmark;
+    }
+    return null;
+  }
+
+  Future<void> _toggleFxlBookmark() async {
+    final repository = widget.bookmarksRepository;
+    final positionInfo = _epubPositionInfo;
+    if (repository == null || positionInfo == null) return;
+    final existing = _fxlBookmarkAtCurrentPosition;
+    if (existing != null) {
+      await repository.delete(existing.id!);
+    } else {
+      await repository.insert(Bookmark(
+        bookId: widget.bookId,
+        name: Bookmark.defaultName(BookmarkPositionContext(
+          epubLocatorJson: positionInfo.locatorJson,
+          progression: positionInfo.progression,
+        )),
+        epubLocatorJson: positionInfo.locatorJson,
+        progression: positionInfo.progression,
+      ));
+    }
+    await _loadFxlBookmarks();
+  }
+
   void _openToc() {
     final currentPath = TocNavigator.findCurrentPath(
       _tocEntries,
@@ -600,6 +650,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         widget.notesRepository != null) {
       _annotationsLoaded = true;
       _reloadAnnotationsAndRefreshDecorations();
+    }
+    if (info.isFixedLayout && widget.bookmarksRepository != null) {
+      _loadFxlBookmarks();
     }
   }
 
@@ -1106,6 +1159,32 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                       icon: const Icon(Icons.settings, color: Colors.white),
                       tooltip: '版面設定',
                       onPressed: _openFxlSettings,
+                    ),
+                  ),
+                ),
+              ),
+            if (_isFixedLayout &&
+                _fixedLayoutControlsVisible &&
+                widget.bookmarksRepository != null)
+              Positioned(
+                top: 128,
+                right: 16,
+                child: ClipOval(
+                  child: Container(
+                    color: Colors.black54,
+                    child: IconButton(
+                      key: const Key('reader_fixed_layout_bookmark_toggle_button'),
+                      icon: Icon(
+                        _fxlBookmarkAtCurrentPosition != null
+                            ? Icons.star
+                            : Icons.star_border,
+                        color: Colors.white,
+                      ),
+                      tooltip: _fxlBookmarkAtCurrentPosition != null
+                          ? '已加入此頁書籤'
+                          : '加入此頁書籤',
+                      onPressed:
+                          _epubPositionInfo == null ? null : _toggleFxlBookmark,
                     ),
                   ),
                 ),
