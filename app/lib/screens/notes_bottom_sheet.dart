@@ -1,8 +1,15 @@
 import 'package:flutter/material.dart';
 
+import '../reader/annotation_list_item.dart';
 import '../reader/bookmark.dart';
 import '../reader/bookmark_position_context.dart';
 import '../reader/bookmarks_repository.dart';
+import '../reader/highlight.dart';
+import '../reader/highlight_style.dart';
+import '../reader/highlights_repository.dart';
+import '../reader/note.dart';
+import '../reader/notes_repository.dart';
+import 'note_edit_dialog.dart';
 
 /// 統一的「筆記」入口 Bottom Sheet 外殼（epic-6-annotations Issue 1，
 /// spec.md「統一入口與 Bottom Sheet」）：帶「🔖 書籤」／「✏️ 劃線與備註」
@@ -21,12 +28,33 @@ class NotesBottomSheet extends StatefulWidget {
   /// 使用者點選某筆書籤時觸發，呼叫端負責實際跳轉並關閉本 Bottom Sheet。
   final ValueChanged<Bookmark> onBookmarkSelected;
 
+  /// 劃線／備註資料存取層（epic-6-annotations Issue 2）。兩者皆為
+  /// 可選具名參數，且必須「同時提供」才會顯示真實內容——未提供（或只提供
+  /// 其中一個）時「✏️」分頁維持 Issue 1 既有的空狀態佔位符，讓 FXL
+  /// （不支援劃線/備註，見 issues.md Issue 4）與尚未做完 Issue 3 的 PDF
+  /// 呼叫端零回歸沿用。
+  final HighlightsRepository? highlightsRepository;
+  final NotesRepository? notesRepository;
+
+  /// 使用者點選某筆合併項目時觸發，呼叫端負責實際跳轉並關閉本 Bottom
+  /// Sheet（比照 [onBookmarkSelected] 既有模式）。
+  final ValueChanged<AnnotationListItem>? onAnnotationSelected;
+
+  /// 本 Bottom Sheet 內任何劃線/備註 CRUD 動作完成後觸發，供呼叫端
+  /// （ReaderScreen）重新查詢並把最新標記清單送給原生端重繪 Decorator
+  /// （見 Task 10）。
+  final VoidCallback? onAnnotationsChanged;
+
   const NotesBottomSheet({
     super.key,
     required this.bookId,
     required this.bookmarksRepository,
     required this.currentPosition,
     required this.onBookmarkSelected,
+    this.highlightsRepository,
+    this.notesRepository,
+    this.onAnnotationSelected,
+    this.onAnnotationsChanged,
   });
 
   @override
@@ -37,6 +65,8 @@ class _NotesBottomSheetState extends State<NotesBottomSheet>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
   List<Bookmark> _bookmarks = [];
+  List<Highlight> _highlights = [];
+  List<Note> _notes = [];
   // 重新命名對話框使用的 TextEditingController（審查修正：修補洩漏）。
   // 刻意不在 _renameBookmark 的 showDialog 呼叫結束後立即 dispose——
   // showDialog 回傳的 Future 會在 Navigator.pop() 當下就完成，早於
@@ -52,6 +82,7 @@ class _NotesBottomSheetState extends State<NotesBottomSheet>
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _loadBookmarks();
+    _loadAnnotations();
   }
 
   @override
@@ -65,6 +96,19 @@ class _NotesBottomSheetState extends State<NotesBottomSheet>
     final list = await widget.bookmarksRepository.listByBook(widget.bookId);
     if (!mounted) return;
     setState(() => _bookmarks = list);
+  }
+
+  Future<void> _loadAnnotations() async {
+    final highlightsRepository = widget.highlightsRepository;
+    final notesRepository = widget.notesRepository;
+    if (highlightsRepository == null || notesRepository == null) return;
+    final highlights = await highlightsRepository.listByBook(widget.bookId);
+    final notes = await notesRepository.listByBook(widget.bookId);
+    if (!mounted) return;
+    setState(() {
+      _highlights = highlights;
+      _notes = notes;
+    });
   }
 
   @override
@@ -100,12 +144,7 @@ class _NotesBottomSheetState extends State<NotesBottomSheet>
                 controller: _tabController,
                 children: [
                   _buildBookmarksTab(),
-                  const Center(
-                    child: Text(
-                      '尚無劃線或備註',
-                      key: Key('notes_sheet_annotations_placeholder'),
-                    ),
-                  ),
+                  _buildAnnotationsTab(),
                 ],
               ),
             ),
@@ -274,5 +313,177 @@ class _NotesBottomSheetState extends State<NotesBottomSheet>
         ],
       ),
     );
+  }
+
+  Widget _buildAnnotationsTab() {
+    final highlightsRepository = widget.highlightsRepository;
+    final notesRepository = widget.notesRepository;
+    if (highlightsRepository == null || notesRepository == null) {
+      return const Center(
+        child: Text('尚無劃線或備註', key: Key('notes_sheet_annotations_placeholder')),
+      );
+    }
+    final items = mergeAnnotations(_highlights, _notes);
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  key: const Key('notes_sheet_delete_all_highlights'),
+                  onPressed: _highlights.isEmpty ? null : _confirmDeleteAllHighlights,
+                  child: const Text('刪除所有劃線'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton(
+                  key: const Key('notes_sheet_delete_all_notes'),
+                  onPressed: _notes.isEmpty ? null : _confirmDeleteAllNotes,
+                  child: const Text('刪除所有備註'),
+                ),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: items.isEmpty
+              ? const Center(
+                  child: Text('尚無劃線或備註', key: Key('notes_sheet_annotations_placeholder')),
+                )
+              : ListView.builder(
+                  key: const Key('notes_sheet_annotation_list'),
+                  itemCount: items.length,
+                  itemBuilder: (context, index) => _buildAnnotationRow(items[index]),
+                ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAnnotationRow(AnnotationListItem item) {
+    final highlight = item.highlight;
+    final note = item.note;
+    return ListTile(
+      key: Key('notes_sheet_annotation_${item.key}'),
+      leading: Icon(
+        Icons.circle,
+        color: highlight != null
+            ? Color(highlightStyleTint(highlight.style,
+                primaryColor: Theme.of(context).colorScheme.primary))
+            : noteOnlyTint,
+      ),
+      title: Text(highlight != null ? _highlightStyleLabel(highlight.style) : '📌 備註'),
+      subtitle: note != null
+          ? Text(note.text, maxLines: 2, overflow: TextOverflow.ellipsis)
+          : null,
+      onTap: () => widget.onAnnotationSelected?.call(item),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (note != null)
+            IconButton(
+              key: Key('notes_sheet_annotation_edit_${note.id}'),
+              icon: const Icon(Icons.edit),
+              tooltip: '編輯備註',
+              onPressed: () => _editNoteText(note),
+            ),
+          IconButton(
+            key: Key('notes_sheet_annotation_delete_${item.key}'),
+            icon: const Icon(Icons.delete),
+            tooltip: '刪除',
+            onPressed: () => _deleteAnnotationItem(item),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 供劃線清單項目顯示用的中文標籤。【審查修正】刻意不放在
+  /// `reader/highlight_style.dart`（領域模型層）——`reader/` 目錄下的其他
+  /// 列舉（`BookFormat`／`WritingMode`／`PdfCropMode` 等）皆不含 UI 顯示
+  /// 字串，是純格式無關的領域模型；本函式是唯一消費端，收斂在這裡避免
+  /// 領域模型檔案摻雜 UI 層級的字串常數。
+  String _highlightStyleLabel(HighlightStyle style) {
+    switch (style) {
+      case HighlightStyle.highlighterYellow:
+        return '螢光筆（黃）';
+      case HighlightStyle.highlighterPink:
+        return '螢光筆（粉）';
+      case HighlightStyle.highlighterBlue:
+        return '螢光筆（藍）';
+      case HighlightStyle.underline:
+        return '底線';
+    }
+  }
+
+  Future<void> _editNoteText(Note note) async {
+    final newText = await showNoteTextDialog(context, initialText: note.text, title: '編輯備註');
+    if (newText == null) return;
+    await widget.notesRepository!.updateText(note.id!, newText);
+    await _loadAnnotations();
+    widget.onAnnotationsChanged?.call();
+  }
+
+  /// 單筆刪除＝整筆一起刪（spec.md 決策 #13）：不依賴 FK `ON DELETE SET
+  /// NULL` 的自動退化（那是給批次刪除劃線情境用的），明確分別刪除兩張表
+  /// 各自的列。
+  Future<void> _deleteAnnotationItem(AnnotationListItem item) async {
+    if (item.note != null) await widget.notesRepository!.delete(item.note!.id!);
+    if (item.highlight != null) await widget.highlightsRepository!.delete(item.highlight!.id!);
+    await _loadAnnotations();
+    widget.onAnnotationsChanged?.call();
+  }
+
+  Future<void> _confirmDeleteAllHighlights() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('確定要刪除全部劃線嗎？（共 ${_highlights.length} 筆）'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            key: const Key('notes_sheet_delete_all_highlights_confirm'),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('刪除'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    await widget.highlightsRepository!.deleteAllForBook(widget.bookId);
+    await _loadAnnotations();
+    widget.onAnnotationsChanged?.call();
+  }
+
+  Future<void> _confirmDeleteAllNotes() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('確定要刪除全部備註嗎？（共 ${_notes.length} 筆）'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            key: const Key('notes_sheet_delete_all_notes_confirm'),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('刪除'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    await widget.notesRepository!.deleteAllForBook(widget.bookId);
+    await _loadAnnotations();
+    widget.onAnnotationsChanged?.call();
   }
 }
