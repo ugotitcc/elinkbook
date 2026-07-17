@@ -45,7 +45,7 @@
 **Interfaces:**
 - Produces: `HighlightStyle`（列舉，4 個值，各自攜帶 `fixedTint`——審查修正，見 Global Constraints「色彩決策收斂在 Dart 端」，改由列舉本身攜帶資料取代重複 `switch`；純 UI 顯示標籤刻意不放在此檔案，見 Task 7）；`highlighterYellowTint`/`highlighterPinkTint`/`highlighterBlueTint`/`noteOnlyTint`（`Color` 常數）；`highlightStyleTint(HighlightStyle, {required Color primaryColor}) → int`；`Highlight`（`id`/`bookId`/`style`/`epubLocatorJson`/`progression`，`toMap()`/`fromMap()`/`==`/`hashCode`）；`Note`（`id`/`bookId`/`text`/`epubLocatorJson`/`progression`/`highlightId`，`toMap()`/`fromMap()`/`copyWith({text})`/`==`/`hashCode`）。供 Task 2-10 消費。
 
-- [ ] **Step 1: 寫失敗測試（`highlight_style_test.dart`）**
+- [x] **Step 1: 寫失敗測試（`highlight_style_test.dart`）**
 
 ```dart
 import 'package:flutter/material.dart';
@@ -86,12 +86,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/reader/highlight_style_test.dart`
 Expected: FAIL（`highlight_style.dart` 尚不存在，編譯錯誤）
 
-- [ ] **Step 3: 實作 `highlight_style.dart`**
+- [x] **Step 3: 實作 `highlight_style.dart`**
 
 建立 `app/lib/reader/highlight_style.dart`：
 
@@ -153,12 +153,12 @@ int highlightStyleTint(HighlightStyle style, {required Color primaryColor}) {
 }
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `flutter test test/reader/highlight_style_test.dart`
 Expected: PASS
 
-- [ ] **Step 5: 寫失敗測試（`highlight_test.dart`）**
+- [x] **Step 5: 寫失敗測試（`highlight_test.dart`）**
 
 ```dart
 import 'package:flutter_test/flutter_test.dart';
@@ -203,12 +203,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 6: 執行測試確認失敗**
+- [x] **Step 6: 執行測試確認失敗**
 
 Run: `flutter test test/reader/highlight_test.dart`
 Expected: FAIL（`highlight.dart` 尚不存在，編譯錯誤）
 
-- [ ] **Step 7: 實作 `Highlight`**
+- [x] **Step 7: 實作 `Highlight`**
 
 建立 `app/lib/reader/highlight.dart`：
 
@@ -276,12 +276,12 @@ class Highlight {
 }
 ```
 
-- [ ] **Step 8: 執行測試確認通過**
+- [x] **Step 8: 執行測試確認通過**
 
 Run: `flutter test test/reader/highlight_test.dart`
 Expected: PASS
 
-- [ ] **Step 9: 寫失敗測試（`note_test.dart`）**
+- [x] **Step 9: 寫失敗測試（`note_test.dart`）**
 
 ```dart
 import 'package:flutter_test/flutter_test.dart';
@@ -333,12 +333,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 10: 執行測試確認失敗**
+- [x] **Step 10: 執行測試確認失敗**
 
 Run: `flutter test test/reader/note_test.dart`
 Expected: FAIL（`note.dart` 尚不存在，編譯錯誤）
 
-- [ ] **Step 11: 實作 `Note`**
+- [x] **Step 11: 實作 `Note`**
 
 建立 `app/lib/reader/note.dart`：
 
@@ -417,17 +417,17 @@ class Note {
 }
 ```
 
-- [ ] **Step 12: 執行測試確認通過**
+- [x] **Step 12: 執行測試確認通過**
 
 Run: `flutter test test/reader/note_test.dart`
 Expected: PASS
 
-- [ ] **Step 13: 執行 `flutter analyze` 確認乾淨**
+- [x] **Step 13: 執行 `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 14: Commit**
+- [x] **Step 14: Commit**
 
 ```bash
 git add app/lib/reader/highlight_style.dart app/lib/reader/highlight.dart app/lib/reader/note.dart app/test/reader/highlight_style_test.dart app/test/reader/highlight_test.dart app/test/reader/note_test.dart
@@ -446,7 +446,7 @@ git commit -m "feat(epic-6): 新增 HighlightStyle／Highlight／Note 模型"
 - Consumes: Task 1 的 `Highlight`／`Note`。
 - Produces: `AnnotationListItem`（`highlight`/`note` 皆 nullable，至少一個非 null；`key` getter）；`mergeAnnotations(List<Highlight>, List<Note>) → List<AnnotationListItem>`，供 Task 7（`NotesBottomSheet`）與 Task 10（`ReaderScreen` 點擊已建立標記時反查）消費。
 
-- [ ] **Step 1: 寫失敗測試**
+- [x] **Step 1: 寫失敗測試**
 
 建立 `app/test/reader/annotation_list_item_test.dart`：
 
@@ -516,12 +516,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/reader/annotation_list_item_test.dart`
 Expected: FAIL（`annotation_list_item.dart` 尚不存在，編譯錯誤）
 
-- [ ] **Step 3: 實作 `AnnotationListItem` + `mergeAnnotations`**
+- [x] **Step 3: 實作 `AnnotationListItem` + `mergeAnnotations`**
 
 建立 `app/lib/reader/annotation_list_item.dart`：
 
@@ -580,17 +580,17 @@ List<AnnotationListItem> mergeAnnotations(
 }
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `flutter test test/reader/annotation_list_item_test.dart`
 Expected: PASS
 
-- [ ] **Step 5: 執行 `flutter analyze` 確認乾淨**
+- [x] **Step 5: 執行 `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/reader/annotation_list_item.dart app/test/reader/annotation_list_item_test.dart
@@ -608,7 +608,7 @@ git commit -m "feat(epic-6): 新增劃線／備註合併排序純函式 mergeAnn
 **Interfaces:**
 - Produces: `highlights` 表（`id`/`book_id`/`style`/`epub_locator_json`/`progression`）、`notes` 表（`id`/`book_id`/`text`/`epub_locator_json`/`progression`/`highlight_id` 可空外鍵），供 Task 4 的 `HighlightsRepository`／`NotesRepository` 消費。
 
-- [ ] **Step 1: 寫失敗測試**
+- [x] **Step 1: 寫失敗測試**
 
 於 `app/test/library/sqlite_library_repository_test.dart` 檔案結尾（最後一個 `}` 之前）新增：
 
@@ -757,12 +757,12 @@ git commit -m "feat(epic-6): 新增劃線／備註合併排序純函式 mergeAnn
   });
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/library/sqlite_library_repository_test.dart`
 Expected: FAIL（`no such table: highlights`，因為 schema 尚未更新且 `version` 仍為 8）
 
-- [ ] **Step 3: 實作 schema migration**
+- [x] **Step 3: 實作 schema migration**
 
 `app/lib/library/sqlite_library_repository.dart` 的 `version: 8,` 改為：
 
@@ -840,17 +840,17 @@ Expected: FAIL（`no such table: highlights`，因為 schema 尚未更新且 `ve
   }
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `flutter test test/library/sqlite_library_repository_test.dart`
 Expected: PASS（全部測試綠燈，含既有 v1→v8 系列遷移測試不受影響）
 
-- [ ] **Step 5: 執行 `flutter analyze` 確認乾淨**
+- [x] **Step 5: 執行 `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/library/sqlite_library_repository.dart app/test/library/sqlite_library_repository_test.dart
@@ -871,7 +871,7 @@ git commit -m "feat(epic-6): 新增 highlights／notes 表與 v8→v9 schema mig
 - Consumes: Task 1 的 `Highlight`／`Note`；Task 3 的 `highlights`/`notes` 表 schema。
 - Produces: `HighlightsRepository(Database)`（`insert`/`listByBook`/`delete`/`deleteAllForBook`）、`NotesRepository(Database)`（`insert`/`listByBook`/`updateText`/`delete`/`deleteAllForBook`），供 Task 7（`NotesBottomSheet`）與 Task 10（`ReaderScreen`）消費。
 
-- [ ] **Step 1: 寫失敗測試（`highlights_repository_test.dart`）**
+- [x] **Step 1: 寫失敗測試（`highlights_repository_test.dart`）**
 
 ```dart
 import 'package:flutter_test/flutter_test.dart';
@@ -974,12 +974,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/reader/highlights_repository_test.dart`
 Expected: FAIL（`highlights_repository.dart` 尚不存在，編譯錯誤）
 
-- [ ] **Step 3: 實作 `HighlightsRepository`**
+- [x] **Step 3: 實作 `HighlightsRepository`**
 
 建立 `app/lib/reader/highlights_repository.dart`：
 
@@ -1022,12 +1022,12 @@ class HighlightsRepository {
 }
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `flutter test test/reader/highlights_repository_test.dart`
 Expected: PASS
 
-- [ ] **Step 5: 寫失敗測試（`notes_repository_test.dart`，含 FK 退化行為）**
+- [x] **Step 5: 寫失敗測試（`notes_repository_test.dart`，含 FK 退化行為）**
 
 ```dart
 import 'package:flutter_test/flutter_test.dart';
@@ -1155,12 +1155,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 6: 執行測試確認失敗**
+- [x] **Step 6: 執行測試確認失敗**
 
 Run: `flutter test test/reader/notes_repository_test.dart`
 Expected: FAIL（`notes_repository.dart` 尚不存在，編譯錯誤）
 
-- [ ] **Step 7: 實作 `NotesRepository`**
+- [x] **Step 7: 實作 `NotesRepository`**
 
 建立 `app/lib/reader/notes_repository.dart`：
 
@@ -1207,17 +1207,17 @@ class NotesRepository {
 }
 ```
 
-- [ ] **Step 8: 執行測試確認通過**
+- [x] **Step 8: 執行測試確認通過**
 
 Run: `flutter test test/reader/notes_repository_test.dart`
 Expected: PASS（含 FK 退化行為測試）
 
-- [ ] **Step 9: 執行 `flutter analyze` 確認乾淨**
+- [x] **Step 9: 執行 `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 10: Commit**
+- [x] **Step 10: Commit**
 
 ```bash
 git add app/lib/reader/highlights_repository.dart app/lib/reader/notes_repository.dart app/test/reader/highlights_repository_test.dart app/test/reader/notes_repository_test.dart
@@ -1235,7 +1235,7 @@ git commit -m "feat(epic-6): 新增 HighlightsRepository／NotesRepository"
 **Interfaces:**
 - Produces: `showNoteTextDialog(BuildContext, {String initialText, String title}) → Future<String?>`，供 Task 7（`NotesBottomSheet` 編輯既有備註）與 Task 10（`ReaderScreen` 新增備註）共用消費。
 
-- [ ] **Step 1: 寫失敗測試**
+- [x] **Step 1: 寫失敗測試**
 
 建立 `app/test/screens/note_edit_dialog_test.dart`：
 
@@ -1347,12 +1347,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/screens/note_edit_dialog_test.dart`
 Expected: FAIL（`note_edit_dialog.dart` 尚不存在，編譯錯誤）
 
-- [ ] **Step 3: 實作 `note_edit_dialog.dart`**
+- [x] **Step 3: 實作 `note_edit_dialog.dart`**
 
 建立 `app/lib/screens/note_edit_dialog.dart`：
 
@@ -1438,17 +1438,17 @@ class _NoteTextDialogState extends State<_NoteTextDialog> {
 }
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `flutter test test/screens/note_edit_dialog_test.dart`
 Expected: PASS
 
-- [ ] **Step 5: 執行 `flutter analyze` 確認乾淨**
+- [x] **Step 5: 執行 `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/screens/note_edit_dialog.dart app/test/screens/note_edit_dialog_test.dart
@@ -1467,7 +1467,7 @@ git commit -m "feat(epic-6): 新增備註文字輸入/編輯共用 Dialog"
 - Consumes: Task 1 的 `HighlightStyle`／色票常數。
 - Produces: `AnnotationToolbar({onStyleSelected, onNotePressed})`，供 Task 10（`ReaderScreen`）消費；design.md 明訂 EPUB／PDF 共用同一組 Widget（Issue 3 會直接複用，本 Issue 不含 PDF 專屬邏輯）。
 
-- [ ] **Step 1: 寫失敗測試**
+- [x] **Step 1: 寫失敗測試**
 
 建立 `app/test/screens/annotation_toolbar_test.dart`：
 
@@ -1536,12 +1536,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/screens/annotation_toolbar_test.dart`
 Expected: FAIL（`annotation_toolbar.dart` 尚不存在，編譯錯誤）
 
-- [ ] **Step 3: 實作 `AnnotationToolbar`**
+- [x] **Step 3: 實作 `AnnotationToolbar`**
 
 建立 `app/lib/screens/annotation_toolbar.dart`：
 
@@ -1626,17 +1626,17 @@ class AnnotationToolbar extends StatelessWidget {
 }
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `flutter test test/screens/annotation_toolbar_test.dart`
 Expected: PASS
 
-- [ ] **Step 5: 執行 `flutter analyze` 確認乾淨**
+- [x] **Step 5: 執行 `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/screens/annotation_toolbar.dart app/test/screens/annotation_toolbar_test.dart
@@ -1657,7 +1657,7 @@ git commit -m "feat(epic-6): 新增 AnnotationToolbar 浮動工具列 Widget"
 - Consumes: Task 1 的 `Highlight`／`Note`／色票／`HighlightStyle.fixedTint`；Task 2 的 `AnnotationListItem`／`mergeAnnotations`；Task 4 的 `HighlightsRepository`／`NotesRepository`；Task 5 的 `showNoteTextDialog`。UI 顯示標籤（例如「螢光筆（黃）」）不從 `reader/highlight_style.dart` 消費——`reader/` 目錄下的列舉刻意不含 UI 字串（審查修正，見 Task 1），本 Task 在 `notes_bottom_sheet.dart` 內自建私有的 `_highlightStyleLabel` 函式（唯一消費端）。
 - Produces: `NotesBottomSheet` 新增可選具名參數 `highlightsRepository`／`notesRepository`／`onAnnotationSelected`／`onAnnotationsChanged`（皆 nullable，未提供時「✏️」分頁維持 Issue 1 既有的空狀態佔位符，供 FXL／尚未有 Issue 3 的 PDF 呼叫端零回歸沿用），供 Task 10（`ReaderScreen`）消費。
 
-- [ ] **Step 1: 建立測試用 Fake**
+- [x] **Step 1: 建立測試用 Fake**
 
 建立 `app/test/support/fake_highlights_repository.dart`：
 
@@ -1756,7 +1756,7 @@ class FakeNotesRepository implements NotesRepository {
 }
 ```
 
-- [ ] **Step 2: 寫失敗測試**
+- [x] **Step 2: 寫失敗測試**
 
 於 `app/test/screens/notes_bottom_sheet_test.dart` 頂部新增 import：
 
@@ -2030,12 +2030,12 @@ Future<void> _pumpSheet(
   });
 ```
 
-- [ ] **Step 3: 執行測試確認失敗**
+- [x] **Step 3: 執行測試確認失敗**
 
 Run: `flutter test test/screens/notes_bottom_sheet_test.dart`
 Expected: FAIL（`NotesBottomSheet` 建構子尚無 `highlightsRepository` 等新參數，編譯錯誤）
 
-- [ ] **Step 4: 擴充 `NotesBottomSheet`**
+- [x] **Step 4: 擴充 `NotesBottomSheet`**
 
 `app/lib/screens/notes_bottom_sheet.dart` 頂部新增 import：
 
@@ -2308,17 +2308,17 @@ import 'note_edit_dialog.dart';
   }
 ```
 
-- [ ] **Step 5: 執行測試確認通過**
+- [x] **Step 5: 執行測試確認通過**
 
 Run: `flutter test test/screens/notes_bottom_sheet_test.dart`
 Expected: PASS（全部測試綠燈，含 Issue 1 既有測試不受影響）
 
-- [ ] **Step 6: 執行 `flutter analyze` 確認乾淨**
+- [x] **Step 6: 執行 `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app/lib/screens/notes_bottom_sheet.dart app/test/support/fake_highlights_repository.dart app/test/support/fake_notes_repository.dart app/test/screens/notes_bottom_sheet_test.dart
@@ -2342,7 +2342,7 @@ git commit -m "feat(epic-6): NotesBottomSheet「劃線與備註」分頁正式�
 **Interfaces:**
 - Produces: `PercentRect`（`left`/`top`/`right`/`bottom`，`==`/`hashCode`，審查修正——見下方 Step 1-2）；`EpubSelectionInfo`（`locatorJson`/`progression`/`rect: PercentRect`）；`EpubDecoration`（`id`/`locatorJson`/`tint`/`isUnderline`，`toWire()`，`EpubDecoration.forHighlight(...)`/`EpubDecoration.forNote(...)` 具名建構子）；`AnnotationKind`／`decodeAnnotationId(String) → ({AnnotationKind kind, int id})?`（審查修正，見下方 Step 5-6）；`EpubReaderView` 新增 `onSelectionChanged`/`onSelectionCleared`/`onAnnotationActivated` 建構參數與 `EpubReaderView.setDecorations(key, List<EpubDecoration>)` 靜態方法，供 Task 10（`ReaderScreen`）消費；`EpubReaderView.kt`（Task 9）為其原生對應端。
 
-- [ ] **Step 1: 寫失敗測試（`percent_rect_test.dart`，審查修正：抽出獨立值物件取代 `EpubSelectionInfo` 內 4 個高度相關的百分比欄位）**
+- [x] **Step 1: 寫失敗測試（`percent_rect_test.dart`，審查修正：抽出獨立值物件取代 `EpubSelectionInfo` 內 4 個高度相關的百分比欄位）**
 
 建立 `app/test/reader/percent_rect_test.dart`：
 
@@ -2366,12 +2366,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/reader/percent_rect_test.dart`
 Expected: FAIL（`percent_rect.dart` 尚不存在，編譯錯誤）
 
-- [ ] **Step 3: 實作 `PercentRect`**
+- [x] **Step 3: 實作 `PercentRect`**
 
 建立 `app/lib/reader/percent_rect.dart`：
 
@@ -2412,12 +2412,12 @@ class PercentRect {
 }
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `flutter test test/reader/percent_rect_test.dart`
 Expected: PASS
 
-- [ ] **Step 5: 寫失敗測試（`epub_selection_info_test.dart`）**
+- [x] **Step 5: 寫失敗測試（`epub_selection_info_test.dart`）**
 
 建立 `app/test/reader/epub_selection_info_test.dart`：
 
@@ -2444,12 +2444,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 6: 執行測試確認失敗**
+- [x] **Step 6: 執行測試確認失敗**
 
 Run: `flutter test test/reader/epub_selection_info_test.dart`
 Expected: FAIL（`epub_selection_info.dart` 尚不存在，編譯錯誤）
 
-- [ ] **Step 7: 實作 `EpubSelectionInfo`**
+- [x] **Step 7: 實作 `EpubSelectionInfo`**
 
 建立 `app/lib/reader/epub_selection_info.dart`：
 
@@ -2487,12 +2487,12 @@ class EpubSelectionInfo {
 }
 ```
 
-- [ ] **Step 8: 執行測試確認通過**
+- [x] **Step 8: 執行測試確認通過**
 
 Run: `flutter test test/reader/epub_selection_info_test.dart`
 Expected: PASS
 
-- [ ] **Step 9: 寫失敗測試（`epub_decoration_test.dart`）**
+- [x] **Step 9: 寫失敗測試（`epub_decoration_test.dart`）**
 
 建立 `app/test/reader/epub_decoration_test.dart`：
 
@@ -2532,12 +2532,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 10: 執行測試確認失敗**
+- [x] **Step 10: 執行測試確認失敗**
 
 Run: `flutter test test/reader/epub_decoration_test.dart`
 Expected: FAIL（`epub_decoration.dart` 尚不存在，編譯錯誤）
 
-- [ ] **Step 11: 實作 `EpubDecoration`**
+- [x] **Step 11: 實作 `EpubDecoration`**
 
 建立 `app/lib/reader/epub_decoration.dart`：
 
@@ -2627,17 +2627,17 @@ DecodedAnnotationId? decodeAnnotationId(String encoded) {
 typedef DecodedAnnotationId = ({AnnotationKind kind, int id});
 ```
 
-- [ ] **Step 12: 執行測試確認通過**
+- [x] **Step 12: 執行測試確認通過**
 
 Run: `flutter test test/reader/epub_decoration_test.dart`
 Expected: PASS
 
-- [ ] **Step 13: 執行 `flutter analyze` 確認乾淨（本 Task 中途檢查點）**
+- [x] **Step 13: 執行 `flutter analyze` 確認乾淨（本 Task 中途檢查點）**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 14: 寫失敗測試（擴充 `epub_reader_view_test.dart`）**
+- [x] **Step 14: 寫失敗測試（擴充 `epub_reader_view_test.dart`）**
 
 於 `app/test/reader/epub_reader_view_test.dart` 頂部新增 import：
 
@@ -2833,12 +2833,12 @@ import 'package:elinkbook/reader/percent_rect.dart';
   });
 ```
 
-- [ ] **Step 15: 執行測試確認失敗**
+- [x] **Step 15: 執行測試確認失敗**
 
 Run: `flutter test test/reader/epub_reader_view_test.dart`
 Expected: FAIL（`EpubReaderView` 尚無 `onSelectionChanged`/`onSelectionCleared`/`onAnnotationActivated` 建構參數與 `setDecorations` 靜態方法，編譯錯誤）
 
-- [ ] **Step 16: 擴充 `EpubReaderView.dart`**
+- [x] **Step 16: 擴充 `EpubReaderView.dart`**
 
 `app/lib/reader/epub_reader_view.dart` 頂部新增 import：
 
@@ -2917,17 +2917,17 @@ import 'percent_rect.dart';
         break;
 ```
 
-- [ ] **Step 17: 執行測試確認通過**
+- [x] **Step 17: 執行測試確認通過**
 
 Run: `flutter test test/reader/epub_reader_view_test.dart`
 Expected: PASS（全部測試綠燈，含既有測試不受影響）
 
-- [ ] **Step 18: 執行 `flutter analyze` 確認乾淨**
+- [x] **Step 18: 執行 `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 19: Commit**
+- [x] **Step 19: Commit**
 
 ```bash
 git add app/lib/reader/percent_rect.dart app/lib/reader/epub_selection_info.dart app/lib/reader/epub_decoration.dart app/lib/reader/epub_reader_view.dart app/test/reader/percent_rect_test.dart app/test/reader/epub_selection_info_test.dart app/test/reader/epub_decoration_test.dart app/test/reader/epub_reader_view_test.dart
@@ -2945,7 +2945,7 @@ git commit -m "feat(epic-6): EpubReaderView.dart 新增選取事件／標記啟�
 - Consumes: Task 8 的 Dart 端 method channel 契約（`setDecorations` 呼叫、`onSelectionChanged`/`onSelectionCleared`/`onAnnotationActivated` 回呼）。
 - Produces: 原生端對稱實作，無新增 Dart 型別。本 Task 無 `app/test/` 單元測試（純 Kotlin 原生邏輯，比照專案既有兩層測試架構——`app/test/` 不 mock 原生 method channel，真機互動驗證留給 Task 11 的 `integration_test`）；只以 `flutter analyze`（確認 Dart 端未受影響）與 Kotlin 編譯通過作為本 Task 驗證手段。
 
-- [ ] **Step 1: 新增 import**
+- [x] **Step 1: 新增 import**
 
 `app/android/app/src/main/kotlin/cc/ugotit/elinkbook/EpubReaderView.kt` 頂部新增：
 
@@ -2959,7 +2959,7 @@ import org.readium.r2.navigator.html.HtmlDecorationTemplates
 import org.readium.r2.navigator.util.BaseActionModeCallback
 ```
 
-- [ ] **Step 2: 新增群組常數與內部欄位**
+- [x] **Step 2: 新增群組常數與內部欄位**
 
 於 `companion object` 內（`isDualPageEnabled` 之後）新增：
 
@@ -2978,7 +2978,7 @@ import org.readium.r2.navigator.util.BaseActionModeCallback
     private var decorationListener: DecorableNavigator.Listener? = null
 ```
 
-- [ ] **Step 3: 新增 `SelectionActionModeCallback` 內部類別**
+- [x] **Step 3: 新增 `SelectionActionModeCallback` 內部類別**
 
 在 `applyFxlFitScale`/`removeFxlLayoutListener` 方法之後新增：
 
@@ -3059,7 +3059,7 @@ import org.readium.r2.navigator.util.BaseActionModeCallback
     }
 ```
 
-- [ ] **Step 4: 於 `onMethodCall` 新增 `setDecorations` 分支**
+- [x] **Step 4: 於 `onMethodCall` 新增 `setDecorations` 分支**
 
 `jumpToLocator` 分支之後新增：
 
@@ -3074,7 +3074,7 @@ import org.readium.r2.navigator.util.BaseActionModeCallback
             }
 ```
 
-- [ ] **Step 5: 新增 `applyDecorationsFromWire`**
+- [x] **Step 5: 新增 `applyDecorationsFromWire`**
 
 在 `reportSelectionChanged` 方法之後新增：
 
@@ -3112,7 +3112,7 @@ import org.readium.r2.navigator.util.BaseActionModeCallback
     }
 ```
 
-- [ ] **Step 6: 在 `attachNavigator()` 內註冊標記點擊監聽器**
+- [x] **Step 6: 在 `attachNavigator()` 內註冊標記點擊監聽器**
 
 於 `attachNavigator()` 內，`navigatorFragment?.currentLocator?.onEach { ... }?.launchIn(scope)` 陳述式之後新增：
 
@@ -3131,7 +3131,7 @@ import org.readium.r2.navigator.util.BaseActionModeCallback
             navigatorFragment?.addDecorationListener(ANNOTATIONS_DECORATION_GROUP, listener)
 ```
 
-- [ ] **Step 7: 於 `buildFontFamiliesConfiguration()` 加上選字攔截與 Decoration 模板設定**
+- [x] **Step 7: 於 `buildFontFamiliesConfiguration()` 加上選字攔截與 Decoration 模板設定**
 
 方法名稱改為 `buildNavigatorConfiguration()`（其職責已從「只登記字型」擴充為整個 `Configuration` 物件，見下方 KDoc 補充），對應呼叫處（`attachNavigator()` 內 `createFragmentFactory(..., configuration = buildFontFamiliesConfiguration())`）同步改名為 `buildNavigatorConfiguration()`。
 
@@ -3159,7 +3159,7 @@ KDoc 補充（沿用既有內容，於段落結尾追加）：
             for ((familyName, lookupKey) in lookupKeys) {
 ```
 
-- [ ] **Step 8: 在 `dispose()` 移除標記點擊監聽器**
+- [x] **Step 8: 在 `dispose()` 移除標記點擊監聽器**
 
 `dispose()` 內 `removeFxlLayoutListener()` 之後新增：
 
@@ -3167,17 +3167,17 @@ KDoc 補充（沿用既有內容，於段落結尾追加）：
         decorationListener?.let { navigatorFragment?.removeDecorationListener(it) }
 ```
 
-- [ ] **Step 9: 編譯驗證**
+- [x] **Step 9: 編譯驗證**
 
 Run: `cd app && flutter build apk --debug`
 Expected: 建置成功（Kotlin 編譯通過，確認新增的 import／型別簽章與 Readium `kotlin-toolkit:3.3.0` 實際 API 相符）。
 
-- [ ] **Step 10: 執行 `flutter analyze` 確認 Dart 端未受影響**
+- [x] **Step 10: 執行 `flutter analyze` 確認 Dart 端未受影響**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 11: Commit**
+- [x] **Step 11: Commit**
 
 ```bash
 git add app/android/app/src/main/kotlin/cc/ugotit/elinkbook/EpubReaderView.kt
@@ -3196,7 +3196,7 @@ git commit -m "feat(epic-6): EpubReaderView.kt 原生端接上選字攔截／Dec
 - Consumes: Task 1-9 的全部型別與 Widget。
 - Produces: `ReaderScreen` 新增可選具名參數 `highlightsRepository`／`notesRepository`（皆 nullable，未提供時行為等同本 Issue 之前，零回歸）；完成本 Issue 端到端接線。
 
-- [ ] **Step 1: 寫失敗測試**
+- [x] **Step 1: 寫失敗測試**
 
 於 `app/test/screens/reader_screen_test.dart` 頂部新增 import：
 
@@ -3267,12 +3267,12 @@ import '../support/fake_notes_repository.dart';
 
 （上方第二個測試刻意保守——`ReaderScreen` 對外沒有暴露測試用的「模擬選取事件」callback，比照 `CLAUDE.md`「`ReaderScreen` 是唯一的閱讀器 seam...刻意不新增公開 callback 參數」的既有原則，選取觸發後的實際浮動工具列顯示效果留給 Task 11 真機驗證；本測試只驗證建構參數可正確傳入不崩潰。）
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/screens/reader_screen_test.dart`
 Expected: FAIL（`ReaderScreen` 建構子尚無 `highlightsRepository`/`notesRepository` 參數，編譯錯誤）
 
-- [ ] **Step 3: 擴充 `ReaderScreen` 建構參數**
+- [x] **Step 3: 擴充 `ReaderScreen` 建構參數**
 
 `app/lib/screens/reader_screen.dart` 頂部新增 import：
 
@@ -3310,12 +3310,12 @@ import 'note_edit_dialog.dart';
   });
 ```
 
-- [ ] **Step 4: 執行測試確認 Step 1 的建構參數編譯通過（尚未驗證行為）**
+- [x] **Step 4: 執行測試確認 Step 1 的建構參數編譯通過（尚未驗證行為）**
 
 Run: `flutter test test/screens/reader_screen_test.dart`
 Expected: 兩個新測試皆 PASS（此步驟僅驗證建構參數已可傳入；下方 Step 5-9 才會真正接上行為邏輯）。
 
-- [ ] **Step 5: 新增 State 欄位**
+- [x] **Step 5: 新增 State 欄位**
 
 `_ReaderScreenState` 內，`_tocEntries`/`_tocLoaded` 欄位群之後新增：
 
@@ -3336,7 +3336,7 @@ Expected: 兩個新測試皆 PASS（此步驟僅驗證建構參數已可傳入�
   int? _pendingHighlightIdForSelection;
 ```
 
-- [ ] **Step 6: 新增選取事件／標記啟用事件處理方法**
+- [x] **Step 6: 新增選取事件／標記啟用事件處理方法**
 
 在 `_handleCharacterCountReady` 方法之後新增：
 
@@ -3523,7 +3523,7 @@ Expected: 兩個新測試皆 PASS（此步驟僅驗證建構參數已可傳入�
   }
 ```
 
-- [ ] **Step 7: 於 `_handleLayoutResolved` 觸發初始標記載入**
+- [x] **Step 7: 於 `_handleLayoutResolved` 觸發初始標記載入**
 
 `_handleLayoutResolved` 方法內，既有的目錄背景抓取 `if (!info.isFixedLayout && _tocEntries.isEmpty && !_tocLoaded) { ... }` 區塊之後新增：
 
@@ -3537,7 +3537,7 @@ Expected: 兩個新測試皆 PASS（此步驟僅驗證建構參數已可傳入�
     }
 ```
 
-- [ ] **Step 8: 於 `_buildNativeView` 的 EPUB 分支接上新回呼**
+- [x] **Step 8: 於 `_buildNativeView` 的 EPUB 分支接上新回呼**
 
 `_buildNativeView` 的 `case BookFormat.epub:` 分支，`onCharacterCountReady: _handleCharacterCountReady,` 之後新增：
 
@@ -3548,7 +3548,7 @@ Expected: 兩個新測試皆 PASS（此步驟僅驗證建構參數已可傳入�
         );
 ```
 
-- [ ] **Step 9: 於 `_buildBody` 疊加 `AnnotationToolbar`**
+- [x] **Step 9: 於 `_buildBody` 疊加 `AnnotationToolbar`**
 
 `_buildBody` 方法內，`final body = Stack(` 改為包一層 `LayoutBuilder`：
 
@@ -3637,7 +3637,7 @@ Expected: 兩個新測試皆 PASS（此步驟僅驗證建構參數已可傳入�
   }
 ```
 
-- [ ] **Step 10: 於 `_openNotesSheet` 接上真實 Repository**
+- [x] **Step 10: 於 `_openNotesSheet` 接上真實 Repository**
 
 `_openNotesSheet` 方法內，`NotesBottomSheet(` 建構呼叫新增：
 
@@ -3674,7 +3674,7 @@ Expected: 兩個新測試皆 PASS（此步驟僅驗證建構參數已可傳入�
 
 （`format == BookFormat.epub && !_isFixedLayout` 這個判斷式把「劃線/備註只支援流式 EPUB」的排除規則收斂在單一位置——FXL 與 PDF 呼叫端此時仍傳入 `null`，`NotesBottomSheet` 據此維持既有空狀態佔位符；PDF 支援留待 Issue 3 把這個條件式擴充為 `|| format == BookFormat.pdf`。）
 
-- [ ] **Step 11: 執行測試確認通過**
+- [x] **Step 11: 執行測試確認通過**
 
 Run: `flutter test test/screens/reader_screen_test.dart`
 Expected: PASS（全部測試綠燈，含既有測試不受影響）
@@ -3682,12 +3682,12 @@ Expected: PASS（全部測試綠燈，含既有測試不受影響）
 Run: `flutter test`
 Expected: 全專案測試皆 PASS（確認本次跨檔案修改無回歸）。
 
-- [ ] **Step 12: 執行 `flutter analyze` 確認乾淨**
+- [x] **Step 12: 執行 `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 13: Commit**
+- [x] **Step 13: Commit**
 
 ```bash
 git add app/lib/screens/reader_screen.dart app/test/screens/reader_screen_test.dart
@@ -3705,7 +3705,7 @@ git commit -m "feat(epic-6): ReaderScreen 接上 EPUB 劃線/備註端到端流�
 - Consumes: Task 1-10 的全部型別（`HighlightsRepository`／`NotesRepository`／`ReaderScreen`／`NotesBottomSheet`）。
 - Produces: 無新增 Dart 型別；驗證 repository 驅動的端到端流程（清單顯示、跳轉、編輯、刪除），比照 `notes_bookmark_test.dart` 既有結構。
 
-- [ ] **Step 1: 撰寫 integration_test**
+- [x] **Step 1: 撰寫 integration_test**
 
 建立 `app/integration_test/epub_highlights_notes_test.dart`：
 
@@ -3888,18 +3888,18 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: 記錄待執行狀態**
+- [x] **Step 2: 記錄待執行狀態**
 
 本測試需在真實 Android 裝置/模擬器上執行（`flutter test integration_test/epub_highlights_notes_test.dart -d <device-id>`）；比照 Issue 1 `notes_bookmark_test.dart` 先例，若撰寫當下無可用裝置，於 `issues.md` Issue 2 驗收標準對應項目註記「測試檔已撰寫，尚待裝置就緒後實際執行」，並列出上方 Step 1 KDoc 註解中的「真機人工驗證清單」4 項供人工測試時對照。
 
-- [ ] **Step 3: 若有裝置可用，執行驗證**
+- [x] **Step 3: 若有裝置可用，執行驗證**
 
 Run: `flutter devices`（確認是否有可用裝置/模擬器）
 若有：Run: `flutter test integration_test/epub_highlights_notes_test.dart -d <device-id>`
 Expected: PASS；並依上方「真機人工驗證清單」逐項人工操作確認。
 若無：跳過本步驟，維持 Step 2 的註記狀態。
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add app/integration_test/epub_highlights_notes_test.dart
@@ -3910,10 +3910,10 @@ git commit -m "test(epic-6): 新增 EPUB 劃線/備註真機整合測試（尚�
 
 ## 完成後的整體驗證
 
-- [ ] Run: `flutter test`（全專案）
-  Expected: 全數 PASS，無回歸。
-- [ ] Run: `flutter analyze`
-  Expected: `No issues found!`
-- [ ] Run: `cd app && flutter build apk --debug`
-  Expected: 建置成功。
-- [ ] 依 `issues.md` Issue 2 驗收標準逐項核對，勾選已完成項目；真機相關項目（Decorator 視覺渲染、直排/橫排一致性、手勢競技場）維持標註「測試檔已撰寫，尚待裝置就緒後實際執行」。
+- [x] Run: `flutter test`（全專案）
+  Expected: 全數 PASS，無回歸。（445/445 通過）
+- [x] Run: `flutter analyze`
+  Expected: `No issues found!`（維持乾淨）
+- [x] Run: `cd app && flutter build apk --debug`
+  Expected: 建置成功。（Task 9 已驗證建置成功）
+- [ ] 依 `issues.md` Issue 2 驗收標準逐項核對，勾選已完成項目；真機相關項目（Decorator 視覺渲染、直排/橫排一致性、手勢競技場）維持標註「測試檔已撰寫，尚待裝置就緒後實際執行」。（repository 驅動的端到端流程已於真機執行並通過兩次，見 Task 11；原生選字手勢建立劃線/備註本身、Decorator 視覺渲染、直排/橫排一致性、手勢競技場優先權仍待人工於真機操作驗證，維持未勾選）
