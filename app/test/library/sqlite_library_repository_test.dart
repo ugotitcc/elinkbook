@@ -1278,4 +1278,134 @@ void main() {
     final books = await upgraded.listBooks();
     expect(books.single.title, '既有書籍');
   });
+
+  test('全新安裝的 highlights／notes 表含 PDF 欄位（version 10 起 onCreate 已含括）',
+      () async {
+    await repository.insertBook(_book('b_pdf_highlight'));
+    final highlightId = await repository.database.insert('highlights', {
+      'book_id': 'b_pdf_highlight',
+      'style': 'underline',
+      'pdf_page_index': 2,
+      'pdf_rect_json': '{"left":0.1,"top":0.2,"right":0.3,"bottom":0.4}',
+    });
+    expect(highlightId, greaterThan(0));
+
+    final noteId = await repository.database.insert('notes', {
+      'book_id': 'b_pdf_highlight',
+      'text': '心得',
+      'pdf_page_index': 2,
+      'pdf_rect_json': '{"left":0.1,"top":0.2,"right":0.3,"bottom":0.4}',
+      'highlight_id': highlightId,
+    });
+    expect(noteId, greaterThan(0));
+  });
+
+  test('既有 version 9 裝置升級到 version 10，highlights／notes 表正確補上 PDF 欄位（ALTER TABLE 路徑）',
+      () async {
+    final tempDir = await Directory.systemTemp
+        .createTemp('elinkbook_migration_v9_to_v10_test');
+    addTearDown(() => tempDir.delete(recursive: true));
+    final dbPath = p.join(tempDir.path, 'test.db');
+
+    // 模擬「已存在於 version 9」的舊資料庫：手動以 version 9 當時的完整
+    // schema 建立（highlights/notes 已存在但無 PDF 欄位），不透過
+    // SqliteLibraryRepository.open()（該方法目前的 onCreate 已經是
+    // version 10 的最終 schema），比照 v8→v9 遷移測試既有寫法。
+    final oldDb = await databaseFactory.openDatabase(
+      dbPath,
+      options: OpenDatabaseOptions(
+        version: 9,
+        onConfigure: (db) async {
+          await db.execute('PRAGMA foreign_keys = ON');
+        },
+        onCreate: (db, version) async {
+          await db.execute('CREATE TABLE groups (name TEXT PRIMARY KEY)');
+          await db.insert('groups', {'name': '未分類'});
+          await db.execute('''
+            CREATE TABLE books (
+              id TEXT PRIMARY KEY,
+              title TEXT NOT NULL,
+              author TEXT,
+              format TEXT NOT NULL,
+              filePath TEXT NOT NULL,
+              source TEXT NOT NULL,
+              coverPath TEXT,
+              progress REAL NOT NULL DEFAULT 0,
+              epubLocator TEXT,
+              pdfPageIndex INTEGER,
+              totalCharacterCount INTEGER,
+              groupName TEXT NOT NULL DEFAULT '未分類',
+              createTime INTEGER NOT NULL,
+              lastReadTime INTEGER NOT NULL
+            )
+          ''');
+          await db.execute('''
+            CREATE TABLE highlights (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              book_id TEXT NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+              style TEXT NOT NULL,
+              epub_locator_json TEXT,
+              progression REAL
+            )
+          ''');
+          await db.execute('''
+            CREATE TABLE notes (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              book_id TEXT NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+              text TEXT NOT NULL,
+              epub_locator_json TEXT,
+              progression REAL,
+              highlight_id INTEGER REFERENCES highlights(id) ON DELETE SET NULL
+            )
+          ''');
+        },
+      ),
+    );
+    await oldDb.insert('books', {
+      'id': 'b1',
+      'title': '既有書籍',
+      'format': 'pdf',
+      'filePath': 'content://example/b1',
+      'source': 'local',
+      'progress': 0.0,
+      'groupName': '未分類',
+      'createTime': 1000,
+      'lastReadTime': 1000,
+    });
+    final existingHighlightId = await oldDb.insert('highlights', {
+      'book_id': 'b1',
+      'style': 'underline',
+      'epub_locator_json': null,
+      'progression': 0.1,
+    });
+    await oldDb.close();
+
+    // 重新以目前版本開啟同一個檔案，觸發 onUpgrade（oldVersion=9 →
+    // newVersion=10），驗證 highlights／notes 表確實補上 PDF 欄位、既有
+    // 資料列不受影響、且新欄位可正常寫入。
+    final upgraded = await SqliteLibraryRepository.open(dbPath);
+    addTearDown(() => upgraded.close());
+
+    final existingRows = await upgraded.database
+        .query('highlights', where: 'id = ?', whereArgs: [existingHighlightId]);
+    expect(existingRows.single['progression'], 0.1);
+    expect(existingRows.single['pdf_page_index'], isNull);
+
+    final newHighlightId = await upgraded.database.insert('highlights', {
+      'book_id': 'b1',
+      'style': 'highlighterYellow',
+      'pdf_page_index': 5,
+      'pdf_rect_json': '{"left":0,"top":0,"right":1,"bottom":1}',
+    });
+    expect(newHighlightId, greaterThan(0));
+
+    final newNoteId = await upgraded.database.insert('notes', {
+      'book_id': 'b1',
+      'text': '升級後新增的 PDF 備註',
+      'pdf_page_index': 5,
+      'pdf_rect_json': '{"left":0,"top":0,"right":1,"bottom":1}',
+      'highlight_id': null,
+    });
+    expect(newNoteId, greaterThan(0));
+  });
 }

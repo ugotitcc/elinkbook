@@ -92,7 +92,7 @@
 
 ## Issue 3：PDF 劃線與備註
 
-**Status:** ready-for-agent
+**Status:** ✅ 已完成，待合併（分支 `worktree-epic6-issue3-pdf-highlights`，尚未合併回 `main`）——依 `plans/plan-issue-3.md` 11 個 Task 以 Subagent-Driven Development 實作：長按拖曳框選手勢改由 Flutter 端 `GestureDetector`（`onLongPressStart`／`onLongPressMoveUpdate`／`onLongPressEnd`，與既有 `onHorizontalDragEnd` 共用同一手勢競技場）主導辨識，原生端 `PdfReaderView.kt` 僅被動接收 `beginAnnotationSelection`／`updateAnnotationSelection`／`endAnnotationSelection`／`cancelAnnotationSelection` 四個 method call（此為審查修正，原設計由原生端無條件攔截 `ACTION_DOWN` 會讓既有滑動翻頁手勢失效，見 `plan-issue-3.md` Global Constraints）；`highlights`／`notes` 表新增 PDF 欄位並完成 v9→v10 schema migration（if/else 互斥、避免跳版升級時 duplicate column 例外）；`HighlightSelectionOverlayView`／`computeFitCenterContentBounds` 共用座標數學；`refreshAnnotations()` 原生端 Bitmap 疊加渲染（螢光筆/底線依 `scale` 而非畫面 DP 密度縮放，純備註改用手繪黑白向量圖釘取代系統 Emoji，E-Ink 對比度考量）；`ReaderScreen`／`NotesBottomSheet` 完整接上 PDF 分支，複用 Issue 2 邏輯零回歸。11 個 Task 逐一經 task-scoped 審查（3 個 Task 由實作者發現並修正計劃書本身的真實錯誤——FIT_CENTER 測試期望值算式、Kotlin 可見性洩漏、跨 Task 型別前向參照——皆經 controller 獨立驗證後回頭修正 `plan-issue-3.md`），加上最終全分支審查（發現 1 項 Important：PDF 浮動工具列在 letterbox 情境下座標基準誤用整個 widget 尺寸而非內容範圍，導致定位偏移，已新增 `widgetRect` 欄位修正並複審通過）。`flutter test`（全專案 466 個）全過、`flutter analyze` 乾淨、Kotlin JVM 測試（73 個）全過、`flutter build apk --debug` 建置成功。**真機驗證現況**：`integration_test/pdf_highlights_notes_test.dart`（repository 驅動的端到端流程——清單顯示、跳轉、單筆刪除）已於真機（Android 15 / API 35）實際執行並通過；原生長按框選手勢本身觸發、與既有滑動翻頁/雙頁縮放平移手勢的優先權、Bitmap 疊加視覺渲染、多指取消、裝置旋轉/裁切後座標基準，這 5 類項目屬於 Flutter `integration_test` 無法模擬 `PlatformView` 內部觸控事件的已知限制，仍待人工於真機操作逐項驗證（詳見該測試檔案開頭的「真機人工驗證清單」7 項）。**待人工決定**：分支尚未合併/推送，需人工決定合併方式（本地合併／推送建 PR／維持現狀）。
 
 **依賴：** Issue 2（複用 Dart 端資料模型／Repository／Bottom Sheet 清單 UI，本工單只新增 PDF 專屬的原生框選建立路徑）
 
@@ -117,14 +117,14 @@ PDF 書籍開啟「✏️ 劃線與備註」分頁時，資料層與 UI 完全�
 
 **驗收標準：**
 
-- [ ] PDF 長按頁面直接觸發拖曳框選矩形手勢，不需先進入獨立模式（ADR 0008）
-- [ ] 框選座標相對頁面內容範圍（非整個 View）計算，裝置旋轉後仍正確
-- [ ] 框選中縮放/平移直接取消選取
-- [ ] 劃線/備註正確疊加渲染於 PDF Bitmap，變更後原生端正確重繪（`refreshAnnotations()`）
-- [ ] 長按框選與既有九宮格熱區/雙頁縮放平移手勢無衝突（真機驗證）
-- [ ] PDF 書籍的「✏️ 劃線與備註」分頁完整可用（複用 Issue 2 邏輯）
-- [ ] 上述測試皆通過，`flutter analyze` 乾淨
-- [ ] 真機整合測試涵蓋 PDF 長按框選建立劃線/備註、原生重繪、手勢優先權、裝置旋轉座標正確性的端到端流程
+- [ ] PDF 長按頁面直接觸發拖曳框選矩形手勢，不需先進入獨立模式（ADR 0008）——程式碼已實作（Flutter `GestureDetector` 長按辨識＋原生端狀態機），尚待真機人工驗證實際手勢觸發體感
+- [ ] 框選座標相對頁面內容範圍（非整個 View）計算，裝置旋轉後仍正確——letterbox-aware 座標數學已實作並經 JVM 單元測試涵蓋，「裝置旋轉後仍正確」屬真機專屬驗證項目，尚待人工執行
+- [ ] 框選中縮放/平移直接取消選取——Dart 端多指偵測邏輯已有 widget test 驗證（模擬真實雙指觸點），原生端接收與真實硬體多指手勢尚待真機人工驗證
+- [ ] 劃線/備註正確疊加渲染於 PDF Bitmap，變更後原生端正確重繪（`refreshAnnotations()`）——資料解析與疊加繪製邏輯已實作並經 JVM 單元測試涵蓋，實際視覺渲染效果尚待真機人工驗證
+- [ ] 長按框選與既有九宮格熱區/雙頁縮放平移手勢無衝突（真機驗證）——架構上已透過「手勢辨識完全交由 Flutter GestureDetector 主導、原生端不再攔截觸控」解決此風險（見 `plan-issue-3.md` Global Constraints 審查修正），但仍屬明確標註「真機驗證」的項目，尚待人工於真機操作確認
+- [x] PDF 書籍的「✏️ 劃線與備註」分頁完整可用（複用 Issue 2 邏輯）——`integration_test/pdf_highlights_notes_test.dart` 已於真機（Android 15 / API 35）實際執行並通過，驗證合併清單顯示、跳轉、單筆刪除
+- [x] 上述測試皆通過，`flutter analyze` 乾淨——`flutter test` 466/466、Kotlin JVM 測試 73/73、`flutter analyze` 乾淨、`flutter build apk --debug` 建置成功
+- [ ] 真機整合測試涵蓋 PDF 長按框選建立劃線/備註、原生重繪、手勢優先權、裝置旋轉座標正確性的端到端流程——repository 驅動的端到端流程（清單顯示、跳轉、刪除）已於真機執行並通過；原生長按框選本身建立劃線/備註、手勢優先權、裝置旋轉座標正確性仍屬人工真機驗證清單範圍，尚待執行（見 `pdf_highlights_notes_test.dart` 檔案開頭「真機人工驗證清單」7 項）
 
 **Blocked by：** Issue 2
 

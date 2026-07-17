@@ -16,10 +16,12 @@ import '../reader/highlight_style.dart';
 import '../reader/highlights_repository.dart';
 import '../reader/note.dart';
 import '../reader/notes_repository.dart';
+import '../reader/pdf_annotation_decoration.dart';
 import '../reader/pdf_crop_mode.dart';
 import '../reader/pdf_crop_rect.dart';
 import '../reader/pdf_page_info.dart';
 import '../reader/pdf_reader_view.dart';
+import '../reader/pdf_selection_info.dart';
 import '../reader/reading_position.dart';
 import '../reader/reader_prefs_manager.dart';
 import '../reader/toc_entry.dart';
@@ -141,6 +143,12 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   // 「若同時已選色/底線，備註與劃線共存於同一筆記錄」）。新選取範圍
   // 開始時（_handleSelectionChanged）重置為 null。
   int? _pendingHighlightIdForSelection;
+  // PDF 劃線／備註目前選取狀態（epic-6-annotations Issue 3），由原生端
+  // onSelectionRectComputed 回報；非 null 時於 body Stack 顯示
+  // AnnotationToolbar。與 EPUB 的 _currentSelection 並存但不會同時非
+  // null（同一次只會開啟一種格式的書籍）。
+  PdfSelectionInfo? _currentPdfSelection;
+  int? _pendingPdfHighlightIdForSelection;
   // 供 TocBottomSheet 訂閱、在已開啟的目錄畫面即時反映全書字元數背景計算
   // 完成事件（spec.md「目錄模組」載入中狀態決策）——與 _totalCharacterCount
   // 這個驅動頁尾 rebuild 的既有欄位（Issue 3）刻意分開維護，避免耦合兩條
@@ -483,18 +491,27 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         bookId: widget.bookId,
         bookmarksRepository: repository,
         currentPosition: positionContext,
-        highlightsRepository:
-            format == BookFormat.epub && !_isFixedLayout ? widget.highlightsRepository : null,
-        notesRepository:
-            format == BookFormat.epub && !_isFixedLayout ? widget.notesRepository : null,
+        highlightsRepository: (format == BookFormat.epub && !_isFixedLayout) ||
+                format == BookFormat.pdf
+            ? widget.highlightsRepository
+            : null,
+        notesRepository: (format == BookFormat.epub && !_isFixedLayout) ||
+                format == BookFormat.pdf
+            ? widget.notesRepository
+            : null,
         onAnnotationSelected: (item) {
           Navigator.of(context).pop();
           final locatorJson = item.highlight?.epubLocatorJson ?? item.note?.epubLocatorJson;
+          final pdfPageIndex = item.highlight?.pdfPageIndex ?? item.note?.pdfPageIndex;
           if (locatorJson != null) {
             EpubReaderView.jumpToLocator(_epubReaderViewKey, locatorJson);
+          } else if (pdfPageIndex != null) {
+            PdfReaderView.jumpToPage(_pdfReaderViewKey, pdfPageIndex);
           }
         },
-        onAnnotationsChanged: _reloadAnnotationsAndRefreshDecorations,
+        onAnnotationsChanged: format == BookFormat.pdf
+            ? _reloadPdfAnnotationsAndSync
+            : _reloadAnnotationsAndRefreshDecorations,
         onBookmarkSelected: (bookmark) {
           Navigator.of(context).pop();
           if (bookmark.epubLocatorJson != null) {
@@ -513,6 +530,18 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   void _handlePageRendered() {
     if (!mounted) return;
     setState(() => _state = _RenderState.rendered);
+    // epic-6-annotations Issue 3：PDF 書籍開啟成功後載入既有劃線/備註並
+    // 送給原生端渲染。與 EPUB 的觸發點（_handleLayoutResolved，見 Issue 2
+    // Task 10 Step 7）刻意不同——PDF 沒有對應的版面解析回呼，本方法
+    // （onPageRendered）是 PDF 開書成功的既有訊號，兩種格式共用同一個
+    // _annotationsLoaded 旗標（單一書籍只會是其中一種格式，不會重複觸發）。
+    if (detectBookFormat(widget.filePath) == BookFormat.pdf &&
+        !_annotationsLoaded &&
+        widget.highlightsRepository != null &&
+        widget.notesRepository != null) {
+      _annotationsLoaded = true;
+      _reloadPdfAnnotationsAndSync();
+    }
   }
 
   void _handleError(String message) {
@@ -765,6 +794,120 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     }
   }
 
+  void _handlePdfSelectionRectComputed(PdfSelectionInfo info) {
+    if (!mounted) return;
+    setState(() {
+      _currentPdfSelection = info;
+      _pendingPdfHighlightIdForSelection = null;
+    });
+  }
+
+  void _handlePdfSelectionCanceled() {
+    if (!mounted) return;
+    setState(() {
+      _currentPdfSelection = null;
+      _pendingPdfHighlightIdForSelection = null;
+    });
+  }
+
+  Future<void> _handlePdfHighlightStyleSelected(HighlightStyle style) async {
+    final selection = _currentPdfSelection;
+    final repository = widget.highlightsRepository;
+    if (selection == null || repository == null) return;
+    final id = await repository.insert(Highlight(
+      bookId: widget.bookId,
+      style: style,
+      pdfPageIndex: selection.pageIndex,
+      pdfRect: selection.rect,
+    ));
+    _pendingPdfHighlightIdForSelection = id;
+    await _reloadPdfAnnotationsAndSync();
+  }
+
+  Future<void> _handlePdfNotePressed() async {
+    final selection = _currentPdfSelection;
+    final repository = widget.notesRepository;
+    if (selection == null || repository == null) return;
+    final text = await showNoteTextDialog(context, title: '新增備註');
+    if (text == null) return;
+    await repository.insert(Note(
+      bookId: widget.bookId,
+      text: text,
+      pdfPageIndex: selection.pageIndex,
+      pdfRect: selection.rect,
+      highlightId: _pendingPdfHighlightIdForSelection,
+    ));
+    await _reloadPdfAnnotationsAndSync();
+    if (!mounted) return;
+    setState(() {
+      _currentPdfSelection = null;
+      _pendingPdfHighlightIdForSelection = null;
+    });
+  }
+
+  /// 重新查詢本書全部劃線/備註並送給原生端重繪 Bitmap 疊加（PDF 版本，
+  /// 比照 EPUB 的 [_reloadAnnotationsAndRefreshDecorations]）。共用同一組
+  /// [_highlights]／[_notes] state 欄位——單一 ReaderScreen 會話只會載入
+  /// 其中一種格式的書籍，不會同時混用。
+  Future<void> _reloadPdfAnnotationsAndSync() async {
+    final highlightsRepository = widget.highlightsRepository;
+    final notesRepository = widget.notesRepository;
+    if (highlightsRepository == null || notesRepository == null) return;
+    final highlights = await highlightsRepository.listByBook(widget.bookId);
+    final notes = await notesRepository.listByBook(widget.bookId);
+    if (!mounted) return;
+    setState(() {
+      _highlights = highlights;
+      _notes = notes;
+    });
+    _sendPdfAnnotationsToNative();
+  }
+
+  void _sendPdfAnnotationsToNative() {
+    if (!mounted) return;
+    final primaryColor = Theme.of(context).colorScheme.primary;
+    final annotations = <PdfAnnotationDecoration>[
+      for (final highlight in _highlights)
+        if (highlight.pdfPageIndex != null && highlight.pdfRect != null)
+          PdfAnnotationDecoration.forHighlight(
+            pageIndex: highlight.pdfPageIndex!,
+            rect: highlight.pdfRect!,
+            tint: highlightStyleTint(highlight.style, primaryColor: primaryColor),
+            isUnderline: highlight.style == HighlightStyle.underline,
+          ),
+      for (final note in _notes)
+        if (note.highlightId == null && note.pdfPageIndex != null && note.pdfRect != null)
+          PdfAnnotationDecoration.forNote(
+            pageIndex: note.pdfPageIndex!,
+            rect: note.pdfRect!,
+            tint: noteOnlyTint.toARGB32(),
+          ),
+    ];
+    PdfReaderView.refreshAnnotations(_pdfReaderViewKey, annotations);
+  }
+
+  // 浮動工具列估計高度／與選取範圍的間距，PDF 版本（比照 EPUB 的
+  // _annotationToolbarHeight／_annotationToolbarGap 既有常數值，兩者刻意
+  // 保持相同數值，故不重複宣告，直接複用）。
+
+  /// PDF 版本的浮動工具列定位計算，邏輯與 EPUB 的 [_annotationToolbarTop]
+  /// 完全相同（皆為「優先貼在選取範圍上方，空間不足時貼下方」），但參數
+  /// 型別不同（[PdfSelectionInfo] 而非 [EpubSelectionInfo]），故獨立宣告
+  /// 一份而非嘗試合併兩者呼叫端（Surgical Changes 原則：不更動 Issue 2
+  /// 已驗證穩定的 [_annotationToolbarTop] 本體）。
+  double _pdfAnnotationToolbarTop(PdfSelectionInfo selection, Size size) {
+    // 【審查修正 Finding 1】此處 [size] 是整個 widget 尺寸，PAGE_FIT 模式下
+    // 頁面常因長寬比與螢幕不同而產生 letterbox 留白，故改用相對整個
+    // widget（含留白）換算的 [selection.widgetRect]，而非相對 bitmap
+    // 內容範圍的 [selection.rect]（後者仍保留給持久化/重繪使用，見
+    // PdfSelectionInfo 的欄位說明），避免工具列位置隨留白量偏移。
+    final topAboveSelection =
+        selection.widgetRect.top * size.height - _annotationToolbarHeight - _annotationToolbarGap;
+    if (topAboveSelection >= 0) return topAboveSelection;
+    final belowSelection = selection.widgetRect.bottom * size.height + _annotationToolbarGap;
+    return belowSelection.clamp(0.0, size.height - _annotationToolbarHeight);
+  }
+
   @override
   Widget build(BuildContext context) {
     final format = detectBookFormat(widget.filePath);
@@ -931,6 +1074,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       builder: (context, constraints) {
         final size = constraints.biggest;
         final selection = _currentSelection;
+        final pdfSelection = _currentPdfSelection;
         return Stack(
           children: [
             if (_resolved != null) _buildNativeView(format, isLandscape),
@@ -973,6 +1117,17 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                 child: AnnotationToolbar(
                   onStyleSelected: _handleHighlightStyleSelected,
                   onNotePressed: _handleNotePressed,
+                ),
+              ),
+            if (pdfSelection != null)
+              Positioned(
+                // 同上（見 _pdfAnnotationToolbarTop 註解）：改用相對整個
+                // widget 尺寸的 widgetRect，避免 letterbox 留白造成偏移。
+                left: (pdfSelection.widgetRect.left * size.width).clamp(0.0, size.width),
+                top: _pdfAnnotationToolbarTop(pdfSelection, size),
+                child: AnnotationToolbar(
+                  onStyleSelected: _handlePdfHighlightStyleSelected,
+                  onNotePressed: _handlePdfNotePressed,
                 ),
               ),
             if (_state == _RenderState.loading)
@@ -1113,6 +1268,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             if (!mounted) return;
             setState(() => _pdfPageInfo = info);
           },
+          onSelectionRectComputed: _handlePdfSelectionRectComputed,
+          onSelectionCanceled: _handlePdfSelectionCanceled,
         );
       case BookFormat.unknown:
         return const SizedBox.shrink();

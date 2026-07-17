@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/reader/note.dart';
+import 'package:elinkbook/reader/percent_rect.dart';
 
 void main() {
   test('toMap／fromMap round-trip 保留所有欄位（不含 id）', () {
@@ -43,5 +44,43 @@ void main() {
     const b = Note(id: 1, bookId: 'b1', text: 'X', highlightId: null);
     expect(a, b);
     expect(a.hashCode, b.hashCode);
+  });
+
+  test('toMap／fromMap round-trip 保留 PDF 欄位（pdfPageIndex／pdfRect）', () {
+    const note = Note(
+      bookId: 'b1',
+      text: '重點',
+      pdfPageIndex: 2,
+      pdfRect: PercentRect(left: 0.05, top: 0.1, right: 0.5, bottom: 0.15),
+    );
+    final map = note.toMap();
+    expect(map['pdf_page_index'], 2);
+    expect(map['pdf_rect_json'], isNotNull);
+
+    final restored = Note.fromMap({
+      'id': 1,
+      'book_id': 'b1',
+      'text': '重點',
+      'epub_locator_json': null,
+      'progression': null,
+      'highlight_id': null,
+      'pdf_page_index': map['pdf_page_index'],
+      'pdf_rect_json': map['pdf_rect_json'],
+    });
+    expect(restored.pdfPageIndex, 2);
+    expect(restored.pdfRect, const PercentRect(left: 0.05, top: 0.1, right: 0.5, bottom: 0.15));
+  });
+
+  test('copyWith 只更新 text，PDF 欄位保留原值', () {
+    const original = Note(
+      id: 1,
+      bookId: 'b1',
+      text: '舊文字',
+      pdfPageIndex: 4,
+      pdfRect: PercentRect(left: 0, top: 0, right: 1, bottom: 1),
+    );
+    final updated = original.copyWith(text: '新文字');
+    expect(updated.pdfPageIndex, 4);
+    expect(updated.pdfRect, const PercentRect(left: 0, top: 0, right: 1, bottom: 1));
   });
 }

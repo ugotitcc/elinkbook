@@ -24,7 +24,7 @@ class SqliteLibraryRepository implements LibraryRepository {
   static Future<SqliteLibraryRepository> open(String path) async {
     final db = await openDatabase(
       path,
-      version: 9,
+      version: 10,
       onConfigure: (db) async {
         // book_reader_prefs 的 ON DELETE CASCADE 需要外鍵約束真正生效，
         // SQLite 預設不強制外鍵，須逐連線手動開啟（見 epic-3 plan-issue-1）。
@@ -125,9 +125,18 @@ class SqliteLibraryRepository implements LibraryRepository {
           // 任何 oldVersion < 9 的裝置都必然還沒有這兩張表，無條件建立
           // 即可，不需要判斷「表是否已存在」。順序先建 highlights 再建
           // notes（notes.highlight_id 參照 highlights，見 spec.md「資料
-          // 模型關聯」審查修正 1.1 的程式碼可讀性慣例）。
+          // 模型關聯」審查修正 1.1 的程式碼可讀性慣例）。_createHighlightsTable／
+          // _createNotesTable 已是 version 10 的最終欄位組合（含 Issue 3
+          // 的 PDF 欄位），一步到位，故此分支之後不需要再跑
+          // _addPdfAnnotationColumns（否則會對剛建好、已有該欄位的表
+          // ALTER TABLE，拋出 duplicate column name 例外）。
           await _createHighlightsTable(db);
           await _createNotesTable(db);
+        } else if (oldVersion < 10) {
+          // epic-6-annotations Issue 3：oldVersion 為 9 的裝置，
+          // highlights／notes 表已存在（上方 if 分支已處理過），但欄位
+          // 版本停留在 Issue 2（無 PDF 欄位），僅需 ALTER TABLE 補上。
+          await _addPdfAnnotationColumns(db);
         }
       },
     );
@@ -249,24 +258,25 @@ class SqliteLibraryRepository implements LibraryRepository {
   }
 
   static Future<void> _createHighlightsTable(Database db) async {
-    // 劃線（epic-6-annotations Issue 2，spec.md「劃線與備註模組」），與
-    // books 表以 book_id 外鍵關聯（比照 bookmarks 既有關聯模式）。本
-    // Issue 只新增 EPUB 相關欄位；PDF 專屬欄位（頁碼＋矩形座標）留待
-    // Issue 3 以後續 migration 補上（見 plan-issue-2.md Global
-    // Constraints，避免預先建立用不到的欄位）。
+    // 劃線（epic-6-annotations Issue 2/3，spec.md「劃線與備註模組」），與
+    // books 表以 book_id 外鍵關聯（比照 bookmarks 既有關聯模式）。
+    // pdf_page_index／pdf_rect_json（Issue 3 新增）與
+    // epub_locator_json／progression（Issue 2）互斥，依書籍格式擇一填入。
     await db.execute('''
       CREATE TABLE highlights (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         book_id TEXT NOT NULL REFERENCES books(id) ON DELETE CASCADE,
         style TEXT NOT NULL,
         epub_locator_json TEXT,
-        progression REAL
+        progression REAL,
+        pdf_page_index INTEGER,
+        pdf_rect_json TEXT
       )
     ''');
   }
 
   static Future<void> _createNotesTable(Database db) async {
-    // 備註（epic-6-annotations Issue 2，spec.md「資料模型關聯」）：
+    // 備註（epic-6-annotations Issue 2/3，spec.md「資料模型關聯」）：
     // highlight_id 為可空外鍵，ON DELETE SET NULL——批次刪除劃線後，
     // 依附的備註自動退化為純備註（highlight_id 變 null），不需應用層
     // 判斷邏輯。建表順序刻意晚於 _createHighlightsTable（程式碼可讀性
@@ -278,9 +288,22 @@ class SqliteLibraryRepository implements LibraryRepository {
         text TEXT NOT NULL,
         epub_locator_json TEXT,
         progression REAL,
-        highlight_id INTEGER REFERENCES highlights(id) ON DELETE SET NULL
+        highlight_id INTEGER REFERENCES highlights(id) ON DELETE SET NULL,
+        pdf_page_index INTEGER,
+        pdf_rect_json TEXT
       )
     ''');
+  }
+
+  static Future<void> _addPdfAnnotationColumns(Database db) async {
+    // epic-6-annotations Issue 3：PDF 專屬的劃線/備註定位欄位，補追加到
+    // 既有（version 9 起已存在）的 highlights／notes 兩張表。只有
+    // oldVersion == 9（表已存在但無這兩欄位）的裝置會走到這個函式，見
+    // onUpgrade 的 if/else 互斥結構。
+    await db.execute('ALTER TABLE highlights ADD COLUMN pdf_page_index INTEGER');
+    await db.execute('ALTER TABLE highlights ADD COLUMN pdf_rect_json TEXT');
+    await db.execute('ALTER TABLE notes ADD COLUMN pdf_page_index INTEGER');
+    await db.execute('ALTER TABLE notes ADD COLUMN pdf_rect_json TEXT');
   }
 
   /// 供 [BookReaderPrefsRepository] 等後續 repository 共用同一個資料庫連線
