@@ -2,6 +2,7 @@ package cc.ugotit.elinkbook
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.PointF
 import android.graphics.pdf.PdfRenderer
 import android.net.Uri
 import android.os.ParcelFileDescriptor
@@ -87,6 +88,15 @@ class PdfReaderView(
     // previousPage() 暫停回應，避免翻頁手勢與拖拉裁切框互相干擾。
     private var cropEditModeActive: Boolean = false
     private var cropOverlayView: CropOverlayView? = null
+
+    // 長按拖曳框選劃線範圍的狀態（epic-6-annotations Issue 3，ADR
+    // 0008）。與 cropOverlayView／cropEditModeActive 刻意獨立——劃線框選
+    // 不是「先進入模式」，而是 Dart 端 GestureDetector 判定長按後隨時可能
+    // 觸發（見審查修正 1.1：觸發時機/獨佔判斷改由 Dart 端 GestureDetector
+    // 負責，原生端不再自行監聽 rootView 觸控）。
+    private var highlightSelectionOverlayView: HighlightSelectionOverlayView? = null
+    private var highlightAnchor: PointF? = null
+    private var highlightSelectionActive: Boolean = false
 
     // 解析自 Dart DualPageMode.name 字串，預設 AUTO，與
     // BookReaderPrefs.dualPageMode 為 null 時的語意一致（epic-16-dual-page）。
@@ -273,6 +283,23 @@ class PdfReaderView(
             if (!dualPageEnabled) return 1
             return if (currentPageIndex == 1 && coverAlone) 1 else 2
         }
+
+        /**
+         * 目前狀態是否允許開始長按框選劃線範圍（epic-6-annotations
+         * Issue 3，plan-issue-3.md Global Constraints「長按框選僅支援
+         * PAGE_FIT」）：裁切編輯模式中、非 PAGE_FIT 顯示模式、或雙頁模式
+         * 生效中皆不允許——這三項條件的判斷收斂在原生端這個唯一權威來源，
+         * Dart 端（Task 6）無條件送出手勢事件，不重複判斷，避免兩端狀態
+         * 不同步。抽成 `internal` 純函式，可脫離真機直接以 JVM 單元測試
+         * 涵蓋，比照 `isDualPageEnabled` 既有先例。
+         */
+        internal fun isAnnotationSelectionEligible(
+            fitMode: PdfFitMode,
+            dualPageEnabled: Boolean,
+            cropEditModeActive: Boolean,
+        ): Boolean {
+            return !cropEditModeActive && fitMode == PdfFitMode.PAGE_FIT && !dualPageEnabled
+        }
     }
 
     init {
@@ -315,6 +342,26 @@ class PdfReaderView(
             }
             "exitCropEditMode" -> {
                 exitCropEditMode()
+                result.success(null)
+            }
+            "beginAnnotationSelection" -> {
+                val xPct = (call.argument<Number>("xPct"))?.toFloat()
+                val yPct = (call.argument<Number>("yPct"))?.toFloat()
+                if (xPct != null && yPct != null) handleBeginAnnotationSelection(xPct, yPct)
+                result.success(null)
+            }
+            "updateAnnotationSelection" -> {
+                val xPct = (call.argument<Number>("xPct"))?.toFloat()
+                val yPct = (call.argument<Number>("yPct"))?.toFloat()
+                if (xPct != null && yPct != null) handleUpdateAnnotationSelection(xPct, yPct)
+                result.success(null)
+            }
+            "endAnnotationSelection" -> {
+                finishHighlightSelection()
+                result.success(null)
+            }
+            "cancelAnnotationSelection" -> {
+                cancelHighlightSelection()
                 result.success(null)
             }
             else -> result.notImplemented()
@@ -718,6 +765,91 @@ class PdfReaderView(
     }
 
     /**
+     * Dart 端 `GestureDetector.onLongPressStart` 觸發時呼叫（
+     * epic-6-annotations Issue 3，審查修正 1.1）。[xPct]／[yPct] 為相對
+     * `PdfReaderView` widget 自身尺寸的百分比（Task 6），本函式先確認
+     * 目前狀態允許框選（[isAnnotationSelectionEligible]），再換算成
+     * `rootView` 目前量測到的像素座標，交給 [beginHighlightSelection]。
+     */
+    private fun handleBeginAnnotationSelection(xPct: Float, yPct: Float) {
+        if (!isAnnotationSelectionEligible(fitMode, dualPageEnabled, cropEditModeActive)) return
+        beginHighlightSelection(xPct * rootView.width, yPct * rootView.height)
+    }
+
+    /** Dart 端 `GestureDetector.onLongPressMoveUpdate` 觸發時呼叫，換算
+     * 方式同 [handleBeginAnnotationSelection]；框選未進行中時靜默忽略
+     * （例如上一次 [handleBeginAnnotationSelection] 因不符資格而未建立
+     * 疊加層）。*/
+    private fun handleUpdateAnnotationSelection(xPct: Float, yPct: Float) {
+        val anchor = highlightAnchor ?: return
+        highlightSelectionOverlayView?.updateRect(
+            anchor,
+            PointF(xPct * rootView.width, yPct * rootView.height),
+        )
+    }
+
+    /** 建立疊加層並開始追蹤拖曳矩形。*/
+    private fun beginHighlightSelection(x: Float, y: Float) {
+        val bitmapWidth = imageView.drawable?.intrinsicWidth ?: return
+        val bitmapHeight = imageView.drawable?.intrinsicHeight ?: return
+        val anchor = PointF(x, y)
+        highlightAnchor = anchor
+        highlightSelectionActive = true
+        val overlay = HighlightSelectionOverlayView(context, bitmapWidth, bitmapHeight)
+        highlightSelectionOverlayView = overlay
+        rootView.addView(
+            overlay,
+            FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT),
+        )
+        overlay.updateRect(anchor, anchor)
+    }
+
+    /**
+     * Dart 端 `GestureDetector.onLongPressEnd` 觸發時呼叫：換算目前框選
+     * 矩形為百分比值回報 Dart 端。矩形太小（例如長按後幾乎未拖曳就放開）
+     * 視為使用者放棄，等同取消，不建立退化的零面積劃線。框選未進行中時
+     * （[highlightSelectionOverlayView] 為 null）靜默忽略。
+     */
+    private fun finishHighlightSelection() {
+        val relative = highlightSelectionOverlayView?.currentRelativeRect()
+        val pageIndex = currentPageIndex
+        removeHighlightSelectionOverlay()
+        if (relative == null) return
+        val minFraction = 0.01f
+        if ((relative.right - relative.left) < minFraction || (relative.bottom - relative.top) < minFraction) {
+            channel.invokeMethod("onSelectionCanceled", null)
+            return
+        }
+        channel.invokeMethod(
+            "onSelectionRectComputed",
+            mapOf(
+                "pageIndex" to pageIndex,
+                "left" to relative.left.toDouble(),
+                "top" to relative.top.toDouble(),
+                "right" to relative.right.toDouble(),
+                "bottom" to relative.bottom.toDouble(),
+            ),
+        )
+    }
+
+    /** Dart 端偵測到第二指觸碰（`cancelAnnotationSelection`）、或收到
+     * 翻頁/跳頁指令時呼叫（呼叫點見下方於 nextPage()／
+     * previousPage()／jumpToPage() 開頭新增的呼叫）。*/
+    private fun cancelHighlightSelection() {
+        if (highlightSelectionActive) {
+            removeHighlightSelectionOverlay()
+            channel.invokeMethod("onSelectionCanceled", null)
+        }
+    }
+
+    private fun removeHighlightSelectionOverlay() {
+        highlightSelectionOverlayView?.let { rootView.removeView(it) }
+        highlightSelectionOverlayView = null
+        highlightAnchor = null
+        highlightSelectionActive = false
+    }
+
+    /**
      * 裁切編輯模式下的預覽渲染：忽略目前 cropMode，永遠顯示完整頁面、
      * 固定 FIT_CENTER，讓 CropOverlayView 的 FIT_CENTER letterbox 座標
      * 換算單純化（見 CropOverlayView.computeContentBounds()）。刻意獨立
@@ -810,6 +942,7 @@ class PdfReaderView(
     }
 
     private fun nextPage() {
+        cancelHighlightSelection()
         if (cropEditModeActive) return
         val step = nextPageStep(currentPageIndex, dualPageEnabled, dualPageCoverAlone)
         val newIndex = currentPageIndex + step
@@ -821,6 +954,7 @@ class PdfReaderView(
     }
 
     private fun previousPage() {
+        cancelHighlightSelection()
         if (cropEditModeActive) return
         val step = previousPageStep(currentPageIndex, dualPageEnabled, dualPageCoverAlone)
         val newIndex = currentPageIndex - step
@@ -840,6 +974,7 @@ class PdfReaderView(
      * 邊界對齊，見 plan-issue-1.md Global Constraints。
      */
     private fun jumpToPage(pageIndex: Int) {
+        cancelHighlightSelection()
         if (cropEditModeActive) return
         if (pageIndex !in 0 until totalPages) return
         if (pageIndex == currentPageIndex) return
@@ -880,6 +1015,7 @@ class PdfReaderView(
     }
 
     override fun dispose() {
+        removeHighlightSelectionOverlay()
         cropOverlayView?.let { rootView.removeView(it) }
         cropOverlayView = null
         renderer?.close()

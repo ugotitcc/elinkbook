@@ -1923,7 +1923,7 @@ git commit -m "feat(epic-6): 抽出共用 letterbox 座標函式並新增 Highli
 
 **審查修正說明（見 `tmp/epic-6/reviews/plan_issue_3_review.md` 1.1）**：原設計由原生端 `rootView.setOnTouchListener` 自建 `Handler`+`ViewConfiguration` 長按計時器、對 `ACTION_DOWN` 無條件回傳 `true` 攔截整個觸控序列。這會讓原生端在使用者每一次觸碰螢幕時都搶先宣告獨佔該次觸控，導致 Flutter 端既有的水平滑動翻頁手勢（`onHorizontalDragEnd`）完全收不到事件、在一般閱讀情境下失效——這不是機率性的真機風險，而是必然發生的行為。而「長按觸發前回傳 false、觸發後才回傳 true」在 Android 的觸控分派模型下也不可行：`View` 若在 `ACTION_DOWN` 當下放棄該序列（回傳 `false`），後續同一序列的 `ACTION_MOVE`/`ACTION_UP` 便不會再送達，等長按計時器事後觸發時已經沒有辦法收集拖曳/放開的事件了。因此本 Task 改為完全移除原生端的觸控監聽/長按計時邏輯，長按與拖曳的辨識改由 Task 6 的 Flutter 端 `GestureDetector` 主導，原生端只被動接收 Dart 送來的四個 method call，語意與原本的觸控狀態機一一對應（`beginAnnotationSelection` ≈ 原長按計時器觸發、`updateAnnotationSelection` ≈ 原 `ACTION_MOVE`、`endAnnotationSelection` ≈ 原 `ACTION_UP`、`cancelAnnotationSelection` ≈ 原 `ACTION_POINTER_DOWN`/`ACTION_CANCEL`），`beginHighlightSelection`／`finishHighlightSelection`／`cancelHighlightSelection`／`removeHighlightSelectionOverlay` 這幾個核心方法的內部邏輯不變，只是觸發來源從觸控事件改為 method call。
 
-- [ ] **Step 1: 新增 import**
+- [x] **Step 1: 新增 import**
 
 `app/android/app/src/main/kotlin/cc/ugotit/elinkbook/PdfReaderView.kt` 頂部新增：
 
@@ -1931,7 +1931,7 @@ git commit -m "feat(epic-6): 抽出共用 letterbox 座標函式並新增 Highli
 import android.graphics.PointF
 ```
 
-- [ ] **Step 2: 新增狀態機欄位**
+- [x] **Step 2: 新增狀態機欄位**
 
 於 `cropOverlayView` 欄位之後新增：
 
@@ -1950,7 +1950,7 @@ import android.graphics.PointF
     private var pageAnnotations: List<PdfAnnotationOverlay> = emptyList()
 ```
 
-- [ ] **Step 3: 於 `companion object` 新增 `isAnnotationSelectionEligible` 純函式**
+- [x] **Step 3: 於 `companion object` 新增 `isAnnotationSelectionEligible` 純函式**
 
 於 `companion object` 內（`previousPageStep` 之後）新增：
 
@@ -1973,7 +1973,7 @@ import android.graphics.PointF
         }
 ```
 
-- [ ] **Step 4: 寫失敗測試（`isAnnotationSelectionEligible`，擴充 `PdfReaderViewTest.kt`）**
+- [x] **Step 4: 寫失敗測試（`isAnnotationSelectionEligible`，擴充 `PdfReaderViewTest.kt`）**
 
 於 `app/android/app/src/test/kotlin/cc/ugotit/elinkbook/PdfReaderViewTest.kt` 檔案結尾（最後一個 `}` 之前）新增：
 
@@ -2024,12 +2024,12 @@ import android.graphics.PointF
 Run: `cd app/android && ./gradlew testDebugUnitTest --tests "cc.ugotit.elinkbook.PdfReaderViewTest"`
 Expected: FAIL（`isAnnotationSelectionEligible` 尚不存在，編譯錯誤）
 
-- [ ] **Step 5: 執行測試確認通過**
+- [x] **Step 5: 執行測試確認通過**
 
 Run: `cd app/android && ./gradlew testDebugUnitTest --tests "cc.ugotit.elinkbook.PdfReaderViewTest"`
 Expected: PASS（含既有 `isDualPageEnabled` 等測試不受影響）
 
-- [ ] **Step 6: 新增 `onMethodCall` 分支與狀態機方法**
+- [x] **Step 6: 新增 `onMethodCall` 分支與狀態機方法**
 
 `onMethodCall` 的 `when (call.method)` 內，`"exitCropEditMode" -> { ... }` 分支之後新增：
 
@@ -2145,7 +2145,7 @@ Expected: PASS（含既有 `isDualPageEnabled` 等測試不受影響）
     }
 ```
 
-- [ ] **Step 7: 於 `nextPage`／`previousPage`／`jumpToPage` 新增取消呼叫、`dispose()` 清理疊加層**
+- [x] **Step 7: 於 `nextPage`／`previousPage`／`jumpToPage` 新增取消呼叫、`dispose()` 清理疊加層**
 
 三個換頁方法開頭（`if (cropEditModeActive) return` 之前）各自新增 `cancelHighlightSelection()`（此為新增，非既有程式碼——`nextPage()`/`previousPage()`/`jumpToPage()` 本身是本檔案既有方法，但呼叫 `cancelHighlightSelection()` 這一行是本 Task 才新增的行為，語意對應 spec.md 審查修正 1.3「縮放/平移手勢開始、或收到翻頁/跳頁指令時取消目前框選狀態」）：
 
@@ -2191,22 +2191,22 @@ Expected: PASS（含既有 `isDualPageEnabled` 等測試不受影響）
         removeHighlightSelectionOverlay()
 ```
 
-- [ ] **Step 8: 編譯驗證**
+- [x] **Step 8: 編譯驗證**
 
 Run: `cd app && flutter build apk --debug`
 Expected: 建置成功
 
-- [ ] **Step 9: 執行既有 Kotlin 單元測試確認無回歸**
+- [x] **Step 9: 執行既有 Kotlin 單元測試確認無回歸**
 
 Run: `cd app/android && ./gradlew testDebugUnitTest`
 Expected: BUILD SUCCESSFUL（`PdfReaderViewTest`／`PdfContentBoundsTest` 皆通過；`PdfAnnotationOverlayTest` 待 Task 9 建立後才存在，本 Task 尚未執行到不影響）
 
-- [ ] **Step 10: 執行 `flutter analyze` 確認 Dart 端未受影響**
+- [x] **Step 10: 執行 `flutter analyze` 確認 Dart 端未受影響**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 11: Commit**
+- [x] **Step 11: Commit**
 
 ```bash
 git add app/android/app/src/main/kotlin/cc/ugotit/elinkbook/PdfReaderView.kt app/android/app/src/test/kotlin/cc/ugotit/elinkbook/PdfReaderViewTest.kt
