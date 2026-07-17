@@ -1667,7 +1667,7 @@ git commit -m "feat(epic-6): PdfReaderView.dart 改由 Flutter GestureDetector �
 - Consumes: 無新增 Dart 型別依賴。
 - Produces: 頂層函式 `computeFitCenterContentBounds(viewWidth, viewHeight, contentWidthPx, contentHeightPx): RectF`（`CropOverlayView`／`HighlightSelectionOverlayView` 共用）；`HighlightSelectionOverlayView`（`updateRect`/`currentRelativeRect`），供 Task 8（`PdfReaderView.kt` 框選狀態機）消費。
 
-- [ ] **Step 1: 抽出共用座標數學（`PdfContentBounds.kt`）**
+- [x] **Step 1: 抽出共用座標數學（`PdfContentBounds.kt`）**
 
 建立 `app/android/app/src/main/kotlin/cc/ugotit/elinkbook/PdfContentBounds.kt`：
 
@@ -1710,7 +1710,7 @@ internal fun computeFitCenterContentBounds(
 }
 ```
 
-- [ ] **Step 2: 寫 JVM 單元測試（`PdfContentBoundsTest.kt`）**
+- [x] **Step 2: 寫 JVM 單元測試（`PdfContentBoundsTest.kt`）**
 
 建立 `app/android/app/src/test/kotlin/cc/ugotit/elinkbook/PdfContentBoundsTest.kt`：
 
@@ -1760,7 +1760,7 @@ class PdfContentBoundsTest {
 Run: `cd app/android && ./gradlew testDebugUnitTest --tests "cc.ugotit.elinkbook.PdfContentBoundsTest"`
 Expected: PASS（一次到位，無紅燈階段——本 Step 目的是為 Step 1 已抽出的純函式立即補上驗證，比照本檔案既有 `isDualPageEnabled` 等純函式的測試風格）
 
-- [ ] **Step 3: `CropOverlayView.kt` 改用共用函式（避免程式碼重複）**
+- [x] **Step 3: `CropOverlayView.kt` 改用共用函式（避免程式碼重複）**
 
 `app/android/app/src/main/kotlin/cc/ugotit/elinkbook/CropOverlayView.kt` 的 `computeContentBounds` 方法整段改為：
 
@@ -1777,7 +1777,7 @@ Expected: PASS（一次到位，無紅燈階段——本 Step 目的是為 Step 
 Run: `cd app/android && ./gradlew testDebugUnitTest`
 Expected: BUILD SUCCESSFUL（既有 Kotlin 單元測試不受影響——本次是純委派重構，行為不變）
 
-- [ ] **Step 4: 實作 `HighlightSelectionOverlayView`**
+- [x] **Step 4: 實作 `HighlightSelectionOverlayView`**
 
 建立 `app/android/app/src/main/kotlin/cc/ugotit/elinkbook/HighlightSelectionOverlayView.kt`：
 
@@ -1881,17 +1881,17 @@ class HighlightSelectionOverlayView(
 internal data class PercentRectPx(val left: Float, val top: Float, val right: Float, val bottom: Float)
 ```
 
-- [ ] **Step 5: 編譯驗證**
+- [x] **Step 5: 編譯驗證**
 
 Run: `cd app && flutter build apk --debug`
 Expected: 建置成功（Kotlin 編譯通過）
 
-- [ ] **Step 6: 執行 `flutter analyze` 確認 Dart 端未受影響**
+- [x] **Step 6: 執行 `flutter analyze` 確認 Dart 端未受影響**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app/android/app/src/main/kotlin/cc/ugotit/elinkbook/CropOverlayView.kt app/android/app/src/main/kotlin/cc/ugotit/elinkbook/PdfContentBounds.kt app/android/app/src/main/kotlin/cc/ugotit/elinkbook/HighlightSelectionOverlayView.kt app/android/app/src/test/kotlin/cc/ugotit/elinkbook/PdfContentBoundsTest.kt

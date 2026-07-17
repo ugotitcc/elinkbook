@@ -117,28 +117,12 @@ class CropOverlayView(
     }
 
     /**
-     * FIT_CENTER letterbox 數學：頁面依長寬比置中縮放至剛好完整顯示於
-     * View 內，多餘空間留白。手動重算是因為裁切框需要知道確切的顯示範圍
-     * 才能正確換算座標，ImageView 本身不會公開這個計算結果。
+     * FIT_CENTER letterbox 數學：委派給共用函式
+     * [computeFitCenterContentBounds]（epic-6-annotations Issue 3 抽出，見
+     * `PdfContentBounds.kt`），本類別不再自行重複實作同一段數學。
      */
-    private fun computeContentBounds(viewWidth: Int, viewHeight: Int): RectF {
-        if (viewWidth <= 0 || viewHeight <= 0 || pageWidthPx <= 0 || pageHeightPx <= 0) {
-            return RectF(0f, 0f, viewWidth.toFloat(), viewHeight.toFloat())
-        }
-        val viewRatio = viewWidth.toFloat() / viewHeight.toFloat()
-        val pageRatio = pageWidthPx.toFloat() / pageHeightPx.toFloat()
-        return if (pageRatio > viewRatio) {
-            // 頁面較「寬」：滿版寬度，上下留白
-            val displayHeight = viewWidth / pageRatio
-            val top = (viewHeight - displayHeight) / 2f
-            RectF(0f, top, viewWidth.toFloat(), top + displayHeight)
-        } else {
-            // 頁面較「高」：滿版高度，左右留白
-            val displayWidth = viewHeight * pageRatio
-            val left = (viewWidth - displayWidth) / 2f
-            RectF(left, 0f, left + displayWidth, viewHeight.toFloat())
-        }
-    }
+    private fun computeContentBounds(viewWidth: Int, viewHeight: Int): RectF =
+        computeFitCenterContentBounds(viewWidth, viewHeight, pageWidthPx, pageHeightPx)
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
