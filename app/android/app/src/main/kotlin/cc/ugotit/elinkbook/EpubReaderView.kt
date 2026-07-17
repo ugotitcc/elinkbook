@@ -3,6 +3,8 @@ package cc.ugotit.elinkbook
 import android.content.Context
 import android.net.Uri
 import android.os.Bundle
+import android.view.ActionMode
+import android.view.Menu
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewTreeObserver
@@ -26,14 +28,19 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
+import org.readium.r2.navigator.DecorableNavigator
+import org.readium.r2.navigator.Decoration
+import org.readium.r2.navigator.Selection
 import org.readium.r2.navigator.epub.EpubNavigatorFactory
 import org.readium.r2.navigator.epub.EpubNavigatorFragment
 import org.readium.r2.navigator.epub.EpubPreferences
 import org.readium.r2.navigator.epub.css.FontStyle
 import org.readium.r2.navigator.epub.css.FontWeight
+import org.readium.r2.navigator.html.HtmlDecorationTemplates
 import org.readium.r2.navigator.preferences.FontFamily
 import org.readium.r2.navigator.preferences.Spread
 import org.readium.r2.navigator.preferences.TextAlign
+import org.readium.r2.navigator.util.BaseActionModeCallback
 import org.readium.r2.shared.publication.Layout
 import org.readium.r2.shared.publication.Link
 import org.readium.r2.shared.publication.Locator
@@ -120,6 +127,10 @@ class EpubReaderView(
         internal fun isDualPageEnabled(dualPageMode: DualPageMode, isLandscape: Boolean): Boolean =
             dualPageMode == DualPageMode.ALWAYS ||
                 (dualPageMode == DualPageMode.AUTO && isLandscape)
+
+        /** applyDecorations／addDecorationListener 使用的群組鍵，任取一個
+         * 在整個 App 內唯一的字串即可，不需要與其他任何既有機制對應。*/
+        internal const val ANNOTATIONS_DECORATION_GROUP = "elinkbook_annotations"
     }
 
     private val containerId = View.generateViewId()
@@ -150,6 +161,11 @@ class EpubReaderView(
 
     /** 裝置是否為橫向，由 [applyDualPagePreferences] 更新。 */
     private var isLandscape: Boolean = false
+
+    /** 標記點擊監聽器，dispose() 時需要用同一個實例呼叫
+     * removeDecorationListener，故保留參照（見 Decoration.kt
+     * addDecorationListener／removeDecorationListener 簽章）。*/
+    private var decorationListener: DecorableNavigator.Listener? = null
 
     init {
         channel.setMethodCallHandler(this)
@@ -222,6 +238,14 @@ class EpubReaderView(
                     }
                 }
                 result.success(null)
+            }
+            "setDecorations" -> {
+                @Suppress("UNCHECKED_CAST")
+                val list = call.argument<List<Map<String, Any?>>>("decorations") ?: emptyList()
+                scope.launch {
+                    applyDecorationsFromWire(list)
+                    if (!isDisposed) result.success(null)
+                }
             }
             else -> result.notImplemented()
         }
@@ -581,6 +605,113 @@ class EpubReaderView(
     }
 
     /**
+     * 攔截 Readium 原生選字工具列（epic-6-annotations Issue 2，design.md
+     * 決策：改由 Flutter 端 `AnnotationToolbar` 接手顯示浮動工具列）。
+     *
+     * 【審查修正，重要】`onCreateActionMode` 必須回傳 `true`，**不能**回傳
+     * `false`——這是 Android `ActionMode.Callback` 官方文件明訂的契約：
+     * 回傳 `false` 代表整個 ActionMode 生命週期直接不建立，其後
+     * `onDestroyActionMode` 也「不會」被呼叫（非 Readium 特有行為，是
+     * Android SDK 本身的標準行為）。若回傳 `false`，`onSelectionCleared`
+     * 事件永遠不會送出，Flutter 端浮動工具列會卡在畫面上收不起來。改為
+     * 回傳 `true`（讓 ActionMode 正常建立、生命週期正常運作），並在
+     * `menu?.clear()` 清空選單項目，讓原生 Cut/Copy/Share 等按鈕不會
+     * 顯示——視覺效果與原本「不顯示原生選單」的意圖相同，但透過清空選單
+     * 內容達成，而非跳過整個生命週期。
+     *
+     * 同時在 `onCreateActionMode` 當下呼叫 `currentSelection()`
+     * （suspend）取得選取範圍的 Locator／矩形，回報給 Dart 端。
+     *
+     * `onDestroyActionMode` 現在能正常在使用者點擊選取範圍以外的地方
+     * （原生選取被清除）時觸發，通知 Dart 端收起浮動工具列。先呼叫
+     * `super.onDestroyActionMode()`——`BaseActionModeCallback` 本身可能有
+     * Readium 內部需要的清理邏輯，本類別只是附加通知，不取代它。
+     */
+    private inner class SelectionActionModeCallback : BaseActionModeCallback() {
+        override fun onCreateActionMode(mode: ActionMode?, menu: Menu?): Boolean {
+            menu?.clear()
+            scope.launch {
+                val selection = navigatorFragment?.currentSelection() ?: return@launch
+                if (!isDisposed) reportSelectionChanged(selection)
+            }
+            return true
+        }
+
+        override fun onDestroyActionMode(mode: ActionMode) {
+            super.onDestroyActionMode(mode)
+            if (!isDisposed) channel.invokeMethod("onSelectionCleared", null)
+        }
+    }
+
+    /**
+     * 把 [selection] 換算成相對於 [container] 寬高的百分比矩形送給 Dart
+     * 端（見 Global Constraints「選取矩形座標協定」）。流式 EPUB
+     * （本 Issue 範圍，FXL 排除）不像 `applyFxlFitScale()` 那樣對 WebView
+     * 做額外縮放/位移變換，故 `Selection.rect` 可視為已經是相對
+     * [container] 座標系的量測結果，不需要額外的座標轉換——此假設留待
+     * Task 11 真機測試驗證（見 issues.md 驗收標準）。
+     *
+     * 【Task 9 實作階段審查修正】`Selection.rect` 的 Kotlin 宣告型別是
+     * `RectF?`（可空），而非 javap 反編譯 bytecode 表面看到的
+     * `RectF`——Kotlin 的可空性是編譯器層級中繼資料，不反映在 JVM
+     * bytecode 的欄位型別本身，純用 javap 無法偵測到這個落差，只有真正
+     * 跑 Kotlin 編譯器才會擋下非 safe-call 存取。`rect` 為 `null` 時直接
+     * 靜默不回報這次選取事件（比照本檔案既有對非致命/背景訊號的處理
+     * 原則，例如 `jumpToLocator` 對無效 `locatorJson` 的靜默忽略）——
+     * 使用者只是這一次選取沒有觸發浮動工具列，並非致命錯誤，不需要
+     * 更複雜的退回方案（例如假想一個全零矩形）。
+     */
+    private fun reportSelectionChanged(selection: Selection) {
+        val width = container.width.toFloat()
+        val height = container.height.toFloat()
+        if (width <= 0 || height <= 0) return
+        val rect = selection.rect ?: return
+        channel.invokeMethod(
+            "onSelectionChanged",
+            mapOf(
+                "locatorJson" to selection.locator.toJSON().toString(),
+                "progression" to selection.locator.locations.totalProgression,
+                "leftPct" to (rect.left / width).toDouble(),
+                "topPct" to (rect.top / height).toDouble(),
+                "rightPct" to (rect.right / width).toDouble(),
+                "bottomPct" to (rect.bottom / height).toDouble(),
+            ),
+        )
+    }
+
+    /**
+     * 把 Dart 端送來的完整標記清單（見
+     * app/lib/reader/epub_decoration.dart `EpubDecoration.toWire()`）
+     * 轉換為 Readium `Decoration` 清單並整組套用（`applyDecorations`
+     * 本身是「取代目前該群組全部標記」語意，非增量新增，比照
+     * `EpubPreferences` 整組送出的既有慣例）。單筆解析失敗（例如
+     * locatorJson 格式錯誤）時該筆略過，不影響其餘標記，比照本檔案既有
+     * 對非致命錯誤的處理原則（見 `jumpToLocator` 分支）。
+     */
+    private suspend fun applyDecorationsFromWire(list: List<Map<String, Any?>>) {
+        val nav = navigatorFragment ?: return
+        val decorations = list.mapNotNull { entry ->
+            val id = entry["id"] as? String ?: return@mapNotNull null
+            val locatorJson = entry["locatorJson"] as? String ?: return@mapNotNull null
+            val tint = (entry["tint"] as? Number)?.toInt() ?: return@mapNotNull null
+            val isUnderline = entry["isUnderline"] as? Boolean ?: false
+            val locator = try {
+                Locator.fromJSON(JSONObject(locatorJson))
+            } catch (e: Exception) {
+                null
+            } ?: return@mapNotNull null
+            val style: Decoration.Style = if (isUnderline) {
+                Decoration.Style.Underline(tint = tint, isActive = false)
+            } else {
+                Decoration.Style.Highlight(tint = tint, isActive = false)
+            }
+            Decoration(id = id, locator = locator, style = style)
+        }
+        if (isDisposed) return
+        nav.applyDecorations(decorations, ANNOTATIONS_DECORATION_GROUP)
+    }
+
+    /**
      * 把 Dart 端送來的偏好設定 map（openBook 的 initialPreferences，或
      * setPreferences 的參數，兩者格式相同）轉換為 EpubPreferences；未出現在
      * map 中的 key 對應到該欄位的 null（交由 currentPreferences.plus() 決定
@@ -631,8 +762,18 @@ class EpubReaderView(
      * 字型註冊 NORMAL+BOLD 兩個 face；其餘單一靜態字重字型只註冊一個 face，
      * 讓瀏覽器預設的 `font-synthesis` 在字重滑桿要求較粗的值時，自動套用模擬
      * 粗體。
+     *
+     * 【epic-6-annotations Issue 2 擴充】本函式職責已從「只登記字型」擴充
+     * 為建構整個 EpubNavigatorFragment.Configuration：額外設定
+     * `selectionActionModeCallback`（攔截原生選字工具列，見
+     * SelectionActionModeCallback KDoc）與 `decorationTemplates`
+     * （`HtmlDecorationTemplates.defaultTemplates()`，Readium 內建預設
+     * 模板即可正確渲染 Highlight/Underline 兩種 built-in 樣式，不自訂
+     * HtmlDecorationTemplate，見 plan-issue-2.md Global Constraints「純
+     * 備註視覺簡化」）。方法名稱同步由 buildFontFamiliesConfiguration
+     * 改為 buildNavigatorConfiguration，反映此擴充後的實際職責。
      */
-    private fun buildFontFamiliesConfiguration(): EpubNavigatorFragment.Configuration {
+    private fun buildNavigatorConfiguration(): EpubNavigatorFragment.Configuration {
         val loader = FlutterInjector.instance().flutterLoader()
         val fontAssets = mapOf(
             "SourceHanSansTC" to "assets/fonts/SourceHanSansTC-VF.ttf",
@@ -645,6 +786,8 @@ class EpubReaderView(
         val lookupKeys = fontAssets.mapValues { (_, path) -> loader.getLookupKeyForAsset(path) }
         return EpubNavigatorFragment.Configuration {
             servedAssets = lookupKeys.values.toList()
+            selectionActionModeCallback = SelectionActionModeCallback()
+            decorationTemplates = HtmlDecorationTemplates.defaultTemplates()
             for ((familyName, lookupKey) in lookupKeys) {
                 addFontFamilyDeclaration(
                     fontFamily = FontFamily(familyName),
@@ -743,7 +886,7 @@ class EpubReaderView(
                 initialLocator = initialLocator,
                 listener = this,
                 paginationListener = this,
-                configuration = buildFontFamiliesConfiguration(),
+                configuration = buildNavigatorConfiguration(),
             )
             installedFragmentFactory = fragmentFactory
             activity.supportFragmentManager.fragmentFactory = fragmentFactory
@@ -783,6 +926,18 @@ class EpubReaderView(
                     )
                 }
                 ?.launchIn(scope)
+            // epic-6-annotations Issue 2：標記點擊事件（design.md 使用者
+            // 流程步驟 3：「點擊既有劃線/備註 → 開啟編輯 Dialog」）。
+            val listener = object : DecorableNavigator.Listener {
+                override fun onDecorationActivated(
+                    event: DecorableNavigator.OnActivatedEvent,
+                ): Boolean {
+                    channel.invokeMethod("onAnnotationActivated", event.decoration.id)
+                    return true
+                }
+            }
+            decorationListener = listener
+            navigatorFragment?.addDecorationListener(ANNOTATIONS_DECORATION_GROUP, listener)
             if (initialPreferences != null && initialPreferences.isNotEmpty()) {
                 applyDualPagePreferences(initialPreferences)
                 currentPreferences = currentPreferences.plus(buildPreferencesFromMap(initialPreferences))
@@ -1005,6 +1160,7 @@ class EpubReaderView(
         isDisposed = true
         scope.cancel()
         removeFxlLayoutListener()
+        decorationListener?.let { navigatorFragment?.removeDecorationListener(it) }
         val fragment = activity.supportFragmentManager.findFragmentByTag(fragmentTag)
         if (fragment != null) {
             try {
