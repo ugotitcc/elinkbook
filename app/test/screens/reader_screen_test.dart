@@ -1727,7 +1727,7 @@ void main() {
     await tester.pump();
 
     // 解決 loading state 導致 CircularProgressIndicator 無限動畫持續排程的問題
-    view.onPageRendered?.call();
+    view.onPageRendered();
     await tester.pump();
 
     final notesButtonFinder = find.byKey(const Key('reader_fixed_layout_notes_button'));
@@ -1782,7 +1782,7 @@ void main() {
     await tester.pump();
 
     // 解決 loading state
-    view.onPageRendered?.call();
+    view.onPageRendered();
     await tester.pump();
 
     view.onLocatorChanged?.call(
@@ -1841,7 +1841,7 @@ void main() {
     await tester.pump();
 
     // 解決 loading state
-    view.onPageRendered?.call();
+    view.onPageRendered();
     await tester.pump();
 
     view.onLocatorChanged?.call(
