@@ -2829,7 +2829,7 @@ git commit -m "feat(epic-6): ReaderScreen 接上 PDF 劃線/備註端到端流�
 - Consumes: Task 1-10 的全部型別（`HighlightsRepository`／`NotesRepository`／`ReaderScreen`／`NotesBottomSheet`）。
 - Produces: 無新增 Dart 型別；驗證 repository 驅動的端到端流程（清單顯示、跳轉、編輯、刪除），比照 Issue 2 `epub_highlights_notes_test.dart` 既有結構，改用 `sample.pdf`／`sample_dual_page.pdf` 既有測試 fixture。
 
-- [ ] **Step 1: 撰寫 integration_test**
+- [x] **Step 1: 撰寫 integration_test**
 
 建立 `app/integration_test/pdf_highlights_notes_test.dart`：
 
@@ -3021,18 +3021,18 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: 記錄待執行狀態**
+- [x] **Step 2: 記錄待執行狀態**
 
 本測試需在真實 Android 裝置/模擬器上執行（`flutter test integration_test/pdf_highlights_notes_test.dart -d <device-id>`）；比照 Issue 1/2 先例，若撰寫當下無可用裝置，於 `issues.md` Issue 3 驗收標準對應項目註記「測試檔已撰寫，尚待裝置就緒後實際執行」，並列出上方 Step 1 註解中的「真機人工驗證清單」7 項供人工測試時對照。
 
-- [ ] **Step 3: 若有裝置可用，執行驗證**
+- [x] **Step 3: 若有裝置可用，執行驗證**
 
 Run: `flutter devices`（確認是否有可用裝置/模擬器）
 若有：Run: `flutter test integration_test/pdf_highlights_notes_test.dart -d <device-id>`
 Expected: PASS；並依上方「真機人工驗證清單」逐項人工操作確認，額外聚焦 Issue 2 未曾驗證過的項目：長按與水平滑動翻頁實際共存（清單項目 2，審查修正 1.1 後為構造性驗證而非未知風險排查）、多指取消（項目 3）、裁切後座標基準（項目 7）。
 若無：跳過本步驟，維持 Step 2 的註記狀態。
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add app/integration_test/pdf_highlights_notes_test.dart
