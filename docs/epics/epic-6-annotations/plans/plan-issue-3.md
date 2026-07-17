@@ -2505,7 +2505,7 @@ git commit -m "feat(epic-6): PdfReaderView.kt 新增 refreshAnnotations 與 Bitm
 - Consumes: Task 1-9 的全部型別與原生端實作。
 - Produces: `ReaderScreen` 對 PDF 完成 Issue 3 端到端接線，`highlightsRepository`/`notesRepository` 對 PDF 書籍同樣生效（複用 Issue 2 已有的可選具名參數，不新增建構參數）。
 
-- [ ] **Step 1: 寫失敗測試**
+- [x] **Step 1: 寫失敗測試**
 
 於 `app/test/screens/reader_screen_test.dart` 檔案結尾（最後一個 `}` 之前）新增：
 
@@ -2555,12 +2555,12 @@ git commit -m "feat(epic-6): PdfReaderView.kt 新增 refreshAnnotations 與 Bitm
 
 （`FakeBookmarksRepository`／`FakeHighlightsRepository`／`FakeNotesRepository`／`FakeReaderPrefsManager`／`AnnotationToolbar` 皆已由既有 import 涵蓋，見 Issue 1/2 既有測試檔頂部 import 清單，本次無需新增 import。）
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/screens/reader_screen_test.dart`
 Expected: 目前應已可通過建構（`highlightsRepository`/`notesRepository` 參數 Issue 2 已存在）——**先執行一次確認此假設成立**；若確實已通過，本 Step 記錄「測試先行通過，Step 3 起的接線是行為擴充而非讓編譯通過」，繼續往下實作 PDF 選取/CRUD/清單流程本身（後續整合測試留給 Task 11 覆蓋，本 Task Step 1 的兩個測試主要作用是防止建構期間拋出例外的回歸網）。
 
-- [ ] **Step 3: 擴充 `ReaderScreen` import**
+- [x] **Step 3: 擴充 `ReaderScreen` import**
 
 `app/lib/screens/reader_screen.dart` 頂部新增：
 
@@ -2569,7 +2569,7 @@ import '../reader/pdf_annotation_decoration.dart';
 import '../reader/pdf_selection_info.dart';
 ```
 
-- [ ] **Step 4: 新增 State 欄位**
+- [x] **Step 4: 新增 State 欄位**
 
 `_ReaderScreenState` 內，`_pendingHighlightIdForSelection`（EPUB，Issue 2 新增）欄位之後新增：
 
@@ -2582,7 +2582,7 @@ import '../reader/pdf_selection_info.dart';
   int? _pendingPdfHighlightIdForSelection;
 ```
 
-- [ ] **Step 5: 新增 PDF 選取事件／CRUD 處理方法**
+- [x] **Step 5: 新增 PDF 選取事件／CRUD 處理方法**
 
 在 `_showAnnotationActionDialog` 方法之後（EPUB 相關方法群結尾）新增：
 
@@ -2697,7 +2697,7 @@ import '../reader/pdf_selection_info.dart';
   }
 ```
 
-- [ ] **Step 6: 於 `_handlePageRendered` 觸發初始標記載入**
+- [x] **Step 6: 於 `_handlePageRendered` 觸發初始標記載入**
 
 `_handlePageRendered` 方法改為：
 
@@ -2720,7 +2720,7 @@ import '../reader/pdf_selection_info.dart';
   }
 ```
 
-- [ ] **Step 7: 於 `_buildNativeView` 的 PDF 分支接上新回呼**
+- [x] **Step 7: 於 `_buildNativeView` 的 PDF 分支接上新回呼**
 
 `_buildNativeView` 的 `case BookFormat.pdf:` 分支，`onPageChanged: (info) { ... },` 之後（`return PdfReaderView(...)` 結尾的 `)` 之前）新增：
 
@@ -2730,7 +2730,7 @@ import '../reader/pdf_selection_info.dart';
         );
 ```
 
-- [ ] **Step 8: 於 `_buildBody` 疊加 PDF 版本的 `AnnotationToolbar`**
+- [x] **Step 8: 於 `_buildBody` 疊加 PDF 版本的 `AnnotationToolbar`**
 
 `_buildBody` 方法內 `LayoutBuilder` 的 `builder` 中，`final selection = _currentSelection;` 之後新增：
 
@@ -2752,7 +2752,7 @@ import '../reader/pdf_selection_info.dart';
               ),
 ```
 
-- [ ] **Step 9: 於 `_openNotesSheet` 擴充 PDF 支援**
+- [x] **Step 9: 於 `_openNotesSheet` 擴充 PDF 支援**
 
 `_openNotesSheet` 方法內，`NotesBottomSheet(` 建構呼叫改為：
 
@@ -2798,7 +2798,7 @@ import '../reader/pdf_selection_info.dart';
 
 （原本 `format == BookFormat.epub && !_isFixedLayout ? widget.highlightsRepository : null` 這行是 Issue 2 已預留的擴充點，本 Step 依其註解指示擴充為涵蓋 `format == BookFormat.pdf`。）
 
-- [ ] **Step 10: 執行測試確認通過**
+- [x] **Step 10: 執行測試確認通過**
 
 Run: `flutter test test/screens/reader_screen_test.dart`
 Expected: PASS（全部測試綠燈，含既有測試不受影響）
@@ -2806,12 +2806,12 @@ Expected: PASS（全部測試綠燈，含既有測試不受影響）
 Run: `flutter test`
 Expected: 全專案測試皆 PASS（確認本次跨檔案修改無回歸）。
 
-- [ ] **Step 11: 執行 `flutter analyze` 確認乾淨**
+- [x] **Step 11: 執行 `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 12: Commit**
+- [x] **Step 12: Commit**
 
 ```bash
 git add app/lib/screens/reader_screen.dart app/test/screens/reader_screen_test.dart

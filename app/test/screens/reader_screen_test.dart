@@ -1529,4 +1529,46 @@ void main() {
     // widget test 環境下真實模擬）。
     expect(state, isNotNull);
   });
+
+  testWidgets(
+      'PDF 書籍提供 highlightsRepository／notesRepository 後，ReaderScreen 建構不受影響、仍正常顯示',
+      (tester) async {
+    final bookmarksRepository = FakeBookmarksRepository();
+    final highlightsRepository = FakeHighlightsRepository();
+    final notesRepository = FakeNotesRepository();
+
+    await tester.pumpWidget(MaterialApp(
+      home: ReaderScreen(
+        filePath: 'test/fixtures/sample.pdf',
+        bookId: 'b1',
+        prefsManager: FakeReaderPrefsManager(),
+        bookmarksRepository: bookmarksRepository,
+        highlightsRepository: highlightsRepository,
+        notesRepository: notesRepository,
+      ),
+    ));
+    await tester.pump();
+
+    // 原生 PlatformView 在 app/test/ 環境下不會真正建立（_channel 恆為
+    // null，見既有兩層測試架構慣例），選取觸發後的浮動工具列顯示效果留
+    // 給 Task 11 integration_test 驗證；本測試只驗證建構參數可正確傳入
+    // 不崩潰，且未觸發選取時不顯示浮動工具列（既有行為零回歸）。
+    expect(find.byType(AnnotationToolbar), findsNothing);
+  });
+
+  testWidgets('PDF 書籍未提供 highlightsRepository／notesRepository 時建構不受影響（既有呼叫端零回歸）',
+      (tester) async {
+    final bookmarksRepository = FakeBookmarksRepository();
+    await tester.pumpWidget(MaterialApp(
+      home: ReaderScreen(
+        filePath: 'test/fixtures/sample.pdf',
+        bookId: 'b1',
+        prefsManager: FakeReaderPrefsManager(),
+        bookmarksRepository: bookmarksRepository,
+      ),
+    ));
+    await tester.pump();
+
+    expect(find.byType(AnnotationToolbar), findsNothing);
+  });
 }
