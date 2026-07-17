@@ -2,6 +2,7 @@ package cc.ugotit.elinkbook
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.PointF
 import android.graphics.pdf.PdfRenderer
 import android.net.Uri
 import android.os.ParcelFileDescriptor
@@ -87,6 +88,19 @@ class PdfReaderView(
     // previousPage() 暫停回應，避免翻頁手勢與拖拉裁切框互相干擾。
     private var cropEditModeActive: Boolean = false
     private var cropOverlayView: CropOverlayView? = null
+
+    // 長按拖曳框選劃線範圍的狀態（epic-6-annotations Issue 3，ADR
+    // 0008）。與 cropOverlayView／cropEditModeActive 刻意獨立——劃線框選
+    // 不是「先進入模式」，而是 Dart 端 GestureDetector 判定長按後隨時可能
+    // 觸發（見審查修正 1.1：觸發時機/獨佔判斷改由 Dart 端 GestureDetector
+    // 負責，原生端不再自行監聽 rootView 觸控）。
+    private var highlightSelectionOverlayView: HighlightSelectionOverlayView? = null
+    private var highlightAnchor: PointF? = null
+    private var highlightSelectionActive: Boolean = false
+
+    // Dart 端送來的目前應顯示標記清單（Issue 3 `refreshAnnotations`），
+    // 依 pageIndex 分組供 renderPageBitmap() 逐頁疊加繪製。
+    private var pageAnnotations: List<PdfAnnotationOverlay> = emptyList()
 
     // 解析自 Dart DualPageMode.name 字串，預設 AUTO，與
     // BookReaderPrefs.dualPageMode 為 null 時的語意一致（epic-16-dual-page）。
@@ -273,6 +287,59 @@ class PdfReaderView(
             if (!dualPageEnabled) return 1
             return if (currentPageIndex == 1 && coverAlone) 1 else 2
         }
+
+        /**
+         * 原生端內部使用的單筆標記疊加資料（epic-6-annotations Issue 3）。
+         * 對應 Dart `PdfAnnotationDecoration.toWire()`。
+         */
+        internal data class PdfAnnotationOverlay(
+            val pageIndex: Int,
+            val left: Float,
+            val top: Float,
+            val right: Float,
+            val bottom: Float,
+            val tint: Int,
+            val isUnderline: Boolean,
+            val isNoteOnly: Boolean,
+        )
+
+        /**
+         * 解析 Dart 端 `refreshAnnotations` 送來的標記清單。單筆缺少必要
+         * 數值欄位時該筆略過，不影響其餘項目解析（比照本檔案既有
+         * `parseCropRect` 對非致命錯誤的處理原則）。抽成 `internal` 純
+         * 函式，可脫離真機直接以 JVM 單元測試涵蓋（比照
+         * `isDualPageEnabled` 等既有先例）。
+         */
+        internal fun parsePdfAnnotationOverlays(list: List<Map<String, Any?>>): List<PdfAnnotationOverlay> {
+            return list.mapNotNull { entry ->
+                val pageIndex = entry["pageIndex"] as? Int ?: return@mapNotNull null
+                val left = (entry["left"] as? Number)?.toFloat() ?: return@mapNotNull null
+                val top = (entry["top"] as? Number)?.toFloat() ?: return@mapNotNull null
+                val right = (entry["right"] as? Number)?.toFloat() ?: return@mapNotNull null
+                val bottom = (entry["bottom"] as? Number)?.toFloat() ?: return@mapNotNull null
+                val tint = (entry["tint"] as? Number)?.toInt() ?: return@mapNotNull null
+                val isUnderline = entry["isUnderline"] as? Boolean ?: false
+                val isNoteOnly = entry["isNoteOnly"] as? Boolean ?: false
+                PdfAnnotationOverlay(pageIndex, left, top, right, bottom, tint, isUnderline, isNoteOnly)
+            }
+        }
+
+        /**
+         * 目前狀態是否允許開始長按框選劃線範圍（epic-6-annotations
+         * Issue 3，plan-issue-3.md Global Constraints「長按框選僅支援
+         * PAGE_FIT」）：裁切編輯模式中、非 PAGE_FIT 顯示模式、或雙頁模式
+         * 生效中皆不允許——這三項條件的判斷收斂在原生端這個唯一權威來源，
+         * Dart 端（Task 6）無條件送出手勢事件，不重複判斷，避免兩端狀態
+         * 不同步。抽成 `internal` 純函式，可脫離真機直接以 JVM 單元測試
+         * 涵蓋，比照 `isDualPageEnabled` 既有先例。
+         */
+        internal fun isAnnotationSelectionEligible(
+            fitMode: PdfFitMode,
+            dualPageEnabled: Boolean,
+            cropEditModeActive: Boolean,
+        ): Boolean {
+            return !cropEditModeActive && fitMode == PdfFitMode.PAGE_FIT && !dualPageEnabled
+        }
     }
 
     init {
@@ -315,6 +382,33 @@ class PdfReaderView(
             }
             "exitCropEditMode" -> {
                 exitCropEditMode()
+                result.success(null)
+            }
+            "refreshAnnotations" -> {
+                @Suppress("UNCHECKED_CAST")
+                val list = call.argument<List<Map<String, Any?>>>("annotations") ?: emptyList()
+                pageAnnotations = parsePdfAnnotationOverlays(list)
+                renderCurrentSpread()
+                result.success(null)
+            }
+            "beginAnnotationSelection" -> {
+                val xPct = (call.argument<Number>("xPct"))?.toFloat()
+                val yPct = (call.argument<Number>("yPct"))?.toFloat()
+                if (xPct != null && yPct != null) handleBeginAnnotationSelection(xPct, yPct)
+                result.success(null)
+            }
+            "updateAnnotationSelection" -> {
+                val xPct = (call.argument<Number>("xPct"))?.toFloat()
+                val yPct = (call.argument<Number>("yPct"))?.toFloat()
+                if (xPct != null && yPct != null) handleUpdateAnnotationSelection(xPct, yPct)
+                result.success(null)
+            }
+            "endAnnotationSelection" -> {
+                finishHighlightSelection()
+                result.success(null)
+            }
+            "cancelAnnotationSelection" -> {
+                cancelHighlightSelection()
                 result.success(null)
             }
             else -> result.notImplemented()
@@ -590,10 +684,114 @@ class PdfReaderView(
                 postScale(scale, scale)
             }
             page.render(bitmap, null, matrix, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+            // 已知、可接受的互動（非 bug，勿「順手修掉」）：此處疊加標記發生在
+            // displayFinalBitmap() 稍後的 applyBoldEffect()（加粗＝型態學膨脹）
+            // 之前，故使用者開啟「加粗」時，剛畫好的劃線/底線/圖釘也會一併被
+            // 膨脹（某種程度上甚至是理想效果——劃線下方文字看起來更粗）。
+            // 若改成加粗之後才疊加，會在雙頁拼接情境下重新引入跨頁座標縫合的
+            // 複雜度（本函式刻意選在單頁 bitmap 剛渲染完、拼接/加粗都還沒發生
+            // 時繪製，見本方法上方 KDoc 理由 (a)(b)(c)），故不予更動。
+            drawAnnotationOverlays(bitmap, pageIndex, scale)
             return bitmap
         } finally {
             page.close()
         }
+    }
+
+    /**
+     * 於 [bitmap] 上疊加繪製 [pageIndex] 這一頁的所有劃線/備註（
+     * epic-6-annotations Issue 3）。刻意放在 `renderPageBitmap()` 內、單頁
+     * 內容渲染完成後立即繪製（而非等拼接/加粗/fit/濾鏡都套用完才疊加）：
+     * (a) 雙頁模式下左右頁各自呼叫本函式一次，天然正確疊加、不需處理拼接
+     * 後的座標換算；(b) 旋轉/裁切/版面調整觸發的重新渲染會自動重跑整個
+     * pipeline、連帶重繪標記，不需要額外的旋轉感知邏輯；(c) 百分比座標
+     * 直接乘上 [bitmap] 自身寬高即為疊加位置——因為框選當下的座標協定
+     * 本來就是「相對目前顯示中 bitmap 內容範圍」（見 plan-issue-3.md
+     * Global Constraints「PDF 座標協定」），bitmap 本身不含 letterbox
+     * 留白，留白只發生在 ImageView 用 FIT_CENTER 顯示 bitmap 到 View
+     * 的階段，該階段的縮放/置中會自動、成比例地把已疊加好的內容一併帶到
+     * 正確視覺位置。
+     *
+     * 【審查修正，見 review 2.1】底線粗細／釘標尺寸須以 [scale]（即
+     * `PdfImageProcessor.pageRenderScale(density)`，本方法渲染 bitmap 時
+     * 實際採用的縮放係數）為基準，不可用畫面 DP 密度——`bitmap` 的實際
+     * 像素尺寸是頁面點數乘上 [scale] 決定的，常遠大於螢幕 DP，用 DP
+     * 密度換算會讓筆畫在高解析度 bitmap 上顯得極細/極小。底線繪製點為
+     * `bottom - strokeWidth / 2`（而非直接畫在 `bottom`）——`Canvas.drawLine`
+     * 的筆畫以座標為中線向兩側延伸，選取範圍貼近頁面底部時，若畫在
+     * `bottom` 上，一半線寬會被畫布邊界裁掉。
+     */
+    private fun drawAnnotationOverlays(bitmap: Bitmap, pageIndex: Int, scale: Float) {
+        val matching = pageAnnotations.filter { it.pageIndex == pageIndex }
+        if (matching.isEmpty()) return
+        val canvas = android.graphics.Canvas(bitmap)
+        for (ann in matching) {
+            val left = ann.left * bitmap.width
+            val top = ann.top * bitmap.height
+            val right = ann.right * bitmap.width
+            val bottom = ann.bottom * bitmap.height
+            if (ann.isUnderline) {
+                // 底線樣式：PDF 點陣圖無文字層可錨定，改繪製矩形底部的
+                // 一條實色線段（design.md 決策 #5 的視覺意圖延伸，不同於
+                // EPUB 端 Readium Decoration.Style.Underline 的文字級底線）。
+                val paint = android.graphics.Paint().apply {
+                    color = ann.tint
+                    style = android.graphics.Paint.Style.STROKE
+                    strokeWidth = 2f * scale
+                    strokeCap = android.graphics.Paint.Cap.ROUND
+                }
+                val lineY = bottom - paint.strokeWidth / 2
+                canvas.drawLine(left, lineY, right, lineY, paint)
+            } else {
+                // 螢光筆三色／純備註灰底皆屬此類（tint 本身已含透明度）。
+                val fillPaint = android.graphics.Paint().apply {
+                    color = ann.tint
+                    style = android.graphics.Paint.Style.FILL
+                }
+                canvas.drawRect(left, top, right, bottom, fillPaint)
+            }
+            if (ann.isNoteOnly) {
+                drawNoteOnlyMarker(canvas, right, top, scale)
+            }
+        }
+    }
+
+    /**
+     * 【審查修正，見 review 2.2】純備註畫面指示（design.md 決策 #2）改用
+     * 純黑白、高對比度的手繪向量圖釘（圓形釘頭＋三角釘尖），不使用系統
+     * Emoji（原本的 `canvas.drawText("📌", ...)`）——elinkBook 的核心場景
+     * 之一是 E-Ink 黑白螢幕，系統 Emoji 經點陣化後會因失去色彩/漸層細節
+     * 而模糊、對比度不足。比照本檔案 `CropOverlayView.kt` 既有先例——裁切
+     * 確認按鈕同樣是刻意手繪的黑底白勾（非圖示字型），理由記載於其
+     * KDoc：「確保在 E-Ink 16 階灰階裝置...與一般彩色螢幕上都維持清楚
+     * 可辨的對比度」。[right]／[top] 為該筆標記矩形的右上角像素座標，圖釘
+     * 錨點置於此角落內側一點的位置。
+     */
+    private fun drawNoteOnlyMarker(canvas: android.graphics.Canvas, right: Float, top: Float, scale: Float) {
+        val markerRadius = 5f * scale
+        val markerCx = right - markerRadius - 2f * scale
+        val markerCy = top + markerRadius + 2f * scale
+        val fillPaint = android.graphics.Paint().apply {
+            color = android.graphics.Color.BLACK
+            style = android.graphics.Paint.Style.FILL
+            isAntiAlias = true
+        }
+        val outlinePaint = android.graphics.Paint().apply {
+            color = android.graphics.Color.WHITE
+            style = android.graphics.Paint.Style.STROKE
+            strokeWidth = 1f * scale
+            isAntiAlias = true
+        }
+        val pinPath = android.graphics.Path().apply {
+            moveTo(markerCx - markerRadius, markerCy)
+            lineTo(markerCx, markerCy + markerRadius * 2.2f)
+            lineTo(markerCx + markerRadius, markerCy)
+            close()
+        }
+        canvas.drawPath(pinPath, fillPaint)
+        canvas.drawPath(pinPath, outlinePaint)
+        canvas.drawCircle(markerCx, markerCy, markerRadius, fillPaint)
+        canvas.drawCircle(markerCx, markerCy, markerRadius, outlinePaint)
     }
 
     /**
@@ -718,6 +916,105 @@ class PdfReaderView(
     }
 
     /**
+     * Dart 端 `GestureDetector.onLongPressStart` 觸發時呼叫（
+     * epic-6-annotations Issue 3，審查修正 1.1）。[xPct]／[yPct] 為相對
+     * `PdfReaderView` widget 自身尺寸的百分比（Task 6），本函式先確認
+     * 目前狀態允許框選（[isAnnotationSelectionEligible]），再換算成
+     * `rootView` 目前量測到的像素座標，交給 [beginHighlightSelection]。
+     */
+    private fun handleBeginAnnotationSelection(xPct: Float, yPct: Float) {
+        if (!isAnnotationSelectionEligible(fitMode, dualPageEnabled, cropEditModeActive)) return
+        beginHighlightSelection(xPct * rootView.width, yPct * rootView.height)
+    }
+
+    /** Dart 端 `GestureDetector.onLongPressMoveUpdate` 觸發時呼叫，換算
+     * 方式同 [handleBeginAnnotationSelection]；框選未進行中時靜默忽略
+     * （例如上一次 [handleBeginAnnotationSelection] 因不符資格而未建立
+     * 疊加層）。*/
+    private fun handleUpdateAnnotationSelection(xPct: Float, yPct: Float) {
+        val anchor = highlightAnchor ?: return
+        highlightSelectionOverlayView?.updateRect(
+            anchor,
+            PointF(xPct * rootView.width, yPct * rootView.height),
+        )
+    }
+
+    /** 建立疊加層並開始追蹤拖曳矩形。若前一次框選尚未結束（例如 Dart 端
+     * 重複或錯序送出 `beginAnnotationSelection`），先移除舊疊加層再建立
+     * 新的，避免舊的 [HighlightSelectionOverlayView] 仍留在 [rootView] 上
+     * 卻遺失參考、永久無法被清除。*/
+    private fun beginHighlightSelection(x: Float, y: Float) {
+        removeHighlightSelectionOverlay()
+        val bitmapWidth = imageView.drawable?.intrinsicWidth ?: return
+        val bitmapHeight = imageView.drawable?.intrinsicHeight ?: return
+        val anchor = PointF(x, y)
+        highlightAnchor = anchor
+        highlightSelectionActive = true
+        val overlay = HighlightSelectionOverlayView(context, bitmapWidth, bitmapHeight)
+        highlightSelectionOverlayView = overlay
+        rootView.addView(
+            overlay,
+            FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT),
+        )
+        overlay.updateRect(anchor, anchor)
+    }
+
+    /**
+     * Dart 端 `GestureDetector.onLongPressEnd` 觸發時呼叫：換算目前框選
+     * 矩形為百分比值回報 Dart 端。矩形太小（例如長按後幾乎未拖曳就放開）
+     * 視為使用者放棄，等同取消，不建立退化的零面積劃線。框選未進行中時
+     * （[highlightSelectionOverlayView] 為 null）靜默忽略。
+     */
+    private fun finishHighlightSelection() {
+        val relative = highlightSelectionOverlayView?.currentRelativeRect()
+        // 【審查修正，Finding 1】同時取得相對整個 View（含 letterbox 留白）
+        // 的百分比矩形，供 Dart 端定位浮動工具列使用；relative（內容相對值）
+        // 維持不變，持久化／重繪仍使用它。兩者描述同一筆框選，僅參照基準
+        // 不同，見 HighlightSelectionOverlayView.currentWidgetRelativeRect()
+        // 的說明。
+        val widgetRelative = highlightSelectionOverlayView?.currentWidgetRelativeRect()
+        val pageIndex = currentPageIndex
+        removeHighlightSelectionOverlay()
+        if (relative == null || widgetRelative == null) return
+        val minFraction = 0.01f
+        if ((relative.right - relative.left) < minFraction || (relative.bottom - relative.top) < minFraction) {
+            channel.invokeMethod("onSelectionCanceled", null)
+            return
+        }
+        channel.invokeMethod(
+            "onSelectionRectComputed",
+            mapOf(
+                "pageIndex" to pageIndex,
+                "left" to relative.left.toDouble(),
+                "top" to relative.top.toDouble(),
+                "right" to relative.right.toDouble(),
+                "bottom" to relative.bottom.toDouble(),
+                "widgetLeft" to widgetRelative.left.toDouble(),
+                "widgetTop" to widgetRelative.top.toDouble(),
+                "widgetRight" to widgetRelative.right.toDouble(),
+                "widgetBottom" to widgetRelative.bottom.toDouble(),
+            ),
+        )
+    }
+
+    /** Dart 端偵測到第二指觸碰（`cancelAnnotationSelection`）、或收到
+     * 翻頁/跳頁指令時呼叫（呼叫點見下方於 nextPage()／
+     * previousPage()／jumpToPage() 開頭新增的呼叫）。*/
+    private fun cancelHighlightSelection() {
+        if (highlightSelectionActive) {
+            removeHighlightSelectionOverlay()
+            channel.invokeMethod("onSelectionCanceled", null)
+        }
+    }
+
+    private fun removeHighlightSelectionOverlay() {
+        highlightSelectionOverlayView?.let { rootView.removeView(it) }
+        highlightSelectionOverlayView = null
+        highlightAnchor = null
+        highlightSelectionActive = false
+    }
+
+    /**
      * 裁切編輯模式下的預覽渲染：忽略目前 cropMode，永遠顯示完整頁面、
      * 固定 FIT_CENTER，讓 CropOverlayView 的 FIT_CENTER letterbox 座標
      * 換算單純化（見 CropOverlayView.computeContentBounds()）。刻意獨立
@@ -810,6 +1107,7 @@ class PdfReaderView(
     }
 
     private fun nextPage() {
+        cancelHighlightSelection()
         if (cropEditModeActive) return
         val step = nextPageStep(currentPageIndex, dualPageEnabled, dualPageCoverAlone)
         val newIndex = currentPageIndex + step
@@ -821,6 +1119,7 @@ class PdfReaderView(
     }
 
     private fun previousPage() {
+        cancelHighlightSelection()
         if (cropEditModeActive) return
         val step = previousPageStep(currentPageIndex, dualPageEnabled, dualPageCoverAlone)
         val newIndex = currentPageIndex - step
@@ -840,6 +1139,7 @@ class PdfReaderView(
      * 邊界對齊，見 plan-issue-1.md Global Constraints。
      */
     private fun jumpToPage(pageIndex: Int) {
+        cancelHighlightSelection()
         if (cropEditModeActive) return
         if (pageIndex !in 0 until totalPages) return
         if (pageIndex == currentPageIndex) return
@@ -880,6 +1180,7 @@ class PdfReaderView(
     }
 
     override fun dispose() {
+        removeHighlightSelectionOverlay()
         cropOverlayView?.let { rootView.removeView(it) }
         cropOverlayView = null
         renderer?.close()

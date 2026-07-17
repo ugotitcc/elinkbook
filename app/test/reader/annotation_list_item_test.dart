@@ -72,4 +72,17 @@ void main() {
     );
     expect(a.key, b.key);
   });
+
+  test('PDF 項目依 pdfPageIndex 由小到大排序（修正 progression 恆為 null 時排序鍵失效的缺陷）',
+      () {
+    final highlights = [
+      const Highlight(id: 1, bookId: 'b1', style: HighlightStyle.underline, pdfPageIndex: 9),
+      const Highlight(id: 2, bookId: 'b1', style: HighlightStyle.underline, pdfPageIndex: 0),
+    ];
+    final notes = [
+      const Note(id: 5, bookId: 'b1', text: '純備註', pdfPageIndex: 4),
+    ];
+    final items = mergeAnnotations(highlights, notes);
+    expect(items.map((i) => i.highlight?.id ?? -i.note!.id!).toList(), [2, -5, 1]);
+  });
 }

@@ -14,7 +14,7 @@
 - `ReaderScreen` 是本專案唯一的閱讀器 seam（`CLAUDE.md`），本 Issue 不新增第二個閱讀器入口。
 - **SQLite schema migration**：目前資料庫 `version` 為 9（Issue 2 已建立 `highlights`／`notes` 表，僅含 EPUB 欄位），本 Issue 提升至 10，新增 `pdf_page_index INTEGER`／`pdf_rect_json TEXT` 兩個欄位到這兩張表。**onCreate／onUpgrade 分歧路徑（重要，避免 duplicate column 例外）**：`_createHighlightsTable`／`_createNotesTable`（全新安裝走的路徑）直接把這兩個新欄位內嵌進 `CREATE TABLE` 語句本身（一步到位，比照 `_createBookReaderPrefsTable` 已包含所有版本新增欄位的既有先例）；既有 v9 裝置（`highlights`/`notes` 表已存在但無 PDF 欄位）則需要一個新的 `_addPdfAnnotationColumns(db)` 用 `ALTER TABLE ADD COLUMN` 補上。這兩條路徑必須是 **if/else 互斥**（比照 `book_reader_prefs` 表 `if (oldVersion < 2) { 建表 } else { ALTER TABLE 系列 }` 的既有慣例），**不可**寫成兩個獨立的 `if (oldVersion < 9)`／`if (oldVersion < 10)`——否則 `oldVersion == 8`（跳級升級、`highlights`/`notes` 表本身也還不存在）的裝置會先在 `oldVersion < 9` 分支建立「已含 PDF 欄位」的最終版表，緊接著又落入 `oldVersion < 10` 分支對同一張表 `ALTER TABLE ADD COLUMN` 已存在的欄位，SQLite 會拋出 `duplicate column name` 例外。
 - **長按/拖曳的手勢辨識改由 Flutter 端 `GestureDetector` 主導，原生端不再自行監聽 `rootView` 觸控（審查修正，見 `tmp/epic-6/reviews/plan_issue_3_review.md` 1.1，取代原本「原生端自建 Handler+ViewConfiguration 長按計時、`rootView.setOnTouchListener` 無條件回傳 `true` 攔截整個觸控序列」的設計）**：原設計會讓原生端在使用者每一次觸碰螢幕的 `ACTION_DOWN` 當下就無條件宣告「這次觸控歸我」，而 Android 的觸控分派契約規定——`OnTouchListener` 一旦在 `ACTION_DOWN` 回傳 `true`，同一觸控序列後續的 `ACTION_MOVE`/`ACTION_UP` 便只會送達該 View、不會再進入 Flutter 的手勢競技場，導致既有的水平滑動翻頁手勢（`PdfReaderView.dart` 的 `GestureDetector.onHorizontalDragEnd`）在一般閱讀情境下完全失效，且此問題並非僅在真機測試中才會顯現的機率性風險，而是每次觸碰都會發生的必然行為。反過來若改成「長按觸發前回傳 `false`，觸發後才回傳 `true`」也不可行——Android 的規則是「View 若在 `ACTION_DOWN` 當下未取得該序列（回傳 `false`），之後同一序列的事件不會再補送給它」，`rootView` 一旦在 `ACTION_DOWN` 選擇放行，就永遠不會再收到那次觸控接下來的 `ACTION_MOVE`/`ACTION_UP`，長按計時器即使之後真的觸發，也已經沒有後續事件可以用來追蹤拖曳或完成框選。**改採的正確架構**：長按與拖曳的辨識完全交給 `PdfReaderView.dart` 既有的 `GestureDetector`（與 `onHorizontalDragEnd` 同一個元件）新增的 `onLongPressStart`／`onLongPressMoveUpdate`／`onLongPressEnd` 三個內建回呼——這是 Flutter 手勢框架本來就設計用來裁決「同一觸點究竟是長按還是拖曳」的機制，由它在 Dart 層仲裁，原生端完全不需要猜測、也不需要佔用 `rootView` 的觸控序列。三個回呼各自把觸點位置換算成**相對 `PdfReaderView` 這個 widget 自身尺寸**（非 bitmap 內容範圍，見下方座標協定說明兩段式換算）的百分比（`xPct`/`yPct`，透過 `LayoutBuilder` 取得目前 `constraints.biggest`），分別呼叫 `beginAnnotationSelection`／`updateAnnotationSelection`／`endAnnotationSelection` 這三個新增的 outgoing method call 通知原生端；原生端收到後才建立/更新/結束疊加層，不再自行判斷「是否為長按」。
-- **PDF 座標協定為兩段式換算（審查修正後定案）**：(1) Dart 端把觸點位置換算成相對 `PdfReaderView` widget 自身尺寸的百分比（`xPct`/`yPct`，與裝置像素密度無關，因為分子分母同單位相除）送給原生端；(2) 原生端收到後先乘上 `rootView` 目前量測到的寬高換算回 View 像素座標，再透過沿用/延伸 `CropOverlayView.kt` 既有的 FIT_CENTER letterbox 數學（`computeContentBounds()`，本計劃抽出為共用函式 `computeFitCenterContentBounds()`，以 `imageView.drawable` 的 intrinsic 尺寸——已反映目前生效的裁切狀態，若有——為基準）換算出「相對目前顯示中 bitmap 內容範圍」（而非整個原生 View 容器寬高）的最終百分比矩形（`left`/`top`/`right`/`bottom`，0.0–1.0），這組最終座標才是透過 `onSelectionRectComputed` 回報給 Dart 端、寫入資料庫的值。letterbox 換算必須留在原生端，因為只有原生端知道 bitmap 的實際像素尺寸；Dart 端不需要、也沒有管道取得這項資訊。**渲染回貼時直接以「最終百分比 × bitmap 自身寬高」換算像素座標**（不再重算 letterbox——因為 bitmap 本身沒有內部留白，留白只發生在 `ImageView` 用 `FIT_CENTER` 顯示 bitmap 到 View 的階段，`ImageView` 本身的縮放/置中會自動、成比例地把疊加內容一併帶到正確視覺位置），這也是本設計天然正確處理裝置旋轉／雙頁模式／已裁切頁面的關鍵——見下方「長按框選僅支援 PAGE_FIT」與「疊加繪製位置」。
+- **PDF 座標協定為兩段式換算（審查修正後定案）**：(1) Dart 端把觸點位置換算成相對 `PdfReaderView` widget 自身尺寸的百分比（`xPct`/`yPct`，與裝置像素密度無關，因為分子分母同單位相除）送給原生端；(2) 原生端收到後先乘上 `rootView` 目前量測到的寬高換算回 View 像素座標，再透過沿用/延伸 `CropOverlayView.kt` 既有的 FIT_CENTER letterbox 數學（`computeContentBounds()`，本計劃抽出為共用函式 `computeFitCenterContentBounds()`，以 `imageView.drawable` 的 intrinsic 尺寸——已反映目前生效的裁切狀態，若有——為基準）換算出「相對目前顯示中 bitmap 內容範圍」（而非整個原生 View 容器寬高）的最終百分比矩形（`left`/`top`/`right`/`bottom`，0.0–1.0），這組最終座標才是透過 `onSelectionRectComputed` 回報給 Dart 端、寫入資料庫的值。letterbox 換算必須留在原生端，因為只有原生端知道 bitmap 的實際像素尺寸；Dart 端不需要、也沒有管道取得這項資訊。**渲染回貼時直接以「最終百分比 × bitmap 自身寬高」換算像素座標**（不再重算 letterbox——因為 bitmap 本身沒有內部留白，留白只發生在 `ImageView` 用 `FIT_CENTER` 顯示 bitmap 到 View 的階段，`ImageView` 本身的縮放/置中會自動、成比例地把疊加內容一併帶到正確視覺位置），這也是本設計天然正確處理裝置旋轉／雙頁模式／已裁切頁面的關鍵——見下方「長按框選僅支援 PAGE_FIT」與「疊加繪製位置」。**審查修正（最終全分支審查 Finding 1，見 `tmp/epic-6/reviews/review-issue-3.md` Spec (c)）**：上述「相對 bitmap 內容範圍」的最終百分比矩形（`PdfSelectionInfo.rect`）正確用於持久化與重繪，但**不可**直接用於在 Dart 端定位浮動 `AnnotationToolbar` 等 UI 元件——工具列疊在整個 widget 座標系之上，PAGE_FIT 模式下頁面長寬比與螢幕不同時會產生 letterbox，若把內容相對值直接乘上整個 widget 尺寸，會偏移 letterbox 留白的量（此為 Task 10 沿用 EPUB 版 `_annotationToolbarTop` 公式時遺漏的落差，EPUB 選取範圍本就相對整個容器、無 letterbox 概念，故公式對 EPUB 正確、對 PDF 不正確）。修法：原生端額外計算並回報第二組「相對整個 View 完整尺寸（含 letterbox）」的百分比矩形（`HighlightSelectionOverlayView.currentWidgetRelativeRect()`，Task 7；`onSelectionRectComputed` payload 新增 `widgetLeft`/`widgetTop`/`widgetRight`/`widgetBottom`，Task 8），Dart 端 `PdfSelectionInfo` 新增對應的 `widgetRect` 欄位（Task 5／Task 6 解析），**僅供 UI 定位使用**；`rect`（內容相對值）的既有語意/用途完全不變，持久化與重繪路徑不受影響。詳見 Task 5、6、7、8、10 各自段落內的對應修正。
 - **長按框選僅支援 `fitMode == PAGE_FIT` 且雙頁模式未生效（本計劃書自行定案的範圍簡化，issues.md 驗收標準未要求涵蓋 `FIT_WIDTH`/`ACTUAL_SIZE`/雙頁情境，YAGNI）**：`FIT_WIDTH`/`ACTUAL_SIZE` 用 `Matrix` 縮放（非 `FIT_CENTER`），letterbox 數學不適用；雙頁模式下一次觸控可能落在拼接後的左頁或右頁、需要額外判斷觸點屬於哪一頁再換算，複雜度顯著提高且無明確驗收標準要求。此守衛收斂在原生端 `beginAnnotationSelection` 的 handler 內（`if (cropEditModeActive || fitMode != PdfFitMode.PAGE_FIT || dualPageEnabled) return` 靜默忽略，比照既有 `cropEditModeActive` 守衛風格）——Dart 端不重複判斷這些條件（避免與原生端狀態不同步），一律無條件送出三個手勢事件，由原生端這個唯一的權威來源決定是否真的生效。日後有需要時可再擴充，非本 Issue 範圍。
 - **疊加繪製位置**：標記疊加繪製發生在 `renderPageBitmap(pageIndex)` 產生「單一頁面」的原始內容 bitmap 之後、回傳之前，逐頁繪製（單頁與雙頁模式皆呼叫此函式各自渲染每一頁）。這保證：(a) 雙頁模式下左右頁各自正確疊加（不需要處理拼接後座標）；(b) 旋轉/版面調整觸發的重新渲染會自動重算並重繪（因為整個 pipeline 本來就會重跑 `renderPageBitmap`），不需要額外的旋轉感知邏輯；(c) 已知限制：若使用者在「建立劃線之後」才變更裁切模式/裁切矩形，該筆劃線的百分比座標仍以建立當下的裁切狀態為準，可能與新裁切結果不再對齐——此為已知、可接受的範圍簡化（比照本專案既有先例，例如 EPUB 直排/橫排切換的劃線視覺一致性亦非像素級保證，見 spec.md Out of Scope），非本 Issue 修正範圍。
 - **底線/純備註疊加樣式須依實際渲染尺寸縮放，不可用裝置 DP 密度（審查修正，見 review 2.1）**：`renderPageBitmap()` 產生的 bitmap 尺寸是頁面點數乘上 `PdfImageProcessor.pageRenderScale(density)` 決定的渲染縮放係數（常遠大於螢幕 DP），底線的 `strokeWidth` 與純備註釘標圖示的尺寸必須以這個 `scale` 為基準（例如 `2f * scale`），不可沿用畫面 DP 密度（`1f * density` 之類），否則在實際渲染出的高解析度 bitmap 上會顯得極細/極小。底線繪製點須為 `bottom - strokeWidth / 2`（而非直接畫在 `bottom` 上）——`Canvas.drawLine` 的筆畫以座標為中線向兩側延伸，若選取範圍恰好貼近頁面底部（`bottom` 接近 `bitmap.height`），畫在 `bottom` 上會有一半線寬被畫布邊界裁掉。
@@ -42,7 +42,7 @@
 - Consumes: 無（Issue 2 已建立的 `PercentRect`）。
 - Produces: `PercentRect.toJson() → String`／`PercentRect.fromJson(String) → PercentRect`，供 Task 2（`Highlight`/`Note` 新增 `pdfRect` 欄位持久化）消費。
 
-- [ ] **Step 1: 寫失敗測試**
+- [x] **Step 1: 寫失敗測試**
 
 於 `app/test/reader/percent_rect_test.dart` 檔案結尾（最後一個 `}` 之前）新增：
 
@@ -54,12 +54,12 @@
   });
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/reader/percent_rect_test.dart`
 Expected: FAIL（`toJson`/`fromJson` 尚不存在，編譯錯誤）
 
-- [ ] **Step 3: 實作**
+- [x] **Step 3: 實作**
 
 `app/lib/reader/percent_rect.dart` 頂部新增：
 
@@ -91,17 +91,17 @@ import 'dart:convert';
   }
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `flutter test test/reader/percent_rect_test.dart`
 Expected: PASS
 
-- [ ] **Step 5: 執行 `flutter analyze` 確認乾淨**
+- [x] **Step 5: 執行 `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/reader/percent_rect.dart app/test/reader/percent_rect_test.dart
@@ -124,7 +124,7 @@ git commit -m "feat(epic-6): PercentRect 新增 JSON 序列化供 PDF 劃線座�
 - Consumes: Task 1 的 `PercentRect.toJson()`/`fromJson()`。
 - Produces: `Highlight`/`Note` 新增 `pdfPageIndex: int?`／`pdfRect: PercentRect?` 欄位，供 Task 4（排序）、Task 5（wire 格式）、Task 10（`ReaderScreen`）消費。
 
-- [ ] **Step 1: 寫失敗測試（`highlight_test.dart` 新增案例）**
+- [x] **Step 1: 寫失敗測試（`highlight_test.dart` 新增案例）**
 
 於 `app/test/reader/highlight_test.dart` 頂部新增 import：
 
@@ -172,12 +172,12 @@ import 'package:elinkbook/reader/percent_rect.dart';
   });
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/reader/highlight_test.dart`
 Expected: FAIL（`Highlight` 尚無 `pdfPageIndex`/`pdfRect` 建構參數，編譯錯誤）
 
-- [ ] **Step 3: 修改 `Highlight`**
+- [x] **Step 3: 修改 `Highlight`**
 
 `app/lib/reader/highlight.dart` 頂部新增：
 
@@ -269,12 +269,12 @@ class Highlight {
 }
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `flutter test test/reader/highlight_test.dart`
 Expected: PASS（含既有 Issue 2 測試不受影響）
 
-- [ ] **Step 5: 寫失敗測試（`note_test.dart` 新增案例）**
+- [x] **Step 5: 寫失敗測試（`note_test.dart` 新增案例）**
 
 於 `app/test/reader/note_test.dart` 頂部新增 import：
 
@@ -324,12 +324,12 @@ import 'package:elinkbook/reader/percent_rect.dart';
   });
 ```
 
-- [ ] **Step 6: 執行測試確認失敗**
+- [x] **Step 6: 執行測試確認失敗**
 
 Run: `flutter test test/reader/note_test.dart`
 Expected: FAIL（`Note` 尚無 `pdfPageIndex`/`pdfRect` 建構參數，編譯錯誤）
 
-- [ ] **Step 7: 修改 `Note`**
+- [x] **Step 7: 修改 `Note`**
 
 `app/lib/reader/note.dart` 頂部新增：
 
@@ -437,12 +437,12 @@ class Note {
 }
 ```
 
-- [ ] **Step 8: 執行測試確認通過**
+- [x] **Step 8: 執行測試確認通過**
 
 Run: `flutter test test/reader/note_test.dart`
 Expected: PASS
 
-- [ ] **Step 9: 更新測試 Fake（`FakeHighlightsRepository`／`FakeNotesRepository`）**
+- [x] **Step 9: 更新測試 Fake（`FakeHighlightsRepository`／`FakeNotesRepository`）**
 
 `app/test/support/fake_highlights_repository.dart` 的 `insert` 方法內，`_storage.add(Highlight(...))` 補上兩個新欄位：
 
@@ -508,17 +508,17 @@ Expected: PASS
 
 `copyWith` 呼叫（`updateText` 方法內）不需改動——`Note.copyWith` 已於 Step 7 保留 `pdfPageIndex`/`pdfRect`。
 
-- [ ] **Step 10: 執行全專案測試確認通過**
+- [x] **Step 10: 執行全專案測試確認通過**
 
 Run: `flutter test`
 Expected: 全數 PASS（Fake 修改不影響既有依賴它們的 Issue 1/2 測試——排序鍵在 EPUB-only 情境下 `pdfPageIndex` 恆 null，退回 `progression`，行為與修改前一致）
 
-- [ ] **Step 11: 執行 `flutter analyze` 確認乾淨**
+- [x] **Step 11: 執行 `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 12: Commit**
+- [x] **Step 12: Commit**
 
 ```bash
 git add app/lib/reader/highlight.dart app/lib/reader/note.dart app/test/reader/highlight_test.dart app/test/reader/note_test.dart app/test/support/fake_highlights_repository.dart app/test/support/fake_notes_repository.dart
@@ -537,7 +537,7 @@ git commit -m "feat(epic-6): Highlight／Note 新增 PDF 頁碼與矩形座標�
 - Consumes: Task 2 的 `Highlight`/`Note` PDF 欄位。
 - Produces: `highlights`／`notes` 表新增 `pdf_page_index`/`pdf_rect_json` 欄位，供 Task 4 的 Repository 消費。
 
-- [ ] **Step 1: 寫失敗測試**
+- [x] **Step 1: 寫失敗測試**
 
 於 `app/test/library/sqlite_library_repository_test.dart` 檔案結尾（最後一個 `}` 之前）新增：
 
@@ -673,12 +673,12 @@ git commit -m "feat(epic-6): Highlight／Note 新增 PDF 頁碼與矩形座標�
   });
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/library/sqlite_library_repository_test.dart`
 Expected: FAIL（`no such column: pdf_page_index`，因為 schema 尚未更新且 `version` 仍為 9）
 
-- [ ] **Step 3: 實作 schema migration**
+- [x] **Step 3: 實作 schema migration**
 
 `app/lib/library/sqlite_library_repository.dart` 的 `version: 9,` 改為：
 
@@ -782,22 +782,22 @@ Expected: FAIL（`no such column: pdf_page_index`，因為 schema 尚未更新�
         }
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `flutter test test/library/sqlite_library_repository_test.dart`
 Expected: PASS（全部測試綠燈，含既有 v1→v9 系列遷移測試不受影響）
 
-- [ ] **Step 5: 執行全專案測試確認通過**
+- [x] **Step 5: 執行全專案測試確認通過**
 
 Run: `flutter test`
 Expected: 全數 PASS
 
-- [ ] **Step 6: 執行 `flutter analyze` 確認乾淨**
+- [x] **Step 6: 執行 `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app/lib/library/sqlite_library_repository.dart app/test/library/sqlite_library_repository_test.dart
@@ -820,7 +820,7 @@ git commit -m "feat(epic-6): highlights／notes 表新增 PDF 欄位與 v9→v10
 - Consumes: Task 2／Task 3 的 PDF 欄位。
 - Produces: `HighlightsRepository.listByBook`／`NotesRepository.listByBook` 依 `COALESCE(pdf_page_index, progression)` 排序；`mergeAnnotations` 正確依 PDF 頁碼或 EPUB 進度排序（**修正一個真實缺陷**：目前 `AnnotationListItem._position` 只讀 `progression`，PDF 項目的 `progression` 恆為 null，會導致所有 PDF 劃線/備註在清單中排序鍵皆為 0、無法正確依頁碼排序）。
 
-- [ ] **Step 1: 寫失敗測試（`highlights_repository_test.dart` 新增案例）**
+- [x] **Step 1: 寫失敗測試（`highlights_repository_test.dart` 新增案例）**
 
 於 `app/test/reader/highlights_repository_test.dart` 檔案結尾（最後一個 `}` 之前）新增：
 
@@ -836,12 +836,12 @@ git commit -m "feat(epic-6): highlights／notes 表新增 PDF 欄位與 v9→v10
   });
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/reader/highlights_repository_test.dart`
 Expected: FAIL（目前 `orderBy: 'progression ASC'`，`pdf_page_index` 非 null 但 `progression` 皆為 null，SQLite 排序 null 值視為相等，兩筆順序不保證為 `[1, 5]`——依插入順序恰好可能巧合通過，需以 3 筆以上或明確反向插入順序驗證；比照上方寫法先插入頁碼較大者，若排序邏輯錯誤會得到 `[5, 1]`）
 
-- [ ] **Step 3: 修正 `HighlightsRepository.listByBook`**
+- [x] **Step 3: 修正 `HighlightsRepository.listByBook`**
 
 `app/lib/reader/highlights_repository.dart` 的 `listByBook` 方法改為：
 
@@ -860,12 +860,12 @@ Expected: FAIL（目前 `orderBy: 'progression ASC'`，`pdf_page_index` 非 null
   }
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `flutter test test/reader/highlights_repository_test.dart`
 Expected: PASS（含既有 EPUB 排序測試不受影響——`pdf_page_index` 恆 null 時 `COALESCE` 退回 `progression`，行為與修改前等價）
 
-- [ ] **Step 5: 寫失敗測試（`notes_repository_test.dart` 新增案例）**
+- [x] **Step 5: 寫失敗測試（`notes_repository_test.dart` 新增案例）**
 
 於 `app/test/reader/notes_repository_test.dart` 檔案結尾（最後一個 `}` 之前）新增：
 
@@ -879,12 +879,12 @@ Expected: PASS（含既有 EPUB 排序測試不受影響——`pdf_page_index` �
   });
 ```
 
-- [ ] **Step 6: 執行測試確認失敗**
+- [x] **Step 6: 執行測試確認失敗**
 
 Run: `flutter test test/reader/notes_repository_test.dart`
 Expected: FAIL（同上，`orderBy: 'progression ASC'` 對 PDF 資料無法正確排序）
 
-- [ ] **Step 7: 修正 `NotesRepository.listByBook`**
+- [x] **Step 7: 修正 `NotesRepository.listByBook`**
 
 `app/lib/reader/notes_repository.dart` 的 `listByBook` 方法改為：
 
@@ -902,12 +902,12 @@ Expected: FAIL（同上，`orderBy: 'progression ASC'` 對 PDF 資料無法正�
   }
 ```
 
-- [ ] **Step 8: 執行測試確認通過**
+- [x] **Step 8: 執行測試確認通過**
 
 Run: `flutter test test/reader/notes_repository_test.dart`
 Expected: PASS
 
-- [ ] **Step 9: 寫失敗測試（`annotation_list_item_test.dart` 新增案例）**
+- [x] **Step 9: 寫失敗測試（`annotation_list_item_test.dart` 新增案例）**
 
 於 `app/test/reader/annotation_list_item_test.dart` 檔案結尾（最後一個 `}` 之前）新增：
 
@@ -926,12 +926,12 @@ Expected: PASS
   });
 ```
 
-- [ ] **Step 10: 執行測試確認失敗**
+- [x] **Step 10: 執行測試確認失敗**
 
 Run: `flutter test test/reader/annotation_list_item_test.dart`
 Expected: FAIL（`_position` 只讀 `progression`，PDF 項目排序鍵恆為 0，無法區分順序）
 
-- [ ] **Step 11: 修正 `AnnotationListItem._position`**
+- [x] **Step 11: 修正 `AnnotationListItem._position`**
 
 `app/lib/reader/annotation_list_item.dart` 的 `_position` getter 改為：
 
@@ -946,12 +946,12 @@ Expected: FAIL（`_position` 只讀 `progression`，PDF 項目排序鍵恆為 0�
       0;
 ```
 
-- [ ] **Step 12: 執行測試確認通過**
+- [x] **Step 12: 執行測試確認通過**
 
 Run: `flutter test test/reader/annotation_list_item_test.dart`
 Expected: PASS（含既有 EPUB 排序測試不受影響）
 
-- [ ] **Step 13: 執行全專案測試 + `flutter analyze` 確認乾淨**
+- [x] **Step 13: 執行全專案測試 + `flutter analyze` 確認乾淨**
 
 Run: `flutter test`
 Expected: 全數 PASS
@@ -959,7 +959,7 @@ Expected: 全數 PASS
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 14: Commit**
+- [x] **Step 14: Commit**
 
 ```bash
 git add app/lib/reader/highlights_repository.dart app/lib/reader/notes_repository.dart app/lib/reader/annotation_list_item.dart app/test/reader/highlights_repository_test.dart app/test/reader/notes_repository_test.dart app/test/reader/annotation_list_item_test.dart
@@ -980,7 +980,7 @@ git commit -m "fix(epic-6): Repository／mergeAnnotations 排序改用 COALESCE 
 - Consumes: Task 1 的 `PercentRect`。
 - Produces: `PdfSelectionInfo`（`pageIndex`/`rect`）；`PdfAnnotationDecoration`（`pageIndex`/`rect`/`tint`/`isUnderline`/`isNoteOnly`，`toWire()`，`forHighlight`/`forNote` 具名建構子），供 Task 6（`PdfReaderView.dart`）與 Task 10（`ReaderScreen`）消費。
 
-- [ ] **Step 1: 寫失敗測試（`pdf_selection_info_test.dart`）**
+- [x] **Step 1: 寫失敗測試（`pdf_selection_info_test.dart`）**
 
 建立 `app/test/reader/pdf_selection_info_test.dart`：
 
@@ -1005,12 +1005,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/reader/pdf_selection_info_test.dart`
 Expected: FAIL（`pdf_selection_info.dart` 尚不存在，編譯錯誤）
 
-- [ ] **Step 3: 實作 `PdfSelectionInfo`**
+- [x] **Step 3: 實作 `PdfSelectionInfo`**
 
 建立 `app/lib/reader/pdf_selection_info.dart`：
 
@@ -1039,12 +1039,44 @@ class PdfSelectionInfo {
 }
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+**審查修正（最終全分支審查 Finding 1，見 `tmp/epic-6/reviews/review-issue-3.md` Spec (c)；實作於後續修復 commit，本節回頭補上文件記錄）**：上方 `PdfSelectionInfo` 定案版本除 `pageIndex`／`rect` 外，還需新增 `widgetRect: PercentRect` 欄位（連同建構子、`==`／`hashCode`／`toString` 一併納入）。原因：`rect` 是相對「bitmap 內容範圍」（不含 letterbox 留白）的百分比值，正確用於持久化（`Highlight`/`Note`）與原生端重繪，但 Task 10 的浮動工具列定位若直接拿 `rect` 乘上整個 widget 尺寸，PAGE_FIT 模式下頁面長寬比與螢幕不同、產生 letterbox 時會偏移留白的量。`widgetRect` 是另一組「相對整個 widget 尺寸（含 letterbox）」的百分比值，僅供 UI 定位使用，`rect` 的既有語意/用途完全不變。定案版本：
+
+```dart
+class PdfSelectionInfo {
+  final int pageIndex;
+  final PercentRect rect;
+  final PercentRect widgetRect;
+
+  const PdfSelectionInfo({
+    required this.pageIndex,
+    required this.rect,
+    required this.widgetRect,
+  });
+
+  @override
+  bool operator ==(Object other) =>
+      other is PdfSelectionInfo &&
+      other.pageIndex == pageIndex &&
+      other.rect == rect &&
+      other.widgetRect == widgetRect;
+
+  @override
+  int get hashCode => Object.hash(pageIndex, rect, widgetRect);
+
+  @override
+  String toString() =>
+      'PdfSelectionInfo(pageIndex: $pageIndex, rect: $rect, widgetRect: $widgetRect)';
+}
+```
+
+對應原生端／Task 6／Task 10 的變更見下方相應審查修正段落。
+
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `flutter test test/reader/pdf_selection_info_test.dart`
 Expected: PASS
 
-- [ ] **Step 5: 寫失敗測試（`pdf_annotation_decoration_test.dart`）**
+- [x] **Step 5: 寫失敗測試（`pdf_annotation_decoration_test.dart`）**
 
 建立 `app/test/reader/pdf_annotation_decoration_test.dart`：
 
@@ -1081,12 +1113,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 6: 執行測試確認失敗**
+- [x] **Step 6: 執行測試確認失敗**
 
 Run: `flutter test test/reader/pdf_annotation_decoration_test.dart`
 Expected: FAIL（`pdf_annotation_decoration.dart` 尚不存在，編譯錯誤）
 
-- [ ] **Step 7: 實作 `PdfAnnotationDecoration`**
+- [x] **Step 7: 實作 `PdfAnnotationDecoration`**
 
 建立 `app/lib/reader/pdf_annotation_decoration.dart`：
 
@@ -1150,17 +1182,17 @@ class PdfAnnotationDecoration {
 }
 ```
 
-- [ ] **Step 8: 執行測試確認通過**
+- [x] **Step 8: 執行測試確認通過**
 
 Run: `flutter test test/reader/pdf_annotation_decoration_test.dart`
 Expected: PASS
 
-- [ ] **Step 9: 執行 `flutter analyze` 確認乾淨**
+- [x] **Step 9: 執行 `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 10: Commit**
+- [x] **Step 10: Commit**
 
 ```bash
 git add app/lib/reader/pdf_selection_info.dart app/lib/reader/pdf_annotation_decoration.dart app/test/reader/pdf_selection_info_test.dart app/test/reader/pdf_annotation_decoration_test.dart
@@ -1179,7 +1211,7 @@ git commit -m "feat(epic-6): 新增 PdfSelectionInfo／PdfAnnotationDecoration �
 - Consumes: Task 5 的 `PdfSelectionInfo`／`PdfAnnotationDecoration`。
 - Produces: `PdfReaderView` 的 `GestureDetector` 新增 `onLongPressStart`／`onLongPressMoveUpdate`／`onLongPressEnd`（與既有 `onHorizontalDragEnd` 同一個元件，由 Flutter 手勢競技場裁決長按 vs 水平滑動，見 Global Constraints「長按/拖曳的手勢辨識改由 Flutter 端 GestureDetector 主導」審查修正），觸發 `beginAnnotationSelection`／`updateAnnotationSelection`／`endAnnotationSelection` 三個新增 outgoing method call；外層新增 `Listener` 追蹤觸點數，多指觸碰時觸發 `cancelAnnotationSelection`。`onSelectionRectComputed`／`onSelectionCanceled` 建構參數（incoming）與 `PdfReaderView.refreshAnnotations(key, List<PdfAnnotationDecoration>)` 靜態方法（outgoing）維持不變，供 Task 10（`ReaderScreen`）消費；`PdfReaderView.kt`（Task 7/8/9）為其原生對應端。
 
-- [ ] **Step 1: 寫失敗測試（擴充 `pdf_reader_view_test.dart`）**
+- [x] **Step 1: 寫失敗測試（擴充 `pdf_reader_view_test.dart`）**
 
 於 `app/test/reader/pdf_reader_view_test.dart` 頂部新增 import：
 
@@ -1436,12 +1468,12 @@ import 'package:elinkbook/reader/percent_rect.dart';
   });
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/reader/pdf_reader_view_test.dart`
 Expected: FAIL（`onSelectionRectComputed`/`onSelectionCanceled` 建構參數、`refreshAnnotations` 靜態方法、`onLongPressStart`/`onLongPressMoveUpdate`/`onLongPressEnd`/`Listener` 觸控回呼皆尚不存在，編譯錯誤）
 
-- [ ] **Step 3: 擴充 `PdfReaderView`**
+- [x] **Step 3: 擴充 `PdfReaderView`**
 
 `app/lib/reader/pdf_reader_view.dart` 頂部新增 import：
 
@@ -1530,6 +1562,29 @@ import 'percent_rect.dart';
         break;
       case 'onSelectionCanceled':
         widget.onSelectionCanceled?.call();
+        break;
+```
+
+**審查修正（最終全分支審查 Finding 1，見 Task 5 對應段落）**：`onSelectionRectComputed` 分支需額外解析原生端一併送來的 `widgetLeft`／`widgetTop`／`widgetRight`／`widgetBottom` 四個 wire 欄位（見下方 Task 8 對應段落，原生端 payload 的變更），組成 `PdfSelectionInfo.widgetRect` 一併傳入建構子。定案版本：
+
+```dart
+      case 'onSelectionRectComputed':
+        final args = call.arguments as Map<Object?, Object?>;
+        widget.onSelectionRectComputed?.call(PdfSelectionInfo(
+          pageIndex: args['pageIndex'] as int,
+          rect: PercentRect(
+            left: (args['left'] as num).toDouble(),
+            top: (args['top'] as num).toDouble(),
+            right: (args['right'] as num).toDouble(),
+            bottom: (args['bottom'] as num).toDouble(),
+          ),
+          widgetRect: PercentRect(
+            left: (args['widgetLeft'] as num).toDouble(),
+            top: (args['widgetTop'] as num).toDouble(),
+            right: (args['widgetRight'] as num).toDouble(),
+            bottom: (args['widgetBottom'] as num).toDouble(),
+          ),
+        ));
         break;
 ```
 
@@ -1633,12 +1688,12 @@ import 'percent_rect.dart';
   }
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `flutter test test/reader/pdf_reader_view_test.dart`
 Expected: PASS（含既有 Issue 1-4 相關測試不受影響）
 
-- [ ] **Step 5: 執行全專案測試 + `flutter analyze` 確認乾淨**
+- [x] **Step 5: 執行全專案測試 + `flutter analyze` 確認乾淨**
 
 Run: `flutter test`
 Expected: 全數 PASS
@@ -1646,7 +1701,7 @@ Expected: 全數 PASS
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/reader/pdf_reader_view.dart app/test/reader/pdf_reader_view_test.dart
@@ -1667,7 +1722,7 @@ git commit -m "feat(epic-6): PdfReaderView.dart 改由 Flutter GestureDetector �
 - Consumes: 無新增 Dart 型別依賴。
 - Produces: 頂層函式 `computeFitCenterContentBounds(viewWidth, viewHeight, contentWidthPx, contentHeightPx): RectF`（`CropOverlayView`／`HighlightSelectionOverlayView` 共用）；`HighlightSelectionOverlayView`（`updateRect`/`currentRelativeRect`），供 Task 8（`PdfReaderView.kt` 框選狀態機）消費。
 
-- [ ] **Step 1: 抽出共用座標數學（`PdfContentBounds.kt`）**
+- [x] **Step 1: 抽出共用座標數學（`PdfContentBounds.kt`）**
 
 建立 `app/android/app/src/main/kotlin/cc/ugotit/elinkbook/PdfContentBounds.kt`：
 
@@ -1710,7 +1765,7 @@ internal fun computeFitCenterContentBounds(
 }
 ```
 
-- [ ] **Step 2: 寫 JVM 單元測試（`PdfContentBoundsTest.kt`）**
+- [x] **Step 2: 寫 JVM 單元測試（`PdfContentBoundsTest.kt`）**
 
 建立 `app/android/app/src/test/kotlin/cc/ugotit/elinkbook/PdfContentBoundsTest.kt`：
 
@@ -1727,10 +1782,13 @@ class PdfContentBoundsTest {
         val bounds = computeFitCenterContentBounds(
             viewWidth = 200, viewHeight = 200, contentWidthPx = 400, contentHeightPx = 100,
         )
+        // displayHeight = viewWidth / contentRatio = 200 / 4 = 50；
+        // top = (viewHeight - displayHeight) / 2 = (200 - 50) / 2 = 75（審查修正：
+        // 原始期望值 50f/100f 算式有誤，見 Task 7 實作報告）。
         assertEquals(0f, bounds.left)
         assertEquals(200f, bounds.right)
-        assertEquals(50f, bounds.top)
-        assertEquals(100f, bounds.bottom)
+        assertEquals(75f, bounds.top)
+        assertEquals(125f, bounds.bottom)
     }
 
     @Test
@@ -1738,8 +1796,11 @@ class PdfContentBoundsTest {
         val bounds = computeFitCenterContentBounds(
             viewWidth = 200, viewHeight = 200, contentWidthPx = 100, contentHeightPx = 400,
         )
-        assertEquals(50f, bounds.left)
-        assertEquals(150f, bounds.right)
+        // displayWidth = viewHeight * contentRatio = 200 * 0.25 = 50；
+        // left = (viewWidth - displayWidth) / 2 = (200 - 50) / 2 = 75（審查修正：
+        // 原始期望值 50f/150f 算式有誤，見 Task 7 實作報告）。
+        assertEquals(75f, bounds.left)
+        assertEquals(125f, bounds.right)
         assertEquals(0f, bounds.top)
         assertEquals(200f, bounds.bottom)
     }
@@ -1760,7 +1821,7 @@ class PdfContentBoundsTest {
 Run: `cd app/android && ./gradlew testDebugUnitTest --tests "cc.ugotit.elinkbook.PdfContentBoundsTest"`
 Expected: PASS（一次到位，無紅燈階段——本 Step 目的是為 Step 1 已抽出的純函式立即補上驗證，比照本檔案既有 `isDualPageEnabled` 等純函式的測試風格）
 
-- [ ] **Step 3: `CropOverlayView.kt` 改用共用函式（避免程式碼重複）**
+- [x] **Step 3: `CropOverlayView.kt` 改用共用函式（避免程式碼重複）**
 
 `app/android/app/src/main/kotlin/cc/ugotit/elinkbook/CropOverlayView.kt` 的 `computeContentBounds` 方法整段改為：
 
@@ -1777,7 +1838,7 @@ Expected: PASS（一次到位，無紅燈階段——本 Step 目的是為 Step 
 Run: `cd app/android && ./gradlew testDebugUnitTest`
 Expected: BUILD SUCCESSFUL（既有 Kotlin 單元測試不受影響——本次是純委派重構，行為不變）
 
-- [ ] **Step 4: 實作 `HighlightSelectionOverlayView`**
+- [x] **Step 4: 實作 `HighlightSelectionOverlayView`**
 
 建立 `app/android/app/src/main/kotlin/cc/ugotit/elinkbook/HighlightSelectionOverlayView.kt`：
 
@@ -1863,8 +1924,13 @@ class HighlightSelectionOverlayView(
      * 尚未量測完成（極早期 layout 尚未跑過 `onSizeChanged`）時回傳全零矩形，
      * 呼叫端須視為退化案例（見 Task 8 `finishHighlightSelection` 的最小
      * 尺寸檢查，全零矩形必然小於門檻、會被當成取消處理）。
+     *
+     * 【審查修正】回傳型別必須是 `internal fun`，不能是 `public`（Kotlin
+     * 編譯錯誤：public 函式不可暴露 internal 型別 `PercentRectPx`）——
+     * 本函式僅供同模組 Task 8 的 `PdfReaderView.kt` 消費，符合其實際使用
+     * 範圍，見 Task 7 實作報告。
      */
-    fun currentRelativeRect(): PercentRectPx {
+    internal fun currentRelativeRect(): PercentRectPx {
         if (contentBounds.width() <= 0f || contentBounds.height() <= 0f) {
             return PercentRectPx(0f, 0f, 0f, 0f)
         }
@@ -1875,23 +1941,46 @@ class HighlightSelectionOverlayView(
             bottom = (rectPx.bottom - contentBounds.top) / contentBounds.height(),
         )
     }
+
+    /**
+     * 【審查修正，最終全分支審查 Finding 1，見 Task 5 對應段落】換算目前
+     * 框選矩形為相對本 View 自身完整尺寸（`width`/`height`，即含 letterbox
+     * 留白的完整範圍）的百分比值，與 [currentRelativeRect] 的差異僅在
+     * 分母／偏移基準：這裡直接除以本 View 的 `width`/`height`，不扣除／
+     * 不除以 [contentBounds]。供 Dart 端定位浮動 `AnnotationToolbar` 等
+     * UI 使用（見 Task 10 對應段落）——工具列疊在整個 widget 座標系之上，
+     * PAGE_FIT 模式下頁面常因長寬比與螢幕不同產生 letterbox，若拿內容
+     * 相對值直接乘上整個 widget 尺寸，會偏移 letterbox 留白的量。
+     * [currentRelativeRect]（內容相對值）維持不變，持久化／重繪仍使用它。
+     */
+    internal fun currentWidgetRelativeRect(): PercentRectPx {
+        if (width <= 0 || height <= 0) {
+            return PercentRectPx(0f, 0f, 0f, 0f)
+        }
+        return PercentRectPx(
+            left = rectPx.left / width,
+            top = rectPx.top / height,
+            right = rectPx.right / width,
+            bottom = rectPx.bottom / height,
+        )
+    }
 }
 
 /** 原生端內部使用的百分比矩形值物件（0.0-1.0），對應 Dart `PercentRect`。*/
 internal data class PercentRectPx(val left: Float, val top: Float, val right: Float, val bottom: Float)
 ```
 
-- [ ] **Step 5: 編譯驗證**
+- [x] **Step 5: 編譯驗證**
 
 Run: `cd app && flutter build apk --debug`
 Expected: 建置成功（Kotlin 編譯通過）
 
-- [ ] **Step 6: 執行 `flutter analyze` 確認 Dart 端未受影響**
+- [x] **Step 6: 執行 `flutter analyze` 確認 Dart 端未受影響**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app/android/app/src/main/kotlin/cc/ugotit/elinkbook/CropOverlayView.kt app/android/app/src/main/kotlin/cc/ugotit/elinkbook/PdfContentBounds.kt app/android/app/src/main/kotlin/cc/ugotit/elinkbook/HighlightSelectionOverlayView.kt app/android/app/src/test/kotlin/cc/ugotit/elinkbook/PdfContentBoundsTest.kt
@@ -1908,11 +1997,11 @@ git commit -m "feat(epic-6): 抽出共用 letterbox 座標函式並新增 Highli
 
 **Interfaces:**
 - Consumes: Task 6 的 Dart 端 outgoing method call（`beginAnnotationSelection`／`updateAnnotationSelection`／`endAnnotationSelection`／`cancelAnnotationSelection`）；Task 7 的 `HighlightSelectionOverlayView`。
-- Produces: `isAnnotationSelectionEligible` 純函式（`internal`，JVM 單元測試涵蓋，比照 `isDualPageEnabled` 既有先例）；原生端狀態機透過 `channel` 送出 `onSelectionRectComputed`／`onSelectionCanceled`（Task 6 已定義的 Dart 端 incoming 端點），供 Task 9 沿用同一組 `highlightSelectionOverlayView`／`highlightAnchor`／`highlightSelectionActive`／`pageAnnotations` 欄位。
+- Produces: `isAnnotationSelectionEligible` 純函式（`internal`，JVM 單元測試涵蓋，比照 `isDualPageEnabled` 既有先例）；原生端狀態機透過 `channel` 送出 `onSelectionRectComputed`／`onSelectionCanceled`（Task 6 已定義的 Dart 端 incoming 端點），供 Task 9 沿用同一組 `highlightSelectionOverlayView`／`highlightAnchor`／`highlightSelectionActive` 欄位。**審查修正（Task 8 實作發現，見 Task 8 實作報告）**：`pageAnnotations: List<PdfAnnotationOverlay>` 欄位**不**在本 Task 宣告——`PdfAnnotationOverlay` 型別要到 Task 9 Step 3 才定義，若本 Task 提前宣告會因前向參照未定義型別而編譯失敗，與本 Task 自身 Step 8/9（`flutter build apk --debug`／`./gradlew testDebugUnitTest` 皆須成功）互相矛盾。`pageAnnotations` 欄位改移入 Task 9（與 `PdfAnnotationOverlay` 型別同一 Task 一併宣告，見 Task 9 Step 3 之前新增的欄位宣告步驟），Task 8 本身只新增 `highlightSelectionOverlayView`／`highlightAnchor`／`highlightSelectionActive` 三個欄位。
 
 **審查修正說明（見 `tmp/epic-6/reviews/plan_issue_3_review.md` 1.1）**：原設計由原生端 `rootView.setOnTouchListener` 自建 `Handler`+`ViewConfiguration` 長按計時器、對 `ACTION_DOWN` 無條件回傳 `true` 攔截整個觸控序列。這會讓原生端在使用者每一次觸碰螢幕時都搶先宣告獨佔該次觸控，導致 Flutter 端既有的水平滑動翻頁手勢（`onHorizontalDragEnd`）完全收不到事件、在一般閱讀情境下失效——這不是機率性的真機風險，而是必然發生的行為。而「長按觸發前回傳 false、觸發後才回傳 true」在 Android 的觸控分派模型下也不可行：`View` 若在 `ACTION_DOWN` 當下放棄該序列（回傳 `false`），後續同一序列的 `ACTION_MOVE`/`ACTION_UP` 便不會再送達，等長按計時器事後觸發時已經沒有辦法收集拖曳/放開的事件了。因此本 Task 改為完全移除原生端的觸控監聽/長按計時邏輯，長按與拖曳的辨識改由 Task 6 的 Flutter 端 `GestureDetector` 主導，原生端只被動接收 Dart 送來的四個 method call，語意與原本的觸控狀態機一一對應（`beginAnnotationSelection` ≈ 原長按計時器觸發、`updateAnnotationSelection` ≈ 原 `ACTION_MOVE`、`endAnnotationSelection` ≈ 原 `ACTION_UP`、`cancelAnnotationSelection` ≈ 原 `ACTION_POINTER_DOWN`/`ACTION_CANCEL`），`beginHighlightSelection`／`finishHighlightSelection`／`cancelHighlightSelection`／`removeHighlightSelectionOverlay` 這幾個核心方法的內部邏輯不變，只是觸發來源從觸控事件改為 method call。
 
-- [ ] **Step 1: 新增 import**
+- [x] **Step 1: 新增 import**
 
 `app/android/app/src/main/kotlin/cc/ugotit/elinkbook/PdfReaderView.kt` 頂部新增：
 
@@ -1920,7 +2009,7 @@ git commit -m "feat(epic-6): 抽出共用 letterbox 座標函式並新增 Highli
 import android.graphics.PointF
 ```
 
-- [ ] **Step 2: 新增狀態機欄位**
+- [x] **Step 2: 新增狀態機欄位**
 
 於 `cropOverlayView` 欄位之後新增：
 
@@ -1933,13 +2022,11 @@ import android.graphics.PointF
     private var highlightSelectionOverlayView: HighlightSelectionOverlayView? = null
     private var highlightAnchor: PointF? = null
     private var highlightSelectionActive: Boolean = false
-
-    // Dart 端送來的目前應顯示標記清單（Issue 3 `refreshAnnotations`），
-    // 依 pageIndex 分組供 renderPageBitmap() 逐頁疊加繪製（見 Task 9）。
-    private var pageAnnotations: List<PdfAnnotationOverlay> = emptyList()
 ```
 
-- [ ] **Step 3: 於 `companion object` 新增 `isAnnotationSelectionEligible` 純函式**
+**審查修正**：本 Step 刻意不宣告 `pageAnnotations: List<PdfAnnotationOverlay>` 欄位——`PdfAnnotationOverlay` 型別要到 Task 9 Step 3 才定義，本 Task 提前宣告會因前向參照未定義型別而編譯失敗（見上方 Interfaces 段落審查修正說明）。`pageAnnotations` 欄位改於 Task 9 與 `PdfAnnotationOverlay` 型別同時宣告。
+
+- [x] **Step 3: 於 `companion object` 新增 `isAnnotationSelectionEligible` 純函式**
 
 於 `companion object` 內（`previousPageStep` 之後）新增：
 
@@ -1962,7 +2049,7 @@ import android.graphics.PointF
         }
 ```
 
-- [ ] **Step 4: 寫失敗測試（`isAnnotationSelectionEligible`，擴充 `PdfReaderViewTest.kt`）**
+- [x] **Step 4: 寫失敗測試（`isAnnotationSelectionEligible`，擴充 `PdfReaderViewTest.kt`）**
 
 於 `app/android/app/src/test/kotlin/cc/ugotit/elinkbook/PdfReaderViewTest.kt` 檔案結尾（最後一個 `}` 之前）新增：
 
@@ -2013,12 +2100,12 @@ import android.graphics.PointF
 Run: `cd app/android && ./gradlew testDebugUnitTest --tests "cc.ugotit.elinkbook.PdfReaderViewTest"`
 Expected: FAIL（`isAnnotationSelectionEligible` 尚不存在，編譯錯誤）
 
-- [ ] **Step 5: 執行測試確認通過**
+- [x] **Step 5: 執行測試確認通過**
 
 Run: `cd app/android && ./gradlew testDebugUnitTest --tests "cc.ugotit.elinkbook.PdfReaderViewTest"`
 Expected: PASS（含既有 `isDualPageEnabled` 等測試不受影響）
 
-- [ ] **Step 6: 新增 `onMethodCall` 分支與狀態機方法**
+- [x] **Step 6: 新增 `onMethodCall` 分支與狀態機方法**
 
 `onMethodCall` 的 `when (call.method)` 內，`"exitCropEditMode" -> { ... }` 分支之後新增：
 
@@ -2115,10 +2202,41 @@ Expected: PASS（含既有 `isDualPageEnabled` 等測試不受影響）
             ),
         )
     }
+```
+
+**審查修正（最終全分支審查 Finding 1，見 Task 5 對應段落）**：`finishHighlightSelection()` 須同時取得 `currentWidgetRelativeRect()`（Task 7 新增），並在 `onSelectionRectComputed` payload 中新增 `widgetLeft`／`widgetTop`／`widgetRight`／`widgetBottom` 四個 key，與既有內容相對值並存送出；`removeHighlightSelectionOverlay()` 之前的兩個矩形皆須在移除疊加層前先行取得（因為疊加層一旦被移除，`highlightSelectionOverlayView` 即變為 `null`，兩個 `currentXxxRelativeRect()` 都無法再呼叫）。定案版本：
+
+```kotlin
+    private fun finishHighlightSelection() {
+        val relative = highlightSelectionOverlayView?.currentRelativeRect()
+        val widgetRelative = highlightSelectionOverlayView?.currentWidgetRelativeRect()
+        val pageIndex = currentPageIndex
+        removeHighlightSelectionOverlay()
+        if (relative == null || widgetRelative == null) return
+        val minFraction = 0.01f
+        if ((relative.right - relative.left) < minFraction || (relative.bottom - relative.top) < minFraction) {
+            channel.invokeMethod("onSelectionCanceled", null)
+            return
+        }
+        channel.invokeMethod(
+            "onSelectionRectComputed",
+            mapOf(
+                "pageIndex" to pageIndex,
+                "left" to relative.left.toDouble(),
+                "top" to relative.top.toDouble(),
+                "right" to relative.right.toDouble(),
+                "bottom" to relative.bottom.toDouble(),
+                "widgetLeft" to widgetRelative.left.toDouble(),
+                "widgetTop" to widgetRelative.top.toDouble(),
+                "widgetRight" to widgetRelative.right.toDouble(),
+                "widgetBottom" to widgetRelative.bottom.toDouble(),
+            ),
+        )
+    }
 
     /** Dart 端偵測到第二指觸碰（`cancelAnnotationSelection`）、或收到
-     * 翻頁/跳頁指令時呼叫（見 nextPage()／previousPage()／jumpToPage()
-     * 開頭的既有呼叫點，本 Task 不需要異動那幾處）。*/
+     * 翻頁/跳頁指令時呼叫（呼叫點見下方 Step 7 於 nextPage()／
+     * previousPage()／jumpToPage() 開頭新增的呼叫）。*/
     private fun cancelHighlightSelection() {
         if (highlightSelectionActive) {
             removeHighlightSelectionOverlay()
@@ -2134,11 +2252,9 @@ Expected: PASS（含既有 `isDualPageEnabled` 等測試不受影響）
     }
 ```
 
-- [ ] **Step 7: 確認 `nextPage`／`previousPage`／`jumpToPage`／`dispose()` 沿用既有呼叫點**
+- [x] **Step 7: 於 `nextPage`／`previousPage`／`jumpToPage` 新增取消呼叫、`dispose()` 清理疊加層**
 
-三個換頁方法與 `dispose()` 已於原計劃草稿中包含 `cancelHighlightSelection()`／`removeHighlightSelectionOverlay()` 呼叫（語意不變，僅上方 Step 6 的 `cancelHighlightSelection()`／`removeHighlightSelectionOverlay()` 本體已同步簡化，不再有 `cancelPendingLongPress()` 這個已移除的函式）。逐一確認：
-
-`nextPage()`／`previousPage()`／`jumpToPage(pageIndex: Int)` 三個方法開頭（`if (cropEditModeActive) return` 之前）皆已有 `cancelHighlightSelection()`：
+三個換頁方法開頭（`if (cropEditModeActive) return` 之前）各自新增 `cancelHighlightSelection()`（此為新增，非既有程式碼——`nextPage()`/`previousPage()`/`jumpToPage()` 本身是本檔案既有方法，但呼叫 `cancelHighlightSelection()` 這一行是本 Task 才新增的行為，語意對應 spec.md 審查修正 1.3「縮放/平移手勢開始、或收到翻頁/跳頁指令時取消目前框選狀態」）：
 
 ```kotlin
     private fun nextPage() {
@@ -2176,28 +2292,28 @@ Expected: PASS（含既有 `isDualPageEnabled` 等測試不受影響）
     }
 ```
 
-`dispose()` 內、`cropOverlayView?.let { rootView.removeView(it) }` 之前，把原本的兩行改為只保留一行（`cancelPendingLongPress()` 已隨 Step 2 移除計時器欄位一併刪除，不再需要呼叫）：
+`dispose()` 內、`cropOverlayView?.let { rootView.removeView(it) }` 之前新增一行：
 
 ```kotlin
         removeHighlightSelectionOverlay()
 ```
 
-- [ ] **Step 8: 編譯驗證**
+- [x] **Step 8: 編譯驗證**
 
 Run: `cd app && flutter build apk --debug`
 Expected: 建置成功
 
-- [ ] **Step 9: 執行既有 Kotlin 單元測試確認無回歸**
+- [x] **Step 9: 執行既有 Kotlin 單元測試確認無回歸**
 
 Run: `cd app/android && ./gradlew testDebugUnitTest`
 Expected: BUILD SUCCESSFUL（`PdfReaderViewTest`／`PdfContentBoundsTest` 皆通過；`PdfAnnotationOverlayTest` 待 Task 9 建立後才存在，本 Task 尚未執行到不影響）
 
-- [ ] **Step 10: 執行 `flutter analyze` 確認 Dart 端未受影響**
+- [x] **Step 10: 執行 `flutter analyze` 確認 Dart 端未受影響**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 11: Commit**
+- [x] **Step 11: Commit**
 
 ```bash
 git add app/android/app/src/main/kotlin/cc/ugotit/elinkbook/PdfReaderView.kt app/android/app/src/test/kotlin/cc/ugotit/elinkbook/PdfReaderViewTest.kt
@@ -2216,7 +2332,7 @@ git commit -m "feat(epic-6): PdfReaderView.kt 改為接收 Dart 端手勢事件�
 - Consumes: Task 6 的 Dart 端 `refreshAnnotations` wire 格式（見 `PdfAnnotationDecoration.toWire()`）。
 - Produces: `PdfAnnotationOverlay`（`internal data class`，`parsePdfAnnotationOverlays` 純函式可獨立單元測試）；原生端於 `renderPageBitmap()` 疊加繪製劃線/底線/純備註三種樣式。
 
-- [ ] **Step 1: 寫失敗測試（`PdfAnnotationOverlayTest.kt`）**
+- [x] **Step 1: 寫失敗測試（`PdfAnnotationOverlayTest.kt`）**
 
 建立 `app/android/app/src/test/kotlin/cc/ugotit/elinkbook/PdfAnnotationOverlayTest.kt`：
 
@@ -2230,9 +2346,15 @@ import org.junit.Test
 
 class PdfAnnotationOverlayTest {
 
+    // 【審查修正，Task 9 實作發現】parsePdfAnnotationOverlays 宣告於
+    // PdfReaderView 的 companion object 內，從外部類別呼叫時必須加上
+    // `PdfReaderView.` 前綴（Kotlin 不會自動把 companion object 成員
+    // 帶入其他檔案的呼叫範圍），比照本檔案既有 isDualPageEnabled／
+    // pairIndices 等測試呼叫的既有慣例。
+
     @Test
     fun `正確解析完整欄位的單筆標記`() {
-        val list = parsePdfAnnotationOverlays(listOf(
+        val list = PdfReaderView.parsePdfAnnotationOverlays(listOf(
             mapOf(
                 "pageIndex" to 3,
                 "left" to 0.1,
@@ -2251,7 +2373,7 @@ class PdfAnnotationOverlayTest {
 
     @Test
     fun `缺少必要數值欄位的項目略過、不影響其餘項目`() {
-        val list = parsePdfAnnotationOverlays(listOf(
+        val list = PdfReaderView.parsePdfAnnotationOverlays(listOf(
             mapOf("pageIndex" to 1, "left" to 0.0, "top" to 0.0, "right" to 1.0), // 缺 bottom/tint
             mapOf(
                 "pageIndex" to 2, "left" to 0.0, "top" to 0.0, "right" to 1.0, "bottom" to 1.0,
@@ -2264,7 +2386,7 @@ class PdfAnnotationOverlayTest {
 
     @Test
     fun `isUnderline／isNoteOnly 缺席時預設為 false`() {
-        val list = parsePdfAnnotationOverlays(listOf(
+        val list = PdfReaderView.parsePdfAnnotationOverlays(listOf(
             mapOf(
                 "pageIndex" to 0, "left" to 0.0, "top" to 0.0, "right" to 1.0, "bottom" to 1.0,
                 "tint" to 1,
@@ -2276,12 +2398,12 @@ class PdfAnnotationOverlayTest {
 }
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `cd app/android && ./gradlew testDebugUnitTest --tests "cc.ugotit.elinkbook.PdfAnnotationOverlayTest"`
 Expected: FAIL（`PdfAnnotationOverlay`/`parsePdfAnnotationOverlays` 尚不存在，編譯錯誤）
 
-- [ ] **Step 3: 實作 `PdfAnnotationOverlay` 與解析函式**
+- [x] **Step 3: 實作 `PdfAnnotationOverlay` 與解析函式**
 
 `app/android/app/src/main/kotlin/cc/ugotit/elinkbook/PdfReaderView.kt` 的 `companion object` 內（`previousPageStep` 之後）新增：
 
@@ -2323,12 +2445,20 @@ Expected: FAIL（`PdfAnnotationOverlay`/`parsePdfAnnotationOverlays` 尚不存�
         }
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+**審查修正（原規劃在 Task 8 宣告本欄位，Task 8 實作時發現會前向參照尚未定義的 `PdfAnnotationOverlay` 型別而編譯失敗，改移至此處與型別同時宣告，見 Task 8 實作報告）**：於 `cropOverlayView` 欄位之後（Task 8 已新增的 `highlightSelectionOverlayView`／`highlightAnchor`／`highlightSelectionActive` 三個欄位之後）新增：
+
+```kotlin
+    // Dart 端送來的目前應顯示標記清單（Issue 3 `refreshAnnotations`），
+    // 依 pageIndex 分組供 renderPageBitmap() 逐頁疊加繪製。
+    private var pageAnnotations: List<PdfAnnotationOverlay> = emptyList()
+```
+
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `cd app/android && ./gradlew testDebugUnitTest --tests "cc.ugotit.elinkbook.PdfAnnotationOverlayTest"`
 Expected: PASS
 
-- [ ] **Step 5: 於 `onMethodCall` 新增 `refreshAnnotations` 分支**
+- [x] **Step 5: 於 `onMethodCall` 新增 `refreshAnnotations` 分支**
 
 `onMethodCall` 的 `when (call.method)` 內，`"exitCropEditMode" -> { ... }` 分支之後新增：
 
@@ -2342,7 +2472,7 @@ Expected: PASS
             }
 ```
 
-- [ ] **Step 6: 於 `renderPageBitmap` 疊加繪製標記**
+- [x] **Step 6: 於 `renderPageBitmap` 疊加繪製標記**
 
 `renderPageBitmap(pageIndex: Int): Bitmap` 方法內，`page.render(bitmap, null, matrix, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)` 之後、`return bitmap` 之前新增（`scale` 為該方法內既有的區域變數，緊接在 `page.render(...)` 之前已計算好，直接沿用，不重複計算）：
 
@@ -2450,22 +2580,22 @@ Expected: PASS
     }
 ```
 
-- [ ] **Step 7: 編譯驗證**
+- [x] **Step 7: 編譯驗證**
 
 Run: `cd app && flutter build apk --debug`
 Expected: 建置成功
 
-- [ ] **Step 8: 執行既有 Kotlin 單元測試確認無回歸**
+- [x] **Step 8: 執行既有 Kotlin 單元測試確認無回歸**
 
 Run: `cd app/android && ./gradlew testDebugUnitTest`
 Expected: BUILD SUCCESSFUL（`PdfReaderViewTest`／`PdfContentBoundsTest`／`PdfAnnotationOverlayTest` 皆通過）
 
-- [ ] **Step 9: 執行 `flutter analyze` 確認 Dart 端未受影響**
+- [x] **Step 9: 執行 `flutter analyze` 確認 Dart 端未受影響**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 10: Commit**
+- [x] **Step 10: Commit**
 
 ```bash
 git add app/android/app/src/main/kotlin/cc/ugotit/elinkbook/PdfReaderView.kt app/android/app/src/test/kotlin/cc/ugotit/elinkbook/PdfAnnotationOverlayTest.kt
@@ -2484,7 +2614,7 @@ git commit -m "feat(epic-6): PdfReaderView.kt 新增 refreshAnnotations 與 Bitm
 - Consumes: Task 1-9 的全部型別與原生端實作。
 - Produces: `ReaderScreen` 對 PDF 完成 Issue 3 端到端接線，`highlightsRepository`/`notesRepository` 對 PDF 書籍同樣生效（複用 Issue 2 已有的可選具名參數，不新增建構參數）。
 
-- [ ] **Step 1: 寫失敗測試**
+- [x] **Step 1: 寫失敗測試**
 
 於 `app/test/screens/reader_screen_test.dart` 檔案結尾（最後一個 `}` 之前）新增：
 
@@ -2534,12 +2664,12 @@ git commit -m "feat(epic-6): PdfReaderView.kt 新增 refreshAnnotations 與 Bitm
 
 （`FakeBookmarksRepository`／`FakeHighlightsRepository`／`FakeNotesRepository`／`FakeReaderPrefsManager`／`AnnotationToolbar` 皆已由既有 import 涵蓋，見 Issue 1/2 既有測試檔頂部 import 清單，本次無需新增 import。）
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/screens/reader_screen_test.dart`
 Expected: 目前應已可通過建構（`highlightsRepository`/`notesRepository` 參數 Issue 2 已存在）——**先執行一次確認此假設成立**；若確實已通過，本 Step 記錄「測試先行通過，Step 3 起的接線是行為擴充而非讓編譯通過」，繼續往下實作 PDF 選取/CRUD/清單流程本身（後續整合測試留給 Task 11 覆蓋，本 Task Step 1 的兩個測試主要作用是防止建構期間拋出例外的回歸網）。
 
-- [ ] **Step 3: 擴充 `ReaderScreen` import**
+- [x] **Step 3: 擴充 `ReaderScreen` import**
 
 `app/lib/screens/reader_screen.dart` 頂部新增：
 
@@ -2548,7 +2678,7 @@ import '../reader/pdf_annotation_decoration.dart';
 import '../reader/pdf_selection_info.dart';
 ```
 
-- [ ] **Step 4: 新增 State 欄位**
+- [x] **Step 4: 新增 State 欄位**
 
 `_ReaderScreenState` 內，`_pendingHighlightIdForSelection`（EPUB，Issue 2 新增）欄位之後新增：
 
@@ -2561,7 +2691,7 @@ import '../reader/pdf_selection_info.dart';
   int? _pendingPdfHighlightIdForSelection;
 ```
 
-- [ ] **Step 5: 新增 PDF 選取事件／CRUD 處理方法**
+- [x] **Step 5: 新增 PDF 選取事件／CRUD 處理方法**
 
 在 `_showAnnotationActionDialog` 方法之後（EPUB 相關方法群結尾）新增：
 
@@ -2676,7 +2806,19 @@ import '../reader/pdf_selection_info.dart';
   }
 ```
 
-- [ ] **Step 6: 於 `_handlePageRendered` 觸發初始標記載入**
+**審查修正（最終全分支審查 Finding 1，見 Task 5 對應段落；問題根源）**：上方 `_pdfAnnotationToolbarTop` 直接沿用 EPUB 版本 `_annotationToolbarTop` 的公式，把 `selection.rect`（相對 bitmap 內容範圍、不含 letterbox 留白的百分比值）乘上 `size`（整個 widget 尺寸）——這個公式對 EPUB 是對的（Readium 回報的選取範圍本就相對整個容器，無 letterbox 概念），但直接搬到 PDF 是錯的：PAGE_FIT 模式下頁面長寬比與螢幕不同時會產生 letterbox，把內容相對值當作 widget 相對值使用會讓浮動工具列偏移留白的量。改為使用 `selection.widgetRect`（Task 5 新增，相對整個 widget 尺寸、含 letterbox 的百分比值）。定案版本：
+
+```dart
+  double _pdfAnnotationToolbarTop(PdfSelectionInfo selection, Size size) {
+    final topAboveSelection =
+        selection.widgetRect.top * size.height - _annotationToolbarHeight - _annotationToolbarGap;
+    if (topAboveSelection >= 0) return topAboveSelection;
+    final belowSelection = selection.widgetRect.bottom * size.height + _annotationToolbarGap;
+    return belowSelection.clamp(0.0, size.height - _annotationToolbarHeight);
+  }
+```
+
+- [x] **Step 6: 於 `_handlePageRendered` 觸發初始標記載入**
 
 `_handlePageRendered` 方法改為：
 
@@ -2699,7 +2841,7 @@ import '../reader/pdf_selection_info.dart';
   }
 ```
 
-- [ ] **Step 7: 於 `_buildNativeView` 的 PDF 分支接上新回呼**
+- [x] **Step 7: 於 `_buildNativeView` 的 PDF 分支接上新回呼**
 
 `_buildNativeView` 的 `case BookFormat.pdf:` 分支，`onPageChanged: (info) { ... },` 之後（`return PdfReaderView(...)` 結尾的 `)` 之前）新增：
 
@@ -2709,7 +2851,7 @@ import '../reader/pdf_selection_info.dart';
         );
 ```
 
-- [ ] **Step 8: 於 `_buildBody` 疊加 PDF 版本的 `AnnotationToolbar`**
+- [x] **Step 8: 於 `_buildBody` 疊加 PDF 版本的 `AnnotationToolbar`**
 
 `_buildBody` 方法內 `LayoutBuilder` 的 `builder` 中，`final selection = _currentSelection;` 之後新增：
 
@@ -2731,7 +2873,21 @@ import '../reader/pdf_selection_info.dart';
               ),
 ```
 
-- [ ] **Step 9: 於 `_openNotesSheet` 擴充 PDF 支援**
+**審查修正（最終全分支審查 Finding 1，同上）**：`Positioned.left` 同樣誤用 `pdfSelection.rect`（內容相對值）乘上整個 widget 寬度，改用 `pdfSelection.widgetRect`。定案版本：
+
+```dart
+            if (pdfSelection != null)
+              Positioned(
+                left: (pdfSelection.widgetRect.left * size.width).clamp(0.0, size.width),
+                top: _pdfAnnotationToolbarTop(pdfSelection, size),
+                child: AnnotationToolbar(
+                  onStyleSelected: _handlePdfHighlightStyleSelected,
+                  onNotePressed: _handlePdfNotePressed,
+                ),
+              ),
+```
+
+- [x] **Step 9: 於 `_openNotesSheet` 擴充 PDF 支援**
 
 `_openNotesSheet` 方法內，`NotesBottomSheet(` 建構呼叫改為：
 
@@ -2777,7 +2933,7 @@ import '../reader/pdf_selection_info.dart';
 
 （原本 `format == BookFormat.epub && !_isFixedLayout ? widget.highlightsRepository : null` 這行是 Issue 2 已預留的擴充點，本 Step 依其註解指示擴充為涵蓋 `format == BookFormat.pdf`。）
 
-- [ ] **Step 10: 執行測試確認通過**
+- [x] **Step 10: 執行測試確認通過**
 
 Run: `flutter test test/screens/reader_screen_test.dart`
 Expected: PASS（全部測試綠燈，含既有測試不受影響）
@@ -2785,12 +2941,12 @@ Expected: PASS（全部測試綠燈，含既有測試不受影響）
 Run: `flutter test`
 Expected: 全專案測試皆 PASS（確認本次跨檔案修改無回歸）。
 
-- [ ] **Step 11: 執行 `flutter analyze` 確認乾淨**
+- [x] **Step 11: 執行 `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 12: Commit**
+- [x] **Step 12: Commit**
 
 ```bash
 git add app/lib/screens/reader_screen.dart app/test/screens/reader_screen_test.dart
@@ -2808,7 +2964,7 @@ git commit -m "feat(epic-6): ReaderScreen 接上 PDF 劃線/備註端到端流�
 - Consumes: Task 1-10 的全部型別（`HighlightsRepository`／`NotesRepository`／`ReaderScreen`／`NotesBottomSheet`）。
 - Produces: 無新增 Dart 型別；驗證 repository 驅動的端到端流程（清單顯示、跳轉、編輯、刪除），比照 Issue 2 `epub_highlights_notes_test.dart` 既有結構，改用 `sample.pdf`／`sample_dual_page.pdf` 既有測試 fixture。
 
-- [ ] **Step 1: 撰寫 integration_test**
+- [x] **Step 1: 撰寫 integration_test**
 
 建立 `app/integration_test/pdf_highlights_notes_test.dart`：
 
@@ -3000,18 +3156,18 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: 記錄待執行狀態**
+- [x] **Step 2: 記錄待執行狀態**
 
 本測試需在真實 Android 裝置/模擬器上執行（`flutter test integration_test/pdf_highlights_notes_test.dart -d <device-id>`）；比照 Issue 1/2 先例，若撰寫當下無可用裝置，於 `issues.md` Issue 3 驗收標準對應項目註記「測試檔已撰寫，尚待裝置就緒後實際執行」，並列出上方 Step 1 註解中的「真機人工驗證清單」7 項供人工測試時對照。
 
-- [ ] **Step 3: 若有裝置可用，執行驗證**
+- [x] **Step 3: 若有裝置可用，執行驗證**
 
 Run: `flutter devices`（確認是否有可用裝置/模擬器）
 若有：Run: `flutter test integration_test/pdf_highlights_notes_test.dart -d <device-id>`
 Expected: PASS；並依上方「真機人工驗證清單」逐項人工操作確認，額外聚焦 Issue 2 未曾驗證過的項目：長按與水平滑動翻頁實際共存（清單項目 2，審查修正 1.1 後為構造性驗證而非未知風險排查）、多指取消（項目 3）、裁切後座標基準（項目 7）。
 若無：跳過本步驟，維持 Step 2 的註記狀態。
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add app/integration_test/pdf_highlights_notes_test.dart

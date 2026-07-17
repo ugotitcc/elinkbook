@@ -95,4 +95,14 @@ void main() {
     expect(await repository.listByBook('b1'), isEmpty);
     expect(await repository.listByBook('b2'), hasLength(1));
   });
+
+  test('listByBook 對 PDF 劃線依 pdf_page_index 由小到大排序', () async {
+    await repository.insert(const Highlight(
+        bookId: 'b1', style: HighlightStyle.underline, pdfPageIndex: 5));
+    await repository.insert(const Highlight(
+        bookId: 'b1', style: HighlightStyle.underline, pdfPageIndex: 1));
+
+    final list = await repository.listByBook('b1');
+    expect(list.map((h) => h.pdfPageIndex).toList(), [1, 5]);
+  });
 }

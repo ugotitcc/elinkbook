@@ -16,12 +16,14 @@ class NotesRepository {
     return _db.insert('notes', note.toMap());
   }
 
+  /// 依書中位置順序排序，比照 [HighlightsRepository.listByBook] 的
+  /// `COALESCE` 慣例（Issue 3 新增）。
   Future<List<Note>> listByBook(String bookId) async {
     final rows = await _db.query(
       'notes',
       where: 'book_id = ?',
       whereArgs: [bookId],
-      orderBy: 'progression ASC',
+      orderBy: 'COALESCE(pdf_page_index, progression) ASC',
     );
     return rows.map(Note.fromMap).toList();
   }

@@ -18,7 +18,14 @@ class AnnotationListItem {
   /// 各自的資料庫 id（其中一個可能為 null）。
   String get key => 'h${highlight?.id}_n${note?.id}';
 
-  double get _position => highlight?.progression ?? note?.progression ?? 0;
+  /// 排序鍵：PDF 用 `pdfPageIndex`、EPUB 用 `progression`，兩者互斥（Issue 3
+  /// 修正——原本只讀 `progression`，PDF 項目的 `progression` 恆為 null，
+  /// 會導致所有 PDF 劃線/備註排序鍵皆為 0、清單順序失去意義）。
+  double get _position =>
+      (highlight?.pdfPageIndex ?? note?.pdfPageIndex)?.toDouble() ??
+      highlight?.progression ??
+      note?.progression ??
+      0;
 }
 
 /// 合併 [highlights]／[notes] 兩份清單成單一依書中位置排序的顯示清單

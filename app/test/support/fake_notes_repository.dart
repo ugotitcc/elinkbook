@@ -19,6 +19,8 @@ class FakeNotesRepository implements NotesRepository {
       epubLocatorJson: note.epubLocatorJson,
       progression: note.progression,
       highlightId: note.highlightId,
+      pdfPageIndex: note.pdfPageIndex,
+      pdfRect: note.pdfRect,
     ));
     return id;
   }
@@ -26,9 +28,11 @@ class FakeNotesRepository implements NotesRepository {
   @override
   Future<List<Note>> listByBook(String bookId) async {
     final list = _storage.where((n) => n.bookId == bookId).toList();
-    list.sort((a, b) => (a.progression ?? 0).compareTo(b.progression ?? 0));
+    list.sort((a, b) => _positionOf(a).compareTo(_positionOf(b)));
     return list;
   }
+
+  double _positionOf(Note n) => (n.pdfPageIndex?.toDouble()) ?? n.progression ?? 0;
 
   @override
   Future<void> updateText(int id, String text) async {

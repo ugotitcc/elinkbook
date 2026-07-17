@@ -120,4 +120,12 @@ void main() {
     expect(notes, hasLength(2));
     expect(notes.every((n) => n.highlightId == null), isTrue);
   });
+
+  test('listByBook 對 PDF 備註依 pdf_page_index 由小到大排序', () async {
+    await notesRepository.insert(const Note(bookId: 'b1', text: 'B', pdfPageIndex: 5));
+    await notesRepository.insert(const Note(bookId: 'b1', text: 'A', pdfPageIndex: 1));
+
+    final list = await notesRepository.listByBook('b1');
+    expect(list.map((n) => n.text).toList(), ['A', 'B']);
+  });
 }

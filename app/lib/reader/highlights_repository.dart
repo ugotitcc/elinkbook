@@ -13,15 +13,15 @@ class HighlightsRepository {
     return _db.insert('highlights', highlight.toMap());
   }
 
-  /// 依書中位置順序排序（本 Issue 只有 EPUB，故直接用 progression；PDF
-  /// 欄位由 Issue 3 補上時，這裡的 ORDER BY 需要改回 bookmarks 既有的
-  /// `COALESCE(...)` 寫法，屬 Issue 3 範圍）。
+  /// 依書中位置順序排序：EPUB 用 `progression` 比例、PDF 用
+  /// `pdf_page_index`（Issue 3 新增），兩者互斥、一本書只會用到其中一組
+  /// （比照 `BookmarksRepository.listByBook` 既有的 `COALESCE` 慣例）。
   Future<List<Highlight>> listByBook(String bookId) async {
     final rows = await _db.query(
       'highlights',
       where: 'book_id = ?',
       whereArgs: [bookId],
-      orderBy: 'progression ASC',
+      orderBy: 'COALESCE(pdf_page_index, progression) ASC',
     );
     return rows.map(Highlight.fromMap).toList();
   }

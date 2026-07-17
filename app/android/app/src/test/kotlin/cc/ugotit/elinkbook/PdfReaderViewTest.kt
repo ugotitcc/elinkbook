@@ -288,4 +288,46 @@ class PdfReaderViewTest {
         )
         assertEquals(2, step)
     }
+
+    // ---- isAnnotationSelectionEligible（epic-6-annotations Issue 3）----
+
+    @Test
+    fun `isAnnotationSelectionEligible PAGE_FIT、非裁切、非雙頁時允許框選`() {
+        val eligible = PdfReaderView.isAnnotationSelectionEligible(
+            fitMode = PdfReaderView.PdfFitMode.PAGE_FIT,
+            dualPageEnabled = false,
+            cropEditModeActive = false,
+        )
+        assertEquals(true, eligible)
+    }
+
+    @Test
+    fun `isAnnotationSelectionEligible 非 PAGE_FIT 時不允許框選`() {
+        val eligible = PdfReaderView.isAnnotationSelectionEligible(
+            fitMode = PdfReaderView.PdfFitMode.FIT_WIDTH,
+            dualPageEnabled = false,
+            cropEditModeActive = false,
+        )
+        assertEquals(false, eligible)
+    }
+
+    @Test
+    fun `isAnnotationSelectionEligible 雙頁模式生效時不允許框選`() {
+        val eligible = PdfReaderView.isAnnotationSelectionEligible(
+            fitMode = PdfReaderView.PdfFitMode.PAGE_FIT,
+            dualPageEnabled = true,
+            cropEditModeActive = false,
+        )
+        assertEquals(false, eligible)
+    }
+
+    @Test
+    fun `isAnnotationSelectionEligible 裁切編輯模式中不允許框選`() {
+        val eligible = PdfReaderView.isAnnotationSelectionEligible(
+            fitMode = PdfReaderView.PdfFitMode.PAGE_FIT,
+            dualPageEnabled = false,
+            cropEditModeActive = true,
+        )
+        assertEquals(false, eligible)
+    }
 }
