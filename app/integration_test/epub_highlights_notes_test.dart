@@ -123,7 +123,7 @@ void main() {
       progression: 0.05,
       highlightId: highlightId,
     ));
-    await notesRepository.insert(const Note(
+    final pureNoteId = await notesRepository.insert(const Note(
       bookId: 'b_highlights_epub',
       text: '純備註內容',
       epubLocatorJson: '{"href":"/OEBPS/chapter2.xhtml"}',
@@ -161,7 +161,28 @@ void main() {
     expect(find.byType(NotesBottomSheet), findsNothing);
     expect(find.byKey(const Key('reader_error_text')), findsNothing);
 
-    // 重新開啟，驗證單筆刪除（劃線+備註一併消失）持久化生效。
+    // 重新開啟，驗證編輯純備註（另一筆，非上面已跳轉刪除的合併項目）文字
+    // 持久化生效：Dialog 儲存後清單即時反映新文字，且直接重新查詢
+    // repository 確認資料庫確實已更新（不只是 widget tree 上的暫存狀態）。
+    await tester.tap(find.byKey(const Key('reader_notes_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('notes_sheet_tab_annotations')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(Key('notes_sheet_annotation_edit_$pureNoteId')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('note_edit_dialog_field')), '已編輯的純備註');
+    await tester.tap(find.byKey(const Key('note_edit_dialog_confirm')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('已編輯的純備註'), findsOneWidget);
+    expect(find.text('純備註內容'), findsNothing);
+    final notesAfterEdit = await notesRepository.listByBook('b_highlights_epub');
+    expect(notesAfterEdit.firstWhere((n) => n.id == pureNoteId).text, '已編輯的純備註');
+
+    // 關閉 Bottom Sheet，重新開啟驗證單筆刪除（劃線+備註一併消失）持久化生效。
+    await tester.tapAt(const Offset(20, 20));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('reader_notes_button')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('notes_sheet_tab_annotations')));
@@ -171,6 +192,9 @@ void main() {
 
     expect(await highlightsRepository.listByBook('b_highlights_epub'), isEmpty);
     expect(find.text('這段很重要'), findsNothing);
-    expect(find.text('純備註內容'), findsOneWidget);
+    // 上一段編輯備註流程已把這筆純備註的文字改為「已編輯的純備註」，
+    // 此處延續驗證單筆刪除只影響被刪除的合併項目，不影響這筆仍保留的
+    // 純備註。
+    expect(find.text('已編輯的純備註'), findsOneWidget);
   });
 }
