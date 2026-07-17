@@ -14,7 +14,7 @@
 - `ReaderScreen` 是本專案唯一的閱讀器 seam（`CLAUDE.md`），本 Issue 不新增第二個閱讀器入口。
 - **SQLite schema migration**：目前資料庫 `version` 為 9（Issue 2 已建立 `highlights`／`notes` 表，僅含 EPUB 欄位），本 Issue 提升至 10，新增 `pdf_page_index INTEGER`／`pdf_rect_json TEXT` 兩個欄位到這兩張表。**onCreate／onUpgrade 分歧路徑（重要，避免 duplicate column 例外）**：`_createHighlightsTable`／`_createNotesTable`（全新安裝走的路徑）直接把這兩個新欄位內嵌進 `CREATE TABLE` 語句本身（一步到位，比照 `_createBookReaderPrefsTable` 已包含所有版本新增欄位的既有先例）；既有 v9 裝置（`highlights`/`notes` 表已存在但無 PDF 欄位）則需要一個新的 `_addPdfAnnotationColumns(db)` 用 `ALTER TABLE ADD COLUMN` 補上。這兩條路徑必須是 **if/else 互斥**（比照 `book_reader_prefs` 表 `if (oldVersion < 2) { 建表 } else { ALTER TABLE 系列 }` 的既有慣例），**不可**寫成兩個獨立的 `if (oldVersion < 9)`／`if (oldVersion < 10)`——否則 `oldVersion == 8`（跳級升級、`highlights`/`notes` 表本身也還不存在）的裝置會先在 `oldVersion < 9` 分支建立「已含 PDF 欄位」的最終版表，緊接著又落入 `oldVersion < 10` 分支對同一張表 `ALTER TABLE ADD COLUMN` 已存在的欄位，SQLite 會拋出 `duplicate column name` 例外。
 - **長按/拖曳的手勢辨識改由 Flutter 端 `GestureDetector` 主導，原生端不再自行監聽 `rootView` 觸控（審查修正，見 `tmp/epic-6/reviews/plan_issue_3_review.md` 1.1，取代原本「原生端自建 Handler+ViewConfiguration 長按計時、`rootView.setOnTouchListener` 無條件回傳 `true` 攔截整個觸控序列」的設計）**：原設計會讓原生端在使用者每一次觸碰螢幕的 `ACTION_DOWN` 當下就無條件宣告「這次觸控歸我」，而 Android 的觸控分派契約規定——`OnTouchListener` 一旦在 `ACTION_DOWN` 回傳 `true`，同一觸控序列後續的 `ACTION_MOVE`/`ACTION_UP` 便只會送達該 View、不會再進入 Flutter 的手勢競技場，導致既有的水平滑動翻頁手勢（`PdfReaderView.dart` 的 `GestureDetector.onHorizontalDragEnd`）在一般閱讀情境下完全失效，且此問題並非僅在真機測試中才會顯現的機率性風險，而是每次觸碰都會發生的必然行為。反過來若改成「長按觸發前回傳 `false`，觸發後才回傳 `true`」也不可行——Android 的規則是「View 若在 `ACTION_DOWN` 當下未取得該序列（回傳 `false`），之後同一序列的事件不會再補送給它」，`rootView` 一旦在 `ACTION_DOWN` 選擇放行，就永遠不會再收到那次觸控接下來的 `ACTION_MOVE`/`ACTION_UP`，長按計時器即使之後真的觸發，也已經沒有後續事件可以用來追蹤拖曳或完成框選。**改採的正確架構**：長按與拖曳的辨識完全交給 `PdfReaderView.dart` 既有的 `GestureDetector`（與 `onHorizontalDragEnd` 同一個元件）新增的 `onLongPressStart`／`onLongPressMoveUpdate`／`onLongPressEnd` 三個內建回呼——這是 Flutter 手勢框架本來就設計用來裁決「同一觸點究竟是長按還是拖曳」的機制，由它在 Dart 層仲裁，原生端完全不需要猜測、也不需要佔用 `rootView` 的觸控序列。三個回呼各自把觸點位置換算成**相對 `PdfReaderView` 這個 widget 自身尺寸**（非 bitmap 內容範圍，見下方座標協定說明兩段式換算）的百分比（`xPct`/`yPct`，透過 `LayoutBuilder` 取得目前 `constraints.biggest`），分別呼叫 `beginAnnotationSelection`／`updateAnnotationSelection`／`endAnnotationSelection` 這三個新增的 outgoing method call 通知原生端；原生端收到後才建立/更新/結束疊加層，不再自行判斷「是否為長按」。
-- **PDF 座標協定為兩段式換算（審查修正後定案）**：(1) Dart 端把觸點位置換算成相對 `PdfReaderView` widget 自身尺寸的百分比（`xPct`/`yPct`，與裝置像素密度無關，因為分子分母同單位相除）送給原生端；(2) 原生端收到後先乘上 `rootView` 目前量測到的寬高換算回 View 像素座標，再透過沿用/延伸 `CropOverlayView.kt` 既有的 FIT_CENTER letterbox 數學（`computeContentBounds()`，本計劃抽出為共用函式 `computeFitCenterContentBounds()`，以 `imageView.drawable` 的 intrinsic 尺寸——已反映目前生效的裁切狀態，若有——為基準）換算出「相對目前顯示中 bitmap 內容範圍」（而非整個原生 View 容器寬高）的最終百分比矩形（`left`/`top`/`right`/`bottom`，0.0–1.0），這組最終座標才是透過 `onSelectionRectComputed` 回報給 Dart 端、寫入資料庫的值。letterbox 換算必須留在原生端，因為只有原生端知道 bitmap 的實際像素尺寸；Dart 端不需要、也沒有管道取得這項資訊。**渲染回貼時直接以「最終百分比 × bitmap 自身寬高」換算像素座標**（不再重算 letterbox——因為 bitmap 本身沒有內部留白，留白只發生在 `ImageView` 用 `FIT_CENTER` 顯示 bitmap 到 View 的階段，`ImageView` 本身的縮放/置中會自動、成比例地把疊加內容一併帶到正確視覺位置），這也是本設計天然正確處理裝置旋轉／雙頁模式／已裁切頁面的關鍵——見下方「長按框選僅支援 PAGE_FIT」與「疊加繪製位置」。
+- **PDF 座標協定為兩段式換算（審查修正後定案）**：(1) Dart 端把觸點位置換算成相對 `PdfReaderView` widget 自身尺寸的百分比（`xPct`/`yPct`，與裝置像素密度無關，因為分子分母同單位相除）送給原生端；(2) 原生端收到後先乘上 `rootView` 目前量測到的寬高換算回 View 像素座標，再透過沿用/延伸 `CropOverlayView.kt` 既有的 FIT_CENTER letterbox 數學（`computeContentBounds()`，本計劃抽出為共用函式 `computeFitCenterContentBounds()`，以 `imageView.drawable` 的 intrinsic 尺寸——已反映目前生效的裁切狀態，若有——為基準）換算出「相對目前顯示中 bitmap 內容範圍」（而非整個原生 View 容器寬高）的最終百分比矩形（`left`/`top`/`right`/`bottom`，0.0–1.0），這組最終座標才是透過 `onSelectionRectComputed` 回報給 Dart 端、寫入資料庫的值。letterbox 換算必須留在原生端，因為只有原生端知道 bitmap 的實際像素尺寸；Dart 端不需要、也沒有管道取得這項資訊。**渲染回貼時直接以「最終百分比 × bitmap 自身寬高」換算像素座標**（不再重算 letterbox——因為 bitmap 本身沒有內部留白，留白只發生在 `ImageView` 用 `FIT_CENTER` 顯示 bitmap 到 View 的階段，`ImageView` 本身的縮放/置中會自動、成比例地把疊加內容一併帶到正確視覺位置），這也是本設計天然正確處理裝置旋轉／雙頁模式／已裁切頁面的關鍵——見下方「長按框選僅支援 PAGE_FIT」與「疊加繪製位置」。**審查修正（最終全分支審查 Finding 1，見 `tmp/epic-6/reviews/review-issue-3.md` Spec (c)）**：上述「相對 bitmap 內容範圍」的最終百分比矩形（`PdfSelectionInfo.rect`）正確用於持久化與重繪，但**不可**直接用於在 Dart 端定位浮動 `AnnotationToolbar` 等 UI 元件——工具列疊在整個 widget 座標系之上，PAGE_FIT 模式下頁面長寬比與螢幕不同時會產生 letterbox，若把內容相對值直接乘上整個 widget 尺寸，會偏移 letterbox 留白的量（此為 Task 10 沿用 EPUB 版 `_annotationToolbarTop` 公式時遺漏的落差，EPUB 選取範圍本就相對整個容器、無 letterbox 概念，故公式對 EPUB 正確、對 PDF 不正確）。修法：原生端額外計算並回報第二組「相對整個 View 完整尺寸（含 letterbox）」的百分比矩形（`HighlightSelectionOverlayView.currentWidgetRelativeRect()`，Task 7；`onSelectionRectComputed` payload 新增 `widgetLeft`/`widgetTop`/`widgetRight`/`widgetBottom`，Task 8），Dart 端 `PdfSelectionInfo` 新增對應的 `widgetRect` 欄位（Task 5／Task 6 解析），**僅供 UI 定位使用**；`rect`（內容相對值）的既有語意/用途完全不變，持久化與重繪路徑不受影響。詳見 Task 5、6、7、8、10 各自段落內的對應修正。
 - **長按框選僅支援 `fitMode == PAGE_FIT` 且雙頁模式未生效（本計劃書自行定案的範圍簡化，issues.md 驗收標準未要求涵蓋 `FIT_WIDTH`/`ACTUAL_SIZE`/雙頁情境，YAGNI）**：`FIT_WIDTH`/`ACTUAL_SIZE` 用 `Matrix` 縮放（非 `FIT_CENTER`），letterbox 數學不適用；雙頁模式下一次觸控可能落在拼接後的左頁或右頁、需要額外判斷觸點屬於哪一頁再換算，複雜度顯著提高且無明確驗收標準要求。此守衛收斂在原生端 `beginAnnotationSelection` 的 handler 內（`if (cropEditModeActive || fitMode != PdfFitMode.PAGE_FIT || dualPageEnabled) return` 靜默忽略，比照既有 `cropEditModeActive` 守衛風格）——Dart 端不重複判斷這些條件（避免與原生端狀態不同步），一律無條件送出三個手勢事件，由原生端這個唯一的權威來源決定是否真的生效。日後有需要時可再擴充，非本 Issue 範圍。
 - **疊加繪製位置**：標記疊加繪製發生在 `renderPageBitmap(pageIndex)` 產生「單一頁面」的原始內容 bitmap 之後、回傳之前，逐頁繪製（單頁與雙頁模式皆呼叫此函式各自渲染每一頁）。這保證：(a) 雙頁模式下左右頁各自正確疊加（不需要處理拼接後座標）；(b) 旋轉/版面調整觸發的重新渲染會自動重算並重繪（因為整個 pipeline 本來就會重跑 `renderPageBitmap`），不需要額外的旋轉感知邏輯；(c) 已知限制：若使用者在「建立劃線之後」才變更裁切模式/裁切矩形，該筆劃線的百分比座標仍以建立當下的裁切狀態為準，可能與新裁切結果不再對齐——此為已知、可接受的範圍簡化（比照本專案既有先例，例如 EPUB 直排/橫排切換的劃線視覺一致性亦非像素級保證，見 spec.md Out of Scope），非本 Issue 修正範圍。
 - **底線/純備註疊加樣式須依實際渲染尺寸縮放，不可用裝置 DP 密度（審查修正，見 review 2.1）**：`renderPageBitmap()` 產生的 bitmap 尺寸是頁面點數乘上 `PdfImageProcessor.pageRenderScale(density)` 決定的渲染縮放係數（常遠大於螢幕 DP），底線的 `strokeWidth` 與純備註釘標圖示的尺寸必須以這個 `scale` 為基準（例如 `2f * scale`），不可沿用畫面 DP 密度（`1f * density` 之類），否則在實際渲染出的高解析度 bitmap 上會顯得極細/極小。底線繪製點須為 `bottom - strokeWidth / 2`（而非直接畫在 `bottom` 上）——`Canvas.drawLine` 的筆畫以座標為中線向兩側延伸，若選取範圍恰好貼近頁面底部（`bottom` 接近 `bitmap.height`），畫在 `bottom` 上會有一半線寬被畫布邊界裁掉。
@@ -1039,6 +1039,38 @@ class PdfSelectionInfo {
 }
 ```
 
+**審查修正（最終全分支審查 Finding 1，見 `tmp/epic-6/reviews/review-issue-3.md` Spec (c)；實作於後續修復 commit，本節回頭補上文件記錄）**：上方 `PdfSelectionInfo` 定案版本除 `pageIndex`／`rect` 外，還需新增 `widgetRect: PercentRect` 欄位（連同建構子、`==`／`hashCode`／`toString` 一併納入）。原因：`rect` 是相對「bitmap 內容範圍」（不含 letterbox 留白）的百分比值，正確用於持久化（`Highlight`/`Note`）與原生端重繪，但 Task 10 的浮動工具列定位若直接拿 `rect` 乘上整個 widget 尺寸，PAGE_FIT 模式下頁面長寬比與螢幕不同、產生 letterbox 時會偏移留白的量。`widgetRect` 是另一組「相對整個 widget 尺寸（含 letterbox）」的百分比值，僅供 UI 定位使用，`rect` 的既有語意/用途完全不變。定案版本：
+
+```dart
+class PdfSelectionInfo {
+  final int pageIndex;
+  final PercentRect rect;
+  final PercentRect widgetRect;
+
+  const PdfSelectionInfo({
+    required this.pageIndex,
+    required this.rect,
+    required this.widgetRect,
+  });
+
+  @override
+  bool operator ==(Object other) =>
+      other is PdfSelectionInfo &&
+      other.pageIndex == pageIndex &&
+      other.rect == rect &&
+      other.widgetRect == widgetRect;
+
+  @override
+  int get hashCode => Object.hash(pageIndex, rect, widgetRect);
+
+  @override
+  String toString() =>
+      'PdfSelectionInfo(pageIndex: $pageIndex, rect: $rect, widgetRect: $widgetRect)';
+}
+```
+
+對應原生端／Task 6／Task 10 的變更見下方相應審查修正段落。
+
 - [x] **Step 4: 執行測試確認通過**
 
 Run: `flutter test test/reader/pdf_selection_info_test.dart`
@@ -1533,6 +1565,29 @@ import 'percent_rect.dart';
         break;
 ```
 
+**審查修正（最終全分支審查 Finding 1，見 Task 5 對應段落）**：`onSelectionRectComputed` 分支需額外解析原生端一併送來的 `widgetLeft`／`widgetTop`／`widgetRight`／`widgetBottom` 四個 wire 欄位（見下方 Task 8 對應段落，原生端 payload 的變更），組成 `PdfSelectionInfo.widgetRect` 一併傳入建構子。定案版本：
+
+```dart
+      case 'onSelectionRectComputed':
+        final args = call.arguments as Map<Object?, Object?>;
+        widget.onSelectionRectComputed?.call(PdfSelectionInfo(
+          pageIndex: args['pageIndex'] as int,
+          rect: PercentRect(
+            left: (args['left'] as num).toDouble(),
+            top: (args['top'] as num).toDouble(),
+            right: (args['right'] as num).toDouble(),
+            bottom: (args['bottom'] as num).toDouble(),
+          ),
+          widgetRect: PercentRect(
+            left: (args['widgetLeft'] as num).toDouble(),
+            top: (args['widgetTop'] as num).toDouble(),
+            right: (args['widgetRight'] as num).toDouble(),
+            bottom: (args['widgetBottom'] as num).toDouble(),
+          ),
+        ));
+        break;
+```
+
 `_PdfReaderViewState` 內，`MethodChannel? _channel;` 之後新增兩個欄位：
 
 ```dart
@@ -1886,6 +1941,29 @@ class HighlightSelectionOverlayView(
             bottom = (rectPx.bottom - contentBounds.top) / contentBounds.height(),
         )
     }
+
+    /**
+     * 【審查修正，最終全分支審查 Finding 1，見 Task 5 對應段落】換算目前
+     * 框選矩形為相對本 View 自身完整尺寸（`width`/`height`，即含 letterbox
+     * 留白的完整範圍）的百分比值，與 [currentRelativeRect] 的差異僅在
+     * 分母／偏移基準：這裡直接除以本 View 的 `width`/`height`，不扣除／
+     * 不除以 [contentBounds]。供 Dart 端定位浮動 `AnnotationToolbar` 等
+     * UI 使用（見 Task 10 對應段落）——工具列疊在整個 widget 座標系之上，
+     * PAGE_FIT 模式下頁面常因長寬比與螢幕不同產生 letterbox，若拿內容
+     * 相對值直接乘上整個 widget 尺寸，會偏移 letterbox 留白的量。
+     * [currentRelativeRect]（內容相對值）維持不變，持久化／重繪仍使用它。
+     */
+    internal fun currentWidgetRelativeRect(): PercentRectPx {
+        if (width <= 0 || height <= 0) {
+            return PercentRectPx(0f, 0f, 0f, 0f)
+        }
+        return PercentRectPx(
+            left = rectPx.left / width,
+            top = rectPx.top / height,
+            right = rectPx.right / width,
+            bottom = rectPx.bottom / height,
+        )
+    }
 }
 
 /** 原生端內部使用的百分比矩形值物件（0.0-1.0），對應 Dart `PercentRect`。*/
@@ -2121,6 +2199,37 @@ Expected: PASS（含既有 `isDualPageEnabled` 等測試不受影響）
                 "top" to relative.top.toDouble(),
                 "right" to relative.right.toDouble(),
                 "bottom" to relative.bottom.toDouble(),
+            ),
+        )
+    }
+```
+
+**審查修正（最終全分支審查 Finding 1，見 Task 5 對應段落）**：`finishHighlightSelection()` 須同時取得 `currentWidgetRelativeRect()`（Task 7 新增），並在 `onSelectionRectComputed` payload 中新增 `widgetLeft`／`widgetTop`／`widgetRight`／`widgetBottom` 四個 key，與既有內容相對值並存送出；`removeHighlightSelectionOverlay()` 之前的兩個矩形皆須在移除疊加層前先行取得（因為疊加層一旦被移除，`highlightSelectionOverlayView` 即變為 `null`，兩個 `currentXxxRelativeRect()` 都無法再呼叫）。定案版本：
+
+```kotlin
+    private fun finishHighlightSelection() {
+        val relative = highlightSelectionOverlayView?.currentRelativeRect()
+        val widgetRelative = highlightSelectionOverlayView?.currentWidgetRelativeRect()
+        val pageIndex = currentPageIndex
+        removeHighlightSelectionOverlay()
+        if (relative == null || widgetRelative == null) return
+        val minFraction = 0.01f
+        if ((relative.right - relative.left) < minFraction || (relative.bottom - relative.top) < minFraction) {
+            channel.invokeMethod("onSelectionCanceled", null)
+            return
+        }
+        channel.invokeMethod(
+            "onSelectionRectComputed",
+            mapOf(
+                "pageIndex" to pageIndex,
+                "left" to relative.left.toDouble(),
+                "top" to relative.top.toDouble(),
+                "right" to relative.right.toDouble(),
+                "bottom" to relative.bottom.toDouble(),
+                "widgetLeft" to widgetRelative.left.toDouble(),
+                "widgetTop" to widgetRelative.top.toDouble(),
+                "widgetRight" to widgetRelative.right.toDouble(),
+                "widgetBottom" to widgetRelative.bottom.toDouble(),
             ),
         )
     }
@@ -2697,6 +2806,18 @@ import '../reader/pdf_selection_info.dart';
   }
 ```
 
+**審查修正（最終全分支審查 Finding 1，見 Task 5 對應段落；問題根源）**：上方 `_pdfAnnotationToolbarTop` 直接沿用 EPUB 版本 `_annotationToolbarTop` 的公式，把 `selection.rect`（相對 bitmap 內容範圍、不含 letterbox 留白的百分比值）乘上 `size`（整個 widget 尺寸）——這個公式對 EPUB 是對的（Readium 回報的選取範圍本就相對整個容器，無 letterbox 概念），但直接搬到 PDF 是錯的：PAGE_FIT 模式下頁面長寬比與螢幕不同時會產生 letterbox，把內容相對值當作 widget 相對值使用會讓浮動工具列偏移留白的量。改為使用 `selection.widgetRect`（Task 5 新增，相對整個 widget 尺寸、含 letterbox 的百分比值）。定案版本：
+
+```dart
+  double _pdfAnnotationToolbarTop(PdfSelectionInfo selection, Size size) {
+    final topAboveSelection =
+        selection.widgetRect.top * size.height - _annotationToolbarHeight - _annotationToolbarGap;
+    if (topAboveSelection >= 0) return topAboveSelection;
+    final belowSelection = selection.widgetRect.bottom * size.height + _annotationToolbarGap;
+    return belowSelection.clamp(0.0, size.height - _annotationToolbarHeight);
+  }
+```
+
 - [x] **Step 6: 於 `_handlePageRendered` 觸發初始標記載入**
 
 `_handlePageRendered` 方法改為：
@@ -2744,6 +2865,20 @@ import '../reader/pdf_selection_info.dart';
             if (pdfSelection != null)
               Positioned(
                 left: (pdfSelection.rect.left * size.width).clamp(0.0, size.width),
+                top: _pdfAnnotationToolbarTop(pdfSelection, size),
+                child: AnnotationToolbar(
+                  onStyleSelected: _handlePdfHighlightStyleSelected,
+                  onNotePressed: _handlePdfNotePressed,
+                ),
+              ),
+```
+
+**審查修正（最終全分支審查 Finding 1，同上）**：`Positioned.left` 同樣誤用 `pdfSelection.rect`（內容相對值）乘上整個 widget 寬度，改用 `pdfSelection.widgetRect`。定案版本：
+
+```dart
+            if (pdfSelection != null)
+              Positioned(
+                left: (pdfSelection.widgetRect.left * size.width).clamp(0.0, size.width),
                 top: _pdfAnnotationToolbarTop(pdfSelection, size),
                 child: AnnotationToolbar(
                   onStyleSelected: _handlePdfHighlightStyleSelected,
