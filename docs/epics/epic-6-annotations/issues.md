@@ -49,7 +49,7 @@
 
 ## Issue 2：EPUB 劃線與備註
 
-**Status:** ready-for-agent
+**Status:** ✅ 已完成並合併（PR #50，`worktree-epic6-issue2-epub-highlights` → `main`）——依 `plans/plan-issue-2.md` 11 個 Task 實作：`highlights`／`notes` 表與累加式 v8→v9 schema migration（含可為空的 `highlight_id REFERENCES highlights(id) ON DELETE SET NULL`）、`HighlightsRepository`／`NotesRepository`（CRUD）、`HighlightStyle`／`Highlight`／`Note` 模型、劃線／備註合併排序純函式 `mergeAnnotations`、備註文字輸入/編輯共用 Dialog、`AnnotationToolbar` 浮動工具列 Widget（螢光筆三色＋底線＋備註）、`NotesBottomSheet`「✏️ 劃線與備註」分頁正式生效、`EpubReaderView.dart`／`.kt` 新增選取事件／標記啟用事件／`setDecorations` 契約與原生端選字攔截／Decorator 疊加／標記點擊、`ReaderScreen` 接上 EPUB 劃線/備註端到端流程。經審查修正：`mergeAnnotations` 孤兒備註（`note.highlightId` 指向清單外的 highlight 時）改為防禦性退化為純備註顯示而非消失、`NotesBottomSheet` 收斂重複的批次刪除確認 `AlertDialog` 為共用 `_confirmDeleteAll`（見 `tmp/epic-6/reviews/review-issue-2.md` Spec 3／Standards 2）、`NotesBottomSheet` 過時類別註解修正、`plan-issue-2.md` 補齊各 Task/Step 完成勾選（審查發現遺漏）。`flutter test`（全專案 445 個）全過、`flutter analyze` 乾淨、`flutter build apk --debug` 建置成功。**真機驗證現況**：`integration_test/epub_highlights_notes_test.dart` 已撰寫並於真機執行兩次通過（repository 驅動的端到端流程——清單顯示、跳轉、編輯、單筆刪除），但原生長按選字手勢本身觸發浮動工具列、Decorator 視覺樣式渲染、直排/橫排切換下劃線視覺一致性、標記點擊啟用編輯/刪除 Dialog 這 4 項屬於 Flutter `integration_test` 無法可靠模擬 `PlatformView` 內部 WebView 觸控事件的已知限制，仍待人工於真機操作逐項驗證（詳見 `plan-issue-2.md` Task 11 Step 1 註解中的「真機人工驗證清單」）。
 
 **依賴：** Issue 1（「✏️ 劃線與備註」分頁的 Bottom Sheet 外殼已存在，本工單填入真正內容）
 
@@ -77,14 +77,14 @@
 
 **驗收標準：**
 
-- [ ] `highlights`／`notes` 表與累加式 migration 正確建立（含 `highlight_id` FK）
-- [ ] EPUB 原生選字手勢正確觸發浮動工具列（螢光筆三色、底線、備註）
-- [ ] 劃線與備註可獨立建立，純備註有固定樣式的畫面指示
-- [ ] 批次刪除劃線後，依附備註正確退化為純備註（FK `ON DELETE SET NULL` 驗證）
-- [ ] 「✏️ 劃線與備註」分頁完整可用：合併顯示、依位置排序、200ms 內跳轉、編輯備註、單筆刪除、批次刪除（劃線/備註各自獨立，需確認）
-- [ ] 直排/橫排切換下劃線視覺基本一致（真機驗證）
-- [ ] 上述測試皆通過，`flutter analyze` 乾淨
-- [ ] 真機整合測試涵蓋 EPUB 選字建立劃線/備註、視覺渲染、直橫排切換的端到端流程
+- [x] `highlights`／`notes` 表與累加式 migration 正確建立（含 `highlight_id` FK）
+- [ ] EPUB 原生選字手勢正確觸發浮動工具列（螢光筆三色、底線、備註）——程式碼已實作，尚待真機人工驗證
+- [ ] 劃線與備註可獨立建立，純備註有固定樣式的畫面指示——資料層邏輯已測試，Decorator 視覺樣式尚待真機人工驗證
+- [x] 批次刪除劃線後，依附備註正確退化為純備註（FK `ON DELETE SET NULL` 驗證）
+- [x] 「✏️ 劃線與備註」分頁完整可用：合併顯示、依位置排序、200ms 內跳轉、編輯備註、單筆刪除、批次刪除（劃線/備註各自獨立，需確認）
+- [ ] 直排/橫排切換下劃線視覺基本一致（真機驗證）——尚待真機人工驗證
+- [x] 上述測試皆通過，`flutter analyze` 乾淨
+- [ ] 真機整合測試涵蓋 EPUB 選字建立劃線/備註、視覺渲染、直橫排切換的端到端流程——repository 驅動的端到端流程已於真機執行並通過兩次；原生選字手勢、Decorator 視覺渲染、直橫排一致性仍待人工於真機操作驗證
 
 **Blocked by：** Issue 1
 
