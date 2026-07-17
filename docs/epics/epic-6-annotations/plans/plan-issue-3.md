@@ -537,7 +537,7 @@ git commit -m "feat(epic-6): Highlight／Note 新增 PDF 頁碼與矩形座標�
 - Consumes: Task 2 的 `Highlight`/`Note` PDF 欄位。
 - Produces: `highlights`／`notes` 表新增 `pdf_page_index`/`pdf_rect_json` 欄位，供 Task 4 的 Repository 消費。
 
-- [ ] **Step 1: 寫失敗測試**
+- [x] **Step 1: 寫失敗測試**
 
 於 `app/test/library/sqlite_library_repository_test.dart` 檔案結尾（最後一個 `}` 之前）新增：
 
@@ -673,12 +673,12 @@ git commit -m "feat(epic-6): Highlight／Note 新增 PDF 頁碼與矩形座標�
   });
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/library/sqlite_library_repository_test.dart`
 Expected: FAIL（`no such column: pdf_page_index`，因為 schema 尚未更新且 `version` 仍為 9）
 
-- [ ] **Step 3: 實作 schema migration**
+- [x] **Step 3: 實作 schema migration**
 
 `app/lib/library/sqlite_library_repository.dart` 的 `version: 9,` 改為：
 
@@ -782,22 +782,22 @@ Expected: FAIL（`no such column: pdf_page_index`，因為 schema 尚未更新�
         }
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `flutter test test/library/sqlite_library_repository_test.dart`
 Expected: PASS（全部測試綠燈，含既有 v1→v9 系列遷移測試不受影響）
 
-- [ ] **Step 5: 執行全專案測試確認通過**
+- [x] **Step 5: 執行全專案測試確認通過**
 
 Run: `flutter test`
 Expected: 全數 PASS
 
-- [ ] **Step 6: 執行 `flutter analyze` 確認乾淨**
+- [x] **Step 6: 執行 `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app/lib/library/sqlite_library_repository.dart app/test/library/sqlite_library_repository_test.dart
