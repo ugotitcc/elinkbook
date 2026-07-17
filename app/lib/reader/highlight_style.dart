@@ -43,14 +43,14 @@ enum HighlightStyle {
 }
 
 /// 依樣式＋目前主題 primary 色，換算成原生 Decoration API 所需的完整
-/// ARGB `int` 色值（Dart `Color.value` 與 Android `Color` int 皆為
-/// `0xAARRGGBB` 版面，可直接透傳給原生端，見 Global Constraints「色彩
-/// 決策收斂在 Dart 端」）。純函式，不依賴 `BuildContext`——呼叫端自行讀取
-/// `Theme.of(context).colorScheme.primary` 後傳入，維持本函式可獨立
-/// 單元測試。實作本身不再需要 `switch`——[HighlightStyle.fixedTint] 非
-/// null 時直接採用，僅 `underline`（`fixedTint == null`）才退回呼叫端
+/// ARGB `int` 色值（Dart `Color.toARGB32()`〔審查修正：`Color.value` 已於
+/// Flutter SDK deprecated，`toARGB32()` 是行為完全相同的替代方法〕與 Android
+/// `Color` int 皆為 `0xAARRGGBB` 版面，可直接透傳給原生端，見 Global
+/// Constraints「色彩決策收斂在 Dart 端」）。純函式，不依賴 `BuildContext`
+/// ——呼叫端自行讀取 `Theme.of(context).colorScheme.primary` 後傳入，維持
+/// 本函式可獨立單元測試。實作本身不再需要 `switch`——[HighlightStyle.fixedTint]
+/// 非 null 時直接採用，僅 `underline`（`fixedTint == null`）才退回呼叫端
 /// 傳入的 [primaryColor]。
 int highlightStyleTint(HighlightStyle style, {required Color primaryColor}) {
-  // ignore: deprecated_member_use
-  return (style.fixedTint ?? primaryColor).value;
+  return (style.fixedTint ?? primaryColor).toARGB32();
 }

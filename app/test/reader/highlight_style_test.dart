@@ -2,22 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/reader/highlight_style.dart';
 
-// ignore_for_file: deprecated_member_use
-
 void main() {
   test('highlighterYellow/Pink/Blue 回傳各自固定色票，忽略 primaryColor', () {
     const arbitraryPrimary = Color(0xFF000000);
     expect(
       highlightStyleTint(HighlightStyle.highlighterYellow, primaryColor: arbitraryPrimary),
-      highlighterYellowTint.value,
+      highlighterYellowTint.toARGB32(),
     );
     expect(
       highlightStyleTint(HighlightStyle.highlighterPink, primaryColor: arbitraryPrimary),
-      highlighterPinkTint.value,
+      highlighterPinkTint.toARGB32(),
     );
     expect(
       highlightStyleTint(HighlightStyle.highlighterBlue, primaryColor: arbitraryPrimary),
-      highlighterBlueTint.value,
+      highlighterBlueTint.toARGB32(),
     );
   });
 
@@ -25,7 +23,7 @@ void main() {
     const primary = Color(0xFF123456);
     expect(
       highlightStyleTint(HighlightStyle.underline, primaryColor: primary),
-      primary.value,
+      primary.toARGB32(),
     );
   });
 
