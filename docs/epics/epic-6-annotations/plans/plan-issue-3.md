@@ -2237,9 +2237,15 @@ import org.junit.Test
 
 class PdfAnnotationOverlayTest {
 
+    // 【審查修正，Task 9 實作發現】parsePdfAnnotationOverlays 宣告於
+    // PdfReaderView 的 companion object 內，從外部類別呼叫時必須加上
+    // `PdfReaderView.` 前綴（Kotlin 不會自動把 companion object 成員
+    // 帶入其他檔案的呼叫範圍），比照本檔案既有 isDualPageEnabled／
+    // pairIndices 等測試呼叫的既有慣例。
+
     @Test
     fun `正確解析完整欄位的單筆標記`() {
-        val list = parsePdfAnnotationOverlays(listOf(
+        val list = PdfReaderView.parsePdfAnnotationOverlays(listOf(
             mapOf(
                 "pageIndex" to 3,
                 "left" to 0.1,
@@ -2258,7 +2264,7 @@ class PdfAnnotationOverlayTest {
 
     @Test
     fun `缺少必要數值欄位的項目略過、不影響其餘項目`() {
-        val list = parsePdfAnnotationOverlays(listOf(
+        val list = PdfReaderView.parsePdfAnnotationOverlays(listOf(
             mapOf("pageIndex" to 1, "left" to 0.0, "top" to 0.0, "right" to 1.0), // 缺 bottom/tint
             mapOf(
                 "pageIndex" to 2, "left" to 0.0, "top" to 0.0, "right" to 1.0, "bottom" to 1.0,
@@ -2271,7 +2277,7 @@ class PdfAnnotationOverlayTest {
 
     @Test
     fun `isUnderline／isNoteOnly 缺席時預設為 false`() {
-        val list = parsePdfAnnotationOverlays(listOf(
+        val list = PdfReaderView.parsePdfAnnotationOverlays(listOf(
             mapOf(
                 "pageIndex" to 0, "left" to 0.0, "top" to 0.0, "right" to 1.0, "bottom" to 1.0,
                 "tint" to 1,
