@@ -42,7 +42,7 @@
 - Consumes: 無（Issue 2 已建立的 `PercentRect`）。
 - Produces: `PercentRect.toJson() → String`／`PercentRect.fromJson(String) → PercentRect`，供 Task 2（`Highlight`/`Note` 新增 `pdfRect` 欄位持久化）消費。
 
-- [ ] **Step 1: 寫失敗測試**
+- [x] **Step 1: 寫失敗測試**
 
 於 `app/test/reader/percent_rect_test.dart` 檔案結尾（最後一個 `}` 之前）新增：
 
@@ -54,12 +54,12 @@
   });
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/reader/percent_rect_test.dart`
 Expected: FAIL（`toJson`/`fromJson` 尚不存在，編譯錯誤）
 
-- [ ] **Step 3: 實作**
+- [x] **Step 3: 實作**
 
 `app/lib/reader/percent_rect.dart` 頂部新增：
 
@@ -91,17 +91,17 @@ import 'dart:convert';
   }
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `flutter test test/reader/percent_rect_test.dart`
 Expected: PASS
 
-- [ ] **Step 5: 執行 `flutter analyze` 確認乾淨**
+- [x] **Step 5: 執行 `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/reader/percent_rect.dart app/test/reader/percent_rect_test.dart
@@ -124,7 +124,7 @@ git commit -m "feat(epic-6): PercentRect 新增 JSON 序列化供 PDF 劃線座�
 - Consumes: Task 1 的 `PercentRect.toJson()`/`fromJson()`。
 - Produces: `Highlight`/`Note` 新增 `pdfPageIndex: int?`／`pdfRect: PercentRect?` 欄位，供 Task 4（排序）、Task 5（wire 格式）、Task 10（`ReaderScreen`）消費。
 
-- [ ] **Step 1: 寫失敗測試（`highlight_test.dart` 新增案例）**
+- [x] **Step 1: 寫失敗測試（`highlight_test.dart` 新增案例）**
 
 於 `app/test/reader/highlight_test.dart` 頂部新增 import：
 
@@ -172,12 +172,12 @@ import 'package:elinkbook/reader/percent_rect.dart';
   });
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/reader/highlight_test.dart`
 Expected: FAIL（`Highlight` 尚無 `pdfPageIndex`/`pdfRect` 建構參數，編譯錯誤）
 
-- [ ] **Step 3: 修改 `Highlight`**
+- [x] **Step 3: 修改 `Highlight`**
 
 `app/lib/reader/highlight.dart` 頂部新增：
 
@@ -269,12 +269,12 @@ class Highlight {
 }
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `flutter test test/reader/highlight_test.dart`
 Expected: PASS（含既有 Issue 2 測試不受影響）
 
-- [ ] **Step 5: 寫失敗測試（`note_test.dart` 新增案例）**
+- [x] **Step 5: 寫失敗測試（`note_test.dart` 新增案例）**
 
 於 `app/test/reader/note_test.dart` 頂部新增 import：
 
@@ -324,12 +324,12 @@ import 'package:elinkbook/reader/percent_rect.dart';
   });
 ```
 
-- [ ] **Step 6: 執行測試確認失敗**
+- [x] **Step 6: 執行測試確認失敗**
 
 Run: `flutter test test/reader/note_test.dart`
 Expected: FAIL（`Note` 尚無 `pdfPageIndex`/`pdfRect` 建構參數，編譯錯誤）
 
-- [ ] **Step 7: 修改 `Note`**
+- [x] **Step 7: 修改 `Note`**
 
 `app/lib/reader/note.dart` 頂部新增：
 
@@ -437,12 +437,12 @@ class Note {
 }
 ```
 
-- [ ] **Step 8: 執行測試確認通過**
+- [x] **Step 8: 執行測試確認通過**
 
 Run: `flutter test test/reader/note_test.dart`
 Expected: PASS
 
-- [ ] **Step 9: 更新測試 Fake（`FakeHighlightsRepository`／`FakeNotesRepository`）**
+- [x] **Step 9: 更新測試 Fake（`FakeHighlightsRepository`／`FakeNotesRepository`）**
 
 `app/test/support/fake_highlights_repository.dart` 的 `insert` 方法內，`_storage.add(Highlight(...))` 補上兩個新欄位：
 
@@ -508,17 +508,17 @@ Expected: PASS
 
 `copyWith` 呼叫（`updateText` 方法內）不需改動——`Note.copyWith` 已於 Step 7 保留 `pdfPageIndex`/`pdfRect`。
 
-- [ ] **Step 10: 執行全專案測試確認通過**
+- [x] **Step 10: 執行全專案測試確認通過**
 
 Run: `flutter test`
 Expected: 全數 PASS（Fake 修改不影響既有依賴它們的 Issue 1/2 測試——排序鍵在 EPUB-only 情境下 `pdfPageIndex` 恆 null，退回 `progression`，行為與修改前一致）
 
-- [ ] **Step 11: 執行 `flutter analyze` 確認乾淨**
+- [x] **Step 11: 執行 `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 12: Commit**
+- [x] **Step 12: Commit**
 
 ```bash
 git add app/lib/reader/highlight.dart app/lib/reader/note.dart app/test/reader/highlight_test.dart app/test/reader/note_test.dart app/test/support/fake_highlights_repository.dart app/test/support/fake_notes_repository.dart
