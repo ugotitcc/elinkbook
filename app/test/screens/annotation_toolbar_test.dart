@@ -33,6 +33,36 @@ void main() {
     expect(selected, HighlightStyle.highlighterYellow);
   });
 
+  testWidgets('點擊粉色螢光筆按鈕觸發 onStyleSelected(highlighterPink)', (tester) async {
+    HighlightStyle? selected;
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: AnnotationToolbar(
+          onStyleSelected: (style) => selected = style,
+          onNotePressed: () {},
+        ),
+      ),
+    ));
+
+    await tester.tap(find.byKey(const Key('annotation_toolbar_highlighter_pink')));
+    expect(selected, HighlightStyle.highlighterPink);
+  });
+
+  testWidgets('點擊藍色螢光筆按鈕觸發 onStyleSelected(highlighterBlue)', (tester) async {
+    HighlightStyle? selected;
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: AnnotationToolbar(
+          onStyleSelected: (style) => selected = style,
+          onNotePressed: () {},
+        ),
+      ),
+    ));
+
+    await tester.tap(find.byKey(const Key('annotation_toolbar_highlighter_blue')));
+    expect(selected, HighlightStyle.highlighterBlue);
+  });
+
   testWidgets('點擊底線按鈕觸發 onStyleSelected(underline)', (tester) async {
     HighlightStyle? selected;
     await tester.pumpWidget(MaterialApp(
