@@ -3029,12 +3029,22 @@ import org.readium.r2.navigator.util.BaseActionModeCallback
      * 做額外縮放/位移變換，故 `Selection.rect` 可視為已經是相對
      * [container] 座標系的量測結果，不需要額外的座標轉換——此假設留待
      * Task 11 真機測試驗證（見 issues.md 驗收標準）。
+     *
+     * 【Task 9 實作階段審查修正】`Selection.rect` 的 Kotlin 宣告型別是
+     * `RectF?`（可空），而非 javap 反編譯 bytecode 表面看到的
+     * `RectF`——Kotlin 的可空性是編譯器層級中繼資料，不反映在 JVM
+     * bytecode 的欄位型別本身，純用 javap 無法偵測到這個落差，只有真正
+     * 跑 Kotlin 編譯器才會擋下非 safe-call 存取。`rect` 為 `null` 時直接
+     * 靜默不回報這次選取事件（比照本檔案既有對非致命/背景訊號的處理
+     * 原則，例如 `jumpToLocator` 對無效 `locatorJson` 的靜默忽略）——
+     * 使用者只是這一次選取沒有觸發浮動工具列，並非致命錯誤，不需要
+     * 更複雜的退回方案（例如假想一個全零矩形）。
      */
     private fun reportSelectionChanged(selection: Selection) {
         val width = container.width.toFloat()
         val height = container.height.toFloat()
         if (width <= 0 || height <= 0) return
-        val rect = selection.rect
+        val rect = selection.rect ?: return
         channel.invokeMethod(
             "onSelectionChanged",
             mapOf(
