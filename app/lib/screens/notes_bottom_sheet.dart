@@ -13,9 +13,11 @@ import 'note_edit_dialog.dart';
 
 /// 統一的「筆記」入口 Bottom Sheet 外殼（epic-6-annotations Issue 1，
 /// spec.md「統一入口與 Bottom Sheet」）：帶「🔖 書籤」／「✏️ 劃線與備註」
-/// 兩個分頁籤，兩分頁底下的資料層完全獨立（design.md 決策 #1）。本 Issue
-/// 只完整實作「書籤」分頁；「劃線與備註」分頁本 Issue 僅顯示空狀態佔位符，
-/// 真正內容由 Issue 2（EPUB）／Issue 3（PDF）建立。
+/// 兩個分頁籤，兩分頁底下的資料層完全獨立（design.md 決策 #1）。「書籤」
+/// 分頁於 Issue 1 完整實作；「劃線與備註」分頁於 Issue 2 針對流式 EPUB
+/// 正式生效（`highlightsRepository`／`notesRepository` 皆提供時），PDF
+/// 支援留待 Issue 3；未提供這兩個 repository 時（FXL、尚未支援的 PDF）
+/// 仍維持空狀態佔位符。
 class NotesBottomSheet extends StatefulWidget {
   final String bookId;
   final BookmarksRepository bookmarksRepository;
