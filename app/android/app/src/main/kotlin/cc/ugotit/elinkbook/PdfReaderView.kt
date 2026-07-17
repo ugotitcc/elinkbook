@@ -98,6 +98,10 @@ class PdfReaderView(
     private var highlightAnchor: PointF? = null
     private var highlightSelectionActive: Boolean = false
 
+    // Dart 端送來的目前應顯示標記清單（Issue 3 `refreshAnnotations`），
+    // 依 pageIndex 分組供 renderPageBitmap() 逐頁疊加繪製。
+    private var pageAnnotations: List<PdfAnnotationOverlay> = emptyList()
+
     // 解析自 Dart DualPageMode.name 字串，預設 AUTO，與
     // BookReaderPrefs.dualPageMode 為 null 時的語意一致（epic-16-dual-page）。
     private var dualPageMode: DualPageMode = DualPageMode.AUTO
@@ -285,6 +289,42 @@ class PdfReaderView(
         }
 
         /**
+         * 原生端內部使用的單筆標記疊加資料（epic-6-annotations Issue 3）。
+         * 對應 Dart `PdfAnnotationDecoration.toWire()`。
+         */
+        internal data class PdfAnnotationOverlay(
+            val pageIndex: Int,
+            val left: Float,
+            val top: Float,
+            val right: Float,
+            val bottom: Float,
+            val tint: Int,
+            val isUnderline: Boolean,
+            val isNoteOnly: Boolean,
+        )
+
+        /**
+         * 解析 Dart 端 `refreshAnnotations` 送來的標記清單。單筆缺少必要
+         * 數值欄位時該筆略過，不影響其餘項目解析（比照本檔案既有
+         * `parseCropRect` 對非致命錯誤的處理原則）。抽成 `internal` 純
+         * 函式，可脫離真機直接以 JVM 單元測試涵蓋（比照
+         * `isDualPageEnabled` 等既有先例）。
+         */
+        internal fun parsePdfAnnotationOverlays(list: List<Map<String, Any?>>): List<PdfAnnotationOverlay> {
+            return list.mapNotNull { entry ->
+                val pageIndex = entry["pageIndex"] as? Int ?: return@mapNotNull null
+                val left = (entry["left"] as? Number)?.toFloat() ?: return@mapNotNull null
+                val top = (entry["top"] as? Number)?.toFloat() ?: return@mapNotNull null
+                val right = (entry["right"] as? Number)?.toFloat() ?: return@mapNotNull null
+                val bottom = (entry["bottom"] as? Number)?.toFloat() ?: return@mapNotNull null
+                val tint = (entry["tint"] as? Number)?.toInt() ?: return@mapNotNull null
+                val isUnderline = entry["isUnderline"] as? Boolean ?: false
+                val isNoteOnly = entry["isNoteOnly"] as? Boolean ?: false
+                PdfAnnotationOverlay(pageIndex, left, top, right, bottom, tint, isUnderline, isNoteOnly)
+            }
+        }
+
+        /**
          * 目前狀態是否允許開始長按框選劃線範圍（epic-6-annotations
          * Issue 3，plan-issue-3.md Global Constraints「長按框選僅支援
          * PAGE_FIT」）：裁切編輯模式中、非 PAGE_FIT 顯示模式、或雙頁模式
@@ -342,6 +382,13 @@ class PdfReaderView(
             }
             "exitCropEditMode" -> {
                 exitCropEditMode()
+                result.success(null)
+            }
+            "refreshAnnotations" -> {
+                @Suppress("UNCHECKED_CAST")
+                val list = call.argument<List<Map<String, Any?>>>("annotations") ?: emptyList()
+                pageAnnotations = parsePdfAnnotationOverlays(list)
+                renderCurrentSpread()
                 result.success(null)
             }
             "beginAnnotationSelection" -> {
@@ -637,10 +684,107 @@ class PdfReaderView(
                 postScale(scale, scale)
             }
             page.render(bitmap, null, matrix, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+            drawAnnotationOverlays(bitmap, pageIndex, scale)
             return bitmap
         } finally {
             page.close()
         }
+    }
+
+    /**
+     * 於 [bitmap] 上疊加繪製 [pageIndex] 這一頁的所有劃線/備註（
+     * epic-6-annotations Issue 3）。刻意放在 `renderPageBitmap()` 內、單頁
+     * 內容渲染完成後立即繪製（而非等拼接/加粗/fit/濾鏡都套用完才疊加）：
+     * (a) 雙頁模式下左右頁各自呼叫本函式一次，天然正確疊加、不需處理拼接
+     * 後的座標換算；(b) 旋轉/裁切/版面調整觸發的重新渲染會自動重跑整個
+     * pipeline、連帶重繪標記，不需要額外的旋轉感知邏輯；(c) 百分比座標
+     * 直接乘上 [bitmap] 自身寬高即為疊加位置——因為框選當下的座標協定
+     * 本來就是「相對目前顯示中 bitmap 內容範圍」（見 plan-issue-3.md
+     * Global Constraints「PDF 座標協定」），bitmap 本身不含 letterbox
+     * 留白，留白只發生在 ImageView 用 FIT_CENTER 顯示 bitmap 到 View
+     * 的階段，該階段的縮放/置中會自動、成比例地把已疊加好的內容一併帶到
+     * 正確視覺位置。
+     *
+     * 【審查修正，見 review 2.1】底線粗細／釘標尺寸須以 [scale]（即
+     * `PdfImageProcessor.pageRenderScale(density)`，本方法渲染 bitmap 時
+     * 實際採用的縮放係數）為基準，不可用畫面 DP 密度——`bitmap` 的實際
+     * 像素尺寸是頁面點數乘上 [scale] 決定的，常遠大於螢幕 DP，用 DP
+     * 密度換算會讓筆畫在高解析度 bitmap 上顯得極細/極小。底線繪製點為
+     * `bottom - strokeWidth / 2`（而非直接畫在 `bottom`）——`Canvas.drawLine`
+     * 的筆畫以座標為中線向兩側延伸，選取範圍貼近頁面底部時，若畫在
+     * `bottom` 上，一半線寬會被畫布邊界裁掉。
+     */
+    private fun drawAnnotationOverlays(bitmap: Bitmap, pageIndex: Int, scale: Float) {
+        val matching = pageAnnotations.filter { it.pageIndex == pageIndex }
+        if (matching.isEmpty()) return
+        val canvas = android.graphics.Canvas(bitmap)
+        for (ann in matching) {
+            val left = ann.left * bitmap.width
+            val top = ann.top * bitmap.height
+            val right = ann.right * bitmap.width
+            val bottom = ann.bottom * bitmap.height
+            if (ann.isUnderline) {
+                // 底線樣式：PDF 點陣圖無文字層可錨定，改繪製矩形底部的
+                // 一條實色線段（design.md 決策 #5 的視覺意圖延伸，不同於
+                // EPUB 端 Readium Decoration.Style.Underline 的文字級底線）。
+                val paint = android.graphics.Paint().apply {
+                    color = ann.tint
+                    style = android.graphics.Paint.Style.STROKE
+                    strokeWidth = 2f * scale
+                    strokeCap = android.graphics.Paint.Cap.ROUND
+                }
+                val lineY = bottom - paint.strokeWidth / 2
+                canvas.drawLine(left, lineY, right, lineY, paint)
+            } else {
+                // 螢光筆三色／純備註灰底皆屬此類（tint 本身已含透明度）。
+                val fillPaint = android.graphics.Paint().apply {
+                    color = ann.tint
+                    style = android.graphics.Paint.Style.FILL
+                }
+                canvas.drawRect(left, top, right, bottom, fillPaint)
+            }
+            if (ann.isNoteOnly) {
+                drawNoteOnlyMarker(canvas, right, top, scale)
+            }
+        }
+    }
+
+    /**
+     * 【審查修正，見 review 2.2】純備註畫面指示（design.md 決策 #2）改用
+     * 純黑白、高對比度的手繪向量圖釘（圓形釘頭＋三角釘尖），不使用系統
+     * Emoji（原本的 `canvas.drawText("📌", ...)`）——elinkBook 的核心場景
+     * 之一是 E-Ink 黑白螢幕，系統 Emoji 經點陣化後會因失去色彩/漸層細節
+     * 而模糊、對比度不足。比照本檔案 `CropOverlayView.kt` 既有先例——裁切
+     * 確認按鈕同樣是刻意手繪的黑底白勾（非圖示字型），理由記載於其
+     * KDoc：「確保在 E-Ink 16 階灰階裝置...與一般彩色螢幕上都維持清楚
+     * 可辨的對比度」。[right]／[top] 為該筆標記矩形的右上角像素座標，圖釘
+     * 錨點置於此角落內側一點的位置。
+     */
+    private fun drawNoteOnlyMarker(canvas: android.graphics.Canvas, right: Float, top: Float, scale: Float) {
+        val markerRadius = 5f * scale
+        val markerCx = right - markerRadius - 2f * scale
+        val markerCy = top + markerRadius + 2f * scale
+        val fillPaint = android.graphics.Paint().apply {
+            color = android.graphics.Color.BLACK
+            style = android.graphics.Paint.Style.FILL
+            isAntiAlias = true
+        }
+        val outlinePaint = android.graphics.Paint().apply {
+            color = android.graphics.Color.WHITE
+            style = android.graphics.Paint.Style.STROKE
+            strokeWidth = 1f * scale
+            isAntiAlias = true
+        }
+        val pinPath = android.graphics.Path().apply {
+            moveTo(markerCx - markerRadius, markerCy)
+            lineTo(markerCx, markerCy + markerRadius * 2.2f)
+            lineTo(markerCx + markerRadius, markerCy)
+            close()
+        }
+        canvas.drawPath(pinPath, fillPaint)
+        canvas.drawPath(pinPath, outlinePaint)
+        canvas.drawCircle(markerCx, markerCy, markerRadius, fillPaint)
+        canvas.drawCircle(markerCx, markerCy, markerRadius, outlinePaint)
     }
 
     /**

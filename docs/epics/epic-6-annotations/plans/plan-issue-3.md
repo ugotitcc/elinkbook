@@ -2223,7 +2223,7 @@ git commit -m "feat(epic-6): PdfReaderView.kt 改為接收 Dart 端手勢事件�
 - Consumes: Task 6 的 Dart 端 `refreshAnnotations` wire 格式（見 `PdfAnnotationDecoration.toWire()`）。
 - Produces: `PdfAnnotationOverlay`（`internal data class`，`parsePdfAnnotationOverlays` 純函式可獨立單元測試）；原生端於 `renderPageBitmap()` 疊加繪製劃線/底線/純備註三種樣式。
 
-- [ ] **Step 1: 寫失敗測試（`PdfAnnotationOverlayTest.kt`）**
+- [x] **Step 1: 寫失敗測試（`PdfAnnotationOverlayTest.kt`）**
 
 建立 `app/android/app/src/test/kotlin/cc/ugotit/elinkbook/PdfAnnotationOverlayTest.kt`：
 
@@ -2283,12 +2283,12 @@ class PdfAnnotationOverlayTest {
 }
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `cd app/android && ./gradlew testDebugUnitTest --tests "cc.ugotit.elinkbook.PdfAnnotationOverlayTest"`
 Expected: FAIL（`PdfAnnotationOverlay`/`parsePdfAnnotationOverlays` 尚不存在，編譯錯誤）
 
-- [ ] **Step 3: 實作 `PdfAnnotationOverlay` 與解析函式**
+- [x] **Step 3: 實作 `PdfAnnotationOverlay` 與解析函式**
 
 `app/android/app/src/main/kotlin/cc/ugotit/elinkbook/PdfReaderView.kt` 的 `companion object` 內（`previousPageStep` 之後）新增：
 
@@ -2338,12 +2338,12 @@ Expected: FAIL（`PdfAnnotationOverlay`/`parsePdfAnnotationOverlays` 尚不存�
     private var pageAnnotations: List<PdfAnnotationOverlay> = emptyList()
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `cd app/android && ./gradlew testDebugUnitTest --tests "cc.ugotit.elinkbook.PdfAnnotationOverlayTest"`
 Expected: PASS
 
-- [ ] **Step 5: 於 `onMethodCall` 新增 `refreshAnnotations` 分支**
+- [x] **Step 5: 於 `onMethodCall` 新增 `refreshAnnotations` 分支**
 
 `onMethodCall` 的 `when (call.method)` 內，`"exitCropEditMode" -> { ... }` 分支之後新增：
 
@@ -2357,7 +2357,7 @@ Expected: PASS
             }
 ```
 
-- [ ] **Step 6: 於 `renderPageBitmap` 疊加繪製標記**
+- [x] **Step 6: 於 `renderPageBitmap` 疊加繪製標記**
 
 `renderPageBitmap(pageIndex: Int): Bitmap` 方法內，`page.render(bitmap, null, matrix, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)` 之後、`return bitmap` 之前新增（`scale` 為該方法內既有的區域變數，緊接在 `page.render(...)` 之前已計算好，直接沿用，不重複計算）：
 
@@ -2465,22 +2465,22 @@ Expected: PASS
     }
 ```
 
-- [ ] **Step 7: 編譯驗證**
+- [x] **Step 7: 編譯驗證**
 
 Run: `cd app && flutter build apk --debug`
 Expected: 建置成功
 
-- [ ] **Step 8: 執行既有 Kotlin 單元測試確認無回歸**
+- [x] **Step 8: 執行既有 Kotlin 單元測試確認無回歸**
 
 Run: `cd app/android && ./gradlew testDebugUnitTest`
 Expected: BUILD SUCCESSFUL（`PdfReaderViewTest`／`PdfContentBoundsTest`／`PdfAnnotationOverlayTest` 皆通過）
 
-- [ ] **Step 9: 執行 `flutter analyze` 確認 Dart 端未受影響**
+- [x] **Step 9: 執行 `flutter analyze` 確認 Dart 端未受影響**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 10: Commit**
+- [x] **Step 10: Commit**
 
 ```bash
 git add app/android/app/src/main/kotlin/cc/ugotit/elinkbook/PdfReaderView.kt app/android/app/src/test/kotlin/cc/ugotit/elinkbook/PdfAnnotationOverlayTest.kt
