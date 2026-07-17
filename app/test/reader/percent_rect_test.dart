@@ -14,4 +14,10 @@ void main() {
     const b = PercentRect(left: 0.15, top: 0.2, right: 0.3, bottom: 0.4);
     expect(a, isNot(b));
   });
+
+  test('toJson／fromJson round-trip 保留所有欄位', () {
+    const rect = PercentRect(left: 0.1, top: 0.2, right: 0.3, bottom: 0.4);
+    final restored = PercentRect.fromJson(rect.toJson());
+    expect(restored, rect);
+  });
 }
