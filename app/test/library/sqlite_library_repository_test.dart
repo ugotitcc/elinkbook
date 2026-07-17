@@ -1135,4 +1135,147 @@ void main() {
     final books = await upgraded.listBooks();
     expect(books.single.title, '既有書籍');
   });
+
+  test('全新安裝的 highlights／notes 表可用（version 9 起 onCreate 已含括）', () async {
+    await repository.insertBook(_book('b_highlight'));
+    final highlightId = await repository.database.insert('highlights', {
+      'book_id': 'b_highlight',
+      'style': 'underline',
+      'epub_locator_json': '{"href":"/c1.xhtml"}',
+      'progression': 0.1,
+    });
+    expect(highlightId, greaterThan(0));
+
+    final noteId = await repository.database.insert('notes', {
+      'book_id': 'b_highlight',
+      'text': '心得',
+      'epub_locator_json': '{"href":"/c1.xhtml"}',
+      'progression': 0.1,
+      'highlight_id': highlightId,
+    });
+    expect(noteId, greaterThan(0));
+
+    final rows = await repository.database
+        .query('notes', where: 'book_id = ?', whereArgs: ['b_highlight']);
+    expect(rows.single['highlight_id'], highlightId);
+  });
+
+  test('既有 version 8 裝置升級到 version 9，highlights／notes 表正確建立', () async {
+    final tempDir = await Directory.systemTemp
+        .createTemp('elinkbook_migration_v8_to_v9_test');
+    addTearDown(() => tempDir.delete(recursive: true));
+    final dbPath = p.join(tempDir.path, 'test.db');
+
+    // 模擬「已存在於 version 8」的舊資料庫：手動以 version 8 當時的完整
+    // schema（books/book_reader_prefs/bookmarks 皆為 version 8 最終樣貌，
+    // 不含 highlights/notes）建立，不透過 SqliteLibraryRepository.open()
+    // （該方法目前的 onCreate 已經是 version 9 的最終 schema，無法用來
+    // 重現「舊裝置」情境，比照 v7→v8 遷移測試既有寫法）。
+    final oldDb = await databaseFactory.openDatabase(
+      dbPath,
+      options: OpenDatabaseOptions(
+        version: 8,
+        onConfigure: (db) async {
+          await db.execute('PRAGMA foreign_keys = ON');
+        },
+        onCreate: (db, version) async {
+          await db.execute('CREATE TABLE groups (name TEXT PRIMARY KEY)');
+          await db.insert('groups', {'name': '未分類'});
+          await db.execute('''
+            CREATE TABLE books (
+              id TEXT PRIMARY KEY,
+              title TEXT NOT NULL,
+              author TEXT,
+              format TEXT NOT NULL,
+              filePath TEXT NOT NULL,
+              source TEXT NOT NULL,
+              coverPath TEXT,
+              progress REAL NOT NULL DEFAULT 0,
+              epubLocator TEXT,
+              pdfPageIndex INTEGER,
+              totalCharacterCount INTEGER,
+              groupName TEXT NOT NULL DEFAULT '未分類',
+              createTime INTEGER NOT NULL,
+              lastReadTime INTEGER NOT NULL
+            )
+          ''');
+          await db.execute('''
+            CREATE TABLE book_reader_prefs (
+              book_id TEXT PRIMARY KEY REFERENCES books(id) ON DELETE CASCADE,
+              font_family TEXT,
+              font_size REAL,
+              font_weight REAL,
+              line_height REAL,
+              paragraph_spacing REAL,
+              page_margins REAL,
+              text_align TEXT,
+              publisher_styles INTEGER,
+              writing_mode_override TEXT,
+              page_turn_mode_override TEXT,
+              screen_orientation_override TEXT,
+              pdf_fit_mode TEXT,
+              pdf_contrast REAL,
+              pdf_brightness REAL,
+              pdf_bold_strength REAL,
+              pdf_crop_mode TEXT,
+              pdf_crop_rect TEXT,
+              dual_page_mode TEXT,
+              dual_page_cover_alone INTEGER,
+              dual_page_direction TEXT,
+              show_header INTEGER,
+              show_footer INTEGER
+            )
+          ''');
+          await db.execute('''
+            CREATE TABLE bookmarks (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              book_id TEXT NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+              name TEXT NOT NULL,
+              epub_locator_json TEXT,
+              progression REAL,
+              pdf_page_index INTEGER
+            )
+          ''');
+        },
+      ),
+    );
+    await oldDb.insert('books', {
+      'id': 'b1',
+      'title': '既有書籍',
+      'format': 'epub',
+      'filePath': 'content://example/b1',
+      'source': 'local',
+      'progress': 0.0,
+      'groupName': '未分類',
+      'createTime': 1000,
+      'lastReadTime': 1000,
+    });
+    await oldDb.close();
+
+    // 重新以目前版本開啟同一個檔案，觸發 onUpgrade（oldVersion=8 →
+    // newVersion=9），驗證 highlights／notes 表確實建立且可寫入。
+    final upgraded = await SqliteLibraryRepository.open(dbPath);
+    addTearDown(() => upgraded.close());
+
+    final highlightId = await upgraded.database.insert('highlights', {
+      'book_id': 'b1',
+      'style': 'highlighterYellow',
+      'epub_locator_json': null,
+      'progression': 0.3,
+    });
+    expect(highlightId, greaterThan(0));
+
+    final noteId = await upgraded.database.insert('notes', {
+      'book_id': 'b1',
+      'text': '升級後新增的備註',
+      'epub_locator_json': null,
+      'progression': 0.3,
+      'highlight_id': null,
+    });
+    expect(noteId, greaterThan(0));
+
+    // 既有書籍資料不受影響。
+    final books = await upgraded.listBooks();
+    expect(books.single.title, '既有書籍');
+  });
 }

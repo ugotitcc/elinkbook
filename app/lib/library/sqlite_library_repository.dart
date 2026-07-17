@@ -24,7 +24,7 @@ class SqliteLibraryRepository implements LibraryRepository {
   static Future<SqliteLibraryRepository> open(String path) async {
     final db = await openDatabase(
       path,
-      version: 8,
+      version: 9,
       onConfigure: (db) async {
         // book_reader_prefs 的 ON DELETE CASCADE 需要外鍵約束真正生效，
         // SQLite 預設不強制外鍵，須逐連線手動開啟（見 epic-3 plan-issue-1）。
@@ -57,6 +57,8 @@ class SqliteLibraryRepository implements LibraryRepository {
         ''');
         await _createBookReaderPrefsTable(db);
         await _createBookmarksTable(db);
+        await _createHighlightsTable(db);
+        await _createNotesTable(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
@@ -116,6 +118,16 @@ class SqliteLibraryRepository implements LibraryRepository {
           // book_reader_prefs 有 CREATE／ALTER 兩條分歧路徑，bookmarks
           // 只有一條路徑）。
           await _createBookmarksTable(db);
+        }
+        if (oldVersion < 9) {
+          // epic-6-annotations Issue 2：劃線／備註功能新增的兩張全新
+          // 資料表。與 bookmarks 表（oldVersion < 8）比照同一原則——
+          // 任何 oldVersion < 9 的裝置都必然還沒有這兩張表，無條件建立
+          // 即可，不需要判斷「表是否已存在」。順序先建 highlights 再建
+          // notes（notes.highlight_id 參照 highlights，見 spec.md「資料
+          // 模型關聯」審查修正 1.1 的程式碼可讀性慣例）。
+          await _createHighlightsTable(db);
+          await _createNotesTable(db);
         }
       },
     );
@@ -232,6 +244,41 @@ class SqliteLibraryRepository implements LibraryRepository {
         epub_locator_json TEXT,
         progression REAL,
         pdf_page_index INTEGER
+      )
+    ''');
+  }
+
+  static Future<void> _createHighlightsTable(Database db) async {
+    // 劃線（epic-6-annotations Issue 2，spec.md「劃線與備註模組」），與
+    // books 表以 book_id 外鍵關聯（比照 bookmarks 既有關聯模式）。本
+    // Issue 只新增 EPUB 相關欄位；PDF 專屬欄位（頁碼＋矩形座標）留待
+    // Issue 3 以後續 migration 補上（見 plan-issue-2.md Global
+    // Constraints，避免預先建立用不到的欄位）。
+    await db.execute('''
+      CREATE TABLE highlights (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        book_id TEXT NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+        style TEXT NOT NULL,
+        epub_locator_json TEXT,
+        progression REAL
+      )
+    ''');
+  }
+
+  static Future<void> _createNotesTable(Database db) async {
+    // 備註（epic-6-annotations Issue 2，spec.md「資料模型關聯」）：
+    // highlight_id 為可空外鍵，ON DELETE SET NULL——批次刪除劃線後，
+    // 依附的備註自動退化為純備註（highlight_id 變 null），不需應用層
+    // 判斷邏輯。建表順序刻意晚於 _createHighlightsTable（程式碼可讀性
+    // 慣例，非技術硬性要求，見 spec.md 審查修正 1.1）。
+    await db.execute('''
+      CREATE TABLE notes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        book_id TEXT NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+        text TEXT NOT NULL,
+        epub_locator_json TEXT,
+        progression REAL,
+        highlight_id INTEGER REFERENCES highlights(id) ON DELETE SET NULL
       )
     ''');
   }
