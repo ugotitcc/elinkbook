@@ -15,6 +15,8 @@ class FakeHighlightsRepository implements HighlightsRepository {
       style: highlight.style,
       epubLocatorJson: highlight.epubLocatorJson,
       progression: highlight.progression,
+      pdfPageIndex: highlight.pdfPageIndex,
+      pdfRect: highlight.pdfRect,
     ));
     return id;
   }
@@ -22,9 +24,12 @@ class FakeHighlightsRepository implements HighlightsRepository {
   @override
   Future<List<Highlight>> listByBook(String bookId) async {
     final list = _storage.where((h) => h.bookId == bookId).toList();
-    list.sort((a, b) => (a.progression ?? 0).compareTo(b.progression ?? 0));
+    list.sort((a, b) => _positionOf(a).compareTo(_positionOf(b)));
     return list;
   }
+
+  double _positionOf(Highlight h) =>
+      (h.pdfPageIndex?.toDouble()) ?? h.progression ?? 0;
 
   @override
   Future<void> delete(int id) async {
