@@ -2,8 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/reader/bookmark.dart';
 import 'package:elinkbook/reader/bookmark_position_context.dart';
+import 'package:elinkbook/reader/annotation_list_item.dart';
+import 'package:elinkbook/reader/highlight.dart';
+import 'package:elinkbook/reader/highlight_style.dart';
+import 'package:elinkbook/reader/note.dart';
 import 'package:elinkbook/screens/notes_bottom_sheet.dart';
 import '../support/fake_bookmarks_repository.dart';
+import '../support/fake_highlights_repository.dart';
+import '../support/fake_notes_repository.dart';
 
 Future<void> _pumpSheet(
   WidgetTester tester, {
@@ -11,6 +17,10 @@ Future<void> _pumpSheet(
   String bookId = 'b1',
   BookmarkPositionContext currentPosition = const BookmarkPositionContext(),
   ValueChanged<Bookmark>? onBookmarkSelected,
+  FakeHighlightsRepository? highlightsRepository,
+  FakeNotesRepository? notesRepository,
+  ValueChanged<AnnotationListItem>? onAnnotationSelected,
+  VoidCallback? onAnnotationsChanged,
 }) async {
   await tester.pumpWidget(MaterialApp(
     home: Scaffold(
@@ -19,6 +29,10 @@ Future<void> _pumpSheet(
         bookmarksRepository: repository,
         currentPosition: currentPosition,
         onBookmarkSelected: onBookmarkSelected ?? (_) {},
+        highlightsRepository: highlightsRepository,
+        notesRepository: notesRepository,
+        onAnnotationSelected: onAnnotationSelected,
+        onAnnotationsChanged: onAnnotationsChanged,
       ),
     ),
   ));
@@ -231,5 +245,230 @@ void main() {
 
     expect(find.text('A'), findsNothing);
     expect(find.text('B'), findsNothing);
+  });
+
+  testWidgets('未提供 highlightsRepository／notesRepository 時，維持 Issue 1 既有空狀態佔位符',
+      (tester) async {
+    final repository = FakeBookmarksRepository();
+    await _pumpSheet(tester, repository: repository);
+
+    await tester.tap(find.byKey(const Key('notes_sheet_tab_annotations')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('notes_sheet_annotations_placeholder')), findsOneWidget);
+  });
+
+  testWidgets('提供兩個 repository 後，「劃線與備註」分頁依位置排序顯示合併清單',
+      (tester) async {
+    final repository = FakeBookmarksRepository();
+    final highlightsRepository = FakeHighlightsRepository();
+    final notesRepository = FakeNotesRepository();
+    final highlightId = await highlightsRepository.insert(const Highlight(
+      bookId: 'b1',
+      style: HighlightStyle.highlighterPink,
+      progression: 0.2,
+    ));
+    await notesRepository.insert(
+      Note(bookId: 'b1', text: '依附備註', progression: 0.2, highlightId: highlightId),
+    );
+    await notesRepository.insert(const Note(bookId: 'b1', text: '純備註', progression: 0.5));
+
+    await _pumpSheet(
+      tester,
+      repository: repository,
+      highlightsRepository: highlightsRepository,
+      notesRepository: notesRepository,
+    );
+    await tester.tap(find.byKey(const Key('notes_sheet_tab_annotations')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('notes_sheet_annotation_list')), findsOneWidget);
+    expect(find.text('螢光筆（粉）'), findsOneWidget);
+    expect(find.text('依附備註'), findsOneWidget);
+    expect(find.text('純備註'), findsOneWidget);
+  });
+
+  testWidgets('點選合併項目觸發 onAnnotationSelected', (tester) async {
+    final repository = FakeBookmarksRepository();
+    final highlightsRepository = FakeHighlightsRepository();
+    final notesRepository = FakeNotesRepository();
+    await highlightsRepository.insert(
+      const Highlight(bookId: 'b1', style: HighlightStyle.underline, progression: 0.1),
+    );
+    AnnotationListItem? selected;
+
+    await _pumpSheet(
+      tester,
+      repository: repository,
+      highlightsRepository: highlightsRepository,
+      notesRepository: notesRepository,
+      onAnnotationSelected: (item) => selected = item,
+    );
+    await tester.tap(find.byKey(const Key('notes_sheet_tab_annotations')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('底線'));
+
+    expect(selected?.highlight?.style, HighlightStyle.underline);
+  });
+
+  testWidgets('編輯備註文字後清單即時反映，且觸發 onAnnotationsChanged', (tester) async {
+    final repository = FakeBookmarksRepository();
+    final highlightsRepository = FakeHighlightsRepository();
+    final notesRepository = FakeNotesRepository();
+    final noteId =
+        await notesRepository.insert(const Note(bookId: 'b1', text: '舊文字', progression: 0.1));
+    var changedCount = 0;
+
+    await _pumpSheet(
+      tester,
+      repository: repository,
+      highlightsRepository: highlightsRepository,
+      notesRepository: notesRepository,
+      onAnnotationsChanged: () => changedCount++,
+    );
+    await tester.tap(find.byKey(const Key('notes_sheet_tab_annotations')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(Key('notes_sheet_annotation_edit_$noteId')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('note_edit_dialog_field')), '新文字');
+    await tester.tap(find.byKey(const Key('note_edit_dialog_confirm')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('新文字'), findsOneWidget);
+    expect(changedCount, greaterThan(0));
+  });
+
+  testWidgets('單筆刪除合併項目時，劃線與備註一併刪除', (tester) async {
+    final repository = FakeBookmarksRepository();
+    final highlightsRepository = FakeHighlightsRepository();
+    final notesRepository = FakeNotesRepository();
+    final highlightId = await highlightsRepository.insert(
+      const Highlight(bookId: 'b1', style: HighlightStyle.underline, progression: 0.1),
+    );
+    await notesRepository.insert(
+      Note(bookId: 'b1', text: '依附備註', progression: 0.1, highlightId: highlightId),
+    );
+
+    await _pumpSheet(
+      tester,
+      repository: repository,
+      highlightsRepository: highlightsRepository,
+      notesRepository: notesRepository,
+    );
+    await tester.tap(find.byKey(const Key('notes_sheet_tab_annotations')));
+    await tester.pumpAndSettle();
+
+    final itemKey = 'h${highlightId}_n1';
+    await tester.tap(find.byKey(Key('notes_sheet_annotation_delete_$itemKey')));
+    await tester.pumpAndSettle();
+
+    expect(await highlightsRepository.listByBook('b1'), isEmpty);
+    expect(await notesRepository.listByBook('b1'), isEmpty);
+    expect(find.byKey(const Key('notes_sheet_annotations_placeholder')), findsOneWidget);
+  });
+
+  testWidgets('批次刪除所有劃線：確認對話框顯示正確筆數，確認後劃線清單清空',
+      (tester) async {
+    final repository = FakeBookmarksRepository();
+    final highlightsRepository = FakeHighlightsRepository();
+    final notesRepository = FakeNotesRepository();
+    await highlightsRepository.insert(
+      const Highlight(bookId: 'b1', style: HighlightStyle.underline, progression: 0.1),
+    );
+    await highlightsRepository.insert(
+      const Highlight(bookId: 'b1', style: HighlightStyle.underline, progression: 0.2),
+    );
+
+    await _pumpSheet(
+      tester,
+      repository: repository,
+      highlightsRepository: highlightsRepository,
+      notesRepository: notesRepository,
+    );
+    await tester.tap(find.byKey(const Key('notes_sheet_tab_annotations')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('notes_sheet_delete_all_highlights')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('2'), findsWidgets);
+
+    await tester.tap(find.byKey(const Key('notes_sheet_delete_all_highlights_confirm')));
+    await tester.pumpAndSettle();
+
+    expect(await highlightsRepository.listByBook('b1'), isEmpty);
+    expect(find.byKey(const Key('notes_sheet_annotations_placeholder')), findsOneWidget);
+  });
+
+  testWidgets(
+      '已退化的純備註（highlightId 已為 null，模擬真實資料庫 FK ON DELETE SET NULL '
+      'cascade 之後的狀態——真正的 cascade 行為本身由 Task 4 對真實 SQLite 的 '
+      'notes_repository_test.dart 驗證，本測試不重複模擬那段邏輯，Fake 之間也刻意'
+      '不互相協調）：批次刪除所有劃線後，這筆早已獨立存在的純備註不受影響，仍正確'
+      '顯示在清單中', (tester) async {
+    final repository = FakeBookmarksRepository();
+    final highlightsRepository = FakeHighlightsRepository();
+    final notesRepository = FakeNotesRepository();
+    await highlightsRepository.insert(
+      const Highlight(bookId: 'b1', style: HighlightStyle.underline, progression: 0.1),
+    );
+    // 直接建構「已退化」狀態（highlightId: null），而非先建立一筆連結中的
+    // 備註再期待 Fake 自動模擬 cascade——兩個 Fake 刻意保持互不協調（見
+    // Global Constraints／FakeNotesRepository 既有 KDoc），避免在測試替身
+    // 裡重新實作一份可能與真實資料庫語意逐漸失準的 FK cascade 邏輯。
+    await notesRepository.insert(
+      const Note(bookId: 'b1', text: '已退化的純備註', progression: 0.3, highlightId: null),
+    );
+
+    await _pumpSheet(
+      tester,
+      repository: repository,
+      highlightsRepository: highlightsRepository,
+      notesRepository: notesRepository,
+    );
+    await tester.tap(find.byKey(const Key('notes_sheet_tab_annotations')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('notes_sheet_delete_all_highlights')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('notes_sheet_delete_all_highlights_confirm')));
+    await tester.pumpAndSettle();
+
+    expect(await highlightsRepository.listByBook('b1'), isEmpty);
+    expect(find.text('已退化的純備註'), findsOneWidget);
+    expect(find.byKey(const Key('notes_sheet_annotations_placeholder')), findsNothing);
+  });
+
+  testWidgets('批次刪除所有備註：取消不刪除，確認後備註消失、劃線不受影響', (tester) async {
+    final repository = FakeBookmarksRepository();
+    final highlightsRepository = FakeHighlightsRepository();
+    final notesRepository = FakeNotesRepository();
+    await highlightsRepository.insert(
+      const Highlight(bookId: 'b1', style: HighlightStyle.underline, progression: 0.1),
+    );
+    await notesRepository.insert(const Note(bookId: 'b1', text: '純備註', progression: 0.5));
+
+    await _pumpSheet(
+      tester,
+      repository: repository,
+      highlightsRepository: highlightsRepository,
+      notesRepository: notesRepository,
+    );
+    await tester.tap(find.byKey(const Key('notes_sheet_tab_annotations')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('notes_sheet_delete_all_notes')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('取消'));
+    await tester.pumpAndSettle();
+    expect(await notesRepository.listByBook('b1'), hasLength(1));
+
+    await tester.tap(find.byKey(const Key('notes_sheet_delete_all_notes')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('notes_sheet_delete_all_notes_confirm')));
+    await tester.pumpAndSettle();
+
+    expect(await notesRepository.listByBook('b1'), isEmpty);
+    expect(await highlightsRepository.listByBook('b1'), hasLength(1));
   });
 }

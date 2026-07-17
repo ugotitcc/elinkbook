@@ -3,10 +3,13 @@ import 'package:flutter/services.dart';
 
 import 'app_font.dart';
 import 'dual_page_mode.dart';
+import 'epub_decoration.dart';
 import 'epub_position_info.dart';
+import 'epub_selection_info.dart';
 import 'epub_text_align.dart';
 import 'toc_entry.dart';
 import 'page_turn_mode.dart';
+import 'percent_rect.dart';
 import 'writing_mode.dart';
 
 /// 包裝原生 Android EpubReaderView（Readium kotlin-toolkit）的 Flutter widget，
@@ -71,6 +74,19 @@ class EpubReaderView extends StatefulWidget {
   /// 傳回全書字元數。供呼叫端（ReaderScreen）寫入快取。
   final ValueChanged<int>? onCharacterCountReady;
 
+  /// 使用者原生選字手勢建立/變動選取範圍時觸發（epic-6-annotations
+  /// Issue 2），供呼叫端顯示浮動工具列。
+  final ValueChanged<EpubSelectionInfo>? onSelectionChanged;
+
+  /// 選取範圍被清除時觸發（原生端 ActionMode 銷毀，例如使用者點擊選取
+  /// 範圍以外的地方），供呼叫端收起浮動工具列。
+  final VoidCallback? onSelectionCleared;
+
+  /// 使用者點擊既有劃線/備註標記時觸發，傳回該筆標記的 id 字串（見
+  /// `EpubDecoration` 的 id 編碼慣例 `"highlight:<id>"`／`"note:<id>"`），
+  /// 供呼叫端開啟編輯/刪除 Dialog。
+  final ValueChanged<String>? onAnnotationActivated;
+
   const EpubReaderView({
     super.key,
     required this.filePath,
@@ -95,6 +111,9 @@ class EpubReaderView extends StatefulWidget {
     this.onLocatorChanged,
     this.totalCharacterCount,
     this.onCharacterCountReady,
+    this.onSelectionChanged,
+    this.onSelectionCleared,
+    this.onAnnotationActivated,
   });
 
   /// 跳轉到指定全書進度比例（0.0-1.0），由 Dart 端 EpubPageEstimator
@@ -141,6 +160,21 @@ class EpubReaderView extends StatefulWidget {
     if (state is _EpubReaderViewState) {
       state._channel?.invokeMethod('jumpToLocator', {
         'locatorJson': locatorJson,
+      });
+    }
+  }
+
+  /// 把目前應顯示的完整標記清單一次性送給原生端（比照既有
+  /// `setPreferences` 整組送出慣例，非增量 diff），供 Readium
+  /// `applyDecorations` 疊加視覺樣式。
+  static void setDecorations(
+    GlobalKey<State<EpubReaderView>> key,
+    List<EpubDecoration> decorations,
+  ) {
+    final state = key.currentState;
+    if (state is _EpubReaderViewState) {
+      state._channel?.invokeMethod('setDecorations', {
+        'decorations': decorations.map((d) => d.toWire()).toList(),
       });
     }
   }
@@ -251,6 +285,25 @@ class _EpubReaderViewState extends State<EpubReaderView> {
         break;
       case 'onCharacterCountReady':
         widget.onCharacterCountReady?.call(call.arguments as int);
+        break;
+      case 'onSelectionChanged':
+        final args = call.arguments as Map<Object?, Object?>;
+        widget.onSelectionChanged?.call(EpubSelectionInfo(
+          locatorJson: args['locatorJson'] as String,
+          progression: (args['progression'] as num?)?.toDouble(),
+          rect: PercentRect(
+            left: (args['leftPct'] as num).toDouble(),
+            top: (args['topPct'] as num).toDouble(),
+            right: (args['rightPct'] as num).toDouble(),
+            bottom: (args['bottomPct'] as num).toDouble(),
+          ),
+        ));
+        break;
+      case 'onSelectionCleared':
+        widget.onSelectionCleared?.call();
+        break;
+      case 'onAnnotationActivated':
+        widget.onAnnotationActivated?.call(call.arguments as String);
         break;
     }
   }

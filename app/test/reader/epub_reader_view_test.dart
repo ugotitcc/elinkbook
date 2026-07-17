@@ -3,10 +3,13 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/reader/app_font.dart';
 import 'package:elinkbook/reader/dual_page_mode.dart';
+import 'package:elinkbook/reader/epub_decoration.dart';
 import 'package:elinkbook/reader/epub_position_info.dart';
 import 'package:elinkbook/reader/epub_reader_view.dart';
+import 'package:elinkbook/reader/epub_selection_info.dart';
 import 'package:elinkbook/reader/epub_text_align.dart';
 import 'package:elinkbook/reader/page_turn_mode.dart';
+import 'package:elinkbook/reader/percent_rect.dart';
 import 'package:elinkbook/reader/writing_mode.dart';
 
 /// 驅動 [EpubReaderView] 底層 AndroidView 完成建立流程所需的最小 mock：
@@ -443,6 +446,188 @@ void main() {
         progression: 0.35,
       ),
     );
+  });
+
+  testWidgets('收到原生端 onSelectionChanged 事件時正確解析 EpubSelectionInfo',
+      (tester) async {
+    EpubSelectionInfo? received;
+    final binaryMessenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    MethodChannel? instanceChannel;
+
+    binaryMessenger.setMockMethodCallHandler(SystemChannels.platform_views,
+        (call) async {
+      if (call.method == 'create') {
+        final id = (call.arguments as Map<Object?, Object?>)['id'] as int;
+        instanceChannel =
+            MethodChannel('cc.ugotit.elinkbook/epub_reader_view_$id');
+        binaryMessenger.setMockMethodCallHandler(
+            instanceChannel!, (call) async => null);
+        return 0;
+      }
+      return null;
+    });
+
+    await tester.pumpWidget(MaterialApp(
+      home: EpubReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        onSelectionChanged: (info) => received = info,
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    final codec = instanceChannel!.codec;
+    final data = codec.encodeMethodCall(const MethodCall('onSelectionChanged', {
+      'locatorJson': '{"href":"/c1.xhtml"}',
+      'progression': 0.2,
+      'leftPct': 0.1,
+      'topPct': 0.2,
+      'rightPct': 0.3,
+      'bottomPct': 0.4,
+    }));
+    await binaryMessenger.handlePlatformMessage(
+        instanceChannel!.name, data, (_) {});
+
+    expect(
+      received,
+      const EpubSelectionInfo(
+        locatorJson: '{"href":"/c1.xhtml"}',
+        progression: 0.2,
+        rect: PercentRect(left: 0.1, top: 0.2, right: 0.3, bottom: 0.4),
+      ),
+    );
+  });
+
+  testWidgets('收到原生端 onSelectionCleared 事件時觸發 callback', (tester) async {
+    var cleared = false;
+    final binaryMessenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    MethodChannel? instanceChannel;
+
+    binaryMessenger.setMockMethodCallHandler(SystemChannels.platform_views,
+        (call) async {
+      if (call.method == 'create') {
+        final id = (call.arguments as Map<Object?, Object?>)['id'] as int;
+        instanceChannel =
+            MethodChannel('cc.ugotit.elinkbook/epub_reader_view_$id');
+        binaryMessenger.setMockMethodCallHandler(
+            instanceChannel!, (call) async => null);
+        return 0;
+      }
+      return null;
+    });
+
+    await tester.pumpWidget(MaterialApp(
+      home: EpubReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        onSelectionCleared: () => cleared = true,
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    final codec = instanceChannel!.codec;
+    final data = codec.encodeMethodCall(const MethodCall('onSelectionCleared', null));
+    await binaryMessenger.handlePlatformMessage(instanceChannel!.name, data, (_) {});
+
+    expect(cleared, isTrue);
+  });
+
+  testWidgets('收到原生端 onAnnotationActivated 事件時傳回標記 id 字串',
+      (tester) async {
+    String? activatedId;
+    final binaryMessenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    MethodChannel? instanceChannel;
+
+    binaryMessenger.setMockMethodCallHandler(SystemChannels.platform_views,
+        (call) async {
+      if (call.method == 'create') {
+        final id = (call.arguments as Map<Object?, Object?>)['id'] as int;
+        instanceChannel =
+            MethodChannel('cc.ugotit.elinkbook/epub_reader_view_$id');
+        binaryMessenger.setMockMethodCallHandler(
+            instanceChannel!, (call) async => null);
+        return 0;
+      }
+      return null;
+    });
+
+    await tester.pumpWidget(MaterialApp(
+      home: EpubReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        onAnnotationActivated: (id) => activatedId = id,
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    final codec = instanceChannel!.codec;
+    final data =
+        codec.encodeMethodCall(const MethodCall('onAnnotationActivated', 'highlight:12'));
+    await binaryMessenger.handlePlatformMessage(instanceChannel!.name, data, (_) {});
+
+    expect(activatedId, 'highlight:12');
+  });
+
+  testWidgets('setDecorations 呼叫原生端時正確序列化 EpubDecoration 清單',
+      (tester) async {
+    final binaryMessenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    MethodChannel? instanceChannel;
+    final instanceCalls = <MethodCall>[];
+
+    binaryMessenger.setMockMethodCallHandler(SystemChannels.platform_views,
+        (call) async {
+      if (call.method == 'create') {
+        final id = (call.arguments as Map<Object?, Object?>)['id'] as int;
+        instanceChannel =
+            MethodChannel('cc.ugotit.elinkbook/epub_reader_view_$id');
+        binaryMessenger.setMockMethodCallHandler(instanceChannel!, (call) async {
+          instanceCalls.add(call);
+          return null;
+        });
+        return 0;
+      }
+      return null;
+    });
+
+    final key = GlobalKey<State<EpubReaderView>>();
+    await tester.pumpWidget(MaterialApp(
+      home: EpubReaderView(
+        key: key,
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    EpubReaderView.setDecorations(key, [
+      EpubDecoration.forHighlight(
+        highlightId: 1,
+        locatorJson: '{"href":"/c1.xhtml"}',
+        tint: 0x73FDE047,
+        isUnderline: false,
+      ),
+      EpubDecoration.forHighlight(
+        highlightId: 2,
+        locatorJson: '{"href":"/c2.xhtml"}',
+        tint: 0xFF6750A4,
+        isUnderline: true,
+      ),
+    ]);
+
+    final call = instanceCalls.singleWhere((c) => c.method == 'setDecorations');
+    final decorations =
+        (call.arguments as Map<Object?, Object?>)['decorations'] as List<Object?>;
+    expect(decorations, hasLength(2));
+    expect((decorations[0] as Map<Object?, Object?>)['id'], 'highlight:1');
+    expect((decorations[1] as Map<Object?, Object?>)['isUnderline'], isTrue);
   });
 }
 
