@@ -22,7 +22,7 @@
   - `EpubNavigatorFragment.Configuration.selectionActionModeCallback: ActionMode.Callback?`——Readium 官方提供的選字工具列客製化掛點，我們用它攔截原生選字選單。**審查修正**：`onCreateActionMode` 必須回傳 `true`（回傳 `false` 會讓 Android 整個跳過 ActionMode 生命週期，`onDestroyActionMode` 永遠不會觸發，是 Android SDK 本身的標準契約，非 Readium 特有行為），改用 `menu?.clear()` 清空選單項目來達成「不顯示原生選單」的視覺效果；同時在 `onCreateActionMode` 當下呼叫 `currentSelection()` 取得選取範圍回報給 Dart。
   - `EpubNavigatorFragment.Configuration.decorationTemplates: HtmlDecorationTemplates?`——設為 `HtmlDecorationTemplates.defaultTemplates()`（Readium 內建預設模板，直接處理 Highlight/Underline 兩種 built-in 樣式的 HTML/CSS 渲染，不自訂 `HtmlDecorationTemplate`）。
 - **純備註視覺簡化（本計劃書自行定案，design.md 決策 #2 「淡灰底＋行內小圖示」未展開到此細節；已提交 `/superpowers:requesting-code-review` 審查、審查報告列為「部分實現需求」，經人類確認維持此簡化，不擴大本 Issue 範圍，見 `tmp/epic-6/reviews/plan_issue_2_review.md` Spec (a).1）**：純備註（無劃線）一律套用 `Decoration.Style.Highlight(tint = noteOnlyTint)`（固定淡灰色），沿用 Readium 內建 Highlight 模板即可達成「淡灰底」視覺區隔；「行內小圖示」需要自訂 `HtmlDecorationTemplate`（客製化 HTML 模板），本 Issue 範圍不含此項，以「與螢光筆顏色明顯不同的淡灰色」作為區隔手段（點擊後開啟的編輯 Dialog 本身也會清楚標示「備註」而非「劃線」，不會造成使用者誤判）。若真機測試發現色彩區隔不足以辨識，留待後續 issue 補上自訂圖示模板。
-- **色彩決策收斂在 Dart 端**：三種螢光筆固定色票＋純備註灰色皆為 Dart 常數；底線色為目前主題 `primary` 色（design.md 決策 #5），由 Dart 於呼叫 `setDecorations` 當下讀取 `Theme.of(context).colorScheme.primary` 換算。Dart `Color.value`（`0xAARRGGBB`）與 Android `Color` int 版面完全一致，可直接透傳給原生端當 `tint`，原生端不需維護色彩對照表。
+- **色彩決策收斂在 Dart 端**：三種螢光筆固定色票＋純備註灰色皆為 Dart 常數；底線色為目前主題 `primary` 色（design.md 決策 #5），由 Dart 於呼叫 `setDecorations` 當下讀取 `Theme.of(context).colorScheme.primary` 換算。Dart 端一律以 `Color.toARGB32()`（`0xAARRGGBB`，`Color.value` 已於 Flutter SDK deprecated，見審查修正）換算，與 Android `Color` int 版面完全一致，可直接透傳給原生端當 `tint`，原生端不需維護色彩對照表。
 - **選取矩形座標協定**：比照 design.md 決策 #15 對 PDF 的既有百分比慣例——原生端把選取矩形換算成相對於 `container`（AndroidView 的量測寬高）的百分比值（`leftPct`/`topPct`/`rightPct`/`bottomPct`，0.0–1.0）送給 Dart，而非絕對像素。Dart 端在 `ReaderScreen._buildBody` 既有的 `Stack` 座標系內（與原生 `container` 1:1 對應，因為流式 EPUB 不像 FXL 有額外縮放/置中變換）用 `LayoutBuilder` 量得的寬高換算回實際座標定位浮動工具列。design.md 決策 #15 提到的「Dart 端以 Overlay 定位」在本計劃書解讀為「視覺上疊加在最上層」，實作上直接沿用 `_buildBody` 既有 `Stack`＋`Positioned` 慣例（FXL 懸浮按鈕已是同樣手法），不引入 Flutter `Overlay`/`OverlayEntry` API，避免新增一套疊加層機制。
 - **FXL 排除**（design.md 決策 #7）：`ReaderScreen._handleSelectionChanged` 開頭以 `if (_isFixedLayout) return;` 明確擋下——FXL 頁面本質上多半無可選取文字層，理論上仍可能有極少數例外，此防禦保證不會意外對 FXL 觸發劃線 UI。
 - **單筆刪除＝整筆一起刪**（spec.md 決策 #13）：不依賴 FK `ON DELETE SET NULL` 的自動退化（那是給「批次刪除劃線」情境用的）——單筆刪除一個「劃線+備註」合併項目時，程式碼須明確分別呼叫 `notesRepository.delete()` 與 `highlightsRepository.delete()` 兩次。
@@ -57,15 +57,15 @@ void main() {
     const arbitraryPrimary = Color(0xFF000000);
     expect(
       highlightStyleTint(HighlightStyle.highlighterYellow, primaryColor: arbitraryPrimary),
-      highlighterYellowTint.value,
+      highlighterYellowTint.toARGB32(),
     );
     expect(
       highlightStyleTint(HighlightStyle.highlighterPink, primaryColor: arbitraryPrimary),
-      highlighterPinkTint.value,
+      highlighterPinkTint.toARGB32(),
     );
     expect(
       highlightStyleTint(HighlightStyle.highlighterBlue, primaryColor: arbitraryPrimary),
-      highlighterBlueTint.value,
+      highlighterBlueTint.toARGB32(),
     );
   });
 
@@ -73,7 +73,7 @@ void main() {
     const primary = Color(0xFF123456);
     expect(
       highlightStyleTint(HighlightStyle.underline, primaryColor: primary),
-      primary.value,
+      primary.toARGB32(),
     );
   });
 
@@ -141,7 +141,7 @@ enum HighlightStyle {
 }
 
 /// 依樣式＋目前主題 primary 色，換算成原生 Decoration API 所需的完整
-/// ARGB `int` 色值（Dart `Color.value` 與 Android `Color` int 皆為
+/// ARGB `int` 色值（Dart `Color.toARGB32()`〔審查修正：`Color.value` 已於 Flutter SDK deprecated，`toARGB32()` 是行為完全相同的替代方法〕與 Android `Color` int 皆為
 /// `0xAARRGGBB` 版面，可直接透傳給原生端，見 Global Constraints「色彩
 /// 決策收斂在 Dart 端」）。純函式，不依賴 `BuildContext`——呼叫端自行讀取
 /// `Theme.of(context).colorScheme.primary` 後傳入，維持本函式可獨立
@@ -149,7 +149,7 @@ enum HighlightStyle {
 /// null 時直接採用，僅 `underline`（`fixedTint == null`）才退回呼叫端
 /// 傳入的 [primaryColor]。
 int highlightStyleTint(HighlightStyle style, {required Color primaryColor}) {
-  return (style.fixedTint ?? primaryColor).value;
+  return (style.fixedTint ?? primaryColor).toARGB32();
 }
 ```
 
@@ -3420,7 +3420,7 @@ Expected: 兩個新測試皆 PASS（此步驟僅驗證建構參數已可傳入�
           EpubDecoration.forNote(
             noteId: note.id!,
             locatorJson: note.epubLocatorJson!,
-            tint: noteOnlyTint.value,
+            tint: noteOnlyTint.toARGB32(),
           ),
     ];
     EpubReaderView.setDecorations(_epubReaderViewKey, decorations);
