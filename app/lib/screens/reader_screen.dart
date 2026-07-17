@@ -896,10 +896,15 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 一份而非嘗試合併兩者呼叫端（Surgical Changes 原則：不更動 Issue 2
   /// 已驗證穩定的 [_annotationToolbarTop] 本體）。
   double _pdfAnnotationToolbarTop(PdfSelectionInfo selection, Size size) {
+    // 【審查修正 Finding 1】此處 [size] 是整個 widget 尺寸，PAGE_FIT 模式下
+    // 頁面常因長寬比與螢幕不同而產生 letterbox 留白，故改用相對整個
+    // widget（含留白）換算的 [selection.widgetRect]，而非相對 bitmap
+    // 內容範圍的 [selection.rect]（後者仍保留給持久化/重繪使用，見
+    // PdfSelectionInfo 的欄位說明），避免工具列位置隨留白量偏移。
     final topAboveSelection =
-        selection.rect.top * size.height - _annotationToolbarHeight - _annotationToolbarGap;
+        selection.widgetRect.top * size.height - _annotationToolbarHeight - _annotationToolbarGap;
     if (topAboveSelection >= 0) return topAboveSelection;
-    final belowSelection = selection.rect.bottom * size.height + _annotationToolbarGap;
+    final belowSelection = selection.widgetRect.bottom * size.height + _annotationToolbarGap;
     return belowSelection.clamp(0.0, size.height - _annotationToolbarHeight);
   }
 
@@ -1116,7 +1121,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
               ),
             if (pdfSelection != null)
               Positioned(
-                left: (pdfSelection.rect.left * size.width).clamp(0.0, size.width),
+                // 同上（見 _pdfAnnotationToolbarTop 註解）：改用相對整個
+                // widget 尺寸的 widgetRect，避免 letterbox 留白造成偏移。
+                left: (pdfSelection.widgetRect.left * size.width).clamp(0.0, size.width),
                 top: _pdfAnnotationToolbarTop(pdfSelection, size),
                 child: AnnotationToolbar(
                   onStyleSelected: _handlePdfHighlightStyleSelected,

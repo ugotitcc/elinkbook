@@ -233,6 +233,14 @@ class _PdfReaderViewState extends State<PdfReaderView> {
             right: (args['right'] as num).toDouble(),
             bottom: (args['bottom'] as num).toDouble(),
           ),
+          // widget* 系列為相對整個 View（含 letterbox 留白）的百分比矩形，
+          // 僅供浮動工具列定位使用，見 PdfSelectionInfo 的 widgetRect 說明。
+          widgetRect: PercentRect(
+            left: (args['widgetLeft'] as num).toDouble(),
+            top: (args['widgetTop'] as num).toDouble(),
+            right: (args['widgetRight'] as num).toDouble(),
+            bottom: (args['widgetBottom'] as num).toDouble(),
+          ),
         ));
         break;
       case 'onSelectionCanceled':

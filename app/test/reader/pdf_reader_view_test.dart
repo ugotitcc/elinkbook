@@ -1002,6 +1002,14 @@ void main() {
       'top': 0.2,
       'right': 0.3,
       'bottom': 0.4,
+      // widget* 系列為相對整個 View（含 letterbox 留白）的百分比矩形，
+      // 供浮動工具列定位使用（見 Finding 1 修正：原本誤用 content-relative
+      // 的 rect 定位工具列，letterbox 情境下會偏移）；left/top/right/bottom
+      // 維持 content-relative，供持久化/重繪使用，兩者刻意不同。
+      'widgetLeft': 0.12,
+      'widgetTop': 0.22,
+      'widgetRight': 0.32,
+      'widgetBottom': 0.42,
     }));
     await binaryMessenger.handlePlatformMessage(instanceChannel!.name, data, (_) {});
 
@@ -1010,6 +1018,7 @@ void main() {
       const PdfSelectionInfo(
         pageIndex: 2,
         rect: PercentRect(left: 0.1, top: 0.2, right: 0.3, bottom: 0.4),
+        widgetRect: PercentRect(left: 0.12, top: 0.22, right: 0.32, bottom: 0.42),
       ),
     );
   });

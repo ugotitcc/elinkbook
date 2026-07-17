@@ -684,6 +684,13 @@ class PdfReaderView(
                 postScale(scale, scale)
             }
             page.render(bitmap, null, matrix, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+            // 已知、可接受的互動（非 bug，勿「順手修掉」）：此處疊加標記發生在
+            // displayFinalBitmap() 稍後的 applyBoldEffect()（加粗＝型態學膨脹）
+            // 之前，故使用者開啟「加粗」時，剛畫好的劃線/底線/圖釘也會一併被
+            // 膨脹（某種程度上甚至是理想效果——劃線下方文字看起來更粗）。
+            // 若改成加粗之後才疊加，會在雙頁拼接情境下重新引入跨頁座標縫合的
+            // 複雜度（本函式刻意選在單頁 bitmap 剛渲染完、拼接/加粗都還沒發生
+            // 時繪製，見本方法上方 KDoc 理由 (a)(b)(c)），故不予更動。
             drawAnnotationOverlays(bitmap, pageIndex, scale)
             return bitmap
         } finally {
@@ -960,9 +967,15 @@ class PdfReaderView(
      */
     private fun finishHighlightSelection() {
         val relative = highlightSelectionOverlayView?.currentRelativeRect()
+        // 【審查修正，Finding 1】同時取得相對整個 View（含 letterbox 留白）
+        // 的百分比矩形，供 Dart 端定位浮動工具列使用；relative（內容相對值）
+        // 維持不變，持久化／重繪仍使用它。兩者描述同一筆框選，僅參照基準
+        // 不同，見 HighlightSelectionOverlayView.currentWidgetRelativeRect()
+        // 的說明。
+        val widgetRelative = highlightSelectionOverlayView?.currentWidgetRelativeRect()
         val pageIndex = currentPageIndex
         removeHighlightSelectionOverlay()
-        if (relative == null) return
+        if (relative == null || widgetRelative == null) return
         val minFraction = 0.01f
         if ((relative.right - relative.left) < minFraction || (relative.bottom - relative.top) < minFraction) {
             channel.invokeMethod("onSelectionCanceled", null)
@@ -976,6 +989,10 @@ class PdfReaderView(
                 "top" to relative.top.toDouble(),
                 "right" to relative.right.toDouble(),
                 "bottom" to relative.bottom.toDouble(),
+                "widgetLeft" to widgetRelative.left.toDouble(),
+                "widgetTop" to widgetRelative.top.toDouble(),
+                "widgetRight" to widgetRelative.right.toDouble(),
+                "widgetBottom" to widgetRelative.bottom.toDouble(),
             ),
         )
     }

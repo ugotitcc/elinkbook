@@ -91,6 +91,28 @@ class HighlightSelectionOverlayView(
             bottom = (rectPx.bottom - contentBounds.top) / contentBounds.height(),
         )
     }
+
+    /**
+     * 【審查修正，Finding 1】換算目前框選矩形為相對本 View 自身完整尺寸
+     * （`width`/`height`，即含 letterbox 留白的完整範圍）的百分比值，與
+     * [currentRelativeRect] 的差異僅在分母／偏移基準：這裡直接除以本 View
+     * 的 `width`/`height`，不扣除／不除以 [contentBounds]。供 Dart 端定位
+     * 浮動 `AnnotationToolbar` 等 UI 使用——工具列疊在整個 widget 座標系
+     * 之上，PAGE_FIT 模式下頁面常因長寬比與螢幕不同產生 letterbox，若拿
+     * 內容相對值直接乘上整個 widget 尺寸，會偏移 letterbox 留白的量。
+     * [currentRelativeRect]（內容相對值）維持不變，持久化／重繪仍使用它。
+     */
+    internal fun currentWidgetRelativeRect(): PercentRectPx {
+        if (width <= 0 || height <= 0) {
+            return PercentRectPx(0f, 0f, 0f, 0f)
+        }
+        return PercentRectPx(
+            left = rectPx.left / width,
+            top = rectPx.top / height,
+            right = rectPx.right / width,
+            bottom = rectPx.bottom / height,
+        )
+    }
 }
 
 /** 原生端內部使用的百分比矩形值物件（0.0-1.0），對應 Dart `PercentRect`。*/
