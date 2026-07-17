@@ -980,7 +980,7 @@ git commit -m "fix(epic-6): Repository／mergeAnnotations 排序改用 COALESCE 
 - Consumes: Task 1 的 `PercentRect`。
 - Produces: `PdfSelectionInfo`（`pageIndex`/`rect`）；`PdfAnnotationDecoration`（`pageIndex`/`rect`/`tint`/`isUnderline`/`isNoteOnly`，`toWire()`，`forHighlight`/`forNote` 具名建構子），供 Task 6（`PdfReaderView.dart`）與 Task 10（`ReaderScreen`）消費。
 
-- [ ] **Step 1: 寫失敗測試（`pdf_selection_info_test.dart`）**
+- [x] **Step 1: 寫失敗測試（`pdf_selection_info_test.dart`）**
 
 建立 `app/test/reader/pdf_selection_info_test.dart`：
 
@@ -1005,12 +1005,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/reader/pdf_selection_info_test.dart`
 Expected: FAIL（`pdf_selection_info.dart` 尚不存在，編譯錯誤）
 
-- [ ] **Step 3: 實作 `PdfSelectionInfo`**
+- [x] **Step 3: 實作 `PdfSelectionInfo`**
 
 建立 `app/lib/reader/pdf_selection_info.dart`：
 
@@ -1039,12 +1039,12 @@ class PdfSelectionInfo {
 }
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `flutter test test/reader/pdf_selection_info_test.dart`
 Expected: PASS
 
-- [ ] **Step 5: 寫失敗測試（`pdf_annotation_decoration_test.dart`）**
+- [x] **Step 5: 寫失敗測試（`pdf_annotation_decoration_test.dart`）**
 
 建立 `app/test/reader/pdf_annotation_decoration_test.dart`：
 
@@ -1081,12 +1081,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 6: 執行測試確認失敗**
+- [x] **Step 6: 執行測試確認失敗**
 
 Run: `flutter test test/reader/pdf_annotation_decoration_test.dart`
 Expected: FAIL（`pdf_annotation_decoration.dart` 尚不存在，編譯錯誤）
 
-- [ ] **Step 7: 實作 `PdfAnnotationDecoration`**
+- [x] **Step 7: 實作 `PdfAnnotationDecoration`**
 
 建立 `app/lib/reader/pdf_annotation_decoration.dart`：
 
@@ -1150,17 +1150,17 @@ class PdfAnnotationDecoration {
 }
 ```
 
-- [ ] **Step 8: 執行測試確認通過**
+- [x] **Step 8: 執行測試確認通過**
 
 Run: `flutter test test/reader/pdf_annotation_decoration_test.dart`
 Expected: PASS
 
-- [ ] **Step 9: 執行 `flutter analyze` 確認乾淨**
+- [x] **Step 9: 執行 `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 10: Commit**
+- [x] **Step 10: Commit**
 
 ```bash
 git add app/lib/reader/pdf_selection_info.dart app/lib/reader/pdf_annotation_decoration.dart app/test/reader/pdf_selection_info_test.dart app/test/reader/pdf_annotation_decoration_test.dart
