@@ -572,9 +572,23 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           } else if (bookmark.pdfPageIndex != null) {
             PdfReaderView.jumpToPage(_pdfReaderViewKey, bookmark.pdfPageIndex!);
           }
+          // epic-6-annotations Issue 4：FXL 書籤跳轉概念上等同換頁，套用與
+          // EpubReaderView.onFixedLayoutPageTurn（見本檔案下方
+          // _buildNativeView）相同的既有沉浸式閱讀慣例——一律強制收合，非
+          // toggle 語意，不是另立新規則。
+          if (_isFixedLayout) {
+            setState(() => _fixedLayoutControlsVisible = false);
+          }
         },
       ),
-    );
+    ).then((_) {
+      // epic-6-annotations Issue 4：FXL 懸浮書籤按鈕的二態圖示快取
+      // （_fxlBookmarks）與本 Bottom Sheet 內「🔖 書籤」分頁各自獨立載入
+      // 自己的清單（見 _loadFxlBookmarks 說明），Bottom Sheet 關閉後主動
+      // 重新整理一次，確保使用者在分頁裡新增/刪除書籤後，懸浮按鈕圖示不會
+      // 停留在過期狀態。
+      if (_isFixedLayout) _loadFxlBookmarks();
+    });
   }
 
   void _handlePageRendered() {
@@ -1185,6 +1199,26 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                           : '加入此頁書籤',
                       onPressed:
                           _epubPositionInfo == null ? null : _toggleFxlBookmark,
+                    ),
+                  ),
+                ),
+              ),
+            if (_isFixedLayout &&
+                _fixedLayoutControlsVisible &&
+                widget.bookmarksRepository != null)
+              Positioned(
+                top: 72,
+                right: 16,
+                child: ClipOval(
+                  child: Container(
+                    color: Colors.black54,
+                    child: IconButton(
+                      key: const Key('reader_fixed_layout_notes_button'),
+                      icon: const Icon(Icons.bookmarks, color: Colors.white),
+                      tooltip: '筆記',
+                      onPressed: _epubPositionInfo == null
+                          ? null
+                          : () => _openNotesSheet(BookFormat.epub),
                     ),
                   ),
                 ),
