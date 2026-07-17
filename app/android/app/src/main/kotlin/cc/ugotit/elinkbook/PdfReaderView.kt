@@ -788,8 +788,12 @@ class PdfReaderView(
         )
     }
 
-    /** 建立疊加層並開始追蹤拖曳矩形。*/
+    /** 建立疊加層並開始追蹤拖曳矩形。若前一次框選尚未結束（例如 Dart 端
+     * 重複或錯序送出 `beginAnnotationSelection`），先移除舊疊加層再建立
+     * 新的，避免舊的 [HighlightSelectionOverlayView] 仍留在 [rootView] 上
+     * 卻遺失參考、永久無法被清除。*/
     private fun beginHighlightSelection(x: Float, y: Float) {
+        removeHighlightSelectionOverlay()
         val bitmapWidth = imageView.drawable?.intrinsicWidth ?: return
         val bitmapHeight = imageView.drawable?.intrinsicHeight ?: return
         val anchor = PointF(x, y)
