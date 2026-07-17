@@ -1919,7 +1919,7 @@ git commit -m "feat(epic-6): 抽出共用 letterbox 座標函式並新增 Highli
 
 **Interfaces:**
 - Consumes: Task 6 的 Dart 端 outgoing method call（`beginAnnotationSelection`／`updateAnnotationSelection`／`endAnnotationSelection`／`cancelAnnotationSelection`）；Task 7 的 `HighlightSelectionOverlayView`。
-- Produces: `isAnnotationSelectionEligible` 純函式（`internal`，JVM 單元測試涵蓋，比照 `isDualPageEnabled` 既有先例）；原生端狀態機透過 `channel` 送出 `onSelectionRectComputed`／`onSelectionCanceled`（Task 6 已定義的 Dart 端 incoming 端點），供 Task 9 沿用同一組 `highlightSelectionOverlayView`／`highlightAnchor`／`highlightSelectionActive`／`pageAnnotations` 欄位。
+- Produces: `isAnnotationSelectionEligible` 純函式（`internal`，JVM 單元測試涵蓋，比照 `isDualPageEnabled` 既有先例）；原生端狀態機透過 `channel` 送出 `onSelectionRectComputed`／`onSelectionCanceled`（Task 6 已定義的 Dart 端 incoming 端點），供 Task 9 沿用同一組 `highlightSelectionOverlayView`／`highlightAnchor`／`highlightSelectionActive` 欄位。**審查修正（Task 8 實作發現，見 Task 8 實作報告）**：`pageAnnotations: List<PdfAnnotationOverlay>` 欄位**不**在本 Task 宣告——`PdfAnnotationOverlay` 型別要到 Task 9 Step 3 才定義，若本 Task 提前宣告會因前向參照未定義型別而編譯失敗，與本 Task 自身 Step 8/9（`flutter build apk --debug`／`./gradlew testDebugUnitTest` 皆須成功）互相矛盾。`pageAnnotations` 欄位改移入 Task 9（與 `PdfAnnotationOverlay` 型別同一 Task 一併宣告，見 Task 9 Step 3 之前新增的欄位宣告步驟），Task 8 本身只新增 `highlightSelectionOverlayView`／`highlightAnchor`／`highlightSelectionActive` 三個欄位。
 
 **審查修正說明（見 `tmp/epic-6/reviews/plan_issue_3_review.md` 1.1）**：原設計由原生端 `rootView.setOnTouchListener` 自建 `Handler`+`ViewConfiguration` 長按計時器、對 `ACTION_DOWN` 無條件回傳 `true` 攔截整個觸控序列。這會讓原生端在使用者每一次觸碰螢幕時都搶先宣告獨佔該次觸控，導致 Flutter 端既有的水平滑動翻頁手勢（`onHorizontalDragEnd`）完全收不到事件、在一般閱讀情境下失效——這不是機率性的真機風險，而是必然發生的行為。而「長按觸發前回傳 false、觸發後才回傳 true」在 Android 的觸控分派模型下也不可行：`View` 若在 `ACTION_DOWN` 當下放棄該序列（回傳 `false`），後續同一序列的 `ACTION_MOVE`/`ACTION_UP` 便不會再送達，等長按計時器事後觸發時已經沒有辦法收集拖曳/放開的事件了。因此本 Task 改為完全移除原生端的觸控監聽/長按計時邏輯，長按與拖曳的辨識改由 Task 6 的 Flutter 端 `GestureDetector` 主導，原生端只被動接收 Dart 送來的四個 method call，語意與原本的觸控狀態機一一對應（`beginAnnotationSelection` ≈ 原長按計時器觸發、`updateAnnotationSelection` ≈ 原 `ACTION_MOVE`、`endAnnotationSelection` ≈ 原 `ACTION_UP`、`cancelAnnotationSelection` ≈ 原 `ACTION_POINTER_DOWN`/`ACTION_CANCEL`），`beginHighlightSelection`／`finishHighlightSelection`／`cancelHighlightSelection`／`removeHighlightSelectionOverlay` 這幾個核心方法的內部邏輯不變，只是觸發來源從觸控事件改為 method call。
 
@@ -1944,11 +1944,9 @@ import android.graphics.PointF
     private var highlightSelectionOverlayView: HighlightSelectionOverlayView? = null
     private var highlightAnchor: PointF? = null
     private var highlightSelectionActive: Boolean = false
-
-    // Dart 端送來的目前應顯示標記清單（Issue 3 `refreshAnnotations`），
-    // 依 pageIndex 分組供 renderPageBitmap() 逐頁疊加繪製（見 Task 9）。
-    private var pageAnnotations: List<PdfAnnotationOverlay> = emptyList()
 ```
+
+**審查修正**：本 Step 刻意不宣告 `pageAnnotations: List<PdfAnnotationOverlay>` 欄位——`PdfAnnotationOverlay` 型別要到 Task 9 Step 3 才定義，本 Task 提前宣告會因前向參照未定義型別而編譯失敗（見上方 Interfaces 段落審查修正說明）。`pageAnnotations` 欄位改於 Task 9 與 `PdfAnnotationOverlay` 型別同時宣告。
 
 - [x] **Step 3: 於 `companion object` 新增 `isAnnotationSelectionEligible` 純函式**
 
@@ -2330,6 +2328,14 @@ Expected: FAIL（`PdfAnnotationOverlay`/`parsePdfAnnotationOverlays` 尚不存�
                 PdfAnnotationOverlay(pageIndex, left, top, right, bottom, tint, isUnderline, isNoteOnly)
             }
         }
+```
+
+**審查修正（原規劃在 Task 8 宣告本欄位，Task 8 實作時發現會前向參照尚未定義的 `PdfAnnotationOverlay` 型別而編譯失敗，改移至此處與型別同時宣告，見 Task 8 實作報告）**：於 `cropOverlayView` 欄位之後（Task 8 已新增的 `highlightSelectionOverlayView`／`highlightAnchor`／`highlightSelectionActive` 三個欄位之後）新增：
+
+```kotlin
+    // Dart 端送來的目前應顯示標記清單（Issue 3 `refreshAnnotations`），
+    // 依 pageIndex 分組供 renderPageBitmap() 逐頁疊加繪製。
+    private var pageAnnotations: List<PdfAnnotationOverlay> = emptyList()
 ```
 
 - [ ] **Step 4: 執行測試確認通過**
