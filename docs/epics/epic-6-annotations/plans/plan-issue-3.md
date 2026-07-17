@@ -820,7 +820,7 @@ git commit -m "feat(epic-6): highlights／notes 表新增 PDF 欄位與 v9→v10
 - Consumes: Task 2／Task 3 的 PDF 欄位。
 - Produces: `HighlightsRepository.listByBook`／`NotesRepository.listByBook` 依 `COALESCE(pdf_page_index, progression)` 排序；`mergeAnnotations` 正確依 PDF 頁碼或 EPUB 進度排序（**修正一個真實缺陷**：目前 `AnnotationListItem._position` 只讀 `progression`，PDF 項目的 `progression` 恆為 null，會導致所有 PDF 劃線/備註在清單中排序鍵皆為 0、無法正確依頁碼排序）。
 
-- [ ] **Step 1: 寫失敗測試（`highlights_repository_test.dart` 新增案例）**
+- [x] **Step 1: 寫失敗測試（`highlights_repository_test.dart` 新增案例）**
 
 於 `app/test/reader/highlights_repository_test.dart` 檔案結尾（最後一個 `}` 之前）新增：
 
@@ -836,12 +836,12 @@ git commit -m "feat(epic-6): highlights／notes 表新增 PDF 欄位與 v9→v10
   });
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/reader/highlights_repository_test.dart`
 Expected: FAIL（目前 `orderBy: 'progression ASC'`，`pdf_page_index` 非 null 但 `progression` 皆為 null，SQLite 排序 null 值視為相等，兩筆順序不保證為 `[1, 5]`——依插入順序恰好可能巧合通過，需以 3 筆以上或明確反向插入順序驗證；比照上方寫法先插入頁碼較大者，若排序邏輯錯誤會得到 `[5, 1]`）
 
-- [ ] **Step 3: 修正 `HighlightsRepository.listByBook`**
+- [x] **Step 3: 修正 `HighlightsRepository.listByBook`**
 
 `app/lib/reader/highlights_repository.dart` 的 `listByBook` 方法改為：
 
@@ -860,12 +860,12 @@ Expected: FAIL（目前 `orderBy: 'progression ASC'`，`pdf_page_index` 非 null
   }
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `flutter test test/reader/highlights_repository_test.dart`
 Expected: PASS（含既有 EPUB 排序測試不受影響——`pdf_page_index` 恆 null 時 `COALESCE` 退回 `progression`，行為與修改前等價）
 
-- [ ] **Step 5: 寫失敗測試（`notes_repository_test.dart` 新增案例）**
+- [x] **Step 5: 寫失敗測試（`notes_repository_test.dart` 新增案例）**
 
 於 `app/test/reader/notes_repository_test.dart` 檔案結尾（最後一個 `}` 之前）新增：
 
@@ -879,12 +879,12 @@ Expected: PASS（含既有 EPUB 排序測試不受影響——`pdf_page_index` �
   });
 ```
 
-- [ ] **Step 6: 執行測試確認失敗**
+- [x] **Step 6: 執行測試確認失敗**
 
 Run: `flutter test test/reader/notes_repository_test.dart`
 Expected: FAIL（同上，`orderBy: 'progression ASC'` 對 PDF 資料無法正確排序）
 
-- [ ] **Step 7: 修正 `NotesRepository.listByBook`**
+- [x] **Step 7: 修正 `NotesRepository.listByBook`**
 
 `app/lib/reader/notes_repository.dart` 的 `listByBook` 方法改為：
 
@@ -902,12 +902,12 @@ Expected: FAIL（同上，`orderBy: 'progression ASC'` 對 PDF 資料無法正�
   }
 ```
 
-- [ ] **Step 8: 執行測試確認通過**
+- [x] **Step 8: 執行測試確認通過**
 
 Run: `flutter test test/reader/notes_repository_test.dart`
 Expected: PASS
 
-- [ ] **Step 9: 寫失敗測試（`annotation_list_item_test.dart` 新增案例）**
+- [x] **Step 9: 寫失敗測試（`annotation_list_item_test.dart` 新增案例）**
 
 於 `app/test/reader/annotation_list_item_test.dart` 檔案結尾（最後一個 `}` 之前）新增：
 
@@ -926,12 +926,12 @@ Expected: PASS
   });
 ```
 
-- [ ] **Step 10: 執行測試確認失敗**
+- [x] **Step 10: 執行測試確認失敗**
 
 Run: `flutter test test/reader/annotation_list_item_test.dart`
 Expected: FAIL（`_position` 只讀 `progression`，PDF 項目排序鍵恆為 0，無法區分順序）
 
-- [ ] **Step 11: 修正 `AnnotationListItem._position`**
+- [x] **Step 11: 修正 `AnnotationListItem._position`**
 
 `app/lib/reader/annotation_list_item.dart` 的 `_position` getter 改為：
 
@@ -946,12 +946,12 @@ Expected: FAIL（`_position` 只讀 `progression`，PDF 項目排序鍵恆為 0�
       0;
 ```
 
-- [ ] **Step 12: 執行測試確認通過**
+- [x] **Step 12: 執行測試確認通過**
 
 Run: `flutter test test/reader/annotation_list_item_test.dart`
 Expected: PASS（含既有 EPUB 排序測試不受影響）
 
-- [ ] **Step 13: 執行全專案測試 + `flutter analyze` 確認乾淨**
+- [x] **Step 13: 執行全專案測試 + `flutter analyze` 確認乾淨**
 
 Run: `flutter test`
 Expected: 全數 PASS
@@ -959,7 +959,7 @@ Expected: 全數 PASS
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 14: Commit**
+- [x] **Step 14: Commit**
 
 ```bash
 git add app/lib/reader/highlights_repository.dart app/lib/reader/notes_repository.dart app/lib/reader/annotation_list_item.dart app/test/reader/highlights_repository_test.dart app/test/reader/notes_repository_test.dart app/test/reader/annotation_list_item_test.dart
