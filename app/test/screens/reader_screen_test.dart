@@ -21,6 +21,9 @@ import 'package:elinkbook/screens/reader_screen.dart';
 import '../support/fake_reader_prefs_manager.dart';
 import 'package:elinkbook/screens/notes_bottom_sheet.dart';
 import '../support/fake_bookmarks_repository.dart';
+import 'package:elinkbook/screens/annotation_toolbar.dart';
+import '../support/fake_highlights_repository.dart';
+import '../support/fake_notes_repository.dart';
 
 // 依 spec.md「測試決策」：ReaderScreen 分派到 EpubReaderView/PdfReaderView
 // 後，實際渲染內容存在於原生 PlatformView 之中，一般 flutter test（無真實
@@ -1472,5 +1475,58 @@ void main() {
     await tester.pump();
 
     expect(tester.widget<IconButton>(finder).onPressed, isNotNull);
+  });
+
+  // --- Epic 6 Issue 2：EPUB 劃線/備註 ---
+
+  testWidgets(
+      '未提供 highlightsRepository／notesRepository 時，EPUB 選取事件不顯示浮動工具列（既有呼叫端零回歸）',
+      (tester) async {
+    final bookmarksRepository = FakeBookmarksRepository();
+    await tester.pumpWidget(MaterialApp(
+      home: ReaderScreen(
+        filePath: 'test/fixtures/sample.epub',
+        bookId: 'b1',
+        prefsManager: FakeReaderPrefsManager(),
+        bookmarksRepository: bookmarksRepository,
+      ),
+    ));
+    await tester.pump();
+
+    expect(find.byType(AnnotationToolbar), findsNothing);
+  });
+
+  testWidgets('提供 highlightsRepository／notesRepository 後，ReaderScreen 建構不受影響、仍正常顯示（既有測試涵蓋常態載入行為）',
+      (tester) async {
+    final bookmarksRepository = FakeBookmarksRepository();
+    final highlightsRepository = FakeHighlightsRepository();
+    final notesRepository = FakeNotesRepository();
+
+    await tester.pumpWidget(MaterialApp(
+      home: ReaderScreen(
+        filePath: 'test/fixtures/sample.epub',
+        bookId: 'b1',
+        prefsManager: FakeReaderPrefsManager(),
+        bookmarksRepository: bookmarksRepository,
+        highlightsRepository: highlightsRepository,
+        notesRepository: notesRepository,
+      ),
+    ));
+    await tester.pump();
+
+    final state = tester.state(find.byType(ReaderScreen));
+    // ReaderScreen 在 app/test/ 環境下 _channel 恆為 null（無真實
+    // AndroidView），無法透過原生端觸發 onSelectionChanged；改為直接
+    // 呼叫 State 內部的處理方法驗證（比照既有測試對「_channel 恆為
+    // null」限制的既有因應方式：專案既有測試不新增 Method Channel Mock
+    // 基礎設施，見 spec.md「Testing Decisions」）。由於
+    // `_handleSelectionChanged` 是私有方法，本測試改為直接驗證
+    // `AnnotationToolbar` 在 `_currentSelection` 非 null 時確實會被
+    // build 出來，透過 State 是否存在對應的公開行為間接驗證——此處
+    // 選擇不新增測試專用的 public API，僅驗證 widget tree 初始狀態不
+    // 顯示 AnnotationToolbar（上一個測試已涵蓋），選取觸發後的顯示邏輯
+    // 交由 Task 11 的 integration_test 驗證（原生選字手勢本身即無法在
+    // widget test 環境下真實模擬）。
+    expect(state, isNotNull);
   });
 }

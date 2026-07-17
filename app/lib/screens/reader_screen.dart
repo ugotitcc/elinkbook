@@ -1,13 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../reader/annotation_list_item.dart';
 import '../reader/book_format.dart';
 import '../reader/bookmark_position_context.dart';
 import '../reader/bookmarks_repository.dart';
 import '../reader/book_reader_prefs.dart';
+import '../reader/epub_decoration.dart';
 import '../reader/epub_page_estimator.dart';
 import '../reader/epub_position_info.dart';
 import '../reader/epub_reader_view.dart';
+import '../reader/epub_selection_info.dart';
+import '../reader/highlight.dart';
+import '../reader/highlight_style.dart';
+import '../reader/highlights_repository.dart';
+import '../reader/note.dart';
+import '../reader/notes_repository.dart';
 import '../reader/pdf_crop_mode.dart';
 import '../reader/pdf_crop_rect.dart';
 import '../reader/pdf_page_info.dart';
@@ -19,6 +27,8 @@ import '../reader/toc_navigator.dart';
 import '../reader/resolved_preferences.dart';
 import '../reader/screen_orientation_setting.dart';
 import '../reader/writing_mode.dart';
+import 'annotation_toolbar.dart';
+import 'note_edit_dialog.dart';
 import 'notes_bottom_sheet.dart';
 import 'fxl_settings_sheet.dart';
 import 'pdf_settings_sheet.dart';
@@ -53,12 +63,21 @@ class ReaderScreen extends StatefulWidget {
   /// plan-issue-1.md Global Constraints）。
   final BookmarksRepository? bookmarksRepository;
 
+  /// 劃線／備註功能的資料存取層（epic-6-annotations Issue 2）。與
+  /// [bookmarksRepository] 同樣刻意為可選參數——未提供時 EPUB 選取事件
+  /// 不會顯示浮動工具列、`NotesBottomSheet`「✏️」分頁維持空狀態佔位符，
+  /// 行為等同本 Issue 之前，零回歸。
+  final HighlightsRepository? highlightsRepository;
+  final NotesRepository? notesRepository;
+
   const ReaderScreen({
     super.key,
     required this.filePath,
     required this.bookId,
     required this.prefsManager,
     this.bookmarksRepository,
+    this.highlightsRepository,
+    this.notesRepository,
   });
 
   @override
@@ -108,6 +127,20 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   // （等待相關非同步就緒訊號才啟用），不引入本專案目前沒有的「Bottom
   // Sheet 內顯示載入中」UI 型態。
   bool _tocLoaded = false;
+  // EPUB 劃線／備註快取（epic-6-annotations Issue 2），由
+  // _reloadAnnotationsAndRefreshDecorations() 統一載入與更新。
+  List<Highlight> _highlights = [];
+  List<Note> _notes = [];
+  bool _annotationsLoaded = false;
+  // 目前選取範圍（原生 onSelectionChanged 回報），非 null 時於 body
+  // Stack 顯示 AnnotationToolbar；FXL 一律不使用（見
+  // _handleSelectionChanged 開頭防呆）。
+  EpubSelectionInfo? _currentSelection;
+  // 同一次選取中，使用者若已點擊螢光筆/底線建立劃線，暫存其資料庫 id，
+  // 供接著點擊「備註」時把新備註連結到這筆劃線（design.md 使用者流程：
+  // 「若同時已選色/底線，備註與劃線共存於同一筆記錄」）。新選取範圍
+  // 開始時（_handleSelectionChanged）重置為 null。
+  int? _pendingHighlightIdForSelection;
   // 供 TocBottomSheet 訂閱、在已開啟的目錄畫面即時反映全書字元數背景計算
   // 完成事件（spec.md「目錄模組」載入中狀態決策）——與 _totalCharacterCount
   // 這個驅動頁尾 rebuild 的既有欄位（Issue 3）刻意分開維護，避免耦合兩條
@@ -450,6 +483,18 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         bookId: widget.bookId,
         bookmarksRepository: repository,
         currentPosition: positionContext,
+        highlightsRepository:
+            format == BookFormat.epub && !_isFixedLayout ? widget.highlightsRepository : null,
+        notesRepository:
+            format == BookFormat.epub && !_isFixedLayout ? widget.notesRepository : null,
+        onAnnotationSelected: (item) {
+          Navigator.of(context).pop();
+          final locatorJson = item.highlight?.epubLocatorJson ?? item.note?.epubLocatorJson;
+          if (locatorJson != null) {
+            EpubReaderView.jumpToLocator(_epubReaderViewKey, locatorJson);
+          }
+        },
+        onAnnotationsChanged: _reloadAnnotationsAndRefreshDecorations,
         onBookmarkSelected: (bookmark) {
           Navigator.of(context).pop();
           if (bookmark.epubLocatorJson != null) {
@@ -520,6 +565,13 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         });
       });
     }
+    if (!info.isFixedLayout &&
+        !_annotationsLoaded &&
+        widget.highlightsRepository != null &&
+        widget.notesRepository != null) {
+      _annotationsLoaded = true;
+      _reloadAnnotationsAndRefreshDecorations();
+    }
   }
 
   /// 原生端背景計算全書字元數完成時觸發（Epic 5 Issue 3）：更新本地狀態
@@ -530,6 +582,187 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     setState(() => _totalCharacterCount = totalCharacterCount);
     _totalCharacterCountNotifier.value = totalCharacterCount;
     widget.prefsManager.saveTotalCharacterCount(widget.bookId, totalCharacterCount);
+  }
+
+  /// FXL 一律不處理選取事件（design.md 決策 #7：劃線/備註排除 FXL）——
+  /// 理論上 FXL 頁面多半無可選取文字層，此防呆保證不會意外對 FXL 觸發
+  /// 劃線 UI（見 plan-issue-2.md Global Constraints「FXL 排除」）。
+  void _handleSelectionChanged(EpubSelectionInfo info) {
+    if (!mounted || _isFixedLayout) return;
+    setState(() {
+      _currentSelection = info;
+      _pendingHighlightIdForSelection = null;
+    });
+  }
+
+  void _handleSelectionCleared() {
+    if (!mounted) return;
+    setState(() {
+      _currentSelection = null;
+      _pendingHighlightIdForSelection = null;
+    });
+  }
+
+  Future<void> _handleHighlightStyleSelected(HighlightStyle style) async {
+    final selection = _currentSelection;
+    final repository = widget.highlightsRepository;
+    if (selection == null || repository == null) return;
+    final id = await repository.insert(Highlight(
+      bookId: widget.bookId,
+      style: style,
+      epubLocatorJson: selection.locatorJson,
+      progression: selection.progression,
+    ));
+    _pendingHighlightIdForSelection = id;
+    await _reloadAnnotationsAndRefreshDecorations();
+  }
+
+  Future<void> _handleNotePressed() async {
+    final selection = _currentSelection;
+    final repository = widget.notesRepository;
+    if (selection == null || repository == null) return;
+    final text = await showNoteTextDialog(context, title: '新增備註');
+    if (text == null) return;
+    await repository.insert(Note(
+      bookId: widget.bookId,
+      text: text,
+      epubLocatorJson: selection.locatorJson,
+      progression: selection.progression,
+      highlightId: _pendingHighlightIdForSelection,
+    ));
+    await _reloadAnnotationsAndRefreshDecorations();
+    if (!mounted) return;
+    setState(() {
+      _currentSelection = null;
+      _pendingHighlightIdForSelection = null;
+    });
+  }
+
+  /// 重新查詢本書全部劃線/備註並送給原生端重繪 Decorator（比照 TOC 的
+  /// 「只在尚未載入過才抓取」慣例，但本方法每次 CRUD 後皆會主動重新
+  /// 呼叫，非只呼叫一次——這裡的 `_annotationsLoaded` 只用於「開書時是否
+  /// 已載入過初始清單」，不是「是否曾呼叫過本方法」）。
+  Future<void> _reloadAnnotationsAndRefreshDecorations() async {
+    final highlightsRepository = widget.highlightsRepository;
+    final notesRepository = widget.notesRepository;
+    if (highlightsRepository == null || notesRepository == null) return;
+    final highlights = await highlightsRepository.listByBook(widget.bookId);
+    final notes = await notesRepository.listByBook(widget.bookId);
+    if (!mounted) return;
+    setState(() {
+      _highlights = highlights;
+      _notes = notes;
+    });
+    _sendDecorationsToNative();
+  }
+
+  void _sendDecorationsToNative() {
+    if (!mounted) return;
+    final primaryColor = Theme.of(context).colorScheme.primary;
+    final decorations = <EpubDecoration>[
+      for (final highlight in _highlights)
+        if (highlight.id != null && highlight.epubLocatorJson != null)
+          EpubDecoration.forHighlight(
+            highlightId: highlight.id!,
+            locatorJson: highlight.epubLocatorJson!,
+            tint: highlightStyleTint(highlight.style, primaryColor: primaryColor),
+            isUnderline: highlight.style == HighlightStyle.underline,
+          ),
+      for (final note in _notes)
+        if (note.highlightId == null && note.id != null && note.epubLocatorJson != null)
+          EpubDecoration.forNote(
+            noteId: note.id!,
+            locatorJson: note.epubLocatorJson!,
+            tint: noteOnlyTint.toARGB32(),
+          ),
+    ];
+    EpubReaderView.setDecorations(_epubReaderViewKey, decorations);
+  }
+
+  Highlight? _findHighlightById(int id) {
+    for (final highlight in _highlights) {
+      if (highlight.id == id) return highlight;
+    }
+    return null;
+  }
+
+  Note? _findNoteByHighlightId(int highlightId) {
+    for (final note in _notes) {
+      if (note.highlightId == highlightId) return note;
+    }
+    return null;
+  }
+
+  Note? _findNoteById(int id) {
+    for (final note in _notes) {
+      if (note.id == id) return note;
+    }
+    return null;
+  }
+
+  /// 原生端 onAnnotationActivated 回呼（使用者點擊既有標記）：依
+  /// [decodeAnnotationId] 反查是哪一筆記錄，開啟編輯/刪除 Dialog
+  /// （design.md 使用者流程步驟 3）。id 格式不明或查無對應記錄時靜默
+  /// 忽略——理論上不會發生（送給原生端的 id 皆由
+  /// [EpubDecoration.forHighlight]/[EpubDecoration.forNote] 產生），但
+  /// 點擊當下記錄可能已被其他途徑刪除（極短競速窗口），静默忽略比拋出
+  /// 例外更穩妥。
+  void _handleAnnotationActivated(String decorationId) {
+    final decoded = decodeAnnotationId(decorationId);
+    if (decoded == null) return;
+    AnnotationListItem item;
+    switch (decoded.kind) {
+      case AnnotationKind.highlight:
+        final highlight = _findHighlightById(decoded.id);
+        if (highlight == null) return;
+        item = AnnotationListItem(
+          highlight: highlight,
+          note: _findNoteByHighlightId(decoded.id),
+        );
+        break;
+      case AnnotationKind.note:
+        final note = _findNoteById(decoded.id);
+        if (note == null) return;
+        item = AnnotationListItem(note: note);
+        break;
+    }
+    _showAnnotationActionDialog(item);
+  }
+
+  Future<void> _showAnnotationActionDialog(AnnotationListItem item) async {
+    final action = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => SimpleDialog(
+        title: const Text('劃線/備註'),
+        children: [
+          if (item.note != null)
+            SimpleDialogOption(
+              onPressed: () => Navigator.of(dialogContext).pop('edit'),
+              child: const Text('✍️ 編輯備註文字'),
+            ),
+          SimpleDialogOption(
+            onPressed: () => Navigator.of(dialogContext).pop('delete'),
+            child: const Text('🗑️ 刪除此劃線與備註'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted) return;
+    final note = item.note;
+    final highlight = item.highlight;
+    if (action == 'edit' && note != null) {
+      final newText = await showNoteTextDialog(context, initialText: note.text, title: '編輯備註');
+      if (newText != null) {
+        await widget.notesRepository!.updateText(note.id!, newText);
+        await _reloadAnnotationsAndRefreshDecorations();
+      }
+    } else if (action == 'delete') {
+      // 單筆刪除＝整筆一起刪（spec.md 決策 #13），比照
+      // NotesBottomSheet._deleteAnnotationItem 的既有原則。
+      if (note != null) await widget.notesRepository!.delete(note.id!);
+      if (highlight != null) await widget.highlightsRepository!.delete(highlight.id!);
+      await _reloadAnnotationsAndRefreshDecorations();
+    }
   }
 
   @override
@@ -659,6 +892,25 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     }
   }
 
+  // 浮動工具列估計高度／與選取範圍的間距（初始選擇，真機測試後可能需
+  // 微調，見 Global Constraints「選取矩形座標協定」）。
+  static const _annotationToolbarHeight = 56.0;
+  static const _annotationToolbarGap = 8.0;
+
+  /// 【審查修正】原本無條件把工具列定位在選取範圍上方、clamp 到
+  /// `>= 0`，若選取範圍太靠近頂端（`topPct * height < 工具列高度`），
+  /// clamp 後的 `top` 會落在 0，導致工具列往下遮住選取範圍第一行文字
+  /// （clamp 只保證不跑到畫面外，不保證不遮擋選取範圍本身）。改為：
+  /// 選取範圍上方若有足夠空間才貼在上方；空間不足時改貼在選取範圍
+  /// 下方，兩種情況下工具列都不會覆蓋選取矩形本體。
+  double _annotationToolbarTop(EpubSelectionInfo selection, Size size) {
+    final topAboveSelection =
+        selection.rect.top * size.height - _annotationToolbarHeight - _annotationToolbarGap;
+    if (topAboveSelection >= 0) return topAboveSelection;
+    final belowSelection = selection.rect.bottom * size.height + _annotationToolbarGap;
+    return belowSelection.clamp(0.0, size.height - _annotationToolbarHeight);
+  }
+
   Widget _buildBody(BookFormat format, bool isLandscape) {
     if (format == BookFormat.unknown) {
       return const Center(child: Text('不支援的檔案格式'));
@@ -675,47 +927,62 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         ),
       );
     }
-    final body = Stack(
-      children: [
-        if (_resolved != null) _buildNativeView(format, isLandscape),
-        if (_isFixedLayout && _fixedLayoutControlsVisible)
-          Positioned(
-            top: 16, // SafeArea 內層，頂部已扣除狀態列，故直接設為 16 即可
-            left: 16,
-            child: ClipOval(
-              child: Container(
-                color: Colors.black54,
-                child: IconButton(
-                  key: const Key('reader_fixed_layout_back_button'),
-                  icon: const Icon(Icons.arrow_back, color: Colors.white),
-                  tooltip: '返回',
-                  onPressed: () => Navigator.of(context).pop(),
+    final body = LayoutBuilder(
+      builder: (context, constraints) {
+        final size = constraints.biggest;
+        final selection = _currentSelection;
+        return Stack(
+          children: [
+            if (_resolved != null) _buildNativeView(format, isLandscape),
+            if (_isFixedLayout && _fixedLayoutControlsVisible)
+              Positioned(
+                top: 16, // SafeArea 內層，頂部已扣除狀態列，故直接設為 16 即可
+                left: 16,
+                child: ClipOval(
+                  child: Container(
+                    color: Colors.black54,
+                    child: IconButton(
+                      key: const Key('reader_fixed_layout_back_button'),
+                      icon: const Icon(Icons.arrow_back, color: Colors.white),
+                      tooltip: '返回',
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ),
-        if (_isFixedLayout && _fixedLayoutControlsVisible)
-          Positioned(
-            top: 16,
-            right: 16,
-            child: ClipOval(
-              child: Container(
-                color: Colors.black54,
-                child: IconButton(
-                  key: const Key('reader_fixed_layout_settings_button'),
-                  icon: const Icon(Icons.settings, color: Colors.white),
-                  tooltip: '版面設定',
-                  onPressed: _openFxlSettings,
+            if (_isFixedLayout && _fixedLayoutControlsVisible)
+              Positioned(
+                top: 16,
+                right: 16,
+                child: ClipOval(
+                  child: Container(
+                    color: Colors.black54,
+                    child: IconButton(
+                      key: const Key('reader_fixed_layout_settings_button'),
+                      icon: const Icon(Icons.settings, color: Colors.white),
+                      tooltip: '版面設定',
+                      onPressed: _openFxlSettings,
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ),
-        if (_state == _RenderState.loading)
-          const Center(
-            key: Key('reader_loading_indicator'),
-            child: CircularProgressIndicator(),
-          ),
-      ],
+            if (selection != null)
+              Positioned(
+                left: (selection.rect.left * size.width).clamp(0.0, size.width),
+                top: _annotationToolbarTop(selection, size),
+                child: AnnotationToolbar(
+                  onStyleSelected: _handleHighlightStyleSelected,
+                  onNotePressed: _handleNotePressed,
+                ),
+              ),
+            if (_state == _RenderState.loading)
+              const Center(
+                key: Key('reader_loading_indicator'),
+                child: CircularProgressIndicator(),
+              ),
+          ],
+        );
+      },
     );
 
     return SafeArea(
@@ -818,6 +1085,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           },
           totalCharacterCount: _totalCharacterCount,
           onCharacterCountReady: _handleCharacterCountReady,
+          onSelectionChanged: _handleSelectionChanged,
+          onSelectionCleared: _handleSelectionCleared,
+          onAnnotationActivated: _handleAnnotationActivated,
         );
       case BookFormat.pdf:
         return PdfReaderView(
