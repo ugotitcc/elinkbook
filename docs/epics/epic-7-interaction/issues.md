@@ -63,7 +63,7 @@
 
 ## Issue 3：導航熱區設定畫面
 
-**Status:** ready-for-agent
+**Status:** ✅ 已完成。依 `plans/plan-issue-3.md` Task 1-4 完成實作：`ReaderPrefsManager` 新增 `loadGlobalPrefs()`（不依附書籍 ID 的全域偏好讀取入口，`load(bookId)` 內部改呼叫同一份實作）；新增 `NavZoneSettingsScreen`（四選一熱區模板即時全域生效、自訂模式 9 格編輯器逐格循環切換、儲存前 `isValidCustomZoneConfig()` 驗證擋下無效設定、熱區輔助線開關）；`SettingsScreen` 新增「導航熱區」入口、`LibraryScreen` 呼叫點同步更新。程式碼審查（`tmp/epic-7/reviews/review-issue-3.md`，對照分支 `epic-7/issue-3-nav-zone-settings`）結論 Ready to merge: Yes，無 Critical/Important 問題；審查後依 Minor 建議將 `RadioListTile` 的 `groupValue`/`onChanged` 改用 `RadioGroup` 祖先 widget，移除 deprecated API 抑制註解（commit `5fa3f5b`）。已透過 PR #57 合併回 `main`，`main` 上重新驗證：`flutter analyze` 乾淨、`flutter test`（全專案）520 個測試全數通過。
 
 **依賴：** Issue 2
 
