@@ -1249,6 +1249,44 @@ void main() {
     expect(capturedActions, [ZoneAction.previousPage, ZoneAction.menu]);
   });
 
+  testWidgets(
+      '長按框選放開不誤觸發熱區動作（區分點擊與長按釋放，_longPressActive 狀態機正確性）',
+      (tester) async {
+    final capturedActions = <ZoneAction>[];
+    await _pumpPdfReaderView(
+      tester,
+      PdfReaderView(
+        filePath: '/tmp/sample.pdf',
+        onPageRendered: _noop,
+        onError: _noopError,
+        navZoneActions: const [
+          ZoneAction.previousPage, ZoneAction.menu, ZoneAction.nextPage,
+          ZoneAction.previousPage, ZoneAction.menu, ZoneAction.nextPage,
+          ZoneAction.previousPage, ZoneAction.menu, ZoneAction.nextPage,
+        ],
+        onZoneAction: capturedActions.add,
+      ),
+    );
+
+    // 在「選單」熱區（nav_zone_1）範圍內按下，比照既有長按拖曳測試的手勢
+    // 驅動方式（tester.startGesture + 等待超過長按判定門檻）。
+    final zoneCenter = tester.getCenter(find.byKey(const Key('nav_zone_1')));
+    final gesture = await tester.startGesture(zoneCenter);
+    // 等待超過長按判定門檻（Flutter 預設 500ms），期間手指未明顯移動，
+    // GestureDetector 的 LongPressGestureRecognizer 應會勝出競技場，觸發
+    // _handleLongPressStart 將 _longPressActive 設為 true。
+    await tester.pump(const Duration(milliseconds: 700));
+    await gesture.moveBy(const Offset(5, 5));
+    await tester.pump();
+    await gesture.up();
+    await tester.pump();
+
+    // 放開時 _longPressActive 應已為 true（_handleLongPressEnd 尚未來得及
+    // 清除，或即使清除，放開位移已超出單純點擊語意），_handleAnnotationPointerUp
+    // 的點擊判讀邏輯必須因此拒絕派送 ZoneAction，避免與長按框選重複觸發。
+    expect(capturedActions, isEmpty);
+  });
+
   testWidgets('showNavZoneDebugOverlay=true 時，格子顯示對應動作文字標籤', (tester) async {
     await _pumpPdfReaderView(
       tester,

@@ -374,11 +374,12 @@ class _PdfReaderViewState extends State<PdfReaderView> {
   }
 
   /// 3×3 導航熱區疊加層——純視覺標記／除錯輔助線，永遠不攔截觸控（外層
-  /// 包了 [IgnorePointer]），實際點擊判讀由 [_handleZoneTap] 透過
-  /// [hitTestZoneIndex] 對座標運算完成，兩者共用同一份 3×3 格線定義。
-  /// `showNavZoneDebugOverlay == false` 時格子仍存在（供 widget test 以
-  /// `Key('nav_zone_$index')` 尋址並透過 `tester.tap()` 觸發底層
-  /// [GestureDetector] 的 `onTapUp`），只是不顯示邊框與文字標籤。
+  /// 包了 [IgnorePointer]），實際點擊判讀由 [_handleAnnotationPointerUp]
+  /// 透過 [_dispatchZoneAction]（內部呼叫 [hitTestZoneIndex]）對座標運算
+  /// 完成，兩者共用同一份 3×3 格線定義。`showNavZoneDebugOverlay == false`
+  /// 時格子仍存在（供 widget test 以 `Key('nav_zone_$index')` 尋址並透過
+  /// `tester.tap()` 觸發外層 [Listener] 的 `onPointerUp`），只是不顯示邊框
+  /// 與文字標籤。
   Widget _buildNavZoneOverlay() {
     return GridView.count(
       crossAxisCount: 3,
