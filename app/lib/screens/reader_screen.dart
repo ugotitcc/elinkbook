@@ -1446,6 +1446,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           },
           onSelectionRectComputed: _handlePdfSelectionRectComputed,
           onSelectionCanceled: _handlePdfSelectionCanceled,
+          navZoneActions: resolved.navZoneActions,
+          onZoneAction: _handleZoneAction,
+          showNavZoneDebugOverlay: resolved.showNavZoneDebugOverlay,
         );
       case BookFormat.unknown:
         return const SizedBox.shrink();

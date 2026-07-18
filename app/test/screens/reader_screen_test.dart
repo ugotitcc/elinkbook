@@ -2066,4 +2066,28 @@ void main() {
     expect(sizeWithoutAppBar, sizeWithAppBar,
         reason: 'PdfReaderView 尺寸不應因 AppBar 顯示/隱藏而改變');
   });
+
+  testWidgets('PDF：真實點擊熱區「選單」格（index 1）觸發沉浸模式切換', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b1',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    expect(find.byType(AppBar), findsOneWidget);
+
+    // navZoneMode 預設 rightFlip，index 1（中欄）為 menu
+    // （見 app/lib/reader/nav_zone_mode.dart rightFlipZoneTemplate）。
+    await tester.tap(find.byKey(const Key('nav_zone_1')));
+    await tester.pump();
+
+    expect(find.byType(AppBar), findsNothing);
+  });
 }
