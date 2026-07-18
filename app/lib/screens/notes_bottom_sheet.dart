@@ -1,4 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../reader/annotation_list_item.dart';
 import '../reader/bookmark.dart';
@@ -9,6 +13,7 @@ import '../reader/highlight_style.dart';
 import '../reader/highlights_repository.dart';
 import '../reader/note.dart';
 import '../reader/notes_repository.dart';
+import '../reader/markdown_export.dart';
 import 'note_edit_dialog.dart';
 
 /// 統一的「筆記」入口 Bottom Sheet 外殼（epic-6-annotations Issue 1，
@@ -21,6 +26,13 @@ import 'note_edit_dialog.dart';
 class NotesBottomSheet extends StatefulWidget {
   final String bookId;
   final BookmarksRepository bookmarksRepository;
+
+  /// 供「導出為 Markdown」使用的書籍中繼資料（epic-6-annotations
+  /// Issue 5）。皆為必填——唯一正式呼叫端 `ReaderScreen._openNotesSheet`
+  /// 一定會提供值（見 plan-issue-5.md Global Constraints）。
+  final String bookTitle;
+  final String? bookAuthor;
+  final double bookProgress;
 
   /// 開啟當下的目前位置上下文，供書籤 toggle 按鈕判斷目前位置是否已有
   /// 書籤、以及新增書籤時計算預設名稱（Global Constraints「書籤 toggle
@@ -50,6 +62,9 @@ class NotesBottomSheet extends StatefulWidget {
   const NotesBottomSheet({
     super.key,
     required this.bookId,
+    required this.bookTitle,
+    this.bookAuthor,
+    required this.bookProgress,
     required this.bookmarksRepository,
     required this.currentPosition,
     required this.onBookmarkSelected,
@@ -113,6 +128,33 @@ class _NotesBottomSheetState extends State<NotesBottomSheet>
     });
   }
 
+  /// 【審查修正 M-1】包在 try-catch 內——`getTemporaryDirectory()`／
+  /// `writeAsString()`／`SharePlus.instance.share()` 皆涉及非同步 I/O 與
+  /// 平台通道，極端環境（例如儲存空間不足、使用者中途取消系統分享面板
+  /// 拋出例外）下不應讓整個 Bottom Sheet 崩潰，比照專案既有對外部 I/O
+  /// 失敗的防禦性慣例（見 `_loadFxlBookmarks()` 既有寫法）。
+  Future<void> _exportMarkdown() async {
+    try {
+      final markdown = generateMarkdownExport(
+        bookTitle: widget.bookTitle,
+        bookAuthor: widget.bookAuthor,
+        progress: widget.bookProgress,
+        exportTime: DateTime.now(),
+        bookmarks: _bookmarks,
+        annotations: mergeAnnotations(_highlights, _notes),
+      );
+      final tempDir = await getTemporaryDirectory();
+      final fileName = 'notes-${sanitizeMarkdownFileName(widget.bookTitle)}.md';
+      final file = File('${tempDir.path}/$fileName');
+      await file.writeAsString(markdown);
+      await SharePlus.instance.share(
+        ShareParams(files: [XFile(file.path, mimeType: 'text/markdown')]),
+      );
+    } catch (e) {
+      debugPrint('Failed to export markdown: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     // TabBarView 無法在無邊界的父層自我量測高度，需要一個明確的高度值
@@ -129,10 +171,21 @@ class _NotesBottomSheetState extends State<NotesBottomSheet>
         height: sheetHeight,
         child: Column(
           children: [
-            const Padding(
-              padding: EdgeInsets.all(16),
-              child:
-                  Text('📚 筆記', style: TextStyle(fontWeight: FontWeight.bold)),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('📚 筆記',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  TextButton.icon(
+                    key: const Key('notes_sheet_export_markdown'),
+                    onPressed: _exportMarkdown,
+                    icon: const Icon(Icons.ios_share),
+                    label: const Text('導出為 Markdown'),
+                  ),
+                ],
+              ),
             ),
             TabBar(
               controller: _tabController,
