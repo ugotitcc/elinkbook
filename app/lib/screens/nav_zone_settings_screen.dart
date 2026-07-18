@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-// ignore_for_file: deprecated_member_use
-
 import '../reader/global_reader_prefs.dart';
 import '../reader/nav_zone_mode.dart';
 import '../reader/reader_prefs_manager.dart';
@@ -120,33 +118,33 @@ class _NavZoneSettingsScreenState extends State<NavZoneSettingsScreen> {
             )
           : ListView(
               children: [
-                RadioListTile<NavZoneMode>(
-                  key: const Key('nav_zone_mode_leftFlip'),
-                  title: const Text('左翻頁'),
-                  value: NavZoneMode.leftFlip,
+                RadioGroup<NavZoneMode>(
                   groupValue: _prefs.navZoneMode,
                   onChanged: (mode) => _selectMode(mode!),
-                ),
-                RadioListTile<NavZoneMode>(
-                  key: const Key('nav_zone_mode_rightFlip'),
-                  title: const Text('右翻頁'),
-                  value: NavZoneMode.rightFlip,
-                  groupValue: _prefs.navZoneMode,
-                  onChanged: (mode) => _selectMode(mode!),
-                ),
-                RadioListTile<NavZoneMode>(
-                  key: const Key('nav_zone_mode_oneHand'),
-                  title: const Text('單手'),
-                  value: NavZoneMode.oneHand,
-                  groupValue: _prefs.navZoneMode,
-                  onChanged: (mode) => _selectMode(mode!),
-                ),
-                RadioListTile<NavZoneMode>(
-                  key: const Key('nav_zone_mode_custom'),
-                  title: const Text('自訂'),
-                  value: NavZoneMode.custom,
-                  groupValue: _prefs.navZoneMode,
-                  onChanged: (mode) => _selectMode(mode!),
+                  child: Column(
+                    children: [
+                      RadioListTile<NavZoneMode>(
+                        key: const Key('nav_zone_mode_leftFlip'),
+                        title: const Text('左翻頁'),
+                        value: NavZoneMode.leftFlip,
+                      ),
+                      RadioListTile<NavZoneMode>(
+                        key: const Key('nav_zone_mode_rightFlip'),
+                        title: const Text('右翻頁'),
+                        value: NavZoneMode.rightFlip,
+                      ),
+                      RadioListTile<NavZoneMode>(
+                        key: const Key('nav_zone_mode_oneHand'),
+                        title: const Text('單手'),
+                        value: NavZoneMode.oneHand,
+                      ),
+                      RadioListTile<NavZoneMode>(
+                        key: const Key('nav_zone_mode_custom'),
+                        title: const Text('自訂'),
+                        value: NavZoneMode.custom,
+                      ),
+                    ],
+                  ),
                 ),
                 if (_prefs.navZoneMode == NavZoneMode.custom)
                   _buildCustomEditor(),
