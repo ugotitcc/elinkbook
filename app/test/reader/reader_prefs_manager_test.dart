@@ -12,6 +12,8 @@ import 'package:elinkbook/reader/reader_prefs_manager.dart';
 import 'package:elinkbook/reader/reader_prefs_manager_impl.dart';
 import 'package:elinkbook/reader/screen_orientation_setting.dart';
 import 'package:elinkbook/reader/writing_mode.dart';
+import 'package:elinkbook/reader/nav_zone_mode.dart';
+import 'package:elinkbook/reader/zone_action.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
@@ -92,6 +94,9 @@ void main() {
         globalPrefs: const GlobalReaderPrefs(
           pageTurnMode: PageTurnMode.scroll,
           screenOrientation: ScreenOrientationSetting.lock270,
+          navZoneMode: NavZoneMode.rightFlip,
+          navZoneCustomActions: rightFlipZoneTemplate,
+          showNavZoneDebugOverlay: false,
         ),
       );
       final resolved = manager.resolve(loaded);
@@ -189,14 +194,37 @@ void main() {
       expect(loaded.bookPrefs, prefs);
     });
 
-    test('saveGlobalPrefs 寫入後，load 讀回相同的全域預設值', () async {
+    test('saveGlobalPrefs 寫入後，load 讀回相同的全域預設值（含熱區三欄位）',
+        () async {
       const globalPrefs = GlobalReaderPrefs(
         pageTurnMode: PageTurnMode.scroll,
         screenOrientation: ScreenOrientationSetting.lock90,
+        navZoneMode: NavZoneMode.custom,
+        navZoneCustomActions: [
+          ZoneAction.menu, ZoneAction.none, ZoneAction.none,
+          ZoneAction.previousPage, ZoneAction.none, ZoneAction.nextPage,
+          ZoneAction.none, ZoneAction.none, ZoneAction.none,
+        ],
+        showNavZoneDebugOverlay: true,
       );
       await manager.saveGlobalPrefs(globalPrefs);
       final loaded = await manager.load('b1');
       expect(loaded.globalPrefs, globalPrefs);
+    });
+
+    test('navZoneCustomActions 已儲存值為空字串時，安全回退為 rightFlip 模板',
+        () async {
+      SharedPreferences.setMockInitialValues({
+        'global_reader_nav_zone_custom_actions': '',
+      });
+      final loaded = await manager.load('b1');
+      expect(loaded.globalPrefs.navZoneCustomActions, rightFlipZoneTemplate);
+    });
+
+    test('navZoneCustomActions 未儲存過（缺鍵）時，安全回退為 rightFlip 模板',
+        () async {
+      final loaded = await manager.load('b1');
+      expect(loaded.globalPrefs.navZoneCustomActions, rightFlipZoneTemplate);
     });
 
     test('已儲存的全域預設字串無法對應到任何列舉值時，安全回退為初始值', () async {

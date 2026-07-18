@@ -5,6 +5,7 @@ import 'book_reader_prefs_repository.dart';
 import 'dual_page_direction.dart';
 import 'dual_page_mode.dart';
 import 'global_reader_prefs.dart';
+import 'nav_zone_mode.dart';
 import 'page_turn_mode.dart';
 import 'pdf_crop_mode.dart';
 import 'pdf_fit_mode.dart';
@@ -15,6 +16,7 @@ import 'reading_position_repository.dart';
 import 'resolved_preferences.dart';
 import 'screen_orientation_setting.dart';
 import 'writing_mode.dart';
+import 'zone_action.dart';
 
 /// [ReaderPrefsManager] 的正式實作。直接內建全域預設值的 SharedPreferences
 /// 讀寫邏輯（吸收原 `GlobalReaderDefaults` 的職責，鍵名沿用不變以保留既有
@@ -33,6 +35,11 @@ class ReaderPrefsManagerImpl implements ReaderPrefsManager {
 
   static const _pageTurnModeKey = 'global_reader_page_turn_mode';
   static const _screenOrientationKey = 'global_reader_screen_orientation';
+  static const _navZoneModeKey = 'global_reader_nav_zone_mode';
+  static const _navZoneCustomActionsKey =
+      'global_reader_nav_zone_custom_actions';
+  static const _navZoneDebugOverlayKey =
+      'global_reader_nav_zone_debug_overlay';
 
   @override
   Future<LoadedPrefs> load(String bookId) async {
@@ -61,6 +68,11 @@ class ReaderPrefsManagerImpl implements ReaderPrefsManager {
             ScreenOrientationSetting.values,
           ) ??
           ScreenOrientationSetting.auto,
+      navZoneMode: _readEnum(sp, _navZoneModeKey, NavZoneMode.values) ??
+          NavZoneMode.rightFlip,
+      navZoneCustomActions:
+          _decodeZoneActions(sp.getString(_navZoneCustomActionsKey)),
+      showNavZoneDebugOverlay: sp.getBool(_navZoneDebugOverlayKey) ?? false,
     );
   }
 
@@ -78,6 +90,26 @@ class ReaderPrefsManagerImpl implements ReaderPrefsManager {
     }
   }
 
+  /// `navZoneCustomActions` 缺席、長度不為 9、或含有無法辨識的 [ZoneAction]
+  /// 名稱時，一律回退為 [rightFlipZoneTemplate]——不可回退全 `none`，會
+  /// 違反自訂模式「至少 1 格 menu」的驗證規則（spec.md「資料模型」審查
+  /// 修正）。只捕捉 `ArgumentError`——`EnumName.byName()` 找不到對應列舉
+  /// 值時擲出的例外型別——不使用 `catch (_)` 寬泛捕捉一切，避免意外吞掉
+  /// 非預期的系統層級錯誤（審查修正）。
+  List<ZoneAction> _decodeZoneActions(String? raw) {
+    if (raw == null) return rightFlipZoneTemplate;
+    final parts = raw.split(',');
+    if (parts.length != 9) return rightFlipZoneTemplate;
+    try {
+      return parts.map((name) => ZoneAction.values.byName(name)).toList();
+    } on ArgumentError catch (_) {
+      return rightFlipZoneTemplate;
+    }
+  }
+
+  String _encodeZoneActions(List<ZoneAction> actions) =>
+      actions.map((a) => a.name).join(',');
+
   @override
   Future<void> saveBookPrefs(String bookId, BookReaderPrefs prefs) =>
       _sqliteRepository.save(bookId, prefs);
@@ -87,6 +119,12 @@ class ReaderPrefsManagerImpl implements ReaderPrefsManager {
     final sp = await SharedPreferences.getInstance();
     await sp.setString(_pageTurnModeKey, prefs.pageTurnMode.name);
     await sp.setString(_screenOrientationKey, prefs.screenOrientation.name);
+    await sp.setString(_navZoneModeKey, prefs.navZoneMode.name);
+    await sp.setString(
+      _navZoneCustomActionsKey,
+      _encodeZoneActions(prefs.navZoneCustomActions),
+    );
+    await sp.setBool(_navZoneDebugOverlayKey, prefs.showNavZoneDebugOverlay);
   }
 
   @override
