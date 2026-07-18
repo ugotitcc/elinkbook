@@ -19,6 +19,11 @@ import '../support/fake_reader_prefs_manager.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
 import '../support/fake_highlights_repository.dart';
 import '../support/fake_notes_repository.dart';
+import 'package:elinkbook/reader/highlight.dart';
+import 'package:elinkbook/reader/highlight_style.dart';
+import 'package:elinkbook/reader/pdf_reader_view.dart';
+import 'package:elinkbook/reader/percent_rect.dart';
+import '../support/fake_bookmarks_repository.dart';
 
 void main() {
   late SqliteLibraryRepository libraryRepository;
@@ -1033,6 +1038,75 @@ void main() {
         reason: 'LibraryScreen._openBook() 修正前，highlightsRepository 從未'
             '貫穿給 ReaderScreen，一律為 null（見 issues.md Issue 6 背景）');
     expect(readerScreen.notesRepository, same(notesRepository));
+  });
+
+  testWidgets(
+      '透過 LibraryScreen 開啟已有劃線/備註資料的 PDF 書籍後，'
+      '「劃線與備註」分頁正確顯示既有資料而非空狀態（Issue 6 缺口修正）',
+      (tester) async {
+    final book = Book(
+      id: '1',
+      title: '測試 PDF',
+      author: '測試作者',
+      format: BookFileFormat.pdf,
+      filePath: 'test/fixtures/sample.pdf',
+      source: BookSource.local,
+      groupName: BookGroup.uncategorized,
+      createTime: DateTime.now(),
+      lastReadTime: DateTime.now(),
+    );
+    final bookmarksRepository = FakeBookmarksRepository();
+    final highlightsRepository = FakeHighlightsRepository();
+    final notesRepository = FakeNotesRepository();
+    await highlightsRepository.insert(const Highlight(
+      bookId: '1',
+      style: HighlightStyle.highlighterYellow,
+      pdfPageIndex: 0,
+      pdfRect: PercentRect(left: 0.1, top: 0.1, right: 0.5, bottom: 0.2),
+    ));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: [book]),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+          bookmarksRepository: bookmarksRepository,
+          highlightsRepository: highlightsRepository,
+          notesRepository: notesRepository,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('book_item_1')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // PDF 的「📚 筆記」按鈕須等 onPageRendered 觸發後才可點擊（既有防呆
+    // 邏輯，見 reader_screen_test.dart 既有先例）；app/test/ 環境下原生
+    // _channel 恆為 null，改為直接呼叫 PdfReaderView 的公開回呼模擬。
+    final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+    pdfView.onPageRendered();
+    await tester.pump();
+
+    final notesButton = find.byKey(const Key('reader_notes_button'));
+    expect(tester.widget<IconButton>(notesButton).onPressed, isNotNull);
+
+    await tester.tap(notesButton);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    await tester.tap(find.byKey(const Key('notes_sheet_tab_annotations')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('notes_sheet_annotation_list')), findsOneWidget,
+        reason: '修正前 highlightsRepository／notesRepository 永遠為 null，'
+            '此分頁只會顯示空狀態佔位符（見 issues.md Issue 6 背景）');
+    expect(
+      find.byKey(const Key('notes_sheet_annotations_placeholder')),
+      findsNothing,
+    );
   });
 }
 
