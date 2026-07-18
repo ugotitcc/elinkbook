@@ -6,7 +6,7 @@
 
 ## Issue 1：Spike——Readium `InputListener.onTap()` 可行性驗證與收斂關卡
 
-**Status:** ready-for-agent
+**Status:** ✅ 已完成。依 `plans/plan-issue-1.md` Task 1-3 完成真機驗證，結論寫入 `reviews/spike-epub-inputlistener.md`：Q1 確認 `EpubNavigatorFragment` 對純點擊無內建翻頁反應，不需要停用步驟；Q2 確認 `InputListener.onTap()` 攔截可靠，`onTap` 呼叫次數與點擊次數嚴格 1:1（logcat 實測 6 次點擊對應 6 次呼叫，無重複觸發，反轉方向測試設計成功排除防抖鎖假陽性風險）；Q3 確認 `TapEvent.point` 為 `publicationView`（與 `fragmentView` 尺寸相同、無 letterbox）本地座標，`NavZoneHitTester.cellIndex()` 不需額外轉換公式。三項結論皆與 `spec.md` 原假設一致，已於 `spec.md`「待驗證風險與收斂關卡」段落補上驗證結果摘要，**Issue 6 可依 `spec.md` 既有規劃直接採用 `InputListener` 路線，不需退回自行實作**。驗證過程另發現附帶事實：測試裝置（TCL 9491G 客製化 ROM）系統層會過濾 `Log.d`（Debug 等級）的 `logcat` 輸出，已記錄進報告供未來同裝置除錯參考。Task 2 暫時性 Kotlin 插樁已於驗證後 `git checkout --` 完整還原，`flutter analyze`／`flutter build apk --debug` 皆確認乾淨。已於 branch `worktree-epic7-issue1`（4 個 commit）完成，經 PR #55 合併回 `main`。
 
 **依賴：** 無（起始工單，可與 Issue 2 平行）
 
