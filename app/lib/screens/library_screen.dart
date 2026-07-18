@@ -282,6 +282,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
               bookId: book.id,
               prefsManager: widget.prefsManager,
               bookmarksRepository: widget.bookmarksRepository,
+              bookTitle: book.title,
+              bookAuthor: book.author,
+              bookProgress: book.progress,
             ),
           ),
         )
