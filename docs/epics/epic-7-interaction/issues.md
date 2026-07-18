@@ -87,7 +87,15 @@
 
 ## Issue 4：PDF 熱區導覽 + 沉浸模式基礎建設
 
-**Status:** ready-for-agent
+**Status:** ✅ 已完成（Task 4 人工驗證清單待補，見下）。依 `plans/plan-issue-4.md` Task 1-5 完成實作：`ReaderScreen` 既有 `_fixedLayoutControlsVisible` 改名擴大為格式無關的 `_chromeVisible`，新增統一熱區動作分派入口 `_handleZoneAction()` 與強型別 `ReaderScreen.triggerZoneAction()` static helper（供 Issue 5/6/7 複用）；Scaffold 開啟 `extendBodyBehindAppBar: true` 並改造 `_buildBody()` 改用 `MediaQuery.viewPadding.top`，避免沉浸模式切換觸發 `PlatformView` resize；`PdfReaderView` 新增 3×3 導航熱區點擊判讀，移除既有橫向滑動翻頁手勢（ADR 0010）。
+
+**實作階段重大技術發現：** `GestureDetector.onTapUp` 包住 `AndroidView` 時實際上永遠不會觸發——`AndroidView` 內建的被動 `_PlatformViewGestureRecognizer` 依 Flutter 手勢競技場「先加入者勝出」的預設仲裁規則，一定贏過外層 `GestureDetector` 的 `TapGestureRecognizer`（已對照 Flutter SDK 原始碼 `platform_view.dart`/`arena.dart` 驗證屬實，非本專案 bug，也推翻了 `spec.md` 第 34 行「PDF 原生層無觸控監聽、沒有搶手勢競技場對象」的假設——原生層是否有監聽與 `AndroidView` 是否贏得競技場無關）。熱區點擊改由既有 `Listener`（`_handleAnnotationPointerDown`/`_handleAnnotationPointerUp`）手動座標比對判讀，以 `kTouchSlop`／`_longPressActive` 正確區分點擊與既有長按拖曳劃線手勢，不新建第二個 `GestureDetector`、不影響 `AndroidView` 觸控可見度（與 EPUB FXL 熱區疊加層「整個蓋住 AndroidView」的取捨不同）。
+
+**審查與修正：** 5 個 Task 分別經過 spec compliance + code quality 審查（Task 2 因上述發現偏離 brief 逐字碼，經 1 輪修正——補上長按/點擊邊界的回歸測試、修正一處與新機制矛盾的舊註解——後通過）；全分支最終審查（Opus）結論 Ready to merge: With fixes，0 Critical、3 Important（皆源自計畫書本身逐字內容，非實作者自行加料，經人裁示後修正）：(1) 除錯用「熱區輔助線」`GridView.count` 預設方形格子在直式手機上跑版（功能判讀 `hitTestZoneIndex()` 不受影響）→ 改為 `Column`/`Row` of `Expanded` 依實際比例排版；(2) `extendBodyBehindAppBar` 只解決 AppBar 造成的 resize，頁尾（in-flow）顯示/隱藏切換仍會造成 `body` resize，與計畫書聲稱「完全防範 Issue 6 WebView 重新分頁」不完全相符 → 修正程式碼註解用語，明確記錄為 Issue 6 開工前需處理的已知限制，未強行改造頁尾版面結構；(3) 保留的 `onTapUp`/`_handleZoneTap` 死碼有潛在雙重派發風險 → 加上一行防禦性交叉引用註解。已透過 PR #58 合併回 `main`，`main` 上重新驗證：`flutter analyze` 乾淨、`flutter test`（全專案）528 個測試全數通過。
+
+**待辦（未阻擋合併，比照 `epic-6-annotations` 既有先例）：** Task 4 Step 4 人工驗證清單尚未執行，需要人類實機操作：依序點擊 9 宮格各格對應動作是否正確、開啟熱區輔助線視覺確認格線與標籤、熱區點擊與長按拖曳劃線交叉操作不誤觸發、裝置旋轉後熱區位置正確對應。已完整記錄於 `app/integration_test/pdf_nav_zone_test.dart` 檔案開頭註解；驗證結果待補記於本節。
+
+**待辦（人類文件修正，非本 issue 程式碼範圍）：** `docs/epics/epic-7-interaction/spec.md` 第 34 行「PDF 原生層無觸控監聽、沒有搶手勢競技場對象」的敘述已證實不成立，建議修正。
 
 **依賴：** Issue 2
 
