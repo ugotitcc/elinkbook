@@ -1641,7 +1641,6 @@ void main() {
   // 待 Task 3 整合測試在真機上補做完整驗證。
   testWidgets(
       'FXL：收到 onLocatorChanged 後，點擊懸浮書籤按鈕可新增/移除目前頁書籤，圖示正確切換並持久化',
-      skip: true, // flutter test 無法模擬 PlatformView rebuild，待整合測試補做
       (tester) async {
     final bookmarksRepository = FakeBookmarksRepository();
 
@@ -1664,6 +1663,11 @@ void main() {
       const EpubLayoutInfo(isFixedLayout: true, writingMode: WritingMode.horizontal),
     );
     await tester.pump();
+
+    // 解決 loading state 導致 CircularProgressIndicator 動畫持續排程與 MissingPluginException 問題
+    view.onPageRendered();
+    await tester.pump();
+
     view.onLocatorChanged?.call(
       const EpubPositionInfo(locatorJson: '{"href":"/page1.xhtml"}', progression: 0.2),
     );
@@ -1676,13 +1680,16 @@ void main() {
       Icons.star_border,
     );
 
-    // 點擊書籤按鈕：_toggleFxlBookmark 透過 runAsync 執行非同步 repository
-    // 操作。不 pump（避免 setState 觸發 PlatformView rebuild 導致
-    // MissingPluginException）。直接驗證 repository 狀態。
-    await tester.runAsync(() async {
-      await tester.tap(finder);
-      await Future.delayed(Duration.zero);
-    });
+    // 點擊新增書籤
+    await tester.tap(finder);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // 斷言 UI 圖示是否已切換為已加入書籤狀態
+    expect(
+      (tester.widget<IconButton>(finder).icon as Icon).icon,
+      Icons.star,
+    );
 
     final afterAdd = await bookmarksRepository.listByBook('b_fxl_bookmark_toggle');
     expect(afterAdd, hasLength(1));
@@ -1691,10 +1698,15 @@ void main() {
     expect(afterAdd.single.pdfPageIndex, isNull);
 
     // 再次點擊移除書籤
-    await tester.runAsync(() async {
-      await tester.tap(finder);
-      await Future.delayed(Duration.zero);
-    });
+    await tester.tap(finder);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // 斷言 UI 圖示是否已還原為未加入書籤狀態
+    expect(
+      (tester.widget<IconButton>(finder).icon as Icon).icon,
+      Icons.star_border,
+    );
 
     final afterRemove = await bookmarksRepository.listByBook('b_fxl_bookmark_toggle');
     expect(afterRemove, isEmpty);
