@@ -1571,4 +1571,316 @@ void main() {
 
     expect(find.byType(AnnotationToolbar), findsNothing);
   });
+
+  // --- Epic 6 Issue 4：FXL 書籤支援 ---
+
+  testWidgets(
+      'FXL：未提供 bookmarksRepository 時，懸浮書籤/筆記按鈕皆不存在（既有呼叫端零回歸）',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample_fixed_layout.epub',
+          bookId: 'b_fxl_no_repo',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final view = tester.widget<EpubReaderView>(find.byType(EpubReaderView));
+    view.onLayoutResolved?.call(
+      const EpubLayoutInfo(isFixedLayout: true, writingMode: WritingMode.horizontal),
+    );
+    await tester.pump();
+
+    expect(
+      find.byKey(const Key('reader_fixed_layout_bookmark_toggle_button')),
+      findsNothing,
+    );
+  });
+
+  testWidgets(
+      'FXL：提供 bookmarksRepository 後，懸浮書籤按鈕存在，onLocatorChanged 前為停用狀態',
+      (tester) async {
+    final bookmarksRepository = FakeBookmarksRepository();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample_fixed_layout.epub',
+          bookId: 'b_fxl_bookmark_disabled',
+          prefsManager: prefsManager,
+          bookmarksRepository: bookmarksRepository,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final view = tester.widget<EpubReaderView>(find.byType(EpubReaderView));
+    view.onLayoutResolved?.call(
+      const EpubLayoutInfo(isFixedLayout: true, writingMode: WritingMode.horizontal),
+    );
+    await tester.pump();
+
+    final finder = find.byKey(const Key('reader_fixed_layout_bookmark_toggle_button'));
+    expect(finder, findsOneWidget);
+    expect(
+      tester.widget<IconButton>(finder).onPressed,
+      isNull,
+      reason: '尚未收到 onLocatorChanged，_epubPositionInfo 仍為 null，比照 '
+          'reader_notes_button 既有防呆邏輯',
+    );
+  });
+
+
+  testWidgets(
+      'FXL：收到 onLocatorChanged 後，點擊懸浮書籤按鈕可新增/移除目前頁書籤，圖示正確切換並持久化',
+      (tester) async {
+    final bookmarksRepository = FakeBookmarksRepository();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample_fixed_layout.epub',
+          bookId: 'b_fxl_bookmark_toggle',
+          prefsManager: prefsManager,
+          bookmarksRepository: bookmarksRepository,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final view = tester.widget<EpubReaderView>(find.byType(EpubReaderView));
+    view.onLayoutResolved?.call(
+      const EpubLayoutInfo(isFixedLayout: true, writingMode: WritingMode.horizontal),
+    );
+    await tester.pump();
+
+    // 解決 loading state 導致 CircularProgressIndicator 動畫持續排程與 MissingPluginException 問題
+    view.onPageRendered();
+    await tester.pump();
+
+    view.onLocatorChanged?.call(
+      const EpubPositionInfo(locatorJson: '{"href":"/page1.xhtml"}', progression: 0.2),
+    );
+    await tester.pump();
+
+    final finder = find.byKey(const Key('reader_fixed_layout_bookmark_toggle_button'));
+    expect(tester.widget<IconButton>(finder).onPressed, isNotNull);
+    expect(
+      (tester.widget<IconButton>(finder).icon as Icon).icon,
+      Icons.star_border,
+    );
+
+    // 點擊新增書籤
+    await tester.tap(finder);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // 斷言 UI 圖示是否已切換為已加入書籤狀態
+    expect(
+      (tester.widget<IconButton>(finder).icon as Icon).icon,
+      Icons.star,
+    );
+
+    final afterAdd = await bookmarksRepository.listByBook('b_fxl_bookmark_toggle');
+    expect(afterAdd, hasLength(1));
+    expect(afterAdd.single.epubLocatorJson, '{"href":"/page1.xhtml"}');
+    expect(afterAdd.single.progression, 0.2);
+    expect(afterAdd.single.pdfPageIndex, isNull);
+
+    // 再次點擊移除書籤
+    await tester.tap(finder);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // 斷言 UI 圖示是否已還原為未加入書籤狀態
+    expect(
+      (tester.widget<IconButton>(finder).icon as Icon).icon,
+      Icons.star_border,
+    );
+
+    final afterRemove = await bookmarksRepository.listByBook('b_fxl_bookmark_toggle');
+    expect(afterRemove, isEmpty);
+  });
+
+  // --- Epic 6 Issue 4：FXL 書籤支援（Task 2） ---
+
+  testWidgets(
+      'FXL：懸浮筆記按鈕開啟 Bottom Sheet，「🔖 書籤」分頁可用、「✏️ 劃線與備註」分頁顯示空狀態且不可互動',
+      (tester) async {
+    final bookmarksRepository = FakeBookmarksRepository();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample_fixed_layout.epub',
+          bookId: 'b_fxl_notes_sheet',
+          prefsManager: prefsManager,
+          bookmarksRepository: bookmarksRepository,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final view = tester.widget<EpubReaderView>(find.byType(EpubReaderView));
+    view.onLayoutResolved?.call(
+      const EpubLayoutInfo(isFixedLayout: true, writingMode: WritingMode.horizontal),
+    );
+    await tester.pump();
+
+    // 解決 loading state 導致 CircularProgressIndicator 無限動畫持續排程的問題
+    view.onPageRendered();
+    await tester.pump();
+
+    final notesButtonFinder = find.byKey(const Key('reader_fixed_layout_notes_button'));
+    expect(notesButtonFinder, findsOneWidget);
+    expect(tester.widget<IconButton>(notesButtonFinder).onPressed, isNull);
+
+    view.onLocatorChanged?.call(
+      const EpubPositionInfo(locatorJson: '{"href":"/page1.xhtml"}', progression: 0.2),
+    );
+    await tester.pump();
+    expect(tester.widget<IconButton>(notesButtonFinder).onPressed, isNotNull);
+
+    await tester.tap(notesButtonFinder);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.byType(NotesBottomSheet), findsOneWidget);
+    expect(find.byKey(const Key('notes_sheet_tab_bookmarks')), findsOneWidget);
+    expect(find.byKey(const Key('notes_sheet_bookmark_toggle')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('notes_sheet_tab_annotations')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.byKey(const Key('notes_sheet_annotations_placeholder')), findsOneWidget);
+    expect(find.byKey(const Key('notes_sheet_delete_all_highlights')), findsNothing);
+    expect(find.byKey(const Key('notes_sheet_delete_all_notes')), findsNothing);
+  });
+
+  testWidgets(
+      'FXL：於 Bottom Sheet 的書籤分頁新增書籤後關閉，懸浮書籤按鈕圖示同步更新',
+      (tester) async {
+    final bookmarksRepository = FakeBookmarksRepository();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample_fixed_layout.epub',
+          bookId: 'b_fxl_sync',
+          prefsManager: prefsManager,
+          bookmarksRepository: bookmarksRepository,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final view = tester.widget<EpubReaderView>(find.byType(EpubReaderView));
+    view.onLayoutResolved?.call(
+      const EpubLayoutInfo(isFixedLayout: true, writingMode: WritingMode.horizontal),
+    );
+    await tester.pump();
+
+    // 解決 loading state
+    view.onPageRendered();
+    await tester.pump();
+
+    view.onLocatorChanged?.call(
+      const EpubPositionInfo(locatorJson: '{"href":"/page1.xhtml"}', progression: 0.2),
+    );
+    await tester.pump();
+
+    final bookmarkToggleFinder =
+        find.byKey(const Key('reader_fixed_layout_bookmark_toggle_button'));
+    expect(
+      (tester.widget<IconButton>(bookmarkToggleFinder).icon as Icon).icon,
+      Icons.star_border,
+    );
+
+    await tester.tap(find.byKey(const Key('reader_fixed_layout_notes_button')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    await tester.tap(find.byKey(const Key('notes_sheet_bookmark_toggle')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // 關閉 Bottom Sheet（點擊外側遮罩）。
+    await tester.tapAt(const Offset(20, 20));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(
+      (tester.widget<IconButton>(bookmarkToggleFinder).icon as Icon).icon,
+      Icons.star,
+      reason: 'Bottom Sheet 內新增書籤後關閉，懸浮按鈕應重新載入並反映最新狀態',
+    );
+  });
+
+  testWidgets('FXL：從書籤清單點選跳轉後，Bottom Sheet 關閉且懸浮控制項收合',
+      (tester) async {
+    final bookmarksRepository = FakeBookmarksRepository();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample_fixed_layout.epub',
+          bookId: 'b_fxl_jump_collapse',
+          prefsManager: prefsManager,
+          bookmarksRepository: bookmarksRepository,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final view = tester.widget<EpubReaderView>(find.byType(EpubReaderView));
+    view.onLayoutResolved?.call(
+      const EpubLayoutInfo(isFixedLayout: true, writingMode: WritingMode.horizontal),
+    );
+    await tester.pump();
+
+    // 解決 loading state
+    view.onPageRendered();
+    await tester.pump();
+
+    view.onLocatorChanged?.call(
+      const EpubPositionInfo(locatorJson: '{"href":"/page1.xhtml"}', progression: 0.2),
+    );
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('reader_fixed_layout_notes_button')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    await tester.tap(find.byKey(const Key('notes_sheet_bookmark_toggle')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    await tester.tap(find.byType(ListTile).first);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.byType(NotesBottomSheet), findsNothing);
+    expect(
+      find.byKey(const Key('reader_fixed_layout_back_button')),
+      findsNothing,
+      reason: '書籤跳轉比照既有換頁慣例，強制收合懸浮控制項',
+    );
+    expect(find.byKey(const Key('reader_fixed_layout_notes_button')), findsNothing);
+    expect(
+      find.byKey(const Key('reader_fixed_layout_bookmark_toggle_button')),
+      findsNothing,
+    );
+  });
 }
