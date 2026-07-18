@@ -16,6 +16,9 @@ import 'package:elinkbook/library/models/library_enums.dart';
 import '../support/fake_book_import_service.dart';
 import '../support/fake_library_repository.dart';
 import '../support/fake_reader_prefs_manager.dart';
+import 'package:elinkbook/screens/reader_screen.dart';
+import '../support/fake_highlights_repository.dart';
+import '../support/fake_notes_repository.dart';
 
 void main() {
   late SqliteLibraryRepository libraryRepository;
@@ -992,6 +995,44 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('library_importing_overlay')), findsNothing);
+  });
+
+  testWidgets(
+      'LibraryScreen 點開一本書後，ReaderScreen 收到的 highlightsRepository／notesRepository 正確貫穿（Issue 6 缺口修正）',
+      (tester) async {
+    // 使用 .txt 格式讓 ReaderScreen 命中「不支援格式」分支（純 Dart 安全
+    // 路徑，不觸發 AndroidView，比照既有「從閱讀器返回書架」測試的既有
+    // 做法）——本測試只關心建構參數是否正確貫穿，與實際閱讀器渲染無關。
+    final book = _testBook(
+      id: '1',
+      title: '紅樓夢',
+      author: '曹雪芹',
+      filePath: 'content://example/1.txt',
+    );
+    final highlightsRepository = FakeHighlightsRepository();
+    final notesRepository = FakeNotesRepository();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: [book]),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+          highlightsRepository: highlightsRepository,
+          notesRepository: notesRepository,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('book_item_1')));
+    await tester.pumpAndSettle();
+
+    final readerScreen = tester.widget<ReaderScreen>(find.byType(ReaderScreen));
+    expect(readerScreen.highlightsRepository, same(highlightsRepository),
+        reason: 'LibraryScreen._openBook() 修正前，highlightsRepository 從未'
+            '貫穿給 ReaderScreen，一律為 null（見 issues.md Issue 6 背景）');
+    expect(readerScreen.notesRepository, same(notesRepository));
   });
 }
 
