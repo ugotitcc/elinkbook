@@ -31,7 +31,7 @@
 
 ## Issue 2：資料層基礎建設——熱區設定資料模型與全域持久化
 
-**Status:** ready-for-agent
+**Status:** ✅ 已完成。依 `plans/plan-issue-2.md` Task 1-5 完成實作：新增 `ZoneAction`／`NavZoneMode` 列舉與 `resolveZoneActions()`/`hitTestZoneIndex()`/`isValidCustomZoneConfig()` 三個純函式，`GlobalReaderPrefs`／`ResolvedPreferences` 依規劃擴充並接上 `ReaderPrefsManagerImpl` 讀寫。程式碼審查（`reviews/review-issue-2.md`，對照分支 `feat/epic-7-zone-data-model`）結論 Ready to merge: Yes，無 Critical/Important 問題。**分支合併狀況特殊記錄**：實作期間另一個並行 session 已直接在 `main` 上完成同一份 Task 1-5（commit `0787a45`/`d825440`/`619a832`/`cfc1002`/`ceada33`），因此 PR #56（`feat/epic-7-zone-data-model` → `main`）與 `main` 現況逐檔比對後內容完全一致（`git merge-tree` 驗證零衝突、`git diff --stat` 除 Issue 1 相關文件外零差異），PR #56 判定為空合併後由人類直接關閉（未合併），Task 1-5 的實際交付已存在於 `main`。`plan-issue-2.md` Task 6（全域驗證）已在 `main` 上重新執行確認：`flutter analyze` 乾淨、`flutter test`（全專案）511 個測試全數通過。
 
 **依賴：** 無（起始工單，可與 Issue 1 平行）
 
