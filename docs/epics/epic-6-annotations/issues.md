@@ -201,3 +201,34 @@ PDF 書籍開啟「✏️ 劃線與備註」分頁時，資料層與 UI 完全�
 - [ ] `share_plus` 與本專案既有 `FileProvider` 無 manifest 衝突，分享的暫存檔案路徑確實被涵蓋、接收端可正常讀取
 - [ ] 上述測試皆通過，`flutter analyze` 乾淨
 - [ ] 真機整合測試涵蓋導出→存檔→分享的端到端流程
+
+---
+
+## Issue 6：正式圖書庫流程貫穿 highlightsRepository／notesRepository
+
+**Status:** ready-for-agent
+
+**依賴：** Issue 2（EPUB 劃線/備註）、Issue 3（PDF 劃線/備註）
+
+**背景（既有缺口，非新增功能）：** Issue 2/3 已在 `ReaderScreen` 建立完整的 EPUB/PDF 劃線與備註功能，`ReaderScreen` 本身也已支援可選的 `highlightsRepository`／`notesRepository` 建構參數；但 `LibraryScreen._openBook()`（`app/lib/screens/library_screen.dart`）目前只把 `bookmarksRepository` 貫穿給 `ReaderScreen`，從未貫穿這兩個 Repository。結果是：一般使用者從書架點開一本書，`ReaderScreen` 收到的 `highlightsRepository`／`notesRepository` 皆為 `null`，劃線/備註功能在正式流程中完全停用（`NotesBottomSheet` 的「劃線與備註」分頁維持空狀態、無法新增/查看）——Issue 2/3/5（Markdown 導出）三個工單建立的劃線/備註相關功能，目前只有透過測試或直接建構 `ReaderScreen` 才會生效，一般使用者實際上完全接觸不到。
+
+此缺口最早在 Issue 4 審查時發現並記錄（範疇外，未修正），Issue 5（Markdown 導出）最終整體分支審查再次確認：目前正式圖書庫流程匯出的 Markdown 永遠只有書籤清單，劃線/備註段落固定顯示「尚未加入任何劃線或備註」，即使該書實際上有劃線/備註資料。
+
+**What to build：**
+
+`LibraryScreen._openBook(Book book)` 建構 `ReaderScreen` 時，補上貫穿既有的 `highlightsRepository`／`notesRepository`（比照既有 `bookmarksRepository` 的貫穿方式，`LibraryScreen` 應已持有或可建構這兩個 Repository 實例，若尚未持有則需新增對應欄位，比照 `bookmarksRepository` 的既有建構/注入模式）。
+
+**單元測試要求：**
+
+- widget test（純 Dart，不需真機）：
+  - `LibraryScreen` 點開一本書後，`ReaderScreen` 收到的 `highlightsRepository`／`notesRepository` 不為 `null`。
+  - 端到端（透過 `LibraryScreen` 進入 `ReaderScreen` 而非直接建構）：已存在劃線/備註資料的書籍，開書後「📚 筆記」的「劃線與備註」分頁正確顯示既有資料（而非空狀態）。
+  - 既有 `LibraryScreen`／`ReaderScreen` 測試維持全數通過，確認純粹是貫穿缺口的修正、不影響既有行為。
+- 回歸驗證：Issue 5 的 Markdown 導出功能，經由 `LibraryScreen` 開書的正式流程匯出後，內容應正確包含該書實際的劃線/備註（而非固定顯示空狀態）——可視情況新增一則涵蓋此路徑的測試，或於既有 `library_screen_test.dart`／`reader_screen_test.dart` 中擴充既有案例。
+
+**驗收標準：**
+
+- [ ] `LibraryScreen._openBook()` 正確貫穿 `highlightsRepository`／`notesRepository` 給 `ReaderScreen`
+- [ ] 一般使用者透過書架開書後，劃線/備註功能（含 Issue 5 Markdown 導出）在正式流程中確實生效，不再固定顯示空狀態
+- [ ] 既有 `LibraryScreen`／`ReaderScreen` 相關測試維持全數通過，無回歸
+- [ ] 上述測試皆通過，`flutter analyze` 乾淨
