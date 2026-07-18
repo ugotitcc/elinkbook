@@ -1,6 +1,6 @@
 # Epic 6 Issue 5：Markdown 導出 Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development（推薦）或 superpowers:executing-plans 逐 Task 執行本計劃。步驟使用核取方塊（`- [ ]`）語法追蹤進度。
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development（推薦）或 superpowers:executing-plans 逐 Task 執行本計劃。步驟使用核取方塊（`- [x]`）語法追蹤進度。
 
 **Goal:** 讓使用者在「📚 筆記」Bottom Sheet 內一鍵把目前這本書的書籤清單、劃線與個人備註匯出成一份 `.md` 檔案，並透過 Android 系統分享面板送出。
 
@@ -51,7 +51,7 @@
   - `String generateMarkdownExport({required String bookTitle, String? bookAuthor, required double progress, required DateTime exportTime, required List<Bookmark> bookmarks, required List<AnnotationListItem> annotations})`
   - `String sanitizeMarkdownFileName(String title)`
 
-- [ ] **Step 1: 寫入失敗測試**
+- [x] **Step 1: 寫入失敗測試**
 
 建立 `app/test/reader/markdown_export_test.dart`：
 
@@ -196,12 +196,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `cd app && flutter test test/reader/markdown_export_test.dart`
 Expected: FAIL — `Error: Error when reading 'lib/reader/markdown_export.dart': No such file or directory.`
 
-- [ ] **Step 3: 實作 `markdown_export.dart`**
+- [x] **Step 3: 實作 `markdown_export.dart`**
 
 建立 `app/lib/reader/markdown_export.dart`：
 
@@ -314,12 +314,12 @@ String _formatDate(DateTime date) {
 }
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `cd app && flutter test test/reader/markdown_export_test.dart`
 Expected: `All tests passed!`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/lib/reader/markdown_export.dart app/test/reader/markdown_export_test.dart
@@ -345,7 +345,7 @@ git commit -m "feat(epic-6): 新增 Markdown 匯出內容產生純函式"
 - Consumes（既有）：`NotesBottomSheet` 既有 `_bookmarks`／`_highlights`／`_notes` State 欄位與既有 `mergeAnnotations` import；`ReaderScreen._openNotesSheet(BookFormat format)`；`ReaderScreen._epubPositionInfo`（`EpubPositionInfo?`，欄位 `progression`）／`_pdfPageInfo`（`PdfPageInfo?`，欄位 `pageIndex`／`totalPages`）；`LibraryScreen._openBook(Book book)`；`Book.title`／`Book.author`／`Book.progress`（來自 `app/lib/library/models/book.dart`）。
 - Produces：`NotesBottomSheet` 新增 Key `notes_sheet_export_markdown`（`TextButton.icon`）；`ReaderScreen`／`NotesBottomSheet` 新增 `bookTitle`／`bookAuthor`／`bookProgress` 具名參數（供 Task 3 直接建構使用）。**審查修正（I-1）**：`ReaderScreen._openNotesSheet()` 傳給 `NotesBottomSheet` 的 `bookProgress` 改為即時計算的目前進度，不再是 `widget.bookProgress` 這個開書當下的舊快照值（見 Step 6）。
 
-- [ ] **Step 1：新增 `share_plus` 依賴**
+- [x] **Step 1：新增 `share_plus` 依賴**
 
 編輯 `app/pubspec.yaml`，在既有 `path_provider: ^2.1.6`（第 39 行）之後新增：
 
@@ -357,7 +357,7 @@ git commit -m "feat(epic-6): 新增 Markdown 匯出內容產生純函式"
 Run: `cd app && flutter pub get`
 Expected: `Got dependencies!`（新增 `share_plus`／`share_plus_platform_interface`／`cross_file` 等套件）
 
-- [ ] **Step 2：新增測試替身**
+- [x] **Step 2：新增測試替身**
 
 建立 `app/test/support/fake_path_provider_platform.dart`：
 
@@ -399,7 +399,7 @@ class FakeSharePlatform extends SharePlatform {
 }
 ```
 
-- [ ] **Step 3：在 `notes_bottom_sheet_test.dart` 新增失敗測試**
+- [x] **Step 3：在 `notes_bottom_sheet_test.dart` 新增失敗測試**
 
 在檔案頂部 import 區塊（第 1-12 行）新增：
 
@@ -612,12 +612,12 @@ Future<void> _pumpSheet(
   });
 ```
 
-- [ ] **Step 4：執行測試確認失敗**
+- [x] **Step 4：執行測試確認失敗**
 
 Run: `cd app && flutter test test/screens/notes_bottom_sheet_test.dart test/screens/reader_screen_test.dart`
 Expected: FAIL —`notes_bottom_sheet_test.dart` 因 `The named parameter 'bookTitle' isn't defined`（`NotesBottomSheet` 建構子尚未有這些參數）編譯失敗；`reader_screen_test.dart` 同理因 `ReaderScreen`／`NotesBottomSheet` 尚未有 `bookProgress` 等新參數編譯失敗。
 
-- [ ] **Step 5：實作 `notes_bottom_sheet.dart`**
+- [x] **Step 5：實作 `notes_bottom_sheet.dart`**
 
 **5a. 新增 import。** 在既有 import 區塊（第 1-12 行）之後插入：
 
@@ -722,7 +722,7 @@ import '../reader/markdown_export.dart';
             ),
 ```
 
-- [ ] **Step 6：貫穿 `ReaderScreen` 新參數**
+- [x] **Step 6：貫穿 `ReaderScreen` 新參數**
 
 在 `app/lib/screens/reader_screen.dart` 的 `ReaderScreen` 類別，`notesRepository` 欄位宣告（原第 74 行）之後插入：
 
@@ -791,7 +791,7 @@ import '../reader/markdown_export.dart';
 
 （`bookProgress` 傳入的是上面新增的 `latestProgress` 區域變數，**不是** `widget.bookProgress`；`currentPosition` 以下其餘既有欄位與 `onAnnotationSelected`／`onAnnotationsChanged`／`onBookmarkSelected`／`.then(...)` 整段維持原樣不動。）
 
-- [ ] **Step 7：貫穿 `LibraryScreen` 新參數**
+- [x] **Step 7：貫穿 `LibraryScreen` 新參數**
 
 在 `app/lib/screens/library_screen.dart` 的 `_openBook(Book book)` 方法內，原本：
 
@@ -818,17 +818,17 @@ import '../reader/markdown_export.dart';
             ),
 ```
 
-- [ ] **Step 8：執行測試確認通過**
+- [x] **Step 8：執行測試確認通過**
 
 Run: `cd app && flutter test`
 Expected: `All tests passed!`
 
-- [ ] **Step 9：建置驗證 `FileProvider` 無 Manifest 衝突**
+- [x] **Step 9：建置驗證 `FileProvider` 無 Manifest 衝突**
 
 Run: `cd app && flutter build apk --debug`
 Expected: `✓ Built build\app\outputs\flutter-apk\app-debug.apk`（建置成功即代表 `share_plus` 自帶的 `${applicationId}.flutter.share_provider` 與本專案既有 `${applicationId}.fileprovider` 未在 Manifest Merger 階段衝突，見 Global Constraints）。
 
-- [ ] **Step 10：Commit**
+- [x] **Step 10：Commit**
 
 ```bash
 git add app/pubspec.yaml app/pubspec.lock app/lib/screens/notes_bottom_sheet.dart app/lib/screens/reader_screen.dart app/lib/screens/library_screen.dart app/test/screens/notes_bottom_sheet_test.dart app/test/support/fake_path_provider_platform.dart app/test/support/fake_share_platform.dart
@@ -848,7 +848,7 @@ git commit -m "feat(epic-6): NotesBottomSheet 新增導出為 Markdown 按鈕，
 
 **範圍說明**：依 Global Constraints「真實 Android Share Intent 會阻塞等待使用者操作」，本測試**不點擊**匯出按鈕觸發真實分享——只驗證按鈕在真機上正確渲染、依既有 `_epubPositionInfo`／`onPageRendered` 就緒條件正確啟用/停用，比照既有 `reader_notes_button` 的既有測試模式。真正「點擊後系統分享面板喚起、其他 App 能正確讀取檔案」留給下方人工驗證清單。
 
-- [ ] **Step 1：新增 `app/integration_test/markdown_export_test.dart`**
+- [x] **Step 1：新增 `app/integration_test/markdown_export_test.dart`**
 
 ```dart
 import 'dart:io';
@@ -971,12 +971,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：於真實裝置/模擬器執行整合測試**
+- [x] **Step 2：於真實裝置/模擬器執行整合測試**
 
 Run: `cd app && flutter test integration_test/markdown_export_test.dart -d <device-id>`（`<device-id>` 以 `flutter devices` 查得的實際 id 取代）
 Expected: `All tests passed!`
 
-- [ ] **Step 3：執行全專案回歸驗證**
+- [x] **Step 3：執行全專案回歸驗證**
 
 Run: `cd app && flutter test`
 Expected: `All tests passed!`（無既有測試回歸）
@@ -984,7 +984,7 @@ Expected: `All tests passed!`（無既有測試回歸）
 Run: `cd app && flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 4：Commit**
+- [x] **Step 4：Commit**
 
 ```bash
 git add app/integration_test/markdown_export_test.dart
