@@ -35,7 +35,7 @@
 - Consumes：無（本 issue 起始工單）
 - Produces：Q1 的基準證據（螢幕截圖 + 觀察紀錄），供 Task 3 彙整進報告；若本 Task 已發現內建翻頁行為，Task 2 插樁後需與此基準比對是否重複翻頁
 
-- [ ] **Step 1：記錄插樁前的乾淨基準**
+- [x] **Step 1：記錄插樁前的乾淨基準**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook"
@@ -44,7 +44,7 @@ git status --short
 
 Expected：完全無輸出（`plans/plan-issue-1.md` 已隨本次 commit 存在於 worktree 中，不會顯示為待處理變更）。若有殘留輸出，先確認來源再繼續。
 
-- [ ] **Step 2：建置目前（未修改）debug APK 並安裝到真機**
+- [x] **Step 2：建置目前（未修改）debug APK 並安裝到真機**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -54,7 +54,7 @@ adb -s 3CEF42ECD491687 install -r build/app/outputs/flutter-apk/app-debug.apk
 
 Expected：建置成功、安裝成功（`Success`）。
 
-- [ ] **Step 3：推送測試素材並透過 App 內建匯入流程開啟**
+- [x] **Step 3：推送測試素材並透過 App 內建匯入流程開啟**
 
 ```bash
 adb -s 3CEF42ECD491687 push "U:/MyDeveloper/AI/elinkBook/app/test/fixtures/sample_multi_chapter.epub" /sdcard/Download/
@@ -62,13 +62,13 @@ adb -s 3CEF42ECD491687 push "U:/MyDeveloper/AI/elinkBook/app/test/fixtures/sampl
 
 在真機上開啟 App → 圖書庫 →「匯入書籍」→ 系統檔案選擇器 → 導覽至「下載」資料夾 → 選取 `sample_multi_chapter.epub`，等待匯入完成，點擊該書開啟閱讀畫面。確認畫面為流式（reflowable）版面（無懸浮按鈕、有正常 AppBar），非固定版面。
 
-- [ ] **Step 4：直向、擷取第一頁畫面**
+- [x] **Step 4：直向、擷取第一頁畫面**
 
 ```bash
 adb -s 3CEF42ECD491687 exec-out screencap -p > "U:/MyDeveloper/AI/elinkBook/tmp/epic-7/reviews/spike-q1-baseline-page1.png"
 ```
 
-- [ ] **Step 5：在畫面左側、中央、右側三個位置各點擊一次，逐次擷取畫面比對是否翻頁**
+- [x] **Step 5：在畫面左側、中央、右側三個位置各點擊一次，逐次擷取畫面比對是否翻頁**
 
 ```bash
 # 左側（畫面寬度約 1/6 處）
@@ -89,7 +89,7 @@ adb -s 3CEF42ECD491687 exec-out screencap -p > "U:/MyDeveloper/AI/elinkBook/tmp/
 - 若畫面內容（可見文字）在**任一次**點擊後改變 → Q1 結論：Readium **已有內建點擊翻頁行為**，需要先停用；具體停用方式待 Task 2 進一步確認是否能靠 `InputListener.onTap()` 回傳 `true` 抑制，或需要額外的 `EpubPreferences` 設定
 - 若三次點擊畫面皆無變化 → Q1 結論：「無內建點擊翻頁行為，不需停用」
 
-- [ ] **Step 6：記錄 logcat 是否有相關訊息（輔助判斷，非必要證據）**
+- [x] **Step 6：記錄 logcat 是否有相關訊息（輔助判斷，非必要證據）**
 
 ```bash
 adb -s 3CEF42ECD491687 logcat -d | grep -i "readium\|elinkbook" | tail -50 > "U:/MyDeveloper/AI/elinkBook/tmp/epic-7/reviews/spike-q1-logcat.txt"
@@ -106,7 +106,7 @@ adb -s 3CEF42ECD491687 logcat -d | grep -i "readium\|elinkbook" | tail -50 > "U:
 - Consumes：Task 1 的基準結論（是否已有內建翻頁行為，決定插樁後是否要特別留意「同一次點擊換兩頁」的重複翻頁現象）；`EpubReaderView.kt` 既有欄位 `navigatorFragment: EpubNavigatorFragment?`（`attachNavigator()` 賦值後即可用）
 - Produces：Q2／Q3 的證據（logcat 座標紀錄 + 螢幕截圖），供 Task 3 彙整進報告；若證實可行，本插樁確認的 API 呼叫方式（`addInputListener` + `TapEvent.point` + `goForward`/`goBackward`）可作為 Issue 6 實作的起點（僅供參考，Issue 6 需視 `spec.md` 規格重新正式撰寫並補測試，不可直接複製本次插樁程式碼）
 
-- [ ] **Step 1：新增 `InputListener`／`TapEvent` import**
+- [x] **Step 1：新增 `InputListener`／`TapEvent` import**
 
 在 `app/android/app/src/main/kotlin/cc/ugotit/elinkbook/EpubReaderView.kt` 第 43 行（`import org.readium.r2.navigator.util.BaseActionModeCallback` 之後）新增兩行：
 
@@ -115,7 +115,7 @@ import org.readium.r2.navigator.input.InputListener
 import org.readium.r2.navigator.input.TapEvent
 ```
 
-- [ ] **Step 2：在 `attachNavigator()` 內暫時註冊 `InputListener`**
+- [x] **Step 2：在 `attachNavigator()` 內暫時註冊 `InputListener`**
 
 修改 `app/android/app/src/main/kotlin/cc/ugotit/elinkbook/EpubReaderView.kt`，在第 896-897 行：
 
@@ -167,7 +167,7 @@ import org.readium.r2.navigator.input.TapEvent
 
 （此插樁刻意同時記錄 `publicationView` 與 `navigatorFragment.view`（Fragment 自身的 root view）兩組尺寸——若兩者尺寸不同，`event.point` 的座標基準需要靠比對其數值範圍才能判斷是相對哪一個 view，這正是 Q3 要驗證的內容。）
 
-- [ ] **Step 3：重新建置並安裝**
+- [x] **Step 3：重新建置並安裝**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -177,7 +177,7 @@ adb -s 3CEF42ECD491687 install -r build/app/outputs/flutter-apk/app-debug.apk
 
 Expected：建置成功（確認 `InputListener`/`TapEvent` import 路徑正確、`object : InputListener` 匿名類別編譯通過），安裝成功。
 
-- [ ] **Step 4：清空 logcat 緩衝區，開啟同一本書**
+- [x] **Step 4：清空 logcat 緩衝區，開啟同一本書**
 
 ```bash
 adb -s 3CEF42ECD491687 logcat -c
@@ -185,13 +185,13 @@ adb -s 3CEF42ECD491687 logcat -c
 
 在真機上重新開啟 `sample_multi_chapter.epub`（Task 1 已匯入，App 圖書庫內應仍有該書項目；若已被移除，重複 Task 1 Step 3 的匯入流程）。
 
-- [ ] **Step 5：擷取插樁後第一頁畫面**
+- [x] **Step 5：擷取插樁後第一頁畫面**
 
 ```bash
 adb -s 3CEF42ECD491687 exec-out screencap -p > "U:/MyDeveloper/AI/elinkBook/tmp/epic-7/reviews/spike-q2-instrumented-page1.png"
 ```
 
-- [ ] **Step 6：點擊畫面左側 3 次（插樁反轉映射：左側呼叫 `goForward`），先遠離第 1 頁邊界**
+- [x] **Step 6：點擊畫面左側 3 次（插樁反轉映射：左側呼叫 `goForward`），先遠離第 1 頁邊界**
 
 ```bash
 adb -s 3CEF42ECD491687 shell input tap 260 1200
@@ -202,7 +202,7 @@ adb -s 3CEF42ECD491687 exec-out screencap -p > "U:/MyDeveloper/AI/elinkBook/tmp/
 
 先前進 3 頁、遠離第 1 頁邊界，是刻意安排——若在第 1 頁就直接測試「反轉後點擊是否正確後退」，`goBackward()` 在第 1 頁是無效的邊界情況（已在第一頁，退無可退），會讓後續反轉測試的判讀出現歧義（見 Step 7 判準說明）。
 
-- [ ] **Step 7：點擊畫面右側 1 次（插樁反轉映射：右側呼叫 `goBackward`），比對是否正確後退**
+- [x] **Step 7：點擊畫面右側 1 次（插樁反轉映射：右側呼叫 `goBackward`），比對是否正確後退**
 
 ```bash
 adb -s 3CEF42ECD491687 shell input tap 1340 1200
@@ -214,7 +214,7 @@ adb -s 3CEF42ECD491687 exec-out screencap -p > "U:/MyDeveloper/AI/elinkBook/tmp/
 - 內容**明確後退恰好一頁** → `InputListener.onTap()` 已成功攔截並取代預設行為（若 Task 1 確認 Readium 有內建翻頁行為，代表 `onTap()` 回傳 `true` 確實抑制了它；若 Task 1 確認無內建行為，此結果單純確認 `goBackward()` 呼叫本身正確生效）
 - 內容**沒有後退**（停留原頁，或反而前進）→ 代表攔截失敗，`InputListener.onTap()` 與 Readium 內建行為同時生效、兩者方向相反互相打架，淨位移不是乾淨的單頁後退；記錄實際觀察到的內容變化，判定 Q2 失敗
 
-- [ ] **Step 8：再點擊畫面右側 2 次，確認持續後退、排除巧合**
+- [x] **Step 8：再點擊畫面右側 2 次，確認持續後退、排除巧合**
 
 ```bash
 adb -s 3CEF42ECD491687 shell input tap 1340 1200
@@ -225,7 +225,7 @@ adb -s 3CEF42ECD491687 exec-out screencap -p > "U:/MyDeveloper/AI/elinkBook/tmp/
 
 **Q2 判準（一致性檢查）**：`spike-q2-tap-right-2.png`、`spike-q2-tap-right-3.png` 應相對前一張再各後退恰好一頁，與 Step 7 的判讀方向一致，排除 Step 7 是單次巧合。
 
-- [ ] **Step 9：擷取 logcat，取出所有 `EPIC7_SPIKE` 標記的紀錄**
+- [x] **Step 9：擷取 logcat，取出所有 `EPIC7_SPIKE` 標記的紀錄**
 
 ```bash
 adb -s 3CEF42ECD491687 logcat -d | grep "EPIC7_SPIKE" > "U:/MyDeveloper/AI/elinkBook/tmp/epic-7/reviews/spike-q2q3-logcat.txt"
@@ -242,7 +242,7 @@ cat "U:/MyDeveloper/AI/elinkBook/tmp/epic-7/reviews/spike-q2q3-logcat.txt"
 - 若 `point.x`／`point.y` 的數值範圍與 `publicationView.width`／`height` 相符（例如點擊畫面右側時 `point.x` 接近 `publicationView.width` 的數值），且 `publicationView.width/height` 與 `fragmentView.width/height` 相同 → 座標相對整個 view，且該 view 沒有 letterbox 留白，`NavZoneHitTester.cellIndex()` 不需要額外轉換
 - 若 `publicationView` 與 `fragmentView` 尺寸不同，或 `point` 數值與兩者皆不完全吻合（例如座標值明顯小於兩者、暗示是相對某個更小的可視內容區域，或座標系原點不在左上角）→ 記錄實際觀察到的數值關係，供 `spec.md` 記錄所需的座標轉換公式
 
-- [ ] **Step 10：清理真機上的匯入書籍與暫存檔**
+- [x] **Step 10：清理真機上的匯入書籍與暫存檔**
 
 驗證完成後，於 App 內刪除該書（圖書庫 → 長按/滑動該書 → 刪除），並清除裝置暫存：
 
@@ -263,7 +263,7 @@ adb -s 3CEF42ECD491687 shell rm -f /sdcard/Download/sample_multi_chapter.epub
 - Consumes：Task 1、2 產出的截圖與 logcat 證據
 - Produces：本 epic 後續 Issue 6 唯一可依循的事實結論（含是否需要退回自行實作、座標轉換公式）
 
-- [ ] **Step 1：撰寫驗證報告**
+- [x] **Step 1：撰寫驗證報告**
 
 在 `docs/epics/epic-7-interaction/reviews/spike-epub-inputlistener.md` 寫入以下結構（依 Task 1-2 的實際觀察結果填入，不得照抄本範本的佔位文字）：
 
@@ -298,7 +298,7 @@ adb -s 3CEF42ECD491687 shell rm -f /sdcard/Download/sample_multi_chapter.epub
 <綜合 3 項結論，明確寫出 Issue 6 應採用 spec.md 既有規劃的 InputListener 路線、需要哪些調整（例如停用內建行為的具體方式、座標轉換公式），或是否需要退回自行實作；若退回，具體實作方向是什麼>
 ```
 
-- [ ] **Step 2：若任一問題結論與 `spec.md` 現有假設不符，更新 `spec.md`**
+- [x] **Step 2：若任一問題結論與 `spec.md` 現有假設不符，更新 `spec.md`**
 
 回到 `docs/epics/epic-7-interaction/spec.md`「待驗證風險與收斂關卡」一節，在對應項目後方補上：
 
@@ -308,7 +308,7 @@ adb -s 3CEF42ECD491687 shell rm -f /sdcard/Download/sample_multi_chapter.epub
 
 若 3 項皆與現有假設一致（不需額外處理），仍需在該節開頭補一句總結（例如：「本節 3 項風險已於 Issue 1 spike 全數驗證，見 `reviews/spike-epub-inputlistener.md`，Issue 6 可依 `spec.md` 既有規劃直接實作」），避免下一位讀者誤以為此節仍是未解狀態。若 Q3 發現座標需要轉換，同步更新 `spec.md`「模組」節 `EpubReaderView.kt` 段落，在 `NavZoneHitTester.cellIndex()` 呼叫前補上具體轉換公式的文字說明。
 
-- [ ] **Step 3：還原 Task 2 的暫時性程式碼**
+- [x] **Step 3：還原 Task 2 的暫時性程式碼**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook"
@@ -318,7 +318,7 @@ git checkout -- app/android/app/src/main/kotlin/cc/ugotit/elinkbook/EpubReaderVi
 
 Expected：`git diff --stat` 顯示 `EpubReaderView.kt` 有異動（確認插樁確實存在過），`git checkout --` 後該檔案完全還原至插樁前狀態。
 
-- [ ] **Step 4：確認清理完整**
+- [x] **Step 4：確認清理完整**
 
 ```bash
 git status --short
@@ -328,7 +328,7 @@ Expected：只剩 `docs/epics/epic-7-interaction/reviews/spike-epub-inputlistene
 
 （截圖與 logcat 檔案位於 `tmp/epic-7/reviews/`，該路徑已被根目錄 `.gitignore`（`tmp/`）排除，不需手動清理即不會進版控；如需保留證據可留著，或驗證後自行刪除，皆可。）
 
-- [ ] **Step 5：`flutter analyze` 確認未殘留任何插樁副作用**
+- [x] **Step 5：`flutter analyze` 確認未殘留任何插樁副作用**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -337,7 +337,7 @@ flutter analyze
 
 Expected："No issues found!"
 
-- [ ] **Step 6：原生端編譯驗證（審查修正，Step 4 的 `git status` 已確認檔案與 `main` 逐位元組相同，本步驟屬額外保險，確保後續 Issue 2-7 從一個確實可編譯的 `main` 開工）**
+- [x] **Step 6：原生端編譯驗證（審查修正，Step 4 的 `git status` 已確認檔案與 `main` 逐位元組相同，本步驟屬額外保險，確保後續 Issue 2-7 從一個確實可編譯的 `main` 開工）**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -346,7 +346,7 @@ flutter build apk --debug
 
 Expected：建置成功，無 Kotlin 編譯錯誤。
 
-- [ ] **Step 7：Commit**
+- [x] **Step 7：Commit**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook"
