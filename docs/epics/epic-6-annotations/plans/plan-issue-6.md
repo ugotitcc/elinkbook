@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 修正 `LibraryScreen._openBook()` 未貫穿 `highlightsRepository`／`notesRepository` 給 `ReaderScreen` 的既有缺口，讓一般使用者透過書架開書時，Issue 2/3 建立的劃線/備註功能（含 Issue 5 的 Markdown 導出）在正式流程中確實生效。
+**Goal:** 修正 `LibraryScreen._openBook()` 未貫穿 `highlightsRepository`／`notesRepository` 給 `ReaderScreen` 的既有缺口，讓一般使用者透過書架開書時，Issue 2/3 建立的劃線/備註功能（含 Issue 5 的 Markdown 匯出）在正式流程中確實生效。
 
 **Architecture:** 這不是新功能，是既有貫穿鏈路（`main.dart` → `ElinkBookApp` → `LibraryScreen` → `ReaderScreen`）缺一段的補齊。`ReaderScreen` 本身早已支援可選的 `highlightsRepository`／`notesRepository` 建構參數（Issue 2/3 已完成），`main.dart` 也已示範過同一套「建構真實 Repository → 逐層以可選具名參數往下傳」的模式（`bookmarksRepository`，Issue 1）。本工單只需在 `LibraryScreen`／`ElinkBookApp`／`main.dart` 三層依樣新增這兩個欄位並貫穿，不改動任何既有行為。
 
@@ -26,7 +26,7 @@
 |---|---|---|
 | `app/lib/screens/library_screen.dart` | 修改 | 新增 `highlightsRepository`／`notesRepository` 欄位，`_openBook()` 貫穿給 `ReaderScreen` |
 | `app/lib/main.dart` | 修改 | 建構真實 `HighlightsRepository`／`NotesRepository`，經 `ElinkBookApp` 貫穿到 `LibraryScreen` |
-| `app/test/screens/library_screen_test.dart` | 修改（新增測試） | 驗證貫穿正確性（建構參數）＋端到端資料顯示＋ Markdown 導出回歸 |
+| `app/test/screens/library_screen_test.dart` | 修改（新增測試） | 驗證貫穿正確性（建構參數）＋端到端資料顯示＋ Markdown 匯出迴歸 |
 
 ---
 
@@ -306,7 +306,7 @@ git commit -m "test(epic-6): 端到端驗證 LibraryScreen 開書後劃線/備�
 - Consumes：Task 1 完成後的 `LibraryScreen.highlightsRepository`／`notesRepository`（`HighlightsRepository?`／`NotesRepository?`）；既有 `HighlightsRepository(Database)`／`NotesRepository(Database)` 建構子（Issue 2 已建立）；既有 `repository.database`（`SqliteLibraryRepository` 具象型別的 getter，`bookmarksRepository` 已示範的既有用法）。
 - Produces：`ElinkBookApp` 新增兩個可選具名建構參數 `highlightsRepository`（`HighlightsRepository?`）、`notesRepository`（`NotesRepository?`），供真實 App 啟動時使用（本工單最後一段貫穿鏈路，之後不再有下一層需要消費此介面）。
 
-`main.dart` 本身無對應的獨立測試檔（`app/test/` 目前無 `main_test.dart`，比照 Issue 1 `plan-issue-1.md` Task「接線 `LibraryScreen`／`ElinkBookApp`／`main.dart`」的既有先例，此層級的正確性由 `flutter analyze` 與全專案 `flutter test` 回歸驗證，不新增測試檔案）。
+`main.dart` 本身無對應的獨立測試檔（`app/test/` 目前無 `main_test.dart`，比照 Issue 1 `plan-issue-1.md` Task「接線 `LibraryScreen`／`ElinkBookApp`／`main.dart`」的既有先例，此層級的正確性由 `flutter analyze` 與全專案 `flutter test` 迴歸驗證，不新增測試檔案）。
 
 - [x] **Step 1: 於 `main.dart` 新增 import**
 
@@ -396,7 +396,7 @@ class ElinkBookApp extends StatefulWidget {
 Run: `cd app && flutter analyze`
 Expected: `No issues found!`
 
-- [x] **Step 5: 執行全專案測試，確認無回歸**
+- [x] **Step 5: 執行全專案測試，確認無迴歸**
 
 Run: `cd app && flutter test`
 Expected: 全數通過（既有 `ElinkBookApp(...)` 呼叫端因新欄位為可選具名參數，不受影響）。
@@ -410,7 +410,7 @@ git commit -m "feat(epic-6): main.dart 建構真實 HighlightsRepository／Notes
 
 ---
 
-### Task 4: Markdown 導出回歸測試——透過 `LibraryScreen` 開書的正式流程匯出，驗證內容包含實際劃線/備註
+### Task 4: Markdown 匯出迴歸測試——透過 `LibraryScreen` 開書的正式流程匯出，驗證內容包含實際劃線/備註
 
 **Files:**
 - Test: `app/test/screens/library_screen_test.dart`
@@ -437,14 +437,18 @@ import '../support/fake_path_provider_platform.dart';
 import '../support/fake_share_platform.dart';
 ```
 
-- [x] **Step 2: 新增端到端 Markdown 導出回歸測試**
+- [x] **Step 2: 新增端到端 Markdown 匯出迴歸測試（含 `runAsync` 下必要的 PlatformView 方法通道 mock，審查修正）**
+
+`tester.runAsync()` 會讓 `_exportMarkdown()` 內真正的 `Directory.createTemp`／`File` I/O 在真實 Dart Zone 下執行（見下方測試內的根因說明）。畫面上已建立的 `PdfReaderView`（`AndroidView`）若在真實 Zone 下因版面重新佈局而再次觸發 `SystemChannels.platform_views` 的 `'create'` 呼叫，而該通道未註冊任何 mock handler，會拋出 `MissingPluginException` 使測試崩潰（`tmp/epic-6/reviews/review-plan-issue-6.md` Spec (b) 發現）。修正方式：在本測試內對 `SystemChannels.platform_views`／PDF 原生 view 專屬通道各自加上最低限度的 `setMockMethodCallHandler`，並在 `addTearDown` 還原——比照 `epub_reader_view_test.dart`／`pdf_reader_view_test.dart` 測試 `PlatformView` 渲染時的既有先例。這不是「為業務邏輯新增 Mock 基礎設施」（`spec.md`「Testing Decisions」禁止的是替 `HighlightsRepository`／`NotesRepository` 等業務邏輯層的原生呼叫加 Mock；`PlatformView` 建立本身的框架層 Mock 是既有測試已在採用的既定做法）。
+
+**範圍澄清（審查發現原文將此問題歸咎於「Task 2 與 Task 4」，經查證只有 Task 4 需要修正）**：此問題只發生在使用 `tester.runAsync()` 包住 `tester.tap()` 的路徑。Task 2 的端到端測試全程只用一般 `pump()`／`pumpAndSettle()`——`AutomatedTestWidgetsFlutterBinding` 的 fake Zone 下，未攔截的平台通道呼叫只是掛起等待、不會同步拋出例外中斷測試，因此 Task 2 不需要、也不應該加上這組 mock（Global Constraints「不新增 Method Channel Mock 基礎設施」原則對 Task 2 仍然完整適用，僅本 Task 因使用 `runAsync` 而構成例外）。
 
 於 `main()` 內、Task 2 新增的測試之後新增：
 
 ```dart
   testWidgets(
       '透過 LibraryScreen 開書的正式流程匯出 Markdown 後，內容包含該書實際的劃線/備註'
-      '（Issue 6 缺口修正，回歸 Issue 5 審查發現的「永遠空狀態」問題）',
+      '（Issue 6 缺口修正，迴歸 Issue 5 審查發現的「永遠空狀態」問題）',
       (tester) async {
     // 【根因說明，比照 notes_bottom_sheet_test.dart 既有先例】真實
     // Directory.createTemp／File I/O 需要真正的作業系統事件迴圈，
@@ -461,9 +465,34 @@ import '../support/fake_share_platform.dart';
     PathProviderPlatform.instance = FakePathProviderPlatform(tempDir.path);
     final fakeShare = FakeSharePlatform();
     SharePlatform.instance = fakeShare;
+
+    // 【審查修正，見 review-plan-issue-6.md Spec (b)】runAsync 下若
+    // PdfReaderView（AndroidView）觸發版面重新佈局，會透過
+    // SystemChannels.platform_views 呼叫真實 'create' 方法通道；未註冊
+    // handler 時會拋出 MissingPluginException 而非單純掛起，導致測試崩潰
+    // ——僅在 runAsync 的真實 Zone 下才會發生（比照
+    // epub_reader_view_test.dart／pdf_reader_view_test.dart 既有先例，
+    // 於 addTearDown 還原，範圍不擴及本檔案其他測試）。
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      const MethodChannel('flutter/platform_views'),
+      (message) async => 1,
+    );
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      const MethodChannel('cc.ugotit.elinkbook/pdf_reader_view_1'),
+      (message) async => null,
+    );
+
     addTearDown(() {
       PathProviderPlatform.instance = originalPathProvider;
       SharePlatform.instance = originalSharePlatform;
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        const MethodChannel('flutter/platform_views'),
+        null,
+      );
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        const MethodChannel('cc.ugotit.elinkbook/pdf_reader_view_1'),
+        null,
+      );
     });
 
     final book = Book(
@@ -539,7 +568,7 @@ import '../support/fake_share_platform.dart';
 Run: `cd app && flutter test test/screens/library_screen_test.dart`
 Expected: PASS
 
-- [x] **Step 4: 執行全專案測試與 `flutter analyze`，確認無回歸**
+- [x] **Step 4: 執行全專案測試與 `flutter analyze`，確認無迴歸**
 
 Run: `cd app && flutter test`
 Expected: 全數通過（含既有 `library_screen_test.dart`／`reader_screen_test.dart` 全數案例）。
@@ -551,7 +580,7 @@ Expected: `No issues found!`
 
 ```bash
 git add app/test/screens/library_screen_test.dart
-git commit -m "test(epic-6): 回歸驗證正式流程匯出 Markdown 確實包含實際劃線/備註"
+git commit -m "test(epic-6): 迴歸驗證正式流程匯出 Markdown 確實包含實際劃線/備註"
 ```
 
 ---
@@ -559,6 +588,6 @@ git commit -m "test(epic-6): 回歸驗證正式流程匯出 Markdown 確實包�
 ## 完成後的驗收標準對應
 
 - [x]（Task 1）`LibraryScreen._openBook()` 正確貫穿 `highlightsRepository`／`notesRepository` 給 `ReaderScreen`
-- [x]（Task 2、Task 4）一般使用者透過書架開書後，劃線/備註功能（含 Issue 5 Markdown 導出）在正式流程中確實生效，不再固定顯示空狀態
-- [x]（Task 1-4，每個 Task 皆執行全專案回歸）既有 `LibraryScreen`／`ReaderScreen` 相關測試維持全數通過，無回歸
+- [x]（Task 2、Task 4）一般使用者透過書架開書後，劃線/備註功能（含 Issue 5 Markdown 匯出）在正式流程中確實生效，不再固定顯示空狀態
+- [x]（Task 1-4，每個 Task 皆執行全專案迴歸）既有 `LibraryScreen`／`ReaderScreen` 相關測試維持全數通過，無迴歸
 - [x]（每個 Task 皆執行）上述測試皆通過，`flutter analyze` 乾淨
