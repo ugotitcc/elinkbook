@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -16,6 +17,18 @@ import 'package:elinkbook/library/models/library_enums.dart';
 import '../support/fake_book_import_service.dart';
 import '../support/fake_library_repository.dart';
 import '../support/fake_reader_prefs_manager.dart';
+import 'package:elinkbook/screens/reader_screen.dart';
+import '../support/fake_highlights_repository.dart';
+import '../support/fake_notes_repository.dart';
+import 'package:elinkbook/reader/highlight.dart';
+import 'package:elinkbook/reader/highlight_style.dart';
+import 'package:elinkbook/reader/pdf_reader_view.dart';
+import 'package:elinkbook/reader/percent_rect.dart';
+import '../support/fake_bookmarks_repository.dart';
+import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
+import 'package:share_plus_platform_interface/share_plus_platform_interface.dart';
+import '../support/fake_path_provider_platform.dart';
+import '../support/fake_share_platform.dart';
 
 void main() {
   late SqliteLibraryRepository libraryRepository;
@@ -992,6 +1005,231 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('library_importing_overlay')), findsNothing);
+  });
+
+  testWidgets(
+      'LibraryScreen 點開一本書後，ReaderScreen 收到的 highlightsRepository／notesRepository 正確貫穿（Issue 6 缺口修正）',
+      (tester) async {
+    // 使用 .txt 格式讓 ReaderScreen 命中「不支援格式」分支（純 Dart 安全
+    // 路徑，不觸發 AndroidView，比照既有「從閱讀器返回書架」測試的既有
+    // 做法）——本測試只關心建構參數是否正確貫穿，與實際閱讀器渲染無關。
+    final book = _testBook(
+      id: '1',
+      title: '紅樓夢',
+      author: '曹雪芹',
+      filePath: 'content://example/1.txt',
+    );
+    final highlightsRepository = FakeHighlightsRepository();
+    final notesRepository = FakeNotesRepository();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: [book]),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+          highlightsRepository: highlightsRepository,
+          notesRepository: notesRepository,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('book_item_1')));
+    await tester.pumpAndSettle();
+
+    final readerScreen = tester.widget<ReaderScreen>(find.byType(ReaderScreen));
+    expect(readerScreen.highlightsRepository, same(highlightsRepository),
+        reason: 'LibraryScreen._openBook() 修正前，highlightsRepository 從未'
+            '貫穿給 ReaderScreen，一律為 null（見 issues.md Issue 6 背景）');
+    expect(readerScreen.notesRepository, same(notesRepository));
+  });
+
+  testWidgets(
+      '透過 LibraryScreen 開啟已有劃線/備註資料的 PDF 書籍後，'
+      '「劃線與備註」分頁正確顯示既有資料而非空狀態（Issue 6 缺口修正）',
+      (tester) async {
+    final book = Book(
+      id: '1',
+      title: '測試 PDF',
+      author: '測試作者',
+      format: BookFileFormat.pdf,
+      filePath: 'test/fixtures/sample.pdf',
+      source: BookSource.local,
+      groupName: BookGroup.uncategorized,
+      createTime: DateTime.now(),
+      lastReadTime: DateTime.now(),
+    );
+    final bookmarksRepository = FakeBookmarksRepository();
+    final highlightsRepository = FakeHighlightsRepository();
+    final notesRepository = FakeNotesRepository();
+    await highlightsRepository.insert(const Highlight(
+      bookId: '1',
+      style: HighlightStyle.highlighterYellow,
+      pdfPageIndex: 0,
+      pdfRect: PercentRect(left: 0.1, top: 0.1, right: 0.5, bottom: 0.2),
+    ));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: [book]),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+          bookmarksRepository: bookmarksRepository,
+          highlightsRepository: highlightsRepository,
+          notesRepository: notesRepository,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('book_item_1')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // PDF 的「📚 筆記」按鈕須等 onPageRendered 觸發後才可點擊（既有防呆
+    // 邏輯，見 reader_screen_test.dart 既有先例）；app/test/ 環境下原生
+    // _channel 恆為 null，改為直接呼叫 PdfReaderView 的公開回呼模擬。
+    final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+    pdfView.onPageRendered();
+    await tester.pump();
+
+    final notesButton = find.byKey(const Key('reader_notes_button'));
+    expect(tester.widget<IconButton>(notesButton).onPressed, isNotNull);
+
+    await tester.tap(notesButton);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    await tester.tap(find.byKey(const Key('notes_sheet_tab_annotations')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('notes_sheet_annotation_list')), findsOneWidget,
+        reason: '修正前 highlightsRepository／notesRepository 永遠為 null，'
+            '此分頁只會顯示空狀態佔位符（見 issues.md Issue 6 背景）');
+    expect(
+      find.byKey(const Key('notes_sheet_annotations_placeholder')),
+      findsNothing,
+    );
+  });
+
+  testWidgets(
+      '透過 LibraryScreen 開書的正式流程匯出 Markdown 後，內容包含該書實際的劃線/備註'
+      '（Issue 6 缺口修正，回歸 Issue 5 審查發現的「永遠空狀態」問題）',
+      (tester) async {
+    // 【根因說明，比照 notes_bottom_sheet_test.dart 既有先例】真實
+    // Directory.createTemp／File I/O 需要真正的作業系統事件迴圈，
+    // AutomatedTestWidgetsFlutterBinding 的 fake Zone 無法完成，連
+    // tester.tap() 本身也必須整個放進 tester.runAsync() 才能讓
+    // _exportMarkdown() 從第一行就綁定真實 Zone。
+    final tempDir = (await tester.runAsync(
+      () => Directory.systemTemp.createTemp('library_screen_markdown_export_test'),
+    ))!;
+    addTearDown(() => tester.runAsync(() => tempDir.delete(recursive: true)));
+
+    final originalPathProvider = PathProviderPlatform.instance;
+    final originalSharePlatform = SharePlatform.instance;
+    PathProviderPlatform.instance = FakePathProviderPlatform(tempDir.path);
+    final fakeShare = FakeSharePlatform();
+    SharePlatform.instance = fakeShare;
+
+    // 【審查修正，見 review-plan-issue-6.md Spec (b)】runAsync 下若
+    // PdfReaderView（AndroidView）觸發版面重新佈局，會透過
+    // SystemChannels.platform_views 呼叫真實 'create' 方法通道；未註冊
+    // handler 時會拋出 MissingPluginException 而非單純掛起，導致測試崩潰
+    // ——僅在 runAsync 的真實 Zone 下才會發生（比照
+    // epub_reader_view_test.dart／pdf_reader_view_test.dart 既有先例，
+    // 於 addTearDown 還原，範圍不擴及本檔案其他測試）。
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      const MethodChannel('flutter/platform_views'),
+      (message) async => 1,
+    );
+
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      const MethodChannel('cc.ugotit.elinkbook/pdf_reader_view_1'),
+      (message) async => null,
+    );
+
+    addTearDown(() {
+      PathProviderPlatform.instance = originalPathProvider;
+      SharePlatform.instance = originalSharePlatform;
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        const MethodChannel('flutter/platform_views'),
+        null,
+      );
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        const MethodChannel('cc.ugotit.elinkbook/pdf_reader_view_1'),
+        null,
+      );
+    });
+
+    final book = Book(
+      id: '1',
+      title: '測試 PDF',
+      author: '測試作者',
+      format: BookFileFormat.pdf,
+      filePath: 'test/fixtures/sample.pdf',
+      source: BookSource.local,
+      groupName: BookGroup.uncategorized,
+      createTime: DateTime.now(),
+      lastReadTime: DateTime.now(),
+    );
+    final bookmarksRepository = FakeBookmarksRepository();
+    final highlightsRepository = FakeHighlightsRepository();
+    final notesRepository = FakeNotesRepository();
+    await highlightsRepository.insert(const Highlight(
+      bookId: '1',
+      style: HighlightStyle.highlighterYellow,
+      pdfPageIndex: 0,
+      pdfRect: PercentRect(left: 0.1, top: 0.1, right: 0.5, bottom: 0.2),
+    ));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: [book]),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+          bookmarksRepository: bookmarksRepository,
+          highlightsRepository: highlightsRepository,
+          notesRepository: notesRepository,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('book_item_1')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+    pdfView.onPageRendered();
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('reader_notes_button')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    await tester.runAsync(() async {
+      await tester.tap(find.byKey(const Key('notes_sheet_export_markdown')));
+      final deadline = DateTime.now().add(const Duration(seconds: 5));
+      while (fakeShare.lastParams == null && DateTime.now().isBefore(deadline)) {
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+      }
+    });
+    await tester.pump();
+
+    expect(fakeShare.lastParams, isNotNull);
+    final files = fakeShare.lastParams!.files;
+    expect(files, hasLength(1));
+    final exportedFile = File(files!.single.path);
+    final content = await tester.runAsync(() => exportedFile.readAsString());
+    expect(content, contains('### 📌 螢光筆（黃）（位置：第 1 頁）'),
+        reason: '修正前 LibraryScreen 從未貫穿 highlightsRepository／'
+            'notesRepository，匯出內容的劃線/備註段落永遠固定顯示'
+            '「尚未加入任何劃線或備註」（見 issues.md Issue 6 背景）');
+    expect(content, isNot(contains('*(尚未加入任何劃線或備註)*')));
   });
 }
 
