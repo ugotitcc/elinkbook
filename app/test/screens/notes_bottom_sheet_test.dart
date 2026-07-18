@@ -491,8 +491,41 @@ void main() {
     expect(find.byKey(const Key('notes_sheet_export_markdown')), findsOneWidget);
   });
 
-  testWidgets('點擊導出為 Markdown 按鈕後，觸發 _exportMarkdown 方法',
+  testWidgets(
+      '點擊導出為 Markdown 按鈕後，正確寫入暫存檔案並呼叫 SharePlatform.share',
       (tester) async {
+    // 【根因說明，取代原本被簡化掉的失敗版本，見 task-2-report.md「Known
+    // Issues」】`flutter test` 使用的 `AutomatedTestWidgetsFlutterBinding` 以
+    // `FakeAsync` 接管整個測試的 Timer／microtask 排程，僅由 `pump()` 手動
+    // 推進；真實 `dart:io` 檔案系統操作（`Directory.createTemp`／
+    // `File.writeAsString`／`File.exists` 等）需要真正的作業系統事件迴圈才能
+    // 完成。Dart async 函式的 Zone 是在「函式開始執行的當下」就固定，往後每個
+    // await 續作都沿用同一個 Zone——因此不能像等待平台方法通道那樣，先
+    // `tap()`／`pump()` 讓 `_exportMarkdown()` 在（fake）ambient zone 起跑，
+    // 事後才補一個 `tester.runAsync(() => Future.delayed(...))`：那樣真實 I/O
+    // 早已在 fake zone 裡卡死，事後的 runAsync 救不回來（實測會直接卡滿框架
+    // 預設 10 分鐘逾時，正是原本這個測試被簡化掉的直接原因）。正確做法是連
+    // `tester.tap()` 本身也一併放進 `tester.runAsync()` 的 callback 裡，讓
+    // `_exportMarkdown()`（含其中真正的檔案寫入與分享呼叫）整個從一開始就在
+    // runAsync 提供的真實 Zone 下執行；fake 平台替身（`PathProviderPlatform.
+    // instance`／`SharePlatform.instance`）本身沒有問題——兩者皆為即時讀取
+    // 的 getter，替換後立即生效（見 `path_provider`／
+    // `share_plus_platform_interface` 套件原始碼），問題純粹出在 Zone 時機。
+    final tempDir = (await tester.runAsync(
+      () => Directory.systemTemp.createTemp('markdown_export_test'),
+    ))!;
+    addTearDown(() => tester.runAsync(() => tempDir.delete(recursive: true)));
+
+    final originalPathProvider = PathProviderPlatform.instance;
+    final originalSharePlatform = SharePlatform.instance;
+    PathProviderPlatform.instance = FakePathProviderPlatform(tempDir.path);
+    final fakeShare = FakeSharePlatform();
+    SharePlatform.instance = fakeShare;
+    addTearDown(() {
+      PathProviderPlatform.instance = originalPathProvider;
+      SharePlatform.instance = originalSharePlatform;
+    });
+
     final repository = FakeBookmarksRepository();
     await repository.insert(
       const Bookmark(bookId: 'b1', name: '第一章', progression: 0.1),
@@ -506,14 +539,25 @@ void main() {
       bookProgress: 0.42,
     );
 
-    // 驗證按鈕存在
-    expect(find.byKey(const Key('notes_sheet_export_markdown')), findsOneWidget);
-
-    // 點擊按鈕 - 驗證不拋出例外
-    await tester.tap(find.byKey(const Key('notes_sheet_export_markdown')));
+    // `tap()` 本身也在 runAsync callback 內執行，讓 onPressed 觸發的
+    // `_exportMarkdown()` 從第一行就綁定 runAsync 的真實 Zone（見上方
+    // 根因說明）；隨後短暫 delay 讓其內部的檔案寫入／分享呼叫有機會跑完。
+    await tester.runAsync(() async {
+      await tester.tap(find.byKey(const Key('notes_sheet_export_markdown')));
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    });
     await tester.pump();
 
-    // 驗證按鈕仍然存在（未因例外而被移除）
-    expect(find.byKey(const Key('notes_sheet_export_markdown')), findsOneWidget);
+    expect(fakeShare.lastParams, isNotNull);
+    final files = fakeShare.lastParams!.files;
+    expect(files, hasLength(1));
+    final exportedFile = File(files!.single.path);
+    final exists = await tester.runAsync(() => exportedFile.exists());
+    expect(exists, isTrue);
+    final content = await tester.runAsync(() => exportedFile.readAsString());
+    expect(content, contains('# 閱讀筆記：《測試書籍》'));
+    expect(content, contains('**作者**：測試作者'));
+    expect(content, contains('**閱讀進度**：42%'));
+    expect(content, contains('*   第一章'));
   });
 }

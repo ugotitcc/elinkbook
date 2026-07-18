@@ -37,12 +37,12 @@ dependencies:
 
   # 整合測試使用 getTemporaryDirectory() 刪除暫存檔案。
   path_provider: ^2.1.6
-  share_plus: ^13.2.1
+  share_plus: ^11.1.0
   sqflite: ^2.4.2+1
   path: ^1.9.1
-  file_picker: ^12.0.0-beta.7
+  file_picker: ^11.0.2
   shared_preferences: ^2.5.5
-  package_info_plus: ^10.2.1
+  package_info_plus: ^9.0.1
 
 dev_dependencies:
   flutter_test:
@@ -58,7 +58,7 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   sqflite_common_ffi: ^2.4.0+3
   path_provider_platform_interface: ^2.1.0
-  share_plus_platform_interface: ^7.0.0
+  share_plus_platform_interface: ^6.1.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
