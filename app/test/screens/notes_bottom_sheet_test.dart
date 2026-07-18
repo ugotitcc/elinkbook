@@ -541,10 +541,17 @@ void main() {
 
     // `tap()` 本身也在 runAsync callback 內執行，讓 onPressed 觸發的
     // `_exportMarkdown()` 從第一行就綁定 runAsync 的真實 Zone（見上方
-    // 根因說明）；隨後短暫 delay 讓其內部的檔案寫入／分享呼叫有機會跑完。
+    // 根因說明）；隨後改為輪詢等待 `fakeShare.lastParams` 被賦值，而非固定
+    // 延遲——固定延遲（例如原本的 100ms）在系統負載較高、真實磁碟 I/O 較慢
+    // 時會造成間歇性失敗（實測：連續執行會偶發 `fakeShare.lastParams` 仍為
+    // null），輪詢＋逾時上限才能同時兼顧「不誤判失敗」與「真的卡住時仍會
+    // 逾時而非無限等待」。
     await tester.runAsync(() async {
       await tester.tap(find.byKey(const Key('notes_sheet_export_markdown')));
-      await Future<void>.delayed(const Duration(milliseconds: 100));
+      final deadline = DateTime.now().add(const Duration(seconds: 5));
+      while (fakeShare.lastParams == null && DateTime.now().isBefore(deadline)) {
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+      }
     });
     await tester.pump();
 
