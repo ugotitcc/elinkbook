@@ -1037,10 +1037,16 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       canPop: !_cropEditModeActive,
       child: Scaffold(
         // extendBodyBehindAppBar：搭配 _buildBody() 內的 Padding+SafeArea(top:
-        // false) 改造（審查修正），讓 body 版面約束恆定，AppBar 顯示/隱藏
-        // 只是視覺疊加、不觸發 body 底下 PlatformView 的 resize（PDF 目前
-        // 只是微幅重繪，但這段邏輯是 Issue 5/6/7 共用基礎設施，EPUB 流式
-        // 若同樣觸發 resize 會造成 Readium 整本書重新分頁，必須在此收斂）。
+        // false) 改造（審查修正），讓 body 版面約束不受 AppBar 顯示/隱藏
+        // 影響，AppBar 只是視覺疊加、不觸發 body 底下 PlatformView 的
+        // resize。【最終審查修正】這只解決了 AppBar 這一半的問題——頁尾
+        // （ReaderFooter／_buildEpubFooter，見 _buildBody() 內同樣受
+        // _chromeVisible 控制的 in-flow Column 子項）顯示/隱藏仍會改變
+        // body 實際配置高度，PlatformView 仍會 resize。PDF 目前僅是微幅
+        // 重繪、可接受；但這代表本機制尚未完全解決 resize 問題，Issue 6
+        // （EPUB 流式、Readium WebView）若要沿用同一套 _chromeVisible／
+        // _buildBody() 基礎設施，必須先把頁尾也改為浮動疊加層（而非
+        // in-flow），否則頁尾切換仍會觸發 WebView 整本重新分頁。
         extendBodyBehindAppBar: true,
         appBar: (_isFixedLayout || !_chromeVisible)
             ? null // 固定版面（如漫畫）或沉浸模式已收起介面時隱藏 Scaffold AppBar
@@ -1307,10 +1313,13 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       // extendBodyBehindAppBar（見上方 Scaffold 建構）開啟後，Scaffold 會
       // 依 AppBar 是否顯示動態調整 MediaQuery.padding.top；若直接讓
       // SafeArea 消費這個值，body 內容仍會隨沉浸模式切換改變可用高度，
-      // 等於沒解決 PlatformView resize 問題（審查修正）。改用不受 AppBar
-      // 影響、只反映裝置實際安全區域（狀態列/瀏海）的
+      // 等於沒解決 AppBar 那一半的 PlatformView resize 問題（審查修正）。
+      // 改用不受 AppBar 影響、只反映裝置實際安全區域（狀態列/瀏海）的
       // MediaQuery.viewPadding.top，SafeArea 本身關閉頂端判斷（top:
-      // false），確保 body 高度真正恆定，AppBar 只是視覺上疊加在最上方。
+      // false），讓 AppBar 顯示/隱藏不再改變 body 高度。頁尾（下方
+      // ReaderFooter／_buildEpubFooter）仍是 in-flow 子項，其顯示/隱藏
+      // 仍會改變 body 實際高度——這是另一個尚未解決的 resize 來源，見上方
+      // Scaffold 建構處的完整說明。
       padding: EdgeInsets.only(top: MediaQuery.of(context).viewPadding.top),
       child: SafeArea(
         top: false,

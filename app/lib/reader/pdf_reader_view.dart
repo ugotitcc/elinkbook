@@ -381,22 +381,35 @@ class _PdfReaderViewState extends State<PdfReaderView> {
   /// `tester.tap()` 觸發外層 [Listener] 的 `onPointerUp`），只是不顯示邊框
   /// 與文字標籤。
   Widget _buildNavZoneOverlay() {
-    return GridView.count(
-      crossAxisCount: 3,
-      physics: const NeverScrollableScrollPhysics(),
-      children: List.generate(9, (index) {
-        return Container(
-          key: Key('nav_zone_$index'),
-          decoration: widget.showNavZoneDebugOverlay
-              ? BoxDecoration(border: Border.all(color: Colors.white24))
-              : null,
-          alignment: Alignment.center,
-          child: widget.showNavZoneDebugOverlay
-              ? Text(
-                  _zoneActionLabel(widget.navZoneActions[index]),
-                  style: const TextStyle(color: Colors.white70, fontSize: 10),
-                )
-              : null,
+    // 改用 Column（3 個 Expanded 列）包 Row（3 個 Expanded 格），讓每格依
+    // 實際可用空間等比例分配為 width/3 × height/3（審查修正）：原本的
+    // GridView.count 預設 childAspectRatio 為 1.0（正方形格子），在直式手機
+    // （高 > 寬）上只會鋪滿畫面上方一小塊正方形區域，下方約 2/3 完全沒有
+    // 格線，純屬本除錯疊加層的視覺 bug——實際點擊判讀（hitTestZoneIndex）
+    // 本來就是各自獨立以 width/height 三等分計算，不受此影響。
+    return Column(
+      children: List.generate(3, (row) {
+        return Expanded(
+          child: Row(
+            children: List.generate(3, (col) {
+              final index = row * 3 + col;
+              return Expanded(
+                child: Container(
+                  key: Key('nav_zone_$index'),
+                  decoration: widget.showNavZoneDebugOverlay
+                      ? BoxDecoration(border: Border.all(color: Colors.white24))
+                      : null,
+                  alignment: Alignment.center,
+                  child: widget.showNavZoneDebugOverlay
+                      ? Text(
+                          _zoneActionLabel(widget.navZoneActions[index]),
+                          style: const TextStyle(color: Colors.white70, fontSize: 10),
+                        )
+                      : null,
+                ),
+              );
+            }),
+          ),
         );
       }),
     );
@@ -428,6 +441,12 @@ class _PdfReaderViewState extends State<PdfReaderView> {
   /// 依座標查表換算並觸發 [ZoneAction]，供 [_handleZoneTap]（GestureDetector
   /// 路徑，理論上不會被呼叫）與 [_handleAnnotationPointerUp]（實際生效的
   /// Listener 手動點擊判讀路徑）共用同一份邏輯。
+  ///
+  /// 潛在風險（審查修正，僅供未來排查用）：若未來 Flutter SDK 或
+  /// `AndroidView.gestureRecognizers` 設定變動，導致 [_handleZoneTap] 的
+  /// `onTapUp` 意外開始觸發，本方法會被同一次點擊呼叫兩次（重複派發
+  /// 同一個 [ZoneAction]，例如連續翻兩頁）。完整成因見 [_tapDownPosition]
+  /// 欄位註解。
   void _dispatchZoneAction(Offset localPosition) {
     final size = _lastMeasuredSize;
     if (size == null) return;
