@@ -11,6 +11,7 @@ import 'package:elinkbook/reader/dual_page_mode.dart';
 import 'package:elinkbook/reader/pdf_annotation_decoration.dart';
 import 'package:elinkbook/reader/pdf_selection_info.dart';
 import 'package:elinkbook/reader/percent_rect.dart';
+import 'package:elinkbook/reader/zone_action.dart';
 
 /// 驅動 [PdfReaderView] 底層 AndroidView 完成建立流程所需的最小 mock，比照
 /// `epub_reader_view_test.dart` 的 `_pumpEpubReaderView` 模式。
@@ -1215,6 +1216,75 @@ void main() {
 
     await first.up();
     await second.up();
+  });
+
+  testWidgets('9 個 Key(nav_zone_\$index) 皆存在，點擊觸發對應 onZoneAction', (tester) async {
+    final capturedActions = <ZoneAction>[];
+    final calls = await _pumpPdfReaderView(
+      tester,
+      PdfReaderView(
+        filePath: '/tmp/sample.pdf',
+        onPageRendered: _noop,
+        onError: _noopError,
+        navZoneActions: const [
+          ZoneAction.previousPage, ZoneAction.menu, ZoneAction.nextPage,
+          ZoneAction.previousPage, ZoneAction.menu, ZoneAction.nextPage,
+          ZoneAction.previousPage, ZoneAction.menu, ZoneAction.nextPage,
+        ],
+        onZoneAction: capturedActions.add,
+      ),
+    );
+    calls.clear();
+
+    for (var index = 0; index < 9; index++) {
+      expect(find.byKey(Key('nav_zone_$index')), findsOneWidget);
+    }
+
+    await tester.tap(find.byKey(const Key('nav_zone_0')));
+    await tester.pump();
+    expect(capturedActions, [ZoneAction.previousPage]);
+
+    await tester.tap(find.byKey(const Key('nav_zone_4')));
+    await tester.pump();
+    expect(capturedActions, [ZoneAction.previousPage, ZoneAction.menu]);
+  });
+
+  testWidgets('showNavZoneDebugOverlay=true 時，格子顯示對應動作文字標籤', (tester) async {
+    await _pumpPdfReaderView(
+      tester,
+      PdfReaderView(
+        filePath: '/tmp/sample.pdf',
+        onPageRendered: _noop,
+        onError: _noopError,
+        navZoneActions: const [
+          ZoneAction.previousPage, ZoneAction.menu, ZoneAction.nextPage,
+          ZoneAction.previousPage, ZoneAction.menu, ZoneAction.nextPage,
+          ZoneAction.previousPage, ZoneAction.menu, ZoneAction.nextPage,
+        ],
+        showNavZoneDebugOverlay: true,
+      ),
+    );
+
+    expect(find.text('上一頁'), findsWidgets);
+    expect(find.text('選單'), findsWidgets);
+    expect(find.text('下一頁'), findsWidgets);
+  });
+
+  testWidgets('build() 不再註冊 onHorizontalDragEnd（ADR 0010，滑動翻頁已移除）',
+      (tester) async {
+    await _pumpPdfReaderView(
+      tester,
+      const PdfReaderView(
+        filePath: '/tmp/sample.pdf',
+        onPageRendered: _noop,
+        onError: _noopError,
+      ),
+    );
+
+    final detector = tester.widget<GestureDetector>(find.byType(GestureDetector));
+    expect(detector.onHorizontalDragEnd, isNull);
+    expect(detector.onTapUp, isNotNull);
+    expect(detector.onLongPressStart, isNotNull);
   });
 }
 
