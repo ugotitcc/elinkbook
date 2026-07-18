@@ -37,6 +37,15 @@ dependencies:
 
   # 整合測試使用 getTemporaryDirectory() 刪除暫存檔案。
   path_provider: ^2.1.6
+  # 固定為 ^11.1.0 而非最新的 ^13.2.1：share_plus >=13.1.0 要求
+  # win32 ^6.0.1，與現有 package_info_plus ^9.0.1（要求 win32 ^5.5.3）直接
+  # 衝突；把 package_info_plus 升到 >=10.1.0 換取 win32 ^6.0.1 相容，則會
+  # 改成跟 file_picker ^11.0.2（要求 win32 ^5.9.0）衝突，file_picker 要到
+  # 12.x（beta）才支援 win32 ^6.x。三者無法在不動 file_picker／
+  # package_info_plus 版本的前提下同時滿足，^11.1.0 是唯一不需連動升級這兩個
+  # 與本功能無關套件的 share_plus 版本（`SharePlus.instance.share(
+  # ShareParams(...))` 這個非淘汰 API 在此版本一樣存在）。未來若要升級
+  # share_plus，須同時處理這條 win32 相依鏈。
   share_plus: ^11.1.0
   sqflite: ^2.4.2+1
   path: ^1.9.1
