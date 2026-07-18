@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+// ignore_for_file: deprecated_member_use
+
 import '../reader/global_reader_prefs.dart';
 import '../reader/nav_zone_mode.dart';
 import '../reader/reader_prefs_manager.dart';
