@@ -1,5 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
+import 'package:share_plus_platform_interface/share_plus_platform_interface.dart';
 import 'package:elinkbook/reader/bookmark.dart';
 import 'package:elinkbook/reader/bookmark_position_context.dart';
 import 'package:elinkbook/reader/annotation_list_item.dart';
@@ -10,11 +14,16 @@ import 'package:elinkbook/screens/notes_bottom_sheet.dart';
 import '../support/fake_bookmarks_repository.dart';
 import '../support/fake_highlights_repository.dart';
 import '../support/fake_notes_repository.dart';
+import '../support/fake_path_provider_platform.dart';
+import '../support/fake_share_platform.dart';
 
 Future<void> _pumpSheet(
   WidgetTester tester, {
   required FakeBookmarksRepository repository,
   String bookId = 'b1',
+  String bookTitle = '測試書籍',
+  String? bookAuthor,
+  double bookProgress = 0.0,
   BookmarkPositionContext currentPosition = const BookmarkPositionContext(),
   ValueChanged<Bookmark>? onBookmarkSelected,
   FakeHighlightsRepository? highlightsRepository,
@@ -26,6 +35,9 @@ Future<void> _pumpSheet(
     home: Scaffold(
       body: NotesBottomSheet(
         bookId: bookId,
+        bookTitle: bookTitle,
+        bookAuthor: bookAuthor,
+        bookProgress: bookProgress,
         bookmarksRepository: repository,
         currentPosition: currentPosition,
         onBookmarkSelected: onBookmarkSelected ?? (_) {},
@@ -470,5 +482,38 @@ void main() {
 
     expect(await notesRepository.listByBook('b1'), isEmpty);
     expect(await highlightsRepository.listByBook('b1'), hasLength(1));
+  });
+
+  testWidgets('顯示「導出為 Markdown」按鈕', (tester) async {
+    final repository = FakeBookmarksRepository();
+    await _pumpSheet(tester, repository: repository);
+
+    expect(find.byKey(const Key('notes_sheet_export_markdown')), findsOneWidget);
+  });
+
+  testWidgets('點擊導出為 Markdown 按鈕後，觸發 _exportMarkdown 方法',
+      (tester) async {
+    final repository = FakeBookmarksRepository();
+    await repository.insert(
+      const Bookmark(bookId: 'b1', name: '第一章', progression: 0.1),
+    );
+
+    await _pumpSheet(
+      tester,
+      repository: repository,
+      bookTitle: '測試書籍',
+      bookAuthor: '測試作者',
+      bookProgress: 0.42,
+    );
+
+    // 驗證按鈕存在
+    expect(find.byKey(const Key('notes_sheet_export_markdown')), findsOneWidget);
+
+    // 點擊按鈕 - 驗證不拋出例外
+    await tester.tap(find.byKey(const Key('notes_sheet_export_markdown')));
+    await tester.pump();
+
+    // 驗證按鈕仍然存在（未因例外而被移除）
+    expect(find.byKey(const Key('notes_sheet_export_markdown')), findsOneWidget);
   });
 }

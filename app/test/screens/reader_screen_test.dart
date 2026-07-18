@@ -1883,4 +1883,82 @@ void main() {
       findsNothing,
     );
   });
+
+  // --- Epic 6 Issue 5：Markdown 導出 ---
+
+  testWidgets(
+      'EPUB：開啟「📚 筆記」時，傳給 NotesBottomSheet 的 bookProgress 反映目前即時進度，而非開書當下的舊 bookProgress',
+      (tester) async {
+    final bookmarksRepository = FakeBookmarksRepository();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample_multi_chapter.epub',
+          bookId: 'b_progress_export_epub',
+          prefsManager: prefsManager,
+          bookmarksRepository: bookmarksRepository,
+          bookProgress: 0.1,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final epubView = tester.widget<EpubReaderView>(find.byType(EpubReaderView));
+    epubView.onLayoutResolved?.call(
+      const EpubLayoutInfo(isFixedLayout: false, writingMode: WritingMode.horizontal),
+    );
+    await tester.pump();
+    epubView.onLocatorChanged?.call(
+      const EpubPositionInfo(locatorJson: '{"href":"/c3.xhtml"}', progression: 0.5),
+    );
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('reader_notes_button')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    final sheet = tester.widget<NotesBottomSheet>(find.byType(NotesBottomSheet));
+    expect(
+      sheet.bookProgress,
+      0.5,
+      reason: '應反映 onLocatorChanged 回報的最新進度，而非建構時的舊 bookProgress: 0.1',
+    );
+  });
+
+  testWidgets(
+      'PDF：開啟「📚 筆記」時，傳給 NotesBottomSheet 的 bookProgress 依 onPageChanged 回報的頁碼/總頁數即時換算',
+      (tester) async {
+    final bookmarksRepository = FakeBookmarksRepository();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b_progress_export_pdf',
+          prefsManager: prefsManager,
+          bookmarksRepository: bookmarksRepository,
+          bookProgress: 0.0,
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+    pdfView.onPageRendered();
+    await tester.pump();
+    pdfView.onPageChanged?.call(const PdfPageInfo(pageIndex: 4, totalPages: 10));
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('reader_notes_button')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    final sheet = tester.widget<NotesBottomSheet>(find.byType(NotesBottomSheet));
+    expect(
+      sheet.bookProgress,
+      0.5,
+      reason: '第 5 頁／共 10 頁應換算為 0.5，而非建構時的舊 bookProgress: 0.0',
+    );
+  });
 }

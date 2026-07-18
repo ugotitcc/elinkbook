@@ -73,6 +73,13 @@ class ReaderScreen extends StatefulWidget {
   final HighlightsRepository? highlightsRepository;
   final NotesRepository? notesRepository;
 
+  /// 供「導出為 Markdown」使用的書籍中繼資料（epic-6-annotations
+  /// Issue 5）。刻意為可選具名參數並附預設值——比照 [bookmarksRepository]
+  /// 既有慣例，避免既有大量測試呼叫端需要逐一補上這三個參數。
+  final String bookTitle;
+  final String? bookAuthor;
+  final double bookProgress;
+
   const ReaderScreen({
     super.key,
     required this.filePath,
@@ -81,6 +88,9 @@ class ReaderScreen extends StatefulWidget {
     this.bookmarksRepository,
     this.highlightsRepository,
     this.notesRepository,
+    this.bookTitle = '未知書籍',
+    this.bookAuthor,
+    this.bookProgress = 0.0,
   });
 
   @override
@@ -541,11 +551,19 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       pdfPageIndex: format == BookFormat.pdf ? _pdfPageInfo?.pageIndex : null,
       chapterTitle: currentPath.isEmpty ? null : currentPath.last.title,
     );
+    final latestProgress = format == BookFormat.epub
+        ? (_epubPositionInfo?.progression ?? widget.bookProgress)
+        : (_pdfPageInfo != null && _pdfPageInfo!.totalPages > 0
+            ? (_pdfPageInfo!.pageIndex + 1) / _pdfPageInfo!.totalPages
+            : widget.bookProgress);
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       builder: (_) => NotesBottomSheet(
         bookId: widget.bookId,
+        bookTitle: widget.bookTitle,
+        bookAuthor: widget.bookAuthor,
+        bookProgress: latestProgress,
         bookmarksRepository: repository,
         currentPosition: positionContext,
         highlightsRepository: (format == BookFormat.epub && !_isFixedLayout) ||
