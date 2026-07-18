@@ -143,6 +143,8 @@ bool isValidCustomZoneConfig(List<ZoneAction> actions) =>
 
 比照 `epic-16-dual-page` 慣例，以下風險須在進入 Scrum Master 拆解前以獨立 Spike 工單驗證並回填結論，不得留待實作階段才發現：
 
+> **Issue 1 驗證結果（2026-07-18）：本節 3 項風險已於 Issue 1 spike 全數驗證，見 `reviews/spike-epub-inputlistener.md`，Issue 6 可依本節既有規劃直接採用 `InputListener` 路線實作，不需退回自行實作方案。**三項結論摘要：(1) `EpubNavigatorFragment` 對單純點擊無內建翻頁反應，不需要停用步驟；(2) `InputListener.onTap()` 攔截可靠，`goForward()`/`goBackward()` 呼叫與點擊次數嚴格 1:1，無重複觸發；(3) `TapEvent.point` 為 `publicationView`（=`fragmentView`，兩者尺寸相同、無 letterbox）本地座標，`NavZoneHitTester.cellIndex()` 可直接使用、不需額外轉換公式。實務提醒：部分裝置（至少驗證用的 TCL 9491G）系統層會過濾 `Log.d`（Debug 等級）的 `logcat` 輸出，Issue 6 除錯插樁建議直接採用 `Log.i` 或更高等級。
+
 1. **Readium `EpubNavigatorFragment` 既有點擊翻頁行為是否需要先停用**：若 Readium 原生已有預設的單擊翻頁手勢，需確認 `addInputListener()` 註冊後是否會與其共存、疊加，或必須先透過 `EpubPreferences` 顯式停用。
 2. **`InputListener.onTap()` 回呼是否真的能攔下並取代預設行為**：驗證呼叫 `goForward()`／`goBackward()` 後，是否會與 Readium 自身可能存在的手勢處理重複觸發（例如同一次點擊換兩頁）。
 3. **`InputListener` 的座標系統**：確認 `onTap(point: PointF)` 回傳的座標是相對整個 `EpubNavigatorFragment` view、還是相對可視內容區域（可能因 letterbox 或縮放置中偏移而不同），據此決定 `NavZoneHitTester.cellIndex()` 是否需要額外的座標轉換前處理。
