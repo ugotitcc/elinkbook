@@ -11,6 +11,7 @@ import 'package:elinkbook/reader/dual_page_mode.dart';
 import 'package:elinkbook/reader/pdf_annotation_decoration.dart';
 import 'package:elinkbook/reader/pdf_selection_info.dart';
 import 'package:elinkbook/reader/percent_rect.dart';
+import 'package:elinkbook/reader/zone_action.dart';
 
 /// 驅動 [PdfReaderView] 底層 AndroidView 完成建立流程所需的最小 mock，比照
 /// `epub_reader_view_test.dart` 的 `_pumpEpubReaderView` 模式。
@@ -1215,6 +1216,113 @@ void main() {
 
     await first.up();
     await second.up();
+  });
+
+  testWidgets('9 個 Key(nav_zone_\$index) 皆存在，點擊觸發對應 onZoneAction', (tester) async {
+    final capturedActions = <ZoneAction>[];
+    final calls = await _pumpPdfReaderView(
+      tester,
+      PdfReaderView(
+        filePath: '/tmp/sample.pdf',
+        onPageRendered: _noop,
+        onError: _noopError,
+        navZoneActions: const [
+          ZoneAction.previousPage, ZoneAction.menu, ZoneAction.nextPage,
+          ZoneAction.previousPage, ZoneAction.menu, ZoneAction.nextPage,
+          ZoneAction.previousPage, ZoneAction.menu, ZoneAction.nextPage,
+        ],
+        onZoneAction: capturedActions.add,
+      ),
+    );
+    calls.clear();
+
+    for (var index = 0; index < 9; index++) {
+      expect(find.byKey(Key('nav_zone_$index')), findsOneWidget);
+    }
+
+    await tester.tap(find.byKey(const Key('nav_zone_0')));
+    await tester.pump();
+    expect(capturedActions, [ZoneAction.previousPage]);
+
+    await tester.tap(find.byKey(const Key('nav_zone_4')));
+    await tester.pump();
+    expect(capturedActions, [ZoneAction.previousPage, ZoneAction.menu]);
+  });
+
+  testWidgets(
+      '長按框選放開不誤觸發熱區動作（區分點擊與長按釋放，_longPressActive 狀態機正確性）',
+      (tester) async {
+    final capturedActions = <ZoneAction>[];
+    await _pumpPdfReaderView(
+      tester,
+      PdfReaderView(
+        filePath: '/tmp/sample.pdf',
+        onPageRendered: _noop,
+        onError: _noopError,
+        navZoneActions: const [
+          ZoneAction.previousPage, ZoneAction.menu, ZoneAction.nextPage,
+          ZoneAction.previousPage, ZoneAction.menu, ZoneAction.nextPage,
+          ZoneAction.previousPage, ZoneAction.menu, ZoneAction.nextPage,
+        ],
+        onZoneAction: capturedActions.add,
+      ),
+    );
+
+    // 在「選單」熱區（nav_zone_1）範圍內按下，比照既有長按拖曳測試的手勢
+    // 驅動方式（tester.startGesture + 等待超過長按判定門檻）。
+    final zoneCenter = tester.getCenter(find.byKey(const Key('nav_zone_1')));
+    final gesture = await tester.startGesture(zoneCenter);
+    // 等待超過長按判定門檻（Flutter 預設 500ms），期間手指未明顯移動，
+    // GestureDetector 的 LongPressGestureRecognizer 應會勝出競技場，觸發
+    // _handleLongPressStart 將 _longPressActive 設為 true。
+    await tester.pump(const Duration(milliseconds: 700));
+    await gesture.moveBy(const Offset(5, 5));
+    await tester.pump();
+    await gesture.up();
+    await tester.pump();
+
+    // 放開時 _longPressActive 應已為 true（_handleLongPressEnd 尚未來得及
+    // 清除，或即使清除，放開位移已超出單純點擊語意），_handleAnnotationPointerUp
+    // 的點擊判讀邏輯必須因此拒絕派送 ZoneAction，避免與長按框選重複觸發。
+    expect(capturedActions, isEmpty);
+  });
+
+  testWidgets('showNavZoneDebugOverlay=true 時，格子顯示對應動作文字標籤', (tester) async {
+    await _pumpPdfReaderView(
+      tester,
+      PdfReaderView(
+        filePath: '/tmp/sample.pdf',
+        onPageRendered: _noop,
+        onError: _noopError,
+        navZoneActions: const [
+          ZoneAction.previousPage, ZoneAction.menu, ZoneAction.nextPage,
+          ZoneAction.previousPage, ZoneAction.menu, ZoneAction.nextPage,
+          ZoneAction.previousPage, ZoneAction.menu, ZoneAction.nextPage,
+        ],
+        showNavZoneDebugOverlay: true,
+      ),
+    );
+
+    expect(find.text('上一頁'), findsWidgets);
+    expect(find.text('選單'), findsWidgets);
+    expect(find.text('下一頁'), findsWidgets);
+  });
+
+  testWidgets('build() 不再註冊 onHorizontalDragEnd（ADR 0010，滑動翻頁已移除）',
+      (tester) async {
+    await _pumpPdfReaderView(
+      tester,
+      const PdfReaderView(
+        filePath: '/tmp/sample.pdf',
+        onPageRendered: _noop,
+        onError: _noopError,
+      ),
+    );
+
+    final detector = tester.widget<GestureDetector>(find.byType(GestureDetector));
+    expect(detector.onHorizontalDragEnd, isNull);
+    expect(detector.onTapUp, isNotNull);
+    expect(detector.onLongPressStart, isNotNull);
   });
 }
 

@@ -11,6 +11,7 @@ import 'package:elinkbook/reader/pdf_fit_mode.dart';
 import 'package:elinkbook/reader/pdf_page_info.dart';
 import 'package:elinkbook/reader/pdf_reader_view.dart';
 import 'package:elinkbook/reader/writing_mode.dart';
+import 'package:elinkbook/reader/zone_action.dart';
 import 'package:elinkbook/screens/fxl_settings_sheet.dart';
 import 'package:elinkbook/screens/pdf_settings_sheet.dart';
 import 'package:elinkbook/reader/toc_entry.dart';
@@ -1960,5 +1961,133 @@ void main() {
       0.5,
       reason: '第 5 頁／共 10 頁應換算為 0.5，而非建構時的舊 bookProgress: 0.0',
     );
+  });
+
+  testWidgets('_handleZoneAction(menu) 切換 AppBar／頁尾顯示（PDF）', (tester) async {
+    final key = GlobalKey<State<ReaderScreen>>();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          key: key,
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b1',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    // 模擬原生端已回報頁碼，讓頁尾判斷式的 _pdfPageInfo != null 成立
+    // （比照既有「PDF 開書後，收到原生端 onPageChanged 回報時，頁尾正確
+    // 顯示」測試的既定手法，本檔案第 662-687 行）。
+    final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+    pdfView.onPageChanged?.call(const PdfPageInfo(pageIndex: 0, totalPages: 12));
+    await tester.pump();
+
+    expect(find.byType(AppBar), findsOneWidget);
+    expect(find.byKey(const Key('reader_footer')), findsOneWidget);
+
+    ReaderScreen.triggerZoneAction(key, ZoneAction.menu);
+    await tester.pump();
+
+    expect(find.byType(AppBar), findsNothing);
+    expect(find.byKey(const Key('reader_footer')), findsNothing);
+
+    ReaderScreen.triggerZoneAction(key, ZoneAction.menu);
+    await tester.pump();
+
+    expect(find.byType(AppBar), findsOneWidget);
+    expect(find.byKey(const Key('reader_footer')), findsOneWidget);
+  });
+
+  testWidgets(
+      '_handleZoneAction(previousPage/nextPage) 不影響 AppBar 顯示狀態（PDF，design.md 決策 #14）',
+      (tester) async {
+    final key = GlobalKey<State<ReaderScreen>>();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          key: key,
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b1',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    expect(find.byType(AppBar), findsOneWidget);
+
+    ReaderScreen.triggerZoneAction(key, ZoneAction.nextPage);
+    await tester.pump();
+    expect(find.byType(AppBar), findsOneWidget);
+
+    ReaderScreen.triggerZoneAction(key, ZoneAction.previousPage);
+    await tester.pump();
+    expect(find.byType(AppBar), findsOneWidget);
+
+    ReaderScreen.triggerZoneAction(key, ZoneAction.none);
+    await tester.pump();
+    expect(find.byType(AppBar), findsOneWidget);
+  });
+
+  testWidgets(
+      'Scaffold 開啟 extendBodyBehindAppBar，PdfReaderView 尺寸不因沉浸模式切換而改變（審查修正：避免 AppBar 顯示/隱藏觸發 PlatformView resize）',
+      (tester) async {
+    final key = GlobalKey<State<ReaderScreen>>();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          key: key,
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b1',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
+    expect(scaffold.extendBodyBehindAppBar, isTrue);
+
+    final sizeWithAppBar = tester.getSize(find.byType(PdfReaderView));
+
+    ReaderScreen.triggerZoneAction(key, ZoneAction.menu);
+    await tester.pump();
+
+    expect(find.byType(AppBar), findsNothing, reason: '沉浸模式已切換，AppBar 應隱藏');
+    final sizeWithoutAppBar = tester.getSize(find.byType(PdfReaderView));
+    expect(sizeWithoutAppBar, sizeWithAppBar,
+        reason: 'PdfReaderView 尺寸不應因 AppBar 顯示/隱藏而改變');
+  });
+
+  testWidgets('PDF：真實點擊熱區「選單」格（index 1）觸發沉浸模式切換', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b1',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    expect(find.byType(AppBar), findsOneWidget);
+
+    // navZoneMode 預設 rightFlip，index 1（中欄）為 menu
+    // （見 app/lib/reader/nav_zone_mode.dart rightFlipZoneTemplate）。
+    await tester.tap(find.byKey(const Key('nav_zone_1')));
+    await tester.pump();
+
+    expect(find.byType(AppBar), findsNothing);
   });
 }

@@ -30,6 +30,7 @@ import '../reader/toc_navigator.dart';
 import '../reader/resolved_preferences.dart';
 import '../reader/screen_orientation_setting.dart';
 import '../reader/writing_mode.dart';
+import '../reader/zone_action.dart';
 import 'annotation_toolbar.dart';
 import 'note_edit_dialog.dart';
 import 'notes_bottom_sheet.dart';
@@ -95,6 +96,20 @@ class ReaderScreen extends StatefulWidget {
 
   @override
   State<ReaderScreen> createState() => _ReaderScreenState();
+
+  /// 供測試／`PdfReaderView`／後續 Issue 5-7 的原生回呼安全呼叫
+  /// [_ReaderScreenState._handleZoneAction] 的強型別 static helper，比照
+  /// `PdfReaderView.jumpToPage` 既有模式：不使用 `as dynamic` 跨越 State
+  /// 的 private 邊界。[key] 對應的 State 若尚未掛載，靜默忽略。
+  static void triggerZoneAction(
+    GlobalKey<State<ReaderScreen>> key,
+    ZoneAction action,
+  ) {
+    final state = key.currentState;
+    if (state is _ReaderScreenState) {
+      state._handleZoneAction(action);
+    }
+  }
 }
 
 enum _RenderState { loading, rendered, error }
@@ -107,9 +122,13 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   // book_reader_prefs 資料表」）。
   WritingMode? _autoDetectedWritingMode;
   bool _isFixedLayout = false;
-  // 固定版面（FXL）懸浮控制項（返回鍵／設定鍵）是否顯示，由 EpubReaderView
-  // 三欄熱區的中間熱區觸發切換（見 epic-16-dual-page Issue 9）。預設顯示。
-  bool _fixedLayoutControlsVisible = true;
+  // 介面顯示狀態（AppBar＋頁尾＋FXL 懸浮控制項）是否可見，格式無關
+  // （epic-7-interaction Issue 4，原為 FXL 專屬的 _fixedLayoutControlsVisible
+  // 欄位改名／擴大適用範圍）。由熱區「選單」動作切換（見
+  // _handleZoneAction），EPUB FXL 既有熱區的中間格（epic-16-dual-page
+  // Issue 9；epic-7 Issue 5 擴充為九宮格）與新的 PDF 熱區皆共用同一個
+  // 狀態。預設顯示。
+  bool _chromeVisible = true;
   // FXL 懸浮「🔖 書籤 toggle」按鈕圖示所需的最小狀態快取
   // （epic-6-annotations Issue 4）：與 NotesBottomSheet 內部「🔖 書籤」
   // 分頁各自獨立載入自己的清單（比照既有分頁按鈕 toggle 與 Bottom Sheet
@@ -602,7 +621,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           // _buildNativeView）相同的既有沉浸式閱讀慣例——一律強制收合，非
           // toggle 語意，不是另立新規則。
           if (_isFixedLayout) {
-            setState(() => _fixedLayoutControlsVisible = false);
+            setState(() => _chromeVisible = false);
           }
         },
       ),
@@ -1017,8 +1036,20 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       // 新增「取消並還原」語意，維持 spec.md 已鎖定的簡化狀態機決策）。
       canPop: !_cropEditModeActive,
       child: Scaffold(
-        appBar: _isFixedLayout
-            ? null // 固定版面（如漫畫）隱藏 Scaffold AppBar，改用 Stack 懸浮半透明按鈕，避免裁切大圖
+        // extendBodyBehindAppBar：搭配 _buildBody() 內的 Padding+SafeArea(top:
+        // false) 改造（審查修正），讓 body 版面約束不受 AppBar 顯示/隱藏
+        // 影響，AppBar 只是視覺疊加、不觸發 body 底下 PlatformView 的
+        // resize。【最終審查修正】這只解決了 AppBar 這一半的問題——頁尾
+        // （ReaderFooter／_buildEpubFooter，見 _buildBody() 內同樣受
+        // _chromeVisible 控制的 in-flow Column 子項）顯示/隱藏仍會改變
+        // body 實際配置高度，PlatformView 仍會 resize。PDF 目前僅是微幅
+        // 重繪、可接受；但這代表本機制尚未完全解決 resize 問題，Issue 6
+        // （EPUB 流式、Readium WebView）若要沿用同一套 _chromeVisible／
+        // _buildBody() 基礎設施，必須先把頁尾也改為浮動疊加層（而非
+        // in-flow），否則頁尾切換仍會觸發 WebView 整本重新分頁。
+        extendBodyBehindAppBar: true,
+        appBar: (_isFixedLayout || !_chromeVisible)
+            ? null // 固定版面（如漫畫）或沉浸模式已收起介面時隱藏 Scaffold AppBar
             : AppBar(
                 title: _buildAppBarTitle(format),
                 actions: _buildAppBarActions(format),
@@ -1170,7 +1201,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         return Stack(
           children: [
             if (_resolved != null) _buildNativeView(format, isLandscape),
-            if (_isFixedLayout && _fixedLayoutControlsVisible)
+            if (_isFixedLayout && _chromeVisible)
               Positioned(
                 top: 16, // SafeArea 內層，頂部已扣除狀態列，故直接設為 16 即可
                 left: 16,
@@ -1186,7 +1217,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                   ),
                 ),
               ),
-            if (_isFixedLayout && _fixedLayoutControlsVisible)
+            if (_isFixedLayout && _chromeVisible)
               Positioned(
                 top: 16,
                 right: 16,
@@ -1203,7 +1234,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                 ),
               ),
             if (_isFixedLayout &&
-                _fixedLayoutControlsVisible &&
+                _chromeVisible &&
                 widget.bookmarksRepository != null)
               Positioned(
                 top: 128,
@@ -1229,7 +1260,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                 ),
               ),
             if (_isFixedLayout &&
-                _fixedLayoutControlsVisible &&
+                _chromeVisible &&
                 widget.bookmarksRepository != null)
               Positioned(
                 top: 72,
@@ -1278,32 +1309,48 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       },
     );
 
-    return SafeArea(
-      child: Column(
-        children: [
-          Expanded(child: body),
-          // 頁尾佔用固定版面空間、擠壓上方閱讀區域高度（比照
-          // prototype/index.html 的 .reader-footer 既有設計，非浮動疊加
-          // 層）。顯示/隱藏由 showFooter 控制（epic-5-toc-pagination
-          // Issue 5），false 時整個 if 條件不成立、完全不佔用版面空間。
-          if (format == BookFormat.pdf &&
-              _pdfPageInfo != null &&
-              (_resolved?.showFooter ?? true))
-            ReaderFooter(
-              currentPage: _pdfPageInfo!.pageIndex + 1,
-              totalPages: _pdfPageInfo!.totalPages,
-              onPageChanged: (page1Indexed) {
-                // 審查修正：透過強型別 static helper 呼叫，不使用 as dynamic。
-                PdfReaderView.jumpToPage(_pdfReaderViewKey, page1Indexed - 1);
-              },
-            ),
-          if (format == BookFormat.epub &&
-              !_isFixedLayout &&
-              _totalCharacterCount != null &&
-              _resolved != null &&
-              _resolved!.showFooter)
-            _buildEpubFooter(_resolved!, _totalCharacterCount!),
-        ],
+    return Padding(
+      // extendBodyBehindAppBar（見上方 Scaffold 建構）開啟後，Scaffold 會
+      // 依 AppBar 是否顯示動態調整 MediaQuery.padding.top；若直接讓
+      // SafeArea 消費這個值，body 內容仍會隨沉浸模式切換改變可用高度，
+      // 等於沒解決 AppBar 那一半的 PlatformView resize 問題（審查修正）。
+      // 改用不受 AppBar 影響、只反映裝置實際安全區域（狀態列/瀏海）的
+      // MediaQuery.viewPadding.top，SafeArea 本身關閉頂端判斷（top:
+      // false），讓 AppBar 顯示/隱藏不再改變 body 高度。頁尾（下方
+      // ReaderFooter／_buildEpubFooter）仍是 in-flow 子項，其顯示/隱藏
+      // 仍會改變 body 實際高度——這是另一個尚未解決的 resize 來源，見上方
+      // Scaffold 建構處的完整說明。
+      padding: EdgeInsets.only(top: MediaQuery.of(context).viewPadding.top),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          children: [
+            Expanded(child: body),
+            // 頁尾佔用固定版面空間、擠壓上方閱讀區域高度（比照
+            // prototype/index.html 的 .reader-footer 既有設計，非浮動疊加
+            // 層）。顯示/隱藏由 showFooter 控制（epic-5-toc-pagination
+            // Issue 5），false 時整個 if 條件不成立、完全不佔用版面空間。
+            if (format == BookFormat.pdf &&
+                _pdfPageInfo != null &&
+                (_resolved?.showFooter ?? true) &&
+                _chromeVisible)
+              ReaderFooter(
+                currentPage: _pdfPageInfo!.pageIndex + 1,
+                totalPages: _pdfPageInfo!.totalPages,
+                onPageChanged: (page1Indexed) {
+                  // 審查修正：透過強型別 static helper 呼叫，不使用 as dynamic。
+                  PdfReaderView.jumpToPage(_pdfReaderViewKey, page1Indexed - 1);
+                },
+              ),
+            if (format == BookFormat.epub &&
+                !_isFixedLayout &&
+                _totalCharacterCount != null &&
+                _resolved != null &&
+                _resolved!.showFooter &&
+                _chromeVisible)
+              _buildEpubFooter(_resolved!, _totalCharacterCount!),
+          ],
+        ),
       ),
     );
   }
@@ -1363,14 +1410,14 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           dualPageMode: resolved.dualPageMode,
           isLandscape: isLandscape,
           onToggleFixedLayoutControls: () => setState(
-            () => _fixedLayoutControlsVisible = !_fixedLayoutControlsVisible,
+            () => _chromeVisible = !_chromeVisible,
           ),
           // 換頁時一律收起懸浮控制項（更沉浸的閱讀體驗，人類決策，見
           // tmp/epic-16/reviews/review-plan-issue-9.md 之後的討論）——與上面的
           // onToggleFixedLayoutControls 刻意不同：這裡不論收起前是顯示或隱藏，
           // 一律強制設為 false，不是切換（toggle）語意。
           onFixedLayoutPageTurn: () =>
-              setState(() => _fixedLayoutControlsVisible = false),
+              setState(() => _chromeVisible = false),
           initialLocatorJson: _initialPosition?.epubLocatorJson,
           onLocatorChanged: (info) {
             if (!mounted) return;
@@ -1408,9 +1455,39 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           },
           onSelectionRectComputed: _handlePdfSelectionRectComputed,
           onSelectionCanceled: _handlePdfSelectionCanceled,
+          navZoneActions: resolved.navZoneActions,
+          onZoneAction: _handleZoneAction,
+          showNavZoneDebugOverlay: resolved.showNavZoneDebugOverlay,
         );
       case BookFormat.unknown:
         return const SizedBox.shrink();
+    }
+  }
+
+  /// 熱區動作統一分派入口（epic-7-interaction Issue 4）：`previousPage`/
+  /// `nextPage` 呼叫目前格式對應的既有換頁方法；`menu` 切換 [_chromeVisible]
+  /// （沉浸模式）；`none` 不做事。**`previousPage`/`nextPage` 刻意不影響
+  /// [_chromeVisible]**（design.md 決策 #14）。目前只實作 PDF 換頁分支——
+  /// EPUB FXL 分支由 Issue 5 擴充，EPUB 流式的 previousPage/nextPage 完全
+  /// 不經過這裡（原生 Kotlin `InputListener` 自主處理，只有 `menu` 動作經
+  /// Issue 6 的 `onZoneTapped` 回呼）。
+  void _handleZoneAction(ZoneAction action) {
+    switch (action) {
+      case ZoneAction.previousPage:
+        if (detectBookFormat(widget.filePath) == BookFormat.pdf) {
+          PdfReaderView.previousPage(_pdfReaderViewKey);
+        }
+        break;
+      case ZoneAction.nextPage:
+        if (detectBookFormat(widget.filePath) == BookFormat.pdf) {
+          PdfReaderView.nextPage(_pdfReaderViewKey);
+        }
+        break;
+      case ZoneAction.menu:
+        setState(() => _chromeVisible = !_chromeVisible);
+        break;
+      case ZoneAction.none:
+        break;
     }
   }
 }

@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart' show kTouchSlop;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -10,6 +11,8 @@ import 'pdf_selection_info.dart';
 import 'percent_rect.dart';
 import 'dual_page_direction.dart';
 import 'dual_page_mode.dart';
+import 'zone_action.dart';
+import 'zone_hit_test.dart';
 
 /// 包裝原生 Android PdfReaderView 的 Flutter widget，透過 AndroidView
 /// （PlatformView）嵌入畫面。給定 PDF 檔案的裝置端絕對路徑，通知原生端
@@ -59,6 +62,22 @@ class PdfReaderView extends StatefulWidget {
   /// 見 plan-issue-3.md Global Constraints）。呼叫端負責收起浮動工具列。
   final VoidCallback? onSelectionCanceled;
 
+  /// 3×3 導航熱區的動作對照表（epic-7-interaction Issue 2/4），長度固定
+  /// 9，索引慣例見 `zone_hit_test.dart`（0-indexed、列優先）。點擊時查表
+  /// 決定觸發哪個 [ZoneAction]。預設全部 [ZoneAction.none]（非 `required`
+  /// ——比照 [dualPageMode] 等既有欄位的預設值慣例，避免既有大量測試呼叫
+  /// 端需要逐一補上這個參數）。
+  final List<ZoneAction> navZoneActions;
+
+  /// 點擊熱區換算出動作後觸發，呼叫端（`ReaderScreen`）負責分派實際行為
+  /// （換頁／切換沉浸模式，見 `ReaderScreen._handleZoneAction`）。比照
+  /// [onCropRectComputed] 等既有回呼欄位，刻意為可選參數。
+  final ValueChanged<ZoneAction>? onZoneAction;
+
+  /// 是否疊加顯示熱區輔助線（邊框＋動作文字標籤），供使用者於設定畫面
+  /// 開啟除錯用途（epic-7-interaction Issue 2/3 `showNavZoneDebugOverlay`）。
+  final bool showNavZoneDebugOverlay;
+
   const PdfReaderView({
     super.key,
     required this.filePath,
@@ -83,6 +102,13 @@ class PdfReaderView extends StatefulWidget {
     this.initialPageIndex,
     this.onSelectionRectComputed,
     this.onSelectionCanceled,
+    this.navZoneActions = const [
+      ZoneAction.none, ZoneAction.none, ZoneAction.none,
+      ZoneAction.none, ZoneAction.none, ZoneAction.none,
+      ZoneAction.none, ZoneAction.none, ZoneAction.none,
+    ],
+    this.onZoneAction,
+    this.showNavZoneDebugOverlay = false,
   });
 
   @override
@@ -101,6 +127,26 @@ class PdfReaderView extends StatefulWidget {
     final state = key.currentState;
     if (state is _PdfReaderViewState) {
       state.jumpToPage(pageIndex);
+    }
+  }
+
+  /// 供外部（`ReaderScreen._handleZoneAction`，epic-7-interaction Issue 4）
+  /// 安全呼叫 [_PdfReaderViewState.nextPage] 的強型別 static helper，比照
+  /// [jumpToPage] 既有模式。[key] 對應的 State 若尚未掛載，靜默忽略。
+  static void nextPage(GlobalKey<State<PdfReaderView>> key) {
+    final state = key.currentState;
+    if (state is _PdfReaderViewState) {
+      state.nextPage();
+    }
+  }
+
+  /// 供外部（`ReaderScreen._handleZoneAction`，epic-7-interaction Issue 4）
+  /// 安全呼叫 [_PdfReaderViewState.previousPage] 的強型別 static helper，
+  /// 比照 [jumpToPage] 既有模式。[key] 對應的 State 若尚未掛載，靜默忽略。
+  static void previousPage(GlobalKey<State<PdfReaderView>> key) {
+    final state = key.currentState;
+    if (state is _PdfReaderViewState) {
+      state.previousPage();
     }
   }
 
@@ -129,6 +175,38 @@ class _PdfReaderViewState extends State<PdfReaderView> {
   // 改由 Flutter 端 GestureDetector 主導」）。
   Size? _lastMeasuredSize;
   int _activeAnnotationPointerCount = 0;
+
+  // 【偏離 task-2-brief.md Step 3 逐字碼，實作階段發現並修正，見
+  // review-issue-4.md／task-2-report.md】9 格熱區點擊改由本區塊的
+  // Listener 手動座標比對判讀，不能只靠 GestureDetector.onTapUp
+  // （見下方 build() 中仍保留的 onTapUp: _handleZoneTap，理由見那裡的
+  // 註解）：實測（含最小可重現案例，純 GestureDetector 包 AndroidView，
+  // 無 Stack/IgnorePointer 涉入）證實 Flutter 的
+  // GestureArenaManager.sweep()「若無人在放開前主動 accept/reject，仲裁
+  // 給第一個加入手勢競技場的成員」預設規則，會讓 AndroidView 內建、永遠
+  // 被動不主動 accept 的 _PlatformViewGestureRecognizer（因為 AndroidView
+  // 在畫面樹中比本 GestureDetector 更深，其 handleEvent 一定先被呼叫、先
+  // 加入競技場）100% 贏得每一次「純點擊、無明顯移動」手勢，導致
+  // onTapUp 永遠不會觸發——這與 spec.md 審查修正（第 34 行）「PDF 原生層
+  // 沒有任何觸控監聽，沒有『搶手勢競技場』的對象」的假設不符：AndroidView
+  // 是否贏得競技場，是 Flutter 框架本身的 PlatformView 整合機制決定，與
+  // 內嵌的原生 View 本身有沒有自訂觸控監聽無關。相較之下，既有
+  // onLongPressStart／onHorizontalDragEnd（已於本 issue 移除，ADR 0010）
+  // 之所以先前運作正常，是因為 LongPress／Drag 這類手勢辨識器會在放開前
+  // 主動呼叫 `resolve(accepted)`（分別在長按逾時、或移動超過門檻時）搶先
+  // 決議，不需要仰賴 sweep() 的預設仲裁規則。
+  //
+  // 修正做法：改用本檔案既有的外層 [Listener]（`_handleAnnotationPointerDown`
+  // ／`_handleAnnotationPointerUp`）手動比對按下/放開座標判斷是否為點擊。
+  // Listener 是原始指標監聽器、不參與手勢競技場仲裁，保證每次按下/放開都
+  // 會收到事件、不受上述問題影響；也完全不需要像 EpubReaderView FXL
+  // 熱區疊加層那樣，用不透明疊加層整個擋住 AndroidView 換取贏得競技場
+  // （見該檔案 build() 的取捨註解）——那個做法會讓 AndroidView 完全收不到
+  // 熱區範圍內的任何觸控，与 design.md 決策 #18「PDF 新增 GestureDetector，
+  // 與既有長按拖曳框選共存於同一手勢競技場」的設計意圖（維持與
+  // AndroidView 正常共存，而非整個蓋住它）不符。
+  Offset? _tapDownPosition;
+  bool _longPressActive = false;
 
   void _onPlatformViewCreated(int id) {
     final channel = MethodChannel('cc.ugotit.elinkbook/pdf_reader_view_$id');
@@ -272,22 +350,22 @@ class _PdfReaderViewState extends State<PdfReaderView> {
         builder: (context, constraints) {
           _lastMeasuredSize = constraints.biggest;
           return GestureDetector(
-            onHorizontalDragEnd: (details) {
-              if (details.primaryVelocity == null) return;
-              if (details.primaryVelocity! < 0) {
-                // 向左滑動 → 下一頁
-                nextPage();
-              } else if (details.primaryVelocity! > 0) {
-                // 向右滑動 → 上一頁
-                previousPage();
-              }
-            },
+            onTapUp: _handleZoneTap,
             onLongPressStart: _handleLongPressStart,
             onLongPressMoveUpdate: _handleLongPressMoveUpdate,
             onLongPressEnd: _handleLongPressEnd,
-            child: AndroidView(
-              viewType: 'cc.ugotit.elinkbook/pdf_reader_view',
-              onPlatformViewCreated: _onPlatformViewCreated,
+            child: Stack(
+              children: [
+                AndroidView(
+                  viewType: 'cc.ugotit.elinkbook/pdf_reader_view',
+                  onPlatformViewCreated: _onPlatformViewCreated,
+                ),
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: _buildNavZoneOverlay(),
+                  ),
+                ),
+              ],
             ),
           );
         },
@@ -295,19 +373,110 @@ class _PdfReaderViewState extends State<PdfReaderView> {
     );
   }
 
+  /// 3×3 導航熱區疊加層——純視覺標記／除錯輔助線，永遠不攔截觸控（外層
+  /// 包了 [IgnorePointer]），實際點擊判讀由 [_handleAnnotationPointerUp]
+  /// 透過 [_dispatchZoneAction]（內部呼叫 [hitTestZoneIndex]）對座標運算
+  /// 完成，兩者共用同一份 3×3 格線定義。`showNavZoneDebugOverlay == false`
+  /// 時格子仍存在（供 widget test 以 `Key('nav_zone_$index')` 尋址並透過
+  /// `tester.tap()` 觸發外層 [Listener] 的 `onPointerUp`），只是不顯示邊框
+  /// 與文字標籤。
+  Widget _buildNavZoneOverlay() {
+    // 改用 Column（3 個 Expanded 列）包 Row（3 個 Expanded 格），讓每格依
+    // 實際可用空間等比例分配為 width/3 × height/3（審查修正）：原本的
+    // GridView.count 預設 childAspectRatio 為 1.0（正方形格子），在直式手機
+    // （高 > 寬）上只會鋪滿畫面上方一小塊正方形區域，下方約 2/3 完全沒有
+    // 格線，純屬本除錯疊加層的視覺 bug——實際點擊判讀（hitTestZoneIndex）
+    // 本來就是各自獨立以 width/height 三等分計算，不受此影響。
+    return Column(
+      children: List.generate(3, (row) {
+        return Expanded(
+          child: Row(
+            children: List.generate(3, (col) {
+              final index = row * 3 + col;
+              return Expanded(
+                child: Container(
+                  key: Key('nav_zone_$index'),
+                  decoration: widget.showNavZoneDebugOverlay
+                      ? BoxDecoration(border: Border.all(color: Colors.white24))
+                      : null,
+                  alignment: Alignment.center,
+                  child: widget.showNavZoneDebugOverlay
+                      ? Text(
+                          _zoneActionLabel(widget.navZoneActions[index]),
+                          style: const TextStyle(color: Colors.white70, fontSize: 10),
+                        )
+                      : null,
+                ),
+              );
+            }),
+          ),
+        );
+      }),
+    );
+  }
+
+  String _zoneActionLabel(ZoneAction action) {
+    switch (action) {
+      case ZoneAction.previousPage:
+        return '上一頁';
+      case ZoneAction.nextPage:
+        return '下一頁';
+      case ZoneAction.menu:
+        return '選單';
+      case ZoneAction.none:
+        return '無動作';
+    }
+  }
+
+  /// 掛在 [GestureDetector] 的 `onTapUp`，保留以符合 task-2-brief.md／
+  /// spec.md 描述的「9 格 onTap 與既有長按拖曳框選共存於同一個
+  /// GestureDetector」意圖，惟實測手勢競技場預設仲裁規則會讓 AndroidView
+  /// 贏得每一次點擊（見上方 [_tapDownPosition] 欄位註解的完整說明），
+  /// 因此本回呼在實機/測試上皆不會真的觸發；實際點擊判讀請見
+  /// [_handleAnnotationPointerUp] 透過 [_dispatchZoneAction] 完成。
+  void _handleZoneTap(TapUpDetails details) {
+    _dispatchZoneAction(details.localPosition);
+  }
+
+  /// 依座標查表換算並觸發 [ZoneAction]，供 [_handleZoneTap]（GestureDetector
+  /// 路徑，理論上不會被呼叫）與 [_handleAnnotationPointerUp]（實際生效的
+  /// Listener 手動點擊判讀路徑）共用同一份邏輯。
+  ///
+  /// 潛在風險（審查修正，僅供未來排查用）：若未來 Flutter SDK 或
+  /// `AndroidView.gestureRecognizers` 設定變動，導致 [_handleZoneTap] 的
+  /// `onTapUp` 意外開始觸發，本方法會被同一次點擊呼叫兩次（重複派發
+  /// 同一個 [ZoneAction]，例如連續翻兩頁）。完整成因見 [_tapDownPosition]
+  /// 欄位註解。
+  void _dispatchZoneAction(Offset localPosition) {
+    final size = _lastMeasuredSize;
+    if (size == null) return;
+    final index = hitTestZoneIndex(
+      dx: localPosition.dx,
+      dy: localPosition.dy,
+      width: size.width,
+      height: size.height,
+    );
+    widget.onZoneAction?.call(widget.navZoneActions[index]);
+  }
+
   /// 長按拖曳框選劃線範圍的手勢辨識（epic-6-annotations Issue 3，ADR
-  /// 0008；審查修正 1.1）：與既有 `onHorizontalDragEnd` 掛在同一個
-  /// `GestureDetector`，由 Flutter 的手勢競技場自行裁決「這根手指是要
-  /// 長按還是要水平滑動翻頁」，原生端不再自己監聽 `rootView` 觸控、也不
-  /// 需要猜測——這正是 Flutter 手勢框架設計來解決這種同一觸點多種可能
-  /// 手勢的機制。三個回呼把觸點位置換算成相對本 widget 自身尺寸
+  /// 0008；審查修正 1.1）：與既有 9 格熱區點擊（`onTapUp`，epic-7-interaction
+  /// Issue 4）掛在同一個 `GestureDetector`，由 Flutter 的手勢競技場自行
+  /// 裁決「這根手指是要長按還是要點擊」，原生端不再自己監聽 `rootView`
+  /// 觸控、也不需要猜測——這正是 Flutter 手勢框架設計來解決這種同一觸點
+  /// 多種可能手勢的機制。三個回呼把觸點位置換算成相對本 widget 自身尺寸
   /// （[_lastMeasuredSize]，由外層 `LayoutBuilder` 提供）的百分比後送給
   /// 原生端；原生端收到後再自行換算為相對 bitmap 內容範圍的最終座標
   /// （見 plan-issue-3.md Global Constraints「PDF 座標協定」的兩段式
   /// 換算說明），本端不需要知道、也沒有管道取得 letterbox 換算所需的
   /// bitmap 實際像素尺寸。是否真的允許框選（`fitMode`／裁切/雙頁狀態）
   /// 一律交由原生端這個唯一權威來源判斷，本端無條件送出事件。
+  ///
+  /// [_longPressActive] 於此設為 true，供 [_handleAnnotationPointerUp] 的
+  /// 手動點擊判讀邏輯判斷「這次放開是長按框選的放開，不是點擊」，避免
+  /// 兩者重複觸發（見 [_tapDownPosition] 欄位註解的完整說明）。
   void _handleLongPressStart(LongPressStartDetails details) {
+    _longPressActive = true;
     final size = _lastMeasuredSize;
     if (size == null || size.width <= 0 || size.height <= 0) return;
     _channel?.invokeMethod('beginAnnotationSelection', {
@@ -326,6 +495,7 @@ class _PdfReaderViewState extends State<PdfReaderView> {
   }
 
   void _handleLongPressEnd(LongPressEndDetails details) {
+    _longPressActive = false;
     _channel?.invokeMethod('endAnnotationSelection');
   }
 
@@ -337,14 +507,40 @@ class _PdfReaderViewState extends State<PdfReaderView> {
   /// 的處理函式（Dart 函式參數型別逆變允許以 `PointerEvent` 版本同時
   /// 賦值給 `PointerUpListener`／`PointerCancelListener` 兩種型別的參數，
   /// 不需要分別宣告兩份幾乎相同的方法）。
+  ///
+  /// 【epic-7-interaction Issue 4 新增】同時記錄本次手勢第一指的按下座標
+  /// （[_tapDownPosition]），供 [_handleAnnotationPointerUp] 判讀是否為
+  /// 點擊——完整理由見該欄位宣告處的註解（GestureDetector.onTapUp 因手勢
+  /// 競技場與 AndroidView 內建 recognizer 的預設仲裁規則而實際上不會觸發）。
+  /// 第二指（含）以後按下視為多指手勢，清空 [_tapDownPosition] 使其不被
+  /// 誤判為點擊，與既有「多指觸碰取消框選」邏輯一致。
   void _handleAnnotationPointerDown(PointerDownEvent event) {
     _activeAnnotationPointerCount++;
     if (_activeAnnotationPointerCount > 1) {
       _channel?.invokeMethod('cancelAnnotationSelection');
+      _tapDownPosition = null;
+    } else {
+      _tapDownPosition = event.localPosition;
+      _longPressActive = false;
     }
   }
 
+  /// 【epic-7-interaction Issue 4 新增】在既有多指計數遞減之前，判斷這次
+  /// 放開是否構成一次點擊：必須是最後一指放開（`_activeAnnotationPointerCount
+  /// == 1`）、事件本身是 [PointerUpEvent]（非 [PointerCancelEvent]）、期間
+  /// 沒有觸發長按框選（`!_longPressActive`），且放開位置與按下位置的位移
+  /// 沒有超過 [kTouchSlop]（Flutter 標準點擊位移容許誤差）。符合則呼叫
+  /// [_dispatchZoneAction] 觸發對應熱區的 [ZoneAction]。
   void _handleAnnotationPointerUp(PointerEvent event) {
+    final downPosition = _tapDownPosition;
+    if (_activeAnnotationPointerCount == 1 &&
+        event is PointerUpEvent &&
+        !_longPressActive &&
+        downPosition != null &&
+        (event.localPosition - downPosition).distance <= kTouchSlop) {
+      _dispatchZoneAction(event.localPosition);
+    }
     if (_activeAnnotationPointerCount > 0) _activeAnnotationPointerCount--;
+    _tapDownPosition = null;
   }
 }
