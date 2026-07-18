@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/reader/dual_page_direction.dart';
 import 'package:elinkbook/reader/dual_page_mode.dart';
+import 'package:elinkbook/reader/nav_zone_mode.dart';
 import 'package:elinkbook/reader/page_turn_mode.dart';
 import 'package:elinkbook/reader/pdf_crop_mode.dart';
 import 'package:elinkbook/reader/pdf_fit_mode.dart';
@@ -33,6 +34,8 @@ void main() {
       dualPageDirection: DualPageDirection.ltr,
       showHeader: true,
       showFooter: true,
+      navZoneActions: rightFlipZoneTemplate,
+      showNavZoneDebugOverlay: false,
     );
 
     expect(resolved.fontSize, isNull);
@@ -42,5 +45,7 @@ void main() {
     expect(resolved.dualPageMode, DualPageMode.auto);
     expect(resolved.dualPageCoverAlone, isTrue);
     expect(resolved.dualPageDirection, DualPageDirection.ltr);
+    expect(resolved.navZoneActions, rightFlipZoneTemplate);
+    expect(resolved.showNavZoneDebugOverlay, isFalse);
   });
 }

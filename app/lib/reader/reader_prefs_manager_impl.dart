@@ -167,6 +167,9 @@ class ReaderPrefsManagerImpl implements ReaderPrefsManager {
       dualPageDirection: book.dualPageDirection ?? DualPageDirection.rtl,
       showHeader: book.showHeader ?? true,
       showFooter: book.showFooter ?? true,
+      navZoneActions:
+          resolveZoneActions(global.navZoneMode, global.navZoneCustomActions),
+      showNavZoneDebugOverlay: global.showNavZoneDebugOverlay,
     );
   }
 }

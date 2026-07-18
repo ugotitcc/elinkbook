@@ -4,6 +4,7 @@ import 'package:elinkbook/reader/dual_page_direction.dart';
 import 'package:elinkbook/reader/dual_page_mode.dart';
 import 'package:elinkbook/reader/pdf_crop_mode.dart';
 import 'package:elinkbook/reader/pdf_fit_mode.dart';
+import 'package:elinkbook/reader/nav_zone_mode.dart';
 import 'package:elinkbook/reader/page_turn_mode.dart';
 import 'package:elinkbook/reader/resolved_preferences.dart';
 import 'package:elinkbook/reader/screen_orientation_setting.dart';
@@ -23,6 +24,8 @@ const _testResolved = ResolvedPreferences(
   dualPageDirection: DualPageDirection.rtl,
   showHeader: true,
   showFooter: true,
+  navZoneActions: rightFlipZoneTemplate,
+  showNavZoneDebugOverlay: false,
 );
 
 void main() {

@@ -57,6 +57,8 @@ void main() {
       expect(resolved.dualPageDirection, DualPageDirection.rtl);
       expect(resolved.showHeader, isTrue);
       expect(resolved.showFooter, isTrue);
+      expect(resolved.navZoneActions, rightFlipZoneTemplate);
+      expect(resolved.showNavZoneDebugOverlay, isFalse);
     });
 
     test('單書覆寫存在時，優先套用單書覆寫，忽略全域預設', () {
@@ -94,15 +96,39 @@ void main() {
         globalPrefs: const GlobalReaderPrefs(
           pageTurnMode: PageTurnMode.scroll,
           screenOrientation: ScreenOrientationSetting.lock270,
-          navZoneMode: NavZoneMode.rightFlip,
+          navZoneMode: NavZoneMode.oneHand,
           navZoneCustomActions: rightFlipZoneTemplate,
-          showNavZoneDebugOverlay: false,
+          showNavZoneDebugOverlay: true,
         ),
       );
       final resolved = manager.resolve(loaded);
 
       expect(resolved.pageTurnMode, PageTurnMode.scroll);
       expect(resolved.screenOrientation, ScreenOrientationSetting.lock270);
+      expect(resolved.navZoneActions, oneHandZoneTemplate);
+      expect(resolved.showNavZoneDebugOverlay, isTrue);
+    });
+
+    test('navZoneMode 為 custom 時，navZoneActions 直接採用 navZoneCustomActions',
+        () {
+      const customActions = [
+        ZoneAction.none, ZoneAction.none, ZoneAction.menu,
+        ZoneAction.none, ZoneAction.none, ZoneAction.none,
+        ZoneAction.previousPage, ZoneAction.none, ZoneAction.nextPage,
+      ];
+      final loaded = LoadedPrefs(
+        bookPrefs: BookReaderPrefs.empty,
+        globalPrefs: const GlobalReaderPrefs(
+          pageTurnMode: PageTurnMode.paginated,
+          screenOrientation: ScreenOrientationSetting.auto,
+          navZoneMode: NavZoneMode.custom,
+          navZoneCustomActions: customActions,
+          showNavZoneDebugOverlay: false,
+        ),
+      );
+      final resolved = manager.resolve(loaded);
+
+      expect(resolved.navZoneActions, customActions);
     });
 
     test('autoDetectedWritingMode 在沒有 writingModeOverride 時參與解析', () {
