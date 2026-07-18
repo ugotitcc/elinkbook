@@ -238,6 +238,23 @@ void main() {
       expect(loaded.globalPrefs, globalPrefs);
     });
 
+    test('loadGlobalPrefs() 回傳與 load(bookId).globalPrefs 一致的值', () async {
+      const globalPrefs = GlobalReaderPrefs(
+        pageTurnMode: PageTurnMode.scroll,
+        screenOrientation: ScreenOrientationSetting.lock90,
+        navZoneMode: NavZoneMode.oneHand,
+        navZoneCustomActions: rightFlipZoneTemplate,
+        showNavZoneDebugOverlay: true,
+      );
+      await manager.saveGlobalPrefs(globalPrefs);
+
+      final direct = await manager.loadGlobalPrefs();
+      final viaLoad = await manager.load('b1');
+
+      expect(direct, globalPrefs);
+      expect(direct, viaLoad.globalPrefs);
+    });
+
     test('navZoneCustomActions 已儲存值為空字串時，安全回退為 rightFlip 模板',
         () async {
       SharedPreferences.setMockInitialValues({

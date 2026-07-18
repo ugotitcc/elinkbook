@@ -455,7 +455,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
           onPressed: () {
             Navigator.of(context).push(
               MaterialPageRoute(
-                builder: (context) => const SettingsScreen(),
+                builder: (context) =>
+                    SettingsScreen(prefsManager: widget.prefsManager),
               ),
             );
           },

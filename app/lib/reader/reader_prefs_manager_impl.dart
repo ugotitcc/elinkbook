@@ -45,7 +45,7 @@ class ReaderPrefsManagerImpl implements ReaderPrefsManager {
   Future<LoadedPrefs> load(String bookId) async {
     final results = await Future.wait([
       _sqliteRepository.load(bookId),
-      _loadGlobalPrefs(),
+      loadGlobalPrefs(),
       _positionRepository.load(bookId),
       _characterCountRepository?.load(bookId) ?? Future.value(null),
     ]);
@@ -57,7 +57,11 @@ class ReaderPrefsManagerImpl implements ReaderPrefsManager {
     );
   }
 
-  Future<GlobalReaderPrefs> _loadGlobalPrefs() async {
+  /// 單獨載入全域偏好，不需要 bookId——供不依附特定書籍的設定畫面（例如
+  /// `NavZoneSettingsScreen`，epic-7-interaction Issue 3）使用；`load(bookId)`
+  /// 內部也呼叫這裡，兩者保證讀到一致的值。
+  @override
+  Future<GlobalReaderPrefs> loadGlobalPrefs() async {
     final sp = await SharedPreferences.getInstance();
     return GlobalReaderPrefs(
       pageTurnMode: _readEnum(sp, _pageTurnModeKey, PageTurnMode.values) ??
