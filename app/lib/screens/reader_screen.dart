@@ -458,9 +458,13 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   Future<void> _loadFxlBookmarks() async {
     final repository = widget.bookmarksRepository;
     if (repository == null) return;
-    final list = await repository.listByBook(widget.bookId);
-    if (!mounted) return;
-    setState(() => _fxlBookmarks = list);
+    try {
+      final list = await repository.listByBook(widget.bookId);
+      if (!mounted) return;
+      setState(() => _fxlBookmarks = list);
+    } catch (e) {
+      debugPrint('Failed to load FXL bookmarks: $e');
+    }
   }
 
   /// 目前頁是否已有書籤——比較 epubLocatorJson 完全相同字串，比照
@@ -482,7 +486,10 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     if (repository == null || positionInfo == null) return;
     final existing = _fxlBookmarkAtCurrentPosition;
     if (existing != null) {
-      await repository.delete(existing.id!);
+      final id = existing.id;
+      if (id != null) {
+        await repository.delete(id);
+      }
     } else {
       await repository.insert(Bookmark(
         bookId: widget.bookId,

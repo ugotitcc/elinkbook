@@ -1636,9 +1636,7 @@ void main() {
     );
   });
 
-  // TODO(epic-6-issue4): 此測試因 flutter test 無法模擬 PlatformView 生命週期
-  // 而跳過——setState 觸發 EpubReaderView rebuild 導致 MissingPluginException。
-  // 待 Task 3 整合測試在真機上補做完整驗證。
+
   testWidgets(
       'FXL：收到 onLocatorChanged 後，點擊懸浮書籤按鈕可新增/移除目前頁書籤，圖示正確切換並持久化',
       (tester) async {
