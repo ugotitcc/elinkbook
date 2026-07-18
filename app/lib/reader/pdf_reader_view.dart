@@ -104,6 +104,26 @@ class PdfReaderView extends StatefulWidget {
     }
   }
 
+  /// 供外部（`ReaderScreen._handleZoneAction`，epic-7-interaction Issue 4）
+  /// 安全呼叫 [_PdfReaderViewState.nextPage] 的強型別 static helper，比照
+  /// [jumpToPage] 既有模式。[key] 對應的 State 若尚未掛載，靜默忽略。
+  static void nextPage(GlobalKey<State<PdfReaderView>> key) {
+    final state = key.currentState;
+    if (state is _PdfReaderViewState) {
+      state.nextPage();
+    }
+  }
+
+  /// 供外部（`ReaderScreen._handleZoneAction`，epic-7-interaction Issue 4）
+  /// 安全呼叫 [_PdfReaderViewState.previousPage] 的強型別 static helper，
+  /// 比照 [jumpToPage] 既有模式。[key] 對應的 State 若尚未掛載，靜默忽略。
+  static void previousPage(GlobalKey<State<PdfReaderView>> key) {
+    final state = key.currentState;
+    if (state is _PdfReaderViewState) {
+      state.previousPage();
+    }
+  }
+
   /// 把目前應顯示的完整標記清單一次性送給原生端（比照 EPUB
   /// `EpubReaderView.setDecorations` 整組送出慣例，非增量 diff），供原生
   /// 端重繪 Bitmap 快取上的劃線/備註疊加。呼叫時機：初次載入既有標記、
