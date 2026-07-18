@@ -36,6 +36,11 @@ abstract class ReaderPrefsManager {
   /// 新增第 3 個平行讀取）。
   Future<LoadedPrefs> load(String bookId);
 
+  /// 單獨載入全域偏好，不需要 bookId——供不依附特定書籍的設定畫面（例如
+  /// `NavZoneSettingsScreen`，epic-7-interaction Issue 3）使用；`load(bookId)`
+  /// 內部也呼叫同一份實作，兩者保證讀到一致的值。
+  Future<GlobalReaderPrefs> loadGlobalPrefs();
+
   Future<void> saveBookPrefs(String bookId, BookReaderPrefs prefs);
   Future<void> saveGlobalPrefs(GlobalReaderPrefs prefs);
 

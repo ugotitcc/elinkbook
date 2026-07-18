@@ -50,6 +50,9 @@ class FakeReaderPrefsManager implements ReaderPrefsManager {
   }
 
   @override
+  Future<GlobalReaderPrefs> loadGlobalPrefs() async => globalPrefs;
+
+  @override
   Future<void> saveBookPrefs(String bookId, BookReaderPrefs prefs) async {
     bookPrefsByBookId[bookId] = prefs;
     savedBookPrefsCalls.add(bookId);
