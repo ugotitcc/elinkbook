@@ -2,7 +2,7 @@
 
 ## 狀態
 
-已採納（`epic-6-annotations` Discovery，`docs/epics/epic-6-annotations/design.md` 決策 #3）。
+已採納（`epic-6-annotations` Discovery，`docs/archive/2026-07-18-epic-6-annotations/design.md` 決策 #3）。
 
 ## 背景
 

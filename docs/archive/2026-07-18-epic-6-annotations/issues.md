@@ -1,6 +1,6 @@
 # Epic 6 — 註記與知識管理：工單清單 (Issues)
 
-依 `spec.md`（搭配 `design.md`、`/grill-with-docs` Discovery + `/superpowers:requesting-code-review` 審查修正，另見 [ADR 0008](../../adr/0008-pdf-annotation-long-press-gesture.md)）拆解出的細粒度垂直切片工單。Issue 1（書籤 + 統一筆記入口）可立即開始；Issue 2（EPUB 劃線與備註）依賴 Issue 1；Issue 3（PDF 劃線與備註）依賴 Issue 2；Issue 4（FXL 書籤支援）依賴 Issue 1；Issue 5（Markdown 導出）依賴 Issue 1、Issue 2。
+依 `spec.md`（搭配 `design.md`、`/grill-with-docs` Discovery + `/superpowers:requesting-code-review` 審查修正，另見 [ADR 0008](../../adr/0008-pdf-annotation-long-press-gesture.md)）拆解出的細粒度垂直切片工單。Issue 1（書籤 + 統一筆記入口）可立即開始；Issue 2（EPUB 劃線與備註）依賴 Issue 1；Issue 3（PDF 劃線與備註）依賴 Issue 2；Issue 4（FXL 書籤支援）依賴 Issue 1；Issue 5（Markdown 匯出）依賴 Issue 1、Issue 2；Issue 6（正式圖書庫流程貫穿 Repository）依賴 Issue 2、Issue 3，修正 Issue 4/5 審查時發現的既有貫穿缺口。**全部 6 個 Issue（Issue 1-6）皆已完成並合併回 `main`。**
 
 ---
 
@@ -92,7 +92,7 @@
 
 ## Issue 3：PDF 劃線與備註
 
-**Status:** ✅ 已完成，待合併（分支 `worktree-epic6-issue3-pdf-highlights`，尚未合併回 `main`）——依 `plans/plan-issue-3.md` 11 個 Task 以 Subagent-Driven Development 實作：長按拖曳框選手勢改由 Flutter 端 `GestureDetector`（`onLongPressStart`／`onLongPressMoveUpdate`／`onLongPressEnd`，與既有 `onHorizontalDragEnd` 共用同一手勢競技場）主導辨識，原生端 `PdfReaderView.kt` 僅被動接收 `beginAnnotationSelection`／`updateAnnotationSelection`／`endAnnotationSelection`／`cancelAnnotationSelection` 四個 method call（此為審查修正，原設計由原生端無條件攔截 `ACTION_DOWN` 會讓既有滑動翻頁手勢失效，見 `plan-issue-3.md` Global Constraints）；`highlights`／`notes` 表新增 PDF 欄位並完成 v9→v10 schema migration（if/else 互斥、避免跳版升級時 duplicate column 例外）；`HighlightSelectionOverlayView`／`computeFitCenterContentBounds` 共用座標數學；`refreshAnnotations()` 原生端 Bitmap 疊加渲染（螢光筆/底線依 `scale` 而非畫面 DP 密度縮放，純備註改用手繪黑白向量圖釘取代系統 Emoji，E-Ink 對比度考量）；`ReaderScreen`／`NotesBottomSheet` 完整接上 PDF 分支，複用 Issue 2 邏輯零回歸。11 個 Task 逐一經 task-scoped 審查（3 個 Task 由實作者發現並修正計劃書本身的真實錯誤——FIT_CENTER 測試期望值算式、Kotlin 可見性洩漏、跨 Task 型別前向參照——皆經 controller 獨立驗證後回頭修正 `plan-issue-3.md`），加上最終全分支審查（發現 1 項 Important：PDF 浮動工具列在 letterbox 情境下座標基準誤用整個 widget 尺寸而非內容範圍，導致定位偏移，已新增 `widgetRect` 欄位修正並複審通過）。`flutter test`（全專案 466 個）全過、`flutter analyze` 乾淨、Kotlin JVM 測試（73 個）全過、`flutter build apk --debug` 建置成功。**真機驗證現況**：`integration_test/pdf_highlights_notes_test.dart`（repository 驅動的端到端流程——清單顯示、跳轉、單筆刪除）已於真機（Android 15 / API 35）實際執行並通過；原生長按框選手勢本身觸發、與既有滑動翻頁/雙頁縮放平移手勢的優先權、Bitmap 疊加視覺渲染、多指取消、裝置旋轉/裁切後座標基準，這 5 類項目屬於 Flutter `integration_test` 無法模擬 `PlatformView` 內部觸控事件的已知限制，仍待人工於真機操作逐項驗證（詳見該測試檔案開頭的「真機人工驗證清單」7 項）。**待人工決定**：分支尚未合併/推送，需人工決定合併方式（本地合併／推送建 PR／維持現狀）。
+**Status:** ✅ 已完成並合併（PR #51，`worktree-epic6-issue3-pdf-highlights` → `main`）——依 `plans/plan-issue-3.md` 11 個 Task 以 Subagent-Driven Development 實作：長按拖曳框選手勢改由 Flutter 端 `GestureDetector`（`onLongPressStart`／`onLongPressMoveUpdate`／`onLongPressEnd`，與既有 `onHorizontalDragEnd` 共用同一手勢競技場）主導辨識，原生端 `PdfReaderView.kt` 僅被動接收 `beginAnnotationSelection`／`updateAnnotationSelection`／`endAnnotationSelection`／`cancelAnnotationSelection` 四個 method call（此為審查修正，原設計由原生端無條件攔截 `ACTION_DOWN` 會讓既有滑動翻頁手勢失效，見 `plan-issue-3.md` Global Constraints）；`highlights`／`notes` 表新增 PDF 欄位並完成 v9→v10 schema migration（if/else 互斥、避免跳版升級時 duplicate column 例外）；`HighlightSelectionOverlayView`／`computeFitCenterContentBounds` 共用座標數學；`refreshAnnotations()` 原生端 Bitmap 疊加渲染（螢光筆/底線依 `scale` 而非畫面 DP 密度縮放，純備註改用手繪黑白向量圖釘取代系統 Emoji，E-Ink 對比度考量）；`ReaderScreen`／`NotesBottomSheet` 完整接上 PDF 分支，複用 Issue 2 邏輯零回歸。11 個 Task 逐一經 task-scoped 審查（3 個 Task 由實作者發現並修正計劃書本身的真實錯誤——FIT_CENTER 測試期望值算式、Kotlin 可見性洩漏、跨 Task 型別前向參照——皆經 controller 獨立驗證後回頭修正 `plan-issue-3.md`），加上最終全分支審查（發現 1 項 Important：PDF 浮動工具列在 letterbox 情境下座標基準誤用整個 widget 尺寸而非內容範圍，導致定位偏移，已新增 `widgetRect` 欄位修正並複審通過）。`flutter test`（全專案 466 個）全過、`flutter analyze` 乾淨、Kotlin JVM 測試（73 個）全過、`flutter build apk --debug` 建置成功。**真機驗證現況**：`integration_test/pdf_highlights_notes_test.dart`（repository 驅動的端到端流程——清單顯示、跳轉、單筆刪除）已於真機（Android 15 / API 35）實際執行並通過；原生長按框選手勢本身觸發、與既有滑動翻頁/雙頁縮放平移手勢的優先權、Bitmap 疊加視覺渲染、多指取消、裝置旋轉/裁切後座標基準，這 5 類項目屬於 Flutter `integration_test` 無法模擬 `PlatformView` 內部觸控事件的已知限制，仍待人工於真機操作逐項驗證（詳見該測試檔案開頭的「真機人工驗證清單」7 項）。
 
 **依賴：** Issue 2（複用 Dart 端資料模型／Repository／Bottom Sheet 清單 UI，本工單只新增 PDF 專屬的原生框選建立路徑）
 
@@ -132,7 +132,7 @@ PDF 書籍開啟「✏️ 劃線與備註」分頁時，資料層與 UI 完全�
 
 ## Issue 4：FXL（固定版面）書籤支援
 
-**Status:** ready-for-agent
+**Status:** ✅ 已完成並合併（PR #52，`feat/epic6-issue4-fxl-bookmarks` → `main`）——`ReaderScreen` 於 FXL 既有懸浮控制按鈕群組（左上返回鍵、右上設定鍵）新增 🔖 書籤 toggle 與 📚 筆記兩顆懸浮按鈕，複用 Issue 1 的 `BookmarksRepository`／`NotesBottomSheet`「🔖 書籤」分頁邏輯（「✏️ 劃線與備註」分頁維持空狀態且不可互動）；書籤跳轉後比照既有 `onFixedLayoutPageTurn` 慣例強制收合懸浮控制面板，跟隨既有三欄熱區收合顯示/隱藏邏輯。新增 FXL 書籤 `integration_test`；分支複審後修正 3 項 Minor（try-catch 保護、安全性非空斷言、移除過期測試註解）。`flutter analyze` 乾淨；`flutter test` 現況（含本 Issue 新增案例）已隨後續 Issue 5/6 的全專案回歸驗證多次確認全過。
 
 **依賴：** Issue 1（書籤資料模型與 Bottom Sheet 外殼已存在，本工單新增 FXL 專屬的懸浮入口）
 
@@ -158,14 +158,14 @@ PDF 書籍開啟「✏️ 劃線與備註」分頁時，資料層與 UI 完全�
 
 **驗收標準：**
 
-- [ ] FXL 懸浮控制按鈕群組新增 🔖 書籤 toggle、📚 筆記兩顆按鈕
-- [ ] FXL 書籤功能與非 FXL 共用同一套資料模型與清單 UI（複用 Issue 1）
-- [ ] FXL 情境下「劃線與備註」分頁顯示空狀態、不可互動
-- [ ] 新增按鈕跟隨既有三欄熱區收合顯示/隱藏邏輯
-- [ ] 書籤跳轉後懸浮控制面板自動收合（比照既有 `onFixedLayoutPageTurn` 慣例）
-- [ ] 既有 FXL 測試全數通過，無回歸
-- [ ] 上述測試皆通過，`flutter analyze` 乾淨
-- [ ] 真機整合測試涵蓋 FXL 書籤新增/查看/跳轉的端到端流程
+- [x] FXL 懸浮控制按鈕群組新增 🔖 書籤 toggle、📚 筆記兩顆按鈕
+- [x] FXL 書籤功能與非 FXL 共用同一套資料模型與清單 UI（複用 Issue 1）
+- [x] FXL 情境下「劃線與備註」分頁顯示空狀態、不可互動
+- [x] 新增按鈕跟隨既有三欄熱區收合顯示/隱藏邏輯
+- [x] 書籤跳轉後懸浮控制面板自動收合（比照既有 `onFixedLayoutPageTurn` 慣例）
+- [x] 既有 FXL 測試全數通過，無回歸
+- [x] 上述測試皆通過，`flutter analyze` 乾淨
+- [ ] 真機整合測試涵蓋 FXL 書籤新增/查看/跳轉的端到端流程——測試檔案已撰寫並隨分支合併，實際於真機執行的結果未見於提交紀錄中明確記載，待人工確認
 
 **Blocked by：** Issue 1
 
@@ -173,7 +173,7 @@ PDF 書籍開啟「✏️ 劃線與備註」分頁時，資料層與 UI 完全�
 
 ## Issue 5：Markdown 導出
 
-**Status:** ready-for-agent
+**Status:** ✅ 已完成並合併（PR #53，`feat/epic6-issue5-markdown-export` → `main`）——新增 `generateMarkdownExport()` 純函式（依序輸出「🔖 書籤清單」「✏️ 劃線與個人備註」兩大段落，涵蓋「有書籤+有劃線+有備註」等各組合）；`NotesBottomSheet` 新增「導出為 Markdown」按鈕，寫入 `getTemporaryDirectory()` 並透過 `share_plus` 觸發系統分享。審查發現原始匯出測試因逾時被簡化為無效測試（只驗證按鈕存在、未實際驗證檔案寫入與分享參數），已改為讓 `tester.tap()` 整個在 `tester.runAsync()` 真實 Zone 下執行，並將固定延遲改為輪詢等待以消除間歇性失敗；範疇外變更（`file_picker` beta 版／`package_info_plus` 大版號升級）已還原，`share_plus` 鎖定為 `^11.1.0`——經查證 `share_plus >=13.1.0` 要求 `win32 ^6.0.1`，與既有 `package_info_plus`（要求 `win32 ^5.5.3`）／`file_picker`（要求 `win32 ^5.9.0`，12.x beta 才支援 `win32 ^6.x`）相衝突，`^11.1.0` 為唯一不需連動升級這兩個無關套件的版本，已記錄為 `pubspec.yaml` inline 註解。`flutter test`（483 個）全過、`flutter analyze` 乾淨、`flutter build apk --debug` 建置成功（確認 `FileProvider` manifest merge 不衝突）。**真機驗證現況**：`integration_test` 已於真機（Android 15 / API 35）執行並通過，但依計劃 Global Constraints 僅驗證「導出為 Markdown」按鈕正確渲染/就緒啟用，刻意不點擊觸發真實 Android Share Intent（會阻塞等待人工操作系統分享面板）——實際點擊觸發分享、以及接收端 App 讀取分享檔案是否受 `FileProvider` 路徑涵蓋，仍列於「真機人工驗證清單」，尚待人工執行。
 
 **依賴：** Issue 1（書籤資料）、Issue 2（劃線/備註資料；PDF 資料需 Issue 3 才有真實內容可匯出，但匯出邏輯本身不技術依賴 Issue 3）
 
@@ -194,19 +194,19 @@ PDF 書籍開啟「✏️ 劃線與備註」分頁時，資料層與 UI 完全�
 
 **驗收標準：**
 
-- [ ] Markdown 內容正確涵蓋書籤清單與劃線/備註清單，格式符合既有骨架
-- [ ] 導出範圍固定為目前這一本書
-- [ ] 存檔至 App 私有暫存目錄，不需額外儲存權限
-- [ ] 透過 `share_plus` 觸發 Android 系統分享
-- [ ] `share_plus` 與本專案既有 `FileProvider` 無 manifest 衝突，分享的暫存檔案路徑確實被涵蓋、接收端可正常讀取
-- [ ] 上述測試皆通過，`flutter analyze` 乾淨
-- [ ] 真機整合測試涵蓋導出→存檔→分享的端到端流程
+- [x] Markdown 內容正確涵蓋書籤清單與劃線/備註清單，格式符合既有骨架
+- [x] 導出範圍固定為目前這一本書
+- [x] 存檔至 App 私有暫存目錄，不需額外儲存權限
+- [x] 透過 `share_plus` 觸發 Android 系統分享
+- [ ] `share_plus` 與本專案既有 `FileProvider` 無 manifest 衝突，分享的暫存檔案路徑確實被涵蓋、接收端可正常讀取——`flutter build apk --debug` 建置成功已確認 manifest merge 本身不衝突，但接收端 App 實際讀取分享檔案的真機驗證仍待人工執行
+- [x] 上述測試皆通過，`flutter analyze` 乾淨
+- [ ] 真機整合測試涵蓋導出→存檔→分享的端到端流程——按鈕渲染/就緒啟用已於真機驗證通過，實際觸發 Share Intent 依計劃刻意不自動化，仍待人工於真機操作
 
 ---
 
 ## Issue 6：正式圖書庫流程貫穿 highlightsRepository／notesRepository
 
-**Status:** ready-for-agent
+**Status:** ✅ 已完成並合併（PR #54，`worktree-epic6-issue6` → `main`）——依 `plans/plan-issue-6.md` 4 個 Task 實作：`LibraryScreen` 新增可選具名參數 `highlightsRepository`／`notesRepository` 並於 `_openBook()` 貫穿給 `ReaderScreen`（比照既有 `bookmarksRepository` 的注入模式）；新增端到端 widget test 驗證 `ReaderScreen` 收到的兩個 Repository 不為 `null`，以及透過 `LibraryScreen` 開啟已有劃線/備註資料的 PDF 書籍後「劃線與備註」分頁正確顯示既有資料而非空狀態；`main.dart`／`ElinkBookApp` 建構真實 `HighlightsRepository`／`NotesRepository` 完成端到端接線；新增 Markdown 匯出迴歸測試，驗證經由正式圖書庫流程匯出的內容確實包含實際劃線/備註（而非固定顯示空狀態），修正 Issue 5 最終分支審查發現的既有缺口。文件審查（`tmp/epic-6/reviews/review-plan-issue-6.md`）發現 Task 4 在 `tester.runAsync()` 真實 Zone 下若 `PdfReaderView`（`AndroidView`）觸發版面重新佈局，會因 `SystemChannels.platform_views` 未註冊 mock handler 而拋出 `MissingPluginException`，已比照 `epub_reader_view_test.dart`／`pdf_reader_view_test.dart` 既有先例加上最低限度 mock（僅限 Task 4，經查證 Task 2 使用一般 `pump()` 不受影響、不需要）。`flutter test`（全專案 486 個）全過、`flutter analyze` 乾淨。
 
 **依賴：** Issue 2（EPUB 劃線/備註）、Issue 3（PDF 劃線/備註）
 
@@ -228,7 +228,7 @@ PDF 書籍開啟「✏️ 劃線與備註」分頁時，資料層與 UI 完全�
 
 **驗收標準：**
 
-- [ ] `LibraryScreen._openBook()` 正確貫穿 `highlightsRepository`／`notesRepository` 給 `ReaderScreen`
-- [ ] 一般使用者透過書架開書後，劃線/備註功能（含 Issue 5 Markdown 導出）在正式流程中確實生效，不再固定顯示空狀態
-- [ ] 既有 `LibraryScreen`／`ReaderScreen` 相關測試維持全數通過，無回歸
-- [ ] 上述測試皆通過，`flutter analyze` 乾淨
+- [x] `LibraryScreen._openBook()` 正確貫穿 `highlightsRepository`／`notesRepository` 給 `ReaderScreen`
+- [x] 一般使用者透過書架開書後，劃線/備註功能（含 Issue 5 Markdown 匯出）在正式流程中確實生效，不再固定顯示空狀態
+- [x] 既有 `LibraryScreen`／`ReaderScreen` 相關測試維持全數通過，無回歸
+- [x] 上述測試皆通過，`flutter analyze` 乾淨
