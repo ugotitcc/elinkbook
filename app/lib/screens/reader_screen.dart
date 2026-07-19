@@ -1412,6 +1412,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           navZoneActions: resolved.navZoneActions,
           onZoneAction: _handleZoneAction,
           showNavZoneDebugOverlay: resolved.showNavZoneDebugOverlay,
+          onZoneTapped: (index) => _handleZoneAction(resolved.navZoneActions[index]),
           initialLocatorJson: _initialPosition?.epubLocatorJson,
           onLocatorChanged: (info) {
             if (!mounted) return;
@@ -1458,13 +1459,16 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     }
   }
 
-  /// 熱區動作統一分派入口（epic-7-interaction Issue 4）：`previousPage`/
+  /// 熱區動作統一分派入口（epic-7-interaction Issue 4，Issue 5 擴充 EPUB
+  /// FXL 分支，Issue 6 接上流式 EPUB 的 `menu` 動作）：`previousPage`/
   /// `nextPage` 呼叫目前格式對應的既有換頁方法；`menu` 切換 [_chromeVisible]
   /// （沉浸模式）；`none` 不做事。**`previousPage`/`nextPage` 刻意不影響
-  /// [_chromeVisible]**（design.md 決策 #14）。目前只實作 PDF 換頁分支——
-  /// EPUB FXL 分支由 Issue 5 擴充，EPUB 流式的 previousPage/nextPage 完全
-  /// 不經過這裡（原生 Kotlin `InputListener` 自主處理，只有 `menu` 動作經
-  /// Issue 6 的 `onZoneTapped` 回呼）。
+  /// [_chromeVisible]**（design.md 決策 #14）。EPUB 分支的 `previousPage`/
+  /// `nextPage` 只在 FXL（`EpubReaderView` 僅 `_isFixedLayout == true` 時才
+  /// 疊加熱區、才會回呼 `onZoneAction`）生效——EPUB 流式的 `previousPage`/
+  /// `nextPage` 完全不經過這裡（原生 Kotlin `InputListener` 自主呼叫
+  /// `goBackward()`/`goForward()`），只有 `menu` 動作經下方
+  /// `_buildNativeView()` 接上的 `onZoneTapped` 回呼觸發這裡的 `menu` 分支。
   void _handleZoneAction(ZoneAction action) {
     final format = detectBookFormat(widget.filePath);
     switch (action) {

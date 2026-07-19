@@ -2162,4 +2162,36 @@ void main() {
 
     expect(find.byType(AppBar), findsNothing);
   });
+
+  testWidgets('EPUB 流式：原生端 onZoneTapped 回呼（cellIndex=1）觸發沉浸模式切換',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b1',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    expect(find.byType(AppBar), findsOneWidget);
+
+    // navZoneMode 預設 rightFlip，index 1（中欄）為 menu（見
+    // app/lib/reader/nav_zone_mode.dart rightFlipZoneTemplate）。EPUB 流式的
+    // previousPage/nextPage/none 完全由原生端 InputListener 自行處理、不通知
+    // Dart（見 EpubReaderView.kt），只有 menu 動作會透過
+    // onZoneTapped(cellIndex) 回呼給 Dart——這裡直接呼叫該回呼模擬原生端已
+    // 完成熱區判讀後的通知，驗證 ReaderScreen 接線到 _handleZoneAction 的
+    // 部分（不涉及原生 InputListener 本身是否正確攔截點擊，那部分由
+    // integration_test 真機驗證，見 plan-issue-6.md Task 5）。
+    final view = tester.widget<EpubReaderView>(find.byType(EpubReaderView));
+    view.onZoneTapped?.call(1);
+    await tester.pump();
+
+    expect(find.byType(AppBar), findsNothing);
+  });
 }
