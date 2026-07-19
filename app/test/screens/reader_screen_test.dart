@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/reader/book_reader_prefs.dart';
 import 'package:elinkbook/reader/dual_page_direction.dart';
@@ -592,8 +593,8 @@ void main() {
       findsOneWidget,
     );
 
-    // 直接呼叫 onToggleFixedLayoutControls 模擬中間熱區觸發
-    view.onToggleFixedLayoutControls?.call();
+    // 直接呼叫 onZoneAction 模擬中間熱區觸發
+    view.onZoneAction?.call(ZoneAction.menu);
     await tester.pump();
 
     expect(
@@ -606,7 +607,7 @@ void main() {
     );
 
     // 再次觸發切換顯示
-    view.onToggleFixedLayoutControls?.call();
+    view.onZoneAction?.call(ZoneAction.menu);
     await tester.pump();
 
     expect(
@@ -619,7 +620,7 @@ void main() {
     );
   });
 
-  testWidgets('固定版面點擊左/右熱區換頁後，懸浮按鈕自動收起', (tester) async {
+  testWidgets('固定版面點擊左/右熱區換頁後，懸浮按鈕維持原狀（不自動收起）', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         home: ReaderScreen(
@@ -645,17 +646,88 @@ void main() {
       findsOneWidget,
     );
 
-    // 直接呼叫 onFixedLayoutPageTurn 模擬換頁觸發
-    view.onFixedLayoutPageTurn?.call();
+    // 直接呼叫 onZoneAction 模擬換頁觸發
+    view.onZoneAction?.call(ZoneAction.nextPage);
     await tester.pump();
 
     expect(
       find.byKey(const Key('reader_fixed_layout_back_button')),
-      findsNothing,
-      reason: '換頁後，懸浮控制項應自動收起',
+      findsOneWidget,
+      reason: '換頁後，懸浮控制項應維持原狀（不自動收起，design.md 決策 #14）',
     );
+  });
+
+  testWidgets('FXL：真實點擊熱區「選單」格（index 1，中欄）觸發沉浸模式切換', (tester) async {
+    final binaryMessenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    late MethodChannel instanceChannel;
+
+    binaryMessenger.setMockMethodCallHandler(SystemChannels.platform_views,
+        (call) async {
+      if (call.method == 'create') {
+        final id = (call.arguments as Map<Object?, Object?>)['id'] as int;
+        instanceChannel =
+            MethodChannel('cc.ugotit.elinkbook/epub_reader_view_$id');
+        binaryMessenger.setMockMethodCallHandler(
+          instanceChannel,
+          (call) async => null,
+        );
+        return 0;
+      }
+      return null;
+    });
+    // 這個自訂 mock 會取代 flutter_test 預設的 platform view 建立行為（回傳
+    // 完整 creation-params map），改成只回傳裸 textureId——若不還原，之後的
+    // 測試（不論 PDF 或 EPUB）建立 AndroidView 時會因缺少 metadata 觸發
+    // 'meta != null' assertion 崩潰（已知的 Flutter 測試環境限制）。
+    addTearDown(() =>
+        binaryMessenger.setMockMethodCallHandler(SystemChannels.platform_views, null));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample_fixed_layout.epub',
+          bookId: 'b1',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    // 模擬原生端真的回報 isFixedLayout=true——透過 per-instance 頻道送出正確
+    // 編碼的 MethodCall，讓 EpubReaderView 自己內部的 _isFixedLayout 真的
+    // 變成 true（進而讓 build() 真的疊加九宮格熱區）。與既有測試（本檔案
+    // 上方「固定版面點擊...」兩個測試）直接呼叫 view.onLayoutResolved?.call(...)
+    // 不同——那只會更新 ReaderScreen 自己的 _isFixedLayout 副本（驅動懸浮
+    // 按鈕），不會影響 EpubReaderView 內部狀態（驅動熱區疊加層本身是否存在，
+    // 也就是本測試要驗證的 _buildNativeView() 接線是否正確）。
+    final byteData = instanceChannel.codec.encodeMethodCall(
+      const MethodCall('onLayoutResolved', {
+        'isFixedLayout': true,
+        'writingMode': 'horizontal',
+      }),
+    );
+    await binaryMessenger.handlePlatformMessage(
+      instanceChannel.name,
+      byteData,
+      (data) {},
+    );
+    await tester.pump();
+
     expect(
-      find.byKey(const Key('reader_fixed_layout_settings_button')),
+      find.byKey(const Key('reader_fixed_layout_back_button')),
+      findsOneWidget,
+    );
+
+    // navZoneMode 預設 rightFlip，index 1（中欄）為 menu
+    // （見 app/lib/reader/nav_zone_mode.dart rightFlipZoneTemplate）。
+    await tester.tap(find.byKey(const Key('nav_zone_1')));
+    await tester.pump();
+
+    expect(
+      find.byKey(const Key('reader_fixed_layout_back_button')),
       findsNothing,
     );
   });

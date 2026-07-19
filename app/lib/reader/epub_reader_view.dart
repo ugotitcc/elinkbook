@@ -11,6 +11,7 @@ import 'toc_entry.dart';
 import 'page_turn_mode.dart';
 import 'percent_rect.dart';
 import 'writing_mode.dart';
+import 'zone_action.dart';
 
 /// 包裝原生 Android EpubReaderView（Readium kotlin-toolkit）的 Flutter widget，
 /// 透過 AndroidView（PlatformView）嵌入畫面。給定 EPUB 檔案的裝置端絕對路徑，通知
@@ -58,13 +59,21 @@ class EpubReaderView extends StatefulWidget {
   /// 快取最新定位，於離開/背景時寫入資料庫。
   final ValueChanged<EpubPositionInfo>? onLocatorChanged;
 
-  /// 固定版面（FXL）中間熱區觸發，切換 ReaderScreen 懸浮控制項的顯示/隱藏。
-  final VoidCallback? onToggleFixedLayoutControls;
+  /// 3×3 導航熱區的動作對照表（epic-7-interaction Issue 2/4），長度固定
+  /// 9，索引慣例見 `zone_hit_test.dart`（0-indexed、列優先）。點擊時查表
+  /// 決定觸發哪個 [ZoneAction]。預設全部 [ZoneAction.none]（非 `required`
+  /// ——比照 [dualPageMode] 等既有欄位的預設值慣例，避免既有大量測試呼叫
+  /// 端需要逐一補上這個參數）。
+  final List<ZoneAction> navZoneActions;
 
-  /// 固定版面（FXL）左/右熱區換頁時觸發，讓 ReaderScreen 自動收起懸浮控制項
-  ///（更沉浸的閱讀體驗）。與 [onToggleFixedLayoutControls] 刻意不同：這裡不論
-  /// 收起前是顯示或隱藏，一律強制收起（非切換語意）。
-  final VoidCallback? onFixedLayoutPageTurn;
+  /// 點擊熱區換算出動作後觸發，呼叫端（`ReaderScreen`）負責分派實際行為
+  /// （換頁／切換沉浸模式，見 `ReaderScreen._handleZoneAction`）。比照
+  /// [onCropRectComputed] 等既有回呼欄位，刻意為可選參數。
+  final ValueChanged<ZoneAction>? onZoneAction;
+
+  /// 是否疊加顯示熱區輔助線（邊框＋動作文字標籤），供使用者於設定畫面
+  /// 開啟除錯用途（epic-7-interaction Issue 2/3 `showNavZoneDebugOverlay`）。
+  final bool showNavZoneDebugOverlay;
 
   /// 全書字元數快取（epic-5-toc-pagination Issue 3）。`null` 代表尚未計算過，
   /// 原生端會觸發背景計算；非 `null` 則直接沿用快取值，不重新走訪全書。
@@ -105,10 +114,15 @@ class EpubReaderView extends StatefulWidget {
     this.publisherStyles,
     this.dualPageMode = DualPageMode.auto,
     this.isLandscape = false,
-    this.onToggleFixedLayoutControls,
-    this.onFixedLayoutPageTurn,
     this.initialLocatorJson,
     this.onLocatorChanged,
+    this.navZoneActions = const [
+      ZoneAction.none, ZoneAction.none, ZoneAction.none,
+      ZoneAction.none, ZoneAction.none, ZoneAction.none,
+      ZoneAction.none, ZoneAction.none, ZoneAction.none,
+    ],
+    this.onZoneAction,
+    this.showNavZoneDebugOverlay = false,
     this.totalCharacterCount,
     this.onCharacterCountReady,
     this.onSelectionChanged,
@@ -161,6 +175,28 @@ class EpubReaderView extends StatefulWidget {
       state._channel?.invokeMethod('jumpToLocator', {
         'locatorJson': locatorJson,
       });
+    }
+  }
+
+  /// 供外部（`ReaderScreen._handleZoneAction`，epic-7-interaction Issue 4）
+  /// 供 `ReaderScreen._handleZoneAction` 呼叫下一頁／spread（僅 FXL 熱區使用；
+  /// 流式 EPUB 的換頁完全由原生 Kotlin `InputListener` 自主處理，不經過這裡，
+  /// 見 epic-7-interaction Issue 6）。強型別 static helper，比照
+  /// `PdfReaderView.nextPage` 既有模式（epic-7 Issue 4），直接呼叫原生端
+  /// Method Channel，不經過 State instance method。
+  static void nextPage(GlobalKey<State<EpubReaderView>> key) {
+    final state = key.currentState;
+    if (state is _EpubReaderViewState) {
+      state._channel?.invokeMethod('nextPage');
+    }
+  }
+
+  /// 供 `ReaderScreen._handleZoneAction` 呼叫上一頁／spread，同上僅 FXL 熱區
+  /// 使用。強型別 static helper，比照 `PdfReaderView.previousPage`。
+  static void previousPage(GlobalKey<State<EpubReaderView>> key) {
+    final state = key.currentState;
+    if (state is _EpubReaderViewState) {
+      state._channel?.invokeMethod('previousPage');
     }
   }
 
@@ -308,39 +344,8 @@ class _EpubReaderViewState extends State<EpubReaderView> {
     }
   }
 
-  /// 導航至下一頁／spread（僅 FXL 三欄熱區呼叫，見 build()）。換頁後一併觸發
-  /// [EpubReaderView.onFixedLayoutPageTurn]，讓呼叫端（ReaderScreen）自動收起
-  /// 懸浮控制項——這與中間熱區的 [EpubReaderView.onToggleFixedLayoutControls]
-  /// 是切換語意（toggle）刻意不同，換頁一律「收起」，不論收起前是顯示或隱藏。
-  void nextPage() {
-    _channel?.invokeMethod('nextPage');
-    widget.onFixedLayoutPageTurn?.call();
-  }
-
-  /// 導航至上一頁／spread，同上一併觸發 [EpubReaderView.onFixedLayoutPageTurn]。
-  void previousPage() {
-    _channel?.invokeMethod('previousPage');
-    widget.onFixedLayoutPageTurn?.call();
-  }
-
   @override
   Widget build(BuildContext context) {
-    // 【重要，審查修正】AndroidView 必須永遠是 Stack 的第一個子節點，不可依
-    // _isFixedLayout 條件式地整個切換 build() 的根 widget 型別（例如
-    // `if (!_isFixedLayout) return androidView; return Stack(...)`）——
-    // Flutter 的 widget 比對是看同一位置的 widget runtimeType 是否相同，
-    // 一旦根 widget 從 AndroidView 變成 Stack，Flutter 會直接 unmount 舊的
-    // AndroidView element、mount 一個全新的，導致底層原生 EpubReaderView.kt
-    // 實例被銷毀重建、重新 openBook()（重新解析整本書、畫面閃爍）。改成
-    // AndroidView 永遠留在 Stack 的第一個子節點位置，熱區疊加層只作為
-    // 「條件式存在的第二個子節點」，讓 AndroidView 在 _isFixedLayout
-    // 由 false 變 true（或反過來）時都能被 Flutter 複用、不重建。
-    //
-    // 【已知取捨，記錄於此供未來維護者知悉】三欄熱區疊加層覆蓋整個
-    // AndroidView 範圍，會擋住底層 Readium WebView 的所有觸控事件——若 FXL
-    // 書籍內嵌超連結或其他 HTML 互動元素，這些功能在熱區生效期間會失效。
-    // 目前鎖定的使用情境（FXL 漫畫）通常沒有這類互動元素，此為刻意接受的
-    // 暫代方案限制，非本 issue 需要解決的問題。
     return Stack(
       children: [
         AndroidView(
@@ -348,56 +353,57 @@ class _EpubReaderViewState extends State<EpubReaderView> {
           onPlatformViewCreated: _onPlatformViewCreated,
         ),
         if (_isFixedLayout)
-          // FXL 專屬的三欄點擊熱區（暫代版，見 CONTEXT.md「FXL 換頁熱區
-          // （暫代版）」／docs/epics/epic-16-dual-page/issues.md Issue 9）：
-          // 取代原生滑動手勢換頁，避免 E-Ink 裝置動畫殘影，並繞開 Android
-          // WebView 對尚未可視的預載頁面延後渲染造成的縮放跳動（Readium
-          // kotlin-toolkit 已知問題，非本專案可控）。流式 EPUB
-          // （_isFixedLayout == false）完全不受影響，維持原生手勢。
-          //
-          // 每個熱區同時提供 onTap 與（no-op 的）onHorizontalDragStart/
-          // onVerticalDragStart——沒有後兩者的話，一段「越過臨界距離的拖曳」
-          // 手勢會被 Flutter 的手勢競技場判定不是點擊，讓底層原生
-          // AndroidView 有機會接手（等於滑動手勢還是繞過我們直接落到
-          // Readium 的 WebView，觸發它自己的滑動換頁，等於沒解決問題）。
-          // 加上這兩個 no-op 回呼，讓我們的 GestureDetector 對任何觸控
-          // 序列（不論最終是否判定為點擊）都搶到手勢競技場的勝利，原生層
-          // 完全收不到觸控事件。（雙指縮放/pinch-to-zoom 刻意不攔截，見
-          // Task 2 Step 3 之後的「待確認事項」。）
           Positioned.fill(
-            child: Row(
-              children: [
-                Expanded(
-                  child: GestureDetector(
-                    key: const Key('epub_fxl_tap_zone_previous'),
-                    behavior: HitTestBehavior.opaque,
-                    onTap: previousPage,
-                    onHorizontalDragStart: (_) {},
-                    onVerticalDragStart: (_) {},
+            child: Column(
+              children: List.generate(3, (row) {
+                return Expanded(
+                  child: Row(
+                    children: List.generate(3, (col) {
+                      final index = row * 3 + col;
+                      final action = widget.navZoneActions[index];
+                      return Expanded(
+                        child: GestureDetector(
+                          key: Key('nav_zone_$index'),
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () => widget.onZoneAction?.call(action),
+                          onHorizontalDragStart: (_) {},
+                          onVerticalDragStart: (_) {},
+                          child: Container(
+                            decoration: widget.showNavZoneDebugOverlay
+                                ? BoxDecoration(
+                                    border: Border.all(color: Colors.white24))
+                                : null,
+                            alignment: Alignment.center,
+                            child: widget.showNavZoneDebugOverlay
+                                ? Text(
+                                    _zoneActionLabel(action),
+                                    style: const TextStyle(
+                                        color: Colors.white70, fontSize: 10),
+                                  )
+                                : null,
+                          ),
+                        ),
+                      );
+                    }),
                   ),
-                ),
-                Expanded(
-                  child: GestureDetector(
-                    key: const Key('epub_fxl_tap_zone_toggle_controls'),
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () => widget.onToggleFixedLayoutControls?.call(),
-                    onHorizontalDragStart: (_) {},
-                    onVerticalDragStart: (_) {},
-                  ),
-                ),
-                Expanded(
-                  child: GestureDetector(
-                    key: const Key('epub_fxl_tap_zone_next'),
-                    behavior: HitTestBehavior.opaque,
-                    onTap: nextPage,
-                    onHorizontalDragStart: (_) {},
-                    onVerticalDragStart: (_) {},
-                  ),
-                ),
-              ],
+                );
+              }),
             ),
           ),
       ],
     );
+  }
+
+  String _zoneActionLabel(ZoneAction action) {
+    switch (action) {
+      case ZoneAction.previousPage:
+        return '上一頁';
+      case ZoneAction.nextPage:
+        return '下一頁';
+      case ZoneAction.menu:
+        return '選單';
+      case ZoneAction.none:
+        return '無動作';
+    }
   }
 }

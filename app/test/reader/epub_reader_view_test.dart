@@ -11,6 +11,7 @@ import 'package:elinkbook/reader/epub_text_align.dart';
 import 'package:elinkbook/reader/page_turn_mode.dart';
 import 'package:elinkbook/reader/percent_rect.dart';
 import 'package:elinkbook/reader/writing_mode.dart';
+import 'package:elinkbook/reader/zone_action.dart';
 
 /// 驅動 [EpubReaderView] 底層 AndroidView 完成建立流程所需的最小 mock：
 /// 攔截 `SystemChannels.platform_views` 的 `'create'` 呼叫並回傳假的
@@ -271,11 +272,10 @@ void main() {
   });
 
   testWidgets(
-      'FXL 三欄熱區：isFixedLayout 變為 true 後，左/右/中熱區分別觸發 previousPage/nextPage/onToggleFixedLayoutControls',
+      'FXL 9 宮格熱區：isFixedLayout 變為 true 後，9 個 Key(nav_zone_\$index) 皆存在，點擊觸發對應 onZoneAction',
       (tester) async {
     final binaryMessenger =
         TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
-    final instanceCalls = <MethodCall>[];
     late MethodChannel instanceChannel;
 
     binaryMessenger.setMockMethodCallHandler(SystemChannels.platform_views,
@@ -286,35 +286,32 @@ void main() {
             MethodChannel('cc.ugotit.elinkbook/epub_reader_view_$id');
         binaryMessenger.setMockMethodCallHandler(
           instanceChannel,
-          (call) async {
-            instanceCalls.add(call);
-            return null;
-          },
+          (call) async => null,
         );
         return 0;
       }
       return null;
     });
 
-    var toggleCalled = 0;
-    var pageTurnCalled = 0;
+    final capturedActions = <ZoneAction>[];
     await tester.pumpWidget(
       MaterialApp(
         home: EpubReaderView(
           filePath: '/tmp/sample_fixed_layout.epub',
           onPageRendered: _noop,
           onError: _noopError,
-          onToggleFixedLayoutControls: () => toggleCalled++,
-          onFixedLayoutPageTurn: () => pageTurnCalled++,
+          navZoneActions: const [
+            ZoneAction.previousPage, ZoneAction.none, ZoneAction.nextPage,
+            ZoneAction.previousPage, ZoneAction.menu, ZoneAction.nextPage,
+            ZoneAction.previousPage, ZoneAction.none, ZoneAction.nextPage,
+          ],
+          onZoneAction: capturedActions.add,
         ),
       ),
     );
     await tester.pumpAndSettle();
-    instanceCalls.clear();
 
-    // 模擬原生端 reportLayoutResolved() 回報 isFixedLayout=true——真機上這是
-    // EpubReaderView.kt 在 onPageLoaded() 首次觸發時主動送出的，這裡以正確編碼
-    // 的 MethodCall 直接送進 per-instance 頻道模擬同一件事。
+    // 模擬原生端回報 isFixedLayout=true
     final byteData = instanceChannel.codec.encodeMethodCall(
       const MethodCall('onLayoutResolved', {
         'isFixedLayout': true,
@@ -328,27 +325,20 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.byKey(const Key('epub_fxl_tap_zone_previous')), findsOneWidget);
-    expect(find.byKey(const Key('epub_fxl_tap_zone_next')), findsOneWidget);
-    expect(
-      find.byKey(const Key('epub_fxl_tap_zone_toggle_controls')),
-      findsOneWidget,
-    );
+    for (var index = 0; index < 9; index++) {
+      expect(find.byKey(Key('nav_zone_$index')), findsOneWidget);
+    }
 
-    await tester.tap(find.byKey(const Key('epub_fxl_tap_zone_next')));
-    await tester.tap(find.byKey(const Key('epub_fxl_tap_zone_previous')));
-    await tester.tap(find.byKey(const Key('epub_fxl_tap_zone_toggle_controls')));
+    await tester.tap(find.byKey(const Key('nav_zone_0')));
     await tester.pump();
+    expect(capturedActions, [ZoneAction.previousPage]);
 
-    expect(instanceCalls.map((c) => c.method).toList(),
-        ['nextPage', 'previousPage']);
-    expect(toggleCalled, 1);
-    expect(pageTurnCalled, 2,
-        reason: '左右熱區各觸發一次換頁，onFixedLayoutPageTurn 應各被呼叫一次，'
-            '中間熱區（純顯示切換）不應觸發它');
+    await tester.tap(find.byKey(const Key('nav_zone_4')));
+    await tester.pump();
+    expect(capturedActions, [ZoneAction.previousPage, ZoneAction.menu]);
   });
 
-  testWidgets('isFixedLayout 維持預設 false 時，不疊加三欄熱區', (tester) async {
+  testWidgets('isFixedLayout 維持預設 false 時，不疊加 9 宮格熱區', (tester) async {
     await _pumpEpubReaderView(
       tester,
       const EpubReaderView(
@@ -357,12 +347,89 @@ void main() {
         onError: _noopError,
       ),
     );
-    expect(find.byKey(const Key('epub_fxl_tap_zone_previous')), findsNothing);
-    expect(find.byKey(const Key('epub_fxl_tap_zone_next')), findsNothing);
-    expect(
-      find.byKey(const Key('epub_fxl_tap_zone_toggle_controls')),
-      findsNothing,
+    for (var index = 0; index < 9; index++) {
+      expect(find.byKey(Key('nav_zone_$index')), findsNothing);
+    }
+  });
+
+  testWidgets('showNavZoneDebugOverlay=true 時，格子顯示對應動作文字標籤', (tester) async {
+    final binaryMessenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    late MethodChannel instanceChannel;
+
+    binaryMessenger.setMockMethodCallHandler(SystemChannels.platform_views,
+        (call) async {
+      if (call.method == 'create') {
+        final id = (call.arguments as Map<Object?, Object?>)['id'] as int;
+        instanceChannel =
+            MethodChannel('cc.ugotit.elinkbook/epub_reader_view_$id');
+        binaryMessenger.setMockMethodCallHandler(
+          instanceChannel,
+          (call) async => null,
+        );
+        return 0;
+      }
+      return null;
+    });
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: EpubReaderView(
+          filePath: '/tmp/sample.epub',
+          onPageRendered: _noop,
+          onError: _noopError,
+          navZoneActions: const [
+            ZoneAction.previousPage, ZoneAction.menu, ZoneAction.nextPage,
+            ZoneAction.none, ZoneAction.none, ZoneAction.none,
+            ZoneAction.none, ZoneAction.none, ZoneAction.none,
+          ],
+          showNavZoneDebugOverlay: true,
+        ),
+      ),
     );
+    await tester.pumpAndSettle();
+
+    // 模擬原生端回報 isFixedLayout=true
+    final byteData = instanceChannel.codec.encodeMethodCall(
+      const MethodCall('onLayoutResolved', {
+        'isFixedLayout': true,
+        'writingMode': 'horizontal',
+      }),
+    );
+    await binaryMessenger.handlePlatformMessage(
+      instanceChannel.name,
+      byteData,
+      (data) {},
+    );
+    await tester.pump();
+
+    expect(find.text('上一頁'), findsWidgets);
+    expect(find.text('選單'), findsWidgets);
+    expect(find.text('下一頁'), findsWidgets);
+  });
+
+  testWidgets(
+      'EpubReaderView.nextPage() / previousPage()（強型別 static helper）呼叫原生端對應 method channel',
+      (tester) async {
+    final key = GlobalKey<State<EpubReaderView>>();
+    final instanceCalls = await _pumpEpubReaderView(
+      tester,
+      EpubReaderView(
+        key: key,
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+      ),
+    );
+    instanceCalls.clear();
+
+    EpubReaderView.nextPage(key);
+    await tester.pump();
+    expect(instanceCalls.any((c) => c.method == 'nextPage'), isTrue);
+
+    EpubReaderView.previousPage(key);
+    await tester.pump();
+    expect(instanceCalls.any((c) => c.method == 'previousPage'), isTrue);
   });
 
   testWidgets(
