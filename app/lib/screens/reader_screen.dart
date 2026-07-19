@@ -1409,15 +1409,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           publisherStyles: resolved.publisherStyles,
           dualPageMode: resolved.dualPageMode,
           isLandscape: isLandscape,
-          onToggleFixedLayoutControls: () => setState(
-            () => _chromeVisible = !_chromeVisible,
-          ),
-          // 換頁時一律收起懸浮控制項（更沉浸的閱讀體驗，人類決策，見
-          // tmp/epic-16/reviews/review-plan-issue-9.md 之後的討論）——與上面的
-          // onToggleFixedLayoutControls 刻意不同：這裡不論收起前是顯示或隱藏，
-          // 一律強制設為 false，不是切換（toggle）語意。
-          onFixedLayoutPageTurn: () =>
-              setState(() => _chromeVisible = false),
+          navZoneActions: resolved.navZoneActions,
+          onZoneAction: _handleZoneAction,
+          showNavZoneDebugOverlay: resolved.showNavZoneDebugOverlay,
           initialLocatorJson: _initialPosition?.epubLocatorJson,
           onLocatorChanged: (info) {
             if (!mounted) return;
@@ -1472,15 +1466,20 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 不經過這裡（原生 Kotlin `InputListener` 自主處理，只有 `menu` 動作經
   /// Issue 6 的 `onZoneTapped` 回呼）。
   void _handleZoneAction(ZoneAction action) {
+    final format = detectBookFormat(widget.filePath);
     switch (action) {
       case ZoneAction.previousPage:
-        if (detectBookFormat(widget.filePath) == BookFormat.pdf) {
+        if (format == BookFormat.pdf) {
           PdfReaderView.previousPage(_pdfReaderViewKey);
+        } else if (format == BookFormat.epub) {
+          EpubReaderView.previousPage(_epubReaderViewKey);
         }
         break;
       case ZoneAction.nextPage:
-        if (detectBookFormat(widget.filePath) == BookFormat.pdf) {
+        if (format == BookFormat.pdf) {
           PdfReaderView.nextPage(_pdfReaderViewKey);
+        } else if (format == BookFormat.epub) {
+          EpubReaderView.nextPage(_epubReaderViewKey);
         }
         break;
       case ZoneAction.menu:

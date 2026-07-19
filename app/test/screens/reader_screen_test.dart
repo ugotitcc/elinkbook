@@ -592,8 +592,8 @@ void main() {
       findsOneWidget,
     );
 
-    // 直接呼叫 onToggleFixedLayoutControls 模擬中間熱區觸發
-    view.onToggleFixedLayoutControls?.call();
+    // 直接呼叫 onZoneAction 模擬中間熱區觸發
+    view.onZoneAction?.call(ZoneAction.menu);
     await tester.pump();
 
     expect(
@@ -606,7 +606,7 @@ void main() {
     );
 
     // 再次觸發切換顯示
-    view.onToggleFixedLayoutControls?.call();
+    view.onZoneAction?.call(ZoneAction.menu);
     await tester.pump();
 
     expect(
@@ -619,7 +619,7 @@ void main() {
     );
   });
 
-  testWidgets('固定版面點擊左/右熱區換頁後，懸浮按鈕自動收起', (tester) async {
+  testWidgets('固定版面點擊左/右熱區換頁後，懸浮按鈕維持原狀（不自動收起）', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         home: ReaderScreen(
@@ -645,18 +645,14 @@ void main() {
       findsOneWidget,
     );
 
-    // 直接呼叫 onFixedLayoutPageTurn 模擬換頁觸發
-    view.onFixedLayoutPageTurn?.call();
+    // 直接呼叫 onZoneAction 模擬換頁觸發
+    view.onZoneAction?.call(ZoneAction.nextPage);
     await tester.pump();
 
     expect(
       find.byKey(const Key('reader_fixed_layout_back_button')),
-      findsNothing,
-      reason: '換頁後，懸浮控制項應自動收起',
-    );
-    expect(
-      find.byKey(const Key('reader_fixed_layout_settings_button')),
-      findsNothing,
+      findsOneWidget,
+      reason: '換頁後，懸浮控制項應維持原狀（不自動收起，design.md 決策 #14）',
     );
   });
 
