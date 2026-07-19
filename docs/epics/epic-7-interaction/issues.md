@@ -124,7 +124,13 @@
 
 ## Issue 5：EPUB FXL 熱區導覽
 
-**Status:** ready-for-agent
+**Status:** ✅ 已完成。依 `plans/plan-issue-5.md` Task 1-4 完成實作：`EpubReaderView` 既有 FXL 三欄暫代版熱區（`epic-16-dual-page` Issue 9）擴充為 3×3 九宮格，移除 `onToggleFixedLayoutControls`／`onFixedLayoutPageTurn` 舊回呼，改為與 `PdfReaderView`（Issue 4）對稱的 `navZoneActions`／`onZoneAction`／`showNavZoneDebugOverlay` 三個建構參數，新增 `static nextPage`/`previousPage` 強型別 helper；`ReaderScreen._handleZoneAction` 新增 EPUB 分支（`previousPage`/`nextPage` 不再影響沉浸模式，design.md 決策 #14 刻意的行為變更，與 `epic-16-dual-page` Issue 9 舊行為不同）。
+
+**架構重點：** FXL 的九宮格熱區疊加層是 `Stack` 中與 `AndroidView` 同層級的兄弟節點（不像 `PdfReaderView` 把 `GestureDetector` 包在 `AndroidView` 外層），不會遇到 Issue 4 在 PDF 上發現的「`GestureDetector.onTapUp` 包住 `AndroidView` 永遠不會觸發」問題，`tester.tap()` 手勢模擬在真機 `integration_test` 上可靠——沿用 `epic-16-dual-page` Issue 9 既有已驗證多年的模式，不需要比照 PDF Issue 4 改用 `triggerZoneAction` 靜態 helper 繞開手勢模擬。
+
+**審查與修正：** 程式碼審查（`tmp/epic-7/reviews/review-issue-5.md`）結論 Ready to merge: With fixes，0 Critical、2 Important（皆已修正）、3 Minor（文件品質，未修正）：(1) 補上缺少的 `ReaderScreen` 端到端真實點擊測試（比照既有 PDF 對稱測試），驗證 `_buildNativeView()` 的 `navZoneActions`/`onZoneAction` 接線正確——修正過程中發現既有測試慣用的 `view.onLayoutResolved?.call(...)` 只會更新 `ReaderScreen` 自己的狀態副本、不會驅動 `EpubReaderView` 內部真正的熱區疊加層存在與否，改為透過 per-instance platform-view channel 送出真實 `MethodCall` 模擬，並補上 mock handler 的 teardown（否則會洩漏污染後續測試，導致 9 個無關測試因 `'meta != null'` assertion 失敗）；(2) `integration_test` 補上真實換頁驗證（呼叫 `EpubReaderView.previousPage`/`nextPage`、比對 `locatorJson` 前後變動）與 `ZoneAction.none` 格觸控攔截驗證（design.md 決策 #17）。審查過程中另發現 `main` 本機曾有 2 個未經審查、疑似 worktree 混淆導致的直接提交（與本分支內容幾乎逐字重複），經人類確認後已回退並改為透過本分支正常走 PR 流程。
+
+真機（Android 15, API 35）`integration_test` 執行 1/1 PASS：9 格熱區皆存在、換頁真的觸發原生渲染、無動作格正確攔截觸控且不崩潰；`flutter analyze` 乾淨、`flutter test`（全專案）531 個測試全數通過；已透過 PR #59 合併回 `main`。
 
 **依賴：** Issue 2、Issue 4
 
