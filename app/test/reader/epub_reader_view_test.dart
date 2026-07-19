@@ -88,10 +88,12 @@ void main() {
       'publisherStyles': false,
       'dualPageMode': 'auto',
       'isLandscape': false,
+      'navZoneActions': List.filled(9, 'none'),
     });
   });
 
-  testWidgets('所有偏好欄位皆為 null 時，initialPreferences 只含 dualPageMode/isLandscape',
+  testWidgets(
+      '所有偏好欄位皆為 null 時，initialPreferences 只含 dualPageMode/isLandscape/navZoneActions',
       (tester) async {
     final calls = await _pumpEpubReaderView(
       tester,
@@ -106,6 +108,7 @@ void main() {
     expect(openBookCall.arguments['initialPreferences'], {
       'dualPageMode': 'auto',
       'isLandscape': false,
+      'navZoneActions': List.filled(9, 'none'),
     });
   });
 
@@ -161,6 +164,7 @@ void main() {
       'writingMode': 'vertical',
       'dualPageMode': 'auto',
       'isLandscape': false,
+      'navZoneActions': List.filled(9, 'none'),
     });
   });
 
@@ -695,6 +699,100 @@ void main() {
     expect(decorations, hasLength(2));
     expect((decorations[0] as Map<Object?, Object?>)['id'], 'highlight:1');
     expect((decorations[1] as Map<Object?, Object?>)['isUnderline'], isTrue);
+  });
+
+  testWidgets(
+      'navZoneActions 變動時，didUpdateWidget 呼叫 setPreferences 並帶入新的動作陣列',
+      (tester) async {
+    final binaryMessenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    final instanceCalls = <MethodCall>[];
+
+    binaryMessenger.setMockMethodCallHandler(SystemChannels.platform_views,
+        (call) async {
+      if (call.method == 'create') {
+        final id = (call.arguments as Map<Object?, Object?>)['id'] as int;
+        binaryMessenger.setMockMethodCallHandler(
+          MethodChannel('cc.ugotit.elinkbook/epub_reader_view_$id'),
+          (call) async {
+            instanceCalls.add(call);
+            return null;
+          },
+        );
+        return 0;
+      }
+      return null;
+    });
+
+    await tester.pumpWidget(const MaterialApp(
+      home: EpubReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+      ),
+    ));
+    await tester.pumpAndSettle();
+    instanceCalls.clear();
+
+    await tester.pumpWidget(const MaterialApp(
+      home: EpubReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        navZoneActions: [
+          ZoneAction.previousPage, ZoneAction.menu, ZoneAction.nextPage,
+          ZoneAction.previousPage, ZoneAction.menu, ZoneAction.nextPage,
+          ZoneAction.previousPage, ZoneAction.menu, ZoneAction.nextPage,
+        ],
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(instanceCalls, hasLength(1));
+    expect(instanceCalls.single.method, 'setPreferences');
+    expect(instanceCalls.single.arguments['navZoneActions'], [
+      'previousPage', 'menu', 'nextPage',
+      'previousPage', 'menu', 'nextPage',
+      'previousPage', 'menu', 'nextPage',
+    ]);
+  });
+
+  testWidgets('收到原生端 onZoneTapped 事件時，傳回 cellIndex 整數', (tester) async {
+    int? tappedIndex;
+    final binaryMessenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    MethodChannel? instanceChannel;
+
+    binaryMessenger.setMockMethodCallHandler(SystemChannels.platform_views,
+        (call) async {
+      if (call.method == 'create') {
+        final id = (call.arguments as Map<Object?, Object?>)['id'] as int;
+        instanceChannel =
+            MethodChannel('cc.ugotit.elinkbook/epub_reader_view_$id');
+        binaryMessenger.setMockMethodCallHandler(
+            instanceChannel!, (call) async => null);
+        return 0;
+      }
+      return null;
+    });
+
+    await tester.pumpWidget(MaterialApp(
+      home: EpubReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        onZoneTapped: (index) => tappedIndex = index,
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    final codec = instanceChannel!.codec;
+    final data = codec.encodeMethodCall(
+      const MethodCall('onZoneTapped', {'cellIndex': 4}),
+    );
+    await binaryMessenger.handlePlatformMessage(instanceChannel!.name, data, (_) {});
+
+    expect(tappedIndex, 4);
   });
 }
 
