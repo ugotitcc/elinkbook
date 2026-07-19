@@ -49,7 +49,7 @@
 - Consumes：`ZoneAction`（epic-7 Issue 2，`app/lib/reader/zone_action.dart`）
 - Produces：`EpubReaderView` 新增建構參數 `List<ZoneAction> navZoneActions`（預設全 9 格 `ZoneAction.none`）、`ValueChanged<ZoneAction>? onZoneAction`（預設 `null`）、`bool showNavZoneDebugOverlay`（預設 `false`）；移除 `onToggleFixedLayoutControls`／`onFixedLayoutPageTurn`；`static void nextPage(GlobalKey<State<EpubReaderView>> key)`／`static void previousPage(...)`——供 Task 2 的 `_handleZoneAction` 呼叫
 
-- [ ] **Step 1：寫失敗測試**
+- [x] **Step 1：寫失敗測試**
 
 在 `app/test/reader/epub_reader_view_test.dart` 頂部 import 區塊，`import 'package:elinkbook/reader/writing_mode.dart';` 之後新增：
 
@@ -333,7 +333,7 @@ import 'package:elinkbook/reader/zone_action.dart';
   });
 ```
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -342,7 +342,7 @@ flutter test test/reader/epub_reader_view_test.dart
 
 Expected：FAIL（`Error: No named parameter with the name 'navZoneActions'`）。
 
-- [ ] **Step 3：實作**
+- [x] **Step 3：實作**
 
 在 `app/lib/reader/epub_reader_view.dart` 頂部 import 區塊尾端（`import 'writing_mode.dart';` 之後）新增：
 
@@ -605,7 +605,7 @@ import 'zone_action.dart';
 }
 ```
 
-- [ ] **Step 4：執行測試確認通過**
+- [x] **Step 4：執行測試確認通過**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -614,7 +614,7 @@ flutter test test/reader/epub_reader_view_test.dart
 
 Expected：PASS（含改寫的 4 個測試，以及全部既有測試——證明 API 變更與九宮格擴充沒有造成其餘偏好參數/字元計數/選字/標記相關測試回歸）。
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 git add app/lib/reader/epub_reader_view.dart app/test/reader/epub_reader_view_test.dart
@@ -633,7 +633,7 @@ git commit -m "feat(epic-7): expand EPUB FXL hotzone from 3-column to 9-cell nav
 - Consumes：`EpubReaderView.navZoneActions`/`onZoneAction`/`showNavZoneDebugOverlay`/`nextPage`/`previousPage`（Task 1）、`ResolvedPreferences.navZoneActions`/`showNavZoneDebugOverlay`（epic-7 Issue 2）、既有 `_handleZoneAction`（epic-7 Issue 4）
 - Produces：無新增對外介面，`_handleZoneAction` 新增 EPUB 分支
 
-- [ ] **Step 1：寫失敗測試**
+- [x] **Step 1：寫失敗測試**
 
 在 `app/test/screens/reader_screen_test.dart` 檔案第 565-620 行（`固定版面點擊中間熱區可切換懸浮按鈕顯示/隱藏`）與第 622-661 行（`固定版面點擊左/右熱區換頁後，懸浮按鈕自動收起`），原本：
 
@@ -882,7 +882,7 @@ git commit -m "feat(epic-7): expand EPUB FXL hotzone from 3-column to 9-cell nav
   });
 ```
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -891,7 +891,7 @@ flutter test test/screens/reader_screen_test.dart
 
 Expected：FAIL（`Error: The method 'triggerZoneAction' isn't defined` 不會發生——該 helper 已存在——實際會是 `The named parameter 'onToggleFixedLayoutControls' isn't defined` 之類的建構參數編譯錯誤，或第三個新測試點擊 `nav_zone_1` 後 AppBar/懸浮按鈕未如預期變化，因為 `_buildNativeView()` 尚未接上新參數）。
 
-- [ ] **Step 3：實作**
+- [x] **Step 3：實作**
 
 修改 `app/lib/screens/reader_screen.dart` 的 `_buildNativeView()` 方法，`case BookFormat.epub:` 分支原本：
 
@@ -989,7 +989,7 @@ Expected：FAIL（`Error: The method 'triggerZoneAction' isn't defined` 不會�
   }
 ```
 
-- [ ] **Step 4：執行測試確認通過**
+- [x] **Step 4：執行測試確認通過**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -998,7 +998,7 @@ flutter test test/screens/reader_screen_test.dart
 
 Expected：PASS（含改寫/新增的 3 個測試，以及全部既有測試——證明 API 變更沒有造成其餘 PDF／EPUB 流式相關測試回歸）。
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 git add app/lib/screens/reader_screen.dart app/test/screens/reader_screen_test.dart
@@ -1018,7 +1018,7 @@ git commit -m "feat(epic-7): wire EpubReaderView nav zone params, add FXL branch
 
 **與 PDF（Issue 4 Task 4）刻意不同**：PDF 的 `integration_test` 因 `GestureDetector` 包住 `AndroidView` 導致 `tester.tap()` 無法可靠模擬觸控，改用 `ReaderScreen.triggerZoneAction` 繞開手勢模擬。EPUB FXL 的熱區疊加層是 `AndroidView` 的**兄弟節點**（見本計畫「Architecture」段落的結構差異說明），不會遇到同樣的問題——本檔案沿用 `epic-16-dual-page` Issue 9 既有的 `tester.tap()` 直接模擬觸控做法（該既有測試已在真機上驗證多年），只是把測試目標從 3 欄擴充為 9 格、API 換成新的 `navZoneActions`/`onZoneAction`。
 
-- [ ] **Step 1：改寫測試檔**
+- [x] **Step 1：改寫測試檔**
 
 將 `app/integration_test/epub_fxl_tap_zone_test.dart` 整份內容取代為：
 
@@ -1143,7 +1143,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：確認裝置已連線**
+- [x] **Step 2：確認裝置已連線**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -1152,7 +1152,7 @@ flutter devices
 
 Expected：列出至少 1 台已連線的 Android 真機/模擬器，記下其 `<device-id>`。
 
-- [ ] **Step 3：於真機執行測試**
+- [x] **Step 3：於真機執行測試**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -1163,7 +1163,7 @@ flutter test integration_test/epub_fxl_tap_zone_test.dart -d <device-id>
 
 Expected：測試 PASS。若 `lastPosition?.locatorJson` 斷言失敗（例如 FXL 素材書 `onLocatorChanged` 回報頻率與預期不同），記錄實際觀察到的行為，評估是否需要放寬斷言（例如改為只驗證 `errorMessage` 維持 `null` 且無崩潰），並在下方 Step 4 一併記錄。
 
-- [ ] **Step 4：Commit**
+- [x] **Step 4：Commit**
 
 ```bash
 git add app/integration_test/epub_fxl_tap_zone_test.dart
