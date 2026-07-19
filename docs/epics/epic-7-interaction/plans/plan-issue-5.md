@@ -1180,7 +1180,7 @@ git commit -m "test(epic-7): expand EPUB FXL nav zone integration test from 3-co
 - Consumes：Task 1-3 全部產出
 - Produces：驗收證據（`flutter analyze`/`flutter test` 輸出），供人類判斷本 issue 是否可合併
 
-- [ ] **Step 1：`flutter analyze` 全專案靜態分析**
+- [x] **Step 1：`flutter analyze` 全專案靜態分析**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -1189,7 +1189,7 @@ flutter analyze
 
 Expected：`No issues found!`
 
-- [ ] **Step 2：`flutter test` 執行全專案測試**
+- [x] **Step 2：`flutter test` 執行全專案測試**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -1198,7 +1198,7 @@ flutter test
 
 Expected：全數 PASS，含本 issue 改寫/新增的 `epub_reader_view_test.dart`／`reader_screen_test.dart`，無既有測試因 `EpubReaderView` API 變更而回歸失敗。基準為 528 個既有測試（epic-7 Issue 4 完成時的計數），本 issue 淨增加測試數：`epub_reader_view_test.dart` 由 15 個變為 17 個（移除 2 個舊版三欄熱區測試、新增 4 個九宮格版本測試），`reader_screen_test.dart` 由 64 個變為 65 個（移除 2 個舊版 FXL 熱區測試、新增 3 個），預期總數 528 - 2 - 2 + 4 + 3 = 531。
 
-- [ ] **Step 3：確認 `git status` 乾淨（無未提交變更）**
+- [x] **Step 3：確認 `git status` 乾淨（無未提交變更）**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook"
