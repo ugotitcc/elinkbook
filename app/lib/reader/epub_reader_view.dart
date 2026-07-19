@@ -179,22 +179,24 @@ class EpubReaderView extends StatefulWidget {
   }
 
   /// 供外部（`ReaderScreen._handleZoneAction`，epic-7-interaction Issue 4）
-  /// 安全呼叫 [_EpubReaderViewState.nextPage] 的強型別 static helper，比照
-  /// PdfReaderView.nextPage 模式。[key] 對應的 State 若尚未掛載，靜默忽略。
+  /// 供 `ReaderScreen._handleZoneAction` 呼叫下一頁／spread（僅 FXL 熱區使用；
+  /// 流式 EPUB 的換頁完全由原生 Kotlin `InputListener` 自主處理，不經過這裡，
+  /// 見 epic-7-interaction Issue 6）。強型別 static helper，比照
+  /// `PdfReaderView.nextPage` 既有模式（epic-7 Issue 4），直接呼叫原生端
+  /// Method Channel，不經過 State instance method。
   static void nextPage(GlobalKey<State<EpubReaderView>> key) {
     final state = key.currentState;
     if (state is _EpubReaderViewState) {
-      state.nextPage();
+      state._channel?.invokeMethod('nextPage');
     }
   }
 
-  /// 供外部（`ReaderScreen._handleZoneAction`，epic-7-interaction Issue 4）
-  /// 安全呼叫 [_EpubReaderViewState.previousPage] 的強型別 static helper，
-  /// 比照 PdfReaderView.previousPage 模式。[key] 對應的 State 若尚未掛載，靜默忽略。
+  /// 供 `ReaderScreen._handleZoneAction` 呼叫上一頁／spread，同上僅 FXL 熱區
+  /// 使用。強型別 static helper，比照 `PdfReaderView.previousPage`。
   static void previousPage(GlobalKey<State<EpubReaderView>> key) {
     final state = key.currentState;
     if (state is _EpubReaderViewState) {
-      state.previousPage();
+      state._channel?.invokeMethod('previousPage');
     }
   }
 
@@ -340,16 +342,6 @@ class _EpubReaderViewState extends State<EpubReaderView> {
         widget.onAnnotationActivated?.call(call.arguments as String);
         break;
     }
-  }
-
-  /// 導航至下一頁／spread。
-  void nextPage() {
-    _channel?.invokeMethod('nextPage');
-  }
-
-  /// 導航至上一頁／spread。
-  void previousPage() {
-    _channel?.invokeMethod('previousPage');
   }
 
   @override
