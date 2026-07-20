@@ -51,7 +51,7 @@
 - Consumes：無（純 Kotlin，無 Android 依賴，比照 `NavZoneHitTester`/`EpubFxlScaler` 既有抽離慣例）
 - Produces：`object ReaderViewAttachmentTracker { val isAnyAttached: Boolean; var suppressedUntilReattach: Boolean; fun attach(); fun detach() }`，供 Task 2（`EpubReaderView`/`PdfReaderView`）與 Task 3（`MainActivity`）使用
 
-- [ ] **Step 1：寫失敗測試**
+- [x] **Step 1：寫失敗測試**
 
 建立 `app/android/app/src/test/kotlin/cc/ugotit/elinkbook/ReaderViewAttachmentTrackerTest.kt`：
 
@@ -125,7 +125,7 @@ class ReaderViewAttachmentTrackerTest {
 }
 ```
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 在 `app/android` 目錄下執行：
 
@@ -135,7 +135,7 @@ class ReaderViewAttachmentTrackerTest {
 
 Expected：編譯失敗，`unresolved reference: ReaderViewAttachmentTracker`（比照 Issue 6 既有慣例，因跨磁碟機 Gradle 環境問題改用 `:app:` 範圍限定，而非全專案 `testDebugUnitTest`）。
 
-- [ ] **Step 3：寫最小實作**
+- [x] **Step 3：寫最小實作**
 
 建立 `app/android/app/src/main/kotlin/cc/ugotit/elinkbook/ReaderViewAttachmentTracker.kt`：
 
@@ -193,7 +193,7 @@ object ReaderViewAttachmentTracker {
 }
 ```
 
-- [ ] **Step 4：執行測試確認通過**
+- [x] **Step 4：執行測試確認通過**
 
 ```bash
 ./gradlew :app:testDebugUnitTest --tests "cc.ugotit.elinkbook.ReaderViewAttachmentTrackerTest"
@@ -201,7 +201,7 @@ object ReaderViewAttachmentTracker {
 
 Expected：`BUILD SUCCESSFUL`，5/5 測試通過。
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 git add app/android/app/src/main/kotlin/cc/ugotit/elinkbook/ReaderViewAttachmentTracker.kt app/android/app/src/test/kotlin/cc/ugotit/elinkbook/ReaderViewAttachmentTrackerTest.kt
