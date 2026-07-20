@@ -227,11 +227,15 @@ class EpubReaderView(
                 result.success(null)
             }
             "nextPage" -> {
-                // 僅供 FXL 三欄熱區使用（見 Dart 端 EpubReaderView.build()）；直接呼叫
-                // Readium 既有的 OverflowableNavigator.goForward()，animated=false 避免
-                // 觸發滑動動畫——這正是本 issue 要繞開的「揭露未縮放內容的可見時間窗口」
-                // （見 docs/epics/epic-16-dual-page/issues.md Issue 9）。EpubNavigatorFragment
-                // 已實作 OverflowableNavigator，不需要自己重新判斷 spread 要跳幾頁。
+                // 原僅供 FXL 三欄熱區使用（見 Dart 端 EpubReaderView.build()），現
+                // epic-7-interaction Issue 7 音量鍵翻頁讓所有 EPUB 格式（含流式）
+                // 共用同一條路徑——見 EpubReaderView._handleZoneAction() → Dart
+                // static helper nextPage()/previousPage() → 此 method channel case。
+                // 直接呼叫 Readium 既有的 OverflowableNavigator.goForward()，
+                // animated=false 避免觸發滑動動畫——這正是本 issue 要繞開的「揭露
+                // 未縮放內容的可見時間窗口」（見 docs/epics/epic-16-dual-page/issues.md
+                // Issue 9）。EpubNavigatorFragment 已實作 OverflowableNavigator，
+                // 不需要自己重新判斷 spread 要跳幾頁。
                 navigatorFragment?.goForward(animated = false)
                 result.success(null)
             }
