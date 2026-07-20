@@ -753,7 +753,7 @@ git commit -m "feat(epic-7): ReaderScreen 接收音量鍵事件並於 pop 時通
 - Consumes：Task 3/4 的 `elinkbook/volume_key` 頻道契約；既有 `test/fixtures/sample_dual_page.pdf` 測試素材（`epic-4-pdf-enhance`，已提交版本控制，6 頁）
 - Produces：無新公開介面（純驗證性質）
 
-- [ ] **Step 1：建立測試檔**
+- [x] **Step 1：建立測試檔**
 
 建立 `app/integration_test/volume_key_test.dart`：
 
@@ -902,7 +902,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：確認可用裝置**
+- [x] **Step 2：確認可用裝置**
 
 ```bash
 cd app && flutter devices
@@ -910,7 +910,7 @@ cd app && flutter devices
 
 Expected：列出至少 1 台已連線的 Android 真機/模擬器，記下其 `<device-id>`。
 
-- [ ] **Step 3：真機執行測試**
+- [x] **Step 3：真機執行測試**
 
 ```bash
 cd app && flutter test integration_test/volume_key_test.dart -d <device-id>
@@ -920,7 +920,7 @@ cd app && flutter test integration_test/volume_key_test.dart -d <device-id>
 
 Expected：1/1 測試 PASS。
 
-- [ ] **Step 4：Commit**
+- [x] **Step 4：Commit**
 
 ```bash
 git add app/integration_test/volume_key_test.dart
