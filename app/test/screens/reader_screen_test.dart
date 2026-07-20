@@ -2163,6 +2163,137 @@ void main() {
     expect(find.byType(AppBar), findsNothing);
   });
 
+  testWidgets(
+      '音量鍵 onVolumeKey(up/down) 觸發真實換頁（PDF，模擬原生端會呼叫的全域頻道）',
+      (tester) async {
+    final binaryMessenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    final instanceCalls = <MethodCall>[];
+
+    binaryMessenger.setMockMethodCallHandler(SystemChannels.platform_views,
+        (call) async {
+      if (call.method == 'create') {
+        final id = (call.arguments as Map<Object?, Object?>)['id'] as int;
+        binaryMessenger.setMockMethodCallHandler(
+          MethodChannel('cc.ugotit.elinkbook/pdf_reader_view_$id'),
+          (call) async {
+            instanceCalls.add(call);
+            return null;
+          },
+        );
+        return 0;
+      }
+      return null;
+    });
+    addTearDown(() => binaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform_views, null));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b1',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    const volumeKeyChannel = MethodChannel('elinkbook/volume_key');
+    Future<void> simulateVolumeKey(String direction) async {
+      final byteData = volumeKeyChannel.codec.encodeMethodCall(
+        MethodCall('onVolumeKey', {'direction': direction}),
+      );
+      await binaryMessenger.handlePlatformMessage(
+        volumeKeyChannel.name,
+        byteData,
+        (data) {},
+      );
+      await tester.pump();
+    }
+
+    await simulateVolumeKey('down');
+    expect(
+      instanceCalls.any((c) => c.method == 'nextPage'),
+      isTrue,
+      reason: 'onVolumeKey(down) 應呼叫 PdfReaderView 的 nextPage',
+    );
+
+    await simulateVolumeKey('up');
+    expect(
+      instanceCalls.any((c) => c.method == 'previousPage'),
+      isTrue,
+      reason: 'onVolumeKey(up) 應呼叫 PdfReaderView 的 previousPage',
+    );
+  });
+
+  testWidgets(
+      'PopScope：pop 動作啟動當下呼叫 notifyLeavingReader，及早通知原生端釋放音量鍵攔截',
+      (tester) async {
+    final binaryMessenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    const volumeKeyChannel = MethodChannel('elinkbook/volume_key');
+    final outgoingCalls = <MethodCall>[];
+    binaryMessenger.setMockMethodCallHandler(
+      volumeKeyChannel,
+      (call) async {
+        outgoingCalls.add(call);
+        return null;
+      },
+    );
+    addTearDown(() =>
+        binaryMessenger.setMockMethodCallHandler(volumeKeyChannel, null));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: Center(
+              child: ElevatedButton(
+                key: const Key('open_reader'),
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => ReaderScreen(
+                      filePath: 'test/fixtures/sample.pdf',
+                      bookId: 'b1',
+                      prefsManager: prefsManager,
+                    ),
+                  ),
+                ),
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.byKey(const Key('open_reader')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+    // 模擬原生端 onPageRendered，讓 _state 脫離 loading（純 flutter test
+    // 環境下 AndroidView 不會真正觸發原生回呼，比照本檔案既有測試慣例，
+    // 見第 294-298 行）——CircularProgressIndicator 為不定長動畫，若一直
+    // 停留在 loading，後續 pumpAndSettle() 永遠不會收斂而逾時（見第
+    // 957-962 行既有註解記錄的相同教訓）。
+    tester.widget<PdfReaderView>(find.byType(PdfReaderView)).onPageRendered();
+    await tester.pump();
+
+    expect(outgoingCalls, isEmpty);
+
+    final navigatorState = tester.state<NavigatorState>(find.byType(Navigator));
+    navigatorState.maybePop();
+    await tester.pumpAndSettle();
+
+    expect(
+      outgoingCalls.any((c) => c.method == 'notifyLeavingReader'),
+      isTrue,
+    );
+  });
+
   testWidgets('EPUB 流式：原生端 onZoneTapped 回呼（cellIndex=1）觸發沉浸模式切換',
       (tester) async {
     await tester.pumpWidget(

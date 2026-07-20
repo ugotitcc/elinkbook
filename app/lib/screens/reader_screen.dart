@@ -40,6 +40,14 @@ import 'reader_footer.dart';
 import 'reader_settings_sheet.dart';
 import 'toc_bottom_sheet.dart';
 
+/// 音量鍵事件頻道（epic-7-interaction Issue 7）：原生 `MainActivity.
+/// dispatchKeyEvent()` 攔截音量鍵後呼叫 `onVolumeKey`；`_handleVolumeKeyCall`
+/// 轉呼叫既有的 `_handleZoneAction`。既有 `PopScope` 的
+/// `onPopInvokedWithResult` 於 pop 動作啟動當下呼叫 `notifyLeavingReader`，
+/// 讓原生端立即停止攔截（早於退場轉場動畫、更早於 dispose()，見
+/// docs/epics/epic-7-interaction/spec.md「新增音量鍵頻道」）。
+const _volumeKeyChannel = MethodChannel('elinkbook/volume_key');
+
 /// 唯一的閱讀器顯示接縫（seam）：給定書籍檔案路徑，依偵測到的格式分派到
 /// 對應的原生渲染 widget，畫面上會渲染出該書第 1 頁。公開建構參數為
 /// [filePath]／[bookId]／[prefsManager]（`bookId`／`prefsManager` 由
@@ -213,6 +221,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _volumeKeyChannel.setMethodCallHandler(_handleVolumeKeyCall);
     widget.prefsManager.load(widget.bookId).then((loaded) {
       if (!mounted) return;
       setState(() {
@@ -233,6 +242,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _volumeKeyChannel.setMethodCallHandler(null);
     _totalCharacterCountNotifier.dispose();
     // 離開閱讀畫面時觸發一次位置寫入（spec.md「本機閱讀位置記憶」寫入
     // 時機之一）。不 await——dispose() 是同步方法，且這是離開畫面前的
@@ -1027,7 +1037,16 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     // 同一個 isLandscape 值。
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape;
-    return PopScope(
+    // 【實作偏離 plan-issue-7.md Task 4 逐字規格，記錄供未來維護者知悉】
+    // 顯式標註 <dynamic>：新增 onPopInvokedWithResult 後，若不標註型別參數，
+    // Dart 型別推論會依回呼閉包把 T 推成 Object（而非既有測試
+    // `find.byType(PopScope)` 預期比對的 PopScope<dynamic>——generic class
+    // 名稱單獨作為 Type 值時，未標註型別引數會推論為 <dynamic> 而非
+    // <Object?>），導致既有測試（例如「進入手動裁切互動模式後，
+    // PopScope.canPop 為 false」）的 find.byType(PopScope) 比對不到任何
+    // widget 而失敗。顯式標註 <dynamic> 讓實際型別與既有測試預期的裸型別
+    // 字面量一致，回歸零。
+    return PopScope<dynamic>(
       // 手動裁切互動模式進行中時，返回鍵不應把整個 ReaderScreen 一併 pop
       // 掉——原生端裁切互動模式沒有使用者手勢可以主動觸發離開（見 spec.md
       // 第 123 行「不會主動由使用者手勢觸發」），這裡單純吞掉返回鍵手勢，
@@ -1035,6 +1054,17 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       // 意見 2.1(b)：避免誤觸返回鍵導致整個閱讀器被意外關閉；刻意不在此
       // 新增「取消並還原」語意，維持 spec.md 已鎖定的簡化狀態機決策）。
       canPop: !_cropEditModeActive,
+      // pop 動作啟動當下（早於退場轉場動畫、更早於 PlatformView.dispose()）
+      // 通知原生端立即停止攔截音量鍵（epic-7-interaction Issue 7，收斂
+      // 轉場動畫期間的攔截延遲釋放窗口，見 ReaderViewAttachmentTracker
+      // 類別註解）。canPop 為 false（裁切模式攔截返回鍵）時 didPop 為
+      // false，此時閱讀器仍在使用中，不應釋放攔截，故只在 didPop 為 true
+      // 時才呼叫。
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) {
+          _volumeKeyChannel.invokeMethod('notifyLeavingReader');
+        }
+      },
       child: Scaffold(
         // extendBodyBehindAppBar：搭配 _buildBody() 內的 Padding+SafeArea(top:
         // false) 改造（審查修正），讓 body 版面約束不受 AppBar 顯示/隱藏
@@ -1469,6 +1499,23 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// `nextPage` 完全不經過這裡（原生 Kotlin `InputListener` 自主呼叫
   /// `goBackward()`/`goForward()`），只有 `menu` 動作經下方
   /// `_buildNativeView()` 接上的 `onZoneTapped` 回呼觸發這裡的 `menu` 分支。
+  /// 原生端 `MainActivity.dispatchKeyEvent()` 攔截音量鍵後的回呼
+  /// （epic-7-interaction Issue 7）：方向固定映射，不查詢
+  /// `_resolved!.navZoneActions`（design.md 決策 #19）——`up` 一律上一頁、
+  /// `down` 一律下一頁。
+  Future<void> _handleVolumeKeyCall(MethodCall call) async {
+    if (call.method != 'onVolumeKey') return;
+    final args = call.arguments as Map<Object?, Object?>;
+    switch (args['direction'] as String?) {
+      case 'up':
+        _handleZoneAction(ZoneAction.previousPage);
+        break;
+      case 'down':
+        _handleZoneAction(ZoneAction.nextPage);
+        break;
+    }
+  }
+
   void _handleZoneAction(ZoneAction action) {
     final format = detectBookFormat(widget.filePath);
     switch (action) {
