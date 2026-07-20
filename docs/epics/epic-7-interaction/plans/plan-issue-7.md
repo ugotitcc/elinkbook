@@ -456,7 +456,7 @@ git commit -m "feat(epic-7): MainActivity 新增 elinkbook/volume_key 頻道與 
 - Consumes：Task 3 的 `elinkbook/volume_key` 頻道契約（`onVolumeKey({"direction": "up"|"down"})`／`notifyLeavingReader`）；既有 `_handleZoneAction(ZoneAction action)`（Issue 4，`app/lib/screens/reader_screen.dart`）
 - Produces：`_ReaderScreenState._handleVolumeKeyCall(MethodCall call)`（私有方法，透過 `_volumeKeyChannel.setMethodCallHandler` 掛載）
 
-- [ ] **Step 1：寫失敗測試**
+- [x] **Step 1：寫失敗測試**
 
 在 `app/test/screens/reader_screen_test.dart`，於既有測試「PDF：真實點擊熱區「選單」格（index 1）觸發沉浸模式切換」（本檔案第 2142-2178 行左右）之後，新增以下 2 個測試：
 
@@ -585,7 +585,7 @@ git commit -m "feat(epic-7): MainActivity 新增 elinkbook/volume_key 頻道與 
   });
 ```
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 ```bash
 cd app && flutter test test/screens/reader_screen_test.dart
@@ -593,7 +593,7 @@ cd app && flutter test test/screens/reader_screen_test.dart
 
 Expected：新增的 2 個測試 FAIL（第 1 個因 `instanceCalls` 中找不到 `nextPage`/`previousPage`——目前沒有任何程式碼監聽 `elinkbook/volume_key` 頻道；第 2 個因 `outgoingCalls` 中找不到 `notifyLeavingReader`——目前 `PopScope` 沒有 `onPopInvokedWithResult`）。其餘既有測試維持通過。
 
-- [ ] **Step 3：實作 — 新增頻道常數與處理方法**
+- [x] **Step 3：實作 — 新增頻道常數與處理方法**
 
 在 `app/lib/screens/reader_screen.dart`，於既有 import 區塊結尾（第 41 行 `import 'toc_bottom_sheet.dart';`）之後、`ReaderScreen` 類別的文件註解（第 43 行 `/// 唯一的閱讀器顯示接縫...`）之前，新增：
 
@@ -608,7 +608,7 @@ Expected：新增的 2 個測試 FAIL（第 1 個因 `instanceCalls` 中找不�
 const _volumeKeyChannel = MethodChannel('elinkbook/volume_key');
 ```
 
-- [ ] **Step 4：實作 — `initState()`/`dispose()` 掛載與解除頻道處理器**
+- [x] **Step 4：實作 — `initState()`/`dispose()` 掛載與解除頻道處理器**
 
 找到現有的：
 
@@ -650,7 +650,7 @@ const _volumeKeyChannel = MethodChannel('elinkbook/volume_key');
     _totalCharacterCountNotifier.dispose();
 ```
 
-- [ ] **Step 5：實作 — 新增 `_handleVolumeKeyCall`**
+- [x] **Step 5：實作 — 新增 `_handleVolumeKeyCall`**
 
 在既有的 `_handleZoneAction(ZoneAction action) { ... }` 方法（檔案結尾附近，第 1472-1495 行）之前，新增：
 
@@ -674,7 +674,7 @@ const _volumeKeyChannel = MethodChannel('elinkbook/volume_key');
 
 ```
 
-- [ ] **Step 6：實作 — `PopScope` 新增 `onPopInvokedWithResult`**
+- [x] **Step 6：實作 — `PopScope` 新增 `onPopInvokedWithResult`**
 
 找到現有的：
 
@@ -690,10 +690,10 @@ const _volumeKeyChannel = MethodChannel('elinkbook/volume_key');
       child: Scaffold(
 ```
 
-改為：
+改為（**實作修正**：新增 `onPopInvokedWithResult` 後，Dart 會把 `PopScope<T>` 的 `T` 從隱含推論的 `dynamic` 改為 `Object`，導致既有測試 `find.byType(PopScope)`〔隱含比對 `PopScope<dynamic>`〕找不到 widget 而回歸失敗；顯式標註 `PopScope<dynamic>(...)` 還原原本的推論結果，已經審查驗證為正確、最小化的修正，純型別標註、無行為變化）：
 
 ```dart
-    return PopScope(
+    return PopScope<dynamic>(
       // 手動裁切互動模式進行中時，返回鍵不應把整個 ReaderScreen 一併 pop
       // 掉——原生端裁切互動模式沒有使用者手勢可以主動觸發離開（見 spec.md
       // 第 123 行「不會主動由使用者手勢觸發」），這裡單純吞掉返回鍵手勢，
@@ -715,7 +715,7 @@ const _volumeKeyChannel = MethodChannel('elinkbook/volume_key');
       child: Scaffold(
 ```
 
-- [ ] **Step 7：執行測試確認通過**
+- [x] **Step 7：執行測試確認通過**
 
 ```bash
 cd app && flutter test test/screens/reader_screen_test.dart
@@ -735,7 +735,7 @@ cd app && flutter analyze
 
 Expected：`No issues found!`
 
-- [ ] **Step 8：Commit**
+- [x] **Step 8：Commit**
 
 ```bash
 git add app/lib/screens/reader_screen.dart app/test/screens/reader_screen_test.dart
