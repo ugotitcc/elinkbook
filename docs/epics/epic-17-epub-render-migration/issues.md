@@ -6,7 +6,7 @@
 
 ## Issue 1：Spike——`readest/foliate-js` 真機直排分頁穩定性驗證
 
-**Status:** `ready-for-agent`
+**Status:** ✅ 已完成。依 `plans/plan-issue-1.md` Task 1-5 完成 Harness 建置、真機插樁量測與判準分類，結論寫入 `reviews/spike-foliate-js-vertical.md`。以釘定 commit `dd71f2be356563c16a23272686189fcfb45d0b82`（2026-07-19）打包的 `readest/foliate-js`，在真機 Android WebView（`3CEF42ECD491687`，Android 15／API 35）上對 `issue9_vertical_pagejump.epub` 正文段落連續觸發 3 次「下一頁」+ 3 次「上一頁」：6 次觸發皆可視內容無縫銜接、內部 `fraction` 皆為預期單步變化（無多步跳躍、無 0 步被吃掉），且往返路徑以截圖逐位元組比對（`prev-1≡next-2`、`prev-2≡next-1`、`prev-3≡start`）證實完全對稱。依 `design.md`「判準」表分類為**通過**，構成 **GO** 訊號。**下一步進入 Architecting 階段**，撰寫 `spec.md`，並重新逐項確認 `foliate-js-migration-feasibility-assessment.md` 既有的 6 項共識決策。Harness throwaway 專案已從裝置解除安裝，過程中的暫時性素材（截圖、logcat、Harness Android 專案）皆位於 `tmp/`（已 gitignore），未進版控。
 
 **依賴：** 無（起始工單，可立即開始）
 
