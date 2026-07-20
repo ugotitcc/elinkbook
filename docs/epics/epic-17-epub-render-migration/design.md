@@ -80,6 +80,8 @@ ADR 0001 本身已預留重新檢視的伏筆（「若 Readium 的直排支援�
 
 ## GO / NO-GO 決策路徑
 
+> **Spike 結果（2026-07-21）：GO**——完整證據見 `reviews/spike-foliate-js-vertical.md`。下一步進入 Architecting 階段，撰寫 `spec.md`。
+
 - **GO**（Spike 判準「通過」或「計數器層級抖動」）：進入 Architecting 階段，正式撰寫 `spec.md`，屆時重新逐項確認 `foliate-js-migration-feasibility-assessment.md` 的 6 項共識決策與實作路線圖（不直接照抄轉正，需比對 Spike 實測結果與既有本專案架構重新驗算）。
 - **NO-GO**（Spike 判準「失敗」）：記錄具體失敗證據於 `docs/epics/epic-17-epub-render-migration/reviews/`，`design.md` 補上「已評估並否決」的結論與理由，ADR 0001 維持現狀不變，Epic 標記完成並歸檔（不視為失敗的工作，而是一次有價值、排除掉一個選項的技術驗證）。未來重新檢視觸發條件：`readium/css#141` 若被重新開放/解決，或有其他證據顯示 Readium 直排分頁問題已被上游修復。
 
