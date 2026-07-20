@@ -220,7 +220,7 @@ git commit -m "feat(epic-7): 新增 ReaderViewAttachmentTracker 音量鍵攔截�
 - Consumes：Task 1 的 `ReaderViewAttachmentTracker.attach()`/`detach()`
 - Produces：`ReaderViewAttachmentTracker.isAnyAttached` 在任一 Reader PlatformView 存在期間為 `true`，供 Task 3 使用
 
-- [ ] **Step 1：`EpubReaderView.kt` 佈線**
+- [x] **Step 1：`EpubReaderView.kt` 佈線**
 
 在 `EpubReaderView.kt` 找到現有的：
 
@@ -250,7 +250,7 @@ git commit -m "feat(epic-7): 新增 ReaderViewAttachmentTracker 音量鍵攔截�
 
 （其餘 `dispose()` 內容不變。）
 
-- [ ] **Step 2：`PdfReaderView.kt` 佈線**
+- [x] **Step 2：`PdfReaderView.kt` 佈線**
 
 在 `PdfReaderView.kt` 找到現有的：
 
@@ -286,7 +286,7 @@ git commit -m "feat(epic-7): 新增 ReaderViewAttachmentTracker 音量鍵攔截�
 
 （其餘 `dispose()` 內容不變。）
 
-- [ ] **Step 3：執行既有測試確認無回歸**
+- [x] **Step 3：執行既有測試確認無回歸**
 
 ```bash
 cd app/android && ./gradlew :app:testDebugUnitTest
@@ -306,7 +306,7 @@ cd app && flutter build apk --debug
 
 Expected：`BUILD SUCCESSFUL`（純編譯驗證，確認 Kotlin 端改動語法正確、可成功建置；本步驟無自動化斷言，人工檢查指令結尾輸出即可）。
 
-- [ ] **Step 4：Commit**
+- [x] **Step 4：Commit**
 
 ```bash
 git add app/android/app/src/main/kotlin/cc/ugotit/elinkbook/EpubReaderView.kt app/android/app/src/main/kotlin/cc/ugotit/elinkbook/PdfReaderView.kt
