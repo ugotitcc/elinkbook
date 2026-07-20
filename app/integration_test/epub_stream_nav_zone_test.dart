@@ -34,6 +34,13 @@ bool _locatorCoreEquals(String? a, String? b) {
       locationsA?['progression'] == locationsB?['progression'];
 }
 
+/// 與 [_locatorCoreEquals] 互補：判斷兩個 locator 的核心欄位（href／
+/// progression）是否確實不同，而非僅是整串 JSON 位元組不同——避免 Readium
+/// 非同步補齊中繼資料造成的「JSON 有差異」誤判為「位置真的變動」（同一份
+/// locator 若只有 title/position/totalProgression 被非同步補齊，href／
+/// progression 仍相同，不應視為換頁成功）。
+bool _locatorPositionChanged(String? a, String? b) => !_locatorCoreEquals(a, b);
+
 /// Epic 7 Issue 6：EPUB 流式熱區導覽（原生 InputListener）——真機整合測試。
 ///
 /// 【本檔案與 PDF（epic-7-interaction Issue 4，pdf_nav_zone_test.dart）的
@@ -63,6 +70,11 @@ bool _locatorCoreEquals(String? a, String? b) {
 ///      中間選單熱區仍可正常觸發。
 /// 並記錄實際觀察結果於 issues.md Issue 6 段落，比照 issues.md Issue 4
 /// 「待辦」記錄慣例，不阻塞本 issue 合併。
+///
+/// 【實測結果記錄】本檔案已在真機（3CEF42ECD491687，Android 15/API 35）
+/// 執行並通過 2/2：tester.tapAt() 對此原生 InputListener 路徑（無 Flutter
+/// GestureDetector 包裹 AndroidView）確認可靠，上述人工驗證清單並未被觸發
+/// 使用，保留於此僅供未來若真機環境改變、此技術不再可靠時的備援參考。
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
@@ -122,10 +134,11 @@ void main() {
     await tester.pumpAndSettle(const Duration(seconds: 2));
     expect(errorMessage, isNull, reason: '點擊下一頁熱區後不應觸發 onError');
     expect(
-      lastPosition?.locatorJson,
-      isNot(equals(positionAfterOpen?.locatorJson)),
+      _locatorPositionChanged(
+          lastPosition?.locatorJson, positionAfterOpen?.locatorJson),
+      isTrue,
       reason: '點擊右側熱區應透過原生 InputListener 觸發 goForward()，'
-          'locatorJson 應變動；若本斷言失敗，代表 tester.tapAt() 對此原生 '
+          'href／progression 應變動；若本斷言失敗，代表 tester.tapAt() 對此原生 '
           'InputListener 路徑不可靠，需改依本檔案標頭註解的人工驗證清單改用 '
           'adb shell input tap 驗證，並記錄實際觀察結果於 issues.md。',
     );
@@ -136,13 +149,14 @@ void main() {
     await tester.pumpAndSettle(const Duration(seconds: 2));
     expect(errorMessage, isNull, reason: '點擊上一頁熱區後不應觸發 onError');
     expect(
-      lastPosition?.locatorJson,
-      isNot(equals(positionAfterNext?.locatorJson)),
-      reason: '點擊左側熱區應觸發 goBackward()，locatorJson 應變動',
+      _locatorPositionChanged(
+          lastPosition?.locatorJson, positionAfterNext?.locatorJson),
+      isTrue,
+      reason: '點擊左側熱區應觸發 goBackward()，href／progression 應變動',
     );
 
     await tester.tapAt(menuZone);
-    await tester.pump();
+    await tester.pumpAndSettle(const Duration(seconds: 2));
     expect(
       capturedZoneTaps,
       contains(4),
