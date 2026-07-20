@@ -20,6 +20,7 @@
 - **`console.log` 橋接**：`WebChromeClient.onConsoleMessage()` 覆寫，統一以 `Log.i("FOLIATE_SPIKE", consoleMessage.message())` 轉錄進 Logcat，供 `adb logcat -d | grep FOLIATE_SPIKE` 擷取證據（比照 `epic-7-interaction` Issue 9 spike 用專屬 tag 過濾證據的方法論）。
 - **量測基準**：`relocate` 自訂事件的 `event.detail` 含 `cfi`（字串）、`fraction`（0-1 章節內進度）、`index`（章節索引）——比照 `epic-7-interaction` Issue 9 用 `progression`/`position` 前後值量測「單次觸發實際推進量」的方法論，這裡改用 `cfi`/`fraction`/`index` 三者。
 - **觸發座標與裝置**：沿用 `epic-7-interaction` 既有測試裝置（3CEF42ECD491687，Android 15/API 35，螢幕 1600×2400）與熱區座標慣例——螢幕右側 `1340 1200`＝下一頁、左側 `266 1200`＝上一頁。執行時必須先用 `adb devices -l` 確認裝置仍在，並用 `adb shell wm size` 重新確認解析度；若非 1600×2400，需按比例換算這兩組座標（例如 X 座標分別約為螢幕寬度的 83.75% 與 16.6%，Y 座標約為螢幕高度的 50%）。
+- **鎖定直向（審查修訂項目）**：Task 2 執行時實測發現裝置 `accelerometer_rotation=1`（自動旋轉開啟），畫面曾自動轉為橫向 2400×1600，與上述寫死的直向座標不符。`AndroidManifest.xml` 的 `MainActivity` 已加上 `android:screenOrientation="portrait"`（見 Task 1 Step 8），從根源鎖定畫面方向，不依賴裝置本身的自動旋轉設定，確保 Task 3/4 全程座標與畫面方向一致。
 - **每次觸發需間隔至少 2 秒**再擷取下一筆證據，避免觸發排隊/覆蓋模糊掉單次觸發的真實結果（design.md「觸發方法與樣本數」）。
 - **只驗證 `vertical-rl` 這個維度**，不比較橫排（design.md 決策 #1／範圍外段落）；`issues.md` Issue 1 驗收標準明訂只需要「直排 × 上一頁」「直排 × 下一頁」兩類觸發，各至少 3+3 次。
 - **選擇有正文內容的章節頁面**，避開封面/版權頁（design.md「觸發方法與樣本數」）——`issue9_vertical_pagejump.epub` 的 spine 前段是 `cover.xhtml`／`copyright.xhtml`，需先翻到出現大量連續段落文字的故事內文頁面才開始正式量測（Task 4 Step 1）。
@@ -62,7 +63,7 @@
 - Consumes：無（起始工單）
 - Produces：可建置、安裝、啟動的最小 `WebView` Activity，`WebViewAssetLoader` 已正確攔截 `https://appassets.androidplatform.net/assets/` 底下的請求並轉發到 Android `assets/`；`MainActivity.kt` 本 Task 完成後**不再需要修改**，Task 2/3 只新增/覆寫 `assets/foliate/` 底下的檔案即可
 
-- [ ] **Step 1：確認裝置、建立目錄結構**
+- [x] **Step 1：確認裝置、建立目錄結構**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook"
@@ -76,7 +77,7 @@ adb devices -l
 
 Expected：`git status --short` 無輸出（`tmp/` 已被 `.gitignore` 排除，新建目錄不會顯示）；`adb devices -l` 列出至少 1 台裝置，記下 `<device-id>`（預期沿用既有測試裝置 `3CEF42ECD491687`，Android 15/API 35；若已更換，以實際輸出為準，後續指令一律以 `<device-id>` 表示）。
 
-- [ ] **Step 2：確認裝置解析度**
+- [x] **Step 2：確認裝置解析度**
 
 ```bash
 adb -s <device-id> shell wm size
@@ -84,7 +85,7 @@ adb -s <device-id> shell wm size
 
 Expected：`Physical size: 1600x2400`（若不同，記錄實際值，Global Constraints 已說明後續座標換算方式）。
 
-- [ ] **Step 3：複製主專案已驗證可用的 Gradle wrapper**
+- [x] **Step 3：複製主專案已驗證可用的 Gradle wrapper**
 
 ```bash
 cp "U:/MyDeveloper/AI/elinkBook/app/android/gradlew" \
@@ -100,7 +101,7 @@ cp "U:/MyDeveloper/AI/elinkBook/app/android/gradle/wrapper/gradle-wrapper.proper
 
 Expected：4 個檔案複製成功，重用 Gradle 8.14（`gradle-wrapper.properties` 內 `distributionUrl` 應為 `gradle-8.14-all.zip`），不需重新下載新版本。
 
-- [ ] **Step 4：寫 `settings.gradle.kts`**
+- [x] **Step 4：寫 `settings.gradle.kts`**
 
 在 `tmp/epic-17/foliate-spike-harness/settings.gradle.kts` 寫入：
 
@@ -125,7 +126,7 @@ rootProject.name = "foliate-spike-harness"
 include(":app")
 ```
 
-- [ ] **Step 5：寫根目錄 `build.gradle.kts`**
+- [x] **Step 5：寫根目錄 `build.gradle.kts`**
 
 在 `tmp/epic-17/foliate-spike-harness/build.gradle.kts` 寫入：
 
@@ -136,7 +137,7 @@ plugins {
 }
 ```
 
-- [ ] **Step 6：寫 `gradle.properties`**
+- [x] **Step 6：寫 `gradle.properties`**
 
 在 `tmp/epic-17/foliate-spike-harness/gradle.properties` 寫入：
 
@@ -146,7 +147,7 @@ android.useAndroidX=true
 kotlin.code.style=official
 ```
 
-- [ ] **Step 7：寫 `app/build.gradle.kts`**
+- [x] **Step 7：寫 `app/build.gradle.kts`**
 
 在 `tmp/epic-17/foliate-spike-harness/app/build.gradle.kts` 寫入：
 
@@ -185,7 +186,7 @@ dependencies {
 }
 ```
 
-- [ ] **Step 8：寫 `AndroidManifest.xml`**
+- [x] **Step 8：寫 `AndroidManifest.xml`**
 
 在 `tmp/epic-17/foliate-spike-harness/app/src/main/AndroidManifest.xml` 寫入：
 
@@ -201,7 +202,8 @@ dependencies {
         android:theme="@android:style/Theme.NoTitleBar.Fullscreen">
         <activity
             android:name=".MainActivity"
-            android:exported="true">
+            android:exported="true"
+            android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -212,7 +214,7 @@ dependencies {
 </manifest>
 ```
 
-- [ ] **Step 9：寫 `MainActivity.kt`（最終版，本 Task 後不再修改）**
+- [x] **Step 9：寫 `MainActivity.kt`（最終版，本 Task 後不再修改）**
 
 在 `tmp/epic-17/foliate-spike-harness/app/src/main/kotlin/cc/ugotit/foliatespike/MainActivity.kt` 寫入：
 
@@ -282,7 +284,7 @@ class MainActivity : Activity() {
 }
 ```
 
-- [ ] **Step 10：寫暫時的 `index.html`（僅供本 Task 驗證管線，Task 2 會覆寫）**
+- [x] **Step 10：寫暫時的 `index.html`（僅供本 Task 驗證管線，Task 2 會覆寫）**
 
 在 `tmp/epic-17/foliate-spike-harness/app/src/main/assets/foliate/index.html` 寫入：
 
@@ -294,7 +296,7 @@ class MainActivity : Activity() {
 </html>
 ```
 
-- [ ] **Step 11：建置、安裝、啟動，截圖確認管線可用**
+- [x] **Step 11：建置、安裝、啟動，截圖確認管線可用**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/tmp/epic-17/foliate-spike-harness"
@@ -325,7 +327,7 @@ Expected：建置成功（`BUILD SUCCESSFUL`）、安裝成功、截圖顯示畫
 - Consumes：Task 1 已驗證可用的 `MainActivity.kt`／`WebViewAssetLoader` 管線（本 Task 不修改 Kotlin）
 - Produces：可開啟 EPUB 並顯示章節內文的頁面（此時預期為預設橫排——測試素材本身無 `body` 層級 `writing-mode` 宣告，`getDirection()` 讀到的是 CSS 初始值），供 Task 3 疊加直排覆蓋與觸發熱區
 
-- [ ] **Step 1：下載釘定 commit 的 `readest/foliate-js` 依賴閉包**
+- [x] **Step 1：下載釘定 commit 的 `readest/foliate-js` 依賴閉包**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/tmp/epic-17/foliate-spike-harness/app/src/main/assets/foliate"
@@ -341,7 +343,7 @@ wc -l view.js epub.js epubcfi.js progress.js overlayer.js text-walker.js paginat
 
 Expected：`head -c 60 view.js` 輸出以 `import * as CFI from './epubcfi.js'` 開頭（確認抓到的是原始碼而非 GitHub 404 頁面）；`wc -l` 對 8 個檔案皆回報非 0 行數（`paginator.js` 預期約 3500 行、`vendor/zip.js` 為單行高度壓縮的檔案）。
 
-- [ ] **Step 2：複製測試素材**
+- [x] **Step 2：複製測試素材**
 
 ```bash
 cp "U:/MyDeveloper/AI/elinkBook/app/test/fixtures/issue9_vertical_pagejump.epub" \
@@ -351,7 +353,7 @@ ls -la "U:/MyDeveloper/AI/elinkBook/tmp/epic-17/foliate-spike-harness/app/src/ma
 
 Expected：檔案存在，大小約 303KB（309978 bytes）。
 
-- [ ] **Step 3：覆寫 `index.html`**
+- [x] **Step 3：覆寫 `index.html`**
 
 把 `tmp/epic-17/foliate-spike-harness/app/src/main/assets/foliate/index.html` 內容改為：
 
@@ -373,7 +375,7 @@ Expected：檔案存在，大小約 303KB（309978 bytes）。
 </html>
 ```
 
-- [ ] **Step 4：寫 `main.js`（基準版本——只開書、記錄 relocate，尚無直排覆蓋與觸發按鈕）**
+- [x] **Step 4：寫 `main.js`（基準版本——只開書、記錄 relocate，尚無直排覆蓋與觸發按鈕）**
 
 在 `tmp/epic-17/foliate-spike-harness/app/src/main/assets/foliate/main.js` 寫入：
 
@@ -399,13 +401,20 @@ async function openBook() {
     'https://appassets.androidplatform.net/assets/books/issue9_vertical_pagejump.epub',
   )
   await view.open(book)
+  // view.open(book) 只會建立 renderer、掛好事件監聽、呼叫 renderer.open(book)，
+  // 完全不會導覽到任何 section——這是 readest/foliate-js 這個 pinned commit
+  // 下已確認的實際行為，不是遺漏。真正觸發首次渲染與 relocate 事件的是
+  // view.init()；空物件會落入其 else 分支（history.pushState(0); this.next()），
+  // 固定從第 0 節（通常是 cover.xhtml）第 1 頁開始，與 Task 4 既有設計（點擊
+  // 下一頁跳過封面/版權頁）行為一致，不依賴書本是否有 landmarks 導覽結構。
+  await view.init({})
   log('FOLIATE_OPENED', { ok: true })
 }
 
 openBook()
 ```
 
-- [ ] **Step 5：重新建置、安裝、啟動，截圖與 logcat 確認 EPUB 已渲染**
+- [x] **Step 5：重新建置、安裝、啟動，截圖與 logcat 確認 EPUB 已渲染**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/tmp/epic-17/foliate-spike-harness"
@@ -437,7 +446,7 @@ Expected：截圖顯示可辨識的繁體中文內文文字（預期為橫排，
 - Consumes：Task 2 的基準版本（開書、`relocate` 記錄）
 - Produces：可透過固定座標點擊觸發「上一頁」「下一頁」、內容已強制直排、每次觸發與位置變化皆記錄到 Logcat 的完整 Harness，供 Task 4 正式量測直接使用，本 Task 後不再修改任何檔案
 
-- [ ] **Step 1：覆寫 `index.html`，加入左右兩個透明觸發熱區**
+- [x] **Step 1：覆寫 `index.html`，加入左右兩個透明觸發熱區**
 
 把 `tmp/epic-17/foliate-spike-harness/app/src/main/assets/foliate/index.html` 內容改為：
 
@@ -467,7 +476,7 @@ Expected：截圖顯示可辨識的繁體中文內文文字（預期為橫排，
 </html>
 ```
 
-- [ ] **Step 2：覆寫 `main.js`，加入 `transformTarget` 直排覆蓋與觸發按鈕**
+- [x] **Step 2：覆寫 `main.js`，加入 `transformTarget` 直排覆蓋與觸發按鈕**
 
 把 `tmp/epic-17/foliate-spike-harness/app/src/main/assets/foliate/main.js` 內容改為：
 
@@ -507,6 +516,10 @@ async function openBook() {
   })
   await view.open(book)
   view.renderer.setAttribute('flow', 'paginated')
+  // 見 Task 2 Step 4 註解：view.open(book) 本身不導覽到任何 section，
+  // 必須呼叫 view.init() 才會觸發首次渲染與 relocate 事件。放在
+  // setAttribute('flow', ...) 之後，確保第一次渲染就採用正確的分頁模式。
+  await view.init({})
   log('FOLIATE_OPENED', { ok: true })
 }
 
@@ -522,7 +535,7 @@ document.getElementById('btn-next').addEventListener('click', () => {
 openBook()
 ```
 
-- [ ] **Step 3：重新建置、安裝、啟動，截圖確認直排生效**
+- [x] **Step 3：重新建置、安裝、啟動，截圖確認直排生效**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/tmp/epic-17/foliate-spike-harness"
@@ -540,7 +553,7 @@ adb -s <device-id> exec-out screencap -p > "U:/MyDeveloper/AI/elinkBook/tmp/epic
 
 Expected：截圖顯示文字已改為直排（欄由右至左排列、每欄文字由上至下）。若仍是橫排，先確認 Task 2 Step 4 的 `main.js` 是否被完整覆寫（尤其 `book.transformTarget` 那段），而非殘留舊版本。
 
-- [ ] **Step 4：單次點擊右側熱區，確認觸發與位置變化皆被記錄**
+- [x] **Step 4：單次點擊右側熱區，確認觸發與位置變化皆被記錄**
 
 ```bash
 adb -s <device-id> shell input tap 1340 1200
@@ -566,7 +579,7 @@ Expected：`spike1-task3-after-tap.png` 內容與 `spike1-task3-vertical.png` �
 - Consumes：Task 3 完成的 Harness（觸發熱區、直排覆蓋、Logcat 記錄）
 - Produces：6 次觸發（3 次下一頁 + 3 次上一頁）的截圖與 logcat 證據，供 Task 5 分析判定
 
-- [ ] **Step 1：翻到有正文內容的章節頁面（跳過封面/版權頁）**
+- [x] **Step 1：翻到有正文內容的章節頁面（跳過封面/版權頁）**
 
 ```bash
 adb -s <device-id> logcat -c
@@ -581,14 +594,14 @@ adb -s <device-id> exec-out screencap -p > "U:/MyDeveloper/AI/elinkBook/tmp/epic
 
 若尚未到達正文，重複上述兩行指令（依序存為 `spike1-task4-skip-2.png`、`spike1-task4-skip-3.png`……），每次間隔至少 2 秒，直到確認到達正文頁面為止，記錄下總共點擊了幾次（供 Task 5 報告引用）。
 
-- [ ] **Step 2：清空 logcat，擷取正式量測起點截圖**
+- [x] **Step 2：清空 logcat，擷取正式量測起點截圖**
 
 ```bash
 adb -s <device-id> logcat -c
 adb -s <device-id> exec-out screencap -p > "U:/MyDeveloper/AI/elinkBook/tmp/epic-17/reviews/spike1-task4-start.png"
 ```
 
-- [ ] **Step 3：連續 3 次「下一頁」單次觸發，每次間隔至少 2 秒**
+- [x] **Step 3：連續 3 次「下一頁」單次觸發，每次間隔至少 2 秒**
 
 ```bash
 adb -s <device-id> shell input tap 1340 1200
@@ -602,7 +615,7 @@ adb -s <device-id> exec-out screencap -p > "U:/MyDeveloper/AI/elinkBook/tmp/epic
 
 重複「點擊 `1340 1200` → 等待 2 秒 → 截圖」2 次，依序存為 `spike1-task4-next-2.png`、`spike1-task4-next-3.png`。
 
-- [ ] **Step 4：連續 3 次「上一頁」單次觸發，每次間隔至少 2 秒**
+- [x] **Step 4：連續 3 次「上一頁」單次觸發，每次間隔至少 2 秒**
 
 ```bash
 adb -s <device-id> shell input tap 266 1200
@@ -616,7 +629,7 @@ adb -s <device-id> exec-out screencap -p > "U:/MyDeveloper/AI/elinkBook/tmp/epic
 
 重複「點擊 `266 1200` → 等待 2 秒 → 截圖」2 次，依序存為 `spike1-task4-prev-2.png`、`spike1-task4-prev-3.png`。
 
-- [ ] **Step 5：擷取本 Task 完整 logcat**
+- [x] **Step 5：擷取本 Task 完整 logcat**
 
 ```bash
 adb -s <device-id> logcat -d | grep "FOLIATE_SPIKE" > "U:/MyDeveloper/AI/elinkBook/tmp/epic-17/reviews/spike1-task4-logcat.txt"
