@@ -339,7 +339,7 @@ cat "U:/MyDeveloper/AI/elinkBook/tmp/epic-7/reviews/spike9-h-logcat.txt"
 - Consumes：Task 2 的插樁與 logcat 標記格式
 - Produces：直排 2 個組合的量測證據，供 Task 5 彙整
 
-- [ ] **Step 1：切換直排、清空 logcat、重新開書**
+- [x] **Step 1：切換直排、清空 logcat、重新開書**
 
 在真機上開啟「⚙️版面」→「強制直排」。
 
@@ -349,7 +349,7 @@ adb -s <device-id> logcat -c
 
 在 App 內關閉該書再重新開啟（確保從第一頁開始）。
 
-- [ ] **Step 2：直排×熱區——連續 3 次單次點擊（含前進與後退），每次間隔至少 2 秒**
+- [x] **Step 2：直排×熱區——連續 3 次單次點擊（含前進與後退），每次間隔至少 2 秒**
 
 ```bash
 adb -s <device-id> exec-out screencap -p > "U:/MyDeveloper/AI/elinkBook/tmp/epic-7/reviews/spike9-v-tap-p0.png"
@@ -358,7 +358,7 @@ adb -s <device-id> shell input tap 1340 1200
 
 等待至少 2 秒，擷取截圖，重複「點擊前進熱區 `1340 1200` → 等待 2 秒 → 截圖」1 次存為 `spike9-v-tap-p2.png`，隨後點擊「後退熱區 `266 1200` → 等待 2 秒 → 截圖」1 次存為 `spike9-v-tap-p3-prev.png`。
 
-- [ ] **Step 3：直排×音量鍵——連續 3 次單次按鍵（含音量下鍵與音量上鍵），每次間隔至少 2 秒**
+- [x] **Step 3：直排×音量鍵——連續 3 次單次按鍵（含音量下鍵與音量上鍵），每次間隔至少 2 秒**
 
 ```bash
 adb -s <device-id> exec-out screencap -p > "U:/MyDeveloper/AI/elinkBook/tmp/epic-7/reviews/spike9-v-key-p0.png"
@@ -367,7 +367,7 @@ adb -s <device-id> shell input keyevent 25
 
 等待至少 2 秒，擷取截圖，重複「音量下鍵 (`25`) → 等待 2 秒 → 截圖」1 次存為 `p2.png`，隨後按「音量上鍵 (`24`) → 等待 2 秒 → 截圖」1 次存為 `p3-prev.png`。
 
-- [ ] **Step 4：擷取本 Task 的 logcat**
+- [x] **Step 4：擷取本 Task 的 logcat**
 
 ```bash
 adb -s <device-id> logcat -d | grep "EPIC9_SPIKE" > "U:/MyDeveloper/AI/elinkBook/tmp/epic-7/reviews/spike9-v-logcat.txt"
@@ -376,13 +376,13 @@ cat "U:/MyDeveloper/AI/elinkBook/tmp/epic-7/reviews/spike9-v-logcat.txt"
 
 分析方式同 Task 3 Step 4。
 
-- [ ] **Step 5：清理真機上的匯入書籍與暫存檔**
+- [x] **Step 5：清理真機上的匯入書籍與暫存檔**
 
 ```bash
 adb -s <device-id> shell rm -f /sdcard/Download/issue9_vertical_pagejump.epub
 ```
 
-在 App 內刪除該書（圖書庫 → 長按/滑動該書 → 刪除）。
+在 App 內刪除該書（圖書庫 → 長按/滑動該書 → 刪除）。（**實作偏離**：`library_screen.dart` 目前未串接 `deleteBook()`，圖書庫畫面無刪除書籍入口——這是 `epic-1-library` 尚未實作的既有現況，非本 issue 範圍。Task 4 實際改用裝置端 `library.db` 直接刪除對應資料列達成等價效果，已驗證清理完整、其餘既有書籍不受影響。）
 
 ---
 
