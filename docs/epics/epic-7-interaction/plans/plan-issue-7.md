@@ -172,6 +172,7 @@ object ReaderViewAttachmentTracker {
      * （轉場動畫期間 PlatformView 尚未 dispose，isAnyAttached 仍為
      * true）。attach() 時重設回 false——下次真正開新書時恢復正常攔截。
      */
+    @Volatile
     var suppressedUntilReattach: Boolean = false
 
     /** EpubReaderView／PdfReaderView 建構時（init 區塊）呼叫。 */
@@ -962,3 +963,7 @@ git commit -m "test(epic-7): 新增音量鍵翻頁真機整合測試"
 - 採納：`dispatchKeyEvent()` 攔截生效時 `ACTION_DOWN`/`ACTION_UP` 皆消費，只在 `ACTION_DOWN` 時通知 Dart（Task 3 Step 2；**此項刻意偏離 `issues.md` Issue 7 原始「僅 ACTION_DOWN」文字**，理由是已知的 Android 音量條 UI 洩漏陷阱，經人類確認採納，`issues.md` 待本 issue 完成後一併回填此行為調整）
 - 不採納：`PopScope.onPopInvokedWithResult` 顯式型別標註——查證本專案 `analysis_options.yaml` 未啟用 `avoid_types_on_closure_parameters`，且 `app/lib/screens/library_screen.dart:337` 既有、已合併、`flutter analyze` 通過的程式碼即為省略型別寫法，維持與既有慣例一致
 - 不採納：`ReaderViewAttachmentTracker` 增加 `attachmentCount` 供 `notifyLeavingReader` 判斷 `pushReplacement` 競態——已 `grep` 全專案確認 `pushReplacement` 從未被使用，`ReaderScreen` 僅透過 `Navigator.push()` 開啟（`library_screen.dart:284`），`spec.md`「已知限制」已明文此簡化為目前架構下故意的假設，屬 YAGNI
+
+**5. 全部 Task 完成、全分支審查（Ready to merge: Yes）後的追加修訂**（`tmp/epic-7/reviews/code-review-issue-7.md`，經人類確認後採納）：
+- 採納：`ReaderViewAttachmentTracker.suppressedUntilReattach` 加上 `@Volatile`（Task 1，commit `d73d298`）——目前所有讀寫皆在 UI Thread（`dispatchKeyEvent()`／`MethodChannel` 回呼／PlatformView 生命週期方法皆固定於主執行緒），無實質併發風險，但屬零成本防禦性修正，與先前已採納的兩項防禦性修正（nullable channel、計數器下限保護）同一類，一併採納；JVM 測試 5/5 維持通過（`@Volatile` 純屬可見性保障，不改變邏輯）
+- 不採納：抽出獨立 `VolumeKeyChannel` 類別以收斂 `MainActivity` 的 Divergent Change——審查報告本身標註為「未來 Epic 重構」建議，本 issue 只新增 1 個 channel／1 個 case 分支，提前抽象化違反 YAGNI，維持現狀
