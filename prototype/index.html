@@ -124,16 +124,24 @@
       }
     }
 
-    /* 手機裝置框架 */
+    /* 手機裝置框架 - 支援 PPI 解析度與旋轉模擬 */
     .phone-wrapper {
       position: relative;
-      padding: 20px 0;
+      width: calc(var(--phone-width) + 2 * var(--phone-bezel));
+      height: calc(var(--phone-height) + 2 * var(--phone-bezel));
+      transition: width 0.3s ease, height 0.3s ease;
+      display: flex;
+      justify-content: center;
+      align-items: center;
     }
 
     .device-container {
-      position: relative;
+      position: absolute;
+      top: 0;
+      left: 0;
       width: var(--phone-width);
       height: var(--phone-height);
+      transform-origin: top left;
       border: var(--phone-bezel) solid #1E1E24;
       border-radius: var(--phone-radius);
       overflow: hidden;
@@ -143,7 +151,7 @@
         inset 0 0 10px rgba(0, 0, 0, 0.8);
       background: var(--bg-color);
       color: var(--text-color);
-      transition: background 0.3s ease, color 0.3s ease;
+      transition: transform 0.3s ease, background 0.3s ease, color 0.3s ease;
       display: flex;
       flex-direction: column;
     }
@@ -699,8 +707,51 @@
 
     .shelf-grid {
       display: grid;
-      grid-template-columns: repeat(6, 1fr);
-      gap: 6px;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .landscape-device .shelf-grid {
+      grid-template-columns: repeat(4, 1fr);
+    }
+
+    /* 分類卡片內的 2x2 微型封面網格 */
+    .category-mini-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      grid-template-rows: repeat(2, 1fr);
+      gap: 2px;
+      width: 100%;
+      height: 100%;
+    }
+    .category-mini-grid .mini-cover {
+      border-radius: 2px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+    }
+    .category-mini-grid .mini-cover-text {
+      font-family: 'Noto Serif TC', serif;
+      font-weight: 700;
+      font-size: 6px;
+      text-align: center;
+      line-height: 1.1;
+      color: inherit;
+    }
+    .book-card.category-card {
+      cursor: pointer;
+    }
+    .book-card.category-card .category-label {
+      font-size: 8px;
+      font-weight: 600;
+      opacity: 0.7;
+      text-align: center;
+      margin-top: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .book-card {
@@ -723,7 +774,7 @@
     }
 
     .book-cover {
-      height: 64px;
+      height: 96px; /* 原為 64px，提升高度符合 3:4 直立電子書的美觀比例 */
       background: linear-gradient(135deg, #DDD, #ECECEC);
       border-radius: 4px;
       margin-bottom: 4px;
@@ -809,15 +860,15 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 12px;
-      padding-bottom: 8px;
+      margin-bottom: 4px;
+      padding-bottom: 4px;
       border-bottom: 1px solid var(--border-color);
     }
 
     .reader-opt-btn {
-      font-size: 11px;
-      padding: 4px 8px;
-      border-radius: 6px;
+      font-size: 9.5px;
+      padding: 3px 6px;
+      border-radius: 4px;
       border: 1px solid var(--border-color);
       background: var(--card-bg);
       cursor: pointer;
@@ -877,10 +928,21 @@
     .reader-footer {
       display: flex;
       justify-content: space-between;
-      font-size: 11px;
-      opacity: 0.6;
-      margin-top: 10px;
+      align-items: center;
+      font-size: 10px;
+      opacity: 0.8;
+      margin-top: 4px;
       padding: 0 4px;
+    }
+    
+    /* 頁尾進度拖曳條樣式 */
+    .reader-progress-slider {
+      flex: 1;
+      height: 4px;
+      cursor: pointer;
+      accent-color: var(--primary);
+      margin: 0 8px;
+      outline: none;
     }
 
     /* Toast 提示 */
@@ -1059,12 +1121,13 @@
       transform: translateY(100%);
       transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
       z-index: 96;
-      max-height: 75%;
+      max-height: 85%;
       display: flex;
       flex-direction: column;
       color: var(--text-color);
       padding: 16px;
       box-shadow: 0 -10px 25px rgba(0, 0, 0, 0.15);
+      overflow: hidden;
     }
     .bottom-sheet.show {
       transform: translateY(0);
@@ -1320,6 +1383,34 @@
     .sheet-tab.active {
       color: var(--primary);
     }
+
+    /* 小螢幕版面設定適配：BottomSheet 改為全屏，確保關閉按鈕可見 */
+    @media (max-width: 420px) and (max-height: 700px) {
+      .bottom-sheet {
+        max-height: calc(100dvh - 20px) !important;
+        border-radius: 12px 12px 0 0;
+      }
+      .bottom-sheet .bottom-sheet-header {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background: var(--card-bg);
+      }
+    }
+
+    @media (max-width: 360px) {
+      .bottom-sheet {
+        max-height: calc(100dvh - 16px) !important;
+        border-radius: 12px 12px 0 0;
+        padding: 10px;
+      }
+      .bottom-sheet .bottom-sheet-header {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background: var(--card-bg);
+      }
+    }
   </style>
 </head>
 <body>
@@ -1380,13 +1471,13 @@
       <div id="bottom-sheet-backdrop" class="bottom-sheet-backdrop" onclick="closeBottomSheet()"></div>
       <!-- BottomSheet 版面與註記自訂面板 -->
       <div id="bottom-sheet-backdrop" class="bottom-sheet-backdrop" onclick="closeBottomSheet()"></div>
-      <div id="layout-bottom-sheet" class="bottom-sheet" style="height: 520px;">
+      <div id="layout-bottom-sheet" class="bottom-sheet" style="max-height: 85%; height: auto;">
         <div class="bottom-sheet-header" style="padding: 15px 20px 10px 20px;">
           <div class="bottom-sheet-tabs" style="display: flex; gap: 20px; align-items: center; width: 100%; padding-right: 20px; user-select: none;">
             <span class="sheet-tab active" id="tab-layout-btn" onclick="switchSheetTab('layout')" style="font-size: 13px; font-weight: bold; cursor: pointer; padding-bottom: 6px; border-bottom: 2px solid var(--primary); transition: all 0.2s;">⚙️ 版面設定</span>
             <span class="sheet-tab" id="tab-notes-btn" onclick="switchSheetTab('notes')" style="font-size: 13px; font-weight: bold; cursor: pointer; padding-bottom: 6px; border-bottom: 2px solid transparent; opacity: 0.6; transition: all 0.2s;">📝 劃線與書籤</span>
           </div>
-          <span class="bottom-sheet-close" onclick="closeBottomSheet()" style="font-size: 16px; cursor: pointer;">✕</span>
+          <span class="bottom-sheet-close" onclick="closeBottomSheet()" style="font-size: 20px; font-weight: bold; cursor: pointer; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: rgba(0,0,0,0.06); flex-shrink: 0;">✕</span>
         </div>
         
         <!-- Tab 1: 版面與字型設定 -->
@@ -1556,7 +1647,12 @@
             </div>
           </div>
         </div>
-
+          <!-- 底端顯眼的關閉按鈕，確保在滿版下仍能輕易退出 (需求 1) -->
+          <div style="padding: 12px 0 4px 0; border-top: 1px dashed var(--border-color); margin-top: 12px;">
+            <button class="reader-opt-btn" onclick="closeBottomSheet()" style="width: 100%; padding: 10px; font-weight: bold; background: var(--primary); color: #fff; border: none; border-radius: 8px; font-size: 12px; cursor: pointer; transition: all 0.2s;">✕ 關閉並套用設定</button>
+          </div>
+        </div>
+        
         <!-- Tab 2: 劃線與書籤管理 (Task 5) -->
         <div class="bottom-sheet-content" id="tab-content-notes" style="display: none; max-height: 440px; overflow-y: auto; padding: 15px 20px;">
           <div style="display: flex; gap: 8px; margin-bottom: 12px;">
@@ -1567,6 +1663,10 @@
             <!-- 由 JS 動態生成 -->
           </div>
           <button onclick="openMarkdownExport()" class="btn" style="width: 100%; margin-top: 15px; padding: 10px; border-radius: 8px; font-size: 12px; font-weight: bold; background: var(--primary); color: #fff; border: none; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.15);">📤 導出筆記與書籤為 Markdown</button>
+          <!-- 底端顯眼的關閉按鈕 -->
+          <div style="padding: 12px 0 4px 0; border-top: 1px dashed var(--border-color); margin-top: 12px;">
+            <button class="reader-opt-btn" onclick="closeBottomSheet()" style="width: 100%; padding: 10px; font-weight: bold; background: var(--primary); color: #fff; border: none; border-radius: 8px; font-size: 12px; cursor: pointer; transition: all 0.2s;">✕ 關閉並套用設定</button>
+          </div>
         </div>
       </div>
 
@@ -1696,7 +1796,18 @@
   <div class="control-panel">
     <h2>elinkBook 控制台</h2>
     <div style="margin-bottom: 24px; display: flex; flex-direction: column; gap: 8px;">
-      <button class="btn" onclick="runAllTests()">運行自我測試 Suite</button>
+      <!-- 裝置解析度模擬 (解決需求 1 & 確認 1404x1872 等 PPI 的顯示) -->
+        <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); padding: 10px; border-radius: 8px; display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px;">
+          <span style="font-size: 11px; font-weight: bold; opacity: 0.9; color: #FFF; display: flex; align-items: center; gap: 4px;">📱 模擬裝置尺寸與 PPI 規格</span>
+          <select id="device-selector" onchange="changeDeviceDimensions(this.value)" style="width: 100%; font-size: 11px; padding: 6px; border-radius: 4px; background: #2D2D30; color: #E5E5E7; border: 1px solid rgba(255,255,255,0.15); cursor: pointer; outline: none;">
+            <option value="default">預設手機 (390 × 844)</option>
+            <option value="aipaper">AiPaper Reader C (824 × 1648) / 150 PPI</option>
+            <option value="eink300">E-Ink 300 ppi (1404 × 1872) (黑白)</option>
+            <option value="eink150">E-Ink 150 ppi (702 × 936) (彩色)</option>
+          </select>
+          <button class="btn" style="margin-top: 4px; padding: 6px; font-size: 10.5px; background: #4B5563; color: #fff; width: 100%; border-radius: 4px;" onclick="rotateDevice()">🔄 旋轉模擬器 (直立/橫放)</button>
+        </div>
+        <button class="btn" onclick="runAllTests()">運行自我測試 Suite</button>
       <button class="btn" style="background: #D97706; color: #fff;" onclick="triggerSyncConflict()">☁️ 模擬雲端進度衝突 (85%)</button>
       <div style="border-top: 1px dashed rgba(0,0,0,0.15); padding-top: 8px; margin-top: 4px; display: flex; flex-direction: column; gap: 6px;">
         <span style="font-size: 11px; font-weight: bold; opacity: 0.8; color: var(--text-color);">📥 模擬書籍匯入 (FR-34)</span>
@@ -2401,8 +2512,11 @@
             footer.style.setProperty('display', 'flex', 'important');
           }
           footer.innerHTML = `
-            <span>進度：${book.progress}% | 今日已讀：${Math.round(AppState.stats.todayMinutes)} 分鐘</span>
-            <span>第 ${AppState.currentPageNumber} / 12 頁</span>
+            <div style="display: flex; align-items: center; width: 100%; gap: 6px;">
+              <span style="white-space: nowrap; font-size: 9px; opacity: 0.8;">進度 ${book.progress}%</span>
+              <input type="range" class="reader-progress-slider" min="1" max="12" value="${AppState.currentPageNumber}" oninput="handleReaderProgressSlider(this.value)">
+              <span style="white-space: nowrap; font-size: 9px; opacity: 0.8;">${AppState.currentPageNumber} / 12 頁</span>
+            </div>
           `;
         }
       }
@@ -2688,6 +2802,94 @@
       
       updateStateMonitor();
     }
+
+    // 裝置模擬與尺寸切換 (解決需求 1，支援 ppi 切換與橫直放)
+    function changeDeviceDimensions(deviceType) {
+      const shell = document.getElementById('device-shell');
+      if (!shell) return;
+      
+      let w = 390, h = 844, r = 46, b = 12;
+      let scale = 1.0;
+      
+      if (deviceType === 'aipaper') {
+        w = 824; h = 1648; r = 24; b = 16;
+        scale = 0.45; // 在電腦螢幕上等比例縮小顯示
+      } else if (deviceType === 'eink300') {
+        w = 1404; h = 1872; r = 16; b = 20;
+        scale = 0.38; // 在電腦螢幕上等比例縮小顯示
+        switchTheme('eink'); // E-Ink 300 ppi 黑白電子書，切換至 eink 主題
+      } else if (deviceType === 'eink150') {
+        w = 702; h = 936; r = 16; b = 14;
+        scale = 0.65; // 在電腦螢幕上等比例縮小顯示
+        switchTheme('sepia'); // 彩色電子紙，預設羊皮紙
+      } else {
+        switchTheme('light'); // 預設手機，切回淺色
+      }
+      
+      shell.dataset.origWidth = w;
+      shell.dataset.origHeight = h;
+      shell.dataset.origRadius = r;
+      shell.dataset.origBezel = b;
+      shell.dataset.origScale = scale;
+      
+      applyDeviceStyles();
+      showToast(`📱 切換至裝置模式：${deviceType.toUpperCase()}`);
+    }
+    
+    function rotateDevice() {
+      const shell = document.getElementById('device-shell');
+      if (!shell) return;
+      shell.classList.toggle('landscape-device');
+      applyDeviceStyles();
+      const isLandscape = shell.classList.contains('landscape-device');
+      showToast(isLandscape ? '🔄 模擬器已旋轉為：橫放 (Landscape)' : '🔄 模擬器已旋轉為：直立 (Portrait)');
+    }
+    
+    function applyDeviceStyles() {
+      const shell = document.getElementById('device-shell');
+      const wrapper = document.querySelector('.phone-wrapper');
+      if (!shell) return;
+      
+      const isLandscape = shell.classList.contains('landscape-device');
+      
+      let w = parseInt(shell.dataset.origWidth || 390);
+      let h = parseInt(shell.dataset.origHeight || 844);
+      let r = parseInt(shell.dataset.origRadius || 46);
+      let b = parseInt(shell.dataset.origBezel || 12);
+      let scale = parseFloat(shell.dataset.origScale || 1.0);
+      
+      if (isLandscape) {
+        const tmp = w; w = h; h = tmp;
+      }
+      
+      shell.style.setProperty('--phone-width', `${w}px`);
+      shell.style.setProperty('--phone-height', `${h}px`);
+      shell.style.setProperty('--phone-radius', `${r}px`);
+      shell.style.setProperty('--phone-bezel', `${b}px`);
+      
+      if (wrapper) {
+        const totalW = w + b * 2;
+        const totalH = h + b * 2;
+        wrapper.style.width = `${totalW * scale}px`;
+        wrapper.style.height = `${totalH * scale}px`;
+        shell.style.transform = `scale(${scale})`;
+      }
+      
+      renderApp();
+    }
+
+    // 頁尾進度條直接跳頁邏輯 (需求 5)
+    function handleReaderProgressSlider(val) {
+      const pageNum = parseInt(val);
+      AppState.currentPageNumber = pageNum;
+      const book = AppState.books.find(b => b.id === AppState.selectedBook);
+      if (book) {
+        book.progress = Math.round((pageNum / 12) * 100);
+      }
+      renderApp();
+      updateStateMonitor();
+    }
+
 
     // 切換閱讀器橫直排排版
     function toggleLayout() {
@@ -3337,27 +3539,83 @@
             </div>
           `;
         } else {
-          shelfContentHtml = `
-            <div class="${AppState.viewMode === 'grid' ? 'shelf-grid' : 'shelf-list'}">
-              ${sortedBooks.map(book => `
-                <div class="book-card" onclick="selectBook('${book.id}')" title="${book.title} (${book.author}) - 已讀 ${book.progress}%">
-                  <div class="book-cover ${book.coverStyle}">
-                    <span class="book-cover-text">${book.title.substring(0, 3)}</span>
+          // 建立分類群組 → 書籍的對照表
+          const groupBooks = {};
+          sortedBooks.forEach(b => {
+            const grp = b.group || '未分類';
+            if (!groupBooks[grp]) groupBooks[grp] = [];
+            groupBooks[grp].push(b);
+          });
+          const activeGroups = AppState.groups.filter(g => groupBooks[g] && groupBooks[g].length > 0);
+
+          const bookCardHtml = (book) => `
+            <div class="book-card" onclick="selectBook('${book.id}')" title="${book.title} (${book.author}) - 已讀 ${book.progress}%">
+              <div class="book-cover ${book.coverStyle}">
+                <span class="book-cover-text">${book.title.substring(0, 3)}</span>
+              </div>
+              <div class="book-info">
+                <div class="book-title-author">
+                  <span class="book-title">${book.title}</span>
+                  <span class="book-author">${book.author}</span>
+                </div>
+                <div class="book-progress-wrapper">
+                  <div class="progress-bar-container">
+                    <div class="progress-bar-fill" style="width: ${book.progress}%;"></div>
                   </div>
-                  <div class="book-info">
-                    <div class="book-title-author">
-                      <span class="book-title">${book.title}</span>
-                      <span class="book-author">${book.author}</span>
-                    </div>
-                    <div class="book-progress-wrapper">
-                      <div class="progress-bar-container">
-                        <div class="progress-bar-fill" style="width: ${book.progress}%;"></div>
-                      </div>
-                      <div class="book-progress-text">${book.progress}%</div>
-                    </div>
+                  <div class="book-progress-text">${book.progress}%</div>
+                </div>
+              </div>
+            </div>`;
+
+          const categoryCardHtml = (grp, books) => {
+            const miniCovers = books.slice(0, 4).map(b => `
+              <div class="mini-cover ${b.coverStyle}" style="font-size: 5px; height: 100%; width: 100%; display: flex; align-items: center; justify-content: center; border-radius: 2px;">
+                <span style="transform: scale(0.6); display: inline-block; white-space: nowrap; font-weight: bold; color: inherit;">${b.title.substring(0, 2)}</span>
+              </div>
+            `).join('');
+            // 補齊不足4本的空位
+            const emptyCount = Math.max(0, 4 - books.length);
+            const emptyHtml = Array(emptyCount).fill('<div class="mini-cover" style="background: rgba(0,0,0,0.05); border: 1px dashed var(--border-color); height: 100%; width: 100%;"></div>').join('');
+            return `
+              <div class="book-card category-card" onclick="selectGroupFilter('${grp}')" title="分類：${grp}（${books.length} 本書）" style="display: flex; flex-direction: column; justify-content: space-between;">
+                <div class="book-cover" style="background: var(--border-color); padding: 4px; display: block; height: 96px;">
+                  <div class="category-mini-grid">
+                    ${miniCovers}${emptyHtml}
                   </div>
                 </div>
-              `).join('')}
+                <div class="book-info" style="text-align: center; padding: 4px 2px; flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                  <span class="book-title" style="font-weight: bold; font-size: 11px; line-height: 1.2;">📁 ${grp}</span>
+                  <span class="book-author" style="font-size: 8.5px; opacity: 0.6; margin-top: 2px;">${books.length} 本書</span>
+                </div>
+              </div>`;
+          };
+
+          // 網格與清單視圖的卡片生成 (需求 4)
+          let gridCardsHtml = '';
+          if (AppState.selectedGroup === '全部') {
+            if (AppState.viewMode === 'grid') {
+              // 1. 渲染各分類的卡片 (除了未分類)
+              const grps = AppState.groups.filter(g => g !== '未分類' && groupBooks[g] && groupBooks[g].length > 0);
+              grps.forEach(grp => {
+                gridCardsHtml += categoryCardHtml(grp, groupBooks[grp]);
+              });
+              // 2. 渲染未歸類的書 (group === '未分類' 或 null)
+              const unclassed = sortedBooks.filter(b => !b.group || b.group === '未分類');
+              unclassed.forEach(book => {
+                gridCardsHtml += bookCardHtml(book);
+              });
+            } else {
+              gridCardsHtml = sortedBooks.map(book => bookCardHtml(book)).join('');
+            }
+          } else {
+            // 點入特定分類模式：只顯示該分類底下的所有書籍 (不重複顯示分類卡片)
+            const filteredBooks = sortedBooks.filter(b => b.group === AppState.selectedGroup);
+            gridCardsHtml = filteredBooks.map(book => bookCardHtml(book)).join('');
+          }
+
+          shelfContentHtml = `
+            <div class="${AppState.viewMode === 'grid' ? 'shelf-grid' : 'shelf-list'}">
+              ${gridCardsHtml}
             </div>
           `;
         }
@@ -3487,7 +3745,7 @@
           <div class="page-wrapper" style="height: 100%;">
             <div class="reader-toolbar">
               <div style="flex: 1; display: flex; align-items: center; ${book.showHeader === false ? 'opacity: 0 !important; pointer-events: none !important;' : ''}">
-                <span onclick="openTocBottomSheet()" style="font-size:12px; font-weight:600; opacity:0.8; cursor: pointer; text-decoration: underline;" title="點擊展開目錄">《${book.title}》 ${chapterName} ▾</span>
+                <span onclick="openTocBottomSheet()" style="font-size:10px; font-weight:600; opacity:0.8; cursor: pointer; text-decoration: underline;" title="點擊展開目錄">《${book.title}》 ${chapterName} ▾</span>
               </div>
               <div style="display: flex; gap: 6px;">
                 <button class="reader-opt-btn ${hasBookmark ? 'active' : ''}" onclick="toggleBookmark()">${hasBookmark ? '🔖 已書籤' : '🔖 書籤'}</button>
@@ -3504,10 +3762,13 @@
               ${readerHtmlContent}
             </div>
             
-            <div class="reader-footer" style="${book.showFooter === false ? 'display: none !important;' : ''}">
-              <span>進度：${book.progress}% | 今日已讀：${Math.round(AppState.stats.todayMinutes)} 分鐘</span>
-              <span>第 ${AppState.currentPageNumber} / 12 頁</span>
-            </div>
+              <div class="reader-footer" style="${book.showFooter === false ? 'display: none !important;' : ''}">
+                <div style="display: flex; align-items: center; width: 100%; gap: 6px;">
+                  <span style="white-space: nowrap; font-size: 9px; opacity: 0.8;">進度 ${book.progress}%</span>
+                  <input type="range" class="reader-progress-slider" min="1" max="12" value="${AppState.currentPageNumber}" oninput="handleReaderProgressSlider(this.value)">
+                  <span style="white-space: nowrap; font-size: 9px; opacity: 0.8;">${AppState.currentPageNumber} / 12 頁</span>
+                </div>
+              </div>
           </div>
         `;
       } 
@@ -4103,6 +4364,17 @@
       AppState.currentPageNumber = originalPage;
     });
 
+    // 初始化模擬裝置資料與尺寸
+    const shellInit = document.getElementById('device-shell');
+    if (shellInit) {
+      shellInit.dataset.origWidth = 390;
+      shellInit.dataset.origHeight = 844;
+      shellInit.dataset.origRadius = 46;
+      shellInit.dataset.origBezel = 12;
+      shellInit.dataset.origScale = 1.0;
+      applyDeviceStyles();
+    }
+    
     // 初始渲染與自我測試
     switchPage('shelf');
     switchTheme('light');
