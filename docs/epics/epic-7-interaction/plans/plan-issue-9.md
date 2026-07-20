@@ -396,7 +396,7 @@ adb -s <device-id> shell rm -f /sdcard/Download/issue9_vertical_pagejump.epub
 - Consumes：Task 1-4 的截圖與 logcat 證據
 - Produces：`issues.md` Issue 9 回填所需的最終結論
 
-- [ ] **Step 1：先還原 Task 2 的暫時性插樁**
+- [x] **Step 1：先還原 Task 2 的暫時性插樁**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook"
@@ -406,7 +406,7 @@ git checkout -- app/android/app/src/main/kotlin/cc/ugotit/elinkbook/EpubReaderVi
 
 Expected：`git diff --stat` 顯示該檔案有異動（確認插樁確實存在過），`git checkout --` 後完全還原。**先還原再進行 Step 2 的修正**，避免插樁殘留與正式修正混在同一批未還原的變更裡難以分辨。
 
-- [ ] **Step 2：撰寫診斷報告**
+- [x] **Step 2：撰寫診斷報告**
 
 在 `docs/epics/epic-7-interaction/reviews/spike-vertical-pagejump.md` 寫入以下結構（依 Task 1-4 的實際觀察結果填入，不得照抄本範本的佔位文字）：
 
@@ -446,7 +446,7 @@ Expected：`git diff --stat` 顯示該檔案有異動（確認插樁確實存在
 <是否已修正過時註解；根因是否明確且風險低到可直接修正（若是，說明修法與驗證方式）；若需另立實作工單，說明具體退回方案>
 ```
 
-- [ ] **Step 3：修正過時註解（不論根因為何，皆須執行）**
+- [x] **Step 3：修正過時註解（不論根因為何，皆須執行）**
 
 在 `app/android/app/src/main/kotlin/cc/ugotit/elinkbook/EpubReaderView.kt` 找到 `"nextPage"` case 的既有註解：
 
@@ -480,13 +480,13 @@ Expected：`git diff --stat` 顯示該檔案有異動（確認插樁確實存在
             }
 ```
 
-- [ ] **Step 4：視根因判定結果決定是否當場修正**
+- [x] **Step 4：視根因判定結果決定是否當場修正**（判定退回：根因為 Readium reflowable Navigator 內部行為，App 層兩條路徑逐行確認呼叫完全相同、無放大/節流，修法有架構影響，記錄退回方案於報告與 `issues.md`）
 
 **若 Step 2 判定根因明確且修法風險低**（例如：發現送給 Readium 的 `EpubPreferences` 有某個直排相關欄位設定錯誤，或 `goForward()`/`goBackward()` 呼叫需要改用 Readium 提供的其他等效 API）：直接修正該處程式碼，並在報告的「對 Issue 9 驗收標準的回應」段落記錄修法與驗證方式（重新走一次 Task 3/4 對應組合的量測流程，確認修正後單次觸發確實只推進一頁）。
 
 **若根因不明確、或修法需要更動架構**（例如懷疑是 Readium 函式庫本身在特定直排內容結構下的既有 bug，需要升版或繞過）：不在本 issue 內強行修正，在報告與 `issues.md` 回填段落記錄具體退回方案（例如：「建議另立實作工單，方向為 X」），供後續另立工單依循。
 
-- [ ] **Step 5：確認清理完整**
+- [x] **Step 5：確認清理完整**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook"
@@ -495,7 +495,7 @@ git status --short
 
 Expected：只剩 `docs/epics/epic-7-interaction/reviews/spike-vertical-pagejump.md`（新增）與 `app/android/.../EpubReaderView.kt`（僅 Step 3 的註解修正，與若有 Step 4 的根因修正——皆為正式異動，非插樁殘留）。截圖與 logcat 檔案位於 `tmp/epic-7/reviews/`，已被根目錄 `.gitignore`（`tmp/`）排除。
 
-- [ ] **Step 6：`flutter analyze` 與原生端編譯驗證**
+- [x] **Step 6：`flutter analyze` 與原生端編譯驗證**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -511,11 +511,11 @@ flutter build apk --debug
 
 Expected：建置成功，無 Kotlin 編譯錯誤。
 
-- [ ] **Step 7：更新 `issues.md`——回填 Issue 9 結論**
+- [x] **Step 7：更新 `issues.md`——回填 Issue 9 結論**
 
 把 Issue 9 的 `**Status:**`（現為 `ready-for-agent`）改為完成狀態，比照 Issue 1 既有完成說明風格，內容需涵蓋：根因判定結論、是否已當場修正（若是，簡述修法；若否，記錄退回方案與建議的後續工單方向）、過時註解已修正、引用診斷報告路徑 `reviews/spike-vertical-pagejump.md`。
 
-- [ ] **Step 8：Commit**
+- [x] **Step 8：Commit**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook"
