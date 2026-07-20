@@ -75,6 +75,20 @@ bool _locatorPositionChanged(String? a, String? b) => !_locatorCoreEquals(a, b);
 /// 執行並通過 2/2：tester.tapAt() 對此原生 InputListener 路徑（無 Flutter
 /// GestureDetector 包裹 AndroidView）確認可靠，上述人工驗證清單並未被觸發
 /// 使用，保留於此僅供未來若真機環境改變、此技術不再可靠時的備援參考。
+///
+/// 【已知未涵蓋風險，待人工真機驗證，不阻塞本 issue 合併】本檔案與 Issue 1
+/// spike 皆只用無註記（highlight/note）、無內部連結的純文字書驗證熱區點擊，
+/// 未驗證「點擊既有劃線／備註標記」或「點擊 EPUB 內部連結（例如註腳）」時，
+/// `EpubReaderView.kt` 的 `InputListener.onTap()` 是否會與 Readium 既有的
+/// `DecorableNavigator.onDecorationActivated`／連結導覽事件同時觸發，造成
+/// 「開啟標記編輯 Dialog／連結跳轉」與「翻頁」雙重動作。比照
+/// epub_highlights_notes_test.dart 檔頭既有慣例（「點擊既有標記觸發
+/// onAnnotationActivated」本來就已列為該檔案的真機人工驗證項目、非本 issue
+/// 新增的缺口），此項一併列入人工驗證清單：開啟一本含既有劃線/備註/內部
+/// 連結的流式 EPUB，分別點擊標記本身與連結，確認只觸發對應的單一動作
+/// （標記編輯 Dialog 或連結跳轉），不應同時觸發熱區翻頁/選單切換；若發現
+/// 雙重觸發，需在 `onTap()` 內先判斷該點是否落在 decoration/連結範圍，是則
+/// `return false` 交由 Readium 自行處理。
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
@@ -129,6 +143,10 @@ void main() {
     final menuZone = topLeft + Offset(size.width / 2, size.height / 2);
 
     final positionAfterOpen = lastPosition;
+    expect(positionAfterOpen, isNotNull,
+        reason: '開書後應已收到至少一次 onLocatorChanged，否則後續「位置有變動」'
+            '斷言會在缺少真實基準值的情況下（_locatorPositionChanged 對 null '
+            '基準恆回傳 true）產生假陽性');
 
     await tester.tapAt(rightZone);
     await tester.pumpAndSettle(const Duration(seconds: 2));
