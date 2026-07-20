@@ -93,9 +93,9 @@
 
 **審查與修正：** 5 個 Task 分別經過 spec compliance + code quality 審查（Task 2 因上述發現偏離 brief 逐字碼，經 1 輪修正——補上長按/點擊邊界的回歸測試、修正一處與新機制矛盾的舊註解——後通過）；全分支最終審查（Opus）結論 Ready to merge: With fixes，0 Critical、3 Important（皆源自計畫書本身逐字內容，非實作者自行加料，經人裁示後修正）：(1) 除錯用「熱區輔助線」`GridView.count` 預設方形格子在直式手機上跑版（功能判讀 `hitTestZoneIndex()` 不受影響）→ 改為 `Column`/`Row` of `Expanded` 依實際比例排版；(2) `extendBodyBehindAppBar` 只解決 AppBar 造成的 resize，頁尾（in-flow）顯示/隱藏切換仍會造成 `body` resize，與計畫書聲稱「完全防範 Issue 6 WebView 重新分頁」不完全相符 → 修正程式碼註解用語，明確記錄為 Issue 6 開工前需處理的已知限制，未強行改造頁尾版面結構；(3) 保留的 `onTapUp`/`_handleZoneTap` 死碼有潛在雙重派發風險 → 加上一行防禦性交叉引用註解。已透過 PR #58 合併回 `main`，`main` 上重新驗證：`flutter analyze` 乾淨、`flutter test`（全專案）528 個測試全數通過。
 
-**待辦（未阻擋合併，比照 `epic-6-annotations` 既有先例）：** Task 4 Step 4 人工驗證清單尚未執行，需要人類實機操作：依序點擊 9 宮格各格對應動作是否正確、開啟熱區輔助線視覺確認格線與標籤、熱區點擊與長按拖曳劃線交叉操作不誤觸發、裝置旋轉後熱區位置正確對應。已完整記錄於 `app/integration_test/pdf_nav_zone_test.dart` 檔案開頭註解；驗證結果待補記於本節。
+**待辦（已於 Issue 8 全數完成）：** Task 4 Step 4 人工驗證清單（9 宮格對應動作、熱區輔助線視覺、熱區與長按拖曳劃線交叉操作、裝置旋轉）已於 Issue 8 Task 1（前 3 項與裝置旋轉，§1.1-1.4, §1.6）與 Task 2（長按拖曳交叉驗證，§2.1）全數通過實機驗證（詳見 `reviews/qa-issue-8-report.md` §1, §2.1），4 個子項全數消號閉環。
 
-**待辦（人類文件修正，非本 issue 程式碼範圍）：** `docs/epics/epic-7-interaction/spec.md` 第 34 行「PDF 原生層無觸控監聽、沒有搶手勢競技場對象」的敘述已證實不成立，建議修正。
+**待辦（人類文件修正，非本 issue 程式碼範圍）：** `docs/epics/epic-7-interaction/spec.md` 第 34 行「PDF 原生層無觸控監聽、沒有搶手勢競技場對象」的敘述已證實不成立，已於 Issue 8 修正完成。
 
 **依賴：** Issue 2
 
@@ -107,7 +107,7 @@
   - 新增單一分派入口 `void _handleZoneAction(ZoneAction action)`：`previousPage`/`nextPage` 呼叫既有換頁方法；`menu` 執行 `setState(() => _chromeVisible = !_chromeVisible)`；`none` 不做事
 - **`PdfReaderView.dart`**：
   - 移除既有 `onHorizontalDragEnd` 滑動翻頁 handler 整段（ADR 0010）
-  - 新增 `Positioned.fill` 的 3×3 `GestureDetector` 疊加層，每格 `key: Key('nav_zone_$index')`，**只註冊 `onTap`，不註冊任何 drag recognizer**（審查修正——PDF 原生層無任何觸控監聽，不需要搶手勢競技場；與既有長按拖曳框選 `onLongPressStart`/`onLongPressMoveUpdate`/`onLongPressEnd`，`epic-6-annotations` Issue 3，共存於同一個 `GestureDetector`）
+  - 新增 `Positioned.fill` 的 3×3 `GestureDetector` 疊加層，每格 `key: Key('nav_zone_$index')`，**只註冊 `onTap`，不註冊任何 drag recognizer**（審查修正——原生層是否有觸控監聽與 `AndroidView` 是否贏得手勢競技場無關；PDF 熱區改由既有 `Listener` 手動座標判讀，正確區分點擊與既有長按拖曳劃線手勢，見 Issue 4 完整技術發現段落；與既有長按拖曳框選 `onLongPressStart`/`onLongPressMoveUpdate`/`onLongPressEnd`，`epic-6-annotations` Issue 3，共存）
   - `onTap` 呼叫 `hitTestZoneIndex()` 換算格子後查 `navZoneActions[index]`（透過 `ReaderScreen` 傳入的 `ResolvedPreferences.navZoneActions`）並呼叫 `_handleZoneAction`
   - `showNavZoneDebugOverlay == true` 時，同一層額外疊加 9 個格子的邊框與動作文字標籤
 
@@ -200,7 +200,7 @@
 
 `flutter analyze` 乾淨、`flutter test`（全專案）536 個測試全數通過（基準 534 + Task 4 新增 2）；`./gradlew :app:testDebugUnitTest` BUILD SUCCESSFUL（含新增 `ReaderViewAttachmentTrackerTest` 5/5）；已透過 PR #61 合併回 `main`（merge commit `578cd8c`）。
 
-**待辦（未阻擋合併，比照 Issue 4/6 既有先例）：** `app/integration_test/volume_key_test.dart` 檔頭已記錄的人工真機驗證清單尚待人類執行——`dispatchKeyEvent()` 攔截的是原生 Activity 層級硬體按鍵事件，Flutter `integration_test` 框架無法自動化模擬觸達：(1) 實體/虛擬音量鍵直接按下或 `adb shell input keyevent 24/25`，確認 PDF／EPUB FXL／EPUB 流式三種畫面正確翻頁；(2) 按返回鍵離開閱讀畫面轉場動畫期間，音量鍵是否已即時恢復系統音量調整（驗證 `notifyLeavingReader` 即時釋放機制）；(3) 音量鍵攔截消費事件後，系統原生音量提示 UI（音量條 Toast）是否仍會意外跳出（`@Volatile`／`ACTION_UP` 消費修正的實機效果確認）。
+**待辦（已於 Issue 8 全數完成）：** `app/integration_test/volume_key_test.dart` 檔頭之 3 項人工真機驗證清單（三種畫面音量鍵翻頁一致性、離開轉場音量即時恢復、音量條 UI 消費與防意外跳出），**已於 Issue 8 Task 4（§4.1-4.3）全數通過實機驗證**（詳見 `reviews/qa-issue-8-report.md` §4），3 個子項全數消號閉環。
 
 **依賴：** Issue 4
 
@@ -228,7 +228,14 @@
 
 ## Issue 8：真機驗證與收尾
 
-**Status:** ready-for-agent
+**Status:** ✅ 已完成。依 `plans/plan-issue-8.md` Task 1-5 完成實機驗收與 Epic 7 收尾：
+- **端到端組合驗證 (Task 1)**：3 模板 + 自訂模式在 PDF、EPUB FXL、EPUB 流式 3 種畫面上完成全量驗證。除錯輔助線標籤與常數表 100% 貼合、實際點擊正確觸發對應動作、自訂模式具備選單格防呆驗證、重開 App 持久化（左翻頁模式）正常載入、橫向/直向螢幕旋轉熱區自適應縮放（回填 Issue 4 待辦）。
+- **手勢競技場交叉驗證 (Task 2)**：PDF 單擊熱區與長按拖曳劃線手勢共存不誤觸發（誤觸發率 0%）；EPUB 流式劃線標記點擊與熱區點擊無雙重觸發（回填 Issue 6 待辦）。
+- **沉浸模式一致性 (Task 3)**：PDF/EPUB 流式/EPUB FXL 3 種畫面單擊選單格一併隱藏/恢復控制列，行為高度一致；EPUB 流式滾動模式下左右換頁熱區正確失效、選單格維持可操作。
+- **音量鍵驗證 (Task 4)**：PDF/EPUB FXL/EPUB 流式音量鍵翻頁行為一致且與沉浸 UI 隔離；離開閱讀器返回書架後音量鍵即時恢復系統音量；攔截期間 `ACTION_DOWN`/`ACTION_UP` 均成功消費，系統音量條 UI 無意外跳出（回填 Issue 7 待辦）。
+- **待辦回填與閉環 (Task 5)**：Issue 4（熱區/劃線/旋轉）、Issue 6（標記/雙重觸發/捲動）、Issue 7（音量鍵）之全部殘留人工驗證待辦事項已全數消號閉環。
+- **後續追蹤**：驗證過程中未發現任何阻擋性缺陷或新落差，無須建立後續 Issue（後續 Issue 追蹤：無）。
+- **QA 報告 reference**：`reviews/qa-issue-8-report.md`（註：該報告為實機驗證作業紀錄，未進版控，所有結論已完整回填至本檔案）。
 
 **依賴：** Issue 3、4、5、6、7 全部完成
 
