@@ -568,8 +568,17 @@ git commit -m "feat(epic-7): MainActivity 新增 elinkbook/volume_key 頻道與 
       ),
     );
     await tester.tap(find.byKey(const Key('open_reader')));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
     await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+    // 模擬原生端 onPageRendered，讓 _state 脫離 loading（純 flutter test
+    // 環境下 AndroidView 不會真正觸發原生回呼，比照本檔案既有測試慣例）
+    // ——CircularProgressIndicator 為不定長動畫，若一直停留在 loading，
+    // 後續 pumpAndSettle() 永遠不會收斂而逾時（實作修正，全分支審查發現
+    // 原範例的 pumpAndSettle() 會在此情境逾時，已改為手動觸發
+    // onPageRendered 後再 pump，本檔案已有多處先例）。
+    tester.widget<PdfReaderView>(find.byType(PdfReaderView)).onPageRendered();
     await tester.pump();
 
     expect(outgoingCalls, isEmpty);
