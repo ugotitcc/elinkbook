@@ -154,7 +154,13 @@
 
 ## Issue 6：EPUB 流式熱區導覽（原生 `InputListener`）
 
-**Status:** ready-for-agent
+**Status:** ✅ 已完成。依 `plans/plan-issue-6.md` Task 1-6 完成實作：新增純 Kotlin `NavZoneHitTester.cellIndex()`（JVM 測試 10 案，與 Dart 端 `hitTestZoneIndex()` 逐位元一致）；`EpubReaderView.dart` 把既有 `navZoneActions` 欄位首次送到原生端（此前僅供 FXL Dart 端疊加層使用），新增 `onZoneTapped: ValueChanged<int>?` 接收原生端回呼；`EpubReaderView.kt` 新增巢狀 `ZoneAction` 列舉、`buildPreferencesFromMap()` 解析、僅流式（`isFixedLayout == false`）路徑註冊 `InputListener`，依 Issue 1 spike 結論直接採用（不需退回自行實作方案）：`previousPage`/`nextPage` 呼叫 `goBackward()`/`goForward(animated = false)`（捲動模式下依 design.md 決策 #15 略過）、`menu` 觸發 `onZoneTapped({"cellIndex": index})`、`none` 不做事；`ReaderScreen` 接上 `onZoneTapped: (index) => _handleZoneAction(resolved.navZoneActions[index])`，複用既有分派入口。
+
+**真機驗證（Task 5）：** `app/integration_test/epub_stream_nav_zone_test.dart` 在真機（3CEF42ECD491687，Android 15/API 35）執行 2/2 通過，經 3 輪真機除錯收斂：(1) 首輪執行確認生產程式碼（Task 1-4）完全正確——`tester.tapAt()` 對此純原生 `InputListener` 路徑（無 Flutter `GestureDetector` 包裹 `AndroidView`）可靠，未重現 PDF（Issue 4）的手勢競技場問題，不需退回人工 `adb shell input tap` 驗證清單；但發現測試檔本身 2 處斷言錯誤（螢幕正中央點擊實際落在九宮格 index 4 而非誤植的 index 1；locator JSON 嚴格字串相等比對對 Readium 非同步補齊中繼資料過於敏感）；(2) 修正後發現第 3 個問題——捲動模式選單熱區點擊斷言失敗，經控制者複查 `EpubReaderView.kt` dispatch 邏輯確認 `MENU` 分支未受 `scroll` 條件約束（排除生產缺陷），純屬測試等待影格不足，改用 `pumpAndSettle` 後 2/2 通過；(3) 逐工單審查另發現 1 項 Important（測試 1 的換頁斷言用全 JSON 字串不相等判斷、理論上可能被中繼資料雜訊誤判為真的換頁），修正為新增 `_locatorPositionChanged()` 輔助函式改比對 `href`/`progression` 核心欄位，再次真機驗證 2/2 通過。
+
+**全分支最終審查（Opus）：** 結論 Ready to merge: With fixes（實質偏 Yes），0 Critical、1 Important、若干 Minor。Important 已處理：`InputListener.onTap()` 恆回傳 `true`，是否會與既有標記啟用（`epic-6-annotations` 的 `onAnnotationActivated`）或 EPUB 內部連結導覽在流式書籍中雙重觸發，尚未經真機驗證（Issue 1 spike 與本 issue 的 `integration_test` 皆只用無標記/連結的純文字書測試）——已比照 `epub_highlights_notes_test.dart` 既有慣例（該檔案本來就已將「點擊既有標記觸發 `onAnnotationActivated`」列為真機人工驗證項目，非本 issue 新增缺口）記錄為 `epub_stream_nav_zone_test.dart` 檔頭的人工驗證待辦事項，**不阻塞本 issue 合併**，待人類於真機開啟含既有劃線/備註/內部連結的流式 EPUB 驗證後回填結論；若發現雙重觸發，需在 `onTap()` 內先判斷該點是否落在 decoration/連結範圍。Minor 項目：已修正「`positionAfterOpen` 為 null 時斷言恆為真」的假陽性風險（新增 `isNotNull` 前置斷言）；其餘 Minor（`buildPreferencesFromMap()` 副作用範圍略超出函式名、`ReaderScreen` 二次查表冗餘、雙演算法無自動化同步護欄）判定為可接受現狀，未修改。
+
+`flutter analyze` 乾淨、`flutter test`（全專案）534 個測試全數通過（基準 531 + Task 2 新增 2 + Task 4 新增 1）；`./gradlew :app:testDebugUnitTest`（因既有跨磁碟機 Gradle 環境問題改用 `:app:` 範圍限定，主分支同樣存在此問題、與本 issue 無關）`BUILD SUCCESSFUL`，83 個 JVM 測試（8 個測試類別，含新增 `NavZoneHitTesterTest` 10/10）全數通過。
 
 **依賴：** Issue 1、Issue 2、Issue 4
 

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -75,6 +76,15 @@ class EpubReaderView extends StatefulWidget {
   /// 開啟除錯用途（epic-7-interaction Issue 2/3 `showNavZoneDebugOverlay`）。
   final bool showNavZoneDebugOverlay;
 
+  /// 僅流式 EPUB（`_isFixedLayout == false`）路徑觸發：原生端
+  /// `InputListener.onTap()` 判讀出熱區動作為 [ZoneAction.menu] 時，透過
+  /// method channel 回呼傳回該格索引（0-8，見 `zone_hit_test.dart` 索引
+  /// 慣例），呼叫端（`ReaderScreen`）負責分派實際行為（epic-7-interaction
+  /// Issue 6）。`previousPage`/`nextPage`/`none` 三種動作完全由原生端自主
+  /// 處理（呼叫 Readium `goForward()`/`goBackward()` 或不做事），不會觸發
+  /// 這個回呼——與 FXL 路徑的 [onZoneAction] 互斥，兩者不會同時被呼叫。
+  final ValueChanged<int>? onZoneTapped;
+
   /// 全書字元數快取（epic-5-toc-pagination Issue 3）。`null` 代表尚未計算過，
   /// 原生端會觸發背景計算；非 `null` 則直接沿用快取值，不重新走訪全書。
   final int? totalCharacterCount;
@@ -123,6 +133,7 @@ class EpubReaderView extends StatefulWidget {
     ],
     this.onZoneAction,
     this.showNavZoneDebugOverlay = false,
+    this.onZoneTapped,
     this.totalCharacterCount,
     this.onCharacterCountReady,
     this.onSelectionChanged,
@@ -257,7 +268,8 @@ class _EpubReaderViewState extends State<EpubReaderView> {
         widget.textAlign != oldWidget.textAlign ||
         widget.publisherStyles != oldWidget.publisherStyles ||
         widget.dualPageMode != oldWidget.dualPageMode ||
-        widget.isLandscape != oldWidget.isLandscape;
+        widget.isLandscape != oldWidget.isLandscape ||
+        !listEquals(widget.navZoneActions, oldWidget.navZoneActions);
   }
 
   /// 把目前所有非 null 的偏好參數組成一個 map，key 名稱與原生端契約一致
@@ -290,6 +302,8 @@ class _EpubReaderViewState extends State<EpubReaderView> {
     }
     map['dualPageMode'] = widget.dualPageMode.name;
     map['isLandscape'] = widget.isLandscape;
+    map['navZoneActions'] =
+        widget.navZoneActions.map((action) => action.name).toList();
     return map;
   }
 
@@ -340,6 +354,10 @@ class _EpubReaderViewState extends State<EpubReaderView> {
         break;
       case 'onAnnotationActivated':
         widget.onAnnotationActivated?.call(call.arguments as String);
+        break;
+      case 'onZoneTapped':
+        final args = call.arguments as Map<Object?, Object?>;
+        widget.onZoneTapped?.call(args['cellIndex'] as int);
         break;
     }
   }

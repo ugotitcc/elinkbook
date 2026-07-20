@@ -40,6 +40,8 @@ import org.readium.r2.navigator.html.HtmlDecorationTemplates
 import org.readium.r2.navigator.preferences.FontFamily
 import org.readium.r2.navigator.preferences.Spread
 import org.readium.r2.navigator.preferences.TextAlign
+import org.readium.r2.navigator.input.InputListener
+import org.readium.r2.navigator.input.TapEvent
 import org.readium.r2.navigator.util.BaseActionModeCallback
 import org.readium.r2.shared.publication.Layout
 import org.readium.r2.shared.publication.Link
@@ -120,6 +122,25 @@ class EpubReaderView(
         }
     }
 
+    /**
+     * 3×3 導航熱區動作（epic-7-interaction design.md 決策 #8），對應 Dart
+     * `ZoneAction` 列舉（app/lib/reader/zone_action.dart）透過 Method Channel
+     * 傳來的 `.name` 字串（'previousPage'/'nextPage'/'menu'/'none'）。與
+     * [DualPageMode] 是各自獨立的巢狀型別，比照既有慣例。
+     */
+    internal enum class ZoneAction {
+        PREVIOUS_PAGE, NEXT_PAGE, MENU, NONE;
+
+        companion object {
+            fun fromWireValue(value: String?): ZoneAction = when (value) {
+                "previousPage" -> PREVIOUS_PAGE
+                "nextPage" -> NEXT_PAGE
+                "menu" -> MENU
+                else -> NONE
+            }
+        }
+    }
+
     companion object {
         /** 雙頁顯示是否應該生效：`always` 一律生效；`auto` 僅橫向生效；`never`
          * 一律不生效。用於決定送給 Readium 的 `Spread` 值（見
@@ -161,6 +182,20 @@ class EpubReaderView(
 
     /** 裝置是否為橫向，由 [applyDualPagePreferences] 更新。 */
     private var isLandscape: Boolean = false
+
+    /**
+     * 3×3 導航熱區動作對照表（epic-7-interaction Issue 6），由
+     * [buildPreferencesFromMap] 解析 Dart 端送來的 `navZoneActions` 字串陣列
+     * 更新此欄位，供僅流式（`isFixedLayout == false`）路徑註冊的
+     * `InputListener.onTap()` 查表使用。預設全部 [ZoneAction.NONE]——尚未
+     * 收到任何偏好設定時的安全預設，不會誤觸發任何動作。
+     */
+    private var navZoneActions: List<ZoneAction> = List(9) { ZoneAction.NONE }
+
+    /** [attachNavigator] 註冊的熱區點擊監聽器，dispose() 時需要用同一個實例
+     * 呼叫 removeInputListener，故保留參照——比照下方 [decorationListener]
+     * 既有慣例。僅流式（`isFixedLayout == false`）路徑會賦值。 */
+    private var navInputListener: InputListener? = null
 
     /** 標記點擊監聽器，dispose() 時需要用同一個實例呼叫
      * removeDecorationListener，故保留參照（見 Decoration.kt
@@ -718,6 +753,9 @@ class EpubReaderView(
      * 最終生效值，不覆蓋既有已設定的其他欄位）。
      */
     private fun buildPreferencesFromMap(map: Map<String, Any?>): EpubPreferences {
+        (map["navZoneActions"] as? List<*>)?.let { raw ->
+            navZoneActions = raw.map { ZoneAction.fromWireValue(it as? String) }
+        }
         return EpubPreferences(
             verticalText = (map["writingMode"] as? String)?.let { it == "vertical" },
             scroll = (map["pageTurnMode"] as? String)?.let { it == "scroll" },
@@ -943,6 +981,47 @@ class EpubReaderView(
                 currentPreferences = currentPreferences.plus(buildPreferencesFromMap(initialPreferences))
                 navigatorFragment?.submitPreferences(currentPreferences)
             }
+            // epic-7-interaction Issue 6：僅流式（isFixedLayout == false）路徑
+            // 註冊熱區點擊監聽器——Issue 1 spike（reviews/spike-epub-inputlistener.md）
+            // 已在真機驗證 3 項風險：(1) EpubNavigatorFragment 對純點擊無內建
+            // 翻頁反應，不需要停用步驟；(2) onTap() 攔截可靠，goForward()/
+            // goBackward() 呼叫與點擊次數嚴格 1:1，無重複觸發；(3) TapEvent.point
+            // 為 publicationView 本地座標（與其寬高同一座標系，無 letterbox），
+            // NavZoneHitTester.cellIndex() 不需額外轉換。FXL（isFixedLayout ==
+            // true）完全不進這個分支，熱區疊加層由 Dart 端 GestureDetector
+            // 處理（epic-7-interaction Issue 5）。
+            if (openedPublication.metadata.layout != Layout.FIXED) {
+                val listener = object : InputListener {
+                    override fun onTap(event: TapEvent): Boolean {
+                        val view = navigatorFragment?.publicationView ?: return false
+                        val index = NavZoneHitTester.cellIndex(
+                            dx = event.point.x,
+                            dy = event.point.y,
+                            width = view.width.toFloat(),
+                            height = view.height.toFloat(),
+                        )
+                        when (navZoneActions.getOrElse(index) { ZoneAction.NONE }) {
+                            ZoneAction.PREVIOUS_PAGE -> {
+                                // design.md 決策 #15：捲動翻頁模式下左右熱區失效。
+                                if (currentPreferences.scroll != true) {
+                                    navigatorFragment?.goBackward(animated = false)
+                                }
+                            }
+                            ZoneAction.NEXT_PAGE -> {
+                                if (currentPreferences.scroll != true) {
+                                    navigatorFragment?.goForward(animated = false)
+                                }
+                            }
+                            ZoneAction.MENU ->
+                                channel.invokeMethod("onZoneTapped", mapOf("cellIndex" to index))
+                            ZoneAction.NONE -> {}
+                        }
+                        return true
+                    }
+                }
+                navInputListener = listener
+                navigatorFragment?.addInputListener(listener)
+            }
             // epic-5-toc-pagination Issue 3：僅在尚無快取值時才觸發背景字元數
             // 計算，之後每次開書直接沿用 Dart 端傳入的快取值，不重新走訪全書
             // （見 spec.md「執行緒與快取」）。
@@ -1161,6 +1240,7 @@ class EpubReaderView(
         scope.cancel()
         removeFxlLayoutListener()
         decorationListener?.let { navigatorFragment?.removeDecorationListener(it) }
+        navInputListener?.let { navigatorFragment?.removeInputListener(it) }
         val fragment = activity.supportFragmentManager.findFragmentByTag(fragmentTag)
         if (fragment != null) {
             try {
