@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -17,6 +18,20 @@ Future<String> _stageAssetAsFile(String assetPath, String fileName) async {
   final file = File('${tempDir.path}/$fileName');
   await file.writeAsBytes(bytes.buffer.asUint8List(), flush: true);
   return file.path;
+}
+
+/// 只比對 locator 的 href／progression 核心欄位，忽略 Readium 可能非同步
+/// 補齊的 title/position/totalProgression 等中繼資料差異（真機驗證發現：
+/// 同一位置的 locator 在導覽事件後續會被非同步豐富化，完整 JSON 字串相等
+/// 比對會誤判為位置變動）。
+bool _locatorCoreEquals(String? a, String? b) {
+  if (a == null || b == null) return a == b;
+  final decodedA = jsonDecode(a) as Map<String, dynamic>;
+  final decodedB = jsonDecode(b) as Map<String, dynamic>;
+  final locationsA = decodedA['locations'] as Map<String, dynamic>?;
+  final locationsB = decodedB['locations'] as Map<String, dynamic>?;
+  return decodedA['href'] == decodedB['href'] &&
+      locationsA?['progression'] == locationsB?['progression'];
 }
 
 /// Epic 7 Issue 6：EPUB 流式熱區導覽（原生 InputListener）——真機整合測試。
@@ -130,9 +145,9 @@ void main() {
     await tester.pump();
     expect(
       capturedZoneTaps,
-      contains(1),
-      reason: '點擊中間熱區（index 1，選單）應透過 onZoneTapped(cellIndex: 1) '
-          '回呼通知 Dart 端',
+      contains(4),
+      reason: '點擊螢幕正中央應落在九宮格中間列（非頂列），即 index 4，'
+          '應透過 onZoneTapped(cellIndex: 4) 回呼通知 Dart 端',
     );
   });
 
@@ -192,18 +207,21 @@ void main() {
     await tester.pumpAndSettle(const Duration(seconds: 2));
     expect(errorMessage, isNull, reason: '捲動模式下點擊右側熱區不應觸發 onError');
     expect(
-      lastPosition?.locatorJson,
-      equals(positionAfterOpen?.locatorJson),
-      reason: '捲動翻頁模式下右側熱區（下一頁）應失效，locatorJson 不應變動'
-          '（design.md 決策 #15）',
+      _locatorCoreEquals(lastPosition?.locatorJson, positionAfterOpen?.locatorJson),
+      isTrue,
+      reason: '捲動翻頁模式下右側熱區（下一頁）應失效，href／progression 不應變動'
+          '（design.md 決策 #15；Readium 可能非同步補齊 title/position/'
+          'totalProgression 等中繼資料，故不比對完整 JSON 字串相等）',
     );
 
     await tester.tapAt(menuZone);
-    await tester.pump();
+    await tester.pumpAndSettle(const Duration(seconds: 2));
     expect(
       capturedZoneTaps,
-      contains(1),
-      reason: '捲動模式下選單格仍應正常觸發 onZoneTapped（design.md 決策 #15）',
+      contains(4),
+      reason: '點擊螢幕正中央應落在九宮格中間列（非頂列），即 index 4，'
+          '捲動模式下選單格仍應正常觸發 onZoneTapped(cellIndex: 4)'
+          '（design.md 決策 #15）',
     );
   });
 }
