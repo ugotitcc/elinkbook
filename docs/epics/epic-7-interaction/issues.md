@@ -1,6 +1,6 @@
 # Epic 7 — 互動控制：工單清單 (Issues)
 
-依 `spec.md`（搭配 `design.md`、ADR 0009／0010、`tmp/epic-7/reviews/review-design.md`／`review-spec.md` 審查修正）拆解出的細粒度垂直切片工單。Issue 1（Spike）與 Issue 2（資料層）可立即平行開始；Issue 3、4 依賴 Issue 2；Issue 5、6、7 依賴 Issue 4（6 另依賴 Issue 1）；Issue 8 為收尾工單，依賴 Issue 3-7 全部完成。
+依 `spec.md`（搭配 `design.md`、ADR 0009／0010、`tmp/epic-7/reviews/review-design.md`／`review-spec.md` 審查修正）拆解出的細粒度垂直切片工單。Issue 1（Spike）與 Issue 2（資料層）可立即平行開始；Issue 3、4 依賴 Issue 2；Issue 5、6、7 依賴 Issue 4（6 另依賴 Issue 1）；Issue 8 為收尾工單，依賴 Issue 3-7 全部完成。Issue 9（Spike，直排/橫排翻頁跳頁問題診斷）為 Issue 8 真機 QA 過程中新發現，不依賴其他 issue、可獨立進行，不阻塞 Issue 8／Epic 7 收尾。
 
 ---
 
@@ -255,3 +255,41 @@
 - 端到端組合驗證產出書面紀錄（比照 `qa-issue-N-*.md` 既有慣例）
 - `flutter analyze` 乾淨、`flutter test` 全數通過
 - 若有發現需要後續處理的落差，已建立對應的後續 issue 追蹤，不阻塞本 epic 合併
+
+---
+
+## Issue 9：Spike——直排／橫排翻頁跳頁問題診斷
+
+**Status:** ready-for-agent
+
+**依賴：** 無（可獨立進行，不阻塞 Epic 7 收尾／Issue 8 驗收）
+
+**描述：**
+Issue 8 真機 QA 過程中人工發現兩個翻頁異常症狀：
+
+1. **直排（vertical-RL）模式**：點擊上一頁／下一頁熱區，或按音量鍵翻頁，**每次都會跳好幾頁**（穩定重現，非偶發）。
+2. **橫排模式**：同樣操作**偶而會發生一次跳兩頁**（間歇性）。
+
+已確認**兩種觸發方式皆會重現**（畫面熱區點擊／音量鍵），這點是本次診斷方向的關鍵依據：
+
+- 熱區點擊觸發原生 Kotlin `InputListener.onTap()`（`EpubReaderView.kt`，Issue 6 建立），直接呼叫一次 `navigatorFragment.goForward()`/`goBackward()`，不經過 Dart。
+- 音量鍵觸發 Dart `_handleZoneAction` → `EpubReaderView.nextPage()`/`previousPage()`（Dart static helper）→ `"nextPage"`/`"previousPage"` MethodChannel case（原註解寫「僅供 FXL 三欄熱區使用」，但 Issue 7 音量鍵讓**所有 EPUB 格式**共用同一條路徑，此註解已過時，需一併修正）→ 同樣呼叫一次 `goForward()`/`goBackward()`。
+
+兩條路徑在程式碼層級皆已確認**每次觸發只呼叫一次** `goForward()`/`goBackward()`，沒有迴圈或重複呼叫。音量鍵路徑完全不經過 WebView 觸控事件處理，若它也重現此症狀，代表「WebView 誤判單次點擊為多次 tap」不是唯一或主要成因——目前最合理的假設是 **Readium 原生 `OverflowableNavigator` 對直排文字的分頁（column/page）計算本身有誤差，導致單次 `goForward()`/`goBackward()` 呼叫實際推進的視覺頁數超過 1 頁**，橫排模式則可能是同一計算問題的較輕微/邊界情況表現（例如內容長度無法整除欄寬時的邊界誤差）。此為待驗證假設，非定論。
+
+**重現素材：** `app/test/fixtures/issue9_vertical_pagejump.epub`（已提交版本控制；既有素材如 `sample_multi_chapter.epub` 未曾觸發此問題，本檔案的直排中文內容/章節長度可能是誘發條件）
+
+**診斷方法**（比照 Issue 1 spike 先例，真機插樁量測，非自動化測試）：
+
+- 在 `goForward()`/`goBackward()` 呼叫前後插樁記錄目前 `Locator`（含 `progression`），量測**單次觸發**（1 次點擊或 1 次按鍵）對應的**實際頁面推進量**，而非只數呼叫次數是否 1:1（Issue 1 spike 已驗證呼叫次數 1:1，但未量測過「1 次呼叫等於推進多少視覺頁面」這件事，本次需要補上這一層量測）。
+- 分別在直排、橫排模式下，用兩種觸發方式（熱區點擊、音量鍵）各自量測，比對 4 種組合（直排×熱區、直排×音量鍵、橫排×熱區、橫排×音量鍵）的量測結果差異。
+- 每項量測需附具體數據（progression 前後數值、logcat 紀錄），不接受「感覺上跳比較多」的主觀判斷。
+
+**單元測試要求：** 無（研究/診斷性質，比照 Issue 1 先例；過程中若產生暫時性插樁程式碼，診斷後需清理還原，不留在版本控制中）
+
+**驗收標準：**
+- 4 種組合（直排/橫排 × 熱區/音量鍵）的「單次觸發→實際頁面推進量」皆有明確數據與結論
+- 明確判定根因：觸發端重複呼叫／Readium 分頁計算誤差／其他，並附具體證據，寫入驗證報告（`docs/epics/epic-7-interaction/reviews/spike-vertical-pagejump.md`）
+- `"nextPage"`/`"previousPage"` MethodChannel case 的過時註解（「僅供 FXL 三欄熱區使用」）已一併修正為反映實際用途
+- 若根因明確且修法風險低，可在本 issue 內直接修正並如實記錄；若修法有架構影響，記錄具體退回方案供後續另立實作工單依循
+- 過程中的暫時性插樁程式碼已清理，`git status` 乾淨
