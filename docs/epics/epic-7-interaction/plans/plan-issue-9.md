@@ -43,7 +43,7 @@
 - Consumes：無（本 issue 起始工單）
 - Produces：4 組合的無插樁基準截圖，供 Task 3/4 插樁後比對是否與基準時期症狀一致（排除插樁本身改變行為的可能性）
 
-- [ ] **Step 1：確認裝置與乾淨基準**
+- [x] **Step 1：確認裝置與乾淨基準**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook"
@@ -54,7 +54,7 @@ flutter devices
 
 Expected：`mkdir -p` 建立輸出目錄；`git status --short` 無輸出；`flutter devices` 列出至少 1 台裝置，記下 `<device-id>`（預期 `3CEF42ECD491687`）。
 
-- [ ] **Step 2：建置目前（未修改）debug APK 並安裝到真機**
+- [x] **Step 2：建置目前（未修改）debug APK 並安裝到真機**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -64,7 +64,7 @@ adb -s <device-id> install -r build/app/outputs/flutter-apk/app-debug.apk
 
 Expected：建置成功、安裝成功（`Success`）。
 
-- [ ] **Step 3：推送測試素材並透過 App 內建匯入流程開啟**
+- [x] **Step 3：推送測試素材並透過 App 內建匯入流程開啟**
 
 ```bash
 adb -s <device-id> push "U:/MyDeveloper/AI/elinkBook/app/test/fixtures/issue9_vertical_pagejump.epub" /sdcard/Download/
@@ -72,7 +72,7 @@ adb -s <device-id> push "U:/MyDeveloper/AI/elinkBook/app/test/fixtures/issue9_ve
 
 在真機上開啟 App → 圖書庫 →「匯入書籍」→ 系統檔案選擇器 → 導覽至「下載」資料夾 → 選取 `issue9_vertical_pagejump.epub`，等待匯入完成，點擊該書開啟閱讀畫面。確認畫面為流式（reflowable）版面（有正常 AppBar，非固定版面懸浮按鈕）。記錄開啟後預設偵測到的排版方向（自動偵測結果，`_autoDetectedWritingMode`）。
 
-- [ ] **Step 4：橫排基準——點擊熱區與音量鍵各觸發 1 次，擷取前後截圖**
+- [x] **Step 4：橫排基準——點擊熱區與音量鍵各觸發 1 次，擷取前後截圖**
 
 若目前非橫排，點擊「⚙️版面」（`Key('reader_layout_settings_button')`）開啟設定，點擊「強制橫排」（`Key('reader_settings_writing_mode_horizontal')`），關閉設定面板。
 
@@ -88,7 +88,7 @@ adb -s <device-id> exec-out screencap -p > "U:/MyDeveloper/AI/elinkBook/tmp/epic
 
 肉眼比對三張截圖：記錄「點擊熱區」與「按音量鍵」這兩次單次觸發，畫面內容各自看起來推進了幾頁份量的內容（粗略目視評估即可，此步驟只是基準，非正式量測數據——正式量測在 Task 3）。
 
-- [ ] **Step 5：直排基準——重複 Step 4 的觸發方式**
+- [x] **Step 5：直排基準——重複 Step 4 的觸發方式**
 
 點擊「⚙️版面」→「強制直排」（`Key('reader_settings_writing_mode_vertical')`）。
 
@@ -102,7 +102,7 @@ adb -s <device-id> exec-out screencap -p > "U:/MyDeveloper/AI/elinkBook/tmp/epic
 
 肉眼比對，記錄粗略觀察結果（預期與人類原始回報一致：直排每次都跳好幾頁，橫排症狀較輕微或不一定每次發生）。
 
-- [ ] **Step 6：確認基準階段未變動任何程式碼**
+- [x] **Step 6：確認基準階段未變動任何程式碼**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook"
@@ -122,7 +122,7 @@ Expected：無 `app/` 底下的異動（本 Task 純真機操作，未修改程�
 - Consumes：無新介面，插樁既有的 `onTap()`（第 994-1025 行）、`onMethodCall()` 的 `"nextPage"`/`"previousPage"` case（第 229-241 行）、`attachNavigator()` 內既有的 `currentLocator.onEach{}` 訂閱（第 957-967 行）
 - Produces：Task 3/4 量測所需的 logcat 證據（`EPIC9_SPIKE` 標記）
 
-- [ ] **Step 1：插樁 `currentLocator` 訂閱**
+- [x] **Step 1：插樁 `currentLocator` 訂閱**
 
 在 `app/android/app/src/main/kotlin/cc/ugotit/elinkbook/EpubReaderView.kt` 找到既有的：
 
@@ -164,7 +164,7 @@ Expected：無 `app/` 底下的異動（本 Task 純真機操作，未修改程�
                 ?.launchIn(scope)
 ```
 
-- [ ] **Step 2：插樁 `onTap()` 的熱區觸發路徑**
+- [x] **Step 2：插樁 `onTap()` 的熱區觸發路徑**
 
 找到既有的：
 
@@ -214,7 +214,7 @@ Expected：無 `app/` 底下的異動（本 Task 純真機操作，未修改程�
                             }
 ```
 
-- [ ] **Step 3：插樁 `onMethodCall()` 的音量鍵觸發路徑**
+- [x] **Step 3：插樁 `onMethodCall()` 的音量鍵觸發路徑**
 
 找到既有的：
 
@@ -266,7 +266,7 @@ Expected：無 `app/` 底下的異動（本 Task 純真機操作，未修改程�
             }
 ```
 
-- [ ] **Step 4：重新建置並安裝**
+- [x] **Step 4：重新建置並安裝**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
