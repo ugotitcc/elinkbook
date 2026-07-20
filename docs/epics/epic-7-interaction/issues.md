@@ -190,7 +190,17 @@
 
 ## Issue 7：FR-18 音量鍵翻頁
 
-**Status:** ready-for-agent
+**Status:** ✅ 已完成。依 `plans/plan-issue-7.md` Task 1-5 完成實作：新增純 Kotlin `ReaderViewAttachmentTracker`（`AtomicInteger` 計數器單例，JVM 測試 5 案）取代原本設計中「Dart 主動通知的 async 旗標」，改用原生端可自行觀測的 PlatformView 附加狀態判斷是否攔截音量鍵（design.md 決策 #19）；`EpubReaderView.kt`/`PdfReaderView.kt` 的 `init`/`dispose()` 佈線 `attach()`/`detach()`；`MainActivity.kt` 新增 `elinkbook/volume_key` `MethodChannel` 與 `dispatchKeyEvent()` 覆寫；`ReaderScreen` 接上 `onVolumeKey` 回呼（複用既有 `_handleZoneAction`）、`PopScope.onPopInvokedWithResult` 於 pop 動作啟動當下呼叫 `notifyLeavingReader`。
+
+**計畫審查修正（`tmp/epic-7/reviews/review-plan-issue-7.md`，落地前，經人類確認採納）：** (1) `volumeKeyChannel` 改 `MethodChannel?`（nullable）取代 `lateinit var`，避免理論上的初始化崩潰風險；(2) `ReaderViewAttachmentTracker.detach()` 計數器下限保護在 0（`getAndUpdate { maxOf(0, it - 1) }`）；(3) **`dispatchKeyEvent()` 攔截生效時 `ACTION_DOWN`／`ACTION_UP` 皆消費，僅 `ACTION_DOWN` 才透過 `onVolumeKey` 通知 Dart**——刻意偏離本節原始「僅 `ACTION_DOWN`」文字（已同步更新於上方描述），理由是只消費 `ACTION_DOWN`、放行 `ACTION_UP` 是已知的 Android 陷阱，部分機型仍會跳出系統音量條 UI。另有 2 項審查建議經查證後不採納：`PopScope.onPopInvokedWithResult` 顯式型別標註（本專案 lint 設定未啟用該規則，且與 `library_screen.dart` 既有慣例衝突）、`ReaderViewAttachmentTracker` 增加 `attachmentCount` 防禦 `pushReplacement` 競態（全專案未使用 `pushReplacement`，屬不存在的情境，YAGNI）。
+
+**Task 執行與逐工單審查：** 5 個 Task 分別經過 spec compliance + code quality 審查，皆一次通過（Approved），無 Critical/Important 發現。過程中 2 處實作階段的必要調整（皆經 Kotlin/Dart 編譯器強制、非設計缺陷）：Task 3 的 `volumeKeyChannel?.setMethodCallHandler`（`var` 類別屬性被閉包捕獲後 Kotlin 不會 smart-cast，即使緊接賦值之後）；Task 4 的 `PopScope<dynamic>`（新增 `onPopInvokedWithResult` 後 Dart 泛型型別推論從隱含 `dynamic` 變成 `Object`，導致既有測試 `find.byType(PopScope)` 找不到 widget），兩者皆由審查者查證屬實、修正正確且最小化，並已回填更新計畫書範例程式碼。Task 5 真機（`3CEF42ECD491687`, Android 15/API 35）`integration_test` 一次執行 1/1 PASS，未回頭修改 Task 1-4 生產程式碼。
+
+**全分支最終審查（Opus）：** 結論 Ready to merge: Yes，0 Critical、0 Important，僅 2 項 Minor（計畫書 Task 4 範例測試碼與實際提交程式碼有落差，已修正回填；`_handleVolumeKeyCall` 的 `Map` 轉型無防呆，屬可接受現狀）。合併前另一輪獨立程式碼審查（`tmp/epic-7/reviews/code-review-issue-7.md`）追加 1 項採納：`suppressedUntilReattach` 加上 `@Volatile`（目前所有讀寫皆固定在 UI Thread，無實質併發風險，屬零成本防禦性修正）；1 項不採納：抽出獨立 `VolumeKeyChannel` 類別收斂 `MainActivity` 的 Divergent Change（審查報告本身標註為未來 Epic 重構建議，本 issue 範圍內提前抽象化違反 YAGNI）。
+
+`flutter analyze` 乾淨、`flutter test`（全專案）536 個測試全數通過（基準 534 + Task 4 新增 2）；`./gradlew :app:testDebugUnitTest` BUILD SUCCESSFUL（含新增 `ReaderViewAttachmentTrackerTest` 5/5）；已透過 PR #61 合併回 `main`（merge commit `578cd8c`）。
+
+**待辦（未阻擋合併，比照 Issue 4/6 既有先例）：** `app/integration_test/volume_key_test.dart` 檔頭已記錄的人工真機驗證清單尚待人類執行——`dispatchKeyEvent()` 攔截的是原生 Activity 層級硬體按鍵事件，Flutter `integration_test` 框架無法自動化模擬觸達：(1) 實體/虛擬音量鍵直接按下或 `adb shell input keyevent 24/25`，確認 PDF／EPUB FXL／EPUB 流式三種畫面正確翻頁；(2) 按返回鍵離開閱讀畫面轉場動畫期間，音量鍵是否已即時恢復系統音量調整（驗證 `notifyLeavingReader` 即時釋放機制）；(3) 音量鍵攔截消費事件後，系統原生音量提示 UI（音量條 Toast）是否仍會意外跳出（`@Volatile`／`ACTION_UP` 消費修正的實機效果確認）。
 
 **依賴：** Issue 4
 
@@ -200,7 +210,7 @@
 - **`MainActivity.kt`**：
   - 新增小型執行緒安全計數器 `ReaderViewAttachmentTracker`（新檔案，object 單例）：`fun attach()`/`fun detach()`（內部 `AtomicInteger` 遞增/遞減）、`val isAnyAttached: Boolean get() = count.get() > 0`；`PdfReaderView.kt`/`EpubReaderView.kt` 建構子中呼叫 `attach()`，既有 `override fun dispose()` 內呼叫 `detach()`
   - 新增 `ReaderViewAttachmentTracker.suppressedUntilReattach`（`Boolean`，初始 `false`）：收到 Dart 端 `notifyLeavingReader` 呼叫時設為 `true`；`attach()` 時重設回 `false`
-  - 覆寫 `dispatchKeyEvent(event: KeyEvent): Boolean`：`KEYCODE_VOLUME_UP`/`KEYCODE_VOLUME_DOWN`、`ACTION_DOWN`、`isAnyAttached && !suppressedUntilReattach` 時消費事件並透過新建的 `MethodChannel("elinkbook/volume_key")` 呼叫 Dart 端 `onVolumeKey`（`direction: "up" | "down"`）；其餘情況呼叫 `super.dispatchKeyEvent(event)`
+  - 覆寫 `dispatchKeyEvent(event: KeyEvent): Boolean`：`KEYCODE_VOLUME_UP`/`KEYCODE_VOLUME_DOWN`、`isAnyAttached && !suppressedUntilReattach` 時消費事件（`ACTION_DOWN`／`ACTION_UP` 皆消費，回傳 `true`）；僅 `ACTION_DOWN` 時才透過新建的 `MethodChannel("elinkbook/volume_key")` 呼叫 Dart 端 `onVolumeKey`（`direction: "up" | "down"`）；其餘情況呼叫 `super.dispatchKeyEvent(event)`（**實作修正**：原始僅處理 `ACTION_DOWN`、放行 `ACTION_UP` 的設計，經計畫審查發現是已知的 Android 陷阱——部分機型仍會跳出系統音量條 UI，改為攔截生效時兩種 action 皆消費，見下方「計畫審查修正」段落）
 - **`ReaderScreen`**：
   - 監聽 `MethodChannel('elinkbook/volume_key')` 的 `onVolumeKey`：`up` → `_handleZoneAction(ZoneAction.previousPage)`、`down` → `_handleZoneAction(ZoneAction.nextPage)`（固定映射，不查詢 `navZoneActions`）。掛載時機：`initState()`／`dispose()`
   - 既有 `PopScope`（目前用於裁切模式攔截返回鍵）新增 `onPopInvokedWithResult` 回呼：pop 動作啟動當下呼叫 `notifyLeavingReader`，主動通知原生端立即停止攔截（審查修正，收斂轉場動畫延遲攔截風險——`dispose()` 只在 300-500ms 退場轉場動畫結束後才觸發，此為額外的即時 override 訊號）
