@@ -260,7 +260,7 @@
 
 ## Issue 9：Spike——直排／橫排翻頁跳頁問題診斷
 
-**Status:** ready-for-agent
+**Status:** ✅ 已完成。依 `plans/plan-issue-9.md` Task 1-5 完成真機插樁量測與根因判定，結論寫入 `reviews/spike-vertical-pagejump.md`。四種組合（直排/橫排 × 熱區/音量鍵）逐次量測數據齊備：每次觸發皆穩定對應**恰好 1 筆** `LOCATOR_EMIT`（排除「觸發端重複呼叫」假說；音量鍵於 `MainActivity.dispatchKeyEvent()` 僅 `ACTION_DOWN` 轉發、一次按鍵一次 `onVolumeKey`）。**根因判定拆為兩層獨立現象**：(1) 真正的導航異常——橫排呈「觸發被吃掉」（6 次中 3 次 Readium `position` 未動）、直排音量鍵呈「觸發被放大」（單次呼叫 `position` +2/+3/−2），但直排熱區（TAP）3 次皆乾淨 ±1；逐行讀過 `EpubReaderView.kt`（`onTap()` + `onMethodCall` 的 `nextPage`/`previousPage`）、`MainActivity.kt`、`reader_screen.dart` 後確認**兩條觸發路徑最終呼叫的是完全相同的 Readium `goForward/goBackward(animated=false)`，App 層無任何迴圈／計數器／防抖鎖／共用狀態可放大或吃掉觸發**，差異只在呼叫時序（TAP 同步落在 Readium 手勢管線、CHANNEL 經 method channel 非同步折返），故判定為 **Readium reflowable Navigator 內部行為，非 App 層 bug**；(2) UI 頁碼「第 N/148 頁」跳號／橫排凍結——經 `EpubPageEstimator.estimateCurrentPage()` 的 `(progression*totalPages).round()` 捨入證實為字元數估算器的 lossy 假象（148 估算頁 vs Readium ~124 position 兩套計數），**非導航問題**（橫排凍結在「第 1 頁」是因導航實際停在書首 progression≤0.008、`round(1.2)=1`，推翻 Task 3 當下「UI 未訂閱」的臨時假設）。**判定退回、不在本 issue 內強行修正**（Readium 內部行為，修法有架構影響、風險不可控）；建議退回方案／後續實作工單方向依序為：①讓音量鍵翻頁改走與熱區 TAP 相同的原生端同步呼叫路徑（實測 TAP 在直排下乾淨 ±1），消除非同步折返造成的呼叫時序差；②呼叫前確保 Readium WebView 分頁狀態穩定，或改用 `go(Locator)` 明確目標導航取代相對式 `goForward/goBackward`；③橫排「被吃」與升級 Readium `kotlin-toolkit` 版本一併評估；④UI 頁碼精度屬獨立低優先 UI 議題。`"nextPage"`/`"previousPage"` MethodChannel case 的過時註解（「僅供 FXL 三欄熱區使用」）已一併修正為反映 Issue 7 後所有 EPUB 格式共用此路徑的實際用途。Task 2 暫時性 Kotlin 插樁已 `git checkout --` 完整還原，`flutter analyze`（No issues found!）／`flutter build apk --debug`（建置成功）皆確認乾淨。
 
 **依賴：** 無（可獨立進行，不阻塞 Epic 7 收尾／Issue 8 驗收）
 
