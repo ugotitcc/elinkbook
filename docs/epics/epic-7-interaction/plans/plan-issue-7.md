@@ -324,7 +324,7 @@ git commit -m "feat(epic-7): EpubReaderView/PdfReaderView 佈線 ReaderViewAttac
 - Consumes：Task 1 的 `ReaderViewAttachmentTracker.isAnyAttached`/`suppressedUntilReattach`
 - Produces：`elinkbook/volume_key` `MethodChannel`——原生→Dart `onVolumeKey({"direction": "up"|"down"})`；Dart→原生 `notifyLeavingReader`（設定 `suppressedUntilReattach = true`）。供 Task 4（Dart 端接收）與 Task 5（真機驗證）使用
 
-- [ ] **Step 1：新增 import 與欄位**
+- [x] **Step 1：新增 import 與欄位**
 
 在 `MainActivity.kt` 現有 import 區塊：
 
@@ -368,7 +368,7 @@ import android.webkit.WebView
     private var volumeKeyChannel: MethodChannel? = null
 ```
 
-- [ ] **Step 2：覆寫 `dispatchKeyEvent()`**
+- [x] **Step 2：覆寫 `dispatchKeyEvent()`**
 
 在現有 `override fun onCreate(savedInstanceState: Bundle?) { ... }` 方法（結尾為第 60 行 `}`）之後、`override fun configureFlutterEngine(...)`（第 62 行）之前，新增：
 
@@ -402,15 +402,17 @@ import android.webkit.WebView
 
 ```
 
-- [ ] **Step 3：`configureFlutterEngine()` 內註冊頻道**
+- [x] **Step 3：`configureFlutterEngine()` 內註冊頻道**
 
 在現有 `configureFlutterEngine()` 方法內，找到 `elinkbook/app_info` 的 `MethodChannel(...).setMethodCallHandler { ... }` 區塊（方法最後一段），在其**之後**、`configureFlutterEngine` 方法結尾的 `}` 之前，新增：
+
+（**實作修正**：`volumeKeyChannel` 被 `dispatchKeyEvent()` 這個獨立方法內的存取捕獲，Kotlin 對可能被其他作用域讀取的可變類別屬性〔`var`〕不會套用 smart-cast，即使緊接在賦值之後也一樣，因此下方 `setMethodCallHandler` 呼叫必須用 `?.` 安全呼叫，否則編譯失敗，已依編譯器實際要求修正並經審查確認為正確、最小化的調整。）
 
 ```kotlin
 
         volumeKeyChannel =
             MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "elinkbook/volume_key")
-        volumeKeyChannel.setMethodCallHandler { call, result ->
+        volumeKeyChannel?.setMethodCallHandler { call, result ->
             when (call.method) {
                 "notifyLeavingReader" -> {
                     ReaderViewAttachmentTracker.suppressedUntilReattach = true
@@ -421,7 +423,7 @@ import android.webkit.WebView
         }
 ```
 
-- [ ] **Step 4：編譯驗證**
+- [x] **Step 4：編譯驗證**
 
 ```bash
 cd app && flutter analyze
@@ -435,7 +437,7 @@ cd app && flutter build apk --debug
 
 Expected：`BUILD SUCCESSFUL`（`MainActivity.dispatchKeyEvent()` 涉及 `Activity`/`KeyEvent` 等 Android 框架類別，本專案未引入 Robolectric，無法以 JVM 單元測試驗證，見 Global Constraints；此步驟的編譯成功是本 Task 唯一可自動化的正確性訊號，實際攔截行為留給 Task 5 真機驗證）。
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 git add app/android/app/src/main/kotlin/cc/ugotit/elinkbook/MainActivity.kt
