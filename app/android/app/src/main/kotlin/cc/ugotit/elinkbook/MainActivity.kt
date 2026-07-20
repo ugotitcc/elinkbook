@@ -3,6 +3,7 @@ package cc.ugotit.elinkbook
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import android.view.KeyEvent
 import android.webkit.WebView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.commitNow
@@ -18,6 +19,19 @@ class MainActivity : FlutterFragmentActivity() {
     // Activity 進入 STARTED 生命週期之前呼叫，因此以類別層級屬性初始化
     // （AndroidX 官方建議寫法），不放在 configureFlutterEngine() 內。
     private var pendingFolderPickResult: MethodChannel.Result? = null
+
+    /**
+     * 音量鍵事件通道（epic-7-interaction Issue 7）。dispatchKeyEvent()
+     * 攔截音量鍵後透過此頻道呼叫 Dart 端 onVolumeKey；也接收 Dart 端於
+     * PopScope pop 動作啟動當下送出的 notifyLeavingReader 呼叫，立即設定
+     * ReaderViewAttachmentTracker.suppressedUntilReattach = true，停止
+     * 攔截（見 ReaderViewAttachmentTracker 類別註解）。宣告為 nullable
+     * （而非 lateinit，審查修正）：dispatchKeyEvent() 理論上可能在
+     * configureFlutterEngine() 完成賦值前被系統呼叫，nullable + 安全呼叫
+     * （`?.invokeMethod`）讓這種情況下靜默不通知，而不是拋出
+     * UninitializedPropertyAccessException 讓整個 App 崩潰。
+     */
+    private var volumeKeyChannel: MethodChannel? = null
 
     private val openDocumentTreeLauncher =
         registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
@@ -57,6 +71,33 @@ class MainActivity : FlutterFragmentActivity() {
             .forEach { restored ->
                 supportFragmentManager.commitNow(allowStateLoss = true) { remove(restored) }
             }
+    }
+
+    /**
+     * 攔截硬體音量鍵（FR-18），方向固定映射，不查詢熱區設定（design.md
+     * 決策 #19）：僅在有任一 Reader PlatformView 附加、且未被 Dart 端
+     * notifyLeavingReader 暫時抑制時消費事件；其餘情況交還系統處理，含
+     * 正常音量調整。攔截生效時 ACTION_DOWN／ACTION_UP 皆消費（審查修正，
+     * 偏離 issues.md 原始「僅 ACTION_DOWN」文字，經人類確認採納）：只放行
+     * ACTION_DOWN、讓 ACTION_UP 穿透至 super，是已知的 Android 陷阱——
+     * 部分機型即使 ACTION_DOWN 已消費，未消費的 ACTION_UP 仍會讓系統音量
+     * 提示 UI（音量條 Toast）跳出。只有 ACTION_DOWN 才透過 onVolumeKey
+     * 通知 Dart 翻頁，避免按一次鍵觸發兩次翻頁。
+     */
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        val isVolumeKey = event.keyCode == KeyEvent.KEYCODE_VOLUME_UP ||
+            event.keyCode == KeyEvent.KEYCODE_VOLUME_DOWN
+        if (isVolumeKey &&
+            ReaderViewAttachmentTracker.isAnyAttached &&
+            !ReaderViewAttachmentTracker.suppressedUntilReattach
+        ) {
+            if (event.action == KeyEvent.ACTION_DOWN) {
+                val direction = if (event.keyCode == KeyEvent.KEYCODE_VOLUME_UP) "up" else "down"
+                volumeKeyChannel?.invokeMethod("onVolumeKey", mapOf("direction" to direction))
+            }
+            return true
+        }
+        return super.dispatchKeyEvent(event)
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -118,5 +159,17 @@ class MainActivity : FlutterFragmentActivity() {
                     else -> result.notImplemented()
                 }
             }
+
+        volumeKeyChannel =
+            MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "elinkbook/volume_key")
+        volumeKeyChannel?.setMethodCallHandler { call, result ->
+            when (call.method) {
+                "notifyLeavingReader" -> {
+                    ReaderViewAttachmentTracker.suppressedUntilReattach = true
+                    result.success(null)
+                }
+                else -> result.notImplemented()
+            }
+        }
     }
 }

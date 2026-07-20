@@ -344,6 +344,7 @@ class PdfReaderView(
 
     init {
         channel.setMethodCallHandler(this)
+        ReaderViewAttachmentTracker.attach()
     }
 
     override fun getView(): View = rootView
@@ -1180,6 +1181,7 @@ class PdfReaderView(
     }
 
     override fun dispose() {
+        ReaderViewAttachmentTracker.detach()
         removeHighlightSelectionOverlay()
         cropOverlayView?.let { rootView.removeView(it) }
         cropOverlayView = null
