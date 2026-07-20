@@ -30,6 +30,7 @@ object ReaderViewAttachmentTracker {
      * （轉場動畫期間 PlatformView 尚未 dispose，isAnyAttached 仍為
      * true）。attach() 時重設回 false——下次真正開新書時恢復正常攔截。
      */
+    @Volatile
     var suppressedUntilReattach: Boolean = false
 
     /** EpubReaderView／PdfReaderView 建構時（init 區塊）呼叫。 */
