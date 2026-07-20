@@ -1,0 +1,209 @@
+import 'dart:async';
+import 'dart:io';
+
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:integration_test/integration_test.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:elinkbook/reader/epub_position_info.dart';
+import 'package:elinkbook/reader/epub_reader_view.dart';
+import 'package:elinkbook/reader/page_turn_mode.dart';
+import 'package:elinkbook/reader/zone_action.dart';
+
+Future<String> _stageAssetAsFile(String assetPath, String fileName) async {
+  final bytes = await rootBundle.load(assetPath);
+  final tempDir = await getTemporaryDirectory();
+  final file = File('${tempDir.path}/$fileName');
+  await file.writeAsBytes(bytes.buffer.asUint8List(), flush: true);
+  return file.path;
+}
+
+/// Epic 7 Issue 6：EPUB 流式熱區導覽（原生 InputListener）——真機整合測試。
+///
+/// 【本檔案與 PDF（epic-7-interaction Issue 4，pdf_nav_zone_test.dart）的
+/// 差異】PDF 熱區疊加層曾經包住 AndroidView 的 GestureDetector，因 Flutter
+/// 手勢競技場「先加入者贏」的仲裁規則導致 onTapUp 永遠不會觸發（見
+/// issues.md Issue 4），該檔案因此完全放棄 tester.tap 模擬、改用
+/// ReaderScreen.triggerZoneAction 繞開手勢模擬，實際熱區點擊改交由人工
+/// 驗證。流式 EPUB 熱區完全由原生 Kotlin InputListener 處理（見
+/// EpubReaderView.kt），Flutter 端沒有任何 GestureDetector 包住 AndroidView，
+/// 不會遇到 PDF 那種特定的手勢競技場仲裁問題，因此本檔案改為直接嘗試
+/// tester.tapAt() 對 AndroidView 所在螢幕座標送出真實觸控事件，觀察是否能
+/// 觸達原生 InputListener（Issue 1 spike 已用 `adb shell input tap` 這種
+/// OS 層級的觸控注入方式驗證過 InputListener 本身可靠攔截，但 Flutter
+/// `tester.tapAt()` 屬於測試框架層級的觸控合成，是否對 Hybrid Composition
+/// 下的 AndroidView 同樣可靠並未事先驗證，須靠本檔案的真機執行結果確認）。
+///
+/// 【若 tester.tapAt() 證實不可靠，改用以下人工驗證清單】比照
+/// pdf_nav_zone_test.dart 既有先例，若下方任一測試在真機執行時斷言失敗
+/// （locatorJson 未變動／onZoneTapped 未觸發），改用 Issue 1 spike 已驗證
+/// 可靠的 `adb shell input tap <x> <y>` 直接對真機螢幕座標注入觸控（座標
+/// 算法：畫面左 1/6 處＝上一頁、正中央＝選單、右 5/6 處＝下一頁，y 任取
+/// 畫面垂直中點即可，見 reviews/spike-epub-inputlistener.md 座標換算方式），
+/// 人工確認：
+///   1. 依序點擊左/中/右三個位置，確認換頁與沉浸模式切換行為與
+///      navZoneActions（本檔案採用預設 rightFlip 模板）一致。
+///   2. 捲動翻頁模式（pageTurnMode=scroll）下，左右熱區點擊不應換頁，
+///      中間選單熱區仍可正常觸發。
+/// 並記錄實際觀察結果於 issues.md Issue 6 段落，比照 issues.md Issue 4
+/// 「待辦」記錄慣例，不阻塞本 issue 合併。
+void main() {
+  IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+
+  testWidgets(
+      '流式 EPUB 開書後，點擊左/右熱區真的換頁，點擊中間熱區觸發 onZoneTapped',
+      (tester) async {
+    final samplePath = await _stageAssetAsFile(
+        'test/fixtures/sample_multi_chapter.epub', 'epub_stream_nav_zone.epub');
+    addTearDown(() async {
+      final file = File(samplePath);
+      if (await file.exists()) await file.delete();
+    });
+
+    final completer = Completer<void>();
+    String? errorMessage;
+    final capturedZoneTaps = <int>[];
+    EpubPositionInfo? lastPosition;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: EpubReaderView(
+          filePath: samplePath,
+          onPageRendered: () {
+            if (!completer.isCompleted) completer.complete();
+          },
+          onError: (message) {
+            errorMessage = message;
+            if (!completer.isCompleted) completer.complete();
+          },
+          onLocatorChanged: (info) => lastPosition = info,
+          // rightFlip 模板：左欄＝上一頁、中欄＝選單、右欄＝下一頁
+          // （design.md 決策 #5），逐列重複 3 次填滿 9 格。
+          navZoneActions: const [
+            ZoneAction.previousPage, ZoneAction.menu, ZoneAction.nextPage,
+            ZoneAction.previousPage, ZoneAction.menu, ZoneAction.nextPage,
+            ZoneAction.previousPage, ZoneAction.menu, ZoneAction.nextPage,
+          ],
+          onZoneTapped: capturedZoneTaps.add,
+        ),
+      ),
+    );
+
+    await completer.future.timeout(const Duration(seconds: 10));
+    await tester.pumpAndSettle();
+    expect(errorMessage, isNull,
+        reason: '應觸發 onPageRendered，但 onError 訊息為: $errorMessage');
+
+    final topLeft = tester.getTopLeft(find.byType(EpubReaderView));
+    final size = tester.getSize(find.byType(EpubReaderView));
+    final rightZone = topLeft + Offset(size.width * 5 / 6, size.height / 2);
+    final leftZone = topLeft + Offset(size.width / 6, size.height / 2);
+    final menuZone = topLeft + Offset(size.width / 2, size.height / 2);
+
+    final positionAfterOpen = lastPosition;
+
+    await tester.tapAt(rightZone);
+    await tester.pumpAndSettle(const Duration(seconds: 2));
+    expect(errorMessage, isNull, reason: '點擊下一頁熱區後不應觸發 onError');
+    expect(
+      lastPosition?.locatorJson,
+      isNot(equals(positionAfterOpen?.locatorJson)),
+      reason: '點擊右側熱區應透過原生 InputListener 觸發 goForward()，'
+          'locatorJson 應變動；若本斷言失敗，代表 tester.tapAt() 對此原生 '
+          'InputListener 路徑不可靠，需改依本檔案標頭註解的人工驗證清單改用 '
+          'adb shell input tap 驗證，並記錄實際觀察結果於 issues.md。',
+    );
+
+    final positionAfterNext = lastPosition;
+
+    await tester.tapAt(leftZone);
+    await tester.pumpAndSettle(const Duration(seconds: 2));
+    expect(errorMessage, isNull, reason: '點擊上一頁熱區後不應觸發 onError');
+    expect(
+      lastPosition?.locatorJson,
+      isNot(equals(positionAfterNext?.locatorJson)),
+      reason: '點擊左側熱區應觸發 goBackward()，locatorJson 應變動',
+    );
+
+    await tester.tapAt(menuZone);
+    await tester.pump();
+    expect(
+      capturedZoneTaps,
+      contains(1),
+      reason: '點擊中間熱區（index 1，選單）應透過 onZoneTapped(cellIndex: 1) '
+          '回呼通知 Dart 端',
+    );
+  });
+
+  testWidgets(
+      '捲動翻頁模式（pageTurnMode=scroll）下，左右熱區失效但選單格仍可用'
+      '（design.md 決策 #15）',
+      (tester) async {
+    final samplePath = await _stageAssetAsFile(
+        'test/fixtures/sample_multi_chapter.epub',
+        'epub_stream_nav_zone_scroll.epub');
+    addTearDown(() async {
+      final file = File(samplePath);
+      if (await file.exists()) await file.delete();
+    });
+
+    final completer = Completer<void>();
+    String? errorMessage;
+    final capturedZoneTaps = <int>[];
+    EpubPositionInfo? lastPosition;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: EpubReaderView(
+          filePath: samplePath,
+          pageTurnMode: PageTurnMode.scroll,
+          onPageRendered: () {
+            if (!completer.isCompleted) completer.complete();
+          },
+          onError: (message) {
+            errorMessage = message;
+            if (!completer.isCompleted) completer.complete();
+          },
+          onLocatorChanged: (info) => lastPosition = info,
+          navZoneActions: const [
+            ZoneAction.previousPage, ZoneAction.menu, ZoneAction.nextPage,
+            ZoneAction.previousPage, ZoneAction.menu, ZoneAction.nextPage,
+            ZoneAction.previousPage, ZoneAction.menu, ZoneAction.nextPage,
+          ],
+          onZoneTapped: capturedZoneTaps.add,
+        ),
+      ),
+    );
+
+    await completer.future.timeout(const Duration(seconds: 10));
+    await tester.pumpAndSettle();
+    expect(errorMessage, isNull,
+        reason: '應觸發 onPageRendered，但 onError 訊息為: $errorMessage');
+
+    final topLeft = tester.getTopLeft(find.byType(EpubReaderView));
+    final size = tester.getSize(find.byType(EpubReaderView));
+    final rightZone = topLeft + Offset(size.width * 5 / 6, size.height / 2);
+    final menuZone = topLeft + Offset(size.width / 2, size.height / 2);
+
+    final positionAfterOpen = lastPosition;
+
+    await tester.tapAt(rightZone);
+    await tester.pumpAndSettle(const Duration(seconds: 2));
+    expect(errorMessage, isNull, reason: '捲動模式下點擊右側熱區不應觸發 onError');
+    expect(
+      lastPosition?.locatorJson,
+      equals(positionAfterOpen?.locatorJson),
+      reason: '捲動翻頁模式下右側熱區（下一頁）應失效，locatorJson 不應變動'
+          '（design.md 決策 #15）',
+    );
+
+    await tester.tapAt(menuZone);
+    await tester.pump();
+    expect(
+      capturedZoneTaps,
+      contains(1),
+      reason: '捲動模式下選單格仍應正常觸發 onZoneTapped（design.md 決策 #15）',
+    );
+  });
+}
