@@ -204,6 +204,7 @@ class EpubReaderView(
 
     init {
         channel.setMethodCallHandler(this)
+        ReaderViewAttachmentTracker.attach()
     }
 
     override fun getView(): View = container
@@ -1237,6 +1238,7 @@ class EpubReaderView(
 
     override fun dispose() {
         isDisposed = true
+        ReaderViewAttachmentTracker.detach()
         scope.cancel()
         removeFxlLayoutListener()
         decorationListener?.let { navigatorFragment?.removeDecorationListener(it) }
