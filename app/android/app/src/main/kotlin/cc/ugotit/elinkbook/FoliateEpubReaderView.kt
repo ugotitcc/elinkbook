@@ -145,7 +145,9 @@ class FoliateEpubReaderView(
                 channel.invokeMethod("onError", "無法解析檔案路徑：$path")
                 return
             }
-            val allowedRoot = context.filesDir.canonicalPath
+            // 允許範圍：App 私有資料目錄（含 files, cache, app_flutter 等）。
+            // context.filesDir.parentFile 通常即為 /data/user/0/pkg/。
+            val allowedRoot = context.filesDir.parentFile?.canonicalPath ?: context.filesDir.canonicalPath
             if (!FoliatePathValidator.isPathWithinRoot(canonicalFile.canonicalPath, allowedRoot)) {
                 channel.invokeMethod("onError", "檔案路徑不在允許的目錄範圍內：$path")
                 return
@@ -169,10 +171,18 @@ class FoliateEpubReaderView(
             val file = currentBookFile
             val uri = currentBookUri
             val stream = when {
-                file != null -> FileInputStream(file)
-                uri != null -> context.contentResolver.openInputStream(uri) ?: return null
-                else -> return null
-            }
+                file != null -> try {
+                    FileInputStream(file)
+                } catch (e: Exception) {
+                    null
+                }
+                uri != null -> try {
+                    context.contentResolver.openInputStream(uri)
+                } catch (e: Exception) {
+                    null
+                }
+                else -> null
+            } ?: return null
             return WebResourceResponse("application/epub+zip", null, stream)
         }
     }
