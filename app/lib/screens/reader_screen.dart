@@ -12,6 +12,8 @@ import '../reader/epub_page_estimator.dart';
 import '../reader/epub_position_info.dart';
 import '../reader/epub_reader_view.dart';
 import '../reader/epub_selection_info.dart';
+import '../reader/foliate_epub_reader_view.dart';
+import '../library/library_repository.dart';
 import '../reader/highlight.dart';
 import '../reader/highlight_style.dart';
 import '../reader/highlights_repository.dart';
@@ -89,6 +91,19 @@ class ReaderScreen extends StatefulWidget {
   final String? bookAuthor;
   final double bookProgress;
 
+  /// EPUB 是否為固定版面（FXL），對應 `Book.isFixedLayout`（epic-17
+  /// Issue 2）。`null` 代表既有書籍尚未判斷過——此時若提供
+  /// [libraryRepository]，會一次性呼叫 [LibraryRepository.detectAndCacheEpubLayout]
+  /// 判斷並回寫資料庫；若未提供 [libraryRepository]（例如既有測試呼叫端），
+  /// 退回 Issue 3 之前的既有行為，一律視為固定版面、建構 [EpubReaderView]
+  /// （Readium），零回歸。非 EPUB 格式完全不受此欄位影響。
+  final bool? isFixedLayout;
+
+  /// 供 [isFixedLayout] 為 `null` 時呼叫 [LibraryRepository.detectAndCacheEpubLayout]
+  /// 使用。刻意為可選參數——比照 [bookmarksRepository] 既有慣例，避免既有
+  /// 大量測試呼叫端需要逐一補上這個參數。
+  final LibraryRepository? libraryRepository;
+
   const ReaderScreen({
     super.key,
     required this.filePath,
@@ -100,6 +115,8 @@ class ReaderScreen extends StatefulWidget {
     this.bookTitle = '未知書籍',
     this.bookAuthor,
     this.bookProgress = 0.0,
+    this.isFixedLayout,
+    this.libraryRepository,
   });
 
   @override
@@ -213,15 +230,27 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   // static helper（Epic 5 Issue 3），比照 _pdfReaderViewKey 對 PDF 的既有
   // 作法。
   final _epubReaderViewKey = GlobalKey<State<EpubReaderView>>();
+  // 用於呼叫 FoliateEpubReaderView 未來（Issue 4-8）新增的強型別 static
+  // helper，比照 _epubReaderViewKey 對 EpubReaderView 的既有作法。本 Issue
+  // 尚未實際使用，先建立以維持與既有 widget 的對稱慣例。
+  final _foliateEpubReaderViewKey = GlobalKey<State<FoliateEpubReaderView>>();
   // 記錄上一次實際套用給系統的螢幕方向，避免在偏好設定頻繁變動時（例如
   // 拖曳滑桿）重複呼叫 SystemChrome.setPreferredOrientations。
   ScreenOrientationSetting? _lastAppliedOrientation;
+  // EPUB 引擎分派結果（epic-17-epub-render-migration Issue 3）：true=FXL
+  // （EpubReaderView／Readium）、false=流式（FoliateEpubReaderView）、
+  // null=尚未解析完成（既有書籍偵測進行中，畫面維持載入中指示器）。與既有
+  // _isFixedLayout（Readium/foliate-js 開書後才回報的執行期狀態，驅動 FXL
+  // 懸浮控制項/AppBar 顯示邏輯）是兩個不同概念，互不影響——見
+  // docs/epics/epic-17-epub-render-migration/spec.md「已知限制」。
+  bool? _dispatchedIsFixedLayout;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _volumeKeyChannel.setMethodCallHandler(_handleVolumeKeyCall);
+    _resolveEpubEngineDispatch();
     widget.prefsManager.load(widget.bookId).then((loaded) {
       if (!mounted) return;
       setState(() {
@@ -236,6 +265,35 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         );
       });
       _applyScreenOrientation();
+    });
+  }
+
+  /// 解析 EPUB 該用哪個渲染引擎（epic-17-epub-render-migration Issue 3）。
+  /// `widget.isFixedLayout` 非 null 時直接採用；為 null（既有書籍尚未
+  /// 判斷過）時，若提供 [ReaderScreen.libraryRepository]則非同步呼叫
+  /// `detectAndCacheEpubLayout()` 判斷並回寫資料庫，期間 `_dispatchedIsFixedLayout`
+  /// 維持 null（畫面顯示載入中指示器，見 _buildBody 的 gating 條件）；未
+  /// 提供時同步退回既有行為（視為 FXL，建構 EpubReaderView），確保既有
+  /// 測試呼叫端零回歸。非 EPUB 格式完全不受影響（`_dispatchedIsFixedLayout`
+  /// 維持 null 但 `_buildBody` 的 gating 條件只在 format == epub 時才要求
+  /// 它非 null）。
+  void _resolveEpubEngineDispatch() {
+    _dispatchedIsFixedLayout = widget.isFixedLayout;
+    if (_dispatchedIsFixedLayout != null) return;
+    if (detectBookFormat(widget.filePath) != BookFormat.epub) return;
+    final repository = widget.libraryRepository;
+    if (repository == null) {
+      // 既有測試/呼叫端未提供 libraryRepository 時，退回 Issue 3 之前的
+      // 既有行為——一律視為固定版面（EpubReaderView／Readium），零回歸
+      // （見 docs/epics/epic-17-epub-render-migration/spec.md「已知限制」）。
+      _dispatchedIsFixedLayout = true;
+      return;
+    }
+    repository
+        .detectAndCacheEpubLayout(widget.bookId, widget.filePath)
+        .then((result) {
+      if (!mounted) return;
+      setState(() => _dispatchedIsFixedLayout = result);
     });
   }
 
@@ -722,6 +780,22 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     if (info.isFixedLayout && widget.bookmarksRepository != null) {
       _loadFxlBookmarks();
     }
+  }
+
+  /// FoliateEpubReaderView（流式，Issue 3）專屬的 onLayoutResolved 處理，
+  /// 刻意比 `_handleLayoutResolved`（EpubReaderView／FXL 分支既有邏輯）
+  /// 精簡：只設定 `_isFixedLayout`（本 widget 恆回傳 false），不設定
+  /// `_autoDetectedWritingMode`／不觸發 `EpubReaderView.loadTableOfContents`／
+  /// `_reloadAnnotationsAndRefreshDecorations`／`_loadFxlBookmarks`——這些呼叫
+  /// 對尚未掛載的 EpubReaderView/`_epubReaderViewKey` 雖然會靜默 no-op、
+  /// 技術上無害，但會讓 `_tocLoaded`/`_annotationsLoaded` 被誤判為「已
+  /// 完成」，使「目錄」/「筆記」按鈕看似可用卻永遠開出空清單/無法互動。
+  /// 讓「版面設定」/「目錄」/「筆記」按鈕維持停用狀態（依賴
+  /// `_autoDetectedWritingMode`/`_tocLoaded`/`_annotationsLoaded` 的既有
+  /// 判斷條件），直到 Issue 4/6/8 依序補上流式 foliate-js 的對應支援。
+  void _handleFoliateLayoutResolved(EpubLayoutInfo info) {
+    if (!mounted) return;
+    setState(() => _isFixedLayout = info.isFixedLayout);
   }
 
   /// 原生端背景計算全書字元數完成時觸發（Epic 5 Issue 3）：更新本地狀態
@@ -1230,7 +1304,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         final pdfSelection = _currentPdfSelection;
         return Stack(
           children: [
-            if (_resolved != null) _buildNativeView(format, isLandscape),
+            if (_resolved != null &&
+                (format != BookFormat.epub || _dispatchedIsFixedLayout != null))
+              _buildNativeView(format, isLandscape),
             if (_isFixedLayout && _chromeVisible)
               Positioned(
                 top: 16, // SafeArea 內層，頂部已扣除狀態列，故直接設為 16 即可
@@ -1421,6 +1497,15 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     final resolved = _resolved!;
     switch (format) {
       case BookFormat.epub:
+        if (!_dispatchedIsFixedLayout!) {
+          return FoliateEpubReaderView(
+            key: _foliateEpubReaderViewKey,
+            filePath: widget.filePath,
+            onPageRendered: _handlePageRendered,
+            onError: _handleError,
+            onLayoutResolved: _handleFoliateLayoutResolved,
+          );
+        }
         return EpubReaderView(
           key: _epubReaderViewKey,
           filePath: widget.filePath,
