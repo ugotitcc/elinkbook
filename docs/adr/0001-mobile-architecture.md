@@ -2,7 +2,7 @@
 
 ## 狀態
 
-已採納
+已採納；「EPUB 渲染：Readium」這項決策，對**流式（reflowable）EPUB**已被 [ADR 0011](0011-epub-reflowable-migrate-to-foliate-js.md) 取代（改用 `readest/foliate-js`，Phase 1）——本文件第 27 行預留的伏筆條款（「若 Readium 的直排支援或 Decorator...被證實不足，應重新檢視本 ADR」）已在 `epic-17-epub-render-migration` 觸發並收斂。**固定版面（FXL）EPUB 與 PDF 渲染的決策維持不變**，本 ADR 其餘決策（App 外殼、平台優先順序等）維持有效。
 
 ## 背景
 
