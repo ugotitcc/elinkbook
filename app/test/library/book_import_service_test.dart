@@ -74,6 +74,72 @@ void main() {
     expect(books.single.coverPath, isNotNull);
   });
 
+  test('匯入 EPUB 檔案時，extractMetadata 回傳的 isFixedLayout 正確寫入 Book',
+      () async {
+    mockChannel((call) async {
+      if (call.method == 'takePersistableUriPermission') return null;
+      if (call.method == 'extractMetadata') {
+        return {
+          'title': '定樣式漫畫',
+          'author': null,
+          'coverBytes': null,
+          'isFixedLayout': true,
+        };
+      }
+      return null;
+    });
+
+    final books = await service.importFiles(['content://example/comic.epub']);
+
+    expect(books.single.isFixedLayout, isTrue);
+  });
+
+  test('匯入流式 EPUB（isFixedLayout: false）時正確寫入 Book', () async {
+    mockChannel((call) async {
+      if (call.method == 'takePersistableUriPermission') return null;
+      if (call.method == 'extractMetadata') {
+        return {
+          'title': '流式小說',
+          'author': null,
+          'coverBytes': null,
+          'isFixedLayout': false,
+        };
+      }
+      return null;
+    });
+
+    final books = await service.importFiles(['content://example/novel.epub']);
+
+    expect(books.single.isFixedLayout, isFalse);
+  });
+
+  test('匯入 PDF 檔案時，isFixedLayout 維持 null（extractMetadata 回傳無此欄位）',
+      () async {
+    mockChannel((call) async {
+      if (call.method == 'takePersistableUriPermission') return null;
+      if (call.method == 'extractMetadata') {
+        return {'title': null, 'author': null, 'coverBytes': null};
+      }
+      return null;
+    });
+
+    final books = await service.importFiles(['content://example/report.pdf']);
+
+    expect(books.single.isFixedLayout, isNull);
+  });
+
+  test('匯入 TXT 檔案時，isFixedLayout 維持 null（不呼叫 extractMetadata）',
+      () async {
+    mockChannel((call) async {
+      if (call.method == 'takePersistableUriPermission') return null;
+      return null;
+    });
+
+    final books = await service.importFiles(['content://example/notes.txt']);
+
+    expect(books.single.isFixedLayout, isNull);
+  });
+
   test('匯入 PDF 檔案呼叫 extractMetadata(format: pdf)，詮釋資料無標題時降級為檔名',
       () async {
     mockChannel((call) async {
