@@ -12,6 +12,7 @@ class FakeLibraryRepository implements LibraryRepository {
   FakeLibraryRepository({
     List<Book> initialBooks = const [],
     this.throwOnListBooks = false,
+    this.detectedIsFixedLayout = false,
   })  : _books = List.of(initialBooks),
         _groups = {
           BookGroup.uncategorized,
@@ -19,6 +20,16 @@ class FakeLibraryRepository implements LibraryRepository {
         };
 
   final bool throwOnListBooks;
+
+  /// 供測試控制 [detectAndCacheEpubLayout] 的模擬回傳值（比照本檔案「假
+  /// 實作」定位——真實的 method channel 呼叫只發生在
+  /// `SqliteLibraryRepository`，這裡不觸及任何原生端）。
+  final bool detectedIsFixedLayout;
+
+  /// 記錄每次 [detectAndCacheEpubLayout] 呼叫的 bookId，供測試驗證呼叫
+  /// 次數/對象（例如驗證「只在 isFixedLayout == null 時才觸發」）。
+  final List<String> detectAndCacheEpubLayoutCalls = [];
+
   final List<Book> _books;
   final Set<String> _groups;
 
@@ -111,6 +122,17 @@ class FakeLibraryRepository implements LibraryRepository {
     }
   }
 
+  @override
+  Future<bool> detectAndCacheEpubLayout(String bookId, String filePath) async {
+    detectAndCacheEpubLayoutCalls.add(bookId);
+    final index = _books.indexWhere((b) => b.id == bookId);
+    if (index != -1) {
+      _books[index] =
+          _books[index].copyWith(isFixedLayout: detectedIsFixedLayout);
+    }
+    return detectedIsFixedLayout;
+  }
+
   Book _withGroupName(Book book, String groupName) => Book(
         id: book.id,
         title: book.title,
@@ -120,6 +142,7 @@ class FakeLibraryRepository implements LibraryRepository {
         source: book.source,
         coverPath: book.coverPath,
         progress: book.progress,
+        isFixedLayout: book.isFixedLayout,
         groupName: groupName,
         createTime: book.createTime,
         lastReadTime: book.lastReadTime,

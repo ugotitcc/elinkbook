@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -34,6 +35,7 @@ Book _book(
 
 void main() {
   setUpAll(() {
+    TestWidgetsFlutterBinding.ensureInitialized();
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
   });
@@ -1491,5 +1493,52 @@ void main() {
     );
     final updated = await upgraded.listBooks();
     expect(updated.single.isFixedLayout, isFalse);
+  });
+
+  group('detectAndCacheEpubLayout', () {
+    const channel = MethodChannel('elinkbook/book_metadata');
+
+    tearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, null);
+    });
+
+    test('呼叫 detectEpubLayout method channel 後，正確寫回資料庫並回傳結果',
+        () async {
+      await repository.insertBook(_book('b_detect'));
+
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) async {
+        expect(call.method, 'detectEpubLayout');
+        expect((call.arguments as Map)['uri'], 'content://example/b_detect');
+        return {'isFixedLayout': true};
+      });
+
+      final result = await repository.detectAndCacheEpubLayout(
+          'b_detect', 'content://example/b_detect');
+
+      expect(result, isTrue);
+      final books = await repository.listBooks();
+      expect(books.single.isFixedLayout, isTrue);
+    });
+
+    test('判斷結果為流式（false）時，正確寫回資料庫', () async {
+      await repository.insertBook(_book('b_detect_reflowable'));
+
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) async {
+        return {'isFixedLayout': false};
+      });
+
+      final result = await repository.detectAndCacheEpubLayout(
+          'b_detect_reflowable', 'content://example/b_detect_reflowable');
+
+      expect(result, isFalse);
+      final books = await repository.listBooks();
+      expect(
+        books.firstWhere((b) => b.id == 'b_detect_reflowable').isFixedLayout,
+        isFalse,
+      );
+    });
   });
 }
