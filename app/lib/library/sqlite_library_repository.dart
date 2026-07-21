@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
@@ -19,12 +20,14 @@ Future<String> defaultLibraryDatabasePath() async {
 class SqliteLibraryRepository implements LibraryRepository {
   final Database _db;
 
+  static const _metadataChannel = MethodChannel('elinkbook/book_metadata');
+
   SqliteLibraryRepository._(this._db);
 
   static Future<SqliteLibraryRepository> open(String path) async {
     final db = await openDatabase(
       path,
-      version: 10,
+      version: 11,
       onConfigure: (db) async {
         // book_reader_prefs 的 ON DELETE CASCADE 需要外鍵約束真正生效，
         // SQLite 預設不強制外鍵，須逐連線手動開啟（見 epic-3 plan-issue-1）。
@@ -50,6 +53,7 @@ class SqliteLibraryRepository implements LibraryRepository {
             epubLocator TEXT,
             pdfPageIndex INTEGER,
             totalCharacterCount INTEGER,
+            is_fixed_layout INTEGER,
             groupName TEXT NOT NULL DEFAULT '${BookGroup.uncategorized}',
             createTime INTEGER NOT NULL,
             lastReadTime INTEGER NOT NULL
@@ -137,6 +141,14 @@ class SqliteLibraryRepository implements LibraryRepository {
           // highlights／notes 表已存在（上方 if 分支已處理過），但欄位
           // 版本停留在 Issue 2（無 PDF 欄位），僅需 ALTER TABLE 補上。
           await _addPdfAnnotationColumns(db);
+        }
+        if (oldVersion < 11) {
+          // epic-17-epub-render-migration Issue 2：EPUB FXL/流式判斷快取
+          // 欄位，補追加到既有（version 1 起已存在）的 books 表，見
+          // docs/epics/epic-17-epub-render-migration/spec.md「資料模型」。
+          // 刻意放在上方 if/else 之外、無條件檢查，比照 oldVersion < 5/6
+          // 區塊的既有原則。
+          await _addEpubLayoutColumn(db);
         }
       },
     );
@@ -306,11 +318,40 @@ class SqliteLibraryRepository implements LibraryRepository {
     await db.execute('ALTER TABLE notes ADD COLUMN pdf_rect_json TEXT');
   }
 
+  static Future<void> _addEpubLayoutColumn(Database db) async {
+    // EPUB FXL/流式判斷快取（epic-17-epub-render-migration Issue 2），補
+    // 追加到既有（version 1 起已存在）的 books 表，見
+    // docs/epics/epic-17-epub-render-migration/spec.md「資料模型」。
+    // nullable：NULL=尚未判斷、0=流式、1=FXL。比照 _addHeaderFooterColumns
+    // 既有慣例，僅在表已存在時才執行 ALTER TABLE。
+    final tables = await db
+        .rawQuery("SELECT name FROM sqlite_master WHERE type='table' AND name='books'");
+    if (tables.isNotEmpty) {
+      await db.execute('ALTER TABLE books ADD COLUMN is_fixed_layout INTEGER');
+    }
+  }
+
   /// 供 [BookReaderPrefsRepository] 等後續 repository 共用同一個資料庫連線
   /// （`book_reader_prefs` 的外鍵約束要求與 `books` 表在同一個資料庫檔案內）。
   Database get database => _db;
 
   Future<void> close() => _db.close();
+
+  @override
+  Future<bool> detectAndCacheEpubLayout(String bookId, String filePath) async {
+    final response = await _metadataChannel.invokeMapMethod<String, Object?>(
+      'detectEpubLayout',
+      {'uri': filePath},
+    );
+    final isFixedLayout = response?['isFixedLayout'] as bool? ?? false;
+    await _db.update(
+      'books',
+      {'is_fixed_layout': isFixedLayout ? 1 : 0},
+      where: 'id = ?',
+      whereArgs: [bookId],
+    );
+    return isFixedLayout;
+  }
 
   @override
   Future<Book> insertBook(Book book) async {

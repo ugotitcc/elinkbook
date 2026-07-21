@@ -38,6 +38,17 @@ class Book {
   /// 據此觸發一次背景計算；非 `null` 則直接讀取快取，不重新走訪全書。
   final int? totalCharacterCount;
 
+  /// 本書是否為固定版面（FXL）EPUB，`null` 代表尚未判斷過（涵蓋 Phase 1
+  /// 上線前已匯入的既有書籍）或本書非 EPUB 格式（PDF/TXT 恆為 `null`，
+  /// 語意上不適用，見 epic-17-epub-render-migration/spec.md「資料模型」）。
+  /// 判斷結果由 `BookMetadataChannel.kt` 的 `extractEpubMetadata()`（匯入時）
+  /// 或 `detectEpubLayout()`（既有書籍補判斷）提供，寫入後供 `ReaderScreen`
+  /// 決定建構 `EpubReaderView`（Readium）或 `FoliateEpubReaderView`
+  /// （`foliate-js`），**與 `reader/writing_mode.dart` 的
+  /// `EpubLayoutInfo.isFixedLayout`（Readium 開書後才回報的執行期狀態）
+  /// 是兩個不同概念，互不影響**。
+  final bool? isFixedLayout;
+
   final String groupName;
   final DateTime createTime;
   final DateTime lastReadTime;
@@ -54,6 +65,7 @@ class Book {
     this.epubLocator,
     this.pdfPageIndex,
     this.totalCharacterCount,
+    this.isFixedLayout,
     this.groupName = BookGroup.uncategorized,
     required this.createTime,
     required this.lastReadTime,
@@ -72,6 +84,10 @@ class Book {
       'epubLocator': epubLocator,
       'pdfPageIndex': pdfPageIndex,
       'totalCharacterCount': totalCharacterCount,
+      // 欄位名刻意用 snake_case（spec.md「資料模型」決策），與本表其餘
+      // 欄位的 camelCase 命名不一致，不是疏漏。
+      'is_fixed_layout':
+          isFixedLayout == null ? null : (isFixedLayout! ? 1 : 0),
       'groupName': groupName,
       'createTime': createTime.millisecondsSinceEpoch,
       'lastReadTime': lastReadTime.millisecondsSinceEpoch,
@@ -91,6 +107,9 @@ class Book {
       epubLocator: map['epubLocator'] as String?,
       pdfPageIndex: map['pdfPageIndex'] as int?,
       totalCharacterCount: map['totalCharacterCount'] as int?,
+      isFixedLayout: map['is_fixed_layout'] == null
+          ? null
+          : (map['is_fixed_layout'] as int) == 1,
       groupName: map['groupName'] as String,
       createTime: DateTime.fromMillisecondsSinceEpoch(map['createTime'] as int),
       lastReadTime:
@@ -98,9 +117,10 @@ class Book {
     );
   }
 
-  /// 回傳欄位值與自身相同的新物件，僅覆寫明確傳入的參數（目前只需要
-  /// 覆寫 [groupName]——供 Issue 10 的批次分類異動使用）。
-  Book copyWith({String? groupName}) {
+  /// 回傳欄位值與自身相同的新物件，僅覆寫明確傳入的參數。[groupName] 供
+  /// Issue 10 的批次分類異動使用；[isFixedLayout] 供本 Issue 的 EPUB 版面
+  /// 判斷/回填流程使用。
+  Book copyWith({String? groupName, bool? isFixedLayout}) {
     return Book(
       id: id,
       title: title,
@@ -112,9 +132,51 @@ class Book {
       progress: progress,
       epubLocator: epubLocator,
       pdfPageIndex: pdfPageIndex,
+      totalCharacterCount: totalCharacterCount,
+      isFixedLayout: isFixedLayout ?? this.isFixedLayout,
       groupName: groupName ?? this.groupName,
       createTime: createTime,
       lastReadTime: lastReadTime,
     );
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is Book &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          title == other.title &&
+          author == other.author &&
+          format == other.format &&
+          filePath == other.filePath &&
+          source == other.source &&
+          coverPath == other.coverPath &&
+          progress == other.progress &&
+          epubLocator == other.epubLocator &&
+          pdfPageIndex == other.pdfPageIndex &&
+          totalCharacterCount == other.totalCharacterCount &&
+          isFixedLayout == other.isFixedLayout &&
+          groupName == other.groupName &&
+          createTime == other.createTime &&
+          lastReadTime == other.lastReadTime;
+
+  @override
+  int get hashCode => Object.hash(
+        id,
+        title,
+        author,
+        format,
+        filePath,
+        source,
+        coverPath,
+        progress,
+        epubLocator,
+        pdfPageIndex,
+        totalCharacterCount,
+        isFixedLayout,
+        groupName,
+        createTime,
+        lastReadTime,
+      );
 }

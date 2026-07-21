@@ -200,6 +200,7 @@ class BookImportServiceImpl implements BookImportService {
     var title = fallbackTitle;
     String? author;
     String? coverPath;
+    bool? isFixedLayout;
 
     if (format == BookFileFormat.txt) {
       final coverBytes = await generateTxtCover(fallbackTitle);
@@ -215,6 +216,10 @@ class BookImportServiceImpl implements BookImportService {
           title = extractedTitle;
         }
         author = metadata?['author'] as String?;
+        // PDF 的 extractMetadata 回傳 map 沒有這個鍵，cast 結果自然為 null，
+        // 不需要另外依 format 分支判斷（見
+        // docs/epics/epic-17-epub-render-migration/spec.md「模組」）。
+        isFixedLayout = metadata?['isFixedLayout'] as bool?;
         final coverBytes = metadata?['coverBytes'] as Uint8List?;
         if (coverBytes != null) {
           coverPath = await _landCover(coverBytes, id);
@@ -232,6 +237,7 @@ class BookImportServiceImpl implements BookImportService {
       filePath: resolvedUri,
       source: BookSource.local,
       coverPath: coverPath,
+      isFixedLayout: isFixedLayout,
       groupName: folderName ?? BookGroup.uncategorized,
       createTime: now,
       lastReadTime: now,

@@ -149,4 +149,95 @@ void main() {
 
     expect(restored.totalCharacterCount, isNull);
   });
+
+  test('isFixedLayout 欄位可正確往返（epic-17-epub-render-migration Issue 2）',
+      () {
+    final fxlBook = Book(
+      id: 'b8',
+      title: 'FXL 漫畫',
+      format: BookFileFormat.epub,
+      filePath: '/storage/emulated/0/comic.epub',
+      source: BookSource.local,
+      isFixedLayout: true,
+      createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+      lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+    );
+    final reflowableBook = Book(
+      id: 'b9',
+      title: '流式小說',
+      format: BookFileFormat.epub,
+      filePath: '/storage/emulated/0/novel.epub',
+      source: BookSource.local,
+      isFixedLayout: false,
+      createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+      lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+    );
+
+    expect(Book.fromMap(fxlBook.toMap()).isFixedLayout, isTrue);
+    expect(Book.fromMap(reflowableBook.toMap()).isFixedLayout, isFalse);
+  });
+
+  test('isFixedLayout 未設定時，往返後仍為 null（代表尚未判斷過，或格式不適用）',
+      () {
+    final book = Book(
+      id: 'b10',
+      title: 'PDF 書籍',
+      format: BookFileFormat.pdf,
+      filePath: '/storage/emulated/0/report.pdf',
+      source: BookSource.local,
+      createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+      lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+    );
+
+    final restored = Book.fromMap(book.toMap());
+
+    expect(restored.isFixedLayout, isNull);
+  });
+
+  test('copyWith(isFixedLayout: ...) 只改變 isFixedLayout，其餘欄位保持不變',
+      () {
+    final book = Book(
+      id: 'b11',
+      title: '流式小說',
+      format: BookFileFormat.epub,
+      filePath: '/storage/emulated/0/novel.epub',
+      source: BookSource.local,
+      groupName: '小說',
+      createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+      lastReadTime: DateTime.fromMillisecondsSinceEpoch(2000),
+    );
+
+    final detected = book.copyWith(isFixedLayout: false);
+
+    expect(detected.isFixedLayout, isFalse);
+    expect(detected.id, book.id);
+    expect(detected.title, book.title);
+    expect(detected.groupName, book.groupName);
+    expect(detected.createTime, book.createTime);
+    expect(detected.lastReadTime, book.lastReadTime);
+  });
+
+  test('operator== 與 hashCode：欄位值完全相同視為相等，isFixedLayout 不同則不相等',
+      () {
+    Book build({bool? isFixedLayout}) => Book(
+          id: 'b12',
+          title: '書名',
+          format: BookFileFormat.epub,
+          filePath: '/storage/emulated/0/book.epub',
+          source: BookSource.local,
+          isFixedLayout: isFixedLayout,
+          createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+          lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+        );
+
+    final a = build(isFixedLayout: true);
+    final b = build(isFixedLayout: true);
+    final c = build(isFixedLayout: false);
+    final d = build();
+
+    expect(a, equals(b));
+    expect(a.hashCode, equals(b.hashCode));
+    expect(a, isNot(equals(c)));
+    expect(a, isNot(equals(d)));
+  });
 }

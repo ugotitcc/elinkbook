@@ -44,7 +44,7 @@
 
 ## Issue 2：資料層基礎建設——EPUB FXL/流式判斷與回填
 
-**Status:** `ready-for-agent`
+**Status:** ✅ 已完成。依 `plans/plan-issue-2.md` Task 1-6 完成 `Book` model／schema migration（v10→v11）／`BookMetadataChannel.kt`（`extractEpubMetadata` 擴充 + 新增 `detectEpubLayout`）／匯入流程／`LibraryRepository.detectAndCacheEpubLayout()`。`flutter test`（548 tests）／`flutter analyze`／`./gradlew.bat :app:compileDebugKotlin`／`./gradlew.bat :app:testDebugUnitTest` 皆通過。`ReaderScreen` 尚未接線（Issue 3 範圍）。
 
 **依賴：** 無（起始工單，可與 Issue 7 平行開始）
 

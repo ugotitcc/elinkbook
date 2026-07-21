@@ -18,6 +18,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.readium.r2.shared.publication.Layout
 import org.readium.r2.shared.publication.services.cover
 import org.readium.r2.shared.util.AbsoluteUrl
 import org.readium.r2.shared.util.getOrElse
@@ -90,6 +91,14 @@ class BookMetadataChannel(
                     "pdf" -> extractPdfMetadata(path, result)
                     else -> result.error("unsupported_format", "不支援的格式：$format", null)
                 }
+            }
+            "detectEpubLayout" -> {
+                val path = call.argument<String>("uri")
+                if (path == null) {
+                    result.error("invalid_arguments", "缺少 uri 參數", null)
+                    return
+                }
+                detectEpubLayout(path, result)
             }
             "takePersistableUriPermission" -> {
                 val uriString = call.argument<String>("uri")
@@ -239,6 +248,10 @@ class BookMetadataChannel(
                 try {
                     val title = publication.metadata.title
                     val author = publication.metadata.authors.firstOrNull()?.name
+                    // epic-17-epub-render-migration Issue 2：免費多讀一個既有欄位——
+                    // publication 本來就已經在這裡被建構，不需要新的解析路徑
+                    // （見 docs/epics/epic-17-epub-render-migration/spec.md「模組」）。
+                    val isFixedLayout = publication.metadata.layout == Layout.FIXED
                     // PNG 壓縮與封面退路的 I/O／解碼皆為耗時工作，移到背景執行緒避免
                     // 阻塞主執行緒；withContext 返回後會自動切回 scope 的 Main
                     // dispatcher。
@@ -251,6 +264,7 @@ class BookMetadataChannel(
                             "title" to title,
                             "author" to author,
                             "coverBytes" to coverBytes,
+                            "isFixedLayout" to isFixedLayout,
                         ),
                     )
                 } finally {
@@ -260,6 +274,50 @@ class BookMetadataChannel(
                 result.error(
                     "extraction_failed",
                     "提取 EPUB 詮釋資料時發生未預期的錯誤：${e.message}",
+                    null,
+                )
+            }
+        }
+    }
+
+    /**
+     * 供既有書籍（`is_fixed_layout` 為 `null`）補判斷使用（見
+     * docs/epics/epic-17-epub-render-migration/spec.md「既有書籍回填流程」）。
+     * 與 [extractEpubMetadata] 共用同一套開檔模式，但跳過封面點陣圖解碼
+     * （最耗時的部分），只讀 `publication.metadata.layout`。
+     */
+    private fun detectEpubLayout(path: String, result: MethodChannel.Result) {
+        scope.launch {
+            try {
+                val httpClient = DefaultHttpClient()
+                val assetRetriever = AssetRetriever(context.contentResolver, httpClient)
+                val asset = assetRetriever.retrieve(resolveAbsoluteUrl(path)).getOrElse {
+                    result.error("detection_failed", "找不到檔案或檔案已損毀：$path", null)
+                    return@launch
+                }
+                val publicationParser = DefaultPublicationParser(
+                    context,
+                    httpClient,
+                    assetRetriever,
+                    pdfFactory = null,
+                )
+                val publicationOpener = PublicationOpener(publicationParser)
+                val publication =
+                    publicationOpener.open(asset, allowUserInteraction = false).getOrElse {
+                        asset.close()
+                        result.error("detection_failed", "無法解析 EPUB 檔案：${it.message}", null)
+                        return@launch
+                    }
+                try {
+                    val isFixedLayout = publication.metadata.layout == Layout.FIXED
+                    result.success(mapOf("isFixedLayout" to isFixedLayout))
+                } finally {
+                    publication.close()
+                }
+            } catch (e: Exception) {
+                result.error(
+                    "detection_failed",
+                    "判斷 EPUB 版面格式時發生未預期的錯誤：${e.message}",
                     null,
                 )
             }
