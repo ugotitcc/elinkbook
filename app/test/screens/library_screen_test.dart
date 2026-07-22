@@ -1046,6 +1046,40 @@ void main() {
   });
 
   testWidgets(
+      'LibraryScreen 點開一本書後，ReaderScreen 收到的 isFixedLayout／libraryRepository 正確貫穿（epic-17-epub-render-migration Issue 3）',
+      (tester) async {
+    // 使用 .txt 格式讓 ReaderScreen 命中「不支援格式」分支（純 Dart 安全
+    // 路徑，不觸發 AndroidView），比照本檔案既有的貫穿驗證測試手法——本
+    // 測試只關心建構參數是否正確貫穿，與實際閱讀器渲染無關。
+    final book = _testBook(
+      id: '1',
+      title: '紅樓夢',
+      author: '曹雪芹',
+      filePath: 'content://example/1.txt',
+      isFixedLayout: false,
+    );
+    final repository = FakeLibraryRepository(initialBooks: [book]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: repository,
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('book_item_1')));
+    await tester.pumpAndSettle();
+
+    final readerScreen = tester.widget<ReaderScreen>(find.byType(ReaderScreen));
+    expect(readerScreen.isFixedLayout, isFalse);
+    expect(readerScreen.libraryRepository, same(repository));
+  });
+
+  testWidgets(
       '透過 LibraryScreen 開啟已有劃線/備註資料的 PDF 書籍後，'
       '「劃線與備註」分頁正確顯示既有資料而非空狀態（Issue 6 缺口修正）',
       (tester) async {
@@ -1239,6 +1273,7 @@ Book _testBook({
   String? author,
   String groupName = BookGroup.uncategorized,
   String? filePath,
+  bool? isFixedLayout,
 }) {
   final now = DateTime.now();
   return Book(
@@ -1249,6 +1284,7 @@ Book _testBook({
     filePath: filePath ?? 'content://example/$id.epub',
     source: BookSource.local,
     groupName: groupName,
+    isFixedLayout: isFixedLayout,
     createTime: now,
     lastReadTime: now,
   );

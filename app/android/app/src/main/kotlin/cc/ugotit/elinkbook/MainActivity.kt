@@ -116,6 +116,13 @@ class MainActivity : FlutterFragmentActivity() {
                 "cc.ugotit.elinkbook/epub_reader_view",
                 EpubReaderViewFactory(this, flutterEngine.dartExecutor.binaryMessenger),
             )
+        flutterEngine
+            .platformViewsController
+            .registry
+            .registerViewFactory(
+                "cc.ugotit.elinkbook/foliate_epub_reader_view",
+                FoliateEpubReaderViewFactory(flutterEngine.dartExecutor.binaryMessenger),
+            )
         bookMetadataChannel =
             BookMetadataChannel(this, flutterEngine.dartExecutor.binaryMessenger)
 

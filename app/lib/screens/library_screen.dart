@@ -293,6 +293,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
               bookTitle: book.title,
               bookAuthor: book.author,
               bookProgress: book.progress,
+              isFixedLayout: book.isFixedLayout,
+              libraryRepository: widget.repository,
             ),
           ),
         )
