@@ -304,7 +304,7 @@ git commit -m "feat(epic-17): FoliateEpubReaderView 新增 nextPage/previousPage
 - Consumes: 既有 `ZoneAction`（`app/lib/reader/zone_action.dart`）列舉。
 - Produces: `FoliateEpubReaderView` 新增建構參數 `navZoneActions: List<ZoneAction>`（預設 9 格皆 `ZoneAction.none`）／`onZoneAction: ValueChanged<ZoneAction>?`／`showNavZoneDebugOverlay: bool`（預設 `false`），`build()` 疊加 9 個 `Key('nav_zone_$index')` 的 `GestureDetector`。供 Task 4 的 `ReaderScreen._buildNativeView()` 傳入。
 
-- [ ] **Step 1: 寫失敗測試——9 個熱區存在且點擊觸發 onZoneAction**
+- [x] **Step 1: 寫失敗測試——9 個熱區存在且點擊觸發 onZoneAction**
 
 在 `app/test/reader/foliate_epub_reader_view_test.dart` 頂部 import 區塊新增：
 
@@ -378,7 +378,7 @@ import 'package:elinkbook/reader/zone_action.dart';
   });
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 ```bash
 flutter test test/reader/foliate_epub_reader_view_test.dart
@@ -386,7 +386,7 @@ flutter test test/reader/foliate_epub_reader_view_test.dart
 
 預期：新測試 FAIL（`navZoneActions`/`onZoneAction`/`showNavZoneDebugOverlay` 建構參數不存在，或 `find.byKey(Key('nav_zone_0'))` 找不到 widget）。
 
-- [ ] **Step 3: 新增 `zone_action.dart` import**
+- [x] **Step 3: 新增 `zone_action.dart` import**
 
 第 1-7 行：
 
@@ -413,7 +413,7 @@ import 'writing_mode.dart';
 import 'zone_action.dart';
 ```
 
-- [ ] **Step 4: 新增建構參數**
+- [x] **Step 4: 新增建構參數**
 
 第 37-56 行：
 
@@ -487,7 +487,7 @@ import 'zone_action.dart';
   });
 ```
 
-- [ ] **Step 5: 新增 `Stack` 疊加層與 `build()` 修改**
+- [x] **Step 5: 新增 `Stack` 疊加層與 `build()` 修改**
 
 原本的 `build()`（新增 static helper 後，位於檔案最末段）：
 
@@ -577,7 +577,7 @@ import 'zone_action.dart';
 }
 ```
 
-- [ ] **Step 6: 執行測試確認通過**
+- [x] **Step 6: 執行測試確認通過**
 
 ```bash
 flutter test test/reader/foliate_epub_reader_view_test.dart
@@ -585,7 +585,7 @@ flutter test test/reader/foliate_epub_reader_view_test.dart
 
 預期：全數 PASS（含 Task 2 新增的 static helper 測試——`_pumpFoliateEpubReaderView` 的既有測試不受 `Stack` 疊加層影響，`AndroidView` 仍是 `find.byType(AndroidView)` 唯一符合的祖先鏈節點）。
 
-- [ ] **Step 7: 執行 `flutter analyze`**
+- [x] **Step 7: 執行 `flutter analyze`**
 
 ```bash
 flutter analyze
@@ -593,7 +593,7 @@ flutter analyze
 
 預期：`No issues found!`
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add app/lib/reader/foliate_epub_reader_view.dart app/test/reader/foliate_epub_reader_view_test.dart
@@ -612,7 +612,7 @@ git commit -m "feat(epic-17): FoliateEpubReaderView 新增 3×3 導航熱區疊�
 - Consumes: Task 2/3 新增的 `FoliateEpubReaderView.nextPage`/`previousPage`/`navZoneActions`/`onZoneAction`/`showNavZoneDebugOverlay`；既有 `ResolvedPreferences.navZoneActions`/`showNavZoneDebugOverlay`（epic-7-interaction 既有欄位，未變動）；既有 `_dispatchedIsFixedLayout`（Issue 3 已建立，`true`=FXL/`EpubReaderView`、`false`=流式/`FoliateEpubReaderView`）。
 - Produces: 流式 EPUB 開書後，`_handleZoneAction()` 的 `previousPage`/`nextPage`/`menu` 三種動作皆正確生效，供 Task 5 真機驗證。
 
-- [ ] **Step 1: 寫失敗測試——流式 EPUB 點擊選單熱區觸發沉浸模式切換**
+- [x] **Step 1: 寫失敗測試——流式 EPUB 點擊選單熱區觸發沉浸模式切換**
 
 在 `app/test/screens/reader_screen_test.dart` 的 `main()` 內最後一個 `testWidgets` 區塊之後（第 2497-2527 行既有的「EPUB 流式：原生端 onZoneTapped 回呼」測試之後），新增：
 
@@ -700,7 +700,7 @@ git commit -m "feat(epic-17): FoliateEpubReaderView 新增 3×3 導航熱區疊�
   });
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 ```bash
 flutter test test/screens/reader_screen_test.dart
@@ -708,7 +708,7 @@ flutter test test/screens/reader_screen_test.dart
 
 預期：兩個新測試 FAIL——`find.byKey(Key('nav_zone_1'))`/`find.byKey(Key('nav_zone_0'))`/`find.byKey(Key('nav_zone_2'))` 找不到 widget（`_buildNativeView()` 尚未傳入 `navZoneActions`/`onZoneAction`）。
 
-- [ ] **Step 3: `_buildNativeView()` Foliate 分支傳入熱區參數**
+- [x] **Step 3: `_buildNativeView()` Foliate 分支傳入熱區參數**
 
 第 1508-1527 行：
 
@@ -765,7 +765,7 @@ flutter test test/screens/reader_screen_test.dart
         return EpubReaderView(
 ```
 
-- [ ] **Step 4: `_handleZoneAction()` 依 `_dispatchedIsFixedLayout` 分派**
+- [x] **Step 4: `_handleZoneAction()` 依 `_dispatchedIsFixedLayout` 分派**
 
 第 1596-1646 行（含既有說明註解與 `previousPage`/`nextPage` 分支）：
 
@@ -897,7 +897,7 @@ flutter test test/screens/reader_screen_test.dart
 }
 ```
 
-- [ ] **Step 5: 執行測試確認通過**
+- [x] **Step 5: 執行測試確認通過**
 
 ```bash
 flutter test test/screens/reader_screen_test.dart
@@ -905,7 +905,7 @@ flutter test test/screens/reader_screen_test.dart
 
 預期：全數 PASS，特別留意既有「EPUB 流式：原生端 onZoneTapped 回呼」測試（第 2497 行）不受影響——該測試未傳入 `isFixedLayout`，`_dispatchedIsFixedLayout` 退回既有預設值 `true`，仍建構 `EpubReaderView`，不受本工單新增分支影響。
 
-- [ ] **Step 6: 執行 `flutter analyze`**
+- [x] **Step 6: 執行 `flutter analyze`**
 
 ```bash
 flutter analyze
@@ -913,7 +913,7 @@ flutter analyze
 
 預期：`No issues found!`
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app/lib/screens/reader_screen.dart app/test/screens/reader_screen_test.dart
@@ -933,7 +933,7 @@ git commit -m "feat(epic-17): ReaderScreen 接上流式 EPUB 的換頁與 3×3 �
 
 **本 Task 無法寫「失敗測試先行」的 TDD 循環**（比照本 Epic Issue 3/4 既有慣例）：`integration_test` 需要真實裝置渲染 `WebView`，Task 1-3 完成前這個測試必然全數失敗（`FoliateEpubReaderView.nextPage`/`navZoneActions` 尚不存在），Task 1-3 完成後才具備可執行的前提。本 Task 直接撰寫最終版本，於裝置上執行驗證。
 
-- [ ] **Step 1: 新增真機整合測試檔案**
+- [x] **Step 1: 新增真機整合測試檔案**
 
 建立 `app/integration_test/foliate_stream_nav_zone_test.dart`：
 
@@ -1066,7 +1066,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: 確認測試裝置在線**
+- [x] **Step 2: 確認測試裝置在線**
 
 ```bash
 adb devices -l
@@ -1074,7 +1074,7 @@ adb devices -l
 
 預期：`3CEF42ECD491687` 出現在清單中且狀態為 `device`（非 `unauthorized`/`offline`）。
 
-- [ ] **Step 3: 於真機執行本測試**
+- [x] **Step 3: 於真機執行本測試**
 
 於 `app/` 目錄執行：
 
@@ -1084,7 +1084,7 @@ flutter test integration_test/foliate_stream_nav_zone_test.dart -d 3CEF42ECD4916
 
 預期：PASS。若失敗，依錯誤訊息判斷是 Task 1（原生換頁橋接）或 Task 3（Dart 熱區疊加層）的問題，回頭修正對應 Task 後重新執行，不在本 Task 內臨時繞過。
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add app/integration_test/foliate_stream_nav_zone_test.dart
@@ -1101,7 +1101,7 @@ git commit -m "test(epic-17): 新增流式 EPUB 3×3 導航熱區真機整合測
 - Consumes: Task 1-5 的全部產出。
 - Produces: 本工單完成的最終確認證據，供任務審查與 `issues.md` 狀態更新使用。
 
-- [ ] **Step 1: 執行完整 Dart 測試套件**
+- [x] **Step 1: 執行完整 Dart 測試套件**
 
 於 `app/` 目錄執行：
 
@@ -1111,7 +1111,7 @@ flutter test
 
 預期：全數 PASS（Issue 4 完成時基準為 564 個測試，本工單 Task 2 新增 1 個、Task 3 新增 2 個、Task 4 新增 2 個，預期共 569 個）。
 
-- [ ] **Step 2: 執行 `flutter analyze`**
+- [x] **Step 2: 執行 `flutter analyze`**
 
 ```bash
 flutter analyze
@@ -1119,7 +1119,7 @@ flutter analyze
 
 預期：`No issues found!`
 
-- [ ] **Step 3: 執行 Kotlin 編譯與 JVM 測試**
+- [x] **Step 3: 執行 Kotlin 編譯與 JVM 測試**
 
 於 `app/android` 目錄執行：
 
@@ -1130,7 +1130,7 @@ flutter analyze
 
 預期：兩者皆 `BUILD SUCCESSFUL`（93 個既有 JVM 測試，本 Issue 無新增）。
 
-- [ ] **Step 4: 於真機執行 Foliate 相關 `integration_test`**
+- [x] **Step 4: 於真機執行 Foliate 相關 `integration_test`**
 
 ```bash
 cd app
@@ -1140,7 +1140,7 @@ flutter test integration_test/foliate_stream_nav_zone_test.dart -d 3CEF42ECD4916
 
 預期：全數 PASS（`foliate_epub_reader_view_test.dart` 為 Issue 3/4 既有 7 個 + 本工單新增的 `foliate_stream_nav_zone_test.dart` 1 個）。
 
-- [ ] **Step 5: 確認 `git status` 乾淨（僅含本工單預期變更）**
+- [x] **Step 5: 確認 `git status` 乾淨（僅含本工單預期變更）**
 
 ```bash
 git status
@@ -1148,7 +1148,7 @@ git status
 
 預期：僅列出 Task 1-5 修改/新增的檔案，無不相關的暫存產物。
 
-- [ ] **Step 6: 更新 `issues.md` Issue 5 狀態**
+- [x] **Step 6: 更新 `issues.md` Issue 5 狀態**
 
 修改 `docs/epics/epic-17-epub-render-migration/issues.md` 的「## Issue 5」區塊，在 `**Status:** \`ready-for-agent\`` 之後、`**依賴：**` 之前插入完成摘要（比照 Issue 1-4 既有的完成摘要寫法），例如：
 
@@ -1156,7 +1156,7 @@ git status
 **Status:** ✅ 已完成。依 `plans/plan-issue-5.md` Task 1-6 完成 `FoliateEpubReaderView.kt`（`nextPage`/`previousPage`/`jumpToProgression` method channel）／`main.js`（`window.nextPage`/`window.previousPage`/`window.jumpToFraction` 橋接）／`foliate_epub_reader_view.dart`（static helper 三個＋與 `EpubReaderView` FXL 分支逐位元組相同的 3×3 導航熱區疊加層）／`ReaderScreen`（`_buildNativeView()` 傳入熱區參數、`_handleZoneAction()` 依 `_dispatchedIsFixedLayout` 分派）。新增真機整合測試 `foliate_stream_nav_zone_test.dart`。`flutter test`（569 tests）／`flutter analyze`／`./gradlew.bat :app:compileDebugKotlin`／`./gradlew.bat :app:testDebugUnitTest` 以及真機 `integration_test`（9 格熱區逐一點擊、無動作格攔截觸控、換頁呼叫不觸發 onError）皆全數通過。目錄跳轉、定位持久化與頁碼顯示、劃線備註留給 Issue 6-8。
 ```
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add docs/epics/epic-17-epub-render-migration/issues.md

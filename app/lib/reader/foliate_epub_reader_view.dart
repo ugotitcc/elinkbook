@@ -13,15 +13,17 @@ import 'zone_action.dart';
 /// 給定 EPUB 檔案的裝置端絕對路徑或 content:// URI，通知原生端渲染起始
 /// 頁；渲染成功或失敗會分別觸發 [onPageRendered] 或 [onError]。
 ///
-/// 本 Issue（epic-17-epub-render-migration Issue 4）新增 9 項版面偏好
+/// 本 Widget（epic-17-epub-render-migration Issue 4/5）新增 9 項版面偏好
 /// 建構參數，與既有 [EpubReaderView] 對稱參數同名同型別（不含 `dualPageMode`／
-/// `isLandscape`／`navZoneActions`——reflowable 流式書籍不適用「雙頁」，
-/// 3×3 導航熱區是 Issue 5 的範圍且完全由 Dart 端處理、不送給原生端）。
+/// `isLandscape`——reflowable 流式書籍不適用「雙頁」）。Issue 5 新增
+/// `navZoneActions`/`onZoneAction`/`showNavZoneDebugOverlay` 三個建構參數
+/// 與 `nextPage`/`previousPage`/`jumpToProgression` static helper，3×3
+/// 導航熱區完全由 Dart 端 Stack 疊加層處理、不送給原生端。
 /// [writingMode] 是「呼叫端要求套用的方向」（可寫），與 [onLayoutResolved]
 /// 回報的 [EpubLayoutInfo.writingMode]（原生端判斷/回報的唯讀值）是兩個
 /// 不同方向的資料流，比照 [EpubReaderView] 既有模式。
 ///
-/// 排版設定以外的換頁／目錄／劃線備註參數留待 Issue 5-8 補上。
+/// 排版設定以外的目錄／劃線備註參數留待 Issue 6-8 補上。
 class FoliateEpubReaderView extends StatefulWidget {
   final String filePath;
   final VoidCallback onPageRendered;
