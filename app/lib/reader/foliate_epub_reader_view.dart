@@ -55,6 +55,38 @@ class FoliateEpubReaderView extends StatefulWidget {
     this.publisherStyles,
   });
 
+  /// 呼叫原生端 view.next()，換頁不觸發任何回呼（強型別 static helper，
+  /// 比照既有 EpubReaderView.nextPage 模式，不使用 `as dynamic` 跨越
+  /// State 的 private 邊界）。[key] 對應的 State 若尚未掛載（例如純
+  /// flutter_test 環境下 AndroidView 尚未建立），靜默忽略。
+  static void nextPage(GlobalKey<State<FoliateEpubReaderView>> key) {
+    final state = key.currentState;
+    if (state is _FoliateEpubReaderViewState) {
+      state._channel?.invokeMethod('nextPage');
+    }
+  }
+
+  /// 呼叫原生端 view.prev()，同上僅換頁方向相反。
+  static void previousPage(GlobalKey<State<FoliateEpubReaderView>> key) {
+    final state = key.currentState;
+    if (state is _FoliateEpubReaderViewState) {
+      state._channel?.invokeMethod('previousPage');
+    }
+  }
+
+  /// 跳轉到指定全書進度比例（0.0-1.0），原生端呼叫 view.goToFraction()。
+  static void jumpToProgression(
+    GlobalKey<State<FoliateEpubReaderView>> key,
+    double progression,
+  ) {
+    final state = key.currentState;
+    if (state is _FoliateEpubReaderViewState) {
+      state._channel?.invokeMethod('jumpToProgression', {
+        'progression': progression,
+      });
+    }
+  }
+
   @override
   State<FoliateEpubReaderView> createState() => _FoliateEpubReaderViewState();
 }

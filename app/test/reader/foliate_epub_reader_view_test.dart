@@ -337,4 +337,34 @@ void main() {
     expect(info!.isFixedLayout, isFalse);
     expect(info!.writingMode, WritingMode.horizontal);
   });
+
+  testWidgets(
+      'FoliateEpubReaderView.nextPage()／previousPage()／jumpToProgression()'
+      '（強型別 static helper）呼叫原生端對應 method channel',
+      (tester) async {
+    final key = GlobalKey<State<FoliateEpubReaderView>>();
+    final calls = await _pumpFoliateEpubReaderView(
+      tester,
+      FoliateEpubReaderView(
+        key: key,
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+      ),
+    );
+    calls.clear();
+
+    FoliateEpubReaderView.nextPage(key);
+    await tester.pump();
+    expect(calls.any((c) => c.method == 'nextPage'), isTrue);
+
+    FoliateEpubReaderView.previousPage(key);
+    await tester.pump();
+    expect(calls.any((c) => c.method == 'previousPage'), isTrue);
+
+    FoliateEpubReaderView.jumpToProgression(key, 0.42);
+    await tester.pump();
+    final jumpCall = calls.firstWhere((c) => c.method == 'jumpToProgression');
+    expect(jumpCall.arguments, {'progression': 0.42});
+  });
 }
