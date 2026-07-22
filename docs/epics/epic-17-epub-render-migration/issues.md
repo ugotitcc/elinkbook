@@ -183,7 +183,7 @@ Phase 1 需要在「建構閱讀器 widget 之前」就知道一本 EPUB 是固�
 
 ## Issue 7：Spike——劃線/備註可行性驗證（`overlayer.js`）
 
-**Status:** `ready-for-agent`
+**Status:** ✅ 已完成。依 `plans/plan-issue-7.md` Task 1-6 完成 Harness 建置、`readest/foliate-js`（釘定 commit `dd71f2be356563c16a23272686189fcfb45d0b82`）真機插樁驗證與結論收斂，結論寫入 `reviews/spike-overlayer-annotations.md`。在真機 Android WebView（`3CEF42ECD491687`，Android 15／API 35）上，三項研究問題**皆得到正面驗證**：(1) `Overlayer.highlight`/`underline` 的多色螢光筆＋獨立底線子類型繪製正確（顏色可辨、底線方向以 SVG 幾何屬性客觀證實為垂直方向）；(2) 選取範圍的螢幕座標百分比換算公式正確，經真機原生長按拖曳手勢與程式化退路雙重交叉驗證通過；(3) 點擊既有標記可靠觸發 `show-annotation` 並識別正確 CFI（4/4 全數通過、負面對照無誤判）。過程中發現並修正兩個真實的既有 API 陷阱（皆非顯而易見、需真機執行＋Chrome DevTools Protocol 即時檢視才能定位）：CFI round-trip 會把 `selectNodeContents(element)` 產生的元素層級 Range 靜默壓扁成 collapsed（改用文字節點邊界建構 Range 解決）；`'load'` 事件對 look-ahead 預讀章節同樣會觸發，導致依賴該事件快取的模組級變數讀到錯誤/非可見的 doc（改用 `view.lastLocation` 即時查詢解決，在兩條獨立程式碼路徑上各自獨立重現，屬系統性風險）。另發現一項非 `Overlayer` 本身缺陷、但對正式 App 熱區設計有意義的整合風險：導覽熱區與可標記內容區域重疊時會攔截點擊，事件根本傳不到 `hitTest()`。**結論：ADR 0011（劃線/備註完整涵蓋在 Phase 1 範圍）維持不變，不需要人類重新確認範圍**；但 Issue 8 必須把上述兩個 API 陷阱的修正方式與熱區設計提醒當作硬性實作約束，避免重蹈覆轍，詳見報告「風險分級與後續建議」一節。Harness throwaway 專案已從裝置解除安裝，過程中的暫時性素材（截圖、logcat、Harness Android 專案）皆位於 `tmp/`（已 gitignore），未進版控。
 
 **依賴：** 無（可與 Issue 2 平行開始）
 
