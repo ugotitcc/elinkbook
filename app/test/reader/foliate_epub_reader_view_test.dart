@@ -6,6 +6,7 @@ import 'package:elinkbook/reader/writing_mode.dart';
 import 'package:elinkbook/reader/app_font.dart';
 import 'package:elinkbook/reader/epub_text_align.dart';
 import 'package:elinkbook/reader/page_turn_mode.dart';
+import 'package:elinkbook/reader/zone_action.dart';
 
 /// 驅動 [FoliateEpubReaderView] 底層 AndroidView 完成建立流程所需的最小
 /// mock，比照 app/test/reader/epub_reader_view_test.dart 既有的
@@ -366,5 +367,67 @@ void main() {
     await tester.pump();
     final jumpCall = calls.firstWhere((c) => c.method == 'jumpToProgression');
     expect(jumpCall.arguments, {'progression': 0.42});
+  });
+
+  testWidgets(
+      '3×3 導航熱區：9 個 Key(nav_zone_\$index) 皆存在，點擊觸發對應 onZoneAction',
+      (tester) async {
+    final capturedActions = <ZoneAction>[];
+    await _pumpFoliateEpubReaderView(
+      tester,
+      FoliateEpubReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        navZoneActions: const [
+          ZoneAction.previousPage, ZoneAction.none, ZoneAction.nextPage,
+          ZoneAction.previousPage, ZoneAction.menu, ZoneAction.nextPage,
+          ZoneAction.previousPage, ZoneAction.none, ZoneAction.nextPage,
+        ],
+        onZoneAction: capturedActions.add,
+      ),
+    );
+
+    for (var index = 0; index < 9; index++) {
+      expect(find.byKey(Key('nav_zone_$index')), findsOneWidget);
+    }
+
+    await tester.tap(find.byKey(const Key('nav_zone_2')));
+    await tester.pump();
+    expect(capturedActions, [ZoneAction.nextPage]);
+
+    await tester.tap(find.byKey(const Key('nav_zone_4')));
+    await tester.pump();
+    expect(capturedActions, [ZoneAction.nextPage, ZoneAction.menu]);
+
+    await tester.tap(find.byKey(const Key('nav_zone_1')));
+    await tester.pump();
+    expect(
+      capturedActions,
+      [ZoneAction.nextPage, ZoneAction.menu, ZoneAction.none],
+    );
+  });
+
+  testWidgets('showNavZoneDebugOverlay=true 時，格子顯示對應動作文字標籤',
+      (tester) async {
+    await _pumpFoliateEpubReaderView(
+      tester,
+      FoliateEpubReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        navZoneActions: const [
+          ZoneAction.previousPage, ZoneAction.menu, ZoneAction.nextPage,
+          ZoneAction.none, ZoneAction.none, ZoneAction.none,
+          ZoneAction.none, ZoneAction.none, ZoneAction.none,
+        ],
+        showNavZoneDebugOverlay: true,
+      ),
+    );
+
+    expect(find.text('上一頁'), findsWidgets);
+    expect(find.text('選單'), findsWidgets);
+    expect(find.text('下一頁'), findsWidgets);
+    expect(find.text('無動作'), findsWidgets);
   });
 }
