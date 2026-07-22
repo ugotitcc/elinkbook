@@ -12,6 +12,8 @@ import 'package:elinkbook/reader/book_reader_prefs_repository.dart';
 import 'package:elinkbook/reader/reader_prefs_manager_impl.dart';
 import 'package:elinkbook/reader/reading_position_repository.dart';
 import 'package:elinkbook/screens/library_screen.dart';
+import 'package:elinkbook/reader/epub_reader_view.dart';
+import 'package:elinkbook/reader/foliate_epub_reader_view.dart';
 
 const _metadataChannel = MethodChannel('elinkbook/book_metadata');
 
@@ -122,5 +124,140 @@ void main() {
 
     expect(find.byKey(const Key('reader_error_text')), findsNothing,
         reason: '應觸發 onPageRendered（載入指示器消失且無錯誤訊息），但畫面顯示了錯誤');
+  });
+
+  testWidgets(
+      '真實匯入一本流式 EPUB 後點開，由 FoliateEpubReaderView 成功渲染出內容',
+      (tester) async {
+    final tempDir = await getTemporaryDirectory();
+    final uniqueSuffix = DateTime.now().microsecondsSinceEpoch;
+    final dbPath = p.join(
+        tempDir.path, 'library_screen_foliate_test_$uniqueSuffix.db');
+    final coversDir = Directory(p.join(
+        tempDir.path, 'library_screen_foliate_test_covers_$uniqueSuffix'));
+    await coversDir.create(recursive: true);
+    final samplePath = await _stageAssetAsFile(
+        'test/fixtures/sample.epub', 'library_screen_foliate_test_sample.epub');
+
+    final repository = await SqliteLibraryRepository.open(dbPath);
+    final importService =
+        BookImportServiceImpl(repository: repository, coversDirectory: coversDir);
+
+    addTearDown(() async {
+      await repository.close();
+      final dbFile = File(dbPath);
+      if (await dbFile.exists()) await dbFile.delete();
+      if (await coversDir.exists()) await coversDir.delete(recursive: true);
+      final sampleFile = File(samplePath);
+      if (await sampleFile.exists()) await sampleFile.delete();
+    });
+
+    final contentUri = await _metadataChannel
+        .invokeMethod<String>('createTestContentUri', {'path': samplePath});
+    final imported = await importService.importFiles([contentUri!]);
+    expect(imported, hasLength(1));
+    final importedBook = imported.single;
+    // sample.epub 是流式（reflowable）素材，Issue 2 的 extractMetadata 應
+    // 已判斷 isFixedLayout 為 false——先核實這個前提，若不成立代表測試素材
+    // 或 Issue 2 判斷邏輯有問題，而非本 Issue 的分派邏輯有問題。
+    expect(importedBook.isFixedLayout, isFalse,
+        reason: 'sample.epub 應為流式素材，isFixedLayout 應由 Issue 2 判斷為 false');
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: repository,
+          importService: importService,
+          prefsManager: ReaderPrefsManagerImpl(
+            BookReaderPrefsRepository(repository.database),
+            ReadingPositionRepository(repository.database),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(Key('book_item_${importedBook.id}')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.byKey(const Key('reader_loading_indicator')), findsOneWidget);
+
+    await _pumpUntil(
+      tester,
+      _loadingIndicatorGone,
+      timeout: const Duration(seconds: 10),
+    );
+
+    expect(find.byKey(const Key('reader_error_text')), findsNothing,
+        reason: '應觸發 onPageRendered，但畫面顯示了錯誤');
+    expect(find.byType(FoliateEpubReaderView), findsOneWidget,
+        reason: '流式 EPUB 應由 FoliateEpubReaderView 渲染');
+    expect(find.byType(EpubReaderView), findsNothing);
+  });
+
+  testWidgets(
+      '真實匯入一本 FXL（固定版面）EPUB 後點開，仍由既有 EpubReaderView（Readium）渲染，不受本 Issue 影響',
+      (tester) async {
+    final tempDir = await getTemporaryDirectory();
+    final uniqueSuffix = DateTime.now().microsecondsSinceEpoch;
+    final dbPath = p.join(
+        tempDir.path, 'library_screen_fxl_test_$uniqueSuffix.db');
+    final coversDir = Directory(p.join(
+        tempDir.path, 'library_screen_fxl_test_covers_$uniqueSuffix'));
+    await coversDir.create(recursive: true);
+    final samplePath = await _stageAssetAsFile(
+        'test/fixtures/sample_fixed_layout.epub',
+        'library_screen_fxl_test_sample.epub');
+
+    final repository = await SqliteLibraryRepository.open(dbPath);
+    final importService =
+        BookImportServiceImpl(repository: repository, coversDirectory: coversDir);
+
+    addTearDown(() async {
+      await repository.close();
+      final dbFile = File(dbPath);
+      if (await dbFile.exists()) await dbFile.delete();
+      if (await coversDir.exists()) await coversDir.delete(recursive: true);
+      final sampleFile = File(samplePath);
+      if (await sampleFile.exists()) await sampleFile.delete();
+    });
+
+    final contentUri = await _metadataChannel
+        .invokeMethod<String>('createTestContentUri', {'path': samplePath});
+    final imported = await importService.importFiles([contentUri!]);
+    expect(imported, hasLength(1));
+    final importedBook = imported.single;
+    expect(importedBook.isFixedLayout, isTrue,
+        reason: 'sample_fixed_layout.epub 應為 FXL 素材，isFixedLayout 應為 true');
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: repository,
+          importService: importService,
+          prefsManager: ReaderPrefsManagerImpl(
+            BookReaderPrefsRepository(repository.database),
+            ReadingPositionRepository(repository.database),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(Key('book_item_${importedBook.id}')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    await _pumpUntil(
+      tester,
+      _loadingIndicatorGone,
+      timeout: const Duration(seconds: 10),
+    );
+
+    expect(find.byKey(const Key('reader_error_text')), findsNothing);
+    expect(find.byType(EpubReaderView), findsOneWidget,
+        reason: 'FXL 書籍應維持由既有 EpubReaderView（Readium）渲染，不受本 Issue 影響');
+    expect(find.byType(FoliateEpubReaderView), findsNothing);
   });
 }

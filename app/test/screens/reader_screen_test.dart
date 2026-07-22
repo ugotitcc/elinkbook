@@ -20,6 +20,8 @@ import 'package:elinkbook/screens/toc_bottom_sheet.dart';
 
 import 'package:elinkbook/reader/epub_position_info.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
+import 'package:elinkbook/reader/foliate_epub_reader_view.dart';
+import '../support/fake_library_repository.dart';
 import '../support/fake_reader_prefs_manager.dart';
 import 'package:elinkbook/screens/notes_bottom_sheet.dart';
 import '../support/fake_bookmarks_repository.dart';
@@ -98,6 +100,119 @@ void main() {
           '觸發原生回呼），按鈕應為停用狀態，比照 EPUB 齒輪按鈕的既有測試限制'
           '（見本檔案第 46-65 行）',
     );
+  });
+
+  testWidgets('isFixedLayout: true 時直接建構 EpubReaderView，不呼叫偵測',
+      (tester) async {
+    final repository = FakeLibraryRepository();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample_fixed_layout.epub',
+          bookId: 'b1',
+          prefsManager: prefsManager,
+          isFixedLayout: true,
+          libraryRepository: repository,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    expect(find.byType(EpubReaderView), findsOneWidget);
+    expect(find.byType(FoliateEpubReaderView), findsNothing);
+    expect(repository.detectAndCacheEpubLayoutCalls, isEmpty);
+  });
+
+  testWidgets('isFixedLayout: false 時直接建構 FoliateEpubReaderView，不呼叫偵測',
+      (tester) async {
+    final repository = FakeLibraryRepository();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b1',
+          prefsManager: prefsManager,
+          isFixedLayout: false,
+          libraryRepository: repository,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    expect(find.byType(FoliateEpubReaderView), findsOneWidget);
+    expect(find.byType(EpubReaderView), findsNothing);
+    expect(repository.detectAndCacheEpubLayoutCalls, isEmpty);
+  });
+
+  testWidgets(
+      'isFixedLayout: null 且提供 libraryRepository 時，呼叫 detectAndCacheEpubLayout 並依結果建構 FoliateEpubReaderView',
+      (tester) async {
+    final repository =
+        FakeLibraryRepository(detectedIsFixedLayout: false);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b1',
+          prefsManager: prefsManager,
+          libraryRepository: repository,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    expect(repository.detectAndCacheEpubLayoutCalls, ['b1']);
+    expect(find.byType(FoliateEpubReaderView), findsOneWidget);
+    expect(find.byType(EpubReaderView), findsNothing);
+  });
+
+  testWidgets(
+      'isFixedLayout: null 且提供 libraryRepository、偵測結果為 FXL 時，建構 EpubReaderView',
+      (tester) async {
+    final repository = FakeLibraryRepository(detectedIsFixedLayout: true);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample_fixed_layout.epub',
+          bookId: 'b1',
+          prefsManager: prefsManager,
+          libraryRepository: repository,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    expect(repository.detectAndCacheEpubLayoutCalls, ['b1']);
+    expect(find.byType(EpubReaderView), findsOneWidget);
+    expect(find.byType(FoliateEpubReaderView), findsNothing);
+  });
+
+  testWidgets(
+      'isFixedLayout: null 且未提供 libraryRepository 時，退回既有行為建構 EpubReaderView（零回歸）',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b1',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    expect(find.byType(EpubReaderView), findsOneWidget);
+    expect(find.byType(FoliateEpubReaderView), findsNothing);
   });
 
   testWidgets('開啟該書已有的持久化版面偏好設定後，狀態正確載入', (tester) async {

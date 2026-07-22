@@ -74,8 +74,7 @@ Phase 1 需要在「建構閱讀器 widget 之前」就知道一本 EPUB 是固�
 
 ## Issue 3：核心 Widget 建置——`FoliateEpubReaderView` 開書渲染
 
-**Status:** `ready-for-agent`
-
+**Status:** ✅ 已完成。依 `plans/plan-issue-3.md` Task 1-9 完成 `FoliatePathValidator`（路徑安全純邏輯）／`readest/foliate-js` 資產打包＋production `main.js`／`FoliateEpubReaderView.kt`（WebViewAssetLoader + 自訂 PathHandler + FoliateBridge JS 橋接）／`foliate_epub_reader_view.dart`／`ReaderScreen` 分派邏輯（`isFixedLayout`／`libraryRepository`）／`LibraryScreen` 貫穿。`flutter test`／`flutter analyze`／`./gradlew.bat :app:testDebugUnitTest`／真機 `integration_test`（開書成功、`onError`、`PathHandler` 路徑穿越防護、端到端匯入流式 EPUB 與既有 FXL 書籍不受影響）皆通過。排版設定／換頁／目錄／劃線備註留給 Issue 4-8。
 **依賴：** Issue 2
 
 **描述：**
