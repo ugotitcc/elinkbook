@@ -1523,6 +1523,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             pageMargins: resolved.pageMargins,
             textAlign: resolved.textAlign,
             publisherStyles: resolved.publisherStyles,
+            navZoneActions: resolved.navZoneActions,
+            onZoneAction: _handleZoneAction,
+            showNavZoneDebugOverlay: resolved.showNavZoneDebugOverlay,
           );
         }
         return EpubReaderView(
@@ -1594,19 +1597,27 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   }
 
   /// 熱區動作統一分派入口（epic-7-interaction Issue 4，Issue 5 擴充 EPUB
-  /// FXL 分支，Issue 6 接上流式 EPUB 的 `menu` 動作）：`previousPage`/
-  /// `nextPage` 呼叫目前格式對應的既有換頁方法；`menu` 切換 [_chromeVisible]
-  /// （沉浸模式）；`none` 不做事。**`previousPage`/`nextPage` 刻意不影響
+  /// FXL 分支，epic-17-epub-render-migration Issue 5 擴充流式 EPUB 的
+  /// `FoliateEpubReaderView` 分支）：`previousPage`/`nextPage` 呼叫目前
+  /// 格式對應的既有換頁方法；`menu` 切換 [_chromeVisible]（沉浸模式）；
+  /// `none` 不做事。**`previousPage`/`nextPage` 刻意不影響
   /// [_chromeVisible]**（design.md 決策 #14）。EPUB 分支的 `previousPage`/
-  /// `nextPage` 只在 FXL（`EpubReaderView` 僅 `_isFixedLayout == true` 時才
-  /// 疊加熱區、才會回呼 `onZoneAction`）生效——EPUB 流式的 `previousPage`/
-  /// `nextPage` 完全不經過這裡（原生 Kotlin `InputListener` 自主呼叫
-  /// `goBackward()`/`goForward()`），只有 `menu` 動作經下方
-  /// `_buildNativeView()` 接上的 `onZoneTapped` 回呼觸發這裡的 `menu` 分支。
-  /// 原生端 `MainActivity.dispatchKeyEvent()` 攔截音量鍵後的回呼
-  /// （epic-7-interaction Issue 7）：方向固定映射，不查詢
-  /// `_resolved!.navZoneActions`（design.md 決策 #19）——`up` 一律上一頁、
-  /// `down` 一律下一頁。
+  /// `nextPage` 依 `_dispatchedIsFixedLayout` 分派：`true`（FXL，
+  /// `EpubReaderView`）呼叫 `EpubReaderView.previousPage`/`nextPage`；
+  /// `false`（流式，`FoliateEpubReaderView`）呼叫
+  /// `FoliateEpubReaderView.previousPage`/`nextPage`——兩者的 3×3 熱區皆是
+  /// Dart 端 `Stack` 疊加層，`onTap` 直接回呼 [onZoneAction]（見
+  /// `_buildNativeView()` 接線），不經過原生端判讀。`EpubReaderView` 既有的
+  /// `onZoneTapped`（cellIndex 回呼）是 epic-17-epub-render-migration 之前
+  /// 遺留的流式 EPUB via Readium 機制（原生 `InputListener` 座標換算），
+  /// post-epic-17 的分派邏輯下流式書籍一律改建構 `FoliateEpubReaderView`，
+  /// 這條舊路徑理論上不再被觸發，保留是避免不必要地改動
+  /// `EpubReaderView.kt`（本工單範圍外，見 issues.md Issue 5 描述「原生端
+  /// FoliateEpubReaderView.kt 完全不需要移植 NavZoneHitTester.cellIndex()
+  /// 或 InputListener 註冊邏輯」）。原生端 `MainActivity.dispatchKeyEvent()`
+  /// 攔截音量鍵後的回呼（epic-7-interaction Issue 7）：方向固定映射，不
+  /// 查詢 `_resolved!.navZoneActions`（design.md 決策 #19）——`up` 一律
+  /// 上一頁、`down` 一律下一頁。
   Future<void> _handleVolumeKeyCall(MethodCall call) async {
     if (call.method != 'onVolumeKey') return;
     final args = call.arguments as Map<Object?, Object?>;
@@ -1627,14 +1638,22 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         if (format == BookFormat.pdf) {
           PdfReaderView.previousPage(_pdfReaderViewKey);
         } else if (format == BookFormat.epub) {
-          EpubReaderView.previousPage(_epubReaderViewKey);
+          if (_dispatchedIsFixedLayout == true) {
+            EpubReaderView.previousPage(_epubReaderViewKey);
+          } else {
+            FoliateEpubReaderView.previousPage(_foliateEpubReaderViewKey);
+          }
         }
         break;
       case ZoneAction.nextPage:
         if (format == BookFormat.pdf) {
           PdfReaderView.nextPage(_pdfReaderViewKey);
         } else if (format == BookFormat.epub) {
-          EpubReaderView.nextPage(_epubReaderViewKey);
+          if (_dispatchedIsFixedLayout == true) {
+            EpubReaderView.nextPage(_epubReaderViewKey);
+          } else {
+            FoliateEpubReaderView.nextPage(_foliateEpubReaderViewKey);
+          }
         }
         break;
       case ZoneAction.menu:

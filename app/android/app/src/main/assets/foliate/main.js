@@ -88,6 +88,27 @@ window.applyPreferences = function (prefs) {
   view.renderer.setStyles([fontFaceCss, buildOverrideCss(prefs)])
 }
 
+/**
+ * 換頁／跳轉全書進度比例，供原生端 FoliateEpubReaderView.kt 的
+ * nextPage／previousPage／jumpToProgression method channel case 呼叫
+ * （evaluateJavascript 只能存取掛在 window 上的函式，view 是本模組頂層
+ * 作用域的 const，不會自動出現在 window 上，見 Global Constraints）。
+ * view.next()/view.prev()/view.goToFraction() 為 readest/foliate-js
+ * View 類別既有 API（已查證 view.js 原始碼確認存在），本函式不重新實作
+ * 任何換頁邏輯，純粹是可供 evaluateJavascript 呼叫的橋接層。
+ */
+window.nextPage = function () {
+  view.next()
+}
+
+window.previousPage = function () {
+  view.prev()
+}
+
+window.jumpToFraction = function (fraction) {
+  view.goToFraction(fraction)
+}
+
 async function openBook() {
   try {
     const book = await makeBook(

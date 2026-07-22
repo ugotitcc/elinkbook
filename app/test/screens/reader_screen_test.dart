@@ -2525,4 +2525,86 @@ void main() {
 
     expect(find.byType(AppBar), findsNothing);
   });
+
+  testWidgets('EPUB 流式（isFixedLayout: false）：點擊選單熱區觸發沉浸模式切換',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b1',
+          prefsManager: prefsManager,
+          isFixedLayout: false,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    expect(find.byType(AppBar), findsOneWidget);
+
+    // navZoneMode 預設 rightFlip，index 1（中欄）為 menu（見
+    // app/lib/reader/nav_zone_mode.dart rightFlipZoneTemplate）。
+    await tester.tap(find.byKey(const Key('nav_zone_1')));
+    await tester.pump();
+
+    expect(find.byType(AppBar), findsNothing);
+  });
+
+  testWidgets(
+      'EPUB 流式：previousPage/nextPage 熱區呼叫 FoliateEpubReaderView 對應'
+      ' method channel，且不影響沉浸模式狀態（design.md 決策 #14）',
+      (tester) async {
+    final binaryMessenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    final instanceCalls = <MethodCall>[];
+
+    binaryMessenger.setMockMethodCallHandler(SystemChannels.platform_views,
+        (call) async {
+      if (call.method == 'create') {
+        final id = (call.arguments as Map<Object?, Object?>)['id'] as int;
+        binaryMessenger.setMockMethodCallHandler(
+          MethodChannel('cc.ugotit.elinkbook/foliate_epub_reader_view_$id'),
+          (call) async {
+            instanceCalls.add(call);
+            return null;
+          },
+        );
+        return 0;
+      }
+      return null;
+    });
+    addTearDown(() => binaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform_views, null));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b1',
+          prefsManager: prefsManager,
+          isFixedLayout: false,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    expect(find.byType(AppBar), findsOneWidget);
+
+    // rightFlip 模板：index 2（右欄）＝ nextPage。
+    await tester.tap(find.byKey(const Key('nav_zone_2')));
+    await tester.pump();
+    expect(instanceCalls.any((c) => c.method == 'nextPage'), isTrue);
+    expect(find.byType(AppBar), findsOneWidget,
+        reason: '換頁動作不應影響沉浸模式狀態');
+
+    // rightFlip 模板：index 0（左欄）＝ previousPage。
+    await tester.tap(find.byKey(const Key('nav_zone_0')));
+    await tester.pump();
+    expect(instanceCalls.any((c) => c.method == 'previousPage'), isTrue);
+    expect(find.byType(AppBar), findsOneWidget);
+  });
 }

@@ -5,6 +5,7 @@ import 'app_font.dart';
 import 'epub_text_align.dart';
 import 'page_turn_mode.dart';
 import 'writing_mode.dart';
+import 'zone_action.dart';
 
 /// 包裝原生 FoliateEpubReaderView（readest/foliate-js，釘定 commit
 /// dd71f2be356563c16a23272686189fcfb45d0b82）的 Flutter widget，供流式
@@ -12,15 +13,17 @@ import 'writing_mode.dart';
 /// 給定 EPUB 檔案的裝置端絕對路徑或 content:// URI，通知原生端渲染起始
 /// 頁；渲染成功或失敗會分別觸發 [onPageRendered] 或 [onError]。
 ///
-/// 本 Issue（epic-17-epub-render-migration Issue 4）新增 9 項版面偏好
+/// 本 Widget（epic-17-epub-render-migration Issue 4/5）新增 9 項版面偏好
 /// 建構參數，與既有 [EpubReaderView] 對稱參數同名同型別（不含 `dualPageMode`／
-/// `isLandscape`／`navZoneActions`——reflowable 流式書籍不適用「雙頁」，
-/// 3×3 導航熱區是 Issue 5 的範圍且完全由 Dart 端處理、不送給原生端）。
+/// `isLandscape`——reflowable 流式書籍不適用「雙頁」）。Issue 5 新增
+/// `navZoneActions`/`onZoneAction`/`showNavZoneDebugOverlay` 三個建構參數
+/// 與 `nextPage`/`previousPage`/`jumpToProgression` static helper，3×3
+/// 導航熱區完全由 Dart 端 Stack 疊加層處理、不送給原生端。
 /// [writingMode] 是「呼叫端要求套用的方向」（可寫），與 [onLayoutResolved]
 /// 回報的 [EpubLayoutInfo.writingMode]（原生端判斷/回報的唯讀值）是兩個
 /// 不同方向的資料流，比照 [EpubReaderView] 既有模式。
 ///
-/// 排版設定以外的換頁／目錄／劃線備註參數留待 Issue 5-8 補上。
+/// 排版設定以外的目錄／劃線備註參數留待 Issue 6-8 補上。
 class FoliateEpubReaderView extends StatefulWidget {
   final String filePath;
   final VoidCallback onPageRendered;
@@ -36,6 +39,21 @@ class FoliateEpubReaderView extends StatefulWidget {
   final double? pageMargins;
   final EpubTextAlign? textAlign;
   final bool? publisherStyles;
+
+  /// 3×3 導航熱區的動作對照表（epic-17-epub-render-migration Issue 5，
+  /// 對稱 epic-7-interaction 為 EpubReaderView FXL 分支建立的既有模式，
+  /// 見 zone_hit_test.dart 索引慣例：0-indexed、列優先）。與
+  /// EpubReaderView 不同，這個陣列**只在 Dart 端使用**，不會送給原生端
+  /// （見 Global Constraints「不在原生端判讀」）。
+  final List<ZoneAction> navZoneActions;
+
+  /// 點擊熱區換算出動作後觸發，呼叫端（ReaderScreen）負責分派實際行為
+  /// （換頁／切換沉浸模式）。
+  final ValueChanged<ZoneAction>? onZoneAction;
+
+  /// 是否疊加顯示熱區輔助線（邊框＋動作文字標籤），供設定畫面開啟除錯
+  /// 用途。
+  final bool showNavZoneDebugOverlay;
 
   const FoliateEpubReaderView({
     super.key,
@@ -53,7 +71,46 @@ class FoliateEpubReaderView extends StatefulWidget {
     this.pageMargins,
     this.textAlign,
     this.publisherStyles,
+    this.navZoneActions = const [
+      ZoneAction.none, ZoneAction.none, ZoneAction.none,
+      ZoneAction.none, ZoneAction.none, ZoneAction.none,
+      ZoneAction.none, ZoneAction.none, ZoneAction.none,
+    ],
+    this.onZoneAction,
+    this.showNavZoneDebugOverlay = false,
   });
+
+  /// 呼叫原生端 view.next()，換頁不觸發任何回呼（強型別 static helper，
+  /// 比照既有 EpubReaderView.nextPage 模式，不使用 `as dynamic` 跨越
+  /// State 的 private 邊界）。[key] 對應的 State 若尚未掛載（例如純
+  /// flutter_test 環境下 AndroidView 尚未建立），靜默忽略。
+  static void nextPage(GlobalKey<State<FoliateEpubReaderView>> key) {
+    final state = key.currentState;
+    if (state is _FoliateEpubReaderViewState) {
+      state._channel?.invokeMethod('nextPage');
+    }
+  }
+
+  /// 呼叫原生端 view.prev()，同上僅換頁方向相反。
+  static void previousPage(GlobalKey<State<FoliateEpubReaderView>> key) {
+    final state = key.currentState;
+    if (state is _FoliateEpubReaderViewState) {
+      state._channel?.invokeMethod('previousPage');
+    }
+  }
+
+  /// 跳轉到指定全書進度比例（0.0-1.0），原生端呼叫 view.goToFraction()。
+  static void jumpToProgression(
+    GlobalKey<State<FoliateEpubReaderView>> key,
+    double progression,
+  ) {
+    final state = key.currentState;
+    if (state is _FoliateEpubReaderViewState) {
+      state._channel?.invokeMethod('jumpToProgression', {
+        'progression': progression,
+      });
+    }
+  }
 
   @override
   State<FoliateEpubReaderView> createState() => _FoliateEpubReaderViewState();
@@ -148,9 +205,63 @@ class _FoliateEpubReaderViewState extends State<FoliateEpubReaderView> {
 
   @override
   Widget build(BuildContext context) {
-    return AndroidView(
-      viewType: 'cc.ugotit.elinkbook/foliate_epub_reader_view',
-      onPlatformViewCreated: _onPlatformViewCreated,
+    return Stack(
+      children: [
+        AndroidView(
+          viewType: 'cc.ugotit.elinkbook/foliate_epub_reader_view',
+          onPlatformViewCreated: _onPlatformViewCreated,
+        ),
+        Positioned.fill(
+          child: Column(
+            children: List.generate(3, (row) {
+              return Expanded(
+                child: Row(
+                  children: List.generate(3, (col) {
+                    final index = row * 3 + col;
+                    final action = widget.navZoneActions[index];
+                    return Expanded(
+                      child: GestureDetector(
+                        key: Key('nav_zone_$index'),
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => widget.onZoneAction?.call(action),
+                        onHorizontalDragStart: (_) {},
+                        onVerticalDragStart: (_) {},
+                        child: Container(
+                          decoration: widget.showNavZoneDebugOverlay
+                              ? BoxDecoration(
+                                  border: Border.all(color: Colors.white24))
+                              : null,
+                          alignment: Alignment.center,
+                          child: widget.showNavZoneDebugOverlay
+                              ? Text(
+                                  _zoneActionLabel(action),
+                                  style: const TextStyle(
+                                      color: Colors.white70, fontSize: 10),
+                                )
+                              : null,
+                        ),
+                      ),
+                    );
+                  }),
+                ),
+              );
+            }),
+          ),
+        ),
+      ],
     );
+  }
+
+  String _zoneActionLabel(ZoneAction action) {
+    switch (action) {
+      case ZoneAction.previousPage:
+        return '上一頁';
+      case ZoneAction.nextPage:
+        return '下一頁';
+      case ZoneAction.menu:
+        return '選單';
+      case ZoneAction.none:
+        return '無動作';
+    }
   }
 }

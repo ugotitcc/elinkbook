@@ -138,6 +138,25 @@ class FoliateEpubReaderView(
                 setPreferences(call.arguments as? Map<String, Any?>)
                 result.success(null)
             }
+            "nextPage" -> {
+                // 3×3 導航熱區完全由 Dart 端 Stack 疊加層判讀（見
+                // foliate_epub_reader_view.dart，epic-17-epub-render-migration
+                // Issue 5「不在原生端判讀」），本 case 純粹是換頁指令的轉發，
+                // 不做任何座標/熱區判斷。
+                webView.evaluateJavascript("window.nextPage()", null)
+                result.success(null)
+            }
+            "previousPage" -> {
+                webView.evaluateJavascript("window.previousPage()", null)
+                result.success(null)
+            }
+            "jumpToProgression" -> {
+                val progression = call.argument<Double>("progression")
+                if (progression != null) {
+                    webView.evaluateJavascript("window.jumpToFraction($progression)", null)
+                }
+                result.success(null)
+            }
             else -> result.notImplemented()
         }
     }
