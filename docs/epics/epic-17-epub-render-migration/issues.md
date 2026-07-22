@@ -130,7 +130,7 @@ Phase 1 需要在「建構閱讀器 widget 之前」就知道一本 EPUB 是固�
 
 ## Issue 5：換頁與 3×3 導航熱區
 
-**Status:** `ready-for-agent`
+**Status:** ✅ 已完成。依 `plans/plan-issue-5.md` Task 1-6 完成 `FoliateEpubReaderView.kt`（`nextPage`/`previousPage`/`jumpToProgression` method channel）／`main.js`（`window.nextPage`/`window.previousPage`/`window.jumpToFraction` 橋接）／`foliate_epub_reader_view.dart`（static helper 三個＋與 `EpubReaderView` FXL 分支逐位元組相同的 3×3 導航熱區疊加層）／`ReaderScreen`（`_buildNativeView()` 傳入熱區參數、`_handleZoneAction()` 依 `_dispatchedIsFixedLayout` 分派）。新增真機整合測試 `foliate_stream_nav_zone_test.dart`。`flutter test`（569 tests）／`flutter analyze`／`./gradlew.bat :app:compileDebugKotlin`／`./gradlew.bat :app:testDebugUnitTest` 以及真機 `integration_test`（9 格熱區逐一點擊、無動作格攔截觸控、換頁呼叫不觸發 onError）皆全數通過。目錄跳轉、定位持久化與頁碼顯示、劃線備註留給 Issue 6-8。
 
 **依賴：** Issue 3
 
