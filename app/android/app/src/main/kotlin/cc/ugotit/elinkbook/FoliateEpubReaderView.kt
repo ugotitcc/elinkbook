@@ -11,10 +11,12 @@ import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.webkit.WebViewAssetLoader
+import io.flutter.FlutterInjector
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.platform.PlatformView
+import org.json.JSONObject
 import java.io.File
 import java.io.FileInputStream
 
@@ -64,6 +66,21 @@ class FoliateEpubReaderView(
     private var currentBookFile: File? = null
     private var currentBookUri: Uri? = null
 
+    /**
+     * 目前已生效的完整偏好設定（比照 EpubReaderView.kt currentPreferences
+     * 的合併語意，見 docs/adr/0006-epub-reader-batch-preferences-contract.md）
+     * ——openBook 的 initialPreferences 與後續 setPreferences 都是「合併進
+     * 這個 map、再整組序列化送給 JS」，而不是各自獨立送出，否則後送出的
+     * 欄位會把先前已設定的其他欄位在 JS 端「遺忘」（JS 端 applyPreferences()
+     * 每次都是用收到的完整物件重新產生 CSS，不會自己記得上一次的值）。
+     */
+    private val currentPreferences = mutableMapOf<String, Any?>()
+
+    /** 5 款內建字型的 @font-face CSS 宣告，開書當下計算一次（見
+     * [buildFontFaceCss]），字型檔案路徑固定不隨後續 setPreferences 呼叫
+     * 變動。 */
+    private var fontFaceCss: String = ""
+
     private var pageReported = false
     private var isDisposed = false
 
@@ -109,7 +126,16 @@ class FoliateEpubReaderView(
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         when (call.method) {
             "openBook" -> {
-                openBook(call.argument<String>("path"))
+                @Suppress("UNCHECKED_CAST")
+                openBook(
+                    call.argument<String>("path"),
+                    call.argument<Map<String, Any?>>("initialPreferences"),
+                )
+                result.success(null)
+            }
+            "setPreferences" -> {
+                @Suppress("UNCHECKED_CAST")
+                setPreferences(call.arguments as? Map<String, Any?>)
                 result.success(null)
             }
             else -> result.notImplemented()
@@ -128,7 +154,7 @@ class FoliateEpubReaderView(
      * 把關（與現有 EpubReaderView/PdfReaderView 對 content:// URI 的既有
      * 信任層級一致）。
      */
-    private fun openBook(path: String?) {
+    private fun openBook(path: String?, initialPreferences: Map<String, Any?>?) {
         if (path == null) {
             channel.invokeMethod("onError", "缺少檔案路徑")
             return
@@ -154,7 +180,56 @@ class FoliateEpubReaderView(
             }
             currentBookFile = canonicalFile
         }
-        webView.loadUrl("https://appassets.androidplatform.net/assets/foliate/index.html")
+        currentPreferences.clear()
+        initialPreferences?.let { currentPreferences.putAll(it) }
+        fontFaceCss = buildFontFaceCss()
+        val prefsJson = Uri.encode(JSONObject(currentPreferences).toString())
+        val fontFaceCssEncoded = Uri.encode(fontFaceCss)
+        webView.loadUrl(
+            "https://appassets.androidplatform.net/assets/foliate/index.html" +
+                "?prefs=$prefsJson&fontFaceCss=$fontFaceCssEncoded",
+        )
+    }
+
+    /**
+     * 合併 [preferences] 進 [currentPreferences] 並整組序列化送給 JS（比照
+     * EpubReaderView.kt setPreferences() 的合併語意，見 Global Constraints）。
+     * 書本尚未成功開啟（openBook 尚未呼叫）時 currentPreferences 為空，
+     * 呼叫仍會執行但 JS 端 window.applyPreferences 此時尚未定義，
+     * evaluateJavascript 靜默失敗——Dart 端只會在 onPageRendered 觸發之後
+     * 才送出這個指令，理論上不會發生。
+     */
+    private fun setPreferences(preferences: Map<String, Any?>?) {
+        if (preferences == null) return
+        currentPreferences.putAll(preferences)
+        val prefsJson = JSONObject(currentPreferences).toString()
+        webView.evaluateJavascript("window.applyPreferences($prefsJson)", null)
+    }
+
+    /**
+     * 產生固定的 5 款內建字型 @font-face 宣告（FR-09），供 JS 端
+     * window.applyPreferences() 的 fontFamily 選擇引用。透過 FlutterInjector
+     * 取得 Flutter asset 的 AssetManager 查找鍵（比照 EpubReaderView.kt
+     * buildNavigatorConfiguration() 既有做法），經既有註冊的 /assets/
+     * WebViewAssetLoader.AssetsPathHandler 提供給 WebView（該 handler 服務
+     * 整個 Android assets/ 目錄，不限 assets/foliate/ 子目錄，故可直接沿用，
+     * 不需要額外註冊 PathHandler）。家族名稱字串須與 Dart 端
+     * AppFont.familyName（app/lib/reader/app_font.dart）逐字一致。
+     */
+    private fun buildFontFaceCss(): String {
+        val loader = FlutterInjector.instance().flutterLoader()
+        val fontAssets = mapOf(
+            "SourceHanSansTC" to "assets/fonts/SourceHanSansTC-VF.ttf",
+            "SourceHanSerifTC" to "assets/fonts/SourceHanSerifTC-VF.ttf",
+            "GuanKiapTsingKhai" to "assets/fonts/GuanKiapTsingKhai.ttf",
+            "TaiwanPearl" to "assets/fonts/TaiwanPearl-Regular.ttf",
+            "GenRyuMinTW" to "assets/fonts/GenRyuMinTW-Regular.ttf",
+        )
+        return fontAssets.entries.joinToString("\n") { (familyName, path) ->
+            val lookupKey = loader.getLookupKeyForAsset(path)
+            "@font-face { font-family: '$familyName'; " +
+                "src: url('https://appassets.androidplatform.net/assets/$lookupKey'); }"
+        }
     }
 
     /**
@@ -193,8 +268,14 @@ class FoliateEpubReaderView(
      * 執行緒才能安全操作 MethodChannel／觸發 Flutter 端回呼。
      */
     private inner class FoliateBridge {
+        /**
+         * [writingMode] 為 main.js 判斷出的最終生效方向（"vertical"／
+         * "horizontal"）——書本自己宣告的值優先，否則預設橫排，見
+         * assets/foliate/main.js 的 FR-06 偵測邏輯（epic-17-epub-render-migration
+         * Issue 4）。
+         */
         @JavascriptInterface
-        fun onPageRendered() {
+        fun onPageRendered(writingMode: String) {
             mainHandler.post {
                 if (isDisposed || pageReported) return@post
                 pageReported = true
@@ -203,10 +284,7 @@ class FoliateEpubReaderView(
                     "onLayoutResolved",
                     mapOf(
                         "isFixedLayout" to false,
-                        // 依 CSS 宣告判斷實際直排/橫排是 Issue 4 的範圍，
-                        // 本 Issue 固定回報 horizontal，僅為滿足
-                        // EpubLayoutInfo 型別簽章的非空要求。
-                        "writingMode" to "horizontal",
+                        "writingMode" to writingMode,
                     ),
                 )
             }
