@@ -149,6 +149,91 @@ void main() {
   });
 
   testWidgets(
+      '流式 EPUB（isFixedLayout: false）開書後，onLayoutResolved 回報結果驅動「版面設定」按鈕從停用轉為可用',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b1',
+          prefsManager: prefsManager,
+          isFixedLayout: false,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final finder = find.byKey(const Key('reader_layout_settings_button'));
+    expect(
+      tester.widget<IconButton>(finder).onPressed,
+      isNull,
+      reason: '尚未收到 onLayoutResolved，_autoDetectedWritingMode 仍為 null',
+    );
+
+    final foliateView =
+        tester.widget<FoliateEpubReaderView>(find.byType(FoliateEpubReaderView));
+    foliateView.onPageRendered(); // 模擬開書成功，脫離 loading 狀態
+    foliateView.onLayoutResolved?.call(const EpubLayoutInfo(
+      isFixedLayout: false,
+      writingMode: WritingMode.vertical,
+    ));
+    await tester.pump();
+
+    expect(
+      tester.widget<IconButton>(finder).onPressed,
+      isNotNull,
+      reason: 'onLayoutResolved 觸發後，_autoDetectedWritingMode 非 null，按鈕應可用',
+    );
+  });
+
+  testWidgets(
+      '流式 EPUB 開書後，ReaderSettingsSheet 變動的偏好正確傳遞到 FoliateEpubReaderView',
+      (tester) async {
+    // 設定較大的 Viewport，確保 BottomSheet 內的控制項皆在可點擊範圍內
+    tester.view.physicalSize = const Size(800, 1200);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b1',
+          prefsManager: prefsManager,
+          isFixedLayout: false,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final initialView =
+        tester.widget<FoliateEpubReaderView>(find.byType(FoliateEpubReaderView));
+    initialView.onPageRendered(); // 模擬開書成功，脫離 loading 狀態
+    initialView.onLayoutResolved?.call(const EpubLayoutInfo(
+      isFixedLayout: false,
+      writingMode: WritingMode.horizontal,
+    ));
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('reader_layout_settings_button')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('reader_settings_writing_mode_vertical')));
+    await tester.pumpAndSettle();
+
+    final updatedView =
+        tester.widget<FoliateEpubReaderView>(find.byType(FoliateEpubReaderView));
+    expect(updatedView.writingMode, WritingMode.vertical);
+  });
+
+  testWidgets(
       'isFixedLayout: null 且提供 libraryRepository 時，呼叫 detectAndCacheEpubLayout 並依結果建構 FoliateEpubReaderView',
       (tester) async {
     final repository =

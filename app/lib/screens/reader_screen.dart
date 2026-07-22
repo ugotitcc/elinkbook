@@ -782,20 +782,29 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     }
   }
 
-  /// FoliateEpubReaderView（流式，Issue 3）專屬的 onLayoutResolved 處理，
-  /// 刻意比 `_handleLayoutResolved`（EpubReaderView／FXL 分支既有邏輯）
-  /// 精簡：只設定 `_isFixedLayout`（本 widget 恆回傳 false），不設定
-  /// `_autoDetectedWritingMode`／不觸發 `EpubReaderView.loadTableOfContents`／
-  /// `_reloadAnnotationsAndRefreshDecorations`／`_loadFxlBookmarks`——這些呼叫
-  /// 對尚未掛載的 EpubReaderView/`_epubReaderViewKey` 雖然會靜默 no-op、
-  /// 技術上無害，但會讓 `_tocLoaded`/`_annotationsLoaded` 被誤判為「已
-  /// 完成」，使「目錄」/「筆記」按鈕看似可用卻永遠開出空清單/無法互動。
-  /// 讓「版面設定」/「目錄」/「筆記」按鈕維持停用狀態（依賴
-  /// `_autoDetectedWritingMode`/`_tocLoaded`/`_annotationsLoaded` 的既有
-  /// 判斷條件），直到 Issue 4/6/8 依序補上流式 foliate-js 的對應支援。
+  /// FoliateEpubReaderView（流式）專屬的 onLayoutResolved 處理。
+  /// epic-17-epub-render-migration Issue 4 起，也設定
+  /// `_autoDetectedWritingMode` 並重新計算 `_resolved`（比照
+  /// `_handleLayoutResolved` 對應段落），讓「版面設定」按鈕能對流式書籍
+  /// 生效。**仍然刻意不**觸發 `EpubReaderView.loadTableOfContents`／
+  /// `_reloadAnnotationsAndRefreshDecorations`／`_loadFxlBookmarks`——這些
+  /// 呼叫對尚未掛載的 EpubReaderView/`_epubReaderViewKey` 雖然會靜默
+  /// no-op、技術上無害，但會讓 `_tocLoaded`/`_annotationsLoaded` 被誤判為
+  /// 「已完成」，使「目錄」/「筆記」按鈕看似可用卻永遠開出空清單/無法
+  /// 互動。目錄／劃線備註／書籤仍是 Issue 6/8 的範圍。
   void _handleFoliateLayoutResolved(EpubLayoutInfo info) {
     if (!mounted) return;
-    setState(() => _isFixedLayout = info.isFixedLayout);
+    setState(() {
+      _isFixedLayout = info.isFixedLayout;
+      _autoDetectedWritingMode = info.writingMode;
+      final loaded = _loaded;
+      if (loaded != null) {
+        _resolved = widget.prefsManager.resolve(
+          loaded,
+          autoDetectedWritingMode: info.writingMode,
+        );
+      }
+    });
   }
 
   /// 原生端背景計算全書字元數完成時觸發（Epic 5 Issue 3）：更新本地狀態
@@ -1504,6 +1513,16 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             onPageRendered: _handlePageRendered,
             onError: _handleError,
             onLayoutResolved: _handleFoliateLayoutResolved,
+            writingMode: resolved.writingMode,
+            pageTurnMode: resolved.pageTurnMode,
+            fontFamily: resolved.fontFamily,
+            fontSize: resolved.fontSize,
+            fontWeight: resolved.fontWeight,
+            lineHeight: resolved.lineHeight,
+            paragraphSpacing: resolved.paragraphSpacing,
+            pageMargins: resolved.pageMargins,
+            textAlign: resolved.textAlign,
+            publisherStyles: resolved.publisherStyles,
           );
         }
         return EpubReaderView(
