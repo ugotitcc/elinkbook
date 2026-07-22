@@ -104,7 +104,7 @@ Phase 1 需要在「建構閱讀器 widget 之前」就知道一本 EPUB 是固�
 
 ## Issue 4：排版方向與版面偏好設定
 
-**Status:** ✅ 已完成。依 `plans/plan-issue-4.md` Task 1-6 完成 `FoliateEpubReaderView.kt`（偏好設定傳遞、`buildFontFaceCss`、`onPageRendered(writingMode)`）／`main.js`（雙向 `writing-mode` CSS 覆蓋、FR-06 自動判斷、`window.applyPreferences`）／`foliate_epub_reader_view.dart`（9 個版面偏好建構參數）／`ReaderScreen`（傳入偏好、`_handleFoliateLayoutResolved` 設定 `_autoDetectedWritingMode`）。新增測試素材 `sample_declares_vertical.epub`（外部 CSS 宣告 `writing-mode: vertical-rl`，供 FR-06 驗證）。`flutter test`（564 tests）／`flutter analyze`／`./gradlew.bat :app:compileDebugKotlin`／`./gradlew.bat :app:testDebugUnitTest` 皆通過。換頁與 3×3 導航熱區、目錄跳轉、劃線備註留給 Issue 5-8。
+**Status:** ✅ 已完成。依 `plans/plan-issue-4.md` Task 1-6 完成 `FoliateEpubReaderView.kt`（偏好設定傳遞、`buildFontFaceCss`、`onPageRendered(writingMode)`）／`main.js`（雙向 `writing-mode` CSS 覆蓋、FR-06 自動判斷、`window.applyPreferences`）／`foliate_epub_reader_view.dart`（9 個版面偏好建構參數）／`ReaderScreen`（傳入偏好、`_handleFoliateLayoutResolved` 設定 `_autoDetectedWritingMode`）。新增測試素材 `sample_declares_vertical.epub`（外部 CSS 宣告 `writing-mode: vertical-rl`，供 FR-06 驗證）。`flutter test`（564 tests）／`flutter analyze`／`./gradlew.bat :app:compileDebugKotlin`／`./gradlew.bat :app:testDebugUnitTest` 以及真機 `integration_test`（7/7 passed，裝置 `3CEF42ECD491687` 含 FR-06 宣告與未宣告雙素材、雙向切換、偏好套用驗證）皆全數通過。換頁與 3×3 導航熱區、目錄跳轉、劃線備註留給 Issue 5-8。
 
 **依賴：** Issue 3
 

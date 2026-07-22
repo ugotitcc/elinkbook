@@ -39,6 +39,7 @@ function buildOverrideCss(prefs) {
     : 'body, p, div, li, span, td, th, blockquote, dd, dt, a, h1, h2, h3, h4, h5, h6'
 
   if (prefs.writingMode === 'vertical') {
+    // 註：若原書宣告 vertical-lr，覆蓋時亦統一輸出 CJK 主流之 vertical-rl !important（符合本 App 直排規劃目標）
     rules.push('html, body { writing-mode: vertical-rl !important; }')
   } else if (prefs.writingMode === 'horizontal') {
     rules.push('html, body { writing-mode: horizontal-tb !important; }')
