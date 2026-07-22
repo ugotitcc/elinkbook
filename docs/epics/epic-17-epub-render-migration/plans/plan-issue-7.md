@@ -58,7 +58,7 @@
 - Consumes：無（起始工單）
 - Produces：可建置、安裝、啟動的最小 `WebView` Activity，`WebViewAssetLoader` 已正確攔截 `https://appassets.androidplatform.net/assets/` 底下的請求；`MainActivity.kt` 本 Task 完成後不再需要修改，Task 2-5 只新增/覆寫 `assets/foliate/` 底下的檔案。
 
-- [ ] **Step 1：確認裝置、建立目錄結構**
+- [x] **Step 1：確認裝置、建立目錄結構**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook"
@@ -72,7 +72,7 @@ adb devices -l
 
 Expected：`git status --short` 無輸出（`tmp/` 已被 `.gitignore` 排除）；`adb devices -l` 列出至少 1 台裝置，記下 `<device-id>`。
 
-- [ ] **Step 2：確認裝置解析度**
+- [x] **Step 2：確認裝置解析度**
 
 ```bash
 adb -s <device-id> shell wm size
@@ -80,7 +80,7 @@ adb -s <device-id> shell wm size
 
 Expected：`Physical size: 1600x2400`（若不同，記錄實際值，後續座標需按比例換算）。
 
-- [ ] **Step 3：複製主專案已驗證可用的 Gradle wrapper**
+- [x] **Step 3：複製主專案已驗證可用的 Gradle wrapper**
 
 ```bash
 cp "U:/MyDeveloper/AI/elinkBook/app/android/gradlew" \
@@ -96,7 +96,7 @@ cp "U:/MyDeveloper/AI/elinkBook/app/android/gradle/wrapper/gradle-wrapper.proper
 
 Expected：4 個檔案複製成功。
 
-- [ ] **Step 4：寫 `settings.gradle.kts`**
+- [x] **Step 4：寫 `settings.gradle.kts`**
 
 在 `tmp/epic-17/overlayer-spike-harness/settings.gradle.kts` 寫入：
 
@@ -121,7 +121,7 @@ rootProject.name = "overlayer-spike-harness"
 include(":app")
 ```
 
-- [ ] **Step 5：寫根目錄 `build.gradle.kts`**
+- [x] **Step 5：寫根目錄 `build.gradle.kts`**
 
 在 `tmp/epic-17/overlayer-spike-harness/build.gradle.kts` 寫入：
 
@@ -132,7 +132,7 @@ plugins {
 }
 ```
 
-- [ ] **Step 6：寫 `gradle.properties`**
+- [x] **Step 6：寫 `gradle.properties`**
 
 在 `tmp/epic-17/overlayer-spike-harness/gradle.properties` 寫入：
 
@@ -142,7 +142,7 @@ android.useAndroidX=true
 kotlin.code.style=official
 ```
 
-- [ ] **Step 7：寫 `app/build.gradle.kts`**
+- [x] **Step 7：寫 `app/build.gradle.kts`**
 
 在 `tmp/epic-17/overlayer-spike-harness/app/build.gradle.kts` 寫入：
 
@@ -181,7 +181,7 @@ dependencies {
 }
 ```
 
-- [ ] **Step 8：寫 `AndroidManifest.xml`**
+- [x] **Step 8：寫 `AndroidManifest.xml`**
 
 在 `tmp/epic-17/overlayer-spike-harness/app/src/main/AndroidManifest.xml` 寫入：
 
@@ -209,7 +209,7 @@ dependencies {
 </manifest>
 ```
 
-- [ ] **Step 9：寫 `MainActivity.kt`（最終版，本 Task 後不再修改）**
+- [x] **Step 9：寫 `MainActivity.kt`（最終版，本 Task 後不再修改）**
 
 在 `tmp/epic-17/overlayer-spike-harness/app/src/main/kotlin/cc/ugotit/overlayerspike/MainActivity.kt` 寫入：
 
@@ -278,7 +278,7 @@ class MainActivity : Activity() {
 }
 ```
 
-- [ ] **Step 10：寫暫時的 `index.html`（僅供本 Task 驗證管線，Task 2 會覆寫）**
+- [x] **Step 10：寫暫時的 `index.html`（僅供本 Task 驗證管線，Task 2 會覆寫）**
 
 在 `tmp/epic-17/overlayer-spike-harness/app/src/main/assets/foliate/index.html` 寫入：
 
@@ -290,7 +290,7 @@ class MainActivity : Activity() {
 </html>
 ```
 
-- [ ] **Step 11：建置、安裝、啟動，截圖確認管線可用**
+- [x] **Step 11：建置、安裝、啟動，截圖確認管線可用**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/tmp/epic-17/overlayer-spike-harness"
@@ -321,7 +321,7 @@ Expected：建置成功、安裝成功、截圖顯示「OVERLAYER_SPIKE_HARNESS_
 - Consumes：Task 1 已驗證可用的 `MainActivity.kt`／`WebViewAssetLoader` 管線
 - Produces：可開啟 EPUB、強制直排、透過左右熱區換頁的 Harness，`view`／`currentDoc`／`currentIndex` 三個模組級變數供 Task 3-5 擴充 `main.js` 時使用
 
-- [ ] **Step 1：下載釘定 commit 的 `readest/foliate-js` 依賴閉包**
+- [x] **Step 1：下載釘定 commit 的 `readest/foliate-js` 依賴閉包**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/tmp/epic-17/overlayer-spike-harness/app/src/main/assets/foliate"
@@ -337,7 +337,7 @@ wc -l view.js epub.js epubcfi.js progress.js overlayer.js text-walker.js paginat
 
 Expected：`head -c 60 view.js` 以 `import * as CFI from './epubcfi.js'` 開頭；`wc -l` 對 8 個檔案皆回報非 0 行數（`overlayer.js` 預期約 430 行）。
 
-- [ ] **Step 2：複製測試素材**
+- [x] **Step 2：複製測試素材**
 
 ```bash
 cp "U:/MyDeveloper/AI/elinkBook/app/test/fixtures/issue9_vertical_pagejump.epub" \
@@ -347,7 +347,7 @@ ls -la "U:/MyDeveloper/AI/elinkBook/tmp/epic-17/overlayer-spike-harness/app/src/
 
 Expected：檔案存在，大小約 303KB（309978 bytes）。
 
-- [ ] **Step 3：覆寫 `index.html`，加入 4 個透明觸發熱區**
+- [x] **Step 3：覆寫 `index.html`，加入 4 個透明觸發熱區**
 
 把 `tmp/epic-17/overlayer-spike-harness/app/src/main/assets/foliate/index.html` 內容改為：
 
@@ -387,7 +387,7 @@ Expected：檔案存在，大小約 303KB（309978 bytes）。
 
 （`btn-prev`/`btn-next` 改為只佔畫面中間 70% 高度，讓出上下各 15% 給 `btn-annotate`/`btn-select-fallback`，四者互不重疊。）
 
-- [ ] **Step 4：寫 `main.js`（基準版本——開書、強制直排、換頁熱區，尚無標記/選取邏輯）**
+- [x] **Step 4：寫 `main.js`（基準版本——開書、強制直排、換頁熱區，尚無標記/選取邏輯）**
 
 在 `tmp/epic-17/overlayer-spike-harness/app/src/main/assets/foliate/main.js` 寫入：
 
@@ -451,7 +451,7 @@ document.getElementById('btn-next').addEventListener('click', () => {
 openBook()
 ```
 
-- [ ] **Step 5：重新建置、安裝、啟動，翻頁至有正文內容的頁面，截圖確認直排渲染正常**
+- [x] **Step 5：重新建置、安裝、啟動，翻頁至有正文內容的頁面，截圖確認直排渲染正常**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/tmp/epic-17/overlayer-spike-harness"
@@ -489,7 +489,7 @@ Expected：截圖顯示直排繁體中文正文（欄由右至左排列）；log
 - Consumes：Task 2 的 `view`／`currentDoc`／`currentIndex`／`log()`
 - Produces：`addTestAnnotations()` 函式與 `#btn-annotate` 綁定；4 筆已加入的標記（3 色螢光筆 + 1 條底線），各自的 CFI 記錄於 logcat，供 Task 5 點擊測試使用
 
-- [ ] **Step 1：在 `main.js` 加入 `Overlayer` import、`draw-annotation` 監聽、`addTestAnnotations()`**
+- [x] **Step 1：在 `main.js` 加入 `Overlayer` import、`draw-annotation` 監聽、`addTestAnnotations()`**
 
 在 `tmp/epic-17/overlayer-spike-harness/app/src/main/assets/foliate/main.js` 檔案開頭的 import 之後（`import { makeBook } from './view.js'` 之後）新增：
 
@@ -556,7 +556,7 @@ document.getElementById('btn-annotate').addEventListener('click', () => {
 })
 ```
 
-- [ ] **Step 2：重新建置、安裝、啟動，翻到正文頁面，點擊「加入標記」熱區**
+- [x] **Step 2：重新建置、安裝、啟動，翻到正文頁面，點擊「加入標記」熱區**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/tmp/epic-17/overlayer-spike-harness"
@@ -593,7 +593,7 @@ Expected：logcat 依序出現 `OVERLAYER_PARAGRAPHS_FOUND`（`count >= 4`，若
 - Consumes：Task 3 的 `currentDoc`／`log()`
 - Produces：`selectionchange` 監聽器（真實選字手勢與程式化選取皆可觸發）、`#btn-select-fallback` 綁定的程式化選取程式碼，logcat 記錄換算後的 `leftPct`/`topPct`/`rightPct`/`bottomPct`
 
-- [ ] **Step 1：在 `main.js` 加入座標換算與選取監聽**
+- [x] **Step 1：在 `main.js` 加入座標換算與選取監聽**
 
 在 `view.addEventListener('load', (e) => { ... })` 區塊內（`log('OVERLAYER_LOAD', ...)` 之後），新增每次章節載入時對該 `doc` 掛上 `selectionchange` 監聽：
 
@@ -659,7 +659,7 @@ document.getElementById('btn-select-fallback').addEventListener('click', () => {
 })
 ```
 
-- [ ] **Step 2：重新建置、安裝、啟動，翻到正文頁面，嘗試真機原生長按拖曳選字手勢**
+- [x] **Step 2：重新建置、安裝、啟動，翻到正文頁面，嘗試真機原生長按拖曳選字手勢**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/tmp/epic-17/overlayer-spike-harness"
@@ -697,7 +697,7 @@ cat "U:/MyDeveloper/AI/elinkBook/tmp/epic-17/reviews/spike7-task4-native-logcat.
 
 Expected（兩種可能結果皆需如實記錄，不預設哪一種才是「正確」）：(a) 若 `spike7-task4-longpress.png` 出現選取控點且 `spike7-task4-native-logcat.txt` 有 `OVERLAYER_SELECTION_CHANGED` 記錄——代表真機原生長按拖曳手勢可透過 `adb input` 可靠模擬，記錄下換算出的 `leftPct`/`topPct`/`rightPct`/`bottomPct` 是否與畫面反白區域的實際位置吻合；(b) 若未出現選取控點或 logcat 無記錄——這是已知的 `adb input` 工具限制（無法精確模擬「長按不動超過閾值時間」這個手勢判定），不代表 `foliate-js`/`selectionchange` 本身有問題，繼續下一步驟改用程式化退路驗證。
 
-- [ ] **Step 3：程式化退路驗證座標換算公式本身是否正確**
+- [x] **Step 3：程式化退路驗證座標換算公式本身是否正確**
 
 點擊「選取退路」熱區（畫面下方 15% 高度區塊中央，座標約 `800 2220`，若解析度不同需按比例換算）：
 
@@ -725,13 +725,13 @@ Expected：logcat 有 `OVERLAYER_SELECT_FALLBACK_TRIGGERED`，緊接著至少一
 - Consumes：Task 3 已加入的 4 筆標記（各自的 `cfi` 與大略畫面位置）
 - Produces：對每筆標記各執行一次點擊，確認 `'show-annotation'` 事件（`OVERLAYER_SHOW_ANNOTATION` log）回報的 `value` 與該筆標記建立時的 `cfi` 完全一致；額外驗證點擊「無標記」區域不會誤觸發
 
-- [ ] **Step 1：用 Read 工具視覺判讀 `spike7-task3-annotations.png`，決定 4 個標記與 1 個空白對照區的點擊座標**
+- [x] **Step 1：用 Read 工具視覺判讀 `spike7-task3-annotations.png`，決定 4 個標記與 1 個空白對照區的點擊座標**
 
 開啟 Task 3 Step 2 產出的 `tmp/epic-17/reviews/spike7-task3-annotations.png`，肉眼找出畫面上 3 種顏色矩形背景與 1 條底線各自的點擊座標（記錄為 `(x1,y1)`／`(x2,y2)`／`(x3,y3)`／`(x4,y4)`），並額外找一處明顯沒有任何標記覆蓋的空白文字區域座標 `(x5,y5)`（用於驗證「無標記處點擊不應誤觸發」）。
 
 **座標精準度要求（審查修正）**：`Overlayer.hitTest()` 的 `tolerance = 5` 是 CSS px（`getClientRects()`/事件座標皆為 CSS px，非裝置實體像素），在高 DPI 裝置上（`devicePixelRatio` 通常 2-3 倍）換算回螢幕截圖的實體像素後，5 CSS px 只對應約 10-15 個實體像素，容錯範圍比表面數字更緊。3 個螢光筆矩形（`x1`/`x2`/`x3`）面積較大，取矩形內明顯居中的位置即可；但**第 4 筆底線標記（`x4`/`y4`）在直排下是沿文字欄右緣、寬度僅 2 CSS px（約 4-6 實體像素）的細線**（見 `Overlayer.underline` 對 `vertical-rl` 分支：`width` 固定為 `strokeWidth`、`height` 為整行文字高度）——水平方向必須盡量貼齊該細線本身，垂直方向（該段落文字的整個行高範圍內）則容錯較大，不需要特別精準。若第一次點擊 `(x4,y4)` 未觸發 `OVERLAYER_SHOW_ANNOTATION`，在 Step 2 對應段落重新以水平方向 ±3-5 實體像素微調座標後再試一次，仍未命中才記錄為負面結果。
 
-- [ ] **Step 2：依序點擊 4 個標記，逐一確認 `OVERLAYER_SHOW_ANNOTATION` 回報正確的 `value`**
+- [x] **Step 2：依序點擊 4 個標記，逐一確認 `OVERLAYER_SHOW_ANNOTATION` 回報正確的 `value`**
 
 ```bash
 adb -s <device-id> logcat -c
@@ -749,7 +749,7 @@ cat "U:/MyDeveloper/AI/elinkBook/tmp/epic-17/reviews/spike7-task5-tap1.txt"
 
 Expected：4 次點擊各自觸發恰好一筆 `OVERLAYER_SHOW_ANNOTATION`，`value` 與對應建立時的 `cfi` 逐字元相同；若點擊座標落在兩個標記的重疊/相鄰邊界導致誤判，或底線標記需要微調才能命中，記錄下實際命中所需的座標誤差範圍（`Overlayer.hitTest()` 原始碼第 156 行 `tolerance = 5` 為 CSS px，非裝置實體像素，見 Step 1 已記錄的換算說明）。
 
-- [ ] **Step 3：點擊無標記的空白區域，確認不會誤觸發**
+- [x] **Step 3：點擊無標記的空白區域，確認不會誤觸發**
 
 ```bash
 adb -s <device-id> logcat -c
@@ -777,7 +777,7 @@ Expected：檔案為空（無 `OVERLAYER_SHOW_ANNOTATION` 記錄），確認 `hi
 - Consumes：Task 1-5 的全部截圖、logcat 證據與比對結論
 - Produces：Issue 8 實作時必須依循的正式結論；若發現嚴重落差，標記需要人類重新確認 ADR 0011 範圍
 
-- [ ] **Step 1：撰寫驗證報告**
+- [x] **Step 1：撰寫驗證報告**
 
 在 `docs/epics/epic-17-epub-render-migration/reviews/spike-overlayer-annotations.md` 寫入以下結構（依 Task 1-5 的實際觀察結果填入，不得照抄本範本的佔位文字）：
 
@@ -813,11 +813,11 @@ Expected：檔案為空（無 `OVERLAYER_SHOW_ANNOTATION` 記錄），確認 `hi
 <若任一項有嚴重落差，具體說明落差內容與建議的替代做法，供 Issue 8 依循，不得由 Issue 8 實作者在工單執行階段才發現並自行決定退回方案>
 ```
 
-- [ ] **Step 2：更新 `issues.md`**
+- [x] **Step 2：更新 `issues.md`**
 
 修改 `docs/epics/epic-17-epub-render-migration/issues.md` 的「## Issue 7」區塊，把 `**Status:** \`ready-for-agent\`` 改為完成狀態，比照 Issue 1 既有的完成摘要寫法，內容需涵蓋：三項研究問題的結論摘要、是否發現需要 Issue 8 依循的落差、引用報告路徑 `reviews/spike-overlayer-annotations.md`。
 
-- [ ] **Step 3：清理裝置狀態**
+- [x] **Step 3：清理裝置狀態**
 
 ```bash
 adb -s <device-id> uninstall cc.ugotit.overlayerspike
@@ -825,7 +825,7 @@ adb -s <device-id> uninstall cc.ugotit.overlayerspike
 
 Expected：`Success`。
 
-- [ ] **Step 4：確認版控狀態乾淨**
+- [x] **Step 4：確認版控狀態乾淨**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook"
@@ -834,7 +834,7 @@ git status --short
 
 Expected：只顯示 `docs/epics/epic-17-epub-render-migration/reviews/spike-overlayer-annotations.md`（新增）與 `issues.md`（修改）兩個檔案的異動；`tmp/epic-17/overlayer-spike-harness/` 與 `tmp/epic-17/reviews/` 底下的所有 throwaway 檔案皆不出現（已被根目錄 `.gitignore` 的 `tmp/` 規則排除）。
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook"
