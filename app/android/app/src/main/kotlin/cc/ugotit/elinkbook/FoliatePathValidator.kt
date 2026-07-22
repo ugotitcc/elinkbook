@@ -10,10 +10,17 @@ package cc.ugotit.elinkbook
  *
  * 供 FoliateEpubReaderView.kt 的自訂 WebViewAssetLoader.PathHandler 使用：
  * 開書時把待開啟的 EPUB 檔案系統路徑（[requestedCanonicalPath]）與 App
- * 私有文件目錄（[allowedRootCanonicalPath]，即 Context.filesDir，對應
- * Flutter path_provider 的 getApplicationDocumentsDirectory()）比對，防止
- * WebView 內容（foliate-js 本身或惡意 EPUB 內容）藉由精心構造的請求路徑
- * 讀取允許目錄之外的檔案。
+ * 私有資料目錄根（[allowedRootCanonicalPath]，即 `Context.filesDir.parentFile`，
+ * 通常為 `/data/user/0/<applicationId>/`，同時涵蓋 `files/`／`cache/`／
+ * `app_flutter/` 等所有 App 私有子目錄——不是單純的 `Context.filesDir`
+ * 本身，也不等同 Flutter path_provider 的 `getApplicationDocumentsDirectory()`
+ * 〔後者只對應 `files/` 這個子目錄〕；真機測試發現 Flutter 端常用的
+ * `getTemporaryDirectory()`〔對應 `Context.cacheDir`〕與正式匯入退路
+ * 複製目的地〔`getApplicationDocumentsDirectory()/imported_books/`〕分別
+ * 落在 `cache/`／`files/` 兩個平行子目錄，只鎖 `filesDir` 會誤擋合法的
+ * `cacheDir` 路徑，故改以兩者共同的父目錄為允許根）比對，防止 WebView
+ * 內容（foliate-js 本身或惡意 EPUB 內容）藉由精心構造的請求路徑讀取
+ * 允許目錄之外的檔案。
  *
  * 刻意不用單純的 requestedCanonicalPath.startsWith(allowedRootCanonicalPath)
  * ——這會誤判「同前綴但其實是不同目錄」的情況（例如 allowedRoot=
