@@ -9,7 +9,7 @@
 
 **結論：成立，但依 brief Step 1 原樣程式碼在真機上第一次執行時完全看不到任何標記——這是一個真實的既有 API 陷阱，已定位根本原因並修正，修正後在真機上肉眼確認繪製正確。**
 
-`Overlayer.highlight`／`Overlayer.underline` 本身的繪製邏輯經證實是正確的：修正後的最終截圖 `task3fix2_annotated.png` 中，紅／綠／藍紫三色半透明螢光筆矩形清楚可辨、正確沿直排欄位分布，黑色底線也確實可見（緊貼文字右側、寬約 2px 的細直線）。底線方向以 CDP 讀出的 SVG `<rect>` 幾何屬性客觀證實：4 個矩形皆為 `width:2px`、`height` 介於 134～380px（高達寬的數十倍），與 `overlayer.js` 對 `writingMode === 'vertical-rl'` 分支的邏輯完全吻合，代表底線沿垂直方向繪製、貼齊文字，而非橫排時該有的貼底橫線。
+`Overlayer.highlight`／`Overlayer.underline` 本身的繪製邏輯經證實是正確的：修正後的最終截圖 `task3fix2_annotated.png` 中，紅／綠／藍紫三色半透明螢光筆矩形清楚可辨、正確沿直排欄位分布，黑色底線也確實可見（緊貼文字右側、寬約 2px 的細直線）。底線方向以 CDP 讀出的 SVG `<rect>` 幾何屬性客觀證實：該底線標記的 Range 橫跨 4 行，`Overlayer.underline` 對每個 client rect 各畫一個獨立的 `<rect>`（一行一個），這 4 個 `<rect>` 皆為 `width:2px`、`height` 介於 134～380px（高達寬的數十倍），與 `overlayer.js` 對 `writingMode === 'vertical-rl'` 分支的邏輯完全吻合，代表底線沿垂直方向繪製、貼齊文字，而非橫排時該有的貼底橫線。
 
 但 brief 原樣程式碼（`range.selectNodeContents(paragraph)` → `view.getCFI()` → `view.addAnnotation()`）第一次真機執行時，logcat 顯示 4 筆 `OVERLAYER_DRAW_ANNOTATION`／`OVERLAYER_ANNOTATION_ADDED` 皆正常觸發、CFI 格式正確，但截圖 `spike7-task3-annotations.png` 上完全沒有任何可見標記。用 Chrome DevTools Protocol（`adb forward` 到 WebView remote debugging）現場檢視即時 DOM/SVG 狀態後，鎖定兩個疊加的根本原因：
 
@@ -38,6 +38,8 @@
 
 兩條路徑均已用真機證實：座標換算公式正確，前提是餵給它的 doc/Range 必須是「目前真正可視」的那一個。
 
+**留白（供 Issue 8 注意）**：本次驗證與 harness 程式碼皆只取 `range.getClientRects()[0]`（單一矩形）換算座標，未驗證選取範圍橫跨多欄時該如何取代表座標。直排 vertical-rl 下，一段跨欄選取會產生多個彼此欄位座標差異很大的 client rect（欄與欄之間視覺位置跳躍大），只取第一個矩形可能讓浮動工具列/座標回報落在使用者預期之外的欄位。現有 `EpubReaderView.kt`／`onSelectionChanged` 契約本身就是回報單一 `PercentRect`，所以這是既有契約就有的繼承限制、並非本次 Spike 新引入的問題；但由於本 Spike 的目的正是替 vertical-rl（本 Epic 最高風險方向）去風險，這裡仍記錄為未驗證項目：Issue 8 需自行決定「多欄選取時取代表 rect」的策略（例如：永遠取第一個 rect、取所有 rect 的聯集 bounding box、或取選取錨點/焦點端所在的 rect），並在該情境下補測。
+
 ## 研究問題 #3：點擊既有標記可靠觸發回呼並識別正確 id（Task 5）
 
 **結論：成立。4/4 個真實標記逐一測試，各自觸發恰好一筆 `show-annotation` 事件，回報的 CFI 與建立時的 CFI 逐字元完全相同，無誤判、無重複觸發；無標記區域的負面對照正確地未觸發任何回呼。**
@@ -57,8 +59,9 @@
 
 - **`Overlayer.highlight`／`Overlayer.underline` 的 options 形狀不一致**（`Overlayer.highlight(rects, {color, vertical: boolean})` vs `Overlayer.underline(rects, {color, writingMode: string})`）：本次驗證程式碼中兩者呼叫方式確實不同形狀（`vertical:true` vs `writingMode:'vertical-rl'`），此落差在 Issue 7 工單描述階段即已知、本次驗證確認屬實。Issue 8 實作 `FoliateEpubReaderView.kt` 的橋接邏輯需要依 `isUnderline` 分別組裝正確形狀的 options，不能共用同一組參數物件。
 - **`Overlayer` 以 `annotation.value` 當 Map key，必須唯一**：本次驗證中每筆測試標記使用的 CFI 值天生互不相同（不同段落），未實際遇到重複 key 的情境，因此本次驗證未能實測「兩筆標記共用同一 CFI」時的行為。Issue 8 設計標記 id/CFI 產生邏輯時仍須保證唯一性作為前提假設，建議在正式實作階段另補一則針對此邊界情況的單元測試，而非假設本 Spike 已涵蓋。
-- **CFI round-trip 對元素層級 Range（`selectNodeContents(element)`）會靜默壓扁成 collapsed**：`epubcfi.js` 的 CFI 序列化格式只在文字節點（奇數 step index）才保留 offset，元素節點（偶數 step index）的 offset 會被捨棄，導致 start/end 序列化成相同字串、往返解析後兩端重合。不拋錯、log 全部正常，只有視覺上「什麼都沒畫出來」。Issue 8 任何會建構 Range 交給 `view.getCFI()`/`view.addAnnotation()` 的程式碼，都必須用文字節點邊界（`range.setStart(textNode, offset)`/`setEnd(...)`），不可用 `selectNodeContents(element)`。這對「使用者現場選字建立劃線」的情境影響較小（`window.getSelection()` 取得的 Range 天然就是文字節點邊界），但對「批次還原已存標記」「以段落/元素為單位程式化建立標記」等情境是必須遵守的硬性限制。
+- **CFI round-trip 對元素層級 Range（`selectNodeContents(element)`）會靜默壓扁成 collapsed**：`epubcfi.js` 的 CFI 序列化格式只在文字節點（奇數 step index）才保留 offset，元素節點（偶數 step index）的 offset 會被捨棄，導致 start/end 序列化成相同字串、往返解析後兩端重合。不拋錯、log 全部正常，只有視覺上「什麼都沒畫出來」。Issue 8 任何會建構 Range 交給 `view.getCFI()`/`view.addAnnotation()` 的程式碼，都必須用文字節點邊界（`range.setStart(textNode, offset)`/`setEnd(...)`），不可用 `selectNodeContents(element)`。這對「使用者現場選字建立劃線」的情境影響較小（`window.getSelection()` 取得的 Range 天然就是文字節點邊界），對「批次還原已存標記」情境本身影響也較小（還原時是把已存的 CFI 字串直接餵給 `addAnnotation({value: cfiString})`，由 foliate 內部把 CFI 解析回 Range，這條路徑不會重新呼叫 `selectNodeContents()`——除非該 CFI 在當初「建立」的當下就已經是被壓扁的壞值）；真正必須遵守此限制的是「以段落/元素為單位程式化建立標記」這類情境，即任何會呼叫 `selectNodeContents(element)` 或等效方式建構 Range、再交給 `view.getCFI()` 的程式碼。
 - **`'load'` 事件對 look-ahead 預讀的（畫面上尚未顯示的）章節同樣會觸發，導致依賴 `'load'` 事件快取的模組級變數（`currentDoc`/`currentIndex`）在讀取當下可能已經過時、指向錯誤 doc**：本次驗證中，這個陷阱在研究問題 #1（`addTestAnnotations()`）與研究問題 #2（`selectionchange` callback、`#btn-select-fallback`）兩條完全獨立的程式碼路徑上各自獨立命中一次，證實不是單一程式碼的巧合，而是這個 API 使用模式本身的系統性風險。Issue 8 需要「目前畫面上實際顯示的內容」時，一律改用即時查詢（`view.lastLocation.section.current`／`view.lastLocation.range`，或至少 `view.renderer.primaryIndex`），不可快取 `'load'` 事件的 `e.detail.doc`/`e.detail.index` 到模組級/物件級的共用可變變數後於事後讀取；若監聽器必須掛在 `'load'` handler 內部（例如 `selectionchange`），callback 內部也必須讀取該次呼叫私有的區域變數（閉包凍結），不可讀取共用變數。
+- **選取範圍座標換算只驗證了單一 client rect（`getClientRects()[0]`），未驗證多欄選取如何取代表座標**：直排 vertical-rl 下一段跨欄選取會產生多個彼此位置差異很大的矩形，只取第一個可能讓浮動工具列/座標回報偏離使用者實際選取的欄位。現有 `PercentRect` 契約本身就只回報單一矩形，這是繼承既有契約的限制而非本次新引入；Issue 8 需自行決定多欄場景的代表 rect 策略（首個／聯集 bounding box／錨點端）並補測，詳見研究問題 #2 一節。
 - **Harness 導覽熱區與可標記內容區域重疊會攔截點擊，使事件根本傳不到 `hitTest()`**：本次驗證用的 throwaway harness 為求方便設計了覆蓋螢幕左右各 33% 寬、70% 高的隱形導覽按鈕（`#btn-prev`/`#btn-next`），恰好與其中一個標記的螢幕位置重疊，導致該標記第一次點擊被按鈕攔截、觸發意外翻頁而非 `show-annotation`。這不是 `Overlayer.hitTest()` 本身的缺陷（換一個不重疊的座標後，同一個標記立即被正確命中），但是一項對 Issue 8／正式 App 有意義的設計提醒：**九宮格導覽/操作熱區的佈局，不得與可能出現可標記內容的區域無條件重疊**，否則會產生「`hitTest()` 邏輯完全正確、標記確實存在，但使用者的點擊永遠傳不到它」的隱藏缺陷。Issue 8 實作正式 App 的 3×3 熱區系統時，需要明確的熱區優先權/穿透規則（例如：熱區只在確認「該點擊未命中任何標記」後才觸發導覽），而非依賴熱區與內容區域自然不重疊的僥倖假設。
 
 ## 風險分級與後續建議
