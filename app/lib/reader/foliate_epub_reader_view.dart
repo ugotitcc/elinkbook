@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'app_font.dart';
+import 'epub_decoration.dart';
 import 'epub_position_info.dart';
+import 'epub_selection_info.dart';
 import 'epub_text_align.dart';
 import 'page_turn_mode.dart';
+import 'percent_rect.dart';
 import 'toc_entry.dart';
 import 'writing_mode.dart';
 import 'zone_action.dart';
@@ -79,6 +82,15 @@ class FoliateEpubReaderView extends StatefulWidget {
   /// [EpubReaderView.onLocatorChanged] 既有模式。
   final ValueChanged<EpubPositionInfo>? onLocatorChanged;
 
+  /// 劃線備註（epic-17-epub-render-migration Issue 8）：使用者長按選字建立/變動選取範圍時觸發
+  final ValueChanged<EpubSelectionInfo>? onSelectionChanged;
+
+  /// 選取範圍清除時觸發
+  final VoidCallback? onSelectionCleared;
+
+  /// 使用者點擊既有劃線/備註標記時觸發，帶入不透明 id 字串
+  final ValueChanged<String>? onAnnotationActivated;
+
   const FoliateEpubReaderView({
     super.key,
     required this.filePath,
@@ -104,6 +116,9 @@ class FoliateEpubReaderView extends StatefulWidget {
     this.showNavZoneDebugOverlay = false,
     this.initialLocatorJson,
     this.onLocatorChanged,
+    this.onSelectionChanged,
+    this.onSelectionCleared,
+    this.onAnnotationActivated,
   });
 
   /// 呼叫原生端 view.next()，換頁不觸發任何回呼（強型別 static helper，
@@ -172,6 +187,20 @@ class FoliateEpubReaderView extends StatefulWidget {
     return raw
         .map((e) => TocEntry.fromWire(e as Map<Object?, Object?>))
         .toList();
+  }
+
+  /// 傳送劃線/備註標記清單給原生端（epic-17-epub-render-migration Issue 8），
+  /// 比照 [jumpToLocator] 的強型別 static helper 模式。
+  static void setDecorations(
+    GlobalKey<State<FoliateEpubReaderView>> key,
+    List<EpubDecoration> decorations,
+  ) {
+    final state = key.currentState;
+    if (state is _FoliateEpubReaderViewState) {
+      state._channel?.invokeMethod('setDecorations', {
+        'decorations': decorations.map((d) => d.toWire()).toList(),
+      });
+    }
   }
 
   @override
@@ -272,6 +301,25 @@ class _FoliateEpubReaderViewState extends State<FoliateEpubReaderView> {
           pageIndex: (args['pageIndex'] as num?)?.toInt(),
           totalPages: (args['totalPages'] as num?)?.toInt(),
         ));
+        break;
+      case 'onSelectionChanged':
+        final args = call.arguments as Map<Object?, Object?>;
+        widget.onSelectionChanged?.call(EpubSelectionInfo(
+          locatorJson: args['locatorJson'] as String,
+          progression: (args['progression'] as num).toDouble(),
+          rect: PercentRect(
+            left: (args['leftPct'] as num).toDouble(),
+            top: (args['topPct'] as num).toDouble(),
+            right: (args['rightPct'] as num).toDouble(),
+            bottom: (args['bottomPct'] as num).toDouble(),
+          ),
+        ));
+        break;
+      case 'onSelectionCleared':
+        widget.onSelectionCleared?.call();
+        break;
+      case 'onAnnotationActivated':
+        widget.onAnnotationActivated?.call(call.arguments as String);
         break;
     }
   }
