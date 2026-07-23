@@ -73,6 +73,7 @@ dependencies {
     implementation("androidx.webkit:webkit:1.16.0")
 
     testImplementation("junit:junit:4.13.2")
+    testImplementation("org.json:json:20231013")
 }
 
 flutter {
