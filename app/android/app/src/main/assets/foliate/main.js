@@ -12,6 +12,11 @@ const initialPrefs = JSON.parse(params.get('prefs') || '{}')
 // buildFontFaceCss()），開書當下由原生端算好透過 query string 傳入，字型
 // 檔案路徑固定不隨後續 applyPreferences 呼叫變動。
 const fontFaceCss = params.get('fontFaceCss') || ''
+// 開書起始定位（epic-17 Issue 6）：原生端已透過 FoliateLocatorCodec
+// .extractCfi() 驗證過格式，這裡拿到的要嘛是合法 CFI 字串，要嘛是空字串
+// （缺席／舊格式／無效資料的優雅退回，見 Global Constraints），不需要
+// 再自行判斷格式。
+const initialCfi = params.get('initialCfi') || ''
 
 // 判斷書本第一個 section 的 CSS 是否已宣告 writing-mode（epic-17
 // Issue 4，FR-06）。同時涵蓋標準屬性與 EPUB 專屬的 -epub- 前綴寫法；只
@@ -109,6 +114,87 @@ window.jumpToFraction = function (fraction) {
   view.goToFraction(fraction)
 }
 
+/**
+ * 跳轉到指定 CFI（epic-17 Issue 6）。[cfi] 已由原生端
+ * FoliateLocatorCodec.extractCfi() 驗證過格式（新格式定位 JSON 才會呼叫
+ * 到這裡，舊格式/無效 JSON 在原生端就已被過濾掉，見
+ * FoliateEpubReaderView.kt「jumpToLocator」case），本函式不需要再自行
+ * 解析 JSON 或判斷格式。
+ */
+window.jumpToLocator = function (cfi) {
+  view.goTo(cfi)
+}
+
+/**
+ * 遞迴解析單一目錄節點：透過 view.book.resolveHref() 取得 {index, anchor}，
+ * 載入該 section 的文件（book.sections[index].createDocument()，獨立於
+ * 目前實際顯示中的頁面，不影響閱讀畫面）後計算對應 CFI；href 無法解析、
+ * 缺少頁內錨點（anchor(doc) 回傳非 Node 值，例如純章節起點連結）、或文件
+ * 載入失敗時，退回 section 層級的 base CFI（view.getCFI(index, undefined)，
+ * 不含頁內錨點精度，比照 view.js getCFI() 既有的 baseCFI 退路，仍可跳轉
+ * 到正確章節，見 Global Constraints）。
+ */
+async function buildTocEntry(item) {
+  const resolved = item.href ? view.book.resolveHref(item.href) : null
+  let cfi = null
+  let index = null
+  let fraction = null
+  if (resolved && resolved.index >= 0) {
+    index = resolved.index
+    try {
+      const doc = await view.book.sections[index].createDocument()
+      const frag = resolved.anchor(doc)
+      let range
+      if (frag instanceof Range) {
+        range = frag
+      } else if (frag && frag.nodeType) {
+        range = doc.createRange()
+        range.selectNodeContents(frag)
+      }
+      cfi = view.getCFI(index, range)
+    } catch (e) {
+      cfi = view.getCFI(index, undefined)
+    }
+    if (cfi) {
+      const progress = await view.getCFIProgress(cfi)
+      fraction = progress?.fraction ?? null
+    }
+  }
+  const children = []
+  for (const sub of item.subitems ?? []) {
+    children.push(await buildTocEntry(sub))
+  }
+  return {
+    title: item.label ?? '',
+    locatorJson: cfi
+      ? JSON.stringify({ cfi, index, fraction })
+      : '',
+    progression: fraction,
+    children,
+  }
+}
+
+/**
+ * 讀取全書目錄（epic-17 Issue 6），供原生端 getTableOfContents method
+ * channel case 呼叫。非同步計算完成後主動透過 FoliateBridge 回呼原生端
+ * ——WebView.evaluateJavascript 的 callback 不會等待 async function 內部
+ * 的 Promise resolve（只會拿到 Promise 物件本身序列化後的無意義結果），
+ * 見 FoliateEpubReaderView.kt onTableOfContentsReady() 註解與 Global
+ * Constraints，本函式因此不能單純依賴 evaluateJavascript 的回傳值。
+ */
+window.getTableOfContents = async function () {
+  try {
+    const items = view.book?.toc ?? []
+    const entries = []
+    for (const item of items) {
+      entries.push(await buildTocEntry(item))
+    }
+    window.FoliateBridge.onTableOfContentsReady(JSON.stringify(entries))
+  } catch (e) {
+    window.FoliateBridge.onTableOfContentsReady(JSON.stringify([]))
+  }
+}
+
 async function openBook() {
   try {
     const book = await makeBook(
@@ -145,12 +231,26 @@ async function openBook() {
       window.applyPreferences({ ...initialPrefs, writingMode: resolvedWritingMode })
       window.FoliateBridge.onPageRendered(resolvedWritingMode)
     }, { once: true })
+    // 目前定位變動持續推播（epic-17 Issue 6）：與上方 { once: true } 的
+    // FR-06/onPageRendered 監聽器各自獨立、互不影響，開書當下的第一次
+    // relocate 事件兩者皆會觸發。location.current／location.total 為
+    // foliate-js SectionProgress.getProgress() 既有輸出（見
+    // progress.js），近似頁碼概念，非精確渲染頁數。
+    view.addEventListener('relocate', (e) => {
+      const { cfi, section, fraction, location } = e.detail
+      window.FoliateBridge.onLocatorChanged(
+        JSON.stringify({ cfi, index: section?.current ?? 0, fraction: fraction ?? 0 }),
+        fraction ?? 0,
+        location?.current ?? 0,
+        location?.total ?? 0,
+      )
+    })
     await view.open(book)
     view.renderer.setAttribute(
       'flow',
       initialPrefs.pageTurnMode === 'scroll' ? 'scrolled' : 'paginated',
     )
-    await view.init({})
+    await view.init(initialCfi ? { lastLocation: initialCfi } : {})
   } catch (e) {
     window.FoliateBridge.onError(String((e && e.message) || e))
   }

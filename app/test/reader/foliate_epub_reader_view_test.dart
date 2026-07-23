@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:elinkbook/reader/epub_position_info.dart';
 import 'package:elinkbook/reader/foliate_epub_reader_view.dart';
 import 'package:elinkbook/reader/writing_mode.dart';
 import 'package:elinkbook/reader/app_font.dart';
@@ -429,5 +430,158 @@ void main() {
     expect(find.text('選單'), findsWidgets);
     expect(find.text('下一頁'), findsWidgets);
     expect(find.text('無動作'), findsWidgets);
+  });
+
+  testWidgets('openBook 呼叫時帶入 initialLocatorJson（非 null）',
+      (tester) async {
+    final calls = await _pumpFoliateEpubReaderView(
+      tester,
+      const FoliateEpubReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        initialLocatorJson: '{"cfi":"epubcfi(/4/2)","index":1,"fraction":0.3}',
+      ),
+    );
+
+    final openBookCall = calls.firstWhere((c) => c.method == 'openBook');
+    expect(openBookCall.arguments['initialLocatorJson'],
+        '{"cfi":"epubcfi(/4/2)","index":1,"fraction":0.3}');
+  });
+
+  testWidgets('openBook 呼叫時不含 initialLocatorJson（null）', (tester) async {
+    final calls = await _pumpFoliateEpubReaderView(
+      tester,
+      const FoliateEpubReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+      ),
+    );
+
+    final openBookCall = calls.firstWhere((c) => c.method == 'openBook');
+    expect(openBookCall.arguments.containsKey('initialLocatorJson'), false);
+  });
+
+  testWidgets('onLocatorChanged 收到原生端回報時觸發 callback',
+      (tester) async {
+    EpubPositionInfo? captured;
+    final binaryMessenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    int channelId = -1;
+
+    binaryMessenger.setMockMethodCallHandler(SystemChannels.platform_views,
+        (call) async {
+      if (call.method == 'create') {
+        final id =
+            (call.arguments as Map<Object?, Object?>)['id'] as int;
+        channelId = id;
+        binaryMessenger.setMockMethodCallHandler(
+          MethodChannel('cc.ugotit.elinkbook/foliate_epub_reader_view_$id'),
+          (call) async => null,
+        );
+        return 0;
+      }
+      return null;
+    });
+
+    await tester.pumpWidget(MaterialApp(
+      home: FoliateEpubReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        onLocatorChanged: (info) => captured = info,
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    // 模擬原生端回報 onLocatorChanged
+    final channel =
+        MethodChannel('cc.ugotit.elinkbook/foliate_epub_reader_view_$channelId');
+    await TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .handlePlatformMessage(channel.name, channel.codec.encodeMethodCall(
+          MethodCall('onLocatorChanged', {
+            'locatorJson': '{"cfi":"epubcfi(/4/2)","index":1,"fraction":0.3}',
+            'progression': 0.3,
+            'pageIndex': 5,
+            'totalPages': 20,
+          }),
+        ), (_) {});
+
+    expect(captured, isNotNull);
+    expect(captured!.locatorJson,
+        '{"cfi":"epubcfi(/4/2)","index":1,"fraction":0.3}');
+    expect(captured!.progression, 0.3);
+    expect(captured!.pageIndex, 5);
+    expect(captured!.totalPages, 20);
+  });
+
+  testWidgets('onLocatorChanged 為 null 時，原生端回報不觸發例外',
+      (tester) async {
+    final binaryMessenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    int channelId = -1;
+
+    binaryMessenger.setMockMethodCallHandler(SystemChannels.platform_views,
+        (call) async {
+      if (call.method == 'create') {
+        final id =
+            (call.arguments as Map<Object?, Object?>)['id'] as int;
+        channelId = id;
+        binaryMessenger.setMockMethodCallHandler(
+          MethodChannel('cc.ugotit.elinkbook/foliate_epub_reader_view_$id'),
+          (call) async => null,
+        );
+        return 0;
+      }
+      return null;
+    });
+
+    await tester.pumpWidget(MaterialApp(
+      home: const FoliateEpubReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        // onLocatorChanged 不提供
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    final channel =
+        MethodChannel('cc.ugotit.elinkbook/foliate_epub_reader_view_$channelId');
+    // 不拋出例外即通過
+    await TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .handlePlatformMessage(channel.name, channel.codec.encodeMethodCall(
+          MethodCall('onLocatorChanged', {
+            'locatorJson': '{"cfi":"epubcfi(/4/2)","index":1,"fraction":0.3}',
+            'progression': 0.3,
+            'pageIndex': 5,
+            'totalPages': 20,
+          }),
+        ), (_) {});
+  });
+
+  test('EpubPositionInfo equals/hashCode/toString', () {
+    const a = EpubPositionInfo(
+      locatorJson: '{"cfi":"epubcfi(/4/2)","index":1,"fraction":0.3}',
+      progression: 0.3,
+      pageIndex: 5,
+      totalPages: 20,
+    );
+    const b = EpubPositionInfo(
+      locatorJson: '{"cfi":"epubcfi(/4/2)","index":1,"fraction":0.3}',
+      progression: 0.3,
+      pageIndex: 5,
+      totalPages: 20,
+    );
+    const c = EpubPositionInfo(
+      locatorJson: '{"cfi":"epubcfi(/4/3)","index":2,"fraction":0.6}',
+    );
+
+    expect(a, equals(b));
+    expect(a.hashCode, b.hashCode);
+    expect(a, isNot(equals(c)));
+    expect(a.toString(), contains('locatorJson'));
+    expect(a.toString(), contains('pageIndex: 5'));
   });
 }

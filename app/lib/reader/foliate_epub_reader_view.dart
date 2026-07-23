@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'app_font.dart';
+import 'epub_position_info.dart';
 import 'epub_text_align.dart';
 import 'page_turn_mode.dart';
+import 'toc_entry.dart';
 import 'writing_mode.dart';
 import 'zone_action.dart';
 
@@ -18,12 +20,21 @@ import 'zone_action.dart';
 /// `isLandscape`——reflowable 流式書籍不適用「雙頁」）。Issue 5 新增
 /// `navZoneActions`/`onZoneAction`/`showNavZoneDebugOverlay` 三個建構參數
 /// 與 `nextPage`/`previousPage`/`jumpToProgression` static helper，3×3
-/// 導航熱區完全由 Dart 端 Stack 疊加層處理、不送給原生端。
+/// 導航熱區完全由 Dart 端 Stack 疊加層處理、不送給原生端。Issue 6 新增
+/// `initialLocatorJson`/`onLocatorChanged` 建構參數與
+/// `jumpToLocator`/`loadTableOfContents` static helper——定位格式為
+/// 本 Epic 新增的 CFI JSON（`epub_position_info.dart`「資料模型」），與
+/// [EpubReaderView] 使用的 Readium Locator JSON 完全不相容，但公開介面
+/// 形狀（`String` 定位欄位）保持對稱，呼叫端不需要因為換了引擎而改變
+/// 使用方式。**不**新增 `totalCharacterCount`/`onCharacterCountReady`
+/// ——本 widget 完全不呼叫任何字數統計，頁尾頁碼改由 `onLocatorChanged`
+/// 新增的 `pageIndex`/`totalPages` 欄位直接驅動（見
+/// docs/epics/epic-17-epub-render-migration/spec.md「頁碼估算」）。
 /// [writingMode] 是「呼叫端要求套用的方向」（可寫），與 [onLayoutResolved]
 /// 回報的 [EpubLayoutInfo.writingMode]（原生端判斷/回報的唯讀值）是兩個
 /// 不同方向的資料流，比照 [EpubReaderView] 既有模式。
 ///
-/// 排版設定以外的目錄／劃線備註參數留待 Issue 6-8 補上。
+/// 劃線備註參數留待 Issue 8 補上。
 class FoliateEpubReaderView extends StatefulWidget {
   final String filePath;
   final VoidCallback onPageRendered;
@@ -55,6 +66,19 @@ class FoliateEpubReaderView extends StatefulWidget {
   /// 用途。
   final bool showNavZoneDebugOverlay;
 
+  /// 開書起始定位（epic-17-epub-render-migration Issue 6）。`null` 代表
+  /// 無既有位置記錄，或原生端 `FoliateLocatorCodec.extractCfi()` 判斷為
+  /// 舊格式/無效資料而優雅退回，一律從書本開頭開始（見 Global
+  /// Constraints）。與其餘偏好參數不同，這是「一次性開書起始值」，只在
+  /// `openBook` 當下送出一次，不參與 [didUpdateWidget] 的偏好設定 diff
+  /// 邏輯，比照 [EpubReaderView.initialLocatorJson] 既有模式。
+  final String? initialLocatorJson;
+
+  /// 目前定位變動時觸發（開書、翻頁、目錄跳轉），供呼叫端（ReaderScreen）
+  /// 快取最新定位，於離開/背景時寫入資料庫，比照
+  /// [EpubReaderView.onLocatorChanged] 既有模式。
+  final ValueChanged<EpubPositionInfo>? onLocatorChanged;
+
   const FoliateEpubReaderView({
     super.key,
     required this.filePath,
@@ -78,6 +102,8 @@ class FoliateEpubReaderView extends StatefulWidget {
     ],
     this.onZoneAction,
     this.showNavZoneDebugOverlay = false,
+    this.initialLocatorJson,
+    this.onLocatorChanged,
   });
 
   /// 呼叫原生端 view.next()，換頁不觸發任何回呼（強型別 static helper，
@@ -112,6 +138,42 @@ class FoliateEpubReaderView extends StatefulWidget {
     }
   }
 
+  /// 依目錄項目／書籤／備註的序列化定位跳轉（epic-17-epub-render-migration
+  /// Issue 6），比照 [jumpToProgression] 的強型別 static helper 模式，不
+  /// 使用 `as dynamic` 跨越 State 的 private 邊界。[locatorJson] 為本 Epic
+  /// 新增的 CFI 格式 JSON 字串；若為舊格式/無效資料，原生端
+  /// `FoliateLocatorCodec.extractCfi()` 會優雅退回、不執行任何跳轉（見
+  /// Global Constraints），呼叫端不需要事先驗證格式。
+  static void jumpToLocator(
+    GlobalKey<State<FoliateEpubReaderView>> key,
+    String locatorJson,
+  ) {
+    final state = key.currentState;
+    if (state is _FoliateEpubReaderViewState) {
+      state._channel?.invokeMethod('jumpToLocator', {
+        'locatorJson': locatorJson,
+      });
+    }
+  }
+
+  /// 讀取全書目錄樹狀結構（epic-17-epub-render-migration Issue 6），比照
+  /// [EpubReaderView.loadTableOfContents] 既有模式：請求/回應語意（回傳
+  /// `Future`），非 fire-and-forget。原生端呼叫失敗或本 State 尚未掛載
+  /// （例如純 `flutter_test` 環境下 `_channel` 恆為 `null`，AndroidView
+  /// 未真正建立）時回傳空清單，不拋出例外。
+  static Future<List<TocEntry>> loadTableOfContents(
+    GlobalKey<State<FoliateEpubReaderView>> key,
+  ) async {
+    final state = key.currentState;
+    if (state is! _FoliateEpubReaderViewState) return const [];
+    final raw = await state._channel
+        ?.invokeMethod<List<Object?>>('getTableOfContents');
+    if (raw == null) return const [];
+    return raw
+        .map((e) => TocEntry.fromWire(e as Map<Object?, Object?>))
+        .toList();
+  }
+
   @override
   State<FoliateEpubReaderView> createState() => _FoliateEpubReaderViewState();
 }
@@ -127,6 +189,8 @@ class _FoliateEpubReaderViewState extends State<FoliateEpubReaderView> {
     channel.invokeMethod('openBook', {
       'path': widget.filePath,
       'initialPreferences': _buildPreferencesMap(),
+      if (widget.initialLocatorJson != null)
+        'initialLocatorJson': widget.initialLocatorJson,
     });
   }
 
@@ -199,6 +263,15 @@ class _FoliateEpubReaderViewState extends State<FoliateEpubReaderView> {
               : WritingMode.horizontal,
         );
         widget.onLayoutResolved?.call(info);
+        break;
+      case 'onLocatorChanged':
+        final args = call.arguments as Map<Object?, Object?>;
+        widget.onLocatorChanged?.call(EpubPositionInfo(
+          locatorJson: args['locatorJson'] as String,
+          progression: (args['progression'] as num?)?.toDouble(),
+          pageIndex: (args['pageIndex'] as num?)?.toInt(),
+          totalPages: (args['totalPages'] as num?)?.toInt(),
+        ));
         break;
     }
   }

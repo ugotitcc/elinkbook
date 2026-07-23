@@ -153,7 +153,7 @@ Phase 1 需要在「建構閱讀器 widget 之前」就知道一本 EPUB 是固�
 
 ## Issue 6：目錄跳轉與定位持久化／頁碼顯示
 
-**Status:** `ready-for-agent`
+**Status:** 🚧 實作與單元測試完成（待裝置驗證）。依 `plans/plan-issue-6.md` Task 1-6 完成 `FoliateLocatorCodec.kt`（純函式：`extractCfi`／`parseTocEntries`，含 10 個 JVM 測試）／`FoliateEpubReaderView.kt`（`jumpToLocator`／`getTableOfContents` method channel、`onLocatorChanged`／`onTableOfContentsReady` 橋接）／`main.js`（`window.jumpToLocator`／`window.getTableOfContents`／`buildTocEntry`／持續 `relocate` 推播／`initialCfi` 開書起始定位）／`foliate_epub_reader_view.dart`（`initialLocatorJson`／`onLocatorChanged`／`jumpToLocator`／`loadTableOfContents`）／`EpubPositionInfo`（新增 `pageIndex`/`totalPages`）／`ReaderScreen`（`_jumpToEpubLocator()` 統一分派、`_handleFoliateLayoutResolved` 觸發目錄背景抓取、`_buildFoliateEpubFooter()`）。新增真機整合測試 `foliate_toc_footer_test.dart`。`flutter test`（578 tests）／`flutter analyze`／`./gradlew.bat :app:compileDebugKotlin`／`./gradlew.bat :app:testDebugUnitTest`（103 tests）皆全數通過。真機 `integration_test`（目錄跳轉、頁尾頁碼、舊格式 `initialLocatorJson` 優雅退回）待裝置驗證。劃線與備註留給 Issue 8。
 
 **依賴：** Issue 3
 
