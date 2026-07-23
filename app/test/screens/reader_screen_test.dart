@@ -2784,4 +2784,38 @@ void main() {
 
     expect(find.byKey(const Key('reader_footer')), findsNothing);
   });
+
+  testWidgets(
+      '流式 EPUB：onLocatorChanged 回報 totalPages=0 時，頁尾不顯示且不崩潰',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_footer_foliate_zero',
+          prefsManager: prefsManager,
+          isFixedLayout: false,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final foliateView =
+        tester.widget<FoliateEpubReaderView>(find.byType(FoliateEpubReaderView));
+    foliateView.onPageRendered();
+    foliateView.onLocatorChanged?.call(const EpubPositionInfo(
+      locatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
+      progression: 0.1,
+      pageIndex: 0,
+      totalPages: 0,
+    ));
+    await tester.pump();
+
+    // totalPages=0 應被 _buildFoliateEpubFooter 內部防呆攔截
+    // （info.totalPages ?? 0 → 0 <= 0 → return SizedBox.shrink），
+    // 不會走到 clamp(1, 0) 也不會建構 ReaderFooter。
+    expect(find.byKey(const Key('reader_footer')), findsNothing);
+  });
 }
