@@ -8,7 +8,6 @@ import 'package:integration_test/integration_test.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:elinkbook/reader/epub_position_info.dart';
 import 'package:elinkbook/reader/foliate_epub_reader_view.dart';
-import 'package:elinkbook/reader/toc_entry.dart';
 
 Future<String> _stageAssetAsFile(String assetPath, String fileName) async {
   final bytes = await rootBundle.load(assetPath);
