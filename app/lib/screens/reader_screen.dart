@@ -601,6 +601,23 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     await _loadFxlBookmarks();
   }
 
+  /// 依 `_dispatchedIsFixedLayout` 分派到正確的原生 widget 執行目錄／
+  /// 書籤／備註跳轉（epic-17-epub-render-migration Issue 6）：FXL
+  /// （Readium）用 `EpubReaderView.jumpToLocator`，流式（foliate-js）用
+  /// `FoliateEpubReaderView.jumpToLocator`，兩者接受的 `locatorJson`
+  /// 格式不同（Readium Locator JSON vs 本 Epic 新 CFI 格式），但呼叫端
+  /// （本方法的三個呼叫點：`_openToc`／`_openNotesSheet` 的
+  /// `onAnnotationSelected`／`onBookmarkSelected`）不需要關心格式差異，
+  /// 只需傳入目前使用中書籍的 `locatorJson`。比照 `_handleZoneAction`
+  /// （Issue 5）建立的相同分派模式。
+  void _jumpToEpubLocator(String locatorJson) {
+    if (_dispatchedIsFixedLayout == true) {
+      EpubReaderView.jumpToLocator(_epubReaderViewKey, locatorJson);
+    } else {
+      FoliateEpubReaderView.jumpToLocator(_foliateEpubReaderViewKey, locatorJson);
+    }
+  }
+
   void _openToc() {
     final currentPath = TocNavigator.findCurrentPath(
       _tocEntries,
@@ -617,7 +634,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         resolved: _resolved!,
         onEntrySelected: (entry) {
           Navigator.of(context).pop();
-          EpubReaderView.jumpToLocator(_epubReaderViewKey, entry.locatorJson);
+          _jumpToEpubLocator(entry.locatorJson);
         },
       ),
     );
@@ -666,7 +683,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           final locatorJson = item.highlight?.epubLocatorJson ?? item.note?.epubLocatorJson;
           final pdfPageIndex = item.highlight?.pdfPageIndex ?? item.note?.pdfPageIndex;
           if (locatorJson != null) {
-            EpubReaderView.jumpToLocator(_epubReaderViewKey, locatorJson);
+            _jumpToEpubLocator(locatorJson);
           } else if (pdfPageIndex != null) {
             PdfReaderView.jumpToPage(_pdfReaderViewKey, pdfPageIndex);
           }
@@ -677,10 +694,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         onBookmarkSelected: (bookmark) {
           Navigator.of(context).pop();
           if (bookmark.epubLocatorJson != null) {
-            EpubReaderView.jumpToLocator(
-              _epubReaderViewKey,
-              bookmark.epubLocatorJson!,
-            );
+            _jumpToEpubLocator(bookmark.epubLocatorJson!);
           } else if (bookmark.pdfPageIndex != null) {
             PdfReaderView.jumpToPage(_pdfReaderViewKey, bookmark.pdfPageIndex!);
           }
@@ -786,12 +800,16 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// epic-17-epub-render-migration Issue 4 起，也設定
   /// `_autoDetectedWritingMode` 並重新計算 `_resolved`（比照
   /// `_handleLayoutResolved` 對應段落），讓「版面設定」按鈕能對流式書籍
-  /// 生效。**仍然刻意不**觸發 `EpubReaderView.loadTableOfContents`／
-  /// `_reloadAnnotationsAndRefreshDecorations`／`_loadFxlBookmarks`——這些
-  /// 呼叫對尚未掛載的 EpubReaderView/`_epubReaderViewKey` 雖然會靜默
-  /// no-op、技術上無害，但會讓 `_tocLoaded`/`_annotationsLoaded` 被誤判為
-  /// 「已完成」，使「目錄」/「筆記」按鈕看似可用卻永遠開出空清單/無法
-  /// 互動。目錄／劃線備註／書籤仍是 Issue 6/8 的範圍。
+  /// 生效。Issue 6 起新增目錄背景抓取（比照 `_handleLayoutResolved`
+  /// 對應段落，改呼叫 `FoliateEpubReaderView.loadTableOfContents()`
+  /// 而非 `EpubReaderView` 的版本）——不需要像 Readium 分支那樣額外檢查
+  /// `!info.isFixedLayout`，因為本方法只會被 `FoliateEpubReaderView`
+  /// （恆為流式）呼叫。**仍然刻意不**觸發
+  /// `_reloadAnnotationsAndRefreshDecorations`／`_loadFxlBookmarks`——這兩
+  /// 個呼叫對尚未掛載的 `EpubReaderView`/`_epubReaderViewKey` 雖然會靜默
+  /// no-op、技術上無害，但會讓 `_annotationsLoaded` 被誤判為「已完成」，
+  /// 使「筆記」按鈕看似可用卻永遠開出空清單/無法互動。劃線備註仍是
+  /// Issue 8 的範圍。
   void _handleFoliateLayoutResolved(EpubLayoutInfo info) {
     if (!mounted) return;
     setState(() {
@@ -805,6 +823,16 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         );
       }
     });
+    if (_tocEntries.isEmpty && !_tocLoaded) {
+      FoliateEpubReaderView.loadTableOfContents(_foliateEpubReaderViewKey)
+          .then((entries) {
+        if (!mounted) return;
+        setState(() {
+          _tocEntries = entries;
+          _tocLoaded = true;
+        });
+      });
+    }
   }
 
   /// 原生端背景計算全書字元數完成時觸發（Epic 5 Issue 3）：更新本地狀態
@@ -1464,6 +1492,13 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                 _resolved!.showFooter &&
                 _chromeVisible)
               _buildEpubFooter(_resolved!, _totalCharacterCount!),
+            if (format == BookFormat.epub &&
+                _dispatchedIsFixedLayout == false &&
+                _epubPositionInfo?.totalPages != null &&
+                _resolved != null &&
+                _resolved!.showFooter &&
+                _chromeVisible)
+              _buildFoliateEpubFooter(_epubPositionInfo!),
           ],
         ),
       ),
@@ -1502,6 +1537,33 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     );
   }
 
+  /// 流式 EPUB（FoliateEpubReaderView）頁尾（epic-17-epub-render-migration
+  /// Issue 6）：直接使用原生端 relocate 事件回報的 pageIndex／totalPages
+  /// （foliate-js SectionProgress.getProgress() 的 location.current／
+  /// location.total，近似頁碼概念，非精確渲染頁數，見 spec.md「頁碼
+  /// 估算」）——與 _buildEpubFooter（Readium 遺留路徑，依全書字元數估算
+  /// 頁數，post-epic-17 對流式書籍已是死路徑，見 plans/plan-issue-5.md
+  /// 對 onZoneTapped 的相同結論）刻意不同，不重用其估算邏輯；本 widget
+  /// 完全不呼叫任何字數統計（不送出 totalCharacterCount）。pageIndex 為
+  /// 0-indexed（比照原生端既有慣例），ReaderFooter 要求 1-indexed，此處
+  /// +1 換算。onPageChanged 透過既有 jumpToProgression（Issue 5）換算
+  /// 目標頁對應的全書進度比例，與 _buildEpubFooter 的 onPageChanged 作法
+  /// 相同（近似值，非精確反解頁碼）。
+  Widget _buildFoliateEpubFooter(EpubPositionInfo info) {
+    final totalPages = info.totalPages!;
+    final currentPage = ((info.pageIndex ?? 0) + 1).clamp(1, totalPages);
+    return ReaderFooter(
+      currentPage: currentPage,
+      totalPages: totalPages,
+      onPageChanged: (page1Indexed) {
+        final progression =
+            totalPages > 0 ? (page1Indexed - 1) / totalPages : 0.0;
+        FoliateEpubReaderView.jumpToProgression(
+            _foliateEpubReaderViewKey, progression);
+      },
+    );
+  }
+
   Widget _buildNativeView(BookFormat format, bool isLandscape) {
     final resolved = _resolved!;
     switch (format) {
@@ -1526,6 +1588,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             navZoneActions: resolved.navZoneActions,
             onZoneAction: _handleZoneAction,
             showNavZoneDebugOverlay: resolved.showNavZoneDebugOverlay,
+            initialLocatorJson: _initialPosition?.epubLocatorJson,
+            onLocatorChanged: (info) {
+              if (!mounted) return;
+              setState(() => _epubPositionInfo = info);
+            },
           );
         }
         return EpubReaderView(

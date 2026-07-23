@@ -2607,4 +2607,181 @@ void main() {
     expect(instanceCalls.any((c) => c.method == 'previousPage'), isTrue);
     expect(find.byType(AppBar), findsOneWidget);
   });
+
+  // ─────────────────────────────────────────────────────────────────────
+  // epic-17-epub-render-migration Issue 6：流式 EPUB 目錄跳轉、定位
+  // 持久化與頁尾頁碼測試。
+  // ─────────────────────────────────────────────────────────────────────
+
+  testWidgets(
+      '流式 EPUB（isFixedLayout: false）收到 onLayoutResolved 後，目錄按鈕轉為可點擊，點擊後開啟 TocBottomSheet',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_toc_foliate_open',
+          prefsManager: prefsManager,
+          isFixedLayout: false,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final foliateView =
+        tester.widget<FoliateEpubReaderView>(find.byType(FoliateEpubReaderView));
+    foliateView.onPageRendered();
+    foliateView.onLayoutResolved?.call(const EpubLayoutInfo(
+      isFixedLayout: false,
+      writingMode: WritingMode.horizontal,
+    ));
+    await tester.pump();
+    // 比照既有 Readium 分支測試：目錄按鈕的啟用條件額外要求 _tocLoaded，
+    // 該旗標由 FoliateEpubReaderView.loadTableOfContents() 這個 async
+    // 呼叫的 .then() callback 設定，需要多一次 pump 讓其 microtask 完成。
+    await tester.pump();
+
+    final finder = find.byKey(const Key('reader_toc_button'));
+    expect(tester.widget<IconButton>(finder).onPressed, isNotNull);
+
+    await tester.tap(finder);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.byType(TocBottomSheet), findsOneWidget);
+  });
+
+  testWidgets(
+      '流式 EPUB：點選目錄項目呼叫 FoliateEpubReaderView.jumpToLocator（非 EpubReaderView）',
+      (tester) async {
+    final binaryMessenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    final instanceCalls = <MethodCall>[];
+
+    binaryMessenger.setMockMethodCallHandler(SystemChannels.platform_views,
+        (call) async {
+      if (call.method == 'create') {
+        final id = (call.arguments as Map<Object?, Object?>)['id'] as int;
+        binaryMessenger.setMockMethodCallHandler(
+          MethodChannel('cc.ugotit.elinkbook/foliate_epub_reader_view_$id'),
+          (call) async {
+            instanceCalls.add(call);
+            return null;
+          },
+        );
+        return 0;
+      }
+      return null;
+    });
+    addTearDown(() => binaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform_views, null));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_toc_foliate_jump',
+          prefsManager: prefsManager,
+          isFixedLayout: false,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final foliateView =
+        tester.widget<FoliateEpubReaderView>(find.byType(FoliateEpubReaderView));
+    foliateView.onPageRendered();
+    foliateView.onLayoutResolved?.call(const EpubLayoutInfo(
+      isFixedLayout: false,
+      writingMode: WritingMode.horizontal,
+    ));
+    await tester.pump();
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('reader_toc_button')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.byType(TocBottomSheet), findsOneWidget);
+
+    final sheet = tester.widget<TocBottomSheet>(find.byType(TocBottomSheet));
+    sheet.onEntrySelected(
+      const TocEntry(
+        title: '測試章節',
+        locatorJson: '{"cfi":"epubcfi(/6/8!/4)","index":1,"fraction":0.2}',
+        progression: 0.2,
+      ),
+    );
+    await tester.pump();
+
+    expect(
+      instanceCalls.any((c) =>
+          c.method == 'jumpToLocator' &&
+          (c.arguments as Map)['locatorJson'] ==
+              '{"cfi":"epubcfi(/6/8!/4)","index":1,"fraction":0.2}'),
+      isTrue,
+      reason: '流式 EPUB 應呼叫 FoliateEpubReaderView.jumpToLocator，'
+          '不應誤呼叫 EpubReaderView（該 widget 在此分派下根本未被建構）',
+    );
+  });
+
+  testWidgets(
+      '流式 EPUB：onLocatorChanged 回報 pageIndex/totalPages 後，頁尾顯示對應頁碼',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_footer_foliate',
+          prefsManager: prefsManager,
+          isFixedLayout: false,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final foliateView =
+        tester.widget<FoliateEpubReaderView>(find.byType(FoliateEpubReaderView));
+    foliateView.onPageRendered();
+    foliateView.onLocatorChanged?.call(const EpubPositionInfo(
+      locatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
+      progression: 0.1,
+      pageIndex: 9,
+      totalPages: 100,
+    ));
+    await tester.pump();
+
+    expect(find.byKey(const Key('reader_footer')), findsOneWidget);
+    expect(find.text('進度 10% ｜ 第 10/100 頁'), findsOneWidget);
+  });
+
+  testWidgets(
+      '流式 EPUB：onLocatorChanged 未觸發前（pageIndex/totalPages 皆為 null），頁尾不顯示',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_footer_foliate_absent',
+          prefsManager: prefsManager,
+          isFixedLayout: false,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final foliateView =
+        tester.widget<FoliateEpubReaderView>(find.byType(FoliateEpubReaderView));
+    foliateView.onPageRendered();
+    await tester.pump();
+
+    expect(find.byKey(const Key('reader_footer')), findsNothing);
+  });
 }
