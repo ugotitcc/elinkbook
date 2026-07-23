@@ -205,7 +205,7 @@ Phase 1 需要在「建構閱讀器 widget 之前」就知道一本 EPUB 是固�
 
 ## Issue 8：劃線與備註
 
-**Status:** ✅ 已完成。依 `plans/plan-issue-8.md` Task 1-6 完成 `FoliateDecorationCodec.kt`（`argbIntToCssColor`／`buildDecorationEntries` 格式與顏色轉換純函式，含 9 個 JVM 測試）／`main.js`（`window.setDecorations`／`draw-annotation`／`show-annotation`／持久 `'load'`→`selectionchange` 事件監聽器）／`FoliateEpubReaderView.kt`（`setDecorations` method channel／`onSelectionChanged`／`onSelectionCleared`／`onAnnotationActivated` 橋接）／`foliate_epub_reader_view.dart`（新增三個回呼參數與 `FoliateEpubReaderView.setDecorations` static helper，含 4 個 widget 測試）／`ReaderScreen`（`_handleFoliateLayoutResolved` 劃線備註載入、`_sendDecorationsToNative` 分派至 `FoliateEpubReaderView`、`_buildNativeView` 接上回呼，含 3 個 widget 測試）。新增真機整合測試 `foliate_highlights_notes_test.dart`。`flutter test`（576 tests）／`flutter analyze`／`./gradlew.bat :app:compileDebugKotlin`／`./gradlew.bat :app:testDebugUnitTest`（112 tests）全數通過。
+**Status:** `ready-for-agent`
 
 **依賴：** Issue 3、Issue 7
 
