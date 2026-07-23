@@ -91,6 +91,7 @@ flutter:
     - test/fixtures/sample_forced_linebreak_vertical.epub
     - test/fixtures/sample_fxl_svg_cover.epub
     - test/fixtures/sample_multi_chapter.epub
+    - test/fixtures/issue9_vertical_pagejump.epub
     - test/fixtures/sample_declares_vertical.epub
     - assets/fonts/GuanKiapTsingKhai.ttf
     # 開發期暫停用（建置速度優化，其餘 4 款字型檔約 134MB）：檔案暫存於

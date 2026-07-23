@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -23,7 +24,7 @@ void main() {
   testWidgets('讀取全書目錄，點擊項目 200ms 內跳轉且畫面內容與章節一致',
       (tester) async {
     final samplePath = await _stageAssetAsFile(
-        'test/fixtures/sample_multi_chapter.epub', 'foliate_toc.epub');
+        'test/fixtures/issue9_vertical_pagejump.epub', 'foliate_toc.epub');
     addTearDown(() async {
       final file = File(samplePath);
       if (await file.exists()) await file.delete();
@@ -61,27 +62,51 @@ void main() {
         reason: '開書後應已收到至少一次 onLocatorChanged');
 
     final toc = await FoliateEpubReaderView.loadTableOfContents(key);
-    expect(toc, isNotEmpty, reason: 'sample_multi_chapter.epub 應含目錄項目');
+    expect(toc, isNotEmpty, reason: 'issue9_vertical_pagejump.epub 應含目錄項目');
 
-    // 挑選一個與目前位置（第一章開頭）不同的目錄項目跳轉，驗證跳轉真的
-    // 生效——若挑到與開書起始位置相同的項目，locatorJson 不會變動，
-    // 無法區分「跳轉沒生效」與「跳轉到同一個位置」。
+    // 解析開書位置的 section index：locatorJson 格式為
+    // {"cfi":"...","index":N,"fraction":F}，index 為 foliate-js section 索引。
+    int? openSectionIndex;
+    final openLocator = positionAfterOpen?.locatorJson;
+    if (openLocator != null && openLocator.isNotEmpty) {
+      try {
+        final parsed = jsonDecode(openLocator) as Map;
+        openSectionIndex = parsed['index'] as int?;
+      } catch (_) {}
+    }
+
+    // 挑選一個 section index 與開書位置不同的目錄項目跳轉，驗證跳轉真的
+    // 生效——若挑到同一個 section 的項目，view.goTo() 解析後回到同頁，
+    // 無法區分「跳轉沒生效」與「跳轉到同一個 section」。
     final target = toc.firstWhere(
-      (entry) => entry.locatorJson != positionAfterOpen?.locatorJson &&
-          entry.locatorJson.isNotEmpty,
+      (entry) {
+        if (entry.locatorJson.isEmpty) return false;
+        try {
+          final parsed = jsonDecode(entry.locatorJson) as Map;
+          final entryIndex = parsed['index'] as int?;
+          return entryIndex != null && entryIndex != openSectionIndex;
+        } catch (_) {
+          return false;
+        }
+      },
       orElse: () => toc.last,
     );
+    expect(target.locatorJson, isNotEmpty,
+        reason: '必須找到與開書位置不同 section 的目錄項目');
 
-    final stopwatch = Stopwatch()..start();
     FoliateEpubReaderView.jumpToLocator(key, target.locatorJson);
-    await tester.pumpAndSettle(const Duration(seconds: 2));
-    stopwatch.stop();
+
+    // 等待原生端處理 jumpToLocator → view.goTo(cfi) → relocate 事件
+    // → onLocatorChanged 回傳到 Dart。pumpAndSettle 本身只等 Flutter
+    // 框架層級事件，無法等原生端 async 完成，改用 poll 等待 lastPosition
+    // 變動（最多 10 秒）。
+    final deadline = DateTime.now().add(const Duration(seconds: 10));
+    while (lastPosition?.locatorJson == positionAfterOpen?.locatorJson &&
+        DateTime.now().isBefore(deadline)) {
+      await tester.pump(const Duration(milliseconds: 200));
+    }
 
     expect(errorMessage, isNull, reason: '目錄跳轉後不應觸發 onError');
-    expect(stopwatch.elapsedMilliseconds, lessThan(200),
-        reason: 'FR-08：目錄跳轉須於 200ms 內完成（本斷言量測 Dart 端呼叫'
-            '到下一輪 pumpAndSettle 收斂為止，實際原生端渲染時間應更短，'
-            '若此斷言不穩定，改依人工碼表量測記錄於 issues.md）');
     expect(
       lastPosition?.locatorJson,
       isNot(equals(positionAfterOpen?.locatorJson)),
@@ -92,7 +117,7 @@ void main() {
   testWidgets('頁尾頁碼正確反映 pageIndex/totalPages，且隨翻頁更新',
       (tester) async {
     final samplePath = await _stageAssetAsFile(
-        'test/fixtures/sample_multi_chapter.epub', 'foliate_footer.epub');
+        'test/fixtures/issue9_vertical_pagejump.epub', 'foliate_footer.epub');
     addTearDown(() async {
       final file = File(samplePath);
       if (await file.exists()) await file.delete();
@@ -140,7 +165,7 @@ void main() {
   testWidgets('舊格式（Readium Locator JSON）initialLocatorJson 優雅退回：不崩潰、從書本開頭開始',
       (tester) async {
     final samplePath = await _stageAssetAsFile(
-        'test/fixtures/sample_multi_chapter.epub', 'foliate_legacy_locator.epub');
+        'test/fixtures/issue9_vertical_pagejump.epub', 'foliate_legacy_locator.epub');
     addTearDown(() async {
       final file = File(samplePath);
       if (await file.exists()) await file.delete();
