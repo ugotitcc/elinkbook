@@ -84,6 +84,16 @@ class FoliateEpubReaderView(
     private var pageReported = false
     private var isDisposed = false
 
+    /** getTableOfContents 的待完成 Result（epic-17 Issue 6）：JS 端的
+     * window.getTableOfContents() 是非同步函式，evaluateJavascript 的
+     * callback 不會等待其內部 Promise resolve（見 Global Constraints），
+     * 因此改由 JS 完成計算後主動呼叫 FoliateBridge.onTableOfContentsReady()
+     * 回報，此處暫存對應的 Result 供該回呼完成時呼叫 result.success()。
+     * 單一書籍畫面同時只會有一次未完成的目錄請求（ReaderScreen 只在
+     * onLayoutResolved 觸發時呼叫一次，見 spec.md），不需要佇列/多筆並行
+     * 處理。 */
+    private var pendingTocResult: MethodChannel.Result? = null
+
     private val assetLoader = WebViewAssetLoader.Builder()
         .addPathHandler("/assets/", WebViewAssetLoader.AssetsPathHandler(context))
         .addPathHandler("/book/", BookPathHandler())
@@ -130,6 +140,7 @@ class FoliateEpubReaderView(
                 openBook(
                     call.argument<String>("path"),
                     call.argument<Map<String, Any?>>("initialPreferences"),
+                    call.argument<String>("initialLocatorJson"),
                 )
                 result.success(null)
             }
@@ -157,6 +168,24 @@ class FoliateEpubReaderView(
                 }
                 result.success(null)
             }
+            "jumpToLocator" -> {
+                val locatorJson = call.argument<String>("locatorJson")
+                val cfi = FoliateLocatorCodec.extractCfi(locatorJson)
+                if (cfi != null) {
+                    webView.evaluateJavascript(
+                        "window.jumpToLocator(${JSONObject.quote(cfi)})",
+                        null,
+                    )
+                }
+                // 優雅退回：cfi 為 null（舊格式/無效資料）時不執行任何跳轉，
+                // 靜默忽略（見 Global Constraints），仍需 result.success()
+                // 讓 Dart 端的 invokeMethod 呼叫正常完成。
+                result.success(null)
+            }
+            "getTableOfContents" -> {
+                pendingTocResult = result
+                webView.evaluateJavascript("window.getTableOfContents()", null)
+            }
             else -> result.notImplemented()
         }
     }
@@ -173,7 +202,11 @@ class FoliateEpubReaderView(
      * 把關（與現有 EpubReaderView/PdfReaderView 對 content:// URI 的既有
      * 信任層級一致）。
      */
-    private fun openBook(path: String?, initialPreferences: Map<String, Any?>?) {
+    private fun openBook(
+        path: String?,
+        initialPreferences: Map<String, Any?>?,
+        initialLocatorJson: String?,
+    ) {
         if (path == null) {
             channel.invokeMethod("onError", "缺少檔案路徑")
             return
@@ -204,9 +237,15 @@ class FoliateEpubReaderView(
         fontFaceCss = buildFontFaceCss()
         val prefsJson = Uri.encode(JSONObject(currentPreferences).toString())
         val fontFaceCssEncoded = Uri.encode(fontFaceCss)
+        // 優雅退回（epic-17 Issue 6）：extractCfi() 對缺席／舊格式（既有
+        // 流式書籍留下的 Readium Locator JSON）／無效 JSON 皆回傳
+        // null，此時不附加 initialCfi 查詢參數，main.js 端 params.get()
+        // 拿到 null，退回既有預設開書行為（見 Global Constraints）。
+        val initialCfi = FoliateLocatorCodec.extractCfi(initialLocatorJson)
+        val initialCfiParam = initialCfi?.let { "&initialCfi=${Uri.encode(it)}" } ?: ""
         webView.loadUrl(
             "https://appassets.androidplatform.net/assets/foliate/index.html" +
-                "?prefs=$prefsJson&fontFaceCss=$fontFaceCssEncoded",
+                "?prefs=$prefsJson&fontFaceCss=$fontFaceCssEncoded$initialCfiParam",
         )
     }
 
@@ -316,10 +355,55 @@ class FoliateEpubReaderView(
                 channel.invokeMethod("onError", message)
             }
         }
+
+        /**
+         * relocate 事件持續推播（main.js 的第二個、非 { once: true } 的
+         * relocate 監聽器），epic-17 Issue 6。[locatorJson] 為新 CFI 格式
+         * 序列化字串（{"cfi":...,"index":...,"fraction":...}）；[fraction]
+         * 為全書進度比例（0.0-1.0），與 locatorJson 內嵌的 fraction 欄位
+         * 相同數值，額外拆出一份供 Dart 端直接使用（比照既有
+         * EpubReaderView progression 欄位的既定慣例，不需要自行解析
+         * locatorJson）；[pageIndex]／[totalPages] 為 foliate-js
+         * SectionProgress.getProgress() 回傳的 location.current／
+         * location.total（近似頁碼概念，非精確渲染頁數，見 Global
+         * Constraints）。
+         */
+        @JavascriptInterface
+        fun onLocatorChanged(locatorJson: String, fraction: Double, pageIndex: Int, totalPages: Int) {
+            mainHandler.post {
+                if (isDisposed) return@post
+                channel.invokeMethod(
+                    "onLocatorChanged",
+                    mapOf(
+                        "locatorJson" to locatorJson,
+                        "progression" to fraction,
+                        "pageIndex" to pageIndex,
+                        "totalPages" to totalPages,
+                    ),
+                )
+            }
+        }
+
+        /**
+         * window.getTableOfContents() 計算完成回呼，[json] 為目錄節點陣列
+         * 的 JSON 序列化字串（見 main.js buildTocEntry()）。解析失敗時
+         * FoliateLocatorCodec.parseTocEntries() 回傳空清單，不讓 Dart 端
+         * 的 Future 永遠不 resolve。
+         */
+        @JavascriptInterface
+        fun onTableOfContentsReady(json: String) {
+            mainHandler.post {
+                if (isDisposed) return@post
+                val result = pendingTocResult ?: return@post
+                pendingTocResult = null
+                result.success(FoliateLocatorCodec.parseTocEntries(json))
+            }
+        }
     }
 
     override fun dispose() {
         isDisposed = true
+        pendingTocResult = null
         ReaderViewAttachmentTracker.detach()
         webView.destroy()
     }
