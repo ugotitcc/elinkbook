@@ -167,7 +167,7 @@ async function buildTocEntry(item) {
   return {
     title: item.label ?? '',
     locatorJson: cfi
-      ? JSON.stringify({ cfi, index, fraction: fraction ?? 0 })
+      ? JSON.stringify({ cfi, index, fraction })
       : '',
     progression: fraction,
     children,
@@ -183,12 +183,16 @@ async function buildTocEntry(item) {
  * Constraints，本函式因此不能單純依賴 evaluateJavascript 的回傳值。
  */
 window.getTableOfContents = async function () {
-  const items = view.book?.toc ?? []
-  const entries = []
-  for (const item of items) {
-    entries.push(await buildTocEntry(item))
+  try {
+    const items = view.book?.toc ?? []
+    const entries = []
+    for (const item of items) {
+      entries.push(await buildTocEntry(item))
+    }
+    window.FoliateBridge.onTableOfContentsReady(JSON.stringify(entries))
+  } catch (e) {
+    window.FoliateBridge.onTableOfContentsReady(JSON.stringify([]))
   }
-  window.FoliateBridge.onTableOfContentsReady(JSON.stringify(entries))
 }
 
 async function openBook() {

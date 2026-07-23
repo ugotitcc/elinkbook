@@ -1550,7 +1550,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 目標頁對應的全書進度比例，與 _buildEpubFooter 的 onPageChanged 作法
   /// 相同（近似值，非精確反解頁碼）。
   Widget _buildFoliateEpubFooter(EpubPositionInfo info) {
-    final totalPages = info.totalPages!;
+    final totalPages = info.totalPages ?? 0;
+    if (totalPages <= 0) return const SizedBox.shrink();
     final currentPage = ((info.pageIndex ?? 0) + 1).clamp(1, totalPages);
     return ReaderFooter(
       currentPage: currentPage,

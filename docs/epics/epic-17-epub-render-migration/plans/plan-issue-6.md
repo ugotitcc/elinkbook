@@ -56,7 +56,7 @@
 - Consumes: 無新的外部依賴（`org.json.JSONObject`/`JSONArray` 皆為既有專案依賴）。
 - Produces: `FoliateLocatorCodec.extractCfi(locatorJson: String?): String?`；`FoliateLocatorCodec.parseTocEntries(tocJson: String): List<Map<String, Any?>>`（每個 map 含 `title: String`／`locatorJson: String`／`progression: Double?`／`children: List<Map<String, Any?>>`）。Task 2 的 `FoliateEpubReaderView.kt` 依賴這兩個方法名稱與簽章。
 
-- [ ] **Step 1: 寫失敗測試**
+- [x] **Step 1: 寫失敗測試**
 
 建立 `app/android/app/src/test/kotlin/cc/ugotit/elinkbook/FoliateLocatorCodecTest.kt`：
 
@@ -156,7 +156,7 @@ class FoliateLocatorCodecTest {
 }
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 於 `app/android` 目錄執行：
 
@@ -166,7 +166,7 @@ class FoliateLocatorCodecTest {
 
 預期：編譯失敗（`FoliateLocatorCodec` 尚不存在）。
 
-- [ ] **Step 3: 建立 `FoliateLocatorCodec.kt`**
+- [x] **Step 3: 建立 `FoliateLocatorCodec.kt`**
 
 建立 `app/android/app/src/main/kotlin/cc/ugotit/elinkbook/FoliateLocatorCodec.kt`：
 
@@ -230,7 +230,7 @@ object FoliateLocatorCodec {
 }
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 ```bash
 ./gradlew.bat :app:testDebugUnitTest --tests "cc.ugotit.elinkbook.FoliateLocatorCodecTest"
@@ -238,7 +238,7 @@ object FoliateLocatorCodec {
 
 預期：全數 PASS（10 個測試）。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/android/app/src/main/kotlin/cc/ugotit/elinkbook/FoliateLocatorCodec.kt app/android/app/src/test/kotlin/cc/ugotit/elinkbook/FoliateLocatorCodecTest.kt
@@ -259,7 +259,7 @@ git commit -m "feat(epic-17): 新增 FoliateLocatorCodec 純函式——定位/�
 
 **本 Task 無 JVM 單元測試**（比照 Issue 2/3/4/5 既定退路）：`evaluateJavascript`/`WebView` 呼叫是框架 API 的直接串接，沒有可抽出的純邏輯（可抽出的部分已在 Task 1 完成）。驗收標準是 `compileDebugKotlin` 成功 + 既有 JVM 測試不受影響，實際行為由 Task 5 真機 `integration_test` 驗證。
 
-- [ ] **Step 1: `main.js` 新增 `window.jumpToLocator()`**
+- [x] **Step 1: `main.js` 新增 `window.jumpToLocator()`**
 
 在 `app/android/app/src/main/assets/foliate/main.js` 的 `window.jumpToFraction = function (fraction) { view.goToFraction(fraction) }`（第 108-110 行）之後、`async function openBook() {`（第 112 行）之前，插入：
 
@@ -343,7 +343,7 @@ window.getTableOfContents = async function () {
 }
 ```
 
-- [ ] **Step 2: `main.js` 新增持續 `relocate` 監聽器與 `initialCfi` 開書起始定位**
+- [x] **Step 2: `main.js` 新增持續 `relocate` 監聽器與 `initialCfi` 開書起始定位**
 
 第 9-14 行（`params`/`initialPrefs`/`fontFaceCss` 常數宣告）：
 
@@ -430,7 +430,7 @@ const initialCfi = params.get('initialCfi') || ''
     await view.init(initialCfi ? { lastLocation: initialCfi } : {})
 ```
 
-- [ ] **Step 3: `FoliateEpubReaderView.kt`——`openBook` 新增 `initialLocatorJson` 參數**
+- [x] **Step 3: `FoliateEpubReaderView.kt`——`openBook` 新增 `initialLocatorJson` 參數**
 
 第 176-211 行的 `openBook`：
 
@@ -524,7 +524,7 @@ const initialCfi = params.get('initialCfi') || ''
     }
 ```
 
-- [ ] **Step 4: `FoliateEpubReaderView.kt`——`onMethodCall` 新增 case，新增 `pendingTocResult` 欄位**
+- [x] **Step 4: `FoliateEpubReaderView.kt`——`onMethodCall` 新增 case，新增 `pendingTocResult` 欄位**
 
 第 84-85 行（`pageReported`/`isDisposed` 欄位）：
 
@@ -653,7 +653,7 @@ const initialCfi = params.get('initialCfi') || ''
     }
 ```
 
-- [ ] **Step 5: `FoliateEpubReaderView.kt`——`FoliateBridge` 新增 `onLocatorChanged`／`onTableOfContentsReady`**
+- [x] **Step 5: `FoliateEpubReaderView.kt`——`FoliateBridge` 新增 `onLocatorChanged`／`onTableOfContentsReady`**
 
 第 289-319 行的 `FoliateBridge` 類別：
 
@@ -771,7 +771,7 @@ const initialCfi = params.get('initialCfi') || ''
     }
 ```
 
-- [ ] **Step 6: `dispose()` 新增 `pendingTocResult` 清理**
+- [x] **Step 6: `dispose()` 新增 `pendingTocResult` 清理**
 
 目錄讀取尚未完成（`onTableOfContentsReady` 尚未觸發）時 Widget 若被銷毀，既有的 `isDisposed` 檢查會擋掉 `onTableOfContentsReady` 內的 `result.success()` 呼叫，不會崩潰，但 `pendingTocResult` 欄位會殘留對 `MethodChannel.Result`（間接持有 reply channel 參照）的參照，直到 `FoliateEpubReaderView` 實例本身被回收為止。比照本檔案 `openBook()` 重新開書時明確清空 `currentBookFile`/`currentBookUri` 的既有防禦風格，`dispose()` 一併明確清空，讓該參照提早可被回收（審查修正）。
 
@@ -796,7 +796,7 @@ const initialCfi = params.get('initialCfi') || ''
     }
 ```
 
-- [ ] **Step 7: 確認 Kotlin 編譯成功**
+- [x] **Step 7: 確認 Kotlin 編譯成功**
 
 於 `app/android` 目錄執行：
 
@@ -806,7 +806,7 @@ const initialCfi = params.get('initialCfi') || ''
 
 預期：`BUILD SUCCESSFUL`。
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add app/android/app/src/main/kotlin/cc/ugotit/elinkbook/FoliateEpubReaderView.kt app/android/app/src/main/assets/foliate/main.js
@@ -826,7 +826,7 @@ git commit -m "feat(epic-17): FoliateEpubReaderView.kt/main.js 新增目錄讀�
 - Consumes: Task 2 新增的 `initialLocatorJson`／`jumpToLocator`／`getTableOfContents`／`onLocatorChanged` method channel 契約。
 - Produces: `EpubPositionInfo` 新增 `pageIndex: int?`／`totalPages: int?` 欄位；`FoliateEpubReaderView` 新增建構參數 `initialLocatorJson: String?`／`onLocatorChanged: ValueChanged<EpubPositionInfo>?`；新增 static helper `FoliateEpubReaderView.jumpToLocator(key, locatorJson)`／`FoliateEpubReaderView.loadTableOfContents(key): Future<List<TocEntry>>`。供 Task 4 的 `ReaderScreen` 使用。
 
-- [ ] **Step 1: 寫失敗測試**
+- [x] **Step 1: 寫失敗測試**
 
 在 `app/test/reader/foliate_epub_reader_view_test.dart` 頂部 import 區塊新增：
 
@@ -958,7 +958,7 @@ import 'package:elinkbook/reader/toc_entry.dart';
   });
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 於 `app/` 目錄執行：
 
@@ -968,7 +968,7 @@ flutter test test/reader/foliate_epub_reader_view_test.dart
 
 預期：新測試 FAIL（`initialLocatorJson`/`onLocatorChanged` 建構參數不存在、`jumpToLocator`/`loadTableOfContents` static method 不存在）。
 
-- [ ] **Step 3: `epub_position_info.dart` 新增 `pageIndex`/`totalPages` 欄位**
+- [x] **Step 3: `epub_position_info.dart` 新增 `pageIndex`/`totalPages` 欄位**
 
 `app/lib/reader/epub_position_info.dart` 現有完整內容：
 
@@ -1055,7 +1055,7 @@ class EpubPositionInfo {
 }
 ```
 
-- [ ] **Step 4: `foliate_epub_reader_view.dart` 新增 import 與建構參數**
+- [x] **Step 4: `foliate_epub_reader_view.dart` 新增 import 與建構參數**
 
 第 1-8 行：
 
@@ -1132,7 +1132,7 @@ import 'zone_action.dart';
   });
 ```
 
-- [ ] **Step 5: `_onPlatformViewCreated` 傳入 `initialLocatorJson`，新增 static helper**
+- [x] **Step 5: `_onPlatformViewCreated` 傳入 `initialLocatorJson`，新增 static helper**
 
 第 122-131 行：
 
@@ -1242,7 +1242,7 @@ import 'zone_action.dart';
   State<FoliateEpubReaderView> createState() => _FoliateEpubReaderViewState();
 ```
 
-- [ ] **Step 6: `_handleMethodCall` 新增 `onLocatorChanged` case**
+- [x] **Step 6: `_handleMethodCall` 新增 `onLocatorChanged` case**
 
 第 185-204 行：
 
@@ -1303,7 +1303,7 @@ import 'zone_action.dart';
   }
 ```
 
-- [ ] **Step 7: 更新檔案頂端 Widget 說明文件**
+- [x] **Step 7: 更新檔案頂端 Widget 說明文件**
 
 第 9-26 行的檔案頂端說明：
 
@@ -1358,7 +1358,7 @@ import 'zone_action.dart';
 /// 劃線備註參數留待 Issue 8 補上。
 ```
 
-- [ ] **Step 8: 執行測試確認通過**
+- [x] **Step 8: 執行測試確認通過**
 
 ```bash
 flutter test test/reader/foliate_epub_reader_view_test.dart
@@ -1366,7 +1366,7 @@ flutter test test/reader/foliate_epub_reader_view_test.dart
 
 預期：全數 PASS。
 
-- [ ] **Step 9: 執行 `flutter analyze`**
+- [x] **Step 9: 執行 `flutter analyze`**
 
 ```bash
 flutter analyze
@@ -1374,7 +1374,7 @@ flutter analyze
 
 預期：`No issues found!`
 
-- [ ] **Step 10: Commit**
+- [x] **Step 10: Commit**
 
 ```bash
 git add app/lib/reader/epub_position_info.dart app/lib/reader/foliate_epub_reader_view.dart app/test/reader/foliate_epub_reader_view_test.dart
@@ -1393,7 +1393,7 @@ git commit -m "feat(epic-17): FoliateEpubReaderView 新增目錄讀取與定位�
 - Consumes: Task 3 新增的 `FoliateEpubReaderView.initialLocatorJson`/`onLocatorChanged`/`jumpToLocator`/`loadTableOfContents`；既有 `_dispatchedIsFixedLayout`（Issue 3 已建立）；既有 `ReaderFooter`（格式無關，`currentPage`/`totalPages`/`onPageChanged` 三個 1-indexed 參數）。
 - Produces: 流式 EPUB 開書後，目錄背景抓取／目錄跳轉／書籤跳轉／備註跳轉／頁尾頁碼皆正確生效，供 Task 5 真機驗證。
 
-- [ ] **Step 1: 寫失敗測試——流式 EPUB 目錄載入與跳轉分派**
+- [x] **Step 1: 寫失敗測試——流式 EPUB 目錄載入與跳轉分派**
 
 在 `app/test/screens/reader_screen_test.dart` 的 `main()` 內、既有「EPUB reflowable 收到 onLayoutResolved 後，目錄按鈕轉為可點擊」與「點選目錄項目後，TocBottomSheet 關閉」兩個測試（第 1266-1347 行）之後，新增：
 
@@ -1573,7 +1573,7 @@ git commit -m "feat(epic-17): FoliateEpubReaderView 新增目錄讀取與定位�
 
 在 `main()` 頂部 import 區塊確認已有 `package:elinkbook/reader/epub_position_info.dart`（既有匯入，Task 4 沿用不需新增）。
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 ```bash
 flutter test test/screens/reader_screen_test.dart
@@ -1581,7 +1581,7 @@ flutter test test/screens/reader_screen_test.dart
 
 預期：新測試 FAIL——目錄按鈕不會轉為可點擊（`_handleFoliateLayoutResolved` 尚未觸發目錄抓取）；`onLocatorChanged` 尚不存在於 `FoliateEpubReaderView`（本 Task 依賴 Task 3，需先完成 Task 3 才會是「執行期」失敗而非「編譯期」失敗，此為預期的 TDD 紅燈狀態）。
 
-- [ ] **Step 3: 新增 `_jumpToEpubLocator()` helper，取代 3 處寫死呼叫**
+- [x] **Step 3: 新增 `_jumpToEpubLocator()` helper，取代 3 處寫死呼叫**
 
 第 604-624 行的 `_openToc()`：
 
@@ -1705,7 +1705,7 @@ flutter test test/screens/reader_screen_test.dart
           }
 ```
 
-- [ ] **Step 4: `_handleFoliateLayoutResolved` 新增目錄背景抓取**
+- [x] **Step 4: `_handleFoliateLayoutResolved` 新增目錄背景抓取**
 
 第 785-808 行：
 
@@ -1779,7 +1779,7 @@ flutter test test/screens/reader_screen_test.dart
   }
 ```
 
-- [ ] **Step 5: `_buildNativeView()` Foliate 分支傳入 `initialLocatorJson`/`onLocatorChanged`**
+- [x] **Step 5: `_buildNativeView()` Foliate 分支傳入 `initialLocatorJson`/`onLocatorChanged`**
 
 第 1508-1527 行：
 
@@ -1844,7 +1844,7 @@ flutter test test/screens/reader_screen_test.dart
         return EpubReaderView(
 ```
 
-- [ ] **Step 6: 新增 `_buildFoliateEpubFooter()` 與對應的頁尾條件式區塊**
+- [x] **Step 6: 新增 `_buildFoliateEpubFooter()` 與對應的頁尾條件式區塊**
 
 第 1460-1466 行（`_buildBody` 內的 EPUB 頁尾條件式）：
 
@@ -1919,7 +1919,7 @@ flutter test test/screens/reader_screen_test.dart
   }
 ```
 
-- [ ] **Step 7: 執行測試確認通過**
+- [x] **Step 7: 執行測試確認通過**
 
 ```bash
 flutter test test/screens/reader_screen_test.dart
@@ -1927,7 +1927,7 @@ flutter test test/screens/reader_screen_test.dart
 
 預期：全數 PASS，特別留意既有「EPUB 流式：原生端 onZoneTapped 回呼」「PDF：...」等既有大量測試不受 `_jumpToEpubLocator`/`_buildFoliateEpubFooter` 新增影響（`EpubReaderView` 分支的行為與呼叫方式完全不變，只是把直接呼叫改為透過 `_jumpToEpubLocator` 這一層薄轉發）。
 
-- [ ] **Step 8: 執行 `flutter analyze`**
+- [x] **Step 8: 執行 `flutter analyze`**
 
 ```bash
 flutter analyze
@@ -1935,7 +1935,7 @@ flutter analyze
 
 預期：`No issues found!`
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add app/lib/screens/reader_screen.dart app/test/screens/reader_screen_test.dart
@@ -1955,7 +1955,7 @@ git commit -m "feat(epic-17): ReaderScreen 接上流式 EPUB 的目錄跳轉、�
 
 **本 Task 無法寫「失敗測試先行」的 TDD 循環**（比照本 Epic Issue 3-5 既有慣例）：`integration_test` 需要真實裝置渲染 `WebView`，Task 1-4 完成前這個測試必然全數失敗。本 Task 直接撰寫最終版本，於裝置上執行驗證。
 
-- [ ] **Step 1: 新增真機整合測試檔案**
+- [x] **Step 1: 新增真機整合測試檔案**
 
 建立 `app/integration_test/foliate_toc_footer_test.dart`：
 
@@ -2150,7 +2150,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: 確認測試裝置在線**
+- [x] **Step 2: 確認測試裝置在線**
 
 ```bash
 adb devices -l
@@ -2158,7 +2158,7 @@ adb devices -l
 
 預期：`3CEF42ECD491687` 出現在清單中且狀態為 `device`。
 
-- [ ] **Step 3: 於真機執行本測試**
+- [x] **Step 3: 於真機執行本測試**
 
 於 `app/` 目錄執行：
 
@@ -2168,7 +2168,7 @@ flutter test integration_test/foliate_toc_footer_test.dart -d 3CEF42ECD491687
 
 預期：PASS。若「200ms 內完成跳轉」斷言在裝置上不穩定（Dart 測試框架層級的時間量測含 `pumpAndSettle` 動畫等待，可能無法精確反映純原生跳轉耗時），依註解說明改為人工碼表量測，記錄實際觀察結果於 `issues.md` Issue 6 段落，不阻塞本工單。
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add app/integration_test/foliate_toc_footer_test.dart
@@ -2185,7 +2185,7 @@ git commit -m "test(epic-17): 新增流式 EPUB 目錄跳轉/頁尾頁碼/舊格
 - Consumes: Task 1-5 的全部產出。
 - Produces: 本工單完成的最終確認證據，供任務審查與 `issues.md` 狀態更新使用。
 
-- [ ] **Step 1: 執行完整 Dart 測試套件**
+- [x] **Step 1: 執行完整 Dart 測試套件**
 
 於 `app/` 目錄執行：
 
@@ -2195,7 +2195,7 @@ flutter test
 
 預期：全數 PASS（Issue 5 完成時基準為 569 個測試，本工單 Task 3 新增 5 個、Task 4 新增 4 個，預期共 578 個）。
 
-- [ ] **Step 2: 執行 `flutter analyze`**
+- [x] **Step 2: 執行 `flutter analyze`**
 
 ```bash
 flutter analyze
@@ -2203,7 +2203,7 @@ flutter analyze
 
 預期：`No issues found!`
 
-- [ ] **Step 3: 執行 Kotlin 編譯與 JVM 測試**
+- [x] **Step 3: 執行 Kotlin 編譯與 JVM 測試**
 
 於 `app/android` 目錄執行：
 
@@ -2214,7 +2214,7 @@ flutter analyze
 
 預期：兩者皆 `BUILD SUCCESSFUL`（93 個既有 JVM 測試 + Task 1 新增 10 個 `FoliateLocatorCodecTest`，共 103 個）。
 
-- [ ] **Step 4: 於真機執行 Foliate 相關 `integration_test`**
+- [x] **Step 4: 於真機執行 Foliate 相關 `integration_test`**
 
 ```bash
 cd app
@@ -2225,7 +2225,7 @@ flutter test integration_test/foliate_toc_footer_test.dart -d 3CEF42ECD491687
 
 預期：全數 PASS。
 
-- [ ] **Step 5: 確認 `git status` 乾淨（僅含本工單預期變更）**
+- [x] **Step 5: 確認 `git status` 乾淨（僅含本工單預期變更）**
 
 ```bash
 git status
@@ -2233,7 +2233,7 @@ git status
 
 預期：僅列出 Task 1-5 修改/新增的檔案，無不相關的暫存產物。
 
-- [ ] **Step 6: 更新 `issues.md` Issue 6 狀態**
+- [x] **Step 6: 更新 `issues.md` Issue 6 狀態**
 
 修改 `docs/epics/epic-17-epub-render-migration/issues.md` 的「## Issue 6」區塊，在 `**Status:** \`ready-for-agent\`` 之後、`**依賴：**` 之前插入完成摘要（比照 Issue 1-5 既有的完成摘要寫法），例如：
 
@@ -2241,7 +2241,7 @@ git status
 **Status:** ✅ 已完成。依 `plans/plan-issue-6.md` Task 1-6 完成 `FoliateLocatorCodec.kt`（純函式：`extractCfi`／`parseTocEntries`，含 10 個 JVM 測試）／`FoliateEpubReaderView.kt`（`jumpToLocator`／`getTableOfContents` method channel、`onLocatorChanged`／`onTableOfContentsReady` 橋接）／`main.js`（`window.jumpToLocator`／`window.getTableOfContents`／`buildTocEntry`／持續 `relocate` 推播／`initialCfi` 開書起始定位）／`foliate_epub_reader_view.dart`（`initialLocatorJson`／`onLocatorChanged`／`jumpToLocator`／`loadTableOfContents`）／`EpubPositionInfo`（新增 `pageIndex`/`totalPages`）／`ReaderScreen`（`_jumpToEpubLocator()` 統一分派、`_handleFoliateLayoutResolved` 觸發目錄背景抓取、`_buildFoliateEpubFooter()`）。新增真機整合測試 `foliate_toc_footer_test.dart`。`flutter test`（578 tests）／`flutter analyze`／`./gradlew.bat :app:compileDebugKotlin`／`./gradlew.bat :app:testDebugUnitTest`（103 tests）以及真機 `integration_test`（目錄跳轉、頁尾頁碼、舊格式 `initialLocatorJson` 優雅退回）皆全數通過。劃線與備註留給 Issue 8。
 ```
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add docs/epics/epic-17-epub-render-migration/issues.md

@@ -35,11 +35,9 @@ import java.io.FileInputStream
  * （見 [FoliateBridge]），而非解析 console.log（那是 Issue 1 Spike harness
  * 專屬的證據蒐集手法，不適合用在正式功能的通訊機制上）。
  *
- * openBook 只支援本 Issue 明確範圍：filePath／onPageRendered／onError／
- * onLayoutResolved（恆回傳 isFixedLayout: false，writingMode: "horizontal"
- * ——實際依書本 CSS 判斷的邏輯是 Issue 4 的範圍）。setPreferences／
- * nextPage／jumpToProgression／getTableOfContents／setDecorations 等契約
- * 留待 Issue 4-8 依 spec.md「介面」節逐一補上。
+ * 已實作契約：openBook／setPreferences／nextPage／previousPage／
+ * jumpToProgression／jumpToLocator／getTableOfContents／onLocatorChanged；
+ * 待補契約：setDecorations，見 Issue 8 依 spec.md「介面」節補上。
  */
 class FoliateEpubReaderView(
     private val context: Context,
