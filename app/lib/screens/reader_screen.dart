@@ -833,6 +833,12 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         });
       });
     }
+    if (!_annotationsLoaded &&
+        widget.highlightsRepository != null &&
+        widget.notesRepository != null) {
+      _annotationsLoaded = true;
+      _reloadAnnotationsAndRefreshDecorations();
+    }
   }
 
   /// 原生端背景計算全書字元數完成時觸發（Epic 5 Issue 3）：更新本地狀態
@@ -917,6 +923,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     _sendDecorationsToNative();
   }
 
+  /// 比照 `_jumpToEpubLocator()`（Issue 6）建立的分派模式：FXL
+  /// （Readium）用 `EpubReaderView.setDecorations`，流式（foliate-js）用
+  /// `FoliateEpubReaderView.setDecorations`。
   void _sendDecorationsToNative() {
     if (!mounted) return;
     final primaryColor = Theme.of(context).colorScheme.primary;
@@ -937,7 +946,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             tint: noteOnlyTint.toARGB32(),
           ),
     ];
-    EpubReaderView.setDecorations(_epubReaderViewKey, decorations);
+    if (_dispatchedIsFixedLayout == true) {
+      EpubReaderView.setDecorations(_epubReaderViewKey, decorations);
+    } else {
+      FoliateEpubReaderView.setDecorations(_foliateEpubReaderViewKey, decorations);
+    }
   }
 
   Highlight? _findHighlightById(int id) {
@@ -1594,6 +1607,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
               if (!mounted) return;
               setState(() => _epubPositionInfo = info);
             },
+            onSelectionChanged: _handleSelectionChanged,
+            onSelectionCleared: _handleSelectionCleared,
+            onAnnotationActivated: _handleAnnotationActivated,
           );
         }
         return EpubReaderView(

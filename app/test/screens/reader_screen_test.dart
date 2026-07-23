@@ -178,7 +178,7 @@ void main() {
 
     final foliateView =
         tester.widget<FoliateEpubReaderView>(find.byType(FoliateEpubReaderView));
-    foliateView.onPageRendered(); // 模擬開書成功，脫離 loading 狀態
+    foliateView.onPageRendered();
     foliateView.onLayoutResolved?.call(const EpubLayoutInfo(
       isFixedLayout: false,
       writingMode: WritingMode.vertical,
@@ -2909,8 +2909,17 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
+    // 先呼叫 onLayoutResolved 觸發 _resolved 設定（_buildNativeView 所需）
     final foliateView =
         tester.widget<FoliateEpubReaderView>(find.byType(FoliateEpubReaderView));
+    foliateView.onPageRendered();
+    foliateView.onLayoutResolved?.call(const EpubLayoutInfo(
+      isFixedLayout: false,
+      writingMode: WritingMode.horizontal,
+    ));
+    await tester.pump();
+    await tester.pump();
+
     foliateView.onSelectionChanged?.call(const EpubSelectionInfo(
       locatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
       progression: 0.1,
@@ -2951,10 +2960,14 @@ void main() {
 
     final foliateView =
         tester.widget<FoliateEpubReaderView>(find.byType(FoliateEpubReaderView));
+    foliateView.onPageRendered();
     foliateView.onLayoutResolved?.call(const EpubLayoutInfo(
       isFixedLayout: false,
       writingMode: WritingMode.horizontal,
     ));
+    await tester.pump();
+    // _reloadAnnotationsAndRefreshDecorations() 內部 await repository
+    // 呼叫，需多一次 pump 讓 microtask 完成。
     await tester.pump();
     await tester.pump();
 
