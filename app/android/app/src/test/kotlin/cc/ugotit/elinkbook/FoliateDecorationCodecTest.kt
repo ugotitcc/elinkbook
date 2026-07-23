@@ -132,4 +132,36 @@ class FoliateDecorationCodecTest {
     fun `空清單回傳空清單`() {
         assertTrue(FoliateDecorationCodec.buildDecorationEntries(emptyList()).isEmpty())
     }
+
+    @Test
+    fun `重複 cfi 的兩筆項目皆原樣保留，本函式不去重（已知限制，記錄於 main_js window_setDecorations 註解）`() {
+        // spike-overlayer-annotations.md 第 63 行明確建議補一則此邊界情況的
+        // 單元測試：兩筆不同標記剛好指向完全相同的 CFI 時，Kotlin 端本身
+        // 不負責去重/覆蓋——實際的「後寫入覆蓋前者」行為發生在 JS 端的
+        // decorationIdByCfi Map 語意（main.js window.setDecorations()），
+        // 本函式的職責僅止於逐筆轉換 wire 格式，不對輸入清單做任何去重
+        // 邏輯，此測試鎖定這個「原樣保留」的既定行為，避免未來有人誤以為
+        // 這裡已經處理過重複 key。
+        val sameCfi = """{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.0}"""
+        val list = listOf(
+            mapOf(
+                "id" to "highlight:1",
+                "locatorJson" to sameCfi,
+                "tint" to 0xFFFF0000.toInt(),
+                "isUnderline" to false,
+            ),
+            mapOf(
+                "id" to "highlight:2",
+                "locatorJson" to sameCfi,
+                "tint" to 0xFF0000FF.toInt(),
+                "isUnderline" to false,
+            ),
+        )
+        val entries = FoliateDecorationCodec.buildDecorationEntries(list)
+        assertEquals(2, entries.size)
+        assertEquals("highlight:1", entries[0]["id"])
+        assertEquals("epubcfi(/6/4)", entries[0]["cfi"])
+        assertEquals("highlight:2", entries[1]["id"])
+        assertEquals("epubcfi(/6/4)", entries[1]["cfi"])
+    }
 }

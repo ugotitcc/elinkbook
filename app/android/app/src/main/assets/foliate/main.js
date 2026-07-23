@@ -161,6 +161,22 @@ window.jumpToLocator = function (cfi) {
  * callback 只有透過 view.addAnnotation() 觸發的 draw-annotation 事件才
  * 拿得到，見 view.js addAnnotation() 原始碼）。
  */
+/**
+ * 【已知限制，審查修正記錄於此】重複 CFI 的最後寫入覆蓋前者：
+ * decorationIdByCfi（本身是 Map，key 唯一）與 Overlayer 內部的
+ * annotation map（同樣以 value/CFI 當 key，見 overlayer.js `add()`：
+ * `if (this.#map.has(key)) this.remove(key)`）皆以 CFI 為 key，若
+ * [decorations] 中兩筆不同標記剛好指向完全相同的 CFI（例如對完全相同的
+ * 選取範圍先後建立兩種不同顏色的劃線——極端邊界情況，spike 報告
+ * spike-overlayer-annotations.md「已記錄的既有 API 落差」已明確記錄
+ * 「Overlayer 以 annotation.value 當 Map key，必須唯一」這項前提假設，
+ * 但未實測重複 key 情境），後面那筆會在兩個 Map 中都覆蓋前者：前者的
+ * 視覺標記會消失、點擊該位置只會命中後者的 id。目前不主動去重/警告，
+ * 依賴 Dart 端每筆標記的 CFI 天然互不相同（不同段落/選取範圍產生不同
+ * CFI）這個假設；`FoliateDecorationCodec.buildDecorationEntries()`
+ * （Kotlin 端）本身不對重複 CFI 做任何處理，原樣保留全部項目，去重/
+ * 覆蓋行為完全發生在這裡（JS 端 Map 語意）。
+ */
 window.setDecorations = function (decorations) {
   for (const cfi of decorationIdByCfi.keys()) {
     view.deleteAnnotation({ value: cfi })
@@ -258,14 +274,29 @@ async function openBook() {
             ? 'vertical'
             : 'horizontal'
         }
+        // epic-17 Issue 8 審查修正：Overlayer.highlight() 內建
+        // `opacity: var(--overlayer-highlight-opacity, .3)`（overlayer.js
+        // 既有程式碼，不可修改），若不覆寫這個 CSS 自訂屬性，會疊加在
+        // FoliateDecorationCodec.argbIntToCssColor() 已經算好的 tint
+        // alpha 之上（兩者相乘），造成螢光筆/純備註視覺上明顯比 Readium/
+        // FXL 路徑（直接用 tint alpha、無額外乘數）更淡。本 App 的透明度
+        // 完全由 tint 的 ARGB alpha 決定，故固定覆蓋為 1（不透明度
+        // 100%），讓 rgba() 自帶的 alpha 成為唯一透明度來源，與 Readium
+        // 路徑語意一致。底線（Overlayer.underline()）不受影響，該函式
+        // 未設定這個 CSS 變數。此規則須無條件套用（不像下方 writingMode
+        // 覆蓋依 initialPrefs 決定是否附加），故獨立於下方判斷之外組裝。
+        let overriddenCss = `${css}\nhtml, body { --overlayer-highlight-opacity: 1; }\n`
         // 初次開書若呼叫端（openBook 的 initialPreferences）未指定
-        // writingMode，不附加任何覆蓋規則，讓書本自己的 CSS 宣告（或無
-        // 宣告時的預設橫排）自然生效（ADR 0003「初次開書不主動設定」）。
-        if (!initialPrefs.writingMode) return css
-        const override = initialPrefs.writingMode === 'vertical'
-          ? 'writing-mode: vertical-rl !important;'
-          : 'writing-mode: horizontal-tb !important;'
-        return `${css}\nhtml, body { ${override} }\n`
+        // writingMode，不附加排版方向覆蓋規則，讓書本自己的 CSS 宣告
+        // （或無宣告時的預設橫排）自然生效（ADR 0003「初次開書不主動
+        // 設定」）。
+        if (initialPrefs.writingMode) {
+          const override = initialPrefs.writingMode === 'vertical'
+            ? 'writing-mode: vertical-rl !important;'
+            : 'writing-mode: horizontal-tb !important;'
+          overriddenCss += `html, body { ${override} }\n`
+        }
+        return overriddenCss
       })
     })
     // 見 Issue 1 Spike（plans/plan-issue-1.md Task 2）已驗證的行為與 Issue 3
