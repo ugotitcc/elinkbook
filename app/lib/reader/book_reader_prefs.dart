@@ -43,6 +43,8 @@ class BookReaderPrefs {
   final bool? showHeader; // null=true（預設顯示頁首，僅 EPUB 有效，見 spec.md「頁首/頁尾顯示切換」）
   final bool? showFooter; // null=true（預設顯示頁尾，EPUB／PDF 皆有效）
 
+  final bool? singleColumn; // null=未覆寫（交由 foliate-js 內建 --_max-column-count: 2 自動判斷）、true=強制單欄、false=明確允許雙欄，僅直排 EPUB 有效，見 epic-18-reader-device-qa spec.md「singleColumn 偏好」
+
   const BookReaderPrefs({
     this.fontFamily,
     this.fontSize,
@@ -66,6 +68,7 @@ class BookReaderPrefs {
     this.dualPageDirection,
     this.showHeader,
     this.showFooter,
+    this.singleColumn,
   });
 
   /// 無任何覆寫，等同資料庫無對應列時的狀態。
@@ -98,6 +101,7 @@ class BookReaderPrefs {
       'dual_page_direction': dualPageDirection?.name,
       'show_header': showHeader == null ? null : (showHeader! ? 1 : 0),
       'show_footer': showFooter == null ? null : (showFooter! ? 1 : 0),
+      'single_column': singleColumn == null ? null : (singleColumn! ? 1 : 0),
     };
   }
 
@@ -157,6 +161,9 @@ class BookReaderPrefs {
           map['show_header'] == null ? null : (map['show_header'] as int) == 1,
       showFooter:
           map['show_footer'] == null ? null : (map['show_footer'] as int) == 1,
+      singleColumn: map['single_column'] == null
+          ? null
+          : (map['single_column'] as int) == 1,
     );
   }
 
@@ -184,7 +191,8 @@ class BookReaderPrefs {
       other.dualPageCoverAlone == dualPageCoverAlone &&
       other.dualPageDirection == dualPageDirection &&
       other.showHeader == showHeader &&
-      other.showFooter == showFooter;
+      other.showFooter == showFooter &&
+      other.singleColumn == singleColumn;
 
   @override
   int get hashCode => Object.hashAll([
@@ -210,6 +218,7 @@ class BookReaderPrefs {
         dualPageDirection,
         showHeader,
         showFooter,
+        singleColumn,
       ]);
 
   /// 只更新明確傳入的欄位，其餘欄位沿用目前值（`newValue ?? this.value`
@@ -240,6 +249,7 @@ class BookReaderPrefs {
     DualPageDirection? dualPageDirection,
     bool? showHeader,
     bool? showFooter,
+    bool? singleColumn,
   }) {
     return BookReaderPrefs(
       fontFamily: fontFamily ?? this.fontFamily,
@@ -265,6 +275,7 @@ class BookReaderPrefs {
       dualPageDirection: dualPageDirection ?? this.dualPageDirection,
       showHeader: showHeader ?? this.showHeader,
       showFooter: showFooter ?? this.showFooter,
+      singleColumn: singleColumn ?? this.singleColumn,
     );
   }
 }
