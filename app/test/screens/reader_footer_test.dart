@@ -14,7 +14,7 @@ void main() {
       ),
     ));
 
-    expect(find.text('進度 25% ｜ 第 5/20 頁'), findsOneWidget);
+    expect(find.text('5/20'), findsOneWidget);
   });
 
   testWidgets('輸入框輸入合法頁碼並送出後，觸發 onPageChanged', (tester) async {
@@ -135,7 +135,7 @@ void main() {
     await tester.pump();
 
     expect(find.text('8'), findsOneWidget);
-    expect(find.text('進度 40% ｜ 第 8/20 頁'), findsOneWidget);
+    expect(find.text('8/20'), findsOneWidget);
   });
 
   testWidgets('總頁數只有 1 頁時，滑桿停用（onChanged 為 null）', (tester) async {
@@ -155,5 +155,40 @@ void main() {
         tester.widget<Slider>(find.byKey(const Key('reader_footer_jump_slider')));
     expect(slider.onChanged, isNull);
     expect(slider.onChangeEnd, isNull);
+  });
+
+  testWidgets('合併為單行後，頁尾高度明顯低於合併前的既有高度快照（84.0）', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: ReaderFooter(
+          currentPage: 5,
+          totalPages: 20,
+          onPageChanged: (_) {},
+        ),
+      ),
+    ));
+
+    final height = tester.getSize(find.byKey(const Key('reader_footer'))).height;
+    // 合併前（Column 內「進度文字」+「跳頁 Row」兩個子項）在同一份預設
+    // MaterialApp 主題、同一個 800x600 測試視窗下，既有高度快照為 84.0
+    // （撰寫本計劃時已實測記錄，見 plan-issue-2.md Global Constraints）；
+    // 合併為單一 Row 後應明顯縮短。
+    expect(height, lessThan(84.0));
+  });
+
+  testWidgets('滑桿 label 帶入正確的進度百分比字串', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: ReaderFooter(
+          currentPage: 5,
+          totalPages: 20,
+          onPageChanged: (_) {},
+        ),
+      ),
+    ));
+
+    final slider =
+        tester.widget<Slider>(find.byKey(const Key('reader_footer_jump_slider')));
+    expect(slider.label, '25%');
   });
 }

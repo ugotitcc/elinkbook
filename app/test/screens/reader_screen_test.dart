@@ -960,7 +960,7 @@ void main() {
     await tester.pump();
 
     expect(find.byKey(const Key('reader_footer')), findsOneWidget);
-    expect(find.text('進度 8% ｜ 第 1/12 頁'), findsOneWidget);
+    expect(find.text('1/12'), findsOneWidget);
   });
 
   // --- 0↔1 頁碼轉換與 jumpToPage 原生呼叫 ---
@@ -1065,7 +1065,7 @@ void main() {
     expect(find.byKey(const Key('reader_footer')), findsOneWidget);
     // 預設版面參數下 estimateCharsPerScreen() = 500，5000/500 = 10 頁；
     // 尚未收到 onLocatorChanged，estimateCurrentPage(null, 10) = 1。
-    expect(find.text('進度 10% ｜ 第 1/10 頁'), findsOneWidget);
+    expect(find.text('1/10'), findsOneWidget);
   });
 
   testWidgets('EPUB 收到 onLocatorChanged 的 progression 後，頁尾目前頁碼正確更新',
@@ -1095,7 +1095,7 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.text('進度 50% ｜ 第 5/10 頁'), findsOneWidget);
+    expect(find.text('5/10'), findsOneWidget);
   });
 
   testWidgets('EPUB 固定版面（FXL）開書後，即使收到 onCharacterCountReady 也不顯示頁尾',
@@ -1148,7 +1148,7 @@ void main() {
     epubView.onCharacterCountReady?.call(5000);
     await tester.pump();
 
-    expect(find.text('進度 10% ｜ 第 1/10 頁'), findsOneWidget);
+    expect(find.text('1/10'), findsOneWidget);
 
     // 開啟版面設定，把字型大小從 16 調到 32（加倍），觸發真正的
     // _handlePrefsChanged → setState → rebuild 路徑（而非直接建構帶有
@@ -1176,7 +1176,7 @@ void main() {
 
     // fontSize 倍率變成 2.0 → estimateCharsPerScreen 從 500 降為 125 →
     // totalPages 從 10 變成 40。
-    expect(find.text('進度 3% ｜ 第 1/40 頁'), findsOneWidget);
+    expect(find.text('1/40'), findsOneWidget);
   });
 
   testWidgets('PDF 頁尾行為不受本工單影響（既有回歸驗證）', (tester) async {
@@ -1198,7 +1198,7 @@ void main() {
     await tester.pump();
 
     expect(find.byKey(const Key('reader_footer')), findsOneWidget);
-    expect(find.text('進度 8% ｜ 第 1/12 頁'), findsOneWidget);
+    expect(find.text('1/12'), findsOneWidget);
   });
 
   // --- Epic 5 Issue 4：EPUB 目錄（TOC）樹狀清單 ---
@@ -2761,7 +2761,7 @@ void main() {
     await tester.pump();
 
     expect(find.byKey(const Key('reader_footer')), findsOneWidget);
-    expect(find.text('進度 10% ｜ 第 10/100 頁'), findsOneWidget);
+    expect(find.text('10/100'), findsOneWidget);
   });
 
   testWidgets(
