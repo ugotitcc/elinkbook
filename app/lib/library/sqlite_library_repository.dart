@@ -27,7 +27,7 @@ class SqliteLibraryRepository implements LibraryRepository {
   static Future<SqliteLibraryRepository> open(String path) async {
     final db = await openDatabase(
       path,
-      version: 11,
+      version: 12,
       onConfigure: (db) async {
         // book_reader_prefs 的 ON DELETE CASCADE 需要外鍵約束真正生效，
         // SQLite 預設不強制外鍵，須逐連線手動開啟（見 epic-3 plan-issue-1）。
@@ -95,6 +95,16 @@ class SqliteLibraryRepository implements LibraryRepository {
             // 時 _createBookReaderPrefsTable 已一步到位建表含
             // show_header/show_footer，不需要再 ALTER TABLE。
             await _addHeaderFooterColumns(db);
+          }
+          if (oldVersion < 12) {
+            // epic-18-reader-device-qa Issue 5：強制單欄版面偏好新增的 1
+            // 個欄位，補追加到既有（version 2 起已存在）的
+            // book_reader_prefs 表。必須放在 else 分支內（oldVersion >= 2）
+            // ——理由同上：oldVersion < 2 時 _createBookReaderPrefsTable
+            // 已一步到位建表含 single_column，若在 else 分支外無條件執行
+            // ALTER TABLE，oldVersion == 1 的裝置會對剛建好、已有該欄位的
+            // 表重複 ALTER TABLE，拋出 duplicate column name 例外。
+            await _addSingleColumnColumn(db);
           }
         }
         if (oldVersion < 5) {
@@ -184,7 +194,8 @@ class SqliteLibraryRepository implements LibraryRepository {
         dual_page_cover_alone INTEGER,
         dual_page_direction TEXT,
         show_header INTEGER,
-        show_footer INTEGER
+        show_footer INTEGER,
+        single_column INTEGER
       )
     ''');
   }
@@ -328,6 +339,21 @@ class SqliteLibraryRepository implements LibraryRepository {
         .rawQuery("SELECT name FROM sqlite_master WHERE type='table' AND name='books'");
     if (tables.isNotEmpty) {
       await db.execute('ALTER TABLE books ADD COLUMN is_fixed_layout INTEGER');
+    }
+  }
+
+  static Future<void> _addSingleColumnColumn(Database db) async {
+    // 強制單欄版面偏好（epic-18-reader-device-qa Issue 5），補追加到既有
+    // （version 2 起已存在）的 book_reader_prefs 表，見
+    // docs/epics/epic-18-reader-device-qa/spec.md「singleColumn 偏好」。
+    // nullable：NULL=未覆寫（交由 foliate-js 內建 --_max-column-count: 2
+    // 自動判斷）、0=false、1=true。比照 _addHeaderFooterColumns／
+    // _addEpubLayoutColumn 既有慣例，僅在表已存在時才執行 ALTER TABLE。
+    final tables = await db.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='book_reader_prefs'");
+    if (tables.isNotEmpty) {
+      await db.execute(
+          'ALTER TABLE book_reader_prefs ADD COLUMN single_column INTEGER');
     }
   }
 
