@@ -41,8 +41,9 @@ void main() {
       BookReaderPrefsRepository(libraryRepository.database),
       ReadingPositionRepository(libraryRepository.database),
     );
-    addTearDown(() => libraryRepository.close());
-
+    // 不關閉 in-memory database（addTearDown 在 widget 樹拆除前執行，
+    // 關閉資料庫會導致 dispose 中的 _writeCurrentPosition 拋出
+    // database_closed 例外）。
     final samplePath = await _stageAssetAsFile(
         'test/fixtures/sample.epub', 'single_column_default.epub');
     addTearDown(() async {
@@ -81,7 +82,7 @@ void main() {
     expect(find.byKey(const Key('reader_error_text')), findsNothing);
 
     // 開啟版面設定面板
-    await tester.tap(find.byKey(const Key('reader_settings_button')));
+    await tester.tap(find.byKey(const Key('reader_layout_settings_button')));
     await tester.pumpAndSettle();
 
     // 確認強制單欄開關存在
@@ -112,8 +113,7 @@ void main() {
       BookReaderPrefsRepository(libraryRepository.database),
       ReadingPositionRepository(libraryRepository.database),
     );
-    addTearDown(() => libraryRepository.close());
-
+    // 不關閉 in-memory database（理由同上）。
     final samplePath = await _stageAssetAsFile(
         'test/fixtures/sample.epub', 'single_column_persisted.epub');
     addTearDown(() async {
@@ -157,7 +157,7 @@ void main() {
     expect(find.byKey(const Key('reader_error_text')), findsNothing);
 
     // 開啟版面設定面板
-    await tester.tap(find.byKey(const Key('reader_settings_button')));
+    await tester.tap(find.byKey(const Key('reader_layout_settings_button')));
     await tester.pumpAndSettle();
 
     // 確認開關反映為開啟
