@@ -157,6 +157,7 @@ class ReaderPrefsManagerImpl implements ReaderPrefsManager {
       pageMargins: book.pageMargins,
       textAlign: book.textAlign,
       publisherStyles: book.publisherStyles,
+      singleColumn: book.singleColumn,
       pageTurnMode: book.pageTurnModeOverride ?? global.pageTurnMode,
       screenOrientation:
           book.screenOrientationOverride ?? global.screenOrientation,

@@ -73,6 +73,7 @@ void main() {
           dualPageDirection: DualPageDirection.rtl,
           showHeader: false,
           showFooter: false,
+          singleColumn: true,
         ),
         globalPrefs: const GlobalReaderPrefs.initial(),
       );
@@ -87,6 +88,7 @@ void main() {
       expect(resolved.dualPageDirection, DualPageDirection.rtl);
       expect(resolved.showHeader, isFalse);
       expect(resolved.showFooter, isFalse);
+      expect(resolved.singleColumn, isTrue);
     });
 
     test('單書覆寫為 null 時，正確退回全域預設（非硬編碼初始值，證明真的有讀 globalPrefs）',
@@ -173,6 +175,7 @@ void main() {
       expect(resolved.pageMargins, isNull);
       expect(resolved.textAlign, isNull);
       expect(resolved.publisherStyles, isNull);
+      expect(resolved.singleColumn, isNull);
     });
   });
 
