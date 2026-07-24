@@ -207,6 +207,8 @@ adb -s <device-id> shell rm /sdcard/qa9_library_restore.db
 rm local_qa9_library.db
 ```
 
+執行 `ls local_qa9_library.db`（Git Bash）確認回報 `No such file or directory`——本機暫存的資料庫複本已確實刪除，不留下含使用者書籍中繼資料的檔案在開發機上。
+
 （App 執行中持有的資料庫連線可能快取檔案內容——若步驟 4 開書後行為與預期不符，先透過 `adb shell am force-stop cc.ugotit.elinkbook` 完全關閉 App 再重新啟動，確保讀到的是磁碟上剛修改過的檔案。）
 
 - [ ] **Step 4：第一次開書——確認一次性判斷與回填正確**
@@ -215,17 +217,19 @@ rm local_qa9_library.db
 adb -s <device-id> logcat -c
 ```
 
+**`logcat -c` 應變說明**：部分裝置/Android 版本下 `logcat -c` 可能無法徹底清空緩衝區（非 root 環境下的已知限制）。若下方 `logcat -d | grep` 的結果混雜了非本次操作產生的舊 `QA-ISSUE9` 行，改用插樁訊息中已內建的 `bookId=${widget.bookId}`（見 Step 1）過濾，或改用 `adb -s <device-id> logcat -d -T '<執行 Step 4 前的時間戳記>'` 只看清空時間點之後的新輸出，不需要依賴 `logcat -c` 真的清空成功。
+
 在 App 書架點擊剛被改回 `NULL` 的那本書（`sample_multi_chapter.epub`），開書過程中執行：
 
 ```bash
 adb -s <device-id> logcat -d | grep "QA-ISSUE9"
 ```
 
-確認：(a) 這行插樁 log 確實輸出一次；(b) 書籍正確以流式（`FoliateEpubReaderView`）開啟並成功渲染出內容（非卡在載入中或錯誤畫面）；(c) 用 Step 3 相同的 `sqlite3`/Python 讀取方式重新查詢該書的 `is_fixed_layout`，確認已從 `NULL` 回填為 `0`（流式）。記錄於 QA 報告「既有書籍回填流程實測」段落。
+確認：(a) 這行插樁 log 確實輸出一次（含正確的 `bookId`）；(b) 書籍正確以流式（`FoliateEpubReaderView`）開啟並成功渲染出內容（非卡在載入中或錯誤畫面）；(c) 用 Step 3 相同的 `sqlite3`/Python 讀取方式重新查詢該書的 `is_fixed_layout`，確認已從 `NULL` 回填為 `0`（流式）。記錄於 QA 報告「既有書籍回填流程實測」段落。
 
 - [ ] **Step 5：第二次開書——確認不再重複判斷**
 
-離開閱讀畫面回到書架，清空 logcat 緩衝後重新開啟同一本書：
+離開閱讀畫面回到書架，清空 logcat 緩衝後重新開啟同一本書（`logcat -c` 應變說明同 Step 4）：
 
 ```bash
 adb -s <device-id> logcat -c
@@ -237,7 +241,7 @@ adb -s <device-id> logcat -c
 adb -s <device-id> logcat -d | grep "QA-ISSUE9"
 ```
 
-確認**沒有**任何 `QA-ISSUE9` 輸出（`widget.isFixedLayout` 此時已是 Step 4 回填的非 `null` 值，`_resolveEpubEngineDispatch()` 應在 `if (_dispatchedIsFixedLayout != null) return;` 這行就提前返回，不會再呼叫 `detectAndCacheEpubLayout()`）。記錄於 QA 報告。
+確認**兩件事**（缺一不可，避免偽陽性）：(a) **沒有**任何含這本書 `bookId` 的 `QA-ISSUE9` 輸出（`widget.isFixedLayout` 此時已是 Step 4 回填的非 `null` 值，`_resolveEpubEngineDispatch()` 應在 `if (_dispatchedIsFixedLayout != null) return;` 這行就提前返回，不會再呼叫 `detectAndCacheEpubLayout()`）；(b) 書籍仍正確以流式開啟並成功渲染出內容——**若 (a) 成立但 (b) 不成立**（沒有 log、但書也沒開起來/卡在載入畫面），代表 `_resolveEpubEngineDispatch()` 整條路徑根本沒有執行到，不是「正確跳過重複判斷」而是「開書流程本身壞了」，兩者不可混為一談，須在 QA 報告中明確區分。記錄於 QA 報告。
 
 - [ ] **Step 6：還原臨時插樁**
 
@@ -273,7 +277,7 @@ cd U:/MyDeveloper/AI/elinkBook
 git log --oneline -- app/android/app/src/main/kotlin/cc/ugotit/elinkbook/EpubReaderView.kt | head -5
 ```
 
-確認最新一筆 commit 的日期早於 Epic 17 Issue 1 的起始日期（2026-07-20，見 `docs/epics.md` 或 `issues.md` Issue 1 完成說明）——若有任何 2026-07-20 之後的 commit 觸及此檔案，需要先查明原因（理論上不應該有，因為這正是本 Task 要驗證的架構保證）。
+**已知的同日邊界案例（不需要重新查證，直接視為已排除）**：最新一筆命中的 commit 會是 `d1cfd17`（`docs(epic-7): Issue 9 spike——直排/橫排翻頁跳頁問題診斷與收斂`，2026-07-20 18:08），日期與 Epic 17 起源日期（2026-07-20，見 `docs/epics.md`「2026-07-20 起源自 epic-7-interaction Issue 9 spike 診斷」）同一天，單看日期無法直接判斷「早於/晚於」。已查證（`git show d1cfd17 -- app/android/.../EpubReaderView.kt`）此 commit 只修改了 `nextPage` method channel case 上方的 KDoc 註解（補充說明音量鍵翻頁〔`epic-7-interaction` Issue 7，另一個既有 Epic〕也共用同一條既有路徑），不含任何邏輯變更，且是催生 Epic 17 誕生的那次診斷 commit 本身，非 Epic 17 Phase 1 期間（Issue 1 之後）對此檔案的異動。**判準改為**：`git log` 結果中若只有 `d1cfd17` 或更早的 commit，視為驗證通過；若出現 `d1cfd17` 之後的其他 commit，才需要進一步查明原因（理論上不應該有）。
 
 - [ ] **Step 2：匯入並開啟 FXL 測試書，抽測既有行為**
 
@@ -338,6 +342,11 @@ cd app && flutter test
 ```
 Expected：全數 PASS（本 issue 未修改任何生產程式碼，此步驟純粹確認環境未因其他因素回歸）。
 
+```bash
+cd app/android && ./gradlew.bat :app:testDebugUnitTest
+```
+Expected：`BUILD SUCCESSFUL`（`issues.md` Issue 9「驗收標準」明訂三項工具皆須全過，非只有 `flutter analyze`／`flutter test` 兩項；本 issue 同樣未修改任何 Kotlin 程式碼，純粹確認既有 JVM 測試套件未因其他因素回歸）。
+
 - [ ] **Step 5：Commit**
 
 ```bash
@@ -355,9 +364,23 @@ git commit -m "docs(epic-17): Issue 9 彙整驗收狀態，Phase 1 Issue 1-9 全
 - 「FXL 路徑不受影響：抽測既有 FXL EPUB 開書行為與 Phase 1 上線前一致（`EpubReaderView.kt`/Readium 完全未修改）」→ Task 3（Step 1 程式碼事實查證 + Step 2 真機行為抽測雙重確認）。
 - 「彙整驗證紀錄，更新 `docs/epics.md` 狀態列，若驗證中發現需要後續處理的落差，比照既有慣例另立後續 issue 追蹤，不阻塞本 Phase 1 收尾」→ Task 4（Step 2/3 彙整並更新兩份文件；Global Constraints 明確要求落差另立 issue 追蹤）。
 
+**驗收標準覆蓋度**（審查修正：先前只核對「描述」段落，遺漏「驗收標準」段落三項，已補查）：`issues.md` Issue 9「驗收標準」列出的 3 個項目逐一對應：
+- 「端到端組合驗證產出書面紀錄」→ Task 1 Step 2-5（QA 報告 1.1-1.3 節）。
+- 「`flutter analyze` 乾淨、`flutter test` 全數通過、`./gradlew :app:testDebugUnitTest` 全過」→ Task 4 Step 4（三項工具皆已列出，先前草稿僅列前兩項，已補上第三項）。
+- 「若有發現需要後續處理的落差，已建立對應的後續 issue 追蹤，不阻塞本 Phase 1 收尾」→ 與「描述」段落同一句要求重複，見上方 Task 4 對應項。
+
 **占位符掃描**：全文無 TBD/待補字樣；QA 報告模板與各 Task Step 中的「<記錄...>」「<總結...>」佔位符是驗收/文件步驟本質使然（真機操作結果需要實際執行才能得知，比照 `epic-7-interaction` Issue 8、`epic-16-dual-page` Issue 7 計劃 Self-Review 對同類段落的既有認定）——所有涉及可預先撰寫的內容（QA 報告骨架結構、adb/sqlite3/Python 指令、操作序列步驟、既有測試素材路徑）皆已提供完整內容，非遺漏。
 
 **型別一致性**：不適用（本計劃不涉及程式碼型別/介面設計，純驗證與文件性質）；Task 2 引用的既有函式簽章（`LibraryRepository.detectAndCacheEpubLayout(bookId, filePath)`、`_resolveEpubEngineDispatch()`）已對照 `app/lib/screens/reader_screen.dart:280-298`、`app/lib/library/sqlite_library_repository.dart:341` 現行原始碼逐一核對存在、行號準確。
+
+## 審查修訂紀錄（`tmp/epic-17/reviews/review-plan-issue-9.md`／`code-review-plan-issue-9.md`，經人類確認後採納）
+
+- **採納**：Task 4 Step 4 補上 `./gradlew :app:testDebugUnitTest`（原稿只列 `flutter analyze`／`flutter test` 兩項，遺漏 `issues.md` Issue 9 驗收標準明訂的第三項工具；Self-Review 新增「驗收標準覆蓋度」段落，補上先前只核對「描述」段落、漏查「驗收標準」段落的缺口）。
+- **採納**：Task 3 Step 1 明確標註 `EpubReaderView.kt` 最新一筆 commit（`d1cfd17`，2026-07-20，與 Epic 17 起源同一天）是已查證的同日邊界案例（僅改 KDoc 註解、是催生 Epic 17 誕生的診斷 commit 本身），把原本模糊的「早於/晚於」日期判準改為「以 `d1cfd17` 為基準點」的明確指令，不留給執行者臨場查證。
+- **採納**：Task 2 Step 5「不再重複判斷」新增「書籍仍成功渲染」的並列確認條件，避免「log 沒輸出」與「開書流程整條路徑沒執行到」兩種完全不同的失敗模式被誤判為同一種「通過」結果（原稿僅檢查 log 缺席，有偽陽性風險）。
+- **採納**：Task 2 Step 3 Python 退路新增 `ls local_qa9_library.db` 確認本機資料庫複本已刪除的驗證指令（原稿有 `rm` 指令但無明確驗證步驟）。
+- **採納**：Task 2 Step 4/5 補上 `logcat -c` 在部分裝置/Android 版本下可能無法徹底清空緩衝區的已知限制與應變說明（改用插樁訊息內建的 `bookId` 過濾，或改用 `logcat -T` 依時間戳記過濾），既有插樁天然已支援、不需額外改動插樁本身。
+- **不採納**：`adb shell pm clear cc.ugotit.elinkbook` 作為 Task 4 Step 1 裝置清理備案——`pm clear` 是整包資料清空（資料庫/SharedPreferences/cache 全部歸零），效果遠超過「只刪除 3 本 QA 測試書、保留其餘真實資料」的實際需求；本開發裝置是 Epic 17 全程持續使用的同一台真機，可能留有其他非本次 QA 相關的資料，貿然建議整包清空的風險與實際需求不成比例，技術上有效不代表適合作為此處的建議。
 
 ## Execution Handoff
 
