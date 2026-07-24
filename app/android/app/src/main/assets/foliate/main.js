@@ -114,6 +114,14 @@ window.applyPreferences = function (prefs) {
   if (prefs.writingMode) {
     currentWritingMode = prefs.writingMode
   }
+  // Issue 5：強制單欄覆寫（nullable，undefined 時保留 foliate-js 內建
+  // --_max-column-count: 2 的自動判斷行為，不呼叫 setAttribute）。
+  // max-column-count 用於 CSS calc() 乘數，非長度屬性，不需 CSS 單位。
+  if (prefs.singleColumn === true) {
+    view.renderer.setAttribute('max-column-count', '1')
+  } else if (prefs.singleColumn === false) {
+    view.renderer.setAttribute('max-column-count', '2')
+  }
   view.renderer.setStyles([fontFaceCss, buildOverrideCss(prefs)])
 }
 
