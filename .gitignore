@@ -8,8 +8,6 @@ Thumbs.db
 .agents/skills/
 .claude/skills/
 docs/epics/epic-0-skeleton/reviews/
-docs/epics/epic-7-interaction/reviews/
-docs/epics/epic-17-epub-render-migration/reviews/
 tmp/
 app/android/.kotlin/sessions/kotlin-compiler-12120238411686333762.salive
 agent/skills/
