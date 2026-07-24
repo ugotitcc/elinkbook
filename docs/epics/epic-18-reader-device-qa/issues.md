@@ -32,7 +32,7 @@
 
 ## Issue 2：閱讀畫面上下工具列瘦身（AppBar 高度 + 頁尾合併單行）
 
-**Status:** `ready-for-agent`
+**Status:** ✅ 已完成並合併回 `main`（PR #74，merge commit `3113135`）。AppBar 高度順利瘦身至 20dp，並同步透過 `IconButton.styleFrom` 與 `shrinkWrap` 收斂動作按鈕、圖示與字型，成功解決溢出與誤觸問題；頁尾 `ReaderFooter` 合併為單行 Row 並簡化進度文字為 `XXX/OOO`，保留 `Column(mainAxisSize: MainAxisSize.min)` 避開 Slider 佈局拉伸地雷。全專案 595 個測試與靜態分析全數通過。
 
 **依賴：** 無
 
