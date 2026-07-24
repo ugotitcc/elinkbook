@@ -960,7 +960,7 @@ void main() {
     await tester.pump();
 
     expect(find.byKey(const Key('reader_footer')), findsOneWidget);
-    expect(find.text('進度 8% ｜ 第 1/12 頁'), findsOneWidget);
+    expect(find.text('1/12'), findsOneWidget);
   });
 
   // --- 0↔1 頁碼轉換與 jumpToPage 原生呼叫 ---
@@ -1065,7 +1065,7 @@ void main() {
     expect(find.byKey(const Key('reader_footer')), findsOneWidget);
     // 預設版面參數下 estimateCharsPerScreen() = 500，5000/500 = 10 頁；
     // 尚未收到 onLocatorChanged，estimateCurrentPage(null, 10) = 1。
-    expect(find.text('進度 10% ｜ 第 1/10 頁'), findsOneWidget);
+    expect(find.text('1/10'), findsOneWidget);
   });
 
   testWidgets('EPUB 收到 onLocatorChanged 的 progression 後，頁尾目前頁碼正確更新',
@@ -1095,7 +1095,7 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.text('進度 50% ｜ 第 5/10 頁'), findsOneWidget);
+    expect(find.text('5/10'), findsOneWidget);
   });
 
   testWidgets('EPUB 固定版面（FXL）開書後，即使收到 onCharacterCountReady 也不顯示頁尾',
@@ -1148,7 +1148,7 @@ void main() {
     epubView.onCharacterCountReady?.call(5000);
     await tester.pump();
 
-    expect(find.text('進度 10% ｜ 第 1/10 頁'), findsOneWidget);
+    expect(find.text('1/10'), findsOneWidget);
 
     // 開啟版面設定，把字型大小從 16 調到 32（加倍），觸發真正的
     // _handlePrefsChanged → setState → rebuild 路徑（而非直接建構帶有
@@ -1176,7 +1176,7 @@ void main() {
 
     // fontSize 倍率變成 2.0 → estimateCharsPerScreen 從 500 降為 125 →
     // totalPages 從 10 變成 40。
-    expect(find.text('進度 3% ｜ 第 1/40 頁'), findsOneWidget);
+    expect(find.text('1/40'), findsOneWidget);
   });
 
   testWidgets('PDF 頁尾行為不受本工單影響（既有回歸驗證）', (tester) async {
@@ -1198,7 +1198,7 @@ void main() {
     await tester.pump();
 
     expect(find.byKey(const Key('reader_footer')), findsOneWidget);
-    expect(find.text('進度 8% ｜ 第 1/12 頁'), findsOneWidget);
+    expect(find.text('1/12'), findsOneWidget);
   });
 
   // --- Epic 5 Issue 4：EPUB 目錄（TOC）樹狀清單 ---
@@ -1427,6 +1427,56 @@ void main() {
 
     expect(find.byKey(const Key('reader_appbar_static_title')), findsOneWidget);
     expect(find.byKey(const Key('reader_appbar_chapter_title')), findsNothing);
+  });
+
+  testWidgets('AppBar 顯示時，toolbarHeight 瘦身為 20（Issue 2）', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_appbar_toolbar_height',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final appBar = tester.widget<AppBar>(find.byType(AppBar));
+    expect(appBar.preferredSize.height, 20.0);
+  });
+
+  testWidgets('AppBar 動作按鈕已收斂實際渲染寬度與圖示大小（Issue 2）',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_appbar_action_size',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    // 斷言實際渲染的 Rect，而非只檢查建構子的 constraints/padding 欄位——
+    // Material 3 的 IconButton 不會因建構子的 padding/constraints 參數而
+    // 改變實際渲染尺寸（撰寫本計劃時已實測確認，見 Global Constraints
+    // 「IconButton 尺寸收斂機制」），只檢查欄位值會造成「測試通過但實際
+    // 尺寸沒變」的假陽性。
+    final buttonRect = tester.getRect(
+      find.byKey(const Key('reader_layout_settings_button')),
+    );
+    expect(buttonRect.width, 32.0);
+    expect(buttonRect.height, 20.0, reason: '高度恆等於 toolbarHeight，見 Global Constraints 說明');
+
+    final button = tester.widget<IconButton>(
+      find.byKey(const Key('reader_layout_settings_button')),
+    );
+    expect((button.icon as Icon).size, 18.0);
   });
 
   testWidgets('頁首啟用且目錄背景抓取完成後，點擊 AppBar 標題可開啟 TocBottomSheet',
@@ -2761,7 +2811,7 @@ void main() {
     await tester.pump();
 
     expect(find.byKey(const Key('reader_footer')), findsOneWidget);
-    expect(find.text('進度 10% ｜ 第 10/100 頁'), findsOneWidget);
+    expect(find.text('10/100'), findsOneWidget);
   });
 
   testWidgets(
