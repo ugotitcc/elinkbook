@@ -452,6 +452,61 @@ void main() {
     expect(result!.writingModeOverride, WritingMode.vertical);
     expect(result!.pageTurnModeOverride, PageTurnMode.scroll);
   });
+
+  testWidgets('點擊關閉按鈕後，Bottom Sheet 關閉（Navigator.pop 生效）', (tester) async {
+    await _pumpModalSheet(tester, BookReaderPrefs.empty, (_) {});
+
+    expect(find.byType(ReaderSettingsSheet), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('reader_settings_close_button')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ReaderSettingsSheet), findsNothing);
+  });
+
+  testWidgets('內容超出小螢幕視窗高度並捲動內容後，關閉按鈕位置維持不變（未被捲出畫面）',
+      (tester) async {
+    tester.view.physicalSize = const Size(400, 500);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    await _pumpModalSheet(tester, BookReaderPrefs.empty, (_) {});
+
+    expect(find.byKey(const Key('reader_settings_close_button')), findsOneWidget);
+    final beforeScroll = tester.getTopLeft(
+      find.byKey(const Key('reader_settings_close_button')),
+    );
+
+    await tester.drag(find.byType(ListView), const Offset(0, -300));
+    await tester.pump();
+
+    expect(find.byKey(const Key('reader_settings_close_button')), findsOneWidget);
+    final afterScroll = tester.getTopLeft(
+      find.byKey(const Key('reader_settings_close_button')),
+    );
+    expect(afterScroll, beforeScroll,
+        reason: '關閉列在 Column 頂端、ListView 之外，捲動內部 ListView 不應移動它的位置');
+  });
+
+  testWidgets('內容小於可用高度時，Bottom Sheet 保持緊湊包裹（不撐滿刻意放大的可用高度）',
+      (tester) async {
+    tester.view.physicalSize = const Size(800, 3000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    await _pumpModalSheet(tester, BookReaderPrefs.empty, (_) {});
+
+    final sheetHeight = tester.getSize(find.byType(ReaderSettingsSheet)).height;
+    expect(sheetHeight, lessThan(2500),
+        reason:
+            'mainAxisSize.min 應讓內容較短時 Sheet 緊湊包裹，不應撐滿刻意放大的可用高度 3000');
+  });
 }
 
 Future<void> _pumpSheet(
@@ -513,4 +568,32 @@ class _TestSettingsSheetWrapperState extends State<_TestSettingsSheetWrapper> {
       onChanged: (_) {},
     );
   }
+}
+
+Future<void> _pumpModalSheet(
+  WidgetTester tester,
+  BookReaderPrefs prefs,
+  ValueChanged<BookReaderPrefs> onChanged,
+) async {
+  await tester.pumpWidget(MaterialApp(
+    home: Scaffold(
+      body: Builder(
+        builder: (context) => ElevatedButton(
+          onPressed: () => showModalBottomSheet<void>(
+            context: context,
+            isScrollControlled: true,
+            enableDrag: false,
+            builder: (_) => ReaderSettingsSheet(
+              prefs: prefs,
+              onChanged: onChanged,
+            ),
+          ),
+          child: const Text('open'),
+        ),
+      ),
+    ),
+  ));
+
+  await tester.tap(find.text('open'));
+  await tester.pumpAndSettle();
 }

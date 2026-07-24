@@ -524,6 +524,17 @@ void main() {
     expect(notified?.dualPageMode, DualPageMode.always);
     expect(notified?.showFooter, isFalse, reason: '關鍵斷言：未被清空');
   });
+
+  testWidgets('點擊關閉按鈕後，Bottom Sheet 關閉（Navigator.pop 生效）', (tester) async {
+    await _pumpModalSheet(tester, BookReaderPrefs.empty, (_) {});
+
+    expect(find.byType(PdfSettingsSheet), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('pdf_settings_close_button')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(PdfSettingsSheet), findsNothing);
+  });
 }
 
 Future<void> _pumpSheet(
@@ -544,3 +555,33 @@ Future<void> _pumpSheet(
 }
 
 void _noopVoid() {}
+
+Future<void> _pumpModalSheet(
+  WidgetTester tester,
+  BookReaderPrefs prefs,
+  ValueChanged<BookReaderPrefs> onChanged, {
+  VoidCallback onRequestManualCrop = _noopVoid,
+}) async {
+  await tester.pumpWidget(MaterialApp(
+    home: Scaffold(
+      body: Builder(
+        builder: (context) => ElevatedButton(
+          onPressed: () => showModalBottomSheet<void>(
+            context: context,
+            isScrollControlled: true,
+            enableDrag: false,
+            builder: (_) => PdfSettingsSheet(
+              prefs: prefs,
+              onChanged: onChanged,
+              onRequestManualCrop: onRequestManualCrop,
+            ),
+          ),
+          child: const Text('open'),
+        ),
+      ),
+    ),
+  ));
+
+  await tester.tap(find.text('open'));
+  await tester.pumpAndSettle();
+}

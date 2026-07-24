@@ -133,115 +133,138 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   @override
   Widget build(BuildContext context) {
     return SafeArea(
-      child: ListView(
-        shrinkWrap: true,
-        padding: const EdgeInsets.all(16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          const Text('⚙️ 版面設定', style: TextStyle(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 12),
-          _buildFontFamilyDropdown(),
-          _buildSliderRow(
-            keyPrefix: 'reader_settings_font_size',
-            label: '字型大小',
-            value: _fontSize,
-            min: 12,
-            max: 40,
-            step: 1,
-            displayValue: _fontSize.round().toString(),
-            onChanged: (v) => setState(() {
-              _fontSize = v;
-              _notifyChanged();
-            }),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 8, 0),
+            child: Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    '⚙️ 版面設定',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                IconButton(
+                  key: const Key('reader_settings_close_button'),
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ],
+            ),
           ),
-          _buildSliderRow(
-            keyPrefix: 'reader_settings_font_weight',
-            label: '字型粗細',
-            value: _fontWeightMultiplier * 400,
-            min: 300,
-            max: 900,
-            step: 100,
-            displayValue: (_fontWeightMultiplier * 400).round().toString(),
-            onChanged: (v) => setState(() {
-              _fontWeightMultiplier = v / 400;
-              _notifyChanged();
-            }),
+          Flexible(
+            child: ListView(
+              shrinkWrap: true,
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              children: [
+                _buildFontFamilyDropdown(),
+                _buildSliderRow(
+                  keyPrefix: 'reader_settings_font_size',
+                  label: '字型大小',
+                  value: _fontSize,
+                  min: 12,
+                  max: 40,
+                  step: 1,
+                  displayValue: _fontSize.round().toString(),
+                  onChanged: (v) => setState(() {
+                    _fontSize = v;
+                    _notifyChanged();
+                  }),
+                ),
+                _buildSliderRow(
+                  keyPrefix: 'reader_settings_font_weight',
+                  label: '字型粗細',
+                  value: _fontWeightMultiplier * 400,
+                  min: 300,
+                  max: 900,
+                  step: 100,
+                  displayValue: (_fontWeightMultiplier * 400).round().toString(),
+                  onChanged: (v) => setState(() {
+                    _fontWeightMultiplier = v / 400;
+                    _notifyChanged();
+                  }),
+                ),
+                _buildSliderRow(
+                  keyPrefix: 'reader_settings_line_height',
+                  label: '行高',
+                  value: _lineHeight,
+                  min: 1.2,
+                  max: 2.5,
+                  step: 0.1,
+                  displayValue: _lineHeight.toStringAsFixed(1),
+                  onChanged: (v) => setState(() {
+                    _lineHeight = double.parse(v.toStringAsFixed(1));
+                    _notifyChanged();
+                  }),
+                ),
+                _buildSliderRow(
+                  keyPrefix: 'reader_settings_paragraph_spacing',
+                  label: '段落間距',
+                  value: _paragraphSpacing,
+                  min: 0,
+                  max: 40,
+                  step: 1,
+                  displayValue: _paragraphSpacing.round().toString(),
+                  onChanged: (v) => setState(() {
+                    _paragraphSpacing = v;
+                    _notifyChanged();
+                  }),
+                ),
+                _buildSliderRow(
+                  keyPrefix: 'reader_settings_page_margins',
+                  label: '邊距',
+                  value: _pageMargins,
+                  min: 0,
+                  max: 50,
+                  step: 1,
+                  displayValue: _pageMargins.round().toString(),
+                  onChanged: (v) => setState(() {
+                    _pageMargins = v;
+                    _notifyChanged();
+                  }),
+                ),
+                const SizedBox(height: 12),
+                _buildTextAlignRow(),
+                const SizedBox(height: 12),
+                SwitchListTile(
+                  key: const Key('reader_settings_disable_book_css'),
+                  title: const Text('停用書本 CSS'),
+                  value: !_publisherStyles,
+                  onChanged: (v) => setState(() {
+                    _publisherStyles = !v;
+                    _notifyChanged();
+                  }),
+                ),
+                const SizedBox(height: 12),
+                SwitchListTile(
+                  key: const Key('reader_settings_show_header'),
+                  title: const Text('顯示頁首'),
+                  value: _showHeader,
+                  onChanged: (v) => setState(() {
+                    _showHeader = v;
+                    _notifyChanged();
+                  }),
+                ),
+                SwitchListTile(
+                  key: const Key('reader_settings_show_footer'),
+                  title: const Text('顯示頁尾'),
+                  value: _showFooter,
+                  onChanged: (v) => setState(() {
+                    _showFooter = v;
+                    _notifyChanged();
+                  }),
+                ),
+                const SizedBox(height: 12),
+                _buildWritingModeOverrideRow(),
+                const SizedBox(height: 12),
+                _buildScreenOrientationOverrideRow(),
+                const SizedBox(height: 12),
+                _buildPageTurnModeOverrideRow(),
+              ],
+            ),
           ),
-          _buildSliderRow(
-            keyPrefix: 'reader_settings_line_height',
-            label: '行高',
-            value: _lineHeight,
-            min: 1.2,
-            max: 2.5,
-            step: 0.1,
-            displayValue: _lineHeight.toStringAsFixed(1),
-            onChanged: (v) => setState(() {
-              _lineHeight = double.parse(v.toStringAsFixed(1));
-              _notifyChanged();
-            }),
-          ),
-          _buildSliderRow(
-            keyPrefix: 'reader_settings_paragraph_spacing',
-            label: '段落間距',
-            value: _paragraphSpacing,
-            min: 0,
-            max: 40,
-            step: 1,
-            displayValue: _paragraphSpacing.round().toString(),
-            onChanged: (v) => setState(() {
-              _paragraphSpacing = v;
-              _notifyChanged();
-            }),
-          ),
-          _buildSliderRow(
-            keyPrefix: 'reader_settings_page_margins',
-            label: '邊距',
-            value: _pageMargins,
-            min: 0,
-            max: 50,
-            step: 1,
-            displayValue: _pageMargins.round().toString(),
-            onChanged: (v) => setState(() {
-              _pageMargins = v;
-              _notifyChanged();
-            }),
-          ),
-          const SizedBox(height: 12),
-          _buildTextAlignRow(),
-          const SizedBox(height: 12),
-          SwitchListTile(
-            key: const Key('reader_settings_disable_book_css'),
-            title: const Text('停用書本 CSS'),
-            value: !_publisherStyles,
-            onChanged: (v) => setState(() {
-              _publisherStyles = !v;
-              _notifyChanged();
-            }),
-          ),
-          const SizedBox(height: 12),
-          SwitchListTile(
-            key: const Key('reader_settings_show_header'),
-            title: const Text('顯示頁首'),
-            value: _showHeader,
-            onChanged: (v) => setState(() {
-              _showHeader = v;
-              _notifyChanged();
-            }),
-          ),
-          SwitchListTile(
-            key: const Key('reader_settings_show_footer'),
-            title: const Text('顯示頁尾'),
-            value: _showFooter,
-            onChanged: (v) => setState(() {
-              _showFooter = v;
-              _notifyChanged();
-            }),
-          ),
-          const SizedBox(height: 12),
-          _buildWritingModeOverrideRow(),
-          const SizedBox(height: 12),
-          _buildScreenOrientationOverrideRow(),
-          const SizedBox(height: 12),
-          _buildPageTurnModeOverrideRow(),
         ],
       ),
     );

@@ -52,4 +52,43 @@ void main() {
     );
     expect(button.color, isNotNull, reason: '目前選中的選項應以主題色標示');
   });
+
+  testWidgets('點擊關閉按鈕後，Bottom Sheet 關閉（Navigator.pop 生效）', (tester) async {
+    await _pumpModalSheet(tester, BookReaderPrefs.empty, (_) {});
+
+    expect(find.byType(FxlSettingsSheet), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('fxl_settings_close_button')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(FxlSettingsSheet), findsNothing);
+  });
+}
+
+Future<void> _pumpModalSheet(
+  WidgetTester tester,
+  BookReaderPrefs prefs,
+  ValueChanged<BookReaderPrefs> onChanged,
+) async {
+  await tester.pumpWidget(MaterialApp(
+    home: Scaffold(
+      body: Builder(
+        builder: (context) => ElevatedButton(
+          onPressed: () => showModalBottomSheet<void>(
+            context: context,
+            isScrollControlled: true,
+            enableDrag: false,
+            builder: (_) => FxlSettingsSheet(
+              prefs: prefs,
+              onChanged: onChanged,
+            ),
+          ),
+          child: const Text('open'),
+        ),
+      ),
+    ),
+  ));
+
+  await tester.tap(find.text('open'));
+  await tester.pumpAndSettle();
 }
