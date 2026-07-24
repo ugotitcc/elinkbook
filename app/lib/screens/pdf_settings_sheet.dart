@@ -97,10 +97,21 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
         height: 400,
         child: Column(
           children: [
-            const Padding(
-              padding: EdgeInsets.all(16),
-              child: Text('⚙️ PDF 版面設定',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 8, 0),
+              child: Row(
+                children: [
+                  const Expanded(
+                    child: Text('⚙️ PDF 版面設定',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                  IconButton(
+                    key: const Key('pdf_settings_close_button'),
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
             ),
             TabBar(
               controller: _tabController,
