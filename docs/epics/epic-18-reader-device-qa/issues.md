@@ -102,7 +102,14 @@
 
 ## Issue 5：新增「強制單欄」版面偏好（避免直排部分書籍被拆成需多次翻頁的「兩欄」）
 
-**Status:** `ready-for-agent`
+**Status:** ✅ 已完成（PR 待發，分支 `epic-18/issue-5-single-column`）。全 607 項 `flutter test` 通過、`flutter analyze` 乾淨。6 個 Task 皆已實現並分別 commit：
+
+- Task 1: `BookReaderPrefs.singleColumn` 欄位（commit `f29f57d`）
+- Task 2: SQLite schema v11→v12 migration（commit `fcdbb0e`）
+- Task 3: `FoliateEpubReaderView.singleColumn` 建構參數（commit `f83814c`）
+- Task 4: `ResolvedPreferences`/`ReaderPrefsManagerImpl`/`ReaderScreen` 接通透傳（commit `3513ab8`）
+- Task 5: `ReaderSettingsSheet` 新增「強制單欄（直排）」SwitchListTile（commit `c96cbfd`）
+- Task 6: `main.js applyPreferences` 新增 `max-column-count` setAttribute + 整合測試（commit `85d3efd`）
 
 **依賴：** 無
 
