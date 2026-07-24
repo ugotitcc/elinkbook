@@ -16,6 +16,7 @@ import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.platform.PlatformView
+import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.io.FileInputStream
@@ -36,8 +37,10 @@ import java.io.FileInputStream
  * 專屬的證據蒐集手法，不適合用在正式功能的通訊機制上）。
  *
  * 已實作契約：openBook／setPreferences／nextPage／previousPage／
- * jumpToProgression／jumpToLocator／getTableOfContents／onLocatorChanged；
- * 待補契約：setDecorations，見 Issue 8 依 spec.md「介面」節補上。
+ * jumpToProgression／jumpToLocator／getTableOfContents／onLocatorChanged／
+ * setDecorations／onSelectionChanged／onSelectionCleared／
+ * onAnnotationActivated——與 spec.md「介面」節逐一對稱，見該檔案「模組」
+ * 節列出的完整契約表。
  */
 class FoliateEpubReaderView(
     private val context: Context,
@@ -183,6 +186,16 @@ class FoliateEpubReaderView(
             "getTableOfContents" -> {
                 pendingTocResult = result
                 webView.evaluateJavascript("window.getTableOfContents()", null)
+            }
+            "setDecorations" -> {
+                @Suppress("UNCHECKED_CAST")
+                val decorations =
+                    call.argument<List<Map<String, Any?>>>("decorations") ?: emptyList()
+                val entries = FoliateDecorationCodec.buildDecorationEntries(decorations)
+                val jsonArray = JSONArray()
+                entries.forEach { jsonArray.put(JSONObject(it)) }
+                webView.evaluateJavascript("window.setDecorations($jsonArray)", null)
+                result.success(null)
             }
             else -> result.notImplemented()
         }
@@ -395,6 +408,66 @@ class FoliateEpubReaderView(
                 val result = pendingTocResult ?: return@post
                 pendingTocResult = null
                 result.success(FoliateLocatorCodec.parseTocEntries(json))
+            }
+        }
+
+        /**
+         * 使用者原生選字手勢建立/變動選取範圍時觸發（epic-17 Issue 8），
+         * [locatorJson] 為新 CFI 格式序列化字串；[leftPct]/[topPct]/
+         * [rightPct]/[bottomPct] 為選取矩形相對 WebView 容器寬高的百分比
+         * （main.js 已完成座標換算，見該檔案「選取範圍即時回報」段落
+         * 註解），與 Readium EpubReaderView.kt reportSelectionChanged()
+         * 送出的欄位名稱一致，供 Dart 端共用同一個 EpubSelectionInfo 解析
+         * 邏輯（見 foliate_epub_reader_view.dart）。
+         */
+        @JavascriptInterface
+        fun onSelectionChanged(
+            locatorJson: String,
+            fraction: Double,
+            leftPct: Double,
+            topPct: Double,
+            rightPct: Double,
+            bottomPct: Double,
+        ) {
+            mainHandler.post {
+                if (isDisposed) return@post
+                channel.invokeMethod(
+                    "onSelectionChanged",
+                    mapOf(
+                        "locatorJson" to locatorJson,
+                        "progression" to fraction,
+                        "leftPct" to leftPct,
+                        "topPct" to topPct,
+                        "rightPct" to rightPct,
+                        "bottomPct" to bottomPct,
+                    ),
+                )
+            }
+        }
+
+        /**
+         * 選取範圍被清除時觸發（epic-17 Issue 8），對稱既有
+         * EpubReaderView.kt onDestroyActionMode() 語意。
+         */
+        @JavascriptInterface
+        fun onSelectionCleared() {
+            mainHandler.post {
+                if (isDisposed) return@post
+                channel.invokeMethod("onSelectionCleared", null)
+            }
+        }
+
+        /**
+         * 使用者點擊既有劃線/備註標記時觸發（epic-17 Issue 8），[id] 為
+         * main.js 透過 decorationIdByCfi 反查出的 Dart 端不透明 id 字串
+         * （"highlight:5"/"note:12"，見 epub_decoration.dart
+         * decodeAnnotationId() 編碼慣例）。
+         */
+        @JavascriptInterface
+        fun onAnnotationActivated(id: String) {
+            mainHandler.post {
+                if (isDisposed) return@post
+                channel.invokeMethod("onAnnotationActivated", id)
             }
         }
     }

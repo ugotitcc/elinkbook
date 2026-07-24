@@ -1,4 +1,5 @@
 import { makeBook } from './view.js'
+import { Overlayer } from './overlayer.js'
 
 const view = document.getElementById('view')
 
@@ -29,6 +30,24 @@ const WRITING_MODE_DECLARATION_RE =
 // 第一個 CSS 資源解析時就會賦值一次，之後維持不變——只需要書本「第一個」
 // section 的判斷結果，見 issues.md Issue 4 描述）。
 let detectedBookWritingMode = null
+
+// 目前生效的排版方向（epic-17 Issue 8）：與 detectedBookWritingMode
+// 不同，這個變數追蹤「目前實際套用」的方向（可能被使用者手動切換），
+// 供劃線/備註繪製時判斷 Overlayer.highlight()/underline() 該用哪種
+// options 形狀（見下方 draw-annotation 監聽器）。初始值於下方 FR-06 的
+// { once: true } relocate 監聽器內、以及每次 window.applyPreferences()
+// 呼叫時更新。
+let currentWritingMode = 'horizontal'
+
+// 目前顯示中標記的 cfi → Dart 端不透明 id（"highlight:5"/"note:12"）對照
+// 表（epic-17 Issue 8）。view.addAnnotation({value}) 的 value 欄位本身
+// 必須是 view.resolveNavigation() 可解析的目標（此處固定用 cfi 字串），
+// 不能直接塞 Dart 端的不透明 id 字串，故另建這份表供 show-annotation
+// 事件反查，見
+// docs/epics/epic-17-epub-render-migration/reviews/spike-overlayer-annotations.md
+// 「已記錄的既有 API 落差」。window.setDecorations() 每次呼叫時整組
+// 重建，非增量更新。
+let decorationIdByCfi = new Map()
 
 /**
  * 依目前偏好 [prefs] 產生要疊加在書本樣式之上的覆蓋 CSS 文字（透過
@@ -90,6 +109,11 @@ window.applyPreferences = function (prefs) {
       prefs.pageTurnMode === 'scroll' ? 'scrolled' : 'paginated',
     )
   }
+  // epic-17 Issue 8：劃線/備註繪製需要知道目前實際生效的排版方向，見
+  // currentWritingMode 宣告處註解。
+  if (prefs.writingMode) {
+    currentWritingMode = prefs.writingMode
+  }
   view.renderer.setStyles([fontFaceCss, buildOverrideCss(prefs)])
 }
 
@@ -123,6 +147,45 @@ window.jumpToFraction = function (fraction) {
  */
 window.jumpToLocator = function (cfi) {
   view.goTo(cfi)
+}
+
+/**
+ * 把目前應顯示的完整標記清單一次性套用（epic-17 Issue 8，比照既有
+ * window.applyPreferences「整組送出」慣例，非增量 diff）：先移除全部
+ * 既有標記，再逐筆呼叫 view.addAnnotation() 重新加入。[decorations] 為
+ * FoliateDecorationCodec.buildDecorationEntries() 產生的
+ * [{id, cfi, color, isUnderline}, ...] 陣列，由原生端
+ * FoliateEpubReaderView.kt 的 setDecorations method channel case 呼叫。
+ * 實際繪製邏輯在下方 draw-annotation 監聽器（本函式只負責告知 view
+ * 「這些位置需要標記」，繪製視覺樣式的決定權交給監聽器，因為 draw
+ * callback 只有透過 view.addAnnotation() 觸發的 draw-annotation 事件才
+ * 拿得到，見 view.js addAnnotation() 原始碼）。
+ */
+/**
+ * 【已知限制，審查修正記錄於此】重複 CFI 的最後寫入覆蓋前者：
+ * decorationIdByCfi（本身是 Map，key 唯一）與 Overlayer 內部的
+ * annotation map（同樣以 value/CFI 當 key，見 overlayer.js `add()`：
+ * `if (this.#map.has(key)) this.remove(key)`）皆以 CFI 為 key，若
+ * [decorations] 中兩筆不同標記剛好指向完全相同的 CFI（例如對完全相同的
+ * 選取範圍先後建立兩種不同顏色的劃線——極端邊界情況，spike 報告
+ * spike-overlayer-annotations.md「已記錄的既有 API 落差」已明確記錄
+ * 「Overlayer 以 annotation.value 當 Map key，必須唯一」這項前提假設，
+ * 但未實測重複 key 情境），後面那筆會在兩個 Map 中都覆蓋前者：前者的
+ * 視覺標記會消失、點擊該位置只會命中後者的 id。目前不主動去重/警告，
+ * 依賴 Dart 端每筆標記的 CFI 天然互不相同（不同段落/選取範圍產生不同
+ * CFI）這個假設；`FoliateDecorationCodec.buildDecorationEntries()`
+ * （Kotlin 端）本身不對重複 CFI 做任何處理，原樣保留全部項目，去重/
+ * 覆蓋行為完全發生在這裡（JS 端 Map 語意）。
+ */
+window.setDecorations = function (decorations) {
+  for (const cfi of decorationIdByCfi.keys()) {
+    view.deleteAnnotation({ value: cfi })
+  }
+  decorationIdByCfi = new Map()
+  for (const { id, cfi, color, isUnderline } of decorations) {
+    decorationIdByCfi.set(cfi, id)
+    view.addAnnotation({ value: cfi, color, isUnderline })
+  }
 }
 
 /**
@@ -211,14 +274,29 @@ async function openBook() {
             ? 'vertical'
             : 'horizontal'
         }
+        // epic-17 Issue 8 審查修正：Overlayer.highlight() 內建
+        // `opacity: var(--overlayer-highlight-opacity, .3)`（overlayer.js
+        // 既有程式碼，不可修改），若不覆寫這個 CSS 自訂屬性，會疊加在
+        // FoliateDecorationCodec.argbIntToCssColor() 已經算好的 tint
+        // alpha 之上（兩者相乘），造成螢光筆/純備註視覺上明顯比 Readium/
+        // FXL 路徑（直接用 tint alpha、無額外乘數）更淡。本 App 的透明度
+        // 完全由 tint 的 ARGB alpha 決定，故固定覆蓋為 1（不透明度
+        // 100%），讓 rgba() 自帶的 alpha 成為唯一透明度來源，與 Readium
+        // 路徑語意一致。底線（Overlayer.underline()）不受影響，該函式
+        // 未設定這個 CSS 變數。此規則須無條件套用（不像下方 writingMode
+        // 覆蓋依 initialPrefs 決定是否附加），故獨立於下方判斷之外組裝。
+        let overriddenCss = `${css}\nhtml, body { --overlayer-highlight-opacity: 1; }\n`
         // 初次開書若呼叫端（openBook 的 initialPreferences）未指定
-        // writingMode，不附加任何覆蓋規則，讓書本自己的 CSS 宣告（或無
-        // 宣告時的預設橫排）自然生效（ADR 0003「初次開書不主動設定」）。
-        if (!initialPrefs.writingMode) return css
-        const override = initialPrefs.writingMode === 'vertical'
-          ? 'writing-mode: vertical-rl !important;'
-          : 'writing-mode: horizontal-tb !important;'
-        return `${css}\nhtml, body { ${override} }\n`
+        // writingMode，不附加排版方向覆蓋規則，讓書本自己的 CSS 宣告
+        // （或無宣告時的預設橫排）自然生效（ADR 0003「初次開書不主動
+        // 設定」）。
+        if (initialPrefs.writingMode) {
+          const override = initialPrefs.writingMode === 'vertical'
+            ? 'writing-mode: vertical-rl !important;'
+            : 'writing-mode: horizontal-tb !important;'
+          overriddenCss += `html, body { ${override} }\n`
+        }
+        return overriddenCss
       })
     })
     // 見 Issue 1 Spike（plans/plan-issue-1.md Task 2）已驗證的行為與 Issue 3
@@ -244,6 +322,81 @@ async function openBook() {
         location?.current ?? 0,
         location?.total ?? 0,
       )
+    })
+    // 劃線/備註繪製（epic-17 Issue 8）：view.addAnnotation() 對於一般
+    // 標記（非 foliate-search:/foliate-note: 前綴），透過 draw-annotation
+    // 事件把繪製決定權交還給呼叫端（見 view.js addAnnotation() 原始碼），
+    // annotation 即是 window.setDecorations() 傳入 view.addAnnotation()
+    // 的 {value, color, isUnderline} 物件本身（addAnnotation() 原樣透傳，
+    // 未做任何欄位過濾）。Overlayer.highlight()/underline() 的 options
+    // 形狀不同（vertical: boolean vs writingMode: string），依
+    // isUnderline 分流組裝，不可共用同一組參數物件（見
+    // spike-overlayer-annotations.md「已記錄的既有 API 落差」）。
+    view.addEventListener('draw-annotation', (e) => {
+      const { draw, annotation } = e.detail
+      if (annotation.isUnderline) {
+        draw(Overlayer.underline, {
+          color: annotation.color,
+          writingMode: currentWritingMode === 'vertical' ? 'vertical-rl' : 'horizontal-tb',
+        })
+      } else {
+        draw(Overlayer.highlight, {
+          color: annotation.color,
+          vertical: currentWritingMode === 'vertical',
+        })
+      }
+    })
+    // 點擊既有標記（epic-17 Issue 8）：value 即建立時傳入的 cfi（見
+    // window.setDecorations()），透過 decorationIdByCfi 反查 Dart 端的
+    // 不透明 id 字串（"highlight:5"/"note:12"，見 epub_decoration.dart
+    // decodeAnnotationId() 編碼慣例）。查無對應（理論上不會發生，標記
+    // 只可能在 setDecorations 已呼叫過後才可能被點擊）時靜默忽略，比照
+    // 本檔案既有對非致命錯誤的處理原則。
+    view.addEventListener('show-annotation', (e) => {
+      const id = decorationIdByCfi.get(e.detail.value)
+      if (id) window.FoliateBridge.onAnnotationActivated(id)
+    })
+    // 選取範圍即時回報（epic-17 Issue 8）：'load' 事件對 look-ahead
+    // 預讀章節同樣會觸發，故 doc/index 皆從本次 'load' 呼叫的區域變數
+    // 閉包讀取，不快取到模組級共用變數再事後讀取（見
+    // spike-overlayer-annotations.md「已記錄的既有 API 落差」，此陷阱
+    // 在該次驗證的兩條獨立程式碼路徑上各自獨立命中）。長按拖曳選字這類
+    // 使用者手勢天生只會發生在目前實際可視的 iframe 上，selectionchange
+    // 在背景預讀章節的 doc 上觸發時 getSelection().rangeCount 恆為 0，
+    // 不需要額外的「目前是否可視」判斷。選取範圍用
+    // window.getSelection().getRangeAt(0) 取得，天然是文字節點邊界
+    // （非 selectNodeContents(element)），CFI round-trip 不會被壓扁，見
+    // spike-overlayer-annotations.md 研究問題 #1 的既有限制說明。
+    view.addEventListener('load', (e) => {
+      const doc = e.detail.doc
+      const index = e.detail.index
+      doc.addEventListener('selectionchange', async () => {
+        const selection = doc.getSelection()
+        if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
+          window.FoliateBridge.onSelectionCleared()
+          return
+        }
+        const range = selection.getRangeAt(0)
+        const rect = range.getClientRects()[0]
+        if (!rect) return
+        const cfi = view.getCFI(index, range)
+        const progress = await view.getCFIProgress(cfi)
+        // 座標換算（Issue 7 Spike 已驗證公式）：iframe 內局部矩形 + iframe
+        // 相對外層 #view 容器的位移，除以外層容器可視尺寸。只取第一個
+        // client rect 當代表矩形（多欄選取的代表 rect 策略，見
+        // spike-overlayer-annotations.md「留白」段落——現有 PercentRect
+        // 契約本身就只回報單一矩形，這是既有契約的限制，非本工單新增）。
+        const iframeRect = doc.defaultView.frameElement.getBoundingClientRect()
+        const viewportRect = view.getBoundingClientRect()
+        window.FoliateBridge.onSelectionChanged(
+          JSON.stringify({ cfi, index, fraction: progress?.fraction ?? 0 }),
+          progress?.fraction ?? 0,
+          (iframeRect.left + rect.left - viewportRect.left) / viewportRect.width,
+          (iframeRect.top + rect.top - viewportRect.top) / viewportRect.height,
+          (iframeRect.left + rect.right - viewportRect.left) / viewportRect.width,
+          (iframeRect.top + rect.bottom - viewportRect.top) / viewportRect.height,
+        )
+      })
     })
     await view.open(book)
     view.renderer.setAttribute(

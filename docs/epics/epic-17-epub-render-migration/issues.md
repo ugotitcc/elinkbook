@@ -205,7 +205,7 @@ Phase 1 需要在「建構閱讀器 widget 之前」就知道一本 EPUB 是固�
 
 ## Issue 8：劃線與備註
 
-**Status:** `ready-for-agent`
+**Status:** ✅ 已完成。依 `plans/plan-issue-8.md` Task 1-7 完成 `FoliateDecorationCodec.kt`（`argbIntToCssColor`／`buildDecorationEntries` 格式與顏色轉換純函式，含 11 個 JVM 測試）／`main.js`（`window.setDecorations`／`draw-annotation`／`show-annotation`／持久 `'load'`→`selectionchange` 事件監聽器）／`FoliateEpubReaderView.kt`（`setDecorations` method channel／`onSelectionChanged`／`onSelectionCleared`／`onAnnotationActivated` 橋接）／`foliate_epub_reader_view.dart`（新增三個回呼參數與 `FoliateEpubReaderView.setDecorations` static helper，含 4 個 widget 測試）／`ReaderScreen`（`_handleFoliateLayoutResolved` 劃線備註載入、`_sendDecorationsToNative` 分派至 `FoliateEpubReaderView`、`_buildNativeView` 接上回呼，含 3 個 widget 測試）。新增真機整合測試 `foliate_highlights_notes_test.dart`。程式碼審查（`tmp/epic-17/reviews/review-issue-8-implementation.md`）發現並修正 2 項 Important：`Overlayer.highlight()` 內建 opacity 與 tint alpha 疊乘造成螢光筆/純備註視覺過淡（`main.js` 改為無條件覆寫 `--overlayer-highlight-opacity: 1`）、重複 CFI 邊界情況補上 spike 報告建議的單元測試；1 項 Minor（`docs/epics/epic-17-epub-render-migration/reviews/` 補上 `.gitignore`）。`flutter test`（586 tests）／`flutter analyze`／`./gradlew.bat :app:compileDebugKotlin`／`./gradlew.bat :app:testDebugUnitTest`（114 tests）全數通過，真機 `integration_test`（裝置 `3CEF42ECD491687`：`foliate_epub_reader_view_test.dart`／`foliate_stream_nav_zone_test.dart`／`foliate_toc_footer_test.dart`／`foliate_highlights_notes_test.dart`）與真機人工驗證清單（手勢選字工具列定位、三色螢光筆與底線繪製、點擊標記開對話框、直排/橫排切換視覺一致、3×3 熱區與標記互動優先權）皆通過，詳見 `tmp/epic-17/reviews/qa-issue-8-testing-results.md`。
 
 **依賴：** Issue 3、Issue 7
 
