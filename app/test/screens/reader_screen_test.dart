@@ -1429,6 +1429,56 @@ void main() {
     expect(find.byKey(const Key('reader_appbar_chapter_title')), findsNothing);
   });
 
+  testWidgets('AppBar 顯示時，toolbarHeight 瘦身為 20（Issue 2）', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_appbar_toolbar_height',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final appBar = tester.widget<AppBar>(find.byType(AppBar));
+    expect(appBar.preferredSize.height, 20.0);
+  });
+
+  testWidgets('AppBar 動作按鈕已收斂實際渲染寬度與圖示大小（Issue 2）',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_appbar_action_size',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    // 斷言實際渲染的 Rect，而非只檢查建構子的 constraints/padding 欄位——
+    // Material 3 的 IconButton 不會因建構子的 padding/constraints 參數而
+    // 改變實際渲染尺寸（撰寫本計劃時已實測確認，見 Global Constraints
+    // 「IconButton 尺寸收斂機制」），只檢查欄位值會造成「測試通過但實際
+    // 尺寸沒變」的假陽性。
+    final buttonRect = tester.getRect(
+      find.byKey(const Key('reader_layout_settings_button')),
+    );
+    expect(buttonRect.width, 32.0);
+    expect(buttonRect.height, 20.0, reason: '高度恆等於 toolbarHeight，見 Global Constraints 說明');
+
+    final button = tester.widget<IconButton>(
+      find.byKey(const Key('reader_layout_settings_button')),
+    );
+    expect((button.icon as Icon).size, 18.0);
+  });
+
   testWidgets('頁首啟用且目錄背景抓取完成後，點擊 AppBar 標題可開啟 TocBottomSheet',
       (tester) async {
     await tester.pumpWidget(

@@ -1205,6 +1205,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         appBar: (_isFixedLayout || !_chromeVisible)
             ? null // 固定版面（如漫畫）或沉浸模式已收起介面時隱藏 Scaffold AppBar
             : AppBar(
+                toolbarHeight: _appBarToolbarHeight,
                 title: _buildAppBarTitle(format),
                 actions: _buildAppBarActions(format),
               ),
@@ -1224,7 +1225,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   Widget _buildAppBarTitle(BookFormat format) {
     final showHeader = format == BookFormat.epub && (_resolved?.showHeader ?? true);
     if (!showHeader) {
-      return const Text('閱讀器', key: Key('reader_appbar_static_title'));
+      return const Text(
+        '閱讀器',
+        key: Key('reader_appbar_static_title'),
+        style: TextStyle(fontSize: _appBarTitleFontSize),
+      );
     }
     final currentPath = TocNavigator.findCurrentPath(
       _tocEntries,
@@ -1234,9 +1239,34 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     return InkWell(
       key: const Key('reader_appbar_chapter_title'),
       onTap: (_autoDetectedWritingMode == null || !_tocLoaded) ? null : _openToc,
-      child: Text(chapterTitle, overflow: TextOverflow.ellipsis),
+      child: Text(
+        chapterTitle,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(fontSize: _appBarTitleFontSize),
+      ),
     );
   }
+
+  // AppBar 瘦身（Epic 18 Issue 2，design.md 決策 #2：縮減至約現有高度
+  // 1/3）：只設定 toolbarHeight 不夠——IconButton 預設觸控寬度 48dp、
+  // 預設圖示 24dp，title 文字預設字級，在 20dp 高的 AppBar 內都會偏擠，
+  // 故同步收斂三者。以下數值為起始建議值，真機測試（Task 3）後可再調整
+  // （issues.md Issue 2 審查修正）。
+  //
+  // 【實測發現，記錄供未來維護者知悉】_buildAppBarActions() 的
+  // IconButton 一律透過 `style: IconButton.styleFrom(...)` 收斂尺寸，
+  // 不使用建構子的 `padding`/`constraints` 參數——Material 3 的
+  // IconButton 在本專案 Flutter 版本（3.41.9）下，`padding`/`constraints`
+  // 這兩個建構子參數對實際渲染尺寸完全無效（實測仍是 48dp 預設寬度），
+  // 必須透過 `style` 才能真正生效。另外，AppBar.actions 內的按鈕實際
+  // 渲染高度無論如何設定都會被鎖死在 toolbarHeight（本例為 20），故這裡
+  // 只需要一個「最小寬度」常數，不需要（也無法生效）獨立的「最小高度」
+  // 常數——`_appBarButtonMinWidth` 只控制寬度，高度直接沿用
+  // `_appBarToolbarHeight`。
+  static const _appBarToolbarHeight = 20.0;
+  static const _appBarButtonMinWidth = 32.0;
+  static const _appBarIconSize = 18.0;
+  static const _appBarTitleFontSize = 13.0;
 
   List<Widget>? _buildAppBarActions(BookFormat format) {
     if (_isFixedLayout) return null;
@@ -1245,8 +1275,13 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         return [
           IconButton(
             key: const Key('reader_toc_button'),
-            icon: const Icon(Icons.menu_book),
+            icon: const Icon(Icons.menu_book, size: _appBarIconSize),
             tooltip: '目錄',
+            style: IconButton.styleFrom(
+              minimumSize: const Size(_appBarButtonMinWidth, _appBarToolbarHeight),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              padding: EdgeInsets.zero,
+            ),
             // 沿用與「⚙️版面」按鈕一致的啟用條件（_autoDetectedWritingMode
             // 非 null 代表 onLayoutResolved 已觸發，書本已成功開啟），並
             // 額外要求 _tocLoaded（審查修正）——避免使用者在背景抓取
@@ -1258,8 +1293,13 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           ),
           IconButton(
             key: const Key('reader_layout_settings_button'),
-            icon: const Icon(Icons.settings),
+            icon: const Icon(Icons.settings, size: _appBarIconSize),
             tooltip: '版面設定',
+            style: IconButton.styleFrom(
+              minimumSize: const Size(_appBarButtonMinWidth, _appBarToolbarHeight),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              padding: EdgeInsets.zero,
+            ),
             // _autoDetectedWritingMode 非 null 代表 onLayoutResolved 已觸發，
             // 書本已成功開啟、navigatorFragment 已存在，此時開啟版面設定並
             // 呼叫 setPreferences 才有意義（見 EpubReaderView.kt 的靜默忽略
@@ -1270,8 +1310,13 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           if (widget.bookmarksRepository != null)
             IconButton(
               key: const Key('reader_notes_button'),
-              icon: const Icon(Icons.bookmarks),
+              icon: const Icon(Icons.bookmarks, size: _appBarIconSize),
               tooltip: '筆記',
+              style: IconButton.styleFrom(
+                minimumSize: const Size(_appBarButtonMinWidth, _appBarToolbarHeight),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                padding: EdgeInsets.zero,
+              ),
               // 除了 _autoDetectedWritingMode（onLayoutResolved 已觸發）之外，
               // 額外要求 _epubPositionInfo 非 null（審查修正）——這兩個回呼
               // 來自原生端兩條各自獨立、無先後順序保證的非同步路徑
@@ -1290,8 +1335,13 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         return [
           IconButton(
             key: const Key('reader_layout_settings_button'),
-            icon: const Icon(Icons.settings),
+            icon: const Icon(Icons.settings, size: _appBarIconSize),
             tooltip: '版面設定',
+            style: IconButton.styleFrom(
+              minimumSize: const Size(_appBarButtonMinWidth, _appBarToolbarHeight),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              padding: EdgeInsets.zero,
+            ),
             // _state == rendered 代表 onPageRendered 已觸發，PDF 已成功
             // 開啟，此時開啟版面設定並呼叫 setPdfPreferences 才有意義，比照
             // EPUB 分支的既有判斷原則。
@@ -1300,8 +1350,13 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           if (widget.bookmarksRepository != null)
             IconButton(
               key: const Key('reader_notes_button'),
-              icon: const Icon(Icons.bookmarks),
+              icon: const Icon(Icons.bookmarks, size: _appBarIconSize),
               tooltip: '筆記',
+              style: IconButton.styleFrom(
+                minimumSize: const Size(_appBarButtonMinWidth, _appBarToolbarHeight),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                padding: EdgeInsets.zero,
+              ),
               onPressed: _state == _RenderState.rendered
                   ? () => _openNotesSheet(format)
                   : null,
