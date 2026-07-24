@@ -230,7 +230,7 @@ Phase 1 需要在「建構閱讀器 widget 之前」就知道一本 EPUB 是固�
 
 ## Issue 9：真機端到端驗證與收尾
 
-**Status:** `ready-for-agent`
+**Status:** ✅ 已完成。依 `plans/plan-issue-9.md` Task 1-4 於真機（Hera_Vis_WIFI，`3CEF42ECD491687`，Android 15）完成整合收尾驗證。驗證結果包括：(1) 端到端組合驗證：`sample_declares_vertical.epub`（初始直排、換頁、3x3熱區、橫直排手動切換、目錄跳轉、三色劃線備註新增、頁尾進度、重開書持久化與高亮渲染）與 `sample_multi_chapter.epub`（多章節無縫翻頁、巢狀子目錄跳轉）全部順利通過；(2) 既有書籍回填實測：利用臨時整合測試 `qa_double_open_test.dart` 成功觀測並驗證 `is_fixed_layout` 為 `null` 的既有書籍在第一次開啟時觸發 layout 偵測並回寫 SQLite（回寫值為 `false`），第二次開啟時直接讀取資料庫，不再重複偵測；(3) FXL 路徑不受影響：Git 提交歷史查證 `EpubReaderView.kt` 自 2026-07-20 本 Epic 啟動以來完全無任何變動，真機開書與既有 FXL 書籤、換頁操作等抽測全數正常。驗收紀錄已彙整至 `docs/epics/epic-17-epub-render-migration/reviews/qa-issue-9-report.md`。本地 `flutter test`（586 tests）／`flutter analyze`／`./gradlew :app:testDebugUnitTest`（114 tests）與真機 `integration_test`（四個整合測試檔）全數通過，無發現任何新問題或 regression 缺陷。
 
 **依賴：** Issue 2、3、4、5、6、7、8 全部完成
 
