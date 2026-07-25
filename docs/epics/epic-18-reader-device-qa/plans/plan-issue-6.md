@@ -30,7 +30,7 @@
 - Consumes: N/A
 - Produces: `ColumnMode` enum (`auto`, `single`, `double`), `BookReaderPrefs.columnMode`, `BookReaderPrefs.columnSize`
 
-- [ ] **Step 1: 建立 `app/lib/reader/column_mode.dart` 檔案**
+- [x] **Step 1: 建立 `app/lib/reader/column_mode.dart` 檔案**
 
 ```dart
 /// 流式 EPUB 專屬的分欄模式偏好（epic-18 Issue 6）。
@@ -46,7 +46,7 @@ enum ColumnMode {
 }
 ```
 
-- [ ] **Step 2: 撰寫 `BookReaderPrefs` 測試**
+- [x] **Step 2: 撰寫 `BookReaderPrefs` 測試**
 
 修改 `app/test/reader/book_reader_prefs_test.dart`，移除 `singleColumn` 測試，改為測試 `columnMode` 與 `columnSize`：
 
@@ -84,12 +84,12 @@ enum ColumnMode {
     });
 ```
 
-- [ ] **Step 3: 執行測試並確認失敗**
+- [x] **Step 3: 執行測試並確認失敗**
 
 Run: `flutter test test/reader/book_reader_prefs_test.dart`
 Expected: FAIL (欄位未存在)
 
-- [ ] **Step 4: 修改 `BookReaderPrefs` 移除 `singleColumn` 並加入 `columnMode` / `columnSize`**
+- [x] **Step 4: 修改 `BookReaderPrefs` 移除 `singleColumn` 並加入 `columnMode` / `columnSize`**
 
 在 `app/lib/reader/book_reader_prefs.dart` 中：
 - 匯入 `column_mode.dart`
@@ -97,12 +97,12 @@ Expected: FAIL (欄位未存在)
 - 新增 `final ColumnMode? columnMode;` 與 `final double? columnSize;`
 - 在建構子、`toMap` ('column_mode', 'column_size')、`fromMap` (解析 enum 與 double)、`==`、`hashCode`、`copyWith` 中更換對應欄位。
 
-- [ ] **Step 5: 執行測試確認通過**
+- [x] **Step 5: 執行測試確認通過**
 
 Run: `flutter test test/reader/book_reader_prefs_test.dart`
 Expected: PASS
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/reader/column_mode.dart app/lib/reader/book_reader_prefs.dart app/test/reader/book_reader_prefs_test.dart
@@ -125,7 +125,7 @@ git commit -m "feat(reader): 定義 ColumnMode 並於 BookReaderPrefs 新增 col
 
 在 `app/test/library/sqlite_library_repository_test.dart` 中：
 1. 更新全新安裝測試：`CREATE TABLE` 後包含 `column_mode` 與 `column_size`（無 `single_column`）。
-2. 新增 v11 → v12 → v13 三段式升級測試：建立 v11 舊版 Schema，寫入 `single_column: 1` 的舊資料，開啟資料庫觸發 Migration 至 v13。驗證 `single_column` 變為 `NULL`，且 `column_mode`/`column_size` 可正常寫入與讀取。
+2. 新增 v12 → v13 升級測試（**審查修正**：原文誤植「v11 → v12 → v13」，但 v11 schema 根本不含 `single_column` 欄位——該欄位是 v12 才新增的，寫入 `single_column: 1` 前必須先有 v12 baseline，故正確場景是「以 v12 schema 建庫、寫入既有 `single_column: 1` 真實資料，再升級至 v13」）：建立 v12 舊版 Schema（含 `single_column` 欄位），寫入 `single_column: 1` 的舊資料，開啟資料庫觸發 Migration 至 v13。驗證 `single_column` 變為 `NULL`，且 `column_mode`/`column_size` 可正常寫入與讀取。
 3. 更新既有 v11→v12 測試的註解與說明（標明已自動升級至 v13）。
 
 - [ ] **Step 2: 執行測試確認失敗**

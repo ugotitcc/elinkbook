@@ -1513,7 +1513,7 @@ void main() {
     expect(row['column_size'], 800.0);
   });
 
-  test('既有 version 11 裝置升級到 version 12，book_reader_prefs 表正確補上 single_column 欄位（ALTER TABLE 路徑）',
+  test('既有 version 11 裝置升級到目前版本（v13），book_reader_prefs 表正確補上 single_column 欄位（ALTER TABLE 路徑）',
       () async {
     final tempDir = await Directory.systemTemp
         .createTemp('elinkbook_migration_v11_to_v12_test');
@@ -1602,7 +1602,9 @@ void main() {
     await oldDb.close();
 
     // 重新以目前版本開啟同一個檔案，觸發 onUpgrade（oldVersion=11 →
-    // newVersion=12），驗證既有資料不受影響、新欄位存在且預設 NULL、且可寫入。
+    // newVersion=13，一次跳級經過 v12 single_column 與 v13 column_mode/
+    // column_size 兩段遷移），驗證既有資料不受影響、single_column 欄位
+    // 存在且預設 NULL、且可寫入。
     final upgraded = await SqliteLibraryRepository.open(dbPath);
     addTearDown(() => upgraded.close());
 

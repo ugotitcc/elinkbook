@@ -35,3 +35,9 @@ const divisor = Math.min(
 1. **修改 vendored `paginator.js` 移除直排 `+1` 邏輯**——違反 ADR 0011 釘定版本的既有決策，且該 `+1` 可能有其合理用途（readest/foliate-js 上游設計意圖不明），貿然移除風險不可控
 2. **透過 CSS 直接覆蓋 `--_max-column-count-spread` / `--_max-column-count-portrait`**——這些 CSS 變數是 `paginator.js` 內部衍生值（`var(--_max-column-count)` 的 cascade），外部覆蓋會與 `attributeChangedCallback` 的寫入衝突，行為不可預測
 3. **維持 `singleColumn` 布林但加大 `maxInlineSize` 預設值**——無法讓使用者在「完全交給引擎決定」和「我要強制單欄」之間做選擇，也無法解決三欄問題
+
+## 已知限制
+
+「雙欄」模式的 `max-inline-size`（`targetSize = Math.max(360, Math.ceil(hostSize / 2))`）是呼叫 `applyPreferences()` 當下 `getBoundingClientRect()` 的一次性快照，寫死後不會再變動。`paginator.js` 自己的 `ResizeObserver`（`paginator.js:1163`）在裝置旋轉/視窗尺寸變化後會重新呼叫 `render()`，但只會用「當下真實 `hostSize`」對比「呼叫當下算出、此後不變的 `max-inline-size`」重新計算 `divisor`，不會觸發 `applyPreferences()` 重新執行、也不會重新計算 `targetSize`。也就是說裝置旋轉後，「雙欄」模式的欄寬可能不再精確等於「當下 `hostSize` 的一半」，欄數本身通常仍會落在 2 欄上下但不保證每次都精確重算。「單欄」（`99999px` 常數）與「自動」（使用者設定的常數）兩態不受影響，因為兩者的 `max-inline-size` 皆與 `hostSize` 無關。
+
+此限制目前不修正——修正需要新增「裝置旋轉/視窗尺寸變化時重新呼叫 `applyPreferences()`」的機制，`issues.md` Issue 6 的驗收標準未涵蓋旋轉情境，屬於範圍外的擴充，留待未來若有實際使用者回報再評估是否要另立 Issue 處理。

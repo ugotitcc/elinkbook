@@ -27,10 +27,10 @@ Future<String> _stageAssetAsFile(String assetPath, String fileName) async {
   return file.path;
 }
 
-/// Epic 18 Issue 5：強制單欄（直排）偏好——真機整合測試。
+/// Epic 18 Issue 6：欄數（columnMode）三態控制——真機整合測試。
 ///
 /// 核心症狀回歸測試：使用 sample_long_chinese_vertical.epub（足夠長的
-/// 繁體中文直排 EPUB），驗證 singleColumn=true 時連續翻頁的
+/// 繁體中文直排 EPUB），驗證 columnMode=ColumnMode.single 時連續翻頁的
 /// pageIndex 嚴格遞增（即每次翻頁只前進一頁，不會因為兩欄排版導致
 /// 同一個頁碼要點兩次才變化）。
 ///
@@ -41,7 +41,7 @@ void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets(
-      'singleColumn=true 時，使用長篇直排 EPUB 連續翻頁 5 次，pageIndex 嚴格遞增',
+      'columnMode=ColumnMode.single 時，使用長篇直排 EPUB 連續翻頁 5 次，pageIndex 嚴格遞增',
       (tester) async {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
@@ -69,7 +69,7 @@ void main() {
       lastReadTime: DateTime.now(),
     ));
 
-    // 建構 FoliateEpubReaderView，明確指定 vertical + singleColumn=true，
+    // 建構 FoliateEpubReaderView，明確指定 vertical + columnMode=ColumnMode.single，
     // 繞過 ReaderScreen 的完整開書流程以直接驗證 FoliateEpubReaderView 本身
     // 的翻頁行為。使用 onPageRendered 等待原生 PlatformView 載入完成
     // （reader_loading_indicator 只在 ReaderScreen 中存在）。
@@ -131,7 +131,7 @@ void main() {
     }
 
     // 核心驗證：pageIndex 嚴格遞增。
-    // 若 main.js:120-124 的 singleColumn 分支被移除（bug 未修復），
+    // 若 main.js:122-124 的 columnMode==='single' 分支被移除（bug 未修復），
     // 部分直排 EPUB 會被 paginator.js 判斷為「兩欄」，導致同一個
     // 頁碼要翻兩次才變化——此時連續 5 次 nextPage() 會產生重複的
     // pageIndex 值，此斷言會失敗。
@@ -186,7 +186,7 @@ void main() {
       lastReadTime: DateTime.now(),
     ));
 
-    // 預先寫入 singleColumn=true 的單書偏好。
+    // 預先寫入 columnMode=ColumnMode.single 的單書偏好。
     await prefsManager.saveBookPrefs(
       'b_single_column_on_integration',
       const BookReaderPrefs(columnMode: ColumnMode.single),
@@ -215,11 +215,15 @@ void main() {
     await tester.tap(find.byKey(const Key('reader_layout_settings_button')));
     await tester.pumpAndSettle();
 
-    // 確認單欄按鈕反映為選取（color == primary 表示選中）
-    final singleBtn = tester.widget<IconButton>(
-        find.byKey(const Key('reader_settings_column_mode_single')));
-    expect(singleBtn.color, isNotNull,
-        reason: '已持久化 columnMode=single 時單欄按鈕應為選取狀態（有 color）');
+    // 確認單欄按鈕反映為選取（color 精確等於主題 primary 色，比照
+    // ReaderSettingsSheet._buildColumnModeRow() 的
+    // `color: selected ? Theme.of(context).colorScheme.primary : null`
+    // 既有寫法，不只驗證「非 null」這種較弱的斷言）。
+    final singleBtnFinder = find.byKey(const Key('reader_settings_column_mode_single'));
+    final singleBtn = tester.widget<IconButton>(singleBtnFinder);
+    final primaryColor = Theme.of(tester.element(singleBtnFinder)).colorScheme.primary;
+    expect(singleBtn.color, primaryColor,
+        reason: '已持久化 columnMode=single 時單欄按鈕應反映為選取狀態（color 等於主題 primary 色）');
 
     // 確認自動按鈕未選取（color 應為 null）
     final autoBtn = tester.widget<IconButton>(
