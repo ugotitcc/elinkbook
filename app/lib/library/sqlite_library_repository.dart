@@ -27,7 +27,7 @@ class SqliteLibraryRepository implements LibraryRepository {
   static Future<SqliteLibraryRepository> open(String path) async {
     final db = await openDatabase(
       path,
-      version: 12,
+      version: 13,
       onConfigure: (db) async {
         // book_reader_prefs 的 ON DELETE CASCADE 需要外鍵約束真正生效，
         // SQLite 預設不強制外鍵，須逐連線手動開啟（見 epic-3 plan-issue-1）。
@@ -105,6 +105,13 @@ class SqliteLibraryRepository implements LibraryRepository {
             // ALTER TABLE，oldVersion == 1 的裝置會對剛建好、已有該欄位的
             // 表重複 ALTER TABLE，拋出 duplicate column name 例外。
             await _addSingleColumnColumn(db);
+          }
+          if (oldVersion < 13) {
+            // epic-18-reader-device-qa Issue 6：欄數/欄位大小新增的 2 個欄位。
+            // 必須放在 else 分支內（oldVersion >= 2）——理由同 _addSingleColumnColumn：
+            // oldVersion < 2 時 _createBookReaderPrefsTable 已一步到位建表含 column_mode/column_size，
+            // 若在 else 分支外無條件執行 ALTER TABLE，oldVersion == 1 的裝置會重複 ALTER TABLE 拋出崩潰。
+            await _addColumnModeColumns(db);
           }
         }
         if (oldVersion < 5) {
@@ -195,7 +202,8 @@ class SqliteLibraryRepository implements LibraryRepository {
         dual_page_direction TEXT,
         show_header INTEGER,
         show_footer INTEGER,
-        single_column INTEGER
+        column_mode TEXT,
+        column_size REAL
       )
     ''');
   }
@@ -354,6 +362,23 @@ class SqliteLibraryRepository implements LibraryRepository {
     if (tables.isNotEmpty) {
       await db.execute(
           'ALTER TABLE book_reader_prefs ADD COLUMN single_column INTEGER');
+    }
+  }
+
+  static Future<void> _addColumnModeColumns(Database db) async {
+    // epic-18-reader-device-qa Issue 6：欄數/欄位大小新增的 2 個欄位，
+    // 補追加到既有（version 2 起已存在）的 book_reader_prefs 表。
+    // issues.md 明確要求：既有 single_column 欄位所有值遷移為 NULL（等同自動）。
+    // 比照 _addHeaderFooterColumns 既有慣例，僅在表已存在時才執行 ALTER TABLE。
+    final tables = await db.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='book_reader_prefs'");
+    if (tables.isNotEmpty) {
+      await db.execute(
+          'ALTER TABLE book_reader_prefs ADD COLUMN column_mode TEXT');
+      await db.execute(
+          'ALTER TABLE book_reader_prefs ADD COLUMN column_size REAL');
+      // issues.md 明確要求：既有 single_column 欄位所有值遷移為 NULL（等同自動）
+      await db.execute('UPDATE book_reader_prefs SET single_column = NULL');
     }
   }
 
