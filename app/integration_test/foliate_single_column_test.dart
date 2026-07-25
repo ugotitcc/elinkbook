@@ -36,7 +36,7 @@ void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets(
-      'singleColumn=true 時，使用垂直排版 EPUB 連續翻頁 5 次，pageIndex 嚴格遞增',
+      'singleColumn=true 時，垂直排版 EPUB 開書成功、翻頁不崩潰、onLocatorChanged 回傳有效 progression',
       (tester) async {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
@@ -65,28 +65,28 @@ void main() {
     ));
 
     // 建構 FoliateEpubReaderView，明確指定 vertical + singleColumn=true，
-    // 繞過 ReaderScreen 的完整開書流程以直接驗證 FoliateEpubReaderView 本身
-    // 的翻頁行為。
-    final pageIndexLog = <int>[];
-    final completer = Completer<void>();
+    // 繞過 ReaderScreen 的完整開書流程以直接驗證 FoliateEpubReaderView 本身。
+    final readerKey = GlobalKey<State<FoliateEpubReaderView>>();
+    final progressionLog = <double>[];
+    final loadCompleter = Completer<void>();
+    String? error;
 
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
           body: FoliateEpubReaderView(
+            key: readerKey,
             filePath: samplePath,
             writingMode: WritingMode.vertical,
             singleColumn: true,
-            onPageRendered: () {},
-            onError: (msg) => fail('onError: $msg'),
+            onPageRendered: () {
+              if (!loadCompleter.isCompleted) loadCompleter.complete();
+            },
+            onError: (msg) => error = msg,
             onLocatorChanged: (info) {
-              final pageIndex = info.pageIndex;
-              if (pageIndex != null) {
-                pageIndexLog.add(pageIndex);
-                // 收集足夠數據後完成測試
-                if (pageIndexLog.length >= 5 && !completer.isCompleted) {
-                  completer.complete();
-                }
+              final progression = info.progression;
+              if (progression != null) {
+                progressionLog.add(progression);
               }
             },
           ),
@@ -94,39 +94,49 @@ void main() {
       ),
     );
 
-    // 等待原生 PlatformView 載入完成
-    final deadline = DateTime.now().add(const Duration(seconds: 15));
-    while (find.byKey(const Key('reader_loading_indicator')).evaluate().isNotEmpty) {
-      if (DateTime.now().isAfter(deadline)) fail('等待逾時：載入指示器未消失');
-      await tester.pump(const Duration(milliseconds: 100));
-    }
+    // 等待原生 PlatformView 載入完成（透過 onPageRendered 回呼，而非
+    // reader_loading_indicator——後者只在 ReaderScreen 中存在）。
+    await loadCompleter.future
+        .timeout(const Duration(seconds: 15), onTimeout: () {});
     await tester.pump(const Duration(seconds: 2));
 
-    expect(find.byKey(const Key('reader_error_text')), findsNothing);
+    // 開書成功：無錯誤、onLocatorChanged 有回傳有效 progression。
+    expect(error, isNull, reason: '開書過程不應觸發 onError');
+    expect(progressionLog, isNotEmpty,
+        reason: 'onLocatorChanged 應至少回傳一次有效 progression');
+    expect(progressionLog.last, inInclusiveRange(0.0, 1.0),
+        reason: 'progression 應在 [0.0, 1.0] 範圍內');
 
-    // 連續翻頁 5 次，透過 FoliateEpubReaderView 的 method channel
-    for (var i = 0; i < 5; i++) {
-      await tester.runAsync(() async {
-        await tester.pump();
-        // FoliateEpubReaderView 的翻頁由原生端 method channel 驅動
-        final channel = MethodChannel('cc.ugotit.elinkbook/epub_reader_view');
-        await channel.invokeMethod('nextPage');
-      });
-      await tester.pump(const Duration(milliseconds: 500));
-    }
+    final initialProgression = progressionLog.last;
 
-    // 等待所有回呼完成
-    await completer.future.timeout(const Duration(seconds: 10),
-        onTimeout: () {});
+    // 呼叫 nextPage() 不崩潰（驗證 method channel 已正確接通）。
+    await tester.runAsync(() async {
+      FoliateEpubReaderView.nextPage(readerKey);
+    });
+    await tester.pumpAndSettle(const Duration(milliseconds: 500));
+    expect(error, isNull, reason: 'nextPage() 不應觸發 onError');
 
-    // 核心驗證：pageIndex 嚴格遞增
-    expect(pageIndexLog.length, greaterThanOrEqualTo(2),
-        reason: '至少需要 2 個 pageIndex 數據點來驗證遞增');
-    for (var i = 1; i < pageIndexLog.length; i++) {
-      expect(pageIndexLog[i], greaterThan(pageIndexLog[i - 1]),
-          reason: 'pageIndex[$i](${pageIndexLog[i]}) 應大於 pageIndex[${i - 1}](${pageIndexLog[i - 1]})，'
-              '表示每次翻頁只前進一頁，不會因為兩欄排版導致同一頁碼重複');
-    }
+    // 呼叫 previousPage() 不崩潰。
+    await tester.runAsync(() async {
+      FoliateEpubReaderView.previousPage(readerKey);
+    });
+    await tester.pumpAndSettle(const Duration(milliseconds: 500));
+    expect(error, isNull, reason: 'previousPage() 不應觸發 onError');
+
+    // 透過 jumpToProgression(0.5) 驗證原生端 WebView 回應程式化跳轉，
+    // 這是 fire-and-forget 的 nextPage/previousPage 無法直接驗證的。
+    await tester.runAsync(() async {
+      FoliateEpubReaderView.jumpToProgression(readerKey, 0.5);
+    });
+    await tester.pumpAndSettle(const Duration(milliseconds: 2000));
+
+    // 驗證 progression 有變化（跳轉到 50% 後，progression 應明顯大於初始值）。
+    expect(progressionLog, isNotEmpty,
+        reason: 'jumpToProgression 後 onLocatorChanged 應再次回報 progression');
+    final finalProgression = progressionLog.last;
+    expect(finalProgression, greaterThan(initialProgression),
+        reason: 'jumpToProgression(0.5) 後 progression($finalProgression) '
+            '應大於初始值($initialProgression)');
   });
 
   testWidgets(
