@@ -1655,6 +1655,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             textAlign: resolved.textAlign,
             publisherStyles: resolved.publisherStyles,
             singleColumn: resolved.singleColumn,
+            showFooter: resolved.showFooter,
             navZoneActions: resolved.navZoneActions,
             onZoneAction: _handleZoneAction,
             showNavZoneDebugOverlay: resolved.showNavZoneDebugOverlay,

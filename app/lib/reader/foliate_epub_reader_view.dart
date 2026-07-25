@@ -60,6 +60,17 @@ class FoliateEpubReaderView extends StatefulWidget {
   /// 在直排時傳入。
   final bool? singleColumn;
 
+  /// 頁尾（`ReaderFooter`）目前是否顯示（epic-18-reader-device-qa
+  /// Issue 4）：`null`＝未知（`main.js` 視同已顯示，見該檔案對應邏輯的
+  /// `prefs.showFooter === false` 判斷式），非 null 時供直排上下邊距
+  /// 計算使用——頁尾顯示時（in-flow，已經壓縮過 WebView 可視高度一次）
+  /// 只需要小幅下邊距，頁尾隱藏時則需要較大下邊距避免文字貼齊螢幕底緣。
+  /// 與其餘偏好欄位不同，這個值本身不是使用者可覆寫的「偏好」，而是
+  /// `ReaderScreen` 已解析的 `ResolvedPreferences.showFooter`（非 nullable
+  /// `bool`）原樣透傳，型別維持 `bool?` 只是為了沿用既有「未傳入時 map
+  /// 省略此 key」的既有 pass-through 慣例（見 Global Constraints）。
+  final bool? showFooter;
+
   /// 3×3 導航熱區的動作對照表（epic-17-epub-render-migration Issue 5，
   /// 對稱 epic-7-interaction 為 EpubReaderView FXL 分支建立的既有模式，
   /// 見 zone_hit_test.dart 索引慣例：0-indexed、列優先）。與
@@ -114,6 +125,7 @@ class FoliateEpubReaderView extends StatefulWidget {
     this.textAlign,
     this.publisherStyles,
     this.singleColumn,
+    this.showFooter,
     this.navZoneActions = const [
       ZoneAction.none, ZoneAction.none, ZoneAction.none,
       ZoneAction.none, ZoneAction.none, ZoneAction.none,
@@ -249,7 +261,8 @@ class _FoliateEpubReaderViewState extends State<FoliateEpubReaderView> {
         widget.pageMargins != oldWidget.pageMargins ||
         widget.textAlign != oldWidget.textAlign ||
         widget.publisherStyles != oldWidget.publisherStyles ||
-        widget.singleColumn != oldWidget.singleColumn;
+        widget.singleColumn != oldWidget.singleColumn ||
+        widget.showFooter != oldWidget.showFooter;
   }
 
   /// 把目前所有非 null 的偏好參數組成一個 map，key 名稱與原生端契約一致
@@ -282,6 +295,9 @@ class _FoliateEpubReaderViewState extends State<FoliateEpubReaderView> {
     }
     if (widget.singleColumn != null) {
       map['singleColumn'] = widget.singleColumn;
+    }
+    if (widget.showFooter != null) {
+      map['showFooter'] = widget.showFooter;
     }
     return map;
   }
