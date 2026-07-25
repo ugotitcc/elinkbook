@@ -292,4 +292,49 @@ void main() {
     expect(updated.showHeader, isTrue);
     expect(updated.showFooter, isFalse);
   });
+
+  test('singleColumn 欄位 BookReaderPrefs.empty 為 null（未覆寫，交由 foliate-js 內建 --_max-column-count 自動判斷）',
+      () {
+    const prefs = BookReaderPrefs.empty;
+    expect(prefs.singleColumn, isNull);
+  });
+
+  test('singleColumn 欄位值完全相同的 BookReaderPrefs 視為相等', () {
+    const a = BookReaderPrefs(singleColumn: true);
+    const b = BookReaderPrefs(singleColumn: true);
+    expect(a, b);
+    expect(a.hashCode, b.hashCode);
+  });
+
+  test('singleColumn 欄位不同時視為不相等', () {
+    const a = BookReaderPrefs(singleColumn: true);
+    const b = BookReaderPrefs(singleColumn: false);
+    expect(a, isNot(b));
+  });
+
+  test('singleColumn 為 true／false／null 皆正確 toMap／fromMap round-trip（避免布林值 0/1 轉換錯誤）',
+      () {
+    const withTrue = BookReaderPrefs(singleColumn: true);
+    final trueMap = withTrue.toMap('book-13');
+    expect(trueMap['single_column'], 1);
+    expect(BookReaderPrefs.fromMap(trueMap).singleColumn, isTrue);
+
+    const withFalse = BookReaderPrefs(singleColumn: false);
+    final falseMap = withFalse.toMap('book-14');
+    expect(falseMap['single_column'], 0);
+    expect(BookReaderPrefs.fromMap(falseMap).singleColumn, isFalse);
+
+    const withNull = BookReaderPrefs.empty;
+    final nullMap = withNull.toMap('book-15');
+    expect(nullMap['single_column'], isNull);
+    expect(BookReaderPrefs.fromMap(nullMap).singleColumn, isNull);
+  });
+
+  test('copyWith 更新 singleColumn 時，其餘欄位保留原值', () {
+    const original = BookReaderPrefs(fontSize: 18, singleColumn: false);
+    final updated = original.copyWith(singleColumn: true);
+
+    expect(updated.fontSize, 18);
+    expect(updated.singleColumn, isTrue);
+  });
 }

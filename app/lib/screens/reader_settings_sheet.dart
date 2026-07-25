@@ -55,6 +55,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   late ScreenOrientationSetting? _screenOrientationOverride;
   late bool _showHeader;
   late bool _showFooter;
+  late bool _singleColumn;
 
   @override
   void initState() {
@@ -78,6 +79,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     _screenOrientationOverride = widget.prefs.screenOrientationOverride;
     _showHeader = widget.prefs.showHeader ?? true;
     _showFooter = widget.prefs.showFooter ?? true;
+    _singleColumn = widget.prefs.singleColumn ?? false;
   }
 
   @override
@@ -104,6 +106,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
         _screenOrientationOverride = widget.prefs.screenOrientationOverride;
         _showHeader = widget.prefs.showHeader ?? true;
         _showFooter = widget.prefs.showFooter ?? true;
+        _singleColumn = widget.prefs.singleColumn ?? false;
       });
     }
   }
@@ -127,6 +130,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
       screenOrientationOverride: _screenOrientationOverride,
       showHeader: _showHeader,
       showFooter: _showFooter,
+      singleColumn: _singleColumn,
     ));
   }
 
@@ -253,6 +257,15 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                   value: _showFooter,
                   onChanged: (v) => setState(() {
                     _showFooter = v;
+                    _notifyChanged();
+                  }),
+                ),
+                SwitchListTile(
+                  key: const Key('reader_settings_single_column'),
+                  title: const Text('強制單欄（直排）'),
+                  value: _singleColumn,
+                  onChanged: (v) => setState(() {
+                    _singleColumn = v;
                     _notifyChanged();
                   }),
                 ),

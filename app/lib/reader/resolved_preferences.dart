@@ -34,6 +34,11 @@ class ResolvedPreferences {
   final EpubTextAlign? textAlign;
   final bool? publisherStyles;
 
+  /// 強制單欄版面偏好（epic-18-reader-device-qa Issue 5）：與 EPUB 字型/
+  /// 排版欄位同組 pass-through 語意（見類別頂端文件），無既存安全預設值，
+  /// `null` 原樣透傳給 [FoliateEpubReaderView]。
+  final bool? singleColumn;
+
   final PageTurnMode pageTurnMode;
   final ScreenOrientationSetting screenOrientation;
 
@@ -66,6 +71,7 @@ class ResolvedPreferences {
     this.pageMargins,
     this.textAlign,
     this.publisherStyles,
+    this.singleColumn,
     required this.pageTurnMode,
     required this.screenOrientation,
     required this.pdfFitMode,

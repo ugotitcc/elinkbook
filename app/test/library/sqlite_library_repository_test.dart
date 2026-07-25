@@ -1495,6 +1495,132 @@ void main() {
     expect(updated.single.isFixedLayout, isFalse);
   });
 
+  test('全新安裝的 book_reader_prefs 表包含 single_column 欄位（version 12 起 onCreate 已含括）',
+      () async {
+    await repository.insertBook(_book('b_single_column'));
+    await repository.database.insert('book_reader_prefs', {
+      'book_id': 'b_single_column',
+      'single_column': 1,
+    });
+
+    final row = (await repository.database.query('book_reader_prefs',
+            where: 'book_id = ?', whereArgs: ['b_single_column']))
+        .single;
+    expect(row['single_column'], 1);
+  });
+
+  test('既有 version 11 裝置升級到 version 12，book_reader_prefs 表正確補上 single_column 欄位（ALTER TABLE 路徑）',
+      () async {
+    final tempDir = await Directory.systemTemp
+        .createTemp('elinkbook_migration_v11_to_v12_test');
+    addTearDown(() => tempDir.delete(recursive: true));
+    final dbPath = p.join(tempDir.path, 'test.db');
+
+    // 模擬「已存在於 version 11」的舊資料庫：手動以 version 11 當時的完整
+    // schema（books 表含 is_fixed_layout；book_reader_prefs 表不含
+    // single_column）建立，不透過 SqliteLibraryRepository.open()（該方法
+    // 目前的 onCreate 已經是 version 12 的最終 schema，無法用來重現「舊
+    // 裝置」情境），比照既有 v10→v11 遷移測試寫法。
+    final oldDb = await databaseFactory.openDatabase(
+      dbPath,
+      options: OpenDatabaseOptions(
+        version: 11,
+        onConfigure: (db) async {
+          await db.execute('PRAGMA foreign_keys = ON');
+        },
+        onCreate: (db, version) async {
+          await db.execute('CREATE TABLE groups (name TEXT PRIMARY KEY)');
+          await db.insert('groups', {'name': '未分類'});
+          await db.execute('''
+            CREATE TABLE books (
+              id TEXT PRIMARY KEY,
+              title TEXT NOT NULL,
+              author TEXT,
+              format TEXT NOT NULL,
+              filePath TEXT NOT NULL,
+              source TEXT NOT NULL,
+              coverPath TEXT,
+              progress REAL NOT NULL DEFAULT 0,
+              epubLocator TEXT,
+              pdfPageIndex INTEGER,
+              totalCharacterCount INTEGER,
+              is_fixed_layout INTEGER,
+              groupName TEXT NOT NULL DEFAULT '未分類',
+              createTime INTEGER NOT NULL,
+              lastReadTime INTEGER NOT NULL
+            )
+          ''');
+          await db.execute('''
+            CREATE TABLE book_reader_prefs (
+              book_id TEXT PRIMARY KEY REFERENCES books(id) ON DELETE CASCADE,
+              font_family TEXT,
+              font_size REAL,
+              font_weight REAL,
+              line_height REAL,
+              paragraph_spacing REAL,
+              page_margins REAL,
+              text_align TEXT,
+              publisher_styles INTEGER,
+              writing_mode_override TEXT,
+              page_turn_mode_override TEXT,
+              screen_orientation_override TEXT,
+              pdf_fit_mode TEXT,
+              pdf_contrast REAL,
+              pdf_brightness REAL,
+              pdf_bold_strength REAL,
+              pdf_crop_mode TEXT,
+              pdf_crop_rect TEXT,
+              dual_page_mode TEXT,
+              dual_page_cover_alone INTEGER,
+              dual_page_direction TEXT,
+              show_header INTEGER,
+              show_footer INTEGER
+            )
+          ''');
+        },
+      ),
+    );
+    await oldDb.insert('books', {
+      'id': 'b1',
+      'title': '既有書籍',
+      'format': 'epub',
+      'filePath': 'content://example/b1',
+      'source': 'local',
+      'progress': 0.0,
+      'groupName': '未分類',
+      'createTime': 1000,
+      'lastReadTime': 1000,
+    });
+    await oldDb.insert('book_reader_prefs', {
+      'book_id': 'b1',
+      'font_size': 18.0,
+    });
+    await oldDb.close();
+
+    // 重新以目前版本開啟同一個檔案，觸發 onUpgrade（oldVersion=11 →
+    // newVersion=12），驗證既有資料不受影響、新欄位存在且預設 NULL、且可寫入。
+    final upgraded = await SqliteLibraryRepository.open(dbPath);
+    addTearDown(() => upgraded.close());
+
+    final row = (await upgraded.database
+            .query('book_reader_prefs', where: 'book_id = ?', whereArgs: ['b1']))
+        .single;
+    expect(row['font_size'], 18.0); // 既有資料不受影響
+    expect(row['single_column'], isNull); // 新欄位存在且預設 NULL
+
+    // 證明欄位真的可寫入（不只是巧合為 null），確認 ALTER TABLE 確實生效。
+    await upgraded.database.update(
+      'book_reader_prefs',
+      {'single_column': 1},
+      where: 'book_id = ?',
+      whereArgs: ['b1'],
+    );
+    final updated = (await upgraded.database
+            .query('book_reader_prefs', where: 'book_id = ?', whereArgs: ['b1']))
+        .single;
+    expect(updated['single_column'], 1);
+  });
+
   group('detectAndCacheEpubLayout', () {
     const channel = MethodChannel('elinkbook/book_metadata');
 

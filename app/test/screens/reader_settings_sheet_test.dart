@@ -434,6 +434,72 @@ void main() {
     expect(result!.showHeader, isTrue);
   });
 
+  testWidgets('開啟強制單欄開關後，onChanged 帶入 singleColumn=true',
+      (tester) async {
+    BookReaderPrefs? result;
+    await _pumpSheet(tester, BookReaderPrefs.empty, (prefs) => result = prefs);
+
+    await tester.tap(find.byKey(const Key('reader_settings_single_column')));
+    await tester.pump();
+
+    expect(result, isNotNull);
+    expect(result!.singleColumn, isTrue);
+  });
+
+  testWidgets('切換強制單欄開關不會清空其他既有覆寫欄位（回歸檢查）', (tester) async {
+    BookReaderPrefs? result;
+    await _pumpSheet(
+      tester,
+      const BookReaderPrefs(
+        writingModeOverride: WritingMode.vertical,
+        pageTurnModeOverride: PageTurnMode.scroll,
+      ),
+      (prefs) => result = prefs,
+    );
+
+    await tester.tap(find.byKey(const Key('reader_settings_single_column')));
+    await tester.pump();
+
+    expect(result, isNotNull);
+    expect(result!.writingModeOverride, WritingMode.vertical);
+    expect(result!.pageTurnModeOverride, PageTurnMode.scroll);
+  });
+
+  testWidgets('singleColumn=null 時，開關初始值為關閉', (tester) async {
+    await _pumpSheet(tester, BookReaderPrefs.empty, (_) {});
+
+    final switchTile = tester.widget<SwitchListTile>(
+        find.byKey(const Key('reader_settings_single_column')));
+    expect(switchTile.value, isFalse);
+  });
+
+  testWidgets('singleColumn=true 時，開關初始值為開啟', (tester) async {
+    await _pumpSheet(
+      tester,
+      const BookReaderPrefs(singleColumn: true),
+      (_) {},
+    );
+
+    final switchTile = tester.widget<SwitchListTile>(
+        find.byKey(const Key('reader_settings_single_column')));
+    expect(switchTile.value, isTrue);
+  });
+
+  testWidgets('強制單欄開關先開啟再關閉，onChanged 帶入 singleColumn=false（可逆性）', (tester) async {
+    BookReaderPrefs? result;
+    await _pumpSheet(tester, BookReaderPrefs.empty, (prefs) => result = prefs);
+
+    // 開啟
+    await tester.tap(find.byKey(const Key('reader_settings_single_column')));
+    await tester.pump();
+    expect(result!.singleColumn, isTrue);
+
+    // 關閉
+    await tester.tap(find.byKey(const Key('reader_settings_single_column')));
+    await tester.pump();
+    expect(result!.singleColumn, isFalse);
+  });
+
   testWidgets('切換頁首/頁尾開關不會清空其他既有覆寫欄位（回歸檢查）', (tester) async {
     BookReaderPrefs? result;
     await _pumpSheet(

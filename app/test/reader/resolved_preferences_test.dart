@@ -21,6 +21,7 @@ void main() {
       pageMargins: null,
       textAlign: null,
       publisherStyles: null,
+      singleColumn: null,
       pageTurnMode: PageTurnMode.paginated,
       screenOrientation: ScreenOrientationSetting.auto,
       pdfFitMode: PdfFitMode.pageFit,
@@ -40,6 +41,7 @@ void main() {
 
     expect(resolved.fontSize, isNull);
     expect(resolved.textAlign, isNull);
+    expect(resolved.singleColumn, isNull);
     expect(resolved.pageTurnMode, PageTurnMode.paginated);
     expect(resolved.pdfFitMode, PdfFitMode.pageFit);
     expect(resolved.dualPageMode, DualPageMode.auto);

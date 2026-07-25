@@ -232,9 +232,13 @@ void main() {
     await tester.tap(find.byKey(const Key('reader_settings_writing_mode_vertical')));
     await tester.pumpAndSettle();
 
+    await tester.tap(find.byKey(const Key('reader_settings_single_column')));
+    await tester.pumpAndSettle();
+
     final updatedView =
         tester.widget<FoliateEpubReaderView>(find.byType(FoliateEpubReaderView));
     expect(updatedView.writingMode, WritingMode.vertical);
+    expect(updatedView.singleColumn, isTrue);
   });
 
   testWidgets(
