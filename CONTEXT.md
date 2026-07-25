@@ -95,3 +95,12 @@ _Avoid_: 熱區行為
 **沉浸模式（Immersive Mode）**：
 熱區「選單」動作觸發的介面顯示/隱藏切換：EPUB 流式與 PDF 隱藏 Scaffold AppBar ＋ `ReaderFooter`；EPUB FXL 沿用既有懸浮控制項（返回/設定/書籤/筆記按鈕）顯示/隱藏。翻頁動作（上一頁/下一頁）不影響此顯示狀態，僅選單格可切換（與 FXL 舊行為「換頁一律強制收起」不同，是刻意的行為變更）。
 _Avoid_: 全螢幕模式（與 FR-42「固定版面全螢幕顯示開關」是不同概念，那個是 `epic-14-system-settings` 的獨立設定項）
+
+**欄數（Column Mode）**：
+流式 EPUB 專屬的分欄控制，三態互斥：自動（由 `paginator.js` 依欄位大小閾值自由決定，可能 1/2/3 欄）、單欄（強制單欄，不論裝置尺寸或排版方向）、雙欄（硬限最多 2 欄）。單書持久化於 `book_reader_prefs`。取代 Epic 18 Issue 5 原有的 `singleColumn` 布林開關（該開關因 `paginator.js` 對直排書籍的 `maxColumnCount + 1` 邏輯，在多數裝置上是 no-op，見 ADR 0012）。固定版面 EPUB 和 PDF 不適用（兩者有各自獨立的「雙頁模式」概念）。
+_Avoid_: 強制單欄、分欄偏好、Column Layout
+
+**欄位大小（Column Size）**：
+流式 EPUB 專屬的單欄最大寬度（橫排）或最大高度（直排）閾值，對應 `paginator.js` 的 `--_max-inline-size` CSS 自訂屬性。超過此值時 paginator 開始考慮分欄。單書持久化於 `book_reader_prefs`，僅在「欄數」為「自動」時生效（「單欄」和「雙欄」模式下由系統自動覆蓋）。預設 720px，可調範圍 360–1440px，步進 60px。
+_Avoid_: 欄數切換閾值、maxInlineSize（使用者不懂的技術名稱）
+

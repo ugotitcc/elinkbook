@@ -141,52 +141,73 @@
 
 ---
 
-## Issue 6：調查——「強制單欄」偏好在常見裝置幾何尺寸下可能無法真正生效（Issue 5 衍生追蹤項目）
+## Issue 6：流式 EPUB「欄數」三態控制 +「欄位大小」閾值（取代 Issue 5 的 `singleColumn`）
 
-**Status:** `needs-triage`
+**Status:** `ready-for-agent`
 
-**依賴：** Issue 5（`singleColumn` 機制已實作；本項是該實作在真機驗證過程中意外發現的疑慮，**不阻擋** Issue 5 既有六層透傳機制／UI 開關本身合併，僅追蹤「這個偏好在特定裝置幾何下是否真的解決了使用者回報的症狀」這個獨立的產品層級問題）
+**依賴：** 無（Issue 5 的 `singleColumn` 六層透傳機制已合併至 `main`，本 Issue 在其基礎上重新設計並取代）
 
 **背景：**
 
-Issue 5 為直排 EPUB 新增「強制單欄」偏好，機制是透過 `main.js` 呼叫 `view.renderer.setAttribute('max-column-count', singleColumn ? '1' : '2')`，把值寫入 `readest/foliate-js` `paginator.js` 的 `--_max-column-count` CSS 自訂屬性。在 Issue 5 的 code review 第三輪（`tmp/epic-18/reviews/review-issue-5-round3.md`）中，審查者以真機 mutation test（裝置 `3CEF42ECD491687`：先跑一次 fix 生效版本，再暫時把 `main.js` 的 `singleColumn` 分支整段移除模擬「bug 未修復」重跑一次，比對兩次的原始事件序列）驗證「整合測試是否真的能偵測到 bug」時發現：無論 `singleColumn` 開啟或維持未修復狀態，實際算出的欄數（`divisor`）皆相同（都是 2），代表這個開關在該裝置上**對直排書籍完全沒有產生任何可觀察差異**。
+Issue 5 的 `singleColumn` 布林開關因 `paginator.js` 對直排書籍的 `maxColumnCount + 1` 邏輯（`paginator.js:1820`），在多數裝置上是 no-op（見 ADR 0012）。此外，大螢幕裝置（如 AiPaper Reader C，~1758dp）上使用者實際遇到了三欄排版問題。本 Issue 將 `singleColumn` 布林升級為「欄數（Column Mode）」三態選擇 +「欄位大小（Column Size）」閾值滑桿，核心機制改為透過 `setAttribute('max-inline-size', ...)` 控制分欄閾值。
 
-**根因（已查證，見 `paginator.js:1817-1822` `#beforeRender()`）：**
+**設計決策（經 grilling session 確認，見 ADR 0012）：**
 
-```js
-const divisor = flow === 'scrolled'
-    ? 1
-    : Math.min(
-        maxColumnCount + (vertical ? 1 : 0),
-        Math.ceil(Math.floor(hostSize) / Math.floor(maxInlineSize)),
-    )
-```
+### 三態行為
 
-直排書籍（`vertical === true`）會在 `maxColumnCount` 上無條件 `+1`（此行為屬於 vendored、釘定版本的 `readest/foliate-js` 既有邏輯，非本專案程式碼，Epic 18 依既有決策不修改 vendored 檔案）。`maxInlineSize` 固定為 `720`（CSS px，`paginator.js` 內建常數）。因此：
-
-- `singleColumn=true`（`maxColumnCount=1`）：`divisor = min(1+1, ceil(hostSize/720)) = min(2, ceil(hostSize/720))`
-- `singleColumn=false`/未設定（`maxColumnCount=2`）：`divisor = min(2+1, ceil(hostSize/720)) = min(3, ceil(hostSize/720))`
-
-這兩者只有在 `ceil(hostSize/720) >= 3`（即 `hostSize > 1440` CSS px）時才會算出不同的 `divisor`。`hostSize` 是直排書籍可視區域的實際渲染高度。
-
-**已知裝置數據：**
-
-| 裝置 | 螢幕解析度／密度 | 換算高度（dp／CSS px 近似值） | `singleColumn` 是否有效差異 |
+| 模式 | `max-inline-size` 行為 | `max-column-count` 行為 | 滑桿狀態 |
 |---|---|---|---|
-| `3CEF42ECD491687`（9491G，Android 15，本專案既有測試裝置） | 1600×2400 physical @ 320dpi（`adb shell wm size`／`wm density` 實測） | 2400 / (320/160) = **1200dp**，已是整台裝置螢幕高度上限 | 否——低於 1440 門檻，`divisor` 兩種狀態皆為 2（已用 mutation test 實測確認，逐值相同） |
-| AiPaper Reader C（`design.md` 使用者原始回報項目 8 的問題裝置） | 824×1648／150 PPI | 1648 / (150/160) ≈ **1758dp**（公式推算，**尚未在該裝置實機驗證**） | 理論上有差異，但只從 3 欄降到 2 欄（`min(2,3)=2` vs `min(3,3)=3`），並非真正的「單欄」 |
+| **單欄** | 設為極大值（如 `99999`）→ 強制 `divisor = 1` | 不設定（保留預設） | 隱藏/停用 |
+| **自動** | 使用「欄位大小」滑桿值（預設 720px） | 不設定（保留預設） | 顯示且可調 |
+| **雙欄** | JS 端動態計算，保證 `ceil(hostSize / maxInlineSize) <= 2` | 不設定（保留預設） | 隱藏/停用 |
 
-**待調查/待確認事項：**
+### 滑桿參數
 
-1. **在原始回報問題的裝置（或其他真實使用者裝置尺寸）上實機驗證**：`singleColumn=true` 開啟後，直排書籍的實際欄數是否真的從「使用者回報的兩欄拆分症狀」變成單欄，還是像公式推算的一樣只降到 2 欄（症狀部分緩解、但未完全消除）。需要在 AiPaper Reader C 或等效尺寸裝置上實機測試，比對 `tmp/issues/2-1.png`／`2-2.png`／`3.png` 參考截圖的實際呈現效果。
-2. **是否需要重新設計「強制單欄」的實作機制**：若確認在常見裝置尺寸（包含 Issue 5 驗收標準指定的 `3CEF42ECD491687`）上此偏好是 no-op，需要評估是否有其他方式能繞過 `paginator.js` 對直排書籍的 `+1` 邏輯（例如：是否有其他 `observedAttributes` 可用、是否需要透過 CSS 直接覆蓋 `--_max-column-count-spread`／`--_max-column-count-portrait` 而非只設定 `--_max-column-count` 本身、或需要向上游 `readest/foliate-js` 回報這個行為）。
-3. **Issue 5 的真機驗收（`plan-issue-5.md` Task 7）是否已經涵蓋這個情境**：若 Task 7 的真機驗收是在 `3CEF42ECD491687` 上進行，依本項發現，該次驗收記錄需要重新檢視——應改用已知會被拆成兩欄的書籍在 `3CEF42ECD491687` 上仔細比對開關開/關的實際視覺差異，而非僅信任先前的驗收記錄（該裝置幾何下開關理論上不應有任何視覺差異）。
-4. **`integration_test/foliate_single_column_test.dart` 目前的測試缺口**：Issue 5 的核心症狀回歸測試（`pageIndex` 嚴格遞增）目前在 `3CEF42ECD491687` 上對此 mutation 無偵測力，根因就是本項調查的問題（開關本身在此裝置幾何下是 no-op，而非測試斷言邏輯的問題）。若本項調查確認需要調整實作機制，該測試屆時應一併修正；若調查結論是「此裝置幾何本來就不該預期有效果，這是產品層級的已知限制」，則測試需要改用其他裝置幾何、或改用直接讀取欄數的方式（見 `review-issue-5-round3.md` Critical #1 建議的方案 (a)：透過 `evaluateJavascript` 讀取渲染後的 `--_column-count` 計算值）才能有意義。
+- 範圍：360–1440px
+- 步進：60px
+- 預設：720px（與 `paginator.js` 內建 `--_max-inline-size` 一致）
+- UI 標籤：「欄位大小」，顯示目前數值（如「欄位大小 720px」）
+
+### 適用範圍
+
+僅限流式 EPUB（`ReaderSettingsSheet`）。固定版面 EPUB 和 PDF 不受影響（兩者有各自獨立的「雙頁模式」概念）。
+
+### 資料層變更
+
+- **`BookReaderPrefs`**：移除 `singleColumn: bool?`，新增 `columnMode: ColumnMode?`（enum: `auto`, `single`, `double`）和 `columnSize: double?`
+- **SQLite migration v12 → v13**：新增 `column_mode TEXT`（nullable）和 `column_size REAL`（nullable），既有 `single_column` 欄位所有值遷移為 `NULL`（等同自動）
+- **`FoliateEpubReaderView`**：`singleColumn: bool?` 替換為 `columnMode: ColumnMode?` + `columnSize: double?`，`_buildPreferencesMap()` 和 `_preferencesChanged()` 同步更新
+- **`ResolvedPreferences`**：`singleColumn: bool` 替換為 `columnMode: ColumnMode`（non-nullable，預設 `auto`）+ `columnSize: double`（non-nullable，預設 `720.0`）
+- **`main.js`**：`prefs.singleColumn` 分支替換為 `prefs.columnMode` + `prefs.columnSize` 邏輯，依三態行為表呼叫 `setAttribute('max-inline-size', ...)`
+
+### UI 變更
+
+- **取代**：`ReaderSettingsSheet` 的「強制單欄（直排）」`SwitchListTile`（`Key('reader_settings_single_column')`）
+- **新增**：分段按鈕（自動/單欄/雙欄），UI 風格比照既有「書寫方向」分段按鈕
+- **新增**：「欄位大小」`Slider`，僅在「自動」模式下顯示/啟用
+- **參考截圖**：`tmp/image/setting_fields.jpg`
+
+**單元測試要求：**
+- `BookReaderPrefs`：`columnMode`/`columnSize` 的 `toMap`/`fromMap` round-trip、`copyWith`、`==`/`hashCode` 測試
+- SQLite migration round-trip：v11 → v12 → v13 升級後，既有 `single_column` 值正確遷移為 `NULL`，新欄位可讀寫
+- `foliate_epub_reader_view_test.dart`：`columnMode`/`columnSize` 出現/不出現於 `initialPreferences` map、`didUpdateWidget` 變動時觸發 `setPreferences`
+- `reader_settings_sheet_test.dart`：三態分段按鈕存在、預設為自動、點擊切換正確觸發 `onChanged`；滑桿僅在自動模式下可見
+- `reader_screen_test.dart`：`columnMode`/`columnSize` 從 `ResolvedPreferences` 正確透傳到 `FoliateEpubReaderView`
+- `main.js` 的 `setAttribute` 呼叫無 JS 單元測試（同 Issue 4/5 慣例），驗收依賴真機 `integration_test`
+
+**驗收標準：**
+- `flutter analyze` 乾淨、既有 `flutter test` 全數通過（無回歸）
+- 真機（`3CEF42ECD491687`）直排開書：「單欄」模式下確認只有一欄（不再受制於 `+1` 邏輯）
+- 真機直排開書：「雙欄」模式下確認最多兩欄（即使裝置高度 > 1440 CSS px 也不出現三欄）
+- 真機直排開書：「自動」模式下調整滑桿，確認欄數隨閾值變化
+- 橫排模式回歸確認：三種模式皆不影響橫排既有行為（橫排無 `+1`，本來就正常）
 
 **相關佐證：**
-- `tmp/epic-18/reviews/review-issue-5-round3.md`（Critical #1，附完整實機 mutation test 數據）
-- `docs/epics/epic-18-reader-device-qa/spec.md`「`singleColumn` 偏好」表格（Issue 5 原始機制設計）
-- `docs/epics/epic-18-reader-device-qa/design.md` 使用者回報項目 8 與參考截圖 `tmp/issues/2-1.png`／`2-2.png`／`3.png`
+- ADR 0012（`docs/adr/0012-column-mode-replaces-single-column.md`）
+- `tmp/epic-18/reviews/review-issue-5-round3.md`（Issue 5 mutation test 發現根因）
+- `tmp/image/setting_fields.jpg`（UI 參考截圖）
+- `CONTEXT.md`「欄數」「欄位大小」詞彙定義
+
 
 ---
 
