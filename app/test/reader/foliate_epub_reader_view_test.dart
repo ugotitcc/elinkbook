@@ -147,6 +147,90 @@ void main() {
     expect(setPreferencesCall.arguments, {'singleColumn': true});
   });
 
+  testWidgets('showFooter: false 時，openBook 的 initialPreferences 含 showFooter: false',
+      (tester) async {
+    final calls = await _pumpFoliateEpubReaderView(
+      tester,
+      const FoliateEpubReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        showFooter: false,
+      ),
+    );
+
+    final openBookCall = calls.firstWhere((c) => c.method == 'openBook');
+    expect(openBookCall.arguments['initialPreferences'], {'showFooter': false});
+  });
+
+  testWidgets('showFooter 為 null（預設）時，initialPreferences 不含 showFooter key',
+      (tester) async {
+    final calls = await _pumpFoliateEpubReaderView(
+      tester,
+      const FoliateEpubReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+      ),
+    );
+
+    final openBookCall = calls.firstWhere((c) => c.method == 'openBook');
+    expect(
+      (openBookCall.arguments['initialPreferences'] as Map).containsKey('showFooter'),
+      isFalse,
+    );
+  });
+
+  testWidgets('showFooter 變動時，didUpdateWidget 呼叫 setPreferences 並帶入新值',
+      (tester) async {
+    final binaryMessenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    final instanceCalls = <MethodCall>[];
+
+    binaryMessenger.setMockMethodCallHandler(SystemChannels.platform_views,
+        (call) async {
+      if (call.method == 'create') {
+        final id = (call.arguments as Map<Object?, Object?>)['id'] as int;
+        binaryMessenger.setMockMethodCallHandler(
+          MethodChannel('cc.ugotit.elinkbook/foliate_epub_reader_view_$id'),
+          (call) async {
+            instanceCalls.add(call);
+            return null;
+          },
+        );
+        return 0;
+      }
+      return null;
+    });
+
+    final key = GlobalKey<State<FoliateEpubReaderView>>();
+    await tester.pumpWidget(MaterialApp(
+      home: FoliateEpubReaderView(
+        key: key,
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+      ),
+    ));
+    await tester.pumpAndSettle();
+    instanceCalls.clear();
+
+    await tester.pumpWidget(MaterialApp(
+      home: FoliateEpubReaderView(
+        key: key,
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        showFooter: false,
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    final setPreferencesCall =
+        instanceCalls.firstWhere((c) => c.method == 'setPreferences');
+    expect(setPreferencesCall.arguments, {'showFooter': false});
+  });
+
   testWidgets(
       '_onPlatformViewCreated 呼叫 openBook 時，initialPreferences 包含所有非 null 建構參數',
       (tester) async {
