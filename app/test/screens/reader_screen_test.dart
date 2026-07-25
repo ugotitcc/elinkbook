@@ -235,10 +235,14 @@ void main() {
     await tester.tap(find.byKey(const Key('reader_settings_single_column')));
     await tester.pumpAndSettle();
 
+    await tester.tap(find.byKey(const Key('reader_settings_show_footer')));
+    await tester.pumpAndSettle();
+
     final updatedView =
         tester.widget<FoliateEpubReaderView>(find.byType(FoliateEpubReaderView));
     expect(updatedView.writingMode, WritingMode.vertical);
     expect(updatedView.singleColumn, isTrue);
+    expect(updatedView.showFooter, isFalse);
   });
 
   testWidgets(
