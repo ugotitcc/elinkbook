@@ -77,7 +77,7 @@
 
 ## Issue 4：直排文字頂端裁切與本文/頁尾間空白過多
 
-**Status:** `ready-for-agent`
+**Status:** ✅ 已完成。直排上下邊距已不再依賴 foliate-js 內建的固定 48px，改由 `main.js` 根據使用者偏好的 `pageMargins` 與 `showFooter` 動態設定。真機 smoke test 與既有 integration 回歸測試均已在實機上全數通過，且經人類人工視覺驗收確認直排頂端壓字與本文/頁尾空白症狀皆已消除，橫排模式不受影響。
 
 **依賴：** 無
 
