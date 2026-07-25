@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:elinkbook/reader/book_reader_prefs.dart';
 import 'package:elinkbook/reader/book_reader_prefs_repository.dart';
+import 'package:elinkbook/reader/column_mode.dart';
 import 'package:elinkbook/reader/dual_page_direction.dart';
 import 'package:elinkbook/reader/dual_page_mode.dart';
 import 'package:elinkbook/reader/global_reader_prefs.dart';
@@ -73,7 +74,8 @@ void main() {
           dualPageDirection: DualPageDirection.rtl,
           showHeader: false,
           showFooter: false,
-          singleColumn: true,
+          columnMode: ColumnMode.single,
+          columnSize: 600.0,
         ),
         globalPrefs: const GlobalReaderPrefs.initial(),
       );
@@ -88,7 +90,8 @@ void main() {
       expect(resolved.dualPageDirection, DualPageDirection.rtl);
       expect(resolved.showHeader, isFalse);
       expect(resolved.showFooter, isFalse);
-      expect(resolved.singleColumn, isTrue);
+      expect(resolved.columnMode, ColumnMode.single);
+      expect(resolved.columnSize, 600.0);
     });
 
     test('單書覆寫為 null 時，正確退回全域預設（非硬編碼初始值，證明真的有讀 globalPrefs）',
@@ -175,7 +178,8 @@ void main() {
       expect(resolved.pageMargins, isNull);
       expect(resolved.textAlign, isNull);
       expect(resolved.publisherStyles, isNull);
-      expect(resolved.singleColumn, isNull);
+      expect(resolved.columnMode, ColumnMode.auto);
+      expect(resolved.columnSize, 720.0);
     });
   });
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/reader/app_font.dart';
 import 'package:elinkbook/reader/book_reader_prefs.dart';
+import 'package:elinkbook/reader/column_mode.dart';
 import 'package:elinkbook/reader/epub_text_align.dart';
 import 'package:elinkbook/reader/page_turn_mode.dart';
 import 'package:elinkbook/reader/screen_orientation_setting.dart';
@@ -434,7 +435,7 @@ void main() {
     expect(result!.showHeader, isTrue);
   });
 
-  testWidgets('開啟強制單欄開關後，onChanged 帶入 singleColumn=true',
+  testWidgets('開啟強制單欄開關後，onChanged 帶入 columnMode=single',
       (tester) async {
     BookReaderPrefs? result;
     await _pumpSheet(tester, BookReaderPrefs.empty, (prefs) => result = prefs);
@@ -443,7 +444,7 @@ void main() {
     await tester.pump();
 
     expect(result, isNotNull);
-    expect(result!.singleColumn, isTrue);
+    expect(result!.columnMode, ColumnMode.single);
   });
 
   testWidgets('切換強制單欄開關不會清空其他既有覆寫欄位（回歸檢查）', (tester) async {
@@ -473,10 +474,10 @@ void main() {
     expect(switchTile.value, isFalse);
   });
 
-  testWidgets('singleColumn=true 時，開關初始值為開啟', (tester) async {
+  testWidgets('columnMode=single 時，開關初始值為開啟', (tester) async {
     await _pumpSheet(
       tester,
-      const BookReaderPrefs(singleColumn: true),
+      const BookReaderPrefs(columnMode: ColumnMode.single),
       (_) {},
     );
 
@@ -485,19 +486,19 @@ void main() {
     expect(switchTile.value, isTrue);
   });
 
-  testWidgets('強制單欄開關先開啟再關閉，onChanged 帶入 singleColumn=false（可逆性）', (tester) async {
+  testWidgets('強制單欄開關先開啟再關閉，onChanged 帶入 columnMode=auto（可逆性）', (tester) async {
     BookReaderPrefs? result;
     await _pumpSheet(tester, BookReaderPrefs.empty, (prefs) => result = prefs);
 
     // 開啟
     await tester.tap(find.byKey(const Key('reader_settings_single_column')));
     await tester.pump();
-    expect(result!.singleColumn, isTrue);
+    expect(result!.columnMode, ColumnMode.single);
 
     // 關閉
     await tester.tap(find.byKey(const Key('reader_settings_single_column')));
     await tester.pump();
-    expect(result!.singleColumn, isFalse);
+    expect(result!.columnMode, ColumnMode.auto);
   });
 
   testWidgets('切換頁首/頁尾開關不會清空其他既有覆寫欄位（回歸檢查）', (tester) async {

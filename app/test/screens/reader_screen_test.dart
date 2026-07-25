@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/reader/book_reader_prefs.dart';
+import 'package:elinkbook/reader/column_mode.dart';
 import 'package:elinkbook/reader/dual_page_direction.dart';
 import 'package:elinkbook/reader/dual_page_mode.dart';
 import 'package:elinkbook/reader/epub_reader_view.dart';
@@ -241,7 +242,7 @@ void main() {
     final updatedView =
         tester.widget<FoliateEpubReaderView>(find.byType(FoliateEpubReaderView));
     expect(updatedView.writingMode, WritingMode.vertical);
-    expect(updatedView.singleColumn, isTrue);
+    expect(updatedView.columnMode, ColumnMode.single);
     expect(updatedView.showFooter, isFalse);
   });
 

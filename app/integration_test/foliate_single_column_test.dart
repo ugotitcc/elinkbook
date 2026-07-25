@@ -12,6 +12,7 @@ import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/library/sqlite_library_repository.dart';
 import 'package:elinkbook/reader/book_reader_prefs.dart';
 import 'package:elinkbook/reader/book_reader_prefs_repository.dart';
+import 'package:elinkbook/reader/column_mode.dart';
 import 'package:elinkbook/reader/foliate_epub_reader_view.dart';
 import 'package:elinkbook/reader/reader_prefs_manager_impl.dart';
 import 'package:elinkbook/reader/reading_position_repository.dart';
@@ -84,7 +85,7 @@ void main() {
             key: readerKey,
             filePath: samplePath,
             writingMode: WritingMode.vertical,
-            singleColumn: true,
+            columnMode: ColumnMode.single,
             onPageRendered: () {
               if (!loadCompleter.isCompleted) loadCompleter.complete();
             },
@@ -188,7 +189,7 @@ void main() {
     // 預先寫入 singleColumn=true 的單書偏好。
     await prefsManager.saveBookPrefs(
       'b_single_column_on_integration',
-      const BookReaderPrefs(singleColumn: true),
+      const BookReaderPrefs(columnMode: ColumnMode.single),
     );
 
     await tester.pumpWidget(

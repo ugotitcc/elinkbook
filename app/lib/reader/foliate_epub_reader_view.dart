@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'app_font.dart';
+import 'column_mode.dart';
 import 'epub_decoration.dart';
 import 'epub_position_info.dart';
 import 'epub_selection_info.dart';
@@ -54,11 +55,13 @@ class FoliateEpubReaderView extends StatefulWidget {
   final EpubTextAlign? textAlign;
   final bool? publisherStyles;
 
-  /// 強制單欄版面偏好（epic-18-reader-device-qa Issue 5）：`null`＝未覆寫
-  /// （交由 foliate-js 內建 `--_max-column-count: 2` 自動判斷），`true`＝
-  /// 強制單欄，`false`＝明確允許雙欄。僅直排時有意義，但不限制呼叫端只能
-  /// 在直排時傳入。
-  final bool? singleColumn;
+  /// 流式 EPUB 分欄模式（epic-18-reader-device-qa Issue 6）：auto/single/double。
+  /// null = 未覆寫（交由 foliate-js 內建邏輯決定），傳入 map 時使用 name。
+  final ColumnMode? columnMode;
+
+  /// 欄位大小閾值（epic-18-reader-device-qa Issue 6），360~1440px，
+  /// 僅 [columnMode] == auto 時有效。null = 未覆寫。
+  final double? columnSize;
 
   /// 頁尾（`ReaderFooter`）目前是否顯示（epic-18-reader-device-qa
   /// Issue 4）：`null`＝未知（`main.js` 視同已顯示，見該檔案對應邏輯的
@@ -124,7 +127,8 @@ class FoliateEpubReaderView extends StatefulWidget {
     this.pageMargins,
     this.textAlign,
     this.publisherStyles,
-    this.singleColumn,
+    this.columnMode,
+    this.columnSize,
     this.showFooter,
     this.navZoneActions = const [
       ZoneAction.none, ZoneAction.none, ZoneAction.none,
@@ -261,7 +265,8 @@ class _FoliateEpubReaderViewState extends State<FoliateEpubReaderView> {
         widget.pageMargins != oldWidget.pageMargins ||
         widget.textAlign != oldWidget.textAlign ||
         widget.publisherStyles != oldWidget.publisherStyles ||
-        widget.singleColumn != oldWidget.singleColumn ||
+        widget.columnMode != oldWidget.columnMode ||
+        widget.columnSize != oldWidget.columnSize ||
         widget.showFooter != oldWidget.showFooter;
   }
 
@@ -293,8 +298,11 @@ class _FoliateEpubReaderViewState extends State<FoliateEpubReaderView> {
     if (widget.publisherStyles != null) {
       map['publisherStyles'] = widget.publisherStyles;
     }
-    if (widget.singleColumn != null) {
-      map['singleColumn'] = widget.singleColumn;
+    if (widget.columnMode != null) {
+      map['columnMode'] = widget.columnMode!.name;
+    }
+    if (widget.columnSize != null) {
+      map['columnSize'] = widget.columnSize;
     }
     if (widget.showFooter != null) {
       map['showFooter'] = widget.showFooter;

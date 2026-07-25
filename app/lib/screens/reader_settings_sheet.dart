@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../reader/app_font.dart';
 import '../reader/book_reader_prefs.dart';
+import '../reader/column_mode.dart';
 import '../reader/epub_text_align.dart';
 import '../reader/page_turn_mode.dart';
 import '../reader/screen_orientation_setting.dart';
@@ -55,7 +56,8 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   late ScreenOrientationSetting? _screenOrientationOverride;
   late bool _showHeader;
   late bool _showFooter;
-  late bool _singleColumn;
+  late ColumnMode _columnMode;
+  late double _columnSize;
 
   @override
   void initState() {
@@ -79,7 +81,8 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     _screenOrientationOverride = widget.prefs.screenOrientationOverride;
     _showHeader = widget.prefs.showHeader ?? true;
     _showFooter = widget.prefs.showFooter ?? true;
-    _singleColumn = widget.prefs.singleColumn ?? false;
+    _columnMode = widget.prefs.columnMode ?? ColumnMode.auto;
+    _columnSize = widget.prefs.columnSize ?? 720.0;
   }
 
   @override
@@ -106,7 +109,8 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
         _screenOrientationOverride = widget.prefs.screenOrientationOverride;
         _showHeader = widget.prefs.showHeader ?? true;
         _showFooter = widget.prefs.showFooter ?? true;
-        _singleColumn = widget.prefs.singleColumn ?? false;
+        _columnMode = widget.prefs.columnMode ?? ColumnMode.auto;
+        _columnSize = widget.prefs.columnSize ?? 720.0;
       });
     }
   }
@@ -130,7 +134,8 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
       screenOrientationOverride: _screenOrientationOverride,
       showHeader: _showHeader,
       showFooter: _showFooter,
-      singleColumn: _singleColumn,
+      columnMode: _columnMode,
+      columnSize: _columnSize,
     ));
   }
 
@@ -263,9 +268,9 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                 SwitchListTile(
                   key: const Key('reader_settings_single_column'),
                   title: const Text('強制單欄（直排）'),
-                  value: _singleColumn,
+                  value: _columnMode == ColumnMode.single,
                   onChanged: (v) => setState(() {
-                    _singleColumn = v;
+                    _columnMode = v ? ColumnMode.single : ColumnMode.auto;
                     _notifyChanged();
                   }),
                 ),
