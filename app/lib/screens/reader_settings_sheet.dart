@@ -130,7 +130,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
       screenOrientationOverride: _screenOrientationOverride,
       showHeader: _showHeader,
       showFooter: _showFooter,
-      singleColumn: _singleColumn ? true : null,
+      singleColumn: _singleColumn,
     ));
   }
 

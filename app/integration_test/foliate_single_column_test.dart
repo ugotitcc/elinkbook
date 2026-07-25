@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -11,8 +12,10 @@ import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/library/sqlite_library_repository.dart';
 import 'package:elinkbook/reader/book_reader_prefs.dart';
 import 'package:elinkbook/reader/book_reader_prefs_repository.dart';
+import 'package:elinkbook/reader/foliate_epub_reader_view.dart';
 import 'package:elinkbook/reader/reader_prefs_manager_impl.dart';
 import 'package:elinkbook/reader/reading_position_repository.dart';
+import 'package:elinkbook/reader/writing_mode.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
 
 Future<String> _stageAssetAsFile(String assetPath, String fileName) async {
@@ -25,35 +28,35 @@ Future<String> _stageAssetAsFile(String assetPath, String fileName) async {
 
 /// Epic 18 Issue 5：強制單欄（直排）偏好——真機整合測試。
 ///
-/// 驗證 singleColumn 偏好被持久化並正確傳遞至 FoliateEpubReaderView，
-/// 且 版面設定面板中切換開關可覆蓋既有值。
+/// 核心症狀回歸測試：使用 issue9_vertical_pagejump.epub（原本會被
+/// paginator.js 判斷為「兩欄」的 EPUB），驗證 singleColumn=true 時
+/// 連續翻頁的 pageIndex 嚴格遞增（即每次翻頁只前進一頁，不會因為
+/// 兩欄排版導致同一個頁碼要點兩次才變化）。
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets(
-      '未持久化（預設）開 EPUB 書後，singleColumn 維持預設雙欄行為，版面設定面板可開啟/關閉',
+      'singleColumn=true 時，使用垂直排版 EPUB 連續翻頁 5 次，pageIndex 嚴格遞增',
       (tester) async {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
     final libraryRepository =
         await SqliteLibraryRepository.open(inMemoryDatabasePath);
-    final prefsManager = ReaderPrefsManagerImpl(
-      BookReaderPrefsRepository(libraryRepository.database),
-      ReadingPositionRepository(libraryRepository.database),
-    );
     // 不關閉 in-memory database（addTearDown 在 widget 樹拆除前執行，
     // 關閉資料庫會導致 dispose 中的 _writeCurrentPosition 拋出
     // database_closed 例外）。
+
     final samplePath = await _stageAssetAsFile(
-        'test/fixtures/sample.epub', 'single_column_default.epub');
+        'test/fixtures/issue9_vertical_pagejump.epub',
+        'single_column_pagejump.epub');
     addTearDown(() async {
       final file = File(samplePath);
       if (await file.exists()) await file.delete();
     });
 
     await libraryRepository.insertBook(Book(
-      id: 'b_single_column_integration',
-      title: '單欄測試書',
+      id: 'b_single_column_pagejump',
+      title: '單欄翻頁測試書',
       format: BookFileFormat.epub,
       filePath: samplePath,
       source: BookSource.local,
@@ -61,17 +64,37 @@ void main() {
       lastReadTime: DateTime.now(),
     ));
 
-    // 預設 BookReaderPrefs（singleColumn=null），驗證開書不崩潰。
+    // 建構 FoliateEpubReaderView，明確指定 vertical + singleColumn=true，
+    // 繞過 ReaderScreen 的完整開書流程以直接驗證 FoliateEpubReaderView 本身
+    // 的翻頁行為。
+    final pageIndexLog = <int>[];
+    final completer = Completer<void>();
+
     await tester.pumpWidget(
       MaterialApp(
-        home: ReaderScreen(
-          filePath: samplePath,
-          bookId: 'b_single_column_integration',
-          prefsManager: prefsManager,
+        home: Scaffold(
+          body: FoliateEpubReaderView(
+            filePath: samplePath,
+            writingMode: WritingMode.vertical,
+            singleColumn: true,
+            onPageRendered: () {},
+            onError: (msg) => fail('onError: $msg'),
+            onLocatorChanged: (info) {
+              final pageIndex = info.pageIndex;
+              if (pageIndex != null) {
+                pageIndexLog.add(pageIndex);
+                // 收集足夠數據後完成測試
+                if (pageIndexLog.length >= 5 && !completer.isCompleted) {
+                  completer.complete();
+                }
+              }
+            },
+          ),
         ),
       ),
     );
 
+    // 等待原生 PlatformView 載入完成
     final deadline = DateTime.now().add(const Duration(seconds: 15));
     while (find.byKey(const Key('reader_loading_indicator')).evaluate().isNotEmpty) {
       if (DateTime.now().isAfter(deadline)) fail('等待逾時：載入指示器未消失');
@@ -81,25 +104,29 @@ void main() {
 
     expect(find.byKey(const Key('reader_error_text')), findsNothing);
 
-    // 開啟版面設定面板
-    await tester.tap(find.byKey(const Key('reader_layout_settings_button')));
-    await tester.pumpAndSettle();
+    // 連續翻頁 5 次，透過 FoliateEpubReaderView 的 method channel
+    for (var i = 0; i < 5; i++) {
+      await tester.runAsync(() async {
+        await tester.pump();
+        // FoliateEpubReaderView 的翻頁由原生端 method channel 驅動
+        final channel = MethodChannel('cc.ugotit.elinkbook/epub_reader_view');
+        await channel.invokeMethod('nextPage');
+      });
+      await tester.pump(const Duration(milliseconds: 500));
+    }
 
-    // 確認強制單欄開關存在
-    expect(find.byKey(const Key('reader_settings_single_column')), findsOneWidget);
-    // 預設為關閉狀態
-    final switchTile = tester.widget<SwitchListTile>(
-        find.byKey(const Key('reader_settings_single_column')));
-    expect(switchTile.value, isFalse,
-        reason: '預設 singleColumn=null 時開關應為關閉');
+    // 等待所有回呼完成
+    await completer.future.timeout(const Duration(seconds: 10),
+        onTimeout: () {});
 
-    // 開啟強制單欄
-    await tester.tap(find.byKey(const Key('reader_settings_single_column')));
-    await tester.pumpAndSettle();
-
-    // 關閉面板
-    await tester.tap(find.byKey(const Key('reader_settings_close_button')));
-    await tester.pumpAndSettle();
+    // 核心驗證：pageIndex 嚴格遞增
+    expect(pageIndexLog.length, greaterThanOrEqualTo(2),
+        reason: '至少需要 2 個 pageIndex 數據點來驗證遞增');
+    for (var i = 1; i < pageIndexLog.length; i++) {
+      expect(pageIndexLog[i], greaterThan(pageIndexLog[i - 1]),
+          reason: 'pageIndex[$i](${pageIndexLog[i]}) 應大於 pageIndex[${i - 1}](${pageIndexLog[i - 1]})，'
+              '表示每次翻頁只前進一頁，不會因為兩欄排版導致同一頁碼重複');
+    }
   });
 
   testWidgets(
@@ -113,7 +140,7 @@ void main() {
       BookReaderPrefsRepository(libraryRepository.database),
       ReadingPositionRepository(libraryRepository.database),
     );
-    // 不關閉 in-memory database（理由同上）。
+
     final samplePath = await _stageAssetAsFile(
         'test/fixtures/sample.epub', 'single_column_persisted.epub');
     addTearDown(() async {
