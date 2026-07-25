@@ -265,15 +265,8 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                     _notifyChanged();
                   }),
                 ),
-                SwitchListTile(
-                  key: const Key('reader_settings_single_column'),
-                  title: const Text('強制單欄（直排）'),
-                  value: _columnMode == ColumnMode.single,
-                  onChanged: (v) => setState(() {
-                    _columnMode = v ? ColumnMode.single : ColumnMode.auto;
-                    _notifyChanged();
-                  }),
-                ),
+                const SizedBox(height: 12),
+                _buildColumnModeRow(),
                 const SizedBox(height: 12),
                 _buildWritingModeOverrideRow(),
                 const SizedBox(height: 12),
@@ -283,6 +276,75 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildColumnModeRow() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('欄數'),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              IconButton(
+                key: const Key('reader_settings_column_mode_auto'),
+                icon: const Icon(Icons.auto_awesome),
+                tooltip: '自動',
+                color: _columnMode == ColumnMode.auto
+                    ? Theme.of(context).colorScheme.primary
+                    : null,
+                onPressed: () => setState(() {
+                  _columnMode = ColumnMode.auto;
+                  _notifyChanged();
+                }),
+              ),
+              IconButton(
+                key: const Key('reader_settings_column_mode_single'),
+                icon: const Icon(Icons.crop_portrait),
+                tooltip: '單欄',
+                color: _columnMode == ColumnMode.single
+                    ? Theme.of(context).colorScheme.primary
+                    : null,
+                onPressed: () => setState(() {
+                  _columnMode = ColumnMode.single;
+                  _notifyChanged();
+                }),
+              ),
+              IconButton(
+                key: const Key('reader_settings_column_mode_double'),
+                icon: const Icon(Icons.book),
+                tooltip: '雙欄',
+                color: _columnMode == ColumnMode.double
+                    ? Theme.of(context).colorScheme.primary
+                    : null,
+                onPressed: () => setState(() {
+                  _columnMode = ColumnMode.double;
+                  _notifyChanged();
+                }),
+              ),
+            ],
+          ),
+          if (_columnMode == ColumnMode.auto) ...[
+            const SizedBox(height: 8),
+            Text('欄位大小 ${_columnSize.round()}px'),
+            Slider(
+              key: const Key('reader_settings_column_size_slider'),
+              value: _columnSize,
+              min: 360.0,
+              max: 1440.0,
+              divisions: 18, // (1440 - 360) / 60 = 18
+              label: '${_columnSize.round()}px',
+              onChanged: (v) => setState(() {
+                _columnSize = v;
+                _notifyChanged();
+              }),
+            ),
+          ],
         ],
       ),
     );
