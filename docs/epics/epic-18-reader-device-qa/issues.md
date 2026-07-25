@@ -143,7 +143,7 @@
 
 ## Issue 6：流式 EPUB「欄數」三態控制 +「欄位大小」閾值（取代 Issue 5 的 `singleColumn`）
 
-**Status:** `ready-for-agent`
+**Status:** ✅ 已完成並合併回 `main`（PR #76，merge commit `eda4f79`；review followup commit `fefeb06`）。6 個 Task 皆已實現並分別 commit（`013de7b`/`96de5f6`/`2ba65d5`/`5c3a4d5`/`85ccb72`/`a950fe5`），經計畫兩輪審查（`review-plan-issue-6.md`、`review-plan-issue-6-passed.md`）與程式碼審查（`review-issue-6.md`，Ready to merge: Yes）確認：「雙欄」模式的分欄算式（`Math.ceil`）與 SQLite v13 migration 位置皆經獨立驗算/追蹤確認正確；`flutter analyze` 乾淨、`flutter test` 616 項全數通過。程式碼審查提出的 Important #1（雙欄模式旋轉限制）與 Minor #1-4 已於合併後另行修正並記錄進 ADR 0012。
 
 **依賴：** 無（Issue 5 的 `singleColumn` 六層透傳機制已合併至 `main`，本 Issue 在其基礎上重新設計並取代）
 

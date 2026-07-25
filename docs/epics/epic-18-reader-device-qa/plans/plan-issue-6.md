@@ -121,19 +121,19 @@ git commit -m "feat(reader): 定義 ColumnMode 並於 BookReaderPrefs 新增 col
 - Consumes: `BookReaderPrefs.columnMode`, `BookReaderPrefs.columnSize`
 - Produces: SQLite `book_reader_prefs` table version 13 with `column_mode TEXT` and `column_size REAL`, with `single_column` migrated to NULL.
 
-- [ ] **Step 1: 在 `sqlite_library_repository_test.dart` 撰寫 Migration 測試**
+- [x] **Step 1: 在 `sqlite_library_repository_test.dart` 撰寫 Migration 測試**
 
 在 `app/test/library/sqlite_library_repository_test.dart` 中：
 1. 更新全新安裝測試：`CREATE TABLE` 後包含 `column_mode` 與 `column_size`（無 `single_column`）。
 2. 新增 v12 → v13 升級測試（**審查修正**：原文誤植「v11 → v12 → v13」，但 v11 schema 根本不含 `single_column` 欄位——該欄位是 v12 才新增的，寫入 `single_column: 1` 前必須先有 v12 baseline，故正確場景是「以 v12 schema 建庫、寫入既有 `single_column: 1` 真實資料，再升級至 v13」）：建立 v12 舊版 Schema（含 `single_column` 欄位），寫入 `single_column: 1` 的舊資料，開啟資料庫觸發 Migration 至 v13。驗證 `single_column` 變為 `NULL`，且 `column_mode`/`column_size` 可正常寫入與讀取。
 3. 更新既有 v11→v12 測試的註解與說明（標明已自動升級至 v13）。
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/library/sqlite_library_repository_test.dart`
 Expected: FAIL (schema version 仍為 12)
 
-- [ ] **Step 3: 修改 `SqliteLibraryRepository` 提升 Version 至 13 並實作 Migration**
+- [x] **Step 3: 修改 `SqliteLibraryRepository` 提升 Version 至 13 並實作 Migration**
 
 在 `app/lib/library/sqlite_library_repository.dart` 中：
 - 將版本更新為 `version: 13` (Line 30)
@@ -177,12 +177,12 @@ Expected: FAIL (schema version 仍為 12)
   }
   ```
 
-- [ ] **Step 4: 執行測試驗證通過**
+- [x] **Step 4: 執行測試驗證通過**
 
 Run: `flutter test test/library/sqlite_library_repository_test.dart`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/lib/library/sqlite_library_repository.dart app/test/library/sqlite_library_repository_test.dart
@@ -207,7 +207,7 @@ git commit -m "feat(db): 升級 SQLite DB 版本至 v13，新增 column_mode 與
 - Consumes: `ColumnMode`, `BookReaderPrefs.columnMode`, `BookReaderPrefs.columnSize`
 - Produces: `ResolvedPreferences.columnMode` (non-nullable, default `auto`), `ResolvedPreferences.columnSize` (non-nullable, default `720.0`), `FoliateEpubReaderView.columnMode`, `FoliateEpubReaderView.columnSize`
 
-- [ ] **Step 1: 修改測試檔 (修正受 `singleColumn` 移除影響的所有單元測試)**
+- [x] **Step 1: 修改測試檔 (修正受 `singleColumn` 移除影響的所有單元測試)**
 
 1. `app/test/reader/foliate_epub_reader_view_test.dart`：
    - 將 `singleColumn: true` 改為 `columnMode: ColumnMode.single, columnSize: 800.0` 測試 `initialPreferences`
@@ -219,12 +219,12 @@ git commit -m "feat(db): 升級 SQLite DB 版本至 v13，新增 column_mode 與
 4. `app/test/screens/reader_screen_test.dart`：
    - 更新 FoliateEpubReaderView 斷言：`expect(updatedView.columnMode, ColumnMode.single)`
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/reader/foliate_epub_reader_view_test.dart test/reader/resolved_preferences_test.dart test/reader/reader_prefs_manager_test.dart`
 Expected: FAIL (欄位未更新)
 
-- [ ] **Step 3: 更新 `ResolvedPreferences` 與 `ReaderPrefsManagerImpl`**
+- [x] **Step 3: 更新 `ResolvedPreferences` 與 `ReaderPrefsManagerImpl`**
 
 1. 在 `app/lib/reader/resolved_preferences.dart`：
    - 替換 `final bool? singleColumn;` 為 `final ColumnMode columnMode;` 與 `final double columnSize;`
@@ -233,7 +233,7 @@ Expected: FAIL (欄位未更新)
    - `columnMode: book.columnMode ?? ColumnMode.auto`
    - `columnSize: book.columnSize ?? 720.0`
 
-- [ ] **Step 4: 更新 `FoliateEpubReaderView` 與 `ReaderScreen`**
+- [x] **Step 4: 更新 `FoliateEpubReaderView` 與 `ReaderScreen`**
 
 1. 在 `app/lib/reader/foliate_epub_reader_view.dart`：
    - 替換 `singleColumn` 為 `final ColumnMode? columnMode;` 與 `final double? columnSize;`
@@ -250,12 +250,12 @@ Expected: FAIL (欄位未更新)
 2. 在 `app/lib/screens/reader_screen.dart`：
    - 傳遞 `columnMode: resolved.columnMode` 與 `columnSize: resolved.columnSize` 給 `FoliateEpubReaderView`
 
-- [ ] **Step 5: 執行測試驗證通過**
+- [x] **Step 5: 執行測試驗證通過**
 
 Run: `flutter test test/reader/foliate_epub_reader_view_test.dart test/reader/resolved_preferences_test.dart test/reader/reader_prefs_manager_test.dart test/screens/reader_screen_test.dart`
 Expected: PASS
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/reader/resolved_preferences.dart app/lib/reader/reader_prefs_manager_impl.dart app/lib/reader/foliate_epub_reader_view.dart app/lib/screens/reader_screen.dart app/test/reader/foliate_epub_reader_view_test.dart app/test/reader/resolved_preferences_test.dart app/test/reader/reader_prefs_manager_test.dart app/test/screens/reader_screen_test.dart
@@ -273,7 +273,7 @@ git commit -m "feat(reader): 於 ResolvedPreferences 與 FoliateEpubReaderView �
 - Consumes: `prefs.columnMode` ('auto', 'single', 'double'), `prefs.columnSize` (number)
 - Produces: Dynamic DOM attribute mutation on `view.renderer` (`max-inline-size`)
 
-- [ ] **Step 1: 修改 `main.js` 中的 `applyPreferences` 與 `updateLayout` 計算**
+- [x] **Step 1: 修改 `main.js` 中的 `applyPreferences` 與 `updateLayout` 計算**
 
 在 `app/android/app/src/main/assets/foliate/main.js` 中：
 
@@ -298,7 +298,7 @@ git commit -m "feat(reader): 於 ResolvedPreferences 與 FoliateEpubReaderView �
   }
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add app/android/app/src/main/assets/foliate/main.js
@@ -317,7 +317,7 @@ git commit -m "feat(foliate): 在 main.js 中依 columnMode 與 columnSize 正�
 - Consumes: `BookReaderPrefs.columnMode`, `BookReaderPrefs.columnSize`
 - Produces: `ColumnMode` selection row + `columnSize` Slider (conditional) in `ReaderSettingsSheet`
 
-- [ ] **Step 1: 更新 `reader_settings_sheet_test.dart` 測試檔**
+- [x] **Step 1: 更新 `reader_settings_sheet_test.dart` 測試檔**
 
 將原本的 `SwitchListTile` 測試替換為三態「欄數」分段按鈕與「欄位大小」Slider 測試：
 1. 驗證按鈕與 Slider 預設狀態。
@@ -325,12 +325,12 @@ git commit -m "feat(foliate): 在 main.js 中依 columnMode 與 columnSize 正�
 3. 切換到「單欄」或「雙欄」後，確認 Slider 元件不顯示（`expect(find.byKey(const Key('reader_settings_column_size_slider')), findsNothing);`）。
 4. 點選「自動」時 Slider 可見且可調，滑動傳回新 `columnSize`。
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/screens/reader_settings_sheet_test.dart`
 Expected: FAIL
 
-- [ ] **Step 3: 實作 `ReaderSettingsSheet` 中的「欄數」三態按鈕與「欄位大小」滑桿**
+- [x] **Step 3: 實作 `ReaderSettingsSheet` 中的「欄數」三態按鈕與「欄位大小」滑桿**
 
 在 `app/lib/screens/reader_settings_sheet.dart` 中：
 - 宣告 `late ColumnMode _columnMode;` 與 `late double _columnSize;`
@@ -391,12 +391,12 @@ Expected: FAIL
   ```
 - 替換原本 `SwitchListTile` 為 `_buildColumnModeRow()`。
 
-- [ ] **Step 4: 執行測試驗證通過**
+- [x] **Step 4: 執行測試驗證通過**
 
 Run: `flutter test test/screens/reader_settings_sheet_test.dart`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/lib/screens/reader_settings_sheet.dart app/test/screens/reader_settings_sheet_test.dart
@@ -413,7 +413,7 @@ git commit -m "feat(ui): 升級 ReaderSettingsSheet 提供欄數三態選擇與�
 **Interfaces:**
 - Consumes: All updated interfaces (`ColumnMode.single`, `ColumnMode.auto`)
 
-- [ ] **Step 1: 更新 `foliate_single_column_test.dart` 中的兩個測試**
+- [x] **Step 1: 更新 `foliate_single_column_test.dart` 中的兩個測試**
 
 修改 `app/integration_test/foliate_single_column_test.dart`：
 1. 第一個測試（連續翻頁遞增驗證）：將 `singleColumn: true` 改為 `columnMode: ColumnMode.single`，保留 pageIndex 遞增斷言。
@@ -421,17 +421,17 @@ git commit -m "feat(ui): 升級 ReaderSettingsSheet 提供欄數三態選擇與�
    - `BookReaderPrefs(singleColumn: true)` 改為 `BookReaderPrefs(columnMode: ColumnMode.single)`
    - 替換 `SwitchListTile` / `Key('reader_settings_single_column')` 斷言：改為尋找 `IconButton`（`Key('reader_settings_column_mode_single')`），斷言其 `color` 等於 `Theme.of(context).colorScheme.primary`（選中狀態）。
 
-- [ ] **Step 2: 執行 `flutter analyze` 確保語法與型態檢查無誤**
+- [x] **Step 2: 執行 `flutter analyze` 確保語法與型態檢查無誤**
 
 Run: `flutter analyze`
 Expected: No issues found!
 
-- [ ] **Step 3: 執行全套單元測試**
+- [x] **Step 3: 執行全套單元測試**
 
 Run: `flutter test`
 Expected: All tests pass!
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add app/integration_test/foliate_single_column_test.dart
