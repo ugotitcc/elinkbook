@@ -1,4 +1,5 @@
 import 'app_font.dart';
+import 'column_mode.dart';
 import 'dual_page_direction.dart';
 import 'dual_page_mode.dart';
 import 'epub_text_align.dart';
@@ -34,10 +35,13 @@ class ResolvedPreferences {
   final EpubTextAlign? textAlign;
   final bool? publisherStyles;
 
-  /// 強制單欄版面偏好（epic-18-reader-device-qa Issue 5）：與 EPUB 字型/
-  /// 排版欄位同組 pass-through 語意（見類別頂端文件），無既存安全預設值，
-  /// `null` 原樣透傳給 [FoliateEpubReaderView]。
-  final bool? singleColumn;
+  /// 流式 EPUB 分欄模式（epic-18-reader-device-qa Issue 6）：auto/single/double。
+  /// null = auto（預設），由 foliate-js paginator.js 依 [columnSize] 決定欄數。
+  final ColumnMode columnMode;
+
+  /// 欄位大小閾值（epic-18-reader-device-qa Issue 6），360~1440px，
+  /// 僅 [columnMode] == auto 時有效。預設 720.0。
+  final double columnSize;
 
   final PageTurnMode pageTurnMode;
   final ScreenOrientationSetting screenOrientation;
@@ -71,7 +75,8 @@ class ResolvedPreferences {
     this.pageMargins,
     this.textAlign,
     this.publisherStyles,
-    this.singleColumn,
+    this.columnMode = ColumnMode.auto,
+    this.columnSize = 720.0,
     required this.pageTurnMode,
     required this.screenOrientation,
     required this.pdfFitMode,

@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:elinkbook/reader/column_mode.dart';
 import 'package:elinkbook/reader/dual_page_direction.dart';
 import 'package:elinkbook/reader/dual_page_mode.dart';
 import 'package:elinkbook/reader/nav_zone_mode.dart';
@@ -9,8 +10,7 @@ import 'package:elinkbook/reader/resolved_preferences.dart';
 import 'package:elinkbook/reader/screen_orientation_setting.dart';
 
 void main() {
-  test('建構後各欄位保留傳入值，EPUB 欄位可為 null（無既存預設值，維持既有 pass-through 語意）',
-      () {
+  test('建構後各欄位保留傳入值，columnMode 預設 auto、columnSize 預設 720.0', () {
     const resolved = ResolvedPreferences(
       writingMode: null,
       fontFamily: null,
@@ -21,7 +21,6 @@ void main() {
       pageMargins: null,
       textAlign: null,
       publisherStyles: null,
-      singleColumn: null,
       pageTurnMode: PageTurnMode.paginated,
       screenOrientation: ScreenOrientationSetting.auto,
       pdfFitMode: PdfFitMode.pageFit,
@@ -41,7 +40,8 @@ void main() {
 
     expect(resolved.fontSize, isNull);
     expect(resolved.textAlign, isNull);
-    expect(resolved.singleColumn, isNull);
+    expect(resolved.columnMode, ColumnMode.auto);
+    expect(resolved.columnSize, 720.0);
     expect(resolved.pageTurnMode, PageTurnMode.paginated);
     expect(resolved.pdfFitMode, PdfFitMode.pageFit);
     expect(resolved.dualPageMode, DualPageMode.auto);

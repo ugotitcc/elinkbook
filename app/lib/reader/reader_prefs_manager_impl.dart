@@ -2,6 +2,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'book_reader_prefs.dart';
 import 'book_reader_prefs_repository.dart';
+import 'column_mode.dart';
 import 'dual_page_direction.dart';
 import 'dual_page_mode.dart';
 import 'global_reader_prefs.dart';
@@ -157,7 +158,8 @@ class ReaderPrefsManagerImpl implements ReaderPrefsManager {
       pageMargins: book.pageMargins,
       textAlign: book.textAlign,
       publisherStyles: book.publisherStyles,
-      singleColumn: book.singleColumn,
+      columnMode: book.columnMode ?? ColumnMode.auto,
+      columnSize: book.columnSize ?? 720.0,
       pageTurnMode: book.pageTurnModeOverride ?? global.pageTurnMode,
       screenOrientation:
           book.screenOrientationOverride ?? global.screenOrientation,

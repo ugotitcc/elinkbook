@@ -114,13 +114,28 @@ window.applyPreferences = function (prefs) {
   if (prefs.writingMode) {
     currentWritingMode = prefs.writingMode
   }
-  // Issue 5：強制單欄覆寫（nullable，undefined 時保留 foliate-js 內建
-  // --_max-column-count: 2 的自動判斷行為，不呼叫 setAttribute）。
-  // max-column-count 用於 CSS calc() 乘數，非長度屬性，不需 CSS 單位。
-  if (prefs.singleColumn === true) {
-    view.renderer.setAttribute('max-column-count', '1')
-  } else if (prefs.singleColumn === false) {
-    view.renderer.setAttribute('max-column-count', '2')
+  // Issue 6：欄數（columnMode）與欄位大小（columnSize）控制。
+  // 用 max-inline-size 控制分欄閾值，徹底解決 paginator.js 對直排書籍
+  // max-column-count 的 +1 邏輯問題（見 plan-issue-6.md）。
+  // columnMode: 'auto' | 'single' | 'double'
+  // columnSize: 360~1440px，僅 auto 時有效。
+  if (prefs.columnMode === 'single') {
+    // 強制單欄：設定極大 inline-size 確保 ceil(hostSize / maxInlineSize) 永遠為 1
+    view.renderer.setAttribute('max-inline-size', '99999px')
+  } else if (prefs.columnMode === 'double') {
+    // 硬限雙欄：計算 hostSize 並將 max-inline-size 設為 Math.ceil(hostSize / 2)
+    // 注意：必須使用 Math.ceil 而非 Math.floor，保證 targetSize * 2 >= hostSize，
+    // 避免奇數/帶小數 hostSize 算出的 targetSize 偏小導致 ceil(hostSize / targetSize) 變成 3 欄！
+    const hostRect = view.renderer.getBoundingClientRect()
+    const hostSize = currentWritingMode === 'vertical' ? hostRect.height : hostRect.width
+    const targetSize = Math.max(360, Math.ceil(hostSize / 2))
+    view.renderer.setAttribute('max-inline-size', `${targetSize}px`)
+  } else {
+    // 自動模式：使用使用者設定的 columnSize（預設 720px）。
+    // undefined 時保留 foliate-js 內建 --_max-inline-size: 720px 預設值。
+    if (typeof prefs.columnSize === 'number') {
+      view.renderer.setAttribute('max-inline-size', `${prefs.columnSize}px`)
+    }
   }
   // epic-18 Issue 4：直排上下邊距。paginator.js 內建 --_margin-top/
   // --_margin-bottom 固定 48px，從未接上使用者 pageMargins 偏好（見

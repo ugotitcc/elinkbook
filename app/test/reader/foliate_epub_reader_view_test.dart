@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:elinkbook/reader/column_mode.dart';
 import 'package:elinkbook/reader/epub_decoration.dart';
 import 'package:elinkbook/reader/epub_selection_info.dart';
 import 'package:elinkbook/reader/epub_position_info.dart';
@@ -63,7 +64,7 @@ void main() {
     expect(openBookCall.arguments['initialPreferences'], <String, Object?>{});
   });
 
-  testWidgets('singleColumn: true 時，openBook 的 initialPreferences 含 singleColumn: true',
+  testWidgets('columnMode: single 時，openBook 的 initialPreferences 含 columnMode: single',
       (tester) async {
     final calls = await _pumpFoliateEpubReaderView(
       tester,
@@ -71,15 +72,15 @@ void main() {
         filePath: '/tmp/sample.epub',
         onPageRendered: _noop,
         onError: _noopError,
-        singleColumn: true,
+        columnMode: ColumnMode.single,
       ),
     );
 
     final openBookCall = calls.firstWhere((c) => c.method == 'openBook');
-    expect(openBookCall.arguments['initialPreferences'], {'singleColumn': true});
+    expect(openBookCall.arguments['initialPreferences'], {'columnMode': 'single'});
   });
 
-  testWidgets('singleColumn 為 null（預設）時，initialPreferences 不含 singleColumn key',
+  testWidgets('columnMode 為 null（預設）時，initialPreferences 不含 columnMode key',
       (tester) async {
     final calls = await _pumpFoliateEpubReaderView(
       tester,
@@ -92,12 +93,12 @@ void main() {
 
     final openBookCall = calls.firstWhere((c) => c.method == 'openBook');
     expect(
-      (openBookCall.arguments['initialPreferences'] as Map).containsKey('singleColumn'),
+      (openBookCall.arguments['initialPreferences'] as Map).containsKey('columnMode'),
       isFalse,
     );
   });
 
-  testWidgets('singleColumn 變動時，didUpdateWidget 呼叫 setPreferences 並帶入新值',
+  testWidgets('columnMode 變動時，didUpdateWidget 呼叫 setPreferences 並帶入新值',
       (tester) async {
     final binaryMessenger =
         TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
@@ -137,14 +138,15 @@ void main() {
         filePath: '/tmp/sample.epub',
         onPageRendered: _noop,
         onError: _noopError,
-        singleColumn: true,
+        columnMode: ColumnMode.single,
+        columnSize: 600.0,
       ),
     ));
     await tester.pumpAndSettle();
 
     final setPreferencesCall =
         instanceCalls.firstWhere((c) => c.method == 'setPreferences');
-    expect(setPreferencesCall.arguments, {'singleColumn': true});
+    expect(setPreferencesCall.arguments, {'columnMode': 'single', 'columnSize': 600.0});
   });
 
   testWidgets('showFooter: false 時，openBook 的 initialPreferences 含 showFooter: false',

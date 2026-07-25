@@ -12,6 +12,7 @@ import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/library/sqlite_library_repository.dart';
 import 'package:elinkbook/reader/book_reader_prefs.dart';
 import 'package:elinkbook/reader/book_reader_prefs_repository.dart';
+import 'package:elinkbook/reader/column_mode.dart';
 import 'package:elinkbook/reader/foliate_epub_reader_view.dart';
 import 'package:elinkbook/reader/reader_prefs_manager_impl.dart';
 import 'package:elinkbook/reader/reading_position_repository.dart';
@@ -84,7 +85,7 @@ void main() {
             key: readerKey,
             filePath: samplePath,
             writingMode: WritingMode.vertical,
-            singleColumn: true,
+            columnMode: ColumnMode.single,
             onPageRendered: () {
               if (!loadCompleter.isCompleted) loadCompleter.complete();
             },
@@ -157,7 +158,7 @@ void main() {
   });
 
   testWidgets(
-      '已持久化 singleColumn=true 開 EPUB 書後，版面設定面板開關反映為開啟',
+      '已持久化 columnMode=single 開 EPUB 書後，版面設定面板欄數按鈕反映為選取',
       (tester) async {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
@@ -188,7 +189,7 @@ void main() {
     // 預先寫入 singleColumn=true 的單書偏好。
     await prefsManager.saveBookPrefs(
       'b_single_column_on_integration',
-      const BookReaderPrefs(singleColumn: true),
+      const BookReaderPrefs(columnMode: ColumnMode.single),
     );
 
     await tester.pumpWidget(
@@ -214,10 +215,16 @@ void main() {
     await tester.tap(find.byKey(const Key('reader_layout_settings_button')));
     await tester.pumpAndSettle();
 
-    // 確認開關反映為開啟
-    final switchTile = tester.widget<SwitchListTile>(
-        find.byKey(const Key('reader_settings_single_column')));
-    expect(switchTile.value, isTrue,
-        reason: '已持久化 singleColumn=true 時開關應為開啟');
+    // 確認單欄按鈕反映為選取（color == primary 表示選中）
+    final singleBtn = tester.widget<IconButton>(
+        find.byKey(const Key('reader_settings_column_mode_single')));
+    expect(singleBtn.color, isNotNull,
+        reason: '已持久化 columnMode=single 時單欄按鈕應為選取狀態（有 color）');
+
+    // 確認自動按鈕未選取（color 應為 null）
+    final autoBtn = tester.widget<IconButton>(
+        find.byKey(const Key('reader_settings_column_mode_auto')));
+    expect(autoBtn.color, isNull,
+        reason: 'columnMode=single 時自動按鈕應為未選取');
   });
 }

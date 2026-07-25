@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/reader/app_font.dart';
 import 'package:elinkbook/reader/book_reader_prefs.dart';
+import 'package:elinkbook/reader/column_mode.dart';
 import 'package:elinkbook/reader/epub_text_align.dart';
 import 'package:elinkbook/reader/page_turn_mode.dart';
 import 'package:elinkbook/reader/screen_orientation_setting.dart';
@@ -434,19 +435,19 @@ void main() {
     expect(result!.showHeader, isTrue);
   });
 
-  testWidgets('開啟強制單欄開關後，onChanged 帶入 singleColumn=true',
+  testWidgets('點選「單欄」按鈕後，onChanged 帶入 columnMode=single',
       (tester) async {
     BookReaderPrefs? result;
     await _pumpSheet(tester, BookReaderPrefs.empty, (prefs) => result = prefs);
 
-    await tester.tap(find.byKey(const Key('reader_settings_single_column')));
+    await tester.tap(find.byKey(const Key('reader_settings_column_mode_single')));
     await tester.pump();
 
     expect(result, isNotNull);
-    expect(result!.singleColumn, isTrue);
+    expect(result!.columnMode, ColumnMode.single);
   });
 
-  testWidgets('切換強制單欄開關不會清空其他既有覆寫欄位（回歸檢查）', (tester) async {
+  testWidgets('切換欄數不會清空其他既有覆寫欄位（回歸檢查）', (tester) async {
     BookReaderPrefs? result;
     await _pumpSheet(
       tester,
@@ -457,7 +458,7 @@ void main() {
       (prefs) => result = prefs,
     );
 
-    await tester.tap(find.byKey(const Key('reader_settings_single_column')));
+    await tester.tap(find.byKey(const Key('reader_settings_column_mode_single')));
     await tester.pump();
 
     expect(result, isNotNull);
@@ -465,39 +466,48 @@ void main() {
     expect(result!.pageTurnModeOverride, PageTurnMode.scroll);
   });
 
-  testWidgets('singleColumn=null 時，開關初始值為關閉', (tester) async {
+  testWidgets('columnMode 預設 auto 時，自動按鈕高亮、Slider 可見', (tester) async {
     await _pumpSheet(tester, BookReaderPrefs.empty, (_) {});
 
-    final switchTile = tester.widget<SwitchListTile>(
-        find.byKey(const Key('reader_settings_single_column')));
-    expect(switchTile.value, isFalse);
+    // 自動按鈕存在且可見
+    expect(find.byKey(const Key('reader_settings_column_mode_auto')), findsOneWidget);
+    // Slider 可見
+    expect(find.byKey(const Key('reader_settings_column_size_slider')), findsOneWidget);
   });
 
-  testWidgets('singleColumn=true 時，開關初始值為開啟', (tester) async {
+  testWidgets('columnMode=single 時，Slider 不可見', (tester) async {
     await _pumpSheet(
       tester,
-      const BookReaderPrefs(singleColumn: true),
+      const BookReaderPrefs(columnMode: ColumnMode.single),
       (_) {},
     );
 
-    final switchTile = tester.widget<SwitchListTile>(
-        find.byKey(const Key('reader_settings_single_column')));
-    expect(switchTile.value, isTrue);
+    // Slider 不應存在
+    expect(find.byKey(const Key('reader_settings_column_size_slider')), findsNothing);
   });
 
-  testWidgets('強制單欄開關先開啟再關閉，onChanged 帶入 singleColumn=false（可逆性）', (tester) async {
+  testWidgets('columnMode=double 時，Slider 不可見', (tester) async {
+    await _pumpSheet(
+      tester,
+      const BookReaderPrefs(columnMode: ColumnMode.double),
+      (_) {},
+    );
+
+    expect(find.byKey(const Key('reader_settings_column_size_slider')), findsNothing);
+  });
+
+  testWidgets('從單欄切換到自動，onChanged 帶入 columnMode=auto（可逆性）', (tester) async {
     BookReaderPrefs? result;
-    await _pumpSheet(tester, BookReaderPrefs.empty, (prefs) => result = prefs);
+    await _pumpSheet(
+      tester,
+      const BookReaderPrefs(columnMode: ColumnMode.single),
+      (prefs) => result = prefs,
+    );
 
-    // 開啟
-    await tester.tap(find.byKey(const Key('reader_settings_single_column')));
+    // 切換到自動
+    await tester.tap(find.byKey(const Key('reader_settings_column_mode_auto')));
     await tester.pump();
-    expect(result!.singleColumn, isTrue);
-
-    // 關閉
-    await tester.tap(find.byKey(const Key('reader_settings_single_column')));
-    await tester.pump();
-    expect(result!.singleColumn, isFalse);
+    expect(result!.columnMode, ColumnMode.auto);
   });
 
   testWidgets('切換頁首/頁尾開關不會清空其他既有覆寫欄位（回歸檢查）', (tester) async {
