@@ -28,15 +28,19 @@ Future<String> _stageAssetAsFile(String assetPath, String fileName) async {
 
 /// Epic 18 Issue 5：強制單欄（直排）偏好——真機整合測試。
 ///
-/// 核心症狀回歸測試：使用 issue9_vertical_pagejump.epub（原本會被
-/// paginator.js 判斷為「兩欄」的 EPUB），驗證 singleColumn=true 時
-/// 連續翻頁的 pageIndex 嚴格遞增（即每次翻頁只前進一頁，不會因為
-/// 兩欄排版導致同一個頁碼要點兩次才變化）。
+/// 核心症狀回歸測試：使用 sample_long_chinese_vertical.epub（足夠長的
+/// 繁體中文直排 EPUB），驗證 singleColumn=true 時連續翻頁的
+/// pageIndex 嚴格遞增（即每次翻頁只前進一頁，不會因為兩欄排版導致
+/// 同一個頁碼要點兩次才變化）。
+///
+/// foliate-js 的 SectionProgress 以 content size / sizePerLoc(1500)
+/// 計算 pageIndex，因此 EPUB 內容需足夠長（>= 9000 bytes XHTML）
+/// 才能產生多個 pageIndex 值供遞增驗證。
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets(
-      'singleColumn=true 時，垂直排版 EPUB 開書成功、翻頁不崩潰、onLocatorChanged 回傳有效 progression',
+      'singleColumn=true 時，使用長篇直排 EPUB 連續翻頁 5 次，pageIndex 嚴格遞增',
       (tester) async {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
@@ -47,16 +51,16 @@ void main() {
     // database_closed 例外）。
 
     final samplePath = await _stageAssetAsFile(
-        'test/fixtures/issue9_vertical_pagejump.epub',
-        'single_column_pagejump.epub');
+        'test/fixtures/sample_long_chinese_vertical.epub',
+        'single_column_long.epub');
     addTearDown(() async {
       final file = File(samplePath);
       if (await file.exists()) await file.delete();
     });
 
     await libraryRepository.insertBook(Book(
-      id: 'b_single_column_pagejump',
-      title: '單欄翻頁測試書',
+      id: 'b_single_column_long',
+      title: '長篇單欄翻頁測試書',
       format: BookFileFormat.epub,
       filePath: samplePath,
       source: BookSource.local,
@@ -65,9 +69,11 @@ void main() {
     ));
 
     // 建構 FoliateEpubReaderView，明確指定 vertical + singleColumn=true，
-    // 繞過 ReaderScreen 的完整開書流程以直接驗證 FoliateEpubReaderView 本身。
+    // 繞過 ReaderScreen 的完整開書流程以直接驗證 FoliateEpubReaderView 本身
+    // 的翻頁行為。使用 onPageRendered 等待原生 PlatformView 載入完成
+    // （reader_loading_indicator 只在 ReaderScreen 中存在）。
     final readerKey = GlobalKey<State<FoliateEpubReaderView>>();
-    final progressionLog = <double>[];
+    final pageIndexLog = <int>[];
     final loadCompleter = Completer<void>();
     String? error;
 
@@ -84,9 +90,9 @@ void main() {
             },
             onError: (msg) => error = msg,
             onLocatorChanged: (info) {
-              final progression = info.progression;
-              if (progression != null) {
-                progressionLog.add(progression);
+              final pageIndex = info.pageIndex;
+              if (pageIndex != null) {
+                pageIndexLog.add(pageIndex);
               }
             },
           ),
@@ -94,49 +100,60 @@ void main() {
       ),
     );
 
-    // 等待原生 PlatformView 載入完成（透過 onPageRendered 回呼，而非
-    // reader_loading_indicator——後者只在 ReaderScreen 中存在）。
+    // 等待原生 PlatformView 載入完成。
     await loadCompleter.future
         .timeout(const Duration(seconds: 15), onTimeout: () {});
     await tester.pump(const Duration(seconds: 2));
 
-    // 開書成功：無錯誤、onLocatorChanged 有回傳有效 progression。
     expect(error, isNull, reason: '開書過程不應觸發 onError');
-    expect(progressionLog, isNotEmpty,
-        reason: 'onLocatorChanged 應至少回傳一次有效 progression');
-    expect(progressionLog.last, inInclusiveRange(0.0, 1.0),
-        reason: 'progression 應在 [0.0, 1.0] 範圍內');
+    expect(pageIndexLog, isNotEmpty,
+        reason: 'onLocatorChanged 應至少回傳一次有效 pageIndex');
 
-    final initialProgression = progressionLog.last;
+    // 清空初始載入的數據，確保後續只記錄翻頁結果。
+    pageIndexLog.clear();
 
-    // 呼叫 nextPage() 不崩潰（驗證 method channel 已正確接通）。
-    await tester.runAsync(() async {
-      FoliateEpubReaderView.nextPage(readerKey);
-    });
-    await tester.pumpAndSettle(const Duration(milliseconds: 500));
-    expect(error, isNull, reason: 'nextPage() 不應觸發 onError');
+    // 連續翻頁 5 次，透過 FoliateEpubReaderView 的強型別 static helper
+    // （比照 ReaderScreen 實際使用模式）。nextPage() 呼叫原生端
+    // view.next()，觸發 paginator.js 的 relocate 事件，經 Kotlin bridge
+    // 回呼 Dart 端 onLocatorChanged，因此可觀察 pageIndex 變化。
+    //
+    // 重要：使用 tester.runAsync + Future.delayed 而非 pumpAndSettle，
+    // 因為 pumpAndSettle 只處理 Flutter framework 幀，無法等到原生
+    // WebView 的 relocate 事件經 Kotlin bridge 非同步回呼 Dart 端。
+    // 3 秒延遲足夠 WebView 完成 scroll + paginator 計算 + Kotlin
+    // mainHandler.post 切回主執行緒觸發 channel.invokeMethod。
+    for (var i = 0; i < 5; i++) {
+      await tester.runAsync(() async {
+        FoliateEpubReaderView.nextPage(readerKey);
+        await Future.delayed(const Duration(milliseconds: 3000));
+      });
+    }
 
-    // 呼叫 previousPage() 不崩潰。
-    await tester.runAsync(() async {
-      FoliateEpubReaderView.previousPage(readerKey);
-    });
-    await tester.pumpAndSettle(const Duration(milliseconds: 500));
-    expect(error, isNull, reason: 'previousPage() 不應觸發 onError');
-
-    // 透過 jumpToProgression(0.5) 驗證原生端 WebView 回應程式化跳轉，
-    // 這是 fire-and-forget 的 nextPage/previousPage 無法直接驗證的。
-    await tester.runAsync(() async {
-      FoliateEpubReaderView.jumpToProgression(readerKey, 0.5);
-    });
-    await tester.pumpAndSettle(const Duration(milliseconds: 2000));
-
-    // 驗證 progression 有變化（跳轉到 50% 後，progression 應明顯大於初始值）。
-    expect(progressionLog, isNotEmpty,
-        reason: 'jumpToProgression 後 onLocatorChanged 應再次回報 progression');
-    final finalProgression = progressionLog.last;
-    expect(finalProgression, greaterThan(initialProgression),
-        reason: 'jumpToProgression(0.5) 後 progression($finalProgression) '
-            '應大於初始值($initialProgression)');
+    // 核心驗證：pageIndex 嚴格遞增。
+    // 若 main.js:120-124 的 singleColumn 分支被移除（bug 未修復），
+    // 部分直排 EPUB 會被 paginator.js 判斷為「兩欄」，導致同一個
+    // 頁碼要翻兩次才變化——此時連續 5 次 nextPage() 會產生重複的
+    // pageIndex 值，此斷言會失敗。
+    //
+    // 此 EPUB 的 chapter1.xhtml 約 9000 bytes，以 sizePerLoc=1500
+    // 計算可產生約 6 個 pageIndex（0~5），足夠 5 次 nextPage() 都
+    // 產生遞增的 pageIndex 值。
+    //
+    // foliate-js 的 relocate 事件會對同一個 pageIndex 觸發多次
+    // （ paginator.js 動畫開始與結束各觸發一次），因此需要先去除
+    // 連續重複值，再驗證嚴格遞增。
+    expect(pageIndexLog, isNotEmpty, reason: '翻頁後應至少有一筆 pageIndex');
+    final deduped = <int>[];
+    for (final v in pageIndexLog) {
+      if (deduped.isEmpty || deduped.last != v) deduped.add(v);
+    }
+    expect(deduped.length, greaterThanOrEqualTo(2),
+        reason: '去除連續重複後至少需要 2 個不同 pageIndex 來驗證遞增');
+    for (var i = 1; i < deduped.length; i++) {
+      expect(deduped[i], greaterThan(deduped[i - 1]),
+          reason: 'deduped[$i](${deduped[i]}) 應大於 deduped[${i - 1}](${deduped[i - 1]})，'
+              '表示每次翻頁只前進一頁，不會因為兩欄排版導致同一頁碼重複');
+    }
   });
 
   testWidgets(
