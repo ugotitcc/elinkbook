@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/reader/app_font.dart';
 import 'package:elinkbook/reader/book_reader_prefs.dart';
+import 'package:elinkbook/reader/column_mode.dart';
 import 'package:elinkbook/reader/epub_text_align.dart';
 import 'package:elinkbook/reader/pdf_crop_mode.dart';
 import 'package:elinkbook/reader/pdf_crop_rect.dart';
@@ -293,48 +294,52 @@ void main() {
     expect(updated.showFooter, isFalse);
   });
 
-  test('singleColumn 欄位 BookReaderPrefs.empty 為 null（未覆寫，交由 foliate-js 內建 --_max-column-count 自動判斷）',
-      () {
+  test('columnMode 與 columnSize 預設為 null（未覆寫）', () {
     const prefs = BookReaderPrefs.empty;
-    expect(prefs.singleColumn, isNull);
+    expect(prefs.columnMode, isNull);
+    expect(prefs.columnSize, isNull);
   });
 
-  test('singleColumn 欄位值完全相同的 BookReaderPrefs 視為相等', () {
-    const a = BookReaderPrefs(singleColumn: true);
-    const b = BookReaderPrefs(singleColumn: true);
+  test('columnMode 與 columnSize 相同的 BookReaderPrefs 視為相等', () {
+    const a = BookReaderPrefs(columnMode: ColumnMode.single, columnSize: 800);
+    const b = BookReaderPrefs(columnMode: ColumnMode.single, columnSize: 800);
     expect(a, b);
     expect(a.hashCode, b.hashCode);
   });
 
-  test('singleColumn 欄位不同時視為不相等', () {
-    const a = BookReaderPrefs(singleColumn: true);
-    const b = BookReaderPrefs(singleColumn: false);
+  test('columnMode 與 columnSize 不同時視為不相等', () {
+    const a = BookReaderPrefs(columnMode: ColumnMode.single);
+    const b = BookReaderPrefs(columnMode: ColumnMode.double);
     expect(a, isNot(b));
   });
 
-  test('singleColumn 為 true／false／null 皆正確 toMap／fromMap round-trip（避免布林值 0/1 轉換錯誤）',
-      () {
-    const withTrue = BookReaderPrefs(singleColumn: true);
-    final trueMap = withTrue.toMap('book-13');
-    expect(trueMap['single_column'], 1);
-    expect(BookReaderPrefs.fromMap(trueMap).singleColumn, isTrue);
+  test('toMap 與 fromMap 正確轉換 columnMode 與 columnSize', () {
+    const prefs = BookReaderPrefs(columnMode: ColumnMode.double, columnSize: 600);
+    final map = prefs.toMap('b1');
+    expect(map['column_mode'], 'double');
+    expect(map['column_size'], 600.0);
 
-    const withFalse = BookReaderPrefs(singleColumn: false);
-    final falseMap = withFalse.toMap('book-14');
-    expect(falseMap['single_column'], 0);
-    expect(BookReaderPrefs.fromMap(falseMap).singleColumn, isFalse);
-
-    const withNull = BookReaderPrefs.empty;
-    final nullMap = withNull.toMap('book-15');
-    expect(nullMap['single_column'], isNull);
-    expect(BookReaderPrefs.fromMap(nullMap).singleColumn, isNull);
+    final restored = BookReaderPrefs.fromMap(map);
+    expect(restored.columnMode, ColumnMode.double);
+    expect(restored.columnSize, 600.0);
   });
 
-  test('copyWith 更新 singleColumn 時，其餘欄位保留原值', () {
-    const original = BookReaderPrefs(fontSize: 18, singleColumn: false);
-    final updated = original.copyWith(singleColumn: true);
+  test('columnMode/columnSize 為 null 時 toMap 正確產生 null 值', () {
+    const prefs = BookReaderPrefs.empty;
+    final map = prefs.toMap('b2');
+    expect(map['column_mode'], isNull);
+    expect(map['column_size'], isNull);
 
+    final restored = BookReaderPrefs.fromMap(map);
+    expect(restored.columnMode, isNull);
+    expect(restored.columnSize, isNull);
+  });
+
+  test('copyWith 正確更新 columnMode 與 columnSize', () {
+    const original = BookReaderPrefs(fontSize: 18);
+    final updated = original.copyWith(columnMode: ColumnMode.single, columnSize: 900);
     expect(updated.fontSize, 18);
-    expect(updated.singleColumn, isTrue);
+    expect(updated.columnMode, ColumnMode.single);
+    expect(updated.columnSize, 900.0);
   });
 }
