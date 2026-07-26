@@ -327,7 +327,15 @@ Issue 5 的 `singleColumn` 布林開關因 `paginator.js` 對直排書籍的 `ma
 
 ## Issue 10：流式 EPUB 原生嵌入遷移至 `flutter_inappwebview`（完整實作）
 
-**Status:** `ready-for-agent`（Issue 8 Spike 已於 `spike/epic-18-issue-8-inappwebview` 分支產出 GO 結論並經複審通過，見 `tmp/epic-18/reviews/review-issue-8-spike-round2.md`；可展開細部計畫）
+**Status:** ✅ 已完成（4 commits on `feat/issue-10-foliate-inappwebview-migration`）：
+- `db24b9c` Task 1：Dart codec layer（`foliate_bridge_codec.dart` + 25 tests）
+- `be61dcd` Task 2：Native resource channel（`ReaderResourceChannel.kt` + `MainActivity` volumeKey dispatch）
+- `b315713` Task 3：Dart native bridge（`foliate_native_bridge.dart` + 7 tests）
+- `15f2a6e` Task 4：`FoliateEpubReaderView` 改用 `InAppWebView`（公開介面不變）
+- `3cb723c` Task 5：`main.js` JS 橋接改為 `flutter_inappwebview.callHandler`，依 ADR 0013 新增 Android `contextmenu`/`pointercancel` 選取偵測
+- `54cb037` Task 6：移除舊有 Kotlin 檔案與 PlatformView 註冊
+
+**Step 1 實際結果**：`InAppWebView` 無法在 `flutter_test` 純 Dart VM 下 pump（拋出 `InAppWebViewPlatform.instance != null` 斷言），9 宮格 widget test 改列入真機驗證清單。
 
 **依賴：** Issue 8（Spike 須為 GO 結論才可開始）
 

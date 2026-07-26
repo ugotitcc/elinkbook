@@ -1958,8 +1958,8 @@ git commit -m "refactor(epic-18): 移除舊有 FoliateEpubReaderView.kt 原生�
 
 > 執行 Task 4 Step 1、Task 5 Step 3 時，把實際觀察結果記錄於此，供後續複查依據。
 
-- **Task 4 Step 1（`InAppWebView` 能否在 `flutter_test` 下 pump）**：（實作時填寫）
-- **Task 5 Step 3（`selectionchange`＋`contextmenu`＋`pointercancel` 三個監聽器在真機上是否確實生效）**：（實作時填寫）
+- **Task 4 Step 1（`InAppWebView` 能否在 `flutter_test` 下 pump）**：❌ 無法 pump。`InAppWebViewPlatform.instance` 在純 Dart VM 環境下為 null，拋出 `AssertionError: 'InAppWebViewPlatform.instance != null'`。結論：9 宮格 `GestureDetector` tap 測試與 `showNavZoneDebugOverlay` 文字標籤測試無法保留為 widget test，改列入 Task 7 真機驗證清單。
+- **Task 5 Step 3（`selectionchange`＋`contextmenu`＋`pointercancel` 三個監聽器在真機上是否確實生效）**：待真機驗證（APK 已建置成功 `app-debug.apk`，需真機安裝後手動測試）。
 
 ---
 
