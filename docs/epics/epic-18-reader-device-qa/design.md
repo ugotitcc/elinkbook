@@ -87,3 +87,37 @@ Issue 1-6 全數完成合併後，使用者持續真機使用中再回報 5 項�
 - `tmp/epic-18/reviews/anx_reader_foliate_js_highlighting_analysis.md`（Issue 8 根因佐證與 Android 手勢處理參考）
 - `docs/adr/0012-column-mode-replaces-single-column.md`「已知限制」段（Issue 9 起源）
 - `docs/archive/2026-07-24-epic-7-interaction/design.md:115`（no-op drag 搶手勢競技場機制的原始設計意圖）
+
+---
+
+## Spike 結論：flutter_inappwebview 選取偵測驗證（2026-07-26）
+
+### 背景
+
+Issue 8 確認 Android WebView 原生選取完全在 native layer 運作，標準 `android.webkit.WebView` 包在 Flutter 官方 `AndroidView` 下時，所有 DOM 事件（`selectionchange`、`touchstart`、`pointerdown` 等）均不觸發，且 Flutter PlatformView 的 touch handling 攔截了所有觸控事件，導致 Kotlin 端的 `setOnTouchListener`/`setOnLongClickListener` 也不觸發。
+
+### Spike 目的
+
+驗證 `flutter_inappwebview` 套件能否解決上述限制，並確認其 `shouldInterceptRequest` 機制不會重新踩到既有 Kotlin `WebViewAssetLoader` 已解決的 ES module CORS/MIME 陷阱。
+
+### 驗證結果
+
+| 驗證項目 | 結果 | 說明 |
+|----------|------|------|
+| InAppWebView 真機載入 | ✅ PASS | WebView 成功載入並執行 JS |
+| JS handler 註冊 | ✅ PASS | `addJavaScriptHandler` 正常運作 |
+| ES module 載入 | ✅ PASS | `shouldInterceptRequest` + MIME 覆寫機制運作正常 |
+| 選取控點拖曳偵測 | ✅ PASS | 真機 adb 模擬長按選取與拖曳控點，`selectionLog` 成功取得 3 筆隨拖曳動態變化的內容紀錄 |
+
+### 結論
+
+**GO** — `flutter_inappwebview` 在真機上展現的 touch handling 與 DOM `selectionchange` 事件轉發能力，解決了標準 Android WebView + Flutter PlatformView 的根本限制（ADR 0013）。ES module 載入亦不踩既有 CORS/MIME 陷阱。
+
+### 下一步
+
+- Issue 10：整合 `flutter_inappwebview` 到 `FoliateEpubReaderView`
+- 保留 `flutter_inappwebview` 依賴（供 Issue 10 繼續使用）
+
+### 報告路徑
+
+完整報告見 `docs/epics/epic-18-reader-device-qa/reviews/spike-flutter-inappwebview-selection.md`
