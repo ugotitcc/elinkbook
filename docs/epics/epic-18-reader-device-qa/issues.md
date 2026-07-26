@@ -1,6 +1,6 @@
 # Epic 18 — 真機 UI 精修：工單清單 (Issues)
 
-依 `design.md`（使用者真機 QA 回報 8 項，其中項目 4 拆出不在本 Epic 範圍）與 `spec.md`（Issue 4／5 新介面定義）拆解出的 5 個工單。5 個工單彼此獨立、無依賴關係，可任意順序或平行開始。
+依 `design.md`（使用者真機 QA 回報 8 項，其中項目 4 拆出不在本 Epic 範圍）與 `spec.md`（Issue 4／5 新介面定義）拆解出的 5 個工單（Issue 1-6，其中 Issue 6 取代 Issue 5）。Issue 6 完成合併後，使用者持續真機使用中再回報 5 項（見 `design.md`「第二輪真機使用回報」），拆解為 Issue 7-9。全部 8 個現行工單（Issue 1-4、6-9）彼此獨立、無依賴關係，可任意順序或平行開始。
 
 ---
 
@@ -208,6 +208,120 @@ Issue 5 的 `singleColumn` 布林開關因 `paginator.js` 對直排書籍的 `ma
 - `tmp/image/setting_fields.jpg`（UI 參考截圖）
 - `CONTEXT.md`「欄數」「欄位大小」詞彙定義
 
+
+---
+
+## Issue 7：流式 EPUB Chrome 重構（浮動選單列＋頁眉/進度資訊分離）
+
+**Status:** `ready-for-agent`
+
+**依賴：** 無
+
+**描述：**
+
+見 `design.md`「第二輪真機使用回報」項目 1+2+3。現況 streaming EPUB（`_dispatchedIsFixedLayout == false`）用 in-flow `AppBar`（`reader_screen.dart:1205-1211`，含頁眉文字＋TOC/設定/筆記 3 個 icon）+ in-flow `ReaderFooter`（`reader_screen.dart:1556-1569`，頁碼＋跳頁滑桿）。既有註解（`reader_screen.dart:1192-1203`／`1523-1533`）記載頁尾 in-flow 顯示/隱藏仍會改變 body 實際高度、觸發底下 WebView 整本重新分頁的已知未解問題。FXL（`_isFixedLayout == true`）完全沒這問題，因為其頁眉/按鈕/書籤全部是 `Positioned` 浮動疊加層（`reader_screen.dart:1415-1492`，`ClipOval`+黑底圓鈕），`appBar` 為 `null`，body 高度恆定不變。本 Issue 把 streaming EPUB 的整組 chrome 改成跟 FXL 同款的浮動疊加層架構。
+
+- **`build()`（`reader_screen.dart:1205-1211`）**：`appBar` 判斷式新增「streaming EPUB 一律 null」條件（`format == BookFormat.epub && _dispatchedIsFixedLayout == false` 時，不論 `_chromeVisible` 為何都不建構 `AppBar`——比照 `_isFixedLayout` 現有處理，讓兩種 EPUB 引擎路徑最終殊途同歸都是 `appBar: null`）。`_buildAppBarTitle()`／`_buildAppBarActions()` 對 streaming EPUB 不再被呼叫（PDF 分支不受影響，維持現有 `AppBar`）。
+- **`_buildBody()`（`reader_screen.dart:1389-1574`）**：在既有 FXL 浮動按鈕 `Positioned` 區塊（`1415-1492`）之後，新增比照樣式的 streaming EPUB 專屬浮動疊加層區塊，皆以 `format == BookFormat.epub && _dispatchedIsFixedLayout == false && _chromeVisible` 為顯示條件：
+  - 返回鈕（`Key('reader_foliate_back_button')`，左上，`Navigator.of(context).pop()`）
+  - TOC 鈕（`Key('reader_foliate_toc_button')`，右上第 1 個，複用既有 `_openToc`，啟用條件同既有 `reader_toc_button`：`_autoDetectedWritingMode != null && _tocLoaded`）
+  - 版面設定鈕（`Key('reader_foliate_settings_button')`，右上第 2 個，複用既有 `_openLayoutSettings`，啟用條件同既有 `reader_layout_settings_button`：`_autoDetectedWritingMode != null`）
+  - 書籤 toggle 鈕（`Key('reader_foliate_bookmark_toggle_button')`，右上第 3 個，★/☆ 圖示切換，邏輯複用 `_fxlBookmarkAtCurrentPosition`/`_toggleFxlBookmark`——**這兩個方法名稱與內部欄位命名目前隱含「FXL 專屬」語意，本 Issue 需要泛用化供兩種 EPUB 引擎共用**，例如改名為 `_bookmarkAtCurrentPosition`/`_toggleBookmark`，行為完全不變，僅移除命名上的 FXL 專屬暗示；`widget.bookmarksRepository != null` 時才顯示，同既有 FXL 條件）
+  - 筆記鈕（`Key('reader_foliate_notes_button')`，右上第 4 個，複用既有 `_openNotesSheet(BookFormat.epub)`，`widget.bookmarksRepository != null` 時才顯示）
+  - 頁眉文字（`Key('reader_foliate_header_text')`，頂部置中，**純顯示、不可點擊**——內容邏輯複用現有 `_buildAppBarTitle()` 的章節名稱推導部分，但拿掉 `InkWell`/`onTap`，`_resolved?.showHeader ?? true` 為 `false` 時完全不顯示這個 widget，而非顯示靜態「閱讀器」文字——因為浮動疊加層沒有「不顯示頁眉時退回靜態標題」的既有 AppBar 慣例可沿用，`showHeader` 語意收斂為單純「顯示/隱藏這個 widget」）
+  - 進度資訊（`Key('reader_foliate_progress_text')`，**純顯示、不可互動**，內容邏輯複用現有 `_buildFoliateEpubFooter()` 的 `currentPage`/`totalPages` 換算，格式維持「168/197」；橫排時置於畫面最下方置中，直排時（`resolved.writingMode == WritingMode.vertical`）改用 `RotatedBox(quarterTurns: 建議 1 或 3，依實際文字方向真機確認)` 置於左下角；`_resolved?.showFooter ?? true` 為 `false` 時不顯示；不顯示時鐘）
+  - 進度/跳頁鈕（`Key('reader_foliate_progress_button')`，第 6 顆浮動鈕，位置待實作階段依真機視覺定案——建議與其餘 4 顆功能鈕同側但獨立一行，或畫面下方角落，避免與純顯示的進度資訊互相遮擋；點擊開啟 `showModalBottomSheet` 包住既有 `ReaderFooter` widget（**`ReaderFooter` widget 本身不需修改**，只是把它從目前 in-flow `Column` 子項改為 Bottom Sheet 內容，複用其既有 `currentPage`/`totalPages`/`onPageChanged` 介面與既有 `reader_footer_progress_text`/`reader_footer_jump_input`/`reader_footer_jump_slider` 三個 Key）；只在 `_resolved?.showFooter ?? true` 為 `true` 時顯示這顆按鈕本身（若進度顯示本身就被關閉，跳頁功能也一併隱藏，避免出現「看不到進度卻能跳頁」的不一致體驗）
+- **移除舊路徑**：`_buildBody()` 內既有的 streaming EPUB in-flow `ReaderFooter`（`1556-1562`，呼叫 `_buildFoliateEpubFooter`）整段移除，改為上述浮動疊加層；`_buildFoliateEpubFooter()` 方法保留但改由新的進度/跳頁 Bottom Sheet 呼叫端使用其換算邏輯（或直接複用其回傳的 `ReaderFooter` widget實例，置入 Bottom Sheet `builder`）。
+
+**單元測試要求：**
+- `reader_screen_test.dart`：streaming EPUB 開書後 `find.byType(AppBar)` 為 `findsNothing`（比照既有 FXL 的斷言模式）；`Key('reader_foliate_back_button')`／`Key('reader_foliate_toc_button')`／`Key('reader_foliate_settings_button')`／`Key('reader_foliate_bookmark_toggle_button')`／`Key('reader_foliate_notes_button')`／`Key('reader_foliate_progress_button')` 皆存在且可點擊，點擊後觸發對應既有行為（開 TOC／開版面設定／toggle 書籤／開筆記／開進度 Bottom Sheet）。
+- `Key('reader_foliate_header_text')`：`showHeader == false` 時 `findsNothing`；`true` 時顯示章節名稱且無 `onTap`（透過 `tester.widget<GestureDetector>`/`InkWell` 反查或直接確認外層無手勢 widget 包裹來驗證不可點擊）。
+- `Key('reader_foliate_progress_text')`：`showFooter == false` 時 `findsNothing`；直排時外層存在 `RotatedBox` 且 `quarterTurns` 非 0；橫排時不存在 `RotatedBox`（或 `quarterTurns == 0`）。
+- 進度/跳頁 Bottom Sheet 開啟後，既有 `reader_footer_progress_text`/`reader_footer_jump_input`/`reader_footer_jump_slider` 三個既有測試案例（輸入頁碼跳頁、拖曳捲軸跳頁、`totalPages <= 1` 停用）需在新的 Bottom Sheet 情境下重新驗證仍然通過。
+- PDF 分支既有 `AppBar`／`ReaderFooter` 行為需回歸確認未被本 Issue 意外影響（`find.byType(AppBar)` 對 PDF 仍為 `findsOneWidget`）。
+- FXL 既有的 4 個浮動按鈕測試（`reader_fixed_layout_*` keys）需回歸確認未被 `_toggleFxlBookmark`/`_fxlBookmarkAtCurrentPosition` 改名影響（改名後的呼叫端需同步更新，既有測試若直接呼叫這兩個方法名稱本身則需同步改寫，行為斷言不變）。
+
+**驗收標準：**
+- 上述測試皆通過、`flutter analyze` 乾淨。
+- 真機（`3CEF42ECD491687`）streaming EPUB 開書：6 顆浮動按鈕皆可點擊、行為與重構前一致；頁眉/進度顯示皆為純資訊、點擊無反應；切換沉浸模式（選單熱區）時 6 顆按鈕＋頁眉＋進度一起顯示/收合。
+- 真機確認：切換「顯示頁眉」／「顯示進度」開關後，對應浮動元件正確顯示/隱藏；切換兩者不再觸發 WebView 整本重新分頁（既有 resize 問題已解掉，可用真機肉眼觀察翻頁動畫/捲動位置是否被打斷來間接驗證）。
+- 真機確認直排模式下，進度資訊正確以旋轉文字顯示於左下角，格式為「168/197」。
+- FXL 與 PDF 既有行為回歸確認無影響。
+
+**相關佐證：**
+- `design.md`「第二輪真機使用回報」
+- `tmp/image/reading_process.jpg`（直排進度顯示位置參考）
+
+---
+
+## Issue 8：流式 EPUB 真機無法畫線
+
+**Status:** `ready-for-agent`
+
+**依賴：** 無
+
+**描述：**
+
+見 `design.md`「第二輪真機使用回報」項目 4。使用者回報流式 EPUB 在實體機上長按選字後，無法拖曳選取控點調整範圍以建立劃線。
+
+**根因假設（未經真機驗證，本 Issue 第一步即驗證此假設）**：`foliate_epub_reader_view.dart:364-409` 的 `build()` 在 `AndroidView`（WebView）上疊了一層全螢幕 9 宮格 `GestureDetector`，`behavior: HitTestBehavior.opaque` 且註冊 `onHorizontalDragStart`/`onVerticalDragStart`（空 handler，`foliate_epub_reader_view.dart:383-384`）。此機制原記載於 `docs/archive/2026-07-24-epic-7-interaction/design.md:115`，是刻意設計——讓 9 宮格只認 tap、不讓底層原生（foliate-js）自己的滑動翻頁手勢跟 tap 熱區打架（ADR 0009/0010）。此機制原本只用於 FXL（`EpubReaderView`，決策 #7 排除劃線功能，不會踩到衝突），但被原樣複製到同樣需要支援劃線的 `FoliateEpubReaderView`，懷疑長按選字後「拖曳選取控點調整範圍」這個手勢被這層攔截，傳不到底下 WebView。
+
+**參考研究**：`tmp/epic-18/reviews/anx_reader_foliate_js_highlighting_analysis.md`（anx-reader 專案基於 foliate-js 的畫線實作分析）第 4.1 節證實 Android 平台「原生選取 Handle 拖拽」是需要特別處理的獨立手勢類別，該專案監聽 `contextmenu`／`pointercancel` 事件避免拖拉控制點時誤觸自訂選單——若單純拿掉 no-op drag handler 仍無法完全解決，可參考此手法在 `main.js` 既有 `selectionchange` 監聽器（`main.js:432-462`）旁補上對應處理。
+
+**執行流程（比照本 Epic 既有的真機 mutation test 方法論，Issue 5/6 皆用此法）：**
+
+1. 真機（`3CEF42ECD491687`）重現現況：開一本流式 EPUB，長按選字，確認選取控點（handle）拖曳無反應、無法擴大/縮小選取範圍。
+2. **Mutation 測試**：暫時移除 `foliate_epub_reader_view.dart:383-384` 的 `onHorizontalDragStart`/`onVerticalDragStart` 兩行，真機重新安裝測試：
+   - 畫線功能是否恢復（長按選字→拖曳控點→放開→出現 `AnnotationToolbar`→選色成功建立劃線）？
+   - 9 宮格 tap 熱區導覽（翻頁／選單）是否仍正常，有無出現非預期的滑動翻頁（foliate-js 內建手勢跑出來與 tap 熱區衝突）？
+3. 依步驟 2 結果決定最終修法：
+   - 若移除後兩者皆正常：直接移除這兩行（最簡方案）。
+   - 若移除後翻頁手勢衝突：改為更精細的判斷（例如「目前是否有作用中選取範圍」時才放行拖曳，或參考 anx-reader 監聽 `contextmenu`/`pointercancel` 於 `main.js` 端處理，Dart 端 `GestureDetector` 維持攔截但改用不同手段辨識選取拖曳手勢），具體方案由實際測試結果決定，不預先鎖定。
+4. 確認最終修法下，9 宮格 tap 導覽、沉浸模式切換、既有換頁功能皆無回歸。
+
+**單元測試要求：**
+- 本 Issue 核心驗證依賴真機互動測試（長按選字＋拖曳手勢），非 `flutter test`/`integration_test` 自動化可完整覆蓋的範圍（比照本專案對純手勢層行為的既有測試決策）。
+- 若最終修法涉及新增 Dart 端邏輯判斷（例如「是否有作用中選取範圍」的狀態），需為該邏輯本身新增對應的 widget test（依實際修法決定測試內容，本 Issue 撰寫階段無法預先寫出，因修法尚未定案）。
+- 既有 `foliate_epub_reader_view_test.dart` 中 9 宮格 `Key('nav_zone_$index')` 存在且可點擊的既有測試需保持通過（回歸確認）。
+
+**驗收標準：**
+- 真機（`3CEF42ECD491687`）流式 EPUB 長按選字→拖曳控點調整範圍→放開→成功建立劃線（顏色/底線皆可）。
+- 真機確認 9 宮格 tap 熱區導覽（上一頁/下一頁/選單）功能不受影響，無非預期的滑動翻頁。
+- `flutter analyze` 乾淨、既有 `flutter test` 全數通過（無回歸）。
+
+**相關佐證：**
+- `design.md`「第二輪真機使用回報」
+- `tmp/epic-18/reviews/anx_reader_foliate_js_highlighting_analysis.md`
+- `docs/archive/2026-07-24-epic-7-interaction/design.md:115`（no-op drag 搶手勢競技場機制原始設計意圖）
+
+---
+
+## Issue 9：裝置旋轉/視窗尺寸變化時重新呼叫 `applyPreferences()`
+
+**Status:** `ready-for-agent`
+
+**依賴：** 無
+
+**描述：**
+
+見 `design.md`「第二輪真機使用回報」項目 5、ADR 0012「已知限制」段。「雙欄」模式的 `max-inline-size`（`main.js:125-132` 的 `targetSize = Math.max(360, Math.ceil(hostSize / 2))`）是呼叫 `applyPreferences()` 當下 `getBoundingClientRect()` 的一次性快照，裝置旋轉/視窗尺寸變化後不會重新計算，欄寬可能不再精確等於「當下 `hostSize` 的一半」。
+
+- **`main.js`**：新增模組級變數 `let lastAppliedPrefs = initialPrefs`（`window.applyPreferences(prefs)` 函式開頭，`main.js:105` 附近，第一行就存一份 `lastAppliedPrefs = prefs`，確保任何時刻呼叫都能取得最新已套用的完整 prefs）。
+- 對 `view`（或其父容器，實作階段確認哪個 DOM 節點的尺寸變化才是真正需要關心的訊號）新增**本專案自建**的 `ResizeObserver`（與 `paginator.js:1163` 既有的那個是兩個獨立 observer，互不干擾，不修改 vendored `paginator.js`，比照 ADR 0011）：resize callback 內 debounce（建議 200ms，實作階段可依真機測試結果微調）後呼叫 `window.applyPreferences(lastAppliedPrefs)`。
+- **不特例只挑「雙欄模式」才重算**——整包 `lastAppliedPrefs` 全部重新套用，其餘欄位（字級/邊距/CSS 覆蓋）重算是 idempotent、無副作用，不值得為了省這點運算加一層「只有 double 才重算」的特例判斷（比照專案「不特地加狀態抑制無害重複呼叫」的既有慣例）。
+
+**單元測試要求：**
+- `main.js` 的 `setAttribute`/`ResizeObserver` 呼叫本身無 JVM/JS 單元測試（比照 Issue 4/5/6 既有慣例），驗收依賴真機 `integration_test` 與人工視覺確認。
+
+**驗收標準：**
+- `flutter analyze` 乾淨、既有 `flutter test`／`./gradlew :app:testDebugUnitTest` 全數通過（無回歸）。
+- 真機（`3CEF42ECD491687`）流式 EPUB「雙欄」模式下旋轉裝置，確認欄寬重新計算為新 `hostSize` 的一半（可用 `showNavZoneDebugOverlay` 或直接肉眼比對欄寬變化）。
+- 真機確認旋轉後目前閱讀位置/頁碼不跳動（`paginator.js` 的 CFI-based relocate 理論上會保留，需真機驗證）。
+- 真機確認「單欄」／「自動」模式不受本 Issue 影響（兩者 `max-inline-size` 本就與 `hostSize` 無關）。
+
+**相關佐證：**
+- `design.md`「第二輪真機使用回報」
+- `docs/adr/0012-column-mode-replaces-single-column.md`「已知限制」段
 
 ---
 
