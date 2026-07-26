@@ -314,9 +314,9 @@ window.getTableOfContents = async function () {
     for (const item of items) {
       entries.push(await buildTocEntry(item))
     }
-    window.FoliateBridge.onTableOfContentsReady(JSON.stringify(entries))
+    window.flutter_inappwebview.callHandler('onTableOfContentsReady', JSON.stringify(entries))
   } catch (e) {
-    window.FoliateBridge.onTableOfContentsReady(JSON.stringify([]))
+    window.flutter_inappwebview.callHandler('onTableOfContentsReady', JSON.stringify([]))
   }
 }
 
@@ -369,7 +369,7 @@ async function openBook() {
       const resolvedWritingMode =
         initialPrefs.writingMode ?? detectedBookWritingMode ?? 'horizontal'
       window.applyPreferences({ ...initialPrefs, writingMode: resolvedWritingMode })
-      window.FoliateBridge.onPageRendered(resolvedWritingMode)
+      window.flutter_inappwebview.callHandler('onPageRendered', resolvedWritingMode)
     }, { once: true })
     // 目前定位變動持續推播（epic-17 Issue 6）：與上方 { once: true } 的
     // FR-06/onPageRendered 監聽器各自獨立、互不影響，開書當下的第一次
@@ -378,7 +378,8 @@ async function openBook() {
     // progress.js），近似頁碼概念，非精確渲染頁數。
     view.addEventListener('relocate', (e) => {
       const { cfi, section, fraction, location } = e.detail
-      window.FoliateBridge.onLocatorChanged(
+      window.flutter_inappwebview.callHandler(
+        'onLocatorChanged',
         JSON.stringify({ cfi, index: section?.current ?? 0, fraction: fraction ?? 0 }),
         fraction ?? 0,
         location?.current ?? 0,
@@ -416,7 +417,7 @@ async function openBook() {
     // 本檔案既有對非致命錯誤的處理原則。
     view.addEventListener('show-annotation', (e) => {
       const id = decorationIdByCfi.get(e.detail.value)
-      if (id) window.FoliateBridge.onAnnotationActivated(id)
+      if (id) window.flutter_inappwebview.callHandler('onAnnotationActivated', id)
     })
     // 選取範圍即時回報（epic-17 Issue 8）：'load' 事件對 look-ahead
     // 預讀章節同樣會觸發，故 doc/index 皆從本次 'load' 呼叫的區域變數
@@ -432,10 +433,17 @@ async function openBook() {
     view.addEventListener('load', (e) => {
       const doc = e.detail.doc
       const index = e.detail.index
-      doc.addEventListener('selectionchange', async () => {
+
+      // 選取範圍即時回報（epic-17 Issue 8）：抽成共用函式，供既有
+      // selectionchange 與下方 ADR 0013 既定的 Android 專用
+      // contextmenu/pointercancel 分支共同呼叫，避免重複實作同一段
+      // CFI/座標換算邏輯。'load' 事件對 look-ahead 預讀章節同樣會觸發，
+      // 故 doc/index 皆從本次 'load' 呼叫的區域變數閉包讀取（見
+      // spike-overlayer-annotations.md「已記錄的既有 API 落差」）。
+      const reportSelection = async () => {
         const selection = doc.getSelection()
         if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
-          window.FoliateBridge.onSelectionCleared()
+          window.flutter_inappwebview.callHandler('onSelectionCleared')
           return
         }
         const range = selection.getRangeAt(0)
@@ -443,14 +451,10 @@ async function openBook() {
         if (!rect) return
         const cfi = view.getCFI(index, range)
         const progress = await view.getCFIProgress(cfi)
-        // 座標換算（Issue 7 Spike 已驗證公式）：iframe 內局部矩形 + iframe
-        // 相對外層 #view 容器的位移，除以外層容器可視尺寸。只取第一個
-        // client rect 當代表矩形（多欄選取的代表 rect 策略，見
-        // spike-overlayer-annotations.md「留白」段落——現有 PercentRect
-        // 契約本身就只回報單一矩形，這是既有契約的限制，非本工單新增）。
         const iframeRect = doc.defaultView.frameElement.getBoundingClientRect()
         const viewportRect = view.getBoundingClientRect()
-        window.FoliateBridge.onSelectionChanged(
+        window.flutter_inappwebview.callHandler(
+          'onSelectionChanged',
           JSON.stringify({ cfi, index, fraction: progress?.fraction ?? 0 }),
           progress?.fraction ?? 0,
           (iframeRect.left + rect.left - viewportRect.left) / viewportRect.width,
@@ -458,7 +462,24 @@ async function openBook() {
           (iframeRect.left + rect.right - viewportRect.left) / viewportRect.width,
           (iframeRect.top + rect.bottom - viewportRect.top) / viewportRect.height,
         )
+      }
+
+      doc.addEventListener('selectionchange', reportSelection)
+
+      // ADR 0013 既定決策（非本計畫視情況新增）：比照 anx-reader 已驗證的
+      // 手法（見 tmp/epic-18/reviews/anx_reader_foliate_js_highlighting_
+      // analysis.md 5 節）——contextmenu 在長按觸發原生選字/顯示控點時
+      // 觸發，需 preventDefault() 避免原生選單彈出與既有 AnnotationToolbar
+      // 衝突；pointercancel 在拖曳控點期間，原本的 pointer 手勢因系統選取
+      // 手勢接管而觸發，兩者皆代表「選取狀態可能剛建立或變動」，作為
+      // selectionchange 的主動觸發備援（不同 Android WebView 版本/廠牌
+      // 客製化/E-Ink 裝置對 selectionchange 事件觸發時機的行為差異，比
+      // 依賴單一被動事件更穩健）。
+      doc.addEventListener('contextmenu', (evt) => {
+        evt.preventDefault()
+        reportSelection()
       })
+      doc.addEventListener('pointercancel', () => reportSelection())
     })
     await view.open(book)
     view.renderer.setAttribute(
@@ -467,7 +488,7 @@ async function openBook() {
     )
     await view.init(initialCfi ? { lastLocation: initialCfi } : {})
   } catch (e) {
-    window.FoliateBridge.onError(String((e && e.message) || e))
+    window.flutter_inappwebview.callHandler('onError', String((e && e.message) || e))
   }
 }
 
