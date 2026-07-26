@@ -1,6 +1,6 @@
 # Epic 18 — 真機 UI 精修：工單清單 (Issues)
 
-依 `design.md`（使用者真機 QA 回報 8 項，其中項目 4 拆出不在本 Epic 範圍）與 `spec.md`（Issue 4／5 新介面定義）拆解出的 5 個工單（Issue 1-6，其中 Issue 6 取代 Issue 5）。Issue 6 完成合併後，使用者持續真機使用中再回報 5 項（見 `design.md`「第二輪真機使用回報」），拆解為 Issue 7-9。全部 8 個現行工單（Issue 1-4、6-9）彼此獨立、無依賴關係，可任意順序或平行開始。
+依 `design.md`（使用者真機 QA 回報 8 項，其中項目 4 拆出不在本 Epic 範圍）與 `spec.md`（Issue 4／5 新介面定義）拆解出的 5 個工單（Issue 1-6，其中 Issue 6 取代 Issue 5）。Issue 6 完成合併後，使用者持續真機使用中再回報 5 項（見 `design.md`「第二輪真機使用回報」），拆解為 Issue 7-9。Issue 8 於 `/diagnose` 調查後發現根因是 Flutter `AndroidView` 觸控轉發機制本身的限制（見 ADR 0013），改組為 Spike（驗證 `flutter_inappwebview` 是否可解），並新增 Issue 10 承接 Spike 通過後的完整遷移實作（**依賴 Issue 8**，其餘工單彼此獨立、無依賴關係，可任意順序或平行開始）。
 
 ---
 
@@ -254,45 +254,45 @@ Issue 5 的 `singleColumn` 布林開關因 `paginator.js` 對直排書籍的 `ma
 
 ---
 
-## Issue 8：流式 EPUB 真機無法畫線
+## Issue 8：Spike——`flutter_inappwebview` 能否解決流式 EPUB 真機無法畫線問題
 
-**Status:** `ready-for-agent`
+**Status:** ✅ 已完成並合併回 `main`（PR #77，merge commit `fc71c53`；分支 `spike/epic-18-issue-8-inappwebview`）。首輪複審（`tmp/epic-18/reviews/review-issue-8-spike.md`）發現 Task 1 選取手勢核心驗證從未實際執行、`selectionLog` 為空卻仍下 GO 結論，已退回補測；補測後（commit `d0abab3`）真機以 `adb shell input touchscreen swipe` 實際模擬長按選字＋兩次拖曳位移，`selectionLog` 取得 3 筆隨拖曳遞增、內部一致的 `CHANGED` 紀錄，Task 2（ES module 載入）維持 `moduleLoadResult == 'module-ok'`，兩項 AND 判準皆有實測證據支撐，複審通過（`tmp/epic-18/reviews/review-issue-8-spike-round2.md`）。結論 **GO**，`flutter_inappwebview` 依賴已保留於 `pubspec.yaml`，完整遷移實作交由 Issue 10 承接。
 
-**依賴：** 無
+**依賴：** 無（起始工單，可立即開始）
 
-**描述：**
+**背景：**
 
-見 `design.md`「第二輪真機使用回報」項目 4。使用者回報流式 EPUB 在實體機上長按選字後，無法拖曳選取控點調整範圍以建立劃線。
+見 `design.md`「第二輪真機使用回報」項目 4。使用者回報流式 EPUB 在實體機上長按選字後，選取控點（handle）會出現，但拖曳控點調整範圍完全沒反應，導致無法建立劃線/備註。
 
-**根因假設（未經真機驗證，本 Issue 第一步即驗證此假設）**：`foliate_epub_reader_view.dart:364-409` 的 `build()` 在 `AndroidView`（WebView）上疊了一層全螢幕 9 宮格 `GestureDetector`，`behavior: HitTestBehavior.opaque` 且註冊 `onHorizontalDragStart`/`onVerticalDragStart`（空 handler，`foliate_epub_reader_view.dart:383-384`）。此機制原記載於 `docs/archive/2026-07-24-epic-7-interaction/design.md:115`，是刻意設計——讓 9 宮格只認 tap、不讓底層原生（foliate-js）自己的滑動翻頁手勢跟 tap 熱區打架（ADR 0009/0010）。此機制原本只用於 FXL（`EpubReaderView`，決策 #7 排除劃線功能，不會踩到衝突），但被原樣複製到同樣需要支援劃線的 `FoliateEpubReaderView`，懷疑長按選字後「拖曳選取控點調整範圍」這個手勢被這層攔截，傳不到底下 WebView。
+原假設（Dart 端 9 宮格 `GestureDetector` 的 no-op drag handler 攔截了拖曳手勢）已透過 `/diagnose` session 的真機獨立實測**推翻**：把 `foliate_epub_reader_view.dart` 疊在 `AndroidView` 上的整層 `GestureDetector`（含 `onTap`）完全拿掉、只留裸 `AndroidView`，用 `adb shell input` 送真實硬體層級觸控重測，`webView.setOnTouchListener` 依然零觸發（`DecorView.dispatchTouchEvent` 有收到，但沒傳到 `WebView`）。三條獨立調查路線（`reviews/issue-8-selection-detection-report.md` 的 8 種方案實測、本次真機獨立驗證、`reviews/issue_8_new_solution_proposal.md`）收斂到同一根因：Flutter 官方 `AndroidView` 包裝 `android.webkit.WebView` 時，觸控轉發機制本身就無法完整還原「長按選字→拖曳控點」這個手勢序列，非本專案程式碼缺陷，詳見 **ADR 0013**。
 
-**參考研究**：`tmp/epic-18/reviews/anx_reader_foliate_js_highlighting_analysis.md`（anx-reader 專案基於 foliate-js 的畫線實作分析）第 4.1 節證實 Android 平台「原生選取 Handle 拖拽」是需要特別處理的獨立手勢類別，該專案監聽 `contextmenu`／`pointercancel` 事件避免拖拉控制點時誤觸自訂選單——若單純拿掉 no-op drag handler 仍無法完全解決，可參考此手法在 `main.js` 既有 `selectionchange` 監聽器（`main.js:432-462`）旁補上對應處理。
+`flutter_inappwebview` 有自己獨立於 Flutter 官方 `AndroidView` 的原生嵌入與觸控轉發機制，`anx-reader`（同樣是 Flutter + `foliate-js` 的產品）已在正式產品環境證實此路徑可行。但這是本專案完全沒用過的第三方套件，且流式 EPUB 目前的原生嵌入（`FoliateEpubReaderView.kt`）用了 `WebViewAssetLoader` 搭配一個當初特別處理過的 ES module CORS/MIME 陷阱（`main.js`/`view.js` 等皆為 `<script type="module">`，透過 `file://` 直接載入會被瀏覽器拒絕，見既有程式碼註解）——`flutter_inappwebview` 換一套資源載入機制後，這個陷阱是否會被重新踩到，未經驗證。比照 ADR 0011 當初「先做 Spike 驗證核心假設，GO 才進入完整遷移」的既有慣例（`epic-17-epub-render-migration` Issue 1），本 Issue 只做最小範圍驗證，不做完整遷移實作。
 
-**執行流程（比照本 Epic 既有的真機 mutation test 方法論，Issue 5/6 皆用此法）：**
+**驗證範圍（唯二兩項）：**
 
-1. 真機（`3CEF42ECD491687`）重現現況：開一本流式 EPUB，長按選字，確認選取控點（handle）拖曳無反應、無法擴大/縮小選取範圍。
-2. **Mutation 測試**：暫時移除 `foliate_epub_reader_view.dart:383-384` 的 `onHorizontalDragStart`/`onVerticalDragStart` 兩行，真機重新安裝測試：
-   - 畫線功能是否恢復（長按選字→拖曳控點→放開→出現 `AnnotationToolbar`→選色成功建立劃線）？
-   - 9 宮格 tap 熱區導覽（翻頁／選單）是否仍正常，有無出現非預期的滑動翻頁（foliate-js 內建手勢跑出來與 tap 熱區衝突）？
-3. 依步驟 2 結果決定最終修法：
-   - 若移除後兩者皆正常：直接移除這兩行（最簡方案）。
-   - 若移除後翻頁手勢衝突：改為更精細的判斷（例如「目前是否有作用中選取範圍」時才放行拖曳，或參考 anx-reader 監聽 `contextmenu`/`pointercancel` 於 `main.js` 端處理，Dart 端 `GestureDetector` 維持攔截但改用不同手段辨識選取拖曳手勢），具體方案由實際測試結果決定，不預先鎖定。
-4. 確認最終修法下，9 宮格 tap 導覽、沉浸模式切換、既有換頁功能皆無回歸。
+1. **觸控轉發**：用 `flutter_inappwebview` 的 `InAppWebView` 元件開一個最小 harness（不需要完整 `foliate-js`，可先用一個含長段可選文字的簡單 HTML 頁面驗證），真機長按選字→拖曳控點，確認選取範圍會隨拖曳正確擴大/縮小，且 Dart 端能透過 `InAppWebViewController.addJavaScriptHandler()`（JS 側呼叫 `window.flutter_inappwebview.callHandler('onSelectionChanged', ...)`）收到選取變動事件。
+2. **ES module 資源載入**：把現有 `app/android/app/src/main/assets/foliate/` 的 8 個檔案（`index.html`／`main.js`／`view.js` 等）透過 `InAppWebView` 的 `shouldInterceptRequest` callback（`Future<WebResourceResponse?> Function(InAppWebViewController controller, WebResourceRequest request)`，已查證為 `flutter_inappwebview` 6.1.5 現行 API，非 deprecated 的 `androidShouldInterceptRequest`）比照現行 Kotlin `WebViewAssetLoader` 的 virtual origin（`https://appassets.androidplatform.net/assets/foliate/...`）與 `.js` 副檔名 MIME 覆寫邏輯（`text/javascript`）服務，確認 `<script type="module">` 的 `import` 陳述式正常載入、不重現 CORS 錯誤。
 
-**單元測試要求：**
-- 本 Issue 核心驗證依賴真機互動測試（長按選字＋拖曳手勢），非 `flutter test`/`integration_test` 自動化可完整覆蓋的範圍（比照本專案對純手勢層行為的既有測試決策）。
-- 若最終修法涉及新增 Dart 端邏輯判斷（例如「是否有作用中選取範圍」的狀態），需為該邏輯本身新增對應的 widget test（依實際修法決定測試內容，本 Issue 撰寫階段無法預先寫出，因修法尚未定案）。
-- 既有 `foliate_epub_reader_view_test.dart` 中 9 宮格 `Key('nav_zone_$index')` 存在且可點擊的既有測試需保持通過（回歸確認）。
+**明確不在本 Issue 範圍**：完整遷移實作（`FoliateEpubReaderView.kt`/`.dart` 改寫、`main.js` 選取偵測邏輯改為 `contextmenu`/`pointercancel`、字型 `@font-face`／書本內容讀取搬到 Dart 端等）——這些留待 Issue 10（GO 之後才展開，見下方）。
+
+**GO/NO-GO 決策路徑：**
+- **GO**（兩項驗證皆通過）：於 `design.md` 記錄 Spike 結果，Issue 10 開始撰寫完整遷移計畫。
+- **NO-GO**（任一項失敗）：記錄具體失敗證據於 `reviews/`，`design.md` 補上「已評估並否決」的結論，回頭評估 ADR 0013 的其餘替代方案（例如接受劃線功能侷限、或重新評估其他 WebView 封裝方案）。
+
+**單元測試要求：** 無（研究/驗證性質，比照 `epic-17-epub-render-migration` Issue 1 先例）。過程中產生的 throwaway harness 程式碼與素材（截圖、logcat）驗證後需清理，不進版控（放 `tmp/`，已 gitignore）。
 
 **驗收標準：**
-- 真機（`3CEF42ECD491687`）流式 EPUB 長按選字→拖曳控點調整範圍→放開→成功建立劃線（顏色/底線皆可）。
-- 真機確認 9 宮格 tap 熱區導覽（上一頁/下一頁/選單）功能不受影響，無非預期的滑動翻頁。
-- `flutter analyze` 乾淨、既有 `flutter test` 全數通過（無回歸）。
+- 真機（`3CEF42ECD491687`）長按選字→拖曳控點→選取範圍正確擴大/縮小→Dart 端 `addJavaScriptHandler` 收到對應事件，皆有截圖或 log 佐證。
+- ES module 透過 `shouldInterceptRequest` 載入無 CORS/MIME 錯誤，`main.js`（或等效驗證用 JS 檔）內的 `import` 陳述式成功執行。
+- 明確依 GO/NO-GO 分類，寫入驗證報告（建議路徑：`docs/epics/epic-18-reader-device-qa/reviews/spike-flutter-inappwebview-selection.md`）。
+- 依結果更新 `design.md` 對應段落。
 
 **相關佐證：**
+- ADR 0013（`docs/adr/0013-flutter-inappwebview-for-foliate-selection.md`）
 - `design.md`「第二輪真機使用回報」
 - `tmp/epic-18/reviews/anx_reader_foliate_js_highlighting_analysis.md`
-- `docs/archive/2026-07-24-epic-7-interaction/design.md:115`（no-op drag 搶手勢競技場機制原始設計意圖）
+- `docs/epics/epic-18-reader-device-qa/reviews/issue-8-selection-detection-report.md`
+- `docs/epics/epic-18-reader-device-qa/reviews/issue_8_new_solution_proposal.md`
 
 ---
 
@@ -322,6 +322,37 @@ Issue 5 的 `singleColumn` 布林開關因 `paginator.js` 對直排書籍的 `ma
 **相關佐證：**
 - `design.md`「第二輪真機使用回報」
 - `docs/adr/0012-column-mode-replaces-single-column.md`「已知限制」段
+
+---
+
+## Issue 10：流式 EPUB 原生嵌入遷移至 `flutter_inappwebview`（完整實作）
+
+**Status:** `ready-for-agent`（Issue 8 Spike 已於 `spike/epic-18-issue-8-inappwebview` 分支產出 GO 結論並經複審通過，見 `tmp/epic-18/reviews/review-issue-8-spike-round2.md`；可展開細部計畫）
+
+**依賴：** Issue 8（Spike 須為 GO 結論才可開始）
+
+**描述：**
+
+見 ADR 0013。Issue 8 的 Spike 若確認 `flutter_inappwebview` 能解決真機無法畫線問題且不重現 ES module 載入陷阱，本 Issue 執行完整遷移：
+
+- `app/pubspec.yaml` 正式引入 `flutter_inappwebview` 依賴。
+- `app/lib/reader/foliate_epub_reader_view.dart`：`AndroidView` 換成 `InAppWebView`，公開建構參數與 callback 契約（`onPageRendered`／`onSelectionChanged`／`onSelectionCleared`／`onLocatorChanged`／`onAnnotationActivated` 等）維持不變，`ReaderScreen` 不需要改動。
+- JS↔Dart 橋接從 Kotlin `addJavascriptInterface`（`window.FoliateBridge.xxx(...)`）改為 `flutter_inappwebview` 的 `addJavaScriptHandler`（JS 側改為 `window.flutter_inappwebview.callHandler('xxx', ...)`），`main.js` 目前 8 處 `window.FoliateBridge.` 呼叫點需要逐一改寫（`onTableOfContentsReady`×2／`onPageRendered`／`onLocatorChanged`／`onAnnotationActivated`／`onSelectionCleared`／`onSelectionChanged`／`onError`）。
+- `main.js` 新增 Android 專用的 `contextmenu`/`pointercancel` 選取偵測分支（比照 ADR 0013 決策，anx-reader 已驗證手法），取代現有 iframe `selectionchange` 監聽器在 Android 平台完全不觸發的既有邏輯；非 Android 平台維持既有邏輯。
+- `app/android/app/src/main/kotlin/cc/ugotit/elinkbook/FoliateEpubReaderView.kt`／`FoliateEpubReaderViewFactory.kt`：`WebViewAssetLoader`（含 `.js` MIME 覆寫）、`BookPathHandler`（讀取目前開啟書籍檔案/`content://` URI）、`buildFontFaceCss()`（5 款內建字型 `@font-face` 產生）三塊邏輯，需要決定搬到 Dart 端 `shouldInterceptRequest` 或以其他方式對接 `flutter_inappwebview`——具體設計留待本 Issue 的 `plan-issue-10.md` 階段依 Issue 8 Spike 的實測結果決定，`MainActivity.kt` 的 `FoliateEpubReaderViewFactory` 註冊（`MainActivity.kt:123-125`）預期整段移除。
+- `ReaderViewAttachmentTracker`（原生端音量鍵攔截狀態追蹤，見 `epic-7-interaction` Issue 7）目前掛在 `FoliateEpubReaderView.kt` 的 `init`/`dispose()`，遷移後需要確認新架構下這個追蹤機制如何對接，不得讓音量鍵翻頁功能回歸。
+
+**單元測試要求：** 待 `plan-issue-10.md` 階段依實際設計定案（此階段無法預先寫出，需求已在 Issue 8 Spike 確認可行後才知道最終架構）。至少須涵蓋：`foliate_epub_reader_view_test.dart` 既有測試套件（`initialPreferences` map 組裝、`didUpdateWidget` 偏好變動、9 宮格熱區、`onSelectionChanged`/`onSelectionCleared`/`onLocatorChanged` 等 callback 解析）全數改寫後依然通過對稱行為；真機 `integration_test` 回歸確認換頁/劃線/目錄/書籤功能無 regression。
+
+**驗收標準：**
+- 真機（`3CEF42ECD491687`）流式 EPUB 長按選字→拖曳控點→放開→成功建立劃線（顏色/底線皆可）。
+- 既有功能（換頁、9 宮格熱區、沉浸模式、TOC、書籤、直排/橫排切換、欄數模式、音量鍵翻頁）真機回歸確認無 regression。
+- `flutter analyze` 乾淨、`flutter test` 全數通過、`./gradlew :app:testDebugUnitTest`（若原生端仍有可測邏輯）通過。
+
+**相關佐證：**
+- ADR 0013（`docs/adr/0013-flutter-inappwebview-for-foliate-selection.md`）
+- Issue 8 的 Spike 結論報告（`reviews/spike-flutter-inappwebview-selection.md`）
+- `tmp/epic-18/reviews/issue_8_new_solution_proposal.md`
 
 ---
 
