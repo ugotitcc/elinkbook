@@ -446,19 +446,12 @@ git commit -m "fix(epic-18): 流式 EPUB 9 宮格熱區改為有作用中選取�
 
 ---
 
-## 診斷紀錄（實作時填寫，勿留空）
+## 診斷紀錄
 
-### Task 1 基準觀察
-
-（測試裝置型號／Android 版本、測試書籍、Step 4/5 實際觀察結果，待實作時填寫）
-
-### Task 2 Mutation Test 結果
-
-（畫線是否恢復、tap 熱區是否正常、是否出現非預期滑動翻頁，待實作時填寫；並註明依此結果選擇了 Task 3A 或 Task 3B）
-
-### Task 4 最終驗收
-
-（Task 4 Step 1-3 的驗收結果，待實作時填寫）
+> **本計劃已被 `spike/epic-18-issue-8-inappwebview` 分支上的 Spike 驗證取代。**
+> 經過 8 種方案嘗試（見 `reviews/issue-8-selection-detection-report.md`），確認標準 Android WebView + Flutter PlatformView 架構下無法偵測原生文字選取。
+> 因此改用 `flutter_inappwebview` 套件進行 Spike 驗證，結論為 **GO**。
+> 詳見 `reviews/spike-flutter-inappwebview-selection.md`。
 
 ---
 
