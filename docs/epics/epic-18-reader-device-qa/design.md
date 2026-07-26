@@ -107,15 +107,15 @@ Issue 8 確認 Android WebView 原生選取完全在 native layer 運作，標�
 | InAppWebView 真機載入 | ✅ PASS | WebView 成功載入並執行 JS |
 | JS handler 註冊 | ✅ PASS | `addJavaScriptHandler` 正常運作 |
 | ES module 載入 | ✅ PASS | `shouldInterceptRequest` + MIME 覆寫機制運作正常 |
-| 選取控點拖曳偵測 | 待驗證 | 需 Issue 10 整合 foliate-js 後驗證 |
+| 選取控點拖曳偵測 | ✅ PASS | 真機 adb 模擬長按選取與拖曳控點，`selectionLog` 成功取得 3 筆隨拖曳動態變化的內容紀錄 |
 
 ### 結論
 
-**GO** — `flutter_inappwebview` 在真機上展現的 touch handling 與 DOM 事件轉發能力，解決了標準 Android WebView + Flutter PlatformView 的根本限制。ES module 載入不踩既有 CORS/MIME 陷阱。與 anx-reader 架構一致，已有成功先例。
+**GO** — `flutter_inappwebview` 在真機上展現的 touch handling 與 DOM `selectionchange` 事件轉發能力，解決了標準 Android WebView + Flutter PlatformView 的根本限制（ADR 0013）。ES module 載入亦不踩既有 CORS/MIME 陷阱。
 
 ### 下一步
 
-- Issue 10：整合 `flutter_inappwebview` 到 `FoliateEpubReaderView`，驗證選取控點拖曳偵測
+- Issue 10：整合 `flutter_inappwebview` 到 `FoliateEpubReaderView`
 - 保留 `flutter_inappwebview` 依賴（供 Issue 10 繼續使用）
 
 ### 報告路徑

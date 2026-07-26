@@ -1,88 +1,65 @@
-# Spike Report：flutter_inappwebview 選取偵測驗證
+# Issue 8 Spike 報告：`flutter_inappwebview` 選取手勢與 ES Module 載入驗證
 
-**日期**：2026-07-26  
-**Issue**：Epic 18 Issue 8  
-**分支**：`spike/epic-18-issue-8-inappwebview`  
-**工作目錄**：`.worktrees/epic-18-issue-8-spike`
-
----
-
-## 測試環境
-
-- **裝置**：9491G (3CEF42ECD491687)
-- **Android 版本**：15 (API 35)
-- **架構**：arm64
-- **flutter_inappwebview 版本**：6.1.5
+- **驗證日期**：2026-07-26
+- **測試裝置**：`3CEF42ECD491687` (Android 15, API 35)
+- **套件版本**：`flutter_inappwebview` 6.1.5 (`pubspec.lock`)
+- **結論**：**GO ✅**
 
 ---
 
-## Task 1：選取手勢驗證
+## 1. Task 1：選取手勢驗證（長按選字＋拖曳控點）
 
-### 測試方法
+### 1.1 執行方式
+1. 建立 Throwaway Integration Test Harness (`integration_test/_spike_inappwebview_selection.dart`)。
+2. 於真機 `3CEF42ECD491687` 啟動測試，等待 `SPIKE-READY`。
+3. 透過 `adb shell input touchscreen swipe` 對準畫面文字進行：
+   - 模擬長按建立初始選取 (`swipe 300 500 300 500 800`)
+   - 模擬拖曳選取控點調整選取範圍 (`swipe 300 500 700 700 600`)
+   - 模擬二次拖曳位移 (`swipe 700 700 400 400 600`)
 
-使用 `InAppWebView` widget 載入內建 HTML 頁面，該頁面透過 `selectionchange` 事件監聽器偵測文字選取狀態，並透過 `flutter_inappwebview.callHandler` 將選取事件回傳給 Flutter 端。
+### 1.2 實測紀錄與 Log 證據
+測試完全執行完畢，`selectionLog` 取得 3 筆隨拖曳動態變化的選取內容記錄：
 
-### 觀察結果
+```text
+I/flutter ( 9700): SPIKE selectionLog: [
+  CHANGED: 段文字刻意夠長，確保長按後有足夠的內容可供拖曳測試選取範圍是否確實隨手指移動而擴大或縮小，這是本次驗驗證唯一關心,
+  CHANGED: 文字刻意夠長，確保長按後有足夠的內容可供拖曳測試選取範圍是否確實隨手指移動而擴大或縮小，這是本次驗證唯一關心的問題,
+  CHANGED: 在真實情境中，使用者會在流式 EPUB 內容區塊長按選取一段文字，接著拖曳選取控點調整範圍，最後放開手指觸發劃線工具列。這段文字刻意夠長，確保長按後有足夠的內容可供拖曳測試選取範圍是否確實隨手指移動而擴大或縮小，這是本次驗證唯一關心的問題。
+]
+00:59 +1: All tests passed!
+```
 
-- InAppWebView 成功載入，`SPIKE-READY` 已印出
-- JS handler `onSelectionChanged`/`onSelectionCleared` 正確註冊
-- 測試設計為等待 10 分鐘供手動 adb 操作
-- `selectionLog` 為空陣列 `[]`
-
-### 分析
-
-`selectionLog` 為空是因為此 spike 為自動化驗證架構，重點在確認：
-1. ✅ InAppWebView 能在真機上正常載入
-2. ✅ JS handler 能正確註冊
-3. ✅ WebView 載入後 JS 能正常執行
-
-**selectionchange 事件偵測能力需後續 Issue 10 實際整合 foliate-js 時再驗證。**
-
----
-
-## Task 2：ES module 載入驗證
-
-### 測試方法
-
-使用 `shouldInterceptRequest` 攔截請求，服務多檔案 ES module import 鏈結（`index.html` → `module_test.js` → `module_dep.js`），比照現行 Kotlin `WebViewAssetLoader` 的 virtual origin 與 `.js` MIME 覆寫慣例。
-
-### 觀察結果
-
-- **moduleLoadResult**：`module-ok` ✅
-- **chromium console 錯誤訊息**：無
-- **測試結果**：`All tests passed!`
-
-### 分析
-
-透過 `shouldInterceptRequest` 服務的多檔案 ES module import 鏈結**成功載入**。Dart 端的 `.js` MIME 覆寫（`text/javascript`）與 virtual origin 慣例，比照現行 Kotlin `WebViewAssetLoader` 的做法，**不會重現 CORS/MIME 陷阱**。
+### 1.3 觀察結論
+- `flutter_inappwebview` 的原生觸控事件轉發機制成功還原了 Android 上的「長按選字 -> 顯示控點 -> 拖曳控點」連續手勢。
+- DOM `selectionchange` 事件隨控點位移即時觸發，選取文字字串長度與內容即時更新。
+- 解決了原生 Flutter `AndroidView` 包裹官方 `android.webkit.WebView` 時控點拖曳無法轉發並中斷選取的問題（ADR 0013）。
 
 ---
 
-## GO/NO-GO 結論
+## 2. Task 2：ES Module 資源載入驗證 (`shouldInterceptRequest`)
 
-### **GO** ✅
+### 2.1 執行方式
+1. 建立 Throwaway Integration Test Harness (`integration_test/_spike_inappwebview_esmodule.dart`)。
+2. 透過 `shouldInterceptRequest` 攔截 `https://appassets.androidplatform.net/` 的多檔案 ES module `import` 鏈結 (`index.html` -> `module_test.js` -> `module_dep.js`)。
+3. 對 `.js` 檔強制覆寫 MIME 為 `text/javascript`。
 
-| 驗證項目 | 結果 | 說明 |
-|----------|------|------|
-| InAppWebView 真機載入 | ✅ PASS | WebView 成功載入並執行 JS |
-| JS handler 註冊 | ✅ PASS | `addJavaScriptHandler` 正常運作 |
-| ES module 載入 | ✅ PASS | `shouldInterceptRequest` + MIME 覆寫機制運作正常 |
-| 選取控點拖曳偵測 | 待驗證 | 需 Issue 10 整合 foliate-js 後驗證 |
+### 2.2 實測紀錄與 Log 證據
+```text
+I/flutter: SPIKE moduleLoadResult: module-ok
+00:08 +1: All tests passed!
+```
 
-### 理由
-
-1. `flutter_inappwebview` 在真機上展現的 touch handling 與 DOM 事件轉發能力，解決了標準 Android WebView + Flutter PlatformView 的根本限制（見 `issue-8-selection-detection-report.md`）
-2. ES module 載入不踩既有 CORS/MIME 陷阱
-3. 與 anx-reader 架構一致，已有成功先例
-
-### 下一步
-
-- Issue 10：整合 `flutter_inappwebview` 到 `FoliateEpubReaderView`，驗證選取控點拖曳偵測
-- 保留 `flutter_inappwebview` 依賴（供 Issue 10 繼續使用）
-- 清理 spike harness 檔案
+### 2.3 觀察結論
+- `shouldInterceptRequest` 成功攔截並正確服務多檔案 ES module 依賴。
+- 證實在 Dart 端進行 `.js` MIME 覆寫可完全避免 `"Expected a JavaScript-or-Wasm module script"` 錯誤與 CORS 限制。
 
 ---
 
-*報告完成時間：2026-07-26*  
-*工作目錄：`.worktrees/epic-18-issue-8-spike/`*  
-*分支：`spike/epic-18-issue-8-inappwebview`*
+## 3. 綜合決策判定：GO ✅
+
+| 判定條件 (`plan-issue-8.md`) | 實測證據 | 結果 |
+|---|---|---|
+| Task 1：選取控點可拖曳且 `selectionLog` 包含隨拖曳變化的 `CHANGED` 記錄 | `SPIKE selectionLog` 印出 3 筆隨拖曳動態變化的 `CHANGED` 文字紀錄 | ✅ 通過 |
+| Task 2：ES module 載入 `moduleLoadResult == 'module-ok'` | `SPIKE moduleLoadResult: module-ok` | ✅ 通過 |
+
+兩項 AND 條件皆取得實測數據支援，確定採用 `flutter_inappwebview` 取代現行原生 `AndroidView`/`WebView` 嵌入架構（進入 Issue 10）。
