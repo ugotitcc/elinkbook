@@ -46,7 +46,7 @@
 
 這 5 個函式的行為需與 Kotlin 對應版本（`FoliateLocatorCodec.extractCfi`/`parseTocEntries`、`FoliateDecorationCodec.argbIntToCssColor`/`buildDecorationEntries`、`FoliatePathValidator.isPathWithinRoot`）逐一對稱，測試案例直接對照既有 3 份 JVM 測試（`app/android/app/src/test/kotlin/cc/ugotit/elinkbook/FoliateLocatorCodecTest.kt`／`FoliateDecorationCodecTest.kt`／`FoliatePathValidatorTest.kt`）搬移，不遺漏任何既有案例（這些檔案在 Task 6 會被刪除，本 Task 是它們的替代覆蓋）。
 
-- [ ] **Step 1：撰寫失敗測試——`extractCfi`**
+- [x] **Step 1：撰寫失敗測試——`extractCfi`**
 
 ```dart
 import 'dart:convert';
@@ -89,12 +89,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：執行測試確認失敗（函式尚未存在）**
+- [x] **Step 2：執行測試確認失敗（函式尚未存在）**
 
 Run: `flutter test test/reader/foliate_bridge_codec_test.dart`
 Expected: FAIL——`Error: Method not found: 'extractCfi'`（或等效的 undefined function 錯誤）。
 
-- [ ] **Step 3：實作 `extractCfi`**
+- [x] **Step 3：實作 `extractCfi`**
 
 建立 `app/lib/reader/foliate_bridge_codec.dart`：
 
@@ -123,12 +123,12 @@ String? extractCfi(String? locatorJson) {
 }
 ```
 
-- [ ] **Step 4：執行測試確認通過**
+- [x] **Step 4：執行測試確認通過**
 
 Run: `flutter test test/reader/foliate_bridge_codec_test.dart`
 Expected: All `extractCfi` 測試 PASS。
 
-- [ ] **Step 5：撰寫失敗測試——`parseTableOfContents`**
+- [x] **Step 5：撰寫失敗測試——`parseTableOfContents`**
 
 於同一測試檔新增：
 
@@ -171,12 +171,12 @@ Expected: All `extractCfi` 測試 PASS。
   });
 ```
 
-- [ ] **Step 6：執行測試確認失敗**
+- [x] **Step 6：執行測試確認失敗**
 
 Run: `flutter test test/reader/foliate_bridge_codec_test.dart`
 Expected: FAIL——`parseTableOfContents` 未定義。
 
-- [ ] **Step 7：實作 `parseTableOfContents`**
+- [x] **Step 7：實作 `parseTableOfContents`**
 
 於 `foliate_bridge_codec.dart` 新增：
 
@@ -201,12 +201,12 @@ List<TocEntry> parseTableOfContents(String tocJson) {
 }
 ```
 
-- [ ] **Step 8：執行測試確認通過**
+- [x] **Step 8：執行測試確認通過**
 
 Run: `flutter test test/reader/foliate_bridge_codec_test.dart`
 Expected: All PASS。
 
-- [ ] **Step 9：撰寫失敗測試——`argbToCssColor`**
+- [x] **Step 9：撰寫失敗測試——`argbToCssColor`**
 
 新增：
 
@@ -230,7 +230,7 @@ Expected: All PASS。
   });
 ```
 
-- [ ] **Step 10：執行測試確認失敗，然後實作 `argbToCssColor`**
+- [x] **Step 10：執行測試確認失敗，然後實作 `argbToCssColor`**
 
 Run: `flutter test test/reader/foliate_bridge_codec_test.dart` → FAIL（未定義）。
 
@@ -251,7 +251,7 @@ String argbToCssColor(int argb) {
 
 Run: `flutter test test/reader/foliate_bridge_codec_test.dart` → PASS。
 
-- [ ] **Step 11：撰寫失敗測試——`buildDecorationEntries`**
+- [x] **Step 11：撰寫失敗測試——`buildDecorationEntries`**
 
 新增（直接操作 `EpubDecoration` 物件，不再透過 wire map 中介——本函式現在與呼叫端在同一個 Dart 執行環境，不需要先序列化成 `Map` 再解析回來）：
 
@@ -340,7 +340,7 @@ Run: `flutter test test/reader/foliate_bridge_codec_test.dart` → PASS。
   });
 ```
 
-- [ ] **Step 12：執行測試確認失敗，然後實作 `buildDecorationEntries`**
+- [x] **Step 12：執行測試確認失敗，然後實作 `buildDecorationEntries`**
 
 新增至 `foliate_bridge_codec.dart`：
 
@@ -373,7 +373,7 @@ List<Map<String, Object?>> buildDecorationEntries(
 
 Run: `flutter test test/reader/foliate_bridge_codec_test.dart` → PASS。
 
-- [ ] **Step 13：撰寫失敗測試——`isPathWithinRoot`**
+- [x] **Step 13：撰寫失敗測試——`isPathWithinRoot`**
 
 新增：
 
@@ -439,7 +439,7 @@ Run: `flutter test test/reader/foliate_bridge_codec_test.dart` → PASS。
   });
 ```
 
-- [ ] **Step 14：執行測試確認失敗，然後實作 `isPathWithinRoot`**
+- [x] **Step 14：執行測試確認失敗，然後實作 `isPathWithinRoot`**
 
 新增至 `foliate_bridge_codec.dart`：
 
@@ -472,12 +472,12 @@ bool isPathWithinRoot(
 
 Run: `flutter test test/reader/foliate_bridge_codec_test.dart` → PASS（全部 20 個測試）。
 
-- [ ] **Step 15：`flutter analyze` 確認乾淨**
+- [x] **Step 15：`flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 16：Commit**
+- [x] **Step 16：Commit**
 
 ```bash
 git add app/lib/reader/foliate_bridge_codec.dart app/test/reader/foliate_bridge_codec_test.dart
