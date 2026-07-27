@@ -525,6 +525,33 @@ async function openBook() {
       'flow',
       initialPrefs.pageTurnMode === 'scroll' ? 'scrolled' : 'paginated',
     )
+    // Issue 9：裝置旋轉/視窗尺寸變化時重新呼叫 applyPreferences()。
+    // 根因（見 ADR 0012「已知限制」段）：「雙欄」欄數模式的
+    // max-inline-size（targetSize = Math.ceil(hostSize / 2)，見上方
+    // window.applyPreferences() 的 columnMode === 'double' 分支）是呼叫
+    // applyPreferences() 當下 getBoundingClientRect() 的一次性快照，寫死後
+    // 不會再變動。paginator.js 自己的 ResizeObserver（paginator.js:1367，
+    // 觀察內部私有 #container）在裝置旋轉/視窗尺寸變化後只會重新計算
+    // divisor（用「當下真實 hostSize」對比「呼叫當下算出、此後不變的
+    // max-inline-size」），不會觸發 applyPreferences() 重新執行、也不會
+    // 重新計算 targetSize。
+    // 這裡新增一個本專案自建、完全獨立的 ResizeObserver（觀察
+    // view.renderer 這個 <foliate-paginator> 自訂元素本身的 box 尺寸——與
+    // window.applyPreferences() 的 columnMode === 'double' 分支算 hostSize
+    // 時用的是同一個元素的 getBoundingClientRect()，語意一致），debounce
+    // 200ms（起始建議值，避免旋轉動畫過程中連續觸發多次不必要的重排）後
+    // 呼叫 window.applyPreferences(lastAppliedPrefs)，讓「雙欄」模式的
+    // targetSize 依當下真實尺寸重新計算。不特例只挑 columnMode ===
+    // 'double' 才重算——整包 lastAppliedPrefs 重新套用一次，其餘欄位
+    // （字級/邊距/CSS 覆蓋/max-column-count）重算是 idempotent、無副作用
+    // （見 Global Constraints）。
+    let resizeDebounceTimer = null
+    new ResizeObserver(() => {
+      if (resizeDebounceTimer) clearTimeout(resizeDebounceTimer)
+      resizeDebounceTimer = setTimeout(() => {
+        window.applyPreferences(lastAppliedPrefs)
+      }, 200)
+    }).observe(view.renderer)
     await view.init(initialCfi ? { lastLocation: initialCfi } : {})
   } catch (e) {
     window.flutter_inappwebview.callHandler('onError', String((e && e.message) || e))
