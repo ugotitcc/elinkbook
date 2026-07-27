@@ -565,10 +565,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   }
 
   /// 目前頁是否已有書籤——比較 epubLocatorJson 完全相同字串，比照
-  /// NotesBottomSheet._matchesCurrentPosition 既有邏輯（FXL 副檔名為
-  /// .epub，恆用 epubLocatorJson，不使用 pdfPageIndex，見 Global
-  /// Constraints）。
-  Bookmark? get _fxlBookmarkAtCurrentPosition {
+  /// NotesBottomSheet._matchesCurrentPosition 既有邏輯（FXL／流式 EPUB
+  /// 副檔名皆為 .epub，恆用 epubLocatorJson，不使用 pdfPageIndex，見
+  /// Global Constraints）。epic-18 Issue 7 泛用化改名（原
+  /// _fxlBookmarkAtCurrentPosition），供 FXL 與流式 EPUB 共用。
+  Bookmark? get _bookmarkAtCurrentPosition {
     final locatorJson = _epubPositionInfo?.locatorJson;
     if (locatorJson == null) return null;
     for (final bookmark in _fxlBookmarks) {
@@ -577,11 +578,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     return null;
   }
 
-  Future<void> _toggleFxlBookmark() async {
+  Future<void> _toggleBookmark() async {
     final repository = widget.bookmarksRepository;
     final positionInfo = _epubPositionInfo;
     if (repository == null || positionInfo == null) return;
-    final existing = _fxlBookmarkAtCurrentPosition;
+    final existing = _bookmarkAtCurrentPosition;
     if (existing != null) {
       final id = existing.id;
       if (id != null) {
@@ -1456,16 +1457,16 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                     child: IconButton(
                       key: const Key('reader_fixed_layout_bookmark_toggle_button'),
                       icon: Icon(
-                        _fxlBookmarkAtCurrentPosition != null
+                        _bookmarkAtCurrentPosition != null
                             ? Icons.star
                             : Icons.star_border,
                         color: Colors.white,
                       ),
-                      tooltip: _fxlBookmarkAtCurrentPosition != null
+                      tooltip: _bookmarkAtCurrentPosition != null
                           ? '已加入此頁書籤'
                           : '加入此頁書籤',
                       onPressed:
-                          _epubPositionInfo == null ? null : _toggleFxlBookmark,
+                          _epubPositionInfo == null ? null : _toggleBookmark,
                     ),
                   ),
                 ),
