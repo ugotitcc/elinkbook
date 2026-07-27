@@ -17,6 +17,7 @@ import 'package:elinkbook/reader/writing_mode.dart';
 import 'package:elinkbook/reader/zone_action.dart';
 import 'package:elinkbook/screens/fxl_settings_sheet.dart';
 import 'package:elinkbook/screens/pdf_settings_sheet.dart';
+import 'package:elinkbook/screens/reader_settings_sheet.dart';
 import 'package:elinkbook/reader/toc_entry.dart';
 import 'package:elinkbook/screens/toc_bottom_sheet.dart';
 
@@ -177,7 +178,7 @@ void main() {
       await tester.runAsync(() => Future.delayed(Duration.zero));
       await tester.pump();
 
-      final finder = find.byKey(const Key('reader_layout_settings_button'));
+      final finder = find.byKey(const Key('reader_foliate_settings_button'));
       expect(
         tester.widget<IconButton>(finder).onPressed,
         isNull,
@@ -241,7 +242,7 @@ void main() {
       );
       await tester.pump();
 
-      await tester.tap(find.byKey(const Key('reader_layout_settings_button')));
+      await tester.tap(find.byKey(const Key('reader_foliate_settings_button')));
       await tester.pumpAndSettle();
 
       await tester.tap(
@@ -2835,33 +2836,43 @@ void main() {
     expect(find.byType(AppBar), findsNothing);
   });
 
-  testWidgets('EPUB 流式（isFixedLayout: false）：點擊選單熱區觸發沉浸模式切換', (tester) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: 'test/fixtures/sample.epub',
-          bookId: 'b1',
-          prefsManager: prefsManager,
-          isFixedLayout: false,
+  testWidgets(
+    'EPUB 流式（isFixedLayout: false）：點擊選單熱區觸發沉浸模式切換（Issue 7：AppBar 恆為 null，改斷言浮動按鈕）',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b1',
+            prefsManager: prefsManager,
+            isFixedLayout: false,
+          ),
         ),
-      ),
-    );
-    await tester.pump();
-    await tester.runAsync(() => Future.delayed(Duration.zero));
-    await tester.pump();
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
 
-    expect(find.byType(AppBar), findsOneWidget);
+      expect(find.byType(AppBar), findsNothing);
+      expect(
+        find.byKey(const Key('reader_foliate_back_button')),
+        findsOneWidget,
+      );
 
-    // navZoneMode 預設 rightFlip，index 1（中欄）為 menu（見
-    // app/lib/reader/nav_zone_mode.dart rightFlipZoneTemplate）。
-    await tester.tap(find.byKey(const Key('nav_zone_1')));
-    await tester.pump();
+      // navZoneMode 預設 rightFlip，index 1（中欄）為 menu（見
+      // app/lib/reader/nav_zone_mode.dart rightFlipZoneTemplate）。
+      await tester.tap(find.byKey(const Key('nav_zone_1')));
+      await tester.pump();
 
-    expect(find.byType(AppBar), findsNothing);
-  });
+      expect(
+        find.byKey(const Key('reader_foliate_back_button')),
+        findsNothing,
+      );
+    },
+  );
 
   testWidgets('EPUB 流式：previousPage/nextPage 熱區觸發 FoliateEpubReaderView '
-      '換頁，且不影響沉浸模式狀態（design.md 決策 #14）', (tester) async {
+      '換頁，且不影響沉浸模式狀態（design.md 決策 #14；Issue 7 改斷言浮動按鈕）', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         home: ReaderScreen(
@@ -2876,18 +2887,22 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    expect(find.byType(AppBar), findsOneWidget);
+    expect(find.byKey(const Key('reader_foliate_back_button')), findsOneWidget);
 
     // rightFlip 模板：index 2（右欄）＝ nextPage。
     await tester.tap(find.byKey(const Key('nav_zone_2')));
     await tester.pump();
-    expect(find.byType(AppBar), findsOneWidget, reason: '換頁動作不應影響沉浸模式狀態');
+    expect(
+      find.byKey(const Key('reader_foliate_back_button')),
+      findsOneWidget,
+      reason: '換頁動作不應影響沉浸模式狀態',
+    );
 
     // rightFlip 模板：index 0（左欄）＝ previousPage。
     await tester.tap(find.byKey(const Key('nav_zone_0')));
     await tester.pump();
     expect(
-      find.byType(AppBar),
+      find.byKey(const Key('reader_foliate_back_button')),
       findsOneWidget,
       reason: 'previousPage 同樣不應影響沉浸模式狀態',
     );
@@ -2931,7 +2946,7 @@ void main() {
       // 呼叫的 .then() callback 設定，需要多一次 pump 讓其 microtask 完成。
       await tester.pump();
 
-      final finder = find.byKey(const Key('reader_toc_button'));
+      final finder = find.byKey(const Key('reader_foliate_toc_button'));
       expect(tester.widget<IconButton>(finder).onPressed, isNotNull);
 
       await tester.tap(finder);
@@ -2972,7 +2987,7 @@ void main() {
       await tester.pump();
       await tester.pump();
 
-      await tester.tap(find.byKey(const Key('reader_toc_button')));
+      await tester.tap(find.byKey(const Key('reader_foliate_toc_button')));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
       expect(find.byType(TocBottomSheet), findsOneWidget);
@@ -3025,7 +3040,7 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.byKey(const Key('reader_footer')), findsOneWidget);
+    expect(find.byKey(const Key('reader_foliate_progress_text')), findsOneWidget);
     expect(find.text('10/100'), findsOneWidget);
   });
 
@@ -3052,7 +3067,10 @@ void main() {
       foliateView.onPageRendered();
       await tester.pump();
 
-      expect(find.byKey(const Key('reader_footer')), findsNothing);
+      expect(
+        find.byKey(const Key('reader_foliate_progress_text')),
+        findsNothing,
+      );
     },
   );
 
@@ -3087,10 +3105,13 @@ void main() {
     );
     await tester.pump();
 
-    // totalPages=0 應被 _buildFoliateEpubFooter 內部防呆攔截
-    // （info.totalPages ?? 0 → 0 <= 0 → return SizedBox.shrink），
-    // 不會走到 clamp(1, 0) 也不會建構 ReaderFooter。
-    expect(find.byKey(const Key('reader_footer')), findsNothing);
+    // totalPages=0 應被 Issue 7 新增的疊加層條件
+    // （(_epubPositionInfo?.totalPages ?? 0) > 0）攔截，不會建構
+    // _buildFoliateProgressText()。
+    expect(
+      find.byKey(const Key('reader_foliate_progress_text')),
+      findsNothing,
+    );
   });
 
   // --- Epic 17 Issue 8：流式 EPUB（FoliateEpubReaderView）劃線與備註 ---
@@ -3244,6 +3265,471 @@ void main() {
       await tester.pump(const Duration(milliseconds: 500));
 
       expect(find.byType(SimpleDialog), findsOneWidget);
+    },
+  );
+
+  // ─────────────────────────────────────────────────────────────────────
+  // epic-18-reader-device-qa Issue 7：流式 EPUB Chrome 重構（浮動選單列＋
+  // 頁眉/進度資訊分離）。
+  // ─────────────────────────────────────────────────────────────────────
+
+  testWidgets('流式 EPUB：AppBar 不顯示，6 顆浮動按鈕存在且可點擊（Issue 7）', (
+    tester,
+  ) async {
+    final bookmarksRepository = FakeBookmarksRepository();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_foliate_chrome',
+          prefsManager: prefsManager,
+          bookmarksRepository: bookmarksRepository,
+          isFixedLayout: false,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    expect(find.byType(AppBar), findsNothing);
+
+    final foliateView = tester.widget<FoliateEpubReaderView>(
+      find.byType(FoliateEpubReaderView),
+    );
+    foliateView.onPageRendered();
+    foliateView.onLayoutResolved?.call(
+      const EpubLayoutInfo(
+        isFixedLayout: false,
+        writingMode: WritingMode.horizontal,
+      ),
+    );
+    await tester.pump();
+    // _tocLoaded 由 loadTableOfContents() 的 .then() 設定，需多一次 pump。
+    await tester.pump();
+    foliateView.onLocatorChanged?.call(
+      const EpubPositionInfo(
+        locatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
+        progression: 0.1,
+        pageIndex: 0,
+        totalPages: 10,
+      ),
+    );
+    await tester.pump();
+
+    for (final key in [
+      'reader_foliate_back_button',
+      'reader_foliate_toc_button',
+      'reader_foliate_settings_button',
+      'reader_foliate_bookmark_toggle_button',
+      'reader_foliate_notes_button',
+      'reader_foliate_progress_button',
+    ]) {
+      final finder = find.byKey(Key(key));
+      expect(finder, findsOneWidget, reason: '$key 應存在');
+      expect(
+        tester.widget<IconButton>(finder).onPressed,
+        isNotNull,
+        reason: '$key 應為可點擊狀態',
+      );
+    }
+  });
+
+  testWidgets('流式 EPUB：點擊浮動版面設定按鈕開啟 ReaderSettingsSheet（Issue 7）', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_foliate_settings_btn',
+          prefsManager: prefsManager,
+          isFixedLayout: false,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final foliateView = tester.widget<FoliateEpubReaderView>(
+      find.byType(FoliateEpubReaderView),
+    );
+    foliateView.onPageRendered();
+    foliateView.onLayoutResolved?.call(
+      const EpubLayoutInfo(
+        isFixedLayout: false,
+        writingMode: WritingMode.horizontal,
+      ),
+    );
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('reader_foliate_settings_button')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ReaderSettingsSheet), findsOneWidget);
+  });
+
+  testWidgets(
+    '流式 EPUB：點擊浮動書籤 toggle 按鈕可新增/移除目前頁書籤，圖示正確切換（複用泛用化後的 _toggleBookmark，Issue 7）',
+    (tester) async {
+      final bookmarksRepository = FakeBookmarksRepository();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_foliate_bookmark_btn',
+            prefsManager: prefsManager,
+            bookmarksRepository: bookmarksRepository,
+            isFixedLayout: false,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final foliateView = tester.widget<FoliateEpubReaderView>(
+        find.byType(FoliateEpubReaderView),
+      );
+      foliateView.onPageRendered();
+      foliateView.onLocatorChanged?.call(
+        const EpubPositionInfo(
+          locatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
+          progression: 0.1,
+          pageIndex: 0,
+          totalPages: 10,
+        ),
+      );
+      await tester.pump();
+
+      final finder = find.byKey(
+        const Key('reader_foliate_bookmark_toggle_button'),
+      );
+      expect(
+        (tester.widget<IconButton>(finder).icon as Icon).icon,
+        Icons.star_border,
+      );
+
+      await tester.tap(finder);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(
+        (tester.widget<IconButton>(finder).icon as Icon).icon,
+        Icons.star,
+      );
+
+      final afterAdd = await bookmarksRepository.listByBook(
+        'b_foliate_bookmark_btn',
+      );
+      expect(afterAdd, hasLength(1));
+    },
+  );
+
+  testWidgets('流式 EPUB：點擊浮動筆記按鈕開啟 NotesBottomSheet（Issue 7）', (
+    tester,
+  ) async {
+    final bookmarksRepository = FakeBookmarksRepository();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_foliate_notes_btn',
+          prefsManager: prefsManager,
+          bookmarksRepository: bookmarksRepository,
+          isFixedLayout: false,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final foliateView = tester.widget<FoliateEpubReaderView>(
+      find.byType(FoliateEpubReaderView),
+    );
+    foliateView.onPageRendered();
+    foliateView.onLayoutResolved?.call(
+      const EpubLayoutInfo(
+        isFixedLayout: false,
+        writingMode: WritingMode.horizontal,
+      ),
+    );
+    await tester.pump();
+    foliateView.onLocatorChanged?.call(
+      const EpubPositionInfo(
+        locatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
+        progression: 0.1,
+      ),
+    );
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('reader_foliate_notes_button')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.byType(NotesBottomSheet), findsOneWidget);
+  });
+
+  testWidgets('流式 EPUB：頁眉純顯示章節名稱、不可點擊，showHeader=false 時不顯示（Issue 7）', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_foliate_header',
+          prefsManager: prefsManager,
+          isFixedLayout: false,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final foliateView = tester.widget<FoliateEpubReaderView>(
+      find.byType(FoliateEpubReaderView),
+    );
+    foliateView.onPageRendered();
+    foliateView.onLayoutResolved?.call(
+      const EpubLayoutInfo(
+        isFixedLayout: false,
+        writingMode: WritingMode.horizontal,
+      ),
+    );
+    await tester.pump();
+
+    final headerFinder = find.byKey(const Key('reader_foliate_header_text'));
+    expect(headerFinder, findsOneWidget);
+    expect(
+      find.ancestor(of: headerFinder, matching: find.byType(InkWell)),
+      findsNothing,
+      reason: '頁眉須為純顯示，不可點擊開啟目錄',
+    );
+    expect(
+      find.ancestor(of: headerFinder, matching: find.byType(GestureDetector)),
+      findsNothing,
+    );
+  });
+
+  testWidgets('流式 EPUB：showHeader=false 時頁眉不顯示（Issue 7）', (tester) async {
+    await prefsManager.saveBookPrefs(
+      'b_foliate_header_off',
+      const BookReaderPrefs(showHeader: false),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_foliate_header_off',
+          prefsManager: prefsManager,
+          isFixedLayout: false,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final foliateView = tester.widget<FoliateEpubReaderView>(
+      find.byType(FoliateEpubReaderView),
+    );
+    foliateView.onPageRendered();
+    foliateView.onLayoutResolved?.call(
+      const EpubLayoutInfo(
+        isFixedLayout: false,
+        writingMode: WritingMode.horizontal,
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byKey(const Key('reader_foliate_header_text')), findsNothing);
+  });
+
+  testWidgets(
+    '流式 EPUB：進度為純顯示、橫排時置於下方置中且不含手勢 widget（Issue 7）',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_foliate_progress_h',
+            prefsManager: prefsManager,
+            isFixedLayout: false,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final foliateView = tester.widget<FoliateEpubReaderView>(
+        find.byType(FoliateEpubReaderView),
+      );
+      foliateView.onPageRendered();
+      foliateView.onLocatorChanged?.call(
+        const EpubPositionInfo(
+          locatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
+          progression: 0.1,
+          pageIndex: 167,
+          totalPages: 197,
+        ),
+      );
+      await tester.pump();
+
+      final progressFinder = find.byKey(
+        const Key('reader_foliate_progress_text'),
+      );
+      expect(progressFinder, findsOneWidget);
+      expect(find.text('168/197'), findsOneWidget);
+      expect(find.byType(RotatedBox), findsNothing);
+      expect(
+        find.ancestor(
+          of: progressFinder,
+          matching: find.byType(GestureDetector),
+        ),
+        findsNothing,
+      );
+    },
+  );
+
+  testWidgets('流式 EPUB：直排時進度以 RotatedBox 顯示於左下角（Issue 7）', (
+    tester,
+  ) async {
+    await prefsManager.saveBookPrefs(
+      'b_foliate_progress_v',
+      const BookReaderPrefs(writingModeOverride: WritingMode.vertical),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_foliate_progress_v',
+          prefsManager: prefsManager,
+          isFixedLayout: false,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final foliateView = tester.widget<FoliateEpubReaderView>(
+      find.byType(FoliateEpubReaderView),
+    );
+    foliateView.onPageRendered();
+    foliateView.onLocatorChanged?.call(
+      const EpubPositionInfo(
+        locatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
+        progression: 0.1,
+        pageIndex: 167,
+        totalPages: 197,
+      ),
+    );
+    await tester.pump();
+
+    final rotatedFinder = find.ancestor(
+      of: find.byKey(const Key('reader_foliate_progress_text')),
+      matching: find.byType(RotatedBox),
+    );
+    expect(rotatedFinder, findsOneWidget);
+    expect(tester.widget<RotatedBox>(rotatedFinder).quarterTurns, isNot(0));
+  });
+
+  testWidgets('流式 EPUB：showFooter=false 時進度文字與進度/跳頁按鈕皆不顯示（Issue 7）', (
+    tester,
+  ) async {
+    await prefsManager.saveBookPrefs(
+      'b_foliate_progress_off',
+      const BookReaderPrefs(showFooter: false),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_foliate_progress_off',
+          prefsManager: prefsManager,
+          isFixedLayout: false,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final foliateView = tester.widget<FoliateEpubReaderView>(
+      find.byType(FoliateEpubReaderView),
+    );
+    foliateView.onPageRendered();
+    foliateView.onLocatorChanged?.call(
+      const EpubPositionInfo(
+        locatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
+        progression: 0.1,
+        pageIndex: 0,
+        totalPages: 10,
+      ),
+    );
+    await tester.pump();
+
+    expect(
+      find.byKey(const Key('reader_foliate_progress_text')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const Key('reader_foliate_progress_button')),
+      findsNothing,
+    );
+  });
+
+  testWidgets(
+    '流式 EPUB：點擊浮動進度/跳頁按鈕開啟內含 ReaderFooter 的 Bottom Sheet，舊 in-flow 頁尾不再存在（Issue 7）',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_foliate_progress_sheet',
+            prefsManager: prefsManager,
+            isFixedLayout: false,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final foliateView = tester.widget<FoliateEpubReaderView>(
+        find.byType(FoliateEpubReaderView),
+      );
+      foliateView.onPageRendered();
+      foliateView.onLocatorChanged?.call(
+        const EpubPositionInfo(
+          locatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
+          progression: 0.1,
+          pageIndex: 9,
+          totalPages: 100,
+        ),
+      );
+      await tester.pump();
+
+      // Bottom Sheet 開啟前，舊 in-flow ReaderFooter 應已不存在（見 Task 2
+      // 「移除舊路徑」），畫面上只有浮動進度文字顯示同樣的頁碼。
+      expect(find.byKey(const Key('reader_footer')), findsNothing);
+      expect(find.text('10/100'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('reader_foliate_progress_button')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('reader_footer')), findsOneWidget);
+      expect(
+        find.byKey(const Key('reader_footer_progress_text')),
+        findsOneWidget,
+      );
+      // 浮動疊加層（Bottom Sheet 開啟後仍在背景可見）與 Bottom Sheet 內的
+      // ReaderFooter 各自顯示一份相同頁碼文字。
+      expect(find.text('10/100'), findsNWidgets(2));
     },
   );
 }

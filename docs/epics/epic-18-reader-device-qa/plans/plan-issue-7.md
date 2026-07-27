@@ -31,12 +31,12 @@
 
 這是純粹的識別字重新命名，行為完全不變，只是拿掉「FXL 專屬」的命名暗示，為 Task 2 新增的流式 EPUB 書籤按鈕鋪路。
 
-- [ ] **Step 1：確認目前這兩個識別字的所有出現位置**
+- [x] **Step 1：確認目前這兩個識別字的所有出現位置**
 
 Run: `grep -n "_toggleFxlBookmark\|_fxlBookmarkAtCurrentPosition" app/lib/screens/reader_screen.dart`
 Expected: 6 行結果——`_fxlBookmarkAtCurrentPosition` 的 getter 定義（約第 571 行）、`_toggleFxlBookmark` 的方法定義與其內部呼叫（約第 580/584 行）、FXL 浮動按鈕區塊內的 3 處使用（約第 1459/1464/1468 行）。
 
-- [ ] **Step 2：改名 getter 定義**
+- [x] **Step 2：改名 getter 定義**
 
 把：
 
@@ -59,7 +59,7 @@ Expected: 6 行結果——`_fxlBookmarkAtCurrentPosition` 的 getter 定義（�
   Bookmark? get _bookmarkAtCurrentPosition {
 ```
 
-- [ ] **Step 3：改名方法定義與內部呼叫**
+- [x] **Step 3：改名方法定義與內部呼叫**
 
 把：
 
@@ -81,7 +81,7 @@ Expected: 6 行結果——`_fxlBookmarkAtCurrentPosition` 的 getter 定義（�
     final existing = _bookmarkAtCurrentPosition;
 ```
 
-- [ ] **Step 4：改名 FXL 浮動按鈕區塊內的 3 處使用**
+- [x] **Step 4：改名 FXL 浮動按鈕區塊內的 3 處使用**
 
 把（既有 FXL 書籤 toggle 浮動按鈕區塊）：
 
@@ -115,7 +115,7 @@ Expected: 6 行結果——`_fxlBookmarkAtCurrentPosition` 的 getter 定義（�
                           _epubPositionInfo == null ? null : _toggleBookmark,
 ```
 
-- [ ] **Step 5：靜態分析 + 執行既有 FXL 書籤測試，確認零行為變動**
+- [x] **Step 5：靜態分析 + 執行既有 FXL 書籤測試，確認零行為變動**
 
 Run: `cd app && flutter analyze`
 Expected: `No issues found!`
@@ -123,7 +123,7 @@ Expected: `No issues found!`
 Run: `cd app && flutter test test/screens/reader_screen_test.dart --plain-name "FXL"`
 Expected: 所有名稱含「FXL」的既有測試（含 3 個書籤 toggle 相關測試）全數 PASS，無任何斷言改動。
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/lib/screens/reader_screen.dart
@@ -156,7 +156,7 @@ git commit -m "refactor(epic-18): 泛用化 FXL 書籤 toggle 方法命名，供
 | 進度文字（橫排） | `bottom: 16`，水平置中 |
 | 進度文字（直排） | `left: 16, bottom: 16`，`RotatedBox(quarterTurns: 1)` |
 
-- [ ] **Step 1：撰寫失敗測試——AppBar 消失、6 顆浮動按鈕存在且可點擊**
+- [x] **Step 1：撰寫失敗測試——AppBar 消失、6 顆浮動按鈕存在且可點擊**
 
 在 `app/test/screens/reader_screen_test.dart` 檔案最末端（最後一個 `testWidgets` 區塊之後、收尾的 `}` 之前）新增：
 
@@ -633,12 +633,12 @@ git commit -m "refactor(epic-18): 泛用化 FXL 書籤 toggle 方法命名，供
 import 'package:elinkbook/screens/reader_settings_sheet.dart';
 ```
 
-- [ ] **Step 2：執行新測試，確認全數失敗**
+- [x] **Step 2：執行新測試，確認全數失敗**
 
 Run: `cd app && flutter test test/screens/reader_screen_test.dart --plain-name "Issue 7"`
 Expected: FAIL——`reader_foliate_back_button` 等 8 個新 Key 皆找不到（`find.byKey` 回傳 `findsNothing`），因為production code 尚未變更。
 
-- [ ] **Step 3：`build()` 新增 streaming EPUB 一律隱藏 `AppBar` 的條件**
+- [x] **Step 3：`build()` 新增 streaming EPUB 一律隱藏 `AppBar` 的條件**
 
 把：
 
@@ -671,7 +671,7 @@ Expected: FAIL——`reader_foliate_back_button` 等 8 個新 Key 皆找不到�
               ),
 ```
 
-- [ ] **Step 4：`_buildBody()` 的 `Stack` 新增流式 EPUB 浮動按鈕與頁眉/進度疊加層**
+- [x] **Step 4：`_buildBody()` 的 `Stack` 新增流式 EPUB 浮動按鈕與頁眉/進度疊加層**
 
 在既有 FXL 浮動筆記按鈕區塊（`Key('reader_fixed_layout_notes_button')` 所在的 `Positioned` 區塊）結束、選取工具列（`if (selection != null) Positioned(...)`）開始之前，插入以下區塊。定位錨點：緊接在
 
@@ -865,7 +865,7 @@ Expected: FAIL——`reader_foliate_back_button` 等 8 個新 Key 皆找不到�
                     ),
 ```
 
-- [ ] **Step 5：新增 2 個 helper 方法與 1 個 Bottom Sheet 開啟方法，移除舊 in-flow 頁尾**
+- [x] **Step 5：新增 2 個 helper 方法與 1 個 Bottom Sheet 開啟方法，移除舊 in-flow 頁尾**
 
 在 `_buildFoliateEpubFooter()` 方法定義之前（緊接其上方文件註解之前），新增：
 
@@ -971,7 +971,7 @@ Expected: FAIL——`reader_foliate_back_button` 等 8 個新 Key 皆找不到�
   }
 ```
 
-- [ ] **Step 6：靜態分析 + 執行 Task 2 新增測試，確認全數通過**
+- [x] **Step 6：靜態分析 + 執行 Task 2 新增測試，確認全數通過**
 
 Run: `cd app && flutter analyze`
 Expected: `No issues found!`
@@ -979,7 +979,7 @@ Expected: `No issues found!`
 Run: `cd app && flutter test test/screens/reader_screen_test.dart --plain-name "Issue 7"`
 Expected: 全數 PASS。
 
-- [ ] **Step 7：Commit**
+- [x] **Step 7：Commit**
 
 ```bash
 git add app/lib/screens/reader_screen.dart app/test/screens/reader_screen_test.dart
@@ -997,16 +997,16 @@ git commit -m "feat(epic-18): 流式 EPUB Chrome 改為浮動疊加層，抑制 
 - Consumes: Task 2 產出的 `reader_foliate_back_button`／`reader_foliate_toc_button`／`reader_foliate_progress_text` 等 Key。
 - Produces: 無新介面，純測試斷言更新。
 
-Task 2 的變更會讓以下 7 個既有測試失敗，原因分兩類：(a) 2 個測試直接斷言流式 EPUB 情境下 `find.byType(AppBar)` 的存在/消失，AppBar 已恆為 `null`，斷言本身失去意義，需改成斷言浮動按鈕的存在/消失；(b) 5 個測試使用了現在只存在於 PDF/FXL-legacy 路徑的 Key（`reader_toc_button`／`reader_footer`），流式 EPUB 情境下這些 Key 已被 Task 2 的新 Key 取代。
+Task 2 的變更會讓以下 9 個既有測試失敗，原因分三類：(a) 2 個測試直接斷言流式 EPUB 情境下 `find.byType(AppBar)` 的存在/消失，AppBar 已恆為 `null`，斷言本身失去意義，需改成斷言浮動按鈕的存在/消失；(b) 5 個測試使用了現在只存在於 PDF/FXL-legacy 路徑的 Key（`reader_toc_button`／`reader_footer`），流式 EPUB 情境下這些 Key 已被 Task 2 的新 Key 取代；(c) 2 個測試斷言了 `reader_layout_settings_button`——本 Issue 之前，流式 EPUB 走 AppBar actions 路徑時「⚙️版面設定」按鈕的既有 Key，Task 2 的 AppBar 抑制同樣讓它在流式 EPUB 情境下失效，需改為 `reader_foliate_settings_button`。**審查修正**（見 `reviews/review-issue-7.md` Important #2）：原文只列出 (a)(b) 共 7 個，遺漏了 (c) 這 2 個——實際修正已包含在下方 Step 2-5 與 commit `d088412` 中，此處為事後補正的正確計數，詳細條列見 Step 7 之後的「審查修正記錄」。
 
 先確認斷言修正範圍無遺漏：
 
-- [ ] **Step 1：執行完整測試檔，收集 Task 2 造成的既有測試失敗清單**
+- [x] **Step 1：執行完整測試檔，收集 Task 2 造成的既有測試失敗清單**
 
 Run: `cd app && flutter test test/screens/reader_screen_test.dart`
-Expected: 除 Task 2 新增的測試外，另外有 7 個既有測試 FAIL，測試名稱應與下方 Step 2/3 列出的 7 個一致（若數量或名稱不同，先 `git diff` 確認 Task 2 是否有超出計畫範圍的意外改動，再繼續）。
+Expected: 除 Task 2 新增的測試外，另外有 9 個既有測試 FAIL（審查修正：原文誤寫為 7 個，見上方段落與 Step 7 之後的「審查修正記錄」），測試名稱應與下方 Step 2/3/「審查修正記錄」列出的 9 個一致（若數量或名稱不同，先 `git diff` 確認 Task 2 是否有超出計畫範圍的意外改動，再繼續）。
 
-- [ ] **Step 2：改寫「點擊選單熱區觸發沉浸模式切換」測試（AppBar → 浮動按鈕）**
+- [x] **Step 2：改寫「點擊選單熱區觸發沉浸模式切換」測試（AppBar → 浮動按鈕）**
 
 把：
 
@@ -1076,7 +1076,7 @@ Expected: 除 Task 2 新增的測試外，另外有 7 個既有測試 FAIL，測
   );
 ```
 
-- [ ] **Step 3：改寫「previousPage/nextPage 熱區不影響沉浸模式狀態」測試**
+- [x] **Step 3：改寫「previousPage/nextPage 熱區不影響沉浸模式狀態」測試**
 
 把：
 
@@ -1156,7 +1156,7 @@ Expected: 除 Task 2 新增的測試外，另外有 7 個既有測試 FAIL，測
   });
 ```
 
-- [ ] **Step 4：TOC 按鈕 Key 遷移（2 處）**
+- [x] **Step 4：TOC 按鈕 Key 遷移（2 處）**
 
 在測試「流式 EPUB（isFixedLayout: false）收到 onLayoutResolved 後，目錄按鈕轉為可點擊，點擊後開啟 TocBottomSheet」內，把：
 
@@ -1212,7 +1212,7 @@ Expected: 除 Task 2 新增的測試外，另外有 7 個既有測試 FAIL，測
       expect(find.byType(TocBottomSheet), findsOneWidget);
 ```
 
-- [ ] **Step 5：頁尾 Key 遷移（3 個測試）——`reader_footer` → `reader_foliate_progress_text`**
+- [x] **Step 5：頁尾 Key 遷移（3 個測試）——`reader_footer` → `reader_foliate_progress_text`**
 
 在測試「流式 EPUB：onLocatorChanged 回報 pageIndex/totalPages 後，頁尾顯示對應頁碼」內，把：
 
@@ -1278,20 +1278,29 @@ Expected: 除 Task 2 新增的測試外，另外有 7 個既有測試 FAIL，測
   });
 ```
 
-- [ ] **Step 6：靜態分析 + 執行完整測試檔，確認全數通過且無回歸**
+- [x] **Step 6：靜態分析 + 執行完整測試檔，確認全數通過且無回歸**
 
 Run: `cd app && flutter analyze`
 Expected: `No issues found!`
 
 Run: `cd app && flutter test`
-Expected: 全數 PASS（Task 2 新增 10 項 + Task 3 修正 7 項既有測試 = 全專案總數較 Issue 10 完成時的 634 項增加 10 項，無 FAIL）。
+Expected: 全數 PASS（Task 2 新增 10 項 + Task 3 修正 9 項既有測試 = 全專案總數較 Issue 10 完成時的 634 項增加 10 項，無 FAIL）。
 
-- [ ] **Step 7：Commit**
+- [x] **Step 7：Commit**
 
 ```bash
 git add app/test/screens/reader_screen_test.dart
 git commit -m "test(epic-18): 修正 Issue 7 導致失效的既有沉浸模式/目錄/頁尾測試"
 ```
+
+#### 審查修正記錄（`reviews/review-issue-7.md` Important #2，實作已於 commit `d088412` 內完成，僅補上此處遺漏的文件記錄）
+
+除 Step 2-5 列出的 7 個既有測試外，`d088412` 這個 commit 額外正確修正了以下 2 個既有測試（原計畫撰寫階段漏算，程式碼修正本身沒有問題）：
+
+- 「流式 EPUB（isFixedLayout: false）開書後，onLayoutResolved 回報結果驅動「版面設定」按鈕從停用轉為可用」
+- 「流式 EPUB 開書後，ReaderSettingsSheet 變動的偏好正確傳遞到 FoliateEpubReaderView」
+
+兩者原本斷言 `find.byKey(const Key('reader_layout_settings_button'))`——該 Key 在本 Issue之前是流式 EPUB 走 AppBar actions 路徑時「⚙️版面設定」按鈕的既有 Key，因 Task 2 的 AppBar 抑制而永久消失，正確修正為 `find.byKey(const Key('reader_foliate_settings_button'))`（`reader_screen_test.dart` 第 178、242 行附近，`git show d088412` 的兩個 hunk）。
 
 ---
 
@@ -1299,34 +1308,34 @@ git commit -m "test(epic-18): 修正 Issue 7 導致失效的既有沉浸模式/�
 
 **Files:** 無程式碼變更，本 Task 為驗收 checklist。
 
-- [ ] **Step 1：安裝最新 debug build 到既有測試裝置**
+- [x] **Step 1：安裝最新 debug build 到既有測試裝置**
 
 Run: `cd app && flutter build apk --debug && adb -s 3CEF42ECD491687 install -r build/app/outputs/flutter-apk/app-debug.apk`
 
-- [ ] **Step 2：開啟一本流式 EPUB，確認 6 顆浮動按鈕存在、行為與重構前一致**
+- [x] **Step 2：開啟一本流式 EPUB，確認 6 顆浮動按鈕存在、行為與重構前一致**
 
 依序點擊返回、TOC、版面設定、書籤 toggle、筆記、進度/跳頁 6 顆浮動按鈕，確認皆可點擊且行為正確（返回離開閱讀器、TOC 開目錄、版面設定開 `ReaderSettingsSheet`、書籤 toggle 圖示切換、筆記開 `NotesBottomSheet`、進度/跳頁開含 `ReaderFooter` 的 Bottom Sheet 且可正確跳頁）。
 
-- [ ] **Step 3：確認頁眉/進度為純資訊、點擊無反應**
+- [x] **Step 3：確認頁眉/進度為純資訊、點擊無反應**
 
 點擊頁眉章節名稱文字與進度文字，確認畫面無任何反應（不開啟 TOC、不開啟跳頁 Bottom Sheet）。
 
-- [ ] **Step 4：切換沉浸模式，確認 6 顆按鈕＋頁眉＋進度一起顯示/收合**
+- [x] **Step 4：切換沉浸模式，確認 6 顆按鈕＋頁眉＋進度一起顯示/收合**
 
 點擊畫面中央熱區（沉浸模式切換），確認全部 8 個浮動元件（6 按鈕＋頁眉＋進度文字）同步顯示/收合，無任何元件不同步。
 
-- [ ] **Step 5：切換「顯示頁眉」／「顯示進度」開關，確認對應元件正確顯示/隱藏且不觸發整本重新分頁**
+- [x] **Step 5：切換「顯示頁眉」／「顯示進度」開關，確認對應元件正確顯示/隱藏且不觸發整本重新分頁**
 
 在版面設定內切換「顯示頁眉」「顯示進度」兩個開關，確認：(a) 對應浮動元件正確顯示/隱藏；(b) 肉眼觀察翻頁動畫/目前捲動位置未被打斷（即既有「頁尾顯示/隱藏觸發 WebView 整本重新分頁」問題已解決）。
 
-- [ ] **Step 6：直排模式下確認進度顯示位置與格式**
+- [x] **Step 6：直排模式下確認進度顯示位置與格式**
 
 切換為直排模式，確認進度資訊以旋轉文字顯示於左下角，格式為「168/197」這類阿拉伯數字格式（參考 `tmp/image/reading_process.jpg`）。
 
-- [ ] **Step 7：FXL 與 PDF 既有行為回歸確認**
+- [x] **Step 7：FXL 與 PDF 既有行為回歸確認**
 
 分別開啟一本 FXL EPUB 與一本 PDF，確認既有懸浮按鈕（FXL）與 AppBar（PDF）行為完全不受本次變更影響。
 
-- [ ] **Step 8：更新 `docs/epics/epic-18-reader-device-qa/issues.md` Issue 7 狀態**
+- [x] **Step 8：更新 `docs/epics/epic-18-reader-device-qa/issues.md` Issue 7 狀態**
 
 真機驗收全數通過後，把 Issue 7 的 `**Status:**` 從 `ready-for-agent` 更新為完成狀態，並記錄本次 Task 1-3 的 commit hash，比照本文件其餘 Issue 的既有記錄格式。
