@@ -1203,8 +1203,15 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         // _buildBody() 基礎設施，必須先把頁尾也改為浮動疊加層（而非
         // in-flow），否則頁尾切換仍會觸發 WebView 整本重新分頁。
         extendBodyBehindAppBar: true,
-        appBar: (_isFixedLayout || !_chromeVisible)
-            ? null // 固定版面（如漫畫）或沉浸模式已收起介面時隱藏 Scaffold AppBar
+        // epic-18-reader-device-qa Issue 7：流式 EPUB（_dispatchedIsFixedLayout
+        // == false）一律不建構 AppBar，改用 _buildBody() 內對稱於 FXL 的
+        // Positioned 浮動疊加層 chrome（見下方 _buildBody 的新增區塊）——不論
+        // _chromeVisible 為何，讓 EpubReaderView（FXL）／FoliateEpubReaderView
+        // （流式）兩條渲染路徑最終殊途同歸都是 appBar: null。
+        appBar: (_isFixedLayout ||
+                !_chromeVisible ||
+                (format == BookFormat.epub && _dispatchedIsFixedLayout == false))
+            ? null // 固定版面（如漫畫）、沉浸模式已收起介面、或流式 EPUB 時隱藏 Scaffold AppBar
             : AppBar(
                 toolbarHeight: _appBarToolbarHeight,
                 title: _buildAppBarTitle(format),
@@ -1491,6 +1498,168 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                   ),
                 ),
               ),
+            // epic-18-reader-device-qa Issue 7：流式 EPUB 的 chrome，結構對稱
+            // 於上方 FXL 浮動按鈕區塊——appBar 已在 build() 恆為 null（見上方
+            // 註解），改用這組 Positioned 疊加層承載「功能操作」（返回／TOC／
+            // 設定／書籤／筆記／進度-跳頁），另有 2 個純顯示元件（頁眉章節
+            // 名稱／進度文字）承載「資訊顯示」，兩者刻意分離（design.md「第
+            // 二輪真機使用回報」項目 2）。
+            if (format == BookFormat.epub &&
+                _dispatchedIsFixedLayout == false &&
+                _chromeVisible)
+              Positioned(
+                top: 16,
+                left: 16,
+                child: ClipOval(
+                  child: Container(
+                    color: Colors.black54,
+                    child: IconButton(
+                      key: const Key('reader_foliate_back_button'),
+                      icon: const Icon(Icons.arrow_back, color: Colors.white),
+                      tooltip: '返回',
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ),
+                ),
+              ),
+            if (format == BookFormat.epub &&
+                _dispatchedIsFixedLayout == false &&
+                _chromeVisible)
+              Positioned(
+                top: 16,
+                right: 16,
+                child: ClipOval(
+                  child: Container(
+                    color: Colors.black54,
+                    child: IconButton(
+                      key: const Key('reader_foliate_toc_button'),
+                      icon: const Icon(Icons.menu_book, color: Colors.white),
+                      tooltip: '目錄',
+                      onPressed: (_autoDetectedWritingMode == null || !_tocLoaded)
+                          ? null
+                          : _openToc,
+                    ),
+                  ),
+                ),
+              ),
+            if (format == BookFormat.epub &&
+                _dispatchedIsFixedLayout == false &&
+                _chromeVisible)
+              Positioned(
+                top: 72,
+                right: 16,
+                child: ClipOval(
+                  child: Container(
+                    color: Colors.black54,
+                    child: IconButton(
+                      key: const Key('reader_foliate_settings_button'),
+                      icon: const Icon(Icons.settings, color: Colors.white),
+                      tooltip: '版面設定',
+                      onPressed: _autoDetectedWritingMode == null
+                          ? null
+                          : _openLayoutSettings,
+                    ),
+                  ),
+                ),
+              ),
+            if (format == BookFormat.epub &&
+                _dispatchedIsFixedLayout == false &&
+                _chromeVisible &&
+                widget.bookmarksRepository != null)
+              Positioned(
+                top: 128,
+                right: 16,
+                child: ClipOval(
+                  child: Container(
+                    color: Colors.black54,
+                    child: IconButton(
+                      key: const Key('reader_foliate_bookmark_toggle_button'),
+                      icon: Icon(
+                        _bookmarkAtCurrentPosition != null
+                            ? Icons.star
+                            : Icons.star_border,
+                        color: Colors.white,
+                      ),
+                      tooltip: _bookmarkAtCurrentPosition != null
+                          ? '已加入此頁書籤'
+                          : '加入此頁書籤',
+                      onPressed:
+                          _epubPositionInfo == null ? null : _toggleBookmark,
+                    ),
+                  ),
+                ),
+              ),
+            if (format == BookFormat.epub &&
+                _dispatchedIsFixedLayout == false &&
+                _chromeVisible &&
+                widget.bookmarksRepository != null)
+              Positioned(
+                top: 184,
+                right: 16,
+                child: ClipOval(
+                  child: Container(
+                    color: Colors.black54,
+                    child: IconButton(
+                      key: const Key('reader_foliate_notes_button'),
+                      icon: const Icon(Icons.bookmarks, color: Colors.white),
+                      tooltip: '筆記',
+                      onPressed: (_autoDetectedWritingMode == null ||
+                              _epubPositionInfo == null)
+                          ? null
+                          : () => _openNotesSheet(BookFormat.epub),
+                    ),
+                  ),
+                ),
+              ),
+            if (format == BookFormat.epub &&
+                _dispatchedIsFixedLayout == false &&
+                _chromeVisible &&
+                (_resolved?.showFooter ?? true))
+              Positioned(
+                top: 240,
+                right: 16,
+                child: ClipOval(
+                  child: Container(
+                    color: Colors.black54,
+                    child: IconButton(
+                      key: const Key('reader_foliate_progress_button'),
+                      icon: const Icon(Icons.swap_vert, color: Colors.white),
+                      tooltip: '跳頁',
+                      onPressed: _openFoliateProgressSheet,
+                    ),
+                  ),
+                ),
+              ),
+            if (format == BookFormat.epub &&
+                _dispatchedIsFixedLayout == false &&
+                _chromeVisible &&
+                (_resolved?.showHeader ?? true))
+              Positioned(
+                top: 16,
+                left: 72,
+                right: 72,
+                child: Center(child: _buildFoliateHeaderText()),
+              ),
+            if (format == BookFormat.epub &&
+                _dispatchedIsFixedLayout == false &&
+                _chromeVisible &&
+                (_resolved?.showFooter ?? true) &&
+                (_epubPositionInfo?.totalPages ?? 0) > 0)
+              (_resolved?.writingMode == WritingMode.vertical)
+                  ? Positioned(
+                      left: 16,
+                      bottom: 16,
+                      child: RotatedBox(
+                        quarterTurns: 1,
+                        child: _buildFoliateProgressText(),
+                      ),
+                    )
+                  : Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 16,
+                      child: Center(child: _buildFoliateProgressText()),
+                    ),
             if (selection != null)
               Positioned(
                 left: (selection.rect.left * size.width).clamp(0.0, size.width),
@@ -1561,13 +1730,6 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                 _resolved!.showFooter &&
                 _chromeVisible)
               _buildEpubFooter(_resolved!, _totalCharacterCount!),
-            if (format == BookFormat.epub &&
-                _dispatchedIsFixedLayout == false &&
-                _epubPositionInfo?.totalPages != null &&
-                _resolved != null &&
-                _resolved!.showFooter &&
-                _chromeVisible)
-              _buildFoliateEpubFooter(_epubPositionInfo!),
           ],
         ),
       ),
@@ -1603,6 +1765,78 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         );
         EpubReaderView.jumpToProgression(_epubReaderViewKey, progression);
       },
+    );
+  }
+
+  /// 流式 EPUB 頁眉（epic-18-reader-device-qa Issue 7）：純顯示章節名稱、
+  /// 不可點擊（點擊開 TOC 這個功能已交給獨立的 reader_foliate_toc_button，
+  /// 見 design.md「第二輪真機使用回報」項目 2 的「資訊與功能分離」原則）。
+  /// 章節名稱推導邏輯與既有 _buildAppBarTitle() 相同，故不重複抽象成共用
+  /// 函式——兩者一個要包 InkWell/onTap、一個刻意不包，硬拆共用反而增加
+  /// 兩個呼叫端之間不必要的耦合。
+  Widget _buildFoliateHeaderText() {
+    final currentPath = TocNavigator.findCurrentPath(
+      _tocEntries,
+      _epubPositionInfo?.progression,
+    );
+    final chapterTitle = currentPath.isEmpty ? '閱讀器' : currentPath.last.title;
+    return Container(
+      key: const Key('reader_foliate_header_text'),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.black54,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Text(
+        chapterTitle,
+        overflow: TextOverflow.ellipsis,
+        maxLines: 1,
+        style: const TextStyle(color: Colors.white, fontSize: 13),
+      ),
+    );
+  }
+
+  /// 流式 EPUB 進度純顯示（epic-18-reader-device-qa Issue 7）：內容換算邏輯
+  /// 與 _buildFoliateEpubFooter() 相同（pageIndex/totalPages 皆為 0-indexed/
+  /// 近似頁碼，+1 換算為人類慣用的 1-indexed），呼叫端已保證
+  /// totalPages > 0 才會建構本 widget。跳頁互動已獨立到
+  /// reader_foliate_progress_button 開啟的 Bottom Sheet，本 widget 不含任何
+  /// 手勢 widget。
+  Widget _buildFoliateProgressText() {
+    final info = _epubPositionInfo!;
+    final totalPages = info.totalPages!;
+    final currentPage = ((info.pageIndex ?? 0) + 1).clamp(1, totalPages);
+    return Container(
+      key: const Key('reader_foliate_progress_text'),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.black54,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        '$currentPage/$totalPages',
+        style: const TextStyle(color: Colors.white, fontSize: 12),
+      ),
+    );
+  }
+
+  /// 流式 EPUB「進度/跳頁」浮動按鈕開啟的 Bottom Sheet（epic-18-
+  /// reader-device-qa Issue 7）：內容直接沿用既有 _buildFoliateEpubFooter()
+  /// 回傳的 ReaderFooter widget 實例（含既有 currentPage/totalPages
+  /// 換算與 onPageChanged 跳頁邏輯），只是把承載它的容器從 in-flow Column
+  /// 子項改為 Bottom Sheet——ReaderFooter 本身不需要任何修改。
+  /// _epubPositionInfo 為 null（onLocatorChanged 尚未觸發過）時顯示空白
+  /// Sheet，比照 reader_foliate_progress_button 本身只依 showFooter
+  /// gating、不額外等待 _epubPositionInfo 的簡化決策（見 issues.md Issue 7
+  /// 「進度/跳頁鈕」段落）。
+  void _openFoliateProgressSheet() {
+    final positionInfo = _epubPositionInfo;
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => positionInfo == null
+          ? const SizedBox.shrink()
+          : _buildFoliateEpubFooter(positionInfo),
     );
   }
 
