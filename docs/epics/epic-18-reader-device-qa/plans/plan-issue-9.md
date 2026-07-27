@@ -39,7 +39,7 @@
 **Interfaces:**
 - Produces: 模組級可變變數 `lastAppliedPrefs`（型別與 `prefs` 參數相同的物件，例如 `{writingMode, fontSize, columnMode, columnSize, ...}`），供 Task 2 的 `ResizeObserver` callback 讀取最新值。
 
-- [ ] **Step 1: 確認現況**
+- [x] **Step 1: 確認現況**
 
 執行：
 ```bash
@@ -48,7 +48,7 @@ grep -n "currentWritingMode\|window.applyPreferences" app/android/app/src/main/a
 
 預期看到 `let currentWritingMode = 'horizontal'`（約第 43 行）與 `window.applyPreferences = function (prefs) {`（約第 110 行），且目前**沒有** `lastAppliedPrefs` 任何蹤跡（`grep -n "lastAppliedPrefs" app/android/app/src/main/assets/foliate/main.js` 應為空）。
 
-- [ ] **Step 2: 在 `currentWritingMode` 宣告之後新增 `lastAppliedPrefs`**
+- [x] **Step 2: 在 `currentWritingMode` 宣告之後新增 `lastAppliedPrefs`**
 
 在 `main.js` 第 43 行 `let currentWritingMode = 'horizontal'` 之後，新增：
 
@@ -62,7 +62,7 @@ grep -n "currentWritingMode\|window.applyPreferences" app/android/app/src/main/a
 let lastAppliedPrefs = initialPrefs
 ```
 
-- [ ] **Step 3: 在 `window.applyPreferences(prefs)` 函式開頭同步賦值**
+- [x] **Step 3: 在 `window.applyPreferences(prefs)` 函式開頭同步賦值**
 
 找到 `main.js:110` 附近的：
 
@@ -83,7 +83,7 @@ window.applyPreferences = function (prefs) {
   if (prefs.pageTurnMode) {
 ```
 
-- [ ] **Step 4: 靜態檢查與既有測試回歸**
+- [x] **Step 4: 靜態檢查與既有測試回歸**
 
 執行：
 ```bash
@@ -96,7 +96,7 @@ cd app && flutter test
 ```
 預期：全數通過（本步驟未新增/修改任何 Dart 測試，測試數與 Task 1 執行前的既有基準一致）。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/android/app/src/main/assets/foliate/main.js
@@ -114,7 +114,7 @@ git commit -m "feat(epic-18): Issue 9 新增 lastAppliedPrefs 追蹤最後套用
 - Consumes: Task 1 產生的模組級變數 `lastAppliedPrefs`；`window.applyPreferences`（既有函式，Task 1 已在其內新增 `lastAppliedPrefs = prefs` 賦值，本 Task 直接呼叫它，不需要新增任何函式簽章）。
 - Produces: 無新的對外可呼叫函式（本 Task 是純內部自動觸發機制，Dart 端無需新增/修改任何呼叫）。
 
-- [ ] **Step 1: 確認 `view.renderer` 的建立時機**
+- [x] **Step 1: 確認 `view.renderer` 的建立時機**
 
 執行：
 ```bash
@@ -133,7 +133,7 @@ await view.init(initialCfi ? { lastLocation: initialCfi } : {})
 
 `view.renderer` 是 `readest/foliate-js` 的 `view.js`（`View` 類別 `open()` 方法內，見 `view.js:258-269`）在 `view.open(book)` **當下同步建立**的 `<foliate-paginator>` 自訂元素（附掛到 `view` 的 shadow root）——換言之，`view.renderer` 只有在 `await view.open(book)` **之後**才保證存在，本 Task 的 `ResizeObserver` 註冊必須放在這一行之後、`view.init()` 之前或之後皆可（`view.init()` 才會觸發首次 `relocate`／`applyPreferences`，`ResizeObserver` 註冊本身不依賴 `view.init()` 是否已完成）。
 
-- [ ] **Step 2: 在 `await view.open(book)` 之後新增 debounced resize 監聽**
+- [x] **Step 2: 在 `await view.open(book)` 之後新增 debounced resize 監聽**
 
 找到 `main.js:511` 附近的：
 
@@ -184,7 +184,7 @@ await view.init(initialCfi ? { lastLocation: initialCfi } : {})
     await view.init(initialCfi ? { lastLocation: initialCfi } : {})
 ```
 
-- [ ] **Step 3: 靜態檢查與既有測試回歸**
+- [x] **Step 3: 靜態檢查與既有測試回歸**
 
 執行：
 ```bash
@@ -197,7 +197,7 @@ cd app && flutter test
 ```
 預期：全數通過，測試數與 Task 1 完成後的基準一致（本 Task 未新增/修改任何 Dart 檔案或測試）。
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add app/android/app/src/main/assets/foliate/main.js
@@ -214,14 +214,14 @@ git commit -m "feat(epic-18): Issue 9 新增 ResizeObserver 於旋轉/尺寸變�
 - Consumes: Task 1／Task 2 完成後的 `main.js`（含 `lastAppliedPrefs` 與 `ResizeObserver`）。
 - Produces: 驗收結果記錄（供合併前的程式碼審查／`issues.md` Issue 9 狀態更新引用）。
 
-- [ ] **Step 1: 安裝最新 debug APK 至真機 `3CEF42ECD491687`**
+- [x] **Step 1: 安裝最新 debug APK 至真機 `3CEF42ECD491687`**
 
 ```bash
 cd app && flutter build apk --debug
 adb -s 3CEF42ECD491687 install -r build/app/outputs/flutter-apk/app-debug.apk
 ```
 
-- [ ] **Step 2: 「雙欄」模式旋轉驗證**
+- [x] **Step 2: 「雙欄」模式旋轉驗證**
 
 1. 開啟一本直排 EPUB（`app/test/fixtures/sample.epub` 或既有測試書籍）。
 2. 於「版面設定」將「欄數」切換為「雙欄」。
@@ -229,20 +229,20 @@ adb -s 3CEF42ECD491687 install -r build/app/outputs/flutter-apk/app-debug.apk
 4. 旋轉裝置至橫向（landscape），等待 debounce（約 200ms 以上）後，確認欄寬**重新計算**為新 `hostSize`（旋轉後的寬或高，依 `currentWritingMode` 而定）的一半，而非停留在旋轉前算出的舊數值。
 5. 記錄：是否觀察到欄寬正確隨旋轉重算（Pass/Fail + 截圖佐證）。
 
-- [ ] **Step 3: 位置不跳動驗證**
+- [x] **Step 3: 位置不跳動驗證**
 
 1. 在「雙欄」模式下翻到書本中段任一頁，記錄目前頁碼/進度文字（`Key('reader_foliate_progress_text')`）。
 2. 旋轉裝置。
 3. 確認旋轉後目前頁碼/進度文字**未跳動**（`paginator.js` 的 CFI-based relocate 理論上會保留閱讀位置，需真機驗證此假設在 `ResizeObserver` 重新套用偏好後依然成立）。
 4. 記錄：Pass/Fail。
 
-- [ ] **Step 4: 「單欄」／「自動」模式不受影響驗證**
+- [x] **Step 4: 「單欄」／「自動」模式不受影響驗證**
 
 1. 將「欄數」切換為「單欄」，旋轉裝置，確認畫面仍維持單欄（不因新增的 `ResizeObserver` 意外跑出多欄）。
 2. 將「欄數」切換為「自動」，旋轉裝置，確認欄數變化行為與 Issue 9 修正前一致（`columnSize` 是使用者設定的固定常數，不隨 `hostSize` 變動，`ResizeObserver` 重新套用偏好對這兩態應為 no-op 等效行為）。
 3. 記錄：Pass/Fail。
 
-- [ ] **Step 5: 記錄驗收結果**
+- [x] **Step 5: 記錄驗收結果**
 
 將 Step 2-4 的 Pass/Fail 結果與截圖整理，供後續程式碼審查（`superpowers:requesting-code-review`）與 `docs/epics/epic-18-reader-device-qa/issues.md` Issue 9 狀態更新引用。若任一項 Fail，回頭調整 Task 2 的 debounce 間隔或觀察目標元素（`view.renderer` vs `view`），重新執行本 Task。
 

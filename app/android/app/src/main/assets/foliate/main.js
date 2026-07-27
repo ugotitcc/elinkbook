@@ -41,6 +41,13 @@ let detectedBookWritingMode = null
 // { once: true } relocate 監聽器內、以及每次 window.applyPreferences()
 // 呼叫時更新。
 let currentWritingMode = 'horizontal'
+// Issue 9：裝置旋轉/視窗尺寸變化時重新呼叫 applyPreferences() 需要知道
+// 「最後一次完整套用過的偏好物件」是什麼，見下方 window.applyPreferences()
+// 開頭賦值處與 openBook() 內的 ResizeObserver 註冊。初始值設為 initialPrefs，
+// 涵蓋「開書當下第一次 relocate 事件觸發 applyPreferences() 之前」若恰好
+// 發生一次 resize 的邊界情況（此時仍能拿到開書時傳入的完整偏好，而非
+// undefined）。
+let lastAppliedPrefs = initialPrefs
 
 // 目前顯示中標記的 cfi → Dart 端不透明 id（"highlight:5"/"note:12"）對照
 // 表（epic-17 Issue 8）。view.addAnnotation({value}) 的 value 欄位本身
@@ -108,6 +115,11 @@ function buildOverrideCss(prefs) {
  * 不經過本函式）。
  */
 window.applyPreferences = function (prefs) {
+  // Issue 9：每次套用偏好都同步記錄下來，供 openBook() 內的
+  // ResizeObserver debounce callback 在裝置旋轉/視窗尺寸變化後，能重新
+  // 呼叫本函式並拿到「使用者最後一次實際設定的完整偏好」，而不是只拿到
+  // 旋轉當下手邊剛好有的局部資料。
+  lastAppliedPrefs = prefs
   if (prefs.pageTurnMode) {
     view.renderer.setAttribute(
       'flow',
@@ -513,6 +525,40 @@ async function openBook() {
       'flow',
       initialPrefs.pageTurnMode === 'scroll' ? 'scrolled' : 'paginated',
     )
+    // Issue 9：裝置旋轉/視窗尺寸變化時重新呼叫 applyPreferences()。
+    // 根因（見 ADR 0012「已知限制」段）：「雙欄」欄數模式的
+    // max-inline-size（targetSize = Math.ceil(hostSize / 2)，見上方
+    // window.applyPreferences() 的 columnMode === 'double' 分支）是呼叫
+    // applyPreferences() 當下 getBoundingClientRect() 的一次性快照，寫死後
+    // 不會再變動。paginator.js 自己的 ResizeObserver（paginator.js:1367，
+    // 觀察內部私有 #container）在裝置旋轉/視窗尺寸變化後只會重新計算
+    // divisor（用「當下真實 hostSize」對比「呼叫當下算出、此後不變的
+    // max-inline-size」），不會觸發 applyPreferences() 重新執行、也不會
+    // 重新計算 targetSize。
+    // 這裡新增一個本專案自建、完全獨立的 ResizeObserver（觀察
+    // view.renderer 這個 <foliate-paginator> 自訂元素本身的 box 尺寸——與
+    // window.applyPreferences() 的 columnMode === 'double' 分支算 hostSize
+    // 時用的是同一個元素的 getBoundingClientRect()，語意一致），debounce
+    // 200ms（起始建議值，避免旋轉動畫過程中連續觸發多次不必要的重排）後
+    // 呼叫 window.applyPreferences(lastAppliedPrefs)，讓「雙欄」模式的
+    // targetSize 依當下真實尺寸重新計算。不特例只挑 columnMode ===
+    // 'double' 才重算——整包 lastAppliedPrefs 重新套用一次，其餘欄位
+    // （字級/邊距/CSS 覆蓋/max-column-count）重算是 idempotent、無副作用
+    // （見 Global Constraints）。
+    // 保留參照（比照 paginator.js 自己的 #observer 於 destroy() 呼叫
+    // unobserve() 的既有謹慎作法，見 paginator.js:3493）：openBook() 全
+    // repo 只在檔案最底部被呼叫一次，本 WebView 頁面沒有「換書但不重建
+    // InAppWebView」的既有機制，整個 JS context 會隨頁面關閉一併回收，
+    // 故目前沒有對應的 disconnect() 呼叫時機，不無中生有加一個沒有呼叫端
+    // 的 disconnect() 呼叫。
+    let resizeDebounceTimer = null
+    const hostResizeObserver = new ResizeObserver(() => {
+      if (resizeDebounceTimer) clearTimeout(resizeDebounceTimer)
+      resizeDebounceTimer = setTimeout(() => {
+        window.applyPreferences(lastAppliedPrefs)
+      }, 200)
+    })
+    hostResizeObserver.observe(view.renderer)
     await view.init(initialCfi ? { lastLocation: initialCfi } : {})
   } catch (e) {
     window.flutter_inappwebview.callHandler('onError', String((e && e.message) || e))

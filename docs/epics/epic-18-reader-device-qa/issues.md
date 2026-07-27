@@ -305,7 +305,13 @@ Issue 5 的 `singleColumn` 布林開關因 `paginator.js` 對直排書籍的 `ma
 
 ## Issue 9：裝置旋轉/視窗尺寸變化時重新呼叫 `applyPreferences()`
 
-**Status:** `ready-for-agent`
+**Status:** ✅ 已完成（分支 `epic-18/issue-9-resize-reapply-prefs`，尚未合併回 `main`）。依 `plans/plan-issue-9.md` 3 個 Task 逐一實作並分別 commit：
+
+- Task 1：`main.js` 新增 `lastAppliedPrefs` 追蹤最後套用偏好（commit `54032d0`）
+- Task 2：`main.js` 新增 `ResizeObserver` 於旋轉/尺寸變化時重新套用偏好（commit `499c3f5`）
+- Task 3：真機（`3CEF42ECD491687`）驗收（人工執行）——雙欄模式旋轉後欄寬正確重算、目前頁碼/進度不跳動、單欄／自動模式不受影響，皆通過。
+
+程式碼審查（`tmp/epic-18/reviews/review-issue-9.md`）結論為「Ready to merge, with fixes」（0 Critical／2 Important／2 Minor）：2 項 Important（`ResizeObserver` 首次 `.observe()` 保證觸發一次初始 callback、潛在的重複觸發風險）已併入 Task 3 真機驗收清單，人工肉眼確認皆未觀察到問題；Minor #1（`ResizeObserver` 未保留參照/未 `disconnect()`）已修正，新增 `hostResizeObserver` 保留參照並說明目前無對應 `disconnect()` 呼叫時機（commit `d90b54c`）；Minor #2（純 JS 變更下 `flutter analyze`/`flutter test` 驗證力有限）屬既有慣例如實記錄，非可修正項目。`flutter analyze` 乾淨、`flutter test` 644 項全數通過。
 
 **依賴：** 無
 
