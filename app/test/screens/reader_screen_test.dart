@@ -42,7 +42,7 @@ import 'package:elinkbook/reader/highlight_style.dart';
 // 內容」驗證改由 integration_test/reader_screen_test.dart 在真實裝置上
 // 執行；此處只保留 flutter test 就能可靠驗證的部分：「不支援格式」分支、
 // 「⚙️版面」按鈕在 onLayoutResolved 觸發前的初始狀態，以及排版方向／
-// 翻頁模式雙層解析邏輯（后者不依賴 onLayoutResolved，可離線驗證，見
+// 翻頁模式雙層解析邏輯（後者不依賴 onLayoutResolved，可離線驗證，見
 // docs/epics/epic-3-fonts-layout/plans/plan-issue-4.md）。
 
 void main() {
@@ -87,8 +87,7 @@ void main() {
     expect(
       tester.widget<IconButton>(finder).onPressed,
       isNull,
-      reason:
-          '尚未收到 onLayoutResolved，_autoDetectedWritingMode 仍為 null，按鈕應為停用狀態',
+      reason: '尚未收到 onLayoutResolved，_autoDetectedWritingMode 仍為 null，按鈕應為停用狀態',
     );
   });
 
@@ -108,14 +107,14 @@ void main() {
     expect(
       tester.widget<IconButton>(finder).onPressed,
       isNull,
-      reason: '尚未收到 onPageRendered（純 flutter test 環境下 AndroidView 不會'
+      reason:
+          '尚未收到 onPageRendered（純 flutter test 環境下 AndroidView 不會'
           '觸發原生回呼），按鈕應為停用狀態，比照 EPUB 齒輪按鈕的既有測試限制'
           '（見本檔案第 46-65 行）',
     );
   });
 
-  testWidgets('isFixedLayout: true 時直接建構 EpubReaderView，不呼叫偵測',
-      (tester) async {
+  testWidgets('isFixedLayout: true 時直接建構 EpubReaderView，不呼叫偵測', (tester) async {
     final repository = FakeLibraryRepository();
     await tester.pumpWidget(
       MaterialApp(
@@ -137,8 +136,9 @@ void main() {
     expect(repository.detectAndCacheEpubLayoutCalls, isEmpty);
   });
 
-  testWidgets('isFixedLayout: false 時直接建構 FoliateEpubReaderView，不呼叫偵測',
-      (tester) async {
+  testWidgets('isFixedLayout: false 時直接建構 FoliateEpubReaderView，不呼叫偵測', (
+    tester,
+  ) async {
     final repository = FakeLibraryRepository();
     await tester.pumpWidget(
       MaterialApp(
@@ -161,164 +161,179 @@ void main() {
   });
 
   testWidgets(
-      '流式 EPUB（isFixedLayout: false）開書後，onLayoutResolved 回報結果驅動「版面設定」按鈕從停用轉為可用',
-      (tester) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: 'test/fixtures/sample.epub',
-          bookId: 'b1',
-          prefsManager: prefsManager,
+    '流式 EPUB（isFixedLayout: false）開書後，onLayoutResolved 回報結果驅動「版面設定」按鈕從停用轉為可用',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b1',
+            prefsManager: prefsManager,
+            isFixedLayout: false,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final finder = find.byKey(const Key('reader_layout_settings_button'));
+      expect(
+        tester.widget<IconButton>(finder).onPressed,
+        isNull,
+        reason: '尚未收到 onLayoutResolved，_autoDetectedWritingMode 仍為 null',
+      );
+
+      final foliateView = tester.widget<FoliateEpubReaderView>(
+        find.byType(FoliateEpubReaderView),
+      );
+      foliateView.onPageRendered();
+      foliateView.onLayoutResolved?.call(
+        const EpubLayoutInfo(
           isFixedLayout: false,
+          writingMode: WritingMode.vertical,
         ),
-      ),
-    );
-    await tester.pump();
-    await tester.runAsync(() => Future.delayed(Duration.zero));
-    await tester.pump();
+      );
+      await tester.pump();
 
-    final finder = find.byKey(const Key('reader_layout_settings_button'));
-    expect(
-      tester.widget<IconButton>(finder).onPressed,
-      isNull,
-      reason: '尚未收到 onLayoutResolved，_autoDetectedWritingMode 仍為 null',
-    );
-
-    final foliateView =
-        tester.widget<FoliateEpubReaderView>(find.byType(FoliateEpubReaderView));
-    foliateView.onPageRendered();
-    foliateView.onLayoutResolved?.call(const EpubLayoutInfo(
-      isFixedLayout: false,
-      writingMode: WritingMode.vertical,
-    ));
-    await tester.pump();
-
-    expect(
-      tester.widget<IconButton>(finder).onPressed,
-      isNotNull,
-      reason: 'onLayoutResolved 觸發後，_autoDetectedWritingMode 非 null，按鈕應可用',
-    );
-  });
+      expect(
+        tester.widget<IconButton>(finder).onPressed,
+        isNotNull,
+        reason: 'onLayoutResolved 觸發後，_autoDetectedWritingMode 非 null，按鈕應可用',
+      );
+    },
+  );
 
   testWidgets(
-      '流式 EPUB 開書後，ReaderSettingsSheet 變動的偏好正確傳遞到 FoliateEpubReaderView',
-      (tester) async {
-    // 設定較大的 Viewport，確保 BottomSheet 內的控制項皆在可點擊範圍內
-    tester.view.physicalSize = const Size(800, 1200);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(() {
-      tester.view.resetPhysicalSize();
-      tester.view.resetDevicePixelRatio();
-    });
+    '流式 EPUB 開書後，ReaderSettingsSheet 變動的偏好正確傳遞到 FoliateEpubReaderView',
+    (tester) async {
+      // 設定較大的 Viewport，確保 BottomSheet 內的控制項皆在可點擊範圍內
+      tester.view.physicalSize = const Size(800, 1200);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: 'test/fixtures/sample.epub',
-          bookId: 'b1',
-          prefsManager: prefsManager,
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b1',
+            prefsManager: prefsManager,
+            isFixedLayout: false,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final initialView = tester.widget<FoliateEpubReaderView>(
+        find.byType(FoliateEpubReaderView),
+      );
+      initialView.onPageRendered(); // 模擬開書成功，脫離 loading 狀態
+      initialView.onLayoutResolved?.call(
+        const EpubLayoutInfo(
           isFixedLayout: false,
+          writingMode: WritingMode.horizontal,
         ),
-      ),
-    );
-    await tester.pump();
-    await tester.runAsync(() => Future.delayed(Duration.zero));
-    await tester.pump();
+      );
+      await tester.pump();
 
-    final initialView =
-        tester.widget<FoliateEpubReaderView>(find.byType(FoliateEpubReaderView));
-    initialView.onPageRendered(); // 模擬開書成功，脫離 loading 狀態
-    initialView.onLayoutResolved?.call(const EpubLayoutInfo(
-      isFixedLayout: false,
-      writingMode: WritingMode.horizontal,
-    ));
-    await tester.pump();
+      await tester.tap(find.byKey(const Key('reader_layout_settings_button')));
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('reader_layout_settings_button')));
-    await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const Key('reader_settings_writing_mode_vertical')),
+      );
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('reader_settings_writing_mode_vertical')));
-    await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const Key('reader_settings_column_mode_single')),
+      );
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('reader_settings_column_mode_single')));
-    await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('reader_settings_show_footer')));
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('reader_settings_show_footer')));
-    await tester.pumpAndSettle();
-
-    final updatedView =
-        tester.widget<FoliateEpubReaderView>(find.byType(FoliateEpubReaderView));
-    expect(updatedView.writingMode, WritingMode.vertical);
-    expect(updatedView.columnMode, ColumnMode.single);
-    expect(updatedView.showFooter, isFalse);
-  });
+      final updatedView = tester.widget<FoliateEpubReaderView>(
+        find.byType(FoliateEpubReaderView),
+      );
+      expect(updatedView.writingMode, WritingMode.vertical);
+      expect(updatedView.columnMode, ColumnMode.single);
+      expect(updatedView.showFooter, isFalse);
+    },
+  );
 
   testWidgets(
-      'isFixedLayout: null 且提供 libraryRepository 時，呼叫 detectAndCacheEpubLayout 並依結果建構 FoliateEpubReaderView',
-      (tester) async {
-    final repository =
-        FakeLibraryRepository(detectedIsFixedLayout: false);
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: 'test/fixtures/sample.epub',
-          bookId: 'b1',
-          prefsManager: prefsManager,
-          libraryRepository: repository,
+    'isFixedLayout: null 且提供 libraryRepository 時，呼叫 detectAndCacheEpubLayout 並依結果建構 FoliateEpubReaderView',
+    (tester) async {
+      final repository = FakeLibraryRepository(detectedIsFixedLayout: false);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b1',
+            prefsManager: prefsManager,
+            libraryRepository: repository,
+          ),
         ),
-      ),
-    );
-    await tester.pump();
-    await tester.runAsync(() => Future.delayed(Duration.zero));
-    await tester.pump();
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
 
-    expect(repository.detectAndCacheEpubLayoutCalls, ['b1']);
-    expect(find.byType(FoliateEpubReaderView), findsOneWidget);
-    expect(find.byType(EpubReaderView), findsNothing);
-  });
+      expect(repository.detectAndCacheEpubLayoutCalls, ['b1']);
+      expect(find.byType(FoliateEpubReaderView), findsOneWidget);
+      expect(find.byType(EpubReaderView), findsNothing);
+    },
+  );
 
   testWidgets(
-      'isFixedLayout: null 且提供 libraryRepository、偵測結果為 FXL 時，建構 EpubReaderView',
-      (tester) async {
-    final repository = FakeLibraryRepository(detectedIsFixedLayout: true);
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: 'test/fixtures/sample_fixed_layout.epub',
-          bookId: 'b1',
-          prefsManager: prefsManager,
-          libraryRepository: repository,
+    'isFixedLayout: null 且提供 libraryRepository、偵測結果為 FXL 時，建構 EpubReaderView',
+    (tester) async {
+      final repository = FakeLibraryRepository(detectedIsFixedLayout: true);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample_fixed_layout.epub',
+            bookId: 'b1',
+            prefsManager: prefsManager,
+            libraryRepository: repository,
+          ),
         ),
-      ),
-    );
-    await tester.pump();
-    await tester.runAsync(() => Future.delayed(Duration.zero));
-    await tester.pump();
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
 
-    expect(repository.detectAndCacheEpubLayoutCalls, ['b1']);
-    expect(find.byType(EpubReaderView), findsOneWidget);
-    expect(find.byType(FoliateEpubReaderView), findsNothing);
-  });
+      expect(repository.detectAndCacheEpubLayoutCalls, ['b1']);
+      expect(find.byType(EpubReaderView), findsOneWidget);
+      expect(find.byType(FoliateEpubReaderView), findsNothing);
+    },
+  );
 
   testWidgets(
-      'isFixedLayout: null 且未提供 libraryRepository 時，退回既有行為建構 EpubReaderView（零回歸）',
-      (tester) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: 'test/fixtures/sample.epub',
-          bookId: 'b1',
-          prefsManager: prefsManager,
+    'isFixedLayout: null 且未提供 libraryRepository 時，退回既有行為建構 EpubReaderView（零回歸）',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b1',
+            prefsManager: prefsManager,
+          ),
         ),
-      ),
-    );
-    await tester.pump();
-    await tester.runAsync(() => Future.delayed(Duration.zero));
-    await tester.pump();
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
 
-    expect(find.byType(EpubReaderView), findsOneWidget);
-    expect(find.byType(FoliateEpubReaderView), findsNothing);
-  });
+      expect(find.byType(EpubReaderView), findsOneWidget);
+      expect(find.byType(FoliateEpubReaderView), findsNothing);
+    },
+  );
 
   testWidgets('開啟該書已有的持久化版面偏好設定後，狀態正確載入', (tester) async {
     await prefsManager.saveBookPrefs(
@@ -345,8 +360,7 @@ void main() {
     expect(epubView.fontSize, 1.5);
   });
 
-  testWidgets(
-      'writingModeOverride 已持久化時，即使尚未收到 onLayoutResolved，'
+  testWidgets('writingModeOverride 已持久化時，即使尚未收到 onLayoutResolved，'
       'EpubReaderView.writingMode 仍採用覆寫值', (tester) async {
     await prefsManager.saveBookPrefs(
       'b1',
@@ -366,8 +380,7 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    final epubView =
-        tester.widget<EpubReaderView>(find.byType(EpubReaderView));
+    final epubView = tester.widget<EpubReaderView>(find.byType(EpubReaderView));
     expect(epubView.writingMode, WritingMode.vertical);
     // 排版方向的雙層解析獨立於「⚙️版面」按鈕的啟用條件——後者仍要求真正
     // 收到 onLayoutResolved（見 _buildAppBarActions 的
@@ -377,14 +390,16 @@ void main() {
     expect(
       tester
           .widget<IconButton>(
-              find.byKey(const Key('reader_layout_settings_button')))
+            find.byKey(const Key('reader_layout_settings_button')),
+          )
           .onPressed,
       isNull,
     );
   });
 
-  testWidgets('pageTurnModeOverride 為 null 時，未覆寫的書籍採用全域預設值（paginated）',
-      (tester) async {
+  testWidgets('pageTurnModeOverride 為 null 時，未覆寫的書籍採用全域預設值（paginated）', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: ReaderScreen(
@@ -398,8 +413,7 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    final epubView =
-        tester.widget<EpubReaderView>(find.byType(EpubReaderView));
+    final epubView = tester.widget<EpubReaderView>(find.byType(EpubReaderView));
     expect(epubView.pageTurnMode, PageTurnMode.paginated);
   });
 
@@ -421,8 +435,7 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    final epubView =
-        tester.widget<EpubReaderView>(find.byType(EpubReaderView));
+    final epubView = tester.widget<EpubReaderView>(find.byType(EpubReaderView));
     expect(epubView.pageTurnMode, PageTurnMode.scroll);
   });
 
@@ -445,13 +458,13 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    final epubView =
-        tester.widget<EpubReaderView>(find.byType(EpubReaderView));
+    final epubView = tester.widget<EpubReaderView>(find.byType(EpubReaderView));
     expect(epubView.pageTurnMode, PageTurnMode.scroll);
   });
 
-  testWidgets('開啟該書已有的持久化 pdfFitMode 後，PdfReaderView.fitMode 正確載入',
-      (tester) async {
+  testWidgets('開啟該書已有的持久化 pdfFitMode 後，PdfReaderView.fitMode 正確載入', (
+    tester,
+  ) async {
     await prefsManager.saveBookPrefs(
       'b1',
       const BookReaderPrefs(pdfFitMode: PdfFitMode.actualSize),
@@ -476,8 +489,9 @@ void main() {
     expect(pdfView.fitMode, PdfFitMode.actualSize);
   });
 
-  testWidgets('尚未持久化 pdfFitMode 時，PdfReaderView.fitMode 採用預設值 pageFit',
-      (tester) async {
+  testWidgets('尚未持久化 pdfFitMode 時，PdfReaderView.fitMode 採用預設值 pageFit', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: ReaderScreen(
@@ -496,99 +510,111 @@ void main() {
   });
 
   testWidgets(
-      '點擊手動選區後，關閉 PdfSettingsSheet 並將 cropEditModeActive 傳入 PdfReaderView',
-      (tester) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: 'test/fixtures/sample.pdf',
-          bookId: 'b1',
-          prefsManager: prefsManager,
+    '點擊手動選區後，關閉 PdfSettingsSheet 並將 cropEditModeActive 傳入 PdfReaderView',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.pdf',
+            bookId: 'b1',
+            prefsManager: prefsManager,
+          ),
         ),
-      ),
-    );
-    await tester.pump();
-    await tester.runAsync(() => Future.delayed(Duration.zero));
-    await tester.pump();
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
 
-    // 模擬原生端 onPageRendered，讓「⚙️版面」按鈕轉為可點擊狀態（純
-    // flutter test 環境下 AndroidView 不會真正觸發原生回呼，比照本檔案
-    // 既有測試對「尚未收到 onPageRendered」情境的說明，見第 69-89 行）。
-    tester.widget<PdfReaderView>(find.byType(PdfReaderView)).onPageRendered();
-    await tester.pump();
+      // 模擬原生端 onPageRendered，讓「⚙️版面」按鈕轉為可點擊狀態（純
+      // flutter test 環境下 AndroidView 不會真正觸發原生回呼，比照本檔案
+      // 既有測試對「尚未收到 onPageRendered」情境的說明，見第 69-89 行）。
+      tester.widget<PdfReaderView>(find.byType(PdfReaderView)).onPageRendered();
+      await tester.pump();
 
-    await tester.tap(find.byKey(const Key('reader_layout_settings_button')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('pdf_settings_tab_crop')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('pdf_settings_crop_mode_manual')));
-    await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('reader_layout_settings_button')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('pdf_settings_tab_crop')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('pdf_settings_crop_mode_manual')));
+      await tester.pumpAndSettle();
 
-    expect(find.byType(PdfSettingsSheet), findsNothing);
-    expect(
+      expect(find.byType(PdfSettingsSheet), findsNothing);
+      expect(
+        tester
+            .widget<PdfReaderView>(find.byType(PdfReaderView))
+            .cropEditModeActive,
+        isTrue,
+      );
+    },
+  );
+
+  testWidgets(
+    '收到 onCropRectSelected 後，退出裁切模式、寫入 pdfCropMode=manual 並持久化、重新開啟 PdfSettingsSheet',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.pdf',
+            bookId: 'b1',
+            prefsManager: prefsManager,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      tester.widget<PdfReaderView>(find.byType(PdfReaderView)).onPageRendered();
+      await tester.pump();
+
+      const selectedRect = PdfCropRect(
+        left: 0.1,
+        top: 0.15,
+        right: 0.9,
+        bottom: 0.85,
+      );
       tester
           .widget<PdfReaderView>(find.byType(PdfReaderView))
-          .cropEditModeActive,
+          .onCropRectSelected!(selectedRect);
+      await tester.pumpAndSettle();
+
+      final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+      expect(pdfView.cropEditModeActive, isFalse);
+      expect(pdfView.cropMode, PdfCropMode.manual);
+      expect(pdfView.cropRect, selectedRect);
+      expect(
+        find.byType(PdfSettingsSheet),
+        findsOneWidget,
+        reason: '確認框選後應重新開啟 PdfSettingsSheet 顯示套用結果（見 spec.md）',
+      );
+
+      final saved = await prefsManager.load('b1');
+      expect(saved.bookPrefs.pdfCropMode, PdfCropMode.manual);
+      expect(saved.bookPrefs.pdfCropRect, selectedRect);
+    },
+  );
+
+  testWidgets('進入手動裁切互動模式後，PopScope.canPop 為 false（返回鍵不應退出整個閱讀器）', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b1',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    expect(
+      tester.widget<PopScope>(find.byType(PopScope)).canPop,
       isTrue,
+      reason: '尚未進入裁切互動模式時，返回鍵應正常運作（可以離開閱讀器）',
     );
-  });
-
-  testWidgets(
-      '收到 onCropRectSelected 後，退出裁切模式、寫入 pdfCropMode=manual 並持久化、重新開啟 PdfSettingsSheet',
-      (tester) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: 'test/fixtures/sample.pdf',
-          bookId: 'b1',
-          prefsManager: prefsManager,
-        ),
-      ),
-    );
-    await tester.pump();
-    await tester.runAsync(() => Future.delayed(Duration.zero));
-    await tester.pump();
-
-    tester.widget<PdfReaderView>(find.byType(PdfReaderView)).onPageRendered();
-    await tester.pump();
-
-    const selectedRect =
-        PdfCropRect(left: 0.1, top: 0.15, right: 0.9, bottom: 0.85);
-    tester
-        .widget<PdfReaderView>(find.byType(PdfReaderView))
-        .onCropRectSelected!(selectedRect);
-    await tester.pumpAndSettle();
-
-    final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
-    expect(pdfView.cropEditModeActive, isFalse);
-    expect(pdfView.cropMode, PdfCropMode.manual);
-    expect(pdfView.cropRect, selectedRect);
-    expect(find.byType(PdfSettingsSheet), findsOneWidget,
-        reason: '確認框選後應重新開啟 PdfSettingsSheet 顯示套用結果（見 spec.md）');
-
-    final saved = await prefsManager.load('b1');
-    expect(saved.bookPrefs.pdfCropMode, PdfCropMode.manual);
-    expect(saved.bookPrefs.pdfCropRect, selectedRect);
-  });
-
-  testWidgets(
-      '進入手動裁切互動模式後，PopScope.canPop 為 false（返回鍵不應退出整個閱讀器）',
-      (tester) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: 'test/fixtures/sample.pdf',
-          bookId: 'b1',
-          prefsManager: prefsManager,
-        ),
-      ),
-    );
-    await tester.pump();
-    await tester.runAsync(() => Future.delayed(Duration.zero));
-    await tester.pump();
-
-    expect(tester.widget<PopScope>(find.byType(PopScope)).canPop, isTrue,
-        reason: '尚未進入裁切互動模式時，返回鍵應正常運作（可以離開閱讀器）');
 
     tester.widget<PdfReaderView>(find.byType(PdfReaderView)).onPageRendered();
     await tester.pump();
@@ -600,54 +626,58 @@ void main() {
     await tester.tap(find.byKey(const Key('pdf_settings_crop_mode_manual')));
     await tester.pumpAndSettle();
 
-    expect(tester.widget<PopScope>(find.byType(PopScope)).canPop, isFalse,
-        reason: '裁切互動模式進行中，返回鍵不應把整個 ReaderScreen 一併 '
-            'pop 掉（審查意見 2.1(b)：避免誤觸返回鍵導致整個閱讀器被意外'
-            '關閉；刻意不新增「取消並還原」語意，維持 spec.md 已鎖定的簡化'
-            '狀態機決策——見本檔案 _handleRequestManualCrop 的文件註解）');
+    expect(
+      tester.widget<PopScope>(find.byType(PopScope)).canPop,
+      isFalse,
+      reason:
+          '裁切互動模式進行中，返回鍵不應把整個 ReaderScreen 一併 '
+          'pop 掉（審查意見 2.1(b)：避免誤觸返回鍵導致整個閱讀器被意外'
+          '關閉；刻意不新增「取消並還原」語意，維持 spec.md 已鎖定的簡化'
+          '狀態機決策——見本檔案 _handleRequestManualCrop 的文件註解）',
+    );
   });
 
   testWidgets(
-      'onLayoutResolved 觸發後，EpubReaderView.writingMode 帶入自動偵測到的直排方向（C2 接線）',
-      (tester) async {
-    // 不預設任何 writingModeOverride，讓自動偵測值決定結果
-    final manager = FakeReaderPrefsManager();
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: 'test/fixtures/sample.epub',
-          bookId: 'b1',
-          prefsManager: manager,
+    'onLayoutResolved 觸發後，EpubReaderView.writingMode 帶入自動偵測到的直排方向（C2 接線）',
+    (tester) async {
+      // 不預設任何 writingModeOverride，讓自動偵測值決定結果
+      final manager = FakeReaderPrefsManager();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b1',
+            prefsManager: manager,
+          ),
         ),
-      ),
-    );
-    // 等待 initState 的 async load 完成
-    await tester.pump();
-    await tester.runAsync(() => Future.delayed(Duration.zero));
-    await tester.pump();
+      );
+      // 等待 initState 的 async load 完成
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
 
-    // 比照同檔既有 PDF 測試直接呼叫公開 callback prop 的手法
-    //（onPageRendered: reader_screen_test.dart:317），
-    // EpubReaderView.onLayoutResolved 是公開的 ValueChanged<EpubLayoutInfo>?
-    // callback prop（epub_reader_view.dart:32），可在純 flutter test 中直接呼叫。
-    tester
-        .widget<EpubReaderView>(find.byType(EpubReaderView))
-        .onLayoutResolved!(
-      const EpubLayoutInfo(
-        isFixedLayout: false,
-        writingMode: WritingMode.vertical,
-      ),
-    );
-    await tester.pump();
+      // 比照同檔既有 PDF 測試直接呼叫公開 callback prop 的手法
+      //（onPageRendered: reader_screen_test.dart:317），
+      // EpubReaderView.onLayoutResolved 是公開的 ValueChanged<EpubLayoutInfo>?
+      // callback prop（epub_reader_view.dart:32），可在純 flutter test 中直接呼叫。
+      tester
+          .widget<EpubReaderView>(find.byType(EpubReaderView))
+          .onLayoutResolved!(
+        const EpubLayoutInfo(
+          isFixedLayout: false,
+          writingMode: WritingMode.vertical,
+        ),
+      );
+      await tester.pump();
 
-    expect(
-      tester.widget<EpubReaderView>(find.byType(EpubReaderView)).writingMode,
-      WritingMode.vertical,
-    );
-  });
+      expect(
+        tester.widget<EpubReaderView>(find.byType(EpubReaderView)).writingMode,
+        WritingMode.vertical,
+      );
+    },
+  );
 
-  testWidgets('裝置為橫向時，isLandscape 正確下傳給 PdfReaderView 建構參數',
-      (tester) async {
+  testWidgets('裝置為橫向時，isLandscape 正確下傳給 PdfReaderView 建構參數', (tester) async {
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.binding.setSurfaceSize(const Size(800, 400)); // 橫向
 
@@ -697,8 +727,7 @@ void main() {
     expect(pdfView.isLandscape, isFalse);
   });
 
-  testWidgets('開啟該書已有的持久化雙頁偏好設定後，PdfReaderView 的雙頁參數正確載入',
-      (tester) async {
+  testWidgets('開啟該書已有的持久化雙頁偏好設定後，PdfReaderView 的雙頁參數正確載入', (tester) async {
     await prefsManager.saveBookPrefs(
       'b1',
       const BookReaderPrefs(
@@ -727,9 +756,9 @@ void main() {
     expect(pdfView.dualPageDirection, DualPageDirection.rtl);
   });
 
-  testWidgets(
-      '尚未持久化雙頁偏好設定時，PdfReaderView 的雙頁參數採用預設值（auto／true／rtl）',
-      (tester) async {
+  testWidgets('尚未持久化雙頁偏好設定時，PdfReaderView 的雙頁參數採用預設值（auto／true／rtl）', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: ReaderScreen(
@@ -749,9 +778,9 @@ void main() {
     expect(pdfView.dualPageDirection, DualPageDirection.rtl);
   });
 
-  testWidgets(
-      'EPUB 固定版面開書後，畫面右上角出現懸浮設定按鈕，點擊能開啟 FxlSettingsSheet',
-      (tester) async {
+  testWidgets('EPUB 固定版面開書後，畫面右上角出現懸浮設定按鈕，點擊能開啟 FxlSettingsSheet', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: ReaderScreen(
@@ -770,13 +799,21 @@ void main() {
     // 本檔案既有測試對「無法在此層級驅動原生渲染」的既定限制處理方式。
     final view = tester.widget<EpubReaderView>(find.byType(EpubReaderView));
     view.onLayoutResolved?.call(
-      const EpubLayoutInfo(isFixedLayout: true, writingMode: WritingMode.horizontal),
+      const EpubLayoutInfo(
+        isFixedLayout: true,
+        writingMode: WritingMode.horizontal,
+      ),
     );
     await tester.pump();
 
-    expect(find.byKey(const Key('reader_fixed_layout_settings_button')), findsOneWidget);
+    expect(
+      find.byKey(const Key('reader_fixed_layout_settings_button')),
+      findsOneWidget,
+    );
 
-    await tester.tap(find.byKey(const Key('reader_fixed_layout_settings_button')));
+    await tester.tap(
+      find.byKey(const Key('reader_fixed_layout_settings_button')),
+    );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
 
@@ -800,7 +837,10 @@ void main() {
     // 直接呼叫 onLayoutResolved 模擬原生端回報 isFixedLayout=true
     final view = tester.widget<EpubReaderView>(find.byType(EpubReaderView));
     view.onLayoutResolved?.call(
-      const EpubLayoutInfo(isFixedLayout: true, writingMode: WritingMode.horizontal),
+      const EpubLayoutInfo(
+        isFixedLayout: true,
+        writingMode: WritingMode.horizontal,
+      ),
     );
     await tester.pump();
 
@@ -857,7 +897,10 @@ void main() {
     // 直接呼叫 onLayoutResolved 模擬原生端回報 isFixedLayout=true
     final view = tester.widget<EpubReaderView>(find.byType(EpubReaderView));
     view.onLayoutResolved?.call(
-      const EpubLayoutInfo(isFixedLayout: true, writingMode: WritingMode.horizontal),
+      const EpubLayoutInfo(
+        isFixedLayout: true,
+        writingMode: WritingMode.horizontal,
+      ),
     );
     await tester.pump();
 
@@ -882,12 +925,14 @@ void main() {
         TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
     late MethodChannel instanceChannel;
 
-    binaryMessenger.setMockMethodCallHandler(SystemChannels.platform_views,
-        (call) async {
+    binaryMessenger.setMockMethodCallHandler(SystemChannels.platform_views, (
+      call,
+    ) async {
       if (call.method == 'create') {
         final id = (call.arguments as Map<Object?, Object?>)['id'] as int;
-        instanceChannel =
-            MethodChannel('cc.ugotit.elinkbook/epub_reader_view_$id');
+        instanceChannel = MethodChannel(
+          'cc.ugotit.elinkbook/epub_reader_view_$id',
+        );
         binaryMessenger.setMockMethodCallHandler(
           instanceChannel,
           (call) async => null,
@@ -900,8 +945,12 @@ void main() {
     // 完整 creation-params map），改成只回傳裸 textureId——若不還原，之後的
     // 測試（不論 PDF 或 EPUB）建立 AndroidView 時會因缺少 metadata 觸發
     // 'meta != null' assertion 崩潰（已知的 Flutter 測試環境限制）。
-    addTearDown(() =>
-        binaryMessenger.setMockMethodCallHandler(SystemChannels.platform_views, null));
+    addTearDown(
+      () => binaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform_views,
+        null,
+      ),
+    );
 
     await tester.pumpWidget(
       MaterialApp(
@@ -952,8 +1001,7 @@ void main() {
     );
   });
 
-  testWidgets('PDF 開書後，收到原生端 onPageChanged 回報時，頁尾正確顯示',
-      (tester) async {
+  testWidgets('PDF 開書後，收到原生端 onPageChanged 回報時，頁尾正確顯示', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         home: ReaderScreen(
@@ -970,9 +1018,10 @@ void main() {
     // 模擬原生端回報頁碼：直接呼叫 PdfReaderView widget 上的 onPageChanged
     // callback（比照既有 EPUB 測試直接呼叫 onLayoutResolved 的模式），
     // 驗證 ReaderScreen 正確驅動 ReaderFooter 顯示。
-    final pdfView =
-        tester.widget<PdfReaderView>(find.byType(PdfReaderView));
-    pdfView.onPageChanged?.call(const PdfPageInfo(pageIndex: 0, totalPages: 12));
+    final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+    pdfView.onPageChanged?.call(
+      const PdfPageInfo(pageIndex: 0, totalPages: 12),
+    );
     await tester.pump();
 
     expect(find.byKey(const Key('reader_footer')), findsOneWidget);
@@ -998,8 +1047,9 @@ void main() {
 
   // --- Epic 5 Issue 2：閱讀位置記憶 ---
 
-  testWidgets('PDF 收到 onPageChanged 後離開畫面（dispose），正確寫入 ReadingPosition',
-      (tester) async {
+  testWidgets('PDF 收到 onPageChanged 後離開畫面（dispose），正確寫入 ReadingPosition', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: ReaderScreen(
@@ -1016,9 +1066,10 @@ void main() {
     // 模擬原生端回報頁碼：直接呼叫 PdfReaderView widget 上的 onPageChanged
     // callback（比照既有「PDF 開書後，收到原生端 onPageChanged 回報時，
     // 頁尾正確顯示」的模式），驗證 dispose() 時正確寫入 ReadingPosition。
-    final pdfView =
-        tester.widget<PdfReaderView>(find.byType(PdfReaderView));
-    pdfView.onPageChanged?.call(const PdfPageInfo(pageIndex: 3, totalPages: 10));
+    final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+    pdfView.onPageChanged?.call(
+      const PdfPageInfo(pageIndex: 3, totalPages: 10),
+    );
     await tester.pump();
 
     // 導覽離開 ReaderScreen，觸發 dispose()。
@@ -1032,29 +1083,32 @@ void main() {
     expect(saved.value.progress, 0.4); // (3+1)/10
   });
 
-  testWidgets('尚未收到任何 onPageChanged 時，dispose 不呼叫 saveReadingPosition（避免覆寫既有記錄）',
-      (tester) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: 'test/fixtures/sample.pdf',
-          bookId: 'b_no_position',
-          prefsManager: prefsManager,
+  testWidgets(
+    '尚未收到任何 onPageChanged 時，dispose 不呼叫 saveReadingPosition（避免覆寫既有記錄）',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.pdf',
+            bookId: 'b_no_position',
+            prefsManager: prefsManager,
+          ),
         ),
-      ),
-    );
-    await tester.pump();
+      );
+      await tester.pump();
 
-    await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
-    await tester.pump();
+      await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
+      await tester.pump();
 
-    expect(prefsManager.savedReadingPositionCalls, isEmpty);
-  });
+      expect(prefsManager.savedReadingPositionCalls, isEmpty);
+    },
+  );
 
   // --- Epic 5 Issue 3：EPUB 頁碼顯示 + 跳頁 ---
 
-  testWidgets('EPUB reflowable 開書後，收到 onCharacterCountReady 回報時，頁尾正確顯示估算頁碼',
-      (tester) async {
+  testWidgets('EPUB reflowable 開書後，收到 onCharacterCountReady 回報時，頁尾正確顯示估算頁碼', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: ReaderScreen(
@@ -1071,7 +1125,10 @@ void main() {
     final epubView = tester.widget<EpubReaderView>(find.byType(EpubReaderView));
     // 先回報非固定版面（頁尾只在流式 EPUB 顯示）。
     epubView.onLayoutResolved?.call(
-      const EpubLayoutInfo(isFixedLayout: false, writingMode: WritingMode.horizontal),
+      const EpubLayoutInfo(
+        isFixedLayout: false,
+        writingMode: WritingMode.horizontal,
+      ),
     );
     await tester.pump();
     // 模擬原生端背景計算完成，回報全書字元數。
@@ -1084,8 +1141,9 @@ void main() {
     expect(find.text('1/10'), findsOneWidget);
   });
 
-  testWidgets('EPUB 收到 onLocatorChanged 的 progression 後，頁尾目前頁碼正確更新',
-      (tester) async {
+  testWidgets('EPUB 收到 onLocatorChanged 的 progression 後，頁尾目前頁碼正確更新', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: ReaderScreen(
@@ -1101,21 +1159,28 @@ void main() {
 
     final epubView = tester.widget<EpubReaderView>(find.byType(EpubReaderView));
     epubView.onLayoutResolved?.call(
-      const EpubLayoutInfo(isFixedLayout: false, writingMode: WritingMode.horizontal),
+      const EpubLayoutInfo(
+        isFixedLayout: false,
+        writingMode: WritingMode.horizontal,
+      ),
     );
     await tester.pump();
     epubView.onCharacterCountReady?.call(5000); // 總頁數 10
     await tester.pump();
     epubView.onLocatorChanged?.call(
-      const EpubPositionInfo(locatorJson: '{"href":"/c1.xhtml"}', progression: 0.5),
+      const EpubPositionInfo(
+        locatorJson: '{"href":"/c1.xhtml"}',
+        progression: 0.5,
+      ),
     );
     await tester.pump();
 
     expect(find.text('5/10'), findsOneWidget);
   });
 
-  testWidgets('EPUB 固定版面（FXL）開書後，即使收到 onCharacterCountReady 也不顯示頁尾',
-      (tester) async {
+  testWidgets('EPUB 固定版面（FXL）開書後，即使收到 onCharacterCountReady 也不顯示頁尾', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: ReaderScreen(
@@ -1131,7 +1196,10 @@ void main() {
 
     final epubView = tester.widget<EpubReaderView>(find.byType(EpubReaderView));
     epubView.onLayoutResolved?.call(
-      const EpubLayoutInfo(isFixedLayout: true, writingMode: WritingMode.horizontal),
+      const EpubLayoutInfo(
+        isFixedLayout: true,
+        writingMode: WritingMode.horizontal,
+      ),
     );
     await tester.pump();
     epubView.onCharacterCountReady?.call(5000);
@@ -1140,8 +1208,7 @@ void main() {
     expect(find.byKey(const Key('reader_footer')), findsNothing);
   });
 
-  testWidgets('版面設定（字型大小）變動後，EPUB 頁尾估算總頁數即時重新計算',
-      (tester) async {
+  testWidgets('版面設定（字型大小）變動後，EPUB 頁尾估算總頁數即時重新計算', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         home: ReaderScreen(
@@ -1158,7 +1225,10 @@ void main() {
     final epubView = tester.widget<EpubReaderView>(find.byType(EpubReaderView));
     epubView.onPageRendered();
     epubView.onLayoutResolved?.call(
-      const EpubLayoutInfo(isFixedLayout: false, writingMode: WritingMode.horizontal),
+      const EpubLayoutInfo(
+        isFixedLayout: false,
+        writingMode: WritingMode.horizontal,
+      ),
     );
     await tester.pump();
     epubView.onCharacterCountReady?.call(5000);
@@ -1186,7 +1256,9 @@ void main() {
     // 重新 build——否則 IconButton.onPressed 閉包捕捉到的仍是上一次 build
     // 當下的 clampedValue，16 次點擊會重複套用同一個遞增結果，而非累加。
     for (var i = 0; i < 16; i++) {
-      await tester.tap(find.byKey(const Key('reader_settings_font_size_increment')));
+      await tester.tap(
+        find.byKey(const Key('reader_settings_font_size_increment')),
+      );
       await tester.pump();
     }
 
@@ -1210,7 +1282,9 @@ void main() {
     await tester.pump();
 
     final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
-    pdfView.onPageChanged?.call(const PdfPageInfo(pageIndex: 0, totalPages: 12));
+    pdfView.onPageChanged?.call(
+      const PdfPageInfo(pageIndex: 0, totalPages: 12),
+    );
     await tester.pump();
 
     expect(find.byKey(const Key('reader_footer')), findsOneWidget);
@@ -1259,8 +1333,7 @@ void main() {
     expect(find.byKey(const Key('reader_toc_button')), findsNothing);
   });
 
-  testWidgets('EPUB 固定版面（FXL）開書後，目錄按鈕不存在（沿用既有 AppBar 隱藏機制）',
-      (tester) async {
+  testWidgets('EPUB 固定版面（FXL）開書後，目錄按鈕不存在（沿用既有 AppBar 隱藏機制）', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         home: ReaderScreen(
@@ -1276,7 +1349,10 @@ void main() {
 
     final epubView = tester.widget<EpubReaderView>(find.byType(EpubReaderView));
     epubView.onLayoutResolved?.call(
-      const EpubLayoutInfo(isFixedLayout: true, writingMode: WritingMode.horizontal),
+      const EpubLayoutInfo(
+        isFixedLayout: true,
+        writingMode: WritingMode.horizontal,
+      ),
     );
     await tester.pump();
 
@@ -1284,43 +1360,49 @@ void main() {
   });
 
   testWidgets(
-      'EPUB reflowable 收到 onLayoutResolved 後，目錄按鈕轉為可點擊，點擊後開啟 TocBottomSheet',
-      (tester) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: 'test/fixtures/sample.epub',
-          bookId: 'b_toc_open',
-          prefsManager: prefsManager,
+    'EPUB reflowable 收到 onLayoutResolved 後，目錄按鈕轉為可點擊，點擊後開啟 TocBottomSheet',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_toc_open',
+            prefsManager: prefsManager,
+          ),
         ),
-      ),
-    );
-    await tester.pump();
-    await tester.runAsync(() => Future.delayed(Duration.zero));
-    await tester.pump();
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
 
-    final epubView = tester.widget<EpubReaderView>(find.byType(EpubReaderView));
-    epubView.onLayoutResolved?.call(
-      const EpubLayoutInfo(isFixedLayout: false, writingMode: WritingMode.horizontal),
-    );
-    await tester.pump();
-    // 審查修正：目錄按鈕的啟用條件額外要求 _tocLoaded，該旗標由
-    // EpubReaderView.loadTableOfContents() 這個 async 呼叫的 .then()
-    // callback 設定，需要多一次 pump 讓其 microtask 完成、觸發 setState。
-    await tester.pump();
+      final epubView = tester.widget<EpubReaderView>(
+        find.byType(EpubReaderView),
+      );
+      epubView.onLayoutResolved?.call(
+        const EpubLayoutInfo(
+          isFixedLayout: false,
+          writingMode: WritingMode.horizontal,
+        ),
+      );
+      await tester.pump();
+      // 審查修正：目錄按鈕的啟用條件額外要求 _tocLoaded，該旗標由
+      // EpubReaderView.loadTableOfContents() 這個 async 呼叫的 .then()
+      // callback 設定，需要多一次 pump 讓其 microtask 完成、觸發 setState。
+      await tester.pump();
 
-    final finder = find.byKey(const Key('reader_toc_button'));
-    expect(tester.widget<IconButton>(finder).onPressed, isNotNull);
+      final finder = find.byKey(const Key('reader_toc_button'));
+      expect(tester.widget<IconButton>(finder).onPressed, isNotNull);
 
-    await tester.tap(finder);
-    // showModalBottomSheet 動畫在 flutter test 環境下 pumpAndSettle 永遠不
-    // 會收斂（持續泵送動畫幀），改用有限幀 pump 等待動畫展開，比照本檔案
-    // 既有的 FxlSettingsSheet 開啟測試模式（第 548-554 行）。
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
+      await tester.tap(finder);
+      // showModalBottomSheet 動畫在 flutter test 環境下 pumpAndSettle 永遠不
+      // 會收斂（持續泵送動畫幀），改用有限幀 pump 等待動畫展開，比照本檔案
+      // 既有的 FxlSettingsSheet 開啟測試模式（第 548-554 行）。
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
 
-    expect(find.byType(TocBottomSheet), findsOneWidget);
-  });
+      expect(find.byType(TocBottomSheet), findsOneWidget);
+    },
+  );
 
   testWidgets('點選目錄項目後，TocBottomSheet 關閉', (tester) async {
     await tester.pumpWidget(
@@ -1338,7 +1420,10 @@ void main() {
 
     final epubView = tester.widget<EpubReaderView>(find.byType(EpubReaderView));
     epubView.onLayoutResolved?.call(
-      const EpubLayoutInfo(isFixedLayout: false, writingMode: WritingMode.horizontal),
+      const EpubLayoutInfo(
+        isFixedLayout: false,
+        writingMode: WritingMode.horizontal,
+      ),
     );
     await tester.pump();
     // 審查修正：多一次 pump 讓 loadTableOfContents() 的 .then() callback
@@ -1368,35 +1453,47 @@ void main() {
 
   // --- Epic 5 Issue 5：頁首/頁尾顯示切換 ---
 
-  testWidgets('EPUB reflowable 預設（未持久化）showHeader=true，開書後 AppBar 標題為可點擊的章節標題元件',
-      (tester) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: 'test/fixtures/sample.epub',
-          bookId: 'b_header_default',
-          prefsManager: prefsManager,
+  testWidgets(
+    'EPUB reflowable 預設（未持久化）showHeader=true，開書後 AppBar 標題為可點擊的章節標題元件',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_header_default',
+            prefsManager: prefsManager,
+          ),
         ),
-      ),
-    );
-    await tester.pump();
-    await tester.runAsync(() => Future.delayed(Duration.zero));
-    await tester.pump();
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
 
-    final epubView = tester.widget<EpubReaderView>(find.byType(EpubReaderView));
-    epubView.onLayoutResolved?.call(
-      const EpubLayoutInfo(isFixedLayout: false, writingMode: WritingMode.horizontal),
-    );
-    await tester.pump();
+      final epubView = tester.widget<EpubReaderView>(
+        find.byType(EpubReaderView),
+      );
+      epubView.onLayoutResolved?.call(
+        const EpubLayoutInfo(
+          isFixedLayout: false,
+          writingMode: WritingMode.horizontal,
+        ),
+      );
+      await tester.pump();
 
-    expect(find.byKey(const Key('reader_appbar_chapter_title')), findsOneWidget);
-    expect(find.byKey(const Key('reader_appbar_static_title')), findsNothing);
-    // 「⚙️版面」按鈕仍在 actions 內，頁首開關不影響既有版面設定入口
-    expect(find.byKey(const Key('reader_layout_settings_button')), findsOneWidget);
-  });
+      expect(
+        find.byKey(const Key('reader_appbar_chapter_title')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('reader_appbar_static_title')), findsNothing);
+      // 「⚙️版面」按鈕仍在 actions 內，頁首開關不影響既有版面設定入口
+      expect(
+        find.byKey(const Key('reader_layout_settings_button')),
+        findsOneWidget,
+      );
+    },
+  );
 
-  testWidgets('已持久化 showHeader=false 時，AppBar 標題維持靜態「閱讀器」文字',
-      (tester) async {
+  testWidgets('已持久化 showHeader=false 時，AppBar 標題維持靜態「閱讀器」文字', (tester) async {
     await prefsManager.saveBookPrefs(
       'b_header_off',
       const BookReaderPrefs(showHeader: false),
@@ -1417,19 +1514,24 @@ void main() {
 
     final epubView = tester.widget<EpubReaderView>(find.byType(EpubReaderView));
     epubView.onLayoutResolved?.call(
-      const EpubLayoutInfo(isFixedLayout: false, writingMode: WritingMode.horizontal),
+      const EpubLayoutInfo(
+        isFixedLayout: false,
+        writingMode: WritingMode.horizontal,
+      ),
     );
     await tester.pump();
 
     expect(find.byKey(const Key('reader_appbar_static_title')), findsOneWidget);
     expect(find.text('閱讀器'), findsOneWidget);
     expect(find.byKey(const Key('reader_appbar_chapter_title')), findsNothing);
-    expect(find.byKey(const Key('reader_toc_button')), findsOneWidget,
-        reason: '頁首關閉不影響目錄按鈕仍存在於 actions');
+    expect(
+      find.byKey(const Key('reader_toc_button')),
+      findsOneWidget,
+      reason: '頁首關閉不影響目錄按鈕仍存在於 actions',
+    );
   });
 
-  testWidgets('PDF 開書後，AppBar 標題恆為靜態「閱讀器」文字（頁首概念僅限 EPUB）',
-      (tester) async {
+  testWidgets('PDF 開書後，AppBar 標題恆為靜態「閱讀器」文字（頁首概念僅限 EPUB）', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         home: ReaderScreen(
@@ -1463,8 +1565,7 @@ void main() {
     expect(appBar.preferredSize.height, 20.0);
   });
 
-  testWidgets('AppBar 動作按鈕已收斂實際渲染寬度與圖示大小（Issue 2）',
-      (tester) async {
+  testWidgets('AppBar 動作按鈕已收斂實際渲染寬度與圖示大小（Issue 2）', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         home: ReaderScreen(
@@ -1487,7 +1588,11 @@ void main() {
       find.byKey(const Key('reader_layout_settings_button')),
     );
     expect(buttonRect.width, 32.0);
-    expect(buttonRect.height, 20.0, reason: '高度恆等於 toolbarHeight，見 Global Constraints 說明');
+    expect(
+      buttonRect.height,
+      20.0,
+      reason: '高度恆等於 toolbarHeight，見 Global Constraints 說明',
+    );
 
     final button = tester.widget<IconButton>(
       find.byKey(const Key('reader_layout_settings_button')),
@@ -1495,8 +1600,7 @@ void main() {
     expect((button.icon as Icon).size, 18.0);
   });
 
-  testWidgets('頁首啟用且目錄背景抓取完成後，點擊 AppBar 標題可開啟 TocBottomSheet',
-      (tester) async {
+  testWidgets('頁首啟用且目錄背景抓取完成後，點擊 AppBar 標題可開啟 TocBottomSheet', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         home: ReaderScreen(
@@ -1512,7 +1616,10 @@ void main() {
 
     final epubView = tester.widget<EpubReaderView>(find.byType(EpubReaderView));
     epubView.onLayoutResolved?.call(
-      const EpubLayoutInfo(isFixedLayout: false, writingMode: WritingMode.horizontal),
+      const EpubLayoutInfo(
+        isFixedLayout: false,
+        writingMode: WritingMode.horizontal,
+      ),
     );
     await tester.pump();
     // 比照既有目錄按鈕測試：_tocLoaded 由 loadTableOfContents() 的 .then()
@@ -1529,8 +1636,9 @@ void main() {
     expect(find.byType(TocBottomSheet), findsOneWidget);
   });
 
-  testWidgets('showFooter=false 時，EPUB 頁尾即使收到 onCharacterCountReady 也不顯示',
-      (tester) async {
+  testWidgets('showFooter=false 時，EPUB 頁尾即使收到 onCharacterCountReady 也不顯示', (
+    tester,
+  ) async {
     await prefsManager.saveBookPrefs(
       'b_footer_off_epub',
       const BookReaderPrefs(showFooter: false),
@@ -1551,7 +1659,10 @@ void main() {
 
     final epubView = tester.widget<EpubReaderView>(find.byType(EpubReaderView));
     epubView.onLayoutResolved?.call(
-      const EpubLayoutInfo(isFixedLayout: false, writingMode: WritingMode.horizontal),
+      const EpubLayoutInfo(
+        isFixedLayout: false,
+        writingMode: WritingMode.horizontal,
+      ),
     );
     await tester.pump();
     epubView.onCharacterCountReady?.call(5000);
@@ -1559,11 +1670,15 @@ void main() {
 
     expect(find.byKey(const Key('reader_footer')), findsNothing);
     // 頁尾關閉不影響頁首（預設開啟）——驗證兩者互相獨立。
-    expect(find.byKey(const Key('reader_appbar_chapter_title')), findsOneWidget);
+    expect(
+      find.byKey(const Key('reader_appbar_chapter_title')),
+      findsOneWidget,
+    );
   });
 
-  testWidgets('showFooter=false 時，PDF 頁尾即使收到 onPageChanged 也不顯示',
-      (tester) async {
+  testWidgets('showFooter=false 時，PDF 頁尾即使收到 onPageChanged 也不顯示', (
+    tester,
+  ) async {
     await prefsManager.saveBookPrefs(
       'b_footer_off_pdf',
       const BookReaderPrefs(showFooter: false),
@@ -1583,14 +1698,17 @@ void main() {
     await tester.pump();
 
     final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
-    pdfView.onPageChanged?.call(const PdfPageInfo(pageIndex: 0, totalPages: 12));
+    pdfView.onPageChanged?.call(
+      const PdfPageInfo(pageIndex: 0, totalPages: 12),
+    );
     await tester.pump();
 
     expect(find.byKey(const Key('reader_footer')), findsNothing);
   });
 
-  testWidgets('showHeader=true 且 showFooter=false 組合：頁首顯示章節標題元件、頁尾不顯示',
-      (tester) async {
+  testWidgets('showHeader=true 且 showFooter=false 組合：頁首顯示章節標題元件、頁尾不顯示', (
+    tester,
+  ) async {
     await prefsManager.saveBookPrefs(
       'b_header_on_footer_off',
       const BookReaderPrefs(showHeader: true, showFooter: false),
@@ -1611,18 +1729,25 @@ void main() {
 
     final epubView = tester.widget<EpubReaderView>(find.byType(EpubReaderView));
     epubView.onLayoutResolved?.call(
-      const EpubLayoutInfo(isFixedLayout: false, writingMode: WritingMode.horizontal),
+      const EpubLayoutInfo(
+        isFixedLayout: false,
+        writingMode: WritingMode.horizontal,
+      ),
     );
     await tester.pump();
     epubView.onCharacterCountReady?.call(5000);
     await tester.pump();
 
-    expect(find.byKey(const Key('reader_appbar_chapter_title')), findsOneWidget);
+    expect(
+      find.byKey(const Key('reader_appbar_chapter_title')),
+      findsOneWidget,
+    );
     expect(find.byKey(const Key('reader_footer')), findsNothing);
   });
 
-  testWidgets('showHeader=false 且 showFooter=true 組合：頁首為靜態文字、頁尾顯示',
-      (tester) async {
+  testWidgets('showHeader=false 且 showFooter=true 組合：頁首為靜態文字、頁尾顯示', (
+    tester,
+  ) async {
     await prefsManager.saveBookPrefs(
       'b_header_off_footer_on',
       const BookReaderPrefs(showHeader: false, showFooter: true),
@@ -1643,7 +1768,10 @@ void main() {
 
     final epubView = tester.widget<EpubReaderView>(find.byType(EpubReaderView));
     epubView.onLayoutResolved?.call(
-      const EpubLayoutInfo(isFixedLayout: false, writingMode: WritingMode.horizontal),
+      const EpubLayoutInfo(
+        isFixedLayout: false,
+        writingMode: WritingMode.horizontal,
+      ),
     );
     await tester.pump();
     epubView.onCharacterCountReady?.call(5000);
@@ -1653,41 +1781,59 @@ void main() {
     expect(find.byKey(const Key('reader_footer')), findsOneWidget);
   });
 
-  testWidgets('EPUB 固定版面（FXL）開書後，即使 showHeader=false/showFooter=false，懸浮返回/設定按鈕仍正常顯示（FXL 完全不受影響）',
-      (tester) async {
-    await prefsManager.saveBookPrefs(
-      'b_fxl_untouched',
-      const BookReaderPrefs(showHeader: false, showFooter: false),
-    );
+  testWidgets(
+    'EPUB 固定版面（FXL）開書後，即使 showHeader=false/showFooter=false，懸浮返回/設定按鈕仍正常顯示（FXL 完全不受影響）',
+    (tester) async {
+      await prefsManager.saveBookPrefs(
+        'b_fxl_untouched',
+        const BookReaderPrefs(showHeader: false, showFooter: false),
+      );
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: 'test/fixtures/sample_fixed_layout.epub',
-          bookId: 'b_fxl_untouched',
-          prefsManager: prefsManager,
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample_fixed_layout.epub',
+            bookId: 'b_fxl_untouched',
+            prefsManager: prefsManager,
+          ),
         ),
-      ),
-    );
-    await tester.pump();
-    await tester.runAsync(() => Future.delayed(Duration.zero));
-    await tester.pump();
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
 
-    final epubView = tester.widget<EpubReaderView>(find.byType(EpubReaderView));
-    epubView.onLayoutResolved?.call(
-      const EpubLayoutInfo(isFixedLayout: true, writingMode: WritingMode.horizontal),
-    );
-    await tester.pump();
+      final epubView = tester.widget<EpubReaderView>(
+        find.byType(EpubReaderView),
+      );
+      epubView.onLayoutResolved?.call(
+        const EpubLayoutInfo(
+          isFixedLayout: true,
+          writingMode: WritingMode.horizontal,
+        ),
+      );
+      await tester.pump();
 
-    expect(find.byType(AppBar), findsNothing, reason: 'FXL 不建構 Scaffold AppBar，頁首邏輯不適用');
-    expect(find.byKey(const Key('reader_fixed_layout_back_button')), findsOneWidget);
-    expect(find.byKey(const Key('reader_fixed_layout_settings_button')), findsOneWidget);
-  });
+      expect(
+        find.byType(AppBar),
+        findsNothing,
+        reason: 'FXL 不建構 Scaffold AppBar，頁首邏輯不適用',
+      );
+      expect(
+        find.byKey(const Key('reader_fixed_layout_back_button')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('reader_fixed_layout_settings_button')),
+        findsOneWidget,
+      );
+    },
+  );
 
   // --- Epic 6 Issue 1：書籤管理 + 統一「筆記」入口 ---
 
-  testWidgets('未提供 bookmarksRepository 時，📚 筆記按鈕不存在（既有呼叫端不受影響）',
-      (tester) async {
+  testWidgets('未提供 bookmarksRepository 時，📚 筆記按鈕不存在（既有呼叫端不受影響）', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: ReaderScreen(
@@ -1703,28 +1849,28 @@ void main() {
   });
 
   testWidgets(
-      'EPUB 提供 bookmarksRepository 後，📚 筆記按鈕存在，onLayoutResolved 前為停用狀態',
-      (tester) async {
-    final bookmarksRepository = FakeBookmarksRepository();
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: 'test/fixtures/sample.epub',
-          bookId: 'b_notes_epub',
-          prefsManager: prefsManager,
-          bookmarksRepository: bookmarksRepository,
+    'EPUB 提供 bookmarksRepository 後，📚 筆記按鈕存在，onLayoutResolved 前為停用狀態',
+    (tester) async {
+      final bookmarksRepository = FakeBookmarksRepository();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_notes_epub',
+            prefsManager: prefsManager,
+            bookmarksRepository: bookmarksRepository,
+          ),
         ),
-      ),
-    );
-    await tester.pump();
+      );
+      await tester.pump();
 
-    final finder = find.byKey(const Key('reader_notes_button'));
-    expect(finder, findsOneWidget);
-    expect(tester.widget<IconButton>(finder).onPressed, isNull);
-  });
+      final finder = find.byKey(const Key('reader_notes_button'));
+      expect(finder, findsOneWidget);
+      expect(tester.widget<IconButton>(finder).onPressed, isNull);
+    },
+  );
 
-  testWidgets(
-      'EPUB 只收到 onLayoutResolved（尚未收到 onLocatorChanged）時，📚 按鈕仍為停用狀態'
+  testWidgets('EPUB 只收到 onLayoutResolved（尚未收到 onLocatorChanged）時，📚 按鈕仍為停用狀態'
       '（審查修正：避免定位資料未就緒時寫入無定位資訊的壞書籤）', (tester) async {
     final bookmarksRepository = FakeBookmarksRepository();
     await tester.pumpWidget(
@@ -1754,172 +1900,194 @@ void main() {
     expect(tester.widget<IconButton>(finder).onPressed, isNull);
   });
 
-  testWidgets('EPUB 收到 onLayoutResolved 與 onLocatorChanged 後，📚 按鈕可點擊，點擊後開啟 NotesBottomSheet',
-      (tester) async {
-    final bookmarksRepository = FakeBookmarksRepository();
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: 'test/fixtures/sample.epub',
-          bookId: 'b_notes_epub_open',
-          prefsManager: prefsManager,
-          bookmarksRepository: bookmarksRepository,
+  testWidgets(
+    'EPUB 收到 onLayoutResolved 與 onLocatorChanged 後，📚 按鈕可點擊，點擊後開啟 NotesBottomSheet',
+    (tester) async {
+      final bookmarksRepository = FakeBookmarksRepository();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_notes_epub_open',
+            prefsManager: prefsManager,
+            bookmarksRepository: bookmarksRepository,
+          ),
         ),
-      ),
-    );
-    await tester.pump();
-    await tester.runAsync(() => Future.delayed(Duration.zero));
-    await tester.pump();
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
 
-    final epubView = tester.widget<EpubReaderView>(find.byType(EpubReaderView));
-    epubView.onLayoutResolved?.call(
-      const EpubLayoutInfo(
-        isFixedLayout: false,
-        writingMode: WritingMode.horizontal,
-      ),
-    );
-    await tester.pump();
-    epubView.onLocatorChanged?.call(
-      const EpubPositionInfo(locatorJson: '{"href":"/c1.xhtml"}', progression: 0.1),
-    );
-    await tester.pump();
+      final epubView = tester.widget<EpubReaderView>(
+        find.byType(EpubReaderView),
+      );
+      epubView.onLayoutResolved?.call(
+        const EpubLayoutInfo(
+          isFixedLayout: false,
+          writingMode: WritingMode.horizontal,
+        ),
+      );
+      await tester.pump();
+      epubView.onLocatorChanged?.call(
+        const EpubPositionInfo(
+          locatorJson: '{"href":"/c1.xhtml"}',
+          progression: 0.1,
+        ),
+      );
+      await tester.pump();
 
-    final finder = find.byKey(const Key('reader_notes_button'));
-    expect(tester.widget<IconButton>(finder).onPressed, isNotNull);
+      final finder = find.byKey(const Key('reader_notes_button'));
+      expect(tester.widget<IconButton>(finder).onPressed, isNotNull);
 
-    await tester.tap(finder);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
+      await tester.tap(finder);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
 
-    expect(find.byType(NotesBottomSheet), findsOneWidget);
-  });
+      expect(find.byType(NotesBottomSheet), findsOneWidget);
+    },
+  );
 
   testWidgets(
-      'PDF 提供 bookmarksRepository 後，onPageRendered 前 📚 按鈕為停用狀態，之後可點擊',
-      (tester) async {
-    final bookmarksRepository = FakeBookmarksRepository();
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: 'test/fixtures/sample.pdf',
-          bookId: 'b_notes_pdf',
-          prefsManager: prefsManager,
-          bookmarksRepository: bookmarksRepository,
+    'PDF 提供 bookmarksRepository 後，onPageRendered 前 📚 按鈕為停用狀態，之後可點擊',
+    (tester) async {
+      final bookmarksRepository = FakeBookmarksRepository();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.pdf',
+            bookId: 'b_notes_pdf',
+            prefsManager: prefsManager,
+            bookmarksRepository: bookmarksRepository,
+          ),
         ),
-      ),
-    );
-    await tester.pump();
+      );
+      await tester.pump();
 
-    final finder = find.byKey(const Key('reader_notes_button'));
-    expect(tester.widget<IconButton>(finder).onPressed, isNull);
+      final finder = find.byKey(const Key('reader_notes_button'));
+      expect(tester.widget<IconButton>(finder).onPressed, isNull);
 
-    final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
-    pdfView.onPageRendered();
-    await tester.pump();
+      final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+      pdfView.onPageRendered();
+      await tester.pump();
 
-    expect(tester.widget<IconButton>(finder).onPressed, isNotNull);
-  });
+      expect(tester.widget<IconButton>(finder).onPressed, isNotNull);
+    },
+  );
 
   // --- Epic 6 Issue 2：EPUB 劃線/備註 ---
 
   testWidgets(
-      '未提供 highlightsRepository／notesRepository 時，EPUB 選取事件不顯示浮動工具列（既有呼叫端零回歸）',
-      (tester) async {
-    final bookmarksRepository = FakeBookmarksRepository();
-    await tester.pumpWidget(MaterialApp(
-      home: ReaderScreen(
-        filePath: 'test/fixtures/sample.epub',
-        bookId: 'b1',
-        prefsManager: FakeReaderPrefsManager(),
-        bookmarksRepository: bookmarksRepository,
-      ),
-    ));
-    await tester.pump();
+    '未提供 highlightsRepository／notesRepository 時，EPUB 選取事件不顯示浮動工具列（既有呼叫端零回歸）',
+    (tester) async {
+      final bookmarksRepository = FakeBookmarksRepository();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b1',
+            prefsManager: FakeReaderPrefsManager(),
+            bookmarksRepository: bookmarksRepository,
+          ),
+        ),
+      );
+      await tester.pump();
 
-    expect(find.byType(AnnotationToolbar), findsNothing);
-  });
-
-  testWidgets('提供 highlightsRepository／notesRepository 後，ReaderScreen 建構不受影響、仍正常顯示（既有測試涵蓋常態載入行為）',
-      (tester) async {
-    final bookmarksRepository = FakeBookmarksRepository();
-    final highlightsRepository = FakeHighlightsRepository();
-    final notesRepository = FakeNotesRepository();
-
-    await tester.pumpWidget(MaterialApp(
-      home: ReaderScreen(
-        filePath: 'test/fixtures/sample.epub',
-        bookId: 'b1',
-        prefsManager: FakeReaderPrefsManager(),
-        bookmarksRepository: bookmarksRepository,
-        highlightsRepository: highlightsRepository,
-        notesRepository: notesRepository,
-      ),
-    ));
-    await tester.pump();
-
-    final state = tester.state(find.byType(ReaderScreen));
-    // ReaderScreen 在 app/test/ 環境下 _channel 恆為 null（無真實
-    // AndroidView），無法透過原生端觸發 onSelectionChanged；改為直接
-    // 呼叫 State 內部的處理方法驗證（比照既有測試對「_channel 恆為
-    // null」限制的既有因應方式：專案既有測試不新增 Method Channel Mock
-    // 基礎設施，見 spec.md「Testing Decisions」）。由於
-    // `_handleSelectionChanged` 是私有方法，本測試改為直接驗證
-    // `AnnotationToolbar` 在 `_currentSelection` 非 null 時確實會被
-    // build 出來，透過 State 是否存在對應的公開行為間接驗證——此處
-    // 選擇不新增測試專用的 public API，僅驗證 widget tree 初始狀態不
-    // 顯示 AnnotationToolbar（上一個測試已涵蓋），選取觸發後的顯示邏輯
-    // 交由 Task 11 的 integration_test 驗證（原生選字手勢本身即無法在
-    // widget test 環境下真實模擬）。
-    expect(state, isNotNull);
-  });
+      expect(find.byType(AnnotationToolbar), findsNothing);
+    },
+  );
 
   testWidgets(
-      'PDF 書籍提供 highlightsRepository／notesRepository 後，ReaderScreen 建構不受影響、仍正常顯示',
-      (tester) async {
-    final bookmarksRepository = FakeBookmarksRepository();
-    final highlightsRepository = FakeHighlightsRepository();
-    final notesRepository = FakeNotesRepository();
+    '提供 highlightsRepository／notesRepository 後，ReaderScreen 建構不受影響、仍正常顯示（既有測試涵蓋常態載入行為）',
+    (tester) async {
+      final bookmarksRepository = FakeBookmarksRepository();
+      final highlightsRepository = FakeHighlightsRepository();
+      final notesRepository = FakeNotesRepository();
 
-    await tester.pumpWidget(MaterialApp(
-      home: ReaderScreen(
-        filePath: 'test/fixtures/sample.pdf',
-        bookId: 'b1',
-        prefsManager: FakeReaderPrefsManager(),
-        bookmarksRepository: bookmarksRepository,
-        highlightsRepository: highlightsRepository,
-        notesRepository: notesRepository,
-      ),
-    ));
-    await tester.pump();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b1',
+            prefsManager: FakeReaderPrefsManager(),
+            bookmarksRepository: bookmarksRepository,
+            highlightsRepository: highlightsRepository,
+            notesRepository: notesRepository,
+          ),
+        ),
+      );
+      await tester.pump();
 
-    // 原生 PlatformView 在 app/test/ 環境下不會真正建立（_channel 恆為
-    // null，見既有兩層測試架構慣例），選取觸發後的浮動工具列顯示效果留
-    // 給 Task 11 integration_test 驗證；本測試只驗證建構參數可正確傳入
-    // 不崩潰，且未觸發選取時不顯示浮動工具列（既有行為零回歸）。
-    expect(find.byType(AnnotationToolbar), findsNothing);
-  });
+      final state = tester.state(find.byType(ReaderScreen));
+      // ReaderScreen 在 app/test/ 環境下 _channel 恆為 null（無真實
+      // AndroidView），無法透過原生端觸發 onSelectionChanged；改為直接
+      // 呼叫 State 內部的處理方法驗證（比照既有測試對「_channel 恆為
+      // null」限制的既有因應方式：專案既有測試不新增 Method Channel Mock
+      // 基礎設施，見 spec.md「Testing Decisions」）。由於
+      // `_handleSelectionChanged` 是私有方法，本測試改為直接驗證
+      // `AnnotationToolbar` 在 `_currentSelection` 非 null 時確實會被
+      // build 出來，透過 State 是否存在對應的公開行為間接驗證——此處
+      // 選擇不新增測試專用的 public API，僅驗證 widget tree 初始狀態不
+      // 顯示 AnnotationToolbar（上一個測試已涵蓋），選取觸發後的顯示邏輯
+      // 交由 Task 11 的 integration_test 驗證（原生選字手勢本身即無法在
+      // widget test 環境下真實模擬）。
+      expect(state, isNotNull);
+    },
+  );
 
-  testWidgets('PDF 書籍未提供 highlightsRepository／notesRepository 時建構不受影響（既有呼叫端零回歸）',
-      (tester) async {
-    final bookmarksRepository = FakeBookmarksRepository();
-    await tester.pumpWidget(MaterialApp(
-      home: ReaderScreen(
-        filePath: 'test/fixtures/sample.pdf',
-        bookId: 'b1',
-        prefsManager: FakeReaderPrefsManager(),
-        bookmarksRepository: bookmarksRepository,
-      ),
-    ));
-    await tester.pump();
+  testWidgets(
+    'PDF 書籍提供 highlightsRepository／notesRepository 後，ReaderScreen 建構不受影響、仍正常顯示',
+    (tester) async {
+      final bookmarksRepository = FakeBookmarksRepository();
+      final highlightsRepository = FakeHighlightsRepository();
+      final notesRepository = FakeNotesRepository();
 
-    expect(find.byType(AnnotationToolbar), findsNothing);
-  });
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.pdf',
+            bookId: 'b1',
+            prefsManager: FakeReaderPrefsManager(),
+            bookmarksRepository: bookmarksRepository,
+            highlightsRepository: highlightsRepository,
+            notesRepository: notesRepository,
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // 原生 PlatformView 在 app/test/ 環境下不會真正建立（_channel 恆為
+      // null，見既有兩層測試架構慣例），選取觸發後的浮動工具列顯示效果留
+      // 給 Task 11 integration_test 驗證；本測試只驗證建構參數可正確傳入
+      // 不崩潰，且未觸發選取時不顯示浮動工具列（既有行為零回歸）。
+      expect(find.byType(AnnotationToolbar), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'PDF 書籍未提供 highlightsRepository／notesRepository 時建構不受影響（既有呼叫端零回歸）',
+    (tester) async {
+      final bookmarksRepository = FakeBookmarksRepository();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.pdf',
+            bookId: 'b1',
+            prefsManager: FakeReaderPrefsManager(),
+            bookmarksRepository: bookmarksRepository,
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.byType(AnnotationToolbar), findsNothing);
+    },
+  );
 
   // --- Epic 6 Issue 4：FXL 書籤支援 ---
 
-  testWidgets(
-      'FXL：未提供 bookmarksRepository 時，懸浮書籤/筆記按鈕皆不存在（既有呼叫端零回歸）',
-      (tester) async {
+  testWidgets('FXL：未提供 bookmarksRepository 時，懸浮書籤/筆記按鈕皆不存在（既有呼叫端零回歸）', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: ReaderScreen(
@@ -1935,7 +2103,10 @@ void main() {
 
     final view = tester.widget<EpubReaderView>(find.byType(EpubReaderView));
     view.onLayoutResolved?.call(
-      const EpubLayoutInfo(isFixedLayout: true, writingMode: WritingMode.horizontal),
+      const EpubLayoutInfo(
+        isFixedLayout: true,
+        writingMode: WritingMode.horizontal,
+      ),
     );
     await tester.pump();
 
@@ -1945,9 +2116,9 @@ void main() {
     );
   });
 
-  testWidgets(
-      'FXL：提供 bookmarksRepository 後，懸浮書籤按鈕存在，onLocatorChanged 前為停用狀態',
-      (tester) async {
+  testWidgets('FXL：提供 bookmarksRepository 後，懸浮書籤按鈕存在，onLocatorChanged 前為停用狀態', (
+    tester,
+  ) async {
     final bookmarksRepository = FakeBookmarksRepository();
     await tester.pumpWidget(
       MaterialApp(
@@ -1965,24 +2136,29 @@ void main() {
 
     final view = tester.widget<EpubReaderView>(find.byType(EpubReaderView));
     view.onLayoutResolved?.call(
-      const EpubLayoutInfo(isFixedLayout: true, writingMode: WritingMode.horizontal),
+      const EpubLayoutInfo(
+        isFixedLayout: true,
+        writingMode: WritingMode.horizontal,
+      ),
     );
     await tester.pump();
 
-    final finder = find.byKey(const Key('reader_fixed_layout_bookmark_toggle_button'));
+    final finder = find.byKey(
+      const Key('reader_fixed_layout_bookmark_toggle_button'),
+    );
     expect(finder, findsOneWidget);
     expect(
       tester.widget<IconButton>(finder).onPressed,
       isNull,
-      reason: '尚未收到 onLocatorChanged，_epubPositionInfo 仍為 null，比照 '
+      reason:
+          '尚未收到 onLocatorChanged，_epubPositionInfo 仍為 null，比照 '
           'reader_notes_button 既有防呆邏輯',
     );
   });
 
-
-  testWidgets(
-      'FXL：收到 onLocatorChanged 後，點擊懸浮書籤按鈕可新增/移除目前頁書籤，圖示正確切換並持久化',
-      (tester) async {
+  testWidgets('FXL：收到 onLocatorChanged 後，點擊懸浮書籤按鈕可新增/移除目前頁書籤，圖示正確切換並持久化', (
+    tester,
+  ) async {
     final bookmarksRepository = FakeBookmarksRepository();
 
     await tester.pumpWidget(
@@ -2001,7 +2177,10 @@ void main() {
 
     final view = tester.widget<EpubReaderView>(find.byType(EpubReaderView));
     view.onLayoutResolved?.call(
-      const EpubLayoutInfo(isFixedLayout: true, writingMode: WritingMode.horizontal),
+      const EpubLayoutInfo(
+        isFixedLayout: true,
+        writingMode: WritingMode.horizontal,
+      ),
     );
     await tester.pump();
 
@@ -2010,11 +2189,16 @@ void main() {
     await tester.pump();
 
     view.onLocatorChanged?.call(
-      const EpubPositionInfo(locatorJson: '{"href":"/page1.xhtml"}', progression: 0.2),
+      const EpubPositionInfo(
+        locatorJson: '{"href":"/page1.xhtml"}',
+        progression: 0.2,
+      ),
     );
     await tester.pump();
 
-    final finder = find.byKey(const Key('reader_fixed_layout_bookmark_toggle_button'));
+    final finder = find.byKey(
+      const Key('reader_fixed_layout_bookmark_toggle_button'),
+    );
     expect(tester.widget<IconButton>(finder).onPressed, isNotNull);
     expect(
       (tester.widget<IconButton>(finder).icon as Icon).icon,
@@ -2027,12 +2211,11 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
 
     // 斷言 UI 圖示是否已切換為已加入書籤狀態
-    expect(
-      (tester.widget<IconButton>(finder).icon as Icon).icon,
-      Icons.star,
-    );
+    expect((tester.widget<IconButton>(finder).icon as Icon).icon, Icons.star);
 
-    final afterAdd = await bookmarksRepository.listByBook('b_fxl_bookmark_toggle');
+    final afterAdd = await bookmarksRepository.listByBook(
+      'b_fxl_bookmark_toggle',
+    );
     expect(afterAdd, hasLength(1));
     expect(afterAdd.single.epubLocatorJson, '{"href":"/page1.xhtml"}');
     expect(afterAdd.single.progression, 0.2);
@@ -2049,15 +2232,17 @@ void main() {
       Icons.star_border,
     );
 
-    final afterRemove = await bookmarksRepository.listByBook('b_fxl_bookmark_toggle');
+    final afterRemove = await bookmarksRepository.listByBook(
+      'b_fxl_bookmark_toggle',
+    );
     expect(afterRemove, isEmpty);
   });
 
   // --- Epic 6 Issue 4：FXL 書籤支援（Task 2） ---
 
-  testWidgets(
-      'FXL：懸浮筆記按鈕開啟 Bottom Sheet，「🔖 書籤」分頁可用、「✏️ 劃線與備註」分頁顯示空狀態且不可互動',
-      (tester) async {
+  testWidgets('FXL：懸浮筆記按鈕開啟 Bottom Sheet，「🔖 書籤」分頁可用、「✏️ 劃線與備註」分頁顯示空狀態且不可互動', (
+    tester,
+  ) async {
     final bookmarksRepository = FakeBookmarksRepository();
     await tester.pumpWidget(
       MaterialApp(
@@ -2075,7 +2260,10 @@ void main() {
 
     final view = tester.widget<EpubReaderView>(find.byType(EpubReaderView));
     view.onLayoutResolved?.call(
-      const EpubLayoutInfo(isFixedLayout: true, writingMode: WritingMode.horizontal),
+      const EpubLayoutInfo(
+        isFixedLayout: true,
+        writingMode: WritingMode.horizontal,
+      ),
     );
     await tester.pump();
 
@@ -2083,12 +2271,17 @@ void main() {
     view.onPageRendered();
     await tester.pump();
 
-    final notesButtonFinder = find.byKey(const Key('reader_fixed_layout_notes_button'));
+    final notesButtonFinder = find.byKey(
+      const Key('reader_fixed_layout_notes_button'),
+    );
     expect(notesButtonFinder, findsOneWidget);
     expect(tester.widget<IconButton>(notesButtonFinder).onPressed, isNull);
 
     view.onLocatorChanged?.call(
-      const EpubPositionInfo(locatorJson: '{"href":"/page1.xhtml"}', progression: 0.2),
+      const EpubPositionInfo(
+        locatorJson: '{"href":"/page1.xhtml"}',
+        progression: 0.2,
+      ),
     );
     await tester.pump();
     expect(tester.widget<IconButton>(notesButtonFinder).onPressed, isNotNull);
@@ -2099,20 +2292,27 @@ void main() {
 
     expect(find.byType(NotesBottomSheet), findsOneWidget);
     expect(find.byKey(const Key('notes_sheet_tab_bookmarks')), findsOneWidget);
-    expect(find.byKey(const Key('notes_sheet_bookmark_toggle')), findsOneWidget);
+    expect(
+      find.byKey(const Key('notes_sheet_bookmark_toggle')),
+      findsOneWidget,
+    );
 
     await tester.tap(find.byKey(const Key('notes_sheet_tab_annotations')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
 
-    expect(find.byKey(const Key('notes_sheet_annotations_placeholder')), findsOneWidget);
-    expect(find.byKey(const Key('notes_sheet_delete_all_highlights')), findsNothing);
+    expect(
+      find.byKey(const Key('notes_sheet_annotations_placeholder')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('notes_sheet_delete_all_highlights')),
+      findsNothing,
+    );
     expect(find.byKey(const Key('notes_sheet_delete_all_notes')), findsNothing);
   });
 
-  testWidgets(
-      'FXL：於 Bottom Sheet 的書籤分頁新增書籤後關閉，懸浮書籤按鈕圖示同步更新',
-      (tester) async {
+  testWidgets('FXL：於 Bottom Sheet 的書籤分頁新增書籤後關閉，懸浮書籤按鈕圖示同步更新', (tester) async {
     final bookmarksRepository = FakeBookmarksRepository();
     await tester.pumpWidget(
       MaterialApp(
@@ -2130,7 +2330,10 @@ void main() {
 
     final view = tester.widget<EpubReaderView>(find.byType(EpubReaderView));
     view.onLayoutResolved?.call(
-      const EpubLayoutInfo(isFixedLayout: true, writingMode: WritingMode.horizontal),
+      const EpubLayoutInfo(
+        isFixedLayout: true,
+        writingMode: WritingMode.horizontal,
+      ),
     );
     await tester.pump();
 
@@ -2139,12 +2342,16 @@ void main() {
     await tester.pump();
 
     view.onLocatorChanged?.call(
-      const EpubPositionInfo(locatorJson: '{"href":"/page1.xhtml"}', progression: 0.2),
+      const EpubPositionInfo(
+        locatorJson: '{"href":"/page1.xhtml"}',
+        progression: 0.2,
+      ),
     );
     await tester.pump();
 
-    final bookmarkToggleFinder =
-        find.byKey(const Key('reader_fixed_layout_bookmark_toggle_button'));
+    final bookmarkToggleFinder = find.byKey(
+      const Key('reader_fixed_layout_bookmark_toggle_button'),
+    );
     expect(
       (tester.widget<IconButton>(bookmarkToggleFinder).icon as Icon).icon,
       Icons.star_border,
@@ -2170,8 +2377,7 @@ void main() {
     );
   });
 
-  testWidgets('FXL：從書籤清單點選跳轉後，Bottom Sheet 關閉且懸浮控制項收合',
-      (tester) async {
+  testWidgets('FXL：從書籤清單點選跳轉後，Bottom Sheet 關閉且懸浮控制項收合', (tester) async {
     final bookmarksRepository = FakeBookmarksRepository();
     await tester.pumpWidget(
       MaterialApp(
@@ -2189,7 +2395,10 @@ void main() {
 
     final view = tester.widget<EpubReaderView>(find.byType(EpubReaderView));
     view.onLayoutResolved?.call(
-      const EpubLayoutInfo(isFixedLayout: true, writingMode: WritingMode.horizontal),
+      const EpubLayoutInfo(
+        isFixedLayout: true,
+        writingMode: WritingMode.horizontal,
+      ),
     );
     await tester.pump();
 
@@ -2198,7 +2407,10 @@ void main() {
     await tester.pump();
 
     view.onLocatorChanged?.call(
-      const EpubPositionInfo(locatorJson: '{"href":"/page1.xhtml"}', progression: 0.2),
+      const EpubPositionInfo(
+        locatorJson: '{"href":"/page1.xhtml"}',
+        progression: 0.2,
+      ),
     );
     await tester.pump();
 
@@ -2220,7 +2432,10 @@ void main() {
       findsNothing,
       reason: '書籤跳轉比照既有換頁慣例，強制收合懸浮控制項',
     );
-    expect(find.byKey(const Key('reader_fixed_layout_notes_button')), findsNothing);
+    expect(
+      find.byKey(const Key('reader_fixed_layout_notes_button')),
+      findsNothing,
+    );
     expect(
       find.byKey(const Key('reader_fixed_layout_bookmark_toggle_button')),
       findsNothing,
@@ -2230,80 +2445,96 @@ void main() {
   // --- Epic 6 Issue 5：Markdown 導出 ---
 
   testWidgets(
-      'EPUB：開啟「📚 筆記」時，傳給 NotesBottomSheet 的 bookProgress 反映目前即時進度，而非開書當下的舊 bookProgress',
-      (tester) async {
-    final bookmarksRepository = FakeBookmarksRepository();
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: 'test/fixtures/sample_multi_chapter.epub',
-          bookId: 'b_progress_export_epub',
-          prefsManager: prefsManager,
-          bookmarksRepository: bookmarksRepository,
-          bookProgress: 0.1,
+    'EPUB：開啟「📚 筆記」時，傳給 NotesBottomSheet 的 bookProgress 反映目前即時進度，而非開書當下的舊 bookProgress',
+    (tester) async {
+      final bookmarksRepository = FakeBookmarksRepository();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample_multi_chapter.epub',
+            bookId: 'b_progress_export_epub',
+            prefsManager: prefsManager,
+            bookmarksRepository: bookmarksRepository,
+            bookProgress: 0.1,
+          ),
         ),
-      ),
-    );
-    await tester.pump();
-    await tester.runAsync(() => Future.delayed(Duration.zero));
-    await tester.pump();
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
 
-    final epubView = tester.widget<EpubReaderView>(find.byType(EpubReaderView));
-    epubView.onLayoutResolved?.call(
-      const EpubLayoutInfo(isFixedLayout: false, writingMode: WritingMode.horizontal),
-    );
-    await tester.pump();
-    epubView.onLocatorChanged?.call(
-      const EpubPositionInfo(locatorJson: '{"href":"/c3.xhtml"}', progression: 0.5),
-    );
-    await tester.pump();
+      final epubView = tester.widget<EpubReaderView>(
+        find.byType(EpubReaderView),
+      );
+      epubView.onLayoutResolved?.call(
+        const EpubLayoutInfo(
+          isFixedLayout: false,
+          writingMode: WritingMode.horizontal,
+        ),
+      );
+      await tester.pump();
+      epubView.onLocatorChanged?.call(
+        const EpubPositionInfo(
+          locatorJson: '{"href":"/c3.xhtml"}',
+          progression: 0.5,
+        ),
+      );
+      await tester.pump();
 
-    await tester.tap(find.byKey(const Key('reader_notes_button')));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
+      await tester.tap(find.byKey(const Key('reader_notes_button')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
 
-    final sheet = tester.widget<NotesBottomSheet>(find.byType(NotesBottomSheet));
-    expect(
-      sheet.bookProgress,
-      0.5,
-      reason: '應反映 onLocatorChanged 回報的最新進度，而非建構時的舊 bookProgress: 0.1',
-    );
-  });
+      final sheet = tester.widget<NotesBottomSheet>(
+        find.byType(NotesBottomSheet),
+      );
+      expect(
+        sheet.bookProgress,
+        0.5,
+        reason: '應反映 onLocatorChanged 回報的最新進度，而非建構時的舊 bookProgress: 0.1',
+      );
+    },
+  );
 
   testWidgets(
-      'PDF：開啟「📚 筆記」時，傳給 NotesBottomSheet 的 bookProgress 依 onPageChanged 回報的頁碼/總頁數即時換算',
-      (tester) async {
-    final bookmarksRepository = FakeBookmarksRepository();
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: 'test/fixtures/sample.pdf',
-          bookId: 'b_progress_export_pdf',
-          prefsManager: prefsManager,
-          bookmarksRepository: bookmarksRepository,
-          bookProgress: 0.0,
+    'PDF：開啟「📚 筆記」時，傳給 NotesBottomSheet 的 bookProgress 依 onPageChanged 回報的頁碼/總頁數即時換算',
+    (tester) async {
+      final bookmarksRepository = FakeBookmarksRepository();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.pdf',
+            bookId: 'b_progress_export_pdf',
+            prefsManager: prefsManager,
+            bookmarksRepository: bookmarksRepository,
+            bookProgress: 0.0,
+          ),
         ),
-      ),
-    );
-    await tester.pump();
+      );
+      await tester.pump();
 
-    final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
-    pdfView.onPageRendered();
-    await tester.pump();
-    pdfView.onPageChanged?.call(const PdfPageInfo(pageIndex: 4, totalPages: 10));
-    await tester.pump();
+      final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+      pdfView.onPageRendered();
+      await tester.pump();
+      pdfView.onPageChanged?.call(
+        const PdfPageInfo(pageIndex: 4, totalPages: 10),
+      );
+      await tester.pump();
 
-    await tester.tap(find.byKey(const Key('reader_notes_button')));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
+      await tester.tap(find.byKey(const Key('reader_notes_button')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
 
-    final sheet = tester.widget<NotesBottomSheet>(find.byType(NotesBottomSheet));
-    expect(
-      sheet.bookProgress,
-      0.5,
-      reason: '第 5 頁／共 10 頁應換算為 0.5，而非建構時的舊 bookProgress: 0.0',
-    );
-  });
+      final sheet = tester.widget<NotesBottomSheet>(
+        find.byType(NotesBottomSheet),
+      );
+      expect(
+        sheet.bookProgress,
+        0.5,
+        reason: '第 5 頁／共 10 頁應換算為 0.5，而非建構時的舊 bookProgress: 0.0',
+      );
+    },
+  );
 
   testWidgets('_handleZoneAction(menu) 切換 AppBar／頁尾顯示（PDF）', (tester) async {
     final key = GlobalKey<State<ReaderScreen>>();
@@ -2325,7 +2556,9 @@ void main() {
     // （比照既有「PDF 開書後，收到原生端 onPageChanged 回報時，頁尾正確
     // 顯示」測試的既定手法，本檔案第 662-687 行）。
     final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
-    pdfView.onPageChanged?.call(const PdfPageInfo(pageIndex: 0, totalPages: 12));
+    pdfView.onPageChanged?.call(
+      const PdfPageInfo(pageIndex: 0, totalPages: 12),
+    );
     await tester.pump();
 
     expect(find.byType(AppBar), findsOneWidget);
@@ -2345,69 +2578,74 @@ void main() {
   });
 
   testWidgets(
-      '_handleZoneAction(previousPage/nextPage) 不影響 AppBar 顯示狀態（PDF，design.md 決策 #14）',
-      (tester) async {
-    final key = GlobalKey<State<ReaderScreen>>();
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          key: key,
-          filePath: 'test/fixtures/sample.pdf',
-          bookId: 'b1',
-          prefsManager: prefsManager,
+    '_handleZoneAction(previousPage/nextPage) 不影響 AppBar 顯示狀態（PDF，design.md 決策 #14）',
+    (tester) async {
+      final key = GlobalKey<State<ReaderScreen>>();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            key: key,
+            filePath: 'test/fixtures/sample.pdf',
+            bookId: 'b1',
+            prefsManager: prefsManager,
+          ),
         ),
-      ),
-    );
-    await tester.pump();
-    await tester.runAsync(() => Future.delayed(Duration.zero));
-    await tester.pump();
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
 
-    expect(find.byType(AppBar), findsOneWidget);
+      expect(find.byType(AppBar), findsOneWidget);
 
-    ReaderScreen.triggerZoneAction(key, ZoneAction.nextPage);
-    await tester.pump();
-    expect(find.byType(AppBar), findsOneWidget);
+      ReaderScreen.triggerZoneAction(key, ZoneAction.nextPage);
+      await tester.pump();
+      expect(find.byType(AppBar), findsOneWidget);
 
-    ReaderScreen.triggerZoneAction(key, ZoneAction.previousPage);
-    await tester.pump();
-    expect(find.byType(AppBar), findsOneWidget);
+      ReaderScreen.triggerZoneAction(key, ZoneAction.previousPage);
+      await tester.pump();
+      expect(find.byType(AppBar), findsOneWidget);
 
-    ReaderScreen.triggerZoneAction(key, ZoneAction.none);
-    await tester.pump();
-    expect(find.byType(AppBar), findsOneWidget);
-  });
+      ReaderScreen.triggerZoneAction(key, ZoneAction.none);
+      await tester.pump();
+      expect(find.byType(AppBar), findsOneWidget);
+    },
+  );
 
   testWidgets(
-      'Scaffold 開啟 extendBodyBehindAppBar，PdfReaderView 尺寸不因沉浸模式切換而改變（審查修正：避免 AppBar 顯示/隱藏觸發 PlatformView resize）',
-      (tester) async {
-    final key = GlobalKey<State<ReaderScreen>>();
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          key: key,
-          filePath: 'test/fixtures/sample.pdf',
-          bookId: 'b1',
-          prefsManager: prefsManager,
+    'Scaffold 開啟 extendBodyBehindAppBar，PdfReaderView 尺寸不因沉浸模式切換而改變（審查修正：避免 AppBar 顯示/隱藏觸發 PlatformView resize）',
+    (tester) async {
+      final key = GlobalKey<State<ReaderScreen>>();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            key: key,
+            filePath: 'test/fixtures/sample.pdf',
+            bookId: 'b1',
+            prefsManager: prefsManager,
+          ),
         ),
-      ),
-    );
-    await tester.pump();
-    await tester.runAsync(() => Future.delayed(Duration.zero));
-    await tester.pump();
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
 
-    final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
-    expect(scaffold.extendBodyBehindAppBar, isTrue);
+      final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
+      expect(scaffold.extendBodyBehindAppBar, isTrue);
 
-    final sizeWithAppBar = tester.getSize(find.byType(PdfReaderView));
+      final sizeWithAppBar = tester.getSize(find.byType(PdfReaderView));
 
-    ReaderScreen.triggerZoneAction(key, ZoneAction.menu);
-    await tester.pump();
+      ReaderScreen.triggerZoneAction(key, ZoneAction.menu);
+      await tester.pump();
 
-    expect(find.byType(AppBar), findsNothing, reason: '沉浸模式已切換，AppBar 應隱藏');
-    final sizeWithoutAppBar = tester.getSize(find.byType(PdfReaderView));
-    expect(sizeWithoutAppBar, sizeWithAppBar,
-        reason: 'PdfReaderView 尺寸不應因 AppBar 顯示/隱藏而改變');
-  });
+      expect(find.byType(AppBar), findsNothing, reason: '沉浸模式已切換，AppBar 應隱藏');
+      final sizeWithoutAppBar = tester.getSize(find.byType(PdfReaderView));
+      expect(
+        sizeWithoutAppBar,
+        sizeWithAppBar,
+        reason: 'PdfReaderView 尺寸不應因 AppBar 顯示/隱藏而改變',
+      );
+    },
+  );
 
   testWidgets('PDF：真實點擊熱區「選單」格（index 1）觸發沉浸模式切換', (tester) async {
     await tester.pumpWidget(
@@ -2433,15 +2671,16 @@ void main() {
     expect(find.byType(AppBar), findsNothing);
   });
 
-  testWidgets(
-      '音量鍵 onVolumeKey(up/down) 觸發真實換頁（PDF，模擬原生端會呼叫的全域頻道）',
-      (tester) async {
+  testWidgets('音量鍵 onVolumeKey(up/down) 觸發真實換頁（PDF，模擬原生端會呼叫的全域頻道）', (
+    tester,
+  ) async {
     final binaryMessenger =
         TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
     final instanceCalls = <MethodCall>[];
 
-    binaryMessenger.setMockMethodCallHandler(SystemChannels.platform_views,
-        (call) async {
+    binaryMessenger.setMockMethodCallHandler(SystemChannels.platform_views, (
+      call,
+    ) async {
       if (call.method == 'create') {
         final id = (call.arguments as Map<Object?, Object?>)['id'] as int;
         binaryMessenger.setMockMethodCallHandler(
@@ -2455,8 +2694,12 @@ void main() {
       }
       return null;
     });
-    addTearDown(() => binaryMessenger.setMockMethodCallHandler(
-        SystemChannels.platform_views, null));
+    addTearDown(
+      () => binaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform_views,
+        null,
+      ),
+    );
 
     await tester.pumpWidget(
       MaterialApp(
@@ -2499,22 +2742,20 @@ void main() {
     );
   });
 
-  testWidgets(
-      'PopScope：pop 動作啟動當下呼叫 notifyLeavingReader，及早通知原生端釋放音量鍵攔截',
-      (tester) async {
+  testWidgets('PopScope：pop 動作啟動當下呼叫 notifyLeavingReader，及早通知原生端釋放音量鍵攔截', (
+    tester,
+  ) async {
     final binaryMessenger =
         TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
     const volumeKeyChannel = MethodChannel('elinkbook/volume_key');
     final outgoingCalls = <MethodCall>[];
-    binaryMessenger.setMockMethodCallHandler(
-      volumeKeyChannel,
-      (call) async {
-        outgoingCalls.add(call);
-        return null;
-      },
+    binaryMessenger.setMockMethodCallHandler(volumeKeyChannel, (call) async {
+      outgoingCalls.add(call);
+      return null;
+    });
+    addTearDown(
+      () => binaryMessenger.setMockMethodCallHandler(volumeKeyChannel, null),
     );
-    addTearDown(() =>
-        binaryMessenger.setMockMethodCallHandler(volumeKeyChannel, null));
 
     await tester.pumpWidget(
       MaterialApp(
@@ -2558,14 +2799,12 @@ void main() {
     navigatorState.maybePop();
     await tester.pumpAndSettle();
 
-    expect(
-      outgoingCalls.any((c) => c.method == 'notifyLeavingReader'),
-      isTrue,
-    );
+    expect(outgoingCalls.any((c) => c.method == 'notifyLeavingReader'), isTrue);
   });
 
-  testWidgets('EPUB 流式：原生端 onZoneTapped 回呼（cellIndex=1）觸發沉浸模式切換',
-      (tester) async {
+  testWidgets('EPUB 流式：原生端 onZoneTapped 回呼（cellIndex=1）觸發沉浸模式切換', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: ReaderScreen(
@@ -2596,8 +2835,7 @@ void main() {
     expect(find.byType(AppBar), findsNothing);
   });
 
-  testWidgets('EPUB 流式（isFixedLayout: false）：點擊選單熱區觸發沉浸模式切換',
-      (tester) async {
+  testWidgets('EPUB 流式（isFixedLayout: false）：點擊選單熱區觸發沉浸模式切換', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         home: ReaderScreen(
@@ -2622,10 +2860,8 @@ void main() {
     expect(find.byType(AppBar), findsNothing);
   });
 
-  testWidgets(
-      'EPUB 流式：previousPage/nextPage 熱區觸發 FoliateEpubReaderView '
-      '換頁，且不影響沉浸模式狀態（design.md 決策 #14）',
-      (tester) async {
+  testWidgets('EPUB 流式：previousPage/nextPage 熱區觸發 FoliateEpubReaderView '
+      '換頁，且不影響沉浸模式狀態（design.md 決策 #14）', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         home: ReaderScreen(
@@ -2645,14 +2881,16 @@ void main() {
     // rightFlip 模板：index 2（右欄）＝ nextPage。
     await tester.tap(find.byKey(const Key('nav_zone_2')));
     await tester.pump();
-    expect(find.byType(AppBar), findsOneWidget,
-        reason: '換頁動作不應影響沉浸模式狀態');
+    expect(find.byType(AppBar), findsOneWidget, reason: '換頁動作不應影響沉浸模式狀態');
 
     // rightFlip 模板：index 0（左欄）＝ previousPage。
     await tester.tap(find.byKey(const Key('nav_zone_0')));
     await tester.pump();
-    expect(find.byType(AppBar), findsOneWidget,
-        reason: 'previousPage 同樣不應影響沉浸模式狀態');
+    expect(
+      find.byType(AppBar),
+      findsOneWidget,
+      reason: 'previousPage 同樣不應影響沉浸模式狀態',
+    );
   });
 
   // ─────────────────────────────────────────────────────────────────────
@@ -2661,96 +2899,104 @@ void main() {
   // ─────────────────────────────────────────────────────────────────────
 
   testWidgets(
-      '流式 EPUB（isFixedLayout: false）收到 onLayoutResolved 後，目錄按鈕轉為可點擊，點擊後開啟 TocBottomSheet',
-      (tester) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: 'test/fixtures/sample.epub',
-          bookId: 'b_toc_foliate_open',
-          prefsManager: prefsManager,
-          isFixedLayout: false,
+    '流式 EPUB（isFixedLayout: false）收到 onLayoutResolved 後，目錄按鈕轉為可點擊，點擊後開啟 TocBottomSheet',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_toc_foliate_open',
+            prefsManager: prefsManager,
+            isFixedLayout: false,
+          ),
         ),
-      ),
-    );
-    await tester.pump();
-    await tester.runAsync(() => Future.delayed(Duration.zero));
-    await tester.pump();
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
 
-    final foliateView =
-        tester.widget<FoliateEpubReaderView>(find.byType(FoliateEpubReaderView));
-    foliateView.onPageRendered();
-    foliateView.onLayoutResolved?.call(const EpubLayoutInfo(
-      isFixedLayout: false,
-      writingMode: WritingMode.horizontal,
-    ));
-    await tester.pump();
-    // 比照既有 Readium 分支測試：目錄按鈕的啟用條件額外要求 _tocLoaded，
-    // 該旗標由 FoliateEpubReaderView.loadTableOfContents() 這個 async
-    // 呼叫的 .then() callback 設定，需要多一次 pump 讓其 microtask 完成。
-    await tester.pump();
+      final foliateView = tester.widget<FoliateEpubReaderView>(
+        find.byType(FoliateEpubReaderView),
+      );
+      foliateView.onPageRendered();
+      foliateView.onLayoutResolved?.call(
+        const EpubLayoutInfo(
+          isFixedLayout: false,
+          writingMode: WritingMode.horizontal,
+        ),
+      );
+      await tester.pump();
+      // 比照既有 Readium 分支測試：目錄按鈕的啟用條件額外要求 _tocLoaded，
+      // 該旗標由 FoliateEpubReaderView.loadTableOfContents() 這個 async
+      // 呼叫的 .then() callback 設定，需要多一次 pump 讓其 microtask 完成。
+      await tester.pump();
 
-    final finder = find.byKey(const Key('reader_toc_button'));
-    expect(tester.widget<IconButton>(finder).onPressed, isNotNull);
+      final finder = find.byKey(const Key('reader_toc_button'));
+      expect(tester.widget<IconButton>(finder).onPressed, isNotNull);
 
-    await tester.tap(finder);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
+      await tester.tap(finder);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
 
-    expect(find.byType(TocBottomSheet), findsOneWidget);
-  });
+      expect(find.byType(TocBottomSheet), findsOneWidget);
+    },
+  );
 
   testWidgets(
-      '流式 EPUB：點選目錄項目呼叫 FoliateEpubReaderView.jumpToLocator（非 EpubReaderView）',
-      (tester) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: 'test/fixtures/sample.epub',
-          bookId: 'b_toc_foliate_jump',
-          prefsManager: prefsManager,
-          isFixedLayout: false,
+    '流式 EPUB：點選目錄項目呼叫 FoliateEpubReaderView.jumpToLocator（非 EpubReaderView）',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_toc_foliate_jump',
+            prefsManager: prefsManager,
+            isFixedLayout: false,
+          ),
         ),
-      ),
-    );
-    await tester.pump();
-    await tester.runAsync(() => Future.delayed(Duration.zero));
-    await tester.pump();
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
 
-    final foliateView =
-        tester.widget<FoliateEpubReaderView>(find.byType(FoliateEpubReaderView));
-    foliateView.onPageRendered();
-    foliateView.onLayoutResolved?.call(const EpubLayoutInfo(
-      isFixedLayout: false,
-      writingMode: WritingMode.horizontal,
-    ));
-    await tester.pump();
-    await tester.pump();
+      final foliateView = tester.widget<FoliateEpubReaderView>(
+        find.byType(FoliateEpubReaderView),
+      );
+      foliateView.onPageRendered();
+      foliateView.onLayoutResolved?.call(
+        const EpubLayoutInfo(
+          isFixedLayout: false,
+          writingMode: WritingMode.horizontal,
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
 
-    await tester.tap(find.byKey(const Key('reader_toc_button')));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
-    expect(find.byType(TocBottomSheet), findsOneWidget);
+      await tester.tap(find.byKey(const Key('reader_toc_button')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.byType(TocBottomSheet), findsOneWidget);
 
-    final sheet = tester.widget<TocBottomSheet>(find.byType(TocBottomSheet));
-    sheet.onEntrySelected(
-      const TocEntry(
-        title: '測試章節',
-        locatorJson: '{"cfi":"epubcfi(/6/8!/4)","index":1,"fraction":0.2}',
-        progression: 0.2,
-      ),
-    );
-    await tester.pump();
+      final sheet = tester.widget<TocBottomSheet>(find.byType(TocBottomSheet));
+      sheet.onEntrySelected(
+        const TocEntry(
+          title: '測試章節',
+          locatorJson: '{"cfi":"epubcfi(/6/8!/4)","index":1,"fraction":0.2}',
+          progression: 0.2,
+        ),
+      );
+      await tester.pump();
 
-    // 驗證 FoliateEpubReaderView 存在（代表走對了分支），且
-    // EpubReaderView 未被建構——確認目錄跳轉走的是 Foliate 路徑。
-    expect(find.byType(FoliateEpubReaderView), findsOneWidget);
-    expect(find.byType(EpubReaderView), findsNothing);
-  });
+      // 驗證 FoliateEpubReaderView 存在（代表走對了分支），且
+      // EpubReaderView 未被建構——確認目錄跳轉走的是 Foliate 路徑。
+      expect(find.byType(FoliateEpubReaderView), findsOneWidget);
+      expect(find.byType(EpubReaderView), findsNothing);
+    },
+  );
 
-  testWidgets(
-      '流式 EPUB：onLocatorChanged 回報 pageIndex/totalPages 後，頁尾顯示對應頁碼',
-      (tester) async {
+  testWidgets('流式 EPUB：onLocatorChanged 回報 pageIndex/totalPages 後，頁尾顯示對應頁碼', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: ReaderScreen(
@@ -2765,15 +3011,18 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    final foliateView =
-        tester.widget<FoliateEpubReaderView>(find.byType(FoliateEpubReaderView));
+    final foliateView = tester.widget<FoliateEpubReaderView>(
+      find.byType(FoliateEpubReaderView),
+    );
     foliateView.onPageRendered();
-    foliateView.onLocatorChanged?.call(const EpubPositionInfo(
-      locatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
-      progression: 0.1,
-      pageIndex: 9,
-      totalPages: 100,
-    ));
+    foliateView.onLocatorChanged?.call(
+      const EpubPositionInfo(
+        locatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
+        progression: 0.1,
+        pageIndex: 9,
+        totalPages: 100,
+      ),
+    );
     await tester.pump();
 
     expect(find.byKey(const Key('reader_footer')), findsOneWidget);
@@ -2781,33 +3030,35 @@ void main() {
   });
 
   testWidgets(
-      '流式 EPUB：onLocatorChanged 未觸發前（pageIndex/totalPages 皆為 null），頁尾不顯示',
-      (tester) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: 'test/fixtures/sample.epub',
-          bookId: 'b_footer_foliate_absent',
-          prefsManager: prefsManager,
-          isFixedLayout: false,
+    '流式 EPUB：onLocatorChanged 未觸發前（pageIndex/totalPages 皆為 null），頁尾不顯示',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_footer_foliate_absent',
+            prefsManager: prefsManager,
+            isFixedLayout: false,
+          ),
         ),
-      ),
-    );
-    await tester.pump();
-    await tester.runAsync(() => Future.delayed(Duration.zero));
-    await tester.pump();
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
 
-    final foliateView =
-        tester.widget<FoliateEpubReaderView>(find.byType(FoliateEpubReaderView));
-    foliateView.onPageRendered();
-    await tester.pump();
+      final foliateView = tester.widget<FoliateEpubReaderView>(
+        find.byType(FoliateEpubReaderView),
+      );
+      foliateView.onPageRendered();
+      await tester.pump();
 
-    expect(find.byKey(const Key('reader_footer')), findsNothing);
-  });
+      expect(find.byKey(const Key('reader_footer')), findsNothing);
+    },
+  );
 
-  testWidgets(
-      '流式 EPUB：onLocatorChanged 回報 totalPages=0 時，頁尾不顯示且不崩潰',
-      (tester) async {
+  testWidgets('流式 EPUB：onLocatorChanged 回報 totalPages=0 時，頁尾不顯示且不崩潰', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: ReaderScreen(
@@ -2822,15 +3073,18 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    final foliateView =
-        tester.widget<FoliateEpubReaderView>(find.byType(FoliateEpubReaderView));
+    final foliateView = tester.widget<FoliateEpubReaderView>(
+      find.byType(FoliateEpubReaderView),
+    );
     foliateView.onPageRendered();
-    foliateView.onLocatorChanged?.call(const EpubPositionInfo(
-      locatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
-      progression: 0.1,
-      pageIndex: 0,
-      totalPages: 0,
-    ));
+    foliateView.onLocatorChanged?.call(
+      const EpubPositionInfo(
+        locatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
+        progression: 0.1,
+        pageIndex: 0,
+        totalPages: 0,
+      ),
+    );
     await tester.pump();
 
     // totalPages=0 應被 _buildFoliateEpubFooter 內部防呆攔截
@@ -2842,136 +3096,154 @@ void main() {
   // --- Epic 17 Issue 8：流式 EPUB（FoliateEpubReaderView）劃線與備註 ---
 
   testWidgets(
-      '流式 EPUB 開書後，自動載入既有劃線/備註並透過 FoliateEpubReaderView.setDecorations 送給原生端',
-      (tester) async {
-    final highlightsRepo = FakeHighlightsRepository();
-    final notesRepo = FakeNotesRepository();
-    await highlightsRepo.insert(const Highlight(
-      bookId: 'b_foliate_anno',
-      style: HighlightStyle.highlighterYellow,
-      epubLocatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
-      progression: 0.1,
-    ));
-
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: 'test/fixtures/sample.epub',
+    '流式 EPUB 開書後，自動載入既有劃線/備註並透過 FoliateEpubReaderView.setDecorations 送給原生端',
+    (tester) async {
+      final highlightsRepo = FakeHighlightsRepository();
+      final notesRepo = FakeNotesRepository();
+      await highlightsRepo.insert(
+        const Highlight(
           bookId: 'b_foliate_anno',
-          prefsManager: prefsManager,
-          highlightsRepository: highlightsRepo,
-          notesRepository: notesRepo,
-          isFixedLayout: false,
+          style: HighlightStyle.highlighterYellow,
+          epubLocatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
+          progression: 0.1,
         ),
-      ),
-    );
-    await tester.pump();
-    await tester.runAsync(() => Future.delayed(Duration.zero));
-    await tester.pump();
+      );
 
-    final foliateView =
-        tester.widget<FoliateEpubReaderView>(find.byType(FoliateEpubReaderView));
-    foliateView.onLayoutResolved?.call(const EpubLayoutInfo(
-      isFixedLayout: false,
-      writingMode: WritingMode.horizontal,
-    ));
-    await tester.pump();
-    await tester.pump();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_foliate_anno',
+            prefsManager: prefsManager,
+            highlightsRepository: highlightsRepo,
+            notesRepository: notesRepo,
+            isFixedLayout: false,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
 
-    // InAppWebView 環境下 setDecorations 透過 evaluateJavascript 發送，
-    // flutter_test 無法攔截 JS 呼叫。此處驗證 widget 成功建構且不崩潰，
-    // 表示劃線載入 → setDecorations 完整流程未拋出例外。
-    expect(find.byType(FoliateEpubReaderView), findsOneWidget);
-  });
+      final foliateView = tester.widget<FoliateEpubReaderView>(
+        find.byType(FoliateEpubReaderView),
+      );
+      foliateView.onLayoutResolved?.call(
+        const EpubLayoutInfo(
+          isFixedLayout: false,
+          writingMode: WritingMode.horizontal,
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      // InAppWebView 環境下 setDecorations 透過 evaluateJavascript 發送，
+      // flutter_test 無法攔截 JS 呼叫。此處驗證 widget 成功建構且不崩潰，
+      // 表示劃線載入 → setDecorations 完整流程未拋出例外。
+      expect(find.byType(FoliateEpubReaderView), findsOneWidget);
+    },
+  );
 
   testWidgets(
-      '流式 EPUB：FoliateEpubReaderView 回報 onSelectionChanged 時，顯示 AnnotationToolbar',
-      (tester) async {
-    final highlightsRepo = FakeHighlightsRepository();
-    final notesRepo = FakeNotesRepository();
+    '流式 EPUB：FoliateEpubReaderView 回報 onSelectionChanged 時，顯示 AnnotationToolbar',
+    (tester) async {
+      final highlightsRepo = FakeHighlightsRepository();
+      final notesRepo = FakeNotesRepository();
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: 'test/fixtures/sample.epub',
-          bookId: 'b_foliate_select',
-          prefsManager: prefsManager,
-          highlightsRepository: highlightsRepo,
-          notesRepository: notesRepo,
-          isFixedLayout: false,
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_foliate_select',
+            prefsManager: prefsManager,
+            highlightsRepository: highlightsRepo,
+            notesRepository: notesRepo,
+            isFixedLayout: false,
+          ),
         ),
-      ),
-    );
-    await tester.pump();
-    await tester.runAsync(() => Future.delayed(Duration.zero));
-    await tester.pump();
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
 
-    // 先呼叫 onLayoutResolved 觸發 _resolved 設定（_buildNativeView 所需）
-    final foliateView =
-        tester.widget<FoliateEpubReaderView>(find.byType(FoliateEpubReaderView));
-    foliateView.onPageRendered();
-    foliateView.onLayoutResolved?.call(const EpubLayoutInfo(
-      isFixedLayout: false,
-      writingMode: WritingMode.horizontal,
-    ));
-    await tester.pump();
-    await tester.pump();
+      // 先呼叫 onLayoutResolved 觸發 _resolved 設定（_buildNativeView 所需）
+      final foliateView = tester.widget<FoliateEpubReaderView>(
+        find.byType(FoliateEpubReaderView),
+      );
+      foliateView.onPageRendered();
+      foliateView.onLayoutResolved?.call(
+        const EpubLayoutInfo(
+          isFixedLayout: false,
+          writingMode: WritingMode.horizontal,
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
 
-    foliateView.onSelectionChanged?.call(const EpubSelectionInfo(
-      locatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
-      progression: 0.1,
-      rect: PercentRect(left: 0.1, top: 0.2, right: 0.5, bottom: 0.3),
-    ));
-    await tester.pump();
+      foliateView.onSelectionChanged?.call(
+        const EpubSelectionInfo(
+          locatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
+          progression: 0.1,
+          rect: PercentRect(left: 0.1, top: 0.2, right: 0.5, bottom: 0.3),
+        ),
+      );
+      await tester.pump();
 
-    expect(find.byType(AnnotationToolbar), findsOneWidget);
-  });
+      expect(find.byType(AnnotationToolbar), findsOneWidget);
+    },
+  );
 
   testWidgets(
-      '流式 EPUB：FoliateEpubReaderView 回報 onAnnotationActivated 時，開啟對話框',
-      (tester) async {
-    final highlightsRepo = FakeHighlightsRepository();
-    final notesRepo = FakeNotesRepository();
-    final highlightId = await highlightsRepo.insert(const Highlight(
-      bookId: 'b_foliate_active',
-      style: HighlightStyle.highlighterYellow,
-      epubLocatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
-      progression: 0.1,
-    ));
-
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: 'test/fixtures/sample.epub',
+    '流式 EPUB：FoliateEpubReaderView 回報 onAnnotationActivated 時，開啟對話框',
+    (tester) async {
+      final highlightsRepo = FakeHighlightsRepository();
+      final notesRepo = FakeNotesRepository();
+      final highlightId = await highlightsRepo.insert(
+        const Highlight(
           bookId: 'b_foliate_active',
-          prefsManager: prefsManager,
-          highlightsRepository: highlightsRepo,
-          notesRepository: notesRepo,
-          isFixedLayout: false,
+          style: HighlightStyle.highlighterYellow,
+          epubLocatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
+          progression: 0.1,
         ),
-      ),
-    );
-    await tester.pump();
-    await tester.runAsync(() => Future.delayed(Duration.zero));
-    await tester.pump();
+      );
 
-    final foliateView =
-        tester.widget<FoliateEpubReaderView>(find.byType(FoliateEpubReaderView));
-    foliateView.onPageRendered();
-    foliateView.onLayoutResolved?.call(const EpubLayoutInfo(
-      isFixedLayout: false,
-      writingMode: WritingMode.horizontal,
-    ));
-    await tester.pump();
-    // _reloadAnnotationsAndRefreshDecorations() 內部 await repository
-    // 呼叫，需多一次 pump 讓 microtask 完成。
-    await tester.pump();
-    await tester.pump();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_foliate_active',
+            prefsManager: prefsManager,
+            highlightsRepository: highlightsRepo,
+            notesRepository: notesRepo,
+            isFixedLayout: false,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
 
-    foliateView.onAnnotationActivated?.call('highlight:$highlightId');
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
+      final foliateView = tester.widget<FoliateEpubReaderView>(
+        find.byType(FoliateEpubReaderView),
+      );
+      foliateView.onPageRendered();
+      foliateView.onLayoutResolved?.call(
+        const EpubLayoutInfo(
+          isFixedLayout: false,
+          writingMode: WritingMode.horizontal,
+        ),
+      );
+      await tester.pump();
+      // _reloadAnnotationsAndRefreshDecorations() 內部 await repository
+      // 呼叫，需多一次 pump 讓 microtask 完成。
+      await tester.pump();
+      await tester.pump();
 
-    expect(find.byType(SimpleDialog), findsOneWidget);
-  });
+      foliateView.onAnnotationActivated?.call('highlight:$highlightId');
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.byType(SimpleDialog), findsOneWidget);
+    },
+  );
 }
