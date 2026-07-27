@@ -39,7 +39,7 @@
 **Interfaces:**
 - Produces: 模組級可變變數 `lastAppliedPrefs`（型別與 `prefs` 參數相同的物件，例如 `{writingMode, fontSize, columnMode, columnSize, ...}`），供 Task 2 的 `ResizeObserver` callback 讀取最新值。
 
-- [ ] **Step 1: 確認現況**
+- [x] **Step 1: 確認現況**
 
 執行：
 ```bash
@@ -48,7 +48,7 @@ grep -n "currentWritingMode\|window.applyPreferences" app/android/app/src/main/a
 
 預期看到 `let currentWritingMode = 'horizontal'`（約第 43 行）與 `window.applyPreferences = function (prefs) {`（約第 110 行），且目前**沒有** `lastAppliedPrefs` 任何蹤跡（`grep -n "lastAppliedPrefs" app/android/app/src/main/assets/foliate/main.js` 應為空）。
 
-- [ ] **Step 2: 在 `currentWritingMode` 宣告之後新增 `lastAppliedPrefs`**
+- [x] **Step 2: 在 `currentWritingMode` 宣告之後新增 `lastAppliedPrefs`**
 
 在 `main.js` 第 43 行 `let currentWritingMode = 'horizontal'` 之後，新增：
 
@@ -62,7 +62,7 @@ grep -n "currentWritingMode\|window.applyPreferences" app/android/app/src/main/a
 let lastAppliedPrefs = initialPrefs
 ```
 
-- [ ] **Step 3: 在 `window.applyPreferences(prefs)` 函式開頭同步賦值**
+- [x] **Step 3: 在 `window.applyPreferences(prefs)` 函式開頭同步賦值**
 
 找到 `main.js:110` 附近的：
 
@@ -83,7 +83,7 @@ window.applyPreferences = function (prefs) {
   if (prefs.pageTurnMode) {
 ```
 
-- [ ] **Step 4: 靜態檢查與既有測試回歸**
+- [x] **Step 4: 靜態檢查與既有測試回歸**
 
 執行：
 ```bash
@@ -96,7 +96,7 @@ cd app && flutter test
 ```
 預期：全數通過（本步驟未新增/修改任何 Dart 測試，測試數與 Task 1 執行前的既有基準一致）。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/android/app/src/main/assets/foliate/main.js
@@ -114,7 +114,7 @@ git commit -m "feat(epic-18): Issue 9 新增 lastAppliedPrefs 追蹤最後套用
 - Consumes: Task 1 產生的模組級變數 `lastAppliedPrefs`；`window.applyPreferences`（既有函式，Task 1 已在其內新增 `lastAppliedPrefs = prefs` 賦值，本 Task 直接呼叫它，不需要新增任何函式簽章）。
 - Produces: 無新的對外可呼叫函式（本 Task 是純內部自動觸發機制，Dart 端無需新增/修改任何呼叫）。
 
-- [ ] **Step 1: 確認 `view.renderer` 的建立時機**
+- [x] **Step 1: 確認 `view.renderer` 的建立時機**
 
 執行：
 ```bash
@@ -133,7 +133,7 @@ await view.init(initialCfi ? { lastLocation: initialCfi } : {})
 
 `view.renderer` 是 `readest/foliate-js` 的 `view.js`（`View` 類別 `open()` 方法內，見 `view.js:258-269`）在 `view.open(book)` **當下同步建立**的 `<foliate-paginator>` 自訂元素（附掛到 `view` 的 shadow root）——換言之，`view.renderer` 只有在 `await view.open(book)` **之後**才保證存在，本 Task 的 `ResizeObserver` 註冊必須放在這一行之後、`view.init()` 之前或之後皆可（`view.init()` 才會觸發首次 `relocate`／`applyPreferences`，`ResizeObserver` 註冊本身不依賴 `view.init()` 是否已完成）。
 
-- [ ] **Step 2: 在 `await view.open(book)` 之後新增 debounced resize 監聽**
+- [x] **Step 2: 在 `await view.open(book)` 之後新增 debounced resize 監聽**
 
 找到 `main.js:511` 附近的：
 
@@ -184,7 +184,7 @@ await view.init(initialCfi ? { lastLocation: initialCfi } : {})
     await view.init(initialCfi ? { lastLocation: initialCfi } : {})
 ```
 
-- [ ] **Step 3: 靜態檢查與既有測試回歸**
+- [x] **Step 3: 靜態檢查與既有測試回歸**
 
 執行：
 ```bash
@@ -197,7 +197,7 @@ cd app && flutter test
 ```
 預期：全數通過，測試數與 Task 1 完成後的基準一致（本 Task 未新增/修改任何 Dart 檔案或測試）。
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add app/android/app/src/main/assets/foliate/main.js
