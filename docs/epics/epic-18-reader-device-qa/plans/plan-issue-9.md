@@ -214,14 +214,14 @@ git commit -m "feat(epic-18): Issue 9 新增 ResizeObserver 於旋轉/尺寸變�
 - Consumes: Task 1／Task 2 完成後的 `main.js`（含 `lastAppliedPrefs` 與 `ResizeObserver`）。
 - Produces: 驗收結果記錄（供合併前的程式碼審查／`issues.md` Issue 9 狀態更新引用）。
 
-- [ ] **Step 1: 安裝最新 debug APK 至真機 `3CEF42ECD491687`**
+- [x] **Step 1: 安裝最新 debug APK 至真機 `3CEF42ECD491687`**
 
 ```bash
 cd app && flutter build apk --debug
 adb -s 3CEF42ECD491687 install -r build/app/outputs/flutter-apk/app-debug.apk
 ```
 
-- [ ] **Step 2: 「雙欄」模式旋轉驗證**
+- [x] **Step 2: 「雙欄」模式旋轉驗證**
 
 1. 開啟一本直排 EPUB（`app/test/fixtures/sample.epub` 或既有測試書籍）。
 2. 於「版面設定」將「欄數」切換為「雙欄」。
@@ -229,20 +229,20 @@ adb -s 3CEF42ECD491687 install -r build/app/outputs/flutter-apk/app-debug.apk
 4. 旋轉裝置至橫向（landscape），等待 debounce（約 200ms 以上）後，確認欄寬**重新計算**為新 `hostSize`（旋轉後的寬或高，依 `currentWritingMode` 而定）的一半，而非停留在旋轉前算出的舊數值。
 5. 記錄：是否觀察到欄寬正確隨旋轉重算（Pass/Fail + 截圖佐證）。
 
-- [ ] **Step 3: 位置不跳動驗證**
+- [x] **Step 3: 位置不跳動驗證**
 
 1. 在「雙欄」模式下翻到書本中段任一頁，記錄目前頁碼/進度文字（`Key('reader_foliate_progress_text')`）。
 2. 旋轉裝置。
 3. 確認旋轉後目前頁碼/進度文字**未跳動**（`paginator.js` 的 CFI-based relocate 理論上會保留閱讀位置，需真機驗證此假設在 `ResizeObserver` 重新套用偏好後依然成立）。
 4. 記錄：Pass/Fail。
 
-- [ ] **Step 4: 「單欄」／「自動」模式不受影響驗證**
+- [x] **Step 4: 「單欄」／「自動」模式不受影響驗證**
 
 1. 將「欄數」切換為「單欄」，旋轉裝置，確認畫面仍維持單欄（不因新增的 `ResizeObserver` 意外跑出多欄）。
 2. 將「欄數」切換為「自動」，旋轉裝置，確認欄數變化行為與 Issue 9 修正前一致（`columnSize` 是使用者設定的固定常數，不隨 `hostSize` 變動，`ResizeObserver` 重新套用偏好對這兩態應為 no-op 等效行為）。
 3. 記錄：Pass/Fail。
 
-- [ ] **Step 5: 記錄驗收結果**
+- [x] **Step 5: 記錄驗收結果**
 
 將 Step 2-4 的 Pass/Fail 結果與截圖整理，供後續程式碼審查（`superpowers:requesting-code-review`）與 `docs/epics/epic-18-reader-device-qa/issues.md` Issue 9 狀態更新引用。若任一項 Fail，回頭調整 Task 2 的 debounce 間隔或觀察目標元素（`view.renderer` vs `view`），重新執行本 Task。
 
