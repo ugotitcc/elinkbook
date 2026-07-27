@@ -178,7 +178,7 @@ void main() {
       await tester.runAsync(() => Future.delayed(Duration.zero));
       await tester.pump();
 
-      final finder = find.byKey(const Key('reader_layout_settings_button'));
+      final finder = find.byKey(const Key('reader_foliate_settings_button'));
       expect(
         tester.widget<IconButton>(finder).onPressed,
         isNull,
@@ -242,7 +242,7 @@ void main() {
       );
       await tester.pump();
 
-      await tester.tap(find.byKey(const Key('reader_layout_settings_button')));
+      await tester.tap(find.byKey(const Key('reader_foliate_settings_button')));
       await tester.pumpAndSettle();
 
       await tester.tap(
@@ -2836,33 +2836,43 @@ void main() {
     expect(find.byType(AppBar), findsNothing);
   });
 
-  testWidgets('EPUB 流式（isFixedLayout: false）：點擊選單熱區觸發沉浸模式切換', (tester) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: 'test/fixtures/sample.epub',
-          bookId: 'b1',
-          prefsManager: prefsManager,
-          isFixedLayout: false,
+  testWidgets(
+    'EPUB 流式（isFixedLayout: false）：點擊選單熱區觸發沉浸模式切換（Issue 7：AppBar 恆為 null，改斷言浮動按鈕）',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b1',
+            prefsManager: prefsManager,
+            isFixedLayout: false,
+          ),
         ),
-      ),
-    );
-    await tester.pump();
-    await tester.runAsync(() => Future.delayed(Duration.zero));
-    await tester.pump();
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
 
-    expect(find.byType(AppBar), findsOneWidget);
+      expect(find.byType(AppBar), findsNothing);
+      expect(
+        find.byKey(const Key('reader_foliate_back_button')),
+        findsOneWidget,
+      );
 
-    // navZoneMode 預設 rightFlip，index 1（中欄）為 menu（見
-    // app/lib/reader/nav_zone_mode.dart rightFlipZoneTemplate）。
-    await tester.tap(find.byKey(const Key('nav_zone_1')));
-    await tester.pump();
+      // navZoneMode 預設 rightFlip，index 1（中欄）為 menu（見
+      // app/lib/reader/nav_zone_mode.dart rightFlipZoneTemplate）。
+      await tester.tap(find.byKey(const Key('nav_zone_1')));
+      await tester.pump();
 
-    expect(find.byType(AppBar), findsNothing);
-  });
+      expect(
+        find.byKey(const Key('reader_foliate_back_button')),
+        findsNothing,
+      );
+    },
+  );
 
   testWidgets('EPUB 流式：previousPage/nextPage 熱區觸發 FoliateEpubReaderView '
-      '換頁，且不影響沉浸模式狀態（design.md 決策 #14）', (tester) async {
+      '換頁，且不影響沉浸模式狀態（design.md 決策 #14；Issue 7 改斷言浮動按鈕）', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         home: ReaderScreen(
@@ -2877,18 +2887,22 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    expect(find.byType(AppBar), findsOneWidget);
+    expect(find.byKey(const Key('reader_foliate_back_button')), findsOneWidget);
 
     // rightFlip 模板：index 2（右欄）＝ nextPage。
     await tester.tap(find.byKey(const Key('nav_zone_2')));
     await tester.pump();
-    expect(find.byType(AppBar), findsOneWidget, reason: '換頁動作不應影響沉浸模式狀態');
+    expect(
+      find.byKey(const Key('reader_foliate_back_button')),
+      findsOneWidget,
+      reason: '換頁動作不應影響沉浸模式狀態',
+    );
 
     // rightFlip 模板：index 0（左欄）＝ previousPage。
     await tester.tap(find.byKey(const Key('nav_zone_0')));
     await tester.pump();
     expect(
-      find.byType(AppBar),
+      find.byKey(const Key('reader_foliate_back_button')),
       findsOneWidget,
       reason: 'previousPage 同樣不應影響沉浸模式狀態',
     );
@@ -2932,7 +2946,7 @@ void main() {
       // 呼叫的 .then() callback 設定，需要多一次 pump 讓其 microtask 完成。
       await tester.pump();
 
-      final finder = find.byKey(const Key('reader_toc_button'));
+      final finder = find.byKey(const Key('reader_foliate_toc_button'));
       expect(tester.widget<IconButton>(finder).onPressed, isNotNull);
 
       await tester.tap(finder);
@@ -2973,7 +2987,7 @@ void main() {
       await tester.pump();
       await tester.pump();
 
-      await tester.tap(find.byKey(const Key('reader_toc_button')));
+      await tester.tap(find.byKey(const Key('reader_foliate_toc_button')));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
       expect(find.byType(TocBottomSheet), findsOneWidget);
@@ -3026,7 +3040,7 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.byKey(const Key('reader_footer')), findsOneWidget);
+    expect(find.byKey(const Key('reader_foliate_progress_text')), findsOneWidget);
     expect(find.text('10/100'), findsOneWidget);
   });
 
@@ -3053,7 +3067,10 @@ void main() {
       foliateView.onPageRendered();
       await tester.pump();
 
-      expect(find.byKey(const Key('reader_footer')), findsNothing);
+      expect(
+        find.byKey(const Key('reader_foliate_progress_text')),
+        findsNothing,
+      );
     },
   );
 
@@ -3088,10 +3105,13 @@ void main() {
     );
     await tester.pump();
 
-    // totalPages=0 應被 _buildFoliateEpubFooter 內部防呆攔截
-    // （info.totalPages ?? 0 → 0 <= 0 → return SizedBox.shrink），
-    // 不會走到 clamp(1, 0) 也不會建構 ReaderFooter。
-    expect(find.byKey(const Key('reader_footer')), findsNothing);
+    // totalPages=0 應被 Issue 7 新增的疊加層條件
+    // （(_epubPositionInfo?.totalPages ?? 0) > 0）攔截，不會建構
+    // _buildFoliateProgressText()。
+    expect(
+      find.byKey(const Key('reader_foliate_progress_text')),
+      findsNothing,
+    );
   });
 
   // --- Epic 17 Issue 8：流式 EPUB（FoliateEpubReaderView）劃線與備註 ---
