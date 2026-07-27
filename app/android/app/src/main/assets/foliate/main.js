@@ -119,6 +119,21 @@ window.applyPreferences = function (prefs) {
   if (prefs.writingMode) {
     currentWritingMode = prefs.writingMode
   }
+  // /diagnose（2026-07-27，ViWoods Air Reader 直排字級過小）：paginator.js
+  // 的分欄上限公式是 `maxColumnCount + (vertical ? 1 : 0)`（見
+  // paginator.js #beforeRender()），直排永遠比橫排多 1 欄上限。多數裝置
+  // 旋轉時寬高會互換，這個 +1 差異通常不明顯；但 ViWoods Air Reader 這類
+  // 「旋轉後寬度幾乎不變、只有高度大幅縮水」的裝置上，直排會用（比橫排
+  // 大上許多的）高度去逼近這個上限，導致直排硬是比橫排多切出一欄，畫面
+  // 塞入更多文字、視覺上判讀為「字變小」（詳見
+  // docs/epics/epic-18-reader-device-qa/reviews/ 的真機除錯面板量測記錄）。
+  // 讓 --_max-column-count 依目前排版方向動態設定，使直排／橫排的「有效
+  // 上限」（含 paginator.js 內建 +1）永遠一致為 2 欄，不再因排版方向而
+  // 不對稱。
+  view.renderer.setAttribute(
+    'max-column-count',
+    currentWritingMode === 'vertical' ? '1' : '2',
+  )
   // Issue 6：欄數（columnMode）與欄位大小（columnSize）控制。
   // 用 max-inline-size 控制分欄閾值，徹底解決 paginator.js 對直排書籍
   // max-column-count 的 +1 邏輯問題（見 plan-issue-6.md）。

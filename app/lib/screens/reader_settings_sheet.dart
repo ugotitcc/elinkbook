@@ -174,7 +174,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                   label: '字型大小',
                   value: _fontSize,
                   min: 12,
-                  max: 40,
+                  max: 80,
                   step: 1,
                   displayValue: _fontSize.round().toString(),
                   onChanged: (v) => setState(() {
