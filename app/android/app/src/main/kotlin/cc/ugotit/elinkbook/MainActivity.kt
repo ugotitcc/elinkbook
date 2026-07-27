@@ -116,15 +116,10 @@ class MainActivity : FlutterFragmentActivity() {
                 "cc.ugotit.elinkbook/epub_reader_view",
                 EpubReaderViewFactory(this, flutterEngine.dartExecutor.binaryMessenger),
             )
-        flutterEngine
-            .platformViewsController
-            .registry
-            .registerViewFactory(
-                "cc.ugotit.elinkbook/foliate_epub_reader_view",
-                FoliateEpubReaderViewFactory(flutterEngine.dartExecutor.binaryMessenger),
-            )
         bookMetadataChannel =
             BookMetadataChannel(this, flutterEngine.dartExecutor.binaryMessenger)
+
+        ReaderResourceChannel(this, flutterEngine.dartExecutor.binaryMessenger)
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "elinkbook/folder_picker")
             .setMethodCallHandler { call, result ->
@@ -173,6 +168,20 @@ class MainActivity : FlutterFragmentActivity() {
             when (call.method) {
                 "notifyLeavingReader" -> {
                     ReaderViewAttachmentTracker.suppressedUntilReattach = true
+                    result.success(null)
+                }
+                // Issue 10：InAppWebView 沒有自建的原生 PlatformView 生命週期
+                // 可掛 ReaderViewAttachmentTracker.attach()/detach()（原本掛在
+                // FoliateEpubReaderView.kt 的 init{}/dispose()，該檔案本次遷移
+                // 已移除，見 Task 6），改由 Dart 端
+                // foliate_native_bridge.dart 在 onWebViewCreated／
+                // State.dispose() 主動呼叫這兩個 case 通知原生端。
+                "attachReaderView" -> {
+                    ReaderViewAttachmentTracker.attach()
+                    result.success(null)
+                }
+                "detachReaderView" -> {
+                    ReaderViewAttachmentTracker.detach()
                     result.success(null)
                 }
                 else -> result.notImplemented()

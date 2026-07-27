@@ -1,5 +1,8 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
 import 'app_font.dart';
 import 'column_mode.dart';
@@ -7,38 +10,77 @@ import 'epub_decoration.dart';
 import 'epub_position_info.dart';
 import 'epub_selection_info.dart';
 import 'epub_text_align.dart';
+import 'foliate_bridge_codec.dart';
+import 'foliate_native_bridge.dart';
 import 'page_turn_mode.dart';
 import 'percent_rect.dart';
 import 'toc_entry.dart';
 import 'writing_mode.dart';
 import 'zone_action.dart';
 
-/// 包裝原生 FoliateEpubReaderView（readest/foliate-js，釘定 commit
+/// 把目前所有非 null 的偏好參數組成一個 map，key 名稱與 `main.js`
+/// `window.applyPreferences`/`window.FoliateBridge` 契約一致（取代原本
+/// `_FoliateEpubReaderViewState._buildPreferencesMap()` 私有方法，改為
+/// 公開頂層純函式以便不透過 `InAppWebView` 直接單元測試，見
+/// docs/epics/epic-18-reader-device-qa/plans/plan-issue-10.md Task 4）。
+/// `null` 值的欄位完全不出現在 map 中。
+Map<String, Object?> buildFoliatePreferencesMap(FoliateEpubReaderView view) {
+  final map = <String, Object?>{};
+  if (view.writingMode != null) {
+    map['writingMode'] =
+        view.writingMode == WritingMode.vertical ? 'vertical' : 'horizontal';
+  }
+  if (view.pageTurnMode != null) {
+    map['pageTurnMode'] =
+        view.pageTurnMode == PageTurnMode.scroll ? 'scroll' : 'paginated';
+  }
+  if (view.fontFamily != null) map['fontFamily'] = view.fontFamily!.familyName;
+  if (view.fontSize != null) map['fontSize'] = view.fontSize;
+  if (view.fontWeight != null) map['fontWeight'] = view.fontWeight;
+  if (view.lineHeight != null) map['lineHeight'] = view.lineHeight;
+  if (view.paragraphSpacing != null) {
+    map['paragraphSpacing'] = view.paragraphSpacing;
+  }
+  if (view.pageMargins != null) map['pageMargins'] = view.pageMargins;
+  if (view.textAlign != null) map['textAlign'] = view.textAlign!.name;
+  if (view.publisherStyles != null) {
+    map['publisherStyles'] = view.publisherStyles;
+  }
+  if (view.columnMode != null) map['columnMode'] = view.columnMode!.name;
+  if (view.columnSize != null) map['columnSize'] = view.columnSize;
+  if (view.showFooter != null) map['showFooter'] = view.showFooter;
+  return map;
+}
+
+/// 比較兩次 widget 建構參數，判斷是否需要重新呼叫
+/// `window.applyPreferences()`（取代原本
+/// `_FoliateEpubReaderViewState._preferencesChanged()`）。
+bool foliatePreferencesChanged(
+  FoliateEpubReaderView oldView,
+  FoliateEpubReaderView newView,
+) {
+  return oldView.writingMode != newView.writingMode ||
+      oldView.pageTurnMode != newView.pageTurnMode ||
+      oldView.fontFamily != newView.fontFamily ||
+      oldView.fontSize != newView.fontSize ||
+      oldView.fontWeight != newView.fontWeight ||
+      oldView.lineHeight != newView.lineHeight ||
+      oldView.paragraphSpacing != newView.paragraphSpacing ||
+      oldView.pageMargins != newView.pageMargins ||
+      oldView.textAlign != newView.textAlign ||
+      oldView.publisherStyles != newView.publisherStyles ||
+      oldView.columnMode != newView.columnMode ||
+      oldView.columnSize != newView.columnSize ||
+      oldView.showFooter != newView.showFooter;
+}
+
+/// 包裝 readest/foliate-js（釘定 commit
 /// dd71f2be356563c16a23272686189fcfb45d0b82）的 Flutter widget，供流式
-/// （reflowable）EPUB 使用，透過 AndroidView（PlatformView）嵌入畫面。
-/// 給定 EPUB 檔案的裝置端絕對路徑或 content:// URI，通知原生端渲染起始
-/// 頁；渲染成功或失敗會分別觸發 [onPageRendered] 或 [onError]。
-///
-/// 本 Widget（epic-17-epub-render-migration Issue 4/5）新增 9 項版面偏好
-/// 建構參數，與既有 [EpubReaderView] 對稱參數同名同型別（不含 `dualPageMode`／
-/// `isLandscape`——reflowable 流式書籍不適用「雙頁」）。Issue 5 新增
-/// `navZoneActions`/`onZoneAction`/`showNavZoneDebugOverlay` 三個建構參數
-/// 與 `nextPage`/`previousPage`/`jumpToProgression` static helper，3×3
-/// 導航熱區完全由 Dart 端 Stack 疊加層處理、不送給原生端。Issue 6 新增
-/// `initialLocatorJson`/`onLocatorChanged` 建構參數與
-/// `jumpToLocator`/`loadTableOfContents` static helper——定位格式為
-/// 本 Epic 新增的 CFI JSON（`epub_position_info.dart`「資料模型」），與
-/// [EpubReaderView] 使用的 Readium Locator JSON 完全不相容，但公開介面
-/// 形狀（`String` 定位欄位）保持對稱，呼叫端不需要因為換了引擎而改變
-/// 使用方式。**不**新增 `totalCharacterCount`/`onCharacterCountReady`
-/// ——本 widget 完全不呼叫任何字數統計，頁尾頁碼改由 `onLocatorChanged`
-/// 新增的 `pageIndex`/`totalPages` 欄位直接驅動（見
-/// docs/epics/epic-17-epub-render-migration/spec.md「頁碼估算」）。
-/// [writingMode] 是「呼叫端要求套用的方向」（可寫），與 [onLayoutResolved]
-/// 回報的 [EpubLayoutInfo.writingMode]（原生端判斷/回報的唯讀值）是兩個
-/// 不同方向的資料流，比照 [EpubReaderView] 既有模式。
-///
-/// 劃線備註參數留待 Issue 8 補上。
+/// （reflowable）EPUB 使用。原生嵌入元件為 `flutter_inappwebview` 的
+/// `InAppWebView`（epic-18-reader-device-qa Issue 10，取代原本的
+/// `AndroidView`+自建 `android.webkit.WebView`，見 ADR 0013）——本次遷移
+/// 只換底層嵌入/JS 橋接機制，公開建構參數與 callback 契約與遷移前完全
+/// 相同，`ReaderScreen` 等呼叫端不需要任何修改。
 class FoliateEpubReaderView extends StatefulWidget {
   final String filePath;
   final VoidCallback onPageRendered;
@@ -48,67 +90,22 @@ class FoliateEpubReaderView extends StatefulWidget {
   final PageTurnMode? pageTurnMode;
   final AppFont? fontFamily;
   final double? fontSize;
-  final double? fontWeight; // Readium 倍率語意（1.0 = normal），比照 EpubReaderView
+  final double? fontWeight;
   final double? lineHeight;
   final double? paragraphSpacing;
   final double? pageMargins;
   final EpubTextAlign? textAlign;
   final bool? publisherStyles;
-
-  /// 流式 EPUB 分欄模式（epic-18-reader-device-qa Issue 6）：auto/single/double。
-  /// null = 未覆寫（交由 foliate-js 內建邏輯決定），傳入 map 時使用 name。
   final ColumnMode? columnMode;
-
-  /// 欄位大小閾值（epic-18-reader-device-qa Issue 6），360~1440px，
-  /// 僅 [columnMode] == auto 時有效。null = 未覆寫。
   final double? columnSize;
-
-  /// 頁尾（`ReaderFooter`）目前是否顯示（epic-18-reader-device-qa
-  /// Issue 4）：`null`＝未知（`main.js` 視同已顯示，見該檔案對應邏輯的
-  /// `prefs.showFooter === false` 判斷式），非 null 時供直排上下邊距
-  /// 計算使用——頁尾顯示時（in-flow，已經壓縮過 WebView 可視高度一次）
-  /// 只需要小幅下邊距，頁尾隱藏時則需要較大下邊距避免文字貼齊螢幕底緣。
-  /// 與其餘偏好欄位不同，這個值本身不是使用者可覆寫的「偏好」，而是
-  /// `ReaderScreen` 已解析的 `ResolvedPreferences.showFooter`（非 nullable
-  /// `bool`）原樣透傳，型別維持 `bool?` 只是為了沿用既有「未傳入時 map
-  /// 省略此 key」的既有 pass-through 慣例（見 Global Constraints）。
   final bool? showFooter;
-
-  /// 3×3 導航熱區的動作對照表（epic-17-epub-render-migration Issue 5，
-  /// 對稱 epic-7-interaction 為 EpubReaderView FXL 分支建立的既有模式，
-  /// 見 zone_hit_test.dart 索引慣例：0-indexed、列優先）。與
-  /// EpubReaderView 不同，這個陣列**只在 Dart 端使用**，不會送給原生端
-  /// （見 Global Constraints「不在原生端判讀」）。
   final List<ZoneAction> navZoneActions;
-
-  /// 點擊熱區換算出動作後觸發，呼叫端（ReaderScreen）負責分派實際行為
-  /// （換頁／切換沉浸模式）。
   final ValueChanged<ZoneAction>? onZoneAction;
-
-  /// 是否疊加顯示熱區輔助線（邊框＋動作文字標籤），供設定畫面開啟除錯
-  /// 用途。
   final bool showNavZoneDebugOverlay;
-
-  /// 開書起始定位（epic-17-epub-render-migration Issue 6）。`null` 代表
-  /// 無既有位置記錄，或原生端 `FoliateLocatorCodec.extractCfi()` 判斷為
-  /// 舊格式/無效資料而優雅退回，一律從書本開頭開始（見 Global
-  /// Constraints）。與其餘偏好參數不同，這是「一次性開書起始值」，只在
-  /// `openBook` 當下送出一次，不參與 [didUpdateWidget] 的偏好設定 diff
-  /// 邏輯，比照 [EpubReaderView.initialLocatorJson] 既有模式。
   final String? initialLocatorJson;
-
-  /// 目前定位變動時觸發（開書、翻頁、目錄跳轉），供呼叫端（ReaderScreen）
-  /// 快取最新定位，於離開/背景時寫入資料庫，比照
-  /// [EpubReaderView.onLocatorChanged] 既有模式。
   final ValueChanged<EpubPositionInfo>? onLocatorChanged;
-
-  /// 劃線備註（epic-17-epub-render-migration Issue 8）：使用者長按選字建立/變動選取範圍時觸發
   final ValueChanged<EpubSelectionInfo>? onSelectionChanged;
-
-  /// 選取範圍清除時觸發
   final VoidCallback? onSelectionCleared;
-
-  /// 使用者點擊既有劃線/備註標記時觸發，帶入不透明 id 字串
   final ValueChanged<String>? onAnnotationActivated;
 
   const FoliateEpubReaderView({
@@ -144,85 +141,59 @@ class FoliateEpubReaderView extends StatefulWidget {
     this.onAnnotationActivated,
   });
 
-  /// 呼叫原生端 view.next()，換頁不觸發任何回呼（強型別 static helper，
-  /// 比照既有 EpubReaderView.nextPage 模式，不使用 `as dynamic` 跨越
-  /// State 的 private 邊界）。[key] 對應的 State 若尚未掛載（例如純
-  /// flutter_test 環境下 AndroidView 尚未建立），靜默忽略。
   static void nextPage(GlobalKey<State<FoliateEpubReaderView>> key) {
     final state = key.currentState;
     if (state is _FoliateEpubReaderViewState) {
-      state._channel?.invokeMethod('nextPage');
+      state._evaluate('window.nextPage()');
     }
   }
 
-  /// 呼叫原生端 view.prev()，同上僅換頁方向相反。
   static void previousPage(GlobalKey<State<FoliateEpubReaderView>> key) {
     final state = key.currentState;
     if (state is _FoliateEpubReaderViewState) {
-      state._channel?.invokeMethod('previousPage');
+      state._evaluate('window.previousPage()');
     }
   }
 
-  /// 跳轉到指定全書進度比例（0.0-1.0），原生端呼叫 view.goToFraction()。
   static void jumpToProgression(
     GlobalKey<State<FoliateEpubReaderView>> key,
     double progression,
   ) {
     final state = key.currentState;
     if (state is _FoliateEpubReaderViewState) {
-      state._channel?.invokeMethod('jumpToProgression', {
-        'progression': progression,
-      });
+      state._evaluate('window.jumpToFraction($progression)');
     }
   }
 
-  /// 依目錄項目／書籤／備註的序列化定位跳轉（epic-17-epub-render-migration
-  /// Issue 6），比照 [jumpToProgression] 的強型別 static helper 模式，不
-  /// 使用 `as dynamic` 跨越 State 的 private 邊界。[locatorJson] 為本 Epic
-  /// 新增的 CFI 格式 JSON 字串；若為舊格式/無效資料，原生端
-  /// `FoliateLocatorCodec.extractCfi()` 會優雅退回、不執行任何跳轉（見
-  /// Global Constraints），呼叫端不需要事先驗證格式。
   static void jumpToLocator(
     GlobalKey<State<FoliateEpubReaderView>> key,
     String locatorJson,
   ) {
     final state = key.currentState;
     if (state is _FoliateEpubReaderViewState) {
-      state._channel?.invokeMethod('jumpToLocator', {
-        'locatorJson': locatorJson,
-      });
+      final cfi = extractCfi(locatorJson);
+      if (cfi != null) {
+        state._evaluate('window.jumpToLocator(${jsonEncode(cfi)})');
+      }
     }
   }
 
-  /// 讀取全書目錄樹狀結構（epic-17-epub-render-migration Issue 6），比照
-  /// [EpubReaderView.loadTableOfContents] 既有模式：請求/回應語意（回傳
-  /// `Future`），非 fire-and-forget。原生端呼叫失敗或本 State 尚未掛載
-  /// （例如純 `flutter_test` 環境下 `_channel` 恆為 `null`，AndroidView
-  /// 未真正建立）時回傳空清單，不拋出例外。
   static Future<List<TocEntry>> loadTableOfContents(
     GlobalKey<State<FoliateEpubReaderView>> key,
   ) async {
     final state = key.currentState;
     if (state is! _FoliateEpubReaderViewState) return const [];
-    final raw = await state._channel
-        ?.invokeMethod<List<Object?>>('getTableOfContents');
-    if (raw == null) return const [];
-    return raw
-        .map((e) => TocEntry.fromWire(e as Map<Object?, Object?>))
-        .toList();
+    return state._requestTableOfContents();
   }
 
-  /// 傳送劃線/備註標記清單給原生端（epic-17-epub-render-migration Issue 8），
-  /// 比照 [jumpToLocator] 的強型別 static helper 模式。
   static void setDecorations(
     GlobalKey<State<FoliateEpubReaderView>> key,
     List<EpubDecoration> decorations,
   ) {
     final state = key.currentState;
     if (state is _FoliateEpubReaderViewState) {
-      state._channel?.invokeMethod('setDecorations', {
-        'decorations': decorations.map((d) => d.toWire()).toList(),
-      });
+      final entries = buildDecorationEntries(decorations);
+      state._evaluate('window.setDecorations(${jsonEncode(entries)})');
     }
   }
 
@@ -231,141 +202,191 @@ class FoliateEpubReaderView extends StatefulWidget {
 }
 
 class _FoliateEpubReaderViewState extends State<FoliateEpubReaderView> {
-  MethodChannel? _channel;
+  InAppWebViewController? _controller;
+  Completer<List<TocEntry>>? _pendingToc;
 
-  void _onPlatformViewCreated(int id) {
-    final channel =
-        MethodChannel('cc.ugotit.elinkbook/foliate_epub_reader_view_$id');
-    _channel = channel;
-    channel.setMethodCallHandler(_handleMethodCall);
-    channel.invokeMethod('openBook', {
-      'path': widget.filePath,
-      'initialPreferences': _buildPreferencesMap(),
-      if (widget.initialLocatorJson != null)
-        'initialLocatorJson': widget.initialLocatorJson,
-    });
+  /// Issue 8/ADR 0013：是否有作用中的文字選取範圍。`true` 時 9 宮格熱區的
+  /// `GestureDetector` 不攔截拖曳手勢，讓「拖曳選取控點調整範圍」這個手勢
+  /// 能傳遞到底下 `InAppWebView`；`false` 時維持既有攔截行為，避免滑動
+  /// 手勢被 foliate-js 內建的滑動翻頁誤判（見
+  /// docs/archive/2026-07-24-epic-7-interaction/design.md:115 的原始設計
+  /// 意圖）。
+  bool _hasActiveSelection = false;
+
+  late final Uri _initialIndexUri = _buildIndexUri();
+
+  Uri _buildIndexUri() {
+    final params = <String, String>{
+      'prefs': jsonEncode(buildFoliatePreferencesMap(widget)),
+      'fontFaceCss': buildFontFaceCss(),
+    };
+    final cfi = extractCfi(widget.initialLocatorJson);
+    if (cfi != null) params['initialCfi'] = cfi;
+    return Uri.https(
+      'appassets.androidplatform.net',
+      '/assets/foliate/index.html',
+      params,
+    );
+  }
+
+  void _evaluate(String source) {
+    _controller?.evaluateJavascript(source: source);
+  }
+
+  Future<List<TocEntry>> _requestTableOfContents() {
+    if (_controller == null) return Future.value(const []);
+    final completer = Completer<List<TocEntry>>();
+    _pendingToc = completer;
+    _evaluate('window.getTableOfContents()');
+    return completer.future;
+  }
+
+  Future<void> _onWebViewCreated(InAppWebViewController controller) async {
+    _controller = controller;
+    controller.addJavaScriptHandler(
+      handlerName: 'onPageRendered',
+      callback: (args) {
+        widget.onPageRendered();
+        final writingModeStr =
+            args.isNotEmpty ? args[0] as String : 'horizontal';
+        widget.onLayoutResolved?.call(EpubLayoutInfo(
+          isFixedLayout: false,
+          writingMode: writingModeStr == 'vertical'
+              ? WritingMode.vertical
+              : WritingMode.horizontal,
+        ));
+      },
+    );
+    controller.addJavaScriptHandler(
+      handlerName: 'onError',
+      callback: (args) {
+        widget.onError(args.isNotEmpty ? args[0] as String : '未知錯誤');
+      },
+    );
+    controller.addJavaScriptHandler(
+      handlerName: 'onLocatorChanged',
+      callback: (args) {
+        // 審查修正：main.js 目前以 `fraction ?? 0`／`location?.current ?? 0`／
+        // `location?.total ?? 0` 保底，理論上不會送出 null；但改用 `as num?`
+        // + `?? 0` 防禦性轉型，與本檔案其餘 handler（onPageRendered/onError/
+        // onTableOfContentsReady 的 `args.isNotEmpty` 檢查）保持一致的防禦
+        //風格，避免未來 main.js 若不慎移除 `?? 0` 保底時整個閱讀畫面直接
+        // 因 TypeError 崩潰。
+        widget.onLocatorChanged?.call(EpubPositionInfo(
+          locatorJson: args.isNotEmpty ? args[0] as String : '',
+          progression:
+              (args.length > 1 ? args[1] as num? : null)?.toDouble() ?? 0.0,
+          pageIndex:
+              (args.length > 2 ? args[2] as num? : null)?.toInt() ?? 0,
+          totalPages:
+              (args.length > 3 ? args[3] as num? : null)?.toInt() ?? 0,
+        ));
+      },
+    );
+    controller.addJavaScriptHandler(
+      handlerName: 'onTableOfContentsReady',
+      callback: (args) {
+        final completer = _pendingToc;
+        _pendingToc = null;
+        final json = args.isNotEmpty ? args[0] as String : '[]';
+        completer?.complete(parseTableOfContents(json));
+      },
+    );
+    controller.addJavaScriptHandler(
+      handlerName: 'onSelectionChanged',
+      callback: (args) {
+        if (!_hasActiveSelection && mounted) {
+          setState(() => _hasActiveSelection = true);
+        }
+        // 審查修正：同 onLocatorChanged，改用防禦性轉型取代直接強制轉型。
+        num? argAt(int index) =>
+            args.length > index ? args[index] as num? : null;
+        widget.onSelectionChanged?.call(EpubSelectionInfo(
+          locatorJson: args.isNotEmpty ? args[0] as String : '',
+          progression: argAt(1)?.toDouble() ?? 0.0,
+          rect: PercentRect(
+            left: argAt(2)?.toDouble() ?? 0.0,
+            top: argAt(3)?.toDouble() ?? 0.0,
+            right: argAt(4)?.toDouble() ?? 0.0,
+            bottom: argAt(5)?.toDouble() ?? 0.0,
+          ),
+        ));
+      },
+    );
+    controller.addJavaScriptHandler(
+      handlerName: 'onSelectionCleared',
+      callback: (args) {
+        if (mounted) setState(() => _hasActiveSelection = false);
+        widget.onSelectionCleared?.call();
+      },
+    );
+    controller.addJavaScriptHandler(
+      handlerName: 'onAnnotationActivated',
+      callback: (args) {
+        widget.onAnnotationActivated?.call(args[0] as String);
+      },
+    );
+    await attachReaderView();
+  }
+
+  Future<WebResourceResponse?> _shouldInterceptRequest(
+    InAppWebViewController controller,
+    WebResourceRequest request,
+  ) async {
+    final path = request.url.path;
+    if (path == '/book/current.epub') {
+      final bytes = await loadBookBytes(widget.filePath);
+      if (bytes == null) return null;
+      return WebResourceResponse(
+          contentType: 'application/epub+zip', data: bytes);
+    }
+    const foliateAssetsPrefix = '/assets/foliate/';
+    if (path.startsWith(foliateAssetsPrefix)) {
+      final relative = 'foliate/${path.substring(foliateAssetsPrefix.length)}';
+      final bytes = await loadAndroidAsset(relative);
+      if (bytes == null) return null;
+      final contentType =
+          path.endsWith('.js') ? 'text/javascript' : 'text/html';
+      return WebResourceResponse(contentType: contentType, data: bytes);
+    }
+    const fontsPrefix = '/assets/fonts/';
+    if (path.startsWith(fontsPrefix)) {
+      final relative = 'assets/fonts/${path.substring(fontsPrefix.length)}';
+      final bytes = await loadFlutterFontAsset(relative);
+      if (bytes == null) return null;
+      return WebResourceResponse(contentType: 'font/ttf', data: bytes);
+    }
+    return null;
   }
 
   @override
   void didUpdateWidget(covariant FoliateEpubReaderView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (_preferencesChanged(oldWidget)) {
-      _channel?.invokeMethod('setPreferences', _buildPreferencesMap());
+    if (foliatePreferencesChanged(oldWidget, widget)) {
+      _evaluate(
+        'window.applyPreferences(${jsonEncode(buildFoliatePreferencesMap(widget))})',
+      );
     }
   }
 
-  bool _preferencesChanged(FoliateEpubReaderView oldWidget) {
-    return widget.writingMode != oldWidget.writingMode ||
-        widget.pageTurnMode != oldWidget.pageTurnMode ||
-        widget.fontFamily != oldWidget.fontFamily ||
-        widget.fontSize != oldWidget.fontSize ||
-        widget.fontWeight != oldWidget.fontWeight ||
-        widget.lineHeight != oldWidget.lineHeight ||
-        widget.paragraphSpacing != oldWidget.paragraphSpacing ||
-        widget.pageMargins != oldWidget.pageMargins ||
-        widget.textAlign != oldWidget.textAlign ||
-        widget.publisherStyles != oldWidget.publisherStyles ||
-        widget.columnMode != oldWidget.columnMode ||
-        widget.columnSize != oldWidget.columnSize ||
-        widget.showFooter != oldWidget.showFooter;
-  }
-
-  /// 把目前所有非 null 的偏好參數組成一個 map，key 名稱與原生端契約一致
-  /// （見 docs/epics/epic-17-epub-render-migration/plans/plan-issue-4.md
-  /// Global Constraints）。`null` 值的欄位完全不出現在 map 中，比照
-  /// `EpubReaderView._buildPreferencesMap()` 既有慣例。
-  Map<String, Object?> _buildPreferencesMap() {
-    final map = <String, Object?>{};
-    if (widget.writingMode != null) {
-      map['writingMode'] =
-          widget.writingMode == WritingMode.vertical ? 'vertical' : 'horizontal';
-    }
-    if (widget.pageTurnMode != null) {
-      map['pageTurnMode'] =
-          widget.pageTurnMode == PageTurnMode.scroll ? 'scroll' : 'paginated';
-    }
-    if (widget.fontFamily != null) {
-      map['fontFamily'] = widget.fontFamily!.familyName;
-    }
-    if (widget.fontSize != null) map['fontSize'] = widget.fontSize;
-    if (widget.fontWeight != null) map['fontWeight'] = widget.fontWeight;
-    if (widget.lineHeight != null) map['lineHeight'] = widget.lineHeight;
-    if (widget.paragraphSpacing != null) {
-      map['paragraphSpacing'] = widget.paragraphSpacing;
-    }
-    if (widget.pageMargins != null) map['pageMargins'] = widget.pageMargins;
-    if (widget.textAlign != null) map['textAlign'] = widget.textAlign!.name;
-    if (widget.publisherStyles != null) {
-      map['publisherStyles'] = widget.publisherStyles;
-    }
-    if (widget.columnMode != null) {
-      map['columnMode'] = widget.columnMode!.name;
-    }
-    if (widget.columnSize != null) {
-      map['columnSize'] = widget.columnSize;
-    }
-    if (widget.showFooter != null) {
-      map['showFooter'] = widget.showFooter;
-    }
-    return map;
-  }
-
-  Future<void> _handleMethodCall(MethodCall call) async {
-    switch (call.method) {
-      case 'onPageRendered':
-        widget.onPageRendered();
-        break;
-      case 'onError':
-        widget.onError(call.arguments as String);
-        break;
-      case 'onLayoutResolved':
-        final args = call.arguments as Map<Object?, Object?>;
-        final info = EpubLayoutInfo(
-          isFixedLayout: args['isFixedLayout'] as bool,
-          writingMode: (args['writingMode'] as String) == 'vertical'
-              ? WritingMode.vertical
-              : WritingMode.horizontal,
-        );
-        widget.onLayoutResolved?.call(info);
-        break;
-      case 'onLocatorChanged':
-        final args = call.arguments as Map<Object?, Object?>;
-        widget.onLocatorChanged?.call(EpubPositionInfo(
-          locatorJson: args['locatorJson'] as String,
-          progression: (args['progression'] as num?)?.toDouble(),
-          pageIndex: (args['pageIndex'] as num?)?.toInt(),
-          totalPages: (args['totalPages'] as num?)?.toInt(),
-        ));
-        break;
-      case 'onSelectionChanged':
-        final args = call.arguments as Map<Object?, Object?>;
-        widget.onSelectionChanged?.call(EpubSelectionInfo(
-          locatorJson: args['locatorJson'] as String,
-          progression: (args['progression'] as num).toDouble(),
-          rect: PercentRect(
-            left: (args['leftPct'] as num).toDouble(),
-            top: (args['topPct'] as num).toDouble(),
-            right: (args['rightPct'] as num).toDouble(),
-            bottom: (args['bottomPct'] as num).toDouble(),
-          ),
-        ));
-        break;
-      case 'onSelectionCleared':
-        widget.onSelectionCleared?.call();
-        break;
-      case 'onAnnotationActivated':
-        widget.onAnnotationActivated?.call(call.arguments as String);
-        break;
-    }
+  @override
+  void dispose() {
+    detachReaderView();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        AndroidView(
-          viewType: 'cc.ugotit.elinkbook/foliate_epub_reader_view',
-          onPlatformViewCreated: _onPlatformViewCreated,
+        InAppWebView(
+          initialUrlRequest: URLRequest(url: WebUri.uri(_initialIndexUri)),
+          initialSettings: InAppWebViewSettings(
+            javaScriptEnabled: true,
+            useShouldInterceptRequest: true,
+          ),
+          onWebViewCreated: _onWebViewCreated,
+          shouldInterceptRequest: _shouldInterceptRequest,
         ),
         Positioned.fill(
           child: Column(
@@ -380,8 +401,10 @@ class _FoliateEpubReaderViewState extends State<FoliateEpubReaderView> {
                         key: Key('nav_zone_$index'),
                         behavior: HitTestBehavior.opaque,
                         onTap: () => widget.onZoneAction?.call(action),
-                        onHorizontalDragStart: (_) {},
-                        onVerticalDragStart: (_) {},
+                        onHorizontalDragStart:
+                            _hasActiveSelection ? null : (_) {},
+                        onVerticalDragStart:
+                            _hasActiveSelection ? null : (_) {},
                         child: Container(
                           decoration: widget.showNavZoneDebugOverlay
                               ? BoxDecoration(

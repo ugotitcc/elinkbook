@@ -180,7 +180,7 @@ packages:
     source: hosted
     version: "1.1.2"
   flutter_inappwebview_platform_interface:
-    dependency: transitive
+    dependency: "direct dev"
     description:
       name: flutter_inappwebview_platform_interface
       sha256: cf5323e194096b6ede7a1ca808c3e0a078e4b33cc3f6338977d75b4024ba2500

@@ -3,18 +3,21 @@ import { Overlayer } from './overlayer.js'
 
 const view = document.getElementById('view')
 
-// FoliateBridge 由原生端 FoliateEpubReaderView.kt 透過
-// WebView.addJavascriptInterface() 注入，見該檔案 KDoc 說明——不是
+// JS→Dart 橋接透過 window.flutter_inappwebview.callHandler(...) 呼叫（見
+// 下方各處呼叫），對應的 handler 由 Dart 端 foliate_epub_reader_view.dart
+// 的 _onWebViewCreated() 用 InAppWebViewController.addJavaScriptHandler()
+// 註冊（epic-18 Issue 10 遷移，取代原本 Kotlin 端
+// WebView.addJavascriptInterface() 注入的 FoliateBridge 機制）——不是
 // console.log 解析（那是 Issue 1 Spike harness 專屬手法）。
 
 const params = new URLSearchParams(location.search)
 const initialPrefs = JSON.parse(params.get('prefs') || '{}')
-// 5 款內建字型的 @font-face 宣告（見 FoliateEpubReaderView.kt
-// buildFontFaceCss()），開書當下由原生端算好透過 query string 傳入，字型
+// 5 款內建字型的 @font-face 宣告（見 foliate_native_bridge.dart
+// buildFontFaceCss()），開書當下由 Dart 端算好透過 query string 傳入，字型
 // 檔案路徑固定不隨後續 applyPreferences 呼叫變動。
 const fontFaceCss = params.get('fontFaceCss') || ''
-// 開書起始定位（epic-17 Issue 6）：原生端已透過 FoliateLocatorCodec
-// .extractCfi() 驗證過格式，這裡拿到的要嘛是合法 CFI 字串，要嘛是空字串
+// 開書起始定位（epic-17 Issue 6）：Dart 端已透過 foliate_bridge_codec.dart
+// extractCfi() 驗證過格式，這裡拿到的要嘛是合法 CFI 字串，要嘛是空字串
 // （缺席／舊格式／無效資料的優雅退回，見 Global Constraints），不需要
 // 再自行判斷格式。
 const initialCfi = params.get('initialCfi') || ''
@@ -99,8 +102,10 @@ function buildOverrideCss(prefs) {
  * 套用完整偏好設定（開書當下的 initialPreferences，或後續 setPreferences
  * 呼叫，兩者格式相同）：pageTurnMode 對應 Paginator 的 flow 屬性（獨立於
  * CSS 覆蓋之外的設定），其餘 9 項透過 setStyles() 疊加 CSS。暴露為
- * window 全域函式供原生端 evaluateJavascript 呼叫（見
- * FoliateEpubReaderView.kt setPreferences()）。
+ * window 全域函式供 Dart 端 InAppWebViewController.evaluateJavascript
+ * 呼叫（見 foliate_epub_reader_view.dart didUpdateWidget()，偏好變動時
+ * 呼叫；開書當下的初次套用改由 _buildIndexUri() 透過 query string 傳入，
+ * 不經過本函式）。
  */
 window.applyPreferences = function (prefs) {
   if (prefs.pageTurnMode) {
@@ -180,8 +185,9 @@ window.applyPreferences = function (prefs) {
 }
 
 /**
- * 換頁／跳轉全書進度比例，供原生端 FoliateEpubReaderView.kt 的
- * nextPage／previousPage／jumpToProgression method channel case 呼叫
+ * 換頁／跳轉全書進度比例，供 Dart 端 foliate_epub_reader_view.dart 的
+ * FoliateEpubReaderView.nextPage／previousPage／jumpToProgression static
+ * helper（透過 InAppWebViewController.evaluateJavascript）呼叫
  * （evaluateJavascript 只能存取掛在 window 上的函式，view 是本模組頂層
  * 作用域的 const，不會自動出現在 window 上，見 Global Constraints）。
  * view.next()/view.prev()/view.goToFraction() 為 readest/foliate-js
@@ -201,11 +207,12 @@ window.jumpToFraction = function (fraction) {
 }
 
 /**
- * 跳轉到指定 CFI（epic-17 Issue 6）。[cfi] 已由原生端
- * FoliateLocatorCodec.extractCfi() 驗證過格式（新格式定位 JSON 才會呼叫
- * 到這裡，舊格式/無效 JSON 在原生端就已被過濾掉，見
- * FoliateEpubReaderView.kt「jumpToLocator」case），本函式不需要再自行
- * 解析 JSON 或判斷格式。
+ * 跳轉到指定 CFI（epic-17 Issue 6）。[cfi] 已由 Dart 端
+ * foliate_bridge_codec.dart extractCfi() 驗證過格式（新格式定位 JSON 才會
+ * 呼叫到這裡，舊格式/無效 JSON 在 Dart 端
+ * FoliateEpubReaderView.jumpToLocator() static helper 就已被過濾掉，見
+ * foliate_epub_reader_view.dart），本函式不需要再自行解析 JSON 或判斷
+ * 格式。
  */
 window.jumpToLocator = function (cfi) {
   view.goTo(cfi)
@@ -215,9 +222,10 @@ window.jumpToLocator = function (cfi) {
  * 把目前應顯示的完整標記清單一次性套用（epic-17 Issue 8，比照既有
  * window.applyPreferences「整組送出」慣例，非增量 diff）：先移除全部
  * 既有標記，再逐筆呼叫 view.addAnnotation() 重新加入。[decorations] 為
- * FoliateDecorationCodec.buildDecorationEntries() 產生的
- * [{id, cfi, color, isUnderline}, ...] 陣列，由原生端
- * FoliateEpubReaderView.kt 的 setDecorations method channel case 呼叫。
+ * foliate_bridge_codec.dart buildDecorationEntries() 產生的
+ * [{id, cfi, color, isUnderline}, ...] 陣列，由 Dart 端
+ * FoliateEpubReaderView.setDecorations() static helper（透過
+ * InAppWebViewController.evaluateJavascript）呼叫。
  * 實際繪製邏輯在下方 draw-annotation 監聽器（本函式只負責告知 view
  * 「這些位置需要標記」，繪製視覺樣式的決定權交給監聽器，因為 draw
  * callback 只有透過 view.addAnnotation() 觸發的 draw-annotation 事件才
@@ -235,8 +243,8 @@ window.jumpToLocator = function (cfi) {
  * 但未實測重複 key 情境），後面那筆會在兩個 Map 中都覆蓋前者：前者的
  * 視覺標記會消失、點擊該位置只會命中後者的 id。目前不主動去重/警告，
  * 依賴 Dart 端每筆標記的 CFI 天然互不相同（不同段落/選取範圍產生不同
- * CFI）這個假設；`FoliateDecorationCodec.buildDecorationEntries()`
- * （Kotlin 端）本身不對重複 CFI 做任何處理，原樣保留全部項目，去重/
+ * CFI）這個假設；`foliate_bridge_codec.dart buildDecorationEntries()`
+ * （Dart 端）本身不對重複 CFI 做任何處理，原樣保留全部項目，去重/
  * 覆蓋行為完全發生在這裡（JS 端 Map 語意）。
  */
 window.setDecorations = function (decorations) {
@@ -300,12 +308,16 @@ async function buildTocEntry(item) {
 }
 
 /**
- * 讀取全書目錄（epic-17 Issue 6），供原生端 getTableOfContents method
- * channel case 呼叫。非同步計算完成後主動透過 FoliateBridge 回呼原生端
- * ——WebView.evaluateJavascript 的 callback 不會等待 async function 內部
- * 的 Promise resolve（只會拿到 Promise 物件本身序列化後的無意義結果），
- * 見 FoliateEpubReaderView.kt onTableOfContentsReady() 註解與 Global
- * Constraints，本函式因此不能單純依賴 evaluateJavascript 的回傳值。
+ * 讀取全書目錄（epic-17 Issue 6），供 Dart 端
+ * FoliateEpubReaderView.loadTableOfContents() static helper（透過
+ * InAppWebViewController.evaluateJavascript）呼叫。非同步計算完成後主動
+ * 透過 window.flutter_inappwebview.callHandler('onTableOfContentsReady', ...)
+ * 回呼 Dart 端——WebView.evaluateJavascript 的回傳值不會等待 async
+ * function 內部的 Promise resolve（只會拿到 Promise 物件本身序列化後的
+ * 無意義結果），見 foliate_epub_reader_view.dart
+ * _requestTableOfContents()／addJavaScriptHandler('onTableOfContentsReady')
+ * 註解與 Global Constraints，本函式因此不能單純依賴 evaluateJavascript
+ * 的回傳值。
  */
 window.getTableOfContents = async function () {
   try {
@@ -314,9 +326,9 @@ window.getTableOfContents = async function () {
     for (const item of items) {
       entries.push(await buildTocEntry(item))
     }
-    window.FoliateBridge.onTableOfContentsReady(JSON.stringify(entries))
+    window.flutter_inappwebview.callHandler('onTableOfContentsReady', JSON.stringify(entries))
   } catch (e) {
-    window.FoliateBridge.onTableOfContentsReady(JSON.stringify([]))
+    window.flutter_inappwebview.callHandler('onTableOfContentsReady', JSON.stringify([]))
   }
 }
 
@@ -339,7 +351,7 @@ async function openBook() {
         // epic-17 Issue 8 審查修正：Overlayer.highlight() 內建
         // `opacity: var(--overlayer-highlight-opacity, .3)`（overlayer.js
         // 既有程式碼，不可修改），若不覆寫這個 CSS 自訂屬性，會疊加在
-        // FoliateDecorationCodec.argbIntToCssColor() 已經算好的 tint
+        // foliate_bridge_codec.dart argbToCssColor() 已經算好的 tint
         // alpha 之上（兩者相乘），造成螢光筆/純備註視覺上明顯比 Readium/
         // FXL 路徑（直接用 tint alpha、無額外乘數）更淡。本 App 的透明度
         // 完全由 tint 的 ARGB alpha 決定，故固定覆蓋為 1（不透明度
@@ -369,7 +381,7 @@ async function openBook() {
       const resolvedWritingMode =
         initialPrefs.writingMode ?? detectedBookWritingMode ?? 'horizontal'
       window.applyPreferences({ ...initialPrefs, writingMode: resolvedWritingMode })
-      window.FoliateBridge.onPageRendered(resolvedWritingMode)
+      window.flutter_inappwebview.callHandler('onPageRendered', resolvedWritingMode)
     }, { once: true })
     // 目前定位變動持續推播（epic-17 Issue 6）：與上方 { once: true } 的
     // FR-06/onPageRendered 監聽器各自獨立、互不影響，開書當下的第一次
@@ -378,7 +390,8 @@ async function openBook() {
     // progress.js），近似頁碼概念，非精確渲染頁數。
     view.addEventListener('relocate', (e) => {
       const { cfi, section, fraction, location } = e.detail
-      window.FoliateBridge.onLocatorChanged(
+      window.flutter_inappwebview.callHandler(
+        'onLocatorChanged',
         JSON.stringify({ cfi, index: section?.current ?? 0, fraction: fraction ?? 0 }),
         fraction ?? 0,
         location?.current ?? 0,
@@ -416,7 +429,7 @@ async function openBook() {
     // 本檔案既有對非致命錯誤的處理原則。
     view.addEventListener('show-annotation', (e) => {
       const id = decorationIdByCfi.get(e.detail.value)
-      if (id) window.FoliateBridge.onAnnotationActivated(id)
+      if (id) window.flutter_inappwebview.callHandler('onAnnotationActivated', id)
     })
     // 選取範圍即時回報（epic-17 Issue 8）：'load' 事件對 look-ahead
     // 預讀章節同樣會觸發，故 doc/index 皆從本次 'load' 呼叫的區域變數
@@ -432,10 +445,17 @@ async function openBook() {
     view.addEventListener('load', (e) => {
       const doc = e.detail.doc
       const index = e.detail.index
-      doc.addEventListener('selectionchange', async () => {
+
+      // 選取範圍即時回報（epic-17 Issue 8）：抽成共用函式，供既有
+      // selectionchange 與下方 ADR 0013 既定的 Android 專用
+      // contextmenu/pointercancel 分支共同呼叫，避免重複實作同一段
+      // CFI/座標換算邏輯。'load' 事件對 look-ahead 預讀章節同樣會觸發，
+      // 故 doc/index 皆從本次 'load' 呼叫的區域變數閉包讀取（見
+      // spike-overlayer-annotations.md「已記錄的既有 API 落差」）。
+      const reportSelection = async () => {
         const selection = doc.getSelection()
         if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
-          window.FoliateBridge.onSelectionCleared()
+          window.flutter_inappwebview.callHandler('onSelectionCleared')
           return
         }
         const range = selection.getRangeAt(0)
@@ -443,14 +463,10 @@ async function openBook() {
         if (!rect) return
         const cfi = view.getCFI(index, range)
         const progress = await view.getCFIProgress(cfi)
-        // 座標換算（Issue 7 Spike 已驗證公式）：iframe 內局部矩形 + iframe
-        // 相對外層 #view 容器的位移，除以外層容器可視尺寸。只取第一個
-        // client rect 當代表矩形（多欄選取的代表 rect 策略，見
-        // spike-overlayer-annotations.md「留白」段落——現有 PercentRect
-        // 契約本身就只回報單一矩形，這是既有契約的限制，非本工單新增）。
         const iframeRect = doc.defaultView.frameElement.getBoundingClientRect()
         const viewportRect = view.getBoundingClientRect()
-        window.FoliateBridge.onSelectionChanged(
+        window.flutter_inappwebview.callHandler(
+          'onSelectionChanged',
           JSON.stringify({ cfi, index, fraction: progress?.fraction ?? 0 }),
           progress?.fraction ?? 0,
           (iframeRect.left + rect.left - viewportRect.left) / viewportRect.width,
@@ -458,7 +474,24 @@ async function openBook() {
           (iframeRect.left + rect.right - viewportRect.left) / viewportRect.width,
           (iframeRect.top + rect.bottom - viewportRect.top) / viewportRect.height,
         )
+      }
+
+      doc.addEventListener('selectionchange', reportSelection)
+
+      // ADR 0013 既定決策（非本計畫視情況新增）：比照 anx-reader 已驗證的
+      // 手法（見 tmp/epic-18/reviews/anx_reader_foliate_js_highlighting_
+      // analysis.md 5 節）——contextmenu 在長按觸發原生選字/顯示控點時
+      // 觸發，需 preventDefault() 避免原生選單彈出與既有 AnnotationToolbar
+      // 衝突；pointercancel 在拖曳控點期間，原本的 pointer 手勢因系統選取
+      // 手勢接管而觸發，兩者皆代表「選取狀態可能剛建立或變動」，作為
+      // selectionchange 的主動觸發備援（不同 Android WebView 版本/廠牌
+      // 客製化/E-Ink 裝置對 selectionchange 事件觸發時機的行為差異，比
+      // 依賴單一被動事件更穩健）。
+      doc.addEventListener('contextmenu', (evt) => {
+        evt.preventDefault()
+        reportSelection()
       })
+      doc.addEventListener('pointercancel', () => reportSelection())
     })
     await view.open(book)
     view.renderer.setAttribute(
@@ -467,7 +500,7 @@ async function openBook() {
     )
     await view.init(initialCfi ? { lastLocation: initialCfi } : {})
   } catch (e) {
-    window.FoliateBridge.onError(String((e && e.message) || e))
+    window.flutter_inappwebview.callHandler('onError', String((e && e.message) || e))
   }
 }
 

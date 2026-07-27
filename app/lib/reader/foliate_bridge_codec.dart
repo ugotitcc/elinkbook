@@ -1,0 +1,101 @@
+import 'dart:convert';
+
+import 'epub_decoration.dart';
+import 'toc_entry.dart';
+
+/// 解析/擷取 epic-17-epub-render-migration Issue 6 新增的定位 JSON 格式
+/// （`{"cfi":"epubcfi(...)","index":N,"fraction":F}`），取代原本
+/// `FoliateLocatorCodec.kt`（純函式，不觸碰 `InAppWebView`，見
+/// epic-18-reader-device-qa plans/plan-issue-10.md ADR 0013 後續遷移）。
+/// [locatorJson] 為 `null`、JSON 格式錯誤、或既有流式書籍留下的舊格式
+/// Readium Locator JSON（無 `cfi` 鍵）皆回傳 `null`，供呼叫端優雅退回。
+String? extractCfi(String? locatorJson) {
+  if (locatorJson == null) return null;
+  try {
+    final obj = jsonDecode(locatorJson);
+    if (obj is Map && obj['cfi'] is String) return obj['cfi'] as String;
+    return null;
+  } catch (_) {
+    return null;
+  }
+}
+
+/// 把 `main.js` `window.getTableOfContents()` 回傳的 JSON 陣列字串解析為
+/// [TocEntry] 清單（取代原本 Kotlin 端 `FoliateLocatorCodec.parseTocEntries`
+/// + `tocEntryFromJsonObject`）。`jsonDecode` 產生的 `Map<String, dynamic>`
+/// 依 Dart 泛型協變規則可直接滿足 [TocEntry.fromWire] 要求的
+/// `Map<Object?, Object?>` 型別（`String <: Object?`、`dynamic <: Object?`），
+/// 不需要額外轉型。[tocJson] 格式錯誤時回傳空清單，不拋出例外——目錄讀取
+/// 失敗不應該讓已成功開啟的書籍畫面顯示錯誤，比照原 Kotlin 實作的既有
+/// 錯誤處理原則。
+List<TocEntry> parseTableOfContents(String tocJson) {
+  try {
+    final array = jsonDecode(tocJson) as List<dynamic>;
+    return array
+        .map((e) => TocEntry.fromWire(e as Map<Object?, Object?>))
+        .toList();
+  } catch (_) {
+    return const [];
+  }
+}
+
+/// 把 Dart `Color.toARGB32()`／Android `Color` int 皆採用的 0xAARRGGBB
+/// 版面轉換為 SVG fill/stroke 屬性可直接使用的 `rgba()` CSS 字串（取代原本
+/// `FoliateDecorationCodec.argbIntToCssColor`）。
+String argbToCssColor(int argb) {
+  final a = (argb >> 24) & 0xFF;
+  final r = (argb >> 16) & 0xFF;
+  final g = (argb >> 8) & 0xFF;
+  final b = argb & 0xFF;
+  return 'rgba($r, $g, $b, ${a / 255.0})';
+}
+
+/// 把 Dart 端的完整標記清單轉換為 `main.js window.setDecorations()` 所需的
+/// `{"id","cfi","color","isUnderline"}` 清單（取代原本
+/// `FoliateDecorationCodec.buildDecorationEntries`）。單筆 [EpubDecoration]
+/// 的 `locatorJson` 解析失敗（[extractCfi] 回傳 `null`——缺席、格式錯誤、
+/// 或既有流式書籍留下的舊格式 Readium Locator JSON）時該筆略過，不影響
+/// 其餘標記，比照原 Kotlin 實作的既有非致命錯誤略過原則。與原 Kotlin 版本
+/// 不同：本函式直接操作 [EpubDecoration] 物件，不再需要先序列化為 wire
+/// map 再解析回來（呼叫端與本函式同在 Dart 執行環境內）。
+List<Map<String, Object?>> buildDecorationEntries(
+  List<EpubDecoration> decorations,
+) {
+  final entries = <Map<String, Object?>>[];
+  for (final decoration in decorations) {
+    final cfi = extractCfi(decoration.locatorJson);
+    if (cfi == null) continue;
+    entries.add({
+      'id': decoration.id,
+      'cfi': cfi,
+      'color': argbToCssColor(decoration.tint),
+      'isUnderline': decoration.isUnderline,
+    });
+  }
+  return entries;
+}
+
+/// 判斷「已正規化」的請求路徑是否真的落在允許根目錄之內（含根目錄本身）
+/// （取代原本 `FoliatePathValidator.isPathWithinRoot`，純字串邊界比對，
+/// 不做任何檔案系統 I/O）。刻意不用單純的
+/// `requestedCanonicalPath.startsWith(allowedRootCanonicalPath)`——會誤判
+/// 「同前綴但其實是不同目錄」的情況（例如 allowedRoot=".../files"，
+/// requestedPath=".../files_evil/x" 純 startsWith 會誤判為合法）。必須
+/// 額外要求邊界字元本身也對得上：完全相等，或後面緊接著路徑分隔符。
+///
+/// 審查修正：兩個參數先正規化為一律以 `/` 為分隔符再比對，而非直接假設
+/// 呼叫端一定是 `/`。開發機（Windows）執行 `flutter test` 時，
+/// `File.resolveSymbolicLinksSync()`（Task 3 `loadBookBytes` 呼叫）回傳的
+/// 是反斜線路徑，若這裡的邊界字元寫死 `/`，Task 3 Step 12「允許目錄內的
+/// 真實檔案」測試會在 Windows 開發機上直接判定為「不在允許範圍內」而失敗
+/// ——本專案目標平台（Android）恆為 `/`，正規化為 `/` 不影響正式環境行為，
+/// 只讓本函式在任何開發機平台上都能被正確測試。
+bool isPathWithinRoot(
+  String requestedCanonicalPath,
+  String allowedRootCanonicalPath,
+) {
+  final normalizedRequested = requestedCanonicalPath.replaceAll('\\', '/');
+  final normalizedRoot = allowedRootCanonicalPath.replaceAll('\\', '/');
+  if (normalizedRequested == normalizedRoot) return true;
+  return normalizedRequested.startsWith('$normalizedRoot/');
+}
