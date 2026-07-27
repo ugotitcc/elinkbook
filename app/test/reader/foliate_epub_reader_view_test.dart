@@ -1,15 +1,29 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_inappwebview_platform_interface/flutter_inappwebview_platform_interface.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/reader/column_mode.dart';
 import 'package:elinkbook/reader/foliate_epub_reader_view.dart';
 import 'package:elinkbook/reader/writing_mode.dart';
 import 'package:elinkbook/reader/app_font.dart';
 import 'package:elinkbook/reader/epub_text_align.dart';
 import 'package:elinkbook/reader/page_turn_mode.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:elinkbook/reader/zone_action.dart';
+import '../support/fake_inappwebview_platform.dart';
 
 void _noop() {}
 void _noopError(String message) {}
 
 void main() {
+  // Issue 10 審查修正：9 宮格導航熱區 tap／debug overlay 這兩項 widget
+  // test 原本因「裸 InAppWebView 無法在 flutter_test 下 pump」被整批移除
+  // （見 plan-issue-10.md「驗證紀錄」），比照
+  // test/screens/reader_screen_test.dart 已驗證可行的作法，註冊
+  // FakeInAppWebViewPlatform 後即可正常 pump，回補於下方
+  // 「3×3 導航熱區」group。
+  setUpAll(() {
+    InAppWebViewPlatform.instance = FakeInAppWebViewPlatform();
+  });
+
   group('buildFoliatePreferencesMap', () {
     test('所有偏好欄位皆為 null 時回傳空 map', () {
       const view = FoliateEpubReaderView(
@@ -165,6 +179,86 @@ void main() {
         fontSize: 1.0,
       );
       expect(foliatePreferencesChanged(oldView, newView), isFalse);
+    });
+  });
+
+  group('3×3 導航熱區（InAppWebView）', () {
+    // Issue 10 審查修正：改寫前（AndroidView）版本用
+    // SystemChannels.platform_views/MethodChannel mock 驅動底層原生
+    // PlatformView 建立流程（見 git 歷史 b2ea4a3 版本的
+    // _pumpFoliateEpubReaderView），該機制已隨遷移完全消失；改用
+    // setUpAll 註冊的 FakeInAppWebViewPlatform 讓 InAppWebView 可直接
+    // pump，不需要任何 mock。pump 後接 runAsync(Future.delayed(Duration.zero))
+    // 再 pump 一次，比照 test/screens/reader_screen_test.dart 已驗證可行
+    // 的既有寫法。
+    testWidgets(
+        '3×3 導航熱區：9 個 Key(nav_zone_\$index) 皆存在，點擊觸發對應 onZoneAction',
+        (tester) async {
+      final capturedActions = <ZoneAction>[];
+      await tester.pumpWidget(
+        MaterialApp(
+          home: FoliateEpubReaderView(
+            filePath: '/tmp/sample.epub',
+            onPageRendered: _noop,
+            onError: _noopError,
+            navZoneActions: const [
+              ZoneAction.previousPage, ZoneAction.none, ZoneAction.nextPage,
+              ZoneAction.previousPage, ZoneAction.menu, ZoneAction.nextPage,
+              ZoneAction.previousPage, ZoneAction.none, ZoneAction.nextPage,
+            ],
+            onZoneAction: capturedActions.add,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      for (var index = 0; index < 9; index++) {
+        expect(find.byKey(Key('nav_zone_$index')), findsOneWidget);
+      }
+
+      await tester.tap(find.byKey(const Key('nav_zone_2')));
+      await tester.pump();
+      expect(capturedActions, [ZoneAction.nextPage]);
+
+      await tester.tap(find.byKey(const Key('nav_zone_4')));
+      await tester.pump();
+      expect(capturedActions, [ZoneAction.nextPage, ZoneAction.menu]);
+
+      await tester.tap(find.byKey(const Key('nav_zone_1')));
+      await tester.pump();
+      expect(
+        capturedActions,
+        [ZoneAction.nextPage, ZoneAction.menu, ZoneAction.none],
+      );
+    });
+
+    testWidgets('showNavZoneDebugOverlay=true 時，格子顯示對應動作文字標籤',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: FoliateEpubReaderView(
+            filePath: '/tmp/sample.epub',
+            onPageRendered: _noop,
+            onError: _noopError,
+            navZoneActions: const [
+              ZoneAction.previousPage, ZoneAction.menu, ZoneAction.nextPage,
+              ZoneAction.none, ZoneAction.none, ZoneAction.none,
+              ZoneAction.none, ZoneAction.none, ZoneAction.none,
+            ],
+            showNavZoneDebugOverlay: true,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      expect(find.text('上一頁'), findsWidgets);
+      expect(find.text('選單'), findsWidgets);
+      expect(find.text('下一頁'), findsWidgets);
+      expect(find.text('無動作'), findsWidgets);
     });
   });
 }

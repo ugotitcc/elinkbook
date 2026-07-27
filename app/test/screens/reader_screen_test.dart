@@ -23,6 +23,7 @@ import 'package:elinkbook/screens/toc_bottom_sheet.dart';
 import 'package:elinkbook/reader/epub_position_info.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
 import 'package:elinkbook/reader/foliate_epub_reader_view.dart';
+import '../support/fake_inappwebview_platform.dart';
 import '../support/fake_library_repository.dart';
 import '../support/fake_reader_prefs_manager.dart';
 import 'package:elinkbook/screens/notes_bottom_sheet.dart';
@@ -43,37 +44,6 @@ import 'package:elinkbook/reader/highlight_style.dart';
 // 「⚙️版面」按鈕在 onLayoutResolved 觸發前的初始狀態，以及排版方向／
 // 翻頁模式雙層解析邏輯（后者不依賴 onLayoutResolved，可離線驗證，見
 // docs/epics/epic-3-fonts-layout/plans/plan-issue-4.md）。
-
-/// InAppWebView 的測試用假實作，讓 FoliateEpubReaderView 可在 flutter_test
-/// 環境中建構 widget 樹而不觸發 platform 實作缺失的 assertion。
-class FakeInAppWebViewPlatform extends InAppWebViewPlatform {
-  @override
-  PlatformInAppWebViewWidget createPlatformInAppWebViewWidget(
-    PlatformInAppWebViewWidgetCreationParams params,
-  ) {
-    return FakePlatformInAppWebViewWidget(params);
-  }
-}
-
-class FakePlatformInAppWebViewWidget extends PlatformInAppWebViewWidget {
-  FakePlatformInAppWebViewWidget(PlatformInAppWebViewWidgetCreationParams params)
-      : super.implementation(params);
-
-  @override
-  Widget build(BuildContext context) {
-    // 回傳一個具有固定尺寸的 placeholder，讓 nav zone 的 Stack 可以正確
-    // 建構子樹並接受 hit test（SizedBox.shrink 會導致零尺寸）。
-    return SizedBox(width: 400, height: 800);
-  }
-
-  @override
-  T controllerFromPlatform<T>(PlatformInAppWebViewController controller) {
-    throw UnimplementedError('controllerFromPlatform not needed in tests');
-  }
-
-  @override
-  void dispose() {}
-}
 
 void main() {
   late FakeReaderPrefsManager prefsManager;

@@ -1958,7 +1958,8 @@ git commit -m "refactor(epic-18): 移除舊有 FoliateEpubReaderView.kt 原生�
 
 > 執行 Task 4 Step 1、Task 5 Step 3 時，把實際觀察結果記錄於此，供後續複查依據。
 
-- **Task 4 Step 1（`InAppWebView` 能否在 `flutter_test` 下 pump）**：❌ 無法 pump。`InAppWebViewPlatform.instance` 在純 Dart VM 環境下為 null，拋出 `AssertionError: 'InAppWebViewPlatform.instance != null'`。結論：9 宮格 `GestureDetector` tap 測試與 `showNavZoneDebugOverlay` 文字標籤測試無法保留為 widget test，改列入 Task 7 真機驗證清單。
+- **Task 4 Step 1（`InAppWebView` 能否在 `flutter_test` 下 pump）**：❌ 裸 `InAppWebView()`（未註冊任何平台實作）無法 pump。`InAppWebViewPlatform.instance` 在純 Dart VM 環境下為 null，拋出 `AssertionError: 'InAppWebViewPlatform.instance != null'`。結論：9 宮格 `GestureDetector` tap 測試與 `showNavZoneDebugOverlay` 文字標籤測試無法保留為 widget test，改列入 Task 7 真機驗證清單。
+  - **審查修正（Issue 10 review Important #2）**：上述結論僅適用於「裸、未註冊平台實作」的 `InAppWebView`，並非「`InAppWebView` 無法在 `flutter_test` 下 pump」的一般性結論。同一分支最後一個 commit（`e4873cc`）為修復 `test/screens/reader_screen_test.dart` 而寫出 `FakeInAppWebViewPlatform`/`FakePlatformInAppWebViewWidget`（透過 `InAppWebViewPlatform.instance = FakeInAppWebViewPlatform()` 註冊），證實只要註冊測試替身，`InAppWebView` 即可正常 pump。已將該替身抽到共用檔案 `app/test/support/fake_inappwebview_platform.dart`，並在 `app/test/reader/foliate_epub_reader_view_test.dart` 回補「9 個 `Key('nav_zone_$index')` 皆存在、點擊觸發正確 `onZoneAction`」與「`showNavZoneDebugOverlay` 文字標籤」兩項 widget test（新增後 `flutter test` 總數由 632 增至 634），不再只依賴真機人工驗證。
 - **Task 5 Step 3（`selectionchange`＋`contextmenu`＋`pointercancel` 三個監聽器在真機上是否確實生效）**：待真機驗證（APK 已建置成功 `app-debug.apk`，需真機安裝後手動測試）。
 
 ---
