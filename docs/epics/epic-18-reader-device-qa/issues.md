@@ -305,7 +305,7 @@ Issue 5 的 `singleColumn` 布林開關因 `paginator.js` 對直排書籍的 `ma
 
 ## Issue 9：裝置旋轉/視窗尺寸變化時重新呼叫 `applyPreferences()`
 
-**Status:** ✅ 已完成（分支 `epic-18/issue-9-resize-reapply-prefs`，尚未合併回 `main`）。依 `plans/plan-issue-9.md` 3 個 Task 逐一實作並分別 commit：
+**Status:** ✅ 已完成並合併回 `main`（PR #80，merge commit `7fbafb9`；分支 `epic-18/issue-9-resize-reapply-prefs`）。依 `plans/plan-issue-9.md` 3 個 Task 逐一實作並分別 commit：
 
 - Task 1：`main.js` 新增 `lastAppliedPrefs` 追蹤最後套用偏好（commit `54032d0`）
 - Task 2：`main.js` 新增 `ResizeObserver` 於旋轉/尺寸變化時重新套用偏好（commit `499c3f5`）
