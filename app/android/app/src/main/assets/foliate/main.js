@@ -545,13 +545,20 @@ async function openBook() {
     // 'double' 才重算——整包 lastAppliedPrefs 重新套用一次，其餘欄位
     // （字級/邊距/CSS 覆蓋/max-column-count）重算是 idempotent、無副作用
     // （見 Global Constraints）。
+    // 保留參照（比照 paginator.js 自己的 #observer 於 destroy() 呼叫
+    // unobserve() 的既有謹慎作法，見 paginator.js:3493）：openBook() 全
+    // repo 只在檔案最底部被呼叫一次，本 WebView 頁面沒有「換書但不重建
+    // InAppWebView」的既有機制，整個 JS context 會隨頁面關閉一併回收，
+    // 故目前沒有對應的 disconnect() 呼叫時機，不無中生有加一個沒有呼叫端
+    // 的 disconnect() 呼叫。
     let resizeDebounceTimer = null
-    new ResizeObserver(() => {
+    const hostResizeObserver = new ResizeObserver(() => {
       if (resizeDebounceTimer) clearTimeout(resizeDebounceTimer)
       resizeDebounceTimer = setTimeout(() => {
         window.applyPreferences(lastAppliedPrefs)
       }, 200)
-    }).observe(view.renderer)
+    })
+    hostResizeObserver.observe(view.renderer)
     await view.init(initialCfi ? { lastLocation: initialCfi } : {})
   } catch (e) {
     window.flutter_inappwebview.callHandler('onError', String((e && e.message) || e))
