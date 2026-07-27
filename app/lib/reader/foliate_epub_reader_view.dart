@@ -205,14 +205,6 @@ class _FoliateEpubReaderViewState extends State<FoliateEpubReaderView> {
   InAppWebViewController? _controller;
   Completer<List<TocEntry>>? _pendingToc;
 
-  /// Issue 8/ADR 0013：是否有作用中的文字選取範圍。`true` 時 9 宮格熱區的
-  /// `GestureDetector` 不攔截拖曳手勢，讓「拖曳選取控點調整範圍」這個手勢
-  /// 能傳遞到底下 `InAppWebView`；`false` 時維持既有攔截行為，避免滑動
-  /// 手勢被 foliate-js 內建的滑動翻頁誤判（見
-  /// docs/archive/2026-07-24-epic-7-interaction/design.md:115 的原始設計
-  /// 意圖）。
-  bool _hasActiveSelection = false;
-
   late final Uri _initialIndexUri = _buildIndexUri();
 
   Uri _buildIndexUri() {
@@ -295,9 +287,6 @@ class _FoliateEpubReaderViewState extends State<FoliateEpubReaderView> {
     controller.addJavaScriptHandler(
       handlerName: 'onSelectionChanged',
       callback: (args) {
-        if (!_hasActiveSelection && mounted) {
-          setState(() => _hasActiveSelection = true);
-        }
         // 審查修正：同 onLocatorChanged，改用防禦性轉型取代直接強制轉型。
         num? argAt(int index) =>
             args.length > index ? args[index] as num? : null;
@@ -316,7 +305,6 @@ class _FoliateEpubReaderViewState extends State<FoliateEpubReaderView> {
     controller.addJavaScriptHandler(
       handlerName: 'onSelectionCleared',
       callback: (args) {
-        if (mounted) setState(() => _hasActiveSelection = false);
         widget.onSelectionCleared?.call();
       },
     );
@@ -397,14 +385,9 @@ class _FoliateEpubReaderViewState extends State<FoliateEpubReaderView> {
                     final index = row * 3 + col;
                     final action = widget.navZoneActions[index];
                     return Expanded(
-                      child: GestureDetector(
+                      child: _NavZoneTapDetector(
                         key: Key('nav_zone_$index'),
-                        behavior: HitTestBehavior.opaque,
                         onTap: () => widget.onZoneAction?.call(action),
-                        onHorizontalDragStart:
-                            _hasActiveSelection ? null : (_) {},
-                        onVerticalDragStart:
-                            _hasActiveSelection ? null : (_) {},
                         child: Container(
                           decoration: widget.showNavZoneDebugOverlay
                               ? BoxDecoration(
@@ -442,5 +425,68 @@ class _FoliateEpubReaderViewState extends State<FoliateEpubReaderView> {
       case ZoneAction.none:
         return '無動作';
     }
+  }
+}
+
+/// 九宮格導覽熱區的單一格子，取代原本的 `GestureDetector(onTap: ...)`
+/// （/diagnose 2026-07-27 真機診斷發現的根因修正）。
+///
+/// 根因：`GestureDetector` 的 `TapGestureRecognizer` 沒有時長上限——即使按住
+/// 800ms 才放開，仍會被判定為一次有效的 tap。`InAppWebView`（Hybrid
+/// Composition 平台視圖）與這個 `GestureDetector` 在同一個 Stack 位置競爭
+/// 手勢競技場時，只要有任何 Flutter 側的手勢辨識器參與競爭，平台視圖自己
+/// 的原生觸控轉發就會等待競技場裁定結果——`TapGestureRecognizer` 一路持有
+/// 到放開才裁定為「是」，導致 `InAppWebView` 從頭到尾都沒收到這次觸控序列，
+/// 長按選字的原生選取 UI（控點）完全不會出現（真機 `adb shell input
+/// touchscreen swipe` 模擬長按已驗證：拿掉這層 `GestureDetector` 或改用本
+/// 類別後，選字/控點/劃線皆恢復正常；只有 `HitTestBehavior` 從 opaque 改
+/// translucent 並不夠，因為問題不在 hit-test 可見性、而在手勢競技場裁定）。
+///
+/// 改用 [Listener] 直接觀察原始 pointer 事件、自行判斷「是否為一次快速點擊」
+/// （位移在 [_tapSlop] 內、耗時在 [_tapMaxDurationMs] 內），完全不註冊
+/// `GestureRecognizer`、不參與手勢競技場，讓 `InAppWebView` 的原生觸控轉發
+/// 不再被攔截。原本 `_hasActiveSelection` 這個只放行「已有選取範圍時的拖曳」
+/// 的權宜旗標（Issue 8/ADR 0013）已不再需要——本類別從一開始就不會攔截任何
+/// 非「快速點擊」手勢，選字/拖曳控點/翻頁滑動皆可直接穿透到 `InAppWebView`。
+class _NavZoneTapDetector extends StatefulWidget {
+  final VoidCallback onTap;
+  final Widget child;
+  const _NavZoneTapDetector({
+    super.key,
+    required this.onTap,
+    required this.child,
+  });
+
+  @override
+  State<_NavZoneTapDetector> createState() => _NavZoneTapDetectorState();
+}
+
+class _NavZoneTapDetectorState extends State<_NavZoneTapDetector> {
+  Offset? _downPosition;
+  int? _downTimeMs;
+
+  static const _tapSlop = 18.0;
+  static const _tapMaxDurationMs = 400;
+
+  @override
+  Widget build(BuildContext context) {
+    return Listener(
+      behavior: HitTestBehavior.translucent,
+      onPointerDown: (event) {
+        _downPosition = event.position;
+        _downTimeMs = DateTime.now().millisecondsSinceEpoch;
+      },
+      onPointerUp: (event) {
+        final downPosition = _downPosition;
+        final downTimeMs = _downTimeMs;
+        if (downPosition == null || downTimeMs == null) return;
+        final elapsed = DateTime.now().millisecondsSinceEpoch - downTimeMs;
+        final distance = (event.position - downPosition).distance;
+        if (elapsed <= _tapMaxDurationMs && distance <= _tapSlop) {
+          widget.onTap();
+        }
+      },
+      child: widget.child,
+    );
   }
 }
