@@ -213,14 +213,14 @@ Issue 5 的 `singleColumn` 布林開關因 `paginator.js` 對直排書籍的 `ma
 
 ## Issue 7：流式 EPUB Chrome 重構（浮動選單列＋頁眉/進度資訊分離）
 
-**Status:** ✅ 已完成（分支 `epic-18/issue-7-foliate-chrome-refactor`，尚未合併回 `main`）。依 `plans/plan-issue-7.md` 4 個 Task 逐一實作並分別 commit：
+**Status:** ✅ 已完成並合併回 `main`（PR #79，merge commit `1302820`；分支 `epic-18/issue-7-foliate-chrome-refactor`）。依 `plans/plan-issue-7.md` 4 個 Task 逐一實作並分別 commit：
 
 - Task 1：泛用化 FXL 書籤 toggle 方法命名（commit `97a1475`）
 - Task 2：AppBar 抑制、6 顆浮動按鈕與頁眉/進度疊加層、移除舊 in-flow 頁尾（commit `afa34c7`）
 - Task 3：修正因本 Issue 而失效的既有測試（commit `d088412`）
 - Task 4：真機（`3CEF42ECD491687`）驗收（人工執行，8 項 Step 皆通過）
 
-`flutter analyze` 乾淨、`flutter test` 644 項全數通過。程式碼審查（`reviews/review-issue-7.md`）結論為「Ready to merge, with fixes」（0 Critical／2 Important／2 Minor），2 項 Important（本文件狀態更新、`plan-issue-7.md` Task 3 既有測試回歸計數修正）已依審查意見補正。
+`flutter analyze` 乾淨、`flutter test` 644 項全數通過。程式碼審查（`reviews/review-issue-7.md`）結論為「Ready to merge, with fixes」（0 Critical／2 Important／2 Minor），2 項 Important（狀態文件更新、`plan-issue-7.md` Task 3 既有測試回歸計數修正）已於合併前依審查意見補正（commit `af5298e`）。
 
 **依賴：** 無
 
