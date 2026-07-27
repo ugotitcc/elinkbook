@@ -327,15 +327,17 @@ Issue 5 的 `singleColumn` 布林開關因 `paginator.js` 對直排書籍的 `ma
 
 ## Issue 10：流式 EPUB 原生嵌入遷移至 `flutter_inappwebview`（完整實作）
 
-**Status:** ✅ 已完成（4 commits on `feat/issue-10-foliate-inappwebview-migration`）：
+**Status:** ✅ 已完成並合併回 `main`（PR #78，merge commit `17ad0a8`）。完整實作 Task 1 至 Task 7 並通過雙輪 Code Review（`review-code-issue-10.md` 與 `review-issue-10-worktree-implementation.md` FULL PASS）：
 - `db24b9c` Task 1：Dart codec layer（`foliate_bridge_codec.dart` + 25 tests）
 - `be61dcd` Task 2：Native resource channel（`ReaderResourceChannel.kt` + `MainActivity` volumeKey dispatch）
 - `b315713` Task 3：Dart native bridge（`foliate_native_bridge.dart` + 7 tests）
 - `15f2a6e` Task 4：`FoliateEpubReaderView` 改用 `InAppWebView`（公開介面不變）
-- `3cb723c` Task 5：`main.js` JS 橋接改為 `flutter_inappwebview.callHandler`，依 ADR 0013 新增 Android `contextmenu`/`pointercancel` 選取偵測
+- `3cb723c` Task 5：`main.js` JS 橋接改為 `flutter_inappwebview.callHandler`，依 ADR 0013 新增 Android `contextmenu`/`pointercancel` 選字偵測
 - `54cb037` Task 6：移除舊有 Kotlin 檔案與 PlatformView 註冊
+- `dc578f4` Review Fix 1：更新 `main.js` 架構註解，改指向 Dart 端橋接
+- `4c0351c` Review Fix 2：回補 9 宮格導航熱區 widget test，抽出共用 `FakeInAppWebViewPlatform`（全專案測試數提升至 634）
 
-**Step 1 實際結果**：`InAppWebView` 無法在 `flutter_test` 純 Dart VM 下 pump（拋出 `InAppWebViewPlatform.instance != null` 斷言），9 宮格 widget test 改列入真機驗證清單。
+**測試與驗證**：抽出 `FakeInAppWebViewPlatform` 讓 `InAppWebView` Widget 可在純 `flutter_test` 環境 pump，回補熱區導航與 debug overlay 測試。全專案 634 項測試全數通過、`flutter analyze` 為 `No issues found!`。
 
 **依賴：** Issue 8（Spike 須為 GO 結論才可開始）
 
