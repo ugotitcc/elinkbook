@@ -121,3 +121,47 @@ Issue 8 確認 Android WebView 原生選取完全在 native layer 運作，標�
 ### 報告路徑
 
 完整報告見 `docs/epics/epic-18-reader-device-qa/reviews/spike-flutter-inappwebview-selection.md`
+
+---
+
+## 第三輪真機使用回報（2026-07-28，`/diagnose` Discovery）
+
+Issue 7-10 全數完成合併後，使用者持續真機使用中再回報 4 項問題，透過 `/diagnose` 直接讀碼確認根因（皆為確定性、可從程式碼判讀的問題，不需另建真機除錯迴圈），逐項釐清後拆為 4 個新 Issue。
+
+### 使用者回報的 4 項（原文摘要）
+
+1. 流式 EPUB 點選進度條按鈕要拖拉進度時，進度條會被下方系統工具列蓋住（無系統工具列的機種不受影響）。
+2. 流式 EPUB 的進度 FAB 按鈕，應跟其他 FAB 按鈕同時出現，不應被「顯示頁尾」開關額外限制。
+3. 「顯示頁首」「顯示頁尾」開啟時，頁首/頁尾應跟電子書內文同時常駐顯示，不應該要點了選單（`_chromeVisible` 沉浸模式）才顯示。
+4. 流式 EPUB 左右留白過多；現有單一「邊距」滑桿同時驅動左右留白（CSS `em` 單位、隨字級等比例放大）與直排模式下的上下邊距（`main.js` Issue 4 機制，橫排完全不受影響），使用者希望能各自獨立調整上/下/左/右四個方向。
+
+### 調查結論
+
+- **項目 1**：`_openFoliateProgressSheet()`（`reader_screen.dart:1836-1845`）的 `builder` 直接回傳 `_buildFoliateEpubFooter(positionInfo)`，缺少 `SafeArea` 包裹。對照同檔案內其餘 Bottom Sheet——`ReaderSettingsSheet`（`reader_settings_sheet.dart:144`）、`TocBottomSheet`（`toc_bottom_sheet.dart:114`）皆已用 `SafeArea` 包裹——確認這是遺漏，非設計如此。
+- **項目 2**：`reader_foliate_progress_button` 的顯示條件（`reader_screen.dart:1618-1621`）比其餘 5 顆浮動按鈕多了 `(_resolved?.showFooter ?? true)`。這是 Issue 7 計畫階段的**刻意設計**（理由：「看不到進度就不該讓使用者以為能跳頁」的一致性考量），非缺陷；本次使用者回報後決定推翻此設計，統一比照其餘 5 顆按鈕只看 `_chromeVisible`。
+- **項目 3**：全 App 既有「沉浸模式」設計（`_chromeVisible`，見上方第一輪「決策」#14）——點擊畫面中央熱區同時切換 PDF 的 AppBar/頁尾、FXL 與流式 EPUB 的所有浮動按鈕＋頁首＋進度文字。使用者回報後決定：**僅流式 EPUB**（`_dispatchedIsFixedLayout == false`）的頁首文字／進度文字，從 `_chromeVisible` 拆出來獨立（改為純綁 `showHeader`/`showFooter`），FXL（本無頁首/頁尾文字，只有按鈕）與 PDF（in-flow 頁尾，牽動既有 resize 限制，範圍外）不受影響。6 顆浮動**功能按鈕**（含項目 2 修正後的進度/跳頁鈕）仍全部跟隨 `_chromeVisible`——這次回報只拆分「資訊顯示」，不動「功能操作」的既有沉浸模式行為。
+- **項目 4**：確認根因為 `buildOverrideCss()`（`main.js:92-93`）的 `body { padding: 0 ${1.5 * prefs.pageMargins}em }`——`em` 單位隨同函式內 `html { font-size: X% }` 等比例放大，字級調越大、左右留白隨之等比膨脹（本 Epic 稍早的 ViWoods Air Reader 字級診斷已將字級滑桿上限由 40 調到 80，副作用更明顯）。目前單一「邊距」滑桿同時驅動：(a) 左右 CSS padding（`buildOverrideCss()`，所有排版方向皆生效）、(b) 直排模式下的上下邊距（Issue 4 引入的 `main.js` 機制，僅直排、獨立的 px 公式，橫排永遠固定 `paginator.js` 內建 48px，完全不受這個滑桿影響）——一個滑桿橫跨兩種不同單位/不同適用範圍的機制，語意混亂。
+  - **與 ADR 0005 的關係（重要）**：`BookReaderPrefs.pageMargins` 欄位註解明載「單一數值，四邊同步變動，見 ADR 0005」——該 ADR 決定不做四邊獨立邊距，理由是反編譯 Readium `EpubPreferences` 確認其原生只有單一 `pageMargins` 純量欄位，若要四邊獨立需自建 CSS 覆寫層，成本/風險太高，故 Epic 3 當時不採用。**但 ADR 0005 的調查範圍是 `EpubReaderView`（Readium 原生 kotlin-toolkit，供 FXL 使用）**，成書於 Epic 17 的 foliate-js 遷移**之前**。確認 `FxlSettingsSheet`（`app/lib/screens/fxl_settings_sheet.dart`）完全沒有邊距滑桿 UI——`pageMargins` 這個欄位在目前產品中，實際上只由流式 EPUB 專用的 `ReaderSettingsSheet` 寫入。而流式 EPUB 走的正是 Epic 17 為了 `main.js` 而自建的 CSS 覆寫層（`buildOverrideCss()`）——ADR 0005 當初認定「自建 CSS 覆寫層成本過高」的技術障礙，對流式 EPUB 這條路徑**已經不存在**（Epic 17 已經蓋好了）。故本次四邊獨立邊距的範圍**僅限流式 EPUB**（`FoliateEpubReaderView`/`main.js`），不動 `EpubReaderView`／Readium／FXL 路徑，`pageMargins` 這個既有純量欄位維持原樣（透過 `EpubReaderView.pageMargins` 屬性繼續傳遞，供 FXL 未來若要補上邊距 UI 時使用，目前 FXL 無 UI 寫入它，形同無害保留）——不是推翻 ADR 0005，而是新增一個 ADR 縮小其適用範圍：ADR 0005 的限制對 FXL/Readium 路徑依然成立，僅對流式 EPUB 這條路徑不再適用。
+
+### 決策（人類已確認）
+
+1. 4 項全部併入 `epic-18-reader-device-qa`（不另立新 Epic），依範圍拆為 4 個獨立新 Issue：
+   - **Issue 11**：流式 EPUB 進度/跳頁 Bottom Sheet 補上 `SafeArea`（項目 1）
+   - **Issue 12**：進度/跳頁浮動按鈕移除 `showFooter` 額外限制（項目 2）
+   - **Issue 13**：流式 EPUB 頁首/進度文字從沉浸模式拆出、跟內文常駐顯示（項目 3）
+   - **Issue 14**：流式 EPUB 邊距重新設計為上/下/左/右 4 個獨立欄位（項目 4）
+2. **Issue 13 範圍**：僅流式 EPUB 的頁首/進度**文字**（純資訊顯示）獨立於 `_chromeVisible`；6 顆浮動**功能按鈕**（含 Issue 12 修正後的進度/跳頁鈕）維持跟隨 `_chromeVisible`；FXL／PDF 不受影響。
+3. **Issue 14 範圍**：直接做滿 4 個獨立欄位（上/下/左/右），對應 `docs/prd.md`「版面控制項」原始需求「獨立的上/下/左/右邊距滑桿」。範圍僅限流式 EPUB（`FoliateEpubReaderView`/`main.js`），新增獨立 ADR（見 ADR 0014）縮小 ADR 0005 的適用範圍（ADR 0005 對 FXL/Readium 路徑依然有效），不修改 `EpubReaderView`/Readium 既有 `pageMargins` 傳遞路徑。
+
+### 範圍界定（第三輪）
+
+- Issue 11-14 皆不修改 `readest/foliate-js` 釘定版本本身（`view.js`／`paginator.js`／`overlayer.js`），比照本 Epic 既有慣例（ADR 0011）。
+- Issue 14 新增 `BookReaderPrefs` 持久化欄位（上/下/左/右邊距各自獨立），需要 SQLite schema migration（目前版本見 `sqlite_library_repository.dart:30`），且需要修改 `ReaderSettingsSheet` 既有的單一「邊距」滑桿 UI；`pageMargins` 舊欄位保留、不刪除、不遷移既有值（FXL/Readium 路徑繼續使用，見 ADR 0014）。
+- Issue 11/12/13 皆不新增/修改任何 `BookReaderPrefs` 欄位，純 UI 顯示條件調整。
+- Issue 14 需要新增 ADR 0014（架構層面涉及持久化 schema 且與既有 ADR 0005 的適用範圍相關，屬「難以回頭＋意外＋真權衡」的決策，符合本專案 ADR 撰寫門檻）。
+
+### 相關佐證
+
+- `docs/adr/0005-epub-page-margins-single-value.md`（Issue 14 範圍界定的關鍵前置決策）
+- `docs/adr/0014-foliate-epub-independent-margins.md`（Issue 14 新增，縮小 ADR 0005 適用範圍）
+- `app/lib/reader/book_reader_prefs.dart:26`（`pageMargins` 欄位註解指向 ADR 0005）

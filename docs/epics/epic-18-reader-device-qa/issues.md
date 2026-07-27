@@ -1,6 +1,6 @@
 # Epic 18 — 真機 UI 精修：工單清單 (Issues)
 
-依 `design.md`（使用者真機 QA 回報 8 項，其中項目 4 拆出不在本 Epic 範圍）與 `spec.md`（Issue 4／5 新介面定義）拆解出的 5 個工單（Issue 1-6，其中 Issue 6 取代 Issue 5）。Issue 6 完成合併後，使用者持續真機使用中再回報 5 項（見 `design.md`「第二輪真機使用回報」），拆解為 Issue 7-9。Issue 8 於 `/diagnose` 調查後發現根因是 Flutter `AndroidView` 觸控轉發機制本身的限制（見 ADR 0013），改組為 Spike（驗證 `flutter_inappwebview` 是否可解），並新增 Issue 10 承接 Spike 通過後的完整遷移實作（**依賴 Issue 8**，其餘工單彼此獨立、無依賴關係，可任意順序或平行開始）。
+依 `design.md`（使用者真機 QA 回報 8 項，其中項目 4 拆出不在本 Epic 範圍）與 `spec.md`（Issue 4／5 新介面定義）拆解出的 5 個工單（Issue 1-6，其中 Issue 6 取代 Issue 5）。Issue 6 完成合併後，使用者持續真機使用中再回報 5 項（見 `design.md`「第二輪真機使用回報」），拆解為 Issue 7-9。Issue 8 於 `/diagnose` 調查後發現根因是 Flutter `AndroidView` 觸控轉發機制本身的限制（見 ADR 0013），改組為 Spike（驗證 `flutter_inappwebview` 是否可解），並新增 Issue 10 承接 Spike 通過後的完整遷移實作（**依賴 Issue 8**）。Issue 7-10 完成合併後，使用者持續真機使用中再回報 4 項（見 `design.md`「第三輪真機使用回報」），拆解為 Issue 11-14。全部工單彼此獨立、無依賴關係（僅 Issue 10 依賴 Issue 8），可任意順序或平行開始。
 
 ---
 
@@ -376,6 +376,129 @@ Issue 5 的 `singleColumn` 布林開關因 `paginator.js` 對直排書籍的 `ma
 - ADR 0013（`docs/adr/0013-flutter-inappwebview-for-foliate-selection.md`）
 - Issue 8 的 Spike 結論報告（`reviews/spike-flutter-inappwebview-selection.md`）
 - `tmp/epic-18/reviews/issue_8_new_solution_proposal.md`
+
+---
+
+## Issue 11：流式 EPUB 進度/跳頁 Bottom Sheet 補上 `SafeArea`
+
+**Status:** `ready-for-agent`
+
+**依賴：** 無
+
+**描述：**
+
+見 `design.md`「第三輪真機使用回報」項目 1。`_openFoliateProgressSheet()`（`reader_screen.dart:1836-1845`）的 `builder` 直接回傳 `_buildFoliateEpubFooter(positionInfo)`（一個 `ReaderFooter`），未包 `SafeArea`，導致有系統手勢列/三鍵導覽列的裝置上，進度捲軸/跳頁輸入框被系統工具列蓋住、無法正常拖曳。對照同檔案內其餘 Bottom Sheet：`ReaderSettingsSheet`（`reader_settings_sheet.dart:144`）、`TocBottomSheet`（`toc_bottom_sheet.dart:114`）皆已用 `SafeArea` 包裹其內容，唯獨這個進度/跳頁 Sheet 遺漏。
+
+- **`_openFoliateProgressSheet()`**（`reader_screen.dart:1836-1845`）：`builder` 回傳值改為 `SafeArea(child: positionInfo == null ? const SizedBox.shrink() : _buildFoliateEpubFooter(positionInfo))`，比照 `ReaderSettingsSheet`/`TocBottomSheet` 既有寫法（`SafeArea` 預設 `top`/`bottom` 皆為 `true`，Bottom Sheet 情境下只需要在意 `bottom`，直接沿用預設值即可，不需要額外指定 `top: false`——那是 `_buildBody()` 主畫面 `Scaffold` 才需要的特例，見該處註解）。
+
+**單元測試要求：**
+- `reader_screen_test.dart`：以有 `viewPadding.bottom`（模擬系統手勢列/三鍵導覽列）的 `MediaQuery` pump `ReaderScreen`（流式 EPUB），點擊 `reader_foliate_progress_button` 開啟 Bottom Sheet 後，`find.byType(SafeArea)` 在該 Bottom Sheet 的 widget 子樹中 `findsOneWidget`（或以 `tester.getBottomLeft(find.byKey(Key('reader_footer_jump_slider')))` 確認其 `dy` 不超過 `size.height - viewPadding.bottom`，證明沒有被系統工具列遮擋範圍覆蓋）。
+- 既有 `reader_footer_progress_text`/`reader_footer_jump_input`/`reader_footer_jump_slider` 相關測試案例（輸入頁碼跳頁、拖曳捲軸跳頁、`totalPages <= 1` 停用）需在補上 `SafeArea` 後重新驗證仍然通過（純外層包裝，預期無行為變化）。
+
+**驗收標準：**
+- 上述測試皆通過、`flutter analyze` 乾淨。
+- 真機（`3CEF42ECD491687`，若可取得有系統手勢列的裝置則一併確認）開啟進度/跳頁 Bottom Sheet，確認捲軸/輸入框完整顯示在系統工具列上方，可正常拖曳互動。
+
+**相關佐證：**
+- `design.md`「第三輪真機使用回報」項目 1
+
+---
+
+## Issue 12：進度/跳頁浮動按鈕移除 `showFooter` 額外限制
+
+**Status:** `ready-for-agent`
+
+**依賴：** 無
+
+**描述：**
+
+見 `design.md`「第三輪真機使用回報」項目 2。`reader_foliate_progress_button` 的顯示條件（`reader_screen.dart:1618-1621`）比其餘 5 顆浮動按鈕（`reader_foliate_back_button`/`reader_foliate_toc_button`/`reader_foliate_settings_button`/`reader_foliate_bookmark_toggle_button`/`reader_foliate_notes_button`）多了 `(_resolved?.showFooter ?? true)` 這個額外條件。此為 Issue 7 計畫階段的刻意設計（理由：「看不到進度就不該讓使用者以為能跳頁」的一致性考量），使用者實際使用後回報希望此按鈕比照其餘 5 顆只看 `_chromeVisible`，恆常可跳頁（不論「顯示頁尾」開關為何）。
+
+- **`reader_screen.dart:1618-1621`**：`reader_foliate_progress_button` 的 `Positioned` 顯示條件，移除 `(_resolved?.showFooter ?? true)` 這一項，改為與其餘 5 顆按鈕相同的 `format == BookFormat.epub && _dispatchedIsFixedLayout == false && _chromeVisible`。
+
+**單元測試要求：**
+- `reader_screen_test.dart`：既有測試「流式 EPUB：`showFooter=false` 時進度文字與進度/跳頁按鈕皆不顯示（Issue 7）」需修改為「`showFooter=false` 時進度文字不顯示，但進度/跳頁按鈕仍顯示」（`find.byKey(Key('reader_foliate_progress_button'))` 改為 `findsOneWidget`），並補上點擊該按鈕後仍可正常開啟 Bottom Sheet 的斷言。
+
+**驗收標準：**
+- 上述測試皆通過、`flutter analyze` 乾淨。
+- 真機（`3CEF42ECD491687`）確認：關閉「顯示頁尾」後，進度/跳頁浮動按鈕仍與其餘 5 顆按鈕一起顯示，點擊仍可開啟跳頁 Bottom Sheet。
+
+**相關佐證：**
+- `design.md`「第三輪真機使用回報」項目 2
+- `issues.md` Issue 7（本 Issue 修正的原始設計決策出處）
+
+---
+
+## Issue 13：流式 EPUB 頁首/進度文字從沉浸模式拆出、跟內文常駐顯示
+
+**Status:** `ready-for-agent`
+
+**依賴：** 無
+
+**描述：**
+
+見 `design.md`「第三輪真機使用回報」項目 3。全 App 既有「沉浸模式」設計（`_chromeVisible`，`design.md` 第一輪「決策」#14）：點擊畫面中央熱區同時切換 PDF 的 AppBar/頁尾、FXL 與流式 EPUB 的所有浮動按鈕＋頁首＋進度文字。使用者回報希望**僅流式 EPUB**的頁首文字（`reader_foliate_header_text`）與進度文字（`reader_foliate_progress_text`）改為跟內文（`_resolved?.showHeader`/`showFooter` 開啟時）常駐顯示，不受 `_chromeVisible` 切換影響；6 顆浮動**功能按鈕**（含 Issue 12 修正後的進度/跳頁鈕）維持跟隨 `_chromeVisible`——本 Issue 只拆分「資訊顯示」，不動「功能操作」的既有沉浸模式行為。FXL（本無頁首/頁尾文字，只有按鈕）與 PDF（in-flow 頁尾，牽動既有 resize 限制，範圍外）不受本 Issue 影響。
+
+- **`reader_screen.dart:1637-1646`**（頁首文字 `Positioned`）：顯示條件由 `format == BookFormat.epub && _dispatchedIsFixedLayout == false && _chromeVisible && (_resolved?.showHeader ?? true)` 改為 `format == BookFormat.epub && _dispatchedIsFixedLayout == false && (_resolved?.showHeader ?? true)`（移除 `_chromeVisible`）。
+- **`reader_screen.dart:1647-1666`**（進度文字 `Positioned`，含直排/橫排兩種佈局分支）：顯示條件由 `format == BookFormat.epub && _dispatchedIsFixedLayout == false && _chromeVisible && (_resolved?.showFooter ?? true) && (_epubPositionInfo?.totalPages ?? 0) > 0` 改為 `format == BookFormat.epub && _dispatchedIsFixedLayout == false && (_resolved?.showFooter ?? true) && (_epubPositionInfo?.totalPages ?? 0) > 0`（移除 `_chromeVisible`）。
+- 6 顆浮動功能按鈕（`reader_foliate_back_button`／`reader_foliate_toc_button`／`reader_foliate_settings_button`／`reader_foliate_bookmark_toggle_button`／`reader_foliate_notes_button`／`reader_foliate_progress_button`）的既有顯示條件**不變動**，繼續跟隨 `_chromeVisible`。
+
+**單元測試要求：**
+- `reader_screen_test.dart`：既有測試「流式 EPUB：頁眉純顯示章節名稱、不可點擊，`showHeader=false` 時不顯示（Issue 7）」等相關測試，需新增/調整案例驗證 `_chromeVisible == false`（沉浸模式已收起選單）時，`showHeader == true` 的頁首文字與 `showFooter == true` 的進度文字**仍然顯示**（`findsOneWidget`），但 6 顆浮動功能按鈕在同一狀態下**不顯示**（`findsNothing`），證明兩者已正確拆分為獨立顯示條件。
+- 既有「`showHeader`/`showFooter` 為 `false` 時頁首/進度文字不顯示」的既有測試案例需保持通過（本 Issue 不改變這一半的判斷條件，只移除 `_chromeVisible` 這一項）。
+
+**驗收標準：**
+- 上述測試皆通過、`flutter analyze` 乾淨。
+- 真機（`3CEF42ECD491687`）確認：開啟「顯示頁首」/「顯示進度」後，點擊熱區收起選單（`_chromeVisible = false`）時，頁首文字/進度文字仍常駐顯示；6 顆浮動按鈕正確收合。
+- FXL 與 PDF 既有沉浸模式行為回歸確認無影響。
+
+**相關佐證：**
+- `design.md`「第三輪真機使用回報」項目 3
+- `design.md` 第一輪「決策」#14（`_chromeVisible` 沉浸模式原始設計）
+
+---
+
+## Issue 14：流式 EPUB 邊距重新設計為上/下/左/右 4 個獨立欄位
+
+**Status:** `ready-for-agent`
+
+**依賴：** 無
+
+**描述：**
+
+見 `design.md`「第三輪真機使用回報」項目 4、ADR 0014（`docs/adr/0014-foliate-epub-independent-margins.md`）。現況：單一「邊距」滑桿（`BookReaderPrefs.pageMargins`）同時驅動兩種不相干的機制——(a) `main.js` 的 `buildOverrideCss()`（`main.js:99-100`）：`body { padding: 0 ${1.5 * prefs.pageMargins}em }`，`em` 單位隨字級等比例放大，所有排版方向皆生效；(b) `epic-18` Issue 4 引入的 `main.js` 機制（`main.js:172-211`）：直排模式下 `view.renderer.setAttribute('margin-top'/'margin-bottom', ...)`（px 單位），橫排永遠固定 `paginator.js` 內建 48px、完全不受此滑桿影響。使用者回報左右留白過多（根因是 `em` 單位隨字級放大，`epic-18` 稍早的字級診斷已將字級滑桿上限由 40 調到 80，副作用更明顯），並要求比照 `docs/prd.md`「版面控制項」原始需求，補齊上/下/左/右 4 個獨立可調欄位。
+
+依 ADR 0014：**本 Issue 範圍僅限流式 EPUB**（`FoliateEpubReaderView`/`main.js`），不修改 `EpubReaderView`／Readium／FXL 路徑；既有 `pageMargins` 欄位保留不變、不刪除、不遷移既有值（繼續透過 `EpubReaderView.pageMargins` 傳給 Readium，供 FXL 使用；FXL 目前無 UI 寫入此欄位，形同無害保留）。
+
+- **`BookReaderPrefs`**：新增 `final double? marginTop`、`final double? marginBottom`、`final double? marginLeft`、`final double? marginRight` 4 個欄位，`toMap`/`fromMap`/`copyWith`/`==`/`hashCode` 同步新增（比照既有 `pageMargins` 欄位新增時的既有寫法，`book_reader_prefs.dart:26/56/88/124/183/210/242/268`）。
+- **`book_reader_prefs` schema migration**：目前版本 `sqlite_library_repository.dart:30` 為 `version: 13`，本 Issue 升級至 `version: 14`，新增 `if (oldVersion < 14)` 累加式 migration 分支，新增 4 個 nullable 欄位（`margin_top`/`margin_bottom`/`margin_left`/`margin_right` REAL），比照既有累加式 migration 慣例；既有 `page_margins` 欄位不受影響、不做任何遷移。
+- **`ReaderSettingsSheet`**：既有單一「邊距」`_buildSliderRow`（`reader_settings_sheet.dart:224-236`，`Key('reader_settings_page_margins')`）拆為 4 個獨立滑桿：「上邊界」（`Key('reader_settings_margin_top')`）、「下邊界」（`Key('reader_settings_margin_bottom')`）、「左邊界」（`Key('reader_settings_margin_left')`）、「右邊界」（`Key('reader_settings_margin_right')`），滑桿範圍/step/預設值比照既有「邊距」滑桿（0-50，step 1，預設 15，即倍率 1.0，具體數值換算公式與是否 4 者共用同一個 `_toMultiplier(_, 15.0)` 換算基準，留待實作階段依真機視覺效果確認）。
+- **`FoliateEpubReaderView`（Dart）**：新增 `marginTop`/`marginBottom`/`marginLeft`/`marginRight` 4 個 `double?` 建構參數（取代原本傳遞給流式 EPUB 路徑的 `pageMargins`，`pageMargins` 本身作為 `EpubReaderView` 建構參數的既有傳遞路徑不受影響），`_buildPreferencesMap()`／`_preferencesChanged()` 同步更新。
+- **`ReaderScreen`**：`_buildNativeView()` 的 `FoliateEpubReaderView(...)` 建構呼叫新增 4 個新欄位透傳（`resolved.marginTop`/`marginBottom`/`marginLeft`/`marginRight`），`ResolvedPreferences` 同步新增對應 non-nullable 欄位（比照既有慣例提供預設值，例如皆預設等同目前 `pageMargins` 預設倍率 1.0 換算後的效果，具體預設值留待實作階段依現況視覺效果決定，避免使用者升級後左右留白瞬間跳變）。
+- **`main.js`**：
+  - `buildOverrideCss()`（`main.js:99-100`）：`prefs.pageMargins` 條件式改為分別讀取 `prefs.marginLeft`/`prefs.marginRight`，各自產生 `body { padding-left: ${...}em !important; }`／`body { padding-right: ${...}em !important; }`（取代目前合併的 `padding: 0 Xem`），單位是否仍用 `em`（維持隨字級縮放的既有視覺比例關係）或改為與上下邊距一致的 `px`（避免字級再放大時左右留白又不成比例膨脹，這正是本次回報的根因）留待實作階段依真機視覺效果決定，若改用 `px` 需在計劃階段明確記錄换算公式。
+  - `main.js:172-211` 的直排/橫排 margin-top/margin-bottom 邏輯：改吃 `prefs.marginTop`/`prefs.marginBottom`（取代目前的 `prefs.pageMargins`），且**移除橫排永遠固定 48px 的既有限制**——橫排模式下也依 `marginTop`/`marginBottom` 動態計算並呼叫 `setAttribute`，兩種排版方向皆一致生效（不再有「只有直排才受邊距滑桿影響」的既有不對稱行為）。
+
+**單元測試要求：**
+- `BookReaderPrefs`：4 個新欄位的 `toMap`/`fromMap` round-trip、`copyWith`、`==`/`hashCode` 測試（比照既有 `pageMargins` 欄位測試模式）。
+- SQLite migration round-trip：`sqlite_library_repository_test.dart`（或對應既有測試檔）新增測試：(a) 新裝置直接以 `version: 14` 建表，4 個新欄位可讀寫；(b) 模擬既有 `version: 13` 裝置升級到 `version: 14` 後，既有資料列的 4 個新欄位為 `NULL`、既有 `page_margins` 欄位值不變（比照既有 migration 測試模式，如 Epic 18 Issue 5/6 先例）。
+- `foliate_epub_reader_view_test.dart`：`marginTop`/`marginBottom`/`marginLeft`/`marginRight` 出現/不出現於 `initialPreferences` map、`didUpdateWidget` 變動時觸發 `setPreferences`。
+- `reader_settings_sheet_test.dart`：4 個新 `Key`（`reader_settings_margin_top`/`_bottom`/`_left`/`_right`）皆存在、可調整、觸發 `onChanged` 帶出對應欄位；既有 `Key('reader_settings_page_margins')` 相關測試需移除或改寫（滑桿本身已拆分，不再存在單一「邊距」滑桿）。
+- `reader_screen_test.dart`：4 個新欄位從 `ResolvedPreferences` 正確透傳到 `FoliateEpubReaderView`。
+- `main.js` 的 `setAttribute`/CSS 覆寫呼叫無 JS 單元測試（比照 Issue 4/5/6/7/9 既有慣例），驗收依賴真機 `integration_test` 與人工視覺確認。
+
+**驗收標準：**
+- 上述測試皆通過、`flutter analyze` 乾淨、`./gradlew :app:testDebugUnitTest` 全數通過。
+- 真機（`3CEF42ECD491687`）流式 EPUB 開書：分別調整「上邊界」「下邊界」「左邊界」「右邊界」4 個滑桿，確認四個方向的留白各自獨立變化、互不影響。
+- 真機確認：橫排模式下調整「上邊界」「下邊界」滑桿，確認上下留白會變化（修正前橫排永遠固定 48px、不受影響的既有限制）。
+- 真機確認：調大字級後，左右留白不再隨字級等比例失控膨脹（視實作階段是否改用 `px` 單位而定，若維持 `em` 單位需額外確認此驗收標準是否仍然成立，不成立則需回頭調整單位選擇）。
+- FXL（`EpubReaderView`／Readium）既有 `pageMargins` 行為回歸確認無影響（本 Issue 不觸碰該路徑）。
+
+**相關佐證：**
+- `design.md`「第三輪真機使用回報」項目 4
+- ADR 0005（`docs/adr/0005-epub-page-margins-single-value.md`，本 Issue 縮小其適用範圍的前置決策）
+- ADR 0014（`docs/adr/0014-foliate-epub-independent-margins.md`）
+- `docs/prd.md`「版面控制項」原始需求（獨立的上/下/左/右邊距滑桿）
 
 ---
 
