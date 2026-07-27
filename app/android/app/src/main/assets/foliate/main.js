@@ -41,6 +41,13 @@ let detectedBookWritingMode = null
 // { once: true } relocate 監聽器內、以及每次 window.applyPreferences()
 // 呼叫時更新。
 let currentWritingMode = 'horizontal'
+// Issue 9：裝置旋轉/視窗尺寸變化時重新呼叫 applyPreferences() 需要知道
+// 「最後一次完整套用過的偏好物件」是什麼，見下方 window.applyPreferences()
+// 開頭賦值處與 openBook() 內的 ResizeObserver 註冊。初始值設為 initialPrefs，
+// 涵蓋「開書當下第一次 relocate 事件觸發 applyPreferences() 之前」若恰好
+// 發生一次 resize 的邊界情況（此時仍能拿到開書時傳入的完整偏好，而非
+// undefined）。
+let lastAppliedPrefs = initialPrefs
 
 // 目前顯示中標記的 cfi → Dart 端不透明 id（"highlight:5"/"note:12"）對照
 // 表（epic-17 Issue 8）。view.addAnnotation({value}) 的 value 欄位本身
@@ -108,6 +115,11 @@ function buildOverrideCss(prefs) {
  * 不經過本函式）。
  */
 window.applyPreferences = function (prefs) {
+  // Issue 9：每次套用偏好都同步記錄下來，供 openBook() 內的
+  // ResizeObserver debounce callback 在裝置旋轉/視窗尺寸變化後，能重新
+  // 呼叫本函式並拿到「使用者最後一次實際設定的完整偏好」，而不是只拿到
+  // 旋轉當下手邊剛好有的局部資料。
+  lastAppliedPrefs = prefs
   if (prefs.pageTurnMode) {
     view.renderer.setAttribute(
       'flow',
