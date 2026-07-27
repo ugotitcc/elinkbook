@@ -1202,6 +1202,10 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         // （EPUB 流式、Readium WebView）若要沿用同一套 _chromeVisible／
         // _buildBody() 基礎設施，必須先把頁尾也改為浮動疊加層（而非
         // in-flow），否則頁尾切換仍會觸發 WebView 整本重新分頁。
+        // 【Issue 7 更新】流式 EPUB（FoliateEpubReaderView）的頁尾已改為
+        // _buildBody() 內的浮動疊加層（見下方新增區塊），上述 resize 問題對
+        // 這條路徑已解決；僅 EpubReaderView＋_buildEpubFooter()（legacy
+        // reflowable 內容）路徑仍受此限制。
         extendBodyBehindAppBar: true,
         // epic-18-reader-device-qa Issue 7：流式 EPUB（_dispatchedIsFixedLayout
         // == false）一律不建構 AppBar，改用 _buildBody() 內對稱於 FXL 的

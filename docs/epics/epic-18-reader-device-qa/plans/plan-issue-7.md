@@ -997,14 +997,14 @@ git commit -m "feat(epic-18): 流式 EPUB Chrome 改為浮動疊加層，抑制 
 - Consumes: Task 2 產出的 `reader_foliate_back_button`／`reader_foliate_toc_button`／`reader_foliate_progress_text` 等 Key。
 - Produces: 無新介面，純測試斷言更新。
 
-Task 2 的變更會讓以下 7 個既有測試失敗，原因分兩類：(a) 2 個測試直接斷言流式 EPUB 情境下 `find.byType(AppBar)` 的存在/消失，AppBar 已恆為 `null`，斷言本身失去意義，需改成斷言浮動按鈕的存在/消失；(b) 5 個測試使用了現在只存在於 PDF/FXL-legacy 路徑的 Key（`reader_toc_button`／`reader_footer`），流式 EPUB 情境下這些 Key 已被 Task 2 的新 Key 取代。
+Task 2 的變更會讓以下 9 個既有測試失敗，原因分三類：(a) 2 個測試直接斷言流式 EPUB 情境下 `find.byType(AppBar)` 的存在/消失，AppBar 已恆為 `null`，斷言本身失去意義，需改成斷言浮動按鈕的存在/消失；(b) 5 個測試使用了現在只存在於 PDF/FXL-legacy 路徑的 Key（`reader_toc_button`／`reader_footer`），流式 EPUB 情境下這些 Key 已被 Task 2 的新 Key 取代；(c) 2 個測試斷言了 `reader_layout_settings_button`——本 Issue 之前，流式 EPUB 走 AppBar actions 路徑時「⚙️版面設定」按鈕的既有 Key，Task 2 的 AppBar 抑制同樣讓它在流式 EPUB 情境下失效，需改為 `reader_foliate_settings_button`。**審查修正**（見 `reviews/review-issue-7.md` Important #2）：原文只列出 (a)(b) 共 7 個，遺漏了 (c) 這 2 個——實際修正已包含在下方 Step 2-5 與 commit `d088412` 中，此處為事後補正的正確計數，詳細條列見 Step 7 之後的「審查修正記錄」。
 
 先確認斷言修正範圍無遺漏：
 
 - [x] **Step 1：執行完整測試檔，收集 Task 2 造成的既有測試失敗清單**
 
 Run: `cd app && flutter test test/screens/reader_screen_test.dart`
-Expected: 除 Task 2 新增的測試外，另外有 7 個既有測試 FAIL，測試名稱應與下方 Step 2/3 列出的 7 個一致（若數量或名稱不同，先 `git diff` 確認 Task 2 是否有超出計畫範圍的意外改動，再繼續）。
+Expected: 除 Task 2 新增的測試外，另外有 9 個既有測試 FAIL（審查修正：原文誤寫為 7 個，見上方段落與 Step 7 之後的「審查修正記錄」），測試名稱應與下方 Step 2/3/「審查修正記錄」列出的 9 個一致（若數量或名稱不同，先 `git diff` 確認 Task 2 是否有超出計畫範圍的意外改動，再繼續）。
 
 - [x] **Step 2：改寫「點擊選單熱區觸發沉浸模式切換」測試（AppBar → 浮動按鈕）**
 
@@ -1284,7 +1284,7 @@ Run: `cd app && flutter analyze`
 Expected: `No issues found!`
 
 Run: `cd app && flutter test`
-Expected: 全數 PASS（Task 2 新增 10 項 + Task 3 修正 7 項既有測試 = 全專案總數較 Issue 10 完成時的 634 項增加 10 項，無 FAIL）。
+Expected: 全數 PASS（Task 2 新增 10 項 + Task 3 修正 9 項既有測試 = 全專案總數較 Issue 10 完成時的 634 項增加 10 項，無 FAIL）。
 
 - [x] **Step 7：Commit**
 
@@ -1292,6 +1292,15 @@ Expected: 全數 PASS（Task 2 新增 10 項 + Task 3 修正 7 項既有測試 =
 git add app/test/screens/reader_screen_test.dart
 git commit -m "test(epic-18): 修正 Issue 7 導致失效的既有沉浸模式/目錄/頁尾測試"
 ```
+
+#### 審查修正記錄（`reviews/review-issue-7.md` Important #2，實作已於 commit `d088412` 內完成，僅補上此處遺漏的文件記錄）
+
+除 Step 2-5 列出的 7 個既有測試外，`d088412` 這個 commit 額外正確修正了以下 2 個既有測試（原計畫撰寫階段漏算，程式碼修正本身沒有問題）：
+
+- 「流式 EPUB（isFixedLayout: false）開書後，onLayoutResolved 回報結果驅動「版面設定」按鈕從停用轉為可用」
+- 「流式 EPUB 開書後，ReaderSettingsSheet 變動的偏好正確傳遞到 FoliateEpubReaderView」
+
+兩者原本斷言 `find.byKey(const Key('reader_layout_settings_button'))`——該 Key 在本 Issue之前是流式 EPUB 走 AppBar actions 路徑時「⚙️版面設定」按鈕的既有 Key，因 Task 2 的 AppBar 抑制而永久消失，正確修正為 `find.byKey(const Key('reader_foliate_settings_button'))`（`reader_screen_test.dart` 第 178、242 行附近，`git show d088412` 的兩個 hunk）。
 
 ---
 
