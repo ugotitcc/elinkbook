@@ -321,7 +321,7 @@ cd app && flutter build apk --debug
 adb -s 3CEF42ECD491687 install -r build/app/outputs/flutter-apk/app-debug.apk
 ```
 
-- [x] **Step 2: 驗證直立／橫放格數與旋轉即時切換**（待人工確認）
+- [x] **Step 2: 驗證直立／橫放格數與旋轉即時切換**
 
 1. 匯入至少 4-6 本書籍，確保書架有足夠封面可觀察排列。
 2. 裝置維持直立，確認書架封面為 3 欄一列。
@@ -329,7 +329,9 @@ adb -s 3CEF42ECD491687 install -r build/app/outputs/flutter-apk/app-debug.apk
 4. 旋轉回直立，確認欄數即時變回 3 欄。
 5. 記錄：Pass/Fail + 截圖佐證（直立、橫放各一張）。
 
-- [x] **Step 3: 視覺確認 `childAspectRatio` 與欄格間距，必要時調整**（待人工確認）
+**驗收結果：Pass。** 直立 3 欄、橫放 4 欄，旋轉裝置時欄數即時切換、未重新進入書架畫面。截圖佐證：`tmp/epic-18/3x4_直排.png`／`tmp/epic-18/3x4_橫排.png`。
+
+- [x] **Step 3: 視覺確認 `childAspectRatio` 與欄格間距，必要時調整**
 
 **若已完成 Task 2**：本步驟必須以「已套用 `crossAxisSpacing: 8`／`mainAxisSpacing: 12` 之後」的最終畫面為準做視覺判斷——間距會改變每格實際可繪製的寬高比例，`childAspectRatio` 與間距必須當作同一次視覺評估的組合結果一併判斷，不可先單獨評估 `childAspectRatio`（假設無間距）、事後才疊加間距檢查，否則兩者互相影響會導致評估基準不一致。
 
@@ -338,15 +340,19 @@ adb -s 3CEF42ECD491687 install -r build/app/outputs/flutter-apk/app-debug.apk
 3. **決策規則（間距，僅當已完成 Task 2）**：若間距目視正常，`crossAxisSpacing`/`mainAxisSpacing` 維持 `8`/`12` 不動，Pass。若需調整，依同樣規則記錄新數值與理由。
 4. 記錄：Pass/Fail + 截圖佐證。
 
-- [x] **Step 4: 既有書架功能回歸確認**（待人工確認）
+**驗收結果：Pass。** 已在套用 `crossAxisSpacing: 8`／`mainAxisSpacing: 12` 之後的最終畫面上一併評估，直立/橫放下封面比例與間距皆目視正常（無明顯拉伸/擠壓、書名文字無異常換行溢出、封面間不擁擠），`childAspectRatio` 維持 `0.62`、`crossAxisSpacing`/`mainAxisSpacing` 維持 `8`/`12` 皆不調整。本步驟未額外留存截圖。
+
+- [x] **Step 4: 既有書架功能回歸確認**
 
 1. 切換至列表檢視（`library_list_view`），確認不受本次改動影響。
 2. 確認排序（最後閱讀／建立時間／作者／書名）、分類篩選、批次選取等既有功能正常。
 3. 記錄：Pass/Fail。
 
-- [x] **Step 5: 記錄驗收結果**（待人工確認後補填）
+**驗收結果：Pass。** 列表檢視、排序（最後閱讀／建立時間／作者／書名）、分類篩選、批次選取皆確認正常，未受本次改動影響。本步驟未額外留存截圖。
 
-供後續程式碼審查與 `docs/epics/epic-18-reader-device-qa/issues.md` Issue 3 狀態更新引用。
+- [x] **Step 5: 記錄驗收結果**
+
+供後續程式碼審查與 `docs/epics/epic-18-reader-device-qa/issues.md` Issue 3 狀態更新引用；結果已同步記錄於本檔案 Step 2-4 與 `issues.md` Issue 3 條目。
 
 ---
 
