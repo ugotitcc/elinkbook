@@ -34,7 +34,7 @@
 - Consumes: 既有 `_resolved`（`ResolvedPreferences?`）、`_chromeVisible`（`bool`）、`_dispatchedIsFixedLayout`（`bool?`）、`_openFoliateProgressSheet()`（既有方法，不修改簽章）。
 - Produces: 無新的對外可呼叫函式，純顯示條件調整。
 
-- [ ] **Step 1: 確認現況**
+- [x] **Step 1: 確認現況**
 
 執行：
 ```bash
@@ -64,7 +64,7 @@ grep -n "reader_foliate_progress_button" -B 5 app/lib/screens/reader_screen.dart
               ),
 ```
 
-- [ ] **Step 2: 修改既有測試，確認新斷言先失敗**
+- [x] **Step 2: 修改既有測試，確認新斷言先失敗**
 
 在 `app/test/screens/reader_screen_test.dart` 找到既有測試「流式 EPUB：`showFooter=false` 時進度文字與進度/跳頁按鈕皆不顯示（Issue 7）」（`grep -n "showFooter=false 時進度文字與進度/跳頁按鈕皆不顯示" app/test/screens/reader_screen_test.dart` 確認行號），把測試標題與內容改為：
 
@@ -132,7 +132,7 @@ grep -n "reader_foliate_progress_button" -B 5 app/lib/screens/reader_screen.dart
   );
 ```
 
-- [ ] **Step 3: 執行測試，確認失敗**
+- [x] **Step 3: 執行測試，確認失敗**
 
 執行：
 ```bash
@@ -140,7 +140,7 @@ cd app && flutter test test/screens/reader_screen_test.dart --plain-name "showFo
 ```
 預期：FAIL——`buttonFinder` 為 `findsNothing`（目前 `showFooter: false` 會讓按鈕整個不顯示）。
 
-- [ ] **Step 4: 實作修正**
+- [x] **Step 4: 實作修正**
 
 修改 `reader_screen.dart:1618-1636`，移除 `(_resolved?.showFooter ?? true)` 這一項：
 
@@ -165,7 +165,7 @@ cd app && flutter test test/screens/reader_screen_test.dart --plain-name "showFo
               ),
 ```
 
-- [ ] **Step 5: 執行測試，確認通過**
+- [x] **Step 5: 執行測試，確認通過**
 
 執行：
 ```bash
@@ -173,7 +173,7 @@ cd app && flutter test test/screens/reader_screen_test.dart --plain-name "showFo
 ```
 預期：PASS。
 
-- [ ] **Step 6: 執行全部既有測試回歸**
+- [x] **Step 6: 執行全部既有測試回歸**
 
 執行：
 ```bash
@@ -182,7 +182,7 @@ cd app && flutter test
 ```
 預期：`flutter analyze` 顯示 `No issues found!`；`flutter test` 全數通過。
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app/lib/screens/reader_screen.dart app/test/screens/reader_screen_test.dart
@@ -199,14 +199,14 @@ git commit -m "fix(epic-18): Issue 12 進度/跳頁按鈕移除 showFooter 額�
 - Consumes: Task 1 完成後的 `reader_screen.dart`。
 - Produces: 驗收結果記錄（供合併前的程式碼審查／`issues.md` Issue 12 狀態更新引用）。
 
-- [ ] **Step 1: 安裝最新 debug APK 至真機 `3CEF42ECD491687`**
+- [x] **Step 1: 安裝最新 debug APK 至真機 `3CEF42ECD491687`**
 
 ```bash
 cd app && flutter build apk --debug
 adb -s 3CEF42ECD491687 install -r build/app/outputs/flutter-apk/app-debug.apk
 ```
 
-- [ ] **Step 2: 驗證按鈕顯示條件**
+- [x] **Step 2: 驗證按鈕顯示條件**
 
 1. 開啟一本流式 EPUB，於「版面設定」關閉「顯示進度」（`showFooter`）。
 2. 確認進度/跳頁浮動按鈕仍與其餘 5 顆按鈕一起顯示（不再因 `showFooter` 關閉而消失）。
@@ -214,9 +214,11 @@ adb -s 3CEF42ECD491687 install -r build/app/outputs/flutter-apk/app-debug.apk
 4. 切換沉浸模式（點擊選單熱區）收起選單，確認該按鈕跟其餘 5 顆按鈕一起收合。
 5. 記錄：Pass/Fail + 截圖佐證。
 
-- [ ] **Step 3: 記錄驗收結果**
+**驗收結果：Pass。** 由使用者本人於真機 `3CEF42ECD491687` 實測：關閉「顯示頁尾」後，進度/跳頁浮動按鈕仍與其餘 5 顆按鈕一起顯示；點擊仍可正常開啟跳頁 Bottom Sheet；切換沉浸模式收合選單時，該按鈕跟其餘 5 顆按鈕一起收合，行為正常。
 
-供後續程式碼審查與 `docs/epics/epic-18-reader-device-qa/issues.md` Issue 12 狀態更新引用。
+- [x] **Step 3: 記錄驗收結果**
+
+供後續程式碼審查與 `docs/epics/epic-18-reader-device-qa/issues.md` Issue 12 狀態更新引用；結果已同步記錄於本檔案 Step 2 與 `issues.md` Issue 12 條目。
 
 ---
 

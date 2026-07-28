@@ -1617,8 +1617,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
               ),
             if (format == BookFormat.epub &&
                 _dispatchedIsFixedLayout == false &&
-                _chromeVisible &&
-                (_resolved?.showFooter ?? true))
+                _chromeVisible)
               Positioned(
                 top: 240,
                 right: 16,
