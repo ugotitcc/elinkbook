@@ -4,7 +4,7 @@
 
 ## 儲存庫現況
 
-`epic-0-skeleton`（Flutter + Android 技術骨架）已完成並合併回 `main`：`app/` 目錄下是可執行、可測試的 Flutter Android App，已驗證「書架 → 點開一本書 → 原生渲染出內容」的端到端流程（EPUB 用 Readium、PDF 用 `PdfRenderer`）。`docs/prd.md` 描述的其餘功能（真正的圖書庫管理、直排/橫排排版、字型與版面客製化、註記、雲端同步、全文檢索、閱讀統計等）皆尚未實作，屬於後續 Epic（現況與優先順序見 `docs/epics.md`）。
+大多數核心閱讀體驗 Epic 已完成並歸檔（`docs/archive/`）：技術骨架、圖書庫管理（匯入/分類/排序）、直排/橫排核心、字型與版面設定、PDF 專業增強、目錄與頁碼、註記（書籤/劃線/備註）、互動控制（音量鍵/導航熱區）、雙頁顯示、EPUB 渲染引擎遷移（Readium→foliate-js，見下方）皆已可用。尚未開始的功能見 `docs/epics.md` Backlog 列（雲端同步、閱讀統計、全文檢索、TXT 引擎、社群分享、iOS 移植、系統設定、傳統儲存權限）。目前 Active 的 Epic 是真機 UI 精修與書架/閱讀體驗強化，現況與優先順序一律以 `docs/epics.md` 為準——本檔案不重複記錄逐一 Epic 的完成狀態。
 
 `prototype/index.html` 是一份獨立、依需求文件製作的 HTML/CSS/JS UI/UX 原型（手機外殼模擬器），後續功能性 Epic 設計畫面時應先參考它，細節見下方「UI/UX 原型參考」。
 
@@ -40,28 +40,35 @@ flutter build apk --debug
 
 ### `ReaderScreen`：唯一的閱讀器 seam
 
-`app/lib/screens/reader_screen.dart` 是格式無關的統一入口：`ReaderScreen({required String filePath, required String bookId, required BookReaderPrefsRepository prefsRepository})` 依 `detectBookFormat()`（`app/lib/reader/book_format.dart`，依副檔名判斷 `epub`/`pdf`/`unknown`）分派到對應的原生渲染 widget：
+`app/lib/screens/reader_screen.dart` 是格式無關的統一入口，依 `detectBookFormat()`（`app/lib/reader/book_format.dart`，依副檔名判斷 `epub`/`pdf`/`unknown`）與（EPUB 專屬）`Book.isFixedLayout`（是否為固定版面 FXL）分派到三條完全獨立的原生渲染路徑之一：
 
-- `EpubReaderView`（`app/lib/reader/epub_reader_view.dart`）——包裝 Readium `kotlin-toolkit`
-- `PdfReaderView`（`app/lib/reader/pdf_reader_view.dart`）——包裝 `android.graphics.pdf.PdfRenderer`
+- `PdfReaderView`（`app/lib/reader/pdf_reader_view.dart`）——`AndroidView` 包裝 `android.graphics.pdf.PdfRenderer`。
+- `EpubReaderView`（`app/lib/reader/epub_reader_view.dart`）——`AndroidView` 包裝 Readium `kotlin-toolkit`，**僅供固定版面（FXL）EPUB 使用**。
+- `FoliateEpubReaderView`（`app/lib/reader/foliate_epub_reader_view.dart`）——**流式（reflowable）EPUB 使用**，`readest/foliate-js`（釘定 commit、直接複製進版控、不經 npm 建置，見 `app/android/app/src/main/assets/foliate/`）跑在 `flutter_inappwebview` 的 `InAppWebView` 內，**不是**傳統 `AndroidView`/`PlatformView`（`MainActivity.kt` 沒有為它註冊 `PlatformView` 類型字串），透過 `foliate_native_bridge.dart` 與原生端（`elinkbook/volume_key` 頻道的 `attachReaderView`/`detachReaderView`）溝通生命週期，JS↔Dart 契約定義在 `main.js`（見 ADR 0011、ADR 0013）。
 
-兩者是刻意對稱的 `AndroidView` 包裝：Dart 端建構參數固定為 `filePath`/`onPageRendered`/`onError`；原生端（`app/android/app/src/main/kotlin/cc/ugotit/elinkbook/`）皆實作同一組 method channel 契約 `openBook(path)` → `onPageRendered()`/`onError(message)`，並用對稱的檔名（`EpubReaderView.kt`+`EpubReaderViewFactory.kt`／`PdfReaderView.kt`+`PdfReaderViewFactory.kt`），在 `MainActivity.configureFlutterEngine()` 中註冊各自的 `PlatformView` 類型字串。未來新增格式（例如 TXT）應延續同一組三段式契約。
+`PdfReaderView`/`EpubReaderView` 是刻意對稱的 `AndroidView` 包裝：Dart 端建構參數固定為 `filePath`/`onPageRendered`/`onError`；原生端（`app/android/app/src/main/kotlin/cc/ugotit/elinkbook/`）皆實作同一組 method channel 契約 `openBook(path)` → `onPageRendered()`/`onError(message)`，並用對稱的檔名（`EpubReaderView.kt`+`EpubReaderViewFactory.kt`／`PdfReaderView.kt`+`PdfReaderViewFactory.kt`），在 `MainActivity.configureFlutterEngine()` 中註冊各自的 `PlatformView` 類型字串。`FoliateEpubReaderView` 刻意不比照這個模式（見上方）。EPUB 分流依據是**書本格式**（開書前先判斷 FXL/流式，快取進 `books.is_fixed_layout`），不是使用者當下選擇的橫排/直排——同一引擎內即時切換橫直排不涉及引擎替換。
 
 `ReaderScreen` 對外的公開建構參數為 `filePath`／`bookId`／`prefsRepository`（後兩者由 `epic-3-fonts-layout` Issue 3 新增；`prefsRepository` 由 `main.dart` 建構後，與 `LibraryRepository`/`BookImportService` 平行、逐層透過建構子參數傳遞下來，`LibraryRepository` 抽象介面本身不受影響，見 `docs/adr/0007-reader-screen-book-id-contract.md`）——載入中／錯誤狀態是內部實作細節，透過固定的 `Key('reader_loading_indicator')`／`Key('reader_error_text')` 暴露給測試觀察，刻意不新增公開 callback 參數。
 
 ### `MainActivity` 為何是 `FlutterFragmentActivity`
 
-`EpubReaderView` 需要把 Readium 的 `EpubNavigatorFragment`（建構子為 `internal`，只能透過 Readium 自己的 `FragmentFactory` 建立）掛載到 Activity 層級的 `supportFragmentManager`，因此 `MainActivity` 從 Flutter 預設的 `FlutterActivity` 改為 `FlutterFragmentActivity`。`PdfReaderView` 不涉及 Fragment（純 `ImageView` 點陣圖渲染），不受此影響。
+`EpubReaderView`（FXL 路徑）需要把 Readium 的 `EpubNavigatorFragment`（建構子為 `internal`，只能透過 Readium 自己的 `FragmentFactory` 建立）掛載到 Activity 層級的 `supportFragmentManager`，因此 `MainActivity` 從 Flutter 預設的 `FlutterActivity` 改為 `FlutterFragmentActivity`。`PdfReaderView` 不涉及 Fragment（純 `ImageView` 點陣圖渲染）、`FoliateEpubReaderView`（流式路徑）是 `flutter_inappwebview` 自己的 widget（不涉及 `supportFragmentManager`），兩者皆不受此影響。
 
 ### 兩層測試架構
 
 - `app/test/`——純 Dart／widget test，`flutter test` 即可執行，不需裝置。適用於格式偵測邏輯，以及不涉及原生 `PlatformView` 渲染的畫面行為。
 - `app/integration_test/`——**必須**在真實 Android 裝置/模擬器上執行（`-d <device-id>`）。一般 widget test 無法觀察 `PlatformView` 內部的真實渲染結果，因此「原生渲染是否真的成功」一律由這裡驗證：斷言方式是等待 `Key('reader_loading_indicator')` 消失且無 `Key('reader_error_text')`，而非直接掛 callback（`ReaderScreen` 對外沒有暴露 callback，見上方）。
-- 已提交版本控制的範例測試檔：`app/test/fixtures/sample.epub`／`sample.pdf`（在 `pubspec.yaml` 宣告為 asset），同時供上述測試與 `LibraryScreen` 的範例書架項目共用。
+- 已提交版本控制的範例測試檔：`app/test/fixtures/sample.epub`／`sample.pdf`（在 `pubspec.yaml` 宣告為 asset），供上述測試使用（見下方「`LibraryScreen` 與圖書庫管理」）。
 
-### `LibraryScreen` 與範例書籍
+### `LibraryScreen` 與圖書庫管理
 
-`app/lib/screens/library_screen.dart` 目前顯示固定的範例書籍清單（定義於 `app/lib/screens/sample_books.dart`：一本 EPUB、一本 PDF）——真正的圖書庫管理（匯入、詮釋資料、封面產生）屬於尚未開始的 `epic-1-library`。點擊範例項目時，`stageSampleBookFile()` 會把 Flutter asset 複製為裝置暫存目錄中的真實檔案，再導航至 `ReaderScreen`，因為原生渲染引擎需要真實的裝置檔案系統路徑、無法直接讀取 Flutter asset。
+`app/lib/screens/library_screen.dart` 是真正的書架畫面，資料一律經 `LibraryRepository`（抽象介面，`app/lib/library/library_repository.dart`；正式實作 `SqliteLibraryRepository`，`sqflite`）存取，不再有固定範例書籍。核心概念：
+
+- **`Book`**（`app/lib/library/models/book.dart`）：`filePath` 是 `content://`/`file://` URI 或本機路徑（見 ADR 0002）——匯入時是否落地成 App 私有複本依權限/副檔名判斷情況而定，不能假設一定是本機檔案；`coverPath` 一律是本機複本。`groupName` 為單選分類（非多對多標籤），系統保留值 `BookGroup.uncategorized`（「未分類」）不可刪除/改名。
+- **匯入**：`BookImportService`（檔案/資料夾選取，可選依資料夾名稱自動建立分類）。
+- **批次操作**：長按書籍項目進入選取模式（`_selectedBookIds`），選取工具列目前支援「移動到分類」（其餘批次動作視各 Epic 進度增減，見 `docs/epics.md`）。
+- **檢視模式**：格狀（`SliverGridDelegateWithFixedCrossAxisCount`，欄數依螢幕方向調整）／列表，皆由 `LibraryPreferences`（`SharedPreferences`）記住使用者上次選擇。
+- 舊有的固定範例書籍機制（`sample_books.dart`/`stageSampleBookFile()`）已隨圖書庫管理實作完成而移除；`app/test/fixtures/sample.epub`／`sample.pdf` 現在純粹是測試/整合測試 fixture，不再供 `LibraryScreen` 展示使用。
 
 ## 這是什麼產品
 
@@ -71,7 +78,7 @@ elinkBook（全能跨平台電子書閱讀器）是一款跨平台電子書閱�
 
 ### 支援格式與渲染方式
 - **ePub3**（流式與定樣式）、**PDF**、**TXT** 為三大核心格式（P0）。
-- ePub：自動偵測排版方向（見 FR-06）；偵測方法本身尚未決定。渲染架構已定案——見下方「技術棧（已決策）」（Readium）。
+- ePub：自動偵測排版方向（見 FR-06），依書本 CSS 是否已宣告 `writing-mode` 判斷（判斷不出來則預設橫排），不做語言猜測。渲染架構已定案——見下方「技術棧（已決策）」（FXL 用 Readium，流式用 foliate-js）。
 - PDF：目標為 100MB 以上檔案開啟速度小於 2 秒；支援影像濾鏡（對比度/亮度/加粗）、智慧/手動裁切，預設採用 page-fit。渲染架構已定案——見下方「技術棧（已決策）」（平台原生 API）。
 - TXT：自動偵測編碼與章節標題，合成具估算頁碼的階層式目錄（固定字元數量的分頁換算啟發式）。
 - 檔案匯入：本機檔案選擇器，並支援 Google Drive 與 OneDrive 雲端存取。Google Drive 登入/驗證/下載須在無 Google Play Services 的裝置上（例如部分 E-Ink 閱讀器）持續正常運作。
@@ -120,7 +127,7 @@ elinkBook（全能跨平台電子書閱讀器）是一款跨平台電子書閱�
 
 ## 目前在此儲存庫中的工作方式
 
-請將此處的任務視為：(a) 修訂 `docs/prd.md` 本身，或 (b) 透過下方的 SDD 工作流程進行後續 Epic 的開發（下一個里程碑：`epic-1-library`，現況見 `docs/epics.md`）。
+請將此處的任務視為：(a) 修訂 `docs/prd.md` 本身，或 (b) 透過下方的 SDD 工作流程進行後續 Epic 的開發（現況與優先順序一律以 `docs/epics.md` 為準）。
 
 ### UI/UX 原型參考
 
@@ -131,10 +138,13 @@ elinkBook（全能跨平台電子書閱讀器）是一款跨平台電子書閱�
 - **App 外殼**：Flutter，跨平台共用。
 - **手機優先，Android 先於 iOS。** 初期幾波不含桌面版目標（見 `docs/epics.md` 的 epic-13）。
 - **Android 最低支援版本：Android 11 (API 30)**（見 `docs/prd.md` NFR-6）——不得將 Android 專案的 `minSdk`/相容性設定限制在比 API 30 更新的門檻。實際 `minSdk` 目前是 `24`（比政策門檻寬鬆；由 Readium `kotlin-toolkit`〔要求 23〕與 `integration_test` 外掛〔要求 24〕兩者疊加後的真實下限決定，見 `app/android/app/build.gradle.kts`），不是刻意收緊。
-- **EPUB**：Readium 官方原生工具包（Android 用 `readium-kotlin-toolkit`、iOS 用 `readium-swift-toolkit`）——不是自訂解析器，也不是像 epub.js 這種 WebView 函式庫。透過 Flutter 的 `PlatformView` 渲染，使用 Readium 的 Locator（等同 CFI）與 Decorator（劃線/備註疊加）API。
+- **EPUB（雙引擎，依書本格式分流，見 ADR 0011）**：
+  - **固定版面（FXL）**：Readium 官方原生工具包（Android 用 `readium-kotlin-toolkit`）——不是自訂解析器。透過 `AndroidView`/`PlatformView` 渲染，使用 Readium 的 Locator（等同 CFI）與 Decorator（劃線/備註疊加）API。
+  - **流式（reflowable）**：`readest/foliate-js`（釘定 commit、直接複製進版控，不引入 Node.js/npm 建置工具鏈）跑在 `flutter_inappwebview` 的 `InAppWebView` 內（見 ADR 0013——標準 Flutter `AndroidView`+`android.webkit.WebView` 的觸控轉發機制無法完整還原「長按選字→拖曳選取控點」手勢，`flutter_inappwebview` 有自己獨立的原生嵌入機制解決此限制）。原本規劃「全部 EPUB 都用 Readium」的初始決策（見下方理由）已被 ADR 0011 取代——Readium reflowable Navigator 在直排/橫排跳頁上的已知缺口（CSS Multicolumn 規格層級限制，Readium 官方已擱置）才是真正觸發遷移的原因。
+  - 兩條路徑完全獨立、互不影響；iOS（`readium-swift-toolkit`）尚未啟動（見 `epic-13-ios`），屆時是否也採雙引擎需另行評估。
 - **PDF**：各平台內建 API（Android 用 `PdfRenderer`、iOS 用 `PDFKit`），不使用 PDFium，透過 `PlatformView` 渲染。
-- **TXT**：自訂的輕量直排 CJK 排版引擎（獨立 epic —— `epic-11-txt-engine`），不採用 Readium/WebView 方案，因為純文字沒有 HTML/CSS 那層需要重新實作。
-- 理由：先前以 WebView 為主的嘗試（Capacitor + epub.js）在直排文字跳轉導航與劃線/備註一致性上反覆出現缺陷（見專案歷史）。完全自寫 EPUB 的 XHTML/CSS reflow 引擎（以徹底避開 WebView）被判定對此團隊規模不可行——那等同於重新實作一個瀏覽器排版引擎。Readium 是折衷路線：內部仍是 WebView，但是成熟、專門打造的 SDK，而非自己拼裝的膠水程式碼。
+- **TXT**：自訂的輕量直排 CJK 排版引擎（獨立 epic —— `epic-11-txt-engine`，尚未開始），不採用 Readium/WebView 方案，因為純文字沒有 HTML/CSS 那層需要重新實作。
+- **原始（epic-0 時期）理由，現況見上方雙引擎決策**：先前以 WebView 為主的嘗試（Capacitor + epub.js）在直排文字跳轉導航與劃線/備註一致性上反覆出現缺陷（見專案歷史）。完全自寫 EPUB 的 XHTML/CSS reflow 引擎（以徹底避開 WebView）被判定對此團隊規模不可行——那等同於重新實作一個瀏覽器排版引擎。Readium 曾是折衷路線，但流式 EPUB 的直排分頁缺口最終仍促成改用 foliate-js（見上方）。
 
 ## Spec-Driven Development (SDD) 工作流程
 
@@ -150,7 +160,7 @@ docs/
 ├── epics/                  # 進行中的 Epic 沙盒（design.md、spec.md、issues.md、plans/、reviews/）
 ├── archive/                # 已完成的 Epic，搬移至 <YYYY-MM-DD>-<簡稱>/
 ├── prd.md                  # 全域：產品需求
-├── CONTEXT.md              # 全域：通用語言 + 程式碼限制（尚未建立）
+├── CONTEXT.md              # 全域：通用語言詞彙表（domain-modeling skill 維護）
 └── epics.md                # 全域：Epic 狀態看板 —— 見下方說明
 ```
 

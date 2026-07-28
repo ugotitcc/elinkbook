@@ -6,7 +6,7 @@
 
 ## Issue 1：全螢幕模式
 
-**Status:** ready-for-agent
+**Status:** ✅ 已完成
 
 **依賴：** 無
 

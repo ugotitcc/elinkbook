@@ -29,7 +29,7 @@
 **Interfaces:**
 - Produces: `BookReaderPrefs.fullscreen`（`bool?`，建構參數／`toMap`/`fromMap`/`copyWith`/`==`/`hashCode` 皆涵蓋）——後續 Task 依賴此欄位名稱與型別。
 
-- [ ] **Step 1: 撰寫失敗測試**
+- [x] **Step 1: 撰寫失敗測試**
 
 在 `app/test/reader/book_reader_prefs_test.dart` 檔案末尾（`}` 之前）新增：
 
@@ -80,12 +80,12 @@
   });
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `cd app && flutter test test/reader/book_reader_prefs_test.dart`
 Expected: FAIL——`The named parameter 'fullscreen' isn't defined`（`BookReaderPrefs` 建構子尚未有這個參數）。
 
-- [ ] **Step 3: 實作欄位**
+- [x] **Step 3: 實作欄位**
 
 編輯 `app/lib/reader/book_reader_prefs.dart`：
 
@@ -163,12 +163,12 @@ Expected: FAIL——`The named parameter 'fullscreen' isn't defined`（`BookRead
   }
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `cd app && flutter test test/reader/book_reader_prefs_test.dart`
 Expected: PASS（全部測試通過，含既有測試無回歸）。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/lib/reader/book_reader_prefs.dart app/test/reader/book_reader_prefs_test.dart
@@ -187,7 +187,7 @@ git commit -m "feat(epic-19): Issue 1 Task 1 新增 BookReaderPrefs.fullscreen �
 - Consumes: 無（純資料庫 schema 變更）。
 - Produces: `book_reader_prefs.fullscreen` 欄位（`INTEGER`，nullable）——Task 3 的 `BookReaderPrefsRepository`（透過 `BookReaderPrefs.toMap`/`fromMap`，已在 Task 1 完成）依賴此欄位存在。
 
-- [ ] **Step 1: 撰寫失敗測試（全新安裝）**
+- [x] **Step 1: 撰寫失敗測試（全新安裝）**
 
 在 `app/test/library/sqlite_library_repository_test.dart` 找到現有的「全新安裝的 book_reader_prefs 表包含邊距 4 個欄位（version 14 起 onCreate 已含括）」測試（約第 1748 行），在其後新增：
 
@@ -207,12 +207,12 @@ git commit -m "feat(epic-19): Issue 1 Task 1 新增 BookReaderPrefs.fullscreen �
   });
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `cd app && flutter test test/library/sqlite_library_repository_test.dart -n "全新安裝的 book_reader_prefs 表包含 fullscreen 欄位"`
 Expected: FAIL——`DatabaseException(table book_reader_prefs has no column named fullscreen)`。
 
-- [ ] **Step 3: 實作 `_createBookReaderPrefsTable` 與 schema version**
+- [x] **Step 3: 實作 `_createBookReaderPrefsTable` 與 schema version**
 
 編輯 `app/lib/library/sqlite_library_repository.dart`：
 
@@ -259,12 +259,12 @@ Expected: FAIL——`DatabaseException(table book_reader_prefs has no column nam
         )
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `cd app && flutter test test/library/sqlite_library_repository_test.dart -n "全新安裝的 book_reader_prefs 表包含 fullscreen 欄位"`
 Expected: PASS。
 
-- [ ] **Step 5: 撰寫失敗測試（既有裝置升級）**
+- [x] **Step 5: 撰寫失敗測試（既有裝置升級）**
 
 在同一測試檔案，緊接著 v13→v14 遷移測試（約第 1885 行 `});` 之後）新增：
 
@@ -388,12 +388,12 @@ Expected: PASS。
   });
 ```
 
-- [ ] **Step 6: 執行測試確認失敗**
+- [x] **Step 6: 執行測試確認失敗**
 
 Run: `cd app && flutter test test/library/sqlite_library_repository_test.dart -n "既有 version 14 裝置升級到 version 15"`
 Expected: FAIL——`row['fullscreen']` 會拋出 `NoSuchMethodError` 或欄位不存在的錯誤（`onUpgrade` 尚未處理 `oldVersion < 15`）。
 
-- [ ] **Step 7: 實作 `_addFullscreenColumn` 與 `onUpgrade` 分支**
+- [x] **Step 7: 實作 `_addFullscreenColumn` 與 `onUpgrade` 分支**
 
 編輯 `app/lib/library/sqlite_library_repository.dart`：
 
@@ -432,12 +432,12 @@ Expected: FAIL——`row['fullscreen']` 會拋出 `NoSuchMethodError` 或欄位�
         }
 ```
 
-- [ ] **Step 8: 執行測試確認通過**
+- [x] **Step 8: 執行測試確認通過**
 
 Run: `cd app && flutter test test/library/sqlite_library_repository_test.dart`
 Expected: PASS（全部測試通過，含既有測試無回歸）。
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add app/lib/library/sqlite_library_repository.dart app/test/library/sqlite_library_repository_test.dart
@@ -457,7 +457,7 @@ git commit -m "feat(epic-19): Issue 1 Task 2 SQLite schema v14→v15，新增 fu
 - Consumes: `BookReaderPrefs.fullscreen`（Task 1）。
 - Produces: `ResolvedPreferences.fullscreen`（`bool`，non-nullable，預設 `false`）——Task 5（`ReaderScreen`）依賴此欄位。
 
-- [ ] **Step 1: 撰寫失敗測試**
+- [x] **Step 1: 撰寫失敗測試**
 
 在 `app/test/reader/reader_prefs_manager_test.dart` 找到「全部欄位皆未覆寫時，回傳的 non-null 欄位皆為既存安全預設值」測試（約第 39 行），在 `expect(resolved.showNavZoneDebugOverlay, isFalse);` 之後新增：
 
@@ -475,12 +475,12 @@ git commit -m "feat(epic-19): Issue 1 Task 2 SQLite schema v14→v15，新增 fu
     });
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `cd app && flutter test test/reader/reader_prefs_manager_test.dart`
 Expected: FAIL——`The getter 'fullscreen' isn't defined for the class 'ResolvedPreferences'`。
 
-- [ ] **Step 3: 實作**
+- [x] **Step 3: 實作**
 
 編輯 `app/lib/reader/resolved_preferences.dart`：
 
@@ -513,17 +513,17 @@ Expected: FAIL——`The getter 'fullscreen' isn't defined for the class 'Resolv
     );
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `cd app && flutter test test/reader/reader_prefs_manager_test.dart`
 Expected: PASS。
 
-- [ ] **Step 5: 執行全專案測試確認無回歸**
+- [x] **Step 5: 執行全專案測試確認無回歸**
 
 Run: `cd app && flutter test`
 Expected: PASS（`ResolvedPreferences` 建構子新增的 `fullscreen` 有預設值 `false`，既有呼叫端不需要修改也不會壞）。
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/reader/resolved_preferences.dart app/lib/reader/reader_prefs_manager_impl.dart app/test/reader/reader_prefs_manager_test.dart
@@ -544,7 +544,7 @@ git commit -m "feat(epic-19): Issue 1 Task 3 ResolvedPreferences.fullscreen 接�
 
 **測試說明（比照 `spec.md`「測試決策」與本專案既有慣例）**：這是純原生 Kotlin 呼叫 Android Window API 的膠水程式碼，`WindowInsetsControllerCompat` 需要真實 `Window`/`View`，本專案沒有 Robolectric 等原生 UI 模擬框架（比照既有 `main.js`/`FoliateEpubReaderView.kt` 的 `setAttribute`/`evaluateJavascript` 呼叫「無 JVM/JS 單元測試」的既有慣例），本 Task 無自動化測試步驟，正確性由 Task 7 真機驗收確認。
 
-- [ ] **Step 1: 新增 `androidx.core:core-ktx` 依賴**
+- [x] **Step 1: 新增 `androidx.core:core-ktx` 依賴**
 
 編輯 `app/android/app/build.gradle.kts`，在 `dependencies`區塊既有的 `implementation("androidx.fragment:fragment-ktx:1.8.9")` 之後新增：
 
@@ -553,7 +553,7 @@ git commit -m "feat(epic-19): Issue 1 Task 3 ResolvedPreferences.fullscreen 接�
     implementation("androidx.core:core-ktx:1.15.0")
 ```
 
-- [ ] **Step 2: 新增 platform channel**
+- [x] **Step 2: 新增 platform channel**
 
 編輯 `app/android/app/src/main/kotlin/cc/ugotit/elinkbook/MainActivity.kt`：
 
@@ -619,12 +619,12 @@ import io.flutter.plugin.common.MethodChannel
 
 （上述區塊取代原本檔案結尾的 `}` `}`——新增的 `elinkbook/fullscreen` 頻道註冊插入在 `volumeKeyChannel` 設定之後、`configureFlutterEngine()` 方法與 `MainActivity` 類別的結尾大括號之前。）
 
-- [ ] **Step 3: 編譯確認無語法錯誤**
+- [x] **Step 3: 編譯確認無語法錯誤**
 
 Run: `cd app && flutter build apk --debug`
 Expected: `BUILD SUCCESSFUL`，無 Kotlin 編譯錯誤。
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add app/android/app/build.gradle.kts app/android/app/src/main/kotlin/cc/ugotit/elinkbook/MainActivity.kt
@@ -643,7 +643,7 @@ git commit -m "feat(epic-19): Issue 1 Task 4 新增 elinkbook/fullscreen 原生�
 - Consumes: `ResolvedPreferences.fullscreen`（Task 3）、platform channel `elinkbook/fullscreen`（Task 4）。
 - Produces: `ReaderScreen._applySystemUiMode()`（供本檔案內部呼叫，無對外公開介面異動）。
 
-- [ ] **Step 1: 撰寫失敗測試（`_applySystemUiMode` 基本行為）**
+- [x] **Step 1: 撰寫失敗測試（`_applySystemUiMode` 基本行為）**
 
 在 `app/test/screens/reader_screen_test.dart` 找到既有 `elinkbook/volume_key` 頻道測試（約第 2748-2760 行的 mock handler 寫法）附近，新增以下獨立的 `testWidgets`：
 
@@ -784,12 +784,12 @@ git commit -m "feat(epic-19): Issue 1 Task 4 新增 elinkbook/fullscreen 原生�
 
 `FakeReaderPrefsManager`（`app/test/support/fake_reader_prefs_manager.dart`）已是 `reader_screen_test.dart` 既有匯入的測試替身（既有 `prefsManager = FakeReaderPrefsManager();` 用法見同檔案第 57 行），`bookPrefsByBookId` 是其既有建構參數（`Map<String, BookReaderPrefs>?`），`resolve()` 內部委派給真正的 `ReaderPrefsManagerImpl.resolve()`（見該檔案第 35-39、80-85 行），故驗證的合併邏輯與正式實作完全一致，不需要新增測試替身。
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `cd app && flutter test test/screens/reader_screen_test.dart -n "elinkbook/fullscreen"`
 Expected: FAIL——`calls` 為空（`_applySystemUiMode()` 尚未實作，`ReaderScreen` 從未呼叫 `elinkbook/fullscreen` 頻道）。
 
-- [ ] **Step 3: 實作 `ReaderScreen` 端**
+- [x] **Step 3: 實作 `ReaderScreen` 端**
 
 編輯 `app/lib/screens/reader_screen.dart`：
 
@@ -876,17 +876,17 @@ const _fullscreenChannel = MethodChannel('elinkbook/fullscreen');
   }
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `cd app && flutter test test/screens/reader_screen_test.dart`
 Expected: PASS（新增 3 個測試通過，既有測試無回歸）。
 
-- [ ] **Step 5: 執行全專案測試確認無回歸**
+- [x] **Step 5: 執行全專案測試確認無回歸**
 
 Run: `cd app && flutter test`
 Expected: PASS。`flutter analyze` 亦須乾淨。
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/screens/reader_screen.dart app/test/screens/reader_screen_test.dart
@@ -909,7 +909,7 @@ git commit -m "feat(epic-19): Issue 1 Task 5 ReaderScreen 接通全螢幕模式�
 - Consumes: `BookReaderPrefs.fullscreen`（Task 1）。
 - Produces: 無新對外介面（三個既有 Widget 的 `onChanged` callback 行為擴充）。
 
-- [ ] **Step 1: 撰寫失敗測試（`ReaderSettingsSheet`）**
+- [x] **Step 1: 撰寫失敗測試（`ReaderSettingsSheet`）**
 
 在 `app/test/screens/reader_settings_sheet_test.dart` 找到既有「已持久化 showHeader=false 時，頁首開關初始值反映為關閉」與「關閉頁首開關後，onChanged 帶入 showHeader=false...」兩個測試（約第 459-486 行）附近，新增：
 
@@ -944,12 +944,12 @@ git commit -m "feat(epic-19): Issue 1 Task 5 ReaderScreen 接通全螢幕模式�
   });
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `cd app && flutter test test/screens/reader_settings_sheet_test.dart -n "全螢幕模式"`
 Expected: FAIL——`find.byKey(const Key('reader_settings_fullscreen'))` 找不到（`ReaderSettingsSheet` 尚未有此開關）。
 
-- [ ] **Step 3: 實作 `ReaderSettingsSheet`**
+- [x] **Step 3: 實作 `ReaderSettingsSheet`**
 
 編輯 `app/lib/screens/reader_settings_sheet.dart`：
 
@@ -1006,12 +1006,12 @@ Expected: FAIL——`find.byKey(const Key('reader_settings_fullscreen'))` 找不
                 _buildColumnModeRow(),
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `cd app && flutter test test/screens/reader_settings_sheet_test.dart`
 Expected: PASS。
 
-- [ ] **Step 5: 撰寫失敗測試（`PdfSettingsSheet`）**
+- [x] **Step 5: 撰寫失敗測試（`PdfSettingsSheet`）**
 
 在 `app/test/screens/pdf_settings_sheet_test.dart` 既有 `pdf_settings_show_footer` 測試附近新增：
 
@@ -1044,12 +1044,12 @@ Expected: PASS。
   });
 ```
 
-- [ ] **Step 6: 執行測試確認失敗**
+- [x] **Step 6: 執行測試確認失敗**
 
 Run: `cd app && flutter test test/screens/pdf_settings_sheet_test.dart -n "全螢幕模式"`
 Expected: FAIL——找不到 `pdf_settings_fullscreen` key。
 
-- [ ] **Step 7: 實作 `PdfSettingsSheet`**
+- [x] **Step 7: 實作 `PdfSettingsSheet`**
 
 編輯 `app/lib/screens/pdf_settings_sheet.dart`：
 
@@ -1099,12 +1099,12 @@ Expected: FAIL——找不到 `pdf_settings_fullscreen` key。
             const Text('頁面方向'),
 ```
 
-- [ ] **Step 8: 執行測試確認通過**
+- [x] **Step 8: 執行測試確認通過**
 
 Run: `cd app && flutter test test/screens/pdf_settings_sheet_test.dart`
 Expected: PASS。
 
-- [ ] **Step 9: 撰寫失敗測試（`FxlSettingsSheet`）**
+- [x] **Step 9: 撰寫失敗測試（`FxlSettingsSheet`）**
 
 在 `app/test/screens/fxl_settings_sheet_test.dart` 新增（`FxlSettingsSheet` 目前沒有任何開關，這是第一個）：
 
@@ -1148,12 +1148,12 @@ Expected: PASS。
   });
 ```
 
-- [ ] **Step 10: 執行測試確認失敗**
+- [x] **Step 10: 執行測試確認失敗**
 
 Run: `cd app && flutter test test/screens/fxl_settings_sheet_test.dart -n "全螢幕模式"`
 Expected: FAIL——找不到 `fxl_settings_fullscreen` key。
 
-- [ ] **Step 11: 實作 `FxlSettingsSheet`**
+- [x] **Step 11: 實作 `FxlSettingsSheet`**
 
 編輯 `app/lib/screens/fxl_settings_sheet.dart`：
 
@@ -1203,12 +1203,12 @@ Expected: FAIL——找不到 `fxl_settings_fullscreen` key。
 }
 ```
 
-- [ ] **Step 12: 執行測試確認通過**
+- [x] **Step 12: 執行測試確認通過**
 
 Run: `cd app && flutter test test/screens/fxl_settings_sheet_test.dart`
 Expected: PASS。
 
-- [ ] **Step 13: 執行全專案測試確認無回歸**
+- [x] **Step 13: 執行全專案測試確認無回歸**
 
 Run: `cd app && flutter test`
 Expected: PASS。若既有測試因新增的 `SwitchListTile` 把畫面內容推出 viewport（比照 `epic-18-reader-device-qa` Issue 14 曾發生的既有先例）而失敗，將對應測試檔案 `_pumpSheet` 的 `Size(800, 1600)` 高度調高（例如改為 `Size(800, 1700)`），重新執行確認通過。
@@ -1216,7 +1216,7 @@ Expected: PASS。若既有測試因新增的 `SwitchListTile` 把畫面內容推
 Run: `cd app && flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 14: Commit**
+- [x] **Step 14: Commit**
 
 ```bash
 git add app/lib/screens/reader_settings_sheet.dart app/lib/screens/pdf_settings_sheet.dart app/lib/screens/fxl_settings_sheet.dart app/test/screens/reader_settings_sheet_test.dart app/test/screens/pdf_settings_sheet_test.dart app/test/screens/fxl_settings_sheet_test.dart
@@ -1229,31 +1229,31 @@ git commit -m "feat(epic-19): Issue 1 Task 6 三個設定面板新增全螢幕�
 
 **Files:** 無程式碼異動，僅驗收記錄。
 
-- [ ] **Step 1: 建置並安裝 debug APK**
+- [x] **Step 1: 建置並安裝 debug APK**
 
 Run: `cd app && flutter clean && flutter build apk --debug`
 
 安裝到既有測試裝置（`3CEF42ECD491687` 或目前可用裝置）。
 
-- [ ] **Step 2: 三種格式逐一驗收全螢幕模式開關**
+- [x] **Step 2: 三種格式逐一驗收全螢幕模式開關**
 
 分別開啟一本 EPUB 流式書、一本 FXL（固定版面）書、一本 PDF，各自：
 1. 開啟版面設定面板，開啟「全螢幕模式」開關，確認系統狀態列與導覽列消失、App 自己的頁首/頁尾/浮動按鈕不受影響（仍照 `showHeader`/`showFooter`/沉浸模式既有邏輯顯示）。
 2. 從螢幕邊緣滑入，確認系統列可暫時浮現（`BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE`），放開後自動再收起。
 3. 關閉開關，確認系統列恢復正常顯示。
 
-- [ ] **Step 3: 驗收生命週期還原**
+- [x] **Step 3: 驗收生命週期還原**
 
 開啟全螢幕模式後，按 Home 鍵切到背景，再切回 App，確認系統列仍然隱藏（未被 OS 重新顯示後卡住——這是 code review Critical 2 發現的 bug，須重點確認）。
 
-- [ ] **Step 4: 驗收離開閱讀畫面還原**
+- [x] **Step 4: 驗收離開閱讀畫面還原**
 
 開啟全螢幕模式後，返回書架畫面，確認系統列恢復正常顯示，不外溢到書架或其他畫面。
 
-- [ ] **Step 5: 回歸確認既有功能**
+- [x] **Step 5: 回歸確認既有功能**
 
 確認既有的沉浸模式（九宮格中央熱區）、`showHeader`/`showFooter` 開關、螢幕方向鎖定、音量鍵翻頁等既有功能皆不受本次變動影響。
 
-- [ ] **Step 6: 更新 `issues.md`**
+- [x] **Step 6: 更新 `issues.md`**
 
 將 `docs/epics/epic-19-shelf-reading-enhance/issues.md` Issue 1 的 `Status:` 改為 `✅ 已完成`，並記錄上述真機驗收結果。
