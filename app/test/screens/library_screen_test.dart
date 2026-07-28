@@ -37,6 +37,14 @@ void main() {
   setUpAll(() {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
+    // 全螢幕模式頻道（epic-19 Issue 1）：ReaderScreen.dispose() 會無條件
+    // 呼叫 elinkbook/fullscreen setEnabled(false)，需要全域 mock 避免
+    // MissingPluginException。
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+      const MethodChannel('elinkbook/fullscreen'),
+      (_) async => null,
+    );
   });
 
   setUp(() async {
