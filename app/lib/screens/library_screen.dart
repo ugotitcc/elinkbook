@@ -581,11 +581,13 @@ class _LibraryScreenState extends State<LibraryScreen> {
   Widget _buildBookList(List<Book> books) {
     final selectedIds = _selectedBookIds;
     if (_viewMode == LibraryViewMode.grid) {
+      final orientation = MediaQuery.orientationOf(context);
+      final crossAxisCount = orientation == Orientation.landscape ? 4 : 3;
       return GridView.builder(
         key: const Key('library_grid_view'),
         padding: const EdgeInsets.all(8),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 6,
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: crossAxisCount,
           childAspectRatio: 0.62,
         ),
         itemCount: books.length,
