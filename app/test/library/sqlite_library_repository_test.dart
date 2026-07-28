@@ -1765,6 +1765,20 @@ void main() {
     expect(row['margin_right'], 30.0);
   });
 
+  test('全新安裝的 book_reader_prefs 表包含 fullscreen 欄位（version 15 起 onCreate 已含括）',
+      () async {
+    await repository.insertBook(_book('b_fullscreen'));
+    await repository.database.insert('book_reader_prefs', {
+      'book_id': 'b_fullscreen',
+      'fullscreen': 1,
+    });
+
+    final row = (await repository.database.query('book_reader_prefs',
+            where: 'book_id = ?', whereArgs: ['b_fullscreen']))
+        .single;
+    expect(row['fullscreen'], 1);
+  });
+
   test('既有 version 13 裝置升級到 version 14，book_reader_prefs 新增邊距 4 個欄位，既有 page_margins 值不受影響',
       () async {
     final tempDir = await Directory.systemTemp
@@ -1882,6 +1896,124 @@ void main() {
         .single;
     expect(updated['margin_top'], 72.0);
     expect(updated['margin_left'], 30.0);
+  });
+
+  test('既有 version 14 裝置升級到 version 15，book_reader_prefs 新增 fullscreen 欄位，既有 margin_top 值不受影響',
+      () async {
+    final tempDir = await Directory.systemTemp
+        .createTemp('elinkbook_migration_v14_to_v15_test');
+    addTearDown(() => tempDir.delete(recursive: true));
+    final dbPath = p.join(tempDir.path, 'test.db');
+
+    // 模擬「已存在於 version 14」的舊資料庫：手動以 version 14 當時的完整
+    // schema（book_reader_prefs 含邊距 4 個欄位、不含 fullscreen）建立，
+    // 不透過 SqliteLibraryRepository.open()（該方法目前的 onCreate 已經是
+    // version 15 的最終 schema），比照既有 v13→v14 遷移測試寫法。
+    final oldDb = await databaseFactory.openDatabase(
+      dbPath,
+      options: OpenDatabaseOptions(
+        version: 14,
+        onConfigure: (db) async {
+          await db.execute('PRAGMA foreign_keys = ON');
+        },
+        onCreate: (db, version) async {
+          await db.execute('CREATE TABLE groups (name TEXT PRIMARY KEY)');
+          await db.insert('groups', {'name': '未分類'});
+          await db.execute('''
+            CREATE TABLE books (
+              id TEXT PRIMARY KEY,
+              title TEXT NOT NULL,
+              author TEXT,
+              format TEXT NOT NULL,
+              filePath TEXT NOT NULL,
+              source TEXT NOT NULL,
+              coverPath TEXT,
+              progress REAL NOT NULL DEFAULT 0,
+              epubLocator TEXT,
+              pdfPageIndex INTEGER,
+              totalCharacterCount INTEGER,
+              is_fixed_layout INTEGER,
+              groupName TEXT NOT NULL DEFAULT '未分類',
+              createTime INTEGER NOT NULL,
+              lastReadTime INTEGER NOT NULL
+            )
+          ''');
+          await db.execute('''
+            CREATE TABLE book_reader_prefs (
+              book_id TEXT PRIMARY KEY REFERENCES books(id) ON DELETE CASCADE,
+              font_family TEXT,
+              font_size REAL,
+              font_weight REAL,
+              line_height REAL,
+              paragraph_spacing REAL,
+              page_margins REAL,
+              text_align TEXT,
+              publisher_styles INTEGER,
+              writing_mode_override TEXT,
+              page_turn_mode_override TEXT,
+              screen_orientation_override TEXT,
+              pdf_fit_mode TEXT,
+              pdf_contrast REAL,
+              pdf_brightness REAL,
+              pdf_bold_strength REAL,
+              pdf_crop_mode TEXT,
+              pdf_crop_rect TEXT,
+              dual_page_mode TEXT,
+              dual_page_cover_alone INTEGER,
+              dual_page_direction TEXT,
+              show_header INTEGER,
+              show_footer INTEGER,
+              column_mode TEXT,
+              column_size REAL,
+              margin_top REAL,
+              margin_bottom REAL,
+              margin_left REAL,
+              margin_right REAL
+            )
+          ''');
+        },
+      ),
+    );
+    await oldDb.insert('books', {
+      'id': 'b1',
+      'title': '既有書籍',
+      'format': 'epub',
+      'filePath': 'content://example/b1',
+      'source': 'local',
+      'progress': 0.0,
+      'groupName': '未分類',
+      'createTime': 1000,
+      'lastReadTime': 1000,
+    });
+    await oldDb.insert('book_reader_prefs', {
+      'book_id': 'b1',
+      'margin_top': 72.0,
+    });
+    await oldDb.close();
+
+    // 重新以目前版本開啟同一個檔案，觸發 onUpgrade（oldVersion=14 →
+    // newVersion=15），驗證既有 margin_top 值不受影響、fullscreen 新欄位
+    // 存在且可寫入。
+    final upgraded = await SqliteLibraryRepository.open(dbPath);
+    addTearDown(() => upgraded.close());
+
+    final row = (await upgraded.database
+            .query('book_reader_prefs', where: 'book_id = ?', whereArgs: ['b1']))
+        .single;
+    expect(row['margin_top'], 72.0); // 既有資料不受影響
+    expect(row['fullscreen'], isNull); // 新欄位存在且預設 NULL
+
+    // 證明新欄位真的可寫入（不只是巧合為 null），確認 ALTER TABLE 確實生效。
+    await upgraded.database.update(
+      'book_reader_prefs',
+      {'fullscreen': 1},
+      where: 'book_id = ?',
+      whereArgs: ['b1'],
+    );
+    final updated = (await upgraded.database
+            .query('book_reader_prefs', where: 'book_id = ?', whereArgs: ['b1']))
+        .single;
+    expect(updated['fullscreen'], 1);
   });
 
   group('detectAndCacheEpubLayout', () {
