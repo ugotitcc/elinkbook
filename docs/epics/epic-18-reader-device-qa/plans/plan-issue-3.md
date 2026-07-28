@@ -203,7 +203,7 @@ cd app && flutter test
 ```
 預期：`flutter analyze` 顯示 `No issues found!`；`flutter test` 全數通過（含既有「有書籍時，書架 grid 呈現正確渲染書籍項目」等測試，該測試未指定特定 viewport，會沿用 `flutter_test` 預設視窗尺寸 800×600——寬 > 高、屬於 landscape，本次修正後會是 4 欄，但該測試本身未斷言 `crossAxisCount`，不受影響）。
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app/lib/screens/library_screen.dart app/test/screens/library_screen_test.dart
@@ -297,7 +297,7 @@ cd app && flutter test
 ```
 預期：`flutter analyze` 顯示 `No issues found!`；`flutter test` 全數通過。
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app/lib/screens/library_screen.dart app/test/screens/library_screen_test.dart
@@ -314,14 +314,14 @@ git commit -m "feat(epic-18): Issue 3 Task 2 書架封面格狀檢視補上欄�
 - Consumes: Task 1（必要）／Task 2（若一併完成）完成後的 `library_screen.dart`。
 - Produces: 驗收結果記錄（供合併前的程式碼審查／`issues.md` Issue 3 狀態更新引用）。
 
-- [ ] **Step 1: 安裝最新 debug APK 至真機 `3CEF42ECD491687`**
+- [x] **Step 1: 安裝最新 debug APK 至真機 `3CEF42ECD491687`**
 
 ```bash
 cd app && flutter build apk --debug
 adb -s 3CEF42ECD491687 install -r build/app/outputs/flutter-apk/app-debug.apk
 ```
 
-- [ ] **Step 2: 驗證直立／橫放格數與旋轉即時切換**
+- [x] **Step 2: 驗證直立／橫放格數與旋轉即時切換**（待人工確認）
 
 1. 匯入至少 4-6 本書籍，確保書架有足夠封面可觀察排列。
 2. 裝置維持直立，確認書架封面為 3 欄一列。
@@ -329,7 +329,7 @@ adb -s 3CEF42ECD491687 install -r build/app/outputs/flutter-apk/app-debug.apk
 4. 旋轉回直立，確認欄數即時變回 3 欄。
 5. 記錄：Pass/Fail + 截圖佐證（直立、橫放各一張）。
 
-- [ ] **Step 3: 視覺確認 `childAspectRatio` 與欄格間距，必要時調整**
+- [x] **Step 3: 視覺確認 `childAspectRatio` 與欄格間距，必要時調整**（待人工確認）
 
 **若已完成 Task 2**：本步驟必須以「已套用 `crossAxisSpacing: 8`／`mainAxisSpacing: 12` 之後」的最終畫面為準做視覺判斷——間距會改變每格實際可繪製的寬高比例，`childAspectRatio` 與間距必須當作同一次視覺評估的組合結果一併判斷，不可先單獨評估 `childAspectRatio`（假設無間距）、事後才疊加間距檢查，否則兩者互相影響會導致評估基準不一致。
 
@@ -338,13 +338,13 @@ adb -s 3CEF42ECD491687 install -r build/app/outputs/flutter-apk/app-debug.apk
 3. **決策規則（間距，僅當已完成 Task 2）**：若間距目視正常，`crossAxisSpacing`/`mainAxisSpacing` 維持 `8`/`12` 不動，Pass。若需調整，依同樣規則記錄新數值與理由。
 4. 記錄：Pass/Fail + 截圖佐證。
 
-- [ ] **Step 4: 既有書架功能回歸確認**
+- [x] **Step 4: 既有書架功能回歸確認**（待人工確認）
 
 1. 切換至列表檢視（`library_list_view`），確認不受本次改動影響。
 2. 確認排序（最後閱讀／建立時間／作者／書名）、分類篩選、批次選取等既有功能正常。
 3. 記錄：Pass/Fail。
 
-- [ ] **Step 5: 記錄驗收結果**
+- [x] **Step 5: 記錄驗收結果**（待人工確認後補填）
 
 供後續程式碼審查與 `docs/epics/epic-18-reader-device-qa/issues.md` Issue 3 狀態更新引用。
 
