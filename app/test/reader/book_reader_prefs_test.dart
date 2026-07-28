@@ -35,6 +35,10 @@ void main() {
     expect(prefs.dualPageMode, isNull);
     expect(prefs.dualPageCoverAlone, isNull);
     expect(prefs.dualPageDirection, isNull);
+    expect(prefs.marginTop, isNull);
+    expect(prefs.marginBottom, isNull);
+    expect(prefs.marginLeft, isNull);
+    expect(prefs.marginRight, isNull);
   });
 
   test('兩個欄位值完全相同的 BookReaderPrefs 視為相等', () {
@@ -341,5 +345,29 @@ void main() {
     expect(updated.fontSize, 18);
     expect(updated.columnMode, ColumnMode.single);
     expect(updated.columnSize, 900.0);
+  });
+
+  test('邊距 4 個獨立欄位的 toMap／fromMap round-trip 保留所有欄位', () {
+    const prefs = BookReaderPrefs(
+      marginTop: 72,
+      marginBottom: 20,
+      marginLeft: 30,
+      marginRight: 30,
+    );
+
+    final map = prefs.toMap('book-margin-1');
+    expect(map['margin_top'], 72);
+    expect(map['margin_bottom'], 20);
+    expect(map['margin_left'], 30);
+    expect(map['margin_right'], 30);
+
+    final restored = BookReaderPrefs.fromMap(map);
+    expect(restored, prefs);
+  });
+
+  test('邊距 4 個欄位任一不同時視為不相等', () {
+    const a = BookReaderPrefs(marginTop: 64);
+    const b = BookReaderPrefs(marginTop: 72);
+    expect(a, isNot(b));
   });
 }

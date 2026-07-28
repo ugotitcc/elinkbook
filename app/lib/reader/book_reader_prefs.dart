@@ -23,7 +23,16 @@ class BookReaderPrefs {
   final double? fontWeight; // Readium 倍率語意（1.0 = normal），非 CSS 300-900 原始值
   final double? lineHeight;
   final double? paragraphSpacing;
-  final double? pageMargins; // 單一數值，四邊同步變動，見 ADR 0005
+  final double? pageMargins; // 單一數值，四邊同步變動，見 ADR 0005（僅供 EpubReaderView／FXL 使用）
+
+  /// 流式 EPUB 專用的獨立邊距欄位（epic-18-reader-device-qa Issue 14，見
+  /// ADR 0014）。皆為 px 數值，不需要倍率換算（比照 columnSize 既有模式，
+  /// 非比照 pageMargins 的倍率模式）。不影響 EpubReaderView／FXL 路徑。
+  final double? marginTop;
+  final double? marginBottom;
+  final double? marginLeft;
+  final double? marginRight;
+
   final EpubTextAlign? textAlign;
   final bool? publisherStyles; // 對應 Readium publisherStyles；true=使用書本內建 CSS
   final WritingMode? writingModeOverride; // null=採用書籍排版（自動偵測）
@@ -54,6 +63,10 @@ class BookReaderPrefs {
     this.lineHeight,
     this.paragraphSpacing,
     this.pageMargins,
+    this.marginTop,
+    this.marginBottom,
+    this.marginLeft,
+    this.marginRight,
     this.textAlign,
     this.publisherStyles,
     this.writingModeOverride,
@@ -86,6 +99,10 @@ class BookReaderPrefs {
       'line_height': lineHeight,
       'paragraph_spacing': paragraphSpacing,
       'page_margins': pageMargins,
+      'margin_top': marginTop,
+      'margin_bottom': marginBottom,
+      'margin_left': marginLeft,
+      'margin_right': marginRight,
       'text_align': textAlign?.name,
       'publisher_styles':
           publisherStyles == null ? null : (publisherStyles! ? 1 : 0),
@@ -122,6 +139,10 @@ class BookReaderPrefs {
       lineHeight: (map['line_height'] as num?)?.toDouble(),
       paragraphSpacing: (map['paragraph_spacing'] as num?)?.toDouble(),
       pageMargins: (map['page_margins'] as num?)?.toDouble(),
+      marginTop: (map['margin_top'] as num?)?.toDouble(),
+      marginBottom: (map['margin_bottom'] as num?)?.toDouble(),
+      marginLeft: (map['margin_left'] as num?)?.toDouble(),
+      marginRight: (map['margin_right'] as num?)?.toDouble(),
       textAlign: map['text_align'] == null
           ? null
           : EpubTextAlign.values.byName(map['text_align'] as String),
@@ -181,6 +202,10 @@ class BookReaderPrefs {
       other.lineHeight == lineHeight &&
       other.paragraphSpacing == paragraphSpacing &&
       other.pageMargins == pageMargins &&
+      other.marginTop == marginTop &&
+      other.marginBottom == marginBottom &&
+      other.marginLeft == marginLeft &&
+      other.marginRight == marginRight &&
       other.textAlign == textAlign &&
       other.publisherStyles == publisherStyles &&
       other.writingModeOverride == writingModeOverride &&
@@ -208,6 +233,10 @@ class BookReaderPrefs {
         lineHeight,
         paragraphSpacing,
         pageMargins,
+        marginTop,
+        marginBottom,
+        marginLeft,
+        marginRight,
         textAlign,
         publisherStyles,
         writingModeOverride,
@@ -240,6 +269,10 @@ class BookReaderPrefs {
     double? lineHeight,
     double? paragraphSpacing,
     double? pageMargins,
+    double? marginTop,
+    double? marginBottom,
+    double? marginLeft,
+    double? marginRight,
     EpubTextAlign? textAlign,
     bool? publisherStyles,
     WritingMode? writingModeOverride,
@@ -266,6 +299,10 @@ class BookReaderPrefs {
       lineHeight: lineHeight ?? this.lineHeight,
       paragraphSpacing: paragraphSpacing ?? this.paragraphSpacing,
       pageMargins: pageMargins ?? this.pageMargins,
+      marginTop: marginTop ?? this.marginTop,
+      marginBottom: marginBottom ?? this.marginBottom,
+      marginLeft: marginLeft ?? this.marginLeft,
+      marginRight: marginRight ?? this.marginRight,
       textAlign: textAlign ?? this.textAlign,
       publisherStyles: publisherStyles ?? this.publisherStyles,
       writingModeOverride: writingModeOverride ?? this.writingModeOverride,
