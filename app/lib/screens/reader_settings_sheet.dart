@@ -41,14 +41,20 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   static const _defaultFontWeightMultiplier = 1.0; // 倍率，UI 顯示 400（1.0 × 400）
   static const _defaultLineHeight = 1.5;
   static const _defaultParagraphSpacing = 10.0;
-  static const _defaultPageMargins = 15.0;
+  static const _defaultMarginTop = 64.0;
+  static const _defaultMarginBottom = 16.0;
+  static const _defaultMarginLeft = 24.0;
+  static const _defaultMarginRight = 24.0;
 
   late AppFont? _fontFamily;
   late double _fontSize;
-  late double _fontWeightMultiplier; // Readium 倍率語意，UI 顯示時 ×400
+  late double _fontWeightMultiplier;
   late double _lineHeight;
   late double _paragraphSpacing;
-  late double _pageMargins;
+  late double _marginTop;
+  late double _marginBottom;
+  late double _marginLeft;
+  late double _marginRight;
   late EpubTextAlign? _textAlign;
   late bool _publisherStyles;
   late WritingMode? _writingModeOverride;
@@ -71,9 +77,10 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     _paragraphSpacing = widget.prefs.paragraphSpacing != null
         ? (widget.prefs.paragraphSpacing! * 10.0).roundToDouble()
         : _defaultParagraphSpacing;
-    _pageMargins = widget.prefs.pageMargins != null
-        ? (widget.prefs.pageMargins! * 15.0).roundToDouble()
-        : _defaultPageMargins;
+    _marginTop = widget.prefs.marginTop ?? _defaultMarginTop;
+    _marginBottom = widget.prefs.marginBottom ?? _defaultMarginBottom;
+    _marginLeft = widget.prefs.marginLeft ?? _defaultMarginLeft;
+    _marginRight = widget.prefs.marginRight ?? _defaultMarginRight;
     _textAlign = widget.prefs.textAlign;
     _publisherStyles = widget.prefs.publisherStyles ?? true;
     _writingModeOverride = widget.prefs.writingModeOverride;
@@ -99,9 +106,10 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
         _paragraphSpacing = widget.prefs.paragraphSpacing != null
             ? (widget.prefs.paragraphSpacing! * 10.0).roundToDouble()
             : _defaultParagraphSpacing;
-        _pageMargins = widget.prefs.pageMargins != null
-            ? (widget.prefs.pageMargins! * 15.0).roundToDouble()
-            : _defaultPageMargins;
+        _marginTop = widget.prefs.marginTop ?? _defaultMarginTop;
+        _marginBottom = widget.prefs.marginBottom ?? _defaultMarginBottom;
+        _marginLeft = widget.prefs.marginLeft ?? _defaultMarginLeft;
+        _marginRight = widget.prefs.marginRight ?? _defaultMarginRight;
         _textAlign = widget.prefs.textAlign;
         _publisherStyles = widget.prefs.publisherStyles ?? true;
         _writingModeOverride = widget.prefs.writingModeOverride;
@@ -126,7 +134,10 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
       fontWeight: _fontWeightMultiplier,
       lineHeight: _lineHeight,
       paragraphSpacing: _toMultiplier(_paragraphSpacing, 10.0),
-      pageMargins: _toMultiplier(_pageMargins, 15.0),
+      marginTop: _marginTop,
+      marginBottom: _marginBottom,
+      marginLeft: _marginLeft,
+      marginRight: _marginRight,
       textAlign: _textAlign,
       publisherStyles: _publisherStyles,
       writingModeOverride: _writingModeOverride,
@@ -222,15 +233,54 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                   }),
                 ),
                 _buildSliderRow(
-                  keyPrefix: 'reader_settings_page_margins',
-                  label: '邊距',
-                  value: _pageMargins,
+                  keyPrefix: 'reader_settings_margin_top',
+                  label: '上邊界',
+                  value: _marginTop,
                   min: 0,
-                  max: 50,
-                  step: 1,
-                  displayValue: _pageMargins.round().toString(),
+                  max: 120,
+                  step: 4,
+                  displayValue: _marginTop.round().toString(),
                   onChanged: (v) => setState(() {
-                    _pageMargins = v;
+                    _marginTop = v;
+                    _notifyChanged();
+                  }),
+                ),
+                _buildSliderRow(
+                  keyPrefix: 'reader_settings_margin_bottom',
+                  label: '下邊界',
+                  value: _marginBottom,
+                  min: 0,
+                  max: 120,
+                  step: 4,
+                  displayValue: _marginBottom.round().toString(),
+                  onChanged: (v) => setState(() {
+                    _marginBottom = v;
+                    _notifyChanged();
+                  }),
+                ),
+                _buildSliderRow(
+                  keyPrefix: 'reader_settings_margin_left',
+                  label: '左邊界',
+                  value: _marginLeft,
+                  min: 0,
+                  max: 120,
+                  step: 4,
+                  displayValue: _marginLeft.round().toString(),
+                  onChanged: (v) => setState(() {
+                    _marginLeft = v;
+                    _notifyChanged();
+                  }),
+                ),
+                _buildSliderRow(
+                  keyPrefix: 'reader_settings_margin_right',
+                  label: '右邊界',
+                  value: _marginRight,
+                  min: 0,
+                  max: 120,
+                  step: 4,
+                  displayValue: _marginRight.round().toString(),
+                  onChanged: (v) => setState(() {
+                    _marginRight = v;
                     _notifyChanged();
                   }),
                 ),

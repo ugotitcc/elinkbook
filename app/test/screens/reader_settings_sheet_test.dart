@@ -17,7 +17,10 @@ void main() {
       fontWeight: 1.75, // UI 700
       lineHeight: 1.8,
       paragraphSpacing: 2.0, // UI 20.0
-      pageMargins: 1.6667, // UI 25.0
+      marginTop: 72,
+      marginBottom: 20,
+      marginLeft: 30,
+      marginRight: 30,
       textAlign: EpubTextAlign.justify,
       publisherStyles: false, // 停用書本 CSS 開關應為 true（反向語意）
     );
@@ -62,9 +65,30 @@ void main() {
     expect(
       tester
           .widget<Slider>(
-              find.byKey(const Key('reader_settings_page_margins_slider')))
+              find.byKey(const Key('reader_settings_margin_top_slider')))
           .value,
-      25.0,
+      72.0,
+    );
+    expect(
+      tester
+          .widget<Slider>(
+              find.byKey(const Key('reader_settings_margin_bottom_slider')))
+          .value,
+      20.0,
+    );
+    expect(
+      tester
+          .widget<Slider>(
+              find.byKey(const Key('reader_settings_margin_left_slider')))
+          .value,
+      30.0,
+    );
+    expect(
+      tester
+          .widget<Slider>(
+              find.byKey(const Key('reader_settings_margin_right_slider')))
+          .value,
+      30.0,
     );
     expect(
       tester
@@ -109,9 +133,30 @@ void main() {
     expect(
       tester
           .widget<Slider>(
-              find.byKey(const Key('reader_settings_page_margins_slider')))
+              find.byKey(const Key('reader_settings_margin_top_slider')))
           .value,
-      15.0,
+      64.0,
+    );
+    expect(
+      tester
+          .widget<Slider>(
+              find.byKey(const Key('reader_settings_margin_bottom_slider')))
+          .value,
+      16.0,
+    );
+    expect(
+      tester
+          .widget<Slider>(
+              find.byKey(const Key('reader_settings_margin_left_slider')))
+          .value,
+      24.0,
+    );
+    expect(
+      tester
+          .widget<Slider>(
+              find.byKey(const Key('reader_settings_margin_right_slider')))
+          .value,
+      24.0,
     );
     expect(
       tester
@@ -138,6 +183,24 @@ void main() {
     expect(result, isNotNull);
     expect(result!.fontSize, 1.3125); // UI 21.0
     expect(result!.lineHeight, 1.6, reason: '未被觸碰的欄位應維持原值');
+  });
+
+  testWidgets('點擊上邊界 + 按鈕後，onChanged 帶入 marginTop+4 且其他欄位不變',
+      (tester) async {
+    BookReaderPrefs? result;
+    await _pumpSheet(
+      tester,
+      const BookReaderPrefs(marginTop: 64, marginLeft: 24),
+      (prefs) => result = prefs,
+    );
+
+    await tester
+        .tap(find.byKey(const Key('reader_settings_margin_top_increment')));
+    await tester.pump();
+
+    expect(result, isNotNull);
+    expect(result!.marginTop, 68.0);
+    expect(result!.marginLeft, 24.0, reason: '未被觸碰的欄位應維持原值');
   });
 
   testWidgets('拖動字重滑桿到 UI 值 700 時，onChanged 帶入換算後的倍率 1.75',
