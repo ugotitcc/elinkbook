@@ -41,7 +41,10 @@ Map<String, Object?> buildFoliatePreferencesMap(FoliateEpubReaderView view) {
   if (view.paragraphSpacing != null) {
     map['paragraphSpacing'] = view.paragraphSpacing;
   }
-  if (view.pageMargins != null) map['pageMargins'] = view.pageMargins;
+  if (view.marginTop != null) map['marginTop'] = view.marginTop;
+  if (view.marginBottom != null) map['marginBottom'] = view.marginBottom;
+  if (view.marginLeft != null) map['marginLeft'] = view.marginLeft;
+  if (view.marginRight != null) map['marginRight'] = view.marginRight;
   if (view.textAlign != null) map['textAlign'] = view.textAlign!.name;
   if (view.publisherStyles != null) {
     map['publisherStyles'] = view.publisherStyles;
@@ -66,7 +69,10 @@ bool foliatePreferencesChanged(
       oldView.fontWeight != newView.fontWeight ||
       oldView.lineHeight != newView.lineHeight ||
       oldView.paragraphSpacing != newView.paragraphSpacing ||
-      oldView.pageMargins != newView.pageMargins ||
+      oldView.marginTop != newView.marginTop ||
+      oldView.marginBottom != newView.marginBottom ||
+      oldView.marginLeft != newView.marginLeft ||
+      oldView.marginRight != newView.marginRight ||
       oldView.textAlign != newView.textAlign ||
       oldView.publisherStyles != newView.publisherStyles ||
       oldView.columnMode != newView.columnMode ||
@@ -93,7 +99,10 @@ class FoliateEpubReaderView extends StatefulWidget {
   final double? fontWeight;
   final double? lineHeight;
   final double? paragraphSpacing;
-  final double? pageMargins;
+  final double? marginTop;
+  final double? marginBottom;
+  final double? marginLeft;
+  final double? marginRight;
   final EpubTextAlign? textAlign;
   final bool? publisherStyles;
   final ColumnMode? columnMode;
@@ -121,7 +130,10 @@ class FoliateEpubReaderView extends StatefulWidget {
     this.fontWeight,
     this.lineHeight,
     this.paragraphSpacing,
-    this.pageMargins,
+    this.marginTop,
+    this.marginBottom,
+    this.marginLeft,
+    this.marginRight,
     this.textAlign,
     this.publisherStyles,
     this.columnMode,
