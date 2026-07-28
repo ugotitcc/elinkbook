@@ -654,7 +654,8 @@ Future<void> _pumpSheet(
   ValueChanged<BookReaderPrefs> onChanged,
 ) async {
   // 設定較大的 Viewport，以防 ListView 元件超出預設的 800x600 範圍導致 tap 失敗
-  tester.view.physicalSize = const Size(800, 1200);
+  // （Issue 14 邊距拆為 4 個獨立滑桿後內容變高，1200 已不足，調高至 1600）
+  tester.view.physicalSize = const Size(800, 1600);
   tester.view.devicePixelRatio = 1.0;
   addTearDown(() {
     tester.view.resetPhysicalSize();

@@ -209,7 +209,8 @@ void main() {
     '流式 EPUB 開書後，ReaderSettingsSheet 變動的偏好正確傳遞到 FoliateEpubReaderView',
     (tester) async {
       // 設定較大的 Viewport，確保 BottomSheet 內的控制項皆在可點擊範圍內
-      tester.view.physicalSize = const Size(800, 1200);
+      // （Issue 14 邊距拆為 4 個獨立滑桿後內容變高，1200 已不足，調高至 1600）
+      tester.view.physicalSize = const Size(800, 1600);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(() {
         tester.view.resetPhysicalSize();
