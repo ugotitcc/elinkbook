@@ -1635,7 +1635,6 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
               ),
             if (format == BookFormat.epub &&
                 _dispatchedIsFixedLayout == false &&
-                _chromeVisible &&
                 (_resolved?.showHeader ?? true))
               Positioned(
                 top: 16,
@@ -1645,7 +1644,6 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
               ),
             if (format == BookFormat.epub &&
                 _dispatchedIsFixedLayout == false &&
-                _chromeVisible &&
                 (_resolved?.showFooter ?? true) &&
                 (_epubPositionInfo?.totalPages ?? 0) > 0)
               (_resolved?.writingMode == WritingMode.vertical)
