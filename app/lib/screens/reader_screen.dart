@@ -1838,9 +1838,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      builder: (_) => positionInfo == null
-          ? const SizedBox.shrink()
-          : _buildFoliateEpubFooter(positionInfo),
+      builder: (_) => SafeArea(
+        child: positionInfo == null
+            ? const SizedBox.shrink()
+            : _buildFoliateEpubFooter(positionInfo),
+      ),
     );
   }
 

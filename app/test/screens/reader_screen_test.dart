@@ -3732,4 +3732,55 @@ void main() {
       expect(find.text('10/100'), findsNWidgets(2));
     },
   );
+
+  testWidgets(
+    '流式 EPUB：進度/跳頁 Bottom Sheet 內容包在 SafeArea 內，避免被系統工具列蓋住（Issue 11）',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MediaQuery(
+            // 模擬有系統手勢列/三鍵導覽列的裝置：viewPadding.bottom > 0。
+            data: const MediaQueryData(
+              viewPadding: EdgeInsets.only(bottom: 48),
+            ),
+            child: ReaderScreen(
+              filePath: 'test/fixtures/sample.epub',
+              bookId: 'b_foliate_progress_safearea',
+              prefsManager: prefsManager,
+              isFixedLayout: false,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final foliateView = tester.widget<FoliateEpubReaderView>(
+        find.byType(FoliateEpubReaderView),
+      );
+      foliateView.onPageRendered();
+      foliateView.onLocatorChanged?.call(
+        const EpubPositionInfo(
+          locatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
+          progression: 0.1,
+          pageIndex: 0,
+          totalPages: 10,
+        ),
+      );
+      await tester.pump();
+
+      await tester.tap(find.byKey(const Key('reader_foliate_progress_button')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      final sliderFinder = find.byKey(const Key('reader_footer_jump_slider'));
+      expect(sliderFinder, findsOneWidget);
+      expect(
+        find.ancestor(of: sliderFinder, matching: find.byType(SafeArea)),
+        findsOneWidget,
+        reason: '跳頁滑桿須包在 SafeArea 內，避免被系統工具列（viewPadding.bottom）蓋住',
+      );
+    },
+  );
 }
