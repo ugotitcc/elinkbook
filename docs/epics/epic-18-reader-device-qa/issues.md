@@ -57,7 +57,7 @@
 
 ## Issue 3：書架封面格數依螢幕方向自適應（直立 3／橫放 4）
 
-**Status:** `ready-for-agent`
+**Status:** ✅ 已完成。書架封面格數依螢幕方向動態調整（直立 3 欄、橫放 4 欄），`childAspectRatio: 0.62` 維持不變，補上 `crossAxisSpacing: 8`／`mainAxisSpacing: 12` 避免封面緊貼。`flutter analyze` 乾淨、659 項測試全數通過。真機（`3CEF42ECD491687`）驗收通過：直立 3 欄、橫放 4 欄、旋轉即時切換正確，封面比例與間距視覺正常。
 
 **依賴：** 無
 
