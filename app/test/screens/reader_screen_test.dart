@@ -3638,50 +3638,67 @@ void main() {
     expect(tester.widget<RotatedBox>(rotatedFinder).quarterTurns, isNot(0));
   });
 
-  testWidgets('流式 EPUB：showFooter=false 時進度文字與進度/跳頁按鈕皆不顯示（Issue 7）', (
-    tester,
-  ) async {
-    await prefsManager.saveBookPrefs(
-      'b_foliate_progress_off',
-      const BookReaderPrefs(showFooter: false),
-    );
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ReaderScreen(
-          filePath: 'test/fixtures/sample.epub',
-          bookId: 'b_foliate_progress_off',
-          prefsManager: prefsManager,
-          isFixedLayout: false,
+  testWidgets(
+    '流式 EPUB：showFooter=false 時進度文字不顯示，但進度/跳頁按鈕仍顯示且可點擊（Issue 12）',
+    (tester) async {
+      await prefsManager.saveBookPrefs(
+        'b_foliate_progress_off',
+        const BookReaderPrefs(showFooter: false),
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_foliate_progress_off',
+            prefsManager: prefsManager,
+            isFixedLayout: false,
+          ),
         ),
-      ),
-    );
-    await tester.pump();
-    await tester.runAsync(() => Future.delayed(Duration.zero));
-    await tester.pump();
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
 
-    final foliateView = tester.widget<FoliateEpubReaderView>(
-      find.byType(FoliateEpubReaderView),
-    );
-    foliateView.onPageRendered();
-    foliateView.onLocatorChanged?.call(
-      const EpubPositionInfo(
-        locatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
-        progression: 0.1,
-        pageIndex: 0,
-        totalPages: 10,
-      ),
-    );
-    await tester.pump();
+      final foliateView = tester.widget<FoliateEpubReaderView>(
+        find.byType(FoliateEpubReaderView),
+      );
+      foliateView.onPageRendered();
+      foliateView.onLocatorChanged?.call(
+        const EpubPositionInfo(
+          locatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
+          progression: 0.1,
+          pageIndex: 0,
+          totalPages: 10,
+        ),
+      );
+      await tester.pump();
 
-    expect(
-      find.byKey(const Key('reader_foliate_progress_text')),
-      findsNothing,
-    );
-    expect(
-      find.byKey(const Key('reader_foliate_progress_button')),
-      findsNothing,
-    );
-  });
+      expect(
+        find.byKey(const Key('reader_foliate_progress_text')),
+        findsNothing,
+        reason: 'showFooter=false 時進度文字（資訊顯示）仍不應顯示',
+      );
+
+      final buttonFinder = find.byKey(
+        const Key('reader_foliate_progress_button'),
+      );
+      expect(
+        buttonFinder,
+        findsOneWidget,
+        reason: '進度/跳頁按鈕（功能操作）不應被 showFooter 額外限制',
+      );
+
+      await tester.tap(buttonFinder);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(
+        find.byKey(const Key('reader_footer_jump_slider')),
+        findsOneWidget,
+        reason: '點擊按鈕仍可正常開啟跳頁 Bottom Sheet',
+      );
+    },
+  );
 
   testWidgets(
     '流式 EPUB：點擊浮動進度/跳頁按鈕開啟內含 ReaderFooter 的 Bottom Sheet，舊 in-flow 頁尾不再存在（Issue 7）',
