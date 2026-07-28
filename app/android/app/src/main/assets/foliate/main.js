@@ -96,16 +96,6 @@ function buildOverrideCss(prefs) {
   if (typeof prefs.paragraphSpacing === 'number') {
     rules.push(`p { margin-bottom: ${prefs.paragraphSpacing}em !important; }`)
   }
-  // epic-18 Issue 14：左右邊距改用獨立的 px 欄位（取代原本混用 em 的
-  // pageMargins），字級調整不再連帶影響左右留白（根因見 design.md
-  // 「第三輪真機使用回報」項目 4）。null 時不覆寫（沿用書本/瀏覽器
-  // 預設，比照既有 pageMargins null 時的既有行為）。
-  if (typeof prefs.marginLeft === 'number') {
-    rules.push(`body { padding-left: ${prefs.marginLeft}px !important; }`)
-  }
-  if (typeof prefs.marginRight === 'number') {
-    rules.push(`body { padding-right: ${prefs.marginRight}px !important; }`)
-  }
   if (prefs.textAlign) {
     rules.push(`p { text-align: ${prefs.textAlign} !important; }`)
   }
@@ -191,6 +181,23 @@ window.applyPreferences = function (prefs) {
   const marginBottomPx = typeof prefs.marginBottom === 'number' ? prefs.marginBottom : 16
   view.renderer.setAttribute('margin-top', `${marginTopPx}px`)
   view.renderer.setAttribute('margin-bottom', `${marginBottomPx}px`)
+  // /diagnose（2026-07-28，左右邊界設為 0 仍留有一大塊空白）：左右邊距原本
+  // 透過 buildOverrideCss() 疊加 `body { padding-left/right }` 覆蓋 CSS，
+  // 但 Paginator（paginator.js）自己內建的 --_margin-left/--_margin-right
+  // 預設值（48px，見該檔案 #top 樣式區塊）完全沒被觸碰，兩者是各自獨立的
+  // 留白來源——使用者把滑桿調到 0 只清空了自己疊加的 body padding，
+  // paginator.js 內建的 48px 邊界依然存在，看起來像「留白怎麼調都調不掉」。
+  // 改為直接比照 margin-top/margin-bottom 的既有作法，把值送進 Paginator
+  // 原生的 margin-left/margin-right attribute（該 custom element 的
+  // observedAttributes 本就含這兩項，見 paginator.js attributeChangedCallback()），
+  // 徹底取代 paginator.js 內建的 48px 預設，才能讓使用者設定的值（含 0）
+  // 真正生效；使用者已確認浮動按鈕（FAB）疊在內容上沒關係，不需要另外
+  // 保留按鈕安全邊界。未設定時的預設值（24px）比照 ReaderSettingsSheet
+  // 滑桿的既有預設常數（_defaultMarginLeft/_defaultMarginRight）。
+  const marginLeftPx = typeof prefs.marginLeft === 'number' ? prefs.marginLeft : 24
+  const marginRightPx = typeof prefs.marginRight === 'number' ? prefs.marginRight : 24
+  view.renderer.setAttribute('margin-left', `${marginLeftPx}px`)
+  view.renderer.setAttribute('margin-right', `${marginRightPx}px`)
   view.renderer.setStyles([fontFaceCss, buildOverrideCss(prefs)])
 }
 
