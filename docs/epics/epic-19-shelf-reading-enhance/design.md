@@ -57,7 +57,9 @@
 
 ## ADR
 
-三項功能皆未同時滿足「難以回頭＋沒有前情提要會很意外＋真正的權衡取捨」三個門檻（比照 `epic-18-reader-device-qa` 既有判斷慣例），故不另開 ADR。若後續實作階段發現需要新增持久化欄位以外的架構性取捨（例如全螢幕模式在特定裝置上與 E-Ink 更新模式衝突），屆時再評估是否補開。
+三項功能皆未同時滿足「難以回頭＋沒有前情提要會很意外＋真正的權衡取捨」三個門檻（比照 `epic-18-reader-device-qa` 既有判斷慣例），故不另開 ADR。
+
+**【後續更新，撰寫 `plan-issue-1.md` 前發現】**：全螢幕模式的系統列隱藏機制，原規劃的純 Dart `SystemChrome.setEnabledSystemUIMode()` 經查證在本專案目前的 `targetSdk`（36，Flutter SDK 3.41.9 預設值）下確認無效（Flutter 官方文件明載 API 36+ 一律強制 `edgeToEdge`、無退出方法）。改採原生 `WindowInsetsControllerCompat` 方案，此變動符合三個門檻（難以回頭：需新增原生 Kotlin 程式碼；意外：表面上應該用 Flutter 內建 API 卻改用原生方案；真權衡：曾考慮調降全專案 `targetSdk` 但影響範圍過大而排除），已新增 **ADR 0015**（`docs/adr/0015-fullscreen-native-window-insets-controller.md`），詳見 `spec.md`「功能 ① 全螢幕模式」。
 
 ## 後續
 

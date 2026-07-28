@@ -13,7 +13,10 @@
   1. `_createBookReaderPrefsTable()`（`sqlite_library_repository.dart:190-222`）的 `CREATE TABLE` 陳述式本身直接加上 `fullscreen INTEGER`（比照該陳述式已包含 `show_header`/`column_mode`/`margin_top` 等既有慣例——這是「一次到位、含所有現行欄位」的建表陳述式，全新安裝走 `onCreate` → 這個函式，不會經過 `onUpgrade`；若只改 `onUpgrade`，全新安裝的表會永遠缺這個欄位，讀寫時直接拋出 `no such column: fullscreen`）。
   2. `onUpgrade` 內既有 `if (oldVersion < 2) {...} else { ... if (oldVersion < 14) { await _addMarginColumns(db); } }` 分支內追加 `if (oldVersion < 15) { await _addFullscreenColumn(db); }`（放在 else 分支內、緊接 `_addMarginColumns` 之後，供既有裝置——`oldVersion >= 2`——升級用）。
 - **`app/lib/screens/reader_settings_sheet.dart`／`app/lib/screens/pdf_settings_sheet.dart`／`app/lib/screens/fxl_settings_sheet.dart`（異動，三者皆同步新增）**——各自新增 `late bool _fullscreen;`（`initState`／`didUpdateWidget`：`widget.prefs.fullscreen ?? false`），一個 `SwitchListTile`（`key: Key('<prefix>_settings_fullscreen')`，標籤「全螢幕模式」，比照既有 `show_header`/`show_footer`/`dual_page_cover_alone` 開關寫法），`_notifyChanged()` 帶入 `fullscreen: _fullscreen`。`fxl_settings_sheet.dart:9` 既有註解「為未來 FR-42（全螢幕顯示開關）預留擴充空間」即是此欄位的既定落點（本欄位範圍比 FR-42 更廣，見 `CONTEXT.md`「全螢幕模式」詞條，但沿用同一個預留位置）。
-- **`app/lib/screens/reader_screen.dart`（異動）**——新增 `bool? _lastAppliedFullscreen;`（比照既有 `_lastAppliedOrientation`，`reader_screen.dart:239`），新增 `_applySystemUiMode()` 方法（比照既有 `_applyScreenOrientation()`，`reader_screen.dart:389-397`），在 `_resolved` 每次重新賦值後的既有呼叫點追加呼叫（即目前呼叫 `_applyScreenOrientation()` 的所有位置：`initState().then()` 內、及 `_resolved = widget.prefsManager.resolve(...)` 之後的其餘賦值處）；`dispose()`（`reader_screen.dart:301-314`）新增系統列還原呼叫，緊鄰既有 `SystemChrome.setPreferredOrientations(const [])`（line 313）。既有 `didChangeAppLifecycleState()`（`reader_screen.dart:322-326`，目前只處理 `AppLifecycleState.paused`）新增一個 `AppLifecycleState.resumed` 分支（見下方「介面」段落——Android `immersiveSticky` 從背景恢復時系統列可能被 OS 自動重新顯示，需要強制重套用，不能只靠等值防護，`/superpowers:requesting-code-review` 審查 Critical 2）。
+- **【審查修正——技術方案變更】原設計呼叫 `SystemChrome.setEnabledSystemUIMode()` 已確認在本專案的 Android 建置設定下無效**：直接查證 Flutter SDK（3.41.9）`system_chrome.dart:601-608` 官方文件——「若 targetSdk 為 API 36 以上，App 一律強制使用 `SystemUiMode.edgeToEdge`，呼叫其他模式一律被忽略、沒有退出方法」；本專案 `app/android/app/build.gradle.kts:16,41` 的 `compileSdk`/`targetSdk` 皆直接吃 `flutter.compileSdkVersion`/`flutter.targetSdkVersion`，目前安裝的 Flutter SDK 這兩個預設值皆為 36。故改採 Android 官方建議、繼任 `SystemUiMode` 的現代 API `WindowInsetsControllerCompat`——運作在原生 `Window`/`View` 層級，不經過 Flutter 引擎的 `SystemUiMode` 限制，透過新增的 `elinkbook/fullscreen` platform channel（比照既有 `elinkbook/volume_key`／`elinkbook/app_info` 頻道慣例）呼叫。
+- **`app/android/app/src/main/kotlin/cc/ugotit/elinkbook/MainActivity.kt`（異動）**——`configureFlutterEngine()` 內新增 `MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "elinkbook/fullscreen")`，處理 `"setEnabled"`（`Boolean` 參數）：透過 `WindowCompat.getInsetsController(window, window.decorView)` 取得 controller，`true` 時設定 `systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE` 後呼叫 `hide(WindowInsetsCompat.Type.systemBars())`，`false` 時呼叫 `show(WindowInsetsCompat.Type.systemBars())`。
+- **`app/android/app/build.gradle.kts`（異動）**——新增 `implementation("androidx.core:core-ktx:1.15.0")`（`WindowCompat`/`WindowInsetsControllerCompat`/`WindowInsetsCompat` 所在套件；本專案既有 `androidx.fragment:fragment-ktx:1.8.9` 雖已transitively 帶入相容版本的 `androidx.core`，但明確宣告版本比依賴未宣告的傳遞依賴更穩健，比照本檔案其餘依賴皆明確宣告版本號的既有慣例）。
+- **`app/lib/screens/reader_screen.dart`（異動）**——新增 `static const _fullscreenChannel = MethodChannel('elinkbook/fullscreen');`（比照既有 `_volumeKeyChannel` 宣告方式，`reader_screen.dart:51`）；新增 `bool? _lastAppliedFullscreen;`（比照既有 `_lastAppliedOrientation`，`reader_screen.dart:239`），新增 `_applySystemUiMode()` 方法（比照既有 `_applyScreenOrientation()`，`reader_screen.dart:389-397`，改呼叫 `_fullscreenChannel.invokeMethod('setEnabled', resolved.fullscreen)`），在 `_resolved` 每次重新賦值後的既有呼叫點追加呼叫（即目前呼叫 `_applyScreenOrientation()` 的所有位置：`initState().then()`〔line 267〕、`_handlePrefsChanged()`〔line 441〕——**只有這兩處**，`_handleCropRectComputed`/`_handleCropRectSelected` 不呼叫，因為那兩條路徑不可能改變 `fullscreen` 欄位，比照 `_applyScreenOrientation()` 現有呼叫點範圍）；`dispose()`（`reader_screen.dart:301-314`）新增系統列還原呼叫，緊鄰既有 `SystemChrome.setPreferredOrientations(const [])`（line 313）。既有 `didChangeAppLifecycleState()`（`reader_screen.dart:322-326`，目前只處理 `AppLifecycleState.paused`）新增一個 `AppLifecycleState.resumed` 分支（見下方「介面」段落——App 從背景恢復時系統列可能被 OS 自動重新顯示，需要強制重套用，不能只靠等值防護，`/superpowers:requesting-code-review` 審查 Critical 2）。
 
 ### 資料模型 (Data Model)
 
@@ -30,6 +33,28 @@ ALTER TABLE book_reader_prefs ADD COLUMN fullscreen INTEGER; -- nullable：NULL=
 
 ### 介面 (Interfaces)
 
+```kotlin
+// MainActivity.kt configureFlutterEngine() 內新增
+MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "elinkbook/fullscreen")
+    .setMethodCallHandler { call, result ->
+        when (call.method) {
+            "setEnabled" -> {
+                val enabled = call.arguments as Boolean
+                val controller = WindowCompat.getInsetsController(window, window.decorView)
+                if (enabled) {
+                    controller.systemBarsBehavior =
+                        WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                    controller.hide(WindowInsetsCompat.Type.systemBars())
+                } else {
+                    controller.show(WindowInsetsCompat.Type.systemBars())
+                }
+                result.success(null)
+            }
+            else -> result.notImplemented()
+        }
+    }
+```
+
 ```dart
 // reader_screen.dart —— 比照既有 _applyScreenOrientation() 的節流寫法，
 // 避免偏好設定頻繁變動（例如快速切換開關）時重複呼叫 platform channel。
@@ -38,18 +63,16 @@ void _applySystemUiMode() {
   if (resolved == null) return;
   if (resolved.fullscreen == _lastAppliedFullscreen) return;
   _lastAppliedFullscreen = resolved.fullscreen;
-  SystemChrome.setEnabledSystemUIMode(
-    resolved.fullscreen ? SystemUiMode.immersiveSticky : SystemUiMode.edgeToEdge,
-  );
+  _fullscreenChannel.invokeMethod('setEnabled', resolved.fullscreen);
 }
 ```
 
 ```dart
 // reader_screen.dart 既有 didChangeAppLifecycleState()——新增 resumed 分支。
-// immersiveSticky 從背景恢復時，Android 可能已自動重新顯示系統列，此時
+// App 從背景恢復時，Android 可能已自動重新顯示系統列，此時
 // _lastAppliedFullscreen 仍等於 resolved.fullscreen（值本身沒變），
 // _applySystemUiMode() 的等值節流防護會誤判「不需要重新套用」而略過
-// SystemChrome 呼叫。故 resumed 時強制清空節流快取、無條件重新套用一次。
+// platform channel 呼叫。故 resumed 時強制清空節流快取、無條件重新套用一次。
 @override
 void didChangeAppLifecycleState(AppLifecycleState state) {
   if (state == AppLifecycleState.paused) {
@@ -64,17 +87,17 @@ void didChangeAppLifecycleState(AppLifecycleState state) {
 `dispose()` 新增（不論進入閱讀器時是否開啟過全螢幕模式，離開時一律強制還原，比照 `SystemChrome.setPreferredOrientations(const [])` 既有的無條件還原寫法，不判斷 `_lastAppliedFullscreen`）：
 
 ```dart
-SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+_fullscreenChannel.invokeMethod('setEnabled', false);
 ```
 
-**與既有機制的邊界（見 `design.md`／`CONTEXT.md`「全螢幕模式」詞條）**：`_applySystemUiMode()` 只呼叫 `SystemChrome`，不讀取／不影響 `_chromeVisible`（沉浸模式）或 `resolved.showHeader`/`resolved.showFooter`——三套機制在程式碼層級完全獨立，互不呼叫對方。
+**與既有機制的邊界（見 `design.md`／`CONTEXT.md`「全螢幕模式」詞條）**：`_applySystemUiMode()` 只透過 `elinkbook/fullscreen` 頻道控制原生系統列，不讀取／不影響 `_chromeVisible`（沉浸模式）或 `resolved.showHeader`/`resolved.showFooter`——三套機制在程式碼層級完全獨立，互不呼叫對方。
 
 ### 測試決策 (Testing Decisions)
 
 - `BookReaderPrefs.fullscreen` 的 `toMap`/`fromMap`/`copyWith`/`==`/`hashCode`：`flutter test` 單元測試，比照既有 `showHeader`/`showFooter` 欄位新增時的既有測試模式。
 - 三個設定面板新增的 `SwitchListTile`：widget test，比照既有 `reader_settings_show_header`/`pdf_settings_show_footer` 的既有測試模式（tap 開關→驗證 `onChanged` 回報的 `BookReaderPrefs.fullscreen` 值）。
-- `_applySystemUiMode()`／`dispose()` 的 `SystemChrome` 呼叫：可用 Flutter test 的 mock method channel（`TestDefaultBinaryMessengerBinding`）記錄 `SystemChrome.setEnabledSystemUIMode` 被呼叫的次數與參數（比照既有 `_applyScreenOrientation()` 的既有測試侷限），但「系統狀態列/導覽列是否真的從畫面消失」無法在 widget test 環境驗證，需真機人工視覺確認（沿用本專案既有的兩層測試架構慣例，見 `CLAUDE.md`「兩層測試架構」）。
-- `didChangeAppLifecycleState(AppLifecycleState.resumed)`：widget test 驗證 `_lastAppliedFullscreen` 被重置後 `_applySystemUiMode()` 確實再次呼叫 `SystemChrome.setEnabledSystemUIMode`（即使 `resolved.fullscreen` 值前後相同也要再呼叫一次）；真機驗收項目新增「開啟全螢幕模式→切到背景→切回前台→系統列仍隱藏」。
+- `_applySystemUiMode()`／`dispose()` 的 `elinkbook/fullscreen` 頻道呼叫：用 `TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(const MethodChannel('elinkbook/fullscreen'), ...)` 記錄 `MethodCall`（比照既有 `elinkbook/volume_key` 頻道的既有測試模式，`reader_screen_test.dart:2748-2760`），驗證等值節流防護生效／`fullscreen` 值改變時正確呼叫 `setEnabled` 且參數正確。「系統狀態列/導覽列是否真的從畫面消失」無法在 widget test 環境驗證原生 `WindowInsetsController` 的實際效果，需真機人工視覺確認（沿用本專案既有的兩層測試架構慣例，見 `CLAUDE.md`「兩層測試架構」）。
+- `didChangeAppLifecycleState(AppLifecycleState.resumed)`：widget test 用 `tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed)` 觸發，驗證 `_lastAppliedFullscreen` 被重置後 `_applySystemUiMode()` 確實再次呼叫 `elinkbook/fullscreen` 頻道（即使 `resolved.fullscreen` 值前後相同也要再呼叫一次）；真機驗收項目新增「開啟全螢幕模式→切到背景→切回前台→系統列仍隱藏」。
 
 ---
 
@@ -474,4 +497,4 @@ AppBar _buildNormalAppBar(List<Book>? books) {
 
 ## ADR
 
-三項功能皆不需要新增 ADR（見 `design.md`「ADR」段落既有判斷）。
+【審查修正——技術方案變更後新增】撰寫 `plan-issue-1.md` 前查證得知功能 ① 原始設計（純 Dart `SystemChrome.setEnabledSystemUIMode`）在本專案目前 `targetSdk`（36）下無效，改採原生 `WindowInsetsControllerCompat` 方案，屬於「難以回頭＋沒有前情提要會很意外＋真正的權衡取捨」皆成立的決策，已新增 **ADR 0015**（`docs/adr/0015-fullscreen-native-window-insets-controller.md`）。功能 ②③ 維持原判斷，不需要新增 ADR。
