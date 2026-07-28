@@ -3783,4 +3783,42 @@ void main() {
       );
     },
   );
+
+  testWidgets(
+    '流式 EPUB：positionInfo 尚未就緒（null）時點擊進度/跳頁按鈕，SafeArea 仍正常包裹空白內容，不噴例外（Issue 11）',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_foliate_progress_safearea_null',
+            prefsManager: prefsManager,
+            isFixedLayout: false,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      // 刻意不呼叫 onLocatorChanged，讓 _epubPositionInfo 維持 null，
+      // 藉此觸發 builder 的 SizedBox.shrink() 分支。此時畫面上只有
+      // `_buildBody()` 主體的那一層 SafeArea。
+      expect(find.byType(SafeArea), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('reader_foliate_progress_button')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(tester.takeException(), isNull);
+      expect(find.byKey(const Key('reader_footer')), findsNothing);
+      expect(
+        find.byType(SafeArea),
+        findsNWidgets(2),
+        reason:
+            'positionInfo 為 null 時 Bottom Sheet 仍應包一層 SafeArea（SizedBox.shrink 分支），'
+            '不因內容為空而被省略',
+      );
+    },
+  );
 }

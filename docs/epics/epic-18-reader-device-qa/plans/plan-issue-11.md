@@ -187,9 +187,11 @@ adb -s 3CEF42ECD491687 install -r build/app/outputs/flutter-apk/app-debug.apk
 3. 確認跳頁捲軸與輸入框完整顯示在系統工具列（若裝置有手勢列/三鍵導覽列）上方，可正常拖曳互動、不被遮擋。
 4. 記錄：Pass/Fail + 截圖佐證。
 
+**驗收結果：Pass。** 由使用者本人於真機 `3CEF42ECD491687` 實測：開啟流式 EPUB → 點擊進度/跳頁浮動按鈕開啟 Bottom Sheet → 跳頁捲軸與輸入框完整顯示於系統手勢列上方，可正常拖曳互動，未被遮擋。
+
 - [x] **Step 3: 記錄驗收結果**
 
-供後續程式碼審查與 `docs/epics/epic-18-reader-device-qa/issues.md` Issue 11 狀態更新引用。
+供後續程式碼審查與 `docs/epics/epic-18-reader-device-qa/issues.md` Issue 11 狀態更新引用；結果已同步記錄於本檔案 Step 2 與 `issues.md` Issue 11 條目。
 
 ---
 
