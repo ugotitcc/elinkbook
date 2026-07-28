@@ -381,7 +381,7 @@ Issue 5 的 `singleColumn` 布林開關因 `paginator.js` 對直排書籍的 `ma
 
 ## Issue 11：流式 EPUB 進度/跳頁 Bottom Sheet 補上 `SafeArea`
 
-**Status:** ✅ 已完成（分支 `fix/epic-18-issue-11-safearea`，尚未合併回 `main`）。`_openFoliateProgressSheet()` 的 `builder` 已補上 `SafeArea` 包裹，比照 `ReaderSettingsSheet`/`TocBottomSheet` 既有寫法。新增的 widget 測試（模擬 `viewPadding.bottom: 48` 的系統手勢列情境）驗證跳頁滑桿確實位於 `SafeArea` 之內，`flutter analyze` 乾淨、`flutter test` 全數通過。真機驗收由使用者本人於裝置 `3CEF42ECD491687` 上實測完成：開啟流式 EPUB 後點擊進度/跳頁浮動按鈕，確認跳頁捲軸與輸入框完整顯示在系統手勢列上方，可正常拖曳互動、未被遮擋，結果為 Pass。
+**Status:** ✅ 已完成並合併回 `main`（PR #81，merge commit `19c9468`）。`_openFoliateProgressSheet()` 的 `builder` 已補上 `SafeArea` 包裹，比照 `ReaderSettingsSheet`/`TocBottomSheet` 既有寫法。新增的 widget 測試（模擬 `viewPadding.bottom: 48` 的系統手勢列情境）驗證跳頁滑桿確實位於 `SafeArea` 之內，`flutter analyze` 乾淨、`flutter test` 全數通過。真機驗收由使用者本人於裝置 `3CEF42ECD491687` 上實測完成：開啟流式 EPUB 後點擊進度/跳頁浮動按鈕，確認跳頁捲軸與輸入框完整顯示在系統手勢列上方，可正常拖曳互動、未被遮擋，結果為 Pass。
 
 **依賴：** 無
 
@@ -406,7 +406,7 @@ Issue 5 的 `singleColumn` 布林開關因 `paginator.js` 對直排書籍的 `ma
 
 ## Issue 12：進度/跳頁浮動按鈕移除 `showFooter` 額外限制
 
-**Status:** ✅ 已完成（分支 `issue-12-reader-foliate-progress-btn`，尚未合併回 `main`）。`reader_foliate_progress_button` 的顯示條件已移除 `(_resolved?.showFooter ?? true)`，改與其餘 5 顆浮動按鈕共用同一組 `format == BookFormat.epub && _dispatchedIsFixedLayout == false && _chromeVisible` 基底；`reader_foliate_progress_text`（資訊顯示）維持不變，仍受 `showFooter` 控制。既有測試已改寫並驗證先紅後綠，`flutter analyze` 乾淨、`flutter test` 646 個測試全數通過。真機驗收由使用者本人於裝置 `3CEF42ECD491687` 實測完成：關閉「顯示頁尾」後，進度/跳頁浮動按鈕仍與其餘 5 顆按鈕一起顯示，點擊可正常開啟跳頁 Bottom Sheet；切換沉浸模式時該按鈕仍跟其餘按鈕一起收合，結果為 Pass。
+**Status:** ✅ 已完成並合併回 `main`（PR #82，merge commit `4bb00ab`）。`reader_foliate_progress_button` 的顯示條件已移除 `(_resolved?.showFooter ?? true)`，改與其餘 5 顆浮動按鈕共用同一組 `format == BookFormat.epub && _dispatchedIsFixedLayout == false && _chromeVisible` 基底；`reader_foliate_progress_text`（資訊顯示）維持不變，仍受 `showFooter` 控制。既有測試已改寫並驗證先紅後綠，`flutter analyze` 乾淨、`flutter test` 646 個測試全數通過。真機驗收由使用者本人於裝置 `3CEF42ECD491687` 實測完成：關閉「顯示頁尾」後，進度/跳頁浮動按鈕仍與其餘 5 顆按鈕一起顯示，點擊可正常開啟跳頁 Bottom Sheet；切換沉浸模式時該按鈕仍跟其餘按鈕一起收合，結果為 Pass。
 
 **依賴：** 無
 
@@ -431,7 +431,7 @@ Issue 5 的 `singleColumn` 布林開關因 `paginator.js` 對直排書籍的 `ma
 
 ## Issue 13：流式 EPUB 頁首/進度文字從沉浸模式拆出、跟內文常駐顯示
 
-**Status:** ✅ 已完成（分支 `fix/epic-18-issue-13-chrome-visible`，尚未合併回 `main`）。頁首文字（`reader_foliate_header_text`）與進度文字（`reader_foliate_progress_text`）的 `Positioned` 顯示條件皆已移除 `_chromeVisible`，改為只依各自的 `showHeader`/`showFooter` 開關決定顯示；6 顆浮動功能按鈕（含 Issue 12 修正後的進度/跳頁鈕）維持不變，仍跟隨 `_chromeVisible`。新增的兩個測試驗證沉浸模式收起選單後，按鈕收合但頁首/進度文字仍常駐顯示，`flutter analyze` 乾淨、`flutter test` 648 個測試全數通過。真機驗收由使用者本人於裝置 `3CEF42ECD491687` 實測完成：頁首/進度文字在沉浸模式收合時仍常駐顯示，再次叫出選單時按鈕與常駐文字無重疊衝突，關閉「顯示頁首」/「顯示進度」仍可正確隱藏對應文字；FXL 與 PDF 既有沉浸模式行為未受影響，結果為 Pass。
+**Status:** ✅ 已完成並合併回 `main`（PR #83，merge commit `5b83ba5`）。頁首文字（`reader_foliate_header_text`）與進度文字（`reader_foliate_progress_text`）的 `Positioned` 顯示條件皆已移除 `_chromeVisible`，改為只依各自的 `showHeader`/`showFooter` 開關決定顯示；6 顆浮動功能按鈕（含 Issue 12 修正後的進度/跳頁鈕）維持不變，仍跟隨 `_chromeVisible`。新增的兩個測試驗證沉浸模式收起選單後，按鈕收合但頁首/進度文字仍常駐顯示，`flutter analyze` 乾淨、`flutter test` 648 個測試全數通過。真機驗收由使用者本人於裝置 `3CEF42ECD491687` 實測完成：頁首/進度文字在沉浸模式收合時仍常駐顯示，再次叫出選單時按鈕與常駐文字無重疊衝突，關閉「顯示頁首」/「顯示進度」仍可正確隱藏對應文字；FXL 與 PDF 既有沉浸模式行為未受影響，結果為 Pass。
 
 **依賴：** 無
 
@@ -460,7 +460,7 @@ Issue 5 的 `singleColumn` 布林開關因 `paginator.js` 對直排書籍的 `ma
 
 ## Issue 14：流式 EPUB 邊距重新設計為上/下/左/右 4 個獨立欄位
 
-**Status:** ✅ 已完成（分支 `feat/issue-14-independent-margins`，尚未合併回 `main`）。`BookReaderPrefs`／SQLite schema（v13→v14）／`ResolvedPreferences`／`FoliateEpubReaderView`／`ReaderSettingsSheet` 皆已依計畫拆為上/下/左/右 4 個獨立 px 欄位，`main.js` 的 `applyPreferences()` 統一依這 4 個欄位動態設定 Paginator 的 `margin-top`/`margin-bottom`/`margin-left`/`margin-right` attribute，橫排/直排皆生效，字級調整不再連帶影響左右留白。`flutter analyze` 乾淨、`flutter test` 655 個測試全數通過。
+**Status:** ✅ 已完成並合併回 `main`（PR #84，merge commit `871b73d`）。`BookReaderPrefs`／SQLite schema（v13→v14）／`ResolvedPreferences`／`FoliateEpubReaderView`／`ReaderSettingsSheet` 皆已依計畫拆為上/下/左/右 4 個獨立 px 欄位，`main.js` 的 `applyPreferences()` 統一依這 4 個欄位動態設定 Paginator 的 `margin-top`/`margin-bottom`/`margin-left`/`margin-right` attribute，橫排/直排皆生效，字級調整不再連帶影響左右留白。`flutter analyze` 乾淨、`flutter test` 655 個測試全數通過。
 
 程式碼審查（review-issue-14）發現的兩項問題皆已修正：
 1. Task 6 新增 4 個獨立滑桿後 `ReaderSettingsSheet` 內容變高，既有測試固定 viewport 過小導致 6 項測試失敗——已調高 `_pumpSheet()`／`reader_screen_test.dart` 的 viewport 至 `Size(800, 1600)` 解決。
