@@ -34,7 +34,7 @@
 - Consumes: 既有 `_resolved`（`ResolvedPreferences?`）、`_buildFoliateHeaderText()`（既有方法，不修改簽章）。
 - Produces: 無新的對外可呼叫函式，純顯示條件調整。
 
-- [ ] **Step 1: 確認現況**
+- [x] **Step 1: 確認現況**
 
 執行：
 ```bash
@@ -55,7 +55,7 @@ grep -n "reader_foliate_header_text" -B 8 app/lib/screens/reader_screen.dart | h
               ),
 ```
 
-- [ ] **Step 2: 撰寫會失敗的測試**
+- [x] **Step 2: 撰寫會失敗的測試**
 
 在 `app/test/screens/reader_screen_test.dart` 找到既有測試「流式 EPUB：頁眉純顯示章節名稱、不可點擊，`showHeader=false` 時不顯示（Issue 7）」（`grep -n "頁眉純顯示章節名稱" app/test/screens/reader_screen_test.dart` 確認行號），在其後新增：
 
@@ -108,7 +108,7 @@ grep -n "reader_foliate_header_text" -B 8 app/lib/screens/reader_screen.dart | h
   );
 ```
 
-- [ ] **Step 3: 執行測試，確認失敗**
+- [x] **Step 3: 執行測試，確認失敗**
 
 執行：
 ```bash
@@ -116,7 +116,7 @@ cd app && flutter test test/screens/reader_screen_test.dart --plain-name "頁首
 ```
 預期：FAIL——`find.byKey(const Key('reader_foliate_header_text'))` 為 `findsNothing`（目前頁首文字仍受 `_chromeVisible` 控制，收起選單後一併消失）。
 
-- [ ] **Step 4: 實作修正**
+- [x] **Step 4: 實作修正**
 
 修改 `reader_screen.dart:1637-1646`，移除 `_chromeVisible` 子句：
 
@@ -132,7 +132,7 @@ cd app && flutter test test/screens/reader_screen_test.dart --plain-name "頁首
               ),
 ```
 
-- [ ] **Step 5: 執行測試，確認通過**
+- [x] **Step 5: 執行測試，確認通過**
 
 執行：
 ```bash
@@ -140,7 +140,7 @@ cd app && flutter test test/screens/reader_screen_test.dart --plain-name "頁首
 ```
 預期：PASS。
 
-- [ ] **Step 6: 執行既有頁首相關測試回歸**
+- [x] **Step 6: 執行既有頁首相關測試回歸**
 
 執行：
 ```bash
@@ -148,7 +148,7 @@ cd app && flutter test test/screens/reader_screen_test.dart --plain-name "頁眉
 ```
 預期：既有「頁眉純顯示章節名稱、不可點擊，`showHeader=false` 時不顯示」與「`showHeader=false` 時頁眉不顯示」兩項測試皆維持 PASS（本步驟只移除 `_chromeVisible` 這一項判斷，`showHeader` 判斷邏輯不變）。
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app/lib/screens/reader_screen.dart app/test/screens/reader_screen_test.dart
@@ -167,7 +167,7 @@ git commit -m "fix(epic-18): Issue 13 Task 1 頁首文字脫離沉浸模式，�
 - Consumes: 既有 `_resolved`（`ResolvedPreferences?`）、`_epubPositionInfo`（`EpubPositionInfo?`）、`_buildFoliateProgressText()`（既有方法，不修改簽章）。
 - Produces: 無新的對外可呼叫函式，純顯示條件調整。
 
-- [ ] **Step 1: 確認現況**
+- [x] **Step 1: 確認現況**
 
 執行：
 ```bash
@@ -198,7 +198,7 @@ grep -n "reader_foliate_progress_text" -B 5 -A 15 app/lib/screens/reader_screen.
                     ),
 ```
 
-- [ ] **Step 2: 撰寫會失敗的測試**
+- [x] **Step 2: 撰寫會失敗的測試**
 
 在 `app/test/screens/reader_screen_test.dart` 新增（緊接 Task 1 新增的測試之後）：
 
@@ -252,7 +252,7 @@ grep -n "reader_foliate_progress_text" -B 5 -A 15 app/lib/screens/reader_screen.
   );
 ```
 
-- [ ] **Step 3: 執行測試，確認失敗**
+- [x] **Step 3: 執行測試，確認失敗**
 
 執行：
 ```bash
@@ -260,7 +260,7 @@ cd app && flutter test test/screens/reader_screen_test.dart --plain-name "進度
 ```
 預期：FAIL——`find.byKey(const Key('reader_foliate_progress_text'))` 為 `findsNothing`（目前進度文字仍受 `_chromeVisible` 控制）。
 
-- [ ] **Step 4: 實作修正**
+- [x] **Step 4: 實作修正**
 
 修改 `reader_screen.dart:1647-1666`，移除 `_chromeVisible` 子句：
 
@@ -286,7 +286,7 @@ cd app && flutter test test/screens/reader_screen_test.dart --plain-name "進度
                     ),
 ```
 
-- [ ] **Step 5: 執行測試，確認通過**
+- [x] **Step 5: 執行測試，確認通過**
 
 執行：
 ```bash
@@ -294,7 +294,7 @@ cd app && flutter test test/screens/reader_screen_test.dart --plain-name "進度
 ```
 預期：PASS。
 
-- [ ] **Step 6: 執行既有進度文字相關測試回歸**
+- [x] **Step 6: 執行既有進度文字相關測試回歸**
 
 執行：
 ```bash
@@ -304,7 +304,7 @@ cd app && flutter test
 ```
 預期：既有「進度為純顯示、橫排時置於下方置中且不含手勢 widget」「直排時進度以 `RotatedBox` 顯示於左下角」「`showFooter=false` 時進度文字不顯示，但進度/跳頁按鈕仍顯示且可點擊（Issue 12 已改寫）」等測試皆維持 PASS；`flutter analyze` 顯示 `No issues found!`；`flutter test` 全數通過。
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app/lib/screens/reader_screen.dart app/test/screens/reader_screen_test.dart
@@ -321,14 +321,14 @@ git commit -m "fix(epic-18): Issue 13 Task 2 進度文字脫離沉浸模式，�
 - Consumes: Task 1／Task 2 完成後的 `reader_screen.dart`。
 - Produces: 驗收結果記錄（供合併前的程式碼審查／`issues.md` Issue 13 狀態更新引用）。
 
-- [ ] **Step 1: 安裝最新 debug APK 至真機 `3CEF42ECD491687`**
+- [x] **Step 1: 安裝最新 debug APK 至真機 `3CEF42ECD491687`**
 
 ```bash
 cd app && flutter build apk --debug
 adb -s 3CEF42ECD491687 install -r build/app/outputs/flutter-apk/app-debug.apk
 ```
 
-- [ ] **Step 2: 驗證頁首/進度文字常駐顯示**
+- [x] **Step 2: 驗證頁首/進度文字常駐顯示**
 
 1. 開啟一本流式 EPUB，確認「顯示頁首」「顯示進度」皆為開啟。
 2. 點擊選單熱區收起浮動按鈕（沉浸模式）。
@@ -337,15 +337,19 @@ adb -s 3CEF42ECD491687 install -r build/app/outputs/flutter-apk/app-debug.apk
 5. 分別關閉「顯示頁首」/「顯示進度」，確認對應文字仍會正確隱藏（不受本次改動影響）。
 6. 記錄：Pass/Fail + 截圖佐證。
 
-- [ ] **Step 3: FXL／PDF 回歸確認**
+**驗收結果：Pass。** 由使用者本人於真機 `3CEF42ECD491687` 實測：點擊選單熱區收起浮動按鈕後，頁首文字（章節名稱）與進度文字（頁碼）仍常駐顯示，只有 6 顆浮動按鈕收合；再次叫出選單時按鈕正常出現，不與常駐文字重疊或衝突；分別關閉「顯示頁首」/「顯示進度」後，對應文字仍正確隱藏。
+
+- [x] **Step 3: FXL／PDF 回歸確認**
 
 1. 開啟一本 FXL（固定版面）EPUB，確認既有沉浸模式行為（4 顆浮動按鈕跟隨收合/顯示）未受影響。
 2. 開啟一本 PDF，確認既有 AppBar／頁尾沉浸模式行為未受影響。
 3. 記錄：Pass/Fail。
 
-- [ ] **Step 4: 記錄驗收結果**
+**驗收結果：Pass。** FXL 與 PDF 既有沉浸模式行為皆未受本次改動影響。
 
-供後續程式碼審查與 `docs/epics/epic-18-reader-device-qa/issues.md` Issue 13 狀態更新引用。
+- [x] **Step 4: 記錄驗收結果**
+
+供後續程式碼審查與 `docs/epics/epic-18-reader-device-qa/issues.md` Issue 13 狀態更新引用；結果已同步記錄於本檔案 Step 2/Step 3 與 `issues.md` Issue 13 條目。
 
 ---
 
