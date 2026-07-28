@@ -176,10 +176,31 @@ void main() {
       expect(resolved.lineHeight, isNull);
       expect(resolved.paragraphSpacing, isNull);
       expect(resolved.pageMargins, isNull);
+      expect(resolved.marginTop, isNull);
+      expect(resolved.marginBottom, isNull);
+      expect(resolved.marginLeft, isNull);
+      expect(resolved.marginRight, isNull);
       expect(resolved.textAlign, isNull);
       expect(resolved.publisherStyles, isNull);
       expect(resolved.columnMode, ColumnMode.auto);
       expect(resolved.columnSize, 720.0);
+    });
+
+    test('BookReaderPrefs 的邊距 4 個欄位正確透傳到 ResolvedPreferences', () {
+      final loaded = LoadedPrefs(
+        bookPrefs: const BookReaderPrefs(
+          marginTop: 72,
+          marginBottom: 20,
+          marginLeft: 30,
+          marginRight: 30,
+        ),
+        globalPrefs: const GlobalReaderPrefs.initial(),
+      );
+      final resolved = manager.resolve(loaded);
+      expect(resolved.marginTop, 72);
+      expect(resolved.marginBottom, 20);
+      expect(resolved.marginLeft, 30);
+      expect(resolved.marginRight, 30);
     });
   });
 

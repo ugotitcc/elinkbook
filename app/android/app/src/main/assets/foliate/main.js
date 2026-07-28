@@ -96,9 +96,6 @@ function buildOverrideCss(prefs) {
   if (typeof prefs.paragraphSpacing === 'number') {
     rules.push(`p { margin-bottom: ${prefs.paragraphSpacing}em !important; }`)
   }
-  if (typeof prefs.pageMargins === 'number') {
-    rules.push(`body { padding: 0 ${1.5 * prefs.pageMargins}em !important; }`)
-  }
   if (prefs.textAlign) {
     rules.push(`p { text-align: ${prefs.textAlign} !important; }`)
   }
@@ -169,45 +166,38 @@ window.applyPreferences = function (prefs) {
       view.renderer.setAttribute('max-inline-size', `${prefs.columnSize}px`)
     }
   }
-  // epic-18 Issue 4：直排上下邊距。paginator.js 內建 --_margin-top/
-  // --_margin-bottom 固定 48px，從未接上使用者 pageMargins 偏好（見
-  // docs/epics/epic-18-reader-device-qa/design.md「調查結論」），導致
-  // (a) 頂端文字在某些字級/行高組合下被裁切（使用者回報項目 6）、
-  // (b) 本文與頁尾間空白過多（項目 7，因為 ReaderFooter 已經是 in-flow
-  // 子項壓縮過 WebView 可視高度一次，paginator.js 又在這個已壓縮高度內
-  // 再扣一次完整 48px 下邊距，兩者疊加）。用 currentWritingMode（上面
-  // 已更新為本次呼叫的最新值）判斷，不用 prefs.writingMode——理由同上方
-  // 單欄覆寫註解，prefs.writingMode 在特定呼叫時序下可能是 undefined，
-  // currentWritingMode 已保證持有最新已知值。margin-top/margin-bottom
-  // 是長度屬性，setAttribute 傳入值必須帶 CSS 單位（純數字會被靜默
-  // 忽略，見 spec.md「CSS 單位要求」）。
-  if (currentWritingMode === 'vertical') {
-    // pageMargins 是既有的頁邊距倍率偏好（body 左右 padding 已使用同一個
-    // 值，見 buildOverrideCss()），未設定時（prefs.pageMargins 非數字）
-    // 以 1（既有 UI 滑桿中性初始位置對應的倍率）當基準。
-    const marginMultiplier = typeof prefs.pageMargins === 'number' ? prefs.pageMargins : 1
-    // 上邊距：以內建預設值 48px 為基準放大約 1.33 倍（起始建議值，見
-    // Global Constraints），解決「頂端文字被裁切」；隨 pageMargins 倍率
-    // 同步縮放，使用者可再依需要調整。
-    const marginTopPx = Math.round(64 * marginMultiplier)
-    // 下邊距：頁尾顯示時（prefs.showFooter !== false，涵蓋 true 與
-    // undefined 兩種「視同顯示」情況）只需要小幅視覺緩衝（16px 起始
-    // 建議值），避免在已經被頁尾壓縮過的可視高度內再扣一次完整邊距；
-    // 頁尾明確隱藏時（prefs.showFooter === false）沒有頁尾提供視覺
-    // 邊界，改用與上邊距相同的較大緩衝，避免文字貼齊螢幕底緣。
-    const marginBottomPx = prefs.showFooter === false
-      ? Math.round(64 * marginMultiplier)
-      : Math.round(16 * marginMultiplier)
-    view.renderer.setAttribute('margin-top', `${marginTopPx}px`)
-    view.renderer.setAttribute('margin-bottom', `${marginBottomPx}px`)
-  } else {
-    // 橫排：還原 paginator.js 內建預設值。setAttribute 具持久性（不會
-    // 隨排版方向切換自動歸零/還原），若省略這個 else 分支，使用者從
-    // 直排切回橫排後會殘留直排時設定的邊距值，違反「橫排不受本 Issue
-    // 影響」的驗收標準。
-    view.renderer.setAttribute('margin-top', '48px')
-    view.renderer.setAttribute('margin-bottom', '48px')
-  }
+  // epic-18 Issue 14：上/下邊距改用獨立的 marginTop/marginBottom 欄位
+  // （取代 Issue 4 引入的 pageMargins 倍率公式），且不再限制僅直排生效
+  // ——橫排模式現在也依這兩個欄位動態設定，取代原本「橫排永遠固定
+  // paginator.js 內建 48px」的既有限制（見 design.md「第三輪真機使用
+  // 回報」項目 4）。因為兩個方向現在共用同一套邏輯，不再需要「切換
+  // 排版方向時重設回 48px」這層既有的持久性補償（原本 Issue 4 的
+  // if/else 分支正是為了這個補償而存在）。
+  // 未設定時的預設值（64px/16px）延續 Issue 4 當初為修正直排頂端裁切
+  // 問題而定的數值；marginBottom 不再依 showFooter 動態調整——Issue 7
+  // 已把頁尾改為浮動疊加層，不再壓縮 WebView 可視高度，「頁尾顯示時
+  // 縮小下邊距」的補償理由已不成立，此為刻意簡化。
+  const marginTopPx = typeof prefs.marginTop === 'number' ? prefs.marginTop : 64
+  const marginBottomPx = typeof prefs.marginBottom === 'number' ? prefs.marginBottom : 16
+  view.renderer.setAttribute('margin-top', `${marginTopPx}px`)
+  view.renderer.setAttribute('margin-bottom', `${marginBottomPx}px`)
+  // /diagnose（2026-07-28，左右邊界設為 0 仍留有一大塊空白）：左右邊距原本
+  // 透過 buildOverrideCss() 疊加 `body { padding-left/right }` 覆蓋 CSS，
+  // 但 Paginator（paginator.js）自己內建的 --_margin-left/--_margin-right
+  // 預設值（48px，見該檔案 #top 樣式區塊）完全沒被觸碰，兩者是各自獨立的
+  // 留白來源——使用者把滑桿調到 0 只清空了自己疊加的 body padding，
+  // paginator.js 內建的 48px 邊界依然存在，看起來像「留白怎麼調都調不掉」。
+  // 改為直接比照 margin-top/margin-bottom 的既有作法，把值送進 Paginator
+  // 原生的 margin-left/margin-right attribute（該 custom element 的
+  // observedAttributes 本就含這兩項，見 paginator.js attributeChangedCallback()），
+  // 徹底取代 paginator.js 內建的 48px 預設，才能讓使用者設定的值（含 0）
+  // 真正生效；使用者已確認浮動按鈕（FAB）疊在內容上沒關係，不需要另外
+  // 保留按鈕安全邊界。未設定時的預設值（24px）比照 ReaderSettingsSheet
+  // 滑桿的既有預設常數（_defaultMarginLeft/_defaultMarginRight）。
+  const marginLeftPx = typeof prefs.marginLeft === 'number' ? prefs.marginLeft : 24
+  const marginRightPx = typeof prefs.marginRight === 'number' ? prefs.marginRight : 24
+  view.renderer.setAttribute('margin-left', `${marginLeftPx}px`)
+  view.renderer.setAttribute('margin-right', `${marginRightPx}px`)
   view.renderer.setStyles([fontFaceCss, buildOverrideCss(prefs)])
 }
 

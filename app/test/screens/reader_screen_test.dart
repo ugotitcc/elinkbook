@@ -209,7 +209,8 @@ void main() {
     '流式 EPUB 開書後，ReaderSettingsSheet 變動的偏好正確傳遞到 FoliateEpubReaderView',
     (tester) async {
       // 設定較大的 Viewport，確保 BottomSheet 內的控制項皆在可點擊範圍內
-      tester.view.physicalSize = const Size(800, 1200);
+      // （Issue 14 邊距拆為 4 個獨立滑桿後內容變高，1200 已不足，調高至 1600）
+      tester.view.physicalSize = const Size(800, 1600);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(() {
         tester.view.resetPhysicalSize();
@@ -3933,4 +3934,39 @@ void main() {
       );
     },
   );
+
+  testWidgets('流式 EPUB：邊距 4 個欄位從 ResolvedPreferences 正確透傳到 FoliateEpubReaderView（Issue 14）', (
+    tester,
+  ) async {
+    await prefsManager.saveBookPrefs(
+      'b_foliate_margins',
+      const BookReaderPrefs(
+        marginTop: 72,
+        marginBottom: 20,
+        marginLeft: 30,
+        marginRight: 30,
+      ),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_foliate_margins',
+          prefsManager: prefsManager,
+          isFixedLayout: false,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final foliateView = tester.widget<FoliateEpubReaderView>(
+      find.byType(FoliateEpubReaderView),
+    );
+    expect(foliateView.marginTop, 72);
+    expect(foliateView.marginBottom, 20);
+    expect(foliateView.marginLeft, 30);
+    expect(foliateView.marginRight, 30);
+  });
 }

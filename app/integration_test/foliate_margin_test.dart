@@ -90,7 +90,10 @@ void main() {
             if (!completer.isCompleted) completer.complete();
           },
           writingMode: WritingMode.vertical,
-          pageMargins: 1.6667,
+          marginTop: 1.6667,
+          marginBottom: 1.6667,
+          marginLeft: 1.6667,
+          marginRight: 1.6667,
           showFooter: false,
         ),
       ),

@@ -32,6 +32,10 @@ class ResolvedPreferences {
   final double? lineHeight;
   final double? paragraphSpacing;
   final double? pageMargins;
+  final double? marginTop;
+  final double? marginBottom;
+  final double? marginLeft;
+  final double? marginRight;
   final EpubTextAlign? textAlign;
   final bool? publisherStyles;
 
@@ -73,6 +77,10 @@ class ResolvedPreferences {
     this.lineHeight,
     this.paragraphSpacing,
     this.pageMargins,
+    this.marginTop,
+    this.marginBottom,
+    this.marginLeft,
+    this.marginRight,
     this.textAlign,
     this.publisherStyles,
     this.columnMode = ColumnMode.auto,

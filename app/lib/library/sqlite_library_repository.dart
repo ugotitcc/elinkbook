@@ -27,7 +27,7 @@ class SqliteLibraryRepository implements LibraryRepository {
   static Future<SqliteLibraryRepository> open(String path) async {
     final db = await openDatabase(
       path,
-      version: 13,
+      version: 14,
       onConfigure: (db) async {
         // book_reader_prefs 的 ON DELETE CASCADE 需要外鍵約束真正生效，
         // SQLite 預設不強制外鍵，須逐連線手動開啟（見 epic-3 plan-issue-1）。
@@ -112,6 +112,16 @@ class SqliteLibraryRepository implements LibraryRepository {
             // oldVersion < 2 時 _createBookReaderPrefsTable 已一步到位建表含 column_mode/column_size，
             // 若在 else 分支外無條件執行 ALTER TABLE，oldVersion == 1 的裝置會重複 ALTER TABLE 拋出崩潰。
             await _addColumnModeColumns(db);
+          }
+          if (oldVersion < 14) {
+            // epic-18-reader-device-qa Issue 14：邊距 4 個獨立欄位。必須
+            // 放在 else 分支內（oldVersion >= 2）——理由同
+            // _addColumnModeColumns：oldVersion < 2 時
+            // _createBookReaderPrefsTable 已一步到位建表含這 4 個欄位，若
+            // 在 else 分支外無條件執行 ALTER TABLE，oldVersion == 1 的
+            // 裝置會重複 ALTER TABLE 拋出崩潰。既有 page_margins 欄位不
+            // 受影響、不做任何遷移（見 ADR 0014）。
+            await _addMarginColumns(db);
           }
         }
         if (oldVersion < 5) {
@@ -203,7 +213,11 @@ class SqliteLibraryRepository implements LibraryRepository {
         show_header INTEGER,
         show_footer INTEGER,
         column_mode TEXT,
-        column_size REAL
+        column_size REAL,
+        margin_top REAL,
+        margin_bottom REAL,
+        margin_left REAL,
+        margin_right REAL
       )
     ''');
   }
@@ -379,6 +393,27 @@ class SqliteLibraryRepository implements LibraryRepository {
           'ALTER TABLE book_reader_prefs ADD COLUMN column_size REAL');
       // issues.md 明確要求：既有 single_column 欄位所有值遷移為 NULL（等同自動）
       await db.execute('UPDATE book_reader_prefs SET single_column = NULL');
+    }
+  }
+
+  static Future<void> _addMarginColumns(Database db) async {
+    // epic-18-reader-device-qa Issue 14：上/下/左/右邊距 4 個獨立欄位，
+    // 補追加到既有（version 2 起已存在）的 book_reader_prefs 表。既有
+    // page_margins 欄位不受影響、不遷移既有值（見 ADR 0014，本次新欄位
+    // 僅供流式 EPUB 使用，page_margins 繼續供 EpubReaderView／FXL 使用）。
+    // 比照 _addColumnModeColumns 既有慣例，僅在表已存在時才執行
+    // ALTER TABLE。
+    final tables = await db.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='book_reader_prefs'");
+    if (tables.isNotEmpty) {
+      await db.execute(
+          'ALTER TABLE book_reader_prefs ADD COLUMN margin_top REAL');
+      await db.execute(
+          'ALTER TABLE book_reader_prefs ADD COLUMN margin_bottom REAL');
+      await db.execute(
+          'ALTER TABLE book_reader_prefs ADD COLUMN margin_left REAL');
+      await db.execute(
+          'ALTER TABLE book_reader_prefs ADD COLUMN margin_right REAL');
     }
   }
 
