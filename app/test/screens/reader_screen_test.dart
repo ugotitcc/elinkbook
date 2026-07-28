@@ -3933,4 +3933,39 @@ void main() {
       );
     },
   );
+
+  testWidgets('流式 EPUB：邊距 4 個欄位從 ResolvedPreferences 正確透傳到 FoliateEpubReaderView（Issue 14）', (
+    tester,
+  ) async {
+    await prefsManager.saveBookPrefs(
+      'b_foliate_margins',
+      const BookReaderPrefs(
+        marginTop: 72,
+        marginBottom: 20,
+        marginLeft: 30,
+        marginRight: 30,
+      ),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_foliate_margins',
+          prefsManager: prefsManager,
+          isFixedLayout: false,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final foliateView = tester.widget<FoliateEpubReaderView>(
+      find.byType(FoliateEpubReaderView),
+    );
+    expect(foliateView.marginTop, 72);
+    expect(foliateView.marginBottom, 20);
+    expect(foliateView.marginLeft, 30);
+    expect(foliateView.marginRight, 30);
+  });
 }
