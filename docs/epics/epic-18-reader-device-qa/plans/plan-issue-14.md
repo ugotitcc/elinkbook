@@ -42,7 +42,7 @@
 **Interfaces:**
 - Produces: `BookReaderPrefs.marginTop`/`marginBottom`/`marginLeft`/`marginRight`（皆為 `double?`，px 數值），`toMap()` 對應鍵 `margin_top`/`margin_bottom`/`margin_left`/`margin_right`。
 
-- [ ] **Step 1: 撰寫會失敗的測試**
+- [x] **Step 1: 撰寫會失敗的測試**
 
 在 `app/test/reader/book_reader_prefs_test.dart` 新增（緊接既有「`toMap／fromMap round-trip` 保留所有欄位（含 `book_id`）」測試之後）：
 
@@ -81,7 +81,7 @@
     expect(prefs.marginRight, isNull);
 ```
 
-- [ ] **Step 2: 執行測試，確認失敗**
+- [x] **Step 2: 執行測試，確認失敗**
 
 執行：
 ```bash
@@ -89,7 +89,7 @@ cd app && flutter test test/reader/book_reader_prefs_test.dart
 ```
 預期：FAIL——`BookReaderPrefs` 建構子不存在 `marginTop`/`marginBottom`/`marginLeft`/`marginRight` 具名參數，編譯錯誤。
 
-- [ ] **Step 3: 實作**
+- [x] **Step 3: 實作**
 
 修改 `app/lib/reader/book_reader_prefs.dart`：
 
@@ -162,7 +162,7 @@ cd app && flutter test test/reader/book_reader_prefs_test.dart
       marginRight: marginRight ?? this.marginRight,
 ```
 
-- [ ] **Step 4: 執行測試，確認通過**
+- [x] **Step 4: 執行測試，確認通過**
 
 執行：
 ```bash
@@ -170,7 +170,7 @@ cd app && flutter test test/reader/book_reader_prefs_test.dart
 ```
 預期：PASS。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/lib/reader/book_reader_prefs.dart app/test/reader/book_reader_prefs_test.dart
@@ -189,7 +189,7 @@ git commit -m "feat(epic-18): Issue 14 Task 1 BookReaderPrefs 新增邊距 4 個
 - Consumes: Task 1 的 `BookReaderPrefs`（新欄位需要對應的資料庫欄位才能持久化）。
 - Produces: `book_reader_prefs` 表新增 `margin_top REAL`/`margin_bottom REAL`/`margin_left REAL`/`margin_right REAL` 4 個 nullable 欄位，schema `version: 14`。
 
-- [ ] **Step 1: 確認現況**
+- [x] **Step 1: 確認現況**
 
 執行：
 ```bash
@@ -197,7 +197,7 @@ grep -n "version: 13\|_addColumnModeColumns\|column_size REAL" app/lib/library/s
 ```
 預期看到 `version: 13`（`sqlite_library_repository.dart:30`）、`_createBookReaderPrefsTable` 的 `CREATE TABLE` 最後一欄為 `column_size REAL`（第 206 行）、`onUpgrade` 內 `if (oldVersion < 13) { await _addColumnModeColumns(db); }`（第 109-115 行）。
 
-- [ ] **Step 2: 撰寫會失敗的 migration round-trip 測試**
+- [x] **Step 2: 撰寫會失敗的 migration round-trip 測試**
 
 在 `app/test/library/sqlite_library_repository_test.dart` 新增（緊接既有測試「既有 version 12 裝置升級到 version 13，book_reader_prefs 新增 column_mode/column_size 且 single_column 舊值清零」之後，`grep -n "既有 version 12 裝置升級到 version 13" app/test/library/sqlite_library_repository_test.dart` 確認行號；本檔案頂層已有共用的 `late SqliteLibraryRepository repository`／`setUp()` fixture 與 `_book()` helper，見檔案第 12/43/45 行）：
 
@@ -342,7 +342,7 @@ grep -n "version: 13\|_addColumnModeColumns\|column_size REAL" app/lib/library/s
   });
 ```
 
-- [ ] **Step 3: 執行測試，確認失敗**
+- [x] **Step 3: 執行測試，確認失敗**
 
 執行：
 ```bash
@@ -350,7 +350,7 @@ cd app && flutter test test/library/sqlite_library_repository_test.dart --plain-
 ```
 預期：FAIL——`version: 14` 尚未定義、`margin_top`/`margin_bottom`/`margin_left`/`margin_right` 欄位不存在。
 
-- [ ] **Step 4: 實作**
+- [x] **Step 4: 實作**
 
 修改 `app/lib/library/sqlite_library_repository.dart`：
 
@@ -405,7 +405,7 @@ cd app && flutter test test/library/sqlite_library_repository_test.dart --plain-
   }
 ```
 
-- [ ] **Step 5: 執行測試，確認通過**
+- [x] **Step 5: 執行測試，確認通過**
 
 執行：
 ```bash
@@ -413,7 +413,7 @@ cd app && flutter test test/library/sqlite_library_repository_test.dart
 ```
 預期：PASS，全數通過（含既有既有 migration 測試，無回歸）。
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/library/sqlite_library_repository.dart app/test/library/sqlite_library_repository_test.dart
@@ -433,7 +433,7 @@ git commit -m "feat(epic-18): Issue 14 Task 2 SQLite schema v13→v14 新增邊�
 - Consumes: Task 1 的 `BookReaderPrefs.marginTop`/`marginBottom`/`marginLeft`/`marginRight`。
 - Produces: `ResolvedPreferences.marginTop`/`marginBottom`/`marginLeft`/`marginRight`（皆 `double?`，直接從 `BookReaderPrefs` 對應欄位透傳，無任何解析/預設值邏輯，比照既有 `pageMargins` 透傳模式）。
 
-- [ ] **Step 1: 撰寫會失敗的測試**
+- [x] **Step 1: 撰寫會失敗的測試**
 
 在 `app/test/reader/reader_prefs_manager_test.dart` 找到既有 `expect(resolved.pageMargins, isNull);`（約第 178 行）所在的測試，於同一測試內新增：
 
@@ -465,7 +465,7 @@ git commit -m "feat(epic-18): Issue 14 Task 2 SQLite schema v13→v14 新增邊�
     });
 ```
 
-- [ ] **Step 2: 執行測試，確認失敗**
+- [x] **Step 2: 執行測試，確認失敗**
 
 執行：
 ```bash
@@ -473,7 +473,7 @@ cd app && flutter test test/reader/reader_prefs_manager_test.dart
 ```
 預期：FAIL——`ResolvedPreferences` 建構子不存在 `marginTop` 等具名參數、`resolved.marginTop` 存取不到，編譯錯誤。
 
-- [ ] **Step 3: 實作**
+- [x] **Step 3: 實作**
 
 修改 `app/lib/reader/resolved_preferences.dart`：
 
@@ -501,7 +501,7 @@ cd app && flutter test test/reader/reader_prefs_manager_test.dart
       marginRight: book.marginRight,
 ```
 
-- [ ] **Step 4: 執行測試，確認通過**
+- [x] **Step 4: 執行測試，確認通過**
 
 執行：
 ```bash
@@ -509,7 +509,7 @@ cd app && flutter test test/reader/reader_prefs_manager_test.dart
 ```
 預期：PASS。
 
-- [ ] **Step 5: 全專案回歸**
+- [x] **Step 5: 全專案回歸**
 
 執行：
 ```bash
@@ -517,7 +517,7 @@ cd app && flutter analyze
 ```
 預期：`No issues found!`（`ResolvedPreferences` 新增欄位尚未被任何呼叫端使用，不會產生未使用警告，因為是 class 欄位非區域變數）。
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/reader/resolved_preferences.dart app/lib/reader/reader_prefs_manager_impl.dart app/test/reader/reader_prefs_manager_test.dart
@@ -536,7 +536,7 @@ git commit -m "feat(epic-18): Issue 14 Task 3 ResolvedPreferences 新增邊距 4
 - Consumes: Task 3 的 `ResolvedPreferences.marginTop`/`marginBottom`/`marginLeft`/`marginRight`（供 Task 5 的 `ReaderScreen` 建構呼叫使用）。
 - Produces: `FoliateEpubReaderView` 的 `marginTop`/`marginBottom`/`marginLeft`/`marginRight` 建構參數（皆 `double?`），`buildFoliatePreferencesMap()` 對應輸出 `'marginTop'`/`'marginBottom'`/`'marginLeft'`/`'marginRight'` key（取代原本的 `'pageMargins'` key，`FoliateEpubReaderView` 不再有 `pageMargins` 欄位）。
 
-- [ ] **Step 1: 修改既有測試，確認新斷言先失敗**
+- [x] **Step 1: 修改既有測試，確認新斷言先失敗**
 
 修改 `app/test/reader/foliate_epub_reader_view_test.dart` 既有測試「所有非 null 建構參數皆正確出現於 map」：
 
@@ -584,7 +584,7 @@ git commit -m "feat(epic-18): Issue 14 Task 3 ResolvedPreferences 新增邊距 4
     });
 ```
 
-- [ ] **Step 2: 執行測試，確認失敗**
+- [x] **Step 2: 執行測試，確認失敗**
 
 執行：
 ```bash
@@ -592,7 +592,7 @@ cd app && flutter test test/reader/foliate_epub_reader_view_test.dart
 ```
 預期：FAIL——`FoliateEpubReaderView` 建構子不存在 `marginTop`/`marginBottom`/`marginLeft`/`marginRight` 具名參數（仍是 `pageMargins`），編譯錯誤。
 
-- [ ] **Step 3: 實作**
+- [x] **Step 3: 實作**
 
 修改 `app/lib/reader/foliate_epub_reader_view.dart`：
 
@@ -628,7 +628,7 @@ cd app && flutter test test/reader/foliate_epub_reader_view_test.dart
     this.marginRight,
 ```
 
-- [ ] **Step 4: 執行測試，確認通過**
+- [x] **Step 4: 執行測試，確認通過**
 
 執行：
 ```bash
@@ -636,7 +636,7 @@ cd app && flutter test test/reader/foliate_epub_reader_view_test.dart
 ```
 預期：PASS。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/lib/reader/foliate_epub_reader_view.dart app/test/reader/foliate_epub_reader_view_test.dart
@@ -654,7 +654,7 @@ git commit -m "feat(epic-18): Issue 14 Task 4 FoliateEpubReaderView 以 4 個邊
 **Interfaces:**
 - Consumes: Task 3 的 `ResolvedPreferences.marginTop`/`marginBottom`/`marginLeft`/`marginRight`；Task 4 的 `FoliateEpubReaderView.marginTop`/`marginBottom`/`marginLeft`/`marginRight` 建構參數。
 
-- [ ] **Step 1: 確認現況並修正編譯錯誤**
+- [x] **Step 1: 確認現況並修正編譯錯誤**
 
 Task 4 完成後，`app/lib/screens/reader_screen.dart` 第 1893 行附近的 `FoliateEpubReaderView(...)` 建構呼叫仍寫著 `pageMargins: resolved.pageMargins,`，此時 `flutter analyze` 會報錯（`FoliateEpubReaderView` 已無 `pageMargins` 具名參數）。執行：
 ```bash
@@ -662,7 +662,7 @@ cd app && flutter analyze
 ```
 預期：出現 `reader_screen.dart` 該行的 "no parameter named 'pageMargins'" 之類錯誤。
 
-- [ ] **Step 2: 修正**
+- [x] **Step 2: 修正**
 
 找到 `FoliateEpubReaderView(...)` 建構呼叫內的：
 ```dart
@@ -678,7 +678,7 @@ cd app && flutter analyze
 
 **注意**：`_buildEpubFooter()`（約第 1752 行）與 `EpubReaderView(...)` 建構呼叫（約第 1925 行）內的 `pageMargins: resolved.pageMargins,` **維持不動**——前者是既有的字元數頁碼估算 heuristic，後者是 FXL／Readium 路徑，兩者皆不在本 Issue 範圍內（見 Global Constraints）。
 
-- [ ] **Step 3: 撰寫驗證透傳的測試**
+- [x] **Step 3: 撰寫驗證透傳的測試**
 
 在 `app/test/screens/reader_screen_test.dart` 新增（比照既有欄位透傳測試模式，可放在既有 `columnMode`/`columnSize` 透傳測試附近，`grep -n "columnMode.*columnSize.*透傳\|columnSize.*正確透傳" app/test/screens/reader_screen_test.dart` 找既有先例）：
 
@@ -719,7 +719,7 @@ cd app && flutter analyze
   });
 ```
 
-- [ ] **Step 4: 執行測試，確認通過**
+- [x] **Step 4: 執行測試，確認通過**
 
 執行：
 ```bash
@@ -727,7 +727,7 @@ cd app && flutter test test/screens/reader_screen_test.dart --plain-name "邊距
 ```
 預期：PASS。
 
-- [ ] **Step 5: 全專案回歸**
+- [x] **Step 5: 全專案回歸**
 
 執行：
 ```bash
@@ -736,7 +736,7 @@ cd app && flutter test
 ```
 預期：`flutter analyze` 顯示 `No issues found!`；`flutter test` 全數通過。
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/screens/reader_screen.dart app/test/screens/reader_screen_test.dart
@@ -755,7 +755,7 @@ git commit -m "feat(epic-18): Issue 14 Task 5 ReaderScreen 透傳邊距 4 個欄
 - Consumes: Task 1 的 `BookReaderPrefs.marginTop`/`marginBottom`/`marginLeft`/`marginRight`。
 - Produces: 4 個新 `Key`：`reader_settings_margin_top_slider`/`_decrement`/`_increment`（同前綴規則套用於 `bottom`/`left`/`right`），透過既有 `_buildSliderRow()` 產生。
 
-- [ ] **Step 1: 修改既有測試，確認新斷言先失敗**
+- [x] **Step 1: 修改既有測試，確認新斷言先失敗**
 
 修改 `app/test/screens/reader_settings_sheet_test.dart`：
 
@@ -871,7 +871,7 @@ git commit -m "feat(epic-18): Issue 14 Task 5 ReaderScreen 透傳邊距 4 個欄
   });
 ```
 
-- [ ] **Step 2: 執行測試，確認失敗**
+- [x] **Step 2: 執行測試，確認失敗**
 
 執行：
 ```bash
@@ -879,7 +879,7 @@ cd app && flutter test test/screens/reader_settings_sheet_test.dart
 ```
 預期：FAIL——`Key('reader_settings_margin_top_slider')` 等找不到（滑桿尚未拆分），且 `BookReaderPrefs` 尚不支援 `marginTop` 具名參數若 Task 1 未完成也會編譯失敗（本 Task 依賴 Task 1 已完成）。
 
-- [ ] **Step 3: 實作**
+- [x] **Step 3: 實作**
 
 修改 `app/lib/screens/reader_settings_sheet.dart`：
 
@@ -1009,7 +1009,7 @@ cd app && flutter test test/screens/reader_settings_sheet_test.dart
                 ),
 ```
 
-- [ ] **Step 4: 執行測試，確認通過**
+- [x] **Step 4: 執行測試，確認通過**
 
 執行：
 ```bash
@@ -1017,7 +1017,7 @@ cd app && flutter test test/screens/reader_settings_sheet_test.dart
 ```
 預期：PASS。
 
-- [ ] **Step 5: 全專案回歸**
+- [x] **Step 5: 全專案回歸**
 
 執行：
 ```bash
@@ -1026,7 +1026,7 @@ cd app && flutter test
 ```
 預期：`flutter analyze` 顯示 `No issues found!`；`flutter test` 全數通過。
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/screens/reader_settings_sheet.dart app/test/screens/reader_settings_sheet_test.dart
@@ -1043,7 +1043,7 @@ git commit -m "feat(epic-18): Issue 14 Task 6 ReaderSettingsSheet 邊距拆為�
 **Interfaces:**
 - Consumes: `prefs.marginTop`/`marginBottom`/`marginLeft`/`marginRight`（Task 4 的 `buildFoliatePreferencesMap()` 輸出鍵名）。
 
-- [ ] **Step 1: 確認現況**
+- [x] **Step 1: 確認現況**
 
 執行：
 ```bash
@@ -1051,7 +1051,7 @@ grep -n "pageMargins\|margin-top\|margin-bottom" app/android/app/src/main/assets
 ```
 預期看到 `buildOverrideCss()` 內第 99-100 行的 `pageMargins` 分支、`applyPreferences()` 內第 172-211 行的直排/橫排 margin-top/margin-bottom 邏輯（見本文件開頭「調查結論」的行號引用）。
 
-- [ ] **Step 2: 修改 `buildOverrideCss()`**
+- [x] **Step 2: 修改 `buildOverrideCss()`**
 
 找到：
 ```js
@@ -1073,7 +1073,7 @@ grep -n "pageMargins\|margin-top\|margin-bottom" app/android/app/src/main/assets
   }
 ```
 
-- [ ] **Step 3: 修改 `applyPreferences()` 的上下邊距邏輯**
+- [x] **Step 3: 修改 `applyPreferences()` 的上下邊距邏輯**
 
 找到（約第 172-211 行）整段：
 ```js
@@ -1114,7 +1114,7 @@ grep -n "pageMargins\|margin-top\|margin-bottom" app/android/app/src/main/assets
   view.renderer.setAttribute('margin-bottom', `${marginBottomPx}px`)
 ```
 
-- [ ] **Step 4: 執行 Dart 端全部既有測試回歸**
+- [x] **Step 4: 執行 Dart 端全部既有測試回歸**
 
 執行：
 ```bash
@@ -1123,7 +1123,7 @@ cd app && flutter test
 ```
 預期：`flutter analyze` 顯示 `No issues found!`；`flutter test` 全數通過（`main.js` 變更本身無 JS 單元測試，比照 Issue 4/5/6/7/9 既有慣例，此步驟只確認 Dart 端未受影響）。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/android/app/src/main/assets/foliate/main.js
@@ -1140,39 +1140,47 @@ git commit -m "feat(epic-18): Issue 14 Task 7 main.js 邊距改用上下左右 4
 - Consumes: Task 1-7 完成後的完整實作。
 - Produces: 驗收結果記錄（供合併前的程式碼審查／`issues.md` Issue 14 狀態更新引用）。
 
-- [ ] **Step 1: 安裝最新 debug APK 至真機 `3CEF42ECD491687`**
+- [x] **Step 1: 安裝最新 debug APK 至真機 `3CEF42ECD491687`**
 
 ```bash
 cd app && flutter build apk --debug
 adb -s 3CEF42ECD491687 install -r build/app/outputs/flutter-apk/app-debug.apk
 ```
 
-- [ ] **Step 2: 驗證 4 個方向獨立可調**
+- [x] **Step 2: 驗證 4 個方向獨立可調**
 
 1. 開啟一本流式 EPUB，於「版面設定」分別調整「上邊界」「下邊界」「左邊界」「右邊界」4 個滑桿。
 2. 確認四個方向的留白各自獨立變化、互不影響（例如把「左邊界」調到最大，「上邊界」「下邊界」「右邊界」不受影響）。
 3. 記錄：Pass/Fail + 截圖佐證。
 
-- [ ] **Step 3: 驗證橫排模式上下邊距生效**
+**驗收結果：Pass。** 4 個方向各自獨立調整，互不影響；額外發現左/右邊界調到 0 仍殘留約一顆 FAB 大小的空白（根因是 Paginator 內建 `--_margin-left`/`--_margin-right` 48px 預設值未被觸碰），已修正為直接設定 Paginator 原生 `margin-left`/`margin-right` attribute，修正後 0 值可正確生效、內容貼齊邊緣。
+
+- [x] **Step 3: 驗證橫排模式上下邊距生效**
 
 1. 切換為橫排，分別調整「上邊界」「下邊界」滑桿。
 2. 確認橫排模式下上下留白會隨滑桿變化（修正前橫排永遠固定 48px、不受影響）。
 3. 記錄：Pass/Fail。
 
-- [ ] **Step 4: 驗證字級放大後左右留白不再失控膨脹**
+**驗收結果：Pass。** 橫排模式下上下邊界確實隨滑桿動態變化，不再永遠固定 48px。
+
+- [x] **Step 4: 驗證字級放大後左右留白不再失控膨脹**
 
 1. 把字型大小滑桿調到高值（例如 60px 以上）。
 2. 確認左右留白維持固定（不隨字級等比例膨脹）——此為本 Issue 修正的原始根因（`em` 改 `px`）。
 3. 記錄：Pass/Fail + 截圖佐證（可與 diagnose session 稍早的字級截圖對照）。
 
-- [ ] **Step 5: FXL 回歸確認**
+**驗收結果：Pass。** 字型大小調到高值後，左右留白維持固定 px 值，不再隨字級等比例膨脹。
+
+- [x] **Step 5: FXL 回歸確認**
 
 1. 開啟一本 FXL（固定版面）EPUB，確認其既有行為（本 Issue 不觸碰 `EpubReaderView`／`pageMargins`／FXL 路徑）未受影響。
 2. 記錄：Pass/Fail。
 
-- [ ] **Step 6: 記錄驗收結果**
+**驗收結果：Pass。** FXL 既有行為未受本 Issue 影響。
 
-供後續程式碼審查與 `docs/epics/epic-18-reader-device-qa/issues.md` Issue 14 狀態更新引用。
+- [x] **Step 6: 記錄驗收結果**
+
+供後續程式碼審查與 `docs/epics/epic-18-reader-device-qa/issues.md` Issue 14 狀態更新引用；結果已同步記錄於本檔案 Step 2-5 與 `issues.md` Issue 14 條目。另外記錄一項與程式碼無關的建置環境問題：使用者本機一份不完整/過期的 `flutter build apk --debug` 建置產物（缺少部分 ABI 的完整 `libflutter.so`）曾導致 App 卡在系統啟動畫面，改用 `flutter clean` 後乾淨重新建置即正常，已於裝置 `3CEF42ECD491687` 上以升級/全新安裝兩種路徑重複驗證解決。
 
 ---
 

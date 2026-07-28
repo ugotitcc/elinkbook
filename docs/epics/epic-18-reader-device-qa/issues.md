@@ -460,7 +460,15 @@ Issue 5 的 `singleColumn` 布林開關因 `paginator.js` 對直排書籍的 `ma
 
 ## Issue 14：流式 EPUB 邊距重新設計為上/下/左/右 4 個獨立欄位
 
-**Status:** `ready-for-agent`
+**Status:** ✅ 已完成（分支 `feat/issue-14-independent-margins`，尚未合併回 `main`）。`BookReaderPrefs`／SQLite schema（v13→v14）／`ResolvedPreferences`／`FoliateEpubReaderView`／`ReaderSettingsSheet` 皆已依計畫拆為上/下/左/右 4 個獨立 px 欄位，`main.js` 的 `applyPreferences()` 統一依這 4 個欄位動態設定 Paginator 的 `margin-top`/`margin-bottom`/`margin-left`/`margin-right` attribute，橫排/直排皆生效，字級調整不再連帶影響左右留白。`flutter analyze` 乾淨、`flutter test` 655 個測試全數通過。
+
+程式碼審查（review-issue-14）發現的兩項問題皆已修正：
+1. Task 6 新增 4 個獨立滑桿後 `ReaderSettingsSheet` 內容變高，既有測試固定 viewport 過小導致 6 項測試失敗——已調高 `_pumpSheet()`／`reader_screen_test.dart` 的 viewport 至 `Size(800, 1600)` 解決。
+2. 真機驗收發現的建置環境問題（非本 Issue 程式碼缺陷）：使用者本機一份不完整/過期的 `flutter build apk --debug` 建置產物（缺少部分 ABI 的完整 `libflutter.so`）導致 App 卡在系統啟動畫面；改用乾淨重新建置（`flutter clean` 後重建）即正常，已於裝置 `3CEF42ECD491687` 上以升級/全新安裝兩種路徑重複驗證。
+
+真機驗收（`3CEF42ECD491687`）額外發現並修正一項邊界案例：左/右邊界滑桿調到 0 時仍殘留約一顆 FAB 大小的空白，根因是 `main.js` 原本用 `body { padding-left/right }` CSS 疊加左右留白，但 Paginator 自身內建的 `--_margin-left`/`--_margin-right` 預設值（48px）從未被觸碰；改為直接比照 `margin-top`/`margin-bottom` 既有作法，把值送進 Paginator 原生的 `margin-left`/`margin-right` attribute，徹底取代內建 48px 預設。使用者確認浮動按鈕（FAB）疊在內容上沒關係，不需要另外保留按鈕安全邊界。
+
+真機驗收結果（Pass）：4 個方向獨立可調、橫排模式上下邊距確實生效（不再永遠固定 48px）、字級放大後左右留白不再等比例膨脹、FXL 既有行為回歸確認無影響。
 
 **依賴：** 無
 
