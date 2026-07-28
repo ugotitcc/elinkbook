@@ -112,6 +112,122 @@ void main() {
     expect(find.text('0%'), findsOneWidget);
   });
 
+  testWidgets('直立（高 > 寬）時，書架封面格數為 3 欄', (tester) async {
+    // 800×1200：寬 < 高，MediaQuery.orientation 判定為 portrait。
+    tester.view.physicalSize = const Size(800, 1200);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    final book = _testBook(id: '1', title: '紅樓夢');
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: [book]),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final delegate = tester
+            .widget<GridView>(find.byKey(const Key('library_grid_view')))
+            .gridDelegate
+        as SliverGridDelegateWithFixedCrossAxisCount;
+    expect(delegate.crossAxisCount, 3);
+  });
+
+  testWidgets('橫放（寬 > 高）時，書架封面格數為 4 欄', (tester) async {
+    // 1200×800：寬 > 高，MediaQuery.orientation 判定為 landscape。
+    tester.view.physicalSize = const Size(1200, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    final book = _testBook(id: '1', title: '紅樓夢');
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: [book]),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final delegate = tester
+            .widget<GridView>(find.byKey(const Key('library_grid_view')))
+            .gridDelegate
+        as SliverGridDelegateWithFixedCrossAxisCount;
+    expect(delegate.crossAxisCount, 4);
+  });
+
+  testWidgets(
+      '裝置旋轉（MediaQuery 從直立變橫放）後，書架封面欄數即時從 3 變為 4，不需要重新導航或重建整個畫面',
+      (tester) async {
+    tester.view.physicalSize = const Size(800, 1200);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    final book = _testBook(id: '1', title: '紅樓夢');
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: [book]),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    SliverGridDelegateWithFixedCrossAxisCount currentDelegate() =>
+        tester
+                .widget<GridView>(find.byKey(const Key('library_grid_view')))
+                .gridDelegate
+            as SliverGridDelegateWithFixedCrossAxisCount;
+
+    expect(currentDelegate().crossAxisCount, 3);
+
+    // 同一個 pumpWidget 之後直接改變 view 尺寸並重新 pump，模擬裝置旋轉，
+    // 不重新導航、不重建 LibraryScreen（比照既有 reader_screen_test.dart
+    // 對 tester.view.physicalSize 的既有使用模式）。
+    tester.view.physicalSize = const Size(1200, 800);
+    await tester.pumpAndSettle();
+
+    expect(currentDelegate().crossAxisCount, 4);
+  });
+
+  testWidgets('書架封面格狀檢視含欄格間距，避免封面互相緊貼', (tester) async {
+    final book = _testBook(id: '1', title: '紅樓夢');
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: [book]),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final delegate = tester
+            .widget<GridView>(find.byKey(const Key('library_grid_view')))
+            .gridDelegate
+        as SliverGridDelegateWithFixedCrossAxisCount;
+    expect(delegate.crossAxisSpacing, 8);
+    expect(delegate.mainAxisSpacing, 12);
+  });
+
   testWidgets('從閱讀器返回書架時，重新載入書籍清單，避免後續操作以過期資料覆寫最新進度',
       (tester) async {
     // 使用 .txt 格式讓 ReaderScreen 命中「不支援格式」分支（純 Dart 安全路徑，
