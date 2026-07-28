@@ -93,8 +93,12 @@ _Avoid_: 九宮格（單指配置本身時容易與「熱區動作」混淆）�
 _Avoid_: 熱區行為
 
 **沉浸模式（Immersive Mode）**：
-熱區「選單」動作觸發的介面顯示/隱藏切換：EPUB 流式與 PDF 隱藏 Scaffold AppBar ＋ `ReaderFooter`；EPUB FXL 沿用既有懸浮控制項（返回/設定/書籤/筆記按鈕）顯示/隱藏。翻頁動作（上一頁/下一頁）不影響此顯示狀態，僅選單格可切換（與 FXL 舊行為「換頁一律強制收起」不同，是刻意的行為變更）。
-_Avoid_: 全螢幕模式（與 FR-42「固定版面全螢幕顯示開關」是不同概念，那個是 `epic-14-system-settings` 的獨立設定項）
+熱區「選單」動作觸發的介面顯示/隱藏切換：EPUB 流式與 PDF 隱藏 Scaffold AppBar ＋ `ReaderFooter`；EPUB FXL 沿用既有懸浮控制項（返回/設定/書籤/筆記按鈕）顯示/隱藏。翻頁動作（上一頁/下一頁）不影響此顯示狀態，僅選單格可切換（與 FXL 舊行為「換頁一律強制收起」不同，是刻意的行為變更）。**與「全螢幕模式」是彼此獨立、互不干涉的兩套機制**，見下方詞條。
+_Avoid_: 全螢幕模式（見下方獨立詞條，非同義詞，不可混用）
+
+**全螢幕模式（Fullscreen Mode）**：
+`epic-19-shelf-reading-enhance` 新增的每本書持久化開關，只控制 Android 系統狀態列與導覽列的顯示/隱藏（`SystemUiMode.immersiveSticky` 或等效 API），與 App 自己的 AppBar/Footer/頁首/頁尾/懸浮按鈕完全脫鉤——後者永遠只受「沉浸模式」與各自的顯示開關（`showHeader`/`showFooter`）控制，不受全螢幕模式影響。離開閱讀畫面時強制還原系統列顯示，不依賴使用者手動關閉開關。**與 PRD FR-42「固定版面全螢幕顯示開關」（`epic-14-system-settings`，僅限 FXL 排版）是不同概念**——FR-42 範圍更窄且尚未開工，全螢幕模式涵蓋 EPUB 流式/FXL/PDF 三種格式。
+_Avoid_: 沉浸模式（見上方獨立詞條，非同義詞）
 
 **欄數（Column Mode）**：
 流式 EPUB 專屬的分欄控制，三態互斥：自動（由 `paginator.js` 依欄位大小閾值自由決定，可能 1/2/3 欄）、單欄（強制單欄，不論裝置尺寸或排版方向）、雙欄（硬限最多 2 欄）。單書持久化於 `book_reader_prefs`。取代 Epic 18 Issue 5 原有的 `singleColumn` 布林開關（該開關因 `paginator.js` 對直排書籍的 `maxColumnCount + 1` 邏輯，在多數裝置上是 no-op，見 ADR 0012）。固定版面 EPUB 和 PDF 不適用（兩者有各自獨立的「雙頁模式」概念）。
