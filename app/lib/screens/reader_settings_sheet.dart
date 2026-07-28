@@ -62,6 +62,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   late ScreenOrientationSetting? _screenOrientationOverride;
   late bool _showHeader;
   late bool _showFooter;
+  late bool _fullscreen;
   late ColumnMode _columnMode;
   late double _columnSize;
 
@@ -88,6 +89,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     _screenOrientationOverride = widget.prefs.screenOrientationOverride;
     _showHeader = widget.prefs.showHeader ?? true;
     _showFooter = widget.prefs.showFooter ?? true;
+    _fullscreen = widget.prefs.fullscreen ?? false;
     _columnMode = widget.prefs.columnMode ?? ColumnMode.auto;
     _columnSize = widget.prefs.columnSize ?? 720.0;
   }
@@ -117,6 +119,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
         _screenOrientationOverride = widget.prefs.screenOrientationOverride;
         _showHeader = widget.prefs.showHeader ?? true;
         _showFooter = widget.prefs.showFooter ?? true;
+        _fullscreen = widget.prefs.fullscreen ?? false;
         _columnMode = widget.prefs.columnMode ?? ColumnMode.auto;
         _columnSize = widget.prefs.columnSize ?? 720.0;
       });
@@ -145,6 +148,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
       screenOrientationOverride: _screenOrientationOverride,
       showHeader: _showHeader,
       showFooter: _showFooter,
+      fullscreen: _fullscreen,
       columnMode: _columnMode,
       columnSize: _columnSize,
     ));
@@ -312,6 +316,15 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                   value: _showFooter,
                   onChanged: (v) => setState(() {
                     _showFooter = v;
+                    _notifyChanged();
+                  }),
+                ),
+                SwitchListTile(
+                  key: const Key('reader_settings_fullscreen'),
+                  title: const Text('全螢幕模式'),
+                  value: _fullscreen,
+                  onChanged: (v) => setState(() {
+                    _fullscreen = v;
                     _notifyChanged();
                   }),
                 ),

@@ -24,15 +24,20 @@ class FxlSettingsSheet extends StatefulWidget {
 
 class _FxlSettingsSheetState extends State<FxlSettingsSheet> {
   late DualPageMode _dualPageMode;
+  late bool _fullscreen;
 
   @override
   void initState() {
     super.initState();
     _dualPageMode = widget.prefs.dualPageMode ?? DualPageMode.auto;
+    _fullscreen = widget.prefs.fullscreen ?? false;
   }
 
   void _notifyChanged() {
-    widget.onChanged(widget.prefs.copyWith(dualPageMode: _dualPageMode));
+    widget.onChanged(widget.prefs.copyWith(
+      dualPageMode: _dualPageMode,
+      fullscreen: _fullscreen,
+    ));
   }
 
   @override
@@ -82,6 +87,16 @@ class _FxlSettingsSheetState extends State<FxlSettingsSheet> {
                   }),
                 );
               }).toList(),
+            ),
+            const SizedBox(height: 16),
+            SwitchListTile(
+              key: const Key('fxl_settings_fullscreen'),
+              title: const Text('全螢幕模式'),
+              value: _fullscreen,
+              onChanged: (v) => setState(() {
+                _fullscreen = v;
+                _notifyChanged();
+              }),
             ),
           ],
         ),
