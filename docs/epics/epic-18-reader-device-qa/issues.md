@@ -406,7 +406,7 @@ Issue 5 的 `singleColumn` 布林開關因 `paginator.js` 對直排書籍的 `ma
 
 ## Issue 12：進度/跳頁浮動按鈕移除 `showFooter` 額外限制
 
-**Status:** `ready-for-agent`
+**Status:** ✅ 已完成（分支 `issue-12-reader-foliate-progress-btn`，尚未合併回 `main`）。`reader_foliate_progress_button` 的顯示條件已移除 `(_resolved?.showFooter ?? true)`，改與其餘 5 顆浮動按鈕共用同一組 `format == BookFormat.epub && _dispatchedIsFixedLayout == false && _chromeVisible` 基底；`reader_foliate_progress_text`（資訊顯示）維持不變，仍受 `showFooter` 控制。既有測試已改寫並驗證先紅後綠，`flutter analyze` 乾淨、`flutter test` 646 個測試全數通過。真機驗收由使用者本人於裝置 `3CEF42ECD491687` 實測完成：關閉「顯示頁尾」後，進度/跳頁浮動按鈕仍與其餘 5 顆按鈕一起顯示，點擊可正常開啟跳頁 Bottom Sheet；切換沉浸模式時該按鈕仍跟其餘按鈕一起收合，結果為 Pass。
 
 **依賴：** 無
 
