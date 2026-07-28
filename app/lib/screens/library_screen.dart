@@ -589,6 +589,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: crossAxisCount,
           childAspectRatio: 0.62,
+          crossAxisSpacing: 8,
+          mainAxisSpacing: 12,
         ),
         itemCount: books.length,
         itemBuilder: (context, index) {

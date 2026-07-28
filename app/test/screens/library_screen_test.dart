@@ -207,6 +207,27 @@ void main() {
     expect(currentDelegate().crossAxisCount, 4);
   });
 
+  testWidgets('書架封面格狀檢視含欄格間距，避免封面互相緊貼', (tester) async {
+    final book = _testBook(id: '1', title: '紅樓夢');
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: [book]),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final delegate = tester
+            .widget<GridView>(find.byKey(const Key('library_grid_view')))
+            .gridDelegate
+        as SliverGridDelegateWithFixedCrossAxisCount;
+    expect(delegate.crossAxisSpacing, 8);
+    expect(delegate.mainAxisSpacing, 12);
+  });
+
   testWidgets('從閱讀器返回書架時，重新載入書籍清單，避免後續操作以過期資料覆寫最新進度',
       (tester) async {
     // 使用 .txt 格式讓 ReaderScreen 命中「不支援格式」分支（純 Dart 安全路徑，
