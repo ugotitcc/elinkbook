@@ -34,7 +34,7 @@
 - Consumes: 既有 `_buildFoliateEpubFooter(EpubPositionInfo positionInfo)`（回傳 `ReaderFooter` widget，不修改其簽章）。
 - Produces: 無新的對外可呼叫函式，純內部 widget 樹調整。
 
-- [ ] **Step 1: 確認現況**
+- [x] **Step 1: 確認現況**
 
 執行：
 ```bash
@@ -55,7 +55,7 @@ void _openFoliateProgressSheet() {
 }
 ```
 
-- [ ] **Step 2: 撰寫會失敗的測試**
+- [x] **Step 2: 撰寫會失敗的測試**
 
 在 `app/test/screens/reader_screen_test.dart` 找到既有測試「流式 EPUB：點擊浮動進度/跳頁按鈕開啟內含 ReaderFooter 的 Bottom Sheet，舊 in-flow 頁尾不再存在（Issue 7）」（`grep -n "點擊浮動進度/跳頁按鈕開啟內含 ReaderFooter" app/test/screens/reader_screen_test.dart` 確認行號），在同一個 `describe`/檔案範圍內、緊接該測試之後新增：
 
@@ -112,7 +112,7 @@ void _openFoliateProgressSheet() {
   );
 ```
 
-- [ ] **Step 3: 執行測試，確認失敗**
+- [x] **Step 3: 執行測試，確認失敗**
 
 執行：
 ```bash
@@ -120,7 +120,7 @@ cd app && flutter test test/screens/reader_screen_test.dart --plain-name "進度
 ```
 預期：FAIL——`find.ancestor(... matching: find.byType(SafeArea))` 找不到 `SafeArea`（`findsNothing`，因為目前 `builder` 沒有包 `SafeArea`）。
 
-- [ ] **Step 4: 實作修正**
+- [x] **Step 4: 實作修正**
 
 修改 `reader_screen.dart:1836-1845`：
 
@@ -139,7 +139,7 @@ cd app && flutter test test/screens/reader_screen_test.dart --plain-name "進度
   }
 ```
 
-- [ ] **Step 5: 執行測試，確認通過**
+- [x] **Step 5: 執行測試，確認通過**
 
 執行：
 ```bash
@@ -147,7 +147,7 @@ cd app && flutter test test/screens/reader_screen_test.dart --plain-name "進度
 ```
 預期：PASS。
 
-- [ ] **Step 6: 執行全部既有測試回歸**
+- [x] **Step 6: 執行全部既有測試回歸**
 
 執行：
 ```bash
@@ -156,7 +156,7 @@ cd app && flutter test
 ```
 預期：`flutter analyze` 顯示 `No issues found!`；`flutter test` 全數通過（含既有「點擊浮動進度/跳頁按鈕開啟內含 ReaderFooter 的 Bottom Sheet」等測試，純外層包裝、不改變其行為）。
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app/lib/screens/reader_screen.dart app/test/screens/reader_screen_test.dart
@@ -173,23 +173,25 @@ git commit -m "fix(epic-18): Issue 11 進度/跳頁 Bottom Sheet 補上 SafeArea
 - Consumes: Task 1 完成後的 `reader_screen.dart`。
 - Produces: 驗收結果記錄（供合併前的程式碼審查／`issues.md` Issue 11 狀態更新引用）。
 
-- [ ] **Step 1: 安裝最新 debug APK 至真機 `3CEF42ECD491687`**
+- [x] **Step 1: 安裝最新 debug APK 至真機 `3CEF42ECD491687`**
 
 ```bash
 cd app && flutter build apk --debug
 adb -s 3CEF42ECD491687 install -r build/app/outputs/flutter-apk/app-debug.apk
 ```
 
-- [ ] **Step 2: 驗證進度/跳頁 Bottom Sheet 不被系統工具列蓋住**
+- [x] **Step 2: 驗證進度/跳頁 Bottom Sheet 不被系統工具列蓋住**
 
 1. 開啟一本流式 EPUB。
 2. 點擊進度/跳頁浮動按鈕（`reader_foliate_progress_button`）開啟 Bottom Sheet。
 3. 確認跳頁捲軸與輸入框完整顯示在系統工具列（若裝置有手勢列/三鍵導覽列）上方，可正常拖曳互動、不被遮擋。
 4. 記錄：Pass/Fail + 截圖佐證。
 
-- [ ] **Step 3: 記錄驗收結果**
+**驗收結果：Pass。** 由使用者本人於真機 `3CEF42ECD491687` 實測：開啟流式 EPUB → 點擊進度/跳頁浮動按鈕開啟 Bottom Sheet → 跳頁捲軸與輸入框完整顯示於系統手勢列上方，可正常拖曳互動，未被遮擋。
 
-供後續程式碼審查與 `docs/epics/epic-18-reader-device-qa/issues.md` Issue 11 狀態更新引用。
+- [x] **Step 3: 記錄驗收結果**
+
+供後續程式碼審查與 `docs/epics/epic-18-reader-device-qa/issues.md` Issue 11 狀態更新引用；結果已同步記錄於本檔案 Step 2 與 `issues.md` Issue 11 條目。
 
 ---
 

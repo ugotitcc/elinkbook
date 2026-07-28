@@ -381,7 +381,7 @@ Issue 5 的 `singleColumn` 布林開關因 `paginator.js` 對直排書籍的 `ma
 
 ## Issue 11：流式 EPUB 進度/跳頁 Bottom Sheet 補上 `SafeArea`
 
-**Status:** `ready-for-agent`
+**Status:** ✅ 已完成（分支 `fix/epic-18-issue-11-safearea`，尚未合併回 `main`）。`_openFoliateProgressSheet()` 的 `builder` 已補上 `SafeArea` 包裹，比照 `ReaderSettingsSheet`/`TocBottomSheet` 既有寫法。新增的 widget 測試（模擬 `viewPadding.bottom: 48` 的系統手勢列情境）驗證跳頁滑桿確實位於 `SafeArea` 之內，`flutter analyze` 乾淨、`flutter test` 全數通過。真機驗收由使用者本人於裝置 `3CEF42ECD491687` 上實測完成：開啟流式 EPUB 後點擊進度/跳頁浮動按鈕，確認跳頁捲軸與輸入框完整顯示在系統手勢列上方，可正常拖曳互動、未被遮擋，結果為 Pass。
 
 **依賴：** 無
 
