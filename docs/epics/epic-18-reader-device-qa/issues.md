@@ -431,7 +431,7 @@ Issue 5 的 `singleColumn` 布林開關因 `paginator.js` 對直排書籍的 `ma
 
 ## Issue 13：流式 EPUB 頁首/進度文字從沉浸模式拆出、跟內文常駐顯示
 
-**Status:** `ready-for-agent`
+**Status:** ✅ 已完成（分支 `fix/epic-18-issue-13-chrome-visible`，尚未合併回 `main`）。頁首文字（`reader_foliate_header_text`）與進度文字（`reader_foliate_progress_text`）的 `Positioned` 顯示條件皆已移除 `_chromeVisible`，改為只依各自的 `showHeader`/`showFooter` 開關決定顯示；6 顆浮動功能按鈕（含 Issue 12 修正後的進度/跳頁鈕）維持不變，仍跟隨 `_chromeVisible`。新增的兩個測試驗證沉浸模式收起選單後，按鈕收合但頁首/進度文字仍常駐顯示，`flutter analyze` 乾淨、`flutter test` 648 個測試全數通過。真機驗收由使用者本人於裝置 `3CEF42ECD491687` 實測完成：頁首/進度文字在沉浸模式收合時仍常駐顯示，再次叫出選單時按鈕與常駐文字無重疊衝突，關閉「顯示頁首」/「顯示進度」仍可正確隱藏對應文字；FXL 與 PDF 既有沉浸模式行為未受影響，結果為 Pass。
 
 **依賴：** 無
 

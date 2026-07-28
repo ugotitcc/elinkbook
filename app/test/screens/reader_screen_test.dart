@@ -3514,6 +3514,53 @@ void main() {
     );
   });
 
+  testWidgets(
+    '流式 EPUB：沉浸模式收起選單（_chromeVisible=false）時，頁首文字仍常駐顯示、6 顆浮動按鈕正確收合（Issue 13）',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_foliate_header_immersive',
+            prefsManager: prefsManager,
+            isFixedLayout: false,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final foliateView = tester.widget<FoliateEpubReaderView>(
+        find.byType(FoliateEpubReaderView),
+      );
+      foliateView.onPageRendered();
+      foliateView.onLayoutResolved?.call(
+        const EpubLayoutInfo(
+          isFixedLayout: false,
+          writingMode: WritingMode.horizontal,
+        ),
+      );
+      await tester.pump();
+
+      // navZoneMode 預設 rightFlip，index 1（中欄）為 menu（見
+      // app/lib/reader/nav_zone_mode.dart rightFlipZoneTemplate）。
+      await tester.tap(find.byKey(const Key('nav_zone_1')));
+      await tester.pump();
+
+      expect(
+        find.byKey(const Key('reader_foliate_back_button')),
+        findsNothing,
+        reason: '沉浸模式收起後，浮動功能按鈕應收合',
+      );
+      expect(
+        find.byKey(const Key('reader_foliate_header_text')),
+        findsOneWidget,
+        reason: '頁首文字（資訊顯示）不受沉浸模式影響，應常駐顯示',
+      );
+    },
+  );
+
   testWidgets('流式 EPUB：showHeader=false 時頁眉不顯示（Issue 7）', (tester) async {
     await prefsManager.saveBookPrefs(
       'b_foliate_header_off',
@@ -3592,6 +3639,54 @@ void main() {
         ),
         findsNothing,
       );
+    },
+  );
+
+  testWidgets(
+    '流式 EPUB：沉浸模式收起選單（_chromeVisible=false）時，進度文字仍常駐顯示（Issue 13）',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_foliate_progress_immersive',
+            prefsManager: prefsManager,
+            isFixedLayout: false,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final foliateView = tester.widget<FoliateEpubReaderView>(
+        find.byType(FoliateEpubReaderView),
+      );
+      foliateView.onPageRendered();
+      foliateView.onLocatorChanged?.call(
+        const EpubPositionInfo(
+          locatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
+          progression: 0.1,
+          pageIndex: 167,
+          totalPages: 197,
+        ),
+      );
+      await tester.pump();
+
+      await tester.tap(find.byKey(const Key('nav_zone_1')));
+      await tester.pump();
+
+      expect(
+        find.byKey(const Key('reader_foliate_progress_button')),
+        findsNothing,
+        reason: '沉浸模式收起後，浮動功能按鈕應收合',
+      );
+      expect(
+        find.byKey(const Key('reader_foliate_progress_text')),
+        findsOneWidget,
+        reason: '進度文字（資訊顯示）不受沉浸模式影響，應常駐顯示',
+      );
+      expect(find.text('168/197'), findsOneWidget);
     },
   );
 
