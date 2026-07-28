@@ -173,21 +173,21 @@ git commit -m "fix(epic-18): Issue 11 進度/跳頁 Bottom Sheet 補上 SafeArea
 - Consumes: Task 1 完成後的 `reader_screen.dart`。
 - Produces: 驗收結果記錄（供合併前的程式碼審查／`issues.md` Issue 11 狀態更新引用）。
 
-- [ ] **Step 1: 安裝最新 debug APK 至真機 `3CEF42ECD491687`**
+- [x] **Step 1: 安裝最新 debug APK 至真機 `3CEF42ECD491687`**
 
 ```bash
 cd app && flutter build apk --debug
 adb -s 3CEF42ECD491687 install -r build/app/outputs/flutter-apk/app-debug.apk
 ```
 
-- [ ] **Step 2: 驗證進度/跳頁 Bottom Sheet 不被系統工具列蓋住**
+- [x] **Step 2: 驗證進度/跳頁 Bottom Sheet 不被系統工具列蓋住**
 
 1. 開啟一本流式 EPUB。
 2. 點擊進度/跳頁浮動按鈕（`reader_foliate_progress_button`）開啟 Bottom Sheet。
 3. 確認跳頁捲軸與輸入框完整顯示在系統工具列（若裝置有手勢列/三鍵導覽列）上方，可正常拖曳互動、不被遮擋。
 4. 記錄：Pass/Fail + 截圖佐證。
 
-- [ ] **Step 3: 記錄驗收結果**
+- [x] **Step 3: 記錄驗收結果**
 
 供後續程式碼審查與 `docs/epics/epic-18-reader-device-qa/issues.md` Issue 11 狀態更新引用。
 

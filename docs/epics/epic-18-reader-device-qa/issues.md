@@ -381,7 +381,7 @@ Issue 5 的 `singleColumn` 布林開關因 `paginator.js` 對直排書籍的 `ma
 
 ## Issue 11：流式 EPUB 進度/跳頁 Bottom Sheet 補上 `SafeArea`
 
-**Status:** `ready-for-agent`
+**Status:** `done`
 
 **依賴：** 無
 
