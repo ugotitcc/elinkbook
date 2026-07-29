@@ -26,8 +26,9 @@ void main() {
   setUp(() async {
     repository = await SqliteLibraryRepository.open(inMemoryDatabasePath);
     coversDir = Directory.systemTemp.createTempSync('book_import_test_covers');
-    importedBooksDir =
-        Directory.systemTemp.createTempSync('book_import_test_imported');
+    importedBooksDir = Directory.systemTemp.createTempSync(
+      'book_import_test_imported',
+    );
     service = BookImportServiceImpl(
       repository: repository,
       coversDirectory: coversDir,
@@ -50,8 +51,7 @@ void main() {
         .setMockMethodCallHandler(_channel, handler);
   }
 
-  test('匯入 EPUB 檔案呼叫 extractMetadata(format: epub) 並寫入正確詮釋資料',
-      () async {
+  test('匯入 EPUB 檔案呼叫 extractMetadata(format: epub) 並寫入正確詮釋資料', () async {
     mockChannel((call) async {
       if (call.method == 'takePersistableUriPermission') return null;
       if (call.method == 'extractMetadata') {
@@ -65,7 +65,8 @@ void main() {
       return null;
     });
 
-    final books = await service.importFiles(['content://example/book.epub']);
+    final result = await service.importFiles(['content://example/book.epub']);
+    final books = result.importedBooks;
 
     expect(books, hasLength(1));
     expect(books.single.title, '紅樓夢');
@@ -74,8 +75,7 @@ void main() {
     expect(books.single.coverPath, isNotNull);
   });
 
-  test('匯入 EPUB 檔案時，extractMetadata 回傳的 isFixedLayout 正確寫入 Book',
-      () async {
+  test('匯入 EPUB 檔案時，extractMetadata 回傳的 isFixedLayout 正確寫入 Book', () async {
     mockChannel((call) async {
       if (call.method == 'takePersistableUriPermission') return null;
       if (call.method == 'extractMetadata') {
@@ -89,7 +89,8 @@ void main() {
       return null;
     });
 
-    final books = await service.importFiles(['content://example/comic.epub']);
+    final result = await service.importFiles(['content://example/comic.epub']);
+    final books = result.importedBooks;
 
     expect(books.single.isFixedLayout, isTrue);
   });
@@ -108,13 +109,13 @@ void main() {
       return null;
     });
 
-    final books = await service.importFiles(['content://example/novel.epub']);
+    final result = await service.importFiles(['content://example/novel.epub']);
+    final books = result.importedBooks;
 
     expect(books.single.isFixedLayout, isFalse);
   });
 
-  test('匯入 PDF 檔案時，isFixedLayout 維持 null（extractMetadata 回傳無此欄位）',
-      () async {
+  test('匯入 PDF 檔案時，isFixedLayout 維持 null（extractMetadata 回傳無此欄位）', () async {
     mockChannel((call) async {
       if (call.method == 'takePersistableUriPermission') return null;
       if (call.method == 'extractMetadata') {
@@ -123,25 +124,25 @@ void main() {
       return null;
     });
 
-    final books = await service.importFiles(['content://example/report.pdf']);
+    final result = await service.importFiles(['content://example/report.pdf']);
+    final books = result.importedBooks;
 
     expect(books.single.isFixedLayout, isNull);
   });
 
-  test('匯入 TXT 檔案時，isFixedLayout 維持 null（不呼叫 extractMetadata）',
-      () async {
+  test('匯入 TXT 檔案時，isFixedLayout 維持 null（不呼叫 extractMetadata）', () async {
     mockChannel((call) async {
       if (call.method == 'takePersistableUriPermission') return null;
       return null;
     });
 
-    final books = await service.importFiles(['content://example/notes.txt']);
+    final result = await service.importFiles(['content://example/notes.txt']);
+    final books = result.importedBooks;
 
     expect(books.single.isFixedLayout, isNull);
   });
 
-  test('匯入 PDF 檔案呼叫 extractMetadata(format: pdf)，詮釋資料無標題時降級為檔名',
-      () async {
+  test('匯入 PDF 檔案呼叫 extractMetadata(format: pdf)，詮釋資料無標題時降級為檔名', () async {
     mockChannel((call) async {
       if (call.method == 'takePersistableUriPermission') return null;
       if (call.method == 'extractMetadata') {
@@ -155,7 +156,8 @@ void main() {
       return null;
     });
 
-    final books = await service.importFiles(['content://example/report.pdf']);
+    final result = await service.importFiles(['content://example/report.pdf']);
+    final books = result.importedBooks;
 
     expect(books, hasLength(1));
     expect(books.single.format, BookFileFormat.pdf);
@@ -173,7 +175,8 @@ void main() {
       return null;
     });
 
-    final books = await service.importFiles(['content://example/notes.txt']);
+    final result = await service.importFiles(['content://example/notes.txt']);
+    final books = result.importedBooks;
 
     expect(extractMetadataCalled, isFalse);
     expect(books, hasLength(1));
@@ -182,8 +185,7 @@ void main() {
     expect(books.single.coverPath, isNotNull);
   });
 
-  test('詮釋資料提取失敗時降級寫入：標題=檔名、coverPath=null，不中斷整批匯入',
-      () async {
+  test('詮釋資料提取失敗時降級寫入：標題=檔名、coverPath=null，不中斷整批匯入', () async {
     mockChannel((call) async {
       if (call.method == 'takePersistableUriPermission') return null;
       if (call.method == 'extractMetadata') {
@@ -192,10 +194,11 @@ void main() {
       return null;
     });
 
-    final books = await service.importFiles([
+    final result = await service.importFiles([
       'content://example/broken.epub',
       'content://example/another.pdf',
     ]);
+    final books = result.importedBooks;
 
     expect(books, hasLength(2));
     expect(books[0].title, 'broken');
@@ -204,8 +207,7 @@ void main() {
     expect(books[1].coverPath, isNull);
   });
 
-  test('匯入成功的書籍 source 為 local，filePath 存放原始 URI（未被複製）',
-      () async {
+  test('匯入成功的書籍 source 為 local，filePath 存放原始 URI（未被複製）', () async {
     mockChannel((call) async {
       if (call.method == 'takePersistableUriPermission') return null;
       return {'title': null, 'author': null, 'coverBytes': null};
@@ -213,7 +215,8 @@ void main() {
 
     const uri =
         'content://com.android.externalstorage.documents/document/primary%3ADownload%2Fmybook.pdf';
-    final books = await service.importFiles([uri]);
+    final result = await service.importFiles([uri]);
+    final books = result.importedBooks;
 
     expect(books.single.source, BookSource.local);
     expect(books.single.filePath, uri);
@@ -225,24 +228,26 @@ void main() {
       return {'title': '有效書籍', 'author': null, 'coverBytes': null};
     });
 
-    final books = await service.importFiles([
+    final result = await service.importFiles([
       'content://example/document.docx',
       'content://example/valid.epub',
     ]);
+    final books = result.importedBooks;
 
     expect(books, hasLength(1));
     expect(books.single.title, '有效書籍');
   });
 
-  test(
-      'takePersistableUriPermission 失敗但複製到本機儲存成功時，'
+  test('takePersistableUriPermission 失敗但複製到本機儲存成功時，'
       '改用本機複本路徑繼續完成匯入（不再直接略過）', () async {
     mockChannel((call) async {
       final args = call.arguments as Map;
       if (call.method == 'takePersistableUriPermission') {
         if ((args['uri'] as String).contains('no_permission')) {
           throw PlatformException(
-              code: 'permission_failed', message: '模擬權限持久化失敗');
+            code: 'permission_failed',
+            message: '模擬權限持久化失敗',
+          );
         }
         return null;
       }
@@ -250,10 +255,11 @@ void main() {
       return {'title': '有效書籍', 'author': null, 'coverBytes': null};
     });
 
-    final books = await service.importFiles([
+    final result = await service.importFiles([
       'content://example/no_permission.epub',
       'content://example/valid.pdf',
     ]);
+    final books = result.importedBooks;
 
     expect(books, hasLength(2));
     expect(
@@ -263,15 +269,16 @@ void main() {
     );
   });
 
-  test(
-      'takePersistableUriPermission 與複製到本機儲存都失敗時，'
+  test('takePersistableUriPermission 與複製到本機儲存都失敗時，'
       '真的略過該檔案，不寫入資料庫、不中斷整批匯入', () async {
     mockChannel((call) async {
       final args = call.arguments as Map;
       if (call.method == 'takePersistableUriPermission') {
         if ((args['uri'] as String).contains('no_permission')) {
           throw PlatformException(
-              code: 'permission_failed', message: '模擬權限持久化失敗');
+            code: 'permission_failed',
+            message: '模擬權限持久化失敗',
+          );
         }
         return null;
       }
@@ -281,17 +288,17 @@ void main() {
       return {'title': '有效書籍', 'author': null, 'coverBytes': null};
     });
 
-    final books = await service.importFiles([
+    final result = await service.importFiles([
       'content://example/no_permission.epub',
       'content://example/valid.pdf',
     ]);
+    final books = result.importedBooks;
 
     expect(books, hasLength(1));
     expect(books.single.title, '有效書籍');
   });
 
-  test(
-      'URI 為不透明文件 ID（不含可辨識副檔名，例如媒體庫文件提供者）時，'
+  test('URI 為不透明文件 ID（不含可辨識副檔名，例如媒體庫文件提供者）時，'
       '改用 displayNames 判斷格式仍能成功匯入', () async {
     mockChannel((call) async {
       if (call.method == 'takePersistableUriPermission') return null;
@@ -308,41 +315,40 @@ void main() {
     // detectBookFileFormat 必定回傳 null，整個檔案會在最前面就被靜默跳過。
     const opaqueUri =
         'content://com.android.providers.media.documents/document/document%3A1000001716';
-    final books = await service.importFiles(
+    final result = await service.importFiles(
       [opaqueUri],
       displayNames: ['葬送的芙莉蓮 11.epub'],
     );
+    final books = result.importedBooks;
 
     expect(books, hasLength(1));
     expect(books.single.format, BookFileFormat.epub);
     expect(books.single.title, '葬送的芙莉蓮');
   });
 
-  test('displayNames 為 null（未提供）時退回只看 URI 判斷格式，行為與先前版本一致',
-      () async {
+  test('displayNames 為 null（未提供）時退回只看 URI 判斷格式，行為與先前版本一致', () async {
     mockChannel((call) async {
       if (call.method == 'takePersistableUriPermission') return null;
       return {'title': null, 'author': null, 'coverBytes': null};
     });
 
-    final books =
-        await service.importFiles(['content://example/book.epub']);
+    final result = await service.importFiles(['content://example/book.epub']);
+    final books = result.importedBooks;
 
     expect(books, hasLength(1));
     expect(books.single.format, BookFileFormat.epub);
   });
 
-  test('指定 folderName 時自動建立分類並歸入，書籍 groupName 對應資料夾名稱',
-      () async {
+  test('指定 folderName 時自動建立分類並歸入，書籍 groupName 對應資料夾名稱', () async {
     mockChannel((call) async {
       if (call.method == 'takePersistableUriPermission') return null;
       return {'title': null, 'author': null, 'coverBytes': null};
     });
 
-    final books = await service.importFiles(
-      ['content://example/book.epub'],
-      folderName: '古典奇幻',
-    );
+    final result = await service.importFiles([
+      'content://example/book.epub',
+    ], folderName: '古典奇幻');
+    final books = result.importedBooks;
 
     expect(books.single.groupName, '古典奇幻');
     final groups = await repository.listGroups();
@@ -364,7 +370,8 @@ void main() {
       return {'title': null, 'author': null, 'coverBytes': null};
     });
 
-    final books = await service.importFolder('content://example/tree/folder');
+    final result = await service.importFolder('content://example/tree/folder');
+    final books = result.importedBooks;
 
     expect(books, hasLength(2));
     final savedBooks = await repository.listBooks();
@@ -383,18 +390,18 @@ void main() {
       return {'title': null, 'author': null, 'coverBytes': null};
     });
 
-    final books = await service.importFolder(
+    final result = await service.importFolder(
       'content://example/tree/folder',
       autoGroupByFolderName: true,
     );
+    final books = result.importedBooks;
 
     expect(books.single.groupName, '歷史小說');
     final groups = await repository.listGroups();
     expect(groups.map((g) => g.name), contains('歷史小說'));
   });
 
-  test('autoGroupByFolderName=true 且群組已存在時，直接歸入既有群組、不重複建立',
-      () async {
+  test('autoGroupByFolderName=true 且群組已存在時，直接歸入既有群組、不重複建立', () async {
     await repository.upsertGroup('歷史小說');
     mockChannel((call) async {
       if (call.method == 'takePersistableUriPermission') return null;
@@ -425,11 +432,94 @@ void main() {
       return {'title': null, 'author': null, 'coverBytes': null};
     });
 
-    final books = await service.importFolder(
+    final result = await service.importFolder(
       'content://example/tree/folder',
       autoGroupByFolderName: false,
     );
+    final books = result.importedBooks;
 
     expect(books.single.groupName, BookGroup.uncategorized);
+  });
+
+  group('重複匯入偵測（診斷修正：同一本書可以重複匯入）', () {
+    test('來源 URI 與圖書庫既有書籍相同時，跳過不新增，並回報 skippedDuplicateCount',
+        () async {
+      mockChannel((call) async {
+        if (call.method == 'takePersistableUriPermission') return null;
+        return {'title': '既有書籍', 'author': null, 'coverBytes': null};
+      });
+
+      const uri = 'content://example/existing.epub';
+      final firstImport = await service.importFiles([uri]);
+      expect(firstImport.importedBooks, hasLength(1));
+      expect(firstImport.skippedDuplicateCount, 0);
+
+      final secondImport = await service.importFiles([uri]);
+
+      expect(secondImport.importedBooks, isEmpty);
+      expect(secondImport.skippedDuplicateCount, 1);
+      final allBooks = await repository.listBooks();
+      expect(allBooks, hasLength(1),
+          reason: '重複匯入不應該在資料庫多寫入第二筆同一份來源檔案的書籍列');
+    });
+
+    test('同一批次內重複選取同一個 URI 兩次，只匯入一次，第二次視為重複跳過',
+        () async {
+      mockChannel((call) async {
+        if (call.method == 'takePersistableUriPermission') return null;
+        return {'title': '書籍', 'author': null, 'coverBytes': null};
+      });
+
+      const uri = 'content://example/duplicate_in_same_batch.epub';
+      final result = await service.importFiles([uri, uri]);
+
+      expect(result.importedBooks, hasLength(1));
+      expect(result.skippedDuplicateCount, 1);
+      final allBooks = await repository.listBooks();
+      expect(allBooks, hasLength(1));
+    });
+
+    test('不同來源 URI 的書籍（即使書名相同）不會被誤判為重複而跳過', () async {
+      mockChannel((call) async {
+        if (call.method == 'takePersistableUriPermission') return null;
+        return {'title': '同名書', 'author': null, 'coverBytes': null};
+      });
+
+      final result = await service.importFiles([
+        'content://example/copy_a.epub',
+        'content://example/copy_b.epub',
+      ]);
+
+      expect(result.importedBooks, hasLength(2));
+      expect(result.skippedDuplicateCount, 0);
+    });
+
+    test('importFolder 內含與圖書庫既有書籍相同來源 URI 的檔案時，同樣跳過並回報',
+        () async {
+      mockChannel((call) async {
+        if (call.method == 'takePersistableUriPermission') return null;
+        if (call.method == 'listFolderContents') {
+          return {
+            'folderName': '歷史小說',
+            'fileUris': [
+              'content://example/tree/folder/document/existing.epub',
+              'content://example/tree/folder/document/new.epub',
+            ],
+          };
+        }
+        return {'title': '書籍', 'author': null, 'coverBytes': null};
+      });
+
+      await service.importFiles(
+        ['content://example/tree/folder/document/existing.epub'],
+      );
+
+      final result = await service.importFolder('content://example/tree/folder');
+
+      expect(result.importedBooks, hasLength(1));
+      expect(result.importedBooks.single.filePath,
+          'content://example/tree/folder/document/new.epub');
+      expect(result.skippedDuplicateCount, 1);
+    });
   });
 }

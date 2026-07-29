@@ -26,8 +26,7 @@ import 'package:elinkbook/library/sqlite_library_repository.dart';
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('手動選擇並匯入一個真實檔案（人工驗收，不做自動斷言）',
-      (tester) async {
+  testWidgets('手動選擇並匯入一個真實檔案（人工驗收，不做自動斷言）', (tester) async {
     final repository = await SqliteLibraryRepository.open(
       await defaultLibraryDatabasePath(),
     );
@@ -58,7 +57,9 @@ void main() {
                             .map((f) => f.identifier)
                             .whereType<String>()
                             .toList();
-                        final books = await importService.importFiles(uris);
+                        final books = (await importService.importFiles(
+                          uris,
+                        )).importedBooks;
                         setState(() {
                           resultText = books.isEmpty
                               ? '匯入失敗或無有效檔案'

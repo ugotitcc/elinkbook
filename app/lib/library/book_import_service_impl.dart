@@ -63,7 +63,7 @@ class BookImportServiceImpl implements BookImportService {
   final Directory? _importedBooksDirectory;
 
   @override
-  Future<List<Book>> importFiles(
+  Future<ImportResult> importFiles(
     List<String> uris, {
     List<String?>? displayNames,
     String? folderName,
@@ -72,22 +72,33 @@ class BookImportServiceImpl implements BookImportService {
       await _repository.upsertGroup(folderName);
     }
 
+    // 【診斷修正】見下方 _importSingleFile 前的重複偵測說明。
+    final seenUris = await _existingFilePaths();
     final imported = <Book>[];
+    var skippedDuplicateCount = 0;
     for (var i = 0; i < uris.length; i++) {
+      final uri = uris[i];
+      if (!seenUris.add(uri)) {
+        skippedDuplicateCount++;
+        continue;
+      }
       final displayName =
           (displayNames != null && i < displayNames.length) ? displayNames[i] : null;
       final book = await _importSingleFile(
-        uris[i],
+        uri,
         displayName: displayName,
         folderName: folderName,
       );
       if (book != null) imported.add(book);
     }
-    return imported;
+    return ImportResult(
+      importedBooks: imported,
+      skippedDuplicateCount: skippedDuplicateCount,
+    );
   }
 
   @override
-  Future<List<Book>> importFolder(
+  Future<ImportResult> importFolder(
     String folderUri, {
     bool autoGroupByFolderName = true,
   }) async {
@@ -97,7 +108,7 @@ class BookImportServiceImpl implements BookImportService {
         {'uri': folderUri},
       );
     } on PlatformException {
-      return [];
+      return const ImportResult(importedBooks: []);
     }
 
     Map<Object?, Object?>? contents;
@@ -107,9 +118,9 @@ class BookImportServiceImpl implements BookImportService {
         {'uri': folderUri},
       );
     } on PlatformException {
-      return [];
+      return const ImportResult(importedBooks: []);
     }
-    if (contents == null) return [];
+    if (contents == null) return const ImportResult(importedBooks: []);
 
     final folderName = contents['folderName'] as String?;
     final fileUris =
@@ -124,8 +135,15 @@ class BookImportServiceImpl implements BookImportService {
       await _repository.upsertGroup(groupName);
     }
 
+    // 【診斷修正】見下方 _importSingleFile 前的重複偵測說明。
+    final seenUris = await _existingFilePaths();
     final imported = <Book>[];
+    var skippedDuplicateCount = 0;
     for (final uri in fileUris) {
+      if (!seenUris.add(uri)) {
+        skippedDuplicateCount++;
+        continue;
+      }
       final book = await _importSingleFile(
         uri,
         folderName: groupName,
@@ -133,7 +151,26 @@ class BookImportServiceImpl implements BookImportService {
       );
       if (book != null) imported.add(book);
     }
-    return imported;
+    return ImportResult(
+      importedBooks: imported,
+      skippedDuplicateCount: skippedDuplicateCount,
+    );
+  }
+
+  /// 【診斷修正——真機回報「同一本書可以重複匯入」】圖書庫既有書籍的
+  /// `filePath` 集合，供匯入前判斷來源 URI 是否重複。比對依據是「來源檔案
+  /// URI/路徑是否相同」，不比對書名/作者（避免同名但內容不同的書被誤判為
+  /// 重複）——對大多數情況成立：`filePath` 只有在持久化 URI 權限授權失敗、
+  /// 或原始 URI 沒有可辨識副檔名時才會落地成本機複本（每次落地會產生新的
+  /// 隨機檔名），故此防護對「使用者重新選取同一份原始檔案」這個實際回報的
+  /// 情境有效；對「先前已落地成本機複本、之後又重新選取同一份原始檔案」
+  /// 這種較罕見的邊界情況無效（本機複本檔名與原始 URI 不同，比對不到），
+  /// 屬已知、可接受的限制。這個集合在同一次批次匯入呼叫（`importFiles`／
+  /// `importFolder`）期間會持續更新，故同一批次內重複選取同一個 URI 兩次
+  /// 也會被正確擋下第二次。
+  Future<Set<String>> _existingFilePaths() async {
+    final books = await _repository.listBooks();
+    return books.map((b) => b.filePath).toSet();
   }
 
   Future<Book?> _importSingleFile(
