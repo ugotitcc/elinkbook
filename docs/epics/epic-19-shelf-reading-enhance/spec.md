@@ -228,9 +228,12 @@ class _GroupTile {
 }
 ```
 
+【診斷修正——2026-07-29 真機測試後追加的規格更新】「未分類」不產生拼貼格：`BookGroup.uncategorized` 的書籍已經透過 `_buildBookList()` 的 `visibleBooks` 過濾邏輯純粹以個別書籍項目顯示在頂層書籍清單中（見上方【診斷修正】），若還額外顯示一個「未分類」拼貼格，等於同一批書在畫面上出現兩種呈現方式；只有具名分類才需要拼貼格這種「摘要縮圖」的呈現方式。`orderedNames` 移除原本無條件插入的 `BookGroup.uncategorized`：
+
 ```dart
-/// 依目前已載入的 [books]（已依 _sortBy 排序）與 [_groups]（name ASC，
-/// 「未分類」強制排最後，見 design.md 決策）分組，只保留非空分類。
+/// 依目前已載入的 [books]（已依 _sortBy 排序）與 [_groups]（name ASC）
+/// 分組，只保留非空的具名分類（「未分類」不產生拼貼格，見上方【診斷修
+/// 正】）。
 ///
 /// 【審查修正】`_groups` 是 `_loadGroups()` 讀取的記憶體快照，既有的
 /// `_loadGroups()` 錯誤處理註解本身承認暫時性讀取失敗時會保留舊快照
@@ -239,7 +242,9 @@ class _GroupTile {
 /// 落後於 `_books` 的情境）。若只依 `_groups` 組出 `orderedNames`，這些
 /// 書籍會被整批漏掉、從書架上「消失」而非只是分類格顯示不完整，後果比
 /// 拼貼格排序錯誤嚴重得多，故補一個兜底桶收留所有未被涵蓋的
-/// `groupName`，確保 `byGroup` 裡的書一定會出現在某個拼貼格。
+/// `groupName`（`BookGroup.uncategorized` 本身排除在兜底桶之外——這個
+/// 名字不會消失，只是不產生拼貼格），確保 `byGroup` 裡的具名分類書籍一
+/// 定會出現在某個拼貼格。
 List<_GroupTile> _buildGroupTiles(List<Book> books) {
   final byGroup = <String, List<Book>>{};
   for (final book in books) {
@@ -248,7 +253,6 @@ List<_GroupTile> _buildGroupTiles(List<Book> books) {
   final orderedNames = [
     for (final group in _groups)
       if (group.name != BookGroup.uncategorized) group.name,
-    BookGroup.uncategorized,
     for (final name in byGroup.keys)
       if (name != BookGroup.uncategorized &&
           !_groups.any((g) => g.name == name))
@@ -325,14 +329,20 @@ void _openGroupFilteredView(String groupName) {
 }
 ```
 
+【診斷修正——2026-07-29 真機測試後的規格更新】真機回報「已分類書籍在書架第一層重複顯示」（同一本書同時出現在分類拼貼格的封面預覽裡、也出現在下方書籍清單中）。原始設計是拼貼格與書籍清單「並存」，`books` 參數在頂層（`groupFilter == null`）維持不篩選、原封不動傳給下方清單；經確認後改為「互斥」：頂層書籍清單只顯示「未分類」書籍，已歸類書籍只透過所屬拼貼格顯示。新增 `visibleBooks`，`itemCount`／`itemBuilder` 內的 `books` 皆改用 `visibleBooks`：
+
 ```dart
 // _buildBookList()：分類格與書籍合併進同一個 index 空間，分類格在前
-// （design.md 決策：分類格固定排最前面）。
+// （design.md 決策：分類格固定排最前面）。頂層書架的書籍清單只顯示未分類
+// 書籍，已歸類書籍只透過所屬拼貼格顯示，不重複列出（見上方【診斷修正】）。
 Widget _buildBookList(List<Book> books) {
   final selectedIds = _selectedBookIds;
   final groupTiles =
       widget.groupFilter == null ? _buildGroupTiles(books) : const <_GroupTile>[];
-  final itemCount = groupTiles.length + books.length;
+  final visibleBooks = widget.groupFilter == null
+      ? books.where((b) => b.groupName == BookGroup.uncategorized).toList()
+      : books;
+  final itemCount = groupTiles.length + visibleBooks.length;
   Widget itemBuilder(BuildContext context, int index, {required bool isGrid}) {
     if (index < groupTiles.length) {
       final tile = groupTiles[index];
@@ -347,7 +357,7 @@ Widget _buildBookList(List<Book> books) {
           ? _GroupGridTile(tile: tile, onTap: onTap)
           : _GroupListTile(tile: tile, onTap: onTap);
     }
-    final book = books[index - groupTiles.length];
+    final book = visibleBooks[index - groupTiles.length];
     return isGrid
         ? _BookGridTile(
             book: book,
@@ -509,6 +519,8 @@ AppBar _buildNormalAppBar(List<Book>? books) {
 - `_openGroupFilteredView`：widget test（tap 分類格後，`Navigator` 推入的新 `LibraryScreen.groupFilter` 等於分類名稱；新畫面 AppBar 標題顯示分類名稱、不顯示分類拼貼格區塊、不顯示「管理分類」按鈕）。
 - `_buildBookList` 合併 index 空間：widget test（`itemCount` 等於分類格數＋書籍數；分類格永遠排在書籍之前）。
 - 【審查修正】選取模式互動：widget test 驗證進入選取模式（長按任一本書）後，分類格的 `onTap` 為 `null`（點擊不觸發 `Navigator.push`，`_selectedBookIds` 與選取工具列狀態不受影響）。
+- 【診斷修正】頂層書架「已分類書籍不重複列出」：widget test 驗證已歸類到具名分類的書籍在頂層（`groupFilter == null`）的書籍清單中不出現（只透過所屬拼貼格顯示），未分類書籍仍正常列出；點擊該分類拼貼格進入篩選畫面後，該書籍才出現在畫面中。既有測試（`_buildBookList` 合併 index 空間、選取模式互動）若使用已歸類書籍作為測試資料，需同步調整為改用未分類書籍（或改用不同書籍分別驗證「可長按選取」與「有分類格可點擊」兩件事），避免測試本身依賴一本已被隱藏的書籍。
+- 【診斷修正——同日追加】「未分類」不使用拼貼格顯示：widget test 驗證即使「未分類」有書籍（非空），書架上也不會出現 `Key('group_tile_${BookGroup.uncategorized}')`，該書籍純粹以個別書籍項目呈現；具名分類的拼貼格排序測試（name ASC）需移除原本把「未分類」當作排序參考基準點的假設——既有的 `_loadGroups()` 回歸測試（驗證新分類不會被孤兒兜底桶誤排）原本是比較新分類與「未分類」拼貼格的相對順序，「未分類」拼貼格拿掉後這個比較基準點消失，需改用一個 `name ASC` 排序上會排在既有具名分類之前的新分類名稱，改比較它與該既有具名分類的相對順序。
 
 ---
 
