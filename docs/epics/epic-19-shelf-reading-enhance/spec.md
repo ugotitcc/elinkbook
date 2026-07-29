@@ -110,6 +110,12 @@ _fullscreenChannel.invokeMethod('setEnabled', false);
 
 ### 介面 (Interfaces)
 
+【審查修正——已合併程式碼審查後的規格更新，`review-issue-2.md`／`plan-issue-2.md` 已記錄，此處回填同步】實際合併的程式碼與本節原始草稿相比有三處差異，皆已審查通過：
+
+1. **`await File(...).delete()` → `File(...).deleteSync()`**：原始草稿用非同步 `delete()`，實作改為同步 `deleteSync()`。理由：widget test 的 `AutomatedTestWidgetsFlutterBinding` fake zone 無法讓真實 `dart:io` 非同步 I/O 的 `Future` 完成，若維持 `await delete()`，每個涉及刪除的測試都必須用 `tester.runAsync()` 包住確認刪除的 tap 動作、並搭配輪詢等待逾時；`deleteSync()` 是同步系統呼叫（底層即 `unlink`，屬中繼資料操作，不受檔案大小影響，效能風險低），可直接在 fake zone 內完成，測試因此不需要 `runAsync`/輪詢。此為程式碼審查（`plan-issue-2-code-review.md` Important 項目）後由作者確認保留的決策，非未經評估的規格漂移。
+2. **新增 `if (!mounted) return;`**：`await _confirmDeleteBooks(...)` 這個 dialog await 之後、`_exitSelectionMode()`（會觸碰 state）之前，比照本檔案內 `_openManageGroupsDialog()` 等既有慣例補上此檢查（此項為 `plan-issue-2.md` 撰寫階段的計畫審查已要求，先前未回填進本檔案，此處一併同步）。
+3. **檔案刪除包 `try-catch`**：單一檔案刪除失敗（例如被鎖定、權限異常）不應中斷整個批次刪除迴圈——`deleteBook()`（資料庫紀錄）已於迴圈內该筆書籍处理時完成，迴圈仍要繼續處理其餘已選取書籍並跑到最後的 `_loadBooks()`（同樣是計畫審查階段要求、此處回填）。
+
 ```dart
 Future<bool?> _confirmDeleteBooks(int count) {
   return showDialog<bool>(
@@ -140,6 +146,9 @@ Future<void> _deleteSelectedBooks() async {
   if (selectedIds == null || selectedIds.isEmpty || books == null) return;
   final confirmed = await _confirmDeleteBooks(selectedIds.length);
   if (confirmed != true) return;
+  // await 跳出 dialog 的操作之後、觸碰 state 之前先確認 widget 是否仍在
+  // 畫面上（比照既有 _openManageGroupsDialog()）。
+  if (!mounted) return;
   // 比照既有 _moveSelectedBooksToGroup()：先退出選取模式，避免刪除迴圈
   // 執行期間使用者重複點擊觸發本方法。
   _exitSelectionMode();
@@ -148,13 +157,21 @@ Future<void> _deleteSelectedBooks() async {
     await widget.repository.deleteBook(book.id);
     // existsSync() 防護對 content:// 來源的 filePath 安全（見 design.md
     // 調查結論——content:// 字串永遠不會判定為存在的本機路徑，故此處
-    // 不需要分辨 filePath 是本機複本還是原始外部檔案參照）。
-    if (File(book.filePath).existsSync()) {
-      await File(book.filePath).delete();
-    }
-    final coverPath = book.coverPath;
-    if (coverPath != null && File(coverPath).existsSync()) {
-      await File(coverPath).delete();
+    // 不需要分辨 filePath 是本機複本還是原始外部檔案參照）。單一檔案刪除
+    // 失敗不應中斷整個批次迴圈，故用 try-catch 包住。
+    try {
+      // 使用 deleteSync()（同步系統呼叫）而非 await delete()：widget test
+      // 的 fake zone 無法完成真實 I/O 的 Future，deleteSync() 不受此限制。
+      if (File(book.filePath).existsSync()) {
+        File(book.filePath).deleteSync();
+      }
+      final coverPath = book.coverPath;
+      if (coverPath != null && File(coverPath).existsSync()) {
+        File(coverPath).deleteSync();
+      }
+    } catch (_) {
+      // 檔案刪除失敗時靜默略過，不中斷主流程；資料庫紀錄已刪除，殘留
+      // 檔案不影響功能正確性。
     }
   }
   await _loadBooks();
@@ -175,7 +192,7 @@ IconButton(
 ### 測試決策 (Testing Decisions)
 
 - `_confirmDeleteBooks`/`_deleteSelectedBooks`：widget test，比照既有 `_moveSelectedBooksToGroup` 的既有測試模式——mock `LibraryRepository` 驗證 `deleteBook()` 對每個已選取 id 各被呼叫一次、取消對話框時不呼叫、確認對話框文案包含選取本數。
-- 檔案清理邏輯：用 `Directory.systemTemp` 建立暫存檔驗證 `existsSync()` 防護（存在的檔案被刪除、不存在的路徑—含模擬 `content://` 字串—被安全跳過），不需要真機。
+- 檔案清理邏輯：用 `Directory.systemTemp` 建立暫存檔驗證 `existsSync()` 防護（存在的檔案被刪除、不存在的路徑—含模擬 `content://` 字串—被安全跳過），不需要真機。暫存檔的建立/寫入（`Directory.systemTemp.createTemp()`／`writeAsBytes()`）仍需 `tester.runAsync()` 包住（fake zone 無法完成真實檔案系統 I/O）；但確認刪除的 tap 動作本身不需要——`_deleteSelectedBooks()` 改用 `deleteSync()`（見上方「介面」章節的審查修正說明）後，刪除在同一個同步延續內完成，不需額外的 `runAsync`/輪詢等待。
 
 ---
 

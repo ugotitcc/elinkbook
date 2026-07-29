@@ -279,6 +279,74 @@ class _LibraryScreenState extends State<LibraryScreen> {
     await _loadBooks();
   }
 
+  Future<bool?> _confirmDeleteBooks(int count) {
+    return showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('刪除書籍'),
+        content: Text(
+          '將刪除已選取的 $count 本書籍，並一併刪除其書籤、劃線與備註，此操作無法復原。確定要刪除嗎？',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            key: const Key('library_delete_confirm_button'),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('刪除'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _deleteSelectedBooks() async {
+    final selectedIds = _selectedBookIds;
+    final books = _books;
+    if (selectedIds == null || selectedIds.isEmpty || books == null) return;
+    final confirmed = await _confirmDeleteBooks(selectedIds.length);
+    if (confirmed != true) return;
+    // 比照既有 _openManageGroupsDialog() 的既有慣例：await 跳出 dialog 的
+    // 操作之後、觸碰 state 之前先確認 widget 是否仍在畫面上（見
+    // library_screen.dart:322，同檔案內多數 await-dialog 後的路徑皆有此
+    // 檢查，_moveSelectedBooksToGroup() 缺這道檢查屬既有缺口，不在本工單
+    // 範圍內一併修正）。
+    if (!mounted) return;
+    // 比照既有 _moveSelectedBooksToGroup()：先退出選取模式，避免刪除迴圈
+    // 執行期間使用者重複點擊觸發本方法。
+    _exitSelectionMode();
+    for (final book in books) {
+      if (!selectedIds.contains(book.id)) continue;
+      await widget.repository.deleteBook(book.id);
+      // existsSync() 防護對 content:// 來源的 filePath 安全（design.md
+      // 調查結論——content:// 字串永遠不會判定為存在的本機路徑，故此處
+      // 不需要分辨 filePath 是本機複本還是原始外部檔案參照）。比照既有
+      // _pickAndImportFiles()/_pickAndImportFolder() 的既有慣例，用
+      // try-catch 包住檔案系統操作：單一檔案刪除失敗（例如被其他程序鎖
+      // 定、權限異常）不應中斷整個批次刪除迴圈——deleteBook()（資料庫紀
+      // 錄，使用者最關心的「書從書架消失」）已在上一行完成，迴圈仍要繼
+      // 續處理其餘已選取的書籍並跑到最後的 _loadBooks()。
+      try {
+        // 使用 deleteSync() 而非 await delete()：widget test 的 fake zone
+        // 無法完成真實 I/O 的 Future，deleteSync() 是同步系統呼叫，可直接完
+        // 成，不受 zone 限制。
+        if (File(book.filePath).existsSync()) {
+          File(book.filePath).deleteSync();
+        }
+        final coverPath = book.coverPath;
+        if (coverPath != null && File(coverPath).existsSync()) {
+          File(coverPath).deleteSync();
+        }
+      } catch (_) {
+        // 檔案刪除失敗時靜默略過，不中斷主流程；資料庫紀錄已刪除，殘留
+        // 檔案不影響功能正確性。
+      }
+    }
+    await _loadBooks();
+  }
+
   void _openBook(Book book) {
     Navigator.of(context)
         .push(
@@ -512,6 +580,12 @@ class _LibraryScreenState extends State<LibraryScreen> {
           icon: const Icon(Icons.drive_file_move),
           tooltip: '移動到分類',
           onPressed: count == 0 ? null : _moveSelectedBooksToGroup,
+        ),
+        IconButton(
+          key: const Key('library_delete_books_button'),
+          icon: const Icon(Icons.delete),
+          tooltip: '刪除',
+          onPressed: count == 0 ? null : _deleteSelectedBooks,
         ),
       ],
     );

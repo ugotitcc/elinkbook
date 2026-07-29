@@ -45,8 +45,14 @@ class FakeLibraryRepository implements LibraryRepository {
     if (index != -1) _books[index] = book;
   }
 
+  /// 記錄每次 [deleteBook] 呼叫的 id，供測試驗證「每個已選取 id 各被呼叫
+  /// 一次」（epic-19 Issue 2，比照既有 detectAndCacheEpubLayoutCalls 的
+  /// 呼叫紀錄慣例）。
+  final List<String> deleteBookCalls = [];
+
   @override
   Future<void> deleteBook(String id) async {
+    deleteBookCalls.add(id);
     _books.removeWhere((b) => b.id == id);
   }
 
