@@ -143,8 +143,10 @@ class _LibraryScreenState extends State<LibraryScreen> {
       if (uris.isEmpty) return;
       final displayNames = pickedWithUri.map((f) => f.name).toList();
       setState(() => _isImporting = true);
-      await widget.importService.importFiles(uris, displayNames: displayNames);
+      final result =
+          await widget.importService.importFiles(uris, displayNames: displayNames);
       await _loadBooks();
+      _showDuplicateSkippedSnackBar(result.skippedDuplicateCount);
     } catch (_) {
       // 匯入失敗時靜默吞掉，避免異常傳播破壞 widget 樹或留下不一致狀態
     } finally {
@@ -163,17 +165,27 @@ class _LibraryScreenState extends State<LibraryScreen> {
       final autoGroup = await _confirmAutoGroupByFolderName();
       if (autoGroup == null) return;
       setState(() => _isImporting = true);
-      await widget.importService.importFolder(
+      final result = await widget.importService.importFolder(
         folderUri,
         autoGroupByFolderName: autoGroup,
       );
       await _loadGroups();
       await _loadBooks();
+      _showDuplicateSkippedSnackBar(result.skippedDuplicateCount);
     } catch (_) {
       // 匯入失敗時靜默吞掉，避免異常傳播破壞 widget 樹或留下不一致狀態
     } finally {
       if (mounted) setState(() => _isImporting = false);
     }
+  }
+
+  /// 【診斷修正】匯入完成後，若有檔案因來源 URI 與既有書籍重複而被跳過，
+  /// 顯示提示告知使用者（見 book_import_service_impl.dart 的重複偵測說明）。
+  void _showDuplicateSkippedSnackBar(int skippedCount) {
+    if (skippedCount <= 0 || !mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('$skippedCount 本已存在，已跳過')),
+    );
   }
 
   Future<bool?> _confirmAutoGroupByFolderName() {
@@ -646,8 +658,14 @@ class _LibraryScreenState extends State<LibraryScreen> {
     );
   }
 
-  /// 依目前已載入的 [books]（已依 _sortBy 排序）與 [_groups]（name ASC，
-  /// 「未分類」強制排最後）分組，只保留非空分類。
+  /// 依目前已載入的 [books]（已依 _sortBy 排序）與 [_groups]（name ASC）
+  /// 分組，只保留非空的具名分類。
+  ///
+  /// 【診斷修正】「未分類」不產生拼貼格——`BookGroup.uncategorized` 的書籍
+  /// 已經透過 `_buildBookList()` 的 `visibleBooks` 過濾邏輯純粹以個別書籍
+  /// 項目顯示在頂層書籍清單中，若還額外顯示一個「未分類」拼貼格，等於同一
+  /// 批書籍在畫面上出現兩種呈現方式，造成混淆；只有具名分類才需要拼貼格
+  /// 這種「摘要縮圖」的呈現方式。
   ///
   /// `_groups` 是 `_loadGroups()` 讀取的記憶體快照，既有的 `_loadGroups()`
   /// 錯誤處理邏輯本身承認暫時性讀取失敗時會保留舊快照——故 `book.groupName`
@@ -655,7 +673,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
   /// （`_groups` 落後於 `_books` 的情境）。若只依 `_groups` 組出
   /// `orderedNames`，這些書籍會被整批漏掉、從書架上「消失」而非只是分類格
   /// 顯示不完整，後果比拼貼格排序錯誤嚴重得多，故補一個兜底桶收留所有未
-  /// 被涵蓋的 `groupName`，確保 `byGroup` 裡的書一定會出現在某個拼貼格。
+  /// 被涵蓋的 `groupName`（`BookGroup.uncategorized` 本身仍被排除在兜底桶
+  /// 之外——落後的快照不會讓一本書從「未分類」變成孤兒 `groupName`，
+  /// `BookGroup.uncategorized` 這個名字本身不會消失，只是不產生拼貼格）。
   ///
   /// 【審查意見，不要求改動】若同時存在多個孤兒 `groupName`，彼此之間的
   /// 順序取決於 `byGroup.keys`（`LinkedHashMap` 插入順序＝書籍依目前
@@ -670,7 +690,6 @@ class _LibraryScreenState extends State<LibraryScreen> {
     final orderedNames = [
       for (final group in _groups)
         if (group.name != BookGroup.uncategorized) group.name,
-      BookGroup.uncategorized,
       for (final name in byGroup.keys)
         if (name != BookGroup.uncategorized &&
             !_groups.any((g) => g.name == name))
@@ -692,7 +711,16 @@ class _LibraryScreenState extends State<LibraryScreen> {
     final groupTiles = widget.groupFilter == null
         ? _buildGroupTiles(books)
         : const <_GroupTile>[];
-    final itemCount = groupTiles.length + books.length;
+    // 【診斷修正——真機回報「已分類書籍在頂層重複顯示」】頂層書架
+    // （groupFilter == null）已經用拼貼格代表每個非空分類，若已歸類的書籍
+    // 同時還出現在下方書籍清單中，等於同一本書在畫面上顯示兩次。故頂層只
+    // 保留「未分類」書籍在書籍清單中；已歸類的書籍只透過所屬分類的拼貼格
+    // 顯示，要看到該書本身須點擊拼貼格進入該分類的篩選畫面（`groupFilter`
+    // 非 null 時不受影響，篩選畫面本來就不顯示拼貼格，books 維持原樣）。
+    final visibleBooks = widget.groupFilter == null
+        ? books.where((b) => b.groupName == BookGroup.uncategorized).toList()
+        : books;
+    final itemCount = groupTiles.length + visibleBooks.length;
     Widget itemBuilder(BuildContext context, int index, {required bool isGrid}) {
       if (index < groupTiles.length) {
         final tile = groupTiles[index];
@@ -707,7 +735,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
             ? _GroupGridTile(tile: tile, onTap: onTap)
             : _GroupListTile(tile: tile, onTap: onTap);
       }
-      final book = books[index - groupTiles.length];
+      final book = visibleBooks[index - groupTiles.length];
       return isGrid
           ? _BookGridTile(
               book: book,

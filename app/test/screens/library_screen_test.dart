@@ -10,6 +10,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:elinkbook/library/sqlite_library_repository.dart';
 import 'package:elinkbook/reader/reader_prefs_manager.dart';
 import 'package:elinkbook/screens/library_screen.dart';
+import 'package:elinkbook/library/book_import_service.dart';
 import 'package:elinkbook/library/book_import_service_impl.dart';
 import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/book_group.dart';
@@ -397,12 +398,10 @@ void main() {
     await tester.tap(find.byKey(const Key('library_view_mode_toggle')));
     await tester.pumpAndSettle();
 
-    // 兩本書皆為預設「未分類」，書架會多顯示 1 個「未分類」拼貼格
-    // ListTile，恆排在書籍之前（見 _buildBookList 合併 index 空間的規則）
-    // ——用 .skip(1) 跳過它，只比較書籍本身的順序。
+    // 兩本書皆為預設「未分類」——「未分類」不使用拼貼格顯示（見【診斷
+    // 修正】），故書架上沒有拼貼格 ListTile，只有書籍本身的 ListTile。
     var titles = tester
         .widgetList<ListTile>(find.byType(ListTile))
-        .skip(1)
         .map((tile) => (tile.title as Text).data)
         .toList();
     expect(titles, ['B書', 'A書']);
@@ -414,7 +413,6 @@ void main() {
 
     titles = tester
         .widgetList<ListTile>(find.byType(ListTile))
-        .skip(1)
         .map((tile) => (tile.title as Text).data)
         .toList();
     expect(titles, ['A書', 'B書']);
@@ -459,7 +457,8 @@ void main() {
     expect(find.byTooltip('排序：作者'), findsOneWidget);
   });
 
-  testWidgets('點擊分類拼貼格後只顯示該分類書籍；返回後恢復書架顯示全部書籍',
+  testWidgets(
+      '點擊分類拼貼格後只顯示該分類書籍；返回書架後僅顯示未分類書籍與分類拼貼格（已分類書籍不重複列出）',
       (tester) async {
     final bookA = _testBook(id: '1', title: 'A書', groupName: '奇幻');
     final bookB =
@@ -477,7 +476,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const Key('book_item_1')), findsOneWidget);
+    // 【審查修正】bookA 已歸類到「奇幻」，頂層書架不應重複列出，只透過
+    // 「奇幻」拼貼格顯示；bookB 是「未分類」，仍照舊直接列在書籍清單中。
+    expect(find.byKey(const Key('book_item_1')), findsNothing);
     expect(find.byKey(const Key('book_item_2')), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('group_tile_奇幻')));
@@ -504,7 +505,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('書架'), findsOneWidget);
-    expect(find.byKey(const Key('book_item_1')), findsOneWidget);
+    expect(find.byKey(const Key('book_item_1')), findsNothing);
     expect(find.byKey(const Key('book_item_2')), findsOneWidget);
   });
 
@@ -543,7 +544,7 @@ void main() {
   });
 
   testWidgets(
-      '管理分類對話框：刪除分類前彈出確認對話框，確認後該分類下書籍改顯示於「未分類」拼貼格',
+      '管理分類對話框：刪除分類前彈出確認對話框，確認後該分類下書籍改顯示於書架頂層的「未分類」書籍清單中',
       (tester) async {
     final book = _testBook(id: '1', title: '奇幻小說', groupName: '奇幻');
     final repository = FakeLibraryRepository(initialBooks: [book]);
@@ -558,6 +559,9 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+
+    // 刪除前書籍已歸類到「奇幻」，只透過拼貼格顯示，頂層書籍清單看不到它。
+    expect(find.byKey(const Key('book_item_1')), findsNothing);
 
     await tester.tap(find.byKey(const Key('library_manage_groups_button')));
     await tester.pumpAndSettle();
@@ -575,18 +579,13 @@ void main() {
 
     expect(find.byKey(const Key('group_tile_奇幻')), findsNothing);
 
-    await tester.tap(find.byKey(Key('group_tile_${BookGroup.uncategorized}')));
-    await tester.pumpAndSettle();
-
-    final filteredScreenFinder =
-        _filteredLibraryScreenFinder(BookGroup.uncategorized);
+    // 刪除分類後書籍改列為「未分類」——「未分類」不使用拼貼格顯示，書籍
+    // 直接以個別項目呈現在頂層書籍清單中，不需要再點擊任何拼貼格導覽。
     expect(
-      find.descendant(
-        of: filteredScreenFinder,
-        matching: find.byKey(const Key('book_item_1')),
-      ),
-      findsOneWidget,
+      find.byKey(Key('group_tile_${BookGroup.uncategorized}')),
+      findsNothing,
     );
+    expect(find.byKey(const Key('book_item_1')), findsOneWidget);
   });
 
   testWidgets('管理分類對話框：刪除確認對話框按下取消，分類與所屬書籍皆不受影響', (tester) async {
@@ -1125,7 +1124,11 @@ void main() {
       if (call.method == 'takePersistableUriPermission') return null;
       if (call.method == 'listFolderContents') {
         return {
-          'folderName': '武俠小說',
+          // 刻意選用 name ASC 排序上會落在「奇幻」之前的名稱（一 U+4E00 <
+          // 奇 U+5947），讓「正確載入 vs. 落入孤兒兜底桶」兩種情境的拼貼格
+          // 順序真的不同，用來偵測 _loadGroups() 是否有確實被呼叫（「未
+          // 分類」不使用拼貼格顯示後，不能再用它當排序參考基準點）。
+          'folderName': '一般叢書',
           'fileUris': ['content://example/tree/folder/document/book1.epub'],
         };
       }
@@ -1133,12 +1136,7 @@ void main() {
     });
 
     final book = _testBook(id: '1', title: '奇幻小說', groupName: '奇幻');
-    // 另備一本「未分類」書籍，確保頂層書架本來就有一個「未分類」拼貼格
-    // 可以拿來比較相對順序（若沒有任何書籍留在未分類，就沒有基準點可比）。
-    final uncategorizedBook =
-        _testBook(id: '2', title: '一般書', groupName: BookGroup.uncategorized);
-    final repository =
-        FakeLibraryRepository(initialBooks: [book, uncategorizedBook]);
+    final repository = FakeLibraryRepository(initialBooks: [book]);
 
     await tester.pumpWidget(
       MaterialApp(
@@ -1188,19 +1186,16 @@ void main() {
     await tester.pumpAndSettle();
 
     // 若 _openGroupFilteredView() 的 .then() 沒有一併呼叫 _loadGroups()，
-    // 「武俠小說」不在頂層 _groups 快照中，會被 _buildGroupTiles() 的孤兒
-    // 兜底桶排到「未分類」之後；正確行為應是「武俠小說」（name ASC 排序
-    // 上在「奇幻」與「未分類」之間）出現在「未分類」之前。
+    // 「一般叢書」不在頂層 _groups 快照中，會被 _buildGroupTiles() 的孤兒
+    // 兜底桶排到所有「正常註冊」分類（此處只有「奇幻」）之後；正確行為
+    // 是「一般叢書」依 name ASC 排序排在「奇幻」之前（一 U+4E00 < 奇
+    // U+5947），而非孤兒兜底桶把它排到「奇幻」之後。
     final tileTitles = tester
         .widgetList<ListTile>(find.byType(ListTile))
         .map((tile) => (tile.title as Text).data)
-        .where((title) =>
-            title == '奇幻' ||
-            title == '武俠小說' ||
-            title == BookGroup.uncategorized)
+        .where((title) => title == '奇幻' || title == '一般叢書')
         .toList();
-    expect(tileTitles.indexOf('武俠小說'),
-        lessThan(tileTitles.indexOf(BookGroup.uncategorized)));
+    expect(tileTitles, ['一般叢書', '奇幻']);
   });
 
   testWidgets('選取模式下 AppBar 顯示刪除按鈕，取消刪除確認對話框不會呼叫 deleteBook',
@@ -1388,7 +1383,7 @@ void main() {
     });
 
     final importService = FakeBookImportService();
-    final completer = Completer<List<Book>>();
+    final completer = Completer<ImportResult>();
     importService.pendingCompleter = completer;
 
     await tester.pumpWidget(
@@ -1426,7 +1421,7 @@ void main() {
     );
     expect(importButton.enabled, isFalse);
 
-    completer.complete(const []);
+    completer.complete(const ImportResult(importedBooks: []));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('library_importing_overlay')), findsNothing);
@@ -1457,7 +1452,7 @@ void main() {
     });
 
     final importService = FakeBookImportService();
-    final completer = Completer<List<Book>>();
+    final completer = Completer<ImportResult>();
     importService.pendingCompleter = completer;
 
     await tester.pumpWidget(
@@ -1492,7 +1487,7 @@ void main() {
     );
     expect(emptyImportButton.onPressed, isNull);
 
-    completer.complete(const []);
+    completer.complete(const ImportResult(importedBooks: []));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('library_importing_overlay')), findsNothing);
@@ -1513,7 +1508,7 @@ void main() {
     });
 
     final importService = FakeBookImportService();
-    final completer = Completer<List<Book>>();
+    final completer = Completer<ImportResult>();
     importService.pendingCompleter = completer;
 
     await tester.pumpWidget(
@@ -1541,6 +1536,56 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('library_importing_overlay')), findsNothing);
+  });
+
+  testWidgets('【診斷修正】匯入完成後有檔案因來源 URI 重複被跳過時，顯示提示告知使用者',
+      (tester) async {
+    const filePickerChannel =
+        MethodChannel('miguelruivo.flutter.plugins.filepicker');
+    addTearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(filePickerChannel, null);
+    });
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(filePickerChannel, (call) async {
+      if (call.method == 'custom') {
+        return [
+          {
+            'name': 'book.epub',
+            'path': '/tmp/book.epub',
+            'size': 100,
+            'bytes': null,
+            'identifier': 'content://example/book.epub',
+          },
+        ];
+      }
+      return null;
+    });
+
+    final importService = FakeBookImportService();
+    final completer = Completer<ImportResult>();
+    importService.pendingCompleter = completer;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(),
+          importService: importService,
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('library_empty_import_button')));
+    await tester.pump(const Duration(milliseconds: 300));
+
+    completer.complete(
+      const ImportResult(importedBooks: [], skippedDuplicateCount: 2),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('2 本已存在，已跳過'), findsOneWidget);
   });
 
   testWidgets(
@@ -1804,7 +1849,7 @@ void main() {
 
   // ── Task 2: 補齊分類拼貼格排序/兜底桶/空格佔位/選取模式互動測試 ──
 
-  testWidgets('分類拼貼格依名稱 A-Z 排序，「未分類」強制排在所有具名分類之後',
+  testWidgets('分類拼貼格依名稱 A-Z 排序；「未分類」不使用拼貼格顯示，不計入排序',
       (tester) async {
     final bookSci = _testBook(id: '1', title: '科幻書', groupName: '科幻');
     final bookFan = _testBook(id: '2', title: '奇幻書', groupName: '奇幻');
@@ -1827,13 +1872,46 @@ void main() {
 
     // 列表檢視下拼貼格是 ListTile（_GroupListTile.title 只顯示分類名稱，
     // 不含數量），用它的 title 文字順序驗證排序（name ASC：奇幻 < 科幻，
-    // 依 Dart String 預設 UTF-16 碼點比較；未分類固定排最後）。
+    // 依 Dart String 預設 UTF-16 碼點比較）。只有 2 個拼貼格——「未分類」
+    // 不使用拼貼格顯示，bookNone 純粹以個別書籍項目呈現在拼貼格之後。
     final tileTitles = tester
         .widgetList<ListTile>(find.byType(ListTile))
-        .take(3)
+        .take(2)
         .map((tile) => (tile.title as Text).data)
         .toList();
-    expect(tileTitles, ['奇幻', '科幻', BookGroup.uncategorized]);
+    expect(tileTitles, ['奇幻', '科幻']);
+    expect(find.byKey(Key('group_tile_${BookGroup.uncategorized}')),
+        findsNothing);
+    expect(find.byKey(const Key('book_item_3')), findsOneWidget);
+  });
+
+  testWidgets('【診斷修正】「未分類」不使用拼貼格顯示，其書籍純以個別書籍項目呈現',
+      (tester) async {
+    final bookFan = _testBook(id: '1', title: '奇幻書', groupName: '奇幻');
+    final bookNone = _testBook(id: '2', title: '未分類書');
+    final repository =
+        FakeLibraryRepository(initialBooks: [bookFan, bookNone]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: repository,
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // 具名分類（奇幻）仍照舊顯示拼貼格；「未分類」不應該有拼貼格，只有
+    // 具名分類才用 2×2 拼貼呈現，「未分類」的書籍純粹以個別書籍項目顯示
+    // （已由前一輪診斷修正確保會列在頂層書籍清單中）。
+    expect(find.byKey(const Key('group_tile_奇幻')), findsOneWidget);
+    expect(
+      find.byKey(Key('group_tile_${BookGroup.uncategorized}')),
+      findsNothing,
+    );
+    expect(find.byKey(const Key('book_item_2')), findsOneWidget);
   });
 
   testWidgets('_groups 快照落後於 _books 時，孤兒 groupName 仍會被兜底桶收留，不會讓書籍消失',
@@ -2014,7 +2092,10 @@ void main() {
 
   testWidgets('長按進入選取模式後，分類拼貼格的 onTap 停用，點擊不觸發導覽也不影響選取狀態',
       (tester) async {
-    final bookA = _testBook(id: '1', title: 'A書', groupName: '奇幻');
+    // bookA 維持「未分類」，確保它仍會出現在頂層書架的書籍清單中可供長按
+    // （已歸類的書籍不再重複顯示於頂層，見「已分類的書不重複列出」規則）；
+    // bookB 歸入「奇幻」，用來確保有一個分類拼貼格可以點擊測試。
+    final bookA = _testBook(id: '1', title: 'A書', groupName: BookGroup.uncategorized);
     final bookB = _testBook(id: '2', title: 'B書', groupName: '奇幻');
     final repository = FakeLibraryRepository(initialBooks: [bookA, bookB]);
 
@@ -2062,14 +2143,16 @@ void main() {
     await tester.tap(find.byKey(const Key('library_view_mode_toggle')));
     await tester.pumpAndSettle();
 
-    // 2 本書分屬 2 個不同分類 → 2 個拼貼格（ListTile）+ 2 本書（也是
-    // ListTile，見 _BookListTile）。驗證拼貼格恆排最前面：前 2 個
-    // ListTile 的 title 應為分類名稱，之後才是書名。
+    // bookA 已歸類到「奇幻」→ 1 個拼貼格（ListTile），頂層書架不重複列出
+    // （只透過拼貼格顯示）；bookB 是「未分類」→「未分類」不使用拼貼格
+    // 顯示，純粹以個別書籍項目列在書籍清單中（也是 ListTile，見
+    // _BookListTile）。驗證拼貼格恆排最前面：第 1 個 ListTile 的 title
+    // 應為分類名稱，之後才是「未分類」書籍本身。
     final titles = tester
         .widgetList<ListTile>(find.byType(ListTile))
         .map((tile) => (tile.title as Text).data)
         .toList();
-    expect(titles, ['奇幻', BookGroup.uncategorized, 'A書', 'B書']);
+    expect(titles, ['奇幻', 'B書']);
   });
 }
 
