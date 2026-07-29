@@ -36,6 +36,7 @@ class LibraryScreen extends StatefulWidget {
   final bool isEinkMode;
   final ValueChanged<AppTheme>? onThemeChanged;
   final ValueChanged<bool>? onEinkModeChanged;
+  final String? groupFilter;
 
   const LibraryScreen({
     super.key,
@@ -49,6 +50,7 @@ class LibraryScreen extends StatefulWidget {
     this.isEinkMode = false,
     this.onThemeChanged,
     this.onEinkModeChanged,
+    this.groupFilter,
   });
 
   @override
@@ -69,6 +71,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
   @override
   void initState() {
     super.initState();
+    _groupFilter = widget.groupFilter;
     _initialize();
   }
 
@@ -215,11 +218,6 @@ class _LibraryScreenState extends State<LibraryScreen> {
   Future<void> _changeSortBy(LibrarySortBy sortBy) async {
     setState(() => _sortBy = sortBy);
     await _preferences.saveSortBy(sortBy);
-    await _loadBooks();
-  }
-
-  Future<void> _changeGroupFilter(String? groupFilter) async {
-    setState(() => _groupFilter = groupFilter);
     await _loadBooks();
   }
 
@@ -388,15 +386,41 @@ class _LibraryScreenState extends State<LibraryScreen> {
     );
     await _loadGroups();
     if (!mounted) return;
-    // 若目前篩選中的分類已在對話框內被刪除，退回「全部」篩選，避免畫面
-    // 停留在一個已不存在的分類上（listBooks 對不存在的 groupFilter 只會
-    // 回傳空清單，容易誤以為「這個分類沒有書」而非「這個分類已被刪除」）。
-    final filterStillExists =
-        _groupFilter == null || _groups.any((g) => g.name == _groupFilter);
-    if (!filterStillExists) {
-      setState(() => _groupFilter = null);
-    }
     await _loadBooks();
+  }
+
+  void _openGroupFilteredView(String groupName) {
+    Navigator.of(context)
+        .push(
+          MaterialPageRoute(
+            builder: (_) => LibraryScreen(
+              repository: widget.repository,
+              importService: widget.importService,
+              prefsManager: widget.prefsManager,
+              bookmarksRepository: widget.bookmarksRepository,
+              highlightsRepository: widget.highlightsRepository,
+              notesRepository: widget.notesRepository,
+              currentTheme: widget.currentTheme,
+              isEinkMode: widget.isEinkMode,
+              onThemeChanged: widget.onThemeChanged,
+              onEinkModeChanged: widget.onEinkModeChanged,
+              groupFilter: groupName,
+            ),
+          ),
+        )
+        .then((_) {
+      // 【審查修正】推入的畫面是獨立的 LibraryScreen State 實例，在裡面
+      // 移動/刪除書籍只會更新該實例自己的 _books，不會 touch 這裡（背景
+      // 頂層畫面）的狀態；返回時若不重新載入，頂層拼貼格與書籍清單會停
+      // 留在使用者離開當下的舊快照（比照既有 _openBook() 的 .then() 修
+      // 正所防範的同類問題）。只需要 _loadBooks()——分類「名稱集合」
+      // （_groups）不會因為這條路徑而改變：「管理分類」入口在 groupFilter
+      // != null 的篩選畫面上本來就不顯示（見 _buildNormalAppBar()），從
+      // 篩選畫面內唯一能做的是把書移到既有分類或刪除書籍，兩者都不會新
+      // 增/重新命名/刪除任何 BookGroup，故不需要額外呼叫 _loadGroups()。
+      if (!mounted) return;
+      _loadBooks();
+    });
   }
 
   @override
@@ -419,7 +443,6 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 children: [
                   Column(
                     children: [
-                      _buildGroupTabs(),
                       Expanded(
                         child: books.isEmpty
                             ? _buildEmptyState()
@@ -455,7 +478,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
   AppBar _buildNormalAppBar(List<Book>? books) {
     return AppBar(
-      title: const Text('書架'),
+      title: Text(widget.groupFilter ?? '書架'),
       actions: [
         _buildThemeDot(
             AppTheme.light, const Color(0xFFF5F5F5), 'library_theme_dot_light'),
@@ -519,6 +542,13 @@ class _LibraryScreenState extends State<LibraryScreen> {
             ),
           ],
         ),
+        if (widget.groupFilter == null)
+          IconButton(
+            key: const Key('library_manage_groups_button'),
+            icon: const Icon(Icons.category),
+            tooltip: '管理分類',
+            onPressed: _openManageGroupsDialog,
+          ),
         IconButton(
           icon: const Icon(Icons.settings),
           tooltip: '設定',
@@ -591,50 +621,6 @@ class _LibraryScreenState extends State<LibraryScreen> {
     );
   }
 
-  Widget _buildGroupTabs() {
-    return SizedBox(
-      key: const Key('library_group_tabs'),
-      height: 48,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-            child: ChoiceChip(
-              key: const Key('library_group_tab_all'),
-              label: const Text('全部'),
-              selected: _groupFilter == null,
-              onSelected:
-                  _inSelectionMode ? null : (_) => _changeGroupFilter(null),
-            ),
-          ),
-          for (final group in _groups)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-              child: ChoiceChip(
-                key: Key('library_group_tab_${group.name}'),
-                label: Text(group.name),
-                selected: _groupFilter == group.name,
-                onSelected: _inSelectionMode
-                    ? null
-                    : (_) => _changeGroupFilter(group.name),
-              ),
-            ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-            child: ActionChip(
-              key: const Key('library_group_manage_button'),
-              avatar: const Icon(Icons.category, size: 16),
-              label: const Text('管理分類'),
-              onPressed: _inSelectionMode ? null : _openManageGroupsDialog,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildEmptyState() {
     return Center(
       child: Column(
@@ -652,8 +638,78 @@ class _LibraryScreenState extends State<LibraryScreen> {
     );
   }
 
+  /// 依目前已載入的 [books]（已依 _sortBy 排序）與 [_groups]（name ASC，
+  /// 「未分類」強制排最後）分組，只保留非空分類。
+  ///
+  /// `_groups` 是 `_loadGroups()` 讀取的記憶體快照，既有的 `_loadGroups()`
+  /// 錯誤處理邏輯本身承認暫時性讀取失敗時會保留舊快照——故 `book.groupName`
+  /// 理論上可能不在目前的 `_groups` 清單中、也不是 `BookGroup.uncategorized`
+  /// （`_groups` 落後於 `_books` 的情境）。若只依 `_groups` 組出
+  /// `orderedNames`，這些書籍會被整批漏掉、從書架上「消失」而非只是分類格
+  /// 顯示不完整，後果比拼貼格排序錯誤嚴重得多，故補一個兜底桶收留所有未
+  /// 被涵蓋的 `groupName`，確保 `byGroup` 裡的書一定會出現在某個拼貼格。
+  List<_GroupTile> _buildGroupTiles(List<Book> books) {
+    final byGroup = <String, List<Book>>{};
+    for (final book in books) {
+      byGroup.putIfAbsent(book.groupName, () => []).add(book);
+    }
+    final orderedNames = [
+      for (final group in _groups)
+        if (group.name != BookGroup.uncategorized) group.name,
+      BookGroup.uncategorized,
+      for (final name in byGroup.keys)
+        if (name != BookGroup.uncategorized &&
+            !_groups.any((g) => g.name == name))
+          name,
+    ];
+    return [
+      for (final name in orderedNames)
+        if (byGroup[name]?.isNotEmpty ?? false)
+          _GroupTile(
+            name: name,
+            previewBooks: byGroup[name]!.take(4).toList(),
+            totalCount: byGroup[name]!.length,
+          ),
+    ];
+  }
+
   Widget _buildBookList(List<Book> books) {
     final selectedIds = _selectedBookIds;
+    final groupTiles = widget.groupFilter == null
+        ? _buildGroupTiles(books)
+        : const <_GroupTile>[];
+    final itemCount = groupTiles.length + books.length;
+    Widget itemBuilder(BuildContext context, int index, {required bool isGrid}) {
+      if (index < groupTiles.length) {
+        final tile = groupTiles[index];
+        // 選取模式進行中時，分類格不可觸發導覽（onTap 傳 null），比照舊版
+        // _buildGroupTabs() 對 Chip 在 _inSelectionMode 時一律停用互動的
+        // 既有慣例——否則使用者長按多選書籍時誤觸分類格，會帶著選取狀態
+        // 被推入另一個 LibraryScreen 實例，選取列顯示與計數會與使用者預
+        // 期不符。
+        final onTap =
+            _inSelectionMode ? null : () => _openGroupFilteredView(tile.name);
+        return isGrid
+            ? _GroupGridTile(tile: tile, onTap: onTap)
+            : _GroupListTile(tile: tile, onTap: onTap);
+      }
+      final book = books[index - groupTiles.length];
+      return isGrid
+          ? _BookGridTile(
+              book: book,
+              selectionMode: _inSelectionMode,
+              selected: selectedIds?.contains(book.id) ?? false,
+              onTap: () => _onBookTap(book),
+              onLongPress: () => _onBookLongPress(book),
+            )
+          : _BookListTile(
+              book: book,
+              selectionMode: _inSelectionMode,
+              selected: selectedIds?.contains(book.id) ?? false,
+              onTap: () => _onBookTap(book),
+              onLongPress: () => _onBookLongPress(book),
+            );
+    }
     if (_viewMode == LibraryViewMode.grid) {
       final orientation = MediaQuery.orientationOf(context);
       final crossAxisCount = orientation == Orientation.landscape ? 4 : 3;
@@ -666,32 +722,112 @@ class _LibraryScreenState extends State<LibraryScreen> {
           crossAxisSpacing: 8,
           mainAxisSpacing: 12,
         ),
-        itemCount: books.length,
-        itemBuilder: (context, index) {
-          final book = books[index];
-          return _BookGridTile(
-            book: book,
-            selectionMode: _inSelectionMode,
-            selected: selectedIds?.contains(book.id) ?? false,
-            onTap: () => _onBookTap(book),
-            onLongPress: () => _onBookLongPress(book),
-          );
-        },
+        itemCount: itemCount,
+        itemBuilder: (context, index) =>
+            itemBuilder(context, index, isGrid: true),
       );
     }
     return ListView.builder(
       key: const Key('library_list_view'),
-      itemCount: books.length,
-      itemBuilder: (context, index) {
-        final book = books[index];
-        return _BookListTile(
-          book: book,
-          selectionMode: _inSelectionMode,
-          selected: selectedIds?.contains(book.id) ?? false,
-          onTap: () => _onBookTap(book),
-          onLongPress: () => _onBookLongPress(book),
-        );
-      },
+      itemCount: itemCount,
+      itemBuilder: (context, index) => itemBuilder(context, index, isGrid: false),
+    );
+  }
+}
+
+/// 單一分類在書架分類拼貼格上的顯示資料，純畫面呈現用途，不持久化、不
+/// 跨檔案共用，故不建成 library/models 底下的公開模型。
+class _GroupTile {
+  final String name;
+  final List<Book> previewBooks; // 最多 4 本，依目前排序結果順序截取前 4 筆
+  final int totalCount;
+  const _GroupTile({
+    required this.name,
+    required this.previewBooks,
+    required this.totalCount,
+  });
+}
+
+/// 分類拼貼格（格狀檢視）：2×2 拼貼＋分類名稱/數量，重用既有 _BookCover。
+/// onTap 為 null 時（選取模式進行中）InkWell 自動停用點擊反饋，比照
+/// Flutter 既有「null 停用互動」慣例。
+class _GroupGridTile extends StatelessWidget {
+  final _GroupTile tile;
+  final VoidCallback? onTap;
+  const _GroupGridTile({required this.tile, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      key: Key('group_tile_${tile.name}'),
+      onTap: onTap,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: GridView.count(
+              crossAxisCount: 2,
+              // GridView 是 BoxScrollView 的子類，padding 為 null 時會自動
+              // 吃進 MediaQuery.of(context).padding（垂直捲動吃 top/bottom
+              // safe area）；這個巢狀在拼貼格內的小型 GridView 若不明講
+              // padding: EdgeInsets.zero，會意外套上裝置狀態列/導覽列高度
+              // 的內距，把 2×2 封面擠壓變形。
+              padding: EdgeInsets.zero,
+              mainAxisSpacing: 2,
+              crossAxisSpacing: 2,
+              physics: const NeverScrollableScrollPhysics(),
+              children: List.generate(
+                4,
+                (i) => i < tile.previewBooks.length
+                    ? _BookCover(book: tile.previewBooks[i])
+                    : ColoredBox(color: Colors.grey.shade200),
+              ),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '${tile.name} (${tile.totalCount})',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 分類拼貼格（列表檢視）：橫向 4 張小縮圖＋名稱＋數量，不強行套用 2×2
+/// 方形拼貼於列表列。
+class _GroupListTile extends StatelessWidget {
+  final _GroupTile tile;
+  final VoidCallback? onTap; // null＝選取模式進行中，停用點擊（同 _GroupGridTile）
+  const _GroupListTile({required this.tile, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      key: Key('group_tile_${tile.name}'),
+      leading: SizedBox(
+        width: 4 * 32,
+        height: 48,
+        child: Row(
+          children: List.generate(
+            4,
+            (i) => SizedBox(
+              width: 32,
+              height: 48,
+              child: i < tile.previewBooks.length
+                  ? _BookCover(book: tile.previewBooks[i])
+                  : ColoredBox(color: Colors.grey.shade200),
+            ),
+          ),
+        ),
+      ),
+      title: Text(tile.name),
+      subtitle: Text('${tile.totalCount} 本'),
+      onTap: onTap,
     );
   }
 }
