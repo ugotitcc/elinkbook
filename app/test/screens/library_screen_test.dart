@@ -1699,6 +1699,276 @@ void main() {
     expect(find.byKey(const Key('group_tile_奇幻')), findsNothing);
     expect(find.text('科幻 (2)'), findsOneWidget);
   });
+
+  // ── Task 2: 補齊分類拼貼格排序/兜底桶/空格佔位/選取模式互動測試 ──
+
+  testWidgets('分類拼貼格依名稱 A-Z 排序，「未分類」強制排在所有具名分類之後',
+      (tester) async {
+    final bookSci = _testBook(id: '1', title: '科幻書', groupName: '科幻');
+    final bookFan = _testBook(id: '2', title: '奇幻書', groupName: '奇幻');
+    final bookNone = _testBook(id: '3', title: '未分類書');
+    final repository =
+        FakeLibraryRepository(initialBooks: [bookSci, bookFan, bookNone]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: repository,
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('library_view_mode_toggle')));
+    await tester.pumpAndSettle();
+
+    // 列表檢視下拼貼格是 ListTile（_GroupListTile.title 只顯示分類名稱，
+    // 不含數量），用它的 title 文字順序驗證排序（name ASC：奇幻 < 科幻，
+    // 依 Dart String 預設 UTF-16 碼點比較；未分類固定排最後）。
+    final tileTitles = tester
+        .widgetList<ListTile>(find.byType(ListTile))
+        .take(3)
+        .map((tile) => (tile.title as Text).data)
+        .toList();
+    expect(tileTitles, ['奇幻', '科幻', BookGroup.uncategorized]);
+  });
+
+  testWidgets('_groups 快照落後於 _books 時，孤兒 groupName 仍會被兜底桶收留，不會讓書籍消失',
+      (tester) async {
+    final book = _testBook(id: '1', title: '懸疑小說', groupName: '懸疑');
+    final repository = FakeLibraryRepository(initialBooks: [book]);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: repository,
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // 直接繞過 UI 呼叫 repository.updateBook()，模擬「_groups 快照落後於
+    // _books」的情境（例如另一裝置端已新增分類，但本機 _groups 尚未重新
+    // 整理）——FakeLibraryRepository.updateBook() 不會同步更新 _groups
+    // （比照 SqliteLibraryRepository 的既有分工，_groups 是獨立載入的快
+    // 照，見 _loadGroups()）。
+    await repository.updateBook(book.copyWith(groupName: '科幻'));
+    // 觸發 _loadBooks()（不觸發 _loadGroups()）：_changeSortBy() 只重讀
+    // _books，不重讀 _groups，正好模擬「_groups 落後」情境。
+    await tester.tap(find.byKey(const Key('library_sort_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('library_sort_option_title')));
+    await tester.pumpAndSettle();
+
+    // '科幻' 不在 _groups 快照中（快照仍是建構時的 {未分類, 懸疑}），書籍
+    // 仍應被兜底桶收留、出現在某個拼貼格，而不是從書架上「消失」。
+    expect(find.byKey(const Key('group_tile_科幻')), findsOneWidget);
+    expect(find.text('科幻 (1)'), findsOneWidget);
+  });
+
+  testWidgets('分類拼貼格的封面預覽只取該分類前 4 本書，且保留目前排序結果的順序',
+      (tester) async {
+    final now = DateTime.now();
+    final books = [
+      for (var i = 0; i < 4; i++)
+        Book(
+          id: '${i + 1}',
+          title: '奇幻書${i + 1}',
+          author: null,
+          format: BookFileFormat.epub,
+          filePath: 'content://example/${i + 1}.epub',
+          source: BookSource.local,
+          groupName: '奇幻',
+          createTime: now,
+          lastReadTime: now.subtract(Duration(minutes: i)),
+        ),
+      // 第 5 本書刻意用不同格式（txt → Icons.article）且 lastReadTime 最
+      // 舊（預設「最後閱讀」排序下排最後），用來驗證 previewBooks.take(4)
+      // 確實把它排除在封面預覽之外——若截取邏輯錯誤（例如順序顛倒），這
+      // 裡會多出一個 Icons.article。
+      Book(
+        id: '5',
+        title: '奇幻書5',
+        author: null,
+        format: BookFileFormat.txt,
+        filePath: 'content://example/5.txt',
+        source: BookSource.local,
+        groupName: '奇幻',
+        createTime: now,
+        lastReadTime: now.subtract(const Duration(minutes: 10)),
+      ),
+    ];
+    final repository = FakeLibraryRepository(initialBooks: books);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: repository,
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('奇幻 (5)'), findsOneWidget);
+
+    final tileFinder = find.byKey(const Key('group_tile_奇幻'));
+    expect(
+      find.descendant(
+        of: tileFinder,
+        matching:
+            find.byWidgetPredicate((w) => w is Icon && w.icon == Icons.menu_book),
+      ),
+      findsNWidgets(4),
+    );
+    expect(
+      find.descendant(
+        of: tileFinder,
+        matching:
+            find.byWidgetPredicate((w) => w is Icon && w.icon == Icons.article),
+      ),
+      findsNothing,
+    );
+  });
+
+  testWidgets('分類拼貼格（格狀檢視）不足 4 本時以中性色塊佔位，名稱與本數正確顯示',
+      (tester) async {
+    final bookA = _testBook(id: '1', title: 'A書', groupName: '奇幻');
+    final bookB = _testBook(id: '2', title: 'B書', groupName: '奇幻');
+    final repository = FakeLibraryRepository(initialBooks: [bookA, bookB]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: repository,
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final tileFinder = find.byKey(const Key('group_tile_奇幻'));
+    expect(tileFinder, findsOneWidget);
+    expect(find.text('奇幻 (2)'), findsOneWidget);
+
+    // 2 本書皆無 coverPath，_BookCover 各自退回格式圖示佔位（Icon），故拼
+    // 貼格內應有 2 個 Icon（書封佔位）＋ 2 個中性灰色塊（拼貼格本身「不
+    // 足 4 本」的空格佔位，色階 grey.shade200，與 _BookCover 內部佔位的
+    // shade300 不同，可用色階區分兩者，不需要存取 private widget 型別）。
+    expect(
+      find.descendant(of: tileFinder, matching: find.byType(Icon)),
+      findsNWidgets(2),
+    );
+    expect(
+      find.descendant(
+        of: tileFinder,
+        matching: find.byWidgetPredicate(
+          (w) => w is ColoredBox && w.color == Colors.grey.shade200,
+        ),
+      ),
+      findsNWidgets(2),
+    );
+  });
+
+  testWidgets('分類拼貼格（列表檢視）不足 4 本時以中性色塊佔位', (tester) async {
+    final book = _testBook(id: '1', title: 'A書', groupName: '奇幻');
+    final repository = FakeLibraryRepository(initialBooks: [book]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: repository,
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('library_view_mode_toggle')));
+    await tester.pumpAndSettle();
+
+    final tileFinder = find.byKey(const Key('group_tile_奇幻'));
+    expect(tileFinder, findsOneWidget);
+    expect(find.text('奇幻'), findsOneWidget);
+    expect(find.text('1 本'), findsOneWidget);
+    expect(
+      find.descendant(of: tileFinder, matching: find.byType(Icon)),
+      findsNWidgets(1),
+    );
+    expect(
+      find.descendant(
+        of: tileFinder,
+        matching: find.byWidgetPredicate(
+          (w) => w is ColoredBox && w.color == Colors.grey.shade200,
+        ),
+      ),
+      findsNWidgets(3),
+    );
+  });
+
+  testWidgets('長按進入選取模式後，分類拼貼格的 onTap 停用，點擊不觸發導覽也不影響選取狀態',
+      (tester) async {
+    final bookA = _testBook(id: '1', title: 'A書', groupName: '奇幻');
+    final bookB = _testBook(id: '2', title: 'B書', groupName: '奇幻');
+    final repository = FakeLibraryRepository(initialBooks: [bookA, bookB]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: repository,
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.longPress(find.byKey(const Key('book_item_1')));
+    await tester.pumpAndSettle();
+    expect(find.text('已選取 1 本'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('group_tile_奇幻')));
+    await tester.pumpAndSettle();
+
+    // 選取狀態不受影響、沒有觸發 Navigator.push（沒有跳轉離開，選取列仍
+    // 顯示在同一個畫面上）。
+    expect(find.text('已選取 1 本'), findsOneWidget);
+    expect(find.byKey(const Key('library_selection_app_bar')), findsOneWidget);
+  });
+
+  testWidgets('_buildBookList 合併分類格與書籍的 index 空間，分類格恆排在書籍之前',
+      (tester) async {
+    final bookA = _testBook(id: '1', title: 'A書', groupName: '奇幻');
+    final bookB =
+        _testBook(id: '2', title: 'B書', groupName: BookGroup.uncategorized);
+    final repository = FakeLibraryRepository(initialBooks: [bookA, bookB]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: repository,
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('library_view_mode_toggle')));
+    await tester.pumpAndSettle();
+
+    // 2 本書分屬 2 個不同分類 → 2 個拼貼格（ListTile）+ 2 本書（也是
+    // ListTile，見 _BookListTile）。驗證拼貼格恆排最前面：前 2 個
+    // ListTile 的 title 應為分類名稱，之後才是書名。
+    final titles = tester
+        .widgetList<ListTile>(find.byType(ListTile))
+        .map((tile) => (tile.title as Text).data)
+        .toList();
+    expect(titles, ['奇幻', BookGroup.uncategorized, 'A書', 'B書']);
+  });
 }
 
 Book _testBook({
