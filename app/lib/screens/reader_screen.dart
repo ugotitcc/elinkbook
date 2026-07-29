@@ -50,6 +50,11 @@ import 'toc_bottom_sheet.dart';
 /// docs/epics/epic-7-interaction/spec.md「新增音量鍵頻道」）。
 const _volumeKeyChannel = MethodChannel('elinkbook/volume_key');
 
+/// 全螢幕模式頻道（epic-19-shelf-reading-enhance Issue 1，見 ADR 0015）：
+/// 呼叫原生 WindowInsetsControllerCompat 隱藏/顯示系統狀態列與導覽列，
+/// 不經過 Flutter SystemChrome（本專案目前 targetSdk 下已知失效）。
+const _fullscreenChannel = MethodChannel('elinkbook/fullscreen');
+
 /// 唯一的閱讀器顯示接縫（seam）：給定書籍檔案路徑，依偵測到的格式分派到
 /// 對應的原生渲染 widget，畫面上會渲染出該書第 1 頁。公開建構參數為
 /// [filePath]／[bookId]／[prefsManager]（`bookId`／`prefsManager` 由
@@ -237,6 +242,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   // 記錄上一次實際套用給系統的螢幕方向，避免在偏好設定頻繁變動時（例如
   // 拖曳滑桿）重複呼叫 SystemChrome.setPreferredOrientations。
   ScreenOrientationSetting? _lastAppliedOrientation;
+  // 記錄上一次實際套用給系統的全螢幕模式狀態，避免偏好設定頻繁變動時
+  // 重複呼叫 elinkbook/fullscreen 頻道；App 從背景恢復時會被強制清空
+  // （見 didChangeAppLifecycleState），確保系統列真的被 OS 重新顯示時
+  // 能重新套用。
+  bool? _lastAppliedFullscreen;
   // EPUB 引擎分派結果（epic-17-epub-render-migration Issue 3）：true=FXL
   // （EpubReaderView／Readium）、false=流式（FoliateEpubReaderView）、
   // null=尚未解析完成（既有書籍偵測進行中，畫面維持載入中指示器）。與既有
@@ -265,6 +275,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         );
       });
       _applyScreenOrientation();
+      _applySystemUiMode();
     });
   }
 
@@ -311,6 +322,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     // 音量鍵離開閱讀介面後恢復正常系統音量控制的既有處理原則，避免鎖定
     // 狀態外溢到書架等其他畫面。
     SystemChrome.setPreferredOrientations(const []);
+    // 全螢幕模式離開閱讀畫面時無條件還原，不判斷 _lastAppliedFullscreen
+    // （比照上一行既有的螢幕方向無條件還原寫法），避免外溢到書架等其他畫面。
+    _fullscreenChannel.invokeMethod('setEnabled', false);
     super.dispose();
   }
 
@@ -322,6 +336,12 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused) {
       _writeCurrentPosition();
+    } else if (state == AppLifecycleState.resumed) {
+      // App 從背景恢復時，Android 系統列可能已被 OS 自動重新顯示，
+      // _lastAppliedFullscreen 等值節流防護會誤判不需重套用，故強制清空
+      // 快取後無條件重新呼叫一次（epic-19 Issue 1 review Critical 2）。
+      _lastAppliedFullscreen = null;
+      _applySystemUiMode();
     }
   }
 
@@ -396,6 +416,17 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     );
   }
 
+  /// 依 [_resolved] 的 fullscreen 呼叫 elinkbook/fullscreen 頻道，比照
+  /// _applyScreenOrientation() 的節流寫法，避免偏好設定頻繁變動時重複
+  /// 呼叫 platform channel。
+  void _applySystemUiMode() {
+    final resolved = _resolved;
+    if (resolved == null) return;
+    if (resolved.fullscreen == _lastAppliedFullscreen) return;
+    _lastAppliedFullscreen = resolved.fullscreen;
+    _fullscreenChannel.invokeMethod('setEnabled', resolved.fullscreen);
+  }
+
   List<DeviceOrientation> _deviceOrientationsFor(
     ScreenOrientationSetting setting,
   ) {
@@ -439,6 +470,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     });
     widget.prefsManager.saveBookPrefs(widget.bookId, prefs);
     _applyScreenOrientation();
+    _applySystemUiMode();
   }
 
   /// 智慧自動裁切首次計算出矩形時觸發（原生端 onCropRectComputed），只

@@ -60,6 +60,7 @@ void main() {
       expect(resolved.showFooter, isTrue);
       expect(resolved.navZoneActions, rightFlipZoneTemplate);
       expect(resolved.showNavZoneDebugOverlay, isFalse);
+      expect(resolved.fullscreen, isFalse);
     });
 
     test('單書覆寫存在時，優先套用單書覆寫，忽略全域預設', () {
@@ -76,6 +77,7 @@ void main() {
           showFooter: false,
           columnMode: ColumnMode.single,
           columnSize: 600.0,
+          fullscreen: true,
         ),
         globalPrefs: const GlobalReaderPrefs.initial(),
       );
@@ -92,6 +94,7 @@ void main() {
       expect(resolved.showFooter, isFalse);
       expect(resolved.columnMode, ColumnMode.single);
       expect(resolved.columnSize, 600.0);
+      expect(resolved.fullscreen, isTrue);
     });
 
     test('單書覆寫為 null 時，正確退回全域預設（非硬編碼初始值，證明真的有讀 globalPrefs）',

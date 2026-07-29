@@ -498,6 +498,35 @@ void main() {
     expect(result!.showHeader, isTrue);
   });
 
+  testWidgets('已持久化 fullscreen=true 時，全螢幕模式開關初始值反映為開啟', (tester) async {
+    await _pumpSheet(
+      tester,
+      const BookReaderPrefs(fullscreen: true),
+      (_) {},
+    );
+
+    expect(
+      tester
+          .widget<SwitchListTile>(
+              find.byKey(const Key('reader_settings_fullscreen')))
+          .value,
+      isTrue,
+    );
+  });
+
+  testWidgets('開啟全螢幕模式開關後，onChanged 帶入 fullscreen=true 且不影響 showHeader',
+      (tester) async {
+    BookReaderPrefs? result;
+    await _pumpSheet(tester, BookReaderPrefs.empty, (prefs) => result = prefs);
+
+    await tester.tap(find.byKey(const Key('reader_settings_fullscreen')));
+    await tester.pump();
+
+    expect(result, isNotNull);
+    expect(result!.fullscreen, isTrue);
+    expect(result!.showHeader, isTrue);
+  });
+
   testWidgets('點選「單欄」按鈕後，onChanged 帶入 columnMode=single',
       (tester) async {
     BookReaderPrefs? result;

@@ -66,6 +66,7 @@ dependencies {
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
     implementation("androidx.fragment:fragment-ktx:1.8.9")
+    implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.documentfile:documentfile:1.0.1")
     // epic-17-epub-render-migration Issue 3：FoliateEpubReaderView 的
     // WebViewAssetLoader 與自訂 PathHandler，版本比照 Issue 1 Spike harness

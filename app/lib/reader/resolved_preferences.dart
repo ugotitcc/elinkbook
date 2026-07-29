@@ -69,6 +69,11 @@ class ResolvedPreferences {
   final List<ZoneAction> navZoneActions;
   final bool showNavZoneDebugOverlay;
 
+  /// 全螢幕模式（epic-19-shelf-reading-enhance Issue 1）：恆非 null，
+  /// resolve() 內 book.fullscreen ?? false（預設關閉，無全域預設層，比照
+  /// showHeader/showFooter 的既有慣例）。
+  final bool fullscreen;
+
   const ResolvedPreferences({
     this.writingMode,
     this.fontFamily,
@@ -100,5 +105,6 @@ class ResolvedPreferences {
     required this.showFooter,
     required this.navZoneActions,
     required this.showNavZoneDebugOverlay,
+    this.fullscreen = false,
   });
 }

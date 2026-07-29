@@ -509,6 +509,33 @@ void main() {
     expect(notified?.showFooter, isFalse);
   });
 
+  testWidgets('已持久化 fullscreen=true 時，全螢幕模式開關初始值反映為開啟', (tester) async {
+    await _pumpSheet(
+      tester,
+      const BookReaderPrefs(fullscreen: true),
+      (_) {},
+    );
+
+    expect(
+      tester
+          .widget<SwitchListTile>(
+              find.byKey(const Key('pdf_settings_fullscreen')))
+          .value,
+      isTrue,
+    );
+  });
+
+  testWidgets('開啟全螢幕模式開關後，onChanged 帶入 fullscreen=true', (tester) async {
+    BookReaderPrefs? notified;
+    await _pumpSheet(tester, BookReaderPrefs.empty, (prefs) => notified = prefs);
+
+    await tester.ensureVisible(find.byKey(const Key('pdf_settings_fullscreen')));
+    await tester.tap(find.byKey(const Key('pdf_settings_fullscreen')));
+    await tester.pump();
+
+    expect(notified?.fullscreen, isTrue);
+  });
+
   testWidgets('已持久化 showFooter=false 時，調整雙頁模式不會清空該欄位（回歸檢查）',
       (tester) async {
     BookReaderPrefs? notified;

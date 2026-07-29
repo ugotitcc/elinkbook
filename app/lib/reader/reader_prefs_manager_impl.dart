@@ -181,6 +181,7 @@ class ReaderPrefsManagerImpl implements ReaderPrefsManager {
       navZoneActions:
           resolveZoneActions(global.navZoneMode, global.navZoneCustomActions),
       showNavZoneDebugOverlay: global.showNavZoneDebugOverlay,
+      fullscreen: book.fullscreen ?? false,
     );
   }
 }
