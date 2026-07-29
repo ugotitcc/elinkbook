@@ -63,7 +63,7 @@
 
 ## Issue 3：分類 2×2 拼貼格取代分類 Chip 列
 
-**Status:** ready-for-agent
+**Status:** ✅ 已完成
 
 **依賴：** 無
 
