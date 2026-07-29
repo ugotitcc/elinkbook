@@ -49,8 +49,16 @@ _Avoid_: 雙頁顯示、兩頁模式、分頁模式
 _Avoid_: 跨頁組、頁面組
 
 **固定版面（Fixed-Layout, FXL）**：
-EPUB 的一種排版形式，每頁有固定尺寸（寬×高），內容不隨螢幕大小重排——常見於漫畫、童書、食譜。與「流式（Reflowable）」互斥。由 Readium 的 `onLayoutResolved` 回報 `isFixedLayout: true` 偵測。
+EPUB 的一種排版形式，每頁有固定尺寸（寬×高），內容不隨螢幕大小重排——常見於漫畫、童書、食譜。與「流式（Reflowable）」互斥。指排版形式本身，偵測時機/機制見「引擎分派判斷」（開書前）與 `EpubLayoutInfo.isFixedLayout`（開書後 Readium 執行期回報，僅用於已選定 Readium 路徑時的內部狀態，不決定引擎選擇）。
 _Avoid_: 固定排版、定版式
+
+**引擎分派判斷（Engine Dispatch Detection）**：
+決定一本 EPUB 該用 Readium（FXL 路徑）或 foliate-js（流式路徑）開書的**開書前**判斷，結果快取於 `Book.isFixedLayout`（`app/lib/library/models/book.dart:50`，nullable bool，`null` 代表既有書籍尚未判斷過）。判斷來源為 `extractMetadata`（匯入時）或 `detectAndCacheEpubLayout`/`detectEpubLayout`（既有書籍首次開書時補判斷）這兩個原生 channel（讀取 EPUB OPF `rendition:layout` 屬性，不涉及任何一個引擎的執行期狀態）。與 `EpubLayoutInfo.isFixedLayout`（Readium 開書後才回報、只在已選定 Readium 路徑下才存在的執行期狀態）是兩個不同概念、互不影響——見 `book.dart:44-49` 既有註解。少數漫畫 EPUB 因來源檔案 metadata 不完整/不規範，此判斷可能誤判為流式，見「人工版面覆蓋」。
+_Avoid_: FXL 偵測、版面偵測（皆容易與 `EpubLayoutInfo` 執行期狀態混淆）
+
+**人工版面覆蓋（Manual Engine Override）**：
+使用者在 `LibraryScreen` 多選模式下，對選取的 EPUB 書籍手動覆寫「引擎分派判斷」結果的操作，二擇一：「強制 FXL」（直接寫入 `Book.isFixedLayout = true`）／「恢復自動判斷」（重新呼叫 `detectAndCacheEpubLayout()`，回到系統原始判斷結果，非固定寫入 `false`）。用途是對「引擎分派判斷」誤判（例如漫畫 EPUB 被誤判為流式）提供救濟手段，不修改判斷邏輯本身。批次選取中的非 EPUB 書籍（PDF/TXT）自動跳過。生效時機為使用者下次從書架開啟該書時。
+_Avoid_: 強制版面、版面覆蓋（皆過於籠統，未點出「覆蓋的是引擎分派判斷，而非單書版面設定」這個關鍵區別，容易與「單書版面偏好設定」混淆）
 
 **閱讀偏好管理器（ReaderPrefsManager）**：
 整合全域預設值（SharedPreferences）與單書版面偏好設定（SQLite）的深模組。負責載入、寫入與優先級覆寫解析邏輯，對閱讀器（ReaderScreen）提供單一介面，隱藏底層多個數據倉庫。

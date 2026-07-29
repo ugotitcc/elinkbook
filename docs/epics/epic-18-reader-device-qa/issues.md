@@ -1,6 +1,6 @@
 # Epic 18 — 真機 UI 精修：工單清單 (Issues)
 
-依 `design.md`（使用者真機 QA 回報 8 項，其中項目 4 拆出不在本 Epic 範圍）與 `spec.md`（Issue 4／5 新介面定義）拆解出的 5 個工單（Issue 1-6，其中 Issue 6 取代 Issue 5）。Issue 6 完成合併後，使用者持續真機使用中再回報 5 項（見 `design.md`「第二輪真機使用回報」），拆解為 Issue 7-9。Issue 8 於 `/diagnose` 調查後發現根因是 Flutter `AndroidView` 觸控轉發機制本身的限制（見 ADR 0013），改組為 Spike（驗證 `flutter_inappwebview` 是否可解），並新增 Issue 10 承接 Spike 通過後的完整遷移實作（**依賴 Issue 8**）。Issue 7-10 完成合併後，使用者持續真機使用中再回報 4 項（見 `design.md`「第三輪真機使用回報」），拆解為 Issue 11-14。2026-07-29 使用者於 `epic-19-shelf-reading-enhance` Issue 1（全螢幕模式）真機驗收時意外發現 FXL 橫屏雙頁置中留白問題，經 `/superpowers:requesting-code-review` 審查子代理判斷與該次變更無關、屬本 Epic 既有雙頁/FXL 領域的殘留問題，拆出獨立的 Issue 15（`needs-triage`）。全部工單彼此獨立、無依賴關係（僅 Issue 10 依賴 Issue 8），可任意順序或平行開始。
+依 `design.md`（使用者真機 QA 回報 8 項，其中項目 4 拆出不在本 Epic 範圍）與 `spec.md`（Issue 4／5 新介面定義）拆解出的 5 個工單（Issue 1-6，其中 Issue 6 取代 Issue 5）。Issue 6 完成合併後，使用者持續真機使用中再回報 5 項（見 `design.md`「第二輪真機使用回報」），拆解為 Issue 7-9。Issue 8 於 `/diagnose` 調查後發現根因是 Flutter `AndroidView` 觸控轉發機制本身的限制（見 ADR 0013），改組為 Spike（驗證 `flutter_inappwebview` 是否可解），並新增 Issue 10 承接 Spike 通過後的完整遷移實作（**依賴 Issue 8**）。Issue 7-10 完成合併後，使用者持續真機使用中再回報 4 項（見 `design.md`「第三輪真機使用回報」），拆解為 Issue 11-14。2026-07-29 使用者於 `epic-19-shelf-reading-enhance` Issue 1（全螢幕模式）真機驗收時意外發現 FXL 橫屏雙頁置中留白問題，經 `/superpowers:requesting-code-review` 審查子代理判斷與該次變更無關、屬本 Epic 既有雙頁/FXL 領域的殘留問題，拆出獨立的 Issue 15。2026-07-30 `/grill-with-docs` Discovery 確認實際根因並非雙頁置中留白，而是部分漫畫 EPUB 被「引擎分派判斷」誤判為流式，Issue 15 已改為新增「人工版面覆蓋」選項（見 `design.md`「Issue 15 根因重新診斷與人工版面覆蓋功能」），狀態更新為 `ready-for-agent`。全部工單彼此獨立、無依賴關係（僅 Issue 10 依賴 Issue 8），可任意順序或平行開始。
 
 ---
 
@@ -510,29 +510,54 @@ Issue 5 的 `singleColumn` 布林開關因 `paginator.js` 對直排書籍的 `ma
 
 ---
 
-## Issue 15：FXL 橫屏雙頁瀏覽置中留白（左右兩頁中間有間隙）
+## Issue 15：漫畫 EPUB 誤判為流式，新增「人工版面覆蓋」選項（取代原「FXL 雙頁置中留白」推論方向）
 
-**Status:** `needs-triage`（2026-07-29 使用者於 `epic-19-shelf-reading-enhance` Issue 1「全螢幕模式」真機驗收時意外發現並回報，經該 Issue 的 `/superpowers:requesting-code-review` 審查子代理初步判斷後拆出獨立追蹤，尚未進入 Discovery/Diagnose 階段，無 `design.md`/`plans/plan-issue-15.md`）。
+**Status:** `ready-for-agent`（2026-07-30 `/grill-with-docs` Discovery 已完成，決策已記錄於 `design.md`「Issue 15 根因重新診斷與人工版面覆蓋功能」，可撰寫 `plans/plan-issue-15.md`）。
 
-**依賴：** 無（獨立於 `epic-19-shelf-reading-enhance` Issue 1，經審查確認兩者程式碼路徑互不重疊，見下方「相關佐證」）。
+**依賴：** 無
+
+**背景／根因變更說明：**
+
+本條目原始標題為「FXL 橫屏雙頁瀏覽置中留白（左右兩頁中間有間隙）」，2026-07-29 於 `epic-19-shelf-reading-enhance` Issue 1 程式碼審查時意外拆出，當時僅有「初步判斷」（見下方「相關佐證」的舊審查報告），尚未進入正式 Discovery。使用者後續實際使用中確認：**部分書檔本質上是漫畫（理應為固定版面 FXL），但「引擎分派判斷」（見 `CONTEXT.md`）誤判為流式 EPUB**，導致改走 `foliate-js` 路徑後渲染異常——這才是本次要處理的根因，**取代**原始「雙頁置中留白」的推論方向。原「中縫空白／`applyFxlFitScale()`」調查線索（`EpubReaderView.kt`「【中縫空白修正，實驗性】」區塊）予以擱置，若未來真的有人重現雙頁置中留白症狀，再另行拆出新 Issue 調查，不在本次範圍內延續。
+
+**引擎分派判斷機制**（見 `CONTEXT.md`「引擎分派判斷」詞條）：EPUB 該用 Readium（FXL）或 `foliate-js`（流式）開書，取決於開書前快取在 `Book.isFixedLayout`（`app/lib/library/models/book.dart:50`，nullable bool）的判斷結果，來源為 `extractMetadata`（匯入時）或 `detectAndCacheEpubLayout`/`detectEpubLayout`（既有書籍首次開書時補判斷）這兩個原生 channel（讀取 EPUB OPF `rendition:layout` 屬性）。少數漫畫 EPUB 因來源檔案 metadata 不完整/不規範，被誤判為流式。**本次範圍僅新增人工救濟手段，不調查/修正這個判斷邏輯本身**（經 grilling 確認的刻意範圍縮小，見 `design.md`）。
 
 **描述：**
 
-FXL（固定版面，例如漫畫）EPUB 在橫屏（landscape）雙頁瀏覽模式下，左右兩頁中間沒有靠中對齊（book spine 未貼齊），兩頁之間留有一道明顯空白間隙。
+新增「人工版面覆蓋」（見 `CONTEXT.md`）功能，讓使用者可對誤判的書籍手動修正：
 
-初步判斷（來自 Epic 19 Issue 1 程式碼審查附錄，非正式除錯結論，僅供後續 Discovery/Diagnose 參考）：
-- **與 Epic 19 Issue 1（全螢幕模式）無關**：該 Issue 的 diff 完全沒有觸碰 `EpubReaderView.kt` 或任何雙頁排版/置中計算邏輯，原生端僅新增 `MainActivity.kt` 的 `elinkbook/fullscreen` method channel；全螢幕模式只切換系統列可視狀態，本專案 targetSdk 36 下本來就是 edge-to-edge（系統列以透明疊加顯示，不擠壓內容區），不會觸發 container resize，兩者資料流無關聯。
-- **極可能是既有問題**：`EpubReaderView.kt` 內已有一段標註「【中縫空白修正，實驗性】」的既有程式碼（源自 `docs/archive/2026-07-14-epic-16-dual-page/plans/plan-issue-6.md` 的審查修正），處理過同類「兩頁分別置中在螢幕中線疊出空白縫隙」現象，標註「實驗性」代表當時可能尚未完全收斂；`docs/epics.md` Epic 16 列亦記載 2026-07-16 曾在 `epic-5-toc-pagination` Issue 2 審查過程中發現並修正過一次類似的「中縫空白＋RTL 頁序顛倒」問題（`applyFxlFitScale()`），隨 PR #45 合併、未另立 Epic/Issue 追蹤——本次回報可能是同一問題領域的殘留或回歸。
+- **資料層（零新增）**：不新增欄位、不需要 SQLite migration。
+  - 「強制 FXL」：對選取的每本 EPUB 呼叫既有 `LibraryRepository.updateBook(book.copyWith(isFixedLayout: true))`。
+  - 「恢復自動判斷」：對選取的每本 EPUB 重新呼叫既有 `LibraryRepository.detectAndCacheEpubLayout(book.id, book.filePath)`（本來就會重新偵測並覆寫資料庫，語意上等同「回到系統原始判斷」）。
+- **`LibraryScreen`**：不新增長按手勢或三點選單，沿用現有多選模式（`_enterSelectionMode`/`_selectedBookIds`），在既有選取工具列（`_buildSelectionAppBar()`，「移動到分類」旁）新增兩顆獨立按鈕：
+  - `Key('library_force_fxl_button')`：「強制 FXL」
+  - `Key('library_restore_auto_layout_button')`：「恢復自動判斷」
+  - 兩者批次套用於 `_selectedBookIds` 中所有 `format == BookFileFormat.epub` 的書籍；選取集合中若含 PDF/TXT，自動跳過、不報錯（比照既有「移動到分類」「刪除」按鈕：選取模式下永遠顯示，不因選取內容而隱藏/停用）。
+  - 點擊後**不**彈確認對話框，直接執行（比照 `_moveSelectedBooksToGroup()` 而非 `_confirmDeleteBooks()`）：立即 `_exitSelectionMode()` → 逐筆呼叫對應 repository 方法 → `_loadBooks()` 重新整理，**不**額外顯示 SnackBar（比照 `_moveSelectedBooksToGroup()` 既有模式）。
+  - 書架封面/列表**不**新增視覺標記（badge）表示「已人工覆蓋」（經 grilling 確認的刻意精簡）。
+- **生效時機**：`ReaderScreen._resolveEpubEngineDispatch()`（`reader_screen.dart:291-309`）本來就是每次開書時才解析引擎，下次從書架開啟該書時自然套用新值，**不需要**改動 `ReaderScreen`/`FoliateEpubReaderView`/`EpubReaderView`。
 
-**建議後續：**
-- 需要 `/diagnose` 或 Discovery 階段先確認重現條件（是否每次都出現／間歇性、是否與特定書籍的 FXL 頁面尺寸比例有關），並對照 `EpubFxlScaler`（`computeFitScale`/`computeCenteringTranslation`，Epic 16 Issue 8 抽出的 pure-Kotlin 模組）與 `ViewTreeObserver.OnGlobalLayoutListener`/`visibleWebViews` 可見性判斷時機做進一步除錯。
-- 待根因確認後再撰寫 `plans/plan-issue-15.md`。
+**單元測試要求：**
+- `library_screen_test.dart`：
+  - 進入多選模式後，`Key('library_force_fxl_button')`／`Key('library_restore_auto_layout_button')` 皆存在且可點擊。
+  - 選取純 EPUB 書籍後點擊「強制 FXL」：對應 `repository.updateBook` 被呼叫、傳入的 `Book.isFixedLayout == true`；點擊後 `_inSelectionMode` 變為 `false`（沿用「移動到分類」既有斷言模式）。
+  - 選取純 EPUB 書籍後點擊「恢復自動判斷」：對應 `repository.detectAndCacheEpubLayout(bookId, filePath)` 被呼叫。
+  - 選取集合同時包含 EPUB 與 PDF/TXT：點擊任一按鈕後，只有 EPUB 書籍觸發對應 repository 呼叫，非 EPUB 書籍不觸發任何呼叫、不拋錯。
+  - 兩顆按鈕在選取模式下即使選取集合全為非 EPUB，仍然顯示（不隱藏/不停用）。
+
+**驗收標準：**
+- 上述測試皆通過、`flutter analyze` 乾淨。
+- 真機（`3CEF42ECD491687`）以一本已知被誤判為流式的漫畫 EPUB 驗證：於書架多選該書、點擊「強制 FXL」後重新開啟，確認改用 Readium（FXL）路徑渲染、不再出現流式引擎的渲染異常。
+- 真機確認：點擊「恢復自動判斷」後重新開啟同一本書，確認 `Book.isFixedLayout` 回到系統原始判斷值（與該書從未被覆蓋過時一致）。
+- 真機確認：選取集合混雜 EPUB 與 PDF/TXT 時，兩顆按鈕仍可點擊，僅 EPUB 書籍受影響、PDF/TXT 不受影響。
 
 **相關佐證：**
-- `epic-19-shelf-reading-enhance` Issue 1 程式碼審查報告「附錄：FXL 雙頁置中問題初步判斷」（2026-07-29；審查報告本身依規範不進版控，摘要已收錄於本條目與 `docs/epics.md`）
-- `docs/archive/2026-07-14-epic-16-dual-page/plans/plan-issue-6.md`
-- `docs/epics.md` Epic 16 列「歸檔後補充」段落（2026-07-16 `epic-5-toc-pagination` Issue 2 審查發現的同類問題與修正）
-- `app/android/app/src/main/kotlin/cc/ugotit/elinkbook/EpubReaderView.kt`（`applyFxlFitScale()` 與既有「中縫空白修正，實驗性」註解區塊）
+- `docs/epics/epic-18-reader-device-qa/design.md`「Issue 15 根因重新診斷與人工版面覆蓋功能」（本次 `/grill-with-docs` Discovery 完整決策記錄）
+- `CONTEXT.md`「固定版面（FXL）」「引擎分派判斷」「人工版面覆蓋」詞彙定義
+- `app/lib/library/models/book.dart:41-50`（`Book.isFixedLayout` 既有註解）
+- `app/lib/screens/reader_screen.dart:282-309`（`_resolveEpubEngineDispatch()`）
+- `app/lib/library/sqlite_library_repository.dart:449-462`（`detectAndCacheEpubLayout()`）
+- （舊）`epic-19-shelf-reading-enhance` Issue 1 程式碼審查報告「附錄：FXL 雙頁置中問題初步判斷」（2026-07-29；原始發現來源，根因推論已被本次取代，僅保留歷史脈絡）
 
 ---
 

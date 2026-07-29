@@ -165,3 +165,34 @@ Issue 7-10 全數完成合併後，使用者持續真機使用中再回報 4 項
 - `docs/adr/0005-epub-page-margins-single-value.md`（Issue 14 範圍界定的關鍵前置決策）
 - `docs/adr/0014-foliate-epub-independent-margins.md`（Issue 14 新增，縮小 ADR 0005 適用範圍）
 - `app/lib/reader/book_reader_prefs.dart:26`（`pageMargins` 欄位註解指向 ADR 0005）
+
+---
+
+## Issue 15 根因重新診斷與人工版面覆蓋功能（2026-07-30，`/grill-with-docs` Discovery）
+
+Issue 15 原始條目（見 `issues.md`）記錄的是 2026-07-29 於 `epic-19-shelf-reading-enhance` Issue 1 程式碼審查時意外發現的「FXL 橫屏雙頁置中留白」現象，當時僅止於「初步判斷」、尚未進入正式 Discovery。使用者後續實際使用中確認：部分書檔本質上是漫畫（理應為固定版面 FXL），但「引擎分派判斷」（見 `CONTEXT.md`）誤判為流式 EPUB，導致改走 `foliate-js` 路徑後渲染異常——這才是本次要處理的根因，**取代**原始條目「雙頁置中留白」的推論方向（兩者是否為同一問題領域的殘留，留待後續有人真的遇到雙頁置中留白症狀時再另行處理，不在本次範圍內延續調查）。
+
+### 範圍界定（本次 grilling 決策）
+
+僅新增**人工版面覆蓋**（見 `CONTEXT.md`）救濟手段，不調查/修正「引擎分派判斷」（`extractMetadata`/`detectEpubLayout` 原生 channel）本身的誤判邏輯——那是另一個獨立的診斷工作，成本與風險評估留待未來有需要時再啟動。
+
+### 決策（人類已確認）
+
+1. **資料層零新增**：不新增欄位、不需要 SQLite migration。「強制 FXL」直接呼叫既有 `LibraryRepository.updateBook(book.copyWith(isFixedLayout: true))`；「恢復自動判斷」直接重新呼叫既有 `LibraryRepository.detectAndCacheEpubLayout(bookId, filePath)`（本來就會重新偵測並覆寫資料庫，語意上完全等同「回到系統原始判斷」，不需要另外保留一份「使用者是否覆蓋過」的旗標）。
+2. **UI 入口**：不新增長按手勢或三點選單，沿用 `LibraryScreen` 現有多選模式（`_enterSelectionMode`/`_selectedBookIds`），在既有選取工具列（「移動到分類」旁）新增兩顆獨立按鈕：「強制 FXL」／「恢復自動判斷」。批次套用於選取集合中的所有 EPUB 書籍。
+3. **非 EPUB 混選**：兩顆按鈕在選取模式下永遠顯示（比照「移動到分類」「刪除」既有慣例），若選取集合中含 PDF/TXT，執行時自動跳過非 EPUB 書籍、不報錯。
+4. **不需要確認對話框**：比照「移動到分類」（僅彈目的地選擇對話框，不算確認），非「刪除」模式——理由是此操作可隨時再按另一顆按鈕復原，不像刪除書籍不可逆。
+5. **不需要完成後 SnackBar**：比照「移動到分類」既有模式，執行完畢後直接退出選取模式、重新整理書架，不額外顯示提示。
+6. **不新增書架視覺標記**：書籍封面/列表不顯示「已人工覆蓋」的 badge，保持最小變動。
+7. **生效時機零額外處理**：`ReaderScreen._resolveEpubEngineDispatch()` 本來就是每次開書時才解析引擎，下次從書架開啟該書時自然套用新值，不需要改動 `ReaderScreen`/`FoliateEpubReaderView`/`EpubReaderView`。
+
+### 詞彙釐清（見 `CONTEXT.md`）
+
+grilling 過程中發現 `CONTEXT.md` 原「固定版面（Fixed-Layout, FXL）」詞條把「開書前的引擎分派判斷」與「開書後 Readium 執行期回報的 `EpubLayoutInfo.isFixedLayout`」混為一談，已拆分為「固定版面（FXL）」「引擎分派判斷」「人工版面覆蓋」三個獨立詞條。
+
+### 相關佐證
+
+- `docs/epics/epic-19-shelf-reading-enhance/` Issue 1 程式碼審查報告「附錄：FXL 雙頁置中問題初步判斷」（原始發現來源，已被本次根因取代）
+- `app/lib/library/models/book.dart:41-50`（`Book.isFixedLayout` 既有註解）
+- `app/lib/screens/reader_screen.dart:282-309`（`_resolveEpubEngineDispatch()`）
+- `app/lib/library/sqlite_library_repository.dart:449-462`（`detectAndCacheEpubLayout()`）
