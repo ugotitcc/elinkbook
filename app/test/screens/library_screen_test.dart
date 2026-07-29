@@ -989,6 +989,220 @@ void main() {
     );
   });
 
+  testWidgets(
+      '點擊分類拼貼格會推入新的 LibraryScreen 並以該分類篩選；篩選畫面不顯示拼貼格區塊與管理分類按鈕',
+      (tester) async {
+    final bookA = _testBook(id: '1', title: 'A書', groupName: '奇幻');
+    final bookB =
+        _testBook(id: '2', title: 'B書', groupName: BookGroup.uncategorized);
+    final repository = FakeLibraryRepository(initialBooks: [bookA, bookB]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: repository,
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('group_tile_奇幻')));
+    await tester.pumpAndSettle();
+
+    final filteredScreenFinder = _filteredLibraryScreenFinder('奇幻');
+    expect(filteredScreenFinder, findsOneWidget);
+
+    // AppBar 標題顯示分類名稱，不是「書架」（此文字在整棵樹中唯一——背景
+    // 畫面的拼貼格文字是「奇幻 (1)」而非單獨的「奇幻」，不會誤判）。
+    expect(find.text('奇幻'), findsOneWidget);
+
+    // 篩選畫面本身不顯示拼貼格區塊、不顯示「管理分類」按鈕（用 descendant
+    // 限定搜尋範圍在篩選畫面內，避免誤判到背景仍掛載的頂層畫面自己的拼貼
+    // 格／管理分類按鈕——MaterialPageRoute 預設 maintainState: true，背景
+    // 畫面推入新畫面後仍留在 widget 樹中）。
+    expect(
+      find.descendant(
+        of: filteredScreenFinder,
+        matching: find.byKey(const Key('group_tile_奇幻')),
+      ),
+      findsNothing,
+    );
+    expect(
+      find.descendant(
+        of: filteredScreenFinder,
+        matching: find.byKey(const Key('library_manage_groups_button')),
+      ),
+      findsNothing,
+    );
+    expect(
+      find.descendant(
+        of: filteredScreenFinder,
+        matching: find.byKey(const Key('book_item_1')),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: filteredScreenFinder,
+        matching: find.byKey(const Key('book_item_2')),
+      ),
+      findsNothing,
+    );
+  });
+
+  testWidgets(
+      '從分類篩選畫面把書移到其他分類後返回書架，頂層拼貼格與書籍清單即時反映最新狀態',
+      (tester) async {
+    final bookA = _testBook(id: '1', title: 'A書', groupName: '奇幻');
+    final bookB = _testBook(id: '2', title: 'B書', groupName: '科幻');
+    final repository = FakeLibraryRepository(initialBooks: [bookA, bookB]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: repository,
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('奇幻 (1)'), findsOneWidget);
+    expect(find.text('科幻 (1)'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('group_tile_奇幻')));
+    await tester.pumpAndSettle();
+
+    final filteredScreenFinder = _filteredLibraryScreenFinder('奇幻');
+    await tester.longPress(
+      find.descendant(
+        of: filteredScreenFinder,
+        matching: find.byKey(const Key('book_item_1')),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('library_move_to_group_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('library_move_to_group_option_科幻')));
+    await tester.pumpAndSettle();
+
+    final navigatorState = tester.state<NavigatorState>(find.byType(Navigator));
+    await navigatorState.maybePop();
+    await tester.pumpAndSettle();
+
+    // bookA 已被移出「奇幻」——「奇幻」拼貼格應消失（剩 0 本，
+    // _buildGroupTiles 只保留非空分類），「科幻」拼貼格應顯示 2 本。若
+    // _openGroupFilteredView 沒有在返回時呼叫 _loadBooks()，這裡會錯誤地
+    // 仍顯示「奇幻 (1)」／「科幻 (1)」的舊快照。
+    expect(find.byKey(const Key('group_tile_奇幻')), findsNothing);
+    expect(find.text('科幻 (2)'), findsOneWidget);
+  });
+
+  testWidgets(
+      '【審查修正】從分類篩選畫面內用「選擇資料夾＋自動分類」建立新分類後返回書架，'
+      '新分類拼貼格排在「未分類」之前，而非落入孤兒兜底桶排到最後',
+      (tester) async {
+    const folderPickerChannel = MethodChannel('elinkbook/folder_picker');
+    const metadataChannel = MethodChannel('elinkbook/book_metadata');
+    addTearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(folderPickerChannel, null);
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(metadataChannel, null);
+    });
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(folderPickerChannel, (call) async {
+      if (call.method == 'pickFolder') {
+        return 'content://example/tree/folder';
+      }
+      return null;
+    });
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(metadataChannel, (call) async {
+      if (call.method == 'takePersistableUriPermission') return null;
+      if (call.method == 'listFolderContents') {
+        return {
+          'folderName': '武俠小說',
+          'fileUris': ['content://example/tree/folder/document/book1.epub'],
+        };
+      }
+      return {'title': null, 'author': null, 'coverBytes': null};
+    });
+
+    final book = _testBook(id: '1', title: '奇幻小說', groupName: '奇幻');
+    // 另備一本「未分類」書籍，確保頂層書架本來就有一個「未分類」拼貼格
+    // 可以拿來比較相對順序（若沒有任何書籍留在未分類，就沒有基準點可比）。
+    final uncategorizedBook =
+        _testBook(id: '2', title: '一般書', groupName: BookGroup.uncategorized);
+    final repository =
+        FakeLibraryRepository(initialBooks: [book, uncategorizedBook]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: repository,
+          importService: BookImportServiceImpl(repository: repository),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('group_tile_奇幻')));
+    await tester.pumpAndSettle();
+
+    // 篩選畫面內的「匯入書籍」入口沒有比照「管理分類」用 groupFilter ==
+    // null 隱藏，故仍可在此觸發「選擇資料夾＋自動分類」，建立一個頂層
+    // _groups 快照原本不知道的新分類。
+    final filteredScreenFinder = _filteredLibraryScreenFinder('奇幻');
+    await tester.tap(
+      find.descendant(
+        of: filteredScreenFinder,
+        matching: find.byKey(const Key('library_import_button')),
+      ),
+    );
+    await tester.pumpAndSettle();
+    // PopupMenuButton 的選單項目透過 Overlay 路由渲染，不是觸發它的
+    // LibraryScreen 的 descendant，故這裡不能比照上面用 find.descendant
+    // 限定範圍——但這個選單同一時間只會有一份，不會有背景/前景重複的問
+    // 題，直接用未限定範圍的 find.byKey 即可（比照既有「點擊「選擇資料
+    // 夾」...」測試的既有寫法）。
+    await tester.tap(find.byKey(const Key('library_import_folder_option')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('library_import_folder_confirm')));
+    await tester.pumpAndSettle();
+
+    final navigatorState = tester.state<NavigatorState>(find.byType(Navigator));
+    await navigatorState.maybePop();
+    await tester.pumpAndSettle();
+
+    // Navigator.pop 會把被彈出的篩選畫面從 widget 樹移除（跟 push 不同，
+    // 不會留下背景重複實例），故此時切到列表檢視只會影響剩下的頂層畫面，
+    // library_view_mode_toggle 這個 key 在樹中唯一。切到列表檢視是為了用
+    // _GroupListTile 的 ListTile.title（純分類名稱，不含數量）方便比對順
+    // 序——格狀檢視的 _GroupGridTile 是 InkWell，不是 ListTile。
+    await tester.tap(find.byKey(const Key('library_view_mode_toggle')));
+    await tester.pumpAndSettle();
+
+    // 若 _openGroupFilteredView() 的 .then() 沒有一併呼叫 _loadGroups()，
+    // 「武俠小說」不在頂層 _groups 快照中，會被 _buildGroupTiles() 的孤兒
+    // 兜底桶排到「未分類」之後；正確行為應是「武俠小說」（name ASC 排序
+    // 上在「奇幻」與「未分類」之間）出現在「未分類」之前。
+    final tileTitles = tester
+        .widgetList<ListTile>(find.byType(ListTile))
+        .map((tile) => (tile.title as Text).data)
+        .where((title) =>
+            title == '奇幻' ||
+            title == '武俠小說' ||
+            title == BookGroup.uncategorized)
+        .toList();
+    expect(tileTitles.indexOf('武俠小說'),
+        lessThan(tileTitles.indexOf(BookGroup.uncategorized)));
+  });
+
   testWidgets('選取模式下 AppBar 顯示刪除按鈕，取消刪除確認對話框不會呼叫 deleteBook',
       (tester) async {
     final book = _testBook(id: '1', title: '測試書');
@@ -1586,118 +1800,6 @@ void main() {
             'notesRepository，匯出內容的劃線/備註段落永遠固定顯示'
             '「尚未加入任何劃線或備註」（見 issues.md Issue 6 背景）');
     expect(content, isNot(contains('*(尚未加入任何劃線或備註)*')));
-  });
-
-  testWidgets(
-      '點擊分類拼貼格會推入新的 LibraryScreen 並以該分類篩選；篩選畫面不顯示拼貼格區塊與管理分類按鈕',
-      (tester) async {
-    final bookA = _testBook(id: '1', title: 'A書', groupName: '奇幻');
-    final bookB =
-        _testBook(id: '2', title: 'B書', groupName: BookGroup.uncategorized);
-    final repository = FakeLibraryRepository(initialBooks: [bookA, bookB]);
-
-    await tester.pumpWidget(
-      MaterialApp(
-        home: LibraryScreen(
-          repository: repository,
-          importService: FakeBookImportService(),
-          prefsManager: prefsManager,
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byKey(const Key('group_tile_奇幻')));
-    await tester.pumpAndSettle();
-
-    final filteredScreenFinder = _filteredLibraryScreenFinder('奇幻');
-    expect(filteredScreenFinder, findsOneWidget);
-
-    // AppBar 標題顯示分類名稱，不是「書架」（此文字在整棵樹中唯一——背景
-    // 畫面的拼貼格文字是「奇幻 (1)」而非單獨的「奇幻」，不會誤判）。
-    expect(find.text('奇幻'), findsOneWidget);
-
-    // 篩選畫面本身不顯示拼貼格區塊、不顯示「管理分類」按鈕（用 descendant
-    // 限定搜尋範圍在篩選畫面內，避免誤判到背景仍掛載的頂層畫面自己的拼貼
-    // 格／管理分類按鈕——MaterialPageRoute 預設 maintainState: true，背景
-    // 畫面推入新畫面後仍留在 widget 樹中）。
-    expect(
-      find.descendant(
-        of: filteredScreenFinder,
-        matching: find.byKey(const Key('group_tile_奇幻')),
-      ),
-      findsNothing,
-    );
-    expect(
-      find.descendant(
-        of: filteredScreenFinder,
-        matching: find.byKey(const Key('library_manage_groups_button')),
-      ),
-      findsNothing,
-    );
-    expect(
-      find.descendant(
-        of: filteredScreenFinder,
-        matching: find.byKey(const Key('book_item_1')),
-      ),
-      findsOneWidget,
-    );
-    expect(
-      find.descendant(
-        of: filteredScreenFinder,
-        matching: find.byKey(const Key('book_item_2')),
-      ),
-      findsNothing,
-    );
-  });
-
-  testWidgets(
-      '從分類篩選畫面把書移到其他分類後返回書架，頂層拼貼格與書籍清單即時反映最新狀態',
-      (tester) async {
-    final bookA = _testBook(id: '1', title: 'A書', groupName: '奇幻');
-    final bookB = _testBook(id: '2', title: 'B書', groupName: '科幻');
-    final repository = FakeLibraryRepository(initialBooks: [bookA, bookB]);
-
-    await tester.pumpWidget(
-      MaterialApp(
-        home: LibraryScreen(
-          repository: repository,
-          importService: FakeBookImportService(),
-          prefsManager: prefsManager,
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.text('奇幻 (1)'), findsOneWidget);
-    expect(find.text('科幻 (1)'), findsOneWidget);
-
-    await tester.tap(find.byKey(const Key('group_tile_奇幻')));
-    await tester.pumpAndSettle();
-
-    final filteredScreenFinder = _filteredLibraryScreenFinder('奇幻');
-    await tester.longPress(
-      find.descendant(
-        of: filteredScreenFinder,
-        matching: find.byKey(const Key('book_item_1')),
-      ),
-    );
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('library_move_to_group_button')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('library_move_to_group_option_科幻')));
-    await tester.pumpAndSettle();
-
-    final navigatorState = tester.state<NavigatorState>(find.byType(Navigator));
-    await navigatorState.maybePop();
-    await tester.pumpAndSettle();
-
-    // bookA 已被移出「奇幻」——「奇幻」拼貼格應消失（剩 0 本，
-    // _buildGroupTiles 只保留非空分類），「科幻」拼貼格應顯示 2 本。若
-    // _openGroupFilteredView 沒有在返回時呼叫 _loadBooks()，這裡會錯誤地
-    // 仍顯示「奇幻 (1)」／「科幻 (1)」的舊快照。
-    expect(find.byKey(const Key('group_tile_奇幻')), findsNothing);
-    expect(find.text('科幻 (2)'), findsOneWidget);
   });
 
   // ── Task 2: 補齊分類拼貼格排序/兜底桶/空格佔位/選取模式互動測試 ──

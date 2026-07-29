@@ -410,15 +410,23 @@ class _LibraryScreenState extends State<LibraryScreen> {
         )
         .then((_) {
       // 【審查修正】推入的畫面是獨立的 LibraryScreen State 實例，在裡面
-      // 移動/刪除書籍只會更新該實例自己的 _books，不會 touch 這裡（背景
-      // 頂層畫面）的狀態；返回時若不重新載入，頂層拼貼格與書籍清單會停
-      // 留在使用者離開當下的舊快照（比照既有 _openBook() 的 .then() 修
-      // 正所防範的同類問題）。只需要 _loadBooks()——分類「名稱集合」
-      // （_groups）不會因為這條路徑而改變：「管理分類」入口在 groupFilter
-      // != null 的篩選畫面上本來就不顯示（見 _buildNormalAppBar()），從
-      // 篩選畫面內唯一能做的是把書移到既有分類或刪除書籍，兩者都不會新
-      // 增/重新命名/刪除任何 BookGroup，故不需要額外呼叫 _loadGroups()。
+      // 移動/刪除書籍只會更新該實例自己的 _books/_groups，不會 touch 這裡
+      // （背景頂層畫面）的狀態；返回時若不重新載入，頂層拼貼格與書籍清單
+      // 會停留在使用者離開當下的舊快照（比照既有 _openBook() 的 .then()
+      // 修正所防範的同類問題）。
+      //
+      // 【審查修正】原本只呼叫 _loadBooks()，理由是「管理分類」入口在
+      // groupFilter != null 的篩選畫面上不顯示，篩選畫面內無法變動分類
+      // 名稱集合——但這個假設不成立：篩選畫面的 AppBar 仍保留「匯入書籍」
+      // 按鈕（未比照「管理分類」用 groupFilter == null 隱藏），而「選擇
+      // 資料夾＋依資料夾名稱自動建立分類」會呼叫
+      // BookImportServiceImpl.importFolder() 內部的 repository.upsertGroup()，
+      // 確實可以在篩選畫面內建立新分類。若不一併呼叫 _loadGroups()，頂層
+      // 的 _groups 快照就不包含新分類，_buildGroupTiles() 的孤兒兜底桶會
+      // 把新分類排到「未分類」之後，違反「未分類固定排最後」的不變量，
+      // 故改為與 _loadBooks() 一起重新載入。
       if (!mounted) return;
+      _loadGroups();
       _loadBooks();
     });
   }
@@ -648,6 +656,12 @@ class _LibraryScreenState extends State<LibraryScreen> {
   /// `orderedNames`，這些書籍會被整批漏掉、從書架上「消失」而非只是分類格
   /// 顯示不完整，後果比拼貼格排序錯誤嚴重得多，故補一個兜底桶收留所有未
   /// 被涵蓋的 `groupName`，確保 `byGroup` 裡的書一定會出現在某個拼貼格。
+  ///
+  /// 【審查意見，不要求改動】若同時存在多個孤兒 `groupName`，彼此之間的
+  /// 順序取決於 `byGroup.keys`（`LinkedHashMap` 插入順序＝書籍依目前
+  /// `_sortBy` 排序後被迭代到的順序），並非依名稱字母排序。`spec.md`／
+  /// `design.md` 只要求孤兒不會讓書籍消失，沒有規範多個孤兒彼此的相對
+  /// 順序，故此處維持現況，僅記錄此已知特性供日後參考。
   List<_GroupTile> _buildGroupTiles(List<Book> books) {
     final byGroup = <String, List<Book>>{};
     for (final book in books) {
