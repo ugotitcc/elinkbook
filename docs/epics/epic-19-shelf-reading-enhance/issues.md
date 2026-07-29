@@ -39,7 +39,7 @@
 
 ## Issue 2：刪除書籍
 
-**Status:** ready-for-agent
+**Status:** ✅ 已完成
 
 **依賴：** 無
 
