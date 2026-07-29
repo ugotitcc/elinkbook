@@ -56,6 +56,13 @@ class BookReaderPrefs {
   final ColumnMode? columnMode; // null=未覆寫（使用 auto 預設），見 epic-18 Issue 6
   final double? columnSize; // null=未覆寫（使用 720.0 預設），360~1440px，僅 columnMode=auto 時有效
 
+  /// 全螢幕模式（epic-19-shelf-reading-enhance Issue 1）：只控制 Android
+  /// 系統狀態列/導覽列，與 showHeader/showFooter、既有的沉浸模式
+  /// （_chromeVisible）完全獨立，互不干涉。null=未覆寫，resolve() 決成
+  /// false（預設關閉），實際隱藏/顯示機制見 ADR 0015（原生
+  /// WindowInsetsControllerCompat，非 Flutter SystemChrome）。
+  final bool? fullscreen;
+
   const BookReaderPrefs({
     this.fontFamily,
     this.fontSize,
@@ -85,6 +92,7 @@ class BookReaderPrefs {
     this.showFooter,
     this.columnMode,
     this.columnSize,
+    this.fullscreen,
   });
 
   /// 無任何覆寫，等同資料庫無對應列時的狀態。
@@ -123,6 +131,7 @@ class BookReaderPrefs {
       'show_footer': showFooter == null ? null : (showFooter! ? 1 : 0),
       'column_mode': columnMode?.name,
       'column_size': columnSize,
+      'fullscreen': fullscreen == null ? null : (fullscreen! ? 1 : 0),
     };
   }
 
@@ -190,6 +199,8 @@ class BookReaderPrefs {
           ? null
           : ColumnMode.values.byName(map['column_mode'] as String),
       columnSize: (map['column_size'] as num?)?.toDouble(),
+      fullscreen:
+          map['fullscreen'] == null ? null : (map['fullscreen'] as int) == 1,
     );
   }
 
@@ -223,7 +234,8 @@ class BookReaderPrefs {
       other.showHeader == showHeader &&
       other.showFooter == showFooter &&
       other.columnMode == columnMode &&
-      other.columnSize == columnSize;
+      other.columnSize == columnSize &&
+      other.fullscreen == fullscreen;
 
   @override
   int get hashCode => Object.hashAll([
@@ -255,6 +267,7 @@ class BookReaderPrefs {
         showFooter,
         columnMode,
         columnSize,
+        fullscreen,
       ]);
 
   /// 只更新明確傳入的欄位，其餘欄位沿用目前值（`newValue ?? this.value`
@@ -291,6 +304,7 @@ class BookReaderPrefs {
     bool? showFooter,
     ColumnMode? columnMode,
     double? columnSize,
+    bool? fullscreen,
   }) {
     return BookReaderPrefs(
       fontFamily: fontFamily ?? this.fontFamily,
@@ -322,6 +336,7 @@ class BookReaderPrefs {
       showFooter: showFooter ?? this.showFooter,
       columnMode: columnMode ?? this.columnMode,
       columnSize: columnSize ?? this.columnSize,
+      fullscreen: fullscreen ?? this.fullscreen,
     );
   }
 }

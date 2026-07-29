@@ -370,4 +370,49 @@ void main() {
     const b = BookReaderPrefs(marginTop: 72);
     expect(a, isNot(b));
   });
+
+  test('全螢幕模式欄位 BookReaderPrefs.empty 為 null（未覆寫，交由 ResolvedPreferences 決定預設值 false）',
+      () {
+    const prefs = BookReaderPrefs.empty;
+    expect(prefs.fullscreen, isNull);
+  });
+
+  test('全螢幕模式欄位值完全相同的 BookReaderPrefs 視為相等', () {
+    const a = BookReaderPrefs(fullscreen: true);
+    const b = BookReaderPrefs(fullscreen: true);
+    expect(a, b);
+    expect(a.hashCode, b.hashCode);
+  });
+
+  test('全螢幕模式欄位值不同時視為不相等', () {
+    const a = BookReaderPrefs(fullscreen: true);
+    const b = BookReaderPrefs(fullscreen: false);
+    expect(a, isNot(b));
+  });
+
+  test('fullscreen 為 true／false／null 皆正確 toMap／fromMap round-trip（避免布林值 0/1 轉換錯誤）',
+      () {
+    const withTrue = BookReaderPrefs(fullscreen: true);
+    final trueMap = withTrue.toMap('book-fs-1');
+    expect(trueMap['fullscreen'], 1);
+    expect(BookReaderPrefs.fromMap(trueMap).fullscreen, isTrue);
+
+    const withFalse = BookReaderPrefs(fullscreen: false);
+    final falseMap = withFalse.toMap('book-fs-2');
+    expect(falseMap['fullscreen'], 0);
+    expect(BookReaderPrefs.fromMap(falseMap).fullscreen, isFalse);
+
+    const withNull = BookReaderPrefs.empty;
+    final nullMap = withNull.toMap('book-fs-3');
+    expect(nullMap['fullscreen'], isNull);
+    expect(BookReaderPrefs.fromMap(nullMap).fullscreen, isNull);
+  });
+
+  test('copyWith 更新 fullscreen 時，其餘欄位保留原值', () {
+    const original = BookReaderPrefs(fontSize: 18, fullscreen: false);
+    final updated = original.copyWith(fullscreen: true);
+
+    expect(updated.fontSize, 18);
+    expect(updated.fullscreen, isTrue);
+  });
 }

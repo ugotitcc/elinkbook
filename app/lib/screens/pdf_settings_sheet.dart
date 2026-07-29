@@ -46,6 +46,7 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
   late bool _dualPageCoverAlone;
   late DualPageDirection _dualPageDirection;
   late bool _showFooter;
+  late bool _fullscreen;
 
   @override
   void initState() {
@@ -60,6 +61,7 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
     _dualPageCoverAlone = widget.prefs.dualPageCoverAlone ?? true;
     _dualPageDirection = widget.prefs.dualPageDirection ?? DualPageDirection.rtl;
     _showFooter = widget.prefs.showFooter ?? true;
+    _fullscreen = widget.prefs.fullscreen ?? false;
   }
 
   @override
@@ -84,6 +86,7 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
       dualPageCoverAlone: _dualPageCoverAlone,
       dualPageDirection: _dualPageDirection,
       showFooter: _showFooter,
+      fullscreen: _fullscreen,
     ));
   }
 
@@ -230,6 +233,15 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
               value: _showFooter,
               onChanged: (v) => setState(() {
                 _showFooter = v;
+                _notifyChanged();
+              }),
+            ),
+            SwitchListTile(
+              key: const Key('pdf_settings_fullscreen'),
+              title: const Text('全螢幕模式'),
+              value: _fullscreen,
+              onChanged: (v) => setState(() {
+                _fullscreen = v;
                 _notifyChanged();
               }),
             ),

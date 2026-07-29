@@ -3969,4 +3969,137 @@ void main() {
     expect(foliateView.marginLeft, 30);
     expect(foliateView.marginRight, 30);
   });
+
+  testWidgets('開啟全螢幕模式偏好後，elinkbook/fullscreen 頻道收到 setEnabled(true)',
+      (tester) async {
+    final binaryMessenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    const fullscreenChannel = MethodChannel('elinkbook/fullscreen');
+    final calls = <MethodCall>[];
+    binaryMessenger.setMockMethodCallHandler(fullscreenChannel, (call) async {
+      calls.add(call);
+      return null;
+    });
+    addTearDown(
+      () => binaryMessenger.setMockMethodCallHandler(fullscreenChannel, null),
+    );
+
+    final prefsManager = FakeReaderPrefsManager(
+      bookPrefsByBookId: {'b1': const BookReaderPrefs(fullscreen: true)},
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b1',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(calls, hasLength(1));
+    expect(calls.single.method, 'setEnabled');
+    expect(calls.single.arguments, isTrue);
+  });
+
+  testWidgets('離開 ReaderScreen 時，elinkbook/fullscreen 頻道收到 setEnabled(false) 無條件還原',
+      (tester) async {
+    final binaryMessenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    const fullscreenChannel = MethodChannel('elinkbook/fullscreen');
+    final calls = <MethodCall>[];
+    binaryMessenger.setMockMethodCallHandler(fullscreenChannel, (call) async {
+      calls.add(call);
+      return null;
+    });
+    addTearDown(
+      () => binaryMessenger.setMockMethodCallHandler(fullscreenChannel, null),
+    );
+
+    final prefsManager = FakeReaderPrefsManager(
+      bookPrefsByBookId: {'b1': const BookReaderPrefs(fullscreen: true)},
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: ElevatedButton(
+              key: const Key('open_reader'),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => ReaderScreen(
+                    filePath: 'test/fixtures/sample.pdf',
+                    bookId: 'b1',
+                    prefsManager: prefsManager,
+                  ),
+                ),
+              ),
+              child: const Text('open'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.byKey(const Key('open_reader')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+    // 模擬原生端 onPageRendered，讓畫面脫離 loading（純 flutter test 環境下
+    // AndroidView 不會真正觸發原生回呼，比照本檔案既有測試慣例，見既有
+    // 「離開閱讀器時通知原生端」測試）——CircularProgressIndicator 為不定長
+    // 動畫，若一直停留在 loading，後續 pumpAndSettle() 永遠不會收斂而逾時。
+    tester.widget<PdfReaderView>(find.byType(PdfReaderView)).onPageRendered();
+    await tester.pump();
+    calls.clear();
+
+    final navigatorState = tester.state<NavigatorState>(find.byType(Navigator));
+    navigatorState.maybePop();
+    await tester.pumpAndSettle();
+
+    expect(calls, contains(predicate<MethodCall>((c) =>
+        c.method == 'setEnabled' && c.arguments == false)));
+  });
+
+  testWidgets(
+      'App 從背景恢復時，即使 fullscreen 值未變，_applySystemUiMode 仍重新呼叫 elinkbook/fullscreen',
+      (tester) async {
+    final binaryMessenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    const fullscreenChannel = MethodChannel('elinkbook/fullscreen');
+    final calls = <MethodCall>[];
+    binaryMessenger.setMockMethodCallHandler(fullscreenChannel, (call) async {
+      calls.add(call);
+      return null;
+    });
+    addTearDown(
+      () => binaryMessenger.setMockMethodCallHandler(fullscreenChannel, null),
+    );
+
+    final prefsManager = FakeReaderPrefsManager(
+      bookPrefsByBookId: {'b1': const BookReaderPrefs(fullscreen: true)},
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b1',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(calls, hasLength(1)); // 初次套用
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pump();
+
+    expect(calls, hasLength(2), reason: 'resumed 應強制重新呼叫，不受等值節流影響');
+    expect(calls.last.method, 'setEnabled');
+    expect(calls.last.arguments, isTrue);
+  });
 }

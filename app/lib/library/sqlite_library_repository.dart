@@ -27,7 +27,7 @@ class SqliteLibraryRepository implements LibraryRepository {
   static Future<SqliteLibraryRepository> open(String path) async {
     final db = await openDatabase(
       path,
-      version: 14,
+      version: 15,
       onConfigure: (db) async {
         // book_reader_prefs 的 ON DELETE CASCADE 需要外鍵約束真正生效，
         // SQLite 預設不強制外鍵，須逐連線手動開啟（見 epic-3 plan-issue-1）。
@@ -123,6 +123,15 @@ class SqliteLibraryRepository implements LibraryRepository {
             // 受影響、不做任何遷移（見 ADR 0014）。
             await _addMarginColumns(db);
           }
+          if (oldVersion < 15) {
+            // epic-19-shelf-reading-enhance Issue 1：全螢幕模式開關新增的
+            // 1 個欄位。必須放在 else 分支內（oldVersion >= 2）——理由同
+            // _addMarginColumns：oldVersion < 2 時 _createBookReaderPrefsTable
+            // 已一步到位建表含 fullscreen，若在 else 分支外無條件執行
+            // ALTER TABLE，oldVersion == 1 的裝置會重複 ALTER TABLE 拋出
+            // 崩潰。
+            await _addFullscreenColumn(db);
+          }
         }
         if (oldVersion < 5) {
           // epic-5-toc-pagination Issue 2：本機閱讀位置記憶新增的 2 個
@@ -217,7 +226,8 @@ class SqliteLibraryRepository implements LibraryRepository {
         margin_top REAL,
         margin_bottom REAL,
         margin_left REAL,
-        margin_right REAL
+        margin_right REAL,
+        fullscreen INTEGER
       )
     ''');
   }
@@ -414,6 +424,18 @@ class SqliteLibraryRepository implements LibraryRepository {
           'ALTER TABLE book_reader_prefs ADD COLUMN margin_left REAL');
       await db.execute(
           'ALTER TABLE book_reader_prefs ADD COLUMN margin_right REAL');
+    }
+  }
+
+  static Future<void> _addFullscreenColumn(Database db) async {
+    // epic-19-shelf-reading-enhance Issue 1：全螢幕模式開關欄位，補追加到
+    // 既有（version 2 起已存在）的 book_reader_prefs 表。比照
+    // _addMarginColumns 既有慣例，僅在表已存在時才執行 ALTER TABLE。
+    final tables = await db.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='book_reader_prefs'");
+    if (tables.isNotEmpty) {
+      await db.execute(
+          'ALTER TABLE book_reader_prefs ADD COLUMN fullscreen INTEGER');
     }
   }
 

@@ -4,10 +4,10 @@ import '../reader/book_reader_prefs.dart';
 import '../reader/dual_page_mode.dart';
 
 /// EPUB 固定版面（FXL 漫畫）專屬的精簡版設定 Bottom Sheet（見
-/// docs/epics/epic-16-dual-page/spec.md「模組」段落）：只提供「雙頁模式」
-/// 三態切換，不與 PdfSettingsSheet／ReaderSettingsSheet 共用元件（固定版面
-/// 沒有字型/裁切/濾鏡等其餘設定）。為未來 FR-42（全螢幕顯示開關）預留擴充
-/// 空間，本 issue 不實作該功能本身。
+/// docs/epics/epic-16-dual-page/spec.md「模組」段落）：提供「雙頁模式」
+/// 三態切換與「全螢幕模式」開關（epic-19-shelf-reading-enhance Issue 1），
+/// 不與 PdfSettingsSheet／ReaderSettingsSheet 共用元件（固定版面沒有
+/// 字型/裁切/濾鏡等其餘設定）。
 class FxlSettingsSheet extends StatefulWidget {
   final BookReaderPrefs prefs;
   final ValueChanged<BookReaderPrefs> onChanged;
@@ -24,15 +24,20 @@ class FxlSettingsSheet extends StatefulWidget {
 
 class _FxlSettingsSheetState extends State<FxlSettingsSheet> {
   late DualPageMode _dualPageMode;
+  late bool _fullscreen;
 
   @override
   void initState() {
     super.initState();
     _dualPageMode = widget.prefs.dualPageMode ?? DualPageMode.auto;
+    _fullscreen = widget.prefs.fullscreen ?? false;
   }
 
   void _notifyChanged() {
-    widget.onChanged(widget.prefs.copyWith(dualPageMode: _dualPageMode));
+    widget.onChanged(widget.prefs.copyWith(
+      dualPageMode: _dualPageMode,
+      fullscreen: _fullscreen,
+    ));
   }
 
   @override
@@ -82,6 +87,16 @@ class _FxlSettingsSheetState extends State<FxlSettingsSheet> {
                   }),
                 );
               }).toList(),
+            ),
+            const SizedBox(height: 16),
+            SwitchListTile(
+              key: const Key('fxl_settings_fullscreen'),
+              title: const Text('全螢幕模式'),
+              value: _fullscreen,
+              onChanged: (v) => setState(() {
+                _fullscreen = v;
+                _notifyChanged();
+              }),
             ),
           ],
         ),

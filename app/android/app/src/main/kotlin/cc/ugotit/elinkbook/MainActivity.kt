@@ -6,6 +6,9 @@ import android.os.Bundle
 import android.view.KeyEvent
 import android.webkit.WebView
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.fragment.app.commitNow
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -187,5 +190,38 @@ class MainActivity : FlutterFragmentActivity() {
                 else -> result.notImplemented()
             }
         }
+
+        // 全螢幕模式（epic-19-shelf-reading-enhance Issue 1，見 ADR 0015）：
+        // Flutter 官方 SystemChrome.setEnabledSystemUIMode() 在本專案目前
+        // targetSdk（36）下已確認無效（Flutter SDK 官方文件：API 36+ 一律
+        // 強制 edgeToEdge、無退出方法），改用原生 WindowInsetsControllerCompat
+        // 直接操作 Window，不經過 Flutter 引擎的 SystemUiMode 限制。
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "elinkbook/fullscreen")
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "setEnabled" -> {
+                        val enabled = call.arguments as? Boolean
+                        if (enabled == null) {
+                            result.error(
+                                "invalid_argument",
+                                "setEnabled 需要一個 Boolean 參數",
+                                null,
+                            )
+                            return@setMethodCallHandler
+                        }
+                        val controller =
+                            WindowCompat.getInsetsController(window, window.decorView)
+                        if (enabled) {
+                            controller.systemBarsBehavior =
+                                WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                            controller.hide(WindowInsetsCompat.Type.systemBars())
+                        } else {
+                            controller.show(WindowInsetsCompat.Type.systemBars())
+                        }
+                        result.success(null)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
     }
 }
