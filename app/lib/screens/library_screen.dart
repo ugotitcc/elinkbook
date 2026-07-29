@@ -320,6 +320,29 @@ class _LibraryScreenState extends State<LibraryScreen> {
     for (final book in books) {
       if (!selectedIds.contains(book.id)) continue;
       await widget.repository.deleteBook(book.id);
+      // existsSync() 防護對 content:// 來源的 filePath 安全（design.md
+      // 調查結論——content:// 字串永遠不會判定為存在的本機路徑，故此處
+      // 不需要分辨 filePath 是本機複本還是原始外部檔案參照）。比照既有
+      // _pickAndImportFiles()/_pickAndImportFolder() 的既有慣例，用
+      // try-catch 包住檔案系統操作：單一檔案刪除失敗（例如被其他程序鎖
+      // 定、權限異常）不應中斷整個批次刪除迴圈——deleteBook()（資料庫紀
+      // 錄，使用者最關心的「書從書架消失」）已在上一行完成，迴圈仍要繼
+      // 續處理其餘已選取的書籍並跑到最後的 _loadBooks()。
+      try {
+        // 使用 deleteSync() 而非 await delete()：widget test 的 fake zone
+        // 無法完成真實 I/O 的 Future，deleteSync() 是同步系統呼叫，可直接完
+        // 成，不受 zone 限制。
+        if (File(book.filePath).existsSync()) {
+          File(book.filePath).deleteSync();
+        }
+        final coverPath = book.coverPath;
+        if (coverPath != null && File(coverPath).existsSync()) {
+          File(coverPath).deleteSync();
+        }
+      } catch (_) {
+        // 檔案刪除失敗時靜默略過，不中斷主流程；資料庫紀錄已刪除，殘留
+        // 檔案不影響功能正確性。
+      }
     }
     await _loadBooks();
   }

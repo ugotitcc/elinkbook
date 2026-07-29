@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -1039,6 +1040,96 @@ void main() {
     expect(find.byKey(const Key('book_item_3')), findsOneWidget);
   });
 
+  testWidgets('確認刪除後，書籍檔案與封面檔案（本機複本）從裝置上被刪除', (tester) async {
+    // 【根因說明，比照既有 Markdown 匯出測試先例】真實 Directory.createTemp／
+    // File I/O 需要真正的作業系統事件迴圈，AutomatedTestWidgetsFlutterBinding
+    // 的 fake Zone 無法完成，須用 tester.runAsync() 包住真實 I/O。
+    final tempDir = (await tester.runAsync(
+      () => Directory.systemTemp.createTemp('library_screen_delete_book_test'),
+    ))!;
+    addTearDown(() => tester.runAsync(() => tempDir.delete(recursive: true)));
+
+    final bookFile = File('${tempDir.path}/book.epub');
+    final coverFile = File('${tempDir.path}/cover.png');
+    await tester.runAsync(() async {
+      await bookFile.writeAsBytes([0]);
+      // 最小合法 1x1 PNG（可被 Image.file 成功解碼），避免 _BookCover 在
+      // pumpAndSettle() 階段因無效圖片內容觸發 FlutterError.reportError
+      // 而讓測試失敗（bookFile 的內容不受此限——filePath 從未被當成圖片
+      // 解碼，只有 coverPath 會經過 Image.file）。
+      await coverFile.writeAsBytes(base64Decode(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY'
+        '42YAAAAASUVORK5CYII=',
+      ));
+    });
+
+    final book = _testBook(
+      id: '1',
+      title: '測試書',
+      filePath: bookFile.path,
+      coverPath: coverFile.path,
+    );
+    final repository = FakeLibraryRepository(initialBooks: [book]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: repository,
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.longPress(find.byKey(const Key('book_item_1')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('library_delete_books_button')));
+    await tester.pumpAndSettle();
+
+    // 確認刪除的 tap 在框架 zone 內執行，讓 Navigator.pop 觸發的 microtask
+    // 正常 flush。_deleteSelectedBooks 使用 deleteSync()（同步系統呼叫），不
+    // 需 runAsync 即可在 fake zone 內完成。
+    await tester.tap(find.byKey(const Key('library_delete_confirm_button')));
+    await tester.pumpAndSettle();
+
+    expect(repository.deleteBookCalls, ['1']);
+    expect(bookFile.existsSync(), isFalse);
+    expect(coverFile.existsSync(), isFalse);
+    expect(find.byKey(const Key('book_item_1')), findsNothing);
+  });
+
+  testWidgets('書籍 filePath 為外部 content:// 參照時，刪除書籍不會嘗試刪除原始檔案也不拋例外',
+      (tester) async {
+    final book = _testBook(
+      id: '1',
+      title: '測試書',
+      filePath: 'content://com.android.externalstorage.documents/document/1234',
+    );
+    final repository = FakeLibraryRepository(initialBooks: [book]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: repository,
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.longPress(find.byKey(const Key('book_item_1')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('library_delete_books_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('library_delete_confirm_button')));
+    await tester.pumpAndSettle();
+
+    expect(repository.deleteBookCalls, ['1']);
+    expect(find.byKey(const Key('book_item_1')), findsNothing);
+  });
+
   testWidgets('觸發資料夾匯入後，匯入完成前畫面顯示處理中狀態，其他匯入觸發點停用',
       (tester) async {
     const folderPickerChannel = MethodChannel('elinkbook/folder_picker');
@@ -1476,6 +1567,7 @@ Book _testBook({
   String? author,
   String groupName = BookGroup.uncategorized,
   String? filePath,
+  String? coverPath,
   bool? isFixedLayout,
 }) {
   final now = DateTime.now();
@@ -1486,6 +1578,7 @@ Book _testBook({
     format: BookFileFormat.epub,
     filePath: filePath ?? 'content://example/$id.epub',
     source: BookSource.local,
+    coverPath: coverPath,
     groupName: groupName,
     isFixedLayout: isFixedLayout,
     createTime: now,
