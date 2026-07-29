@@ -1,6 +1,6 @@
 # Epic 18 — 真機 UI 精修：工單清單 (Issues)
 
-依 `design.md`（使用者真機 QA 回報 8 項，其中項目 4 拆出不在本 Epic 範圍）與 `spec.md`（Issue 4／5 新介面定義）拆解出的 5 個工單（Issue 1-6，其中 Issue 6 取代 Issue 5）。Issue 6 完成合併後，使用者持續真機使用中再回報 5 項（見 `design.md`「第二輪真機使用回報」），拆解為 Issue 7-9。Issue 8 於 `/diagnose` 調查後發現根因是 Flutter `AndroidView` 觸控轉發機制本身的限制（見 ADR 0013），改組為 Spike（驗證 `flutter_inappwebview` 是否可解），並新增 Issue 10 承接 Spike 通過後的完整遷移實作（**依賴 Issue 8**）。Issue 7-10 完成合併後，使用者持續真機使用中再回報 4 項（見 `design.md`「第三輪真機使用回報」），拆解為 Issue 11-14。全部工單彼此獨立、無依賴關係（僅 Issue 10 依賴 Issue 8），可任意順序或平行開始。
+依 `design.md`（使用者真機 QA 回報 8 項，其中項目 4 拆出不在本 Epic 範圍）與 `spec.md`（Issue 4／5 新介面定義）拆解出的 5 個工單（Issue 1-6，其中 Issue 6 取代 Issue 5）。Issue 6 完成合併後，使用者持續真機使用中再回報 5 項（見 `design.md`「第二輪真機使用回報」），拆解為 Issue 7-9。Issue 8 於 `/diagnose` 調查後發現根因是 Flutter `AndroidView` 觸控轉發機制本身的限制（見 ADR 0013），改組為 Spike（驗證 `flutter_inappwebview` 是否可解），並新增 Issue 10 承接 Spike 通過後的完整遷移實作（**依賴 Issue 8**）。Issue 7-10 完成合併後，使用者持續真機使用中再回報 4 項（見 `design.md`「第三輪真機使用回報」），拆解為 Issue 11-14。2026-07-29 使用者於 `epic-19-shelf-reading-enhance` Issue 1（全螢幕模式）真機驗收時意外發現 FXL 橫屏雙頁置中留白問題，經 `/superpowers:requesting-code-review` 審查子代理判斷與該次變更無關、屬本 Epic 既有雙頁/FXL 領域的殘留問題，拆出獨立的 Issue 15（`needs-triage`）。全部工單彼此獨立、無依賴關係（僅 Issue 10 依賴 Issue 8），可任意順序或平行開始。
 
 ---
 
@@ -507,6 +507,32 @@ Issue 5 的 `singleColumn` 布林開關因 `paginator.js` 對直排書籍的 `ma
 - ADR 0005（`docs/adr/0005-epub-page-margins-single-value.md`，本 Issue 縮小其適用範圍的前置決策）
 - ADR 0014（`docs/adr/0014-foliate-epub-independent-margins.md`）
 - `docs/prd.md`「版面控制項」原始需求（獨立的上/下/左/右邊距滑桿）
+
+---
+
+## Issue 15：FXL 橫屏雙頁瀏覽置中留白（左右兩頁中間有間隙）
+
+**Status:** `needs-triage`（2026-07-29 使用者於 `epic-19-shelf-reading-enhance` Issue 1「全螢幕模式」真機驗收時意外發現並回報，經該 Issue 的 `/superpowers:requesting-code-review` 審查子代理初步判斷後拆出獨立追蹤，尚未進入 Discovery/Diagnose 階段，無 `design.md`/`plans/plan-issue-15.md`）。
+
+**依賴：** 無（獨立於 `epic-19-shelf-reading-enhance` Issue 1，經審查確認兩者程式碼路徑互不重疊，見下方「相關佐證」）。
+
+**描述：**
+
+FXL（固定版面，例如漫畫）EPUB 在橫屏（landscape）雙頁瀏覽模式下，左右兩頁中間沒有靠中對齊（book spine 未貼齊），兩頁之間留有一道明顯空白間隙。
+
+初步判斷（來自 Epic 19 Issue 1 程式碼審查附錄，非正式除錯結論，僅供後續 Discovery/Diagnose 參考）：
+- **與 Epic 19 Issue 1（全螢幕模式）無關**：該 Issue 的 diff 完全沒有觸碰 `EpubReaderView.kt` 或任何雙頁排版/置中計算邏輯，原生端僅新增 `MainActivity.kt` 的 `elinkbook/fullscreen` method channel；全螢幕模式只切換系統列可視狀態，本專案 targetSdk 36 下本來就是 edge-to-edge（系統列以透明疊加顯示，不擠壓內容區），不會觸發 container resize，兩者資料流無關聯。
+- **極可能是既有問題**：`EpubReaderView.kt` 內已有一段標註「【中縫空白修正，實驗性】」的既有程式碼（源自 `docs/archive/2026-07-14-epic-16-dual-page/plans/plan-issue-6.md` 的審查修正），處理過同類「兩頁分別置中在螢幕中線疊出空白縫隙」現象，標註「實驗性」代表當時可能尚未完全收斂；`docs/epics.md` Epic 16 列亦記載 2026-07-16 曾在 `epic-5-toc-pagination` Issue 2 審查過程中發現並修正過一次類似的「中縫空白＋RTL 頁序顛倒」問題（`applyFxlFitScale()`），隨 PR #45 合併、未另立 Epic/Issue 追蹤——本次回報可能是同一問題領域的殘留或回歸。
+
+**建議後續：**
+- 需要 `/diagnose` 或 Discovery 階段先確認重現條件（是否每次都出現／間歇性、是否與特定書籍的 FXL 頁面尺寸比例有關），並對照 `EpubFxlScaler`（`computeFitScale`/`computeCenteringTranslation`，Epic 16 Issue 8 抽出的 pure-Kotlin 模組）與 `ViewTreeObserver.OnGlobalLayoutListener`/`visibleWebViews` 可見性判斷時機做進一步除錯。
+- 待根因確認後再撰寫 `plans/plan-issue-15.md`。
+
+**相關佐證：**
+- `epic-19-shelf-reading-enhance` Issue 1 程式碼審查報告「附錄：FXL 雙頁置中問題初步判斷」（2026-07-29；審查報告本身依規範不進版控，摘要已收錄於本條目與 `docs/epics.md`）
+- `docs/archive/2026-07-14-epic-16-dual-page/plans/plan-issue-6.md`
+- `docs/epics.md` Epic 16 列「歸檔後補充」段落（2026-07-16 `epic-5-toc-pagination` Issue 2 審查發現的同類問題與修正）
+- `app/android/app/src/main/kotlin/cc/ugotit/elinkbook/EpubReaderView.kt`（`applyFxlFitScale()` 與既有「中縫空白修正，實驗性」註解區塊）
 
 ---
 
