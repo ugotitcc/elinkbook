@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -17,6 +18,43 @@ import 'percent_rect.dart';
 import 'toc_entry.dart';
 import 'writing_mode.dart';
 import 'zone_action.dart';
+
+/// 【診斷修正】`Object.groupBy`／`Map.groupBy` 是 ES2024 才加入的內建方法
+/// （對應 Chromium 117+，Android WebView 126+），較舊的 Android System
+/// WebView（常見於部分久未更新系統元件的裝置，例如 E-Ink 閱讀器）尚未支援
+/// ——`epub.js`（`readest/foliate-js` 釘定版本）的 OPF 詮釋資料解析
+/// （`getMetadata()`）無條件呼叫這兩個方法，在這類裝置上開啟任何 EPUB 都會
+/// 直接拋出 `TypeError: Object.groupBy is not a function`，導致完全無法閱讀
+/// （已用 `@xmldom/xmldom` + 未經修改的實際 epub.js 重現此例外訊息並驗證此
+/// polyfill 可修復）。僅在缺席時才定義（不覆蓋原生實作，等原生 WebView 支援
+/// 後行為與新版一致），透過 [UserScript] 在文件載入最早期注入，不修改
+/// `readest/foliate-js` 釘定版本本身（比照既有 ADR 0011「不修改釘定版本」
+/// 的既有限制）。
+const _groupByPolyfillJs = '''
+if (!Object.groupBy) {
+  Object.groupBy = function (items, keyFn) {
+    const result = Object.create(null);
+    let index = 0;
+    for (const item of items) {
+      const key = keyFn(item, index++);
+      (result[key] ??= []).push(item);
+    }
+    return result;
+  };
+}
+if (!Map.groupBy) {
+  Map.groupBy = function (items, keyFn) {
+    const result = new Map();
+    let index = 0;
+    for (const item of items) {
+      const key = keyFn(item, index++);
+      if (!result.has(key)) result.set(key, []);
+      result.get(key).push(item);
+    }
+    return result;
+  };
+}
+''';
 
 /// 把目前所有非 null 的偏好參數組成一個 map，key 名稱與 `main.js`
 /// `window.applyPreferences`/`window.FoliateBridge` 契約一致（取代原本
@@ -385,6 +423,15 @@ class _FoliateEpubReaderViewState extends State<FoliateEpubReaderView> {
             javaScriptEnabled: true,
             useShouldInterceptRequest: true,
           ),
+          // 【診斷修正】見上方 _groupByPolyfillJs 註解——在文件載入最早期
+          // 注入 Object.groupBy/Map.groupBy polyfill，避免舊版 WebView 開
+          // 啟 EPUB 時因 epub.js 呼叫這兩個 ES2024 方法而拋出例外。
+          initialUserScripts: UnmodifiableListView<UserScript>([
+            UserScript(
+              source: _groupByPolyfillJs,
+              injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
+            ),
+          ]),
           onWebViewCreated: _onWebViewCreated,
           shouldInterceptRequest: _shouldInterceptRequest,
         ),

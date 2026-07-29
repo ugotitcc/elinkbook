@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_inappwebview_platform_interface/flutter_inappwebview_platform_interface.dart';
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/reader/column_mode.dart';
 import 'package:elinkbook/reader/foliate_epub_reader_view.dart';
@@ -265,6 +265,42 @@ void main() {
       expect(find.text('選單'), findsWidgets);
       expect(find.text('下一頁'), findsWidgets);
       expect(find.text('無動作'), findsWidgets);
+    });
+  });
+
+  group('Object.groupBy/Map.groupBy polyfill（診斷修正）', () {
+    // 根因：epub.js（readest/foliate-js 釘定版本）的 OPF 詮釋資料解析無條
+    // 件呼叫 Object.groupBy/Map.groupBy（ES2024），較舊的 Android System
+    // WebView（Chromium < 117）尚未支援，開啟任何 EPUB 都會拋出
+    // 「TypeError: Object.groupBy is not a function」（已用 @xmldom/xmldom
+    // 及未經修改的實際 epub.js 重現並驗證 polyfill 可修復，見診斷紀錄）。
+    // 這裡只驗證 InAppWebView 確實在文件載入最早期（AT_DOCUMENT_START）
+    // 注入了含 Object.groupBy／Map.groupBy 的 polyfill 腳本；polyfill 本身
+    // 的 JS 邏輯正確性已在 Node 環境對照真實 epub.js 驗證過，不在 widget
+    // test 範圍內重複驗證。
+    testWidgets('InAppWebView 於 AT_DOCUMENT_START 注入 Object.groupBy/Map.groupBy polyfill',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: FoliateEpubReaderView(
+            filePath: '/tmp/sample.epub',
+            onPageRendered: _noop,
+            onError: _noopError,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final webView = tester.widget<InAppWebView>(find.byType(InAppWebView));
+      final scripts = webView.platform.params.initialUserScripts;
+      expect(scripts, isNotNull);
+      expect(scripts, hasLength(1));
+      final script = scripts!.single;
+      expect(script.injectionTime, UserScriptInjectionTime.AT_DOCUMENT_START);
+      expect(script.source, contains('Object.groupBy'));
+      expect(script.source, contains('Map.groupBy'));
     });
   });
 }
