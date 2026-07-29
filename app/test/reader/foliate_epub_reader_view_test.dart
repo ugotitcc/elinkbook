@@ -268,17 +268,25 @@ void main() {
     });
   });
 
-  group('Object.groupBy/Map.groupBy polyfill（診斷修正）', () {
-    // 根因：epub.js（readest/foliate-js 釘定版本）的 OPF 詮釋資料解析無條
-    // 件呼叫 Object.groupBy/Map.groupBy（ES2024），較舊的 Android System
-    // WebView（Chromium < 117）尚未支援，開啟任何 EPUB 都會拋出
-    // 「TypeError: Object.groupBy is not a function」（已用 @xmldom/xmldom
-    // 及未經修改的實際 epub.js 重現並驗證 polyfill 可修復，見診斷紀錄）。
-    // 這裡只驗證 InAppWebView 確實在文件載入最早期（AT_DOCUMENT_START）
-    // 注入了含 Object.groupBy／Map.groupBy 的 polyfill 腳本；polyfill 本身
+  group('ES 相容性 polyfill（診斷修正）', () {
+    // 根因：epub.js/epubcfi.js/paginator.js（readest/foliate-js 釘定版本）
+    // 在開書必經路徑無條件使用三個較新的 ES 內建方法——Object.groupBy／
+    // Map.groupBy（ES2024，需 Chromium 117+）、Array.prototype.at()
+    // （ES2022，需 Chromium 92+）、Array.prototype.findLastIndex()
+    // （ES2023，需 Chromium 97+）。較舊的 Android System WebView（例如
+    // 真機回報的 Mobiscribe WAVE，Chromium 91）三個都不支援：groupBy 那部
+    // 分會讓任何 EPUB 直接拋出可觀察的例外；.at()/findLastIndex() 那部分
+    // 則是在 loadItem()/loadReplaced()/分頁計算等更深層的呼叫點，這台裝置
+    // 的 WebView 建置沒有開啟遠端 DevTools 除錯、無法直接看到例外訊息，
+    // 症狀純粹是「畫面永遠停在載入指示器」。已用 @xmldom/xmldom 及未經修
+    // 改的實際 epub.js／epubcfi.js 重現並驗證這三個 polyfill 可修復（見
+    // 診斷紀錄）。這裡只驗證 InAppWebView 確實在文件載入最早期
+    // （AT_DOCUMENT_START）注入了含這三個 polyfill 的腳本；polyfill 本身
     // 的 JS 邏輯正確性已在 Node 環境對照真實 epub.js 驗證過，不在 widget
     // test 範圍內重複驗證。
-    testWidgets('InAppWebView 於 AT_DOCUMENT_START 注入 Object.groupBy/Map.groupBy polyfill',
+    testWidgets(
+        'InAppWebView 於 AT_DOCUMENT_START 注入 Object.groupBy/Map.groupBy/'
+        'Array.prototype.at/Array.prototype.findLastIndex polyfill',
         (tester) async {
       await tester.pumpWidget(
         MaterialApp(
@@ -301,6 +309,8 @@ void main() {
       expect(script.injectionTime, UserScriptInjectionTime.AT_DOCUMENT_START);
       expect(script.source, contains('Object.groupBy'));
       expect(script.source, contains('Map.groupBy'));
+      expect(script.source, contains('Array.prototype.at'));
+      expect(script.source, contains('Array.prototype.findLastIndex'));
     });
   });
 }

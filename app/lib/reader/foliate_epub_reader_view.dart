@@ -19,18 +19,29 @@ import 'toc_entry.dart';
 import 'writing_mode.dart';
 import 'zone_action.dart';
 
-/// 【診斷修正】`Object.groupBy`／`Map.groupBy` 是 ES2024 才加入的內建方法
-/// （對應 Chromium 117+，Android WebView 126+），較舊的 Android System
-/// WebView（常見於部分久未更新系統元件的裝置，例如 E-Ink 閱讀器）尚未支援
-/// ——`epub.js`（`readest/foliate-js` 釘定版本）的 OPF 詮釋資料解析
-/// （`getMetadata()`）無條件呼叫這兩個方法，在這類裝置上開啟任何 EPUB 都會
-/// 直接拋出 `TypeError: Object.groupBy is not a function`，導致完全無法閱讀
-/// （已用 `@xmldom/xmldom` + 未經修改的實際 epub.js 重現此例外訊息並驗證此
-/// polyfill 可修復）。僅在缺席時才定義（不覆蓋原生實作，等原生 WebView 支援
-/// 後行為與新版一致），透過 [UserScript] 在文件載入最早期注入，不修改
-/// `readest/foliate-js` 釘定版本本身（比照既有 ADR 0011「不修改釘定版本」
-/// 的既有限制）。
-const _groupByPolyfillJs = '''
+/// 【診斷修正——真機回報：Mobiscribe WAVE（Android 12，
+/// `com.android.webview` 版本 91.0.4472.114）開啟流式 EPUB 時畫面永遠停在
+/// 轉圈圈載入指示器，且沒有任何可觀察的例外/console 訊息（這台裝置的
+/// WebView 建置沒有開啟 `setWebContentsDebuggingEnabled`，無法遠端連接
+/// DevTools 檢視實際拋出的例外）】`epub.js`／`epubcfi.js`／`paginator.js`
+/// （`readest/foliate-js` 釘定版本）在開書必經路徑（`loadItem()`／
+/// `loadReplaced()` 讀取 spine 資源、`paginator.js` 分頁計算）無條件使用
+/// 三個較新的 ES 內建方法，較舊的 Android System WebView 統統沒有：
+///
+/// - `Object.groupBy`／`Map.groupBy`（ES2024，需 Chromium 117+）
+/// - `Array.prototype.at()`（ES2022，需 Chromium 92+）
+/// - `Array.prototype.findLastIndex()`（ES2023，需 Chromium 97+）
+///
+/// 這台裝置的 Chromium 91（已用 `dumpsys package com.android.webview` 與
+/// `adb logcat` 的 `cr_LibraryLoader` 訊息雙重確認版本號）三個都不支援；
+/// `Object.groupBy` 那部分已在前一輪診斷修正過，這次追加 `.at()`／
+/// `findLastIndex()` 的 polyfill——已用 `@xmldom/xmldom` + 未經修改的實際
+/// epub.js／epubcfi.js 驗證這兩個方法確實會在 Node.js 移除該內建方法後
+/// 拋出對應的 `TypeError`。僅在缺席時才定義（不覆蓋原生實作，等原生
+/// WebView 支援後行為與新版一致），透過 [UserScript] 在文件載入最早期
+/// 注入，不修改 `readest/foliate-js` 釘定版本本身（比照既有 ADR 0011
+/// 「不修改釘定版本」的既有限制）。
+const _esCompatPolyfillJs = '''
 if (!Object.groupBy) {
   Object.groupBy = function (items, keyFn) {
     const result = Object.create(null);
@@ -52,6 +63,21 @@ if (!Map.groupBy) {
       result.get(key).push(item);
     }
     return result;
+  };
+}
+if (!Array.prototype.at) {
+  Array.prototype.at = function (index) {
+    const len = this.length;
+    const relativeIndex = index < 0 ? len + index : index;
+    return (relativeIndex >= 0 && relativeIndex < len) ? this[relativeIndex] : undefined;
+  };
+}
+if (!Array.prototype.findLastIndex) {
+  Array.prototype.findLastIndex = function (predicate, thisArg) {
+    for (let i = this.length - 1; i >= 0; i--) {
+      if (predicate.call(thisArg, this[i], i, this)) return i;
+    }
+    return -1;
   };
 }
 ''';
@@ -423,12 +449,14 @@ class _FoliateEpubReaderViewState extends State<FoliateEpubReaderView> {
             javaScriptEnabled: true,
             useShouldInterceptRequest: true,
           ),
-          // 【診斷修正】見上方 _groupByPolyfillJs 註解——在文件載入最早期
-          // 注入 Object.groupBy/Map.groupBy polyfill，避免舊版 WebView 開
-          // 啟 EPUB 時因 epub.js 呼叫這兩個 ES2024 方法而拋出例外。
+          // 【診斷修正】見上方 _esCompatPolyfillJs 註解——在文件載入最早期
+          // 注入 Object.groupBy/Map.groupBy/Array.prototype.at/
+          // Array.prototype.findLastIndex 的 polyfill，避免舊版 WebView 開
+          // 啟 EPUB 時因 epub.js/epubcfi.js/paginator.js 呼叫這些較新的 ES
+          // 內建方法而拋出例外、導致畫面卡在載入指示器。
           initialUserScripts: UnmodifiableListView<UserScript>([
             UserScript(
-              source: _groupByPolyfillJs,
+              source: _esCompatPolyfillJs,
               injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
             ),
           ]),
