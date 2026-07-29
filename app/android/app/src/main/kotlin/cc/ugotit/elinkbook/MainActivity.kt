@@ -200,7 +200,15 @@ class MainActivity : FlutterFragmentActivity() {
             .setMethodCallHandler { call, result ->
                 when (call.method) {
                     "setEnabled" -> {
-                        val enabled = call.arguments as Boolean
+                        val enabled = call.arguments as? Boolean
+                        if (enabled == null) {
+                            result.error(
+                                "invalid_argument",
+                                "setEnabled 需要一個 Boolean 參數",
+                                null,
+                            )
+                            return@setMethodCallHandler
+                        }
                         val controller =
                             WindowCompat.getInsetsController(window, window.decorView)
                         if (enabled) {

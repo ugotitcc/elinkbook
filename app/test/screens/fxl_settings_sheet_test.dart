@@ -5,6 +5,10 @@ import 'package:elinkbook/reader/dual_page_mode.dart';
 import 'package:elinkbook/screens/fxl_settings_sheet.dart';
 
 void main() {
+  // 本檔案既有測試自 epic-19 Issue 1 起改用 `home: Scaffold(body: ...)` 包裹
+  // （原本是 `home: FxlSettingsSheet(...)` 直接當 home）：新增的「全螢幕模式」
+  // SwitchListTile 需要 Material 祖先元件才能正確渲染，比照 pdf_settings_sheet_test.dart／
+  // reader_settings_sheet_test.dart 既有的 Scaffold 包裹寫法統一。
   testWidgets('能正常 pump 起，顯示三個雙頁模式選項', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
