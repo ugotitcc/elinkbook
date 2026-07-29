@@ -154,63 +154,73 @@ class _LibraryGroupManagementDialogState
       title: const Text('管理分類'),
       content: SizedBox(
         width: double.maxFinite,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (_errorMessage != null)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Text(
-                  _errorMessage!,
-                  style: const TextStyle(color: Colors.red),
+        // 【診斷修正，見 tmp/epic-18/分類異常.jpg】分類數量較多時，下方的
+        // 「新增分類名稱」欄位取得焦點、系統鍵盤彈出後，AlertDialog 可用
+        // 高度會被 MediaQuery.viewInsets.bottom 壓縮，但這個 Column 本身
+        // 不會跟著收縮（分類清單固定用 maxHeight: 240 的 ConstrainedBox），
+        // 導致底部溢位（真機回報 BOTTOM OVERFLOWED BY 21 PIXELS）。改用
+        // SingleChildScrollView 包住整個內容，鍵盤把可用高度壓縮到不足時
+        // 改為讓整個對話框內容可捲動，而不是讓 RenderFlex 溢位（比照既有
+        // pdf_settings_sheet.dart 處理類似鍵盤/視窗高度不足情境的既有寫法）。
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (_errorMessage != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    _errorMessage!,
+                    style: const TextStyle(color: Colors.red),
+                  ),
+                ),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 240),
+                child: ListView.builder(
+                  key: const Key('library_group_manage_list'),
+                  shrinkWrap: true,
+                  itemCount: _groups.length,
+                  itemBuilder: (context, index) {
+                    final group = _groups[index];
+                    final isProtected = group.name == BookGroup.uncategorized;
+                    return ListTile(
+                      key: Key('library_group_manage_item_${group.name}'),
+                      title: Text(group.name),
+                      trailing: isProtected
+                          ? null
+                          : Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  key: Key(
+                                    'library_group_rename_button_${group.name}',
+                                  ),
+                                  icon: const Icon(Icons.edit, size: 20),
+                                  onPressed: () => _renameGroup(group.name),
+                                ),
+                                IconButton(
+                                  key: Key(
+                                    'library_group_delete_button_${group.name}',
+                                  ),
+                                  icon: const Icon(Icons.delete, size: 20),
+                                  onPressed: () =>
+                                      _confirmDeleteGroup(group.name),
+                                ),
+                              ],
+                            ),
+                    );
+                  },
                 ),
               ),
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 240),
-              child: ListView.builder(
-                key: const Key('library_group_manage_list'),
-                shrinkWrap: true,
-                itemCount: _groups.length,
-                itemBuilder: (context, index) {
-                  final group = _groups[index];
-                  final isProtected = group.name == BookGroup.uncategorized;
-                  return ListTile(
-                    key: Key('library_group_manage_item_${group.name}'),
-                    title: Text(group.name),
-                    trailing: isProtected
-                        ? null
-                        : Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                key: Key(
-                                  'library_group_rename_button_${group.name}',
-                                ),
-                                icon: const Icon(Icons.edit, size: 20),
-                                onPressed: () => _renameGroup(group.name),
-                              ),
-                              IconButton(
-                                key: Key(
-                                  'library_group_delete_button_${group.name}',
-                                ),
-                                icon: const Icon(Icons.delete, size: 20),
-                                onPressed: () =>
-                                    _confirmDeleteGroup(group.name),
-                              ),
-                            ],
-                          ),
-                  );
-                },
+              const SizedBox(height: 12),
+              TextField(
+                key: const Key('library_group_add_field'),
+                controller: _addController,
+                decoration: const InputDecoration(labelText: '新增分類名稱'),
+                onSubmitted: (_) => _addGroup(),
               ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              key: const Key('library_group_add_field'),
-              controller: _addController,
-              decoration: const InputDecoration(labelText: '新增分類名稱'),
-              onSubmitted: (_) => _addGroup(),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
       actions: [

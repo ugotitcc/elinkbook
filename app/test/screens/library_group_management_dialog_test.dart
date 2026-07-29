@@ -1,0 +1,58 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+import 'package:elinkbook/screens/library_group_management_dialog.dart';
+
+import '../support/fake_library_repository.dart';
+
+void main() {
+  testWidgets(
+      '分類數量多且鍵盤開啟（新增分類名稱欄位取得焦點）時，'
+      '管理分類對話框底部不應溢位', (tester) async {
+    final repository = FakeLibraryRepository();
+    // 比照使用者回報畫面：畫面中已有數個具名分類（含「未分類」共 5+ 個）。
+    for (final name in ['有意義', '測試', '四書聖訓', '心理勵志', '小說']) {
+      await repository.upsertGroup(name);
+    }
+    final groups = await repository.listGroups();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: Center(
+              child: ElevatedButton(
+                onPressed: () => showDialog<void>(
+                  context: context,
+                  builder: (_) => LibraryGroupManagementDialog(
+                    repository: repository,
+                    initialGroups: groups,
+                  ),
+                ),
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    // 點擊「新增分類名稱」欄位取得焦點，模擬使用者實際操作時觸發系統鍵盤
+    // 彈出；widget test 環境沒有真正的系統鍵盤，改用
+    // tester.testTextInput.show() 讓 Flutter 認為鍵盤已顯示，並手動調整
+    // MediaQuery.viewInsets.bottom 模擬鍵盤佔用的螢幕高度（比照真機常見的
+    // 注音鍵盤高度比例，約佔螢幕下半部）。
+    await tester.tap(find.byKey(const Key('library_group_add_field')));
+    await tester.pumpAndSettle();
+    tester.view.viewInsets = const FakeViewPadding(bottom: 900);
+    addTearDown(tester.view.resetViewInsets);
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull,
+        reason: '分類數量多＋鍵盤開啟時，AlertDialog 內容（分類清單＋新增欄位）'
+            '不應該讓 RenderFlex 溢位（真機回報：BOTTOM OVERFLOWED BY 21 PIXELS）');
+  });
+}
