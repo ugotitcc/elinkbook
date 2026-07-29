@@ -279,6 +279,51 @@ class _LibraryScreenState extends State<LibraryScreen> {
     await _loadBooks();
   }
 
+  Future<bool?> _confirmDeleteBooks(int count) {
+    return showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('刪除書籍'),
+        content: Text(
+          '將刪除已選取的 $count 本書籍，並一併刪除其書籤、劃線與備註，此操作無法復原。確定要刪除嗎？',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            key: const Key('library_delete_confirm_button'),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('刪除'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _deleteSelectedBooks() async {
+    final selectedIds = _selectedBookIds;
+    final books = _books;
+    if (selectedIds == null || selectedIds.isEmpty || books == null) return;
+    final confirmed = await _confirmDeleteBooks(selectedIds.length);
+    if (confirmed != true) return;
+    // 比照既有 _openManageGroupsDialog() 的既有慣例：await 跳出 dialog 的
+    // 操作之後、觸碰 state 之前先確認 widget 是否仍在畫面上（見
+    // library_screen.dart:322，同檔案內多數 await-dialog 後的路徑皆有此
+    // 檢查，_moveSelectedBooksToGroup() 缺這道檢查屬既有缺口，不在本工單
+    // 範圍內一併修正）。
+    if (!mounted) return;
+    // 比照既有 _moveSelectedBooksToGroup()：先退出選取模式，避免刪除迴圈
+    // 執行期間使用者重複點擊觸發本方法。
+    _exitSelectionMode();
+    for (final book in books) {
+      if (!selectedIds.contains(book.id)) continue;
+      await widget.repository.deleteBook(book.id);
+    }
+    await _loadBooks();
+  }
+
   void _openBook(Book book) {
     Navigator.of(context)
         .push(
@@ -512,6 +557,12 @@ class _LibraryScreenState extends State<LibraryScreen> {
           icon: const Icon(Icons.drive_file_move),
           tooltip: '移動到分類',
           onPressed: count == 0 ? null : _moveSelectedBooksToGroup,
+        ),
+        IconButton(
+          key: const Key('library_delete_books_button'),
+          icon: const Icon(Icons.delete),
+          tooltip: '刪除',
+          onPressed: count == 0 ? null : _deleteSelectedBooks,
         ),
       ],
     );

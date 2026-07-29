@@ -960,6 +960,85 @@ void main() {
     expect(find.byKey(const Key('book_item_2')), findsOneWidget);
   });
 
+  testWidgets('選取模式下 AppBar 顯示刪除按鈕，取消刪除確認對話框不會呼叫 deleteBook',
+      (tester) async {
+    final book = _testBook(id: '1', title: '測試書');
+    final repository = FakeLibraryRepository(initialBooks: [book]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: repository,
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.longPress(find.byKey(const Key('book_item_1')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('library_delete_books_button')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('library_delete_books_button')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('刪除書籍'), findsOneWidget);
+    expect(
+      find.text('將刪除已選取的 1 本書籍，並一併刪除其書籤、劃線與備註，此操作無法復原。確定要刪除嗎？'),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.text('取消'));
+    await tester.pumpAndSettle();
+
+    expect(repository.deleteBookCalls, isEmpty);
+    expect(find.byKey(const Key('book_item_1')), findsOneWidget);
+  });
+
+  testWidgets('選取多本書後點擊刪除並確認，每個已選取 id 各被呼叫一次 deleteBook，書籍從列表消失',
+      (tester) async {
+    final bookA = _testBook(id: '1', title: 'A書');
+    final bookB = _testBook(id: '2', title: 'B書');
+    final bookC = _testBook(id: '3', title: 'C書');
+    final repository =
+        FakeLibraryRepository(initialBooks: [bookA, bookB, bookC]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: repository,
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.longPress(find.byKey(const Key('book_item_1')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('book_item_2')));
+    await tester.pumpAndSettle();
+    expect(find.text('已選取 2 本'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('library_delete_books_button')));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('將刪除已選取的 2 本書籍，並一併刪除其書籤、劃線與備註，此操作無法復原。確定要刪除嗎？'),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.byKey(const Key('library_delete_confirm_button')));
+    await tester.pumpAndSettle();
+
+    expect(repository.deleteBookCalls, unorderedEquals(['1', '2']));
+    expect(find.byKey(const Key('library_selection_app_bar')), findsNothing);
+    expect(find.byKey(const Key('book_item_1')), findsNothing);
+    expect(find.byKey(const Key('book_item_2')), findsNothing);
+    expect(find.byKey(const Key('book_item_3')), findsOneWidget);
+  });
+
   testWidgets('觸發資料夾匯入後，匯入完成前畫面顯示處理中狀態，其他匯入觸發點停用',
       (tester) async {
     const folderPickerChannel = MethodChannel('elinkbook/folder_picker');
