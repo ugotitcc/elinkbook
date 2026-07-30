@@ -14,13 +14,13 @@
 - **硬編碼修改全程不 commit**，Task 3 結束前必須 `git checkout -- app/android/app/src/main/kotlin/cc/ugotit/elinkbook/EpubReaderView.kt` revert 乾淨。
 - 需要真機 `3CEF42ECD491687`，沿用 Issue 15/17 已知會被誤判為流式的同一本漫畫 EPUB（該書應已套用「強制 FXL」，若裝置狀態已因先前 Issue 17 驗證而復原，重新套用一次）。
 - 每次修改 Kotlin 原生程式碼後必須完整重新建置＋安裝（`flutter build apk --debug` + `adb install -r`）。
-- **本次硬編碼只影響傳給 `EpubNavigatorFactory` 的 `Publication` 參照與本專案自己的 3 個檢查點**，`computeTotalCharacterCountInBackground(openedPublication)`（`EpubReaderView.kt:1034`）等其餘既有呼叫端**維持使用原始 `openedPublication`**（保留完整服務），不需要一併改成 `effectivePublication`——服務遺失風險驗證的對象是「`EpubNavigatorFragment` 自己內部是否需要那些服務」，不是本專案自己的既有邏輯（本專案自己的邏輯本來就可以繼續用原始物件）。
+- **class 欄位 `publication` 全程維持指向原始 `openedPublication`，不指向服務不完整的重建物件**（審查修正，見 `tmp/epic-18/review-plan-issue-18.md` Issue C-1）。`jumpToProgression()`／`buildTocPayloadSafely()`／`computeTotalCharacterCountInBackground()` 等既有呼叫端都讀 `publication`（或直接吃參數），必須維持使用原始物件（保留完整服務），否則會在還沒開始測服務遺失風險之前，就先讓這些既有功能悄悄壞掉。新增的暫時欄位 `spikeEffectivePublication` 只供 `:501`／`:1199` 兩個「FXL 判斷」檢查點讀取（見 Task 2 Step 1）；`:998` 因為在 `attachNavigator()` 同一函式範圍內，直接讀區域變數 `effectivePublication` 即可，不需要額外欄位。
 
 ---
 
 ## 檔案結構
 
-- **暫時修改（不 commit）：** `app/android/app/src/main/kotlin/cc/ugotit/elinkbook/EpubReaderView.kt`（`attachNavigator()` 新增 `effectivePublication` 計算＋3 處檢查點改讀，見 Task 2）
+- **暫時修改（不 commit）：** `app/android/app/src/main/kotlin/cc/ugotit/elinkbook/EpubReaderView.kt`（新增 `spikeEffectivePublication` 暫時欄位＋`attachNavigator()` 內建構 `effectivePublication`＋3 個 FXL 判斷檢查點改讀，見 Task 2）
 
 ---
 
@@ -56,13 +56,25 @@ adb -s 3CEF42ECD491687 install -r build/app/outputs/flutter-apk/app-debug.apk
 ### Task 2：硬編碼 `Publication.Builder` 重建方案，真機驗證
 
 **Files:**
-- Modify（暫時，**先不要 commit**）: `app/android/app/src/main/kotlin/cc/ugotit/elinkbook/EpubReaderView.kt:911-924,998,1199`
+- Modify（暫時，**先不要 commit**）: `app/android/app/src/main/kotlin/cc/ugotit/elinkbook/EpubReaderView.kt:164,501,911-924,998,1199`
 
 **Interfaces:**
 - Consumes: Task 1 已確認現象重現
 - Produces:「Spike 紀錄」第 2 節的比對結果，決定 GO/NO-GO
 
-- [ ] **Step 1: 在 `attachNavigator()` 內硬編碼 `effectivePublication` 並改讀**
+- [ ] **Step 1: 新增暫時 class 欄位 `spikeEffectivePublication`**
+
+**審查修正（`tmp/epic-18/review-plan-issue-18.md` Issue C-1）**：`jumpToProgression()`（`:1103`）與 `buildTocPayloadSafely()`（`:1146`）都讀 class 欄位 `publication` 並呼叫 `.positions()`——若把 `publication` 整個改指向服務不完整的 `effectivePublication`，會悄悄破壞這兩個既有功能，污染 Spike 想驗證的問題（本專案既有功能是否受服務遺失影響，不該在還沒開始測之前就先被破壞）。因此改為新增一個**專供本 Spike 用**的獨立暫時欄位，只給「FXL 判斷」用的檢查點讀，`publication` 本身維持指向原始物件不動。
+
+找到 `private var publication: Publication? = null`（`EpubReaderView.kt:164` 附近），暫時在其後新增：
+```kotlin
+    // Issue 18 Spike：硬編碼驗證，不進 main。只供 :501／:1199 這兩個 FXL
+    // 判斷檢查點讀取，publication 本欄位維持指向原始物件（jumpToProgression()／
+    // buildTocPayloadSafely() 需要完整服務，見 review-plan-issue-18.md Issue C-1）。
+    private var spikeEffectivePublication: Publication? = null
+```
+
+- [ ] **Step 2: 在 `attachNavigator()` 內建構 `effectivePublication`**
 
 找到（`EpubReaderView.kt:911-924`）：
 ```kotlin
@@ -100,18 +112,35 @@ adb -s 3CEF42ECD491687 install -r build/app/outputs/flutter-apk/app-debug.apk
                     ),
                     container = openedPublication.container,
                     // 注意：原始 servicesBuilder 是 private，這裡只能用預設值——
-                    // 這正是本 Spike Task 2 Step 4 要驗證的服務遺失風險。
+                    // 這正是本 Spike Task 2 Step 9 要驗證的服務遺失風險。
                 ).build()
             } else {
                 openedPublication
             }
-            publication = effectivePublication
+            // publication 維持指向原始物件（審查修正，見 Step 1 說明）；
+            // spikeEffectivePublication 只供 :501／:1199 兩個 FXL 判斷檢查點讀取。
+            publication = openedPublication
+            spikeEffectivePublication = effectivePublication
             val navigatorFactory = EpubNavigatorFactory(publication = effectivePublication)
 ```
 
-- [ ] **Step 2: 硬編碼原生端 tap 熱區監聽器註冊判斷（:998），改讀 `effectivePublication`**
+- [ ] **Step 3: 硬編碼 `applyFxlFitScale()` 的 FXL 判斷（:501），改讀 `spikeEffectivePublication`**
 
-`:998` 目前讀的是 `attachNavigator()` 的參數 `openedPublication`（區域變數），而非上面新增的 `effectivePublication`。找到：
+找到：
+```kotlin
+    private fun applyFxlFitScale() {
+        val isFixedLayout = publication?.metadata?.layout == Layout.FIXED
+```
+暫時改為：
+```kotlin
+    private fun applyFxlFitScale() {
+        // Issue 18 Spike：改讀 spikeEffectivePublication，硬編碼驗證，不進 main。
+        val isFixedLayout = (spikeEffectivePublication ?: publication)?.metadata?.layout == Layout.FIXED
+```
+
+- [ ] **Step 4: 硬編碼原生端 tap 熱區監聽器註冊判斷（:998），改讀 `effectivePublication`**
+
+`:998` 讀的是 `attachNavigator()` 的區域變數 `openedPublication`，Step 2 已在同一函式範圍內定義 `effectivePublication`（區域變數，直接可見，不需要額外欄位）。找到：
 ```kotlin
             if (openedPublication.metadata.layout != Layout.FIXED) {
 ```
@@ -121,15 +150,28 @@ adb -s 3CEF42ECD491687 install -r build/app/outputs/flutter-apk/app-debug.apk
             if (effectivePublication.metadata.layout != Layout.FIXED) {
 ```
 
-- [ ] **Step 3: 確認 `:1199`（`reportLayoutResolved()`）已透過 class 欄位 `publication` 自動生效**
+- [ ] **Step 5: 硬編碼 `reportLayoutResolved()` 的 FXL 判斷（:1199），改讀 `spikeEffectivePublication`**
 
-`reportLayoutResolved()` 讀的是 class 欄位 `publication?.metadata?.layout`（`EpubReaderView.kt:1199`），Step 1 已把 `publication = effectivePublication`，此處**不需要**額外修改，執行：
+**審查修正（Issue M-1）**：`reportLayoutResolved()` 是獨立方法，`attachNavigator()` 的區域變數 `effectivePublication` 在此不可見，必須讀 Step 1 新增的 class 欄位。找到：
+```kotlin
+    private fun reportLayoutResolved() {
+        val isFixedLayout = publication?.metadata?.layout == Layout.FIXED
+```
+暫時改為：
+```kotlin
+    private fun reportLayoutResolved() {
+        // Issue 18 Spike：改讀 spikeEffectivePublication，硬編碼驗證，不進 main。
+        val isFixedLayout = (spikeEffectivePublication ?: publication)?.metadata?.layout == Layout.FIXED
+```
+
+- [ ] **Step 6: 確認變更範圍**
+
 ```bash
 git diff app/android/app/src/main/kotlin/cc/ugotit/elinkbook/EpubReaderView.kt
 ```
-確認變更範圍僅限 Step 1／Step 2 兩處區塊。
+確認變更範圍僅限 Step 1-5 共 5 處區塊（新增欄位＋4 個檢查點）。
 
-- [ ] **Step 4: 重新建置並安裝**
+- [ ] **Step 7: 重新建置並安裝**
 
 ```bash
 cd app
@@ -137,29 +179,29 @@ flutter build apk --debug
 adb -s 3CEF42ECD491687 install -r build/app/outputs/flutter-apk/app-debug.apk
 ```
 
-- [ ] **Step 5: 驗證雙頁排版是否恢復正常**
+- [ ] **Step 8: 驗證雙頁排版是否恢復正常**
 
 同一本書、裝置橫向、雙頁模式開啟，重新開書觀察：
 
-- **若畫面顯示兩頁並排、翻頁行為為 spread 切換** → 核心假設成立，前往 Step 6 服務遺失風險驗證。
-- **若畫面仍是單頁、或當機/畫面損壞** → 核心假設不成立，直接記錄 NO-GO（Step 8），可跳過 Step 6/7。
+- **若畫面顯示兩頁並排、翻頁行為為 spread 切換** → 核心假設成立，前往 Step 9 服務遺失風險驗證。
+- **若畫面仍是單頁、或當機/畫面損壞** → 核心假設不成立，直接記錄 NO-GO（Step 11），可跳過 Step 9/10。
 
-- [ ] **Step 6: 驗證服務遺失風險（本 Issue 新增，Issue 17/外部報告皆未驗證過）**
+- [ ] **Step 9: 驗證服務遺失風險**
 
-> 僅在 Step 5 結果為「GO 傾向」時執行。對同一本已套用 `effectivePublication` 的書：
+> 僅在 Step 8 結果為「GO 傾向」時執行。**審查修正（`tmp/epic-18/review-plan-issue-18.md` Issue C-1/C-2/I-1）**：因 Step 1-2 已改為隔離設計（`publication` 維持原始物件，只有 `effectivePublication` 服務不完整），本專案自己的既有功能（字元數統計、TOC 讀取、劃線/備註）皆繼續使用未受影響的 `publication`，測不到「服務遺失」這個風險本身；真正可能受影響的只有 **Readium Navigator 自己內部**依賴 `effectivePublication` 服務所產生的行為。驗證項目改為：
 
-1. **全書字元數統計**：確認「⚙️版面設定」或頁尾顯示的總頁數/進度是否仍正確計算（比對套用 Spike 前的既有數值，或至少確認非 0/非錯誤值）。
-2. **目錄（TOC）**：開啟目錄畫面，確認章節清單仍正常載入、點擊可正常跳轉。
-3. **劃線／備註**：嘗試建立一筆劃線或備註（若 FXL 路徑既有支援），確認功能正常、位置正確；若既有 FXL 路徑本來就不支援劃線（見 `CONTEXT.md`「劃線」詞條：FXL 不支援），此項記錄為「不適用」。
-4. **頁面基本渲染**：確認書本內容（文字/圖片）本身正常顯示，未因 `container` 以外的問題出現空白頁或載入錯誤。
+1. **頁面基本渲染**：確認書本內容（文字/圖片）本身正常顯示，未出現空白頁或載入錯誤——驗證 `Publication.Builder` 重建的物件本身可用，是後續測試的前提。
+2. **Slider 進度跳轉測試**：拖曳頁尾/浮動進度條至約 25%／50%／75%，確認畫面正確跳轉至對應位置（非無反應、非跳到錯誤位置）。
+3. **`onLocatorChanged` 進度回報觀察**：透過 `adb logcat` 過濾 `onLocatorChanged` 相關輸出（或本專案既有的除錯機制），確認 `progression` 欄位回傳合理的非 `null`／非異常數值（例如非恆為 0 或跳頁後未更新）——這是 Readium Navigator 內部是否因服務遺失而無法正確計算 `totalProgression` 的直接觀察點。
+4. **目錄（TOC）點擊跳轉**：開啟目錄畫面確認章節清單仍正常載入（`buildTocPayloadSafely()` 用未受影響的 `publication` 建構，預期正常），點擊任一項目確認能正確跳轉——跳轉動作本身由 Navigator（`effectivePublication`）執行，一併確認無害。
 
-- [ ] **Step 7: 附帶驗證——tap 熱區雙重處理風險（不影響 GO/NO-GO，僅記錄）**
+- [ ] **Step 10: 附帶驗證——tap 熱區雙重處理風險（不影響 GO/NO-GO，僅記錄）**
 
 點擊畫面左右兩側觀察換頁行為是否有雙重觸發或不一致現象，記錄結果。
 
-- [ ] **Step 8: 記錄 Task 2 觀察結果與 GO/NO-GO 判定**
+- [ ] **Step 11: 記錄 Task 2 觀察結果與 GO/NO-GO 判定**
 
-把 Step 5-7 的觀察結果（含截圖）填入「Spike 紀錄」的「Task 2 驗證結果」小節，明確寫下 **GO**／**NO-GO**／**部分 GO**（雙頁正常但服務遺失有明確退化）判定。
+把 Step 8-10 的觀察結果（含截圖／logcat 摘錄）填入「Spike 紀錄」的「Task 2 驗證結果」小節，明確寫下 **GO**／**NO-GO**／**部分 GO**（雙頁正常但服務遺失有明確退化，例如進度跳轉/回報異常）判定。
 
 ---
 
