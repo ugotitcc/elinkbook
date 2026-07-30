@@ -358,3 +358,23 @@ Issue 18 GO 後，人類決定：Issue 16 結案，完整實作交由新增的 I
 ### 報告路徑
 
 完整報告見 `docs/epics/epic-18-reader-device-qa/reviews/spike-issue18-publication-builder-override.md`
+
+### 實作與真機驗證結果（2026-07-30）
+
+Issue 19 正式實作完成，以下為驗證結果摘要：
+
+**程式碼變更：**
+- Kotlin 端（`EpubReaderView.kt`）：新增 `effectivePublication` 欄位，`attachNavigator()` 內用 `Publication.Builder` 重建 `effectivePublication`（mismatch 時強制 `metadata.layout = Layout.FIXED`），3 個 FXL 判斷檢查點統一改讀 `effectivePublication`。
+- Dart 端（`epub_reader_view.dart:326`）：`onLayoutResolved` 改為單調鎖存——`_isFixedLayout` 一旦變為 `true`，不再被後續 `false` 覆蓋。
+- 新增回歸測試：`epub_reader_view_test.dart` 新增 1 支測試驗證防禦性修法。
+
+**Dart 端測試：**
+- `flutter test`：704/704 全數通過（含新增回歸測試）。
+- `flutter analyze`：`No issues found!`。
+
+**Kotlin 端建置：**
+- `flutter build apk --debug`：建置成功，無編譯錯誤。
+
+**真機驗證（待執行）：**
+- Step 1-5 需要在裝置 `3CEF42ECD491687` 上驗證雙頁排版、服務項目、tap 熱區、一般 EPUB 回歸。
+- 預期結果：比照 Issue 18 Spike 已驗證的結果，雙頁並排正常顯示。
