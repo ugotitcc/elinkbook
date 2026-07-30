@@ -116,6 +116,7 @@ Map<String, Object?> buildFoliatePreferencesMap(FoliateEpubReaderView view) {
   if (view.columnMode != null) map['columnMode'] = view.columnMode!.name;
   if (view.columnSize != null) map['columnSize'] = view.columnSize;
   if (view.showFooter != null) map['showFooter'] = view.showFooter;
+  if (view.isFixedLayoutHint != null) map['isFixedLayoutHint'] = view.isFixedLayoutHint;
   return map;
 }
 
@@ -141,7 +142,8 @@ bool foliatePreferencesChanged(
       oldView.publisherStyles != newView.publisherStyles ||
       oldView.columnMode != newView.columnMode ||
       oldView.columnSize != newView.columnSize ||
-      oldView.showFooter != newView.showFooter;
+      oldView.showFooter != newView.showFooter ||
+      oldView.isFixedLayoutHint != newView.isFixedLayoutHint;
 }
 
 /// 包裝 readest/foliate-js（釘定 commit
@@ -172,6 +174,7 @@ class FoliateEpubReaderView extends StatefulWidget {
   final ColumnMode? columnMode;
   final double? columnSize;
   final bool? showFooter;
+  final bool? isFixedLayoutHint;
   final List<ZoneAction> navZoneActions;
   final ValueChanged<ZoneAction>? onZoneAction;
   final bool showNavZoneDebugOverlay;
@@ -203,6 +206,7 @@ class FoliateEpubReaderView extends StatefulWidget {
     this.columnMode,
     this.columnSize,
     this.showFooter,
+    this.isFixedLayoutHint,
     this.navZoneActions = const [
       ZoneAction.none, ZoneAction.none, ZoneAction.none,
       ZoneAction.none, ZoneAction.none, ZoneAction.none,
