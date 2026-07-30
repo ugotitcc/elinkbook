@@ -755,7 +755,7 @@ Issue 16 確認「強制 FXL」後橫向雙頁模式退化成單頁的根因；I
 
 ## Issue 20：FXL 書籍新增進度條／頁尾 FAB（比照流式 EPUB，根因已確認為 UI 層從未接線）
 
-**Status:** Discovery 已完成，實作計劃已撰寫（`plans/plan-issue-20.md`），待程式碼審查後開始 TDD 實作。
+**Status:** ⏸️ 暫停執行（2026-07-30）。Discovery 已完成、實作計劃已撰寫（`plans/plan-issue-20.md`），但尚未開始實作前，人類決定優先評估更大的技術方向——把 FXL 整個遷移到 `foliate-js`（另立 `epic-20-fxl-foliate-migration`）。若該 Epic Issue 1 Spike 結果為 GO，本 Issue 的 Readium 路徑修補工作大多會被取代、正式標記為不再執行；若 NO-GO，本 Issue 恢復依現有計畫執行。
 
 **依賴：** 無（獨立於 Issue 21，UI 接線與資料來源皆已查證清楚，可直接進 Planning）。
 
@@ -787,7 +787,7 @@ Issue 16 確認「強制 FXL」後橫向雙頁模式退化成單頁的根因；I
 
 ## Issue 21：Spike——FXL 封面獨立顯示／頁碼配對（`1,3-2,5-4`），驗證能否覆寫 `page` 屬性強制首頁獨立成頁
 
-**Status:** Discovery 已完成，Spike 計劃已撰寫（`plans/plan-issue-21.md`），待執行真機驗證。
+**Status:** ⏸️ 暫停執行（2026-07-30）。Discovery 已完成、Spike 計劃已撰寫（`plans/plan-issue-21.md`），但尚未執行前，人類決定優先評估更大的技術方向——把 FXL 整個遷移到 `foliate-js`（另立 `epic-20-fxl-foliate-migration`，該 Epic 已查證 foliate-js 原生支援 `page-spread-*`／RTL，技術路線比本 Issue 在 Readium 內硬湊更成熟）。若該 Epic Issue 1 Spike 結果為 GO，本 Issue 正式標記為不再執行；若 NO-GO，本 Issue 恢復依現有計畫執行。
 
 **依賴：** 無（獨立於 Issue 20，可平行進行）。
 
