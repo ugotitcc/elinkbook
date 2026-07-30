@@ -13,26 +13,18 @@
 所有指令皆在 `app/` 目錄下執行。
 
 ```bash
-# 安裝/更新相依套件
 flutter pub get
-
-# 執行所有 widget/unit test（純 Dart，不需裝置/模擬器）
 flutter test
-
-# 執行單一測試檔
 flutter test test/screens/reader_screen_test.dart
 
-# 靜態分析——提交前必須乾淨（"No issues found!"）
+# 提交前必須乾淨（"No issues found!"）
 flutter analyze
 
-# 列出可用的真實裝置/模擬器 id
 flutter devices
 
-# integration_test：驗證原生 PlatformView 是否真的渲染出內容，
 # 必須指定真實裝置/模擬器（見下方「兩層測試架構」，一般 flutter test 做不到這件事）
 flutter test integration_test/reader_screen_test.dart -d <device-id>
 
-# 建置 debug APK
 flutter build apk --debug
 ```
 
