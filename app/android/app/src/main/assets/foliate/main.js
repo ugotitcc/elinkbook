@@ -117,6 +117,28 @@ window.applyPreferences = function (prefs) {
   // 呼叫本函式並拿到「使用者最後一次實際設定的完整偏好」，而不是只拿到
   // 旋轉當下手邊剛好有的局部資料。
   lastAppliedPrefs = prefs
+
+  // Epic 20 Issue 2：FXL（定樣式）書籍不套用流式（reflowable） Paginator
+  // 專屬的排版參數。`foliate-fxl` 的 observedAttributes 只有
+  // ['zoom', 'scale-factor', 'spread', 'flow', 'scroll-gap']，其中只有
+  // flow 共通；setStyles() 對 foliate-fxl 完全不存在（呼叫會拋 TypeError）。
+  // FXL 書籍本質上是圖片頁，無 reflow 概念，不需要字級/行距/邊距/CSS 覆蓋。
+  if (view.isFixedLayout) {
+    // FXL 分支：只保留 flow attribute（FXL 仍可能需要）與 lastAppliedPrefs 記錄，
+    // 跳過所有 Paginator 專屬呼叫。
+    if (prefs.pageTurnMode) {
+      view.renderer.setAttribute(
+        'flow',
+        prefs.pageTurnMode === 'scroll' ? 'scrolled' : 'paginated',
+      )
+    }
+    if (prefs.writingMode) {
+      currentWritingMode = prefs.writingMode
+    }
+    return
+  }
+
+  // 以下為流式（reflowable）書籍的既有邏輯，完全不變動。
   if (prefs.pageTurnMode) {
     view.renderer.setAttribute(
       'flow',
@@ -405,14 +427,26 @@ async function openBook() {
     // relocate 事件兩者皆會觸發。location.current／location.total 為
     // foliate-js SectionProgress.getProgress() 既有輸出（見
     // progress.js），近似頁碼概念，非精確渲染頁數。
+    // Epic 20 Issue 2：FXL 書籍的 relocate 事件 e.detail 欄位形狀可能與
+    // 流式書籍不同——fixed-layout.js 有 page/pages/index 等 getter，但
+    // location.current/location.total 可能不存在。依 view.isFixedLayout 分流
+    // 組裝 onLocatorChanged payload，確保 FXL 書籍的 pageIndex/totalPages
+    // 仍有意義。
     view.addEventListener('relocate', (e) => {
       const { cfi, section, fraction, location } = e.detail
+      let pageIndex = section?.current ?? 0
+      let totalPages = location?.total ?? 0
+      // FXL 書籍：若 location.current/total 不存在，改用 renderer 的 page/pages
+      if (view.isFixedLayout && !totalPages && view.renderer) {
+        pageIndex = view.renderer.page ?? pageIndex
+        totalPages = view.renderer.pages ?? totalPages
+      }
       window.flutter_inappwebview.callHandler(
         'onLocatorChanged',
-        JSON.stringify({ cfi, index: section?.current ?? 0, fraction: fraction ?? 0 }),
+        JSON.stringify({ cfi, index: pageIndex, fraction: fraction ?? 0 }),
         fraction ?? 0,
-        location?.current ?? 0,
-        location?.total ?? 0,
+        location?.current ?? pageIndex,
+        totalPages,
       )
     })
     // 劃線/備註繪製（epic-17 Issue 8）：view.addAnnotation() 對於一般
@@ -510,6 +544,16 @@ async function openBook() {
       })
       doc.addEventListener('pointercancel', () => reportSelection())
     })
+    // Epic 20 Issue 2（ADR 0017 決策 4）：isFixedLayoutHint 覆蓋機制。
+    // 當 Dart 端傳入 isFixedLayoutHint === true 時，強制將書本的
+    // rendition.layout 覆寫為 'pre-paginated'，讓 view.js 的 isFixedLayout
+    // 偵測邏輯（book.rendition?.layout === 'pre-paginated'）觸發 FXL 路徑。
+    // 用於 epub.js 自己判斷不出 FXL 但人工強制的邊界案例。
+    // 覆寫必須在 view.open(book) 之前，因為 view.js 在 open() 內部讀取
+    // book.rendition 並據此決定是否動態 import('./fixed-layout.js')。
+    if (initialPrefs.isFixedLayoutHint === true && book.rendition?.layout !== 'pre-paginated') {
+      book.rendition = { ...book.rendition, layout: 'pre-paginated' }
+    }
     await view.open(book)
     view.renderer.setAttribute(
       'flow',
