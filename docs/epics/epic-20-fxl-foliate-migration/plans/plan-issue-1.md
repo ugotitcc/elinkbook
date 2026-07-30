@@ -19,6 +19,7 @@
 - **封面獨立顯示依賴書本自己的 `page-spread-center` metadata**（已對照原始碼查證）：`fixed-layout.js` 讀每個 section 的 `pageSpread` 屬性（`epub.js:1091-1095` 已解析 `page-spread-left`/`page-spread-right`/`page-spread-center`），`pageSpread === 'center'` 時該頁獨立成頁。若測試素材本身缺少這個 metadata（很可能——這類 metadata 不完整正是這本書當初被誤判為流式的成因），Task 3 會觀察到「雙頁正常但封面未獨立」的結果，Task 4 視情況嘗試透過 `book.transformTarget` 攔截 OPF／manifest 資料補上這個屬性（比照 `epic-17` Issue 1 用同一機制注入 CSS 覆寫的既有手法）。
 - **測試素材非版控 fixture**：沿用的漫畫 EPUB 是真機上真實匯入的使用者書籍（`epic-18` Issue 15/17/18/19 一路使用的同一本），不在 `app/test/fixtures/` 下，需要先從裝置取出（見 Task 2 Step 2）。
 - **每次觸發需間隔至少 2 秒**再擷取下一筆證據，避免觸發排隊/覆蓋模糊掉單次觸發的真實結果。
+- **觸發機制備援（審查建議，非必要，僅在座標點擊不穩定時採用）**：Task 3/4 預設用 `adb shell input tap` 模擬點擊，比照 `epic-17` Issue 1 已驗證可行的做法。若實測發現座標換算誤差或熱區覆蓋不準確，可在 `main.js` 額外暴露 `window.spikeNext = () => view.next()`／`window.spikePrev = () => view.prev()`，改用 `adb shell am start-activity` 搭配自訂 Intent（需在 `MainActivity.kt` 加一個 `BroadcastReceiver` 呼叫 `webView.evaluateJavascript()`，需要額外 Kotlin 改動）精準觸發——這是 fallback，不是預設路徑，除非真的遇到點擊不準確的問題才需要加這段 Kotlin 改動。
 - **Gradle/AGP/Kotlin 版本比照 `app/android`**，直接複製其 Gradle wrapper 檔案重用。`compileSdk`/`targetSdk` 皆設為 35，`minSdk` 24。
 - **執行環境**：全文所有 ```bash 區塊皆假設以 POSIX 相容的 Bash 工具（Git Bash / MSYS2）執行，非 PowerShell／`cmd.exe`。
 
@@ -555,30 +556,62 @@ adb -s <device-id> shell input tap <right-x> <mid-y>
 ### Task 4：（視 Task 3 結果）嘗試補救封面獨立顯示，並執行連續翻頁正式量測
 
 **Files:**
-- Modify（僅在 Task 3 觀察到封面未獨立顯示時執行）：`main.js`
+- Modify（僅在 Task 3 觀察到封面未獨立顯示時執行）：測試素材本身（新增一份修補過的副本，不動原始 `comic.epub`）
 
 **Interfaces:**
 - Consumes：Task 3 觀察結果
 - Produces：連續翻頁穩定性的正式量測證據；若封面獨立顯示需要補救，記錄補救是否成功
 
-- [ ] **Step 1（條件式）：嘗試透過 `book.transformTarget` 補上 `page-spread-center`**
+- [ ] **Step 1（條件式）：直接修補 EPUB 檔案本身，補上 `page-spread-center`**
 
-僅在 Task 3 Step 5 觀察到封面未獨立顯示時執行。比照 `epic-17` Issue 1 用 `book.transformTarget` 的 `'data'` 事件攔截資源文字的既有手法，在 `openBook()` 內、`view.open(book)` 之前插入（需先找出封面對應的 section/manifest item href，可從 `book.sections[0]` 或 `book.landmarks` 取得，實際欄位名稱以真機 log 為準）：
+僅在 Task 3 Step 5 觀察到封面未獨立顯示時執行。**審查修正**：原規劃嘗試用 `book.transformTarget` 的 `'data'` 事件攔截 OPF 內容，經對照 `epub.js` 原始碼查證**此路不通**——OPF 是透過私有方法 `#loadXML()` 直接讀取，完全不經過 `transformTarget`（`transformTarget` 只用於後續個別內容項目載入，經由 `Loader` 類別），不是時序問題，是攔截點本身就錯了。改為在組裝 Harness 素材階段直接修補 EPUB 檔案本身（解壓縮 → 修改 OPF XML 文字 → 重新封裝成合法 EPUB zip），不依賴任何執行期 JS 攔截機制。
 
-```js
-book.transformTarget?.addEventListener('data', (e) => {
-  if (e.detail.type === 'application/oebps-package+xml' || e.detail.name?.endsWith('.opf')) {
-    e.detail.data = Promise.resolve(e.detail.data).then((xml) => {
-      // 於封面 itemref 補上 properties="page-spread-center"，實際字串替換
-      // 邏輯依真機截取到的 OPF 內容調整，此處僅為示意起點。
-      log('FOLIATE_OPF_RAW', { snippet: xml.slice(0, 500) })
-      return xml
-    })
-  }
-})
+先找出 OPF 檔案位置與封面對應的 `<itemref>`：
+
+```bash
+cd "U:/MyDeveloper/AI/elinkBook"
+mkdir -p tmp/epic-20/epub_patch_work
+cd tmp/epic-20/epub_patch_work
+unzip -o "U:/MyDeveloper/AI/elinkBook/tmp/epic-20/foliate-fxl-spike-harness/app/src/main/assets/books/comic.epub" -d extracted
+OPF_PATH=$(grep -oE 'full-path="[^"]+"' extracted/META-INF/container.xml | sed 's/full-path="//;s/"$//')
+echo "OPF path: $OPF_PATH"
+cat "extracted/$OPF_PATH"
 ```
 
-先加入上述僅記錄（不修改）的版本重新建置驗證，確認能攔截到 OPF 原始內容並印出，再視實際內容決定精確的字串替換規則，重新建置驗證是否讓封面獨立顯示。
+肉眼檢視輸出的 OPF 內容，找出 `<spine>` 內第一個 `<itemref idref="...">`（通常對應封面頁），記下其 `idref` 值（下一步 `<COVER_IDREF>` 替換為此實際值）。
+
+用 Python（比 `sed` 更適合處理 XML 屬性插入，避免破壞既有格式）在該 `itemref` 加上 `properties="page-spread-center"`：
+
+```bash
+python3 -c "
+import re
+opf_path = 'extracted/$OPF_PATH'
+with open(opf_path, 'r', encoding='utf-8') as f:
+    content = f.read()
+content_new = re.sub(
+    r'(<itemref\s+idref=\"<COVER_IDREF>\"(?!\s+properties))',
+    r'\1 properties=\"page-spread-center\"',
+    content,
+    count=1,
+)
+assert content_new != content, 'OPF 未被修改，請確認 <COVER_IDREF> 是否為實際 idref 值'
+with open(opf_path, 'w', encoding='utf-8') as f:
+    f.write(content_new)
+print('OPF patched')
+"
+```
+
+重新封裝成合法 EPUB zip（`mimetype` 必須是第一個項目且不壓縮儲存，否則部分解析器會判定為無效 EPUB）：
+
+```bash
+cd extracted
+zip -X -0 "../comic_patched.epub" mimetype
+zip -rX "../comic_patched.epub" . -x mimetype
+cd ..
+cp comic_patched.epub "U:/MyDeveloper/AI/elinkBook/tmp/epic-20/foliate-fxl-spike-harness/app/src/main/assets/books/comic_patched.epub"
+```
+
+修改 `main.js` 的 `openBook()`，把書本 URL 暫時改指向 `comic_patched.epub`，重新建置安裝，重複 Task 3 Step 3-5 的觀察流程，確認封面是否改為獨立顯示。驗證完成後記錄結果——不論成功與否，皆保留 `main.js` 內修改前後兩個版本的差異記錄於 Spike 報告，供 Architecting 階段參考「修補 metadata 這條路是否可行」。
 
 - [ ] **Step 2：清空 logcat，準備正式量測**
 
