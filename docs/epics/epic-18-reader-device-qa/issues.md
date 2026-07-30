@@ -644,6 +644,79 @@ Issue 5 的 `singleColumn` 布林開關因 `paginator.js` 對直排書籍的 `ma
 
 ---
 
+## Issue 18：Spike v2——重建 `Publication` 物件覆寫 `metadata.layout`，驗證是否讓 `EpubNavigatorFragment` 渲染成 FXL
+
+**Status:** `ready-for-agent`（2026-07-30 使用者提供外部分析報告 `tmp/epic-18/issue-16-solution-analysis.md`，經對照 Readium 官方 `kotlin-toolkit` 原始碼〔本專案釘選版本 `3.3.0`〕逐一查證後定案，可撰寫 `plans/plan-issue-18.md`）。
+
+**依賴：** 無（獨立於 Issue 15／16／17，Issue 17 已確認 NO-GO 的路徑〔覆寫本專案自己的 3 個 bookkeeping 檢查點〕不再嘗試，本 Issue 是全新方向）。
+
+**背景：**
+
+Issue 17 Spike 確認：覆寫 `EpubReaderView.kt` 自己的 3 個 `isFixedLayout` 檢查點對 `EpubNavigatorFragment` 的實際渲染行為無效（NO-GO）。使用者提供的外部分析報告提出新方向：**不改我們自己的檢查點，改覆寫傳給 `EpubNavigatorFactory` 的 `Publication` 物件本身**。
+
+**根因查證（已對照 Readium `kotlin-toolkit` 3.3.0 官方原始碼逐一確認，非僅閱讀外部報告推論）：**
+
+- `EpubNavigatorFactory`（`readium-navigator` 3.3.0）建構時計算 `private val layout = publication.metadata.layout ?: Layout.REFLOWABLE`，並把**同一個** `publication` 物件參照直接傳給 `EpubNavigatorFragment`。
+- `EpubNavigatorFragment` 內部在多個方法（`onCreateView()`／`resetResourcePagerAdapter()`／`goForward()`/`goBackward()`／`firstVisibleElementLocator()`）各自重新讀取 `publication.metadata.layout` 決定渲染/分頁/導航行為——這完全解釋了 Issue 17 為何 NO-GO：我們自己的 3 個檢查點根本不是 Readium 官方元件實際讀取的東西。
+- `EpubNavigatorFragment.Configuration`（本專案唯一能設定的組態介面）**確認沒有**任何欄位可以覆寫渲染模式判讀——與 Issue 16／17 的既有結論一致。
+
+**外部分析報告的技術主張逐一查證結果：**
+
+| 主張 | 查證結果 |
+|---|---|
+| 根因：`EpubNavigatorFactory`/`EpubNavigatorFragment` 獨立讀取 `publication.metadata.layout`，本專案自己的檢查點無效 | ✅ 正確，已對照原始碼確認 |
+| 提出的修復程式碼 `openedPublication.copy(manifest = ...)` | ❌ **編譯不過**——`Publication`（3.3.0）**不是** Kotlin `data class`（一般 `class`），沒有 `.copy()` 方法：`public class Publication(public val manifest: Manifest, public val container: Container<Resource> = EmptyContainer(), private val servicesBuilder: ServicesBuilder = ServicesBuilder())`。`Manifest` 才是 `data class`（`.copy(metadata = ...)` 沒問題），問題出在外層對 `Publication` 呼叫 `.copy()`。 |
+| 「複製並覆寫」策略本身可行 | ⚠️ **需要修正做法＋有未驗證風險**——Readium 提供官方 `Publication.Builder(manifest, container, servicesBuilder)` 可重建 `Publication`，但原始 `openedPublication` 的 `servicesBuilder` 是 **private** 建構子參數，本專案程式碼**無法讀取/複用**原本 `DefaultPublicationParser`/`EpubParser` 真正配置的那份 `servicesBuilder`，重建時只能傳一個全新的預設 `ServicesBuilder()`——可能遺失 EPUB 解析器額外註冊的服務。本專案已確認依賴 `openedPublication.services.positions()`（`computeTotalCharacterCountInBackground()`，見 `EpubReaderView.kt`），這正是這類服務的實際使用案例，遺失後果**查不出來，只能真機測**。書本內容本身的渲染不受影響（`container` 不是 private，可原樣複用）。 |
+
+**額外查證（外部報告未提及）**：`EpubReaderView.kt:998` 那個 tap 熱區檢查點讀的是 `attachNavigator()` 的**區域變數** `openedPublication`（非 class 欄位 `publication`），跟 `:501`／`:1199` 讀的 class 欄位是不同參照——正確做法需要讓這 3 處都改讀同一個 `effectivePublication`（比照 Issue 16 決策「單一典範值」），不能只改 class 欄位就以為 3 處都覆蓋到。
+
+**修復方向（本 Issue 只做最小範圍 Spike 驗證，不做完整實作）：**
+
+```kotlin
+val effectivePublication = if (isForceFxl) {
+    Publication.Builder(
+        manifest = openedPublication.manifest.copy(
+            metadata = openedPublication.metadata.copy(layout = Layout.FIXED),
+        ),
+        container = openedPublication.container,
+        // 注意：無法取得原始 servicesBuilder，此處只能用預設值——這正是本 Spike
+        // 要驗證「是否造成可觀察功能退化」的地方。
+    ).build()
+} else {
+    openedPublication
+}
+```
+
+**驗證範圍：**
+
+1. **主要驗證**：套用上述（或等效）程式碼，`publication`／`openedPublication` 三處檢查點皆改讀 `effectivePublication`，真機驗證橫向雙頁模式是否真的顯示兩頁並排、翻頁行為是否正常。
+2. **服務遺失風險驗證（本 Issue 新增，外部報告未提及）**：對已套用「強制 FXL」且使用 `effectivePublication` 的書籍，確認既有依賴 Readium services 的功能是否仍正常運作，至少涵蓋：全書字元數統計（`computeTotalCharacterCountInBackground`）是否仍正確計算、目錄（TOC）是否仍正常載入、劃線/備註（Decorator）功能是否仍正常。
+3. **附帶驗證（沿用 Issue 16 已知風險，不影響 GO/NO-GO）**：`:998` tap 熱區監聽器改為讀取 `effectivePublication` 後，是否仍與 Dart 端 9 宮格 `GestureDetector` 同時作用。
+
+**明確不在本 Issue 範圍**：完整的 Dart→Kotlin `isForceFxl` 旗標傳遞管線（`openBook()` 新增專屬參數、`EpubReaderView.dart` 新增建構參數）——本 Spike 比照 Issue 17 慣例，直接在 Kotlin 端硬編碼 `isForceFxl = true` 模擬，不寫管線。
+
+**GO/NO-GO 決策路徑：**
+- **GO**（雙頁排版正常顯示，且服務遺失風險驗證未發現功能退化，或發現的退化範圍可接受）：於 `design.md` 記錄結果，新增工單承接完整實作（含 Dart→Kotlin 旗標傳遞管線）。
+- **NO-GO**（雙頁排版仍不正常，或發現服務遺失造成無法接受的功能退化如字元數統計失效）：記錄具體證據，回頭評估 Issue 16 其餘替代方案（接受限制／UI 提示）。
+- **部分 GO**（雙頁排版正常但服務遺失有明確、範圍有限的退化）：記錄退化清單，交由人類決定是否可接受、或需要額外方案補救遺失的服務（例如手動註冊等效服務到 `Publication.Builder`）。
+
+**單元測試要求：** 無（研究/驗證性質，比照 Issue 8／17 先例）。
+
+**驗收標準：**
+- 真機（`3CEF42ECD491687`）以已知誤判書籍驗證，明確記錄 GO/NO-GO 判定與依據。
+- 服務遺失風險驗證結果（字元數統計／TOC／劃線備註）明確記錄，不論結果為何。
+- 依結果更新 `design.md`／`issues.md` 對應狀態。
+
+**相關佐證：**
+- `tmp/epic-18/issue-16-solution-analysis.md`（外部分析報告，本 Issue 根因診斷部分已查證屬實）
+- `docs/epics/epic-18-reader-device-qa/reviews/spike-issue16-fxl-metadata-override.md`（Issue 17 NO-GO 報告，本 Issue 承接的前一次失敗嘗試）
+- `docs/epics/epic-18-reader-device-qa/issues.md` Issue 16／17
+- Readium `kotlin-toolkit` 3.3.0 官方原始碼（`readium/shared/.../publication/Publication.kt`／`Manifest.kt`；`readium/navigator/.../epub/EpubNavigatorFactory.kt`／`EpubNavigatorFragment.kt`）
+- `CONTEXT.md`「Readium 內部版面渲染決策」詞彙定義
+- `app/android/app/src/main/kotlin/cc/ugotit/elinkbook/EpubReaderView.kt:501,891-924,998,1199`
+
+---
+
 ## 審查修訂紀錄（`tmp/epic-18/reviews/review_report.md`，經人類確認後採納）
 
 - **採納**：`spec.md`／Issue 4 澄清 `buildOverrideCss()` 維持純函式，所有 `setAttribute` 呼叫改到 `window.applyPreferences(prefs)`（既有的副作用進入點，`pageTurnMode`/`writingMode` 已是同樣模式）。
