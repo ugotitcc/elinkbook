@@ -753,29 +753,29 @@ Issue 16 確認「強制 FXL」後橫向雙頁模式退化成單頁的根因；I
 
 ---
 
-## Issue 20：強制 FXL 書籍進度條／頁數顯示異常（`Publication.Builder` 重建服務遺失），需排查修復方案
+## Issue 20：FXL（Readium）書籍進度條／頁數顯示異常，需排查根因（PDF／流式 EPUB 皆正常，僅 FXL 路徑受影響）
 
-**Status:** needs-triage，根因方向已確認（見下方「2026-07-30 訂正」）——確定是 Issue 18/19 `Publication.Builder` 重建路徑的 `ServicesBuilder()` 服務遺失所致，非既有缺陷，尚未進行完整 Discovery。
+**Status:** needs-triage，症狀範圍已確認（見下方「2026-07-30 二次訂正」）——不論書本是原生判定為 FXL 或使用者強制覆蓋，只要走 `EpubReaderView`（Readium／FXL）路徑就沒有進度條；只有 `PdfReaderView`（PDF）與 `FoliateEpubReaderView`（流式 EPUB）進度條正常。尚未進行完整 Discovery 找出根因。
 
 **依賴：** 無（獨立排查，不阻擋 Issue 19）。
 
 **描述：**
 
-Issue 18 Spike（`Publication.Builder` 重建 `metadata.layout` 驗證）真機測試時觀察到進度條異常（進度條不可見、頁數呈現模式與預期的 1,3-2,5-4 不同）。Issue 18 重建的 `Publication` 物件因原始 `servicesBuilder` 為 private、只能用全新預設值，理論上會遺失 `positions()` 等服務，可以解釋觀察到的異常。
+Issue 18 Spike（`Publication.Builder` 重建 `metadata.layout` 驗證）真機測試時觀察到進度條異常（進度條不可見、頁數呈現模式與預期的 1,3-2,5-4 不同）。原本推測是 Issue 18 重建的 `Publication` 物件因原始 `servicesBuilder` 為 private、只能用全新預設值，遺失 `positions()` 等服務所致。
 
-**2026-07-30 訂正（Issue 19 Task 3 Step 5 真機複核，人類確認）**：Issue 19 程式碼審查（`tmp/epic-18/review-plan-issue-19.md` Minor #1）曾一度誤讀 `design.md` 記錄、以為一般（未套用「強制 FXL」）的 FXL 書籍也重現此症狀，暗示是與本次改動無關的既有缺陷——經人類真機複核，**此為誤判**：一般 FXL 書籍（不進 `Publication.Builder` 重建分支，`effectivePublication` 就是原始 `openedPublication`）進度條正常，**症狀僅出現在強制 FXL（走過 `Publication.Builder` 重建）的路徑**，與 `ServicesBuilder()` 重建遺失服務的理論一致，並非獨立於 Issue 18/19 改動之外的既有缺陷。`design.md:382` 已同步訂正。
+**2026-07-30 二次訂正（人類真機複核，取代前一版錯誤結論）**：本條目先前歷經兩次錯誤修訂——第一次誤以為「一般 FXL 書籍無此問題，只有強制 FXL 才有」。人類最終複核澄清：**兩者皆有問題**——不論是原生判定就是 FXL、還是使用者強制覆蓋，只要是 FXL（`EpubReaderView`／Readium）路徑，進度條一律不可用；只有 PDF 與流式 EPUB（`FoliateEpubReaderView`／`foliate-js`）正常。這代表進度條缺失**不是** `Publication.Builder` 重建（Issue 18/19）造成的服務遺失——自然 FXL 書籍根本不會進入重建分支（`effectivePublication` 就是原始 `openedPublication`），卻同樣缺失——而是 FXL／Readium 路徑本身既有的限制，範圍比 Issue 18/19 改動更廣，很可能與 `Publication.Builder` 重建完全無關。`design.md:382` 已同步二次訂正。
 
 **範圍：** 需要先做 Discovery（`/diagnose` 或等效流程）：
-1. 確認 `ServicesBuilder()` 重建後具體遺失了哪些服務（`positions()` 是已知一項，是否還有其他），對照真機觀察到的「進度條不可見」「頁數呈現模式與預期不同」逐項比對根因。
-2. 評估是否有辦法在不引入反射等高風險手段的前提下減緩/修復（例如：是否只需要重新實作最小可用的 `PositionsService` 而非整個 `servicesBuilder`）。
-3. 若排查後判定修復成本過高，記錄為已知限制，於 UI 上適度提示使用者（例如「強制 FXL 書籍暫不支援進度顯示」）。
+1. 查證 Readium `EpubNavigatorFragment`／`onLocatorChanged` 對 FXL 書籍本身是否原生就不提供有效的 `totalProgression`（例如 FXL 書籍的 `positionsByReadingOrder()` 計算方式與流式書籍不同、或 FXL Navigator 根本不支援），先確認這是 Readium 官方元件的既有行為，而非本專案任何一層的程式錯誤。
+2. 若確認是 Readium FXL Navigator 本身的既有限制：評估是否有替代的進度顯示方式（例如改顯示絕對頁碼而非百分比 Slider），或記錄為已知限制、於 UI 上適度提示。
+3. 若排查後發現並非 Readium 既有限制、而是本專案某處程式碼問題，需要進一步定位（例如 `EpubReaderView.kt` 的 `onLocatorChanged` 訂閱邏輯、`positions()` 呼叫時機等）。
 
 **明確不在本 Issue 範圍**：Issue 19 的橫向雙頁排版修復本身（已完成，不受本 Issue 影響）。
 
 **相關佐證：**
 - `docs/epics/epic-18-reader-device-qa/reviews/spike-issue18-publication-builder-override.md`「Service Loss 驗證」小節（症狀首次記錄）
-- `docs/epics/epic-18-reader-device-qa/design.md:378-382`（Issue 19 Task 3 真機驗證結果，含 Step 5 訂正記錄）
-- `docs/adr/0016-fxl-metadata-override-via-publication-builder.md`（`Publication.Builder` 重建、`ServicesBuilder()` 服務遺失代價的架構決策）
+- `docs/epics/epic-18-reader-device-qa/design.md:378-382`（Issue 19 Task 3 真機驗證結果，含 Step 5 二次訂正記錄）
+- `docs/adr/0016-fxl-metadata-override-via-publication-builder.md`（`Publication.Builder` 重建架構決策，含已知服務遺失代價的原始推測——現已確認非本次症狀根因）
 
 ---
 
