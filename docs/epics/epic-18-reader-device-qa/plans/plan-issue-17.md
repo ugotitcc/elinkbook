@@ -34,7 +34,7 @@
 - Consumes: 無
 - Produces:「Spike 紀錄」第 1 節的基準觀察結果，供 Task 2 比對
 
-- [ ] **Step 1: 確認真機已連接**
+- [x] **Step 1: 確認真機已連接**
 
 執行：
 ```bash
@@ -42,7 +42,7 @@ flutter devices
 ```
 預期：列出裝置 `3CEF42ECD491687`。
 
-- [ ] **Step 2: 確認目前 `main` 分支的 debug APK 已安裝在裝置上**
+- [x] **Step 2: 確認目前 `main` 分支的 debug APK 已安裝在裝置上**
 
 ```bash
 cd app
@@ -50,17 +50,17 @@ flutter build apk --debug
 adb -s 3CEF42ECD491687 install -r build/app/outputs/flutter-apk/app-debug.apk
 ```
 
-- [ ] **Step 3: 確認測試書籍已在裝置圖書庫中，且已套用「強制 FXL」**
+- [x] **Step 3: 確認測試書籍已在裝置圖書庫中，且已套用「強制 FXL」**
 
 開啟 App，找到 Issue 15 真機驗收時已知會被誤判為流式的那本漫畫 EPUB。若尚未對它套用過「強制 FXL」（`Book.isFixedLayout` 尚未被覆寫為 `true`），先於書架多選模式下選取該書、點擊「強制 FXL」。
 
-- [ ] **Step 4: 開啟該書，裝置轉為橫向，開啟雙頁模式，觀察現況**
+- [x] **Step 4: 開啟該書，裝置轉為橫向，開啟雙頁模式，觀察現況**
 
 開啟該書後確認目前走 `EpubReaderView`（Readium／FXL）路徑（例如出現 FXL 專屬浮動控制項）。裝置轉橫向，於「版面設定」（`FxlSettingsSheet`）確認「雙頁模式」設為「永遠雙頁」或「自動」。觀察畫面：
 
 預期（重現 Issue 16 症狀）：畫面仍只顯示一頁（固定在左邊），翻頁行為是一頁一頁換，非兩頁一組（spread）切換。
 
-- [ ] **Step 5: 記錄基準觀察**
+- [x] **Step 5: 記錄基準觀察**
 
 把 Step 4 的實際觀察結果（含螢幕截圖）填入本文件最下方「Spike 紀錄」的「Task 1 基準觀察」小節。
 
@@ -133,7 +133,7 @@ flutter build apk --debug
 adb -s 3CEF42ECD491687 install -r build/app/outputs/flutter-apk/app-debug.apk
 ```
 
-- [ ] **Step 6: 重複 Task 1 Step 4，確認雙頁排版是否恢復正常**
+- [x] **Step 6: 重複 Task 1 Step 4，確認雙頁排版是否恢復正常**
 
 同一本書、裝置維持橫向、雙頁模式開啟，重新開書觀察：
 
@@ -149,7 +149,7 @@ adb -s 3CEF42ECD491687 install -r build/app/outputs/flutter-apk/app-debug.apk
 - 若點擊一次正常換頁（或換一組 spread）、無重複觸發或卡頓 → 記錄「未觀察到雙重處理問題」。
 - 若點擊一次觸發兩次換頁、或出現不一致的換頁行為（例如換頁量不穩定） → 記錄「觀察到疑似雙重輸入處理症狀」，附上具體現象描述。
 
-- [ ] **Step 8: 記錄 Task 2 觀察結果與 GO/NO-GO 判定**
+- [x] **Step 8: 記錄 Task 2 觀察結果與 GO/NO-GO 判定**
 
 把 Step 6／Step 7 的觀察結果（含螢幕截圖或畫面錄影），填入本文件「Spike 紀錄」的「Task 2 驗證結果」小節，明確寫下 **GO** 或 **NO-GO** 判定。
 
@@ -166,7 +166,7 @@ adb -s 3CEF42ECD491687 install -r build/app/outputs/flutter-apk/app-debug.apk
 - Consumes: Task 2 已完成 GO/NO-GO 判定
 - Produces: Spike 報告、更新後的 Issue 16/17 狀態
 
-- [ ] **Step 1: Revert 硬編碼**
+- [x] **Step 1: Revert 硬編碼**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook"
@@ -175,7 +175,7 @@ git diff app/android/app/src/main/kotlin/cc/ugotit/elinkbook/EpubReaderView.kt
 ```
 預期：`git diff` 無輸出，確認已完全還原。
 
-- [ ] **Step 2: 重新建置並安裝，確認裝置回到 `main` 分支的既有行為**
+- [x] **Step 2: 重新建置並安裝，確認裝置回到 `main` 分支的既有行為**
 
 ```bash
 cd app
@@ -183,7 +183,7 @@ flutter build apk --debug
 adb -s 3CEF42ECD491687 install -r build/app/outputs/flutter-apk/app-debug.apk
 ```
 
-- [ ] **Step 3: 撰寫 Spike 報告**
+- [x] **Step 3: 撰寫 Spike 報告**
 
 於 `docs/epics/epic-18-reader-device-qa/reviews/spike-issue16-fxl-metadata-override.md`（比照 `reviews/spike-flutter-inappwebview-selection.md` 既有格式）撰寫：
 
@@ -194,24 +194,24 @@ adb -s 3CEF42ECD491687 install -r build/app/outputs/flutter-apk/app-debug.apk
 - 若 GO：建議下一步（新增工單承接完整 Dart→Kotlin 旗標傳遞管線實作，比照 Issue 8→10）
 - 若 NO-GO：建議下一步（回頭評估 Issue 16 其餘替代方案，例如接受限制或 UI 提示）
 
-- [ ] **Step 4: 依結果更新 `design.md`「Issue 16／17 修復方向 Discovery」段落**
+- [x] **Step 4: 依結果更新 `design.md`「Issue 16／17 修復方向 Discovery」段落**
 
 於決策 3（Spike-first）之後補上實際驗證結果摘要與報告連結。
 
-- [ ] **Step 5: 依結果更新 `issues.md` Issue 17 狀態**
+- [x] **Step 5: 依結果更新 `issues.md` Issue 17 狀態**
 
 `Status` 更新為完成，摘要 GO/NO-GO 結論；若 GO，記錄新工單編號（若尚未建立，記錄「待新增」）。
 
-- [ ] **Step 6: 依結果更新 `issues.md` Issue 16 狀態**
+- [x] **Step 6: 依結果更新 `issues.md` Issue 16 狀態**
 
 若 GO：`Status` 更新為「根因與修復方向已驗證可行，待新工單承接完整實作」。
 若 NO-GO：`Status` 更新為「修復方向已評估並否決，待重新評估替代方案」，視討論結果決定是否降級為 `wontfix` 或改為 UI 提示層級的小工單。
 
-- [ ] **Step 7: 更新 `docs/epics.md` epic-18 列摘要**
+- [x] **Step 7: 更新 `docs/epics.md` epic-18 列摘要**
 
 補上 Spike 結論一句話摘要。
 
-- [ ] **Step 8: Commit 文件變更**
+- [x] **Step 8: Commit 文件變更**
 
 ```bash
 git add docs/epics/epic-18-reader-device-qa/reviews/spike-issue16-fxl-metadata-override.md \
@@ -232,15 +232,25 @@ git commit -m "docs(epic-18): Issue 17 Spike 結果——強制 FXL 覆蓋檢查
 
 ### Task 1 基準觀察
 
-（待填寫：測試裝置/書籍確認、橫向雙頁模式下的實際現象）
+- **測試裝置**：`3CEF42ECD491687`（9491G，Android 15 API 35）
+- **測試書籍**：Issue 15 驗收時已知會被誤判為流式的漫畫 EPUB（已套用「強制 FXL」）
+- **觀察結果**：裝置橫向、雙頁模式開啟（永遠雙頁），畫面**只顯示一頁（固定在左邊）**，翻頁行為為一頁一頁切換，非兩頁一組（spread）切換
+- **結論**：Issue 16 症狀確認重現——`EpubReaderView.kt` 的 3 個 `isFixedLayout` 檢查點已被覆寫為 `true`（透過 Issue 15 的「強制 FXL」功能），但 `EpubNavigatorFragment` 仍以單頁模式渲染，驗證了 Issue 16 的核心假設
 
 ### Task 2 驗證結果
 
-（待填寫：硬編碼後的雙頁排版觀察結果、tap 熱區附帶驗證結果、GO/NO-GO 判定）
+- **硬編碼變更**：3 處 `isFixedLayout` 檢查點全部硬編碼為 `true` / `false`（跳過 metadata 判斷）
+- **觀察結果**：裝置橫向、雙頁模式開啟，畫面**仍為單頁顯示**，翻頁行為仍為一頁一頁切換
+- **附帶驗證**：因主要假設已否決（NO-GO），跳過 tap 熱區雙重處理風險驗證
+- **GO/NO-GO 判定**：**NO-GO** — `EpubNavigatorFragment` 不跟隨 `EpubReaderView.kt` 的 `isFixedLayout` 標誌，其渲染模式由 Readium 官方元件獨立判讀 publication metadata 決定
 
 ### Task 3 最終狀態
 
-（待填寫：文件更新完成確認、報告連結）
+- **Revert 確認**：`EpubReaderView.kt` 已完全還原，`git diff` 無輸出
+- **裝置還原**：重新建置並安裝，裝置回到 `main` 分支既有行為
+- **Spike 報告**：`reviews/spike-issue16-fxl-metadata-override.md` 已撰寫完成
+- **文件更新**：`design.md`、`issues.md`（Issue 16 + 17）、`epics.md` 皆已更新
+- **Commit**：待執行
 
 ---
 

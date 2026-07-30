@@ -241,3 +241,36 @@ Issue 15 程式碼審查（`tmp/epic-18/review-issue-15.md` Important #1）確�
 - `CONTEXT.md`「Readium 內部版面渲染決策」新詞條
 - `docs/adr/0011-epub-reflowable-migrate-to-foliate-js.md`（foliate-js Spike-first 既有慣例，本次比照的方法論）
 - `app/android/app/src/main/kotlin/cc/ugotit/elinkbook/EpubReaderView.kt:501,819-853,998,1199`
+
+---
+
+## Issue 17 Spike 結論：強制 FXL 覆蓋檢查點後 `EpubNavigatorFragment` 渲染行為（2026-07-30）
+
+### 背景
+
+Issue 16 確認「強制 FXL 後橫向雙頁模式退化成單頁」的根因，並拆出 Issue 17 作為 Spike 驗證核心假設：`EpubReaderView.kt` 有 3 個各自獨立讀取 `publication.metadata.layout == Layout.FIXED` 的檢查點，但真正決定 WebView 渲染模式的是 Readium 官方元件 `EpubNavigatorFragment`，其 `Configuration` 沒有任何欄位可以覆寫它自己對書本 metadata 的獨立判讀。
+
+### Spike 目的
+
+用最小範圍的硬編碼（不寫完整 Dart→Kotlin 旗標傳遞管線）覆寫本專案自己的 3 個檢查點後，觀察 `EpubNavigatorFragment` 是否真的會跟著渲染成 FXL。
+
+### 驗證結果
+
+| 驗證項目 | 結果 | 說明 |
+|----------|------|------|
+| Task 1：基準觀察（修改前） | ✅ 重現 Issue 16 症狀 | 畫面只顯示一頁（固定在左邊），翻頁行為為一頁一頁切換 |
+| Task 2：硬編碼 3 個 `isFixedLayout` 檢查點後 | ❌ 畫面仍為單頁 | `EpubNavigatorFragment` 不跟隨 `EpubReaderView.kt` 的 `isFixedLayout` 標誌 |
+| Task 2 附帶驗證：tap 熱區雙重處理風險 | ⏭️ 跳過 | 因主要假設已否決（NO-GO），tap 熱區風險已無意義 |
+
+### 結論
+
+**NO-GO** — `EpubNavigatorFragment` 不跟隨 `EpubReaderView.kt` 的 `isFixedLayout` 標誌。其渲染模式由 Readium 官方元件獨立判讀 publication metadata 決定，本專案無法透過覆寫自身檢查點來影響 `EpubNavigatorFragment` 的渲染行為。
+
+### 下一步
+
+- 回頭評估 Issue 16 的其餘替代方案（例如接受此限制、或在 UI 上提示使用者「強制 FXL 對此類書籍的雙頁排版效果有限」）
+- 若雙頁模式為必要功能，需評估是否更換閱讀引擎（但成本極高）
+
+### 報告路徑
+
+完整報告見 `docs/epics/epic-18-reader-device-qa/reviews/spike-issue16-fxl-metadata-override.md`

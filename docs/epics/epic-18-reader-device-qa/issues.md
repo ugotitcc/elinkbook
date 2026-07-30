@@ -563,7 +563,7 @@ Issue 5 的 `singleColumn` 布林開關因 `paginator.js` 對直排書籍的 `ma
 
 ## Issue 16：強制 FXL 後，橫向雙頁模式退化成單頁（Readium 原生端獨立判讀書本 metadata，不受人工覆蓋影響）
 
-**Status:** `needs-triage`（2026-07-30 於 Issue 15 程式碼審查〔`tmp/epic-18/review-issue-15.md` Important #1〕發現並確認根因；同日 `/grill-with-docs` Discovery〔見 `design.md`「Issue 16／17 修復方向 Discovery」〕確認修復方向的核心假設無法從程式碼驗證，需要真機 Spike，已拆出獨立的 **Issue 17** 承接 Spike，本條目維持問題描述與根因追蹤、不含修復方向定案）。
+**Status:** 修復方向已評估並否決（Issue 17 Spike 結論 NO-GO）。待重新評估替代方案——可能改為 `wontfix` 或降級為 UI 提示層級的小工單（例如提示使用者「強制 FXL 對此類書籍的雙頁排版效果有限」）。
 
 **依賴：** 無（獨立於 Issue 15，Issue 15 的「強制 FXL」核心交付物——引擎確實從 `FoliateEpubReaderView` 切換到 `EpubReaderView`——已確認正常運作，不受本 Issue 影響，故不阻擋 Issue 15 合併）。
 
@@ -607,7 +607,7 @@ Issue 5 的 `singleColumn` 布林開關因 `paginator.js` 對直排書籍的 `ma
 
 ## Issue 17：Spike——強制 FXL 覆蓋本專案檢查點後，`EpubNavigatorFragment` 是否真的會渲染成 FXL
 
-**Status:** `ready-for-agent`（2026-07-30 `/grill-with-docs` Discovery 已完成，決策記錄於 `design.md`「Issue 16／17 修復方向 Discovery」，可撰寫 `plans/plan-issue-17.md`）。
+**Status:** ✅ 已完成（`spike/epic-18-issue-17-fxl-metadata-override` 分支）。結論 **NO-GO**——硬編碼 3 個 `isFixedLayout` 檢查點後，`EpubNavigatorFragment` 仍以單頁模式渲染，確認其渲染模式由 Readium 官方元件獨立判讀 publication metadata 決定，本專案無法透過覆寫自身檢查點來影響。完整報告見 `reviews/spike-issue16-fxl-metadata-override.md`。
 
 **依賴：** 無（獨立於 Issue 15／16，起始工單，可立即開始）。
 
