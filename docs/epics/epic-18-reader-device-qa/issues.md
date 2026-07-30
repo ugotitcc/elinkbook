@@ -719,7 +719,7 @@ val effectivePublication = if (isForceFxl) {
 
 ## Issue 19：正式實作——「強制 FXL」書籍橫向雙頁排版修復（`Publication.Builder` 重建 `metadata.layout`）
 
-**Status:** Discovery／Architecting 已完成（2026-07-30 `/grill-with-docs`，見 `design.md`「Issue 19 Discovery」與 `docs/adr/0016-fxl-metadata-override-via-publication-builder.md`），實作計劃已撰寫（`plans/plan-issue-19.md`），待程式碼審查後開始 TDD 實作。
+**Status:** 實作完成，程式碼審查通過（`tmp/epic-18/review-plan-issue-19.md`，Important #1/#2 已修正），PR #90 已送出待合併：https://git.jigong.org/huthief/elinkBook/pulls/90（分支 `feature/epic-18-issue-19-fxl-metadata-override`）。真機驗證：橫向雙頁模式正確顯示兩頁並排，翻頁正常，tap 熱區無雙重觸發；`flutter test` 704/704 通過、`flutter analyze` 無警告、`flutter build apk --debug` 建置成功。
 
 **依賴：** Issue 15（「強制 FXL」人工覆蓋機制，本 Issue 修復其已知副作用）、Issue 18（Spike 驗證 GO，本 Issue 的技術方向依據）、ADR 0016（本 Issue 的架構決策紀錄）。
 
