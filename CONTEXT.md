@@ -57,8 +57,12 @@ _Avoid_: 固定排版、定版式
 _Avoid_: FXL 偵測、版面偵測（皆容易與 `EpubLayoutInfo` 執行期狀態混淆）
 
 **人工版面覆蓋（Manual Engine Override）**：
-使用者在 `LibraryScreen` 多選模式下，對選取的 EPUB 書籍手動覆寫「引擎分派判斷」結果的操作，二擇一：「強制 FXL」（直接寫入 `Book.isFixedLayout = true`）／「恢復自動判斷」（重新呼叫 `detectAndCacheEpubLayout()`，回到系統原始判斷結果，非固定寫入 `false`）。用途是對「引擎分派判斷」誤判（例如漫畫 EPUB 被誤判為流式）提供救濟手段，不修改判斷邏輯本身。批次選取中的非 EPUB 書籍（PDF/TXT）自動跳過。生效時機為使用者下次從書架開啟該書時。
+使用者在 `LibraryScreen` 多選模式下，對選取的 EPUB 書籍手動覆寫「引擎分派判斷」結果的操作，二擇一：「強制 FXL」（直接寫入 `Book.isFixedLayout = true`）／「恢復自動判斷」（重新呼叫 `detectAndCacheEpubLayout()`，回到系統原始判斷結果，非固定寫入 `false`）。用途是對「引擎分派判斷」誤判（例如漫畫 EPUB 被誤判為流式）提供救濟手段，不修改判斷邏輯本身。批次選取中的非 EPUB 書籍（PDF/TXT）自動跳過。生效時機為使用者下次從書架開啟該書時。**能救濟的範圍受限於「Readium 內部版面渲染決策」**（見下方詞條）——只對「metadata 不完整但 Readium 官方解析器仍判斷得出 FXL」的書籍完全生效，對「metadata 損壞到連 Readium 官方解析器都判斷不出 FXL」的書籍先天無法完全救濟（epic-18 Issue 16／17 發現）。
 _Avoid_: 強制版面、版面覆蓋（皆過於籠統，未點出「覆蓋的是引擎分派判斷，而非單書版面設定」這個關鍵區別，容易與「單書版面偏好設定」混淆）
+
+**Readium 內部版面渲染決策（Readium Internal Rendering Decision）**：
+Readium 官方元件 `EpubNavigatorFragment`（`readium-kotlin-toolkit`，非本專案程式碼）開書後，自己獨立從 `Publication.metadata.layout` 判讀這本書該用 FXL（左右並排 WebView）還是 reflowable（單欄連續捲動）模式渲染——這個判讀**完全獨立於**本專案 Dart 端的「引擎分派判斷」，且 `EpubNavigatorFragment.Configuration`（`EpubReaderView.kt:819-853`）沒有任何欄位可以覆寫它。本專案 `EpubReaderView.kt` 另有 3 個**自己的**檢查點（`applyFxlFitScale()`／原生 tap 熱區監聽器註冊／`onLayoutResolved` 回報，皆各自獨立讀取 `publication.metadata.layout == Layout.FIXED`）驅動雙頁 spread 計算、輸入手勢分派、Dart 端 chrome 顯示——這些是本專案自己的 bookkeeping，可以被「人工版面覆蓋」的強制決定覆寫；但即使覆寫了這 3 個檢查點，`EpubNavigatorFragment` 本身是否會跟著改變渲染模式仍未經驗證（見 epic-18 Issue 17 Spike）。三層概念完整脈絡：「固定版面（FXL）」（格式本身）→「引擎分派判斷」（Dart 端選哪個 widget）→「Readium 內部版面渲染決策」（Readium 官方元件開書後自己的獨立判讀，本專案無法直接控制）。
+_Avoid_: FXL 渲染判斷（容易與「引擎分派判斷」混淆）、Readium 判斷（過於籠統，未點出這是 Readium 官方元件的內部行為、非本專案程式碼）
 
 **閱讀偏好管理器（ReaderPrefsManager）**：
 整合全域預設值（SharedPreferences）與單書版面偏好設定（SQLite）的深模組。負責載入、寫入與優先級覆寫解析邏輯，對閱讀器（ReaderScreen）提供單一介面，隱藏底層多個數據倉庫。

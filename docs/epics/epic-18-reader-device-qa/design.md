@@ -198,3 +198,46 @@ grilling 過程中發現 `CONTEXT.md` 原「固定版面（Fixed-Layout, FXL）�
 - `app/lib/library/models/book.dart:41-50`（`Book.isFixedLayout` 既有註解）
 - `app/lib/screens/reader_screen.dart:282-309`（`_resolveEpubEngineDispatch()`）
 - `app/lib/library/sqlite_library_repository.dart:449-462`（`detectAndCacheEpubLayout()`）
+
+---
+
+## Issue 16／17 修復方向 Discovery（2026-07-30，`/grill-with-docs` Discovery）
+
+Issue 15 程式碼審查（`tmp/epic-18/review-issue-15.md` Important #1）確認「強制 FXL 後橫向雙頁模式退化成單頁」的根因，並拆出 Issue 16 追蹤。本次 grilling 針對修復方向的架構決策展開，過程中發現審查報告本身遺漏的額外事實、以及一個無法從程式碼確認、需要真機驗證的核心不確定性。
+
+### 查證發現（超出審查報告範圍）
+
+1. **`EpubReaderView.kt` 實際有 3 個、非審查報告所述 2 個獨立讀取 `publication.metadata.layout` 的檢查點**：
+   - `EpubReaderView.kt:501`（`applyFxlFitScale()`，雙頁 spread 位置/縮放計算，審查報告已提到）
+   - `EpubReaderView.kt:1199`（回報 `onLayoutResolved` 給 Dart 端，審查報告已提到）
+   - `EpubReaderView.kt:998`（**審查報告未發現**）——決定是否註冊原生端 tap 熱區監聽器（`epic-7-interaction` Issue 6，僅流式路徑用）。若「強制 FXL」的書被 Readium 判定非 FXL，這裡會同時註冊原生端 tap 監聽器，與 Dart 端已疊上的 FXL 專屬 9 宮格 `GestureDetector`（`epic-7-interaction` Issue 5）同時作用，可能造成雙重輸入處理衝突——這是額外風險，非本次修復的必要條件，僅列為 Spike 附帶驗證項目。
+
+2. **更根本的不確定性**：上述 3 個檢查點只是本專案自己的 bookkeeping，真正決定 WebView 渲染模式（FXL 左右並排 vs. reflowable 單欄連續捲動）的是 Readium 官方元件 `EpubNavigatorFragment`（`readium-kotlin-toolkit`，非本專案程式碼）。查證 `EpubNavigatorFragment.Configuration`（`EpubReaderView.kt:819-853`，本專案唯一能設定的組態介面：字型、選字回呼、裝飾模板）**沒有任何欄位可以覆寫 `EpubNavigatorFragment` 自己對 `publication.metadata.layout` 的獨立判讀**。也就是說：即使把本專案自己的 3 個檢查點都改成信任「強制 FXL」，`EpubNavigatorFragment` 本身是否會跟著改變渲染模式**無法從程式碼確認**，需要真機實測。
+
+見 `CONTEXT.md`「Readium 內部版面渲染決策」新詞條，區分此第三層概念與既有的「固定版面（FXL）」「引擎分派判斷」。
+
+### 決策（人類已確認）
+
+1. **修復架構**：3 個檢查點改為讀取單一 class 層級的典範值（例如 `effectiveIsFixedLayout`），一次計算、全部引用，取代各自獨立重算 `publication.metadata.layout == Layout.FIXED` 的現狀——避免像審查報告建議的「各自改 OR 條件」那樣容易漏改（審查報告自己就漏了第 3 個檢查點）。
+2. **旗標傳遞方式**：「強制 FXL」旗標新增為 `openBook()` 的專屬參數（非塞進既有 `initialPreferences` Map）——理由是這個旗標語意上是「開書前已確定、不會在閱讀中途改變的書本事實」（同 `Book.isFixedLayout` 語意層級），不是使用者可隨時調整的版面偏好（`dualPageMode`/`pageMargins` 等透過 `initialPreferences`/`setPreferences` 動態更新的既有語意），混進同一個 Map 容易誤導成「可動態改變」。
+3. **核心假設不確定，先做 Spike 驗證**（比照 ADR 0011／Issue 8 既有慣例，先驗證核心假設、GO 才進入完整實作）：
+   - **範圍**：不寫完整 Dart→Kotlin 旗標傳遞管線，直接在 `EpubReaderView.kt` 的 3 個檢查點硬編碼 `true`（或臨時 debug flag）模擬「強制 FXL 已生效」，最小範圍驗證 `EpubNavigatorFragment` 是否真的跟著渲染成 FXL。硬編碼不進 `main`，僅真機臨時 build（比照 Issue 8 throwaway harness 慣例，過程素材放 `tmp/`，已 gitignore）。
+   - **測試素材**：沿用 Issue 15 真機驗收時已知會誤判為流式的同一本漫畫 EPUB；測試裝置固定 `3CEF42ECD491687`。
+   - **附帶驗證**：同一次真機驗證順便確認上方查證發現 #1 的 tap 熱區雙重處理風險（不影響 GO/NO-GO，僅記錄入報告）。
+   - **GO**：橫向雙頁模式下，該書真的顯示兩頁並排且翻頁行為正常（非兩個單頁正常顯示、非頁碼順序錯誤）。
+   - **NO-GO**：渲染結果仍是單頁、當機、或畫面損壞。
+   - **報告路徑**：`docs/epics/epic-18-reader-device-qa/reviews/spike-issue16-fxl-metadata-override.md`。
+4. **Issue 結構**：**保留 Issue 16 現狀**（問題描述＋根因追蹤不變），**新增 Issue 17** 作為 Spike 本身（分支 `spike/epic-18-issue-17-fxl-metadata-override`）。GO 之後再視情況新增完整實作工單（含完整 Dart→Kotlin 旗標傳遞管線），NO-GO 則回頭評估 Issue 16 的其餘替代方案（例如接受此限制、或在 UI 上提示使用者「強制 FXL 對此類書籍的雙頁排版效果有限」）。
+
+### 範圍界定
+
+- Spike（Issue 17）不修改 `readium-kotlin-toolkit` 本身（第三方官方 library，非本專案程式碼），比照本 Epic 對 `readest/foliate-js` 的既有態度（不修改 vendored/第三方程式碼本身）。
+- Spike 不需要建立 ADR（尚未進入架構決策階段，是驗證假設）；若 GO 後的完整實作階段决定旗標傳遞的具體設計有「難以回頭＋意外＋真權衡」性質，屆時再評估是否需要 ADR。
+
+### 相關佐證
+
+- `tmp/epic-18/review-issue-15.md` Important #1（Issue 16 根因原始來源）
+- `docs/epics/epic-18-reader-device-qa/issues.md` Issue 16／Issue 17
+- `CONTEXT.md`「Readium 內部版面渲染決策」新詞條
+- `docs/adr/0011-epub-reflowable-migrate-to-foliate-js.md`（foliate-js Spike-first 既有慣例，本次比照的方法論）
+- `app/android/app/src/main/kotlin/cc/ugotit/elinkbook/EpubReaderView.kt:501,819-853,998,1199`
