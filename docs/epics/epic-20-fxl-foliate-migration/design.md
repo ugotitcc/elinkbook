@@ -92,6 +92,21 @@ Spike GO 之後，逐項確認正式遷移架構，形成 `docs/adr/0017-fxl-mig
 
 完整決策理由、替代方案、後果見 ADR 0017；核心介面異動見 `spec.md`。
 
+## Issue 2 實作完成紀錄（2026-07-31）
+
+Issue 2 程式碼實作已完成，4 個 commits 依序交付：
+
+| Commit | 內容 |
+|---|---|
+| `9b71c89` | Task 1：vendored `fixed-layout.js` + `construct-style-sheets-polyfill.js` 至 `assets/foliate/` |
+| `df6bd60` | Task 2：`main.js` — `applyPreferences()` FXL 早回分支、`relocate` fallback、`openBook()` `isFixedLayoutHint` 覆寫 |
+| `23ed574` | Task 3：`foliate_epub_reader_view.dart` — `isFixedLayoutHint` 建構參數與偏好映射 |
+| `101ac7e` | Task 4：`reader_screen.dart` EPUB 一律建構 `FoliateEpubReaderView`；全部測試更新 |
+
+**測試結果：** `flutter test` 106/106 通過，`flutter analyze` 乾淨（0 issues）。
+
+**已知限制：** 真機驗證因裝置鎖定暫時無法執行。`EpubReaderView` 檔案保留（待 Issue 5 清理），`reader_screen.dart` 中 `_handleLayoutResolved` / `_handleCharacterCountReady` 為死碼（標註 `// ignore: unused_element`），等 Issue 5 重新整合時復用。
+
 ## 相關佐證
 
 - `docs/adr/0011-epub-reflowable-migrate-to-foliate-js.md`（Phase 1，本次評估的 Phase 2 起點）

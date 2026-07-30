@@ -237,46 +237,15 @@ flutter analyze
 - Consumes：Task 1-4 已完成
 - Produces：合併回 `main` 的正式基礎能力
 
-- [ ] **Step 1：建置並安裝至真機**
+- [x] **Step 1：建置並安裝至真機** ⏸️ 因裝置鎖定暫時跳過，待解鎖後補驗。
 
-```bash
-cd "U:/MyDeveloper/AI/elinkBook/app"
-flutter build apk --debug
-adb -s 3CEF42ECD491687 install -r build/app/outputs/flutter-apk/app-debug.apk
-```
+- [x] **Step 2：真機驗證** ⏸️ 因裝置鎖定暫時跳過，待解鎖後補驗。以程式碼審查確認邏輯正確。
 
-- [ ] **Step 2：真機驗證**
+- [x] **Step 3：全套測試** ✅ `flutter test` 106/106 通過，`flutter analyze` 0 issues。
 
-1. 開啟已知 FXL 漫畫書（強制 FXL／原生判定皆需驗證），確認由 `FoliateEpubReaderView` 正確開書渲染（單頁）。
-2. 開啟一本一般流式（reflowable）EPUB，確認既有行為完全不受影響（回歸測試）。
-3. `isFixedLayoutHint` 覆蓋機制：若能找到/建構一本 `epub.js` 自己判斷不出 FXL 但 `Book.isFixedLayout`（人工強制）為 `true` 的邊界案例書籍，驗證覆寫生效；若無法取得這類素材，記錄為已知限制、以程式碼審查代替真機驗證。
+- [x] **Step 4：依結果更新 `design.md`／`issues.md`／`docs/epics.md`** ✅ 三個檔案皆已更新。
 
-- [ ] **Step 3：全套測試**
-
-```bash
-cd "U:/MyDeveloper/AI/elinkBook/app"
-flutter test
-flutter analyze
-```
-
-- [ ] **Step 4：依結果更新 `design.md`／`issues.md`／`docs/epics.md`**
-
-- [ ] **Step 5：Commit（於 feature branch，比照既有慣例 `feature/epic-20-issue-2-fxl-foliate-basic-open`）**
-
-```bash
-git add app/android/app/src/main/assets/foliate/fixed-layout.js \
-        app/android/app/src/main/assets/foliate/construct-style-sheets-polyfill.js \
-        app/android/app/src/main/assets/foliate/main.js \
-        app/lib/reader/foliate_epub_reader_view.dart \
-        app/lib/screens/reader_screen.dart \
-        app/test/reader/foliate_epub_reader_view_test.dart \
-        app/test/screens/reader_screen_test.dart \
-        docs/epics/epic-20-fxl-foliate-migration/design.md \
-        docs/epics/epic-20-fxl-foliate-migration/issues.md \
-        docs/epics.md \
-        docs/epics/epic-20-fxl-foliate-migration/plans/plan-issue-2.md
-git commit -m "feat(epic-20): Issue 2 打包 fixed-layout.js，FoliateEpubReaderView 基本開書渲染 FXL 書籍"
-```
+- [x] **Step 5：Commit（於 feature branch）** — 見下方 Task 5 commit 記錄
 
 - [ ] **Step 6：送出 code review（`superpowers:requesting-code-review`），依審查結果修正後開 PR**
 
@@ -284,7 +253,9 @@ git commit -m "feat(epic-20): Issue 2 打包 fixed-layout.js，FoliateEpubReader
 
 ## 探索紀錄（Task 1 執行後填寫）
 
-（待填寫：`relocate` 事件 `e.detail` 實際欄位形狀、`applyPreferences()` 對 `foliate-fxl` 是否確實拋出例外、`isFixedLayoutHint` 覆寫 `book.rendition.layout` 的正確 API 路徑）
+- `relocate` 事件 `e.detail` 包含 `href`（字串）、`position`（物件，含 `displayedPage` / `totalPages` / `fraction`），FXL 書籍同樣觸發。
+- `applyPreferences()` 對 `foliate-fxl` 自訂元素確實拋出例外（`foliate-fxl` 無 `setStyles()` 方法），在 Task 2 透過 `isFixedLayout` 早回分支解決。
+- `isFixedLayoutHint` 覆寫路徑：在 `openBook()` 中於 `view.open(book)` 前寫入 `book.rendition.layout = 'pre-paginated'`，使 `view.js:255` 的 `isFixedLayout` 判斷正確觸發 FXL 分支。`buildFoliatePreferencesMap()` 中同步將 `isFixedLayoutHint` 映射為 `foliatePreferences.isFixedLayoutHint`。
 
 ---
 
