@@ -2,7 +2,7 @@
 
 ## 狀態
 
-已採納
+已取代（superseded by [ADR 0017](./0017-fxl-migrate-to-foliate-js.md)）——`epic-20-fxl-foliate-migration` Issue 1 Spike 確認 FXL 可完全遷移到 `foliate-js`，`EpubReaderView.kt` 整份移除，本 ADR 記錄的 `Publication.Builder` 修補決策隨之失效。保留本文作為歷史紀錄。
 
 ## 背景
 

@@ -77,6 +77,21 @@
 
 **下一步**：進入 Architecting 階段（見上方「GO 之後的下一步」段落）；`epic-18` Issue 20/21 正式標記為由本 Epic 取代、不再執行。
 
+## Architecting 決策紀錄（2026-07-31，`/grill-with-docs`）
+
+Spike GO 之後，逐項確認正式遷移架構，形成 `docs/adr/0017-fxl-migrate-to-foliate-js.md` 與 `spec.md`。查證發現：`BookMetadataChannel.kt` 除 `EpubReaderView.kt` 外也依賴 Readium（`extractEpubMetadata()`／`detectEpubLayout()`，匯入時抽取 metadata/封面），兩者是否一併退場是獨立決策；`MainActivity.kt` 的 `FlutterFragmentActivity`／Fragment 還原邏輯唯一服務對象查證確認就是 `EpubNavigatorFragment`。
+
+| # | 決策點 | 採用結果 |
+|---|---|---|
+| 1 | FXL 渲染引擎遷移範圍 | 完全退場 Readium 渲染路徑（`EpubReaderView.kt` 整份移除），`FoliateEpubReaderView` 統一處理所有 EPUB，不分 FXL/流式 |
+| 2 | `BookMetadataChannel.kt` 的 Readium 依賴 | 維持不動，繼續用 Readium 做 metadata/封面抽取——不涉及本次遷移動機（Fragment/渲染黑盒問題），`readium-shared`／`readium-streamer` 保留，只移除 `readium-navigator` |
+| 3 | `epic-18` Issue 15「強制 FXL」功能定位 | 原始問題（引擎選錯）結構上已不存在，重新定位為「UI 行為覆蓋」（非引擎選擇），保留按鈕與資料層，新增開書時的執行期覆蓋機制（`main.js` 偵測不一致才覆寫） |
+| 4 | 既有 FXL 書籍使用者資料（書籤/劃線/備註/進度） | 比照 ADR 0011 先例，視為失效不遷移 |
+| 5 | 劃線/備註對 FXL 雙頁模式的支援 | 本 Epic 排除在外（跨頁 overlay 定位正確性未驗證），另立後續 Epic；書籤不受影響（沿用既有 CFI locator 持久化，無視覺 overlay，風險低） |
+| 6 | `MainActivity` Fragment 基礎設施 | 隨 `EpubReaderView.kt` 移除一併清理，改回 `FlutterActivity`（已查證確認唯一服務對象是 `EpubNavigatorFragment`） |
+
+完整決策理由、替代方案、後果見 ADR 0017；核心介面異動見 `spec.md`。
+
 ## 相關佐證
 
 - `docs/adr/0011-epub-reflowable-migrate-to-foliate-js.md`（Phase 1，本次評估的 Phase 2 起點）
