@@ -322,6 +322,39 @@ Publication.Builder(manifest: Manifest, container: Container<Resource>, services
 3. 依使用者需求新增「封面獨立顯示」功能
 4. 更新 Issue 16 狀態，進入正式實作
 
+---
+
+## Issue 19 Discovery（2026-07-30，`/grill-with-docs`）
+
+Issue 18 GO 後，人類決定：Issue 16 結案，完整實作交由新增的 Issue 19 承接；Service Loss（進度條/頁數呈現異常）另開 Issue 20 獨立排查，不阻擋 Issue 19。本次 grilling 針對 Issue 19 文件遺留的「待確認技術問題」（是否仍需要顯式 Dart→Kotlin `isForceFxl` 旗標）與是否需要 ADR 展開。
+
+### 查證發現
+
+檢視 `reader_screen.dart:291-309`（`_resolveEpubEngineDispatch()`）確認：`EpubReaderView`（FXL 路徑 widget）只會在 `_dispatchedIsFixedLayout == true` 時被建構，這個條件涵蓋三種情況——(a) 使用者按「強制 FXL」、(b) `detectAndCacheEpubLayout()` 自動判斷為 FXL、(c) 未提供 `libraryRepository` 時的既有退回預設值（一律視為 FXL）。Dart 端目前不會、也不需要區分這三種情況；三者最終都應該得到同一個結果——Kotlin 端渲染成 FXL。
+
+進一步檢視 `EpubReaderView.kt` 的 `openBook()`／`attachNavigator()`（`:856-924`）確認：`attachNavigator()` 只會在上述三種情況之一成立時才會被呼叫。也就是說，一旦程式跑到這個函式，「這本書該渲染成 FXL」在 Dart 端已經是定案——`openedPublication.metadata.layout != Layout.FIXED` 這個 Kotlin 端運行時判斷式，已完整表達「Readium 官方解析器不同意上游決定」，資訊量等同一個恆為 `true` 的顯式旗標。
+
+檢視 `epub_reader_view.dart:326`（Issue 16「額外發現」提到的未受保護 `_isFixedLayout`）進一步確認：`reportLayoutResolved()`（`EpubReaderView.kt:1199`）修復後若統一改讀 `effectivePublication`，其回報給 Dart 端的 `isFixedLayout` 理論上將恆為 `true`（因為判斷不對時已在 Kotlin 端強制覆寫）——這個既有 bug 在正常路徑下的觸發條件會隨本次修復一併消失，但仍建議保留防禦性保護，因應 `Publication.Builder` 重建失敗等邊界情況。
+
+### 決策（人類已確認）
+
+1. **不做 Dart→Kotlin `isForceFxl` 旗標傳遞管線**：改用 Kotlin 端 `attachNavigator()` 內對 `openedPublication.metadata.layout != Layout.FIXED` 的運行時判斷，效果與顯式旗標完全等同，省去一條沒有額外資訊量的傳遞管線與對稱的 Dart/Kotlin 契約維護成本。**人類特別確認**：此決策不影響、不削弱使用者透過 Issue 15「強制 FXL」按鈕做出的手動決定——那個決定完整保留在 Dart 端引擎分派這一層（`Book.isFixedLayout`），不受本次 Kotlin 端內部實作方式影響。
+2. **`epub_reader_view.dart:326` 降級為防禦性修法**：不再是本次修復的核心手段（核心手段是 Kotlin 端統一改讀 `effectivePublication`，理論上會讓 native 端不再回報不一致的 `false`），但仍保留這個防護，作為邊界情況（例如 `Publication.Builder` 重建拋例外、退回原始物件）的防禦層。
+3. **新增 ADR 0016**：本次技術方向（重建 `Publication` 物件、繞過 Readium 官方 metadata 判讀、接受服務遺失風險換取雙頁渲染）符合 ADR 三要件——難以憑直覺理解（為何不用官方 `Configuration` 介面）、真實的權衡（`servicesBuilder` 為 private、重建必然遺失部分服務，是刻意接受的代價）、有 Issue 17 NO-GO 這個已排除的替代方案值得記錄——比照本 Epic 既有 ADR 0011／0013 慣例另立正式 ADR。
+
+### 範圍界定
+
+- 本次 Discovery 只收斂「旗標傳遞機制」與「是否需要 ADR」這兩個決策點；`Publication.Builder` 重建的具體程式碼結構、隔離架構（`publication` vs `effectivePublication`）已於 Issue 18 Spike 驗證，直接沿用，不重新開放討論。
+- Service Loss（進度條/頁數呈現異常）本身的修復不在本次 Discovery 範圍，已另立 Issue 20。
+
+### 相關佐證
+
+- `docs/adr/0016-fxl-metadata-override-via-publication-builder.md`
+- `docs/epics/epic-18-reader-device-qa/issues.md` Issue 15／16／17／18／19／20
+- `app/lib/screens/reader_screen.dart:291-309`
+- `app/android/app/src/main/kotlin/cc/ugotit/elinkbook/EpubReaderView.kt:164,501,856-924,998,1199`
+- `app/lib/reader/epub_reader_view.dart:326`
+
 ### 報告路徑
 
 完整報告見 `docs/epics/epic-18-reader-device-qa/reviews/spike-issue18-publication-builder-override.md`

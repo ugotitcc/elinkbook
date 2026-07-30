@@ -719,23 +719,19 @@ val effectivePublication = if (isForceFxl) {
 
 ## Issue 19：正式實作——「強制 FXL」書籍橫向雙頁排版修復（`Publication.Builder` 重建 `metadata.layout`）
 
-**Status:** 待撰寫實作計劃（`plans/plan-issue-19.md`）。Spike 已確認方向可行（Issue 18 GO），本 Issue 承接其「建議下一步」。
+**Status:** Discovery 已完成（2026-07-30 `/grill-with-docs`，見 `design.md`「Issue 19 Discovery」與 `docs/adr/0016-fxl-metadata-override-via-publication-builder.md`），待撰寫實作計劃（`plans/plan-issue-19.md`）。
 
-**依賴：** Issue 15（「強制 FXL」人工覆蓋機制，本 Issue 修復其已知副作用）、Issue 18（Spike 驗證 GO，本 Issue 的技術方向依據）。
+**依賴：** Issue 15（「強制 FXL」人工覆蓋機制，本 Issue 修復其已知副作用）、Issue 18（Spike 驗證 GO，本 Issue 的技術方向依據）、ADR 0016（本 Issue 的架構決策紀錄）。
 
 **背景：**
 
 Issue 16 確認「強制 FXL」後橫向雙頁模式退化成單頁的根因；Issue 17（覆寫本專案自身 3 個檢查點）驗證 NO-GO；Issue 18（改用 `Publication.Builder` 重建整個 `Publication` 物件、強制 `metadata.layout = Layout.FIXED`）驗證 **GO**——`EpubNavigatorFragment` 會正確渲染成雙頁並排，翻頁與熱區翻頁皆正常。本 Issue 將 Issue 18 的硬編碼 Spike 收斂為正式、可維護的實作。
 
-**範圍：**
+**範圍（2026-07-30 grilling 定案，見 ADR 0016）：**
 
-1. **Dart→Kotlin 旗標傳遞**：讓 Kotlin 端知道「這是一本被強制 FXL 的書」。
-2. **Kotlin 端**：於 `attachNavigator()` 用 `Publication.Builder` 重建 `effectivePublication`（比照 Issue 18 Spike 已驗證的程式碼結構），`applyFxlFitScale()`（`:501`）／tap 熱區監聽器註冊（`:998`）／`reportLayoutResolved()`（`:1199`）三處 FXL 判斷檢查點統一改讀同一個典範值。
-3. **修正 `epub_reader_view.dart:326`**：`_isFixedLayout` 目前對 native 異步回報值無條件套用（`setState(() => _isFixedLayout = info.isFixedLayout)`），需要比照 Issue 15 `commit 97878c4` 對 `ReaderScreen._isFixedLayout` 的既有保護模式，避免被 native 回報的 `false` 覆蓋掉「強制 FXL」的使用者決定。
-
-**待確認技術問題（留給 `plans/plan-issue-19.md` 撰寫時決定，不在本 Discovery 階段自行拍板）：**
-
-是否仍需要顯式的 Dart→Kotlin `isForceFxl` 旗標？`EpubReaderView`（FXL 路徑）這個 widget 本來就只在 `Book.isFixedLayout == true` 時才會被建構（見 `CONTEXT.md`「引擎分派判斷」），所以理論上只要 Kotlin 端在執行期發現 `openedPublication.metadata.layout != Layout.FIXED`，就等同於「這是一本被強制 FXL、但 Readium 官方解析器不同意的書」——不需要額外從 Dart 傳一個旗標，可以純 Kotlin 內部判斷，省掉整條旗標傳遞管線。撰寫實作計劃前應先驗證這個推論是否有反例（例如是否存在其他會讓 `metadata.layout` 暫時不等於 `FIXED` 但不該觸發重建的情境）。
+1. **不做 Dart→Kotlin 旗標傳遞管線**——`EpubReaderView`（FXL 路徑）這個 widget 本來就只在 `Book.isFixedLayout == true` 時才會被建構（見 `CONTEXT.md`「引擎分派判斷」，涵蓋使用者強制／自動判斷／既有退回預設值三種情況），所以 Kotlin 端 `attachNavigator()` 只要在執行期發現 `openedPublication.metadata.layout != Layout.FIXED`，就已完整等同於「上游已決定這本書要走 FXL，但 Readium 官方解析器不同意」，不需要從 Dart 額外傳一個旗標。這**不影響**使用者透過「強制 FXL」按鈕做出的手動決定——那個決定完整保留在上游 `Book.isFixedLayout`／Dart 端 widget 分派這一層，本次只是補齊「決定之後，Readium 內部渲染也真的照做」這最後一哩路。
+2. **Kotlin 端**：於 `attachNavigator()` 檢查 `openedPublication.metadata.layout != Layout.FIXED`，若成立則用 `Publication.Builder` 重建 `effectivePublication`（比照 Issue 18 Spike 已驗證的程式碼結構與隔離設計——class 欄位 `publication` 維持指向原始物件，`effectivePublication` 只供 FXL 判斷檢查點使用），`applyFxlFitScale()`（`:501`）／tap 熱區監聽器註冊（`:998`）／`reportLayoutResolved()`（`:1199`）三處 FXL 判斷檢查點統一改讀 `effectivePublication`。
+3. **`epub_reader_view.dart:326` 防禦性修法**：修復後 `reportLayoutResolved()` 回報給 Dart 端的 `isFixedLayout` 理論上恆為 `true`（因為判斷結果不對時已在 Kotlin 端強制覆寫），此處的既有 bug（`setState(() => _isFixedLayout = info.isFixedLayout)` 無條件套用 native 回報值）在正常路徑下不會再被觸發，但仍需比照 Issue 15 `commit 97878c4` 對 `ReaderScreen._isFixedLayout` 的既有保護模式補上防護，作為 `Publication.Builder` 重建失敗等邊界情況的防禦層。
 
 **Service Loss 因應（人類已決定範圍）：** 本 Issue **不**處理進度條/頁數呈現異常本身，該現象另開 **Issue 20** 獨立排查（不確定是否為本 Issue 改動所導致，或本來就是既有缺陷）。本 Issue 僅需確保：套用 `Publication.Builder` 重建後，不引入*超出 Issue 20 已知範圍*的新退化——沿用 Issue 18 Spike 已驗證的驗證項目（頁面渲染／Slider 進度跳轉／`onLocatorChanged` progression 觀察／TOC 跳轉）重新於正式實作後真機複驗。
 
@@ -748,8 +744,9 @@ Issue 16 確認「強制 FXL」後橫向雙頁模式退化成單頁的根因；I
 - `flutter analyze` 無新增警告，既有測試全數通過。
 
 **相關佐證：**
+- `docs/adr/0016-fxl-metadata-override-via-publication-builder.md`（本 Issue 的架構決策 ADR）
 - `docs/epics/epic-18-reader-device-qa/reviews/spike-issue18-publication-builder-override.md`（Issue 18 Spike 報告，本 Issue 承接其「建議下一步」）
-- `docs/epics/epic-18-reader-device-qa/design.md`「Issue 16／17 修復方向 Discovery」「Issue 18 Spike 結論」
+- `docs/epics/epic-18-reader-device-qa/design.md`「Issue 16／17 修復方向 Discovery」「Issue 18 Spike 結論」「Issue 19 Discovery」
 - `docs/epics/epic-18-reader-device-qa/issues.md` Issue 15（`commit 97878c4` 既有保護模式參考）／16／17／18
 - `app/android/app/src/main/kotlin/cc/ugotit/elinkbook/EpubReaderView.kt:164,501,911-924,998,1199`
 - `app/lib/reader/epub_reader_view.dart:326`
