@@ -755,7 +755,7 @@ Issue 16 確認「強制 FXL」後橫向雙頁模式退化成單頁的根因；I
 
 ## Issue 20：FXL 書籍新增進度條／頁尾 FAB（比照流式 EPUB，根因已確認為 UI 層從未接線）
 
-**Status:** Discovery 已完成（2026-07-30 `/grill-with-docs`），根因已確認，待撰寫實作計劃。
+**Status:** Discovery 已完成，實作計劃已撰寫（`plans/plan-issue-20.md`），待程式碼審查後開始 TDD 實作。
 
 **依賴：** 無（獨立於 Issue 21，UI 接線與資料來源皆已查證清楚，可直接進 Planning）。
 
@@ -787,7 +787,7 @@ Issue 16 確認「強制 FXL」後橫向雙頁模式退化成單頁的根因；I
 
 ## Issue 21：Spike——FXL 封面獨立顯示／頁碼配對（`1,3-2,5-4`），驗證能否覆寫 `page` 屬性強制首頁獨立成頁
 
-**Status:** Discovery 已完成（2026-07-30 `/grill-with-docs`），待撰寫 Spike 計劃。
+**Status:** Discovery 已完成，Spike 計劃已撰寫（`plans/plan-issue-21.md`），待執行真機驗證。
 
 **依賴：** 無（獨立於 Issue 20，可平行進行）。
 
