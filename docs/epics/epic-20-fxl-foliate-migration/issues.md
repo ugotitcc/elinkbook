@@ -2,7 +2,7 @@
 
 ## Issue 1：Spike——`readest/foliate-js` 的 `fixed-layout.js` 能否正確處理 FXL 漫畫橫向雙頁/RTL/封面獨立顯示
 
-**Status:** Discovery 已完成，Spike 計劃已撰寫（`plans/plan-issue-1.md`），待執行真機驗證。
+**Status:** ✅ 已完成，**結論 GO**（2026-07-31，真機以真實問題書籍《一弦定音！(11)》驗證，4 項核心判準全數通過，完整證據見 `reviews/spike-issue1-fxl-foliate.md`）。過程中曾有兩輪驗證嘗試因證據與結論矛盾／測試素材誤用而被獨立覆核判定不成立（見報告內「本報告狀態說明」），第三輪由執行者本人直接操作真機、使用真實問題書籍取得最終結論。`epic-18` Issue 20/21 已由本 Issue 取代，不再執行。
 
 **依賴：** 無（起始工單）。
 

@@ -69,6 +69,14 @@
 
 比照 ADR 0011 的分階段遷移模式：Architecting 階段需正式化 FXL 是否完全退出 Readium、既有 FXL 使用者資料（書籤/劃線/備註）是否比照 ADR 0011「視為失效不遷移」的先例、劃線/備註對接 `overlayer.js`（已於 reflowable 路徑驗證過，`epic-17` Issue 7/8）、3×3 導航熱區沿用既有 Dart 端 `GestureDetector` 模式（已與 reflowable 路徑一致）。
 
+### Spike 結果（2026-07-31）：GO ✅
+
+真機以真實問題書籍（《一弦定音！(11)》，`tmp/一弦定音.epub`，202 頁 RTL 漫畫）驗證，4 項核心判準與效能/記憶體觀察項目全數通過：橫向雙頁排版（並排接縫可見）、封面獨立顯示（單頁全寬）、RTL 頁序（目錄置右、後續章節頁置左）、連續翻頁穩定性（4 次 next + 3 次 prev，來回路徑截圖逐位元組對稱）。完整證據見 `reviews/spike-issue1-fxl-foliate.md`。
+
+**過程記錄（供未來查閱）**：本次驗證前歷經兩輪失敗的驗證嘗試——第一輪（2026-07-30）截圖與 logcat 證據與聲稱的 GO 結論矛盾（獨立覆核判定 GO 不成立，見 `tmp/epic-20/spike-issue1-execution-review.md`）；第二輪重跑（2026-07-31 早先）誤用單頁合成測試書取代真實問題書，結構上無法驗證任何判準，且報告內截圖比對表格引用了磁碟上不存在的檔案數據（獨立覆核判定同樣不成立，見 `tmp/epic-20/spike-issue1-rerun-review.md`）。第三輪由執行者本人直接操作真機、使用真實問題書籍、每次觸發後立即核對證據，取得上述 GO 結論。
+
+**下一步**：進入 Architecting 階段（見上方「GO 之後的下一步」段落）；`epic-18` Issue 20/21 正式標記為由本 Epic 取代、不再執行。
+
 ## 相關佐證
 
 - `docs/adr/0011-epub-reflowable-migrate-to-foliate-js.md`（Phase 1，本次評估的 Phase 2 起點）
