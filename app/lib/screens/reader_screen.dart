@@ -847,12 +847,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 對應段落，改呼叫 `FoliateEpubReaderView.loadTableOfContents()`
   /// 而非 `EpubReaderView` 的版本）——不需要像 Readium 分支那樣額外檢查
   /// `!info.isFixedLayout`，因為本方法只會被 `FoliateEpubReaderView`
-  /// （恆為流式）呼叫。**仍然刻意不**觸發
-  /// `_reloadAnnotationsAndRefreshDecorations`／`_loadFxlBookmarks`——這兩
-  /// 個呼叫對尚未掛載的 `EpubReaderView`/`_epubReaderViewKey` 雖然會靜默
-  /// no-op、技術上無害，但會讓 `_annotationsLoaded` 被誤判為「已完成」，
-  /// 使「筆記」按鈕看似可用卻永遠開出空清單/無法互動。劃線備註仍是
-  /// Issue 8 的範圍。
+  /// （恆為流式）呼叫。**刻意**觸發 `_reloadAnnotationsAndRefreshDecorations`
+  /// 以載入劃線備註——`_sendDecorationsToNative` 對尚未掛載的
+  /// `EpubReaderView`/`_epubReaderViewKey` 會靜默 no-op（技術上無害），
+  /// 但 FoliateEpubReaderView 的 decorations 管線會正確處理。
+  /// `_loadFxlBookmarks` 已整合進 `_reloadAnnotationsAndRefreshDecorations`。
   void _handleFoliateLayoutResolved(EpubLayoutInfo info) {
     if (!mounted) return;
     setState(() {
@@ -1811,7 +1810,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           targetPage: targetPage,
           totalPages: totalPages,
         );
-        EpubReaderView.jumpToProgression(_epubReaderViewKey, progression);
+        FoliateEpubReaderView.jumpToProgression(_foliateEpubReaderViewKey, progression);
       },
     );
   }
