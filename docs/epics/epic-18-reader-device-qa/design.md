@@ -274,3 +274,54 @@ Issue 16 確認「強制 FXL 後橫向雙頁模式退化成單頁」的根因，
 ### 報告路徑
 
 完整報告見 `docs/epics/epic-18-reader-device-qa/reviews/spike-issue16-fxl-metadata-override.md`
+
+---
+
+## Issue 18 Spike 結論：`Publication.Builder` 重建 `metadata.layout` 後 `EpubNavigatorFragment` 渲染行為（2026-07-30）
+
+### 背景
+
+Issue 17 Spike 確認「硬編碼 3 個 `isFixedLayout` 檢查點」無法影響 `EpubNavigatorFragment` 的渲染模式（NO-GO）。Issue 18 改用替代方案：用 `Publication.Builder` 重建整個 `Publication` 物件，將 `metadata.layout` 強制設為 `Layout.FIXED`，讓 Readium 官方元件收到的 metadata 本身就標記為 FXL。
+
+### Spike 目的
+
+驗證：若重建後的 `Publication` 物件被傳入 `EpubNavigatorFactory`，`EpubNavigatorFragment` 會根據這個被修改過的 metadata 判斷為 FXL，進而渲染成雙頁並排。
+
+### 驗證結果
+
+| 驗證項目 | 結果 | 說明 |
+|----------|------|------|
+| Task 1：基準觀察（修改前） | ✅ 重現 Issue 16 症狀 | 畫面只顯示一頁（固定在左邊），翻頁行為為一頁一頁切換 |
+| Task 2：`Publication.Builder` 重建 `metadata.layout = Layout.FIXED` 後 | ✅ 雙頁 FXL 並排 | 畫面呈現雙頁並排效果，翻頁正常，熱區翻頁正常 |
+| Task 2 Service Loss 驗證 | ⚠️ 部分異常 | 進度條不可見、頁數呈現模式與預期不同，疑似因 `ServicesBuilder()` 空物件導致 |
+
+### 結論
+
+**GO** — `EpubNavigatorFragment` 會根據傳入的 `Publication` 物件的 `metadata.layout` 決定渲染模式。透過 `Publication.Builder` 重建物件並強制設定 `metadata.layout = Layout.FIXED`，可以讓 Readium 官方元件正確判斷為 FXL，進而渲染成雙頁並排。
+
+### `Publication.Builder` API 實際簽名
+
+Readium kotlin-toolkit 3.3.0 的 `Publication.Builder` 實際簽名為：
+
+```kotlin
+Publication.Builder(manifest: Manifest, container: Container<Resource>, servicesBuilder: ServicesBuilder)
+```
+
+- **不是** `Publication.Builder(publication, json)` — 原始假設錯誤
+- `container` 標記為 `@InternalReadiumApi`，需 `@OptIn` 才能存取
+- `servicesBuilder` 為 private 屬性，無法從既有 `Publication` 取得，只能新建
+
+### Service Loss 風險
+
+使用新建的 `ServicesBuilder()` 可能遺失原始物件的服務（如 `positions()`）。本 Spike 觀察到進度條不可見、頁數呈現模式異常，可能與此有關。正式實作時需評估是否需要複製原始的 `servicesBuilder`（但因其為 private，可能需要反射或其他方式）。
+
+### 下一步
+
+1. 將 `Publication.Builder` 重建邏輯納入正式實作
+2. 評估 Service Loss 影響（進度條、頁數呈現）
+3. 依使用者需求新增「封面獨立顯示」功能
+4. 更新 Issue 16 狀態，進入正式實作
+
+### 報告路徑
+
+完整報告見 `docs/epics/epic-18-reader-device-qa/reviews/spike-issue18-publication-builder-override.md`

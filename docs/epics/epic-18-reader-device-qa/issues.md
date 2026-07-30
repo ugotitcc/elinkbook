@@ -563,7 +563,7 @@ Issue 5 的 `singleColumn` 布林開關因 `paginator.js` 對直排書籍的 `ma
 
 ## Issue 16：強制 FXL 後，橫向雙頁模式退化成單頁（Readium 原生端獨立判讀書本 metadata，不受人工覆蓋影響）
 
-**Status:** 修復方向已評估並否決（Issue 17 Spike 結論 NO-GO）。待重新評估替代方案——可能改為 `wontfix` 或降級為 UI 提示層級的小工單（例如提示使用者「強制 FXL 對此類書籍的雙頁排版效果有限」）。
+**Status:** 根因已確認，替代方案已驗證可行（Issue 18 Spike 結論 GO）。待人類決定是否進入正式實作——完整 Dart→Kotlin `isForceFxl` 旗標傳遞管線（`openBook()` 新增專屬參數、`EpubReaderView.dart` 新增建構參數）+ `Publication.Builder` 重建邏輯。
 
 **依賴：** 無（獨立於 Issue 15，Issue 15 的「強制 FXL」核心交付物——引擎確實從 `FoliateEpubReaderView` 切換到 `EpubReaderView`——已確認正常運作，不受本 Issue 影響，故不阻擋 Issue 15 合併）。
 
@@ -646,7 +646,7 @@ Issue 5 的 `singleColumn` 布林開關因 `paginator.js` 對直排書籍的 `ma
 
 ## Issue 18：Spike v2——重建 `Publication` 物件覆寫 `metadata.layout`，驗證是否讓 `EpubNavigatorFragment` 渲染成 FXL
 
-**Status:** `ready-for-agent`（2026-07-30 使用者提供外部分析報告 `tmp/epic-18/issue-16-solution-analysis.md`，經對照 Readium 官方 `kotlin-toolkit` 原始碼〔本專案釘選版本 `3.3.0`〕逐一查證後定案，可撰寫 `plans/plan-issue-18.md`）。
+**Status:** ✅ Spike 完成（GO）。2026-07-30 真機驗證確認：`Publication.Builder` 重建 `metadata.layout = Layout.FIXED` 後，`EpubNavigatorFragment` 正確渲染成雙頁 FXL 並排。翻頁正常、熱區翻頁正常。Service Loss 風險：進度條不可見、頁數呈現模式異常（疑似因 `ServicesBuilder()` 空物件導致）。完整報告見 `reviews/spike-issue18-publication-builder-override.md`。待人類決定是否進入正式實作（含 Dart→Kotlin 旗標傳遞管線）。
 
 **依賴：** 無（獨立於 Issue 15／16／17，Issue 17 已確認 NO-GO 的路徑〔覆寫本專案自己的 3 個 bookkeeping 檢查點〕不再嘗試，本 Issue 是全新方向）。
 
