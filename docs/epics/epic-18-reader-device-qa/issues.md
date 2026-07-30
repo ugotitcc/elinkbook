@@ -512,7 +512,7 @@ Issue 5 的 `singleColumn` 布林開關因 `paginator.js` 對直排書籍的 `ma
 
 ## Issue 15：漫畫 EPUB 誤判為流式，新增「人工版面覆蓋」選項（取代原「FXL 雙頁置中留白」推論方向）
 
-**Status:** Task 1／Task 2 已完成並經程式碼審查（分支 `feature/epic-18-issue-15-force-fxl`，commit `9c29ad3`／`2316827`；審查報告 `tmp/epic-18/review-issue-15.md`，結論 Ready to merge, with fixes，0 Critical／3 Important／2 Minor）。審查發現的 Important #2（計畫外追加的 `reader_screen.dart` 異步回報保護修正 `97878c4` 未同步更新文件）與 Important #3（該修正缺少回歸測試）已修正並補齊（見 `plan-issue-15.md`「實作備註」與 `design.md` 決策 #7 後方備註）。Important #1（真機驗收發現「強制 FXL 後橫向雙頁模式退化成單頁」，根因為 Readium 原生端獨立判讀書本 metadata、不受「強制 FXL」影響）判斷超出本 Issue 範圍，已另立 **Issue 16** 追蹤（見下方），不阻擋本 Issue 合併。`plans/plan-issue-15.md` Task 3（真機驗收）Step 2-5 尚待完成後方可合併。
+**Status:** ✅ 3 個 Task 皆已完成，含程式碼審查與真機驗收（分支 `feature/epic-18-issue-15-force-fxl`；commit `9c29ad3`／`2316827` Task 1-2、`97878c4` 計畫外追加修正、`f155caa`／`36a7c3d` 審查修正回填）。審查報告 `tmp/epic-18/review-issue-15.md`，結論 Ready to merge, with fixes，0 Critical／3 Important／2 Minor：Important #2（`97878c4` 未同步更新文件）與 Important #3（`97878c4` 缺少回歸測試）已修正並補齊（見 `plan-issue-15.md`「實作備註」與 `design.md` 決策 #7 後方備註、新增的 `reader_screen_test.dart` 回歸測試）；Important #1（真機驗收發現「強制 FXL 後橫向雙頁模式退化成單頁」，根因為 Readium 原生端獨立判讀書本 metadata、不受「強制 FXL」影響）判斷超出本 Issue 範圍，已另立 **Issue 16** 追蹤（見下方），不阻擋本 Issue 合併。`plans/plan-issue-15.md` Task 3（真機驗收）Step 1-5 全數 Pass，待人類確認後合併。
 
 **依賴：** 無
 

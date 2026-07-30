@@ -463,7 +463,7 @@ cd app && flutter build apk --debug
 adb -s 3CEF42ECD491687 install -r build/app/outputs/flutter-apk/app-debug.apk
 ```
 
-- [ ] **Step 2: 驗證「強制 FXL」實際切換引擎**
+- [x] **Step 2: 驗證「強制 FXL」實際切換引擎**
 
 1. 匯入一本已知被誤判為流式的漫畫 EPUB（若無現成素材，任一 EPUB 皆可用於驗證「引擎確實切換」這個機制本身，不要求驗證漫畫排版效果）。
 2. 開啟該書，確認目前走 `FoliateEpubReaderView`（流式）路徑（例如觀察是否出現流式專屬的浮動按鈕組）。
@@ -471,21 +471,27 @@ adb -s 3CEF42ECD491687 install -r build/app/outputs/flutter-apk/app-debug.apk
 4. 重新開啟該書，確認改走 `EpubReaderView`（Readium／FXL）路徑（例如觀察是否出現 FXL 專屬的浮動控制項/雙頁行為）。
 5. 記錄：Pass/Fail + 截圖佐證。
 
-- [ ] **Step 3: 驗證「恢復自動判斷」還原**
+**驗收結果：Pass。** 由使用者本人於真機 `3CEF42ECD491687` 實測：對已知被誤判為流式的漫畫 EPUB 點擊「強制 FXL」後，重新開書確認改走 `EpubReaderView`（Readium／FXL）路徑。此步驟過程中額外發現「橫向雙頁模式退化成單頁」症狀，已於程式碼審查（`tmp/epic-18/review-issue-15.md` Important #1）確認根因並拆出獨立 **Issue 16** 追蹤，不影響本 Step「引擎確實切換」這項核心驗收標準的 Pass 結論。
+
+- [x] **Step 3: 驗證「恢復自動判斷」還原**
 
 1. 承上，選取同一本書，點擊「恢復自動判斷」。
 2. 重新開啟該書，**觀察開書後呈現的 UI 是否恢復為流式 EPUB 專屬的浮動按鈕組與排版行為**（真機黑箱測試無法直接讀取 `Book.isFixedLayout` 記憶體值，故以可觀察的 UI 特徵間接驗證已恢復系統原始判斷，若原始判斷本來就是流式）。
 3. 記錄：Pass/Fail。
 
-- [ ] **Step 4: 驗證混合選取情境**
+**驗收結果：Pass。** 由使用者本人於真機 `3CEF42ECD491687` 實測：點擊「恢復自動判斷」後重新開書，確認恢復為流式 EPUB 專屬的浮動按鈕組與排版行為，符合預期。
+
+- [x] **Step 4: 驗證混合選取情境**
 
 1. 多選模式下同時選取 1 本 EPUB 與 1 本 PDF/TXT。
 2. 點擊「強制 FXL」／「恢復自動判斷」，確認兩顆按鈕皆可點擊、僅 EPUB 書籍受影響，PDF/TXT 開啟時行為不受影響（不因本次操作出錯或改變）。
 3. 記錄：Pass/Fail。
 
-- [ ] **Step 5: 記錄驗收結果**
+**驗收結果：Pass。** 由使用者本人於真機 `3CEF42ECD491687` 實測：混合選取 EPUB 與 PDF/TXT 時，兩顆按鈕皆可正常點擊，僅 EPUB 書籍受影響，PDF/TXT 開啟行為不受影響。
 
-供後續程式碼審查與 `docs/epics/epic-18-reader-device-qa/issues.md` Issue 15 狀態更新引用。
+- [x] **Step 5: 記錄驗收結果**
+
+供後續程式碼審查與 `docs/epics/epic-18-reader-device-qa/issues.md` Issue 15 狀態更新引用；結果已同步記錄於本檔案 Step 2-4 與 `issues.md` Issue 15 條目。Task 3 全數完成，Issue 15 三個 Task 皆已完成，待人類確認後合併。
 
 ---
 
