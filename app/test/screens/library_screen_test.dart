@@ -927,6 +927,111 @@ void main() {
     );
   });
 
+  testWidgets('選取多本 EPUB 書籍後點擊「強制 FXL」，所有已選取書籍的 isFixedLayout 皆變為 true',
+      (tester) async {
+    final bookA = _testBook(id: '1', title: 'A漫畫');
+    final bookB = _testBook(id: '2', title: 'B漫畫');
+    final repository = FakeLibraryRepository(initialBooks: [bookA, bookB]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: repository,
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.longPress(find.byKey(const Key('book_item_1')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('book_item_2')));
+    await tester.pumpAndSettle();
+    expect(find.text('已選取 2 本'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('library_force_fxl_button')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('library_selection_app_bar')), findsNothing,
+        reason: '執行後應立即退出選取模式（比照移動到分類既有行為）');
+
+    final updated = await repository.listBooks();
+    expect(updated.firstWhere((b) => b.id == '1').isFixedLayout, isTrue);
+    expect(updated.firstWhere((b) => b.id == '2').isFixedLayout, isTrue);
+  });
+
+  testWidgets(
+      '選取集合混雜 EPUB 與 PDF 時，點擊「強制 FXL」只影響 EPUB、PDF 不受影響也不拋錯',
+      (tester) async {
+    final epubBook = _testBook(id: '1', title: 'A漫畫');
+    final pdfBook = _testBook(
+      id: '2',
+      title: 'B文件',
+      format: BookFileFormat.pdf,
+      filePath: 'content://example/2.pdf',
+    );
+    final repository =
+        FakeLibraryRepository(initialBooks: [epubBook, pdfBook]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: repository,
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.longPress(find.byKey(const Key('book_item_1')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('book_item_2')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('library_force_fxl_button')));
+    await tester.pumpAndSettle();
+
+    final updated = await repository.listBooks();
+    expect(updated.firstWhere((b) => b.id == '1').isFixedLayout, isTrue);
+    expect(updated.firstWhere((b) => b.id == '2').isFixedLayout, isNull,
+        reason: 'PDF 不具備 isFixedLayout 語意，應完全不受影響');
+  });
+
+  testWidgets('選取集合全為非 EPUB 時，「強制 FXL」按鈕仍然顯示（不隱藏/不因格式停用）',
+      (tester) async {
+    final pdfBook = _testBook(
+      id: '1',
+      title: 'A文件',
+      format: BookFileFormat.pdf,
+      filePath: 'content://example/1.pdf',
+    );
+    final repository = FakeLibraryRepository(initialBooks: [pdfBook]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: repository,
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.longPress(find.byKey(const Key('book_item_1')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('library_force_fxl_button')), findsOneWidget);
+
+    final button = tester.widget<IconButton>(
+      find.byKey(const Key('library_force_fxl_button')),
+    );
+    expect(button.onPressed, isNotNull,
+        reason: 'count > 0 時按鈕應可點擊，不因選取內容全為非 EPUB 而停用');
+  });
+
   testWidgets('書架（grid）與列表兩種檢視皆能觸發長按進入選取模式並完成批次移動',
       (tester) async {
     final bookA =
@@ -2164,13 +2269,14 @@ Book _testBook({
   String? filePath,
   String? coverPath,
   bool? isFixedLayout,
+  BookFileFormat format = BookFileFormat.epub,
 }) {
   final now = DateTime.now();
   return Book(
     id: id,
     title: title,
     author: author,
-    format: BookFileFormat.epub,
+    format: format,
     filePath: filePath ?? 'content://example/$id.epub',
     source: BookSource.local,
     coverPath: coverPath,

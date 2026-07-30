@@ -289,6 +289,30 @@ class _LibraryScreenState extends State<LibraryScreen> {
     await _loadBooks();
   }
 
+  /// 對選取集合中所有 EPUB 書籍手動覆寫「引擎分派判斷」結果為固定版面
+  /// （FXL）——救濟部分漫畫 EPUB 因來源檔案 metadata 不完整/不規範，被
+  /// 「引擎分派判斷」誤判為流式的情況（見 CONTEXT.md「人工版面覆蓋」）。
+  /// 非 EPUB 書籍（PDF/TXT）自動跳過，不影響、不拋錯。行為比照
+  /// _moveSelectedBooksToGroup()：無確認對話框、無完成後 SnackBar，立即
+  /// 退出選取模式後才逐筆寫入，避免寫入期間使用者重複點擊觸發本方法。
+  /// **`selectedIds` 在 `_exitSelectionMode()` 之前捕捉是安全的**：
+  /// `_exitSelectionMode()` 只把 `_selectedBookIds` 欄位重新賦值為
+  /// `null`，不會 mutate 這裡捕捉到的 Set 物件本身，比照
+  /// `_moveSelectedBooksToGroup()`/`_deleteSelectedBooks()` 既有慣例
+  /// （已於 plan-issue-15.md 審查階段確認，見 `reviews/` 對應報告）。
+  Future<void> _forceFixedLayoutForSelectedBooks() async {
+    final selectedIds = _selectedBookIds;
+    final books = _books;
+    if (selectedIds == null || selectedIds.isEmpty || books == null) return;
+    _exitSelectionMode();
+    for (final book in books) {
+      if (!selectedIds.contains(book.id)) continue;
+      if (book.format != BookFileFormat.epub) continue;
+      await widget.repository.updateBook(book.copyWith(isFixedLayout: true));
+    }
+    await _loadBooks();
+  }
+
   Future<bool?> _confirmDeleteBooks(int count) {
     return showDialog<bool>(
       context: context,
@@ -630,6 +654,12 @@ class _LibraryScreenState extends State<LibraryScreen> {
           icon: const Icon(Icons.drive_file_move),
           tooltip: '移動到分類',
           onPressed: count == 0 ? null : _moveSelectedBooksToGroup,
+        ),
+        IconButton(
+          key: const Key('library_force_fxl_button'),
+          icon: const Icon(Icons.menu_book),
+          tooltip: '強制 FXL',
+          onPressed: count == 0 ? null : _forceFixedLayoutForSelectedBooks,
         ),
         IconButton(
           key: const Key('library_delete_books_button'),
