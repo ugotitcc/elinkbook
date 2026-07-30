@@ -290,7 +290,15 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 它非 null）。
   void _resolveEpubEngineDispatch() {
     _dispatchedIsFixedLayout = widget.isFixedLayout;
-    if (_dispatchedIsFixedLayout != null) return;
+    if (_dispatchedIsFixedLayout != null) {
+      // 當使用者透過「強制 FXL」設定 isFixedLayout=true 時，
+      // 同步設定 _isFixedLayout 確保所有 FXL chrome（AppBar 隱藏、
+      // 懸浮設定按鈕等）正確顯示，不受 native view 異步回報覆蓋。
+      if (_dispatchedIsFixedLayout == true) {
+        _isFixedLayout = true;
+      }
+      return;
+    }
     if (detectBookFormat(widget.filePath) != BookFormat.epub) return;
     final repository = widget.libraryRepository;
     if (repository == null) {
@@ -786,7 +794,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   void _handleLayoutResolved(EpubLayoutInfo info) {
     if (!mounted) return;
     setState(() {
-      _isFixedLayout = info.isFixedLayout;
+      // 當使用者透過「強制 FXL」手動設定 isFixedLayout=true 時，
+      // 覆蓋 native view 的異步回報（見 _resolveEpubEngineDispatch 註解）。
+      if (widget.isFixedLayout != true) {
+        _isFixedLayout = info.isFixedLayout;
+      }
       _autoDetectedWritingMode = info.writingMode;
       final loaded = _loaded;
       if (loaded != null) {
@@ -846,7 +858,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   void _handleFoliateLayoutResolved(EpubLayoutInfo info) {
     if (!mounted) return;
     setState(() {
-      _isFixedLayout = info.isFixedLayout;
+      // 當使用者透過「強制 FXL」手動設定 isFixedLayout=true 時，
+      // 覆蓋 native view 的異步回報（見 _resolveEpubEngineDispatch 註解）。
+      if (widget.isFixedLayout != true) {
+        _isFixedLayout = info.isFixedLayout;
+      }
       _autoDetectedWritingMode = info.writingMode;
       final loaded = _loaded;
       if (loaded != null) {
