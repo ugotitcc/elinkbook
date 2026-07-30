@@ -512,7 +512,7 @@ Issue 5 的 `singleColumn` 布林開關因 `paginator.js` 對直排書籍的 `ma
 
 ## Issue 15：漫畫 EPUB 誤判為流式，新增「人工版面覆蓋」選項（取代原「FXL 雙頁置中留白」推論方向）
 
-**Status:** `ready-for-agent`（2026-07-30 `/grill-with-docs` Discovery 已完成，決策已記錄於 `design.md`「Issue 15 根因重新診斷與人工版面覆蓋功能」，可撰寫 `plans/plan-issue-15.md`）。
+**Status:** Task 1／Task 2 已完成並經程式碼審查（分支 `feature/epic-18-issue-15-force-fxl`，commit `9c29ad3`／`2316827`；審查報告 `tmp/epic-18/review-issue-15.md`，結論 Ready to merge, with fixes，0 Critical／3 Important／2 Minor）。審查發現的 Important #2（計畫外追加的 `reader_screen.dart` 異步回報保護修正 `97878c4` 未同步更新文件）與 Important #3（該修正缺少回歸測試）已修正並補齊（見 `plan-issue-15.md`「實作備註」與 `design.md` 決策 #7 後方備註）。Important #1（真機驗收發現「強制 FXL 後橫向雙頁模式退化成單頁」，根因為 Readium 原生端獨立判讀書本 metadata、不受「強制 FXL」影響）判斷超出本 Issue 範圍，已另立 **Issue 16** 追蹤（見下方），不阻擋本 Issue 合併。`plans/plan-issue-15.md` Task 3（真機驗收）Step 2-5 尚待完成後方可合併。
 
 **依賴：** 無
 
@@ -558,6 +558,46 @@ Issue 5 的 `singleColumn` 布林開關因 `paginator.js` 對直排書籍的 `ma
 - `app/lib/screens/reader_screen.dart:282-309`（`_resolveEpubEngineDispatch()`）
 - `app/lib/library/sqlite_library_repository.dart:449-462`（`detectAndCacheEpubLayout()`）
 - （舊）`epic-19-shelf-reading-enhance` Issue 1 程式碼審查報告「附錄：FXL 雙頁置中問題初步判斷」（2026-07-29；原始發現來源，根因推論已被本次取代，僅保留歷史脈絡）
+
+---
+
+## Issue 16：強制 FXL 後，橫向雙頁模式退化成單頁（Readium 原生端獨立判讀書本 metadata，不受人工覆蓋影響）
+
+**Status:** `needs-triage`（2026-07-30 於 Issue 15 程式碼審查〔`tmp/epic-18/review-issue-15.md` Important #1〕發現並確認根因，尚未進入正式 Discovery/Architecting 階段，無 `design.md` 段落／`plans/plan-issue-16.md`）。
+
+**依賴：** 無（獨立於 Issue 15，Issue 15 的「強制 FXL」核心交付物——引擎確實從 `FoliateEpubReaderView` 切換到 `EpubReaderView`——已確認正常運作，不受本 Issue 影響，故不阻擋 Issue 15 合併）。
+
+**描述：**
+
+使用者對一本被「引擎分派判斷」誤判為流式的漫畫 EPUB 點擊「強制 FXL」（見 Issue 15）後，重新開書確實改走 `EpubReaderView`（Readium／FXL）路徑，但裝置橫向且雙頁模式（`DualPageMode`）開啟時，畫面仍只顯示一頁（固定在左邊），翻頁行為也是一頁一頁換，而非兩頁一組（spread）切換——雙頁功能形同虛設。
+
+**根因（已於 Issue 15 程式碼審查以靜態分析確認，見 `tmp/epic-18/review-issue-15.md` Important #1 完整推導）：**
+
+`app/android/app/src/main/kotlin/cc/ugotit/elinkbook/EpubReaderView.kt` 有兩處**各自獨立**讀取 `publication?.metadata?.layout == Layout.FIXED` 來判斷書本是否真的是 FXL，完全不知道 Flutter 端「強制 FXL」這個人工決定：
+
+- `EpubReaderView.kt:501`（`applyFxlFitScale()`，雙頁 spread 位置/縮放計算的**唯一**函式，`docs/archive/2026-07-14-epic-16-dual-page` 核心邏輯）：`if (!isFixedLayout) { removeFxlLayoutListener(); return }`——書本被 Readium 自己判定為非 FXL 時整段短路跳過，spread 計算完全不執行。
+- `EpubReaderView.kt:1199`（回報給 Dart 端 `onLayoutResolved` 的 payload 建構處）：同樣獨立讀取，驅動 `app/lib/reader/epub_reader_view.dart:326`（`EpubLayoutInfo.isFixedLayout`）。
+
+「強制 FXL」（`Book.isFixedLayout`，見 `CONTEXT.md`「引擎分派判斷」）在設計上只能改變**開書前該用哪個 widget 開書**，無法改變 Readium 開書後對這本書*自身* metadata 的獨立判讀——而這本書當初會被誤判為流式，很可能正是因為同一份不規範的 OPF `rendition:layout` metadata，讓 Readium 官方解析器（`DefaultPublicationParser`）也判斷不出 FXL。也就是說：「強制 FXL」對「metadata 不完整但 Readium 官方解析器仍判斷得出來」的書籍能完全救濟，但對「metadata 損壞到連 Readium 官方解析器都判斷不出 FXL」的書籍**先天無法完全救濟**。
+
+**額外發現**：Issue 15 追加修正 `commit 97878c4` 只保護了 `ReaderScreen._isFixedLayout`，`EpubReaderView` widget 自己內部同名欄位（`epub_reader_view.dart:326`，驅動 FXL 換頁熱區疊加層顯示，見 `CONTEXT.md`「FXL 換頁熱區（暫代版）」）未受保護，`setState(() => _isFixedLayout = info.isFixedLayout);` 仍無條件套用 native 回報值——不確定是否已造成使用者觀察到「強制 FXL 書籍點擊左右熱區無反應」的症狀，待本 Issue Discovery 階段一併確認。
+
+**建議修復方向（來自審查報告，非定案，待 Architecting 階段決定）：**
+
+- 讓 `EpubReaderView.kt` 的 `openBook()` 額外接收一個「Dart 端已決定強制視為 FXL」的旗標，`applyFxlFitScale()`／`onLayoutResolved` 的 `isFixedLayout` 判斷改為「`publication.metadata.layout == Layout.FIXED` **或** 該旗標為真」的 OR 條件。
+- `app/lib/reader/epub_reader_view.dart` 需要新增對應建構參數並貫穿 `epub_reader_view.dart:326` 的 guard（同步解決上述「額外發現」）。
+- 這是一次跨 Dart＋Kotlin 兩層的中等規模改動，需要真機驗證雙頁排版效果，不適合當作 Issue 15 的順手追加，故獨立成本 Issue。
+
+**建議後續：**
+- 需要 `/diagnose` 或正式 Discovery 確認重現條件（哪些書籍會踩到「Readium 官方解析器也判斷不出 FXL」這個更深層的 metadata 缺陷子集合）、決定 Kotlin 端旗標覆寫機制的確切設計，再撰寫 `plans/plan-issue-16.md`。
+- 待 Issue 15 完成真機驗收（`plans/plan-issue-15.md` Task 3 Step 2-5）時，建議一併記錄本症狀的具體重現步驟（書籍/裝置方向），供本 Issue 直接引用當 repro case。
+
+**相關佐證：**
+- `tmp/epic-18/review-issue-15.md` Important #1（完整根因推導與程式碼位置引用，本條目摘要來源）
+- `docs/epics/epic-18-reader-device-qa/plans/plan-issue-15.md`「實作備註」
+- `docs/archive/2026-07-14-epic-16-dual-page/`（已歸檔的雙頁模式 Epic，`DualPageMode`／`applyFxlFitScale()` 原始設計）
+- `CONTEXT.md`「固定版面（FXL）」「引擎分派判斷」「FXL 換頁熱區（暫代版）」詞彙定義
+- `app/android/app/src/main/kotlin/cc/ugotit/elinkbook/EpubReaderView.kt:501,1199`
 
 ---
 

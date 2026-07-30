@@ -19,6 +19,8 @@
 - 按鈕圖示（`Icons.menu_book`／`Icons.restore`）與文字（「強制 FXL」／「恢復自動判斷」）為起始建議值，非最終規格，實作階段可視真機視覺效果微調（比照 Issue 2/3 既有慣例），但兩個 `Key`（`library_force_fxl_button`／`library_restore_auto_layout_button`）與 tooltip 文字須與 `issues.md` Issue 15 條目一致。
 - 真機驗收裝置固定為 `3CEF42ECD491687`；驗收需要一本已知會被誤判為流式的漫畫 EPUB（若手邊沒有現成 fixture，可用任一 metadata 不完整的漫畫 EPUB，或以現有 `sample.epub` 搭配暫時偽造誤判情境驗證「強制 FXL 後改走 Readium 路徑」這件事本身，實際漫畫渲染效果非本 Issue 驗收重點——本 Issue 只保證「引擎確實切換」，不保證「切換後漫畫排版完美」）。
 
+**實作備註（已於程式碼審查後確認接受，見 `tmp/epic-18/review-issue-15.md` Important #2／#3）**：Task 1／Task 2 完成後，真機驗收發現「範圍僅限 `LibraryScreen`」這項 Global Constraint 的前提不完全成立——`ReaderScreen._isFixedLayout`（驅動 FXL 懸浮 chrome 顯示，非引擎分派）仍會被 native view 異步回報覆蓋，導致「強制 FXL」後設定表單短暫顯示流式選項。追加 commit `97878c4` 修改 `app/lib/screens/reader_screen.dart` 三處（`_resolveEpubEngineDispatch()`／`_handleLayoutResolved()`／`_handleFoliateLayoutResolved()`）新增保護邏輯，此屬計畫範圍外的追加，已經人類於程式碼審查後確認接受，不需要回退；已補上對應回歸測試（`reader_screen_test.dart`，鎖住「強制 FXL 後 native 異步回報不應覆蓋」這個情境）。真機驗收同時發現「橫向雙頁模式退化成單頁」症狀，根因為 Kotlin 原生端 `EpubReaderView.kt` 的雙頁 spread 計算完全依賴 Readium 自己對書本 metadata 的獨立判讀、不受「強制 FXL」影響，已判斷超出本 Issue 範圍，另立新 Issue 追蹤（見 `issues.md`），不阻擋本 Issue 合併。
+
 ---
 
 ## 檔案結構
