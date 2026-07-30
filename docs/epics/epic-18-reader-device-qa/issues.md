@@ -753,29 +753,90 @@ Issue 16 確認「強制 FXL」後橫向雙頁模式退化成單頁的根因；I
 
 ---
 
-## Issue 20：FXL（Readium）書籍進度條／頁數顯示異常，需排查根因（PDF／流式 EPUB 皆正常，僅 FXL 路徑受影響）
+## Issue 20：FXL 書籍新增進度條／頁尾 FAB（比照流式 EPUB，根因已確認為 UI 層從未接線）
 
-**Status:** needs-triage，症狀範圍已確認（見下方「2026-07-30 二次訂正」）——不論書本是原生判定為 FXL 或使用者強制覆蓋，只要走 `EpubReaderView`（Readium／FXL）路徑就沒有進度條；只有 `PdfReaderView`（PDF）與 `FoliateEpubReaderView`（流式 EPUB）進度條正常。尚未進行完整 Discovery 找出根因。
+**Status:** Discovery 已完成（2026-07-30 `/grill-with-docs`），根因已確認，待撰寫實作計劃。
 
-**依賴：** 無（獨立排查，不阻擋 Issue 19）。
+**依賴：** 無（獨立於 Issue 21，UI 接線與資料來源皆已查證清楚，可直接進 Planning）。
 
-**描述：**
+**根因（2026-07-30 grilling 查證，取代先前「Readium 內部限制」的推測）**：`reader_screen.dart` 目前有兩組完全獨立的浮動按鈕群組——流式 EPUB（`_dispatchedIsFixedLayout == false`）與 FXL（`_isFixedLayout`）。**FXL 那組只有 4 顆按鈕（返回／版面設定／書籤／筆記），從未接上對應流式 EPUB `reader_foliate_progress_button`「跳頁」的按鈕**，也沒有對應 `_buildFoliateProgressText()` 的常駐進度文字。另外，舊有的 `_buildEpubFooter()`（in-flow 頁尾、依全書字元數估算頁碼）雖然還在程式碼中，但其顯示條件 `!_isFixedLayout` 是 ADR 0011 把流式 EPUB 遷移到 `foliate-js` 之前的殘留判斷式——現在 FXL 書籍一律 `_isFixedLayout == true`，此條件恆假，是打不到的死碼。**結論：「進度條不可見」的根因是 UI 層在 FXL 路徑上從未接線，不是 Readium 官方元件的限制**，先前 Issue 18/19 Spike 觀察到的異常本身仍有效（真的看不到進度條），但根因推測方向已修正。
 
-Issue 18 Spike（`Publication.Builder` 重建 `metadata.layout` 驗證）真機測試時觀察到進度條異常（進度條不可見、頁數呈現模式與預期的 1,3-2,5-4 不同）。原本推測是 Issue 18 重建的 `Publication` 物件因原始 `servicesBuilder` 為 private、只能用全新預設值，遺失 `positions()` 等服務所致。
+**修復方向（2026-07-30 grilling 定案）：**
+1. **比照流式 EPUB 的 FAB＋Bottom Sheet 模式**：於 FXL 浮動按鈕群組新增一顆對應 `reader_foliate_progress_button` 的「跳頁」按鈕（`reader_fixed_layout_progress_button`，置於下一個可用欄位 `top:184, right:16`），點擊開啟含 `ReaderFooter`（既有共用元件，PDF／流式 EPUB／舊 `_buildEpubFooter` 皆已使用）的 Bottom Sheet。
+2. **頁尾常駐顯示由閱讀設定 `showFooter` 控制**：比照流式 EPUB `_buildFoliateProgressText()` 的既有 gating 模式（`(_resolved?.showFooter ?? true) && _chromeVisible`）。
+3. **頁碼資料來源改用 `readingOrder` 索引，不用字元數估算**——**這是本次 grilling 的關鍵修正**：人類指出 FXL 書籍（漫畫）內文字元數趨近於 0，`EpubPageEstimator` 的字元估算模型（`_buildEpubFooter()` 原本的作法）完全不適用；改為查證發現 `readingOrder`（`EpubReaderView.kt:1103` 已在用）是 `Publication` manifest 的基本屬性，不經過 `positions()`／`servicesBuilder` 那套有疑慮的服務層，`readingOrder.size` 本身就是精確、可靠的總頁數（FXL 每個 `readingOrder` 項目對應一頁圖片），完全不需要估算；目前頁用 `Locator.href` 對照 `readingOrder` 索引位置取得。需要在 Kotlin 端新增這個索引查找邏輯（不需要新的 Dart→Kotlin 旗標），並透過既有 `onLocatorChanged`／或擴充其 payload 回報給 Dart 端。
 
-**2026-07-30 二次訂正（人類真機複核，取代前一版錯誤結論）**：本條目先前歷經兩次錯誤修訂——第一次誤以為「一般 FXL 書籍無此問題，只有強制 FXL 才有」。人類最終複核澄清：**兩者皆有問題**——不論是原生判定就是 FXL、還是使用者強制覆蓋，只要是 FXL（`EpubReaderView`／Readium）路徑，進度條一律不可用；只有 PDF 與流式 EPUB（`FoliateEpubReaderView`／`foliate-js`）正常。這代表進度條缺失**不是** `Publication.Builder` 重建（Issue 18/19）造成的服務遺失——自然 FXL 書籍根本不會進入重建分支（`effectivePublication` 就是原始 `openedPublication`），卻同樣缺失——而是 FXL／Readium 路徑本身既有的限制，範圍比 Issue 18/19 改動更廣，很可能與 `Publication.Builder` 重建完全無關。`design.md:382` 已同步二次訂正。
+**明確不在本 Issue 範圍：**
+- Issue 21：封面獨立顯示／頁碼配對模式（`1,3-2,5-4`），為獨立的技術不確定性問題，需要先做 Spike。
+- Issue 22：FXL 缺少目錄（TOC）按鈕，順帶發現但範圍不同，另立追蹤。
 
-**範圍：** 需要先做 Discovery（`/diagnose` 或等效流程）：
-1. 查證 Readium `EpubNavigatorFragment`／`onLocatorChanged` 對 FXL 書籍本身是否原生就不提供有效的 `totalProgression`（例如 FXL 書籍的 `positionsByReadingOrder()` 計算方式與流式書籍不同、或 FXL Navigator 根本不支援），先確認這是 Readium 官方元件的既有行為，而非本專案任何一層的程式錯誤。
-2. 若確認是 Readium FXL Navigator 本身的既有限制：評估是否有替代的進度顯示方式（例如改顯示絕對頁碼而非百分比 Slider），或記錄為已知限制、於 UI 上適度提示。
-3. 若排查後發現並非 Readium 既有限制、而是本專案某處程式碼問題，需要進一步定位（例如 `EpubReaderView.kt` 的 `onLocatorChanged` 訂閱邏輯、`positions()` 呼叫時機等）。
+**單元測試要求：** Dart 端 widget test 涵蓋新按鈕的顯示條件（`_isFixedLayout && _chromeVisible`）與 Bottom Sheet 開啟行為，比照既有 `reader_foliate_progress_button` 測試模式；Kotlin 端 `readingOrder` 索引邏輯無法用 `flutter test` 覆蓋，真機驗證（比照既有兩層測試架構慣例）。
 
-**明確不在本 Issue 範圍**：Issue 19 的橫向雙頁排版修復本身（已完成，不受本 Issue 影響）。
+**驗收標準：**
+- FXL 書籍點擊新「跳頁」按鈕，開啟含正確目前頁／總頁數的 Bottom Sheet，可拖曳 Slider 跳頁。
+- `showFooter` 設定關閉時，FXL 常駐進度文字不顯示；開啟時正確顯示。
+- 真機驗證：漫畫 EPUB（已知會被誤判為流式、已套用強制 FXL）與一般原生判定 FXL 書籍皆正確顯示頁碼，不依賴字元數估算。
 
 **相關佐證：**
-- `docs/epics/epic-18-reader-device-qa/reviews/spike-issue18-publication-builder-override.md`「Service Loss 驗證」小節（症狀首次記錄）
-- `docs/epics/epic-18-reader-device-qa/design.md:378-382`（Issue 19 Task 3 真機驗證結果，含 Step 5 二次訂正記錄）
-- `docs/adr/0016-fxl-metadata-override-via-publication-builder.md`（`Publication.Builder` 重建架構決策，含已知服務遺失代價的原始推測——現已確認非本次症狀根因）
+- `docs/epics/epic-18-reader-device-qa/design.md`「Issue 20／21 修復方向 Discovery」（2026-07-30 grilling 完整決策記錄）
+- `app/lib/screens/reader_screen.dart:1666-1711`（流式 EPUB FAB＋常駐進度文字既有模式，本次比照對象）
+- `app/lib/screens/reader_screen.dart:1792-1818`（`_buildEpubFooter()` 死碼，字元估算模型不適用於 FXL 的原始寫法）
+- `app/android/app/src/main/kotlin/cc/ugotit/elinkbook/EpubReaderView.kt:1103`（`readingOrder` 既有使用範例，佐證其不依賴 `positions()`／`servicesBuilder`）
+
+---
+
+## Issue 21：Spike——FXL 封面獨立顯示／頁碼配對（`1,3-2,5-4`），驗證能否覆寫 `page` 屬性強制首頁獨立成頁
+
+**Status:** Discovery 已完成（2026-07-30 `/grill-with-docs`），待撰寫 Spike 計劃。
+
+**依賴：** 無（獨立於 Issue 20，可平行進行）。
+
+**背景：** 使用者真機測試發現，強制 FXL 的漫畫 EPUB 在雙頁模式下，頁碼配對沒有依照「封面獨立成頁、之後兩兩並排」（`1,3-2,5-4`）的慣例呈現，PDF 已有對應的「封面獨立顯示」功能（`dualPageCoverAlone`，`PdfReaderView.kt` 手寫的配對演算法），EPUB FXL 這邊完全沒有對應機制。
+
+**外部分析報告（`docs/epics/epic-18-reader-device-qa/reviews/spike-fxl-first-page-single-spread.md`）技術主張逐一查證結果（對照 Readium 3.3.0 官方原始碼）：**
+
+| 主張 | 查證結果 |
+|---|---|
+| `Spread` Enum（`AUTO`/`NEVER`/`ALWAYS`）僅為全域偏好，無頁面層級控制，無法單靠它讓第一頁獨立成頁 | ✅ 正確——已對照 `Types.kt` 確認 `Spread` 只有 3 個全域值，KDoc 僅「Synthetic spread policy」 |
+| 建議程式碼：`org.readium.r2.shared.publication.presentation.Page`、`Page.CENTER`、`link.properties.presentation.copy(page = Page.CENTER)` | ❌ **不存在**——已查證 `presentation/Properties.kt` 只有 5 個已棄用擴充屬性（`clipped`/`fit`/`orientation`/`overflow`/`spread`），沒有 `page`／`Page` 這組 API；`epub/Presentation.kt` 只有一個已棄用的 `layoutOf()`。此 API 為編造，不會編譯（與 Issue 18 承接的前一份外部報告犯了同一種錯誤——概念方向可能對，具體程式碼是錯的）。 |
+| 建議程式碼：`publication.readingOrder[0] = firstLink.copy(...)` 直接索引賦值 | ❌ **不會編譯**——`Manifest.readingOrder` 是不可變 `List<Link>`，沒有 `set` 運算子。 |
+| 「覆寫第一頁屬性讓 Readium 自動歸為單頁 Spread」這個**方向**是否可行 | ⚠️ **需要修正做法＋核心假設未經真機驗證**——查證到 `Properties`（`readium/shared/.../publication/Properties.kt`）是 `data class`，本質包一個 `otherProperties: Map<String, Any>`，提供 `.add(properties: Map<String, Any>)` 合併任意 key（已棄用的 `spread` 擴充屬性底層就是讀 `this["spread"] as? String` 這個原始 key）；另外查到官方 `ManifestTransformer` 介面（`transform(link: Link): Link`）搭配 `Manifest.copy(transformer)`，是比外部報告乾淨的官方轉換管道。但 Readium 的 spread 演算法實際上讀哪個 key（很可能是 `"page"`，對應 EPUB `page-spread-center`，但未經證實）、以及讀了之後是否真的按單頁處理，**無法只靠讀原始碼確認，需要真機驗證**（與 Issue 16-19 一路查到的模式一致）。 |
+
+**修復方向（Spike 假設，需真機驗證）：** 在 `attachNavigator()`（沿用 Issue 19 已在用的 `Publication.Builder` 重建同一處）額外覆寫 `readingOrder` 第一項 `Link.properties`，用 `.add(mapOf("page" to "center"))`（或真機驗證後找到的正確 key）標記為獨立頁，重建後傳給 `EpubNavigatorFactory`，觀察 Readium 的 spread 演算法是否真的把它當獨立頁處理。
+
+**Spike 範圍：**
+1. 硬編碼上述覆寫邏輯（不做 Dart→Kotlin 旗標傳遞管線，比照 Issue 17/18 既有 throwaway 慣例）。
+2. 真機驗證：橫向雙頁模式下，第一頁（封面）是否真的獨立顯示，第二頁起是否正確兩兩配對（`2,3`／`4,5`……）。
+3. 若 `"page"` key 無效，嘗試查證正確 key 名稱（可能需要對照 Readium 如何解析 EPUB OPF 的 `page-spread-*` 屬性、或攔截/記錄 spread 演算法實際讀取的 key）。
+
+**GO/NO-GO 決策路徑：**
+- **GO**：覆寫後首頁確實獨立成頁、後續正確配對，記錄結果，新增工單承接完整實作。
+- **NO-GO**：Readium spread 演算法不讀取此屬性、或讀取但效果不符預期：記錄具體證據，評估外部報告「方案 3」（Native App 層物理裁切，已被報告自身標註不推薦、會有畫面殘影）是否值得一試，或回頭評估其餘替代方案（例如接受此限制、UI 提示）。
+
+**單元測試要求：** 無（研究/驗證性質，比照 Issue 8／17／18 先例）。
+
+**相關佐證：**
+- `docs/epics/epic-18-reader-device-qa/reviews/spike-fxl-first-page-single-spread.md`（外部分析報告，方向查證屬實，具體程式碼已查證有誤並修正）
+- `docs/epics/epic-18-reader-device-qa/design.md`「Issue 20／21 修復方向 Discovery」
+- `docs/epics/epic-18-reader-device-qa/plans/plan-issue-18.md`（`Publication.Builder` 重建既有慣例，本 Spike 沿用同一處掛鉤點）
+- Readium `kotlin-toolkit` 3.3.0 官方原始碼：`navigator/preferences/Types.kt`（`Spread` enum）、`shared/publication/presentation/Properties.kt`（已棄用擴充屬性）、`shared/publication/Properties.kt`（`Properties` data class／`.add()`）、`shared/publication/ManifestTransformer.kt`（官方轉換介面）
+- `app/android/app/src/main/kotlin/cc/ugotit/elinkbook/PdfReaderView.kt`（PDF `dualPageCoverAlone` 既有實作參考）
+
+---
+
+## Issue 22：FXL 缺少目錄（TOC）按鈕（順帶發現，另立追蹤）
+
+**Status:** needs-triage，已於 Issue 20 grilling 順帶發現，尚未進行完整 Discovery。
+
+**依賴：** 無。
+
+**描述：** 流式 EPUB 浮動按鈕群組有 `reader_foliate_toc_button`（開啟目錄），FXL 浮動按鈕群組（`reader_fixed_layout_*`）沒有對應物——FXL 目前完全沒有從閱讀畫面開啟目錄的入口。範圍與確切修復方式（新按鈕位置、是否共用既有 TOC Bottom Sheet 元件）留待正式 Discovery。
+
+**明確不在本 Issue 範圍**：Issue 20（進度條/頁尾）、Issue 21（封面獨立顯示），本次 grilling 決定不與之合併處理。
+
+**相關佐證：**
+- `app/lib/screens/reader_screen.dart:1577-1596`（流式 EPUB `reader_foliate_toc_button` 既有實作參考）
+- `docs/epics/epic-18-reader-device-qa/design.md`「Issue 20／21 修復方向 Discovery」
 
 ---
 
