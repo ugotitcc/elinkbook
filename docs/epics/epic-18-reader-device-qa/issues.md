@@ -719,7 +719,7 @@ val effectivePublication = if (isForceFxl) {
 
 ## Issue 19：正式實作——「強制 FXL」書籍橫向雙頁排版修復（`Publication.Builder` 重建 `metadata.layout`）
 
-**Status:** 已完成（2026-07-30，程式碼實作完成、Dart 測試全數通過、Kotlin 建置成功，真機驗證待執行）。
+**Status:** 已完成（2026-07-30，程式碼實作完成、Dart 測試 704/704 全數通過、Kotlin 建置成功、真機驗證通過——雙頁排版正常、tap 熱區正常；Slider 進度條不可用為已知 Issue 20 範圍，不影響本 Issue 驗收）。
 
 **依賴：** Issue 15（「強制 FXL」人工覆蓋機制，本 Issue 修復其已知副作用）、Issue 18（Spike 驗證 GO，本 Issue 的技術方向依據）、ADR 0016（本 Issue 的架構決策紀錄）。
 
