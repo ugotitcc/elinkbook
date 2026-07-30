@@ -563,7 +563,7 @@ Issue 5 的 `singleColumn` 布林開關因 `paginator.js` 對直排書籍的 `ma
 
 ## Issue 16：強制 FXL 後，橫向雙頁模式退化成單頁（Readium 原生端獨立判讀書本 metadata，不受人工覆蓋影響）
 
-**Status:** 根因已確認，替代方案已驗證可行（Issue 18 Spike 結論 GO）。待人類決定是否進入正式實作——完整 Dart→Kotlin `isForceFxl` 旗標傳遞管線（`openBook()` 新增專屬參數、`EpubReaderView.dart` 新增建構參數）+ `Publication.Builder` 重建邏輯。
+**Status:** 已完成根因確認與 Spike 驗證——Issue 17（覆寫本專案自身檢查點）NO-GO，Issue 18（`Publication.Builder` 重建 `metadata.layout`）GO。人類決定：完整實作交由 **Issue 19** 承接（Dart→Kotlin `isForceFxl` 旗標傳遞管線＋`Publication.Builder` 重建＋`epub_reader_view.dart:326` 防護）；Issue 18 真機驗證時觀察到的進度條不可見／頁數呈現異常，人類指出舊版測試已發現類似症狀、不確定是否與本次改動相關，另開 **Issue 20** 獨立排查。本 Issue 至此結案，後續請追蹤 Issue 19／20。
 
 **依賴：** 無（獨立於 Issue 15，Issue 15 的「強制 FXL」核心交付物——引擎確實從 `FoliateEpubReaderView` 切換到 `EpubReaderView`——已確認正常運作，不受本 Issue 影響，故不阻擋 Issue 15 合併）。
 
@@ -714,6 +714,69 @@ val effectivePublication = if (isForceFxl) {
 - Readium `kotlin-toolkit` 3.3.0 官方原始碼（`readium/shared/.../publication/Publication.kt`／`Manifest.kt`；`readium/navigator/.../epub/EpubNavigatorFactory.kt`／`EpubNavigatorFragment.kt`）
 - `CONTEXT.md`「Readium 內部版面渲染決策」詞彙定義
 - `app/android/app/src/main/kotlin/cc/ugotit/elinkbook/EpubReaderView.kt:501,891-924,998,1199`
+
+---
+
+## Issue 19：正式實作——「強制 FXL」書籍橫向雙頁排版修復（`Publication.Builder` 重建 `metadata.layout`）
+
+**Status:** 待撰寫實作計劃（`plans/plan-issue-19.md`）。Spike 已確認方向可行（Issue 18 GO），本 Issue 承接其「建議下一步」。
+
+**依賴：** Issue 15（「強制 FXL」人工覆蓋機制，本 Issue 修復其已知副作用）、Issue 18（Spike 驗證 GO，本 Issue 的技術方向依據）。
+
+**背景：**
+
+Issue 16 確認「強制 FXL」後橫向雙頁模式退化成單頁的根因；Issue 17（覆寫本專案自身 3 個檢查點）驗證 NO-GO；Issue 18（改用 `Publication.Builder` 重建整個 `Publication` 物件、強制 `metadata.layout = Layout.FIXED`）驗證 **GO**——`EpubNavigatorFragment` 會正確渲染成雙頁並排，翻頁與熱區翻頁皆正常。本 Issue 將 Issue 18 的硬編碼 Spike 收斂為正式、可維護的實作。
+
+**範圍：**
+
+1. **Dart→Kotlin 旗標傳遞**：讓 Kotlin 端知道「這是一本被強制 FXL 的書」。
+2. **Kotlin 端**：於 `attachNavigator()` 用 `Publication.Builder` 重建 `effectivePublication`（比照 Issue 18 Spike 已驗證的程式碼結構），`applyFxlFitScale()`（`:501`）／tap 熱區監聽器註冊（`:998`）／`reportLayoutResolved()`（`:1199`）三處 FXL 判斷檢查點統一改讀同一個典範值。
+3. **修正 `epub_reader_view.dart:326`**：`_isFixedLayout` 目前對 native 異步回報值無條件套用（`setState(() => _isFixedLayout = info.isFixedLayout)`），需要比照 Issue 15 `commit 97878c4` 對 `ReaderScreen._isFixedLayout` 的既有保護模式，避免被 native 回報的 `false` 覆蓋掉「強制 FXL」的使用者決定。
+
+**待確認技術問題（留給 `plans/plan-issue-19.md` 撰寫時決定，不在本 Discovery 階段自行拍板）：**
+
+是否仍需要顯式的 Dart→Kotlin `isForceFxl` 旗標？`EpubReaderView`（FXL 路徑）這個 widget 本來就只在 `Book.isFixedLayout == true` 時才會被建構（見 `CONTEXT.md`「引擎分派判斷」），所以理論上只要 Kotlin 端在執行期發現 `openedPublication.metadata.layout != Layout.FIXED`，就等同於「這是一本被強制 FXL、但 Readium 官方解析器不同意的書」——不需要額外從 Dart 傳一個旗標，可以純 Kotlin 內部判斷，省掉整條旗標傳遞管線。撰寫實作計劃前應先驗證這個推論是否有反例（例如是否存在其他會讓 `metadata.layout` 暫時不等於 `FIXED` 但不該觸發重建的情境）。
+
+**Service Loss 因應（人類已決定範圍）：** 本 Issue **不**處理進度條/頁數呈現異常本身，該現象另開 **Issue 20** 獨立排查（不確定是否為本 Issue 改動所導致，或本來就是既有缺陷）。本 Issue 僅需確保：套用 `Publication.Builder` 重建後，不引入*超出 Issue 20 已知範圍*的新退化——沿用 Issue 18 Spike 已驗證的驗證項目（頁面渲染／Slider 進度跳轉／`onLocatorChanged` progression 觀察／TOC 跳轉）重新於正式實作後真機複驗。
+
+**單元測試要求：** Kotlin 原生渲染邏輯無法用 `flutter test` 覆蓋（見 `CLAUDE.md`「兩層測試架構」），沿用既有 `EpubReaderView.kt` 慣例僅真機驗證；`epub_reader_view.dart:326` 的保護邏輯需補 Dart 端 widget test（比照 `reader_screen_test.dart` 中 Issue 15 `commit 97878c4` 回歸測試的既有寫法）；`integration_test/` 需真機驗證橫向雙頁排版正常顯示。
+
+**驗收標準：**
+- 已知被誤判為流式的漫畫 EPUB，套用「強制 FXL」後，橫向雙頁模式正確顯示兩頁並排，翻頁行為正常（`3CEF42ECD491687` 真機驗證）。
+- `epub_reader_view.dart:326` 的 `_isFixedLayout` 不再被 native 異步回報覆蓋，回歸測試通過。
+- Issue 18 Spike 已驗證的 4 項服務驗證（頁面渲染／Slider 跳轉／`onLocatorChanged` progression／TOC 跳轉）於正式實作後真機重新驗證仍通過。
+- `flutter analyze` 無新增警告，既有測試全數通過。
+
+**相關佐證：**
+- `docs/epics/epic-18-reader-device-qa/reviews/spike-issue18-publication-builder-override.md`（Issue 18 Spike 報告，本 Issue 承接其「建議下一步」）
+- `docs/epics/epic-18-reader-device-qa/design.md`「Issue 16／17 修復方向 Discovery」「Issue 18 Spike 結論」
+- `docs/epics/epic-18-reader-device-qa/issues.md` Issue 15（`commit 97878c4` 既有保護模式參考）／16／17／18
+- `app/android/app/src/main/kotlin/cc/ugotit/elinkbook/EpubReaderView.kt:164,501,911-924,998,1199`
+- `app/lib/reader/epub_reader_view.dart:326`
+
+---
+
+## Issue 20：FXL 書籍進度條／頁數顯示異常，需排查（不確定是既有缺陷或本次改動所致）
+
+**Status:** needs-triage。人類於 Issue 18 真機驗證時發現並回報，尚未進行 Discovery。
+
+**依賴：** 無（獨立排查，不阻擋 Issue 19）。
+
+**描述：**
+
+人類回報：舊版測試中已發現，FXL 模式的進度條「不確定是哪個版本開始」就已經無法顯示。Issue 18 Spike（`Publication.Builder` 重建 `metadata.layout` 驗證）真機測試時也觀察到同樣現象（進度條不可見、頁數呈現模式與預期的 1,3-2,5-4 不同），但**尚未確認兩者是否為同一根因**——Issue 18 重建的 `Publication` 物件因原始 `servicesBuilder` 為 private、只能用全新預設值，理論上會遺失 `positions()` 等服務，可以解釋觀察到的異常；但人類指出一般（未套用「強制 FXL」、未經 `Publication.Builder` 重建）的 FXL 書籍似乎也有類似症狀，暗示可能是獨立於 Issue 18 改動之外、影響範圍更廣的既有缺陷。
+
+**範圍：** 需要先做 Discovery（`/diagnose` 或等效流程）釐清：
+1. 進度條不可見的症狀，在「未套用強制 FXL、原生判定就是 FXL」的一般書籍上是否重現？（若重現，代表與 Issue 18 的 `Publication.Builder` 重建無關，是獨立於本 Epic 的既有缺陷）
+2. 若一般 FXL 書籍不重現、僅強制 FXL＋`Publication.Builder` 重建路徑重現，則問題應併回 Issue 19（屬於其 Service Loss 範圍）。
+3. 釐清「不確定哪個版本開始」——是否可用既有 `docs/archive/` 紀錄縮小範圍（例如比對 `epic-16-dual-page` 歸檔前後的行為差異）。
+
+**明確不在本 Issue 範圍**：Issue 19 的橫向雙頁排版修復本身，本 Issue 不阻擋其進行。
+
+**相關佐證：**
+- `docs/epics/epic-18-reader-device-qa/reviews/spike-issue18-publication-builder-override.md`「Service Loss 驗證」小節（症狀首次記錄）
+- `docs/archive/2026-07-14-epic-16-dual-page/`（既有雙頁模式歸檔紀錄，可能的行為變化基準點）
+- Issue 19（若排查後確認是同一根因，併回 Issue 19 一併處理）
 
 ---
 
