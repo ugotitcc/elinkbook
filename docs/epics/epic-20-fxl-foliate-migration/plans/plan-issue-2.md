@@ -70,6 +70,8 @@ console.log('DEBUG_APPLY_PREFS_ENTER', JSON.stringify({ isFixedLayout: view.isFi
 
 查閱 `foliate_native_bridge.dart`／`main.js:355` 既有的 `https://appassets.androidplatform.net/book/current.epub` 虛擬路徑機制，透過既有匯入流程（`BookImportService`）把 `tmp/一弦定音.epub` 匯入 App 圖書庫（或使用既有已匯入、已套用「強制 FXL」的同一本書，若前次 Issue 15/17/18/19 測試裝置狀態還在）。
 
+**備援素材（審查建議，非預期需要）**：Issue 1 Spike 已用同一本 76MB 真實書籍完整驗證真機開書/雙頁/翻頁，logcat 全程無 `Mali`／`BAD ALLOC`／`OutOfMemory`／`FATAL` 記錄（見 `reviews/spike-issue1-fxl-foliate.md`），預期本工單不會遇到大檔案相關的真機問題。若過程中意外遇到裝置層級的圖片/記憶體問題，可暫時改用 `app/test/fixtures/sample_fixed_layout.epub`（既有測試 fixture，檔案極小）先排除是否為本工單新增程式碼本身的問題，而非素材大小造成，再換回真實書籍驗證。
+
 - [ ] **Step 4：建置安裝，開啟這本 FXL 書籍**
 
 ```bash
