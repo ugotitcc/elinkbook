@@ -186,6 +186,8 @@ Issue 15 原始條目（見 `issues.md`）記錄的是 2026-07-29 於 `epic-19-s
 6. **不新增書架視覺標記**：書籍封面/列表不顯示「已人工覆蓋」的 badge，保持最小變動。
 7. **生效時機零額外處理**：`ReaderScreen._resolveEpubEngineDispatch()` 本來就是每次開書時才解析引擎，下次從書架開啟該書時自然套用新值，不需要改動 `ReaderScreen`/`FoliateEpubReaderView`/`EpubReaderView`。
 
+**實作備註（已於程式碼審查後確認接受，見 `tmp/epic-18/review-issue-15.md` Important #2）**：實作階段真機驗證發現決策 #7 的前提不完全成立——`ReaderScreen._isFixedLayout`（驅動 FXL 懸浮 chrome 顯示的執行期狀態，見 `CONTEXT.md`「固定版面（FXL）」詞條）雖然不影響*引擎分派*，但仍會被 native view 的 `onLayoutResolved`/`onPageRendered` 異步回報覆蓋，導致「強制 FXL」後閱讀器設定表單短暫顯示流式選項而非 FXL 選項。追加 commit `97878c4` 在 `_resolveEpubEngineDispatch()`／`_handleLayoutResolved()`／`_handleFoliateLayoutResolved()` 三處新增 `widget.isFixedLayout == true` 時不允許 native 回報覆蓋 `_isFixedLayout` 的保護邏輯，此屬計畫範圍外的追加，已經人類於程式碼審查後確認接受，不需要回退。**已知殘留限制**：此修復只保護了 `ReaderScreen._isFixedLayout`，`EpubReaderView` widget 自己內部同名欄位（`app/lib/reader/epub_reader_view.dart:326`，驅動 FXL 換頁熱區疊加層顯示）與 Kotlin 原生端 `EpubReaderView.kt` 的雙頁 spread 計算（`applyFxlFitScale()`）仍完全依賴 Readium 自己對書本 metadata 的獨立判讀、不受「強制 FXL」影響——後者正是真機驗收發現「橫向雙頁模式退化成單頁」症狀的根因，已判斷超出本 Issue 範圍，另立新 Issue 追蹤（見 `issues.md`）。
+
 ### 詞彙釐清（見 `CONTEXT.md`）
 
 grilling 過程中發現 `CONTEXT.md` 原「固定版面（Fixed-Layout, FXL）」詞條把「開書前的引擎分派判斷」與「開書後 Readium 執行期回報的 `EpubLayoutInfo.isFixedLayout`」混為一談，已拆分為「固定版面（FXL）」「引擎分派判斷」「人工版面覆蓋」三個獨立詞條。
