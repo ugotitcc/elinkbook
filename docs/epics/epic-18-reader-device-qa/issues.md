@@ -719,7 +719,7 @@ val effectivePublication = if (isForceFxl) {
 
 ## Issue 19：正式實作——「強制 FXL」書籍橫向雙頁排版修復（`Publication.Builder` 重建 `metadata.layout`）
 
-**Status:** Discovery 已完成（2026-07-30 `/grill-with-docs`，見 `design.md`「Issue 19 Discovery」與 `docs/adr/0016-fxl-metadata-override-via-publication-builder.md`），待撰寫實作計劃（`plans/plan-issue-19.md`）。
+**Status:** Discovery／Architecting 已完成（2026-07-30 `/grill-with-docs`，見 `design.md`「Issue 19 Discovery」與 `docs/adr/0016-fxl-metadata-override-via-publication-builder.md`），實作計劃已撰寫（`plans/plan-issue-19.md`），待程式碼審查後開始 TDD 實作。
 
 **依賴：** Issue 15（「強制 FXL」人工覆蓋機制，本 Issue 修復其已知副作用）、Issue 18（Spike 驗證 GO，本 Issue 的技術方向依據）、ADR 0016（本 Issue 的架構決策紀錄）。
 
