@@ -922,6 +922,51 @@ void main() {
     );
   });
 
+  testWidgets(
+      '強制 FXL（widget.isFixedLayout: true）時，native 端異步回報 isFixedLayout: false 不會覆蓋，FXL chrome 仍正確顯示（Issue 15 commit 97878c4 回歸測試）',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample_fixed_layout.epub',
+          bookId: 'b1',
+          prefsManager: prefsManager,
+          isFixedLayout: true,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    // 引擎分派（_dispatchedIsFixedLayout）已由 widget.isFixedLayout 同步
+    // 決定，建構的必為 EpubReaderView（Readium/FXL 路徑）。
+    expect(find.byType(EpubReaderView), findsOneWidget);
+
+    // 模擬 native 端（Readium 自己對這本書 metadata 的獨立判讀，見
+    // EpubReaderView.kt 的 publication?.metadata?.layout）異步回報
+    // isFixedLayout: false——比照本檔案既有測試對「無法在此層級驅動原生
+    // 渲染」的既定處理方式，直接呼叫 onLayoutResolved callback。
+    final view = tester.widget<EpubReaderView>(find.byType(EpubReaderView));
+    view.onLayoutResolved?.call(
+      const EpubLayoutInfo(
+        isFixedLayout: false,
+        writingMode: WritingMode.horizontal,
+      ),
+    );
+    await tester.pump();
+
+    // 使用者透過「強制 FXL」手動設定的決定不應被 native 端的異步回報
+    // 覆蓋——FXL 專屬的懸浮設定按鈕仍須顯示（見 reader_screen.dart
+    // `_resolveEpubEngineDispatch()`／`_handleLayoutResolved()` 的
+    // widget.isFixedLayout 保護邏輯）。
+    expect(
+      find.byKey(const Key('reader_fixed_layout_settings_button')),
+      findsOneWidget,
+      reason: '強制 FXL 後，native 異步回報 isFixedLayout=false 不應覆蓋 _isFixedLayout',
+    );
+  });
+
   testWidgets('FXL：真實點擊熱區「選單」格（index 1，中欄）觸發沉浸模式切換', (tester) async {
     final binaryMessenger =
         TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
