@@ -358,3 +358,25 @@ Issue 18 GO 後，人類決定：Issue 16 結案，完整實作交由新增的 I
 ### 報告路徑
 
 完整報告見 `docs/epics/epic-18-reader-device-qa/reviews/spike-issue18-publication-builder-override.md`
+
+### 實作與真機驗證結果（2026-07-30）
+
+Issue 19 正式實作完成，以下為驗證結果摘要：
+
+**程式碼變更：**
+- Kotlin 端（`EpubReaderView.kt`）：新增 `effectivePublication` 欄位，`attachNavigator()` 內用 `Publication.Builder` 重建 `effectivePublication`（mismatch 時強制 `metadata.layout = Layout.FIXED`），3 個 FXL 判斷檢查點統一改讀 `effectivePublication`。
+- Dart 端（`epub_reader_view.dart:326`）：`onLayoutResolved` 改為單調鎖存——`_isFixedLayout` 一旦變為 `true`，不再被後續 `false` 覆蓋。
+- 新增回歸測試：`epub_reader_view_test.dart` 新增 1 支測試驗證防禦性修法。
+
+**Dart 端測試：**
+- `flutter test`：704/704 全數通過（含新增回歸測試）。
+- `flutter analyze`：`No issues found!`。
+
+**Kotlin 端建置：**
+- `flutter build apk --debug`：建置成功，無編譯錯誤。
+
+**真機驗證（2026-07-30，裝置 `3CEF42ECD491687`）：**
+- Step 2 雙頁排版修復：✅ 正常——強制 FXL 漫畫 EPUB 橫向雙頁模式正確顯示兩頁並排，翻頁為 spread 切換。
+- Step 3 4 項服務項目：⚠️ 部分通過——頁面基本渲染正常、TOC 跳轉正常；Slider 進度條不可用（已知問題，由 Issue 20 獨立排查）。
+- Step 4 tap 熱區：✅ 正常——無雙重觸發或不一致現象。
+- Step 5 一般（原生判定就是 FXL、非強制覆蓋）EPUB 回歸：⚠️ 同 Step 3——進度條不可用。**二次訂正（2026-07-30，人類複核，取代前一版「✅ 正常」的錯誤訂正）**：不論書本是原生判定為 FXL 或使用者強制覆蓋，只要走 FXL（`EpubReaderView`／Readium）路徑，進度條皆不可用；只有 PDF 與流式 EPUB（`FoliateEpubReaderView`／`foliate-js`）進度條正常。這代表進度條缺失**不是** `Publication.Builder` 重建（Issue 18/19）造成的服務遺失——自然 FXL 書籍根本不會進入重建分支，卻同樣缺失——而是 FXL／Readium 路徑本身既有的限制，範圍比 Issue 18/19 改動更廣，詳見 Issue 20 更新後的範圍界定。

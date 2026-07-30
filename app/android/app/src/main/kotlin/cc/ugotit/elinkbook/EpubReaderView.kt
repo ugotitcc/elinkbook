@@ -43,6 +43,7 @@ import org.readium.r2.navigator.preferences.TextAlign
 import org.readium.r2.navigator.input.InputListener
 import org.readium.r2.navigator.input.TapEvent
 import org.readium.r2.navigator.util.BaseActionModeCallback
+import org.readium.r2.shared.InternalReadiumApi
 import org.readium.r2.shared.publication.Layout
 import org.readium.r2.shared.publication.Link
 import org.readium.r2.shared.publication.Locator
@@ -162,6 +163,14 @@ class EpubReaderView(
     private val previousFragmentFactory = activity.supportFragmentManager.fragmentFactory
     private var installedFragmentFactory: FragmentFactory? = null
     private var publication: Publication? = null
+    // 修復 Issue 16：Readium 官方元件 EpubNavigatorFragment 會獨立重新讀取
+    // Publication.metadata.layout 決定渲染模式，不受本專案 publication 欄位
+    // 影響（見 docs/adr/0016-fxl-metadata-override-via-publication-builder.md）。
+    // effectivePublication 是傳給 EpubNavigatorFactory／FXL 判斷檢查點使用的
+    // 物件；publication 欄位維持指向原始物件，確保 jumpToProgression()／
+    // buildTocPayloadSafely()／computeTotalCharacterCountInBackground() 等既有
+    // 呼叫端維持使用完整服務。
+    private var effectivePublication: Publication? = null
     private var navigatorFragment: EpubNavigatorFragment? = null
     private var pageReported = false
     private var isDisposed = false
@@ -498,7 +507,7 @@ class EpubReaderView(
     private var cachedFxlFitScaleIsSpread: Boolean? = null
 
     private fun applyFxlFitScale() {
-        val isFixedLayout = publication?.metadata?.layout == Layout.FIXED
+        val isFixedLayout = effectivePublication?.metadata?.layout == Layout.FIXED
         if (!isFixedLayout) {
             removeFxlLayoutListener()
             return
@@ -921,7 +930,28 @@ class EpubReaderView(
         // 協程例外，導致 Flutter 端卡住或整個 App 崩潰，繞過既有的錯誤回報機制。
         try {
             publication = openedPublication
-            val navigatorFactory = EpubNavigatorFactory(publication = openedPublication)
+            // 修復 Issue 16：Readium 官方解析器判定這本書不是 FXL 時（可能是
+            // 書本 metadata 本身不規範，也可能是使用者透過「強制 FXL」（Issue 15）
+            // 覆蓋了引擎分派決定，見 ADR 0016），用官方 Publication.Builder 重建
+            // 一個 metadata.layout 強制為 FIXED 的物件，讓 EpubNavigatorFragment
+            // 收到的 metadata 本身就是 FXL；沒有 mismatch 時原樣沿用，不重建
+            // （避免對正常 FXL 書籍引入不必要的服務遺失風險，見 Issue 20）。
+            @OptIn(InternalReadiumApi::class)
+            val effective = if (openedPublication.metadata.layout != Layout.FIXED) {
+                Publication.Builder(
+                    manifest = openedPublication.manifest.copy(
+                        metadata = openedPublication.manifest.metadata.copy(
+                            layout = Layout.FIXED,
+                        ),
+                    ),
+                    container = openedPublication.container,
+                    servicesBuilder = Publication.ServicesBuilder(),
+                ).build()
+            } else {
+                openedPublication
+            }
+            effectivePublication = effective
+            val navigatorFactory = EpubNavigatorFactory(publication = effective)
             val initialLocator = initialLocatorJson?.let {
                 Locator.fromJSON(JSONObject(it))
             }
@@ -995,7 +1025,12 @@ class EpubReaderView(
             // NavZoneHitTester.cellIndex() 不需額外轉換。FXL（isFixedLayout ==
             // true）完全不進這個分支，熱區疊加層由 Dart 端 GestureDetector
             // 處理（epic-7-interaction Issue 5）。
-            if (openedPublication.metadata.layout != Layout.FIXED) {
+            // 修復後 effective.metadata.layout 恆為 Layout.FIXED（Step 3 已強制
+            // 覆寫 mismatch 的情況），此條件理論上不再成立，原生端 tap 熱區監聽器
+            // 不會再與 Dart 端 9 宮格 GestureDetector（epic-7-interaction Issue 5）
+            // 同時作用（見 Issue 16 附帶發現的雙重輸入處理風險）；保留判斷式作為
+            // 防禦層，不刪除。
+            if (effective.metadata.layout != Layout.FIXED) {
                 val listener = object : InputListener {
                     override fun onTap(event: TapEvent): Boolean {
                         val view = navigatorFragment?.publicationView ?: return false
@@ -1037,6 +1072,7 @@ class EpubReaderView(
             // 掛載失敗時 Fragment 沒有真正附著到任何畫面上，Publication 不會再被使用，
             // 必須主動關閉釋放資源——與 openBook() 中 isDisposed 分支的做法一致。
             publication = null
+            effectivePublication = null
             openedPublication.close()
             channel.invokeMethod("onError", "掛載 EPUB 閱讀畫面失敗：${e.message}")
         }
@@ -1196,7 +1232,7 @@ class EpubReaderView(
      * StateFlow，直接讀取目前值即可，不需自行呼叫 EpubSettingsResolver。
      */
     private fun reportLayoutResolved() {
-        val isFixedLayout = publication?.metadata?.layout == Layout.FIXED
+        val isFixedLayout = effectivePublication?.metadata?.layout == Layout.FIXED
         val isVertical = navigatorFragment?.settings?.value?.verticalText ?: false
         channel.invokeMethod(
             "onLayoutResolved",
@@ -1267,6 +1303,7 @@ class EpubReaderView(
         }
         publication?.close()
         publication = null
+        effectivePublication = null
         navigatorFragment = null
     }
 }

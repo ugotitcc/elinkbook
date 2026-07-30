@@ -323,7 +323,14 @@ class _EpubReaderViewState extends State<EpubReaderView> {
               ? WritingMode.vertical
               : WritingMode.horizontal,
         );
-        setState(() => _isFixedLayout = info.isFixedLayout);
+        // Issue 19：EpubReaderView 這個 widget 本身只會在上游已決定「這本書用
+        // FXL 引擎開」時才會被建構（見 docs/adr/0016-...）。修復 Issue 16 後
+        // native 端理論上不會再回報 isFixedLayout: false，但保留防禦層：一旦
+        // _isFixedLayout 變為 true，不再讓後續的 false 覆蓋掉，避免 FXL 專屬
+        // 9 宮格熱區疊加層（見下方 build()）無預警消失。
+        if (info.isFixedLayout) {
+          setState(() => _isFixedLayout = true);
+        }
         widget.onLayoutResolved?.call(info);
         break;
       case 'onLocatorChanged':

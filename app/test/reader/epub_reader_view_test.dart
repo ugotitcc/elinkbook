@@ -342,6 +342,84 @@ void main() {
     expect(capturedActions, [ZoneAction.previousPage, ZoneAction.menu]);
   });
 
+  testWidgets(
+      'FXL 9 宮格熱區：isFixedLayout 一旦變為 true，後續 native 回報 false 不會覆蓋（Issue 19 防禦性修法回歸測試）',
+      (tester) async {
+    final binaryMessenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    late MethodChannel instanceChannel;
+
+    binaryMessenger.setMockMethodCallHandler(SystemChannels.platform_views,
+        (call) async {
+      if (call.method == 'create') {
+        final id = (call.arguments as Map<Object?, Object?>)['id'] as int;
+        instanceChannel =
+            MethodChannel('cc.ugotit.elinkbook/epub_reader_view_$id');
+        binaryMessenger.setMockMethodCallHandler(
+          instanceChannel,
+          (call) async => null,
+        );
+        return 0;
+      }
+      return null;
+    });
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: EpubReaderView(
+          filePath: '/tmp/sample_fixed_layout.epub',
+          onPageRendered: _noop,
+          onError: _noopError,
+          navZoneActions: const [
+            ZoneAction.previousPage, ZoneAction.none, ZoneAction.nextPage,
+            ZoneAction.previousPage, ZoneAction.menu, ZoneAction.nextPage,
+            ZoneAction.previousPage, ZoneAction.none, ZoneAction.nextPage,
+          ],
+          onZoneAction: (_) {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Step 1: 模擬原生端回報 isFixedLayout=true
+    var byteData = instanceChannel.codec.encodeMethodCall(
+      const MethodCall('onLayoutResolved', {
+        'isFixedLayout': true,
+        'writingMode': 'horizontal',
+      }),
+    );
+    await binaryMessenger.handlePlatformMessage(
+      instanceChannel.name,
+      byteData,
+      (data) {},
+    );
+    await tester.pump();
+
+    // 斷言 9 宮格熱區 Key 皆存在
+    for (var index = 0; index < 9; index++) {
+      expect(find.byKey(Key('nav_zone_$index')), findsOneWidget);
+    }
+
+    // Step 2: 模擬原生端回報 isFixedLayout=false（修復前會發生、修復後屬邊界情況）
+    byteData = instanceChannel.codec.encodeMethodCall(
+      const MethodCall('onLayoutResolved', {
+        'isFixedLayout': false,
+        'writingMode': 'horizontal',
+      }),
+    );
+    await binaryMessenger.handlePlatformMessage(
+      instanceChannel.name,
+      byteData,
+      (data) {},
+    );
+    await tester.pump();
+
+    // 斷言 9 宮格熱區 Key **仍然**皆存在（未被移除）
+    for (var index = 0; index < 9; index++) {
+      expect(find.byKey(Key('nav_zone_$index')), findsOneWidget);
+    }
+  });
+
   testWidgets('isFixedLayout 維持預設 false 時，不疊加 9 宮格熱區', (tester) async {
     await _pumpEpubReaderView(
       tester,

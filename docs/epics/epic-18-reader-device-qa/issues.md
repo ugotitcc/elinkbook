@@ -563,7 +563,7 @@ Issue 5 的 `singleColumn` 布林開關因 `paginator.js` 對直排書籍的 `ma
 
 ## Issue 16：強制 FXL 後，橫向雙頁模式退化成單頁（Readium 原生端獨立判讀書本 metadata，不受人工覆蓋影響）
 
-**Status:** 已完成根因確認與 Spike 驗證——Issue 17（覆寫本專案自身檢查點）NO-GO，Issue 18（`Publication.Builder` 重建 `metadata.layout`）GO。人類決定：完整實作交由 **Issue 19** 承接（Dart→Kotlin `isForceFxl` 旗標傳遞管線＋`Publication.Builder` 重建＋`epub_reader_view.dart:326` 防護）；Issue 18 真機驗證時觀察到的進度條不可見／頁數呈現異常，人類指出舊版測試已發現類似症狀、不確定是否與本次改動相關，另開 **Issue 20** 獨立排查。本 Issue 至此結案，後續請追蹤 Issue 19／20。
+**Status:** 已由 Issue 19 完整修復並合併（2026-07-30）。Issue 19 透過 `Publication.Builder` 重建 `effectivePublication` 強制 `metadata.layout = Layout.FIXED`，解決了 Readium 原生端獨立判讀導致的雙頁退化問題。
 
 **依賴：** 無（獨立於 Issue 15，Issue 15 的「強制 FXL」核心交付物——引擎確實從 `FoliateEpubReaderView` 切換到 `EpubReaderView`——已確認正常運作，不受本 Issue 影響，故不阻擋 Issue 15 合併）。
 
@@ -719,7 +719,7 @@ val effectivePublication = if (isForceFxl) {
 
 ## Issue 19：正式實作——「強制 FXL」書籍橫向雙頁排版修復（`Publication.Builder` 重建 `metadata.layout`）
 
-**Status:** 實作完成，程式碼審查通過（`tmp/epic-18/review-plan-issue-19.md`，Important #1/#2 已修正），PR #90 已送出待合併：https://git.jigong.org/huthief/elinkBook/pulls/90（分支 `feature/epic-18-issue-19-fxl-metadata-override`）。真機驗證：橫向雙頁模式正確顯示兩頁並排，翻頁正常，tap 熱區無雙重觸發；`flutter test` 704/704 通過、`flutter analyze` 無警告、`flutter build apk --debug` 建置成功。
+**Status:** 已完成並合併回 `main`（2026-07-30，PR #90：https://git.jigong.org/huthief/elinkBook/pulls/90，分支 `feature/epic-18-issue-19-fxl-metadata-override`）。程式碼審查通過（`tmp/epic-18/review-plan-issue-19.md`，Important #1/#2 已修正）；`flutter test` 704/704 全數通過、`flutter analyze` 無警告、`flutter build apk --debug` 建置成功；真機驗證通過——橫向雙頁模式正確顯示兩頁並排，翻頁正常，tap 熱區無雙重觸發。Slider 進度條不可用，經複核確認為 FXL（Readium）路徑本身既有限制、與本次改動無關，已另立 Issue 20 獨立排查，不影響本 Issue 驗收。
 
 **依賴：** Issue 15（「強制 FXL」人工覆蓋機制，本 Issue 修復其已知副作用）、Issue 18（Spike 驗證 GO，本 Issue 的技術方向依據）、ADR 0016（本 Issue 的架構決策紀錄）。
 
