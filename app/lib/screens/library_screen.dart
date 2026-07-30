@@ -313,6 +313,24 @@ class _LibraryScreenState extends State<LibraryScreen> {
     await _loadBooks();
   }
 
+  /// 對選取集合中所有 EPUB 書籍重新呼叫既有 detectAndCacheEpubLayout()，
+  /// 回到系統原始的「引擎分派判斷」結果——用於復原誤按/誤判後想撤銷人工
+  /// 覆蓋的情況（見 CONTEXT.md「人工版面覆蓋」）。非 EPUB 書籍自動跳過。
+  /// 行為比照 _forceFixedLayoutForSelectedBooks()，含其「捕捉 selectedIds
+  /// 參考早於 _exitSelectionMode() 是安全的」註記。
+  Future<void> _restoreAutoLayoutForSelectedBooks() async {
+    final selectedIds = _selectedBookIds;
+    final books = _books;
+    if (selectedIds == null || selectedIds.isEmpty || books == null) return;
+    _exitSelectionMode();
+    for (final book in books) {
+      if (!selectedIds.contains(book.id)) continue;
+      if (book.format != BookFileFormat.epub) continue;
+      await widget.repository.detectAndCacheEpubLayout(book.id, book.filePath);
+    }
+    await _loadBooks();
+  }
+
   Future<bool?> _confirmDeleteBooks(int count) {
     return showDialog<bool>(
       context: context,
@@ -660,6 +678,12 @@ class _LibraryScreenState extends State<LibraryScreen> {
           icon: const Icon(Icons.menu_book),
           tooltip: '強制 FXL',
           onPressed: count == 0 ? null : _forceFixedLayoutForSelectedBooks,
+        ),
+        IconButton(
+          key: const Key('library_restore_auto_layout_button'),
+          icon: const Icon(Icons.restore),
+          tooltip: '恢復自動判斷',
+          onPressed: count == 0 ? null : _restoreAutoLayoutForSelectedBooks,
         ),
         IconButton(
           key: const Key('library_delete_books_button'),

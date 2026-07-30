@@ -1032,6 +1032,112 @@ void main() {
         reason: 'count > 0 時按鈕應可點擊，不因選取內容全為非 EPUB 而停用');
   });
 
+  testWidgets(
+      '選取多本 EPUB 書籍後點擊「恢復自動判斷」，對每本已選取書籍呼叫 detectAndCacheEpubLayout',
+      (tester) async {
+    final bookA = _testBook(id: '1', title: 'A漫畫', isFixedLayout: true);
+    final bookB = _testBook(id: '2', title: 'B漫畫', isFixedLayout: true);
+    final repository = FakeLibraryRepository(
+      initialBooks: [bookA, bookB],
+      detectedIsFixedLayout: false,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: repository,
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.longPress(find.byKey(const Key('book_item_1')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('book_item_2')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('library_restore_auto_layout_button')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('library_selection_app_bar')), findsNothing);
+    expect(
+      repository.detectAndCacheEpubLayoutCalls,
+      containsAll(['1', '2']),
+    );
+    final updated = await repository.listBooks();
+    expect(updated.firstWhere((b) => b.id == '1').isFixedLayout, isFalse);
+    expect(updated.firstWhere((b) => b.id == '2').isFixedLayout, isFalse);
+  });
+
+  testWidgets(
+      '選取集合混雜 EPUB 與 TXT 時，點擊「恢復自動判斷」只影響 EPUB、TXT 不受影響也不拋錯',
+      (tester) async {
+    final epubBook = _testBook(id: '1', title: 'A漫畫', isFixedLayout: true);
+    final txtBook = _testBook(
+      id: '2',
+      title: 'B文字書',
+      format: BookFileFormat.txt,
+      filePath: 'content://example/2.txt',
+    );
+    final repository = FakeLibraryRepository(
+      initialBooks: [epubBook, txtBook],
+      detectedIsFixedLayout: false,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: repository,
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.longPress(find.byKey(const Key('book_item_1')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('book_item_2')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('library_restore_auto_layout_button')));
+    await tester.pumpAndSettle();
+
+    expect(repository.detectAndCacheEpubLayoutCalls, ['1']);
+  });
+
+  testWidgets('選取集合全為非 EPUB 時，「恢復自動判斷」按鈕仍然顯示（不隱藏/不因格式停用）',
+      (tester) async {
+    final txtBook = _testBook(
+      id: '1',
+      title: 'A文字書',
+      format: BookFileFormat.txt,
+      filePath: 'content://example/1.txt',
+    );
+    final repository = FakeLibraryRepository(initialBooks: [txtBook]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: repository,
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.longPress(find.byKey(const Key('book_item_1')));
+    await tester.pumpAndSettle();
+
+    final button = tester.widget<IconButton>(
+      find.byKey(const Key('library_restore_auto_layout_button')),
+    );
+    expect(button.onPressed, isNotNull);
+  });
+
   testWidgets('書架（grid）與列表兩種檢視皆能觸發長按進入選取模式並完成批次移動',
       (tester) async {
     final bookA =
