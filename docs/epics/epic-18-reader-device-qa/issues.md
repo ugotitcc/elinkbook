@@ -753,30 +753,29 @@ Issue 16 確認「強制 FXL」後橫向雙頁模式退化成單頁的根因；I
 
 ---
 
-## Issue 20：FXL 書籍進度條／頁數顯示異常，需排查（不確定是既有缺陷或本次改動所致）
+## Issue 20：強制 FXL 書籍進度條／頁數顯示異常（`Publication.Builder` 重建服務遺失），需排查修復方案
 
-**Status:** needs-triage。人類於 Issue 18 真機驗證時發現並回報，尚未進行 Discovery。
+**Status:** needs-triage，根因方向已確認（見下方「2026-07-30 訂正」）——確定是 Issue 18/19 `Publication.Builder` 重建路徑的 `ServicesBuilder()` 服務遺失所致，非既有缺陷，尚未進行完整 Discovery。
 
 **依賴：** 無（獨立排查，不阻擋 Issue 19）。
 
 **描述：**
 
-人類回報：舊版測試中已發現，FXL 模式的進度條「不確定是哪個版本開始」就已經無法顯示。Issue 18 Spike（`Publication.Builder` 重建 `metadata.layout` 驗證）真機測試時也觀察到同樣現象（進度條不可見、頁數呈現模式與預期的 1,3-2,5-4 不同），但**尚未確認兩者是否為同一根因**——Issue 18 重建的 `Publication` 物件因原始 `servicesBuilder` 為 private、只能用全新預設值，理論上會遺失 `positions()` 等服務，可以解釋觀察到的異常；但人類指出一般（未套用「強制 FXL」、未經 `Publication.Builder` 重建）的 FXL 書籍似乎也有類似症狀，暗示可能是獨立於 Issue 18 改動之外、影響範圍更廣的既有缺陷。
+Issue 18 Spike（`Publication.Builder` 重建 `metadata.layout` 驗證）真機測試時觀察到進度條異常（進度條不可見、頁數呈現模式與預期的 1,3-2,5-4 不同）。Issue 18 重建的 `Publication` 物件因原始 `servicesBuilder` 為 private、只能用全新預設值，理論上會遺失 `positions()` 等服務，可以解釋觀察到的異常。
 
-**範圍：** 需要先做 Discovery（`/diagnose` 或等效流程）釐清：
-1. 進度條不可見的症狀，在「未套用強制 FXL、原生判定就是 FXL」的一般書籍上是否重現？**（已有初步證據指向「是」，見下方 Issue 19 Task 3 Step 5 真機觀察）**
-2. 若一般 FXL 書籍不重現、僅強制 FXL＋`Publication.Builder` 重建路徑重現，則問題應併回 Issue 19（屬於其 Service Loss 範圍）。
-3. 釐清「不確定哪個版本開始」——是否可用既有 `docs/archive/` 紀錄縮小範圍（例如比對 `epic-16-dual-page` 歸檔前後的行為差異）。
+**2026-07-30 訂正（Issue 19 Task 3 Step 5 真機複核，人類確認）**：Issue 19 程式碼審查（`tmp/epic-18/review-plan-issue-19.md` Minor #1）曾一度誤讀 `design.md` 記錄、以為一般（未套用「強制 FXL」）的 FXL 書籍也重現此症狀，暗示是與本次改動無關的既有缺陷——經人類真機複核，**此為誤判**：一般 FXL 書籍（不進 `Publication.Builder` 重建分支，`effectivePublication` 就是原始 `openedPublication`）進度條正常，**症狀僅出現在強制 FXL（走過 `Publication.Builder` 重建）的路徑**，與 `ServicesBuilder()` 重建遺失服務的理論一致，並非獨立於 Issue 18/19 改動之外的既有缺陷。`design.md:382` 已同步訂正。
 
-**Issue 19 程式碼審查提供的線索（2026-07-30，`tmp/epic-18/review-plan-issue-19.md` Minor #1）**：Issue 19 Task 3 Step 5（一般、非強制 FXL 書籍回歸驗證，見 `design.md:382`）真機觀察到**一般 FXL 書籍同樣出現 Slider 進度條不可用**，而依 Issue 19 的 ADR 0016 設計，一般 FXL 書籍完全不會進入 `Publication.Builder` 重建分支（`effectivePublication` 就是原始 `openedPublication` 本身，理論上服務完整）。這強烈暗示範圍問題 1 的答案是「是」——進度條異常很可能是與 Issue 18/19 改動**無關**的既有缺陷，建議 Discovery 時優先從這條線索查起，而非預設是 `ServicesBuilder()` 重建導致的服務遺失。
+**範圍：** 需要先做 Discovery（`/diagnose` 或等效流程）：
+1. 確認 `ServicesBuilder()` 重建後具體遺失了哪些服務（`positions()` 是已知一項，是否還有其他），對照真機觀察到的「進度條不可見」「頁數呈現模式與預期不同」逐項比對根因。
+2. 評估是否有辦法在不引入反射等高風險手段的前提下減緩/修復（例如：是否只需要重新實作最小可用的 `PositionsService` 而非整個 `servicesBuilder`）。
+3. 若排查後判定修復成本過高，記錄為已知限制，於 UI 上適度提示使用者（例如「強制 FXL 書籍暫不支援進度顯示」）。
 
-**明確不在本 Issue 範圍**：Issue 19 的橫向雙頁排版修復本身，本 Issue 不阻擋其進行。
+**明確不在本 Issue 範圍**：Issue 19 的橫向雙頁排版修復本身（已完成，不受本 Issue 影響）。
 
 **相關佐證：**
 - `docs/epics/epic-18-reader-device-qa/reviews/spike-issue18-publication-builder-override.md`「Service Loss 驗證」小節（症狀首次記錄）
-- `docs/epics/epic-18-reader-device-qa/design.md:380-382`（Issue 19 Task 3 Step 3／5 真機觀察，一般 FXL 書籍同樣重現）
-- `docs/archive/2026-07-14-epic-16-dual-page/`（既有雙頁模式歸檔紀錄，可能的行為變化基準點）
-- Issue 19（若排查後確認是同一根因，併回 Issue 19 一併處理）
+- `docs/epics/epic-18-reader-device-qa/design.md:378-382`（Issue 19 Task 3 真機驗證結果，含 Step 5 訂正記錄）
+- `docs/adr/0016-fxl-metadata-override-via-publication-builder.md`（`Publication.Builder` 重建、`ServicesBuilder()` 服務遺失代價的架構決策）
 
 ---
 
