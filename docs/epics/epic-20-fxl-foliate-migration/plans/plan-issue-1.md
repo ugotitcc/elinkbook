@@ -59,7 +59,7 @@
 - Consumes：無（起始工單）
 - Produces：可建置、安裝、啟動的最小 `WebView` Activity，`WebViewAssetLoader` 已正確攔截 `https://appassets.androidplatform.net/assets/` 底下的請求；本 Task 完成後 `MainActivity.kt` 不再需要修改
 
-- [ ] **Step 1：確認裝置、建立目錄結構**
+- [x] **Step 1：確認裝置、建立目錄結構**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook"
@@ -73,7 +73,7 @@ adb devices -l
 
 Expected：`git status --short` 無輸出；`adb devices -l` 列出裝置 `3CEF42ECD491687`（若已更換，以實際輸出為準，後續指令一律以 `<device-id>` 表示）。
 
-- [ ] **Step 2：確認裝置解析度**
+- [x] **Step 2：確認裝置解析度**
 
 ```bash
 adb -s <device-id> shell wm size
@@ -81,7 +81,7 @@ adb -s <device-id> shell wm size
 
 Expected：記下實際解析度，供 Task 3/4 觸發座標換算使用。
 
-- [ ] **Step 3：複製主專案已驗證可用的 Gradle wrapper**
+- [x] **Step 3：複製主專案已驗證可用的 Gradle wrapper**
 
 ```bash
 cp "U:/MyDeveloper/AI/elinkBook/app/android/gradlew" \
@@ -95,7 +95,7 @@ cp "U:/MyDeveloper/AI/elinkBook/app/android/gradle/wrapper/gradle-wrapper.proper
    "U:/MyDeveloper/AI/elinkBook/tmp/epic-20/foliate-fxl-spike-harness/gradle/wrapper/gradle-wrapper.properties"
 ```
 
-- [ ] **Step 4：寫 `settings.gradle.kts`**
+- [x] **Step 4：寫 `settings.gradle.kts`**
 
 ```kotlin
 pluginManagement {
@@ -118,7 +118,7 @@ rootProject.name = "foliate-fxl-spike-harness"
 include(":app")
 ```
 
-- [ ] **Step 5：寫根目錄 `build.gradle.kts`**
+- [x] **Step 5：寫根目錄 `build.gradle.kts`**
 
 ```kotlin
 plugins {
@@ -127,7 +127,7 @@ plugins {
 }
 ```
 
-- [ ] **Step 6：寫 `gradle.properties`**
+- [x] **Step 6：寫 `gradle.properties`**
 
 ```properties
 org.gradle.jvmargs=-Xmx2048M
@@ -135,7 +135,7 @@ android.useAndroidX=true
 kotlin.code.style=official
 ```
 
-- [ ] **Step 7：寫 `app/build.gradle.kts`**
+- [x] **Step 7：寫 `app/build.gradle.kts`**
 
 ```kotlin
 plugins {
@@ -172,7 +172,7 @@ dependencies {
 }
 ```
 
-- [ ] **Step 8：寫 `AndroidManifest.xml`**
+- [x] **Step 8：寫 `AndroidManifest.xml`**
 
 ```xml
 <?xml version="1.0" encoding="utf-8"?>
@@ -200,7 +200,7 @@ dependencies {
 
 （`screenOrientation="landscape"` 而非 `epic-17` Issue 1 的 `"portrait"`——本次驗證目標是橫向雙頁，比照 `epic-18` Issue 15/17/18/19 一路的既有測試慣例，直接鎖定橫向、避免裝置自動旋轉干擾。）
 
-- [ ] **Step 9：寫 `MainActivity.kt`（最終版，本 Task 後不再修改，直接沿用 `epic-17` Issue 1 已驗證版本，僅改 package 名稱）**
+- [x] **Step 9：寫 `MainActivity.kt`（最終版，本 Task 後不再修改，直接沿用 `epic-17` Issue 1 已驗證版本，僅改 package 名稱）**
 
 ```kotlin
 package cc.ugotit.foliatefxlspike
@@ -264,7 +264,7 @@ class MainActivity : Activity() {
 }
 ```
 
-- [ ] **Step 10：寫暫時的 `index.html`**
+- [x] **Step 10：寫暫時的 `index.html`**
 
 ```html
 <!doctype html>
@@ -274,7 +274,7 @@ class MainActivity : Activity() {
 </html>
 ```
 
-- [ ] **Step 11：建置、安裝、啟動，截圖確認管線可用**
+- [x] **Step 11：建置、安裝、啟動，截圖確認管線可用**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/tmp/epic-20/foliate-fxl-spike-harness"
@@ -305,7 +305,7 @@ Expected：畫面顯示「FOLIATE_FXL_SPIKE_HARNESS_OK」，代表管線正常�
 - Consumes：Task 1 已驗證可用的管線
 - Produces：可開啟 FXL 漫畫 EPUB 並顯示內容的頁面（此時尚未啟用雙頁，`foliate-fxl` 自訂元素若正確載入應已可單頁顯示圖片內容）
 
-- [ ] **Step 1：下載釘定 commit 的 9 個依賴檔案，並處理 `fixed-layout.js` 的 polyfill import**
+- [x] **Step 1：下載釘定 commit 的 9 個依賴檔案，並處理 `fixed-layout.js` 的 polyfill import**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/tmp/epic-20/foliate-fxl-spike-harness/app/src/main/assets/foliate"
@@ -330,7 +330,7 @@ grep -n "^import" fixed-layout.js
 
 Expected：`fixed-layout.js` 的 import 已改指向本地空檔案。（若真機測試時發現此假設有誤、真的需要功能性 polyfill，記錄於 Spike 報告，正式實作階段再處理。）
 
-- [ ] **Step 2：從真機取出測試用漫畫 EPUB**
+- [x] **Step 2：從真機取出測試用漫畫 EPUB**（實際執行：使用者已提供本機複本 `tmp/一弦定音.epub`，直接複製進 harness assets，未實際跑 `adb run-as` 取出流程，效果等同）
 
 沿用 `epic-18` Issue 15/17/18/19 一路使用的同一本已知會被誤判為流式的漫畫 EPUB（已於裝置圖書庫套用「強制 FXL」）。此書是真實使用者匯入的書籍，非版控 fixture，需先取得其檔案：
 
@@ -350,7 +350,7 @@ ls -la "U:/MyDeveloper/AI/elinkBook/tmp/epic-20/foliate-fxl-spike-harness/app/sr
 
 Expected：`comic.epub` 檔案存在且大小合理（非 0 bytes）。
 
-- [ ] **Step 3：覆寫 `index.html`**
+- [x] **Step 3：覆寫 `index.html`**
 
 ```html
 <!doctype html>
@@ -370,7 +370,7 @@ Expected：`comic.epub` 檔案存在且大小合理（非 0 bytes）。
 </html>
 ```
 
-- [ ] **Step 4：寫 `main.js`（基準版本——只開書、記錄 relocate，尚無雙頁/觸發按鈕）**
+- [x] **Step 4：寫 `main.js`（基準版本——只開書、記錄 relocate，尚無雙頁/觸發按鈕）**
 
 ```js
 import { makeBook } from './view.js'
@@ -408,7 +408,7 @@ async function openBook() {
 openBook()
 ```
 
-- [ ] **Step 5：重新建置、安裝、啟動，截圖與 logcat 確認 FXL 已被正確偵測並渲染**
+- [x] **Step 5：重新建置、安裝、啟動，截圖與 logcat 確認 FXL 已被正確偵測並渲染**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/tmp/epic-20/foliate-fxl-spike-harness"
@@ -440,7 +440,7 @@ Expected：`FOLIATE_BOOK_META` 顯示 `layout` 為 `"pre-paginated"`（確認這
 - Consumes：Task 2 基準版本
 - Produces：可透過固定座標觸發「上一頁」「下一頁」、雙頁模式已啟用的完整 Harness
 
-- [ ] **Step 1：覆寫 `index.html`，加入左右觸發熱區**
+- [x] **Step 1：覆寫 `index.html`，加入左右觸發熱區**
 
 ```html
 <!doctype html>
@@ -468,7 +468,7 @@ Expected：`FOLIATE_BOOK_META` 顯示 `layout` 為 `"pre-paginated"`（確認這
 </html>
 ```
 
-- [ ] **Step 2：覆寫 `main.js`，啟用雙頁模式並加入觸發按鈕**
+- [x] **Step 2：覆寫 `main.js`，啟用雙頁模式並加入觸發按鈕**
 
 ```js
 import { makeBook } from './view.js'
@@ -516,7 +516,7 @@ document.getElementById('btn-next').addEventListener('click', () => {
 openBook()
 ```
 
-- [ ] **Step 3：重新建置、安裝、啟動，截圖確認雙頁生效**
+- [x] **Step 3：重新建置、安裝、啟動，截圖確認雙頁生效**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/tmp/epic-20/foliate-fxl-spike-harness"
@@ -534,7 +534,7 @@ adb -s <device-id> exec-out screencap -p > "U:/MyDeveloper/AI/elinkBook/tmp/epic
 
 Expected：畫面顯示雙頁並排（或若第一頁是封面且書本有正確 `page-spread-center` metadata，可能顯示單頁封面——兩種結果皆需記錄，不預設立場）。
 
-- [ ] **Step 4：連續點擊下一頁 3 次，逐次截圖，觀察頁面配對模式**
+- [x] **Step 4：連續點擊下一頁 3 次，逐次截圖，觀察頁面配對模式**
 
 ```bash
 adb -s <device-id> shell input tap <right-x> <mid-y>
@@ -542,7 +542,7 @@ adb -s <device-id> shell input tap <right-x> <mid-y>
 
 等待至少 2 秒，擷取截圖，依序存為 `spike1-task3-next-1.png`／`next-2.png`／`next-3.png`（座標依 Task 1 Step 2 記錄的實際解析度換算，右側熱區約在畫面寬度 66%-100% 之間任一點，Y 座標約畫面高度中點）。
 
-- [ ] **Step 5：肉眼比對截圖，記錄配對模式與 RTL 順序**
+- [x] **Step 5：肉眼比對截圖，記錄配對模式與 RTL 順序**
 
 比對 `spike1-task3-spread-page1.png` → `next-1` → `next-2` → `next-3` 四張截圖：
 1. 封面（第一頁）是否獨立顯示，或與第二頁並排？
@@ -562,7 +562,7 @@ adb -s <device-id> shell input tap <right-x> <mid-y>
 - Consumes：Task 3 觀察結果
 - Produces：連續翻頁穩定性的正式量測證據；若封面獨立顯示需要補救，記錄補救是否成功
 
-- [ ] **Step 1（條件式）：直接修補 EPUB 檔案本身，補上 `page-spread-center`**
+- [x] **Step 1（條件式，實際跳過）：直接修補 EPUB 檔案本身，補上 `page-spread-center`**（實際執行：真實問題書籍原始 OPF 本來就有正確的 `rendition:page-spread-center`／`page-spread-left`／`page-spread-right` 宣告，Task 3 已觀察到封面正確獨立顯示，本步驟條件不成立，跳過）
 
 僅在 Task 3 Step 5 觀察到封面未獨立顯示時執行。**審查修正**：原規劃嘗試用 `book.transformTarget` 的 `'data'` 事件攔截 OPF 內容，經對照 `epub.js` 原始碼查證**此路不通**——OPF 是透過私有方法 `#loadXML()` 直接讀取，完全不經過 `transformTarget`（`transformTarget` 只用於後續個別內容項目載入，經由 `Loader` 類別），不是時序問題，是攔截點本身就錯了。改為在組裝 Harness 素材階段直接修補 EPUB 檔案本身（解壓縮 → 修改 OPF XML 文字 → 重新封裝成合法 EPUB zip），不依賴任何執行期 JS 攔截機制。
 
@@ -613,14 +613,14 @@ cp comic_patched.epub "U:/MyDeveloper/AI/elinkBook/tmp/epic-20/foliate-fxl-spike
 
 修改 `main.js` 的 `openBook()`，把書本 URL 暫時改指向 `comic_patched.epub`，重新建置安裝，重複 Task 3 Step 3-5 的觀察流程，確認封面是否改為獨立顯示。驗證完成後記錄結果——不論成功與否，皆保留 `main.js` 內修改前後兩個版本的差異記錄於 Spike 報告，供 Architecting 階段參考「修補 metadata 這條路是否可行」。
 
-- [ ] **Step 2：清空 logcat，準備正式量測**
+- [x] **Step 2：清空 logcat，準備正式量測**
 
 ```bash
 adb -s <device-id> logcat -c
 adb -s <device-id> exec-out screencap -p > "U:/MyDeveloper/AI/elinkBook/tmp/epic-20/reviews/spike1-task4-start.png"
 ```
 
-- [ ] **Step 3：連續 3 次「下一頁」單次觸發，每次間隔至少 2 秒**
+- [x] **Step 3：連續 3 次「下一頁」單次觸發，每次間隔至少 2 秒**
 
 ```bash
 adb -s <device-id> shell input tap <right-x> <mid-y>
@@ -628,7 +628,7 @@ adb -s <device-id> shell input tap <right-x> <mid-y>
 
 等待至少 2 秒，擷取截圖，重複 3 次，依序存為 `spike1-task4-next-1.png`～`next-3.png`。
 
-- [ ] **Step 4：連續 3 次「上一頁」單次觸發，每次間隔至少 2 秒**
+- [x] **Step 4：連續 3 次「上一頁」單次觸發，每次間隔至少 2 秒**
 
 ```bash
 adb -s <device-id> shell input tap <left-x> <mid-y>
@@ -636,7 +636,7 @@ adb -s <device-id> shell input tap <left-x> <mid-y>
 
 等待至少 2 秒，擷取截圖，重複 3 次，依序存為 `spike1-task4-prev-1.png`～`prev-3.png`。
 
-- [ ] **Step 5：擷取完整 logcat**
+- [x] **Step 5：擷取完整 logcat**
 
 ```bash
 adb -s <device-id> logcat -d | grep "FOLIATE_FXL_SPIKE" > "U:/MyDeveloper/AI/elinkBook/tmp/epic-20/reviews/spike1-task4-logcat.txt"
@@ -660,30 +660,30 @@ Expected：6 筆 `FOLIATE_TRIGGER`，每筆之後緊接至少一筆 `FOLIATE_REL
 - Consumes：Task 1-4 的截圖與 logcat 證據
 - Produces：本 Epic 後續（GO → Architecting／NO-GO → epic-18 Issue 20/21 恢復執行）唯一可依循的正式結論
 
-- [ ] **Step 1：撰寫診斷報告**
+- [x] **Step 1：撰寫診斷報告**
 
 於 `docs/epics/epic-20-fxl-foliate-migration/reviews/spike-issue1-fxl-foliate.md`（比照 `docs/archive/2026-07-24-epic-17-epub-render-migration/reviews/spike-foliate-js-vertical.md` 既有格式）撰寫：驗證範圍摘要、Task 1-4 觀察結果（含截圖引用）、`design.md` 判準表逐項結果、封面獨立顯示是否需要補救及補救是否成功、明確 GO/NO-GO 結論。
 
-- [ ] **Step 2：更新 `design.md`「Spike 驗證方法與判準」段落**
+- [x] **Step 2：更新 `design.md`「Spike 驗證方法與判準」段落**
 
 補上實際結果摘要。
 
-- [ ] **Step 3：更新 `issues.md` Issue 1 狀態**
+- [x] **Step 3：更新 `issues.md` Issue 1 狀態**
 
-- [ ] **Step 4：依 GO/NO-GO 結果更新 `epic-18` `issues.md` Issue 20／21 狀態**
+- [x] **Step 4：依 GO/NO-GO 結果更新 `epic-18` `issues.md` Issue 20／21 狀態**
 
 若 GO：兩者 Status 改為「已由 `epic-20` 取代，不再執行；正式實作方向見 `epic-20` Architecting 階段」。
 若 NO-GO：兩者 Status 改為「`epic-20` Spike 判定 NO-GO，恢復依原計畫執行」，移除 ⏸️ 暫停標記。
 
-- [ ] **Step 5：更新 `docs/epics.md` epic-18／epic-20 兩列摘要**
+- [x] **Step 5：更新 `docs/epics.md` epic-18／epic-20 兩列摘要**
 
-- [ ] **Step 6：清理裝置狀態**
+- [x] **Step 6：清理裝置狀態**
 
 ```bash
 adb -s <device-id> uninstall cc.ugotit.foliatefxlspike
 ```
 
-- [ ] **Step 7：確認版控狀態乾淨並 Commit**
+- [x] **Step 7：確認版控狀態乾淨並 Commit**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook"
