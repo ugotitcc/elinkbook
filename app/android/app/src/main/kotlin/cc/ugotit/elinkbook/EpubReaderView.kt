@@ -1072,6 +1072,7 @@ class EpubReaderView(
             // 掛載失敗時 Fragment 沒有真正附著到任何畫面上，Publication 不會再被使用，
             // 必須主動關閉釋放資源——與 openBook() 中 isDisposed 分支的做法一致。
             publication = null
+            effectivePublication = null
             openedPublication.close()
             channel.invokeMethod("onError", "掛載 EPUB 閱讀畫面失敗：${e.message}")
         }
@@ -1302,6 +1303,7 @@ class EpubReaderView(
         }
         publication?.close()
         publication = null
+        effectivePublication = null
         navigatorFragment = null
     }
 }

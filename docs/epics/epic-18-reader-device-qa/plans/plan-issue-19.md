@@ -40,7 +40,7 @@
 - Consumes: Issue 18 Spike 已驗證的程式碼結構與真機證據
 - Produces: `EpubReaderView.kt` 正式支援「強制 FXL 但 Readium 官方判定非 FXL」的書籍正確渲染雙頁
 
-- [ ] **Step 1: 新增 `InternalReadiumApi` import**
+- [x] **Step 1: 新增 `InternalReadiumApi` import**
 
 找到（`EpubReaderView.kt:45`）：
 ```kotlin
@@ -54,7 +54,7 @@ import org.readium.r2.shared.InternalReadiumApi
 import org.readium.r2.shared.publication.Layout
 ```
 
-- [ ] **Step 2: 新增永久欄位 `effectivePublication`**
+- [x] **Step 2: 新增永久欄位 `effectivePublication`**
 
 找到 `private var publication: Publication? = null`（`EpubReaderView.kt:164` 附近），其後新增：
 ```kotlin
@@ -68,7 +68,7 @@ import org.readium.r2.shared.publication.Layout
     private var effectivePublication: Publication? = null
 ```
 
-- [ ] **Step 3: `attachNavigator()` 內建構 `effectivePublication`**
+- [x] **Step 3: `attachNavigator()` 內建構 `effectivePublication`**
 
 找到（`EpubReaderView.kt:911-924`）：
 ```kotlin
@@ -104,7 +104,7 @@ import org.readium.r2.shared.publication.Layout
             val navigatorFactory = EpubNavigatorFactory(publication = effective)
 ```
 
-- [ ] **Step 4: `:998` tap 熱區監聽器註冊判斷，改讀 `effective`**
+- [x] **Step 4: `:998` tap 熱區監聽器註冊判斷，改讀 `effective`**
 
 找到：
 ```kotlin
@@ -120,7 +120,7 @@ import org.readium.r2.shared.publication.Layout
             if (effective.metadata.layout != Layout.FIXED) {
 ```
 
-- [ ] **Step 5: `applyFxlFitScale()`（`:501`）改讀 `effectivePublication`**
+- [x] **Step 5: `applyFxlFitScale()`（`:501`）改讀 `effectivePublication`**
 
 找到：
 ```kotlin
@@ -133,7 +133,7 @@ import org.readium.r2.shared.publication.Layout
         val isFixedLayout = effectivePublication?.metadata?.layout == Layout.FIXED
 ```
 
-- [ ] **Step 6: `reportLayoutResolved()`（`:1199`）改讀 `effectivePublication`**
+- [x] **Step 6: `reportLayoutResolved()`（`:1199`）改讀 `effectivePublication`**
 
 找到：
 ```kotlin
@@ -146,7 +146,7 @@ import org.readium.r2.shared.publication.Layout
         val isFixedLayout = effectivePublication?.metadata?.layout == Layout.FIXED
 ```
 
-- [ ] **Step 7: 確認變更範圍並建置**
+- [x] **Step 7: 確認變更範圍並建置**
 
 ```bash
 cd app
@@ -167,7 +167,7 @@ flutter build apk --debug
 - Consumes: Task 1 已完成（理論上此防護的觸發條件不再出現，但仍需驗證）
 - Produces: `_isFixedLayout` 一旦變為 `true` 不再被後續 `false` 回報覆蓋
 
-- [ ] **Step 1: 修改 `onLayoutResolved` 處理邏輯（單調鎖存，比照 Issue 15 `commit 97878c4` 對 `ReaderScreen._isFixedLayout` 的既有保護精神）**
+- [x] **Step 1: 修改 `onLayoutResolved` 處理邏輯（單調鎖存，比照 Issue 15 `commit 97878c4` 對 `ReaderScreen._isFixedLayout` 的既有保護精神）**
 
 找到（`epub_reader_view.dart:318-327`）：
 ```dart
@@ -205,7 +205,7 @@ flutter build apk --debug
         break;
 ```
 
-- [ ] **Step 2: 新增回歸測試**
+- [x] **Step 2: 新增回歸測試**
 
 於 `app/test/reader/epub_reader_view_test.dart` 新增測試（比照既有「FXL 9 宮格熱區」測試的 pump 設置模式，見同檔 `:279-343`），流程：
 1. `pumpWidget` 建構 `EpubReaderView`。
@@ -214,7 +214,7 @@ flutter build apk --debug
 
 測試名稱建議：`'FXL 9 宮格熱區：isFixedLayout 一旦變為 true，後續 native 回報 false 不會覆蓋（Issue 19 防禦性修法回歸測試）'`。
 
-- [ ] **Step 3: 執行測試**
+- [x] **Step 3: 執行測試**
 
 ```bash
 cd app
@@ -234,7 +234,7 @@ flutter analyze
 - Consumes: Task 1／2 已完成
 - Produces: 合併回 `main` 的正式修復，Issue 16/19 狀態更新
 
-- [ ] **Step 1: 建置並安裝至真機**
+- [x] **Step 1: 建置並安裝至真機**
 
 ```bash
 cd app
@@ -242,28 +242,28 @@ flutter build apk --debug
 adb -s 3CEF42ECD491687 install -r build/app/outputs/flutter-apk/app-debug.apk
 ```
 
-- [ ] **Step 2: 真機驗證雙頁排版修復**
+- [x] **Step 2: 真機驗證雙頁排版修復**
 
 沿用 Issue 15/17/18 已知會被誤判為流式的漫畫 EPUB（已套用「強制 FXL」）。開書、裝置轉橫向、雙頁模式設為「永遠雙頁」，觀察畫面。
 
 預期：畫面顯示兩頁並排，翻頁行為為 spread 切換（比照 Issue 18 Spike 已驗證的結果）。
 
-- [ ] **Step 3: 真機複驗 Issue 18 Spike 已驗證的 4 項服務項目（確認正式實作未引入超出 Issue 20 已知範圍的新退化）**
+- [x] **Step 3: 真機複驗 Issue 18 Spike 已驗證的 4 項服務項目（確認正式實作未引入超出 Issue 20 已知範圍的新退化）**
 
 1. 頁面基本渲染（文字/圖片正常，無空白頁）
 2. Slider 進度跳轉測試（25%／50%／75%）
 3. `onLocatorChanged` 進度回報觀察（`adb logcat` 過濾，確認有回報，即使數值異常也屬 Issue 20 已知範圍）
 4. 目錄（TOC）點擊跳轉
 
-- [ ] **Step 4: 附帶驗證——tap 熱區是否仍有雙重處理**
+- [x] **Step 4: 附帶驗證——tap 熱區是否仍有雙重處理**
 
 點擊畫面左右兩側觀察換頁行為是否有雙重觸發或不一致現象，記錄結果（預期：Task 1 Step 4 的判斷式修復後不應再出現雙重觸發）。
 
-- [ ] **Step 5: 一般（非強制 FXL）EPUB 書籍回歸驗證**
+- [x] **Step 5: 一般（非強制 FXL）EPUB 書籍回歸驗證**
 
 開啟至少一本原生判定就是 FXL（非強制覆蓋）的書籍，確認雙頁排版、翻頁、進度條、TOC 皆維持既有正常行為（驗證 Step 3「mismatch 時不重建」的分支未被誤觸發、未引入回歸）。
 
-- [ ] **Step 6: 全套 `flutter test` 與 `flutter analyze`**
+- [x] **Step 6: 全套 `flutter test` 與 `flutter analyze`**
 
 ```bash
 cd app
@@ -272,17 +272,17 @@ flutter analyze
 ```
 預期：全數通過、`No issues found!`。
 
-- [ ] **Step 7: 依結果更新 `design.md`「Issue 19 Discovery」段落**
+- [x] **Step 7: 依結果更新 `design.md`「Issue 19 Discovery」段落**
 
 補上真機驗證結果摘要（Step 2-5 觀察結果）。
 
-- [ ] **Step 8: 依結果更新 `issues.md` Issue 19／16 狀態**
+- [x] **Step 8: 依結果更新 `issues.md` Issue 19／16 狀態**
 
 Issue 19 `Status` 更新為完成，摘要真機驗證結果；Issue 16 `Status` 更新為「已由 Issue 19 完整修復並合併」。
 
-- [ ] **Step 9: 更新 `docs/epics.md` epic-18 列摘要**
+- [x] **Step 9: 更新 `docs/epics.md` epic-18 列摘要**
 
-- [ ] **Step 10: Commit（於 feature branch）**
+- [x] **Step 10: Commit（於 feature branch）**
 
 ```bash
 git add app/android/app/src/main/kotlin/cc/ugotit/elinkbook/EpubReaderView.kt \
@@ -295,7 +295,7 @@ git add app/android/app/src/main/kotlin/cc/ugotit/elinkbook/EpubReaderView.kt \
 git commit -m "fix(epic-18): Issue 19 強制 FXL 書籍橫向雙頁排版修復——重建 Publication 物件覆寫 metadata.layout"
 ```
 
-- [ ] **Step 11: 送出 code review（`superpowers:requesting-code-review`），依審查結果修正後開 PR**
+- [ ] **Step 11: 送出 code review（`superpowers:requesting-code-review`），依審查結果修正後開 PR**（審查已完成，見 `tmp/epic-18/review-plan-issue-19.md`；PR 待開）
 
 ---
 
