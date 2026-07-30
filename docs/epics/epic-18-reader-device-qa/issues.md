@@ -764,14 +764,17 @@ Issue 16 確認「強制 FXL」後橫向雙頁模式退化成單頁的根因；I
 人類回報：舊版測試中已發現，FXL 模式的進度條「不確定是哪個版本開始」就已經無法顯示。Issue 18 Spike（`Publication.Builder` 重建 `metadata.layout` 驗證）真機測試時也觀察到同樣現象（進度條不可見、頁數呈現模式與預期的 1,3-2,5-4 不同），但**尚未確認兩者是否為同一根因**——Issue 18 重建的 `Publication` 物件因原始 `servicesBuilder` 為 private、只能用全新預設值，理論上會遺失 `positions()` 等服務，可以解釋觀察到的異常；但人類指出一般（未套用「強制 FXL」、未經 `Publication.Builder` 重建）的 FXL 書籍似乎也有類似症狀，暗示可能是獨立於 Issue 18 改動之外、影響範圍更廣的既有缺陷。
 
 **範圍：** 需要先做 Discovery（`/diagnose` 或等效流程）釐清：
-1. 進度條不可見的症狀，在「未套用強制 FXL、原生判定就是 FXL」的一般書籍上是否重現？（若重現，代表與 Issue 18 的 `Publication.Builder` 重建無關，是獨立於本 Epic 的既有缺陷）
+1. 進度條不可見的症狀，在「未套用強制 FXL、原生判定就是 FXL」的一般書籍上是否重現？**（已有初步證據指向「是」，見下方 Issue 19 Task 3 Step 5 真機觀察）**
 2. 若一般 FXL 書籍不重現、僅強制 FXL＋`Publication.Builder` 重建路徑重現，則問題應併回 Issue 19（屬於其 Service Loss 範圍）。
 3. 釐清「不確定哪個版本開始」——是否可用既有 `docs/archive/` 紀錄縮小範圍（例如比對 `epic-16-dual-page` 歸檔前後的行為差異）。
+
+**Issue 19 程式碼審查提供的線索（2026-07-30，`tmp/epic-18/review-plan-issue-19.md` Minor #1）**：Issue 19 Task 3 Step 5（一般、非強制 FXL 書籍回歸驗證，見 `design.md:382`）真機觀察到**一般 FXL 書籍同樣出現 Slider 進度條不可用**，而依 Issue 19 的 ADR 0016 設計，一般 FXL 書籍完全不會進入 `Publication.Builder` 重建分支（`effectivePublication` 就是原始 `openedPublication` 本身，理論上服務完整）。這強烈暗示範圍問題 1 的答案是「是」——進度條異常很可能是與 Issue 18/19 改動**無關**的既有缺陷，建議 Discovery 時優先從這條線索查起，而非預設是 `ServicesBuilder()` 重建導致的服務遺失。
 
 **明確不在本 Issue 範圍**：Issue 19 的橫向雙頁排版修復本身，本 Issue 不阻擋其進行。
 
 **相關佐證：**
 - `docs/epics/epic-18-reader-device-qa/reviews/spike-issue18-publication-builder-override.md`「Service Loss 驗證」小節（症狀首次記錄）
+- `docs/epics/epic-18-reader-device-qa/design.md:380-382`（Issue 19 Task 3 Step 3／5 真機觀察，一般 FXL 書籍同樣重現）
 - `docs/archive/2026-07-14-epic-16-dual-page/`（既有雙頁模式歸檔紀錄，可能的行為變化基準點）
 - Issue 19（若排查後確認是同一根因，併回 Issue 19 一併處理）
 
