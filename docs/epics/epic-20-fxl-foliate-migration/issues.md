@@ -2,7 +2,7 @@
 
 ## Issue 1：Spike——`readest/foliate-js` 的 `fixed-layout.js` 能否正確處理 FXL 漫畫橫向雙頁/RTL/封面獨立顯示
 
-**Status:** Discovery 已完成（見 `design.md`），待撰寫 Spike 計劃。
+**Status:** Discovery 已完成，Spike 計劃已撰寫（`plans/plan-issue-1.md`），待執行真機驗證。
 
 **依賴：** 無（起始工單）。
 
