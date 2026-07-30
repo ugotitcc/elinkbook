@@ -295,7 +295,7 @@ git add app/android/app/src/main/kotlin/cc/ugotit/elinkbook/EpubReaderView.kt \
 git commit -m "fix(epic-18): Issue 19 強制 FXL 書籍橫向雙頁排版修復——重建 Publication 物件覆寫 metadata.layout"
 ```
 
-- [ ] **Step 11: 送出 code review（`superpowers:requesting-code-review`），依審查結果修正後開 PR**（審查已完成，見 `tmp/epic-18/review-plan-issue-19.md`；PR 待開）
+- [x] **Step 11: 送出 code review（`superpowers:requesting-code-review`），依審查結果修正後開 PR**（審查見 `tmp/epic-18/review-plan-issue-19.md`，Important #1/#2 已修正；PR #90：https://git.jigong.org/huthief/elinkBook/pulls/90）
 
 ---
 
