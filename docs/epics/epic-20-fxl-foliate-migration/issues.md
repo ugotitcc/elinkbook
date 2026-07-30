@@ -40,7 +40,7 @@
 
 ## Issue 2：打包 `fixed-layout.js` 至 production assets，`FoliateEpubReaderView` 基本開書渲染 FXL 書籍
 
-**Status:** ready-for-agent
+**Status:** 實作計劃已撰寫（`plans/plan-issue-2.md`），待程式碼審查後開始執行。計劃內已查證關鍵風險：`foliate-fxl` 自訂元素沒有 `setStyles()` 方法，`main.js` 既有 `applyPreferences()` 若不分流會直接對 FXL 書籍拋出未攔截例外；`relocate` 事件對 FXL 的實際 payload 形狀尚未查證，計劃 Task 1 先做真機探索，Task 2 才依結果撰寫正式邏輯。
 
 **依賴：** Issue 1（Spike GO）。
 
