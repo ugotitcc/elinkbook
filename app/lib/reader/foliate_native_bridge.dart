@@ -9,6 +9,12 @@ import 'foliate_bridge_codec.dart';
 
 const _readerResourcesChannel = MethodChannel('elinkbook/reader_resources');
 
+/// 背景執行緒的 method channel，處理 `cacheBookForServing`。
+/// 217MB 檔案複製可能耗時數秒，透過 `BinaryMessenger.makeBackgroundTaskQueue()`
+/// 在背景執行緒執行，不阻塞 Android 主執行緒（避免 ANR）。
+const _readerResourcesCacheChannel =
+    MethodChannel('elinkbook/reader_resources_cache');
+
 /// 供 [attachReaderView]/[detachReaderView] 重用既有的
 /// `elinkbook/volume_key` 通道（MainActivity.kt 既有的音量鍵事件通道，見
 /// docs/epics/epic-18-reader-device-qa/plans/plan-issue-10.md Task 2）——
@@ -95,31 +101,41 @@ Future<Uint8List?> loadFlutterFontAsset(String assetPath) async {
   }
 }
 
-/// 讀取待開啟的 EPUB 檔案本體位元組，供 `InAppWebView.shouldInterceptRequest`
-/// 服務 `main.js` `makeBook()` 對 `/book/current.epub` 的一次性 fetch（已
-/// 查證 `view.js` 原始碼確認一次性讀取整份內容、不發 HTTP Range 請求，見
-/// 原 Kotlin `FoliateEpubReaderView.kt BookPathHandler` 註解）。[filePath]
-/// 依 ADR 0002 可能是真實檔案系統路徑或 `content://` URI（`"://"` 啟發式
-/// 判斷，比照既有慣例）：
-/// - `content://` URI：透過 Task 2 的原生 `ContentResolver` 橋接讀取，
-///   Android SAF 權限模型本身把關存取範圍，不做額外路徑檢查（比照原
-///   Kotlin `openBook()` 對 `content://` 分支的既有信任層級）。
-/// - 真實檔案路徑：先確認檔案存在，再用 [File.resolveSymbolicLinksSync]
-///   取得已解析符號連結的絕對路徑，透過 [isPathWithinRoot] 驗證落在 App
-///   私有資料目錄範圍內（`getApplicationDocumentsDirectory()` 的父目錄，
-///   同時涵蓋 `files/`／`cache/`／`app_flutter/`，比照原
-///   `FoliatePathValidator` 呼叫端的既有範圍定義），不在範圍內則回傳
-///   `null`。
-Future<Uint8List?> loadBookBytes(String filePath) async {
+/// 將 EPUB 檔案分塊複製到每個 widget 實例獨立的快取子目錄，
+/// 供 `WebViewAssetLoader.InternalStoragePathHandler` 串流服務。
+/// [filePath] 依 ADR 0002 可能是真實檔案系統路徑或 `content://` URI；
+/// [instanceId] 由呼叫端產生的實例唯一 ID，用於區隔快取子目錄。
+/// 回傳快取檔案的絕對路徑，失敗回傳 null。
+///
+/// 使用頂層函數變數（非直接函數宣告），以便測試環境可以透過
+/// 直接覆寫此變數來注入 mock，完全繞過 Dart 端的檔案系統檢查
+/// （`File.exists()`、`resolveSymbolicLinksSync()` 等），避免
+/// `flutter test` 無法模擬原生檔案操作導致 mock 失效。
+Future<String?> Function(String filePath, String instanceId) cacheBookForServing =
+    _defaultCacheBookForServing;
+
+Future<String?> _defaultCacheBookForServing(String filePath, String instanceId) async {
   if (filePath.contains('://')) {
-    return _readerResourcesChannel
-        .invokeMethod<Uint8List>('readContentUri', {'uri': filePath});
+    return _readerResourcesCacheChannel.invokeMethod<String>(
+        'cacheBookForServing', {'uri': filePath, 'instanceId': instanceId});
   }
   final file = File(filePath);
-  if (!await file.exists()) return null;
+  final exists = await file.exists();
+  if (!exists) return null;
   final canonicalPath = file.resolveSymbolicLinksSync();
   final docsDir = await getApplicationDocumentsDirectory();
-  final allowedRoot = Directory(docsDir.path).parent.path;
-  if (!isPathWithinRoot(canonicalPath, allowedRoot)) return null;
-  return file.readAsBytes();
+  final parentDir = Directory(docsDir.path).parent;
+  // Android 上 `/data/user/0` 是指向 `/data/data` 的 symlink，若不解析
+  // allowedRoot 的 symlink，`isPathWithinRoot` 會因兩側路徑不一致而誤判
+  // 合法檔案為「超出允許範圍」（見 Issue 8 整合測試失敗診斷）。
+  String allowedRoot;
+  try {
+    allowedRoot = parentDir.resolveSymbolicLinksSync();
+  } catch (e) {
+    allowedRoot = parentDir.path;
+  }
+  final withinRoot = isPathWithinRoot(canonicalPath, allowedRoot);
+  if (!withinRoot) return null;
+  return _readerResourcesCacheChannel.invokeMethod<String>(
+      'cacheBookForServing', {'filePath': canonicalPath, 'instanceId': instanceId});
 }

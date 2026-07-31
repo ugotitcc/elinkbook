@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -23,6 +24,7 @@ import 'package:elinkbook/screens/toc_bottom_sheet.dart';
 import 'package:elinkbook/reader/epub_position_info.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
 import 'package:elinkbook/reader/foliate_epub_reader_view.dart';
+import 'package:elinkbook/reader/foliate_native_bridge.dart';
 import '../support/fake_inappwebview_platform.dart';
 import '../support/fake_library_repository.dart';
 import '../support/fake_reader_prefs_manager.dart';
@@ -47,9 +49,18 @@ import 'package:elinkbook/reader/highlight_style.dart';
 
 void main() {
   late FakeReaderPrefsManager prefsManager;
+  // 保存原始實作， tearDownAll 時還原
+  late Future<String?> Function(String, String) originalCacheBookForServing;
 
   setUpAll(() {
     InAppWebViewPlatform.instance = FakeInAppWebViewPlatform();
+    originalCacheBookForServing = cacheBookForServing;
+    // 直接覆寫頂層函數變數，繞過 Dart 端檔案系統檢查（File.exists()、
+    // resolveSymbolicLinksSync()、getApplicationDocumentsDirectory() 等），
+    // 確保 FoliateEpubReaderView 的 _cacheBook() 在測試環境中能順利完成。
+    cacheBookForServing = (filePath, instanceId) async {
+      return '/fake/cache/dir/current.epub';
+    };
   });
 
   setUp(() {
@@ -4371,5 +4382,10 @@ void main() {
     expect(calls, hasLength(2), reason: 'resumed 應強制重新呼叫，不受等值節流影響');
     expect(calls.last.method, 'setEnabled');
     expect(calls.last.arguments, isTrue);
+  });
+
+  tearDownAll(() {
+    // 還原 cacheBookForServing 為原始實作，避免污染其他測試檔
+    cacheBookForServing = originalCacheBookForServing;
   });
 }
