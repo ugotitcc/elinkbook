@@ -192,6 +192,8 @@ java.lang.OutOfMemoryError: Failed to allocate a 219210408 byte allocation with 
 
 **下一步：** 已具備足夠可行性證據直接進入 Planning（視規模決定是否需要新 ADR 記錄「resource loading 從 Dart-side callback 改回原生 WebViewAssetLoader」的決策），標記 `ready-for-agent`。**與 Issue 7（真機端到端驗證）之間建立相依關係**：Issue 7 的真機驗證應涵蓋至少一本大型（150MB+）真實書籍，驗收判準包含 `tmp/膽大黨10.epub`（217MB，本 Issue 原始崩潰樣本）真機開啟不再 OOM。
 
+**追加查證（2026-07-31，人類提供兩份外部分析報告後）：** 逐項核對 `tmp/epic-20/anx_reader_large_file_analysis_report.md`／`foliate_large_file_analysis_report.md` 的具體技術宣稱與本專案 vendored 原始碼是否相符（完整過程見 `reviews/bugfix-repro.md` 追加段落）——`zip.js` 具備 `HttpRangeReader` 隨需讀取的核心論點**經查證不成立**（本專案 vendored 的 `vendor/zip.js` 全檔搜尋無 `HttpRangeReader`、無任何 `Range` 字樣，只有 `BlobReader`／`FileReader`／`ZipReader`），與 `epic-18` Issue 21 先前發現的「外部報告編造不存在 API」是同一種失準模式；`epub.js` `Loader` 引用計數卸載機制、`fixed-layout.js` `maxLoaded`/`maxConcurrent` 頁面調度機制則查證屬實，但兩者管的是「書已開啟後逐頁閱讀期間」的記憶體，不影響「開書當下」的問題本身。獨立重新查證 `view.js` `fetchFile()`：`fetch(url)` + `await res.blob()` 為單次完整緩衝，與既有查證結論一致。**新增一項尚待真機驗證的殘餘風險**：原生端串流修正後，WebView 仍會對整份回應呼叫 `res.blob()`，在渲染器行程（獨立於 App 主行程）緩衝整份內容，這一步驟對 217MB 檔案是否會觸發渲染器行程自身的 OOM 目前無既有證據（原始崩潰發生在更早的 App 主行程階段，從未真正走到這一步）——Planning／實作階段完成原生串流修正後，務必以 `tmp/膽大黨10.epub` 在真機測試到底整個開書流程（含 WebView 端），不能只確認 `ReaderResourceChannel.kt` 這一個點不再拋錯。
+
 ---
 
 ## Issue 9：`FoliateEpubReaderView` 開書偶發 `onError('Failed to fetch')`／`onLayoutResolved` 逾時，與分支無關的既有問題
