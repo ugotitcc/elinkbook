@@ -26,7 +26,7 @@ flutter devices          # 列出可用裝置
 
 Kotlin 原始碼位於 `app/android/app/src/main/kotlin/cc/ugotit/elinkbook/`：
 - `PdfReaderView.kt` + `PdfReaderViewFactory.kt`
-- `MainActivity.kt`（`FlutterActivity`）
+- `MainActivity.kt`（`FlutterFragmentActivity`，因 `registerForActivityResult` 需要）
 - `BookMetadataChannel.kt`
 - `ReaderViewAttachmentTracker.kt`（共用元件）
 
