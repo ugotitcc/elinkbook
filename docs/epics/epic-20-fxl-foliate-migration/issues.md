@@ -186,3 +186,30 @@ java.lang.OutOfMemoryError: Failed to allocate a 219210408 byte allocation with 
 3. 或評估提高 App 的 `largeHeap` manifest 設定（`android:largeHeap="true"`）暫時緩解（治標，非長期解法，且部分裝置可能仍不夠）。
 
 **建議下一步：** 若優先處理，建議先跑 `/diagnose` 或 Discovery 階段確認修復方向（技術可行性），再視結果決定是否需要新 ADR（若牽涉 `readest/foliate-js` Range 支援評估）或直接進入 Scrum Master 拆工單。**建議與 Issue 7（真機端到端驗證）之間建立相依關係**：Issue 7 的真機驗證應涵蓋至少一本大型（150MB+）真實書籍，若本 Issue 未修復，Issue 7 驗收時須明確記錄「大型檔案已知限制」而非略過不提。
+
+---
+
+## Issue 9：`FoliateEpubReaderView` 開書偶發 `onError('Failed to fetch')`／`onLayoutResolved` 逾時，與分支無關的既有問題
+
+**Status:** needs-triage
+
+**發現時機／方式：** 2026-07-31，Issue 5 程式碼審查回應階段，於真機（`3CEF42ECD491687`）執行 `flutter test integration_test/foliate_epub_reader_view_test.dart -d 3CEF42ECD491687` 驗證審查回應的測試修正時發現。
+
+**現象：** 同一輪測試執行內，多項測試（含完全未被本次改動觸碰的既有測試）出現兩類失敗：
+1. `onError` 收到字面訊息 `'Failed to fetch'`（而非預期的 `null`／特定驗證訊息），包含最基本的「開啟有效的流式 EPUB 檔案觸發 onPageRendered」（第一項測試，最簡單情境即失敗）、「PathHandler 路徑穿越防護」（預期收到含『允許的目錄範圍』的訊息，實際收到 `'Failed to fetch'`）、「字型/字級/行距等偏好設定套用」。
+2. `onLayoutResolved`／`onPageRendered` 完全未觸發，10 秒後 `TimeoutException`：「FR-06：開啟自行宣告 writing-mode」「FR-06：開啟完全不宣告 writing-mode」「手動切換橫排→直排」。
+
+**已排除為本次分支迴歸的查證過程：**
+- 完整 `adb uninstall`／重新安裝後重跑，現象不變。
+- `adb shell pm clear com.google.android.webview`（清除 WebView 元件資料）後重跑，現象不變。
+- **切換到 `main`（commit `a7366a6`，epic-20 Issue 5 任何改動之前）重跑同一份測試，現象完全相同**（同樣是第一項最基本測試就以 `'Failed to fetch'` 失敗）——確認與 Issue 5 的 Dart／Kotlin 改動無關，是既有、branch-independent 的問題。
+- 用 `integration_test/smoke_test.dart`（純 Flutter widget，不涉及 `FoliateEpubReaderView`／WebView）驗證裝置本身可正常執行 integration test、非裝置全面故障——僅 `FoliateEpubReaderView` 的 WebView 資源載入路徑受影響。
+- `adb logcat` 未在失敗當下找到明確對應的原生端錯誤堆疊（WebView/chromium 啟動日誌看起來正常，`Failed to fetch` 是 JS `fetch()` 層級的錯誤訊息，尚未定位是 `main.js`／`view.js` 內部哪一次 `fetch()` 呼叫失敗、或 `InAppWebView.shouldInterceptRequest`／`ReaderResourceChannel` 原生端攔截哪個環節出狀況）。
+
+**已知但未確認的線索：** 本次失敗具間歇性——同一份 `FoliateEpubReaderView` 架構在本次 epic-20（Issue 1-5）多次先前的真機人工驗證（Issue 3/4 的手動驗收、Issue 1/2 的 spike）皆成功開書，並非「這條路徑從未在此裝置上正常運作過」；本次是在同一個裝置上短時間內反覆執行大量 `flutter test -d` 建置/安裝/解除安裝循環（本次審查回應流程內即重新建置安裝 3 次以上）之後才穩定重現，不排除與裝置端資源狀態（記憶體/儲存空間/WebView sandboxed process 累積）或近期裝置系統 WebView 更新（`com.google.android.webview` 150.0.7871.181）有關，但未實際驗證。
+
+**待決事項（需人類決定調查方向，故標記 `needs-triage`）：**
+1. 是否值得投入 `/diagnose` 立案調查根因（例如逐步加 log 定位是哪一次 `fetch()` 呼叫失敗、或改用 `chrome://inspect` 遠端除錯 WebView 內容），還是先觀察是否為裝置特定的暫時性狀態（例如重啟裝置、換一台裝置測試是否重現）。
+2. 若確認間歇性與「短時間內大量重複安裝/解除安裝」相關，可能純屬本機開發/測試循環的副作用，不代表終端使用者實際會遇到的問題——待確認後再決定是否需要修正產品程式碼，或只是測試流程本身需要調整（例如兩次真機測試之間加入裝置重啟）。
+
+**建議下一步：** 不阻塞 Issue 5／Issue 6／Issue 7 的既定工作——三者皆已個別確認過這類 WebView 資源載入路徑在人工真機驗證時可正常運作。建議累積更多重現樣本（不同裝置、不同時間點）後再評估是否立案 `/diagnose`。
