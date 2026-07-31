@@ -62,7 +62,7 @@
 
 ## Issue 3：雙頁模式（`dualPageMode`／`isLandscape` 參數 + `main.js` spread 邏輯）
 
-**Status:** ✅ 程式碼實作完成（commit `f0fe2aa`）。`flutter test`（全專案）730/730 通過，`flutter analyze` 乾淨。APK 已安裝至真機 `3CEF42ECD491687`，待人類親自驗證四項判準。
+**Status:** ✅ 程式碼實作完成（commit `f0fe2aa`），程式碼審查通過（`tmp/epic-20/issue3-implementation-review.md`，With fixes，2 項 Important 皆為文件數字誤植已修正，程式碼本身無缺陷）。`flutter test`（全專案）730/730 通過，`flutter analyze` 乾淨。真機驗證已於 2026-07-31 由 Claude Code 親自在真機（`3CEF42ECD491687`）以 `tmp/一弦定音.epub` 完成，5 項判準（橫向雙頁／封面獨立顯示／RTL 頁序／直向單頁／開書雙重渲染觀察）皆為 GO，詳見 `plans/plan-issue-3.md` Task 4 Step 3。
 
 **依賴：** Issue 2。
 
@@ -73,7 +73,7 @@
 2. `foliate_epub_reader_view.dart`：新增 `dualPageMode`（`DualPageMode?`，nullable）與 `isLandscape`（`bool`，非 nullable，預設 `false`）建構參數，`buildFoliatePreferencesMap()` 與 `foliatePreferencesChanged()` 同步擴充。
 3. `reader_screen.dart`：`_buildNativeView()` 將 `resolved.dualPageMode` 與 `isLandscape` 下傳至 `FoliateEpubReaderView`。
 
-**單元測試：** 35 項 `foliate_epub_reader_view_test.dart`（含 `isDualPageEnabled` truth table 可執行文件）+ 4 項 `reader_screen_test.dart` 新增測試。
+**單元測試：** 18 項 `foliate_epub_reader_view_test.dart`（含 `isDualPageEnabled` truth table 可執行文件）+ 4 項 `reader_screen_test.dart` 新增測試。
 
 **真機驗證：** APK 已安裝，待人類驗證：橫向雙頁、封面獨立顯示、RTL 頁序、直向/單頁模式四項判準。
 

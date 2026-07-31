@@ -119,7 +119,7 @@ Issue 3 程式碼實作已完成，橫向雙頁模式能力已植入 `FoliateEpu
 - `main.js`：新增 `isDualPageEnabled(dualPageMode, isLandscape)` 純函式（移植自 `EpubReaderView.kt:149-151`），`applyPreferences()` FXL 分支新增 `setAttribute('spread', ...)` 設定 `'both'`/`'none'`
 - `foliate_epub_reader_view.dart`：新增 `dualPageMode`（`DualPageMode?`，nullable）與 `isLandscape`（`bool`，非 nullable，預設 `false`）建構參數，`buildFoliatePreferencesMap()` 與 `foliatePreferencesChanged()` 擴充
 - `reader_screen.dart`：`_buildNativeView()` 將 `resolved.dualPageMode` 與 `isLandscape` 下傳至 `FoliateEpubReaderView`
-- 單元測試：35 項 `foliate_epub_reader_view_test.dart` + 4 項 `reader_screen_test.dart` 新增測試，含 `isDualPageEnabled` truth table 可執行文件
+- 單元測試：18 項 `foliate_epub_reader_view_test.dart` + 4 項 `reader_screen_test.dart` 新增測試，含 `isDualPageEnabled` truth table 可執行文件（審查修正：原記載「35 項」為誤植，獨立核算實際新增 18 項）
 
 **測試結果：** `flutter test`（全專案）730/730 通過，`flutter analyze` 乾淨（0 issues）。
 

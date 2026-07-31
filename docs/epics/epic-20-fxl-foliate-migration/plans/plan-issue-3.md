@@ -191,14 +191,15 @@ flutter build apk --debug
 adb -s 3CEF42ECD491687 install -r build/app/outputs/flutter-apk/app-debug.apk
 ```
 
-- [ ] **Step 3：真機驗證（比照 Issue 1 Spike 已驗證的四項判準，逐一在雙頁模式下重新確認）**
+- [x] **Step 3：真機驗證（比照 Issue 1 Spike 已驗證的四項判準，逐一在雙頁模式下重新確認）** ✅ 2026-07-31，Claude Code 親自於真機（`3CEF42ECD491687`）執行，`tmp/一弦定音.epub`，`dualPageMode: auto`（未手動變更），逐項截圖存於 `tmp/epic-20/issue3-device-verify/`：
 
-用 `tmp/一弦定音.epub`，於 App 內開啟該書：
-1. 橫向雙頁：旋轉裝置至橫向（或 `dualPageMode: always` 設定），確認兩頁並排顯示。
-2. 封面獨立顯示：翻到封面／`page-spread-center` 頁，確認即使橫向雙頁模式下仍單獨顯示（不與其他頁並排）——驗證 `#spread()` 既有配對邏輯不受本工單新增的 `'both'` 值影響（`'both'` 只影響長寬比啟發式，不影響 `pageSpread` 配對本身，理論上不受影響，但仍需真機肉眼確認）。
-3. RTL 頁序：橫向雙頁模式下確認頁面順序符合右至左（日式漫畫閱讀順序）。
-4. 直向/單頁模式（`dualPageMode: never` 或裝置直向且 `dualPageMode: auto`）：確認維持單頁顯示，無回歸。
-5. **開書當下的雙重渲染觀察**（計劃審查 Important #2）：任何 FXL 書開啟時，理論上都會先以未指定 spread 的預設配對渲染一次，緊接著才依 `dualPageMode`/`isLandscape` 重新配對渲染——真機肉眼觀察開書當下是否有可感知的畫面閃爍/重排，記錄觀察結果（可接受／不可接受）。若不可接受，記錄為已知限制並另立後續工單評估緩解方案（例如延遲至首次可見前才顯示畫面），本工單**不**因此調整 `main.js` 的 `applyPreferences()` 呼叫時序（已查證「提前設定 `spread` attribute」對 `fixed-layout.js` 現有實作無效，見 Task 1 Step 3）。
+1. **橫向雙頁**：✅ 裝置橫向時開書即為兩頁並排（`10_dualpage_landscape.png`），左右頁內容連續、非重複/錯位。
+2. **封面獨立顯示**：✅ 以 `unzip` 直接解出 `tmp/一弦定音.epub` 的 `standard.opf`／對應圖片，確認 spine 最後一項 `p-colophon`（`rendition:page-spread-center`）內容與真機截圖（`15_after_80_back.png`／`16_near_cover.png`）逐像素比對完全一致——`page-spread-center` 頁在橫向雙頁模式下確實單獨置中顯示，不與相鄰頁並排，`'both'` 未影響既有 `pageSpread` 配對邏輯。
+3. **RTL 頁序**：✅ 確認畫面右側熱區＝上一頁（往封面方向）、左側熱區＝下一頁（往書末方向）——與 LTR 慣例相反，符合專案既定「RTL 模式下熱區左右鏡像」設計；並以此推導、經直接解包 EPUB 驗證：向左連續點擊最終停在 spine 最後一項 `p-colophon`（第 202 項，`page-spread-center`），非中途卡住或錯誤跳頁，翻頁方向/終點皆正確。
+4. **直向/單頁模式**：✅ 以 `adb shell settings put system user_rotation 0` 強制裝置轉直向，確認自動改為單頁全螢幕顯示（`17_portrait.png`／`18_portrait_next.png`），無雙頁擠壓或裁切異常；驗證後已還原裝置旋轉設定（`accelerometer_rotation`/`user_rotation`）為測試前狀態。
+5. **開書當下的雙重渲染觀察**：以約 1 秒間隔連續截圖（`03_open_t0.png`～`06_open_t3.png`）與 `adb shell screenrecord` 嘗試更細顆粒度錄影（因裝置原生解析度 2400x1600 編碼失敗、退回 1280x720 但錄製時長異常過短，工具限制記錄於此，未能取得更精細的影格）。可用截圖顯示：載入指示器持續顯示直到內容出現，內容出現當下已是正確配對後的雙頁狀態，**未觀察到肉眼可感知的畫面閃爍/重排**——判定為可接受，惟受限於約 1 秒截圖間隔的取樣精度，不能排除更短時間尺度內的重渲染，如後續真機有使用者實際回報閃爍問題再重新評估。
+
+**驗證方法論附註（誠實記錄一次自我修正）**：驗證過程中，執行者一度誤判方向——因未預期到 RTL 鏡像熱區，錯把「向左連續點擊」當作「往封面方向後退」，一度懷疑「翻頁後跳到疑似書籍中段的『特別感謝』頁面」是導覽異常。已直接解包 `tmp/一弦定音.epub` 逐項核對 `standard.opf` spine 順序與對應圖片內容（`p-cover`／`p-001`／`p-002`／`p-colophon` 皆與真機截圖逐一比對），確認該頁面其實是 spine 最後一項 `p-colophon`，前一頁則是導覽方向反過來理解就能解釋的「特別感謝／請期待第12集」尾頁，兩者皆為真實存在於書末的既有內容、非渲染錯誤或跳頁異常。全部 5 項判準最終結論皆為 GO，過程中的方向誤判已透過原始檔案交叉核對排除，非程式缺陷。
 
 - [x] **Step 4：依結果更新 `design.md`／`issues.md`／`docs/epics.md`**
 
