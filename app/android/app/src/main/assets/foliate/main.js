@@ -151,7 +151,7 @@ window.applyPreferences = function (prefs) {
     // （#render()，僅 'both'/'portrait' 會強制以橫向雙頁樣式渲染），對應
     // EpubReaderView.kt:784 既有的二值 Spread.ALWAYS/NEVER 摺疊設計，見
     // plan-issue-3.md「已查證的關鍵技術事實」。
-    view.renderer.setAttribute(
+    view.renderer?.setAttribute(
       'spread',
       isDualPageEnabled(prefs.dualPageMode, prefs.isLandscape) ? 'both' : 'none',
     )
