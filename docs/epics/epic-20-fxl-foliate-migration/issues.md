@@ -81,7 +81,7 @@
 
 ## Issue 4：`ReaderScreen` 浮動按鈕群組合併，移除 FXL/流式雙軌 UI 分支
 
-**Status:** ✅ 程式碼實作完成（3 個 commits：`4db9b0d`、`4c13db3`、`f767ff9`）。`flutter test`（全專案）730/730 通過，`flutter analyze` 乾淨（0 issues）。真機驗證已於 2026-07-31 由人類確認通過（`tmp/一弦定音.epub` FXL 書籍，裝置 `3CEF42ECD491687`）：返回/設定/書籤/筆記/目錄/跳頁/進度按鈕均正常運作。
+**Status:** ✅ 程式碼實作完成，程式碼審查通過（`tmp/epic-20/issue4-implementation-review.md`，With fixes，已依審查回應修正文件矛盾、補齊測試、訂正過度樂觀的劃線/備註驗證宣稱）。`flutter test`（全專案）733/733 通過（含審查回應補上的 3 項新測試），`flutter analyze` 乾淨（0 issues）。真機驗證已於 2026-07-31 完成（`tmp/一弦定音.epub` FXL 書籍，裝置 `3CEF42ECD491687`），截圖佐證：返回/設定（`FxlSettingsSheet`）/書籤/筆記/目錄/跳頁（20/93頁）按鈕均正常運作。**劃線/備註疊圖判準改列不適用**——FXL 圖片式頁面無文字節點可選取，正常操作下無法新增劃線/備註（`epic-6-annotations` 既有決策 #7，非本工單新增限制），詳見 `design.md`「Issue 4 實作完成紀錄」。
 
 **依賴：** Issue 2、3。
 

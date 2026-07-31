@@ -714,6 +714,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         bookProgress: latestProgress,
         bookmarksRepository: repository,
         currentPosition: positionContext,
+        // FXL EPUB 傳入 null（見 _handleSelectionChanged 註解——FXL 頁面
+        // 是純點陣圖，無文字節點可選取，劃線/備註排除 FXL 是結構性必然，
+        // 非可調整的產品決策，epic-20 Issue 4 審查回應已查證確認）。
         highlightsRepository: (format == BookFormat.epub && !_isFixedLayout) ||
                 format == BookFormat.pdf
             ? widget.highlightsRepository
@@ -910,8 +913,15 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   }
 
   /// FXL 一律不處理選取事件（design.md 決策 #7：劃線/備註排除 FXL）——
-  /// 理論上 FXL 頁面多半無可選取文字層，此防呆保證不會意外對 FXL 觸發
-  /// 劃線 UI（見 plan-issue-2.md Global Constraints「FXL 排除」）。
+  /// 已查證（epic-20 Issue 4 審查回應）FXL 頁面的 XHTML 內容一律是
+  /// `<svg><image .../></svg>`（純點陣圖，OPF 內每個 `p-*.xhtml` 皆同一
+  /// 樣式），完全沒有文字節點；`main.js` 的選字回報機制（`:510-550`）
+  /// 依賴 `document.getSelection()`/`Range`，`overlayer.js` 疊圖計算也依賴
+  /// `Range`／`createRange()`——兩者皆需要文字節點才能產生有意義的
+  /// 結果。這代表 FXL 排除劃線/備註**不是可調整的產品決策**，而是目前
+  /// 圖片式 FXL 內容結構本身無法支援選字→CFI range 這條既有機制的必然
+  /// 結果；此防呆保證不會意外對 FXL 觸發劃線 UI（見 plan-issue-2.md
+  /// Global Constraints「FXL 排除」）。
   void _handleSelectionChanged(EpubSelectionInfo info) {
     if (!mounted || _isFixedLayout) return;
     setState(() {
