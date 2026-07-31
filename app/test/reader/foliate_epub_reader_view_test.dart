@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -8,6 +10,7 @@ import 'package:elinkbook/reader/writing_mode.dart';
 import 'package:elinkbook/reader/app_font.dart';
 import 'package:elinkbook/reader/epub_text_align.dart';
 import 'package:elinkbook/reader/page_turn_mode.dart';
+import 'package:elinkbook/reader/foliate_native_bridge.dart';
 import 'package:elinkbook/reader/zone_action.dart';
 import '../support/fake_inappwebview_platform.dart';
 
@@ -15,6 +18,9 @@ void _noop() {}
 void _noopError(String message) {}
 
 void main() {
+  // 保存原始實作， tearDownAll 時還原
+  late Future<String?> Function(String, String) originalCacheBookForServing;
+
   // Issue 10 審查修正：9 宮格導航熱區 tap／debug overlay 這兩項 widget
   // test 原本因「裸 InAppWebView 無法在 flutter_test 下 pump」被整批移除
   // （見 plan-issue-10.md「驗證紀錄」），比照
@@ -23,6 +29,13 @@ void main() {
   // 「3×3 導航熱區」group。
   setUpAll(() {
     InAppWebViewPlatform.instance = FakeInAppWebViewPlatform();
+    // Issue 8 審查修正：覆寫 cacheBookForServing 頂層函數變數，
+    // 繞過 Dart 端檔案系統檢查（File.exists()、resolveSymbolicLinksSync() 等），
+    // 確保 FoliateEpubReaderView 的 _cacheBook() 在測試環境中能順利完成。
+    originalCacheBookForServing = cacheBookForServing;
+    cacheBookForServing = (filePath, instanceId) async {
+      return '/fake/cache/dir/current.epub';
+    };
   });
 
   group('buildFoliatePreferencesMap', () {
@@ -587,5 +600,58 @@ void main() {
     test('never + portrait → false', () {
       expect(isDualPageEnabled('never', false), isFalse);
     });
+  });
+
+  // Issue 8 審查 Important #7：mounted 守衛/dispose 競態測試
+  // 驗證「快取完成前 dispose」不會導致快取目錄洩漏
+  group('mounted guard / dispose race', () {
+    testWidgets('dispose during cache does not leak cache directory', (tester) async {
+      final completer = Completer<String?>();
+      cacheBookForServing = (filePath, instanceId) async {
+        return completer.future;
+      };
+
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: FoliateEpubReaderView(
+            filePath: '/tmp/sample.epub',
+            onPageRendered: _noop,
+            onError: _noopError,
+          ),
+        ),
+      ));
+
+      // 移除 widget（觸發 dispose），此時快取尚未完成
+      await tester.pumpWidget(const MaterialApp(home: Scaffold(body: SizedBox())));
+
+      // 讓 Future 完成，不應拋出例外
+      completer.complete('/fake/cache/dir/current.epub');
+      await tester.pump();
+    });
+
+    testWidgets('cache failure calls onError', (tester) async {
+      cacheBookForServing = (filePath, instanceId) async {
+        return null;
+      };
+
+      String? receivedError;
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: FoliateEpubReaderView(
+            filePath: '/tmp/sample.epub',
+            onPageRendered: _noop,
+            onError: (msg) => receivedError = msg,
+          ),
+        ),
+      ));
+
+      await tester.pump();
+      expect(receivedError, '無法快取書籍檔案');
+    });
+  });
+
+  tearDownAll(() {
+    // 還原 cacheBookForServing 為原始實作，避免污染其他測試檔
+    cacheBookForServing = originalCacheBookForServing;
   });
 }

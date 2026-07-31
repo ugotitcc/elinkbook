@@ -15,6 +15,13 @@ class FakeInAppWebViewPlatform extends InAppWebViewPlatform {
   ) {
     return FakePlatformInAppWebViewWidget(params);
   }
+
+  @override
+  PlatformInternalStoragePathHandler createPlatformInternalStoragePathHandler(
+    PlatformInternalStoragePathHandlerCreationParams params,
+  ) {
+    return FakePlatformInternalStoragePathHandler(params);
+  }
 }
 
 /// 搭配 [FakeInAppWebViewPlatform] 使用的假 [PlatformInAppWebViewWidget]：
@@ -38,4 +45,24 @@ class FakePlatformInAppWebViewWidget extends PlatformInAppWebViewWidget {
 
   @override
   void dispose() {}
+}
+
+/// 搭配 [FakeInAppWebViewPlatform] 使用的假 [PlatformInternalStoragePathHandler]：
+/// Issue 8 引入 `InternalStoragePathHandler` 以啟用 `WebViewAssetLoader` 本機快取
+/// 串流。在純 widget test 環境下，`InAppWebView` 建構時會呼叫
+/// `createPlatformInternalStoragePathHandler`，此替身回傳一個不產生副作用的
+/// placeholder，避免 `UnimplementedError` 中斷 widget 樹建構。
+class FakePlatformInternalStoragePathHandler
+    extends PlatformInternalStoragePathHandler {
+  FakePlatformInternalStoragePathHandler(super.params)
+      : super.implementation();
+
+  @override
+  PlatformPathHandlerEvents? eventHandler;
+
+  @override
+  Map<String, dynamic> toMap() => {};
+
+  @override
+  Map<String, dynamic> toJson() => {};
 }

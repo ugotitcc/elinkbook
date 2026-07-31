@@ -158,7 +158,16 @@
 
 ## Issue 8：大型 EPUB（約 200MB+）開書時因整檔載入記憶體導致 `OutOfMemoryError` 閃退
 
-**Status:** needs-triage
+**Status:** ✅ 實作完成，code review 兩輪已跑完並全數關閉（Issue 9 阻擋已排除）。原生 `WebViewAssetLoader.InternalStoragePathHandler` 串流服務已實作（Kotlin `cacheBookForServing` + Dart `cacheBookForServing()` + `FoliateEpubReaderView` 改用 `webViewAssetLoader`），`loadBookBytes()` 已移除。額外修復 `flutter_inappwebview_android-1.1.3` `AndroidInternalStoragePathHandler.toMap()` 無限遞迴 bug（本地 patch：`app/patches/flutter_inappwebview_android/`）。`flutter analyze` 乾淨，`flutter test` 713/713 通過。真機 217MB EPUB 開書不再 OOM。
+
+Code review 過程（完整報告 `reviews/review-issue-8.md`，兩輪）：
+- **一審**（`83141d4..8c8a121`）找出 7 項 Important：#1 複製未完成時 dispose 導致快取目錄洩漏、#2 `flutter analyze` 因 `app/patches/` 不乾淨、#3 `app/patches/flutter_inappwebview_android/` 內有完整多餘的重複複本、#4 ADR 0018「不需要 fork/patch 套件」論述已被實作推翻、#5 計劃 Task 5 Step 2 大型檔案整合測試完全沒做、#6 `cacheBookForServingFn` 建構參數是死碼、#7 缺 `mounted` 守衛/dispose 競態單元測試。
+- **二審**（`8c8a121..a8c8140`）核實：#1-4、#6 已修正，#7 部分修正（新增測試斷言薄弱，已知但非阻塞），**#5 仍未修正**。
+- **補齊 #5**（commit `670a03e`）：新增 `integration_test`，測試當下動態組出實體大小固定 30MB 的合法 EPUB（`archive` 套件 dev_dependency，`CompressionType.none` 確保填充內容大小如實反映），驗證 `FoliateEpubReaderView` 能透過原生 `WebViewAssetLoader` 串流路徑正確開啟大檔案。已用獨立 Dart 腳本 + Python `zipfile.testzip()` 交叉驗證產出的 EPUB 結構完全合法（CRC32 全過、`mimetype` 為首個未壓縮 entry）。**真機（`3CEF42ECD491687`）目前跑這項新測試會失敗**（`Failed to fetch`／逾時），但同一裝置上完全未改動的既有基準測試（`sample.epub`）也重現一模一樣的失敗現象，且與下方 **Issue 9**（`needs-triage`，與分支無關的既有 WebView flakiness）描述逐字吻合，已用 `pm clear`／重啟 adb server 排除本機環境臆測原因——判定為 Issue 9 既有缺陷所致，非本次新增測試的邏輯錯誤。
+
+**Issue 9 排除後的真機驗證（2026-08-01）：** `/diagnose` 找到 Issue 9「完全逾時」失敗模式的根因（見下方 Issue 9 段落——`integration_test` 預設 `framePolicy` 不會在 `_cacheBook()` 這類非同步 `setState()` 後自動畫格），已在 `app/integration_test/flutter_test_config.dart` 全域修正。修正後 `foliate_epub_reader_view_test.dart` 全套（含本 Issue 新增的大型檔案測試）連續兩次真機執行皆為 9/10 通過（唯一失敗是既有、無關的 FXL 逾時問題），`content_uri_acceptance_test.dart` 亦通過。`Important #5` 至此完整關閉，證據不再只是人工真機測試。
+
+**待辦：** 無——Issue 8 邏輯與測試皆已完整實作、兩輪審查修正、真機驗證通過，可送出 PR。
 
 **發現時機／方式：** 2026-07-31，Issue 3 真機測試階段人類回報「開啟 `tmp/膽大黨10.epub`（正常 FXL 漫畫）會閃退，但 `tmp/一弦定音.epub`（Issue 1/2 一路使用的測試書）沒事」。由 Claude Code 直接 `adb -s 3CEF42ECD491687 shell dumpsys dropbox --print` 從真機拉出 6 筆真實當機記錄查證，非二手轉述，逐一交叉比對程式碼確認根因，詳見 `tmp/epic-20/issue3-implementation-review.md`。**已確認與 Issue 3 本身的 `spread` attribute 邏輯完全無關**（Issue 3 分支未觸碰任何 `.kt` 檔案／`foliate_native_bridge.dart`）。
 
@@ -180,18 +189,25 @@ java.lang.OutOfMemoryError: Failed to allocate a 219210408 byte allocation with 
 
 **影響範圍**：`loadBookBytes()`／`_shouldInterceptRequest` 是 `FoliateEpubReaderView` 通用機制，**不分 FXL／流式**，任何經此 widget 開啟（epic-20 Issue 2 起已是全部 EPUB 的唯一路徑）、檔案大小逼近或超過 App heap 上限的書籍皆會受影響，非 FXL 專屬問題。
 
-**待決事項（需人類決定修復方向，故標記 `needs-triage` 而非 `ready-for-agent`）：**
-1. 是否改為串流／分塊讀取（例如 `WebResourceResponse` 直接接 `InputStream` 而非先讀完整個 `ByteArray`，若 `flutter_inappwebview`／Android `WebResourceResponse` API 支援的話）——徹底解法，但需評估對 `content://` SAF 來源與本機檔案兩種情況是否都可行，以及是否波及 `view.js` `makeBook()` 「一次性 fetch」的既有假設（可能需要上游 `readest/foliate-js` 支援 Range，而該專案是「不修改釘定版本」的既有限制，需先查證是否可行）。
-2. 或先設一個保守的檔案大小警戒值，超過時提示使用者「檔案過大可能無法開啟」而非讓 App 無聲閃退（治標，成本低，可作為 1 的過渡方案）。
-3. 或評估提高 App 的 `largeHeap` manifest 設定（`android:largeHeap="true"`）暫時緩解（治標，非長期解法，且部分裝置可能仍不夠）。
+**`/diagnose` 修復方向研究結論（2026-07-31，完整過程見 `reviews/bugfix-repro.md`）：**
 
-**建議下一步：** 若優先處理，建議先跑 `/diagnose` 或 Discovery 階段確認修復方向（技術可行性），再視結果決定是否需要新 ADR（若牽涉 `readest/foliate-js` Range 支援評估）或直接進入 Scrum Master 拆工單。**建議與 Issue 7（真機端到端驗證）之間建立相依關係**：Issue 7 的真機驗證應涵蓋至少一本大型（150MB+）真實書籍，若本 Issue 未修復，Issue 7 驗收時須明確記錄「大型檔案已知限制」而非略過不提。
+方向 (1)「串流/分塊讀取」**技術上完全可行**，且是唯一能徹底解法（非治標）的選項，已查證確認：
+
+- 現行 Dart 端 `InAppWebView.shouldInterceptRequest` callback（含 `flutter_inappwebview` 的 `CustomPathHandler`）一律要求回傳 `Uint8List`，天生無法串流——問題不在 Kotlin 端怎麼讀，瓶頸在跨 platform channel 前 Dart 端必須先持有完整位元組陣列。
+- `flutter_inappwebview` 原生端已內建 `WebViewAssetLoader` 整合（優先於 Dart callback 被檢查），其 `InternalStoragePathHandler` 完全在原生端運作、以 `FileInputStream` 串流讀取，**不經過 Dart callback，不受 `Uint8List` 限制**，且不需要 fork/patch 套件本身。
+- 本機檔案路徑（既有 `isPathWithinRoot` 已強制要求落在 App 私有資料目錄）已 100% 符合 `InternalStoragePathHandler` 前提，不需額外複製；`content://` SAF 來源可比照既有 `BookImportService`（ADR 0002）落地機制，開書前以 Kotlin `InputStream.copyTo(OutputStream, bufferSize)` 有界記憶體分塊複製到私有快取後，同樣走 `InternalStoragePathHandler`。
+- **不會**波及 `readest/foliate-js` 釘定版本「一次性 `fetch()`」的既有假設——`InternalStoragePathHandler` 只改變原生端「怎麼組出 `WebResourceResponse`」，WebView 收到的仍是單一完整 HTTP 回應，不涉及 HTTP Range，不需要修改釘定版本任何程式碼。
+- 本專案 epic-17 時期（commit `4bc492a`）其實用過原生 `WebViewAssetLoader`，後來因 ADR 0013（觸控/選字手勢限制，與記憶體無關）換成目前的 `flutter_inappwebview` `InAppWebView`——改回原生資產載入不是走回頭路撞到 ADR 0013 要解決的問題，手勢處理仍由 `InAppWebView` 負責，只是資源載入這一小塊換回原生路徑。
+
+**下一步：** 已具備足夠可行性證據直接進入 Planning（視規模決定是否需要新 ADR 記錄「resource loading 從 Dart-side callback 改回原生 WebViewAssetLoader」的決策），標記 `ready-for-agent`。**與 Issue 7（真機端到端驗證）之間建立相依關係**：Issue 7 的真機驗證應涵蓋至少一本大型（150MB+）真實書籍，驗收判準包含 `tmp/膽大黨10.epub`（217MB，本 Issue 原始崩潰樣本）真機開啟不再 OOM。
+
+**追加查證（2026-07-31，人類提供兩份外部分析報告後）：** 逐項核對 `tmp/epic-20/anx_reader_large_file_analysis_report.md`／`foliate_large_file_analysis_report.md` 的具體技術宣稱與本專案 vendored 原始碼是否相符（完整過程見 `reviews/bugfix-repro.md` 追加段落）——`zip.js` 具備 `HttpRangeReader` 隨需讀取的核心論點**經查證不成立**（本專案 vendored 的 `vendor/zip.js` 全檔搜尋無 `HttpRangeReader`、無任何 `Range` 字樣，只有 `BlobReader`／`FileReader`／`ZipReader`），與 `epic-18` Issue 21 先前發現的「外部報告編造不存在 API」是同一種失準模式；`epub.js` `Loader` 引用計數卸載機制、`fixed-layout.js` `maxLoaded`/`maxConcurrent` 頁面調度機制則查證屬實，但兩者管的是「書已開啟後逐頁閱讀期間」的記憶體，不影響「開書當下」的問題本身。獨立重新查證 `view.js` `fetchFile()`：`fetch(url)` + `await res.blob()` 為單次完整緩衝，與既有查證結論一致。**新增一項尚待真機驗證的殘餘風險**：原生端串流修正後，WebView 仍會對整份回應呼叫 `res.blob()`，在渲染器行程（獨立於 App 主行程）緩衝整份內容，這一步驟對 217MB 檔案是否會觸發渲染器行程自身的 OOM 目前無既有證據（原始崩潰發生在更早的 App 主行程階段，從未真正走到這一步）——Planning／實作階段完成原生串流修正後，務必以 `tmp/膽大黨10.epub` 在真機測試到底整個開書流程（含 WebView 端），不能只確認 `ReaderResourceChannel.kt` 這一個點不再拋錯。
 
 ---
 
 ## Issue 9：`FoliateEpubReaderView` 開書偶發 `onError('Failed to fetch')`／`onLayoutResolved` 逾時，與分支無關的既有問題
 
-**Status:** needs-triage
+**Status:** ✅ 根因已確認並修正（`/diagnose`，2026-08-01，見下方「根因與修正」）。
 
 **發現時機／方式：** 2026-07-31，Issue 5 程式碼審查回應階段，於真機（`3CEF42ECD491687`）執行 `flutter test integration_test/foliate_epub_reader_view_test.dart -d 3CEF42ECD491687` 驗證審查回應的測試修正時發現。
 
@@ -213,3 +229,23 @@ java.lang.OutOfMemoryError: Failed to allocate a 219210408 byte allocation with 
 2. 若確認間歇性與「短時間內大量重複安裝/解除安裝」相關，可能純屬本機開發/測試循環的副作用，不代表終端使用者實際會遇到的問題——待確認後再決定是否需要修正產品程式碼，或只是測試流程本身需要調整（例如兩次真機測試之間加入裝置重啟）。
 
 **建議下一步：** 不阻塞 Issue 5／Issue 6／Issue 7 的既定工作——三者皆已個別確認過這類 WebView 資源載入路徑在人工真機驗證時可正常運作。建議累積更多重現樣本（不同裝置、不同時間點）後再評估是否立案 `/diagnose`。
+
+**2026-08-01 更新：** Issue 8 補齊 Important #5（大型 EPUB 串流整合測試，commit `670a03e`）時在同一台裝置（`3CEF42ECD491687`）再次重現，兩種既有記錄的失敗現象（`Failed to fetch`／逾時）都出現，`pm clear`／重啟 adb server 皆未能排除。Issue 8 目前仍缺這一項真機乾淨通過的自動化證據、卡在本 Issue 身上，提高了排查優先度。
+
+---
+
+### 根因與修正（`/diagnose`，2026-08-01）
+
+**Feedback loop：** `flutter test integration_test/foliate_epub_reader_view_test.dart -d 3CEF42ECD491687 --plain-name "<test>"`，逾時失敗模式重現率 100%（連續多次）。
+
+**根因（已確認，「逾時」失敗模式）：** `IntegrationTestWidgetsFlutterBinding`（繼承自 Flutter SDK 的 `LiveTestWidgetsFlutterBinding`）預設 `framePolicy` 是 `fadePointers`——這個模式下，`handleBeginFrame()` 只在 `_expectingFrame`（測試明確呼叫過 `pump()`）或 `_viewNeedsPaint`（指標活動觸發除錯用的十字準心淡出效果）為真時才真正執行畫格（`flutter_test/lib/src/binding.dart:2453,2489-2503`）；單純的 `setState()` 不會自動觸發下一次畫格。
+
+`FoliateEpubReaderView`（Issue 8 起）在 `initState()` 內非同步完成 `_cacheBook()` 後才 `setState()` 掛載 `InAppWebView`；而既有整合測試的寫法一律是 `pumpWidget()` 後直接 `await completer.future.timeout(...)`，中間沒有任何 `pump()` 呼叫——導致 `_cacheBook()` 完成那次 `setState()` 永遠等不到下一次畫格，`InAppWebView` 從未真正掛載，10 秒後測試自己的 `timeout()` 觸發 `TimeoutException`。這條路徑只在 Issue 8 之後（`FoliateEpubReaderView` 新增非同步前置快取步驟）才會踩到，是 Issue 8 引入的一個新的測試環境層級問題（不影響真實 App 執行——真實 App 用的是 `WidgetsFlutterBinding`，畫格排程正常，不受此限制）。
+
+**驗證：** 在 `_cacheBook()`／`build()`／`_shouldInterceptRequest`／WebView `onConsoleMessage`／JS `fetch()` 加時間戳記診斷 log 後，2/2 次完整重現「`setState()` 執行完成、之後永遠沒有下一次 `build()`」；將 `binding.framePolicy` 改為 `LiveTestWidgetsFlutterBindingFramePolicy.fullyLive` 後，連續 3/3 次單一測試通過，且 log 顯示 `InAppWebView` 正常掛載、`/book/current.epub` 經原生 `WebViewAssetLoader` fetch 成功（`status=200`，順便驗證 Issue 8 的串流實作本身正確）。全檔案（10 項測試）重跑兩次皆為 9/10 通過，唯一失敗是既有、無關的 FXL 逾時問題（見下方）。
+
+**「Failed to fetch」失敗模式：** 未能取得同等直接的根因證據——本次以完整診斷 log 重現的兩次皆是「逾時」模式，未再次重現 `Failed to fetch`。套用修正後的多次真機重跑（含全檔案兩輪）也未再出現 `Failed to fetch`，不排除是同一 framePolicy 問題在不同時序下的另一種表現（例如某次意外的畫格恰好讓 `InAppWebView` 掛載到一半、JS 在尚未完全就緒的狀態下執行），但此推測未經直接驗證，若未來又重現需另外排查。
+
+**修正：** 新增 `app/integration_test/flutter_test_config.dart`（Flutter 標準的全域整合測試設定機制，`flutter test integration_test/` 執行任何測試前都會先跑這裡的 `testExecutable`），將 `framePolicy` 全域設為 `fullyLive`，對 `integration_test/` 目錄下所有測試檔案一次性生效，不需要逐檔修改。另外一併訂正 `foliate_epub_reader_view_test.dart` 「PathHandler 路徑穿越防護」測試一個過期的斷言字串（Issue 8 把驗證失敗訊息從舊版「允許的目錄範圍」改成「無法快取書籍檔案」，這個既有測試先前未同步更新——安全行為本身沒問題，純粹是斷言文字過期）。
+
+**FXL 逾時（獨立、未修正）：** 全檔案重跑仍有「開啟定樣式（FXL）範例 EPUB，onLayoutResolved 回報 isFixedLayout 為 true」1 項失敗（`isFixedLayout` 收到 `false`），與 `tmp/epic-20/handoff-epic-20-issue-8.md` 記錄的既有、非 Issue 8／Issue 9 範圍問題一致，需另立工單處理。
