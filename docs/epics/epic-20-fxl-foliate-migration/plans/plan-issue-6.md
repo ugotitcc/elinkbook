@@ -122,17 +122,27 @@ adb -s 3CEF42ECD491687 install -r build/app/outputs/flutter-apk/app-debug.apk
 - Consumes：Task 1-2 驗證結果
 - Produces：Issue 6 結案紀錄（或若發現異常，記錄具體現象並建議後續子工單方向，比照 Issue 8/9 的處理模式）
 
-- [ ] **Step 1：依 Task 1-2 實際觀察結果，如實記錄於 `design.md`「Issue 6 實作完成紀錄」**——若全數正常，明確寫「純驗證，無程式碼異動」；若發現任何異常，具體描述現象（不得只寫「有問題」），並說明是否已另立 Issue／子工單追蹤。
+- [x] **Step 1：依 Task 1-2 實際觀察結果，如實記錄於 `design.md`「Issue 6 實作完成紀錄」**——若全數正常，明確寫「純驗證，無程式碼異動」；若發現任何異常，具體描述現象（不得只寫「有問題」），並說明是否已另立 Issue／子工單追蹤。
 
-- [ ] **Step 2：更新 `issues.md` Issue 6 Status 為 ✅ 或視發現結果調整（例如若有異常則保留 `needs-triage` 並補充發現內容）**
+已記錄於 `design.md`「Issue 6 真機驗證完成紀錄（2026-08-01）」，含 Task 1/2 全數正常結果、Task 2 Step 7 部分驗證的具體現象描述。
 
-- [ ] **Step 3：更新 `docs/epics.md`（若 Epic 整體狀態因此有變動）**
+- [x] **Step 2：更新 `issues.md` Issue 6 Status 為 ✅ 或視發現結果調整（例如若有異常則保留 `needs-triage` 並補充發現內容）**
 
-- [ ] **Step 4：本計畫檔 Task 1-3 所有 Step 依實際完成進度勾選**
+已更新為 ✅ 已完成，並保留上一版撤回紀錄的歷史脈絡。
 
-- [ ] **Step 5：Commit（比照 Issue 2-5 branch 命名慣例 `feature/epic-20-issue-6-*`，若無任何程式碼異動，允許本工單只有文件 commit，不強制建立空的程式碼變更）**
+- [x] **Step 3：更新 `docs/epics.md`（若 Epic 整體狀態因此有變動）**
+
+已於 `epic-20-fxl-foliate-migration` 列補上 Issue 6 完成摘要。
+
+- [x] **Step 4：本計畫檔 Task 1-3 所有 Step 依實際完成進度勾選**
+
+- [x] **Step 5：Commit（比照 Issue 2-5 branch 命名慣例 `feature/epic-20-issue-6-*`，若無任何程式碼異動，允許本工單只有文件 commit，不強制建立空的程式碼變更）**
+
+commit `a3c9cf4`（純文件 commit，`git diff --stat` 確認僅 4 個 Markdown 檔案異動，無任何 `app/` 程式碼變更）。
 
 - [ ] **Step 6：送出 code review（`superpowers:requesting-code-review`），依審查結果修正後開 PR**
+
+已送出審查（範圍 `71ad157..a3c9cf4`），結論：驗證宣告可信、可合併，唯一發現為本 Step 4 的核取方塊未即時勾選（已於本次修正）。待人類決定是否開 PR。
 
 ---
 
