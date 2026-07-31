@@ -860,15 +860,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// `foliate_epub_reader_view.dart`）尚未回傳真實的 `isFixedLayout`
   /// 判斷結果，`info.isFixedLayout` 在這裡固定收到 `false`，故本方法內部
   /// 目前不依賴 `info.isFixedLayout` 做任何分支。觸發
-  /// `_reloadAnnotationsAndRefreshDecorations` 以載入劃線備註——但
-  /// `_sendDecorationsToNative()` 目前仍依 `_dispatchedIsFixedLayout` 分派
-  /// 到 `EpubReaderView.setDecorations`／`FoliateEpubReaderView.setDecorations`
-  /// 兩者之一（尚未於本 Issue 統一），FXL 分支呼叫的
-  /// `EpubReaderView.setDecorations` 對已無人建構的 `_epubReaderViewKey`
-  /// 會靜默 no-op——也就是說，FXL 書籍此刻實際上**尚未**取得真正生效的
-  /// 劃線/備註疊圖，這是已知、留待 Issue 4（decorations 管線統一）一併
-  /// 解決的缺口，並非本行為的正確／最終路徑。`_loadFxlBookmarks` 已整合
-  /// 進 `_reloadAnnotationsAndRefreshDecorations`。
+  /// `_reloadAnnotationsAndRefreshDecorations` 以載入劃線備註——`_sendDecorationsToNative()`
+  /// 現已無條件使用 `FoliateEpubReaderView.setDecorations`，FXL 書籍的
+  /// 劃線/備註疊圖已生效（Issue 4 修正）。
   void _handleFoliateLayoutResolved(EpubLayoutInfo info) {
     if (!mounted) return;
     setState(() {
@@ -987,9 +981,10 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     _sendDecorationsToNative();
   }
 
-  /// 比照 `_jumpToEpubLocator()`（Issue 6）建立的分派模式：FXL
-  /// （Readium）用 `EpubReaderView.setDecorations`，流式（foliate-js）用
-  /// `FoliateEpubReaderView.setDecorations`。
+  /// 無條件使用 `FoliateEpubReaderView.setDecorations`（Issue 4 修正：
+  /// FXL 書籍的劃線/備註疊圖從本工單起才第一次真正生效，先前因
+  /// `_dispatchedIsFixedLayout` 分派到已無人建構的 `EpubReaderView` 而
+  /// 靜默失敗）。
   void _sendDecorationsToNative() {
     if (!mounted) return;
     final primaryColor = Theme.of(context).colorScheme.primary;
@@ -1010,11 +1005,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             tint: noteOnlyTint.toARGB32(),
           ),
     ];
-    if (_dispatchedIsFixedLayout == true) {
-      EpubReaderView.setDecorations(_epubReaderViewKey, decorations);
-    } else {
-      FoliateEpubReaderView.setDecorations(_foliateEpubReaderViewKey, decorations);
-    }
+    FoliateEpubReaderView.setDecorations(_foliateEpubReaderViewKey, decorations);
   }
 
   Highlight? _findHighlightById(int id) {
