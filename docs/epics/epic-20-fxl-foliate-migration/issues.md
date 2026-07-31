@@ -100,7 +100,7 @@
 
 ## Issue 5：移除 `EpubReaderView.kt`／`readium-navigator` 依賴，`MainActivity` 改回 `FlutterActivity`
 
-**Status:** ready-for-agent
+**Status:** 實作計劃已撰寫（`plans/plan-issue-5.md`），待計劃審查通過後開始執行。計劃審查前查證發現文件更新範圍比本 issue 原始描述更大——不只「`MainActivity` 為何是 `FlutterFragmentActivity`」段落，`CLAUDE.md`／`CONTEXT.md`（非 `docs/CONTEXT.md`，路徑已訂正）皆有多處描述雙引擎 FXL 架構的內容需一併訂正，詳見計劃「已查證的關鍵技術事實」。
 
 **依賴：** Issue 4（確認 `reader_screen.dart` 不再有任何路徑建構 `EpubReaderView`）。
 
