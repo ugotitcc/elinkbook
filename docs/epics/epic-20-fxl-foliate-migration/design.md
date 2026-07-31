@@ -165,6 +165,15 @@ Issue 5 程式碼實作已完成，已死的 `EpubReaderView` 路徑與 `readium
 
 **程式碼審查回應（2026-07-31）：** 審查發現 `app/integration_test/` 下 7 個檔案（`content_uri_acceptance_test.dart`、`epub_dual_page_test.dart`、`epub_fxl_tap_zone_test.dart`、`epub_reader_view_test.dart`、`epub_stream_nav_zone_test.dart`、`library_screen_test.dart`、`reading_position_test.dart`）因引用已刪除的 `EpubReaderView` 導致 `flutter analyze` 實際上並非乾淨（Critical，計劃原查證範圍未涵蓋 `integration_test/`）。已逐一改為建構 `FoliateEpubReaderView`（其中 `epub_stream_nav_zone_test.dart` 因架構整個被取代——原生 `InputListener` 座標換算機制已不存在——改為直接刪除，已有 `foliate_stream_nav_zone_test.dart` 涵蓋等效行為；`epub_reader_view_test.dart` 亦刪除，其中「毀損檔案偵測」「FXL isFixedLayout=true 回報」兩項尚無其他測試涵蓋的場景改移植進 `foliate_epub_reader_view_test.dart`；`library_screen_test.dart` 第三項測試原本斷言「FXL 仍由 EpubReaderView 渲染、不受本 Issue 影響」，這個前提自 Issue 2 起已不成立，一併訂正為 `FoliateEpubReaderView`）。另訂正 Task 1 Step 3 原本跳過未做的 3 處過時說明文字、`reader_screen.dart` 兩處死碼刪除後遺留的斷句殘留、`CLAUDE.md` 因移除「MainActivity 為何是 FlutterFragmentActivity」段落但未補回新理由造成的文件缺口。`flutter analyze` 現況：0 issues；`flutter test`（僅涵蓋 `app/test/`，713/713 不受本輪 `app/integration_test/` 修正影響）維持不變。真機驗證：`foliate_epub_reader_view_test.dart` 等既有／改寫測試在裝置 `3CEF42ECD491687` 上出現與本工單改動無關、可在 `main`（`a7366a6`，Issue 5 改動前）穩定重現的既有 `Failed to fetch` 間歇性失敗（`FoliateEpubReaderView` 之 WebView 資源載入層級問題），已排除為本工單新增迴歸，建議另立 Issue／Bug 追蹤，不阻塞本工單。
 
+## Issue 6 驗證完成紀錄（2026-07-31）
+
+Issue 6 真機驗證已完成（純驗證性質，無任何 `.dart`／`.kt` 程式碼異動）：
+
+**驗證摘要：**
+- **單頁模式（Task 1）**：裝置轉直向（`user_rotation 0`），使用 `tmp/一弦定音.epub` 驗證按鈕狀態切換、書籤新增、筆記 Bottom Sheet「🔖 書籤」分頁清單渲染、跳轉定位及刪除書籤，行為完全正常。
+- **雙頁模式（Task 2）**：裝置轉橫向（`user_rotation 1`），雙頁並排畫面下新增書籤成功記錄 CFI 定位，點選清單項目順利跳轉回原雙頁 Spread 配對；直向/橫向跨模式切換時 CFI locator 持久化一致性驗證通過。
+- **測試結果**：`flutter test` 713/713 passed；書籤專屬 widget test 8/8 passed；`flutter analyze` 0 issues。
+
 ## 相關佐證
 
 - `docs/adr/0011-epub-reflowable-migrate-to-foliate-js.md`（Phase 1，本次評估的 Phase 2 起點）
