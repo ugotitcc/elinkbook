@@ -76,7 +76,11 @@ function isDualPageEnabled(dualPageMode, isLandscape) {
 
 - [ ] **Step 3：確認初次開書套用路徑不需額外修改**
 
-`openBook()` 內 `{once:true}` 的 relocate 監聽器已呼叫 `window.applyPreferences({ ...initialPrefs, writingMode: resolvedWritingMode })`（`main.js:422`），只要 Task 2 把 `dualPageMode`／`isLandscape` 塞進 `initialPrefs`（透過 `_buildIndexUri()` 的 query string，Dart 端 Task 2 負責），Step 2 新增的邏輯會在開書當下自動套用一次，不需要在 `openBook()` 額外呼叫。裝置旋轉時的 `ResizeObserver` debounce callback（`main.js:577-592`）已呼叫 `window.applyPreferences(lastAppliedPrefs)`，同樣自動涵蓋——本 Step 純粹是確認並記錄，不需要新增程式碼，若真機驗證（Task 4）發現不成立才回頭修正。
+`openBook()` 內 `{once:true}` 的 relocate 監聽器已呼叫 `window.applyPreferences({ ...initialPrefs, writingMode: resolvedWritingMode })`（`main.js:422`），只要 Task 2 把 `dualPageMode`／`isLandscape` 塞進 `initialPrefs`（透過 `_buildIndexUri()` 的 query string，Dart 端 Task 2 負責），Step 2 新增的邏輯會在開書當下自動套用一次，不需要在 `openBook()` 額外呼叫。裝置旋轉時的 `ResizeObserver` debounce callback（`main.js:` 約 588-595）已呼叫 `window.applyPreferences(lastAppliedPrefs)`，同樣自動涵蓋——本 Step 純粹是確認並記錄，不需要新增程式碼，若真機驗證（Task 4）發現不成立才回頭修正。
+
+**審查發現（計劃審查 Important #2，2026-07-31，時序已逐行查證）**：這個時序安排會讓**每一本 FXL 書開啟時都發生一次隱性的「先渲染一次、緊接著立刻依 spread 設定重渲染一次」**，非邊界情況、必然發生：`fixed-layout.js` 的 `open(book)`（:1100-1107）內部無條件呼叫無 mode 參數的 `#spread()`，`view.init()` 觸發的第一次導覽一律先用「未指定 spread」的預設配對完成一次真正渲染（建立 iframe、載入內容）；緊接著本 Step 描述的 relocate 監聽器內才第一次呼叫 `applyPreferences()`，Step 2 新增的 `setAttribute('spread', ...)` 是該 attribute**第一次**被賦值，此時 `this.#index` 已因第一次導覽完成而 `>= 0`，不會被 `#respread()` 的 `this.#index === -1` 防呆擋下，因此會真正重新執行配對、清空快取、重建 iframe——真機上可能表現為開書當下短暫的畫面閃爍/重排。
+
+**已排除的替代方案（勿採用）**：「在 `view.init()` 之前預先設定 `spread` attribute」看似可以避免這個雙重渲染，但已查證對 `fixed-layout.js` 現有實作是無效的 no-op——`view.init()` 呼叫前 `this.#index` 仍是初始值 `-1`，`#respread()` 開頭的防呆會讓這次設定直接不生效（連 `#spread(spreadMode)` 都不會被呼叫）。目前計劃選擇的時序（`view.init()` 完成首次導覽後才呼叫 `applyPreferences()`）是「不修改釘定版本」Global Constraints 下唯一可行的做法，不是考慮不周，**不需要調整實作時序**——本項風險純粹留給 Task 4 的真機驗收判準追蹤。
 
 ---
 
@@ -91,22 +95,22 @@ function isDualPageEnabled(dualPageMode, isLandscape) {
 
 - [ ] **Step 1：新增建構參數欄位**
 
-比照既有 `isFixedLayoutHint` 欄位的加入方式（Issue 2 先例），在 `FoliateEpubReaderView` class 新增：
+**審查修正（計劃審查 Important #1，2026-07-31）**：`dualPageMode`／`isLandscape` 兩者簽章不同，須依 `spec.md`「核心介面異動」第 1 節（本 Epic 唯一事實來源）逐字對齊，不可兩者一律 nullable：
 
 ```dart
-final DualPageMode? dualPageMode;
-final bool? isLandscape;
+final DualPageMode? dualPageMode;   // 沿用既有 dual_page_mode.dart 列舉，比照 isFixedLayoutHint 先例維持 nullable
+final bool isLandscape;             // 比照舊 EpubReaderView 的必要參數，非 nullable，預設 false
 ```
 
-建構子新增對應具名參數（皆為 optional，預設 `null`——**不**比照 `EpubReaderView` 用非 null 預設值 `DualPageMode.auto`/`false`，因為 `buildFoliatePreferencesMap()` 的既有慣例是「null 值完全不出現在 map 中」，讓 `main.js` 端在 `prefs.dualPageMode`/`prefs.isLandscape` 為 `undefined` 時自然短路成 `isDualPageEnabled` 回傳 `false`，行為等同 `never`/`false`，不需要 Dart 端另外指定預設值語意）。新增 `import 'dual_page_mode.dart';`。
+`dualPageMode` 比照既有 `isFixedLayoutHint` 欄位的加入方式（Issue 2 先例），optional 具名參數，預設 `null`，讓 `buildFoliatePreferencesMap()`「null 值完全不出現在 map 中」的既有慣例continue適用。`isLandscape` **不**適用此慣例——依 `spec.md` 明文宣告比照舊 `EpubReaderView`（`epub_reader_view.dart:126`：`this.isLandscape = false,`）採非 nullable、預設 `false` 的必要參數寫法，建構子新增 `this.isLandscape = false,`。新增 `import 'dual_page_mode.dart';`。
 
 - [ ] **Step 2：`buildFoliatePreferencesMap()` 擴充**
 
-比照既有 `isFixedLayoutHint` 那行的寫法：
+`dualPageMode` 比照既有 `isFixedLayoutHint` 那行的 nullable 寫法；`isLandscape` 為非 nullable，恆定加入 map（無需 `if` 判斷）：
 
 ```dart
 if (view.dualPageMode != null) map['dualPageMode'] = view.dualPageMode!.name;
-if (view.isLandscape != null) map['isLandscape'] = view.isLandscape;
+map['isLandscape'] = view.isLandscape;
 ```
 
 - [ ] **Step 3：`foliatePreferencesChanged()` 擴充**
@@ -122,9 +126,11 @@ oldView.isLandscape != newView.isLandscape ||
 
 於 `app/test/reader/foliate_epub_reader_view_test.dart` 比照 Issue 2 審查回應新增的 `isFixedLayoutHint` 測試組（`buildFoliatePreferencesMap` group、`foliatePreferencesChanged` group），新增：
 - `dualPageMode: DualPageMode.always` 時 map 含 `dualPageMode: 'always'`
-- `isLandscape: true` 時 map 含 `isLandscape: true`
-- `dualPageMode`／`isLandscape` 皆未設定（null）時 map 不含對應 key（可併入既有「所有偏好欄位皆為 null」測試案例，或個別新增）
+- `dualPageMode` 未設定（null）時 map 不含該 key（可併入既有「所有偏好欄位皆為 null」測試案例，或個別新增）
+- `isLandscape` 為非 nullable 必要參數，恆定出現在 map 中——新增 `isLandscape: true` 與預設值（未傳入，即 `false`）兩種情況皆驗證 map 含正確的 `isLandscape` 值（不是「未設定時不出現」，與 `dualPageMode` 的測試性質不同）
 - `dualPageMode` 變動／`isLandscape` 變動皆使 `foliatePreferencesChanged` 回傳 `true`
+
+**建議追加（計劃審查 Minor #1）**：`isDualPageEnabled` 的判斷邏輯（`always`/`auto+landscape`/`auto+portrait`/`never` 四種組合）目前只能在 JS 端驗證（本 repo 無 JS 測試框架），純靠真機肉眼驗證+程式碼審查把關、無法留下自動化迴歸測試。建議在 Dart 端另補一個邏輯等效的 truth table 測試（例如直接把 `main.js` 的 `isDualPageEnabled` 判斷式抄一份等效邏輯到測試檔案內做四種組合斷言，作為可執行文件），非強制項目。
 
 執行 `flutter test test/reader/foliate_epub_reader_view_test.dart` 確認全部通過。
 
@@ -192,6 +198,7 @@ adb -s 3CEF42ECD491687 install -r build/app/outputs/flutter-apk/app-debug.apk
 2. 封面獨立顯示：翻到封面／`page-spread-center` 頁，確認即使橫向雙頁模式下仍單獨顯示（不與其他頁並排）——驗證 `#spread()` 既有配對邏輯不受本工單新增的 `'both'` 值影響（`'both'` 只影響長寬比啟發式，不影響 `pageSpread` 配對本身，理論上不受影響，但仍需真機肉眼確認）。
 3. RTL 頁序：橫向雙頁模式下確認頁面順序符合右至左（日式漫畫閱讀順序）。
 4. 直向/單頁模式（`dualPageMode: never` 或裝置直向且 `dualPageMode: auto`）：確認維持單頁顯示，無回歸。
+5. **開書當下的雙重渲染觀察**（計劃審查 Important #2）：任何 FXL 書開啟時，理論上都會先以未指定 spread 的預設配對渲染一次，緊接著才依 `dualPageMode`/`isLandscape` 重新配對渲染——真機肉眼觀察開書當下是否有可感知的畫面閃爍/重排，記錄觀察結果（可接受／不可接受）。若不可接受，記錄為已知限制並另立後續工單評估緩解方案（例如延遲至首次可見前才顯示畫面），本工單**不**因此調整 `main.js` 的 `applyPreferences()` 呼叫時序（已查證「提前設定 `spread` attribute」對 `fixed-layout.js` 現有實作無效，見 Task 1 Step 3）。
 
 - [ ] **Step 4：依結果更新 `design.md`／`issues.md`／`docs/epics.md`**
 
