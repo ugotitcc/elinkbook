@@ -192,12 +192,6 @@ class FoliateEpubReaderView extends StatefulWidget {
   final VoidCallback? onSelectionCleared;
   final ValueChanged<String>? onAnnotationActivated;
 
-  /// 可選的快取函數注入點，用於測試環境繞過 Dart 端檔案系統檢查。
-  /// null 時使用預設的 [cacheBookForServing] 全域實作。
-  @visibleForTesting
-  final Future<String?> Function(String filePath, String instanceId)?
-      cacheBookForServingFn;
-
   const FoliateEpubReaderView({
     super.key,
     required this.filePath,
@@ -235,7 +229,6 @@ class FoliateEpubReaderView extends StatefulWidget {
     this.onSelectionChanged,
     this.onSelectionCleared,
     this.onAnnotationActivated,
-    this.cacheBookForServingFn,
   });
 
   static void nextPage(GlobalKey<State<FoliateEpubReaderView>> key) {
@@ -321,9 +314,18 @@ class _FoliateEpubReaderViewState extends State<FoliateEpubReaderView> {
   /// 供 `WebViewAssetLoader.InternalStoragePathHandler` 串流服務。
   Future<void> _cacheBook() async {
     try {
-      final cacheFn = widget.cacheBookForServingFn ?? cacheBookForServing;
+      final cacheFn = cacheBookForServing;
       final cachedPath = await cacheFn(widget.filePath, _instanceId);
-      if (!mounted) return; // 217MB 檔案複製可能耗時數秒，需檢查 mounted
+      if (!mounted) {
+        // 217MB 檔案複製可能耗時數秒，若使用者已離開畫面，需主動清理快取
+        if (cachedPath != null) {
+          final cacheDir = Directory(File(cachedPath).parent.path);
+          if (cacheDir.existsSync()) {
+            cacheDir.deleteSync(recursive: true);
+          }
+        }
+        return;
+      }
       if (cachedPath != null) {
         // cacheBookForServing 回傳的是檔案絕對路徑，InternalStoragePathHandler 要的是目錄
         setState(() {

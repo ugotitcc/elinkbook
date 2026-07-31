@@ -49,3 +49,22 @@ java.lang.OutOfMemoryError: Failed to allocate a 219210408 byte allocation ...
 - **設定保守的檔案大小警戒值，超過時提示使用者「檔案過大可能無法開啟」**：治標不治本，僅止住無聲閃退，未解決根本問題；本 ADR 決策的方向可徹底解決，優先採用；若實作工期考量需要短期防護，可作為過渡方案疊加，不互斥。
 - **提高 App 的 `largeHeap` manifest 設定暫時緩解**：非長期解法，部分裝置仍可能不足，且無助於改善開書速度／整體記憶體使用效率，已排除為主要方向。
 - **要求 `readest/foliate-js` 釘定版本支援 HTTP Range 請求（走真正的分塊/隨需讀取）**：查證確認本專案 vendored 的 `zip.js` 不具備此能力（外部分析報告聲稱的 `HttpRangeReader` 經查證不存在），且違反「不修改釘定版本」的既有限制，已排除。
+
+---
+
+## Addendum（2026-08-01，Issue 8 實作後修訂）
+
+### 實際情況
+
+實作過程中發現 `flutter_inappwebview_android` 1.1.3 的 `AndroidInternalStoragePathHandler.toMap()` 存在無限遞迴 bug（`return {...toMap(), 'directory': directory}` 自己呼叫自己），導致 `InternalStoragePathHandler` 一旦被使用就會 `StackOverflowError`。因此本專案不得不 fork/patch 該套件，與上方「不需要 fork/patch 套件本身」的原始論述不符。
+
+### 修正措施
+
+- 本地 patch 位於 `app/patches/flutter_inappwebview_android/`
+- 透過 `pubspec.yaml` 的 `dependency_overrides` 套用
+- 修正內容：`toMap()` 改為 `return {'type': type, 'path': path, 'directory': directory}`
+
+### 追蹤事項
+
+- 上游 issue：待確認 `flutter_inappwebview_android` 是否已在此版本後修復
+- 移除條件：上游發布包含修正的穩定版本後，升級並移除 `app/patches/` 目錄

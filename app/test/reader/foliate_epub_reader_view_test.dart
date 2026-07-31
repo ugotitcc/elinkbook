@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -597,6 +599,54 @@ void main() {
 
     test('never + portrait → false', () {
       expect(isDualPageEnabled('never', false), isFalse);
+    });
+  });
+
+  // Issue 8 審查 Important #7：mounted 守衛/dispose 競態測試
+  // 驗證「快取完成前 dispose」不會導致快取目錄洩漏
+  group('mounted guard / dispose race', () {
+    testWidgets('dispose during cache does not leak cache directory', (tester) async {
+      final completer = Completer<String?>();
+      cacheBookForServing = (filePath, instanceId) async {
+        return completer.future;
+      };
+
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: FoliateEpubReaderView(
+            filePath: '/tmp/sample.epub',
+            onPageRendered: _noop,
+            onError: _noopError,
+          ),
+        ),
+      ));
+
+      // 移除 widget（觸發 dispose），此時快取尚未完成
+      await tester.pumpWidget(const MaterialApp(home: Scaffold(body: SizedBox())));
+
+      // 讓 Future 完成，不應拋出例外
+      completer.complete('/fake/cache/dir/current.epub');
+      await tester.pump();
+    });
+
+    testWidgets('cache failure calls onError', (tester) async {
+      cacheBookForServing = (filePath, instanceId) async {
+        return null;
+      };
+
+      String? receivedError;
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: FoliateEpubReaderView(
+            filePath: '/tmp/sample.epub',
+            onPageRendered: _noop,
+            onError: (msg) => receivedError = msg,
+          ),
+        ),
+      ));
+
+      await tester.pump();
+      expect(receivedError, '無法快取書籍檔案');
     });
   });
 
