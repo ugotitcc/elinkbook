@@ -158,7 +158,7 @@
 
 ## Issue 8：大型 EPUB（約 200MB+）開書時因整檔載入記憶體導致 `OutOfMemoryError` 閃退
 
-**Status:** needs-triage
+**Status:** ready-for-agent（`/diagnose` 已確認修復方向，`docs/epics/epic-20-fxl-foliate-migration/reviews/bugfix-repro.md`）
 
 **發現時機／方式：** 2026-07-31，Issue 3 真機測試階段人類回報「開啟 `tmp/膽大黨10.epub`（正常 FXL 漫畫）會閃退，但 `tmp/一弦定音.epub`（Issue 1/2 一路使用的測試書）沒事」。由 Claude Code 直接 `adb -s 3CEF42ECD491687 shell dumpsys dropbox --print` 從真機拉出 6 筆真實當機記錄查證，非二手轉述，逐一交叉比對程式碼確認根因，詳見 `tmp/epic-20/issue3-implementation-review.md`。**已確認與 Issue 3 本身的 `spread` attribute 邏輯完全無關**（Issue 3 分支未觸碰任何 `.kt` 檔案／`foliate_native_bridge.dart`）。
 
@@ -180,12 +180,17 @@ java.lang.OutOfMemoryError: Failed to allocate a 219210408 byte allocation with 
 
 **影響範圍**：`loadBookBytes()`／`_shouldInterceptRequest` 是 `FoliateEpubReaderView` 通用機制，**不分 FXL／流式**，任何經此 widget 開啟（epic-20 Issue 2 起已是全部 EPUB 的唯一路徑）、檔案大小逼近或超過 App heap 上限的書籍皆會受影響，非 FXL 專屬問題。
 
-**待決事項（需人類決定修復方向，故標記 `needs-triage` 而非 `ready-for-agent`）：**
-1. 是否改為串流／分塊讀取（例如 `WebResourceResponse` 直接接 `InputStream` 而非先讀完整個 `ByteArray`，若 `flutter_inappwebview`／Android `WebResourceResponse` API 支援的話）——徹底解法，但需評估對 `content://` SAF 來源與本機檔案兩種情況是否都可行，以及是否波及 `view.js` `makeBook()` 「一次性 fetch」的既有假設（可能需要上游 `readest/foliate-js` 支援 Range，而該專案是「不修改釘定版本」的既有限制，需先查證是否可行）。
-2. 或先設一個保守的檔案大小警戒值，超過時提示使用者「檔案過大可能無法開啟」而非讓 App 無聲閃退（治標，成本低，可作為 1 的過渡方案）。
-3. 或評估提高 App 的 `largeHeap` manifest 設定（`android:largeHeap="true"`）暫時緩解（治標，非長期解法，且部分裝置可能仍不夠）。
+**`/diagnose` 修復方向研究結論（2026-07-31，完整過程見 `reviews/bugfix-repro.md`）：**
 
-**建議下一步：** 若優先處理，建議先跑 `/diagnose` 或 Discovery 階段確認修復方向（技術可行性），再視結果決定是否需要新 ADR（若牽涉 `readest/foliate-js` Range 支援評估）或直接進入 Scrum Master 拆工單。**建議與 Issue 7（真機端到端驗證）之間建立相依關係**：Issue 7 的真機驗證應涵蓋至少一本大型（150MB+）真實書籍，若本 Issue 未修復，Issue 7 驗收時須明確記錄「大型檔案已知限制」而非略過不提。
+方向 (1)「串流/分塊讀取」**技術上完全可行**，且是唯一能徹底解法（非治標）的選項，已查證確認：
+
+- 現行 Dart 端 `InAppWebView.shouldInterceptRequest` callback（含 `flutter_inappwebview` 的 `CustomPathHandler`）一律要求回傳 `Uint8List`，天生無法串流——問題不在 Kotlin 端怎麼讀，瓶頸在跨 platform channel 前 Dart 端必須先持有完整位元組陣列。
+- `flutter_inappwebview` 原生端已內建 `WebViewAssetLoader` 整合（優先於 Dart callback 被檢查），其 `InternalStoragePathHandler` 完全在原生端運作、以 `FileInputStream` 串流讀取，**不經過 Dart callback，不受 `Uint8List` 限制**，且不需要 fork/patch 套件本身。
+- 本機檔案路徑（既有 `isPathWithinRoot` 已強制要求落在 App 私有資料目錄）已 100% 符合 `InternalStoragePathHandler` 前提，不需額外複製；`content://` SAF 來源可比照既有 `BookImportService`（ADR 0002）落地機制，開書前以 Kotlin `InputStream.copyTo(OutputStream, bufferSize)` 有界記憶體分塊複製到私有快取後，同樣走 `InternalStoragePathHandler`。
+- **不會**波及 `readest/foliate-js` 釘定版本「一次性 `fetch()`」的既有假設——`InternalStoragePathHandler` 只改變原生端「怎麼組出 `WebResourceResponse`」，WebView 收到的仍是單一完整 HTTP 回應，不涉及 HTTP Range，不需要修改釘定版本任何程式碼。
+- 本專案 epic-17 時期（commit `4bc492a`）其實用過原生 `WebViewAssetLoader`，後來因 ADR 0013（觸控/選字手勢限制，與記憶體無關）換成目前的 `flutter_inappwebview` `InAppWebView`——改回原生資產載入不是走回頭路撞到 ADR 0013 要解決的問題，手勢處理仍由 `InAppWebView` 負責，只是資源載入這一小塊換回原生路徑。
+
+**下一步：** 已具備足夠可行性證據直接進入 Planning（視規模決定是否需要新 ADR 記錄「resource loading 從 Dart-side callback 改回原生 WebViewAssetLoader」的決策），標記 `ready-for-agent`。**與 Issue 7（真機端到端驗證）之間建立相依關係**：Issue 7 的真機驗證應涵蓋至少一本大型（150MB+）真實書籍，驗收判準包含 `tmp/膽大黨10.epub`（217MB，本 Issue 原始崩潰樣本）真機開啟不再 OOM。
 
 ---
 
