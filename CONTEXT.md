@@ -45,7 +45,7 @@ EPUB 固定版面與 PDF 的並排顯示設定，三態：自動（橫向時啟�
 _Avoid_: 雙頁顯示、兩頁模式、分頁模式
 
 **Spread（跨頁）**：
-雙頁模式下同時顯示的一組頁面（通常為相鄰兩頁）。封面獨立時第 1 頁為單頁 spread，之後為雙頁 spread (2,3)(4,5)…。PDF 的翻頁步進以 spread 為單位（一次換一個完整 spread）。EPUB 固定版面的 spread 配對由 Readium 依 `page-spread-left/right` metadata 處理。
+雙頁模式下同時顯示的一組頁面（通常為相鄰兩頁）。封面獨立時第 1 頁為單頁 spread，之後為雙頁 spread (2,3)(4,5)…。PDF 的翻頁步進以 spread 為單位（一次換一個完整 spread）。EPUB 固定版面的 spread 配對由 `foliate-js`（`paginate.js`）處理。
 _Avoid_: 跨頁組、頁面組
 
 **固定版面（Fixed-Layout, FXL）**：
@@ -53,16 +53,17 @@ EPUB 的一種排版形式，每頁有固定尺寸（寬×高），內容不隨�
 _Avoid_: 固定排版、定版式
 
 **引擎分派判斷（Engine Dispatch Detection）**：
-決定一本 EPUB 該用 Readium（FXL 路徑）或 foliate-js（流式路徑）開書的**開書前**判斷，結果快取於 `Book.isFixedLayout`（`app/lib/library/models/book.dart:50`，nullable bool，`null` 代表既有書籍尚未判斷過）。判斷來源為 `extractMetadata`（匯入時）或 `detectAndCacheEpubLayout`/`detectEpubLayout`（既有書籍首次開書時補判斷）這兩個原生 channel（讀取 EPUB OPF `rendition:layout` 屬性，不涉及任何一個引擎的執行期狀態）。與 `EpubLayoutInfo.isFixedLayout`（Readium 開書後才回報、只在已選定 Readium 路徑下才存在的執行期狀態）是兩個不同概念、互不影響——見 `book.dart:44-49` 既有註解。少數漫畫 EPUB 因來源檔案 metadata 不完整/不規範，此判斷可能誤判為流式，見「人工版面覆蓋」。
+決定一本 EPUB 該用什麼 UI 版面語意（FXL → 單頁/雙頁模式；流式 → 連續捲動）的**開書前**判斷，結果快取於 `Book.isFixedLayout`（`app/lib/library/models/book.dart:50`，nullable bool，`null` 代表既有書籍尚未判斷過）。判斷來源為 `extractMetadata`（匯入時）或 `detectAndCacheEpubLayout`/`detectEpubLayout`（既有書籍首次開書時補判斷）這兩個原生 channel（讀取 EPUB OPF `rendition:layout` 屬性）。自 ADR 0017 起，EPUB 一律建構 `FoliateEpubReaderView`，不再依此判斷分流到不同 widget——此判斷僅影響 UI 版面參數（單頁/雙頁），不決定引擎選擇。與 `EpubLayoutInfo.isFixedLayout`（開書後才回報的執行期狀態）是兩個不同概念、互不影響——見 `book.dart:44-49` 既有註解。少數漫畫 EPUB 因來源檔案 metadata 不完整/不規範，此判斷可能誤判為流式，見「人工版面覆蓋」。
 _Avoid_: FXL 偵測、版面偵測（皆容易與 `EpubLayoutInfo` 執行期狀態混淆）
 
 **人工版面覆蓋（Manual Engine Override）**：
-使用者在 `LibraryScreen` 多選模式下，對選取的 EPUB 書籍手動覆寫「引擎分派判斷」結果的操作，二擇一：「強制 FXL」（直接寫入 `Book.isFixedLayout = true`）／「恢復自動判斷」（重新呼叫 `detectAndCacheEpubLayout()`，回到系統原始判斷結果，非固定寫入 `false`）。用途是對「引擎分派判斷」誤判（例如漫畫 EPUB 被誤判為流式）提供救濟手段，不修改判斷邏輯本身。批次選取中的非 EPUB 書籍（PDF/TXT）自動跳過。生效時機為使用者下次從書架開啟該書時。**能救濟的範圍受限於「Readium 內部版面渲染決策」**（見下方詞條）——只對「metadata 不完整但 Readium 官方解析器仍判斷得出 FXL」的書籍完全生效，對「metadata 損壞到連 Readium 官方解析器都判斷不出 FXL」的書籍先天無法完全救濟（epic-18 Issue 16／17 發現）。
+使用者在 `LibraryScreen` 多選模式下，對選取的 EPUB 書籍手動覆寫「引擎分派判斷」結果的操作，二擇一：「強制 FXL」（直接寫入 `Book.isFixedLayout = true`）／「恢復自動判斷」（重新呼叫 `detectAndCacheEpubLayout()`，回到系統原始判斷結果，非固定寫入 `false`）。用途是對「引擎分派判斷」誤判（例如漫畫 EPUB 被誤判為流式）提供救濟手段，不修改判斷邏輯本身。批次選取中的非 EPUB 書籍（PDF/TXT）自動跳過。生效時機為使用者下次從書架開啟該書時。自 ADR 0017 起，EPUB 一律使用 `foliate-js` 渲染，「引擎分派判斷」僅驅動 UI 版面語意（單頁/雙頁 vs. 連續捲動），不涉及引擎替換。
 _Avoid_: 強制版面、版面覆蓋（皆過於籠統，未點出「覆蓋的是引擎分派判斷，而非單書版面設定」這個關鍵區別，容易與「單書版面偏好設定」混淆）
 
 **Readium 內部版面渲染決策（Readium Internal Rendering Decision）**：
-Readium 官方元件 `EpubNavigatorFragment`（`readium-kotlin-toolkit`，非本專案程式碼）開書後，自己獨立從 `Publication.metadata.layout` 判讀這本書該用 FXL（左右並排 WebView）還是 reflowable（單欄連續捲動）模式渲染——這個判讀**完全獨立於**本專案 Dart 端的「引擎分派判斷」，且 `EpubNavigatorFragment.Configuration`（`EpubReaderView.kt:819-853`）沒有任何欄位可以覆寫它。本專案 `EpubReaderView.kt` 另有 3 個**自己的**檢查點（`applyFxlFitScale()`／原生 tap 熱區監聽器註冊／`onLayoutResolved` 回報，皆各自獨立讀取 `publication.metadata.layout == Layout.FIXED`）驅動雙頁 spread 計算、輸入手勢分派、Dart 端 chrome 顯示——這些是本專案自己的 bookkeeping，可以被「人工版面覆蓋」的強制決定覆寫；但即使覆寫了這 3 個檢查點，`EpubNavigatorFragment` 本身是否會跟著改變渲染模式仍未經驗證（見 epic-18 Issue 17 Spike）。三層概念完整脈絡：「固定版面（FXL）」（格式本身）→「引擎分派判斷」（Dart 端選哪個 widget）→「Readium 內部版面渲染決策」（Readium 官方元件開書後自己的獨立判讀，本專案無法直接控制）。
-_Avoid_: FXL 渲染判斷（容易與「引擎分派判斷」混淆）、Readium 判斷（過於籠統，未點出這是 Readium 官方元件的內部行為、非本專案程式碼）
+> ⚠️ **Historical（epic-20 前架構）**：自 ADR 0017 起，EPUB 一律使用 `foliate-js` 渲染，本詞條描述的 `EpubNavigatorFragment`／`EpubReaderView.kt` 機制已移除（Issue 5）。保留本詞條供理解歷史脈絡。
+Readium 官方元件 `EpubNavigatorFragment`（`readium-kotlin-toolkit`，已移除）曾自行從 `Publication.metadata.layout` 判讀 FXL 或 reflowable 模式渲染，該判讀完全獨立於 Dart 端的「引擎分派判斷」且無外部 API 可覆寫。過去的三層概念脈絡：「固定版面（FXL）」（格式本身）→「引擎分派判斷」（Dart 端 UI 版面語意）→「Readium 內部版面渲染決策」（Readium 官方元件自己的判讀）。現行架構下，`foliate-js` 透過 `paginate.js` 依 `rendition:layout` meta 統一處理 FXL 與流式的渲染模式。
+_Avoid_: FXL 渲染判斷（容易與「引擎分派判斷」混淆）
 
 **閱讀偏好管理器（ReaderPrefsManager）**：
 整合全域預設值（SharedPreferences）與單書版面偏好設定（SQLite）的深模組。負責載入、寫入與優先級覆寫解析邏輯，對閱讀器（ReaderScreen）提供單一介面，隱藏底層多個數據倉庫。
@@ -73,7 +74,7 @@ _Avoid_: 偏好設定服務、設定 Facade
 _Avoid_: 最終偏好、生效設定
 
 **FXL 換頁熱區（暫代版）（FXL Tap-Zone Navigation, Interim）**：
-固定版面（FXL）EPUB 專屬的最小化點擊換頁機制：畫面左／右各 1/3 寬度熱區點擊觸發上一頁／下一頁（呼叫 Readium `goForward(animated=false)`/`goBackward(animated=false)`，不使用滑動動畫，換頁後懸浮控制項一律自動收起），中間 1/3 熱區切換懸浮控制項（返回鍵／設定鍵）顯示或隱藏（切換語意，與左右熱區的「強制收起」不同）。用來取代原生滑動手勢，避免 E-Ink 裝置換頁動畫殘留殘影，也繞開 FXL 相鄰頁 WebView 預載零尺寸造成的縮放跳動（見 `epic-16-dual-page` 已知限制）。左右熱區固定不隨閱讀方向鏡像、不可自訂，僅適用於 FXL；流式 EPUB 不受影響、維持原生手勢。熱區疊加層會擋住底層 WebView 的所有觸控（含 FXL 內嵌超連結，若有的話），刻意接受的暫代方案限制。**與 PRD「可自訂 3×3 點擊九宮格」（傳統/單手/類 Kindle 多種對應模式、RTL 鏡像）是不同東西**——後者是尚未開始的獨立功能，本機制只是範圍受限的暫時方案。
+固定版面（FXL）EPUB 專屬的最小化點擊換頁機制：畫面左／右各 1/3 寬度熱區點擊觸發上一頁／下一頁（透過 `ZoneAction` 執行 `foliate-js` 的 `paginate.js` 分頁命令，不使用滑動動畫，換頁後懸浮控制項一律自動收起），中間 1/3 熱區切換懸浮控制項（返回鍵／設定鍵）顯示或隱藏（切換語意，與左右熱區的「強制收起」不同）。用來取代原生滑動手勢，避免 E-Ink 裝置換頁動畫殘留殘影，也繞開 FXL 相鄰頁 WebView 預載零尺寸造成的縮放跳動（見 `epic-16-dual-page` 已知限制）。左右熱區固定不隨閱讀方向鏡像、不可自訂，僅適用於 FXL；流式 EPUB 不受影響、維持原生手勢。熱區疊加層會擋住底層 WebView 的所有觸控（含 FXL 內嵌超連結，若有的話），刻意接受的暫代方案限制。**與 PRD「可自訂 3×3 點擊九宮格」（傳統/單手/類 Kindle 多種對應模式、RTL 鏡像）是不同東西**——後者是尚未開始的獨立功能，本機制只是範圍受限的暫時方案。
 _Avoid_: 九宮格、熱區導航（皆容易與 PRD 完整版混淆，應明確加註「暫代版」或「FXL 專屬」）
 
 **設定面板草稿具現化原則（Settings Sheet Draft Concretization Rule）**：

@@ -17,18 +17,18 @@ flutter devices          # 列出可用裝置
 ### 唯一 Seam：ReaderScreen
 
 `app/lib/screens/reader_screen.dart` 是唯一的閱讀器入口，依副檔名分派到：
-- `EpubReaderView` → Readium kotlin-toolkit (AndroidView)
+- `FoliateEpubReaderView` → `readest/foliate-js` 跑在 `flutter_inappwebview` 的 `InAppWebView` 內（所有 EPUB，含 FXL 與流式）
 - `PdfReaderView` → android.graphics.pdf.PdfRenderer (AndroidView)
 
-兩者是對稱的 PlatformView 包裝，method channel 契約：`openBook(path)` → `onPageRendered()`/`onError(message)`。
+`PdfReaderView` 為傳統 `AndroidView`/`PlatformView` 包裝，method channel 契約：`openBook(path)` → `onPageRendered()`/`onError(message)`。`FoliateEpubReaderView` 不是傳統 `PlatformView`，透過 `foliate_native_bridge.dart` 與原生端溝通。
 
 ### Native 層
 
 Kotlin 原始碼位於 `app/android/app/src/main/kotlin/cc/ugotit/elinkbook/`：
-- `EpubReaderView.kt` + `EpubReaderViewFactory.kt`
 - `PdfReaderView.kt` + `PdfReaderViewFactory.kt`
-- `MainActivity.kt`（`FlutterFragmentActivity`，非預設 `FlutterActivity`，因 Readium Fragment 需要）
+- `MainActivity.kt`（`FlutterActivity`）
 - `BookMetadataChannel.kt`
+- `ReaderViewAttachmentTracker.kt`（共用元件）
 
 ### 偏好設定系統（Epic 3）
 
@@ -94,6 +94,5 @@ flutter build apk --debug                       # 建置 debug APK
 
 - `flutter analyze` 必須乾淨才能提交
 - Integration tests 必須指定 `-d <device-id>`，否則會找不到裝置
-- Kotlin 端的 `EpubNavigatorFragment` 建構子是 `internal`，只能透過 Readium 的 `FragmentFactory` 建立
 - 原生渲染引擎需要真實裝置檔案路徑，不能直接讀 Flutter asset（見 `stageSampleBookFile()`）
 - `BookReaderPrefs.fontWeight` 使用 Readium 倍率語意（1.0 = normal），非 CSS 300-900 原始值
