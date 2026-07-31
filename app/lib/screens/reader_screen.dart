@@ -10,7 +10,6 @@ import '../reader/book_reader_prefs.dart';
 import '../reader/epub_decoration.dart';
 import '../reader/epub_page_estimator.dart';
 import '../reader/epub_position_info.dart';
-import '../reader/epub_reader_view.dart';
 import '../reader/epub_selection_info.dart';
 import '../reader/foliate_epub_reader_view.dart';
 import '../library/library_repository.dart';
@@ -231,10 +230,6 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   // helper（審查修正，見 Task 2 Step 4——不使用 as dynamic 跨 State 私有
   // 邊界呼叫，避免 release 混淆／tree-shaking 風險）。
   final _pdfReaderViewKey = GlobalKey<State<PdfReaderView>>();
-  // 用於呼叫 EpubReaderView.jumpToProgression(key, progression) 這個強型別
-  // static helper（Epic 5 Issue 3），比照 _pdfReaderViewKey 對 PDF 的既有
-  // 作法。
-  final _epubReaderViewKey = GlobalKey<State<EpubReaderView>>();
   // 用於呼叫 FoliateEpubReaderView 的強型別 static helper。epic-20 Issue 2
   // 起，所有 EPUB（FXL／流式）皆統一建構 FoliateEpubReaderView（見
   // _resolveEpubEngineDispatch／_buildBody），此 key 已是實際掛載的唯一
@@ -792,62 +787,6 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 【已知、可接受的行為】把自動偵測結果寫回 [_autoDetectedWritingMode]
   /// 後，若當下沒有 writingModeOverride，[_resolved] 的 writingMode 會從 null
   /// 變成非 null，驅動 EpubReaderView 以非 null 值重建；EpubReaderView 的
-  /// didUpdateWidget 偵測到「null → 非 null」的變化時，會多送一次
-  /// setPreferences 給原生端，等於把 Readium 剛剛自動判斷好的值重新套用
-  /// 一次。這是多餘但無害的呼叫（見 EpubReaderView.kt 的 setPreferences
-  /// 註解——currentPreferences.plus() 合併語意，不會覆蓋其他已生效欄位），
-  /// 不特地加狀態去抑制它，避免為了避免一次無害的重複呼叫而增加複雜度。
-  // ignore: unused_element
-  void _handleLayoutResolved(EpubLayoutInfo info) {
-    if (!mounted) return;
-    setState(() {
-      // 當使用者透過「強制 FXL」手動設定 isFixedLayout=true 時，
-      // 覆蓋 native view 的異步回報（見 _resolveEpubEngineDispatch 註解）。
-      if (widget.isFixedLayout != true) {
-        _isFixedLayout = info.isFixedLayout;
-      }
-      _autoDetectedWritingMode = info.writingMode;
-      final loaded = _loaded;
-      if (loaded != null) {
-        _resolved = widget.prefsManager.resolve(
-          loaded,
-          autoDetectedWritingMode: info.writingMode,
-        );
-      }
-    });
-    // epic-5-toc-pagination Issue 4：目錄僅支援流式 EPUB（spec.md「範圍
-    // 界定」），FXL 不預取。目錄樹狀結構不會隨版面設定變動而改變（與頁碼
-    // 估算不同，見 _buildEpubFooter 的重算邏輯），理論上只需要抓取一次。
-    //
-    // 【審查修正，防禦性保險】原生端 onLayoutResolved 目前的 pageReported
-    // 一次性 latch（見 EpubReaderView.kt openBook()/onPageLoaded()）與
-    // MainActivity 的 configChanges 宣告，已確保本方法在單次開書期間只會
-    // 被呼叫一次——旋轉螢幕、調整字型大小都不會讓它再次觸發，故目前並不
-    // 存在「每次版面重排都重複抓取目錄」的實際效能問題。加上
-    // `_tocEntries.isEmpty` 這道檢查純粹是把「只抓取一次」這句話從隱含假設
-    // 變成程式碼本身強制執行的行為，零成本、無副作用；即使原生端的一次性
-    // 觸發機制未來被改動，這裡也不會退化成重複請求。
-    if (!info.isFixedLayout && _tocEntries.isEmpty && !_tocLoaded) {
-      EpubReaderView.loadTableOfContents(_epubReaderViewKey).then((entries) {
-        if (!mounted) return;
-        setState(() {
-          _tocEntries = entries;
-          _tocLoaded = true;
-        });
-      });
-    }
-    if (!info.isFixedLayout &&
-        !_annotationsLoaded &&
-        widget.highlightsRepository != null &&
-        widget.notesRepository != null) {
-      _annotationsLoaded = true;
-      _reloadAnnotationsAndRefreshDecorations();
-    }
-    if (info.isFixedLayout && widget.bookmarksRepository != null) {
-      _loadFxlBookmarks();
-    }
-  }
-
   /// `FoliateEpubReaderView` 專屬的 onLayoutResolved 處理。
   /// epic-17-epub-render-migration Issue 4 起，也設定
   /// `_autoDetectedWritingMode` 並重新計算 `_resolved`（比照
@@ -899,17 +838,6 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       _annotationsLoaded = true;
       _reloadAnnotationsAndRefreshDecorations();
     }
-  }
-
-  /// 原生端背景計算全書字元數完成時觸發（Epic 5 Issue 3）：更新本地狀態
-  /// 驅動頁尾重新渲染，並持久化快取值——不 await，比照本類別其餘持久化
-  /// 呼叫的既有慣例（見 _handlePrefsChanged）。
-  // ignore: unused_element
-  void _handleCharacterCountReady(int totalCharacterCount) {
-    if (!mounted) return;
-    setState(() => _totalCharacterCount = totalCharacterCount);
-    _totalCharacterCountNotifier.value = totalCharacterCount;
-    widget.prefsManager.saveTotalCharacterCount(widget.bookId, totalCharacterCount);
   }
 
   /// FXL 一律不處理選取事件（design.md 決策 #7：劃線/備註排除 FXL）——
