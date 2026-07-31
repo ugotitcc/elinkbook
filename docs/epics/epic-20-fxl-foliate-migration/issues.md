@@ -158,7 +158,7 @@
 
 ## Issue 8：大型 EPUB（約 200MB+）開書時因整檔載入記憶體導致 `OutOfMemoryError` 閃退
 
-**Status:** ready-for-agent（`/diagnose` 已確認修復方向，`docs/epics/epic-20-fxl-foliate-migration/reviews/bugfix-repro.md`）
+**Status:** 實作計劃已撰寫（`plans/plan-issue-8.md`，架構決策見 `docs/adr/0018-webviewassetloader-streaming-for-large-epub.md`），待計劃審查通過後開始實作。
 
 **發現時機／方式：** 2026-07-31，Issue 3 真機測試階段人類回報「開啟 `tmp/膽大黨10.epub`（正常 FXL 漫畫）會閃退，但 `tmp/一弦定音.epub`（Issue 1/2 一路使用的測試書）沒事」。由 Claude Code 直接 `adb -s 3CEF42ECD491687 shell dumpsys dropbox --print` 從真機拉出 6 筆真實當機記錄查證，非二手轉述，逐一交叉比對程式碼確認根因，詳見 `tmp/epic-20/issue3-implementation-review.md`。**已確認與 Issue 3 本身的 `spread` attribute 邏輯完全無關**（Issue 3 分支未觸碰任何 `.kt` 檔案／`foliate_native_bridge.dart`）。
 
