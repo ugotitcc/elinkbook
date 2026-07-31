@@ -62,7 +62,7 @@
 
 ## Issue 3：雙頁模式（`dualPageMode`／`isLandscape` 參數 + `main.js` spread 邏輯）
 
-**Status:** ready-for-agent
+**Status:** 實作計劃已撰寫（`plans/plan-issue-3.md`），待計劃審查通過後開始執行。
 
 **依賴：** Issue 2。
 
