@@ -158,7 +158,14 @@
 
 ## Issue 8：大型 EPUB（約 200MB+）開書時因整檔載入記憶體導致 `OutOfMemoryError` 閃退
 
-**Status:** ✅ 實作完成。原生 `WebViewAssetLoader.InternalStoragePathHandler` 串流服務已實作（Kotlin `cacheBookForServing` + Dart `cacheBookForServing()` + `FoliateEpubReaderView` 改用 `webViewAssetLoader`），`loadBookBytes()` 已移除。額外修復 `flutter_inappwebview_android-1.1.3` `AndroidInternalStoragePathHandler.toMap()` 無限遞迴 bug（本地 patch：`app/patches/flutter_inappwebview_android/`）。711/711 單元測試通過，`flutter analyze` 乾淨。整合測試 24/26 通過（2 項失敗為既有的 FXL 超時與 DB 隔離問題，與 Issue 8 無關）。真機 217MB EPUB 開書不再 OOM。待送出 code review。
+**Status:** 🔍 實作完成，code review 兩輪已跑完，剩一項待 Issue 9 排除後才能完整關閉。原生 `WebViewAssetLoader.InternalStoragePathHandler` 串流服務已實作（Kotlin `cacheBookForServing` + Dart `cacheBookForServing()` + `FoliateEpubReaderView` 改用 `webViewAssetLoader`），`loadBookBytes()` 已移除。額外修復 `flutter_inappwebview_android-1.1.3` `AndroidInternalStoragePathHandler.toMap()` 無限遞迴 bug（本地 patch：`app/patches/flutter_inappwebview_android/`）。`flutter analyze` 乾淨，`flutter test` 713/713 通過。真機 217MB EPUB 開書不再 OOM。
+
+Code review 過程（完整報告 `reviews/review-issue-8.md`，兩輪）：
+- **一審**（`83141d4..8c8a121`）找出 7 項 Important：#1 複製未完成時 dispose 導致快取目錄洩漏、#2 `flutter analyze` 因 `app/patches/` 不乾淨、#3 `app/patches/flutter_inappwebview_android/` 內有完整多餘的重複複本、#4 ADR 0018「不需要 fork/patch 套件」論述已被實作推翻、#5 計劃 Task 5 Step 2 大型檔案整合測試完全沒做、#6 `cacheBookForServingFn` 建構參數是死碼、#7 缺 `mounted` 守衛/dispose 競態單元測試。
+- **二審**（`8c8a121..a8c8140`）核實：#1-4、#6 已修正，#7 部分修正（新增測試斷言薄弱，已知但非阻塞），**#5 仍未修正**。
+- **補齊 #5**（commit `670a03e`）：新增 `integration_test`，測試當下動態組出實體大小固定 30MB 的合法 EPUB（`archive` 套件 dev_dependency，`CompressionType.none` 確保填充內容大小如實反映），驗證 `FoliateEpubReaderView` 能透過原生 `WebViewAssetLoader` 串流路徑正確開啟大檔案。已用獨立 Dart 腳本 + Python `zipfile.testzip()` 交叉驗證產出的 EPUB 結構完全合法（CRC32 全過、`mimetype` 為首個未壓縮 entry）。**真機（`3CEF42ECD491687`）目前跑這項新測試會失敗**（`Failed to fetch`／逾時），但同一裝置上完全未改動的既有基準測試（`sample.epub`）也重現一模一樣的失敗現象，且與下方 **Issue 9**（`needs-triage`，與分支無關的既有 WebView flakiness）描述逐字吻合，已用 `pm clear`／重啟 adb server 排除本機環境臆測原因——判定為 Issue 9 既有缺陷所致，非本次新增測試的邏輯錯誤。
+
+**待辦：** Issue 8 本身邏輯已完整實作並經兩輪審查修正；`Important #5` 的真機乾淨通過證據需等 Issue 9 排除後補齊，屆時一併關閉本 Issue、送出 PR。
 
 **發現時機／方式：** 2026-07-31，Issue 3 真機測試階段人類回報「開啟 `tmp/膽大黨10.epub`（正常 FXL 漫畫）會閃退，但 `tmp/一弦定音.epub`（Issue 1/2 一路使用的測試書）沒事」。由 Claude Code 直接 `adb -s 3CEF42ECD491687 shell dumpsys dropbox --print` 從真機拉出 6 筆真實當機記錄查證，非二手轉述，逐一交叉比對程式碼確認根因，詳見 `tmp/epic-20/issue3-implementation-review.md`。**已確認與 Issue 3 本身的 `spread` attribute 邏輯完全無關**（Issue 3 分支未觸碰任何 `.kt` 檔案／`foliate_native_bridge.dart`）。
 
@@ -220,3 +227,5 @@ java.lang.OutOfMemoryError: Failed to allocate a 219210408 byte allocation with 
 2. 若確認間歇性與「短時間內大量重複安裝/解除安裝」相關，可能純屬本機開發/測試循環的副作用，不代表終端使用者實際會遇到的問題——待確認後再決定是否需要修正產品程式碼，或只是測試流程本身需要調整（例如兩次真機測試之間加入裝置重啟）。
 
 **建議下一步：** 不阻塞 Issue 5／Issue 6／Issue 7 的既定工作——三者皆已個別確認過這類 WebView 資源載入路徑在人工真機驗證時可正常運作。建議累積更多重現樣本（不同裝置、不同時間點）後再評估是否立案 `/diagnose`。
+
+**2026-08-01 更新：** Issue 8 補齊 Important #5（大型 EPUB 串流整合測試，commit `670a03e`）時在同一台裝置（`3CEF42ECD491687`）再次重現，兩種既有記錄的失敗現象（`Failed to fetch`／逾時）都出現，`pm clear`／重啟 adb server 皆未能排除。Issue 8 目前仍缺這一項真機乾淨通過的自動化證據、卡在本 Issue 身上，提高了排查優先度。
