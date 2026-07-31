@@ -125,6 +125,24 @@ Issue 3 程式碼實作已完成，橫向雙頁模式能力已植入 `FoliateEpu
 
 **真機驗證：** APK 已安裝至 `3CEF42ECD491687`，待人類親自驗證四項判準（橫向雙頁、封面獨立顯示、RTL 頁序、直向/單頁模式）。
 
+## Issue 4 實作完成紀錄（2026-07-31）
+
+Issue 4 程式碼實作已完成，`reader_fixed_layout_*` 與 `reader_foliate_*` 按鈕群組已合併為統一 UI：
+
+| Commit | 內容 |
+|---|---|
+| `4db9b0d` | Task 1：刪除 `reader_fixed_layout_*` 4 顆按鈕 Positioned 區塊，放寬 `reader_foliate_*` gating 條件 |
+| `4c13db3` | Task 2：`_sendDecorationsToNative()` 移除 `_dispatchedIsFixedLayout` 三元判斷，恆用 `FoliateEpubReaderView.setDecorations` |
+| `f767ff9` | Task 3：25 項 `reader_fixed_layout_*` key 引用全數替換為 `reader_foliate_*`，settings 按鈕新增 conditional 邏輯（FXL→`FxlSettingsSheet`，流式→`ReaderSettingsSheet`） |
+
+**實作摘要：**
+- `reader_screen.dart`：刪除 `reader_fixed_layout_back`、`reader_fixed_layout_settings`、`reader_fixed_layout_notes`、`reader_fixed_layout_bookmarks` 共 4 個 Positioned 區塊；所有 `reader_foliate_*` gating 條件從 `_dispatchedIsFixedLayout == false && _chromeVisible && ...` 放寬為 `_chromeVisible && ...`；settings 按鈕改為 `_isFixedLayout ? _openFxlSettings : (_autoDetectedWritingMode == null ? null : _openLayoutSettings)`；`_sendDecorationsToNative()` 移除 `_dispatchedIsFixedLayout` 三元判斷，恆用 `FoliateEpubReaderView.setDecorations`（修復 FXL 書籍裝飾設定靜默失敗的既有缺陷）
+- `reader_screen_test.dart`：25 項 `reader_fixed_layout_*` Key 引用全數替換為對應的 `reader_foliate_*` Key；FXL 書籍測試改為斷言合併後的統一按鈕群組
+
+**測試結果：** `flutter test`（全專案）730/730 通過，`flutter analyze` 乾淨（0 issues）。
+
+**真機驗證：** 已安裝至 `3CEF42ECD491687`，待人類親自驗證。
+
 ## 相關佐證
 
 - `docs/adr/0011-epub-reflowable-migrate-to-foliate-js.md`（Phase 1，本次評估的 Phase 2 起點）
