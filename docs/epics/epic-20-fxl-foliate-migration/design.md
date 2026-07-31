@@ -125,6 +125,24 @@ Issue 3 程式碼實作已完成，橫向雙頁模式能力已植入 `FoliateEpu
 
 **真機驗證：** APK 已安裝至 `3CEF42ECD491687`，待人類親自驗證四項判準（橫向雙頁、封面獨立顯示、RTL 頁序、直向/單頁模式）。
 
+## Issue 4 實作完成紀錄（2026-07-31）
+
+Issue 4 程式碼實作已完成，`reader_fixed_layout_*` 與 `reader_foliate_*` 按鈕群組已合併為統一 UI：
+
+| Commit | 內容 |
+|---|---|
+| `4db9b0d` | Task 1：刪除 `reader_fixed_layout_*` 4 顆按鈕 Positioned 區塊，放寬 `reader_foliate_*` gating 條件 |
+| `4c13db3` | Task 2：`_sendDecorationsToNative()` 移除 `_dispatchedIsFixedLayout` 三元判斷，恆用 `FoliateEpubReaderView.setDecorations` |
+| `f767ff9` | Task 3：25 項 `reader_fixed_layout_*` key 引用全數替換為 `reader_foliate_*`，settings 按鈕新增 conditional 邏輯（FXL→`FxlSettingsSheet`，流式→`ReaderSettingsSheet`） |
+
+**實作摘要：**
+- `reader_screen.dart`：刪除 `reader_fixed_layout_back`、`reader_fixed_layout_settings`、`reader_fixed_layout_notes`、`reader_fixed_layout_bookmarks` 共 4 個 Positioned 區塊；所有 `reader_foliate_*` gating 條件從 `_dispatchedIsFixedLayout == false && _chromeVisible && ...` 放寬為 `_chromeVisible && ...`；settings 按鈕改為 `_isFixedLayout ? _openFxlSettings : (_autoDetectedWritingMode == null ? null : _openLayoutSettings)`；`_sendDecorationsToNative()` 移除 `_dispatchedIsFixedLayout` 三元判斷，恆用 `FoliateEpubReaderView.setDecorations`（修復 FXL 書籍裝飾設定靜默失敗的既有缺陷）
+- `reader_screen_test.dart`：25 項 `reader_fixed_layout_*` Key 引用全數替換為對應的 `reader_foliate_*` Key；FXL 書籍測試改為斷言合併後的統一按鈕群組；**審查回應（2026-07-31）**補上計劃 Task 3 Step 3/4 要求、原先缺漏的 3 項新測試：settings 按鈕依 `_isFixedLayout` 分流（FXL／流式各一個測試，交叉驗證不誤開另一種 Sheet）、FXL 書籍呼叫 `FoliateEpubReaderView.setDecorations`（而非已無人建構的 `EpubReaderView`）的回歸測試
+
+**測試結果：** `flutter test`（全專案）733/733 通過，`flutter analyze` 乾淨（0 issues）。
+
+**真機驗證：** 已安裝至 `3CEF42ECD491687`。2026-07-31 確認通過：返回/設定（`FxlSettingsSheet`）/書籤/筆記/目錄/跳頁（20/93頁）按鈕均正常運作，截圖佐證見 `tmp/epic-20/epic20-issue4_bookmark.png`／`epic20-issue4_process.png`。**審查修正（2026-07-31）**：原「劃線/備註疊圖驗證通過」宣稱缺乏對應截圖證據，追查後確認 FXL 圖片式頁面無文字節點可選取，正常操作下無法「新增」劃線/備註（既有 `epic-6-annotations` 決策 #7，非本工單新增限制），此項判準改列為不適用，詳見 `plans/plan-issue-4.md` Task 4 Step 3 item 4；`_sendDecorationsToNative()` 的修正實際生效情境是「書籍先以流式身分建立過劃線/備註、事後才被強制轉分類為 FXL」的邊界情況，非一般新開 FXL 書籍的主要使用情境。
+
 ## 相關佐證
 
 - `docs/adr/0011-epub-reflowable-migrate-to-foliate-js.md`（Phase 1，本次評估的 Phase 2 起點）

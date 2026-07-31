@@ -6,6 +6,7 @@ import 'package:elinkbook/reader/book_reader_prefs.dart';
 import 'package:elinkbook/reader/column_mode.dart';
 import 'package:elinkbook/reader/dual_page_direction.dart';
 import 'package:elinkbook/reader/dual_page_mode.dart';
+import 'package:elinkbook/reader/epub_reader_view.dart';
 import 'package:elinkbook/reader/page_turn_mode.dart';
 import 'package:elinkbook/reader/pdf_crop_mode.dart';
 import 'package:elinkbook/reader/pdf_crop_rect.dart';
@@ -916,18 +917,95 @@ void main() {
     await tester.pump();
 
     expect(
-      find.byKey(const Key('reader_fixed_layout_settings_button')),
+      find.byKey(const Key('reader_foliate_settings_button')),
       findsOneWidget,
     );
 
     await tester.tap(
-      find.byKey(const Key('reader_fixed_layout_settings_button')),
+      find.byKey(const Key('reader_foliate_settings_button')),
     );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
 
     expect(find.byType(FxlSettingsSheet), findsOneWidget);
   });
+
+  // epic-20-fxl-foliate-migration Issue 4 Task 3 Step 3：合併按鈕群組後，
+  // reader_foliate_settings_button 是唯一仍需依 _isFixedLayout 分流的按鈕
+  // （FXL 開 FxlSettingsSheet、流式開 ReaderSettingsSheet）。以下兩個測試
+  // 明確斷言「另一種 Sheet 不會被誤開」（`findsNothing` 交叉驗證），
+  // 區別於既有兩個各自獨立驗證單一分支的測試（:890「開啟 FxlSettingsSheet」、
+  // :3479「開啟 ReaderSettingsSheet」）；比照既有 FXL 測試（:890）
+  // 使用固定 `pump` 而非 `pumpAndSettle`（FXL 分支下 `pumpAndSettle` 曾
+  // 逾時，見該處既有寫法）。
+  testWidgets(
+    'reader_foliate_settings_button 分流：FXL 書籍開啟 FxlSettingsSheet、不誤開 ReaderSettingsSheet',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample_fixed_layout.epub',
+            bookId: 'b_settings_dispatch_fxl',
+            prefsManager: prefsManager,
+            isFixedLayout: true,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+      final fxlView = tester.widget<FoliateEpubReaderView>(
+        find.byType(FoliateEpubReaderView),
+      );
+      fxlView.onPageRendered();
+      fxlView.onLayoutResolved?.call(
+        const EpubLayoutInfo(
+          isFixedLayout: true,
+          writingMode: WritingMode.horizontal,
+        ),
+      );
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('reader_foliate_settings_button')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.byType(FxlSettingsSheet), findsOneWidget);
+      expect(find.byType(ReaderSettingsSheet), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'reader_foliate_settings_button 分流：流式書籍開啟 ReaderSettingsSheet、不誤開 FxlSettingsSheet',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_settings_dispatch_reflowable',
+            prefsManager: prefsManager,
+            isFixedLayout: false,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+      final reflowableView = tester.widget<FoliateEpubReaderView>(
+        find.byType(FoliateEpubReaderView),
+      );
+      reflowableView.onPageRendered();
+      reflowableView.onLayoutResolved?.call(
+        const EpubLayoutInfo(
+          isFixedLayout: false,
+          writingMode: WritingMode.horizontal,
+        ),
+      );
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('reader_foliate_settings_button')));
+      await tester.pumpAndSettle();
+      expect(find.byType(ReaderSettingsSheet), findsOneWidget);
+      expect(find.byType(FxlSettingsSheet), findsNothing);
+    },
+  );
 
   testWidgets('固定版面點擊中間熱區可切換懸浮按鈕顯示/隱藏', (tester) async {
     await tester.pumpWidget(
@@ -954,11 +1032,11 @@ void main() {
     await tester.pump();
 
     expect(
-      find.byKey(const Key('reader_fixed_layout_back_button')),
+      find.byKey(const Key('reader_foliate_back_button')),
       findsOneWidget,
     );
     expect(
-      find.byKey(const Key('reader_fixed_layout_settings_button')),
+      find.byKey(const Key('reader_foliate_settings_button')),
       findsOneWidget,
     );
 
@@ -967,11 +1045,11 @@ void main() {
     await tester.pump();
 
     expect(
-      find.byKey(const Key('reader_fixed_layout_back_button')),
+      find.byKey(const Key('reader_foliate_back_button')),
       findsNothing,
     );
     expect(
-      find.byKey(const Key('reader_fixed_layout_settings_button')),
+      find.byKey(const Key('reader_foliate_settings_button')),
       findsNothing,
     );
 
@@ -980,11 +1058,11 @@ void main() {
     await tester.pump();
 
     expect(
-      find.byKey(const Key('reader_fixed_layout_back_button')),
+      find.byKey(const Key('reader_foliate_back_button')),
       findsOneWidget,
     );
     expect(
-      find.byKey(const Key('reader_fixed_layout_settings_button')),
+      find.byKey(const Key('reader_foliate_settings_button')),
       findsOneWidget,
     );
   });
@@ -1014,7 +1092,7 @@ void main() {
     await tester.pump();
 
     expect(
-      find.byKey(const Key('reader_fixed_layout_back_button')),
+      find.byKey(const Key('reader_foliate_back_button')),
       findsOneWidget,
     );
 
@@ -1023,7 +1101,7 @@ void main() {
     await tester.pump();
 
     expect(
-      find.byKey(const Key('reader_fixed_layout_back_button')),
+      find.byKey(const Key('reader_foliate_back_button')),
       findsOneWidget,
       reason: '換頁後，懸浮控制項應維持原狀（不自動收起，design.md 決策 #14）',
     );
@@ -1068,7 +1146,7 @@ void main() {
     // `_resolveEpubEngineDispatch()`／`_handleLayoutResolved()` 的
     // widget.isFixedLayout 保護邏輯）。
     expect(
-      find.byKey(const Key('reader_fixed_layout_settings_button')),
+      find.byKey(const Key('reader_foliate_settings_button')),
       findsOneWidget,
       reason: '強制 FXL 後，native 異步回報 isFixedLayout=false 不應覆蓋 _isFixedLayout',
     );
@@ -1108,7 +1186,7 @@ void main() {
     await tester.pump();
 
     expect(
-      find.byKey(const Key('reader_fixed_layout_back_button')),
+      find.byKey(const Key('reader_foliate_back_button')),
       findsOneWidget,
     );
 
@@ -1120,7 +1198,7 @@ void main() {
     await tester.pump();
 
     expect(
-      find.byKey(const Key('reader_fixed_layout_back_button')),
+      find.byKey(const Key('reader_foliate_back_button')),
       findsNothing,
     );
   });
@@ -1960,11 +2038,11 @@ void main() {
         reason: 'FXL 不建構 Scaffold AppBar，頁首邏輯不適用',
       );
       expect(
-        find.byKey(const Key('reader_fixed_layout_back_button')),
+        find.byKey(const Key('reader_foliate_back_button')),
         findsOneWidget,
       );
       expect(
-        find.byKey(const Key('reader_fixed_layout_settings_button')),
+        find.byKey(const Key('reader_foliate_settings_button')),
         findsOneWidget,
       );
     },
@@ -2252,7 +2330,7 @@ void main() {
     await tester.pump();
 
     expect(
-      find.byKey(const Key('reader_fixed_layout_bookmark_toggle_button')),
+      find.byKey(const Key('reader_foliate_bookmark_toggle_button')),
       findsNothing,
     );
   });
@@ -2285,7 +2363,7 @@ void main() {
     await tester.pump();
 
     final finder = find.byKey(
-      const Key('reader_fixed_layout_bookmark_toggle_button'),
+      const Key('reader_foliate_bookmark_toggle_button'),
     );
     expect(finder, findsOneWidget);
     expect(
@@ -2338,7 +2416,7 @@ void main() {
     await tester.pump();
 
     final finder = find.byKey(
-      const Key('reader_fixed_layout_bookmark_toggle_button'),
+      const Key('reader_foliate_bookmark_toggle_button'),
     );
     expect(tester.widget<IconButton>(finder).onPressed, isNotNull);
     expect(
@@ -2413,7 +2491,7 @@ void main() {
     await tester.pump();
 
     final notesButtonFinder = find.byKey(
-      const Key('reader_fixed_layout_notes_button'),
+      const Key('reader_foliate_notes_button'),
     );
     expect(notesButtonFinder, findsOneWidget);
     expect(tester.widget<IconButton>(notesButtonFinder).onPressed, isNull);
@@ -2491,14 +2569,14 @@ void main() {
     await tester.pump();
 
     final bookmarkToggleFinder = find.byKey(
-      const Key('reader_fixed_layout_bookmark_toggle_button'),
+      const Key('reader_foliate_bookmark_toggle_button'),
     );
     expect(
       (tester.widget<IconButton>(bookmarkToggleFinder).icon as Icon).icon,
       Icons.star_border,
     );
 
-    await tester.tap(find.byKey(const Key('reader_fixed_layout_notes_button')));
+    await tester.tap(find.byKey(const Key('reader_foliate_notes_button')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
 
@@ -2555,7 +2633,7 @@ void main() {
     );
     await tester.pump();
 
-    await tester.tap(find.byKey(const Key('reader_fixed_layout_notes_button')));
+    await tester.tap(find.byKey(const Key('reader_foliate_notes_button')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
 
@@ -2569,16 +2647,16 @@ void main() {
 
     expect(find.byType(NotesBottomSheet), findsNothing);
     expect(
-      find.byKey(const Key('reader_fixed_layout_back_button')),
+      find.byKey(const Key('reader_foliate_back_button')),
       findsNothing,
       reason: '書籤跳轉比照既有換頁慣例，強制收合懸浮控制項',
     );
     expect(
-      find.byKey(const Key('reader_fixed_layout_notes_button')),
+      find.byKey(const Key('reader_foliate_notes_button')),
       findsNothing,
     );
     expect(
-      find.byKey(const Key('reader_fixed_layout_bookmark_toggle_button')),
+      find.byKey(const Key('reader_foliate_bookmark_toggle_button')),
       findsNothing,
     );
   });
@@ -3303,6 +3381,60 @@ void main() {
       // flutter_test 無法攔截 JS 呼叫。此處驗證 widget 成功建構且不崩潰，
       // 表示劃線載入 → setDecorations 完整流程未拋出例外。
       expect(find.byType(FoliateEpubReaderView), findsOneWidget);
+    },
+  );
+
+  // epic-20-fxl-foliate-migration Issue 4 Task 2/3：_sendDecorationsToNative()
+  // 修正前對 FXL 書籍會呼叫已無人建構的 EpubReaderView.setDecorations（見
+  // tmp/epic-20/issue2-implementation-review.md 原始發現），修正後無條件呼叫
+  // FoliateEpubReaderView.setDecorations——比照上方既有的流式版本測試風格
+  // （InAppWebView 環境下 flutter_test 無法攔截 evaluateJavascript 呼叫本身，
+  // 故以「不崩潰」+「畫面中只有 FoliateEpubReaderView、沒有 EpubReaderView」
+  // 佐證分派目標正確，是本測試能提供的最強保證）。
+  testWidgets(
+    'FXL EPUB 開書後，自動載入既有劃線/備註並透過 FoliateEpubReaderView.setDecorations（而非已無人建構的 EpubReaderView）送給原生端',
+    (tester) async {
+      final highlightsRepo = FakeHighlightsRepository();
+      final notesRepo = FakeNotesRepository();
+      await highlightsRepo.insert(
+        const Highlight(
+          bookId: 'b_fxl_anno',
+          style: HighlightStyle.highlighterYellow,
+          epubLocatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
+          progression: 0.1,
+        ),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample_fixed_layout.epub',
+            bookId: 'b_fxl_anno',
+            prefsManager: prefsManager,
+            highlightsRepository: highlightsRepo,
+            notesRepository: notesRepo,
+            isFixedLayout: true,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final fxlView = tester.widget<FoliateEpubReaderView>(
+        find.byType(FoliateEpubReaderView),
+      );
+      fxlView.onLayoutResolved?.call(
+        const EpubLayoutInfo(
+          isFixedLayout: true,
+          writingMode: WritingMode.horizontal,
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.byType(FoliateEpubReaderView), findsOneWidget);
+      expect(find.byType(EpubReaderView), findsNothing);
     },
   );
 
