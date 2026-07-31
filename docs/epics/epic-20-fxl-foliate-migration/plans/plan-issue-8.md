@@ -19,24 +19,28 @@
 - **`_shouldInterceptRequest`（`foliate_epub_reader_view.dart:409-437`）目前處理三種前綴**：`/book/current.epub`（本工單要移除、改走原生）、`/assets/foliate/*`（`foliate-js` 靜態資源，小檔案，維持 Dart callback 不動）、`/assets/fonts/*`（字型檔，小檔案，維持 Dart callback 不動）。手術式異動，只碰第一種。
 - **`FoliateEpubReaderView` 目前無 `initState()` override，`build()`（`:456`）直接同步建構 `InAppWebView`**，`_initialIndexUri`（`:297`）是 `late final` 同步計算欄位。本工單需要在 `InAppWebView` 真正掛載前插入一段非同步「確保書籍已落地快取」的前置步驟——比照 `ReaderScreen` 既有的載入中/錯誤狀態模式（`Key('reader_loading_indicator')`／`Key('reader_error_text')`，外層已有），`FoliateEpubReaderView` 內部在快取完成前可回傳 `SizedBox.shrink()`（不需要自己疊一層視覺載入指示器，外層 `ReaderScreen` 已負責），快取失敗時呼叫 `widget.onError(...)`（比照既有 `:344` 呼叫慣例）。
 - **既有 `isPathWithinRoot` 檢查**（`foliate_native_bridge.dart:107-111,121-123`）已確認：本機檔案路徑一律落在 `getApplicationDocumentsDirectory()` 的父目錄（App 私有資料根目錄）範圍內——這個既有驗證邏輯在本工單中應該保留（新的複製流程仍需要先驗證來源路徑合法，才能決定要不要複製），只是複製「之後」的服務方式改變。
+- **計劃審查發現（2026-07-31，`tmp/epic-20/plan_issue_8_review_report.md`）：單一固定快取槽位在螢幕轉場期間有競態風險**——`ReaderScreen` 每次開書皆是 `Navigator.push` 新路由，Flutter 預設轉場動畫在 pop/push 交疊期間，舊路由的 `FoliateEpubReaderView`（尚未真正 `dispose()`）與新路由的 `FoliateEpubReaderView` 可能短暫同時掛載。若兩者共用同一個固定檔名（`current.epub`），使用者快速「退出書 A → 開啟書 B」時兩個原生複製操作可能同時寫入同一路徑，導致其中一本書被覆寫或讀到寫入中途的半份檔案——不是閃退，是安靜地顯示錯誤/損毀內容。**因此改為每個 widget 實例使用獨立的快取子目錄**（而非全域共用的固定檔名），詳見下方 Task 1-3 的對應調整。
+- **計劃審查發現：Kotlin 端 `MethodChannel.setMethodCallHandler` 的 callback 預設在 Android 主執行緒（UI 執行緒）執行**——217MB 檔案的分塊複製即使是有界記憶體、不會 OOM，仍可能耗時數秒，若在主執行緒同步執行會阻塞手勢/動畫/UI 更新，觸發 ANR watchdog（本專案明確以 E-Ink／較舊裝置為目標族群，儲存 I/O 可能更慢，風險不只是「感知延遲」）。**改為透過 `BinaryMessenger.makeBackgroundTaskQueue()` 讓這個 method channel 的複製呼叫在背景執行緒池執行**，詳見 Task 1 Step 2。
 
 ## Global Constraints
 
 - **`readest/foliate-js` 釘定版本本身不修改**（`vendor/`、`view.js`、`main.js` 等，一律不動）。
 - **`content://` 與本機檔案路徑統一走同一套分塊複製機制**，不特殊處理本機檔案（ADR 0018 已說明理由：`InternalStoragePathHandler` 的原生端路徑穿越安全檢查對符號連結行為不確定，統一複製換取一致性）。
 - **`/assets/foliate/*`／`/assets/fonts/*` 兩條既有 Dart callback 路徑不動**，只移除 `_shouldInterceptRequest` 的 `/book/current.epub` 分支。
-- **快取為單一固定槽位**（`<filesDir>/foliate_book_cache/current.epub`），比照現行「一次只服務一本正在閱讀的書」既有語意，不引入多書並存快取的複雜度。
+- **快取為每個 widget 實例獨立的子目錄**（`<filesDir>/foliate_book_cache/<實例唯一 ID>/current.epub`，見上方計劃審查發現），避免螢幕轉場期間的競態；`InternalStoragePathHandler` 的 URL 前綴固定仍是 `/book/`（`main.js` 硬編碼，不可變），但每個 `InAppWebView` 實例各自的 `webViewAssetLoader` 設定指向各自專屬的子目錄，互不共用可變狀態。
+- **Kotlin 端複製操作透過 `BinaryMessenger.makeBackgroundTaskQueue()` 在背景執行緒執行**，不阻塞 Android 主執行緒（見上方計劃審查發現）。
 - **測試素材**：`tmp/膽大黨10.epub`（217MB，本 Issue 原始崩潰樣本）為必要驗收樣本；`tmp/一弦定音.epub`（77MB，既有回歸基準）與 `app/test/fixtures/sample.epub`（既有小型 fixture）用於一般大小回歸；真機固定使用 `3CEF42ECD491687`。
-- **殘餘風險提醒**（ADR 0018 已記錄）：真機驗收必須測試「整個開書流程」（含 WebView 端 `res.blob()` 是否也扛得住 217MB），不能只確認 Kotlin 端不再拋錯就視為通過。
+- **殘餘風險提醒**（ADR 0018 已記錄）：真機驗收必須測試「整個開書流程」（含 WebView 端 `res.blob()` 是否也扛得住 217MB），不能只確認 Kotlin 端不再拋錯就視為通過；本專案目前無任何 `onRenderProcessGone` 覆寫（已查證全專案零匹配），若渲染器行程真的因此 OOM，預期現象是整個 App 進程被系統直接終止（明顯可辨識的崩潰），而非卡住或被 `onError` 攔截到。
 
 ---
 
 ## 檔案結構
 
 - Modify：`app/android/app/src/main/kotlin/cc/ugotit/elinkbook/ReaderResourceChannel.kt`
+- Modify：`app/android/app/src/main/kotlin/cc/ugotit/elinkbook/MainActivity.kt`（Task 4 Step 2 保底清理）
 - Modify：`app/lib/reader/foliate_native_bridge.dart`
 - Modify：`app/lib/reader/foliate_epub_reader_view.dart`
-- Modify：`app/test/reader/foliate_epub_reader_view_test.dart`（既有單元測試需同步調整）
+- Modify：`app/test/reader/foliate_epub_reader_view_test.dart`（既有單元測試需同步調整，套用 `foliate_native_bridge_test.dart:26-42` 既有 mock 範式，見 Task 5 Step 1）
 - 新增測試（視 Task 2/3 實作內容決定，見下方各 Task 說明）
 
 ---
@@ -47,16 +51,16 @@
 - Modify：`app/android/app/src/main/kotlin/cc/ugotit/elinkbook/ReaderResourceChannel.kt`
 
 **Interfaces:**
-- Consumes：`content://` URI 字串、或已通過 `isPathWithinRoot` 驗證的本機檔案絕對路徑；目的地快取目錄路徑
-- Produces：新的 method channel 方法（例如 `cacheBookForServing`），成功時回傳快取檔案的絕對路徑（供 Dart 端組出 `InternalStoragePathHandler` 的 `directory` 參數），失敗回傳 `null`
+- Consumes：`content://` URI 字串、或已通過 `isPathWithinRoot` 驗證的本機檔案絕對路徑；Dart 端產生的實例唯一 ID（用於區隔快取子目錄）
+- Produces：新的 method channel 方法（例如 `cacheBookForServing`），成功時回傳快取檔案的絕對路徑（供 Dart 端組出 `InternalStoragePathHandler` 的 `directory` 參數），失敗回傳 `null`；此 method channel 註冊為背景 `TaskQueue`，不阻塞 Android 主執行緒
 
-- [ ] **Step 1：新增分塊複製 helper 函式**
+- [ ] **Step 1：新增分塊複製 helper 函式（快取路徑改為依實例 ID 區隔子目錄）**
 
-在 `ReaderResourceChannel.kt` 新增一個 `private fun copyToCache(input: InputStream, destFileName: String): String?`（或視實作習慣調整簽章），內部邏輯：
+在 `ReaderResourceChannel.kt` 新增一個 `private fun copyToCache(input: InputStream, instanceId: String): String?`（或視實作習慣調整簽章），內部邏輯——**計劃審查發現（2026-07-31）**：快取路徑改為 `foliate_book_cache/<instanceId>/current.epub`，取代原本全域共用的固定檔名，避免螢幕轉場期間兩個 `FoliateEpubReaderView` 實例並存、共用同一個可變檔案的競態（見上方 Global Constraints）：
 
 ```kotlin
-val cacheDir = File(context.filesDir, "foliate_book_cache").apply { mkdirs() }
-val destFile = File(cacheDir, destFileName)
+val cacheDir = File(context.filesDir, "foliate_book_cache/$instanceId").apply { mkdirs() }
+val destFile = File(cacheDir, "current.epub")
 try {
     input.use { source ->
         FileOutputStream(destFile).use { output ->
@@ -70,22 +74,41 @@ try {
 }
 ```
 
-`destFileName` 固定為 `"current.epub"`（比照現行 `/book/current.epub` URL 的固定語意），複製前若目的檔已存在應先刪除（覆蓋語意，見 Task 4 快取清理）。
+- [ ] **Step 2：新增 `onMethodCall` 分支 `cacheBookForServing`，並註冊為背景 `TaskQueue`**
 
-- [ ] **Step 2：新增 `onMethodCall` 分支 `cacheBookForServing`**
+**計劃審查發現（2026-07-31）**：`MethodChannel.setMethodCallHandler` 的 callback 預設在 Android 主執行緒執行，217MB 檔案複製即使有界記憶體、不會 OOM，仍可能耗時數秒、阻塞 UI 造成 ANR 風險——改用 `BinaryMessenger.makeBackgroundTaskQueue()`（Flutter engine 2.8+ API）建立獨立的 `MethodChannel` 實例處理這個方法：
 
-新增 case，依傳入參數是 `content://` URI 或本機檔案路徑分派：
+```kotlin
+private val cacheChannel = MethodChannel(
+    messenger,
+    "elinkbook/reader_resources_cache",
+    StandardMethodCodec.INSTANCE,
+    messenger.makeBackgroundTaskQueue(),
+)
+// init { } 內註冊 cacheChannel.setMethodCallHandler(...)，與既有 channel（主執行緒）分開處理
+```
+
+`onMethodCall` 內新增分支，依傳入參數是 `content://` URI 或本機檔案路徑分派——**計劃審查發現（2026-07-31）：整個 `when { ... }`（含開啟輸入串流）須納入同一個 try/catch**（比照即將被取代的 `readContentUri` 既有範圍，原始草稿只把 try/catch 包在 `copyToCache` 內部、開啟串流的呼叫本身在範圍外，SAF 授權失效／檔案競態刪除等情境會讓例外未被捕捉地冒出，變成 Dart 端未預期的 `PlatformException`，而非設計中「乾淨的 `null` 回傳 → `onError(...)`」路徑）：
 
 ```kotlin
 "cacheBookForServing" -> {
+    val instanceId = call.argument<String>("instanceId")
     val uriString = call.argument<String>("uri")
     val filePath = call.argument<String>("filePath")
-    val input: InputStream? = when {
-        uriString != null -> context.contentResolver.openInputStream(Uri.parse(uriString))
-        filePath != null -> File(filePath).inputStream()
-        else -> null
+    if (instanceId == null) {
+        result.success(null)
+        return
     }
-    val cachedPath = input?.let { copyToCache(it, "current.epub") }
+    val cachedPath = try {
+        val input: InputStream? = when {
+            uriString != null -> context.contentResolver.openInputStream(Uri.parse(uriString))
+            filePath != null -> File(filePath).inputStream()
+            else -> null
+        }
+        input?.let { copyToCache(it, instanceId) }
+    } catch (e: Exception) {
+        null
+    }
     result.success(cachedPath)
 }
 ```
@@ -94,7 +117,7 @@ try {
 
 - [ ] **Step 3：移除已成為死碼的 `readContentUri` 分支**
 
-`Task 2` 確認 Dart 端不再呼叫 `readContentUri` 後，移除該 `onMethodCall` 分支（`readAndroidAsset` 服務 `/assets/foliate/*`，不受影響，保留）。
+`Task 2` 確認 Dart 端不再呼叫 `readContentUri` 後，移除該 `onMethodCall` 分支（`readAndroidAsset` 服務 `/assets/foliate/*`，不受影響，保留在原本的主執行緒 channel 上，不需要背景 `TaskQueue`——這些是小檔案，非本工單的效能/ANR 疑慮範圍）。
 
 ---
 
@@ -104,18 +127,18 @@ try {
 - Modify：`app/lib/reader/foliate_native_bridge.dart`
 
 **Interfaces:**
-- Consumes：Task 1 新增的 `cacheBookForServing` method channel 方法
-- Produces：`Future<String?> cacheBookForServing(String filePath)`，回傳快取檔案絕對路徑或 `null`
+- Consumes：Task 1 新增的 `cacheBookForServing` method channel 方法（背景 `TaskQueue`）
+- Produces：`Future<String?> cacheBookForServing(String filePath, String instanceId)`，回傳快取檔案絕對路徑或 `null`
 
-- [ ] **Step 1：新增 `cacheBookForServing()` 函式**
+- [ ] **Step 1：新增 `cacheBookForServing()` 函式，接受呼叫端提供的實例唯一 ID**
 
-比照現行 `loadBookBytes()`（`:113-125`）的 `"://"` 啟發式判斷與 `isPathWithinRoot` 驗證邏輯（**保留這段驗證，只改變驗證通過後的動作**——從「直接讀取位元組」改成「呼叫原生端分塊複製」）：
+比照現行 `loadBookBytes()`（`:113-125`）的 `"://"` 啟發式判斷與 `isPathWithinRoot` 驗證邏輯（**保留這段驗證，只改變驗證通過後的動作**——從「直接讀取位元組」改成「呼叫原生端分塊複製」）。**計劃審查發現（2026-07-31）：新增 `instanceId` 參數**，由呼叫端（Task 3 的 `_FoliateEpubReaderViewState`）產生並傳入，用於 Task 1 Step 1 的快取子目錄區隔（避免螢幕轉場期間的競態，見 Global Constraints）：
 
 ```dart
-Future<String?> cacheBookForServing(String filePath) async {
+Future<String?> cacheBookForServing(String filePath, String instanceId) async {
   if (filePath.contains('://')) {
-    return _readerResourcesChannel
-        .invokeMethod<String>('cacheBookForServing', {'uri': filePath});
+    return _readerResourcesChannel.invokeMethod<String>(
+        'cacheBookForServing', {'uri': filePath, 'instanceId': instanceId});
   }
   final file = File(filePath);
   if (!await file.exists()) return null;
@@ -123,10 +146,12 @@ Future<String?> cacheBookForServing(String filePath) async {
   final docsDir = await getApplicationDocumentsDirectory();
   final allowedRoot = Directory(docsDir.path).parent.path;
   if (!isPathWithinRoot(canonicalPath, allowedRoot)) return null;
-  return _readerResourcesChannel.invokeMethod<String>(
-      'cacheBookForServing', {'filePath': canonicalPath});
+  return _readerResourcesChannel.invokeMethod<String>('cacheBookForServing',
+      {'filePath': canonicalPath, 'instanceId': instanceId});
 }
 ```
+
+（`instanceId` 只需在單一 App 生命週期內、同時存在的 `FoliateEpubReaderView` 實例之間不重複即可，不需要跨裝置/跨 App 安裝全域唯一——例如 Dart 端一個簡單的遞增計數器或 `identityHashCode` 皆足夠，實作時決定。）
 
 - [ ] **Step 2：刪除已成為死碼的 `loadBookBytes()`**
 
@@ -143,9 +168,12 @@ Future<String?> cacheBookForServing(String filePath) async {
 - Consumes：Task 2 的 `cacheBookForServing()`
 - Produces：`InAppWebView` 建構時已設定 `webViewAssetLoader`，`/book/current.epub` 請求由原生端串流服務；快取未完成前不掛載 `InAppWebView`
 
-- [ ] **Step 1：`_FoliateEpubReaderViewState` 新增非同步前置快取步驟**
+- [ ] **Step 1：`_FoliateEpubReaderViewState` 新增非同步前置快取步驟（含實例 ID 產生與 `mounted` 守衛）**
 
-新增 `initState()`（目前沒有），呼叫 `cacheBookForServing(widget.filePath)`，用一個 nullable 狀態欄位（例如 `String? _bookCacheDir`）追蹤結果；成功時取 `File(cachedPath).parent.path` 作為 `InternalStoragePathHandler` 的 `directory`（`cacheBookForServing` 回傳的是**檔案**絕對路徑，`InternalStoragePathHandler` 要的是**目錄**，實作時注意這個轉換）；失敗（回傳 `null`）呼叫 `widget.onError(...)`（比照既有 `:344` 慣例的錯誤訊息風格）。
+新增 `initState()`（目前沒有）：
+1. 產生本實例的唯一 ID（例如 `identityHashCode(this).toString()` 或一個遞增計數器），供 `cacheBookForServing()` 區隔快取子目錄。
+2. 呼叫 `cacheBookForServing(widget.filePath, instanceId)`，用一個 nullable 狀態欄位（例如 `String? _bookCacheDir`）追蹤結果；成功時取 `File(cachedPath).parent.path` 作為 `InternalStoragePathHandler` 的 `directory`（`cacheBookForServing` 回傳的是**檔案**絕對路徑，`InternalStoragePathHandler` 要的是**目錄**，實作時注意這個轉換）；失敗（回傳 `null`）呼叫 `widget.onError(...)`（比照既有 `:344` 慣例的錯誤訊息風格）。
+3. **計劃審查發現（2026-07-31）：`Future` 完成時呼叫 `setState()` 前必須先檢查 `if (!mounted) return;`**——217MB 檔案複製可能耗時數秒（ADR 0018 已承認），若使用者在複製完成前離開 `ReaderScreen`（本 State 已 `dispose()`），未加此守衛會直接拋出 `FlutterError: setState() called after dispose()`。這是 Flutter 非同步生命週期的標準陷阱，不得省略。
 
 - [ ] **Step 2：`build()` 依 `_bookCacheDir` 是否就緒分派**
 
@@ -179,12 +207,16 @@ initialSettings: InAppWebViewSettings(
 - Modify：`app/android/app/src/main/kotlin/cc/ugotit/elinkbook/ReaderResourceChannel.kt`（Task 1 內已包含「複製前先刪除既有目的檔」，本 Task 聚焦 dispose 時機的額外清理，視實作階段判斷是否需要）
 
 **Interfaces:**
-- Consumes：Task 1-3 完成
-- Produces：`foliate_book_cache/` 目錄不會無限累積孤兒檔案
+- Consumes：Task 1-3 完成（含審查後改為「每實例獨立子目錄」的設計）
+- Produces：`foliate_book_cache/` 目錄不會無限累積孤兒子目錄
 
-- [ ] **Step 1：確認 Task 1 Step 1「複製前先刪除既有目的檔」已生效**（單一固定槽位語意下，開新書會自動覆蓋前一本書的快取，不需要額外的「開啟時清理」邏輯）。
+- [ ] **Step 1：`FoliateEpubReaderView` dispose 時清理本實例的快取子目錄**
 
-- [ ] **Step 2：評估是否需要在 `FoliateEpubReaderView` dispose 或 `MainActivity` 層級新增清理**（例如 App 啟動時清空 `foliate_book_cache/`，防止異常結束〔例如崩潰、被系統殺掉〕遺留的快取檔長期佔用空間）。若判斷現行「開新書即覆蓋」已足夠（快取檔至多一份，非無限增長），可記錄理由後跳過，不強制新增。
+改為每實例獨立子目錄後（`foliate_book_cache/<instanceId>/`），不再有「開新書自動覆蓋前一本書」這種天然清理時機（因為不同實例不共用路徑）——`dispose()` 時應主動刪除 `foliate_book_cache/<instanceId>/` 整個子目錄，避免每次開書都留下一個新的孤兒子目錄。
+
+- [ ] **Step 2：`MainActivity.onCreate()` 新增保底清理，處理異常結束的遺留**
+
+**計劃審查建議（2026-07-31，Minor #3）**：App 異常結束（崩潰、被系統殺掉）時 Step 1 的 dispose 清理不會執行，長期可能累積孤兒子目錄。建議在 `MainActivity.onCreate()` 新增清空整個 `foliate_book_cache/` 目錄的邏輯（App 冷啟動時，不會有任何 `FoliateEpubReaderView` 實例正在使用快取，可安全整個清空，不需要精細判斷哪些子目錄是孤兒）。
 
 ---
 
@@ -198,9 +230,26 @@ initialSettings: InAppWebViewSettings(
 - Consumes：Task 1-4 完成
 - Produces：Issue 8 結案，`tmp/膽大黨10.epub` 真機開啟不再 OOM
 
-- [ ] **Step 1：既有單元測試盤點與調整**
+- [ ] **Step 1：既有單元測試盤點與調整——套用本專案既有的 `MethodChannel` mock 範式**
 
-`foliate_epub_reader_view_test.dart` 中直接建構 `FoliateEpubReaderView` 並等待 `onPageRendered`／`onError` 的既有 widget test，因新增了非同步前置快取步驟（Task 3 Step 1-2），需確認測試環境下（無真機 Android 原生端）這段邏輯的行為——**這是純 Dart widget test（`flutter test`，非 `integration_test`），無法呼叫真正的原生 `MethodChannel`**，`cacheBookForServing()` 在測試環境下會如何表現需要實作時確認（可能需要 mock `MethodChannel` 回應，或確認既有測試本來就依賴真機/`integration_test` 層級才能驗證完整開書流程——若屬於後者，本 Task 只需確認純 Dart 邏輯層〔例如 `isPathWithinRoot` 判斷、URL 組裝〕仍有涵蓋，原生串流部分留給 `integration_test`）。
+`foliate_epub_reader_view_test.dart` 中直接建構 `FoliateEpubReaderView` 並等待 `onPageRendered`／`onError` 的既有 widget test，因新增了非同步前置快取步驟（Task 3 Step 1-3）**會直接壞掉**——尤其是「3×3 導航熱區（`InAppWebView`）」與「ES 相容性 polyfill（診斷修正）」這兩組既有測試（目前直接 `pumpWidget` 後用 `find.byKey`／`find.byType(InAppWebView)` 斷言），在測試環境沒有 mock `elinkbook/reader_resources` channel 的情況下，`cacheBookForServing()` 的 `invokeMethod` 會拋出 `MissingPluginException`，導致 `_bookCacheDir` 永遠不會變成非 null、`build()` 永遠回傳 `SizedBox.shrink()`，這兩組測試會找不到 `InAppWebView` 而失敗。
+
+**計劃審查發現（2026-07-31，Important #1）：本專案已有現成的 mock 範式可直接套用**，比照 `app/test/reader/foliate_native_bridge_test.dart:26-42`：
+
+```dart
+TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+    .setMockMethodCallHandler(
+  const MethodChannel('elinkbook/reader_resources'),  // 或新的背景 channel 名稱，依 Task 1 Step 2 實際命名調整
+  (call) async {
+    if (call.method == 'cacheBookForServing') {
+      return '/fake/cache/dir/current.epub';  // 回傳假路徑即可，測試不需要真的存在的檔案
+    }
+    return null;
+  },
+);
+```
+
+在 `foliate_epub_reader_view_test.dart` 的 `setUpAll`／各測試前置註冊此 mock handler，確保「3×3 導航熱區」「ES 相容性 polyfill」兩組既有測試在新架構下仍能通過——這一步必須在實作 Task 3 的**同時**處理，不得留到最後才確認。
 
 - [ ] **Step 2：新增/調整 `integration_test/foliate_epub_reader_view_test.dart` 涵蓋大型檔案情境**
 
@@ -229,6 +278,8 @@ adb -s 3CEF42ECD491687 install -r build/app/outputs/flutter-apk/app-debug.apk
 3. **`content://` 來源與本機檔案路徑來源皆測試過**（比照既有 `content_uri_acceptance_test.dart`／一般匯入流程）。
 4. **FXL 與流式 EPUB 皆測試過**（本修復對兩者皆適用，非 FXL 專屬）。
 5. **`/assets/foliate/*`／`/assets/fonts/*` 既有 Dart callback 路徑未受影響**——確認字型/直排橫排等既有功能正常（間接驗證兩條路徑並存無衝突）。
+6. **（計劃審查發現，2026-07-31，Important #5）量測 `tmp/膽大黨10.epub` 分塊複製耗時，確認過程中無 ANR 對話框跳出**——複製透過背景 `TaskQueue` 執行（Task 1 Step 2）理論上不阻塞主執行緒，但仍須真機實測確認：開書期間 UI（載入指示器動畫、系統手勢）維持回應，複製完成到 `onPageRendered` 之間的總耗時記錄下來供未來參考。
+7. **（計劃審查發現，Important #4）快速切換書籍測試**：真機連續操作「開啟書 A → 立即返回 → 開啟書 B」數次（利用 Flutter 轉場動畫期間新舊 `FoliateEpubReaderView` 可能短暫並存的時機），確認兩本書的內容皆正確顯示、互不污染／覆寫（驗證 Task 1-3 改為每實例獨立快取子目錄後，先前計劃審查點出的競態情境已排除）。
 
 - [ ] **Step 6：依結果更新 `design.md`／`issues.md`／`docs/epics.md`**
 
@@ -251,3 +302,5 @@ adb -s 3CEF42ECD491687 install -r build/app/outputs/flutter-apk/app-debug.apk
   - `flutter_inappwebview-6.1.5/example/integration_test/in_app_webview/webview_asset_loader.dart`
   - `flutter_inappwebview_android-1.1.3/android/src/main/java/.../types/WebViewAssetLoaderExt.java`
   - `flutter_inappwebview_android-1.1.3/android/src/main/java/.../webview/in_app_webview/InAppWebViewClient.java`
+- `app/test/reader/foliate_native_bridge_test.dart:26-42`（本專案既有的 `MethodChannel` mock 範式，Task 5 Step 1 直接套用）
+- `tmp/epic-20/plan_issue_8_review_report.md`（計劃審查報告，2026-07-31，5 項 Important 發現已於本計劃逐一回應）
