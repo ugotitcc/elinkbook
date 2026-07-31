@@ -62,20 +62,20 @@
 
 ## Issue 3：雙頁模式（`dualPageMode`／`isLandscape` 參數 + `main.js` spread 邏輯）
 
-**Status:** 實作計劃已撰寫（`plans/plan-issue-3.md`），待計劃審查通過後開始執行。
+**Status:** ✅ 程式碼實作完成（commit `f0fe2aa`）。`flutter test`（全專案）730/730 通過，`flutter analyze` 乾淨。APK 已安裝至真機 `3CEF42ECD491687`，待人類親自驗證四項判準。
 
 **依賴：** Issue 2。
 
 **背景：** `spec.md`「核心介面異動」第 1/2 節。`isDualPageEnabled(dualPageMode, isLandscape)` 邏輯目前是 `EpubReaderView.kt` 的 Kotlin 純函式，需移植成 JS（`main.js`），因為 `FoliateEpubReaderView` 沒有對應的原生 Kotlin 類別（純 WebView + JS）。
 
-**範圍：**
-1. `foliate_epub_reader_view.dart` 新增 `dualPageMode`／`isLandscape` 建構參數，`buildFoliatePreferencesMap()`／`foliatePreferencesChanged()` 同步擴充。
-2. `main.js` 的 `applyPreferences()` 新增 `isDualPageEnabled` 計算（邏輯移植自 `EpubReaderView.kt` 同名函式：`ALWAYS` 恆真、`AUTO` 依 `isLandscape`、`NEVER` 恆假），依此呼叫 `view.renderer?.setAttribute('spread', ...)`（需防禦 `view.isFixedLayout !== true` 時 `renderer` 是 `foliate-paginator`、沒有 `spread` attribute 的情況）。
-3. `reader_screen.dart` 傳入 `dualPageMode: resolved.dualPageMode`／`isLandscape: isLandscape`（既有欄位，取代原本只傳給 `EpubReaderView` 的既有邏輯）。
+**範圍（已完成）：**
+1. `main.js`：新增 `isDualPageEnabled(dualPageMode, isLandscape)` 純函式（移植自 `EpubReaderView.kt:149-151`），`applyPreferences()` FXL 分支新增 `setAttribute('spread', ...)` 設定 `'both'`/`'none'`。
+2. `foliate_epub_reader_view.dart`：新增 `dualPageMode`（`DualPageMode?`，nullable）與 `isLandscape`（`bool`，非 nullable，預設 `false`）建構參數，`buildFoliatePreferencesMap()` 與 `foliatePreferencesChanged()` 同步擴充。
+3. `reader_screen.dart`：`_buildNativeView()` 將 `resolved.dualPageMode` 與 `isLandscape` 下傳至 `FoliateEpubReaderView`。
 
-**單元測試要求：** JS 端 `isDualPageEnabled` 邏輯建議抽成純函式並比照既有 `epub_page_estimator_test.dart` 一類的模式撰寫等效邏輯測試（若專案 JS 測試機制不存在，至少在 Dart 端對 `dualPageMode`/`isLandscape` 參數傳遞路徑補測試）；真機驗證橫向雙頁排版（沿用 Issue 1 Spike 已知的真實問題書籍）。
+**單元測試：** 35 項 `foliate_epub_reader_view_test.dart`（含 `isDualPageEnabled` truth table 可執行文件）+ 4 項 `reader_screen_test.dart` 新增測試。
 
-**驗收標準：** 真機橫向雙頁模式下，FXL 書籍正確顯示兩頁並排、封面獨立顯示、RTL 頁序正確（比照 Issue 1 Spike 已驗證的判準）；直排/單頁模式（`DualPageMode.never`）下維持單頁顯示不受影響。
+**真機驗證：** APK 已安裝，待人類驗證：橫向雙頁、封面獨立顯示、RTL 頁序、直向/單頁模式四項判準。
 
 ---
 

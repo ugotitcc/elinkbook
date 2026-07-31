@@ -174,7 +174,7 @@ isLandscape: isLandscape,
 - Consumes：Task 1-3 已完成
 - Produces：合併回 `main` 的雙頁能力
 
-- [ ] **Step 1：全套測試**
+- [x] **Step 1：全套測試**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -184,7 +184,7 @@ flutter test
 
 須為 0 issues／全部通過，且不得比 Issue 2 合併後的基準測試數少（回歸檢查）。
 
-- [ ] **Step 2：建置並安裝至真機（`3CEF42ECD491687`）**
+- [x] **Step 2：建置並安裝至真機（`3CEF42ECD491687`）**
 
 ```bash
 flutter build apk --debug
@@ -200,7 +200,7 @@ adb -s 3CEF42ECD491687 install -r build/app/outputs/flutter-apk/app-debug.apk
 4. 直向/單頁模式（`dualPageMode: never` 或裝置直向且 `dualPageMode: auto`）：確認維持單頁顯示，無回歸。
 5. **開書當下的雙重渲染觀察**（計劃審查 Important #2）：任何 FXL 書開啟時，理論上都會先以未指定 spread 的預設配對渲染一次，緊接著才依 `dualPageMode`/`isLandscape` 重新配對渲染——真機肉眼觀察開書當下是否有可感知的畫面閃爍/重排，記錄觀察結果（可接受／不可接受）。若不可接受，記錄為已知限制並另立後續工單評估緩解方案（例如延遲至首次可見前才顯示畫面），本工單**不**因此調整 `main.js` 的 `applyPreferences()` 呼叫時序（已查證「提前設定 `spread` attribute」對 `fixed-layout.js` 現有實作無效，見 Task 1 Step 3）。
 
-- [ ] **Step 4：依結果更新 `design.md`／`issues.md`／`docs/epics.md`**
+- [x] **Step 4：依結果更新 `design.md`／`issues.md`／`docs/epics.md`**
 
 - [ ] **Step 5：Commit（於獨立 feature branch，比照 Issue 2 branch 命名慣例 `feature/epic-20-issue-3-*`）**
 
