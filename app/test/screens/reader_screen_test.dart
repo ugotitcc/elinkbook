@@ -166,6 +166,111 @@ void main() {
     expect(repository.detectAndCacheEpubLayoutCalls, isEmpty);
   });
 
+  // Epic 20 Issue 3：FoliateEpubReaderView 的 dualPageMode/isLandscape 參數下傳
+  testWidgets('裝置為橫向時，isLandscape 正確下傳給 FoliateEpubReaderView 建構參數', (tester) async {
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.binding.setSurfaceSize(const Size(800, 400)); // 橫向
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b1',
+          prefsManager: prefsManager,
+          isFixedLayout: true,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final foliateView = tester.widget<FoliateEpubReaderView>(
+      find.byType(FoliateEpubReaderView),
+    );
+    expect(foliateView.isLandscape, isTrue);
+  });
+
+  testWidgets('裝置為直向時，isLandscape 正確下傳為 false', (tester) async {
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.binding.setSurfaceSize(const Size(400, 800)); // 直向
+    tester.view.physicalSize = const Size(400, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+    await tester.pump();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b1',
+          prefsManager: prefsManager,
+          isFixedLayout: true,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final foliateView = tester.widget<FoliateEpubReaderView>(
+      find.byType(FoliateEpubReaderView),
+    );
+    expect(foliateView.isLandscape, isFalse);
+  });
+
+  testWidgets('開啟該書已有的持久化雙頁偏好設定後，FoliateEpubReaderView 的 dualPageMode 正確載入', (tester) async {
+    await prefsManager.saveBookPrefs(
+      'b1',
+      const BookReaderPrefs(
+        dualPageMode: DualPageMode.always,
+      ),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b1',
+          prefsManager: prefsManager,
+          isFixedLayout: true,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final foliateView = tester.widget<FoliateEpubReaderView>(
+      find.byType(FoliateEpubReaderView),
+    );
+    expect(foliateView.dualPageMode, DualPageMode.always);
+  });
+
+  testWidgets('尚未持久化雙頁偏好設定時，FoliateEpubReaderView 的 dualPageMode 為 auto（預設值）', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b1',
+          prefsManager: prefsManager,
+          isFixedLayout: true,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final foliateView = tester.widget<FoliateEpubReaderView>(
+      find.byType(FoliateEpubReaderView),
+    );
+    expect(foliateView.dualPageMode, DualPageMode.auto);
+  });
+
   testWidgets(
     '流式 EPUB（isFixedLayout: false）開書後，onLayoutResolved 回報結果驅動「版面設定」按鈕從停用轉為可用',
     (tester) async {

@@ -107,6 +107,24 @@ Issue 2 程式碼實作已完成，4 個 commits 依序交付：
 
 **已知限制：** `EpubReaderView` 檔案保留（待 Issue 5 清理），`reader_screen.dart` 中 `_handleLayoutResolved` / `_handleCharacterCountReady` 為死碼（標註 `// ignore: unused_element`），等 Issue 5 重新整合時復用。`FoliateEpubReaderView` 尚無字元數統計/頁碼進度回報機制，導致頁尾頁碼顯示對所有 EPUB（FXL/流式）皆不可用（見 `issues.md` Issue 2「已知限制」，非本次新增缺口）。真機驗證已於 2026-07-31 裝置解鎖後由人類親自在場確認完成（見 `issues.md` Issue 2 Status）。
 
+## Issue 3 實作完成紀錄（2026-07-31）
+
+Issue 3 程式碼實作已完成，橫向雙頁模式能力已植入 `FoliateEpubReaderView`：
+
+| Commit | 內容 |
+|---|---|
+| `f0fe2aa` | Task 1-3：`main.js` isDualPageEnabled() + spread attribute、`FoliateEpubReaderView` dualPageMode/isLandscape 參數、`ReaderScreen` 參數透傳 |
+
+**實作摘要：**
+- `main.js`：新增 `isDualPageEnabled(dualPageMode, isLandscape)` 純函式（移植自 `EpubReaderView.kt:149-151`），`applyPreferences()` FXL 分支新增 `setAttribute('spread', ...)` 設定 `'both'`/`'none'`
+- `foliate_epub_reader_view.dart`：新增 `dualPageMode`（`DualPageMode?`，nullable）與 `isLandscape`（`bool`，非 nullable，預設 `false`）建構參數，`buildFoliatePreferencesMap()` 與 `foliatePreferencesChanged()` 擴充
+- `reader_screen.dart`：`_buildNativeView()` 將 `resolved.dualPageMode` 與 `isLandscape` 下傳至 `FoliateEpubReaderView`
+- 單元測試：18 項 `foliate_epub_reader_view_test.dart` + 4 項 `reader_screen_test.dart` 新增測試，含 `isDualPageEnabled` truth table 可執行文件（審查修正：原記載「35 項」為誤植，獨立核算實際新增 18 項）
+
+**測試結果：** `flutter test`（全專案）730/730 通過，`flutter analyze` 乾淨（0 issues）。
+
+**真機驗證：** APK 已安裝至 `3CEF42ECD491687`，待人類親自驗證四項判準（橫向雙頁、封面獨立顯示、RTL 頁序、直向/單頁模式）。
+
 ## 相關佐證
 
 - `docs/adr/0011-epub-reflowable-migrate-to-foliate-js.md`（Phase 1，本次評估的 Phase 2 起點）

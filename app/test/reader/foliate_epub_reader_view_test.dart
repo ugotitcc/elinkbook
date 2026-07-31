@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/reader/column_mode.dart';
+import 'package:elinkbook/reader/dual_page_mode.dart';
 import 'package:elinkbook/reader/foliate_epub_reader_view.dart';
 import 'package:elinkbook/reader/writing_mode.dart';
 import 'package:elinkbook/reader/app_font.dart';
@@ -31,7 +32,8 @@ void main() {
         onPageRendered: _noop,
         onError: _noopError,
       );
-      expect(buildFoliatePreferencesMap(view), <String, Object?>{});
+      // isLandscape 為非 nullable 必要參數，預設 false，恆定出現在 map
+      expect(buildFoliatePreferencesMap(view), {'isLandscape': false});
     });
 
     test('columnMode: single 時 map 含 columnMode: single', () {
@@ -41,7 +43,10 @@ void main() {
         onError: _noopError,
         columnMode: ColumnMode.single,
       );
-      expect(buildFoliatePreferencesMap(view), {'columnMode': 'single'});
+      expect(buildFoliatePreferencesMap(view), {
+        'columnMode': 'single',
+        'isLandscape': false,
+      });
     });
 
     test('showFooter: false 時 map 含 showFooter: false', () {
@@ -51,7 +56,10 @@ void main() {
         onError: _noopError,
         showFooter: false,
       );
-      expect(buildFoliatePreferencesMap(view), {'showFooter': false});
+      expect(buildFoliatePreferencesMap(view), {
+        'showFooter': false,
+        'isLandscape': false,
+      });
     });
 
     test('所有非 null 建構參數皆正確出現於 map', () {
@@ -93,6 +101,7 @@ void main() {
         'columnMode': 'single',
         'columnSize': 600.0,
         'showFooter': false,
+        'isLandscape': false,
       });
     });
 
@@ -103,7 +112,10 @@ void main() {
         onError: _noopError,
         writingMode: WritingMode.horizontal,
       );
-      expect(buildFoliatePreferencesMap(view), {'writingMode': 'horizontal'});
+      expect(buildFoliatePreferencesMap(view), {
+        'writingMode': 'horizontal',
+        'isLandscape': false,
+      });
     });
 
     test('isFixedLayoutHint: true 時 map 含 isFixedLayoutHint: true', () {
@@ -113,7 +125,10 @@ void main() {
         onError: _noopError,
         isFixedLayoutHint: true,
       );
-      expect(buildFoliatePreferencesMap(view), {'isFixedLayoutHint': true});
+      expect(buildFoliatePreferencesMap(view), {
+        'isFixedLayoutHint': true,
+        'isLandscape': false,
+      });
     });
 
     test('isFixedLayoutHint: false 時 map 含 isFixedLayoutHint: false', () {
@@ -123,7 +138,10 @@ void main() {
         onError: _noopError,
         isFixedLayoutHint: false,
       );
-      expect(buildFoliatePreferencesMap(view), {'isFixedLayoutHint': false});
+      expect(buildFoliatePreferencesMap(view), {
+        'isFixedLayoutHint': false,
+        'isLandscape': false,
+      });
     });
 
     test('isFixedLayoutHint 未設定（null）時 map 不含該 key', () {
@@ -137,6 +155,92 @@ void main() {
         buildFoliatePreferencesMap(view).containsKey('isFixedLayoutHint'),
         isFalse,
       );
+    });
+
+    // Epic 20 Issue 3：dualPageMode／isLandscape 單元測試
+    test('dualPageMode: always 時 map 含 dualPageMode: always', () {
+      const view = FoliateEpubReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        dualPageMode: DualPageMode.always,
+      );
+      expect(buildFoliatePreferencesMap(view), {
+        'dualPageMode': 'always',
+        'isLandscape': false,
+      });
+    });
+
+    test('dualPageMode: auto 時 map 含 dualPageMode: auto', () {
+      const view = FoliateEpubReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        dualPageMode: DualPageMode.auto,
+      );
+      expect(buildFoliatePreferencesMap(view), {
+        'dualPageMode': 'auto',
+        'isLandscape': false,
+      });
+    });
+
+    test('dualPageMode: never 時 map 含 dualPageMode: never', () {
+      const view = FoliateEpubReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        dualPageMode: DualPageMode.never,
+      );
+      expect(buildFoliatePreferencesMap(view), {
+        'dualPageMode': 'never',
+        'isLandscape': false,
+      });
+    });
+
+    test('dualPageMode 未設定（null）時 map 不含該 key', () {
+      const view = FoliateEpubReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        dualPageMode: null,
+      );
+      expect(
+        buildFoliatePreferencesMap(view).containsKey('dualPageMode'),
+        isFalse,
+      );
+    });
+
+    test('isLandscape: true 時 map 含 isLandscape: true', () {
+      const view = FoliateEpubReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        isLandscape: true,
+      );
+      expect(buildFoliatePreferencesMap(view), {'isLandscape': true});
+    });
+
+    test('isLandscape 預設值（false）時 map 含 isLandscape: false', () {
+      const view = FoliateEpubReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+      );
+      expect(buildFoliatePreferencesMap(view), {'isLandscape': false});
+    });
+
+    test('dualPageMode + isLandscape 同時設定時兩者皆出現在 map', () {
+      const view = FoliateEpubReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        dualPageMode: DualPageMode.always,
+        isLandscape: true,
+      );
+      expect(buildFoliatePreferencesMap(view), {
+        'dualPageMode': 'always',
+        'isLandscape': true,
+      });
     });
   });
 
@@ -232,6 +336,90 @@ void main() {
         onPageRendered: _noop,
         onError: _noopError,
         fontSize: 1.0,
+      );
+      expect(foliatePreferencesChanged(oldView, newView), isFalse);
+    });
+
+    // Epic 20 Issue 3：dualPageMode／isLandscape 變動偵測
+    test('dualPageMode 變動回傳 true', () {
+      const oldView = FoliateEpubReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        dualPageMode: DualPageMode.always,
+      );
+      const newView = FoliateEpubReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        dualPageMode: DualPageMode.never,
+      );
+      expect(foliatePreferencesChanged(oldView, newView), isTrue);
+    });
+
+    test('dualPageMode 從 null 變為 always 回傳 true', () {
+      const oldView = FoliateEpubReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+      );
+      const newView = FoliateEpubReaderView(
+       filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        dualPageMode: DualPageMode.always,
+      );
+      expect(foliatePreferencesChanged(oldView, newView), isTrue);
+    });
+
+    test('isLandscape 變動回傳 true', () {
+      const oldView = FoliateEpubReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        isLandscape: false,
+      );
+      const newView = FoliateEpubReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        isLandscape: true,
+      );
+      expect(foliatePreferencesChanged(oldView, newView), isTrue);
+    });
+
+    test('dualPageMode + isLandscape 同時變動回傳 true', () {
+      const oldView = FoliateEpubReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        dualPageMode: DualPageMode.auto,
+        isLandscape: false,
+      );
+      const newView = FoliateEpubReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        dualPageMode: DualPageMode.always,
+        isLandscape: true,
+      );
+      expect(foliatePreferencesChanged(oldView, newView), isTrue);
+    });
+
+    test('dualPageMode + isLandscape 未變動回傳 false', () {
+      const oldView = FoliateEpubReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        dualPageMode: DualPageMode.auto,
+        isLandscape: true,
+      );
+      const newView = FoliateEpubReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        dualPageMode: DualPageMode.auto,
+        isLandscape: true,
       );
       expect(foliatePreferencesChanged(oldView, newView), isFalse);
     });
@@ -360,6 +548,44 @@ void main() {
       expect(script.source, contains('Map.groupBy'));
       expect(script.source, contains('Array.prototype.at'));
       expect(script.source, contains('Array.prototype.findLastIndex'));
+    });
+  });
+
+  // Epic 20 Issue 3 計畫審查 Minor #1：isDualPageEnabled 的 Dart 端 truth
+  // table 測試——移植自 EpubReaderView.kt:149-151 既有的 Kotlin 邏輯，
+  // 與 main.js 的 JS 版本邏輯完全一致。本測試無法直接驗證 JS 端行為（無
+  // JS 測試框架），但作為可執行文件確保四種組合的預期結果被記錄且可回歸
+  // 檢查；若未來 Dart 端需要相同邏輯（例如 PDF 路徑），可直接參考此處。
+  group('isDualPageEnabled truth table（可執行文件）', () {
+    /// 等效於 main.js 的 isDualPageEnabled(dualPageMode, isLandscape)
+    /// 與 EpubReaderView.kt:149-151 的邏輯
+    bool isDualPageEnabled(String dualPageMode, bool isLandscape) {
+      return dualPageMode == 'always' ||
+          (dualPageMode == 'auto' && isLandscape);
+    }
+
+    test('always + landscape → true', () {
+      expect(isDualPageEnabled('always', true), isTrue);
+    });
+
+    test('always + portrait → true', () {
+      expect(isDualPageEnabled('always', false), isTrue);
+    });
+
+    test('auto + landscape → true', () {
+      expect(isDualPageEnabled('auto', true), isTrue);
+    });
+
+    test('auto + portrait → false', () {
+      expect(isDualPageEnabled('auto', false), isFalse);
+    });
+
+    test('never + landscape → false', () {
+      expect(isDualPageEnabled('never', true), isFalse);
+    });
+
+    test('never + portrait → false', () {
+      expect(isDualPageEnabled('never', false), isFalse);
     });
   });
 }

@@ -7,6 +7,7 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
 import 'app_font.dart';
 import 'column_mode.dart';
+import 'dual_page_mode.dart';
 import 'epub_decoration.dart';
 import 'epub_position_info.dart';
 import 'epub_selection_info.dart';
@@ -117,6 +118,8 @@ Map<String, Object?> buildFoliatePreferencesMap(FoliateEpubReaderView view) {
   if (view.columnSize != null) map['columnSize'] = view.columnSize;
   if (view.showFooter != null) map['showFooter'] = view.showFooter;
   if (view.isFixedLayoutHint != null) map['isFixedLayoutHint'] = view.isFixedLayoutHint;
+  if (view.dualPageMode != null) map['dualPageMode'] = view.dualPageMode!.name;
+  map['isLandscape'] = view.isLandscape;
   return map;
 }
 
@@ -143,7 +146,9 @@ bool foliatePreferencesChanged(
       oldView.columnMode != newView.columnMode ||
       oldView.columnSize != newView.columnSize ||
       oldView.showFooter != newView.showFooter ||
-      oldView.isFixedLayoutHint != newView.isFixedLayoutHint;
+      oldView.isFixedLayoutHint != newView.isFixedLayoutHint ||
+      oldView.dualPageMode != newView.dualPageMode ||
+      oldView.isLandscape != newView.isLandscape;
 }
 
 /// 包裝 readest/foliate-js（釘定 commit
@@ -175,6 +180,8 @@ class FoliateEpubReaderView extends StatefulWidget {
   final double? columnSize;
   final bool? showFooter;
   final bool? isFixedLayoutHint;
+  final DualPageMode? dualPageMode;
+  final bool isLandscape;
   final List<ZoneAction> navZoneActions;
   final ValueChanged<ZoneAction>? onZoneAction;
   final bool showNavZoneDebugOverlay;
@@ -207,6 +214,8 @@ class FoliateEpubReaderView extends StatefulWidget {
     this.columnSize,
     this.showFooter,
     this.isFixedLayoutHint,
+    this.dualPageMode,
+    this.isLandscape = false,
     this.navZoneActions = const [
       ZoneAction.none, ZoneAction.none, ZoneAction.none,
       ZoneAction.none, ZoneAction.none, ZoneAction.none,

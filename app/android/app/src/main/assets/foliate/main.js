@@ -103,6 +103,16 @@ function buildOverrideCss(prefs) {
 }
 
 /**
+ * 移植自 EpubReaderView.kt（Readium 路徑既有邏輯，:149-151），FXL 雙頁
+ * 模式的觸發判斷——ALWAYS 恆真、AUTO 依 isLandscape、NEVER 恆假。
+ * 沿用該處把結果摺疊成二值（而非細緻的三態 spread 值）的既有設計，
+ * 見 plan-issue-3.md「已查證的關鍵技術事實」。
+ */
+function isDualPageEnabled(dualPageMode, isLandscape) {
+  return dualPageMode === 'always' || (dualPageMode === 'auto' && isLandscape === true)
+}
+
+/**
  * 套用完整偏好設定（開書當下的 initialPreferences，或後續 setPreferences
  * 呼叫，兩者格式相同）：pageTurnMode 對應 Paginator 的 flow 屬性（獨立於
  * CSS 覆蓋之外的設定），其餘 9 項透過 setStyles() 疊加 CSS。暴露為
@@ -135,6 +145,16 @@ window.applyPreferences = function (prefs) {
     if (prefs.writingMode) {
       currentWritingMode = prefs.writingMode
     }
+    // Epic 20 Issue 3：橫向雙頁模式。'both' 同時控制 foliate-fxl 的 section
+    // 配對（#spread()，非 'none' 時依 page-spread-* metadata + book.dir
+    // 自動配對——封面獨立顯示/RTL 頁序不受影響）與略過容器長寬比啟發式
+    // （#render()，僅 'both'/'portrait' 會強制以橫向雙頁樣式渲染），對應
+    // EpubReaderView.kt:784 既有的二值 Spread.ALWAYS/NEVER 摺疊設計，見
+    // plan-issue-3.md「已查證的關鍵技術事實」。
+    view.renderer?.setAttribute(
+      'spread',
+      isDualPageEnabled(prefs.dualPageMode, prefs.isLandscape) ? 'both' : 'none',
+    )
     return
   }
 
