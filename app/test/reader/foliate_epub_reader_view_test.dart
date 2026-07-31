@@ -105,6 +105,39 @@ void main() {
       );
       expect(buildFoliatePreferencesMap(view), {'writingMode': 'horizontal'});
     });
+
+    test('isFixedLayoutHint: true 時 map 含 isFixedLayoutHint: true', () {
+      const view = FoliateEpubReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        isFixedLayoutHint: true,
+      );
+      expect(buildFoliatePreferencesMap(view), {'isFixedLayoutHint': true});
+    });
+
+    test('isFixedLayoutHint: false 時 map 含 isFixedLayoutHint: false', () {
+      const view = FoliateEpubReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        isFixedLayoutHint: false,
+      );
+      expect(buildFoliatePreferencesMap(view), {'isFixedLayoutHint': false});
+    });
+
+    test('isFixedLayoutHint 未設定（null）時 map 不含該 key', () {
+      const view = FoliateEpubReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        isFixedLayoutHint: null,
+      );
+      expect(
+        buildFoliatePreferencesMap(view).containsKey('isFixedLayoutHint'),
+        isFalse,
+      );
+    });
   });
 
   group('foliatePreferencesChanged', () {
@@ -167,6 +200,22 @@ void main() {
         onPageRendered: _noop,
         onError: _noopError,
         showFooter: false,
+      );
+      expect(foliatePreferencesChanged(oldView, newView), isTrue);
+    });
+
+    test('isFixedLayoutHint 變動回傳 true', () {
+      const oldView = FoliateEpubReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        isFixedLayoutHint: false,
+      );
+      const newView = FoliateEpubReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        isFixedLayoutHint: true,
       );
       expect(foliatePreferencesChanged(oldView, newView), isTrue);
     });

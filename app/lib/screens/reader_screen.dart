@@ -235,9 +235,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   // static helper（Epic 5 Issue 3），比照 _pdfReaderViewKey 對 PDF 的既有
   // 作法。
   final _epubReaderViewKey = GlobalKey<State<EpubReaderView>>();
-  // 用於呼叫 FoliateEpubReaderView 未來（Issue 4-8）新增的強型別 static
-  // helper，比照 _epubReaderViewKey 對 EpubReaderView 的既有作法。本 Issue
-  // 尚未實際使用，先建立以維持與既有 widget 的對稱慣例。
+  // 用於呼叫 FoliateEpubReaderView 的強型別 static helper。epic-20 Issue 2
+  // 起，所有 EPUB（FXL／流式）皆統一建構 FoliateEpubReaderView（見
+  // _resolveEpubEngineDispatch／_buildBody），此 key 已是實際掛載的唯一
+  // EPUB widget key；_epubReaderViewKey（Readium）僅保留供 Issue 5 清理前
+  // 過渡期間的舊程式碼路徑相容，不再被任何分派邏輯建構。
   final _foliateEpubReaderViewKey = GlobalKey<State<FoliateEpubReaderView>>();
   // 記錄上一次實際套用給系統的螢幕方向，避免在偏好設定頻繁變動時（例如
   // 拖曳滑桿）重複呼叫 SystemChrome.setPreferredOrientations。
@@ -247,11 +249,15 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   // （見 didChangeAppLifecycleState），確保系統列真的被 OS 重新顯示時
   // 能重新套用。
   bool? _lastAppliedFullscreen;
-  // EPUB 引擎分派結果（epic-17-epub-render-migration Issue 3）：true=FXL
-  // （EpubReaderView／Readium）、false=流式（FoliateEpubReaderView）、
-  // null=尚未解析完成（既有書籍偵測進行中，畫面維持載入中指示器）。與既有
-  // _isFixedLayout（Readium/foliate-js 開書後才回報的執行期狀態，驅動 FXL
-  // 懸浮控制項/AppBar 顯示邏輯）是兩個不同概念，互不影響——見
+  // EPUB 版面判斷結果：true=FXL、false=流式、null=尚未解析完成（既有書籍
+  // 偵測進行中，畫面維持載入中指示器）。epic-17-epub-render-migration
+  // Issue 3 引入當下曾用來分派「建構 EpubReaderView 還是
+  // FoliateEpubReaderView」；epic-20 Issue 2 起兩種情況一律建構
+  // FoliateEpubReaderView（見 _buildBody），本欄位已不再決定要建構哪個
+  // widget，改為單純的 FXL／流式版面旗標，用於 UI 分支（例如 FXL 懸浮
+  // 控制項顯示邏輯、跳過流式限定功能）。與既有 _isFixedLayout
+  // （foliate-js 開書後才回報的執行期狀態，驅動 FXL 懸浮控制項/AppBar
+  // 顯示邏輯）是兩個不同概念，互不影響——見
   // docs/epics/epic-17-epub-render-migration/spec.md「已知限制」。
   bool? _dispatchedIsFixedLayout;
 
@@ -652,11 +658,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 只需傳入目前使用中書籍的 `locatorJson`。比照 `_handleZoneAction`
   /// （Issue 5）建立的相同分派模式。
   void _jumpToEpubLocator(String locatorJson) {
-    if (_dispatchedIsFixedLayout == true) {
-      EpubReaderView.jumpToLocator(_epubReaderViewKey, locatorJson);
-    } else {
-      FoliateEpubReaderView.jumpToLocator(_foliateEpubReaderViewKey, locatorJson);
-    }
+    // Epic 20 Issue 2：EPUB 一律使用 FoliateEpubReaderView。
+    FoliateEpubReaderView.jumpToLocator(_foliateEpubReaderViewKey, locatorJson);
   }
 
   void _openToc() {
@@ -791,6 +794,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 一次。這是多餘但無害的呼叫（見 EpubReaderView.kt 的 setPreferences
   /// 註解——currentPreferences.plus() 合併語意，不會覆蓋其他已生效欄位），
   /// 不特地加狀態去抑制它，避免為了避免一次無害的重複呼叫而增加複雜度。
+  // ignore: unused_element
   void _handleLayoutResolved(EpubLayoutInfo info) {
     if (!mounted) return;
     setState(() {
@@ -841,20 +845,30 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     }
   }
 
-  /// FoliateEpubReaderView（流式）專屬的 onLayoutResolved 處理。
+  /// `FoliateEpubReaderView` 專屬的 onLayoutResolved 處理。
   /// epic-17-epub-render-migration Issue 4 起，也設定
   /// `_autoDetectedWritingMode` 並重新計算 `_resolved`（比照
   /// `_handleLayoutResolved` 對應段落），讓「版面設定」按鈕能對流式書籍
   /// 生效。Issue 6 起新增目錄背景抓取（比照 `_handleLayoutResolved`
   /// 對應段落，改呼叫 `FoliateEpubReaderView.loadTableOfContents()`
   /// 而非 `EpubReaderView` 的版本）——不需要像 Readium 分支那樣額外檢查
-  /// `!info.isFixedLayout`，因為本方法只會被 `FoliateEpubReaderView`
-  /// （恆為流式）呼叫。**仍然刻意不**觸發
-  /// `_reloadAnnotationsAndRefreshDecorations`／`_loadFxlBookmarks`——這兩
-  /// 個呼叫對尚未掛載的 `EpubReaderView`/`_epubReaderViewKey` 雖然會靜默
-  /// no-op、技術上無害，但會讓 `_annotationsLoaded` 被誤判為「已完成」，
-  /// 使「筆記」按鈕看似可用卻永遠開出空清單/無法互動。劃線備註仍是
-  /// Issue 8 的範圍。
+  /// `!info.isFixedLayout`，因為 `FoliateEpubReaderView.loadTableOfContents()`
+  /// 對 FXL／流式書籍皆可正常運作。epic-20 Issue 2 起，本方法也會被 FXL
+  /// 書籍呼叫（`_dispatchedIsFixedLayout == true` 時同樣建構
+  /// `FoliateEpubReaderView`，不再是「恆為流式」）——但目前
+  /// `FoliateEpubReaderView` 的 `onPageRendered` handler（見
+  /// `foliate_epub_reader_view.dart`）尚未回傳真實的 `isFixedLayout`
+  /// 判斷結果，`info.isFixedLayout` 在這裡固定收到 `false`，故本方法內部
+  /// 目前不依賴 `info.isFixedLayout` 做任何分支。觸發
+  /// `_reloadAnnotationsAndRefreshDecorations` 以載入劃線備註——但
+  /// `_sendDecorationsToNative()` 目前仍依 `_dispatchedIsFixedLayout` 分派
+  /// 到 `EpubReaderView.setDecorations`／`FoliateEpubReaderView.setDecorations`
+  /// 兩者之一（尚未於本 Issue 統一），FXL 分支呼叫的
+  /// `EpubReaderView.setDecorations` 對已無人建構的 `_epubReaderViewKey`
+  /// 會靜默 no-op——也就是說，FXL 書籍此刻實際上**尚未**取得真正生效的
+  /// 劃線/備註疊圖，這是已知、留待 Issue 4（decorations 管線統一）一併
+  /// 解決的缺口，並非本行為的正確／最終路徑。`_loadFxlBookmarks` 已整合
+  /// 進 `_reloadAnnotationsAndRefreshDecorations`。
   void _handleFoliateLayoutResolved(EpubLayoutInfo info) {
     if (!mounted) return;
     setState(() {
@@ -893,6 +907,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 原生端背景計算全書字元數完成時觸發（Epic 5 Issue 3）：更新本地狀態
   /// 驅動頁尾重新渲染，並持久化快取值——不 await，比照本類別其餘持久化
   /// 呼叫的既有慣例（見 _handlePrefsChanged）。
+  // ignore: unused_element
   void _handleCharacterCountReady(int totalCharacterCount) {
     if (!mounted) return;
     setState(() => _totalCharacterCount = totalCharacterCount);
@@ -1812,7 +1827,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           targetPage: targetPage,
           totalPages: totalPages,
         );
-        EpubReaderView.jumpToProgression(_epubReaderViewKey, progression);
+        FoliateEpubReaderView.jumpToProgression(_foliateEpubReaderViewKey, progression);
       },
     );
   }
@@ -1923,71 +1938,41 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     final resolved = _resolved!;
     switch (format) {
       case BookFormat.epub:
-        if (!_dispatchedIsFixedLayout!) {
-          return FoliateEpubReaderView(
-            key: _foliateEpubReaderViewKey,
-            filePath: widget.filePath,
-            onPageRendered: _handlePageRendered,
-            onError: _handleError,
-            onLayoutResolved: _handleFoliateLayoutResolved,
-            writingMode: resolved.writingMode,
-            pageTurnMode: resolved.pageTurnMode,
-            fontFamily: resolved.fontFamily,
-            fontSize: resolved.fontSize,
-            fontWeight: resolved.fontWeight,
-            lineHeight: resolved.lineHeight,
-            paragraphSpacing: resolved.paragraphSpacing,
-            marginTop: resolved.marginTop,
-            marginBottom: resolved.marginBottom,
-            marginLeft: resolved.marginLeft,
-            marginRight: resolved.marginRight,
-            textAlign: resolved.textAlign,
-            publisherStyles: resolved.publisherStyles,
-            columnMode: resolved.columnMode,
-            columnSize: resolved.columnSize,
-            showFooter: resolved.showFooter,
-            navZoneActions: resolved.navZoneActions,
-            onZoneAction: _handleZoneAction,
-            showNavZoneDebugOverlay: resolved.showNavZoneDebugOverlay,
-            initialLocatorJson: _initialPosition?.epubLocatorJson,
-            onLocatorChanged: (info) {
-              if (!mounted) return;
-              setState(() => _epubPositionInfo = info);
-            },
-            onSelectionChanged: _handleSelectionChanged,
-            onSelectionCleared: _handleSelectionCleared,
-            onAnnotationActivated: _handleAnnotationActivated,
-          );
-        }
-        return EpubReaderView(
-          key: _epubReaderViewKey,
+        // Epic 20 Issue 2：EPUB 一律透過 FoliateEpubReaderView 渲染。
+        // EpubReaderView（Readium）路徑保留但不再被建構（留待 Issue 5 清理）。
+        // isFixedLayoutHint 將 widget.isFixedLayout 傳入，讓 main.js 的
+        // isFixedLayoutHint 覆寫機制（ADR 0017 決策 4）生效。
+        return FoliateEpubReaderView(
+          key: _foliateEpubReaderViewKey,
           filePath: widget.filePath,
-          writingMode: resolved.writingMode,
-          pageTurnMode: resolved.pageTurnMode,
           onPageRendered: _handlePageRendered,
           onError: _handleError,
-          onLayoutResolved: _handleLayoutResolved,
+          onLayoutResolved: _handleFoliateLayoutResolved,
+          writingMode: resolved.writingMode,
+          pageTurnMode: resolved.pageTurnMode,
           fontFamily: resolved.fontFamily,
           fontSize: resolved.fontSize,
           fontWeight: resolved.fontWeight,
           lineHeight: resolved.lineHeight,
           paragraphSpacing: resolved.paragraphSpacing,
-          pageMargins: resolved.pageMargins,
+          marginTop: resolved.marginTop,
+          marginBottom: resolved.marginBottom,
+          marginLeft: resolved.marginLeft,
+          marginRight: resolved.marginRight,
           textAlign: resolved.textAlign,
           publisherStyles: resolved.publisherStyles,
-          dualPageMode: resolved.dualPageMode,
-          isLandscape: isLandscape,
+          columnMode: resolved.columnMode,
+          columnSize: resolved.columnSize,
+          showFooter: resolved.showFooter,
+          isFixedLayoutHint: widget.isFixedLayout,
           navZoneActions: resolved.navZoneActions,
           onZoneAction: _handleZoneAction,
           showNavZoneDebugOverlay: resolved.showNavZoneDebugOverlay,
-          onZoneTapped: (index) => _handleZoneAction(resolved.navZoneActions[index]),
           initialLocatorJson: _initialPosition?.epubLocatorJson,
           onLocatorChanged: (info) {
             if (!mounted) return;
             setState(() => _epubPositionInfo = info);
           },
-          totalCharacterCount: _totalCharacterCount,
-          onCharacterCountReady: _handleCharacterCountReady,
           onSelectionChanged: _handleSelectionChanged,
           onSelectionCleared: _handleSelectionCleared,
           onAnnotationActivated: _handleAnnotationActivated,
@@ -2069,22 +2054,16 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         if (format == BookFormat.pdf) {
           PdfReaderView.previousPage(_pdfReaderViewKey);
         } else if (format == BookFormat.epub) {
-          if (_dispatchedIsFixedLayout == true) {
-            EpubReaderView.previousPage(_epubReaderViewKey);
-          } else {
-            FoliateEpubReaderView.previousPage(_foliateEpubReaderViewKey);
-          }
+          // Epic 20 Issue 2：EPUB 一律使用 FoliateEpubReaderView。
+          FoliateEpubReaderView.previousPage(_foliateEpubReaderViewKey);
         }
         break;
       case ZoneAction.nextPage:
         if (format == BookFormat.pdf) {
           PdfReaderView.nextPage(_pdfReaderViewKey);
         } else if (format == BookFormat.epub) {
-          if (_dispatchedIsFixedLayout == true) {
-            EpubReaderView.nextPage(_epubReaderViewKey);
-          } else {
-            FoliateEpubReaderView.nextPage(_foliateEpubReaderViewKey);
-          }
+          // Epic 20 Issue 2：EPUB 一律使用 FoliateEpubReaderView。
+          FoliateEpubReaderView.nextPage(_foliateEpubReaderViewKey);
         }
         break;
       case ZoneAction.menu:

@@ -40,7 +40,9 @@
 
 ## Issue 2：打包 `fixed-layout.js` 至 production assets，`FoliateEpubReaderView` 基本開書渲染 FXL 書籍
 
-**Status:** 實作計劃已撰寫（`plans/plan-issue-2.md`），待程式碼審查後開始執行。計劃內已查證關鍵風險：`foliate-fxl` 自訂元素沒有 `setStyles()` 方法，`main.js` 既有 `applyPreferences()` 若不分流會直接對 FXL 書籍拋出未攔截例外；`relocate` 事件對 FXL 的實際 payload 形狀尚未查證，計劃 Task 1 先做真機探索，Task 2 才依結果撰寫正式邏輯。
+**Status:** ✅ 程式碼實作完成（7 個 commits：`9b71c89`、`df6bd60`、`23ed574`、`101ac7e`、`41dc599`、`b826c79`、`13bbe55`）。`flutter test`（全專案）708/708 通過（含程式碼審查 Important #2 補上的 `isFixedLayoutHint` 測試），`flutter analyze` 乾淨。真機驗證已於裝置解鎖後完成，人類（huthief）親自在場全程觀察 FXL 開書/雙頁/翻頁，確認正常運作（詳見 `plans/plan-issue-2.md` Task 5 Step 2——過程存檔的部分截圖經審查發現無法單獨佐證翻頁行為，已如實記錄該落差，最終以人類親自確認結案）。
+
+**已知限制（程式碼審查發現，2026-07-31）：** `FoliateEpubReaderView` 目前沒有任何字元數統計/頁碼進度回報機制（`onCharacterCountReady` 只存在於舊 `EpubReaderView`／Readium widget），導致頁尾 `X/Y` 頁碼顯示對所有透過 `FoliateEpubReaderView` 渲染的 EPUB（不論 FXL 或流式）皆不可用——這不是 Issue 2 新造成的問題（`FoliateEpubReaderView` 自 epic-17 遷移完成以來即是如此），但 Issue 2 的統一分派讓流式書籍第一次也繼承這個既存缺口的可見影響（`reader_screen_test.dart` 已有多處測試斷言「頁尾不顯示」反映此現況）。修復（補上字元數統計機制）待另立工單評估，非本 Epic 既定範圍。
 
 **依賴：** Issue 1（Spike GO）。
 

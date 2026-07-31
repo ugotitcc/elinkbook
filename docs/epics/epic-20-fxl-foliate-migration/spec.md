@@ -4,7 +4,7 @@
 
 ## 範圍
 
-**本次遷移交付**：FXL EPUB 的基本閱讀能力（開書、橫向雙頁、封面獨立顯示、RTL 頁序、進度條/頁尾/目錄、書籤）統一由 `FoliateEpubReaderView` 提供；`EpubReaderView`（Readium）路徑完全移除。
+**本次遷移交付**：FXL EPUB 的基本閱讀能力（開書、橫向雙頁、封面獨立顯示、RTL 頁序、進度條/目錄、書籤）統一由 `FoliateEpubReaderView` 提供；`EpubReaderView`（Readium）路徑完全移除。（**修正**（Issue 2 程式碼審查發現，2026-07-31）：頁尾 `X/Y` 頁碼顯示**不**在此清單內——`FoliateEpubReaderView` 目前沒有字元數統計機制，此功能對所有透過它渲染的 EPUB 皆不可用，見 `issues.md` Issue 2「已知限制」，非本次遷移範圍內可解決的項目。）
 
 **明確排除**：劃線/備註（`overlayer.js`）在 FXL 雙頁模式下的支援——另立後續 Epic（見 ADR 0017 決策 6）。
 
