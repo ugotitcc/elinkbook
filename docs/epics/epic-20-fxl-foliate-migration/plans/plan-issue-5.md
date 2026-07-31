@@ -29,6 +29,7 @@
   - `:134-135`（「技術棧（已決策）」EPUB 雙引擎條目，含 FXL 用 Readium／流式用 foliate-js 兩個子項目）——需重寫為單引擎（foliate-js）架構，同時保留足夠的歷史脈絡（ADR 0011 Phase 1、ADR 0017 Phase 2 的演進，供後續讀者理解「為何看似只有一個引擎，過去卻分兩條路徑」），不是單純刪字。
   - `:132`（minSdk 理由）——內容預期仍成立（見上方查證），只需確認、不要求修改。
 - **`docs/CONTEXT.md` 不存在，實際檔案是根目錄 `CONTEXT.md`**（`issues.md` 原始描述路徑有誤，已確認實際路徑）。內容比 `CLAUDE.md` 更廣泛地假設雙引擎架構仍然存在，已查證至少以下詞條需要更新：「雙頁 spread」（`:48`，「EPUB 固定版面的 spread 配對由 Readium 依 page-spread-left/right metadata 處理」——已由 foliate-js 接手，見 Issue 3）、「引擎分派判斷」（`:56`，仍描述「決定一本 EPUB 該用 Readium（FXL 路徑）或 foliate-js（流式路徑）」——epic-20 後這個判斷已不再決定引擎，只剩 UI 版面語意，見 Issue 2-4 的 `_dispatchedIsFixedLayout` 語意變化）、「Readium 內部版面渲染決策」（`:63-65`，整條詞目描述 `EpubNavigatorFragment`／`EpubReaderView.kt:819-853` 等即將刪除的 Kotlin 內部機制——整條詞目本身已無現實對應物，建議移除或明確標註為「historical，epic-20 前架構」）、「固定版面（FXL）熱區換頁機制」（`:76`，描述呼叫 Readium `goForward`/`goBackward` 的既有機制——FXL 現在跟流式共用同一套 Dart 端 `_ZoneOverlay`/`ZoneAction` 機制，不再有獨立的 Readium 版本）。
+- **計劃審查發現（2026-07-31）：根目錄 `AGENTS.md` 同樣受影響，範圍比原本查證的 `CLAUDE.md`／`CONTEXT.md` 更嚴重**——已逐行核對確認：「唯一 Seam：ReaderScreen」段落（`:17-23`）描述 `ReaderScreen` 只分派到 `EpubReaderView`（Readium）／`PdfReaderView` 兩者，**完全沒有提及 `FoliateEpubReaderView`**（比 `CLAUDE.md`／`CONTEXT.md` 更過時，疑似從未隨 ADR 0011 的 reflowable 遷移更新過）；「Native 層」段落（`:27-31`）列出 `EpubReaderView.kt`+`EpubReaderViewFactory.kt`（即將刪除）與 `MainActivity.kt`「`FlutterFragmentActivity`，非預設 `FlutterActivity`，因 Readium Fragment 需要」（即將不成立）。**額外查證發現審查報告未提及的第三處**：「Gotchas」段落（`:97`）「Kotlin 端的 `EpubNavigatorFragment` 建構子是 `internal`，只能透過 Readium 的 `FragmentFactory` 建立」——本工單移除 `EpubNavigatorFragment` 全部使用後，這則 Gotcha 本身已無現實對應物，應一併移除，不只是改寫用詞。
 
 ## Global Constraints
 
@@ -44,7 +45,7 @@
 - Delete：`app/android/app/src/main/kotlin/cc/ugotit/elinkbook/EpubReaderView.kt`、`EpubReaderViewFactory.kt`、`app/lib/reader/epub_reader_view.dart`、`app/test/reader/epub_reader_view_test.dart`
 - Modify：`app/android/app/build.gradle.kts`、`app/android/app/src/main/kotlin/cc/ugotit/elinkbook/MainActivity.kt`
 - Modify：`app/lib/screens/reader_screen.dart`、`app/test/screens/reader_screen_test.dart`
-- Modify：`CLAUDE.md`、`CONTEXT.md`
+- Modify：`CLAUDE.md`、`CONTEXT.md`、`AGENTS.md`
 
 ---
 
@@ -111,14 +112,14 @@ flutter build apk --debug
 
 ---
 
-### Task 3：文件更新（`CLAUDE.md`、`CONTEXT.md`）
+### Task 3：文件更新（`CLAUDE.md`、`CONTEXT.md`、`AGENTS.md`）
 
 **Files:**
-- Modify：`CLAUDE.md`、`CONTEXT.md`
+- Modify：`CLAUDE.md`、`CONTEXT.md`、`AGENTS.md`
 
 **Interfaces:**
 - Consumes：Task 1/2 已完成的實際刪除範圍
-- Produces：兩份文件不再描述已刪除的雙引擎 FXL 架構
+- Produces：三份文件不再描述已刪除的雙引擎 FXL 架構
 
 - [ ] **Step 1：`CLAUDE.md` 依「已查證的關鍵技術事實」列出的 7 處逐一訂正**
 
@@ -128,7 +129,11 @@ flutter build apk --debug
 
 「雙頁 spread」（`:48`，spread 配對機制改為 foliate-js）、「引擎分派判斷」（`:56`，訂正為「決定 UI 版面語意」而非「決定引擎」）、「Readium 內部版面渲染決策」（`:63-65`，整條詞目移除或標註為 historical）、「固定版面（FXL）熱區換頁機制」（`:76`，改為描述現行的 Dart 端 `_ZoneOverlay`/`ZoneAction` 共用機制，不再是 Readium 專屬）。
 
-執行完 Step 1/2 後，`grep -rn "EpubReaderView\|FlutterFragmentActivity" CLAUDE.md CONTEXT.md` 應只剩存在於 ADR/歷史脈絡說明中的提及（例如「ADR 0011/0017 演進脈絡」段落刻意保留的歷史敘述），不應再有描述「現行架構如此」語氣的殘留。
+- [ ] **Step 3：`AGENTS.md` 依「已查證的關鍵技術事實」列出的 3 處逐一訂正**（計劃審查發現，2026-07-31）
+
+「唯一 Seam：ReaderScreen」段落（`:17-23`）——`ReaderScreen` 分派清單改為 `FoliateEpubReaderView`（所有 EPUB）／`PdfReaderView`，「兩者是對稱的 PlatformView 包裝」這句連帶不成立（`FoliateEpubReaderView` 不是傳統 `AndroidView`/`PlatformView`，見 `CLAUDE.md` 既有準確說明可直接參考用詞），需一併訂正、不能只換類別名稱。「Native 層」段落（`:27-31`）——移除 `EpubReaderView.kt`+`EpubReaderViewFactory.kt` 條目，`MainActivity.kt` 的說明文字改為不提 `FlutterFragmentActivity`/Readium Fragment。「Gotchas」段落（`:97`）——移除 `EpubNavigatorFragment` 建構子那條，本工單完成後已無現實對應物（不是改寫用詞，是整行移除）。
+
+執行完 Step 1-3 後，`grep -rn "EpubReaderView\|FlutterFragmentActivity" CLAUDE.md CONTEXT.md AGENTS.md` 應只剩存在於 ADR/歷史脈絡說明中的提及（例如「ADR 0011/0017 演進脈絡」段落刻意保留的歷史敘述），不應再有描述「現行架構如此」語氣的殘留。
 
 ---
 
@@ -181,3 +186,5 @@ adb -s 3CEF42ECD491687 install -r build/app/outputs/flutter-apk/app-debug.apk
 - `app/android/app/build.gradle.kts:40,63-65`
 - `CLAUDE.md:38-47,73,132-139`
 - `CONTEXT.md:48,56,63-65,76`
+- `AGENTS.md:17-23,27-31,97`（計劃審查發現，2026-07-31）
+- `tmp/epic-20/plan_issue_5_review_report.md`（計劃審查報告，AGENTS.md 發現來源）
