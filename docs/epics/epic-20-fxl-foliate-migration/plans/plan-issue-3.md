@@ -122,7 +122,7 @@ oldView.dualPageMode != newView.dualPageMode ||
 oldView.isLandscape != newView.isLandscape ||
 ```
 
-- [ ] **Step 4：單元測試**
+- [x] **Step 4：單元測試**
 
 於 `app/test/reader/foliate_epub_reader_view_test.dart` 比照 Issue 2 審查回應新增的 `isFixedLayoutHint` 測試組（`buildFoliatePreferencesMap` group、`foliatePreferencesChanged` group），新增：
 - `dualPageMode: DualPageMode.always` 時 map 含 `dualPageMode: 'always'`
@@ -146,7 +146,7 @@ oldView.isLandscape != newView.isLandscape ||
 - Consumes：Task 2 新增的建構參數
 - Produces：EPUB（FXL）真機橫向雙頁模式下正確顯示兩頁並排，取代舊 `EpubReaderView` 已死的傳遞路徑
 
-- [ ] **Step 1：`_buildNativeView()` 的 `FoliateEpubReaderView(...)` 建構新增兩個具名參數**
+- [x] **Step 1：`_buildNativeView()` 的 `FoliateEpubReaderView(...)` 建構新增兩個具名參數**
 
 `reader_screen.dart:1945-1979`（`case BookFormat.epub` 分支）新增：
 
@@ -157,7 +157,7 @@ isLandscape: isLandscape,
 
 （`resolved`／`isLandscape` 皆為該函式既有可用的區域變數，`PdfReaderView` 分支已在用同名欄位，直接比照複製，不需要新增任何上游計算邏輯。）
 
-- [ ] **Step 2：測試更新**
+- [x] **Step 2：測試更新**
 
 比照 `test/screens/reader_screen_test.dart:684-780` 既有針對 `PdfReaderView.isLandscape`／`PdfReaderView.dualPageMode` 的測試寫法，新增等效的 `FoliateEpubReaderView` 版本（裝置橫向/直向時 `isLandscape` 正確下傳、`dualPageMode` 正確下傳），或視既有 FXL 相關測試案例（`isFixedLayout: true` 那組）擴充追加斷言。
 
