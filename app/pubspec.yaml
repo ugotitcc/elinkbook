@@ -71,6 +71,13 @@ dev_dependencies:
   share_plus_platform_interface: ^6.1.0
   flutter_inappwebview_platform_interface: ^1.3.0
 
+# flutter_inappwebview_android 1.1.3 有 toMap() 無限遞迴 bug（line 198 呼叫
+# ...toMap() 而非手動組裝 map），造成 InternalStoragePathHandler 使用時
+# StackOverflow。本地 patch 修正此 bug，待上游修復後移除此 override。
+dependency_overrides:
+  flutter_inappwebview_android:
+    path: patches/flutter_inappwebview_android
+
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 

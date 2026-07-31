@@ -5,6 +5,7 @@ import android.os.Build
 import android.view.KeyEvent
 import android.webkit.WebView
 import androidx.activity.result.contract.ActivityResultContracts
+import java.io.File
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -54,6 +55,18 @@ class MainActivity : FlutterFragmentActivity() {
 
     override fun onCreate(savedInstanceState: android.os.Bundle?) {
         super.onCreate(savedInstanceState)
+        // App 冷啟動時清空整個 foliate_book_cache 目錄（保底清理）。
+        // App 異常結束（崩潰、被系統殺掉）時 Widget dispose 清理不會執行，
+        // 長期可能累積孤兒子目錄。冷啟動時不會有任何 FoliateEpubReaderView
+        // 實例正在使用快取，可安全整個清空。
+        try {
+            val cacheDir = File(filesDir, "foliate_book_cache")
+            if (cacheDir.exists()) {
+                cacheDir.deleteRecursively()
+            }
+        } catch (_: Exception) {
+            // 清理失敗不影響 App 啟動
+        }
     }
 
     /**

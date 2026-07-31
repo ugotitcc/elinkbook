@@ -8,6 +8,7 @@ import 'package:elinkbook/reader/writing_mode.dart';
 import 'package:elinkbook/reader/app_font.dart';
 import 'package:elinkbook/reader/epub_text_align.dart';
 import 'package:elinkbook/reader/page_turn_mode.dart';
+import 'package:elinkbook/reader/foliate_native_bridge.dart';
 import 'package:elinkbook/reader/zone_action.dart';
 import '../support/fake_inappwebview_platform.dart';
 
@@ -15,6 +16,9 @@ void _noop() {}
 void _noopError(String message) {}
 
 void main() {
+  // 保存原始實作， tearDownAll 時還原
+  late Future<String?> Function(String, String) originalCacheBookForServing;
+
   // Issue 10 審查修正：9 宮格導航熱區 tap／debug overlay 這兩項 widget
   // test 原本因「裸 InAppWebView 無法在 flutter_test 下 pump」被整批移除
   // （見 plan-issue-10.md「驗證紀錄」），比照
@@ -23,6 +27,13 @@ void main() {
   // 「3×3 導航熱區」group。
   setUpAll(() {
     InAppWebViewPlatform.instance = FakeInAppWebViewPlatform();
+    // Issue 8 審查修正：覆寫 cacheBookForServing 頂層函數變數，
+    // 繞過 Dart 端檔案系統檢查（File.exists()、resolveSymbolicLinksSync() 等），
+    // 確保 FoliateEpubReaderView 的 _cacheBook() 在測試環境中能順利完成。
+    originalCacheBookForServing = cacheBookForServing;
+    cacheBookForServing = (filePath, instanceId) async {
+      return '/fake/cache/dir/current.epub';
+    };
   });
 
   group('buildFoliatePreferencesMap', () {
@@ -587,5 +598,10 @@ void main() {
     test('never + portrait → false', () {
       expect(isDualPageEnabled('never', false), isFalse);
     });
+  });
+
+  tearDownAll(() {
+    // 還原 cacheBookForServing 為原始實作，避免污染其他測試檔
+    cacheBookForServing = originalCacheBookForServing;
   });
 }

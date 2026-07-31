@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
@@ -191,6 +192,12 @@ class FoliateEpubReaderView extends StatefulWidget {
   final VoidCallback? onSelectionCleared;
   final ValueChanged<String>? onAnnotationActivated;
 
+  /// 可選的快取函數注入點，用於測試環境繞過 Dart 端檔案系統檢查。
+  /// null 時使用預設的 [cacheBookForServing] 全域實作。
+  @visibleForTesting
+  final Future<String?> Function(String filePath, String instanceId)?
+      cacheBookForServingFn;
+
   const FoliateEpubReaderView({
     super.key,
     required this.filePath,
@@ -228,6 +235,7 @@ class FoliateEpubReaderView extends StatefulWidget {
     this.onSelectionChanged,
     this.onSelectionCleared,
     this.onAnnotationActivated,
+    this.cacheBookForServingFn,
   });
 
   static void nextPage(GlobalKey<State<FoliateEpubReaderView>> key) {
@@ -294,7 +302,41 @@ class _FoliateEpubReaderViewState extends State<FoliateEpubReaderView> {
   InAppWebViewController? _controller;
   Completer<List<TocEntry>>? _pendingToc;
 
+  /// 每個 widget 實例獨立的快取子目錄路徑，供 `InternalStoragePathHandler` 使用。
+  /// null 表示快取尚未完成或失敗。
+  String? _bookCacheDir;
+
+  /// 本實例的唯一 ID，用於區隔快取子目錄（避免螢幕轉場期間的競態）。
+  late final String _instanceId = identityHashCode(this).toString();
+
   late final Uri _initialIndexUri = _buildIndexUri();
+
+  @override
+  void initState() {
+    super.initState();
+    _cacheBook();
+  }
+
+  /// 非同步前置快取步驟：將 EPUB 檔案複製到原生端快取目錄，
+  /// 供 `WebViewAssetLoader.InternalStoragePathHandler` 串流服務。
+  Future<void> _cacheBook() async {
+    try {
+      final cacheFn = widget.cacheBookForServingFn ?? cacheBookForServing;
+      final cachedPath = await cacheFn(widget.filePath, _instanceId);
+      if (!mounted) return; // 217MB 檔案複製可能耗時數秒，需檢查 mounted
+      if (cachedPath != null) {
+        // cacheBookForServing 回傳的是檔案絕對路徑，InternalStoragePathHandler 要的是目錄
+        setState(() {
+          _bookCacheDir = File(cachedPath).parent.path;
+        });
+      } else {
+        widget.onError('無法快取書籍檔案');
+      }
+    } catch (e) {
+      if (!mounted) return;
+      widget.onError('快取書籍失敗: $e');
+    }
+  }
 
   Uri _buildIndexUri() {
     final params = <String, String>{
@@ -411,12 +453,8 @@ class _FoliateEpubReaderViewState extends State<FoliateEpubReaderView> {
     WebResourceRequest request,
   ) async {
     final path = request.url.path;
-    if (path == '/book/current.epub') {
-      final bytes = await loadBookBytes(widget.filePath);
-      if (bytes == null) return null;
-      return WebResourceResponse(
-          contentType: 'application/epub+zip', data: bytes);
-    }
+    // `/book/current.epub` 請求已改由原生 `WebViewAssetLoader.InternalStoragePathHandler` 串流服務，
+    // 不再需要 Dart callback 攔截（見 Issue 8 Task 3）。
     const foliateAssetsPrefix = '/assets/foliate/';
     if (path.startsWith(foliateAssetsPrefix)) {
       final relative = 'foliate/${path.substring(foliateAssetsPrefix.length)}';
@@ -448,12 +486,23 @@ class _FoliateEpubReaderViewState extends State<FoliateEpubReaderView> {
 
   @override
   void dispose() {
+    // 清理本實例的快取子目錄（避免孤兒子目錄累積）
+    if (_bookCacheDir != null) {
+      final cacheDir = Directory(_bookCacheDir!);
+      if (cacheDir.existsSync()) {
+        cacheDir.deleteSync(recursive: true);
+      }
+    }
     detachReaderView();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    // 快取未完成前不掛載 InAppWebView（外層 ReaderScreen 已負責視覺載入狀態）
+    if (_bookCacheDir == null) {
+      return const SizedBox.shrink();
+    }
     return Stack(
       children: [
         InAppWebView(
@@ -461,6 +510,12 @@ class _FoliateEpubReaderViewState extends State<FoliateEpubReaderView> {
           initialSettings: InAppWebViewSettings(
             javaScriptEnabled: true,
             useShouldInterceptRequest: true,
+            webViewAssetLoader: WebViewAssetLoader(
+              pathHandlers: [
+                InternalStoragePathHandler(
+                    path: '/book/', directory: _bookCacheDir!),
+              ],
+            ),
           ),
           // 【診斷修正】見上方 _esCompatPolyfillJs 註解——在文件載入最早期
           // 注入 Object.groupBy/Map.groupBy/Array.prototype.at/

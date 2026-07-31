@@ -1,11 +1,6 @@
-import 'dart:io';
-
 import 'package:elinkbook/reader/foliate_native_bridge.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
-
-import '../support/fake_path_provider_platform.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -64,43 +59,22 @@ void main() {
     expect(bytes!.isNotEmpty, isTrue);
   });
 
-  group('loadBookBytes（檔案系統路徑分支）', () {
-    late Directory tempDir;
+  test('cacheBookForServing 呼叫 elinkbook/reader_resources_cache 的 cacheBookForServing', () async {
+    MethodCall? captured;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+      const MethodChannel('elinkbook/reader_resources_cache'),
+      (call) async {
+        captured = call;
+        return '/fake/cache/dir/current.epub';
+      },
+    );
 
-    setUp(() async {
-      tempDir = await Directory.systemTemp.createTemp('foliate_native_bridge_test_');
-      PathProviderPlatform.instance =
-          FakePathProviderPlatform('${tempDir.path}/files');
-      await Directory('${tempDir.path}/files').create(recursive: true);
-    });
+    // 使用 content:// URI 測試（不經過檔案存在檢查，直接呼叫原生端）
+    final result = await cacheBookForServing('content://com.example.provider/book.epub', 'test_instance');
 
-    tearDown(() async {
-      await tempDir.delete(recursive: true);
-    });
-
-    test('允許目錄內的真實檔案，正確讀回位元組內容', () async {
-      final file = File('${tempDir.path}/files/sample.epub');
-      await file.writeAsBytes([9, 8, 7]);
-
-      final bytes = await loadBookBytes(file.path);
-
-      expect(bytes, [9, 8, 7]);
-    });
-
-    test('允許目錄之外的路徑，回傳 null（不讀取內容）', () async {
-      final outsideDir = await Directory.systemTemp.createTemp('outside_');
-      addTearDown(() => outsideDir.delete(recursive: true));
-      final file = File('${outsideDir.path}/secret.epub');
-      await file.writeAsBytes([1]);
-
-      final bytes = await loadBookBytes(file.path);
-
-      expect(bytes, isNull);
-    });
-
-    test('檔案不存在時回傳 null', () async {
-      final bytes = await loadBookBytes('${tempDir.path}/files/missing.epub');
-      expect(bytes, isNull);
-    });
+    expect(captured!.method, 'cacheBookForServing');
+    expect(captured!.arguments, {'uri': 'content://com.example.provider/book.epub', 'instanceId': 'test_instance'});
+    expect(result, '/fake/cache/dir/current.epub');
   });
 }
