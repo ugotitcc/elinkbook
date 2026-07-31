@@ -158,14 +158,16 @@
 
 ## Issue 8：大型 EPUB（約 200MB+）開書時因整檔載入記憶體導致 `OutOfMemoryError` 閃退
 
-**Status:** 🔍 實作完成，code review 兩輪已跑完，剩一項待 Issue 9 排除後才能完整關閉。原生 `WebViewAssetLoader.InternalStoragePathHandler` 串流服務已實作（Kotlin `cacheBookForServing` + Dart `cacheBookForServing()` + `FoliateEpubReaderView` 改用 `webViewAssetLoader`），`loadBookBytes()` 已移除。額外修復 `flutter_inappwebview_android-1.1.3` `AndroidInternalStoragePathHandler.toMap()` 無限遞迴 bug（本地 patch：`app/patches/flutter_inappwebview_android/`）。`flutter analyze` 乾淨，`flutter test` 713/713 通過。真機 217MB EPUB 開書不再 OOM。
+**Status:** ✅ 實作完成，code review 兩輪已跑完並全數關閉（Issue 9 阻擋已排除）。原生 `WebViewAssetLoader.InternalStoragePathHandler` 串流服務已實作（Kotlin `cacheBookForServing` + Dart `cacheBookForServing()` + `FoliateEpubReaderView` 改用 `webViewAssetLoader`），`loadBookBytes()` 已移除。額外修復 `flutter_inappwebview_android-1.1.3` `AndroidInternalStoragePathHandler.toMap()` 無限遞迴 bug（本地 patch：`app/patches/flutter_inappwebview_android/`）。`flutter analyze` 乾淨，`flutter test` 713/713 通過。真機 217MB EPUB 開書不再 OOM。
 
 Code review 過程（完整報告 `reviews/review-issue-8.md`，兩輪）：
 - **一審**（`83141d4..8c8a121`）找出 7 項 Important：#1 複製未完成時 dispose 導致快取目錄洩漏、#2 `flutter analyze` 因 `app/patches/` 不乾淨、#3 `app/patches/flutter_inappwebview_android/` 內有完整多餘的重複複本、#4 ADR 0018「不需要 fork/patch 套件」論述已被實作推翻、#5 計劃 Task 5 Step 2 大型檔案整合測試完全沒做、#6 `cacheBookForServingFn` 建構參數是死碼、#7 缺 `mounted` 守衛/dispose 競態單元測試。
 - **二審**（`8c8a121..a8c8140`）核實：#1-4、#6 已修正，#7 部分修正（新增測試斷言薄弱，已知但非阻塞），**#5 仍未修正**。
 - **補齊 #5**（commit `670a03e`）：新增 `integration_test`，測試當下動態組出實體大小固定 30MB 的合法 EPUB（`archive` 套件 dev_dependency，`CompressionType.none` 確保填充內容大小如實反映），驗證 `FoliateEpubReaderView` 能透過原生 `WebViewAssetLoader` 串流路徑正確開啟大檔案。已用獨立 Dart 腳本 + Python `zipfile.testzip()` 交叉驗證產出的 EPUB 結構完全合法（CRC32 全過、`mimetype` 為首個未壓縮 entry）。**真機（`3CEF42ECD491687`）目前跑這項新測試會失敗**（`Failed to fetch`／逾時），但同一裝置上完全未改動的既有基準測試（`sample.epub`）也重現一模一樣的失敗現象，且與下方 **Issue 9**（`needs-triage`，與分支無關的既有 WebView flakiness）描述逐字吻合，已用 `pm clear`／重啟 adb server 排除本機環境臆測原因——判定為 Issue 9 既有缺陷所致，非本次新增測試的邏輯錯誤。
 
-**待辦：** Issue 8 本身邏輯已完整實作並經兩輪審查修正；`Important #5` 的真機乾淨通過證據需等 Issue 9 排除後補齊，屆時一併關閉本 Issue、送出 PR。
+**Issue 9 排除後的真機驗證（2026-08-01）：** `/diagnose` 找到 Issue 9「完全逾時」失敗模式的根因（見下方 Issue 9 段落——`integration_test` 預設 `framePolicy` 不會在 `_cacheBook()` 這類非同步 `setState()` 後自動畫格），已在 `app/integration_test/flutter_test_config.dart` 全域修正。修正後 `foliate_epub_reader_view_test.dart` 全套（含本 Issue 新增的大型檔案測試）連續兩次真機執行皆為 9/10 通過（唯一失敗是既有、無關的 FXL 逾時問題），`content_uri_acceptance_test.dart` 亦通過。`Important #5` 至此完整關閉，證據不再只是人工真機測試。
+
+**待辦：** 無——Issue 8 邏輯與測試皆已完整實作、兩輪審查修正、真機驗證通過，可送出 PR。
 
 **發現時機／方式：** 2026-07-31，Issue 3 真機測試階段人類回報「開啟 `tmp/膽大黨10.epub`（正常 FXL 漫畫）會閃退，但 `tmp/一弦定音.epub`（Issue 1/2 一路使用的測試書）沒事」。由 Claude Code 直接 `adb -s 3CEF42ECD491687 shell dumpsys dropbox --print` 從真機拉出 6 筆真實當機記錄查證，非二手轉述，逐一交叉比對程式碼確認根因，詳見 `tmp/epic-20/issue3-implementation-review.md`。**已確認與 Issue 3 本身的 `spread` attribute 邏輯完全無關**（Issue 3 分支未觸碰任何 `.kt` 檔案／`foliate_native_bridge.dart`）。
 
@@ -205,7 +207,7 @@ java.lang.OutOfMemoryError: Failed to allocate a 219210408 byte allocation with 
 
 ## Issue 9：`FoliateEpubReaderView` 開書偶發 `onError('Failed to fetch')`／`onLayoutResolved` 逾時，與分支無關的既有問題
 
-**Status:** needs-triage
+**Status:** ✅ 根因已確認並修正（`/diagnose`，2026-08-01，見下方「根因與修正」）。
 
 **發現時機／方式：** 2026-07-31，Issue 5 程式碼審查回應階段，於真機（`3CEF42ECD491687`）執行 `flutter test integration_test/foliate_epub_reader_view_test.dart -d 3CEF42ECD491687` 驗證審查回應的測試修正時發現。
 
@@ -229,3 +231,21 @@ java.lang.OutOfMemoryError: Failed to allocate a 219210408 byte allocation with 
 **建議下一步：** 不阻塞 Issue 5／Issue 6／Issue 7 的既定工作——三者皆已個別確認過這類 WebView 資源載入路徑在人工真機驗證時可正常運作。建議累積更多重現樣本（不同裝置、不同時間點）後再評估是否立案 `/diagnose`。
 
 **2026-08-01 更新：** Issue 8 補齊 Important #5（大型 EPUB 串流整合測試，commit `670a03e`）時在同一台裝置（`3CEF42ECD491687`）再次重現，兩種既有記錄的失敗現象（`Failed to fetch`／逾時）都出現，`pm clear`／重啟 adb server 皆未能排除。Issue 8 目前仍缺這一項真機乾淨通過的自動化證據、卡在本 Issue 身上，提高了排查優先度。
+
+---
+
+### 根因與修正（`/diagnose`，2026-08-01）
+
+**Feedback loop：** `flutter test integration_test/foliate_epub_reader_view_test.dart -d 3CEF42ECD491687 --plain-name "<test>"`，逾時失敗模式重現率 100%（連續多次）。
+
+**根因（已確認，「逾時」失敗模式）：** `IntegrationTestWidgetsFlutterBinding`（繼承自 Flutter SDK 的 `LiveTestWidgetsFlutterBinding`）預設 `framePolicy` 是 `fadePointers`——這個模式下，`handleBeginFrame()` 只在 `_expectingFrame`（測試明確呼叫過 `pump()`）或 `_viewNeedsPaint`（指標活動觸發除錯用的十字準心淡出效果）為真時才真正執行畫格（`flutter_test/lib/src/binding.dart:2453,2489-2503`）；單純的 `setState()` 不會自動觸發下一次畫格。
+
+`FoliateEpubReaderView`（Issue 8 起）在 `initState()` 內非同步完成 `_cacheBook()` 後才 `setState()` 掛載 `InAppWebView`；而既有整合測試的寫法一律是 `pumpWidget()` 後直接 `await completer.future.timeout(...)`，中間沒有任何 `pump()` 呼叫——導致 `_cacheBook()` 完成那次 `setState()` 永遠等不到下一次畫格，`InAppWebView` 從未真正掛載，10 秒後測試自己的 `timeout()` 觸發 `TimeoutException`。這條路徑只在 Issue 8 之後（`FoliateEpubReaderView` 新增非同步前置快取步驟）才會踩到，是 Issue 8 引入的一個新的測試環境層級問題（不影響真實 App 執行——真實 App 用的是 `WidgetsFlutterBinding`，畫格排程正常，不受此限制）。
+
+**驗證：** 在 `_cacheBook()`／`build()`／`_shouldInterceptRequest`／WebView `onConsoleMessage`／JS `fetch()` 加時間戳記診斷 log 後，2/2 次完整重現「`setState()` 執行完成、之後永遠沒有下一次 `build()`」；將 `binding.framePolicy` 改為 `LiveTestWidgetsFlutterBindingFramePolicy.fullyLive` 後，連續 3/3 次單一測試通過，且 log 顯示 `InAppWebView` 正常掛載、`/book/current.epub` 經原生 `WebViewAssetLoader` fetch 成功（`status=200`，順便驗證 Issue 8 的串流實作本身正確）。全檔案（10 項測試）重跑兩次皆為 9/10 通過，唯一失敗是既有、無關的 FXL 逾時問題（見下方）。
+
+**「Failed to fetch」失敗模式：** 未能取得同等直接的根因證據——本次以完整診斷 log 重現的兩次皆是「逾時」模式，未再次重現 `Failed to fetch`。套用修正後的多次真機重跑（含全檔案兩輪）也未再出現 `Failed to fetch`，不排除是同一 framePolicy 問題在不同時序下的另一種表現（例如某次意外的畫格恰好讓 `InAppWebView` 掛載到一半、JS 在尚未完全就緒的狀態下執行），但此推測未經直接驗證，若未來又重現需另外排查。
+
+**修正：** 新增 `app/integration_test/flutter_test_config.dart`（Flutter 標準的全域整合測試設定機制，`flutter test integration_test/` 執行任何測試前都會先跑這裡的 `testExecutable`），將 `framePolicy` 全域設為 `fullyLive`，對 `integration_test/` 目錄下所有測試檔案一次性生效，不需要逐檔修改。另外一併訂正 `foliate_epub_reader_view_test.dart` 「PathHandler 路徑穿越防護」測試一個過期的斷言字串（Issue 8 把驗證失敗訊息從舊版「允許的目錄範圍」改成「無法快取書籍檔案」，這個既有測試先前未同步更新——安全行為本身沒問題，純粹是斷言文字過期）。
+
+**FXL 逾時（獨立、未修正）：** 全檔案重跑仍有「開啟定樣式（FXL）範例 EPUB，onLayoutResolved 回報 isFixedLayout 為 true」1 項失敗（`isFixedLayout` 收到 `false`），與 `tmp/epic-20/handoff-epic-20-issue-8.md` 記錄的既有、非 Issue 8／Issue 9 範圍問題一致，需另立工單處理。

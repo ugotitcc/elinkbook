@@ -202,7 +202,11 @@ void main() {
 
     expect(rendered, isFalse,
         reason: 'PathHandler 的目錄邊界檢查應該拒絕這個請求，不應該渲染成功');
-    expect(errorMessage, contains('允許的目錄範圍'));
+    // Issue 8 起，`cacheBookForServing()` 的目錄邊界檢查失敗時回傳 null，
+    // `_cacheBook()` 統一轉為通用訊息「無法快取書籍檔案」（不再是舊版
+    // Dart shouldInterceptRequest 攔截時的「允許的目錄範圍」字樣），見
+    // foliate_epub_reader_view.dart 的 _cacheBook()。
+    expect(errorMessage, '無法快取書籍檔案');
   });
 
   testWidgets(
