@@ -153,3 +153,36 @@
 **單元測試要求：** 無新增（驗證性質）。
 
 **驗收標準：** 比照 `epic-17` Issue 9 驗收標準，全數通過且無 Regression。
+
+---
+
+## Issue 8：大型 EPUB（約 200MB+）開書時因整檔載入記憶體導致 `OutOfMemoryError` 閃退
+
+**Status:** needs-triage
+
+**發現時機／方式：** 2026-07-31，Issue 3 真機測試階段人類回報「開啟 `tmp/膽大黨10.epub`（正常 FXL 漫畫）會閃退，但 `tmp/一弦定音.epub`（Issue 1/2 一路使用的測試書）沒事」。由 Claude Code 直接 `adb -s 3CEF42ECD491687 shell dumpsys dropbox --print` 從真機拉出 6 筆真實當機記錄查證，非二手轉述，逐一交叉比對程式碼確認根因，詳見 `tmp/epic-20/issue3-implementation-review.md`。**已確認與 Issue 3 本身的 `spread` attribute 邏輯完全無關**（Issue 3 分支未觸碰任何 `.kt` 檔案／`foliate_native_bridge.dart`）。
+
+**根因（已用真機 logcat + 原始碼交叉查證，非推測）：**
+
+```
+java.lang.OutOfMemoryError: Failed to allocate a 219210408 byte allocation with 25165824 free bytes and 41MB until OOM, target footprint 249790736, growth limit 268435456
+	at java.util.Arrays.copyOf(Arrays.java:4276)
+	at java.io.ByteArrayOutputStream.toByteArray(ByteArrayOutputStream.java:211)
+	at kotlin.io.ByteStreamsKt.readBytes(IOStreams.kt:152)
+	at cc.ugotit.elinkbook.ReaderResourceChannel.onMethodCall(ReaderResourceChannel.kt:58)
+```
+
+`FoliateEpubReaderView` 開書時，`loadBookBytes()`（`app/lib/reader/foliate_native_bridge.dart:113-124`）依 `filePath` 是否為 `content://` URI 分派：`content://` 走 `ReaderResourceChannel.kt:58` 的 `readContentUri`（`context.contentResolver.openInputStream(...).use { it.readBytes() }`）；本機檔案路徑走 Dart `File.readAsBytes()`（`foliate_native_bridge.dart:124`）。兩者皆是**整份檔案一次性讀進單一 byte array**，供 `InAppWebView.shouldInterceptRequest` 攔截 `/book/current.epub` 後整包回傳——這是既有、經查證的設計（程式碼註解已明文記載：`main.js` 的 `view.js` `makeBook()` 對這個 URL 只做一次性 `fetch()`、不發 HTTP Range 請求，見該函式 doc comment），不是本次新發現的程式錯誤，而是**檔案大小超出既有假設**首次被真實踩到。
+
+**與檔案大小直接對應**：
+- `tmp/膽大黨10.epub` = 217,237,457 bytes → 崩潰時嘗試配置 219,210,408 bytes，超過 App heap 上限（`growth limit 268435456` ≈ 256MB，扣掉既有佔用後不足）
+- `tmp/一弦定音.epub` = 76,791,360 bytes → 遠低於上限，故 Issue 1/2 全程未觸發
+
+**影響範圍**：`loadBookBytes()`／`_shouldInterceptRequest` 是 `FoliateEpubReaderView` 通用機制，**不分 FXL／流式**，任何經此 widget 開啟（epic-20 Issue 2 起已是全部 EPUB 的唯一路徑）、檔案大小逼近或超過 App heap 上限的書籍皆會受影響，非 FXL 專屬問題。
+
+**待決事項（需人類決定修復方向，故標記 `needs-triage` 而非 `ready-for-agent`）：**
+1. 是否改為串流／分塊讀取（例如 `WebResourceResponse` 直接接 `InputStream` 而非先讀完整個 `ByteArray`，若 `flutter_inappwebview`／Android `WebResourceResponse` API 支援的話）——徹底解法，但需評估對 `content://` SAF 來源與本機檔案兩種情況是否都可行，以及是否波及 `view.js` `makeBook()` 「一次性 fetch」的既有假設（可能需要上游 `readest/foliate-js` 支援 Range，而該專案是「不修改釘定版本」的既有限制，需先查證是否可行）。
+2. 或先設一個保守的檔案大小警戒值，超過時提示使用者「檔案過大可能無法開啟」而非讓 App 無聲閃退（治標，成本低，可作為 1 的過渡方案）。
+3. 或評估提高 App 的 `largeHeap` manifest 設定（`android:largeHeap="true"`）暫時緩解（治標，非長期解法，且部分裝置可能仍不夠）。
+
+**建議下一步：** 若優先處理，建議先跑 `/diagnose` 或 Discovery 階段確認修復方向（技術可行性），再視結果決定是否需要新 ADR（若牽涉 `readest/foliate-js` Range 支援評估）或直接進入 Scrum Master 拆工單。**建議與 Issue 7（真機端到端驗證）之間建立相依關係**：Issue 7 的真機驗證應涵蓋至少一本大型（150MB+）真實書籍，若本 Issue 未修復，Issue 7 驗收時須明確記錄「大型檔案已知限制」而非略過不提。
