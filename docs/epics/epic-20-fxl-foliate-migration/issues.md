@@ -98,9 +98,9 @@
 
 ---
 
-## Issue 5：移除 `EpubReaderView.kt`／`readium-navigator` 依賴，`MainActivity` 改回 `FlutterActivity`
+## Issue 5：移除 `EpubReaderView.kt`／`readium-navigator` 依賴，`MainActivity` 移除 Readium Fragment 依賴
 
-**Status:** 實作計劃已撰寫（`plans/plan-issue-5.md`），待計劃審查通過後開始執行。計劃審查前查證發現文件更新範圍比本 issue 原始描述更大——不只「`MainActivity` 為何是 `FlutterFragmentActivity`」段落，`CLAUDE.md`／`CONTEXT.md`（非 `docs/CONTEXT.md`，路徑已訂正）皆有多處描述雙引擎 FXL 架構的內容需一併訂正，詳見計劃「已查證的關鍵技術事實」。
+**Status:** ✅ 程式碼實作完成，程式碼審查通過（`tmp/epic-20/issue5_code_review_report.md`，With fixes，已依審查回應修正 `app/integration_test/` 7 個檔案的失效引用、補齊 Task 1 Step 3 過時說明文字訂正、修正 `CLAUDE.md` MainActivity 文件缺口、訂正本欄位測試數字）。`flutter analyze` 乾淨（0 issues）、`flutter test`（`app/test/`）713/713 通過（較 Issue 4 基準 733 減少 20，對應刪除的 `app/test/reader/epub_reader_view_test.dart`）、`./gradlew :app:compileDebugKotlin` 成功、`flutter build apk --debug` 成功。真機 APK 已安裝至 `3CEF42ECD491687`，待人類執行完整回歸測試後結案。`MainActivity` 因 `registerForActivityResult`（FolderPicker 需要）保留 `FlutterFragmentActivity`（與原計劃不同，但功能上必要）。審查回應真機測試發現 `FoliateEpubReaderView` 的 `Failed to fetch` 間歇性 WebView 資源載入失敗，已核實在 `main`（`a7366a6`，本工單改動前）同樣可重現，非本工單迴歸，不阻塞結案，建議另立 Issue／Bug 追蹤。
 
 **依賴：** Issue 4（確認 `reader_screen.dart` 不再有任何路徑建構 `EpubReaderView`）。
 
@@ -109,10 +109,10 @@
 **範圍：**
 1. 刪除 `app/android/app/src/main/kotlin/cc/ugotit/elinkbook/EpubReaderView.kt`／`EpubReaderViewFactory.kt`、`app/lib/reader/epub_reader_view.dart`、`app/test/reader/epub_reader_view_test.dart`。
 2. `app/android/app/build.gradle.kts` 移除 `org.readium.kotlin-toolkit:readium-navigator:3.3.0`（**保留** `readium-shared`／`readium-streamer`，供 `BookMetadataChannel.kt` 使用，見 ADR 0017 決策 2）。
-3. `MainActivity.kt`：`FlutterFragmentActivity` 改回 `FlutterActivity`；移除 `EpubNavigatorFragment` 相關 import 與程序還原邏輯（`:60-75`）；`configureFlutterEngine()` 移除 `EpubReaderView` 的 `PlatformView` 類型字串註冊。
-4. `docs/CONTEXT.md`／`CLAUDE.md`「`MainActivity` 為何是 `FlutterFragmentActivity`」段落同步更新或移除（該段落說明的理由已不成立）。
+3. `MainActivity.kt`：移除 `EpubNavigatorFragment` 相關 import 與處理邏輯、`configureFlutterEngine()` 移除 `EpubReaderView` 的 `PlatformView` 類型字串註冊。`MainActivity` 因 `registerForActivityResult`（FolderPicker 需要）保留 `FlutterFragmentActivity`。
+4. `CLAUDE.md`／`CONTEXT.md`／`AGENTS.md` 同步更新（移除對已刪除程式碼的引用、更正不成立的技術事實陳述）。
 
-**單元測試要求：** 無新增（純刪除/簡化），確保 `flutter test`／`flutter analyze`／`./gradlew :app:compileDebugKotlin` 全數通過，無殘留的失效 import 或未使用程式碼。
+**單元測試要求：** 無新增（純刪除/簡化），`flutter test`／`flutter analyze`／`./gradlew :app:compileDebugKotlin` 全數通過。
 
 **驗收標準：** 真機完整回歸測試（開書、翻頁、雙頁、書籤、目錄、進度、劃線/備註〔限流式書籍〕、版面設定）皆正常；`app-debug.apk` 建置成功且體積因移除 `readium-navigator` 而縮小（觀察性質，非硬性門檻）。
 

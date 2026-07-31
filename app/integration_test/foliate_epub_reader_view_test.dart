@@ -11,9 +11,12 @@ import 'package:elinkbook/reader/epub_text_align.dart';
 import 'package:elinkbook/reader/foliate_epub_reader_view.dart';
 import 'package:elinkbook/reader/writing_mode.dart';
 
+/// Epic 20 Issue 5：EpubReaderView（Readium）刪除後，原本只在（已刪除的）
+/// epub_reader_view_test.dart 驗證的兩個場景（毀損檔案偵測、FXL
+/// isFixedLayout=true 回報）改到這裡沿用 FoliateEpubReaderView 驗證，避免
+/// EpubReaderView 類別刪除連帶讓這兩項行為的自動化涵蓋消失。
+
 /// 把 Flutter asset 複製為裝置暫存目錄中的真實檔案，回傳其絕對路徑。
-/// 比照 app/integration_test/epub_reader_view_test.dart 既有的
-/// _stageAssetAsFile 手法。
 Future<String> _stageAssetAsFile(String assetPath, String fileName) async {
   final bytes = await rootBundle.load(assetPath);
   final tempDir = await getTemporaryDirectory();
@@ -306,5 +309,81 @@ void main() {
 
     expect(errorMessage, isNull,
         reason: '套用完整版面偏好不應觸發 onError');
+  });
+
+  testWidgets('開啟內容已損毀的 EPUB 檔案（合法路徑但非合法 zip）觸發 onError',
+      (tester) async {
+    // 檔案存在且落在允許目錄內，但內容不是合法的 EPUB（甚至不是合法的
+    // zip）——與「檔案不存在」的測試案例分屬不同的失敗分支，驗證的是
+    // 解析階段（而非路徑驗證階段）的 onError 觸發路徑。
+    final tempDir = await getTemporaryDirectory();
+    final corruptedFile = File(
+        '${tempDir.path}/foliate_corrupted_${DateTime.now().millisecondsSinceEpoch}.epub');
+    await corruptedFile.writeAsBytes(
+        List<int>.generate(256, (i) => i % 256), flush: true);
+    addTearDown(() async {
+      if (await corruptedFile.exists()) await corruptedFile.delete();
+    });
+
+    final completer = Completer<void>();
+    var rendered = false;
+    String? errorMessage;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: FoliateEpubReaderView(
+          filePath: corruptedFile.path,
+          onPageRendered: () {
+            rendered = true;
+            if (!completer.isCompleted) completer.complete();
+          },
+          onError: (message) {
+            errorMessage = message;
+            if (!completer.isCompleted) completer.complete();
+          },
+        ),
+      ),
+    );
+
+    await completer.future.timeout(const Duration(seconds: 10));
+    await tester.pumpAndSettle();
+
+    expect(errorMessage, isNotNull);
+    expect(rendered, isFalse);
+  });
+
+  testWidgets('開啟定樣式（FXL）範例 EPUB，onLayoutResolved 回報 isFixedLayout 為 true',
+      (tester) async {
+    final samplePath = await _stageAssetAsFile(
+        'test/fixtures/sample_fixed_layout.epub', 'foliate_layout_fixed.epub');
+    addTearDown(() async {
+      final file = File(samplePath);
+      if (await file.exists()) await file.delete();
+    });
+
+    final completer = Completer<void>();
+    EpubLayoutInfo? layoutInfo;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: FoliateEpubReaderView(
+          filePath: samplePath,
+          onPageRendered: () {},
+          onError: (message) {
+            if (!completer.isCompleted) completer.complete();
+          },
+          onLayoutResolved: (info) {
+            layoutInfo = info;
+            if (!completer.isCompleted) completer.complete();
+          },
+        ),
+      ),
+    );
+
+    await completer.future.timeout(const Duration(seconds: 10));
+    await tester.pumpAndSettle();
+
+    expect(layoutInfo, isNotNull);
+    expect(layoutInfo!.isFixedLayout, isTrue);
   });
 }

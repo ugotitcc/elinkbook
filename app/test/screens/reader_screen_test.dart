@@ -6,7 +6,6 @@ import 'package:elinkbook/reader/book_reader_prefs.dart';
 import 'package:elinkbook/reader/column_mode.dart';
 import 'package:elinkbook/reader/dual_page_direction.dart';
 import 'package:elinkbook/reader/dual_page_mode.dart';
-import 'package:elinkbook/reader/epub_reader_view.dart';
 import 'package:elinkbook/reader/page_turn_mode.dart';
 import 'package:elinkbook/reader/pdf_crop_mode.dart';
 import 'package:elinkbook/reader/pdf_crop_rect.dart';
@@ -3434,7 +3433,6 @@ void main() {
       await tester.pump();
 
       expect(find.byType(FoliateEpubReaderView), findsOneWidget);
-      expect(find.byType(EpubReaderView), findsNothing);
     },
   );
 

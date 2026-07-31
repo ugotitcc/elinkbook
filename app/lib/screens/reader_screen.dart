@@ -10,7 +10,6 @@ import '../reader/book_reader_prefs.dart';
 import '../reader/epub_decoration.dart';
 import '../reader/epub_page_estimator.dart';
 import '../reader/epub_position_info.dart';
-import '../reader/epub_reader_view.dart';
 import '../reader/epub_selection_info.dart';
 import '../reader/foliate_epub_reader_view.dart';
 import '../library/library_repository.dart';
@@ -100,8 +99,9 @@ class ReaderScreen extends StatefulWidget {
   /// Issue 2）。`null` 代表既有書籍尚未判斷過——此時若提供
   /// [libraryRepository]，會一次性呼叫 [LibraryRepository.detectAndCacheEpubLayout]
   /// 判斷並回寫資料庫；若未提供 [libraryRepository]（例如既有測試呼叫端），
-  /// 退回 Issue 3 之前的既有行為，一律視為固定版面、建構 [EpubReaderView]
-  /// （Readium），零回歸。非 EPUB 格式完全不受此欄位影響。
+  /// `_dispatchedIsFixedLayout` 直接沿用這個 `null` 值。EPUB 一律建構
+  /// [FoliateEpubReaderView]（epic-20 Issue 2 起不再依此欄位分派 widget，
+  /// 只驅動 FXL 專屬 UI/chrome 語意），非 EPUB 格式完全不受此欄位影響。
   final bool? isFixedLayout;
 
   /// 供 [isFixedLayout] 為 `null` 時呼叫 [LibraryRepository.detectAndCacheEpubLayout]
@@ -231,10 +231,6 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   // helper（審查修正，見 Task 2 Step 4——不使用 as dynamic 跨 State 私有
   // 邊界呼叫，避免 release 混淆／tree-shaking 風險）。
   final _pdfReaderViewKey = GlobalKey<State<PdfReaderView>>();
-  // 用於呼叫 EpubReaderView.jumpToProgression(key, progression) 這個強型別
-  // static helper（Epic 5 Issue 3），比照 _pdfReaderViewKey 對 PDF 的既有
-  // 作法。
-  final _epubReaderViewKey = GlobalKey<State<EpubReaderView>>();
   // 用於呼叫 FoliateEpubReaderView 的強型別 static helper。epic-20 Issue 2
   // 起，所有 EPUB（FXL／流式）皆統一建構 FoliateEpubReaderView（見
   // _resolveEpubEngineDispatch／_buildBody），此 key 已是實際掛載的唯一
@@ -285,13 +281,15 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     });
   }
 
-  /// 解析 EPUB 該用哪個渲染引擎（epic-17-epub-render-migration Issue 3）。
+  /// 解析 `_dispatchedIsFixedLayout`（EPUB 的 FXL/流式 UI 語意判斷，epic-17
+  /// Issue 3 引入；epic-20 Issue 2 起不再決定要建構哪個 widget——EPUB 一律
+  /// 建構 [FoliateEpubReaderView]，本方法只決定單頁/雙頁等 UI/chrome 語意）。
   /// `widget.isFixedLayout` 非 null 時直接採用；為 null（既有書籍尚未
   /// 判斷過）時，若提供 [ReaderScreen.libraryRepository]則非同步呼叫
   /// `detectAndCacheEpubLayout()` 判斷並回寫資料庫，期間 `_dispatchedIsFixedLayout`
   /// 維持 null（畫面顯示載入中指示器，見 _buildBody 的 gating 條件）；未
-  /// 提供時同步退回既有行為（視為 FXL，建構 EpubReaderView），確保既有
-  /// 測試呼叫端零回歸。非 EPUB 格式完全不受影響（`_dispatchedIsFixedLayout`
+  /// 提供時同步退回既有行為（`_dispatchedIsFixedLayout` 視為 true），確保
+  /// 既有測試呼叫端零回歸。非 EPUB 格式完全不受影響（`_dispatchedIsFixedLayout`
   /// 維持 null 但 `_buildBody` 的 gating 條件只在 format == epub 時才要求
   /// 它非 null）。
   void _resolveEpubEngineDispatch() {
@@ -309,8 +307,10 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     final repository = widget.libraryRepository;
     if (repository == null) {
       // 既有測試/呼叫端未提供 libraryRepository 時，退回 Issue 3 之前的
-      // 既有行為——一律視為固定版面（EpubReaderView／Readium），零回歸
-      // （見 docs/epics/epic-17-epub-render-migration/spec.md「已知限制」）。
+      // 既有行為——_dispatchedIsFixedLayout 一律視為 true，零回歸（EPUB
+      // 一律建構 FoliateEpubReaderView，此處只影響 FXL 專屬 UI/chrome
+      // 語意，不影響要建構哪個 widget；見
+      // docs/epics/epic-17-epub-render-migration/spec.md「已知限制」）。
       _dispatchedIsFixedLayout = true;
       return;
     }
@@ -789,66 +789,10 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     });
   }
 
+  /// `FoliateEpubReaderView` 專屬的 onLayoutResolved 處理。
   /// 【已知、可接受的行為】把自動偵測結果寫回 [_autoDetectedWritingMode]
   /// 後，若當下沒有 writingModeOverride，[_resolved] 的 writingMode 會從 null
-  /// 變成非 null，驅動 EpubReaderView 以非 null 值重建；EpubReaderView 的
-  /// didUpdateWidget 偵測到「null → 非 null」的變化時，會多送一次
-  /// setPreferences 給原生端，等於把 Readium 剛剛自動判斷好的值重新套用
-  /// 一次。這是多餘但無害的呼叫（見 EpubReaderView.kt 的 setPreferences
-  /// 註解——currentPreferences.plus() 合併語意，不會覆蓋其他已生效欄位），
-  /// 不特地加狀態去抑制它，避免為了避免一次無害的重複呼叫而增加複雜度。
-  // ignore: unused_element
-  void _handleLayoutResolved(EpubLayoutInfo info) {
-    if (!mounted) return;
-    setState(() {
-      // 當使用者透過「強制 FXL」手動設定 isFixedLayout=true 時，
-      // 覆蓋 native view 的異步回報（見 _resolveEpubEngineDispatch 註解）。
-      if (widget.isFixedLayout != true) {
-        _isFixedLayout = info.isFixedLayout;
-      }
-      _autoDetectedWritingMode = info.writingMode;
-      final loaded = _loaded;
-      if (loaded != null) {
-        _resolved = widget.prefsManager.resolve(
-          loaded,
-          autoDetectedWritingMode: info.writingMode,
-        );
-      }
-    });
-    // epic-5-toc-pagination Issue 4：目錄僅支援流式 EPUB（spec.md「範圍
-    // 界定」），FXL 不預取。目錄樹狀結構不會隨版面設定變動而改變（與頁碼
-    // 估算不同，見 _buildEpubFooter 的重算邏輯），理論上只需要抓取一次。
-    //
-    // 【審查修正，防禦性保險】原生端 onLayoutResolved 目前的 pageReported
-    // 一次性 latch（見 EpubReaderView.kt openBook()/onPageLoaded()）與
-    // MainActivity 的 configChanges 宣告，已確保本方法在單次開書期間只會
-    // 被呼叫一次——旋轉螢幕、調整字型大小都不會讓它再次觸發，故目前並不
-    // 存在「每次版面重排都重複抓取目錄」的實際效能問題。加上
-    // `_tocEntries.isEmpty` 這道檢查純粹是把「只抓取一次」這句話從隱含假設
-    // 變成程式碼本身強制執行的行為，零成本、無副作用；即使原生端的一次性
-    // 觸發機制未來被改動，這裡也不會退化成重複請求。
-    if (!info.isFixedLayout && _tocEntries.isEmpty && !_tocLoaded) {
-      EpubReaderView.loadTableOfContents(_epubReaderViewKey).then((entries) {
-        if (!mounted) return;
-        setState(() {
-          _tocEntries = entries;
-          _tocLoaded = true;
-        });
-      });
-    }
-    if (!info.isFixedLayout &&
-        !_annotationsLoaded &&
-        widget.highlightsRepository != null &&
-        widget.notesRepository != null) {
-      _annotationsLoaded = true;
-      _reloadAnnotationsAndRefreshDecorations();
-    }
-    if (info.isFixedLayout && widget.bookmarksRepository != null) {
-      _loadFxlBookmarks();
-    }
-  }
-
-  /// `FoliateEpubReaderView` 專屬的 onLayoutResolved 處理。
+  /// 變成非 null，驅動 `FoliateEpubReaderView` 以非 null 值重建。
   /// epic-17-epub-render-migration Issue 4 起，也設定
   /// `_autoDetectedWritingMode` 並重新計算 `_resolved`（比照
   /// `_handleLayoutResolved` 對應段落），讓「版面設定」按鈕能對流式書籍
@@ -899,17 +843,6 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       _annotationsLoaded = true;
       _reloadAnnotationsAndRefreshDecorations();
     }
-  }
-
-  /// 原生端背景計算全書字元數完成時觸發（Epic 5 Issue 3）：更新本地狀態
-  /// 驅動頁尾重新渲染，並持久化快取值——不 await，比照本類別其餘持久化
-  /// 呼叫的既有慣例（見 _handlePrefsChanged）。
-  // ignore: unused_element
-  void _handleCharacterCountReady(int totalCharacterCount) {
-    if (!mounted) return;
-    setState(() => _totalCharacterCount = totalCharacterCount);
-    _totalCharacterCountNotifier.value = totalCharacterCount;
-    widget.prefsManager.saveTotalCharacterCount(widget.bookId, totalCharacterCount);
   }
 
   /// FXL 一律不處理選取事件（design.md 決策 #7：劃線/備註排除 FXL）——
@@ -1849,7 +1782,6 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     switch (format) {
       case BookFormat.epub:
         // Epic 20 Issue 2：EPUB 一律透過 FoliateEpubReaderView 渲染。
-        // EpubReaderView（Readium）路徑保留但不再被建構（留待 Issue 5 清理）。
         // isFixedLayoutHint 將 widget.isFixedLayout 傳入，讓 main.js 的
         // isFixedLayoutHint 覆寫機制（ADR 0017 決策 4）生效。
         return FoliateEpubReaderView(
@@ -1925,27 +1857,19 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   }
 
   /// 熱區動作統一分派入口（epic-7-interaction Issue 4，Issue 5 擴充 EPUB
-  /// FXL 分支，epic-17-epub-render-migration Issue 5 擴充流式 EPUB 的
-  /// `FoliateEpubReaderView` 分支）：`previousPage`/`nextPage` 呼叫目前
-  /// 格式對應的既有換頁方法；`menu` 切換 [_chromeVisible]（沉浸模式）；
-  /// `none` 不做事。**`previousPage`/`nextPage` 刻意不影響
-  /// [_chromeVisible]**（design.md 決策 #14）。EPUB 分支的 `previousPage`/
-  /// `nextPage` 依 `_dispatchedIsFixedLayout` 分派：`true`（FXL，
-  /// `EpubReaderView`）呼叫 `EpubReaderView.previousPage`/`nextPage`；
-  /// `false`（流式，`FoliateEpubReaderView`）呼叫
-  /// `FoliateEpubReaderView.previousPage`/`nextPage`——兩者的 3×3 熱區皆是
-  /// Dart 端 `Stack` 疊加層，`onTap` 直接回呼 [onZoneAction]（見
-  /// `_buildNativeView()` 接線），不經過原生端判讀。`EpubReaderView` 既有的
-  /// `onZoneTapped`（cellIndex 回呼）是 epic-17-epub-render-migration 之前
-  /// 遺留的流式 EPUB via Readium 機制（原生 `InputListener` 座標換算），
-  /// post-epic-17 的分派邏輯下流式書籍一律改建構 `FoliateEpubReaderView`，
-  /// 這條舊路徑理論上不再被觸發，保留是避免不必要地改動
-  /// `EpubReaderView.kt`（本工單範圍外，見 issues.md Issue 5 描述「原生端
-  /// FoliateEpubReaderView.kt 完全不需要移植 NavZoneHitTester.cellIndex()
-  /// 或 InputListener 註冊邏輯」）。原生端 `MainActivity.dispatchKeyEvent()`
-  /// 攔截音量鍵後的回呼（epic-7-interaction Issue 7）：方向固定映射，不
-  /// 查詢 `_resolved!.navZoneActions`（design.md 決策 #19）——`up` 一律
-  /// 上一頁、`down` 一律下一頁。
+  /// FXL 分支）：`previousPage`/`nextPage` 呼叫目前格式對應的既有換頁方法；
+  /// `menu` 切換 [_chromeVisible]（沉浸模式）；`none` 不做事。
+  /// **`previousPage`/`nextPage` 刻意不影響 [_chromeVisible]**（design.md
+  /// 決策 #14）。EPUB 分支的 `previousPage`/`nextPage` 自 epic-20 Issue 2
+  /// 起，不論 FXL 或流式一律呼叫 `FoliateEpubReaderView.previousPage`/
+  /// `nextPage`——3×3 熱區是 Dart 端 `Stack` 疊加層，`onTap` 直接回呼
+  /// [onZoneAction]（見 `_buildNativeView()` 接線），不經過原生端判讀。
+  /// epic-20 Issue 5 已刪除的舊 `EpubReaderView.kt`／原生 `InputListener`
+  /// 座標換算機制與此無關，本方法從未依賴它。原生端
+  /// `MainActivity.dispatchKeyEvent()` 攔截音量鍵後的回呼
+  /// （epic-7-interaction Issue 7）：方向固定映射，不查詢
+  /// `_resolved!.navZoneActions`（design.md 決策 #19）——`up` 一律上一頁、
+  /// `down` 一律下一頁。
   Future<void> _handleVolumeKeyCall(MethodCall call) async {
     if (call.method != 'onVolumeKey') return;
     final args = call.arguments as Map<Object?, Object?>;

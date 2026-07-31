@@ -62,7 +62,6 @@ dependencies {
 
     implementation("org.readium.kotlin-toolkit:readium-shared:3.3.0")
     implementation("org.readium.kotlin-toolkit:readium-streamer:3.3.0")
-    implementation("org.readium.kotlin-toolkit:readium-navigator:3.3.0")
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
     implementation("androidx.fragment:fragment-ktx:1.8.9")

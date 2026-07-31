@@ -7,7 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:elinkbook/reader/epub_position_info.dart';
-import 'package:elinkbook/reader/epub_reader_view.dart';
+import 'package:elinkbook/reader/foliate_epub_reader_view.dart';
 import 'package:elinkbook/reader/zone_action.dart';
 
 Future<String> _stageAssetAsFile(String assetPath, String fileName) async {
@@ -36,11 +36,11 @@ void main() {
     String? errorMessage;
     final capturedActions = <ZoneAction>[];
     EpubPositionInfo? lastPosition;
-    final key = GlobalKey<State<EpubReaderView>>();
+    final key = GlobalKey<State<FoliateEpubReaderView>>();
 
     await tester.pumpWidget(
       MaterialApp(
-        home: EpubReaderView(
+        home: FoliateEpubReaderView(
           key: key,
           filePath: samplePath,
           onPageRendered: () {
@@ -61,14 +61,14 @@ void main() {
           onZoneAction: (action) {
             capturedActions.add(action);
             // 模擬 ReaderScreen._handleZoneAction 的實際分派邏輯（本測試直接
-            // 建構 EpubReaderView，不經過 ReaderScreen，故在此手動呼叫，讓
-            // 換頁動作真的觸發原生端渲染，而非只驗證回呼有沒有被呼叫）。
+            // 建構 FoliateEpubReaderView，不經過 ReaderScreen，故在此手動呼叫，
+            // 讓換頁動作真的觸發原生端渲染，而非只驗證回呼有沒有被呼叫）。
             switch (action) {
               case ZoneAction.previousPage:
-                EpubReaderView.previousPage(key);
+                FoliateEpubReaderView.previousPage(key);
                 break;
               case ZoneAction.nextPage:
-                EpubReaderView.nextPage(key);
+                FoliateEpubReaderView.nextPage(key);
                 break;
               case ZoneAction.menu:
               case ZoneAction.none:
