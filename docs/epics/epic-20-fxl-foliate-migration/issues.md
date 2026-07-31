@@ -98,9 +98,9 @@
 
 ---
 
-## Issue 5：移除 `EpubReaderView.kt`／`readium-navigator` 依賴，`MainActivity` 改回 `FlutterActivity`
+## Issue 5：移除 `EpubReaderView.kt`／`readium-navigator` 依賴，`MainActivity` 移除 Readium Fragment 依賴
 
-**Status:** ✅ 程式碼實作完成（3 commits：`cc1d5a5` Dart 端死碼刪除、`3e76c69` Kotlin 端與依賴移除、`4e9443e` 文件更新），`flutter analyze` 乾淨（0 issues）、`flutter test` 733/733 通過、`./gradlew :app:compileDebugKotlin` 成功、`flutter build apk --debug` 成功。真機 APK 已安裝至 `3CEF42ECD491687`，待人類執行完整回歸測試後結案。`MainActivity` 因 `registerForActivityResult`（FolderPicker 需要）保留 `FlutterFragmentActivity`（與原計劃不同，但功能上必要）。
+**Status:** ✅ 程式碼實作完成，程式碼審查通過（`tmp/epic-20/issue5_code_review_report.md`，With fixes，已依審查回應修正 `app/integration_test/` 7 個檔案的失效引用、補齊 Task 1 Step 3 過時說明文字訂正、修正 `CLAUDE.md` MainActivity 文件缺口、訂正本欄位測試數字）。`flutter analyze` 乾淨（0 issues）、`flutter test`（`app/test/`）713/713 通過（較 Issue 4 基準 733 減少 20，對應刪除的 `app/test/reader/epub_reader_view_test.dart`）、`./gradlew :app:compileDebugKotlin` 成功、`flutter build apk --debug` 成功。真機 APK 已安裝至 `3CEF42ECD491687`，待人類執行完整回歸測試後結案。`MainActivity` 因 `registerForActivityResult`（FolderPicker 需要）保留 `FlutterFragmentActivity`（與原計劃不同，但功能上必要）。審查回應真機測試發現 `FoliateEpubReaderView` 的 `Failed to fetch` 間歇性 WebView 資源載入失敗，已核實在 `main`（`a7366a6`，本工單改動前）同樣可重現，非本工單迴歸，不阻塞結案，建議另立 Issue／Bug 追蹤。
 
 **依賴：** Issue 4（確認 `reader_screen.dart` 不再有任何路徑建構 `EpubReaderView`）。
 

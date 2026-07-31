@@ -159,9 +159,11 @@ Issue 5 程式碼實作已完成，已死的 `EpubReaderView` 路徑與 `readium
 - `MainActivity.kt`：移除 EpubNavigatorFragment 相關 import 與處理邏輯、移除 `EpubReaderView` PlatformView 註冊；**保留 `FlutterFragmentActivity`**（因 `registerForActivityResult` 需要 FragmentActivity 支援，FolderPicker 功能必要）
 - 文件：`CLAUDE.md`（EpubReaderView 條目移除、FoliateEpubReaderView 改為所有 EPUB 使用、移除 FlutterFragmentActivity 段落、EPUB 技術棧改為單引擎架構）、`CONTEXT.md`（引擎分派判斷改為 UI 版面語意、Readium 內部版面渲染決策標註為 historical、FXL 換頁熱區改為 ZoneAction）、`AGENTS.md`（ReaderScreen 分派改為 FoliateEpubReaderView/PdfReaderView、Native 層移除 EpubReaderView.kt 條目、移除 EpubNavigatorFragment Gotcha）
 
-**測試結果：** `flutter test`（全專案）733/733 通過，`flutter analyze` 乾淨（0 issues），`./gradlew :app:compileDebugKotlin` 成功，`flutter build apk --debug` 成功。
+**測試結果：** `flutter test`（全專案）713/713 通過（較 Issue 4 基準 733 減少 20，對應刪除的 `epub_reader_view_test.dart`），`flutter analyze` 乾淨（0 issues），`./gradlew :app:compileDebugKotlin` 成功，`flutter build apk --debug` 成功。
 
 **真機驗證：** APK 已安裝至 `3CEF42ECD491687`，待人類執行完整回歸測試後正式結案。本工單為純刪除/簡化，不改變任何執行期行為。
+
+**程式碼審查回應（2026-07-31）：** 審查發現 `app/integration_test/` 下 7 個檔案（`content_uri_acceptance_test.dart`、`epub_dual_page_test.dart`、`epub_fxl_tap_zone_test.dart`、`epub_reader_view_test.dart`、`epub_stream_nav_zone_test.dart`、`library_screen_test.dart`、`reading_position_test.dart`）因引用已刪除的 `EpubReaderView` 導致 `flutter analyze` 實際上並非乾淨（Critical，計劃原查證範圍未涵蓋 `integration_test/`）。已逐一改為建構 `FoliateEpubReaderView`（其中 `epub_stream_nav_zone_test.dart` 因架構整個被取代——原生 `InputListener` 座標換算機制已不存在——改為直接刪除，已有 `foliate_stream_nav_zone_test.dart` 涵蓋等效行為；`epub_reader_view_test.dart` 亦刪除，其中「毀損檔案偵測」「FXL isFixedLayout=true 回報」兩項尚無其他測試涵蓋的場景改移植進 `foliate_epub_reader_view_test.dart`；`library_screen_test.dart` 第三項測試原本斷言「FXL 仍由 EpubReaderView 渲染、不受本 Issue 影響」，這個前提自 Issue 2 起已不成立，一併訂正為 `FoliateEpubReaderView`）。另訂正 Task 1 Step 3 原本跳過未做的 3 處過時說明文字、`reader_screen.dart` 兩處死碼刪除後遺留的斷句殘留、`CLAUDE.md` 因移除「MainActivity 為何是 FlutterFragmentActivity」段落但未補回新理由造成的文件缺口。`flutter analyze` 現況：0 issues；`flutter test`（僅涵蓋 `app/test/`，713/713 不受本輪 `app/integration_test/` 修正影響）維持不變。真機驗證：`foliate_epub_reader_view_test.dart` 等既有／改寫測試在裝置 `3CEF42ECD491687` 上出現與本工單改動無關、可在 `main`（`a7366a6`，Issue 5 改動前）穩定重現的既有 `Failed to fetch` 間歇性失敗（`FoliateEpubReaderView` 之 WebView 資源載入層級問題），已排除為本工單新增迴歸，建議另立 Issue／Bug 追蹤，不阻塞本工單。
 
 ## 相關佐證
 

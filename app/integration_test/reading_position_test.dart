@@ -10,7 +10,7 @@ import 'package:elinkbook/library/sqlite_library_repository.dart';
 import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/reader/book_reader_prefs_repository.dart';
-import 'package:elinkbook/reader/epub_reader_view.dart';
+import 'package:elinkbook/reader/foliate_epub_reader_view.dart';
 import 'package:elinkbook/reader/reader_prefs_manager_impl.dart';
 import 'package:elinkbook/reader/reading_position_repository.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
@@ -152,8 +152,8 @@ void main() {
     await _pumpUntilLoaded(tester);
 
     // 透過手勢翻頁數次（reflowable EPUB 使用原生手勢）。
-    final epubView = find.byType(EpubReaderView);
-    expect(epubView, findsOneWidget, reason: '應找到 EpubReaderView widget');
+    final epubView = find.byType(FoliateEpubReaderView);
+    expect(epubView, findsOneWidget, reason: '應找到 FoliateEpubReaderView widget');
     // 向左滑動翻到下一頁。
     await tester.drag(epubView, const Offset(-300, 0));
     await tester.pumpAndSettle(const Duration(seconds: 2));

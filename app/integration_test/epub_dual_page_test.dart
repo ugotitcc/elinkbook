@@ -7,7 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:elinkbook/reader/dual_page_mode.dart';
-import 'package:elinkbook/reader/epub_reader_view.dart';
+import 'package:elinkbook/reader/foliate_epub_reader_view.dart';
 
 Future<String> _stageAssetAsFile(String assetPath, String fileName) async {
   final bytes = await rootBundle.load(assetPath);
@@ -34,7 +34,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: EpubReaderView(
+        home: FoliateEpubReaderView(
           filePath: samplePath,
           dualPageMode: DualPageMode.always,
           onPageRendered: () {
@@ -67,7 +67,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: EpubReaderView(
+        home: FoliateEpubReaderView(
           filePath: samplePath,
           dualPageMode: DualPageMode.never,
           onPageRendered: () {

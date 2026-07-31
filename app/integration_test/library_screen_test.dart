@@ -12,7 +12,6 @@ import 'package:elinkbook/reader/book_reader_prefs_repository.dart';
 import 'package:elinkbook/reader/reader_prefs_manager_impl.dart';
 import 'package:elinkbook/reader/reading_position_repository.dart';
 import 'package:elinkbook/screens/library_screen.dart';
-import 'package:elinkbook/reader/epub_reader_view.dart';
 import 'package:elinkbook/reader/foliate_epub_reader_view.dart';
 
 const _metadataChannel = MethodChannel('elinkbook/book_metadata');
@@ -229,11 +228,11 @@ void main() {
       findsOneWidget,
       reason: '流式 EPUB 應由 FoliateEpubReaderView 渲染',
     );
-    expect(find.byType(EpubReaderView), findsNothing);
   });
 
   testWidgets(
-    '真實匯入一本 FXL（固定版面）EPUB 後點開，仍由既有 EpubReaderView（Readium）渲染，不受本 Issue 影響',
+    '真實匯入一本 FXL（固定版面）EPUB 後點開，同樣由 FoliateEpubReaderView 成功渲染出內容'
+    '（Epic 20 Issue 2 起 FXL 與流式皆統一走 FoliateEpubReaderView，不再分派到已刪除的 EpubReaderView）',
     (tester) async {
       final tempDir = await getTemporaryDirectory();
       final uniqueSuffix = DateTime.now().microsecondsSinceEpoch;
@@ -305,11 +304,10 @@ void main() {
 
       expect(find.byKey(const Key('reader_error_text')), findsNothing);
       expect(
-        find.byType(EpubReaderView),
+        find.byType(FoliateEpubReaderView),
         findsOneWidget,
-        reason: 'FXL 書籍應維持由既有 EpubReaderView（Readium）渲染，不受本 Issue 影響',
+        reason: 'FXL 書籍自 Epic 20 Issue 2 起同樣由 FoliateEpubReaderView 渲染',
       );
-      expect(find.byType(FoliateEpubReaderView), findsNothing);
     },
   );
 }

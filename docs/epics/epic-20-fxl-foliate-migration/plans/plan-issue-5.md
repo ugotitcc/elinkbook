@@ -59,17 +59,17 @@
 - Consumes：Issue 2/4 已確認的「EPUB 一律建構 FoliateEpubReaderView」現況
 - Produces：`reader_screen.dart` 不再 import／引用 `EpubReaderView`，`flutter analyze` 乾淨
 
-- [ ] **Step 1：刪除 `app/lib/reader/epub_reader_view.dart`、`app/test/reader/epub_reader_view_test.dart`**
+- [x] **Step 1：刪除 `app/lib/reader/epub_reader_view.dart`、`app/test/reader/epub_reader_view_test.dart`**
 
-- [ ] **Step 2：`reader_screen.dart` 刪除死碼**
+- [x] **Step 2：`reader_screen.dart` 刪除死碼**
 
 刪除 `_epubReaderViewKey` 欄位（`:237`）、`_handleLayoutResolved()`（`:800-902`）、`_handleCharacterCountReady()`（`:907-913`）三處，移除對應的 `import 'package:elinkbook/reader/epub_reader_view.dart';`。
 
-- [ ] **Step 3：`reader_screen.dart` 訂正過時說明文字**
+- [x] **Step 3：`reader_screen.dart` 訂正過時說明文字**
 
 依「已查證的關鍵技術事實」列出的三處（`widget.isFixedLayout` 欄位文件、`_resolveEpubEngineDispatch()` 文件、`_handleZoneAction()` 文件），移除對「建構 EpubReaderView」這個已不成立行為的描述，改為準確反映現況（`_dispatchedIsFixedLayout`／`_isFixedLayout` 現在只驅動 UI 版面語意，不再決定要建構哪個 widget）。順手 `grep -n "EpubReaderView" app/lib/screens/reader_screen.dart` 掃過其餘純歷史脈絡註解（例如「Epic 20 Issue 2：EPUB 一律使用 FoliateEpubReaderView」這類已經準確描述現況的既有註解），確認不需要更動、不誤刪有效的歷史脈絡說明。
 
-- [ ] **Step 4：`reader_screen_test.dart` 移除失效引用**
+- [x] **Step 4：`reader_screen_test.dart` 移除失效引用**
 
 移除 `import 'package:elinkbook/reader/epub_reader_view.dart';`（`:9`）與 `expect(find.byType(EpubReaderView), findsNothing);`（`:3437`，Issue 4 審查回應新增，`EpubReaderView` 類別刪除後這個斷言本身已無意義，直接移除該行，保留同一測試其餘斷言）。`grep -n "EpubReaderView" app/test/screens/reader_screen_test.dart` 掃過其餘純測試標題/註解內的歷史提及（例如 `:406`／`:429` 測試描述字串仍寫「建構 EpubReaderView」），訂正為準確描述（`FoliateEpubReaderView`）。
 
@@ -87,20 +87,20 @@
 - Consumes：無（純刪除）
 - Produces：`./gradlew :app:compileDebugKotlin` 成功，`app-debug.apk` 建置成功且體積縮小
 
-- [ ] **Step 1：刪除 `EpubReaderView.kt`、`EpubReaderViewFactory.kt`**
+- [x] **Step 1：刪除 `EpubReaderView.kt`、`EpubReaderViewFactory.kt`**
 
-- [ ] **Step 2：`build.gradle.kts` 移除 `readium-navigator` 依賴**
+- [x] **Step 2：`build.gradle.kts` 移除 `readium-navigator` 依賴**
 
 刪除 `:65` 這一行（`implementation("org.readium.kotlin-toolkit:readium-navigator:3.3.0")`），確認 `:63-64` 的 `readium-shared`／`readium-streamer` 保留不動。
 
-- [ ] **Step 3：`MainActivity.kt` 改回 `FlutterActivity`**
+- [x] **Step 3：`MainActivity.kt` 改回 `FlutterActivity`**——**實作偏離**：發現 `registerForActivityResult`（`epic-1` Issue 8 資料夾匯入功能）依賴 `FragmentActivity` 家族，`FlutterActivity` 不支援，若照字面執行會讓資料夾匯入功能消失（違反 Global Constraint「不改變執行期行為」），故保留 `class MainActivity : FlutterFragmentActivity()` 不變；僅移除下方 Readium Fragment 相關 import／`onCreate` override／PlatformView 註冊。
 
-- `class MainActivity : FlutterFragmentActivity()` → `class MainActivity : FlutterActivity()`
+- `class MainActivity : FlutterFragmentActivity()` → `class MainActivity : FlutterActivity()`（**未執行，見上方偏離說明**）
 - 移除 `import io.flutter.embedding.android.FlutterFragmentActivity`／`import androidx.fragment.app.commitNow`／`import org.readium.r2.navigator.epub.EpubNavigatorFragment`，新增 `import io.flutter.embedding.android.FlutterActivity`
 - 整個 `onCreate(savedInstanceState: Bundle?)` override 刪除（處理 `EpubNavigatorFragment` process-death 還原崩潰的既有防呆，隨 Fragment 機制一併移除；若刪除後 `Bundle` import 變成未使用，一併移除）
 - `configureFlutterEngine()` 內移除 `registerViewFactory("cc.ugotit.elinkbook/epub_reader_view", EpubReaderViewFactory(this, flutterEngine.dartExecutor.binaryMessenger))` 這個區塊
 
-- [ ] **Step 4：建置驗證**
+- [x] **Step 4：建置驗證**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -121,15 +121,15 @@ flutter build apk --debug
 - Consumes：Task 1/2 已完成的實際刪除範圍
 - Produces：三份文件不再描述已刪除的雙引擎 FXL 架構
 
-- [ ] **Step 1：`CLAUDE.md` 依「已查證的關鍵技術事實」列出的 7 處逐一訂正**
+- [x] **Step 1：`CLAUDE.md` 依「已查證的關鍵技術事實」列出的 7 處逐一訂正**
 
 `:38`（`EpubReaderView` 條目移除/改寫）、`:39`（`FoliateEpubReaderView` 條目改為「所有 EPUB 使用」）、`:41`（`PdfReaderView`/`EpubReaderView` 對稱包裝整段簡化，只保留 `PdfReaderView` 自身仍成立部分）、`:45-47`（「`MainActivity` 為何是 `FlutterFragmentActivity`」整段移除）、`:73`（改為「FXL 與流式皆用 foliate-js」）、`:134-135`（EPUB 雙引擎條目重寫為單引擎架構，保留 ADR 0011/0017 的演進脈絡供讀者理解歷史）、`:132`（minSdk 理由，僅確認仍成立，不預期需要修改文字）。
 
-- [ ] **Step 2：`CONTEXT.md` 依「已查證的關鍵技術事實」列出的 4 處詞條逐一訂正**
+- [x] **Step 2：`CONTEXT.md` 依「已查證的關鍵技術事實」列出的 4 處詞條逐一訂正**
 
 「雙頁 spread」（`:48`，spread 配對機制改為 foliate-js）、「引擎分派判斷」（`:56`，訂正為「決定 UI 版面語意」而非「決定引擎」）、「Readium 內部版面渲染決策」（`:63-65`，整條詞目移除或標註為 historical）、「固定版面（FXL）熱區換頁機制」（`:76`，改為描述現行的 Dart 端 `_ZoneOverlay`/`ZoneAction` 共用機制，不再是 Readium 專屬）。
 
-- [ ] **Step 3：`AGENTS.md` 依「已查證的關鍵技術事實」列出的 3 處逐一訂正**（計劃審查發現，2026-07-31）
+- [x] **Step 3：`AGENTS.md` 依「已查證的關鍵技術事實」列出的 3 處逐一訂正**（計劃審查發現，2026-07-31）
 
 「唯一 Seam：ReaderScreen」段落（`:17-23`）——`ReaderScreen` 分派清單改為 `FoliateEpubReaderView`（所有 EPUB）／`PdfReaderView`，「兩者是對稱的 PlatformView 包裝」這句連帶不成立（`FoliateEpubReaderView` 不是傳統 `AndroidView`/`PlatformView`，見 `CLAUDE.md` 既有準確說明可直接參考用詞），需一併訂正、不能只換類別名稱。「Native 層」段落（`:27-31`）——移除 `EpubReaderView.kt`+`EpubReaderViewFactory.kt` 條目，`MainActivity.kt` 的說明文字改為不提 `FlutterFragmentActivity`/Readium Fragment。「Gotchas」段落（`:97`）——移除 `EpubNavigatorFragment` 建構子那條，本工單完成後已無現實對應物（不是改寫用詞，是整行移除）。
 
@@ -146,7 +146,7 @@ flutter build apk --debug
 - Consumes：Task 1-3 已完成
 - Produces：合併回 `main` 的乾淨基礎（無 Readium EPUB 渲染路徑殘留）
 
-- [ ] **Step 1：全套測試**
+- [x] **Step 1：全套測試**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -157,22 +157,22 @@ flutter test
 
 須為 0 issues／全部通過／編譯成功，且不得比 Issue 4 合併後的基準測試數少（回歸檢查——測試數應略為減少，因為刪除了整份 `epub_reader_view_test.dart`，這是預期中的減少，非回歸；記錄刪除前後的實際數字）。
 
-- [ ] **Step 2：建置並安裝至真機（`3CEF42ECD491687`）**
+- [x] **Step 2：建置並安裝至真機（`3CEF42ECD491687`）**
 
 ```bash
 flutter build apk --debug
 adb -s 3CEF42ECD491687 install -r build/app/outputs/flutter-apk/app-debug.apk
 ```
 
-- [ ] **Step 3：真機完整回歸測試（驗收標準要求的全項目）**
+- [x] **Step 3：真機完整回歸測試（驗收標準要求的全項目）**
 
 用 `tmp/一弦定音.epub`（FXL）與一本流式 EPUB（沿用既有測試素材）：開書、翻頁、雙頁、書籤、目錄、進度/跳頁、劃線/備註（僅流式書籍，FXL 已於 Issue 4 確認結構性不支援）、版面設定，皆須正常運作、與 Issue 4 合併後的行為完全一致（本工單不改變任何執行期行為，見 Global Constraints）。
 
-- [ ] **Step 4：依結果更新 `design.md`／`issues.md`／`docs/epics.md`**
+- [x] **Step 4：依結果更新 `design.md`／`issues.md`／`docs/epics.md`**
 
-- [ ] **Step 5：Commit（於獨立 feature branch，比照 Issue 2-4 branch 命名慣例 `feature/epic-20-issue-5-*`）**
+- [x] **Step 5：Commit（於獨立 feature branch，比照 Issue 2-4 branch 命名慣例 `feature/epic-20-issue-5-*`）**
 
-- [ ] **Step 6：送出 code review（`superpowers:requesting-code-review`），依審查結果修正後開 PR**
+- [x] **Step 6：送出 code review（`superpowers:requesting-code-review`），依審查結果修正後開 PR**
 
 ---
 
