@@ -81,7 +81,7 @@
 
 ## Issue 4：`ReaderScreen` 浮動按鈕群組合併，移除 FXL/流式雙軌 UI 分支
 
-**Status:** ready-for-agent
+**Status:** 實作計劃已撰寫（`plans/plan-issue-4.md`），待計劃審查通過後開始執行。
 
 **依賴：** Issue 2、3。
 
