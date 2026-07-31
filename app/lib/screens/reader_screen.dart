@@ -1487,93 +1487,13 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             if (_resolved != null &&
                 (format != BookFormat.epub || _dispatchedIsFixedLayout != null))
               _buildNativeView(format, isLandscape),
-            if (_isFixedLayout && _chromeVisible)
-              Positioned(
-                top: 16, // SafeArea 內層，頂部已扣除狀態列，故直接設為 16 即可
-                left: 16,
-                child: ClipOval(
-                  child: Container(
-                    color: Colors.black54,
-                    child: IconButton(
-                      key: const Key('reader_fixed_layout_back_button'),
-                      icon: const Icon(Icons.arrow_back, color: Colors.white),
-                      tooltip: '返回',
-                      onPressed: () => Navigator.of(context).pop(),
-                    ),
-                  ),
-                ),
-              ),
-            if (_isFixedLayout && _chromeVisible)
-              Positioned(
-                top: 16,
-                right: 16,
-                child: ClipOval(
-                  child: Container(
-                    color: Colors.black54,
-                    child: IconButton(
-                      key: const Key('reader_fixed_layout_settings_button'),
-                      icon: const Icon(Icons.settings, color: Colors.white),
-                      tooltip: '版面設定',
-                      onPressed: _openFxlSettings,
-                    ),
-                  ),
-                ),
-              ),
-            if (_isFixedLayout &&
-                _chromeVisible &&
-                widget.bookmarksRepository != null)
-              Positioned(
-                top: 128,
-                right: 16,
-                child: ClipOval(
-                  child: Container(
-                    color: Colors.black54,
-                    child: IconButton(
-                      key: const Key('reader_fixed_layout_bookmark_toggle_button'),
-                      icon: Icon(
-                        _bookmarkAtCurrentPosition != null
-                            ? Icons.star
-                            : Icons.star_border,
-                        color: Colors.white,
-                      ),
-                      tooltip: _bookmarkAtCurrentPosition != null
-                          ? '已加入此頁書籤'
-                          : '加入此頁書籤',
-                      onPressed:
-                          _epubPositionInfo == null ? null : _toggleBookmark,
-                    ),
-                  ),
-                ),
-              ),
-            if (_isFixedLayout &&
-                _chromeVisible &&
-                widget.bookmarksRepository != null)
-              Positioned(
-                top: 72,
-                right: 16,
-                child: ClipOval(
-                  child: Container(
-                    color: Colors.black54,
-                    child: IconButton(
-                      key: const Key('reader_fixed_layout_notes_button'),
-                      icon: const Icon(Icons.bookmarks, color: Colors.white),
-                      tooltip: '筆記',
-                      onPressed: _epubPositionInfo == null
-                          ? null
-                          : () => _openNotesSheet(BookFormat.epub),
-                    ),
-                  ),
-                ),
-              ),
             // epic-18-reader-device-qa Issue 7：流式 EPUB 的 chrome，結構對稱
             // 於上方 FXL 浮動按鈕區塊——appBar 已在 build() 恆為 null（見上方
             // 註解），改用這組 Positioned 疊加層承載「功能操作」（返回／TOC／
             // 設定／書籤／筆記／進度-跳頁），另有 2 個純顯示元件（頁眉章節
             // 名稱／進度文字）承載「資訊顯示」，兩者刻意分離（design.md「第
             // 二輪真機使用回報」項目 2）。
-            if (format == BookFormat.epub &&
-                _dispatchedIsFixedLayout == false &&
-                _chromeVisible)
+            if (format == BookFormat.epub && _chromeVisible)
               Positioned(
                 top: 16,
                 left: 16,
@@ -1589,9 +1509,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                   ),
                 ),
               ),
-            if (format == BookFormat.epub &&
-                _dispatchedIsFixedLayout == false &&
-                _chromeVisible)
+            if (format == BookFormat.epub && _chromeVisible)
               Positioned(
                 top: 16,
                 right: 16,
@@ -1609,9 +1527,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                   ),
                 ),
               ),
-            if (format == BookFormat.epub &&
-                _dispatchedIsFixedLayout == false &&
-                _chromeVisible)
+            if (format == BookFormat.epub && _chromeVisible)
               Positioned(
                 top: 72,
                 right: 16,
@@ -1622,15 +1538,14 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                       key: const Key('reader_foliate_settings_button'),
                       icon: const Icon(Icons.settings, color: Colors.white),
                       tooltip: '版面設定',
-                      onPressed: _autoDetectedWritingMode == null
-                          ? null
-                          : _openLayoutSettings,
+                      onPressed: _isFixedLayout
+                          ? _openFxlSettings
+                          : (_autoDetectedWritingMode == null ? null : _openLayoutSettings),
                     ),
                   ),
                 ),
               ),
             if (format == BookFormat.epub &&
-                _dispatchedIsFixedLayout == false &&
                 _chromeVisible &&
                 widget.bookmarksRepository != null)
               Positioned(
@@ -1657,7 +1572,6 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                 ),
               ),
             if (format == BookFormat.epub &&
-                _dispatchedIsFixedLayout == false &&
                 _chromeVisible &&
                 widget.bookmarksRepository != null)
               Positioned(
@@ -1678,9 +1592,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                   ),
                 ),
               ),
-            if (format == BookFormat.epub &&
-                _dispatchedIsFixedLayout == false &&
-                _chromeVisible)
+            if (format == BookFormat.epub && _chromeVisible)
               Positioned(
                 top: 240,
                 right: 16,
@@ -1696,9 +1608,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                   ),
                 ),
               ),
-            if (format == BookFormat.epub &&
-                _dispatchedIsFixedLayout == false &&
-                (_resolved?.showHeader ?? true))
+            if (format == BookFormat.epub && (_resolved?.showHeader ?? true))
               Positioned(
                 top: 16,
                 left: 72,
@@ -1706,7 +1616,6 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                 child: Center(child: _buildFoliateHeaderText()),
               ),
             if (format == BookFormat.epub &&
-                _dispatchedIsFixedLayout == false &&
                 (_resolved?.showFooter ?? true) &&
                 (_epubPositionInfo?.totalPages ?? 0) > 0)
               (_resolved?.writingMode == WritingMode.vertical)
