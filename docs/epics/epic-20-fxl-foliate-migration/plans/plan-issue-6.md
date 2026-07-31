@@ -2,6 +2,8 @@
 
 > **給執行者（agentic worker）的提示：** 建議使用 `superpowers:subagent-driven-development`（推薦）或 `superpowers:executing-plans` 逐工單執行本計劃。工單內的步驟以核取方塊（`- [ ]`）追蹤完成狀態。
 
+> **執行狀態備註（2026-07-31）：** 曾有一輪聲稱「驗證完成」的紀錄，經程式碼審查核對檔案系統上的截圖後發現與實際操作內容不符（詳見 `tmp/epic-20/issue6_plan_review_report.md`），已撤回並將以下所有 Step 核取方塊重置為未完成。人類決定本工單的真機驗證併入 Issue 8／9 完成後的收尾真機驗測一併執行（呼應 Issue 7 範圍），計劃內容本身不變，屆時直接依下方步驟重新執行。
+
 **目標：** 驗證 FXL 書籍在單頁／雙頁模式下的書籤新增/刪除/跳轉/清單顯示是否正常運作，與既有流式書籍書籤功能行為一致。本工單**純驗證性質，不預先假設需要程式碼修正**（ADR 0017 決策 6：書籤沿用既有 CFI locator 持久化機制，`epic-17` Issue 6 已為 reflowable 建立，風險低、無視覺 overlay）。
 
 **依賴：** Issue 3（已合併，`main`，雙頁模式）、Issue 5（已合併，`main`，`EpubReaderView.kt`／`readium-navigator` 已移除）。
@@ -39,7 +41,7 @@
 - Consumes：`tmp/一弦定音.epub`、裝置 `3CEF42ECD491687`
 - Produces：單頁模式下書籤新增/刪除/跳轉/清單行為的真機觀察紀錄
 
-- [x] **Step 1：建置並安裝最新 `main` APK 至真機**
+- [ ] **Step 1：建置並安裝最新 `main` APK 至真機**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -47,17 +49,17 @@ flutter build apk --debug
 adb -s 3CEF42ECD491687 install -r build/app/outputs/flutter-apk/app-debug.apk
 ```
 
-- [x] **Step 2：裝置轉直向，匯入／開啟 `tmp/一弦定音.epub`，確認單頁模式**
+- [ ] **Step 2：裝置轉直向，匯入／開啟 `tmp/一弦定音.epub`，確認單頁模式**
 
 `adb shell settings put system user_rotation 0`，確認 `dualPageMode` 未強制（預設 `auto`）情況下直向即為單頁。
 
-- [x] **Step 3：新增書籤，確認懸浮書籤按鈕圖示切換（🔖 outline → filled 或既有慣例的視覺區分）**
+- [ ] **Step 3：新增書籤，確認懸浮書籤按鈕圖示切換（🔖 outline → filled 或既有慣例的視覺區分）**
 
-- [x] **Step 4：開啟筆記 Bottom Sheet「🔖 書籤」分頁，確認剛新增的書籤出現在清單，名稱/位置描述合理**
+- [ ] **Step 4：開啟筆記 Bottom Sheet「🔖 書籤」分頁，確認剛新增的書籤出現在清單，名稱/位置描述合理**
 
-- [x] **Step 5：翻到不同頁，點選清單中的書籤，確認正確跳轉回原本新增書籤的那一頁（畫面內容比對，非只看頁碼數字）**
+- [ ] **Step 5：翻到不同頁，點選清單中的書籤，確認正確跳轉回原本新增書籤的那一頁（畫面內容比對，非只看頁碼數字）**
 
-- [x] **Step 6：刪除該書籤（懸浮按鈕再次點擊，或清單內滑動刪除，依既有 UI 慣例），確認按鈕圖示與清單同步更新**
+- [ ] **Step 6：刪除該書籤（懸浮按鈕再次點擊，或清單內滑動刪除，依既有 UI 慣例），確認按鈕圖示與清單同步更新**
 
 （此 Task 為既有 `epic-6-annotations` 功能的回歸基準確認，預期全數正常——若此處就出現異常，代表問題與雙頁模式無關，是更基礎的既有缺陷，應優先處理並重新評估本工單範圍。）
 
@@ -71,21 +73,21 @@ adb -s 3CEF42ECD491687 install -r build/app/outputs/flutter-apk/app-debug.apk
 - Consumes：Task 1 確認單頁模式基準正常
 - Produces：雙頁模式下書籤新增/刪除/跳轉/清單行為的真機觀察紀錄，含「已查證的關鍵技術事實」點出的兩個具體疑點的結論
 
-- [x] **Step 1：裝置轉橫向，確認 `tmp/一弦定音.epub` 進入雙頁模式（兩頁並排）**
+- [ ] **Step 1：裝置轉橫向，確認 `tmp/一弦定音.epub` 進入雙頁模式（兩頁並排）**
 
 `adb shell settings put system user_rotation 1`（或對應橫向值，比照 Issue 3 驗證慣例）。
 
-- [x] **Step 2：在雙頁並排畫面中新增書籤，明確記錄畫面當下顯示的左右兩頁內容（截圖）**
+- [ ] **Step 2：在雙頁並排畫面中新增書籤，明確記錄畫面當下顯示的左右兩頁內容（截圖）**
 
-- [x] **Step 3：確認懸浮書籤按鈕圖示切換，並開啟書籤清單，確認新增的書籤出現，比對名稱/位置描述是否讓使用者能辨識出「是哪一頁」（呼應「已查證的關鍵技術事實」第一點的疑慮）**
+- [ ] **Step 3：確認懸浮書籤按鈕圖示切換，並開啟書籤清單，確認新增的書籤出現，比對名稱/位置描述是否讓使用者能辨識出「是哪一頁」（呼應「已查證的關鍵技術事實」第一點的疑慮）**
 
-- [x] **Step 4：翻到書中其他位置（不同頁/不同雙頁配對），點選清單中該筆書籤，確認跳轉後畫面正確顯示回 Step 2 截圖記錄的那組雙頁配對（左右頁內容一致，非只有其中一頁對、另一頁錯位，呼應「已查證的關鍵技術事實」第二點的疑慮）**
+- [ ] **Step 4：翻到書中其他位置（不同頁/不同雙頁配對），點選清單中該筆書籤，確認跳轉後畫面正確顯示回 Step 2 截圖記錄的那組雙頁配對（左右頁內容一致，非只有其中一頁對、另一頁錯位，呼應「已查證的關鍵技術事實」第二點的疑慮）**
 
-- [x] **Step 5：刪除該書籤，確認雙頁模式下按鈕圖示與清單同步更新行為與單頁模式（Task 1 Step 6）一致**
+- [ ] **Step 5：刪除該書籤，確認雙頁模式下按鈕圖示與清單同步更新行為與單頁模式（Task 1 Step 6）一致**
 
-- [x] **Step 6：跨模式一致性——在雙頁模式新增一筆書籤後，裝置轉回直向（單頁），確認該書籤仍正確出現在清單中且可正常跳轉（CFI locator 不因版面模式切換而失效）；反向（單頁新增、轉橫向雙頁確認）也驗證一次**
+- [ ] **Step 6：跨模式一致性——在雙頁模式新增一筆書籤後，裝置轉回直向（單頁），確認該書籤仍正確出現在清單中且可正常跳轉（CFI locator 不因版面模式切換而失效）；反向（單頁新增、轉橫向雙頁確認）也驗證一次**
 
-- [x] **Step 7：若 Step 1-6 全數正常，額外用 `tmp/膽大黨10.epub`（另一本真實 FXL 漫畫，Issue 8 已知因檔案過大〔217MB〕可能無法開啟）視情況做一次抽樣確認——若因 Issue 8 的 OOM 問題無法開啟，記錄並跳過，不視為本工單失敗（Issue 8 是獨立已知問題，不阻塞本工單）**
+- [ ] **Step 7：若 Step 1-6 全數正常，額外用 `tmp/膽大黨10.epub`（另一本真實 FXL 漫畫，Issue 8 已知因檔案過大〔217MB〕可能無法開啟）視情況做一次抽樣確認——若因 Issue 8 的 OOM 問題無法開啟，記錄並跳過，不視為本工單失敗（Issue 8 是獨立已知問題，不阻塞本工單）**
 
 ---
 
@@ -98,17 +100,17 @@ adb -s 3CEF42ECD491687 install -r build/app/outputs/flutter-apk/app-debug.apk
 - Consumes：Task 1-2 驗證結果
 - Produces：Issue 6 結案紀錄（或若發現異常，記錄具體現象並建議後續子工單方向，比照 Issue 8/9 的處理模式）
 
-- [x] **Step 1：依 Task 1-2 實際觀察結果，如實記錄於 `design.md`「Issue 6 實作完成紀錄」**——若全數正常，明確寫「純驗證，無程式碼異動」；若發現任何異常，具體描述現象（不得只寫「有問題」），並說明是否已另立 Issue／子工單追蹤。
+- [ ] **Step 1：依 Task 1-2 實際觀察結果，如實記錄於 `design.md`「Issue 6 實作完成紀錄」**——若全數正常，明確寫「純驗證，無程式碼異動」；若發現任何異常，具體描述現象（不得只寫「有問題」），並說明是否已另立 Issue／子工單追蹤。
 
-- [x] **Step 2：更新 `issues.md` Issue 6 Status 為 ✅ 或視發現結果調整（例如若有異常則保留 `needs-triage` 並補充發現內容）**
+- [ ] **Step 2：更新 `issues.md` Issue 6 Status 為 ✅ 或視發現結果調整（例如若有異常則保留 `needs-triage` 並補充發現內容）**
 
-- [x] **Step 3：更新 `docs/epics.md`（若 Epic 整體狀態因此有變動）**
+- [ ] **Step 3：更新 `docs/epics.md`（若 Epic 整體狀態因此有變動）**
 
-- [x] **Step 4：本計畫檔 Task 1-3 所有 Step 依實際完成進度勾選**
+- [ ] **Step 4：本計畫檔 Task 1-3 所有 Step 依實際完成進度勾選**
 
-- [x] **Step 5：Commit（比照 Issue 2-5 branch 命名慣例 `feature/epic-20-issue-6-*`，若無任何程式碼異動，允許本工單只有文件 commit，不強制建立空的程式碼變更）**
+- [ ] **Step 5：Commit（比照 Issue 2-5 branch 命名慣例 `feature/epic-20-issue-6-*`，若無任何程式碼異動，允許本工單只有文件 commit，不強制建立空的程式碼變更）**
 
-- [x] **Step 6：送出 code review（`superpowers:requesting-code-review`），依審查結果修正後開 PR**
+- [ ] **Step 6：送出 code review（`superpowers:requesting-code-review`），依審查結果修正後開 PR**
 
 ---
 
