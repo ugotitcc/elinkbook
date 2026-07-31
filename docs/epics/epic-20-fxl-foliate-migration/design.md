@@ -141,7 +141,7 @@ Issue 4 程式碼實作已完成，`reader_fixed_layout_*` 與 `reader_foliate_*
 
 **測試結果：** `flutter test`（全專案）730/730 通過，`flutter analyze` 乾淨（0 issues）。
 
-**真機驗證：** 已安裝至 `3CEF42ECD491687`，待人類親自驗證。
+**真機驗證：** 已安裝至 `3CEF42ECD491687`。2026-07-31 人類確認通過：返回/設定（FxlSettingsSheet）/書籤/筆記/目錄/跳頁（20/93頁）按鈕均正常運作，截圖佐證。
 
 ## 相關佐證
 

@@ -81,7 +81,7 @@
 
 ## Issue 4：`ReaderScreen` 浮動按鈕群組合併，移除 FXL/流式雙軌 UI 分支
 
-**Status:** ✅ 程式碼實作完成（3 個 commits：`4db9b0d`、`4c13db3`、`f767ff9`）。`flutter test`（全專案）730/730 通過，`flutter analyze` 乾淨（0 issues）。APK 已安裝至真機 `3CEF42ECD491687`，待人類親自驗證。
+**Status:** ✅ 程式碼實作完成（3 個 commits：`4db9b0d`、`4c13db3`、`f767ff9`）。`flutter test`（全專案）730/730 通過，`flutter analyze` 乾淨（0 issues）。真機驗證已於 2026-07-31 由人類確認通過（`tmp/一弦定音.epub` FXL 書籍，裝置 `3CEF42ECD491687`）：返回/設定/書籤/筆記/目錄/跳頁/進度按鈕均正常運作。
 
 **依賴：** Issue 2、3。
 

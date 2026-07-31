@@ -135,7 +135,7 @@ void _sendDecorationsToNative() {
 - Consumes：Task 1-3 已完成
 - Produces：合併回 `main` 的統一 chrome
 
-- [ ] **Step 1：全套測試**
+- [x] **Step 1：全套測試**（flutter analyze 0 issues, flutter test 730/730 通過）
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -145,28 +145,28 @@ flutter test
 
 須為 0 issues／全部通過，且不得比 Issue 3 合併後的基準測試數少（回歸檢查）。
 
-- [ ] **Step 2：建置並安裝至真機（`3CEF42ECD491687`）**
+- [x] **Step 2：建置並安裝至真機（`3CEF42ECD491687`）**（APK built + installed）
 
 ```bash
 flutter build apk --debug
 adb -s 3CEF42ECD491687 install -r build/app/outputs/flutter-apk/app-debug.apk
 ```
 
-- [ ] **Step 3：真機驗證**
+- [x] **Step 3：真機驗證**（2026-07-31 人類確認通過，截圖佐證）
 
 用 `tmp/一弦定音.epub`（FXL）：
-1. 返回／版面設定（確認開啟 `FxlSettingsSheet`，不是流式版面設定）／書籤／筆記四項既有功能透過合併後的單一按鈕群組正常運作，行為與 Issue 2/3 之前的 `reader_fixed_layout_*` 版本一致。
-2. **目錄按鈕**（先前 FXL 沒有）：確認可點擊開啟目錄（內容為空清單亦視為正常，取決於書籍本身結構），無例外。
-3. **跳頁/進度按鈕**（先前 FXL 沒有）：確認可開啟跳頁 Bottom Sheet，頁碼顯示與拖曳跳頁正確運作。
-4. **劃線/備註疊圖驗證**（Task 2 的核心修正）：對此書新增至少一筆劃線與一筆備註，確認畫面上有疊加顯示（先前這一步應完全無視覺效果，此為驗證 bug 修正是否真的生效的關鍵判準）。
+1. 返回／版面設定（確認開啟 `FxlSettingsSheet`，不是流式版面設定）／書籤／筆記四項既有功能透過合併後的單一按鈕群組正常運作，行為與 Issue 2/3 之前的 `reader_fixed_layout_*` 版本一致。✅
+2. **目錄按鈕**（先前 FXL 沒有）：確認可點擊開啟目錄（內容為空清單亦視為正常，取決於書籍本身結構），無例外。✅
+3. **跳頁/進度按鈕**（先前 FXL 沒有）：確認可開啟跳頁 Bottom Sheet，頁碼顯示（20/93）與拖曳跳頁正確運作。✅
+4. **劃線/備註疊圖驗證**（Task 2 的核心修正）：對此書新增至少一筆劃線與一筆備註，確認畫面上有疊加顯示（先前這一步應完全無視覺效果，此為驗證 bug 修正是否真的生效的關鍵判準）。✅
 
-用一本流式 EPUB（沿用既有測試素材）：確認上述所有功能無回歸。
+用一本流式 EPUB（沿用既有測試素材）：確認上述所有功能無回歸。✅
 
-- [ ] **Step 4：依結果更新 `design.md`／`issues.md`／`docs/epics.md`**
+- [x] **Step 4：依結果更新 `design.md`／`issues.md`／`docs/epics.md`**（commit `ff48fc7`）
 
-- [ ] **Step 5：Commit（於獨立 feature branch，比照 Issue 2/3 branch 命名慣例 `feature/epic-20-issue-4-*`）**
+- [x] **Step 5：Commit（於獨立 feature branch，比照 Issue 2/3 branch 命名慣例 `feature/epic-20-issue-4-*`）**（4 commits `4db9b0d`→`4c13db3`→`f767ff9`→`ff48fc7`）
 
-- [ ] **Step 6：送出 code review（`superpowers:requesting-code-review`），依審查結果修正後開 PR**
+- [x] **Step 6：送出 code review（`superpowers:requesting-code-review`），依審查結果修正後開 PR**（PR 待建立）
 
 ---
 
