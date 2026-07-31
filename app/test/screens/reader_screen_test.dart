@@ -916,12 +916,12 @@ void main() {
     await tester.pump();
 
     expect(
-      find.byKey(const Key('reader_fixed_layout_settings_button')),
+      find.byKey(const Key('reader_foliate_settings_button')),
       findsOneWidget,
     );
 
     await tester.tap(
-      find.byKey(const Key('reader_fixed_layout_settings_button')),
+      find.byKey(const Key('reader_foliate_settings_button')),
     );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
@@ -954,11 +954,11 @@ void main() {
     await tester.pump();
 
     expect(
-      find.byKey(const Key('reader_fixed_layout_back_button')),
+      find.byKey(const Key('reader_foliate_back_button')),
       findsOneWidget,
     );
     expect(
-      find.byKey(const Key('reader_fixed_layout_settings_button')),
+      find.byKey(const Key('reader_foliate_settings_button')),
       findsOneWidget,
     );
 
@@ -967,11 +967,11 @@ void main() {
     await tester.pump();
 
     expect(
-      find.byKey(const Key('reader_fixed_layout_back_button')),
+      find.byKey(const Key('reader_foliate_back_button')),
       findsNothing,
     );
     expect(
-      find.byKey(const Key('reader_fixed_layout_settings_button')),
+      find.byKey(const Key('reader_foliate_settings_button')),
       findsNothing,
     );
 
@@ -980,11 +980,11 @@ void main() {
     await tester.pump();
 
     expect(
-      find.byKey(const Key('reader_fixed_layout_back_button')),
+      find.byKey(const Key('reader_foliate_back_button')),
       findsOneWidget,
     );
     expect(
-      find.byKey(const Key('reader_fixed_layout_settings_button')),
+      find.byKey(const Key('reader_foliate_settings_button')),
       findsOneWidget,
     );
   });
@@ -1014,7 +1014,7 @@ void main() {
     await tester.pump();
 
     expect(
-      find.byKey(const Key('reader_fixed_layout_back_button')),
+      find.byKey(const Key('reader_foliate_back_button')),
       findsOneWidget,
     );
 
@@ -1023,7 +1023,7 @@ void main() {
     await tester.pump();
 
     expect(
-      find.byKey(const Key('reader_fixed_layout_back_button')),
+      find.byKey(const Key('reader_foliate_back_button')),
       findsOneWidget,
       reason: '換頁後，懸浮控制項應維持原狀（不自動收起，design.md 決策 #14）',
     );
@@ -1068,7 +1068,7 @@ void main() {
     // `_resolveEpubEngineDispatch()`／`_handleLayoutResolved()` 的
     // widget.isFixedLayout 保護邏輯）。
     expect(
-      find.byKey(const Key('reader_fixed_layout_settings_button')),
+      find.byKey(const Key('reader_foliate_settings_button')),
       findsOneWidget,
       reason: '強制 FXL 後，native 異步回報 isFixedLayout=false 不應覆蓋 _isFixedLayout',
     );
@@ -1108,7 +1108,7 @@ void main() {
     await tester.pump();
 
     expect(
-      find.byKey(const Key('reader_fixed_layout_back_button')),
+      find.byKey(const Key('reader_foliate_back_button')),
       findsOneWidget,
     );
 
@@ -1120,7 +1120,7 @@ void main() {
     await tester.pump();
 
     expect(
-      find.byKey(const Key('reader_fixed_layout_back_button')),
+      find.byKey(const Key('reader_foliate_back_button')),
       findsNothing,
     );
   });
@@ -1960,11 +1960,11 @@ void main() {
         reason: 'FXL 不建構 Scaffold AppBar，頁首邏輯不適用',
       );
       expect(
-        find.byKey(const Key('reader_fixed_layout_back_button')),
+        find.byKey(const Key('reader_foliate_back_button')),
         findsOneWidget,
       );
       expect(
-        find.byKey(const Key('reader_fixed_layout_settings_button')),
+        find.byKey(const Key('reader_foliate_settings_button')),
         findsOneWidget,
       );
     },
@@ -2252,7 +2252,7 @@ void main() {
     await tester.pump();
 
     expect(
-      find.byKey(const Key('reader_fixed_layout_bookmark_toggle_button')),
+      find.byKey(const Key('reader_foliate_bookmark_toggle_button')),
       findsNothing,
     );
   });
@@ -2285,7 +2285,7 @@ void main() {
     await tester.pump();
 
     final finder = find.byKey(
-      const Key('reader_fixed_layout_bookmark_toggle_button'),
+      const Key('reader_foliate_bookmark_toggle_button'),
     );
     expect(finder, findsOneWidget);
     expect(
@@ -2338,7 +2338,7 @@ void main() {
     await tester.pump();
 
     final finder = find.byKey(
-      const Key('reader_fixed_layout_bookmark_toggle_button'),
+      const Key('reader_foliate_bookmark_toggle_button'),
     );
     expect(tester.widget<IconButton>(finder).onPressed, isNotNull);
     expect(
@@ -2413,7 +2413,7 @@ void main() {
     await tester.pump();
 
     final notesButtonFinder = find.byKey(
-      const Key('reader_fixed_layout_notes_button'),
+      const Key('reader_foliate_notes_button'),
     );
     expect(notesButtonFinder, findsOneWidget);
     expect(tester.widget<IconButton>(notesButtonFinder).onPressed, isNull);
@@ -2491,14 +2491,14 @@ void main() {
     await tester.pump();
 
     final bookmarkToggleFinder = find.byKey(
-      const Key('reader_fixed_layout_bookmark_toggle_button'),
+      const Key('reader_foliate_bookmark_toggle_button'),
     );
     expect(
       (tester.widget<IconButton>(bookmarkToggleFinder).icon as Icon).icon,
       Icons.star_border,
     );
 
-    await tester.tap(find.byKey(const Key('reader_fixed_layout_notes_button')));
+    await tester.tap(find.byKey(const Key('reader_foliate_notes_button')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
 
@@ -2555,7 +2555,7 @@ void main() {
     );
     await tester.pump();
 
-    await tester.tap(find.byKey(const Key('reader_fixed_layout_notes_button')));
+    await tester.tap(find.byKey(const Key('reader_foliate_notes_button')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
 
@@ -2569,16 +2569,16 @@ void main() {
 
     expect(find.byType(NotesBottomSheet), findsNothing);
     expect(
-      find.byKey(const Key('reader_fixed_layout_back_button')),
+      find.byKey(const Key('reader_foliate_back_button')),
       findsNothing,
       reason: '書籤跳轉比照既有換頁慣例，強制收合懸浮控制項',
     );
     expect(
-      find.byKey(const Key('reader_fixed_layout_notes_button')),
+      find.byKey(const Key('reader_foliate_notes_button')),
       findsNothing,
     );
     expect(
-      find.byKey(const Key('reader_fixed_layout_bookmark_toggle_button')),
+      find.byKey(const Key('reader_foliate_bookmark_toggle_button')),
       findsNothing,
     );
   });
