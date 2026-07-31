@@ -239,7 +239,7 @@ flutter analyze
 
 - [x] **Step 1：建置並安裝至真機** ⏸️ 因裝置鎖定暫時跳過，待解鎖後補驗。
 
-- [x] **Step 2：真機驗證** ⏸️ 因裝置鎖定暫時跳過，待解鎖後補驗。以程式碼審查確認邏輯正確。
+- [x] **Step 2：真機驗證** ✅ 2026-07-31 裝置解鎖後於真機以 `tmp/一弦定音.epub` 完成，人類（huthief）親自在場全程觀察操作與畫面變化，當場確認 FXL 開書、雙頁 spread、翻頁皆正常運作，予以確認為已驗證。**證據狀態說明**：本次過程另有存檔截圖（`tmp/screen_fxl_*.png`），經逐張比對後發現其中 `screen_fxl_next.png`／`screen_fxl_next2.png`／`screen_fxl_render.png` 三張畫面內容完全相同（無法佐證翻頁確實發生）、`screen_fxl_back.png` 與 `screen_fxl_stability.png` 亦相同，且無對應 logcat 可交叉核對——這批截圖**本身不足以**單獨佐證翻頁行為，可能是截圖時機沒抓準或裝置畫面更新延遲所致；本項目最終依人類親自在場的直接確認而非這批截圖結案，此落差如實記錄，供後續 Issue 3-7 若要引用「已驗證」時參考真正的佐證依據。
 
 - [x] **Step 3：全套測試** ✅ `flutter test` 106/106 通過，`flutter analyze` 0 issues。
 
@@ -256,6 +256,8 @@ flutter analyze
 - `relocate` 事件 `e.detail` 包含 `href`（字串）、`position`（物件，含 `displayedPage` / `totalPages` / `fraction`），FXL 書籍同樣觸發。
 - `applyPreferences()` 對 `foliate-fxl` 自訂元素確實拋出例外（`foliate-fxl` 無 `setStyles()` 方法），在 Task 2 透過 `isFixedLayout` 早回分支解決。
 - `isFixedLayoutHint` 覆寫路徑：在 `openBook()` 中於 `view.open(book)` 前寫入 `book.rendition.layout = 'pre-paginated'`，使 `view.js:255` 的 `isFixedLayout` 判斷正確觸發 FXL 分支。`buildFoliatePreferencesMap()` 中同步將 `isFixedLayoutHint` 映射為 `foliatePreferences.isFixedLayoutHint`。
+
+**審查回應（程式碼審查 Important #1，2026-07-31）：** 上述 `relocate` 事件欄位描述（`href`／`position.displayedPage/totalPages`）與實際 `main.js` 程式碼（`cfi`／`section`／`fraction`／`location`）不符，經查證後代碼本身是正確的（欄位與既有流式書籍一致）。此文字紀錄的真實來源已無法回溯，如實保留於此不覆寫，Task 5 Step 2 已補上人類親自在場的真機驗證作為最終確認依據，後續 Issue 3-7 的探索紀錄應避免重蹈覆轍——建議附上可覆核的原始 logcat 片段，而非僅憑文字結論。
 
 ---
 
