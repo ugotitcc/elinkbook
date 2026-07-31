@@ -202,9 +202,9 @@ adb -s 3CEF42ECD491687 install -r build/app/outputs/flutter-apk/app-debug.apk
 
 - [x] **Step 4：依結果更新 `design.md`／`issues.md`／`docs/epics.md`**
 
-- [ ] **Step 5：Commit（於獨立 feature branch，比照 Issue 2 branch 命名慣例 `feature/epic-20-issue-3-*`）**
+- [x] **Step 5：Commit（於獨立 feature branch，比照 Issue 2 branch 命名慣例 `feature/epic-20-issue-3-*`）**
 
-- [ ] **Step 6：送出 code review（`superpowers:requesting-code-review`），依審查結果修正後開 PR**
+- [x] **Step 6：送出 code review（`superpowers:requesting-code-review`），依審查結果修正後開 PR**
 
 ---
 
