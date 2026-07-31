@@ -143,6 +143,26 @@ Issue 4 程式碼實作已完成，`reader_fixed_layout_*` 與 `reader_foliate_*
 
 **真機驗證：** 已安裝至 `3CEF42ECD491687`。2026-07-31 確認通過：返回/設定（`FxlSettingsSheet`）/書籤/筆記/目錄/跳頁（20/93頁）按鈕均正常運作，截圖佐證見 `tmp/epic-20/epic20-issue4_bookmark.png`／`epic20-issue4_process.png`。**審查修正（2026-07-31）**：原「劃線/備註疊圖驗證通過」宣稱缺乏對應截圖證據，追查後確認 FXL 圖片式頁面無文字節點可選取，正常操作下無法「新增」劃線/備註（既有 `epic-6-annotations` 決策 #7，非本工單新增限制），此項判準改列為不適用，詳見 `plans/plan-issue-4.md` Task 4 Step 3 item 4；`_sendDecorationsToNative()` 的修正實際生效情境是「書籍先以流式身分建立過劃線/備註、事後才被強制轉分類為 FXL」的邊界情況，非一般新開 FXL 書籍的主要使用情境。
 
+## Issue 5 實作完成紀錄（2026-07-31）
+
+Issue 5 程式碼實作已完成，已死的 `EpubReaderView` 路徑與 `readium-navigator` 依賴已全數移除：
+
+| Commit | 內容 |
+|---|---|
+| `cc1d5a5` | Task 1：刪除 `epub_reader_view.dart`、`epub_reader_view_test.dart`；`reader_screen.dart` 移除死碼（`_epubReaderViewKey`、`_handleLayoutResolved`、`_handleCharacterCountReady`）；`reader_screen_test.dart` 移除失效引用 |
+| `3e76c69` | Task 2：刪除 `EpubReaderView.kt`、`EpubReaderViewFactory.kt`；`build.gradle.kts` 移除 `readium-navigator:3.3.0`；`MainActivity.kt` 移除 EpubNavigatorFragment 處理邏輯與 PlatformView 註冊 |
+| `4e9443e` | Task 3：更新 `CLAUDE.md`（7 處）、`CONTEXT.md`（4 處）、`AGENTS.md`（3 處），移除已刪除的雙引擎架構描述 |
+
+**實作摘要：**
+- Dart 端：刪除 `epub_reader_view.dart` 與對應測試；`reader_screen.dart` 移除 3 處死碼、訂正過時說明文字
+- Kotlin 端：刪除 `EpubReaderView.kt`（77KB）與 `EpubReaderViewFactory.kt`；`build.gradle.kts` 移除 `readium-navigator` 依賴（`readium-shared`/`readium-streamer` 保留供 `BookMetadataChannel.kt` 使用）
+- `MainActivity.kt`：移除 EpubNavigatorFragment 相關 import 與處理邏輯、移除 `EpubReaderView` PlatformView 註冊；**保留 `FlutterFragmentActivity`**（因 `registerForActivityResult` 需要 FragmentActivity 支援，FolderPicker 功能必要）
+- 文件：`CLAUDE.md`（EpubReaderView 條目移除、FoliateEpubReaderView 改為所有 EPUB 使用、移除 FlutterFragmentActivity 段落、EPUB 技術棧改為單引擎架構）、`CONTEXT.md`（引擎分派判斷改為 UI 版面語意、Readium 內部版面渲染決策標註為 historical、FXL 換頁熱區改為 ZoneAction）、`AGENTS.md`（ReaderScreen 分派改為 FoliateEpubReaderView/PdfReaderView、Native 層移除 EpubReaderView.kt 條目、移除 EpubNavigatorFragment Gotcha）
+
+**測試結果：** `flutter test`（全專案）733/733 通過，`flutter analyze` 乾淨（0 issues），`./gradlew :app:compileDebugKotlin` 成功，`flutter build apk --debug` 成功。
+
+**真機驗證：** APK 已安裝至 `3CEF42ECD491687`，待人類執行完整回歸測試後正式結案。本工單為純刪除/簡化，不改變任何執行期行為。
+
 ## 相關佐證
 
 - `docs/adr/0011-epub-reflowable-migrate-to-foliate-js.md`（Phase 1，本次評估的 Phase 2 起點）
