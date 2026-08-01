@@ -840,6 +840,43 @@ Issue 16 確認「強制 FXL」後橫向雙頁模式退化成單頁的根因；I
 
 ---
 
+## Issue 23：頁首/頁尾行為調整（邊界預設、FXL 開關補齊、預設關閉、直排位置、章節名稱顯示）
+
+**Status:** ready-for-agent。已完成 `/diagnose` 現況查證（`reviews/bugfix-repro-header-footer.md`，未進版控），5 項需求皆已定位到確切修改點，3 個開放問題已與人類確認（見下方各子項）。
+
+**依賴：** 無（皆為既有頁首/頁尾機制上的調整，不依賴其他未完成 Issue）。
+
+**背景：** 使用者提出 5 項頁首/頁尾相關的行為調整需求，經 `/diagnose` 逐項查證程式碼現況（診斷過程詳見 `reviews/bugfix-repro-header-footer.md`）。
+
+**範圍：**
+
+1. **流式 EPUB 上邊界預設改 32**：`app/android/app/src/main/assets/foliate/main.js:222` 的 `marginTopPx` 未設定時預設值由 `64` 改為 `32`（此段落已明確標註僅適用流式書籍，FXL 不受影響）。
+
+2. **FXL 補齊頁首/頁尾開關**：`app/lib/screens/fxl_settings_sheet.dart` 目前完全沒有「顯示頁首」/「顯示頁尾」控制項（`reader_settings_sheet.dart:306-318` 流式書籍已有）。底層資料模型與 `reader_screen.dart` 的顯示邏輯已對 FXL/流式一視同仁，純粹是 FXL 設定畫面遺漏 UI，比照既有 `SwitchListTile` 模式補上，接到既有的 `BookReaderPrefs.showHeader`/`showFooter` 儲存機制。
+
+3. **兩種格式（含 PDF）預設皆改為關閉**：唯一正式預設值來源 `app/lib/reader/reader_prefs_manager_impl.dart:179-180` 的 `book.showHeader ?? true`／`book.showFooter ?? true` 改為 `?? false`（PDF 與 EPUB 共用同一個 `ResolvedPreferences.showFooter` 欄位與解析點，需在實作階段確認是否真為同一路徑，非另外獨立分支）；另需一併檢視 `reader_screen.dart`／`reader_settings_sheet.dart` 內數個「`_resolved` 尚未載入完成前」的防呆用 `?? true` 站點（`reader_screen.dart:1235,1545,1553,1623`；`reader_settings_sheet.dart:90-91,120-121`），同步改為 `?? false`，避免開書瞬間短暫顯示、`_resolved` load 完成後才消失的畫面閃爍。
+
+4. **直排頁首移到右上角＋與 FAB 互斥**：`reader_screen.dart:1545-1551`（頁首 `Positioned`）目前完全沒有直排分支（永遠水平置中），也完全沒有 `_chromeVisible` 判斷（是全部浮動元素中唯一的例外，其餘 6 顆 FAB 按鈕與頁尾皆各自有明確的顯示條件）。改動兩點：(a) 比照頁尾既有的直排寫法（`reader_screen.dart:1552-1569` 的 `RotatedBox(quarterTurns: 1)` 模式）新增頁首的直排分支，改置於右上角；(b) 不分直排/橫排，顯示條件加上 `!_chromeVisible`，改為「只在非沉浸模式（實際閱讀中）時顯示，FAB 顯示時必隱藏」。**此變更會反轉 Issue 13 當初的明確決策**（Issue 13 刻意移除頁首/頁尾的 `_chromeVisible` 判斷，讓頁首「跟內文常駐顯示、不受沉浸模式影響」）——本次不是恢復 Issue 13 之前「只在 `_chromeVisible == true` 時顯示」的舊行為（那樣會跟 FAB 同時出現），而是新的第三種狀態「只在 `_chromeVisible == false` 時顯示」，三者差異需在實作與測試中清楚區分，避免與 Issue 13 歷史決策混淆。**本項目只改頁首，不影響 Issue 13 對頁尾（進度文字）常駐顯示的既有決策，頁尾維持現狀。**
+
+5. **頁首文字改善——第一層章節名稱或書名**：`_buildFoliateHeaderText()`（`reader_screen.dart:1684-1704`）目前用 `currentPath.last.title`（目錄巢狀路徑最深層項目，非第一層章節），改為 `currentPath.first.title`；找不到章節時目前寫死顯示 `'閱讀器'`，改為顯示書名。**`ReaderScreen` 目前沒有任何管道能拿到書名**，需新增 `bookTitle` 建構參數（由 `library_screen.dart:402-412` 的 `_openBook(Book book)` 直接從既有 `Book` 物件傳入 `book.title`，不新增 `LibraryRepository` 查詢方法、不在 `ReaderScreen` 內部另外非同步查詢），並同步更新 `CLAUDE.md`「`ReaderScreen` 對外的公開建構參數」段落（目前記載為 `filePath`／`bookId`／`prefsRepository`，屬新增性質，不影響既有參數相容性）。另查證確認：`_buildAppBarTitle()`（`reader_screen.dart:1234-1257`）雖有類似的 `currentPath.last.title` 邏輯，但 EPUB 格式的 `Scaffold.appBar` 恆為 `null`（`_isFixedLayout`／`_dispatchedIsFixedLayout == false` 兩者對 FXL／流式各自恆真），此方法實質只服務 PDF（PDF 走固定靜態文字分支，不受本項目影響），**本項目不需修改 `_buildAppBarTitle()`**。
+
+**單元測試要求：**
+- `foliate_epub_reader_view_test.dart` 或等效測試：`main.js` 的 `marginTopPx` 預設值變更（若有對應的既有斷言需同步更新）。
+- `fxl_settings_sheet_test.dart`（若存在）或 widget test：新增的頁首/頁尾開關可正確切換並持久化。
+- `reader_prefs_manager_impl_test.dart`：預設值 `?? false` 的既有測試斷言需盤點並更新（原本假設預設 `true` 的測試會失敗）。
+- `reader_screen_test.dart`：盤點所有假設「頁首/頁尾預設顯示」「頁首在 `_chromeVisible == true` 時仍顯示」（尤其 Issue 13 建立的測試）的既有測試，依新行為改寫；新增測試驗證 `!_chromeVisible` 時頁首顯示、`_chromeVisible` 時頁首隱藏（含直排/橫排各一）；新增測試驗證 `bookTitle` 在無章節資訊時正確顯示為頁首文字。
+
+**驗收標準：**
+- 上述測試皆通過，`flutter analyze` 乾淨。
+- 真機（`3CEF42ECD491687`）驗證 5 項需求：流式書籍預設上邊界為 32px；FXL 設定畫面可切換頁首/頁尾；全新書籍開啟時頁首/頁尾（含 PDF 頁尾）預設關閉；直排時頁首正確顯示於右上角且與 FAB 互斥（顯示 FAB 時頁首消失，收起 FAB 進入閱讀時頁首出現）；頁首文字在有章節資訊時顯示第一層章節名稱、無章節資訊時顯示書名（非「閱讀器」字樣）。
+
+**相關佐證：**
+- `docs/epics/epic-18-reader-device-qa/reviews/bugfix-repro-header-footer.md`（`/diagnose` 完整查證過程，本 Issue 全部修改點的來源）
+- `docs/epics/epic-18-reader-device-qa/issues.md` Issue 13（本次項目 4 會反轉的既有決策，需對照理解）
+- `CLAUDE.md`「`ReaderScreen` 對外的公開建構參數」段落（項目 5 需同步更新）
+
+---
+
 ## 審查修訂紀錄（`tmp/epic-18/reviews/review_report.md`，經人類確認後採納）
 
 - **採納**：`spec.md`／Issue 4 澄清 `buildOverrideCss()` 維持純函式，所有 `setAttribute` 呼叫改到 `window.applyPreferences(prefs)`（既有的副作用進入點，`pageTurnMode`/`writingMode` 已是同樣模式）。
