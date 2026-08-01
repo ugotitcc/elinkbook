@@ -215,11 +215,11 @@ window.applyPreferences = function (prefs) {
   // 回報」項目 4）。因為兩個方向現在共用同一套邏輯，不再需要「切換
   // 排版方向時重設回 48px」這層既有的持久性補償（原本 Issue 4 的
   // if/else 分支正是為了這個補償而存在）。
-  // 未設定時的預設值（64px/16px）延續 Issue 4 當初為修正直排頂端裁切
+  // 未設定時的預設值（32px/16px）延續 Issue 4 當初為修正直排頂端裁切
   // 問題而定的數值；marginBottom 不再依 showFooter 動態調整——Issue 7
   // 已把頁尾改為浮動疊加層，不再壓縮 WebView 可視高度，「頁尾顯示時
   // 縮小下邊距」的補償理由已不成立，此為刻意簡化。
-  const marginTopPx = typeof prefs.marginTop === 'number' ? prefs.marginTop : 64
+  const marginTopPx = typeof prefs.marginTop === 'number' ? prefs.marginTop : 32
   const marginBottomPx = typeof prefs.marginBottom === 'number' ? prefs.marginBottom : 16
   view.renderer.setAttribute('margin-top', `${marginTopPx}px`)
   view.renderer.setAttribute('margin-bottom', `${marginBottomPx}px`)
