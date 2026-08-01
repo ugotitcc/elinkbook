@@ -140,7 +140,7 @@
 
 ## Issue 7：真機端到端驗證與收尾
 
-**Status:** 實作計劃已撰寫（`plans/plan-issue-7.md`），待計劃審查通過後開始執行。依 `issues.md` 原文 4 項範圍拆為 4 個 Task：(1) FXL＋流式各一本的端到端組合驗證、(2) ADR 0017 決策 5「既有 FXL 資料視為失效」真機實測（透過資料庫欄位竄改模擬舊版 Readium Locator 格式，驗證不會 crash）、(3) 完整建置/測試工具鏈確認、(4) 彙整 QA 報告與更新狀態文件。
+**Status:** ✅ 已完成（2026-08-01，真機驗證，完整紀錄見 `reviews/qa-issue-7-report.md`，該檔案未進版控，僅供本機參考）。全範疇通過驗證：(1) FXL (`qa_issue7_fxl.epub`)＋流式 (`qa_issue7_flow.epub`) 各一本於真機完成全功能組合操作序列（開書、換頁、熱區、雙頁模式切換、目錄跳轉、書籤、頁碼與重開書持久化）；(2) ADR 0017 決策 5「既有 FXL 資料視為失效」經 SQLite 資料庫竄改模擬舊 Readium 格式，實測重開與點擊舊書籤皆無 crash，優雅退回初始狀態；(3) 完整建置/測試工具鏈 (`flutter analyze` 0 issues / `flutter test` 713 passed / `compileDebugKotlin` & `testDebugUnitTest` SUCCESS) 全數無 Regression。過期已廢棄的舊測試檔 `EpubReaderViewDualPageTest.kt` 已清理。Epic 20 全部 9 個 Issue（Issue 1-9）全數完成，可供人類決定 Epic 是否歸檔。無新增追蹤 Issue。
 
 **依賴：** Issue 2-6 全部完成。
 
