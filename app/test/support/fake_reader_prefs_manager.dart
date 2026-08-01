@@ -32,6 +32,13 @@ class FakeReaderPrefsManager implements ReaderPrefsManager {
         readingPositionByBookId = readingPositionByBookId ?? {},
         totalCharacterCountByBookId = totalCharacterCountByBookId ?? {};
 
+  /// 預設 BookReaderPrefs：showHeader/showFooter 為 true，避免多數測試
+  /// 需要逐一手動傳入（Issue 23 預設值從 true 改為 false 後的測試適配）。
+  static const _defaultBookPrefs = BookReaderPrefs(
+    showHeader: true,
+    showFooter: true,
+  );
+
   final _delegate = ReaderPrefsManagerImpl(
     FakeBookReaderPrefsRepository(),
     FakeReadingPositionRepository(),
@@ -41,7 +48,7 @@ class FakeReaderPrefsManager implements ReaderPrefsManager {
   @override
   Future<LoadedPrefs> load(String bookId) async {
     return LoadedPrefs(
-      bookPrefs: bookPrefsByBookId[bookId] ?? BookReaderPrefs.empty,
+      bookPrefs: bookPrefsByBookId[bookId] ?? _defaultBookPrefs,
       globalPrefs: globalPrefs,
       readingPosition:
           readingPositionByBookId[bookId] ?? const ReadingPosition(),

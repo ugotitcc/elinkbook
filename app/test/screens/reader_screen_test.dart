@@ -1866,7 +1866,7 @@ void main() {
   ) async {
     await prefsManager.saveBookPrefs(
       'b_footer_off_epub',
-      const BookReaderPrefs(showFooter: false),
+      const BookReaderPrefs(showFooter: false, showHeader: true),
     );
 
     await tester.pumpWidget(
@@ -3977,7 +3977,10 @@ void main() {
   ) async {
     await prefsManager.saveBookPrefs(
       'b_foliate_progress_v',
-      const BookReaderPrefs(writingModeOverride: WritingMode.vertical),
+      const BookReaderPrefs(
+        writingModeOverride: WritingMode.vertical,
+        showFooter: true,
+      ),
     );
     await tester.pumpWidget(
       MaterialApp(

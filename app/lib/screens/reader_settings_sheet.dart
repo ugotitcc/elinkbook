@@ -87,8 +87,8 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     _writingModeOverride = widget.prefs.writingModeOverride;
     _pageTurnModeOverride = widget.prefs.pageTurnModeOverride;
     _screenOrientationOverride = widget.prefs.screenOrientationOverride;
-    _showHeader = widget.prefs.showHeader ?? true;
-    _showFooter = widget.prefs.showFooter ?? true;
+    _showHeader = widget.prefs.showHeader ?? false;
+    _showFooter = widget.prefs.showFooter ?? false;
     _fullscreen = widget.prefs.fullscreen ?? false;
     _columnMode = widget.prefs.columnMode ?? ColumnMode.auto;
     _columnSize = widget.prefs.columnSize ?? 720.0;
@@ -117,8 +117,8 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
         _writingModeOverride = widget.prefs.writingModeOverride;
         _pageTurnModeOverride = widget.prefs.pageTurnModeOverride;
         _screenOrientationOverride = widget.prefs.screenOrientationOverride;
-        _showHeader = widget.prefs.showHeader ?? true;
-        _showFooter = widget.prefs.showFooter ?? true;
+        _showHeader = widget.prefs.showHeader ?? false;
+        _showFooter = widget.prefs.showFooter ?? false;
         _fullscreen = widget.prefs.fullscreen ?? false;
         _columnMode = widget.prefs.columnMode ?? ColumnMode.auto;
         _columnSize = widget.prefs.columnSize ?? 720.0;

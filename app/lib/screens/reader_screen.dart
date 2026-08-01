@@ -1232,7 +1232,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 文字，`onTap` 同步以 `_tocLoaded` 防呆，比照 `_buildAppBarActions` 的
   /// 目錄按鈕既有 gating 條件，避免點擊到空白 Bottom Sheet。
   Widget _buildAppBarTitle(BookFormat format) {
-    final showHeader = format == BookFormat.epub && (_resolved?.showHeader ?? true);
+    final showHeader = format == BookFormat.epub && (_resolved?.showHeader ?? false);
     if (!showHeader) {
       return const Text(
         '閱讀器',
@@ -1542,7 +1542,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                   ),
                 ),
               ),
-            if (format == BookFormat.epub && (_resolved?.showHeader ?? true))
+            if (format == BookFormat.epub && (_resolved?.showHeader ?? false))
               Positioned(
                 top: 16,
                 left: 72,
@@ -1550,7 +1550,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                 child: Center(child: _buildFoliateHeaderText()),
               ),
             if (format == BookFormat.epub &&
-                (_resolved?.showFooter ?? true) &&
+                (_resolved?.showFooter ?? false) &&
                 (_epubPositionInfo?.totalPages ?? 0) > 0)
               (_resolved?.writingMode == WritingMode.vertical)
                   ? Positioned(
@@ -1620,7 +1620,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             // Issue 5），false 時整個 if 條件不成立、完全不佔用版面空間。
             if (format == BookFormat.pdf &&
                 _pdfPageInfo != null &&
-                (_resolved?.showFooter ?? true) &&
+                (_resolved?.showFooter ?? false) &&
                 _chromeVisible)
               ReaderFooter(
                 currentPage: _pdfPageInfo!.pageIndex + 1,
