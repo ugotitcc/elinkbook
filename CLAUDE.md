@@ -39,7 +39,7 @@ flutter build apk --debug
 
 `PdfReaderView` 為 `AndroidView` 包裝，Dart 端建構參數固定為 `filePath`/`onPageRendered`/`onError`；原生端（`app/android/app/src/main/kotlin/cc/ugotit/elinkbook/`）實作 method channel 契約 `openBook(path)` → `onPageRendered()`/`onError(message)`。`FoliateEpubReaderView` 刻意不比照這個模式（見上方）。EPUB 一律建構 `FoliateEpubReaderView`，不再依 FXL/流式分派到不同 widget（見 ADR 0017）。
 
-`ReaderScreen` 對外的公開建構參數為 `filePath`／`bookId`／`prefsRepository`（後兩者由 `epic-3-fonts-layout` Issue 3 新增；`prefsRepository` 由 `main.dart` 建構後，與 `LibraryRepository`/`BookImportService` 平行、逐層透過建構子參數傳遞下來，`LibraryRepository` 抽象介面本身不受影響，見 `docs/adr/0007-reader-screen-book-id-contract.md`）——載入中／錯誤狀態是內部實作細節，透過固定的 `Key('reader_loading_indicator')`／`Key('reader_error_text')` 暴露給測試觀察，刻意不新增公開 callback 參數。
+`ReaderScreen` 對外的公開建構參數為 `filePath`／`bookId`／`prefsRepository`／`bookTitle`（`bookTitle` 由 Issue 23 新增，頁首找不到章節資訊時的回退顯示文字；其餘由 `epic-3-fonts-layout` Issue 3 新增；`prefsRepository` 由 `main.dart` 建構後，與 `LibraryRepository`/`BookImportService` 平行、逐層透過建構子參數傳遞下來，`LibraryRepository` 抽象介面本身不受影響，見 `docs/adr/0007-reader-screen-book-id-contract.md`）——載入中／錯誤狀態是內部實作細節，透過固定的 `Key('reader_loading_indicator')`／`Key('reader_error_text')` 暴露給測試觀察，刻意不新增公開 callback 參數。
 
 `MainActivity` 仍是 `FlutterFragmentActivity`（而非 Flutter 預設的 `FlutterActivity`）——ADR 0017 原規劃隨 Readium FXL 路徑退場一併改回 `FlutterActivity`，但實作 epic-20 Issue 5 時發現資料夾匯入功能（`epic-1` Issue 8）的 `openDocumentTreeLauncher = registerForActivityResult(...)` 依賴 `FragmentActivity` 家族才能使用，`FlutterActivity` 不支援，故維持 `FlutterFragmentActivity`；與 Readium 的 `EpubNavigatorFragment` 已無關。
 

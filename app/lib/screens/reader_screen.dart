@@ -1698,7 +1698,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       _tocEntries,
       _epubPositionInfo?.progression,
     );
-    final chapterTitle = currentPath.isEmpty ? '閱讀器' : currentPath.last.title;
+    final chapterTitle =
+        currentPath.isEmpty ? widget.bookTitle : currentPath.first.title;
     return Container(
       key: const Key('reader_foliate_header_text'),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),

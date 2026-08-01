@@ -3913,6 +3913,49 @@ void main() {
     expect(positioned.top, 16);
   });
 
+  testWidgets('流式 EPUB：目錄尚未載入時，頁首顯示書名而非「閱讀器」（Issue 23）', (
+    tester,
+  ) async {
+    await prefsManager.saveBookPrefs(
+      'b_foliate_header_title',
+      const BookReaderPrefs(showHeader: true),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_foliate_header_title',
+          prefsManager: prefsManager,
+          isFixedLayout: false,
+          bookTitle: '我的測試書名',
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final foliateView = tester.widget<FoliateEpubReaderView>(
+      find.byType(FoliateEpubReaderView),
+    );
+    foliateView.onPageRendered();
+    foliateView.onLayoutResolved?.call(
+      const EpubLayoutInfo(
+        isFixedLayout: false,
+        writingMode: WritingMode.horizontal,
+      ),
+    );
+    await tester.pump();
+
+    // 觸發沉浸模式
+    await tester.tap(find.byKey(const Key('nav_zone_1')));
+    await tester.pump();
+
+    // 目錄尚未載入（_tocEntries 為空），應顯示書名
+    expect(find.text('我的測試書名'), findsOneWidget);
+    expect(find.text('閱讀器'), findsNothing);
+  });
+
   testWidgets('流式 EPUB：showHeader=false 時頁眉不顯示（Issue 7）', (tester) async {
     await prefsManager.saveBookPrefs(
       'b_foliate_header_off',
