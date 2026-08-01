@@ -115,6 +115,88 @@ void main() {
 
     expect(find.byType(FxlSettingsSheet), findsNothing);
   });
+
+  testWidgets('已持久化 showHeader=true 時，顯示頁首開關初始值反映為開啟', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: FxlSettingsSheet(
+            prefs: const BookReaderPrefs(showHeader: true),
+            onChanged: (_) {},
+          ),
+        ),
+      ),
+    );
+
+    expect(
+      tester
+          .widget<SwitchListTile>(
+              find.byKey(const Key('fxl_settings_show_header')))
+          .value,
+      isTrue,
+    );
+  });
+
+  testWidgets('已持久化 showFooter=true 時，顯示頁尾開關初始值反映為開啟', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: FxlSettingsSheet(
+            prefs: const BookReaderPrefs(showFooter: true),
+            onChanged: (_) {},
+          ),
+        ),
+      ),
+    );
+
+    expect(
+      tester
+          .widget<SwitchListTile>(
+              find.byKey(const Key('fxl_settings_show_footer')))
+          .value,
+      isTrue,
+    );
+  });
+
+  testWidgets('開啟顯示頁首開關後，onChanged 帶入 showHeader=true 且不清空其他欄位', (tester) async {
+    BookReaderPrefs? changed;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: FxlSettingsSheet(
+            prefs: const BookReaderPrefs(dualPageMode: DualPageMode.always),
+            onChanged: (prefs) => changed = prefs,
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byKey(const Key('fxl_settings_show_header')));
+    await tester.pump();
+
+    expect(changed?.showHeader, isTrue);
+    expect(changed?.dualPageMode, DualPageMode.always);
+  });
+
+  testWidgets('開啟顯示頁尾開關後，onChanged 帶入 showFooter=true 且不清空其他欄位', (tester) async {
+    BookReaderPrefs? changed;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: FxlSettingsSheet(
+            prefs: const BookReaderPrefs(fullscreen: true),
+            onChanged: (prefs) => changed = prefs,
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byKey(const Key('fxl_settings_show_footer')));
+    await tester.pump();
+
+    expect(changed?.showFooter, isTrue);
+    expect(changed?.fullscreen, isTrue);
+  });
 }
 
 Future<void> _pumpModalSheet(

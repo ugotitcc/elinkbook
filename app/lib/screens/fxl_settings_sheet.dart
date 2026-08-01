@@ -25,18 +25,24 @@ class FxlSettingsSheet extends StatefulWidget {
 class _FxlSettingsSheetState extends State<FxlSettingsSheet> {
   late DualPageMode _dualPageMode;
   late bool _fullscreen;
+  late bool _showHeader;
+  late bool _showFooter;
 
   @override
   void initState() {
     super.initState();
     _dualPageMode = widget.prefs.dualPageMode ?? DualPageMode.auto;
     _fullscreen = widget.prefs.fullscreen ?? false;
+    _showHeader = widget.prefs.showHeader ?? false;
+    _showFooter = widget.prefs.showFooter ?? false;
   }
 
   void _notifyChanged() {
     widget.onChanged(widget.prefs.copyWith(
       dualPageMode: _dualPageMode,
       fullscreen: _fullscreen,
+      showHeader: _showHeader,
+      showFooter: _showFooter,
     ));
   }
 
@@ -95,6 +101,24 @@ class _FxlSettingsSheetState extends State<FxlSettingsSheet> {
               value: _fullscreen,
               onChanged: (v) => setState(() {
                 _fullscreen = v;
+                _notifyChanged();
+              }),
+            ),
+            SwitchListTile(
+              key: const Key('fxl_settings_show_header'),
+              title: const Text('顯示頁首'),
+              value: _showHeader,
+              onChanged: (v) => setState(() {
+                _showHeader = v;
+                _notifyChanged();
+              }),
+            ),
+            SwitchListTile(
+              key: const Key('fxl_settings_show_footer'),
+              title: const Text('顯示頁尾'),
+              value: _showFooter,
+              onChanged: (v) => setState(() {
+                _showFooter = v;
                 _notifyChanged();
               }),
             ),
