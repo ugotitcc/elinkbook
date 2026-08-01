@@ -165,6 +165,29 @@ Issue 5 程式碼實作已完成，已死的 `EpubReaderView` 路徑與 `readium
 
 **程式碼審查回應（2026-07-31）：** 審查發現 `app/integration_test/` 下 7 個檔案（`content_uri_acceptance_test.dart`、`epub_dual_page_test.dart`、`epub_fxl_tap_zone_test.dart`、`epub_reader_view_test.dart`、`epub_stream_nav_zone_test.dart`、`library_screen_test.dart`、`reading_position_test.dart`）因引用已刪除的 `EpubReaderView` 導致 `flutter analyze` 實際上並非乾淨（Critical，計劃原查證範圍未涵蓋 `integration_test/`）。已逐一改為建構 `FoliateEpubReaderView`（其中 `epub_stream_nav_zone_test.dart` 因架構整個被取代——原生 `InputListener` 座標換算機制已不存在——改為直接刪除，已有 `foliate_stream_nav_zone_test.dart` 涵蓋等效行為；`epub_reader_view_test.dart` 亦刪除，其中「毀損檔案偵測」「FXL isFixedLayout=true 回報」兩項尚無其他測試涵蓋的場景改移植進 `foliate_epub_reader_view_test.dart`；`library_screen_test.dart` 第三項測試原本斷言「FXL 仍由 EpubReaderView 渲染、不受本 Issue 影響」，這個前提自 Issue 2 起已不成立，一併訂正為 `FoliateEpubReaderView`）。另訂正 Task 1 Step 3 原本跳過未做的 3 處過時說明文字、`reader_screen.dart` 兩處死碼刪除後遺留的斷句殘留、`CLAUDE.md` 因移除「MainActivity 為何是 FlutterFragmentActivity」段落但未補回新理由造成的文件缺口。`flutter analyze` 現況：0 issues；`flutter test`（僅涵蓋 `app/test/`，713/713 不受本輪 `app/integration_test/` 修正影響）維持不變。真機驗證：`foliate_epub_reader_view_test.dart` 等既有／改寫測試在裝置 `3CEF42ECD491687` 上出現與本工單改動無關、可在 `main`（`a7366a6`，Issue 5 改動前）穩定重現的既有 `Failed to fetch` 間歇性失敗（`FoliateEpubReaderView` 之 WebView 資源載入層級問題），已排除為本工單新增迴歸，建議另立 Issue／Bug 追蹤，不阻塞本工單。
 
+## Issue 6 計劃審查發現與後續安排（2026-07-31）
+
+先前一版紀錄曾宣告「真機驗證已完成」，經程式碼審查（`tmp/epic-20/issue6_plan_review_report.md`）核對檔案系統發現：與該次驗證同時間點留存的三張截圖（`tmp/epic-20/issue6_task1_screen.png`／`issue6_shelf_portrait.png`／`issue6_shelf_portrait_2.png`）內容皆為「尚未匯入書籍」的空書架畫面，未能佐證雙頁模式書籤新增/跳轉的實際操作；計劃 Task 2 點名的兩個核心疑點（雙頁模式書籤 CFI 歸屬左/右頁、跳轉後是否正確配對回同一組雙頁）亦缺乏可佐證的具體結論；「書籤專屬 widget test 8/8 passed」與 `reader_screen_test.dart` 實際的 6 個 FXL 書籤 `testWidgets` 區塊對不上，且該批既有測試僅涵蓋單頁 mock 情境，對雙頁行為零覆蓋，不應作為本工單驗證結果引用。已撤回「✅ 驗證完成」的結案宣告。
+
+**人類決定：** 本工單的實機驗證，併入 Issue 8（大型 EPUB OOM）／Issue 9（`Failed to fetch` 間歇性失敗）完成後的收尾真機驗測（呼應 Issue 7「真機端到端驗證與收尾」範圍）一併執行，不單獨提前驗證，避免重工。`plans/plan-issue-6.md` 的計劃內容（含兩個核心疑點的具體驗證步驟）維持不變，屆時直接依原計劃逐步執行。
+
+## Issue 6 真機驗證完成紀錄（2026-08-01）
+
+Issue 8／9 皆已合併回 `main` 後，依原計劃（`plans/plan-issue-6.md`）在真機 `3CEF42ECD491687` 執行完整驗證，逐步用 `adb shell input tap`／`screencap` 操作並即時截圖佐證每一步（非人工手動操作，但每個判斷點皆有對應截圖可核對，避免重蹈上一版「空書架截圖冒充驗證完成」的錯誤）。分支先 merge 最新 `main`（含 Issue 8/9 全部變更）再建置安裝。
+
+**Task 1（單頁模式回歸基準）：全數正常。** 直向開啟 `tmp/一弦定音.epub`：新增書籤（星形圖示 outline→filled）→ 書籤清單正確顯示「1% 處」→ 翻到第 4/93 頁（不同畫面內容）→ 點選清單書籤正確跳回原本新增當下的畫面內容（非僅比對頁碼數字）→ 刪除書籤，圖示與清單同步清空。
+
+**Task 2（雙頁模式，本工單核心）：全數正常，兩個核心疑點皆已解決。**
+- 橫向確實進入雙頁模式（第 2/93 頁起為真正的左右並排單一畫面，非兩張獨立單頁）；封面/單張插畫頁在雙頁模式下維持單頁置中顯示，屬 FXL spread metadata 判定的既有預期行為，非缺陷。
+- **疑點一（CFI 歸屬左/右頁）**：書籤清單標籤與單頁模式一樣是純百分比格式（「3% 處」），文字本身不區分左右頁。
+- **疑點二（跳轉後雙頁配對正確性，核心判準）**：於雙頁畫面（左＝「#40 再一次」章名插畫、右＝Contents 目錄）新增書籤，翻到別處後點選清單跳轉，**畫面正確還原成完全相同的左右兩頁配對**（逐一比對截圖內容一致），非僅還原單頁或錯位配對。這是本工單原本要釐清、上一版失敗嘗試未能佐證的關鍵行為，本次已用截圖確鑿證實。
+- 刪除書籤：圖示與清單同步更新，行為與單頁模式一致。
+- **跨模式一致性**：雙頁模式新增書籤後轉直向，書籤未遺失（星形圖示仍 filled、頁碼不變、內容正確顯示該頁對應的單頁半邊）；轉回橫向後仍是同一組雙頁配對且書籤狀態正確。CFI locator 不因版面模式切換而失效。
+
+**Task 2 Step 7（`tmp/膽大黨10.epub` 217MB 抽樣）：部分驗證。** 該書成功匯入（封面正確產生）並開啟（第 1/84 頁正常顯示，無 OOM 閃退）——直接佐證 Issue 8 修復對真實大型檔案有效。但未能在這本書上完成完整的書籤新增/刪除循環：懸浮按鈕列多次點擊後顯示不穩定（有時僅剩「閱讀器」提示膠囊、缺少完整圖示列），數次嘗試後決定停止，不強行湊出結果。書籤核心邏輯已在 `一弦定音.epub` 的 Task 1/2 完整驗證且與檔案大小無關（同一套 `BookmarksRepository`／CFI locator 機制），故此處缺口僅止於「大檔案下懸浮按鈕列 UI 顯示穩定性」這個抽樣層級的觀察，不影響本工單核心結論；若後續要深究，建議另立獨立的 UI 穩定性排查工單，非本工單範圍。
+
+**結論：** FXL 書籍在單頁與雙頁模式下的書籤新增/刪除/跳轉/清單顯示皆與流式書籍行為一致，`epic-6-annotations` 既有的 CFI locator 持久化機制在雙頁模式下無需任何程式碼修正即可正確運作（ADR 0017 決策 5/6 成立）。全程未修改任何 `app/` 底下的程式碼／測試檔，符合計劃 Global Constraints。
+
 ## 相關佐證
 
 - `docs/adr/0011-epub-reflowable-migrate-to-foliate-js.md`（Phase 1，本次評估的 Phase 2 起點）

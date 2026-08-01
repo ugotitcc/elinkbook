@@ -2,6 +2,8 @@
 
 > **給執行者（agentic worker）的提示：** 建議使用 `superpowers:subagent-driven-development`（推薦）或 `superpowers:executing-plans` 逐工單執行本計劃。工單內的步驟以核取方塊（`- [ ]`）追蹤完成狀態。
 
+> **執行狀態備註（2026-07-31）：** 曾有一輪聲稱「驗證完成」的紀錄，經程式碼審查核對檔案系統上的截圖後發現與實際操作內容不符（詳見 `tmp/epic-20/issue6_plan_review_report.md`），已撤回並將以下所有 Step 核取方塊重置為未完成。人類決定本工單的真機驗證併入 Issue 8／9 完成後的收尾真機驗測一併執行（呼應 Issue 7 範圍），計劃內容本身不變，屆時直接依下方步驟重新執行。
+
 **目標：** 驗證 FXL 書籍在單頁／雙頁模式下的書籤新增/刪除/跳轉/清單顯示是否正常運作，與既有流式書籍書籤功能行為一致。本工單**純驗證性質，不預先假設需要程式碼修正**（ADR 0017 決策 6：書籤沿用既有 CFI locator 持久化機制，`epic-17` Issue 6 已為 reflowable 建立，風險低、無視覺 overlay）。
 
 **依賴：** Issue 3（已合併，`main`，雙頁模式）、Issue 5（已合併，`main`，`EpubReaderView.kt`／`readium-navigator` 已移除）。
@@ -39,7 +41,7 @@
 - Consumes：`tmp/一弦定音.epub`、裝置 `3CEF42ECD491687`
 - Produces：單頁模式下書籤新增/刪除/跳轉/清單行為的真機觀察紀錄
 
-- [ ] **Step 1：建置並安裝最新 `main` APK 至真機**
+- [x] **Step 1：建置並安裝最新 `main` APK 至真機**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -47,17 +49,27 @@ flutter build apk --debug
 adb -s 3CEF42ECD491687 install -r build/app/outputs/flutter-apk/app-debug.apk
 ```
 
-- [ ] **Step 2：裝置轉直向，匯入／開啟 `tmp/一弦定音.epub`，確認單頁模式**
+分支已 merge 最新 `main`（含 Issue 8/9），以此為基礎建置安裝，`flutter analyze` 乾淨。
 
-`adb shell settings put system user_rotation 0`，確認 `dualPageMode` 未強制（預設 `auto`）情況下直向即為單頁。
+- [x] **Step 2：裝置轉直向，匯入／開啟 `tmp/一弦定音.epub`，確認單頁模式**
 
-- [ ] **Step 3：新增書籤，確認懸浮書籤按鈕圖示切換（🔖 outline → filled 或既有慣例的視覺區分）**
+`adb shell settings put system accelerometer_rotation 0` + `user_rotation 0`。真機截圖 `tmp/epic-20/issue6_t1_step2_loaded.png` 確認：直向、單頁、真實書籍內容（第 1/93 頁），非空書架。
 
-- [ ] **Step 4：開啟筆記 Bottom Sheet「🔖 書籤」分頁，確認剛新增的書籤出現在清單，名稱/位置描述合理**
+- [x] **Step 3：新增書籤，確認懸浮書籤按鈕圖示切換（🔖 outline → filled 或既有慣例的視覺區分）**
 
-- [ ] **Step 5：翻到不同頁，點選清單中的書籤，確認正確跳轉回原本新增書籤的那一頁（畫面內容比對，非只看頁碼數字）**
+截圖 `issue6_t1_step3_star_tap.png`：星形圖示由 outline 變為 filled。
 
-- [ ] **Step 6：刪除該書籤（懸浮按鈕再次點擊，或清單內滑動刪除，依既有 UI 慣例），確認按鈕圖示與清單同步更新**
+- [x] **Step 4：開啟筆記 Bottom Sheet「🔖 書籤」分頁，確認剛新增的書籤出現在清單，名稱/位置描述合理**
+
+截圖 `issue6_t1_step4_notes_sheet.png`：書籤清單顯示「1% 處」。
+
+- [x] **Step 5：翻到不同頁，點選清單中的書籤，確認正確跳轉回原本新增書籤的那一頁（畫面內容比對，非只看頁碼數字）**
+
+截圖 `issue6_t1_step5_after_navigate.png`（翻到第 4/93 頁，不同畫面內容）→ `issue6_t1_step5_after_jump2.png`（點選書籤後正確跳回原本畫面內容，與新增當下一致，非僅頁碼數字比對）。
+
+- [x] **Step 6：刪除該書籤（懸浮按鈕再次點擊，或清單內滑動刪除，依既有 UI 慣例），確認按鈕圖示與清單同步更新**
+
+截圖 `issue6_t1_step6_deleted_v2.png`（星形圖示回到 outline）與 `issue6_t1_step6_list_empty.png`（清單清空、全刪圖示轉為灰階不可用）。
 
 （此 Task 為既有 `epic-6-annotations` 功能的回歸基準確認，預期全數正常——若此處就出現異常，代表問題與雙頁模式無關，是更基礎的既有缺陷，應優先處理並重新評估本工單範圍。）
 
@@ -71,21 +83,33 @@ adb -s 3CEF42ECD491687 install -r build/app/outputs/flutter-apk/app-debug.apk
 - Consumes：Task 1 確認單頁模式基準正常
 - Produces：雙頁模式下書籤新增/刪除/跳轉/清單行為的真機觀察紀錄，含「已查證的關鍵技術事實」點出的兩個具體疑點的結論
 
-- [ ] **Step 1：裝置轉橫向，確認 `tmp/一弦定音.epub` 進入雙頁模式（兩頁並排）**
+- [x] **Step 1：裝置轉橫向，確認 `tmp/一弦定音.epub` 進入雙頁模式（兩頁並排）**
 
-`adb shell settings put system user_rotation 1`（或對應橫向值，比照 Issue 3 驗證慣例）。
+`adb shell settings put system user_rotation 1`。截圖 `issue6_t2_debug_settings.png` 確認第 2/93 頁為真正雙頁並排（角色介紹頁，非單頁）。註：封面／單張插頁在雙頁模式下仍以單頁呈現（畫面居中、左右留白），這是 FXL spread metadata 判定的既有預期行為，不是缺陷；進入內文（例如章名頁+目錄）後即正確配對雙頁。
 
-- [ ] **Step 2：在雙頁並排畫面中新增書籤，明確記錄畫面當下顯示的左右兩頁內容（截圖）**
+- [x] **Step 2：在雙頁並排畫面中新增書籤，明確記錄畫面當下顯示的左右兩頁內容（截圖）**
 
-- [ ] **Step 3：確認懸浮書籤按鈕圖示切換，並開啟書籤清單，確認新增的書籤出現，比對名稱/位置描述是否讓使用者能辨識出「是哪一頁」（呼應「已查證的關鍵技術事實」第一點的疑慮）**
+於第 3/93 頁（左＝「#40 再一次」章名插畫、右＝Contents 目錄頁）新增書籤，截圖 `issue6_t2_step2_bookmarked.png` 記錄星形圖示轉為 filled 及畫面內容。
 
-- [ ] **Step 4：翻到書中其他位置（不同頁/不同雙頁配對），點選清單中該筆書籤，確認跳轉後畫面正確顯示回 Step 2 截圖記錄的那組雙頁配對（左右頁內容一致，非只有其中一頁對、另一頁錯位，呼應「已查證的關鍵技術事實」第二點的疑慮）**
+- [x] **Step 3：確認懸浮書籤按鈕圖示切換，並開啟書籤清單，確認新增的書籤出現，比對名稱/位置描述是否讓使用者能辨識出「是哪一頁」（呼應「已查證的關鍵技術事實」第一點的疑慮）**
 
-- [ ] **Step 5：刪除該書籤，確認雙頁模式下按鈕圖示與清單同步更新行為與單頁模式（Task 1 Step 6）一致**
+截圖 `issue6_t2_step3_list.png`：清單顯示「3% 處」——與單頁模式相同的百分比格式，標籤文字本身不區分左右頁（此為現況記錄，非缺陷判定；使用者辨識「哪一頁」需依賴 Step 4 的跳轉還原效果）。
 
-- [ ] **Step 6：跨模式一致性——在雙頁模式新增一筆書籤後，裝置轉回直向（單頁），確認該書籤仍正確出現在清單中且可正常跳轉（CFI locator 不因版面模式切換而失效）；反向（單頁新增、轉橫向雙頁確認）也驗證一次**
+- [x] **Step 4：翻到書中其他位置（不同頁/不同雙頁配對），點選清單中該筆書籤，確認跳轉後畫面正確顯示回 Step 2 截圖記錄的那組雙頁配對（左右頁內容一致，非只有其中一頁對、另一頁錯位，呼應「已查證的關鍵技術事實」第二點的疑慮）**
 
-- [ ] **Step 7：若 Step 1-6 全數正常，額外用 `tmp/膽大黨10.epub`（另一本真實 FXL 漫畫，Issue 8 已知因檔案過大〔217MB〕可能無法開啟）視情況做一次抽樣確認——若因 Issue 8 的 OOM 問題無法開啟，記錄並跳過，不視為本工單失敗（Issue 8 是獨立已知問題，不阻塞本工單）**
+**本工單核心疑慮已解決，結論：正確。** 截圖 `issue6_t2_step4_navigated_away.png`（翻到第 1/93 頁，不同畫面）→ `issue6_t2_recheck3_jumped.png`（點選書籤後跳回第 3/93 頁，左右兩頁內容與 Step 2 截圖逐一比對完全一致：左＝「#40 再一次」插畫、右＝Contents 目錄）。CFI locator 正確保存並還原整組雙頁配對，非僅單頁或錯位配對。
+
+- [x] **Step 5：刪除該書籤，確認雙頁模式下按鈕圖示與清單同步更新行為與單頁模式（Task 1 Step 6）一致**
+
+截圖 `issue6_t2_step5_star_deleted.png`（星形圖示回到 outline）與 `issue6_t2_step5_list_empty.png`（清單清空），行為與 Task 1 Step 6 一致。
+
+- [x] **Step 6：跨模式一致性——在雙頁模式新增一筆書籤後，裝置轉回直向（單頁），確認該書籤仍正確出現在清單中且可正常跳轉（CFI locator 不因版面模式切換而失效）；反向（單頁新增、轉橫向雙頁確認）也驗證一次**
+
+於第 3/93 頁（雙頁模式）重新新增書籤（`issue6_t2_step6_add_in_dual.png`）→ 轉直向，截圖 `issue6_t2_step6_portrait_check.png` 確認：頁碼仍為 3/93、星形圖示仍為 filled（書籤未因版面切換遺失），畫面正確顯示該頁右半部內容（Contents 目錄）→ 轉回橫向，截圖 `issue6_t2_step6_back_to_landscape.png` 確認：仍是同一組雙頁配對、星形圖示仍 filled。雙向切換皆正確，CFI locator 不受版面模式影響。
+
+- [x] **Step 7：若 Step 1-6 全數正常，額外用 `tmp/膽大黨10.epub`（另一本真實 FXL 漫畫，Issue 8 已知因檔案過大〔217MB〕可能無法開啟）視情況做一次抽樣確認——若因 Issue 8 的 OOM 問題無法開啟，記錄並跳過，不視為本工單失敗（Issue 8 是獨立已知問題，不阻塞本工單）**
+
+**部分驗證。** 匯入 217MB 的 `tmp/膽大黨10.epub`（截圖 `issue6_step7_imported2.png`，封面正確產生）並開啟（截圖 `issue6_step7_opened2.png`，第 1/84 頁正常顯示，無 OOM 閃退）——**直接驗證 Issue 8 修復在真實大型檔案上有效**，與 Issue 8 自己的驗收判準吻合。但本次未能對這本書完成完整的書籤新增/刪除循環：此書的懸浮按鈕列在多次點擊後出現顯示不穩定的情況（時而完整顯示、時而只剩「閱讀器」提示膠囊、命中的座標有時被判讀為換頁而非按鈕點擊），數次嘗試後選擇停止，未強行湊出結果——书籤核心邏輯已在 Task 1／Task 2 用 `一弦定音.epub` 完整驗證過且與檔案大小無關（皆走同一套 `BookmarksRepository`／CFI locator 機制），故此處未完成的僅是抽樣層級的「大檔案下 UI 操作流暢度」確認，不影響本工單核心結論。
 
 ---
 
@@ -98,17 +122,27 @@ adb -s 3CEF42ECD491687 install -r build/app/outputs/flutter-apk/app-debug.apk
 - Consumes：Task 1-2 驗證結果
 - Produces：Issue 6 結案紀錄（或若發現異常，記錄具體現象並建議後續子工單方向，比照 Issue 8/9 的處理模式）
 
-- [ ] **Step 1：依 Task 1-2 實際觀察結果，如實記錄於 `design.md`「Issue 6 實作完成紀錄」**——若全數正常，明確寫「純驗證，無程式碼異動」；若發現任何異常，具體描述現象（不得只寫「有問題」），並說明是否已另立 Issue／子工單追蹤。
+- [x] **Step 1：依 Task 1-2 實際觀察結果，如實記錄於 `design.md`「Issue 6 實作完成紀錄」**——若全數正常，明確寫「純驗證，無程式碼異動」；若發現任何異常，具體描述現象（不得只寫「有問題」），並說明是否已另立 Issue／子工單追蹤。
 
-- [ ] **Step 2：更新 `issues.md` Issue 6 Status 為 ✅ 或視發現結果調整（例如若有異常則保留 `needs-triage` 並補充發現內容）**
+已記錄於 `design.md`「Issue 6 真機驗證完成紀錄（2026-08-01）」，含 Task 1/2 全數正常結果、Task 2 Step 7 部分驗證的具體現象描述。
 
-- [ ] **Step 3：更新 `docs/epics.md`（若 Epic 整體狀態因此有變動）**
+- [x] **Step 2：更新 `issues.md` Issue 6 Status 為 ✅ 或視發現結果調整（例如若有異常則保留 `needs-triage` 並補充發現內容）**
 
-- [ ] **Step 4：本計畫檔 Task 1-3 所有 Step 依實際完成進度勾選**
+已更新為 ✅ 已完成，並保留上一版撤回紀錄的歷史脈絡。
 
-- [ ] **Step 5：Commit（比照 Issue 2-5 branch 命名慣例 `feature/epic-20-issue-6-*`，若無任何程式碼異動，允許本工單只有文件 commit，不強制建立空的程式碼變更）**
+- [x] **Step 3：更新 `docs/epics.md`（若 Epic 整體狀態因此有變動）**
+
+已於 `epic-20-fxl-foliate-migration` 列補上 Issue 6 完成摘要。
+
+- [x] **Step 4：本計畫檔 Task 1-3 所有 Step 依實際完成進度勾選**
+
+- [x] **Step 5：Commit（比照 Issue 2-5 branch 命名慣例 `feature/epic-20-issue-6-*`，若無任何程式碼異動，允許本工單只有文件 commit，不強制建立空的程式碼變更）**
+
+commit `a3c9cf4`（純文件 commit，`git diff --stat` 確認僅 4 個 Markdown 檔案異動，無任何 `app/` 程式碼變更）。
 
 - [ ] **Step 6：送出 code review（`superpowers:requesting-code-review`），依審查結果修正後開 PR**
+
+已送出審查（範圍 `71ad157..a3c9cf4`），結論：驗證宣告可信、可合併，唯一發現為本 Step 4 的核取方塊未即時勾選（已於本次修正）。待人類決定是否開 PR。
 
 ---
 
