@@ -146,7 +146,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
       final result =
           await widget.importService.importFiles(uris, displayNames: displayNames);
       await _loadBooks();
-      _showDuplicateSkippedSnackBar(result.skippedDuplicateCount);
+      _showImportResultSnackBar(result);
     } catch (_) {
       // 匯入失敗時靜默吞掉，避免異常傳播破壞 widget 樹或留下不一致狀態
     } finally {
@@ -171,7 +171,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
       );
       await _loadGroups();
       await _loadBooks();
-      _showDuplicateSkippedSnackBar(result.skippedDuplicateCount);
+      _showImportResultSnackBar(result);
     } catch (_) {
       // 匯入失敗時靜默吞掉，避免異常傳播破壞 widget 樹或留下不一致狀態
     } finally {
@@ -179,12 +179,22 @@ class _LibraryScreenState extends State<LibraryScreen> {
     }
   }
 
-  /// 【診斷修正】匯入完成後，若有檔案因來源 URI 與既有書籍重複而被跳過，
-  /// 顯示提示告知使用者（見 book_import_service_impl.dart 的重複偵測說明）。
-  void _showDuplicateSkippedSnackBar(int skippedCount) {
-    if (skippedCount <= 0 || !mounted) return;
+  /// 匯入完成後顯示單一合併提示：成功匯入本數與（若有）因來源 URI 與既有
+  /// 書籍重複而被跳過的本數（見 book_import_service_impl.dart 的重複偵測
+  /// 說明），避免使用者連續看到兩則獨立 SnackBar。兩者皆為 0（例如選檔後
+  /// 全數格式不支援）時不顯示任何提示，維持既有行為。
+  void _showImportResultSnackBar(ImportResult result) {
+    final importedCount = result.importedBooks.length;
+    final skippedCount = result.skippedDuplicateCount;
+    if (importedCount <= 0 && skippedCount <= 0) return;
+    if (!mounted) return;
+    final message = importedCount > 0
+        ? (skippedCount > 0
+            ? '已匯入 $importedCount 本，$skippedCount 本已存在，已跳過'
+            : '已匯入 $importedCount 本書')
+        : '$skippedCount 本已存在，已跳過';
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$skippedCount 本已存在，已跳過')),
+      SnackBar(content: Text(message)),
     );
   }
 

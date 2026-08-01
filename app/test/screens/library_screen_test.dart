@@ -1799,6 +1799,110 @@ void main() {
     expect(find.text('2 本已存在，已跳過'), findsOneWidget);
   });
 
+  testWidgets('匯入完成且無重複時，顯示已匯入本數的成功提示（Issue 2：匯入成功缺乏正面回饋）',
+      (tester) async {
+    const filePickerChannel =
+        MethodChannel('miguelruivo.flutter.plugins.filepicker');
+    addTearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(filePickerChannel, null);
+    });
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(filePickerChannel, (call) async {
+      if (call.method == 'custom') {
+        return [
+          {
+            'name': 'book.epub',
+            'path': '/tmp/book.epub',
+            'size': 100,
+            'bytes': null,
+            'identifier': 'content://example/book.epub',
+          },
+        ];
+      }
+      return null;
+    });
+
+    final importService = FakeBookImportService();
+    final completer = Completer<ImportResult>();
+    importService.pendingCompleter = completer;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(),
+          importService: importService,
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('library_empty_import_button')));
+    await tester.pump(const Duration(milliseconds: 300));
+
+    completer.complete(
+      ImportResult(importedBooks: [_testBook(id: '1', title: '書一')]),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('已匯入 1 本書'), findsOneWidget);
+  });
+
+  testWidgets('匯入完成且同時有重複被跳過時，合併成單一提示（Issue 2：匯入成功缺乏正面回饋）',
+      (tester) async {
+    const filePickerChannel =
+        MethodChannel('miguelruivo.flutter.plugins.filepicker');
+    addTearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(filePickerChannel, null);
+    });
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(filePickerChannel, (call) async {
+      if (call.method == 'custom') {
+        return [
+          {
+            'name': 'book.epub',
+            'path': '/tmp/book.epub',
+            'size': 100,
+            'bytes': null,
+            'identifier': 'content://example/book.epub',
+          },
+        ];
+      }
+      return null;
+    });
+
+    final importService = FakeBookImportService();
+    final completer = Completer<ImportResult>();
+    importService.pendingCompleter = completer;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(),
+          importService: importService,
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('library_empty_import_button')));
+    await tester.pump(const Duration(milliseconds: 300));
+
+    completer.complete(
+      ImportResult(
+        importedBooks: [_testBook(id: '1', title: '書一')],
+        skippedDuplicateCount: 2,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('已匯入 1 本，2 本已存在，已跳過'), findsOneWidget);
+    expect(find.text('2 本已存在，已跳過'), findsNothing);
+  });
+
   testWidgets(
       'LibraryScreen 點開一本書後，ReaderScreen 收到的 highlightsRepository／notesRepository 正確貫穿（Issue 6 缺口修正）',
       (tester) async {
