@@ -56,8 +56,8 @@ void main() {
       expect(resolved.dualPageMode, DualPageMode.auto);
       expect(resolved.dualPageCoverAlone, isTrue);
       expect(resolved.dualPageDirection, DualPageDirection.rtl);
-      expect(resolved.showHeader, isTrue);
-      expect(resolved.showFooter, isTrue);
+      expect(resolved.showHeader, isFalse);
+      expect(resolved.showFooter, isFalse);
       expect(resolved.navZoneActions, rightFlipZoneTemplate);
       expect(resolved.showNavZoneDebugOverlay, isFalse);
       expect(resolved.fullscreen, isFalse);

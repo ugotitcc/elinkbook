@@ -842,7 +842,7 @@ Issue 16 確認「強制 FXL」後橫向雙頁模式退化成單頁的根因；I
 
 ## Issue 23：頁首/頁尾行為調整（邊界預設、FXL 開關補齊、預設關閉、直排位置、章節名稱顯示）
 
-**Status:** 實作計劃已撰寫（`plans/plan-issue-23.md`），待計劃審查通過後開始執行。已完成 `/diagnose` 現況查證（`reviews/bugfix-repro-header-footer.md`，未進版控），5 項需求皆已定位到確切修改點，3 個開放問題已與人類確認（見下方各子項）。計劃拆為 6 個 Task：Task 1-5 對應 5 項需求逐一實作，Task 6 最終驗證與收尾。
+**Status:** ✅ 已完成（5 項需求全部實作、719/719 測試通過、真機 5 項驗收與截圖全數通過）。計劃 `plans/plan-issue-23.md` 全部 Task 1-6 已完成，`flutter analyze` 乾淨、`flutter test` 719/719 全數通過，真機截圖存於 `tmp/epic-18/issue23_*.png`。
 
 **依賴：** 無（皆為既有頁首/頁尾機制上的調整，不依賴其他未完成 Issue）。
 

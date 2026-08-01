@@ -437,7 +437,7 @@ void main() {
     );
   });
 
-  testWidgets('頁首/頁尾開關初始值反映 prefs（未持久化時預設開啟）', (tester) async {
+  testWidgets('頁首/頁尾開關初始值反映 prefs（未持久化時預設關閉）', (tester) async {
     await _pumpSheet(tester, BookReaderPrefs.empty, (_) {});
 
     expect(
@@ -445,14 +445,14 @@ void main() {
           .widget<SwitchListTile>(
               find.byKey(const Key('reader_settings_show_header')))
           .value,
-      isTrue,
+      isFalse,
     );
     expect(
       tester
           .widget<SwitchListTile>(
               find.byKey(const Key('reader_settings_show_footer')))
           .value,
-      isTrue,
+      isFalse,
     );
   });
 
@@ -475,7 +475,7 @@ void main() {
   testWidgets('關閉頁首開關後，onChanged 帶入 showHeader=false 且不影響 showFooter',
       (tester) async {
     BookReaderPrefs? result;
-    await _pumpSheet(tester, BookReaderPrefs.empty, (prefs) => result = prefs);
+    await _pumpSheet(tester, const BookReaderPrefs(showHeader: true, showFooter: true), (prefs) => result = prefs);
 
     await tester.tap(find.byKey(const Key('reader_settings_show_header')));
     await tester.pump();
@@ -488,7 +488,7 @@ void main() {
   testWidgets('關閉頁尾開關後，onChanged 帶入 showFooter=false 且不影響 showHeader',
       (tester) async {
     BookReaderPrefs? result;
-    await _pumpSheet(tester, BookReaderPrefs.empty, (prefs) => result = prefs);
+    await _pumpSheet(tester, const BookReaderPrefs(showHeader: true, showFooter: true), (prefs) => result = prefs);
 
     await tester.tap(find.byKey(const Key('reader_settings_show_footer')));
     await tester.pump();
@@ -517,7 +517,7 @@ void main() {
   testWidgets('開啟全螢幕模式開關後，onChanged 帶入 fullscreen=true 且不影響 showHeader',
       (tester) async {
     BookReaderPrefs? result;
-    await _pumpSheet(tester, BookReaderPrefs.empty, (prefs) => result = prefs);
+    await _pumpSheet(tester, const BookReaderPrefs(showHeader: true), (prefs) => result = prefs);
 
     await tester.tap(find.byKey(const Key('reader_settings_fullscreen')));
     await tester.pump();
