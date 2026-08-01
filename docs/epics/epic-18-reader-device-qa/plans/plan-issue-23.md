@@ -1,6 +1,6 @@
 # Epic 18 Issue 23 — 頁首/頁尾行為調整（5 項需求） 實作計劃
 
-> **給執行者（agentic worker）的提示：** 建議使用 `superpowers:subagent-driven-development`（推薦）或 `superpowers:executing-plans` 逐工單執行本計劃。工單內的步驟以核取方塊（`- [ ]`）追蹤完成狀態。
+> **給執行者（agentic worker）的提示：** 建議使用 `superpowers:subagent-driven-development`（推薦）或 `superpowers:executing-plans` 逐工單執行本計劃。工單內的步驟以核取方塊（`- [x]`）追蹤完成狀態。
 
 **目標：** 實作 5 項頁首/頁尾行為調整需求（`issues.md` Issue 23）：流式 EPUB 上邊界預設改 32、FXL 補齊頁首/頁尾開關、兩種格式（含 PDF）預設改為關閉、直排頁首移至右上角並與 FAB 互斥、頁首文字改顯示第一層章節名稱或書名。全部修改點已於 `/diagnose` 階段查證（`reviews/bugfix-repro-header-footer.md`），本計劃聚焦落實與測試更新。
 
@@ -45,7 +45,7 @@
 - Consumes：`prefs.marginTop`（既有）
 - Produces：無新介面，純常數值變更
 
-- [ ] **Step 1：修改預設值**
+- [x] **Step 1：修改預設值**
 
 `main.js:222`：
 
@@ -55,7 +55,7 @@ const marginTopPx = typeof prefs.marginTop === 'number' ? prefs.marginTop : 32
 
 （原本 `64` 改為 `32`；同行註解上方 `main.js:218` 提到「未設定時的預設值（64px/16px）延續 Issue 4 當初為修正直排頂端裁切問題而定的數值」，此段註解需同步訂正為 `32px`，避免文件與程式碼不一致。）
 
-- [ ] **Step 2：確認無既有測試斷言這個數字**
+- [x] **Step 2：確認無既有測試斷言這個數字**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -76,7 +76,7 @@ grep -rn "64" test/ | grep -i margin
 - Consumes：`BookReaderPrefs.showHeader`/`showFooter`（既有欄位）
 - Produces：`FxlSettingsSheet` 新增兩個可切換的 `SwitchListTile`
 
-- [ ] **Step 1：`_FxlSettingsSheetState` 新增欄位與初始化**
+- [x] **Step 1：`_FxlSettingsSheetState` 新增欄位與初始化**
 
 比照既有 `_fullscreen` 欄位模式（`fxl_settings_sheet.dart:27,33,39`）：
 
@@ -92,7 +92,7 @@ _showHeader = widget.prefs.showHeader ?? false;  // 見 Task 3，預設改為 fa
 _showFooter = widget.prefs.showFooter ?? false;
 ```
 
-- [ ] **Step 2：`_notifyChanged()` 擴充**
+- [x] **Step 2：`_notifyChanged()` 擴充**
 
 ```dart
 void _notifyChanged() {
@@ -105,7 +105,7 @@ void _notifyChanged() {
 }
 ```
 
-- [ ] **Step 3：`build()` 新增兩個 `SwitchListTile`**
+- [x] **Step 3：`build()` 新增兩個 `SwitchListTile`**
 
 比照 `reader_settings_sheet.dart:306-318` 的文字與既有 `fxl_settings_fullscreen` 開關的 Key 命名慣例，加在既有 `全螢幕模式` 開關之後：
 
@@ -130,7 +130,7 @@ SwitchListTile(
 ),
 ```
 
-- [ ] **Step 4：新增/調整測試**
+- [x] **Step 4：新增/調整測試**
 
 `app/test/screens/fxl_settings_sheet_test.dart` 新增測試：驗證初始狀態依 `prefs.showHeader`/`showFooter` 正確顯示、切換後 `onChanged` 回呼收到正確的 `copyWith` 結果（比照既有 `fxl_settings_fullscreen` 測試案例的寫法）。
 
@@ -148,7 +148,7 @@ SwitchListTile(
 - Consumes：`BookReaderPrefs.showHeader`/`showFooter`（可為 null 的每書覆寫值）
 - Produces：`ResolvedPreferences.showHeader`/`showFooter` 預設值由 `true` 改為 `false`
 
-- [ ] **Step 1：修改正式預設值來源**
+- [x] **Step 1：修改正式預設值來源**
 
 `reader_prefs_manager_impl.dart:179-180`：
 
@@ -157,13 +157,13 @@ showHeader: book.showHeader ?? false,
 showFooter: book.showFooter ?? false,
 ```
 
-- [ ] **Step 2：修改防呆用初始展示值，避免載入瞬間閃爍**
+- [x] **Step 2：修改防呆用初始展示值，避免載入瞬間閃爍**
 
 `reader_screen.dart:1235,1545,1553,1623`（`_resolved?.showHeader ?? true` / `_resolved?.showFooter ?? true`）與 `reader_settings_sheet.dart:90-91,120-121`（`_showHeader = widget.prefs.showHeader ?? true` / `_showFooter = widget.prefs.showFooter ?? true`），全數改 `?? true` → `?? false`。
 
 **逐一確認每一處改動不影響其餘邏輯**（例如 `reader_screen.dart:1235` 是 `_buildAppBarTitle` 的 `showHeader` 判斷，PDF 恆為 `false` 不受影響；`:1545` 是本計劃 Task 4 也會改動的同一行，注意兩個 Task 的改動疊加，實作順序建議先做本 Task 再做 Task 4，避免同一行改兩次互相覆蓋）。
 
-- [ ] **Step 3：確認 PDF 共用同一解析路徑**
+- [x] **Step 3：確認 PDF 共用同一解析路徑**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -172,7 +172,7 @@ grep -n "showFooter" lib/screens/pdf_settings_sheet.dart lib/reader/reader_prefs
 
 確認 `pdf_settings_sheet.dart` 的 `showFooter` 讀寫確實共用 `reader_prefs_manager_impl.dart:180` 同一個解析點（無獨立的 PDF 專屬預設值分支）。若發現有獨立分支，一併修正為 `?? false`。
 
-- [ ] **Step 4：更新既有測試**
+- [x] **Step 4：更新既有測試**
 
 `app/test/reader/reader_prefs_manager_test.dart:58-60`：
 
@@ -183,7 +183,7 @@ expect(resolved.showFooter, isFalse);
 
 （該測試案例本身標題為「預設值」測試，語意不變，只改期望值。）
 
-- [ ] **Step 5：盤點 `reader_screen_test.dart` 其餘依賴預設值的既有測試**
+- [x] **Step 5：盤點 `reader_screen_test.dart` 其餘依賴預設值的既有測試**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -206,7 +206,7 @@ flutter test test/screens/reader_screen_test.dart 2>&1 | grep -i "fail\|expect"
 
 **建議在 Task 3 完成後再執行本 Task**（`reader_screen.dart:1545` 這一行兩個 Task 都會觸及，避免改動互相覆蓋，見 Task 3 Step 2 備註）。
 
-- [ ] **Step 1：頁首 `Positioned` 改為依 `writingMode` 分支，並加上 `!_chromeVisible`**
+- [x] **Step 1：頁首 `Positioned` 改為依 `writingMode` 分支，並加上 `!_chromeVisible`**
 
 `reader_screen.dart:1545-1551` 原本：
 
@@ -246,21 +246,21 @@ if (format == BookFormat.epub &&
 
 **計劃審查發現（2026-08-01，Minor）**：直排分支的長文字溢出風險——`_buildFoliateHeaderText()` 內的 `Text` 雖已有 `maxLines: 1`／`overflow: TextOverflow.ellipsis`（`reader_screen.dart:1697-1701`），但省略號能否生效取決於 `Text` 是否收到有界的寬度約束。橫排分支靠 `left: 72, right: 72` 提供這個約束（螢幕寬度扣掉左右各 72px），原本的直排分支只設 `right`/`top` 兩個邊、未設 `bottom`，`RotatedBox` 交換寬高約束後，`Text` 旋轉前的有效「寬度」（來自外層 `Positioned` 未設下限的「高度」）會是無界的——章節名稱或書名（Task 5 的回退情境）過長時，省略號不會生效，直排文字可能一路向下延伸到螢幕外。**已改為額外設定 `bottom: 16`**，讓 `RotatedBox` 交換後傳給 `Text` 的寬度約束改為「螢幕高度 − 32px」的有界值，與橫排分支「靠 `Positioned` 兩側邊界提供有界寬度」是同一種機制、只是換一組邊，不需要額外的 `ConstrainedBox`／`MediaQuery` 手動計算像素（避免引入需要另外考慮 safe-area/瀏海差異的魔術數字，且與既有橫排分支的寫法風格一致）。
 
-- [ ] **Step 2：修正既有測試 `reader_screen_test.dart:3757`**
+- [x] **Step 2：修正既有測試 `reader_screen_test.dart:3757`**
 
 `'流式 EPUB：頁眉純顯示章節名稱、不可點擊，showHeader=false 時不顯示（Issue 7）'` 目前用 `ReaderScreen` 初始狀態（`_chromeVisible` 預設 `true`）斷言 `headerFinder findsOneWidget`——新行為下 chrome 可見時頁首應隱藏，此測試需要先觸發一次沉浸模式切換（點擊選單熱區，比照 `reader_screen_test.dart:3070` 一帶既有測試觸發 `_chromeVisible` 切換的既有寫法）讓 `_chromeVisible` 變為 `false`，才能斷言 `headerFinder findsOneWidget`；並新增一個新案例斷言「`_chromeVisible == true`（初始狀態，未觸發沉浸模式）時頁首 `findsNothing`」，明確覆蓋新行為的兩種狀態。
 
-- [ ] **Step 3：確認既有測試 `reader_screen_test.dart:3799`（Issue 13）不受影響**
+- [x] **Step 3：確認既有測試 `reader_screen_test.dart:3799`（Issue 13）不受影響**
 
 `'流式 EPUB：沉浸模式收起選單（_chromeVisible=false）時，頁首文字仍常駐顯示、6 顆浮動按鈕正確收合（Issue 13）'`——新行為下 `_chromeVisible == false` 時頁首依然顯示，此測試預期維持通過不需修改；執行後確認實際結果與預期一致，若不一致需重新檢視 Step 1 的條件式是否有誤。
 
-- [ ] **Step 4：新增直排模式的頁首位置測試**
+- [x] **Step 4：新增直排模式的頁首位置測試**
 
 新增測試：`writingMode: WritingMode.vertical` 且 `_chromeVisible == false` 且 `showHeader == true` 時，頁首以 `RotatedBox(quarterTurns: 1)` 包裹並位於右上角（比照頁尾既有的直排位置測試寫法，若存在的話，一併核對慣例）；`Positioned` 的 `bottom: 16` 亦應在測試中一併斷言（確認寬度約束確實有界，不只是視覺上「看起來對」）。
 
 另新增一個長文字案例：`bookTitle` 使用一個明顯過長的字串（例如 20+ 字），直排模式下確認渲染出的 `Text` widget 沒有拋出 layout overflow 例外（`flutter test` 對 `RenderFlex` 等溢出會直接失敗並印出紅黑警告，可作為自動化訊號），驗證 Step 1 新增的 `bottom: 16` 確實讓省略號機制生效，不需要真機才能發現這個問題。
 
-- [ ] **Step 5：真機驗證直排頁首的實際旋轉視覺方向**
+- [x] **Step 5：真機驗證直排頁首的實際旋轉視覺方向**
 
 程式碼層級的 `quarterTurns: 1` 是否讓文字方向符合直排由右至左的閱讀直覺（文字應由上至下排列），需要真機（`3CEF42ECD491687`）實際開啟直排流式書籍、觸發沉浸模式收起後肉眼確認，不能只憑程式碼推斷（比照頁尾同樣寫法的既有視覺，理論上應一致，但仍需真機複核，因為頁首位置從左下角改為右上角，視覺對稱性未必與頁尾完全一致）。同時用一本目錄章節名稱較長的書籍（或暫時測試用超長書名）實際觀察 Step 1 的 `bottom: 16` 約束是否讓省略號正確生效、文字未溢出螢幕。
 
@@ -279,7 +279,7 @@ if (format == BookFormat.epub &&
 - Consumes：`Book.title`（既有欄位）
 - Produces：`ReaderScreen` 新增 `required String bookTitle` 建構參數
 
-- [ ] **Step 1：`ReaderScreen` 新增 `bookTitle` 建構參數**
+- [x] **Step 1：`ReaderScreen` 新增 `bookTitle` 建構參數**
 
 `reader_screen.dart` 的 `ReaderScreen` widget 類別新增：
 
@@ -289,7 +289,7 @@ final String bookTitle;
 
 建構子新增 `required this.bookTitle`。
 
-- [ ] **Step 2：`_buildFoliateHeaderText()` 改用第一層章節與書名回退**
+- [x] **Step 2：`_buildFoliateHeaderText()` 改用第一層章節與書名回退**
 
 `reader_screen.dart:1684-1704`：
 
@@ -307,7 +307,7 @@ Widget _buildFoliateHeaderText() {
 
 （`currentPath.last` → `currentPath.first`；`'閱讀器'` → `widget.bookTitle`。）
 
-- [ ] **Step 3：`library_screen.dart` 傳入書名**
+- [x] **Step 3：`library_screen.dart` 傳入書名**
 
 `library_screen.dart:406-412` 的 `ReaderScreen(...)` 建構呼叫新增：
 
@@ -315,7 +315,7 @@ Widget _buildFoliateHeaderText() {
 bookTitle: book.title,
 ```
 
-- [ ] **Step 4：盤點所有既有建構 `ReaderScreen(...)` 的呼叫點與測試**
+- [x] **Step 4：盤點所有既有建構 `ReaderScreen(...)` 的呼叫點與測試**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -324,11 +324,11 @@ grep -rln "ReaderScreen(" test/ lib/
 
 `bookTitle` 為 `required` 參數，全部既有建構呼叫（含 `reader_screen_test.dart` 內大量既有測試）都需要補上這個參數才能通過編譯——逐一補上（測試用途可用固定字串如 `'測試書名'`，不需要真實書名）。
 
-- [ ] **Step 5：新增測試驗證書名回退行為**
+- [x] **Step 5：新增測試驗證書名回退行為**
 
 新增測試：`_tocEntries` 為空或尚未載入完成時（`currentPath.isEmpty`），頁首文字顯示 `widget.bookTitle` 而非硬編碼「閱讀器」；另新增測試驗證有巢狀目錄時頁首顯示第一層（`currentPath.first.title`）而非最深層章節（`currentPath.last.title`）。
 
-- [ ] **Step 6：更新 `CLAUDE.md`**
+- [x] **Step 6：更新 `CLAUDE.md`**
 
 「`ReaderScreen` 對外的公開建構參數」段落（目前記載「filePath／bookId／prefsRepository」），補上 `bookTitle`，並簡要說明用途（頁首找不到章節資訊時的回退顯示文字）。
 
@@ -345,7 +345,7 @@ grep -rln "ReaderScreen(" test/ lib/
 - Consumes：Task 1-5 全部完成
 - Produces：Issue 23 結案紀錄
 
-- [ ] **Step 1：全套測試與靜態分析**
+- [x] **Step 1：全套測試與靜態分析**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -355,7 +355,7 @@ flutter test
 
 Expected：`No issues found!`；全數 PASS。
 
-- [ ] **Step 2：真機建置安裝與 5 項需求逐一驗證**
+- [x] **Step 2：真機建置安裝與 5 項需求逐一驗證**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -370,15 +370,15 @@ adb -s 3CEF42ECD491687 install -r build/app/outputs/flutter-apk/app-debug.apk
 4. 開啟「顯示頁首」，直排模式下頁首正確顯示於右上角、旋轉方向符合直排閱讀直覺；點擊熱區叫出 FAB 群組時頁首消失，收起 FAB 進入閱讀時頁首重新出現。
 5. 開啟一本有巢狀目錄的書，頁首顯示第一層章節名稱（非最深層）；開啟一本目錄尚未載入完成或無目錄的書，頁首顯示書名（非「閱讀器」字樣）。
 
-- [ ] **Step 3：更新 `docs/epics/epic-18-reader-device-qa/issues.md`——Issue 23 完成說明**
+- [x] **Step 3：更新 `docs/epics/epic-18-reader-device-qa/issues.md`——Issue 23 完成說明**
 
 把 Status 改為完成狀態，逐項記錄 Task 1-5 的驗證結果與真機截圖佐證。
 
-- [ ] **Step 4：更新 `docs/epics.md`（若需要）**
+- [x] **Step 4：更新 `docs/epics.md`（若需要）**
 
-- [ ] **Step 5：本計畫檔 Task 1-6 所有 Step 依實際完成進度勾選**
+- [x] **Step 5：本計畫檔 Task 1-6 所有 Step 依實際完成進度勾選**
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook"
@@ -386,7 +386,7 @@ git add -A  # 或明確列出本次異動檔案
 git commit -m "fix(epic-18): Issue 23 頁首/頁尾行為調整——5 項需求"
 ```
 
-- [ ] **Step 7：送出 code review（`superpowers:requesting-code-review`），依審查結果修正後開 PR**
+- [x] **Step 7：送出 code review（`superpowers:requesting-code-review`），依審查結果修正後開 PR**
 
 ---
 
