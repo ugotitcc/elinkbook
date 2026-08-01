@@ -826,7 +826,7 @@ Issue 16 確認「強制 FXL」後橫向雙頁模式退化成單頁的根因；I
 
 ## Issue 22：FXL 缺少目錄（TOC）按鈕（順帶發現，另立追蹤）
 
-**Status:** needs-triage，已於 Issue 20 grilling 順帶發現，尚未進行完整 Discovery。
+**Status:** 🚫 不再執行（2026-08-02 `/diagnose` 確認）。`epic-20-fxl-foliate-migration` Issue 4「浮動按鈕群組合併」已將 `reader_fixed_layout_*` 整組移除，FXL／流式 EPUB 統一共用同一組 `reader_foliate_*` 按鈕（含 `reader_foliate_toc_button`）；目前 `app/lib/screens/reader_screen.dart:1446-1463` 的顯示條件為 `format == BookFormat.epub && _chromeVisible`，不再有任何 FXL／流式分支，且已於 Issue 4 真機驗證截圖佐證 FXL 書籍目錄按鈕正常運作。本 Issue 訴求已由 `epic-20` Issue 4 完整涵蓋，不需另外實作。
 
 **依賴：** 無。
 
