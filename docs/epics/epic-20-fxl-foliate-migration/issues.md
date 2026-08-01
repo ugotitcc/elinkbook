@@ -140,7 +140,7 @@
 
 ## Issue 7：真機端到端驗證與收尾
 
-**Status:** ready-for-agent
+**Status:** 實作計劃已撰寫（`plans/plan-issue-7.md`），待計劃審查通過後開始執行。依 `issues.md` 原文 4 項範圍拆為 4 個 Task：(1) FXL＋流式各一本的端到端組合驗證、(2) ADR 0017 決策 5「既有 FXL 資料視為失效」真機實測（透過資料庫欄位竄改模擬舊版 Readium Locator 格式，驗證不會 crash）、(3) 完整建置/測試工具鏈確認、(4) 彙整 QA 報告與更新狀態文件。
 
 **依賴：** Issue 2-6 全部完成。
 
