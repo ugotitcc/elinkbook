@@ -11,7 +11,7 @@
 - **項目 1**：`app/android/app/src/main/assets/foliate/main.js:222`，`const marginTopPx = typeof prefs.marginTop === 'number' ? prefs.marginTop : 64`——此行上方 `main.js:161` 明確標註「以下為流式（reflowable）書籍的既有邏輯」，FXL 不受影響。
 - **項目 2**：`app/lib/screens/fxl_settings_sheet.dart` 目前完全沒有 `showHeader`/`showFooter` 控制項；`reader_settings_sheet.dart:306-318` 已有可直接比照的 `SwitchListTile` 寫法；`fxl_settings_sheet.dart` 現有的 `_fullscreen` 開關（同檔案 `:92-100`）是最貼近的既有模式（`late bool` 欄位 + `initState` 讀取 `?? 預設值` + `_notifyChanged()` 呼叫 `widget.prefs.copyWith(...)`）。
 - **項目 3**：唯一正式預設值來源 `app/lib/reader/reader_prefs_manager_impl.dart:179-180`（`book.showHeader ?? true`／`book.showFooter ?? true`）；PDF 與 EPUB 共用同一個 `ResolvedPreferences.showFooter` 欄位與這一處解析點（`pdf_settings_sheet.dart:88` 直接讀寫同一個 `showFooter`，無獨立分支）。另有多個「`_resolved` 尚未載入完成前」的防呆用 `?? true` 站點：`reader_screen.dart:1235,1545,1553,1623`、`reader_settings_sheet.dart:90-91,120-121`。既有測試 `app/test/reader/reader_prefs_manager_test.dart:58-60`（預設值測試）目前斷言 `isTrue`，需改為 `isFalse`。
-- **項目 4**：頁尾既有的直排寫法（`reader_screen.dart:1552-1569`）用 `RotatedBox(quarterTurns: 1)` + `Positioned(left: 16, bottom: 16)`，頁首應比照但改 `right: 16, top: 16`（右上角）。頁首目前的顯示條件（`reader_screen.dart:1545`）完全沒有 `_chromeVisible` 判斷。**此變更會反轉 `issues.md` Issue 13 的既有決策**（Issue 13 刻意移除頁首的 `_chromeVisible` 判斷，讓頁首「常駐顯示、不受沉浸模式影響」）——本次不是恢復 Issue 13 之前「只在 `_chromeVisible == true` 時顯示」的行為（那樣會跟 FAB 同時出現），而是新的第三種狀態「只在 `_chromeVisible == false` 時顯示」，與 FAB 完全互斥。**只改頁首，頁尾（進度文字）維持 Issue 13 的常駐顯示決策不變。** 既有測試 `app/test/screens/reader_screen_test.dart:3799`（`'流式 EPUB：沉浸模式收起選單（_chromeVisible=false）時，頁首文字仍常駐顯示...（Issue 13）'`）在新行為下**依然成立**（chrome 隱藏時頁首仍顯示），但 `reader_screen_test.dart:3757`（`'流式 EPUB：頁眉純顯示章節名稱...'`）目前用 `ReaderScreen` 預設初始狀態（`_chromeVisible` 預設 `true`，未主動切換）並斷言 `headerFinder findsOneWidget`——這個測試在新行為下會失敗（chrome 可見時頁首應改為 `findsNothing`），需要修正。
+- **項目 4**：頁尾既有的直排寫法（`reader_screen.dart:1552-1569`）用 `RotatedBox(quarterTurns: 1)` + `Positioned(left: 16, bottom: 16)`，頁首應比照但改 `right: 16, top: 16, bottom: 16`（右上角，`bottom` 為計劃審查後新增）。**計劃審查發現**：頁尾的直排寫法只設 `left`/`bottom` 兩邊，因為頁尾內容永遠是 `"$currentPage/$totalPages"` 這種固定短字串，從未真正測試過長文字情境；頁首的章節名稱／書名（Task 5 回退情境）是任意長度的使用者/書籍內容字串，若只設 `right`/`top` 兩邊（未設 `bottom`），`RotatedBox` 交換寬高約束後 `Text` 拿到的有效寬度會是無界的，`maxLines: 1`／`overflow: TextOverflow.ellipsis`（`reader_screen.dart:1697-1701`）不會生效，故頁首的直排分支需額外加 `bottom: 16` 提供有界寬度（與橫排分支用 `left: 72, right: 72` 提供有界寬度是同一種機制），不是頁尾既有模式的單純複製。頁首目前的顯示條件（`reader_screen.dart:1545`）完全沒有 `_chromeVisible` 判斷。**此變更會反轉 `issues.md` Issue 13 的既有決策**（Issue 13 刻意移除頁首的 `_chromeVisible` 判斷，讓頁首「常駐顯示、不受沉浸模式影響」）——本次不是恢復 Issue 13 之前「只在 `_chromeVisible == true` 時顯示」的行為（那樣會跟 FAB 同時出現），而是新的第三種狀態「只在 `_chromeVisible == false` 時顯示」，與 FAB 完全互斥。**只改頁首，頁尾（進度文字）維持 Issue 13 的常駐顯示決策不變。** 既有測試 `app/test/screens/reader_screen_test.dart:3799`（`'流式 EPUB：沉浸模式收起選單（_chromeVisible=false）時，頁首文字仍常駐顯示...（Issue 13）'`）在新行為下**依然成立**（chrome 隱藏時頁首仍顯示），但 `reader_screen_test.dart:3757`（`'流式 EPUB：頁眉純顯示章節名稱...'`）目前用 `ReaderScreen` 預設初始狀態（`_chromeVisible` 預設 `true`，未主動切換）並斷言 `headerFinder findsOneWidget`——這個測試在新行為下會失敗（chrome 可見時頁首應改為 `findsNothing`），需要修正。
 - **項目 5**：`_buildFoliateHeaderText()`（`reader_screen.dart:1684-1704`）用 `currentPath.last.title`（最深層章節），找不到時寫死 `'閱讀器'`。`ReaderScreen` 目前沒有管道取得書名，`library_screen.dart:402-412` 的 `_openBook(Book book)` 建構 `ReaderScreen` 時手上已有完整 `Book` 物件（`filePath`/`bookId` 正是從這裡取的），新增 `bookTitle` 建構參數直接傳入 `book.title` 即可，不需要新增 `LibraryRepository` 查詢方法。`_buildAppBarTitle()`（`reader_screen.dart:1234-1257`）雖有類似邏輯，但已查證 EPUB 格式的 `Scaffold.appBar` 恆為 `null`（`reader_screen.dart:1212-1220`），此方法實質只服務 PDF（PDF 走固定靜態文字分支），**不需要修改**。`CLAUDE.md`「`ReaderScreen` 對外的公開建構參數」段落需同步更新（新增性質，不影響既有參數相容性）。
 
 ## Global Constraints
@@ -230,6 +230,7 @@ if (format == BookFormat.epub &&
       ? Positioned(
           right: 16,
           top: 16,
+          bottom: 16,
           child: RotatedBox(
             quarterTurns: 1,
             child: _buildFoliateHeaderText(),
@@ -243,6 +244,8 @@ if (format == BookFormat.epub &&
         ),
 ```
 
+**計劃審查發現（2026-08-01，Minor）**：直排分支的長文字溢出風險——`_buildFoliateHeaderText()` 內的 `Text` 雖已有 `maxLines: 1`／`overflow: TextOverflow.ellipsis`（`reader_screen.dart:1697-1701`），但省略號能否生效取決於 `Text` 是否收到有界的寬度約束。橫排分支靠 `left: 72, right: 72` 提供這個約束（螢幕寬度扣掉左右各 72px），原本的直排分支只設 `right`/`top` 兩個邊、未設 `bottom`，`RotatedBox` 交換寬高約束後，`Text` 旋轉前的有效「寬度」（來自外層 `Positioned` 未設下限的「高度」）會是無界的——章節名稱或書名（Task 5 的回退情境）過長時，省略號不會生效，直排文字可能一路向下延伸到螢幕外。**已改為額外設定 `bottom: 16`**，讓 `RotatedBox` 交換後傳給 `Text` 的寬度約束改為「螢幕高度 − 32px」的有界值，與橫排分支「靠 `Positioned` 兩側邊界提供有界寬度」是同一種機制、只是換一組邊，不需要額外的 `ConstrainedBox`／`MediaQuery` 手動計算像素（避免引入需要另外考慮 safe-area/瀏海差異的魔術數字，且與既有橫排分支的寫法風格一致）。
+
 - [ ] **Step 2：修正既有測試 `reader_screen_test.dart:3757`**
 
 `'流式 EPUB：頁眉純顯示章節名稱、不可點擊，showHeader=false 時不顯示（Issue 7）'` 目前用 `ReaderScreen` 初始狀態（`_chromeVisible` 預設 `true`）斷言 `headerFinder findsOneWidget`——新行為下 chrome 可見時頁首應隱藏，此測試需要先觸發一次沉浸模式切換（點擊選單熱區，比照 `reader_screen_test.dart:3070` 一帶既有測試觸發 `_chromeVisible` 切換的既有寫法）讓 `_chromeVisible` 變為 `false`，才能斷言 `headerFinder findsOneWidget`；並新增一個新案例斷言「`_chromeVisible == true`（初始狀態，未觸發沉浸模式）時頁首 `findsNothing`」，明確覆蓋新行為的兩種狀態。
@@ -253,11 +256,13 @@ if (format == BookFormat.epub &&
 
 - [ ] **Step 4：新增直排模式的頁首位置測試**
 
-新增測試：`writingMode: WritingMode.vertical` 且 `_chromeVisible == false` 且 `showHeader == true` 時，頁首以 `RotatedBox(quarterTurns: 1)` 包裹並位於右上角（比照頁尾既有的直排位置測試寫法，若存在的話，一併核對慣例）。
+新增測試：`writingMode: WritingMode.vertical` 且 `_chromeVisible == false` 且 `showHeader == true` 時，頁首以 `RotatedBox(quarterTurns: 1)` 包裹並位於右上角（比照頁尾既有的直排位置測試寫法，若存在的話，一併核對慣例）；`Positioned` 的 `bottom: 16` 亦應在測試中一併斷言（確認寬度約束確實有界，不只是視覺上「看起來對」）。
+
+另新增一個長文字案例：`bookTitle` 使用一個明顯過長的字串（例如 20+ 字），直排模式下確認渲染出的 `Text` widget 沒有拋出 layout overflow 例外（`flutter test` 對 `RenderFlex` 等溢出會直接失敗並印出紅黑警告，可作為自動化訊號），驗證 Step 1 新增的 `bottom: 16` 確實讓省略號機制生效，不需要真機才能發現這個問題。
 
 - [ ] **Step 5：真機驗證直排頁首的實際旋轉視覺方向**
 
-程式碼層級的 `quarterTurns: 1` 是否讓文字方向符合直排由右至左的閱讀直覺，需要真機（`3CEF42ECD491687`）實際開啟直排流式書籍、觸發沉浸模式收起後肉眼確認，不能只憑程式碼推斷（比照頁尾同樣寫法的既有視覺，理論上應一致，但仍需真機複核，因為頁首位置從左下角改為右上角，視覺對稱性未必與頁尾完全一致）。
+程式碼層級的 `quarterTurns: 1` 是否讓文字方向符合直排由右至左的閱讀直覺（文字應由上至下排列），需要真機（`3CEF42ECD491687`）實際開啟直排流式書籍、觸發沉浸模式收起後肉眼確認，不能只憑程式碼推斷（比照頁尾同樣寫法的既有視覺，理論上應一致，但仍需真機複核，因為頁首位置從左下角改為右上角，視覺對稱性未必與頁尾完全一致）。同時用一本目錄章節名稱較長的書籍（或暫時測試用超長書名）實際觀察 Step 1 的 `bottom: 16` 約束是否讓省略號正確生效、文字未溢出螢幕。
 
 ---
 
