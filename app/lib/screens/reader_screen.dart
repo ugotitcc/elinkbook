@@ -1542,13 +1542,25 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                   ),
                 ),
               ),
-            if (format == BookFormat.epub && (_resolved?.showHeader ?? false))
-              Positioned(
-                top: 16,
-                left: 72,
-                right: 72,
-                child: Center(child: _buildFoliateHeaderText()),
-              ),
+            if (format == BookFormat.epub &&
+                (_resolved?.showHeader ?? false) &&
+                !_chromeVisible)
+              (_resolved?.writingMode == WritingMode.vertical)
+                  ? Positioned(
+                      right: 16,
+                      top: 16,
+                      bottom: 16,
+                      child: RotatedBox(
+                        quarterTurns: 1,
+                        child: _buildFoliateHeaderText(),
+                      ),
+                    )
+                  : Positioned(
+                      top: 16,
+                      left: 72,
+                      right: 72,
+                      child: Center(child: _buildFoliateHeaderText()),
+                    ),
             if (format == BookFormat.epub &&
                 (_resolved?.showFooter ?? false) &&
                 (_epubPositionInfo?.totalPages ?? 0) > 0)

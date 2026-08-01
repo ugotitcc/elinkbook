@@ -3757,6 +3757,10 @@ void main() {
   testWidgets('流式 EPUB：頁眉純顯示章節名稱、不可點擊，showHeader=false 時不顯示（Issue 7）', (
     tester,
   ) async {
+    await prefsManager.saveBookPrefs(
+      'b_foliate_header',
+      const BookReaderPrefs(showHeader: true),
+    );
     await tester.pumpWidget(
       MaterialApp(
         home: ReaderScreen(
@@ -3781,6 +3785,10 @@ void main() {
         writingMode: WritingMode.horizontal,
       ),
     );
+    await tester.pump();
+
+    // 觸發沉浸模式（_chromeVisible=false），頁首才會顯示
+    await tester.tap(find.byKey(const Key('nav_zone_1')));
     await tester.pump();
 
     final headerFinder = find.byKey(const Key('reader_foliate_header_text'));
@@ -3842,6 +3850,68 @@ void main() {
       );
     },
   );
+
+  testWidgets('流式 EPUB：直排模式下頁首以 RotatedBox 顯示於右上角，與 FAB 互斥（Issue 23）', (
+    tester,
+  ) async {
+    await prefsManager.saveBookPrefs(
+      'b_foliate_header_v',
+      const BookReaderPrefs(
+        writingModeOverride: WritingMode.vertical,
+        showHeader: true,
+      ),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_foliate_header_v',
+          prefsManager: prefsManager,
+          isFixedLayout: false,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final foliateView = tester.widget<FoliateEpubReaderView>(
+      find.byType(FoliateEpubReaderView),
+    );
+    foliateView.onPageRendered();
+    foliateView.onLayoutResolved?.call(
+      const EpubLayoutInfo(
+        isFixedLayout: false,
+        writingMode: WritingMode.vertical,
+      ),
+    );
+    await tester.pump();
+
+    // 初始狀態 _chromeVisible=true，頁首不顯示
+    expect(find.byKey(const Key('reader_foliate_header_text')), findsNothing);
+
+    // 觸發沉浸模式（_chromeVisible=false），頁首顯示
+    await tester.tap(find.byKey(const Key('nav_zone_1')));
+    await tester.pump();
+
+    final headerFinder = find.byKey(const Key('reader_foliate_header_text'));
+    expect(headerFinder, findsOneWidget);
+
+    // 驗證直排分支使用 RotatedBox
+    expect(
+      find.ancestor(of: headerFinder, matching: find.byType(RotatedBox)),
+      findsOneWidget,
+      reason: '直排模式頁首應以 RotatedBox 包裹',
+    );
+
+    // 驗證 Positioned 包含 bottom: 16（有界寬度約束）
+    final positioned = tester.widget<Positioned>(
+      find.ancestor(of: headerFinder, matching: find.byType(Positioned)).first,
+    );
+    expect(positioned.bottom, 16);
+    expect(positioned.right, 16);
+    expect(positioned.top, 16);
+  });
 
   testWidgets('流式 EPUB：showHeader=false 時頁眉不顯示（Issue 7）', (tester) async {
     await prefsManager.saveBookPrefs(
