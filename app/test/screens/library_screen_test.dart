@@ -2523,6 +2523,43 @@ void main() {
         tester.widget<SettingsScreen>(find.byType(SettingsScreen));
     expect(settingsScreen.customFontsRepository, customFontsRepository);
   });
+
+  testWidgets(
+      'LibraryScreen 點開一本書後，ReaderScreen 收到的 customFontsRepository 正確貫穿（自訂字型無法在單書閱讀字型選單出現的診斷回歸測試）',
+      (tester) async {
+    // 使用 .txt 格式讓 ReaderScreen 命中「不支援格式」分支（純 Dart 安全
+    // 路徑，不觸發 AndroidView），比照本檔案既有的貫穿驗證測試手法——本
+    // 測試只關心建構參數是否正確貫穿，與實際閱讀器渲染無關。
+    final book = _testBook(
+      id: '1',
+      title: '紅樓夢',
+      author: '曹雪芹',
+      filePath: 'content://example/1.txt',
+    );
+    final customFontsRepository = FakeCustomFontsRepository();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: [book]),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+          customFontsRepository: customFontsRepository,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('book_item_1')));
+    await tester.pumpAndSettle();
+
+    final readerScreen = tester.widget<ReaderScreen>(find.byType(ReaderScreen));
+    expect(readerScreen.customFontsRepository, same(customFontsRepository),
+        reason: 'LibraryScreen._openBook() 未把 customFontsRepository 貫穿給 '
+            'ReaderScreen，導致 ReaderScreen._loadCustomFonts() 早期 return，'
+            '_customFonts 永遠是空清單，自訂字型永遠不會出現在 '
+            'ReaderSettingsSheet 的單書字型選單中');
+  });
 }
 
 Book _testBook({

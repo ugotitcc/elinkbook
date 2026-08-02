@@ -428,6 +428,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
               bookProgress: book.progress,
               isFixedLayout: book.isFixedLayout,
               libraryRepository: widget.repository,
+              customFontsRepository: widget.customFontsRepository,
             ),
           ),
         )
