@@ -1,3 +1,4 @@
+import 'package:elinkbook/reader/custom_font.dart';
 import 'package:elinkbook/reader/foliate_native_bridge.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -16,6 +17,65 @@ void main() {
       "src: url('https://appassets.androidplatform.net/assets/fonts/GuanKiapTsingKhai.ttf'); }",
     ));
     expect('@font-face'.allMatches(css).length, 5);
+  });
+
+  test('buildFontFaceCss 帶入 customFonts 時，額外輸出自訂字型的 @font-face 宣告',
+      () {
+    final css = buildFontFaceCss(customFonts: const [
+      CustomFont(
+        id: 1,
+        displayName: '我的字型',
+        familyName: 'MyCustomFamily',
+        fontUri: 'content://example/font1',
+      ),
+    ]);
+
+    expect(css, contains(
+      "@font-face { font-family: 'MyCustomFamily'; "
+      "src: url('https://appassets.androidplatform.net/assets/custom-fonts/MyCustomFamily'); }",
+    ));
+    // 內建 5 款字型仍照舊輸出，不受影響。
+    expect('@font-face'.allMatches(css).length, 6);
+  });
+
+  test('buildFontFaceCss 的自訂字型虛擬路徑對 family name 做 URL 編碼', () {
+    final css = buildFontFaceCss(customFonts: const [
+      CustomFont(
+        id: 1,
+        displayName: '含空白字型',
+        familyName: 'My Custom Family',
+        fontUri: 'content://example/font2',
+      ),
+    ]);
+
+    expect(css, contains(
+      "src: url('https://appassets.androidplatform.net/assets/custom-fonts/My%20Custom%20Family'); }",
+    ));
+  });
+
+  test('buildFontFaceCss 未帶 customFonts 參數時（既有零參數呼叫）行為不變', () {
+    final css = buildFontFaceCss();
+    expect('@font-face'.allMatches(css).length, 5);
+  });
+
+  test('loadCustomFontBytes 呼叫 elinkbook/reader_resources 的 readCustomFontBytes',
+      () async {
+    MethodCall? captured;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+      const MethodChannel('elinkbook/reader_resources'),
+      (call) async {
+        captured = call;
+        return Uint8List.fromList([4, 5, 6]);
+      },
+    );
+
+    final bytes =
+        await loadCustomFontBytes('content://example.provider/font1.ttf');
+
+    expect(captured!.method, 'readCustomFontBytes');
+    expect(captured!.arguments, {'uri': 'content://example.provider/font1.ttf'});
+    expect(bytes, [4, 5, 6]);
   });
 
   test('loadAndroidAsset 呼叫 elinkbook/reader_resources 的 readAndroidAsset', () async {

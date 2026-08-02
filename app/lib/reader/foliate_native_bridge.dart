@@ -5,6 +5,7 @@ import 'package:flutter/services.dart' show MethodChannel, rootBundle;
 import 'package:path_provider/path_provider.dart';
 
 import 'app_font.dart';
+import 'custom_font.dart';
 import 'foliate_bridge_codec.dart';
 
 const _readerResourcesChannel = MethodChannel('elinkbook/reader_resources');
@@ -54,13 +55,18 @@ String _fontFileName(AppFont font) {
 /// 攔截後呼叫 [loadFlutterFontAsset] 提供位元組。家族名稱字串直接取自
 /// `AppFontFamilyName.familyName`（見 [_fontFileName] 註解），與
 /// `app/lib/reader/app_font.dart` 保持單一事實來源，不重複維護。
-String buildFontFaceCss() {
+String buildFontFaceCss({List<CustomFont> customFonts = const []}) {
   final rules = <String>[];
   for (final font in AppFont.values) {
     final familyName = font.familyName;
     final fileName = _fontFileName(font);
     rules.add("@font-face { font-family: '$familyName'; "
         "src: url('https://appassets.androidplatform.net/assets/fonts/$fileName'); }");
+  }
+  for (final font in customFonts) {
+    final encodedFamilyName = Uri.encodeComponent(font.familyName);
+    rules.add("@font-face { font-family: '${font.familyName}'; "
+        "src: url('https://appassets.androidplatform.net/assets/custom-fonts/$encodedFamilyName'); }");
   }
   return rules.join('\n');
 }
@@ -99,6 +105,17 @@ Future<Uint8List?> loadFlutterFontAsset(String assetPath) async {
   } catch (_) {
     return null;
   }
+}
+
+/// 讀取自訂字型的位元組（`content://` URI，ADR 0021 決策：不落地快取），
+/// 透過原生 `ReaderResourceChannel` 的 `readCustomFontBytes` 一次性讀取，
+/// 供 `InAppWebView.shouldInterceptRequest` 服務 [buildFontFaceCss] 產生的
+/// 自訂字型 `@font-face src` 請求。比照既有 [loadAndroidAsset] 模式（固定
+/// 函式宣告，非 [cacheBookForServing] 的可覆寫頂層函數變數——字型檔案不需要
+/// 書籍本體那種測試環境 mock 注入彈性）。
+Future<Uint8List?> loadCustomFontBytes(String uri) {
+  return _readerResourcesChannel
+      .invokeMethod<Uint8List>('readCustomFontBytes', {'uri': uri});
 }
 
 /// 將 EPUB 檔案分塊複製到每個 widget 實例獨立的快取子目錄，
