@@ -635,7 +635,7 @@ git commit -m "fix(epic-14): ReaderScreen 貫穿 customFonts 並修正非同步�
 
 **前置需求**：一台已連接、可執行 `flutter test integration_test/... -d <device-id>` 的 Android 裝置；`app/test/fixtures/sample.ttf`（Issue 1 已使用過的 KingHwa_OldSong 字型，已存在版本控制）與 `app/test/fixtures/sample.epub` 皆已在 `pubspec.yaml` 宣告為 asset 可供 staging。
 
-- [ ] **Step 1：撰寫真機整合測試**
+- [x] **Step 1：撰寫真機整合測試**
 
 新建 `app/integration_test/custom_font_rendering_test.dart`（比照既有 `app/integration_test/pdf_content_uri_metadata_test.dart` 的 `_stageAssetAsFile` 寫法與 `createTestContentUri`／`takePersistableUriPermission` 使用模式）：
 
@@ -755,7 +755,7 @@ Expected：測試 PASS（無 `reader_error_text`、無殘留 `reader_loading_ind
 3. 肉眼確認內文字體確實變成該字型（非退回內建預設字型），比照本專案既有「自動化驗證機制運作、視覺效果人工確認」慣例（例如 `epic-4` PDF 濾鏡效果的驗收方式）。
 4. 確認切換回內建字型／其他書籍時行為不受影響。
 
-- [ ] **Step 4：`flutter analyze` 全專案確認**
+- [x] **Step 4：`flutter analyze` 全專案確認**
 
 ```bash
 flutter analyze
