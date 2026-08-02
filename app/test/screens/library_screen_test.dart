@@ -31,6 +31,9 @@ import 'package:path_provider_platform_interface/path_provider_platform_interfac
 import 'package:share_plus_platform_interface/share_plus_platform_interface.dart';
 import '../support/fake_path_provider_platform.dart';
 import '../support/fake_share_platform.dart';
+import 'package:elinkbook/reader/custom_fonts_repository.dart';
+import '../support/fake_custom_fonts_repository.dart';
+import 'package:elinkbook/screens/settings_screen.dart';
 
 void main() {
   late SqliteLibraryRepository libraryRepository;
@@ -2499,6 +2502,27 @@ void main() {
         .map((tile) => (tile.title as Text).data)
         .toList();
     expect(titles, ['奇幻', 'B書']);
+  });
+
+  testWidgets('LibraryScreen 貫穿 customFontsRepository 至 SettingsScreen',
+      (tester) async {
+    final customFontsRepository = FakeCustomFontsRepository();
+    await tester.pumpWidget(MaterialApp(
+      home: LibraryScreen(
+        repository: FakeLibraryRepository(initialBooks: const []),
+        importService: FakeBookImportService(),
+        prefsManager: prefsManager,
+        customFontsRepository: customFontsRepository,
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('library_settings_button')));
+    await tester.pumpAndSettle();
+
+    final settingsScreen =
+        tester.widget<SettingsScreen>(find.byType(SettingsScreen));
+    expect(settingsScreen.customFontsRepository, customFontsRepository);
   });
 }
 

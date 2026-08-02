@@ -5,6 +5,8 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:elinkbook/screens/settings_screen.dart';
 import 'package:elinkbook/theme/app_theme.dart';
 import '../support/fake_reader_prefs_manager.dart';
+import 'package:elinkbook/reader/custom_fonts_repository.dart';
+import '../support/fake_custom_fonts_repository.dart';
 
 const _appInfoChannel = MethodChannel('elinkbook/app_info');
 
@@ -38,6 +40,9 @@ void main() {
     expect(find.byKey(const Key('settings_theme_dot_sepia')), findsOneWidget);
     expect(find.byKey(const Key('settings_about_button')), findsOneWidget);
     expect(find.byKey(const Key('settings_nav_zone_button')), findsOneWidget);
+    expect(
+        find.byKey(const Key('settings_font_management_button')),
+        findsOneWidget);
   });
 
   testWidgets('SettingsScreen 點擊主題圓點觸發 onThemeChanged（Issue：AppBar 工具列溢位修復）',
@@ -99,5 +104,19 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('導航熱區'), findsOneWidget);
+  });
+
+  testWidgets('點擊「字型管理」導航至 FontManagementScreen', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: SettingsScreen(
+        prefsManager: FakeReaderPrefsManager(),
+        customFontsRepository: FakeCustomFontsRepository(),
+      ),
+    ));
+
+    await tester.tap(find.byKey(const Key('settings_font_management_button')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('字型管理'), findsOneWidget);
   });
 }
