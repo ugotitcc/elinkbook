@@ -203,3 +203,25 @@ PocketBase 支援用 `pb_hooks` 目錄下的 JS 檔案定義排程工作（cron�
 30 天是初始建議值（與 App 端本機清理用同一個數字，比照 5 分鐘閒置
 計時器同等級的「非定案硬性需求」），可依實際自架規模自行調整
 `purge_tombstones.pb.js` 內的 `thirtyDaysMillis` 常數。
+
+## 測試環境（供 Epic 8 其餘 Issue 使用）
+
+依本文件 Task 1-3 的步驟，已實際建立一份測試用 PocketBase 實例，供
+`epic-8-sync` Issue 2（同步帳號模組）／Issue 4（同步引擎核心）／
+Issue 5（閱讀位置衝突彈窗）的 `integration_test` 連線使用。
+
+- **Base URL（從開發機本身連線）**：`http://127.0.0.1:8090`
+- **Base URL（從 Android 模擬器內連線）**：`http://10.0.2.2:8090`
+  ——Android 模擬器把 `10.0.2.2` 保留為「宿主機的 localhost」，這是
+  Android 官方模擬器網路轉發的既定行為，`integration_test` 若跑在
+  模擬器上須改用這個位址，不能直接用 `127.0.0.1`（那會指向模擬器
+  自己）。跑在實體裝置上時兩者皆不適用，需改成開發機在區網內的實際
+  IP（例如 `http://192.168.x.x:8090`），且手機與開發機須在同一個
+  區網。
+- **測試帳號**：`integration_test` 執行前，先透過 Admin UI 或
+  `POST /api/collections/users/records` 建立至少一個測試用 email+
+  password 帳號（不要用 Task 1 建立的 PocketBase **管理員**帳號，
+  那是另一套系統，見 Task 1「首次啟動」一節的提醒）。
+- **保持運作**：這個測試實例在 Issue 2／4／5 開發期間需要持續運作，
+  建議用 Task 1「選項 B」的 Docker 方式跑在背景（`docker run -d`），
+  不要用「選項 A」的前景 `./pocketbase serve` 跑完就關掉終端機。
