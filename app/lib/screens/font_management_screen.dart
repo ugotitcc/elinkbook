@@ -2,6 +2,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../library/library_repository.dart';
 import '../reader/app_font.dart';
 import '../reader/custom_font.dart';
 import '../reader/custom_fonts_repository.dart';
@@ -30,9 +31,13 @@ class _FontManagementScreenState extends State<FontManagementScreen> {
   }
 
   Future<void> _loadFonts() async {
-    final fonts = await widget.repository.listAll();
-    if (!mounted) return;
-    setState(() => _customFonts = fonts);
+    try {
+      final fonts = await widget.repository.listAll();
+      if (!mounted) return;
+      setState(() => _customFonts = fonts);
+    } catch (e) {
+      debugPrint('Failed to load custom fonts: $e');
+    }
   }
 
   String _builtInDisplayName(AppFont font) {
@@ -159,7 +164,7 @@ class _FontManagementScreenState extends State<FontManagementScreen> {
         final file = validFiles[index];
         final uri = file.identifier!;
         try {
-          await _metadataChannel
+          await kBookMetadataChannel
               .invokeMethod<void>('takePersistableUriPermission', {'uri': uri});
         } on PlatformException {
           // 部分文件提供者不保證核發可持久化授權（比照書籍匯入既有慣例，
@@ -306,4 +311,4 @@ String _stripExtension(String fileName) {
   return dotIndex > 0 ? fileName.substring(0, dotIndex) : fileName;
 }
 
-const _metadataChannel = MethodChannel('elinkbook/book_metadata');
+

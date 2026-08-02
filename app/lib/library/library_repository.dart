@@ -1,6 +1,12 @@
+import 'package:flutter/services.dart';
+
 import 'models/book.dart';
 import 'models/book_group.dart';
 import 'models/library_enums.dart';
+
+/// 原生端 `BookMetadataChannel` 對應的 MethodChannel 名稱，
+/// 供 Dart 側所有需要呼叫原生書籍中繼資料的檔案共用。
+const kBookMetadataChannel = MethodChannel('elinkbook/book_metadata');
 
 /// 圖書庫資料的存取介面；`books`/`groups` 兩張表的唯一存取入口（見
 /// docs/epics/epic-1-library/spec.md「介面」章節）。

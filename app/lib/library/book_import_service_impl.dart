@@ -56,7 +56,7 @@ class BookImportServiceImpl implements BookImportService {
         _coversDirectory = coversDirectory,
         _importedBooksDirectory = importedBooksDirectory;
 
-  static const _channel = MethodChannel('elinkbook/book_metadata');
+  // 使用 kBookMetadataChannel（library_repository.dart）作為共用通道名稱。
 
   final LibraryRepository _repository;
   final Directory? _coversDirectory;
@@ -103,7 +103,7 @@ class BookImportServiceImpl implements BookImportService {
     bool autoGroupByFolderName = true,
   }) async {
     try {
-      await _channel.invokeMethod<void>(
+      await kBookMetadataChannel.invokeMethod<void>(
         'takePersistableUriPermission',
         {'uri': folderUri},
       );
@@ -113,7 +113,7 @@ class BookImportServiceImpl implements BookImportService {
 
     Map<Object?, Object?>? contents;
     try {
-      contents = await _channel.invokeMapMethod<Object?, Object?>(
+      contents = await kBookMetadataChannel.invokeMapMethod<Object?, Object?>(
         'listFolderContents',
         {'uri': folderUri},
       );
@@ -211,7 +211,7 @@ class BookImportServiceImpl implements BookImportService {
     if (takePermission && uri.startsWith('content://')) {
       var permissionGranted = true;
       try {
-        await _channel.invokeMethod<void>(
+        await kBookMetadataChannel.invokeMethod<void>(
           'takePersistableUriPermission',
           {'uri': uri},
         );
@@ -244,7 +244,7 @@ class BookImportServiceImpl implements BookImportService {
       coverPath = await _landCover(coverBytes, id);
     } else {
       try {
-        final metadata = await _channel.invokeMapMethod<String, Object?>(
+        final metadata = await kBookMetadataChannel.invokeMapMethod<String, Object?>(
           'extractMetadata',
           {'uri': resolvedUri, 'format': format.name},
         );
@@ -294,7 +294,7 @@ class BookImportServiceImpl implements BookImportService {
     final importedDir = await _resolveImportedBooksDirectory();
     final destinationPath = p.join(importedDir.path, '$id.${format.name}');
     try {
-      await _channel.invokeMethod<void>(
+      await kBookMetadataChannel.invokeMethod<void>(
         'copyContentUriToFile',
         {'uri': uri, 'destinationPath': destinationPath},
       );
