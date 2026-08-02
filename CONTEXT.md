@@ -17,7 +17,7 @@ _Avoid_: E-Ink 主題
 _Avoid_: 單書設定、閱讀器設定
 
 **全域預設值（Global Default）**：
-跨書籍生效的系統層級預設值（例如螢幕方向、翻頁模式），對應 PRD FR-37/FR-38；單書版面偏好設定可覆寫，未覆寫時回退至此值。目前無對應設定畫面（`epic-14-system-settings` 尚未開發），先以 `shared_preferences` 存放沿用現有行為的初始值。
+跨書籍生效的系統層級預設值（例如螢幕方向、翻頁模式、音量鍵翻頁開關、全螢幕顯示開關），對應 PRD FR-36/FR-37/FR-38/FR-42；單書版面偏好設定可覆寫，未覆寫時回退至此值。以 `shared_preferences` 存放。**目前僅螢幕方向與翻頁模式已接上設定畫面 UI**（`epic-14-system-settings` Discovery 已完成，`design.md` 決策 1 規劃於新增的「閱讀預設值」子畫面統一呈現，含音量鍵/全螢幕兩個新欄位，尚未實作）。
 _Avoid_: 系統設定、全域設定（兩者在 PRD 中另指 `epic-14` 的獨立系統設定畫面本身，容易與「全域預設值」這個資料層概念混淆）
 
 **開書初始偏好（Initial Preferences）**：
@@ -110,7 +110,7 @@ _Avoid_: 熱區行為
 _Avoid_: 全螢幕模式（見下方獨立詞條，非同義詞，不可混用）
 
 **全螢幕模式（Fullscreen Mode）**：
-`epic-19-shelf-reading-enhance` 新增的每本書持久化開關，只控制 Android 系統狀態列與導覽列的顯示/隱藏（`SystemUiMode.immersiveSticky` 或等效 API），與 App 自己的 AppBar/Footer/頁首/頁尾/懸浮按鈕完全脫鉤——後者永遠只受「沉浸模式」與各自的顯示開關（`showHeader`/`showFooter`）控制，不受全螢幕模式影響。離開閱讀畫面時強制還原系統列顯示，不依賴使用者手動關閉開關。**與 PRD FR-42「固定版面全螢幕顯示開關」（`epic-14-system-settings`，僅限 FXL 排版）是不同概念**——FR-42 範圍更窄且尚未開工，全螢幕模式涵蓋 EPUB 流式/FXL/PDF 三種格式。
+`epic-19-shelf-reading-enhance` 新增的持久化開關，只控制 Android 系統狀態列與導覽列的顯示/隱藏（`SystemUiMode.immersiveSticky` 或等效 API），與 App 自己的 AppBar/Footer/頁首/頁尾/懸浮按鈕完全脫鉤——後者永遠只受「沉浸模式」與各自的顯示開關（`showHeader`/`showFooter`）控制，不受全螢幕模式影響。離開閱讀畫面時強制還原系統列顯示，不依賴使用者手動關閉開關。涵蓋 EPUB 流式/FXL/PDF 三種格式。**對應 PRD FR-42**——`epic-19` 僅實作單書層級；`epic-14-system-settings` Discovery（2026-08-02）已規劃新增全域預設層（`book.fullscreen ?? global.fullscreen`，比照「翻頁模式」/「螢幕方向預設」既有雙層解析模式），尚未實作，見 `docs/epics/epic-14-system-settings/design.md` 決策 6。
 _Avoid_: 沉浸模式（見上方獨立詞條，非同義詞）
 
 **欄數（Column Mode）**：
@@ -136,4 +136,12 @@ _Avoid_: 書籍 ID、書本雜湊（未點出「用於跨裝置比對」這個�
 **Checkpoint 同步（Checkpoint Sync）**：
 `epic-8-sync` 的批次同步觸發機制，三種事件之一發生即觸發一次批次同步（把期間累積的所有本機異動一次送出）：App 背景化、書籍切換（離開閱讀器）、閱讀中每 5 分鐘的閒置計時器（避免長時間不背景化/不切書時另一裝置看不到最新異動）。與「逐筆即時同步」（每次異動立刻各自觸發一次網路請求）相對，見 ADR 0020。
 _Avoid_: 自動同步、背景同步（皆未點出「批次觸發」這個關鍵特性）
+
+**自訂字型（Custom Font）**：
+`epic-14-system-settings`（FR-35）引入的使用者上傳字型，與內建 5 款字型（思源黑體/思源宋體/原俠正楷/台灣圓體/源流明體，見「Fit 模式」鄰近詞條群）並列於同一份全域字型清單，統一以 family name 字串識別（`AppFont` enum 僅保留供內建字型清單 UI 呈現，不再是儲存型別）。**只對 EPUB 生效**——PDF 為原生點陣圖渲染，不套用字型設定。**不複製檔案進 App 私有目錄**，比照 ADR 0002 對書籍檔案的既有精神，以 `content://` URI＋`takePersistableUriPermission()` 直接引用，見 ADR 0021。
+_Avoid_: 上傳字型（動詞誤用成獨立概念）、外部字型（未點出「不複製、直接引用」這個關鍵特性）
+
+**閱讀預設值（Reading Defaults）**：
+`epic-14-system-settings` 新增的 `SettingsScreen` 子畫面，集中呈現四項全域預設值（見「全域預設值」詞條）：音量鍵翻頁開關（FR-36）、螢幕方向 5 選一（FR-37）、翻頁模式 2 選一（FR-38）、全螢幕顯示開關（FR-42）。純粹是 UI 呈現層的分組容器，四項底層資料各自獨立存於 `GlobalReaderPrefs`，不是新的資料模型。
+_Avoid_: 系統偏好、全域設定畫面（後者容易與「設定」App 本身混淆）
 
