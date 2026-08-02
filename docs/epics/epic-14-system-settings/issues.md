@@ -8,7 +8,7 @@
 
 ## Issue 1：自訂字型資料模型 + 二進位解析器
 
-**Status:** ready-for-agent
+**Status:** ✅ 已完成並合併（PR #99，`feat/epic-14-issue-1-custom-fonts` → `main`，2026-08-02）——依 `plans/plan-issue-1.md` 3 個 Task 實作：`custom_fonts` 表＋SQLite v15→v16 migration（既有 `AppFont` 列舉值字串資料轉換為 family name 字串）、`fontFamily` 型別由 `AppFont?` 貫穿改為 `String?`（`BookReaderPrefs`／`ResolvedPreferences`／`FoliateEpubReaderView`／`reader_settings_sheet.dart` 字型選單，行為零變更）、手刻 TTF/OTF `name` table 二進位解析器（含真實字型檔 `app/test/fixtures/sample.ttf` 測試案例）。`/superpowers:requesting-code-review` 程式碼審查發現並修正 1 項 Critical（`_createCustomFontsTable` 誤放在 `onUpgrade` 的 `else`／`oldVersion>=2` 分支內，導致停留在 schema version 1 的裝置跳級升級到 16 時該表不會被建立，已搬到頂層無條件執行並補回歸測試）與 1 項 Important（`reader_prefs_manager_test.dart` 遺漏計畫要求的測試，已補上）；1 項 Minor 建議（移除 migration 函式防禦性檢查）實測會打壞既有無關測試，予以保留並非疏漏。全專案 `flutter test`／`flutter analyze` 皆確認乾淨。詳見 `plans/plan-issue-1.md`「審查修正紀錄」與 `tmp/epic-14/review-issue-1.md`（未進版控）。
 
 **依賴／Blocked by：** None - can start immediately
 
@@ -26,11 +26,11 @@
 
 **驗收標準：**
 
-- [ ] `custom_fonts` 表與累加式 migration（v15→16）正確建立，`onCreate`／`onUpgrade` 兩條路徑皆不拋出例外
-- [ ] `book_reader_prefs.font_family` 型別遷移正確：既有 5 種 `AppFont` 列舉值資料轉換為對應 family name 字串，`NULL` 不受影響
-- [ ] 二進位解析器對 Unicode／Mac 兩種 name table 記錄皆能正確解析 family name
-- [ ] 解析器對畸形/無 `name` table 檔案正確退回檔名
-- [ ] 上述測試皆通過，`flutter analyze` 乾淨
+- [x] `custom_fonts` 表與累加式 migration（v15→16）正確建立，`onCreate`／`onUpgrade` 兩條路徑皆不拋出例外
+- [x] `book_reader_prefs.font_family` 型別遷移正確：既有 5 種 `AppFont` 列舉值資料轉換為對應 family name 字串，`NULL` 不受影響
+- [x] 二進位解析器對 Unicode／Mac 兩種 name table 記錄皆能正確解析 family name
+- [x] 解析器對畸形/無 `name` table 檔案正確退回檔名
+- [x] 上述測試皆通過，`flutter analyze` 乾淨
 
 ---
 

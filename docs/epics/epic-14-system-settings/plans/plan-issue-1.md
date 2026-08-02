@@ -1,6 +1,8 @@
 # Epic 14 Issue 1 — 自訂字型資料模型 + 二進位解析器 Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
+>
+> **狀態：✅ 已完成並合併**（PR #99，`feat/epic-14-issue-1-custom-fonts` → `main`）。實作階段後另經 `/superpowers:requesting-code-review` 程式碼審查發現並修正 1 項 Critical、1 項 Important（詳見文末「審查修正紀錄」），修正後才發 PR 合併。
 
 **Goal:** 建立 `custom_fonts` 表與 `book_reader_prefs.font_family` 資料遷移（SQLite v15→v16）、把 `fontFamily` 的 Dart 型別從封閉列舉 `AppFont?` 改為任意字串 `String?`（貫穿既有讀寫管線，行為完全不變）、新增手刻 TTF/OTF `name` table 二進位解析器。純 Dart + SQLite，不涉及原生程式碼，不需要真實裝置。本 Issue 完成後**尚未**新增任何使用者可見的新功能（字型管理畫面是 Issue 2 的範圍）——這是刻意的垂直切片邊界，本 Issue 純粹是行為保留的資料層基礎建設。
 
@@ -31,7 +33,7 @@
 - Consumes：無（起始工單）
 - Produces：`custom_fonts` 表（`id`／`display_name`／`family_name UNIQUE`／`font_uri`）；`book_reader_prefs.font_family` 既有 5 種列舉值字串資料轉換為對應 family name 字串。供 Issue 2 的 `FontManagementScreen` 使用。
 
-- [ ] **Step 1：撰寫失敗測試——全新安裝的 `custom_fonts` 表**
+- [x] **Step 1：撰寫失敗測試——全新安裝的 `custom_fonts` 表**
 
 在 `app/test/library/sqlite_library_repository_test.dart` 最後一個 `test(...)` 區塊（`既有 version 14 裝置升級到 version 15...`，約第 1901-2017 行）之後、`group('detectAndCacheEpubLayout', ...)` 之前，新增：
 
@@ -68,7 +70,7 @@
   });
 ```
 
-- [ ] **Step 2：執行測試，確認失敗**
+- [x] **Step 2：執行測試，確認失敗**
 
 ```bash
 cd app
@@ -77,7 +79,7 @@ flutter test test/library/sqlite_library_repository_test.dart
 
 Expected：FAIL——`custom_fonts` 表不存在，`no such table: custom_fonts`。
 
-- [ ] **Step 3：新增 `_createCustomFontsTable` 並接上 `onCreate`／`onUpgrade`**
+- [x] **Step 3：新增 `_createCustomFontsTable` 並接上 `onCreate`／`onUpgrade`**
 
 `app/lib/library/sqlite_library_repository.dart` 第 30 行版本號：
 
@@ -121,7 +123,7 @@ Expected：FAIL——`custom_fonts` 表不存在，`no such table: custom_fonts`
   }
 ```
 
-- [ ] **Step 4：執行測試，確認通過**
+- [x] **Step 4：執行測試，確認通過**
 
 ```bash
 flutter test test/library/sqlite_library_repository_test.dart
@@ -129,7 +131,7 @@ flutter test test/library/sqlite_library_repository_test.dart
 
 Expected：新增的 2 個測試 PASS；既有測試（含既有 version 14→15 等 migration 測試）不受影響，全數維持 PASS。
 
-- [ ] **Step 5：撰寫失敗測試——既有裝置升級時 `font_family` 既有資料正確轉換**
+- [x] **Step 5：撰寫失敗測試——既有裝置升級時 `font_family` 既有資料正確轉換**
 
 在剛新增的兩個測試之後繼續新增：
 
@@ -345,7 +347,7 @@ Expected：新增的 2 個測試 PASS；既有測試（含既有 version 14→15
   });
 ```
 
-- [ ] **Step 6：執行測試，確認失敗**
+- [x] **Step 6：執行測試，確認失敗**
 
 ```bash
 flutter test test/library/sqlite_library_repository_test.dart
@@ -353,7 +355,7 @@ flutter test test/library/sqlite_library_repository_test.dart
 
 Expected：FAIL——`font_family` 欄位值仍是舊格式（`'sourceHanSans'` 而非 `'SourceHanSansTC'`）。
 
-- [ ] **Step 7：新增 `_migrateFontFamilyValues` 並接上 `onUpgrade`**
+- [x] **Step 7：新增 `_migrateFontFamilyValues` 並接上 `onUpgrade`**
 
 `onUpgrade` 的 `else` 分支（第 73-135 行），在 `if (oldVersion < 15) { ... await _addFullscreenColumn(db); }`（第 126-134 行）之後新增：
 
@@ -395,7 +397,7 @@ Expected：FAIL——`font_family` 欄位值仍是舊格式（`'sourceHanSans'` 
   }
 ```
 
-- [ ] **Step 8：執行測試，確認通過**
+- [x] **Step 8：執行測試，確認通過**
 
 ```bash
 flutter test test/library/sqlite_library_repository_test.dart
@@ -403,7 +405,7 @@ flutter test test/library/sqlite_library_repository_test.dart
 
 Expected：全數 PASS。
 
-- [ ] **Step 9：`flutter analyze` + Commit**
+- [x] **Step 9：`flutter analyze` + Commit**
 
 ```bash
 flutter analyze
@@ -430,7 +432,7 @@ Expected：`flutter analyze` "No issues found!"。
 - Consumes：Task 1 的 SQLite 資料已轉換為新格式字串，`toMap`/`fromMap` 需同步改為直接讀寫字串（不再透過 `AppFont.values.byName`）
 - Produces：`BookReaderPrefs.fontFamily`／`ResolvedPreferences.fontFamily`／`FoliateEpubReaderView.fontFamily` 皆為 `String?`；`reader_settings_sheet.dart` 字型下拉選單型別同步改為 `String?`，選項內容不變（仍只列內建 5 款）；供 Issue 2 的 `FontManagementScreen` 與擴充後的字型選單使用
 
-- [ ] **Step 1：撰寫失敗測試——`BookReaderPrefs.fontFamily` 改為 `String?`**
+- [x] **Step 1：撰寫失敗測試——`BookReaderPrefs.fontFamily` 改為 `String?`**
 
 `app/test/reader/book_reader_prefs_test.dart` 第 46、51、94 行，把 `fontFamily: AppFont.sourceHanSans`／`AppFont.taiwanPearl` 改為對應的 family name 字串：
 
@@ -448,7 +450,7 @@ Expected：`flutter analyze` "No issues found!"。
 
 （`app_font.dart` 的 import 若因此變成未使用，一併移除；若檔案內仍有其他 `AppFont` 用途則保留。）
 
-- [ ] **Step 2：執行測試，確認失敗**
+- [x] **Step 2：執行測試，確認失敗**
 
 ```bash
 flutter test test/reader/book_reader_prefs_test.dart
@@ -456,7 +458,7 @@ flutter test test/reader/book_reader_prefs_test.dart
 
 Expected：FAIL——編譯錯誤或型別不符（`BookReaderPrefs` 建構子的 `fontFamily` 參數仍是 `AppFont?`，收到 `String` 型別實參）。
 
-- [ ] **Step 3：修改 `book_reader_prefs.dart`**
+- [x] **Step 3：修改 `book_reader_prefs.dart`**
 
 第 1 行 `import 'app_font.dart';` 移除（`fontFamily` 型別遷移後此檔案不再需要 `AppFont`）。
 
@@ -486,7 +488,7 @@ Expected：FAIL——編譯錯誤或型別不符（`BookReaderPrefs` 建構子�
 
 （`operator ==`／`hashCode`／`copyWith` 回傳式中的 `fontFamily` 比較/賦值寫法不需改動——皆是型別無關的直接比較/賦值。）
 
-- [ ] **Step 4：執行測試，確認通過**
+- [x] **Step 4：執行測試，確認通過**
 
 ```bash
 flutter test test/reader/book_reader_prefs_test.dart
@@ -494,7 +496,7 @@ flutter test test/reader/book_reader_prefs_test.dart
 
 Expected：全數 PASS。
 
-- [ ] **Step 5：撰寫失敗測試——`ResolvedPreferences.fontFamily` 改為 `String?`**
+- [x] **Step 5：撰寫失敗測試——`ResolvedPreferences.fontFamily` 改為 `String?`**
 
 `app/test/reader/reader_prefs_manager_test.dart` 第 176 行 `expect(resolved.fontFamily, isNull);` 維持不動（`isNull` 斷言與型別無關）；額外新增一個非 null 情境測試（若既有測試檔案沒有涵蓋，於同一 `test(...)` 群組內新增）：
 
@@ -510,7 +512,7 @@ Expected：全數 PASS。
 
 （依既有測試檔案的 `manager`／`saveBookPrefs`／`load` 實際變數名稱與既有測試寫法調整，若已有等義測試則不必重複新增。）
 
-- [ ] **Step 6：執行測試，確認失敗**
+- [x] **Step 6：執行測試，確認失敗**
 
 ```bash
 flutter test test/reader/reader_prefs_manager_test.dart
@@ -518,7 +520,7 @@ flutter test test/reader/reader_prefs_manager_test.dart
 
 Expected：FAIL——`BookReaderPrefs(fontFamily: 'SourceHanSansTC')` 型別不符（`ResolvedPreferences`／`BookReaderPrefs` 仍宣告 `AppFont?`，此步驟先改 `ResolvedPreferences`，`BookReaderPrefs` 已於 Step 3 改完）。
 
-- [ ] **Step 7：修改 `resolved_preferences.dart`**
+- [x] **Step 7：修改 `resolved_preferences.dart`**
 
 第 29 行：
 
@@ -528,7 +530,7 @@ Expected：FAIL——`BookReaderPrefs(fontFamily: 'SourceHanSansTC')` 型別不�
 
 第 1 行 `import 'app_font.dart';` 若因此無其他用途則移除（需先確認檔案內是否還有其他 `AppFont` 型別欄位——目前只有 `fontFamily` 使用，其餘為 `WritingMode`／`double` 等，故可移除）。
 
-- [ ] **Step 8：執行測試，確認通過**
+- [x] **Step 8：執行測試，確認通過**
 
 ```bash
 flutter test test/reader/reader_prefs_manager_test.dart
@@ -536,7 +538,7 @@ flutter test test/reader/reader_prefs_manager_test.dart
 
 Expected：全數 PASS（`reader_prefs_manager_impl.dart:153` 的 `fontFamily: book.fontFamily,` 純傳遞寫法本身不需修改，兩端型別已同步為 `String?`）。
 
-- [ ] **Step 9：修改 `foliate_epub_reader_view.dart`**
+- [x] **Step 9：修改 `foliate_epub_reader_view.dart`**
 
 第 169 行：
 
@@ -552,7 +554,7 @@ Expected：全數 PASS（`reader_prefs_manager_impl.dart:153` 的 `fontFamily: b
 
 第 1 行附近若有 `import 'app_font.dart';` 且移除 `AppFont` 型別後無其他用途，一併移除（需先確認檔案內 `AppFont` 是否還有其他用途，若有則保留 import）。
 
-- [ ] **Step 10：`flutter analyze`，確認 `reader_screen.dart`／`reader_prefs_manager_impl.dart` 無需修改**
+- [x] **Step 10：`flutter analyze`，確認 `reader_screen.dart`／`reader_prefs_manager_impl.dart` 無需修改**
 
 ```bash
 flutter analyze
@@ -560,7 +562,7 @@ flutter analyze
 
 Expected：`reader_screen.dart:1808`（`fontFamily: resolved.fontFamily,`）與 `reader_prefs_manager_impl.dart:153`（`fontFamily: book.fontFamily,`）皆為純傳遞，型別兩端同步改為 `String?` 後應自動維持型別正確，`flutter analyze` 對這兩處不應有任何新增警告。若有，回頭檢查是否遺漏其他型別宣告點。
 
-- [ ] **Step 11：撰寫失敗測試——`reader_settings_sheet.dart` 字型下拉選單改用 `String?`**
+- [x] **Step 11：撰寫失敗測試——`reader_settings_sheet.dart` 字型下拉選單改用 `String?`**
 
 `app/test/screens/reader_settings_sheet_test.dart` 第 15、31-35、231、236 行：
 
@@ -586,7 +588,7 @@ Expected：`reader_screen.dart:1808`（`fontFamily: resolved.fontFamily,`）與 
     tester.widget<DropdownButton<String?>>(dropdown).onChanged!(null);
 ```
 
-- [ ] **Step 12：執行測試，確認失敗**
+- [x] **Step 12：執行測試，確認失敗**
 
 ```bash
 flutter test test/screens/reader_settings_sheet_test.dart
@@ -594,7 +596,7 @@ flutter test test/screens/reader_settings_sheet_test.dart
 
 Expected：FAIL——`reader_settings_sheet.dart` 仍宣告 `DropdownButton<AppFont?>` 與 `late AppFont? _fontFamily`，與測試傳入的 `String` 型別不符。
 
-- [ ] **Step 13：修改 `reader_settings_sheet.dart`**
+- [x] **Step 13：修改 `reader_settings_sheet.dart`**
 
 第 49 行：
 
@@ -629,7 +631,7 @@ Expected：FAIL——`reader_settings_sheet.dart` 仍宣告 `DropdownButton<AppF
 
 （`_fontDisplayName(AppFont font)` 函式簽章本身不變——`AppFont.values.map` 疊代時仍拿得到 `font` 這個 `AppFont` 實例本身供 `_fontDisplayName` 使用，只是 `DropdownMenuItem.value` 改存 `font.familyName` 字串；`app_font.dart` 的 import 保留，`AppFont.values`／`_fontDisplayName` 仍需要它。）
 
-- [ ] **Step 14：執行測試，確認通過**
+- [x] **Step 14：執行測試，確認通過**
 
 ```bash
 flutter test test/screens/reader_settings_sheet_test.dart
@@ -637,7 +639,7 @@ flutter test test/screens/reader_settings_sheet_test.dart
 
 Expected：全數 PASS。
 
-- [ ] **Step 15：全專案回歸測試 + `flutter analyze`**
+- [x] **Step 15：全專案回歸測試 + `flutter analyze`**
 
 ```bash
 flutter test
@@ -646,7 +648,7 @@ flutter analyze
 
 Expected：`flutter test` 全數 PASS（含本 Task 新增/修改的測試，以及既有全部測試不受影響——特別留意任何其他直接建構 `BookReaderPrefs(fontFamily: AppFont....)` 的既有測試檔案，若有遺漏會在此步驟才浮現，需回頭比照 Step 1/11 補改）；`flutter analyze` "No issues found!"。
 
-- [ ] **Step 16：Commit**
+- [x] **Step 16：Commit**
 
 ```bash
 git add lib/reader/book_reader_prefs.dart lib/reader/resolved_preferences.dart lib/reader/foliate_epub_reader_view.dart lib/screens/reader_settings_sheet.dart test/reader/book_reader_prefs_test.dart test/reader/reader_prefs_manager_test.dart test/screens/reader_settings_sheet_test.dart
@@ -665,7 +667,7 @@ git commit -m "refactor(epic-14): fontFamily 型別由 AppFont 封閉列舉改�
 - Consumes：無（純函式，不依賴本 Epic 其他任何模組）
 - Produces：`String? parseFontFamilyName(Uint8List bytes)`——供 Issue 2 的 `FontManagementScreen` 上傳流程呼叫，找不到可用 family name 時回傳 `null`（呼叫端負責退回檔名，不在此函式範圍內）
 
-- [ ] **Step 1：撰寫失敗測試——真實字型檔案（Platform 3 Unicode）**
+- [x] **Step 1：撰寫失敗測試——真實字型檔案（Platform 3 Unicode）**
 
 新建 `app/test/reader/font_name_parser_test.dart`：
 
@@ -825,7 +827,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：執行測試，確認失敗**
+- [x] **Step 2：執行測試，確認失敗**
 
 ```bash
 cd app
@@ -834,7 +836,7 @@ flutter test test/reader/font_name_parser_test.dart
 
 Expected：FAIL——`package:elinkbook/reader/font_name_parser.dart` 找不到（尚未建立）。
 
-- [ ] **Step 3：建立 `font_name_parser.dart`**
+- [x] **Step 3：建立 `font_name_parser.dart`**
 
 ```dart
 import 'dart:convert';
@@ -945,7 +947,7 @@ String _decodeUtf16Be(List<int> bytes) {
 }
 ```
 
-- [ ] **Step 4：執行測試，確認通過**
+- [x] **Step 4：執行測試，確認通過**
 
 ```bash
 flutter test test/reader/font_name_parser_test.dart
@@ -953,7 +955,7 @@ flutter test test/reader/font_name_parser_test.dart
 
 Expected：全數 PASS（含讀取真實 36MB `sample.ttf` fixture 的測試——執行時間可能明顯長於其他純記憶體測試，屬預期現象，非效能異常）。
 
-- [ ] **Step 5：全專案回歸測試 + `flutter analyze`**
+- [x] **Step 5：全專案回歸測試 + `flutter analyze`**
 
 ```bash
 flutter test
@@ -962,7 +964,7 @@ flutter analyze
 
 Expected：全數 PASS，`flutter analyze` "No issues found!"。
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add lib/reader/font_name_parser.dart test/reader/font_name_parser_test.dart
@@ -978,3 +980,13 @@ git commit -m "feat(epic-14): 手刻 TTF/OTF name table 二進位解析器"
 - **測試 fixture 策略**：`app/test/fixtures/sample.ttf`（已存在版本控制、KingHwa_OldSong 字型）用 Python 手動解析二進位結構核實其 Platform 3／nameID=1 記錄值為 `"KingHwa_OldSong"`，作為解析器「真實檔案」測試案例的斷言依據，非憑空假設；其餘編碼優先順序/邊界案例改用測試檔案內手刻的合成 sfnt 位元組陣列，避免新增多個大型二進位 fixture 檔案。
 - **無佔位符掃描**：所有步驟皆附完整程式碼與確切檔案位置/行號，無 "TODO"/"視情況" 等字樣。
 - **型別/介面一致性**：`custom_fonts` 表欄位命名（`display_name`／`family_name`／`font_uri`）與 `spec.md`「新增的資料模型」章節逐字一致；`_migrateFontFamilyValues`／`_createCustomFontsTable` 函式命名比照既有 `_addFullscreenColumn`／`_addEpubLayoutColumn` 慣例；`parseFontFamilyName` 為頂層純函式（非包在類別內），比照本專案既有 `hitTestZoneIndex()`／`pageRenderScale()` 等純函式慣例。
+
+## 審查修正紀錄（`tmp/epic-14/review-issue-1.md`，未進版控）
+
+- **Critical（確認屬實，已修正）**：Task 1 Step 3 的 `_createCustomFontsTable` 實作時被誤放進 `onUpgrade` 的 `else`（`oldVersion >= 2`）分支內（與 `_migrateFontFamilyValues` 包在同一個 `if (oldVersion < 16)`），導致停留在 schema version 1 的裝置跳級升級到 16 時，`if`/`else` 互斥、`custom_fonts` 表完全不會被建立——與本計畫原意（該表應與 `bookmarks`／`highlights`／`notes`／`epub_layout` 同一層級、`onUpgrade` 頂層無條件執行）不符。已搬回頂層，`_migrateFontFamilyValues` 維持在 `else` 分支（因為它確實只在 `book_reader_prefs` 表已存在時才有意義），並新增「既有 version 1 裝置跳級升級到 version 16，`custom_fonts` 表正確建立」回歸測試。
+- **Important（確認屬實，已修正）**：Task 2 Step 5/6 的 checkbox 原本標記完成，但 `reader_prefs_manager_test.dart` 實際未新增計畫要求的「`resolve()` 正確傳遞單書 `fontFamily` 字串值」測試。已補上。
+- **Minor（嘗試採納後發現不成立，予以保留原樣）**：審查建議移除 `_migrateFontFamilyValues` 內查詢 `sqlite_master`／`PRAGMA table_info` 的兩段防禦性檢查（理由是呼叫路徑下必然恆真）。實際嘗試移除後執行 `flutter test`，發現會打壞 4 個既有、與本次無關的舊版資料庫測試（例如「既有 version 4/5/9/10 裝置升級」等測試）——這些測試為了聚焦驗證 `books` 表遷移，刻意省略建立 `book_reader_prefs` 表，即使 `oldVersion >= 2`。已還原防禦檢查並補充註解說明保留原因，非疏漏。
+- **Minor（不需修正）**：解析器僅處理 Platform ID 1／3、忽略 Platform 0（Unicode 不分平台）記錄，與規格既定的解碼優先序一致，非缺陷；審查報告本身也註記「非本 Issue 必須修正項」。
+- **Minor（不需修正）**：計畫 Task 2 開頭「Files」清單未列出 `book_reader_prefs_repository_test.dart`／`foliate_epub_reader_view_test.dart` 兩個測試檔，但 Self-Review Notes 已自陳靠 Step 15 全專案回歸測試補上，實作也確實正確涵蓋了這兩個檔案，純屬計畫文件內部兩處敘述不完全同步，不影響實作正確性。
+
+修正後以 PR #99（`feat/epic-14-issue-1-custom-fonts` → `main`）合併，`flutter test`／`flutter analyze` 皆確認乾淨。
