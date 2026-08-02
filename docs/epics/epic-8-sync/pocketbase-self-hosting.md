@@ -166,3 +166,40 @@ App 端完全不讀取/比對它（見 `spec.md`）。
 送 100 筆異動，見 `spec.md`「同步引擎」，伺服器端上限設太低會導致
 偶爾的大批次同步被拒絕）。不同 PocketBase 版本這個設定畫面的確切
 欄位名稱可能略有差異，以自己安裝的版本畫面實際顯示的文字為準。
+
+## 備份建議
+
+PocketBase 本身用單一 SQLite 檔案（`pb_data/data.db`，隨執行檔/容器
+啟動目錄而定）當儲存後端，備份只需要定期複製整個 `pb_data` 目錄。
+
+最簡單的做法是 cron 排程搭配 `tar`：
+
+```bash
+# 加進 crontab（crontab -e），每天凌晨 3 點備份一次，保留最近 7 份
+0 3 * * * tar -czf /backups/elinkbook-pb-$(date +\%Y\%m\%d).tar.gz -C /path/to/pocketbase pb_data && find /backups -name 'elinkbook-pb-*.tar.gz' -mtime +7 -delete
+```
+
+備份前建議先確認 PocketBase 沒有正在寫入中的長時間交易（一般個人
+自架、低流量情境下直接複製檔案已經足夠安全；高流量正式環境建議另外
+研究 SQLite 線上備份 API，不在本文件範圍內）。
+
+## 墓碑清理
+
+App 端刪除劃線/備註/書籤時採軟刪除（寫入 `deleted_at` 而非真的刪除，
+供其他裝置同步時判斷「這筆已被刪除」，見 `spec.md`「本機 Schema
+變更」／「同步引擎」）。本機端的墓碑由 App 自己的同步引擎清理
+（`SyncEngine.runCheckpoint()` 每次成功推送後自動清理超過 30 天的本機
+墓碑），但**伺服器端**（PocketBase 上 `sync_bookmarks`／
+`sync_highlights`／`sync_notes` 三個 collection）不會有任何一台裝置
+主動幫忙清，需要自架者自行設定伺服器端排程清理，否則刪除紀錄會在
+PocketBase 端無限期累積。
+
+PocketBase 支援用 `pb_hooks` 目錄下的 JS 檔案定義排程工作（cron）。
+把 [`pb_hooks_example/purge_tombstones.pb.js`](pb_hooks_example/purge_tombstones.pb.js)
+複製到自己 PocketBase 執行檔同層的 `pb_hooks/` 目錄下（沒有這個目錄
+就自己建立一個），重啟 PocketBase 即會自動載入、每天凌晨 3 點執行一次
+清理超過 30 天的墓碑。
+
+30 天是初始建議值（與 App 端本機清理用同一個數字，比照 5 分鐘閒置
+計時器同等級的「非定案硬性需求」），可依實際自架規模自行調整
+`purge_tombstones.pb.js` 內的 `thirtyDaysMillis` 常數。
