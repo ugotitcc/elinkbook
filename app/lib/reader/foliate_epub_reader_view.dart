@@ -163,8 +163,9 @@ bool foliatePreferencesChanged(
 /// 觸發到——這段路由/查找邏輯抽出後才能脫離 `InAppWebViewController`／
 /// `WebResourceRequest` 直接測試。`_shouldInterceptRequest` 攔截的是
 /// WebView 的全部請求（非僅我們自己產生的 URL），畸形百分號跳脫序列會讓
-/// `Uri.decodeComponent` 拋出 `FormatException`，包 try/catch 統一視為
-/// 「不符合自訂字型路徑」回傳 `null`，避免例外冒出到攔截回呼（審查修正，
+/// `Uri.decodeComponent` 拋出 `FormatException` 或 `ArgumentError`，包
+/// try/catch 統一視為「不符合自訂字型路徑」回傳 `null`，避免例外冒出到
+/// 攔截回呼（審查修正，
 /// 見 tmp/epic-14/review-plan-issue-3.md Important 1）。
 String? resolveCustomFontUri(String path, List<CustomFont> customFonts) {
   const prefix = '/assets/custom-fonts/';

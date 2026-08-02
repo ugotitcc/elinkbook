@@ -490,7 +490,7 @@ void main() {
       );
     });
 
-    test('畸形百分號跳脫序列（Uri.decodeComponent 會拋 FormatException）時回傳 null，不拋出例外',
+    test('畸形百分號跳脫序列（Uri.decodeComponent 會拋 FormatException 或 ArgumentError）時回傳 null，不拋出例外',
         () {
       expect(
         () => resolveCustomFontUri('/assets/custom-fonts/Font%2', fonts),
