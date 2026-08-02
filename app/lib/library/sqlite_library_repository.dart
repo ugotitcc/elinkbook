@@ -134,11 +134,6 @@ class SqliteLibraryRepository implements LibraryRepository {
             await _addFullscreenColumn(db);
           }
           if (oldVersion < 16) {
-            // epic-14-system-settings Issue 1：自訂字型清單新增的全新資料表。
-            // 與 bookmarks（oldVersion < 8）／highlights／notes（oldVersion <
-            // 9）比照同一原則——任何 oldVersion < 16 的裝置都必然還沒有這張
-            // 表，無條件建立即可，不需要判斷「表是否已存在」。
-            await _createCustomFontsTable(db);
             // epic-14-system-settings Issue 1：font_family 型別由 AppFont
             // 封閉列舉字串改為任意 family name 字串（決策 2），既有 5
             // 種列舉值資料需逐筆轉換。必須放在 else 分支內（oldVersion
@@ -200,6 +195,19 @@ class SqliteLibraryRepository implements LibraryRepository {
           // 刻意放在上方 if/else 之外、無條件檢查，比照 oldVersion < 5/6
           // 區塊的既有原則。
           await _addEpubLayoutColumn(db);
+        }
+        if (oldVersion < 16) {
+          // epic-14-system-settings Issue 1：自訂字型清單新增的全新資料表。
+          // 【審查修正，見 tmp/epic-14/review-issue-1.md Critical 1】原本
+          // 誤放在上方 if/else 的 else 分支內（oldVersion >= 2 才會執行），
+          // 導致停留在 version 1 的裝置跳級升級到 16 時，這張表完全不會
+          // 被建立——與 bookmarks（oldVersion < 8）／highlights／notes
+          // （oldVersion < 9）比照同一原則，custom_fonts 是全新的獨立表
+          // （非既有表新增欄位），任何 oldVersion < 16 的裝置都必然還沒有
+          // 這張表，應與上方 books 表遷移／bookmarks／highlights／notes
+          // 同一層級（onUpgrade 頂層、無條件檢查），不受 book_reader_prefs
+          // 表是否已存在影響。
+          await _createCustomFontsTable(db);
         }
       },
     );
