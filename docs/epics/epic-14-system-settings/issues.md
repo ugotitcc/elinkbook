@@ -36,9 +36,9 @@
 
 ## Issue 2：字型管理畫面 + 單書字型選擇器整合
 
-**依賴／Blocked by：** Issue 1
+**Status:** ✅ 已完成並合併（PR #100，`feat/epic-14-issue-2-font-management` → `main`，2026-08-02）——依 `plans/plan-issue-2.md` 4 個 Task 實作：`CustomFont`／`CustomFontsRepository`、`FontManagementScreen`（批次上傳、內建 5 款字型阻擋重名、清單、重新命名、刪除含使用中提示與級聯重置）、`SettingsScreen`「字型管理」入口＋`customFontsRepository` 全鏈路貫穿（含 `LibraryScreen._openGroupFilteredView()` 遞迴建構點）、`reader_settings_sheet.dart` 字型選單合併自訂字型清單＋`ReaderScreen` 貫穿。計畫審查（`/superpowers:requesting-code-review`）發現並修正 1 項 Critical（自訂字型與內建字型 family name 相同會導致 `DropdownButton` 重複 `value` 崩潰）；實作審查另發現並修正 1 項 Important（`_renameFont` 的 `TextEditingController` 缺釋放，首次修法 `try/finally` 立即 dispose 實測會觸發 Flutter Focus assertion 崩潰，改採本專案 `notes_bottom_sheet.dart` 既有的「State 生命週期保管」正確模式）與 1 項 Important（plan checkbox 追蹤失準已補齊）。全專案 `flutter test`／`flutter analyze` 皆確認乾淨。詳見 `plans/plan-issue-2.md`「審查修正紀錄」與 `tmp/epic-14/review-plan-issue-2.md`／`review-issue-2.md`（未進版控）。
 
-**Status:** ready-for-agent
+**依賴／Blocked by：** Issue 1
 
 **What to build：**
 
@@ -57,12 +57,12 @@
 
 **驗收標準：**
 
-- [ ] 批次上傳（多選）成功新增字型，重複 family name 正確阻擋並計入合併訊息
-- [ ] 字型清單顯示內建 5 款＋自訂字型，可重新命名（僅改顯示名稱）
-- [ ] 刪除字型：一般情況與使用中情況顯示不同確認文案，確認後正確刪除記錄且相關書籍 `font_family` 設回 `NULL`
-- [ ] `SettingsScreen` 新增「字型管理」入口可正確導航
-- [ ] `reader_settings_sheet.dart` 字型選擇器可選取內建與自訂字型，選取結果正確持久化
-- [ ] 上述測試皆通過，`flutter analyze` 乾淨
+- [x] 批次上傳（多選）成功新增字型，重複 family name 正確阻擋並計入合併訊息
+- [x] 字型清單顯示內建 5 款＋自訂字型，可重新命名（僅改顯示名稱）
+- [x] 刪除字型：一般情況與使用中情況顯示不同確認文案，確認後正確刪除記錄且相關書籍 `font_family` 設回 `NULL`
+- [x] `SettingsScreen` 新增「字型管理」入口可正確導航
+- [x] `reader_settings_sheet.dart` 字型選擇器可選取內建與自訂字型，選取結果正確持久化
+- [x] 上述測試皆通過，`flutter analyze` 乾淨
 
 ---
 
