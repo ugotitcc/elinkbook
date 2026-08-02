@@ -42,6 +42,9 @@ void main() {
     expect(
         find.byKey(const Key('settings_font_management_button')),
         findsOneWidget);
+    expect(
+        find.byKey(const Key('settings_reading_defaults_button')),
+        findsOneWidget);
   });
 
   testWidgets('SettingsScreen 點擊主題圓點觸發 onThemeChanged（Issue：AppBar 工具列溢位修復）',
@@ -117,5 +120,17 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('字型管理'), findsOneWidget);
+  });
+
+  testWidgets('點擊「閱讀預設值」導航至 ReadingDefaultsScreen', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: SettingsScreen(prefsManager: FakeReaderPrefsManager()),
+    ));
+
+    await tester
+        .tap(find.byKey(const Key('settings_reading_defaults_button')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('閱讀預設值'), findsOneWidget);
   });
 }

@@ -6,10 +6,11 @@ import '../theme/app_theme.dart';
 import 'about_screen.dart';
 import 'font_management_screen.dart';
 import 'nav_zone_settings_screen.dart';
+import 'reading_defaults_screen.dart';
 
 /// 設定畫面：「佈景」（主題圓點，原位於 `LibraryScreen` AppBar，見
-/// `epic-18-reader-device-qa` 工具列溢位修復）、「導航熱區」與「關於」三個
-/// 項目；其餘設定項目（版面、字型等）屬於後續各功能 Epic。
+/// `epic-18-reader-device-qa` 工具列溢位修復）、「字型管理」、「閱讀預設值」、
+/// 「導航熱區」與「關於」五個項目。
 class SettingsScreen extends StatelessWidget {
   final ReaderPrefsManager prefsManager;
   final AppTheme currentTheme;
@@ -63,6 +64,19 @@ class SettingsScreen extends StatelessWidget {
                       ),
                     );
                   },
+          ),
+          ListTile(
+            key: const Key('settings_reading_defaults_button'),
+            title: const Text('閱讀預設值'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) =>
+                      ReadingDefaultsScreen(prefsManager: prefsManager),
+                ),
+              );
+            },
           ),
           ListTile(
             key: const Key('settings_nav_zone_button'),
