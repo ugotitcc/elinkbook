@@ -7,7 +7,7 @@ import 'zone_action.dart';
 
 /// 跨書生效的全域預設閱讀偏好。
 ///
-/// 五個欄位皆 non-nullable——與 [BookReaderPrefs] 的「全欄位 nullable、
+/// 七個欄位皆 non-nullable——與 [BookReaderPrefs] 的「全欄位 nullable、
 /// null=未覆寫」語意刻意不同：全域層本身沒有更上層的預設可回退，任何時候
 /// 都必須有一個明確生效值。
 class GlobalReaderPrefs {
@@ -26,12 +26,25 @@ class GlobalReaderPrefs {
   /// 是否顯示熱區輔助線，預設 `false`。
   final bool showNavZoneDebugOverlay;
 
+  /// 音量鍵翻頁總開關（FR-36，epic-14-system-settings Issue 4），預設
+  /// `true`（沿用既有行為，不影響升級前的使用者體驗）。無單書覆寫層——
+  /// `ReaderPrefsManagerImpl.resolve()` 直接透傳本欄位。
+  final bool volumeKeyEnabled;
+
+  /// 全螢幕模式全域預設值（FR-42，epic-14-system-settings Issue 4），
+  /// 預設 `false`。與既有單書層 `BookReaderPrefs.fullscreen` 為雙層解析
+  /// 關係（`book.fullscreen ?? global.fullscreen`），涵蓋 EPUB 流式／
+  /// FXL／PDF 三種格式（design.md 決策 6）。
+  final bool fullscreen;
+
   const GlobalReaderPrefs({
     required this.pageTurnMode,
     required this.screenOrientation,
     required this.navZoneMode,
     required this.navZoneCustomActions,
     required this.showNavZoneDebugOverlay,
+    this.volumeKeyEnabled = true,
+    this.fullscreen = false,
   });
 
   /// 初始值，與現行 GlobalReaderDefaults 的既有硬編碼預設一致，
@@ -41,7 +54,9 @@ class GlobalReaderPrefs {
         screenOrientation = ScreenOrientationSetting.auto,
         navZoneMode = NavZoneMode.rightFlip,
         navZoneCustomActions = rightFlipZoneTemplate,
-        showNavZoneDebugOverlay = false;
+        showNavZoneDebugOverlay = false,
+        volumeKeyEnabled = true,
+        fullscreen = false;
 
   GlobalReaderPrefs copyWith({
     PageTurnMode? pageTurnMode,
@@ -49,6 +64,8 @@ class GlobalReaderPrefs {
     NavZoneMode? navZoneMode,
     List<ZoneAction>? navZoneCustomActions,
     bool? showNavZoneDebugOverlay,
+    bool? volumeKeyEnabled,
+    bool? fullscreen,
   }) {
     return GlobalReaderPrefs(
       pageTurnMode: pageTurnMode ?? this.pageTurnMode,
@@ -57,6 +74,8 @@ class GlobalReaderPrefs {
       navZoneCustomActions: navZoneCustomActions ?? this.navZoneCustomActions,
       showNavZoneDebugOverlay:
           showNavZoneDebugOverlay ?? this.showNavZoneDebugOverlay,
+      volumeKeyEnabled: volumeKeyEnabled ?? this.volumeKeyEnabled,
+      fullscreen: fullscreen ?? this.fullscreen,
     );
   }
 
@@ -67,7 +86,9 @@ class GlobalReaderPrefs {
       other.screenOrientation == screenOrientation &&
       other.navZoneMode == navZoneMode &&
       listEquals(other.navZoneCustomActions, navZoneCustomActions) &&
-      other.showNavZoneDebugOverlay == showNavZoneDebugOverlay;
+      other.showNavZoneDebugOverlay == showNavZoneDebugOverlay &&
+      other.volumeKeyEnabled == volumeKeyEnabled &&
+      other.fullscreen == fullscreen;
 
   @override
   int get hashCode => Object.hash(
@@ -76,5 +97,7 @@ class GlobalReaderPrefs {
         navZoneMode,
         Object.hashAll(navZoneCustomActions),
         showNavZoneDebugOverlay,
+        volumeKeyEnabled,
+        fullscreen,
       );
 }
