@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:elinkbook/reader/global_reader_prefs.dart';
 import 'package:elinkbook/reader/nav_zone_mode.dart';
 import 'package:elinkbook/reader/zone_action.dart';
 import 'package:elinkbook/screens/nav_zone_settings_screen.dart';
 import '../support/fake_reader_prefs_manager.dart';
 
 void main() {
-  testWidgets('載入完成前顯示載入指示器，載入完成後顯示四選一模板', (tester) async {
+  testWidgets('載入完成前顯示載入指示器，載入完成後顯示「翻頁方式」二選一與 3 張模板卡片', (tester) async {
     final fakeManager = FakeReaderPrefsManager();
     await tester.pumpWidget(MaterialApp(
       home: NavZoneSettingsScreen(prefsManager: fakeManager),
@@ -23,13 +24,52 @@ void main() {
       find.byKey(const Key('nav_zone_settings_loading_indicator')),
       findsNothing,
     );
+    expect(find.byKey(const Key('nav_zone_template_toggle')), findsOneWidget);
     expect(find.byKey(const Key('nav_zone_mode_leftFlip')), findsOneWidget);
     expect(find.byKey(const Key('nav_zone_mode_rightFlip')), findsOneWidget);
     expect(find.byKey(const Key('nav_zone_mode_oneHand')), findsOneWidget);
-    expect(find.byKey(const Key('nav_zone_mode_custom')), findsOneWidget);
+    expect(find.byKey(const Key('nav_zone_mode_custom')), findsNothing);
   });
 
-  testWidgets('點擊「左翻頁」模板觸發 GlobalReaderPrefs 更新為 leftFlip', (tester) async {
+  testWidgets('SegmentedButton 選中狀態正確反映 navZoneMode：簡單模板對應「簡單」，隱藏 9 格編輯器',
+      (tester) async {
+    final fakeManager = FakeReaderPrefsManager(
+      globalPrefs:
+          const GlobalReaderPrefs.initial().copyWith(navZoneMode: NavZoneMode.oneHand),
+    );
+    await tester.pumpWidget(MaterialApp(
+      home: NavZoneSettingsScreen(prefsManager: fakeManager),
+    ));
+    await tester.pumpAndSettle();
+
+    final toggle = tester.widget<SegmentedButton<bool>>(
+      find.byKey(const Key('nav_zone_template_toggle')),
+    );
+    expect(toggle.selected, {false});
+    expect(find.byKey(const Key('nav_zone_mode_leftFlip')), findsOneWidget);
+    expect(find.byKey(const Key('nav_zone_custom_cell_0')), findsNothing);
+  });
+
+  testWidgets('SegmentedButton 選中狀態正確反映 navZoneMode：custom 對應「自訂」，顯示 9 格編輯器',
+      (tester) async {
+    final fakeManager = FakeReaderPrefsManager(
+      globalPrefs:
+          const GlobalReaderPrefs.initial().copyWith(navZoneMode: NavZoneMode.custom),
+    );
+    await tester.pumpWidget(MaterialApp(
+      home: NavZoneSettingsScreen(prefsManager: fakeManager),
+    ));
+    await tester.pumpAndSettle();
+
+    final toggle = tester.widget<SegmentedButton<bool>>(
+      find.byKey(const Key('nav_zone_template_toggle')),
+    );
+    expect(toggle.selected, {true});
+    expect(find.byKey(const Key('nav_zone_mode_leftFlip')), findsNothing);
+    expect(find.byKey(const Key('nav_zone_custom_cell_0')), findsOneWidget);
+  });
+
+  testWidgets('點擊「左翻頁」模板卡片觸發 GlobalReaderPrefs 更新為 leftFlip', (tester) async {
     final fakeManager = FakeReaderPrefsManager();
     await tester.pumpWidget(MaterialApp(
       home: NavZoneSettingsScreen(prefsManager: fakeManager),
@@ -46,7 +86,7 @@ void main() {
     );
   });
 
-  testWidgets('點擊「單手」模板觸發 GlobalReaderPrefs 更新為 oneHand', (tester) async {
+  testWidgets('點擊「單手」模板卡片觸發 GlobalReaderPrefs 更新為 oneHand', (tester) async {
     final fakeManager = FakeReaderPrefsManager();
     await tester.pumpWidget(MaterialApp(
       home: NavZoneSettingsScreen(prefsManager: fakeManager),
@@ -59,6 +99,121 @@ void main() {
     expect(
       fakeManager.savedGlobalPrefsCalls.last.navZoneMode,
       NavZoneMode.oneHand,
+    );
+  });
+
+  testWidgets('選中的模板卡片顯示 primary 色外框，未選中則為預設 dividerColor 外框', (tester) async {
+    final fakeManager = FakeReaderPrefsManager(
+      globalPrefs:
+          const GlobalReaderPrefs.initial().copyWith(navZoneMode: NavZoneMode.leftFlip),
+    );
+    await tester.pumpWidget(MaterialApp(
+      home: NavZoneSettingsScreen(prefsManager: fakeManager),
+    ));
+    await tester.pumpAndSettle();
+
+    final context = tester.element(find.byType(NavZoneSettingsScreen));
+    final primaryColor = Theme.of(context).colorScheme.primary;
+    final dividerColor = Theme.of(context).dividerColor;
+
+    final leftFlipCard = tester.widget<Container>(
+      find.byKey(const Key('nav_zone_mode_leftFlip')),
+    );
+    final leftFlipBorder =
+        (leftFlipCard.decoration as BoxDecoration).border as Border;
+    expect(leftFlipBorder.top.color, primaryColor);
+
+    final rightFlipCard = tester.widget<Container>(
+      find.byKey(const Key('nav_zone_mode_rightFlip')),
+    );
+    final rightFlipBorder =
+        (rightFlipCard.decoration as BoxDecoration).border as Border;
+    expect(rightFlipBorder.top.color, dividerColor);
+  });
+
+  testWidgets('點擊「自訂」segment，切換為 custom 模式並顯示 9 格編輯器', (tester) async {
+    final fakeManager = FakeReaderPrefsManager();
+    await tester.pumpWidget(MaterialApp(
+      home: NavZoneSettingsScreen(prefsManager: fakeManager),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('自訂'));
+    await tester.pumpAndSettle();
+
+    expect(
+      fakeManager.savedGlobalPrefsCalls.last.navZoneMode,
+      NavZoneMode.custom,
+    );
+    expect(find.byKey(const Key('nav_zone_custom_cell_0')), findsOneWidget);
+  });
+
+  testWidgets('在「自訂」模式下點擊「簡單」segment，切換回 rightFlip 模板並隱藏 9 格編輯器',
+      (tester) async {
+    final fakeManager = FakeReaderPrefsManager(
+      globalPrefs:
+          const GlobalReaderPrefs.initial().copyWith(navZoneMode: NavZoneMode.custom),
+    );
+    await tester.pumpWidget(MaterialApp(
+      home: NavZoneSettingsScreen(prefsManager: fakeManager),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('簡單'));
+    await tester.pumpAndSettle();
+
+    expect(
+      fakeManager.savedGlobalPrefsCalls.last.navZoneMode,
+      NavZoneMode.rightFlip,
+    );
+    expect(find.byKey(const Key('nav_zone_custom_cell_0')), findsNothing);
+    expect(find.byKey(const Key('nav_zone_mode_rightFlip')), findsOneWidget);
+  });
+
+  testWidgets('模式切換（簡單→自訂→簡單→自訂）不影響既有 navZoneCustomActions 資料', (tester) async {
+    const customActions = [
+      ZoneAction.menu, ZoneAction.none, ZoneAction.none,
+      ZoneAction.previousPage, ZoneAction.none, ZoneAction.nextPage,
+      ZoneAction.none, ZoneAction.none, ZoneAction.none,
+    ];
+    final fakeManager = FakeReaderPrefsManager(
+      globalPrefs: const GlobalReaderPrefs.initial().copyWith(
+        navZoneMode: NavZoneMode.custom,
+        navZoneCustomActions: customActions,
+      ),
+    );
+    await tester.pumpWidget(MaterialApp(
+      home: NavZoneSettingsScreen(prefsManager: fakeManager),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('簡單'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('nav_zone_custom_cell_0')), findsNothing);
+
+    await tester.tap(find.text('自訂'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('nav_zone_custom_cell_0')),
+        matching: find.text('選單'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('nav_zone_custom_cell_3')),
+        matching: find.text('上一頁'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('nav_zone_custom_cell_5')),
+        matching: find.text('下一頁'),
+      ),
+      findsOneWidget,
     );
   });
 
@@ -92,7 +247,7 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('nav_zone_mode_custom')));
+    await tester.tap(find.text('自訂'));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('nav_zone_custom_cell_0')), findsOneWidget);
@@ -127,7 +282,7 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('nav_zone_mode_custom')));
+    await tester.tap(find.text('自訂'));
     await tester.pumpAndSettle();
     final savedCallCountAfterModeSwitch =
         fakeManager.savedGlobalPrefsCalls.length;
@@ -178,7 +333,7 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('nav_zone_mode_custom')));
+    await tester.tap(find.text('自訂'));
     await tester.pumpAndSettle();
 
     // 修改第 0 格（原為 previousPage），其餘 menu 格（index 1/4/7）不動，
