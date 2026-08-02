@@ -2,6 +2,7 @@ package cc.ugotit.elinkbook
 
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
@@ -24,6 +25,12 @@ import java.io.InputStream
  *    供 `WebViewAssetLoader.InternalStoragePathHandler` 串流服務。
  *    此 method channel 透過 `BinaryMessenger.makeBackgroundTaskQueue()` 註冊，
  *    不阻塞 Android 主執行緒（避免 217MB 檔案複製造成 ANR）。
+ *
+ * 3. `readCustomFontBytes`：讀取自訂字型的 `content://` URI 位元組
+ *    （epic-14-system-settings Issue 3，ADR 0021 決策：不落地快取），
+ *    比照 `readAndroidAsset` 一次性讀取模式，非 `cacheBookForServing`
+ *    的落地快取模式——字型檔案遠小於 217MB 書籍本體，不需要背景執行緒
+ *    佇列避免 ANR。
  *
  * 取代原本 `FoliateEpubReaderView.kt` 的 `WebViewAssetLoader`／
  * `BookPathHandler`——本類別只負責「給定路徑/URI，回傳位元組或快取路徑」，
@@ -88,6 +95,29 @@ class ReaderResourceChannel(
                 val bytes = try {
                     context.assets.open(path).use { it.readBytes() }
                 } catch (e: Exception) {
+                    null
+                }
+                result.success(bytes)
+            }
+            "readCustomFontBytes" -> {
+                val uriString = call.argument<String>("uri")
+                if (uriString == null) {
+                    result.success(null)
+                    return
+                }
+                // 比照 readAndroidAsset：一次性讀取，不落地快取（ADR 0021），
+                // try/catch 吞掉例外統一回傳 null，避免 SAF 授權失效等情境
+                // 讓例外冒出變成 Dart 端未預期的 PlatformException。失敗時
+                // 記錄 Log.w（非 Log.d——部分裝置的客製化 ROM 會過濾 Debug
+                // 等級的 logcat 輸出，見 epic-7-interaction Issue 1 spike 已
+                // 記錄的既有教訓），方便日後用 adb logcat 判斷是 SAF 授權
+                // 過期還是原始檔案已被使用者刪除（審查修正，見
+                // tmp/epic-14/review-plan-issue-3.md Minor 1）。
+                val bytes = try {
+                    context.contentResolver.openInputStream(Uri.parse(uriString))
+                        ?.use { it.readBytes() }
+                } catch (e: Exception) {
+                    Log.w("ReaderResourceChannel", "Failed to read custom font bytes for uri: $uriString", e)
                     null
                 }
                 result.success(bytes)
