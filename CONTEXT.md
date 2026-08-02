@@ -130,12 +130,16 @@ PRD FR-02 描述的帳號體系，登入 Google Drive／OneDrive 等雲端硬碟
 _Avoid_: 雲端帳號（見上）
 
 **書籍內容指紋（Book Content Fingerprint）**：
-`epic-8-sync` 為解決跨裝置「同一本書」比對問題而新增的穩定識別碼：EPUB 優先取 OPF identifier（通常是 ISBN 或出版社 UUID），缺漏時退而用檔案內容 hash；PDF/TXT 一律用檔案內容 hash。匯入時計算存入 `books.content_fingerprint`。**與本機 `Book.id`（時間戳記+URI hash，僅裝置本地穩定，跨裝置各自不同）是不同概念**，同步邏輯必須用指紋而非本機 id 比對書籍身份。
-_Avoid_: 書籍 ID、書本雜湊（未點出「用於跨裝置比對」這個關鍵用途）
+`epic-8-sync` 為解決跨裝置「同一本書」比對問題而新增的穩定識別碼：EPUB 優先取 OPF identifier（通常是 ISBN 或出版社 UUID），缺漏時退而用檔案內容 hash；PDF/TXT 一律用檔案內容 hash。匯入時計算存入 `books.content_fingerprint`。**與本機 `Book.id`（時間戳記+URI hash，僅裝置本地穩定，跨裝置各自不同）是不同概念**，同步邏輯必須用指紋而非本機 id 比對書籍身份。演算法定案為 **SHA-256**（`package:crypto`），PDF/TXT（與 EPUB 缺漏 OPF identifier 時的退回路徑）皆為**全檔案內容雜湊**（非抽樣頭尾），一次性匯入成本換取正確性、避免抽樣造成的誤判碰撞（2026-08-02 `epic-8-sync` Architecting 階段定案）。`books.id` 本身維持現狀不受影響，不因本 Epic 改成 UUID 格式（格式與跨裝置比對無關）。
+_Avoid_: 書籍 ID、書本雜湊（未點出「用於跨裝置比對」這個關鍵用途）、抽樣雜湊（已否決的方案）
 
 **Checkpoint 同步（Checkpoint Sync）**：
-`epic-8-sync` 的批次同步觸發機制，三種事件之一發生即觸發一次批次同步（把期間累積的所有本機異動一次送出）：App 背景化、書籍切換（離開閱讀器）、閱讀中每 5 分鐘的閒置計時器（避免長時間不背景化/不切書時另一裝置看不到最新異動）。與「逐筆即時同步」（每次異動立刻各自觸發一次網路請求）相對，見 ADR 0020。
+`epic-8-sync` 的批次同步觸發機制，三種事件之一發生即觸發一次批次同步（把期間累積的所有本機異動一次送出）：App 背景化、書籍切換（離開閱讀器）、閱讀中每 5 分鐘的閒置計時器（避免長時間不背景化/不切書時另一裝置看不到最新異動）。與「逐筆即時同步」（每次異動立刻各自觸發一次網路請求）相對，見 ADR 0020。批次上傳透過 PocketBase 內建 **Batch API**（`/api/batch`，要求伺服器版本 ≥ 0.23）一次 HTTP 請求送出，交易性（全部成功或全部失敗）；下載遠端異動不批次，4 個 collection 各自查詢一次即可（量體小不需優化）。
 _Avoid_: 自動同步、背景同步（皆未點出「批次觸發」這個關鍵特性）
+
+**用戶端識別碼（`client_id`）**：
+`epic-8-sync` 引入，`bookmarks`／`highlights`／`notes` 三表的本機主鍵格式由 `INTEGER PRIMARY KEY AUTOINCREMENT` 改為 `TEXT PRIMARY KEY`（UUID），**本機 id 與同步識別碼合一**（不另外疊加一個 `sync_id` 欄位）。PocketBase 端對應 collection 額外開一個 `client_id` 欄位存放同一個 UUID 值，PocketBase 內建的 `id` 欄位純粹是其內部管理用途，App 完全不讀取/比對它——避免依賴特定 PocketBase 版本對自訂 `id` 格式的支援程度。`notes` 依附劃線時存的是該劃線的 `client_id`（而非本機整數 `highlight_id` 的舊概念，該概念已隨此變更取消）。**`books.id` 不受影響、維持原格式**——書籍的跨裝置身份比對用途已由「書籍內容指紋」承擔，兩者是不同機制（2026-08-02 `epic-8-sync` Architecting 階段定案）。
+_Avoid_: sync_id（已否決的雙 id 設計，本機 id 現在就是同步用的那個 id，不是另外疊加的欄位）、UUID（過於籠統，未點出「本機主鍵與同步識別碼合一」這個關鍵設計）
 
 **自訂字型（Custom Font）**：
 `epic-14-system-settings`（FR-35）引入的使用者上傳字型，與內建 5 款字型（思源黑體/思源宋體/原俠正楷/台灣圓體/源流明體，見「Fit 模式」鄰近詞條群）並列於同一份全域字型清單，統一以 family name 字串識別（`AppFont` enum 僅保留供內建字型清單 UI 呈現，不再是儲存型別）。**只對 EPUB 生效**——PDF 為原生點陣圖渲染，不套用字型設定。**不複製檔案進 App 私有目錄**，比照 ADR 0002 對書籍檔案的既有精神，以 `content://` URI＋`takePersistableUriPermission()` 直接引用，見 ADR 0021。
