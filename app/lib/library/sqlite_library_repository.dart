@@ -481,9 +481,15 @@ class SqliteLibraryRepository implements LibraryRepository {
     // family name 字串（epic-14-system-settings 決策 2），既有 5 種列舉
     // 值資料需逐筆轉換為對應的實際 family name（取自 app_font.dart 現行
     // AppFontFamilyName.familyName），NULL 不受影響。僅在表與欄位皆存在
-    // 時才執行——oldVersion < 2 時 _createBookReaderPrefsTable 已一步到位
-    // 建表，不會有任何舊格式資料需要轉換；某些測試情境建立的舊版資料庫
-    // 可能缺少 font_family 欄位，需額外檢查避免 no such column 錯誤。
+    // 時才執行——真實裝置 oldVersion >= 2 時 book_reader_prefs 表與
+    // font_family 欄位必然存在（該欄位自 version 2 起就一直存在，從未
+    // 透過 ALTER TABLE 後補），但本測試檔內多個既有、與本次無關的舊版
+    // 資料庫測試 fixture（例如「既有 version 4/5/9/10 裝置升級」等測試）
+    // 為了只聚焦驗證 books 表遷移，刻意省略建立 book_reader_prefs 表，
+    // 此防禦查詢是為了不讓這些既有測試因此拋出 `no such table`／
+    // `no such column` 例外而失敗（曾嘗試移除、經 `flutter test` 實測
+    // 證實會連帶打壞 4 個既有測試，見 tmp/epic-14/review-issue-1.md
+    // Minor 3 的簡化建議在此專案的既有測試現況下不成立，予以保留）。
     final tables = await db.rawQuery(
         "SELECT name FROM sqlite_master WHERE type='table' AND name='book_reader_prefs'");
     if (tables.isEmpty) return;

@@ -189,6 +189,17 @@ void main() {
       expect(resolved.columnSize, 720.0);
     });
 
+    test('BookReaderPrefs.fontFamily 字串值正確透傳到 ResolvedPreferences（epic-14 型別由 AppFont 改為 String）',
+        () {
+      final loaded = LoadedPrefs(
+        bookPrefs: const BookReaderPrefs(fontFamily: 'SourceHanSansTC'),
+        globalPrefs: const GlobalReaderPrefs.initial(),
+      );
+      final resolved = manager.resolve(loaded);
+
+      expect(resolved.fontFamily, 'SourceHanSansTC');
+    });
+
     test('BookReaderPrefs 的邊距 4 個欄位正確透傳到 ResolvedPreferences', () {
       final loaded = LoadedPrefs(
         bookPrefs: const BookReaderPrefs(
