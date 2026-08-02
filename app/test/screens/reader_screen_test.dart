@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_inappwebview_platform_interface/flutter_inappwebview_platform_interface.dart';
 import 'package:elinkbook/reader/book_reader_prefs.dart';
 import 'package:elinkbook/reader/column_mode.dart';
+import 'package:elinkbook/reader/custom_font.dart';
 import 'package:elinkbook/reader/dual_page_direction.dart';
 import 'package:elinkbook/reader/dual_page_mode.dart';
 import 'package:elinkbook/reader/page_turn_mode.dart';
@@ -28,6 +29,7 @@ import 'package:elinkbook/reader/foliate_native_bridge.dart';
 import '../support/fake_inappwebview_platform.dart';
 import '../support/fake_library_repository.dart';
 import '../support/fake_reader_prefs_manager.dart';
+import '../support/fake_custom_fonts_repository.dart';
 import 'package:elinkbook/screens/notes_bottom_sheet.dart';
 import '../support/fake_bookmarks_repository.dart';
 import 'package:elinkbook/screens/annotation_toolbar.dart';
@@ -4498,6 +4500,52 @@ void main() {
     expect(calls, hasLength(2), reason: 'resumed 應強制重新呼叫，不受等值節流影響');
     expect(calls.last.method, 'setEnabled');
     expect(calls.last.arguments, isTrue);
+  });
+
+  testWidgets('提供 customFontsRepository 時，開啟版面設定顯示自訂字型選項',
+      (tester) async {
+    final customFontsRepository = FakeCustomFontsRepository();
+    await customFontsRepository.insert(const CustomFont(
+      displayName: '測試自訂字型',
+      familyName: 'TestCustomFamily',
+      fontUri: 'content://example/test',
+    ));
+
+    await tester.pumpWidget(MaterialApp(
+      home: ReaderScreen(
+        filePath: 'test/fixtures/sample.epub',
+        bookId: 'b1',
+        prefsManager: prefsManager,
+        customFontsRepository: customFontsRepository,
+      ),
+    ));
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final epubView = tester.widget<FoliateEpubReaderView>(
+      find.byType(FoliateEpubReaderView),
+    );
+    epubView.onLayoutResolved?.call(
+      const EpubLayoutInfo(
+        isFixedLayout: false,
+        writingMode: WritingMode.horizontal,
+      ),
+    );
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('reader_layout_settings_button')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.byType(ReaderSettingsSheet), findsOneWidget);
+
+    // 展開字型下拉選單以驗證自訂字型是否出現
+    await tester.tap(find.byKey(const Key('reader_settings_font_family')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('測試自訂字型'), findsWidgets);
   });
 
   tearDownAll(() {

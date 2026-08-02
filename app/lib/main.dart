@@ -6,6 +6,7 @@ import 'library/library_repository.dart';
 import 'library/sqlite_library_repository.dart';
 import 'reader/book_reader_prefs_repository.dart';
 import 'reader/bookmarks_repository.dart';
+import 'reader/custom_fonts_repository.dart';
 import 'reader/epub_character_count_repository.dart';
 import 'reader/highlights_repository.dart';
 import 'reader/notes_repository.dart';
@@ -41,6 +42,7 @@ Future<void> main() async {
   final bookmarksRepository = BookmarksRepository(repository.database);
   final highlightsRepository = HighlightsRepository(repository.database);
   final notesRepository = NotesRepository(repository.database);
+  final customFontsRepository = CustomFontsRepository(repository.database);
   runApp(
     ElinkBookApp(
       repository: repository,
@@ -49,6 +51,7 @@ Future<void> main() async {
       bookmarksRepository: bookmarksRepository,
       highlightsRepository: highlightsRepository,
       notesRepository: notesRepository,
+      customFontsRepository: customFontsRepository,
       initialTheme: initialTheme,
       initialEinkMode: initialEinkMode,
       themePreferences: themePreferences,
@@ -65,6 +68,7 @@ class ElinkBookApp extends StatefulWidget {
   final BookmarksRepository? bookmarksRepository;
   final HighlightsRepository? highlightsRepository;
   final NotesRepository? notesRepository;
+  final CustomFontsRepository? customFontsRepository;
   final AppThemePreferences themePreferences;
   final AppTheme initialTheme;
   final bool initialEinkMode;
@@ -77,6 +81,7 @@ class ElinkBookApp extends StatefulWidget {
     this.bookmarksRepository,
     this.highlightsRepository,
     this.notesRepository,
+    this.customFontsRepository,
     this.initialTheme = AppTheme.light,
     this.initialEinkMode = false,
     AppThemePreferences? themePreferences,
@@ -123,6 +128,7 @@ class _ElinkBookAppState extends State<ElinkBookApp> {
         bookmarksRepository: widget.bookmarksRepository,
         highlightsRepository: widget.highlightsRepository,
         notesRepository: widget.notesRepository,
+        customFontsRepository: widget.customFontsRepository,
         currentTheme: _theme,
         isEinkMode: _isEinkMode,
         onThemeChanged: _handleThemeChanged,

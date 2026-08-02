@@ -34,7 +34,7 @@
 - Consumes：無（Issue 1 的 `custom_fonts` 表 schema 已存在）
 - Produces：`CustomFont`（`id`／`displayName`／`familyName`／`fontUri`）；`CustomFontsRepository`（`listAll()`／`familyNameExists(String)`／`insert(CustomFont)`／`rename(int, String)`／`countBooksUsing(String)`／`deleteAndResetUsage(int, String)`），供 Task 2（`FontManagementScreen`）與 Task 4（`reader_settings_sheet.dart`）使用
 
-- [ ] **Step 1：撰寫失敗測試——`CustomFont` model round-trip**
+- [x] **Step 1：撰寫失敗測試——`CustomFont` model round-trip**
 
 新建 `app/test/reader/custom_fonts_repository_test.dart`：
 
@@ -215,7 +215,7 @@ Book _book(String id) {
 
 （把這兩行 import 與 `_book()` 函式放在檔案最上方，`void main()` 之前，與其他 `import` 語句放在一起。）
 
-- [ ] **Step 2：執行測試，確認失敗**
+- [x] **Step 2：執行測試，確認失敗**
 
 ```bash
 cd app
@@ -224,7 +224,7 @@ flutter test test/reader/custom_fonts_repository_test.dart
 
 Expected：FAIL——`package:elinkbook/reader/custom_font.dart`／`custom_fonts_repository.dart` 找不到。
 
-- [ ] **Step 3：建立 `custom_font.dart`**
+- [x] **Step 3：建立 `custom_font.dart`**
 
 ```dart
 /// 使用者上傳的自訂字型（epic-14-system-settings FR-35），對應
@@ -290,7 +290,7 @@ class CustomFont {
 }
 ```
 
-- [ ] **Step 4：建立 `custom_fonts_repository.dart`**
+- [x] **Step 4：建立 `custom_fonts_repository.dart`**
 
 ```dart
 import 'package:sqflite/sqflite.dart';
@@ -363,7 +363,7 @@ class CustomFontsRepository {
 }
 ```
 
-- [ ] **Step 5：執行測試，確認通過**
+- [x] **Step 5：執行測試，確認通過**
 
 ```bash
 flutter test test/reader/custom_fonts_repository_test.dart
@@ -371,7 +371,7 @@ flutter test test/reader/custom_fonts_repository_test.dart
 
 Expected：全數 PASS。
 
-- [ ] **Step 6：建立測試用 Fake（供 Task 2 widget test 使用）**
+- [x] **Step 6：建立測試用 Fake（供 Task 2 widget test 使用）**
 
 新建 `app/test/support/fake_custom_fonts_repository.dart`（比照 `app/test/support/fake_bookmarks_repository.dart` 既有模式）：
 
@@ -433,7 +433,7 @@ class FakeCustomFontsRepository implements CustomFontsRepository {
 }
 ```
 
-- [ ] **Step 7：`flutter analyze` + Commit**
+- [x] **Step 7：`flutter analyze` + Commit**
 
 ```bash
 flutter analyze
@@ -455,7 +455,7 @@ Expected：`flutter analyze` "No issues found!"。
 - Consumes：Task 1 的 `CustomFont`／`CustomFontsRepository`（含 Fake）；`app/lib/reader/font_name_parser.dart` 的 `parseFontFamilyName(Uint8List)`；`app/lib/reader/app_font.dart` 的 `AppFont.values`／`AppFontFamilyName.familyName`
 - Produces：`FontManagementScreen` widget（`required CustomFontsRepository repository`），供 Task 3 的 `SettingsScreen` 導航使用
 
-- [ ] **Step 1：撰寫失敗測試——清單顯示內建+自訂字型**
+- [x] **Step 1：撰寫失敗測試——清單顯示內建+自訂字型**
 
 新建 `app/test/screens/font_management_screen_test.dart`：
 
@@ -513,7 +513,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：執行測試，確認失敗**
+- [x] **Step 2：執行測試，確認失敗**
 
 ```bash
 cd app
@@ -522,7 +522,7 @@ flutter test test/screens/font_management_screen_test.dart
 
 Expected：FAIL——`package:elinkbook/screens/font_management_screen.dart` 找不到。
 
-- [ ] **Step 3：建立 `FontManagementScreen`（清單顯示部分）**
+- [x] **Step 3：建立 `FontManagementScreen`（清單顯示部分）**
 
 新建 `app/lib/screens/font_management_screen.dart`：
 
@@ -649,7 +649,7 @@ class _FontManagementScreenState extends State<FontManagementScreen> {
 
 （`_pickAndUploadFonts`／`_renameFont`／`_deleteFont` 先留空殼讓 Step 4 的測試能編譯通過，實作在後續 Step 補上。）
 
-- [ ] **Step 4：執行測試，確認通過**
+- [x] **Step 4：執行測試，確認通過**
 
 ```bash
 flutter test test/screens/font_management_screen_test.dart
@@ -657,7 +657,7 @@ flutter test test/screens/font_management_screen_test.dart
 
 Expected：全數 PASS。
 
-- [ ] **Step 5：撰寫失敗測試——重新命名**
+- [x] **Step 5：撰寫失敗測試——重新命名**
 
 在 `font_management_screen_test.dart` 的 `main()` 內新增：
 
@@ -686,7 +686,7 @@ Expected：全數 PASS。
   });
 ```
 
-- [ ] **Step 6：執行測試，確認失敗**
+- [x] **Step 6：執行測試，確認失敗**
 
 ```bash
 flutter test test/screens/font_management_screen_test.dart
@@ -694,7 +694,7 @@ flutter test test/screens/font_management_screen_test.dart
 
 Expected：FAIL——`font_management_rename_field`／`font_management_rename_confirm` 找不到（`_renameFont` 目前是空殼）。
 
-- [ ] **Step 7：實作 `_renameFont`**
+- [x] **Step 7：實作 `_renameFont`**
 
 ```dart
   Future<void> _renameFont(CustomFont font) async {
@@ -729,7 +729,7 @@ Expected：FAIL——`font_management_rename_field`／`font_management_rename_co
   }
 ```
 
-- [ ] **Step 8：執行測試，確認通過**
+- [x] **Step 8：執行測試，確認通過**
 
 ```bash
 flutter test test/screens/font_management_screen_test.dart
@@ -737,7 +737,7 @@ flutter test test/screens/font_management_screen_test.dart
 
 Expected：全數 PASS。
 
-- [ ] **Step 9：撰寫失敗測試——刪除（一般情況與使用中情況兩種文案）**
+- [x] **Step 9：撰寫失敗測試——刪除（一般情況與使用中情況兩種文案）**
 
 繼續在 `main()` 內新增：
 
@@ -795,7 +795,7 @@ Expected：全數 PASS。
   });
 ```
 
-- [ ] **Step 10：執行測試，確認失敗**
+- [x] **Step 10：執行測試，確認失敗**
 
 ```bash
 flutter test test/screens/font_management_screen_test.dart
@@ -803,7 +803,7 @@ flutter test test/screens/font_management_screen_test.dart
 
 Expected：FAIL——`_deleteFont` 目前是空殼，對話框未出現。
 
-- [ ] **Step 11：實作 `_deleteFont`**
+- [x] **Step 11：實作 `_deleteFont`**
 
 ```dart
   Future<void> _deleteFont(CustomFont font) async {
@@ -836,7 +836,7 @@ Expected：FAIL——`_deleteFont` 目前是空殼，對話框未出現。
   }
 ```
 
-- [ ] **Step 12：執行測試，確認通過**
+- [x] **Step 12：執行測試，確認通過**
 
 ```bash
 flutter test test/screens/font_management_screen_test.dart
@@ -844,7 +844,7 @@ flutter test test/screens/font_management_screen_test.dart
 
 Expected：全數 PASS。
 
-- [ ] **Step 13：撰寫失敗測試——批次上傳合併訊息（重複阻擋）**
+- [x] **Step 13：撰寫失敗測試——批次上傳合併訊息（重複阻擋）**
 
 繼續在 `main()` 內新增（本測試直接呼叫 `_FontManagementScreenState` 的上傳邏輯核心純函式，見下方 Step 14 抽出的 `resolveUploadOutcome`，不透過 `file_picker` 實際彈出系統選擇器——widget test 環境無法驅動系統檔案選擇器）：
 
@@ -890,7 +890,7 @@ Expected：全數 PASS。
   });
 ```
 
-- [ ] **Step 14：執行測試，確認失敗**
+- [x] **Step 14：執行測試，確認失敗**
 
 ```bash
 flutter test test/screens/font_management_screen_test.dart
@@ -898,7 +898,7 @@ flutter test test/screens/font_management_screen_test.dart
 
 Expected：FAIL——`resolveUploadOutcome`／`buildUploadResultMessage` 未定義。
 
-- [ ] **Step 15：抽出上傳結果純函式並實作 `_pickAndUploadFonts`**
+- [x] **Step 15：抽出上傳結果純函式並實作 `_pickAndUploadFonts`**
 
 在 `font_management_screen.dart` 檔案最上方（class 定義之前）新增匯入與兩個頂層純函式：
 
@@ -1052,7 +1052,7 @@ const _metadataChannel = MethodChannel('elinkbook/book_metadata');
   }
 ```
 
-- [ ] **Step 16：執行測試，確認通過**
+- [x] **Step 16：執行測試，確認通過**
 
 ```bash
 flutter test test/screens/font_management_screen_test.dart
@@ -1060,7 +1060,7 @@ flutter test test/screens/font_management_screen_test.dart
 
 Expected：全數 PASS（含 Step 13 新增的兩個純函式測試——它們不透過 `pumpScreen`，直接測試頂層函式，不受 widget 樹或 `file_picker` 影響）。
 
-- [ ] **Step 17：全專案回歸測試 + `flutter analyze`**
+- [x] **Step 17：全專案回歸測試 + `flutter analyze`**
 
 ```bash
 flutter test
@@ -1069,7 +1069,7 @@ flutter analyze
 
 Expected：全數 PASS，`flutter analyze` "No issues found!"。
 
-- [ ] **Step 18：Commit**
+- [x] **Step 18：Commit**
 
 ```bash
 git add lib/screens/font_management_screen.dart test/screens/font_management_screen_test.dart
@@ -1090,7 +1090,7 @@ git commit -m "feat(epic-14): FontManagementScreen——批次上傳/清單/重�
 - Consumes：Task 1 的 `CustomFontsRepository`；Task 2 的 `FontManagementScreen`
 - Produces：`SettingsScreen`／`LibraryScreen`／`ElinkBookApp` 新增可選具名參數 `customFontsRepository`，貫穿至 `main.dart` 實際建構一份 `CustomFontsRepository(repository.database)` 注入（比照既有 `bookmarksRepository` 貫穿模式）
 
-- [ ] **Step 1：撰寫失敗測試——`SettingsScreen` 新增「字型管理」入口**
+- [x] **Step 1：撰寫失敗測試——`SettingsScreen` 新增「字型管理」入口**
 
 `app/test/screens/settings_screen_test.dart` 新增 import：
 
@@ -1125,7 +1125,7 @@ import '../support/fake_custom_fonts_repository.dart';
   });
 ```
 
-- [ ] **Step 2：執行測試，確認失敗**
+- [x] **Step 2：執行測試，確認失敗**
 
 ```bash
 cd app
@@ -1134,7 +1134,7 @@ flutter test test/screens/settings_screen_test.dart
 
 Expected：FAIL——`SettingsScreen` 建構子沒有 `customFontsRepository` 具名參數；`settings_font_management_button` 找不到。
 
-- [ ] **Step 3：修改 `settings_screen.dart`**
+- [x] **Step 3：修改 `settings_screen.dart`**
 
 `import` 區塊（第 1-6 行）新增：
 
@@ -1178,7 +1178,7 @@ class 欄位（第 12-15 行 `final ReaderPrefsManager prefsManager;` 等）之�
 
 （`customFontsRepository` 為 `null` 時 `onTap` 也是 `null`——`ListTile` 的既有語意是 `onTap: null` 時整顆項目仍會顯示但點擊無反應，比照 Flutter 內建行為，不需要額外隱藏整個項目；本專案既有慣例是保留可選參數缺席時「入口仍在、但不可互動」而非「入口整個消失」，讓使用者知道這個功能存在。）
 
-- [ ] **Step 4：執行測試，確認通過**
+- [x] **Step 4：執行測試，確認通過**
 
 ```bash
 flutter test test/screens/settings_screen_test.dart
@@ -1186,7 +1186,7 @@ flutter test test/screens/settings_screen_test.dart
 
 Expected：全數 PASS。
 
-- [ ] **Step 5：撰寫失敗測試——`LibraryScreen` 貫穿 `customFontsRepository` 到 `SettingsScreen`**
+- [x] **Step 5：撰寫失敗測試——`LibraryScreen` 貫穿 `customFontsRepository` 到 `SettingsScreen`**
 
 `app/test/screens/library_screen_test.dart` 目前完全沒有任何測試涵蓋「點擊設定圖示導航至 `SettingsScreen`」這條路徑（`library_screen.dart:617-621` 的設定 `IconButton` 也還沒有 `key:`），新增：
 
@@ -1215,7 +1215,7 @@ Expected：全數 PASS。
 
 （`FakeLibraryRepository`／`FakeBookImportService` 已由檔案頂部既有 import 提供〔`../support/fake_library_repository.dart`／`../support/fake_book_import_service.dart`〕；`prefsManager` 為檔案內既有 `late ReaderPrefsManager prefsManager;` 欄位，於 `setUp()` 賦值為 `FakeReaderPrefsManager()`〔第 37、61 行〕，直接沿用不重新定義。）
 
-- [ ] **Step 6：執行測試，確認失敗**
+- [x] **Step 6：執行測試，確認失敗**
 
 ```bash
 flutter test test/screens/library_screen_test.dart
@@ -1223,7 +1223,7 @@ flutter test test/screens/library_screen_test.dart
 
 Expected：FAIL——`LibraryScreen` 建構子沒有 `customFontsRepository` 參數。
 
-- [ ] **Step 7：修改 `library_screen.dart`**
+- [x] **Step 7：修改 `library_screen.dart`**
 
 `import` 區塊（第 1-21 行）新增：
 
@@ -1259,7 +1259,7 @@ class 欄位（第 28-39 行）新增：
           icon: const Icon(Icons.settings),
 ```
 
-- [ ] **Step 8：執行測試，確認通過**
+- [x] **Step 8：執行測試，確認通過**
 
 ```bash
 flutter test test/screens/library_screen_test.dart
@@ -1267,7 +1267,7 @@ flutter test test/screens/library_screen_test.dart
 
 Expected：全數 PASS。
 
-- [ ] **Step 9：修改 `main.dart` 實際注入**
+- [x] **Step 9：修改 `main.dart` 實際注入**
 
 `import` 區塊（第 1-18 行）新增：
 
@@ -1305,7 +1305,7 @@ import 'reader/custom_fonts_repository.dart';
         customFontsRepository: widget.customFontsRepository,
 ```
 
-- [ ] **Step 10：全專案回歸測試 + `flutter analyze`**
+- [x] **Step 10：全專案回歸測試 + `flutter analyze`**
 
 ```bash
 flutter test
@@ -1314,7 +1314,7 @@ flutter analyze
 
 Expected：全數 PASS，`flutter analyze` "No issues found!"（`main.dart` 本身沒有自動化測試覆蓋，此步驟只能靠 `flutter analyze` 靜態檢查其型別正確；`flutter build apk --debug` 若時間允許可額外驗證整個 App 實際可編譯執行，非必要但建議）。
 
-- [ ] **Step 11：Commit**
+- [x] **Step 11：Commit**
 
 ```bash
 git add lib/screens/settings_screen.dart lib/screens/library_screen.dart lib/main.dart test/screens/settings_screen_test.dart test/screens/library_screen_test.dart
@@ -1335,7 +1335,7 @@ git commit -m "feat(epic-14): SettingsScreen「字型管理」入口 + customFon
 - Consumes：Task 1 的 `CustomFont`／`CustomFontsRepository`
 - Produces：`ReaderSettingsSheet` 新增可選具名參數 `customFonts: List<CustomFont>`（預設 `const []`）；`ReaderScreen` 新增可選具名參數 `customFontsRepository`，開書時載入一次並快取
 
-- [ ] **Step 1：撰寫失敗測試——字型選單合併顯示自訂字型**
+- [x] **Step 1：撰寫失敗測試——字型選單合併顯示自訂字型**
 
 `app/test/screens/reader_settings_sheet_test.dart` 新增 import：
 
@@ -1405,7 +1405,7 @@ Future<void> _pumpSheet(
 
 並在該函式內部建構 `ReaderSettingsSheet(...)` 的地方新增 `customFonts: customFonts,`（依檔案實際既有寫法的確切位置調整，找到 `ReaderSettingsSheet(` 那一行往下對照既有的 `prefs:`／`onChanged:` 具名參數，新增同一層級的 `customFonts:`）。
 
-- [ ] **Step 2：執行測試，確認失敗**
+- [x] **Step 2：執行測試，確認失敗**
 
 ```bash
 cd app
@@ -1414,7 +1414,7 @@ flutter test test/screens/reader_settings_sheet_test.dart
 
 Expected：FAIL——`_pumpSheet` 沒有 `customFonts` 具名參數／`ReaderSettingsSheet` 建構子沒有 `customFonts`。
 
-- [ ] **Step 3：修改 `reader_settings_sheet.dart`**
+- [x] **Step 3：修改 `reader_settings_sheet.dart`**
 
 `import` 區塊新增：
 
@@ -1445,7 +1445,7 @@ class 欄位（第 22-24 行）新增：
               ),
 ```
 
-- [ ] **Step 4：執行測試，確認通過**
+- [x] **Step 4：執行測試，確認通過**
 
 ```bash
 flutter test test/screens/reader_settings_sheet_test.dart
@@ -1453,7 +1453,7 @@ flutter test test/screens/reader_settings_sheet_test.dart
 
 Expected：全數 PASS。
 
-- [ ] **Step 5：撰寫失敗測試——`ReaderScreen` 貫穿自訂字型清單至 `ReaderSettingsSheet`**
+- [x] **Step 5：撰寫失敗測試——`ReaderScreen` 貫穿自訂字型清單至 `ReaderSettingsSheet`**
 
 `app/test/screens/reader_screen_test.dart` 新增 import：
 
@@ -1506,7 +1506,7 @@ import '../support/fake_custom_fonts_repository.dart';
 
 （`prefsManager` 變數沿用檔案內既有於 `setUp`/頂層建立的既有 fixture，不重新定義；`FoliateEpubReaderView`／`EpubLayoutInfo`／`WritingMode` 皆為檔案內既有 import，本測試不需要新增這些型別的 import。）
 
-- [ ] **Step 6：執行測試，確認失敗**
+- [x] **Step 6：執行測試，確認失敗**
 
 ```bash
 flutter test test/screens/reader_screen_test.dart
@@ -1514,7 +1514,7 @@ flutter test test/screens/reader_screen_test.dart
 
 Expected：FAIL——`ReaderScreen` 建構子沒有 `customFontsRepository` 參數。
 
-- [ ] **Step 7：修改 `reader_screen.dart`**
+- [x] **Step 7：修改 `reader_screen.dart`**
 
 class 欄位（第 82-110 行 `final BookmarksRepository? bookmarksRepository;` 等區塊）新增：
 
@@ -1574,7 +1574,7 @@ import '../reader/custom_fonts_repository.dart';
         customFonts: _customFonts,
 ```
 
-- [ ] **Step 8：執行測試，確認通過**
+- [x] **Step 8：執行測試，確認通過**
 
 ```bash
 flutter test test/screens/reader_screen_test.dart
@@ -1582,7 +1582,7 @@ flutter test test/screens/reader_screen_test.dart
 
 Expected：全數 PASS。
 
-- [ ] **Step 9：全專案回歸測試 + `flutter analyze`**
+- [x] **Step 9：全專案回歸測試 + `flutter analyze`**
 
 ```bash
 flutter test
@@ -1591,7 +1591,7 @@ flutter analyze
 
 Expected：全數 PASS，`flutter analyze` "No issues found!"。
 
-- [ ] **Step 10：Commit**
+- [x] **Step 10：Commit**
 
 ```bash
 git add lib/screens/reader_settings_sheet.dart lib/screens/reader_screen.dart test/screens/reader_settings_sheet_test.dart test/screens/reader_screen_test.dart

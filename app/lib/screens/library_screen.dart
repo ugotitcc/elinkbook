@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 
 import '../library/book_import_service.dart';
 import '../reader/bookmarks_repository.dart';
+import '../reader/custom_fonts_repository.dart';
 import '../reader/highlights_repository.dart';
 import '../reader/notes_repository.dart';
 import '../reader/reader_prefs_manager.dart';
@@ -32,6 +33,7 @@ class LibraryScreen extends StatefulWidget {
   final BookmarksRepository? bookmarksRepository;
   final HighlightsRepository? highlightsRepository;
   final NotesRepository? notesRepository;
+  final CustomFontsRepository? customFontsRepository;
   final AppTheme currentTheme;
   final bool isEinkMode;
   final ValueChanged<AppTheme>? onThemeChanged;
@@ -46,6 +48,7 @@ class LibraryScreen extends StatefulWidget {
     this.bookmarksRepository,
     this.highlightsRepository,
     this.notesRepository,
+    this.customFontsRepository,
     this.currentTheme = AppTheme.light,
     this.isEinkMode = false,
     this.onThemeChanged,
@@ -464,6 +467,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
               bookmarksRepository: widget.bookmarksRepository,
               highlightsRepository: widget.highlightsRepository,
               notesRepository: widget.notesRepository,
+              customFontsRepository: widget.customFontsRepository,
               currentTheme: widget.currentTheme,
               isEinkMode: widget.isEinkMode,
               onThemeChanged: widget.onThemeChanged,
@@ -615,6 +619,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
             onPressed: _openManageGroupsDialog,
           ),
         IconButton(
+          key: const Key('library_settings_button'),
           icon: const Icon(Icons.settings),
           tooltip: '設定',
           onPressed: () {
@@ -625,6 +630,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   currentTheme: widget.currentTheme,
                   isEinkMode: widget.isEinkMode,
                   onThemeChanged: widget.onThemeChanged,
+                  customFontsRepository: widget.customFontsRepository,
                 ),
               ),
             );

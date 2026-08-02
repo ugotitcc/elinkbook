@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/reader/book_reader_prefs.dart';
 import 'package:elinkbook/reader/column_mode.dart';
+import 'package:elinkbook/reader/custom_font.dart';
 import 'package:elinkbook/reader/epub_text_align.dart';
 import 'package:elinkbook/reader/page_turn_mode.dart';
 import 'package:elinkbook/reader/screen_orientation_setting.dart';
@@ -674,13 +675,59 @@ void main() {
         reason:
             'mainAxisSize.min 應讓內容較短時 Sheet 緊湊包裹，不應撐滿刻意放大的可用高度 3000');
   });
+
+  testWidgets('字型選單合併顯示內建 5 款與傳入的自訂字型清單', (tester) async {
+    await _pumpSheet(
+      tester,
+      const BookReaderPrefs(),
+      (_) {},
+      customFonts: const [
+        CustomFont(
+          id: 1,
+          displayName: '我的自訂字型',
+          familyName: 'MyCustomFamily',
+          fontUri: 'content://example/font1',
+        ),
+      ],
+    );
+
+    await tester.tap(find.byKey(const Key('reader_settings_font_family')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('思源黑體'), findsWidgets);
+    expect(find.text('我的自訂字型'), findsWidgets);
+  });
+
+  testWidgets('選擇自訂字型後，onChanged 帶入其 familyName', (tester) async {
+    BookReaderPrefs? result;
+    await _pumpSheet(
+      tester,
+      const BookReaderPrefs(),
+      (prefs) => result = prefs,
+      customFonts: const [
+        CustomFont(
+          id: 1,
+          displayName: '我的自訂字型',
+          familyName: 'MyCustomFamily',
+          fontUri: 'content://example/font1',
+        ),
+      ],
+    );
+
+    final dropdown = find.byKey(const Key('reader_settings_font_family'));
+    tester.widget<DropdownButton<String?>>(dropdown).onChanged!('MyCustomFamily');
+    await tester.pump();
+
+    expect(result?.fontFamily, 'MyCustomFamily');
+  });
 }
 
 Future<void> _pumpSheet(
   WidgetTester tester,
   BookReaderPrefs prefs,
-  ValueChanged<BookReaderPrefs> onChanged,
-) async {
+  ValueChanged<BookReaderPrefs> onChanged, {
+  List<CustomFont> customFonts = const [],
+}) async {
   // 設定較大的 Viewport，以防 ListView 元件超出預設的 800x600 範圍導致 tap 失敗
   // （Issue 14 邊距拆為 4 個獨立滑桿後內容變高，1200 已不足，調高至 1600）
   tester.view.physicalSize = const Size(800, 1600);
@@ -695,6 +742,7 @@ Future<void> _pumpSheet(
       body: ReaderSettingsSheet(
         prefs: prefs,
         onChanged: onChanged,
+        customFonts: customFonts,
       ),
     ),
   ));

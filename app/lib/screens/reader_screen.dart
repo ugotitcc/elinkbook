@@ -7,6 +7,8 @@ import '../reader/bookmark.dart';
 import '../reader/bookmark_position_context.dart';
 import '../reader/bookmarks_repository.dart';
 import '../reader/book_reader_prefs.dart';
+import '../reader/custom_font.dart';
+import '../reader/custom_fonts_repository.dart';
 import '../reader/epub_decoration.dart';
 import '../reader/epub_page_estimator.dart';
 import '../reader/epub_position_info.dart';
@@ -109,6 +111,11 @@ class ReaderScreen extends StatefulWidget {
   /// 大量測試呼叫端需要逐一補上這個參數。
   final LibraryRepository? libraryRepository;
 
+  /// 自訂字型清單的資料存取層（epic-14-system-settings Issue 2）。刻意為
+  /// 可選參數——比照 [bookmarksRepository] 既有慣例，未提供時字型選單僅
+  /// 顯示內建 5 款，行為等同本 Issue 之前，零回歸。
+  final CustomFontsRepository? customFontsRepository;
+
   const ReaderScreen({
     super.key,
     required this.filePath,
@@ -122,6 +129,7 @@ class ReaderScreen extends StatefulWidget {
     this.bookProgress = 0.0,
     this.isFixedLayout,
     this.libraryRepository,
+    this.customFontsRepository,
   });
 
   @override
@@ -166,6 +174,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   // 時機見 _handleLayoutResolved（初次開書）／_openNotesSheet（Bottom
   // Sheet 關閉後重新整理，使用者可能在分頁裡新增/刪除書籤）。
   List<Bookmark> _fxlBookmarks = [];
+  // 自訂字型清單快取（epic-14-system-settings Issue 2），開書時載入一次，
+  // 比照既有 _fxlBookmarks／_highlights 等一次性載入快取模式。
+  List<CustomFont> _customFonts = [];
   BookReaderPrefs _prefs = BookReaderPrefs.empty;
   LoadedPrefs? _loaded;
   ResolvedPreferences? _resolved;
@@ -263,6 +274,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     WidgetsBinding.instance.addObserver(this);
     _volumeKeyChannel.setMethodCallHandler(_handleVolumeKeyCall);
     _resolveEpubEngineDispatch();
+    _loadCustomFonts();
     widget.prefsManager.load(widget.bookId).then((loaded) {
       if (!mounted) return;
       setState(() {
@@ -570,6 +582,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       builder: (_) => ReaderSettingsSheet(
         prefs: _prefs,
         onChanged: _handlePrefsChanged,
+        customFonts: _customFonts,
       ),
     );
   }
@@ -607,6 +620,18 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       setState(() => _fxlBookmarks = list);
     } catch (e) {
       debugPrint('Failed to load FXL bookmarks: $e');
+    }
+  }
+
+  Future<void> _loadCustomFonts() async {
+    final repository = widget.customFontsRepository;
+    if (repository == null) return;
+    try {
+      final fonts = await repository.listAll();
+      if (!mounted) return;
+      setState(() => _customFonts = fonts);
+    } catch (e) {
+      debugPrint('Failed to load custom fonts: $e');
     }
   }
 

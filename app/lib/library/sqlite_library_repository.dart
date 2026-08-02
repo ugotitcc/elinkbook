@@ -1,4 +1,3 @@
-import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
@@ -19,8 +18,6 @@ Future<String> defaultLibraryDatabasePath() async {
 
 class SqliteLibraryRepository implements LibraryRepository {
   final Database _db;
-
-  static const _metadataChannel = MethodChannel('elinkbook/book_metadata');
 
   SqliteLibraryRepository._(this._db);
 
@@ -521,7 +518,7 @@ class SqliteLibraryRepository implements LibraryRepository {
 
   @override
   Future<bool> detectAndCacheEpubLayout(String bookId, String filePath) async {
-    final response = await _metadataChannel.invokeMapMethod<String, Object?>(
+    final response = await kBookMetadataChannel.invokeMapMethod<String, Object?>(
       'detectEpubLayout',
       {'uri': filePath},
     );

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../reader/app_font.dart';
 import '../reader/book_reader_prefs.dart';
+import '../reader/custom_font.dart';
 import '../reader/column_mode.dart';
 import '../reader/epub_text_align.dart';
 import '../reader/page_turn_mode.dart';
@@ -22,11 +23,13 @@ import '../reader/writing_mode.dart';
 class ReaderSettingsSheet extends StatefulWidget {
   final BookReaderPrefs prefs;
   final ValueChanged<BookReaderPrefs> onChanged;
+  final List<CustomFont> customFonts;
 
   const ReaderSettingsSheet({
     super.key,
     required this.prefs,
     required this.onChanged,
+    this.customFonts = const [],
   });
 
   @override
@@ -431,6 +434,12 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                 (font) => DropdownMenuItem<String?>(
                   value: font.familyName,
                   child: Text(_fontDisplayName(font)),
+                ),
+              ),
+              ...widget.customFonts.map(
+                (font) => DropdownMenuItem<String?>(
+                  value: font.familyName,
+                  child: Text(font.displayName),
                 ),
               ),
             ],

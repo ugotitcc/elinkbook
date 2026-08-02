@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../reader/custom_fonts_repository.dart';
 import '../reader/reader_prefs_manager.dart';
 import '../theme/app_theme.dart';
 import 'about_screen.dart';
+import 'font_management_screen.dart';
 import 'nav_zone_settings_screen.dart';
 
 /// 設定畫面：「佈景」（主題圓點，原位於 `LibraryScreen` AppBar，見
@@ -13,6 +15,7 @@ class SettingsScreen extends StatelessWidget {
   final AppTheme currentTheme;
   final bool isEinkMode;
   final ValueChanged<AppTheme>? onThemeChanged;
+  final CustomFontsRepository? customFontsRepository;
 
   const SettingsScreen({
     super.key,
@@ -20,6 +23,7 @@ class SettingsScreen extends StatelessWidget {
     this.currentTheme = AppTheme.light,
     this.isEinkMode = false,
     this.onThemeChanged,
+    this.customFontsRepository,
   });
 
   @override
@@ -43,6 +47,22 @@ class SettingsScreen extends StatelessWidget {
                     const Color(0xFFF4ECD8), 'settings_theme_dot_sepia'),
               ],
             ),
+          ),
+          ListTile(
+            key: const Key('settings_font_management_button'),
+            title: const Text('字型管理'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: customFontsRepository == null
+                ? null
+                : () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => FontManagementScreen(
+                          repository: customFontsRepository!,
+                        ),
+                      ),
+                    );
+                  },
           ),
           ListTile(
             key: const Key('settings_nav_zone_button'),
