@@ -28,7 +28,7 @@
 - Consumes：無（本 Task 是整份文件的起點）
 - Produces：一個實際運作中的本機 PocketBase 實例（`http://127.0.0.1:8090`），供 Task 2-4 接續操作；文件「最低版本需求」與「啟動方式」兩節，供 Task 2-4 的讀者接續閱讀
 
-- [ ] **Step 1：建立文件檔案，寫入標題與最低版本需求章節**
+- [x] **Step 1：建立文件檔案，寫入標題與最低版本需求章節**
 
 建立 `docs/epics/epic-8-sync/pocketbase-self-hosting.md`：
 
@@ -52,7 +52,7 @@
   最新版本號。
 ```
 
-- [ ] **Step 2：撰寫「啟動方式」章節（兩種選項）**
+- [x] **Step 2：撰寫「啟動方式」章節（兩種選項）**
 
 在上一步內容之後新增：
 
@@ -111,7 +111,7 @@ docker run -d --name elinkbook-pocketbase -p 8090:8090 -v $(pwd)/pb_data:/pb/pb_
 collection）是完全不同的兩件事，不要混淆。
 ```
 
-- [ ] **Step 3：實際操作一次，驗證章節內容正確**
+- [x] **Step 3：實際操作一次，驗證章節內容正確**
 
 依 Step 2 寫的「選項 A」（或選項 B，擇一即可，兩者皆驗證過更好）實際執行：
 
@@ -126,7 +126,7 @@ curl -sf http://127.0.0.1:8090/api/health
 
 Expected：`curl` 對 `/api/health` 回傳 HTTP 200 與類似 `{"code":200,"message":"API is healthy.","data":{}}` 的 JSON；瀏覽器開啟 `http://127.0.0.1:8090/_/` 能看到建立管理員帳號的畫面。若指令或版本號與實際查證結果有出入（例如查證當下已有更新的版本、或 zip 檔名格式有變動），回頭修正 Step 1/2 的文件內容，確保文件寫的是**親自驗證過的真實步驟**，不是憑印象寫的。
 
-- [ ] **Step 4：Commit**
+- [x] **Step 4：Commit**
 
 ```bash
 git add docs/epics/epic-8-sync/pocketbase-self-hosting.md
@@ -144,7 +144,7 @@ git commit -m "docs(epic-8-sync): Issue 7 Task 1 — PocketBase 自架 SOP：最
 - Consumes：Task 1 產出的運作中 PocketBase 實例（管理員帳號已建立）
 - Produces：4 個 collection（`sync_reading_positions`／`sync_bookmarks`／`sync_highlights`／`sync_notes`）與 Batch API 皆已在該實例上實際建立/啟用完成，供 Task 3/4 接續使用；文件「Collection 建立步驟」章節
 
-- [ ] **Step 1：撰寫「建立 collection」章節**
+- [x] **Step 1：撰寫「建立 collection」章節**
 
 在 `docs/epics/epic-8-sync/pocketbase-self-hosting.md` 「啟動方式」章節之後新增：
 
@@ -239,7 +239,7 @@ PocketBase 內建的 `id` 系統欄位（每個 collection 皆自動具備）**�
 App 端完全不讀取/比對它（見 `spec.md`）。
 ```
 
-- [ ] **Step 2：撰寫「啟用 Batch API」章節**
+- [x] **Step 2：撰寫「啟用 Batch API」章節**
 
 緊接著新增：
 
@@ -257,7 +257,7 @@ App 端完全不讀取/比對它（見 `spec.md`）。
 欄位名稱可能略有差異，以自己安裝的版本畫面實際顯示的文字為準。
 ```
 
-- [ ] **Step 3：實際操作一次，驗證章節內容正確**
+- [x] **Step 3：實際操作一次，驗證章節內容正確**
 
 依 Step 1 的表格，在 Task 1 啟動的 PocketBase 實例上，透過 Admin UI 實際建立全部 4 個 collection 與對應欄位/規則，並依 Step 2 啟用 Batch API。完成後，執行以下驗證：
 
@@ -281,7 +281,7 @@ curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8090/api/batch \
 
 Expected：回傳 HTTP 狀態碼非 `404`（`/api/batch` 端點存在，若 Batch API 未啟用，PocketBase 會回傳能辨識的錯誤而非 404 not found，若這裡确實是 404 代表版本太舊或啟用步驟有誤，回頭檢查 Step 2 的操作）。
 
-- [ ] **Step 4：Commit**
+- [x] **Step 4：Commit**
 
 ```bash
 git add docs/epics/epic-8-sync/pocketbase-self-hosting.md
@@ -300,7 +300,7 @@ git commit -m "docs(epic-8-sync): Issue 7 Task 2 — PocketBase 自架 SOP：4 �
 - Consumes：Task 2 已建立的 4 個 collection（`sync_bookmarks`／`sync_highlights`／`sync_notes` 的 `deleted_at` 欄位）
 - Produces：`pb_hooks` cron 範例腳本，實際載入 Task 1/2 的 PocketBase 實例後可正常運作；文件「備份建議」／「墓碑清理」兩節
 
-- [ ] **Step 1：撰寫「備份建議」章節**
+- [x] **Step 1：撰寫「備份建議」章節**
 
 在「建立 Collection」章節之後新增：
 
@@ -323,7 +323,7 @@ PocketBase 本身用單一 SQLite 檔案（`pb_data/data.db`，隨執行檔/容�
 研究 SQLite 線上備份 API，不在本文件範圍內）。
 ```
 
-- [ ] **Step 2：撰寫「墓碑清理」章節與範例腳本**
+- [x] **Step 2：撰寫「墓碑清理」章節與範例腳本**
 
 先建立範例腳本 `docs/epics/epic-8-sync/pb_hooks_example/purge_tombstones.pb.js`：
 
@@ -396,7 +396,7 @@ PocketBase 支援用 `pb_hooks` 目錄下的 JS 檔案定義排程工作（cron�
 `purge_tombstones.pb.js` 內的 `thirtyDaysMillis` 常數。
 ```
 
-- [ ] **Step 3：實際操作一次，驗證 `pb_hooks` 腳本正確載入**
+- [x] **Step 3：實際操作一次，驗證 `pb_hooks` 腳本正確載入**
 
 把 Step 2 建立的 `purge_tombstones.pb.js` 複製進 Task 1 啟動的 PocketBase 實例的 `pb_hooks/` 目錄，重新啟動該實例：
 
@@ -411,7 +411,7 @@ Expected：啟動輸出**不應**出現任何 JS 語法錯誤或 `cronAdd` 相�
 
 若可行，額外驗證排程確實已註冊（Admin UI 的 **Settings → Crons** 頁面應該會列出 `purgeOldTombstones` 這個工作項目，含下次執行時間）；不需要真的等到凌晨 3 點才能驗證，看到它出現在 Crons 清單即代表 `cronAdd` 呼叫成功、語法正確。
 
-- [ ] **Step 4：Commit**
+- [x] **Step 4：Commit**
 
 ```bash
 git add docs/epics/epic-8-sync/pocketbase-self-hosting.md docs/epics/epic-8-sync/pb_hooks_example/purge_tombstones.pb.js
@@ -429,7 +429,7 @@ git commit -m "docs(epic-8-sync): Issue 7 Task 3 — PocketBase 自架 SOP：備
 - Consumes：Task 1-3 的全部產出（運作中的 PocketBase 實例，4 個 collection、Batch API、`pb_hooks` 皆已就緒）
 - Produces：一個持續運作、可供 Issue 2／4／5 的 `integration_test` 實際連線使用的測試用 PocketBase 實例；文件「測試環境」章節，記錄該實例的連線資訊供後續 Issue 的實作者查閱
 
-- [ ] **Step 1：撰寫「測試環境」章節**
+- [x] **Step 1：撰寫「測試環境」章節**
 
 在文件結尾（「墓碑清理」章節之後）新增：
 
@@ -458,7 +458,7 @@ Issue 5（閱讀位置衝突彈窗）的 `integration_test` 連線使用。
   不要用「選項 A」的前景 `./pocketbase serve` 跑完就關掉終端機。
 ```
 
-- [ ] **Step 2：端到端驗收（對照 issues.md Issue 7 的 4 項人工驗收標準逐一確認）**
+- [x] **Step 2：端到端驗收（對照 issues.md Issue 7 的 4 項人工驗收標準逐一確認）**
 
 依序確認以下 4 點，每點皆為**實際操作**而非紙上檢查：
 
@@ -494,7 +494,7 @@ Issue 5（閱讀位置衝突彈窗）的 `integration_test` 連線使用。
 
 若以上任何一點驗證失敗，回到對應的 Task 修正文件內容（而不是在這裡想辦法繞過去讓驗證「看起來」通過）。
 
-- [ ] **Step 3：Commit**
+- [x] **Step 3：Commit**
 
 ```bash
 git add docs/epics/epic-8-sync/pocketbase-self-hosting.md
