@@ -27,7 +27,7 @@ class SqliteLibraryRepository implements LibraryRepository {
   static Future<SqliteLibraryRepository> open(String path) async {
     final db = await openDatabase(
       path,
-      version: 15,
+      version: 16,
       onConfigure: (db) async {
         // book_reader_prefs 的 ON DELETE CASCADE 需要外鍵約束真正生效，
         // SQLite 預設不強制外鍵，須逐連線手動開啟（見 epic-3 plan-issue-1）。
@@ -63,6 +63,7 @@ class SqliteLibraryRepository implements LibraryRepository {
         await _createBookmarksTable(db);
         await _createHighlightsTable(db);
         await _createNotesTable(db);
+        await _createCustomFontsTable(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
@@ -131,6 +132,20 @@ class SqliteLibraryRepository implements LibraryRepository {
             // ALTER TABLE，oldVersion == 1 的裝置會重複 ALTER TABLE 拋出
             // 崩潰。
             await _addFullscreenColumn(db);
+          }
+          if (oldVersion < 16) {
+            // epic-14-system-settings Issue 1：自訂字型清單新增的全新資料表。
+            // 與 bookmarks（oldVersion < 8）／highlights／notes（oldVersion <
+            // 9）比照同一原則——任何 oldVersion < 16 的裝置都必然還沒有這張
+            // 表，無條件建立即可，不需要判斷「表是否已存在」。
+            await _createCustomFontsTable(db);
+            // epic-14-system-settings Issue 1：font_family 型別由 AppFont
+            // 封閉列舉字串改為任意 family name 字串（決策 2），既有 5
+            // 種列舉值資料需逐筆轉換。必須放在 else 分支內（oldVersion
+            // >= 2，即 book_reader_prefs 表已存在）——oldVersion < 2 時
+            // 該表剛由 _createBookReaderPrefsTable 全新建立，不會有任何
+            // 舊格式資料需要轉換。
+            await _migrateFontFamilyValues(db);
           }
         }
         if (oldVersion < 5) {
@@ -436,6 +451,51 @@ class SqliteLibraryRepository implements LibraryRepository {
     if (tables.isNotEmpty) {
       await db.execute(
           'ALTER TABLE book_reader_prefs ADD COLUMN fullscreen INTEGER');
+    }
+  }
+
+  static Future<void> _createCustomFontsTable(Database db) async {
+    // 自訂字型清單（epic-14-system-settings FR-35），見
+    // docs/epics/epic-14-system-settings/spec.md「字型管理模組」。字型檔案
+    // 本身不落地複本（ADR 0021），font_uri 存 content:// URI。
+    await db.execute('''
+      CREATE TABLE custom_fonts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        display_name TEXT NOT NULL,
+        family_name TEXT NOT NULL UNIQUE,
+        font_uri TEXT NOT NULL
+      )
+    ''');
+  }
+
+  static Future<void> _migrateFontFamilyValues(Database db) async {
+    // book_reader_prefs.font_family 型別由 AppFont 封閉列舉字串改為任意
+    // family name 字串（epic-14-system-settings 決策 2），既有 5 種列舉
+    // 值資料需逐筆轉換為對應的實際 family name（取自 app_font.dart 現行
+    // AppFontFamilyName.familyName），NULL 不受影響。僅在表與欄位皆存在
+    // 時才執行——oldVersion < 2 時 _createBookReaderPrefsTable 已一步到位
+    // 建表，不會有任何舊格式資料需要轉換；某些測試情境建立的舊版資料庫
+    // 可能缺少 font_family 欄位，需額外檢查避免 no such column 錯誤。
+    final tables = await db.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='book_reader_prefs'");
+    if (tables.isEmpty) return;
+    final columns = await db.rawQuery("PRAGMA table_info(book_reader_prefs)");
+    final hasFontFamily = columns.any((c) => c['name'] == 'font_family');
+    if (!hasFontFamily) return;
+    const legacyToFamilyName = {
+      'sourceHanSans': 'SourceHanSansTC',
+      'sourceHanSerif': 'SourceHanSerifTC',
+      'guanKiapTsingKhai': 'GuanKiapTsingKhai',
+      'taiwanPearl': 'TaiwanPearl',
+      'genRyuMinTW': 'GenRyuMinTW',
+    };
+    for (final entry in legacyToFamilyName.entries) {
+      await db.update(
+        'book_reader_prefs',
+        {'font_family': entry.value},
+        where: 'font_family = ?',
+        whereArgs: [entry.key],
+      );
     }
   }
 
