@@ -121,3 +121,19 @@ _Avoid_: 強制單欄、分欄偏好、Column Layout
 流式 EPUB 專屬的單欄最大寬度（橫排）或最大高度（直排）閾值，對應 `paginator.js` 的 `--_max-inline-size` CSS 自訂屬性。超過此值時 paginator 開始考慮分欄。單書持久化於 `book_reader_prefs`，僅在「欄數」為「自動」時生效（「單欄」和「雙欄」模式下由系統自動覆蓋）。預設 720px，可調範圍 360–1440px，步進 60px。
 _Avoid_: 欄數切換閾值、maxInlineSize（使用者不懂的技術名稱）
 
+**elinkBook 同步帳號（Sync Account）**：
+`epic-8-sync` 引入的雲端帳號體系，透過 PocketBase（email+password）登入，用途是把「閱讀進度／劃線／備註／書籤」同步到雲端、跨裝置一致（對應 FR-19/20/30）。完全可選（opt-in），不登入也能完整使用 App 所有既有單機功能。**與「雲端匯入來源帳號」是完全不同的帳號體系**，見下方詞條。
+_Avoid_: 雲端帳號（過於籠統，容易與雲端匯入來源帳號混淆）、PocketBase 帳號（實作細節，非使用者視角詞彙）
+
+**雲端匯入來源帳號（Cloud Import Source Account）**：
+PRD FR-02 描述的帳號體系，登入 Google Drive／OneDrive 等雲端硬碟，用途是從中讀取/下載電子書檔案匯入圖書庫。與「elinkBook 同步帳號」完全無關、互不影響。**目前沒有任何 Epic 追蹤此需求**（P0 缺口，`epic-1-library` 未涵蓋），2026-08-02 於 `epic-8-sync` Discovery 階段確認範圍時發現並記錄。
+_Avoid_: 雲端帳號（見上）
+
+**書籍內容指紋（Book Content Fingerprint）**：
+`epic-8-sync` 為解決跨裝置「同一本書」比對問題而新增的穩定識別碼：EPUB 優先取 OPF identifier（通常是 ISBN 或出版社 UUID），缺漏時退而用檔案內容 hash；PDF/TXT 一律用檔案內容 hash。匯入時計算存入 `books.content_fingerprint`。**與本機 `Book.id`（時間戳記+URI hash，僅裝置本地穩定，跨裝置各自不同）是不同概念**，同步邏輯必須用指紋而非本機 id 比對書籍身份。
+_Avoid_: 書籍 ID、書本雜湊（未點出「用於跨裝置比對」這個關鍵用途）
+
+**Checkpoint 同步（Checkpoint Sync）**：
+`epic-8-sync` 的批次同步觸發機制，三種事件之一發生即觸發一次批次同步（把期間累積的所有本機異動一次送出）：App 背景化、書籍切換（離開閱讀器）、閱讀中每 5 分鐘的閒置計時器（避免長時間不背景化/不切書時另一裝置看不到最新異動）。與「逐筆即時同步」（每次異動立刻各自觸發一次網路請求）相對，見 ADR 0020。
+_Avoid_: 自動同步、背景同步（皆未點出「批次觸發」這個關鍵特性）
+
