@@ -61,6 +61,7 @@ void main() {
       expect(resolved.navZoneActions, rightFlipZoneTemplate);
       expect(resolved.showNavZoneDebugOverlay, isFalse);
       expect(resolved.fullscreen, isFalse);
+      expect(resolved.volumeKeyEnabled, isTrue);
     });
 
     test('單書覆寫存在時，優先套用單書覆寫，忽略全域預設', () {
@@ -95,6 +96,42 @@ void main() {
       expect(resolved.columnMode, ColumnMode.single);
       expect(resolved.columnSize, 600.0);
       expect(resolved.fullscreen, isTrue);
+    });
+
+    test('book.fullscreen 為 null 時退回 global.fullscreen（非硬編碼 false，證明雙層解析生效）',
+        () {
+      final loaded = LoadedPrefs(
+        bookPrefs: BookReaderPrefs.empty,
+        globalPrefs:
+            const GlobalReaderPrefs.initial().copyWith(fullscreen: true),
+      );
+      final resolved = manager.resolve(loaded);
+      expect(resolved.fullscreen, isTrue);
+    });
+
+    test('book.fullscreen 存在時優先於 global.fullscreen', () {
+      final loaded = LoadedPrefs(
+        bookPrefs: const BookReaderPrefs(fullscreen: false),
+        globalPrefs:
+            const GlobalReaderPrefs.initial().copyWith(fullscreen: true),
+      );
+      final resolved = manager.resolve(loaded);
+      expect(resolved.fullscreen, isFalse);
+    });
+
+    test('volumeKeyEnabled 直接透傳 global 值，無單書覆寫層', () {
+      final loadedEnabled = LoadedPrefs(
+        bookPrefs: BookReaderPrefs.empty,
+        globalPrefs: const GlobalReaderPrefs.initial(),
+      );
+      expect(manager.resolve(loadedEnabled).volumeKeyEnabled, isTrue);
+
+      final loadedDisabled = LoadedPrefs(
+        bookPrefs: BookReaderPrefs.empty,
+        globalPrefs: const GlobalReaderPrefs.initial()
+            .copyWith(volumeKeyEnabled: false),
+      );
+      expect(manager.resolve(loadedDisabled).volumeKeyEnabled, isFalse);
     });
 
     test('單書覆寫為 null 時，正確退回全域預設（非硬編碼初始值，證明真的有讀 globalPrefs）',
@@ -295,6 +332,35 @@ void main() {
 
       expect(direct, globalPrefs);
       expect(direct, viaLoad.globalPrefs);
+    });
+
+    test('saveGlobalPrefs 寫入 volumeKeyEnabled／fullscreen 至既有慣例命名的 SharedPreferences key',
+        () async {
+      const globalPrefs = GlobalReaderPrefs(
+        pageTurnMode: PageTurnMode.paginated,
+        screenOrientation: ScreenOrientationSetting.auto,
+        navZoneMode: NavZoneMode.rightFlip,
+        navZoneCustomActions: rightFlipZoneTemplate,
+        showNavZoneDebugOverlay: false,
+        volumeKeyEnabled: false,
+        fullscreen: true,
+      );
+      await manager.saveGlobalPrefs(globalPrefs);
+
+      final sp = await SharedPreferences.getInstance();
+      expect(sp.getBool('global_reader_volume_key_enabled'), isFalse);
+      expect(sp.getBool('global_reader_fullscreen'), isTrue);
+
+      final loaded = await manager.load('b1');
+      expect(loaded.globalPrefs.volumeKeyEnabled, isFalse);
+      expect(loaded.globalPrefs.fullscreen, isTrue);
+    });
+
+    test('volumeKeyEnabled／fullscreen 未儲存過（缺鍵）時，安全回退為預設值 true／false',
+        () async {
+      final loaded = await manager.load('b1');
+      expect(loaded.globalPrefs.volumeKeyEnabled, isTrue);
+      expect(loaded.globalPrefs.fullscreen, isFalse);
     });
 
     test('navZoneCustomActions 已儲存值為空字串時，安全回退為 rightFlip 模板',

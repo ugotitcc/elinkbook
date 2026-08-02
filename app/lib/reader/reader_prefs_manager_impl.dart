@@ -41,6 +41,8 @@ class ReaderPrefsManagerImpl implements ReaderPrefsManager {
       'global_reader_nav_zone_custom_actions';
   static const _navZoneDebugOverlayKey =
       'global_reader_nav_zone_debug_overlay';
+  static const _volumeKeyEnabledKey = 'global_reader_volume_key_enabled';
+  static const _fullscreenKey = 'global_reader_fullscreen';
 
   @override
   Future<LoadedPrefs> load(String bookId) async {
@@ -78,6 +80,8 @@ class ReaderPrefsManagerImpl implements ReaderPrefsManager {
       navZoneCustomActions:
           _decodeZoneActions(sp.getString(_navZoneCustomActionsKey)),
       showNavZoneDebugOverlay: sp.getBool(_navZoneDebugOverlayKey) ?? false,
+      volumeKeyEnabled: sp.getBool(_volumeKeyEnabledKey) ?? true,
+      fullscreen: sp.getBool(_fullscreenKey) ?? false,
     );
   }
 
@@ -130,6 +134,8 @@ class ReaderPrefsManagerImpl implements ReaderPrefsManager {
       _encodeZoneActions(prefs.navZoneCustomActions),
     );
     await sp.setBool(_navZoneDebugOverlayKey, prefs.showNavZoneDebugOverlay);
+    await sp.setBool(_volumeKeyEnabledKey, prefs.volumeKeyEnabled);
+    await sp.setBool(_fullscreenKey, prefs.fullscreen);
   }
 
   @override
@@ -181,7 +187,8 @@ class ReaderPrefsManagerImpl implements ReaderPrefsManager {
       navZoneActions:
           resolveZoneActions(global.navZoneMode, global.navZoneCustomActions),
       showNavZoneDebugOverlay: global.showNavZoneDebugOverlay,
-      fullscreen: book.fullscreen ?? false,
+      fullscreen: book.fullscreen ?? global.fullscreen,
+      volumeKeyEnabled: global.volumeKeyEnabled,
     );
   }
 }
