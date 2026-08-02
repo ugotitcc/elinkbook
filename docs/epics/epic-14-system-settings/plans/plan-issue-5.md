@@ -1,6 +1,6 @@
 # Epic 14 Issue 5 — 導航熱區模板圖示化 Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** 把 `NavZoneSettingsScreen` 現有的「左翻頁／右翻頁／單手／自訂」4 選一純文字 `RadioListTile` 改為「簡單／自訂」二選一 `SegmentedButton` ＋ 3 張圖示卡片（左翻頁／右翻頁／單手），讓使用者用視覺化的三欄示意圖理解每個模板實際的分區方式，而不是憑文字猜測（參考截圖 `tmp/images/導航熱區建議.jpg`）。
 
@@ -29,7 +29,7 @@
 - Consumes：既有 `NavZoneMode`（`app/lib/reader/nav_zone_mode.dart`）、既有 `GlobalReaderPrefs`／`ReaderPrefsManager`（不變）
 - Produces：`NavZoneSettingsScreen` 對外建構參數（`prefsManager`）不變，無新增公開介面；新增私有 `_buildTemplateCard()` 方法（`nav_zone_settings_screen.dart` 內部實作細節，不供外部消費）
 
-- [ ] **Step 1：撰寫失敗測試——以下列內容取代整個測試檔案**
+- [x] **Step 1：撰寫失敗測試——以下列內容取代整個測試檔案**
 
 `app/test/screens/nav_zone_settings_screen_test.dart`（原檔案 206 行）整份取代為：
 
@@ -396,7 +396,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：執行測試，確認失敗**
+- [x] **Step 2：執行測試，確認失敗**
 
 ```bash
 cd app
@@ -405,7 +405,7 @@ flutter test test/screens/nav_zone_settings_screen_test.dart
 
 Expected：FAIL——`Key('nav_zone_template_toggle')` 尚不存在、`Key('nav_zone_mode_custom')` 仍然存在（新測試斷言 `findsNothing` 會失敗）、`SegmentedButton<bool>` 型別在畫面上找不到、圖示卡片的 `Container` 找不到等多項編譯期／執行期失敗。
 
-- [ ] **Step 3：修改 `nav_zone_settings_screen.dart`**
+- [x] **Step 3：修改 `nav_zone_settings_screen.dart`**
 
 第 109-161 行（`build()` 方法全文）改為：
 
@@ -560,7 +560,7 @@ Expected：FAIL——`Key('nav_zone_template_toggle')` 尚不存在、`Key('nav_
   }
 ```
 
-- [ ] **Step 4：執行測試，確認通過**
+- [x] **Step 4：執行測試，確認通過**
 
 ```bash
 flutter test test/screens/nav_zone_settings_screen_test.dart
@@ -568,7 +568,7 @@ flutter test test/screens/nav_zone_settings_screen_test.dart
 
 Expected：全數 PASS。
 
-- [ ] **Step 5：`flutter analyze` + 執行完整測試套件 + Commit**
+- [x] **Step 5：`flutter analyze` + 執行完整測試套件 + Commit**
 
 ```bash
 flutter analyze
@@ -600,3 +600,14 @@ Expected：`flutter analyze` "No issues found!"，`flutter test` 全數 PASS（�
 **與既有「自訂」相關測試的相容性**：三個沿用既有邏輯的自訂編輯器測試（Step 1 檔案內「選到『自訂』後顯示 9 格編輯器」「儲存自訂設定時，全部非 menu 會被擋下」「儲存自訂設定時，至少 1 格為 menu 則成功儲存」）唯一改動是把切換至自訂模式的觸發方式從舊 Key 改為 `find.text('自訂')`，`_cycleCell()`／`_saveCustomActions()`／`isValidCustomZoneConfig()` 等既有邏輯與其餘斷言逐字保留不變。
 
 **Epic 14 完成度**：本 Issue 完成並通過審查合併後，Epic 14（系統設定）5 個 Issue 將全數完成。
+
+## 審查修正紀錄（`tmp/epic-14/review-issue-5.md`）
+
+程式碼審查（獨立 subagent 審查，並經二次獨立抽查覆核跑過完整測試套件）結論 0 Critical、0 Important，程式碼可直接合併。逐項核對：`_selectMode()`/`_saveCustomActions()`/`_cycleCell()`/`_load()`/`_toggleDebugOverlay()`/`_buildCustomEditor()` 六個既有方法用 `git diff` 確認完全未被觸碰；3 張圖示卡片的圖示語意核對 `nav_zone_mode.dart` 實際 `leftFlipZoneTemplate`/`rightFlipZoneTemplate`/`oneHandZoneTemplate` 資料，映射正確；「模式切換不影響 `navZoneCustomActions`」測試核對 `GlobalReaderPrefs.copyWith()` 邏輯確認具真實回歸偵測力；`flutter analyze` 乾淨、完整 `flutter test` 套件 794 個全數通過（獨立抽查親自重跑確認一致）。
+
+**Minor（記錄但不影響本次合併）**：
+1. 卡片寬度實作為 `72`，與本計畫 Step 3 程式碼區塊寫的 `88` 不符（純數值微調，測試未斷言寬度，不影響功能）。
+2. 三色區塊（`Colors.blue.shade100`/`Colors.green.shade100`/`Colors.red.shade100`）為固定色系、不隨主題（深色／羊皮紙／E-Ink 高對比）調整——本計畫 Global Constraints 已標註為刻意簡化，非本次範圍要求，留待後續真機驗收或 UI 打磨評估。
+3. 圖示卡片缺 `Semantics`/`tooltip` 語意標籤，可及性略遜於舊版 `RadioListTile`（自帶文字語意）——非本 Issue 範圍，列入後續可及性待辦。
+
+**Important（確認屬實，已採納）**：`plan-issue-5.md` 全部 Step checkbox 與 `issues.md` Issue 5 狀態合併前未同步更新——與 Epic 14 前 4 個 Issue 反覆出現的同一個文件維護疏漏。已於本次修正一併補齊（本節之前的全部 checkbox）與 `issues.md` Issue 5 狀態同步更新。
