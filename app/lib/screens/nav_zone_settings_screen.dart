@@ -118,34 +118,65 @@ class _NavZoneSettingsScreenState extends State<NavZoneSettingsScreen> {
             )
           : ListView(
               children: [
-                RadioGroup<NavZoneMode>(
-                  groupValue: _prefs.navZoneMode,
-                  onChanged: (mode) => _selectMode(mode!),
-                  child: Column(
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
                     children: [
-                      RadioListTile<NavZoneMode>(
-                        key: const Key('nav_zone_mode_leftFlip'),
-                        title: const Text('左翻頁'),
-                        value: NavZoneMode.leftFlip,
-                      ),
-                      RadioListTile<NavZoneMode>(
-                        key: const Key('nav_zone_mode_rightFlip'),
-                        title: const Text('右翻頁'),
-                        value: NavZoneMode.rightFlip,
-                      ),
-                      RadioListTile<NavZoneMode>(
-                        key: const Key('nav_zone_mode_oneHand'),
-                        title: const Text('單手'),
-                        value: NavZoneMode.oneHand,
-                      ),
-                      RadioListTile<NavZoneMode>(
-                        key: const Key('nav_zone_mode_custom'),
-                        title: const Text('自訂'),
-                        value: NavZoneMode.custom,
+                      const Text('翻頁方式'),
+                      const Spacer(),
+                      SegmentedButton<bool>(
+                        key: const Key('nav_zone_template_toggle'),
+                        segments: const [
+                          ButtonSegment(value: false, label: Text('簡單')),
+                          ButtonSegment(value: true, label: Text('自訂')),
+                        ],
+                        selected: {_prefs.navZoneMode == NavZoneMode.custom},
+                        onSelectionChanged: (selection) {
+                          final showCustom = selection.first;
+                          if (showCustom) {
+                            if (_prefs.navZoneMode != NavZoneMode.custom) {
+                              _selectMode(NavZoneMode.custom);
+                            }
+                          } else {
+                            if (_prefs.navZoneMode == NavZoneMode.custom) {
+                              _selectMode(NavZoneMode.rightFlip);
+                            }
+                          }
+                        },
                       ),
                     ],
                   ),
                 ),
+                if (_prefs.navZoneMode != NavZoneMode.custom)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        _buildTemplateCard(
+                          key: const Key('nav_zone_mode_leftFlip'),
+                          mode: NavZoneMode.leftFlip,
+                          leftIcon: Icons.chevron_right,
+                          middleIcon: Icons.menu,
+                          rightIcon: Icons.chevron_left,
+                        ),
+                        _buildTemplateCard(
+                          key: const Key('nav_zone_mode_rightFlip'),
+                          mode: NavZoneMode.rightFlip,
+                          leftIcon: Icons.chevron_left,
+                          middleIcon: Icons.menu,
+                          rightIcon: Icons.chevron_right,
+                        ),
+                        _buildTemplateCard(
+                          key: const Key('nav_zone_mode_oneHand'),
+                          mode: NavZoneMode.oneHand,
+                          leftIcon: Icons.touch_app,
+                          middleIcon: null,
+                          rightIcon: Icons.touch_app,
+                        ),
+                      ],
+                    ),
+                  ),
                 if (_prefs.navZoneMode == NavZoneMode.custom)
                   _buildCustomEditor(),
                 const Divider(),
@@ -157,6 +188,70 @@ class _NavZoneSettingsScreenState extends State<NavZoneSettingsScreen> {
                 ),
               ],
             ),
+    );
+  }
+
+  /// 模板圖示卡片（Issue 5，取代原本的文字 `RadioListTile`）：縮小版三欄
+  /// 示意圖（左/中/右三色區塊＋圖示），點選呼叫既有 [_selectMode]；與目前
+  /// [GlobalReaderPrefs.navZoneMode] 相同的卡片顯示 primary 色選中外框
+  /// （design.md 決策 #7，參考 `tmp/images/導航熱區建議.jpg`）。三欄圖示
+  /// 對應該模板實際指派的 [ZoneAction]（`leftFlip`/`rightFlip` 左右欄分別
+  /// 對應 `nextPage`/`previousPage`，非固定裝飾符號）。[middleIcon] 為
+  /// `null` 時中欄不顯示圖示——`oneHand` 模板中欄 3 格皆為 [ZoneAction.none]
+  /// （見 `oneHandZoneTemplate`），左右欄則依垂直位置在 menu/previousPage/
+  /// nextPage 間循環、彼此對稱，本卡片格式（單欄單圖示）無法完整表達列
+  /// 逐格語意，故左右欄皆用通用的 [Icons.touch_app] 表示「可點擊區」。
+  Widget _buildTemplateCard({
+    required Key key,
+    required NavZoneMode mode,
+    required IconData leftIcon,
+    IconData? middleIcon,
+    required IconData rightIcon,
+  }) {
+    final selected = _prefs.navZoneMode == mode;
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: () => _selectMode(mode),
+      child: Container(
+        key: key,
+        width: 72,
+        height: 64,
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: selected
+                ? Theme.of(context).colorScheme.primary
+                : Theme.of(context).dividerColor,
+            width: selected ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Container(
+                color: Colors.blue.shade100,
+                alignment: Alignment.center,
+                child: Icon(leftIcon, size: 16),
+              ),
+            ),
+            Expanded(
+              child: Container(
+                color: Colors.green.shade100,
+                alignment: Alignment.center,
+                child: middleIcon == null ? null : Icon(middleIcon, size: 16),
+              ),
+            ),
+            Expanded(
+              child: Container(
+                color: Colors.red.shade100,
+                alignment: Alignment.center,
+                child: Icon(rightIcon, size: 16),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

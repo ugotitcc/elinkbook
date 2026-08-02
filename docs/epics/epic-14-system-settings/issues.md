@@ -132,9 +132,9 @@
 
 ## Issue 5：導航熱區模板圖示化
 
-**依賴／Blocked by：** None - can start immediately（與字型模組、閱讀預設值皆完全獨立）
+**Status:** ✅ 已完成待合併（`feat/epic-14-issue-5-nav-zone-template-icons`，2026-08-02）——依 `plans/plan-issue-5.md` 單一 Task 實作：`NavZoneSettingsScreen` 頂部新增 `SegmentedButton<bool>`（簡單／自訂，`selected` 為 `navZoneMode == NavZoneMode.custom` 的純衍生值）取代原本 4 選一 `RadioListTile`；「簡單」狀態下新增 3 張圖示卡片（左翻頁／右翻頁／單手，圖示對應該模板實際 `ZoneAction` 而非純裝飾）；「自訂」狀態沿用既有 9 格編輯器與防死鎖驗證，`_selectMode()`/`_saveCustomActions()`/`_cycleCell()` 等既有邏輯逐行未動；底層 `NavZoneMode`／`resolveZoneActions()`／`GlobalReaderPrefs` 資料模型零異動。程式碼審查（獨立 subagent + 二次獨立抽查覆核完整測試套件）0 Critical／0 Important，逐項核對圖示語意、既有方法未被觸碰、`navZoneCustomActions` 保留邏輯皆確認無誤；記錄 2 項 Minor（卡片寬度 72 與計畫文字 88 不符，功能無影響；固定色系不隨主題，計畫中已知的刻意簡化）與 1 項可及性待辦（圖示卡片缺 Semantics 標籤，非本 Issue 範圍）；採納 1 項 Important（plan checkbox／`issues.md` 狀態合併前未同步更新，與 Epic 14 前 4 個 Issue 同一個文件維護疏漏，已補齊）。`flutter analyze` 乾淨、完整 `flutter test` 套件 794 個全數通過。詳見 `plans/plan-issue-5.md`「審查修正紀錄」與 `tmp/epic-14/review-issue-5.md`（未進版控）。**Epic 14（系統設定）至此 5 個 Issue 全數完成。**
 
-**Status:** ready-for-agent
+**依賴／Blocked by：** None - can start immediately（與字型模組、閱讀預設值皆完全獨立）
 
 **What to build：**
 
@@ -150,8 +150,8 @@
 
 **驗收標準：**
 
-- [ ] `SegmentedButton` 正確反映並切換「簡單／自訂」狀態
-- [ ] 「簡單」下 3 張圖示卡片正確呈現與選取，立即全域生效
-- [ ] 「自訂」下 9 格編輯器行為與改版前完全一致（含防死鎖驗證）
-- [ ] 模式切換不影響 `navZoneCustomActions` 既有資料
-- [ ] 上述測試皆通過，`flutter analyze` 乾淨
+- [x] `SegmentedButton` 正確反映並切換「簡單／自訂」狀態
+- [x] 「簡單」下 3 張圖示卡片正確呈現與選取，立即全域生效
+- [x] 「自訂」下 9 格編輯器行為與改版前完全一致（含防死鎖驗證）
+- [x] 模式切換不影響 `navZoneCustomActions` 既有資料
+- [x] 上述測試皆通過，`flutter analyze` 乾淨
