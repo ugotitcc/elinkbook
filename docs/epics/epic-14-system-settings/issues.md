@@ -70,7 +70,7 @@
 
 ## Issue 3：自訂字型 Foliate-JS 原生渲染
 
-**Status:** 🟡 已合併，待人工真機視覺驗收（PR #101，`feat/epic-14-issue-3-custom-font-rendering` → `main`，2026-08-02）——依 `plans/plan-issue-3.md` 5 個 Task 實作：`buildFontFaceCss()` 擴充自訂字型 `@font-face` 規則、`ReaderResourceChannel.readCustomFontBytes`（不落地快取）、`_shouldInterceptRequest` 新分支（抽出 `resolveCustomFontUri` 純函式解決既有 `FakePlatformInAppWebViewWidget` 測試基礎設施無法觸發真實 `shouldInterceptRequest` 回呼的限制）、`ReaderScreen` 貫穿並修正撰寫計畫過程中發現的真實非同步載入競態（`_customFonts` 查詢可能晚於 `FoliateEpubReaderView` 的 `late final _initialIndexUri` 計算完成，新增 `_customFontsLoaded` gating 比照既有 `_dispatchedIsFixedLayout`／`_tocLoaded` 模式）、真機 `integration_test`。計畫審查（`/superpowers:requesting-code-review`）採納 1 項 Important（`resolveCustomFontUri` 補 `FormatException` 防護）、1 項 Minor，未採納 1 項 Important（`pumpAndSettle()` 建議查證後判定會因畫面上的不確定動畫逾時，維持原計畫寫法）；實作審查（交叉核對一份既有分析報告，結論一致）發現並修正 2 項 Important（`pubspec.yaml` 缺 `sample.ttf` asset 宣告導致真機測試必定失敗；`reader_screen_test.dart` 新測試缺 `elinkbook/fullscreen` mock 導致 `flutter test` 整體失敗），皆已修正並於真機／全專案回歸測試重新確認通過。詳見 `plans/plan-issue-3.md` 兩段「審查修正紀錄」與 `tmp/epic-14/review-plan-issue-3.md`／`review-issue-3.md`（未進版控）。**驗收標準第 5 項（人工真機視覺驗收：實際上傳字型並確認閱讀畫面字體真的變更）尚未由人類執行，不阻塞合併但待補做。**
+**Status:** ✅ 已完成並合併（PR #101，`feat/epic-14-issue-3-custom-font-rendering` → `main`，2026-08-02）——依 `plans/plan-issue-3.md` 5 個 Task 實作：`buildFontFaceCss()` 擴充自訂字型 `@font-face` 規則、`ReaderResourceChannel.readCustomFontBytes`（不落地快取）、`_shouldInterceptRequest` 新分支（抽出 `resolveCustomFontUri` 純函式解決既有 `FakePlatformInAppWebViewWidget` 測試基礎設施無法觸發真實 `shouldInterceptRequest` 回呼的限制）、`ReaderScreen` 貫穿並修正撰寫計畫過程中發現的真實非同步載入競態（`_customFonts` 查詢可能晚於 `FoliateEpubReaderView` 的 `late final _initialIndexUri` 計算完成，新增 `_customFontsLoaded` gating 比照既有 `_dispatchedIsFixedLayout`／`_tocLoaded` 模式）、真機 `integration_test`。計畫審查（`/superpowers:requesting-code-review`）採納 1 項 Important（`resolveCustomFontUri` 補 `FormatException` 防護）、1 項 Minor，未採納 1 項 Important（`pumpAndSettle()` 建議查證後判定會因畫面上的不確定動畫逾時，維持原計畫寫法）；實作審查（交叉核對一份既有分析報告，結論一致）發現並修正 2 項 Important（`pubspec.yaml` 缺 `sample.ttf` asset 宣告導致真機測試必定失敗；`reader_screen_test.dart` 新測試缺 `elinkbook/fullscreen` mock 導致 `flutter test` 整體失敗），皆已修正並於真機／全專案回歸測試重新確認通過。詳見 `plans/plan-issue-3.md` 兩段「審查修正紀錄」與 `tmp/epic-14/review-plan-issue-3.md`／`review-issue-3.md`（未進版控）。**驗收標準第 5 項（人工真機視覺驗收：實際上傳字型並確認閱讀畫面字體真的變更）已由人類於真機實際操作確認通過。**
 
 **依賴／Blocked by：** Issue 2（需要能選字型才能測試渲染路徑）
 
@@ -88,11 +88,11 @@
 
 **驗收標準：**
 
-- [ ] `buildFontFaceCss()` 正確輸出自訂字型 `@font-face` 規則
-- [ ] `_shouldInterceptRequest` 正確攔截自訂字型虛擬路徑請求
-- [ ] `ReaderResourceChannel.readCustomFontBytes` 正確透過 `ContentResolver` 讀取位元組回傳，不寫入任何快取檔案
-- [ ] 真機端到端流程：上傳字型 → 套用 → 開書無錯誤，`readCustomFontBytes` 呼叫成功
-- [ ] 人工真機視覺驗收：套用的自訂字型確實顯示於閱讀畫面（記錄於本 Issue 完成時的驗收說明）
+- [x] `buildFontFaceCss()` 正確輸出自訂字型 `@font-face` 規則
+- [x] `_shouldInterceptRequest` 正確攔截自訂字型虛擬路徑請求
+- [x] `ReaderResourceChannel.readCustomFontBytes` 正確透過 `ContentResolver` 讀取位元組回傳，不寫入任何快取檔案
+- [x] 真機端到端流程：上傳字型 → 套用 → 開書無錯誤，`readCustomFontBytes` 呼叫成功
+- [x] 人工真機視覺驗收：套用的自訂字型確實顯示於閱讀畫面（人類於真機實際操作確認通過，2026-08-02）
 - [ ] 上述自動化測試皆通過，`flutter analyze` 乾淨
 
 ---
