@@ -95,4 +95,29 @@ void main() {
     );
     expect(a == b, isFalse);
   });
+
+  test('GlobalReaderPrefs.initial() 的 volumeKeyEnabled 預設 true、fullscreen 預設 false',
+      () {
+    const prefs = GlobalReaderPrefs.initial();
+    expect(prefs.volumeKeyEnabled, isTrue);
+    expect(prefs.fullscreen, isFalse);
+  });
+
+  test('copyWith 可個別更新 volumeKeyEnabled／fullscreen，不影響其餘欄位', () {
+    const original = GlobalReaderPrefs.initial();
+    final updated =
+        original.copyWith(volumeKeyEnabled: false, fullscreen: true);
+    expect(updated.volumeKeyEnabled, isFalse);
+    expect(updated.fullscreen, isTrue);
+    expect(updated.pageTurnMode, original.pageTurnMode);
+    expect(updated.navZoneMode, original.navZoneMode);
+  });
+
+  test('volumeKeyEnabled 或 fullscreen 不同時視為不相等', () {
+    const a = GlobalReaderPrefs.initial();
+    final b = a.copyWith(volumeKeyEnabled: false);
+    expect(a == b, isFalse);
+    final c = a.copyWith(fullscreen: true);
+    expect(a == c, isFalse);
+  });
 }

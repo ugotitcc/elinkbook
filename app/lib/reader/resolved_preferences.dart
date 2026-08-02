@@ -68,9 +68,13 @@ class ResolvedPreferences {
   final List<ZoneAction> navZoneActions;
   final bool showNavZoneDebugOverlay;
 
+  /// 全域音量鍵翻頁開關（epic-14-system-settings Issue 4）：恆非 null，
+  /// resolve() 內直接透傳 global.volumeKeyEnabled（無單書覆寫層，FR-36
+  /// 本身即為全域總開關語意）。
+  final bool volumeKeyEnabled;
+
   /// 全螢幕模式（epic-19-shelf-reading-enhance Issue 1）：恆非 null，
-  /// resolve() 內 book.fullscreen ?? false（預設關閉，無全域預設層，比照
-  /// showHeader/showFooter 的既有慣例）。
+  /// resolve() 內 book.fullscreen ?? global.fullscreen（預設關閉，雙層解析）。
   final bool fullscreen;
 
   const ResolvedPreferences({
@@ -104,6 +108,7 @@ class ResolvedPreferences {
     required this.showFooter,
     required this.navZoneActions,
     required this.showNavZoneDebugOverlay,
+    this.volumeKeyEnabled = true,
     this.fullscreen = false,
   });
 }

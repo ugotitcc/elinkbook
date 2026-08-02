@@ -1,6 +1,6 @@
 # Epic 14 Issue 4 — 閱讀預設值畫面 Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** 新增「閱讀預設值」設定畫面，集中呈現音量鍵翻頁開關、翻頁模式、螢幕方向、全螢幕模式四項全域預設值（FR-36/37/38/42），各自獨立即時生效；並補上 `fullscreen` 全域-單書雙層解析與 `volumeKeyEnabled` 全域開關對 `ReaderScreen` 音量鍵翻頁的門閥判定。
 
@@ -30,7 +30,7 @@
 - Consumes：無（純資料類別，本 Task 不依賴其他 Task）
 - Produces：`GlobalReaderPrefs.volumeKeyEnabled`（`bool`，預設 `true`）、`GlobalReaderPrefs.fullscreen`（`bool`，預設 `false`），`copyWith({..., bool? volumeKeyEnabled, bool? fullscreen})`，供 Task 2（`ReaderPrefsManagerImpl`）與 Task 4（`ReadingDefaultsScreen`）使用
 
-- [ ] **Step 1：撰寫失敗測試**
+- [x] **Step 1：撰寫失敗測試**
 
 在 `app/test/reader/global_reader_prefs_test.dart` 檔案結尾（第 97 行 `expect(a == b, isFalse);` 之後、第 98 行 `}` 之前）新增：
 
@@ -62,7 +62,7 @@
   });
 ```
 
-- [ ] **Step 2：執行測試，確認失敗**
+- [x] **Step 2：執行測試，確認失敗**
 
 ```bash
 cd app
@@ -71,7 +71,7 @@ flutter test test/reader/global_reader_prefs_test.dart
 
 Expected：FAIL——`GlobalReaderPrefs` 尚未定義 `volumeKeyEnabled`/`fullscreen`（編譯錯誤）。
 
-- [ ] **Step 3：修改 `global_reader_prefs.dart`**
+- [x] **Step 3：修改 `global_reader_prefs.dart`**
 
 以下列內容取代整個檔案（原檔案 81 行）：
 
@@ -181,7 +181,7 @@ class GlobalReaderPrefs {
 }
 ```
 
-- [ ] **Step 4：執行測試，確認通過**
+- [x] **Step 4：執行測試，確認通過**
 
 ```bash
 flutter test test/reader/global_reader_prefs_test.dart
@@ -189,7 +189,7 @@ flutter test test/reader/global_reader_prefs_test.dart
 
 Expected：全數 PASS（含既有 5 個測試不受影響）。
 
-- [ ] **Step 5：`flutter analyze` + Commit**
+- [x] **Step 5：`flutter analyze` + Commit**
 
 ```bash
 flutter analyze
@@ -213,7 +213,7 @@ Expected：`flutter analyze` 顯示 "No issues found!"。
 - Consumes：Task 1 的 `GlobalReaderPrefs.volumeKeyEnabled`／`fullscreen`
 - Produces：`ResolvedPreferences.volumeKeyEnabled`（`bool`，預設 `true`），`ReaderPrefsManagerImpl.resolve()` 正確填入 `volumeKeyEnabled: global.volumeKeyEnabled`／`fullscreen: book.fullscreen ?? global.fullscreen`；`ReaderPrefsManagerImpl.loadGlobalPrefs()`/`saveGlobalPrefs()` 正確讀寫新的 2 個 SharedPreferences key。供 Task 3（`ReaderScreen._handleVolumeKeyCall`）與 Task 4（`ReadingDefaultsScreen`）使用
 
-- [ ] **Step 1：撰寫失敗測試——`ResolvedPreferences` 新欄位**
+- [x] **Step 1：撰寫失敗測試——`ResolvedPreferences` 新欄位**
 
 `app/test/reader/resolved_preferences_test.dart` 第 12 行既有 `test(...)` 之後（第 52 行 `});` 之後、檔案結尾 `}` 之前）新增：
 
@@ -240,7 +240,7 @@ Expected：`flutter analyze` 顯示 "No issues found!"。
   });
 ```
 
-- [ ] **Step 2：執行測試，確認失敗**
+- [x] **Step 2：執行測試，確認失敗**
 
 ```bash
 cd app
@@ -249,7 +249,7 @@ flutter test test/reader/resolved_preferences_test.dart
 
 Expected：FAIL——`ResolvedPreferences` 尚未定義 `volumeKeyEnabled`（編譯錯誤）。
 
-- [ ] **Step 3：`resolved_preferences.dart` 新增 `volumeKeyEnabled` 欄位**
+- [x] **Step 3：`resolved_preferences.dart` 新增 `volumeKeyEnabled` 欄位**
 
 第 71-74 行（`fullscreen` 欄位宣告）之前插入：
 
@@ -267,7 +267,7 @@ Expected：FAIL——`ResolvedPreferences` 尚未定義 `volumeKeyEnabled`（編
     this.volumeKeyEnabled = true,
 ```
 
-- [ ] **Step 4：執行測試，確認通過**
+- [x] **Step 4：執行測試，確認通過**
 
 ```bash
 flutter test test/reader/resolved_preferences_test.dart
@@ -275,7 +275,7 @@ flutter test test/reader/resolved_preferences_test.dart
 
 Expected：全數 PASS。
 
-- [ ] **Step 5：撰寫失敗測試——`ReaderPrefsManagerImpl` 雙層解析與讀寫**
+- [x] **Step 5：撰寫失敗測試——`ReaderPrefsManagerImpl` 雙層解析與讀寫**
 
 `app/test/reader/reader_prefs_manager_test.dart` 第 39-64 行既有測試 `test('全部欄位皆未覆寫時，回傳的 non-null 欄位皆為既存安全預設值', () { ... });` 內，第 63 行 `expect(resolved.fullscreen, isFalse);` 之後新增一行：
 
@@ -358,7 +358,7 @@ Expected：全數 PASS。
     });
 ```
 
-- [ ] **Step 6：執行測試，確認失敗**
+- [x] **Step 6：執行測試，確認失敗**
 
 ```bash
 flutter test test/reader/reader_prefs_manager_test.dart
@@ -366,7 +366,7 @@ flutter test test/reader/reader_prefs_manager_test.dart
 
 Expected：FAIL——`resolved.volumeKeyEnabled`/`GlobalReaderPrefs(volumeKeyEnabled: ...)` 尚未存在，或 `fullscreen` 雙層解析斷言不成立（目前 `resolve()` 仍是 `book.fullscreen ?? false`，Task 1 完成後編譯可過但邏輯測試會失敗）。
 
-- [ ] **Step 7：修改 `reader_prefs_manager_impl.dart`**
+- [x] **Step 7：修改 `reader_prefs_manager_impl.dart`**
 
 第 42-43 行（`_navZoneDebugOverlayKey` 常數宣告）之後新增：
 
@@ -430,7 +430,7 @@ Expected：FAIL——`resolved.volumeKeyEnabled`/`GlobalReaderPrefs(volumeKeyEna
       volumeKeyEnabled: global.volumeKeyEnabled,
 ```
 
-- [ ] **Step 8：執行測試，確認通過**
+- [x] **Step 8：執行測試，確認通過**
 
 ```bash
 flutter test test/reader/reader_prefs_manager_test.dart test/reader/resolved_preferences_test.dart test/reader/global_reader_prefs_test.dart
@@ -438,7 +438,7 @@ flutter test test/reader/reader_prefs_manager_test.dart test/reader/resolved_pre
 
 Expected：全數 PASS。
 
-- [ ] **Step 9：`flutter analyze` + 執行完整測試套件 + Commit**
+- [x] **Step 9：`flutter analyze` + 執行完整測試套件 + Commit**
 
 ```bash
 flutter analyze
@@ -461,7 +461,7 @@ Expected：`flutter analyze` "No issues found!"，`flutter test` 全數 PASS（�
 - Consumes：Task 2 的 `ResolvedPreferences.volumeKeyEnabled`（透過既有 `_resolved` 欄位取得）
 - Produces：無新公開介面——`_handleVolumeKeyCall` 為既有私有方法，行為擴充
 
-- [ ] **Step 1：撰寫失敗測試**
+- [x] **Step 1：撰寫失敗測試**
 
 `app/test/screens/reader_screen_test.dart` 第 1-5 行 import 區塊（`dart:async` 之後）新增：
 
@@ -538,7 +538,7 @@ import 'package:elinkbook/reader/global_reader_prefs.dart';
   });
 ```
 
-- [ ] **Step 2：執行測試，確認失敗**
+- [x] **Step 2：執行測試，確認失敗**
 
 ```bash
 cd app
@@ -547,7 +547,7 @@ flutter test test/screens/reader_screen_test.dart --plain-name "全域音量鍵�
 
 Expected：FAIL——目前 `_handleVolumeKeyCall` 沒有檢查 `volumeKeyEnabled`，`instanceCalls` 會包含 `nextPage`。
 
-- [ ] **Step 3：修改 `_handleVolumeKeyCall`**
+- [x] **Step 3：修改 `_handleVolumeKeyCall`**
 
 `app/lib/screens/reader_screen.dart` 第 1922-1937 行改為：
 
@@ -572,7 +572,7 @@ Expected：FAIL——目前 `_handleVolumeKeyCall` 沒有檢查 `volumeKeyEnable
   }
 ```
 
-- [ ] **Step 4：執行測試，確認通過**
+- [x] **Step 4：執行測試，確認通過**
 
 ```bash
 flutter test test/screens/reader_screen_test.dart
@@ -580,7 +580,7 @@ flutter test test/screens/reader_screen_test.dart
 
 Expected：全數 PASS（含既有「音量鍵 onVolumeKey(up/down) 觸發真實換頁」測試不受影響——該測試使用預設 `FakeReaderPrefsManager()`，`GlobalReaderPrefs.initial().volumeKeyEnabled` 為 `true`）。
 
-- [ ] **Step 5：`flutter analyze` + Commit**
+- [x] **Step 5：`flutter analyze` + Commit**
 
 ```bash
 flutter analyze
@@ -602,7 +602,7 @@ Expected：`flutter analyze` "No issues found!"。
 - Consumes：Task 1/2 的 `GlobalReaderPrefs`（`volumeKeyEnabled`／`pageTurnMode`／`screenOrientation`／`fullscreen` 四欄位 + `copyWith`）、既有 `ReaderPrefsManager`（`loadGlobalPrefs()`／`saveGlobalPrefs()`）
 - Produces：`class ReadingDefaultsScreen extends StatefulWidget`，建構參數 `{required ReaderPrefsManager prefsManager}`，供 Task 5（`SettingsScreen`）串接
 
-- [ ] **Step 1：建立失敗測試檔案**
+- [x] **Step 1：建立失敗測試檔案**
 
 建立 `app/test/screens/reading_defaults_screen_test.dart`：
 
@@ -741,7 +741,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：執行測試，確認失敗**
+- [x] **Step 2：執行測試，確認失敗**
 
 ```bash
 cd app
@@ -750,7 +750,7 @@ flutter test test/screens/reading_defaults_screen_test.dart
 
 Expected：FAIL——`package:elinkbook/screens/reading_defaults_screen.dart` 不存在（編譯錯誤）。
 
-- [ ] **Step 3：建立 `ReadingDefaultsScreen`**
+- [x] **Step 3：建立 `ReadingDefaultsScreen`**
 
 建立 `app/lib/screens/reading_defaults_screen.dart`：
 
@@ -907,7 +907,7 @@ class _ReadingDefaultsScreenState extends State<ReadingDefaultsScreen> {
 }
 ```
 
-- [ ] **Step 4：執行測試，確認通過**
+- [x] **Step 4：執行測試，確認通過**
 
 ```bash
 flutter test test/screens/reading_defaults_screen_test.dart
@@ -915,7 +915,7 @@ flutter test test/screens/reading_defaults_screen_test.dart
 
 Expected：全數 PASS。
 
-- [ ] **Step 5：`flutter analyze` + Commit**
+- [x] **Step 5：`flutter analyze` + Commit**
 
 ```bash
 flutter analyze
@@ -937,7 +937,7 @@ Expected：`flutter analyze` "No issues found!"。
 - Consumes：Task 4 的 `ReadingDefaultsScreen({required ReaderPrefsManager prefsManager})`
 - Produces：無（本 Task 為 Epic 14 字型模組（Issue 1-3）與閱讀預設值模組（本 Issue）在 `SettingsScreen` 上的最終入口串接，`SettingsScreen` 主列表最終為「佈景／字型管理／閱讀預設值／導航熱區／關於」，design.md 決策 1）
 
-- [ ] **Step 1：撰寫失敗測試**
+- [x] **Step 1：撰寫失敗測試**
 
 `app/test/screens/settings_screen_test.dart` 第 30-45 行既有測試 `testWidgets('SettingsScreen 顯示設定標題與「佈景」「關於」「導航熱區」入口', ...)` 內，第 44 行 `findsOneWidget);` 之後新增一行：
 
@@ -964,7 +964,7 @@ Expected：`flutter analyze` "No issues found!"。
   });
 ```
 
-- [ ] **Step 2：執行測試，確認失敗**
+- [x] **Step 2：執行測試，確認失敗**
 
 ```bash
 cd app
@@ -973,7 +973,7 @@ flutter test test/screens/settings_screen_test.dart
 
 Expected：FAIL——`settings_reading_defaults_button` 尚不存在。
 
-- [ ] **Step 3：修改 `settings_screen.dart`**
+- [x] **Step 3：修改 `settings_screen.dart`**
 
 第 1-8 行 import 區塊改為：
 
@@ -1015,7 +1015,7 @@ import 'reading_defaults_screen.dart';
           ),
 ```
 
-- [ ] **Step 4：執行測試，確認通過**
+- [x] **Step 4：執行測試，確認通過**
 
 ```bash
 flutter test test/screens/settings_screen_test.dart
@@ -1023,7 +1023,7 @@ flutter test test/screens/settings_screen_test.dart
 
 Expected：全數 PASS。
 
-- [ ] **Step 5：`flutter analyze` + 執行完整測試套件 + Commit**
+- [x] **Step 5：`flutter analyze` + 執行完整測試套件 + Commit**
 
 ```bash
 flutter analyze
@@ -1054,3 +1054,13 @@ Expected：`flutter analyze` "No issues found!"，`flutter test` 全數 PASS（�
 **既有測試相容性檢查**：`GlobalReaderPrefs`／`ResolvedPreferences` 新欄位皆為具預設值的具名參數（非 `required`），`test/reader/global_reader_prefs_test.dart`（5 個既有測試）、`test/reader/reader_prefs_manager_test.dart`（多處直接呼叫 `GlobalReaderPrefs(...)`／`LoadedPrefs(...)`）、`test/reader/resolved_preferences_test.dart`、`test/screens/toc_bottom_sheet_test.dart` 這些既有直接建構 `GlobalReaderPrefs(...)`/`ResolvedPreferences(...)` 卻未傳入新欄位的呼叫點，全部維持可編譯、行為不變，不需要修改（已於 Global Constraints 明確記錄，避免實作時誤判「忘記更新」而動手改動不相關的既有測試）。
 
 **與既有音量鍵測試的相容性**：Task 3 新增的門閥判定只在 `_resolved?.volumeKeyEnabled == false` 時生效；既有測試「音量鍵 onVolumeKey(up/down) 觸發真實換頁」使用預設 `FakeReaderPrefsManager()`（`GlobalReaderPrefs.initial().volumeKeyEnabled` 為 `true`），不受影響。
+
+## 審查修正紀錄（`tmp/epic-14/review-issue-4.md`、`tmp/epic-14/review-issue-4-verify.md`）
+
+程式碼審查（外部參考報告 + 獨立二次覆核）逐行比對計畫與實作，五個 Task 皆完整落地、無偏離；`fullscreen`/`volumeKeyEnabled` 的消費端（`_applySystemUiMode()`／`_handleVolumeKeyCall`）確認皆有正確讀到新欄位，未發現孤兒設定；回溯相容性（既有直接建構 `GlobalReaderPrefs(...)`/`ResolvedPreferences(...)` 的呼叫點不需修改）確認無誤；未發現 Issue 2 那類「測試綠燈但實際接線缺口」問題（新增的音量鍵測試透過真實 `MethodChannel` 呼叫路徑驗證，非直接呼叫私有方法）。
+
+**Important（確認屬實，已採納）**：`plan-issue-4.md` 全部 30 個 Step checkbox 合併前始終維持 `- [ ]` 未勾選、`issues.md` Issue 4 狀態仍是 `ready-for-agent`，不符合本專案 CLAUDE.md「TDD 實作與 QA」步驟明文要求的 SDD 流程（每完成一個 Step 須將 `- [ ]` 改為 `- [x]`）。已於本次修正一併補齊（本節之前的全部 checkbox）與 `issues.md` Issue 4 狀態同步更新。
+
+**Minor（確認屬實，記錄但不在本工單處理）**：獨立覆核過程中發現既有測試套件本身存在一個與本次改動無關的間歇性 flaky test（`reader_screen_test.dart`「開啟該書已有的持久化雙頁偏好設定後，PdfReaderView 的雙頁參數正確載入」，`MissingPluginException(... elinkbook/fullscreen ...)`）——根因是既有 `_applySystemUiMode()`（epic-19，本次未改動其呼叫時機）在部分未 mock `elinkbook/fullscreen` 頻道的測試中偶發未處理 Future；僅在挑選特定測試檔子集執行時重現，完整 `flutter test` 套件跑兩次分別得到「788 全過」與「786 過 2 flake、重跑即全過」，證實與本次 `volumeKeyEnabled`/`fullscreen` 新增邏輯無直接關係，不在本工單範圍內修正，建議另開追蹤項目統一 mock 該頻道。
+
+**外部參考報告的驗證缺口**：第一份參考報告（`tmp/epic-14/review-issue-4.md`）聲稱「全部 134 個單元／Widget 測試 100% 通過」並據此判定「可放心合併」，但獨立覆核（`tmp/epic-14/review-issue-4-verify.md`）與本次修正過程中皆各自完整重跑 `flutter test`（不篩選任何檔案）確認實際為 788 個測試，134 這個數字來源不明、明顯只涵蓋不完整的子集，該報告因此完全沒發現上述 checkbox／`issues.md` 狀態未更新的問題。

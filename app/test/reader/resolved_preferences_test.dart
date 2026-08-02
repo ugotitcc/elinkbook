@@ -50,4 +50,24 @@ void main() {
     expect(resolved.navZoneActions, rightFlipZoneTemplate);
     expect(resolved.showNavZoneDebugOverlay, isFalse);
   });
+
+  test('volumeKeyEnabled 未傳入時預設 true', () {
+    const resolved = ResolvedPreferences(
+      pageTurnMode: PageTurnMode.paginated,
+      screenOrientation: ScreenOrientationSetting.auto,
+      pdfFitMode: PdfFitMode.pageFit,
+      pdfContrast: 0,
+      pdfBrightness: 0,
+      pdfBoldStrength: 0,
+      pdfCropMode: PdfCropMode.none,
+      dualPageMode: DualPageMode.auto,
+      dualPageCoverAlone: true,
+      dualPageDirection: DualPageDirection.ltr,
+      showHeader: true,
+      showFooter: true,
+      navZoneActions: rightFlipZoneTemplate,
+      showNavZoneDebugOverlay: false,
+    );
+    expect(resolved.volumeKeyEnabled, isTrue);
+  });
 }
