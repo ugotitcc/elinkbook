@@ -11,6 +11,7 @@ import 'package:elinkbook/reader/epub_text_align.dart';
 import 'package:elinkbook/reader/page_turn_mode.dart';
 import 'package:elinkbook/reader/foliate_native_bridge.dart';
 import 'package:elinkbook/reader/zone_action.dart';
+import 'package:elinkbook/reader/custom_font.dart';
 import '../support/fake_inappwebview_platform.dart';
 
 void _noop() {}
@@ -434,6 +435,68 @@ void main() {
         isLandscape: true,
       );
       expect(foliatePreferencesChanged(oldView, newView), isFalse);
+    });
+  });
+
+  group('resolveCustomFontUri', () {
+    const fonts = [
+      CustomFont(
+        id: 1,
+        displayName: 'A',
+        familyName: 'FamilyA',
+        fontUri: 'content://example/a',
+      ),
+      CustomFont(
+        id: 2,
+        displayName: 'B',
+        familyName: 'My Custom B',
+        fontUri: 'content://example/b',
+      ),
+    ];
+
+    test('路徑符合自訂字型前綴且 family name 存在於清單中，回傳對應 fontUri',
+        () {
+      expect(
+        resolveCustomFontUri('/assets/custom-fonts/FamilyA', fonts),
+        'content://example/a',
+      );
+    });
+
+    test('family name 含空白，先經 URL 解碼再比對', () {
+      expect(
+        resolveCustomFontUri(
+            '/assets/custom-fonts/My%20Custom%20B', fonts),
+        'content://example/b',
+      );
+    });
+
+    test('family name 不在清單中，回傳 null', () {
+      expect(
+        resolveCustomFontUri('/assets/custom-fonts/Unknown', fonts),
+        isNull,
+      );
+    });
+
+    test('路徑不是自訂字型前綴，回傳 null（不影響既有 /assets/fonts/ 等其他路徑）',
+        () {
+      expect(resolveCustomFontUri('/assets/fonts/foo.ttf', fonts), isNull);
+      expect(resolveCustomFontUri('/assets/foliate/main.js', fonts), isNull);
+    });
+
+    test('customFonts 為空清單時一律回傳 null', () {
+      expect(
+        resolveCustomFontUri('/assets/custom-fonts/FamilyA', const []),
+        isNull,
+      );
+    });
+
+    test('畸形百分號跳脫序列（Uri.decodeComponent 會拋 FormatException）時回傳 null，不拋出例外',
+        () {
+      expect(
+        () => resolveCustomFontUri('/assets/custom-fonts/Font%2', fonts),
+        returnsNormally,
+      );
+      expect(resolveCustomFontUri('/assets/custom-fonts/Font%2', fonts), isNull);
     });
   });
 
