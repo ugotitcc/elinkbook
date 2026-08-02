@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 >
-> 本計畫經 `/superpowers:requesting-code-review` 審查（`tmp/epic-14/review-plan-issue-3.md`，結論「核准實作」，0 Critical）與 `/superpowers:receiving-code-review` 核對修訂：採納 1 項 Important（`resolveCustomFontUri` 補 `FormatException` 防護）與 1 項 Minor（原生端補 `Log.w` 診斷紀錄）；**未採納** 1 項 Important（建議把 Task 4 測試改用 `pumpAndSettle()`——查證後判定該畫面含不確定動畫的 `CircularProgressIndicator`〔`Key('reader_loading_indicator')`〕，`pumpAndSettle()` 會因此逾時拋出例外，維持原計畫的 `pump()+runAsync+pump()` 既有模式），詳見文末「審查修正紀錄」。
+> 本計畫經 `/superpowers:requesting-code-review` 審查（`tmp/epic-14/review-plan-issue-3.md`，結論「核准實作」，0 Critical）與 `/superpowers:receiving-code-review` 核對修訂：採納 1 項 Important（`resolveCustomFontUri` 補 `FormatException` 防護）與 1 項 Minor（原生端補 `Log.w` 診斷紀錄）；**未採納** 1 項 Important（建議把 Task 4 測試改用 `pumpAndSettle()`——查證後判定該畫面含不確定動畫的 `CircularProgressIndicator`〔`Key('reader_loading_indicator')`〕，`pumpAndSettle()` 會因此逾時拋出例外，維持原計畫的 `pump()+runAsync+pump()` 既有模式）。**實作完成後另經一輪程式碼審查**（`tmp/epic-14/review-issue-3.md`）發現並修正 2 項 Important（`sample.ttf` 未宣告為 asset 導致真機 `integration_test` 必定失敗；`reader_screen_test.dart` 新測試缺 `elinkbook/fullscreen` mock 導致 `flutter test` 整體失敗），兩者皆已修正並於真機／全專案回歸測試確認通過。詳見文末兩段「審查修正紀錄」。
 
 **Goal:** 讓使用者在 `reader_settings_sheet.dart` 選擇的自訂字型（Issue 1/2 已完成資料層與選擇器 UI）真正在 Foliate-JS 閱讀畫面渲染出來。擴充 `buildFontFaceCss()` 輸出自訂字型的 `@font-face` 規則，`InAppWebView.shouldInterceptRequest` 新增攔截分支透過原生 `ReaderResourceChannel` 即時讀取 `content://` 字型位元組（不落地快取，見 [ADR 0021](../../adr/0021-custom-font-content-uri-no-copy.md)）。
 
@@ -31,7 +31,7 @@
 - Consumes：Issue 1/2 的 `CustomFont`（`app/lib/reader/custom_font.dart`，`familyName`／`fontUri` 欄位）
 - Produces：`String buildFontFaceCss({List<CustomFont> customFonts})`（擴充既有簽章）；新頂層函式 `Future<Uint8List?> loadCustomFontBytes(String uri)`，供 Task 3 的 `_shouldInterceptRequest` 使用
 
-- [ ] **Step 1：撰寫失敗測試——`buildFontFaceCss` 輸出自訂字型 `@font-face` 規則**
+- [x] **Step 1：撰寫失敗測試——`buildFontFaceCss` 輸出自訂字型 `@font-face` 規則**
 
 在 `app/test/reader/foliate_native_bridge_test.dart` 檔案開頭新增 import：
 
@@ -82,7 +82,7 @@ import 'package:elinkbook/reader/custom_font.dart';
   });
 ```
 
-- [ ] **Step 2：執行測試，確認失敗**
+- [x] **Step 2：執行測試，確認失敗**
 
 ```bash
 cd app
@@ -91,7 +91,7 @@ flutter test test/reader/foliate_native_bridge_test.dart
 
 Expected：FAIL——`buildFontFaceCss` 尚未接受 `customFonts` 具名參數（編譯錯誤）。
 
-- [ ] **Step 3：修改 `buildFontFaceCss` 並新增 `loadCustomFontBytes`**
+- [x] **Step 3：修改 `buildFontFaceCss` 並新增 `loadCustomFontBytes`**
 
 `app/lib/reader/foliate_native_bridge.dart` 第 7 行 import 區塊新增：
 
@@ -134,7 +134,7 @@ Future<Uint8List?> loadCustomFontBytes(String uri) {
 }
 ```
 
-- [ ] **Step 4：執行測試，確認通過**
+- [x] **Step 4：執行測試，確認通過**
 
 ```bash
 flutter test test/reader/foliate_native_bridge_test.dart
@@ -142,7 +142,7 @@ flutter test test/reader/foliate_native_bridge_test.dart
 
 Expected：全數 PASS（含既有 5 個測試不受影響）。
 
-- [ ] **Step 5：撰寫失敗測試——`loadCustomFontBytes` 呼叫正確的 method channel**
+- [x] **Step 5：撰寫失敗測試——`loadCustomFontBytes` 呼叫正確的 method channel**
 
 在 `test('loadAndroidAsset 呼叫 elinkbook/reader_resources 的 readAndroidAsset', ...)`（第 21-37 行）之後新增：
 
@@ -168,7 +168,7 @@ Expected：全數 PASS（含既有 5 個測試不受影響）。
   });
 ```
 
-- [ ] **Step 6：執行測試，確認通過**
+- [x] **Step 6：執行測試，確認通過**
 
 ```bash
 flutter test test/reader/foliate_native_bridge_test.dart
@@ -176,7 +176,7 @@ flutter test test/reader/foliate_native_bridge_test.dart
 
 Expected：全數 PASS。
 
-- [ ] **Step 7：`flutter analyze` + Commit**
+- [x] **Step 7：`flutter analyze` + Commit**
 
 ```bash
 flutter analyze
@@ -199,7 +199,7 @@ Expected：`flutter analyze` "No issues found!"。
 
 本 Task 無 JVM 單元測試（比照 Global Constraints 說明的既有慣例），純手動核對程式碼與 Task 5 真機驗證。
 
-- [ ] **Step 1：新增 `readCustomFontBytes` case**
+- [x] **Step 1：新增 `readCustomFontBytes` case**
 
 `app/android/app/src/main/kotlin/cc/ugotit/elinkbook/ReaderResourceChannel.kt` 第 3-11 行 import 區塊新增：
 
@@ -235,7 +235,7 @@ import android.util.Log
             }
 ```
 
-- [ ] **Step 2：更新類別頂部 KDoc 說明**
+- [x] **Step 2：更新類別頂部 KDoc 說明**
 
 第 13-31 行的類別 KDoc 註解，在「2. `cacheBookForServing`：...」段落之後新增第 3 點：
 
@@ -248,7 +248,7 @@ import android.util.Log
  *
 ```
 
-- [ ] **Step 3：`flutter build apk --debug` 確認原生端可編譯**
+- [x] **Step 3：`flutter build apk --debug` 確認原生端可編譯**
 
 ```bash
 cd app
@@ -257,7 +257,7 @@ flutter build apk --debug
 
 Expected：BUILD SUCCESSFUL（純語法/型別層級確認，真正的行為正確性留給 Task 5 真機驗證）。
 
-- [ ] **Step 4：Commit**
+- [x] **Step 4：Commit**
 
 ```bash
 git add android/app/src/main/kotlin/cc/ugotit/elinkbook/ReaderResourceChannel.kt
@@ -276,7 +276,7 @@ git commit -m "feat(epic-14): ReaderResourceChannel 新增 readCustomFontBytes"
 - Consumes：Task 1 的 `buildFontFaceCss({customFonts})`／`loadCustomFontBytes(uri)`
 - Produces：`FoliateEpubReaderView` 新增 `customFonts: List<CustomFont>`（預設 `const []`）建構參數；新頂層純函式 `String? resolveCustomFontUri(String path, List<CustomFont> customFonts)`，供 Task 4 之後、及未來任何需要驗證此路由邏輯的測試直接呼叫
 
-- [ ] **Step 1：撰寫失敗測試——`resolveCustomFontUri` 路由邏輯（純函式，不需 WebView）**
+- [x] **Step 1：撰寫失敗測試——`resolveCustomFontUri` 路由邏輯（純函式，不需 WebView）**
 
 `app/test/reader/foliate_epub_reader_view_test.dart` 開頭新增 import：
 
@@ -350,7 +350,7 @@ import 'package:elinkbook/reader/custom_font.dart';
   });
 ```
 
-- [ ] **Step 2：執行測試，確認失敗**
+- [x] **Step 2：執行測試，確認失敗**
 
 ```bash
 cd app
@@ -359,7 +359,7 @@ flutter test test/reader/foliate_epub_reader_view_test.dart
 
 Expected：FAIL——`resolveCustomFontUri` 未定義。
 
-- [ ] **Step 3：新增 `customFonts` 參數與 `resolveCustomFontUri`**
+- [x] **Step 3：新增 `customFonts` 參數與 `resolveCustomFontUri`**
 
 `app/lib/reader/foliate_epub_reader_view.dart` import 區塊新增：
 
@@ -411,7 +411,7 @@ String? resolveCustomFontUri(String path, List<CustomFont> customFonts) {
 }
 ```
 
-- [ ] **Step 4：執行測試，確認通過**
+- [x] **Step 4：執行測試，確認通過**
 
 ```bash
 flutter test test/reader/foliate_epub_reader_view_test.dart
@@ -419,7 +419,7 @@ flutter test test/reader/foliate_epub_reader_view_test.dart
 
 Expected：全數 PASS（含既有測試不受影響）。
 
-- [ ] **Step 5：接上 `_buildIndexUri()` 與 `_shouldInterceptRequest`**
+- [x] **Step 5：接上 `_buildIndexUri()` 與 `_shouldInterceptRequest`**
 
 第 342-346 行 `_buildIndexUri()` 的 `'fontFaceCss': buildFontFaceCss(),` 改為：
 
@@ -438,7 +438,7 @@ Expected：全數 PASS（含既有測試不受影響）。
     }
 ```
 
-- [ ] **Step 6：`flutter analyze` + 執行完整檔案測試 + Commit**
+- [x] **Step 6：`flutter analyze` + 執行完整檔案測試 + Commit**
 
 ```bash
 flutter analyze
@@ -462,7 +462,7 @@ Expected：`flutter analyze` "No issues found!"，測試全數 PASS。
 - Consumes：Task 3 的 `FoliateEpubReaderView.customFonts`
 - Produces：`ReaderScreen` 開書流程在 `customFontsRepository` 提供時，保證 `FoliateEpubReaderView` 建構當下 `_customFonts` 已載入完成（不再有 Global Constraints 描述的競態）
 
-- [ ] **Step 1：`FakeCustomFontsRepository` 新增可控制的載入延遲閘門**
+- [x] **Step 1：`FakeCustomFontsRepository` 新增可控制的載入延遲閘門**
 
 `app/test/support/fake_custom_fonts_repository.dart` 開頭新增 import：
 
@@ -491,7 +491,7 @@ class 欄位新增（`_storage`／`_nextId` 附近）：
   }
 ```
 
-- [ ] **Step 2：撰寫失敗測試——`FoliateEpubReaderView` 延後至自訂字型清單載入完成才建構**
+- [x] **Step 2：撰寫失敗測試——`FoliateEpubReaderView` 延後至自訂字型清單載入完成才建構**
 
 `app/test/screens/reader_screen_test.dart` 新增 import（若尚未存在）：
 
@@ -536,7 +536,7 @@ import '../support/fake_custom_fonts_repository.dart';
   });
 ```
 
-- [ ] **Step 3：執行測試，確認失敗**
+- [x] **Step 3：執行測試，確認失敗**
 
 ```bash
 cd app
@@ -545,7 +545,7 @@ flutter test test/screens/reader_screen_test.dart
 
 Expected：FAIL——目前 `_buildNativeView` 沒有等待任何自訂字型載入完成旗標，`FoliateEpubReaderView` 在 `gate` 完成前就已經建構。
 
-- [ ] **Step 4：新增 `_customFontsLoaded` 欄位與 gating 條件**
+- [x] **Step 4：新增 `_customFontsLoaded` 欄位與 gating 條件**
 
 `app/lib/screens/reader_screen.dart` 第 179 行 `List<CustomFont> _customFonts = [];` 之後新增：
 
@@ -590,7 +590,7 @@ Expected：FAIL——目前 `_buildNativeView` 沒有等待任何自訂字型載
               _buildNativeView(format, isLandscape),
 ```
 
-- [ ] **Step 5：接上 `FoliateEpubReaderView` 的 `customFonts` 參數**
+- [x] **Step 5：接上 `FoliateEpubReaderView` 的 `customFonts` 參數**
 
 第 585 行附近（`FoliateEpubReaderView(` 建構呼叫的既有具名參數列表，緊接在 `dualPageMode: resolved.dualPageMode,`／`isLandscape: isLandscape,` 一類欄位之後任一位置）新增：
 
@@ -598,7 +598,7 @@ Expected：FAIL——目前 `_buildNativeView` 沒有等待任何自訂字型載
           customFonts: _customFonts,
 ```
 
-- [ ] **Step 6：執行測試，確認通過**
+- [x] **Step 6：執行測試，確認通過**
 
 ```bash
 flutter test test/screens/reader_screen_test.dart
@@ -606,7 +606,7 @@ flutter test test/screens/reader_screen_test.dart
 
 Expected：全數 PASS（含 Step 2 新增測試，以及既有大量 EPUB 相關測試——它們皆未提供 `customFontsRepository`，`_customFontsLoaded` 同步初始化為 `true`，`FoliateEpubReaderView` 建構時機不受影響，零回歸）。
 
-- [ ] **Step 7：全專案回歸測試 + `flutter analyze`**
+- [x] **Step 7：全專案回歸測試 + `flutter analyze`**
 
 ```bash
 flutter test
@@ -615,7 +615,7 @@ flutter analyze
 
 Expected：全數 PASS，`flutter analyze` "No issues found!"。
 
-- [ ] **Step 8：Commit**
+- [x] **Step 8：Commit**
 
 ```bash
 git add lib/screens/reader_screen.dart test/support/fake_custom_fonts_repository.dart test/screens/reader_screen_test.dart
@@ -633,9 +633,9 @@ git commit -m "fix(epic-14): ReaderScreen 貫穿 customFonts 並修正非同步�
 - Consumes：Task 1-4 全部完成的端到端管線
 - Produces：真機驗證報告（本 Task 完成時記錄於 `issues.md` Issue 3 驗收說明），無新增供其他 Task 使用的介面
 
-**前置需求**：一台已連接、可執行 `flutter test integration_test/... -d <device-id>` 的 Android 裝置；`app/test/fixtures/sample.ttf`（Issue 1 已使用過的 KingHwa_OldSong 字型，已存在版本控制）與 `app/test/fixtures/sample.epub` 皆已在 `pubspec.yaml` 宣告為 asset 可供 staging。
+**前置需求**：一台已連接、可執行 `flutter test integration_test/... -d <device-id>` 的 Android 裝置；`app/test/fixtures/sample.ttf`（Issue 1 已使用過的 KingHwa_OldSong 字型，已存在版本控制）與 `app/test/fixtures/sample.epub` 供 staging。**注意（審查修正，見 `tmp/epic-14/review-issue-3.md` Minor 1）**：`sample.epub` 當時已在 `pubspec.yaml` 宣告為 asset，但 `sample.ttf` 當時**未**宣告——這是計畫撰寫當下的事實性錯誤（誤以為兩者狀態相同，未逐一查證），已在 Step 1 實作時因真機測試失敗而發現並補上宣告，本段文字保留錯誤原文供記錄，實際結果見 Step 2。
 
-- [ ] **Step 1：撰寫真機整合測試**
+- [x] **Step 1：撰寫真機整合測試**
 
 新建 `app/integration_test/custom_font_rendering_test.dart`（比照既有 `app/integration_test/pdf_content_uri_metadata_test.dart` 的 `_stageAssetAsFile` 寫法與 `createTestContentUri`／`takePersistableUriPermission` 使用模式）：
 
@@ -737,14 +737,14 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：於真機執行**
+- [x] **Step 2：於真機執行**
 
 ```bash
 flutter devices
 flutter test integration_test/custom_font_rendering_test.dart -d <device-id>
 ```
 
-Expected：測試 PASS（無 `reader_error_text`、無殘留 `reader_loading_indicator`，代表 `readCustomFontBytes` 呼叫鏈路整體未拋出未捕捉例外、書籍成功渲染）。
+Expected：測試 PASS（無 `reader_error_text`、無殘留 `reader_loading_indicator`，代表 `readCustomFontBytes` 呼叫鏈路整體未拋出未捕捉例外、書籍成功渲染）。實際於真機 `3CEF42ECD491687`（Android 15）執行，修正 `pubspec.yaml` 缺少 `sample.ttf` asset 宣告（審查修正，見 `tmp/epic-14/review-issue-3.md` Important 1）後確認 PASS。
 
 - [ ] **Step 3：人工真機視覺驗收**
 
@@ -755,7 +755,7 @@ Expected：測試 PASS（無 `reader_error_text`、無殘留 `reader_loading_ind
 3. 肉眼確認內文字體確實變成該字型（非退回內建預設字型），比照本專案既有「自動化驗證機制運作、視覺效果人工確認」慣例（例如 `epic-4` PDF 濾鏡效果的驗收方式）。
 4. 確認切換回內建字型／其他書籍時行為不受影響。
 
-- [ ] **Step 4：`flutter analyze` 全專案確認**
+- [x] **Step 4：`flutter analyze` 全專案確認**
 
 ```bash
 flutter analyze
@@ -763,7 +763,7 @@ flutter analyze
 
 Expected：`flutter analyze` "No issues found!"。
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 git add integration_test/custom_font_rendering_test.dart
@@ -785,3 +785,9 @@ git commit -m "test(epic-14): 自訂字型渲染真機端到端整合測試"
 - **Important（確認屬實，已修正）**：`resolveCustomFontUri` 呼叫 `Uri.decodeComponent` 未防範畸形百分號跳脫序列拋出的 `FormatException`——`_shouldInterceptRequest` 攔截的是 WebView 全部請求，非僅本專案自己產生的 URL，理論上可能收到非預期路徑。已於 Task 3 補上 `try/catch (on FormatException)`，回傳 `null` 視同不符合自訂字型路徑，並補上對應測試案例。
 - **Important（查證後判定建議有誤，不採納，維持原計畫）**：審查建議把 Task 4 Step 2 測試的 `pump()+runAsync(Future.delayed)+pump()` 改用 `pumpAndSettle()`。查證後發現該測試場景畫面上會有 `Key('reader_loading_indicator')` 的 `CircularProgressIndicator`（不確定動畫，`AnimationController.repeat()`），只要它在畫面上，`pumpAndSettle()` 會因為永遠有排定中的下一影格而逾時拋出例外——這正是本專案既有測試（`foliate_epub_reader_view_test.dart` 多處）刻意採用 `pump()+runAsync+pump()` 而非 `pumpAndSettle()` 的既定理由，維持原計畫寫法不變。
 - **Minor（確認合理，已採納）**：`ReaderResourceChannel.kt` 的 `readCustomFontBytes` 例外處理補上 `Log.w`（非 `Log.d`——比照 `epic-7-interaction` Issue 1 spike 已記錄的既有教訓：部分裝置客製化 ROM 會過濾 Debug 等級 logcat 輸出），方便日後用 `adb logcat` 判斷 SAF 授權過期或原始檔案已被刪除。
+
+## 實作審查修正紀錄（`tmp/epic-14/review-issue-3.md`）
+
+- **Important（確認屬實，已修正）**：`app/pubspec.yaml` 缺少 `test/fixtures/sample.ttf` 的 `assets:` 宣告，導致 Task 5 真機 `integration_test` 的 `rootBundle.load()` 必定拋出 `Unable to load asset`。已補上宣告，於真機 `3CEF42ECD491687`（Android 15）重新執行確認 PASS。本項連帶暴露「前置需求」段落本身的事實性錯誤（見上方該段補充說明）。
+- **Important（確認屬實，已修正）**：`reader_screen_test.dart` 的 Task 4 新測試未 mock `elinkbook/fullscreen` 頻道，導致 `ReaderScreen._applySystemUiMode()` 開書時觸發的 `setEnabled` 呼叫以未捕捉的 `MissingPluginException` 形式讓 `flutter test` 整體失敗（含全專案執行與單檔案獨立執行皆可重現）。已比照同檔既有寫法補上 mock handler，全專案回歸測試 770/770 通過。
+- **Minor（確認合理，已採納）**：「前置需求」段落誤寫 `sample.ttf` 當時已宣告為 asset，已修正措辭並保留錯誤原文供記錄（見上方該段）。

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:elinkbook/reader/custom_font.dart';
 import 'package:elinkbook/reader/custom_fonts_repository.dart';
 
@@ -12,8 +14,14 @@ class FakeCustomFontsRepository implements CustomFontsRepository {
   /// [countBooksUsing] 回傳；未設定的 family name 預設回傳 0。
   final Map<String, int> usageCounts = {};
 
+  /// 測試用：若非 null，[listAll] 會先等待這個 Completer 完成才回傳，
+  /// 供測試精確控制非同步載入完成的時機（epic-14-system-settings Issue 3，
+  /// 驗證 ReaderScreen 在自訂字型清單載入完成前延後建構 FoliateEpubReaderView）。
+  Completer<void>? loadGate;
+
   @override
   Future<List<CustomFont>> listAll() async {
+    if (loadGate != null) await loadGate!.future;
     final list = List<CustomFont>.from(_storage);
     list.sort((a, b) => a.displayName.compareTo(b.displayName));
     return list;

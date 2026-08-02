@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
 import 'column_mode.dart';
+import 'custom_font.dart';
 import 'dual_page_mode.dart';
 import 'epub_decoration.dart';
 import 'epub_position_info.dart';
@@ -151,6 +152,37 @@ bool foliatePreferencesChanged(
       oldView.isLandscape != newView.isLandscape;
 }
 
+/// 從 `InAppWebView.shouldInterceptRequest` 攔截到的請求路徑，判斷是否為
+/// 自訂字型虛擬路徑（`/assets/custom-fonts/<URL 編碼後的 family name>`），
+/// 若是則從 [customFonts] 找出對應項目並回傳其 `fontUri`；路徑不符前綴、
+/// 或找不到符合的 family name，回傳 `null`。抽成獨立頂層純函式（而非直接
+/// 寫在 `_shouldInterceptRequest` 內）的原因：`FakePlatformInAppWebViewWidget`
+/// （`test/support/fake_inappwebview_platform.dart`）只回傳固定尺寸
+/// placeholder，不會觸發真實 `shouldInterceptRequest` 回呼，
+/// `_shouldInterceptRequest` 整個私有方法在目前 widget test 環境下無法被
+/// 觸發到——這段路由/查找邏輯抽出後才能脫離 `InAppWebViewController`／
+/// `WebResourceRequest` 直接測試。`_shouldInterceptRequest` 攔截的是
+/// WebView 的全部請求（非僅我們自己產生的 URL），畸形百分號跳脫序列會讓
+/// `Uri.decodeComponent` 拋出 `FormatException` 或 `ArgumentError`，包
+/// try/catch 統一視為「不符合自訂字型路徑」回傳 `null`，避免例外冒出到
+/// 攔截回呼（審查修正，
+/// 見 tmp/epic-14/review-plan-issue-3.md Important 1）。
+String? resolveCustomFontUri(String path, List<CustomFont> customFonts) {
+  const prefix = '/assets/custom-fonts/';
+  if (!path.startsWith(prefix)) return null;
+  try {
+    final familyName = Uri.decodeComponent(path.substring(prefix.length));
+    for (final font in customFonts) {
+      if (font.familyName == familyName) return font.fontUri;
+    }
+    return null;
+  } on FormatException {
+    return null;
+  } on ArgumentError {
+    return null;
+  }
+}
+
 /// 包裝 readest/foliate-js（釘定 commit
 /// dd71f2be356563c16a23272686189fcfb45d0b82）的 Flutter widget，供流式
 /// （reflowable）EPUB 使用。原生嵌入元件為 `flutter_inappwebview` 的
@@ -182,6 +214,7 @@ class FoliateEpubReaderView extends StatefulWidget {
   final bool? isFixedLayoutHint;
   final DualPageMode? dualPageMode;
   final bool isLandscape;
+  final List<CustomFont> customFonts;
   final List<ZoneAction> navZoneActions;
   final ValueChanged<ZoneAction>? onZoneAction;
   final bool showNavZoneDebugOverlay;
@@ -216,6 +249,7 @@ class FoliateEpubReaderView extends StatefulWidget {
     this.isFixedLayoutHint,
     this.dualPageMode,
     this.isLandscape = false,
+    this.customFonts = const [],
     this.navZoneActions = const [
       ZoneAction.none, ZoneAction.none, ZoneAction.none,
       ZoneAction.none, ZoneAction.none, ZoneAction.none,
@@ -342,7 +376,7 @@ class _FoliateEpubReaderViewState extends State<FoliateEpubReaderView> {
   Uri _buildIndexUri() {
     final params = <String, String>{
       'prefs': jsonEncode(buildFoliatePreferencesMap(widget)),
-      'fontFaceCss': buildFontFaceCss(),
+      'fontFaceCss': buildFontFaceCss(customFonts: widget.customFonts),
     };
     final cfi = extractCfi(widget.initialLocatorJson);
     if (cfi != null) params['initialCfi'] = cfi;
@@ -469,6 +503,12 @@ class _FoliateEpubReaderViewState extends State<FoliateEpubReaderView> {
     if (path.startsWith(fontsPrefix)) {
       final relative = 'assets/fonts/${path.substring(fontsPrefix.length)}';
       final bytes = await loadFlutterFontAsset(relative);
+      if (bytes == null) return null;
+      return WebResourceResponse(contentType: 'font/ttf', data: bytes);
+    }
+    final customFontUri = resolveCustomFontUri(path, widget.customFonts);
+    if (customFontUri != null) {
+      final bytes = await loadCustomFontBytes(customFontUri);
       if (bytes == null) return null;
       return WebResourceResponse(contentType: 'font/ttf', data: bytes);
     }

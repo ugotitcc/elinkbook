@@ -177,6 +177,14 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   // 自訂字型清單快取（epic-14-system-settings Issue 2），開書時載入一次，
   // 比照既有 _fxlBookmarks／_highlights 等一次性載入快取模式。
   List<CustomFont> _customFonts = [];
+  // 自訂字型清單是否已完成載入判斷（epic-14-system-settings Issue 3）：
+  // 未提供 customFontsRepository 時直接視為已完成（沒有東西要等，零回歸）；
+  // 提供時初始為 false，_loadCustomFonts() 完成（不論成功或失敗）後才設為
+  // true。_buildBody 的 EPUB gating 條件依此延後 FoliateEpubReaderView 的
+  // 建構時機，避免 late final _initialIndexUri（內含 buildFontFaceCss()
+  // 產生的自訂字型 @font-face 宣告）在清單查詢完成前就已計算定案、之後
+  // 永遠不會重新產生的競態（見本計畫 Global Constraints）。
+  late bool _customFontsLoaded = widget.customFontsRepository == null;
   BookReaderPrefs _prefs = BookReaderPrefs.empty;
   LoadedPrefs? _loaded;
   ResolvedPreferences? _resolved;
@@ -629,9 +637,14 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     try {
       final fonts = await repository.listAll();
       if (!mounted) return;
-      setState(() => _customFonts = fonts);
+      setState(() {
+        _customFonts = fonts;
+        _customFontsLoaded = true;
+      });
     } catch (e) {
       debugPrint('Failed to load custom fonts: $e');
+      if (!mounted) return;
+      setState(() => _customFontsLoaded = true);
     }
   }
 
@@ -1444,7 +1457,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         return Stack(
           children: [
             if (_resolved != null &&
-                (format != BookFormat.epub || _dispatchedIsFixedLayout != null))
+                (format != BookFormat.epub ||
+                    (_dispatchedIsFixedLayout != null && _customFontsLoaded)))
               _buildNativeView(format, isLandscape),
             // epic-18-reader-device-qa Issue 7：流式 EPUB 的 chrome，結構對稱
             // 於上方 FXL 浮動按鈕區塊——appBar 已在 build() 恆為 null（見上方
@@ -1847,6 +1861,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           isFixedLayoutHint: widget.isFixedLayout,
           dualPageMode: resolved.dualPageMode,
           isLandscape: isLandscape,
+          customFonts: _customFonts,
           navZoneActions: resolved.navZoneActions,
           onZoneAction: _handleZoneAction,
           showNavZoneDebugOverlay: resolved.showNavZoneDebugOverlay,

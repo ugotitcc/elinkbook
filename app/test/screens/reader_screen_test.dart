@@ -1,4 +1,6 @@
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -4546,6 +4548,51 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
 
     expect(find.text('測試自訂字型'), findsWidgets);
+  });
+
+  testWidgets(
+      '提供 customFontsRepository 時，自訂字型清單載入完成前 FoliateEpubReaderView 不建構，載入完成後才建構',
+      (tester) async {
+    // ReaderScreen._applySystemUiMode() 開書時一定會呼叫
+    // elinkbook/fullscreen 頻道的 setEnabled（Epic 19），未 mock 會導致
+    // 未被 await 的 MethodChannel 呼叫非同步拋出 MissingPluginException
+    // （審查修正，見 tmp/epic-14/review-issue-3.md Important 2；比照同檔
+    // 第 4473-4481 行既有寫法）。
+    final binaryMessenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    const fullscreenChannel = MethodChannel('elinkbook/fullscreen');
+    binaryMessenger.setMockMethodCallHandler(
+        fullscreenChannel, (call) async => null);
+    addTearDown(
+      () => binaryMessenger.setMockMethodCallHandler(fullscreenChannel, null),
+    );
+
+    final customFontsRepository = FakeCustomFontsRepository();
+    final gate = Completer<void>();
+    customFontsRepository.loadGate = gate;
+
+    await tester.pumpWidget(MaterialApp(
+      home: ReaderScreen(
+        filePath: 'test/fixtures/sample.epub',
+        bookId: 'b1',
+        prefsManager: prefsManager,
+        customFontsRepository: customFontsRepository,
+      ),
+    ));
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    // 自訂字型清單尚未載入完成，FoliateEpubReaderView 不應建構，仍顯示載入中指示器。
+    expect(find.byType(FoliateEpubReaderView), findsNothing);
+    expect(find.byKey(const Key('reader_loading_indicator')), findsOneWidget);
+
+    gate.complete();
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    expect(find.byType(FoliateEpubReaderView), findsOneWidget);
   });
 
   tearDownAll(() {
