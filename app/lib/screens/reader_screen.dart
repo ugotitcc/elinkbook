@@ -1922,9 +1922,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// `MainActivity.dispatchKeyEvent()` 攔截音量鍵後的回呼
   /// （epic-7-interaction Issue 7）：方向固定映射，不查詢
   /// `_resolved!.navZoneActions`（design.md 決策 #19）——`up` 一律上一頁、
-  /// `down` 一律下一頁。
+  /// `down` 一律下一頁。全域音量鍵開關關閉時（`_resolved?.volumeKeyEnabled
+  /// == false`，epic-14-system-settings Issue 4）忽略此次觸發。
   Future<void> _handleVolumeKeyCall(MethodCall call) async {
     if (call.method != 'onVolumeKey') return;
+    if (_resolved?.volumeKeyEnabled == false) return;
     final args = call.arguments as Map<Object?, Object?>;
     switch (args['direction'] as String?) {
       case 'up':

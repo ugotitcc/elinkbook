@@ -10,6 +10,7 @@ import 'package:elinkbook/reader/column_mode.dart';
 import 'package:elinkbook/reader/custom_font.dart';
 import 'package:elinkbook/reader/dual_page_direction.dart';
 import 'package:elinkbook/reader/dual_page_mode.dart';
+import 'package:elinkbook/reader/global_reader_prefs.dart';
 import 'package:elinkbook/reader/page_turn_mode.dart';
 import 'package:elinkbook/reader/pdf_crop_mode.dart';
 import 'package:elinkbook/reader/pdf_crop_rect.dart';
@@ -2972,6 +2973,70 @@ void main() {
       instanceCalls.any((c) => c.method == 'previousPage'),
       isTrue,
       reason: 'onVolumeKey(up) 應呼叫 PdfReaderView 的 previousPage',
+    );
+  });
+
+  testWidgets('全域音量鍵開關關閉時，onVolumeKey 觸發被忽略，不執行翻頁', (tester) async {
+    final binaryMessenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    final instanceCalls = <MethodCall>[];
+
+    binaryMessenger.setMockMethodCallHandler(SystemChannels.platform_views, (
+      call,
+    ) async {
+      if (call.method == 'create') {
+        final id = (call.arguments as Map<Object?, Object?>)['id'] as int;
+        binaryMessenger.setMockMethodCallHandler(
+          MethodChannel('cc.ugotit.elinkbook/pdf_reader_view_$id'),
+          (call) async {
+            instanceCalls.add(call);
+            return null;
+          },
+        );
+        return 0;
+      }
+      return null;
+    });
+    addTearDown(
+      () => binaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform_views,
+        null,
+      ),
+    );
+
+    final disabledPrefsManager = FakeReaderPrefsManager(
+      globalPrefs:
+          const GlobalReaderPrefs.initial().copyWith(volumeKeyEnabled: false),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b1',
+          prefsManager: disabledPrefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    const volumeKeyChannel = MethodChannel('elinkbook/volume_key');
+    final byteData = volumeKeyChannel.codec.encodeMethodCall(
+      const MethodCall('onVolumeKey', {'direction': 'down'}),
+    );
+    await binaryMessenger.handlePlatformMessage(
+      volumeKeyChannel.name,
+      byteData,
+      (data) {},
+    );
+    await tester.pump();
+
+    expect(
+      instanceCalls.any((c) => c.method == 'nextPage'),
+      isFalse,
+      reason: '全域音量鍵開關關閉時，onVolumeKey(down) 不應觸發翻頁',
     );
   });
 
