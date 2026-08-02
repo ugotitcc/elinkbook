@@ -99,9 +99,9 @@
 
 ## Issue 4：閱讀預設值畫面
 
-**依賴／Blocked by：** None - can start immediately（與字型模組完全獨立）
+**Status:** ✅ 已完成待合併（`feat/epic-14-issue-4-reading-defaults`，2026-08-02）——依 `plans/plan-issue-4.md` 5 個 Task 實作：`GlobalReaderPrefs` 新增 `volumeKeyEnabled`／`fullscreen`（具預設值具名參數，非 `required`，完全不破壞既有測試呼叫點）、`ReaderPrefsManagerImpl` 新 SharedPreferences key 讀寫＋`resolve()` 補上 `fullscreen` 雙層解析與 `volumeKeyEnabled` 透傳、`ReaderScreen._handleVolumeKeyCall` 全域音量鍵開關門閥判定、新建 `ReadingDefaultsScreen`（比照 `NavZoneSettingsScreen` 即時生效無儲存按鈕模式）、`SettingsScreen` 新增入口。程式碼審查（外部參考報告 + 獨立二次覆核 `tmp/epic-14/review-issue-4.md`／`review-issue-4-verify.md`）0 Critical，五個 Task 與計畫逐行對應無偏離，`fullscreen`/`volumeKeyEnabled` 消費端確認皆有正確接線、未發現 Issue 2 那類「測試綠燈但實際接線缺口」問題；發現並修正 1 項 Important（plan checkbox／本 Issue 狀態合併前未同步更新，已於本次補齊，詳見 `plans/plan-issue-4.md`「審查修正紀錄」）；另記錄 1 項 Minor（既有 `elinkbook/fullscreen` 頻道 mock 缺口導致的間歇性 flaky test，與本次改動無關，不在本工單處理）。獨立覆核並澄清外部參考報告「134 個測試通過」數字有誤且來源不明——完整 `flutter test` 套件實際為 788 個，`flutter analyze` 乾淨。
 
-**Status:** ready-for-agent
+**依賴／Blocked by：** None - can start immediately（與字型模組完全獨立）
 
 **What to build：**
 
@@ -121,12 +121,12 @@
 
 **驗收標準：**
 
-- [ ] `GlobalReaderPrefs` 新增 `volumeKeyEnabled`／`fullscreen` 兩欄位，SharedPreferences key 命名與既有慣例一致
-- [ ] `ReadingDefaultsScreen` 四項控制項即時生效，無儲存按鈕
-- [ ] `SettingsScreen` 新增「閱讀預設值」入口可正確導航
-- [ ] `resolve()` 的 `fullscreen` 雙層解析正確（單書覆寫 > 全域 > 預設 `false`）
-- [ ] 全域音量鍵開關關閉時，`ReaderScreen` 忽略音量鍵翻頁觸發
-- [ ] 上述測試皆通過，`flutter analyze` 乾淨
+- [x] `GlobalReaderPrefs` 新增 `volumeKeyEnabled`／`fullscreen` 兩欄位，SharedPreferences key 命名與既有慣例一致
+- [x] `ReadingDefaultsScreen` 四項控制項即時生效，無儲存按鈕
+- [x] `SettingsScreen` 新增「閱讀預設值」入口可正確導航
+- [x] `resolve()` 的 `fullscreen` 雙層解析正確（單書覆寫 > 全域 > 預設 `false`）
+- [x] 全域音量鍵開關關閉時，`ReaderScreen` 忽略音量鍵翻頁觸發
+- [x] 上述測試皆通過，`flutter analyze` 乾淨
 
 ---
 
