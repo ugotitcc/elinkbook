@@ -38,6 +38,8 @@
 
 **Status:** ✅ 已完成並合併（PR #100，`feat/epic-14-issue-2-font-management` → `main`，2026-08-02）——依 `plans/plan-issue-2.md` 4 個 Task 實作：`CustomFont`／`CustomFontsRepository`、`FontManagementScreen`（批次上傳、內建 5 款字型阻擋重名、清單、重新命名、刪除含使用中提示與級聯重置）、`SettingsScreen`「字型管理」入口＋`customFontsRepository` 全鏈路貫穿（含 `LibraryScreen._openGroupFilteredView()` 遞迴建構點）、`reader_settings_sheet.dart` 字型選單合併自訂字型清單＋`ReaderScreen` 貫穿。計畫審查（`/superpowers:requesting-code-review`）發現並修正 1 項 Critical（自訂字型與內建字型 family name 相同會導致 `DropdownButton` 重複 `value` 崩潰）；實作審查另發現並修正 1 項 Important（`_renameFont` 的 `TextEditingController` 缺釋放，首次修法 `try/finally` 立即 dispose 實測會觸發 Flutter Focus assertion 崩潰，改採本專案 `notes_bottom_sheet.dart` 既有的「State 生命週期保管」正確模式）與 1 項 Important（plan checkbox 追蹤失準已補齊）。全專案 `flutter test`／`flutter analyze` 皆確認乾淨。詳見 `plans/plan-issue-2.md`「審查修正紀錄」與 `tmp/epic-14/review-plan-issue-2.md`／`review-issue-2.md`（未進版控）。
 
+**合併後回歸缺陷修正（PR #102，2026-08-02）：** 使用者回報自訂字型上傳後，開書進入「版面設定」的單書字型選單看不到自訂字型。`/diagnose` 查明根因：`LibraryScreen._openBook()`（全專案唯一真正建構 `ReaderScreen` 開書的地方）從未把 `customFontsRepository` 貫穿給 `ReaderScreen`，導致 `_loadCustomFonts()` 早期 return、`_customFonts` 永遠是空清單。當時計畫審查已注意到 `_openGroupFilteredView()`（分類篩選畫面遞迴自我建構點）容易漏傳並補了測試，卻沒涵蓋到 `_openBook()` 本身——本 Issue 上方「`reader_settings_sheet.dart` 字型選擇器可選取內建與自訂字型」這項驗收標準的既有單元測試直接建構 `ReaderSettingsSheet` 並傳入 `customFonts`，繞過了 `LibraryScreen → ReaderScreen` 這段真實貫穿路徑，因此測試綠燈但實際使用情境是壞的。已修正並補上會實際走過「真實開書路徑」的回歸測試（`test/screens/library_screen_test.dart`），詳見 `docs/epics/epic-14-system-settings/reviews/bugfix-repro.md`（未進版控）。`flutter analyze` 乾淨、`flutter test` 771/771 全數通過。
+
 **依賴／Blocked by：** Issue 1
 
 **What to build：**
