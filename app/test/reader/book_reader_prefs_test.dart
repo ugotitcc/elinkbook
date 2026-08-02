@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:elinkbook/reader/app_font.dart';
 import 'package:elinkbook/reader/book_reader_prefs.dart';
 import 'package:elinkbook/reader/column_mode.dart';
 import 'package:elinkbook/reader/epub_text_align.dart';
@@ -43,12 +42,12 @@ void main() {
 
   test('兩個欄位值完全相同的 BookReaderPrefs 視為相等', () {
     const a = BookReaderPrefs(
-      fontFamily: AppFont.sourceHanSans,
+      fontFamily: 'SourceHanSansTC',
       fontSize: 18,
       writingModeOverride: WritingMode.vertical,
     );
     const b = BookReaderPrefs(
-      fontFamily: AppFont.sourceHanSans,
+      fontFamily: 'SourceHanSansTC',
       fontSize: 18,
       writingModeOverride: WritingMode.vertical,
     );
@@ -91,7 +90,7 @@ void main() {
 
   test('toMap／fromMap round-trip 保留所有欄位（含 book_id）', () {
     const prefs = BookReaderPrefs(
-      fontFamily: AppFont.taiwanPearl,
+      fontFamily: 'TaiwanPearl',
       fontSize: 18.5,
       fontWeight: 1.75,
       lineHeight: 1.6,
@@ -106,7 +105,7 @@ void main() {
 
     final map = prefs.toMap('book-1');
     expect(map['book_id'], 'book-1');
-    expect(map['font_family'], 'taiwanPearl');
+    expect(map['font_family'], 'TaiwanPearl');
     expect(map['publisher_styles'], 0);
     expect(map['writing_mode_override'], 'horizontal');
 

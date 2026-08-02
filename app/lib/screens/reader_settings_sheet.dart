@@ -46,7 +46,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   static const _defaultMarginLeft = 24.0;
   static const _defaultMarginRight = 24.0;
 
-  late AppFont? _fontFamily;
+  late String? _fontFamily;
   late double _fontSize;
   late double _fontWeightMultiplier;
   late double _lineHeight;
@@ -419,17 +419,17 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
       child: Row(
         children: [
           const Expanded(child: Text('單書閱讀字型')),
-          DropdownButton<AppFont?>(
+          DropdownButton<String?>(
             key: const Key('reader_settings_font_family'),
             value: _fontFamily,
             items: [
-              const DropdownMenuItem<AppFont?>(
+              const DropdownMenuItem<String?>(
                 value: null,
                 child: Text('使用書本內建字型'),
               ),
               ...AppFont.values.map(
-                (font) => DropdownMenuItem<AppFont?>(
-                  value: font,
+                (font) => DropdownMenuItem<String?>(
+                  value: font.familyName,
                   child: Text(_fontDisplayName(font)),
                 ),
               ),

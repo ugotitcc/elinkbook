@@ -7,7 +7,6 @@ import 'package:elinkbook/reader/column_mode.dart';
 import 'package:elinkbook/reader/dual_page_mode.dart';
 import 'package:elinkbook/reader/foliate_epub_reader_view.dart';
 import 'package:elinkbook/reader/writing_mode.dart';
-import 'package:elinkbook/reader/app_font.dart';
 import 'package:elinkbook/reader/epub_text_align.dart';
 import 'package:elinkbook/reader/page_turn_mode.dart';
 import 'package:elinkbook/reader/foliate_native_bridge.dart';
@@ -82,7 +81,7 @@ void main() {
         onError: _noopError,
         writingMode: WritingMode.vertical,
         pageTurnMode: PageTurnMode.scroll,
-        fontFamily: AppFont.sourceHanSans,
+        fontFamily: 'SourceHanSansTC',
         fontSize: 1.125,
         fontWeight: 1.75,
         lineHeight: 1.6,

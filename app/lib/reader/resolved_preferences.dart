@@ -1,4 +1,3 @@
-import 'app_font.dart';
 import 'column_mode.dart';
 import 'dual_page_direction.dart';
 import 'dual_page_mode.dart';
@@ -26,7 +25,7 @@ import 'zone_action.dart';
 /// `tmp/refactor-reader-prefs/reviews/review-refactor-reader-prefs-plan.md`）。
 class ResolvedPreferences {
   final WritingMode? writingMode;
-  final AppFont? fontFamily;
+  final String? fontFamily;
   final double? fontSize;
   final double? fontWeight;
   final double? lineHeight;

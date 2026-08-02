@@ -3,7 +3,6 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/library/sqlite_library_repository.dart';
-import 'package:elinkbook/reader/app_font.dart';
 import 'package:elinkbook/reader/book_reader_prefs.dart';
 import 'package:elinkbook/reader/book_reader_prefs_repository.dart';
 import 'package:elinkbook/reader/dual_page_direction.dart';
@@ -48,7 +47,7 @@ void main() {
 
   test('save 寫入後，load 讀回相同的值', () async {
     const prefs = BookReaderPrefs(
-      fontFamily: AppFont.sourceHanSerif,
+      fontFamily: 'SourceHanSerifTC',
       fontSize: 20,
       writingModeOverride: WritingMode.vertical,
     );

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:elinkbook/reader/app_font.dart';
 import 'package:elinkbook/reader/book_reader_prefs.dart';
 import 'package:elinkbook/reader/column_mode.dart';
 import 'package:elinkbook/reader/epub_text_align.dart';
@@ -12,7 +11,7 @@ import 'package:elinkbook/screens/reader_settings_sheet.dart';
 void main() {
   testWidgets('初始值正確反映傳入的 BookReaderPrefs', (tester) async {
     const prefs = BookReaderPrefs(
-      fontFamily: AppFont.sourceHanSerif,
+      fontFamily: 'SourceHanSerifTC',
       fontSize: 1.375, // UI 22.0
       fontWeight: 1.75, // UI 700
       lineHeight: 1.8,
@@ -29,10 +28,10 @@ void main() {
 
     expect(
       tester
-          .widget<DropdownButton<AppFont?>>(
+          .widget<DropdownButton<String?>>(
               find.byKey(const Key('reader_settings_font_family')))
           .value,
-      AppFont.sourceHanSerif,
+      'SourceHanSerifTC',
     );
     expect(
       tester
@@ -228,12 +227,12 @@ void main() {
     BookReaderPrefs? result;
     await _pumpSheet(
       tester,
-      const BookReaderPrefs(fontFamily: AppFont.taiwanPearl),
+      const BookReaderPrefs(fontFamily: 'TaiwanPearl'),
       (prefs) => result = prefs,
     );
 
     final dropdown = find.byKey(const Key('reader_settings_font_family'));
-    tester.widget<DropdownButton<AppFont?>>(dropdown).onChanged!(null);
+    tester.widget<DropdownButton<String?>>(dropdown).onChanged!(null);
     await tester.pump();
 
     expect(result, isNotNull);
