@@ -5,7 +5,6 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:elinkbook/screens/settings_screen.dart';
 import 'package:elinkbook/theme/app_theme.dart';
 import '../support/fake_reader_prefs_manager.dart';
-import 'package:elinkbook/reader/custom_fonts_repository.dart';
 import '../support/fake_custom_fonts_repository.dart';
 
 const _appInfoChannel = MethodChannel('elinkbook/app_info');

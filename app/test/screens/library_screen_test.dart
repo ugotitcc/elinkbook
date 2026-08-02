@@ -31,7 +31,6 @@ import 'package:path_provider_platform_interface/path_provider_platform_interfac
 import 'package:share_plus_platform_interface/share_plus_platform_interface.dart';
 import '../support/fake_path_provider_platform.dart';
 import '../support/fake_share_platform.dart';
-import 'package:elinkbook/reader/custom_fonts_repository.dart';
 import '../support/fake_custom_fonts_repository.dart';
 import 'package:elinkbook/screens/settings_screen.dart';
 

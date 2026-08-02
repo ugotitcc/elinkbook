@@ -23,11 +23,25 @@ class FontManagementScreen extends StatefulWidget {
 class _FontManagementScreenState extends State<FontManagementScreen> {
   List<CustomFont> _customFonts = [];
   bool _isUploading = false;
+  // 重新命名對話框使用的 TextEditingController，交由本 State 生命週期保管
+  // （比照 notes_bottom_sheet.dart 既有先例）：不在 showDialog 呼叫結束後
+  // 立即 dispose——showDialog 回傳的 Future 在 Navigator.pop() 當下就完成，
+  // 早於 AlertDialog 退場轉場動畫實際跑完，此時其底下的 TextField 仍會在
+  // 後續幾個 frame 被重新 build，立即 dispose 會拋出
+  // 「TextEditingController used after being disposed」。改為每次重新命名時
+  // 若有前一個實例先 dispose，並在 [dispose] 一併清理。
+  TextEditingController? _renameController;
 
   @override
   void initState() {
     super.initState();
     _loadFonts();
+  }
+
+  @override
+  void dispose() {
+    _renameController?.dispose();
+    super.dispose();
   }
 
   Future<void> _loadFonts() async {
@@ -192,7 +206,9 @@ class _FontManagementScreenState extends State<FontManagementScreen> {
   }
 
   Future<void> _renameFont(CustomFont font) async {
+    _renameController?.dispose();
     final controller = TextEditingController(text: font.displayName);
+    _renameController = controller;
     final newName = await showDialog<String>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -310,5 +326,4 @@ String _stripExtension(String fileName) {
   final dotIndex = fileName.lastIndexOf('.');
   return dotIndex > 0 ? fileName.substring(0, dotIndex) : fileName;
 }
-
 
