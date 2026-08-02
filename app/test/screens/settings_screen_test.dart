@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:elinkbook/screens/settings_screen.dart';
+import 'package:elinkbook/theme/app_theme.dart';
 import '../support/fake_reader_prefs_manager.dart';
 
 const _appInfoChannel = MethodChannel('elinkbook/app_info');
@@ -25,14 +26,52 @@ void main() {
         .setMockMethodCallHandler(_appInfoChannel, null);
   });
 
-  testWidgets('SettingsScreen 顯示設定標題與「關於」「導航熱區」入口', (tester) async {
+  testWidgets('SettingsScreen 顯示設定標題與「佈景」「關於」「導航熱區」入口', (tester) async {
     await tester.pumpWidget(MaterialApp(
       home: SettingsScreen(prefsManager: FakeReaderPrefsManager()),
     ));
 
     expect(find.text('設定'), findsOneWidget);
+    expect(find.text('佈景'), findsOneWidget);
+    expect(find.byKey(const Key('settings_theme_dot_light')), findsOneWidget);
+    expect(find.byKey(const Key('settings_theme_dot_dark')), findsOneWidget);
+    expect(find.byKey(const Key('settings_theme_dot_sepia')), findsOneWidget);
     expect(find.byKey(const Key('settings_about_button')), findsOneWidget);
     expect(find.byKey(const Key('settings_nav_zone_button')), findsOneWidget);
+  });
+
+  testWidgets('SettingsScreen 點擊主題圓點觸發 onThemeChanged（Issue：AppBar 工具列溢位修復）',
+      (tester) async {
+    AppTheme? receivedTheme;
+    await tester.pumpWidget(MaterialApp(
+      home: SettingsScreen(
+        prefsManager: FakeReaderPrefsManager(),
+        currentTheme: AppTheme.light,
+        onThemeChanged: (theme) => receivedTheme = theme,
+      ),
+    ));
+
+    await tester.tap(find.byKey(const Key('settings_theme_dot_sepia')));
+    await tester.pumpAndSettle();
+
+    expect(receivedTheme, AppTheme.sepia);
+  });
+
+  testWidgets('SettingsScreen E-Ink 模式下主題圓點停用點擊', (tester) async {
+    AppTheme? receivedTheme;
+    await tester.pumpWidget(MaterialApp(
+      home: SettingsScreen(
+        prefsManager: FakeReaderPrefsManager(),
+        currentTheme: AppTheme.light,
+        isEinkMode: true,
+        onThemeChanged: (theme) => receivedTheme = theme,
+      ),
+    ));
+
+    await tester.tap(find.byKey(const Key('settings_theme_dot_dark')));
+    await tester.pumpAndSettle();
+
+    expect(receivedTheme, isNull);
   });
 
   testWidgets('點擊「關於」導航至 AboutScreen，可返回 SettingsScreen', (tester) async {

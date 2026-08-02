@@ -179,6 +179,37 @@ void main() {
   });
 
   testWidgets(
+      '窄邏輯寬度裝置（比照 AiPaper Reader C 等 E-Ink 裝置實測會觸發溢位的寬度區間）下，'
+      '書架 AppBar 工具列不再 RenderFlex overflow（epic-18：3 顆主題圓點移至 SettingsScreen 後）',
+      (tester) async {
+    // 修復前：11 個固定寬度 actions 項目在寬度 360 時已確認溢位 29px（見
+    // reviews/bugfix-repro-appbar-overflow.md）；修復後移除 3 顆主題圓點 +
+    // 間隔（僅存 7 項），在同一寬度下應不再溢位。
+    tester.view.physicalSize = const Size(360, 1648);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    final book = _testBook(id: '1', title: '紅樓夢');
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: [book]),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    // 主題圓點已搬離書架 AppBar，不應再出現於此。
+    expect(find.byKey(const Key('library_theme_dot_light')), findsNothing);
+  });
+
+  testWidgets(
       '裝置旋轉（MediaQuery 從直立變橫放）後，書架封面欄數即時從 3 變為 4，不需要重新導航或重建整個畫面',
       (tester) async {
     tester.view.physicalSize = const Size(800, 1200);

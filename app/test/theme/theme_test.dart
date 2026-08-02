@@ -6,6 +6,7 @@ import 'package:elinkbook/main.dart';
 import 'package:elinkbook/theme/app_theme.dart';
 import 'package:elinkbook/theme/app_theme_preferences.dart';
 import 'package:elinkbook/screens/library_screen.dart';
+import 'package:elinkbook/screens/settings_screen.dart';
 import 'package:elinkbook/library/sqlite_library_repository.dart';
 import 'package:elinkbook/reader/reader_prefs_manager.dart';
 
@@ -88,27 +89,26 @@ void main() {
     expect(materialApp.theme?.brightness, Brightness.light);
   });
 
-  testWidgets('LibraryScreen 主題切換按鈕點擊更新 preferences', (tester) async {
+  testWidgets(
+      'SettingsScreen「佈景」主題切換按鈕點擊更新 preferences（原位於 LibraryScreen AppBar，'
+      '因 epic-18 工具列溢位修復搬移至此）', (tester) async {
     SharedPreferences.setMockInitialValues({});
     AppTheme? receivedTheme;
 
     await tester.pumpWidget(
       MaterialApp(
-        home: LibraryScreen(
-          repository: FakeLibraryRepository(),
-          importService: FakeBookImportService(),
+        home: SettingsScreen(
           prefsManager: prefsManager,
           currentTheme: AppTheme.light,
           isEinkMode: false,
           onThemeChanged: (theme) => receivedTheme = theme,
-          onEinkModeChanged: (_) {},
         ),
       ),
     );
     await tester.pumpAndSettle();
 
     // 點擊 dark 主題圓點
-    await tester.tap(find.byKey(const Key('library_theme_dot_dark')));
+    await tester.tap(find.byKey(const Key('settings_theme_dot_dark')));
     await tester.pumpAndSettle();
 
     expect(receivedTheme, AppTheme.dark);

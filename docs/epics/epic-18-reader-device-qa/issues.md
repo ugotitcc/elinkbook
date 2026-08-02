@@ -877,6 +877,45 @@ Issue 16 確認「強制 FXL」後橫向雙頁模式退化成單頁的根因；I
 
 ---
 
+## Issue 24：書架 AppBar 工具列在窄邏輯寬度裝置上 RenderFlex overflow（黑黃警示條紋蓋住設定圖示）
+
+**Status:** ✅ 已完成（2026-08-02，`/diagnose`）。`flutter analyze` 乾淨、`flutter test`（全專案）724/724 通過。
+
+**依賴：** 無。
+
+**背景：** 使用者於真機 AiPaper Reader C（824×1648／150 PPI）截圖回報，書架畫面右上角出現黑黃警示條紋圖示，蓋住原本的設定齒輪圖示，文字被裁到只剩「...ERFLOWED BY...」——這是 Flutter debug 模式的 `RenderFlex` 溢位警示（`RIGHT OVERFLOWED BY N PIXELS`），不是一般錯誤訊息或 LOG 圖示。
+
+**根因（widget test 寬度掃描定位）：** `_buildNormalAppBar()`（`library_screen.dart:551-638`）的 `actions:` 列表原本有 11 個固定寬度項目（3 顆主題圓點＋間隔＋E-Ink 對比切換＋分隔線＋排序＋格狀/列表切換＋匯入(+)＋管理分類＋設定），實測需要約 390 邏輯像素才放得下：
+
+```
+width=450.0 exception=none
+width=412.0 exception=none
+width=390.0 exception=none
+width=360.0 exception=OVERFLOW: A RenderFlex overflowed by 29 pixels on the right.
+```
+
+AiPaper Reader C 這類 E-Ink 裝置為了讓文字/圖示夠大，`devicePixelRatio` 通常設得比物理 PPI 換算值高很多，實際邏輯寬度遠小於 824，落入溢位區間。`epic-18` 過去處理過的都是 `ReaderScreen`（PDF/EPUB 閱讀器）AppBar 的**垂直**高度/溢位問題，書架 `LibraryScreen` 的工具列**橫向**溢位是全新發現、從未處理過。
+
+**修復方向（人類決策）：** 把 3 顆主題圓點（連同其間隔）從 `LibraryScreen` AppBar 移除，改放進全域「設定」畫面（`SettingsScreen`）新增的「佈景」項目；E-Ink 對比切換維持留在書架 AppBar 不動。此舉將固定寬度項目從 11 個減至 7 個，省下約 100 邏輯像素，同一組寬度掃描下 360px 也不再溢位。
+
+**範圍：**
+1. `app/lib/screens/settings_screen.dart`：新增建構參數 `currentTheme`／`isEinkMode`／`onThemeChanged`（皆有預設值，向後相容既有呼叫點）；`ListView` 新增「佈景」`ListTile`，`trailing` 為 3 顆主題圓點（`settings_theme_dot_light`／`_dark`／`_sepia`），互動邏輯（E-Ink 模式下停用點擊＋降低不透明度）原樣從 `LibraryScreen._buildThemeDot()` 搬移。
+2. `app/lib/screens/library_screen.dart`：`_buildNormalAppBar()` 移除 3 顆 `_buildThemeDot(...)` 呼叫與間隔 `SizedBox`；移除已無呼叫端的 `_buildThemeDot()` 方法；「設定」`IconButton.onPressed` 改為把 `currentTheme`／`isEinkMode`／`onThemeChanged` 一併傳入 `SettingsScreen(...)`。`LibraryScreen` 自身的公開建構參數不變（`main.dart` 不需改動）。
+
+**單元測試要求（已完成）：**
+- `app/test/screens/library_screen_test.dart`：新增測試於寬度 360（已實測確認修復前會溢位的寬度）驗證 `tester.takeException()` 為 `null`，且 `library_theme_dot_light` 不再出現於書架 AppBar。
+- `app/test/screens/settings_screen_test.dart`：新增測試驗證「佈景」項目與 3 顆主題圓點出現、點擊觸發 `onThemeChanged`、E-Ink 模式下點擊不觸發。
+- `app/test/theme/theme_test.dart`：原本針對 `LibraryScreen` 主題圓點點擊的測試改為對 `SettingsScreen` 驗證（互動邏輯搬移後的對應調整）。
+
+**驗收標準：** 書架 AppBar 工具列在窄邏輯寬度（實測 360px 為代表性寬度）下不再出現 `RenderFlex overflow`；「設定」畫面新增「佈景」項目可正確切換主題並持久化（沿用既有 `AppThemePreferences` 儲存機制，未變動）；`flutter analyze`／`flutter test` 全數通過。
+
+**相關佐證：**
+- `tmp/images/書架ISSUE.jpg`（使用者原始回報截圖）
+- `app/lib/screens/library_screen.dart:551-627`（修復後的 `_buildNormalAppBar()`）
+- `app/lib/screens/settings_screen.dart`（新增的「佈景」區塊）
+
+---
+
 ## 審查修訂紀錄（`tmp/epic-18/reviews/review_report.md`，經人類確認後採納）
 
 - **採納**：`spec.md`／Issue 4 澄清 `buildOverrideCss()` 維持純函式，所有 `setAttribute` 呼叫改到 `window.applyPreferences(prefs)`（既有的副作用進入點，`pageTurnMode`/`writingMode` 已是同樣模式）。
