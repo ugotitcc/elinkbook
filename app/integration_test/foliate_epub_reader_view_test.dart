@@ -8,7 +8,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:elinkbook/reader/app_font.dart';
 import 'package:elinkbook/reader/epub_text_align.dart';
 import 'package:elinkbook/reader/foliate_epub_reader_view.dart';
 import 'package:elinkbook/reader/writing_mode.dart';
@@ -369,7 +368,7 @@ void main() {
             errorMessage = message;
             if (!completer.isCompleted) completer.complete();
           },
-          fontFamily: AppFont.sourceHanSerif,
+          fontFamily: 'SourceHanSerifTC',
           fontSize: 1.5,
           fontWeight: 1.75,
           lineHeight: 2.0,

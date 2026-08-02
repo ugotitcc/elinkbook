@@ -1,4 +1,3 @@
-import 'app_font.dart';
 import 'column_mode.dart';
 import 'dual_page_direction.dart';
 import 'dual_page_mode.dart';
@@ -18,7 +17,7 @@ import 'writing_mode.dart';
 /// `pdf` 前綴的 6 個欄位為 PDF 專屬，皆為單書持久化、無全域預設層（見
 /// epic-4 design.md 決策 #2／#8）。
 class BookReaderPrefs {
-  final AppFont? fontFamily;
+  final String? fontFamily;
   final double? fontSize;
   final double? fontWeight; // Readium 倍率語意（1.0 = normal），非 CSS 300-900 原始值
   final double? lineHeight;
@@ -101,7 +100,7 @@ class BookReaderPrefs {
   Map<String, Object?> toMap(String bookId) {
     return {
       'book_id': bookId,
-      'font_family': fontFamily?.name,
+      'font_family': fontFamily,
       'font_size': fontSize,
       'font_weight': fontWeight,
       'line_height': lineHeight,
@@ -137,9 +136,7 @@ class BookReaderPrefs {
 
   factory BookReaderPrefs.fromMap(Map<String, Object?> map) {
     return BookReaderPrefs(
-      fontFamily: map['font_family'] == null
-          ? null
-          : AppFont.values.byName(map['font_family'] as String),
+      fontFamily: map['font_family'] as String?,
       // SQLite 對無小數部分的 REAL 欄位可能讀回 int（見
       // Book.fromMap 的 progress 欄位既有處理方式），故用 num? 轉換，
       // 不可直接 `as double?`（會拋出 type cast 例外）。
@@ -276,7 +273,7 @@ class BookReaderPrefs {
   /// 建構方式，不要用這個方法，見 epic-4 plan-issue-5.md Global
   /// Constraints「copyWith 語意」的說明。
   BookReaderPrefs copyWith({
-    AppFont? fontFamily,
+    String? fontFamily,
     double? fontSize,
     double? fontWeight,
     double? lineHeight,

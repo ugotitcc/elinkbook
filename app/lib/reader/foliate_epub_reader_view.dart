@@ -6,7 +6,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
-import 'app_font.dart';
 import 'column_mode.dart';
 import 'dual_page_mode.dart';
 import 'epub_decoration.dart';
@@ -100,7 +99,7 @@ Map<String, Object?> buildFoliatePreferencesMap(FoliateEpubReaderView view) {
     map['pageTurnMode'] =
         view.pageTurnMode == PageTurnMode.scroll ? 'scroll' : 'paginated';
   }
-  if (view.fontFamily != null) map['fontFamily'] = view.fontFamily!.familyName;
+  if (view.fontFamily != null) map['fontFamily'] = view.fontFamily!;
   if (view.fontSize != null) map['fontSize'] = view.fontSize;
   if (view.fontWeight != null) map['fontWeight'] = view.fontWeight;
   if (view.lineHeight != null) map['lineHeight'] = view.lineHeight;
@@ -166,7 +165,7 @@ class FoliateEpubReaderView extends StatefulWidget {
   final ValueChanged<EpubLayoutInfo>? onLayoutResolved;
   final WritingMode? writingMode;
   final PageTurnMode? pageTurnMode;
-  final AppFont? fontFamily;
+  final String? fontFamily;
   final double? fontSize;
   final double? fontWeight;
   final double? lineHeight;

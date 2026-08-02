@@ -27,7 +27,7 @@ class SqliteLibraryRepository implements LibraryRepository {
   static Future<SqliteLibraryRepository> open(String path) async {
     final db = await openDatabase(
       path,
-      version: 15,
+      version: 16,
       onConfigure: (db) async {
         // book_reader_prefs 的 ON DELETE CASCADE 需要外鍵約束真正生效，
         // SQLite 預設不強制外鍵，須逐連線手動開啟（見 epic-3 plan-issue-1）。
@@ -63,6 +63,7 @@ class SqliteLibraryRepository implements LibraryRepository {
         await _createBookmarksTable(db);
         await _createHighlightsTable(db);
         await _createNotesTable(db);
+        await _createCustomFontsTable(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
@@ -132,6 +133,15 @@ class SqliteLibraryRepository implements LibraryRepository {
             // 崩潰。
             await _addFullscreenColumn(db);
           }
+          if (oldVersion < 16) {
+            // epic-14-system-settings Issue 1：font_family 型別由 AppFont
+            // 封閉列舉字串改為任意 family name 字串（決策 2），既有 5
+            // 種列舉值資料需逐筆轉換。必須放在 else 分支內（oldVersion
+            // >= 2，即 book_reader_prefs 表已存在）——oldVersion < 2 時
+            // 該表剛由 _createBookReaderPrefsTable 全新建立，不會有任何
+            // 舊格式資料需要轉換。
+            await _migrateFontFamilyValues(db);
+          }
         }
         if (oldVersion < 5) {
           // epic-5-toc-pagination Issue 2：本機閱讀位置記憶新增的 2 個
@@ -185,6 +195,19 @@ class SqliteLibraryRepository implements LibraryRepository {
           // 刻意放在上方 if/else 之外、無條件檢查，比照 oldVersion < 5/6
           // 區塊的既有原則。
           await _addEpubLayoutColumn(db);
+        }
+        if (oldVersion < 16) {
+          // epic-14-system-settings Issue 1：自訂字型清單新增的全新資料表。
+          // 【審查修正，見 tmp/epic-14/review-issue-1.md Critical 1】原本
+          // 誤放在上方 if/else 的 else 分支內（oldVersion >= 2 才會執行），
+          // 導致停留在 version 1 的裝置跳級升級到 16 時，這張表完全不會
+          // 被建立——與 bookmarks（oldVersion < 8）／highlights／notes
+          // （oldVersion < 9）比照同一原則，custom_fonts 是全新的獨立表
+          // （非既有表新增欄位），任何 oldVersion < 16 的裝置都必然還沒有
+          // 這張表，應與上方 books 表遷移／bookmarks／highlights／notes
+          // 同一層級（onUpgrade 頂層、無條件檢查），不受 book_reader_prefs
+          // 表是否已存在影響。
+          await _createCustomFontsTable(db);
         }
       },
     );
@@ -436,6 +459,57 @@ class SqliteLibraryRepository implements LibraryRepository {
     if (tables.isNotEmpty) {
       await db.execute(
           'ALTER TABLE book_reader_prefs ADD COLUMN fullscreen INTEGER');
+    }
+  }
+
+  static Future<void> _createCustomFontsTable(Database db) async {
+    // 自訂字型清單（epic-14-system-settings FR-35），見
+    // docs/epics/epic-14-system-settings/spec.md「字型管理模組」。字型檔案
+    // 本身不落地複本（ADR 0021），font_uri 存 content:// URI。
+    await db.execute('''
+      CREATE TABLE custom_fonts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        display_name TEXT NOT NULL,
+        family_name TEXT NOT NULL UNIQUE,
+        font_uri TEXT NOT NULL
+      )
+    ''');
+  }
+
+  static Future<void> _migrateFontFamilyValues(Database db) async {
+    // book_reader_prefs.font_family 型別由 AppFont 封閉列舉字串改為任意
+    // family name 字串（epic-14-system-settings 決策 2），既有 5 種列舉
+    // 值資料需逐筆轉換為對應的實際 family name（取自 app_font.dart 現行
+    // AppFontFamilyName.familyName），NULL 不受影響。僅在表與欄位皆存在
+    // 時才執行——真實裝置 oldVersion >= 2 時 book_reader_prefs 表與
+    // font_family 欄位必然存在（該欄位自 version 2 起就一直存在，從未
+    // 透過 ALTER TABLE 後補），但本測試檔內多個既有、與本次無關的舊版
+    // 資料庫測試 fixture（例如「既有 version 4/5/9/10 裝置升級」等測試）
+    // 為了只聚焦驗證 books 表遷移，刻意省略建立 book_reader_prefs 表，
+    // 此防禦查詢是為了不讓這些既有測試因此拋出 `no such table`／
+    // `no such column` 例外而失敗（曾嘗試移除、經 `flutter test` 實測
+    // 證實會連帶打壞 4 個既有測試，見 tmp/epic-14/review-issue-1.md
+    // Minor 3 的簡化建議在此專案的既有測試現況下不成立，予以保留）。
+    final tables = await db.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='book_reader_prefs'");
+    if (tables.isEmpty) return;
+    final columns = await db.rawQuery("PRAGMA table_info(book_reader_prefs)");
+    final hasFontFamily = columns.any((c) => c['name'] == 'font_family');
+    if (!hasFontFamily) return;
+    const legacyToFamilyName = {
+      'sourceHanSans': 'SourceHanSansTC',
+      'sourceHanSerif': 'SourceHanSerifTC',
+      'guanKiapTsingKhai': 'GuanKiapTsingKhai',
+      'taiwanPearl': 'TaiwanPearl',
+      'genRyuMinTW': 'GenRyuMinTW',
+    };
+    for (final entry in legacyToFamilyName.entries) {
+      await db.update(
+        'book_reader_prefs',
+        {'font_family': entry.value},
+        where: 'font_family = ?',
+        whereArgs: [entry.key],
+      );
     }
   }
 

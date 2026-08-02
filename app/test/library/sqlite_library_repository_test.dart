@@ -2016,6 +2016,325 @@ void main() {
     expect(updated['fullscreen'], 1);
   });
 
+  test('全新安裝的 custom_fonts 表可用（version 16 起 onCreate 已含括）', () async {
+    await repository.database.insert('custom_fonts', {
+      'display_name': '我的字型',
+      'family_name': 'MyCustomFont',
+      'font_uri': 'content://example/font1',
+    });
+
+    final row =
+        (await repository.database.query('custom_fonts')).single;
+    expect(row['display_name'], '我的字型');
+    expect(row['family_name'], 'MyCustomFont');
+    expect(row['font_uri'], 'content://example/font1');
+  });
+
+  test('custom_fonts.family_name 具備 UNIQUE 約束', () async {
+    await repository.database.insert('custom_fonts', {
+      'display_name': 'A',
+      'family_name': 'DupFamily',
+      'font_uri': 'content://example/a',
+    });
+
+    expect(
+      () => repository.database.insert('custom_fonts', {
+        'display_name': 'B',
+        'family_name': 'DupFamily',
+        'font_uri': 'content://example/b',
+      }),
+      throwsA(isA<DatabaseException>()),
+    );
+  });
+
+  test('既有 version 15 裝置升級到 version 16，book_reader_prefs.font_family 既有列舉值字串轉換為 family name，NULL 不受影響',
+      () async {
+    final tempDir = await Directory.systemTemp
+        .createTemp('elinkbook_migration_v15_to_v16_test');
+    addTearDown(() => tempDir.delete(recursive: true));
+    final dbPath = p.join(tempDir.path, 'test.db');
+
+    // 模擬「已存在於 version 15」的舊資料庫：手動以 version 15 當時的完整
+    // schema（book_reader_prefs 含 fullscreen、不含 custom_fonts 表）建立，
+    // font_family 欄位存的是舊格式的 AppFont 列舉值字串，比照既有
+    // v14→v15 遷移測試寫法。
+    final oldDb = await databaseFactory.openDatabase(
+      dbPath,
+      options: OpenDatabaseOptions(
+        version: 15,
+        onConfigure: (db) async {
+          await db.execute('PRAGMA foreign_keys = ON');
+        },
+        onCreate: (db, version) async {
+          await db.execute('CREATE TABLE groups (name TEXT PRIMARY KEY)');
+          await db.insert('groups', {'name': '未分類'});
+          await db.execute('''
+            CREATE TABLE books (
+              id TEXT PRIMARY KEY,
+              title TEXT NOT NULL,
+              author TEXT,
+              format TEXT NOT NULL,
+              filePath TEXT NOT NULL,
+              source TEXT NOT NULL,
+              coverPath TEXT,
+              progress REAL NOT NULL DEFAULT 0,
+              epubLocator TEXT,
+              pdfPageIndex INTEGER,
+              totalCharacterCount INTEGER,
+              is_fixed_layout INTEGER,
+              groupName TEXT NOT NULL DEFAULT '未分類',
+              createTime INTEGER NOT NULL,
+              lastReadTime INTEGER NOT NULL
+            )
+          ''');
+          await db.execute('''
+            CREATE TABLE book_reader_prefs (
+              book_id TEXT PRIMARY KEY REFERENCES books(id) ON DELETE CASCADE,
+              font_family TEXT,
+              font_size REAL,
+              font_weight REAL,
+              line_height REAL,
+              paragraph_spacing REAL,
+              page_margins REAL,
+              text_align TEXT,
+              publisher_styles INTEGER,
+              writing_mode_override TEXT,
+              page_turn_mode_override TEXT,
+              screen_orientation_override TEXT,
+              pdf_fit_mode TEXT,
+              pdf_contrast REAL,
+              pdf_brightness REAL,
+              pdf_bold_strength REAL,
+              pdf_crop_mode TEXT,
+              pdf_crop_rect TEXT,
+              dual_page_mode TEXT,
+              dual_page_cover_alone INTEGER,
+              dual_page_direction TEXT,
+              show_header INTEGER,
+              show_footer INTEGER,
+              column_mode TEXT,
+              column_size REAL,
+              margin_top REAL,
+              margin_bottom REAL,
+              margin_left REAL,
+              margin_right REAL,
+              fullscreen INTEGER
+            )
+          ''');
+        },
+      ),
+    );
+    await oldDb.insert('books', {
+      'id': 'b1',
+      'title': '既有書籍（黑體）',
+      'format': 'epub',
+      'filePath': 'content://example/b1',
+      'source': 'local',
+      'progress': 0.0,
+      'groupName': '未分類',
+      'createTime': 1000,
+      'lastReadTime': 1000,
+    });
+    await oldDb.insert('books', {
+      'id': 'b2',
+      'title': '既有書籍（未設字型）',
+      'format': 'epub',
+      'filePath': 'content://example/b2',
+      'source': 'local',
+      'progress': 0.0,
+      'groupName': '未分類',
+      'createTime': 1000,
+      'lastReadTime': 1000,
+    });
+    await oldDb.insert('book_reader_prefs', {
+      'book_id': 'b1',
+      'font_family': 'sourceHanSans',
+    });
+    await oldDb.insert('book_reader_prefs', {
+      'book_id': 'b2',
+      'font_family': null,
+    });
+    await oldDb.close();
+
+    // 重新以目前版本開啟同一個檔案，觸發 onUpgrade（oldVersion=15 →
+    // newVersion=16），驗證既有列舉值字串正確轉換、NULL 不受影響、
+    // custom_fonts 表已建立。
+    final upgraded = await SqliteLibraryRepository.open(dbPath);
+    addTearDown(() => upgraded.close());
+
+    final row1 = (await upgraded.database
+            .query('book_reader_prefs', where: 'book_id = ?', whereArgs: ['b1']))
+        .single;
+    expect(row1['font_family'], 'SourceHanSansTC');
+
+    final row2 = (await upgraded.database
+            .query('book_reader_prefs', where: 'book_id = ?', whereArgs: ['b2']))
+        .single;
+    expect(row2['font_family'], isNull);
+
+    final customFontsTables = await upgraded.database.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='custom_fonts'");
+    expect(customFontsTables, isNotEmpty);
+  });
+
+  test('font_family 全部 5 種既有列舉值字串皆正確轉換為對應 family name', () async {
+    final tempDir = await Directory.systemTemp
+        .createTemp('elinkbook_migration_font_family_all_test');
+    addTearDown(() => tempDir.delete(recursive: true));
+    final dbPath = p.join(tempDir.path, 'test.db');
+
+    final oldDb = await databaseFactory.openDatabase(
+      dbPath,
+      options: OpenDatabaseOptions(
+        version: 15,
+        onConfigure: (db) async {
+          await db.execute('PRAGMA foreign_keys = ON');
+        },
+        onCreate: (db, version) async {
+          await db.execute('CREATE TABLE groups (name TEXT PRIMARY KEY)');
+          await db.insert('groups', {'name': '未分類'});
+          await db.execute('''
+            CREATE TABLE books (
+              id TEXT PRIMARY KEY,
+              title TEXT NOT NULL,
+              format TEXT NOT NULL,
+              filePath TEXT NOT NULL,
+              source TEXT NOT NULL,
+              progress REAL NOT NULL DEFAULT 0,
+              groupName TEXT NOT NULL DEFAULT '未分類',
+              createTime INTEGER NOT NULL,
+              lastReadTime INTEGER NOT NULL
+            )
+          ''');
+          await db.execute('''
+            CREATE TABLE book_reader_prefs (
+              book_id TEXT PRIMARY KEY REFERENCES books(id) ON DELETE CASCADE,
+              font_family TEXT
+            )
+          ''');
+        },
+      ),
+    );
+    const legacyValues = [
+      'sourceHanSans',
+      'sourceHanSerif',
+      'guanKiapTsingKhai',
+      'taiwanPearl',
+      'genRyuMinTW',
+    ];
+    for (var i = 0; i < legacyValues.length; i++) {
+      await oldDb.insert('books', {
+        'id': 'b$i',
+        'title': '書 $i',
+        'format': 'epub',
+        'filePath': 'content://example/b$i',
+        'source': 'local',
+        'progress': 0.0,
+        'groupName': '未分類',
+        'createTime': 1000,
+        'lastReadTime': 1000,
+      });
+      await oldDb.insert('book_reader_prefs',
+          {'book_id': 'b$i', 'font_family': legacyValues[i]});
+    }
+    await oldDb.close();
+
+    final upgraded = await SqliteLibraryRepository.open(dbPath);
+    addTearDown(() => upgraded.close());
+
+    const expected = [
+      'SourceHanSansTC',
+      'SourceHanSerifTC',
+      'GuanKiapTsingKhai',
+      'TaiwanPearl',
+      'GenRyuMinTW',
+    ];
+    for (var i = 0; i < legacyValues.length; i++) {
+      final row = (await upgraded.database.query('book_reader_prefs',
+              where: 'book_id = ?', whereArgs: ['b$i']))
+          .single;
+      expect(row['font_family'], expected[i], reason: 'index $i');
+    }
+  });
+
+  test(
+      '既有 version 1 裝置（無 book_reader_prefs 表）跳級升級到 version 16，custom_fonts 表正確建立'
+      '（回歸測試：tmp/epic-14/review-issue-1.md Critical 1——_createCustomFontsTable 曾誤放在'
+      'onUpgrade 的 else／oldVersion>=2 分支內，導致 oldVersion==1 跳級升級時被完全跳過）',
+      () async {
+    final tempDir = await Directory.systemTemp
+        .createTemp('elinkbook_migration_v1_to_v16_test');
+    addTearDown(() => tempDir.delete(recursive: true));
+    final dbPath = p.join(tempDir.path, 'test.db');
+
+    // 模擬「已存在於 version 1」的最原始資料庫：只有 groups/books 兩張
+    // 表，完全沒有 book_reader_prefs 表——比照既有第 284 行「既有 version
+    // 1 裝置...跳級升級到 version 5」測試的既有寫法。oldVersion==1 時
+    // onUpgrade 只會走 `if (oldVersion < 2)` 分支（該分支之外的 else
+    // 區塊完全不會執行），custom_fonts 表的建立邏輯若被誤放在 else 分支
+    // 內就會在這個情境下漏掉，這正是本測試要防範的迴歸。
+    final oldDb = await databaseFactory.openDatabase(
+      dbPath,
+      options: OpenDatabaseOptions(
+        version: 1,
+        onConfigure: (db) async {
+          await db.execute('PRAGMA foreign_keys = ON');
+        },
+        onCreate: (db, version) async {
+          await db.execute('CREATE TABLE groups (name TEXT PRIMARY KEY)');
+          await db.insert('groups', {'name': '未分類'});
+          await db.execute('''
+            CREATE TABLE books (
+              id TEXT PRIMARY KEY,
+              title TEXT NOT NULL,
+              author TEXT,
+              format TEXT NOT NULL,
+              filePath TEXT NOT NULL,
+              source TEXT NOT NULL,
+              coverPath TEXT,
+              progress REAL NOT NULL DEFAULT 0,
+              groupName TEXT NOT NULL DEFAULT '未分類',
+              createTime INTEGER NOT NULL,
+              lastReadTime INTEGER NOT NULL
+            )
+          ''');
+        },
+      ),
+    );
+    await oldDb.insert('books', {
+      'id': 'b1',
+      'title': '最早期書籍',
+      'format': 'epub',
+      'filePath': 'content://example/b1',
+      'source': 'local',
+      'progress': 0.0,
+      'groupName': '未分類',
+      'createTime': 1000,
+      'lastReadTime': 1000,
+    });
+    await oldDb.close();
+
+    // 重新以目前版本開啟同一個檔案，觸發 onUpgrade（oldVersion=1 →
+    // newVersion=16）。若 Critical 1 的錯放缺陷仍存在，custom_fonts 表
+    // 不會被建立，下方查詢會拋出 `no such table: custom_fonts` 例外。
+    final upgraded = await SqliteLibraryRepository.open(dbPath);
+    addTearDown(() => upgraded.close());
+
+    final customFontsTables = await upgraded.database.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='custom_fonts'");
+    expect(customFontsTables, isNotEmpty);
+
+    // 證明表真的可用（不只是巧合存在於 sqlite_master），確認可正常插入。
+    await upgraded.database.insert('custom_fonts', {
+      'display_name': '測試字型',
+      'family_name': 'TestFamily',
+      'font_uri': 'content://example/font',
+    });
+    final row =
+        (await upgraded.database.query('custom_fonts')).single;
+    expect(row['family_name'], 'TestFamily');
+  });
+
   group('detectAndCacheEpubLayout', () {
     const channel = MethodChannel('elinkbook/book_metadata');
 
