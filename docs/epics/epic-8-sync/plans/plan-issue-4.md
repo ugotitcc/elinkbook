@@ -43,7 +43,7 @@
 
 **為什麼需要 `sync_pending_records`**：spec.md「跨裝置參照設計」明訂 `book_fingerprint` 查無對應本機書籍時「暫緩合併、留在待處理佇列」。由於下載游標（`sync_metadata.lastPulledServerUpdatedAt_<collection>`）在該筆紀錄被下載當下就會前進（spec.md「同步引擎」步驟 5：「若這次沒查到任何新紀錄則維持原值不變」——隱含「查到就更新」，不論該筆紀錄有沒有被成功合併），該筆遠端紀錄之後不會再被下載到，若不落地保存，之後即使使用者匯入了對應的書，這筆同步紀錄也永遠遺失。
 
-- [ ] **Step 1：撰寫失敗測試——新鮮安裝與升級兩種情境皆應建立新表**
+- [x] **Step 1：撰寫失敗測試——新鮮安裝與升級兩種情境皆應建立新表**
 
 在 `app/test/library/sqlite_library_repository_test.dart` 找到既有「既有 version 16 裝置...升級到 version 17」測試（`group` 內最後一個 `test(...)`）之後，新增：
 
@@ -97,7 +97,7 @@
   });
 ```
 
-- [ ] **Step 2：執行測試，確認因表不存在而失敗**
+- [x] **Step 2：執行測試，確認因表不存在而失敗**
 
 Run：
 
@@ -108,7 +108,7 @@ flutter test test/library/sqlite_library_repository_test.dart
 
 Expected：FAIL，`no such table: sync_remote_ids`（或等效訊息）。
 
-- [ ] **Step 3：新增建表函式，`onCreate`／`onUpgrade` 皆呼叫，版本號改為 18**
+- [x] **Step 3：新增建表函式，`onCreate`／`onUpgrade` 皆呼叫，版本號改為 18**
 
 `sqlite_library_repository.dart` 第 28 行 `version: 17,` 改為：
 
@@ -176,7 +176,7 @@ Expected：FAIL，`no such table: sync_remote_ids`（或等效訊息）。
   }
 ```
 
-- [ ] **Step 4：執行測試，確認通過**
+- [x] **Step 4：執行測試，確認通過**
 
 Run：
 
@@ -186,7 +186,7 @@ flutter test test/library/sqlite_library_repository_test.dart
 
 Expected：PASS（全部既有＋新增 2 則測試）。
 
-- [ ] **Step 5：`flutter analyze` + Commit**
+- [x] **Step 5：`flutter analyze` + Commit**
 
 ```bash
 flutter analyze
@@ -212,7 +212,7 @@ Expected：`flutter analyze` 顯示 "No issues found!"。
 - Consumes：無。
 - Produces：`delete()`/`deleteAllForBook()` 對外行為不變（呼叫端無感，`listByBook()` 依然看不到已刪除的紀錄），但內部改為 `UPDATE ... SET deleted_at = ?, updated_at = ?`，供 Task 7（推送 dirty 判定）／Task 8（墓碑清理）使用。
 
-- [ ] **Step 1：撰寫失敗測試——`bookmarks_repository_test.dart`**
+- [x] **Step 1：撰寫失敗測試——`bookmarks_repository_test.dart`**
 
 在既有「delete 移除指定單筆書籤，其餘不受影響」測試之後新增：
 
@@ -244,7 +244,7 @@ Expected：`flutter analyze` 顯示 "No issues found!"。
   });
 ```
 
-- [ ] **Step 2：撰寫失敗測試——`highlights_repository_test.dart`（含 FK 退化行為手動複製）**
+- [x] **Step 2：撰寫失敗測試——`highlights_repository_test.dart`（含 FK 退化行為手動複製）**
 
 先讀取該檔案既有的 import／`setUp` 區塊確認 `notesRepository` 變數名稱（`notes_repository_test.dart` 既有「FK 退化行為」測試已在同一個檔案的 `setUp` 內建構 `NotesRepository`；若 `highlights_repository_test.dart` 目前沒有建構 `NotesRepository`，比照該檔案既有的 `setUp` 模式新增），在既有「delete 移除...其餘不受影響」測試之後新增：
 
@@ -304,7 +304,7 @@ Expected：`flutter analyze` 顯示 "No issues found!"。
   });
 ```
 
-- [ ] **Step 3：撰寫失敗測試——`notes_repository_test.dart`**
+- [x] **Step 3：撰寫失敗測試——`notes_repository_test.dart`**
 
 在既有「delete 移除...其餘不受影響」測試之後新增：
 
@@ -322,7 +322,7 @@ Expected：`flutter analyze` 顯示 "No issues found!"。
   });
 ```
 
-- [ ] **Step 4：執行測試，確認因仍是真實 DELETE 而失敗**
+- [x] **Step 4：執行測試，確認因仍是真實 DELETE 而失敗**
 
 Run：
 
@@ -332,7 +332,7 @@ flutter test test/reader/bookmarks_repository_test.dart test/reader/highlights_r
 
 Expected：FAIL——新增的「軟刪除」測試會失敗（`rawRows` 為空，因為目前仍是真正 `DELETE FROM`）。
 
-- [ ] **Step 5：`BookmarksRepository`／`NotesRepository` 改為軟刪除（無 FK 退化顧慮）**
+- [x] **Step 5：`BookmarksRepository`／`NotesRepository` 改為軟刪除（無 FK 退化顧慮）**
 
 `bookmarks_repository.dart` 的 `delete()`/`deleteAllForBook()`（第 53-59 行）改為：
 
@@ -406,7 +406,7 @@ Expected：FAIL——新增的「軟刪除」測試會失敗（`rawRows` 為空�
   }
 ```
 
-- [ ] **Step 6：`HighlightsRepository` 改為軟刪除，並手動複製 FK `ON DELETE SET NULL` 行為**
+- [x] **Step 6：`HighlightsRepository` 改為軟刪除，並手動複製 FK `ON DELETE SET NULL` 行為**
 
 `highlights_repository.dart` 整份改為：
 
@@ -494,7 +494,7 @@ class HighlightsRepository {
 }
 ```
 
-- [ ] **Step 7：執行測試，確認全數通過（含既有的 FK 退化行為測試，現在改由手動邏輯達成同樣效果）**
+- [x] **Step 7：執行測試，確認全數通過（含既有的 FK 退化行為測試，現在改由手動邏輯達成同樣效果）**
 
 Run：
 
@@ -504,7 +504,7 @@ flutter test test/reader/bookmarks_repository_test.dart test/reader/highlights_r
 
 Expected：PASS，包含 `notes_repository_test.dart` 既有兩則「FK 退化行為」測試（現在是手動邏輯而非真正 FK 觸發，但對外行為不變）。
 
-- [ ] **Step 8：`flutter analyze` + 執行完整測試套件 + Commit**
+- [x] **Step 8：`flutter analyze` + 執行完整測試套件 + Commit**
 
 ```bash
 flutter analyze
@@ -537,7 +537,7 @@ git commit -m "fix(epic-8-sync): Issue 4 Task 2 — bookmarks/highlights/notes �
 - `pdf_page_index`/`progression`（number，可空，兩者互斥）：PDF 格式的書籤缺少 `progression` 時會下載回來 `0.0`，反之亦然——`0` 是合法的真實頁碼/進度值，無法單純用「是不是 0」判斷是否真的有設定。本 Task 的 `buildLocalFields` 因此改用**書籍格式**（`BookFileFormat`，由呼叫端於實際解析時查得，見 Task 8）判斷該取用哪一欄，另一欄一律視為不適用、寫回 `null`，而非依賴欄位值本身判斷。
 - `epub_locator_json`/`pdf_rect_json`（text，可空）：未設定會下載回來 `""`（空字串），必須正規化為 `null`——空字串本身不是合法的 JSON 內容，視同「未設定」不會誤傷真實資料。
 
-- [ ] **Step 1：撰寫失敗測試**
+- [x] **Step 1：撰寫失敗測試**
 
 Create `app/test/sync/sync_table_specs_test.dart`：
 
@@ -675,7 +675,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：執行測試，確認因檔案不存在而失敗**
+- [x] **Step 2：執行測試，確認因檔案不存在而失敗**
 
 Run：
 
@@ -685,7 +685,7 @@ flutter test test/sync/sync_table_specs_test.dart
 
 Expected：FAIL，找不到 `package:elinkbook/sync/sync_table_specs.dart`。
 
-- [ ] **Step 3：實作 `sync_models.dart`**
+- [x] **Step 3：實作 `sync_models.dart`**
 
 Create `app/lib/sync/sync_models.dart`：
 
@@ -778,7 +778,7 @@ import 'package:elinkbook/library/models/library_enums.dart';
 
 （放在檔案最上方，`enum SyncCollection` 定義之前。）
 
-- [ ] **Step 4：實作 `sync_table_specs.dart`**
+- [x] **Step 4：實作 `sync_table_specs.dart`**
 
 Create `app/lib/sync/sync_table_specs.dart`：
 
@@ -922,7 +922,7 @@ final Map<SyncCollection, SyncTableSpec> syncTableSpecs = {
 };
 ```
 
-- [ ] **Step 5：執行測試，確認全數通過**
+- [x] **Step 5：執行測試，確認全數通過**
 
 Run：
 
@@ -932,7 +932,7 @@ flutter test test/sync/sync_table_specs_test.dart
 
 Expected：PASS（8 個測試全數通過）。
 
-- [ ] **Step 6：`flutter analyze` + Commit**
+- [x] **Step 6：`flutter analyze` + Commit**
 
 ```bash
 flutter analyze
@@ -952,7 +952,7 @@ git commit -m "feat(epic-8-sync): Issue 4 Task 3 — 純資料模型與資料表
 - Consumes：Task 3 的 `SyncTableSpec`/`PushOperation`。
 - Produces：`bool isDirtyRow(int updatedAt, int? lastPushCompletedAt)`、`List<PushOperation> buildPushOperations({required SyncTableSpec spec, required List<Map<String, Object?>> joinedRows, required Map<String, String> remoteIdsByClientId, required String userId})`、`List<List<PushOperation>> planPushBatches(List<PushOperation> operations, {int batchLimit = 100})`。供 Task 7（`SyncEngine` 推送階段）使用。
 
-- [ ] **Step 1：撰寫失敗測試**
+- [x] **Step 1：撰寫失敗測試**
 
 Create `app/test/sync/sync_push_planner_test.dart`：
 
@@ -1084,7 +1084,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：執行測試，確認因檔案不存在而失敗**
+- [x] **Step 2：執行測試，確認因檔案不存在而失敗**
 
 Run：
 
@@ -1094,7 +1094,7 @@ flutter test test/sync/sync_push_planner_test.dart
 
 Expected：FAIL，找不到 `package:elinkbook/sync/sync_push_planner.dart`。
 
-- [ ] **Step 3：實作 `sync_push_planner.dart`**
+- [x] **Step 3：實作 `sync_push_planner.dart`**
 
 Create `app/lib/sync/sync_push_planner.dart`：
 
@@ -1159,7 +1159,7 @@ List<List<PushOperation>> planPushBatches(
 }
 ```
 
-- [ ] **Step 4：執行測試，確認全數通過**
+- [x] **Step 4：執行測試，確認全數通過**
 
 Run：
 
@@ -1169,7 +1169,7 @@ flutter test test/sync/sync_push_planner_test.dart
 
 Expected：PASS（9 個測試全數通過）。
 
-- [ ] **Step 5：`flutter analyze` + Commit**
+- [x] **Step 5：`flutter analyze` + Commit**
 
 ```bash
 flutter analyze
@@ -1189,7 +1189,7 @@ git commit -m "feat(epic-8-sync): Issue 4 Task 4 — 推送批次組裝純函式
 - Consumes：Task 3 的 `RemoteRecordMergeInput`/`BookLookup`/`MergeDecision`/`SyncTableSpec`。
 - Produces：`int? normalizeDeletedAt(Object? raw)`、`MergeDecision resolveMergeDecision({required SyncTableSpec spec, required RemoteRecordMergeInput input, required Map<String, BookLookup> booksByFingerprint, required int notDirtyUpdatedAt})`、`List<String> idsPastTombstoneRetention({required List<Map<String, Object?>> rows, required DateTime now, Duration retention = const Duration(days: 30)})`、`String? maxUpdatedCursor(List<String> updatedValues, String? current)`。供 Task 8（`SyncEngine` 下載階段）使用。
 
-- [ ] **Step 1：撰寫失敗測試**
+- [x] **Step 1：撰寫失敗測試**
 
 Create `app/test/sync/sync_merge_test.dart`：
 
@@ -1355,7 +1355,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：執行測試，確認因檔案不存在而失敗**
+- [x] **Step 2：執行測試，確認因檔案不存在而失敗**
 
 Run：
 
@@ -1365,7 +1365,7 @@ flutter test test/sync/sync_merge_test.dart
 
 Expected：FAIL，找不到 `package:elinkbook/sync/sync_merge.dart`。
 
-- [ ] **Step 3：實作 `sync_merge.dart`**
+- [x] **Step 3：實作 `sync_merge.dart`**
 
 Create `app/lib/sync/sync_merge.dart`：
 
@@ -1440,7 +1440,7 @@ String? maxUpdatedCursor(List<String> updatedValues, String? current) {
 }
 ```
 
-- [ ] **Step 4：執行測試，確認全數通過**
+- [x] **Step 4：執行測試，確認全數通過**
 
 Run：
 
@@ -1450,7 +1450,7 @@ flutter test test/sync/sync_merge_test.dart
 
 Expected：PASS（12 個測試全數通過）。
 
-- [ ] **Step 5：`flutter analyze` + Commit**
+- [x] **Step 5：`flutter analyze` + Commit**
 
 ```bash
 flutter analyze
@@ -1470,7 +1470,7 @@ git commit -m "feat(epic-8-sync): Issue 4 Task 5 — 下載合併判定與墓碑
 - Consumes：Task 1 的三張表（`sync_metadata`／`sync_remote_ids`／`sync_pending_records`）、Task 3 的 `SyncCollection`。
 - Produces：`SyncMetadataRepository`（建構子 `SyncMetadataRepository(Database db)`），方法：`loadLastPushCompletedAt()`／`saveLastPushCompletedAt(int)`／`loadPulledCursor(SyncCollection)`／`savePulledCursor(SyncCollection, String)`／`loadRemoteIds(SyncCollection)`／`saveRemoteId(SyncCollection, String, String)`／`listPendingRecords()`／`savePendingRecord(...)`／`deletePendingRecord(SyncCollection, String)`。供 Task 7/8（`SyncEngine`）使用。
 
-- [ ] **Step 1：撰寫失敗測試**
+- [x] **Step 1：撰寫失敗測試**
 
 Create `app/test/sync/sync_metadata_repository_test.dart`：
 
@@ -1582,7 +1582,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：執行測試，確認因檔案不存在而失敗**
+- [x] **Step 2：執行測試，確認因檔案不存在而失敗**
 
 Run：
 
@@ -1592,7 +1592,7 @@ flutter test test/sync/sync_metadata_repository_test.dart
 
 Expected：FAIL，找不到 `package:elinkbook/sync/sync_metadata_repository.dart`。
 
-- [ ] **Step 3：實作 `sync_metadata_repository.dart`**
+- [x] **Step 3：實作 `sync_metadata_repository.dart`**
 
 Create `app/lib/sync/sync_metadata_repository.dart`：
 
@@ -1738,7 +1738,7 @@ class SyncMetadataRepository {
 }
 ```
 
-- [ ] **Step 4：執行測試，確認全數通過**
+- [x] **Step 4：執行測試，確認全數通過**
 
 Run：
 
@@ -1748,7 +1748,7 @@ flutter test test/sync/sync_metadata_repository_test.dart
 
 Expected：PASS（7 個測試全數通過）。
 
-- [ ] **Step 5：`flutter analyze` + Commit**
+- [x] **Step 5：`flutter analyze` + Commit**
 
 ```bash
 flutter analyze
@@ -1768,7 +1768,7 @@ git commit -m "feat(epic-8-sync): Issue 4 Task 6 — SyncMetadataRepository 存�
 - Consumes：Task 3-6 的所有純函式/資料層、Issue 2 的 `SyncAccountRepository`、`PocketBaseClientFactory`（`sync_client.dart`）、Issue 3 的 `computeBookContentFingerprint()`。
 - Produces：`SyncEngine`（建構子 `SyncEngine({required Database db, required SyncAccountRepository accountRepository, required SyncMetadataRepository metadataRepository, PocketBaseClientFactory? clientFactory})`），本 Task 先實作 `runCheckpoint()` 的推送半段（未登入即早退、指紋補算回填、查詢 dirty 列、組裝並分批送出、推送失敗即整批放棄）。**`lastPushCompletedAt`／各 collection 下載游標的實際持久化，刻意延後到 Task 8 下載階段全部成功後才一併寫入**（2026-08-04 `/superpowers:requesting-code-review` 發現並修正的 Critical 問題，見文末「審查修正紀錄」：spec.md「同步引擎」步驟 7 明訂「不局部套用已完成的步驟」，若推送一成功就立刻寫入 `lastPushCompletedAt`，之後下載階段失敗時會違反這個原子性要求）。本 Task 只計算 `notDirtyUpdatedAt`（供 Task 8 的合併/游標寫入使用），不呼叫任何 `SyncMetadataRepository` 的寫入方法。下載/合併/墓碑清理見 Task 8（同一個方法接續擴充）。
 
-- [ ] **Step 1：撰寫失敗測試（僅涵蓋推送半段行為）**
+- [x] **Step 1：撰寫失敗測試（僅涵蓋推送半段行為）**
 
 Create `app/test/sync/sync_engine_test.dart`：
 
@@ -2006,7 +2006,7 @@ void main() {
 
 （本 Task 的測試檔在 Task 8 會繼續擴充下載/合併/墓碑清理案例，Task 8 Step 1 承接同一份檔案。）
 
-- [ ] **Step 2：執行測試，確認因檔案不存在而失敗**
+- [x] **Step 2：執行測試，確認因檔案不存在而失敗**
 
 Run：
 
@@ -2016,7 +2016,7 @@ flutter test test/sync/sync_engine_test.dart
 
 Expected：FAIL，找不到 `package:elinkbook/sync/sync_engine.dart`。
 
-- [ ] **Step 3：實作 `sync_engine.dart`（推送半段）**
+- [x] **Step 3：實作 `sync_engine.dart`（推送半段）**
 
 Create `app/lib/sync/sync_engine.dart`：
 
@@ -2229,7 +2229,7 @@ class SyncEngine {
 }
 ```
 
-- [ ] **Step 4：執行測試，確認全數通過**
+- [x] **Step 4：執行測試，確認全數通過**
 
 Run：
 
@@ -2239,7 +2239,7 @@ flutter test test/sync/sync_engine_test.dart
 
 Expected：PASS（4 個測試全數通過）。
 
-- [ ] **Step 5：`flutter analyze` + Commit**
+- [x] **Step 5：`flutter analyze` + Commit**
 
 ```bash
 flutter analyze
@@ -2259,7 +2259,7 @@ git commit -m "feat(epic-8-sync): Issue 4 Task 7 — SyncEngine 推送階段（�
 - Consumes：Task 5 的 `resolveMergeDecision`/`idsPastTombstoneRetention`/`maxUpdatedCursor`/`normalizeDeletedAt`，Task 6 的 `SyncMetadataRepository` 待處理佇列方法。
 - Produces：`runCheckpoint()` 完整行為（推送成功後接續下載、合併、待處理佇列重試、墓碑清理；下載階段失敗同樣整批放棄）。**`lastPushCompletedAt` 與各 collection 的下載游標，統一延後到推送＋下載全部成功後、`runCheckpoint()` 方法最後才一次寫入**（2026-08-04 `/superpowers:requesting-code-review` 發現並修正的 Critical 問題，見文末「審查修正紀錄」），取代 Task 7 原規劃「推送成功立刻寫入 `lastPushCompletedAt`」的做法。
 
-- [ ] **Step 1：撰寫失敗測試（延續 Task 7 的 `sync_engine_test.dart`，`main()` 內新增）**
+- [x] **Step 1：撰寫失敗測試（延續 Task 7 的 `sync_engine_test.dart`，`main()` 內新增）**
 
 在既有最後一個 `test(...)` 之後、`}` 之前新增：
 
@@ -2552,7 +2552,7 @@ git commit -m "feat(epic-8-sync): Issue 4 Task 7 — SyncEngine 推送階段（�
 
 （`highlight.dart`／`highlights_repository.dart` 已在 Task 7 Step 1 的 import 區塊加入，本 Step 新增的測試直接沿用即可，不需再補 import。）
 
-- [ ] **Step 2：執行測試，確認因下載/合併/墓碑清理尚未實作而失敗**
+- [x] **Step 2：執行測試，確認因下載/合併/墓碑清理尚未實作而失敗**
 
 Run：
 
@@ -2562,7 +2562,7 @@ flutter test test/sync/sync_engine_test.dart
 
 Expected：FAIL——新增的 5 個下載/合併/墓碑清理測試失敗（目前 `runCheckpoint()` 推送成功後直接結束，未執行任何下載/清理動作）。
 
-- [ ] **Step 3：擴充 `sync_engine.dart`——下載/合併/墓碑清理**
+- [x] **Step 3：擴充 `sync_engine.dart`——下載/合併/墓碑清理**
 
 **本 Step 修正審查意見 Critical「同步失敗時游標未維持原子性」**（2026-08-04 `/superpowers:requesting-code-review`，見文末「審查修正紀錄」）：`lastPushCompletedAt` 與各 collection 的下載游標（`lastPulledServerUpdatedAt_<collection>`）全部改為先算在記憶體裡，等推送＋下載整個 `try` 區塊皆成功執行完畢後，才在 `runCheckpoint()` 方法的最後統一一次寫入，不再由 `_downloadAndMerge` 每處理完一個 collection 就各自立刻寫入自己的游標——避免「已推送成功、但下載到一半失敗」時，第一個 collection 的下載游標已經落地、後面的卻沒有，造成 spec.md「同步引擎」步驟 7 明訂禁止的「局部套用已完成的步驟」。
 
@@ -2756,7 +2756,7 @@ Expected：FAIL——新增的 5 個下載/合併/墓碑清理測試失敗（目
   }
 ```
 
-- [ ] **Step 4：執行測試，確認全數通過**
+- [x] **Step 4：執行測試，確認全數通過**
 
 Run：
 
@@ -2766,7 +2766,7 @@ flutter test test/sync/sync_engine_test.dart
 
 Expected：PASS（9 個測試全數通過）。
 
-- [ ] **Step 5：`flutter analyze` + 執行完整測試套件 + Commit**
+- [x] **Step 5：`flutter analyze` + 執行完整測試套件 + Commit**
 
 ```bash
 flutter analyze
@@ -2792,7 +2792,7 @@ git commit -m "feat(epic-8-sync): Issue 4 Task 8 — SyncEngine 下載/合併/�
 
 **注意（比照 `integration_test/sync_account_test.dart` 既有慣例）**：執行前裝置需先連上 Tailscale（見該文件說明），否則連線會逾時。本測試使用與 Issue 2 `integration_test` 相同的測試帳號（`epic8-issue2-test@example.com`），每個測試開頭／結尾清空該帳號在 4 個 `sync_*` collection 下的紀錄，避免測試之間互相汙染（沒有專屬的「清空 collection」API，改用 `getFullList` 讀出全部紀錄後逐筆 `delete()`，成本可接受——真機整合測試資料量小）。
 
-- [ ] **Step 1：撰寫真機測試**
+- [x] **Step 1：撰寫真機測試**
 
 Create `app/integration_test/sync_engine_test.dart`：
 
@@ -2909,7 +2909,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：確認裝置已連上 Tailscale，於真實裝置/模擬器上執行**
+- [x] **Step 2：確認裝置已連上 Tailscale，於真實裝置/模擬器上執行**
 
 Run：
 
@@ -2920,7 +2920,7 @@ flutter test integration_test/sync_engine_test.dart -d <device-id>
 
 Expected：PASS——這代表推送（真的透過 PocketBase Batch API 寫入）與下載合併（真的從 PocketBase 讀回、正確寫入另一個裝置的本機資料庫）在真實網路環境下皆行為正確。
 
-- [ ] **Step 3：Commit**
+- [x] **Step 3：Commit**
 
 ```bash
 git add integration_test/sync_engine_test.dart
