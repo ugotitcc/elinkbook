@@ -267,7 +267,7 @@ class BookImportServiceImpl implements BookImportService {
         if (coverBytes != null) {
           coverPath = await _landCover(coverBytes, id);
         }
-      }       on PlatformException {
+      } on PlatformException {
         // 詮釋資料提取失敗：降級為「檔名為標題、無封面」，不中斷整批匯入。
         // 指紋計算與詮釋資料提取彼此獨立（見下方），此處失敗不影響指紋
         // 計算仍會嘗試執行。
