@@ -295,7 +295,16 @@ class SyncEngine {
           conflictAlgorithm: ConflictAlgorithm.replace,
         );
         await _metadataRepository.saveRemoteId(spec.collection, input.clientId, input.remoteId);
-      } else {
+      } else if (input.bookFingerprint != null) {
+        // `resolveMergeDecision()` 對「book_fingerprint 本身為 null」與
+        // 「查無對應本機書籍」皆回傳 resolved: false（見 sync_merge.dart
+        // 的防禦性測試），呼叫端必須分開處理：後者才是真正的「待處理
+        // 佇列」情境；前者代表遠端紀錄本身缺漏這個必要欄位，沒有指紋
+        // 可供之後比對，寫進待處理佇列也永遠不會被解析，因此直接跳過
+        // 這一筆（審查意見 Important #2，2026-08-04 第二輪
+        // `/superpowers:requesting-code-review`，見文末「審查修正
+        // 紀錄」：原本無條件 `input.bookFingerprint!` 在這個分支會拋出
+        // 空指標例外）。
         await _metadataRepository.savePendingRecord(
           collection: spec.collection,
           clientId: input.clientId,
@@ -313,22 +322,40 @@ class SyncEngine {
     );
   }
 
+  /// 每次查詢最多帶入的指紋數量——與 `_purgeTombstones()` 的
+  /// `_tombstonePurgeChunkSize` 同一類風險（審查意見 Important #1，
+  /// 2026-08-04 第二輪 `/superpowers:requesting-code-review`，見文末
+  /// 「審查修正紀錄」）：全新裝置首次對一個已累積大量書籍/標註的既有
+  /// 帳號執行 checkpoint 時，單次下載回來的紀錄可能橫跨遠超過 SQLite
+  /// 單一陳述式變數上限（Android 常見建置預設 999）的不同 book_fingerprint，
+  /// 原本未分批的 `IN (...)` 查詢會在這個核心情境下拋出
+  /// `too many SQL variables` 而崩潰。
+  static const _fingerprintLookupChunkSize = 500;
+
   Future<Map<String, BookLookup>> _loadBooksByFingerprint(Set<String> fingerprints) async {
     if (fingerprints.isEmpty) return {};
-    final placeholders = List.filled(fingerprints.length, '?').join(',');
-    final rows = await _db.query(
-      'books',
-      columns: ['id', 'format', 'content_fingerprint'],
-      where: 'content_fingerprint IN ($placeholders)',
-      whereArgs: fingerprints.toList(),
-    );
-    return {
-      for (final row in rows)
-        row['content_fingerprint'] as String: BookLookup(
+    final fingerprintList = fingerprints.toList();
+    final result = <String, BookLookup>{};
+    for (var i = 0; i < fingerprintList.length; i += _fingerprintLookupChunkSize) {
+      final end = (i + _fingerprintLookupChunkSize < fingerprintList.length)
+          ? i + _fingerprintLookupChunkSize
+          : fingerprintList.length;
+      final chunk = fingerprintList.sublist(i, end);
+      final placeholders = List.filled(chunk.length, '?').join(',');
+      final rows = await _db.query(
+        'books',
+        columns: ['id', 'format', 'content_fingerprint'],
+        where: 'content_fingerprint IN ($placeholders)',
+        whereArgs: chunk,
+      );
+      for (final row in rows) {
+        result[row['content_fingerprint'] as String] = BookLookup(
           id: row['id'] as String,
           format: BookFileFormat.values.byName(row['format'] as String),
-        ),
-    };
+        );
+      }
+    }
+    return result;
   }
 
   static const _tombstonePurgeChunkSize = 500;

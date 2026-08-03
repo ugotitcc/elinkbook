@@ -341,6 +341,65 @@ void main() {
     expect(pending.single.bookFingerprint, 'fp-unimported');
   });
 
+  test('下載端遇到 book_fingerprint 本身缺漏（null）的遠端紀錄時，直接跳過該筆，不拋出例外、不寫入待處理佇列',
+      () async {
+    // 審查修正紀錄 Important #2：resolveMergeDecision() 對「book_fingerprint
+    // 為 null」與「查無對應本機書籍」皆回傳 resolved: false，呼叫端必須
+    // 分開處理——這筆遠端紀錄刻意省略 book_fingerprint 欄位，模擬防禦性
+    // 情境（例如未來 schema 例外資料）。
+    final mockClient = MockClient((request) async {
+      if (request.method == 'GET' &&
+          request.url.path == '/api/collections/sync_bookmarks/records') {
+        return http.Response(
+          jsonEncode({
+            'items': [
+              {
+                'id': 'pb-remote-no-fp',
+                'client_id': 'bm-remote-no-fp',
+                'deleted_at': 0,
+                'name': '缺漏指紋的遠端書籤',
+                'epub_locator_json': '',
+                'progression': 0.1,
+                'pdf_page_index': 0,
+                'updated': '2026-08-03 00:00:00.000Z',
+              },
+            ],
+            'page': 1,
+            'perPage': 1000,
+            'totalItems': 1,
+          }),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      }
+      if (request.url.path == '/api/batch') {
+        return http.Response(jsonEncode([]), 200,
+            headers: {'content-type': 'application/json'});
+      }
+      return http.Response(
+        jsonEncode({'items': [], 'page': 1, 'perPage': 1000, 'totalItems': 0}),
+        200,
+        headers: {'content-type': 'application/json'},
+      );
+    });
+
+    final engine = SyncEngine(
+      db: libraryRepository.database,
+      accountRepository: accountRepository,
+      metadataRepository: metadataRepository,
+      clientFactory: (baseUrl) => PocketBase(baseUrl, httpClientFactory: () => mockClient),
+    );
+
+    await engine.runCheckpoint();
+
+    expect(await metadataRepository.listPendingRecords(), isEmpty);
+    expect(
+      await metadataRepository.loadPulledCursor(SyncCollection.bookmarks),
+      '2026-08-03 00:00:00.000Z',
+      reason: '這筆紀錄雖然被跳過，但游標仍應正常前進（下次不會重複下載到它）',
+    );
+  });
+
   test('待處理佇列中的紀錄，在對應書籍匯入（指紋比對上）後的下一次 checkpoint 正確解析落地',
       () async {
     await metadataRepository.savePendingRecord(
