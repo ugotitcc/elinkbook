@@ -139,11 +139,11 @@ SQLite schema 自 v16 升級至 v17（比照既有累加式 `if (oldVersion < 17
 
 **驗收標準：**
 
-- [ ] 推送正確分批（100 筆/批），payload 皆帶 `user` 欄位
-- [ ] 下載正確合併（新增/更新/刪除），`client_id`／`highlight_client_id`／`book_fingerprint` 跨裝置參照皆正確解析
-- [ ] 本機墓碑清理正確執行（僅推送成功後、僅 30 天以上的墓碑）
-- [ ] 同步失敗時本機異動不受影響、`sync_metadata` 游標不更新、下次重試會整批重來
-- [ ] 上述測試皆通過，`flutter analyze` 乾淨
+- [x] 推送正確分批（100 筆/批），payload 皆帶 `user` 欄位
+- [x] 下載正確合併（新增/更新/刪除），`client_id`／`highlight_client_id`／`book_fingerprint` 跨裝置參照皆正確解析
+- [x] 本機墓碑清理正確執行（僅推送成功後、僅 30 天以上的墓碑）
+- [x] 同步失敗時本機異動不受影響、`sync_metadata` 游標不更新、下次重試會整批重來
+- [x] 上述測試皆通過，`flutter analyze` 乾淨
 
 ---
 
