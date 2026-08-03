@@ -218,4 +218,283 @@ void main() {
     expect(await metadataRepository.loadLastPushCompletedAt(), isNull);
     expect(await metadataRepository.loadRemoteIds(SyncCollection.bookmarks), isEmpty);
   });
+
+  test('下載端把遠端新增的書籤正確合併進本機（書籍已匯入、指紋對得上）', () async {
+    await libraryRepository.insertBook(_testBook('b4', contentFingerprint: 'fp-4'));
+
+    final mockClient = MockClient((request) async {
+      if (request.method == 'GET' &&
+          request.url.path == '/api/collections/sync_bookmarks/records') {
+        return http.Response(
+          jsonEncode({
+            'items': [
+              {
+                'id': 'pb-remote-1',
+                'client_id': 'bm-remote-1',
+                'book_fingerprint': 'fp-4',
+                'deleted_at': 0,
+                'name': '遠端書籤',
+                'epub_locator_json': '',
+                'progression': 0.3,
+                'pdf_page_index': 0,
+                'updated': '2026-08-03 00:00:00.000Z',
+              },
+            ],
+            'page': 1,
+            'perPage': 1000,
+            'totalItems': 1,
+          }),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      }
+      if (request.url.path == '/api/batch') {
+        return http.Response(jsonEncode([]), 200,
+            headers: {'content-type': 'application/json'});
+      }
+      return http.Response(
+        jsonEncode({'items': [], 'page': 1, 'perPage': 1000, 'totalItems': 0}),
+        200,
+        headers: {'content-type': 'application/json'},
+      );
+    });
+
+    final engine = SyncEngine(
+      db: libraryRepository.database,
+      accountRepository: accountRepository,
+      metadataRepository: metadataRepository,
+      clientFactory: (baseUrl) => PocketBase(baseUrl, httpClientFactory: () => mockClient),
+    );
+
+    await engine.runCheckpoint();
+
+    final bookmarks = await bookmarksRepository.listByBook('b4');
+    expect(bookmarks, hasLength(1));
+    expect(bookmarks.single.id, 'bm-remote-1');
+    expect(bookmarks.single.name, '遠端書籤');
+    expect(
+      await metadataRepository.loadPulledCursor(SyncCollection.bookmarks),
+      '2026-08-03 00:00:00.000Z',
+    );
+    expect(
+      await metadataRepository.loadRemoteIds(SyncCollection.bookmarks),
+      {'bm-remote-1': 'pb-remote-1'},
+    );
+    expect(await metadataRepository.loadLastPushCompletedAt(), isNotNull);
+  });
+
+  test('下載端遇到 book_fingerprint 查無對應本機書籍時，暫緩合併、寫入待處理佇列，不建立空殼書籍',
+      () async {
+    final mockClient = MockClient((request) async {
+      if (request.method == 'GET' &&
+          request.url.path == '/api/collections/sync_bookmarks/records') {
+        return http.Response(
+          jsonEncode({
+            'items': [
+              {
+                'id': 'pb-remote-2',
+                'client_id': 'bm-remote-2',
+                'book_fingerprint': 'fp-unimported',
+                'deleted_at': 0,
+                'name': '尚未匯入書籍的書籤',
+                'epub_locator_json': '',
+                'progression': 0.1,
+                'pdf_page_index': 0,
+                'updated': '2026-08-03 00:00:00.000Z',
+              },
+            ],
+            'page': 1,
+            'perPage': 1000,
+            'totalItems': 1,
+          }),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      }
+      if (request.url.path == '/api/batch') {
+        return http.Response(jsonEncode([]), 200,
+            headers: {'content-type': 'application/json'});
+      }
+      return http.Response(
+        jsonEncode({'items': [], 'page': 1, 'perPage': 1000, 'totalItems': 0}),
+        200,
+        headers: {'content-type': 'application/json'},
+      );
+    });
+
+    final engine = SyncEngine(
+      db: libraryRepository.database,
+      accountRepository: accountRepository,
+      metadataRepository: metadataRepository,
+      clientFactory: (baseUrl) => PocketBase(baseUrl, httpClientFactory: () => mockClient),
+    );
+
+    await engine.runCheckpoint();
+
+    final booksCount =
+        (await libraryRepository.database.query('books')).length;
+    expect(booksCount, 0, reason: '不應為了承接同步資料而建立空殼書籍');
+
+    final pending = await metadataRepository.listPendingRecords();
+    expect(pending, hasLength(1));
+    expect(pending.single.clientId, 'bm-remote-2');
+    expect(pending.single.bookFingerprint, 'fp-unimported');
+  });
+
+  test('待處理佇列中的紀錄，在對應書籍匯入（指紋比對上）後的下一次 checkpoint 正確解析落地',
+      () async {
+    await metadataRepository.savePendingRecord(
+      collection: SyncCollection.bookmarks,
+      clientId: 'bm-pending-1',
+      bookFingerprint: 'fp-later',
+      remoteId: 'pb-pending-1',
+      deletedAt: null,
+      fields: const {
+        'name': '延遲解析的書籤',
+        'epub_locator_json': null,
+        'progression': 0.5,
+        'pdf_page_index': null,
+      },
+    );
+    await libraryRepository.insertBook(_testBook('b5', contentFingerprint: 'fp-later'));
+
+    final mockClient = MockClient((request) async {
+      if (request.url.path == '/api/batch') {
+        return http.Response(jsonEncode([]), 200,
+            headers: {'content-type': 'application/json'});
+      }
+      return http.Response(
+        jsonEncode({'items': [], 'page': 1, 'perPage': 1000, 'totalItems': 0}),
+        200,
+        headers: {'content-type': 'application/json'},
+      );
+    });
+
+    final engine = SyncEngine(
+      db: libraryRepository.database,
+      accountRepository: accountRepository,
+      metadataRepository: metadataRepository,
+      clientFactory: (baseUrl) => PocketBase(baseUrl, httpClientFactory: () => mockClient),
+    );
+
+    await engine.runCheckpoint();
+
+    final bookmarks = await bookmarksRepository.listByBook('b5');
+    expect(bookmarks, hasLength(1));
+    expect(bookmarks.single.id, 'bm-pending-1');
+    expect(bookmarks.single.name, '延遲解析的書籤');
+    expect(await metadataRepository.listPendingRecords(), isEmpty);
+  });
+
+  test('本機墓碑清理：checkpoint 成功完成後，超過 30 天的軟刪除紀錄被真正清除', () async {
+    await libraryRepository.insertBook(_testBook('b6', contentFingerprint: 'fp-6'));
+    await bookmarksRepository.insert(
+      const Bookmark(id: 'bm-old', bookId: 'b6', name: 'X', progression: 0.1),
+    );
+    await bookmarksRepository.delete('bm-old');
+    final old31DaysAgo =
+        DateTime.now().subtract(const Duration(days: 31)).millisecondsSinceEpoch;
+    await libraryRepository.database.update(
+      'bookmarks',
+      {'deleted_at': old31DaysAgo, 'updated_at': old31DaysAgo},
+      where: 'id = ?',
+      whereArgs: ['bm-old'],
+    );
+
+    final mockClient = MockClient((request) async {
+      if (request.url.path == '/api/batch') {
+        // 推送階段會把軟刪除的 bm-old（updated_at 舊值、lastPushCompletedAt
+        // 為 null 所以算 dirty）送進 batch，mock 回應長度需與操作筆數一致。
+        final body = jsonDecode(request.body) as Map<String, dynamic>;
+        final count = (body['requests'] as List).length;
+        return http.Response(
+          jsonEncode([
+            for (var i = 0; i < count; i++)
+              {
+                'status': 200,
+                'body': {'id': 'pb-$i', 'client_id': 'bm-old'},
+              },
+          ]),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      }
+      return http.Response(
+        jsonEncode({'items': [], 'page': 1, 'perPage': 1000, 'totalItems': 0}),
+        200,
+        headers: {'content-type': 'application/json'},
+      );
+    });
+
+    final engine = SyncEngine(
+      db: libraryRepository.database,
+      accountRepository: accountRepository,
+      metadataRepository: metadataRepository,
+      clientFactory: (baseUrl) => PocketBase(baseUrl, httpClientFactory: () => mockClient),
+    );
+
+    await engine.runCheckpoint();
+
+    final rawRows = await libraryRepository.database
+        .query('bookmarks', where: 'id = ?', whereArgs: ['bm-old']);
+    expect(rawRows, isEmpty, reason: '超過 30 天的墓碑應被真正 DELETE');
+  });
+
+  test(
+      '下載階段失敗（HTTP 錯誤）時，即使推送階段已成功，也不執行墓碑清理、'
+      '不寫入 lastPushCompletedAt／任何下載游標', () async {
+    await libraryRepository.insertBook(_testBook('b7', contentFingerprint: 'fp-7'));
+    await bookmarksRepository.insert(
+      const Bookmark(id: 'bm-should-survive', bookId: 'b7', name: 'X', progression: 0.1),
+    );
+    await bookmarksRepository.delete('bm-should-survive');
+    final old31DaysAgo =
+        DateTime.now().subtract(const Duration(days: 31)).millisecondsSinceEpoch;
+    await libraryRepository.database.update(
+      'bookmarks',
+      {'deleted_at': old31DaysAgo, 'updated_at': old31DaysAgo},
+      where: 'id = ?',
+      whereArgs: ['bm-should-survive'],
+    );
+
+    final mockClient = MockClient((request) async {
+      if (request.url.path == '/api/batch') {
+        return http.Response(
+          jsonEncode([
+            {
+              'status': 200,
+              'body': {'id': 'pb-should-survive', 'client_id': 'bm-should-survive'},
+            },
+          ]),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      }
+      return http.Response(
+        jsonEncode({'message': 'Something went wrong.'}),
+        500,
+        headers: {'content-type': 'application/json'},
+      );
+    });
+
+    final engine = SyncEngine(
+      db: libraryRepository.database,
+      accountRepository: accountRepository,
+      metadataRepository: metadataRepository,
+      clientFactory: (baseUrl) => PocketBase(baseUrl, httpClientFactory: () => mockClient),
+    );
+
+    await engine.runCheckpoint();
+
+    final rawRows = await libraryRepository.database
+        .query('bookmarks', where: 'id = ?', whereArgs: ['bm-should-survive']);
+    expect(rawRows, hasLength(1), reason: '下載失敗時不應執行墓碑清理');
+
+    expect(await metadataRepository.loadLastPushCompletedAt(), isNull);
+    expect(await metadataRepository.loadPulledCursor(SyncCollection.bookmarks), isNull);
+    expect(
+      await metadataRepository.loadRemoteIds(SyncCollection.bookmarks),
+      {'bm-should-survive': 'pb-should-survive'},
+    );
+  });
 }

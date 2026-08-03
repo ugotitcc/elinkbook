@@ -78,15 +78,35 @@ class SyncEngine {
         await _sendPushBatch(pb, headers, batch);
       }
     } on ClientException {
-      return; // 同步失敗：整批放棄，不更新任何 sync_metadata 游標
+      return;
     }
 
-    // `lastPushCompletedAt` 刻意不在這裡寫入——spec.md「同步引擎」步驟 7
-    // 要求「不局部套用已完成的步驟」，若推送一成功就立刻持久化，下載
-    // 階段（Task 8）萬一失敗會違反這個原子性要求。實際持久化時機挪到
-    // Task 8：整個 checkpoint（推送＋下載）皆成功後才一次寫入所有游標
-    // （見文末「審查修正紀錄」）。下載/合併/墓碑清理見 Task 8（本方法
-    // 於該 Task 接續擴充）。
+    final notDirtyUpdatedAt = DateTime.now().millisecondsSinceEpoch;
+    final pulledCursors = <SyncCollection, String?>{};
+
+    try {
+      await _resolvePendingRecords(notDirtyUpdatedAt: notDirtyUpdatedAt);
+      for (final spec in syncTableSpecs.values) {
+        pulledCursors[spec.collection] = await _downloadAndMerge(
+          pb,
+          headers,
+          spec,
+          notDirtyUpdatedAt: notDirtyUpdatedAt,
+        );
+      }
+    } on ClientException {
+      return;
+    }
+
+    await _metadataRepository.saveLastPushCompletedAt(notDirtyUpdatedAt);
+    for (final entry in pulledCursors.entries) {
+      final cursor = entry.value;
+      if (cursor != null) {
+        await _metadataRepository.savePulledCursor(entry.key, cursor);
+      }
+    }
+
+    await _purgeTombstones();
   }
 
   /// 記憶體風險註記（審查意見 Important #2，與 `_downloadAndMerge()` 的
@@ -200,6 +220,136 @@ class SyncEngine {
             );
           }
         }
+      }
+    }
+  }
+
+  Future<void> _resolvePendingRecords({required int notDirtyUpdatedAt}) async {
+    for (final record in await _metadataRepository.listPendingRecords()) {
+      final bookRows = await _db.query(
+        'books',
+        columns: ['id', 'format'],
+        where: 'content_fingerprint = ?',
+        whereArgs: [record.bookFingerprint],
+      );
+      if (bookRows.isEmpty) continue;
+      final bookId = bookRows.single['id'] as String;
+      final format = BookFileFormat.values.byName(bookRows.single['format'] as String);
+      final spec = syncTableSpecs[record.collection]!;
+      final localRow = {
+        'id': record.clientId,
+        'book_id': bookId,
+        'deleted_at': record.deletedAt,
+        'updated_at': notDirtyUpdatedAt,
+        ...spec.buildLocalFields(record.fields, format),
+      };
+      await _db.insert(
+        spec.collection.localTable,
+        localRow,
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+      await _metadataRepository.saveRemoteId(record.collection, record.clientId, record.remoteId);
+      await _metadataRepository.deletePendingRecord(record.collection, record.clientId);
+    }
+  }
+
+  Future<String?> _downloadAndMerge(
+    PocketBase pb,
+    Map<String, String> headers,
+    SyncTableSpec spec, {
+    required int notDirtyUpdatedAt,
+  }) async {
+    final cursor = await _metadataRepository.loadPulledCursor(spec.collection);
+    final filter = cursor == null ? null : 'updated > "$cursor"';
+    final records = await pb.collection(spec.collection.remoteCollection).getFullList(
+          filter: filter,
+          sort: 'updated',
+          headers: headers,
+        );
+    if (records.isEmpty) return cursor;
+
+    final fingerprints = records
+        .map((r) => r.data['book_fingerprint'] as String?)
+        .whereType<String>()
+        .toSet();
+    final booksByFingerprint = await _loadBooksByFingerprint(fingerprints);
+
+    for (final remote in records) {
+      final input = RemoteRecordMergeInput(
+        remoteId: remote.data['id'] as String,
+        clientId: remote.data['client_id'] as String,
+        bookFingerprint: remote.data['book_fingerprint'] as String?,
+        deletedAt: normalizeDeletedAt(remote.data['deleted_at']),
+        rawFields: spec.extractRawFields(remote),
+      );
+      final decision = resolveMergeDecision(
+        spec: spec,
+        input: input,
+        booksByFingerprint: booksByFingerprint,
+        notDirtyUpdatedAt: notDirtyUpdatedAt,
+      );
+      if (decision.resolved) {
+        await _db.insert(
+          spec.collection.localTable,
+          decision.localRow!,
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+        await _metadataRepository.saveRemoteId(spec.collection, input.clientId, input.remoteId);
+      } else {
+        await _metadataRepository.savePendingRecord(
+          collection: spec.collection,
+          clientId: input.clientId,
+          bookFingerprint: input.bookFingerprint!,
+          remoteId: input.remoteId,
+          deletedAt: input.deletedAt,
+          fields: input.rawFields,
+        );
+      }
+    }
+
+    return maxUpdatedCursor(
+      records.map((r) => r.data['updated'] as String).toList(),
+      cursor,
+    );
+  }
+
+  Future<Map<String, BookLookup>> _loadBooksByFingerprint(Set<String> fingerprints) async {
+    if (fingerprints.isEmpty) return {};
+    final placeholders = List.filled(fingerprints.length, '?').join(',');
+    final rows = await _db.query(
+      'books',
+      columns: ['id', 'format', 'content_fingerprint'],
+      where: 'content_fingerprint IN ($placeholders)',
+      whereArgs: fingerprints.toList(),
+    );
+    return {
+      for (final row in rows)
+        row['content_fingerprint'] as String: BookLookup(
+          id: row['id'] as String,
+          format: BookFileFormat.values.byName(row['format'] as String),
+        ),
+    };
+  }
+
+  static const _tombstonePurgeChunkSize = 500;
+
+  Future<void> _purgeTombstones() async {
+    final now = DateTime.now();
+    for (final collection in SyncCollection.values) {
+      final table = collection.localTable;
+      final rows = await _db.query(
+        table,
+        columns: ['id', 'deleted_at'],
+        where: 'deleted_at IS NOT NULL',
+      );
+      final idsToDelete = idsPastTombstoneRetention(rows: rows, now: now);
+      for (var i = 0; i < idsToDelete.length; i += _tombstonePurgeChunkSize) {
+        final end = (i + _tombstonePurgeChunkSize < idsToDelete.length)
+            ? i + _tombstonePurgeChunkSize
+            : idsToDelete.length;
+        final chunk = idsToDelete.sublist(i, end);
+        final placeholders = List.filled(chunk.length, '?').join(',');
+        await _db.delete(table, where: 'id IN ($placeholders)', whereArgs: chunk);
       }
     }
   }
