@@ -76,6 +76,15 @@ collection。每個都在 **Collections → New collection** 建立，**Type**
 設定規則。所有欄位除了下表標「必填」的以外皆為選填（`Nonempty`
 不勾）。
 
+**批次建立（可取代下方逐一手動點 Admin UI 的步驟）**：把
+`pb_migrations_example/1785715200_create_sync_collections.js` 複製到
+PocketBase 執行檔同層的 `pb_migrations/` 目錄下（沒有這個目錄就自己
+建立一個），重啟 PocketBase（或執行 `./pocketbase migrate up`）即會
+在一個交易內自動建立好全部 4 個 collection，欄位/型別/必填/API
+Rules 皆與下方表格逐項對應。適合需要重複自架多個測試環境、或想把
+整個 schema 納入版本控制的情況；只想快速看一次 Admin UI 長怎樣的話，
+仍可照下方步驟手動建立，兩種方式擇一即可，不需要都做。
+
 四個 collection 的 **API Rules** 分頁皆設為同一組規則（4 個 List/
 Search、View、Create、Update、Delete 規則欄位皆填相同內容）：
 
