@@ -33,7 +33,7 @@
 - Consumes：無（本 Task 是整個 Issue 的地基，不依賴其他 Task）
 - Produces：`extractMetadata`（既有方法）回應 map 新增 `"identifier": String?`（EPUB 專屬，PDF 呼叫時此鍵不存在，`cast` 結果自然為 `null`，比照既有 `isFixedLayout` 鍵的處理方式）；新增原生方法 `computeSha256`（參數 `{'uri': String}`，成功回傳 `String`——64 字元小寫十六進位 SHA-256 雜湊值；失敗以 `MethodChannel.Result.error("hash_failed", ...)` 回傳）。供 Task 2（`computeBookContentFingerprint`）與 Task 4（`integration_test`）使用。
 
-- [ ] **Step 1：產生新 fixture `sample_no_identifier.epub`**
+- [x] **Step 1：產生新 fixture `sample_no_identifier.epub`**
 
 Run（於 `app/` 目錄下，需要 Python 3）：
 
@@ -128,7 +128,7 @@ print('wrote sample_no_identifier.epub')
 
 Expected：印出 `wrote sample_no_identifier.epub`，`app/test/fixtures/sample_no_identifier.epub` 已建立。
 
-- [ ] **Step 2：`pubspec.yaml` 新增此 fixture 至 assets 清單**
+- [x] **Step 2：`pubspec.yaml` 新增此 fixture 至 assets 清單**
 
 `app/pubspec.yaml` 的 `assets:` 區塊、`- test/fixtures/sample.epub` 那一行之後新增：
 
@@ -136,7 +136,7 @@ Expected：印出 `wrote sample_no_identifier.epub`，`app/test/fixtures/sample_
     - test/fixtures/sample_no_identifier.epub
 ```
 
-- [ ] **Step 3：`extractEpubMetadata` 新增回傳 `identifier`**
+- [x] **Step 3：`extractEpubMetadata` 新增回傳 `identifier`**
 
 `BookMetadataChannel.kt` 第 248-269 行（`extractEpubMetadata` 內 `try` 區塊）改為：
 
@@ -173,7 +173,7 @@ Expected：印出 `wrote sample_no_identifier.epub`，`app/test/fixtures/sample_
                 } finally {
 ```
 
-- [ ] **Step 4：新增 `computeSha256` 方法分派與實作**
+- [x] **Step 4：新增 `computeSha256` 方法分派與實作**
 
 `BookMetadataChannel.kt` 的 `onMethodCall` 內，`"detectEpubLayout" -> {...}` 區塊（第 95-102 行）之後新增：
 
@@ -232,7 +232,7 @@ Expected：印出 `wrote sample_no_identifier.epub`，`app/test/fixtures/sample_
     }
 ```
 
-- [ ] **Step 5：確認 Kotlin 變更編譯成功**
+- [x] **Step 5：確認 Kotlin 變更編譯成功**
 
 Run：
 
@@ -243,7 +243,7 @@ flutter build apk --debug
 
 Expected：建置成功（無編譯錯誤）。這一步只確認 Kotlin 語法/型別正確，`computeSha256`／`identifier` 的實際行為正確性由 Task 4 的 `integration_test`（真機）驗證——`flutter test` 無法執行原生 Kotlin 程式碼。
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add android/app/src/main/kotlin/cc/ugotit/elinkbook/BookMetadataChannel.kt test/fixtures/sample_no_identifier.epub pubspec.yaml
