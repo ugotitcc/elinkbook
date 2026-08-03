@@ -112,7 +112,7 @@ SQLite schema 自 v16 升級至 v17（比照既有累加式 `if (oldVersion < 17
 
 **依賴／Blocked by：** Issue 1、Issue 2、Issue 3
 
-**Status:** ready-for-agent
+**Status:** done
 
 **What to build：**
 
