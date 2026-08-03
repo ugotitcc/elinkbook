@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:crypto/crypto.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
@@ -140,5 +141,120 @@ void main() {
 
     expect(result, isNotNull);
     expect(result!['coverBytes'], isNotNull);
+  });
+
+  // epic-8-sync Issue 3：extractMetadata 新增回傳 identifier、新增
+  // computeSha256 方法，皆無法透過 flutter test 驗證（需要真實原生端
+  // 執行），比照本檔案既有慣例於此驗證。
+  testWidgets('EPUB 有 OPF identifier 時，extractMetadata 正確回傳', (tester) async {
+    final samplePath =
+        await _stageAssetAsFile('test/fixtures/sample.epub', 'sample_id.epub');
+    addTearDown(() async {
+      final file = File(samplePath);
+      if (await file.exists()) await file.delete();
+    });
+
+    final result = await _channel.invokeMapMethod<String, Object?>(
+      'extractMetadata',
+      {'uri': samplePath, 'format': 'epub'},
+    );
+
+    expect(result, isNotNull);
+    expect(result!['identifier'], 'urn:uuid:00000000-0000-0000-0000-000000000001');
+  });
+
+  testWidgets('EPUB 的 OPF identifier 為空字串時，extractMetadata 回傳空字串（非 null、非拋例外）',
+      (tester) async {
+    final samplePath = await _stageAssetAsFile(
+        'test/fixtures/sample_no_identifier.epub', 'sample_no_id.epub');
+    addTearDown(() async {
+      final file = File(samplePath);
+      if (await file.exists()) await file.delete();
+    });
+
+    final result = await _channel.invokeMapMethod<String, Object?>(
+      'extractMetadata',
+      {'uri': samplePath, 'format': 'epub'},
+    );
+
+    expect(result, isNotNull);
+    expect(result!['identifier'], '');
+  });
+
+  testWidgets('PDF 呼叫 extractMetadata 時，回應 map 沒有 identifier 鍵', (tester) async {
+    final samplePath =
+        await _stageAssetAsFile('test/fixtures/sample.pdf', 'sample_id.pdf');
+    addTearDown(() async {
+      final file = File(samplePath);
+      if (await file.exists()) await file.delete();
+    });
+
+    final result = await _channel.invokeMapMethod<String, Object?>(
+      'extractMetadata',
+      {'uri': samplePath, 'format': 'pdf'},
+    );
+
+    expect(result, isNotNull);
+    expect(result!.containsKey('identifier'), isFalse);
+  });
+
+  testWidgets('computeSha256 對本機檔案路徑計算結果與獨立計算的參考雜湊值一致',
+      (tester) async {
+    final samplePath =
+        await _stageAssetAsFile('test/fixtures/sample.pdf', 'sample_hash.pdf');
+    addTearDown(() async {
+      final file = File(samplePath);
+      if (await file.exists()) await file.delete();
+    });
+
+    final expected =
+        sha256.convert(await File(samplePath).readAsBytes()).toString();
+
+    final result = await _channel.invokeMethod<String>(
+      'computeSha256',
+      {'uri': samplePath},
+    );
+
+    expect(result, expected);
+  });
+
+  testWidgets('computeSha256 對真正的 content:// URI 計算結果與本機路徑計算結果一致',
+      (tester) async {
+    // createTestContentUri 僅供 integration_test 使用（見該原生方法註解），
+    // 把裝置上真實檔案路徑轉為 content:// URI，模擬 SAF 回傳的路徑型態。
+    final samplePath =
+        await _stageAssetAsFile('test/fixtures/sample.pdf', 'sample_hash_uri.pdf');
+    addTearDown(() async {
+      final file = File(samplePath);
+      if (await file.exists()) await file.delete();
+    });
+
+    final contentUri = await _channel.invokeMethod<String>(
+      'createTestContentUri',
+      {'path': samplePath},
+    );
+    expect(contentUri, isNotNull);
+    expect(contentUri!.startsWith('content://'), isTrue);
+
+    final expectedFromPath = await _channel.invokeMethod<String>(
+      'computeSha256',
+      {'uri': samplePath},
+    );
+    final resultFromContentUri = await _channel.invokeMethod<String>(
+      'computeSha256',
+      {'uri': contentUri},
+    );
+
+    expect(resultFromContentUri, expectedFromPath);
+  });
+
+  testWidgets('computeSha256 對不存在的檔案路徑拋出 PlatformException', (tester) async {
+    final missingPath =
+        '/data/local/tmp/does_not_exist_hash_${DateTime.now().millisecondsSinceEpoch}.pdf';
+
+    await expectLater(
+      () => _channel.invokeMethod<String>('computeSha256', {'uri': missingPath}),
+      throwsA(isA<PlatformException>()),
+    );
   });
 }
