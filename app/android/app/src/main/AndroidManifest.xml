@@ -2,7 +2,9 @@
     <application
         android:label="elinkBook"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:allowBackup="false"
+        android:usesCleartextTraffic="true">
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -40,6 +42,10 @@
                 android:resource="@xml/file_paths" />
         </provider>
     </application>
+    <!-- epic-8-sync：PocketBase 同步需要網路存取；本專案自架架構下
+         base URL 常見為純 http://（見 docs/epics/epic-8-sync/
+         pocketbase-self-hosting.md「測試環境」），故同時允許明文流量。 -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
          https://developer.android.com/reference/android/content/Intent#ACTION_PROCESS_TEXT.
