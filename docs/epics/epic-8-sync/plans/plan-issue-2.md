@@ -1404,7 +1404,12 @@ void main() {
   // 實體裝置皆可直接用同一個 base URL 連線，不需要依連線來源切換
   // 127.0.0.1／10.0.2.2／區網 IP（2026-08-03 改用固定測試網域後的
   // 修正）。目前是 HTTP（非 HTTPS），與下方 SyncClient 呼叫方式無關，
-  // PocketBase Dart SDK 對 http/https 一視同仁。
+  // PocketBase Dart SDK 對 http/https 一視同仁。**不要加 :8090 埠號**
+  // ——Traefik 只對外開放標準 80 埠並反代到容器內部 8090，帶埠號連不到。
+  // **執行本測試的裝置必須先連上 Tailscale**（pbdev.jigong.org 掛在
+  // Tailscale 私有網路，DNS 解析出的是 Tailscale CGNAT IP），裝置若未
+  // 連線／登入 Tailscale，testConnection() 會正確回傳 false（連線失敗，
+  // 非程式碼 bug）——見 pocketbase-self-hosting.md「測試環境」實測記錄。
   const testBaseUrl = 'http://pbdev.jigong.org';
   const testEmail = 'epic8-issue2-test@example.com';
   const testPassword = 'epic8-test-password-123';

@@ -229,7 +229,23 @@ base URL 連線，不需要再依連線來源切換 `127.0.0.1`／`10.0.2.2`／
 - **Base URL（任何連線來源皆同一個，不需依裝置別切換）**：
   `http://pbdev.jigong.org`——目前是 **HTTP，不是 HTTPS**（Traefik
   只設定了 `web`／HTTP entrypoint，未掛 HTTPS 憑證，見下方「已知
-  部署細節」）。
+  部署細節」）。**不要加 `:8090` 埠號**——Traefik 對外只監聽標準
+  HTTP（80）埠並反向代理到容器內部的 8090，`http://pbdev.jigong.org:8090`
+  連不到（外部沒有對應這個埠的路由），只有不含埠號的
+  `http://pbdev.jigong.org` 才是正確的對外連線位址（2026-08-03
+  Issue 2 `integration_test` 除錯時實測確認過這個混淆點，記錄於此
+  避免下次重蹈覆轍）。
+- **裝置端必須連上 Tailscale 才能連到這個網域**：`pbdev.jigong.org`
+  實際掛在 Tailscale 私有網路（DNS 解析出的是 Tailscale 內部的
+  CGNAT IP，例如 `100.98.175.79`），**不是**公開網際網路可直接連到
+  的網域。任何要執行 `integration_test` 的裝置（開發機／Android
+  模擬器／實體裝置）都必須先在該裝置上啟動並登入 Tailscale（連上
+  同一個 tailnet），否則 DNS 雖然解析成功、但實際連線會 100% 逾時／
+  失敗——`SyncClient.testConnection()` 遇到這種情況會正確地回傳
+  `false`（連線失敗的預期行為，不是程式碼 bug）。2026-08-03 Issue 2
+  的 `integration_test` 真機驗證時，就是先在裝置上把 Tailscale
+  連線起來後才測試通過，先前失敗正是因為裝置上的 Tailscale 沒有
+  連線／登入。
 - **測試帳號**（`epic-8-sync` Issue 2 起各 Issue 的 `integration_test`
   共用，已建立於上述實例）：
   - email：`epic8-issue2-test@example.com`
