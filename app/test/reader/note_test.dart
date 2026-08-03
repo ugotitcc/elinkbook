@@ -3,24 +3,25 @@ import 'package:elinkbook/reader/note.dart';
 import 'package:elinkbook/reader/percent_rect.dart';
 
 void main() {
-  test('toMap／fromMap round-trip 保留所有欄位（不含 id）', () {
+  test('toMap／fromMap round-trip 保留所有欄位（含 id）', () {
     const note = Note(
+      id: 'n1',
       bookId: 'b1',
       text: '這段很重要',
       epubLocatorJson: '{"href":"/c1.xhtml"}',
       progression: 0.2,
-      highlightId: 7,
+      highlightId: 'h7',
     );
     final map = note.toMap();
-    expect(map.containsKey('id'), isFalse);
+    expect(map['id'], 'n1');
     expect(map['book_id'], 'b1');
     expect(map['text'], '這段很重要');
-    expect(map['highlight_id'], 7);
+    expect(map['highlight_id'], 'h7');
   });
 
   test('fromMap 正確還原 highlight_id 為 null（純備註）', () {
     final restored = Note.fromMap({
-      'id': 3,
+      'id': 'n3',
       'book_id': 'b1',
       'text': '純備註內容',
       'epub_locator_json': '{"href":"/c2.xhtml"}',
@@ -32,22 +33,23 @@ void main() {
   });
 
   test('copyWith 只更新 text，其餘欄位保留原值', () {
-    const original = Note(id: 1, bookId: 'b1', text: '舊文字', highlightId: 2);
+    const original = Note(id: 'n1', bookId: 'b1', text: '舊文字', highlightId: 'h2');
     final updated = original.copyWith(text: '新文字');
-    expect(updated.id, 1);
-    expect(updated.highlightId, 2);
+    expect(updated.id, 'n1');
+    expect(updated.highlightId, 'h2');
     expect(updated.text, '新文字');
   });
 
   test('兩個欄位值完全相同的 Note 視為相等', () {
-    const a = Note(id: 1, bookId: 'b1', text: 'X', highlightId: null);
-    const b = Note(id: 1, bookId: 'b1', text: 'X', highlightId: null);
+    const a = Note(id: 'n1', bookId: 'b1', text: 'X', highlightId: null);
+    const b = Note(id: 'n1', bookId: 'b1', text: 'X', highlightId: null);
     expect(a, b);
     expect(a.hashCode, b.hashCode);
   });
 
   test('toMap／fromMap round-trip 保留 PDF 欄位（pdfPageIndex／pdfRect）', () {
     const note = Note(
+      id: 'n2',
       bookId: 'b1',
       text: '重點',
       pdfPageIndex: 2,
@@ -58,7 +60,7 @@ void main() {
     expect(map['pdf_rect_json'], isNotNull);
 
     final restored = Note.fromMap({
-      'id': 1,
+      'id': 'n2',
       'book_id': 'b1',
       'text': '重點',
       'epub_locator_json': null,
@@ -73,7 +75,7 @@ void main() {
 
   test('copyWith 只更新 text，PDF 欄位保留原值', () {
     const original = Note(
-      id: 1,
+      id: 'n3',
       bookId: 'b1',
       text: '舊文字',
       pdfPageIndex: 4,

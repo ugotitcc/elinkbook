@@ -110,20 +110,25 @@ void main() {
       lastReadTime: DateTime.now(),
     ));
 
-    final highlightId = await highlightsRepository.insert(const Highlight(
+    const highlightId = 'h_epub_1';
+    await highlightsRepository.insert(const Highlight(
+      id: highlightId,
       bookId: 'b_highlights_epub',
       style: HighlightStyle.highlighterYellow,
       epubLocatorJson: '{"href":"/OEBPS/chapter1.xhtml"}',
       progression: 0.05,
     ));
-    await notesRepository.insert(Note(
+    const pureNoteId = 'n_epub_1';
+    await notesRepository.insert(const Note(
+      id: 'n_epub_2',
       bookId: 'b_highlights_epub',
       text: '這段很重要',
       epubLocatorJson: '{"href":"/OEBPS/chapter1.xhtml"}',
       progression: 0.05,
       highlightId: highlightId,
     ));
-    final pureNoteId = await notesRepository.insert(const Note(
+    await notesRepository.insert(const Note(
+      id: pureNoteId,
       bookId: 'b_highlights_epub',
       text: '純備註內容',
       epubLocatorJson: '{"href":"/OEBPS/chapter2.xhtml"}',

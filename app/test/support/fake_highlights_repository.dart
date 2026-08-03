@@ -4,13 +4,11 @@ import 'package:elinkbook/reader/highlights_repository.dart';
 /// 測試用 Fake，比照 [FakeBookmarksRepository] 模式。
 class FakeHighlightsRepository implements HighlightsRepository {
   final List<Highlight> _storage = [];
-  int _nextId = 1;
 
   @override
-  Future<int> insert(Highlight highlight) async {
-    final id = _nextId++;
+  Future<void> insert(Highlight highlight) async {
     _storage.add(Highlight(
-      id: id,
+      id: highlight.id,
       bookId: highlight.bookId,
       style: highlight.style,
       epubLocatorJson: highlight.epubLocatorJson,
@@ -18,7 +16,6 @@ class FakeHighlightsRepository implements HighlightsRepository {
       pdfPageIndex: highlight.pdfPageIndex,
       pdfRect: highlight.pdfRect,
     ));
-    return id;
   }
 
   @override
@@ -32,7 +29,7 @@ class FakeHighlightsRepository implements HighlightsRepository {
       (h.pdfPageIndex?.toDouble()) ?? h.progression ?? 0;
 
   @override
-  Future<void> delete(int id) async {
+  Future<void> delete(String id) async {
     _storage.removeWhere((h) => h.id == id);
   }
 

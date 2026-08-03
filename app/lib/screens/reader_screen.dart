@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:uuid/uuid.dart';
 
 import '../reader/annotation_list_item.dart';
 import '../reader/book_format.dart';
@@ -228,13 +229,13 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   // 供接著點擊「備註」時把新備註連結到這筆劃線（design.md 使用者流程：
   // 「若同時已選色/底線，備註與劃線共存於同一筆記錄」）。新選取範圍
   // 開始時（_handleSelectionChanged）重置為 null。
-  int? _pendingHighlightIdForSelection;
+  String? _pendingHighlightIdForSelection;
   // PDF 劃線／備註目前選取狀態（epic-6-annotations Issue 3），由原生端
   // onSelectionRectComputed 回報；非 null 時於 body Stack 顯示
   // AnnotationToolbar。與 EPUB 的 _currentSelection 並存但不會同時非
   // null（同一次只會開啟一種格式的書籍）。
   PdfSelectionInfo? _currentPdfSelection;
-  int? _pendingPdfHighlightIdForSelection;
+  String? _pendingPdfHighlightIdForSelection;
   // 供 TocBottomSheet 訂閱、在已開啟的目錄畫面即時反映全書字元數背景計算
   // 完成事件（spec.md「目錄模組」載入中狀態決策）——與 _totalCharacterCount
   // 這個驅動頁尾 rebuild 的既有欄位（Issue 3）刻意分開維護，避免耦合兩條
@@ -668,12 +669,10 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     if (repository == null || positionInfo == null) return;
     final existing = _bookmarkAtCurrentPosition;
     if (existing != null) {
-      final id = existing.id;
-      if (id != null) {
-        await repository.delete(id);
-      }
+      await repository.delete(existing.id);
     } else {
       await repository.insert(Bookmark(
+        id: const Uuid().v4(),
         bookId: widget.bookId,
         name: Bookmark.defaultName(BookmarkPositionContext(
           epubLocatorJson: positionInfo.locatorJson,
@@ -913,7 +912,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     final selection = _currentSelection;
     final repository = widget.highlightsRepository;
     if (selection == null || repository == null) return;
-    final id = await repository.insert(Highlight(
+    final id = const Uuid().v4();
+    await repository.insert(Highlight(
+      id: id,
       bookId: widget.bookId,
       style: style,
       epubLocatorJson: selection.locatorJson,
@@ -930,6 +931,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     final text = await showNoteTextDialog(context, title: '新增備註');
     if (text == null) return;
     await repository.insert(Note(
+      id: const Uuid().v4(),
       bookId: widget.bookId,
       text: text,
       epubLocatorJson: selection.locatorJson,
@@ -971,17 +973,17 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     final primaryColor = Theme.of(context).colorScheme.primary;
     final decorations = <EpubDecoration>[
       for (final highlight in _highlights)
-        if (highlight.id != null && highlight.epubLocatorJson != null)
+        if (highlight.epubLocatorJson != null)
           EpubDecoration.forHighlight(
-            highlightId: highlight.id!,
+            highlightId: highlight.id,
             locatorJson: highlight.epubLocatorJson!,
             tint: highlightStyleTint(highlight.style, primaryColor: primaryColor),
             isUnderline: highlight.style == HighlightStyle.underline,
           ),
       for (final note in _notes)
-        if (note.highlightId == null && note.id != null && note.epubLocatorJson != null)
+        if (note.highlightId == null && note.epubLocatorJson != null)
           EpubDecoration.forNote(
-            noteId: note.id!,
+            noteId: note.id,
             locatorJson: note.epubLocatorJson!,
             tint: noteOnlyTint.toARGB32(),
           ),
@@ -989,21 +991,21 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     FoliateEpubReaderView.setDecorations(_foliateEpubReaderViewKey, decorations);
   }
 
-  Highlight? _findHighlightById(int id) {
+  Highlight? _findHighlightById(String id) {
     for (final highlight in _highlights) {
       if (highlight.id == id) return highlight;
     }
     return null;
   }
 
-  Note? _findNoteByHighlightId(int highlightId) {
+  Note? _findNoteByHighlightId(String highlightId) {
     for (final note in _notes) {
       if (note.highlightId == highlightId) return note;
     }
     return null;
   }
 
-  Note? _findNoteById(int id) {
+  Note? _findNoteById(String id) {
     for (final note in _notes) {
       if (note.id == id) return note;
     }
@@ -1063,14 +1065,14 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     if (action == 'edit' && note != null) {
       final newText = await showNoteTextDialog(context, initialText: note.text, title: '編輯備註');
       if (newText != null) {
-        await widget.notesRepository!.updateText(note.id!, newText);
+        await widget.notesRepository!.updateText(note.id, newText);
         await _reloadAnnotationsAndRefreshDecorations();
       }
     } else if (action == 'delete') {
       // 單筆刪除＝整筆一起刪（spec.md 決策 #13），比照
       // NotesBottomSheet._deleteAnnotationItem 的既有原則。
-      if (note != null) await widget.notesRepository!.delete(note.id!);
-      if (highlight != null) await widget.highlightsRepository!.delete(highlight.id!);
+      if (note != null) await widget.notesRepository!.delete(note.id);
+      if (highlight != null) await widget.highlightsRepository!.delete(highlight.id);
       await _reloadAnnotationsAndRefreshDecorations();
     }
   }
@@ -1095,13 +1097,15 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     final selection = _currentPdfSelection;
     final repository = widget.highlightsRepository;
     if (selection == null || repository == null) return;
-    final id = await repository.insert(Highlight(
+    final highlightId = const Uuid().v4();
+    await repository.insert(Highlight(
+      id: highlightId,
       bookId: widget.bookId,
       style: style,
       pdfPageIndex: selection.pageIndex,
       pdfRect: selection.rect,
     ));
-    _pendingPdfHighlightIdForSelection = id;
+    _pendingPdfHighlightIdForSelection = highlightId;
     await _reloadPdfAnnotationsAndSync();
   }
 
@@ -1111,7 +1115,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     if (selection == null || repository == null) return;
     final text = await showNoteTextDialog(context, title: '新增備註');
     if (text == null) return;
+    final noteId = const Uuid().v4();
     await repository.insert(Note(
+      id: noteId,
       bookId: widget.bookId,
       text: text,
       pdfPageIndex: selection.pageIndex,

@@ -119,13 +119,16 @@ void main() {
     ));
 
     const rect = PercentRect(left: 0.1, top: 0.1, right: 0.6, bottom: 0.2);
-    final highlightId = await highlightsRepository.insert(const Highlight(
+    const highlightId = 'h_pdf_1';
+    await highlightsRepository.insert(const Highlight(
+      id: highlightId,
       bookId: 'b_highlights_pdf',
       style: HighlightStyle.highlighterYellow,
       pdfPageIndex: 0,
       pdfRect: rect,
     ));
-    await notesRepository.insert(Note(
+    await notesRepository.insert(const Note(
+      id: 'n_pdf_1',
       bookId: 'b_highlights_pdf',
       text: '這段很重要',
       pdfPageIndex: 0,
@@ -133,6 +136,7 @@ void main() {
       highlightId: highlightId,
     ));
     await notesRepository.insert(const Note(
+      id: 'n_pdf_2',
       bookId: 'b_highlights_pdf',
       text: '純備註內容',
       pdfPageIndex: 1,

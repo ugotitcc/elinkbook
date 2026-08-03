@@ -3,15 +3,16 @@ import 'package:elinkbook/reader/bookmark.dart';
 import 'package:elinkbook/reader/bookmark_position_context.dart';
 
 void main() {
-  test('toMap／fromMap round-trip 保留所有欄位（不含 id）', () {
+  test('toMap／fromMap round-trip 保留所有欄位（含 id）', () {
     const bookmark = Bookmark(
+      id: 'bm1',
       bookId: 'b1',
       name: '第二章 (35%)',
       epubLocatorJson: '{"href":"/c2.xhtml"}',
       progression: 0.35,
     );
     final map = bookmark.toMap();
-    expect(map.containsKey('id'), isFalse);
+    expect(map['id'], 'bm1');
     expect(map['book_id'], 'b1');
     expect(map['name'], '第二章 (35%)');
     expect(map['epub_locator_json'], '{"href":"/c2.xhtml"}');
@@ -21,14 +22,14 @@ void main() {
 
   test('fromMap 正確還原 id（模擬資料庫查詢結果）', () {
     final restored = Bookmark.fromMap({
-      'id': 7,
+      'id': 'bm7',
       'book_id': 'b1',
       'name': '第 12 頁',
       'epub_locator_json': null,
       'progression': null,
       'pdf_page_index': 11,
     });
-    expect(restored.id, 7);
+    expect(restored.id, 'bm7');
     expect(restored.bookId, 'b1');
     expect(restored.name, '第 12 頁');
     expect(restored.pdfPageIndex, 11);
@@ -36,13 +37,13 @@ void main() {
 
   test('copyWith 只更新 name，其餘欄位保留原值', () {
     const original = Bookmark(
-      id: 3,
+      id: 'bm3',
       bookId: 'b1',
       name: '舊名稱',
       pdfPageIndex: 5,
     );
     final renamed = original.copyWith(name: '新名稱');
-    expect(renamed.id, 3);
+    expect(renamed.id, 'bm3');
     expect(renamed.bookId, 'b1');
     expect(renamed.name, '新名稱');
     expect(renamed.pdfPageIndex, 5);
@@ -89,15 +90,15 @@ void main() {
   });
 
   test('兩個欄位值完全相同的 Bookmark 視為相等', () {
-    const a = Bookmark(id: 1, bookId: 'b1', name: 'X', pdfPageIndex: 5);
-    const b = Bookmark(id: 1, bookId: 'b1', name: 'X', pdfPageIndex: 5);
+    const a = Bookmark(id: 'bm1', bookId: 'b1', name: 'X', pdfPageIndex: 5);
+    const b = Bookmark(id: 'bm1', bookId: 'b1', name: 'X', pdfPageIndex: 5);
     expect(a, b);
     expect(a.hashCode, b.hashCode);
   });
 
   test('任一欄位不同時視為不相等', () {
-    const a = Bookmark(id: 1, bookId: 'b1', name: 'X', pdfPageIndex: 5);
-    const b = Bookmark(id: 1, bookId: 'b1', name: 'Y', pdfPageIndex: 5);
+    const a = Bookmark(id: 'bm1', bookId: 'b1', name: 'X', pdfPageIndex: 5);
+    const b = Bookmark(id: 'bm2', bookId: 'b1', name: 'Y', pdfPageIndex: 5);
     expect(a, isNot(b));
   });
 }

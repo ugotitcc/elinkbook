@@ -44,8 +44,8 @@ List<AnnotationListItem> mergeAnnotations(
   List<Highlight> highlights,
   List<Note> notes,
 ) {
-  final highlightIds = highlights.map((h) => h.id).whereType<int>().toSet();
-  final noteByHighlightId = <int, Note>{};
+  final highlightIds = highlights.map((h) => h.id).whereType<String>().toSet();
+  final noteByHighlightId = <String, Note>{};
   final standaloneNotes = <Note>[];
   for (final note in notes) {
     final highlightId = note.highlightId;

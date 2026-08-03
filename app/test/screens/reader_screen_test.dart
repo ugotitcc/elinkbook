@@ -3421,6 +3421,7 @@ void main() {
       final notesRepo = FakeNotesRepository();
       await highlightsRepo.insert(
         const Highlight(
+          id: 'h_fs1',
           bookId: 'b_foliate_anno',
           style: HighlightStyle.highlighterYellow,
           epubLocatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
@@ -3477,6 +3478,7 @@ void main() {
       final notesRepo = FakeNotesRepository();
       await highlightsRepo.insert(
         const Highlight(
+          id: 'h_fs2',
           bookId: 'b_fxl_anno',
           style: HighlightStyle.highlighterYellow,
           epubLocatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
@@ -3570,8 +3572,10 @@ void main() {
     (tester) async {
       final highlightsRepo = FakeHighlightsRepository();
       final notesRepo = FakeNotesRepository();
-      final highlightId = await highlightsRepo.insert(
+      const highlightId = 'h_fa1';
+      await highlightsRepo.insert(
         const Highlight(
+          id: highlightId,
           bookId: 'b_foliate_active',
           style: HighlightStyle.highlighterYellow,
           epubLocatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',

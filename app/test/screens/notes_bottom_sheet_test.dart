@@ -77,9 +77,9 @@ void main() {
   testWidgets('書籤分頁正確依位置順序顯示清單', (tester) async {
     final repository = FakeBookmarksRepository();
     await repository
-        .insert(const Bookmark(bookId: 'b1', name: 'C', progression: 0.8));
+        .insert(const Bookmark(id: 'bm1', bookId: 'b1', name: 'C', progression: 0.8));
     await repository
-        .insert(const Bookmark(bookId: 'b1', name: 'A', progression: 0.1));
+        .insert(const Bookmark(id: 'bm2', bookId: 'b1', name: 'A', progression: 0.1));
     await _pumpSheet(tester, repository: repository);
 
     final listFinder = find.byKey(const Key('notes_sheet_bookmark_list'));
@@ -93,7 +93,7 @@ void main() {
   testWidgets('點選書籤項目觸發 onBookmarkSelected', (tester) async {
     final repository = FakeBookmarksRepository();
     await repository.insert(
-      const Bookmark(bookId: 'b1', name: '第一章', progression: 0.1),
+      const Bookmark(id: 'bm3', bookId: 'b1', name: '第一章', progression: 0.1),
     );
     Bookmark? selected;
     await _pumpSheet(
@@ -137,7 +137,7 @@ void main() {
   testWidgets('已有書籤時再次點擊 toggle 按鈕，移除該筆書籤', (tester) async {
     final repository = FakeBookmarksRepository();
     await repository.insert(
-      const Bookmark(bookId: 'b1', name: '第 5 頁', pdfPageIndex: 4),
+      const Bookmark(id: 'bm4', bookId: 'b1', name: '第 5 頁', pdfPageIndex: 4),
     );
     await _pumpSheet(
       tester,
@@ -156,6 +156,7 @@ void main() {
   testWidgets('EPUB 情境下 toggle 依 epubLocatorJson 精確比對', (tester) async {
     final repository = FakeBookmarksRepository();
     await repository.insert(const Bookmark(
+      id: 'bm5',
       bookId: 'b1',
       name: '別處',
       epubLocatorJson: '{"href":"/other.xhtml"}',
@@ -178,8 +179,9 @@ void main() {
 
   testWidgets('重新命名書籤後清單顯示新名稱', (tester) async {
     final repository = FakeBookmarksRepository();
-    final id = await repository.insert(
-      const Bookmark(bookId: 'b1', name: '舊名稱', progression: 0.1),
+    const id = 'bm6';
+    await repository.insert(
+      const Bookmark(id: id, bookId: 'b1', name: '舊名稱', progression: 0.1),
     );
     await _pumpSheet(tester, repository: repository);
 
@@ -198,8 +200,9 @@ void main() {
 
   testWidgets('單筆刪除書籤後清單即時消失，不需確認', (tester) async {
     final repository = FakeBookmarksRepository();
-    final id = await repository.insert(
-      const Bookmark(bookId: 'b1', name: '待刪除', progression: 0.1),
+    const id = 'bm7';
+    await repository.insert(
+      const Bookmark(id: id, bookId: 'b1', name: '待刪除', progression: 0.1),
     );
     await _pumpSheet(tester, repository: repository);
 
@@ -222,9 +225,9 @@ void main() {
   testWidgets('批次刪除顯示確認對話框，取消不刪除', (tester) async {
     final repository = FakeBookmarksRepository();
     await repository
-        .insert(const Bookmark(bookId: 'b1', name: 'A', progression: 0.1));
+        .insert(const Bookmark(id: 'bm8', bookId: 'b1', name: 'A', progression: 0.1));
     await repository
-        .insert(const Bookmark(bookId: 'b1', name: 'B', progression: 0.5));
+        .insert(const Bookmark(id: 'bm9', bookId: 'b1', name: 'B', progression: 0.5));
     await _pumpSheet(tester, repository: repository);
 
     await tester
@@ -242,9 +245,9 @@ void main() {
   testWidgets('批次刪除確認後清單清空', (tester) async {
     final repository = FakeBookmarksRepository();
     await repository
-        .insert(const Bookmark(bookId: 'b1', name: 'A', progression: 0.1));
+        .insert(const Bookmark(id: 'bm10', bookId: 'b1', name: 'A', progression: 0.1));
     await repository
-        .insert(const Bookmark(bookId: 'b1', name: 'B', progression: 0.5));
+        .insert(const Bookmark(id: 'bm11', bookId: 'b1', name: 'B', progression: 0.5));
     await _pumpSheet(tester, repository: repository);
 
     await tester
@@ -275,15 +278,17 @@ void main() {
     final repository = FakeBookmarksRepository();
     final highlightsRepository = FakeHighlightsRepository();
     final notesRepository = FakeNotesRepository();
-    final highlightId = await highlightsRepository.insert(const Highlight(
+    const highlightId = 'h7';
+    await highlightsRepository.insert(const Highlight(
+      id: highlightId,
       bookId: 'b1',
       style: HighlightStyle.highlighterPink,
       progression: 0.2,
     ));
     await notesRepository.insert(
-      Note(bookId: 'b1', text: '依附備註', progression: 0.2, highlightId: highlightId),
+      Note(id: 'n2', bookId: 'b1', text: '依附備註', progression: 0.2, highlightId: highlightId),
     );
-    await notesRepository.insert(const Note(bookId: 'b1', text: '純備註', progression: 0.5));
+    await notesRepository.insert(const Note(id: 'n3', bookId: 'b1', text: '純備註', progression: 0.5));
 
     await _pumpSheet(
       tester,
@@ -305,7 +310,7 @@ void main() {
     final highlightsRepository = FakeHighlightsRepository();
     final notesRepository = FakeNotesRepository();
     await highlightsRepository.insert(
-      const Highlight(bookId: 'b1', style: HighlightStyle.underline, progression: 0.1),
+      const Highlight(id: 'h1', bookId: 'b1', style: HighlightStyle.underline, progression: 0.1),
     );
     AnnotationListItem? selected;
 
@@ -327,8 +332,8 @@ void main() {
     final repository = FakeBookmarksRepository();
     final highlightsRepository = FakeHighlightsRepository();
     final notesRepository = FakeNotesRepository();
-    final noteId =
-        await notesRepository.insert(const Note(bookId: 'b1', text: '舊文字', progression: 0.1));
+    const noteId = 'n4';
+    await notesRepository.insert(const Note(id: noteId, bookId: 'b1', text: '舊文字', progression: 0.1));
     var changedCount = 0;
 
     await _pumpSheet(
@@ -355,11 +360,12 @@ void main() {
     final repository = FakeBookmarksRepository();
     final highlightsRepository = FakeHighlightsRepository();
     final notesRepository = FakeNotesRepository();
-    final highlightId = await highlightsRepository.insert(
-      const Highlight(bookId: 'b1', style: HighlightStyle.underline, progression: 0.1),
+    const highlightId = 'h2';
+    await highlightsRepository.insert(
+      const Highlight(id: highlightId, bookId: 'b1', style: HighlightStyle.underline, progression: 0.1),
     );
     await notesRepository.insert(
-      Note(bookId: 'b1', text: '依附備註', progression: 0.1, highlightId: highlightId),
+      Note(id: 'n6', bookId: 'b1', text: '依附備註', progression: 0.1, highlightId: highlightId),
     );
 
     await _pumpSheet(
@@ -371,7 +377,7 @@ void main() {
     await tester.tap(find.byKey(const Key('notes_sheet_tab_annotations')));
     await tester.pumpAndSettle();
 
-    final itemKey = 'h${highlightId}_n1';
+    final itemKey = 'h${highlightId}_nn6';
     await tester.tap(find.byKey(Key('notes_sheet_annotation_delete_$itemKey')));
     await tester.pumpAndSettle();
 
@@ -386,10 +392,10 @@ void main() {
     final highlightsRepository = FakeHighlightsRepository();
     final notesRepository = FakeNotesRepository();
     await highlightsRepository.insert(
-      const Highlight(bookId: 'b1', style: HighlightStyle.underline, progression: 0.1),
+      const Highlight(id: 'h3', bookId: 'b1', style: HighlightStyle.underline, progression: 0.1),
     );
     await highlightsRepository.insert(
-      const Highlight(bookId: 'b1', style: HighlightStyle.underline, progression: 0.2),
+      const Highlight(id: 'h4', bookId: 'b1', style: HighlightStyle.underline, progression: 0.2),
     );
 
     await _pumpSheet(
@@ -422,14 +428,14 @@ void main() {
     final highlightsRepository = FakeHighlightsRepository();
     final notesRepository = FakeNotesRepository();
     await highlightsRepository.insert(
-      const Highlight(bookId: 'b1', style: HighlightStyle.underline, progression: 0.1),
+      const Highlight(id: 'h5', bookId: 'b1', style: HighlightStyle.underline, progression: 0.1),
     );
     // 直接建構「已退化」狀態（highlightId: null），而非先建立一筆連結中的
     // 備註再期待 Fake 自動模擬 cascade——兩個 Fake 刻意保持互不協調（見
     // Global Constraints／FakeNotesRepository 既有 KDoc），避免在測試替身
     // 裡重新實作一份可能與真實資料庫語意逐漸失準的 FK cascade 邏輯。
     await notesRepository.insert(
-      const Note(bookId: 'b1', text: '已退化的純備註', progression: 0.3, highlightId: null),
+      const Note(id: 'n5', bookId: 'b1', text: '已退化的純備註', progression: 0.3, highlightId: null),
     );
 
     await _pumpSheet(
@@ -456,9 +462,9 @@ void main() {
     final highlightsRepository = FakeHighlightsRepository();
     final notesRepository = FakeNotesRepository();
     await highlightsRepository.insert(
-      const Highlight(bookId: 'b1', style: HighlightStyle.underline, progression: 0.1),
+      const Highlight(id: 'h6', bookId: 'b1', style: HighlightStyle.underline, progression: 0.1),
     );
-    await notesRepository.insert(const Note(bookId: 'b1', text: '純備註', progression: 0.5));
+    await notesRepository.insert(const Note(id: 'n1', bookId: 'b1', text: '純備註', progression: 0.5));
 
     await _pumpSheet(
       tester,
@@ -528,7 +534,7 @@ void main() {
 
     final repository = FakeBookmarksRepository();
     await repository.insert(
-      const Bookmark(bookId: 'b1', name: '第一章', progression: 0.1),
+      const Bookmark(id: 'bm12', bookId: 'b1', name: '第一章', progression: 0.1),
     );
 
     await _pumpSheet(

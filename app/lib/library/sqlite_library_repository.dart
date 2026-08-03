@@ -1,6 +1,7 @@
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:uuid/uuid.dart';
 
 import 'library_repository.dart';
 import 'models/book.dart';
@@ -24,11 +25,31 @@ class SqliteLibraryRepository implements LibraryRepository {
   static Future<SqliteLibraryRepository> open(String path) async {
     final db = await openDatabase(
       path,
-      version: 16,
+      version: 17,
       onConfigure: (db) async {
         // book_reader_prefs 的 ON DELETE CASCADE 需要外鍵約束真正生效，
         // SQLite 預設不強制外鍵，須逐連線手動開啟（見 epic-3 plan-issue-1）。
-        await db.execute('PRAGMA foreign_keys = ON');
+        //
+        // epic-8-sync Issue 1（spec 審查修正 Critical 1，見
+        // tmp/epic-8/plan-issue-1-review.md）：sqflite 的 onUpgrade 回呼
+        // 整段跑在它自動包住的一個交易內（見 sqflite_common
+        // database_mixin.dart `doOpen()` 的
+        // `await transaction((txn) async { ... await options.onUpgrade!(...); ... })`，
+        // 已對照本專案實際鎖定的 sqflite_common 2.5.8 原始碼確認），而
+        // SQLite 官方規定 PRAGMA foreign_keys 在交易開啟期間無法切換
+        // （靜默 no-op，不報錯但也不生效）。因此**不能**在 onUpgrade
+        // 內部切換這個 pragma——改在交易外的 onConfigure（此處）判斷
+        // 「是否即將觸發 Issue 1 的 bookmarks/highlights/notes 主鍵
+        // UUID 遷移」並提前關閉外鍵檢查；遷移過程中的中繼狀態（例如
+        // highlights 表被 rename 又重建期間，notes 表的外鍵暫時指向
+        // 不存在的目標）因此不會被擋下。遷移完成後由下方 onOpen（同樣
+        // 在交易外）恢復開啟。
+        final currentVersion = await db.getVersion();
+        final upgradingPastAnnotationUuidMigration =
+            currentVersion > 0 && currentVersion < 17;
+        await db.execute(
+          'PRAGMA foreign_keys = ${upgradingPastAnnotationUuidMigration ? 'OFF' : 'ON'}',
+        );
       },
       onCreate: (db, version) async {
         await db.execute('''
@@ -53,7 +74,10 @@ class SqliteLibraryRepository implements LibraryRepository {
             is_fixed_layout INTEGER,
             groupName TEXT NOT NULL DEFAULT '${BookGroup.uncategorized}',
             createTime INTEGER NOT NULL,
-            lastReadTime INTEGER NOT NULL
+            lastReadTime INTEGER NOT NULL,
+            content_fingerprint TEXT,
+            position_updated_at INTEGER,
+            position_synced_server_updated_at TEXT
           )
         ''');
         await _createBookReaderPrefsTable(db);
@@ -61,6 +85,7 @@ class SqliteLibraryRepository implements LibraryRepository {
         await _createHighlightsTable(db);
         await _createNotesTable(db);
         await _createCustomFontsTable(db);
+        await _createSyncMetadataTable(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
@@ -204,8 +229,40 @@ class SqliteLibraryRepository implements LibraryRepository {
           // 這張表，應與上方 books 表遷移／bookmarks／highlights／notes
           // 同一層級（onUpgrade 頂層、無條件檢查），不受 book_reader_prefs
           // 表是否已存在影響。
-          await _createCustomFontsTable(db);
+        await _createCustomFontsTable(db);
         }
+        if (oldVersion < 17) {
+          // epic-8-sync Issue 1：雲端同步新增的欄位與主鍵型別變更（見
+          // docs/epics/epic-8-sync/spec.md「本機 Schema 變更」／
+          // 「Migration」）。刻意放在 onUpgrade 頂層、無條件檢查，比照
+          // oldVersion < 5/6/8/9/11/16 既有原則——books 表新增欄位與
+          // bookmarks/highlights/notes 主鍵遷移皆與 book_reader_prefs
+          // 表是否已存在無關。**外鍵約束的暫停/恢復不在這裡處理**——
+          // onUpgrade 整段跑在 sqflite 自動包住的交易內，PRAGMA
+          // foreign_keys 在交易開啟期間無法切換（SQLite 官方規定，
+          // spec 審查修正 Critical 1，見 tmp/epic-8/plan-issue-1-review.md），
+          // 已改在上方 onConfigure（交易外）判斷並提前關閉、下方 onOpen
+          // （同樣交易外）之後恢復。
+          await db.execute(
+              'ALTER TABLE books ADD COLUMN content_fingerprint TEXT');
+          await db.execute(
+              'ALTER TABLE books ADD COLUMN position_updated_at INTEGER');
+          await db.execute(
+              'ALTER TABLE books ADD COLUMN position_synced_server_updated_at TEXT');
+          await _migrateAnnotationTablesToUuid(db);
+          await _createSyncMetadataTable(db);
+        }
+      },
+      onOpen: (db) async {
+        // epic-8-sync Issue 1（spec 審查修正 Critical 1）：onConfigure
+        // 可能因為即將進行 Issue 1 的主鍵遷移而暫時關閉外鍵約束，
+        // onOpen 在 sqflite 的自動交易之外執行（見上方 onConfigure
+        // 註解），無條件恢復開啟，確保遷移完成後**同一個連線、同一次
+        // App 啟動**的剩餘期間（不是要等到下一次重開 App）外鍵約束不會
+        // 停留在關閉狀態、影響既有的 CASCADE／SET NULL 行為。對沒有
+        // 觸發遷移的一般情況（onConfigure 已經是 ON）這裡只是無害的
+        // 重複開啟。
+        await db.execute('PRAGMA foreign_keys = ON');
       },
     );
     return SqliteLibraryRepository._(db);
@@ -319,15 +376,23 @@ class SqliteLibraryRepository implements LibraryRepository {
     // 表以 book_id 外鍵關聯（比照 book_reader_prefs 既有關聯模式，見
     // docs/epics/epic-6-annotations/spec.md「資料模型關聯」）。與
     // book_reader_prefs 不同，一本書可以有多筆書籤，故不用 book_id 當
-    // PRIMARY KEY，改用獨立的自動遞增 id。
+    // PRIMARY KEY，改用獨立的 UUID 識別碼（epic-8-sync Issue 1）。
+    // updated_at／deleted_at 供雲端同步使用（見 docs/epics/epic-8-sync/
+    // spec.md「本機 Schema 變更」）：每次本機新增/修改時寫入目前時間戳記
+    // （由 BookmarksRepository 負責維護，非本函式或 Bookmark 模型本身
+    // 的職責），deleted_at 目前恆為 NULL（軟刪除轉換是 Issue 4 的範圍，
+    // 本 Issue 的 delete() 仍是真正的 DELETE FROM，見 plan-issue-1.md
+    // 審查修正紀錄）。
     await db.execute('''
       CREATE TABLE bookmarks (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id TEXT PRIMARY KEY,
         book_id TEXT NOT NULL REFERENCES books(id) ON DELETE CASCADE,
         name TEXT NOT NULL,
         epub_locator_json TEXT,
         progression REAL,
-        pdf_page_index INTEGER
+        pdf_page_index INTEGER,
+        updated_at INTEGER NOT NULL,
+        deleted_at INTEGER
       )
     ''');
   }
@@ -337,15 +402,19 @@ class SqliteLibraryRepository implements LibraryRepository {
     // books 表以 book_id 外鍵關聯（比照 bookmarks 既有關聯模式）。
     // pdf_page_index／pdf_rect_json（Issue 3 新增）與
     // epub_locator_json／progression（Issue 2）互斥，依書籍格式擇一填入。
+    // epic-8-sync Issue 1：主鍵改為 UUID TEXT，updated_at／deleted_at
+    // 供雲端同步使用（見 _createBookmarksTable 同一段說明）。
     await db.execute('''
       CREATE TABLE highlights (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id TEXT PRIMARY KEY,
         book_id TEXT NOT NULL REFERENCES books(id) ON DELETE CASCADE,
         style TEXT NOT NULL,
         epub_locator_json TEXT,
         progression REAL,
         pdf_page_index INTEGER,
-        pdf_rect_json TEXT
+        pdf_rect_json TEXT,
+        updated_at INTEGER NOT NULL,
+        deleted_at INTEGER
       )
     ''');
   }
@@ -356,16 +425,21 @@ class SqliteLibraryRepository implements LibraryRepository {
     // 依附的備註自動退化為純備註（highlight_id 變 null），不需應用層
     // 判斷邏輯。建表順序刻意晚於 _createHighlightsTable（程式碼可讀性
     // 慣例，非技術硬性要求，見 spec.md 審查修正 1.1）。
+    // epic-8-sync Issue 1：主鍵改為 UUID TEXT，highlight_id 改為 TEXT，
+    // updated_at／deleted_at 供雲端同步使用（見 _createBookmarksTable
+    // 同一段說明）。
     await db.execute('''
       CREATE TABLE notes (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id TEXT PRIMARY KEY,
         book_id TEXT NOT NULL REFERENCES books(id) ON DELETE CASCADE,
         text TEXT NOT NULL,
         epub_locator_json TEXT,
         progression REAL,
-        highlight_id INTEGER REFERENCES highlights(id) ON DELETE SET NULL,
+        highlight_id TEXT REFERENCES highlights(id) ON DELETE SET NULL,
         pdf_page_index INTEGER,
-        pdf_rect_json TEXT
+        pdf_rect_json TEXT,
+        updated_at INTEGER NOT NULL,
+        deleted_at INTEGER
       )
     ''');
   }
@@ -507,6 +581,132 @@ class SqliteLibraryRepository implements LibraryRepository {
         where: 'font_family = ?',
         whereArgs: [entry.key],
       );
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // epic-8-sync Issue 1：雲端同步所需的私有遷移方法
+  // ---------------------------------------------------------------------------
+
+  static Future<void> _createSyncMetadataTable(Database db) async {
+    // 同步中繼資料（epic-8-sync，spec.md「本機 Schema 變更」）：單列表
+    // （id 恆為 1，CHECK 約束防止意外插入第二列）。
+    // last_push_completed_at 為純本機時鐘（dirty 判斷用，只跟自己過去
+    // 的寫入比較，不受其他裝置時鐘影響）；4 個
+    // last_pulled_server_updated_at_<collection> 為 PocketBase 伺服器
+    // 蓋章時間戳記字串（下載游標），刻意不用本機時鐘產生，用來規避
+    // 裝置時鐘偏差問題（spec.md 審查修正）。
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS sync_metadata (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        last_push_completed_at INTEGER,
+        last_pulled_server_updated_at_bookmarks TEXT,
+        last_pulled_server_updated_at_highlights TEXT,
+        last_pulled_server_updated_at_notes TEXT,
+        last_pulled_server_updated_at_reading_positions TEXT
+      )
+    ''');
+    // conflictAlgorithm: ignore 是防禦性寫法：本函式在 onCreate（全新
+    // 安裝）與 onUpgrade 的 if (oldVersion < 17) 分支（既有裝置升級）
+    // 各被呼叫一次，兩者互斥，理論上不會有既存 id=1 列衝突；加上
+    // ignore 是零成本的保險。
+    await db.insert(
+      'sync_metadata',
+      {'id': 1},
+      conflictAlgorithm: ConflictAlgorithm.ignore,
+    );
+  }
+
+  /// 將 bookmarks / highlights / notes 三張表的主鍵從 INTEGER AUTOINCREMENT
+  /// 遷移為 UUID TEXT PRIMARY KEY（見 spec.md「本機 Schema 變更」／
+  /// 「Migration」）。
+  ///
+  /// **外鍵約束已由上方 onConfigure 暫時關閉**（PRAGMA foreign_keys = OFF），
+  /// 因為遷移過程中的中繼狀態（例如 notes.highlight_id 在 highlights 表
+  /// 被 rename 重建期間指向不存在的目標）會被 SQLite 擋下。遷移完成後
+  /// 由 onOpen 恢復開啟。
+  ///
+  /// SQLite 的 ALTER TABLE 只支援 RENAME TABLE / ADD COLUMN / RENAME COLUMN，
+  /// 不支援修改欄位型別或移除欄位，因此只能用「建新表 → 搬資料 →
+  /// 刪舊表 → RENAME 新表」的方式重寫。
+  static Future<void> _migrateAnnotationTablesToUuid(Database db) async {
+    // 檢查 bookmarks 表是否仍使用舊版 INTEGER 主鍵——若已遷移過（例如
+    // 裝置已跑過 16→17 升級）則跳過整個流程，避免重複遷移造成資料遺失。
+    final bookmarksInfo = await db.rawQuery(
+        "SELECT sql FROM sqlite_master WHERE type='table' AND name='bookmarks'");
+    if (bookmarksInfo.isEmpty) return;
+    final createSql = bookmarksInfo.first['sql'] as String;
+    if (!createSql.contains('INTEGER PRIMARY KEY AUTOINCREMENT')) return;
+
+    final uuid = const Uuid();
+
+    // --- Bookmarks ---
+    // 舊表資料備份（用於後續搬遷）
+    final bookmarks = await db.query('bookmarks');
+
+    await db.execute('DROP TABLE IF EXISTS bookmarks');
+    await _createBookmarksTable(db);
+    final migrationTimestamp = DateTime.now().millisecondsSinceEpoch;
+    for (final row in bookmarks) {
+      final newId = uuid.v4();
+      await db.insert('bookmarks', {
+        'id': newId,
+        'book_id': row['book_id'],
+        'name': row['name'],
+        'epub_locator_json': row['epub_locator_json'],
+        'progression': row['progression'],
+        'pdf_page_index': row['pdf_page_index'],
+        'updated_at': migrationTimestamp,
+        'deleted_at': null,
+      });
+    }
+
+    // --- Highlights ---
+    final highlights = await db.query('highlights');
+
+    await db.execute('DROP TABLE IF EXISTS highlights');
+    await _createHighlightsTable(db);
+    // 舊 highlights 的 INTEGER id → 新 UUID id 對照表，供 notes.highlight_id 遷移
+    final highlightIdMap = <int, String>{};
+    for (final row in highlights) {
+      final newId = uuid.v4();
+      highlightIdMap[row['id'] as int] = newId;
+      await db.insert('highlights', {
+        'id': newId,
+        'book_id': row['book_id'],
+        'style': row['style'],
+        'epub_locator_json': row['epub_locator_json'],
+        'progression': row['progression'],
+        'pdf_page_index': row['pdf_page_index'],
+        'pdf_rect_json': row['pdf_rect_json'],
+        'updated_at': migrationTimestamp,
+        'deleted_at': null,
+      });
+    }
+
+    // --- Notes ---
+    final notes = await db.query('notes');
+
+    await db.execute('DROP TABLE IF EXISTS notes');
+    await _createNotesTable(db);
+    for (final row in notes) {
+      final newId = uuid.v4();
+      // 將舊的 INTEGER highlight_id 轉換為新的 UUID highlight_id
+      final oldHighlightId = row['highlight_id'] as int?;
+      final newHighlightId =
+          oldHighlightId != null ? highlightIdMap[oldHighlightId] : null;
+      await db.insert('notes', {
+        'id': newId,
+        'book_id': row['book_id'],
+        'text': row['text'],
+        'epub_locator_json': row['epub_locator_json'],
+        'progression': row['progression'],
+        'highlight_id': newHighlightId,
+        'pdf_page_index': row['pdf_page_index'],
+        'pdf_rect_json': row['pdf_rect_json'],
+        'updated_at': migrationTimestamp,
+        'deleted_at': null,
+      });
     }
   }
 

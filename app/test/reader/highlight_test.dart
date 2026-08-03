@@ -4,15 +4,16 @@ import 'package:elinkbook/reader/highlight_style.dart';
 import 'package:elinkbook/reader/percent_rect.dart';
 
 void main() {
-  test('toMap／fromMap round-trip 保留所有欄位（不含 id）', () {
+  test('toMap／fromMap round-trip 保留所有欄位（含 id）', () {
     const highlight = Highlight(
+      id: 'h1',
       bookId: 'b1',
       style: HighlightStyle.highlighterPink,
       epubLocatorJson: '{"href":"/c1.xhtml"}',
       progression: 0.2,
     );
     final map = highlight.toMap();
-    expect(map.containsKey('id'), isFalse);
+    expect(map['id'], 'h1');
     expect(map['book_id'], 'b1');
     expect(map['style'], 'highlighterPink');
     expect(map['epub_locator_json'], '{"href":"/c1.xhtml"}');
@@ -21,26 +22,27 @@ void main() {
 
   test('fromMap 正確還原 id 與 style（模擬資料庫查詢結果）', () {
     final restored = Highlight.fromMap({
-      'id': 5,
+      'id': 'h5',
       'book_id': 'b1',
       'style': 'underline',
       'epub_locator_json': '{"href":"/c2.xhtml"}',
       'progression': 0.4,
     });
-    expect(restored.id, 5);
+    expect(restored.id, 'h5');
     expect(restored.style, HighlightStyle.underline);
     expect(restored.progression, 0.4);
   });
 
   test('兩個欄位值完全相同的 Highlight 視為相等', () {
-    const a = Highlight(id: 1, bookId: 'b1', style: HighlightStyle.underline, progression: 0.1);
-    const b = Highlight(id: 1, bookId: 'b1', style: HighlightStyle.underline, progression: 0.1);
+    const a = Highlight(id: 'h1', bookId: 'b1', style: HighlightStyle.underline, progression: 0.1);
+    const b = Highlight(id: 'h1', bookId: 'b1', style: HighlightStyle.underline, progression: 0.1);
     expect(a, b);
     expect(a.hashCode, b.hashCode);
   });
 
   test('toMap／fromMap round-trip 保留 PDF 欄位（pdfPageIndex／pdfRect）', () {
     const highlight = Highlight(
+      id: 'h2',
       bookId: 'b1',
       style: HighlightStyle.underline,
       pdfPageIndex: 3,
@@ -51,7 +53,7 @@ void main() {
     expect(map['pdf_rect_json'], isNotNull);
 
     final restored = Highlight.fromMap({
-      'id': 1,
+      'id': 'h2',
       'book_id': 'b1',
       'style': 'underline',
       'epub_locator_json': null,
@@ -65,7 +67,7 @@ void main() {
 
   test('fromMap 缺少 pdf_page_index／pdf_rect_json 鍵時（EPUB 既有資料列）視為 null', () {
     final restored = Highlight.fromMap({
-      'id': 1,
+      'id': 'h1',
       'book_id': 'b1',
       'style': 'underline',
       'epub_locator_json': '{"href":"/c1.xhtml"}',

@@ -93,14 +93,14 @@ void main() {
     test('新格式 locatorJson 正確轉換為 cfi／color／isUnderline', () {
       final entries = buildDecorationEntries([
         EpubDecoration.forHighlight(
-          highlightId: 5,
+          highlightId: 'h5',
           locatorJson: '{"cfi":"epubcfi(/6/8!/4[story-2-2])","index":3,"fraction":0.04}',
           tint: 0xFFFF0000,
           isUnderline: false,
         ),
       ]);
       expect(entries.length, 1);
-      expect(entries[0]['id'], 'highlight:5');
+      expect(entries[0]['id'], 'highlight:h5');
       expect(entries[0]['cfi'], 'epubcfi(/6/8!/4[story-2-2])');
       expect(entries[0]['color'], 'rgba(255, 0, 0, 1.0)');
       expect(entries[0]['isUnderline'], false);
@@ -109,7 +109,7 @@ void main() {
     test('isUnderline 預設為 false（forNote 不接受 isUnderline 參數）', () {
       final entries = buildDecorationEntries([
         EpubDecoration.forNote(
-          noteId: 1,
+          noteId: 'n1',
           locatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.0}',
           tint: 0x73D1D5DB,
         ),
@@ -131,25 +131,25 @@ void main() {
     test('多筆項目保留順序，單筆失敗不影響其餘', () {
       final entries = buildDecorationEntries([
         EpubDecoration.forHighlight(
-          highlightId: 1,
+          highlightId: 'h1',
           locatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.0}',
           tint: 0xFFFF0000,
           isUnderline: false,
         ),
         EpubDecoration(
-          id: 'highlight:2',
+          id: 'highlight:h2',
           locatorJson: '{"href":"/OEBPS/chapter1.xhtml"}',
           tint: 0xFF00FF00,
         ),
         EpubDecoration.forNote(
-          noteId: 1,
+          noteId: 'n1',
           locatorJson: '{"cfi":"epubcfi(/6/6)","index":1,"fraction":0.5}',
           tint: 0x73D1D5DB,
         ),
       ]);
       expect(entries.length, 2);
-      expect(entries[0]['id'], 'highlight:1');
-      expect(entries[1]['id'], 'note:1');
+      expect(entries[0]['id'], 'highlight:h1');
+      expect(entries[1]['id'], 'note:n1');
     });
 
     test('空清單回傳空清單', () {
@@ -160,10 +160,10 @@ void main() {
       const sameCfi = '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.0}';
       final entries = buildDecorationEntries([
         EpubDecoration.forHighlight(
-          highlightId: 1, locatorJson: sameCfi, tint: 0xFFFF0000, isUnderline: false,
+          highlightId: 'h1', locatorJson: sameCfi, tint: 0xFFFF0000, isUnderline: false,
         ),
         EpubDecoration.forHighlight(
-          highlightId: 2, locatorJson: sameCfi, tint: 0xFF0000FF, isUnderline: false,
+          highlightId: 'h2', locatorJson: sameCfi, tint: 0xFF0000FF, isUnderline: false,
         ),
       ]);
       expect(entries.length, 2);

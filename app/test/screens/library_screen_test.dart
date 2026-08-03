@@ -2027,6 +2027,7 @@ void main() {
     final highlightsRepository = FakeHighlightsRepository();
     final notesRepository = FakeNotesRepository();
     await highlightsRepository.insert(const Highlight(
+      id: 'h_lib_1',
       bookId: '1',
       style: HighlightStyle.highlighterYellow,
       pdfPageIndex: 0,
@@ -2142,6 +2143,7 @@ void main() {
     final highlightsRepository = FakeHighlightsRepository();
     final notesRepository = FakeNotesRepository();
     await highlightsRepository.insert(const Highlight(
+      id: 'h_lib_2',
       bookId: '1',
       style: HighlightStyle.highlighterYellow,
       pdfPageIndex: 0,

@@ -34,28 +34,28 @@ void main() {
     await libraryRepository.close();
   });
 
-  test('insert 回傳自動指派的 rowid，listByBook 讀回相同資料', () async {
-    final id = await repository.insert(const Bookmark(
+  test('insert 寫入後 listByBook 讀回相同資料', () async {
+    await repository.insert(const Bookmark(
+      id: 'bm1',
       bookId: 'b1',
       name: '第一章',
       epubLocatorJson: '{"href":"/c1.xhtml"}',
       progression: 0.1,
     ));
-    expect(id, greaterThan(0));
 
     final list = await repository.listByBook('b1');
     expect(list, hasLength(1));
-    expect(list.single.id, id);
+    expect(list.single.id, 'bm1');
     expect(list.single.name, '第一章');
   });
 
   test('listByBook 依 EPUB progression 由小到大排序', () async {
     await repository
-        .insert(const Bookmark(bookId: 'b1', name: 'C', progression: 0.8));
+        .insert(const Bookmark(id: 'bm2', bookId: 'b1', name: 'C', progression: 0.8));
     await repository
-        .insert(const Bookmark(bookId: 'b1', name: 'A', progression: 0.1));
+        .insert(const Bookmark(id: 'bm3', bookId: 'b1', name: 'A', progression: 0.1));
     await repository
-        .insert(const Bookmark(bookId: 'b1', name: 'B', progression: 0.5));
+        .insert(const Bookmark(id: 'bm4', bookId: 'b1', name: 'B', progression: 0.5));
 
     final list = await repository.listByBook('b1');
     expect(list.map((b) => b.name).toList(), ['A', 'B', 'C']);
@@ -63,11 +63,11 @@ void main() {
 
   test('listByBook 依 PDF 頁索引由小到大排序', () async {
     await repository
-        .insert(const Bookmark(bookId: 'b1', name: 'C', pdfPageIndex: 20));
+        .insert(const Bookmark(id: 'bm5', bookId: 'b1', name: 'C', pdfPageIndex: 20));
     await repository
-        .insert(const Bookmark(bookId: 'b1', name: 'A', pdfPageIndex: 2));
+        .insert(const Bookmark(id: 'bm6', bookId: 'b1', name: 'A', pdfPageIndex: 2));
     await repository
-        .insert(const Bookmark(bookId: 'b1', name: 'B', pdfPageIndex: 10));
+        .insert(const Bookmark(id: 'bm7', bookId: 'b1', name: 'B', pdfPageIndex: 10));
 
     final list = await repository.listByBook('b1');
     expect(list.map((b) => b.name).toList(), ['A', 'B', 'C']);
@@ -76,9 +76,9 @@ void main() {
   test('listByBook 只回傳指定 book_id 的書籤', () async {
     await libraryRepository.insertBook(_testBook('b2'));
     await repository
-        .insert(const Bookmark(bookId: 'b1', name: 'X', progression: 0.1));
+        .insert(const Bookmark(id: 'bm8', bookId: 'b1', name: 'X', progression: 0.1));
     await repository
-        .insert(const Bookmark(bookId: 'b2', name: 'Y', pdfPageIndex: 0));
+        .insert(const Bookmark(id: 'bm9', bookId: 'b2', name: 'Y', pdfPageIndex: 0));
 
     final list = await repository.listByBook('b1');
     expect(list, hasLength(1));
@@ -86,12 +86,13 @@ void main() {
   });
 
   test('rename 更新指定書籤的名稱，其餘欄位不受影響', () async {
-    final id = await repository.insert(const Bookmark(
+    await repository.insert(const Bookmark(
+      id: 'bm10',
       bookId: 'b1',
       name: '舊名稱',
       pdfPageIndex: 5,
     ));
-    await repository.rename(id, '新名稱');
+    await repository.rename('bm10', '新名稱');
 
     final list = await repository.listByBook('b1');
     expect(list.single.name, '新名稱');
@@ -99,23 +100,23 @@ void main() {
   });
 
   test('delete 移除指定單筆書籤，其餘不受影響', () async {
-    final id1 = await repository
-        .insert(const Bookmark(bookId: 'b1', name: 'A', progression: 0.1));
-    final id2 = await repository
-        .insert(const Bookmark(bookId: 'b1', name: 'B', progression: 0.5));
-    await repository.delete(id1);
+    await repository
+        .insert(const Bookmark(id: 'bm11', bookId: 'b1', name: 'A', progression: 0.1));
+    await repository
+        .insert(const Bookmark(id: 'bm12', bookId: 'b1', name: 'B', progression: 0.5));
+    await repository.delete('bm11');
 
     final list = await repository.listByBook('b1');
     expect(list, hasLength(1));
-    expect(list.single.id, id2);
+    expect(list.single.id, 'bm12');
   });
 
   test('deleteAllForBook 只清空指定書籍的書籤，其他書籍不受影響', () async {
     await libraryRepository.insertBook(_testBook('b2'));
     await repository
-        .insert(const Bookmark(bookId: 'b1', name: 'X', progression: 0.1));
+        .insert(const Bookmark(id: 'bm13', bookId: 'b1', name: 'X', progression: 0.1));
     await repository
-        .insert(const Bookmark(bookId: 'b2', name: 'Y', pdfPageIndex: 0));
+        .insert(const Bookmark(id: 'bm14', bookId: 'b2', name: 'Y', pdfPageIndex: 0));
 
     await repository.deleteAllForBook('b1');
 

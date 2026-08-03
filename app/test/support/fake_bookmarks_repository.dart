@@ -4,20 +4,17 @@ import 'package:elinkbook/reader/bookmarks_repository.dart';
 /// 測試用 Fake，比照 [FakeReadingPositionRepository] 模式。
 class FakeBookmarksRepository implements BookmarksRepository {
   final List<Bookmark> _storage = [];
-  int _nextId = 1;
 
   @override
-  Future<int> insert(Bookmark bookmark) async {
-    final id = _nextId++;
+  Future<void> insert(Bookmark bookmark) async {
     _storage.add(Bookmark(
-      id: id,
+      id: bookmark.id,
       bookId: bookmark.bookId,
       name: bookmark.name,
       epubLocatorJson: bookmark.epubLocatorJson,
       progression: bookmark.progression,
       pdfPageIndex: bookmark.pdfPageIndex,
     ));
-    return id;
   }
 
   @override
@@ -32,14 +29,14 @@ class FakeBookmarksRepository implements BookmarksRepository {
   }
 
   @override
-  Future<void> rename(int id, String newName) async {
+  Future<void> rename(String id, String newName) async {
     final index = _storage.indexWhere((b) => b.id == id);
     if (index == -1) return;
     _storage[index] = _storage[index].copyWith(name: newName);
   }
 
   @override
-  Future<void> delete(int id) async {
+  Future<void> delete(String id) async {
     _storage.removeWhere((b) => b.id == id);
   }
 

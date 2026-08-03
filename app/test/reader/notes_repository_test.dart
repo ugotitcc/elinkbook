@@ -39,26 +39,26 @@ void main() {
     await libraryRepository.close();
   });
 
-  test('insert 回傳自動指派的 rowid，listByBook 讀回相同資料', () async {
-    final id = await notesRepository.insert(const Note(bookId: 'b1', text: 'A', progression: 0.1));
-    expect(id, greaterThan(0));
+  test('insert 寫入後 listByBook 讀回相同資料', () async {
+    await notesRepository.insert(const Note(id: 'n1', bookId: 'b1', text: 'A', progression: 0.1));
 
     final list = await notesRepository.listByBook('b1');
+    expect(list, hasLength(1));
+    expect(list.single.id, 'n1');
     expect(list.single.text, 'A');
   });
 
   test('listByBook 依 progression 由小到大排序', () async {
-    await notesRepository.insert(const Note(bookId: 'b1', text: 'B', progression: 0.8));
-    await notesRepository.insert(const Note(bookId: 'b1', text: 'A', progression: 0.1));
+    await notesRepository.insert(const Note(id: 'n2', bookId: 'b1', text: 'B', progression: 0.8));
+    await notesRepository.insert(const Note(id: 'n3', bookId: 'b1', text: 'A', progression: 0.1));
 
     final list = await notesRepository.listByBook('b1');
     expect(list.map((n) => n.text).toList(), ['A', 'B']);
   });
 
   test('updateText 更新指定備註的文字，其餘欄位不受影響', () async {
-    final id = await notesRepository
-        .insert(const Note(bookId: 'b1', text: '舊文字', progression: 0.2, highlightId: null));
-    await notesRepository.updateText(id, '新文字');
+    await notesRepository.insert(const Note(id: 'n4', bookId: 'b1', text: '舊文字', progression: 0.2, highlightId: null));
+    await notesRepository.updateText('n4', '新文字');
 
     final list = await notesRepository.listByBook('b1');
     expect(list.single.text, '新文字');
@@ -66,19 +66,19 @@ void main() {
   });
 
   test('delete 移除指定單筆備註，其餘不受影響', () async {
-    final id1 = await notesRepository.insert(const Note(bookId: 'b1', text: 'A', progression: 0.1));
-    final id2 = await notesRepository.insert(const Note(bookId: 'b1', text: 'B', progression: 0.5));
-    await notesRepository.delete(id1);
+    await notesRepository.insert(const Note(id: 'n5', bookId: 'b1', text: 'A', progression: 0.1));
+    await notesRepository.insert(const Note(id: 'n6', bookId: 'b1', text: 'B', progression: 0.5));
+    await notesRepository.delete('n5');
 
     final list = await notesRepository.listByBook('b1');
     expect(list, hasLength(1));
-    expect(list.single.id, id2);
+    expect(list.single.id, 'n6');
   });
 
   test('deleteAllForBook 只清空指定書籍的備註，其他書籍不受影響', () async {
     await libraryRepository.insertBook(_testBook('b2'));
-    await notesRepository.insert(const Note(bookId: 'b1', text: 'A', progression: 0.1));
-    await notesRepository.insert(const Note(bookId: 'b2', text: 'B', progression: 0.1));
+    await notesRepository.insert(const Note(id: 'n7', bookId: 'b1', text: 'A', progression: 0.1));
+    await notesRepository.insert(const Note(id: 'n8', bookId: 'b2', text: 'B', progression: 0.1));
 
     await notesRepository.deleteAllForBook('b1');
 
@@ -89,17 +89,17 @@ void main() {
   test(
       'FK 退化行為（spec.md 決策 #13／資料模型關聯）：刪除劃線後，依附的'
       '備註 highlight_id 自動變 null，備註內容本身不受影響', () async {
-    final highlightId = await highlightsRepository.insert(
-      const Highlight(bookId: 'b1', style: HighlightStyle.underline, progression: 0.3),
+    await highlightsRepository.insert(
+      const Highlight(id: 'h1', bookId: 'b1', style: HighlightStyle.underline, progression: 0.3),
     );
-    final noteId = await notesRepository.insert(
-      Note(bookId: 'b1', text: '依附備註', progression: 0.3, highlightId: highlightId),
+    await notesRepository.insert(
+      const Note(id: 'n9', bookId: 'b1', text: '依附備註', progression: 0.3, highlightId: 'h1'),
     );
 
-    await highlightsRepository.delete(highlightId);
+    await highlightsRepository.delete('h1');
 
     final notes = await notesRepository.listByBook('b1');
-    final degraded = notes.singleWhere((n) => n.id == noteId);
+    final degraded = notes.singleWhere((n) => n.id == 'n9');
     expect(degraded.highlightId, isNull);
     expect(degraded.text, '依附備註');
   });
@@ -107,12 +107,12 @@ void main() {
   test(
       'FK 退化行為（批次版本）：deleteAllForBook 清空劃線後，所有依附備註'
       '皆退化為純備註，備註本身不被刪除', () async {
-    final h1 = await highlightsRepository
-        .insert(const Highlight(bookId: 'b1', style: HighlightStyle.underline, progression: 0.1));
-    final h2 = await highlightsRepository
-        .insert(const Highlight(bookId: 'b1', style: HighlightStyle.underline, progression: 0.2));
-    await notesRepository.insert(Note(bookId: 'b1', text: 'N1', progression: 0.1, highlightId: h1));
-    await notesRepository.insert(Note(bookId: 'b1', text: 'N2', progression: 0.2, highlightId: h2));
+    await highlightsRepository
+        .insert(const Highlight(id: 'h2', bookId: 'b1', style: HighlightStyle.underline, progression: 0.1));
+    await highlightsRepository
+        .insert(const Highlight(id: 'h3', bookId: 'b1', style: HighlightStyle.underline, progression: 0.2));
+    await notesRepository.insert(const Note(id: 'n10', bookId: 'b1', text: 'N1', progression: 0.1, highlightId: 'h2'));
+    await notesRepository.insert(const Note(id: 'n11', bookId: 'b1', text: 'N2', progression: 0.2, highlightId: 'h3'));
 
     await highlightsRepository.deleteAllForBook('b1');
 
@@ -122,8 +122,8 @@ void main() {
   });
 
   test('listByBook 對 PDF 備註依 pdf_page_index 由小到大排序', () async {
-    await notesRepository.insert(const Note(bookId: 'b1', text: 'B', pdfPageIndex: 5));
-    await notesRepository.insert(const Note(bookId: 'b1', text: 'A', pdfPageIndex: 1));
+    await notesRepository.insert(const Note(id: 'n12', bookId: 'b1', text: 'B', pdfPageIndex: 5));
+    await notesRepository.insert(const Note(id: 'n13', bookId: 'b1', text: 'A', pdfPageIndex: 1));
 
     final list = await notesRepository.listByBook('b1');
     expect(list.map((n) => n.text).toList(), ['A', 'B']);

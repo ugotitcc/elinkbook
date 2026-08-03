@@ -23,7 +23,7 @@ class EpubDecoration {
   });
 
   factory EpubDecoration.forHighlight({
-    required int highlightId,
+    required String highlightId,
     required String locatorJson,
     required int tint,
     required bool isUnderline,
@@ -37,7 +37,7 @@ class EpubDecoration {
   }
 
   factory EpubDecoration.forNote({
-    required int noteId,
+    required String noteId,
     required String locatorJson,
     required int tint,
   }) {
@@ -61,23 +61,21 @@ enum AnnotationKind { highlight, note }
 /// 供 `ReaderScreen` 反查是哪一張表的哪一筆資料庫記錄（審查修正：原本
 /// `decorationId.split(':')` 與 `parts[1]` 這種型別不安全的字串操作直接
 /// 寫在 `ReaderScreen` 內，收斂為單一、集中管理的解析函式）。格式不符
-/// （前綴非 `highlight`/`note`、或 id 部分不是合法整數）時回傳 `null`，
+/// （前綴非 `highlight`/`note`、或 id 部分為空）時回傳 `null`，
 /// 不拋出例外——理論上不會發生（id 皆由本檔案的具名建構子產生），但呼叫
 /// 端仍須以「查無對應記錄」的靜默忽略原則處理，見 spec.md 既有慣例。
 DecodedAnnotationId? decodeAnnotationId(String encoded) {
   final parts = encoded.split(':');
-  if (parts.length != 2) return null;
-  final id = int.tryParse(parts[1]);
-  if (id == null) return null;
+  if (parts.length != 2 || parts[1].isEmpty) return null;
   final AnnotationKind? kind = switch (parts[0]) {
     'highlight' => AnnotationKind.highlight,
     'note' => AnnotationKind.note,
     _ => null,
   };
   if (kind == null) return null;
-  return (kind: kind, id: id);
+  return (kind: kind, id: parts[1]);
 }
 
 /// [decodeAnnotationId] 的回傳型別（Dart 3 record），比宣告一個只有兩個
 /// 唯讀欄位的小型 class 更精簡。
-typedef DecodedAnnotationId = ({AnnotationKind kind, int id});
+typedef DecodedAnnotationId = ({AnnotationKind kind, String id});

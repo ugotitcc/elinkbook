@@ -12,8 +12,16 @@ class NotesRepository {
 
   const NotesRepository(this._db);
 
-  Future<int> insert(Note note) {
-    return _db.insert('notes', note.toMap());
+  /// `updated_at`（epic-8-sync Issue 1，供雲端同步 dirty 判定使用，見
+  /// `sqlite_library_repository.dart` `_createNotesTable`）由本層補上
+  /// 目前時間戳記，不放進 [Note] 模型本身——模型只承載本機語意欄位，
+  /// `updated_at`／`deleted_at` 是同步子系統專用的資料庫欄位
+  /// （`deleted_at` 目前恆為 NULL，軟刪除轉換留給 Issue 4）。
+  Future<void> insert(Note note) {
+    return _db.insert('notes', {
+      ...note.toMap(),
+      'updated_at': DateTime.now().millisecondsSinceEpoch,
+    });
   }
 
   /// 依書中位置順序排序，比照 [HighlightsRepository.listByBook] 的
@@ -28,11 +36,19 @@ class NotesRepository {
     return rows.map(Note.fromMap).toList();
   }
 
-  Future<void> updateText(int id, String text) {
-    return _db.update('notes', {'text': text}, where: 'id = ?', whereArgs: [id]);
+  Future<void> updateText(String id, String text) {
+    return _db.update(
+      'notes',
+      {
+        'text': text,
+        'updated_at': DateTime.now().millisecondsSinceEpoch,
+      },
+      where: 'id = ?',
+      whereArgs: [id],
+    );
   }
 
-  Future<void> delete(int id) {
+  Future<void> delete(String id) {
     return _db.delete('notes', where: 'id = ?', whereArgs: [id]);
   }
 

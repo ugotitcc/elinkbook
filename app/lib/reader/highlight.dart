@@ -8,8 +8,8 @@ import 'percent_rect.dart';
 /// [progression] 與 [pdfPageIndex]／[pdfRect] 互斥，一筆劃線只會用到其中
 /// 一組（依書籍格式而定，比照 [Bookmark] 既有的欄位語意）。
 class Highlight {
-  /// SQLite 自動指派的 rowid，新增前（尚未寫入資料庫）為 null。
-  final int? id;
+  /// UUID primary key，新增前由呼叫端產生（見 reader_screen.dart）。
+  final String id;
   final String bookId;
   final HighlightStyle style;
   final String? epubLocatorJson;
@@ -18,7 +18,7 @@ class Highlight {
   final PercentRect? pdfRect;
 
   const Highlight({
-    this.id,
+    required this.id,
     required this.bookId,
     required this.style,
     this.epubLocatorJson,
@@ -27,11 +27,10 @@ class Highlight {
     this.pdfRect,
   });
 
-  /// 供 [HighlightsRepository.insert] 使用；刻意不含 `id`，比照
-  /// `Bookmark.toMap()` 既有慣例（新增一律交由 SQLite `AUTOINCREMENT`
-  /// 指派）。
+  /// 供 [HighlightsRepository.insert] 使用。
   Map<String, Object?> toMap() {
     return {
+      'id': id,
       'book_id': bookId,
       'style': style.name,
       'epub_locator_json': epubLocatorJson,
@@ -44,7 +43,7 @@ class Highlight {
   factory Highlight.fromMap(Map<String, Object?> map) {
     final pdfRectJson = map['pdf_rect_json'] as String?;
     return Highlight(
-      id: map['id'] as int?,
+      id: map['id'] as String,
       bookId: map['book_id'] as String,
       style: HighlightStyle.values.byName(map['style'] as String),
       epubLocatorJson: map['epub_locator_json'] as String?,

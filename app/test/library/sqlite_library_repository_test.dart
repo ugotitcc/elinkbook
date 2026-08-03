@@ -1027,6 +1027,7 @@ void main() {
       'epub_locator_json': '{"href":"/c1.xhtml"}',
       'progression': 0.1,
       'pdf_page_index': null,
+      'updated_at': 1000,
     });
     expect(id, greaterThan(0));
 
@@ -1128,6 +1129,7 @@ void main() {
       'epub_locator_json': null,
       'progression': null,
       'pdf_page_index': 3,
+      'updated_at': 1000,
     });
     expect(id, greaterThan(0));
 
@@ -1142,22 +1144,26 @@ void main() {
 
   test('全新安裝的 highlights／notes 表可用（version 9 起 onCreate 已含括）', () async {
     await repository.insertBook(_book('b_highlight'));
-    final highlightId = await repository.database.insert('highlights', {
+    final highlightId = 'hl_fresh_1';
+    await repository.database.insert('highlights', {
+      'id': highlightId,
       'book_id': 'b_highlight',
       'style': 'underline',
       'epub_locator_json': '{"href":"/c1.xhtml"}',
       'progression': 0.1,
+      'updated_at': 1000,
     });
-    expect(highlightId, greaterThan(0));
 
-    final noteId = await repository.database.insert('notes', {
+    final noteId = 'nt_fresh_1';
+    await repository.database.insert('notes', {
+      'id': noteId,
       'book_id': 'b_highlight',
       'text': '心得',
       'epub_locator_json': '{"href":"/c1.xhtml"}',
       'progression': 0.1,
       'highlight_id': highlightId,
+      'updated_at': 1000,
     });
-    expect(noteId, greaterThan(0));
 
     final rows = await repository.database
         .query('notes', where: 'book_id = ?', whereArgs: ['b_highlight']);
@@ -1266,6 +1272,7 @@ void main() {
       'style': 'highlighterYellow',
       'epub_locator_json': null,
       'progression': 0.3,
+      'updated_at': 1000,
     });
     expect(highlightId, greaterThan(0));
 
@@ -1275,6 +1282,7 @@ void main() {
       'epub_locator_json': null,
       'progression': 0.3,
       'highlight_id': null,
+      'updated_at': 1000,
     });
     expect(noteId, greaterThan(0));
 
@@ -1286,22 +1294,26 @@ void main() {
   test('全新安裝的 highlights／notes 表含 PDF 欄位（version 10 起 onCreate 已含括）',
       () async {
     await repository.insertBook(_book('b_pdf_highlight'));
-    final highlightId = await repository.database.insert('highlights', {
+    final highlightId = 'hl_pdf_1';
+    await repository.database.insert('highlights', {
+      'id': highlightId,
       'book_id': 'b_pdf_highlight',
       'style': 'underline',
       'pdf_page_index': 2,
       'pdf_rect_json': '{"left":0.1,"top":0.2,"right":0.3,"bottom":0.4}',
+      'updated_at': 1000,
     });
-    expect(highlightId, greaterThan(0));
 
-    final noteId = await repository.database.insert('notes', {
+    final noteId = 'nt_pdf_1';
+    await repository.database.insert('notes', {
+      'id': noteId,
       'book_id': 'b_pdf_highlight',
       'text': '心得',
       'pdf_page_index': 2,
       'pdf_rect_json': '{"left":0.1,"top":0.2,"right":0.3,"bottom":0.4}',
       'highlight_id': highlightId,
+      'updated_at': 1000,
     });
-    expect(noteId, greaterThan(0));
   });
 
   test('既有 version 9 裝置升級到 version 10，highlights／notes 表正確補上 PDF 欄位（ALTER TABLE 路徑）',
@@ -2380,5 +2392,199 @@ void main() {
         isFalse,
       );
     });
+  });
+
+  test('全新安裝的 bookmarks/highlights/notes 表主鍵為 TEXT（UUID），books 表含同步欄位，sync_metadata 表已建立（version 17 起 onCreate 已含括）',
+      () async {
+    final repository =
+        await SqliteLibraryRepository.open(inMemoryDatabasePath);
+    addTearDown(() => repository.close());
+
+    for (final table in ['bookmarks', 'highlights', 'notes']) {
+      final columns =
+          await repository.database.rawQuery('PRAGMA table_info($table)');
+      final idColumn = columns.firstWhere((c) => c['name'] == 'id');
+      expect(idColumn['type'], 'TEXT', reason: '$table.id 應為 TEXT（UUID）');
+      expect(
+        columns.map((c) => c['name'] as String).toSet(),
+        containsAll(['updated_at', 'deleted_at']),
+        reason: '$table 應含 updated_at／deleted_at',
+      );
+    }
+
+    final bookColumns =
+        await repository.database.rawQuery('PRAGMA table_info(books)');
+    expect(
+      bookColumns.map((c) => c['name'] as String).toSet(),
+      containsAll([
+        'content_fingerprint',
+        'position_updated_at',
+        'position_synced_server_updated_at',
+      ]),
+    );
+
+    final syncMetadataRows = await repository.database.query('sync_metadata');
+    expect(syncMetadataRows, hasLength(1));
+    expect(syncMetadataRows.single['last_push_completed_at'], isNull);
+  });
+
+  test('既有 version 16 裝置（bookmarks/highlights/notes 為舊版整數主鍵）升級到 version 17，主鍵正確轉為 UUID 且 notes.highlight_id 正確重寫',
+      () async {
+    final tempDir = await Directory.systemTemp
+        .createTemp('elinkbook_migration_v16_to_v17_test');
+    addTearDown(() => tempDir.delete(recursive: true));
+    final dbPath = p.join(tempDir.path, 'test.db');
+
+    // 模擬「已存在於 version 16」的舊格式資料庫：bookmarks/highlights/notes
+    // 主鍵皆為 INTEGER AUTOINCREMENT，notes.highlight_id 參照本機整數 id。
+    final oldDb = await databaseFactory.openDatabase(
+      dbPath,
+      options: OpenDatabaseOptions(
+        version: 16,
+        onConfigure: (db) async {
+          await db.execute('PRAGMA foreign_keys = ON');
+        },
+        onCreate: (db, version) async {
+          await db.execute('CREATE TABLE groups (name TEXT PRIMARY KEY)');
+          await db.insert('groups', {'name': '未分類'});
+          await db.execute('''
+            CREATE TABLE books (
+              id TEXT PRIMARY KEY,
+              title TEXT NOT NULL,
+              author TEXT,
+              format TEXT NOT NULL,
+              filePath TEXT NOT NULL,
+              source TEXT NOT NULL,
+              coverPath TEXT,
+              progress REAL NOT NULL DEFAULT 0,
+              epubLocator TEXT,
+              pdfPageIndex INTEGER,
+              totalCharacterCount INTEGER,
+              is_fixed_layout INTEGER,
+              groupName TEXT NOT NULL DEFAULT '未分類',
+              createTime INTEGER NOT NULL,
+              lastReadTime INTEGER NOT NULL
+            )
+          ''');
+          await db.execute('''
+            CREATE TABLE bookmarks (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              book_id TEXT NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+              name TEXT NOT NULL,
+              epub_locator_json TEXT,
+              progression REAL,
+              pdf_page_index INTEGER
+            )
+          ''');
+          await db.execute('''
+            CREATE TABLE highlights (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              book_id TEXT NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+              style TEXT NOT NULL,
+              epub_locator_json TEXT,
+              progression REAL,
+              pdf_page_index INTEGER,
+              pdf_rect_json TEXT
+            )
+          ''');
+          await db.execute('''
+            CREATE TABLE notes (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              book_id TEXT NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+              text TEXT NOT NULL,
+              epub_locator_json TEXT,
+              progression REAL,
+              highlight_id INTEGER REFERENCES highlights(id) ON DELETE SET NULL,
+              pdf_page_index INTEGER,
+              pdf_rect_json TEXT
+            )
+          ''');
+        },
+      ),
+    );
+    await oldDb.insert('books', {
+      'id': 'b1',
+      'title': '舊資料書籍',
+      'format': 'epub',
+      'filePath': 'content://example/b1',
+      'source': 'local',
+      'progress': 0.0,
+      'groupName': '未分類',
+      'createTime': 1000,
+      'lastReadTime': 1000,
+    });
+    final oldHighlightId = await oldDb.insert('highlights', {
+      'book_id': 'b1',
+      'style': 'underline',
+      'progression': 0.2,
+    });
+    await oldDb.insert('bookmarks', {
+      'book_id': 'b1',
+      'name': '第一章',
+      'progression': 0.1,
+    });
+    await oldDb.insert('notes', {
+      'book_id': 'b1',
+      'text': '依附備註',
+      'progression': 0.2,
+      'highlight_id': oldHighlightId,
+    });
+    await oldDb.close();
+
+    // 重新以目前版本開啟同一個檔案，觸發 onConfigure（判斷 oldVersion=16
+    // < 17 應提前關閉外鍵約束）→ onUpgrade（oldVersion=16 → newVersion=17）
+    // → onOpen（恢復外鍵約束）。若 onConfigure 忘記提前關閉（或錯誤地
+    // 想在 onUpgrade 內部切換，那在 sqflite 的交易包裝下是無效的
+    // no-op，plan-issue-1-review.md Critical 1），下方流程會在
+    // rename/drop 舊 highlights 表時因 notes 仍參照它而拋出
+    // foreign key constraint failed，此測試會直接失敗；若 onOpen 忘記
+    // 恢復，測試結尾的外鍵約束驗證會抓到（插入應該被拒絕卻成功了）。
+    // 兩種遺漏皆會讓此測試失敗，等同涵蓋了 spec 審查修正 Critical 1 的
+    // 回歸驗證。
+    final upgraded = await SqliteLibraryRepository.open(dbPath);
+    addTearDown(() => upgraded.close());
+
+    final bookmarkRows = await upgraded.database.query('bookmarks');
+    expect(bookmarkRows, hasLength(1));
+    expect(bookmarkRows.single['id'], isA<String>());
+    expect(bookmarkRows.single['name'], '第一章');
+    expect(bookmarkRows.single['updated_at'], isNotNull);
+    expect(bookmarkRows.single['deleted_at'], isNull);
+
+    final highlightRows = await upgraded.database.query('highlights');
+    expect(highlightRows, hasLength(1));
+    expect(highlightRows.single['id'], isA<String>());
+    final newHighlightId = highlightRows.single['id'] as String;
+
+    final noteRows = await upgraded.database.query('notes');
+    expect(noteRows, hasLength(1));
+    expect(noteRows.single['id'], isA<String>());
+    expect(noteRows.single['highlight_id'], newHighlightId);
+
+    final bookColumns =
+        await upgraded.database.rawQuery('PRAGMA table_info(books)');
+    expect(
+      bookColumns.map((c) => c['name'] as String).toSet(),
+      containsAll([
+        'content_fingerprint',
+        'position_updated_at',
+        'position_synced_server_updated_at',
+      ]),
+    );
+
+    final syncMetadataRows = await upgraded.database.query('sync_metadata');
+    expect(syncMetadataRows, hasLength(1));
+
+    // 外鍵約束確實已恢復生效（非停留在 OFF 狀態）：插入參照不存在
+    // book_id 的書籤應被拒絕。
+    expect(
+      () => upgraded.database.insert('bookmarks', {
+        'id': 'bm-invalid',
+        'book_id': 'nonexistent-book',
+        'name': 'X',
+        'updated_at': 0,
+      }),
+      throwsA(isA<DatabaseException>()),
+    );
   });
 }

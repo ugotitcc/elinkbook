@@ -9,8 +9,16 @@ class HighlightsRepository {
 
   const HighlightsRepository(this._db);
 
-  Future<int> insert(Highlight highlight) {
-    return _db.insert('highlights', highlight.toMap());
+  /// `updated_at`（epic-8-sync Issue 1，供雲端同步 dirty 判定使用，見
+  /// `sqlite_library_repository.dart` `_createHighlightsTable`）由本層
+  /// 補上目前時間戳記，不放進 [Highlight] 模型本身——模型只承載本機
+  /// 語意欄位，`updated_at`／`deleted_at` 是同步子系統專用的資料庫欄位
+  /// （`deleted_at` 目前恆為 NULL，軟刪除轉換留給 Issue 4）。
+  Future<void> insert(Highlight highlight) {
+    return _db.insert('highlights', {
+      ...highlight.toMap(),
+      'updated_at': DateTime.now().millisecondsSinceEpoch,
+    });
   }
 
   /// 依書中位置順序排序：EPUB 用 `progression` 比例、PDF 用
@@ -26,7 +34,7 @@ class HighlightsRepository {
     return rows.map(Highlight.fromMap).toList();
   }
 
-  Future<void> delete(int id) {
+  Future<void> delete(String id) {
     return _db.delete('highlights', where: 'id = ?', whereArgs: [id]);
   }
 

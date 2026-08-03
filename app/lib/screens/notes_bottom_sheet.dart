@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:uuid/uuid.dart';
 
 import '../reader/annotation_list_item.dart';
 import '../reader/bookmark.dart';
@@ -270,9 +271,10 @@ class _NotesBottomSheetState extends State<NotesBottomSheet>
   Future<void> _toggleBookmark() async {
     final existing = _bookmarkAtCurrentPosition;
     if (existing != null) {
-      await widget.bookmarksRepository.delete(existing.id!);
+      await widget.bookmarksRepository.delete(existing.id);
     } else {
       await widget.bookmarksRepository.insert(Bookmark(
+        id: const Uuid().v4(),
         bookId: widget.bookId,
         name: Bookmark.defaultName(widget.currentPosition),
         epubLocatorJson: widget.currentPosition.epubLocatorJson,
@@ -312,12 +314,12 @@ class _NotesBottomSheetState extends State<NotesBottomSheet>
       ),
     );
     if (newName == null || newName.trim().isEmpty) return;
-    await widget.bookmarksRepository.rename(bookmark.id!, newName.trim());
+    await widget.bookmarksRepository.rename(bookmark.id, newName.trim());
     await _loadBookmarks();
   }
 
   Future<void> _deleteBookmark(Bookmark bookmark) async {
-    await widget.bookmarksRepository.delete(bookmark.id!);
+    await widget.bookmarksRepository.delete(bookmark.id);
     await _loadBookmarks();
   }
 
@@ -477,7 +479,7 @@ class _NotesBottomSheetState extends State<NotesBottomSheet>
   Future<void> _editNoteText(Note note) async {
     final newText = await showNoteTextDialog(context, initialText: note.text, title: '編輯備註');
     if (newText == null) return;
-    await widget.notesRepository!.updateText(note.id!, newText);
+    await widget.notesRepository!.updateText(note.id, newText);
     await _loadAnnotations();
     widget.onAnnotationsChanged?.call();
   }
@@ -486,8 +488,8 @@ class _NotesBottomSheetState extends State<NotesBottomSheet>
   /// NULL` 的自動退化（那是給批次刪除劃線情境用的），明確分別刪除兩張表
   /// 各自的列。
   Future<void> _deleteAnnotationItem(AnnotationListItem item) async {
-    if (item.note != null) await widget.notesRepository!.delete(item.note!.id!);
-    if (item.highlight != null) await widget.highlightsRepository!.delete(item.highlight!.id!);
+    if (item.note != null) await widget.notesRepository!.delete(item.note!.id);
+    if (item.highlight != null) await widget.highlightsRepository!.delete(item.highlight!.id);
     await _loadAnnotations();
     widget.onAnnotationsChanged?.call();
   }

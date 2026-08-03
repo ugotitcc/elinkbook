@@ -1,6 +1,6 @@
 # Epic 8 Issue 1 — 本機 Schema 遷移（v16 → v17）Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** 把 `bookmarks`/`highlights`/`notes` 三表主鍵由本機自增整數改為 UUID（`TEXT PRIMARY KEY`），並在 `books` 表與新的 `sync_metadata` 表補上雲端同步所需欄位，讓 Epic 8 後續 Issue（帳號、指紋、同步引擎）有穩定的本機資料基礎可用。
 
@@ -30,7 +30,7 @@
 - Consumes：無（本 Task 是整個 Issue 的基礎，不依賴其他 Task）
 - Produces：`bookmarks`/`highlights`/`notes` 三表主鍵為 `TEXT`（UUID）、皆新增 `updated_at INTEGER NOT NULL`／`deleted_at INTEGER`；`books` 表新增 `content_fingerprint TEXT`／`position_updated_at INTEGER`／`position_synced_server_updated_at TEXT`；新表 `sync_metadata`（單列，欄位 `id`／`last_push_completed_at`／`last_pulled_server_updated_at_bookmarks`／`last_pulled_server_updated_at_highlights`／`last_pulled_server_updated_at_notes`／`last_pulled_server_updated_at_reading_positions`）。供 Task 2（模型 `fromMap`/`toMap` 讀寫新型別 `id`）與後續 Issue（帳號、指紋、同步引擎）使用。
 
-- [ ] **Step 1：新增 `uuid` 依賴**
+- [x] **Step 1：新增 `uuid` 依賴**
 
 `app/pubspec.yaml` 第 49-55 行（`dependencies:` 區塊內）改為：
 
@@ -52,7 +52,7 @@ flutter pub get
 
 Expected：`uuid` 成功加入 `pubspec.lock`。
 
-- [ ] **Step 2：撰寫失敗測試——全新安裝直接是新 schema**
+- [x] **Step 2：撰寫失敗測試——全新安裝直接是新 schema**
 
 在 `app/test/library/sqlite_library_repository_test.dart` 檔案結尾（最後一個 `test(...)` 之後、檔案結尾 `}` 之前）新增：
 
@@ -253,7 +253,7 @@ Expected：`uuid` 成功加入 `pubspec.lock`。
   });
 ```
 
-- [ ] **Step 3：執行測試，確認失敗**
+- [x] **Step 3：執行測試，確認失敗**
 
 ```bash
 cd app
@@ -262,7 +262,7 @@ flutter test test/library/sqlite_library_repository_test.dart
 
 Expected：FAIL——`version: 16`、`bookmarks`/`highlights`/`notes` 仍是 `INTEGER` 主鍵、`books` 無新欄位、`sync_metadata` 表不存在。
 
-- [ ] **Step 4：修改 `sqlite_library_repository.dart`**
+- [x] **Step 4：修改 `sqlite_library_repository.dart`**
 
 第 1-3 行 import 區塊改為：
 
@@ -525,7 +525,7 @@ import 'package:uuid/uuid.dart';
   }
 ```
 
-- [ ] **Step 5：改寫 `_createBookmarksTable`／`_createHighlightsTable`／`_createNotesTable`**
+- [x] **Step 5：改寫 `_createBookmarksTable`／`_createHighlightsTable`／`_createNotesTable`**
 
 原第 317-333 行 `_createBookmarksTable` 改為：
 
@@ -607,7 +607,7 @@ import 'package:uuid/uuid.dart';
   }
 ```
 
-- [ ] **Step 6：執行測試，確認通過**
+- [x] **Step 6：執行測試，確認通過**
 
 ```bash
 flutter test test/library/sqlite_library_repository_test.dart
@@ -615,7 +615,7 @@ flutter test test/library/sqlite_library_repository_test.dart
 
 Expected：全數 PASS，含 Step 2 新增的兩個測試。
 
-- [ ] **Step 7：`flutter analyze` + Commit**
+- [x] **Step 7：`flutter analyze` + Commit**
 
 ```bash
 flutter analyze
@@ -639,7 +639,7 @@ Expected：`flutter analyze` 顯示 "No issues found!"（此時 `Bookmark`/`High
 - Consumes：Task 1 的新 schema（`bookmarks`/`highlights`/`notes` 表 `id` 欄位為 `TEXT`）
 - Produces：`Bookmark`/`Highlight`/`Note` 的 `id` 欄位型別為 `String`（非 nullable，建構子必要參數）；`Note.highlightId` 維持 `String?`（nullable，語意不變）；三者 `toMap()` 皆包含 `id`。供 Task 3（repository）與 Task 4/5（呼叫端）使用。
 
-- [ ] **Step 1：撰寫失敗測試——`bookmark_test.dart`**
+- [x] **Step 1：撰寫失敗測試——`bookmark_test.dart`**
 
 `app/test/reader/bookmark_test.dart`（原檔案 103 行）整份取代為：
 
@@ -756,7 +756,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：執行測試，確認失敗**
+- [x] **Step 2：執行測試，確認失敗**
 
 ```bash
 cd app
@@ -765,7 +765,7 @@ flutter test test/reader/bookmark_test.dart
 
 Expected：FAIL——`Bookmark` 建構子尚未接受 `id` 具名參數為必要的 `String`（編譯錯誤：缺少必要參數 `id` 或型別不符）。
 
-- [ ] **Step 3：修改 `bookmark.dart`**
+- [x] **Step 3：修改 `bookmark.dart`**
 
 整份取代為：
 
@@ -887,7 +887,7 @@ class Bookmark {
 }
 ```
 
-- [ ] **Step 4：修改 `highlight.dart`**
+- [x] **Step 4：修改 `highlight.dart`**
 
 整份取代為：
 
@@ -975,7 +975,7 @@ class Highlight {
 }
 ```
 
-- [ ] **Step 5：修改 `note.dart`**
+- [x] **Step 5：修改 `note.dart`**
 
 整份取代為：
 
@@ -1087,7 +1087,7 @@ class Note {
 }
 ```
 
-- [ ] **Step 6：執行測試，確認通過**
+- [x] **Step 6：執行測試，確認通過**
 
 ```bash
 flutter test test/reader/bookmark_test.dart
@@ -1095,7 +1095,7 @@ flutter test test/reader/bookmark_test.dart
 
 Expected：全數 PASS。
 
-- [ ] **Step 7：Commit**
+- [x] **Step 7：Commit**
 
 ```bash
 git add lib/reader/bookmark.dart lib/reader/highlight.dart lib/reader/note.dart test/reader/bookmark_test.dart
@@ -1123,7 +1123,7 @@ Expected：這一步之後 `flutter analyze` 仍會報錯（repository 與呼叫
 - Consumes：Task 1 的新 schema、Task 2 的 `Bookmark`/`Highlight`/`Note`（`id` 為必要的 `String`）
 - Produces：`BookmarksRepository.insert(Bookmark)`/`HighlightsRepository.insert(Highlight)`/`NotesRepository.insert(Note)` 回傳型別改為 `Future<void>`（呼叫端已在建構物件時指派 `id`，不需要問資料庫要回傳值）；`rename(String id, ...)`/`delete(String id)`/`updateText(String id, ...)` 參數型別改為 `String`。供 Task 4（生產程式碼呼叫端）、Task 5（測試呼叫端）使用。
 
-- [ ] **Step 1：撰寫失敗測試——三個 repository 測試檔案整份取代**
+- [x] **Step 1：撰寫失敗測試——三個 repository 測試檔案整份取代**
 
 `app/test/reader/bookmarks_repository_test.dart`（原檔案 125 行）整份取代為：
 
@@ -1519,7 +1519,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：執行測試，確認失敗**
+- [x] **Step 2：執行測試，確認失敗**
 
 ```bash
 flutter test test/reader/bookmarks_repository_test.dart test/reader/highlights_repository_test.dart test/reader/notes_repository_test.dart
@@ -1527,7 +1527,7 @@ flutter test test/reader/bookmarks_repository_test.dart test/reader/highlights_r
 
 Expected：FAIL——`insert()` 仍回傳 `Future<int>`、`rename()`/`delete()`/`updateText()` 仍接受 `int` 參數，型別不符（編譯錯誤）。
 
-- [ ] **Step 3：修改三個 repository**
+- [x] **Step 3：修改三個 repository**
 
 `app/lib/reader/bookmarks_repository.dart` 整份取代為：
 
@@ -1677,7 +1677,7 @@ class NotesRepository {
 }
 ```
 
-- [ ] **Step 4：修改三個 Fake repository**
+- [x] **Step 4：修改三個 Fake repository**
 
 `app/test/support/fake_bookmarks_repository.dart` 整份取代為：
 
@@ -1813,7 +1813,7 @@ class FakeNotesRepository implements NotesRepository {
 }
 ```
 
-- [ ] **Step 5：執行測試，確認通過**
+- [x] **Step 5：執行測試，確認通過**
 
 ```bash
 flutter test test/reader/bookmarks_repository_test.dart test/reader/highlights_repository_test.dart test/reader/notes_repository_test.dart
@@ -1821,7 +1821,7 @@ flutter test test/reader/bookmarks_repository_test.dart test/reader/highlights_r
 
 Expected：全數 PASS。
 
-- [ ] **Step 6：`flutter analyze` + Commit**
+- [x] **Step 6：`flutter analyze` + Commit**
 
 ```bash
 flutter analyze
@@ -1846,7 +1846,7 @@ git commit -m "feat(epic-8-sync): Issue 1 Task 3 — repository 與 Fake 簽章�
 - Consumes：Task 2/3 的 `Bookmark`/`Highlight`/`Note`（`id` 必要 `String`）與三個 repository（`insert` 回傳 `Future<void>`，`rename`/`delete`/`updateText` 接受 `String id`）
 - Produces：無新公開介面，純呼叫端修正
 
-- [ ] **Step 1：`reader_screen.dart` 新增 `uuid` import**
+- [x] **Step 1：`reader_screen.dart` 新增 `uuid` import**
 
 第 1 行（檔案開頭 import 區塊）之前新增：
 
@@ -1854,7 +1854,7 @@ git commit -m "feat(epic-8-sync): Issue 1 Task 3 — repository 與 Fake 簽章�
 import 'package:uuid/uuid.dart';
 ```
 
-- [ ] **Step 2：修正 `_pendingHighlightIdForSelection`／`_pendingPdfHighlightIdForSelection` 型別**
+- [x] **Step 2：修正 `_pendingHighlightIdForSelection`／`_pendingPdfHighlightIdForSelection` 型別**
 
 第 231 行：
 
@@ -1880,7 +1880,7 @@ import 'package:uuid/uuid.dart';
   String? _pendingPdfHighlightIdForSelection;
 ```
 
-- [ ] **Step 3：修正 `_toggleBookmark`（第 665-687 行）**
+- [x] **Step 3：修正 `_toggleBookmark`（第 665-687 行）**
 
 第 669-685 行改為：
 
@@ -1902,7 +1902,7 @@ import 'package:uuid/uuid.dart';
     }
 ```
 
-- [ ] **Step 4：修正 `_handleHighlightStyleSelected`（第 912-924 行）**
+- [x] **Step 4：修正 `_handleHighlightStyleSelected`（第 912-924 行）**
 
 第 916-922 行改為：
 
@@ -1918,7 +1918,7 @@ import 'package:uuid/uuid.dart';
     _pendingHighlightIdForSelection = id;
 ```
 
-- [ ] **Step 5：修正 `_handleNotePressed`（第 926-945 行）**
+- [x] **Step 5：修正 `_handleNotePressed`（第 926-945 行）**
 
 第 932-938 行改為：
 
@@ -1933,7 +1933,7 @@ import 'package:uuid/uuid.dart';
     ));
 ```
 
-- [ ] **Step 6：修正 `_showAnnotationActionDialog`（第 1042-1076 行）移除多餘的 `!`**
+- [x] **Step 6：修正 `_showAnnotationActionDialog`（第 1042-1076 行）移除多餘的 `!`**
 
 第 1066、1072、1073 行分別改為：
 
@@ -1946,7 +1946,7 @@ import 'package:uuid/uuid.dart';
       if (highlight != null) await widget.highlightsRepository!.delete(highlight.id);
 ```
 
-- [ ] **Step 7：修正 `_handlePdfHighlightStyleSelected`（第 1094-1106 行）**
+- [x] **Step 7：修正 `_handlePdfHighlightStyleSelected`（第 1094-1106 行）**
 
 第 1098-1104 行改為：
 
@@ -1962,7 +1962,7 @@ import 'package:uuid/uuid.dart';
     _pendingPdfHighlightIdForSelection = id;
 ```
 
-- [ ] **Step 8：修正 `_handlePdfNotePressed`（第 1108-1127 行）**
+- [x] **Step 8：修正 `_handlePdfNotePressed`（第 1108-1127 行）**
 
 第 1114-1120 行改為：
 
@@ -1977,7 +1977,7 @@ import 'package:uuid/uuid.dart';
     ));
 ```
 
-- [ ] **Step 9：`notes_bottom_sheet.dart` 新增 `uuid` import + 修正呼叫端**
+- [x] **Step 9：`notes_bottom_sheet.dart` 新增 `uuid` import + 修正呼叫端**
 
 檔案開頭 import 區塊新增：
 
@@ -2056,7 +2056,7 @@ import 'package:uuid/uuid.dart';
     if (item.highlight != null) await widget.highlightsRepository!.delete(item.highlight!.id);
 ```
 
-- [ ] **Step 10：`flutter analyze` 確認生產程式碼無誤 + Commit**
+- [x] **Step 10：`flutter analyze` 確認生產程式碼無誤 + Commit**
 
 ```bash
 cd app
@@ -2132,7 +2132,7 @@ git commit -m "feat(epic-8-sync): Issue 1 Task 4 — reader_screen/notes_bottom_
        id: 'n1', bookId: 'b1', text: '依附備註', progression: 0.2, highlightId: 'h1'));
    ```
 
-- [ ] **Step 1：執行 `flutter analyze`，取得完整錯誤清單**
+- [x] **Step 1：執行 `flutter analyze`，取得完整錯誤清單**
 
 ```bash
 cd app
@@ -2141,11 +2141,11 @@ flutter analyze test/screens/reader_screen_test.dart test/screens/notes_bottom_s
 
 Expected：回報一長串型別錯誤，每則皆附精確檔案:行號。
 
-- [ ] **Step 2：逐一修正 `reader_screen_test.dart` 的每一則錯誤**
+- [x] **Step 2：逐一修正 `reader_screen_test.dart` 的每一則錯誤**
 
 依上述 4 種規則，比照本計畫已提供的範例逐一修正。修正過程中每處理完約 10-15 處，重新執行一次 `flutter analyze test/screens/reader_screen_test.dart`，確認錯誤數量持續下降、且沒有引入新錯誤（例如同一測試內兩筆 `Bookmark` 誤用了相同的 `id` 而導致後續斷言依賴的資料被覆蓋——這種問題編譯器不會報錯，需要留意規則 1 提到的「彼此不同」要求）。
 
-- [ ] **Step 3：`flutter analyze test/screens/reader_screen_test.dart` 確認乾淨**
+- [x] **Step 3：`flutter analyze test/screens/reader_screen_test.dart` 確認乾淨**
 
 ```bash
 flutter analyze test/screens/reader_screen_test.dart
@@ -2153,7 +2153,7 @@ flutter analyze test/screens/reader_screen_test.dart
 
 Expected："No issues found!"
 
-- [ ] **Step 4：`flutter test test/screens/reader_screen_test.dart` 確認全數通過**
+- [x] **Step 4：`flutter test test/screens/reader_screen_test.dart` 確認全數通過**
 
 ```bash
 flutter test test/screens/reader_screen_test.dart
@@ -2161,7 +2161,7 @@ flutter test test/screens/reader_screen_test.dart
 
 Expected：全數 PASS。若有既有測試斷言依賴「同一個變數兩次呼叫 insert 各自拿到不同 id」之類的舊語意（例如比較兩筆書籤的 id 是否不同），確認修正後的字串 literal id 確實彼此不同、斷言邏輯依然成立。
 
-- [ ] **Step 5：對 `notes_bottom_sheet_test.dart` 重複 Step 1-4**
+- [x] **Step 5：對 `notes_bottom_sheet_test.dart` 重複 Step 1-4**
 
 ```bash
 flutter analyze test/screens/notes_bottom_sheet_test.dart
@@ -2176,7 +2176,7 @@ flutter test test/screens/notes_bottom_sheet_test.dart
 
 皆乾淨/全數通過。
 
-- [ ] **Step 6：`flutter analyze` + 執行完整測試套件 + Commit**
+- [x] **Step 6：`flutter analyze` + 執行完整測試套件 + Commit**
 
 ```bash
 flutter analyze
@@ -2219,3 +2219,21 @@ git commit -m "feat(epic-8-sync): Issue 1 Task 5 — reader_screen_test/notes_bo
 - **Minor（確認屬實，已採納，但特別記錄查證結果）**：`_createSyncMetadataTable` 的種子列插入已加上 `conflictAlgorithm: ConflictAlgorithm.ignore` 防禦。查證後發現審查報告描述的具體失敗情境（遷移中途失敗、重試時撞見已存在的 `id=1` 列）**在本專案目前的交易語意下實際上不會發生**——`onUpgrade` 整段（含 `_createSyncMetadataTable` 的 `CREATE TABLE`＋`INSERT`）都在同一個 sqflite 自動交易內，任何一步拋出例外都會讓整個交易（含版本號更新）一併回滾，下次重試永遠是從乾淨的舊 schema 狀態重新開始，不會有「表已存在、id=1 已存在」的中間態殘留。加上 `ignore` 是零成本的防禦保險，不代表真的驗證到一個目前會發生的 bug——已在程式碼註解中如實記錄這個查證結論，避免未來的人誤以為這是修過一個真實發生過的 bug。
 - **Minor（查證後判定不適用於本計畫實際內容，未採納）**：審查報告建議在測試輔助檔統一宣告 `const testUuid = Uuid();` 避免測試中重複建立 `Uuid()` 物件。核對計畫實際內容：Task 5（測試呼叫端修正規則）全程使用**字串字面值**（例如 `id: 'bm1'`）指派測試用 id，不曾在測試程式碼中呼叫 `Uuid()`；`Uuid()` 只出現在 Task 1 的 3 個遷移函式（`_migrateBookmarksToUuid` 等）與 Task 4 的生產程式碼呼叫端，且皆已是「函式範圍內宣告一次 `const uuid = Uuid();`／`const Uuid().v4()` 單次呼叫」的低頻率用法，不存在迴圈內重複建構的效能疑慮，這項建議沒有對應到計畫裡任何實際會發生的程式碼路徑。
 - **Minor（純讚許，無需動作）**：`renameBookmark`／`updateNoteText` 皆正確維護 `updated_at` 的讚許，維持原樣不變。
+
+## 實作結果第二輪審查修正紀錄（`tmp/epic-8/plan-issue-1-implementation-review-v2.md`）
+
+第一輪實作結果審查（`tmp/epic-8/plan-issue-1-implementation-review.md`）發現 Task 1 完全缺席（`flutter test` 崩潰 22 個測試）；補上 schema 遷移本體後的第二輪複審（2026-08-03）確認崩潰已消除，但發現 4 項新 Critical——與 `issues.md` Issue 1 明文驗收標準逐項核對後，皆確認屬實並已修正：
+
+- **Critical（確認屬實，已採納）**：`bookmarks`／`highlights`／`notes` 三表原本缺少 `updated_at`／`deleted_at` 欄位。已補進 `_createBookmarksTable`／`_createHighlightsTable`／`_createNotesTable` 與 `_migrateAnnotationTablesToUuid` 的三段搬遷邏輯（`updated_at` 回填為遷移當下時間戳記、`deleted_at` 為 `NULL`），並讓遷移函式改為直接呼叫 `_createXTable()` 而非各自重複內嵌 `CREATE TABLE` SQL（DRY，避免兩處 schema 定義日後各自漂移）。
+- **Critical（確認屬實，已採納）**：`sync_metadata` 實際 schema（`table_name TEXT PRIMARY KEY, last_synced_at TEXT NOT NULL`）與本文件明訂的設計（單列 `id=1`＋`last_push_completed_at`＋4 個 `last_pulled_server_updated_at_<collection>`）完全不同。已依 Task 1 Step 4 的精確設計重寫。
+- **Critical（確認屬實，已採納）**：`_createSyncMetadataTable(db)` 原本只在 `onUpgrade` 的 `if (oldVersion < 17)` 分支被呼叫，`onCreate`（全新安裝）完全沒呼叫，導致新裝置沒有這張表。已在 `onCreate` 的建表序列補上這個呼叫。
+- **Critical（確認屬實，已採納）**：`issues.md` 明文要求的兩則遷移測試（全新安裝 schema 正確性、既有 v16 裝置升級正確性＋FK 暫停/恢復回歸驗證）完全未加入。已依 Task 1 Step 2 原文把兩則測試整段加入 `app/test/library/sqlite_library_repository_test.dart`（`sync_metadata` 相關斷言欄位名稱同步改為 `last_push_completed_at`，配合上面第 2 點的 schema 修正）。
+
+補齊上述 4 項後執行 `flutter test`，另外發現並修正兩個連帶問題（非審查報告直接列出，但補齊 Critical 1 後必然浮現）：
+
+- **新發現（補齊 `updated_at NOT NULL` 後才會觸發）**：`BookmarksRepository.insert()`／`rename()`、`HighlightsRepository.insert()`、`NotesRepository.insert()`／`updateText()` 呼叫 `_db.insert()`／`_db.update()` 時都沒有帶入 `updated_at`——本文件 Task 3 的原始程式碼片段本身就有這個遺漏（非實作者偏離計畫，是計畫本身這段程式碼在字面上就會導致 `NOT NULL constraint failed: bookmarks.updated_at`，因為 `Bookmark`/`Highlight`/`Note` 模型刻意不含這個欄位，見 Task 2 Self-Review Notes「模型只承載本機語意欄位」的既定設計）。修正方式：在 repository 層插入/更新時額外補上 `'updated_at': DateTime.now().millisecondsSinceEpoch`，不修改模型本身（`toMap()` 維持不變），維持「同步專用欄位不進模型」的既定切分。`delete()` 系列方法維持不動（`deleted_at` 目前恆為 `NULL`，軟刪除轉換仍是 Issue 4 範圍，與前次審查「Important 推回」的結論一致）。
+- **新發現（既有測試因新增的 `NOT NULL` 約束而失敗，非本 Issue 邏輯錯誤）**：`sqlite_library_repository_test.dart` 內 5 則既有（epic-6-annotations 時期、與本 Issue 無關的）舊測試手動 `db.insert('bookmarks'/'highlights'/'notes', {...})` 未帶 `updated_at`，在新 schema 下失敗。已於這些既有測試的 insert map 補上 `'updated_at': 1000`（測試不關心實際數值，比照該檔案既有 `createTime: 1000`／`lastReadTime: 1000` 的字面時間戳記慣例）。
+
+另修正 2 項 Minor（承接前次審查記錄）：`reader_screen.dart` PDF 劃線／備註 id 移除不一致的 `_pdf` 後綴（改為與其餘 4 處呼叫點一致的純 `const Uuid().v4()`）；`bookmark.dart` 文件註解移除對不存在函式 `_generateUuid()` 的引用。
+
+修正後 `flutter analyze`「No issues found!」，`flutter test` 796 個測試全數通過（含新增的 2 則遷移測試）。Task 1 全部 7 個 Step 核取方塊已依真實狀態改回 `- [x]`。

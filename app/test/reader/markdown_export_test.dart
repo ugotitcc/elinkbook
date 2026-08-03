@@ -16,6 +16,7 @@ void main() {
         exportTime: DateTime(2026, 7, 18),
         bookmarks: const [
           Bookmark(
+            id: 'bm1',
             bookId: 'b1',
             name: '第二章 (35%)',
             epubLocatorJson: '{}',
@@ -25,17 +26,19 @@ void main() {
         annotations: [
           AnnotationListItem(
             highlight: const Highlight(
+              id: 'h1',
               bookId: 'b1',
               style: HighlightStyle.highlighterYellow,
               epubLocatorJson: '{}',
               progression: 0.2,
             ),
             note: const Note(
+              id: 'n1',
               bookId: 'b1',
               text: '黛玉名句',
               epubLocatorJson: '{}',
               progression: 0.2,
-              highlightId: 1,
+              highlightId: 'h1',
             ),
           ),
         ],
@@ -58,7 +61,7 @@ void main() {
         progress: 0.5,
         exportTime: DateTime(2026, 1, 1),
         bookmarks: const [
-          Bookmark(bookId: 'b1', name: '第 3 頁', pdfPageIndex: 2),
+          Bookmark(id: 'bm2', bookId: 'b1', name: '第 3 頁', pdfPageIndex: 2),
         ],
         annotations: const [],
       );
@@ -79,6 +82,7 @@ void main() {
         annotations: [
           AnnotationListItem(
             highlight: const Highlight(
+              id: 'h2',
               bookId: 'b1',
               style: HighlightStyle.underline,
               pdfPageIndex: 4,
@@ -101,7 +105,7 @@ void main() {
         bookmarks: const [],
         annotations: [
           AnnotationListItem(
-            note: const Note(bookId: 'b1', text: '單純心得', progression: 0.6),
+            note: const Note(id: 'n2', bookId: 'b1', text: '單純心得', progression: 0.6),
           ),
         ],
       );

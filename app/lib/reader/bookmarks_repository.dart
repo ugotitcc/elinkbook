@@ -12,9 +12,16 @@ class BookmarksRepository {
 
   const BookmarksRepository(this._db);
 
-  /// 新增一筆書籤，回傳 SQLite 自動指派的 rowid。
-  Future<int> insert(Bookmark bookmark) {
-    return _db.insert('bookmarks', bookmark.toMap());
+  /// 新增一筆書籤。UUID 由呼叫端產生並寫入 [Bookmark.id]。`updated_at`
+  /// （epic-8-sync Issue 1，供雲端同步 dirty 判定使用）由本層補上目前
+  /// 時間戳記，不放進 [Bookmark] 模型本身——模型只承載本機語意欄位，
+  /// `updated_at`／`deleted_at` 是同步子系統專用的資料庫欄位
+  /// （`deleted_at` 目前恆為 NULL，軟刪除轉換留給 Issue 4）。
+  Future<void> insert(Bookmark bookmark) {
+    return _db.insert('bookmarks', {
+      ...bookmark.toMap(),
+      'updated_at': DateTime.now().millisecondsSinceEpoch,
+    });
   }
 
   /// 依書中位置順序排序（EPUB／FXL 用 progression 比例、PDF 用頁索引，
@@ -31,16 +38,19 @@ class BookmarksRepository {
     return rows.map(Bookmark.fromMap).toList();
   }
 
-  Future<void> rename(int id, String newName) {
+  Future<void> rename(String id, String newName) {
     return _db.update(
       'bookmarks',
-      {'name': newName},
+      {
+        'name': newName,
+        'updated_at': DateTime.now().millisecondsSinceEpoch,
+      },
       where: 'id = ?',
       whereArgs: [id],
     );
   }
 
-  Future<void> delete(int id) {
+  Future<void> delete(String id) {
     return _db.delete('bookmarks', where: 'id = ?', whereArgs: [id]);
   }
 

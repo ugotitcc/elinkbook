@@ -100,20 +100,25 @@ void main() {
       lastReadTime: DateTime.now(),
     ));
 
-    final highlightId = await highlightsRepository.insert(const Highlight(
+    const highlightId = 'h_foliate_1';
+    await highlightsRepository.insert(const Highlight(
+      id: highlightId,
       bookId: 'b_foliate_highlights_epub',
       style: HighlightStyle.highlighterYellow,
       epubLocatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
       progression: 0.1,
     ));
-    await notesRepository.insert(Note(
+    const pureNoteId = 'n_foliate_1';
+    await notesRepository.insert(const Note(
+      id: 'n_foliate_2',
       bookId: 'b_foliate_highlights_epub',
       text: 'Foliate 依附備註',
       epubLocatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
       progression: 0.1,
       highlightId: highlightId,
     ));
-    final pureNoteId = await notesRepository.insert(const Note(
+    await notesRepository.insert(const Note(
+      id: pureNoteId,
       bookId: 'b_foliate_highlights_epub',
       text: 'Foliate 純備註',
       epubLocatorJson: '{"cfi":"epubcfi(/6/6)","index":1,"fraction":0.3}',

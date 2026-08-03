@@ -8,17 +8,18 @@ import 'percent_rect.dart';
 /// [epubLocatorJson]／[progression] 與 [pdfPageIndex]／[pdfRect]（Issue 3
 /// 新增）互斥，比照 [Highlight] 的既有欄位語意。
 class Note {
-  final int? id;
+  /// UUID primary key，新增前由呼叫端產生。
+  final String id;
   final String bookId;
   final String text;
   final String? epubLocatorJson;
   final double? progression;
-  final int? highlightId;
+  final String? highlightId;
   final int? pdfPageIndex;
   final PercentRect? pdfRect;
 
   const Note({
-    this.id,
+    required this.id,
     required this.bookId,
     required this.text,
     this.epubLocatorJson,
@@ -30,6 +31,7 @@ class Note {
 
   Map<String, Object?> toMap() {
     return {
+      'id': id,
       'book_id': bookId,
       'text': text,
       'epub_locator_json': epubLocatorJson,
@@ -43,12 +45,12 @@ class Note {
   factory Note.fromMap(Map<String, Object?> map) {
     final pdfRectJson = map['pdf_rect_json'] as String?;
     return Note(
-      id: map['id'] as int?,
+      id: map['id'] as String,
       bookId: map['book_id'] as String,
       text: map['text'] as String,
       epubLocatorJson: map['epub_locator_json'] as String?,
       progression: (map['progression'] as num?)?.toDouble(),
-      highlightId: map['highlight_id'] as int?,
+      highlightId: map['highlight_id'] as String?,
       pdfPageIndex: map['pdf_page_index'] as int?,
       pdfRect: pdfRectJson == null ? null : PercentRect.fromJson(pdfRectJson),
     );

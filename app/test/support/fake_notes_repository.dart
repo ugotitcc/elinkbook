@@ -7,13 +7,11 @@ import 'package:elinkbook/reader/notes_repository.dart';
 /// 狀態」時 UI 是否正確呈現，不需要重新模擬 FK 機制本身。
 class FakeNotesRepository implements NotesRepository {
   final List<Note> _storage = [];
-  int _nextId = 1;
 
   @override
-  Future<int> insert(Note note) async {
-    final id = _nextId++;
+  Future<void> insert(Note note) async {
     _storage.add(Note(
-      id: id,
+      id: note.id,
       bookId: note.bookId,
       text: note.text,
       epubLocatorJson: note.epubLocatorJson,
@@ -22,7 +20,6 @@ class FakeNotesRepository implements NotesRepository {
       pdfPageIndex: note.pdfPageIndex,
       pdfRect: note.pdfRect,
     ));
-    return id;
   }
 
   @override
@@ -35,14 +32,14 @@ class FakeNotesRepository implements NotesRepository {
   double _positionOf(Note n) => (n.pdfPageIndex?.toDouble()) ?? n.progression ?? 0;
 
   @override
-  Future<void> updateText(int id, String text) async {
+  Future<void> updateText(String id, String text) async {
     final index = _storage.indexWhere((n) => n.id == id);
     if (index == -1) return;
     _storage[index] = _storage[index].copyWith(text: text);
   }
 
   @override
-  Future<void> delete(int id) async {
+  Future<void> delete(String id) async {
     _storage.removeWhere((n) => n.id == id);
   }
 

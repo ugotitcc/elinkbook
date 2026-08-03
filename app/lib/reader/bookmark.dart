@@ -6,8 +6,9 @@ import 'bookmark_position_context.dart';
 /// 用到其中一組（依書籍格式而定，FXL 因副檔名是 .epub 而併入 EPUB 那一組，
 /// 見審查修正 1.1），比照 ReadingPosition 既有的欄位語意。
 class Bookmark {
-  /// SQLite 自動指派的 rowid，新增前（尚未寫入資料庫）為 null。
-  final int? id;
+  /// UUID primary key，新增前由呼叫端產生（例如 `reader_screen.dart`
+  /// 直接呼叫 `const Uuid().v4()`）。
+  final String id;
   final String bookId;
   final String name;
   final String? epubLocatorJson;
@@ -15,7 +16,7 @@ class Bookmark {
   final int? pdfPageIndex;
 
   const Bookmark({
-    this.id,
+    required this.id,
     required this.bookId,
     required this.name,
     this.epubLocatorJson,
@@ -28,6 +29,7 @@ class Bookmark {
   /// 目標欄位 `UPDATE`，不透過整列覆寫。
   Map<String, Object?> toMap() {
     return {
+      'id': id,
       'book_id': bookId,
       'name': name,
       'epub_locator_json': epubLocatorJson,
@@ -38,7 +40,7 @@ class Bookmark {
 
   factory Bookmark.fromMap(Map<String, Object?> map) {
     return Bookmark(
-      id: map['id'] as int?,
+      id: map['id'] as String,
       bookId: map['book_id'] as String,
       name: map['name'] as String,
       epubLocatorJson: map['epub_locator_json'] as String?,
