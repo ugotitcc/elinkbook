@@ -279,7 +279,7 @@ curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8090/api/batch \
   -d '{"requests": []}'
 ```
 
-Expected：回傳 HTTP 狀態碼非 `404`（`/api/batch` 端點存在，若 Batch API 未啟用，PocketBase 會回傳能辨識的錯誤而非 404 not found，若這裡确實是 404 代表版本太舊或啟用步驟有誤，回頭檢查 Step 2 的操作）。
+Expected：回傳 HTTP 狀態碼非 `404`（`/api/batch` 端點存在——實測：Batch API 未啟用時回傳 `403`，已啟用但送出空 `requests` 陣列時回傳 `400`，兩者皆代表端點存在且有在處理請求；若這裡確實是 `404` 代表版本太舊或啟用步驟有誤，回頭檢查 Step 2 的操作）。
 
 - [x] **Step 4：Commit**
 
@@ -334,6 +334,12 @@ PocketBase 本身用單一 SQLite 檔案（`pb_data/data.db`，隨執行檔/容�
 /// 透傳的值同單位，見 docs/epics/epic-8-sync/spec.md「墓碑清理」）。
 /// 使用方式：把本檔案複製到 PocketBase 執行檔同層的 pb_hooks/ 目錄下
 /// （沒有這個目錄就自己建立一個），重啟 PocketBase 即會自動載入。
+///
+/// 篩選條件刻意用 `deleted_at > 0` 而非 `deleted_at != null`：PocketBase
+/// 的 number 欄位沒有「可為 NULL」這個選項，從未被軟刪除的正常紀錄，
+/// `deleted_at` 實際存的是數字 0、不是 SQL NULL，`!= null` 對這些正常
+/// 紀錄永遠成立、會被誤判成「超過 30 天的墓碑」整批刪除（已用真實
+/// PocketBase 實例重現並驗證此修正，見文末「實作審查修正紀錄」）。
 
 cronAdd("purgeOldTombstones", "0 3 * * *", () => {
   const collections = ["sync_bookmarks", "sync_highlights", "sync_notes"];
@@ -343,7 +349,7 @@ cronAdd("purgeOldTombstones", "0 3 * * *", () => {
   for (const collectionName of collections) {
     const records = $app.findRecordsByFilter(
       collectionName,
-      "deleted_at != null && deleted_at < {:cutoff}",
+      "deleted_at > 0 && deleted_at < {:cutoff}",
       "",
       500,
       0,
@@ -526,3 +532,11 @@ git commit -m "docs(epic-8-sync): Issue 7 Task 4 — PocketBase 自架 SOP：測
 
 - **確認屬實，已採納**：Task 3 的 `purge_tombstones.pb.js` 迴圈內 `$app.delete(record)` 若單筆拋出例外（例如資料庫瞬間鎖定）會中斷整個 cron handler，讓同一批次裡本來刪得掉的其餘紀錄也一併沒清到。已改為單筆 `try/catch` 包裹，個別失敗只記錄 log（含失敗紀錄 `id`，供事後排查）並繼續處理下一筆，不影響同批次/同批 collection 其餘紀錄的清理；`console.log` 統計文字同步改為 `已清理筆數/總筆數`，反映真實成功比例。
 - **確認屬實，已採納**：PocketBase 的 `user = @request.auth.id` 規則只驗證「送進來的紀錄本身」欄位值，不會自動幫忙把 `user` 欄位填成目前登入者——這點容易被誤解成「規則裡寫了 `@request.auth.id` 就會自動代入」。已在 Task 2「建立 Collection」章節的 API Rules 說明後補上明確提醒，且指出 Task 4 的 `curl` 驗收範例已示範正確帶法（原本就有帶，只是前面章節缺一句提醒讀者「這是必要的、不是自動的」）。
+
+## 實作結果審查修正紀錄（`tmp/epic-8/plan-issue-7-implementation-review.md`）
+
+程式碼審查對象改為「本計畫的實際實作結果」（`docs/epics/epic-8-sync/pocketbase-self-hosting.md` 與 `pb_hooks_example/purge_tombstones.pb.js`，commits `e491a65`→`68e8614`），發現 1 項 Critical，已修正並二度獨立驗證：
+
+- **Critical，確認屬實，已修正**：`purge_tombstones.pb.js` 的清理篩選條件原為 `"deleted_at != null && deleted_at < {:cutoff}"`。PocketBase 的 `number` 型別欄位沒有「可為 NULL」這個選項——從未被軟刪除過的正常紀錄，`deleted_at` 實際存的值是數字 `0`，不是 SQL `NULL`。因此 `deleted_at != null` 對「所有正常紀錄」永遠成立，等同於把整個 collection 當成墓碑，cron 第一次排定執行（預設每天凌晨 3 點）就會刪光所有使用者的全部同步資料。此結論先由審查子代理以真實 PocketBase 實例重現，之後我另外重新下載乾淨的 PocketBase 0.39.10 (windows_amd64) 獨立複驗兩次：一次直接用篩選字串查 API 確認新舊條件的匹配結果差異，一次是完整走 `pb_hooks/` 載入＋手動觸發 cron 端點（`POST /api/crons/purgeOldTombstones`）的端到端流程，用 `live-1`（正常紀錄）/`recent-tombstone`（1 小時前軟刪除）/`old-tombstone`（40 天前軟刪除）三筆測資驗證：修正前條件會把三筆全刪，修正後條件只刪 `old-tombstone`、另外兩筆正確保留。已將 `pb_hooks_example/purge_tombstones.pb.js` 的篩選條件改為 `"deleted_at > 0 && deleted_at < {:cutoff}"`，並在檔案開頭補上說明此設計理由的註解；本計畫 Task 3 Step 2 內嵌的程式碼片段同步更新，避免計畫文件與實際交付檔案不一致。
+- **Minor，確認屬實，已採納**：審查同時指出實作結果裡 `purge_tombstones.pb.js` 的 `try { $app.delete(record); ... }` 前方遺漏了計畫原本要求的 3 行說明註解（解釋「單筆失敗不中斷整批」的理由）。已補回。
+- **Minor，確認屬實，已採納**：Task 2 Step 3 驗證 Batch API 已啟用的 Expected 文字原本只寫「非 `404`」，未說明實際會看到的狀態碼，讀者難以判斷「看到的結果算不算正常」。已依本次獨立驗證的實測結果補充：未啟用回傳 `403`、已啟用但送空 `requests` 回傳 `400`，兩者都代表端點存在且有在處理請求。
