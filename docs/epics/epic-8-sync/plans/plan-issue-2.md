@@ -41,7 +41,7 @@
   - `Future<void> saveCredentials({required String authToken, required String userId, required String email})`
   - `Future<void> clearCredentials()`
 
-- [ ] **Step 1：新增 `pubspec.yaml` 依賴**
+- [x] **Step 1：新增 `pubspec.yaml` 依賴**
 
 在 `dependencies:` 區塊、`flutter_inappwebview: ^6.1.5` 之後新增：
 
@@ -65,12 +65,12 @@
   http: ^1.6.0
 ```
 
-- [ ] **Step 2：執行 `flutter pub get`，確認依賴解析成功**
+- [x] **Step 2：執行 `flutter pub get`，確認依賴解析成功**
 
 Run: `flutter pub get`
 Expected: 成功結束，無版本衝突錯誤（若與既有 `win32`/`http` 版本鏈衝突，比照 `pubspec.yaml` 既有 `share_plus` 版本鎖定手法，於此新增註解記錄實際衝突與選擇理由）。
 
-- [ ] **Step 3：修改 AndroidManifest.xml——新增 `INTERNET` 權限、`allowBackup="false"`、`usesCleartextTraffic="true"`**
+- [x] **Step 3：修改 AndroidManifest.xml——新增 `INTERNET` 權限、`allowBackup="false"`、`usesCleartextTraffic="true"`**
 
 `app/android/app/src/main/AndroidManifest.xml` 目前 `<application>` 標籤（第 2-5 行）：
 
@@ -105,7 +105,7 @@ Expected: 成功結束，無版本衝突錯誤（若與既有 `win32`/`http` 版
 
 （此步驟本身無法用 `flutter test` 驗證，實際生效與否由 Task 5 的 `integration_test` 於真機上間接驗證——若權限/明文流量設定有誤，`testConnection()` 對真實 PocketBase 實例會直接連線失敗。）
 
-- [ ] **Step 4：撰寫 `SyncAccountRepository` 的失敗測試**
+- [x] **Step 4：撰寫 `SyncAccountRepository` 的失敗測試**
 
 Create `app/test/sync/sync_account_repository_test.dart`：
 
@@ -238,12 +238,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 5：執行測試，確認因 `SyncAccountRepository` 尚不存在而失敗**
+- [x] **Step 5：執行測試，確認因 `SyncAccountRepository` 尚不存在而失敗**
 
 Run: `flutter test test/sync/sync_account_repository_test.dart`
 Expected: FAIL，錯誤訊息指出找不到 `package:elinkbook/sync/sync_account_repository.dart`（或找不到 `SyncAccountRepository` 類別）。
 
-- [ ] **Step 6：實作 `SyncAccountRepository`**
+- [x] **Step 6：實作 `SyncAccountRepository`**
 
 Create `app/lib/sync/sync_account_repository.dart`：
 
@@ -336,12 +336,12 @@ class SyncAccountRepository {
 }
 ```
 
-- [ ] **Step 7：執行測試，確認全數通過**
+- [x] **Step 7：執行測試，確認全數通過**
 
 Run: `flutter test test/sync/sync_account_repository_test.dart`
-Expected: PASS（7 個測試全數通過）。
+Expected: PASS（6 個測試全數通過）。
 
-- [ ] **Step 8：Commit**
+- [x] **Step 8：Commit**
 
 ```bash
 git add pubspec.yaml android/app/src/main/AndroidManifest.xml lib/sync/sync_account_repository.dart test/sync/sync_account_repository_test.dart
@@ -364,7 +364,7 @@ git commit -m "feat(epic-8-sync): Issue 2 Task 1 — 新增同步相依套件、
   - `Future<bool> testConnection(String baseUrl, String email, String password)`
   - `Future<void> logout()`
 
-- [ ] **Step 1：撰寫 `SyncClient` 的失敗測試**
+- [x] **Step 1：撰寫 `SyncClient` 的失敗測試**
 
 Create `app/test/sync/sync_client_test.dart`：
 
@@ -542,12 +542,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：執行測試，確認因 `SyncClient` 尚不存在而失敗**
+- [x] **Step 2：執行測試，確認因 `SyncClient` 尚不存在而失敗**
 
 Run: `flutter test test/sync/sync_client_test.dart`
 Expected: FAIL，錯誤訊息指出找不到 `package:elinkbook/sync/sync_client.dart`（或找不到 `SyncClient` 類別）。
 
-- [ ] **Step 3：實作 `SyncClient`**
+- [x] **Step 3：實作 `SyncClient`**
 
 Create `app/lib/sync/sync_client.dart`：
 
@@ -614,12 +614,12 @@ class SyncClient {
 }
 ```
 
-- [ ] **Step 4：執行測試，確認全數通過**
+- [x] **Step 4：執行測試，確認全數通過**
 
 Run: `flutter test test/sync/sync_client_test.dart`
 Expected: PASS（5 個測試全數通過）。
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 git add lib/sync/sync_client.dart test/sync/sync_client_test.dart
@@ -640,7 +640,7 @@ git commit -m "feat(epic-8-sync): Issue 2 Task 2 — SyncClient（testConnection
   - `SyncSettingsScreen({required SyncAccountRepository accountRepository, required SyncClient syncClient})`
   - 對外可觀察的 Key：`sync_settings_loading_indicator`／`sync_settings_base_url_field`／`sync_settings_email_field`／`sync_settings_password_field`／`sync_settings_connect_button`／`sync_settings_error_text`／`sync_settings_logged_in_email`／`sync_settings_logout_button`
 
-- [ ] **Step 1：撰寫 `SyncSettingsScreen` 的失敗測試**
+- [x] **Step 1：撰寫 `SyncSettingsScreen` 的失敗測試**
 
 Create `app/test/screens/sync_settings_screen_test.dart`：
 
@@ -835,12 +835,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：執行測試，確認因 `SyncSettingsScreen` 尚不存在而失敗**
+- [x] **Step 2：執行測試，確認因 `SyncSettingsScreen` 尚不存在而失敗**
 
 Run: `flutter test test/screens/sync_settings_screen_test.dart`
 Expected: FAIL，錯誤訊息指出找不到 `package:elinkbook/screens/sync_settings_screen.dart`。
 
-- [ ] **Step 3：實作 `SyncSettingsScreen`**
+- [x] **Step 3：實作 `SyncSettingsScreen`**
 
 Create `app/lib/screens/sync_settings_screen.dart`：
 
@@ -1033,12 +1033,12 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
 }
 ```
 
-- [ ] **Step 4：執行測試，確認全數通過**
+- [x] **Step 4：執行測試，確認全數通過**
 
 Run: `flutter test test/screens/sync_settings_screen_test.dart`
 Expected: PASS（5 個測試全數通過）。
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 git add lib/screens/sync_settings_screen.dart test/screens/sync_settings_screen_test.dart
@@ -1058,7 +1058,7 @@ git commit -m "feat(epic-8-sync): Issue 2 Task 3 — SyncSettingsScreen"
 **Interfaces:**
 - Consumes：`SyncAccountRepository`（Task 1）、`SyncClient`（Task 2）、`SyncSettingsScreen`（Task 3）
 
-- [ ] **Step 1：`SettingsScreen` 新增「同步」入口——先改測試**
+- [x] **Step 1：`SettingsScreen` 新增「同步」入口——先改測試**
 
 `app/test/screens/settings_screen_test.dart` 現有 `setUp`（第 13-23 行）需要補上 `flutter_secure_storage`／`SharedPreferences` 的測試替身（`SyncSettingsScreen` 內部經由 `SyncAccountRepository` 存取兩者），並新增測試：
 
@@ -1129,12 +1129,12 @@ void main() {
 
 （既有測試第一則「顯示設定標題與『佈景』『關於』『導航熱區』入口」不需要修改斷言內容——本 Task 只新增入口，不移除既有項目。）
 
-- [ ] **Step 2：執行測試，確認新測試因入口不存在而失敗**
+- [x] **Step 2：執行測試，確認新測試因入口不存在而失敗**
 
 Run: `flutter test test/screens/settings_screen_test.dart`
 Expected: FAIL（`find.byKey(const Key('settings_sync_button'))` 找不到任何 widget，其餘既有測試維持 PASS）。
 
-- [ ] **Step 3：`SettingsScreen` 新增欄位與入口**
+- [x] **Step 3：`SettingsScreen` 新增欄位與入口**
 
 `app/lib/screens/settings_screen.dart` 第 1-28 行 import 與欄位宣告，改為：
 
@@ -1198,7 +1198,7 @@ class SettingsScreen extends StatelessWidget {
           ),
 ```
 
-- [ ] **Step 4：`LibraryScreen` 新增欄位並轉傳給 `SettingsScreen`**
+- [x] **Step 4：`LibraryScreen` 新增欄位並轉傳給 `SettingsScreen`**
 
 `app/lib/screens/library_screen.dart` 第 29-57 行欄位宣告與建構子，新增 `syncAccountRepository`／`syncClient`：
 
@@ -1259,7 +1259,7 @@ import '../sync/sync_client.dart';
                 ),
 ```
 
-- [ ] **Step 5：`main.dart` 建立實例並接線**
+- [x] **Step 5：`main.dart` 建立實例並接線**
 
 `app/lib/main.dart` 第 1-19 行 import 區塊新增：
 
@@ -1345,7 +1345,7 @@ class ElinkBookApp extends StatefulWidget {
       ),
 ```
 
-- [ ] **Step 6：執行測試，確認全數通過**
+- [x] **Step 6：執行測試，確認全數通過**
 
 Run: `flutter test test/screens/settings_screen_test.dart`
 Expected: PASS（既有測試與新測試全數通過）。
@@ -1353,7 +1353,7 @@ Expected: PASS（既有測試與新測試全數通過）。
 Run: `flutter analyze`
 Expected: `No issues found!`（`library_screen_test.dart` 等既有測試檔案未直接傳入新的可選參數，型別皆為可空、預設 `null`，不需要跟著修改既有呼叫端）。
 
-- [ ] **Step 7：Commit**
+- [x] **Step 7：Commit**
 
 ```bash
 git add lib/screens/settings_screen.dart lib/screens/library_screen.dart lib/main.dart test/screens/settings_screen_test.dart
@@ -1386,7 +1386,7 @@ curl -s http://pbdev.jigong.org/api/collections/users/records \
 
 若之後需要在其他環境重建同一組測試帳號，重跑本指令即可；帳號已存在時會回傳 400，可略過直接使用既有帳號。
 
-- [ ] **Step 3：撰寫 `integration_test`**
+- [x] **Step 3：撰寫 `integration_test`**
 
 Create `app/integration_test/sync_account_test.dart`：
 
@@ -1439,13 +1439,13 @@ void main() {
 }
 ```
 
-- [ ] **Step 4：於真實裝置/模擬器上執行，確認通過**
+- [x] **Step 4：於真實裝置/模擬器上執行，確認通過**
 
 Run: `flutter devices`（取得可用裝置/模擬器 ID）
 Run: `flutter test integration_test/sync_account_test.dart -d <device-id>`
 Expected: PASS——這代表（a）Task 1 新增的 `INTERNET` 權限與明文流量白名單設定正確生效，（b）`flutter_secure_storage` 在真實 Android Keystore 上正確加密寫入/讀出/清除三項憑證，（c）`SyncClient` 對真實 PocketBase 實例的 `authWithPassword` 呼叫成功。
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 git add integration_test/sync_account_test.dart
@@ -1472,3 +1472,12 @@ git commit -m "test(epic-8-sync): Issue 2 Task 5 — 對真實 PocketBase 測試
 - **建議 1「Base URL 字串修飾」，部分採納**：`.trim()` 部分確認屬實並採納——使用者從其他地方複製貼上網址常見夾帶前後空白，已於 Task 2 `SyncClient.testConnection()` 補上 `trimmedBaseUrl = baseUrl.trim()`，實際用於建立 client 與寫入 `SyncAccountRepository` 皆改用修剪後的值，並補上對應測試（`sync_client_test.dart` 新增「baseUrl 前後夾帶空白」測試）。**移除結尾斜線的部分未採納**：查證 `pocketbase` Dart SDK 原始碼（`PocketBase.buildURL()`）發現該方法本身已處理 `baseURL` 是否以 `/` 結尾的情況（`baseURL + (baseURL.endsWith("/") ? "" : "/")`），結尾多一個 `/` 不會造成路徑重複或請求失敗，本計畫層級再處理一次是多餘的防禦，已在 Task 2 程式碼註解記錄此查證結果與理由。
 - **建議 2「flutter_secure_storage 例外保護」，確認屬實，已採納**：查證 `flutter_secure_storage` 官方 GitHub issue 列表，確認這不是假設性風險——已有多起真實回報（例如 OEM 客製 Keystore 在特定機種／韌體更新後讀取拋出 `PlatformException`／`BadPaddingException`），本專案目標裝置又明確涵蓋較冷門的 E-Ink 閱讀器，風險並非空談。已於 Task 1 `SyncAccountRepository.loadAuthToken()`/`loadUserId()`/`loadEmail()` 三個讀取方法加上 `try/catch`，讀取失敗時安全回退為 `null`（等同「視為未登入」，避免 `SyncSettingsScreen` 卡在載入畫面或例外向上拋出中斷整個 Settings 畫面），並補上對應測試（新增 `_ThrowingSecureStoragePlatform` 測試替身與 1 則測試案例）。**未擴及**寫入方法（`saveCredentials`/`clearCredentials`）——審查意見僅點名 `.read()`，寫入失敗屬於不同的失敗模式（使用者會誤以為登入成功但憑證其實沒真的落地），需要另外設計「回報給呼叫端」的方式，不屬於本次審查範圍，不擅自擴大修改。
 - **建議 3「密碼輸入框體驗優化」，確認屬實，已採納**：已於 Task 3 `SyncSettingsScreen` 的 email／password 兩個 `TextField` 加上 `autocorrect: false`／`enableSuggestions: false`，防止輸入法記憶敏感帳密。
+
+## 實作結果審查修正紀錄（`tmp/epic-8/plan-issue-2-implementation-review.md`）
+
+程式碼審查對象改為「本計畫的實際實作結果」（`feat/epic-8-issue-2-sync-account` 分支，`cf56f54..91be184` 共 6 個 commit），結論「正式通過」，0 Critical，2 項 Important（皆屬流程性，非程式碼缺陷）、2 項 Minor：
+
+- **確認屬實，已處理**：本計畫 Task 1-5 共 28 個 Step 的核取方塊當時仍全數維持 `- [ ]`（僅 Task 5 Step 1/2 例外），與實際程式碼／測試皆已完成且通過的真實狀態不符，違反 CLAUDE.md「每完成一個 Step 需即時勾選」的 SDD 紀律。已將全部 28 個 Step 改回 `- [x]`。
+- **確認屬實，已處理**：Task 5 Step 4（於真機執行 `integration_test` 確認通過）原本無跡象顯示已實際執行過。已在真實 Android 裝置（`3CEF42ECD491687`，Android 15）上執行 `flutter test integration_test/sync_account_test.dart`，過程中發現一次真實的環境問題並排除：`pbdev.jigong.org` 實際掛在 Tailscale 私有網路（解析為 CGNAT IP `100.98.175.79`），裝置上 Tailscale 若未連線會導致 `testConnection()` 正確地回傳 `false`（非程式碼 bug，是連線失敗的預期行為）；裝置端 Tailscale 連線後重跑，測試通過（`testConnection returned: true`、`All tests passed!`）。
+- **確認屬實，已採納**：Task 1 Step 7「Expected: PASS（7 個測試全數通過）」為計畫文字筆誤，`sync_account_repository_test.dart` 實際只有 6 個 `test()` 案例（`grep -c "^  test("` 核實），程式碼本身完全依 Step 6 給出的內容原樣實作，不算實作偏離計畫。已修正計畫文字為「6 個測試」。
+- **確認屬實，暫不處理（維持既定範圍）**：`saveCredentials()`/`clearCredentials()` 寫入路徑無 try/catch，`testConnection()` 理論上存在「baseUrl 已覆寫成新值、但憑證寫入中途失敗仍停留舊值」的極低機率不一致風險。此為本計畫「審查修正紀錄」建議 2 已明確聲明**刻意不擴及**的範圍（寫入失敗屬於不同的失敗模式，需要另外設計），不在本 Issue 處理，留待 Issue 4（同步引擎核心）視需要一併考慮。

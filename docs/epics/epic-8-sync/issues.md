@@ -65,11 +65,11 @@ SQLite schema 自 v16 升級至 v17（比照既有累加式 `if (oldVersion < 17
 
 **驗收標準：**
 
-- [ ] `SyncAccountRepository`／`SyncClient` 正確讀寫 base URL（SharedPreferences）與憑證（flutter_secure_storage）
-- [ ] `testConnection()` 成功即完成登入，失敗不寫入任何憑證
-- [ ] `logout()` 正確清除憑證，不影響本機資料
-- [ ] `SyncSettingsScreen` 正確呈現未登入/已登入狀態，`SettingsScreen` 新增入口可正確導航
-- [ ] 上述測試皆通過，`flutter analyze` 乾淨
+- [x] `SyncAccountRepository`／`SyncClient` 正確讀寫 base URL（SharedPreferences）與憑證（flutter_secure_storage）
+- [x] `testConnection()` 成功即完成登入，失敗不寫入任何憑證
+- [x] `logout()` 正確清除憑證，不影響本機資料
+- [x] `SyncSettingsScreen` 正確呈現未登入/已登入狀態，`SettingsScreen` 新增入口可正確導航
+- [x] 上述測試皆通過，`flutter analyze` 乾淨（含真機 `integration_test`，已於 Android 15 實機驗證通過，見 `plans/plan-issue-2.md`「實作結果審查修正紀錄」）
 
 ---
 
