@@ -29,11 +29,11 @@ SQLite schema 自 v16 升級至 v17（比照既有累加式 `if (oldVersion < 17
 
 **驗收標準：**
 
-- [ ] `PRAGMA foreign_keys = OFF/ON` 正確包住整個表格重建流程，既有裝置升級不崩潰
-- [ ] `bookmarks`/`highlights`/`notes` 主鍵成功轉為 UUID，既有資料與 `notes.highlight_id` 參照正確轉換
-- [ ] `books`／`sync_metadata` 新增欄位正確建立
-- [ ] `Bookmark`/`Highlight`/`Note` 模型與對應 repository 型別變更完整（`int?`→`String`／`Future<int>`→`Future<void>`），全專案呼叫端無遺漏
-- [ ] 上述測試皆通過，`flutter analyze` 乾淨
+- [x] `PRAGMA foreign_keys = OFF/ON` 正確包住整個表格重建流程，既有裝置升級不崩潰
+- [x] `bookmarks`/`highlights`/`notes` 主鍵成功轉為 UUID，既有資料與 `notes.highlight_id` 參照正確轉換
+- [x] `books`／`sync_metadata` 新增欄位正確建立
+- [x] `Bookmark`/`Highlight`/`Note` 模型與對應 repository 型別變更完整（`int?`→`String`／`Future<int>`→`Future<void>`），全專案呼叫端無遺漏
+- [x] 上述測試皆通過，`flutter analyze` 乾淨（兩輪實作結果審查發現並修正 4 項 Critical——`updated_at`/`deleted_at` 欄位缺失、`sync_metadata` schema 錯誤、`onCreate` 未建立該表、遷移測試缺失，見 `plans/plan-issue-1.md`「實作結果第二輪審查修正紀錄」）
 
 ---
 
