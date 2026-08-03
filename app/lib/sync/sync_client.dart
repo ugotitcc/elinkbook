@@ -41,8 +41,8 @@ class SyncClient {
     try {
       final authData =
           await pb.collection('users').authWithPassword(email, password);
-      final userId = authData.record?.id;
-      if (userId == null || userId.isEmpty) return false;
+      final userId = authData.record.id;
+      if (userId.isEmpty) return false;
       await _accountRepository.saveBaseUrl(trimmedBaseUrl);
       await _accountRepository.saveCredentials(
         authToken: authData.token,
