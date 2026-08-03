@@ -234,7 +234,7 @@ SQLite schema 自 v16 升級至 v17（比照既有累加式 `if (oldVersion < 17
 
 **驗收標準（人工檢核，非自動化測試）：**
 
-- [ ] 依文件步驟可從零開始成功建立一個運作中的 PocketBase 實例
-- [ ] 4 個 collection 皆正確建立，欄位/型別/API rule 與 `spec.md` 一致
-- [ ] 依文件建立的測試用 PocketBase 實例可供 Issue 2／4／5 的 `integration_test` 實際連線使用
-- [ ] `pb_hooks` 墓碑清理範例語法正確、可實際載入運作
+- [x] 依文件步驟可從零開始成功建立一個運作中的 PocketBase 實例
+- [x] 4 個 collection 皆正確建立，欄位/型別/API rule 與 `spec.md` 一致
+- [x] 依文件建立的測試用 PocketBase 實例可供 Issue 2／4／5 的 `integration_test` 實際連線使用
+- [x] `pb_hooks` 墓碑清理範例語法正確、可實際載入運作（實作結果審查發現並修正 1 項 Critical——`deleted_at != null` 篩選條件對 PocketBase number 欄位無效，改為 `deleted_at > 0`，見 `plans/plan-issue-7.md`「實作結果審查修正紀錄」）
