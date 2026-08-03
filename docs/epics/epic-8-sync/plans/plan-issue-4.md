@@ -469,25 +469,21 @@ class HighlightsRepository {
     );
   }
 
-  /// 批次版本，同樣手動複製 FK 退化邏輯（見 [delete]）。
+  /// 批次版本，同樣手動複製 FK 退化邏輯（見 [delete]）。**改用子查詢**
+  /// 而非「先查出全部 id 清單、再組 `IN (?,?,?...)` 佔位符」——後者對單本
+  /// 書籍持有大量劃線（超過 SQLite 單一陳述式的變數上限）時會拋出
+  /// `too many SQL variables` 而崩潰（審查意見 Important #1，2026-08-04
+  /// `/superpowers:requesting-code-review` 發現，見文末「審查修正
+  /// 紀錄」）；子查詢完全不受此限制，且不需要先做一次額外的 `SELECT`。
   Future<void> deleteAllForBook(String bookId) async {
     final now = DateTime.now().millisecondsSinceEpoch;
-    final activeHighlights = await _db.query(
-      'highlights',
-      columns: ['id'],
-      where: 'book_id = ? AND deleted_at IS NULL',
+    await _db.update(
+      'notes',
+      {'highlight_id': null, 'updated_at': now},
+      where: 'highlight_id IN '
+          '(SELECT id FROM highlights WHERE book_id = ? AND deleted_at IS NULL)',
       whereArgs: [bookId],
     );
-    if (activeHighlights.isNotEmpty) {
-      final ids = activeHighlights.map((row) => row['id'] as String).toList();
-      final placeholders = List.filled(ids.length, '?').join(',');
-      await _db.update(
-        'notes',
-        {'highlight_id': null, 'updated_at': now},
-        where: 'highlight_id IN ($placeholders)',
-        whereArgs: ids,
-      );
-    }
     await _db.update(
       'highlights',
       {'deleted_at': now, 'updated_at': now},
@@ -1770,7 +1766,7 @@ git commit -m "feat(epic-8-sync): Issue 4 Task 6 — SyncMetadataRepository 存�
 
 **Interfaces:**
 - Consumes：Task 3-6 的所有純函式/資料層、Issue 2 的 `SyncAccountRepository`、`PocketBaseClientFactory`（`sync_client.dart`）、Issue 3 的 `computeBookContentFingerprint()`。
-- Produces：`SyncEngine`（建構子 `SyncEngine({required Database db, required SyncAccountRepository accountRepository, required SyncMetadataRepository metadataRepository, PocketBaseClientFactory? clientFactory})`），本 Task 先實作 `runCheckpoint()` 的推送半段（未登入即早退、指紋補算回填、查詢 dirty 列、組裝並分批送出、推送成功後更新 `lastPushCompletedAt`、推送失敗即整批放棄）。下載/合併/墓碑清理見 Task 8（同一個方法接續擴充）。
+- Produces：`SyncEngine`（建構子 `SyncEngine({required Database db, required SyncAccountRepository accountRepository, required SyncMetadataRepository metadataRepository, PocketBaseClientFactory? clientFactory})`），本 Task 先實作 `runCheckpoint()` 的推送半段（未登入即早退、指紋補算回填、查詢 dirty 列、組裝並分批送出、推送失敗即整批放棄）。**`lastPushCompletedAt`／各 collection 下載游標的實際持久化，刻意延後到 Task 8 下載階段全部成功後才一併寫入**（2026-08-04 `/superpowers:requesting-code-review` 發現並修正的 Critical 問題，見文末「審查修正紀錄」：spec.md「同步引擎」步驟 7 明訂「不局部套用已完成的步驟」，若推送一成功就立刻寫入 `lastPushCompletedAt`，之後下載階段失敗時會違反這個原子性要求）。本 Task 只計算 `notDirtyUpdatedAt`（供 Task 8 的合併/游標寫入使用），不呼叫任何 `SyncMetadataRepository` 的寫入方法。下載/合併/墓碑清理見 Task 8（同一個方法接續擴充）。
 
 - [ ] **Step 1：撰寫失敗測試（僅涵蓋推送半段行為）**
 
@@ -1862,7 +1858,7 @@ void main() {
     expect(requestSent, isFalse);
   });
 
-  test('有指紋的書籍新增一筆書籤：推送 create（remoteId 未知），成功後寫入 sync_remote_ids 並更新 lastPushCompletedAt',
+  test('有指紋的書籍新增一筆書籤：推送 create（remoteId 未知），成功後寫入 sync_remote_ids',
       () async {
     await libraryRepository.insertBook(_testBook('b1', contentFingerprint: 'fp-1'));
     await bookmarksRepository.insert(
@@ -1871,23 +1867,33 @@ void main() {
 
     Map<String, dynamic>? capturedRequest;
     final mockClient = MockClient((request) async {
-      expect(request.url.path, '/api/batch');
-      expect(request.headers['Authorization'], 'test-token');
-      capturedRequest = jsonDecode(request.body) as Map<String, dynamic>;
-      final subRequests = capturedRequest!['requests'] as List;
-      expect(subRequests, hasLength(1));
-      expect(subRequests.single['method'], 'POST');
-      return http.Response(
-        jsonEncode([
-          {
-            'status': 200,
-            'body': {
-              'id': 'pb-created-1',
-              'client_id': 'bm1',
-              'updated': '2026-08-03 00:00:00.000Z',
+      if (request.url.path == '/api/batch') {
+        expect(request.headers['Authorization'], 'test-token');
+        capturedRequest = jsonDecode(request.body) as Map<String, dynamic>;
+        final subRequests = capturedRequest!['requests'] as List;
+        expect(subRequests, hasLength(1));
+        expect(subRequests.single['method'], 'POST');
+        return http.Response(
+          jsonEncode([
+            {
+              'status': 200,
+              'body': {
+                'id': 'pb-created-1',
+                'client_id': 'bm1',
+                'updated': '2026-08-03 00:00:00.000Z',
+              },
             },
-          },
-        ]),
+          ]),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      }
+      // Task 7 尚未實作下載，這個分支現階段不會被觸發；一旦 Task 8 幫
+      // runCheckpoint() 接上下載呼叫，這裡讓任何 collection 的 GET 查詢
+      // 都回傳空結果，避免本測試的 mock 因為多了下載請求而炸掉（見
+      // plan-issue-4.md「審查修正紀錄」）。
+      return http.Response(
+        jsonEncode({'items': [], 'page': 1, 'perPage': 1000, 'totalItems': 0}),
         200,
         headers: {'content-type': 'application/json'},
       );
@@ -1913,7 +1919,9 @@ void main() {
       await metadataRepository.loadRemoteIds(SyncCollection.bookmarks),
       {'bm1': 'pb-created-1'},
     );
-    expect(await metadataRepository.loadLastPushCompletedAt(), isNotNull);
+    // `lastPushCompletedAt` 本 Task 尚未持久化（刻意延後到 Task 8 下載
+    // 階段全部成功後才一併寫入，見上方 Interfaces 說明／文末「審查修正
+    // 紀錄」），故本測試不斷言它，改由 Task 8 的測試驗證完整成功路徑。
   });
 
   test('書籍尚無指紋（content_fingerprint 為 null）時，即時補算並回填後才推送', () async {
@@ -1935,10 +1943,19 @@ void main() {
     );
 
     final mockClient = MockClient((request) async {
+      if (request.url.path == '/api/batch') {
+        return http.Response(
+          jsonEncode([
+            {'status': 200, 'body': {'id': 'pb-h1'}},
+          ]),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      }
+      // 見上一個測試同樣的說明：Task 8 接上下載呼叫後，任何 collection
+      // 的 GET 查詢一律回傳空結果。
       return http.Response(
-        jsonEncode([
-          {'status': 200, 'body': {'id': 'pb-h1'}},
-        ]),
+        jsonEncode({'items': [], 'page': 1, 'perPage': 1000, 'totalItems': 0}),
         200,
         headers: {'content-type': 'application/json'},
       );
@@ -2023,6 +2040,17 @@ import 'sync_table_specs.dart';
 /// 只實作劃線/備註/書籤的推送/下載/合併與本機墓碑清理；閱讀位置的衝突
 /// 預檢由 Issue 5 擴充同一個 [runCheckpoint]；三種觸發來源與併發鎖由
 /// Issue 6 負責，本 Issue 的 [runCheckpoint] 僅需可被手動/測試呼叫。
+///
+/// **給 Issue 6 實作者的例外處理提醒**（審查意見 Minor #1，2026-08-04
+/// `/superpowers:requesting-code-review`，見文末「審查修正紀錄」）：
+/// [runCheckpoint] 只捕捉網路層的 `ClientException`（PocketBase SDK
+/// 統一封裝的 HTTP 錯誤），**不**捕捉本機 SQLite 操作可能拋出的
+/// `DatabaseException`（例如磁碟空間不足）——這是刻意的，本 Issue 不吞
+/// 掉未預期的本機例外。Issue 6 規劃的 `_isSyncing` 執行鎖，呼叫
+/// [runCheckpoint] 時**必須**用 `try { await runCheckpoint(); } finally
+/// { _isSyncing = false; }` 包住，否則任何一次未預期的本機例外都會讓鎖
+/// 永久卡住（需要重開 App 才能恢復），而不能假設 [runCheckpoint] 永遠
+/// 不會拋出例外。
 class SyncEngine {
   final Database _db;
   final SyncAccountRepository _accountRepository;
@@ -2076,11 +2104,19 @@ class SyncEngine {
       return; // 同步失敗：整批放棄，不更新任何 sync_metadata 游標
     }
 
-    await _metadataRepository.saveLastPushCompletedAt(DateTime.now().millisecondsSinceEpoch);
-
-    // 下載/合併/墓碑清理見 Task 8（同一個方法接續擴充）。
+    // `lastPushCompletedAt` 刻意不在這裡寫入——spec.md「同步引擎」步驟 7
+    // 要求「不局部套用已完成的步驟」，若推送一成功就立刻持久化，下載
+    // 階段（Task 8）萬一失敗會違反這個原子性要求。實際持久化時機挪到
+    // Task 8：整個 checkpoint（推送＋下載）皆成功後才一次寫入所有游標
+    // （見文末「審查修正紀錄」）。下載/合併/墓碑清理見 Task 8（本方法
+    // 於該 Task 接續擴充）。
   }
 
+  /// 記憶體風險註記（審查意見 Important #2，與 `_downloadAndMerge()` 的
+  /// `getFullList()` 是同一類風險，見 Task 8 該方法的說明／文末「審查
+  /// 修正紀錄」）：一次性 `rawQuery` 載入該 collection 全部 dirty 列，
+  /// 極端情況（單次 checkpoint 待推送異動筆數極多）可能有記憶體壓力，
+  /// 目前評估暫不需要分頁讀取，先記錄於此供日後追蹤。
   Future<List<Map<String, Object?>>> _queryDirtyRows(
     SyncCollection collection,
     int? lastPushCompletedAt,
@@ -2221,7 +2257,7 @@ git commit -m "feat(epic-8-sync): Issue 4 Task 7 — SyncEngine 推送階段（�
 
 **Interfaces:**
 - Consumes：Task 5 的 `resolveMergeDecision`/`idsPastTombstoneRetention`/`maxUpdatedCursor`/`normalizeDeletedAt`，Task 6 的 `SyncMetadataRepository` 待處理佇列方法。
-- Produces：`runCheckpoint()` 完整行為（推送成功後接續下載、合併、待處理佇列重試、墓碑清理；下載階段失敗同樣整批放棄）。
+- Produces：`runCheckpoint()` 完整行為（推送成功後接續下載、合併、待處理佇列重試、墓碑清理；下載階段失敗同樣整批放棄）。**`lastPushCompletedAt` 與各 collection 的下載游標，統一延後到推送＋下載全部成功後、`runCheckpoint()` 方法最後才一次寫入**（2026-08-04 `/superpowers:requesting-code-review` 發現並修正的 Critical 問題，見文末「審查修正紀錄」），取代 Task 7 原規劃「推送成功立刻寫入 `lastPushCompletedAt`」的做法。
 
 - [ ] **Step 1：撰寫失敗測試（延續 Task 7 的 `sync_engine_test.dart`，`main()` 內新增）**
 
@@ -2291,6 +2327,9 @@ git commit -m "feat(epic-8-sync): Issue 4 Task 7 — SyncEngine 推送階段（�
       await metadataRepository.loadRemoteIds(SyncCollection.bookmarks),
       {'bm-remote-1': 'pb-remote-1'},
     );
+    // 推送＋下載整個 checkpoint 皆成功，此時 lastPushCompletedAt 才應該
+    // 被寫入（審查修正紀錄 Critical：驗證游標只在完全成功後才一次持久化）。
+    expect(await metadataRepository.loadLastPushCompletedAt(), isNotNull);
   });
 
   test('下載端遇到 book_fingerprint 查無對應本機書籍時，暫緩合併、寫入待處理佇列，不建立空殼書籍',
@@ -2439,7 +2478,10 @@ git commit -m "feat(epic-8-sync): Issue 4 Task 7 — SyncEngine 推送階段（�
     expect(rawRows, isEmpty, reason: '超過 30 天的墓碑應被真正 DELETE');
   });
 
-  test('下載階段失敗（HTTP 錯誤）時，本次 checkpoint 視為失敗，不執行墓碑清理', () async {
+  test(
+      '下載階段失敗（HTTP 錯誤）時，即使推送階段已成功，也不執行墓碑清理、'
+      '不寫入 lastPushCompletedAt／任何下載游標（審查修正紀錄 Critical：'
+      '游標寫入的原子性）', () async {
     await libraryRepository.insertBook(_testBook('b7', contentFingerprint: 'fp-7'));
     await bookmarksRepository.insert(
       const Bookmark(id: 'bm-should-survive', bookId: 'b7', name: 'X', progression: 0.1),
@@ -2456,8 +2498,22 @@ git commit -m "feat(epic-8-sync): Issue 4 Task 7 — SyncEngine 推送階段（�
 
     final mockClient = MockClient((request) async {
       if (request.url.path == '/api/batch') {
-        return http.Response(jsonEncode([]), 200,
-            headers: {'content-type': 'application/json'});
+        // 本測試在呼叫 runCheckpoint() 前已軟刪除 bm-should-survive，
+        // 該列 updated_at 雖是「31 天前」的時間戳記，但因為
+        // lastPushCompletedAt 從未寫入過（null，等同門檻 0），仍然算
+        // dirty，會被推送——回應陣列長度需與批次內操作筆數（1 筆）一致，
+        // 否則 _sendPushBatch() 依索引讀取 results[i] 會擲出
+        // RangeError，而非測試原本要驗證的下載失敗情境。
+        return http.Response(
+          jsonEncode([
+            {
+              'status': 200,
+              'body': {'id': 'pb-should-survive', 'client_id': 'bm-should-survive'},
+            },
+          ]),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
       }
       // 下載請求一律失敗。
       return http.Response(
@@ -2479,6 +2535,18 @@ git commit -m "feat(epic-8-sync): Issue 4 Task 7 — SyncEngine 推送階段（�
     final rawRows = await libraryRepository.database
         .query('bookmarks', where: 'id = ?', whereArgs: ['bm-should-survive']);
     expect(rawRows, hasLength(1), reason: '下載失敗時不應執行墓碑清理');
+
+    // 審查修正紀錄 Critical 的核心回歸測試：推送階段已經成功（上方
+    // sync_remote_ids 的寫入不受影響，仍然落地——那是逐筆冪等的中繼資料，
+    // 見 plan-issue-4.md「與 issues.md／spec.md 的落差說明」），但下載
+    // 階段失敗，因此代表「這次 checkpoint 整體成功」的兩個游標都不應該
+    // 被寫入，即使推送那一半原本已經成功。
+    expect(await metadataRepository.loadLastPushCompletedAt(), isNull);
+    expect(await metadataRepository.loadPulledCursor(SyncCollection.bookmarks), isNull);
+    expect(
+      await metadataRepository.loadRemoteIds(SyncCollection.bookmarks),
+      {'bm-should-survive': 'pb-should-survive'},
+    );
   });
 ```
 
@@ -2496,19 +2564,38 @@ Expected：FAIL——新增的 5 個下載/合併/墓碑清理測試失敗（目
 
 - [ ] **Step 3：擴充 `sync_engine.dart`——下載/合併/墓碑清理**
 
-`runCheckpoint()` 方法內、`await _metadataRepository.saveLastPushCompletedAt(...)` 那一行之後（原本的註解「下載/合併/墓碑清理見 Task 8」整段替換）改為：
+**本 Step 修正審查意見 Critical「同步失敗時游標未維持原子性」**（2026-08-04 `/superpowers:requesting-code-review`，見文末「審查修正紀錄」）：`lastPushCompletedAt` 與各 collection 的下載游標（`lastPulledServerUpdatedAt_<collection>`）全部改為先算在記憶體裡，等推送＋下載整個 `try` 區塊皆成功執行完畢後，才在 `runCheckpoint()` 方法的最後統一一次寫入，不再由 `_downloadAndMerge` 每處理完一個 collection 就各自立刻寫入自己的游標——避免「已推送成功、但下載到一半失敗」時，第一個 collection 的下載游標已經落地、後面的卻沒有，造成 spec.md「同步引擎」步驟 7 明訂禁止的「局部套用已完成的步驟」。
+
+`runCheckpoint()` 方法內，Task 7 Step 3 結尾那一段註解（從 `// lastPushCompletedAt 刻意不在這裡寫入...` 開始、到 `// 於該 Task 接續擴充）。` 結束，`}` 之前的全部內容）整段替換為：
 
 ```dart
     final notDirtyUpdatedAt = DateTime.now().millisecondsSinceEpoch;
-    await _metadataRepository.saveLastPushCompletedAt(notDirtyUpdatedAt);
+    final pulledCursors = <SyncCollection, String?>{};
 
     try {
       await _resolvePendingRecords(notDirtyUpdatedAt: notDirtyUpdatedAt);
       for (final spec in syncTableSpecs.values) {
-        await _downloadAndMerge(pb, headers, spec, notDirtyUpdatedAt: notDirtyUpdatedAt);
+        pulledCursors[spec.collection] = await _downloadAndMerge(
+          pb,
+          headers,
+          spec,
+          notDirtyUpdatedAt: notDirtyUpdatedAt,
+        );
       }
     } on ClientException {
-      return; // 下載階段失敗：本次 checkpoint 視為失敗，見 spec.md 步驟 7，不執行墓碑清理
+      return; // 下載階段失敗：本次 checkpoint 視為失敗，見 spec.md 步驟 7，
+      // 不寫入任何游標（含推送階段已成功的部分）、不執行墓碑清理。
+    }
+
+    // 推送＋下載皆已成功，此刻才一次寫入全部游標（見上方本 Step 開頭的
+    // 審查修正說明），確保不會發生「部分 collection 的游標已落地、其餘
+    // 尚未」的中繼狀態。
+    await _metadataRepository.saveLastPushCompletedAt(notDirtyUpdatedAt);
+    for (final entry in pulledCursors.entries) {
+      final cursor = entry.value;
+      if (cursor != null) {
+        await _metadataRepository.savePulledCursor(entry.key, cursor);
+      }
     }
 
     await _purgeTombstones();
@@ -2547,7 +2634,21 @@ Expected：FAIL——新增的 5 個下載/合併/墓碑清理測試失敗（目
     }
   }
 
-  Future<void> _downloadAndMerge(
+  /// 下載並合併單一 collection 的遠端異動，回傳這次應該寫回
+  /// `sync_metadata` 的下載游標值（`null` 代表沒有任何新紀錄、游標維持
+  /// 原值）——**不**在這個方法內直接呼叫 `savePulledCursor()`：實際持久化
+  /// 時機統一挪到 `runCheckpoint()` 最後、確認推送＋下載全部成功後才一次
+  /// 寫入（見 Step 3 開頭「審查修正紀錄」說明）。
+  ///
+  /// 記憶體風險註記（審查意見 Important #2，2026-08-04
+  /// `/superpowers:requesting-code-review`，見文末「審查修正紀錄」）：
+  /// `getFullList()` 會把該 collection 這次符合游標條件的紀錄一次性全部
+  /// 載入記憶體（PocketBase Dart SDK 內部逐頁 `getList()` 累積，見
+  /// `base_crud_service.dart`），極端情況（例如長時間離線後單一 collection
+  /// 累積數千筆待下載異動）可能在受限記憶體的裝置（E-Ink 閱讀器等）上
+  /// 造成 OOM 風險。目前評估暫不需要實作游標分頁式讀取（chunking），先
+  /// 記錄於此供日後若真的遇到 OOM 時快速定位（本 Issue 不處理）。
+  Future<String?> _downloadAndMerge(
     PocketBase pb,
     Map<String, String> headers,
     SyncTableSpec spec, {
@@ -2560,7 +2661,7 @@ Expected：FAIL——新增的 5 個下載/合併/墓碑清理測試失敗（目
           sort: 'updated',
           headers: headers,
         );
-    if (records.isEmpty) return;
+    if (records.isEmpty) return cursor;
 
     final fingerprints = records
         .map((r) => r.data['book_fingerprint'] as String?)
@@ -2601,13 +2702,10 @@ Expected：FAIL——新增的 5 個下載/合併/墓碑清理測試失敗（目
       }
     }
 
-    final maxUpdated = maxUpdatedCursor(
+    return maxUpdatedCursor(
       records.map((r) => r.data['updated'] as String).toList(),
       cursor,
     );
-    if (maxUpdated != null) {
-      await _metadataRepository.savePulledCursor(spec.collection, maxUpdated);
-    }
   }
 
   Future<Map<String, BookLookup>> _loadBooksByFingerprint(Set<String> fingerprints) async {
@@ -2628,6 +2726,14 @@ Expected：FAIL——新增的 5 個下載/合併/墓碑清理測試失敗（目
     };
   }
 
+  /// 每次真正 `DELETE` 最多帶入的 id 數量——與 Task 2
+  /// `HighlightsRepository.deleteAllForBook()` 同一類風險（審查意見
+  /// Important #1）：單一 SQL 陳述式的佔位符數量若無上限，長期離線後
+  /// 一次累積大量墓碑時可能觸發 SQLite 的變數上限例外。此處篩選邏輯
+  /// （[idsPastTombstoneRetention]）刻意維持純函式（spec.md「Testing
+  /// Decisions」要求），只在實際執行 DELETE 時分批，不影響篩選結果。
+  static const _tombstonePurgeChunkSize = 500;
+
   Future<void> _purgeTombstones() async {
     final now = DateTime.now();
     for (final collection in SyncCollection.values) {
@@ -2638,9 +2744,14 @@ Expected：FAIL——新增的 5 個下載/合併/墓碑清理測試失敗（目
         where: 'deleted_at IS NOT NULL',
       );
       final idsToDelete = idsPastTombstoneRetention(rows: rows, now: now);
-      if (idsToDelete.isEmpty) continue;
-      final placeholders = List.filled(idsToDelete.length, '?').join(',');
-      await _db.delete(table, where: 'id IN ($placeholders)', whereArgs: idsToDelete);
+      for (var i = 0; i < idsToDelete.length; i += _tombstonePurgeChunkSize) {
+        final end = (i + _tombstonePurgeChunkSize < idsToDelete.length)
+            ? i + _tombstonePurgeChunkSize
+            : idsToDelete.length;
+        final chunk = idsToDelete.sublist(i, end);
+        final placeholders = List.filled(chunk.length, '?').join(',');
+        await _db.delete(table, where: 'id IN ($placeholders)', whereArgs: chunk);
+      }
     }
   }
 ```
@@ -2820,9 +2931,18 @@ git commit -m "test(epic-8-sync): Issue 4 Task 9 — SyncEngine 真機端到端 
 
 ## Self-Review Notes
 
-- **issues.md 驗收標準覆蓋檢查**：「推送正確分批（100 筆/批），payload 皆帶 user 欄位」→ Task 4（`planPushBatches`／`buildPushOperations` 測試）＋ Task 7（`_sendPushBatch`）。「下載正確合併...client_id／highlight_client_id／book_fingerprint 跨裝置參照皆正確解析」→ Task 5（`resolveMergeDecision`）＋ Task 3（`notesSyncSpec` 的 `highlight_client_id`↔`highlight_id` 對應）＋ Task 8（`_downloadAndMerge`）。「本機墓碑清理正確執行（僅推送成功後、僅 30 天以上的墓碑）」→ Task 2（軟刪除轉換）＋ Task 5（`idsPastTombstoneRetention`）＋ Task 8（`_purgeTombstones` 僅在下載成功後才呼叫）。「同步失敗時本機異動不受影響、`sync_metadata` 游標不更新、下次重試會整批重來」→ Task 7（推送階段 `on ClientException { return; }`）＋ Task 8（下載階段同樣處理，對應測試）。
+- **issues.md 驗收標準覆蓋檢查**：「推送正確分批（100 筆/批），payload 皆帶 user 欄位」→ Task 4（`planPushBatches`／`buildPushOperations` 測試）＋ Task 7（`_sendPushBatch`）。「下載正確合併...client_id／highlight_client_id／book_fingerprint 跨裝置參照皆正確解析」→ Task 5（`resolveMergeDecision`）＋ Task 3（`notesSyncSpec` 的 `highlight_client_id`↔`highlight_id` 對應）＋ Task 8（`_downloadAndMerge`）。「本機墓碑清理正確執行（僅推送成功後、僅 30 天以上的墓碑）」→ Task 2（軟刪除轉換）＋ Task 5（`idsPastTombstoneRetention`）＋ Task 8（`_purgeTombstones` 僅在下載成功後才呼叫）。「同步失敗時本機異動不受影響、`sync_metadata` 游標不更新、下次重試會整批重來」→ Task 7（推送階段 `on ClientException { return; }`，尚未計算/持久化任何游標）＋ Task 8（下載階段同樣 `on ClientException { return; }`；`lastPushCompletedAt`／各 collection 下載游標統一延後到推送＋下載整個 `try` 區塊皆成功後才於 `runCheckpoint()` 最後一次寫入，即使推送階段已成功、下載階段才失敗也不會有任何游標落地，見文末「審查修正紀錄」Critical 項）。
 - **與 spec.md 的一致性檢查**：「先推送、後下載」順序（Task 7 先於 Task 8）；LWW／游標一律用 PocketBase 伺服器蓋章 `updated`（Task 5 `maxUpdatedCursor`／Task 8 `_downloadAndMerge` 皆只用 `remote.data['updated']`，未使用任何客端時間比較）；本機 `updated_at`/`deleted_at` 純本機用途（Task 4 `isDirtyRow`／Task 5 合併後 `updated_at` 設為 `notDirtyUpdatedAt` 而非 `DateTime.now()`，避免下載回來的紀錄被誤判為下次待推送的 dirty）。
 - **型別一致性檢查**：`SyncTableSpec.buildLocalFields(Map<String,Object?>, BookFileFormat)`（Task 3 定義）→ Task 5 `resolveMergeDecision` 與 Task 8 `_resolvePendingRecords` 呼叫時引數型別一致；`PendingSyncRecord`（Task 6 定義，含 `remoteId`/`deletedAt`/`fields`）→ Task 8 `_resolvePendingRecords` 讀取欄位名稱與型別一致；`BookLookup(id, format)`（Task 3 定義）→ Task 5/8 皆以具名參數建構，欄位名稱一致。
 - **與既有慣例的差異說明彙總**（呼應文件開頭「與 issues.md／spec.md 的落差說明」）：(1) `bookmarks`/`highlights`/`notes` 軟刪除轉換（Task 2）；(2) `HighlightsRepository` 手動複製 FK `ON DELETE SET NULL` 退化行為（Task 2）；(3) 指紋補算回填時機與範圍界定（Task 7）；(4) 新增 `sync_remote_ids`/`sync_pending_records` 兩張 spec.md 未定義精確 schema 的表（Task 1）；(5) PocketBase number/text 欄位零值問題的正規化處理（Task 3/5，呼應 Issue 7 已發現的同類問題）。以上 5 項皆非本計畫自創的範圍蔓延，而是查證程式碼庫／PocketBase 實際行為後發現的必要修正，比照 `plan-issue-3.md` 先例的誠實記錄慣例。
 - **測試涵蓋範圍的誠實記錄**：「批次真的分批送出、每批一個獨立 HTTP 請求」這個屬性由 Task 4 `planPushBatches`（純函式、直接斷言批次筆數）與 Task 7 `_sendPushBatch`（逐批呼叫，每批一次 `request.send()`）共同保證，`sync_engine_test.dart` 未另外寫一個「101 筆異動觸發兩次 HTTP 請求」的整合案例（因為 `planPushBatches` 已被獨立單元測試充分覆蓋，重複在 `SyncEngine` 層級驗證屬過度測試，不划算）；`SyncEngine` 層級的測試聚焦在「跨層串接是否正確」（推送成功寫回 remote id、下載正確合併、失敗正確整批放棄），不重複驗證底層純函式已覆蓋的邊界情況，比照本 Epic 前幾個 Issue 計畫的既有分層測試慣例。
 - **Placeholder 掃描**：全文無 TBD/TODO；Task 8 Step 3 因程式碼分散在多個新增方法，已列出全部方法的完整程式碼（非「比照 Task N」的省略寫法）。
+
+## 審查修正紀錄（`tmp/epic-8/plan_review_report_issue_4.md`）
+
+程式碼審查（`/superpowers:requesting-code-review`，2026-08-04）結論「請在修正 Critical 的游標寫入時機，並採納 Important 的 SQL 子查詢建議後，再進行實作」，1 項 Critical、2 項 Important、1 項 Minor，逐項核對程式碼庫現況與 spec.md 原文後，結論如下：
+
+- **Critical「同步失敗時游標未維持原子性」，確認屬實，已採納**：原規劃在推送批次成功後立刻呼叫 `saveLastPushCompletedAt()`（Task 7），且 `_downloadAndMerge()` 每處理完一個 collection 就各自呼叫 `savePulledCursor()`（Task 8）——若下載階段中途失敗（例如處理完 `bookmarks` 後 `highlights` 才拋出 `ClientException`），`lastPushCompletedAt` 與 `bookmarks` 的下載游標已經落地，違反 spec.md「同步引擎」步驟 7「不局部套用已完成的步驟」的原子性要求。已改為：`_downloadAndMerge()` 只回傳這次應寫回的游標值（`String?`），不再自己呼叫 `savePulledCursor()`；`runCheckpoint()` 把所有 collection 的回傳值暫存於記憶體 `Map`，等推送＋下載整個流程皆成功後，才在方法最後一次寫入 `lastPushCompletedAt` 與全部下載游標。新增／修改對應測試：Task 8「下載階段失敗」測試補上 `loadLastPushCompletedAt()`／`loadPulledCursor()` 皆應為 `null` 的斷言（核心回歸測試），「下載端把遠端新增的書籤正確合併進本機」測試補上 `loadLastPushCompletedAt()` 應非 `null` 的斷言（驗證完全成功路徑仍會正確持久化）；Task 7 兩則測試對應移除/調整了不再成立的 `lastPushCompletedAt` 斷言，並修正其 `MockClient` 使其能正確處理 Task 8 加入的下載請求（否則 Task 8 完成後重跑 Task 7 的既有測試會因為 mock 過度嚴格斷言請求路徑、或以錯誤型別的 JSON 回應下載請求而失敗——這是修正 Critical 過程中一併發現、非審查報告原文提及的連帶問題）。
+- **Important「手動 FK 退化邏輯恐觸發 SQLite 變數上限」，確認屬實，已採納**：`HighlightsRepository.deleteAllForBook()`（Task 2）原本「先 `SELECT` 出全部有效劃線 id、再組 `IN (?,?,?...)` 佔位符」的寫法，對持有大量劃線的書籍有觸發 SQLite 變數上限例外的風險。已改用子查詢 `highlight_id IN (SELECT id FROM highlights WHERE book_id = ? AND deleted_at IS NULL)`，完全不受此限制，程式碼也更精簡（不需要先做一次額外的 `SELECT`）。**額外查證發現同一類風險也存在於 Task 8 的 `_purgeTombstones()`**（同樣是「先在 Dart 端收集 id 清單、再組 `IN` 佔位符」的模式，審查報告未提及這個第二個實例）：因為墓碑篩選邏輯（`idsPastTombstoneRetention`）依 spec.md「Testing Decisions」要求必須維持純函式，無法比照上面改用子查詢，故改為以固定上限（500 筆／批）分批執行 `DELETE`，篩選邏輯本身不受影響。
+- **Important「記憶體峰值風險（大檔案/大量異動）」，確認屬實，依審查報告建議「暫不實作、僅註記」採納**：已在 Task 7 `_queryDirtyRows()`／Task 8 `_downloadAndMerge()` 的方法文件註解中記錄此風險與觸發情境，供日後若真的遇到 OOM 時快速定位；未新增分頁式讀取（chunking）實作，符合審查報告本身「考量目前可能不會發生極端狀況，可以先不實作」的建議與本專案 YAGNI 原則。
+- **Minor「例外捕獲範圍與 Issue 6 互鎖機制的潛在死鎖風險」，確認屬實，已採納**：已於 `SyncEngine` 類別層級的文件註解新增給 Issue 6 實作者的提醒——`runCheckpoint()` 刻意只捕捉 `ClientException`、不捕捉 `DatabaseException`，Issue 6 規劃的 `_isSyncing` 執行鎖必須用 `try/finally` 包住 `runCheckpoint()` 呼叫，否則未預期的本機例外會讓鎖永久卡住。本 Issue 本身不需要因此變更 `runCheckpoint()` 的例外處理範圍（審查報告本身也只要求留一筆備註，非要求本 Issue 修改捕獲行為）。
