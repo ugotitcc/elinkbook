@@ -2,21 +2,26 @@ import 'package:flutter/material.dart';
 
 import '../reader/custom_fonts_repository.dart';
 import '../reader/reader_prefs_manager.dart';
+import '../sync/sync_account_repository.dart';
+import '../sync/sync_client.dart';
 import '../theme/app_theme.dart';
 import 'about_screen.dart';
 import 'font_management_screen.dart';
 import 'nav_zone_settings_screen.dart';
 import 'reading_defaults_screen.dart';
+import 'sync_settings_screen.dart';
 
 /// 設定畫面：「佈景」（主題圓點，原位於 `LibraryScreen` AppBar，見
 /// `epic-18-reader-device-qa` 工具列溢位修復）、「字型管理」、「閱讀預設值」、
-/// 「導航熱區」與「關於」五個項目。
+/// 「導航熱區」、「同步」與「關於」六個項目。
 class SettingsScreen extends StatelessWidget {
   final ReaderPrefsManager prefsManager;
   final AppTheme currentTheme;
   final bool isEinkMode;
   final ValueChanged<AppTheme>? onThemeChanged;
   final CustomFontsRepository? customFontsRepository;
+  final SyncAccountRepository? syncAccountRepository;
+  final SyncClient? syncClient;
 
   const SettingsScreen({
     super.key,
@@ -25,6 +30,8 @@ class SettingsScreen extends StatelessWidget {
     this.isEinkMode = false,
     this.onThemeChanged,
     this.customFontsRepository,
+    this.syncAccountRepository,
+    this.syncClient,
   });
 
   @override
@@ -90,6 +97,23 @@ class SettingsScreen extends StatelessWidget {
                 ),
               );
             },
+          ),
+          ListTile(
+            key: const Key('settings_sync_button'),
+            title: const Text('同步'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: syncAccountRepository == null || syncClient == null
+                ? null
+                : () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => SyncSettingsScreen(
+                          accountRepository: syncAccountRepository!,
+                          syncClient: syncClient!,
+                        ),
+                      ),
+                    );
+                  },
           ),
           ListTile(
             key: const Key('settings_about_button'),

@@ -15,6 +15,8 @@ import '../library/library_repository.dart';
 import '../library/models/book.dart';
 import '../library/models/book_group.dart';
 import '../library/models/library_enums.dart';
+import '../sync/sync_account_repository.dart';
+import '../sync/sync_client.dart';
 import '../theme/app_theme.dart';
 import 'library_group_management_dialog.dart';
 import 'library_move_to_group_dialog.dart';
@@ -34,6 +36,8 @@ class LibraryScreen extends StatefulWidget {
   final HighlightsRepository? highlightsRepository;
   final NotesRepository? notesRepository;
   final CustomFontsRepository? customFontsRepository;
+  final SyncAccountRepository? syncAccountRepository;
+  final SyncClient? syncClient;
   final AppTheme currentTheme;
   final bool isEinkMode;
   final ValueChanged<AppTheme>? onThemeChanged;
@@ -49,6 +53,8 @@ class LibraryScreen extends StatefulWidget {
     this.highlightsRepository,
     this.notesRepository,
     this.customFontsRepository,
+    this.syncAccountRepository,
+    this.syncClient,
     this.currentTheme = AppTheme.light,
     this.isEinkMode = false,
     this.onThemeChanged,
@@ -632,6 +638,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   isEinkMode: widget.isEinkMode,
                   onThemeChanged: widget.onThemeChanged,
                   customFontsRepository: widget.customFontsRepository,
+                  syncAccountRepository: widget.syncAccountRepository,
+                  syncClient: widget.syncClient,
                 ),
               ),
             );
