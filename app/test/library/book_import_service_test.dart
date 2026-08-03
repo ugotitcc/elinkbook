@@ -522,4 +522,115 @@ void main() {
       expect(result.skippedDuplicateCount, 1);
     });
   });
+
+  group('content_fingerprint（epic-8-sync Issue 3）', () {
+    test('EPUB 匯入時，extractMetadata 回傳的 identifier 優先寫入 content_fingerprint，不呼叫 computeSha256',
+        () async {
+      var computeSha256Called = false;
+      mockChannel((call) async {
+        if (call.method == 'takePersistableUriPermission') return null;
+        if (call.method == 'extractMetadata') {
+          return {
+            'title': '書名',
+            'author': null,
+            'coverBytes': null,
+            'identifier': 'urn:uuid:00000000-0000-0000-0000-000000000099',
+          };
+        }
+        if (call.method == 'computeSha256') {
+          computeSha256Called = true;
+          return 'should-not-be-used';
+        }
+        return null;
+      });
+
+      final result = await service.importFiles(['content://example/book.epub']);
+
+      expect(result.importedBooks.single.contentFingerprint,
+          'urn:uuid:00000000-0000-0000-0000-000000000099');
+      expect(computeSha256Called, isFalse);
+    });
+
+    test('EPUB 匯入時，identifier 缺漏則呼叫 computeSha256，結果寫入 content_fingerprint',
+        () async {
+      mockChannel((call) async {
+        if (call.method == 'takePersistableUriPermission') return null;
+        if (call.method == 'extractMetadata') {
+          return {'title': '書名', 'author': null, 'coverBytes': null};
+        }
+        if (call.method == 'computeSha256') {
+          expect((call.arguments as Map)['uri'], 'content://example/book2.epub');
+          return 'fallback-hash-abc';
+        }
+        return null;
+      });
+
+      final result =
+          await service.importFiles(['content://example/book2.epub']);
+
+      expect(
+          result.importedBooks.single.contentFingerprint, 'fallback-hash-abc');
+    });
+
+    test('PDF 匯入時，呼叫 computeSha256 並寫入 content_fingerprint', () async {
+      mockChannel((call) async {
+        if (call.method == 'takePersistableUriPermission') return null;
+        if (call.method == 'extractMetadata') {
+          return {'title': null, 'author': null, 'coverBytes': null};
+        }
+        if (call.method == 'computeSha256') return 'pdf-hash-xyz';
+        return null;
+      });
+
+      final result = await service.importFiles(['content://example/report.pdf']);
+
+      expect(result.importedBooks.single.contentFingerprint, 'pdf-hash-xyz');
+    });
+
+    test('TXT 匯入時，呼叫 computeSha256 並寫入 content_fingerprint', () async {
+      mockChannel((call) async {
+        if (call.method == 'takePersistableUriPermission') return null;
+        if (call.method == 'computeSha256') return 'txt-hash-123';
+        return null;
+      });
+
+      final result = await service.importFiles(['content://example/notes.txt']);
+
+      expect(result.importedBooks.single.contentFingerprint, 'txt-hash-123');
+    });
+
+    test('computeSha256 失敗（回傳 null）時，content_fingerprint 降級為 null，不中斷匯入',
+        () async {
+      mockChannel((call) async {
+        if (call.method == 'takePersistableUriPermission') return null;
+        if (call.method == 'extractMetadata') {
+          return {'title': '書名', 'author': null, 'coverBytes': null};
+        }
+        return null; // computeSha256 未被特別處理，落到這裡回傳 null
+      });
+
+      final result = await service.importFiles(['content://example/book3.epub']);
+
+      expect(result.importedBooks, hasLength(1));
+      expect(result.importedBooks.single.contentFingerprint, isNull);
+    });
+
+    test('extractMetadata 拋出例外時，content_fingerprint 仍嘗試計算（兩者互相獨立）',
+        () async {
+      mockChannel((call) async {
+        if (call.method == 'takePersistableUriPermission') return null;
+        if (call.method == 'extractMetadata') {
+          throw PlatformException(code: 'extraction_failed', message: '模擬失敗');
+        }
+        if (call.method == 'computeSha256') return 'still-computed-hash';
+        return null;
+      });
+
+      final result = await service.importFiles(['content://example/book4.epub']);
+
+      expect(result.importedBooks.single.title, 'book4');
+      expect(result.importedBooks.single.contentFingerprint,
+          'still-computed-hash');
+    });
+  });
 }

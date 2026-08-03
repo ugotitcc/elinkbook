@@ -49,6 +49,14 @@ class Book {
   /// 是兩個不同概念，互不影響**。
   final bool? isFixedLayout;
 
+  /// 書籍內容指紋（epic-8-sync Issue 3，spec.md「書籍內容指紋計算」／
+  /// 「跨裝置參照設計」）：EPUB 優先為 OPF identifier，缺漏或 PDF/TXT
+  /// 為整份檔案內容的 SHA-256，供同步引擎跨裝置比對「這是不是同一本
+  /// 書」使用（不攜帶本機 [id]，見 spec.md）。`null` 代表尚未計算過
+  /// （既有書籍升級後的暫時狀態，或本次匯入計算失敗），該書在補算前
+  /// 不參與跨裝置比對，不影響單機使用。
+  final String? contentFingerprint;
+
   final String groupName;
   final DateTime createTime;
   final DateTime lastReadTime;
@@ -66,6 +74,7 @@ class Book {
     this.pdfPageIndex,
     this.totalCharacterCount,
     this.isFixedLayout,
+    this.contentFingerprint,
     this.groupName = BookGroup.uncategorized,
     required this.createTime,
     required this.lastReadTime,
@@ -88,6 +97,7 @@ class Book {
       // 欄位的 camelCase 命名不一致，不是疏漏。
       'is_fixed_layout':
           isFixedLayout == null ? null : (isFixedLayout! ? 1 : 0),
+      'content_fingerprint': contentFingerprint,
       'groupName': groupName,
       'createTime': createTime.millisecondsSinceEpoch,
       'lastReadTime': lastReadTime.millisecondsSinceEpoch,
@@ -110,6 +120,7 @@ class Book {
       isFixedLayout: map['is_fixed_layout'] == null
           ? null
           : (map['is_fixed_layout'] as int) == 1,
+      contentFingerprint: map['content_fingerprint'] as String?,
       groupName: map['groupName'] as String,
       createTime: DateTime.fromMillisecondsSinceEpoch(map['createTime'] as int),
       lastReadTime:
@@ -157,6 +168,7 @@ class Book {
           pdfPageIndex == other.pdfPageIndex &&
           totalCharacterCount == other.totalCharacterCount &&
           isFixedLayout == other.isFixedLayout &&
+          contentFingerprint == other.contentFingerprint &&
           groupName == other.groupName &&
           createTime == other.createTime &&
           lastReadTime == other.lastReadTime;
@@ -175,6 +187,7 @@ class Book {
         pdfPageIndex,
         totalCharacterCount,
         isFixedLayout,
+        contentFingerprint,
         groupName,
         createTime,
         lastReadTime,
