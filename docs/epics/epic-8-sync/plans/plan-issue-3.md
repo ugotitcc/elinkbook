@@ -1121,7 +1121,7 @@ git commit -m "feat(epic-8-sync): Issue 3 Task 3 — Book.contentFingerprint 欄
 import 'package:crypto/crypto.dart';
 ```
 
-- [ ] **Step 2：於真實裝置/模擬器上執行，確認全數通過**
+- [x] **Step 2：於真實裝置/模擬器上執行，確認全數通過**（已提交，待真機驗證）
 
 Run：
 
