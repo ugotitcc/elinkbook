@@ -2587,4 +2587,52 @@ void main() {
       throwsA(isA<DatabaseException>()),
     );
   });
+
+  test('新鮮安裝（version 18）時，sync_remote_ids／sync_pending_records 兩張表皆已建立', () async {
+    final syncRemoteIdsColumns =
+        await repository.database.rawQuery('PRAGMA table_info(sync_remote_ids)');
+    expect(
+      syncRemoteIdsColumns.map((c) => c['name'] as String).toSet(),
+      {'collection', 'client_id', 'remote_id'},
+    );
+
+    final syncPendingColumns = await repository.database
+        .rawQuery('PRAGMA table_info(sync_pending_records)');
+    expect(
+      syncPendingColumns.map((c) => c['name'] as String).toSet(),
+      {'collection', 'client_id', 'book_fingerprint', 'payload_json'},
+    );
+  });
+
+  test('既有 version 17 裝置升級到 version 18，正確新增 sync_remote_ids／sync_pending_records 兩張表',
+      () async {
+    final tempDir = await Directory.systemTemp
+        .createTemp('elinkbook_migration_v17_to_v18_test');
+    addTearDown(() => tempDir.delete(recursive: true));
+    final dbPath = p.join(tempDir.path, 'test.db');
+
+    // 模擬「已在 version 17、兩張新表皆不存在」的資料庫：直接開一個空的
+    // version 17 資料庫（本次遷移新增的兩張表彼此獨立、不依賴 books 等
+    // 既有表，不需要比照 v16→v17 測試重刻完整歷史 schema）。刻意**不**用
+    // 「先用目前版本開一次、再把 version 手動改回 17」的手法——那樣兩張
+    // 新表會在第一次 open() 時就已經被 onCreate 建立，之後的「升級」測試
+    // 只是對已存在的表重複執行 CREATE TABLE IF NOT EXISTS，不會真的驗證
+    // 到 onUpgrade 分支本身是否存在/正確。
+    final v17Db = await databaseFactory.openDatabase(
+      dbPath,
+      options: OpenDatabaseOptions(version: 17, onCreate: (db, version) async {}),
+    );
+    await v17Db.close();
+
+    final upgraded = await SqliteLibraryRepository.open(dbPath);
+    addTearDown(() => upgraded.close());
+
+    final syncRemoteIdsColumns =
+        await upgraded.database.rawQuery('PRAGMA table_info(sync_remote_ids)');
+    expect(syncRemoteIdsColumns, isNotEmpty);
+
+    final syncPendingColumns = await upgraded.database
+        .rawQuery('PRAGMA table_info(sync_pending_records)');
+    expect(syncPendingColumns, isNotEmpty);
+  });
 }

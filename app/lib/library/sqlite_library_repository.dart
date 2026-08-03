@@ -25,7 +25,7 @@ class SqliteLibraryRepository implements LibraryRepository {
   static Future<SqliteLibraryRepository> open(String path) async {
     final db = await openDatabase(
       path,
-      version: 17,
+      version: 18,
       onConfigure: (db) async {
         // book_reader_prefs 的 ON DELETE CASCADE 需要外鍵約束真正生效，
         // SQLite 預設不強制外鍵，須逐連線手動開啟（見 epic-3 plan-issue-1）。
@@ -86,6 +86,8 @@ class SqliteLibraryRepository implements LibraryRepository {
         await _createNotesTable(db);
         await _createCustomFontsTable(db);
         await _createSyncMetadataTable(db);
+        await _createSyncRemoteIdsTable(db);
+        await _createSyncPendingRecordsTable(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
@@ -251,6 +253,16 @@ class SqliteLibraryRepository implements LibraryRepository {
               'ALTER TABLE books ADD COLUMN position_synced_server_updated_at TEXT');
           await _migrateAnnotationTablesToUuid(db);
           await _createSyncMetadataTable(db);
+        }
+        if (oldVersion < 18) {
+          // epic-8-sync Issue 4：推送 create/update 判斷所需的本機 remote id
+          // 對照表，以及 book_fingerprint 查無對應本機書籍時的待處理佇列
+          // （見 spec.md「跨裝置參照設計」／plan-issue-4.md「與 issues.md／
+          // spec.md 的落差說明」）。兩者皆是全新的獨立表（非既有表新增
+          // 欄位），比照 oldVersion < 8/9/16 既有原則，同一層級、無條件
+          // 檢查即可。
+          await _createSyncRemoteIdsTable(db);
+          await _createSyncPendingRecordsTable(db);
         }
       },
       onOpen: (db) async {
@@ -615,6 +627,40 @@ class SqliteLibraryRepository implements LibraryRepository {
       {'id': 1},
       conflictAlgorithm: ConflictAlgorithm.ignore,
     );
+  }
+
+  static Future<void> _createSyncRemoteIdsTable(Database db) async {
+    // client_id -> PocketBase 該筆紀錄真正 id 的對照表（epic-8-sync
+    // Issue 4，spec.md「跨裝置參照設計」；精確理由見
+    // docs/epics/epic-8-sync/plans/plan-issue-4.md Task 1）：PocketBase
+    // 自己的 id 系統欄位不接受本專案 UUID（含連字號）格式，且 App 端
+    // 完全不比對它，因此需要本機自己維護這份對照，供推送時判斷該送
+    // create（查無對照）還是 update（查到對照，帶入該 id）。
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS sync_remote_ids (
+        collection TEXT NOT NULL,
+        client_id TEXT NOT NULL,
+        remote_id TEXT NOT NULL,
+        PRIMARY KEY (collection, client_id)
+      )
+    ''');
+  }
+
+  static Future<void> _createSyncPendingRecordsTable(Database db) async {
+    // 下載時 book_fingerprint 查無對應本機書籍的待處理佇列（epic-8-sync
+    // Issue 4，spec.md「跨裝置參照設計」：「該筆同步紀錄暫緩合併、留在
+    // 待處理佇列」；精確理由見 plan-issue-4.md Task 1）。payload_json
+    // 存放該筆遠端紀錄的原始欄位（未經格式判斷正規化，見
+    // sync_table_specs.dart），待對應書籍匯入後才正規化並落地。
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS sync_pending_records (
+        collection TEXT NOT NULL,
+        client_id TEXT NOT NULL,
+        book_fingerprint TEXT NOT NULL,
+        payload_json TEXT NOT NULL,
+        PRIMARY KEY (collection, client_id)
+      )
+    ''');
   }
 
   /// 將 bookmarks / highlights / notes 三張表的主鍵從 INTEGER AUTOINCREMENT
