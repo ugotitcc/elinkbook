@@ -111,6 +111,31 @@ void main() {
     expect(list.single.id, 'bm12');
   });
 
+  test('delete 為軟刪除：資料列仍實際存在，deleted_at／updated_at 皆已寫入', () async {
+    await repository
+        .insert(const Bookmark(id: 'bm15', bookId: 'b1', name: 'A', progression: 0.1));
+
+    await repository.delete('bm15');
+
+    final rawRows = await libraryRepository.database
+        .query('bookmarks', where: 'id = ?', whereArgs: ['bm15']);
+    expect(rawRows, hasLength(1));
+    expect(rawRows.single['deleted_at'], isNotNull);
+    expect(rawRows.single['updated_at'], isNotNull);
+  });
+
+  test('deleteAllForBook 為軟刪除：資料列仍實際存在，deleted_at 皆已寫入', () async {
+    await repository
+        .insert(const Bookmark(id: 'bm16', bookId: 'b1', name: 'A', progression: 0.1));
+
+    await repository.deleteAllForBook('b1');
+
+    final rawRows = await libraryRepository.database
+        .query('bookmarks', where: 'id = ?', whereArgs: ['bm16']);
+    expect(rawRows, hasLength(1));
+    expect(rawRows.single['deleted_at'], isNotNull);
+  });
+
   test('deleteAllForBook 只清空指定書籍的書籤，其他書籍不受影響', () async {
     await libraryRepository.insertBook(_testBook('b2'));
     await repository

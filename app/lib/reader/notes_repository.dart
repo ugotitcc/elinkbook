@@ -3,10 +3,9 @@ import 'package:sqflite/sqflite.dart';
 import 'note.dart';
 
 /// `notes` 表的存取層（epic-6-annotations Issue 2，spec.md「劃線與備註
-/// 模組」）。FK `ON DELETE SET NULL` 的退化行為由資料庫本身保證（見
-/// sqlite_library_repository.dart `_createNotesTable`），本類別不需要
-/// 額外實作任何退化邏輯，`listByBook` 讀到的 `highlight_id` 已經是
-/// 資料庫層級處理過的最終結果。
+/// 模組」）。`deleted_at IS NULL` 過濾已內建於 [listByBook]，供 UI
+/// 隱藏已（軟）刪除的紀錄；雲端同步引擎直接用 `_db.rawQuery` 讀取
+/// 所有列（含已刪除），不經過本 repository（見 Task 7/8）。
 class NotesRepository {
   final Database _db;
 
@@ -25,11 +24,12 @@ class NotesRepository {
   }
 
   /// 依書中位置順序排序，比照 [HighlightsRepository.listByBook] 的
-  /// `COALESCE` 慣例（Issue 3 新增）。
+  /// `COALESCE` 慣例（Issue 3 新增）。`deleted_at IS NULL` 排除已（軟）
+  /// 刪除的紀錄（epic-8-sync Issue 4）。
   Future<List<Note>> listByBook(String bookId) async {
     final rows = await _db.query(
       'notes',
-      where: 'book_id = ?',
+      where: 'book_id = ? AND deleted_at IS NULL',
       whereArgs: [bookId],
       orderBy: 'COALESCE(pdf_page_index, progression) ASC',
     );
@@ -49,10 +49,22 @@ class NotesRepository {
   }
 
   Future<void> delete(String id) {
-    return _db.delete('notes', where: 'id = ?', whereArgs: [id]);
+    final now = DateTime.now().millisecondsSinceEpoch;
+    return _db.update(
+      'notes',
+      {'deleted_at': now, 'updated_at': now},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
   }
 
   Future<void> deleteAllForBook(String bookId) {
-    return _db.delete('notes', where: 'book_id = ?', whereArgs: [bookId]);
+    final now = DateTime.now().millisecondsSinceEpoch;
+    return _db.update(
+      'notes',
+      {'deleted_at': now, 'updated_at': now},
+      where: 'book_id = ? AND deleted_at IS NULL',
+      whereArgs: [bookId],
+    );
   }
 }

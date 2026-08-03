@@ -6,6 +6,8 @@ import 'package:elinkbook/library/sqlite_library_repository.dart';
 import 'package:elinkbook/reader/highlight.dart';
 import 'package:elinkbook/reader/highlight_style.dart';
 import 'package:elinkbook/reader/highlights_repository.dart';
+import 'package:elinkbook/reader/note.dart';
+import 'package:elinkbook/reader/notes_repository.dart';
 
 Book _testBook(String id) {
   return Book(
@@ -81,6 +83,59 @@ void main() {
     final list = await repository.listByBook('b1');
     expect(list, hasLength(1));
     expect(list.single.id, 'h7');
+  });
+
+  test('delete 為軟刪除：資料列仍實際存在，deleted_at 已寫入', () async {
+    await repository.insert(
+      const Highlight(id: 'h10', bookId: 'b1', style: HighlightStyle.underline, progression: 0.1),
+    );
+
+    await repository.delete('h10');
+
+    final rawRows = await libraryRepository.database
+        .query('highlights', where: 'id = ?', whereArgs: ['h10']);
+    expect(rawRows, hasLength(1));
+    expect(rawRows.single['deleted_at'], isNotNull);
+  });
+
+  test('delete 手動複製既有 FK ON DELETE SET NULL 行為：依附備註的 highlight_id 正確退化為 null',
+      () async {
+    final notesRepository = NotesRepository(libraryRepository.database);
+    await repository.insert(
+      const Highlight(id: 'h11', bookId: 'b1', style: HighlightStyle.underline, progression: 0.2),
+    );
+    await notesRepository.insert(
+      const Note(id: 'n20', bookId: 'b1', text: '依附備註', progression: 0.2, highlightId: 'h11'),
+    );
+
+    await repository.delete('h11');
+
+    final note = (await notesRepository.listByBook('b1')).single;
+    expect(note.highlightId, isNull);
+    expect(note.text, '依附備註');
+  });
+
+  test('deleteAllForBook 手動複製既有 FK ON DELETE SET NULL 行為：所有依附備註皆退化為純備註',
+      () async {
+    final notesRepository = NotesRepository(libraryRepository.database);
+    await repository.insert(
+      const Highlight(id: 'h12', bookId: 'b1', style: HighlightStyle.underline, progression: 0.1),
+    );
+    await repository.insert(
+      const Highlight(id: 'h13', bookId: 'b1', style: HighlightStyle.underline, progression: 0.2),
+    );
+    await notesRepository.insert(
+      const Note(id: 'n21', bookId: 'b1', text: 'N1', progression: 0.1, highlightId: 'h12'),
+    );
+    await notesRepository.insert(
+      const Note(id: 'n22', bookId: 'b1', text: 'N2', progression: 0.2, highlightId: 'h13'),
+    );
+
+    await repository.deleteAllForBook('b1');
+
+    final notes = await notesRepository.listByBook('b1');
+    expect(notes, hasLength(2));
+    expect(notes.every((n) => n.highlightId == null), isTrue);
   });
 
   test('deleteAllForBook 只清空指定書籍的劃線，其他書籍不受影響', () async {

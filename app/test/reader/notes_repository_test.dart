@@ -75,6 +75,17 @@ void main() {
     expect(list.single.id, 'n6');
   });
 
+  test('delete 為軟刪除：資料列仍實際存在，deleted_at 已寫入', () async {
+    await notesRepository.insert(const Note(id: 'n23', bookId: 'b1', text: 'A', progression: 0.1));
+
+    await notesRepository.delete('n23');
+
+    final rawRows = await libraryRepository.database
+        .query('notes', where: 'id = ?', whereArgs: ['n23']);
+    expect(rawRows, hasLength(1));
+    expect(rawRows.single['deleted_at'], isNotNull);
+  });
+
   test('deleteAllForBook 只清空指定書籍的備註，其他書籍不受影響', () async {
     await libraryRepository.insertBook(_testBook('b2'));
     await notesRepository.insert(const Note(id: 'n7', bookId: 'b1', text: 'A', progression: 0.1));

@@ -31,7 +31,7 @@ class BookmarksRepository {
   Future<List<Bookmark>> listByBook(String bookId) async {
     final rows = await _db.query(
       'bookmarks',
-      where: 'book_id = ?',
+      where: 'book_id = ? AND deleted_at IS NULL',
       whereArgs: [bookId],
       orderBy: 'COALESCE(pdf_page_index, progression) ASC',
     );
@@ -51,10 +51,22 @@ class BookmarksRepository {
   }
 
   Future<void> delete(String id) {
-    return _db.delete('bookmarks', where: 'id = ?', whereArgs: [id]);
+    final now = DateTime.now().millisecondsSinceEpoch;
+    return _db.update(
+      'bookmarks',
+      {'deleted_at': now, 'updated_at': now},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
   }
 
   Future<void> deleteAllForBook(String bookId) {
-    return _db.delete('bookmarks', where: 'book_id = ?', whereArgs: [bookId]);
+    final now = DateTime.now().millisecondsSinceEpoch;
+    return _db.update(
+      'bookmarks',
+      {'deleted_at': now, 'updated_at': now},
+      where: 'book_id = ? AND deleted_at IS NULL',
+      whereArgs: [bookId],
+    );
   }
 }
