@@ -54,6 +54,11 @@ dependencies:
   package_info_plus: ^9.0.1
   flutter_inappwebview: ^6.1.5
   uuid: ^4.6.0
+  # PocketBase 同步（epic-8-sync）：官方 Dart SDK。
+  pocketbase: ^0.24.0
+  # 同步帳號憑證（authToken/userId/email）加密儲存，Android Keystore／
+  # iOS Keychain（ADR 0019 決策 3，本專案首次引入的安全性相關儲存機制）。
+  flutter_secure_storage: ^10.3.1
 
 dev_dependencies:
   flutter_test:
@@ -72,6 +77,13 @@ dev_dependencies:
   share_plus_platform_interface: ^6.1.0
   flutter_inappwebview_platform_interface: ^1.3.0
   archive: ^4.0.9
+  # flutter_secure_storage 測試替身：官方套件本身提供
+  # TestFlutterSecureStoragePlatform（見 sync_account_repository_test.dart），
+  # 需要這個 platform interface 套件才能取得 FlutterSecureStoragePlatform
+  # 型別以設定 .instance。
+  flutter_secure_storage_platform_interface: ^2.0.1
+  # 測試 SyncClient 時以 MockClient 取代真實網路請求（sync_client_test.dart）。
+  http: ^1.6.0
 
 # flutter_inappwebview_android 1.1.3 有 toMap() 無限遞迴 bug（line 198 呼叫
 # ...toMap() 而非手動組裝 map），造成 InternalStoragePathHandler 使用時

@@ -14,6 +14,8 @@ import 'reader/reader_prefs_manager.dart';
 import 'reader/reader_prefs_manager_impl.dart';
 import 'reader/reading_position_repository.dart';
 import 'screens/library_screen.dart';
+import 'sync/sync_account_repository.dart';
+import 'sync/sync_client.dart';
 import 'theme/app_theme.dart';
 import 'theme/app_theme_data.dart';
 import 'theme/app_theme_preferences.dart';
@@ -43,6 +45,8 @@ Future<void> main() async {
   final highlightsRepository = HighlightsRepository(repository.database);
   final notesRepository = NotesRepository(repository.database);
   final customFontsRepository = CustomFontsRepository(repository.database);
+  final syncAccountRepository = SyncAccountRepository();
+  final syncClient = SyncClient(accountRepository: syncAccountRepository);
   runApp(
     ElinkBookApp(
       repository: repository,
@@ -52,6 +56,8 @@ Future<void> main() async {
       highlightsRepository: highlightsRepository,
       notesRepository: notesRepository,
       customFontsRepository: customFontsRepository,
+      syncAccountRepository: syncAccountRepository,
+      syncClient: syncClient,
       initialTheme: initialTheme,
       initialEinkMode: initialEinkMode,
       themePreferences: themePreferences,
@@ -69,6 +75,8 @@ class ElinkBookApp extends StatefulWidget {
   final HighlightsRepository? highlightsRepository;
   final NotesRepository? notesRepository;
   final CustomFontsRepository? customFontsRepository;
+  final SyncAccountRepository? syncAccountRepository;
+  final SyncClient? syncClient;
   final AppThemePreferences themePreferences;
   final AppTheme initialTheme;
   final bool initialEinkMode;
@@ -82,6 +90,8 @@ class ElinkBookApp extends StatefulWidget {
     this.highlightsRepository,
     this.notesRepository,
     this.customFontsRepository,
+    this.syncAccountRepository,
+    this.syncClient,
     this.initialTheme = AppTheme.light,
     this.initialEinkMode = false,
     AppThemePreferences? themePreferences,
@@ -129,6 +139,8 @@ class _ElinkBookAppState extends State<ElinkBookApp> {
         highlightsRepository: widget.highlightsRepository,
         notesRepository: widget.notesRepository,
         customFontsRepository: widget.customFontsRepository,
+        syncAccountRepository: widget.syncAccountRepository,
+        syncClient: widget.syncClient,
         currentTheme: _theme,
         isEinkMode: _isEinkMode,
         onThemeChanged: _handleThemeChanged,

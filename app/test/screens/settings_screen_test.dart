@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_secure_storage/test/test_flutter_secure_storage_platform.dart';
+import 'package:flutter_secure_storage_platform_interface/flutter_secure_storage_platform_interface.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:elinkbook/screens/settings_screen.dart';
+import 'package:elinkbook/sync/sync_account_repository.dart';
+import 'package:elinkbook/sync/sync_client.dart';
 import 'package:elinkbook/theme/app_theme.dart';
 import '../support/fake_reader_prefs_manager.dart';
 import '../support/fake_custom_fonts_repository.dart';
@@ -10,6 +15,8 @@ import '../support/fake_custom_fonts_repository.dart';
 const _appInfoChannel = MethodChannel('elinkbook/app_info');
 
 void main() {
+  late FlutterSecureStoragePlatform originalPlatform;
+
   setUp(() {
     PackageInfo.setMockInitialValues(
       appName: 'elinkBook',
@@ -20,11 +27,16 @@ void main() {
     );
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(_appInfoChannel, (call) async => null);
+    SharedPreferences.setMockInitialValues({});
+    originalPlatform = FlutterSecureStoragePlatform.instance;
+    FlutterSecureStoragePlatform.instance =
+        TestFlutterSecureStoragePlatform({});
   });
 
   tearDown(() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(_appInfoChannel, null);
+    FlutterSecureStoragePlatform.instance = originalPlatform;
   });
 
   testWidgets('SettingsScreen 顯示設定標題與「佈景」「關於」「導航熱區」入口', (tester) async {
@@ -132,5 +144,24 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('閱讀預設值'), findsOneWidget);
+  });
+
+  testWidgets('SettingsScreen 顯示「同步」入口，點擊導航至 SyncSettingsScreen',
+      (tester) async {
+    final accountRepository = SyncAccountRepository();
+    await tester.pumpWidget(MaterialApp(
+      home: SettingsScreen(
+        prefsManager: FakeReaderPrefsManager(),
+        syncAccountRepository: accountRepository,
+        syncClient: SyncClient(accountRepository: accountRepository),
+      ),
+    ));
+
+    expect(find.byKey(const Key('settings_sync_button')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('settings_sync_button')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('同步'), findsOneWidget);
   });
 }
