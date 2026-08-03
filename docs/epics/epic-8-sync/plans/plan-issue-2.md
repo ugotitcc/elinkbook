@@ -1370,19 +1370,21 @@ git commit -m "feat(epic-8-sync): Issue 2 Task 4 — SettingsScreen 新增「同
 **Interfaces:**
 - Consumes：`SyncAccountRepository`（Task 1）、`SyncClient`（Task 2），對 Issue 7 產出的可連線測試用 PocketBase 實例（`docs/epics/epic-8-sync/pocketbase-self-hosting.md`「測試環境」）發出真實網路請求。
 
-- [ ] **Step 1：確認 Issue 7 的測試用 PocketBase 實例正在運作**
+- [x] **Step 1：確認測試用 PocketBase 實例正在運作**
 
-依 `docs/epics/epic-8-sync/pocketbase-self-hosting.md`「測試環境」一節，確認本機 `http://127.0.0.1:8090` 有一個正在運作的 PocketBase 實例（若尚未啟動，依該文件 Task 1「選項 B」用 Docker 背景啟動）。
+依 `docs/epics/epic-8-sync/pocketbase-self-hosting.md`「測試環境」一節，`http://pbdev.jigong.org` 已是一份持續運作的正式測試實例（Docker + Traefik 自架，2026-08-03 確認可連線，`/api/health` 回傳 200），不需要開發者各自在本機另外起一個——**這是本計畫原始撰寫時規劃「本機 127.0.0.1:8090」之後的變更**，Task 5 全部步驟已改用這個固定網域。
 
-- [ ] **Step 2：建立本 Issue 專用的測試帳號**
+- [x] **Step 2：確認本 Issue 專用的測試帳號已存在**
+
+已於 `http://pbdev.jigong.org` 建立（2026-08-03，`POST /api/collections/users/records` 回傳 200 與 `"id":"5xdjm5yysd9rkuc"`）：
 
 ```bash
-curl -s http://127.0.0.1:8090/api/collections/users/records \
+curl -s http://pbdev.jigong.org/api/collections/users/records \
   -H "Content-Type: application/json" \
   -d '{"email":"epic8-issue2-test@example.com","password":"epic8-test-password-123","passwordConfirm":"epic8-test-password-123"}'
 ```
 
-Expected：回傳 HTTP 201 與建立好的使用者紀錄 JSON（含 `"id"` 欄位）。若該帳號已存在（重跑本步驟）會回傳 400，可略過此步驟直接使用既有帳號。
+若之後需要在其他環境重建同一組測試帳號，重跑本指令即可；帳號已存在時會回傳 400，可略過直接使用既有帳號。
 
 - [ ] **Step 3：撰寫 `integration_test`**
 
@@ -1397,10 +1399,13 @@ import 'package:integration_test/integration_test.dart';
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  // Android 模擬器把 10.0.2.2 保留為「宿主機的 localhost」（見
-  // pocketbase-self-hosting.md「測試環境」）；跑在實體裝置上時需改成
-  // 開發機在區網內的實際 IP，且手機與開發機須在同一個區網。
-  const testBaseUrl = 'http://10.0.2.2:8090';
+  // http://pbdev.jigong.org 是持續運作的正式測試實例（見
+  // pocketbase-self-hosting.md「測試環境」），開發機／Android 模擬器／
+  // 實體裝置皆可直接用同一個 base URL 連線，不需要依連線來源切換
+  // 127.0.0.1／10.0.2.2／區網 IP（2026-08-03 改用固定測試網域後的
+  // 修正）。目前是 HTTP（非 HTTPS），與下方 SyncClient 呼叫方式無關，
+  // PocketBase Dart SDK 對 http/https 一視同仁。
+  const testBaseUrl = 'http://pbdev.jigong.org';
   const testEmail = 'epic8-issue2-test@example.com';
   const testPassword = 'epic8-test-password-123';
 

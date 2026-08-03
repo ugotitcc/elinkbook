@@ -215,22 +215,34 @@ PocketBase 支援用 `pb_hooks` 目錄下的 JS 檔案定義排程工作（cron�
 
 ## 測試環境（供 Epic 8 其餘 Issue 使用）
 
-依本文件 Task 1-3 的步驟，已實際建立一份測試用 PocketBase 實例，供
+依本文件 Task 1-3 的步驟（實際透過 `pb_migrations_example/
+1785715200_create_sync_collections.js` 批次建立），已在
+`http://pbdev.jigong.org` 架好一份**持續運作**的測試用 PocketBase
+實例（Docker + Traefik，容器名稱 `elinkbook-pocketbase`），供
 `epic-8-sync` Issue 2（同步帳號模組）／Issue 4（同步引擎核心）／
-Issue 5（閱讀位置衝突彈窗）的 `integration_test` 連線使用。
+Issue 5（閱讀位置衝突彈窗）的 `integration_test` 連線使用，取代原本
+規劃「開發者各自在本機起一個臨時測試實例」的做法——這是實際網路上
+可連到的網域，開發機／Android 模擬器／實體裝置皆可直接用同一個
+base URL 連線，不需要再依連線來源切換 `127.0.0.1`／`10.0.2.2`／
+區網 IP（2026-08-03 改為此環境後的修正，見下方「已知部署細節」）。
 
-- **Base URL（從開發機本身連線）**：`http://127.0.0.1:8090`
-- **Base URL（從 Android 模擬器內連線）**：`http://10.0.2.2:8090`
-  ——Android 模擬器把 `10.0.2.2` 保留為「宿主機的 localhost」，這是
-  Android 官方模擬器網路轉發的既定行為，`integration_test` 若跑在
-  模擬器上須改用這個位址，不能直接用 `127.0.0.1`（那會指向模擬器
-  自己）。跑在實體裝置上時兩者皆不適用，需改成開發機在區網內的實際
-  IP（例如 `http://192.168.x.x:8090`），且手機與開發機須在同一個
-  區網。
-- **測試帳號**：`integration_test` 執行前，先透過 Admin UI 或
-  `POST /api/collections/users/records` 建立至少一個測試用 email+
-  password 帳號（不要用 Task 1 建立的 PocketBase **管理員**帳號，
-  那是另一套系統，見 Task 1「首次啟動」一節的提醒）。
-- **保持運作**：這個測試實例在 Issue 2／4／5 開發期間需要持續運作，
-  建議用 Task 1「選項 B」的 Docker 方式跑在背景（`docker run -d`），
-  不要用「選項 A」的前景 `./pocketbase serve` 跑完就關掉終端機。
+- **Base URL（任何連線來源皆同一個，不需依裝置別切換）**：
+  `http://pbdev.jigong.org`——目前是 **HTTP，不是 HTTPS**（Traefik
+  只設定了 `web`／HTTP entrypoint，未掛 HTTPS 憑證，見下方「已知
+  部署細節」）。
+- **測試帳號**（`epic-8-sync` Issue 2 起各 Issue 的 `integration_test`
+  共用，已建立於上述實例）：
+  - email：`epic8-issue2-test@example.com`
+  - password：`epic8-test-password-123`
+  - 不要跟 PocketBase **管理員**（superuser）帳號搞混，那是另一套
+    系統，見 Task 1「首次啟動」一節的提醒；管理員密碼不落地存放在
+    版本控制內，需要時另外詢問。
+- **已知部署細節**（供之後排查連線問題參考）：自架端的
+  `docker-compose.yml` 曾發生 `HOOKS_PATH`／`MIGRATIONS_PATH` 兩個
+  volume 掛載誤用同一個環境變數、導致 `pb_hooks/` 內容被同時掛進
+  `/pb/pb_migrations`，PocketBase 把 `purge_tombstones.pb.js` 誤當
+  migration 執行、撞上 migration 執行環境沒有 `cronAdd` 全域函式而
+  panic 崩潰——已修正為各自獨立的 `HOOKS_PATH`／`MIGRATIONS_PATH`
+  變數（`docker/.env`／`docker/.env.example`／
+  `docker/docker-compose.yml`，非本文件所在的 App 版本控制範圍，
+  是另一個自架用的 Docker 專案目錄）。
