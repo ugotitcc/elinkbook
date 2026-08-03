@@ -100,11 +100,11 @@ SQLite schema 自 v16 升級至 v17（比照既有累加式 `if (oldVersion < 17
 
 **驗收標準：**
 
-- [ ] EPUB 優先使用 OPF identifier，缺漏時正確退回 SHA-256
-- [ ] PDF/TXT 一律使用全檔案 SHA-256，計算結果具確定性（同檔案兩次結果一致）
-- [ ] 指紋計算採串流讀取＋獨立 Isolate 執行，不一次性讀入整個檔案、不阻塞 UI
-- [ ] 匯入流程正確寫入 `content_fingerprint`
-- [ ] 上述測試皆通過，`flutter analyze` 乾淨
+- [x] EPUB 優先使用 OPF identifier，缺漏時正確退回 SHA-256
+- [x] PDF/TXT 一律使用全檔案 SHA-256，計算結果具確定性（同檔案兩次結果一致）
+- [x] 指紋計算採串流讀取＋獨立 Isolate 執行，不一次性讀入整個檔案、不阻塞 UI
+- [x] 匯入流程正確寫入 `content_fingerprint`
+- [x] 上述測試皆通過，`flutter analyze` 乾淨
 
 ---
 

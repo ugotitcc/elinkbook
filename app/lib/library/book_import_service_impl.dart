@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import 'book_content_fingerprint.dart';
 import 'book_import_service.dart';
 import 'library_repository.dart';
 import 'models/book.dart';
@@ -238,6 +239,7 @@ class BookImportServiceImpl implements BookImportService {
     String? author;
     String? coverPath;
     bool? isFixedLayout;
+    String? epubIdentifier;
 
     if (format == BookFileFormat.txt) {
       final coverBytes = await generateTxtCover(fallbackTitle);
@@ -257,13 +259,33 @@ class BookImportServiceImpl implements BookImportService {
         // 不需要另外依 format 分支判斷（見
         // docs/epics/epic-17-epub-render-migration/spec.md「模組」）。
         isFixedLayout = metadata?['isFixedLayout'] as bool?;
+        // epic-8-sync Issue 3：同一次 extractMetadata 回應一併取得，PDF
+        // 呼叫時這個鍵不存在，cast 結果自然為 null，不需要另外依 format
+        // 分支判斷（比照 isFixedLayout 既有處理方式）。
+        epubIdentifier = metadata?['identifier'] as String?;
         final coverBytes = metadata?['coverBytes'] as Uint8List?;
         if (coverBytes != null) {
           coverPath = await _landCover(coverBytes, id);
         }
       } on PlatformException {
         // 詮釋資料提取失敗：降級為「檔名為標題、無封面」，不中斷整批匯入。
+        // 指紋計算與詮釋資料提取彼此獨立（見下方），此處失敗不影響指紋
+        // 計算仍會嘗試執行。
       }
+    }
+
+    String? contentFingerprint;
+    try {
+      contentFingerprint = await computeBookContentFingerprint(
+        resolvedUri,
+        format,
+        epubIdentifier: epubIdentifier,
+      );
+    } catch (_) {
+      // 指紋計算失敗（原生端例外／檔案讀取失敗）：降級為 null，不中斷
+      // 整批匯入——這本書在補算前不參與跨裝置比對，比照 epic-17
+      // detectAndCacheEpubLayout() 的一次性補判斷模式（回填時機留待
+      // Issue 4 決定，見 issues.md）。
     }
 
     final book = Book(
@@ -275,6 +297,7 @@ class BookImportServiceImpl implements BookImportService {
       source: BookSource.local,
       coverPath: coverPath,
       isFixedLayout: isFixedLayout,
+      contentFingerprint: contentFingerprint,
       groupName: folderName ?? BookGroup.uncategorized,
       createTime: now,
       lastReadTime: now,

@@ -240,4 +240,38 @@ void main() {
     expect(a, isNot(equals(c)));
     expect(a, isNot(equals(d)));
   });
+
+  test('contentFingerprint 欄位可正確往返（epic-8-sync Issue 3）', () {
+    final book = Book(
+      id: 'b13',
+      title: '書名',
+      format: BookFileFormat.epub,
+      filePath: 'content://com.example/book.epub',
+      source: BookSource.local,
+      contentFingerprint: 'urn:uuid:00000000-0000-0000-0000-000000000001',
+      createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+      lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+    );
+
+    final restored = Book.fromMap(book.toMap());
+
+    expect(restored.contentFingerprint,
+        'urn:uuid:00000000-0000-0000-0000-000000000001');
+  });
+
+  test('contentFingerprint 未設定時，往返後仍為 null（代表尚未計算過指紋）', () {
+    final book = Book(
+      id: 'b14',
+      title: '書名',
+      format: BookFileFormat.pdf,
+      filePath: '/storage/emulated/0/book.pdf',
+      source: BookSource.local,
+      createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+      lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+    );
+
+    final restored = Book.fromMap(book.toMap());
+
+    expect(restored.contentFingerprint, isNull);
+  });
 }

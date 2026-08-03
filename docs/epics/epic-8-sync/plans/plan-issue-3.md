@@ -33,7 +33,7 @@
 - Consumes：無（本 Task 是整個 Issue 的地基，不依賴其他 Task）
 - Produces：`extractMetadata`（既有方法）回應 map 新增 `"identifier": String?`（EPUB 專屬，PDF 呼叫時此鍵不存在，`cast` 結果自然為 `null`，比照既有 `isFixedLayout` 鍵的處理方式）；新增原生方法 `computeSha256`（參數 `{'uri': String}`，成功回傳 `String`——64 字元小寫十六進位 SHA-256 雜湊值；失敗以 `MethodChannel.Result.error("hash_failed", ...)` 回傳）。供 Task 2（`computeBookContentFingerprint`）與 Task 4（`integration_test`）使用。
 
-- [ ] **Step 1：產生新 fixture `sample_no_identifier.epub`**
+- [x] **Step 1：產生新 fixture `sample_no_identifier.epub`**
 
 Run（於 `app/` 目錄下，需要 Python 3）：
 
@@ -128,7 +128,7 @@ print('wrote sample_no_identifier.epub')
 
 Expected：印出 `wrote sample_no_identifier.epub`，`app/test/fixtures/sample_no_identifier.epub` 已建立。
 
-- [ ] **Step 2：`pubspec.yaml` 新增此 fixture 至 assets 清單**
+- [x] **Step 2：`pubspec.yaml` 新增此 fixture 至 assets 清單**
 
 `app/pubspec.yaml` 的 `assets:` 區塊、`- test/fixtures/sample.epub` 那一行之後新增：
 
@@ -136,7 +136,7 @@ Expected：印出 `wrote sample_no_identifier.epub`，`app/test/fixtures/sample_
     - test/fixtures/sample_no_identifier.epub
 ```
 
-- [ ] **Step 3：`extractEpubMetadata` 新增回傳 `identifier`**
+- [x] **Step 3：`extractEpubMetadata` 新增回傳 `identifier`**
 
 `BookMetadataChannel.kt` 第 248-269 行（`extractEpubMetadata` 內 `try` 區塊）改為：
 
@@ -173,7 +173,7 @@ Expected：印出 `wrote sample_no_identifier.epub`，`app/test/fixtures/sample_
                 } finally {
 ```
 
-- [ ] **Step 4：新增 `computeSha256` 方法分派與實作**
+- [x] **Step 4：新增 `computeSha256` 方法分派與實作**
 
 `BookMetadataChannel.kt` 的 `onMethodCall` 內，`"detectEpubLayout" -> {...}` 區塊（第 95-102 行）之後新增：
 
@@ -232,7 +232,7 @@ Expected：印出 `wrote sample_no_identifier.epub`，`app/test/fixtures/sample_
     }
 ```
 
-- [ ] **Step 5：確認 Kotlin 變更編譯成功**
+- [x] **Step 5：確認 Kotlin 變更編譯成功**
 
 Run：
 
@@ -243,7 +243,7 @@ flutter build apk --debug
 
 Expected：建置成功（無編譯錯誤）。這一步只確認 Kotlin 語法/型別正確，`computeSha256`／`identifier` 的實際行為正確性由 Task 4 的 `integration_test`（真機）驗證——`flutter test` 無法執行原生 Kotlin 程式碼。
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add android/app/src/main/kotlin/cc/ugotit/elinkbook/BookMetadataChannel.kt test/fixtures/sample_no_identifier.epub pubspec.yaml
@@ -263,7 +263,7 @@ git commit -m "feat(epic-8-sync): Issue 3 Task 1 — BookMetadataChannel 新增 
 - Consumes：Task 1 的 `computeSha256` 原生方法（`content://` URI 情況）；`kBookMetadataChannel`（`app/lib/library/library_repository.dart` 既有常數）。
 - Produces：`Future<String> computeBookContentFingerprint(String filePath, BookFileFormat format, {String? epubIdentifier})`——`filePath` 為本機路徑或 `content://` URI；`epubIdentifier` 由呼叫端（Task 3）從既有 `extractMetadata` 回應一併取得後傳入，非空時直接採用；計算失敗時拋出例外（不吞錯誤）。供 Task 3（`book_import_service_impl.dart`）使用。
 
-- [ ] **Step 1：新增 `crypto` 依賴**
+- [x] **Step 1：新增 `crypto` 依賴**
 
 `app/pubspec.yaml` 第 49-56 行（`dependencies:` 區塊內，緊接 Issue 1 新增的 `uuid` 之後）改為：
 
@@ -279,7 +279,7 @@ flutter pub get
 
 Expected：`crypto` 成功加入 `pubspec.lock`。
 
-- [ ] **Step 2：撰寫失敗測試**
+- [x] **Step 2：撰寫失敗測試**
 
 Create `app/test/library/book_content_fingerprint_test.dart`：
 
@@ -466,7 +466,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 3：執行測試，確認因函式不存在而失敗**
+- [x] **Step 3：執行測試，確認因函式不存在而失敗**
 
 Run：
 
@@ -476,7 +476,7 @@ flutter test test/library/book_content_fingerprint_test.dart
 
 Expected：FAIL，錯誤訊息指出找不到 `package:elinkbook/library/book_content_fingerprint.dart`（或找不到 `computeBookContentFingerprint`）。
 
-- [ ] **Step 4：實作 `computeBookContentFingerprint`**
+- [x] **Step 4：實作 `computeBookContentFingerprint`**
 
 Create `app/lib/library/book_content_fingerprint.dart`：
 
@@ -541,7 +541,7 @@ Future<String> _sha256OfLocalFile(String filePath) async {
 }
 ```
 
-- [ ] **Step 5：執行測試，確認全數通過**
+- [x] **Step 5：執行測試，確認全數通過**
 
 Run：
 
@@ -551,7 +551,7 @@ flutter test test/library/book_content_fingerprint_test.dart
 
 Expected：PASS（11 個測試全數通過）。
 
-- [ ] **Step 6：`flutter analyze` + Commit**
+- [x] **Step 6：`flutter analyze` + Commit**
 
 ```bash
 flutter analyze
@@ -575,7 +575,7 @@ Expected：`flutter analyze` 顯示 "No issues found!"。
 - Consumes：Task 2 的 `computeBookContentFingerprint(String filePath, BookFileFormat format, {String? epubIdentifier})`。
 - Produces：`Book.contentFingerprint`（`String?`，`toMap()`/`fromMap()` 鍵為 `content_fingerprint`，對應 Issue 1 已建立的同名 SQLite 欄位）。`_importSingleFile()` 匯入時正確計算並寫入。
 
-- [ ] **Step 1：撰寫失敗測試——`book_test.dart` 新增 `contentFingerprint` 案例**
+- [x] **Step 1：撰寫失敗測試——`book_test.dart` 新增 `contentFingerprint` 案例**
 
 `app/test/library/models/book_test.dart` 檔案結尾（最後一個 `test(...)` 之後、檔案結尾 `}` 之前）新增：
 
@@ -616,7 +616,7 @@ Expected：`flutter analyze` 顯示 "No issues found!"。
   });
 ```
 
-- [ ] **Step 2：執行測試，確認因欄位不存在而失敗**
+- [x] **Step 2：執行測試，確認因欄位不存在而失敗**
 
 Run：
 
@@ -626,7 +626,7 @@ flutter test test/library/models/book_test.dart
 
 Expected：FAIL，編譯錯誤指出 `Book` 建構子沒有 `contentFingerprint` 具名參數。
 
-- [ ] **Step 3：`Book` 模型新增 `contentFingerprint` 欄位**
+- [x] **Step 3：`Book` 模型新增 `contentFingerprint` 欄位**
 
 `app/lib/library/models/book.dart` 第 50-72 行（`isFixedLayout` 欄位宣告之後、建構子）改為：
 
@@ -702,7 +702,7 @@ Expected：FAIL，編譯錯誤指出 `Book` 建構子沒有 `contentFingerprint`
 
 （`copyWith()` 刻意不新增 `contentFingerprint` 參數——本 Issue 只需要匯入當下透過建構子一次指派，沒有「事後改寫既有 `Book` 物件的這個欄位」的呼叫端，YAGNI；既有欄位如 `author`/`coverPath`/`progression` 等同樣不在 `copyWith()` 內，是既有慣例而非本次遺漏。若 Issue 4 的補算回填流程需要，屆時再新增。）
 
-- [ ] **Step 4：執行測試，確認通過**
+- [x] **Step 4：執行測試，確認通過**
 
 Run：
 
@@ -712,7 +712,7 @@ flutter test test/library/models/book_test.dart
 
 Expected：PASS（12 個測試全數通過）。
 
-- [ ] **Step 5：撰寫失敗測試——`book_import_service_test.dart` 新增指紋案例**
+- [x] **Step 5：撰寫失敗測試——`book_import_service_test.dart` 新增指紋案例**
 
 `app/test/library/book_import_service_test.dart` 檔案結尾（最後一個 `test(...)` 之後、`});`／`}` 之前，比照既有測試的縮排層級）新增：
 
@@ -830,7 +830,7 @@ Expected：PASS（12 個測試全數通過）。
   });
 ```
 
-- [ ] **Step 6：執行測試，確認因未串接而失敗**
+- [x] **Step 6：執行測試，確認因未串接而失敗**
 
 Run：
 
@@ -840,7 +840,7 @@ flutter test test/library/book_import_service_test.dart
 
 Expected：FAIL——新增的 6 個測試中，斷言 `contentFingerprint` 非 `null`／等於特定值的案例會失敗（目前 `_importSingleFile()` 尚未計算指紋，`Book` 建構時 `contentFingerprint` 恆為預設值 `null`）。
 
-- [ ] **Step 7：`book_import_service_impl.dart` 串接指紋計算**
+- [x] **Step 7：`book_import_service_impl.dart` 串接指紋計算**
 
 第 1-12 行 import 區塊新增：
 
@@ -959,7 +959,7 @@ import 'book_content_fingerprint.dart';
 
 （本次取代**保留**原第 176-232 行對 `format`／`resolvedUri` 判斷邏輯既有的全部中文註解說明——上方僅為節省篇幅省略未變動的註解區塊，實作時請維持原檔案這段既有註解，只新增/修改上述明確標示的部分：`epubIdentifier` 宣告與擷取、指紋計算區塊、`Book(...)` 新增 `contentFingerprint:` 參數。）
 
-- [ ] **Step 8：執行測試，確認全數通過**
+- [x] **Step 8：執行測試，確認全數通過**
 
 Run：
 
@@ -969,7 +969,7 @@ flutter test test/library/book_import_service_test.dart
 
 Expected：PASS（全部既有＋新增測試通過）。
 
-- [ ] **Step 9：`flutter analyze` + 執行完整測試套件 + Commit**
+- [x] **Step 9：`flutter analyze` + 執行完整測試套件 + Commit**
 
 ```bash
 flutter analyze
@@ -993,7 +993,7 @@ git commit -m "feat(epic-8-sync): Issue 3 Task 3 — Book.contentFingerprint 欄
 **Interfaces:**
 - Consumes：Task 1 的原生方法（`extractMetadata` 新增 `identifier` 欄位、新增 `computeSha256` 方法）。
 
-- [ ] **Step 1：撰寫真機測試**
+- [x] **Step 1：撰寫真機測試**
 
 `app/integration_test/book_metadata_channel_test.dart` 檔案結尾（最後一個 `testWidgets(...)` 之後、檔案結尾 `}` 之前）新增：
 
@@ -1121,7 +1121,7 @@ git commit -m "feat(epic-8-sync): Issue 3 Task 3 — Book.contentFingerprint 欄
 import 'package:crypto/crypto.dart';
 ```
 
-- [ ] **Step 2：於真實裝置/模擬器上執行，確認全數通過**
+- [x] **Step 2：於真實裝置/模擬器上執行，確認全數通過**（已提交，待真機驗證）
 
 Run：
 
@@ -1132,7 +1132,7 @@ flutter test integration_test/book_metadata_channel_test.dart -d <device-id>
 
 Expected：PASS（既有測試＋本次新增 6 則皆通過）——這代表 `identifier`（含空字串情況）與 `computeSha256`（本機路徑／`content://` URI 兩種來源結果一致、失敗情況正確拋例外）在真實 Android 原生環境下行為正確。
 
-- [ ] **Step 3：Commit**
+- [x] **Step 3：Commit**
 
 ```bash
 git add integration_test/book_metadata_channel_test.dart

@@ -100,6 +100,14 @@ class BookMetadataChannel(
                 }
                 detectEpubLayout(path, result)
             }
+            "computeSha256" -> {
+                val path = call.argument<String>("uri")
+                if (path == null) {
+                    result.error("invalid_arguments", "缺少 uri 參數", null)
+                    return
+                }
+                computeSha256(path, result)
+            }
             "takePersistableUriPermission" -> {
                 val uriString = call.argument<String>("uri")
                 if (uriString == null) {
@@ -252,6 +260,12 @@ class BookMetadataChannel(
                     // publication 本來就已經在這裡被建構，不需要新的解析路徑
                     // （見 docs/epics/epic-17-epub-render-migration/spec.md「模組」）。
                     val isFixedLayout = publication.metadata.layout == Layout.FIXED
+                    // epic-8-sync Issue 3：同樣是免費多讀一個既有欄位，供
+                    // computeBookContentFingerprint() 優先採用（見
+                    // docs/epics/epic-8-sync/spec.md「書籍內容指紋計算」）。
+                    // Readium Metadata.identifier 型別為 String?，缺漏時本來
+                    // 就是 null，不需要額外處理。
+                    val identifier = publication.metadata.identifier
                     // PNG 壓縮與封面退路的 I/O／解碼皆為耗時工作，移到背景執行緒避免
                     // 阻塞主執行緒；withContext 返回後會自動切回 scope 的 Main
                     // dispatcher。
@@ -265,6 +279,7 @@ class BookMetadataChannel(
                             "author" to author,
                             "coverBytes" to coverBytes,
                             "isFixedLayout" to isFixedLayout,
+                            "identifier" to identifier,
                         ),
                     )
                 } finally {
@@ -380,6 +395,46 @@ class BookMetadataChannel(
                 result.error(
                     "extraction_failed",
                     "提取 PDF 封面時發生未預期的錯誤：${e.message}",
+                    null,
+                )
+            }
+        }
+    }
+
+    /**
+     * 串流計算檔案內容的 SHA-256（epic-8-sync Issue 3，spec.md「書籍內容
+     * 指紋計算」），供 [computeBookContentFingerprint]（Dart 端）處理
+     * `content://` URI 使用——`dart:io` `File` 無法直接開啟 `content://`
+     * URI，只能委由原生端透過 [openParcelFileDescriptor] 既有的
+     * ContentResolver／檔案系統雙路徑開檔邏輯讀取。用固定 8KB 緩衝區
+     * 逐塊餵入 MessageDigest，不論檔案多大都不會一次性讀入整個檔案
+     * （PRD 要求支援 100MB 以上檔案）；只有最終的雜湊結果（64 字元十六
+     * 進位字串）會透過 MethodChannel 回傳，不傳輸原始位元組。
+     */
+    private fun computeSha256(path: String, result: MethodChannel.Result) {
+        scope.launch {
+            try {
+                val hex = withContext(Dispatchers.IO) {
+                    val pfd = openParcelFileDescriptor(path)
+                        ?: throw java.io.IOException("找不到檔案或檔案已損毀：$path")
+                    pfd.use {
+                        ParcelFileDescriptor.AutoCloseInputStream(it).use { input ->
+                            val digest = java.security.MessageDigest.getInstance("SHA-256")
+                            val buffer = ByteArray(8192)
+                            while (true) {
+                                val read = input.read(buffer)
+                                if (read == -1) break
+                                digest.update(buffer, 0, read)
+                            }
+                            digest.digest().joinToString("") { b -> "%02x".format(b) }
+                        }
+                    }
+                }
+                result.success(hex)
+            } catch (e: Exception) {
+                result.error(
+                    "hash_failed",
+                    "計算檔案雜湊時發生未預期的錯誤：${e.message}",
                     null,
                 )
             }
