@@ -33,7 +33,7 @@
 
 現況：`app/lib/sync/sync_engine.dart` 第 67 行起，`runCheckpoint()` 直接是完整的 checkpoint 邏輯本體（推送/下載/合併/墓碑清理），沒有任何併發防護。
 
-- [ ] **Step 1：在 `sync_engine_test.dart` 寫一個會失敗的併發鎖測試**
+- [x] **Step 1：在 `sync_engine_test.dart` 寫一個會失敗的併發鎖測試**
 
 在 `app/test/sync/sync_engine_test.dart` 第 101 行（`test('未登入時 runCheckpoint 直接早退...')` 結束的 `});` 之後、第 103 行 `test('有指紋的書籍新增一筆書籤...')` 之前）插入：
 
@@ -84,7 +84,7 @@ Run: `cd app && flutter test test/sync/sync_engine_test.dart --plain-name "併�
 
 Expected: FAIL——`requestCountAfterConcurrentCalls` 會是 `requestCountSingleRun` 的兩倍（兩次呼叫都真的各自完整跑了一次 checkpoint，各自對 4 個標註 collection＋1 個閱讀位置 collection 送出下載 GET 請求）。
 
-- [ ] **Step 3：實作併發鎖**
+- [x] **Step 3：實作併發鎖**
 
 修改 `app/lib/sync/sync_engine.dart`：
 
@@ -199,25 +199,25 @@ class SyncEngine {
 
 （上面最後一行只是標註插入位置，不是要實際寫進檔案的文字——實際編輯時，第 67 行原文 `Future<void> runCheckpoint() async {` 直接替換成 `Future<void> _runCheckpointBody() async {`，其餘原本方法內容原封不動接在後面。）
 
-- [ ] **Step 4：執行測試，確認通過**
+- [x] **Step 4：執行測試，確認通過**
 
 Run: `cd app && flutter test test/sync/sync_engine_test.dart --plain-name "併發鎖"`
 
 Expected: PASS。
 
-- [ ] **Step 5：執行整份 `sync_engine_test.dart`，確認無回歸**
+- [x] **Step 5：執行整份 `sync_engine_test.dart`，確認無回歸**
 
 Run: `cd app && flutter test test/sync/sync_engine_test.dart`
 
 Expected: 全數 PASS（既有 Issue 4/5 測試皆只呼叫一次 `runCheckpoint()`，新的鎖對它們的行為無影響）。
 
-- [ ] **Step 6：`flutter analyze` 確認乾淨**
+- [x] **Step 6：`flutter analyze` 確認乾淨**
 
 Run: `cd app && flutter analyze`
 
 Expected: `No issues found!`
 
-- [ ] **Step 7：Commit**
+- [x] **Step 7：Commit**
 
 ```bash
 git add app/lib/sync/sync_engine.dart app/test/sync/sync_engine_test.dart
@@ -236,7 +236,7 @@ git commit -m "feat(epic-8-sync): Issue 6 Task 1 — SyncEngine 內建併發鎖"
 - Consumes：無（純函式注入，不依賴 `SyncEngine`／`SyncAccountRepository` 具體型別，見下方類別設計）。
 - Produces：`SyncCheckpointTrigger`——建構子具名參數 `isLoggedIn`（`Future<bool> Function()`）／`runCheckpoint`（`Future<void> Function()`）；方法 `Future<void> trigger()`。Task 3-6 皆只透過這個類別呼叫同步引擎，不直接持有 `SyncEngine`。
 
-- [ ] **Step 1：寫失敗測試**
+- [x] **Step 1：寫失敗測試**
 
 建立 `app/test/sync/sync_checkpoint_trigger_test.dart`：
 
@@ -293,13 +293,13 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：執行測試，確認失敗**
+- [x] **Step 2：執行測試，確認失敗**
 
 Run: `cd app && flutter test test/sync/sync_checkpoint_trigger_test.dart`
 
 Expected: FAIL（`package:elinkbook/sync/sync_checkpoint_trigger.dart` 尚不存在，編譯錯誤）。
 
-- [ ] **Step 3：實作 `SyncCheckpointTrigger`**
+- [x] **Step 3：實作 `SyncCheckpointTrigger`**
 
 建立 `app/lib/sync/sync_checkpoint_trigger.dart`：
 
@@ -335,19 +335,19 @@ class SyncCheckpointTrigger {
 }
 ```
 
-- [ ] **Step 4：執行測試，確認通過**
+- [x] **Step 4：執行測試，確認通過**
 
 Run: `cd app && flutter test test/sync/sync_checkpoint_trigger_test.dart`
 
 Expected: PASS（3 個測試）。
 
-- [ ] **Step 5：`flutter analyze` 確認乾淨**
+- [x] **Step 5：`flutter analyze` 確認乾淨**
 
 Run: `cd app && flutter analyze`
 
 Expected: `No issues found!`
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/lib/sync/sync_checkpoint_trigger.dart app/test/sync/sync_checkpoint_trigger_test.dart
@@ -366,7 +366,7 @@ git commit -m "feat(epic-8-sync): Issue 6 Task 2 — SyncCheckpointTrigger 登�
 - Consumes：`SyncCheckpointTrigger.trigger()`（Task 2 產出，回傳 `Future<void>`）。
 - Produces：`ReaderScreen` 新增可選具名建構參數 `syncCheckpointTrigger`（型別 `SyncCheckpointTrigger?`），比照既有 `customFontsRepository` 等可選參數慣例——未提供時完全零回歸。Task 4／6 沿用同一個欄位。
 
-- [ ] **Step 1：在 `reader_screen_test.dart` 寫失敗測試**
+  - [x] **Step 1：在 `reader_screen_test.dart` 寫失敗測試**
 
 在 `app/test/screens/reader_screen_test.dart` 檔案頂部 import 區塊（第 45 行 `import 'package:elinkbook/reader/highlight_style.dart';` 之後）新增：
 
@@ -465,13 +465,13 @@ import 'package:elinkbook/sync/sync_checkpoint_trigger.dart';
   });
 ```
 
-- [ ] **Step 2：執行測試，確認失敗**
+  - [x] **Step 2：執行測試，確認失敗**
 
 Run: `cd app && flutter test test/screens/reader_screen_test.dart --plain-name "書籍切換"`
 
 Expected: FAIL——`ReaderScreen` 建構子沒有 `syncCheckpointTrigger` 具名參數，編譯錯誤。
 
-- [ ] **Step 3：實作**
+  - [x] **Step 3：實作**
 
 在 `app/lib/screens/reader_screen.dart` 頂部 import 區塊（第 37 行 `import '../reader/zone_action.dart';` 之後、`import 'annotation_toolbar.dart';` 之前）新增：
 
@@ -509,25 +509,25 @@ import '../sync/sync_checkpoint_trigger.dart';
     widget.syncCheckpointTrigger?.trigger();
 ```
 
-- [ ] **Step 4：執行測試，確認通過**
+  - [x] **Step 4：執行測試，確認通過**
 
 Run: `cd app && flutter test test/screens/reader_screen_test.dart --plain-name "書籍切換"`
 
 Expected: PASS（2 個測試）。
 
-- [ ] **Step 5：執行整份 `reader_screen_test.dart`，確認無回歸**
+  - [x] **Step 5：執行整份 `reader_screen_test.dart`，確認無回歸**
 
 Run: `cd app && flutter test test/screens/reader_screen_test.dart`
 
 Expected: 全數 PASS。
 
-- [ ] **Step 6：`flutter analyze` 確認乾淨**
+  - [x] **Step 6：`flutter analyze` 確認乾淨**
 
 Run: `cd app && flutter analyze`
 
 Expected: `No issues found!`
 
-- [ ] **Step 7：Commit**
+  - [x] **Step 7：Commit**
 
 ```bash
 git add app/lib/screens/reader_screen.dart app/test/screens/reader_screen_test.dart
@@ -546,7 +546,7 @@ git commit -m "feat(epic-8-sync): Issue 6 Task 3 — 離開 ReaderScreen（書�
 - Consumes：`widget.syncCheckpointTrigger`（Task 3 已新增的欄位）。
 - Produces：無新增公開介面，純內部行為擴充。
 
-- [ ] **Step 1：寫失敗測試**
+- [x] **Step 1：寫失敗測試**
 
 在 `app/test/screens/reader_screen_test.dart`（緊接 Task 3 新增的兩個測試之後）插入：
 
@@ -613,13 +613,13 @@ git commit -m "feat(epic-8-sync): Issue 6 Task 3 — 離開 ReaderScreen（書�
   });
 ```
 
-- [ ] **Step 2：執行測試，確認失敗**
+- [x] **Step 2：執行測試，確認失敗**
 
 Run: `cd app && flutter test test/screens/reader_screen_test.dart --plain-name "5 分鐘計時器"`
 
 Expected: FAIL——目前沒有任何計時器邏輯，`triggerCallCount` 在 `tester.pump(const Duration(minutes: 5))` 後仍是 0。
 
-- [ ] **Step 3：實作**
+- [x] **Step 3：實作**
 
 在 `app/lib/screens/reader_screen.dart` 頂部新增 `dart:async` import（目前檔案完全沒有任何 `dart:` 開頭的 import，加在第 1 行 `import 'package:flutter/material.dart';` 之前）：
 
@@ -657,25 +657,25 @@ import 'dart:async';
     _syncCheckpointTimer?.cancel();
 ```
 
-- [ ] **Step 4：執行測試，確認通過**
+- [x] **Step 4：執行測試，確認通過**
 
 Run: `cd app && flutter test test/screens/reader_screen_test.dart --plain-name "5 分鐘計時器"`
 
 Expected: PASS。
 
-- [ ] **Step 5：執行整份 `reader_screen_test.dart`，確認無回歸**
+- [x] **Step 5：執行整份 `reader_screen_test.dart`，確認無回歸**
 
 Run: `cd app && flutter test test/screens/reader_screen_test.dart`
 
 Expected: 全數 PASS（既有測試皆未提供 `syncCheckpointTrigger`，`_syncCheckpointTimer` 維持 `null`，不受影響；本專案既有測試也不會意外因為背景計時器殘留而在 `tearDown` 後跳出 pending-timer 警告，因為每個測試各自的 `tester.pumpWidget` 產生獨立 widget tree，測試結束時 `flutter_test` 會自動 dispose）。
 
-- [ ] **Step 6：`flutter analyze` 確認乾淨**
+- [x] **Step 6：`flutter analyze` 確認乾淨**
 
 Run: `cd app && flutter analyze`
 
 Expected: `No issues found!`
 
-- [ ] **Step 7：Commit**
+- [x] **Step 7：Commit**
 
 ```bash
 git add app/lib/screens/reader_screen.dart app/test/screens/reader_screen_test.dart
@@ -694,7 +694,7 @@ git commit -m "feat(epic-8-sync): Issue 6 Task 4 — 閱讀中 5 分鐘計時器
 - Consumes：`SyncCheckpointTrigger.trigger()`（Task 2）。
 - Produces：`ElinkBookApp` 新增可選具名建構參數 `syncCheckpointTrigger`（型別 `SyncCheckpointTrigger?`）。Task 6 沿用同一個欄位並實際組裝真正的物件傳入。
 
-- [ ] **Step 1：寫失敗測試**
+  - [x] **Step 1：寫失敗測試**
 
 建立 `app/test/app_lifecycle_sync_test.dart`：
 
@@ -779,13 +779,13 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：執行測試，確認失敗**
+  - [x] **Step 2：執行測試，確認失敗**
 
 Run: `cd app && flutter test test/app_lifecycle_sync_test.dart`
 
 Expected: FAIL——`ElinkBookApp` 建構子沒有 `syncCheckpointTrigger` 具名參數，編譯錯誤。
 
-- [ ] **Step 3：實作**
+  - [x] **Step 3：實作**
 
 修改 `app/lib/main.dart`：
 
@@ -851,25 +851,25 @@ class _ElinkBookAppState extends State<ElinkBookApp> with WidgetsBindingObserver
   }
 ```
 
-- [ ] **Step 4：執行測試，確認通過**
+  - [x] **Step 4：執行測試，確認通過**
 
 Run: `cd app && flutter test test/app_lifecycle_sync_test.dart`
 
 Expected: PASS（3 個測試）。
 
-- [ ] **Step 5：執行既有 `theme_test.dart`，確認無回歸**
+  - [x] **Step 5：執行既有 `theme_test.dart`，確認無回歸**
 
 Run: `cd app && flutter test test/theme/theme_test.dart`
 
 Expected: 全數 PASS（該檔案直接建構 `ElinkBookApp` 且未提供 `syncCheckpointTrigger`，新增的 `WidgetsBindingObserver` 對其行為無影響）。
 
-- [ ] **Step 6：`flutter analyze` 確認乾淨**
+  - [x] **Step 6：`flutter analyze` 確認乾淨**
 
 Run: `cd app && flutter analyze`
 
 Expected: `No issues found!`
 
-- [ ] **Step 7：Commit**
+  - [x] **Step 7：Commit**
 
 ```bash
 git add app/lib/main.dart app/test/app_lifecycle_sync_test.dart
@@ -891,7 +891,7 @@ git commit -m "feat(epic-8-sync): Issue 6 Task 5 — App 背景化（AppLifecycl
 - Consumes：`SyncEngine`（Issue 4/5，`app/lib/sync/sync_engine.dart`）、`SyncMetadataRepository`（Issue 4，`app/lib/sync/sync_metadata_repository.dart`）、`showReadingPositionConflictDialog`（Issue 5，`app/lib/screens/reading_position_conflict_dialog.dart`）、`SyncCheckpointTrigger`（Task 2）。
 - Produces：`LibraryScreen` 新增可選具名建構參數 `syncCheckpointTrigger`（型別 `SyncCheckpointTrigger?`），貫穿至其內部 `_openBook()` 建構的 `ReaderScreen`。
 
-- [ ] **Step 1：在 `library_screen_test.dart` 寫失敗測試**
+  - [x] **Step 1：在 `library_screen_test.dart` 寫失敗測試**
 
 在 `app/test/screens/library_screen_test.dart` 頂部 import 區塊新增：
 
@@ -939,13 +939,13 @@ import 'package:elinkbook/sync/sync_checkpoint_trigger.dart';
   });
 ```
 
-- [ ] **Step 2：執行測試，確認失敗**
+  - [x] **Step 2：執行測試，確認失敗**
 
 Run: `cd app && flutter test test/screens/library_screen_test.dart --plain-name "syncCheckpointTrigger 正確貫穿"`
 
 Expected: FAIL——`LibraryScreen` 建構子沒有 `syncCheckpointTrigger` 具名參數，編譯錯誤。
 
-- [ ] **Step 3：修改 `LibraryScreen`**
+  - [x] **Step 3：修改 `LibraryScreen`**
 
 修改 `app/lib/screens/library_screen.dart`：
 
@@ -973,13 +973,13 @@ import '../sync/sync_checkpoint_trigger.dart';
               syncCheckpointTrigger: widget.syncCheckpointTrigger,
 ```
 
-- [ ] **Step 4：執行測試，確認通過**
+  - [x] **Step 4：執行測試，確認通過**
 
 Run: `cd app && flutter test test/screens/library_screen_test.dart --plain-name "syncCheckpointTrigger 正確貫穿"`
 
 Expected: PASS。
 
-- [ ] **Step 5：組裝 `main()`**
+  - [x] **Step 5：組裝 `main()`**
 
 修改 `app/lib/main.dart`：
 
@@ -1077,19 +1077,19 @@ import 'screens/reading_position_conflict_dialog.dart';
       navigatorKey: navigatorKey,
 ```
 
-- [ ] **Step 6：執行整份 `library_screen_test.dart`／`app_lifecycle_sync_test.dart`／`theme_test.dart`，確認無回歸**
+  - [x] **Step 6：執行整份 `library_screen_test.dart`／`app_lifecycle_sync_test.dart`／`theme_test.dart`，確認無回歸**
 
 Run: `cd app && flutter test test/screens/library_screen_test.dart test/app_lifecycle_sync_test.dart test/theme/theme_test.dart`
 
 Expected: 全數 PASS。
 
-- [ ] **Step 7：`flutter analyze` 確認乾淨**
+  - [x] **Step 7：`flutter analyze` 確認乾淨**
 
 Run: `cd app && flutter analyze`
 
 Expected: `No issues found!`
 
-- [ ] **Step 8：`flutter build apk --debug` 確認整個 App 可正常編譯**
+  - [x] **Step 8：`flutter build apk --debug` 確認整個 App 可正常編譯**
 
 本 Task 修改 `main()` 啟動流程本身，`main()` 沒有任何自動化測試直接覆蓋它（本專案既有慣例——`app/test/` 下沒有任何測試呼叫真正的 `main()` 函式，只有 `theme_test.dart` 直接建構 `ElinkBookApp` 繞過 `main()`），因此額外用一次 debug build 確認整條組裝鏈（`SyncMetadataRepository`／`SyncEngine`／`GlobalKey`／`showReadingPositionConflictDialog` 的具名參數與 import 都正確）能實際編譯成功，作為 Step 6-7 純靜態分析之外的最後一道防線。
 
@@ -1097,7 +1097,7 @@ Run: `cd app && flutter build apk --debug`
 
 Expected: `Built build\app\outputs\flutter-apk\app-debug.apk`（建置成功，無編譯錯誤）。
 
-- [ ] **Step 9：Commit**
+  - [x] **Step 9：Commit**
 
 ```bash
 git add app/lib/main.dart app/lib/screens/library_screen.dart app/test/screens/library_screen_test.dart
