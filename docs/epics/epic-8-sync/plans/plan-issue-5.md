@@ -39,7 +39,7 @@
 - Consumes：無（獨立的模型欄位新增，`books` 表的對應 SQL 欄位已由 Issue 1 建立，本 Task 只需要讓 Dart 模型讀寫得到）。
 - Produces：`Book.positionUpdatedAt`（`int?`，SQL 欄位 `position_updated_at`）／`Book.positionSyncedServerUpdatedAt`（`String?`，SQL 欄位 `position_synced_server_updated_at`）。**刻意不新增到 `copyWith()`**（比照 `contentFingerprint` 既有先例，見 `book.dart` 現有註解「若 Issue 4 的補算回填流程需要，屆時再新增」——本 Issue 對這兩個欄位的所有寫入皆透過 Task 2（`ReadingPositionRepository`，partial update）與 Task 5（`SyncEngine`，raw `_db.update`）繞過 `Book` 模型完成，沒有任何呼叫端需要透過 `copyWith()` 修改這兩個欄位，YAGNI）。供 Task 2／Task 5 的測試建構 `Book` 物件時使用；供 Task 5 讀取既有書籍的 `position_synced_server_updated_at` 快取值使用。
 
-- [ ] **Step 1：撰寫失敗測試**
+- [x] **Step 1：撰寫失敗測試**
 
 在 `app/test/library/models/book_test.dart` 檔案結尾（最後一個 `test(...)` 之後、檔案結尾 `}` 之前）新增：
 
@@ -84,7 +84,7 @@
   });
 ```
 
-- [ ] **Step 2：執行測試，確認因欄位不存在而失敗**
+- [x] **Step 2：執行測試，確認因欄位不存在而失敗**
 
 Run（於 `app/` 目錄下）：
 
@@ -94,7 +94,7 @@ flutter test test/library/models/book_test.dart
 
 Expected：FAIL，編譯錯誤指出 `Book` 建構子沒有 `positionUpdatedAt`／`positionSyncedServerUpdatedAt` 具名參數。
 
-- [ ] **Step 3：`Book` 模型新增欄位**
+- [x] **Step 3：`Book` 模型新增欄位**
 
 `app/lib/library/models/book.dart` 的 `contentFingerprint` 欄位宣告（`final String? contentFingerprint;`）之後新增：
 
@@ -162,7 +162,7 @@ Expected：FAIL，編譯錯誤指出 `Book` 建構子沒有 `positionUpdatedAt`�
 
 （同樣，第一行 `contentFingerprint,` 是既有程式碼，僅標示插入位置。）
 
-- [ ] **Step 4：執行測試，確認通過**
+- [x] **Step 4：執行測試，確認通過**
 
 Run：
 
@@ -172,7 +172,7 @@ flutter test test/library/models/book_test.dart
 
 Expected：PASS（全部既有＋新增 2 則測試）。
 
-- [ ] **Step 5：`flutter analyze` + Commit**
+- [x] **Step 5：`flutter analyze` + Commit**
 
 ```bash
 flutter analyze
@@ -194,7 +194,7 @@ Expected：`flutter analyze` 顯示 "No issues found!"。
 - Consumes：無。
 - Produces：`ReadingPositionRepository.save()` 對外簽章不變（`Future<void> save(String bookId, ReadingPosition position)`），但每次成功寫入時，一併把 `books.position_updated_at` 設為目前時間戳記——這是 Issue 5 判斷「這本書的閱讀位置是否需要推送」的唯一觸發點（`ReaderScreen._writeCurrentPosition()` 是目前這個方法唯一的呼叫端，見 plan 開頭調查，`dispose()`／App 背景化各觸發一次，不逐頁呼叫）。供 Task 5（`SyncEngine._syncReadingPositions()`）的 dirty 判定使用。
 
-- [ ] **Step 1：撰寫失敗測試**
+- [x] **Step 1：撰寫失敗測試**
 
 在 `app/test/reader/reading_position_repository_test.dart` 檔案結尾（最後一個 `test(...)` 之後、檔案結尾 `}` 之前）新增：
 
@@ -228,7 +228,7 @@ Expected：`flutter analyze` 顯示 "No issues found!"。
   });
 ```
 
-- [ ] **Step 2：執行測試，確認因 `position_updated_at` 仍為 `null` 而失敗**
+- [x] **Step 2：執行測試，確認因 `position_updated_at` 仍為 `null` 而失敗**
 
 Run：
 
@@ -238,7 +238,7 @@ flutter test test/reader/reading_position_repository_test.dart
 
 Expected：FAIL，`updatedAt` 讀到 `null`，`as int` 轉型例外。
 
-- [ ] **Step 3：`save()` 新增 `position_updated_at` 寫入**
+- [x] **Step 3：`save()` 新增 `position_updated_at` 寫入**
 
 `app/lib/reader/reading_position_repository.dart` 的 `save()` 方法改為：
 
@@ -268,7 +268,7 @@ Expected：FAIL，`updatedAt` 讀到 `null`，`as int` 轉型例外。
   }
 ```
 
-- [ ] **Step 4：執行測試，確認通過**
+- [x] **Step 4：執行測試，確認通過**
 
 Run：
 
@@ -278,7 +278,7 @@ flutter test test/reader/reading_position_repository_test.dart
 
 Expected：PASS（全部既有＋新增 2 則測試）。
 
-- [ ] **Step 5：`flutter analyze` + Commit**
+- [x] **Step 5：`flutter analyze` + Commit**
 
 ```bash
 flutter analyze
@@ -298,7 +298,7 @@ git commit -m "feat(epic-8-sync): Issue 5 Task 2 — ReadingPositionRepository.s
 - Consumes：`BookFileFormat`（`app/lib/library/models/library_enums.dart`）。
 - Produces：`ReadingPositionSnapshot`（純資料：`epubLocatorJson`/`pdfPageIndex`/`progress`）、`ReadingPositionChoice` enum（`keepLocal`/`keepCloud`）、`ReadingPositionConflict`（純資料：`bookId`/`bookTitle`/`format`/`local`/`remote`）、`ReadingPositionConflictResolver` typedef（`Future<ReadingPositionChoice?> Function(ReadingPositionConflict conflict)`）、`ReadingPositionSyncAction` enum（`noAction`/`pushLocalDirectly`/`needsUserDecision`）、`ReadingPositionSyncAction resolveReadingPositionAction({required int? positionUpdatedAt, required int? lastPushCompletedAt, required String? positionSyncedServerUpdatedAt, required String? remoteServerUpdated})`。供 Task 4（對話框 UI 使用 `ReadingPositionConflict`/`ReadingPositionChoice`）／Task 5（`SyncEngine` 使用全部型別）使用。
 
-- [ ] **Step 1：撰寫失敗測試**
+- [x] **Step 1：撰寫失敗測試**
 
 Create `app/test/sync/sync_reading_position_test.dart`：
 
@@ -406,7 +406,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：執行測試，確認因檔案不存在而失敗**
+- [x] **Step 2：執行測試，確認因檔案不存在而失敗**
 
 Run：
 
@@ -416,7 +416,7 @@ flutter test test/sync/sync_reading_position_test.dart
 
 Expected：FAIL，找不到 `package:elinkbook/sync/sync_reading_position.dart`。
 
-- [ ] **Step 3：實作 `sync_reading_position.dart`**
+- [x] **Step 3：實作 `sync_reading_position.dart`**
 
 Create `app/lib/sync/sync_reading_position.dart`：
 
@@ -496,7 +496,7 @@ ReadingPositionSyncAction resolveReadingPositionAction({
 }
 ```
 
-- [ ] **Step 4：執行測試，確認全數通過**
+- [x] **Step 4：執行測試，確認全數通過**
 
 Run：
 
@@ -506,7 +506,7 @@ flutter test test/sync/sync_reading_position_test.dart
 
 Expected：PASS（8 個測試全數通過）。
 
-- [ ] **Step 5：`flutter analyze` + Commit**
+- [x] **Step 5：`flutter analyze` + Commit**
 
 ```bash
 flutter analyze
@@ -526,7 +526,7 @@ git commit -m "feat(epic-8-sync): Issue 5 Task 3 — 閱讀位置衝突判定純
 - Consumes：Task 3 的 `ReadingPositionConflict`／`ReadingPositionChoice`／`ReadingPositionSnapshot`。
 - Produces：`Future<ReadingPositionChoice?> showReadingPositionConflictDialog(BuildContext context, ReadingPositionConflict conflict)`——符合 Task 3 的 `ReadingPositionConflictResolver` typedef 簽章，供 Issue 6 實際串接進 `SyncEngine` 建構子時使用（本 Issue 只交付這個函式本身並完整測試，比照 plan-issue-5.md Global Constraints 說明，不做 `main.dart`/`ReaderScreen` 的實際接線）。
 
-- [ ] **Step 1：撰寫失敗測試**
+- [x] **Step 1：撰寫失敗測試**
 
 Create `app/test/screens/reading_position_conflict_dialog_test.dart`：
 
@@ -614,7 +614,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：執行測試，確認因檔案不存在而失敗**
+- [x] **Step 2：執行測試，確認因檔案不存在而失敗**
 
 Run：
 
@@ -624,7 +624,7 @@ flutter test test/screens/reading_position_conflict_dialog_test.dart
 
 Expected：FAIL，找不到 `package:elinkbook/screens/reading_position_conflict_dialog.dart`。
 
-- [ ] **Step 3：實作對話框**
+- [x] **Step 3：實作對話框**
 
 Create `app/lib/screens/reading_position_conflict_dialog.dart`：
 
@@ -687,7 +687,7 @@ Future<ReadingPositionChoice?> showReadingPositionConflictDialog(
 }
 ```
 
-- [ ] **Step 4：執行測試，確認全數通過**
+- [x] **Step 4：執行測試，確認全數通過**
 
 Run：
 
@@ -697,7 +697,7 @@ flutter test test/screens/reading_position_conflict_dialog_test.dart
 
 Expected：PASS（4 個測試全數通過）。
 
-- [ ] **Step 5：`flutter analyze` + Commit**
+- [x] **Step 5：`flutter analyze` + Commit**
 
 ```bash
 flutter analyze
@@ -719,7 +719,7 @@ git commit -m "feat(epic-8-sync): Issue 5 Task 4 — 閱讀位置衝突對話框
 - Consumes：Task 3 的 `ReadingPositionSnapshot`／`ReadingPositionConflict`／`ReadingPositionChoice`／`ReadingPositionConflictResolver`／`ReadingPositionSyncAction`／`resolveReadingPositionAction()`。
 - Produces：`SyncEngine` 建構子新增可選具名參數 `ReadingPositionConflictResolver? onReadingPositionConflict`（預設 `null`）；`runCheckpoint()` 於既有標註推送之前新增閱讀位置衝突預檢＋推送，於既有標註下載之後新增閱讀位置的常規下載（`_downloadReadingPositions()`，補上本機無 dirty 異動時的下載缺口），`books.position_synced_server_updated_at` 與 `sync_metadata` 的閱讀位置下載游標皆延後到整個 checkpoint 成功後才與 `lastPushCompletedAt`／標註下載游標一起寫入。`SyncMetadataRepository` 新增 `Future<String?> loadReadingPositionsCursor()`／`Future<void> saveReadingPositionsCursor(String value)`。
 
-- [ ] **Step 1：Refactor——抽出可重用的單一書籍指紋補算方法（不改變既有行為，先確保既有測試仍通過）**
+- [x] **Step 1：Refactor——抽出可重用的單一書籍指紋補算方法（不改變既有行為，先確保既有測試仍通過）**
 
 `app/lib/sync/sync_engine.dart` 的 `_backfillMissingFingerprints()` 方法（Issue 4 既有程式碼）改為：
 
@@ -802,7 +802,7 @@ git commit -m "feat(epic-8-sync): Issue 5 Task 4 — 閱讀位置衝突對話框
 
 （這是純粹的抽取重構——原本內嵌在 `_backfillMissingFingerprints()` 迴圈內的計算邏輯，原封不動搬到新方法 `_backfillFingerprintForBook()`，呼叫端行為完全不變。）
 
-- [ ] **Step 2：執行 Issue 4 既有測試，確認 refactor 沒有破壞任何行為**
+- [x] **Step 2：執行 Issue 4 既有測試，確認 refactor 沒有破壞任何行為**
 
 Run：
 
@@ -812,7 +812,7 @@ flutter test test/sync/sync_engine_test.dart
 
 Expected：PASS（Issue 4 既有全部測試通過，尚未新增本 Task 的測試）。
 
-- [ ] **Step 3：Commit（refactor 獨立一個 commit，方便之後追蹤）**
+- [x] **Step 3：Commit（refactor 獨立一個 commit，方便之後追蹤）**
 
 ```bash
 flutter analyze
@@ -822,7 +822,7 @@ git commit -m "refactor(epic-8-sync): Issue 5 Task 5 Step 1 — 抽出 _backfill
 
 Expected：`flutter analyze` "No issues found!"。
 
-- [ ] **Step 4：撰寫失敗測試——`SyncMetadataRepository` 新增閱讀位置下載游標方法**
+- [x] **Step 4：撰寫失敗測試——`SyncMetadataRepository` 新增閱讀位置下載游標方法**
 
 在 `app/test/sync/sync_metadata_repository_test.dart` 檔案結尾（最後一個 `test(...)` 之後、檔案結尾 `}` 之前）新增：
 
@@ -852,7 +852,7 @@ Expected：`flutter analyze` "No issues found!"。
   });
 ```
 
-- [ ] **Step 5：執行測試，確認因方法不存在而失敗**
+- [x] **Step 5：執行測試，確認因方法不存在而失敗**
 
 Run：
 
@@ -862,7 +862,7 @@ flutter test test/sync/sync_metadata_repository_test.dart
 
 Expected：FAIL，編譯錯誤指出 `SyncMetadataRepository` 沒有 `loadReadingPositionsCursor`／`saveReadingPositionsCursor` 方法。
 
-- [ ] **Step 6：`SyncMetadataRepository` 新增方法**
+- [x] **Step 6：`SyncMetadataRepository` 新增方法**
 
 `app/lib/sync/sync_metadata_repository.dart` 的 `savePulledCursor()` 方法（Issue 4 既有程式碼）之後新增：
 
@@ -889,7 +889,7 @@ Expected：FAIL，編譯錯誤指出 `SyncMetadataRepository` 沒有 `loadReadin
   }
 ```
 
-- [ ] **Step 7：執行測試，確認通過**
+- [x] **Step 7：執行測試，確認通過**
 
 Run：
 
@@ -899,7 +899,7 @@ flutter test test/sync/sync_metadata_repository_test.dart
 
 Expected：PASS（全部既有＋新增 2 則測試）。
 
-- [ ] **Step 8：`flutter analyze` + Commit**
+- [x] **Step 8：`flutter analyze` + Commit**
 
 ```bash
 flutter analyze
