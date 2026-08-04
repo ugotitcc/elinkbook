@@ -212,4 +212,46 @@ void main() {
 
     await client.logout();
   });
+
+  testWidgets(
+      'sync_reading_positions unique index：同一 (user, book_fingerprint) 嘗試建立第二筆會被 PocketBase 拒絕'
+      '（epic-8-sync Issue 9）', (tester) async {
+    final pb = PocketBase(testBaseUrl);
+    final authData = await pb.collection('users').authWithPassword(testEmail, testPassword);
+    await clearRemoteData(pb);
+    addTearDown(() => clearRemoteData(pb));
+
+    final fingerprint =
+        'integration-test-unique-index-fingerprint-${DateTime.now().microsecondsSinceEpoch}';
+
+    final first = await pb.collection('sync_reading_positions').create(body: {
+      'user': authData.record.id,
+      'book_fingerprint': fingerprint,
+      'pdf_page_index': 1,
+      'progress': 0.1,
+    });
+    expect(first.id, isNotEmpty);
+
+    await expectLater(
+      pb.collection('sync_reading_positions').create(body: {
+        'user': authData.record.id,
+        'book_fingerprint': fingerprint,
+        'pdf_page_index': 2,
+        'progress': 0.2,
+      }),
+      throwsA(
+        isA<ClientException>().having(
+          (e) => e.response['data'],
+          'validation errors',
+          predicate<Map<String, dynamic>?>(
+            (data) =>
+                data != null &&
+                (data['book_fingerprint']?['code'] == 'validation_not_unique' ||
+                    data['user']?['code'] == 'validation_not_unique'),
+          ),
+        ),
+      ),
+      reason: '同一 (user, book_fingerprint) 的第二筆建立應被 unique index 拒絕（Issue 9）',
+    );
+  });
 }
