@@ -245,7 +245,7 @@ SQLite schema 自 v16 升級至 v17（比照既有累加式 `if (oldVersion < 17
 
 **依賴／Blocked by：** None（獨立 bug 修復，不阻擋 Issue 5/6）
 
-**Status:** needs-triage
+**Status:** done
 
 **背景（2026-08-04，Issue 5 Task 6 真機驗證時發現）：**
 
@@ -271,11 +271,13 @@ Task 6 新增的測試必須用 `--plain-name "雙裝置閱讀位置衝突"`
 
 **建議做法**：先寫一個最小重現案例（純粹兩次 `SqliteLibraryRepository.open(inMemoryDatabasePath)` + 各自插入不同表格但相同 id 的最簡單 widget test，在真機上跑），確認問題必現後再決定修法（例如改用具名的 in-memory URI 讓兩個「裝置」使用不同路徑字串，或升級 `sqflite_common_ffi` 版本）。
 
+**根本原因（2026-08-04 確認，推翻上方「已排除的可能原因」）：** 上方兩點排除理由本身沒有查錯，但查證位置不夠早——`database_mixin.dart`／`sqflite_ffi_impl_io.dart` 兩處都只在「真正執行到開啟」時才會生效，而 `sqflite_common-2.5.8/lib/src/factory_mixin.dart:84-132` 的 `SqfliteDatabaseFactoryMixin.openDatabase()` 有一層更早的 **Dart 層** 快取：`options.singleInstance` 未顯式傳入時預設 `true`，第 94 行 `if (options?.singleInstance != false)` 為真時會先查 `databaseOpenHelpers[path]`（以字面路徑字串為 key 的 process 內快取），命中即直接回傳既有的 `Database` 物件，**完全不會走到**前面已排除的那兩個底層位置。`deviceA`／`deviceB` 用同一個字面字串 `inMemoryDatabasePath`（`":memory:"`）呼叫、都沒有明確傳入 `singleInstance: false`，因此第二次呼叫直接短路回傳第一次的連線——`deviceB` 實際上就是 `deviceA`。已用獨立最小重現案例（`identical(dbA, dbB)` 在預設設定下回傳 `true`）實測驗證，並經 `/superpowers:requesting-code-review` 審查獨立追蹤原始碼複核成立。「尚待查證」的兩個猜測（race condition、套件版本 bug）皆不成立，不予採用「升級 `sqflite_common_ffi` 版本」這個候選修法。
+
 **驗收標準：**
 
-- [ ] 已確認根本原因（透過最小重現案例）
-- [ ] `integration_test/sync_engine_test.dart` 既有 Issue 4 測試在真機上可正確通過，不受這個問題影響
-- [ ] 若採用「兩個裝置使用不同 in-memory 路徑」的修法，Issue 5 Task 6 新增的測試（同一份檔案）一併確認不受影響
+- [x] 已確認根本原因（透過最小重現案例）
+- [x] `integration_test/sync_engine_test.dart` 既有 Issue 4 測試在真機上可正確通過，不受這個問題影響
+- [x] 若採用「兩個裝置使用不同 in-memory 路徑」的修法，Issue 5 Task 6 新增的測試（同一份檔案）一併確認不受影響（PR #111，2026-08-04；實際採用的修法是 `singleInstance: false`，而非「不同 in-memory 路徑」——`SqliteLibraryRepository.open()` 新增可選 `singleInstance` 參數〔預設 `true`，對既有 83 個呼叫點零回歸〕，`integration_test/sync_engine_test.dart` 4 處裝置模擬呼叫點皆加上 `singleInstance: false`；程式碼審查 0 Critical／1 Important（真機驗證缺口，已於審查後補齊）／2 Minor；真機 `3CEF42ECD491687` 執行整份 `flutter test integration_test/sync_engine_test.dart -d 3CEF42ECD491687`〔不加 `--plain-name`〕3 個測試全數 PASS，`flutter test`〔全專案 926 項〕與 `flutter analyze` 皆確認無回歸，詳見 `plans/plan-issue-8.md`）
 
 ---
 
