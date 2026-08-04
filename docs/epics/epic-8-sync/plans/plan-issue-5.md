@@ -4,7 +4,7 @@
 
 **Goal:** 擴充 Issue 4 已完成的 `SyncEngine.runCheckpoint()`，在推送標註異動之前新增「閱讀位置衝突預檢」：偵測到本機與雲端都變動過同一本書的閱讀位置時彈窗詢問使用者要保留哪一邊，無衝突時直接推送。
 
-**Architecture:** `sync_reading_positions` collection（`user`／`book_fingerprint`／`epub_locator`／`pdf_page_index`／`progress`，無 `client_id`、無 `deleted_at`）與 Issue 4 既有的 `sync_bookmarks`/`sync_highlights`/`sync_notes` 三個 collection 的資料形狀本質不同（每本書至多一筆，而非多筆 UUID 標註），因此**不**併入 `SyncCollection` enum／`syncTableSpecs` 那套通用機制，改為在 `SyncEngine` 內新增一段獨立、專用的閱讀位置同步邏輯（`_syncReadingPositions()`），推送階段呼叫時機在既有標註推送**之前**（符合 spec.md「同步引擎」步驟 1 的順序），仍在同一個 `try`／`on ClientException` 邊界內，確保原子性失敗語意與 Issue 4 一致。衝突判定本身抽成純函式（`resolveReadingPositionAction()`），UI 彈窗透過建構子注入的可選非同步回呼觸發（`SyncEngine` 本身沒有 `BuildContext`，也不假設呼叫端一定能顯示 UI——背景觸發等情境可以不提供回呼，衝突就單純延後到下次 checkpoint）。
+**Architecture:** `sync_reading_positions` collection（`user`／`book_fingerprint`／`epub_locator`／`pdf_page_index`／`progress`，無 `client_id`、無 `deleted_at`）與 Issue 4 既有的 `sync_bookmarks`/`sync_highlights`/`sync_notes` 三個 collection 的資料形狀本質不同（每本書至多一筆，而非多筆 UUID 標註），因此**不**併入 `SyncCollection` enum／`syncTableSpecs` 那套通用機制，改為在 `SyncEngine` 內新增兩段獨立、專用的閱讀位置同步邏輯：推送階段的 `_syncReadingPositions()`（呼叫時機在既有標註推送**之前**，符合 spec.md「同步引擎」步驟 1 的順序，仍在同一個 `try`／`on ClientException` 邊界內，確保原子性失敗語意與 Issue 4 一致），以及下載階段的 `_downloadReadingPositions()`（與既有 3 個 collection 的下載合併同一個 `try` 區塊，補上 spec.md 原始設計遺漏的「本機無 dirty 異動、但其他裝置已更新過」情境，見文末「審查修正紀錄」）。衝突判定本身抽成純函式（`resolveReadingPositionAction()`），UI 彈窗透過建構子注入的可選非同步回呼觸發（`SyncEngine` 本身沒有 `BuildContext`，也不假設呼叫端一定能顯示 UI——背景觸發等情境可以不提供回呼，衝突就單純延後到下次 checkpoint）。
 
 **Tech Stack:** Flutter/Dart、`package:pocketbase`（Issue 2/4 已引入）、`package:sqflite`。純函式 widget/unit test（`flutter test`）；`SyncEngine` 整合測試比照 Issue 4 用 `MockClient` 假 PocketBase；雙裝置衝突情境由 `integration_test`（真機，連線 Issue 7 的 `pbdev.jigong.org` 測試實例）驗證。
 
@@ -23,8 +23,9 @@
 
 1. **推送方式**：spec.md「同步引擎」步驟 2 字面描述「加上步驟 1 判定可推送的閱讀位置，組成 PocketBase Batch API 請求」，字面上暗示與標註異動合併成同一個實體 HTTP 請求。但 `sync_reading_positions` 缺乏 `client_id`，無法套用 Issue 4 既有 `PushOperation`／`buildPushOperations()`／`_sendPushBatch()` 那套以 `client_id` 為基礎判斷 create/update 並回填 `sync_remote_ids` 的機制（該機制假設每筆推送都對應一個本機 UUID，閱讀位置沒有）。本計畫改為：閱讀位置用**獨立的一個** `pb.createBatch()` 呼叫（同樣是 PocketBase Batch API，只是與標註異動分開兩個實體 HTTP 請求），程式碼複雜度大幅降低、且不需要異動 Issue 4 已審查通過的既有機制。兩者仍在同一個 `try`／`on ClientException` 邊界內，任一個失敗都會讓整個 checkpoint 視為失敗，原子性保證不受影響。
 2. **是否需要一張新的 `sync_remote_ids` 風格對照表**：不需要。閱讀位置的推送/衝突判定天生就需要在每次 checkpoint 時即時查詢 PocketBase 目前的 `updated` 值（衝突判定的核心依據），這次查詢本身「順便」就能取得該筆紀錄是否存在、以及其 PocketBase 內部 `id`（決定 create 或 update），不需要另外快取。
-3. **`sync_metadata.last_pulled_server_updated_at_reading_positions` 欄位維持不使用**：這個 SQL 欄位自 Issue 1（v16→v17）就存在，但 spec.md「同步引擎」步驟 4 明確排除閱讀位置：「閱讀位置的下載端結果已在步驟 1 處理過，此步驟不重複處理閱讀位置」。本 Issue 的閱讀位置同步是「即時查詢單一書籍目前的伺服器狀態」而非「下載自上次游標以來所有變動」，天生不需要一個游標。這是刻意維持不用的死欄位，非本 Issue 遺漏。
+3. **修正 spec.md 步驟 1／步驟 4 的邏輯缺口——`sync_metadata.last_pulled_server_updated_at_reading_positions` 改為啟用**：spec.md「同步引擎」步驟 4 原文「閱讀位置的下載端結果已在步驟 1 處理過，此步驟不重複處理閱讀位置」有一個未涵蓋的情境——步驟 1 的衝突預檢只掃描本機有 dirty 位置異動（`position_updated_at > lastPushCompletedAt`）的書籍；若某本書在**這台裝置上從未變動過位置**，但在其他裝置上已經同步過新的進度，這本書既不會進入步驟 1（本機不 dirty），也不會被步驟 4 下載（spec.md 字面上排除），導致這台裝置的本機 `books` 表永遠停留在舊進度，使用者下次開啟這本書時會看到過時的頁碼／進度——直接牴觸 FR-19「絕不可靜默覆蓋／位置不一致須先確認」的精神（雖然這裡的失效方向是「顯示過時資料」而非「覆蓋」，但同樣是同步機制沒有真正發揮作用）。**2026-08-04 `/superpowers:requesting-code-review` 發現並修正**（見文末「審查修正紀錄」）：新增 `_downloadReadingPositions()`，比照 Issue 4 既有 `_downloadAndMerge()` 的下載游標模式，啟用這個原本閒置的 SQL 欄位——對整個 `sync_reading_positions` collection 查詢「自上次游標以來的所有變動」（不限於本機 dirty 的書籍），書籍指紋能對上本機既有書籍者直接覆寫本機閱讀位置（這些書籍本來就沒有本機待推送異動，不可能衝突，見 Task 5）；對不上本機任何書籍者略過（不落地暫存——與 Issue 4 標註異動的「待處理佇列」不同，見下方第 5 點）。
 4. **`ReaderScreen` 目前找不到書名時的顯示需求**：衝突彈窗需要顯示書名供使用者辨識是哪一本書，直接讀取 `books.title`（已存在的欄位），不需要額外處理。
+5. **下載到的閱讀位置若查無對應本機書籍，直接略過、不進待處理佇列**：與 Issue 4 標註異動（`sync_pending_records`）的處理方式刻意不同。標註異動一旦錯過就永久遺失（游標已前進、下次不會再下載到同一筆），需要暫存佇列；但閱讀位置的「暫緩」代價很低——這本書根本還沒匯入這台裝置，使用者也就不可能在這台裝置上開啟它、更不會受過時進度影響；等使用者之後匯入這本書並在這台裝置上讀過（觸發本機 dirty），步驟 1 的衝突預檢會自然重新查詢伺服器目前狀態並正確處理，不需要額外的佇列機制去「儘早」補上一個目前用不到的值（YAGNI）。
 
 ---
 
@@ -706,15 +707,17 @@ git commit -m "feat(epic-8-sync): Issue 5 Task 4 — 閱讀位置衝突對話框
 
 ---
 
-### Task 5：`SyncEngine` 擴充——閱讀位置衝突預檢 + 推送
+### Task 5：`SyncEngine` 擴充——閱讀位置衝突預檢 + 推送 + 下載
 
 **Files:**
 - Modify：`app/lib/sync/sync_engine.dart`
+- Modify：`app/lib/sync/sync_metadata_repository.dart`（Issue 4 既有檔案，新增 `sync_reading_positions` 下載游標的存取方法，啟用 Issue 1 就已建立、但一直閒置的 `last_pulled_server_updated_at_reading_positions` 欄位，見文末「審查修正紀錄」Critical #1）
 - Test：`app/test/sync/sync_engine_test.dart`
+- Test：`app/test/sync/sync_metadata_repository_test.dart`（Issue 4 既有檔案）
 
 **Interfaces:**
 - Consumes：Task 3 的 `ReadingPositionSnapshot`／`ReadingPositionConflict`／`ReadingPositionChoice`／`ReadingPositionConflictResolver`／`ReadingPositionSyncAction`／`resolveReadingPositionAction()`。
-- Produces：`SyncEngine` 建構子新增可選具名參數 `ReadingPositionConflictResolver? onReadingPositionConflict`（預設 `null`）；`runCheckpoint()` 於既有標註推送之前新增閱讀位置衝突預檢＋推送，`books.position_synced_server_updated_at` 延後到整個 checkpoint 成功後才與 `lastPushCompletedAt`／下載游標一起寫入。
+- Produces：`SyncEngine` 建構子新增可選具名參數 `ReadingPositionConflictResolver? onReadingPositionConflict`（預設 `null`）；`runCheckpoint()` 於既有標註推送之前新增閱讀位置衝突預檢＋推送，於既有標註下載之後新增閱讀位置的常規下載（`_downloadReadingPositions()`，補上本機無 dirty 異動時的下載缺口），`books.position_synced_server_updated_at` 與 `sync_metadata` 的閱讀位置下載游標皆延後到整個 checkpoint 成功後才與 `lastPushCompletedAt`／標註下載游標一起寫入。`SyncMetadataRepository` 新增 `Future<String?> loadReadingPositionsCursor()`／`Future<void> saveReadingPositionsCursor(String value)`。
 
 - [ ] **Step 1：Refactor——抽出可重用的單一書籍指紋補算方法（不改變既有行為，先確保既有測試仍通過）**
 
@@ -819,7 +822,94 @@ git commit -m "refactor(epic-8-sync): Issue 5 Task 5 Step 1 — 抽出 _backfill
 
 Expected：`flutter analyze` "No issues found!"。
 
-- [ ] **Step 4：撰寫失敗測試——閱讀位置同步情境**
+- [ ] **Step 4：撰寫失敗測試——`SyncMetadataRepository` 新增閱讀位置下載游標方法**
+
+在 `app/test/sync/sync_metadata_repository_test.dart` 檔案結尾（最後一個 `test(...)` 之後、檔案結尾 `}` 之前）新增：
+
+```dart
+
+  test('loadReadingPositionsCursor 初始為 null，saveReadingPositionsCursor 後可讀回（epic-8-sync Issue 5）',
+      () async {
+    expect(await repository.loadReadingPositionsCursor(), isNull);
+
+    await repository.saveReadingPositionsCursor('2026-08-04 00:00:00.000Z');
+
+    expect(
+      await repository.loadReadingPositionsCursor(),
+      '2026-08-04 00:00:00.000Z',
+    );
+  });
+
+  test('saveReadingPositionsCursor 不影響其他 collection 的游標', () async {
+    await repository.savePulledCursor(SyncCollection.bookmarks, '2026-08-01 00:00:00.000Z');
+
+    await repository.saveReadingPositionsCursor('2026-08-04 00:00:00.000Z');
+
+    expect(
+      await repository.loadPulledCursor(SyncCollection.bookmarks),
+      '2026-08-01 00:00:00.000Z',
+    );
+  });
+```
+
+- [ ] **Step 5：執行測試，確認因方法不存在而失敗**
+
+Run：
+
+```bash
+flutter test test/sync/sync_metadata_repository_test.dart
+```
+
+Expected：FAIL，編譯錯誤指出 `SyncMetadataRepository` 沒有 `loadReadingPositionsCursor`／`saveReadingPositionsCursor` 方法。
+
+- [ ] **Step 6：`SyncMetadataRepository` 新增方法**
+
+`app/lib/sync/sync_metadata_repository.dart` 的 `savePulledCursor()` 方法（Issue 4 既有程式碼）之後新增：
+
+```dart
+  /// 閱讀位置的下載游標（epic-8-sync Issue 5，補上 spec.md 原始設計
+  /// 遺漏的「本機無 dirty 異動、但其他裝置已更新過」情境，見
+  /// plan-issue-5.md「審查修正紀錄」Critical #1）：`last_pulled_server_updated_at_reading_positions`
+  /// 欄位自 Issue 1（v16→v17 migration）就已存在，但直到本 Issue 才真正
+  /// 被使用——刻意不套用既有 `_cursorColumns`／`SyncCollection` 那套機制
+  /// （`sync_reading_positions` 的資料形狀與其餘 3 個 collection 本質
+  /// 不同，見 plan-issue-5.md「與 spec.md 的落差說明」第 1 點），改用
+  /// 獨立的方法直接存取這個欄位。
+  Future<String?> loadReadingPositionsCursor() async {
+    final rows = await _db.query('sync_metadata', where: 'id = 1');
+    return rows.single['last_pulled_server_updated_at_reading_positions'] as String?;
+  }
+
+  Future<void> saveReadingPositionsCursor(String value) {
+    return _db.update(
+      'sync_metadata',
+      {'last_pulled_server_updated_at_reading_positions': value},
+      where: 'id = 1',
+    );
+  }
+```
+
+- [ ] **Step 7：執行測試，確認通過**
+
+Run：
+
+```bash
+flutter test test/sync/sync_metadata_repository_test.dart
+```
+
+Expected：PASS（全部既有＋新增 2 則測試）。
+
+- [ ] **Step 8：`flutter analyze` + Commit**
+
+```bash
+flutter analyze
+git add lib/sync/sync_metadata_repository.dart test/sync/sync_metadata_repository_test.dart
+git commit -m "feat(epic-8-sync): Issue 5 Task 5 — SyncMetadataRepository 新增閱讀位置下載游標方法"
+```
+
+Expected：`flutter analyze` 顯示 "No issues found!"。
+
+- [ ] **Step 9：撰寫失敗測試——閱讀位置同步情境（推送 + 下載）**
 
 `app/test/sync/sync_engine_test.dart` 的 `_testBook()` 輔助函式改為：
 
@@ -1233,10 +1323,130 @@ Book _testBook(
       expect(bookRows.single['position_synced_server_updated_at'], isNull);
       expect(await metadataRepository.loadLastPushCompletedAt(), isNull);
     });
+
+    // 以下 2 則測試回應審查修正紀錄 Critical #1（2026-08-04
+    // `/superpowers:requesting-code-review`）：spec.md 原始設計遺漏「本機
+    // 從未變動過位置、但其他裝置已更新過」的下載情境，見文末「審查修正
+    // 紀錄」與 plan-issue-5.md「與 spec.md 的落差說明」第 3 點。
+
+    test('本機無 dirty 閱讀位置異動時，checkpoint 仍會下載其他裝置的位置更新並覆寫本機',
+        () async {
+      await libraryRepository.insertBook(_testBook(
+        'b26',
+        contentFingerprint: 'fp-26',
+        format: BookFileFormat.pdf,
+        pdfPageIndex: 3,
+        progress: 0.1,
+        // positionUpdatedAt 刻意不設定（null）：本機從未變動過這本書的
+        // 位置，不會進入 _syncReadingPositions() 的推送階段查詢。
+      ));
+
+      final mockClient = MockClient((request) async {
+        if (request.method == 'GET' &&
+            request.url.path == '/api/collections/sync_reading_positions/records') {
+          return http.Response(
+            jsonEncode({
+              'items': [
+                {
+                  'id': 'pb-position-remote-1',
+                  'book_fingerprint': 'fp-26',
+                  'pdf_page_index': 39,
+                  'progress': 0.8,
+                  'updated': '2026-08-04 00:00:00.000Z',
+                },
+              ],
+              'page': 1,
+              'perPage': 1000,
+              'totalItems': 1,
+            }),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        if (request.url.path == '/api/batch') {
+          return http.Response(jsonEncode([]), 200,
+              headers: {'content-type': 'application/json'});
+        }
+        return http.Response(
+          jsonEncode({'items': [], 'page': 1, 'perPage': 1000, 'totalItems': 0}),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      });
+
+      final engine = SyncEngine(
+        db: libraryRepository.database,
+        accountRepository: accountRepository,
+        metadataRepository: metadataRepository,
+        clientFactory: (baseUrl) => PocketBase(baseUrl, httpClientFactory: () => mockClient),
+      );
+
+      await engine.runCheckpoint();
+
+      final bookRows = await libraryRepository.database
+          .query('books', where: 'id = ?', whereArgs: ['b26']);
+      expect(bookRows.single['pdfPageIndex'], 39);
+      expect(bookRows.single['progress'], 0.8);
+      expect(
+        bookRows.single['position_synced_server_updated_at'],
+        '2026-08-04 00:00:00.000Z',
+      );
+      expect(
+        await metadataRepository.loadReadingPositionsCursor(),
+        '2026-08-04 00:00:00.000Z',
+      );
+    });
+
+    test('閱讀位置下載本身失敗時，即使標註推送與下載皆已成功，也不寫入任何游標（原子性，含閱讀位置的新游標）',
+        () async {
+      await libraryRepository.insertBook(_testBook('b27', contentFingerprint: 'fp-27'));
+      await bookmarksRepository.insert(
+        const Bookmark(id: 'bm-b27', bookId: 'b27', name: 'X', progression: 0.1),
+      );
+
+      final mockClient = MockClient((request) async {
+        if (request.url.path == '/api/batch') {
+          return http.Response(
+            jsonEncode([
+              {'status': 200, 'body': {'id': 'pb-bm-b27'}},
+            ]),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        if (request.url.path == '/api/collections/sync_reading_positions/records') {
+          // 閱讀位置下載查詢失敗（其餘 collection 的下載查詢在下方一律
+          // 回傳空結果、成功）。
+          return http.Response(
+            jsonEncode({'message': 'Something went wrong.'}),
+            500,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        return http.Response(
+          jsonEncode({'items': [], 'page': 1, 'perPage': 1000, 'totalItems': 0}),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      });
+
+      final engine = SyncEngine(
+        db: libraryRepository.database,
+        accountRepository: accountRepository,
+        metadataRepository: metadataRepository,
+        clientFactory: (baseUrl) => PocketBase(baseUrl, httpClientFactory: () => mockClient),
+      );
+
+      await engine.runCheckpoint();
+
+      expect(await metadataRepository.loadLastPushCompletedAt(), isNull);
+      expect(await metadataRepository.loadPulledCursor(SyncCollection.bookmarks), isNull);
+      expect(await metadataRepository.loadReadingPositionsCursor(), isNull);
+    });
   });
 ```
 
-- [ ] **Step 5：執行測試，確認因閱讀位置同步尚未實作而失敗**
+- [ ] **Step 10：執行測試，確認因閱讀位置同步尚未實作而失敗**
 
 Run：
 
@@ -1244,9 +1454,9 @@ Run：
 flutter test test/sync/sync_engine_test.dart
 ```
 
-Expected：FAIL——新增的 6 個閱讀位置同步測試失敗（`runCheckpoint()` 目前完全不處理閱讀位置）。
+Expected：FAIL——新增的 8 個閱讀位置同步測試失敗（`runCheckpoint()` 目前完全不處理閱讀位置）。
 
-- [ ] **Step 6：擴充 `sync_engine.dart`——閱讀位置衝突預檢＋推送**
+- [ ] **Step 11：擴充 `sync_engine.dart`——閱讀位置衝突預檢＋推送＋下載**
 
 `sync_engine.dart` 檔案開頭的 import 區塊新增：
 
@@ -1254,7 +1464,7 @@ Expected：FAIL——新增的 6 個閱讀位置同步測試失敗（`runCheckpo
 import 'sync_reading_position.dart';
 ```
 
-`SyncEngine` 類別欄位與建構子改為：
+`SyncEngine` 類別欄位與建構子改為（`_onReadingPositionConflict` 欄位上方新增一段給 Issue 6 實作者的提醒，比照既有 `DatabaseException` 提醒的先例，回應審查意見 Minor #1，見文末「審查修正紀錄」）：
 
 ```dart
 class SyncEngine {
@@ -1262,6 +1472,22 @@ class SyncEngine {
   final SyncAccountRepository _accountRepository;
   final SyncMetadataRepository _metadataRepository;
   final PocketBaseClientFactory _clientFactory;
+
+  /// 見建構子 [onReadingPositionConflict] 參數說明。
+  ///
+  /// **給 Issue 6 實作者的提醒**（審查意見 Minor #1，2026-08-04
+  /// `/superpowers:requesting-code-review`）：這個回呼被呼叫時
+  /// [runCheckpoint] 會 `await` 它，直到使用者做出選擇（或關閉對話框）
+  /// 才會繼續——若使用者放著對話框不理，`runCheckpoint()` 會無限期停滯。
+  /// Issue 6 規劃的 `_isSyncing` 執行鎖若用 `try { await runCheckpoint();
+  /// } finally { _isSyncing = false; }` 包住（見既有 `DatabaseException`
+  /// 提醒），鎖本身不會因此洩漏，但使用者放著對話框不理期間，後續的
+  /// checkpoint 觸發都會因為鎖已被佔用而直接放棄——這是可接受的行為
+  /// （比照「同步失敗」的靜默重試精神，等使用者處理完對話框、下一次
+  /// 觸發自然會繼續），只需確認 Task 4 的
+  /// `showReadingPositionConflictDialog()` 在使用者點擊對話框外部區域時
+  /// 會正確回傳 `null`（已在 Task 4 測試驗證過），不會讓 `runCheckpoint()`
+  /// 真的卡死。
   final ReadingPositionConflictResolver? _onReadingPositionConflict;
 
   SyncEngine({
@@ -1328,6 +1554,7 @@ class SyncEngine {
 
     final notDirtyUpdatedAt = DateTime.now().millisecondsSinceEpoch;
     final pulledCursors = <SyncCollection, String?>{};
+    String? readingPositionsPulledCursor;
 
     try {
       await _resolvePendingRecords(notDirtyUpdatedAt: notDirtyUpdatedAt);
@@ -1339,6 +1566,12 @@ class SyncEngine {
           notDirtyUpdatedAt: notDirtyUpdatedAt,
         );
       }
+      // epic-8-sync Issue 5（審查修正紀錄 Critical #1，2026-08-04
+      // `/superpowers:requesting-code-review`，見文末「審查修正紀錄」）：
+      // 補上 spec.md 原始設計遺漏的情境——本機從未變動過位置、但其他
+      // 裝置已推送新進度的書籍，步驟 1 的衝突預檢完全不會碰到它們（本機
+      // 不 dirty），必須靠這個獨立的下載步驟才會學到新進度。
+      readingPositionsPulledCursor = await _downloadReadingPositions(pb, headers);
     } on ClientException {
       return;
     }
@@ -1349,6 +1582,9 @@ class SyncEngine {
       if (cursor != null) {
         await _metadataRepository.savePulledCursor(entry.key, cursor);
       }
+    }
+    if (readingPositionsPulledCursor != null) {
+      await _metadataRepository.saveReadingPositionsCursor(readingPositionsPulledCursor);
     }
     // epic-8-sync Issue 5：與 lastPushCompletedAt／下載游標同一時機才
     // 寫入，理由同上——確保推送+下載整個 checkpoint 皆成功後才一次寫
@@ -1370,6 +1606,11 @@ class SyncEngine {
 在 `_sendPushBatch()` 方法之後新增以下私有類別與方法：
 
 ```dart
+  /// 閱讀位置推送每批最多帶入的筆數——與 PocketBase Batch API 上限一致
+  /// （見 Issue 4 `planPushBatches()` 的同一個數字），審查意見 Important
+  /// #1 發現本檔案原本漏了這個限制，見文末「審查修正紀錄」。
+  static const _readingPositionPushChunkSize = 100;
+
   /// 一筆待推送的閱讀位置（epic-8-sync Issue 5）。[remoteId] 為 `null`
   /// 代表 PocketBase 目前沒有這本書的既有紀錄，走 create；非 `null` 代表
   /// 已查得既有紀錄的 PocketBase 內部 id，走 update。
@@ -1412,8 +1653,15 @@ class SyncEngine {
       );
       final syncedServerUpdatedAt = row['position_synced_server_updated_at'] as String?;
 
+      // 用 pb.filter() 安全帶入 fingerprint，而非字串內插（審查意見
+      // Important #2，2026-08-04 `/superpowers:requesting-code-review`，
+      // 見文末「審查修正紀錄」）：EPUB 指紋優先取自 OPF `dc:identifier`
+      // （見 epic-8-sync Issue 3），是書籍檔案內部的任意字串，並非本專案
+      // 自己產生的可信值，若剛好含有雙引號會破壞 filter 語法；
+      // `pb.filter()` 是 PocketBase Dart SDK 官方提供的具名參數安全綁定
+      // 語法，自動處理特殊字元逸出。
       final result = await pb.collection('sync_reading_positions').getList(
-            filter: 'book_fingerprint = "$fingerprint"',
+            filter: pb.filter('book_fingerprint = {:fp}', {'fp': fingerprint}),
             perPage: 1,
             headers: headers,
           );
@@ -1487,34 +1735,109 @@ class SyncEngine {
 
     if (toPush.isEmpty) return {};
 
-    final request = pb.createBatch();
-    for (final item in toPush) {
-      final body = <String, Object?>{
-        'user': userId,
-        'book_fingerprint': item.fingerprint,
-        'epub_locator': item.local.epubLocatorJson,
-        'pdf_page_index': item.local.pdfPageIndex,
-        'progress': item.local.progress,
-      };
-      if (item.remoteId == null) {
-        request.collection('sync_reading_positions').create(body: body);
-      } else {
-        request.collection('sync_reading_positions').update(item.remoteId!, body: body);
-      }
-    }
-    final results = await request.send(headers: headers);
-
+    // 分批送出（審查意見 Important #1，2026-08-04
+    // `/superpowers:requesting-code-review`，見文末「審查修正紀錄」）：
+    // 與 Issue 4 標註推送同一個 PocketBase Batch API 上限（100 筆/批，
+    // 見 sync_push_planner.dart `planPushBatches()`）。閱讀位置絕大多數
+    // checkpoint 只有 1 筆（目前正在讀的書），但長時間離線後一次累積
+    // 大量書籍的位置異動時仍可能超過上限，比照本檔案既有的
+    // `_purgeTombstones()`／`_loadBooksByFingerprint()` 分批慣例處理，
+    // 不引入新的抽象。
     final positionsToConfirm = <String, String>{};
-    for (var i = 0; i < toPush.length; i++) {
-      final body = results[i].body;
-      if (body is Map) {
-        final updated = body['updated'] as String?;
-        if (updated != null) {
-          positionsToConfirm[toPush[i].bookId] = updated;
+    for (var i = 0; i < toPush.length; i += _readingPositionPushChunkSize) {
+      final end = (i + _readingPositionPushChunkSize < toPush.length)
+          ? i + _readingPositionPushChunkSize
+          : toPush.length;
+      final chunk = toPush.sublist(i, end);
+
+      final request = pb.createBatch();
+      for (final item in chunk) {
+        final body = <String, Object?>{
+          'user': userId,
+          'book_fingerprint': item.fingerprint,
+          'epub_locator': item.local.epubLocatorJson,
+          'pdf_page_index': item.local.pdfPageIndex,
+          'progress': item.local.progress,
+        };
+        if (item.remoteId == null) {
+          request.collection('sync_reading_positions').create(body: body);
+        } else {
+          request.collection('sync_reading_positions').update(item.remoteId!, body: body);
+        }
+      }
+      final results = await request.send(headers: headers);
+
+      for (var j = 0; j < chunk.length; j++) {
+        final body = results[j].body;
+        if (body is Map) {
+          final updated = body['updated'] as String?;
+          if (updated != null) {
+            positionsToConfirm[chunk[j].bookId] = updated;
+          }
         }
       }
     }
     return positionsToConfirm;
+  }
+```
+
+在 `_syncReadingPositions()` 方法之後新增（審查修正紀錄 Critical #1，2026-08-04 `/superpowers:requesting-code-review`，見文末「審查修正紀錄」）：
+
+```dart
+  /// 下載其他裝置對閱讀位置的異動（epic-8-sync Issue 5，補上 spec.md
+  /// 原始設計遺漏的情境，見文末「審查修正紀錄」Critical #1）：對整個
+  /// `sync_reading_positions` collection 查詢「自上次游標以來的所有
+  /// 變動」，**不限於本機有 dirty 異動的書籍**——與 [_syncReadingPositions]
+  /// 互補，該方法只處理「本機有待推送異動」的書籍，這個方法處理「本機
+  /// 從未變動過、但其他裝置已經更新過」的書籍。
+  ///
+  /// 下載到的紀錄若 `book_fingerprint` 對得上本機既有書籍，直接覆寫本機
+  /// 閱讀位置（這些書籍依定義沒有本機待推送異動，不可能發生衝突，見
+  /// plan-issue-5.md「與 spec.md 的落差說明」）；對不上本機任何書籍者
+  /// 直接略過，不落地暫存（理由見同一節說明第 5 點）。回傳這次應寫回
+  /// `sync_metadata` 的下載游標值（`null` 代表沒有任何新紀錄、游標維持
+  /// 原值）——比照 Issue 4 `_downloadAndMerge()` 的既有模式，不在這個
+  /// 方法內直接持久化，實際寫入時機統一挪到 `runCheckpoint()` 最後（見
+  /// 上方原子性保證說明）。
+  Future<String?> _downloadReadingPositions(
+    PocketBase pb,
+    Map<String, String> headers,
+  ) async {
+    final cursor = await _metadataRepository.loadReadingPositionsCursor();
+    final filter = cursor == null ? null : 'updated > "$cursor"';
+    final records = await pb.collection('sync_reading_positions').getFullList(
+          filter: filter,
+          sort: 'updated',
+          headers: headers,
+        );
+    if (records.isEmpty) return cursor;
+
+    final fingerprints =
+        records.map((r) => r.data['book_fingerprint'] as String).toSet();
+    final booksByFingerprint = await _loadBooksByFingerprint(fingerprints);
+
+    for (final remote in records) {
+      final fingerprint = remote.data['book_fingerprint'] as String;
+      final book = booksByFingerprint[fingerprint];
+      if (book == null) continue; // 這台裝置尚未匯入這本書，略過
+
+      await _db.update(
+        'books',
+        {
+          'epubLocator': remote.data['epub_locator'] as String?,
+          'pdfPageIndex': (remote.data['pdf_page_index'] as num?)?.toInt(),
+          'progress': (remote.data['progress'] as num).toDouble(),
+          'position_synced_server_updated_at': remote.data['updated'] as String,
+        },
+        where: 'id = ?',
+        whereArgs: [book.id],
+      );
+    }
+
+    return maxUpdatedCursor(
+      records.map((r) => r.data['updated'] as String).toList(),
+      cursor,
+    );
   }
 ```
 
@@ -1536,7 +1859,7 @@ class _ReadingPositionPushItem {
 }
 ```
 
-- [ ] **Step 7：執行測試，確認全數通過**
+- [ ] **Step 12：執行測試，確認全數通過**
 
 Run：
 
@@ -1544,9 +1867,9 @@ Run：
 flutter test test/sync/sync_engine_test.dart
 ```
 
-Expected：PASS（Issue 4 既有測試＋本 Task 新增 6 則，全數通過）。
+Expected：PASS（Issue 4 既有測試＋本 Task 新增 8 則，全數通過）。
 
-- [ ] **Step 8：`flutter analyze` + 執行完整測試套件 + Commit**
+- [ ] **Step 13：`flutter analyze` + 執行完整測試套件 + Commit**
 
 ```bash
 flutter analyze
@@ -1557,7 +1880,7 @@ Expected：`flutter analyze` "No issues found!"，`flutter test` 全數 PASS（�
 
 ```bash
 git add lib/sync/sync_engine.dart test/sync/sync_engine_test.dart
-git commit -m "feat(epic-8-sync): Issue 5 Task 5 — SyncEngine 閱讀位置衝突預檢與推送"
+git commit -m "feat(epic-8-sync): Issue 5 Task 5 — SyncEngine 閱讀位置衝突預檢、推送與下載"
 ```
 
 ---
@@ -1717,9 +2040,21 @@ git commit -m "test(epic-8-sync): Issue 5 Task 6 — 雙裝置閱讀位置衝突
 
 ## Self-Review Notes
 
-- **issues.md 驗收標準覆蓋檢查**：「閱讀位置衝突偵測正確（僅雙方皆變動過才視為衝突）」→ Task 3（`resolveReadingPositionAction` 7 則測試涵蓋不 dirty／無遠端紀錄／時間戳記相同／不同／快取為 null 但遠端有紀錄／從未推送過等情境）。「偵測到衝突時彈窗詢問使用者，使用者選擇前不靜默覆蓋任一邊」→ Task 4（對話框回傳 `null`／`keepLocal`／`keepCloud` 三態）＋ Task 5（`_syncReadingPositions` 對 `null` 回呼／`null` 選擇皆為「跳過、不覆蓋」）。「無衝突時直接套用變動的一邊」→ Task 5「本機閱讀位置有異動、遠端無既有紀錄時，直接推送」測試。「`position_synced_server_updated_at` 正確維護」→ Task 5 全部 6 則測試皆有對應斷言（含推送失敗時不寫入的原子性驗證）。「上述測試皆通過，`flutter analyze` 乾淨」→ 每個 Task 結尾皆有驗證步驟。
-- **與 spec.md 的一致性檢查**：「僅當本機 position_updated_at > lastPushCompletedAt 才執行」→ Task 5 `_syncReadingPositions()` 的 SQL `WHERE position_updated_at > ?`，並有「本機無待推送異動時完全不查詢」的專門測試。「於推送步驟之前」→ Task 5 `runCheckpoint()` 內 `_syncReadingPositions()` 呼叫順序在標註推送迴圈之前。「使用者選擇前不納入本次推送批次」→ 衝突分支只有 `choice == keepLocal` 才會被加進 `toPush`。「推送成功後用 Batch API 回應中該筆紀錄的 updated 值回填」→ `positionsToConfirm` 的 `body['updated']` 解析，且延後到 checkpoint 全部成功後才實際寫入（沿用 Issue 4 已確立的原子性原則，而非 spec.md 字面上「推送成功後」的較早時機——與 Issue 4 對 `lastPushCompletedAt` 的處理同一邏輯，理由已在 plan-issue-4.md 說明過，此處不重複）。
-- **型別一致性檢查**：`ReadingPositionConflictResolver`（Task 3 定義：`Future<ReadingPositionChoice?> Function(ReadingPositionConflict conflict)`）→ Task 4 `showReadingPositionConflictDialog()` 簽章完全符合（可直接當作這個 typedef 的實例使用，供 Issue 6 之後串接）；Task 5 `SyncEngine` 建構子 `onReadingPositionConflict` 參數型別一致。`ReadingPositionSnapshot`（Task 3 定義）→ Task 4／Task 5 建構時欄位名稱一致。
-- **與既有慣例的差異說明彙總**（呼應文件開頭「與 spec.md 的落差說明」）：(1) 閱讀位置推送改用獨立的 Batch 請求，不與標註異動合併成同一個實體 HTTP 請求；(2) 不新增類似 `sync_remote_ids` 的對照表，每次即時查詢；(3) `sync_metadata.last_pulled_server_updated_at_reading_positions` 維持不使用（spec.md 本身已明確排除）。以上皆非範圍蔓延，是查證 `sync_reading_positions` 實際 PocketBase schema（無 `client_id`／`deleted_at`）後的必要修正，比照 `plan-issue-3.md`／`plan-issue-4.md` 先例的誠實記錄慣例。
-- **本 Issue 刻意不做的事**（呼應 Global Constraints）：不新增 SQL migration（欄位已存在）；不修改 `copyWith()`（YAGNI，比照 `contentFingerprint` 先例）；不把 `SyncEngine`／`showReadingPositionConflictDialog` 實際接進 `main.dart`／`ReaderScreen`（留給 Issue 6，兩者依賴圖上互不依賴）。
-- **Placeholder 掃描**：全文無 TBD/TODO；Task 5 Step 6 因程式碼分散在 `runCheckpoint()` 改寫與新增的 `_syncReadingPositions()`/`_ReadingPositionPushItem`，已列出全部異動的完整程式碼（非「比照 Task N」的省略寫法），並明確標註 `_ReadingPositionPushItem` 為頂層類別、實際插入位置在檔案最底部（`class SyncEngine { ... }` 之後），非巢狀類別。
+- **issues.md 驗收標準覆蓋檢查**：「閱讀位置衝突偵測正確（僅雙方皆變動過才視為衝突）」→ Task 3（`resolveReadingPositionAction` 7 則測試涵蓋不 dirty／無遠端紀錄／時間戳記相同／不同／快取為 null 但遠端有紀錄／從未推送過等情境）。「偵測到衝突時彈窗詢問使用者，使用者選擇前不靜默覆蓋任一邊」→ Task 4（對話框回傳 `null`／`keepLocal`／`keepCloud` 三態）＋ Task 5（`_syncReadingPositions` 對 `null` 回呼／`null` 選擇皆為「跳過、不覆蓋」）。「無衝突時直接套用變動的一邊」→ Task 5「本機閱讀位置有異動、遠端無既有紀錄時，直接推送」測試。「`position_synced_server_updated_at` 正確維護」→ Task 5 全部 8 則測試皆有對應斷言（含推送/下載失敗時不寫入的原子性驗證）。「上述測試皆通過，`flutter analyze` 乾淨」→ 每個 Task 結尾皆有驗證步驟。
+- **與 spec.md 的一致性檢查**：「僅當本機 position_updated_at > lastPushCompletedAt 才執行」→ Task 5 `_syncReadingPositions()` 的 SQL `WHERE position_updated_at > ?`，並有「本機無待推送異動時完全不查詢」的專門測試。「於推送步驟之前」→ Task 5 `runCheckpoint()` 內 `_syncReadingPositions()` 呼叫順序在標註推送迴圈之前。「使用者選擇前不納入本次推送批次」→ 衝突分支只有 `choice == keepLocal` 才會被加進 `toPush`。「推送成功後用 Batch API 回應中該筆紀錄的 updated 值回填」→ `positionsToConfirm` 的 `body['updated']` 解析，且延後到 checkpoint 全部成功後才實際寫入（沿用 Issue 4 已確立的原子性原則，而非 spec.md 字面上「推送成功後」的較早時機——與 Issue 4 對 `lastPushCompletedAt` 的處理同一邏輯，理由已在 plan-issue-4.md 說明過，此處不重複）。**修正 spec.md 步驟 4「不重複處理閱讀位置」字面描述的邏輯缺口**（見文末「審查修正紀錄」Critical #1）→ Task 5 `_downloadReadingPositions()`，補上本機無 dirty 異動時的下載路徑。
+- **型別一致性檢查**：`ReadingPositionConflictResolver`（Task 3 定義：`Future<ReadingPositionChoice?> Function(ReadingPositionConflict conflict)`）→ Task 4 `showReadingPositionConflictDialog()` 簽章完全符合（可直接當作這個 typedef 的實例使用，供 Issue 6 之後串接）；Task 5 `SyncEngine` 建構子 `onReadingPositionConflict` 參數型別一致。`ReadingPositionSnapshot`（Task 3 定義）→ Task 4／Task 5 建構時欄位名稱一致。`SyncMetadataRepository.loadReadingPositionsCursor()`/`saveReadingPositionsCursor()`（Task 5 新增）→ `_downloadReadingPositions()`／`runCheckpoint()` 呼叫時引數型別一致（`String?`／`String`）。
+- **與既有慣例的差異說明彙總**（呼應文件開頭「與 spec.md 的落差說明」）：(1) 閱讀位置推送改用獨立的 Batch 請求，不與標註異動合併成同一個實體 HTTP 請求；(2) 不新增類似 `sync_remote_ids` 的對照表，每次即時查詢；(3) `sync_metadata.last_pulled_server_updated_at_reading_positions` 改為啟用（修正 spec.md 步驟 4 的邏輯缺口，見文末「審查修正紀錄」Critical #1，與最初規劃「維持不使用」相反）；(4) 下載到查無對應本機書籍的閱讀位置直接略過、不進待處理佇列。以上皆非範圍蔓延，是查證 `sync_reading_positions` 實際 PocketBase schema（無 `client_id`／`deleted_at`）與 spec.md 原始設計缺口後的必要修正，比照 `plan-issue-3.md`／`plan-issue-4.md` 先例的誠實記錄慣例。
+- **本 Issue 刻意不做的事**（呼應 Global Constraints）：不新增 SQL migration（欄位已存在）；不修改 `copyWith()`（YAGNI，比照 `contentFingerprint` 先例）；不把 `SyncEngine`／`showReadingPositionConflictDialog` 實際接進 `main.dart`／`ReaderScreen`（留給 Issue 6，兩者依賴圖上互不依賴）；`_downloadReadingPositions()` 查無對應本機書籍時不建立待處理佇列（理由見「與 spec.md 的落差說明」第 5 點，YAGNI）。
+- **測試涵蓋範圍的誠實記錄**：Task 6 的真機整合測試涵蓋「雙裝置皆對同一本書有本機異動、觸發衝突」的核心情境（推送 + 衝突路徑），但**不**額外涵蓋 Critical #1 修正的「裝置從未觸碰過某本書、純靠常規下載學到遠端新進度」這條路徑——該路徑已由 Task 5 的 `SyncEngine` mock 測試（`MockClient` 完整模擬 PocketBase 回應）直接、精確地驗證過，比照 Issue 4 既有先例（並非所有分支都需要額外疊加真機整合測試），不在本計畫追加第二個雙裝置真機情境，避免真機測試套件過度膨脹。
+- **Placeholder 掃描**：全文無 TBD/TODO；Task 5 Step 11 因程式碼分散在 `runCheckpoint()` 改寫與新增的 `_syncReadingPositions()`/`_downloadReadingPositions()`/`_ReadingPositionPushItem`，已列出全部異動的完整程式碼（非「比照 Task N」的省略寫法），並明確標註 `_ReadingPositionPushItem` 為頂層類別、實際插入位置在檔案最底部（`class SyncEngine { ... }` 之後），非巢狀類別。
+
+## 審查修正紀錄（`tmp/epic-8/plan_review_report_issue_5.md`）
+
+程式碼審查（`/superpowers:requesting-code-review`，2026-08-04）結論「建議在實作前優先修正下列兩項 Critical 級別與兩項 Important 級別的問題」，2 項 Critical、2 項 Important、1 項 Minor，逐項核對程式碼庫現況與 PocketBase Dart SDK 原始碼後，結論如下：
+
+- **Critical「遺漏遠端閱讀位置的下載機制」，確認屬實，已採納**：審查指出 spec.md「同步引擎」步驟 4「此步驟不重複處理閱讀位置」的字面描述有一個未涵蓋的情境——步驟 1 的衝突預檢只掃描本機 dirty 的書籍，若某本書在這台裝置上從未變動過位置、但其他裝置已經同步過新進度，這台裝置會永遠學不到新進度，直接牴觸 FR-19 的同步精神。已新增 `SyncEngine._downloadReadingPositions()`，比照 Issue 4 `_downloadAndMerge()` 的下載游標模式，啟用 `sync_metadata.last_pulled_server_updated_at_reading_positions`（Issue 1 就已建立、原本閒置的欄位）——對整個 `sync_reading_positions` collection 查詢自上次游標以來的變動，指紋比對得上本機書籍者直接覆寫（這些書籍依定義沒有本機待推送異動，不可能衝突），比對不上者略過（不進待處理佇列，理由見「與 spec.md 的落差說明」第 5 點）。新增對應的 `SyncMetadataRepository` 存取方法（`loadReadingPositionsCursor()`／`saveReadingPositionsCursor()`）與 2 則新增的 `SyncEngine` 回歸測試（下載到遠端更新／下載本身失敗時的原子性）。
+- **Critical「PocketBase SDK 系統欄位存取錯誤」，確認為誤判，未採納**：審查主張 `RecordModel` 的 `id`／`updated`／`created` 系統欄位「作為直接屬性暴露，並不在 `data` Map 中」，建議改用 `existing.id`／`existing.updated`。查證 `package:pocketbase` 0.24.0+1 原始碼（`lib/src/dtos/record_model.dart`）後確認此判斷不成立：`id`/`created`/`updated` 三個 getter 本身就是 `get<String>("id"/"created"/"updated")` 的薄封裝，而 `get<T>()` 的實作是 `caster.extract<T>(data, fieldNameOrPath, defaultValue)`——三者讀的是同一個 `data` Map，`RecordModel.fromJson(json)` 的建構子也是把整包原始 JSON（含系統欄位與自訂欄位）一次指派給 `data`（`RecordModel(json)`，`data = data ?? {}`）。`existing.data['id']` 與 `existing.id` 因此讀到相同的值，原計畫寫法沒有錯誤。**進一步查證發現原計畫的寫法反而是刻意且正確的選擇**：`id`／`updated` 兩個 getter 的字串轉型（`toString()`）對 `null` 值會回傳空字串 `""` 而非 `null`（與 Issue 4 已明確記錄、必須防範的 PocketBase 零值問題同一類特性，見 `plan-issue-4.md`「與 spec.md／Issue 7 的落差說明」），本計畫使用 `existing?.data['id'] as String?`／`existing?.data['updated'] as String?` 這種直接讀取原始 Map 的寫法，能正確保留 `null`，比審查建議的 getter 寫法更安全、且與 Issue 4 已建立的既有慣例一致，維持原樣不修改。
+- **Important「閱讀位置推送缺少分批 (Batch Chunking) 處理」，確認屬實，已採納**：`_syncReadingPositions()` 原本把全部 `toPush` 項目塞進單一一個 `pb.createBatch()` 請求，未遵守 PocketBase Batch API 100 筆/批的上限（Issue 4 標註推送已有此限制）。已改為以 `_readingPositionPushChunkSize = 100` 分批送出多個 Batch 請求，比照本檔案既有的 `_purgeTombstones()`／`_loadBooksByFingerprint()` 分批慣例（Issue 4 審查已建立的既有寫法），不引入新的抽象。
+- **Important「Filter Injection 風險」，確認屬實，已採納**：查詢遠端閱讀位置時原本用字串內插 `filter: 'book_fingerprint = "$fingerprint"'`——EPUB 指紋優先取自 OPF `dc:identifier`（見 epic-8-sync Issue 3），是書籍檔案內部的任意字串，非本專案自己產生的可信值，若含雙引號會破壞 filter 語法。已改用 PocketBase Dart SDK 官方提供的安全綁定語法 `pb.filter('book_fingerprint = {:fp}', {'fp': fingerprint})`（已查證此方法確實存在於 `package:pocketbase` 0.24.0+1 的 `PocketBase.filter()`，會自動逸出字串內的特殊字元）。**範圍界定**：本次只修正 `book_fingerprint` 這個帶入任意檔案內容的 filter；`_downloadAndMerge()`（Issue 4）與新增的 `_downloadReadingPositions()` 使用的游標 filter（`'updated > "$cursor"'`）維持字串內插不變——游標值一律是 PocketBase 自己蓋章產生的固定格式時間戳記字串，非使用者/檔案內容來源，注入風險可忽略，且修改 Issue 4 既有程式碼超出本 Issue 範圍。
+- **Minor「對話框阻擋同步引擎釋放鎖」，確認屬實，已採納（僅文件備註，不需程式碼變更）**：審查本身也僅要求「建議在 Issue 6 實作併發鎖時，確認對話框可透過點擊外部區域安全釋放鎖定」。已於 `SyncEngine._onReadingPositionConflict` 欄位上方新增給 Issue 6 實作者的提醒（比照既有 `DatabaseException` 提醒的先例），並指出 Task 4 的對話框已測試過點擊外部區域正確回傳 `null`，不會讓 `runCheckpoint()` 真的卡死。
+- **「潛在風險與架構死角」兩項觀察**：「併發問題」（真機手動測試 Issue 5 時可能因為 Issue 6 尚未提供併發鎖而遇到交錯寫入）與「孤兒狀態」（推送閱讀位置成功、後續標註推送失敗時，下次同步會重複 PATCH 同一筆閱讀位置，審查本身已確認這是安全的冪等操作）皆為審查報告自行確認的觀察或提醒未來實作/測試者注意的事項，非要求本計畫修改的問題，不需採取行動。
