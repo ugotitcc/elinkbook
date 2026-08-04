@@ -16,19 +16,20 @@ import 'sync_table_specs.dart';
 
 /// 雲端同步引擎核心（epic-8-sync Issue 4，spec.md「同步引擎」）：本 Issue
 /// 只實作劃線/備註/書籤的推送/下載/合併與本機墓碑清理；閱讀位置的衝突
-/// 預檢由 Issue 5 擴充同一個 [runCheckpoint]；三種觸發來源與併發鎖由
-/// Issue 6 負責，本 Issue 的 [runCheckpoint] 僅需可被手動/測試呼叫。
+/// 預檢由 Issue 5 擴充同一個 [runCheckpoint]；三種觸發來源由 Issue 6
+/// 負責接上（見 `sync_checkpoint_trigger.dart`），本 Issue 的
+/// [runCheckpoint] 僅需可被手動/測試呼叫。
 ///
-/// **給 Issue 6 實作者的例外處理提醒**（審查意見 Minor #1，2026-08-04
-/// `/superpowers:requesting-code-review`，見文末「審查修正紀錄」）：
-/// [runCheckpoint] 只捕捉網路層的 `ClientException`（PocketBase SDK
-/// 統一封裝的 HTTP 錯誤），**不**捕捉本機 SQLite 操作可能拋出的
-/// `DatabaseException`（例如磁碟空間不足）——這是刻意的，本 Issue 不吞
-/// 掉未預期的本機例外。Issue 6 規劃的 `_isSyncing` 執行鎖，呼叫
-/// [runCheckpoint] 時**必須**用 `try { await runCheckpoint(); } finally
-/// { _isSyncing = false; }` 包住，否則任何一次未預期的本機例外都會讓鎖
-/// 永久卡住（需要重開 App 才能恢復），而不能假設 [runCheckpoint] 永遠
-/// 不會拋出例外。
+/// **例外處理與併發鎖**（審查意見 Minor #1，2026-08-04
+/// `/superpowers:requesting-code-review`；併發鎖由 epic-8-sync Issue 6
+/// 實作，見 [_isSyncing]）：[runCheckpoint] 只捕捉網路層的
+/// `ClientException`（PocketBase SDK 統一封裝的 HTTP 錯誤），**不**捕捉
+/// 本機 SQLite 操作可能拋出的 `DatabaseException`（例如磁碟空間不足）
+/// ——這是刻意的，本 Issue 不吞掉未預期的本機例外。[runCheckpoint] 內部
+/// 一律用 `try { await _runCheckpointBody(); } finally { _isSyncing =
+/// false; }` 包住實際執行內容，確保任何一次未預期的本機例外都不會讓鎖
+/// 永久卡住（不需要呼叫端自行處理，也不能假設 [runCheckpoint] 永遠不會
+/// 拋出例外）。
 class SyncEngine {
   final Database _db;
   final SyncAccountRepository _accountRepository;
@@ -37,19 +38,18 @@ class SyncEngine {
 
   /// 見建構子 [onReadingPositionConflict] 參數說明。
   ///
-  /// **給 Issue 6 實作者的提醒**（審查意見 Minor #1，2026-08-04
-  /// `/superpowers:requesting-code-review`）：這個回呼被呼叫時
-  /// [runCheckpoint] 會 `await` 它，直到使用者做出選擇（或關閉對話框）
-  /// 才會繼續——若使用者放著對話框不理，`runCheckpoint()` 會無限期停滯。
-  /// Issue 6 規劃的 `_isSyncing` 執行鎖若用 `try { await runCheckpoint();
-  /// } finally { _isSyncing = false; }` 包住（見既有 `DatabaseException`
-  /// 提醒），鎖本身不會因此洩漏，但使用者放著對話框不理期間，後續的
-  /// checkpoint 觸發都會因為鎖已被佔用而直接放棄——這是可接受的行為
-  /// （比照「同步失敗」的靜默重試精神，等使用者處理完對話框、下一次
-  /// 觸發自然會繼續），只需確認 Task 4 的
+  /// **與併發鎖的互動**（審查意見 Minor #1，2026-08-04
+  /// `/superpowers:requesting-code-review`；epic-8-sync Issue 6 實作
+  /// [_isSyncing]）：這個回呼被呼叫時 [runCheckpoint] 會 `await` 它，
+  /// 直到使用者做出選擇（或關閉對話框）才會繼續——若使用者放著對話框
+  /// 不理，`runCheckpoint()` 會無限期停滯。[runCheckpoint] 內部的
+  /// `try { ... } finally { _isSyncing = false; }` 保證鎖本身不會因此
+  /// 洩漏，但使用者放著對話框不理期間，後續的 checkpoint 觸發都會因為
+  /// 鎖已被佔用而直接放棄——這是可接受的行為（比照「同步失敗」的靜默
+  /// 重試精神，等使用者處理完對話框、下一次觸發自然會繼續），
   /// `showReadingPositionConflictDialog()` 在使用者點擊對話框外部區域時
-  /// 會正確回傳 `null`（已在 Task 4 測試驗證過），不會讓 `runCheckpoint()`
-  /// 真的卡死。
+  /// 會正確回傳 `null`（見 `reading_position_conflict_dialog.dart` 既有
+  /// 測試），不會讓 `runCheckpoint()` 真的卡死。
   final ReadingPositionConflictResolver? _onReadingPositionConflict;
 
   SyncEngine({
@@ -64,7 +64,25 @@ class SyncEngine {
         _clientFactory = clientFactory ?? PocketBase.new,
         _onReadingPositionConflict = onReadingPositionConflict;
 
+  /// epic-8-sync Issue 6（spec.md「同步引擎」併發防護）：SyncEngine 內建
+  /// 單一執行鎖，避免三種 checkpoint 觸發來源（App 背景化／書籍切換／5
+  /// 分鐘閒置計時器，見 `sync_checkpoint_trigger.dart`）短時間內幾乎同時
+  /// 呼叫 [runCheckpoint] 時真的同時送出兩份網路請求。鎖定期間的後續
+  /// 呼叫直接放棄（不排隊），比照「同步失敗」的靜默重試精神——放棄的那次
+  /// 呼叫所代表的本機異動，下一次任何 checkpoint 自然會涵蓋到。
+  bool _isSyncing = false;
+
   Future<void> runCheckpoint() async {
+    if (_isSyncing) return;
+    _isSyncing = true;
+    try {
+      await _runCheckpointBody();
+    } finally {
+      _isSyncing = false;
+    }
+  }
+
+  Future<void> _runCheckpointBody() async {
     final baseUrl = await _accountRepository.loadBaseUrl();
     final authToken = await _accountRepository.loadAuthToken();
     final userId = await _accountRepository.loadUserId();
