@@ -57,6 +57,26 @@ class Book {
   /// 不參與跨裝置比對，不影響單機使用。
   final String? contentFingerprint;
 
+  /// 閱讀位置最後一次本機異動時間（epic-8-sync Issue 5，spec.md「本機
+  /// Schema 變更」／「同步引擎」）：純本機時鐘，供同步引擎判斷「這本書
+  /// 的閱讀位置自上次推送後是否有新異動」，只跟自己過去的
+  /// `sync_metadata.lastPushCompletedAt` 比較，不跨裝置比較（與
+  /// `bookmarks`/`highlights`/`notes` 的 `updated_at` 同一性質）。`null`
+  /// 代表這本書的閱讀位置從未變動過（或此裝置尚未升級到本 Issue 之前
+  /// 就已存在的既有記錄）。由 `ReadingPositionRepository.save()` 在每次
+  /// 寫入閱讀位置時一併維護，不放在本模型的 `copyWith()`（見下方）。
+  final int? positionUpdatedAt;
+
+  /// 快取上次成功同步時，PocketBase `sync_reading_positions` 該筆紀錄的
+  /// 伺服器時間戳記字串（epic-8-sync Issue 5，spec.md「本機 Schema
+  /// 變更」）：供同步引擎偵測「其他裝置是否在此之後又推送過」用——與
+  /// 本機快取值不同即代表衝突。`null` 代表這本書的閱讀位置從未成功同步
+  /// 過。**刻意不新增到 `copyWith()`**（比照 [contentFingerprint] 既有
+  /// 先例）：本 Issue 對這兩個欄位的所有寫入皆透過 partial update
+  /// （`ReadingPositionRepository`／`SyncEngine` 的 raw SQL）完成，沒有
+  /// 呼叫端需要透過 `copyWith()` 修改，YAGNI。
+  final String? positionSyncedServerUpdatedAt;
+
   final String groupName;
   final DateTime createTime;
   final DateTime lastReadTime;
@@ -75,6 +95,8 @@ class Book {
     this.totalCharacterCount,
     this.isFixedLayout,
     this.contentFingerprint,
+    this.positionUpdatedAt,
+    this.positionSyncedServerUpdatedAt,
     this.groupName = BookGroup.uncategorized,
     required this.createTime,
     required this.lastReadTime,
@@ -98,6 +120,8 @@ class Book {
       'is_fixed_layout':
           isFixedLayout == null ? null : (isFixedLayout! ? 1 : 0),
       'content_fingerprint': contentFingerprint,
+      'position_updated_at': positionUpdatedAt,
+      'position_synced_server_updated_at': positionSyncedServerUpdatedAt,
       'groupName': groupName,
       'createTime': createTime.millisecondsSinceEpoch,
       'lastReadTime': lastReadTime.millisecondsSinceEpoch,
@@ -121,6 +145,9 @@ class Book {
           ? null
           : (map['is_fixed_layout'] as int) == 1,
       contentFingerprint: map['content_fingerprint'] as String?,
+      positionUpdatedAt: map['position_updated_at'] as int?,
+      positionSyncedServerUpdatedAt:
+          map['position_synced_server_updated_at'] as String?,
       groupName: map['groupName'] as String,
       createTime: DateTime.fromMillisecondsSinceEpoch(map['createTime'] as int),
       lastReadTime:
@@ -169,6 +196,8 @@ class Book {
           totalCharacterCount == other.totalCharacterCount &&
           isFixedLayout == other.isFixedLayout &&
           contentFingerprint == other.contentFingerprint &&
+          positionUpdatedAt == other.positionUpdatedAt &&
+          positionSyncedServerUpdatedAt == other.positionSyncedServerUpdatedAt &&
           groupName == other.groupName &&
           createTime == other.createTime &&
           lastReadTime == other.lastReadTime;
@@ -188,6 +217,8 @@ class Book {
         totalCharacterCount,
         isFixedLayout,
         contentFingerprint,
+        positionUpdatedAt,
+        positionSyncedServerUpdatedAt,
         groupName,
         createTime,
         lastReadTime,

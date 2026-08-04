@@ -274,4 +274,42 @@ void main() {
 
     expect(restored.contentFingerprint, isNull);
   });
+
+  test('positionUpdatedAt／positionSyncedServerUpdatedAt 欄位可正確往返（epic-8-sync Issue 5）',
+      () {
+    final book = Book(
+      id: 'b15',
+      title: '書名',
+      format: BookFileFormat.epub,
+      filePath: 'content://com.example/book.epub',
+      source: BookSource.local,
+      positionUpdatedAt: 1735689600000,
+      positionSyncedServerUpdatedAt: '2026-08-04 12:00:00.000Z',
+      createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+      lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+    );
+
+    final restored = Book.fromMap(book.toMap());
+
+    expect(restored.positionUpdatedAt, 1735689600000);
+    expect(restored.positionSyncedServerUpdatedAt, '2026-08-04 12:00:00.000Z');
+  });
+
+  test('positionUpdatedAt／positionSyncedServerUpdatedAt 未設定時，往返後仍為 null（代表尚未同步過閱讀位置）',
+      () {
+    final book = Book(
+      id: 'b16',
+      title: '書名',
+      format: BookFileFormat.pdf,
+      filePath: '/storage/emulated/0/book.pdf',
+      source: BookSource.local,
+      createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+      lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+    );
+
+    final restored = Book.fromMap(book.toMap());
+
+    expect(restored.positionUpdatedAt, isNull);
+    expect(restored.positionSyncedServerUpdatedAt, isNull);
+  });
 }
