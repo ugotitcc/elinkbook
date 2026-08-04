@@ -12,13 +12,24 @@
 /// 這兩個欄位（供全新部署使用），但任何「已經套用過舊版
 /// `1785715200_...` 檔案、事後也沒有另外用 Admin API 手動補欄位」的
 /// 既有環境，光改那個檔案的內容完全沒有效果——本檔案就是給這種既有
-/// 環境用的「升級」migration，冪等（用 `hasField` 判斷是否已存在再新增，
+/// 環境用的「升級」migration，冪等（檢查欄位名稱是否已存在再新增，
 /// 避免對已經手動補過欄位的環境〔例如本專案測試用的 `pbdev.jigong.org`，
 /// 已於 2026-08-04 透過 Admin API 直接補上〕重複套用時出錯）。
 ///
 /// 使用方式同 `1785715200_create_sync_collections.js`：複製到
 /// PocketBase 執行檔同層的 `pb_migrations/` 目錄下，重啟 PocketBase
 /// （或執行 `./pocketbase migrate up`）即會套用。
+///
+/// **降版（down）刻意設計為 no-op，不還原欄位**（2026-08-04 Task 6
+/// 審查發現並修正）：這個 migration 的 up 是冪等的，在「
+/// `1785715200_create_sync_collections.js` 已經內建這兩個欄位」的全新
+/// 部署上會直接跳過、什麼都不做——這種情況下若 down 無條件移除欄位，
+/// 等於單獨降版這個檔案就會刪掉其實是另一個 migration
+/// （`1785715200_...`）建立的欄位，靜默重現本檔案要修正的原始 bug。
+/// PocketBase 的 migration 系統無法得知「這個欄位究竟是哪個 migration
+/// 建立的」，與其實作一套追蹤欄位來源的機制（YAGNI，本專案只有一個
+/// 長期運作的測試實例，不需要這種複雜度），選擇讓 down 保持 no-op，
+/// 需要真的移除欄位時請直接透過 Admin UI／API 手動處理。
 
 migrate((app) => {
   const autodateFields = () => [
@@ -43,19 +54,6 @@ migrate((app) => {
     }
     app.save(collection);
   }
-}, (app) => {
-  // 降版：移除本次新增的兩個欄位（若存在）。
-  for (const name of [
-    "sync_reading_positions",
-    "sync_bookmarks",
-    "sync_highlights",
-    "sync_notes",
-  ]) {
-    const collection = app.findCollectionByNameOrId(name);
-    for (const fieldName of ["created", "updated"]) {
-      const field = collection.fields.getByName(fieldName);
-      if (field) collection.fields.removeById(field.id);
-    }
-    app.save(collection);
-  }
+}, (_app) => {
+  // 降版刻意為 no-op：見檔案開頭「降版（down）刻意設計為 no-op」說明。
 });
