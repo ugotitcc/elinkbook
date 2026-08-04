@@ -388,9 +388,20 @@ class SyncEngine {
       // 自己產生的可信值，若剛好含有雙引號會破壞 filter 語法；
       // `pb.filter()` 是 PocketBase Dart SDK 官方提供的具名參數安全綁定
       // 語法，自動處理特殊字元逸出。
+      // epic-8-sync Issue 9：加上確定性排序（'created'，不受後續 update
+      // 影響的欄位）——unique index 套用後 (user, book_fingerprint)
+      // 理論上至多 1 筆，這裡純粹是防禦性語意：查詢行為本身不依賴
+      // PocketBase 未指定 sort 時的預設排序保證（見 issues.md Issue 9）。
+      // 相依於 `created` autodate 欄位存在（migration
+      // `1785801600_add_created_updated_autodate_fields.js`）——若某個
+      // PocketBase 實例只套用過 `1785715200_...` 舊版、沒有這個欄位，
+      // 這裡會直接收到 400（未知的 sort 欄位），push 階段快速失敗；這是
+      // 可接受的 fail-fast（該環境本來就缺 `created`/`updated`，衝突
+      // 判定邏輯本來就不可靠，見 `pocketbase-self-hosting.md`）。
       final result = await pb.collection('sync_reading_positions').getList(
             filter: pb.filter('book_fingerprint = {:fp}', {'fp': fingerprint}),
             perPage: 1,
+            sort: 'created',
             headers: headers,
           );
       final existing = result.items.isEmpty ? null : result.items.first;
