@@ -16,6 +16,7 @@ import '../library/models/book.dart';
 import '../library/models/book_group.dart';
 import '../library/models/library_enums.dart';
 import '../sync/sync_account_repository.dart';
+import '../sync/sync_checkpoint_trigger.dart';
 import '../sync/sync_client.dart';
 import '../theme/app_theme.dart';
 import 'library_group_management_dialog.dart';
@@ -38,6 +39,7 @@ class LibraryScreen extends StatefulWidget {
   final CustomFontsRepository? customFontsRepository;
   final SyncAccountRepository? syncAccountRepository;
   final SyncClient? syncClient;
+  final SyncCheckpointTrigger? syncCheckpointTrigger;
   final AppTheme currentTheme;
   final bool isEinkMode;
   final ValueChanged<AppTheme>? onThemeChanged;
@@ -55,6 +57,7 @@ class LibraryScreen extends StatefulWidget {
     this.customFontsRepository,
     this.syncAccountRepository,
     this.syncClient,
+    this.syncCheckpointTrigger,
     this.currentTheme = AppTheme.light,
     this.isEinkMode = false,
     this.onThemeChanged,
@@ -435,6 +438,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
               isFixedLayout: book.isFixedLayout,
               libraryRepository: widget.repository,
               customFontsRepository: widget.customFontsRepository,
+              syncCheckpointTrigger: widget.syncCheckpointTrigger,
             ),
           ),
         )
