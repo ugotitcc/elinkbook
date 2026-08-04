@@ -151,7 +151,7 @@ SQLite schema 自 v16 升級至 v17（比照既有累加式 `if (oldVersion < 17
 
 **依賴／Blocked by：** Issue 4
 
-**Status:** ready-for-agent
+**Status:** done
 
 **What to build：**
 
@@ -172,11 +172,11 @@ SQLite schema 自 v16 升級至 v17（比照既有累加式 `if (oldVersion < 17
 
 **驗收標準：**
 
-- [ ] 閱讀位置衝突偵測正確（僅雙方皆變動過才視為衝突）
-- [ ] 偵測到衝突時彈窗詢問使用者，使用者選擇前不靜默覆蓋任一邊（FR-19 硬性要求）
-- [ ] 無衝突時直接套用變動的一邊
-- [ ] `position_synced_server_updated_at` 正確維護
-- [ ] 上述測試皆通過，`flutter analyze` 乾淨
+- [x] 閱讀位置衝突偵測正確（僅雙方皆變動過才視為衝突）
+- [x] 偵測到衝突時彈窗詢問使用者，使用者選擇前不靜默覆蓋任一邊（FR-19 硬性要求）
+- [x] 無衝突時直接套用變動的一邊
+- [x] `position_synced_server_updated_at` 正確維護
+- [x] 上述測試皆通過，`flutter analyze` 乾淨（PR #108，2026-08-04；真機雙裝置驗證通過，過程中發現並修正 PocketBase `created`／`updated` autodate 欄位缺失〔影響已合併 Issue 4〕與兩個跨 Task 整合缺口〔衝突延後跳過永不重試、`Book.copyWith()` 清空同步欄位〕，見 `plans/plan-issue-5.md`「審查修正紀錄」；另開 Issue 8／Issue 9 追蹤不阻擋合併的既知缺口）
 
 ---
 
