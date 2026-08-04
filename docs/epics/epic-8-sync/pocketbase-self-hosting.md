@@ -115,9 +115,18 @@ user = @request.auth.id
 | `pdf_page_index` | Number | 否 | |
 | `progress` | Number | 是 | |
 
-不需要額外新增 `updated_at`——PocketBase 每個 collection 內建的
-`updated`／`created` 系統欄位（Dashboard 上會自動出現，不需手動新增）
-已足夠作為衝突比對基準（見 `spec.md`「PocketBase Collection Schema」）。
+不需要額外新增 `updated_at`——用 `updated`／`created` 系統欄位已足夠
+作為衝突比對基準（見 `spec.md`「PocketBase Collection Schema」）。
+**但這兩個系統欄位在 PocketBase v0.23+ 不會自動出現**，必須在
+Fields 分頁手動新增型別為 **Autodate** 的 `created`（Create 打勾、
+Update 不打勾）與 `updated`（Create／Update 皆打勾）兩個欄位——舊版
+PocketBase（v0.22 以前）每個 base collection 會自動內建這兩個欄位，
+但改版後改為需要明確宣告；2026-08-04 epic-8-sync Issue 5 真機整合
+測試時發現本文件先前的說法（「不需要手動新增」）對 v0.39.10 不成立，
+導致測試環境這 4 個 collection 的紀錄實際上完全沒有這兩個欄位，已
+一併修正 `pb_migrations_example/1785715200_create_sync_collections.js`
+（新增 `autodateFields()` 共用欄位定義）。**批次建立**指令碼已包含
+這個修正，用批次建立可以略過這一段手動設定。
 
 ### `sync_bookmarks`
 

@@ -13,9 +13,18 @@
 /// 重啟 PocketBase（或執行 `./pocketbase migrate up`）即會在一個交易
 /// 內自動套用一次，之後同一份資料庫不會重複執行。
 ///
-/// PocketBase 內建的 `id` 系統欄位（每個 collection 皆自動具備）與
-/// `created`／`updated` 系統欄位不需要、也不應該在這裡另外定義——見
-/// pocketbase-self-hosting.md「建立 Collection」段落的說明。
+/// PocketBase 內建的 `id` 系統欄位每個 collection 皆自動具備，不需要在
+/// 這裡另外定義。**`created`／`updated` 則相反，必須明確宣告**：
+/// 2026-08-04 epic-8-sync Issue 5 真機整合測試時發現，PocketBase
+/// v0.23 改版後，`created`／`updated` 改為需要在 schema 明確宣告
+/// `autodate` 型別欄位才會存在，不再是每個 base collection 自動內建
+/// （這點與 pocketbase-self-hosting.md 原本「不需要額外新增」的說明
+/// 相反，該文件已一併修正）——本檔案原始版本沒有宣告這兩個欄位，
+/// 導致 `sync_reading_positions`／`sync_bookmarks`／`sync_highlights`／
+/// `sync_notes` 這 4 個 collection 的紀錄實際上完全沒有 `created`／
+/// `updated` 欄位，讓依賴這兩個欄位做衝突比對／下載游標的邏輯
+/// （`SyncEngine._syncReadingPositions()`／`_downloadAndMerge()`）永遠
+/// 讀到 `null`。
 
 migrate((app) => {
   const usersCollection = app.findCollectionByNameOrId("users");
@@ -34,6 +43,13 @@ migrate((app) => {
     maxSelect: 1,
     cascadeDelete: false,
   });
+
+  // `created`／`updated` 系統欄位（PocketBase v0.23+ 起須明確宣告，見
+  // 檔案開頭說明）：4 個 collection 皆需要，抽成共用函式比照 `userField()`。
+  const autodateFields = () => [
+    { type: "autodate", name: "created", onCreate: true, onUpdate: false },
+    { type: "autodate", name: "updated", onCreate: true, onUpdate: true },
+  ];
 
   const ownerOnlyRule = "user = @request.auth.id";
   const ownerOnlyRules = {
@@ -59,6 +75,7 @@ migrate((app) => {
           onlyInt: true,
         },
         { type: "number", name: "progress", required: true, onlyInt: false },
+        ...autodateFields(),
       ],
       ...ownerOnlyRules,
     })
@@ -92,6 +109,7 @@ migrate((app) => {
           required: false,
           onlyInt: true,
         },
+        ...autodateFields(),
       ],
       ...ownerOnlyRules,
     })
@@ -126,6 +144,7 @@ migrate((app) => {
           onlyInt: true,
         },
         { type: "text", name: "pdf_rect_json", required: false },
+        ...autodateFields(),
       ],
       ...ownerOnlyRules,
     })
@@ -161,6 +180,7 @@ migrate((app) => {
           onlyInt: true,
         },
         { type: "text", name: "pdf_rect_json", required: false },
+        ...autodateFields(),
       ],
       ...ownerOnlyRules,
     })
