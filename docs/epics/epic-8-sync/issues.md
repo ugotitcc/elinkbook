@@ -184,7 +184,7 @@ SQLite schema 自 v16 升級至 v17（比照既有累加式 `if (oldVersion < 17
 
 **依賴／Blocked by：** Issue 4（需要可呼叫的 `runCheckpoint()`；與 Issue 5 互不依賴，可平行）
 
-**Status:** ready-for-agent
+**Status:** done
 
 **What to build：**
 
@@ -207,10 +207,10 @@ SQLite schema 自 v16 升級至 v17（比照既有累加式 `if (oldVersion < 17
 
 **驗收標準：**
 
-- [ ] App 背景化／書籍切換／5 分鐘閒置計時器三種來源皆正確觸發 checkpoint
-- [ ] 併發鎖正確防止同時執行多個 `runCheckpoint()`
-- [ ] 未登入時不觸發任何同步動作
-- [ ] 上述測試皆通過，`flutter analyze` 乾淨
+- [x] App 背景化／書籍切換／5 分鐘閒置計時器三種來源皆正確觸發 checkpoint
+- [x] 併發鎖正確防止同時執行多個 `runCheckpoint()`
+- [x] 未登入時不觸發任何同步動作
+- [x] 上述測試皆通過，`flutter analyze` 乾淨（PR #110，2026-08-04；實作結果審查 0 Critical，2 項 Important／2 項 Minor 皆已修正——`dispose()` 中 checkpoint 觸發順序註解用詞過度保證已改為誠實措辭、`main.dart` import 排序、補上 `AppLifecycleState.inactive` 測試；`LibraryScreen._openGroupFilteredView()` 未貫穿 `syncCheckpointTrigger` 的既有缺口已開 Issue 10 追蹤，詳見 `plans/plan-issue-6.md`）
 
 ---
 
