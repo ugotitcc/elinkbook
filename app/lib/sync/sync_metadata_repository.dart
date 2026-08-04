@@ -136,4 +136,25 @@ class SyncMetadataRepository {
       whereArgs: [collection.name, clientId],
     );
   }
+
+  /// 閱讀位置的下載游標（epic-8-sync Issue 5，補上 spec.md 原始設計
+  /// 遺漏的「本機無 dirty 異動、但其他裝置已更新過」情境，見
+  /// plan-issue-5.md「審查修正紀錄」Critical #1）：`last_pulled_server_updated_at_reading_positions`
+  /// 欄位自 Issue 1（v16→v17 migration）就已存在，但直到本 Issue 才真正
+  /// 被使用——刻意不套用既有 `_cursorColumns`／`SyncCollection` 那套機制
+  /// （`sync_reading_positions` 的資料形狀與其餘 3 個 collection 本質
+  /// 不同，見 plan-issue-5.md「與 spec.md 的落差說明」第 1 點），改用
+  /// 獨立的方法直接存取這個欄位。
+  Future<String?> loadReadingPositionsCursor() async {
+    final rows = await _db.query('sync_metadata', where: 'id = 1');
+    return rows.single['last_pulled_server_updated_at_reading_positions'] as String?;
+  }
+
+  Future<void> saveReadingPositionsCursor(String value) {
+    return _db.update(
+      'sync_metadata',
+      {'last_pulled_server_updated_at_reading_positions': value},
+      where: 'id = 1',
+    );
+  }
 }
