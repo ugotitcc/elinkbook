@@ -29,7 +29,7 @@
 
 現況：`app/lib/screens/library_screen.dart` 第 470-489 行，`_openGroupFilteredView(String groupName)` 呼叫 `Navigator.of(context).push(MaterialPageRoute(builder: (_) => LibraryScreen(...)))` 時，參數列（第 475-486 行）已正確貫穿 `repository`／`importService`／`prefsManager`／`bookmarksRepository`／`highlightsRepository`／`notesRepository`／`customFontsRepository`／`currentTheme`／`isEinkMode`／`onThemeChanged`／`onEinkModeChanged`／`groupFilter` 共 12 個欄位，唯獨遺漏 `syncAccountRepository`／`syncClient`／`syncCheckpointTrigger` 三個欄位。
 
-- [ ] **Step 1：在 `library_screen_test.dart` 寫一個會失敗的測試**
+- [x] **Step 1：在 `library_screen_test.dart` 寫一個會失敗的測試**
 
 在 `app/test/screens/library_screen_test.dart` 檔案最後一個 `testWidgets(...)` 區塊（「LibraryScreen 點開一本書後，ReaderScreen 收到的 syncCheckpointTrigger 正確貫穿」，第 2567-2600 行）結束的 `});` 之後、`main()` 收尾的 `}`（第 2601 行）之前插入：
 
@@ -102,13 +102,13 @@ import 'package:elinkbook/sync/sync_account_repository.dart';
 import 'package:elinkbook/sync/sync_client.dart';
 ```
 
-- [ ] **Step 2：執行測試，確認目前會失敗**
+- [x] **Step 2：執行測試，確認目前會失敗**
 
 Run: `cd app && flutter test test/screens/library_screen_test.dart --plain-name "Issue 10"`
 
 Expected: FAIL——`filteredScreen.syncAccountRepository`／`.syncClient`／`.syncCheckpointTrigger`皆為 `null`（`_openGroupFilteredView()` 目前沒有傳遞這三個欄位），三個 `expect(..., same(...))` 斷言中至少第一個會先失敗。
 
-- [ ] **Step 3：實作**
+- [x] **Step 3：實作**
 
 修改 `app/lib/screens/library_screen.dart` 第 470-489 行，原本：
 
@@ -167,31 +167,31 @@ Expected: FAIL——`filteredScreen.syncAccountRepository`／`.syncClient`／`.s
         )
 ```
 
-- [ ] **Step 4：執行測試，確認通過**
+- [x] **Step 4：執行測試，確認通過**
 
 Run: `cd app && flutter test test/screens/library_screen_test.dart --plain-name "Issue 10"`
 
 Expected: PASS。
 
-- [ ] **Step 5：執行整份 `library_screen_test.dart`，確認無回歸**
+- [x] **Step 5：執行整份 `library_screen_test.dart`，確認無回歸**
 
 Run: `cd app && flutter test test/screens/library_screen_test.dart`
 
 Expected: 全數 PASS。
 
-- [ ] **Step 6：執行 `flutter test`（全專案），確認無回歸**
+- [x] **Step 6：執行 `flutter test`（全專案），確認無回歸**
 
 Run: `cd app && flutter test`
 
 Expected: 全數 PASS。
 
-- [ ] **Step 7：`flutter analyze` 確認乾淨**
+- [x] **Step 7：`flutter analyze` 確認乾淨**
 
 Run: `cd app && flutter analyze`
 
 Expected: `No issues found!`
 
-- [ ] **Step 8：Commit**
+- [x] **Step 8：Commit**
 
 ```bash
 git add app/lib/screens/library_screen.dart app/test/screens/library_screen_test.dart
