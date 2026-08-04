@@ -32,10 +32,16 @@ class ReadingPositionRepository {
     );
   }
 
-  /// Partial update：只更新這 3 個欄位，不影響書籍的其餘欄位。若
-  /// [bookId] 對應的書籍列不存在（理論上不應發生——呼叫端一定是先從
-  /// 圖書庫開啟既有書籍才會進到 ReaderScreen），SQLite 的 UPDATE 會影響
-  /// 0 列，靜默無效果，不拋出例外。
+  /// Partial update：只更新這 3 個欄位（及 epic-8-sync Issue 5 新增的
+  /// `position_updated_at`），不影響書籍的其餘欄位。若 [bookId] 對應的
+  /// 書籍列不存在（理論上不應發生——呼叫端一定是先從圖書庫開啟既有
+  /// 書籍才會進到 ReaderScreen），SQLite 的 UPDATE 會影響 0 列，靜默無
+  /// 效果，不拋出例外。
+  ///
+  /// `position_updated_at` 由本方法統一維護（而非呼叫端），確保「使用者
+  /// 讀過這本書、位置有異動」與「同步引擎判斷這本書的位置需要推送」
+  /// 兩者永遠同步、不會遺漏（epic-8-sync Issue 5，spec.md「本機 Schema
+  /// 變更」／「同步引擎」）。
   Future<void> save(String bookId, ReadingPosition position) async {
     await _db.update(
       'books',
@@ -43,6 +49,7 @@ class ReadingPositionRepository {
         'epubLocator': position.epubLocatorJson,
         'pdfPageIndex': position.pdfPageIndex,
         'progress': position.progress,
+        'position_updated_at': DateTime.now().millisecondsSinceEpoch,
       },
       where: 'id = ?',
       whereArgs: [bookId],
