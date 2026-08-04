@@ -330,7 +330,7 @@ plan-issue-5.md 的 Global Constraints 明確要求「`sync_reading_positions` �
 
 **依賴／Blocked by：** None（獨立缺口，不阻擋 Issue 6 合併）
 
-**Status:** needs-triage
+**Status:** done
 
 **背景（2026-08-04，Issue 6 程式碼審查發現，見 `plans/plan-issue-6.md` 文末「與 spec.md／issues.md 的落差說明彙整」第 5 點自陳、`review-report-code-issue-6.md` Important #2）：**
 
@@ -346,6 +346,6 @@ Issue 6 計畫刻意不在該 Issue 範圍內修正（比照既有 `syncAccountR
 
 **驗收標準：**
 
-- [ ] `_openGroupFilteredView()` 建構下一層 `LibraryScreen` 時正確貫穿 `syncAccountRepository`／`syncClient`／`syncCheckpointTrigger` 三個欄位
-- [ ] 新增測試驗證「透過分類篩選路徑開書後，`ReaderScreen` 收到的 `syncCheckpointTrigger` 與外層一致」（比照既有 `library_screen_test.dart` 對第一層路徑的測試模式）
-- [ ] `flutter analyze` 乾淨
+- [x] `_openGroupFilteredView()` 建構下一層 `LibraryScreen` 時正確貫穿 `syncAccountRepository`／`syncClient`／`syncCheckpointTrigger` 三個欄位
+- [x] 新增測試驗證「透過分類篩選路徑開書後，`ReaderScreen` 收到的 `syncCheckpointTrigger` 與外層一致」（比照既有 `library_screen_test.dart` 對第一層路徑的測試模式）
+- [x] `flutter analyze` 乾淨（PR #112，2026-08-05；計畫文件審查 APPROVED、無 Blocking Issues，實作結果審查 0 Critical／0 Important，僅 1 項不影響合併的 Minor 觀察；審查額外發現此修正連帶修好同源缺口——分類篩選畫面點擊「設定」按鈕時 `SettingsScreen` 收到的 `syncAccountRepository`／`syncClient` 現在也一併正確貫穿；`flutter test`（`library_screen_test.dart` 61 項、全專案 927 項）與 `flutter analyze` 皆通過無回歸，詳見 `plans/plan-issue-10.md`）
