@@ -31,7 +31,7 @@
 
 現況：`app/lib/library/sqlite_library_repository.dart` 第 25 行起，`open()` 呼叫 `openDatabase(path, version: 18, ...)` 時完全沒有傳遞 `singleInstance`，因此永遠採用 sqflite 的預設值 `true`。
 
-- [ ] **Step 1：在 `sqlite_library_repository_test.dart` 寫一個會失敗（編譯錯誤）的測試**
+- [x] **Step 1：在 `sqlite_library_repository_test.dart` 寫一個會失敗（編譯錯誤）的測試**
 
 在 `app/test/library/sqlite_library_repository_test.dart` 檔案最後一個 `test(...)` 區塊（「既有 version 17 裝置升級到 version 18，正確新增 sync_remote_ids／sync_pending_records 兩張表」，第 2607-2637 行）結束的 `});` 之後、`main()` 收尾的 `}`（第 2638 行）之前插入：
 
@@ -69,13 +69,13 @@
   });
 ```
 
-- [ ] **Step 2：執行測試，確認目前會失敗**
+- [x] **Step 2：執行測試，確認目前會失敗**
 
 Run: `cd app && flutter test test/library/sqlite_library_repository_test.dart --plain-name "singleInstance"`
 
 Expected: FAIL——編譯錯誤，`SqliteLibraryRepository.open()` 目前沒有 `singleInstance` 具名參數（`The named parameter 'singleInstance' isn't defined`）。
 
-- [ ] **Step 3：實作**
+- [x] **Step 3：實作**
 
 修改 `app/lib/library/sqlite_library_repository.dart` 第 25-28 行，原本：
 
@@ -112,31 +112,31 @@ Expected: FAIL——編譯錯誤，`SqliteLibraryRepository.open()` 目前沒有
 
 （第 28 行 `version: 18,` 之後緊接新增 `singleInstance: singleInstance,` 這一行，`openDatabase(...)` 呼叫其餘既有具名參數 `onConfigure`／`onCreate`／`onUpgrade`／`onOpen` 完全不動。）
 
-- [ ] **Step 4：執行測試，確認通過**
+- [x] **Step 4：執行測試，確認通過**
 
 Run: `cd app && flutter test test/library/sqlite_library_repository_test.dart --plain-name "singleInstance"`
 
 Expected: PASS。
 
-- [ ] **Step 5：執行整份 `sqlite_library_repository_test.dart`，確認無回歸**
+- [x] **Step 5：執行整份 `sqlite_library_repository_test.dart`，確認無回歸**
 
 Run: `cd app && flutter test test/library/sqlite_library_repository_test.dart`
 
 Expected: 全數 PASS（新參數預設值 `true` 與既有行為相同，其餘既有測試皆未傳入 `singleInstance`，不受影響）。
 
-- [ ] **Step 6：執行 `flutter test`（全專案），確認無回歸**
+- [x] **Step 6：執行 `flutter test`（全專案），確認無回歸**
 
 Run: `cd app && flutter test`
 
 Expected: 全數 PASS（`SqliteLibraryRepository.open()` 專案內既有的 83 個呼叫點皆未傳入 `singleInstance`，維持預設值 `true`，行為零變更；Task 1 本身只修改方法簽章與新增一個測試，不觸碰任何既有呼叫點的原始碼）。
 
-- [ ] **Step 7：`flutter analyze` 確認乾淨**
+- [x] **Step 7：`flutter analyze` 確認乾淨**
 
 Run: `cd app && flutter analyze`
 
 Expected: `No issues found!`
 
-- [ ] **Step 8：Commit**
+- [x] **Step 8：Commit**
 
 ```bash
 git add app/lib/library/sqlite_library_repository.dart app/test/library/sqlite_library_repository_test.dart
@@ -156,7 +156,7 @@ git commit -m "fix(epic-8-sync): Issue 8 Task 1 — SqliteLibraryRepository.open
 
 現況：`app/integration_test/sync_engine_test.dart` 有 4 處 `SqliteLibraryRepository.open(inMemoryDatabasePath)` 呼叫（第 57、91、138、173 行，分別是第一個測試的 `deviceA`／`deviceB`、第二個測試的 `deviceA`／`deviceB`），4 處呼叫的原始碼文字完全相同、皆未傳入 `singleInstance`。
 
-- [ ] **Step 1：修正 4 個呼叫點**
+- [x] **Step 1：修正 4 個呼叫點**
 
 在 `app/integration_test/sync_engine_test.dart` 中，將全部 4 處（`replace_all`）：
 
@@ -190,13 +190,13 @@ git commit -m "fix(epic-8-sync): Issue 8 Task 1 — SqliteLibraryRepository.open
 
 （`deviceA`/`deviceB` 各自的原始文字在檔案中各出現 2 次——分屬第一個與第二個 `testWidgets`——兩次的替換內容完全相同，用 `replace_all: true` 一次處理。修改後 4 處呼叫點皆帶有 `singleInstance: false`，讓每個「模擬裝置」都是真正獨立的記憶體內資料庫，不會透過 sqflite 的 Dart 層路徑快取互相共用。）
 
-- [ ] **Step 2：`flutter analyze` 確認乾淨**
+- [x] **Step 2：`flutter analyze` 確認乾淨**
 
 Run: `cd app && flutter analyze`
 
 Expected: `No issues found!`
 
-- [ ] **Step 3：真機驗證整份 `integration_test/sync_engine_test.dart`（不加 `--plain-name` 篩選）**
+- [x] **Step 3：真機驗證整份 `integration_test/sync_engine_test.dart`（不加 `--plain-name` 篩選）**
 
 Run: `cd app && flutter devices` 確認至少一台已連接的 Android 裝置/模擬器，取得 `<device-id>`，接著：
 
@@ -210,7 +210,9 @@ Expected: 3 個測試全數 PASS——
 
 若裝置環境暫時無法取得（例如目前工作階段沒有連接的 Android 裝置），此步驟必須交由有真機/模擬器存取權的後續階段執行，不可用純 `flutter test`（無 `-d`）替代驗證——本 Issue 的驗收標準明確要求真機確認。
 
-- [ ] **Step 4：Commit**
+**實測結果**（2026-08-04，真機 `3CEF42ECD491687`，`flutter test integration_test/sync_engine_test.dart -d 3CEF42ECD491687`，不加 `--plain-name` 篩選）：`00:40 +3: All tests passed!`——3 個測試全數 PASS，確認本 Issue 要修的崩潰點（`deviceB.insertBook(bookA)` 撞到 `UNIQUE constraint failed: books.id`）已解決，且 Issue 5 Task 6 的雙裝置測試不再需要 `--plain-name` 隔離即可通過。`/superpowers:requesting-code-review` 審查報告（`review-report-code-issue-8.md`）指出的唯一 Important 問題（真機驗證缺口）至此已補齊。
+
+- [x] **Step 4：Commit**
 
 ```bash
 git add app/integration_test/sync_engine_test.dart
