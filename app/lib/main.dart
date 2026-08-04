@@ -15,6 +15,7 @@ import 'reader/reader_prefs_manager_impl.dart';
 import 'reader/reading_position_repository.dart';
 import 'screens/library_screen.dart';
 import 'sync/sync_account_repository.dart';
+import 'sync/sync_checkpoint_trigger.dart';
 import 'sync/sync_client.dart';
 import 'theme/app_theme.dart';
 import 'theme/app_theme_data.dart';
@@ -77,6 +78,7 @@ class ElinkBookApp extends StatefulWidget {
   final CustomFontsRepository? customFontsRepository;
   final SyncAccountRepository? syncAccountRepository;
   final SyncClient? syncClient;
+  final SyncCheckpointTrigger? syncCheckpointTrigger;
   final AppThemePreferences themePreferences;
   final AppTheme initialTheme;
   final bool initialEinkMode;
@@ -92,6 +94,7 @@ class ElinkBookApp extends StatefulWidget {
     this.customFontsRepository,
     this.syncAccountRepository,
     this.syncClient,
+    this.syncCheckpointTrigger,
     this.initialTheme = AppTheme.light,
     this.initialEinkMode = false,
     AppThemePreferences? themePreferences,
@@ -101,15 +104,35 @@ class ElinkBookApp extends StatefulWidget {
   State<ElinkBookApp> createState() => _ElinkBookAppState();
 }
 
-class _ElinkBookAppState extends State<ElinkBookApp> {
+class _ElinkBookAppState extends State<ElinkBookApp> with WidgetsBindingObserver {
   late AppTheme _theme;
   late bool _isEinkMode;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _theme = widget.initialTheme;
     _isEinkMode = widget.initialEinkMode;
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  /// epic-8-sync Issue 6（spec.md「同步引擎」checkpoint 觸發來源之
+  /// 「App 生命週期監聽」）：只在 [AppLifecycleState.paused]（真正進入
+  /// 背景）觸發，不含 [AppLifecycleState.inactive]（系統對話框短暫遮蓋等
+  /// 過渡狀態）——比照 `reader_screen.dart` 既有
+  /// `didChangeAppLifecycleState` 對 `_writeCurrentPosition()` 的同一條
+  /// 判斷準則。不 await，理由同 `reader_screen.dart` 既有慣例。
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) {
+      widget.syncCheckpointTrigger?.trigger();
+    }
   }
 
   void _handleThemeChanged(AppTheme theme) {
