@@ -1895,7 +1895,7 @@ git commit -m "feat(epic-8-sync): Issue 5 Task 5 — SyncEngine 閱讀位置衝�
 
 **注意**：比照 Issue 4 `integration_test/sync_engine_test.dart` 既有慣例，執行前裝置需先連上 Tailscale；使用同一個測試帳號 `epic8-issue2-test@example.com`；測試開頭／結尾清空該帳號在 `sync_reading_positions` collection 下的紀錄。
 
-- [ ] **Step 1：撰寫真機測試**
+- [x] **Step 1：撰寫真機測試**
 
 `app/integration_test/sync_engine_test.dart` 檔案開頭的 import 區塊新增：
 
@@ -2018,7 +2018,7 @@ import 'package:elinkbook/sync/sync_reading_position.dart';
   });
 ```
 
-- [ ] **Step 2：確認裝置已連上 Tailscale，於真實裝置/模擬器上執行**
+- [x] **Step 2：確認裝置已連上 Tailscale，於真實裝置/模擬器上執行**
 
 Run：
 
@@ -2029,7 +2029,7 @@ flutter test integration_test/sync_engine_test.dart -d <device-id>
 
 Expected：PASS（Issue 4 既有整合測試＋本 Task 新增的雙裝置衝突測試皆通過）——代表閱讀位置衝突偵測、回呼觸發、使用者選擇後的推送流程在真實網路環境下皆行為正確。
 
-- [ ] **Step 3：Commit**
+- [x] **Step 3：Commit**
 
 ```bash
 git add integration_test/sync_engine_test.dart
@@ -2059,3 +2059,4 @@ git commit -m "test(epic-8-sync): Issue 5 Task 6 — 雙裝置閱讀位置衝突
 - **Minor「對話框阻擋同步引擎釋放鎖」，確認屬實，已採納（僅文件備註，不需程式碼變更）**：審查本身也僅要求「建議在 Issue 6 實作併發鎖時，確認對話框可透過點擊外部區域安全釋放鎖定」。已於 `SyncEngine._onReadingPositionConflict` 欄位上方新增給 Issue 6 實作者的提醒（比照既有 `DatabaseException` 提醒的先例），並指出 Task 4 的對話框已測試過點擊外部區域正確回傳 `null`，不會讓 `runCheckpoint()` 真的卡死。
 - **「潛在風險與架構死角」兩項觀察**：「併發問題」（真機手動測試 Issue 5 時可能因為 Issue 6 尚未提供併發鎖而遇到交錯寫入）與「孤兒狀態」（推送閱讀位置成功、後續標註推送失敗時，下次同步會重複 PATCH 同一筆閱讀位置，審查本身已確認這是安全的冪等操作）皆為審查報告自行確認的觀察或提醒未來實作/測試者注意的事項，非要求本計畫修改的問題，不需採取行動。
 - **實作 Step 12 時發現並修正兩個問題（2026-08-04）**：(1) `_downloadReadingPositions()` 用 `getFullList()`，PocketBase Dart SDK 判斷「還有下一頁」的條件是「回應的 `items.length == perPage`」；b22／b23／b24 三則衝突測試的 mock 對這個路徑一律回傳寫死的 `perPage: 1`，配合 1 筆資料觸發無限遞迴，導致 `flutter test` 卡住不動。已改為 mock 讀取請求實際帶的 `perPage` query 參數並原樣回填。(2) 修正分頁後浮現真正的邏輯缺口：`_downloadReadingPositions()` 對「自游標以來的所有紀錄」一視同仁套用到本機，若同一次 checkpoint 的推送階段已判定某本書衝突且跳過（無 UI resolver 可用），下載階段又把同一筆未解決的遠端紀錄抓回來覆寫，等於推翻剛才「跳過、留待下次重試」的決定，違反 FR-19。已與人類確認修正方向：`_syncReadingPositions()` 改回傳 record 型別，多帶出這次 checkpoint 有 dirty 異動的書籍指紋集合（`dirtyFingerprints`），`_downloadReadingPositions()` 新增 `excludeFingerprints` 具名參數，跳過這些書籍（不覆寫，但游標推進仍計入該筆 `updated`，比照既有「指紋對不上本機任何書籍」分支）。
+- **Task 6 真機驗證時發現並修正一個部署層級的 Critical 問題（2026-08-04）**：Task 6 新增的雙裝置真機測試第一次執行時，`onReadingPositionConflict` 完全沒被觸發——追查後發現測試用 PocketBase 實例（`pbdev.jigong.org`，v0.39.10）上 `sync_reading_positions`／`sync_bookmarks`／`sync_highlights`／`sync_notes` 這 4 個 collection 的紀錄，API 回應裡完全沒有 `created`／`updated` 系統欄位（直接查證：建立/查詢一筆真實紀錄，JSON 裡只有自訂欄位，無 `created`/`updated`）。根本原因：`docker/pb_migrations/1785715200_create_sync_collections.js` 的原始註解主張「PocketBase 內建的 `created`／`updated` 系統欄位不需要、也不應該在這裡另外定義」——這對 PocketBase v0.22 以前成立，但 v0.23 改版後 `created`／`updated` 改為需要在 schema 明確宣告 `autodate` 型別欄位才會存在，不再是每個 base collection 自動內建。這不只影響 Issue 5：Issue 4 既有的 `_downloadAndMerge()` 同樣讀取 `r.data['updated'] as String`，只要真的有紀錄可下載就會因 `null as String` 型別轉換失敗而丟出例外，只是先前的真機驗證剛好沒有觸發到這個情境而未被發現。**修正**：已與人類確認，直接編輯 `docker/pb_migrations/1785715200_create_sync_collections.js`（新增共用的 `autodateFields()`，套用到全部 4 個 collection；因為這個 migration 檔案在既有唯一一份部署上已標記為套用過、修改檔案內容不會被該部署重複執行，對現有部署無風險，只影響未來全新部署）、同步更新 `docs/epics/epic-8-sync/pb_migrations_example/` 的對照副本、修正 `pocketbase-self-hosting.md`「建立 Collection」段落原本錯誤的「不需要額外新增」說明；並透過 PocketBase Admin API（superuser 認證）直接對 `pbdev.jigong.org` 這台既有運作中的測試實例的 4 個 collection 補上這兩個欄位，修正後 Task 6 測試通過。詳細診斷過程見對話紀錄；Issue 4 既有 `integration_test` 另外撞到一個不相關的 sqflite `:memory:` 裝置隔離問題，已另立 `issues.md` Issue 8 追蹤，不阻擋本 Issue 收尾。
