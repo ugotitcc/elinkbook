@@ -321,3 +321,29 @@ plan-issue-5.md 的 Global Constraints 明確要求「`sync_reading_positions` �
 - [x] 新增的 unique index migration 正確套用（本機／測試實例皆驗證過）
 - [x] `_syncReadingPositions()` 的查詢補上確定性排序
 - [x] 新增測試驗證「同一 (user, book_fingerprint) 嘗試建立第二筆會被 PocketBase 拒絕」（PR #109，2026-08-04；本機用 PocketBase v0.39.10 binary 驗證 migration 正確套用/冪等/失敗情境三種行為，`pbdev.jigong.org` 已透過 Admin API 套用並驗證，見 `plans/plan-issue-9.md`）
+
+---
+
+## Issue 10：`LibraryScreen._openGroupFilteredView()`（分類篩選二次推入路徑）未貫穿同步相關欄位（`syncAccountRepository`／`syncClient`／`syncCheckpointTrigger`）
+
+**依賴／Blocked by：** None（獨立缺口，不阻擋 Issue 6 合併）
+
+**Status:** needs-triage
+
+**背景（2026-08-04，Issue 6 程式碼審查發現，見 `plans/plan-issue-6.md` 文末「與 spec.md／issues.md 的落差說明彙整」第 5 點自陳、`review-report-code-issue-6.md` Important #2）：**
+
+`LibraryScreen._openGroupFilteredView()`（`app/lib/screens/library_screen.dart:470-489`，依分類篩選後再次推入 `LibraryScreen` 的既有遞迴路徑）建構下一層 `LibraryScreen` 時，沒有貫穿 `syncAccountRepository`／`syncClient`（Issue 2 遺留的既有缺口）與 `syncCheckpointTrigger`（Issue 6 新增，本次審查發現）三個同步相關欄位。
+
+**目前影響**：使用者從「書架 → 點分類拼貼格 → 開書」這條常見路徑閱讀時：
+- `syncAccountRepository`／`syncClient` 缺席只影響該層畫面的同步狀態 UI 顯示（既有缺口，Issue 2 時期即存在）。
+- `syncCheckpointTrigger` 缺席則代表該書籍的「離開畫面觸發」（Task 3）與「閱讀中 5 分鐘計時器觸發」（Task 4）兩種 checkpoint 來源會靜默失效，只剩「App 背景化」（Task 5，掛在 `ElinkBookApp` 層、不受 `LibraryScreen` 貫穿與否影響）仍作用。不會導致資料遺失（下次任何 checkpoint 仍會涵蓋到這段期間的異動），但會讓這條路徑上的同步延遲實質變長，偏離 spec.md「閱讀位置...目標延遲 <2 秒」的目標。
+
+Issue 6 計畫刻意不在該 Issue 範圍內修正（比照既有 `syncAccountRepository`／`syncClient` 缺口的既定行為，避免用不相關的修正擴大變更範圍），本工單即為當時承諾的後續追蹤。
+
+**建議做法**：一次處理全部三個欄位（`syncAccountRepository`／`syncClient`／`syncCheckpointTrigger`），在 `_openGroupFilteredView()` 建構下一層 `LibraryScreen` 時比照其餘既有欄位一併貫穿。
+
+**驗收標準：**
+
+- [ ] `_openGroupFilteredView()` 建構下一層 `LibraryScreen` 時正確貫穿 `syncAccountRepository`／`syncClient`／`syncCheckpointTrigger` 三個欄位
+- [ ] 新增測試驗證「透過分類篩選路徑開書後，`ReaderScreen` 收到的 `syncCheckpointTrigger` 與外層一致」（比照既有 `library_screen_test.dart` 對第一層路徑的測試模式）
+- [ ] `flutter analyze` 乾淨

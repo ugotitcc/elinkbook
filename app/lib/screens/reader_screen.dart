@@ -378,12 +378,15 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     _writeCurrentPosition();
     // epic-8-sync Issue 6（spec.md「同步引擎」checkpoint 觸發來源之
     // 「書籍切換」）：離開閱讀畫面視為一次書籍切換，觸發一次 checkpoint。
-    // 刻意排在 _writeCurrentPosition() 之後——ReadingPositionRepository.
-    // saveReadingPosition() 會同步寫入 books.position_updated_at（見該
-    // 檔案），確保這裡觸發的 checkpoint 能把剛寫入的最新閱讀位置一併
-    // 判定為待推送。不 await，理由同上一行 _writeCurrentPosition()，
-    // dispose() 是同步方法；未登入或已有 checkpoint 執行中時
-    // SyncCheckpointTrigger.trigger() 內部會直接放棄，不會拋出例外。
+    // 排在 _writeCurrentPosition() 之後，讓剛寫入的最新閱讀位置有較高
+    // 機率被這次 checkpoint 一併判定為待推送——但兩者皆是 fire-and-
+    // forget（不 await），呼叫順序並不「保證」上一行的 SQLite 寫入已經
+    // 真正落地；即使極端情況下寫入尚未完成，也只是延後到下一次任何
+    // checkpoint 才會被推送，不會遺失資料（審查意見 Important #1，
+    // 2026-08-04 `/superpowers:requesting-code-review`）。不 await，理由
+    // 同上一行 _writeCurrentPosition()，dispose() 是同步方法；未登入或
+    // 已有 checkpoint 執行中時 SyncCheckpointTrigger.trigger() 內部會
+    // 直接放棄，不會拋出例外。
     widget.syncCheckpointTrigger?.trigger();
     // 還原系統預設（允許自由旋轉），不論進入閱讀器時鎖定了哪個角度，比照
     // 音量鍵離開閱讀介面後恢復正常系統音量控制的既有處理原則，避免鎖定
