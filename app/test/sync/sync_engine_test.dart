@@ -682,7 +682,7 @@ void main() {
       expect(pushSideFilterQueried, isFalse);
     });
 
-    test('偵測到衝突、未提供 onReadingPositionConflict 回呼時，跳過該本書、不推送、position_updated_at 維持待重試',
+    test('偵測到衝突、未提供 onReadingPositionConflict 回呼時，跳過該本書、不推送、position_updated_at 被推進以確保下次 checkpoint 仍會重試',
         () async {
       await libraryRepository.insertBook(_testBook(
         'b22',
@@ -751,6 +751,11 @@ void main() {
         bookRows.single['position_synced_server_updated_at'],
         '2026-08-01 00:00:00.000Z',
         reason: '未成功同步，快取值不應變動',
+      );
+      expect(
+        bookRows.single['position_updated_at'],
+        greaterThan(5000),
+        reason: 'position_updated_at 被推進，確保下次 checkpoint 仍判定為 dirty、重新嘗試（而非因 lastPushCompletedAt 前進而永遠不再重試）',
       );
     });
 

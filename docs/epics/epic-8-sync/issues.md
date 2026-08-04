@@ -251,6 +251,13 @@ SQLite schema 自 v16 升級至 v17（比照既有累加式 `if (oldVersion < 17
 
 Issue 4 既有的 `integration_test/sync_engine_test.dart` 測試（「端到端 checkpoint：推送本機新增的書籤...」）在真機（Android 15, API 35）上執行時，於 `await deviceB.insertBook(bookA);` 這一行拋出 `SqfliteFfiException`：`UNIQUE constraint failed: books.id`。
 
+**目前影響**：這個問題導致 `integration_test/sync_engine_test.dart`
+**整個檔案**（`flutter test integration_test/sync_engine_test.dart -d
+<device-id>`）無法完整跑完——Issue 4 的舊測試會先撞到這個 crash；Issue 5
+Task 6 新增的測試必須用 `--plain-name "雙裝置閱讀位置衝突"`
+單獨隔離執行才會通過。任何人之後想確認「整個 `integration_test` 套件是否
+全綠」，在這個問題修好之前都需要記得這個限制。
+
 `deviceA`／`deviceB` 分別是兩次獨立呼叫 `SqliteLibraryRepository.open(inMemoryDatabasePath)` 開出來的、理應互相獨立的記憶體內資料庫，`deviceB` 插入的是 `deviceA` 已經插入過的同一個 `bookA` 物件（同一個 `id`，測試刻意重用同一物件以取得相同 `content_fingerprint`，見該測試檔案內註解）。若兩個資料庫真的互相獨立，插入到一個全新的空資料庫不應該撞到 UNIQUE constraint。
 
 **已排除的可能原因**（控制者已查證 `sqflite_common`/`sqflite_common_ffi` 原始碼，見 Issue 5 Task 6 對話紀錄）：

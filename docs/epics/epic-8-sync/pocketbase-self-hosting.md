@@ -85,6 +85,14 @@ Rules 皆與下方表格逐項對應。適合需要重複自架多個測試環�
 整個 schema 納入版本控制的情況；只想快速看一次 Admin UI 長怎樣的話，
 仍可照下方步驟手動建立，兩種方式擇一即可，不需要都做。
 
+**既有部署升級**：若你的 PocketBase 實例先前已經套用過
+`1785715200_create_sync_collections.js`（PocketBase 依檔名記錄已套用過的
+migration，不會因為檔案內容更新而重新執行），另外複製
+`pb_migrations_example/1785801600_add_created_updated_autodate_fields.js`
+到同一個 `pb_migrations/` 目錄下、重啟 PocketBase 即可補上
+`created`／`updated` 欄位。全新部署則兩支檔案一起放也沒問題——
+`1785801600_...` 是冪等的，偵測到欄位已存在時會自動跳過。
+
 四個 collection 的 **API Rules** 分頁皆設為同一組規則（4 個 List/
 Search、View、Create、Update、Delete 規則欄位皆填相同內容）：
 

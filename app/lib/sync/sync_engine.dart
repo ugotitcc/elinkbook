@@ -95,6 +95,7 @@ class SyncEngine {
 
     Map<String, String> positionsToConfirm;
     Set<String> dirtyReadingPositionFingerprints;
+    Set<String> deferredReadingPositionBookIds;
     try {
       // epic-8-sync Issue 5：閱讀位置衝突預檢＋推送，須在其餘標註推送之前
       // 完成（spec.md「同步引擎」步驟 1），仍在同一個 try 區塊內——任一
@@ -105,6 +106,7 @@ class SyncEngine {
           await _syncReadingPositions(pb, headers, lastPushCompletedAt, userId);
       positionsToConfirm = readingPositionSyncResult.positionsToConfirm;
       dirtyReadingPositionFingerprints = readingPositionSyncResult.dirtyFingerprints;
+      deferredReadingPositionBookIds = readingPositionSyncResult.deferredBookIds;
 
       for (final batch in planPushBatches(allOperations)) {
         await _sendPushBatch(pb, headers, batch);
@@ -161,6 +163,24 @@ class SyncEngine {
         {'position_synced_server_updated_at': entry.value},
         where: 'id = ?',
         whereArgs: [entry.key],
+      );
+    }
+
+    // epic-8-sync Issue 5（最終全分支審查修正，2026-08-04）：偵測到衝突
+    // 但本輪無法取得使用者決定（無 resolver 或使用者關閉對話框）的書籍，
+    // 若放著 position_updated_at 不動，上面已寫入的 lastPushCompletedAt
+    // 會前進到超過它，導致下次 checkpoint 的 dirty 判定
+    // （position_updated_at > lastPushCompletedAt）變成 false——本機
+    // 待推送的位置因此被靜默丟棄，而不是原本設計的「跳過、留待下次
+    // 重試」。把這些書籍的 position_updated_at 蓋成比這次的
+    // notDirtyUpdatedAt（也就是下次 checkpoint 的 lastPushCompletedAt）
+    // 還新，確保下次 checkpoint 仍會判定為 dirty、重新走一次衝突預檢。
+    for (final bookId in deferredReadingPositionBookIds) {
+      await _db.update(
+        'books',
+        {'position_updated_at': notDirtyUpdatedAt + 1},
+        where: 'id = ?',
+        whereArgs: [bookId],
       );
     }
 
@@ -297,13 +317,22 @@ class SyncEngine {
   /// #1 發現本檔案原本漏了這個限制，見文末「審查修正紀錄」。
   static const _readingPositionPushChunkSize = 100;
 
-  /// 一筆待推送的閱讀位置（epic-8-sync Issue 5）。[remoteId] 為 `null`
-  /// 代表 PocketBase 目前沒有這本書的既有紀錄，走 create；非 `null` 代表
-  /// 已查得既有紀錄的 PocketBase 內部 id，走 update。
+  /// 推送階段的閱讀位置衝突預檢＋推送（epic-8-sync Issue 5，spec.md
+  /// 「同步引擎」步驟 1）：只處理本機有 dirty 位置異動的書籍（見
+  /// `WHERE position_updated_at > ?`），依 [resolveReadingPositionAction]
+  /// 判定結果分三路——不需要動作、直接推送、或呼叫
+  /// [_onReadingPositionConflict] 詢問使用者。回傳值同時帶出這次成功
+  /// 確認同步的書籍（positionsToConfirm，用於延後寫入
+  /// `position_synced_server_updated_at`）、這次視為 dirty 的書籍指紋
+  /// 集合（dirtyFingerprints，供 [_downloadReadingPositions] 排除，
+  /// 避免下載階段用舊快照覆寫這裡剛做的決定）、以及因無法取得使用者
+  /// 決定而延後的書籍 id 集合（deferredBookIds，供 [runCheckpoint]
+  /// 重新標記為 dirty，確保下次 checkpoint 重試）。
   Future<
       ({
         Map<String, String> positionsToConfirm,
-        Set<String> dirtyFingerprints
+        Set<String> dirtyFingerprints,
+        Set<String> deferredBookIds
       })> _syncReadingPositions(
     PocketBase pb,
     Map<String, String> headers,
@@ -327,10 +356,15 @@ class SyncEngine {
       whereArgs: [lastPushCompletedAt ?? 0],
     );
     if (dirtyRows.isEmpty) {
-      return (positionsToConfirm: <String, String>{}, dirtyFingerprints: <String>{});
+      return (
+        positionsToConfirm: <String, String>{},
+        dirtyFingerprints: <String>{},
+        deferredBookIds: <String>{},
+      );
     }
 
     final dirtyFingerprints = <String>{};
+    final deferredBookIds = <String>{};
     final toPush = <_ReadingPositionPushItem>[];
     for (final row in dirtyRows) {
       final bookId = row['id'] as String;
@@ -382,7 +416,16 @@ class SyncEngine {
           break;
         case ReadingPositionSyncAction.needsUserDecision:
           final resolver = _onReadingPositionConflict;
-          if (resolver == null) break; // 無可用 UI（例如背景觸發）：本輪跳過，下次重試
+          if (resolver == null) {
+            // 無可用 UI（例如背景觸發）：本輪跳過。position_updated_at
+            // 會在 runCheckpoint() 結尾被蓋成比這次 lastPushCompletedAt
+            // 還新，確保下次 checkpoint 仍視為 dirty、重新走一次衝突
+            // 預檢（2026-08-04 最終全分支審查修正——修正前這裡的「下次
+            // 重試」只是註解宣稱，實際上 lastPushCompletedAt 前進後
+            // 這本書會永遠不再被判定為 dirty，本機異動被靜默丟棄）。
+            deferredBookIds.add(bookId);
+            break;
+          }
           final remote = ReadingPositionSnapshot(
             epubLocatorJson: existing!.data['epub_locator'] as String?,
             pdfPageIndex: (existing.data['pdf_page_index'] as num?)?.toInt(),
@@ -421,14 +464,21 @@ class SyncEngine {
               where: 'id = ?',
               whereArgs: [bookId],
             );
+          } else {
+            // choice 為 null（使用者關閉對話框未決定）：本輪跳過，理由
+            // 同上——加入 deferredBookIds 確保下次 checkpoint 重試。
+            deferredBookIds.add(bookId);
           }
-          // choice 為 null（使用者關閉對話框未決定）：本輪跳過，下次重試。
           break;
       }
     }
 
     if (toPush.isEmpty) {
-      return (positionsToConfirm: <String, String>{}, dirtyFingerprints: dirtyFingerprints);
+      return (
+        positionsToConfirm: <String, String>{},
+        dirtyFingerprints: dirtyFingerprints,
+        deferredBookIds: deferredBookIds,
+      );
     }
 
     // 分批送出（審查意見 Important #1，2026-08-04
@@ -473,7 +523,11 @@ class SyncEngine {
         }
       }
     }
-    return (positionsToConfirm: positionsToConfirm, dirtyFingerprints: dirtyFingerprints);
+    return (
+      positionsToConfirm: positionsToConfirm,
+      dirtyFingerprints: dirtyFingerprints,
+      deferredBookIds: deferredBookIds,
+    );
   }
 
   /// 下載其他裝置對閱讀位置的異動（epic-8-sync Issue 5，補上 spec.md
@@ -702,6 +756,9 @@ class SyncEngine {
   }
 }
 
+/// 一筆待推送的閱讀位置（epic-8-sync Issue 5）。[remoteId] 為 `null`
+/// 代表 PocketBase 目前沒有這本書的既有紀錄，走 create；非 `null` 代表
+/// 已查得既有紀錄的 PocketBase 內部 id，走 update。
 class _ReadingPositionPushItem {
   final String bookId;
   final String fingerprint;

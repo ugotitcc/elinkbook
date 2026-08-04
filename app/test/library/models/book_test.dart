@@ -312,4 +312,27 @@ void main() {
     expect(restored.positionUpdatedAt, isNull);
     expect(restored.positionSyncedServerUpdatedAt, isNull);
   });
+
+  test('copyWith 保留 contentFingerprint／positionUpdatedAt／positionSyncedServerUpdatedAt（epic-8-sync 最終審查修正）',
+      () {
+    final book = Book(
+      id: 'b17',
+      title: '書名',
+      format: BookFileFormat.epub,
+      filePath: 'content://com.example/book.epub',
+      source: BookSource.local,
+      contentFingerprint: 'fp-17',
+      positionUpdatedAt: 1735689600000,
+      positionSyncedServerUpdatedAt: '2026-08-04 12:00:00.000Z',
+      createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+      lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+    );
+
+    final copied = book.copyWith(groupName: '新分類');
+
+    expect(copied.contentFingerprint, 'fp-17');
+    expect(copied.positionUpdatedAt, 1735689600000);
+    expect(copied.positionSyncedServerUpdatedAt, '2026-08-04 12:00:00.000Z');
+    expect(copied.groupName, '新分類');
+  });
 }

@@ -71,10 +71,13 @@ class Book {
   /// 伺服器時間戳記字串（epic-8-sync Issue 5，spec.md「本機 Schema
   /// 變更」）：供同步引擎偵測「其他裝置是否在此之後又推送過」用——與
   /// 本機快取值不同即代表衝突。`null` 代表這本書的閱讀位置從未成功同步
-  /// 過。**刻意不新增到 `copyWith()`**（比照 [contentFingerprint] 既有
-  /// 先例）：本 Issue 對這兩個欄位的所有寫入皆透過 partial update
-  /// （`ReadingPositionRepository`／`SyncEngine` 的 raw SQL）完成，沒有
-  /// 呼叫端需要透過 `copyWith()` 修改，YAGNI。
+  /// 過。
+  /// **不開放為 `copyWith()` 的具名參數**（本 Issue 對這兩個欄位的所有
+  /// 寫入皆透過 partial update 完成，沒有呼叫端需要透過 `copyWith()`
+  /// 修改，YAGNI）——但仍會原樣帶入 `copyWith()` 回傳的新物件，不能
+  /// 讓 `copyWith()` 把這兩個欄位清空（2026-08-04 最終全分支審查修正：
+  /// 原本沒有帶入，會被任何呼叫 `copyWith()` 的地方靜默清成 null，見
+  /// `sqlite_library_repository.dart` 的 `updateBook()` 呼叫端）。
   final String? positionSyncedServerUpdatedAt;
 
   final String groupName;
@@ -171,6 +174,9 @@ class Book {
       epubLocator: epubLocator,
       pdfPageIndex: pdfPageIndex,
       totalCharacterCount: totalCharacterCount,
+      contentFingerprint: contentFingerprint,
+      positionUpdatedAt: positionUpdatedAt,
+      positionSyncedServerUpdatedAt: positionSyncedServerUpdatedAt,
       isFixedLayout: isFixedLayout ?? this.isFixedLayout,
       groupName: groupName ?? this.groupName,
       createTime: createTime,
