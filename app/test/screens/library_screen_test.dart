@@ -34,6 +34,8 @@ import '../support/fake_share_platform.dart';
 import '../support/fake_custom_fonts_repository.dart';
 import 'package:elinkbook/screens/settings_screen.dart';
 import 'package:elinkbook/sync/sync_checkpoint_trigger.dart';
+import 'package:elinkbook/sync/sync_account_repository.dart';
+import 'package:elinkbook/sync/sync_client.dart';
 
 void main() {
   late SqliteLibraryRepository libraryRepository;
@@ -2597,6 +2599,65 @@ void main() {
     expect(readerScreen.syncCheckpointTrigger, same(syncCheckpointTrigger),
         reason: 'LibraryScreen._openBook() 未把 syncCheckpointTrigger 貫穿給 '
             'ReaderScreen，離開閱讀畫面時就不會觸發書籍切換 checkpoint');
+  });
+
+  testWidgets(
+      'LibraryScreen 透過分類篩選路徑（_openGroupFilteredView）開書後，'
+      'ReaderScreen 收到的 syncCheckpointTrigger 與外層一致'
+      '（epic-8-sync Issue 10）', (tester) async {
+    final book = _testBook(
+      id: '1',
+      title: '紅樓夢',
+      author: '曹雪芹',
+      groupName: '奇幻',
+      filePath: 'content://example/1.txt',
+    );
+    final syncAccountRepository = SyncAccountRepository();
+    final syncClient = SyncClient(accountRepository: syncAccountRepository);
+    final syncCheckpointTrigger = SyncCheckpointTrigger(
+      isLoggedIn: () async => false,
+      runCheckpoint: () async {},
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: [book]),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+          syncAccountRepository: syncAccountRepository,
+          syncClient: syncClient,
+          syncCheckpointTrigger: syncCheckpointTrigger,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('group_tile_奇幻')));
+    await tester.pumpAndSettle();
+
+    final filteredScreenFinder = _filteredLibraryScreenFinder('奇幻');
+    final filteredScreen = tester.widget<LibraryScreen>(filteredScreenFinder);
+    expect(filteredScreen.syncAccountRepository, same(syncAccountRepository),
+        reason: '_openGroupFilteredView() 未把 syncAccountRepository 貫穿給下一層 '
+            'LibraryScreen');
+    expect(filteredScreen.syncClient, same(syncClient),
+        reason: '_openGroupFilteredView() 未把 syncClient 貫穿給下一層 LibraryScreen');
+    expect(filteredScreen.syncCheckpointTrigger, same(syncCheckpointTrigger),
+        reason: '_openGroupFilteredView() 未把 syncCheckpointTrigger 貫穿給下一層 '
+            'LibraryScreen');
+
+    await tester.tap(find.descendant(
+      of: filteredScreenFinder,
+      matching: find.byKey(const Key('book_item_1')),
+    ));
+    await tester.pumpAndSettle();
+
+    final readerScreen = tester.widget<ReaderScreen>(find.byType(ReaderScreen));
+    expect(readerScreen.syncCheckpointTrigger, same(syncCheckpointTrigger),
+        reason: '透過分類篩選路徑開書，ReaderScreen 收到的 syncCheckpointTrigger 應與'
+            '外層一致，離開閱讀畫面／閱讀中 5 分鐘計時器兩種來源才會正確觸發 '
+            'checkpoint');
   });
 }
 

@@ -479,6 +479,13 @@ class _LibraryScreenState extends State<LibraryScreen> {
               highlightsRepository: widget.highlightsRepository,
               notesRepository: widget.notesRepository,
               customFontsRepository: widget.customFontsRepository,
+              // epic-8-sync Issue 10：先前遺漏這三個同步相關欄位，導致從這條
+              // 分類篩選路徑開書時 syncCheckpointTrigger 無法貫穿到
+              // ReaderScreen，「離開畫面」／「閱讀中 5 分鐘計時器」兩種
+              // checkpoint 觸發來源會靜默失效（見 plans/plan-issue-10.md）。
+              syncAccountRepository: widget.syncAccountRepository,
+              syncClient: widget.syncClient,
+              syncCheckpointTrigger: widget.syncCheckpointTrigger,
               currentTheme: widget.currentTheme,
               isEinkMode: widget.isEinkMode,
               onThemeChanged: widget.onThemeChanged,
