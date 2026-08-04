@@ -146,41 +146,9 @@ class SyncEngine {
 
     final fingerprintByBookId = <String, String>{};
     for (final bookId in bookIdsNeedingFingerprint) {
-      final bookRows =
-          await _db.query('books', where: 'id = ?', whereArgs: [bookId]);
-      if (bookRows.isEmpty) continue;
-      final filePath = bookRows.single['filePath'] as String;
-      final format = BookFileFormat.values.byName(bookRows.single['format'] as String);
-      String? epubIdentifier;
-      if (format == BookFileFormat.epub) {
-        try {
-          final metadata = await kBookMetadataChannel.invokeMapMethod<String, Object?>(
-            'extractMetadata',
-            {'uri': filePath, 'format': format.name},
-          );
-          epubIdentifier = metadata?['identifier'] as String?;
-        } on PlatformException {
-          // 取得 OPF identifier 失敗：忽略，退回 SHA-256（比照匯入流程既有慣例，
-          // 見 book_import_service_impl.dart）。
-        }
-      }
-      try {
-        final fingerprint = await computeBookContentFingerprint(
-          filePath,
-          format,
-          epubIdentifier: epubIdentifier,
-        );
-        await _db.update(
-          'books',
-          {'content_fingerprint': fingerprint},
-          where: 'id = ?',
-          whereArgs: [bookId],
-        );
+      final fingerprint = await _backfillFingerprintForBook(bookId);
+      if (fingerprint != null) {
         fingerprintByBookId[bookId] = fingerprint;
-      } catch (_) {
-        // 補算失敗：這本書這次不參與推送，其 dirty 列在下方被跳過，下次
-        // checkpoint 會重新嘗試（比照 epic-17 detectAndCacheEpubLayout()
-        // 一次性補判斷模式的失敗容忍精神）。
       }
     }
 
@@ -190,6 +158,48 @@ class SyncEngine {
           row['book_fingerprint'] = fingerprintByBookId[row['book_id']];
         }
       }
+    }
+  }
+
+  /// 對單一書籍計算並回填 `content_fingerprint`（epic-8-sync Issue 3；
+  /// 抽出為獨立方法供 [_backfillMissingFingerprints]〔標註異動觸發〕與
+  /// `_syncReadingPositions`〔閱讀位置異動觸發，epic-8-sync Issue 5〕
+  /// 共用，避免重複 EPUB identifier 擷取與 SHA-256 計算邏輯）。計算失敗
+  /// （原生端例外／檔案讀取失敗）時回傳 `null`，呼叫端決定如何降級
+  /// （比照既有慣例，這本書這次跳過，下次 checkpoint 重新嘗試）。
+  Future<String?> _backfillFingerprintForBook(String bookId) async {
+    final bookRows = await _db.query('books', where: 'id = ?', whereArgs: [bookId]);
+    if (bookRows.isEmpty) return null;
+    final filePath = bookRows.single['filePath'] as String;
+    final format = BookFileFormat.values.byName(bookRows.single['format'] as String);
+    String? epubIdentifier;
+    if (format == BookFileFormat.epub) {
+      try {
+        final metadata = await kBookMetadataChannel.invokeMapMethod<String, Object?>(
+          'extractMetadata',
+          {'uri': filePath, 'format': format.name},
+        );
+        epubIdentifier = metadata?['identifier'] as String?;
+      } on PlatformException {
+        // 取得 OPF identifier 失敗：忽略，退回 SHA-256（比照匯入流程既有慣例，
+        // 見 book_import_service_impl.dart）。
+      }
+    }
+    try {
+      final fingerprint = await computeBookContentFingerprint(
+        filePath,
+        format,
+        epubIdentifier: epubIdentifier,
+      );
+      await _db.update(
+        'books',
+        {'content_fingerprint': fingerprint},
+        where: 'id = ?',
+        whereArgs: [bookId],
+      );
+      return fingerprint;
+    } catch (_) {
+      return null;
     }
   }
 
