@@ -8,7 +8,7 @@
 
 **依賴／Blocked by：** None - can start immediately
 
-**Status:** ready-for-agent
+**Status:** done
 
 **What to build：**
 
@@ -41,7 +41,7 @@ SQLite schema 自 v16 升級至 v17（比照既有累加式 `if (oldVersion < 17
 
 **依賴／Blocked by：** None - can start immediately（與 Issue 1 完全獨立）
 
-**Status:** ready-for-agent
+**Status:** done
 
 **What to build：**
 
@@ -77,7 +77,7 @@ SQLite schema 自 v16 升級至 v17（比照既有累加式 `if (oldVersion < 17
 
 **依賴／Blocked by：** Issue 1（需要 `books.content_fingerprint` 欄位存在）
 
-**Status:** ready-for-agent
+**Status:** done
 
 **What to build：**
 
@@ -218,7 +218,7 @@ SQLite schema 自 v16 升級至 v17（比照既有累加式 `if (oldVersion < 17
 
 **依賴／Blocked by：** None - can start immediately
 
-**Status:** ready-for-agent
+**Status:** done
 
 **What to build：**
 
