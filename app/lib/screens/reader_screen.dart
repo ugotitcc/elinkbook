@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:uuid/uuid.dart';
@@ -35,6 +37,7 @@ import '../reader/resolved_preferences.dart';
 import '../reader/screen_orientation_setting.dart';
 import '../reader/writing_mode.dart';
 import '../reader/zone_action.dart';
+import '../sync/sync_checkpoint_trigger.dart';
 import 'annotation_toolbar.dart';
 import 'note_edit_dialog.dart';
 import 'notes_bottom_sheet.dart';
@@ -117,6 +120,11 @@ class ReaderScreen extends StatefulWidget {
   /// 顯示內建 5 款，行為等同本 Issue 之前，零回歸。
   final CustomFontsRepository? customFontsRepository;
 
+  /// Checkpoint 觸發器（epic-8-sync Issue 6）。刻意為可選參數——比照
+  /// [bookmarksRepository] 既有慣例，未提供時離開閱讀畫面／背景化／閒置
+  /// 計時器皆不觸發任何同步動作，行為等同本 Issue 之前，零回歸。
+  final SyncCheckpointTrigger? syncCheckpointTrigger;
+
   const ReaderScreen({
     super.key,
     required this.filePath,
@@ -131,6 +139,7 @@ class ReaderScreen extends StatefulWidget {
     this.isFixedLayout,
     this.libraryRepository,
     this.customFontsRepository,
+    this.syncCheckpointTrigger,
   });
 
   @override
@@ -277,6 +286,12 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   // docs/epics/epic-17-epub-render-migration/spec.md「已知限制」。
   bool? _dispatchedIsFixedLayout;
 
+  // epic-8-sync Issue 6：閱讀中每 5 分鐘觸發一次 checkpoint 的週期性
+  // 計時器。單純的週期性 Timer（不判斷使用者是否真的有互動），見
+  // plan-issue-6.md Global Constraints 的 YAGNI 說明。未提供
+  // syncCheckpointTrigger 時完全不建立（見 initState），零額外開銷。
+  Timer? _syncCheckpointTimer;
+
   @override
   void initState() {
     super.initState();
@@ -284,6 +299,13 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     _volumeKeyChannel.setMethodCallHandler(_handleVolumeKeyCall);
     _resolveEpubEngineDispatch();
     _loadCustomFonts();
+    final syncCheckpointTrigger = widget.syncCheckpointTrigger;
+    if (syncCheckpointTrigger != null) {
+      _syncCheckpointTimer = Timer.periodic(
+        const Duration(minutes: 5),
+        (_) => syncCheckpointTrigger.trigger(),
+      );
+    }
     widget.prefsManager.load(widget.bookId).then((loaded) {
       if (!mounted) return;
       setState(() {
@@ -345,6 +367,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
 
   @override
   void dispose() {
+    _syncCheckpointTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     _volumeKeyChannel.setMethodCallHandler(null);
     _totalCharacterCountNotifier.dispose();
@@ -353,6 +376,18 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     // 最後一次呼叫，不需要等待其完成，比照既有 _handlePrefsChanged 不
     // await saveBookPrefs 的既有慣例。
     _writeCurrentPosition();
+    // epic-8-sync Issue 6（spec.md「同步引擎」checkpoint 觸發來源之
+    // 「書籍切換」）：離開閱讀畫面視為一次書籍切換，觸發一次 checkpoint。
+    // 排在 _writeCurrentPosition() 之後，讓剛寫入的最新閱讀位置有較高
+    // 機率被這次 checkpoint 一併判定為待推送——但兩者皆是 fire-and-
+    // forget（不 await），呼叫順序並不「保證」上一行的 SQLite 寫入已經
+    // 真正落地；即使極端情況下寫入尚未完成，也只是延後到下一次任何
+    // checkpoint 才會被推送，不會遺失資料（審查意見 Important #1，
+    // 2026-08-04 `/superpowers:requesting-code-review`）。不 await，理由
+    // 同上一行 _writeCurrentPosition()，dispose() 是同步方法；未登入或
+    // 已有 checkpoint 執行中時 SyncCheckpointTrigger.trigger() 內部會
+    // 直接放棄，不會拋出例外。
+    widget.syncCheckpointTrigger?.trigger();
     // 還原系統預設（允許自由旋轉），不論進入閱讀器時鎖定了哪個角度，比照
     // 音量鍵離開閱讀介面後恢復正常系統音量控制的既有處理原則，避免鎖定
     // 狀態外溢到書架等其他畫面。

@@ -14,8 +14,12 @@ import 'reader/reader_prefs_manager.dart';
 import 'reader/reader_prefs_manager_impl.dart';
 import 'reader/reading_position_repository.dart';
 import 'screens/library_screen.dart';
+import 'screens/reading_position_conflict_dialog.dart';
 import 'sync/sync_account_repository.dart';
+import 'sync/sync_checkpoint_trigger.dart';
 import 'sync/sync_client.dart';
+import 'sync/sync_engine.dart';
+import 'sync/sync_metadata_repository.dart';
 import 'theme/app_theme.dart';
 import 'theme/app_theme_data.dart';
 import 'theme/app_theme_preferences.dart';
@@ -47,6 +51,34 @@ Future<void> main() async {
   final customFontsRepository = CustomFontsRepository(repository.database);
   final syncAccountRepository = SyncAccountRepository();
   final syncClient = SyncClient(accountRepository: syncAccountRepository);
+  // epic-8-sync Issue 6：Issue 4/5 只在測試中建構過 SyncEngine，這裡是
+  // App 正式啟動流程第一次真正組裝一個會運作的實例（見
+  // plan-issue-6.md Task 6「與 issues.md 的落差說明」）。navigatorKey
+  // 用來在 SyncEngine 的閱讀位置衝突回呼中取得 BuildContext 顯示對話框
+  // ——SyncEngine 本身刻意不依賴 Flutter widget 樹（見 sync_engine.dart
+  // 既有設計，保持可離線單元測試），衝突對話框的顯示改由這裡的回呼
+  // 橋接。
+  final navigatorKey = GlobalKey<NavigatorState>();
+  final syncMetadataRepository = SyncMetadataRepository(repository.database);
+  final syncEngine = SyncEngine(
+    db: repository.database,
+    accountRepository: syncAccountRepository,
+    metadataRepository: syncMetadataRepository,
+    onReadingPositionConflict: (conflict) async {
+      final context = navigatorKey.currentContext;
+      // App 啟動極早期（尚未渲染出第一個畫面）理論上呼叫不到這裡——
+      // checkpoint 觸發來源（Task 3-5）都發生在畫面已經渲染之後；仍防禦
+      // 性處理 context 為 null 的情況，回傳 null 等同使用者關閉對話框
+      // 未決定，SyncEngine 會照既有邏輯留待下次 checkpoint 重試，不會
+      // 拋出例外或靜默覆蓋任一邊（FR-19）。
+      if (context == null) return null;
+      return showReadingPositionConflictDialog(context, conflict);
+    },
+  );
+  final syncCheckpointTrigger = SyncCheckpointTrigger(
+    isLoggedIn: syncAccountRepository.isLoggedIn,
+    runCheckpoint: syncEngine.runCheckpoint,
+  );
   runApp(
     ElinkBookApp(
       repository: repository,
@@ -58,6 +90,8 @@ Future<void> main() async {
       customFontsRepository: customFontsRepository,
       syncAccountRepository: syncAccountRepository,
       syncClient: syncClient,
+      syncCheckpointTrigger: syncCheckpointTrigger,
+      navigatorKey: navigatorKey,
       initialTheme: initialTheme,
       initialEinkMode: initialEinkMode,
       themePreferences: themePreferences,
@@ -77,6 +111,8 @@ class ElinkBookApp extends StatefulWidget {
   final CustomFontsRepository? customFontsRepository;
   final SyncAccountRepository? syncAccountRepository;
   final SyncClient? syncClient;
+  final SyncCheckpointTrigger? syncCheckpointTrigger;
+  final GlobalKey<NavigatorState>? navigatorKey;
   final AppThemePreferences themePreferences;
   final AppTheme initialTheme;
   final bool initialEinkMode;
@@ -92,6 +128,8 @@ class ElinkBookApp extends StatefulWidget {
     this.customFontsRepository,
     this.syncAccountRepository,
     this.syncClient,
+    this.syncCheckpointTrigger,
+    this.navigatorKey,
     this.initialTheme = AppTheme.light,
     this.initialEinkMode = false,
     AppThemePreferences? themePreferences,
@@ -101,15 +139,35 @@ class ElinkBookApp extends StatefulWidget {
   State<ElinkBookApp> createState() => _ElinkBookAppState();
 }
 
-class _ElinkBookAppState extends State<ElinkBookApp> {
+class _ElinkBookAppState extends State<ElinkBookApp> with WidgetsBindingObserver {
   late AppTheme _theme;
   late bool _isEinkMode;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _theme = widget.initialTheme;
     _isEinkMode = widget.initialEinkMode;
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  /// epic-8-sync Issue 6（spec.md「同步引擎」checkpoint 觸發來源之
+  /// 「App 生命週期監聽」）：只在 [AppLifecycleState.paused]（真正進入
+  /// 背景）觸發，不含 [AppLifecycleState.inactive]（系統對話框短暫遮蓋等
+  /// 過渡狀態）——比照 `reader_screen.dart` 既有
+  /// `didChangeAppLifecycleState` 對 `_writeCurrentPosition()` 的同一條
+  /// 判斷準則。不 await，理由同 `reader_screen.dart` 既有慣例。
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) {
+      widget.syncCheckpointTrigger?.trigger();
+    }
   }
 
   void _handleThemeChanged(AppTheme theme) {
@@ -129,6 +187,7 @@ class _ElinkBookAppState extends State<ElinkBookApp> {
       isEinkMode: _isEinkMode,
     );
     return MaterialApp(
+      navigatorKey: widget.navigatorKey,
       title: 'elinkBook',
       theme: themeData,
       home: LibraryScreen(
@@ -141,6 +200,7 @@ class _ElinkBookAppState extends State<ElinkBookApp> {
         customFontsRepository: widget.customFontsRepository,
         syncAccountRepository: widget.syncAccountRepository,
         syncClient: widget.syncClient,
+        syncCheckpointTrigger: widget.syncCheckpointTrigger,
         currentTheme: _theme,
         isEinkMode: _isEinkMode,
         onThemeChanged: _handleThemeChanged,

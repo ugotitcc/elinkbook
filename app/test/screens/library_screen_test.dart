@@ -33,6 +33,7 @@ import '../support/fake_path_provider_platform.dart';
 import '../support/fake_share_platform.dart';
 import '../support/fake_custom_fonts_repository.dart';
 import 'package:elinkbook/screens/settings_screen.dart';
+import 'package:elinkbook/sync/sync_checkpoint_trigger.dart';
 
 void main() {
   late SqliteLibraryRepository libraryRepository;
@@ -2561,6 +2562,41 @@ void main() {
             'ReaderScreen，導致 ReaderScreen._loadCustomFonts() 早期 return，'
             '_customFonts 永遠是空清單，自訂字型永遠不會出現在 '
             'ReaderSettingsSheet 的單書字型選單中');
+  });
+
+  testWidgets(
+      'LibraryScreen 點開一本書後，ReaderScreen 收到的 syncCheckpointTrigger 正確貫穿',
+      (tester) async {
+    final book = _testBook(
+      id: '1',
+      title: '紅樓夢',
+      author: '曹雪芹',
+      filePath: 'content://example/1.txt',
+    );
+    final syncCheckpointTrigger = SyncCheckpointTrigger(
+      isLoggedIn: () async => false,
+      runCheckpoint: () async {},
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: [book]),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+          syncCheckpointTrigger: syncCheckpointTrigger,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('book_item_1')));
+    await tester.pumpAndSettle();
+
+    final readerScreen = tester.widget<ReaderScreen>(find.byType(ReaderScreen));
+    expect(readerScreen.syncCheckpointTrigger, same(syncCheckpointTrigger),
+        reason: 'LibraryScreen._openBook() 未把 syncCheckpointTrigger 貫穿給 '
+            'ReaderScreen，離開閱讀畫面時就不會觸發書籍切換 checkpoint');
   });
 }
 

@@ -100,6 +100,44 @@ void main() {
     expect(requestSent, isFalse);
   });
 
+  test('併發鎖：兩次幾乎同時呼叫 runCheckpoint()，第二次在第一次仍執行中時直接放棄，不會兩次都真的送出網路請求',
+      () async {
+    var requestCount = 0;
+    final mockClient = MockClient((request) async {
+      requestCount++;
+      return http.Response(
+        jsonEncode({'items': [], 'page': 1, 'perPage': 1000, 'totalItems': 0}),
+        200,
+        headers: {'content-type': 'application/json'},
+      );
+    });
+
+    final engine = SyncEngine(
+      db: libraryRepository.database,
+      accountRepository: accountRepository,
+      metadataRepository: metadataRepository,
+      clientFactory: (baseUrl) => PocketBase(baseUrl, httpClientFactory: () => mockClient),
+    );
+
+    // 不 await 第一次呼叫就立刻發起第二次呼叫，模擬兩個觸發來源幾乎同時
+    // 觸發 checkpoint 的情境（例如使用者切書同時把 App 丟到背景）。
+    final first = engine.runCheckpoint();
+    final second = engine.runCheckpoint();
+    await Future.wait([first, second]);
+    final requestCountAfterConcurrentCalls = requestCount;
+
+    // 鎖應已釋放：接著單獨呼叫一次，取得「一次完整 checkpoint」實際會發出
+    // 的請求數作為基準，用來跟上面併發呼叫的結果比較——若鎖沒生效，併發
+    // 呼叫會是基準的兩倍（兩次完整 checkpoint 都真的執行了）。
+    requestCount = 0;
+    await engine.runCheckpoint();
+    final requestCountSingleRun = requestCount;
+
+    expect(requestCountAfterConcurrentCalls, requestCountSingleRun,
+        reason: '併發呼叫應只有一次真正執行 checkpoint 邏輯，網路請求數應與單次呼叫相同，'
+            '而非兩倍');
+  });
+
   test('有指紋的書籍新增一筆書籤：推送 create（remoteId 未知），成功後寫入 sync_remote_ids',
       () async {
     await libraryRepository.insertBook(_testBook('b1', contentFingerprint: 'fp-1'));
