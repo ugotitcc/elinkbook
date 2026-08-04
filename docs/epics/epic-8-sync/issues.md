@@ -276,3 +276,48 @@ Task 6 新增的測試必須用 `--plain-name "雙裝置閱讀位置衝突"`
 - [ ] 已確認根本原因（透過最小重現案例）
 - [ ] `integration_test/sync_engine_test.dart` 既有 Issue 4 測試在真機上可正確通過，不受這個問題影響
 - [ ] 若採用「兩個裝置使用不同 in-memory 路徑」的修法，Issue 5 Task 6 新增的測試（同一份檔案）一併確認不受影響
+
+---
+
+## Issue 9：`sync_reading_positions` 缺少 unique index 強制「每 (user, book_fingerprint) 至多一筆」
+
+**依賴／Blocked by：** None（獨立修正，建議在 Issue 6 開工前處理）
+
+**Status:** needs-triage
+
+**背景（2026-08-04，Issue 5 最終全分支審查發現）：**
+
+plan-issue-5.md 的 Global Constraints 明確要求「`sync_reading_positions` 每個
+使用者對每本書（`book_fingerprint`）至多一筆紀錄」，但這個約束目前完全只是
+約定、沒有任何機制強制執行：
+
+- `docker/pb_migrations/1785715200_create_sync_collections.js` 的
+  `sync_reading_positions` collection 定義沒有宣告任何 unique index。
+- `SyncEngine._syncReadingPositions()` 查詢既有紀錄時用
+  `getList(filter: ..., perPage: 1)`，沒有帶 `sort`，理論上若真的有多筆
+  符合的紀錄，回傳哪一筆是不確定的。
+
+**可能觸發情境**：兩台裝置第一次同時推送同一本書（都查到 `remoteId` 為
+`null`，因為推送前的查詢發生在真正 create 之前）會各自建一筆；本機同一本書
+匯入兩次（產生兩列相同指紋、皆為 dirty）也會在同一次 checkpoint 內建出
+兩筆。一旦出現重複列，`getList(perPage: 1)` 拿到不穩定的其中一筆、
+`updated` 值忽大忽小，會導致反覆跳出假衝突彈窗，且無法自癒。
+
+**建議做法**：
+
+1. 新增一支冪等的升級 migration（比照 `1785801600_add_created_updated_autodate_fields.js`
+   的模式），對 `sync_reading_positions` 加上
+   `CREATE UNIQUE INDEX idx_sync_reading_positions_user_fp ON sync_reading_positions (user, book_fingerprint)`。
+2. 套用前**必須先確認測試實例 `pbdev.jigong.org` 上沒有既存的重複紀錄**
+   （否則加 unique index 會直接失敗）——先用 Admin API 查一次
+   `sync_reading_positions` 全部紀錄，依 `(user, book_fingerprint)` 分組檢查。
+3. `SyncEngine._syncReadingPositions()` 的 `getList()` 補上確定性的
+   `sort`（例如 `sort: 'created'` 或 `'-updated'`），即使加了 unique index
+   之後理論上不會再有重複，也讓查詢行為本身不依賴未定義的排序。
+
+**驗收標準：**
+
+- [ ] 已確認 `pbdev.jigong.org` 上沒有既存重複紀錄，或已妥善清理
+- [ ] 新增的 unique index migration 正確套用（本機／測試實例皆驗證過）
+- [ ] `_syncReadingPositions()` 的查詢補上確定性排序
+- [ ] 新增測試驗證「同一 (user, book_fingerprint) 嘗試建立第二筆會被 PocketBase 拒絕」
