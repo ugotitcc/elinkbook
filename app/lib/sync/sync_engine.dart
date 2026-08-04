@@ -392,6 +392,12 @@ class SyncEngine {
       // 影響的欄位）——unique index 套用後 (user, book_fingerprint)
       // 理論上至多 1 筆，這裡純粹是防禦性語意：查詢行為本身不依賴
       // PocketBase 未指定 sort 時的預設排序保證（見 issues.md Issue 9）。
+      // 相依於 `created` autodate 欄位存在（migration
+      // `1785801600_add_created_updated_autodate_fields.js`）——若某個
+      // PocketBase 實例只套用過 `1785715200_...` 舊版、沒有這個欄位，
+      // 這裡會直接收到 400（未知的 sort 欄位），push 階段快速失敗；這是
+      // 可接受的 fail-fast（該環境本來就缺 `created`/`updated`，衝突
+      // 判定邏輯本來就不可靠，見 `pocketbase-self-hosting.md`）。
       final result = await pb.collection('sync_reading_positions').getList(
             filter: pb.filter('book_fingerprint = {:fp}', {'fp': fingerprint}),
             perPage: 1,

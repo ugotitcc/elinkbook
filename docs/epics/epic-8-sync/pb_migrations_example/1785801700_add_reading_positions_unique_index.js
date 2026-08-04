@@ -16,8 +16,16 @@
 ///
 /// 比照 `1785801600_add_created_updated_autodate_fields.js` 已確立的
 /// 模式：新增獨立檔案而非修改舊的 `1785715200_...`（已套用過的環境不會
-/// 因為舊檔案內容更新而重新執行）；down 只移除這個 migration 自己加的
-/// 索引（用索引名稱字串比對，不會誤刪其他索引）。
+/// 因為舊檔案內容更新而重新執行）。
+///
+/// **降版（down）刻意設計為 no-op，不移除索引**（比照
+/// `1785801600_...` 已確立的理由）：這支 migration 的 up 是冪等的，在
+/// 「索引已經存在」的環境（例如 `pbdev.jigong.org`——2026-08-04 透過
+/// Admin API 手動加上，見 plan-issue-9.md Task 2）上會直接
+/// `alreadyExists` 早退、什麼都沒做；若 down 無條件依名稱移除索引，
+/// 單獨降版這支檔案就會把「其實不是這支 migration 建立的」索引一併
+/// 刪掉，靜默重現本檔案要修正的原始 bug。需要真的移除索引時請直接
+/// 透過 Admin UI／API 手動處理。
 
 migrate((app) => {
   const collection = app.findCollectionByNameOrId("sync_reading_positions");
@@ -29,9 +37,6 @@ migrate((app) => {
     `CREATE UNIQUE INDEX \`${indexName}\` ON \`sync_reading_positions\` (\`user\`, \`book_fingerprint\`)`
   );
   app.save(collection);
-}, (app) => {
-  const collection = app.findCollectionByNameOrId("sync_reading_positions");
-  const indexName = "idx_sync_reading_positions_user_fp";
-  collection.indexes = collection.indexes.filter((idx) => !idx.includes(indexName));
-  app.save(collection);
+}, (_app) => {
+  // 降版刻意為 no-op：見檔案開頭「降版（down）刻意設計為 no-op」說明。
 });

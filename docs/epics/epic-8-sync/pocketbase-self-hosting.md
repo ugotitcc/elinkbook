@@ -83,22 +83,28 @@ PocketBase 執行檔同層的 `pb_migrations/` 目錄下（沒有這個目錄就
 在一個交易內自動建立好全部 4 個 collection，欄位/型別/必填/API
 Rules 皆與下方表格逐項對應。適合需要重複自架多個測試環境、或想把
 整個 schema 納入版本控制的情況；只想快速看一次 Admin UI 長怎樣的話，
-仍可照下方步驟手動建立，兩種方式擇一即可，不需要都做。
+仍可照下方步驟手動建立，兩種方式擇一即可，不需要都做。**只複製這一支
+檔案不足以取得完整正確的最終 schema**——`created`／`updated` 系統欄位
+與 `sync_reading_positions` 的 unique index 皆由另外兩支獨立 migration
+補上（見下方），全新部署請把下面「既有部署升級」段落列出的**三支檔案
+一起複製**，不要只放這一支就當作完成。
 
 **既有部署升級**：若你的 PocketBase 實例先前已經套用過
 `1785715200_create_sync_collections.js`（PocketBase 依檔名記錄已套用過的
-migration，不會因為檔案內容更新而重新執行），另外複製
-`pb_migrations_example/1785801600_add_created_updated_autodate_fields.js`
-到同一個 `pb_migrations/` 目錄下、重啟 PocketBase 即可補上
-`created`／`updated` 欄位。全新部署則兩支檔案一起放也沒問題——
-`1785801600_...` 是冪等的，偵測到欄位已存在時會自動跳過。
+migration，不會因為檔案內容更新而重新執行），另外複製以下兩支檔案到
+同一個 `pb_migrations/` 目錄下、重啟 PocketBase：
 
-**Unique index（Issue 9）**：另外複製
-`pb_migrations_example/1785801700_add_reading_positions_unique_index.js`
-到同一個 `pb_migrations/` 目錄下，強制「每個使用者對每本書至多一筆閱讀
-位置紀錄」——套用前請先確認 `sync_reading_positions` 沒有既存的重複
-（同一 `user` + `book_fingerprint`）紀錄，否則這支 migration 會套用
-失敗、導致 PocketBase 服務整個啟動失敗。
+- `pb_migrations_example/1785801600_add_created_updated_autodate_fields.js`
+  補上 `created`／`updated` 欄位。
+- `pb_migrations_example/1785801700_add_reading_positions_unique_index.js`
+  對 `sync_reading_positions` 加上 unique index，強制「每個使用者對每
+  本書至多一筆閱讀位置紀錄」——**套用前請先確認 `sync_reading_positions`
+  沒有既存的重複（同一 `user` + `book_fingerprint`）紀錄**，否則這支
+  migration 會套用失敗、導致 PocketBase 服務整個啟動失敗。
+
+全新部署則**三支檔案**一起放也沒問題——`1785801600_...`／`1785801700_...`
+皆為冪等 migration，偵測到欄位/索引已存在時會自動跳過，彼此、與
+`1785715200_...` 皆不衝突。
 
 四個 collection 的 **API Rules** 分頁皆設為同一組規則（4 個 List/
 Search、View、Create、Update、Delete 規則欄位皆填相同內容）：
@@ -143,8 +149,9 @@ PocketBase（v0.22 以前）每個 base collection 會自動內建這兩個欄�
 （新增 `autodateFields()` 共用欄位定義）。**批次建立**指令碼已包含
 這個修正，用批次建立可以略過這一段手動設定。另外需要對
 `(user, book_fingerprint)` 建立 unique index，強制「每個使用者對每
-本書至多一筆」——批次建立指令碼已包含這個修正（見上方「既有部署升級」
-段落）。
+本書至多一筆」——**這一項批次建立指令碼〔`1785715200_...`〕本身不含**，
+須另外複製 `1785801700_add_reading_positions_unique_index.js`（見上方
+「既有部署升級」段落，全新部署也需要這一支）。
 
 ### `sync_bookmarks`
 
