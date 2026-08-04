@@ -619,3 +619,15 @@ git commit -m "docs(epic-8-sync): Issue 9 收尾——更新 spec.md／自架文
 - Task 3：`_syncReadingPositions()` 的 `getList()` 補上 `sort: 'created'`，19/19 測試通過。
 - Task 4：真機整合測試驗證 unique index 拒絕重複紀錄，在 Android 15 實機通過。
 - Task 5：更新 spec.md／pocketbase-self-hosting.md／issues.md，Issue 9 標記為 done。
+
+## 實作結果審查修正紀錄（2026-08-04 `/superpowers:requesting-code-review`）
+
+審查（most capable model）結論「With fixes」：0 Critical、1 Important、5 Minor（4 項本 Issue 範圍內＋1 項既存落差不處理）。
+
+- **Important，確認屬實，已採納**：本計畫 Task 5 Step 2 逐字要求把 `pocketbase-self-hosting.md`「批次建立指令碼已包含這個修正（見上方『既有部署升級』段落）」用在 unique index 上——審查直接 grep `1785715200_create_sync_collections.js` 確認**完全沒有任何 `indexes`**，這句話是錯的：這是計畫本身寫死的缺陷，被實作忠實照抄。真的照這段 SOP 走的全新部署只會複製一支檔案，得到一個沒有 unique index 的實例，原封不動重現本 Issue 要修的 bug。已修正 `pocketbase-self-hosting.md`：「批次建立」段落改為明確要求全新部署複製三支 migration 檔案，「既有部署升級」段落列出兩支檔案（`1785801600_...`／`1785801700_...`）並各自說明用途，`sync_reading_positions` 表格下方的說明改為誠實描述「這一項批次建立指令碼本身不含」。
+- **Minor「down migration 與姊妹檔已確立的 no-op 原則不一致」，確認屬實，已採納**：`pbdev.jigong.org` 的索引是 Task 2 用 Admin API 手動加的，不是這支 migration 的 up 加的（up 在該環境走 `alreadyExists` 早退）；若無條件 down，單獨降版這支檔案會誤刪那個索引。已改為 no-op（比照 `1785801600_...` 已確立的理由），並用本機 PocketBase v0.39.10 binary 重新驗證 up（全新部署／既有部署升級兩種情境）與 down（確認索引不會被誤刪）皆正確。
+- **Minor「`sort: 'created'` 對 autodate migration 產生未記錄的硬相依」，確認屬實，已採納**：在只套用過 `1785715200_...` 舊版、沒有 `created` 欄位的環境上，這行改動會讓 push 階段直接收到 400（而非原本的「衝突判定退化」）。已於 `sync_engine.dart` 補上註解說明這個相依與可接受的 fail-fast 理由。
+- **Minor「`issues.md` 的 `PR #TBD` placeholder」，確認屬實，暫不處理**：本計畫 Task 5 Step 3 本來就要求「請在真正開 PR 後填入實際值」，目前尚未開 PR，開 PR 後再補上實際編號。
+- **Minor「測試 guard 依賴 cursor 為 null 的隱含前提」，確認屬實，判定不處理**：guard 目前成立且與既有慣例（b21 測試）一致；審查建議的加強（多檢查 `filter` 內容）是為了防禦目前不存在的未來情境（這個 test group 目前沒有任何測試會預先寫入游標），YAGNI，先不加。
+- **Minor「`docker/README.md` 沒提 `pb_migrations/`」，確認屬實，判定超出範圍**：審查自己也指出這是本次改動前就存在的落差，非 Issue 9 引入，不在本 PR 處理，留待後續。
+- **三項 Recommendations（migration 內建可讀的重複資料預檢錯誤訊息／計畫審查應同時驗證對既有檔案的事實陳述／`pocketbase-self-hosting.md` 澄清 `pbdev.jigong.org` 是否由 `docker/` 部署）**：皆為流程/選配改進，非本 Issue 缺陷，記錄於此供未來參考，不在本次處理。
