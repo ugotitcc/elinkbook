@@ -19,16 +19,31 @@ import 'package:elinkbook/sync/sync_account_repository.dart';
 import 'package:elinkbook/sync/sync_engine.dart';
 import 'package:elinkbook/sync/sync_metadata_repository.dart';
 import 'package:elinkbook/sync/sync_models.dart';
+import 'package:elinkbook/sync/sync_reading_position.dart';
 import 'package:elinkbook/reader/highlight_style.dart';
 
-Book _testBook(String id, {String? contentFingerprint}) {
+Book _testBook(
+  String id, {
+  String? contentFingerprint,
+  BookFileFormat format = BookFileFormat.epub,
+  int? positionUpdatedAt,
+  String? positionSyncedServerUpdatedAt,
+  String? epubLocator,
+  int? pdfPageIndex,
+  double progress = 0,
+}) {
   return Book(
     id: id,
     title: '測試書',
-    format: BookFileFormat.epub,
+    format: format,
     filePath: 'content://example/$id',
     source: BookSource.local,
     contentFingerprint: contentFingerprint,
+    positionUpdatedAt: positionUpdatedAt,
+    positionSyncedServerUpdatedAt: positionSyncedServerUpdatedAt,
+    epubLocator: epubLocator,
+    pdfPageIndex: pdfPageIndex,
+    progress: progress,
     createTime: DateTime.fromMillisecondsSinceEpoch(1000),
     lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
   );
@@ -555,5 +570,513 @@ void main() {
       await metadataRepository.loadRemoteIds(SyncCollection.bookmarks),
       {'bm-should-survive': 'pb-should-survive'},
     );
+  });
+
+  group('閱讀位置同步（epic-8-sync Issue 5）', () {
+    test('本機閱讀位置有異動、遠端無既有紀錄時，直接推送（create），成功後回填 position_synced_server_updated_at',
+        () async {
+      await libraryRepository.insertBook(_testBook(
+        'b20',
+        contentFingerprint: 'fp-20',
+        positionUpdatedAt: 5000,
+        epubLocator: '{"href":"/c1.xhtml"}',
+        progress: 0.4,
+      ));
+
+      Map<String, dynamic>? capturedBody;
+      final mockClient = MockClient((request) async {
+        if (request.method == 'GET' &&
+            request.url.path == '/api/collections/sync_reading_positions/records') {
+          return http.Response(
+            jsonEncode({'items': [], 'page': 1, 'perPage': 1, 'totalItems': 0}),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        if (request.url.path == '/api/batch') {
+          final decoded = jsonDecode(request.body) as Map<String, dynamic>;
+          final subRequests = decoded['requests'] as List;
+          final readingPositionRequest = subRequests.firstWhere(
+            (r) => (r['url'] as String).contains('sync_reading_positions'),
+            orElse: () => null,
+          );
+          if (readingPositionRequest != null) {
+            capturedBody = readingPositionRequest['body'] as Map<String, dynamic>;
+            return http.Response(
+              jsonEncode([
+                {
+                  'status': 200,
+                  'body': {
+                    'id': 'pb-position-1',
+                    'book_fingerprint': 'fp-20',
+                    'updated': '2026-08-04 00:00:00.000Z',
+                  },
+                },
+              ]),
+              200,
+              headers: {'content-type': 'application/json'},
+            );
+          }
+          return http.Response(jsonEncode([]), 200,
+              headers: {'content-type': 'application/json'});
+        }
+        return http.Response(
+          jsonEncode({'items': [], 'page': 1, 'perPage': 1000, 'totalItems': 0}),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      });
+
+      final engine = SyncEngine(
+        db: libraryRepository.database,
+        accountRepository: accountRepository,
+        metadataRepository: metadataRepository,
+        clientFactory: (baseUrl) => PocketBase(baseUrl, httpClientFactory: () => mockClient),
+      );
+
+      await engine.runCheckpoint();
+
+      expect(capturedBody?['user'], 'user-1');
+      expect(capturedBody?['book_fingerprint'], 'fp-20');
+      expect(capturedBody?['epub_locator'], '{"href":"/c1.xhtml"}');
+      expect(capturedBody?['progress'], 0.4);
+
+      final bookRows = await libraryRepository.database
+          .query('books', where: 'id = ?', whereArgs: ['b20']);
+      expect(
+        bookRows.single['position_synced_server_updated_at'],
+        '2026-08-04 00:00:00.000Z',
+      );
+    });
+
+    test('本機無待推送的閱讀位置異動時，push 階段的 per-book 過濾查詢不會發生'
+        '（下載階段仍會依設計無條件查詢，見 Critical #1 修正）', () async {
+      await libraryRepository.insertBook(_testBook('b21', contentFingerprint: 'fp-21'));
+
+      var pushSideFilterQueried = false;
+      final mockClient = MockClient((request) async {
+        if (request.url.path == '/api/collections/sync_reading_positions/records' &&
+            request.url.queryParameters['filter'] != null) {
+          pushSideFilterQueried = true;
+        }
+        if (request.url.path == '/api/batch') {
+          return http.Response(jsonEncode([]), 200,
+              headers: {'content-type': 'application/json'});
+        }
+        return http.Response(
+          jsonEncode({'items': [], 'page': 1, 'perPage': 1000, 'totalItems': 0}),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      });
+
+      final engine = SyncEngine(
+        db: libraryRepository.database,
+        accountRepository: accountRepository,
+        metadataRepository: metadataRepository,
+        clientFactory: (baseUrl) => PocketBase(baseUrl, httpClientFactory: () => mockClient),
+      );
+
+      await engine.runCheckpoint();
+
+      expect(pushSideFilterQueried, isFalse);
+    });
+
+    test('偵測到衝突、未提供 onReadingPositionConflict 回呼時，跳過該本書、不推送、position_updated_at 被推進以確保下次 checkpoint 仍會重試',
+        () async {
+      await libraryRepository.insertBook(_testBook(
+        'b22',
+        contentFingerprint: 'fp-22',
+        positionUpdatedAt: 5000,
+        positionSyncedServerUpdatedAt: '2026-08-01 00:00:00.000Z',
+        progress: 0.3,
+      ));
+
+      var readingPositionPushed = false;
+      final mockClient = MockClient((request) async {
+        if (request.url.path == '/api/collections/sync_reading_positions/records') {
+          final requestedPerPage =
+              int.tryParse(request.url.queryParameters['perPage'] ?? '') ?? 1;
+          return http.Response(
+            jsonEncode({
+              'items': [
+                {
+                  'id': 'pb-position-existing',
+                  'book_fingerprint': 'fp-22',
+                  'epub_locator': null,
+                  'pdf_page_index': null,
+                  'progress': 0.9,
+                  'updated': '2026-08-03 00:00:00.000Z', // 與本機快取不同 -> 衝突
+                },
+              ],
+              'page': 1,
+              'perPage': requestedPerPage,
+              'totalItems': 1,
+            }),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        if (request.url.path == '/api/batch') {
+          final decoded = jsonDecode(request.body) as Map<String, dynamic>;
+          final subRequests = decoded['requests'] as List;
+          if (subRequests.any((r) => (r['url'] as String).contains('sync_reading_positions'))) {
+            readingPositionPushed = true;
+          }
+          return http.Response(jsonEncode([]), 200,
+              headers: {'content-type': 'application/json'});
+        }
+        return http.Response(
+          jsonEncode({'items': [], 'page': 1, 'perPage': 1000, 'totalItems': 0}),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      });
+
+      final engine = SyncEngine(
+        db: libraryRepository.database,
+        accountRepository: accountRepository,
+        metadataRepository: metadataRepository,
+        clientFactory: (baseUrl) => PocketBase(baseUrl, httpClientFactory: () => mockClient),
+        // onReadingPositionConflict 未提供（null）。
+      );
+
+      await engine.runCheckpoint();
+
+      expect(readingPositionPushed, isFalse);
+      final bookRows = await libraryRepository.database
+          .query('books', where: 'id = ?', whereArgs: ['b22']);
+      expect(bookRows.single['progress'], 0.3, reason: '本機資料不受影響，未被靜默覆蓋');
+      expect(
+        bookRows.single['position_synced_server_updated_at'],
+        '2026-08-01 00:00:00.000Z',
+        reason: '未成功同步，快取值不應變動',
+      );
+      expect(
+        bookRows.single['position_updated_at'],
+        greaterThan(5000),
+        reason: 'position_updated_at 被推進，確保下次 checkpoint 仍判定為 dirty、重新嘗試（而非因 lastPushCompletedAt 前進而永遠不再重試）',
+      );
+    });
+
+    test('偵測到衝突、使用者選擇保留本機時，推送本機值（update，remoteId 已知）', () async {
+      await libraryRepository.insertBook(_testBook(
+        'b23',
+        contentFingerprint: 'fp-23',
+        format: BookFileFormat.pdf,
+        positionUpdatedAt: 5000,
+        positionSyncedServerUpdatedAt: '2026-08-01 00:00:00.000Z',
+        pdfPageIndex: 10,
+        progress: 0.5,
+      ));
+
+      Map<String, dynamic>? capturedBody;
+      String? capturedUrl;
+      final mockClient = MockClient((request) async {
+        if (request.url.path == '/api/collections/sync_reading_positions/records') {
+          final requestedPerPage =
+              int.tryParse(request.url.queryParameters['perPage'] ?? '') ?? 1;
+          return http.Response(
+            jsonEncode({
+              'items': [
+                {
+                  'id': 'pb-position-existing-2',
+                  'book_fingerprint': 'fp-23',
+                  'pdf_page_index': 30,
+                  'progress': 0.9,
+                  'updated': '2026-08-03 00:00:00.000Z',
+                },
+              ],
+              'page': 1,
+              'perPage': requestedPerPage,
+              'totalItems': 1,
+            }),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        if (request.url.path == '/api/batch') {
+          final decoded = jsonDecode(request.body) as Map<String, dynamic>;
+          final subRequests = decoded['requests'] as List;
+          final readingPositionRequest = subRequests.firstWhere(
+            (r) => (r['url'] as String).contains('sync_reading_positions'),
+            orElse: () => null,
+          );
+          if (readingPositionRequest != null) {
+            capturedBody = readingPositionRequest['body'] as Map<String, dynamic>;
+            capturedUrl = readingPositionRequest['url'] as String;
+          }
+          return http.Response(
+            jsonEncode([
+              {
+                'status': 200,
+                'body': {'updated': '2026-08-04 00:00:00.000Z'},
+              },
+            ]),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        return http.Response(
+          jsonEncode({'items': [], 'page': 1, 'perPage': 1000, 'totalItems': 0}),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      });
+
+      final engine = SyncEngine(
+        db: libraryRepository.database,
+        accountRepository: accountRepository,
+        metadataRepository: metadataRepository,
+        clientFactory: (baseUrl) => PocketBase(baseUrl, httpClientFactory: () => mockClient),
+        onReadingPositionConflict: (conflict) async {
+          expect(conflict.bookId, 'b23');
+          expect(conflict.local.pdfPageIndex, 10);
+          expect(conflict.remote.pdfPageIndex, 30);
+          return ReadingPositionChoice.keepLocal;
+        },
+      );
+
+      await engine.runCheckpoint();
+
+      expect(capturedBody?['pdf_page_index'], 10, reason: '推送的是本機值');
+      expect(capturedUrl, contains('pb-position-existing-2'), reason: '走 update（PATCH），不是 create');
+
+      final bookRows = await libraryRepository.database
+          .query('books', where: 'id = ?', whereArgs: ['b23']);
+      expect(
+        bookRows.single['position_synced_server_updated_at'],
+        '2026-08-04 00:00:00.000Z',
+      );
+      expect(bookRows.single['pdfPageIndex'], 10, reason: '本機值未被下載階段的舊快照覆寫（excludeFingerprints 排除生效）');
+    });
+
+    test('偵測到衝突、使用者選擇保留雲端時，立即覆寫本機位置，不推送任何值', () async {
+      await libraryRepository.insertBook(_testBook(
+        'b24',
+        contentFingerprint: 'fp-24',
+        format: BookFileFormat.pdf,
+        positionUpdatedAt: 5000,
+        positionSyncedServerUpdatedAt: '2026-08-01 00:00:00.000Z',
+        pdfPageIndex: 10,
+        progress: 0.5,
+      ));
+
+      var readingPositionPushed = false;
+      final mockClient = MockClient((request) async {
+        if (request.url.path == '/api/collections/sync_reading_positions/records') {
+          final requestedPerPage =
+              int.tryParse(request.url.queryParameters['perPage'] ?? '') ?? 1;
+          return http.Response(
+            jsonEncode({
+              'items': [
+                {
+                  'id': 'pb-position-existing-3',
+                  'book_fingerprint': 'fp-24',
+                  'pdf_page_index': 30,
+                  'progress': 0.9,
+                  'updated': '2026-08-03 00:00:00.000Z',
+                },
+              ],
+              'page': 1,
+              'perPage': requestedPerPage,
+              'totalItems': 1,
+            }),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        if (request.url.path == '/api/batch') {
+          final decoded = jsonDecode(request.body) as Map<String, dynamic>;
+          final subRequests = decoded['requests'] as List;
+          if (subRequests.any((r) => (r['url'] as String).contains('sync_reading_positions'))) {
+            readingPositionPushed = true;
+          }
+          return http.Response(jsonEncode([]), 200,
+              headers: {'content-type': 'application/json'});
+        }
+        return http.Response(
+          jsonEncode({'items': [], 'page': 1, 'perPage': 1000, 'totalItems': 0}),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      });
+
+      final engine = SyncEngine(
+        db: libraryRepository.database,
+        accountRepository: accountRepository,
+        metadataRepository: metadataRepository,
+        clientFactory: (baseUrl) => PocketBase(baseUrl, httpClientFactory: () => mockClient),
+        onReadingPositionConflict: (conflict) async => ReadingPositionChoice.keepCloud,
+      );
+
+      await engine.runCheckpoint();
+
+      expect(readingPositionPushed, isFalse);
+      final bookRows = await libraryRepository.database
+          .query('books', where: 'id = ?', whereArgs: ['b24']);
+      expect(bookRows.single['pdfPageIndex'], 30, reason: '本機已被覆寫為雲端版本');
+      expect(bookRows.single['progress'], 0.9);
+      expect(
+        bookRows.single['position_synced_server_updated_at'],
+        '2026-08-03 00:00:00.000Z',
+        reason: '雲端版本已是本機認可的版本，快取值同步更新，避免下次誤判為衝突',
+      );
+    });
+
+    test('推送階段失敗（HTTP 錯誤）時，即使閱讀位置查詢成功，也不寫入 position_synced_server_updated_at',
+        () async {
+      await libraryRepository.insertBook(_testBook(
+        'b25',
+        contentFingerprint: 'fp-25',
+        positionUpdatedAt: 5000,
+        progress: 0.3,
+      ));
+
+      final mockClient = MockClient((request) async {
+        if (request.url.path == '/api/collections/sync_reading_positions/records') {
+          return http.Response(
+            jsonEncode({'items': [], 'page': 1, 'perPage': 1, 'totalItems': 0}),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        // 批次推送一律失敗。
+        return http.Response(
+          jsonEncode({'message': 'Something went wrong.'}),
+          500,
+          headers: {'content-type': 'application/json'},
+        );
+      });
+
+      final engine = SyncEngine(
+        db: libraryRepository.database,
+        accountRepository: accountRepository,
+        metadataRepository: metadataRepository,
+        clientFactory: (baseUrl) => PocketBase(baseUrl, httpClientFactory: () => mockClient),
+      );
+
+      await engine.runCheckpoint();
+
+      final bookRows = await libraryRepository.database
+          .query('books', where: 'id = ?', whereArgs: ['b25']);
+      expect(bookRows.single['position_synced_server_updated_at'], isNull);
+      expect(await metadataRepository.loadLastPushCompletedAt(), isNull);
+    });
+
+    test('本機無 dirty 閱讀位置異動時，checkpoint 仍會下載其他裝置的位置更新並覆寫本機',
+        () async {
+      await libraryRepository.insertBook(_testBook(
+        'b26',
+        contentFingerprint: 'fp-26',
+        format: BookFileFormat.pdf,
+        pdfPageIndex: 3,
+        progress: 0.1,
+        // positionUpdatedAt 刻意不設定（null）：本機從未變動過這本書的
+        // 位置，不會進入 _syncReadingPositions() 的推送階段查詢。
+      ));
+
+      final mockClient = MockClient((request) async {
+        if (request.method == 'GET' &&
+            request.url.path == '/api/collections/sync_reading_positions/records') {
+          return http.Response(
+            jsonEncode({
+              'items': [
+                {
+                  'id': 'pb-position-remote-1',
+                  'book_fingerprint': 'fp-26',
+                  'pdf_page_index': 39,
+                  'progress': 0.8,
+                  'updated': '2026-08-04 00:00:00.000Z',
+                },
+              ],
+              'page': 1,
+              'perPage': 1000,
+              'totalItems': 1,
+            }),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        if (request.url.path == '/api/batch') {
+          return http.Response(jsonEncode([]), 200,
+              headers: {'content-type': 'application/json'});
+        }
+        return http.Response(
+          jsonEncode({'items': [], 'page': 1, 'perPage': 1000, 'totalItems': 0}),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      });
+
+      final engine = SyncEngine(
+        db: libraryRepository.database,
+        accountRepository: accountRepository,
+        metadataRepository: metadataRepository,
+        clientFactory: (baseUrl) => PocketBase(baseUrl, httpClientFactory: () => mockClient),
+      );
+
+      await engine.runCheckpoint();
+
+      final bookRows = await libraryRepository.database
+          .query('books', where: 'id = ?', whereArgs: ['b26']);
+      expect(bookRows.single['pdfPageIndex'], 39);
+      expect(bookRows.single['progress'], 0.8);
+      expect(
+        bookRows.single['position_synced_server_updated_at'],
+        '2026-08-04 00:00:00.000Z',
+      );
+      expect(
+        await metadataRepository.loadReadingPositionsCursor(),
+        '2026-08-04 00:00:00.000Z',
+      );
+    });
+
+    test('閱讀位置下載本身失敗時，即使標註推送與下載皆已成功，也不寫入任何游標（原子性，含閱讀位置的新游標）',
+        () async {
+      await libraryRepository.insertBook(_testBook('b27', contentFingerprint: 'fp-27'));
+      await bookmarksRepository.insert(
+        const Bookmark(id: 'bm-b27', bookId: 'b27', name: 'X', progression: 0.1),
+      );
+
+      final mockClient = MockClient((request) async {
+        if (request.url.path == '/api/batch') {
+          return http.Response(
+            jsonEncode([
+              {'status': 200, 'body': {'id': 'pb-bm-b27'}},
+            ]),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        if (request.url.path == '/api/collections/sync_reading_positions/records') {
+          // 閱讀位置下載查詢失敗（其餘 collection 的下載查詢在下方一律
+          // 回傳空結果、成功）。
+          return http.Response(
+            jsonEncode({'message': 'Something went wrong.'}),
+            500,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        return http.Response(
+          jsonEncode({'items': [], 'page': 1, 'perPage': 1000, 'totalItems': 0}),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      });
+
+      final engine = SyncEngine(
+        db: libraryRepository.database,
+        accountRepository: accountRepository,
+        metadataRepository: metadataRepository,
+        clientFactory: (baseUrl) => PocketBase(baseUrl, httpClientFactory: () => mockClient),
+      );
+
+      await engine.runCheckpoint();
+
+      expect(await metadataRepository.loadLastPushCompletedAt(), isNull);
+      expect(await metadataRepository.loadPulledCursor(SyncCollection.bookmarks), isNull);
+      expect(await metadataRepository.loadReadingPositionsCursor(), isNull);
+    });
   });
 }

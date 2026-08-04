@@ -238,3 +238,86 @@ SQLite schema 自 v16 升級至 v17（比照既有累加式 `if (oldVersion < 17
 - [x] 4 個 collection 皆正確建立，欄位/型別/API rule 與 `spec.md` 一致
 - [x] 依文件建立的測試用 PocketBase 實例可供 Issue 2／4／5 的 `integration_test` 實際連線使用
 - [x] `pb_hooks` 墓碑清理範例語法正確、可實際載入運作（實作結果審查發現並修正 1 項 Critical——`deleted_at != null` 篩選條件對 PocketBase number 欄位無效，改為 `deleted_at > 0`，見 `plans/plan-issue-7.md`「實作結果審查修正紀錄」）
+
+---
+
+## Issue 8：`integration_test/sync_engine_test.dart` 既有 Issue 4 測試——sqflite `:memory:` 裝置隔離失敗（bug）
+
+**依賴／Blocked by：** None（獨立 bug 修復，不阻擋 Issue 5/6）
+
+**Status:** needs-triage
+
+**背景（2026-08-04，Issue 5 Task 6 真機驗證時發現）：**
+
+Issue 4 既有的 `integration_test/sync_engine_test.dart` 測試（「端到端 checkpoint：推送本機新增的書籤...」）在真機（Android 15, API 35）上執行時，於 `await deviceB.insertBook(bookA);` 這一行拋出 `SqfliteFfiException`：`UNIQUE constraint failed: books.id`。
+
+**目前影響**：這個問題導致 `integration_test/sync_engine_test.dart`
+**整個檔案**（`flutter test integration_test/sync_engine_test.dart -d
+<device-id>`）無法完整跑完——Issue 4 的舊測試會先撞到這個 crash；Issue 5
+Task 6 新增的測試必須用 `--plain-name "雙裝置閱讀位置衝突"`
+單獨隔離執行才會通過。任何人之後想確認「整個 `integration_test` 套件是否
+全綠」，在這個問題修好之前都需要記得這個限制。
+
+`deviceA`／`deviceB` 分別是兩次獨立呼叫 `SqliteLibraryRepository.open(inMemoryDatabasePath)` 開出來的、理應互相獨立的記憶體內資料庫，`deviceB` 插入的是 `deviceA` 已經插入過的同一個 `bookA` 物件（同一個 `id`，測試刻意重用同一物件以取得相同 `content_fingerprint`，見該測試檔案內註解）。若兩個資料庫真的互相獨立，插入到一個全新的空資料庫不應該撞到 UNIQUE constraint。
+
+**已排除的可能原因**（控制者已查證 `sqflite_common`/`sqflite_common_ffi` 原始碼，見 Issue 5 Task 6 對話紀錄）：
+- 不是 `singleInstance` 快取——`sqflite_common-2.5.8/lib/src/database_mixin.dart:930-931` 明確對 `:memory:` 路徑強制 `singleInstance = false`，不受 `openDatabase()` 預設 `singleInstance: true` 影響。
+- 不是 FFI 層級的路徑快取——`sqflite_common_ffi-2.4.0+3/lib/src/sqflite_ffi_impl_io.dart:25-26` 對 `:memory:` 路徑每次呼叫皆執行 `ffi.sqlite3.openInMemory()`，理論上每次都應該是全新、獨立的 sqlite3 連線。
+
+**尚待查證**：既然套件原始碼看起來不應該共享連線，實際卻觀察到共享行為，可能是：
+1. `sqflite_common_ffi` 底層共用的背景 isolate 在快速連續開啟多個 `:memory:` 連線時的某種 race condition 或內部狀態管理問題（`database_tracker.dart` 提到用 `file:sqflite_database_tracker?mode=memory&cache=shared` 追蹤已開啟的連線，值得深入研究這個追蹤機制本身是否有副作用）。
+2. 或本專案 `sqflite_common_ffi` 鎖定版本（2.4.0+3）已知的既有 bug，可能後續版本已修正，需要查證 changelog。
+3. 或是這個測試撰寫當下就已經有這個問題、只是先前真機驗證時剛好沒有真的跑到這條插入敘述（例如先前跑在不同 Android 版本/裝置上、或當時套件版本不同）。
+
+**建議做法**：先寫一個最小重現案例（純粹兩次 `SqliteLibraryRepository.open(inMemoryDatabasePath)` + 各自插入不同表格但相同 id 的最簡單 widget test，在真機上跑），確認問題必現後再決定修法（例如改用具名的 in-memory URI 讓兩個「裝置」使用不同路徑字串，或升級 `sqflite_common_ffi` 版本）。
+
+**驗收標準：**
+
+- [ ] 已確認根本原因（透過最小重現案例）
+- [ ] `integration_test/sync_engine_test.dart` 既有 Issue 4 測試在真機上可正確通過，不受這個問題影響
+- [ ] 若採用「兩個裝置使用不同 in-memory 路徑」的修法，Issue 5 Task 6 新增的測試（同一份檔案）一併確認不受影響
+
+---
+
+## Issue 9：`sync_reading_positions` 缺少 unique index 強制「每 (user, book_fingerprint) 至多一筆」
+
+**依賴／Blocked by：** None（獨立修正，建議在 Issue 6 開工前處理）
+
+**Status:** needs-triage
+
+**背景（2026-08-04，Issue 5 最終全分支審查發現）：**
+
+plan-issue-5.md 的 Global Constraints 明確要求「`sync_reading_positions` 每個
+使用者對每本書（`book_fingerprint`）至多一筆紀錄」，但這個約束目前完全只是
+約定、沒有任何機制強制執行：
+
+- `docker/pb_migrations/1785715200_create_sync_collections.js` 的
+  `sync_reading_positions` collection 定義沒有宣告任何 unique index。
+- `SyncEngine._syncReadingPositions()` 查詢既有紀錄時用
+  `getList(filter: ..., perPage: 1)`，沒有帶 `sort`，理論上若真的有多筆
+  符合的紀錄，回傳哪一筆是不確定的。
+
+**可能觸發情境**：兩台裝置第一次同時推送同一本書（都查到 `remoteId` 為
+`null`，因為推送前的查詢發生在真正 create 之前）會各自建一筆；本機同一本書
+匯入兩次（產生兩列相同指紋、皆為 dirty）也會在同一次 checkpoint 內建出
+兩筆。一旦出現重複列，`getList(perPage: 1)` 拿到不穩定的其中一筆、
+`updated` 值忽大忽小，會導致反覆跳出假衝突彈窗，且無法自癒。
+
+**建議做法**：
+
+1. 新增一支冪等的升級 migration（比照 `1785801600_add_created_updated_autodate_fields.js`
+   的模式），對 `sync_reading_positions` 加上
+   `CREATE UNIQUE INDEX idx_sync_reading_positions_user_fp ON sync_reading_positions (user, book_fingerprint)`。
+2. 套用前**必須先確認測試實例 `pbdev.jigong.org` 上沒有既存的重複紀錄**
+   （否則加 unique index 會直接失敗）——先用 Admin API 查一次
+   `sync_reading_positions` 全部紀錄，依 `(user, book_fingerprint)` 分組檢查。
+3. `SyncEngine._syncReadingPositions()` 的 `getList()` 補上確定性的
+   `sort`（例如 `sort: 'created'` 或 `'-updated'`），即使加了 unique index
+   之後理論上不會再有重複，也讓查詢行為本身不依賴未定義的排序。
+
+**驗收標準：**
+
+- [ ] 已確認 `pbdev.jigong.org` 上沒有既存重複紀錄，或已妥善清理
+- [ ] 新增的 unique index migration 正確套用（本機／測試實例皆驗證過）
+- [ ] `_syncReadingPositions()` 的查詢補上確定性排序
+- [ ] 新增測試驗證「同一 (user, book_fingerprint) 嘗試建立第二筆會被 PocketBase 拒絕」

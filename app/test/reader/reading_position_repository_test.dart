@@ -84,4 +84,31 @@ void main() {
       completes,
     );
   });
+
+  test('save 寫入後，position_updated_at 被設為目前時間戳記（epic-8-sync Issue 5）', () async {
+    final before = DateTime.now().millisecondsSinceEpoch;
+
+    await repository.save('b1', const ReadingPosition(pdfPageIndex: 3, progress: 0.3));
+
+    final after = DateTime.now().millisecondsSinceEpoch;
+    final rows = await libraryRepository.database
+        .query('books', where: 'id = ?', whereArgs: ['b1']);
+    final updatedAt = rows.single['position_updated_at'] as int;
+    expect(updatedAt, greaterThanOrEqualTo(before));
+    expect(updatedAt, lessThanOrEqualTo(after));
+  });
+
+  test('save 兩次呼叫，第二次的 position_updated_at 不早於第一次', () async {
+    await repository.save('b1', const ReadingPosition(pdfPageIndex: 1, progress: 0.1));
+    final firstRows = await libraryRepository.database
+        .query('books', where: 'id = ?', whereArgs: ['b1']);
+    final firstUpdatedAt = firstRows.single['position_updated_at'] as int;
+
+    await repository.save('b1', const ReadingPosition(pdfPageIndex: 2, progress: 0.2));
+    final secondRows = await libraryRepository.database
+        .query('books', where: 'id = ?', whereArgs: ['b1']);
+    final secondUpdatedAt = secondRows.single['position_updated_at'] as int;
+
+    expect(secondUpdatedAt, greaterThanOrEqualTo(firstUpdatedAt));
+  });
 }

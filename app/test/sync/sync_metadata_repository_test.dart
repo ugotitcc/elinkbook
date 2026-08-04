@@ -102,4 +102,27 @@ void main() {
     expect(pending, hasLength(1));
     expect(pending.single.clientId, 'bm2');
   });
+
+  test('loadReadingPositionsCursor 初始為 null，saveReadingPositionsCursor 後可讀回（epic-8-sync Issue 5）',
+      () async {
+    expect(await repository.loadReadingPositionsCursor(), isNull);
+
+    await repository.saveReadingPositionsCursor('2026-08-04 00:00:00.000Z');
+
+    expect(
+      await repository.loadReadingPositionsCursor(),
+      '2026-08-04 00:00:00.000Z',
+    );
+  });
+
+  test('saveReadingPositionsCursor 不影響其他 collection 的游標', () async {
+    await repository.savePulledCursor(SyncCollection.bookmarks, '2026-08-01 00:00:00.000Z');
+
+    await repository.saveReadingPositionsCursor('2026-08-04 00:00:00.000Z');
+
+    expect(
+      await repository.loadPulledCursor(SyncCollection.bookmarks),
+      '2026-08-01 00:00:00.000Z',
+    );
+  });
 }
