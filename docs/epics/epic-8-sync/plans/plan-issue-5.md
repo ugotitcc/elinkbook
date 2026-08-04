@@ -909,7 +909,7 @@ git commit -m "feat(epic-8-sync): Issue 5 Task 5 — SyncMetadataRepository 新�
 
 Expected：`flutter analyze` 顯示 "No issues found!"。
 
-- [ ] **Step 9：撰寫失敗測試——閱讀位置同步情境（推送 + 下載）**
+- [x] **Step 9：撰寫失敗測試——閱讀位置同步情境（推送 + 下載）**
 
 `app/test/sync/sync_engine_test.dart` 的 `_testBook()` 輔助函式改為：
 
@@ -1446,7 +1446,7 @@ Book _testBook(
   });
 ```
 
-- [ ] **Step 10：執行測試，確認因閱讀位置同步尚未實作而失敗**
+- [x] **Step 10：執行測試，確認因閱讀位置同步尚未實作而失敗**
 
 Run：
 
@@ -1456,7 +1456,7 @@ flutter test test/sync/sync_engine_test.dart
 
 Expected：FAIL——新增的 8 個閱讀位置同步測試失敗（`runCheckpoint()` 目前完全不處理閱讀位置）。
 
-- [ ] **Step 11：擴充 `sync_engine.dart`——閱讀位置衝突預檢＋推送＋下載**
+- [x] **Step 11：擴充 `sync_engine.dart`——閱讀位置衝突預檢＋推送＋下載**
 
 `sync_engine.dart` 檔案開頭的 import 區塊新增：
 
@@ -1859,7 +1859,7 @@ class _ReadingPositionPushItem {
 }
 ```
 
-- [ ] **Step 12：執行測試，確認全數通過**
+- [x] **Step 12：執行測試，確認全數通過**
 
 Run：
 
@@ -1869,7 +1869,7 @@ flutter test test/sync/sync_engine_test.dart
 
 Expected：PASS（Issue 4 既有測試＋本 Task 新增 8 則，全數通過）。
 
-- [ ] **Step 13：`flutter analyze` + 執行完整測試套件 + Commit**
+- [x] **Step 13：`flutter analyze` + 執行完整測試套件 + Commit**
 
 ```bash
 flutter analyze
@@ -2058,3 +2058,4 @@ git commit -m "test(epic-8-sync): Issue 5 Task 6 — 雙裝置閱讀位置衝突
 - **Important「Filter Injection 風險」，確認屬實，已採納**：查詢遠端閱讀位置時原本用字串內插 `filter: 'book_fingerprint = "$fingerprint"'`——EPUB 指紋優先取自 OPF `dc:identifier`（見 epic-8-sync Issue 3），是書籍檔案內部的任意字串，非本專案自己產生的可信值，若含雙引號會破壞 filter 語法。已改用 PocketBase Dart SDK 官方提供的安全綁定語法 `pb.filter('book_fingerprint = {:fp}', {'fp': fingerprint})`（已查證此方法確實存在於 `package:pocketbase` 0.24.0+1 的 `PocketBase.filter()`，會自動逸出字串內的特殊字元）。**範圍界定**：本次只修正 `book_fingerprint` 這個帶入任意檔案內容的 filter；`_downloadAndMerge()`（Issue 4）與新增的 `_downloadReadingPositions()` 使用的游標 filter（`'updated > "$cursor"'`）維持字串內插不變——游標值一律是 PocketBase 自己蓋章產生的固定格式時間戳記字串，非使用者/檔案內容來源，注入風險可忽略，且修改 Issue 4 既有程式碼超出本 Issue 範圍。
 - **Minor「對話框阻擋同步引擎釋放鎖」，確認屬實，已採納（僅文件備註，不需程式碼變更）**：審查本身也僅要求「建議在 Issue 6 實作併發鎖時，確認對話框可透過點擊外部區域安全釋放鎖定」。已於 `SyncEngine._onReadingPositionConflict` 欄位上方新增給 Issue 6 實作者的提醒（比照既有 `DatabaseException` 提醒的先例），並指出 Task 4 的對話框已測試過點擊外部區域正確回傳 `null`，不會讓 `runCheckpoint()` 真的卡死。
 - **「潛在風險與架構死角」兩項觀察**：「併發問題」（真機手動測試 Issue 5 時可能因為 Issue 6 尚未提供併發鎖而遇到交錯寫入）與「孤兒狀態」（推送閱讀位置成功、後續標註推送失敗時，下次同步會重複 PATCH 同一筆閱讀位置，審查本身已確認這是安全的冪等操作）皆為審查報告自行確認的觀察或提醒未來實作/測試者注意的事項，非要求本計畫修改的問題，不需採取行動。
+- **實作 Step 12 時發現並修正兩個問題（2026-08-04）**：(1) `_downloadReadingPositions()` 用 `getFullList()`，PocketBase Dart SDK 判斷「還有下一頁」的條件是「回應的 `items.length == perPage`」；b22／b23／b24 三則衝突測試的 mock 對這個路徑一律回傳寫死的 `perPage: 1`，配合 1 筆資料觸發無限遞迴，導致 `flutter test` 卡住不動。已改為 mock 讀取請求實際帶的 `perPage` query 參數並原樣回填。(2) 修正分頁後浮現真正的邏輯缺口：`_downloadReadingPositions()` 對「自游標以來的所有紀錄」一視同仁套用到本機，若同一次 checkpoint 的推送階段已判定某本書衝突且跳過（無 UI resolver 可用），下載階段又把同一筆未解決的遠端紀錄抓回來覆寫，等於推翻剛才「跳過、留待下次重試」的決定，違反 FR-19。已與人類確認修正方向：`_syncReadingPositions()` 改回傳 record 型別，多帶出這次 checkpoint 有 dirty 異動的書籍指紋集合（`dirtyFingerprints`），`_downloadReadingPositions()` 新增 `excludeFingerprints` 具名參數，跳過這些書籍（不覆寫，但游標推進仍計入該筆 `updated`，比照既有「指紋對不上本機任何書籍」分支）。
