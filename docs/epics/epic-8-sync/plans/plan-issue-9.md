@@ -37,6 +37,8 @@
 
 本 Task 沒有 Flutter/Dart 程式碼，驗證方式是實際下載 PocketBase 執行檔在本機跑過，不是 `flutter test`。
 
+**Shell 相容性提醒**：以下所有指令（含 `&` 背景執行、`sleep`）假設在 POSIX-相容 shell 下執行（本專案 Bash 工具預設的 Git Bash，或 WSL）；Windows 原生 `cmd.exe`／PowerShell 對 `&`／`sleep` 的行為不同，不要直接貼過去跑。
+
 - [ ] **Step 1：下載本機測試用 PocketBase 執行檔**
 
 在**任何暫存目錄**（例如系統暫存目錄，不要放進本 repo）下執行（Windows 範例，其他平台請對照 `pocketbase-self-hosting.md`「啟動方式」換成對應檔名）：
@@ -307,16 +309,11 @@ curl -sS -w "\nHTTP %{http_code}\n" -X POST http://pbdev.jigong.org/api/collecti
   -H "Authorization: $USERTOKEN" -H "Content-Type: application/json" \
   -d "{\"user\":\"$USERID\",\"book_fingerprint\":\"issue9-verify-fp\",\"pdf_page_index\":2,\"progress\":0.2}"
 
-# 清理驗證用的紀錄
+# 清理驗證用的紀錄（一行處理完，不需要手動逐一複製 id）
 curl -sS -G http://pbdev.jigong.org/api/collections/sync_reading_positions/records \
-  -H "Authorization: $TOKEN" --data-urlencode "filter=book_fingerprint = \"issue9-verify-fp\"" | python3 -c "
-import sys, json
-d = json.load(sys.stdin)
-for it in d['items']:
-    print(it['id'])
-"
-# 對印出的每個 id 執行：
-# curl -X DELETE http://pbdev.jigong.org/api/collections/sync_reading_positions/records/<id> -H "Authorization: $TOKEN"
+  -H "Authorization: $TOKEN" --data-urlencode "filter=book_fingerprint = \"issue9-verify-fp\"" \
+  | python3 -c "import sys, json; [print(it['id']) for it in json.load(sys.stdin)['items']]" \
+  | xargs -I {} curl -sS -X DELETE http://pbdev.jigong.org/api/collections/sync_reading_positions/records/{} -H "Authorization: $TOKEN"
 ```
 
 Expected：第一次 `HTTP 200`；第二次 `HTTP 400`（`validation_not_unique`）。驗證完畢後務必清理掉這筆測試資料，避免污染共用測試帳號（比照既有 `clearRemoteData()` 慣例）。
