@@ -73,6 +73,7 @@
 | `pdf_page_index` | number, 可空 | PDF 頁碼 |
 | `progress` | number | 進度百分比 |
 | _(`updated`／`created`)_ | _(PocketBase 內建)_ | 衝突比對基準，見上方說明，不另建自訂欄位 |
+| _(unique index)_ | _(user, book_fingerprint)_ | 強制「每個使用者對每本書至多一筆」，2026-08-04 epic-8-sync Issue 9 補上（見 `docker/pb_migrations/1785801700_add_reading_positions_unique_index.js`） |
 
 **`sync_bookmarks`／`sync_highlights`／`sync_notes`**（共通欄位）：
 

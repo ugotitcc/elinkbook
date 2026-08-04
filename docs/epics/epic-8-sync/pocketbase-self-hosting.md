@@ -93,6 +93,13 @@ migration，不會因為檔案內容更新而重新執行），另外複製
 `created`／`updated` 欄位。全新部署則兩支檔案一起放也沒問題——
 `1785801600_...` 是冪等的，偵測到欄位已存在時會自動跳過。
 
+**Unique index（Issue 9）**：另外複製
+`pb_migrations_example/1785801700_add_reading_positions_unique_index.js`
+到同一個 `pb_migrations/` 目錄下，強制「每個使用者對每本書至多一筆閱讀
+位置紀錄」——套用前請先確認 `sync_reading_positions` 沒有既存的重複
+（同一 `user` + `book_fingerprint`）紀錄，否則這支 migration 會套用
+失敗、導致 PocketBase 服務整個啟動失敗。
+
 四個 collection 的 **API Rules** 分頁皆設為同一組規則（4 個 List/
 Search、View、Create、Update、Delete 規則欄位皆填相同內容）：
 
@@ -134,7 +141,10 @@ PocketBase（v0.22 以前）每個 base collection 會自動內建這兩個欄�
 導致測試環境這 4 個 collection 的紀錄實際上完全沒有這兩個欄位，已
 一併修正 `pb_migrations_example/1785715200_create_sync_collections.js`
 （新增 `autodateFields()` 共用欄位定義）。**批次建立**指令碼已包含
-這個修正，用批次建立可以略過這一段手動設定。
+這個修正，用批次建立可以略過這一段手動設定。另外需要對
+`(user, book_fingerprint)` 建立 unique index，強制「每個使用者對每
+本書至多一筆」——批次建立指令碼已包含這個修正（見上方「既有部署升級」
+段落）。
 
 ### `sync_bookmarks`
 
