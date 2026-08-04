@@ -54,7 +54,10 @@ void main() {
     addTearDown(() => clearRemoteData(pb));
 
     // 裝置 A：新增一筆書籤並推送。
-    final deviceA = await SqliteLibraryRepository.open(inMemoryDatabasePath);
+    final deviceA = await SqliteLibraryRepository.open(
+      inMemoryDatabasePath,
+      singleInstance: false,
+    );
     addTearDown(() => deviceA.close());
     final bookA = Book(
       id: 'book-a',
@@ -88,7 +91,10 @@ void main() {
 
     // 裝置 B：同一個帳號、同一本書（指紋相同），執行 checkpoint 應下載到
     // 裝置 A 剛才推送的書籤。
-    final deviceB = await SqliteLibraryRepository.open(inMemoryDatabasePath);
+    final deviceB = await SqliteLibraryRepository.open(
+      inMemoryDatabasePath,
+      singleInstance: false,
+    );
     addTearDown(() => deviceB.close());
     // 注意：`Book.copyWith()` 刻意不含 `contentFingerprint`（見 book.dart
     // 既有註解），若在這裡呼叫 `bookA.copyWith()` 會把指紋重置為 null、
@@ -135,7 +141,10 @@ void main() {
         'integration-test-position-fingerprint-${DateTime.now().microsecondsSinceEpoch}';
 
     // 裝置 A：開這本書、讀到第 10 頁，checkpoint 推送。
-    final deviceA = await SqliteLibraryRepository.open(inMemoryDatabasePath);
+    final deviceA = await SqliteLibraryRepository.open(
+      inMemoryDatabasePath,
+      singleInstance: false,
+    );
     addTearDown(() => deviceA.close());
     final bookA = Book(
       id: 'book-position-a',
@@ -170,7 +179,10 @@ void main() {
     // 第 20 頁、本機異動待推送，checkpoint 時應偵測到衝突（遠端已有裝置
     // A 剛推送的紀錄，本機快取為 null，依 resolveReadingPositionAction()
     // 的定義視為衝突，見 plan-issue-5.md Task 3）。
-    final deviceB = await SqliteLibraryRepository.open(inMemoryDatabasePath);
+    final deviceB = await SqliteLibraryRepository.open(
+      inMemoryDatabasePath,
+      singleInstance: false,
+    );
     addTearDown(() => deviceB.close());
     final bookB = Book(
       id: 'book-position-b',
