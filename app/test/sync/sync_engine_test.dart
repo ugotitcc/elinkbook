@@ -649,6 +649,56 @@ void main() {
       );
     });
 
+    test('查詢既有閱讀位置紀錄時，帶上確定性排序（epic-8-sync Issue 9，防禦性語意：unique index 生效前後皆不依賴未定義排序）',
+        () async {
+      await libraryRepository.insertBook(_testBook(
+        'b28',
+        contentFingerprint: 'fp-28',
+        positionUpdatedAt: 5000,
+        progress: 0.4,
+      ));
+
+      String? capturedSort;
+      final mockClient = MockClient((request) async {
+        if (request.method == 'GET' &&
+            request.url.path == '/api/collections/sync_reading_positions/records' &&
+            request.url.queryParameters.containsKey('filter')) {
+          // 只捕捉 push 階段的查詢（帶 filter），不是下載階段（帶 sort: updated）
+          capturedSort = request.url.queryParameters['sort'];
+          return http.Response(
+            jsonEncode({'items': [], 'page': 1, 'perPage': 1, 'totalItems': 0}),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        if (request.url.path == '/api/batch') {
+          return http.Response(
+            jsonEncode([
+              {'status': 200, 'body': {'id': 'pb-pos-b28', 'updated': '2026-08-04 00:00:00.000Z'}},
+            ]),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        return http.Response(
+          jsonEncode({'items': [], 'page': 1, 'perPage': 1000, 'totalItems': 0}),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      });
+
+      final engine = SyncEngine(
+        db: libraryRepository.database,
+        accountRepository: accountRepository,
+        metadataRepository: metadataRepository,
+        clientFactory: (baseUrl) => PocketBase(baseUrl, httpClientFactory: () => mockClient),
+      );
+
+      await engine.runCheckpoint();
+
+      expect(capturedSort, 'created');
+    });
+
     test('本機無待推送的閱讀位置異動時，push 階段的 per-book 過濾查詢不會發生'
         '（下載階段仍會依設計無條件查詢，見 Critical #1 修正）', () async {
       await libraryRepository.insertBook(_testBook('b21', contentFingerprint: 'fp-21'));
