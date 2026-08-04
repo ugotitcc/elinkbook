@@ -22,10 +22,25 @@ class SqliteLibraryRepository implements LibraryRepository {
 
   SqliteLibraryRepository._(this._db);
 
-  static Future<SqliteLibraryRepository> open(String path) async {
+  /// 開啟（或建立）圖書庫資料庫。
+  ///
+  /// [singleInstance] 預設 `true`（與 sqflite 套件本身預設一致）：對同一個
+  /// 字面路徑字串重複呼叫本方法會回傳同一個底層連線，正式環境下這是正確
+  /// 且需要的行為（避免對同一個真實檔案開出多條連線）。**但若要在同一個
+  /// process 內用相同的 [inMemoryDatabasePath]（`":memory:"`）開出多個彼此
+  /// 獨立的記憶體內資料庫（例如整合測試中模擬「多台裝置各自的本機資料
+  /// 庫」），必須明確傳入 `singleInstance: false`**——sqflite 的 Dart 層快取
+  /// （`databaseOpenHelpers`，見 `sqflite_common` `factory_mixin.dart`）是以
+  /// 字面路徑字串為 key，不會因為路徑是 `:memory:` 就自動視為獨立（
+  /// epic-8-sync Issue 8 實測驗證，見 `plans/plan-issue-8.md`）。
+  static Future<SqliteLibraryRepository> open(
+    String path, {
+    bool singleInstance = true,
+  }) async {
     final db = await openDatabase(
       path,
       version: 18,
+      singleInstance: singleInstance,
       onConfigure: (db) async {
         // book_reader_prefs 的 ON DELETE CASCADE 需要外鍵約束真正生效，
         // SQLite 預設不強制外鍵，須逐連線手動開啟（見 epic-3 plan-issue-1）。
