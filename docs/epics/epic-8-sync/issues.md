@@ -320,4 +320,4 @@ plan-issue-5.md 的 Global Constraints 明確要求「`sync_reading_positions` �
 - [x] 已確認 `pbdev.jigong.org` 上沒有既存重複紀錄，或已妥善清理
 - [x] 新增的 unique index migration 正確套用（本機／測試實例皆驗證過）
 - [x] `_syncReadingPositions()` 的查詢補上確定性排序
-- [x] 新增測試驗證「同一 (user, book_fingerprint) 嘗試建立第二筆會被 PocketBase 拒絕」（PR #TBD，2026-08-04；本機用 PocketBase v0.39.10 binary 驗證 migration 正確套用/冪等/失敗情境三種行為，`pbdev.jigong.org` 已透過 Admin API 套用並驗證，見 `plans/plan-issue-9.md`）
+- [x] 新增測試驗證「同一 (user, book_fingerprint) 嘗試建立第二筆會被 PocketBase 拒絕」（PR #109，2026-08-04；本機用 PocketBase v0.39.10 binary 驗證 migration 正確套用/冪等/失敗情境三種行為，`pbdev.jigong.org` 已透過 Admin API 套用並驗證，見 `plans/plan-issue-9.md`）
