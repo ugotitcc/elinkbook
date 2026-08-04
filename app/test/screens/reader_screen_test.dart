@@ -4621,6 +4621,66 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('閱讀中每 5 分鐘計時器觸發 checkpoint，離開畫面後計時器停止', (tester) async {
+    var triggerCallCount = 0;
+    final syncCheckpointTrigger = SyncCheckpointTrigger(
+      isLoggedIn: () async => true,
+      runCheckpoint: () async {
+        triggerCallCount++;
+      },
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: ElevatedButton(
+              key: const Key('open_reader'),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => ReaderScreen(
+                    filePath: 'test/fixtures/sample.pdf',
+                    bookId: 'b1',
+                    prefsManager: prefsManager,
+                    syncCheckpointTrigger: syncCheckpointTrigger,
+                  ),
+                ),
+              ),
+              child: const Text('open'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.byKey(const Key('open_reader')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+    tester.widget<PdfReaderView>(find.byType(PdfReaderView)).onPageRendered();
+    await tester.pump();
+
+    expect(triggerCallCount, 0);
+
+    await tester.pump(const Duration(minutes: 5));
+    expect(triggerCallCount, 1, reason: '第一次 5 分鐘計時應觸發一次 checkpoint');
+
+    await tester.pump(const Duration(minutes: 5));
+    expect(triggerCallCount, 2, reason: '計時器應持續每 5 分鐘觸發一次');
+
+    final navigatorState = tester.state<NavigatorState>(find.byType(Navigator));
+    navigatorState.maybePop();
+    await tester.pumpAndSettle();
+    // 離開畫面當下 Task 3 的「書籍切換」觸發也會呼叫一次 trigger()，
+    // 這裡只關心「離開之後計時器是否已停止」，故以離開當下的次數為基準，
+    // 不假設離開當下的確切次數。
+    final countAfterLeaving = triggerCallCount;
+
+    await tester.pump(const Duration(minutes: 5));
+    expect(triggerCallCount, countAfterLeaving,
+        reason: '離開畫面後計時器應已被 cancel，不應再繼續觸發');
+  });
+
   testWidgets(
       'App 從背景恢復時，即使 fullscreen 值未變，_applySystemUiMode 仍重新呼叫 elinkbook/fullscreen',
       (tester) async {

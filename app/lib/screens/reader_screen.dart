@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:uuid/uuid.dart';
@@ -284,6 +286,12 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   // docs/epics/epic-17-epub-render-migration/spec.md「已知限制」。
   bool? _dispatchedIsFixedLayout;
 
+  // epic-8-sync Issue 6：閱讀中每 5 分鐘觸發一次 checkpoint 的週期性
+  // 計時器。單純的週期性 Timer（不判斷使用者是否真的有互動），見
+  // plan-issue-6.md Global Constraints 的 YAGNI 說明。未提供
+  // syncCheckpointTrigger 時完全不建立（見 initState），零額外開銷。
+  Timer? _syncCheckpointTimer;
+
   @override
   void initState() {
     super.initState();
@@ -291,6 +299,13 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     _volumeKeyChannel.setMethodCallHandler(_handleVolumeKeyCall);
     _resolveEpubEngineDispatch();
     _loadCustomFonts();
+    final syncCheckpointTrigger = widget.syncCheckpointTrigger;
+    if (syncCheckpointTrigger != null) {
+      _syncCheckpointTimer = Timer.periodic(
+        const Duration(minutes: 5),
+        (_) => syncCheckpointTrigger.trigger(),
+      );
+    }
     widget.prefsManager.load(widget.bookId).then((loaded) {
       if (!mounted) return;
       setState(() {
@@ -352,6 +367,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
 
   @override
   void dispose() {
+    _syncCheckpointTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     _volumeKeyChannel.setMethodCallHandler(null);
     _totalCharacterCountNotifier.dispose();
