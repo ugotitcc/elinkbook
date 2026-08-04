@@ -2635,4 +2635,35 @@ void main() {
         .rawQuery('PRAGMA table_info(sync_pending_records)');
     expect(syncPendingColumns, isNotEmpty);
   });
+
+  test(
+      'open() 傳入 singleInstance:false 時，兩次呼叫相同的 inMemoryDatabasePath '
+      '是彼此獨立的資料庫，不會共用同一個底層連線（epic-8-sync Issue 8）', () async {
+    final deviceA = await SqliteLibraryRepository.open(
+      inMemoryDatabasePath,
+      singleInstance: false,
+    );
+    addTearDown(() => deviceA.close());
+    await deviceA.insertBook(_book('shared-id'));
+
+    final deviceB = await SqliteLibraryRepository.open(
+      inMemoryDatabasePath,
+      singleInstance: false,
+    );
+    addTearDown(() => deviceB.close());
+    // sqflite 的 openDatabase() 預設 singleInstance:true：對同一個字面路徑
+    // 字串（":memory:"）第二次呼叫 open() 會直接回傳第一次那個 Database
+    // 物件（sqflite_common factory_mixin.dart 的 databaseOpenHelpers[path]
+    // 快取，只在 options.singleInstance == false 時才略過）。若這裡沒有
+    // 正確傳遞 singleInstance:false，deviceB 事實上會是 deviceA 同一個
+    // 資料庫，這一行會因為重複插入相同 id 撞到 UNIQUE constraint 而拋出
+    // DatabaseException。
+    await deviceB.insertBook(_book('shared-id'));
+
+    final booksInA = await deviceA.listBooks();
+    expect(booksInA, hasLength(1),
+        reason: 'deviceA 應只看到自己插入的那一筆，看不到 deviceB 插入的另一筆'
+            '同 id 資料（若上一行 insertBook 沒有拋出例外，代表兩者仍是同一個'
+            '資料庫但剛好沒有觸發 UNIQUE constraint，這個斷言會抓到這種情況）');
+  });
 }
