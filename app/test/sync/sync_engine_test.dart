@@ -843,6 +843,7 @@ void main() {
         bookRows.single['position_synced_server_updated_at'],
         '2026-08-04 00:00:00.000Z',
       );
+      expect(bookRows.single['pdfPageIndex'], 10, reason: '本機值未被下載階段的舊快照覆寫（excludeFingerprints 排除生效）');
     });
 
     test('偵測到衝突、使用者選擇保留雲端時，立即覆寫本機位置，不推送任何值', () async {
