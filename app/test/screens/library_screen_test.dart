@@ -2930,6 +2930,117 @@ void main() {
         reason: '只有頂層書架（groupFilter == null）啟動當下才應該觸發自動開書，'
             '分類篩選路徑本身不應該重複觸發');
   });
+
+  testWidgets(
+      '橫屏（4 欄）下 3 個分類拼貼格＋第 4 欄由第一本書籍格頂上時，兩者文字'
+      '標籤起始 Y 座標對齊（epic-18-reader-device-qa Issue 42，真機使用'
+      '回報：書架橫屏下封面未對齊——直式 3 欄時 3 個分類恰好填滿一列、'
+      '書籍從下一列開始，不會同列；橫屏 4 欄時 3 個分類只填滿前 3 欄，'
+      '第 4 欄由第一本書籍格頂上，才會與分類拼貼格同列。根因是'
+      '_BookGridTile 有 2 行文字說明（書名＋進度），_GroupGridTile 只有'
+      '1 行〔分類名稱＋本數〕，兩者封面 Expanded 吃到的剩餘高度因此不同，'
+      '導致同列的封面底部邊界錯開。程式碼審查修正：原測試只建立 1 個分類'
+      '〔任何欄數下皆會同列，未精確重現橫屏限定的觸發條件〕，改為 3 個'
+      '不同分類＋橫屏 4 欄，具體驗證「第 4 欄由書籍格頂上」這個情境）',
+      (tester) async {
+    tester.view.physicalSize = const Size(1600, 1200);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final books = [
+      _testBook(id: 'g0', title: '奇幻書', groupName: '奇幻'),
+      _testBook(id: 'g1', title: '科幻書', groupName: '科幻'),
+      _testBook(id: 'g2', title: '歷史書', groupName: '歷史'),
+      _testBook(id: 'b0', title: '第一本個別書'),
+    ];
+    final repository = FakeLibraryRepository(initialBooks: books);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: repository,
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final groupTileFinder = find.byKey(const Key('group_tile_奇幻'));
+    final bookTileFinder = find.byKey(const Key('book_item_b0'));
+    expect(groupTileFinder, findsOneWidget);
+    expect(bookTileFinder, findsOneWidget);
+
+    // 前提：兩者確實同列（外層總高度相同、頂端 Y 座標相同，這是
+    // GridView 在橫屏 4 欄、3 個分類拼貼格＋書籍格緊接在第 4 欄的既有
+    // 佈局保證，這裡順便驗證前提沒有跑掉）。
+    expect(
+      tester.getTopLeft(groupTileFinder).dy,
+      tester.getTopLeft(bookTileFinder).dy,
+    );
+    expect(
+      tester.getSize(groupTileFinder).height,
+      tester.getSize(bookTileFinder).height,
+    );
+
+    final groupLabelTop = tester
+        .getTopLeft(find.descendant(
+          of: groupTileFinder,
+          matching: find.text('奇幻 (1)'),
+        ))
+        .dy;
+    final bookTitleTop = tester
+        .getTopLeft(find.descendant(
+          of: bookTileFinder,
+          matching: find.text('第一本個別書'),
+        ))
+        .dy;
+
+    expect(bookTitleTop, groupLabelTop,
+        reason: '同列的分類拼貼格與書籍格，文字標籤起始高度應對齊，'
+            '封面區塊底部邊界才不會錯開');
+  });
+
+  testWidgets(
+      '系統字級放大時，分類拼貼格與書籍格的文字說明區高度隨字級同比例'
+      '縮放，不會觸發 RenderFlex 溢位（程式碼審查修正，'
+      'tmp/epic-18/review-issue-42-44.md Important #1：修法前文字說明區'
+      '是自然高度，字級放大時 Column 會自然讓出空間；修法後鎖進固定像素'
+      '高度的 SizedBox，若沒有隨 textScaler 同比例縮放，字級放大會讓'
+      '_BookGridTile 的 2 行文字被截斷、觸發溢位）', (tester) async {
+    tester.view.physicalSize = const Size(1600, 1200);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final books = [
+      _testBook(id: 'g0', title: '奇幻書', groupName: '奇幻'),
+      _testBook(id: 'b0', title: '第一本個別書，書名故意寫長一點測試換行'),
+    ];
+    final repository = FakeLibraryRepository(initialBooks: books);
+
+    await tester.pumpWidget(
+      MediaQuery(
+        // 模擬系統字級放大 1.5 倍（Android「顯示大小」設定常見選項）。
+        data: MediaQueryData(textScaler: TextScaler.linear(1.5)),
+        child: MaterialApp(
+          home: LibraryScreen(
+            repository: repository,
+            importService: FakeBookImportService(),
+            prefsManager: prefsManager,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // 字級放大情境下，只要沒有 RenderFlex 溢位例外，就代表固定高度容器
+    // 有隨 textScaler 同比例放大、確實讓出足夠空間。
+    expect(tester.takeException(), isNull);
+    expect(find.byKey(const Key('group_tile_奇幻')), findsOneWidget);
+    expect(find.byKey(const Key('book_item_b0')), findsOneWidget);
+  });
 }
 
 Book _testBook({

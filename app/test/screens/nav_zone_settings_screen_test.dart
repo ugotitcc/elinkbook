@@ -384,4 +384,57 @@ void main() {
       ZoneAction.nextPage,
     );
   });
+
+  group('navZoneTemplateIconColor（epic-18-reader-device-qa Issue 44）', () {
+    test('chevron_left 恆為紅色', () {
+      expect(navZoneTemplateIconColor(Icons.chevron_left), Colors.red.shade100);
+    });
+
+    test('chevron_right 恆為藍色', () {
+      expect(navZoneTemplateIconColor(Icons.chevron_right), Colors.blue.shade100);
+    });
+
+    test('menu 恆為綠色', () {
+      expect(navZoneTemplateIconColor(Icons.menu), Colors.green.shade100);
+    });
+  });
+
+  testWidgets(
+      '「左翻頁」與「右翻頁」卡片對同一個圖示（chevron_left／chevron_right）'
+      '使用相同顏色（epic-18-reader-device-qa Issue 44，真機使用回報：'
+      '兩張卡片原本用欄位位置決定顏色，導致同一個 < 圖示在兩張卡片上顏色'
+      '不同）', (tester) async {
+    final fakeManager = FakeReaderPrefsManager();
+    await tester.pumpWidget(MaterialApp(
+      home: NavZoneSettingsScreen(prefsManager: fakeManager),
+    ));
+    await tester.pumpAndSettle();
+
+    /// 從卡片內找出指定圖示所在色塊 Container 的 color
+    Color colorOfIcon(Key cardKey, IconData icon) {
+      final containers = tester.widgetList<Container>(find.descendant(
+        of: find.byKey(cardKey),
+        matching: find.byType(Container),
+      ));
+      for (final container in containers) {
+        if (container.color != null && container.child is Icon) {
+          final iconWidget = container.child as Icon;
+          if (iconWidget.icon == icon) return container.color!;
+        }
+      }
+      throw StateError('No Container with Icon $icon found in card $cardKey');
+    }
+
+    final leftFlipChevronLeftColor =
+        colorOfIcon(const Key('nav_zone_mode_leftFlip'), Icons.chevron_left);
+    final rightFlipChevronLeftColor =
+        colorOfIcon(const Key('nav_zone_mode_rightFlip'), Icons.chevron_left);
+    expect(leftFlipChevronLeftColor, rightFlipChevronLeftColor);
+
+    final leftFlipChevronRightColor =
+        colorOfIcon(const Key('nav_zone_mode_leftFlip'), Icons.chevron_right);
+    final rightFlipChevronRightColor =
+        colorOfIcon(const Key('nav_zone_mode_rightFlip'), Icons.chevron_right);
+    expect(leftFlipChevronRightColor, rightFlipChevronRightColor);
+  });
 }

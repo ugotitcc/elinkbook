@@ -3413,13 +3413,13 @@ void main() {
       of: find.byKey(const Key('reader_foliate_header_text')),
       matching: find.byType(Text),
     ));
-    expect(headerText.style?.fontSize, 16);
+    expect(headerText.style?.fontSize, 12);
 
     final footerText = tester.widget<Text>(find.descendant(
       of: find.byKey(const Key('reader_foliate_progress_text')),
       matching: find.byType(Text),
     ));
-    expect(footerText.style?.fontSize, 16);
+    expect(footerText.style?.fontSize, 12);
   });
 
   testWidgets(
@@ -4958,6 +4958,74 @@ void main() {
 
     expect(find.byKey(const Key('reader_error_text')), findsNothing,
         reason: '已成功渲染的畫面不應被逾時計時器事後覆蓋成錯誤狀態');
+  });
+
+  testWidgets(
+      '流式 EPUB 頁首/頁尾文字：字級為 12、不含按鈕底色與內距，只佔文字本身空間、'
+      '文字顏色與書本內文一致（黑色，非白色）'
+      '（epic-18-reader-device-qa Issue 43，真機使用回報：拿掉底色後白色'
+      '文字疊在淺色書頁上基本上看不到）', (tester) async {
+    await prefsManager.saveBookPrefs(
+      'b_header_footer_no_bg',
+      const BookReaderPrefs(showHeader: true, showFooter: true),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_header_footer_no_bg',
+          prefsManager: prefsManager,
+          isFixedLayout: false,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final foliateView = tester.widget<FoliateEpubReaderView>(
+      find.byType(FoliateEpubReaderView),
+    );
+    foliateView.onPageRendered();
+    foliateView.onLocatorChanged?.call(
+      const EpubPositionInfo(
+        locatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
+        progression: 0.1,
+        pageIndex: 9,
+        totalPages: 100,
+      ),
+    );
+    await tester.pump();
+
+    // 觸發沉浸模式讓頁首頁尾顯示
+    await tester.tap(find.byKey(const Key('nav_zone_1')));
+    await tester.pump();
+
+    final headerContainer = tester.widget<Container>(
+      find.byKey(const Key('reader_foliate_header_text')),
+    );
+    expect(headerContainer.padding, isNull);
+    expect(headerContainer.decoration, isNull);
+
+    final headerText = tester.widget<Text>(find.descendant(
+      of: find.byKey(const Key('reader_foliate_header_text')),
+      matching: find.byType(Text),
+    ));
+    expect(headerText.style?.fontSize, 12);
+    expect(headerText.style?.color, Colors.black);
+
+    final footerContainer = tester.widget<Container>(
+      find.byKey(const Key('reader_foliate_progress_text')),
+    );
+    expect(footerContainer.padding, isNull);
+    expect(footerContainer.decoration, isNull);
+
+    final footerText = tester.widget<Text>(find.descendant(
+      of: find.byKey(const Key('reader_foliate_progress_text')),
+      matching: find.byType(Text),
+    ));
+    expect(footerText.style?.fontSize, 12);
+    expect(footerText.style?.color, Colors.black);
   });
 
   tearDownAll(() {
