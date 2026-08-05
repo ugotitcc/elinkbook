@@ -75,6 +75,26 @@ void main() {
     expect(books.single.coverPath, isNotNull);
   });
 
+  test(
+      '匯入的書籍 lastReadTime 為「尚未讀過」哨兵值（epoch 0），非匯入當下時間'
+      '（epic-18-reader-device-qa Issue 29：剛匯入、從未打開過的書不該被誤判為'
+      '「最後閱讀」蓋過真正最近在讀的書）', () async {
+    mockChannel((call) async {
+      if (call.method == 'takePersistableUriPermission') return null;
+      if (call.method == 'extractMetadata') {
+        return {'title': '剛匯入的書'};
+      }
+      return null;
+    });
+
+    final result = await service.importFiles(['content://example/book.epub']);
+    final book = result.importedBooks.single;
+
+    expect(book.lastReadTime, DateTime.fromMillisecondsSinceEpoch(0));
+    expect(book.createTime, isNot(DateTime.fromMillisecondsSinceEpoch(0)),
+        reason: 'createTime 仍應正確記錄實際匯入時間，只有 lastReadTime 改用哨兵值');
+  });
+
   test('匯入 EPUB 檔案時，extractMetadata 回傳的 isFixedLayout 正確寫入 Book', () async {
     mockChannel((call) async {
       if (call.method == 'takePersistableUriPermission') return null;

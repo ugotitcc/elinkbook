@@ -1447,15 +1447,19 @@ void main() {
     // 區分「_groups 已註冊」與「孤兒」分類——所有分類統一來自同一份依
     // _sortBy 排序的 books 走訪順序，故不需要 _loadGroups() 是否有被
     // 呼叫也不會讓「一般叢書」的拼貼格消失或錯放；這裡改為單純驗證新
-    // 建立的分類拼貼格確實存在（未消失）。「一般叢書」排在「奇幻」之前
-    // 是因為它是後來才透過資料夾匯入建立、lastReadTime 較新（預設排序
-    // 模式「最後閱讀」），並非依名稱排序。
+    // 建立的分類拼貼格確實存在（未消失）。「奇幻」排在「一般叢書」之前
+    // 是因為前者的 lastReadTime 是既有 fixture 的真實值（`_testBook()`
+    // 預設值＝建立當下），後者是透過資料夾匯入剛建立、從未被打開過的
+    // 新書——依 Issue 29 修正後的語意，剛匯入未讀的書不該被誤判為
+    // 「最後閱讀」而排到已有真實閱讀紀錄的書之前（`lastReadTime` 為
+    // 「尚未讀過」的 epoch 0 哨兵值，排序模式「最後閱讀」下必然排在最
+    // 後），並非依名稱排序。
     final tileTitles = tester
         .widgetList<ListTile>(find.byType(ListTile))
         .map((tile) => (tile.title as Text).data)
         .where((title) => title == '奇幻' || title == '一般叢書')
         .toList();
-    expect(tileTitles, ['一般叢書', '奇幻']);
+    expect(tileTitles, ['奇幻', '一般叢書']);
   });
 
   testWidgets(
