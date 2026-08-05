@@ -219,4 +219,46 @@ void main() {
           'null-fallback 值（第 1 頁），避免誤導使用者以為該章節就在全書開頭',
     );
   });
+
+  testWidgets('點擊右上角 X 取消按鈕後，Bottom Sheet 關閉（Navigator.pop 生效）',
+      (tester) async {
+    await _pumpModalSheet(tester, entries);
+
+    expect(find.byType(TocBottomSheet), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('toc_bottom_sheet_close_button')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(TocBottomSheet), findsNothing);
+  });
+}
+
+Future<void> _pumpModalSheet(
+  WidgetTester tester,
+  List<TocEntry> entries,
+) async {
+  await tester.pumpWidget(MaterialApp(
+    home: Scaffold(
+      body: Builder(
+        builder: (context) => ElevatedButton(
+          onPressed: () => showModalBottomSheet<void>(
+            context: context,
+            isScrollControlled: true,
+            builder: (_) => TocBottomSheet(
+              entries: entries,
+              initiallyExpandedEntries: const {},
+              currentEntry: null,
+              totalCharacterCountListenable: ValueNotifier<int?>(null),
+              resolved: _testResolved,
+              onEntrySelected: (_) {},
+            ),
+          ),
+          child: const Text('open'),
+        ),
+      ),
+    ),
+  ));
+
+  await tester.tap(find.text('open'));
+  await tester.pumpAndSettle();
 }

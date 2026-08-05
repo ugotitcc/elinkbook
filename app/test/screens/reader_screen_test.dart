@@ -1493,9 +1493,15 @@ void main() {
       await tester.pump();
     }
 
-    // fontSize 倍率變成 2.0 → estimateCharsPerScreen 從 500 降為 125 →
-    // totalPages 從 10 變成 40。
-    expect(find.text('1/40'), findsOneWidget);
+    // fontSize 倍率變成 2.0，且 16 次點擊過程中 ReaderSettingsSheet 的
+    // _notifyChanged() 一併把行高／邊界的目前 UI 狀態（即使使用者未曾觸碰）
+    // 送入 BookReaderPrefs——epic-18 Issue 25/26 把行高／上邊界預設值分別
+    // 從 1.5/64 改為 1.0/32 後，estimateCharsPerScreen() 換算出的總頁數
+    // 也隨之改變（不再是舊預設值年代算出的 40，此為預期中的連動變化，非
+    // 回歸）；expect 值改為目前預設值下的正確結果 27（實測驗證，見
+    // EpubPageEstimator.estimateCharsPerScreen 的 lineHeightFactor／
+    // pageMarginsFactor 計算）。
+    expect(find.text('1/27'), findsOneWidget);
   });
 
   testWidgets('PDF 頁尾行為不受本工單影響（既有回歸驗證）', (tester) async {

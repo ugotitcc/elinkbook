@@ -123,10 +123,20 @@ class _TocBottomSheetState extends State<TocBottomSheet> {
             itemCount: _visibleRows.length + 1,
             itemBuilder: (context, index) {
               if (index == 0) {
-                return const Padding(
-                  padding: EdgeInsets.only(bottom: 12),
-                  child:
-                      Text('📖 目錄', style: TextStyle(fontWeight: FontWeight.bold)),
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('📖 目錄',
+                          style: TextStyle(fontWeight: FontWeight.bold)),
+                      IconButton(
+                        key: const Key('toc_bottom_sheet_close_button'),
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ],
+                  ),
                 );
               }
               return _buildEntryRow(_visibleRows[index - 1], totalCharacterCount);
