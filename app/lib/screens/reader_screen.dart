@@ -292,6 +292,19 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   // syncCheckpointTrigger 時完全不建立（見 initState），零額外開銷。
   Timer? _syncCheckpointTimer;
 
+  /// 開書載入逾時哨兵（epic-18-reader-device-qa Issue 33，真機使用回報：
+  /// iReader Ocean 4 Plus 開啟書籍時畫面永遠停在載入指示器，5 個推測根因
+  /// 皆無真機診斷資料佐證）。單次 Timer，_handlePageRendered()／
+  /// _handleError() 觸發時皆會取消（不論成功或失敗都不需要再等）；
+  /// 12 秒後若仍是 loading 狀態，代表底層渲染引擎（PdfRenderer／
+  /// FoliateEpubReaderView 的 WebView）從未回報任何結果，主動切換為錯誤
+  /// 畫面，避免使用者永遠面對轉圈圈、投訴無門（見上方 Issue 33 的
+  /// _globalErrorCaptureJs 診斷能力補強說明——這是「連 JS 例外都沒有拋出」
+  /// 這種更極端情況的最後一道防線）。12 秒取自本 Issue 的原始分析報告
+  /// 建議值，非嚴謹量測結果，未來若真機回報大型書籍在正常情況下也需要
+  /// 較長時間才能完成首頁繪製，可再調整。
+  Timer? _openBookTimeoutTimer;
+
   @override
   void initState() {
     super.initState();
@@ -306,6 +319,10 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         (_) => syncCheckpointTrigger.trigger(),
       );
     }
+    _openBookTimeoutTimer = Timer(
+      const Duration(seconds: 12),
+      _handleOpenBookTimeout,
+    );
     widget.prefsManager.load(widget.bookId).then((loaded) {
       if (!mounted) return;
       setState(() {
@@ -368,6 +385,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   @override
   void dispose() {
     _syncCheckpointTimer?.cancel();
+    _openBookTimeoutTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     _volumeKeyChannel.setMethodCallHandler(null);
     _totalCharacterCountNotifier.dispose();
@@ -838,6 +856,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
 
   void _handlePageRendered() {
     if (!mounted) return;
+    _openBookTimeoutTimer?.cancel();
     setState(() => _state = _RenderState.rendered);
     // epic-6-annotations Issue 3：PDF 書籍開啟成功後載入既有劃線/備註並
     // 送給原生端渲染。與 EPUB 的觸發點（_handleLayoutResolved，見 Issue 2
@@ -855,9 +874,23 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
 
   void _handleError(String message) {
     if (!mounted) return;
+    _openBookTimeoutTimer?.cancel();
     setState(() {
       _state = _RenderState.error;
       _errorMessage = message;
+    });
+  }
+
+  /// epic-18-reader-device-qa Issue 33：見上方 `_openBookTimeoutTimer` 註解。
+  /// 判斷 `_state == loading` 才動作——理論上 `_handlePageRendered()`／
+  /// `_handleError()` 都會取消這個 Timer，這裡是雙重防禦，避免任何未預期
+  /// 的競態把已經成功渲染或已經顯示其他錯誤訊息的畫面覆蓋掉。
+  void _handleOpenBookTimeout() {
+    if (!mounted) return;
+    if (_state != _RenderState.loading) return;
+    setState(() {
+      _state = _RenderState.error;
+      _errorMessage = '開書逾時，可能是系統 WebView 版本過舊或檔案異常';
     });
   }
 

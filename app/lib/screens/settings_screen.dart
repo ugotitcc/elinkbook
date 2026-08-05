@@ -8,12 +8,14 @@ import '../theme/app_theme.dart';
 import 'about_screen.dart';
 import 'font_management_screen.dart';
 import 'nav_zone_settings_screen.dart';
+import 'reader_console_log_screen.dart';
 import 'reading_defaults_screen.dart';
 import 'sync_settings_screen.dart';
 
 /// 設定畫面：「佈景」（主題圓點，原位於 `LibraryScreen` AppBar，見
 /// `epic-18-reader-device-qa` 工具列溢位修復）、「字型管理」、「閱讀預設值」、
-/// 「導航熱區」、「同步」與「關於」六個項目。
+/// 「導航熱區」、「同步」、「閱讀器 Console Log」（Issue 33 診斷用）與
+/// 「關於」七個項目。
 class SettingsScreen extends StatelessWidget {
   final ReaderPrefsManager prefsManager;
   final AppTheme currentTheme;
@@ -114,6 +116,18 @@ class SettingsScreen extends StatelessWidget {
                       ),
                     );
                   },
+          ),
+          ListTile(
+            key: const Key('settings_reader_console_log_button'),
+            title: const Text('閱讀器 Console Log'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const ReaderConsoleLogScreen(),
+                ),
+              );
+            },
           ),
           ListTile(
             key: const Key('settings_about_button'),

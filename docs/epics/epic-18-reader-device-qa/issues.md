@@ -972,3 +972,37 @@ AiPaper Reader C 這類 E-Ink 裝置為了讓文字/圖示夠大，`devicePixelR
 - **採納**：Issue 2 補上既有字串斷言會壞掉的完整清單（`reader_footer_test.dart` 2 處＋`reader_screen_test.dart` 7 處，原審查報告只提到前者，複查後補齊後者）。
 - **採納**：Issue 3 補上 `crossAxisSpacing`/`mainAxisSpacing` 的視覺建議（Minor，非必要）。
 - **採納**：Issue 5 補上原文遺漏的 SQLite migration round-trip 測試要求（`version: 11 → 12`），複查確認目前 schema 版本確實是 11。
+
+---
+
+## Issue 33：iReader Ocean 4 Plus 開書永遠停在載入指示器——診斷能力（`/grill-with-docs`）
+
+**背景（2026-08-05）：** 使用者於 iReader Ocean 4 Plus 這台真機上回報開啟書籍後畫面永遠停在轉圈圈載入指示器，且該裝置的系統 WebView 建置沒有開啟 `setWebContentsDebuggingEnabled`，無法透過 `chrome://inspect` 遠端除錯，也就無法直接觀察 JS 端是否拋出例外。透過 `/grill-with-docs` 統一評估 `tmp/gradle_jdk_warning_analysis.md`／`tmp/ireader-ocean4-plus-loading-issue-analysis.md`／Flutter SDK 更新提示三個訊號後確認彼此因果獨立，本 Issue 範圍限定於「先建立診斷能力」，不在缺乏根因線索的情況下貿然猜測修復。
+
+**依賴：** 無
+
+**Status:** ✅ 已完成（分支 `feat/epic-18-issue-33-open-book-diagnostics`，4 個 commit，皆採 TDD）。
+
+### 33-1：`_cacheBook()` catch(e) 分支回歸測試
+
+**Status:** ✅ 已完成。調查 `foliate_epub_reader_view.dart` 的 `_cacheBook()` 發現兩個失敗分支（`cachedPath == null`／`catch (e)`）其實都已正確呼叫 `widget.onError(...)`，並非本次回報的根因，不需要修復。仍依人類指示補一個回歸測試鎖住這個行為（`cacheBookForServing` 拋出例外時呼叫 `onError` 帶入例外訊息，不會讓畫面永遠卡在載入指示器），避免未來改動意外破壞。
+
+### 33-2：全局 JS 錯誤捕捉（`window.onerror`／`window.onunhandledrejection`）
+
+**Status:** ✅ 已完成。`initialUserScripts` 新增第二段於 `AT_DOCUMENT_START` 注入的腳本（`_globalErrorCaptureJs`），掛上 `window.onerror` 與 `window.onunhandledrejection`，兩者皆重用既有 `onError` bridge channel（`window.flutter_inappwebview.callHandler('onError', ...)`）回報到 Dart 端，讓真機上未被 foliate-js 自身 try/catch 攔截的 JS 例外也能被 App 觀察到。
+
+### 33-3：開書載入逾時哨兵機制（12 秒）
+
+**Status:** ✅ 已完成。`reader_screen.dart` 新增 `_openBookTimeoutTimer`，`initState()` 啟動 12 秒計時器；`_handlePageRendered()`／`_handleError()` 皆會取消計時器。若 12 秒內兩者皆未觸發（畫面仍處於 `_RenderState.loading`），逾時回呼 `_handleOpenBookTimeout()` 主動切換為錯誤畫面（訊息：「開書逾時，可能是系統 WebView 版本過舊或檔案異常」），避免像本次真機回報一樣無限期停留在載入指示器、使用者無從得知發生什麼事。
+
+### 33-4：App 內建閱讀器 Console Log 診斷畫面
+
+**Status:** ✅ 已完成。新增 `ReaderConsoleLog`（`app/lib/reader/reader_console_log.dart`）記憶體內緩衝區（`ValueNotifier<List<String>>`，上限 500 筆、超過捨棄最舊），承接 `InAppWebView.onConsoleMessage`（透過新增的純函式 `handleFoliateConsoleMessage(message, levelName)`，比照既有 `resolveCustomFontUri` 慣例、繞開 `FakePlatformInAppWebViewWidget` 測試替身無法觸發完整原生回呼型別鏈的限制）。新增 `ReaderConsoleLogScreen`（`app/lib/screens/reader_console_log_screen.dart`），從「設定」畫面新增的「閱讀器 Console Log」項目進入，`ValueListenableBuilder` 即時顯示緩衝區內容，附清空按鈕，供使用者截圖回報。純記憶體、不落地持久化——即時診斷工具，非長期日誌系統。
+
+**單元測試要求（4 項皆已完成）：** 每項皆採 TDD；`app/test/reader/foliate_epub_reader_view_test.dart`（33-1／33-2／33-4 的 widget 層/純函式測試）、`app/test/screens/reader_screen_test.dart`（33-3 逾時計時器測試，含「成功時不被逾時計時器覆蓋」的邊界測試）、`app/test/reader/reader_console_log_test.dart`（新檔，緩衝區 add/clear/上限捨棄邏輯）、`app/test/screens/reader_console_log_screen_test.dart`（新檔，空狀態/列表顯示/清空按鈕）、`app/test/screens/settings_screen_test.dart`（新增入口導航測試）皆有對應新增測試。
+
+**驗收標準：** 上述 4 項皆已實作並通過對應測試；`flutter analyze` 全程維持乾淨；全專案 `flutter test`（958 個測試）無回歸。
+
+**相關佐證：**
+- 分支 `feat/epic-18-issue-33-open-book-diagnostics`（4 個 commit：33-1 測試、33-2 JS 錯誤捕捉、33-3 逾時哨兵、33-4 診斷畫面）
+- `tmp/ireader-ocean4-plus-loading-issue-analysis.md`（原始問題分析文件）

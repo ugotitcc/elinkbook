@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/reader/column_mode.dart';
 import 'package:elinkbook/reader/dual_page_mode.dart';
 import 'package:elinkbook/reader/foliate_epub_reader_view.dart';
+import 'package:elinkbook/reader/reader_console_log.dart';
 import 'package:elinkbook/reader/writing_mode.dart';
 import 'package:elinkbook/reader/epub_text_align.dart';
 import 'package:elinkbook/reader/page_turn_mode.dart';
@@ -616,13 +617,128 @@ void main() {
       final webView = tester.widget<InAppWebView>(find.byType(InAppWebView));
       final scripts = webView.platform.params.initialUserScripts;
       expect(scripts, isNotNull);
-      expect(scripts, hasLength(1));
-      final script = scripts!.single;
+      expect(scripts, hasLength(3));
+      final script = scripts!.first;
       expect(script.injectionTime, UserScriptInjectionTime.AT_DOCUMENT_START);
       expect(script.source, contains('Object.groupBy'));
       expect(script.source, contains('Map.groupBy'));
       expect(script.source, contains('Array.prototype.at'));
       expect(script.source, contains('Array.prototype.findLastIndex'));
+    });
+
+    // epic-18-reader-device-qa Issue 33：iReader Ocean 4 Plus 開書卡住問題
+    // 沒有任何真機診斷資料佐證確切根因（報告 5 個推測皆未經真機驗證），
+    // 這裡先建立診斷能力——全局 JS 錯誤捕捉能抓到 main.js 既有
+    // try/catch（openBook() 本體）涵蓋範圍之外的失敗，包含 view.js／
+    // epub.js／paginator.js 等釘定 vendor 腳本在文件載入極早期（甚至
+    // main.js 本身的 try/catch 尚未有機會執行）就拋出的例外——這正是
+    // 舊版 WebView 缺少 ES 內建方法時最典型的失敗模式（見上方
+    // _esCompatPolyfillJs 的既有診斷紀錄）。透過 AT_DOCUMENT_START
+    // 注入、重用既有的 onError JS↔Dart bridge channel（見
+    // _onWebViewCreated 的 'onError' handler），不需要新增任何 Dart 端
+    // 接線。
+    testWidgets(
+        'InAppWebView 於 AT_DOCUMENT_START 注入全局 JS 錯誤捕捉（window.onerror／'
+        'window.onunhandledrejection），重用既有 onError bridge channel',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: FoliateEpubReaderView(
+            filePath: '/tmp/sample.epub',
+            onPageRendered: _noop,
+            onError: _noopError,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final webView = tester.widget<InAppWebView>(find.byType(InAppWebView));
+      final scripts = webView.platform.params.initialUserScripts;
+      expect(scripts, hasLength(3));
+      final script = scripts![1];
+      expect(script.injectionTime, UserScriptInjectionTime.AT_DOCUMENT_START);
+      expect(script.source, contains('window.onerror'));
+      expect(script.source, contains('window.onunhandledrejection'));
+      expect(script.source, contains("callHandler('onError'"),
+          reason: '必須重用既有的 onError bridge channel，不新增獨立 handler');
+    });
+
+    // epic-18-reader-device-qa Issue 33（程式碼審查建議）：定位「舊版
+    // WebView 引擎不支援特定 API」這類相容性缺口時，User Agent 字串
+    // （含 Chromium 版本號）是最直接的起點線索。直接用標準 console.log
+    // 輸出，沿用既有、已測試過的 onConsoleMessage →
+    // handleFoliateConsoleMessage → ReaderConsoleLog 管線。
+    testWidgets(
+        'InAppWebView 於 AT_DOCUMENT_START 注入 navigator.userAgent 診斷紀錄',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: FoliateEpubReaderView(
+            filePath: '/tmp/sample.epub',
+            onPageRendered: _noop,
+            onError: _noopError,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final webView = tester.widget<InAppWebView>(find.byType(InAppWebView));
+      final scripts = webView.platform.params.initialUserScripts;
+      expect(scripts, hasLength(3));
+      final script = scripts!.last;
+      expect(script.injectionTime, UserScriptInjectionTime.AT_DOCUMENT_START);
+      expect(script.source, contains('navigator.userAgent'));
+      expect(script.source, contains('console.log'));
+    });
+
+    // epic-18-reader-device-qa Issue 33：iReader Ocean 4 Plus 這類裝置若
+    // WebView 建置沒有開啟 setWebContentsDebuggingEnabled，無法用
+    // chrome://inspect 遠端除錯，App 內建的 Console Log 檢視畫面是唯一
+    // 能取得實際 JS console 輸出的管道。InAppWebView 的 onConsoleMessage
+    // 確實有被賦值（結構性驗證，比照 resolveCustomFontUri／
+    // _shouldInterceptRequest 的既有先例——FakePlatformInAppWebViewWidget
+    // 底下無法真正觸發完整的 callback 型別鏈，故實際的訊息處理邏輯抽成
+    // 下方 handleFoliateConsoleMessage 純函式獨立測試）。
+    testWidgets('InAppWebView 的 onConsoleMessage 已被賦值', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: FoliateEpubReaderView(
+            filePath: '/tmp/sample.epub',
+            onPageRendered: _noop,
+            onError: _noopError,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final webView = tester.widget<InAppWebView>(find.byType(InAppWebView));
+      expect(webView.platform.params.onConsoleMessage, isNotNull);
+    });
+  });
+
+  group('handleFoliateConsoleMessage', () {
+    setUp(() {
+      ReaderConsoleLog.clear();
+    });
+
+    test('把 messageLevel 與 message 組成單行文字附加到 ReaderConsoleLog', () {
+      handleFoliateConsoleMessage('測試訊息', 'LOG');
+
+      expect(ReaderConsoleLog.entries.value, hasLength(1));
+      expect(ReaderConsoleLog.entries.value.single, '[LOG] 測試訊息');
+    });
+
+    test('可連續呼叫多次，依序附加不覆蓋既有訊息', () {
+      handleFoliateConsoleMessage('第一筆', 'LOG');
+      handleFoliateConsoleMessage('第二筆', 'ERROR');
+
+      expect(ReaderConsoleLog.entries.value, ['[LOG] 第一筆', '[ERROR] 第二筆']);
     });
   });
 
@@ -709,6 +825,30 @@ void main() {
 
       await tester.pump();
       expect(receivedError, '無法快取書籍檔案');
+    });
+
+    testWidgets(
+        'cacheBookForServing 拋出例外時（epic-18-reader-device-qa Issue 33），'
+        '呼叫 onError 帶入例外訊息，不會讓畫面永遠卡在載入指示器',
+        (tester) async {
+      cacheBookForServing = (filePath, instanceId) async {
+        throw Exception('模擬檔案系統錯誤');
+      };
+
+      String? receivedError;
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: FoliateEpubReaderView(
+            filePath: '/tmp/sample.epub',
+            onPageRendered: _noop,
+            onError: (msg) => receivedError = msg,
+          ),
+        ),
+      ));
+
+      await tester.pump();
+      expect(receivedError, contains('快取書籍失敗'));
+      expect(receivedError, contains('模擬檔案系統錯誤'));
     });
   });
 

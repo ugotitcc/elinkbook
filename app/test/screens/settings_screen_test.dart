@@ -164,4 +164,21 @@ void main() {
 
     expect(find.text('同步'), findsOneWidget);
   });
+
+  testWidgets(
+      '點擊「閱讀器 Console Log」導航至 ReaderConsoleLogScreen（epic-18-reader-device-qa '
+      'Issue 33）', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: SettingsScreen(prefsManager: FakeReaderPrefsManager()),
+    ));
+
+    expect(
+        find.byKey(const Key('settings_reader_console_log_button')),
+        findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('settings_reader_console_log_button')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('閱讀器 Console Log'), findsOneWidget);
+  });
 }

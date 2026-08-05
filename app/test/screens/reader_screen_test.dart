@@ -4901,6 +4901,65 @@ void main() {
     expect(find.byType(FoliateEpubReaderView), findsOneWidget);
   });
 
+  testWidgets(
+      '開書逾時（epic-18-reader-device-qa Issue 33）：12 秒內未收到 onPageRendered，'
+      '自動切換為錯誤畫面，不會永遠停在載入指示器', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b_open_timeout',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    // 刻意不呼叫 onPageRendered，模擬「原生端/WebView 從未回報成功」的
+    // 卡住情境（真機使用回報：iReader Ocean 4 Plus 開啟書籍時畫面永遠
+    // 停在轉圈圈，5 個推測根因皆未經真機診斷資料驗證）。
+    expect(find.byKey(const Key('reader_loading_indicator')), findsOneWidget);
+    expect(find.byKey(const Key('reader_error_text')), findsNothing);
+
+    await tester.pump(const Duration(seconds: 12));
+
+    expect(find.byKey(const Key('reader_error_text')), findsOneWidget,
+        reason: '逾時後應切換為可見的錯誤畫面，而非讓使用者永遠面對轉圈圈');
+    expect(find.byKey(const Key('reader_loading_indicator')), findsNothing);
+  });
+
+  testWidgets(
+      '開書逾時計時器：onPageRendered 在逾時前已觸發時，逾時計時器不應覆蓋既有的成功狀態',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b_open_timeout_success',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    tester.widget<PdfReaderView>(find.byType(PdfReaderView)).onPageRendered();
+    await tester.pump();
+
+    expect(find.byKey(const Key('reader_loading_indicator')), findsNothing);
+
+    // 逾時計時器理應在 onPageRendered 觸發當下就被取消；即使沒有取消，
+    // 逾時處理本身也必須判斷「已經不是 loading 狀態才動作」，兩者皆可
+    // 避免這裡誤把已成功渲染的畫面覆蓋回錯誤狀態。
+    await tester.pump(const Duration(seconds: 12));
+
+    expect(find.byKey(const Key('reader_error_text')), findsNothing,
+        reason: '已成功渲染的畫面不應被逾時計時器事後覆蓋成錯誤狀態');
+  });
+
   tearDownAll(() {
     // 還原 cacheBookForServing 為原始實作，避免污染其他測試檔
     cacheBookForServing = originalCacheBookForServing;
