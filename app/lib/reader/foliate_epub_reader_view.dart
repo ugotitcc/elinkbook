@@ -44,6 +44,17 @@ import 'zone_action.dart';
 /// WebView 支援後行為與新版一致），透過 [UserScript] 在文件載入最早期
 /// 注入，不修改 `readest/foliate-js` 釘定版本本身（比照既有 ADR 0011
 /// 「不修改釘定版本」的既有限制）。
+///
+/// 【epic-18-reader-device-qa Issue 38，2026-08-05 追加發現】本腳本自身
+/// 曾在 `Object.groupBy` polyfill 內用了 `??=`（邏輯 nullish 賦值，ES2021，
+/// 需 Chromium 85+）——JS 引擎會在執行任何程式碼之前完整解析整份腳本，
+/// 任何一處語法錯誤都會讓整份腳本（含本檔案其餘 3 個 polyfill）完全不
+/// 執行。iReader Ocean 4 Plus 的系統 WebView 為 Chromium 83（早於 85），
+/// 代表上面 4 個 polyfill 在這台裝置上其實從未真正生效過。已改寫為
+/// ES5 相容語法（`if (!x) x = []` 取代 `x ??= []`）。**本腳本後續新增的
+/// 任何 polyfill 本體，禁止使用 ES2020 之後的語法糖**（包括 `??=`／`||=`／
+/// `&&=`／選用鏈結 `?.` 需 Chromium 80+、標籤模板等），因為這份腳本存在
+/// 的唯一目的就是在不支援新語法的舊版 WebView 上執行。
 const _esCompatPolyfillJs = '''
 if (!Object.groupBy) {
   Object.groupBy = function (items, keyFn) {
@@ -51,7 +62,8 @@ if (!Object.groupBy) {
     let index = 0;
     for (const item of items) {
       const key = keyFn(item, index++);
-      (result[key] ??= []).push(item);
+      if (!result[key]) result[key] = [];
+      result[key].push(item);
     }
     return result;
   };

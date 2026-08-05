@@ -626,6 +626,36 @@ void main() {
       expect(script.source, contains('Array.prototype.findLastIndex'));
     });
 
+    testWidgets(
+        'ES compat polyfill 本體不含邏輯賦值運算子（??=／||=／&&=），'
+        '避免 Chromium 85 之前的 WebView 在解析階段整份腳本失敗'
+        '（epic-18-reader-device-qa Issue 38，真機使用回報：iReader Ocean 4 '
+        'Plus 系統 WebView 為 Chromium 83，早於 ??= 語法需要的 Chromium 85，'
+        'JS 引擎會在執行任何程式碼之前完整解析整份腳本，任何一處語法錯誤都會讓'
+        '整份腳本（含 Object.groupBy／Map.groupBy／Array.prototype.at／'
+        'Array.prototype.findLastIndex 全部 4 個 polyfill）完全不執行）',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: FoliateEpubReaderView(
+            filePath: '/tmp/sample.epub',
+            onPageRendered: _noop,
+            onError: _noopError,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final webView = tester.widget<InAppWebView>(find.byType(InAppWebView));
+      final scripts = webView.platform.params.initialUserScripts;
+      final polyfillScript = scripts!.first;
+      expect(polyfillScript.source, isNot(contains('??=')));
+      expect(polyfillScript.source, isNot(contains('||=')));
+      expect(polyfillScript.source, isNot(contains('&&=')));
+    });
+
     // epic-18-reader-device-qa Issue 33：iReader Ocean 4 Plus 開書卡住問題
     // 沒有任何真機診斷資料佐證確切根因（報告 5 個推測皆未經真機驗證），
     // 這裡先建立診斷能力——全局 JS 錯誤捕捉能抓到 main.js 既有
