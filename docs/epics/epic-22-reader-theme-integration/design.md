@@ -34,12 +34,9 @@
 - 不修改 `readest/foliate-js` 釘定版本本身（見 ADR 0011）——顏色覆蓋透過本專案自己的 `main.js` CSS 注入機制達成，比照既有 `fontWeight`/`lineHeight` 強制覆蓋的既有作法（`main.js` 共用 selector 直接覆蓋，見 epic-18 Issue 34 診斷紀錄），不改 vendored 檔案。
 - 不修改 `docs/prd.md`——FR-31 原文本來就涵蓋這個範圍，本 Epic 是實作缺口的補齊，非需求變更。
 
-## 待 Architecting 階段（`spec.md`）決定的實作細節
+## Architecting 階段（已定案，見 `spec.md`）
 
-- 背景色採用 `app_theme_data.dart` 現有的 `background` 還是 `surface` 色值。
-- CSS 注入的具體實作位置（`main.js` 的 `buildOverrideCss()` 或新增獨立函式）與 selector 設計。
-- **背景色 CSS 覆蓋範圍的取捨**：既有 `buildOverrideCss()` 選取器（`body, p, div, li, span, td, th, blockquote, dd, dt, a, h1-h6`）套用文字色可直接沿用（與既有 `fontWeight`/`lineHeight` 覆蓋邏輯一致，確保書本自己在 `p`/`div` 等元素直接宣告的顏色也能被蓋過）；但**背景色**若沿用同一組廣選取器，逐一元素套用 `background-color`，可能在圖片外層容器（`div`/`span` 包裹 `img`）上畫出不協調色塊。兩個選項：(A) 背景色比照文字色套用同一組廣選取器，優先保證覆蓋書本自己宣告的背景色（可能有色塊風險）；(B) 背景色僅套用 `html, body`，避免色塊風險，但代價是書本若在特定區塊（例如 `div.chapter`）直接宣告背景色，該區塊仍可能維持原色不被覆蓋。兩者皆為真實權衡，於 `spec.md` 決定。
-- 測試策略：EPUB WebView 實際渲染結果無法在 `flutter test` 觀察（比照既有兩層測試架構慣例），驗證重點放在「JS 橋接呼叫參數是否正確」（widget test 可觀察）與「真機/`integration_test` 視覺確認」兩層。
+上一節列出的待決項（背景色 `background` vs `surface`、CSS 注入實作位置、背景色覆蓋選取器範圍取捨、測試策略）皆已於 `spec.md` 定案，本文件不重複記錄——`spec.md` 自撰寫完成起為本 Epic 的唯一事實來源。
 
 ## 審查回應（`/superpowers:receiving-code-review`，2026-08-06）
 
