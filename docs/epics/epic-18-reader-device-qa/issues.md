@@ -956,10 +956,10 @@ AiPaper Reader C 這類 E-Ink 裝置為了讓文字/圖示夠大，`devicePixelR
 
 **單元測試要求（8 項皆已完成）：** 每項皆採 TDD（先寫失敗測試、確認失敗、實作、確認通過），詳見對應 commit；`app/test/` 各相關測試檔（`reader_settings_sheet_test.dart`／`toc_bottom_sheet_test.dart`／`notes_bottom_sheet_test.dart`／`global_reader_prefs_test.dart`／`reader_prefs_manager_test.dart`／`reading_defaults_screen_test.dart`／`library_screen_test.dart`／`nav_zone_settings_screen_test.dart`／`reader_screen_test.dart`）皆有對應新增/修改測試。
 
-**驗收標準：** 上述 8 項需求皆已實作並通過對應測試；`flutter analyze` 全程維持乾淨；全專案 `flutter test` 無回歸。
+**驗收標準：** 上述 8 項需求皆已實作並通過對應測試；`flutter analyze` 全程維持乾淨；全專案 `flutter test` 無回歸（2026-08-05 完成並合併回 `main`，PR #113；`/superpowers:requesting-code-review` 實作結果審查發現並修正 1 項 Critical／1 項 Important，皆源自 Issue 25 把行高滑桿下限開放到 0 的連動影響——`EpubPageEstimator.estimateCharsPerScreen()` 對 `lineHeight=0.0` 會除以零，Dart 對 `Infinity` 呼叫 `.round()` 直接拋出 `UnsupportedError` 崩潰〔已用獨立最小重現案例實測驗證〕；`main.js` 也會原樣把 `lineHeight: 0` 注入為 CSS `line-height: 0 !important`，讓所有文字行完全疊在一起無法閱讀。修法：`epub_page_estimator.dart` 對 `lineHeight` 套用 `math.max(0.1, ...)`〔純數學防呆，輸出仍會被既有 `clamp(50, 2000)` 收斂〕；`main.js` 比照既有 `fontWeight` 防呆 clamp 慣例，對 CSS 注入值套用 `Math.max(0.8, ...)`〔常見可讀行高下限〕，兩處修正皆不影響使用者仍可在 UI 把滑桿選到 0 這個 Issue 25 原始需求本身）。
 
 **相關佐證：**
-- 分支 `feat/epic-18-issue-25-32-device-feedback-batch`（8 個獨立 commit，一個 Issue 一個 commit）
+- 分支 `feat/epic-18-issue-25-32-device-feedback-batch`（10 個 commit：8 個功能 commit + 1 個文件 commit + 1 個審查修正 commit），PR #113
 
 ---
 
