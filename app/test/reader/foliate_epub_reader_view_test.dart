@@ -710,6 +710,30 @@ void main() {
       await tester.pump();
       expect(receivedError, '無法快取書籍檔案');
     });
+
+    testWidgets(
+        'cacheBookForServing 拋出例外時（epic-18-reader-device-qa Issue 33），'
+        '呼叫 onError 帶入例外訊息，不會讓畫面永遠卡在載入指示器',
+        (tester) async {
+      cacheBookForServing = (filePath, instanceId) async {
+        throw Exception('模擬檔案系統錯誤');
+      };
+
+      String? receivedError;
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: FoliateEpubReaderView(
+            filePath: '/tmp/sample.epub',
+            onPageRendered: _noop,
+            onError: (msg) => receivedError = msg,
+          ),
+        ),
+      ));
+
+      await tester.pump();
+      expect(receivedError, contains('快取書籍失敗'));
+      expect(receivedError, contains('模擬檔案系統錯誤'));
+    });
   });
 
   tearDownAll(() {
