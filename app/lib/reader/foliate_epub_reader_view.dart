@@ -97,6 +97,24 @@ if (!Array.prototype.findLastIndex) {
 }
 ''';
 
+/// `window.applyPreferences` 過早呼叫佇列 shim（epic-18-reader-device-qa
+/// Issue 39，真機使用回報：ViWoods Air Reader C，`Uncaught TypeError:
+/// window.applyPreferences is not a function`）。`didUpdateWidget()`
+/// （見下方）只要 Dart 端偏好狀態變動（例如螢幕方向鎖定套用、既有書籍的
+/// 非同步 FXL 判斷完成）就會呼叫 `window.applyPreferences(...)`，這個呼叫
+/// 跟 `main.js`（ES module）是否已載入完成、真正定義出這個函式完全無關，
+/// 時機上必然存在競速。在 `AT_DOCUMENT_START`（比 `main.js` 更早）注入這個
+/// 佔位 shim，把 `window.applyPreferences` 暫時定義成「先把傳入值存起
+/// 來」；`main.js` 真正的賦值執行時會直接覆蓋掉這個 shim，並緊接著檢查
+/// 有沒有暫存值、有的話立刻補套用（見 main.js 對應修改）。不論 Dart 端
+/// 呼叫發生在 main.js 載入完成前後都不會出錯、也不會遺漏。
+const _applyPreferencesQueueShimJs = '''
+window.__pendingApplyPreferences = null;
+window.applyPreferences = function (prefs) {
+  window.__pendingApplyPreferences = prefs;
+};
+''';
+
 /// 全局 JS 錯誤捕捉（epic-18-reader-device-qa Issue 33，真機使用回報：
 /// iReader Ocean 4 Plus 開啟書籍時畫面永遠停在載入指示器，5 個推測根因
 /// 皆無真機診斷資料佐證）。`main.js` 本身的 `openBook()` 已用 try/catch
@@ -627,6 +645,12 @@ class _FoliateEpubReaderViewState extends State<FoliateEpubReaderView> {
           initialUserScripts: UnmodifiableListView<UserScript>([
             UserScript(
               source: _esCompatPolyfillJs,
+              injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
+            ),
+            // epic-18-reader-device-qa Issue 39：見上方
+            // _applyPreferencesQueueShimJs 註解。
+            UserScript(
+              source: _applyPreferencesQueueShimJs,
               injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
             ),
             // epic-18-reader-device-qa Issue 33：見上方 _globalErrorCaptureJs

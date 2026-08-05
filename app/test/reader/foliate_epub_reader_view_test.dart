@@ -617,7 +617,7 @@ void main() {
       final webView = tester.widget<InAppWebView>(find.byType(InAppWebView));
       final scripts = webView.platform.params.initialUserScripts;
       expect(scripts, isNotNull);
-      expect(scripts, hasLength(3));
+      expect(scripts, hasLength(4));
       final script = scripts!.first;
       expect(script.injectionTime, UserScriptInjectionTime.AT_DOCUMENT_START);
       expect(script.source, contains('Object.groupBy'));
@@ -668,6 +668,35 @@ void main() {
     // _onWebViewCreated 的 'onError' handler），不需要新增任何 Dart 端
     // 接線。
     testWidgets(
+        'InAppWebView 於 AT_DOCUMENT_START 注入 applyPreferences 佇列 shim，'
+        '避免 main.js 尚未載入完成前呼叫 window.applyPreferences 拋出 '
+        'TypeError（epic-18-reader-device-qa Issue 39，真機使用回報：'
+        'ViWoods Air Reader C，Uncaught TypeError: window.applyPreferences '
+        'is not a function）', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: FoliateEpubReaderView(
+            filePath: '/tmp/sample.epub',
+            onPageRendered: _noop,
+            onError: _noopError,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final webView = tester.widget<InAppWebView>(find.byType(InAppWebView));
+      final scripts = webView.platform.params.initialUserScripts;
+      expect(scripts, hasLength(4));
+      final shimScript = scripts![1];
+      expect(
+          shimScript.injectionTime, UserScriptInjectionTime.AT_DOCUMENT_START);
+      expect(shimScript.source, contains('window.__pendingApplyPreferences'));
+      expect(shimScript.source, contains('window.applyPreferences'));
+    });
+
+    testWidgets(
         'InAppWebView 於 AT_DOCUMENT_START 注入全局 JS 錯誤捕捉（window.onerror／'
         'window.onunhandledrejection），重用既有 onError bridge channel',
         (tester) async {
@@ -686,8 +715,8 @@ void main() {
 
       final webView = tester.widget<InAppWebView>(find.byType(InAppWebView));
       final scripts = webView.platform.params.initialUserScripts;
-      expect(scripts, hasLength(3));
-      final script = scripts![1];
+      expect(scripts, hasLength(4));
+      final script = scripts![2];
       expect(script.injectionTime, UserScriptInjectionTime.AT_DOCUMENT_START);
       expect(script.source, contains('window.onerror'));
       expect(script.source, contains('window.onunhandledrejection'));
@@ -718,7 +747,7 @@ void main() {
 
       final webView = tester.widget<InAppWebView>(find.byType(InAppWebView));
       final scripts = webView.platform.params.initialUserScripts;
-      expect(scripts, hasLength(3));
+      expect(scripts, hasLength(4));
       final script = scripts!.last;
       expect(script.injectionTime, UserScriptInjectionTime.AT_DOCUMENT_START);
       expect(script.source, contains('navigator.userAgent'));
