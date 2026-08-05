@@ -121,7 +121,7 @@ void main() {
           .widget<Slider>(
               find.byKey(const Key('reader_settings_line_height_slider')))
           .value,
-      1.5,
+      1.0,
     );
     expect(
       tester

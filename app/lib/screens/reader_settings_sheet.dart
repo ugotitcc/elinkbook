@@ -42,7 +42,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   // 滑桿位置。
   static const _defaultFontSize = 16.0;
   static const _defaultFontWeightMultiplier = 1.0; // 倍率，UI 顯示 400（1.0 × 400）
-  static const _defaultLineHeight = 1.5;
+  static const _defaultLineHeight = 1.0;
   static const _defaultParagraphSpacing = 10.0;
   static const _defaultMarginTop = 64.0;
   static const _defaultMarginBottom = 16.0;
@@ -217,8 +217,8 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                   keyPrefix: 'reader_settings_line_height',
                   label: '行高',
                   value: _lineHeight,
-                  min: 1.2,
-                  max: 2.5,
+                  min: 0,
+                  max: 3,
                   step: 0.1,
                   displayValue: _lineHeight.toStringAsFixed(1),
                   onChanged: (v) => setState(() {
