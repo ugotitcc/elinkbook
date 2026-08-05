@@ -616,13 +616,52 @@ void main() {
       final webView = tester.widget<InAppWebView>(find.byType(InAppWebView));
       final scripts = webView.platform.params.initialUserScripts;
       expect(scripts, isNotNull);
-      expect(scripts, hasLength(1));
-      final script = scripts!.single;
+      expect(scripts, hasLength(2));
+      final script = scripts!.first;
       expect(script.injectionTime, UserScriptInjectionTime.AT_DOCUMENT_START);
       expect(script.source, contains('Object.groupBy'));
       expect(script.source, contains('Map.groupBy'));
       expect(script.source, contains('Array.prototype.at'));
       expect(script.source, contains('Array.prototype.findLastIndex'));
+    });
+
+    // epic-18-reader-device-qa Issue 33：iReader Ocean 4 Plus 開書卡住問題
+    // 沒有任何真機診斷資料佐證確切根因（報告 5 個推測皆未經真機驗證），
+    // 這裡先建立診斷能力——全局 JS 錯誤捕捉能抓到 main.js 既有
+    // try/catch（openBook() 本體）涵蓋範圍之外的失敗，包含 view.js／
+    // epub.js／paginator.js 等釘定 vendor 腳本在文件載入極早期（甚至
+    // main.js 本身的 try/catch 尚未有機會執行）就拋出的例外——這正是
+    // 舊版 WebView 缺少 ES 內建方法時最典型的失敗模式（見上方
+    // _esCompatPolyfillJs 的既有診斷紀錄）。透過 AT_DOCUMENT_START
+    // 注入、重用既有的 onError JS↔Dart bridge channel（見
+    // _onWebViewCreated 的 'onError' handler），不需要新增任何 Dart 端
+    // 接線。
+    testWidgets(
+        'InAppWebView 於 AT_DOCUMENT_START 注入全局 JS 錯誤捕捉（window.onerror／'
+        'window.onunhandledrejection），重用既有 onError bridge channel',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: FoliateEpubReaderView(
+            filePath: '/tmp/sample.epub',
+            onPageRendered: _noop,
+            onError: _noopError,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final webView = tester.widget<InAppWebView>(find.byType(InAppWebView));
+      final scripts = webView.platform.params.initialUserScripts;
+      expect(scripts, hasLength(2));
+      final script = scripts!.last;
+      expect(script.injectionTime, UserScriptInjectionTime.AT_DOCUMENT_START);
+      expect(script.source, contains('window.onerror'));
+      expect(script.source, contains('window.onunhandledrejection'));
+      expect(script.source, contains("callHandler('onError'"),
+          reason: '必須重用既有的 onError bridge channel，不新增獨立 handler');
     });
   });
 

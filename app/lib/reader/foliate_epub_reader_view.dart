@@ -84,6 +84,34 @@ if (!Array.prototype.findLastIndex) {
 }
 ''';
 
+/// 全局 JS 錯誤捕捉（epic-18-reader-device-qa Issue 33，真機使用回報：
+/// iReader Ocean 4 Plus 開啟書籍時畫面永遠停在載入指示器，5 個推測根因
+/// 皆無真機診斷資料佐證）。`main.js` 本身的 `openBook()` 已用 try/catch
+/// 涵蓋自身執行期間拋出的例外並回報 `onError`，但無法涵蓋：(1) 釘定的
+/// vendor 腳本（`view.js`／`epub.js`／`paginator.js`）在文件載入極早期、
+/// `main.js` 的 try/catch 尚未有機會執行前就拋出的例外（例如缺少 ES
+/// 內建方法時的 `TypeError`，見上方 `_esCompatPolyfillJs` 的既有診斷紀
+/// 錄——這正是舊版 WebView 最典型的失敗模式）；(2) 未被 await 的 Promise
+/// rejection。透過 `window.onerror`／`window.onunhandledrejection` 補上
+/// 這兩類涵蓋範圍，並在 `AT_DOCUMENT_START`（比任何 vendor 腳本都早）
+/// 注入，重用既有的 `onError` JS↔Dart bridge channel（見
+/// `_onWebViewCreated` 的 'onError' handler），不需要新增任何 Dart 端
+/// 接線或新的 channel。
+const _globalErrorCaptureJs = '''
+window.onerror = function (message, source, lineno, colno, error) {
+  if (window.flutter_inappwebview) {
+    window.flutter_inappwebview.callHandler('onError', 'JS Error: ' + message + ' (' + source + ':' + lineno + ')');
+  }
+};
+window.onunhandledrejection = function (event) {
+  if (window.flutter_inappwebview) {
+    var reason = event && event.reason;
+    var message = (reason && reason.message) || String(reason);
+    window.flutter_inappwebview.callHandler('onError', 'Unhandled Promise Rejection: ' + message);
+  }
+};
+''';
+
 /// 把目前所有非 null 的偏好參數組成一個 map，key 名稱與 `main.js`
 /// `window.applyPreferences`/`window.FoliateBridge` 契約一致（取代原本
 /// `_FoliateEpubReaderViewState._buildPreferencesMap()` 私有方法，改為
@@ -566,6 +594,13 @@ class _FoliateEpubReaderViewState extends State<FoliateEpubReaderView> {
           initialUserScripts: UnmodifiableListView<UserScript>([
             UserScript(
               source: _esCompatPolyfillJs,
+              injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
+            ),
+            // epic-18-reader-device-qa Issue 33：見上方 _globalErrorCaptureJs
+            // 註解。順序在 polyfill 之後無妨——兩者皆於 AT_DOCUMENT_START
+            // 注入，實際執行順序不影響彼此（各自只是定義全局函式/監聽器）。
+            UserScript(
+              source: _globalErrorCaptureJs,
               injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
             ),
           ]),
