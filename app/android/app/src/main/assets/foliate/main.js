@@ -97,7 +97,17 @@ function buildOverrideCss(prefs) {
     // 2026-08-05）。下限訂為 0.8（常見可讀行高下限，含本 App 目標的
     // CJK 直排內容），比照上面 fontWeight 已有的防呆 clamp 慣例。
     const effectiveLineHeight = Math.max(0.8, prefs.lineHeight)
-    rules.push(`html, body { line-height: ${effectiveLineHeight} !important; }`)
+    // 【診斷修正，epic-18-reader-device-qa Issue 34】原本只鎖定
+    // `html, body`，只設定「可被繼承的值」——書本自己的 CSS 若在 p／
+    // div 等元素直接宣告 line-height（常見於 Calibre 轉檔或出版社排版
+    // 樣式），直接宣告一律贏過繼承值，不論本規則加不加 !important、
+    // 不論設定的數值是多少，導致滑桿設定在這類書上完全無效。改用跟
+    // fontWeight／fontFamily 相同的 selector（涵蓋 p/div/span 等實際
+    // 文字容器元素），比照既有慣例直接覆蓋，不再依賴繼承。已用 headless
+    // Chromium 重現並驗證：舊版對「書本宣告 p{line-height:1.2}」的最小
+    // 重現案例完全無效（computed 值恆為 19.2px，不論覆蓋值為 0.9 或
+    // 2.0）；改用 selector 後正確覆蓋（0.9 → computed 14.4px）。
+    rules.push(`${selector} { line-height: ${effectiveLineHeight} !important; }`)
   }
   if (typeof prefs.paragraphSpacing === 'number') {
     rules.push(`p { margin-bottom: ${prefs.paragraphSpacing}em !important; }`)
