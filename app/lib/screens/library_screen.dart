@@ -861,13 +861,20 @@ class _GroupTile {
 }
 
 /// 分類拼貼格（_GroupGridTile）與書籍格（_BookGridTile）共用的文字說明區
-/// 固定高度（epic-18-reader-device-qa Issue 42）：兩者原本文字說明區行數
-/// 不同（前者 1 行、後者 2 行），導致封面 Expanded 吃到的剩餘高度不同，
-/// 橫屏下兩者同列時封面底部邊界因此錯開（真機回報，已用 widget test 精確
-/// 量測相差 14px）。固定高度取書籍格 2 行文字（書名＋進度）所需的自然
-/// 高度為準，分類拼貼格的 1 行文字說明包進同樣高度的容器（會留一點點
-/// 底部空白，換取跨 cell 對齊），是本修法必然的取捨。
-const _kGridTileFooterHeight = 34.0;
+/// 固定高度基準值（epic-18-reader-device-qa Issue 42）：兩者原本文字說明
+/// 區行數不同（前者 1 行、後者 2 行），導致封面 Expanded 吃到的剩餘高度
+/// 不同，橫屏下兩者同列時封面底部邊界因此錯開（真機回報，已用 widget
+/// test 精確量測相差 14px）。固定高度取書籍格 2 行文字（書名＋進度）所需
+/// 的自然高度為準，分類拼貼格的 1 行文字說明包進同樣高度的容器（會留一
+/// 點點底部空白，換取跨 cell 對齊），是本修法必然的取捨。
+///
+/// 【程式碼審查修正】這是基準值（1.0 倍系統字級下的高度），實際使用時
+/// 一律要經過 `MediaQuery.textScalerOf(context).scale(...)` 換算成當下
+/// 系統字級對應的高度，不可直接當作固定像素值使用——否則使用者放大系統
+/// 字級時，書籍格的 2 行文字會被這個寫死的高度截斷，觸發 `RenderFlex`
+/// 溢位（審查發現：修法前文字說明區是自然高度、不會有這個風險，此為
+/// 修法本身新引入、需要一併防護的技術債）。
+const _kGridTileFooterHeightAtScale1 = 34.0;
 
 /// 分類拼貼格（格狀檢視）：2×2 拼貼＋分類名稱/數量，重用既有 _BookCover。
 /// onTap 為 null 時（選取模式進行中）InkWell 自動停用點擊反饋，比照
@@ -922,7 +929,8 @@ class _GroupGridTile extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           SizedBox(
-            height: _kGridTileFooterHeight,
+            height: MediaQuery.textScalerOf(context)
+                .scale(_kGridTileFooterHeightAtScale1),
             child: Text(
               '${tile.name} (${tile.totalCount})',
               maxLines: 1,
@@ -1093,7 +1101,8 @@ class _BookGridTile extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           SizedBox(
-            height: _kGridTileFooterHeight,
+            height: MediaQuery.textScalerOf(context)
+                .scale(_kGridTileFooterHeightAtScale1),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
