@@ -860,6 +860,15 @@ class _GroupTile {
   });
 }
 
+/// 分類拼貼格（_GroupGridTile）與書籍格（_BookGridTile）共用的文字說明區
+/// 固定高度（epic-18-reader-device-qa Issue 42）：兩者原本文字說明區行數
+/// 不同（前者 1 行、後者 2 行），導致封面 Expanded 吃到的剩餘高度不同，
+/// 橫屏下兩者同列時封面底部邊界因此錯開（真機回報，已用 widget test 精確
+/// 量測相差 14px）。固定高度取書籍格 2 行文字（書名＋進度）所需的自然
+/// 高度為準，分類拼貼格的 1 行文字說明包進同樣高度的容器（會留一點點
+/// 底部空白，換取跨 cell 對齊），是本修法必然的取捨。
+const _kGridTileFooterHeight = 34.0;
+
 /// 分類拼貼格（格狀檢視）：2×2 拼貼＋分類名稱/數量，重用既有 _BookCover。
 /// onTap 為 null 時（選取模式進行中）InkWell 自動停用點擊反饋，比照
 /// Flutter 既有「null 停用互動」慣例。
@@ -912,12 +921,15 @@ class _GroupGridTile extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 4),
-          Text(
-            '${tile.name} (${tile.totalCount})',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 12),
+          SizedBox(
+            height: _kGridTileFooterHeight,
+            child: Text(
+              '${tile.name} (${tile.totalCount})',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 12),
+            ),
           ),
         ],
       ),
@@ -1080,17 +1092,25 @@ class _BookGridTile extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 4),
-          Text(
-            book.title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 12),
-          ),
-          Text(
-            _progressText(book),
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 10, color: Colors.grey),
+          SizedBox(
+            height: _kGridTileFooterHeight,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  book.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 12),
+                ),
+                Text(
+                  _progressText(book),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 10, color: Colors.grey),
+                ),
+              ],
+            ),
           ),
         ],
       ),

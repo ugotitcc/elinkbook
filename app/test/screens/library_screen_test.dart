@@ -2930,6 +2930,65 @@ void main() {
         reason: '只有頂層書架（groupFilter == null）啟動當下才應該觸發自動開書，'
             '分類篩選路徑本身不應該重複觸發');
   });
+
+  testWidgets(
+      '橫屏（4 欄）下分類拼貼格與書籍格同列時，兩者文字標籤起始 Y 座標對齊'
+      '（epic-18-reader-device-qa Issue 42，真機使用回報：書架橫屏下封面'
+      '未對齊——根因是 _BookGridTile 有 2 行文字說明（書名＋進度），'
+      '_GroupGridTile 只有 1 行〔分類名稱＋本數〕，兩者封面 Expanded 吃到的'
+      '剩餘高度因此不同，導致同列的封面底部邊界錯開）', (tester) async {
+    tester.view.physicalSize = const Size(1600, 1200);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final books = [
+      for (var i = 0; i < 3; i++)
+        _testBook(id: 'g$i', title: '分類書$i', groupName: '奇幻'),
+      _testBook(id: 'b0', title: '第一本個別書'),
+    ];
+    final repository = FakeLibraryRepository(initialBooks: books);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: repository,
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final groupTileFinder = find.byKey(const Key('group_tile_奇幻'));
+    final bookTileFinder = find.byKey(const Key('book_item_b0'));
+    expect(groupTileFinder, findsOneWidget);
+    expect(bookTileFinder, findsOneWidget);
+
+    // 前提：兩者確實同列（外層總高度相同，這是 GridView 的既有保證，
+    // 這裡順便驗證前提沒有跑掉）。
+    expect(
+      tester.getSize(groupTileFinder).height,
+      tester.getSize(bookTileFinder).height,
+    );
+
+    final groupLabelTop = tester
+        .getTopLeft(find.descendant(
+          of: groupTileFinder,
+          matching: find.text('奇幻 (3)'),
+        ))
+        .dy;
+    final bookTitleTop = tester
+        .getTopLeft(find.descendant(
+          of: bookTileFinder,
+          matching: find.text('第一本個別書'),
+        ))
+        .dy;
+
+    expect(bookTitleTop, groupLabelTop,
+        reason: '同列的分類拼貼格與書籍格，文字標籤起始高度應對齊，'
+            '封面區塊底部邊界才不會錯開');
+  });
 }
 
 Book _testBook({
