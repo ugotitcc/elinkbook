@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:elinkbook/library/sqlite_library_repository.dart';
+import 'package:elinkbook/reader/global_reader_prefs.dart';
 import 'package:elinkbook/reader/reader_prefs_manager.dart';
 import 'package:elinkbook/screens/library_screen.dart';
 import 'package:elinkbook/library/book_import_service.dart';
@@ -63,7 +64,17 @@ void main() {
     // 本身不涉及版面偏好設定的讀寫，只需要滿足建構參數即可。
     libraryRepository =
         await SqliteLibraryRepository.open(inMemoryDatabasePath);
-    prefsManager = FakeReaderPrefsManager();
+    // epic-18-reader-device-qa Issue 29：openLastBookOnLaunch 預設 true，
+    // 會讓頂層 LibraryScreen 啟動當下自動導向最後閱讀的書籍——這個共用
+    // fixture 供本檔案絕大多數測試使用，這些測試的斷言目標是書架本身的
+    // 行為，並非這個自動開書的新功能，故在這裡明確關閉，避免每個既有測試
+    // 都被意外導覽到 ReaderScreen 而斷言失敗。Issue 29 自己的測試（見
+    // 「openLastBookOnLaunch=...」系列）各自建立獨立的 FakeReaderPrefsManager
+    // 明確開啟，不受這裡影響。
+    prefsManager = FakeReaderPrefsManager(
+      globalPrefs: const GlobalReaderPrefs.initial()
+          .copyWith(openLastBookOnLaunch: false),
+    );
   });
 
   tearDown(() async {
@@ -2659,6 +2670,126 @@ void main() {
             '外層一致，離開閱讀畫面／閱讀中 5 分鐘計時器兩種來源才會正確觸發 '
             'checkpoint');
   });
+
+  testWidgets(
+      'openLastBookOnLaunch=true 且圖書庫有書籍時，App 啟動後自動導向最後閱讀的書籍'
+      '（epic-18-reader-device-qa Issue 29）', (tester) async {
+    final older = _testBook(
+      id: 'older',
+      title: '較早閱讀的書',
+      filePath: 'content://example/older.txt',
+      lastReadTime: DateTime(2026, 1, 1),
+    );
+    final newer = _testBook(
+      id: 'newer',
+      title: '最近閱讀的書',
+      filePath: 'content://example/newer.txt',
+      lastReadTime: DateTime(2026, 6, 1),
+    );
+    final fakeManager = FakeReaderPrefsManager(
+      globalPrefs: const GlobalReaderPrefs.initial()
+          .copyWith(openLastBookOnLaunch: true),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: [older, newer]),
+          importService: FakeBookImportService(),
+          prefsManager: fakeManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final readerScreen = tester.widget<ReaderScreen>(find.byType(ReaderScreen));
+    expect(readerScreen.bookId, 'newer',
+        reason: 'openLastBookOnLaunch 應自動導向 lastReadTime 最新的那一本，'
+            '而非清單第一筆或任意一筆');
+  });
+
+  testWidgets(
+      'openLastBookOnLaunch=false 時，App 啟動後停留在書架，不自動開書'
+      '（epic-18-reader-device-qa Issue 29）', (tester) async {
+    final book = _testBook(
+      id: 'b1',
+      title: '測試書',
+      filePath: 'content://example/b1.txt',
+    );
+    final fakeManager = FakeReaderPrefsManager(
+      globalPrefs: const GlobalReaderPrefs.initial()
+          .copyWith(openLastBookOnLaunch: false),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: [book]),
+          importService: FakeBookImportService(),
+          prefsManager: fakeManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ReaderScreen), findsNothing);
+    expect(find.byKey(const Key('book_item_b1')), findsOneWidget);
+  });
+
+  testWidgets(
+      'openLastBookOnLaunch=true 但圖書庫沒有任何書籍時，不嘗試開書也不拋出例外'
+      '（epic-18-reader-device-qa Issue 29）', (tester) async {
+    final fakeManager = FakeReaderPrefsManager(
+      globalPrefs: const GlobalReaderPrefs.initial()
+          .copyWith(openLastBookOnLaunch: true),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: const []),
+          importService: FakeBookImportService(),
+          prefsManager: fakeManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ReaderScreen), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+      '透過分類篩選路徑（groupFilter 非 null）進入的 LibraryScreen 不會自動開書，'
+      '即使 openLastBookOnLaunch=true（epic-18-reader-device-qa Issue 29）',
+      (tester) async {
+    final book = _testBook(
+      id: 'b1',
+      title: '奇幻書',
+      groupName: '奇幻',
+      filePath: 'content://example/b1.txt',
+    );
+    final fakeManager = FakeReaderPrefsManager(
+      globalPrefs: const GlobalReaderPrefs.initial()
+          .copyWith(openLastBookOnLaunch: true),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: [book]),
+          importService: FakeBookImportService(),
+          prefsManager: fakeManager,
+          groupFilter: '奇幻',
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ReaderScreen), findsNothing,
+        reason: '只有頂層書架（groupFilter == null）啟動當下才應該觸發自動開書，'
+            '分類篩選路徑本身不應該重複觸發');
+  });
 }
 
 Book _testBook({
@@ -2670,6 +2801,7 @@ Book _testBook({
   String? coverPath,
   bool? isFixedLayout,
   BookFileFormat format = BookFileFormat.epub,
+  DateTime? lastReadTime,
 }) {
   final now = DateTime.now();
   return Book(
@@ -2683,7 +2815,7 @@ Book _testBook({
     groupName: groupName,
     isFixedLayout: isFixedLayout,
     createTime: now,
-    lastReadTime: now,
+    lastReadTime: lastReadTime ?? now,
   );
 }
 

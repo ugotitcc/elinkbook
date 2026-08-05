@@ -37,6 +37,11 @@ class GlobalReaderPrefs {
   /// FXL／PDF 三種格式（design.md 決策 6）。
   final bool fullscreen;
 
+  /// 啟動時開啟最後一本書（epic-18-reader-device-qa Issue 29），預設
+  /// `true`。開啟時，App 啟動當下若圖書庫內有任何書籍，直接導向最後
+  /// 閱讀（`Book.lastReadTime` 最新）的那一本，取代顯示書架。
+  final bool openLastBookOnLaunch;
+
   const GlobalReaderPrefs({
     required this.pageTurnMode,
     required this.screenOrientation,
@@ -45,6 +50,7 @@ class GlobalReaderPrefs {
     required this.showNavZoneDebugOverlay,
     this.volumeKeyEnabled = true,
     this.fullscreen = false,
+    this.openLastBookOnLaunch = true,
   });
 
   /// 初始值，與現行 GlobalReaderDefaults 的既有硬編碼預設一致，
@@ -56,7 +62,8 @@ class GlobalReaderPrefs {
         navZoneCustomActions = rightFlipZoneTemplate,
         showNavZoneDebugOverlay = false,
         volumeKeyEnabled = true,
-        fullscreen = false;
+        fullscreen = false,
+        openLastBookOnLaunch = true;
 
   GlobalReaderPrefs copyWith({
     PageTurnMode? pageTurnMode,
@@ -66,6 +73,7 @@ class GlobalReaderPrefs {
     bool? showNavZoneDebugOverlay,
     bool? volumeKeyEnabled,
     bool? fullscreen,
+    bool? openLastBookOnLaunch,
   }) {
     return GlobalReaderPrefs(
       pageTurnMode: pageTurnMode ?? this.pageTurnMode,
@@ -76,6 +84,7 @@ class GlobalReaderPrefs {
           showNavZoneDebugOverlay ?? this.showNavZoneDebugOverlay,
       volumeKeyEnabled: volumeKeyEnabled ?? this.volumeKeyEnabled,
       fullscreen: fullscreen ?? this.fullscreen,
+      openLastBookOnLaunch: openLastBookOnLaunch ?? this.openLastBookOnLaunch,
     );
   }
 
@@ -88,7 +97,8 @@ class GlobalReaderPrefs {
       listEquals(other.navZoneCustomActions, navZoneCustomActions) &&
       other.showNavZoneDebugOverlay == showNavZoneDebugOverlay &&
       other.volumeKeyEnabled == volumeKeyEnabled &&
-      other.fullscreen == fullscreen;
+      other.fullscreen == fullscreen &&
+      other.openLastBookOnLaunch == openLastBookOnLaunch;
 
   @override
   int get hashCode => Object.hash(
@@ -99,5 +109,6 @@ class GlobalReaderPrefs {
         showNavZoneDebugOverlay,
         volumeKeyEnabled,
         fullscreen,
+        openLastBookOnLaunch,
       );
 }

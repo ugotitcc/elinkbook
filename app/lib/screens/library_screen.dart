@@ -96,6 +96,27 @@ class _LibraryScreenState extends State<LibraryScreen> {
       _sortBy = sortBy;
     });
     await Future.wait([_loadGroups(), _loadBooks()]);
+    await _maybeOpenLastBookOnLaunch();
+  }
+
+  /// 啟動時開啟最後一本書（epic-18-reader-device-qa Issue 29）：只在頂層
+  /// 書架（`widget.groupFilter == null`）啟動當下觸發一次——`initState()`
+  /// 對單一 State 物件只會執行一次，`_openGroupFilteredView()` 推入的分類
+  /// 篩選畫面是另一個獨立的 `LibraryScreen` 實例、`groupFilter` 非
+  /// null，此處的 guard 確保使用者點進分類篩選畫面時不會被誤判為「App
+  /// 剛啟動」而重複觸發。「最後閱讀的書籍」獨立以 `LibrarySortBy.lastRead`
+  /// 查詢，不依賴目前畫面選定的 `_sortBy`（使用者的檢視排序偏好與這裡的
+  /// 語意是兩件事，即使目前排序條件是「書名」也不該影響這裡判斷的對象）。
+  Future<void> _maybeOpenLastBookOnLaunch() async {
+    if (widget.groupFilter != null) return;
+    final globalPrefs = await widget.prefsManager.loadGlobalPrefs();
+    if (!globalPrefs.openLastBookOnLaunch) return;
+    if (!mounted) return;
+    final books =
+        await widget.repository.listBooks(sortBy: LibrarySortBy.lastRead);
+    if (!mounted) return;
+    if (books.isEmpty) return;
+    _openBook(books.first);
   }
 
   Future<void> _loadGroups() async {

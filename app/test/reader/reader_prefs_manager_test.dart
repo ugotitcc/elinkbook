@@ -363,6 +363,30 @@ void main() {
       expect(loaded.globalPrefs.fullscreen, isFalse);
     });
 
+    test('saveGlobalPrefs 寫入 openLastBookOnLaunch 至既有慣例命名的 SharedPreferences key',
+        () async {
+      const globalPrefs = GlobalReaderPrefs(
+        pageTurnMode: PageTurnMode.paginated,
+        screenOrientation: ScreenOrientationSetting.auto,
+        navZoneMode: NavZoneMode.rightFlip,
+        navZoneCustomActions: rightFlipZoneTemplate,
+        showNavZoneDebugOverlay: false,
+        openLastBookOnLaunch: false,
+      );
+      await manager.saveGlobalPrefs(globalPrefs);
+
+      final sp = await SharedPreferences.getInstance();
+      expect(sp.getBool('global_reader_open_last_book_on_launch'), isFalse);
+
+      final loaded = await manager.load('b1');
+      expect(loaded.globalPrefs.openLastBookOnLaunch, isFalse);
+    });
+
+    test('openLastBookOnLaunch 未儲存過（缺鍵）時，安全回退為預設值 true', () async {
+      final loaded = await manager.load('b1');
+      expect(loaded.globalPrefs.openLastBookOnLaunch, isTrue);
+    });
+
     test('navZoneCustomActions 已儲存值為空字串時，安全回退為 rightFlip 模板',
         () async {
       SharedPreferences.setMockInitialValues({

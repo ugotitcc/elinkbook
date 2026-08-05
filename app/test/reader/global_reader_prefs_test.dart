@@ -120,4 +120,23 @@ void main() {
     final c = a.copyWith(fullscreen: true);
     expect(a == c, isFalse);
   });
+
+  test('GlobalReaderPrefs.initial() 的 openLastBookOnLaunch 預設 true', () {
+    const prefs = GlobalReaderPrefs.initial();
+    expect(prefs.openLastBookOnLaunch, isTrue);
+  });
+
+  test('copyWith 可更新 openLastBookOnLaunch，不影響其餘欄位', () {
+    const original = GlobalReaderPrefs.initial();
+    final updated = original.copyWith(openLastBookOnLaunch: false);
+    expect(updated.openLastBookOnLaunch, isFalse);
+    expect(updated.pageTurnMode, original.pageTurnMode);
+    expect(updated.volumeKeyEnabled, original.volumeKeyEnabled);
+  });
+
+  test('openLastBookOnLaunch 不同時視為不相等', () {
+    const a = GlobalReaderPrefs.initial();
+    final b = a.copyWith(openLastBookOnLaunch: false);
+    expect(a == b, isFalse);
+  });
 }
