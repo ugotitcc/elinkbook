@@ -1046,8 +1046,8 @@ AiPaper Reader C 這類 E-Ink 裝置為了讓文字/圖示夠大，`devicePixelR
 
 **單元測試要求（已完成）：** `app/test/screens/library_screen_test.dart` 新增尺寸量測回歸測試——4 本書皆無 `coverPath`（`_BookCover` 各自以 `ColoredBox(grey.shade300)` 佔位），量測最下面一列佔位色塊的底部 Y 座標與分類名稱文字頂部 Y 座標之間的間距，應僅為明講的 `SizedBox(height: 4)`（斷言差值 < 10 邏輯像素）；並結構性驗證拼貼格內不再有 `GridView` 型別的 widget（確保修法本身確實生效，非巧合的尺寸吻合）。
 
-**驗收標準：** `flutter analyze` 全程維持乾淨；全專案 `flutter test`（964 個測試）無回歸。
+**驗收標準：** `flutter analyze` 全程維持乾淨；全專案 `flutter test`（964 個測試）無回歸；已透過 PR #116 合併回 `main`。
 
 **相關佐證：**
-- 分支 `fix/epic-18-issue-37-group-tile-cover-fill`
+- 分支 `fix/epic-18-issue-37-group-tile-cover-fill`，PR #116
 - `tmp/images/書架封面未填滿.jpg`（使用者原始回報截圖，紅框標示空白範圍）
