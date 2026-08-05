@@ -1102,3 +1102,20 @@ AiPaper Reader C 這類 E-Ink 裝置為了讓文字/圖示夠大，`devicePixelR
 
 **相關佐證：**
 - 截圖 `tmp/images/iReader1.jpg`／`tmp/images/iReader2.jpg`（iReader Ocean 4 Plus 系統 WebView 版本確認）
+
+### 程式碼審查與合併
+
+**Status:** ✅ 已完成並合併回 `main`（PR #117，分支 `epic-18-issue-38-41`，6 個 commit：Issue 38／39／40／41／docs／審查回應）。
+
+程式碼審查（`tmp/epic-18/review-issue-38-41.md`，Ready to merge: With fixes，0 Critical／2 Important）發現並修正：
+
+1. `replaceAll` polyfill 的函式型 `replacement` 分支原本用 `Array.prototype.join(fn)` 處理，但 `join()` 對非字串參數只會呼叫 `toString()`、不會逐一呼叫該函式，等於把函式原始碼文字字面插入結果字串——是難以排查的靜默錯誤。改為函式型 `replacement` 明確拋出 `TypeError`（目前 vendor 用法只傳字串，不需要這個功能）；字串型 `replacement` 補上 `$$`／`$&` 兩種替換樣式展開，比照原生規格常見用法。已用 Node.js 直接執行修正後的邏輯驗證正確（7 項真實案例，含 vendor 兩處實際呼叫模式）。
+2. `WeakRef` polyfill 補上行內註解，說明刻意使用強參照模擬、不具備真正弱參照語意的權衡取捨與已知影響範圍（`view.js` 的 `lastActive` 單一插槽變數）。
+
+一併修正 1 項 Minor（doc comment 誤用「Task 38」訂正為「Issue 38」）。
+
+**驗收標準：** `flutter analyze` 全程維持乾淨；全專案 `flutter test`（969 個測試）無回歸；`node app/tool/check_foliate_es_compat.js` 仍回報乾淨。
+
+**相關佐證：**
+- 計劃文件 `docs/epics/epic-18-reader-device-qa/plans/plan-issue-38-41.md`（`/superpowers:writing-plans` 產出，全部 Task 已完成）
+- 審查報告 `tmp/epic-18/review-issue-38-41.md`
