@@ -245,7 +245,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                   value: _marginTop,
                   min: 0,
                   max: 120,
-                  step: 4,
+                  step: 2,
                   displayValue: _marginTop.round().toString(),
                   onChanged: (v) => setState(() {
                     _marginTop = v;
@@ -258,7 +258,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                   value: _marginBottom,
                   min: 0,
                   max: 120,
-                  step: 4,
+                  step: 2,
                   displayValue: _marginBottom.round().toString(),
                   onChanged: (v) => setState(() {
                     _marginBottom = v;
@@ -271,7 +271,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                   value: _marginLeft,
                   min: 0,
                   max: 120,
-                  step: 4,
+                  step: 2,
                   displayValue: _marginLeft.round().toString(),
                   onChanged: (v) => setState(() {
                     _marginLeft = v;
@@ -284,7 +284,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                   value: _marginRight,
                   min: 0,
                   max: 120,
-                  step: 4,
+                  step: 2,
                   displayValue: _marginRight.round().toString(),
                   onChanged: (v) => setState(() {
                     _marginRight = v;
