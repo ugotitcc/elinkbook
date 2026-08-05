@@ -4961,8 +4961,10 @@ void main() {
   });
 
   testWidgets(
-      '流式 EPUB 頁首/頁尾文字：字級為 12、不含按鈕底色與內距，只佔文字本身空間'
-      '（epic-18-reader-device-qa Issue 43，真機使用回報）', (tester) async {
+      '流式 EPUB 頁首/頁尾文字：字級為 12、不含按鈕底色與內距，只佔文字本身空間、'
+      '文字顏色與書本內文一致（黑色，非白色）'
+      '（epic-18-reader-device-qa Issue 43，真機使用回報：拿掉底色後白色'
+      '文字疊在淺色書頁上基本上看不到）', (tester) async {
     await prefsManager.saveBookPrefs(
       'b_header_footer_no_bg',
       const BookReaderPrefs(showHeader: true, showFooter: true),
@@ -5010,6 +5012,7 @@ void main() {
       matching: find.byType(Text),
     ));
     expect(headerText.style?.fontSize, 12);
+    expect(headerText.style?.color, Colors.black);
 
     final footerContainer = tester.widget<Container>(
       find.byKey(const Key('reader_foliate_progress_text')),
@@ -5022,6 +5025,7 @@ void main() {
       matching: find.byType(Text),
     ));
     expect(footerText.style?.fontSize, 12);
+    expect(footerText.style?.color, Colors.black);
   });
 
   tearDownAll(() {

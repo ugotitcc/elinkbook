@@ -1819,7 +1819,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         chapterTitle,
         overflow: TextOverflow.ellipsis,
         maxLines: 1,
-        style: const TextStyle(color: Colors.white, fontSize: 12),
+        // 【程式碼審查修正】拿掉黑色半透明底色後（見上方 _buildFoliateHeaderText
+        // 文件註解），白色文字疊在書本頁面（通常是淺色/白色背景）上幾乎
+        // 看不見；改用與書本內文一致的黑色，讓頁首文字融入版面，而非高對比
+        // 疊加控制項的視覺語言。
+        style: const TextStyle(color: Colors.black, fontSize: 12),
       ),
     );
   }
@@ -1838,7 +1842,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       key: const Key('reader_foliate_progress_text'),
       child: Text(
         '$currentPage/$totalPages',
-        style: const TextStyle(color: Colors.white, fontSize: 12),
+        // 【程式碼審查修正】理由同 _buildFoliateHeaderText()：拿掉底色後
+        // 改用與書本內文一致的黑色，避免白色文字疊在淺色書頁背景上看不見。
+        style: const TextStyle(color: Colors.black, fontSize: 12),
       ),
     );
   }
