@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/reader/column_mode.dart';
 import 'package:elinkbook/reader/dual_page_mode.dart';
 import 'package:elinkbook/reader/foliate_epub_reader_view.dart';
+import 'package:elinkbook/reader/reader_console_log.dart';
 import 'package:elinkbook/reader/writing_mode.dart';
 import 'package:elinkbook/reader/epub_text_align.dart';
 import 'package:elinkbook/reader/page_turn_mode.dart';
@@ -662,6 +663,52 @@ void main() {
       expect(script.source, contains('window.onunhandledrejection'));
       expect(script.source, contains("callHandler('onError'"),
           reason: '必須重用既有的 onError bridge channel，不新增獨立 handler');
+    });
+
+    // epic-18-reader-device-qa Issue 33：iReader Ocean 4 Plus 這類裝置若
+    // WebView 建置沒有開啟 setWebContentsDebuggingEnabled，無法用
+    // chrome://inspect 遠端除錯，App 內建的 Console Log 檢視畫面是唯一
+    // 能取得實際 JS console 輸出的管道。InAppWebView 的 onConsoleMessage
+    // 確實有被賦值（結構性驗證，比照 resolveCustomFontUri／
+    // _shouldInterceptRequest 的既有先例——FakePlatformInAppWebViewWidget
+    // 底下無法真正觸發完整的 callback 型別鏈，故實際的訊息處理邏輯抽成
+    // 下方 handleFoliateConsoleMessage 純函式獨立測試）。
+    testWidgets('InAppWebView 的 onConsoleMessage 已被賦值', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: FoliateEpubReaderView(
+            filePath: '/tmp/sample.epub',
+            onPageRendered: _noop,
+            onError: _noopError,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final webView = tester.widget<InAppWebView>(find.byType(InAppWebView));
+      expect(webView.platform.params.onConsoleMessage, isNotNull);
+    });
+  });
+
+  group('handleFoliateConsoleMessage', () {
+    setUp(() {
+      ReaderConsoleLog.clear();
+    });
+
+    test('把 messageLevel 與 message 組成單行文字附加到 ReaderConsoleLog', () {
+      handleFoliateConsoleMessage('測試訊息', 'LOG');
+
+      expect(ReaderConsoleLog.entries.value, hasLength(1));
+      expect(ReaderConsoleLog.entries.value.single, '[LOG] 測試訊息');
+    });
+
+    test('可連續呼叫多次，依序附加不覆蓋既有訊息', () {
+      handleFoliateConsoleMessage('第一筆', 'LOG');
+      handleFoliateConsoleMessage('第二筆', 'ERROR');
+
+      expect(ReaderConsoleLog.entries.value, ['[LOG] 第一筆', '[ERROR] 第二筆']);
     });
   });
 

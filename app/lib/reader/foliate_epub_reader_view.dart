@@ -17,6 +17,7 @@ import 'foliate_bridge_codec.dart';
 import 'foliate_native_bridge.dart';
 import 'page_turn_mode.dart';
 import 'percent_rect.dart';
+import 'reader_console_log.dart';
 import 'toc_entry.dart';
 import 'writing_mode.dart';
 import 'zone_action.dart';
@@ -111,6 +112,16 @@ window.onunhandledrejection = function (event) {
   }
 };
 ''';
+
+/// `InAppWebView.onConsoleMessage` 的訊息處理邏輯（epic-18-reader-device-qa
+/// Issue 33，真機使用回報）。抽成頂層純函式獨立測試——原因與
+/// [resolveCustomFontUri] 相同：`FakePlatformInAppWebViewWidget`
+/// （`test/support/fake_inappwebview_platform.dart`）底下無法真正觸發完整
+/// 的 `onConsoleMessage` callback 型別鏈（需要一個真實 `InAppWebViewController`
+/// 實例），這段訊息格式化邏輯抽出後才能脫離該型別鏈直接測試。
+void handleFoliateConsoleMessage(String message, String levelName) {
+  ReaderConsoleLog.add('[$levelName] $message');
+}
 
 /// 把目前所有非 null 的偏好參數組成一個 map，key 名稱與 `main.js`
 /// `window.applyPreferences`/`window.FoliateBridge` 契約一致（取代原本
@@ -606,6 +617,13 @@ class _FoliateEpubReaderViewState extends State<FoliateEpubReaderView> {
           ]),
           onWebViewCreated: _onWebViewCreated,
           shouldInterceptRequest: _shouldInterceptRequest,
+          // epic-18-reader-device-qa Issue 33：見上方
+          // handleFoliateConsoleMessage 註解。
+          onConsoleMessage: (controller, consoleMessage) =>
+              handleFoliateConsoleMessage(
+            consoleMessage.message,
+            consoleMessage.messageLevel.toString(),
+          ),
         ),
         Positioned.fill(
           child: Column(
