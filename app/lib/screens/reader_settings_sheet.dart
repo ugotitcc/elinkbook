@@ -44,7 +44,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   static const _defaultFontWeightMultiplier = 1.0; // 倍率，UI 顯示 400（1.0 × 400）
   static const _defaultLineHeight = 1.0;
   static const _defaultParagraphSpacing = 10.0;
-  static const _defaultMarginTop = 64.0;
+  static const _defaultMarginTop = 32.0;
   static const _defaultMarginBottom = 16.0;
   static const _defaultMarginLeft = 24.0;
   static const _defaultMarginRight = 24.0;

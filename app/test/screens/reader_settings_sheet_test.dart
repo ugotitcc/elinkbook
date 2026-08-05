@@ -135,7 +135,7 @@ void main() {
           .widget<Slider>(
               find.byKey(const Key('reader_settings_margin_top_slider')))
           .value,
-      64.0,
+      32.0,
     );
     expect(
       tester
