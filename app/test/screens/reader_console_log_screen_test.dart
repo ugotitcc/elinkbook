@@ -1,11 +1,27 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/reader/reader_console_log.dart';
 import 'package:elinkbook/screens/reader_console_log_screen.dart';
 
 void main() {
+  final List<ClipboardData> copiedData = [];
+
   setUp(() {
     ReaderConsoleLog.clear();
+    copiedData.clear();
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+      if (call.method == 'Clipboard.setData') {
+        copiedData.add(ClipboardData(text: call.arguments['text'] as String));
+      }
+      return null;
+    });
+  });
+
+  tearDown(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(SystemChannels.platform, null);
   });
 
   testWidgets('沒有記錄時顯示空狀態', (tester) async {
@@ -43,5 +59,23 @@ void main() {
 
     expect(find.byKey(const Key('reader_console_log_empty')), findsOneWidget);
     expect(ReaderConsoleLog.entries.value, isEmpty);
+  });
+
+  testWidgets('點擊「複製全部」按鈕後，所有記錄以換行組成單一字串複製到剪貼簿',
+      (tester) async {
+    ReaderConsoleLog.add('[ERROR] 第一筆訊息');
+    ReaderConsoleLog.add('[LOG] 第二筆訊息');
+
+    await tester.pumpWidget(
+      const MaterialApp(home: ReaderConsoleLogScreen()),
+    );
+
+    await tester
+        .tap(find.byKey(const Key('reader_console_log_copy_all_button')));
+    await tester.pump();
+
+    expect(copiedData, hasLength(1));
+    expect(copiedData.single.text, '[ERROR] 第一筆訊息\n[LOG] 第二筆訊息');
+    expect(find.text('已複製全部記錄到剪貼簿'), findsOneWidget);
   });
 }

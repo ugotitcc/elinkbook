@@ -617,7 +617,7 @@ void main() {
       final webView = tester.widget<InAppWebView>(find.byType(InAppWebView));
       final scripts = webView.platform.params.initialUserScripts;
       expect(scripts, isNotNull);
-      expect(scripts, hasLength(2));
+      expect(scripts, hasLength(3));
       final script = scripts!.first;
       expect(script.injectionTime, UserScriptInjectionTime.AT_DOCUMENT_START);
       expect(script.source, contains('Object.groupBy'));
@@ -656,13 +656,43 @@ void main() {
 
       final webView = tester.widget<InAppWebView>(find.byType(InAppWebView));
       final scripts = webView.platform.params.initialUserScripts;
-      expect(scripts, hasLength(2));
-      final script = scripts!.last;
+      expect(scripts, hasLength(3));
+      final script = scripts![1];
       expect(script.injectionTime, UserScriptInjectionTime.AT_DOCUMENT_START);
       expect(script.source, contains('window.onerror'));
       expect(script.source, contains('window.onunhandledrejection'));
       expect(script.source, contains("callHandler('onError'"),
           reason: '必須重用既有的 onError bridge channel，不新增獨立 handler');
+    });
+
+    // epic-18-reader-device-qa Issue 33（程式碼審查建議）：定位「舊版
+    // WebView 引擎不支援特定 API」這類相容性缺口時，User Agent 字串
+    // （含 Chromium 版本號）是最直接的起點線索。直接用標準 console.log
+    // 輸出，沿用既有、已測試過的 onConsoleMessage →
+    // handleFoliateConsoleMessage → ReaderConsoleLog 管線。
+    testWidgets(
+        'InAppWebView 於 AT_DOCUMENT_START 注入 navigator.userAgent 診斷紀錄',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: FoliateEpubReaderView(
+            filePath: '/tmp/sample.epub',
+            onPageRendered: _noop,
+            onError: _noopError,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final webView = tester.widget<InAppWebView>(find.byType(InAppWebView));
+      final scripts = webView.platform.params.initialUserScripts;
+      expect(scripts, hasLength(3));
+      final script = scripts!.last;
+      expect(script.injectionTime, UserScriptInjectionTime.AT_DOCUMENT_START);
+      expect(script.source, contains('navigator.userAgent'));
+      expect(script.source, contains('console.log'));
     });
 
     // epic-18-reader-device-qa Issue 33：iReader Ocean 4 Plus 這類裝置若

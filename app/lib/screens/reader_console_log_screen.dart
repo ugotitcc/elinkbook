@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../reader/reader_console_log.dart';
 
@@ -14,6 +15,12 @@ class ReaderConsoleLogScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('閱讀器 Console Log'),
         actions: [
+          IconButton(
+            key: const Key('reader_console_log_copy_all_button'),
+            icon: const Icon(Icons.copy_all_outlined),
+            tooltip: '複製全部',
+            onPressed: () => _copyAllToClipboard(context),
+          ),
           IconButton(
             key: const Key('reader_console_log_clear_button'),
             icon: const Icon(Icons.delete_outline),
@@ -52,6 +59,15 @@ class ReaderConsoleLogScreen extends StatelessWidget {
           );
         },
       ),
+    );
+  }
+
+  Future<void> _copyAllToClipboard(BuildContext context) async {
+    final entries = ReaderConsoleLog.entries.value;
+    await Clipboard.setData(ClipboardData(text: entries.join('\n')));
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('已複製全部記錄到剪貼簿')),
     );
   }
 }

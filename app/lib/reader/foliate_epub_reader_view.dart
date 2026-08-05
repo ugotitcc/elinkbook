@@ -113,6 +113,16 @@ window.onunhandledrejection = function (event) {
 };
 ''';
 
+/// 於診斷日誌開頭記錄 `navigator.userAgent`（epic-18-reader-device-qa
+/// Issue 33，程式碼審查建議）：定位「舊版 WebView 引擎不支援特定 API」
+/// 這類相容性缺口時，User Agent 字串（含 Chromium 版本號）是最直接的
+/// 起點線索。透過標準 `console.log` 輸出，直接沿用既有、已測試過的
+/// `onConsoleMessage` → [handleFoliateConsoleMessage] → `ReaderConsoleLog`
+/// 管線，不需要新增 bridge channel。
+const _userAgentLogJs = '''
+console.log('[UserAgent] ' + navigator.userAgent);
+''';
+
 /// `InAppWebView.onConsoleMessage` 的訊息處理邏輯（epic-18-reader-device-qa
 /// Issue 33，真機使用回報）。抽成頂層純函式獨立測試——原因與
 /// [resolveCustomFontUri] 相同：`FakePlatformInAppWebViewWidget`
@@ -612,6 +622,12 @@ class _FoliateEpubReaderViewState extends State<FoliateEpubReaderView> {
             // 注入，實際執行順序不影響彼此（各自只是定義全局函式/監聽器）。
             UserScript(
               source: _globalErrorCaptureJs,
+              injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
+            ),
+            // epic-18-reader-device-qa Issue 33（程式碼審查建議）：見上方
+            // _userAgentLogJs 註解。
+            UserScript(
+              source: _userAgentLogJs,
               injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
             ),
           ]),
