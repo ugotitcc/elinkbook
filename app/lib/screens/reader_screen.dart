@@ -1627,7 +1627,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                 !_chromeVisible)
               (_resolved?.writingMode == WritingMode.vertical)
                   ? Positioned(
-                      right: 16,
+                      right: 0,
                       top: 16,
                       bottom: 16,
                       child: RotatedBox(
@@ -1636,7 +1636,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                       ),
                     )
                   : Positioned(
-                      top: 16,
+                      top: 0,
                       left: 72,
                       right: 72,
                       child: Center(child: _buildFoliateHeaderText()),
@@ -1646,7 +1646,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                 (_epubPositionInfo?.totalPages ?? 0) > 0)
               (_resolved?.writingMode == WritingMode.vertical)
                   ? Positioned(
-                      left: 16,
+                      left: 0,
                       bottom: 16,
                       child: RotatedBox(
                         quarterTurns: 1,
@@ -1656,7 +1656,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                   : Positioned(
                       left: 0,
                       right: 0,
-                      bottom: 16,
+                      bottom: 0,
                       child: Center(child: _buildFoliateProgressText()),
                     ),
             if (selection != null)
@@ -1791,7 +1791,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         chapterTitle,
         overflow: TextOverflow.ellipsis,
         maxLines: 1,
-        style: const TextStyle(color: Colors.white, fontSize: 13),
+        style: const TextStyle(color: Colors.white, fontSize: 16),
       ),
     );
   }
@@ -1815,7 +1815,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       ),
       child: Text(
         '$currentPage/$totalPages',
-        style: const TextStyle(color: Colors.white, fontSize: 12),
+        style: const TextStyle(color: Colors.white, fontSize: 16),
       ),
     );
   }
