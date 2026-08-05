@@ -5,6 +5,20 @@ import '../reader/nav_zone_mode.dart';
 import '../reader/reader_prefs_manager.dart';
 import '../reader/zone_action.dart';
 
+/// 「簡單」模板卡片（`leftFlip`／`rightFlip`／`oneHand`）色塊配色表
+/// （epic-18-reader-device-qa Issue 44，真機使用回報：`leftFlip`／
+/// `rightFlip` 原本用「欄位位置」決定色塊顏色，導致同一個 `chevron_left`
+/// 圖示在兩張卡片上顏色不同〔一個紅一個藍〕。改用「圖示本身」決定顏色，
+/// 讓三張卡片的配色語意一致：綠＝選單、紅＝上一頁、藍＝下一頁，比照
+/// `_buildOneHandTemplateCard()` 既有的配色慣例。抽成頂層純函式方便獨立
+/// 測試與未來重用。
+Color navZoneTemplateIconColor(IconData icon) {
+  if (icon == Icons.chevron_left) return Colors.red.shade100;
+  if (icon == Icons.chevron_right) return Colors.blue.shade100;
+  if (icon == Icons.menu) return Colors.green.shade100;
+  return Colors.grey.shade100;
+}
+
 /// 導航熱區設定畫面（FR-24）：四選一模板（左翻頁／右翻頁／單手／自訂）
 /// 選擇即時全域生效；選到「自訂」時顯示 9 格自由編輯器，逐格點擊循環切換
 /// 4 種 [ZoneAction]，儲存前呼叫 [isValidCustomZoneConfig] 驗證（design.md
@@ -223,21 +237,23 @@ class _NavZoneSettingsScreenState extends State<NavZoneSettingsScreen> {
           children: [
             Expanded(
               child: Container(
-                color: Colors.blue.shade100,
+                color: navZoneTemplateIconColor(leftIcon),
                 alignment: Alignment.center,
                 child: Icon(leftIcon, size: 16),
               ),
             ),
             Expanded(
               child: Container(
-                color: Colors.green.shade100,
+                color: middleIcon == null
+                    ? Colors.grey.shade100
+                    : navZoneTemplateIconColor(middleIcon),
                 alignment: Alignment.center,
                 child: middleIcon == null ? null : Icon(middleIcon, size: 16),
               ),
             ),
             Expanded(
               child: Container(
-                color: Colors.red.shade100,
+                color: navZoneTemplateIconColor(rightIcon),
                 alignment: Alignment.center,
                 child: Icon(rightIcon, size: 16),
               ),
