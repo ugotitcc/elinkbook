@@ -876,24 +876,39 @@ class _GroupGridTile extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // 【診斷修正】改用 Column/Row 巢狀 Expanded 手排 2×2，不用
+          // GridView.count——GridView 的儲存格高度由
+          // 寬度／childAspectRatio 換算得出（未明講時預設 1.0，即正方形），
+          // 與外層 Expanded 實際分配到的高度無關；外層拼貼格採用較窄長的
+          // 比例（childAspectRatio: 0.62），正方形的 2×2 網格本身高度只
+          // 略等於自身寬度，遠小於 Expanded 分配到的可用高度，
+          // NeverScrollableScrollPhysics 又不會讓內容撐滿捲動範圍，導致
+          // 封面區塊下方留下大片空白（真機使用回報）。改手排後每個儲存格
+          // 皆用 Expanded 包裹，強制精確填滿可用寬高，不受任何比例換算
+          // 影響。
           Expanded(
-            child: GridView.count(
-              crossAxisCount: 2,
-              // GridView 是 BoxScrollView 的子類，padding 為 null 時會自動
-              // 吃進 MediaQuery.of(context).padding（垂直捲動吃 top/bottom
-              // safe area）；這個巢狀在拼貼格內的小型 GridView 若不明講
-              // padding: EdgeInsets.zero，會意外套上裝置狀態列/導覽列高度
-              // 的內距，把 2×2 封面擠壓變形。
-              padding: EdgeInsets.zero,
-              mainAxisSpacing: 2,
-              crossAxisSpacing: 2,
-              physics: const NeverScrollableScrollPhysics(),
-              children: List.generate(
-                4,
-                (i) => i < tile.previewBooks.length
-                    ? _BookCover(book: tile.previewBooks[i])
-                    : ColoredBox(color: Colors.grey.shade200),
-              ),
+            child: Column(
+              children: [
+                Expanded(
+                  child: Row(
+                    children: [
+                      Expanded(child: _groupTilePreviewCell(0)),
+                      const SizedBox(width: 2),
+                      Expanded(child: _groupTilePreviewCell(1)),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Expanded(
+                  child: Row(
+                    children: [
+                      Expanded(child: _groupTilePreviewCell(2)),
+                      const SizedBox(width: 2),
+                      Expanded(child: _groupTilePreviewCell(3)),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 4),
@@ -907,6 +922,12 @@ class _GroupGridTile extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Widget _groupTilePreviewCell(int index) {
+    return index < tile.previewBooks.length
+        ? _BookCover(book: tile.previewBooks[index])
+        : ColoredBox(color: Colors.grey.shade200);
   }
 }
 

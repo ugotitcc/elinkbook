@@ -2457,6 +2457,67 @@ void main() {
     );
   });
 
+  testWidgets(
+      '分類拼貼格（格狀檢視）封面預覽區塊填滿可用高度，下方不留空白'
+      '（診斷修正：原本用 GridView.count 預設正方形儲存格，2×2 網格自身高度'
+      '只略等於寬度，遠小於拼貼格 childAspectRatio: 0.62 分配到的較高可用'
+      '空間，NeverScrollableScrollPhysics 又不會撐滿，導致封面下方留下大片'
+      '空白；改用 Column/Row 手排 Expanded 後應精確填滿）', (tester) async {
+    final books = List.generate(
+      4,
+      (i) => _testBook(id: '$i', title: '書$i', groupName: '奇幻'),
+    );
+    final repository = FakeLibraryRepository(initialBooks: books);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: repository,
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final tileFinder = find.byKey(const Key('group_tile_奇幻'));
+    expect(tileFinder, findsOneWidget);
+
+    // 結構性驗證：不再使用 GridView 手排 2×2（改用 Expanded 手排），確保
+    // 修法本身確實生效，不是巧合的尺寸吻合。
+    expect(
+      find.descendant(of: tileFinder, matching: find.byType(GridView)),
+      findsNothing,
+    );
+
+    // 尺寸驗證：4 本書皆無 coverPath，_BookCover 各自以 ColoredBox 佔位
+    // （內含置中的小圖示，圖示本身不會撐滿儲存格，故量測 ColoredBox 本身
+    // 的邊界而非圖示）；取最下面那一列（第 3/4 格）佔位色塊的底部，應緊
+    // 接分類名稱文字的頂部（僅隔明講的 SizedBox(height: 4) 一點點間距），
+    // 而非留下大片空白。
+    final coverBoxFinder = find.descendant(
+      of: tileFinder,
+      matching: find.byWidgetPredicate(
+        (w) => w is ColoredBox && w.color == Colors.grey.shade300,
+      ),
+    );
+    final coverBoxCount = tester.widgetList(coverBoxFinder).length;
+    expect(coverBoxCount, 4);
+    final bottomRowBottomY = List.generate(
+      coverBoxCount,
+      (i) => tester.getBottomLeft(coverBoxFinder.at(i)).dy,
+    ).reduce((a, b) => a > b ? a : b);
+
+    final labelFinder = find.descendant(
+      of: tileFinder,
+      matching: find.text('奇幻 (4)'),
+    );
+    final labelTopY = tester.getTopLeft(labelFinder).dy;
+
+    expect(labelTopY - bottomRowBottomY, lessThan(10),
+        reason: '封面預覽區塊與分類名稱之間不應留下大片空白（僅預期的 4px 間距）');
+  });
+
   testWidgets('分類拼貼格（格狀檢視）不足 4 本時以中性色塊佔位，名稱與本數正確顯示',
       (tester) async {
     final bookA = _testBook(id: '1', title: 'A書', groupName: '奇幻');

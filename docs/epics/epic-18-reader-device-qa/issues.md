@@ -1035,3 +1035,19 @@ AiPaper Reader C 這類 E-Ink 裝置為了讓文字/圖示夠大，`devicePixelR
 **相關佐證：**
 - 分支 `fix/epic-18-issue-34-36-followup-fixes`（6 個 commit：Issue 34、Issue 35 文字修正、Issue 36、docs、Issue 35 功能補正、docs），PR #115
 - `tmp/images/HOT.png`（使用者提供的「單手」模板參考圖，Issue 36 依此設計）
+
+---
+
+## Issue 37：書架分類拼貼格封面預覽下方留白（`/diagnose`，附截圖）
+
+**背景（2026-08-05）：** 使用者回報書架分類拼貼格（格狀檢視）的 2×2 封面預覽區塊下方有明顯大片空白，附截圖以紅框標示（`tmp/images/書架封面未填滿.jpg`）。
+
+**Status:** ✅ 已完成。**根因**：`_GroupGridTile` 的 2×2 封面預覽用 `GridView.count(crossAxisCount: 2, ...)`，未明講 `childAspectRatio` 時預設為 1.0（正方形儲存格）——2×2 網格自身總高度只略等於自身寬度。外層拼貼格（`GridView.builder` 的 `childAspectRatio: 0.62`）本身是較窄長的比例，`Expanded` 分配給這個巢狀 `GridView.count` 的可用高度遠大於正方形網格實際需要的高度；`NeverScrollableScrollPhysics` 又不會讓內容撐滿捲動範圍，導致封面預覽下方留下與「可用高度 − 正方形網格自身高度」成正比的大片空白，恰好對應截圖紅框範圍。**修法**：改用 `Column`／`Row` 巢狀 `Expanded` 手排 4 個儲存格，取代 `GridView.count`——每個儲存格皆用 `Expanded` 包裹，強制精確填滿可用寬高，不受 `GridView` 用寬度／aspect ratio 換算高度、忽略實際可用高度的既有行為影響。
+
+**單元測試要求（已完成）：** `app/test/screens/library_screen_test.dart` 新增尺寸量測回歸測試——4 本書皆無 `coverPath`（`_BookCover` 各自以 `ColoredBox(grey.shade300)` 佔位），量測最下面一列佔位色塊的底部 Y 座標與分類名稱文字頂部 Y 座標之間的間距，應僅為明講的 `SizedBox(height: 4)`（斷言差值 < 10 邏輯像素）；並結構性驗證拼貼格內不再有 `GridView` 型別的 widget（確保修法本身確實生效，非巧合的尺寸吻合）。
+
+**驗收標準：** `flutter analyze` 全程維持乾淨；全專案 `flutter test`（964 個測試）無回歸。
+
+**相關佐證：**
+- 分支 `fix/epic-18-issue-37-group-tile-cover-fill`
+- `tmp/images/書架封面未填滿.jpg`（使用者原始回報截圖，紅框標示空白範圍）
