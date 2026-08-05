@@ -28,7 +28,15 @@ class EpubPageEstimator {
     double? pageMargins,
   }) {
     final fontSizeFactor = fontSize ?? 1.0;
-    final lineHeightFactor = (lineHeight ?? 1.5) / 1.5;
+    // epic-18-reader-device-qa Issue 25 把行高滑桿範圍下限改為 0 後，
+    // lineHeight 可能真的是 0.0——若不設下限，lineHeightFactor 會是 0、
+    // areaFactor 隨之為 0，下面的 (referenceCharsPerScreen / areaFactor)
+    // 會得到 double.infinity，對 Infinity 呼叫 .round() 在 Dart 會直接
+    // 拋出 UnsupportedError（審查發現，2026-08-05）。0.1 只是避免除以零
+    // 的下限，不代表這是「合理」的行高——即使套用這個下限，算出的
+    // charsPerScreen 之後仍會被下面既有的 clamp(50, referenceCharsPerScreen
+    // * 4) 收斂到同一個上限，不需要更精確的下限值。
+    final lineHeightFactor = math.max(0.1, lineHeight ?? 1.5) / 1.5;
     final paragraphSpacingFactor = paragraphSpacing ?? 1.0;
     final pageMarginsFactor = pageMargins ?? 1.0;
 
