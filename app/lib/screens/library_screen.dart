@@ -875,6 +875,31 @@ class _GroupTile {
 /// 溢位（審查發現：修法前文字說明區是自然高度、不會有這個風險，此為
 /// 修法本身新引入、需要一併防護的技術債）。
 const _kGridTileFooterHeightAtScale1 = 34.0;
+const _kGridTileFooterTitleFontSize = 12.0;
+const _kGridTileFooterProgressFontSize = 10.0;
+
+/// 【/diagnose 第七輪：Air Reader C 真機回報】上面 34.0 這個基準值原本
+/// 是直接整體丟進 `textScaler.scale(34.0)`，但 `_BookGridTile` 實際渲染
+/// 的兩行文字（書名 12px＋進度 10px）是各自獨立呼叫 `scale(12)`／
+/// `scale(10)`——兩者只有在縮放曲線是「線性」（`scale(x) = x * 固定倍率`）
+/// 時才恆等。真機使用者手動調大系統字級後，Android 會套用「非線性字級
+/// 縮放」（避免超大字級把版面撐爆，對數值較大的輸入相對縮放得較保守），
+/// `scale(34)` 因此比 `scale(12) + scale(10)` 縮放得少，容器高度不夠、
+/// 觸發 RenderFlex 溢位。`flutter_test` 套件的 `TestPlatformDispatcher.
+/// scaleFontSize` 寫死是線性乘法，先前的 widget test（`TextScaler.
+/// linear(1.5)`）測不出這個落差。修法：改成對書名／進度兩個實際字級
+/// 分別呼叫 `scale()` 後再相加，比對真正 Text 元件的縮放方式，
+/// `lineHeightFactor` 則是由 34.0 這個既有校準值反推出來、與縮放曲線
+/// 無關的固定行高比例常數，確保系統字級 1.0 倍時仍與原本行為完全一致。
+const _kGridTileFooterLineHeightFactor = _kGridTileFooterHeightAtScale1 /
+    (_kGridTileFooterTitleFontSize + _kGridTileFooterProgressFontSize);
+
+double _gridTileFooterHeight(BuildContext context) {
+  final scaler = MediaQuery.textScalerOf(context);
+  return (scaler.scale(_kGridTileFooterTitleFontSize) +
+          scaler.scale(_kGridTileFooterProgressFontSize)) *
+      _kGridTileFooterLineHeightFactor;
+}
 
 /// 分類拼貼格（格狀檢視）：2×2 拼貼＋分類名稱/數量，重用既有 _BookCover。
 /// onTap 為 null 時（選取模式進行中）InkWell 自動停用點擊反饋，比照
@@ -929,8 +954,7 @@ class _GroupGridTile extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           SizedBox(
-            height: MediaQuery.textScalerOf(context)
-                .scale(_kGridTileFooterHeightAtScale1),
+            height: _gridTileFooterHeight(context),
             child: Text(
               '${tile.name} (${tile.totalCount})',
               maxLines: 1,
@@ -1101,8 +1125,7 @@ class _BookGridTile extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           SizedBox(
-            height: MediaQuery.textScalerOf(context)
-                .scale(_kGridTileFooterHeightAtScale1),
+            height: _gridTileFooterHeight(context),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [

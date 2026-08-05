@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math' show sqrt;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -3041,6 +3042,76 @@ void main() {
     expect(find.byKey(const Key('group_tile_奇幻')), findsOneWidget);
     expect(find.byKey(const Key('book_item_b0')), findsOneWidget);
   });
+
+  testWidgets(
+      '系統字級縮放曲線為非線性時（真機常見情境——Android 系統字級調大後，'
+      '「非線性字級縮放」會讓縮放比例依輸入數值大小而不同），分類拼貼格與'
+      '書籍格的文字說明區仍不會觸發 RenderFlex 溢位（/diagnose 第七輪，'
+      'Air Reader C 真機回報：手動調大系統字級後，即使已套用 Issue 42 的'
+      '固定高度隨 textScaler 縮放修法，仍會溢位。根因是舊寫法把「書名+'
+      '進度」的合計常數〔34.0〕整體丟進 textScaler.scale()，而 Flutter '
+      '真正的 Text 元件是對書名〔12〕與進度〔10〕各自的字級分別呼叫 '
+      'scale()。兩者只有在縮放曲線為線性時才恆等；`flutter_test` 套件的 '
+      'TestPlatformDispatcher.scaleFontSize 寫死是線性乘法，測不出這個'
+      '落差，必須像既有測試一樣改用 MediaQuery 直接提供非線性的自訂 '
+      'TextScaler 才能重現）', (tester) async {
+    tester.view.physicalSize = const Size(1600, 1200);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final books = [
+      _testBook(id: 'g0', title: '奇幻書', groupName: '奇幻'),
+      _testBook(id: 'b0', title: '第一本個別書，書名故意寫長一點測試換行'),
+    ];
+    final repository = FakeLibraryRepository(initialBooks: books);
+
+    await tester.pumpWidget(
+      MediaQuery(
+        data: const MediaQueryData(textScaler: _NonLinearTextScaler(1.5)),
+        child: MaterialApp(
+          home: LibraryScreen(
+            repository: repository,
+            importService: FakeBookImportService(),
+            prefsManager: prefsManager,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.byKey(const Key('group_tile_奇幻')), findsOneWidget);
+    expect(find.byKey(const Key('book_item_b0')), findsOneWidget);
+  });
+}
+
+/// 刻意「非線性」的測試用 TextScaler：對較大的輸入值套用較低的有效縮放
+/// 比例，模擬真實 Android「非線性字級縮放」曲線（避免超大字級把版面撐爆，
+/// 對數值較大的輸入相對縮放得較保守）。`textScaleFactor == 1.0` 時
+/// `scale(x) == x`（與線性/未縮放行為一致，不影響其他既有測試的既有假設），
+/// `textScaleFactor > 1.0` 時，`scale(A) + scale(B)` 恆大於 `scale(A + B)`
+/// （任何嚴格凹函式皆有此「拆開分別縮放，總和比整體一起縮放更大」的性質）
+/// ——足以證明「把兩行文字字級合計成單一常數再縮放」與「兩行文字字級各自
+/// 縮放再相加」在非線性曲線下不是同一件事。
+class _NonLinearTextScaler extends TextScaler {
+  const _NonLinearTextScaler(this.textScaleFactor);
+
+  @override
+  final double textScaleFactor;
+
+  @override
+  double scale(double fontSize) {
+    if (textScaleFactor == 1.0) return fontSize;
+    return fontSize + (textScaleFactor - 1.0) * 6.0 * sqrt(fontSize);
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is _NonLinearTextScaler && other.textScaleFactor == textScaleFactor;
+
+  @override
+  int get hashCode => textScaleFactor.hashCode;
 }
 
 Book _testBook({
