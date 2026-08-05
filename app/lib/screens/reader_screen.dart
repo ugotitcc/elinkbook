@@ -1815,16 +1815,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         currentPath.isEmpty ? widget.bookTitle : currentPath.first.title;
     return Container(
       key: const Key('reader_foliate_header_text'),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.black54,
-        borderRadius: BorderRadius.circular(16),
-      ),
       child: Text(
         chapterTitle,
         overflow: TextOverflow.ellipsis,
         maxLines: 1,
-        style: const TextStyle(color: Colors.white, fontSize: 16),
+        style: const TextStyle(color: Colors.white, fontSize: 12),
       ),
     );
   }
@@ -1841,14 +1836,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     final currentPage = ((info.pageIndex ?? 0) + 1).clamp(1, totalPages);
     return Container(
       key: const Key('reader_foliate_progress_text'),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.black54,
-        borderRadius: BorderRadius.circular(12),
-      ),
       child: Text(
         '$currentPage/$totalPages',
-        style: const TextStyle(color: Colors.white, fontSize: 16),
+        style: const TextStyle(color: Colors.white, fontSize: 12),
       ),
     );
   }
