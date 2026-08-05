@@ -61,7 +61,7 @@ import 'zone_action.dart';
 /// Chromium 85+）；`view.js` 的 Media Overlays 用了 `WeakRef`（ES2021，需
 /// Chromium 84+）。iReader Ocean 4 Plus 的 Chromium 83 兩者皆不支援。兩者
 /// 皆只在特定書籍功能（含混淆內嵌字型／含 media overlay）才會執行到，非
-/// 通用開書路徑，故不像 Task 38 的 `??=` 語法解析失敗那樣影響「每一本
+/// 通用開書路徑，故不像 Issue 38 的 `??=` 語法解析失敗那樣影響「每一本
 /// 書」，但仍是真實存在的崩潰風險，一併補上防護。
 const _esCompatPolyfillJs = '''
 if (!Object.groupBy) {
@@ -111,13 +111,34 @@ if (!String.prototype.replaceAll) {
       }
       return this.replace(search, replacement);
     }
-    return this.split(search).join(
-      typeof replacement === 'function' ? replacement : String(replacement)
+    if (typeof replacement === 'function') {
+      // 目前 vendor 用法（epub.js 的字型反混淆）只會傳入字串
+      // replacement，故不實作函式型 replacement——若未來真的用到，寧可
+      // 在這裡明確拋出例外，也不要靜默產生錯誤結果（原本的寫法用
+      // Array.prototype.join(fn)，join() 對非字串參數只會呼叫
+      // fn.toString()，不會逐一呼叫該函式，等於把函式原始碼文字字面
+      // 插入結果字串，是難以排查的靜默錯誤）。
+      throw new TypeError(
+        'replaceAll polyfill 尚未實作函式型 replacement（目前 vendor 用法不需要）'
+      );
+    }
+    // 展開 \$\$（字面 \$ 符號）／\$&（比對到的子字串）兩種替換樣式，比照
+    // 原生 String.prototype.replaceAll 規格常見用法；不支援比對前/後文字
+    // 這兩種樣式——這兩者需要逐一追蹤每次匹配在原字串中的位置，split/join
+    // 這種一次切割做法無法簡單支援，目前 vendor 用法也用不到，暫不實作。
+    const expanded = String(replacement).replace(
+      /\\\$(\\\$|&)/g,
+      function (_, token) { return token === '\$' ? '\$' : String(search); }
     );
+    return this.split(search).join(expanded);
   };
 }
 if (typeof WeakRef === 'undefined') {
   window.WeakRef = function (target) {
+    // 注意：僅用強參照模擬 deref()，不具備真正的弱參照／GC 語意，只用於
+    // 避免 ReferenceError；已知影響範圍：view.js 的 Media Overlays
+    // lastActive 單一插槽變數（見上方文件註解），該變數在下一次
+    // 'highlight' 事件觸發時會被覆寫，不會無限累積記憶體。
     this._target = target;
   };
   window.WeakRef.prototype.deref = function () {

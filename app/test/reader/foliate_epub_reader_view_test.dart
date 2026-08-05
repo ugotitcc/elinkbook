@@ -682,6 +682,60 @@ void main() {
       expect(polyfillScript.source, contains('WeakRef'));
     });
 
+    testWidgets(
+        'replaceAll polyfill 函式型 replacement 明確拋出例外，不再靜默把'
+        '函式原始碼文字字面插入結果字串（程式碼審查修正，'
+        'tmp/epic-18/review-issue-38-41.md Important #1）', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: FoliateEpubReaderView(
+            filePath: '/tmp/sample.epub',
+            onPageRendered: _noop,
+            onError: _noopError,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final webView = tester.widget<InAppWebView>(find.byType(InAppWebView));
+      final scripts = webView.platform.params.initialUserScripts;
+      final polyfillScript = scripts!.first;
+      expect(
+        polyfillScript.source,
+        contains("typeof replacement === 'function'"),
+      );
+      expect(
+        polyfillScript.source,
+        contains('replaceAll polyfill 尚未實作函式型 replacement'),
+      );
+      expect(polyfillScript.source, contains(r'\$(\$|&)'),
+          reason: '應展開 \$\$／\$& 兩種替換樣式，不再只是純字面插入');
+    });
+
+    testWidgets(
+        'WeakRef polyfill 內含強參照模擬的權衡取捨說明註解（程式碼審查修正，'
+        'tmp/epic-18/review-issue-38-41.md Important #2）', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: FoliateEpubReaderView(
+            filePath: '/tmp/sample.epub',
+            onPageRendered: _noop,
+            onError: _noopError,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final webView = tester.widget<InAppWebView>(find.byType(InAppWebView));
+      final scripts = webView.platform.params.initialUserScripts;
+      final polyfillScript = scripts!.first;
+      expect(polyfillScript.source, contains('僅用強參照模擬'));
+    });
+
     // epic-18-reader-device-qa Issue 33：iReader Ocean 4 Plus 開書卡住問題
     // 沒有任何真機診斷資料佐證確切根因（報告 5 個推測皆未經真機驗證），
     // 這裡先建立診斷能力——全局 JS 錯誤捕捉能抓到 main.js 既有
