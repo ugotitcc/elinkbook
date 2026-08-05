@@ -37,9 +37,10 @@ class GlobalReaderPrefs {
   /// FXL／PDF 三種格式（design.md 決策 6）。
   final bool fullscreen;
 
-  /// 啟動時開啟最後一本書（epic-18-reader-device-qa Issue 29），預設
-  /// `true`。開啟時，App 啟動當下若圖書庫內有任何書籍，直接導向最後
-  /// 閱讀（`Book.lastReadTime` 最新）的那一本，取代顯示書架。
+  /// 啟動時開啟最後閱讀的那本書（epic-18-reader-device-qa Issue 29，
+  /// 顯示文字經 Issue 35 修正），預設 `true`。開啟時，App 啟動當下若
+  /// 圖書庫內有任何書籍，直接導向最後閱讀（`Book.lastReadTime` 最新）
+  /// 的那一本，取代顯示書架。
   final bool openLastBookOnLaunch;
 
   const GlobalReaderPrefs({
