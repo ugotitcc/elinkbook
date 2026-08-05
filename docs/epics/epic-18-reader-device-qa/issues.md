@@ -981,7 +981,7 @@ AiPaper Reader C 這類 E-Ink 裝置為了讓文字/圖示夠大，`devicePixelR
 
 **依賴：** 無
 
-**Status:** ✅ 已完成（分支 `feat/epic-18-issue-33-open-book-diagnostics`，4 個 commit，皆採 TDD）。
+**Status:** ✅ 已完成並合併回 `main`（PR #114，分支 `feat/epic-18-issue-33-open-book-diagnostics`，6 個 commit，皆採 TDD）。
 
 ### 33-1：`_cacheBook()` catch(e) 分支回歸測試
 
@@ -999,10 +999,13 @@ AiPaper Reader C 這類 E-Ink 裝置為了讓文字/圖示夠大，`devicePixelR
 
 **Status:** ✅ 已完成。新增 `ReaderConsoleLog`（`app/lib/reader/reader_console_log.dart`）記憶體內緩衝區（`ValueNotifier<List<String>>`，上限 500 筆、超過捨棄最舊），承接 `InAppWebView.onConsoleMessage`（透過新增的純函式 `handleFoliateConsoleMessage(message, levelName)`，比照既有 `resolveCustomFontUri` 慣例、繞開 `FakePlatformInAppWebViewWidget` 測試替身無法觸發完整原生回呼型別鏈的限制）。新增 `ReaderConsoleLogScreen`（`app/lib/screens/reader_console_log_screen.dart`），從「設定」畫面新增的「閱讀器 Console Log」項目進入，`ValueListenableBuilder` 即時顯示緩衝區內容，附清空按鈕，供使用者截圖回報。純記憶體、不落地持久化——即時診斷工具，非長期日誌系統。
 
-**單元測試要求（4 項皆已完成）：** 每項皆採 TDD；`app/test/reader/foliate_epub_reader_view_test.dart`（33-1／33-2／33-4 的 widget 層/純函式測試）、`app/test/screens/reader_screen_test.dart`（33-3 逾時計時器測試，含「成功時不被逾時計時器覆蓋」的邊界測試）、`app/test/reader/reader_console_log_test.dart`（新檔，緩衝區 add/clear/上限捨棄邏輯）、`app/test/screens/reader_console_log_screen_test.dart`（新檔，空狀態/列表顯示/清空按鈕）、`app/test/screens/settings_screen_test.dart`（新增入口導航測試）皆有對應新增測試。
+**程式碼審查回應（`tmp/epic-18/review-issue-33.md`，Ready to merge: Yes，0 Critical／0 Important）：** 採納 2 項補強建議——`ReaderConsoleLogScreen` 新增「複製全部」按鈕（`Clipboard.setData`，附 SnackBar 回饋）；新增第三段 `AT_DOCUMENT_START` 注入腳本，於診斷日誌開頭記錄 `navigator.userAgent`（沿用既有 `onConsoleMessage` 管線，不新增 bridge channel），供未來定位舊版 WebView 相容性缺口。駁回 1 項誤判建議——審查報告誤認 `ConsoleMessageLevel.toString()` 會輸出含類別名稱的字串（建議改用 `.name`），查證 `flutter_inappwebview_platform_interface` 生成碼確認該型別是自訂 pseudo-enum class，`.name` 這個 getter 根本不存在（正是實作階段撞到的編譯錯誤），且 `toString()` 已被覆寫為純 `'LOG'`／`'ERROR'` 字串，原程式碼維持不動。
 
-**驗收標準：** 上述 4 項皆已實作並通過對應測試；`flutter analyze` 全程維持乾淨；全專案 `flutter test`（958 個測試）無回歸。
+**單元測試要求（4 項皆已完成）：** 每項皆採 TDD；`app/test/reader/foliate_epub_reader_view_test.dart`（33-1／33-2／33-4 的 widget 層/純函式測試，含審查回應新增的 `navigator.userAgent` 腳本注入測試）、`app/test/screens/reader_screen_test.dart`（33-3 逾時計時器測試，含「成功時不被逾時計時器覆蓋」的邊界測試）、`app/test/reader/reader_console_log_test.dart`（新檔，緩衝區 add/clear/上限捨棄邏輯）、`app/test/screens/reader_console_log_screen_test.dart`（新檔，空狀態/列表顯示/清空按鈕，含審查回應新增的「複製全部」按鈕測試）、`app/test/screens/settings_screen_test.dart`（新增入口導航測試）皆有對應新增測試。
+
+**驗收標準：** 上述 4 項皆已實作並通過對應測試；`flutter analyze` 全程維持乾淨；全專案 `flutter test`（960 個測試）無回歸；已透過 PR #114 合併回 `main`。
 
 **相關佐證：**
-- 分支 `feat/epic-18-issue-33-open-book-diagnostics`（4 個 commit：33-1 測試、33-2 JS 錯誤捕捉、33-3 逾時哨兵、33-4 診斷畫面）
+- 分支 `feat/epic-18-issue-33-open-book-diagnostics`（6 個 commit：33-1 測試、33-2 JS 錯誤捕捉、33-3 逾時哨兵、33-4 診斷畫面、docs、審查回應），PR #114
 - `tmp/ireader-ocean4-plus-loading-issue-analysis.md`（原始問題分析文件）
+- `tmp/epic-18/review-issue-33.md`（程式碼審查報告，Ready to merge: Yes）
