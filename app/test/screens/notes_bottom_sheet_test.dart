@@ -573,4 +573,49 @@ void main() {
     expect(content, contains('**閱讀進度**：42%'));
     expect(content, contains('*   第一章'));
   });
+
+  testWidgets('點擊右上角 X 取消按鈕後，Bottom Sheet 關閉（Navigator.pop 生效）',
+      (tester) async {
+    await _pumpModalSheet(tester, repository: FakeBookmarksRepository());
+
+    expect(find.byType(NotesBottomSheet), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('notes_sheet_close_button')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(NotesBottomSheet), findsNothing);
+  });
+}
+
+Future<void> _pumpModalSheet(
+  WidgetTester tester, {
+  required FakeBookmarksRepository repository,
+  String bookId = 'b1',
+  String bookTitle = '測試書籍',
+}) async {
+  await tester.pumpWidget(MaterialApp(
+    home: Scaffold(
+      body: Builder(
+        builder: (context) => ElevatedButton(
+          onPressed: () => showModalBottomSheet<void>(
+            context: context,
+            isScrollControlled: true,
+            builder: (_) => NotesBottomSheet(
+              bookId: bookId,
+              bookTitle: bookTitle,
+              bookAuthor: null,
+              bookProgress: 0.0,
+              bookmarksRepository: repository,
+              currentPosition: const BookmarkPositionContext(),
+              onBookmarkSelected: (_) {},
+            ),
+          ),
+          child: const Text('open'),
+        ),
+      ),
+    ),
+  ));
+
+  await tester.tap(find.text('open'));
+  await tester.pumpAndSettle();
 }

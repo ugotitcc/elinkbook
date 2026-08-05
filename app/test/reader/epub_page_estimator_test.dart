@@ -21,6 +21,19 @@ void main() {
       );
     });
 
+    test('lineHeight 為 0.0 時（epic-18-reader-device-qa Issue 25 行高滑桿範圍改為 '
+        '0~3 後可選到的邊界值），不應除以零拋出 UnsupportedError，改回傳箝制後的上限值',
+        () {
+      expect(
+        () => EpubPageEstimator.estimateCharsPerScreen(lineHeight: 0.0),
+        returnsNormally,
+      );
+      expect(
+        EpubPageEstimator.estimateCharsPerScreen(lineHeight: 0.0),
+        EpubPageEstimator.referenceCharsPerScreen * 4,
+      );
+    });
+
     test('pageMargins 加倍時，可容納字元數依較低權重縮減', () {
       expect(
         EpubPageEstimator.estimateCharsPerScreen(pageMargins: 2.0),

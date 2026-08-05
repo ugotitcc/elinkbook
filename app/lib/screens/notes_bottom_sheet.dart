@@ -173,17 +173,27 @@ class _NotesBottomSheetState extends State<NotesBottomSheet>
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(16, 16, 8, 16),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text('📚 筆記',
                       style: TextStyle(fontWeight: FontWeight.bold)),
-                  TextButton.icon(
-                    key: const Key('notes_sheet_export_markdown'),
-                    onPressed: _exportMarkdown,
-                    icon: const Icon(Icons.ios_share),
-                    label: const Text('導出為 Markdown'),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextButton.icon(
+                        key: const Key('notes_sheet_export_markdown'),
+                        onPressed: _exportMarkdown,
+                        icon: const Icon(Icons.ios_share),
+                        label: const Text('導出為 Markdown'),
+                      ),
+                      IconButton(
+                        key: const Key('notes_sheet_close_button'),
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ],
                   ),
                 ],
               ),

@@ -91,7 +91,13 @@ function buildOverrideCss(prefs) {
     rules.push(`${selector} { font-weight: ${cssWeight} !important; }`)
   }
   if (typeof prefs.lineHeight === 'number') {
-    rules.push(`html, body { line-height: ${prefs.lineHeight} !important; }`)
+    // epic-18-reader-device-qa Issue 25 把行高滑桿範圍下限改為 0 後，
+    // prefs.lineHeight 可能真的是 0——CSS line-height: 0 會讓每一行文字
+    // 的行高坍塌為 0px，所有行完全疊在一起、無法閱讀（審查發現，
+    // 2026-08-05）。下限訂為 0.8（常見可讀行高下限，含本 App 目標的
+    // CJK 直排內容），比照上面 fontWeight 已有的防呆 clamp 慣例。
+    const effectiveLineHeight = Math.max(0.8, prefs.lineHeight)
+    rules.push(`html, body { line-height: ${effectiveLineHeight} !important; }`)
   }
   if (typeof prefs.paragraphSpacing === 'number') {
     rules.push(`p { margin-bottom: ${prefs.paragraphSpacing}em !important; }`)

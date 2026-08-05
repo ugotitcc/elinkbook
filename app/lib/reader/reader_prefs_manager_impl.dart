@@ -43,6 +43,7 @@ class ReaderPrefsManagerImpl implements ReaderPrefsManager {
       'global_reader_nav_zone_debug_overlay';
   static const _volumeKeyEnabledKey = 'global_reader_volume_key_enabled';
   static const _fullscreenKey = 'global_reader_fullscreen';
+  static const _openLastBookOnLaunchKey = 'global_reader_open_last_book_on_launch';
 
   @override
   Future<LoadedPrefs> load(String bookId) async {
@@ -82,6 +83,7 @@ class ReaderPrefsManagerImpl implements ReaderPrefsManager {
       showNavZoneDebugOverlay: sp.getBool(_navZoneDebugOverlayKey) ?? false,
       volumeKeyEnabled: sp.getBool(_volumeKeyEnabledKey) ?? true,
       fullscreen: sp.getBool(_fullscreenKey) ?? false,
+      openLastBookOnLaunch: sp.getBool(_openLastBookOnLaunchKey) ?? true,
     );
   }
 
@@ -136,6 +138,7 @@ class ReaderPrefsManagerImpl implements ReaderPrefsManager {
     await sp.setBool(_navZoneDebugOverlayKey, prefs.showNavZoneDebugOverlay);
     await sp.setBool(_volumeKeyEnabledKey, prefs.volumeKeyEnabled);
     await sp.setBool(_fullscreenKey, prefs.fullscreen);
+    await sp.setBool(_openLastBookOnLaunchKey, prefs.openLastBookOnLaunch);
   }
 
   @override

@@ -42,9 +42,9 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   // 滑桿位置。
   static const _defaultFontSize = 16.0;
   static const _defaultFontWeightMultiplier = 1.0; // 倍率，UI 顯示 400（1.0 × 400）
-  static const _defaultLineHeight = 1.5;
+  static const _defaultLineHeight = 1.0;
   static const _defaultParagraphSpacing = 10.0;
-  static const _defaultMarginTop = 64.0;
+  static const _defaultMarginTop = 32.0;
   static const _defaultMarginBottom = 16.0;
   static const _defaultMarginLeft = 24.0;
   static const _defaultMarginRight = 24.0;
@@ -217,8 +217,8 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                   keyPrefix: 'reader_settings_line_height',
                   label: '行高',
                   value: _lineHeight,
-                  min: 1.2,
-                  max: 2.5,
+                  min: 0,
+                  max: 3,
                   step: 0.1,
                   displayValue: _lineHeight.toStringAsFixed(1),
                   onChanged: (v) => setState(() {
@@ -245,7 +245,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                   value: _marginTop,
                   min: 0,
                   max: 120,
-                  step: 4,
+                  step: 2,
                   displayValue: _marginTop.round().toString(),
                   onChanged: (v) => setState(() {
                     _marginTop = v;
@@ -258,7 +258,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                   value: _marginBottom,
                   min: 0,
                   max: 120,
-                  step: 4,
+                  step: 2,
                   displayValue: _marginBottom.round().toString(),
                   onChanged: (v) => setState(() {
                     _marginBottom = v;
@@ -271,7 +271,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                   value: _marginLeft,
                   min: 0,
                   max: 120,
-                  step: 4,
+                  step: 2,
                   displayValue: _marginLeft.round().toString(),
                   onChanged: (v) => setState(() {
                     _marginLeft = v;
@@ -284,7 +284,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                   value: _marginRight,
                   min: 0,
                   max: 120,
-                  step: 4,
+                  step: 2,
                   displayValue: _marginRight.round().toString(),
                   onChanged: (v) => setState(() {
                     _marginRight = v;

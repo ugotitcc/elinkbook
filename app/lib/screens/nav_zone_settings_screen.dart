@@ -170,9 +170,9 @@ class _NavZoneSettingsScreenState extends State<NavZoneSettingsScreen> {
                         _buildTemplateCard(
                           key: const Key('nav_zone_mode_oneHand'),
                           mode: NavZoneMode.oneHand,
-                          leftIcon: Icons.touch_app,
+                          leftIcon: Icons.chevron_left,
                           middleIcon: null,
-                          rightIcon: Icons.touch_app,
+                          rightIcon: Icons.chevron_right,
                         ),
                       ],
                     ),
@@ -200,7 +200,13 @@ class _NavZoneSettingsScreenState extends State<NavZoneSettingsScreen> {
   /// `null` 時中欄不顯示圖示——`oneHand` 模板中欄 3 格皆為 [ZoneAction.none]
   /// （見 `oneHandZoneTemplate`），左右欄則依垂直位置在 menu/previousPage/
   /// nextPage 間循環、彼此對稱，本卡片格式（單欄單圖示）無法完整表達列
-  /// 逐格語意，故左右欄皆用通用的 [Icons.touch_app] 表示「可點擊區」。
+  /// 逐格語意；【epic-18-reader-device-qa Issue 30，真機使用回報】原本
+  /// 左右欄皆用通用的 [Icons.touch_app] 表示「可點擊區」，但使用者反映
+  /// 看不出點擊各區塊分別對應什麼功能，改為 [Icons.chevron_left]／
+  /// [Icons.chevron_right]（對應此模板實際存在的 previousPage／nextPage
+  /// 動作），中欄維持空白（真實對應 [ZoneAction.none]，也讓本卡片與同樣
+  /// 使用 chevron＋menu 圖示、但中欄是 [Icons.menu] 的 `leftFlip`／
+  /// `rightFlip` 兩張卡片保持可辨識的視覺差異）。
   Widget _buildTemplateCard({
     required Key key,
     required NavZoneMode mode,

@@ -121,7 +121,7 @@ void main() {
           .widget<Slider>(
               find.byKey(const Key('reader_settings_line_height_slider')))
           .value,
-      1.5,
+      1.0,
     );
     expect(
       tester
@@ -135,7 +135,7 @@ void main() {
           .widget<Slider>(
               find.byKey(const Key('reader_settings_margin_top_slider')))
           .value,
-      64.0,
+      32.0,
     );
     expect(
       tester
@@ -185,7 +185,7 @@ void main() {
     expect(result!.lineHeight, 1.6, reason: '未被觸碰的欄位應維持原值');
   });
 
-  testWidgets('點擊上邊界 + 按鈕後，onChanged 帶入 marginTop+4 且其他欄位不變',
+  testWidgets('點擊上邊界 + 按鈕後，onChanged 帶入 marginTop+2 且其他欄位不變',
       (tester) async {
     BookReaderPrefs? result;
     await _pumpSheet(
@@ -199,7 +199,7 @@ void main() {
     await tester.pump();
 
     expect(result, isNotNull);
-    expect(result!.marginTop, 68.0);
+    expect(result!.marginTop, 66.0);
     expect(result!.marginLeft, 24.0, reason: '未被觸碰的欄位應維持原值');
   });
 

@@ -916,6 +916,53 @@ AiPaper Reader C 這類 E-Ink 裝置為了讓文字/圖示夠大，`devicePixelR
 
 ---
 
+## Issue 25-32：第四輪真機使用回報（8 項版面/導航/書架/設定微調與 1 項 bug）
+
+**背景（2026-08-05）：** 使用者於實機持續閱讀使用中，一次回報 8 項問題／調整需求，於獨立 worktree／分支（`feat/epic-18-issue-25-32-device-feedback-batch`）逐一實作，每項各自一個 commit；其中 Issue 31 為真正的排序 bug，其餘 7 項為版面/互動細節調整。
+
+### Issue 25：行高滑桿範圍改為 0~3、預設值改為 1
+
+**Status:** ✅ 已完成。`app/lib/screens/reader_settings_sheet.dart`：`_defaultLineHeight` 由 `1.5` 改為 `1.0`；行高 `Slider` 的 `min`/`max` 由 `1.2`/`2.5` 改為 `0`/`3`（step 維持 `0.1` 不變）。`app/test/screens/reader_settings_sheet_test.dart` 對應更新預設值斷言。
+
+### Issue 26：上邊界預設值改為 32
+
+**Status:** ✅ 已完成。`_defaultMarginTop` 由 `64.0` 改為 `32.0`——原本 Dart 端 UI 預設值（64）與 JS 端 `main.js` 實際生效預設值（32）不一致，改為 32 後 UI 顯示與實際生效值一致。
+
+### Issue 27：上下左右邊界 +/- 微調步進由 4 改為 2
+
+**Status:** ✅ 已完成。`reader_settings_sheet.dart` 四個邊界 `Slider`（上/下/左/右）的 `step` 參數皆由 `4` 改為 `2`。
+
+### Issue 28：目錄／筆記選擇畫面右上角新增 X 取消按鈕
+
+**Status:** ✅ 已完成。`toc_bottom_sheet.dart` 標題列改為 `Row`，新增右上角 X 關閉按鈕（`Key('toc_bottom_sheet_close_button')`）。`notes_bottom_sheet.dart` 右上角新增 X 取消按鈕（`Key('notes_sheet_close_button')`），既有「導出為 Markdown」按鈕左移，X 取得最右側最顯眼的位置，比照本 App 其餘 Bottom Sheet（`ReaderSettingsSheet`）既有慣例。
+
+### Issue 29：新增共用設定「啟動時開啟最後一本書」
+
+**Status:** ✅ 已完成。`GlobalReaderPrefs` 新增 `openLastBookOnLaunch` 欄位（預設 `true`），持久化於 SharedPreferences（key `global_reader_open_last_book_on_launch`）；「閱讀預設值」畫面（`ReadingDefaultsScreen`）新增對應開關。`LibraryScreen`（僅頂層、`groupFilter == null` 的實例，`initState()` 對單一 State 物件只執行一次）啟動當下若開關為開且圖書庫內有書籍，自動導向最後閱讀（`lastReadTime` 最新，獨立查詢、不受畫面目前排序模式影響）的那一本，重用既有 `_openBook()` 機制。
+
+一併修正 `library_screen_test.dart` 共用的 `prefsManager` fixture——預設 `true` 會讓該檔案絕大多數既有測試被意外導覽到 `ReaderScreen`，已在共用 fixture 明確關閉，本 Issue 自己的測試各自建立獨立實例明確開啟。
+
+### Issue 30：導航熱區「單手」模板圖示改用實際翻頁 chevron
+
+**Status:** ✅ 已完成。原本「單手」模板卡片左右欄皆用通用的 `Icons.touch_app` 手勢圖示表示「可點擊區」，使用者反映看不出點擊各區塊分別對應什麼功能。改為 `Icons.chevron_left`／`Icons.chevron_right`（對應此模板實際存在的 `previousPage`／`nextPage` 動作），中欄維持空白（真實對應 `ZoneAction.none`，也讓本卡片與 `leftFlip`／`rightFlip` 兩張卡片〔中欄為 `menu` 圖示〕保持可辨識的視覺差異）。
+
+### Issue 31：書架分類拼貼格排序未跟隨選定的排序模式（bug）
+
+**Status:** ✅ 已完成。**根因**：`LibraryScreen._buildGroupTiles()` 的拼貼格順序固定以 `_groups`（`_loadGroups()` 讀取的分類清單快照，name ASC）為主要排序鍵，只有 `_groups` 快照未涵蓋到的孤兒分類才會依 `byGroup.keys`（即 `_sortBy` 已排序的書籍走訪順序）排在最後——切換排序條件（例如「最後閱讀」）後，拼貼格「內」的書籍預覽會重新排序，但拼貼格「彼此之間」的先後順序固定依分類名稱 A-Z，完全不受影響。**修法**：改為直接統一使用 `byGroup.keys` 決定拼貼格順序，不再參考 `_groups` 的名稱順序——拼貼格順序即以「該分類排序第一的書籍」為代表，跟隨使用者選定的排序模式；同時因為所有分類統一來自同一份資料來源，原本的孤兒兜底桶特殊處理也不再需要，程式碼同步簡化。一併更新兩個既有測試（原本明確把「拼貼格固定依名稱 A-Z 排序」記錄為預期行為）的斷言與註解。
+
+### Issue 32：頁首/頁尾字體縮小至 16，邊距依橫/直排歸零
+
+**Status:** ✅ 已完成。`reader_screen.dart` 的 `_buildFoliateHeaderText()`／`_buildFoliateProgressText()` 字體大小由 13/12 統一改為 16；橫排頁首 `top`、橫排頁尾 `bottom`、直排頁首 `right`、直排頁尾 `left` 四個邊界皆由 16 改為 0（直排頁首的 `top`/`bottom`、直排頁尾的 `bottom` 維持不變，僅使用者明確指出的四個邊界歸零）。
+
+**單元測試要求（8 項皆已完成）：** 每項皆採 TDD（先寫失敗測試、確認失敗、實作、確認通過），詳見對應 commit；`app/test/` 各相關測試檔（`reader_settings_sheet_test.dart`／`toc_bottom_sheet_test.dart`／`notes_bottom_sheet_test.dart`／`global_reader_prefs_test.dart`／`reader_prefs_manager_test.dart`／`reading_defaults_screen_test.dart`／`library_screen_test.dart`／`nav_zone_settings_screen_test.dart`／`reader_screen_test.dart`）皆有對應新增/修改測試。
+
+**驗收標準：** 上述 8 項需求皆已實作並通過對應測試；`flutter analyze` 全程維持乾淨；全專案 `flutter test` 無回歸。
+
+**相關佐證：**
+- 分支 `feat/epic-18-issue-25-32-device-feedback-batch`（8 個獨立 commit，一個 Issue 一個 commit）
+
+---
+
 ## 審查修訂紀錄（`tmp/epic-18/reviews/review_report.md`，經人類確認後採納）
 
 - **採納**：`spec.md`／Issue 4 澄清 `buildOverrideCss()` 維持純函式，所有 `setAttribute` 呼叫改到 `window.applyPreferences(prefs)`（既有的副作用進入點，`pageTurnMode`/`writingMode` 已是同樣模式）。

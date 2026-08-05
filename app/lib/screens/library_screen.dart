@@ -96,6 +96,27 @@ class _LibraryScreenState extends State<LibraryScreen> {
       _sortBy = sortBy;
     });
     await Future.wait([_loadGroups(), _loadBooks()]);
+    await _maybeOpenLastBookOnLaunch();
+  }
+
+  /// 啟動時開啟最後一本書（epic-18-reader-device-qa Issue 29）：只在頂層
+  /// 書架（`widget.groupFilter == null`）啟動當下觸發一次——`initState()`
+  /// 對單一 State 物件只會執行一次，`_openGroupFilteredView()` 推入的分類
+  /// 篩選畫面是另一個獨立的 `LibraryScreen` 實例、`groupFilter` 非
+  /// null，此處的 guard 確保使用者點進分類篩選畫面時不會被誤判為「App
+  /// 剛啟動」而重複觸發。「最後閱讀的書籍」獨立以 `LibrarySortBy.lastRead`
+  /// 查詢，不依賴目前畫面選定的 `_sortBy`（使用者的檢視排序偏好與這裡的
+  /// 語意是兩件事，即使目前排序條件是「書名」也不該影響這裡判斷的對象）。
+  Future<void> _maybeOpenLastBookOnLaunch() async {
+    if (widget.groupFilter != null) return;
+    final globalPrefs = await widget.prefsManager.loadGlobalPrefs();
+    if (!globalPrefs.openLastBookOnLaunch) return;
+    if (!mounted) return;
+    final books =
+        await widget.repository.listBooks(sortBy: LibrarySortBy.lastRead);
+    if (!mounted) return;
+    if (books.isEmpty) return;
+    _openBook(books.first);
   }
 
   Future<void> _loadGroups() async {
@@ -717,46 +738,36 @@ class _LibraryScreenState extends State<LibraryScreen> {
     );
   }
 
-  /// 依目前已載入的 [books]（已依 _sortBy 排序）與 [_groups]（name ASC）
-  /// 分組，只保留非空的具名分類。
+  /// 依目前已載入的 [books]（已依 _sortBy 排序）分組，只保留非空的具名
+  /// 分類；拼貼格彼此的相對順序＝該分類「排序第一的書籍」在 [books] 中
+  /// 出現的順序（`byGroup.keys` 為 `LinkedHashMap` 插入順序，等於書籍
+  /// 依目前 `_sortBy` 排序後被迭代到的順序）。
+  ///
+  /// 【真機使用回報，epic-18-reader-device-qa Issue 31】原本拼貼格順序
+  /// 固定依 `_groups`（`_loadGroups()` 讀取的分類清單快照，name ASC）
+  /// 排序，完全不受使用者選定的排序模式（例如「最後閱讀」）影響——切換
+  /// 排序條件時，書架上未分類書籍與各分類拼貼格內的書籍預覽確實會重新
+  /// 排序，但拼貼格「彼此之間」的先後順序始終原地不動。改為直接沿用
+  /// `byGroup.keys`（不再參考 `_groups` 的名稱順序），拼貼格順序即與
+  /// `_sortBy` 一致，且因為所有分類（含 `_groups` 快照可能落後未涵蓋到
+  /// 的孤兒分類）皆統一來自同一份 `byGroup`，不會有分類從書架「消失」
+  /// （原本 `_groups` 落後時靠獨立的孤兒兜底桶收留，見本次修正前的舊
+  /// 版註解；新寫法下這個安全網已內建在單一資料來源中，不需要再額外
+  /// 處理）。
   ///
   /// 【診斷修正】「未分類」不產生拼貼格——`BookGroup.uncategorized` 的書籍
   /// 已經透過 `_buildBookList()` 的 `visibleBooks` 過濾邏輯純粹以個別書籍
   /// 項目顯示在頂層書籍清單中，若還額外顯示一個「未分類」拼貼格，等於同一
   /// 批書籍在畫面上出現兩種呈現方式，造成混淆；只有具名分類才需要拼貼格
   /// 這種「摘要縮圖」的呈現方式。
-  ///
-  /// `_groups` 是 `_loadGroups()` 讀取的記憶體快照，既有的 `_loadGroups()`
-  /// 錯誤處理邏輯本身承認暫時性讀取失敗時會保留舊快照——故 `book.groupName`
-  /// 理論上可能不在目前的 `_groups` 清單中、也不是 `BookGroup.uncategorized`
-  /// （`_groups` 落後於 `_books` 的情境）。若只依 `_groups` 組出
-  /// `orderedNames`，這些書籍會被整批漏掉、從書架上「消失」而非只是分類格
-  /// 顯示不完整，後果比拼貼格排序錯誤嚴重得多，故補一個兜底桶收留所有未
-  /// 被涵蓋的 `groupName`（`BookGroup.uncategorized` 本身仍被排除在兜底桶
-  /// 之外——落後的快照不會讓一本書從「未分類」變成孤兒 `groupName`，
-  /// `BookGroup.uncategorized` 這個名字本身不會消失，只是不產生拼貼格）。
-  ///
-  /// 【審查意見，不要求改動】若同時存在多個孤兒 `groupName`，彼此之間的
-  /// 順序取決於 `byGroup.keys`（`LinkedHashMap` 插入順序＝書籍依目前
-  /// `_sortBy` 排序後被迭代到的順序），並非依名稱字母排序。`spec.md`／
-  /// `design.md` 只要求孤兒不會讓書籍消失，沒有規範多個孤兒彼此的相對
-  /// 順序，故此處維持現況，僅記錄此已知特性供日後參考。
   List<_GroupTile> _buildGroupTiles(List<Book> books) {
     final byGroup = <String, List<Book>>{};
     for (final book in books) {
       byGroup.putIfAbsent(book.groupName, () => []).add(book);
     }
-    final orderedNames = [
-      for (final group in _groups)
-        if (group.name != BookGroup.uncategorized) group.name,
-      for (final name in byGroup.keys)
-        if (name != BookGroup.uncategorized &&
-            !_groups.any((g) => g.name == name))
-          name,
-    ];
     return [
-      for (final name in orderedNames)
-        if (byGroup[name]?.isNotEmpty ?? false)
+      for (final name in byGroup.keys)
+        if (name != BookGroup.uncategorized)
           _GroupTile(
             name: name,
             previewBooks: byGroup[name]!.take(4).toList(),

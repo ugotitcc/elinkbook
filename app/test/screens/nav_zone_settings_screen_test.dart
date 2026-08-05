@@ -31,6 +31,29 @@ void main() {
     expect(find.byKey(const Key('nav_zone_mode_custom')), findsNothing);
   });
 
+  testWidgets(
+      '「單手」模板卡片使用實際的翻頁 chevron 圖示，不再是不易理解的 touch_app 手勢圖示'
+      '（epic-18-reader-device-qa Issue 30）', (tester) async {
+    final fakeManager = FakeReaderPrefsManager();
+    await tester.pumpWidget(MaterialApp(
+      home: NavZoneSettingsScreen(prefsManager: fakeManager),
+    ));
+    await tester.pumpAndSettle();
+
+    final icons = tester
+        .widgetList<Icon>(find.descendant(
+          of: find.byKey(const Key('nav_zone_mode_oneHand')),
+          matching: find.byType(Icon),
+        ))
+        .map((icon) => icon.icon)
+        .toList();
+
+    expect(icons, contains(Icons.chevron_left));
+    expect(icons, contains(Icons.chevron_right));
+    expect(icons, isNot(contains(Icons.touch_app)),
+        reason: '真機使用回報：通用手勢圖示看不出點擊左右區塊分別對應什麼功能');
+  });
+
   testWidgets('SegmentedButton 選中狀態正確反映 navZoneMode：簡單模板對應「簡單」，隱藏 9 格編輯器',
       (tester) async {
     final fakeManager = FakeReaderPrefsManager(

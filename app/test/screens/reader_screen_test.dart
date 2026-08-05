@@ -1493,9 +1493,15 @@ void main() {
       await tester.pump();
     }
 
-    // fontSize 倍率變成 2.0 → estimateCharsPerScreen 從 500 降為 125 →
-    // totalPages 從 10 變成 40。
-    expect(find.text('1/40'), findsOneWidget);
+    // fontSize 倍率變成 2.0，且 16 次點擊過程中 ReaderSettingsSheet 的
+    // _notifyChanged() 一併把行高／邊界的目前 UI 狀態（即使使用者未曾觸碰）
+    // 送入 BookReaderPrefs——epic-18 Issue 25/26 把行高／上邊界預設值分別
+    // 從 1.5/64 改為 1.0/32 後，estimateCharsPerScreen() 換算出的總頁數
+    // 也隨之改變（不再是舊預設值年代算出的 40，此為預期中的連動變化，非
+    // 回歸）；expect 值改為目前預設值下的正確結果 27（實測驗證，見
+    // EpubPageEstimator.estimateCharsPerScreen 的 lineHeightFactor／
+    // pageMarginsFactor 計算）。
+    expect(find.text('1/27'), findsOneWidget);
   });
 
   testWidgets('PDF 頁尾行為不受本工單影響（既有回歸驗證）', (tester) async {
@@ -3344,6 +3350,79 @@ void main() {
   });
 
   testWidgets(
+      '流式 EPUB：橫排時頁首上邊界與頁尾下邊界皆為 0，頁首/頁尾字體大小皆為 16'
+      '（真機使用回報，epic-18-reader-device-qa Issue 32）', (tester) async {
+    await prefsManager.saveBookPrefs(
+      'b_foliate_header_footer_margin_h',
+      const BookReaderPrefs(showHeader: true, showFooter: true),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_foliate_header_footer_margin_h',
+          prefsManager: prefsManager,
+          isFixedLayout: false,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final foliateView = tester.widget<FoliateEpubReaderView>(
+      find.byType(FoliateEpubReaderView),
+    );
+    foliateView.onPageRendered();
+    foliateView.onLocatorChanged?.call(
+      const EpubPositionInfo(
+        locatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
+        progression: 0.1,
+        pageIndex: 9,
+        totalPages: 100,
+      ),
+    );
+    await tester.pump();
+
+    // 初始狀態 _chromeVisible=true，頁首不顯示（頁尾不受沉浸模式影響，
+    // 比照既有測試慣例）；觸發沉浸模式後頁首才會出現。
+    await tester.tap(find.byKey(const Key('nav_zone_1')));
+    await tester.pump();
+
+    final headerPositioned = tester.widget<Positioned>(
+      find
+          .ancestor(
+            of: find.byKey(const Key('reader_foliate_header_text')),
+            matching: find.byType(Positioned),
+          )
+          .first,
+    );
+    expect(headerPositioned.top, 0);
+
+    final footerPositioned = tester.widget<Positioned>(
+      find
+          .ancestor(
+            of: find.byKey(const Key('reader_foliate_progress_text')),
+            matching: find.byType(Positioned),
+          )
+          .first,
+    );
+    expect(footerPositioned.bottom, 0);
+
+    final headerText = tester.widget<Text>(find.descendant(
+      of: find.byKey(const Key('reader_foliate_header_text')),
+      matching: find.byType(Text),
+    ));
+    expect(headerText.style?.fontSize, 16);
+
+    final footerText = tester.widget<Text>(find.descendant(
+      of: find.byKey(const Key('reader_foliate_progress_text')),
+      matching: find.byType(Text),
+    ));
+    expect(footerText.style?.fontSize, 16);
+  });
+
+  testWidgets(
     '流式 EPUB：onLocatorChanged 未觸發前（pageIndex/totalPages 皆為 null），頁尾不顯示',
     (tester) async {
       await tester.pumpWidget(
@@ -3983,7 +4062,7 @@ void main() {
       find.ancestor(of: headerFinder, matching: find.byType(Positioned)).first,
     );
     expect(positioned.bottom, 16);
-    expect(positioned.right, 16);
+    expect(positioned.right, 0);
     expect(positioned.top, 16);
   });
 
@@ -4203,6 +4282,17 @@ void main() {
     );
     expect(rotatedFinder, findsOneWidget);
     expect(tester.widget<RotatedBox>(rotatedFinder).quarterTurns, isNot(0));
+
+    final positioned = tester.widget<Positioned>(
+      find
+          .ancestor(
+            of: find.byKey(const Key('reader_foliate_progress_text')),
+            matching: find.byType(Positioned),
+          )
+          .first,
+    );
+    expect(positioned.left, 0,
+        reason: '真機使用回報（epic-18-reader-device-qa Issue 32）：直排時頁尾左邊界改為 0');
   });
 
   testWidgets(

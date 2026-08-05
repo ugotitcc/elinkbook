@@ -132,4 +132,44 @@ void main() {
     expect(find.byType(ElevatedButton), findsNothing);
     expect(find.text('儲存'), findsNothing);
   });
+
+  testWidgets('啟動時開啟最後一本書開關反映既有 GlobalReaderPrefs 初始值', (tester) async {
+    final fakeManager = FakeReaderPrefsManager(
+      globalPrefs: const GlobalReaderPrefs.initial()
+          .copyWith(openLastBookOnLaunch: false),
+    );
+    await tester.pumpWidget(MaterialApp(
+      home: ReadingDefaultsScreen(prefsManager: fakeManager),
+    ));
+    await tester.pumpAndSettle();
+
+    final switchFinder =
+        find.byKey(const Key('reading_defaults_open_last_book_switch'));
+    await tester.scrollUntilVisible(switchFinder, 100);
+    await tester.pumpAndSettle();
+
+    final openLastBookSwitch = tester.widget<SwitchListTile>(switchFinder);
+    expect(openLastBookSwitch.value, isFalse);
+  });
+
+  testWidgets('切換啟動時開啟最後一本書開關立即呼叫 saveGlobalPrefs 並反映新值',
+      (tester) async {
+    final fakeManager = FakeReaderPrefsManager();
+    await tester.pumpWidget(MaterialApp(
+      home: ReadingDefaultsScreen(prefsManager: fakeManager),
+    ));
+    await tester.pumpAndSettle();
+
+    final switchFinder =
+        find.byKey(const Key('reading_defaults_open_last_book_switch'));
+    await tester.scrollUntilVisible(switchFinder, 100);
+    await tester.pumpAndSettle();
+    await tester.tap(switchFinder);
+    await tester.pumpAndSettle();
+
+    expect(
+      fakeManager.savedGlobalPrefsCalls.last.openLastBookOnLaunch,
+      isFalse,
+    );
+  });
 }
