@@ -167,13 +167,7 @@ class _NavZoneSettingsScreenState extends State<NavZoneSettingsScreen> {
                           middleIcon: Icons.menu,
                           rightIcon: Icons.chevron_right,
                         ),
-                        _buildTemplateCard(
-                          key: const Key('nav_zone_mode_oneHand'),
-                          mode: NavZoneMode.oneHand,
-                          leftIcon: Icons.chevron_left,
-                          middleIcon: null,
-                          rightIcon: Icons.chevron_right,
-                        ),
+                        _buildOneHandTemplateCard(),
                       ],
                     ),
                   ),
@@ -196,17 +190,10 @@ class _NavZoneSettingsScreenState extends State<NavZoneSettingsScreen> {
   /// [GlobalReaderPrefs.navZoneMode] 相同的卡片顯示 primary 色選中外框
   /// （design.md 決策 #7，參考 `tmp/images/導航熱區建議.jpg`）。三欄圖示
   /// 對應該模板實際指派的 [ZoneAction]（`leftFlip`/`rightFlip` 左右欄分別
-  /// 對應 `nextPage`/`previousPage`，非固定裝飾符號）。[middleIcon] 為
-  /// `null` 時中欄不顯示圖示——`oneHand` 模板中欄 3 格皆為 [ZoneAction.none]
-  /// （見 `oneHandZoneTemplate`），左右欄則依垂直位置在 menu/previousPage/
-  /// nextPage 間循環、彼此對稱，本卡片格式（單欄單圖示）無法完整表達列
-  /// 逐格語意；【epic-18-reader-device-qa Issue 30，真機使用回報】原本
-  /// 左右欄皆用通用的 [Icons.touch_app] 表示「可點擊區」，但使用者反映
-  /// 看不出點擊各區塊分別對應什麼功能，改為 [Icons.chevron_left]／
-  /// [Icons.chevron_right]（對應此模板實際存在的 previousPage／nextPage
-  /// 動作），中欄維持空白（真實對應 [ZoneAction.none]，也讓本卡片與同樣
-  /// 使用 chevron＋menu 圖示、但中欄是 [Icons.menu] 的 `leftFlip`／
-  /// `rightFlip` 兩張卡片保持可辨識的視覺差異）。
+  /// 對應 `nextPage`/`previousPage`，非固定裝飾符號）——這兩個模板剛好是
+  /// 「同一欄、三列動作皆相同」，單列卡片足以正確表達。`oneHand` 模板改用
+  /// 下方獨立的 [_buildOneHandTemplateCard]（見該處說明本卡片格式為何不
+  /// 適用於它）。
   Widget _buildTemplateCard({
     required Key key,
     required NavZoneMode mode,
@@ -255,6 +242,72 @@ class _NavZoneSettingsScreenState extends State<NavZoneSettingsScreen> {
                 child: Icon(rightIcon, size: 16),
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// `oneHand` 模板專用的 3 列縮圖（epic-18-reader-device-qa Issue 36，
+  /// 真機使用回報，取代 Issue 30 當初選錯的做法）。[oneHandZoneTemplate]
+  /// 的語意是「依列變化、左右欄鏡射相同」（上排＝選單、中排＝上一頁、
+  /// 下排＝下一頁），跟 `leftFlip`／`rightFlip`「同一欄三列皆相同」完全
+  /// 相反——[_buildTemplateCard] 的單列三色塊架構只能表達欄的差異，架構上
+  /// 就不可能正確表達列的差異，Issue 30 把左右欄圖示換成
+  /// [Icons.chevron_left]／[Icons.chevron_right] 反而暗示「左右欄動作不同」，
+  /// 與實際資料不符。改為 3 列各自的左/中/右三色塊（中欄留白，對應
+  /// [ZoneAction.none]），列色與圖示對應該列的實際動作（menu／
+  /// previousPage／nextPage），比照使用者提供的參考圖。
+  Widget _buildOneHandTemplateCard() {
+    const mode = NavZoneMode.oneHand;
+    final selected = _prefs.navZoneMode == mode;
+
+    Widget buildRow(IconData icon, Color color) {
+      return Expanded(
+        child: Row(
+          children: [
+            Expanded(
+              child: Container(
+                color: color,
+                alignment: Alignment.center,
+                child: Icon(icon, size: 12),
+              ),
+            ),
+            const Expanded(child: SizedBox.shrink()),
+            Expanded(
+              child: Container(
+                color: color,
+                alignment: Alignment.center,
+                child: Icon(icon, size: 12),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: () => _selectMode(mode),
+      child: Container(
+        key: const Key('nav_zone_mode_oneHand'),
+        width: 72,
+        height: 64,
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: selected
+                ? Theme.of(context).colorScheme.primary
+                : Theme.of(context).dividerColor,
+            width: selected ? 2 : 1,
+          ),
+        ),
+        child: Column(
+          children: [
+            buildRow(Icons.menu, Colors.green.shade100),
+            buildRow(Icons.chevron_left, Colors.red.shade100),
+            buildRow(Icons.chevron_right, Colors.blue.shade100),
           ],
         ),
       ),
