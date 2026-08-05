@@ -99,7 +99,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
     await _maybeOpenLastBookOnLaunch();
   }
 
-  /// 啟動時開啟最後一本書（epic-18-reader-device-qa Issue 29）：只在頂層
+  /// 啟動時開啟最後閱讀的那本書（epic-18-reader-device-qa Issue 29）：只在頂層
   /// 書架（`widget.groupFilter == null`）啟動當下觸發一次——`initState()`
   /// 對單一 State 物件只會執行一次，`_openGroupFilteredView()` 推入的分類
   /// 篩選畫面是另一個獨立的 `LibraryScreen` 實例、`groupFilter` 非

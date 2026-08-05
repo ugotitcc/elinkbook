@@ -133,7 +133,8 @@ void main() {
     expect(find.text('儲存'), findsNothing);
   });
 
-  testWidgets('啟動時開啟最後一本書開關反映既有 GlobalReaderPrefs 初始值', (tester) async {
+  testWidgets('啟動時開啟最後閱讀的那本書開關反映既有 GlobalReaderPrefs 初始值',
+      (tester) async {
     final fakeManager = FakeReaderPrefsManager(
       globalPrefs: const GlobalReaderPrefs.initial()
           .copyWith(openLastBookOnLaunch: false),
@@ -152,7 +153,25 @@ void main() {
     expect(openLastBookSwitch.value, isFalse);
   });
 
-  testWidgets('切換啟動時開啟最後一本書開關立即呼叫 saveGlobalPrefs 並反映新值',
+  testWidgets(
+      '開關文字為「啟動時開啟最後閱讀的那本書」（epic-18-reader-device-qa '
+      'Issue 35，原文字「最後一本書」易誤解為書架排序意義上的最後一本）',
+      (tester) async {
+    final fakeManager = FakeReaderPrefsManager();
+    await tester.pumpWidget(MaterialApp(
+      home: ReadingDefaultsScreen(prefsManager: fakeManager),
+    ));
+    await tester.pumpAndSettle();
+
+    final textFinder = find.text('啟動時開啟最後閱讀的那本書');
+    await tester.scrollUntilVisible(textFinder, 100);
+    await tester.pumpAndSettle();
+
+    expect(textFinder, findsOneWidget);
+    expect(find.text('啟動時開啟最後一本書'), findsNothing);
+  });
+
+  testWidgets('切換啟動時開啟最後閱讀的那本書開關立即呼叫 saveGlobalPrefs 並反映新值',
       (tester) async {
     final fakeManager = FakeReaderPrefsManager();
     await tester.pumpWidget(MaterialApp(

@@ -300,7 +300,14 @@ class BookImportServiceImpl implements BookImportService {
       contentFingerprint: contentFingerprint,
       groupName: folderName ?? BookGroup.uncategorized,
       createTime: now,
-      lastReadTime: now,
+      // 【診斷修正，epic-18-reader-device-qa Issue 29】剛匯入、從未打開過
+      // 的書不該視為「剛讀過」——用 epoch 0 表示「尚未讀過」的哨兵值，
+      // 讓「最後閱讀」排序／自動開書永遠把它排在任何真正被讀過的書之後。
+      // `lastReadTime` 欄位為 `NOT NULL`，改回 nullable 需要 schema
+      // migration，用哨兵值比新增可為 null 的欄位改動範圍更小。真正的
+      // 「最後閱讀時間」由 ReadingPositionRepository.save() 於使用者實際
+      // 閱讀、位置有異動時統一維護。
+      lastReadTime: DateTime.fromMillisecondsSinceEpoch(0),
     );
 
     return _repository.insertBook(book);

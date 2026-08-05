@@ -98,6 +98,22 @@ void main() {
     expect(updatedAt, lessThanOrEqualTo(after));
   });
 
+  test(
+      'save 寫入後，lastReadTime 被更新為目前時間戳記（epic-18-reader-device-qa '
+      'Issue 29：真正的「最後閱讀時間」應在使用者實際閱讀、位置有異動時更新，'
+      '而非只在匯入當下寫一次）', () async {
+    final before = DateTime.now().millisecondsSinceEpoch;
+
+    await repository.save(
+        'b1', const ReadingPosition(pdfPageIndex: 3, progress: 0.3));
+
+    final after = DateTime.now().millisecondsSinceEpoch;
+    final books = await libraryRepository.listBooks();
+    final lastReadTime = books.single.lastReadTime.millisecondsSinceEpoch;
+    expect(lastReadTime, greaterThanOrEqualTo(before));
+    expect(lastReadTime, lessThanOrEqualTo(after));
+  });
+
   test('save 兩次呼叫，第二次的 position_updated_at 不早於第一次', () async {
     await repository.save('b1', const ReadingPosition(pdfPageIndex: 1, progress: 0.1));
     final firstRows = await libraryRepository.database

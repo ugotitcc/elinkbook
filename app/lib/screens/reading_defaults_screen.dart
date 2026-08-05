@@ -146,7 +146,7 @@ class _ReadingDefaultsScreenState extends State<ReadingDefaultsScreen> {
                 const Divider(height: 1),
                 SwitchListTile(
                   key: const Key('reading_defaults_open_last_book_switch'),
-                  title: const Text('啟動時開啟最後一本書'),
+                  title: const Text('啟動時開啟最後閱讀的那本書'),
                   value: _prefs.openLastBookOnLaunch,
                   onChanged: (value) =>
                       _update(_prefs.copyWith(openLastBookOnLaunch: value)),

@@ -32,8 +32,9 @@ void main() {
   });
 
   testWidgets(
-      '「單手」模板卡片使用實際的翻頁 chevron 圖示，不再是不易理解的 touch_app 手勢圖示'
-      '（epic-18-reader-device-qa Issue 30）', (tester) async {
+      '「單手」模板卡片改為 3 列縮圖，依列顯示選單／上一頁／下一頁圖示，左右欄鏡射相同、中欄留白'
+      '（epic-18-reader-device-qa Issue 36，取代 Issue 30 誤導的左右各一顆不同 chevron 設計）',
+      (tester) async {
     final fakeManager = FakeReaderPrefsManager();
     await tester.pumpWidget(MaterialApp(
       home: NavZoneSettingsScreen(prefsManager: fakeManager),
@@ -48,10 +49,13 @@ void main() {
         .map((icon) => icon.icon)
         .toList();
 
-    expect(icons, contains(Icons.chevron_left));
-    expect(icons, contains(Icons.chevron_right));
-    expect(icons, isNot(contains(Icons.touch_app)),
-        reason: '真機使用回報：通用手勢圖示看不出點擊左右區塊分別對應什麼功能');
+    expect(icons.where((icon) => icon == Icons.menu), hasLength(2),
+        reason: '上排左右欄對應 oneHandZoneTemplate 的 menu 動作，左右鏡射相同');
+    expect(icons.where((icon) => icon == Icons.chevron_left), hasLength(2),
+        reason: '中排左右欄對應 previousPage 動作，左右鏡射相同');
+    expect(icons.where((icon) => icon == Icons.chevron_right), hasLength(2),
+        reason: '下排左右欄對應 nextPage 動作，左右鏡射相同');
+    expect(icons, isNot(contains(Icons.touch_app)));
   });
 
   testWidgets('SegmentedButton 選中狀態正確反映 navZoneMode：簡單模板對應「簡單」，隱藏 9 格編輯器',
