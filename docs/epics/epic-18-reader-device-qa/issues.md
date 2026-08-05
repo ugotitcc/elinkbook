@@ -1020,18 +1020,18 @@ AiPaper Reader C 這類 E-Ink 裝置為了讓文字/圖示夠大，`devicePixelR
 
 **Status:** ✅ 已完成。**回報原文**：「行距小於 1.2 後都不會有效果」。**根因（已用 headless Chromium 建立最小重現案例驗證，非臆測）**：`main.js` 的 `buildOverrideCss()` 中，行距覆蓋規則只鎖定 `html, body`（`rules.push('html, body { line-height: ... !important; }')`），不像 `fontWeight`／`fontFamily` 套用到涵蓋 `p`／`div`／`span` 等元素的共用 `selector`——這代表行距覆蓋只設定了「可被繼承的值」。CSS 規則裡，子元素若直接宣告 `line-height`（許多 EPUB，尤其 Calibre 轉檔書籍，常在 `p` 層級直接設定，數值常落在 1.2 附近），那個直接宣告一定贏過從祖先繼承來的值——不論祖先端加不加 `!important`、不論設定的數值是多少。用真實 headless Chrome/Edge 重現：模擬書本 CSS `p { line-height: 1.2 }` + 覆蓋規則設 0.9，computed line-height 算出 19.2px（＝16px×1.2，書本自己的值，完全沒被覆蓋）；即使覆蓋值拉到 2.0，結果仍是 19.2px，證實與數值大小無關。**這代表使用者觀察到的現象並非「小於 1.2 沒效果」，而是「只要書本自己宣告過 line-height，這個滑桿設定值從未真正生效過，1.2 只是那本書本身的預設值」。** **修法**：改用跟 `fontWeight` 相同的共用 `selector`，直接覆蓋 `p`／`div`／`span` 等文字容器元素；改用相同重現案例驗證修法有效（0.9 → computed 14.4px）。`main.js` 為純 JS vendor 檔案，本專案未安裝任何 JS 測試框架，既有 Dart test 只驗證常數字串／資源載入，未曾觸及此處的 CSS 生成邏輯——無自動化測試 seam 可用，已如實記錄為已知限制，驗證改以 headless browser 最小重現案例取代。
 
-### Issue 35：「啟動時開啟最後一本書」文字說明修正（Issue 29 後續回報）
+### Issue 35：「啟動時開啟最後閱讀的那本書」（Issue 29 後續回報，經人類指正非純文字問題）
 
-**Status:** ✅ 已完成。純文字修正，非邏輯缺陷。「最後一本書」易誤解為書架排序意義上的最後一本，正確語意應為「最後閱讀過的那一本」。`app/lib/screens/reading_defaults_screen.dart` 開關文字改為「啟動時開啟最後閱讀的那本書」；一併更新 `global_reader_prefs.dart`／`library_screen.dart` 中提及相同措辭的內部文件註解（欄位名稱／持久化 key／實際行為皆不變）。
+**Status:** ✅ 已完成。最初誤判為純文字修正（開關文字「啟動時開啟最後一本書」易誤解為書架排序意義上的最後一本，已改為「啟動時開啟最後閱讀的那本書」，見 `app/lib/screens/reading_defaults_screen.dart`），經人類指正這其實是功能缺陷，重新查明根因：**`Book.lastReadTime` 只在 `BookImportServiceImpl` 匯入當下寫入一次（等於 `createTime`），全專案沒有任何其他程式碼路徑再更新它**——`ReaderScreen` 離開／背景時實際寫入的是 `reading_position_repository.dart` 管理的 `progress`／`epubLocator`／`pdfPageIndex`，從未觸及 `lastReadTime`。這代表「最後閱讀」排序與「啟動時開啟最後閱讀的那本書」實際依據的其實是「最後匯入時間」：剛匯入、從未打開過的書會被誤判為「最後閱讀」蓋過真正最近在讀的書。**修法**：`book_import_service_impl.dart` 匯入當下的 `lastReadTime` 改用 epoch 0「尚未讀過」哨兵值（欄位為 `NOT NULL`，哨兵值比新增可為 null 的欄位改動範圍更小；`createTime` 不受影響仍正確記錄匯入時間）；`reading_position_repository.dart` 的 `save()`（使用者實際閱讀、位置有異動時呼叫）一併寫入 `lastReadTime = 目前時間`，語意上這正是「最後閱讀時間」該更新的時機。一併修正 `library_screen_test.dart` 一個依賴舊（錯誤）行為的既有測試斷言（原本預期剛匯入的新分類拼貼格排在有真實 `lastReadTime` 的既有書之前）。
 
 ### Issue 36：「單手」熱區模板卡片圖示（Issue 30 後續回報，附參考圖）
 
 **Status:** ✅ 已完成。**根因**：`oneHandZoneTemplate`（`nav_zone_mode.dart`）的實際語意是「依列變化、左右欄鏡射相同」（上排＝選單、中排＝上一頁、下排＝下一頁，左右欄動作永遠一致），這跟 `leftFlip`／`rightFlip`「同一欄、三列動作皆相同」的語意完全相反。`nav_zone_settings_screen.dart` 原本三種模板共用同一個 `_buildTemplateCard()`（單列三色塊架構，左/中/右各一顆圖示）——這個架構只能表達「欄」的差異，架構上就不可能正確表達「列」的差異。上一輪 Issue 30 把「單手」卡片左右欄圖示換成 `Icons.chevron_left`／`Icons.chevron_right`（左右不同），反而是在暗示「左右欄動作不同」，與 `oneHandZoneTemplate` 的實際資料（每一列左右欄動作永遠相同）完全不符，是選錯表達方式的結構性問題，不是換個圖示能解決的。使用者提供的參考圖（3 列：綠色選單／紅色上一頁／藍色下一頁，左右欄對稱、中欄留白）與 `oneHandZoneTemplate` 的實際定義完全吻合。**修法**：新增專用的 `_buildOneHandTemplateCard()`，改為 3 列縮圖（每列左/中/右三色塊，中欄留白對應 `ZoneAction.none`，列色與圖示對應該列實際動作：綠色 `Icons.menu`／紅色 `Icons.chevron_left`／藍色 `Icons.chevron_right`，左右欄圖示鏡射相同），`leftFlip`／`rightFlip` 兩張卡片維持原單列架構不動（它們的語意本來就適用單列表達）。
 
-**單元測試要求（3 項皆已完成）：** `app/test/screens/reading_defaults_screen_test.dart`（Issue 35 新增「開關文字為『啟動時開啟最後閱讀的那本書』」測試，既有測試名稱同步更新）；`app/test/screens/nav_zone_settings_screen_test.dart`（Issue 36 既有的「單手卡片圖示」測試改寫為驗證 3 列縮圖：menu/chevron_left/chevron_right 各恰好出現 2 次、且不含 touch_app）。Issue 34（`main.js`）無 Dart 測試 seam，改以 headless browser 最小重現案例驗證（見上）。
+**單元測試要求（3 項皆已完成）：** `app/test/screens/reading_defaults_screen_test.dart`（Issue 35 新增「開關文字為『啟動時開啟最後閱讀的那本書』」測試，既有測試名稱同步更新）；`app/test/library/book_import_service_test.dart`（Issue 35 補正新增：匯入書籍 `lastReadTime` 為 epoch 0 哨兵值、`createTime` 不受影響）；`app/test/reader/reading_position_repository_test.dart`（Issue 35 補正新增：`save()` 後 `lastReadTime` 更新為目前時間戳記，比照既有 `position_updated_at` 測試模式）；`app/test/screens/nav_zone_settings_screen_test.dart`（Issue 36 既有的「單手卡片圖示」測試改寫為驗證 3 列縮圖：menu/chevron_left/chevron_right 各恰好出現 2 次、且不含 touch_app）。Issue 34（`main.js`）無 Dart 測試 seam，改以 headless browser 最小重現案例驗證（見上）。
 
-**驗收標準：** 上述 3 項皆已實作；`flutter analyze` 全程維持乾淨；全專案 `flutter test`（961 個測試）無回歸。
+**驗收標準：** 上述 3 項皆已實作；`flutter analyze` 全程維持乾淨；全專案 `flutter test`（963 個測試）無回歸。
 
 **相關佐證：**
-- 分支 `fix/epic-18-issue-34-36-followup-fixes`（3 個 commit：Issue 34／35／36 各一）
+- 分支 `fix/epic-18-issue-34-36-followup-fixes`（4 個 commit：Issue 34、Issue 35 文字修正、Issue 36、Issue 35 功能補正）
 - `tmp/images/HOT.png`（使用者提供的「單手」模板參考圖，Issue 36 依此設計）
