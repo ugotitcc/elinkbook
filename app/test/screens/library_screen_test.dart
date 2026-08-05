@@ -1360,7 +1360,7 @@ void main() {
 
   testWidgets(
       '【審查修正】從分類篩選畫面內用「選擇資料夾＋自動分類」建立新分類後返回書架，'
-      '新分類拼貼格排在「未分類」之前，而非落入孤兒兜底桶排到最後',
+      '新分類拼貼格正確出現且未消失',
       (tester) async {
     const folderPickerChannel = MethodChannel('elinkbook/folder_picker');
     const metadataChannel = MethodChannel('elinkbook/book_metadata');
@@ -1382,10 +1382,10 @@ void main() {
       if (call.method == 'takePersistableUriPermission') return null;
       if (call.method == 'listFolderContents') {
         return {
-          // 刻意選用 name ASC 排序上會落在「奇幻」之前的名稱（一 U+4E00 <
-          // 奇 U+5947），讓「正確載入 vs. 落入孤兒兜底桶」兩種情境的拼貼格
-          // 順序真的不同，用來偵測 _loadGroups() 是否有確實被呼叫（「未
-          // 分類」不使用拼貼格顯示後，不能再用它當排序參考基準點）。
+          // 分類名稱本身不影響拼貼格順序（epic-18-reader-device-qa
+          // Issue 31 修正後改依 _sortBy 排序）；這裡只是一個任意的新分類
+          // 名稱，用來驗證資料夾匯入建立的新分類拼貼格確實會出現、不會
+          // 消失。
           'folderName': '一般叢書',
           'fileUris': ['content://example/tree/folder/document/book1.epub'],
         };
@@ -1443,17 +1443,76 @@ void main() {
     await tester.tap(find.byKey(const Key('library_view_mode_toggle')));
     await tester.pumpAndSettle();
 
-    // 若 _openGroupFilteredView() 的 .then() 沒有一併呼叫 _loadGroups()，
-    // 「一般叢書」不在頂層 _groups 快照中，會被 _buildGroupTiles() 的孤兒
-    // 兜底桶排到所有「正常註冊」分類（此處只有「奇幻」）之後；正確行為
-    // 是「一般叢書」依 name ASC 排序排在「奇幻」之前（一 U+4E00 < 奇
-    // U+5947），而非孤兒兜底桶把它排到「奇幻」之後。
+    // epic-18-reader-device-qa Issue 31 修正後，_buildGroupTiles() 不再
+    // 區分「_groups 已註冊」與「孤兒」分類——所有分類統一來自同一份依
+    // _sortBy 排序的 books 走訪順序，故不需要 _loadGroups() 是否有被
+    // 呼叫也不會讓「一般叢書」的拼貼格消失或錯放；這裡改為單純驗證新
+    // 建立的分類拼貼格確實存在（未消失）。「一般叢書」排在「奇幻」之前
+    // 是因為它是後來才透過資料夾匯入建立、lastReadTime 較新（預設排序
+    // 模式「最後閱讀」），並非依名稱排序。
     final tileTitles = tester
         .widgetList<ListTile>(find.byType(ListTile))
         .map((tile) => (tile.title as Text).data)
         .where((title) => title == '奇幻' || title == '一般叢書')
         .toList();
     expect(tileTitles, ['一般叢書', '奇幻']);
+  });
+
+  testWidgets(
+      '分類拼貼格彼此的相對順序跟隨目前選定的排序模式（最後閱讀），'
+      '而非固定依分類名稱排序（epic-18-reader-device-qa Issue 31）',
+      (tester) async {
+    // 刻意讓「名稱字母序」與「最後閱讀時間序」互相矛盾：'一般叢書'
+    // 名稱字母序排最前（一 U+4E00 < 奇 U+5947 < 武 U+6B66），但依
+    // lastReadTime 應排最後——若拼貼格順序錯誤地仍依名稱排序（舊 bug
+    // 行為），這裡會斷言失敗。
+    final generalBook = _testBook(
+      id: 'g1',
+      title: '叢書A',
+      groupName: '一般叢書',
+      lastReadTime: DateTime(2026, 1, 1),
+    );
+    final fantasyBook = _testBook(
+      id: 'f1',
+      title: '奇幻A',
+      groupName: '奇幻',
+      lastReadTime: DateTime(2026, 6, 1),
+    );
+    final wuxiaBook = _testBook(
+      id: 'w1',
+      title: '武俠A',
+      groupName: '武俠',
+      lastReadTime: DateTime(2026, 3, 1),
+    );
+    final repository = FakeLibraryRepository(
+      initialBooks: [generalBook, fantasyBook, wuxiaBook],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: repository,
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // 切到列表檢視，方便用 ListTile.title 比對拼貼格彼此的相對順序
+    // （格狀檢視的 _GroupGridTile 是 InkWell，不是 ListTile，比照既有
+    // 「新分類拼貼格排在「未分類」之前」測試的既有寫法）。
+    await tester.tap(find.byKey(const Key('library_view_mode_toggle')));
+    await tester.pumpAndSettle();
+
+    final tileTitles = tester
+        .widgetList<ListTile>(find.byType(ListTile))
+        .map((tile) => (tile.title as Text).data)
+        .where((title) => title == '奇幻' || title == '一般叢書' || title == '武俠')
+        .toList();
+    expect(tileTitles, ['奇幻', '武俠', '一般叢書'],
+        reason: 'LibraryScreen 預設排序模式為「最後閱讀」，拼貼格順序應依各分類'
+            '最近一次被閱讀的書籍（lastReadTime 最新）排列，而非分類名稱字母序');
   });
 
   testWidgets('選取模式下 AppBar 顯示刪除按鈕，取消刪除確認對話框不會呼叫 deleteBook',
@@ -2213,10 +2272,25 @@ void main() {
 
   // ── Task 2: 補齊分類拼貼格排序/兜底桶/空格佔位/選取模式互動測試 ──
 
-  testWidgets('分類拼貼格依名稱 A-Z 排序；「未分類」不使用拼貼格顯示，不計入排序',
+  testWidgets(
+      '分類拼貼格依目前排序模式（最後閱讀）排序；「未分類」不使用拼貼格顯示，不計入排序',
       (tester) async {
-    final bookSci = _testBook(id: '1', title: '科幻書', groupName: '科幻');
-    final bookFan = _testBook(id: '2', title: '奇幻書', groupName: '奇幻');
+    // epic-18-reader-device-qa Issue 31 修正前，拼貼格順序固定依分類名稱
+    // A-Z（不受 _sortBy 影響）；修正後改依 _sortBy 排序，這裡明確指定
+    // 不同的 lastReadTime（而非依賴巧合的建立順序時間差），確保斷言不依賴
+    // 名稱字母序與時間序恰好一致的巧合。
+    final bookSci = _testBook(
+      id: '1',
+      title: '科幻書',
+      groupName: '科幻',
+      lastReadTime: DateTime(2026, 1, 1),
+    );
+    final bookFan = _testBook(
+      id: '2',
+      title: '奇幻書',
+      groupName: '奇幻',
+      lastReadTime: DateTime(2026, 6, 1),
+    );
     final bookNone = _testBook(id: '3', title: '未分類書');
     final repository =
         FakeLibraryRepository(initialBooks: [bookSci, bookFan, bookNone]);
@@ -2235,9 +2309,10 @@ void main() {
     await tester.pumpAndSettle();
 
     // 列表檢視下拼貼格是 ListTile（_GroupListTile.title 只顯示分類名稱，
-    // 不含數量），用它的 title 文字順序驗證排序（name ASC：奇幻 < 科幻，
-    // 依 Dart String 預設 UTF-16 碼點比較）。只有 2 個拼貼格——「未分類」
-    // 不使用拼貼格顯示，bookNone 純粹以個別書籍項目呈現在拼貼格之後。
+    // 不含數量），用它的 title 文字順序驗證排序——LibraryScreen 預設排序
+    // 模式為「最後閱讀」，奇幻書 lastReadTime 較新，故「奇幻」拼貼格排在
+    // 「科幻」之前。只有 2 個拼貼格——「未分類」不使用拼貼格顯示，
+    // bookNone 純粹以個別書籍項目呈現在拼貼格之後。
     final tileTitles = tester
         .widgetList<ListTile>(find.byType(ListTile))
         .take(2)
