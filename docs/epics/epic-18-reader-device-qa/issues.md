@@ -1030,8 +1030,8 @@ AiPaper Reader C 這類 E-Ink 裝置為了讓文字/圖示夠大，`devicePixelR
 
 **單元測試要求（3 項皆已完成）：** `app/test/screens/reading_defaults_screen_test.dart`（Issue 35 新增「開關文字為『啟動時開啟最後閱讀的那本書』」測試，既有測試名稱同步更新）；`app/test/library/book_import_service_test.dart`（Issue 35 補正新增：匯入書籍 `lastReadTime` 為 epoch 0 哨兵值、`createTime` 不受影響）；`app/test/reader/reading_position_repository_test.dart`（Issue 35 補正新增：`save()` 後 `lastReadTime` 更新為目前時間戳記，比照既有 `position_updated_at` 測試模式）；`app/test/screens/nav_zone_settings_screen_test.dart`（Issue 36 既有的「單手卡片圖示」測試改寫為驗證 3 列縮圖：menu/chevron_left/chevron_right 各恰好出現 2 次、且不含 touch_app）。Issue 34（`main.js`）無 Dart 測試 seam，改以 headless browser 最小重現案例驗證（見上）。
 
-**驗收標準：** 上述 3 項皆已實作；`flutter analyze` 全程維持乾淨；全專案 `flutter test`（963 個測試）無回歸。
+**驗收標準：** 上述 3 項皆已實作；`flutter analyze` 全程維持乾淨；全專案 `flutter test`（963 個測試）無回歸；已透過 PR #115 合併回 `main`。
 
 **相關佐證：**
-- 分支 `fix/epic-18-issue-34-36-followup-fixes`（4 個 commit：Issue 34、Issue 35 文字修正、Issue 36、Issue 35 功能補正）
+- 分支 `fix/epic-18-issue-34-36-followup-fixes`（6 個 commit：Issue 34、Issue 35 文字修正、Issue 36、docs、Issue 35 功能補正、docs），PR #115
 - `tmp/images/HOT.png`（使用者提供的「單手」模板參考圖，Issue 36 依此設計）
