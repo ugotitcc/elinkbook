@@ -1051,3 +1051,54 @@ AiPaper Reader C 這類 E-Ink 裝置為了讓文字/圖示夠大，`devicePixelR
 **相關佐證：**
 - 分支 `fix/epic-18-issue-37-group-tile-cover-fill`，PR #116
 - `tmp/images/書架封面未填滿.jpg`（使用者原始回報截圖，紅框標示空白範圍）
+
+---
+
+## Issue 38-41：真機 WebView 相容性與時序問題（`/diagnose` 第五輪）
+
+**背景（2026-08-05）：** 使用者於 ViWoods Air Reader C 與 iReader Ocean 4 Plus 兩台裝置持續回報開書相關問題（開書不穩定、開書逾時），經 `/diagnose` 第五輪調查，查明 4 個真機回報根因。Issue 38 為本輪優先度最高、影響範圍最大的發現——`_esCompatPolyfillJs` 自身使用 `??=` 導致 Chromium <85 的 WebView 整份腳本解析失敗。
+
+### Issue 38：`_esCompatPolyfillJs` 自身使用 `??=` 導致 Chromium <85 整份腳本解析失敗
+
+**Status:** ✅ 已完成（commit `2323802`）。**根因**：`_esCompatPolyfillJs`（`app/lib/reader/foliate_epub_reader_view.dart`）的 `Object.groupBy` polyfill 本體用了 `(result[key] ??= []).push(item);`（邏輯 nullish 賦值運算子，ES2021，需 Chromium 85+）。JS 引擎在執行任何程式碼之前會先完整解析整個腳本；若腳本中任何一處使用了引擎不認得的語法，會在解析階段直接拋出 `SyntaxError`，導致整個腳本完全不會執行——不只是 `Object.groupBy` 那個 if 區塊，連同一份腳本裡的 `Map.groupBy`／`Array.prototype.at`／`Array.prototype.findLastIndex` 三個 polyfill 也全部一起失效。iReader Ocean 4 Plus 的系統 WebView 版本為 Chromium 83（已從真機「關於」畫面截圖確認），早於 85，代表前兩輪 `/diagnose` 已經「修好」的這 4 個 API polyfill，在這台裝置上其實從未真正生效過。**修法**：改寫為 ES5 相容語法（`if (!result[key]) result[key] = []; result[key].push(item);`）。
+
+**單元測試要求（已完成）：** `app/test/reader/foliate_epub_reader_view_test.dart` 新增斷言 `_esCompatPolyfillJs` 常數不含有 `??=`／`||=`／`&&=` 三種邏輯賦值運算子字面文字。
+
+**驗收標準：** `flutter analyze` 乾淨；全專案 `flutter test`（967 個測試）無回歸。
+
+**相關佐證：**
+- 截圖 `tmp/images/iReader1.jpg`／`tmp/images/iReader2.jpg`（iReader Ocean 4 Plus 系統 WebView 版本確認）
+- 截圖 `tmp/images/JSScript.jpg`（ViWoods Air Reader C JS 腳本錯誤診斷畫面）
+
+### Issue 39：`window.applyPreferences` 過早呼叫的競速（ViWoods 真機回報）
+
+**Status:** ✅ 已完成（commit `4ed91c8`）。**根因**：`foliate_epub_reader_view.dart` 的 `didUpdateWidget()` 只要 `foliatePreferencesChanged(oldWidget, widget)` 為真（例如 `isLandscape` 因螢幕方向鎖定套用時機、`isFixedLayoutHint` 因既有書籍的非同步 FXL 判斷完成而改變），就會呼叫 `_evaluate('window.applyPreferences(...)')`。這個呼叫完全沒有檢查 `main.js`（ES module，`index.html` 用 `<script type="module">` 載入）是否已經執行完成、真正定義出 `window.applyPreferences`——這是純 Dart 端狀態變動觸發的呼叫，跟 WebView／JS module 是否載入完成完全無關，時機上必然存在競速。真機 LOG 顯示的 `Uncaught TypeError: window.applyPreferences is not a function` 精確對應這個成因。**修法**：透過 `initialUserScripts` 在 `AT_DOCUMENT_START`（比 `main.js` 更早）注入一個佔位 shim（`_applyPreferencesQueueShimJs`），把 `window.applyPreferences` 暫時定義成「只是把傳入的偏好值存起來，不做任何事」；`main.js` 真正的 `window.applyPreferences = function (prefs) {...}` 賦值執行時，緊接著檢查有沒有暫存的待套用值，有的話立刻補套用一次。
+
+**單元測試要求（已完成）：** `app/test/reader/foliate_epub_reader_view_test.dart` 新增斷言 `initialUserScripts` 陣列長度為 4（原本 3），且索引 1 的腳本含有 `window.__pendingApplyPreferences` 與 `window.applyPreferences`。
+
+**驗收標準：** `flutter analyze` 乾淨；全專案 `flutter test`（967 個測試）無回歸。
+
+**相關佐證：**
+- 截圖 `tmp/images/JSScript.jpg`（ViWoods Air Reader C 真機回報 `Uncaught TypeError: window.applyPreferences is not a function`）
+
+### Issue 40：`<script type="module">` 補上 `crossorigin="anonymous"`，改善診斷可讀性
+
+**Status:** ✅ 已完成（commit `42deca0`）。**根因**：ViWoods Air Reader C 真機截圖顯示我方 `window.onerror` 診斷畫面（Issue 33）只顯示「JS Error: Script error. (:0)」，完全看不出真正原因；但同一時間點的瀏覽器 console log 卻能看到完整訊息。這是瀏覽器對某些情況下的 script 標準錯誤訊息改寫行為；`index.html` 的 `<script type="module" src="./main.js">` 目前沒有 `crossorigin` 屬性。`crossorigin="anonymous"` 是這類問題的標準建議做法，且在真正同源時沒有任何負面作用。**修法**：`index.html` 的 `<script>` 標籤加上 `crossorigin="anonymous"`。
+
+**無自動化測試 seam**：`index.html` 是純靜態資源，`app/test/` 沒有任何測試會實際載入並解析這個檔案。需未來真機或使用者截圖驗證這個屬性是否真的讓 Issue 33 診斷畫面顯示出完整錯誤訊息。
+
+**驗收標準：** `flutter analyze` 乾淨。
+
+**相關佐證：**
+- 截圖 `tmp/images/JSScript.jpg`（ViWoods Air Reader C 診斷畫面只顯示「Script error.」）
+
+### Issue 41：`epub.js`／`view.js` 使用的 `replaceAll`／`WeakRef` 未設防 + 更新相容性掃描工具
+
+**Status:** ✅ 已完成（commit `3126255`）。**根因**：逐字掃描已 vendored 的 `epub.js`／`view.js`，發現兩處尚未設防的較新 API：`epub.js:711,716` 使用 `String.prototype.replaceAll`（ES2021，需 Chromium 85+，用於字型反混淆）；`view.js:286` 使用 `new WeakRef(el)`（ES2021，需 Chromium 84+，用於 Media Overlays 有聲書同步標色）。iReader Ocean 4 Plus 的系統 WebView 為 Chromium 83，兩者皆不支援。這跟前兩輪已修過的 `Object.groupBy`／`Array.prototype.at`／`findLastIndex` 是同一類問題，只是範圍較窄（特定書籍功能，非通用開書路徑）。**修法**：在 `_esCompatPolyfillJs` 尾端追加 `String.prototype.replaceAll` 與 `WeakRef` 兩個 polyfill（皆用 ES5 相容語法）；更新 `app/tool/check_foliate_es_compat.js` 的 `RISKY_APIS` 清單加入這兩個 API，避免未來再靠人工逐字掃描才發現。
+
+**單元測試要求（已完成）：** `app/test/reader/foliate_epub_reader_view_test.dart` 新增斷言 `_esCompatPolyfillJs` 常數含有 `String.prototype.replaceAll` 與 `WeakRef` 字串。
+
+**驗收標準：** `flutter analyze` 乾淨；全專案 `flutter test`（967 個測試）無回歸；`node app/tool/check_foliate_es_compat.js` 輸出「乾淨」。
+
+**相關佐證：**
+- 截圖 `tmp/images/iReader1.jpg`／`tmp/images/iReader2.jpg`（iReader Ocean 4 Plus 系統 WebView 版本確認）

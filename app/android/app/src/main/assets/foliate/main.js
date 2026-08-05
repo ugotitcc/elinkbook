@@ -259,6 +259,18 @@ window.applyPreferences = function (prefs) {
   view.renderer.setStyles([fontFaceCss, buildOverrideCss(prefs)])
 }
 
+// epic-18-reader-device-qa Issue 39：main.js 這個 ES module 執行到這裡時
+// 才「真正」定義出 window.applyPreferences，覆蓋掉 AT_DOCUMENT_START 階段
+// 注入的佔位 shim（見 foliate_epub_reader_view.dart 的
+// _applyPreferencesQueueShimJs）。若 Dart 端在這之前已經呼叫過一次（被
+// shim 接住、存進 window.__pendingApplyPreferences），這裡立刻補套用一次，
+// 避免那次呼叫被靜默遺漏。
+if (window.__pendingApplyPreferences) {
+  const pendingPrefs = window.__pendingApplyPreferences
+  window.__pendingApplyPreferences = null
+  window.applyPreferences(pendingPrefs)
+}
+
 /**
  * 換頁／跳轉全書進度比例，供 Dart 端 foliate_epub_reader_view.dart 的
  * FoliateEpubReaderView.nextPage／previousPage／jumpToProgression static

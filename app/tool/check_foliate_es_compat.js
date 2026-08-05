@@ -158,6 +158,20 @@ const RISKY_APIS = [
     minChromium: 121,
     specYear: 'ES2024',
   },
+  {
+    name: 'String.prototype.replaceAll',
+    usagePattern: /\.replaceAll\(/g,
+    polyfillMarkers: ['String.prototype.replaceAll'],
+    minChromium: 85,
+    specYear: 'ES2021',
+  },
+  {
+    name: 'WeakRef',
+    usagePattern: /\bnew WeakRef\(/g,
+    polyfillMarkers: ['WeakRef'],
+    minChromium: 84,
+    specYear: 'ES2021',
+  },
 ];
 
 function readFileSafe(filePath) {

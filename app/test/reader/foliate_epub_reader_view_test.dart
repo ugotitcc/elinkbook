@@ -617,13 +617,123 @@ void main() {
       final webView = tester.widget<InAppWebView>(find.byType(InAppWebView));
       final scripts = webView.platform.params.initialUserScripts;
       expect(scripts, isNotNull);
-      expect(scripts, hasLength(3));
+      expect(scripts, hasLength(4));
       final script = scripts!.first;
       expect(script.injectionTime, UserScriptInjectionTime.AT_DOCUMENT_START);
       expect(script.source, contains('Object.groupBy'));
       expect(script.source, contains('Map.groupBy'));
       expect(script.source, contains('Array.prototype.at'));
       expect(script.source, contains('Array.prototype.findLastIndex'));
+    });
+
+    testWidgets(
+        'ES compat polyfill 本體不含邏輯賦值運算子（??=／||=／&&=），'
+        '避免 Chromium 85 之前的 WebView 在解析階段整份腳本失敗'
+        '（epic-18-reader-device-qa Issue 38，真機使用回報：iReader Ocean 4 '
+        'Plus 系統 WebView 為 Chromium 83，早於 ??= 語法需要的 Chromium 85，'
+        'JS 引擎會在執行任何程式碼之前完整解析整份腳本，任何一處語法錯誤都會讓'
+        '整份腳本（含 Object.groupBy／Map.groupBy／Array.prototype.at／'
+        'Array.prototype.findLastIndex 全部 4 個 polyfill）完全不執行）',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: FoliateEpubReaderView(
+            filePath: '/tmp/sample.epub',
+            onPageRendered: _noop,
+            onError: _noopError,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final webView = tester.widget<InAppWebView>(find.byType(InAppWebView));
+      final scripts = webView.platform.params.initialUserScripts;
+      final polyfillScript = scripts!.first;
+      expect(polyfillScript.source, isNot(contains('??=')));
+      expect(polyfillScript.source, isNot(contains('||=')));
+      expect(polyfillScript.source, isNot(contains('&&=')));
+    });
+
+    testWidgets(
+        'ES compat polyfill 含 String.prototype.replaceAll／WeakRef 防護'
+        '（epic-18-reader-device-qa Issue 41，iReader Ocean 4 Plus 系統 '
+        'WebView 為 Chromium 83，早於 replaceAll 需要的 85／WeakRef 需要的 '
+        '84，epub.js 的字型反混淆與 view.js 的 media overlay 功能會用到）',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: FoliateEpubReaderView(
+            filePath: '/tmp/sample.epub',
+            onPageRendered: _noop,
+            onError: _noopError,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final webView = tester.widget<InAppWebView>(find.byType(InAppWebView));
+      final scripts = webView.platform.params.initialUserScripts;
+      final polyfillScript = scripts!.first;
+      expect(polyfillScript.source, contains('String.prototype.replaceAll'));
+      expect(polyfillScript.source, contains('WeakRef'));
+    });
+
+    testWidgets(
+        'replaceAll polyfill 函式型 replacement 明確拋出例外，不再靜默把'
+        '函式原始碼文字字面插入結果字串（程式碼審查修正，'
+        'tmp/epic-18/review-issue-38-41.md Important #1）', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: FoliateEpubReaderView(
+            filePath: '/tmp/sample.epub',
+            onPageRendered: _noop,
+            onError: _noopError,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final webView = tester.widget<InAppWebView>(find.byType(InAppWebView));
+      final scripts = webView.platform.params.initialUserScripts;
+      final polyfillScript = scripts!.first;
+      expect(
+        polyfillScript.source,
+        contains("typeof replacement === 'function'"),
+      );
+      expect(
+        polyfillScript.source,
+        contains('replaceAll polyfill 尚未實作函式型 replacement'),
+      );
+      expect(polyfillScript.source, contains(r'\$(\$|&)'),
+          reason: '應展開 \$\$／\$& 兩種替換樣式，不再只是純字面插入');
+    });
+
+    testWidgets(
+        'WeakRef polyfill 內含強參照模擬的權衡取捨說明註解（程式碼審查修正，'
+        'tmp/epic-18/review-issue-38-41.md Important #2）', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: FoliateEpubReaderView(
+            filePath: '/tmp/sample.epub',
+            onPageRendered: _noop,
+            onError: _noopError,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final webView = tester.widget<InAppWebView>(find.byType(InAppWebView));
+      final scripts = webView.platform.params.initialUserScripts;
+      final polyfillScript = scripts!.first;
+      expect(polyfillScript.source, contains('僅用強參照模擬'));
     });
 
     // epic-18-reader-device-qa Issue 33：iReader Ocean 4 Plus 開書卡住問題
@@ -637,6 +747,35 @@ void main() {
     // 注入、重用既有的 onError JS↔Dart bridge channel（見
     // _onWebViewCreated 的 'onError' handler），不需要新增任何 Dart 端
     // 接線。
+    testWidgets(
+        'InAppWebView 於 AT_DOCUMENT_START 注入 applyPreferences 佇列 shim，'
+        '避免 main.js 尚未載入完成前呼叫 window.applyPreferences 拋出 '
+        'TypeError（epic-18-reader-device-qa Issue 39，真機使用回報：'
+        'ViWoods Air Reader C，Uncaught TypeError: window.applyPreferences '
+        'is not a function）', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: FoliateEpubReaderView(
+            filePath: '/tmp/sample.epub',
+            onPageRendered: _noop,
+            onError: _noopError,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final webView = tester.widget<InAppWebView>(find.byType(InAppWebView));
+      final scripts = webView.platform.params.initialUserScripts;
+      expect(scripts, hasLength(4));
+      final shimScript = scripts![1];
+      expect(
+          shimScript.injectionTime, UserScriptInjectionTime.AT_DOCUMENT_START);
+      expect(shimScript.source, contains('window.__pendingApplyPreferences'));
+      expect(shimScript.source, contains('window.applyPreferences'));
+    });
+
     testWidgets(
         'InAppWebView 於 AT_DOCUMENT_START 注入全局 JS 錯誤捕捉（window.onerror／'
         'window.onunhandledrejection），重用既有 onError bridge channel',
@@ -656,8 +795,8 @@ void main() {
 
       final webView = tester.widget<InAppWebView>(find.byType(InAppWebView));
       final scripts = webView.platform.params.initialUserScripts;
-      expect(scripts, hasLength(3));
-      final script = scripts![1];
+      expect(scripts, hasLength(4));
+      final script = scripts![2];
       expect(script.injectionTime, UserScriptInjectionTime.AT_DOCUMENT_START);
       expect(script.source, contains('window.onerror'));
       expect(script.source, contains('window.onunhandledrejection'));
@@ -688,7 +827,7 @@ void main() {
 
       final webView = tester.widget<InAppWebView>(find.byType(InAppWebView));
       final scripts = webView.platform.params.initialUserScripts;
-      expect(scripts, hasLength(3));
+      expect(scripts, hasLength(4));
       final script = scripts!.last;
       expect(script.injectionTime, UserScriptInjectionTime.AT_DOCUMENT_START);
       expect(script.source, contains('navigator.userAgent'));

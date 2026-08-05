@@ -44,6 +44,25 @@ import 'zone_action.dart';
 /// WebView 支援後行為與新版一致），透過 [UserScript] 在文件載入最早期
 /// 注入，不修改 `readest/foliate-js` 釘定版本本身（比照既有 ADR 0011
 /// 「不修改釘定版本」的既有限制）。
+///
+/// 【epic-18-reader-device-qa Issue 38，2026-08-05 追加發現】本腳本自身
+/// 曾在 `Object.groupBy` polyfill 內用了 `??=`（邏輯 nullish 賦值，ES2021，
+/// 需 Chromium 85+）——JS 引擎會在執行任何程式碼之前完整解析整份腳本，
+/// 任何一處語法錯誤都會讓整份腳本（含本檔案其餘 3 個 polyfill）完全不
+/// 執行。iReader Ocean 4 Plus 的系統 WebView 為 Chromium 83（早於 85），
+/// 代表上面 4 個 polyfill 在這台裝置上其實從未真正生效過。已改寫為
+/// ES5 相容語法（`if (!x) x = []` 取代 `x ??= []`）。**本腳本後續新增的
+/// 任何 polyfill 本體，禁止使用 ES2020 之後的語法糖**（包括 `??=`／`||=`／
+/// `&&=`／選用鏈結 `?.` 需 Chromium 80+、標籤模板等），因為這份腳本存在
+/// 的唯一目的就是在不支援新語法的舊版 WebView 上執行。
+///
+/// 【epic-18-reader-device-qa Issue 41】`epub.js` 的字型反混淆
+/// （`deobfuscators`）用了 `String.prototype.replaceAll`（ES2021，需
+/// Chromium 85+）；`view.js` 的 Media Overlays 用了 `WeakRef`（ES2021，需
+/// Chromium 84+）。iReader Ocean 4 Plus 的 Chromium 83 兩者皆不支援。兩者
+/// 皆只在特定書籍功能（含混淆內嵌字型／含 media overlay）才會執行到，非
+/// 通用開書路徑，故不像 Issue 38 的 `??=` 語法解析失敗那樣影響「每一本
+/// 書」，但仍是真實存在的崩潰風險，一併補上防護。
 const _esCompatPolyfillJs = '''
 if (!Object.groupBy) {
   Object.groupBy = function (items, keyFn) {
@@ -51,7 +70,8 @@ if (!Object.groupBy) {
     let index = 0;
     for (const item of items) {
       const key = keyFn(item, index++);
-      (result[key] ??= []).push(item);
+      if (!result[key]) result[key] = [];
+      result[key].push(item);
     }
     return result;
   };
@@ -83,6 +103,66 @@ if (!Array.prototype.findLastIndex) {
     return -1;
   };
 }
+if (!String.prototype.replaceAll) {
+  String.prototype.replaceAll = function (search, replacement) {
+    if (search instanceof RegExp) {
+      if (!search.global) {
+        throw new TypeError('replaceAll must be called with a global RegExp');
+      }
+      return this.replace(search, replacement);
+    }
+    if (typeof replacement === 'function') {
+      // 目前 vendor 用法（epub.js 的字型反混淆）只會傳入字串
+      // replacement，故不實作函式型 replacement——若未來真的用到，寧可
+      // 在這裡明確拋出例外，也不要靜默產生錯誤結果（原本的寫法用
+      // Array.prototype.join(fn)，join() 對非字串參數只會呼叫
+      // fn.toString()，不會逐一呼叫該函式，等於把函式原始碼文字字面
+      // 插入結果字串，是難以排查的靜默錯誤）。
+      throw new TypeError(
+        'replaceAll polyfill 尚未實作函式型 replacement（目前 vendor 用法不需要）'
+      );
+    }
+    // 展開 \$\$（字面 \$ 符號）／\$&（比對到的子字串）兩種替換樣式，比照
+    // 原生 String.prototype.replaceAll 規格常見用法；不支援比對前/後文字
+    // 這兩種樣式——這兩者需要逐一追蹤每次匹配在原字串中的位置，split/join
+    // 這種一次切割做法無法簡單支援，目前 vendor 用法也用不到，暫不實作。
+    const expanded = String(replacement).replace(
+      /\\\$(\\\$|&)/g,
+      function (_, token) { return token === '\$' ? '\$' : String(search); }
+    );
+    return this.split(search).join(expanded);
+  };
+}
+if (typeof WeakRef === 'undefined') {
+  window.WeakRef = function (target) {
+    // 注意：僅用強參照模擬 deref()，不具備真正的弱參照／GC 語意，只用於
+    // 避免 ReferenceError；已知影響範圍：view.js 的 Media Overlays
+    // lastActive 單一插槽變數（見上方文件註解），該變數在下一次
+    // 'highlight' 事件觸發時會被覆寫，不會無限累積記憶體。
+    this._target = target;
+  };
+  window.WeakRef.prototype.deref = function () {
+    return this._target;
+  };
+}
+''';
+
+/// `window.applyPreferences` 過早呼叫佇列 shim（epic-18-reader-device-qa
+/// Issue 39，真機使用回報：ViWoods Air Reader C，`Uncaught TypeError:
+/// window.applyPreferences is not a function`）。`didUpdateWidget()`
+/// （見下方）只要 Dart 端偏好狀態變動（例如螢幕方向鎖定套用、既有書籍的
+/// 非同步 FXL 判斷完成）就會呼叫 `window.applyPreferences(...)`，這個呼叫
+/// 跟 `main.js`（ES module）是否已載入完成、真正定義出這個函式完全無關，
+/// 時機上必然存在競速。在 `AT_DOCUMENT_START`（比 `main.js` 更早）注入這個
+/// 佔位 shim，把 `window.applyPreferences` 暫時定義成「先把傳入值存起
+/// 來」；`main.js` 真正的賦值執行時會直接覆蓋掉這個 shim，並緊接著檢查
+/// 有沒有暫存值、有的話立刻補套用（見 main.js 對應修改）。不論 Dart 端
+/// 呼叫發生在 main.js 載入完成前後都不會出錯、也不會遺漏。
+const _applyPreferencesQueueShimJs = '''
+window.__pendingApplyPreferences = null;
+window.applyPreferences = function (prefs) {
+  window.__pendingApplyPreferences = prefs;
+};
 ''';
 
 /// 全局 JS 錯誤捕捉（epic-18-reader-device-qa Issue 33，真機使用回報：
@@ -615,6 +695,12 @@ class _FoliateEpubReaderViewState extends State<FoliateEpubReaderView> {
           initialUserScripts: UnmodifiableListView<UserScript>([
             UserScript(
               source: _esCompatPolyfillJs,
+              injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
+            ),
+            // epic-18-reader-device-qa Issue 39：見上方
+            // _applyPreferencesQueueShimJs 註解。
+            UserScript(
+              source: _applyPreferencesQueueShimJs,
               injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
             ),
             // epic-18-reader-device-qa Issue 33：見上方 _globalErrorCaptureJs
