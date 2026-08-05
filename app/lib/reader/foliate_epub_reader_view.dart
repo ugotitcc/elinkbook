@@ -55,6 +55,14 @@ import 'zone_action.dart';
 /// 任何 polyfill 本體，禁止使用 ES2020 之後的語法糖**（包括 `??=`／`||=`／
 /// `&&=`／選用鏈結 `?.` 需 Chromium 80+、標籤模板等），因為這份腳本存在
 /// 的唯一目的就是在不支援新語法的舊版 WebView 上執行。
+///
+/// 【epic-18-reader-device-qa Issue 41】`epub.js` 的字型反混淆
+/// （`deobfuscators`）用了 `String.prototype.replaceAll`（ES2021，需
+/// Chromium 85+）；`view.js` 的 Media Overlays 用了 `WeakRef`（ES2021，需
+/// Chromium 84+）。iReader Ocean 4 Plus 的 Chromium 83 兩者皆不支援。兩者
+/// 皆只在特定書籍功能（含混淆內嵌字型／含 media overlay）才會執行到，非
+/// 通用開書路徑，故不像 Task 38 的 `??=` 語法解析失敗那樣影響「每一本
+/// 書」，但仍是真實存在的崩潰風險，一併補上防護。
 const _esCompatPolyfillJs = '''
 if (!Object.groupBy) {
   Object.groupBy = function (items, keyFn) {
@@ -93,6 +101,27 @@ if (!Array.prototype.findLastIndex) {
       if (predicate.call(thisArg, this[i], i, this)) return i;
     }
     return -1;
+  };
+}
+if (!String.prototype.replaceAll) {
+  String.prototype.replaceAll = function (search, replacement) {
+    if (search instanceof RegExp) {
+      if (!search.global) {
+        throw new TypeError('replaceAll must be called with a global RegExp');
+      }
+      return this.replace(search, replacement);
+    }
+    return this.split(search).join(
+      typeof replacement === 'function' ? replacement : String(replacement)
+    );
+  };
+}
+if (typeof WeakRef === 'undefined') {
+  window.WeakRef = function (target) {
+    this._target = target;
+  };
+  window.WeakRef.prototype.deref = function () {
+    return this._target;
   };
 }
 ''';

@@ -656,6 +656,32 @@ void main() {
       expect(polyfillScript.source, isNot(contains('&&=')));
     });
 
+    testWidgets(
+        'ES compat polyfill 含 String.prototype.replaceAll／WeakRef 防護'
+        '（epic-18-reader-device-qa Issue 41，iReader Ocean 4 Plus 系統 '
+        'WebView 為 Chromium 83，早於 replaceAll 需要的 85／WeakRef 需要的 '
+        '84，epub.js 的字型反混淆與 view.js 的 media overlay 功能會用到）',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: FoliateEpubReaderView(
+            filePath: '/tmp/sample.epub',
+            onPageRendered: _noop,
+            onError: _noopError,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final webView = tester.widget<InAppWebView>(find.byType(InAppWebView));
+      final scripts = webView.platform.params.initialUserScripts;
+      final polyfillScript = scripts!.first;
+      expect(polyfillScript.source, contains('String.prototype.replaceAll'));
+      expect(polyfillScript.source, contains('WeakRef'));
+    });
+
     // epic-18-reader-device-qa Issue 33：iReader Ocean 4 Plus 開書卡住問題
     // 沒有任何真機診斷資料佐證確切根因（報告 5 個推測皆未經真機驗證），
     // 這裡先建立診斷能力——全局 JS 錯誤捕捉能抓到 main.js 既有
