@@ -1119,3 +1119,33 @@ AiPaper Reader C 這類 E-Ink 裝置為了讓文字/圖示夠大，`devicePixelR
 **相關佐證：**
 - 計劃文件 `docs/epics/epic-18-reader-device-qa/plans/plan-issue-38-41.md`（`/superpowers:writing-plans` 產出，全部 Task 已完成）
 - 審查報告 `tmp/epic-18/review-issue-38-41.md`
+
+---
+
+## Issue 42-44：書架橫屏對齊、頁首/頁尾精簡、導航熱區配色一致（`/diagnose` 第六輪）
+
+**背景（2026-08-05）：** 使用者提供橫屏書架截圖，並提出 3 項 UI 調整需求，經 `/diagnose` 逐項查明根因、`/superpowers:writing-plans` 撰寫計劃（`docs/epics/epic-18-reader-device-qa/plans/plan-issue-42-44.md`）後於獨立 worktree／分支（`fix/epic-18-issue-42-44-shelf-header-navzone`）實作，各自一個 commit。
+
+### Issue 42：書架橫屏下分類拼貼格與書籍格同列時封面高度不對齊
+
+**Status:** ✅ 已完成。**回報過程**：使用者最初附的截圖其實是已於 PR #116（Issue 37）修正的舊問題截圖（直式螢幕），經人類更正提供正確的橫屏截圖後重新分析，確認是與 Issue 37 無關的全新問題。**根因（已用真實 widget test 精確量測確認，非臆測）**：橫屏下 `crossAxisCount` 從 3 變為 4，若圖書庫剛好有 3 個分類，直式（3 欄）時 3 個分類拼貼格恰好填滿第一列、書籍格從第二列開始，兩者不會同列；橫屏（4 欄）時 3 個分類拼貼格只填滿前 3 欄，第 4 欄由第一本書籍格填入，分類拼貼格與書籍格因此混排同列。`SliverGridDelegateWithFixedCrossAxisCount` 保證同列所有 cell 外層總高度相同，但 `_GroupGridTile` 文字說明區只有 1 行（分類名稱＋本數）、`_BookGridTile` 有 2 行（書名＋進度），兩者封面 `Expanded` 吃到的剩餘高度因此不同，導致封面底部邊界錯開（實測差 14px）。**修法**：兩種 cell 的文字說明區共用同一個固定高度容器，分類拼貼格會因此犧牲一點點封面高度（約 14px，換取跨 cell 對齊），是本修法必然的取捨。
+
+**程式碼審查回應（`tmp/epic-18/review-issue-42-44.md`，Ready to merge: Yes，0 Critical／1 Important／2 Minor）：** 修正 1 項 Important——新增的固定高度容器對系統字級縮放（accessibility text scaling）沒有防護，修法前文字說明區是自然高度不會溢位，修法後鎖進固定像素值，字級放大時 `_BookGridTile` 的 2 行文字可能觸發 `RenderFlex` 溢位。改用 `MediaQuery.textScalerOf(context).scale(...)` 讓固定高度隨系統字級同比例縮放；已用「暫時還原成未縮放版本」的方式實測驗證：確實重現 `RenderFlex overflowed by 13 pixels`，換回縮放版本後測試通過，證實修法真正解決問題而非巧合。修正 1 項 Minor——回歸測試原本只建立 1 個分類（任何欄數下皆會同列，未精確重現「橫屏限定」的觸發條件），改為 3 個不同分類＋橫屏 4 欄，具體驗證「第 4 欄由第一本書籍格頂上」的情境。
+
+### Issue 43：頁首/頁尾文字移除按鈕底色、縮小至只佔文字空間、字級改為 12、文字顏色改為黑色
+
+**Status:** ✅ 已完成。使用者回報 3 項 EPUB 閱讀器頁首（章節名稱）／頁尾（頁碼進度）純顯示文字的調整：不需要按鈕樣式底色、縮小到只佔文字本身空間、字級改為 12（原 16，Issue 32 所設）。**修法**：`_buildFoliateHeaderText()`／`_buildFoliateProgressText()` 拿掉 `Container` 的 `padding`／`BoxDecoration`（黑色半透明底色），只保留純文字；`Key` 刻意留在最外層 `Container` 而非移到 `Text`——既有大量測試用 `find.descendant(of: find.byKey(...), matching: find.byType(Text))` 尋找內部 `Text`，Key 若直接掛在 `Text` 上會讓這些既有測試全部找不到而失敗。**人類事後補充**：文字顏色也從白色改為黑色，與書本內文一致——拿掉底色後白色文字疊在淺色書頁背景上基本上看不到。
+
+### Issue 44：導航熱區「左翻頁」／「右翻頁」卡片圖示配色不一致
+
+**Status:** ✅ 已完成。**根因**：`nav_zone_settings_screen.dart` 的 `_buildTemplateCard()`（`leftFlip`／`rightFlip` 共用）原本用「欄位位置」決定色塊顏色（左欄固定藍、中欄固定綠、右欄固定紅），不論該欄實際顯示什麼圖示。`leftFlip` 的 `chevron_left` 落在紅欄、`rightFlip` 的 `chevron_left` 卻落在藍欄——同一個「上一頁」`<` 圖示在兩張卡片上顏色不同，這正是使用者回報「簡單第二個圖示顏色應與第一個一致」的成因。**修法**：新增頂層純函式 `navZoneTemplateIconColor(IconData icon)`（`chevron_left`→紅、`chevron_right`→藍、`menu`→綠、其餘→灰），改用「圖示本身」決定顏色，比照 Issue 36 已建立的 `oneHand` 卡片配色慣例，`_buildOneHandTemplateCard()` 本身未被觸碰。
+
+**單元測試要求（皆已完成）：** `app/test/screens/library_screen_test.dart`（Issue 42 對齊測試＋審查回應新增的字級縮放溢位回歸測試）、`app/test/screens/reader_screen_test.dart`（Issue 43 無底色/無內距/字級 12/文字色黑測試）、`app/test/screens/nav_zone_settings_screen_test.dart`（Issue 44 `navZoneTemplateIconColor` 純函式測試＋左右翻頁卡片同圖示同色的 widget 層回歸測試）。
+
+**驗收標準：** `flutter analyze` 全程維持乾淨；全專案 `flutter test`（976 個測試）無回歸；已透過 PR #118 合併回 `main`。
+
+**相關佐證：**
+- 分支 `fix/epic-18-issue-42-44-shelf-header-navzone`（5 個 commit：Issue 42／43／44 各一、審查回應 2 個），PR #118
+- 計劃文件 `docs/epics/epic-18-reader-device-qa/plans/plan-issue-42-44.md`（`/superpowers:writing-plans` 產出，全部 Task 已完成）
+- 審查報告 `tmp/epic-18/review-issue-42-44.md`
+- 截圖 `tmp/images/橫屏書架未對齊.jpg`（使用者提供的橫屏截圖，紅線標示錯位邊界）

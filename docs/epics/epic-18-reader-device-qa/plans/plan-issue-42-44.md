@@ -38,7 +38,7 @@
 - Consumes：無新增依賴。
 - Produces：新增檔案層級常數 `_kGridTileFooterHeight`（`double`），供 `_GroupGridTile`／`_BookGridTile` 共用；兩者的文字說明區改包在 `SizedBox(height: _kGridTileFooterHeight, ...)` 內。
 
-- [ ] **Step 1: 寫失敗測試——量測分類拼貼格與書籍格同列時的文字標籤起始 Y 座標，斷言相同**
+- [x] **Step 1: 寫失敗測試——量測分類拼貼格與書籍格同列時的文字標籤起始 Y 座標，斷言相同**
 
 在 `app/test/screens/library_screen_test.dart` 新增測試（放在既有「填滿可用高度」測試附近即可）：
 
@@ -105,7 +105,7 @@
 
 （`library_screen_test.dart` 檔案內既有的共用 `prefsManager`／`_testBook` 輔助函式已停用 `openLastBookOnLaunch`，直接沿用即可，不需要額外處理。）
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 ```bash
 cd app
@@ -114,7 +114,7 @@ flutter test test/screens/library_screen_test.dart --plain-name "文字標籤起
 
 預期失敗：`bookTitleTop` 與 `groupLabelTop` 相差約 14（實際數值以執行結果為準，測試環境的字型 metrics 可能與正式環境略有差異，但方向與量級應一致）。
 
-- [ ] **Step 3: 修正 `_GroupGridTile`／`_BookGridTile`，讓文字說明區共用固定高度**
+- [x] **Step 3: 修正 `_GroupGridTile`／`_BookGridTile`，讓文字說明區共用固定高度**
 
 在 `library_screen.dart` 頂層（`class _GroupTile` 之前或任一兩個 class 之前皆可，建議放在 `_GroupGridTile` 上方）新增常數：
 
@@ -204,7 +204,7 @@ const _kGridTileFooterHeight = 34.0;
           ),
 ```
 
-- [ ] **Step 4: 執行測試確認通過，若未通過則校準 `_kGridTileFooterHeight`**
+- [x] **Step 4: 執行測試確認通過，若未通過則校準 `_kGridTileFooterHeight`**
 
 ```bash
 flutter test test/screens/library_screen_test.dart --plain-name "文字標籤起始 Y 座標對齊"
@@ -212,7 +212,7 @@ flutter test test/screens/library_screen_test.dart --plain-name "文字標籤起
 
 若仍失敗，依失敗訊息顯示的實際差值調整 `_kGridTileFooterHeight`（增減差值後重跑），直到兩者的 `dy` 完全相等。
 
-- [ ] **Step 5: 跑整個檔案與 `flutter analyze` 確認無回歸**
+- [x] **Step 5: 跑整個檔案與 `flutter analyze` 確認無回歸**
 
 ```bash
 flutter test test/screens/library_screen_test.dart
@@ -221,7 +221,7 @@ flutter analyze
 
 特別注意：`_BookGridTile` 原本兩個 `Text` 是 `Column` 的直接子項（`crossAxisAlignment: CrossAxisAlignment.stretch`），這裡包進內層 `Column(mainAxisSize: MainAxisSize.min)` 後，內層 `Column` 預設 `crossAxisAlignment.center`，兩個 `Text` 皆已設定 `textAlign: TextAlign.center` 且外層又是 `stretch`，視覺上應無變化；若跑完既有測試發現任何依賴 `_BookGridTile` 內部 widget 結構（例如 `find.descendant` 尋找特定巢狀層級）的既有測試失敗，逐一檢視並視情況調整 finder（預期不會，因為既有測試多用 `find.text(...)`／`find.byKey(...)`，不特別依賴巢狀層級）。
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/screens/library_screen.dart app/test/screens/library_screen_test.dart
@@ -244,7 +244,7 @@ git commit -m "fix(epic-18): Issue 42 — 書架橫屏下分類拼貼格與書�
 - Consumes：無。
 - Produces：兩個方法回傳的 widget 樹改為「`Container(key: ...)` 直接包一個 `Text`」（不再有 `padding`/`decoration`），`Key('reader_foliate_header_text')`／`Key('reader_foliate_progress_text')` 維持掛在最外層 `Container` 上（**不要**把 Key 直接移到 `Text` 上——既有大量測試用 `find.descendant(of: find.byKey(...), matching: find.byType(Text))` 尋找內部的 `Text`，Key 若直接掛在 `Text` 上，`descendant` 搜尋不含自身，會導致這些既有測試全部找不到而失敗）。
 
-- [ ] **Step 1: 寫失敗測試——斷言字級為 12、且不再有背景裝飾／內距**
+- [x] **Step 1: 寫失敗測試——斷言字級為 12、且不再有背景裝飾／內距**
 
 在 `app/test/screens/reader_screen_test.dart` 新增測試（找一個既有建構好 `ReaderScreen`、`_chromeVisible` 已觸發沉浸模式顯示頁首頁尾的既有測試附近，比照其 setup 方式）：
 
@@ -282,7 +282,7 @@ git commit -m "fix(epic-18): Issue 42 — 書架橫屏下分類拼貼格與書�
   });
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 ```bash
 flutter test test/screens/reader_screen_test.dart --plain-name "不含按鈕底色與內距"
@@ -290,7 +290,7 @@ flutter test test/screens/reader_screen_test.dart --plain-name "不含按鈕底�
 
 預期失敗：`headerContainer.padding`／`decoration` 皆非 null（目前有 `EdgeInsets.symmetric`／`BoxDecoration`），字級斷言也會失敗（目前是 16）。
 
-- [ ] **Step 3: 修正 `_buildFoliateHeaderText()`／`_buildFoliateProgressText()`**
+- [x] **Step 3: 修正 `_buildFoliateHeaderText()`／`_buildFoliateProgressText()`**
 
 ```dart
   Widget _buildFoliateHeaderText() {
@@ -327,7 +327,7 @@ flutter test test/screens/reader_screen_test.dart --plain-name "不含按鈕底�
   }
 ```
 
-- [ ] **Step 4: 更新既有的兩處 `fontSize, 16` 斷言為 `12`**
+- [x] **Step 4: 更新既有的兩處 `fontSize, 16` 斷言為 `12`**
 
 ```bash
 grep -n "fontSize, 16" test/screens/reader_screen_test.dart
@@ -335,20 +335,20 @@ grep -n "fontSize, 16" test/screens/reader_screen_test.dart
 
 目前已知 2 處（`headerText.style?.fontSize, 16` 與 `footerText.style?.fontSize, 16`），改為 `12`。執行這個 grep 確認沒有遺漏第 3 處——若有其他既有測試也斷言了頁首/頁尾字級為 16，一併更新。
 
-- [ ] **Step 5: 執行測試確認通過**
+- [x] **Step 5: 執行測試確認通過**
 
 ```bash
 flutter test test/screens/reader_screen_test.dart --plain-name "不含按鈕底色與內距"
 ```
 
-- [ ] **Step 6: 跑整個檔案與 `flutter analyze` 確認無回歸**
+- [x] **Step 6: 跑整個檔案與 `flutter analyze` 確認無回歸**
 
 ```bash
 flutter test test/screens/reader_screen_test.dart
 flutter analyze
 ```
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app/lib/screens/reader_screen.dart app/test/screens/reader_screen_test.dart
@@ -376,7 +376,7 @@ git commit -m "fix(epic-18): Issue 43 — 頁首/頁尾文字移除按鈕底色�
 - Consumes：無新增依賴。
 - Produces：新增頂層純函式 `Color navZoneTemplateIconColor(IconData icon)`（`Icons.chevron_left` → `Colors.red.shade100`；`Icons.chevron_right` → `Colors.blue.shade100`；`Icons.menu` → `Colors.green.shade100`；其餘圖示回退 `Colors.grey.shade100`，理論上不會用到，純防禦性预設值）——抽成頂層純函式（不是 `_NavZoneSettingsScreenState` 的私有方法）方便未來若有其他呼叫端需要同樣的配色語意時重用，也方便獨立測試（比照本檔案既有 `resolveCustomFontUri`／`handleFoliateConsoleMessage` 抽出頂層純函式獨立測試的既有慣例）。
 
-- [ ] **Step 1: 寫失敗測試——斷言 `navZoneTemplateIconColor()` 的配色語意**
+- [x] **Step 1: 寫失敗測試——斷言 `navZoneTemplateIconColor()` 的配色語意**
 
 在 `app/test/screens/nav_zone_settings_screen_test.dart` 新增測試（獨立 `group`，不需要 pump widget，純函式測試）：
 
@@ -440,7 +440,7 @@ git commit -m "fix(epic-18): Issue 43 — 頁首/頁尾文字移除按鈕底色�
 
 （上面 `colorOfIcon` 這段 finder 巢狀寫法較複雜，若實作時發現不好用，可以改用更簡單的寫法：直接用 `find.descendant(of: find.byKey(cardKey), matching: find.byWidgetPredicate((w) => w is Container && w.color != null))` 取得該卡片內全部 3 個色塊 `Container`，再逐一比對其 `child`〔`Icon`〕是否為目標圖示，取出對應的 `.color`——效果相同，寫法依實作者判斷選用較清楚的一種即可，這不是本計劃的關鍵決策點。）
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 ```bash
 flutter test test/screens/nav_zone_settings_screen_test.dart --plain-name "navZoneTemplateIconColor"
@@ -449,7 +449,7 @@ flutter test test/screens/nav_zone_settings_screen_test.dart --plain-name "使�
 
 預期：`navZoneTemplateIconColor` 測試因函式不存在而編譯失敗；「使用相同顏色」測試因目前 `rightFlip` 卡片的 `chevron_left`（藍）與 `leftFlip` 的 `chevron_left`（紅）不同而斷言失敗。
 
-- [ ] **Step 3: 新增 `navZoneTemplateIconColor()` 頂層函式，修改 `_buildTemplateCard()` 改用它決定顏色**
+- [x] **Step 3: 新增 `navZoneTemplateIconColor()` 頂層函式，修改 `_buildTemplateCard()` 改用它決定顏色**
 
 在 `nav_zone_settings_screen.dart` 檔案頂層（class 定義之前或之後皆可，建議放在 imports 之後、`NavZoneSettingsScreen` class 之前）新增：
 
@@ -533,21 +533,21 @@ Color navZoneTemplateIconColor(IconData icon) {
 
 （`middleIcon == null` 時維持原本的中性灰色 `Colors.grey.shade100`——目前 `_buildTemplateCard()` 唯一會傳 `middleIcon: null` 的呼叫端已在 Issue 36 移除〔`oneHand` 改用獨立的 `_buildOneHandTemplateCard()`〕，`leftFlip`／`rightFlip` 兩個現存呼叫端的 `middleIcon` 恆為 `Icons.menu`，這個 null 分支理論上不會被觸發，純粹防禦性保留既有行為、不删除既有邏輯分支。）
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 ```bash
 flutter test test/screens/nav_zone_settings_screen_test.dart --plain-name "navZoneTemplateIconColor"
 flutter test test/screens/nav_zone_settings_screen_test.dart --plain-name "使用相同顏色"
 ```
 
-- [ ] **Step 5: 跑整個檔案與 `flutter analyze` 確認無回歸**
+- [x] **Step 5: 跑整個檔案與 `flutter analyze` 確認無回歸**
 
 ```bash
 flutter test test/screens/nav_zone_settings_screen_test.dart
 flutter analyze
 ```
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/screens/nav_zone_settings_screen.dart app/test/screens/nav_zone_settings_screen_test.dart
