@@ -62,14 +62,32 @@ ThemeData _buildDarkTheme() {
   const background = Color(0xFF121214);
   const surface = Color(0xFF1E1E22);
   const onSurface = Color(0xFFE8E8EC);
-  const border = Color(0xFF2A2A30);
+  // 【epic-22-reader-theme-integration Issue 4】原值 #2A2A30 與 surface
+  // #1E1E22 亮度幾乎無法區分（感知亮度差僅約 0.048），導致 Switch 等
+  // Material 元件關閉狀態外框（吃 colorScheme.outline）在深色主題下難以
+  // 辨識。第一版調整為 #5C5C66（亮度差約 0.246）在一般 LCD/OLED 顯示器上
+  // 已達標，但真機電子紙硬體肉眼實測發現這條外框線在電子紙上仍完全不可
+  // 辨識（電子紙灰階抖動渲染機制對細線條特別不利），故進一步調亮為
+  // #86868F（亮度差約 0.41），同時套用到 dividerColor（本檔案既有設計：
+  // 單一色票同時代表 outline 與分隔線語意，見下方 dividerColor 賦值處，
+  // 一併受惠）。
+  const border = Color(0xFF86868F);
   const primary = Color(0xFFBB86FC);
+  // 【epic-22-reader-theme-integration Issue 4 電子紙硬體對比追加修正】
+  // Switch 關閉狀態的軌道底色（M3 Switch 吃 colorScheme.surfaceContainerHighest）
+  // 原本未客製，隱性等於 surface（#1E1E22），與背景完全同色，關閉狀態
+  // 只能靠上方那條外框線撐可視度——但細線條在電子紙上不可靠（見上方
+  // outline 註解），故新增這個色票，讓關閉狀態的 Switch 本身就是一塊與
+  // surface 有明顯亮度差（約 0.119）的實心色塊，即使外框線在電子紙上
+  // 打折扣，使用者仍能從色塊本身辨識出「這裡有個開關」。
+  const surfaceContainerHighest = Color(0xFF3C3C44);
 
   final colorScheme = ColorScheme.dark(
     primary: primary,
     surface: surface,
     onSurface: onSurface,
     outline: border,
+    surfaceContainerHighest: surfaceContainerHighest,
   );
 
   return ThemeData(
