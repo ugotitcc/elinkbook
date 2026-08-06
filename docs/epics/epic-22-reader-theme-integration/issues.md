@@ -106,16 +106,25 @@ None - can start immediately（規劃階段）。
 
 ## Issue 5：深色主題下點擊「進度/跳頁」按鈕，書籍內容區變成全黑不可辨識
 
-**Status:** needs-triage（2026-08-06，`epic-22-issue-2` 審查過程中人類真機測試發現並確認「真的全黑不可辨識」——`/superpowers:requesting-code-review` 初步查證疑似 Issue 1 上線後的下游副作用，詳見 `tmp/epic-22/review-issue-2-implementation.md` Part 2 第 3 項；人類已確認為真實 bug，非審查者原本猜測的「疊加後偏暗」）
+**Status:** ✅ 已完成（2026-08-06，`/diagnose` 確認根因並修復，詳見 `reviews/bugfix-repro-issue5.md`）
 
-**依賴：** 無，可獨立排入規劃，但**優先度應高於 Issue 3／4**——這是使用者實際操作會撞到的真實可重現 bug（點擊既有功能按鈕導致畫面不可用），Issue 3／4 是視覺體驗改善。
+**依賴：** 無。
 
-### What to build（待進一步診斷，建議走 `/diagnose` 而非直接規劃修法）
+### 根因（`/diagnose` 確認，非 WebView 合成 bug）
 
-`_openFoliateProgressSheet()`（`app/lib/screens/reader_screen.dart:1861-1872`）呼叫 `showModalBottomSheet` 未指定 `backgroundColor`/`barrierColor`，用 Flutter 預設半透明黑遮罩（`Colors.black54`）。審查者初步假設：Issue 1 上線後，深色主題下書頁背景本身已跟隨 `_themedBackgroundColor` 變為近黑的 `#121214`，再疊加半透明黑遮罩，理論上應該只是「更暗」而非「全黑不可辨識」——但人類真機確認的現象是**真的全黑**，超出這個假設能解釋的範圍，審查者也不排除 `InAppWebView`（PlatformView）與 Flutter 半透明覆蓋層之間的原生合成相容性問題（`app/lib/reader/foliate_epub_reader_view.dart:703-714` 未顯式設定合成模式）。
+`reader_screen.dart` 全部 6 個 `showModalBottomSheet` 呼叫點（版面設定/PDF 設定/FXL 設定/目錄/筆記/進度）皆未指定 `barrierColor`，用 Flutter 框架預設值 `Colors.black54`——這個值完全沒被 Issue 1/2 改動過。用 Flutter 引擎真正的 `Color.alphaBlend()` 建立確定性驗證迴圈實測：Issue 1 上線前（書本原始背景近似白底）合成結果 RGB≈(117,117,117)，清楚可辨識；Issue 1 上線後（`AppTheme.dark` 背景 `#121214`）合成結果 RGB≈(8,8,9)，一般手機螢幕正常環境光下已與純黑無法區分。另外查證 `flutter_inappwebview`（6.1.5）`useHybridComposition` 預設值為 `true`（正是設計來避免這類半透明疊層合成異常的模式），排除原生合成 bug 的可能性。真正原因純粹是既有不變的遮罩值疊在 Issue 1 新增的深色背景上，數學上必然合成出人眼判讀為全黑的結果。
 
-根因尚未確認，不建議跳過診斷直接規劃修法——下一步應該用 `/diagnose` 建立真機重現的 feedback loop（例如比對「開啟進度面板前」與「開啟後」的畫面截圖，確認究竟是 WebView 內容本身變黑、還是被覆蓋層完全遮蔽、或其他原因），找到真正根因後再回來規劃修法。
+### 修法（人類確認：深色主題下取消遮罩；6 個彈窗一起修）
+
+新增共用私有方法 `_showThemedModalBottomSheet<T>()`（`app/lib/screens/reader_screen.dart`），依 `Theme.of(context).brightness` 決定 `barrierColor`：深色主題 `Colors.transparent`，其餘（淺色/羊皮紙/E-Ink）維持 Flutter 既有預設值 `Colors.black54` 不變。全部 6 個原本直接呼叫 `showModalBottomSheet` 的地方改用這個共用方法，一次修正（不只 Issue 5 報告的進度面板）。
+
+### Acceptance criteria
+
+- [x] 深色主題下開啟任一 Bottom Sheet（進度／版面設定等），不再出現「真的會遮蔽畫面」的遮罩（`ModalBarrier` alpha > 0 的實例），書籍內容區維持可辨識。
+- [x] 淺色/羊皮紙主題下遮罩行為維持 Flutter 既有預設值不變（回歸保證）。
+- [x] `app/test/screens/reader_screen_test.dart` 新增 3 項回歸測試（深色主題進度面板、深色主題版面設定面板〔驗證共用 helper 套用到不只一個呼叫點〕、淺色主題回歸保證）。
+- [x] `flutter analyze` 乾淨、`flutter test`（本檔案 133/133、全專案 995/995）全數通過。
 
 ### Blocked by
 
-None - can start immediately（建議下一步先 `/diagnose`，而非直接寫 plan）。
+None - 已完成。

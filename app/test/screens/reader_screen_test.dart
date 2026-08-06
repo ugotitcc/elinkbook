@@ -5229,6 +5229,119 @@ void main() {
     expect(footerText.style?.color, Colors.black);
   });
 
+  testWidgets(
+      '深色主題下開啟進度/跳頁 Bottom Sheet，遮罩透明（epic-22-reader-'
+      'theme-integration Issue 5：/diagnose 確認 showModalBottomSheet 預設'
+      'barrierColor（Colors.black54）疊在 AppTheme.dark 已變深的書頁背景'
+      '上，合成結果逼近人眼無法辨識的全黑，改為深色主題下完全不用遮罩）',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildThemeData(AppTheme.dark),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_progress_sheet_dark_barrier',
+          prefsManager: prefsManager,
+          isFixedLayout: false,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('reader_foliate_progress_button')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // 【驗證過程修正】widget 樹裡同時存在其他語意用途的 ModalBarrier
+    // （color 恆為 null，非本次 Bottom Sheet 產生）。另外查證 Flutter
+    // 框架本身（bottom_sheet.dart:1133，`if (barrierColor.a != 0 &&
+    // !offstage)`）在 barrierColor 完全透明（alpha=0）時，根本不會建構
+    // 出有顏色的 ModalBarrier widget（視為無遮罩效果的最佳化路徑）——
+    // 故正確斷言方式是「找不到任何『真的會遮蔽畫面』（alpha > 0）的
+    // ModalBarrier」，而不是找一個 color 等於 Colors.transparent 的
+    // 實例（該實例根本不會被建構）。
+    final dimmingBarrierFinder = find.byWidgetPredicate(
+      (widget) =>
+          widget is ModalBarrier && widget.color != null && widget.color!.a > 0,
+    );
+    expect(dimmingBarrierFinder, findsNothing);
+  });
+
+  testWidgets(
+      '深色主題下開啟版面設定 Bottom Sheet，遮罩同樣透明（epic-22-reader-'
+      'theme-integration Issue 5：修法透過共用 helper 套用到全部 6 個'
+      'Bottom Sheet 呼叫點，不只進度面板一處，本測試驗證另一個呼叫點'
+      '同樣生效）', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildThemeData(AppTheme.dark),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_settings_sheet_dark_barrier',
+          prefsManager: prefsManager,
+          isFixedLayout: false,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    // 「版面設定」按鈕在收到 onLayoutResolved 前是停用的（onPressed 為
+    // null），比照既有測試（本檔案第 293 行附近）先觸發一次才能點擊。
+    final foliateView = tester.widget<FoliateEpubReaderView>(
+      find.byType(FoliateEpubReaderView),
+    );
+    foliateView.onPageRendered();
+    foliateView.onLayoutResolved?.call(
+      const EpubLayoutInfo(
+        isFixedLayout: false,
+        writingMode: WritingMode.vertical,
+      ),
+    );
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('reader_foliate_settings_button')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    final dimmingBarrierFinder = find.byWidgetPredicate(
+      (widget) =>
+          widget is ModalBarrier && widget.color != null && widget.color!.a > 0,
+    );
+    expect(dimmingBarrierFinder, findsNothing);
+  });
+
+  testWidgets(
+      '淺色主題下開啟進度/跳頁 Bottom Sheet，遮罩維持 Flutter 既有預設值'
+      '（不受本次修法影響，回歸保證）', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildThemeData(AppTheme.light),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_progress_sheet_light_barrier',
+          prefsManager: prefsManager,
+          isFixedLayout: false,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('reader_foliate_progress_button')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    final barrier = tester.widget<ModalBarrier>(find.byWidgetPredicate(
+      (widget) => widget is ModalBarrier && widget.color != null,
+    ));
+    expect(barrier.color, Colors.black54);
+  });
+
   tearDownAll(() {
     // 還原 cacheBookForServing 為原始實作，避免污染其他測試檔
     cacheBookForServing = originalCacheBookForServing;

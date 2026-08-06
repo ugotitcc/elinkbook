@@ -633,10 +633,37 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     _openPdfSettings();
   }
 
-  void _openLayoutSettings() {
-    showModalBottomSheet<void>(
+  /// 統一包裝 showModalBottomSheet：深色主題下遮罩改為完全透明。
+  ///
+  /// 顯示流式 EPUB 時，書頁背景已跟隨 `Theme.of(context)` 變深（見
+  /// epic-22-reader-theme-integration Issue 1），Flutter `showModalBottomSheet`
+  /// 既有預設半透明黑遮罩（`Colors.black54`）疊在這個已經很深的背景上，
+  /// 合成結果逼近人眼無法辨識的全黑（`/diagnose` 已用 `Color.alphaBlend`
+  /// 實測驗證：`AppTheme.dark` 背景 `#121214` 疊上 54% 黑遮罩，合成
+  /// RGB≈(8,8,9)，一般手機螢幕正常環境光下已與純黑無法區分）——這不是
+  /// WebView 合成或本次改動引入的 bug，是既有不變的遮罩值疊在變深的背景
+  /// 上必然的數學結果，見 Issue 5。純降低遮罩透明度數值救不了（背景起點
+  /// 已接近 0，任何黑色遮罩疊上去仍然接近黑），故深色主題下直接取消
+  /// 遮罩；淺色/羊皮紙/E-Ink 皆為 `Brightness.light`，維持 Flutter 既有
+  /// 預設值不變。本專案所有 Bottom Sheet 呼叫點皆應改用此方法，不直接
+  /// 呼叫 `showModalBottomSheet`。
+  Future<T?> _showThemedModalBottomSheet<T>({
+    required WidgetBuilder builder,
+    bool enableDrag = true,
+  }) {
+    return showModalBottomSheet<T>(
       context: context,
       isScrollControlled: true,
+      enableDrag: enableDrag,
+      barrierColor: Theme.of(context).brightness == Brightness.dark
+          ? Colors.transparent
+          : null,
+      builder: builder,
+    );
+  }
+
+  void _openLayoutSettings() {
+    _showThemedModalBottomSheet<void>(
       // Bottom Sheet 預設的下滑關閉手勢（enableDrag: true）與 Slider 的
       // 水平拖曳手勢在混合角度滑動時容易被手勢競技場誤判，導致使用者
       // 調整滑桿時選單意外關閉；停用後仍可點擊背景遮罩關閉。
@@ -650,9 +677,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   }
 
   void _openPdfSettings() {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
+    _showThemedModalBottomSheet<void>(
       enableDrag: false,
       builder: (_) => PdfSettingsSheet(
         prefs: _prefs,
@@ -663,9 +688,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   }
 
   void _openFxlSettings() {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
+    _showThemedModalBottomSheet<void>(
       builder: (_) => FxlSettingsSheet(
         prefs: _prefs,
         onChanged: _handlePrefsChanged,
@@ -757,9 +780,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       _tocEntries,
       _epubPositionInfo?.progression,
     );
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
+    _showThemedModalBottomSheet<void>(
       builder: (_) => TocBottomSheet(
         entries: _tocEntries,
         initiallyExpandedEntries: currentPath.toSet(),
@@ -794,9 +815,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         : (_pdfPageInfo != null && _pdfPageInfo!.totalPages > 0
             ? (_pdfPageInfo!.pageIndex + 1) / _pdfPageInfo!.totalPages
             : widget.bookProgress);
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
+    _showThemedModalBottomSheet<void>(
       builder: (_) => NotesBottomSheet(
         bookId: widget.bookId,
         bookTitle: widget.bookTitle,
@@ -1862,9 +1881,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 「進度/跳頁鈕」段落）。
   void _openFoliateProgressSheet() {
     final positionInfo = _epubPositionInfo;
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
+    _showThemedModalBottomSheet<void>(
       builder: (_) => SafeArea(
         child: positionInfo == null
             ? const SizedBox.shrink()
