@@ -5342,6 +5342,154 @@ void main() {
     expect(barrier.color, Colors.black54);
   });
 
+  testWidgets(
+      '深色主題下流式 EPUB「返回」浮動按鈕底色/圖示色跟隨 Theme.of(context)'
+      '（epic-22-reader-theme-integration Issue 3）', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildThemeData(AppTheme.dark),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_fab_color_dark',
+          prefsManager: prefsManager,
+          isFixedLayout: false,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    // find.ancestor 可能撿到不只一個 Container（例如 Scaffold/MaterialApp
+    // 內部也會用到 Container），用 .first 精確鎖定最近的一個（緊包住
+    // IconButton 的那一個，即 ClipOval 底下設定 color 的那個）。
+    final backContainer = tester.widget<Container>(find.ancestor(
+      of: find.byKey(const Key('reader_foliate_back_button')),
+      matching: find.byType(Container),
+    ).first);
+    final backIcon = tester.widget<Icon>(find.descendant(
+      of: find.byKey(const Key('reader_foliate_back_button')),
+      matching: find.byType(Icon),
+    ));
+
+    final expectedTheme = buildThemeData(AppTheme.dark);
+    expect(
+      backContainer.color,
+      expectedTheme.colorScheme.onSurface.withValues(alpha: 0.54),
+    );
+    expect(backIcon.color, expectedTheme.colorScheme.surface);
+  });
+
+  testWidgets(
+      '淺色主題下流式 EPUB「返回」浮動按鈕底色/圖示色跟隨 Theme.of(context)'
+      '（epic-22-reader-theme-integration Issue 3）', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildThemeData(AppTheme.light),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_fab_color_light',
+          prefsManager: prefsManager,
+          isFixedLayout: false,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    // find.ancestor 可能撿到不只一個 Container（例如 Scaffold/MaterialApp
+    // 內部也會用到 Container），用 .first 精確鎖定最近的一個（緊包住
+    // IconButton 的那一個，即 ClipOval 底下設定 color 的那個）。
+    final backContainer = tester.widget<Container>(find.ancestor(
+      of: find.byKey(const Key('reader_foliate_back_button')),
+      matching: find.byType(Container),
+    ).first);
+    final backIcon = tester.widget<Icon>(find.descendant(
+      of: find.byKey(const Key('reader_foliate_back_button')),
+      matching: find.byType(Icon),
+    ));
+
+    final expectedTheme = buildThemeData(AppTheme.light);
+    expect(
+      backContainer.color,
+      expectedTheme.colorScheme.onSurface.withValues(alpha: 0.54),
+    );
+    expect(backIcon.color, expectedTheme.colorScheme.surface);
+  });
+
+  testWidgets(
+      'EPUB 固定版面：不論主題為何，浮動按鈕維持既有寫死 Colors.black54/'
+      'Colors.white（epic-22-reader-theme-integration Issue 3，固定版面'
+      '內容通常是白底圖片，控制按鈕跟著深色主題變色會失去對比）',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildThemeData(AppTheme.dark),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample_fixed_layout.epub',
+          bookId: 'b_fab_color_fxl',
+          prefsManager: prefsManager,
+          isFixedLayout: true,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    // find.ancestor 可能撿到不只一個 Container（例如 Scaffold/MaterialApp
+    // 內部也會用到 Container），用 .first 精確鎖定最近的一個（緊包住
+    // IconButton 的那一個，即 ClipOval 底下設定 color 的那個）。
+    final backContainer = tester.widget<Container>(find.ancestor(
+      of: find.byKey(const Key('reader_foliate_back_button')),
+      matching: find.byType(Container),
+    ).first);
+    final backIcon = tester.widget<Icon>(find.descendant(
+      of: find.byKey(const Key('reader_foliate_back_button')),
+      matching: find.byType(Icon),
+    ));
+
+    expect(backContainer.color, Colors.black54);
+    expect(backIcon.color, Colors.white);
+  });
+
+  testWidgets(
+      '深色主題下流式 EPUB「版面設定」浮動按鈕（有 onPressed 分流邏輯的'
+      '按鈕）顏色同樣跟隨主題（epic-22-reader-theme-integration Issue 3，'
+      '驗證不只最簡單的返回按鈕生效）', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildThemeData(AppTheme.dark),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_fab_color_settings_dark',
+          prefsManager: prefsManager,
+          isFixedLayout: false,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final settingsContainer = tester.widget<Container>(find.ancestor(
+      of: find.byKey(const Key('reader_foliate_settings_button')),
+      matching: find.byType(Container),
+    ).first);
+    final settingsIcon = tester.widget<Icon>(find.descendant(
+      of: find.byKey(const Key('reader_foliate_settings_button')),
+      matching: find.byType(Icon),
+    ));
+
+    final expectedTheme = buildThemeData(AppTheme.dark);
+    expect(
+      settingsContainer.color,
+      expectedTheme.colorScheme.onSurface.withValues(alpha: 0.54),
+    );
+    expect(settingsIcon.color, expectedTheme.colorScheme.surface);
+  });
+
   tearDownAll(() {
     // 還原 cacheBookForServing 為原始實作，避免污染其他測試檔
     cacheBookForServing = originalCacheBookForServing;
