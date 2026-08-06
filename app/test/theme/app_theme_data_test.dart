@@ -54,5 +54,32 @@ void main() {
       // 羊皮紙色通常不是純白
       expect(theme.scaffoldBackgroundColor, isNot(Colors.white));
     });
+
+    test(
+        'dark 主題的 outline 色與 surface 色有足夠感知亮度差，Switch 等元件'
+        '關閉狀態外框在深色背景下清楚可辨識（epic-22-reader-theme-'
+        'integration Issue 4：原色值 #2A2A30 與 surface #1E1E22 幾乎無法'
+        '區分，對比嚴重不足）', () {
+      final theme = buildThemeData(AppTheme.dark);
+      final outline = theme.colorScheme.outline;
+      final surface = theme.colorScheme.surface;
+
+      double perceivedLuminance(Color c) =>
+          0.299 * c.r + 0.587 * c.g + 0.114 * c.b;
+
+      final luminanceDiff =
+          (perceivedLuminance(outline) - perceivedLuminance(surface)).abs();
+
+      // 舊色值（#2A2A30 對 #1E1E22）的亮度差約 0.048，明顯不足；新色值
+      // 須顯著超過這個數字，門檻取 0.15（新色值實測約 0.246，留有餘裕）。
+      expect(luminanceDiff, greaterThan(0.15));
+    });
+
+    test(
+        'dark 主題的 dividerColor 與 outline 保持同一色值（本檔案既有設計：'
+        '單一色票同時代表 outline 與分隔線語意）', () {
+      final theme = buildThemeData(AppTheme.dark);
+      expect(theme.dividerColor, theme.colorScheme.outline);
+    });
   });
 }

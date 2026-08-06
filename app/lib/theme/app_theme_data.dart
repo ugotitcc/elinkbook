@@ -62,7 +62,14 @@ ThemeData _buildDarkTheme() {
   const background = Color(0xFF121214);
   const surface = Color(0xFF1E1E22);
   const onSurface = Color(0xFFE8E8EC);
-  const border = Color(0xFF2A2A30);
+  // 【epic-22-reader-theme-integration Issue 4】原值 #2A2A30 與 surface
+  // #1E1E22 亮度幾乎無法區分（感知亮度差僅約 0.048），導致 Switch 等
+  // Material 元件關閉狀態外框（吃 colorScheme.outline）在深色主題下難以
+  // 辨識。調整為亮度差約 0.246 的 #5C5C66，明顯可辨識但仍是低調的中灰
+  // 色調、不搶過 onSurface 的視覺焦點，同時套用到 dividerColor（本檔案
+  // 既有設計：單一色票同時代表 outline 與分隔線語意，見下方 dividerColor
+  // 賦值處，一併受惠）。
+  const border = Color(0xFF5C5C66);
   const primary = Color(0xFFBB86FC);
 
   final colorScheme = ColorScheme.dark(
