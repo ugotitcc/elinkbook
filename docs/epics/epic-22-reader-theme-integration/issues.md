@@ -42,7 +42,7 @@ None - can start immediately.
 
 ## Issue 2：頁首/頁尾文字色跟隨主題（流式 EPUB），固定版面維持現況
 
-**Status:** ready-for-agent
+**Status:** ✅ 已完成（2026-08-06，分支 `epic-22-issue-2`，1 個 commit，依 `plans/plan-issue-2.md` Task 1 實作，重用 Issue 1 既有的 `_themedTextColor`；真機視覺驗證已完成通過，符合計畫；`/superpowers:requesting-code-review` 審查 Ready to merge: Yes，0 Critical／0 Important，`flutter test` 130/130（本檔案）＋ 992/992（全專案）、`flutter analyze` 乾淨，詳見 `tmp/epic-22/review-issue-2-implementation.md`；審查過程中人類真機測試額外回報 3 項 UX 發現，皆與本 Issue 的 diff 無關，已另立 **Issue 3／4／5** 追蹤，見下方）
 
 **依賴：** 技術上無（不依賴 Issue 1 的任何程式碼變更，純 Flutter widget 屬性，與 Issue 1 走完全不同的程式路徑）。**建議與 Issue 1 一起驗收**——單獨完成本票、Issue 1 尚未完成時，會出現「頁首/頁尾變成深色主題文字、但書頁內容還是白底」的過渡期畫面。
 
@@ -56,12 +56,66 @@ PDF 不受影響——頁首/頁尾 widget 呼叫點既有的 `format == BookFor
 
 ### Acceptance criteria
 
-- [ ] 流式 EPUB 顯示時，頁首（章節名稱）與頁尾（頁碼進度）`TextStyle.color` 等於當下 `Theme.of(context).colorScheme.onSurface`，涵蓋 `AppTheme.light`/`dark`/`sepia` × `isEinkMode` 開/關共 6 種組合。
-- [ ] EPUB 固定版面顯示時，頁首/頁尾 `TextStyle.color` 不論 `AppTheme`/`isEinkMode` 為何皆維持 `Colors.black`（既有行為不變的回歸測試）。
-- [ ] 預設情境（`AppTheme.light`、E-Ink 關閉）下，新增本功能前後的顏色值與既有測試（含 Issue 43 既有的 `expect(headerText.style?.color, Colors.black)` 類斷言，此時仍應為黑色，因為預設淺色主題的 `onSurface` 本來就是黑色系）完全相同。
-- [ ] `app/test/screens/reader_screen_test.dart` 新增/擴充 widget test 涵蓋上述組合。
-- [ ] `flutter analyze` 乾淨、`flutter test` 全數通過。
+- [x] 流式 EPUB 顯示時，頁首（章節名稱）與頁尾（頁碼進度）`TextStyle.color` 等於當下 `Theme.of(context).colorScheme.onSurface`，涵蓋 `AppTheme.light`/`dark`/`sepia` × `isEinkMode` 開/關共 6 種組合。
+- [x] EPUB 固定版面顯示時，頁首/頁尾 `TextStyle.color` 不論 `AppTheme`/`isEinkMode` 為何皆維持 `Colors.black`（既有行為不變的回歸測試）。
+- [x] 預設情境（`AppTheme.light`、E-Ink 關閉）下，既有 Issue 43 測試已更新為明確指定 `theme: buildThemeData(AppTheme.light)` 並比對其實際 `onSurface` 色值（不再依賴 Flutter 隱含預設主題）。
+- [x] `app/test/screens/reader_screen_test.dart` 新增/擴充 widget test 涵蓋上述組合。
+- [x] `flutter analyze` 乾淨、`flutter test` 全數通過。
 
 ### Blocked by
 
 None - can start immediately（建議與 Issue 1 一起完成後再一併真機驗收，理由見上方「依賴」）。
+
+---
+
+## Issue 3：閱讀器浮動按鈕（FAB）顏色未依主題調整
+
+**Status:** needs-triage（2026-08-06，`epic-22-issue-2` 審查過程中人類真機測試發現，非本 Epic 迴歸——`/superpowers:requesting-code-review` 查證為 `epic-18-reader-device-qa` Issue 7 導入時就存在的既有設計，詳見 `tmp/epic-22/review-issue-2-implementation.md` Part 2 第 1 項）
+
+**依賴：** 無，可獨立排入規劃。
+
+### What to build（待 Discovery/規劃）
+
+流式 EPUB 閱讀畫面的 6 顆浮動圓形按鈕（返回／目錄／版面設定／書籤／筆記／進度-跳頁）目前一律用 `ClipOval(Container(color: Colors.black54, child: IconButton(icon: ..., color: Colors.white)))` 硬編碼樣式（`app/lib/screens/reader_screen.dart:1543-1657`），與 `Theme.of(context)` 完全無關。深色主題下使用體驗較差（半透明黑底疊在深色書頁上對比不足／不協調）。
+
+需要 Discovery 階段決定：這些按鈕的底色/圖示色要不要跟隨 `Theme.of(context)`（比照 Issue 1/2 的單一來源精神），還是維持「不論主題一律高對比黑底白圖示」的既有設計意圖（因為原本的設計目的可能就是「浮動控制項刻意用高對比視覺語言、不融入頁面」，需要人類確認原始設計意圖再決定要不要改）。
+
+### Blocked by
+
+None - can start immediately（規劃階段）。
+
+---
+
+## Issue 4：深色主題下設定面板 Toggle 開關（關閉狀態）對比不足
+
+**Status:** needs-triage（2026-08-06，`epic-22-issue-2` 審查過程中人類真機測試發現，非本 Epic 迴歸——`/superpowers:requesting-code-review` 查證根因在 `app_theme_data.dart` 既有色票設計，詳見 `tmp/epic-22/review-issue-2-implementation.md` Part 2 第 2 項）
+
+**依賴：** 無，可獨立排入規劃。
+
+### What to build（待 Discovery/規劃）
+
+版面設定面板（`app/lib/screens/reader_settings_sheet.dart:297-333`）的 `SwitchListTile` 是標準 Flutter 元件，本身無任何硬編碼顏色、理論上應主題感知。真正根因是 `app/lib/theme/app_theme_data.dart` 深色主題的 `colorScheme.outline`（`#2A2A30`）與同主題 `background`（`#121214`）／`surface`（`#1E1E22`）亮度過於接近——Material 3 `Switch` 關閉狀態的 thumb/track 外框正是取自 `outline`，導致對比不足、難以辨識目前是關閉狀態。
+
+需要 Discovery 階段決定：是否調整 `app_theme_data.dart` 深色主題的 `outline` 色值（**注意**：`epic-22` Issue 1/2 的 spec.md 明文決定「不修改 `app_theme_data.dart`」，但那個決定的前提是「這個檔案的色票設計本身沒有問題」——本 Issue 是發現色票設計本身有獨立缺陷，需要另外評估，不受該決定約束）；或改為只調整 `Switch` 元件層級的樣式覆蓋，不動全域色票（避免影響其他也用到 `outline` 的既有 UI）。
+
+### Blocked by
+
+None - can start immediately（規劃階段）。
+
+---
+
+## Issue 5：深色主題下點擊「進度/跳頁」按鈕，書籍內容區變成全黑不可辨識
+
+**Status:** needs-triage（2026-08-06，`epic-22-issue-2` 審查過程中人類真機測試發現並確認「真的全黑不可辨識」——`/superpowers:requesting-code-review` 初步查證疑似 Issue 1 上線後的下游副作用，詳見 `tmp/epic-22/review-issue-2-implementation.md` Part 2 第 3 項；人類已確認為真實 bug，非審查者原本猜測的「疊加後偏暗」）
+
+**依賴：** 無，可獨立排入規劃，但**優先度應高於 Issue 3／4**——這是使用者實際操作會撞到的真實可重現 bug（點擊既有功能按鈕導致畫面不可用），Issue 3／4 是視覺體驗改善。
+
+### What to build（待進一步診斷，建議走 `/diagnose` 而非直接規劃修法）
+
+`_openFoliateProgressSheet()`（`app/lib/screens/reader_screen.dart:1861-1872`）呼叫 `showModalBottomSheet` 未指定 `backgroundColor`/`barrierColor`，用 Flutter 預設半透明黑遮罩（`Colors.black54`）。審查者初步假設：Issue 1 上線後，深色主題下書頁背景本身已跟隨 `_themedBackgroundColor` 變為近黑的 `#121214`，再疊加半透明黑遮罩，理論上應該只是「更暗」而非「全黑不可辨識」——但人類真機確認的現象是**真的全黑**，超出這個假設能解釋的範圍，審查者也不排除 `InAppWebView`（PlatformView）與 Flutter 半透明覆蓋層之間的原生合成相容性問題（`app/lib/reader/foliate_epub_reader_view.dart:703-714` 未顯式設定合成模式）。
+
+根因尚未確認，不建議跳過診斷直接規劃修法——下一步應該用 `/diagnose` 建立真機重現的 feedback loop（例如比對「開啟進度面板前」與「開啟後」的畫面截圖，確認究竟是 WebView 內容本身變黑、還是被覆蓋層完全遮蔽、或其他原因），找到真正根因後再回來規劃修法。
+
+### Blocked by
+
+None - can start immediately（建議下一步先 `/diagnose`，而非直接寫 plan）。
