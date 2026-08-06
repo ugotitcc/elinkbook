@@ -1565,10 +1565,10 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                 left: 16,
                 child: ClipOval(
                   child: Container(
-                    color: Colors.black54,
+                    color: _themedFabBackgroundColor,
                     child: IconButton(
                       key: const Key('reader_foliate_back_button'),
-                      icon: const Icon(Icons.arrow_back, color: Colors.white),
+                      icon: Icon(Icons.arrow_back, color: _themedFabIconColor),
                       tooltip: '返回',
                       onPressed: () => Navigator.of(context).pop(),
                     ),
@@ -1581,10 +1581,10 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                 right: 16,
                 child: ClipOval(
                   child: Container(
-                    color: Colors.black54,
+                    color: _themedFabBackgroundColor,
                     child: IconButton(
                       key: const Key('reader_foliate_toc_button'),
-                      icon: const Icon(Icons.menu_book, color: Colors.white),
+                      icon: Icon(Icons.menu_book, color: _themedFabIconColor),
                       tooltip: '目錄',
                       onPressed: (_autoDetectedWritingMode == null || !_tocLoaded)
                           ? null
@@ -1599,10 +1599,10 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                 right: 16,
                 child: ClipOval(
                   child: Container(
-                    color: Colors.black54,
+                    color: _themedFabBackgroundColor,
                     child: IconButton(
                       key: const Key('reader_foliate_settings_button'),
-                      icon: const Icon(Icons.settings, color: Colors.white),
+                      icon: Icon(Icons.settings, color: _themedFabIconColor),
                       tooltip: '版面設定',
                       onPressed: _isFixedLayout
                           ? _openFxlSettings
@@ -1619,14 +1619,14 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                 right: 16,
                 child: ClipOval(
                   child: Container(
-                    color: Colors.black54,
+                    color: _themedFabBackgroundColor,
                     child: IconButton(
                       key: const Key('reader_foliate_bookmark_toggle_button'),
                       icon: Icon(
                         _bookmarkAtCurrentPosition != null
                             ? Icons.star
                             : Icons.star_border,
-                        color: Colors.white,
+                        color: _themedFabIconColor,
                       ),
                       tooltip: _bookmarkAtCurrentPosition != null
                           ? '已加入此頁書籤'
@@ -1645,10 +1645,10 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                 right: 16,
                 child: ClipOval(
                   child: Container(
-                    color: Colors.black54,
+                    color: _themedFabBackgroundColor,
                     child: IconButton(
                       key: const Key('reader_foliate_notes_button'),
-                      icon: const Icon(Icons.bookmarks, color: Colors.white),
+                      icon: Icon(Icons.bookmarks, color: _themedFabIconColor),
                       tooltip: '筆記',
                       onPressed: (_autoDetectedWritingMode == null ||
                               _epubPositionInfo == null)
@@ -1664,10 +1664,10 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                 right: 16,
                 child: ClipOval(
                   child: Container(
-                    color: Colors.black54,
+                    color: _themedFabBackgroundColor,
                     child: IconButton(
                       key: const Key('reader_foliate_progress_button'),
-                      icon: const Icon(Icons.swap_vert, color: Colors.white),
+                      icon: Icon(Icons.swap_vert, color: _themedFabIconColor),
                       tooltip: '跳頁',
                       onPressed: _openFoliateProgressSheet,
                     ),
@@ -1929,6 +1929,30 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       _isFixedLayout ? null : Theme.of(context).colorScheme.onSurface;
   Color? get _themedBackgroundColor =>
       _isFixedLayout ? null : Theme.of(context).scaffoldBackgroundColor;
+
+  /// 浮動控制按鈕（返回/目錄/版面設定/書籤/筆記/進度）的底色/圖示色，
+  /// 跟隨 Theme.of(context)（epic-22-reader-theme-integration Issue 3）。
+  /// 顯示流式 EPUB 時使用主題色——**底色刻意取 `colorScheme.onSurface`
+  /// （而非 `surface`）**：`surface` 在淺色/深色主題下分別接近純白/接近
+  /// 頁面背景本身（見 app_theme_data.dart），若拿來當按鈕底色，淺色主題
+  /// 下會讓按鈕在近白頁面上幾乎隱形（重蹈 Issue 5 才修過的「控制元件顏色
+  /// 跟頁面背景太接近而失去可視性」問題）。`onSurface` 在淺色主題下是
+  /// 近黑色、深色主題下是近白色，天生就與同一主題的頁面背景形成對比，
+  /// 淺色主題下維持與改動前 `Colors.black54` 相近的深色圓形觀感，深色
+  /// 主題下則變成淺色圓形、正確對比深色頁面。半透明度沿用原本
+  /// `Colors.black54` 的 54% 數值，維持「浮動、可透視底下內容」的既有
+  /// 視覺語言。圖示色相應取 `colorScheme.surface`（與底色反向搭配，
+  /// 維持圖示對底色的可視對比）。顯示 EPUB 固定版面（漫畫）時維持既有
+  /// 寫死 Colors.black54/Colors.white——理由同 _themedTextColor：固定
+  /// 版面頁面內容本身不受本 Epic 影響（通常是白底圖片），深色主題下若
+  /// 控制按鈕也跟著變色，容易在不可預期的圖片背景上失去可視對比（與
+  /// Issue 1/2 的 getter 不同，這裡沒有「不適用」的情境，故不用
+  /// Color? + ?? fallback 模式，兩個分支各自直接回傳明確的顏色）。
+  Color get _themedFabBackgroundColor => _isFixedLayout
+      ? Colors.black54
+      : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.54);
+  Color get _themedFabIconColor =>
+      _isFixedLayout ? Colors.white : Theme.of(context).colorScheme.surface;
 
   Widget _buildNativeView(BookFormat format, bool isLandscape) {
     final resolved = _resolved!;
