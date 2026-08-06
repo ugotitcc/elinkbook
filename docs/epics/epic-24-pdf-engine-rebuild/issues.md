@@ -1,0 +1,243 @@
+# Epic 24：PDF 渲染引擎重建（遷移至 pdfrx/PDFium）——工單清單
+
+依 `spec.md` 拆解為 8 個垂直切片（tracer bullet），依 spec.md「Further Notes」的優先順序建議排序：Issue 1-4 為「引擎替換＋既有功能對等」批次，確保任何時間點退回現行架構的成本可控；Issue 5-7 為「新增能力」批次；Issue 8（FAB 工具列整合）殿後，因為需要書籤/目錄皆就緒才能一次接上完整 6 顆按鈕。除 Issue 1 外，其餘 7 張皆以 Issue 1 為前置依賴（新 `pdfrx` widget 存在後才有東西可以擴充）。
+
+## Issue 1：PDF 引擎基礎替換——單頁開書/頁碼/跳頁/`content://` 存取
+
+**Status:** ready-for-agent（2026-08-07，`/to-issues` 依 `spec.md` 拆解）
+
+**依賴：** 無，其餘 7 張工單皆依賴本張。
+
+**對應 User Stories（`spec.md`）：** 22, 23, 24
+
+### What to build
+
+新增以 `pdfrx` 為底層的 Dart PDF 閱讀 widget，取代現行以 `android.graphics.pdf.PdfRenderer` 為底層、透過 `AndroidView` `PlatformView` 渲染的既有實作，直接在 Flutter widget 樹中渲染 PDF，不再透過原生端。範圍限定「單頁顯示＋頁碼＋跳頁」這一最小可驗證路徑——雙頁、影像濾鏡、劃線、目錄、搜尋、縮圖、FAB 工具列皆為後續獨立工單，不在本工單範圍內。
+
+新 widget 對外的建構參數（檔案路徑、開書成功/失敗回呼）維持與現行契約語意相容（開書成功一次性回呼、開書失敗攜帶錯誤訊息字串），讓既有的、格式無關的閱讀畫面狀態機（載入中／已渲染／錯誤三態，以及「已成功渲染的畫面不會被之後才發生的錯誤覆蓋」既有守衛邏輯）不需要改動。
+
+檔案存取須解決 `content://` URI 相容性：優先評估透過 `pdfrx` 的自訂讀取來源能力（讀取 callback，可從既有系統檔案描述符存取方式提供位元組），不需要真實檔案系統路徑、也不需要把檔案整包複製到 App 私有目錄——維持既有「不複製、直接引用原始檔案」的架構原則。只有在證實這個橋接方式不可行時，才退回「落地複製到本機快取」，且僅限於這個回退情境下使用，不做為預設路徑。
+
+現行原生 PDF 渲染模組與其對外暴露的 method channel 契約（開書、頁面渲染完成、錯誤回報三個既有呼叫點）本工單內即可開始淘汰——不需要等全部 8 張工單做完才能移除，維持雙套實作並存的時間愈短愈好。
+
+### Acceptance criteria
+
+- [ ] 開啟一個真實 PDF 檔案（本機路徑）成功顯示第一頁，`onPageRendered`／`onError` 語意等價回呼皆正確觸發。
+- [ ] 開啟一個以 `content://` URI 表示的 PDF 檔案（模擬 SAF 匯入情境）成功顯示，且**不會**在裝置儲存產生該檔案的完整複本（除非已證實 `openCustom` 橋接不可行、明確走文件記錄的回退路徑，此情境須有對應測試與文件註記）。
+- [ ] `pageCount`／`jumpToPage(index)` 正確運作，含邊界情況（跳到最後一頁、跳到超出範圍的頁碼須有合理防呆）。
+- [ ] 開啟失敗（檔案不存在／損毀）時觸發等價於現行 `onError` 語意的回呼，閱讀畫面正確顯示錯誤狀態。
+- [ ] 新增一份內容更豐富的 PDF 測試 fixture（多頁，取代現行僅 345 bytes、單頁、無內容的 `sample.pdf`），提交進版控供本工單與後續 7 張工單共用。
+- [ ] 單元測試：直接用 `flutter test`（非 `integration_test/`）對新 fixture 驗證開書／頁數／跳頁行為，比照 spec.md 測試策略——不透過真機/模擬器。
+- [ ] `flutter analyze` 乾淨、`flutter test` 全數通過（含既有測試零回歸）。
+
+### Blocked by
+
+None - can start immediately.
+
+---
+
+## Issue 2：雙頁並列（Facing Spread）
+
+**Status:** ready-for-agent（2026-08-07，`/to-issues` 依 `spec.md` 拆解）
+
+**依賴：** Issue 1（需要新 `pdfrx` widget 已能開書顯示）。
+
+**對應 User Stories（`spec.md`）：** 8, 9
+
+### What to build
+
+雙頁模式沿用既有的「雙頁模式（Dual-Page Mode）」三態設計（自動/永遠雙頁/永遠單頁，`CONTEXT.md` 既有詞彙，單書持久化於既有偏好設定），語意與資料層不變，底層改由 `pdfrx` 原生的雙頁排版能力實作，取代現行自行拼接點陣圖的作法。雙頁配對規則（封面獨立顯示、之後兩兩配對）與既有「Spread（跨頁）」既有詞彙定義一致。
+
+### Acceptance criteria
+
+- [ ] 三態雙頁模式（自動/永遠雙頁/永遠單頁）皆正確驅動 `pdfrx` 的雙頁排版，「自動」模式下橫向時雙頁、直向時單頁。
+- [ ] 封面獨立顯示、之後兩兩配對的既有 Spread 規則正確重現。
+- [ ] 單元測試：`flutter test` 對多頁 fixture 驗證各雙頁模式下的頁面配對結果。
+- [ ] `flutter analyze` 乾淨、`flutter test` 全數通過（含 Issue 1 既有測試零回歸）。
+
+### Blocked by
+
+- Issue 1
+
+---
+
+## Issue 3：E-Ink 影像濾鏡/裁切功能對等
+
+**Status:** ready-for-agent（2026-08-07，`/to-issues` 依 `spec.md` 拆解）
+
+**依賴：** Issue 1。
+
+**對應 User Stories（`spec.md`）：** 13, 14, 15, 16
+
+### What to build
+
+對比度/亮度濾鏡、型態學膨脹加粗（PDF 加粗）、智慧自動裁切、手動選區裁切，四項現行由原生端直接操作點陣圖完成的影像處理，改在 Dart 端對 `pdfrx` 輸出的頁面點陣圖資料重新實作，達到功能與可用效能對等（同樣的濾鏡參數範圍、同樣的裁切互動方式），不接受功能退化。
+
+影像處理運算（尤其型態學膨脹屬於逐像素運算）一律於背景 Isolate 執行，不佔用 UI 主執行緒。對比度/亮度等濾鏡參數若由使用者拖曳 Slider 連續調整，須加上防手震延遲（debounce）或可取消的運算排程，避免拖曳過程中連續派送大量背景 Isolate 運算工作造成佇列塞車、UI 反應遲鈍（`spec.md` 審查回應）。若背景 Isolate 效能仍無法達成功能對等的可用效能，保留封裝原生（C/C++ FFI）影像處理模組作為備案。
+
+智慧自動裁切維持現行「取樣偵測邊界後全書統一套用同一比例」的既有語意（非逐頁各自計算）；手動選區裁切維持「使用者框選矩形後全書統一套用」的既有語意。
+
+### Acceptance criteria
+
+- [ ] 對比度/亮度濾鏡對已知輸入產生與現行原生實作相當的輸出（像素取樣比對或等價的斷言方式）。
+- [ ] 型態學膨脹加粗濾鏡正確運作，於背景 Isolate 執行、不阻塞 UI。
+- [ ] 智慧自動裁切、手動選區裁切維持既有「全書統一套用」語意，非逐頁各自計算。
+- [ ] Slider 連續調整對比度/亮度時有防手震延遲，不會對每一個中間值都觸發一次完整背景運算。
+- [ ] 單元測試：`flutter test` 驗證各濾鏡函式的輸入輸出配對、Isolate 呼叫時機、debounce 行為。
+- [ ] `flutter analyze` 乾淨、`flutter test` 全數通過（含 Issue 1/2 既有測試零回歸）。
+
+### Blocked by
+
+- Issue 1
+
+---
+
+## Issue 4：書籤/劃線/備註遷移（矩形選取機制保留，新增 PDF 書籤 toggle）
+
+**Status:** ready-for-agent（2026-08-07，`/to-issues` 依 `spec.md` 拆解）
+
+**依賴：** Issue 1。
+
+**對應 User Stories（`spec.md`）：** 10, 11, 12, 25
+
+### What to build
+
+保留現行「長按拖曳框選矩形」的選取互動模式作為主要機制，不改為純文字選取——理由：現行選取以頁面座標（相對頁面內容範圍的百分比矩形）為資料模型，不依賴 PDF 是否有可抽取的文字層，對掃描件（純圖片）PDF 與一般數位原生 PDF 都能一致運作；若改為完全依賴文字定位的文字選取，掃描件 PDF 會直接失去劃線能力，是真實的功能倒退。
+
+選取範圍的資料模型（頁碼＋相對頁面內容範圍的百分比矩形＋相對整個 widget 尺寸的百分比矩形，用於浮動工具列定位）維持現行語意不變，僅底層渲染來源改變。**雙頁模式下，「相對頁面內容範圍的百分比矩形」須明確定義為相對單一頁面本身的邊界，不是相對包含左右兩頁的整個雙頁 viewport**（`spec.md` 審查回應）——否則單頁/雙頁模式切換（或雙頁模式下裝置旋轉）時，既有劃線的百分比座標基準會不一致，導致高亮筆劃拉伸或錯位。
+
+劃線/備註的持久化（`Highlight`／`Note`／`Bookmark` 資料模型，含 `pdfPageIndex` 定位）不需要 schema 遷移，直接沿用既有資料層。
+
+新增書籤 toggle（星號圖示）：比對目前頁碼與既有書籤清單，行為比照 EPUB 既有的書籤 toggle 邏輯（有則移除、無則新增），資料模型使用既有的 `pdfPageIndex` 欄位，不需要新的資料層設計。本工單只需要完成 toggle 邏輯本身（可透過既有測試 seam 觸發驗證）；toggle 對應的 FAB 按鈕留給 Issue 8 統一接線。
+
+### Acceptance criteria
+
+- [ ] 長按拖曳框選矩形的選取互動在新引擎上正確運作，選取範圍資料模型（頁碼＋兩種百分比矩形）語意與現行一致。
+- [ ] 雙頁模式下，選取矩形正確以「所在的單一頁面」為座標基準，不受另一頁存在與否影響；單/雙頁切換後既有劃線位置正確、不拉伸錯位。
+- [ ] 劃線/備註可正確新增、持久化、重新開書後正確還原顯示於對應頁面。
+- [ ] 書籤 toggle：目前頁有書籤時圖示狀態正確反映「已加入」，切換行為（新增/移除）正確寫入/刪除 `Bookmark`（`pdfPageIndex` 定位）。
+- [ ] 單元測試：`flutter test` 對多頁 fixture 驗證選取矩形座標換算（含雙頁情境）、劃線/備註持久化往返、書籤 toggle 邏輯。
+- [ ] `flutter analyze` 乾淨、`flutter test` 全數通過（含既有測試零回歸）。
+
+### Blocked by
+
+- Issue 1
+
+---
+
+## Issue 5：目錄（TOC）解析與 UI（`BookTocItem` 抽象介面）
+
+**Status:** ready-for-agent（2026-08-07，`/to-issues` 依 `spec.md` 拆解）
+
+**依賴：** Issue 1。
+
+**對應 User Stories（`spec.md`）：** 1, 2, 3
+
+### What to build
+
+新增一個格式無關的目錄項目抽象介面（`BookTocItem`：標題、定位點、子項清單、巢狀層級），EPUB 既有的目錄 Bottom Sheet UI 元件改為消費這個抽象介面，而非直接依賴 EPUB 專屬的目錄項目型別；PDF 端把 `pdfrx` 的大綱解析結果（標題、目的頁碼、子項層級）轉換為同一介面的實例。
+
+本工單會異動 EPUB 既有程式碼（抽出抽象介面），範圍嚴格限定為「抽出介面、EPUB 行為保持逐位元組不變、PDF 提供新實作」，不對 EPUB 目錄既有互動行為做任何調整。
+
+目錄項目點擊後的行為（跳轉、目前所在章節高亮、巢狀展開狀態）與 EPUB 既有目錄 Bottom Sheet 行為一致。目錄按鈕的啟用時機比照 EPUB 既有慣例：書籍尚未成功開啟、或目錄背景載入尚未完成前停用。本工單只需完成目錄資料解析與 Bottom Sheet 顯示邏輯本身；對應的 FAB 按鈕接線留給 Issue 8。
+
+### Acceptance criteria
+
+- [ ] `BookTocItem` 抽象介面定義完成，EPUB 既有目錄 Bottom Sheet 改為消費該介面，EPUB 既有目錄相關測試全數維持通過（零回歸）。
+- [ ] PDF 端正確解析大綱（`loadOutline()`），轉換為 `BookTocItem` 樹狀結構，巢狀層級正確保留。
+- [ ] 點擊 PDF 目錄項目正確跳轉至對應頁面。
+- [ ] 目錄背景載入完成前，目錄相關互動正確停用（防呆）。
+- [ ] 無大綱的 PDF（例如掃描件）目錄為空清單時，UI 有合理呈現（非例外崩潰）。
+- [ ] 單元測試：`flutter test` 對含大綱的 fixture 驗證解析結果與跳轉行為；對既有 EPUB 目錄測試確認零回歸。
+- [ ] `flutter analyze` 乾淨、`flutter test` 全數通過。
+
+### Blocked by
+
+- Issue 1
+
+---
+
+## Issue 6：內文搜尋
+
+**Status:** ready-for-agent（2026-08-07，`/to-issues` 依 `spec.md` 拆解）
+
+**依賴：** Issue 1。
+
+**對應 User Stories（`spec.md`）：** 4, 5, 6
+
+### What to build
+
+搜尋範圍限定單一已開啟 PDF 文件內（in-document search），與全書庫全文檢索（FTS5，Backlog，尚未開始）是不同功能，不整合。搜尋結果須支援：以高亮標示所有符合位置、可逐一跳轉至下一個/上一個符合結果。掃描件（無文字層）PDF 無法搜尋到內容——這是格式本身的限制，非實作缺陷，UI 上須有合理的空結果呈現。
+
+### Acceptance criteria
+
+- [ ] 輸入關鍵字後，正確找出文件內所有符合位置並以高亮標示。
+- [ ] 「下一個/上一個」導覽正確依序跳轉至各符合位置對應頁面。
+- [ ] 對無文字層的 PDF（掃描件）搜尋時，UI 顯示合理的「無結果」而非錯誤或無回應。
+- [ ] 單元測試：`flutter test` 對含可搜尋文字的 fixture 驗證搜尋結果數量、位置、導覽行為。
+- [ ] `flutter analyze` 乾淨、`flutter test` 全數通過。
+
+### Blocked by
+
+- Issue 1
+
+---
+
+## Issue 7：頁碼縮圖（Thumbnails）
+
+**Status:** ready-for-agent（2026-08-07，`/to-issues` 依 `spec.md` 拆解）
+
+**依賴：** Issue 1。
+
+**對應 User Stories（`spec.md`）：** 7
+
+### What to build
+
+以頁碼列表/格狀呈現整本書每一頁的縮小預覽圖，點擊縮圖跳轉至對應頁面。縮圖產生方式須避免一次性渲染全書縮圖造成的效能/記憶體問題（可視範圍內才產生、有上限的快取策略）。滑出可視範圍外而被快取淘汰的縮圖影像資源須明確釋放（`dispose()`），避免大量頁數書籍快速捲動縮圖面板時發生記憶體洩漏（`spec.md` 審查回應）。
+
+### Acceptance criteria
+
+- [ ] 縮圖面板正確顯示整本書頁碼縮圖，點擊後正確跳轉至對應頁面。
+- [ ] 縮圖僅於可視範圍內產生，不一次性渲染全書。
+- [ ] 淘汰快取的縮圖資源正確釋放（`dispose()`），大量頁數書籍快速捲動不造成記憶體持續成長。
+- [ ] 單元測試：`flutter test` 驗證縮圖產生/快取/釋放邏輯（可透過可觀察的快取狀態或資源計數斷言，不需要真機記憶體量測）。
+- [ ] `flutter analyze` 乾淨、`flutter test` 全數通過。
+
+### Blocked by
+
+- Issue 1
+
+---
+
+## Issue 8：閱讀工具列 FAB 化（6 顆按鈕整合）
+
+**Status:** ready-for-agent（2026-08-07，`/to-issues` 依 `spec.md` 拆解；原 `epic-23-pdf-fab-toolbar` 併入本 Epic）
+
+**依賴：** Issue 1、3（版面設定面板需要濾鏡控制項）、4（書籤 toggle）、5（目錄）。
+
+**對應 User Stories（`spec.md`）：** 17, 18, 19, 20, 21
+
+### What to build
+
+PDF 頂部工具列（現行傳統 `AppBar`，含系統預設返回箭頭 + 版面設定/筆記兩個按鈕）改為浮動圓形按鈕（FAB），視覺與位置比照 EPUB 既有樣式，重用既有的、跟隨 `Theme.of(context)` 且已考慮電子紙硬體對比的按鈕底色/圖示色邏輯。PDF 最終達到與 EPUB 相同的 6 顆 FAB 按鈕：返回／目錄／版面設定／書籤 toggle／筆記／進度-跳頁。
+
+現行「頁面導覽」（目前頁/總頁數/跳頁）從常駐於畫面底部的既有元件，改為浮動「進度/跳頁」按鈕觸發的 Bottom Sheet 呈現，不再擠壓可視閱讀區域高度，行為比照 EPUB 既有的對應機制。頁碼顯示採雙顯示模式：若 PDF 提供邏輯頁碼標籤（Page Label，例如封面羅馬數字），與實體頁碼/總頁數並列顯示（例如「iii (3/150)」）；若無邏輯頁碼標籤，回退為現行純數字頁碼顯示。跳頁/進度換算邏輯一律以絕對 0-indexed 頁碼為運算基準，不依賴頁碼標籤格式。
+
+沉浸模式（介面收合/展開）行為與 EPUB 既有機制一致。現行 PDF 頂部工具列對應的原生 method channel 契約與其 Dart 端 `AppBar` 相關程式碼隨本工單一併退場。
+
+### Acceptance criteria
+
+- [ ] PDF 閱讀畫面顯示 6 顆浮動圓形按鈕（返回／目錄／版面設定／書籤 toggle／筆記／進度-跳頁），底色/圖示色正確跟隨 `Theme.of(context)`。
+- [ ] 各按鈕功能正確：返回離開閱讀畫面、目錄開啟 Issue 5 的目錄 Bottom Sheet、版面設定開啟含 Issue 3 濾鏡控制項的設定面板、書籤 toggle 正確反映/切換 Issue 4 的書籤狀態、筆記開啟既有筆記面板、進度-跳頁開啟含頁碼顯示與跳頁功能的 Bottom Sheet。
+- [ ] 頁碼顯示正確依是否有 Page Label 呈現雙顯示或純數字，跳頁邏輯以絕對頁碼運算、不受 Page Label 格式影響。
+- [ ] 沉浸模式收合/展開行為與 EPUB 既有機制一致。
+- [ ] 現行 PDF `AppBar` 與對應原生 method channel 契約已完全移除，無殘留死碼。
+- [ ] 單元測試：`flutter test` 驗證 6 顆按鈕的顏色/啟用條件/點擊行為，比照既有 EPUB FAB 相關測試的既有模式。
+- [ ] `flutter analyze` 乾淨、全專案 `flutter test` 全數通過。
+
+### Blocked by
+
+- Issue 1
+- Issue 3
+- Issue 4
+- Issue 5
