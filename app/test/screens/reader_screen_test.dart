@@ -29,6 +29,8 @@ import 'package:elinkbook/reader/epub_position_info.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
 import 'package:elinkbook/reader/foliate_epub_reader_view.dart';
 import 'package:elinkbook/reader/foliate_native_bridge.dart';
+import 'package:elinkbook/theme/app_theme.dart';
+import 'package:elinkbook/theme/app_theme_data.dart';
 import '../support/fake_inappwebview_platform.dart';
 import '../support/fake_library_repository.dart';
 import '../support/fake_reader_prefs_manager.dart';
@@ -4529,6 +4531,85 @@ void main() {
     expect(foliateView.marginBottom, 20);
     expect(foliateView.marginLeft, 30);
     expect(foliateView.marginRight, 30);
+  });
+
+  testWidgets(
+      '流式 EPUB：Theme.of(context) 的顏色正確透傳到 FoliateEpubReaderView'
+      '（epic-22-reader-theme-integration Issue 1）', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildThemeData(AppTheme.dark),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_foliate_theme_color',
+          prefsManager: prefsManager,
+          isFixedLayout: false,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final foliateView = tester.widget<FoliateEpubReaderView>(
+      find.byType(FoliateEpubReaderView),
+    );
+    final expectedTheme = buildThemeData(AppTheme.dark);
+    expect(foliateView.textColor, expectedTheme.colorScheme.onSurface);
+    expect(foliateView.backgroundColor, expectedTheme.scaffoldBackgroundColor);
+  });
+
+  testWidgets(
+      '流式 EPUB：預設淺色主題（AppTheme.light）下顏色仍正確透傳，'
+      '與改動前行為相容（epic-22-reader-theme-integration Issue 1）',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildThemeData(AppTheme.light),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_foliate_theme_color_light',
+          prefsManager: prefsManager,
+          isFixedLayout: false,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final foliateView = tester.widget<FoliateEpubReaderView>(
+      find.byType(FoliateEpubReaderView),
+    );
+    final expectedTheme = buildThemeData(AppTheme.light);
+    expect(foliateView.textColor, expectedTheme.colorScheme.onSurface);
+    expect(foliateView.backgroundColor, expectedTheme.scaffoldBackgroundColor);
+  });
+
+  testWidgets(
+      'EPUB 固定版面：不論主題為何，傳給 FoliateEpubReaderView 的顏色皆為 null'
+      '（epic-22-reader-theme-integration Issue 1，圖片內容無法預期背景色）',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildThemeData(AppTheme.dark),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample_fixed_layout.epub',
+          bookId: 'b_foliate_theme_color_fxl',
+          prefsManager: prefsManager,
+          isFixedLayout: true,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final foliateView = tester.widget<FoliateEpubReaderView>(
+      find.byType(FoliateEpubReaderView),
+    );
+    expect(foliateView.textColor, isNull);
+    expect(foliateView.backgroundColor, isNull);
   });
 
   testWidgets('開啟全螢幕模式偏好後，elinkbook/fullscreen 頻道收到 setEnabled(true)',

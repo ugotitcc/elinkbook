@@ -115,6 +115,20 @@ function buildOverrideCss(prefs) {
   if (prefs.textAlign) {
     rules.push(`p { text-align: ${prefs.textAlign} !important; }`)
   }
+  // epic-22-reader-theme-integration Issue 1：文字色沿用上面同一組廣
+  // selector（涵蓋 p/div/span 等實際文字容器元素），確保書本自己在
+  // 這些元素直接宣告的文字顏色也會被蓋過（與 fontWeight/lineHeight
+  // 既有覆蓋邏輯一致，比照 Issue 34 的既有教訓：只設定 html/body 這種
+  // 可被繼承的值，遇到書本直接宣告會完全失效）。
+  if (prefs.textColor) {
+    rules.push(`${selector} { color: ${prefs.textColor} !important; }`)
+  }
+  // 背景色刻意只套用 html/body，不用上面的廣 selector——若逐一對
+  // p/div/span 等元素套用 background-color，會在包裹圖片的容器上畫出
+  // 不協調的色塊（真實可見的視覺瑕疵，取捨已於 spec.md 定案）。
+  if (prefs.backgroundColor) {
+    rules.push(`html, body { background-color: ${prefs.backgroundColor} !important; }`)
+  }
   return rules.join('\n')
 }
 

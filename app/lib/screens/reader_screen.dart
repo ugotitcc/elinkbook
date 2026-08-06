@@ -1899,6 +1899,18 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     );
   }
 
+  /// 流式 EPUB 顯示時的內容前景/背景色，來自 `Theme.of(context)`
+  /// （已解析後的最終 `AppTheme`/E-Ink 高對比結果，見
+  /// `resolveThemeData()`）；EPUB 固定版面顯示時回傳 `null`——固定
+  /// 版面內容是圖片，無法預期背景色，強制上色沒有意義。呼叫端依情境
+  /// 決定 `null` 時的退回值（epic-22-reader-theme-integration Issue 1：
+  /// `FoliateEpubReaderView` 直接傳 `null`；Issue 2 的頁首/頁尾會退回
+  /// 既有寫死 `Colors.black`，不在本 Task 範圍）。
+  Color? get _themedTextColor =>
+      _isFixedLayout ? null : Theme.of(context).colorScheme.onSurface;
+  Color? get _themedBackgroundColor =>
+      _isFixedLayout ? null : Theme.of(context).scaffoldBackgroundColor;
+
   Widget _buildNativeView(BookFormat format, bool isLandscape) {
     final resolved = _resolved!;
     switch (format) {
@@ -1929,6 +1941,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           columnSize: resolved.columnSize,
           showFooter: resolved.showFooter,
           isFixedLayoutHint: widget.isFixedLayout,
+          textColor: _themedTextColor,
+          backgroundColor: _themedBackgroundColor,
           dualPageMode: resolved.dualPageMode,
           isLandscape: isLandscape,
           customFonts: _customFonts,
