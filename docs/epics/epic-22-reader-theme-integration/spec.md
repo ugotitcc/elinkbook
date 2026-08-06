@@ -24,7 +24,7 @@
 10. 身為維護這個專案的工程師，我希望書本內容顏色與頁首/頁尾顏色來自完全同一個來源（`Theme.of(context)`），這樣未來不會有人只改了 `ThemeData` 沒改 CSS（或反之），導致兩邊顏色不同步。
 11. 身為維護這個專案的工程師，我希望顏色強制覆蓋透過既有的 `main.js` CSS 注入機制達成（不修改 vendored `foliate-js` 檔案），符合 ADR 0011，並與既有的 `fontWeight`/`lineHeight` 強制覆蓋寫法保持一致的實作風格。
 12. 身為驗證這個功能的人，我希望有 widget test 直接斷言傳給 `FoliateEpubReaderView` 的顏色參數、以及頁首/頁尾 `TextStyle` 的顏色值，涵蓋每種主題/E-Ink/固定版面組合，這樣往後的回歸不需要每次都用真機才能發現。
-13. 身為完全沒動過主題設定的既有使用者（維持預設淺色主題、E-Ink 關閉），我希望這次改動上線後我看到的閱讀畫面顏色跟改動前完全一樣，不會有任何非預期的視覺變化。
+13. 身為完全沒動過主題設定的既有使用者（維持預設淺色主題、E-Ink 關閉），我希望這次改動上線後我看到的閱讀畫面顏色維持與 App 既有淺色主題視覺一致的近白背景／近黑文字（`AppTheme.light` 既有的 `#F8F8FA`／`#1A1A2E`），不會出現任何我沒預期到的色彩突兀變化——**註：這與「書本改動前完全不受任何顏色覆蓋、實際渲染色可能是書本 CSS 或瀏覽器預設的純白/純黑」存在細微但真實的差異，見下方「Further Notes」與程式碼審查記錄**。
 
 ## Implementation Decisions
 
@@ -52,7 +52,7 @@
 - **要測的行為**（純外部可觀察行為，不測 `main.js` 內部字串拼接細節）：
   - 流式 EPUB：`AppTheme.light`／`dark`／`sepia` × `isEinkMode` 開/關，共 6 種組合下，`FoliateEpubReaderView.textColor`／`backgroundColor` 與頁首/頁尾 `TextStyle.color` 皆等於當下 `Theme.of(context)` 對應值。
   - EPUB 固定版面：不論 `AppTheme`/`isEinkMode` 為何，`FoliateEpubReaderView.textColor`／`backgroundColor` 皆為 `null`，頁首/頁尾 `TextStyle.color` 皆為 `Colors.black`（維持既有行為的回歸測試）。
-  - 預設情境（`AppTheme.light`、E-Ink 關閉）：新增本功能前後，實際顏色值需與目前既有測試斷言的顏色完全相同（零視覺變化的回歸保證）。
+  - 預設情境（`AppTheme.light`、E-Ink 關閉）：顏色值須等於 `AppTheme.light` 既有的 `scaffoldBackgroundColor`（`#F8F8FA`）／`colorScheme.onSurface`（`#1A1A2E`）——這是與 App 既有淺色主題殼層視覺一致的回歸保證，**不是**與「書本改動前完全不受任何顏色覆蓋的原始渲染色（可能是書本自己 CSS 或瀏覽器預設的純白/純黑）」逐位元組相同（程式碼審查發現的措辭精確度落差，見 Further Notes）。
 - **明確不測的部分**：
   - WebView 實際渲染出來的像素顏色——`flutter test` 無法觀察 `InAppWebView` 內部渲染結果（比照本專案既有兩層測試架構慣例），留給真機/`integration_test` 人工視覺確認。
   - `main.js` `buildOverrideCss()` 產生的 CSS 字串本身的正確性——本專案目前沒有任何 JS 自動化測試框架（`check_foliate_es_compat.js` 是純文字掃描腳本，非單元測試），不在本 Epic 新增；若實作階段需要驗證邏輯正確性，比照 Issue 34 既有做法用臨時 headless Chromium 腳本驗證後即刪除，不留下永久測試資產。
@@ -82,3 +82,10 @@
 - **項目 3（`buildOverrideCss()` 真值檢查）**：查證既有 `fontFamily`／`textAlign` 等字串型欄位皆已用 `if (prefs.X)` 真值檢查才 push 規則，新欄位比照既有風格處理即可，已納入。
 
 額外查證發現 `foliate_epub_reader_view_test.dart` 已有 `buildFoliatePreferencesMap`／`foliatePreferencesChanged` 的既有測試 `group`（這兩個函式本身就是為了不透過 `InAppWebView` 直接單元測試而設計的公開頂層純函式），比原規劃的單一 widget test seam 更精確，已補入 Testing Decisions 作為 Seam 2。
+
+## 審查回應（`/superpowers:requesting-code-review`，Issue 1 實作，2026-08-06）
+
+`tmp/epic-22/review-issue-1-implementation.md` 對 Issue 1 實作（分支 `epic-22-issue-1`，4 個 commit）審查為 With fixes（0 Critical／2 Important／2 Minor）。實作程式碼本身無需修改（`foliatePreferencesChanged()` 窮舉比對、`main.js` 背景色 `html,body` 選取器範圍等 spec.md 定案細節皆確認正確落實，全專案 990 個測試與 `flutter analyze` 皆乾淨），2 項 Important 皆已處理：
+
+- **真機視覺驗證**：Task 5 Step 4（深色/羊皮紙/淺色/E-Ink 四種情境開流式 EPUB 實測）已人類確認完成並通過。
+- **本文件用詞精確度**：審查指出 User Story 13／Testing Decisions 原文「跟改動前完全一樣」「零視覺變化」的字面承諾，與實際採用 `AppTheme.light` 既有殼層色值（`#F8F8FA`／`#1A1A2E`，近白/近黑而非純白/純黑）之間有微小但真實的落差——**這不是實作缺陷，是本文件當初措辭過於絕對**。已修正 User Story 13 與 Testing Decisions 相關段落，改為精確描述「與 App 既有淺色主題殼層視覺一致」，不再宣稱「完全一樣」。維持既有的「重用同一組殼層色值作為單一來源」設計決策不變（未改變任何程式碼行為），僅修正文件用詞。

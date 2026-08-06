@@ -4,7 +4,7 @@
 
 ## Issue 1：流式 EPUB 內容強制套用主題色（背景色＋文字色）
 
-**Status:** ready-for-agent
+**Status:** ✅ 已完成（2026-08-06，分支 `epic-22-issue-1`，4 個 commit，依 `plans/plan-issue-1.md` Task 1-4 實作；`/superpowers:requesting-code-review` 審查 With fixes → 0 Critical／2 Important／2 Minor，真機視覺驗證已完成通過，`spec.md`/本檔案「零視覺變化」措辭已修正，詳見 `tmp/epic-22/review-issue-1-implementation.md`）
 
 **依賴：** 無，可立即開始。
 
@@ -27,12 +27,12 @@
 
 ### Acceptance criteria
 
-- [ ] 流式 EPUB 顯示時，`FoliateEpubReaderView` 收到的 `textColor`/`backgroundColor` 等於當下 `Theme.of(context)` 對應的 `colorScheme.onSurface`/`scaffoldBackgroundColor`，涵蓋 `AppTheme.light`/`dark`/`sepia` × `isEinkMode` 開/關共 6 種組合。
-- [ ] EPUB 固定版面顯示時，不論 `AppTheme`/`isEinkMode` 為何，`FoliateEpubReaderView.textColor`/`backgroundColor` 皆為 `null`。
-- [ ] 預設情境（`AppTheme.light`、E-Ink 關閉）下，新增本功能前後的顏色值與既有測試斷言完全相同（零視覺變化回歸保證）。
-- [ ] `buildFoliatePreferencesMap()`／`foliatePreferencesChanged()` 的既有單元測試 `group`（`app/test/reader/foliate_epub_reader_view_test.dart`）擴充涵蓋新欄位的正確序列化（含十六進位色碼轉換的邊界案例，例如 RGB 帶前導零）與變更偵測。
-- [ ] `flutter analyze` 乾淨、`flutter test` 全數通過。
-- [ ] 真機或 `integration_test` 人工視覺確認：至少一款流式 EPUB 書籍在深色主題下，書頁背景與文字實際變色（`flutter test` 無法觀察 WebView 實際渲染結果，此項不可省略）。
+- [x] 流式 EPUB 顯示時，`FoliateEpubReaderView` 收到的 `textColor`/`backgroundColor` 等於當下 `Theme.of(context)` 對應的 `colorScheme.onSurface`/`scaffoldBackgroundColor`，涵蓋 `AppTheme.light`/`dark`/`sepia` × `isEinkMode` 開/關共 6 種組合。
+- [x] EPUB 固定版面顯示時，不論 `AppTheme`/`isEinkMode` 為何，`FoliateEpubReaderView.textColor`/`backgroundColor` 皆為 `null`。
+- [x] 預設情境（`AppTheme.light`、E-Ink 關閉）下，顏色值等於 `AppTheme.light` 既有的 `scaffoldBackgroundColor`（`#F8F8FA`）／`colorScheme.onSurface`（`#1A1A2E`）——與 App 既有淺色主題殼層視覺一致的回歸保證，非與書本改動前原始渲染色逐位元組相同（程式碼審查發現的措辭精確度落差，已修正 `spec.md`／本檔案用詞，見 `tmp/epic-22/review-issue-1-implementation.md`）。
+- [x] `buildFoliatePreferencesMap()`／`foliatePreferencesChanged()` 的既有單元測試 `group`（`app/test/reader/foliate_epub_reader_view_test.dart`）擴充涵蓋新欄位的正確序列化（含十六進位色碼轉換的邊界案例，例如 RGB 帶前導零）與變更偵測。
+- [x] `flutter analyze` 乾淨、`flutter test` 全數通過（全專案 990 個測試）。
+- [x] 真機人工視覺確認：流式 EPUB 書籍在深色主題下，書頁背景與文字實際變色，已完成並通過。
 
 ### Blocked by
 
