@@ -93,15 +93,23 @@ None - 已完成。
 
 ## Issue 4：深色主題下設定面板 Toggle 開關（關閉狀態）對比不足
 
-**Status:** needs-triage（2026-08-06，`epic-22-issue-2` 審查過程中人類真機測試發現，非本 Epic 迴歸——`/superpowers:requesting-code-review` 查證根因在 `app_theme_data.dart` 既有色票設計，詳見 `tmp/epic-22/review-issue-2-implementation.md` Part 2 第 2 項）
+**Status:** ✅ 已完成並合併（2026-08-06，分支 `fix/epic-22-issue4-outline-contrast`，2 個 commit，依 `plans/plan-issue-4.md` 實作；`/superpowers:requesting-code-review` 審查時人類提供真機電子紙裝置照片證據，發現一般顯示器達標但電子紙硬體上仍嚴重不足，追加修正並一併處理 Issue 3 FAB 的同類問題，詳見 `tmp/epic-22/review-issue-4-implementation.md`與下方「電子紙硬體對比追加修正」；`flutter test` 146/146（本檔案+reader_screen_test.dart）＋全專案 1002/1002，`flutter analyze` 乾淨；真機電子紙裝置重新 build＋安裝驗證通過（過程中一度誤判為異常，確認是測試方誤裝錯檔案，非程式碼問題）；已透過 **PR #122** 合併回 `main`，merge commit `faee646`）
 
 **依賴：** 無，可獨立排入規劃。
 
-### What to build（待 Discovery/規劃）
+### What to build
 
-版面設定面板（`app/lib/screens/reader_settings_sheet.dart:297-333`）的 `SwitchListTile` 是標準 Flutter 元件，本身無任何硬編碼顏色、理論上應主題感知。真正根因是 `app/lib/theme/app_theme_data.dart` 深色主題的 `colorScheme.outline`（`#2A2A30`）與同主題 `background`（`#121214`）／`surface`（`#1E1E22`）亮度過於接近——Material 3 `Switch` 關閉狀態的 thumb/track 外框正是取自 `outline`，導致對比不足、難以辨識目前是關閉狀態。
+版面設定面板（`app/lib/screens/reader_settings_sheet.dart:297-333`）的 `SwitchListTile` 是標準 Flutter 元件，本身無任何硬編碼顏色、理論上應主題感知。根因是 `app/lib/theme/app_theme_data.dart` 深色主題的 `colorScheme.outline`（`#2A2A30`）與同主題 `background`（`#121214`）／`surface`（`#1E1E22`）亮度過於接近——Material 3 `Switch` 關閉狀態的外框/圓鈕正是取自 `outline`，導致對比不足、難以辨識目前是關閉狀態。第一版修法將 `outline` 調整為 `#5C5C66`，在一般 LCD/OLED 顯示器上達標。
 
-需要 Discovery 階段決定：是否調整 `app_theme_data.dart` 深色主題的 `outline` 色值（**注意**：`epic-22` Issue 1/2 的 spec.md 明文決定「不修改 `app_theme_data.dart`」，但那個決定的前提是「這個檔案的色票設計本身沒有問題」——本 Issue 是發現色票設計本身有獨立缺陷，需要另外評估，不受該決定約束）；或改為只調整 `Switch` 元件層級的樣式覆蓋，不動全域色票（避免影響其他也用到 `outline` 的既有 UI）。
+**電子紙硬體對比追加修正**（同一分支延伸，未另立新 Issue）：`/superpowers:requesting-code-review` 審查時人類提供真機電子紙裝置照片，發現 Switch 關閉狀態在電子紙上仍完全消失，Issue 3 已合併的 FAB 按鈕圖示也完全無法辨識形狀。追查 Flutter SDK 原始碼確認 M3 `Switch` 關閉狀態同時吃 `outline`（外框線/圓鈕）與 `surfaceContainerHighest`（軌道底色）兩個色票，本專案只客製了前者、後者隱性等於 `surface`，導致軌道與背景完全同色，僅靠一條 2dp 外框線撐可視度——這種手法在電子紙灰階抖動渲染下結構性地不可靠。修法：`outline` 進一步調亮至 `#86868F`（感知亮度差約 0.41）；新增 `surfaceContainerHighest`（`#3C3C44`，對 `surface` 亮度差約 0.119）；FAB 底色（`_themedFabBackgroundColor`）拿掉 54% 透明度改用不透明 `onSurface` 原色（半透明疊色算出的中間灰正好落在電子紙抖動最弱區間，此變動同時修正三個主題，非僅深色）。
+
+### Acceptance criteria
+
+- [x] 深色主題下 `colorScheme.outline`／`dividerColor` 與 `surface` 有足夠感知亮度差（`> 0.15`），Switch 關閉狀態外框在一般顯示器上清楚可辨識。
+- [x] 深色主題下 `colorScheme.surfaceContainerHighest` 與 `surface` 有足夠感知亮度差（`> 0.10`），Switch 關閉狀態軌道底色本身即為可辨識實心色塊。
+- [x] FAB 底色改為不透明實色，電子紙硬體上圖示可辨識（真機驗證通過）。
+- [x] `app/test/theme/app_theme_data_test.dart`／`app/test/screens/reader_screen_test.dart` 新增/更新對應回歸測試。
+- [x] `flutter analyze` 乾淨、`flutter test` 全數通過。
 
 ### Blocked by
 
