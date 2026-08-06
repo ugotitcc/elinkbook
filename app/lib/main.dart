@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pdfrx/pdfrx.dart';
 
 import 'library/book_import_service.dart';
 import 'library/book_import_service_impl.dart';
@@ -26,6 +27,10 @@ import 'theme/app_theme_preferences.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // pdfrx（PDFium FFI）初始化，epic-24-pdf-engine-rebuild：Flutter App
+  // 執行期一律呼叫 pdfrxFlutterInitialize()（而非 pdfrxInitialize()，後者
+  // 用於純 Dart、無 Flutter 環境），須在任何 PDF 開書呼叫之前完成。
+  await pdfrxFlutterInitialize();
 
   final themePreferences = AppThemePreferences();
   final initialTheme = await themePreferences.loadTheme();
