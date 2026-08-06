@@ -39,6 +39,24 @@ void main() {
     };
   });
 
+  group('colorToCssHex', () {
+    test('不透明色轉換為 6 位十六進位色碼（丟棄 alpha）', () {
+      expect(colorToCssHex(const Color(0xFF121214)), '#121214');
+    });
+
+    test('RGB 帶前導零時仍正確補零（不會被截斷成較短字串）', () {
+      expect(colorToCssHex(const Color(0xFF010203)), '#010203');
+    });
+
+    test('純白色轉換正確', () {
+      expect(colorToCssHex(const Color(0xFFFFFFFF)), '#ffffff');
+    });
+
+    test('純黑色轉換正確', () {
+      expect(colorToCssHex(const Color(0xFF000000)), '#000000');
+    });
+  });
+
   group('buildFoliatePreferencesMap', () {
     test('所有偏好欄位皆為 null 時回傳空 map', () {
       const view = FoliateEpubReaderView(
