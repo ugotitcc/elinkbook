@@ -4,7 +4,7 @@
 
 ## Issue 1：流式 EPUB 內容強制套用主題色（背景色＋文字色）
 
-**Status:** ✅ 已完成（2026-08-06，分支 `epic-22-issue-1`，4 個 commit，依 `plans/plan-issue-1.md` Task 1-4 實作；`/superpowers:requesting-code-review` 審查 With fixes → 0 Critical／2 Important／2 Minor，真機視覺驗證已完成通過，`spec.md`/本檔案「零視覺變化」措辭已修正，詳見 `tmp/epic-22/review-issue-1-implementation.md`）
+**Status:** ✅ 已完成並合併（2026-08-06，分支 `epic-22-issue-1`，4 個 commit，依 `plans/plan-issue-1.md` Task 1-4 實作；`/superpowers:requesting-code-review` 審查 With fixes → 0 Critical／2 Important／2 Minor，真機視覺驗證已完成通過，`spec.md`/本檔案「零視覺變化」措辭已修正，詳見 `tmp/epic-22/review-issue-1-implementation.md`；已透過 **PR #119** 合併回 `main`，merge commit `62d60da`）
 
 **依賴：** 無，可立即開始。
 
