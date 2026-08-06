@@ -42,7 +42,7 @@ None - can start immediately.
 
 ## Issue 2：頁首/頁尾文字色跟隨主題（流式 EPUB），固定版面維持現況
 
-**Status:** ✅ 已完成（2026-08-06，分支 `epic-22-issue-2`，1 個 commit，依 `plans/plan-issue-2.md` Task 1 實作，重用 Issue 1 既有的 `_themedTextColor`；真機視覺驗證已完成通過，符合計畫；`/superpowers:requesting-code-review` 審查 Ready to merge: Yes，0 Critical／0 Important，`flutter test` 130/130（本檔案）＋ 992/992（全專案）、`flutter analyze` 乾淨，詳見 `tmp/epic-22/review-issue-2-implementation.md`；審查過程中人類真機測試額外回報 3 項 UX 發現，皆與本 Issue 的 diff 無關，已另立 **Issue 3／4／5** 追蹤，見下方）
+**Status:** ✅ 已完成並合併（2026-08-06，分支 `epic-22-issue-2`，1 個 commit，依 `plans/plan-issue-2.md` Task 1 實作，重用 Issue 1 既有的 `_themedTextColor`；真機視覺驗證已完成通過，符合計畫；`/superpowers:requesting-code-review` 審查 Ready to merge: Yes，0 Critical／0 Important，`flutter test` 130/130（本檔案）＋ 992/992（全專案）、`flutter analyze` 乾淨，詳見 `tmp/epic-22/review-issue-2-implementation.md`；審查過程中人類真機測試額外回報 3 項 UX 發現，皆與本 Issue 的 diff 無關，已另立 **Issue 3／4／5** 追蹤，見下方；已透過 **PR #120** 合併回 `main`，merge commit `71c81d6`）
 
 **依賴：** 技術上無（不依賴 Issue 1 的任何程式碼變更，純 Flutter widget 屬性，與 Issue 1 走完全不同的程式路徑）。**建議與 Issue 1 一起驗收**——單獨完成本票、Issue 1 尚未完成時，會出現「頁首/頁尾變成深色主題文字、但書頁內容還是白底」的過渡期畫面。
 
