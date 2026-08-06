@@ -18,7 +18,9 @@
 
 檔案存取須解決 `content://` URI 相容性：優先評估透過 `pdfrx` 的自訂讀取來源能力（讀取 callback，可從既有系統檔案描述符存取方式提供位元組），不需要真實檔案系統路徑、也不需要把檔案整包複製到 App 私有目錄——維持既有「不複製、直接引用原始檔案」的架構原則。只有在證實這個橋接方式不可行時，才退回「落地複製到本機快取」，且僅限於這個回退情境下使用，不做為預設路徑。
 
-現行原生 PDF 渲染模組與其對外暴露的 method channel 契約（開書、頁面渲染完成、錯誤回報三個既有呼叫點）本工單內即可開始淘汰——不需要等全部 8 張工單做完才能移除，維持雙套實作並存的時間愈短愈好。
+現行原生 PDF 渲染模組與其對外暴露的 method channel 契約（開書、頁面渲染完成、錯誤回報三個既有呼叫點）本工單內即可開始淘汰——不需要等全部 8 張工單做完才能移除，維持雙套實作並存的時間愈短愈好。清退時須確保 `ReaderScreen` 內部所有對舊原生 View 的呼叫點都已完整改接新 widget，不留下任何仍引用舊路徑的死碼（`spec.md` 審查回應）。
+
+**已知且經人類確認接受的暫時性行為退化**：本工單完成並合併回 `main` 後，直到 Issue 2-4 陸續完成合併前，PDF 閱讀會暫時失去雙頁並列、E-Ink 影像濾鏡/裁切、劃線/備註/書籤這些現行已上線的能力（因為決策 1 是「完全替換、不漸進共存」，舊原生架構不再並存）。這是刻意接受的風險排序，不是遺漏——若之後任何一次真機驗收發現這個退化窗口造成困擾，才需要重新評估是否要把 Issue 1-4 綁定同一次合併，而非逐張個別合併。
 
 ### Acceptance criteria
 
@@ -29,6 +31,7 @@
 - [ ] 新增一份內容更豐富的 PDF 測試 fixture（多頁，取代現行僅 345 bytes、單頁、無內容的 `sample.pdf`），提交進版控供本工單與後續 7 張工單共用。
 - [ ] 單元測試：直接用 `flutter test`（非 `integration_test/`）對新 fixture 驗證開書／頁數／跳頁行為，比照 spec.md 測試策略——不透過真機/模擬器。
 - [ ] `flutter analyze` 乾淨、`flutter test` 全數通過（含既有測試零回歸）。
+- [ ] 確認 `ReaderScreen` 與相關模組中沒有任何殘留對舊原生 PDF View／method channel 的引用（`grep` 驗證），避免死碼或執行期空參考例外。
 
 ### Blocked by
 
@@ -141,6 +144,8 @@ None - can start immediately.
 
 目錄項目點擊後的行為（跳轉、目前所在章節高亮、巢狀展開狀態）與 EPUB 既有目錄 Bottom Sheet 行為一致。目錄按鈕的啟用時機比照 EPUB 既有慣例：書籍尚未成功開啟、或目錄背景載入尚未完成前停用。本工單只需完成目錄資料解析與 Bottom Sheet 顯示邏輯本身；對應的 FAB 按鈕接線留給 Issue 8。
 
+**PDF 目錄 Bottom Sheet 的 UI 入口決策（`spec.md` 審查回應）**：Issue 8 只收斂 6 顆 FAB，沒有獨立的「搜尋」「縮圖」按鈕位置——PDF 版本的目錄 Bottom Sheet 須設計為可容納分頁籤（章節目錄／縮圖／搜尋三個分頁），本工單先建立「章節目錄」分頁與承載分頁籤的殼層結構；縮圖分頁（Issue 7）、搜尋分頁（Issue 6）之後各自把內容掛進同一個殼層，三者共用同一顆「目錄」FAB 觸發。EPUB 目錄 Bottom Sheet 維持現行單一內容、不需要分頁籤（EPUB 沒有縮圖/搜尋功能）。
+
 ### Acceptance criteria
 
 - [ ] `BookTocItem` 抽象介面定義完成，EPUB 既有目錄 Bottom Sheet 改為消費該介面，EPUB 既有目錄相關測試全數維持通過（零回歸）。
@@ -161,7 +166,7 @@ None - can start immediately.
 
 **Status:** ready-for-agent（2026-08-07，`/to-issues` 依 `spec.md` 拆解）
 
-**依賴：** Issue 1。
+**依賴：** Issue 1、Issue 5（搜尋分頁掛載於 Issue 5 建立的目錄 Bottom Sheet 分頁籤殼層內，共用同一顆「目錄」FAB 觸發，見 Issue 5「UI 入口決策」）。
 
 **對應 User Stories（`spec.md`）：** 4, 5, 6
 
@@ -169,17 +174,21 @@ None - can start immediately.
 
 搜尋範圍限定單一已開啟 PDF 文件內（in-document search），與全書庫全文檢索（FTS5，Backlog，尚未開始）是不同功能，不整合。搜尋結果須支援：以高亮標示所有符合位置、可逐一跳轉至下一個/上一個符合結果。掃描件（無文字層）PDF 無法搜尋到內容——這是格式本身的限制，非實作缺陷，UI 上須有合理的空結果呈現。
 
+UI 入口為 Issue 5 建立的目錄 Bottom Sheet「搜尋」分頁，不新增獨立按鈕（見 Issue 5「UI 入口決策」）。
+
 ### Acceptance criteria
 
 - [ ] 輸入關鍵字後，正確找出文件內所有符合位置並以高亮標示。
 - [ ] 「下一個/上一個」導覽正確依序跳轉至各符合位置對應頁面。
 - [ ] 對無文字層的 PDF（掃描件）搜尋時，UI 顯示合理的「無結果」而非錯誤或無回應。
+- [ ] 搜尋分頁正確掛載於 Issue 5 的目錄 Bottom Sheet 殼層內，透過既有「目錄」FAB 開啟後可切換至此分頁。
 - [ ] 單元測試：`flutter test` 對含可搜尋文字的 fixture 驗證搜尋結果數量、位置、導覽行為。
 - [ ] `flutter analyze` 乾淨、`flutter test` 全數通過。
 
 ### Blocked by
 
 - Issue 1
+- Issue 5
 
 ---
 
@@ -187,7 +196,7 @@ None - can start immediately.
 
 **Status:** ready-for-agent（2026-08-07，`/to-issues` 依 `spec.md` 拆解）
 
-**依賴：** Issue 1。
+**依賴：** Issue 1、Issue 5（縮圖分頁掛載於 Issue 5 建立的目錄 Bottom Sheet 分頁籤殼層內，共用同一顆「目錄」FAB 觸發，見 Issue 5「UI 入口決策」）。
 
 **對應 User Stories（`spec.md`）：** 7
 
@@ -195,10 +204,13 @@ None - can start immediately.
 
 以頁碼列表/格狀呈現整本書每一頁的縮小預覽圖，點擊縮圖跳轉至對應頁面。縮圖產生方式須避免一次性渲染全書縮圖造成的效能/記憶體問題（可視範圍內才產生、有上限的快取策略）。滑出可視範圍外而被快取淘汰的縮圖影像資源須明確釋放（`dispose()`），避免大量頁數書籍快速捲動縮圖面板時發生記憶體洩漏（`spec.md` 審查回應）。
 
+UI 入口為 Issue 5 建立的目錄 Bottom Sheet「縮圖」分頁，不新增獨立按鈕（見 Issue 5「UI 入口決策」）。
+
 ### Acceptance criteria
 
 - [ ] 縮圖面板正確顯示整本書頁碼縮圖，點擊後正確跳轉至對應頁面。
 - [ ] 縮圖僅於可視範圍內產生，不一次性渲染全書。
+- [ ] 縮圖分頁正確掛載於 Issue 5 的目錄 Bottom Sheet 殼層內，透過既有「目錄」FAB 開啟後可切換至此分頁。
 - [ ] 淘汰快取的縮圖資源正確釋放（`dispose()`），大量頁數書籍快速捲動不造成記憶體持續成長。
 - [ ] 單元測試：`flutter test` 驗證縮圖產生/快取/釋放邏輯（可透過可觀察的快取狀態或資源計數斷言，不需要真機記憶體量測）。
 - [ ] `flutter analyze` 乾淨、`flutter test` 全數通過。
@@ -206,6 +218,7 @@ None - can start immediately.
 ### Blocked by
 
 - Issue 1
+- Issue 5
 
 ---
 
