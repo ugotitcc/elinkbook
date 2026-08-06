@@ -5490,6 +5490,57 @@ void main() {
     expect(settingsIcon.color, expectedTheme.colorScheme.surface);
   });
 
+  testWidgets(
+      '流式 EPUB 成功開啟後收到 onError（例如螢幕旋轉觸發的 ResizeObserver '
+      '瀏覽器警告，經 epic-18-reader-device-qa Issue 33 的全域 window.onerror '
+      '轉發），不應覆蓋已成功渲染的畫面（/diagnose：真機回報旋轉螢幕後畫面'
+      '整個被錯誤文字取代，無法繼續閱讀）', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_error_after_render',
+          prefsManager: prefsManager,
+          isFixedLayout: false,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final foliateView = tester.widget<FoliateEpubReaderView>(
+      find.byType(FoliateEpubReaderView),
+    );
+    foliateView.onPageRendered();
+    foliateView.onLayoutResolved?.call(
+      const EpubLayoutInfo(
+        isFixedLayout: false,
+        writingMode: WritingMode.vertical,
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byKey(const Key('reader_error_text')), findsNothing);
+    expect(find.byType(FoliateEpubReaderView), findsOneWidget);
+
+    // 模擬旋轉螢幕時，foliate-js 的 ResizeObserver 觸發瀏覽器層級的
+    // 「loop completed with undelivered notifications」警告，被全域
+    // window.onerror 補捉後透過既有 onError bridge 轉發過來——這是一則
+    // 良性警告，不代表書籍真的開啟失敗。
+    foliateView.onError(
+      'JS Error: ResizeObserver loop completed with undelivered '
+      'notifications. (https://appassets.androidplatform.net/assets/'
+      'foliate/index.html?prefs=...)',
+    );
+    await tester.pump();
+
+    expect(find.byKey(const Key('reader_error_text')), findsNothing,
+        reason: '已成功渲染的畫面不應被開書成功後才發生的良性 JS 警告覆蓋成錯誤狀態');
+    expect(find.byType(FoliateEpubReaderView), findsOneWidget,
+        reason: '書籍內容應維持顯示，使用者仍可繼續閱讀');
+  });
+
   tearDownAll(() {
     // 還原 cacheBookForServing 為原始實作，避免污染其他測試檔
     cacheBookForServing = originalCacheBookForServing;

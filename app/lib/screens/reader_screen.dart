@@ -891,8 +891,20 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     }
   }
 
+  /// 【/diagnose：真機回報旋轉螢幕後畫面被錯誤文字取代，無法繼續閱讀】
+  /// 只在 `_state == loading` 時才轉為錯誤畫面——書籍已成功渲染
+  /// （`_state == rendered`）後才發生的 `onError` 不應覆蓋掉已顯示的
+  /// 內容。根因：epic-18-reader-device-qa Issue 33 新增的全域
+  /// `window.onerror`／`window.onunhandledrejection` 補捉會轉發「任何」
+  /// 未被攔截的 JS 例外，包含瀏覽器層級的良性警告（例如 foliate-js 的
+  /// paginator 在螢幕旋轉、ResizeObserver 重新觀察內容尺寸時，Chromium
+  /// 觸發的「ResizeObserver loop completed with undelivered
+  /// notifications」——這只是瀏覽器告知一輪 resize callback 沒能在同一
+  /// frame 內處理完畢，不代表書籍真的開啟失敗）；這個 guard 與既有的
+  /// `_handleOpenBookTimeout()` 採用同一種防禦模式。
   void _handleError(String message) {
     if (!mounted) return;
+    if (_state != _RenderState.loading) return;
     _openBookTimeoutTimer?.cancel();
     setState(() {
       _state = _RenderState.error;
