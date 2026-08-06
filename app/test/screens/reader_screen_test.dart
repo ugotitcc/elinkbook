@@ -5043,15 +5043,18 @@ void main() {
 
   testWidgets(
       '流式 EPUB 頁首/頁尾文字：字級為 12、不含按鈕底色與內距，只佔文字本身空間、'
-      '文字顏色與書本內文一致（黑色，非白色）'
-      '（epic-18-reader-device-qa Issue 43，真機使用回報：拿掉底色後白色'
-      '文字疊在淺色書頁上基本上看不到）', (tester) async {
+      '文字顏色跟隨 Theme.of(context)（epic-22-reader-theme-integration '
+      'Issue 2；epic-18-reader-device-qa Issue 43 的既有測試在此更新——'
+      '原本斷言寫死 Colors.black，現在明確指定 AppTheme.light 並比對其實際'
+      'onSurface 色值，理由同 Issue 43：拿掉底色後，文字顏色必須與書頁'
+      '背景形成足夠對比才看得到）', (tester) async {
     await prefsManager.saveBookPrefs(
       'b_header_footer_no_bg',
       const BookReaderPrefs(showHeader: true, showFooter: true),
     );
     await tester.pumpWidget(
       MaterialApp(
+        theme: buildThemeData(AppTheme.light),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
           bookId: 'b_header_footer_no_bg',
@@ -5093,7 +5096,10 @@ void main() {
       matching: find.byType(Text),
     ));
     expect(headerText.style?.fontSize, 12);
-    expect(headerText.style?.color, Colors.black);
+    expect(
+      headerText.style?.color,
+      buildThemeData(AppTheme.light).colorScheme.onSurface,
+    );
 
     final footerContainer = tester.widget<Container>(
       find.byKey(const Key('reader_foliate_progress_text')),
@@ -5106,6 +5112,120 @@ void main() {
       matching: find.byType(Text),
     ));
     expect(footerText.style?.fontSize, 12);
+    expect(
+      footerText.style?.color,
+      buildThemeData(AppTheme.light).colorScheme.onSurface,
+    );
+  });
+
+  testWidgets(
+      '流式 EPUB 頁首/頁尾文字：深色主題下顏色跟隨 Theme.of(context)'
+      '（epic-22-reader-theme-integration Issue 2）', (tester) async {
+    await prefsManager.saveBookPrefs(
+      'b_header_footer_dark',
+      const BookReaderPrefs(showHeader: true, showFooter: true),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildThemeData(AppTheme.dark),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_header_footer_dark',
+          prefsManager: prefsManager,
+          isFixedLayout: false,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final foliateView = tester.widget<FoliateEpubReaderView>(
+      find.byType(FoliateEpubReaderView),
+    );
+    foliateView.onPageRendered();
+    foliateView.onLocatorChanged?.call(
+      const EpubPositionInfo(
+        locatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
+        progression: 0.1,
+        pageIndex: 9,
+        totalPages: 100,
+      ),
+    );
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('nav_zone_1')));
+    await tester.pump();
+
+    final headerText = tester.widget<Text>(find.descendant(
+      of: find.byKey(const Key('reader_foliate_header_text')),
+      matching: find.byType(Text),
+    ));
+    expect(
+      headerText.style?.color,
+      buildThemeData(AppTheme.dark).colorScheme.onSurface,
+    );
+
+    final footerText = tester.widget<Text>(find.descendant(
+      of: find.byKey(const Key('reader_foliate_progress_text')),
+      matching: find.byType(Text),
+    ));
+    expect(
+      footerText.style?.color,
+      buildThemeData(AppTheme.dark).colorScheme.onSurface,
+    );
+  });
+
+  testWidgets(
+      'EPUB 固定版面：不論主題為何，頁首/頁尾文字色維持既有寫死 Colors.black'
+      '（epic-22-reader-theme-integration Issue 2，固定版面內容通常是白底'
+      '圖片，若文字色跟著深色主題變淺會看不見）', (tester) async {
+    await prefsManager.saveBookPrefs(
+      'b_header_footer_fxl',
+      const BookReaderPrefs(showHeader: true, showFooter: true),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildThemeData(AppTheme.dark),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample_fixed_layout.epub',
+          bookId: 'b_header_footer_fxl',
+          prefsManager: prefsManager,
+          isFixedLayout: true,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final foliateView = tester.widget<FoliateEpubReaderView>(
+      find.byType(FoliateEpubReaderView),
+    );
+    foliateView.onPageRendered();
+    foliateView.onLocatorChanged?.call(
+      const EpubPositionInfo(
+        locatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
+        progression: 0.1,
+        pageIndex: 9,
+        totalPages: 100,
+      ),
+    );
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('nav_zone_1')));
+    await tester.pump();
+
+    final headerText = tester.widget<Text>(find.descendant(
+      of: find.byKey(const Key('reader_foliate_header_text')),
+      matching: find.byType(Text),
+    ));
+    expect(headerText.style?.color, Colors.black);
+
+    final footerText = tester.widget<Text>(find.descendant(
+      of: find.byKey(const Key('reader_foliate_progress_text')),
+      matching: find.byType(Text),
+    ));
     expect(footerText.style?.color, Colors.black);
   });
 
