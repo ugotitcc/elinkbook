@@ -214,15 +214,15 @@ void handleFoliateConsoleMessage(String message, String levelName) {
 }
 
 /// 把 [Color] 轉換為 CSS 合法的 6 位十六進位色碼字串（`#RRGGBB`，不含
-/// alpha）。**不可直接對 [Color.value] 呼叫 `toRadixString(16)`**：
-/// `Color.value` 是 32 位 `AARRGGBB`（alpha 在前），CSS 標準的 8 位
+/// alpha）。**不可直接呼叫 `color.value.toRadixString(16)`**：
+/// `Color` 內部 32 位值是 `AARRGGBB`（alpha 在前），CSS 標準的 8 位
 /// 十六進位色碼是 `#RRGGBBAA`（alpha 在後），順序相反，直接轉換會產生
 /// 錯誤顏色而非只是格式問題（epic-22-reader-theme-integration Issue 1，
 /// 程式碼審查發現）。做法：先補零到 8 碼（`padLeft(8, '0')`，避免
 /// RGB 帶前導零時被截斷成較短字串），再捨棄前 2 碼 alpha，只保留後
 /// 6 碼 RGB。
 String colorToCssHex(Color color) {
-  final hex = color.value.toRadixString(16).padLeft(8, '0');
+  final hex = color.toARGB32().toRadixString(16).padLeft(8, '0');
   return '#${hex.substring(2)}';
 }
 
@@ -261,6 +261,12 @@ Map<String, Object?> buildFoliatePreferencesMap(FoliateEpubReaderView view) {
   if (view.columnSize != null) map['columnSize'] = view.columnSize;
   if (view.showFooter != null) map['showFooter'] = view.showFooter;
   if (view.isFixedLayoutHint != null) map['isFixedLayoutHint'] = view.isFixedLayoutHint;
+  if (view.textColor != null) {
+    map['textColor'] = colorToCssHex(view.textColor!);
+  }
+  if (view.backgroundColor != null) {
+    map['backgroundColor'] = colorToCssHex(view.backgroundColor!);
+  }
   if (view.dualPageMode != null) map['dualPageMode'] = view.dualPageMode!.name;
   map['isLandscape'] = view.isLandscape;
   return map;
@@ -290,6 +296,8 @@ bool foliatePreferencesChanged(
       oldView.columnSize != newView.columnSize ||
       oldView.showFooter != newView.showFooter ||
       oldView.isFixedLayoutHint != newView.isFixedLayoutHint ||
+      oldView.textColor != newView.textColor ||
+      oldView.backgroundColor != newView.backgroundColor ||
       oldView.dualPageMode != newView.dualPageMode ||
       oldView.isLandscape != newView.isLandscape;
 }
@@ -356,6 +364,8 @@ class FoliateEpubReaderView extends StatefulWidget {
   final bool? isFixedLayoutHint;
   final DualPageMode? dualPageMode;
   final bool isLandscape;
+  final Color? textColor;
+  final Color? backgroundColor;
   final List<CustomFont> customFonts;
   final List<ZoneAction> navZoneActions;
   final ValueChanged<ZoneAction>? onZoneAction;
@@ -390,6 +400,8 @@ class FoliateEpubReaderView extends StatefulWidget {
     this.showFooter,
     this.isFixedLayoutHint,
     this.dualPageMode,
+    this.textColor,
+    this.backgroundColor,
     this.isLandscape = false,
     this.customFonts = const [],
     this.navZoneActions = const [

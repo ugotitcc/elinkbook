@@ -94,6 +94,45 @@ void main() {
       });
     });
 
+    test('textColor 非 null 時 map 含轉換後的十六進位色碼字串', () {
+      const view = FoliateEpubReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        textColor: Color(0xFFE8E8EC),
+      );
+      expect(buildFoliatePreferencesMap(view), {
+        'textColor': '#e8e8ec',
+        'isLandscape': false,
+      });
+    });
+
+    test('backgroundColor 非 null 時 map 含轉換後的十六進位色碼字串', () {
+      const view = FoliateEpubReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        backgroundColor: Color(0xFF121214),
+      );
+      expect(buildFoliatePreferencesMap(view), {
+        'backgroundColor': '#121214',
+        'isLandscape': false,
+      });
+    });
+
+    test('textColor／backgroundColor 未設定（null）時 map 不含這兩個 key', () {
+      const view = FoliateEpubReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+      );
+      expect(buildFoliatePreferencesMap(view).containsKey('textColor'), isFalse);
+      expect(
+        buildFoliatePreferencesMap(view).containsKey('backgroundColor'),
+        isFalse,
+      );
+    });
+
     test('所有非 null 建構參數皆正確出現於 map', () {
       const view = FoliateEpubReaderView(
         filePath: '/tmp/sample.epub',
@@ -115,6 +154,8 @@ void main() {
         columnMode: ColumnMode.single,
         columnSize: 600.0,
         showFooter: false,
+        textColor: Color(0xFFE8E8EC),
+        backgroundColor: Color(0xFF121214),
       );
       expect(buildFoliatePreferencesMap(view), {
         'writingMode': 'vertical',
@@ -133,6 +174,8 @@ void main() {
         'columnMode': 'single',
         'columnSize': 600.0,
         'showFooter': false,
+        'textColor': '#e8e8ec',
+        'backgroundColor': '#121214',
         'isLandscape': false,
       });
     });
@@ -452,6 +495,54 @@ void main() {
         onError: _noopError,
         dualPageMode: DualPageMode.auto,
         isLandscape: true,
+      );
+      expect(foliatePreferencesChanged(oldView, newView), isFalse);
+    });
+
+    test('僅 textColor 不同時回傳 true', () {
+      const oldView = FoliateEpubReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        textColor: Color(0xFF000000),
+      );
+      const newView = FoliateEpubReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        textColor: Color(0xFFE8E8EC),
+      );
+      expect(foliatePreferencesChanged(oldView, newView), isTrue);
+    });
+
+    test('僅 backgroundColor 不同時回傳 true', () {
+      const oldView = FoliateEpubReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        backgroundColor: Color(0xFFFFFFFF),
+      );
+      const newView = FoliateEpubReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        backgroundColor: Color(0xFF121214),
+      );
+      expect(foliatePreferencesChanged(oldView, newView), isTrue);
+    });
+
+    test('textColor／backgroundColor 皆相同（含皆為 null）時回傳 false', () {
+      const oldView = FoliateEpubReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        fontSize: 1.0,
+      );
+      const newView = FoliateEpubReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        fontSize: 1.0,
       );
       expect(foliatePreferencesChanged(oldView, newView), isFalse);
     });
