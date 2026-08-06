@@ -1937,20 +1937,23 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 頁面背景本身（見 app_theme_data.dart），若拿來當按鈕底色，淺色主題
   /// 下會讓按鈕在近白頁面上幾乎隱形（重蹈 Issue 5 才修過的「控制元件顏色
   /// 跟頁面背景太接近而失去可視性」問題）。`onSurface` 在淺色主題下是
-  /// 近黑色、深色主題下是近白色，天生就與同一主題的頁面背景形成對比，
-  /// 淺色主題下維持與改動前 `Colors.black54` 相近的深色圓形觀感，深色
-  /// 主題下則變成淺色圓形、正確對比深色頁面。半透明度沿用原本
-  /// `Colors.black54` 的 54% 數值，維持「浮動、可透視底下內容」的既有
-  /// 視覺語言。圖示色相應取 `colorScheme.surface`（與底色反向搭配，
-  /// 維持圖示對底色的可視對比）。顯示 EPUB 固定版面（漫畫）時維持既有
-  /// 寫死 Colors.black54/Colors.white——理由同 _themedTextColor：固定
-  /// 版面頁面內容本身不受本 Epic 影響（通常是白底圖片），深色主題下若
-  /// 控制按鈕也跟著變色，容易在不可預期的圖片背景上失去可視對比（與
-  /// Issue 1/2 的 getter 不同，這裡沒有「不適用」的情境，故不用
-  /// Color? + ?? fallback 模式，兩個分支各自直接回傳明確的顏色）。
-  Color get _themedFabBackgroundColor => _isFixedLayout
-      ? Colors.black54
-      : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.54);
+  /// 近黑色、深色主題下是近白色，天生就與同一主題的頁面背景形成對比。
+  /// 圖示色相應取 `colorScheme.surface`（與底色反向搭配，維持圖示對底色
+  /// 的可視對比）。**底色不透明、不加透明度**（epic-22-reader-theme-
+  /// integration Issue 4 電子紙硬體對比追加修正）：原本沿用改動前
+  /// `Colors.black54` 的 54% 透明度，在一般 LCD/OLED 顯示器上運算出的
+  /// 混合中間灰看起來沒問題，但真機電子紙硬體肉眼實測發現，這個「即時
+  /// 運算出來的中間灰」正好落在電子紙灰階抖動渲染最弱的區間，圖示完全
+  /// 無法辨識形狀；改用不透明實色色塊後，即使被電子紙抖動處理，仍是
+  /// 「一塊清楚色塊 vs. 另一塊清楚色塊」的二元對比。顯示 EPUB 固定版面
+  /// （漫畫）時維持既有寫死 Colors.black54/Colors.white——理由同
+  /// _themedTextColor：固定版面頁面內容本身不受本 Epic 影響（通常是
+  /// 白底圖片），深色主題下若控制按鈕也跟著變色，容易在不可預期的圖片
+  /// 背景上失去可視對比（與 Issue 1/2 的 getter 不同，這裡沒有「不適用」
+  /// 的情境，故不用 Color? + ?? fallback 模式，兩個分支各自直接回傳明確
+  /// 的顏色）。
+  Color get _themedFabBackgroundColor =>
+      _isFixedLayout ? Colors.black54 : Theme.of(context).colorScheme.onSurface;
   Color get _themedFabIconColor =>
       _isFixedLayout ? Colors.white : Theme.of(context).colorScheme.surface;
 

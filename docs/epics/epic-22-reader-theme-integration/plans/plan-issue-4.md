@@ -33,7 +33,7 @@
 - Consumes: 無新依賴。
 - Produces: `buildThemeData(AppTheme.dark).colorScheme.outline` 與 `buildThemeData(AppTheme.dark).dividerColor` 回傳新色值 `Color(0xFF5C5C66)`（取代原本的 `Color(0xFF2A2A30)`）。
 
-- [ ] **Step 1: 在 `app_theme_data_test.dart` 新增對比回歸測試**
+- [x] **Step 1: 在 `app_theme_data_test.dart` 新增對比回歸測試**
 
 在既有 `group('buildThemeData', ...)` 區塊內、`test('sepia 主題使用淺色背景（羊皮紙色）', ...)` 之後，新增：
 
@@ -67,12 +67,12 @@
     });
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/theme/app_theme_data_test.dart --plain-name "epic-22-reader-theme-integration Issue 4"`
 Expected: 第一個測試 FAIL（目前 `outline` 仍是 `#2A2A30`，亮度差約 0.048，小於門檻 0.15）。第二個測試（`dividerColor` 與 `outline` 同值）預期本來就 PASS，是既有設計的回歸基準測試。
 
-- [ ] **Step 3: 調整 `_buildDarkTheme()` 的 `border` 常數**
+- [x] **Step 3: 調整 `_buildDarkTheme()` 的 `border` 常數**
 
 在 `app/lib/theme/app_theme_data.dart` 找到：
 
@@ -103,12 +103,12 @@ ThemeData _buildDarkTheme() {
   const primary = Color(0xFFBB86FC);
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `flutter test test/theme/app_theme_data_test.dart`
 Expected: PASS，全部測試（含既有測試與本次新增測試）通過。
 
-- [ ] **Step 5: 執行完整 `app_theme_data_test.dart` 與相關既有測試確認零回歸**
+- [x] **Step 5: 執行完整 `app_theme_data_test.dart` 與相關既有測試確認零回歸**
 
 Run: `flutter test test/theme/`
 Expected: PASS，全數通過（含 `app_theme_preferences_test.dart`）。
@@ -116,12 +116,12 @@ Expected: PASS，全數通過（含 `app_theme_preferences_test.dart`）。
 Run: `flutter test test/screens/reader_screen_test.dart`
 Expected: PASS，全數通過——本次改動的 `outline`/`dividerColor` 不影響任何既有斷言的 `onSurface`/`scaffoldBackgroundColor` 值（Issue 1/2/5 的測試皆比對這兩個欄位，與 `outline` 無關）。
 
-- [ ] **Step 6: `flutter analyze` 確認乾淨**
+- [x] **Step 6: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app/lib/theme/app_theme_data.dart app/test/theme/app_theme_data_test.dart
@@ -136,17 +136,17 @@ git commit -m "fix(epic-22): 深色主題 outline/dividerColor 色值對比不�
 
 **Interfaces:** 無新增介面，驗證 Task 1 整合後的端到端行為。
 
-- [ ] **Step 1: 執行全專案 `flutter test`**
+- [x] **Step 1: 執行全專案 `flutter test`**
 
 Run: `flutter test`
 Expected: 全數通過，無任何回歸。
 
-- [ ] **Step 2: 執行全專案 `flutter analyze`**
+- [x] **Step 2: 執行全專案 `flutter analyze`**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 3（建議）：真機/模擬器視覺確認**
+- [x] **Step 3（建議）：真機/模擬器視覺確認**
 
 本 Issue 是純色票數值調整，`flutter test` 已用感知亮度差驗證足夠對比，此步驟是建議而非強制，用於確認實際視覺觀感符合預期（而非只是數值上「差異夠大」）：
 
@@ -154,6 +154,40 @@ Expected: `No issues found!`
 2. 確認 `nav_zone_settings_screen.dart` 的分隔線在深色主題下同樣變得可辨識（`dividerColor` 與 `outline` 同值，一併受惠）。
 3. 確認新色值本身不會過於搶眼、破壞深色主題整體低調的視覺調性（純主觀視覺確認，若覺得不理想可微調 `#5C5C66` 這個數值，只要維持測試門檻 `luminanceDiff > 0.15` 即可）。
 
-- [ ] **Step 4: Commit（若真機驗證過程中決定微調色值）**
+**結果：在一般 LCD/OLED 模擬器上確認達標，但人類在真正的電子紙（E-Ink）實體裝置上肉眼實測＋拍照後發現對比仍嚴重不足**（Switch 關閉狀態完全消失，FAB 圖示——Issue 3 已合併的既有問題——完全無法辨識形狀），見下方「電子紙硬體對比追加修正」。
+
+- [x] **Step 4: Commit（若真機驗證過程中決定微調色值）**
 
 若 Step 3 認為 `#5C5C66` 需要微調，重新走一次「改常數 → 重跑 Step 4-6 測試 → 確認仍通過既有門檻」，再另開一個 commit。若視覺確認滿意，本 Step 略過。
+
+**結果：需要微調，見下方「電子紙硬體對比追加修正」一節，已另開 commit。**
+
+---
+
+## 電子紙硬體對比追加修正（同一分支延伸，未另立新 Issue）
+
+**背景：** `/superpowers:requesting-code-review` 對本分支進行標準審查時，人類提供 4 張真機電子紙裝置照片（Switch 設定面板、FAB 按鈕，各自對照一般螢幕截圖版本），要求審查一併評估電子紙硬體對比是否足夠，並將 Issue 3 已合併的 FAB 顏色問題一併處理。完整審查報告：`tmp/epic-22/review-issue-4-implementation.md`。
+
+**審查發現：**
+- Issue 4 原本的 `outline` 調整（`#5C5C66`）本身程式碼合格、在一般顯示器上達標，但 Switch 關閉狀態在電子紙照片中完全消失——根因追查到 Flutter SDK 原始碼（`switch.dart`）：M3 `Switch` 關閉狀態同時吃 `outline`（外框線/圓鈕）與 `surfaceContainerHighest`（軌道底色），本專案的 `ColorScheme.dark(...)` 從未客製後者，隱性等於 `surface`，導致軌道底色與背景完全同色，只能靠一條 2dp 外框線撐可視度——這種「僅靠細線」的手法在電子紙灰階抖動渲染下結構性地不可靠。
+- Issue 3（已合併）的 FAB 按鈕底色 `colorScheme.onSurface.withValues(alpha: 0.54)` 是半透明疊色，電子紙照片顯示圖示完全無法辨識——即時運算出的混合中間灰正好落在電子紙抖動演算法最弱的區間。
+
+**人類決策：** 不另立新 Issue、不拆分 PR，直接在本分支（`fix/epic-22-issue4-outline-contrast`）擴大範圍一併修正；FAB 改用不透明實色的「近白底＋近黑圖示」方案（即拿掉 `.withValues(alpha: 0.54)`，底色改回不透明的 `colorScheme.onSurface` 原色，圖示 `colorScheme.surface` 不變）。
+
+**追加修正內容：**
+
+1. `app/lib/theme/app_theme_data.dart` `_buildDarkTheme()`：
+   - `outline`（`border` 常數）從 `#5C5C66` 進一步調亮為 `#86868F`（對 `surface` 感知亮度差約 0.41，取代原本約 0.246）。
+   - `ColorScheme.dark(...)` 新增 `surfaceContainerHighest: Color(0xFF3C3C44)`（原本未客製，隱性等於 `surface`；新值對 `surface` 感知亮度差約 0.119），讓 Switch 關閉狀態的軌道底色本身就是一塊與背景明顯不同的實心色塊。
+2. `app/lib/screens/reader_screen.dart` `_themedFabBackgroundColor`：拿掉 `.withValues(alpha: 0.54)`，底色改為不透明的 `Theme.of(context).colorScheme.onSurface`（`_themedFabIconColor` 不變，仍是 `colorScheme.surface`）——此變動影響全部三個主題（light/dark/sepia），非僅深色主題，因為半透明疊色在電子紙上的結構性弱點與主題無關。
+3. `app/test/theme/app_theme_data_test.dart`：新增 `surfaceContainerHighest` 對比回歸測試（門檻 `luminanceDiff > 0.10`），更新既有 `outline` 測試的說明註解反映新色值。
+4. `app/test/screens/reader_screen_test.dart`：既有 3 個 Issue 3 FAB 測試斷言從 `.withValues(alpha: 0.54)` 改為不透明色值。
+
+**驗證結果：** `flutter test test/theme/ test/screens/reader_screen_test.dart` 146 項全數通過；全專案 `flutter test` 1002/1002 全數通過；`flutter analyze` 乾淨。
+
+**Commit（追加修正）：**
+
+```bash
+git add app/lib/theme/app_theme_data.dart app/lib/screens/reader_screen.dart app/test/theme/app_theme_data_test.dart app/test/screens/reader_screen_test.dart docs/epics/epic-22-reader-theme-integration/plans/plan-issue-4.md
+git commit -m "fix(epic-22): 深色主題 Switch/FAB 電子紙硬體對比追加修正（Issue 3/4 一併處理）"
+```

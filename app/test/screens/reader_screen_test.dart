@@ -5375,7 +5375,7 @@ void main() {
     final expectedTheme = buildThemeData(AppTheme.dark);
     expect(
       backContainer.color,
-      expectedTheme.colorScheme.onSurface.withValues(alpha: 0.54),
+      expectedTheme.colorScheme.onSurface,
     );
     expect(backIcon.color, expectedTheme.colorScheme.surface);
   });
@@ -5413,7 +5413,7 @@ void main() {
     final expectedTheme = buildThemeData(AppTheme.light);
     expect(
       backContainer.color,
-      expectedTheme.colorScheme.onSurface.withValues(alpha: 0.54),
+      expectedTheme.colorScheme.onSurface,
     );
     expect(backIcon.color, expectedTheme.colorScheme.surface);
   });
@@ -5485,7 +5485,7 @@ void main() {
     final expectedTheme = buildThemeData(AppTheme.dark);
     expect(
       settingsContainer.color,
-      expectedTheme.colorScheme.onSurface.withValues(alpha: 0.54),
+      expectedTheme.colorScheme.onSurface,
     );
     expect(settingsIcon.color, expectedTheme.colorScheme.surface);
   });
