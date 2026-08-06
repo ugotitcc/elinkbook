@@ -70,19 +70,24 @@ None - can start immediately（建議與 Issue 1 一起完成後再一併真機�
 
 ## Issue 3：閱讀器浮動按鈕（FAB）顏色未依主題調整
 
-**Status:** needs-triage（2026-08-06，`epic-22-issue-2` 審查過程中人類真機測試發現，非本 Epic 迴歸——`/superpowers:requesting-code-review` 查證為 `epic-18-reader-device-qa` Issue 7 導入時就存在的既有設計，詳見 `tmp/epic-22/review-issue-2-implementation.md` Part 2 第 1 項）
+**Status:** ✅ 已完成並合併（2026-08-06，分支 `epic-22-issue3-reader-fab-theme`，1 個 commit，依 `plans/plan-issue-3.md` Task 1 實作；人類決策：底色/圖示色改為跟隨 `Theme.of(context)`〔非維持既有高對比黑底白圖示〕；`/superpowers:requesting-code-review` 審查建議合併，0 Critical／0 Important，`flutter test` 137/137（本檔案），`flutter analyze` 乾淨，詳見 `tmp/epic-22/review-issue-3-implementation.md`；已透過 **PR #121** 合併回 `main`，merge commit `7a23493`）
 
 **依賴：** 無，可獨立排入規劃。
 
-### What to build（待 Discovery/規劃）
+### What to build
 
-流式 EPUB 閱讀畫面的 6 顆浮動圓形按鈕（返回／目錄／版面設定／書籤／筆記／進度-跳頁）目前一律用 `ClipOval(Container(color: Colors.black54, child: IconButton(icon: ..., color: Colors.white)))` 硬編碼樣式（`app/lib/screens/reader_screen.dart:1543-1657`），與 `Theme.of(context)` 完全無關。深色主題下使用體驗較差（半透明黑底疊在深色書頁上對比不足／不協調）。
+流式 EPUB 閱讀畫面的 6 顆浮動圓形按鈕（返回／目錄／版面設定／書籤／筆記／進度-跳頁）原本一律用 `ClipOval(Container(color: Colors.black54, child: IconButton(icon: ..., color: Colors.white)))` 硬編碼樣式，與 `Theme.of(context)` 完全無關。比照 Issue 1/2 已建立的既有模式，新增 `_themedFabBackgroundColor`／`_themedFabIconColor` 兩個 non-nullable getter：顯示流式 EPUB 時，底色取 `colorScheme.onSurface`（54% 透明度）、圖示取 `colorScheme.surface`（角色分配刻意與直覺相反，避免重蹈 Issue 5 修過的「控制元件顏色與頁面背景太接近而失去可視性」問題——`surface` 在各主題下皆接近同主題頁面背景，若拿來當底色會讓按鈕在同色頁面上消失）；顯示 EPUB 固定版面（漫畫）時，維持既有寫死 `Colors.black54`/`Colors.white` 不變（頁面內容通常是白底圖片，不受本 Epic 影響）。PDF 不受影響（顯示條件天然排除）。
 
-需要 Discovery 階段決定：這些按鈕的底色/圖示色要不要跟隨 `Theme.of(context)`（比照 Issue 1/2 的單一來源精神），還是維持「不論主題一律高對比黑底白圖示」的既有設計意圖（因為原本的設計目的可能就是「浮動控制項刻意用高對比視覺語言、不融入頁面」，需要人類確認原始設計意圖再決定要不要改）。
+### Acceptance criteria
+
+- [x] 流式 EPUB 顯示時，6 顆浮動按鈕的 `Container.color`/`Icon.color` 等於當下 `Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.54)`/`colorScheme.surface`，涵蓋 `AppTheme.light`/`dark` 主題。
+- [x] EPUB 固定版面顯示時，按鈕顏色不論主題為何皆維持 `Colors.black54`/`Colors.white`（既有行為不變的回歸測試）。
+- [x] `app/test/screens/reader_screen_test.dart` 新增 4 項測試：深色/淺色主題「返回」按鈕、固定版面黑白不變、深色主題「版面設定」按鈕（驗證有 `onPressed` 分流邏輯的按鈕同樣生效）。
+- [x] `flutter analyze` 乾淨、`flutter test` 全數通過（本檔案 137/137）。
 
 ### Blocked by
 
-None - can start immediately（規劃階段）。
+None - 已完成。
 
 ---
 
