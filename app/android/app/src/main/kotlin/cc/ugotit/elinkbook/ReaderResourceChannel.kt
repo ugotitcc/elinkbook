@@ -145,6 +145,27 @@ class ReaderResourceChannel(
                 }
                 result.success(cachedPath)
             }
+            // epic-24-pdf-engine-rebuild Issue 2：一次性讀取 content:// URI 的
+            // 全部位元組。pdfrx 的 PdfDocument.openCustom 雖然宣告 read callback
+            // 為 FutureOr，但內部 PDFium FFI 實作是在 native 執行緒同步呼叫
+            // 該 callback，無法等待 MethodChannel 回傳的 Future（已知技術風險，
+            // 見 plan-issue-1 Task 2），因此 Dart 端改為先透過本方法一次性讀取
+            // 全部位元組，寫入暫存檔後以 PdfDocument.openFile() 開啟。
+            "readContentUriAll" -> {
+                val uriString = call.argument<String>("uri")
+                if (uriString == null) {
+                    result.success(null)
+                    return
+                }
+                val bytes = try {
+                    context.contentResolver.openInputStream(Uri.parse(uriString))
+                        ?.use { it.readBytes() }
+                } catch (e: Exception) {
+                    Log.w("ReaderResourceChannel", "Failed to read content uri all bytes: $uriString", e)
+                    null
+                }
+                result.success(bytes)
+            }
             else -> result.notImplemented()
         }
     }

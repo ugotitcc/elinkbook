@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pdfrx/pdfrx.dart';
 import 'package:elinkbook/reader/pdf_page_info.dart';
@@ -99,5 +101,75 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
     expect(tester.takeException(), isNull);
     expect(lastPageInfo?.pageIndex, 4);
+  });
+
+  testWidgets('content:// URI 路徑觸發 openCustom 分支（無 mock channel 時安全失敗，不當成本機路徑處理）',
+      (tester) async {
+    var renderedCount = 0;
+    String? errorMessage;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PdfxReaderView(
+          filePath: 'content://com.example.provider/document/42',
+          onPageRendered: () => renderedCount++,
+          onError: (msg) => errorMessage = msg,
+        ),
+      ),
+    );
+
+    await tester.runAsync(() async {
+      for (var i = 0; i < 30 && renderedCount == 0 && errorMessage == null; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+      }
+    });
+
+    expect(renderedCount, 0);
+    expect(errorMessage, isNotNull);
+  });
+
+  testWidgets('content:// URI 開書透過平台通道一次性讀取全部位元組',
+      (tester) async {
+    late List<int> fileBytes;
+    await tester.runAsync(() async {
+      fileBytes = await File('test/fixtures/sample_multi_page.pdf').readAsBytes();
+    });
+    var readAllCalled = false;
+
+    const channel = MethodChannel('elinkbook/reader_resources');
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async {
+      switch (call.method) {
+        case 'readContentUriAll':
+          readAllCalled = true;
+          return fileBytes;
+      }
+      return null;
+    });
+    addTearDown(() => TestDefaultBinaryMessengerBinding.instance
+        .defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, null));
+
+    var renderedCount = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PdfxReaderView(
+          filePath: 'content://com.example.provider/document/42',
+          onPageRendered: () => renderedCount++,
+          onError: (_) {},
+        ),
+      ),
+    );
+
+    await tester.runAsync(() async {
+      for (var i = 0; i < 30 && renderedCount == 0; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+      }
+    });
+
+    expect(renderedCount, 1);
+    expect(readAllCalled, isTrue);
   });
 }

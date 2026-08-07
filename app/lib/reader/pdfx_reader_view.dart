@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:pdfrx/pdfrx.dart';
 
 import 'pdf_annotation_decoration.dart';
@@ -75,6 +77,8 @@ class _PdfxReaderViewState extends State<PdfxReaderView> {
   PdfDocument? _document;
   Object? _error;
   bool _renderedNotified = false;
+  static const _resourceChannel = MethodChannel('elinkbook/reader_resources');
+  String? _contentUriTmpPath;
 
   @override
   void initState() {
@@ -84,7 +88,9 @@ class _PdfxReaderViewState extends State<PdfxReaderView> {
 
   Future<void> _openDocument() async {
     try {
-      final document = await PdfDocument.openFile(widget.filePath);
+      final document = widget.filePath.contains('://')
+          ? await _openContentUriDocument()
+          : await PdfDocument.openFile(widget.filePath);
       if (!mounted) {
         await document.dispose();
         return;
@@ -97,9 +103,38 @@ class _PdfxReaderViewState extends State<PdfxReaderView> {
     }
   }
 
+  /// content:// URI 開書（epic-24-pdf-engine-rebuild Issue 2）：
+  /// pdfrx 的 PdfDocument.openCustom 雖然宣告 read callback 為 FutureOr(int)，
+  /// 但內部 PDFium FFI 實作是在 native 執行緒同步呼叫該 callback，無法等待
+  /// MethodChannel 回傳的 Future（已知技術風險，見 plan-issue-1 Task 2）。
+  /// 因此改為：透過平台通道讀取全部位元組後寫入暫存檔，再以 PdfDocument.openFile()
+  /// 開啟。大型 PDF（數百 MB）可能導致記憶體壓力，但這是在避免整包複製到
+  /// 本機快取（見 ADR 0002）與 FFI 同步限制之間的已知取捨。
+  Future<PdfDocument> _openContentUriDocument() async {
+    // 1. 透過平台通道取得 content:// URI 的全部位元組。
+    final bytes = await _resourceChannel.invokeMethod<Uint8List>(
+      'readContentUriAll',
+      {'uri': widget.filePath},
+    );
+    if (bytes == null || bytes.isEmpty) {
+      throw StateError('無法讀取檔案：${widget.filePath}');
+    }
+    // 2. 寫入暫存檔後以 openFile() 開啟——PDFium FFI 在 native 執行緒
+    //    同步讀取檔案，不涉及非同步 read callback。
+    final tmpDir = Directory.systemTemp.createTempSync('elinkbook_pdf_');
+    final tmpFile = File('${tmpDir.path}/doc.pdf');
+    await tmpFile.writeAsBytes(bytes);
+    _contentUriTmpPath = tmpFile.path;
+    return PdfDocument.openFile(tmpFile.path);
+  }
+
   @override
   void dispose() {
     _document?.dispose();
+    final tmpPath = _contentUriTmpPath;
+    if (tmpPath != null) {
+      File(tmpPath).delete().catchError((_) => File(''));
+    }
     super.dispose();
   }
 
