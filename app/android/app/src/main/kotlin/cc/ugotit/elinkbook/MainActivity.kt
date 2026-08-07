@@ -15,6 +15,7 @@ import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterFragmentActivity() {
     private lateinit var bookMetadataChannel: BookMetadataChannel
+    private lateinit var readerResourceChannel: ReaderResourceChannel
 
     // 選擇資料夾的結果狀態（Issue 8）。registerForActivityResult 必須在
     // Activity 進入 STARTED 生命週期之前呼叫，因此以類別層級屬性初始化
@@ -98,17 +99,10 @@ class MainActivity : FlutterFragmentActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-        flutterEngine
-            .platformViewsController
-            .registry
-            .registerViewFactory(
-                "cc.ugotit.elinkbook/pdf_reader_view",
-                PdfReaderViewFactory(flutterEngine.dartExecutor.binaryMessenger),
-            )
         bookMetadataChannel =
             BookMetadataChannel(this, flutterEngine.dartExecutor.binaryMessenger)
 
-        ReaderResourceChannel(this, flutterEngine.dartExecutor.binaryMessenger)
+        readerResourceChannel = ReaderResourceChannel(this, flutterEngine.dartExecutor.binaryMessenger)
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "elinkbook/folder_picker")
             .setMethodCallHandler { call, result ->
@@ -209,5 +203,10 @@ class MainActivity : FlutterFragmentActivity() {
                     else -> result.notImplemented()
                 }
             }
+    }
+
+    override fun onDestroy() {
+        readerResourceChannel.closeAllSessions()
+        super.onDestroy()
     }
 }
