@@ -24,8 +24,7 @@ import '../reader/highlights_repository.dart';
 import '../reader/note.dart';
 import '../reader/notes_repository.dart';
 import '../reader/pdf_annotation_decoration.dart';
-import '../reader/pdf_crop_mode.dart';
-import '../reader/pdf_crop_rect.dart';
+
 import '../reader/pdf_page_info.dart';
 import '../reader/pdf_reader_view.dart';
 import '../reader/pdf_selection_info.dart';
@@ -561,33 +560,6 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     _applySystemUiMode();
   }
 
-  /// 智慧自動裁切首次計算出矩形時觸發（原生端 onCropRectComputed），只
-  /// 更新 pdfCropRect 這一個欄位，其餘欄位透過 copyWith 保留原值——這與
-  /// _handlePrefsChanged（整列覆寫語意）刻意不同，因為這裡的呼叫端
-  /// （PdfReaderView 原生回呼）本來就只知道新計算出的矩形，不該也不會
-  /// 附帶其餘欄位的完整狀態。
-  void _handleCropRectComputed(PdfCropRect rect) {
-    final updated = _prefs.copyWith(pdfCropRect: rect);
-    setState(() {
-      _prefs = updated;
-      final loaded = _loaded;
-      if (loaded != null) {
-        final newLoaded = LoadedPrefs(
-          bookPrefs: updated,
-          globalPrefs: loaded.globalPrefs,
-          readingPosition: loaded.readingPosition,
-          totalCharacterCount: loaded.totalCharacterCount,
-        );
-        _loaded = newLoaded;
-        _resolved = widget.prefsManager.resolve(
-          newLoaded,
-          autoDetectedWritingMode: _autoDetectedWritingMode,
-        );
-      }
-    });
-    widget.prefsManager.saveBookPrefs(widget.bookId, updated);
-  }
-
   /// 手動選區裁切請求（決策 #14）：關閉目前開啟的 PdfSettingsSheet、切換
   /// 至裁切互動模式（宣告式，觸發 PdfReaderView.didUpdateWidget 送出
   /// enterCropEditMode）。context 用的是 State 自身的 context，Navigator
@@ -596,41 +568,6 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   void _handleRequestManualCrop() {
     Navigator.of(context).pop();
     setState(() => _cropEditModeActive = true);
-  }
-
-  /// 使用者在原生裁切互動模式完成框選確認時觸發（PdfReaderView 原生
-  /// onCropRectSelected 回呼）：退出裁切互動模式（宣告式，觸發
-  /// PdfReaderView.didUpdateWidget 送出 exitCropEditMode）、把結果寫入
-  /// BookReaderPrefs（pdfCropMode 固定為 manual、pdfCropRect 為框選
-  /// 結果，透過 copyWith 只更新這兩個欄位，其餘欄位保留原值，比照
-  /// _handleCropRectComputed 的既有模式），持久化後重新開啟
-  /// PdfSettingsSheet 讓使用者看到套用後的結果（見 spec.md「ReaderScreen
-  /// 內部行為異動」）。
-  void _handleCropRectSelected(PdfCropRect rect) {
-    final updated = _prefs.copyWith(
-      pdfCropMode: PdfCropMode.manual,
-      pdfCropRect: rect,
-    );
-    setState(() {
-      _cropEditModeActive = false;
-      _prefs = updated;
-      final loaded = _loaded;
-      if (loaded != null) {
-        final newLoaded = LoadedPrefs(
-          bookPrefs: updated,
-          globalPrefs: loaded.globalPrefs,
-          readingPosition: loaded.readingPosition,
-          totalCharacterCount: loaded.totalCharacterCount,
-        );
-        _loaded = newLoaded;
-        _resolved = widget.prefsManager.resolve(
-          newLoaded,
-          autoDetectedWritingMode: _autoDetectedWritingMode,
-        );
-      }
-    });
-    widget.prefsManager.saveBookPrefs(widget.bookId, updated);
-    _openPdfSettings();
   }
 
   /// 統一包裝 showModalBottomSheet：深色主題下遮罩改為完全透明。
@@ -1174,22 +1111,6 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       if (highlight != null) await widget.highlightsRepository!.delete(highlight.id);
       await _reloadAnnotationsAndRefreshDecorations();
     }
-  }
-
-  void _handlePdfSelectionRectComputed(PdfSelectionInfo info) {
-    if (!mounted) return;
-    setState(() {
-      _currentPdfSelection = info;
-      _pendingPdfHighlightIdForSelection = null;
-    });
-  }
-
-  void _handlePdfSelectionCanceled() {
-    if (!mounted) return;
-    setState(() {
-      _currentPdfSelection = null;
-      _pendingPdfHighlightIdForSelection = null;
-    });
   }
 
   Future<void> _handlePdfHighlightStyleSelected(HighlightStyle style) async {
@@ -2017,34 +1938,23 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           onAnnotationActivated: _handleAnnotationActivated,
         );
       case BookFormat.pdf:
+        // 【epic-24-pdf-engine-rebuild Issue 1，已知且經人類確認接受的
+        // 暫時性行為退化】新引擎目前只支援單頁顯示＋頁碼＋跳頁，濾鏡
+        // （contrast/brightness/boldStrength/cropMode/cropRect）、雙頁
+        // （dualPageMode 等）、劃線選取（onSelectionRectComputed 等）、
+        // 導航熱區（navZoneActions/onZoneAction）皆暫不傳遞——這些能力
+        // 會在 Issue 2-4/8 陸續補回。版面設定面板等 UI 入口在補回前仍會
+        // 顯示，但操作暫時無效果，這是刻意接受的風險排序，非遺漏。
         return PdfReaderView(
           key: _pdfReaderViewKey,
           filePath: widget.filePath,
           initialPageIndex: _initialPosition?.pdfPageIndex,
           onPageRendered: _handlePageRendered,
           onError: _handleError,
-          fitMode: resolved.pdfFitMode,
-          contrast: resolved.pdfContrast,
-          brightness: resolved.pdfBrightness,
-          boldStrength: resolved.pdfBoldStrength,
-          cropMode: resolved.pdfCropMode,
-          cropRect: resolved.pdfCropRect,
-          onCropRectComputed: _handleCropRectComputed,
-          cropEditModeActive: _cropEditModeActive,
-          onCropRectSelected: _handleCropRectSelected,
-          dualPageMode: resolved.dualPageMode,
-          dualPageCoverAlone: resolved.dualPageCoverAlone,
-          dualPageDirection: resolved.dualPageDirection,
-          isLandscape: isLandscape,
           onPageChanged: (info) {
             if (!mounted) return;
             setState(() => _pdfPageInfo = info);
           },
-          onSelectionRectComputed: _handlePdfSelectionRectComputed,
-          onSelectionCanceled: _handlePdfSelectionCanceled,
-          navZoneActions: resolved.navZoneActions,
-          onZoneAction: _handleZoneAction,
-          showNavZoneDebugOverlay: resolved.showNavZoneDebugOverlay,
         );
       case BookFormat.unknown:
         return const SizedBox.shrink();

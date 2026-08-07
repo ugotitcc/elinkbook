@@ -32,6 +32,13 @@ import java.io.InputStream
  *    的落地快取模式——字型檔案遠小於 217MB 書籍本體，不需要背景執行緒
  *    佇列避免 ANR。
  *
+ * 4. `readContentUriAll`：將 `content://` URI 的 PDF 檔案串流複製到 App
+ *    快取目錄的暫存檔（`elinkbook_pdf_tmp/doc_<nanoTime>.pdf`），
+ *    回傳暫存檔路徑。Dart 端 `PdfReaderView._openContentUriDocument()`
+ *    直接以 `PdfDocument.openFile()` 開啟該路徑。使用串流複製取代
+ *    `readBytes()` 避免大型 PDF 佔用雙倍記憶體（epic-24 Issue 2）。
+ *    暫存檔在 Dart 端 `dispose()` 時清理。
+ *
  * 取代原本 `FoliateEpubReaderView.kt` 的 `WebViewAssetLoader`／
  * `BookPathHandler`——本類別只負責「給定路徑/URI，回傳位元組或快取路徑」，
  * 不涉及任何 WebView 生命週期或 JS 橋接，是純粹的資源讀取轉發層。
@@ -145,7 +152,52 @@ class ReaderResourceChannel(
                 }
                 result.success(cachedPath)
             }
+            // epic-24-pdf-engine-rebuild Issue 2：將 content:// URI 的 PDF 檔案
+            // 串流複製到 App 快取目錄的暫存檔，回傳暫存檔路徑。pdfrx 的
+            // PdfDocument.openCustom 雖然宣告 read callback 為 FutureOr，但
+            // 內部 PDFium FFI 實作是在 native 執行緒同步呼叫該 callback，
+            // 無法等待 MethodChannel 回傳的 Future（已知技術風險，見
+            // plan-issue-1 Task 2），因此 Dart 端改為先透過本方法取得暫存
+            // 檔路徑，再以 PdfDocument.openFile() 開啟。
+            //
+            // 改用串流複製（BufferedInputStream/BufferedOutputStream 8KB
+            // 緩衝）取代 readBytes() 一次性載入，避免大型 PDF（數百 MB）
+            // 佔用雙倍記憶體（readBytes 的位元組陣列 + writeAsBytes 的
+            // 位元組陣列）。快取目錄在 Dart 端 dispose() 時清理。
+            "readContentUriAll" -> {
+                val uriString = call.argument<String>("uri")
+                if (uriString == null) {
+                    result.success(null)
+                    return
+                }
+                val tmpPath = try {
+                    val cacheDir = File(context.cacheDir, "elinkbook_pdf_tmp").apply { mkdirs() }
+                    val tmpFile = File(cacheDir, "doc_${System.nanoTime()}.pdf")
+                    context.contentResolver.openInputStream(Uri.parse(uriString))
+                        ?.use { input ->
+                            FileOutputStream(tmpFile).use { output ->
+                                input.copyTo(output)  // Kotlin 標準函式，預設 8KB 緩衝
+                            }
+                        }
+                    tmpFile.absolutePath
+                } catch (e: Exception) {
+                    Log.w("ReaderResourceChannel", "Failed to stream content uri to temp file: $uriString", e)
+                    null
+                }
+                result.success(tmpPath)
+            }
             else -> result.notImplemented()
         }
+    }
+
+    /**
+     * 清理所有資源（epic-24-pdf-engine-rebuild Issue 1）。
+     * 原本規劃的隨機存取 session 機制（openSessions/openContentUriForRandomAccess/
+     * closeContentUriSession）最終未採用，改為 readContentUriAll 一次性讀取，
+     * 因此本方法目前為 no-op。保留方法簽章供 MainActivity.onDestroy() 呼叫，
+     * 日後若恢復分段讀取方案可在此實作 session 清理。
+     */
+    fun closeAllSessions() {
+        // 目前 readContentUriAll 不維護 session 狀態，無需清理。
     }
 }

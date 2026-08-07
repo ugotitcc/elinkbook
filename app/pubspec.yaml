@@ -60,6 +60,9 @@ dependencies:
   # 同步帳號憑證（authToken/userId/email）加密儲存，Android Keystore／
   # iOS Keychain（ADR 0019 決策 3，本專案首次引入的安全性相關儲存機制）。
   flutter_secure_storage: ^10.3.1
+  # PDF 引擎（epic-24-pdf-engine-rebuild）：PDFium 透過 dart:ffi 直接呼叫，
+  # 取代 android.graphics.pdf.PdfRenderer（ADR 0022）。
+  pdfrx: ^2.4.6
 
 dev_dependencies:
   flutter_test:

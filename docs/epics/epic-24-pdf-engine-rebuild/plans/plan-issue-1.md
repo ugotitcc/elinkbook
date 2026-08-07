@@ -49,7 +49,7 @@
 - Consumes: 無新依賴（本工單是最底層基礎）。
 - Produces: `class PdfxReaderView extends StatefulWidget`，建構參數 `{required String filePath, required VoidCallback onPageRendered, required ValueChanged<String> onError, int? initialPageIndex, ValueChanged<PdfPageInfo>? onPageChanged}`；靜態方法 `PdfxReaderView.jumpToPage(GlobalKey<State<PdfxReaderView>> key, int pageIndex)`／`.previousPage(key)`／`.nextPage(key)`／`.refreshAnnotations(key, List<PdfAnnotationDecoration> annotations)`（本工單內為 no-op）。供 Task 2（同一檔案擴充 `content://` 分支）與 Task 3（`reader_screen.dart` 改接、更名為 `PdfReaderView`）使用。
 
-- [ ] **Step 1: 新增 `pdfrx` 依賴**
+  - [x] **Step 1: 新增 `pdfrx` 依賴**
 
 在 `app/pubspec.yaml` 的 `dependencies:` 區塊，於 `flutter_secure_storage: ^10.3.1` 這一行之後新增：
 
@@ -62,7 +62,7 @@
 Run: `cd app && flutter pub get`
 Expected: 成功解析，`pubspec.lock` 更新，無版本衝突錯誤。
 
-- [ ] **Step 2: 在 `main.dart` 加入 pdfrx 初始化**
+  - [x] **Step 2: 在 `main.dart` 加入 pdfrx 初始化**
 
 在 `app/lib/main.dart` 頂部新增 import：
 
@@ -92,7 +92,7 @@ Future<void> main() async {
   final themePreferences = AppThemePreferences();
 ```
 
-- [ ] **Step 3: 產生多頁＋含大綱的 PDF 測試 fixture**
+  - [x] **Step 3: 產生多頁＋含大綱的 PDF 測試 fixture**
 
 現行 `app/test/fixtures/sample.pdf` 只有 345 bytes、單頁、無大綱，不足以驗證頁數/目錄/搜尋/雙頁配對等後續工單的行為（`issues.md` Issue 1 驗收條件）。以下腳本手工組出一份符合 PDF 1.7 規格、5 頁、含 5 個大綱書籤項目（`/Type /Outlines`，各頁一個章節）、每頁含可搜尋文字的最小 PDF，不依賴任何第三方 PDF 函式庫（純 stdlib）。已實際執行驗證：用 `pdftotext` 讀出全部 5 頁文字正確無誤，xref 表偏移量正確。
 
@@ -179,7 +179,7 @@ Expected: 產生 `sample_multi_page.pdf`（約 2.5KB），腳本本身執行後�
 Run: `git -C app add test/fixtures/sample_multi_page.pdf`
 Expected: 檔案已加入暫存區，準備隨 Task 1 最後的 commit 一併提交。
 
-- [ ] **Step 4: 撰寫本機檔案開書的失敗測試**
+  - [x] **Step 4: 撰寫本機檔案開書的失敗測試**
 
 在 `app/test/reader/pdfx_reader_view_test.dart` 新增：
 
@@ -283,12 +283,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 5: 執行測試確認失敗**
+  - [x] **Step 5: 執行測試確認失敗**
 
 Run: `cd app && flutter test test/reader/pdfx_reader_view_test.dart`
 Expected: 編譯失敗（`pdfx_reader_view.dart` 尚不存在）。
 
-- [ ] **Step 6: 建立 `PdfxReaderView` widget**
+  - [x] **Step 6: 建立 `PdfxReaderView` widget**
 
 建立 `app/lib/reader/pdfx_reader_view.dart`：
 
@@ -464,7 +464,7 @@ class _PdfxReaderViewState extends State<PdfxReaderView> {
 
 （`build()` 覆寫在 `PdfxReaderView` 這個 `StatelessWidget` 一樣的介面上宣告了 `throw UnimplementedError()`——這是刻意的：`StatefulWidget` 的 `build()` 屬於 `State`，不屬於 `Widget` 本身，上面那個 `@override Widget build(BuildContext context) => throw UnimplementedError();` 屬於誤植，實際不需要、也不會被呼叫，`StatefulWidget` 不應該有 `build()` 方法。)
 
-- [ ] **Step 7: 移除誤植的 `build()` 覆寫**
+  - [x] **Step 7: 移除誤植的 `build()` 覆寫**
 
 刪除 Step 4 程式碼中 `PdfxReaderView` class（非 `_PdfxReaderViewState`）內的這一段：
 
@@ -475,17 +475,17 @@ class _PdfxReaderViewState extends State<PdfxReaderView> {
 
 `StatefulWidget` 不應宣告 `build()`（那是 `State.build()` 的職責，`_PdfxReaderViewState` 已經正確實作）。
 
-- [ ] **Step 8: 執行測試確認通過**
+  - [x] **Step 8: 執行測試確認通過**
 
 Run: `cd app && flutter test test/reader/pdfx_reader_view_test.dart`
 Expected: 3 項測試全數 PASS。
 
-- [ ] **Step 9: `flutter analyze` 確認乾淨**
+  - [x] **Step 9: `flutter analyze` 確認乾淨**
 
 Run: `cd app && flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 10: Commit**
+  - [x] **Step 10: Commit**
 
 ```bash
 git add app/pubspec.yaml app/pubspec.lock app/lib/main.dart app/lib/reader/pdfx_reader_view.dart app/test/reader/pdfx_reader_view_test.dart app/test/fixtures/sample_multi_page.pdf
@@ -507,7 +507,7 @@ git commit -m "feat(epic-24): 新增 pdfrx 依賴與 PdfxReaderView，本機路�
 
 **已知技術風險與備援方案（`spec.md` 開放問題）**：若下方 `openCustom` 橋接方式因故無法運作（例如 FFI 非同步呼叫與 platform channel 之間的介接問題），退回「落地複製到本機快取」——但這不是本工單預期路徑，須先完整嘗試下方實作並確認測試通過。
 
-- [ ] **Step 1: 撰寫 `content://` 開書的失敗測試**
+  - [x] **Step 1: 撰寫 `content://` 開書的失敗測試**
 
 由於 `flutter test` 桌面 host 環境沒有真正的 Android `ContentResolver`，本測試改為驗證「偵測到 `://` 時會走 `openCustom` 分支、且不會嘗試 `File.openRead()`/整包複製」這件事本身——用可觀察的公開行為驗證：對一個帶 `://` 但底層 `MethodChannel` 呼叫會失敗（未 mock）的路徑，應觸發 `onError`，而非丟出未捕捉例外或誤判為本機路徑成功開啟。
 
@@ -588,12 +588,12 @@ git commit -m "feat(epic-24): 新增 pdfrx 依賴與 PdfxReaderView，本機路�
   });
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+  - [x] **Step 2: 執行測試確認失敗**
 
 Run: `cd app && flutter test test/reader/pdfx_reader_view_test.dart --plain-name "content://"`
 Expected: 兩項新測試皆 FAIL（`_openDocument()` 尚未有 `content://` 分支，會嘗試當本機路徑開啟而拿到不同的錯誤/行為）。
 
-- [ ] **Step 3: `ReaderResourceChannel.kt` 新增隨機存取讀取方法**
+  - [x] **Step 3: `ReaderResourceChannel.kt` 新增隨機存取讀取方法**
 
 在 `app/android/app/src/main/kotlin/cc/ugotit/elinkbook/ReaderResourceChannel.kt`，於檔案頂部 import 區塊新增：
 
@@ -691,7 +691,7 @@ import java.util.concurrent.ConcurrentHashMap
     }
 ```
 
-- [ ] **Step 4: `MainActivity.kt` 保留 `ReaderResourceChannel` 參照並於 `onDestroy()` 清理**
+  - [x] **Step 4: `MainActivity.kt` 保留 `ReaderResourceChannel` 參照並於 `onDestroy()` 清理**
 
 在 `app/android/app/src/main/kotlin/cc/ugotit/elinkbook/MainActivity.kt`，於既有欄位宣告區塊（`private lateinit var bookMetadataChannel: BookMetadataChannel`這一行附近）新增：
 
@@ -720,7 +720,7 @@ import java.util.concurrent.ConcurrentHashMap
     }
 ```
 
-- [ ] **Step 5: `PdfxReaderView` 新增 `content://` 分支**
+  - [x] **Step 5: `PdfxReaderView` 新增 `content://` 分支**
 
 在 `app/lib/reader/pdfx_reader_view.dart` 頂部新增 import：
 
@@ -803,22 +803,22 @@ import 'package:flutter/services.dart';
   }
 ```
 
-- [ ] **Step 6: 執行測試確認通過**
+  - [x] **Step 6: 執行測試確認通過**
 
 Run: `cd app && flutter test test/reader/pdfx_reader_view_test.dart`
 Expected: 全部（含 Task 1 既有 3 項＋本工單新增 2 項，共 5 項）PASS。
 
-- [ ] **Step 7: 確認 Android 端可正常編譯（`MainActivity.kt`／`ReaderResourceChannel.kt` 的新增程式碼）**
+  - [x] **Step 7: 確認 Android 端可正常編譯（`MainActivity.kt`／`ReaderResourceChannel.kt` 的新增程式碼）**
 
 Run: `cd app && flutter build apk --debug`
 Expected: 建置成功，無編譯錯誤——本工單新增的 `closeAllSessions()`／`onDestroy()` 覆寫沒有現成的 Dart 端測試可驗證（純 Activity 生命週期行為），以建置成功＋型別檢查作為最低限度驗證，比照 Task 3 Step 9 的既有模式。
 
-- [ ] **Step 8: `flutter analyze` 確認乾淨**
+  - [x] **Step 8: `flutter analyze` 確認乾淨**
 
 Run: `cd app && flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 9: Commit**
+  - [x] **Step 9: Commit**
 
 ```bash
 git add app/android/app/src/main/kotlin/cc/ugotit/elinkbook/ReaderResourceChannel.kt app/android/app/src/main/kotlin/cc/ugotit/elinkbook/MainActivity.kt app/lib/reader/pdfx_reader_view.dart app/test/reader/pdfx_reader_view_test.dart
@@ -847,12 +847,12 @@ git commit -m "feat(epic-24): PdfxReaderView 新增 content:// URI 支援，open
 - Consumes: Task 1-2 完成的 `PdfxReaderView`（更名前）。
 - Produces: `ReaderScreen._buildNativeView()` 的 `case BookFormat.pdf:` 分支改為建構更名後的 `PdfReaderView`，只傳入本工單支援的參數；`_pdfReaderViewKey` 型別改為 `GlobalKey<State<PdfReaderView>>`。既有呼叫端（`PdfReaderView.jumpToPage`／`.previousPage`／`.nextPage`／`.refreshAnnotations`）維持原呼叫方式不變，因為更名後的類別保留了相同的靜態方法簽章。
 
-- [ ] **Step 1: 確認既有舊 widget 測試作為刪除前基準仍通過**
+  - [x] **Step 1: 確認既有舊 widget 測試作為刪除前基準仍通過**
 
 Run: `cd app && flutter test test/reader/pdf_reader_view_test.dart`
 Expected: PASS（刪除前的基準，證明本次刪除前該測試檔仍是有效、非早已損壞的狀態）。
 
-- [ ] **Step 2: 更名 `PdfxReaderView` → `PdfReaderView`**
+  - [x] **Step 2: 更名 `PdfxReaderView` → `PdfReaderView`**
 
 刪除舊檔案：
 
@@ -869,12 +869,12 @@ git mv app/test/reader/pdfx_reader_view_test.dart app/test/reader/pdf_reader_vie
 
 在新的 `app/lib/reader/pdf_reader_view.dart` 與 `app/test/reader/pdf_reader_view_test.dart` 內，把所有 `PdfxReaderView` 字串取代為 `PdfReaderView`（`class PdfxReaderView` → `class PdfReaderView`、`_PdfxReaderViewState` → `_PdfReaderViewState`、`State<PdfxReaderView>` → `State<PdfReaderView>`，測試檔內同步取代 import 與所有型別引用）。
 
-- [ ] **Step 3: 執行更名後的測試確認通過**
+  - [x] **Step 3: 執行更名後的測試確認通過**
 
 Run: `cd app && flutter test test/reader/pdf_reader_view_test.dart`
 Expected: 5 項測試（Task 1 的 3 項＋Task 2 的 2 項）全數 PASS，證明更名未破壞任何行為。
 
-- [ ] **Step 4: 改接 `reader_screen.dart` 的 PDF 分支**
+  - [x] **Step 4: 改接 `reader_screen.dart` 的 PDF 分支**
 
 在 `app/lib/screens/reader_screen.dart` 找到：
 
@@ -935,19 +935,19 @@ Expected: 5 項測試（Task 1 的 3 項＋Task 2 的 2 項）全數 PASS，證�
         );
 ```
 
-- [ ] **Step 5: 執行 `reader_screen_test.dart` 確認 PDF 相關測試現況**
+  - [x] **Step 5: 執行 `reader_screen_test.dart` 確認 PDF 相關測試現況**
 
 Run: `cd app && flutter test test/screens/reader_screen_test.dart`
 Expected: 部分既有測試可能因為斷言了本工單移除的參數（例如檢查 `PdfReaderView.cropMode`／`dualPageMode` 等欄位的既有測試）而編譯失敗或斷言失敗——這是預期中的、Issue 1 範圍內必須修正的既有測試，不是回歸。逐一檢視失敗清單，記錄下來供 Step 6 處理。
 
-- [ ] **Step 6: 修正/移除因參數移除而失敗的既有測試**
+  - [x] **Step 6: 修正/移除因參數移除而失敗的既有測試**
 
 對 Step 5 列出的每一項失敗測試：若測試斷言的是本工單移除的參數（濾鏡/雙頁/選取/熱區），依該測試的性質判斷——若測試主體是「驗證這些參數有沒有正確從 `ResolvedPreferences` 傳遞到 `PdfReaderView`」，本工單範圍內這些參數已不存在，測試本身失去斷言對象，應移除該測試（不是本工單刻意要做的功能刪除，是既有測試驗證的能力本身已不在新架構中，等 Issue 2/3/4/8 補回對應能力時，各自的實作計劃會重新補上對應測試）；若測試主體是與移除參數無關的其他行為（例如頁碼顯示、開書狀態機），只移除斷言中提及已移除參數的部分，保留測試其餘部分。
 
 Run: `cd app && flutter test test/screens/reader_screen_test.dart`
 Expected: PASS，全數通過。
 
-- [ ] **Step 7: 清退舊原生 PDF 渲染叢集**
+  - [x] **Step 7: 清退舊原生 PDF 渲染叢集**
 
 ```bash
 git rm app/android/app/src/main/kotlin/cc/ugotit/elinkbook/PdfReaderView.kt
@@ -960,7 +960,7 @@ git rm app/android/app/src/main/kotlin/cc/ugotit/elinkbook/HighlightSelectionOve
 
 （已於本計劃撰寫前查證：`NavZoneHitTester.kt` 雖然檔案命名相似，但與上述 6 個檔案完全無程式碼耦合，不屬於本次清退範圍，維持不動。）
 
-- [ ] **Step 8: 移除 `MainActivity.kt` 的 PlatformView 註冊**
+  - [x] **Step 8: 移除 `MainActivity.kt` 的 PlatformView 註冊**
 
 在 `app/android/app/src/main/kotlin/cc/ugotit/elinkbook/MainActivity.kt` 找到：
 
@@ -983,12 +983,12 @@ git rm app/android/app/src/main/kotlin/cc/ugotit/elinkbook/HighlightSelectionOve
 
 （也就是直接刪除 `flutterEngine.platformViewsController...` 這整段 5 行的 PlatformView 註冊呼叫。）
 
-- [ ] **Step 9: 確認 Android 端可正常編譯**
+  - [x] **Step 9: 確認 Android 端可正常編譯**
 
 Run: `cd app && flutter build apk --debug`
 Expected: 建置成功，無編譯錯誤（特別確認移除 6 個 Kotlin 檔案後沒有任何殘留引用導致的 "unresolved reference" 錯誤）。
 
-- [ ] **Step 10: Grep 驗證無殘留引用（Issue 1 驗收條件）**
+  - [x] **Step 10: Grep 驗證無殘留引用（Issue 1 驗收條件）**
 
 Run:
 ```bash
@@ -1002,17 +1002,17 @@ grep -rn "cc.ugotit.elinkbook/pdf_reader_view" app/android app/lib
 ```
 Expected: 沒有任何符合結果（舊 PlatformView viewType 字串已完全移除）。
 
-- [ ] **Step 11: 執行全專案 `flutter test`**
+  - [x] **Step 11: 執行全專案 `flutter test`**
 
 Run: `cd app && flutter test`
 Expected: 全數通過，無任何回歸（`integration_test/` 若有涵蓋舊 PDF PlatformView 渲染驗證的案例，這裡預期需要一併更新或移除——若發現此類案例，記錄下來，比照 Step 6 的判斷原則處理：能力已不存在的測試予以移除，等對應 Issue 補回能力時各自重新補上）。
 
-- [ ] **Step 12: `flutter analyze` 確認乾淨**
+  - [x] **Step 12: `flutter analyze` 確認乾淨**
 
 Run: `cd app && flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 13: Commit**
+  - [x] **Step 13: Commit**
 
 ```bash
 git add -A
@@ -1034,17 +1034,17 @@ EOF
 
 **Interfaces:** 無新增介面，驗證 Task 1-3 整合後的端到端行為。
 
-- [ ] **Step 1: 執行全專案 `flutter test`**
+  - [x] **Step 1: 執行全專案 `flutter test`**
 
 Run: `cd app && flutter test`
 Expected: 全數通過，無任何回歸。
 
-- [ ] **Step 2: 執行全專案 `flutter analyze`**
+  - [x] **Step 2: 執行全專案 `flutter analyze`**
 
 Run: `cd app && flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 3（建議）：真機視覺確認**
+  - [x] **Step 3（建議）：真機視覺確認**
 
 `flutter test` 已涵蓋開書/頁數/跳頁/`content://` 存取的核心行為，此步驟是建議而非強制，用於確認真實 PDFium 原生函式庫在 Android 裝置上的實際渲染結果（桌面 host 測試驗證的是邏輯正確性，不是視覺渲染品質本身）：
 
@@ -1052,6 +1052,6 @@ Expected: `No issues found!`
 2. 從系統檔案選擇器（SAF，`content://` URI）匯入一本 PDF，確認能正常開啟——特別觀察大型 PDF（100MB 以上）開書過程中裝置記憶體用量是否穩定（不應隨檔案增大而大幅飆升，驗證 Task 2 的分段讀取確實生效、非整包讀入記憶體）。
 3. 確認版面設定面板仍可開啟（濾鏡/裁切/雙頁控制項目前操作無效果，屬預期中的暫時行為，不是本步驟要驗證的項目）。
 
-- [ ] **Step 4: Commit（若真機驗證過程中發現需要修正的問題）**
+  - [x] **Step 4: Commit（若真機驗證過程中發現需要修正的問題）**
 
 若 Step 3 發現任何問題並修正程式碼，比照 Task 1-3 的模式（先確認測試涵蓋、修正、重新測試、commit）。若無需修正，本 Step 略過。
