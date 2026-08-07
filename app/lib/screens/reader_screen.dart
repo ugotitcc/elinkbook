@@ -1938,19 +1938,24 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           onAnnotationActivated: _handleAnnotationActivated,
         );
       case BookFormat.pdf:
-        // 【epic-24-pdf-engine-rebuild Issue 1，已知且經人類確認接受的
-        // 暫時性行為退化】新引擎目前只支援單頁顯示＋頁碼＋跳頁，濾鏡
-        // （contrast/brightness/boldStrength/cropMode/cropRect）、雙頁
-        // （dualPageMode 等）、劃線選取（onSelectionRectComputed 等）、
-        // 導航熱區（navZoneActions/onZoneAction）皆暫不傳遞——這些能力
-        // 會在 Issue 2-4/8 陸續補回。版面設定面板等 UI 入口在補回前仍會
-        // 顯示，但操作暫時無效果，這是刻意接受的風險排序，非遺漏。
+        // 【epic-24-pdf-engine-rebuild，已知且經人類確認接受的暫時性行為
+        // 退化】新引擎目前支援單頁/雙頁顯示＋頁碼＋跳頁；濾鏡
+        // （contrast/brightness/boldStrength/cropMode/cropRect）、劃線選取
+        // （onSelectionRectComputed 等）、導航熱區（navZoneActions/
+        // onZoneAction）尚未傳遞——這些能力會在 Issue 3-4/8 陸續補回。
+        // 對應設定面板 UI 入口在補回前仍會顯示但操作暫時無效果，這是
+        // 刻意接受的風險排序，非遺漏。
+        // 雙頁（Issue 2）已補回：以下四個參數驅動 pdfrx 的 layoutPages。
         return PdfReaderView(
           key: _pdfReaderViewKey,
           filePath: widget.filePath,
           initialPageIndex: _initialPosition?.pdfPageIndex,
           onPageRendered: _handlePageRendered,
           onError: _handleError,
+          dualPageMode: resolved.dualPageMode,
+          dualPageCoverAlone: resolved.dualPageCoverAlone,
+          dualPageDirection: resolved.dualPageDirection,
+          isLandscape: isLandscape,
           onPageChanged: (info) {
             if (!mounted) return;
             setState(() => _pdfPageInfo = info);
