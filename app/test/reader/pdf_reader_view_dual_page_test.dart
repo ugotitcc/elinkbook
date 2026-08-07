@@ -110,4 +110,33 @@ void main() {
     // 差異要到 nextPage（Task 6）才會顯現。
     expect(lastPageInfo?.pageIndex, 0);
   });
+
+  testWidgets('雙頁模式下，跳到 spread 的右頁後，頁碼回報 spread 錨點頁',
+      (tester) async {
+    var renderedCount = 0;
+    PdfPageInfo? lastPageInfo;
+    final key = GlobalKey<State<PdfReaderView>>();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PdfReaderView(
+          key: key,
+          filePath: 'test/fixtures/sample_multi_page.pdf',
+          dualPageMode: DualPageMode.always,
+          dualPageCoverAlone: true,
+          dualPageDirection: DualPageDirection.ltr,
+          onPageRendered: () => renderedCount++,
+          onError: (_) {},
+          onPageChanged: (info) => lastPageInfo = info,
+        ),
+      ),
+    );
+    await waitRendered(tester, () => renderedCount);
+
+    // jumpToPage(2)：page 2 屬於 spread [1,2]，錨點頁為 1。
+    PdfReaderView.jumpToPage(key, 2);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(lastPageInfo?.pageIndex, 1, reason: '回報 spread 錨點頁，不是 2');
+  });
 }

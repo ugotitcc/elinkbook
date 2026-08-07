@@ -249,6 +249,41 @@ class _PdfReaderViewState extends State<PdfReaderView> {
     );
   }
 
+  /// 覆寫 pdfrx 的目前頁碼推算：雙頁模式下一律回報「可視區域內佔比最大
+  /// 的那一頁所屬 spread 的錨點頁」，而非該頁本身。這讓
+  /// controller.pageNumber 在雙頁模式下恆為 spread 錨點，於是
+  /// onPageChanged 回報的 PdfPageInfo.pageIndex、閱讀位置持久化、
+  /// _nextPage/_previousPage 的步進基準三者共用同一個定義（沿用已刪除
+  /// 的舊 Kotlin currentPageIndex 語意）。
+  ///
+  /// 回傳為 pdfrx 慣例的 1-indexed pageNumber。
+  int? _calculateSpreadAnchorPageNumber(
+    Rect visibleRect,
+    List<Rect> pageRects,
+    PdfViewerController controller,
+  ) {
+    final layout = _spreadLayout;
+    if (layout == null) return controller.pageNumber;
+
+    var bestIndex = -1;
+    var bestArea = 0.0;
+    for (var i = 0; i < pageRects.length; i++) {
+      final inter = pageRects[i].intersect(visibleRect);
+      if (inter.isEmpty) continue;
+      final area = inter.width * inter.height;
+      // 嚴格 > 比較：面積相等（平手）時保留先遍歷到的較小 pageIndex，
+      // 即該 spread 的錨點頁——這是刻意利用「較小 index 較早被遍歷」
+      // 這件事維持錨點頁語意，不是巧合，不要改成 >=（那會讓平手時保留
+      // 後遍歷到的較大 index，可能回報非錨點頁）。
+      if (area > bestArea) {
+        bestArea = area;
+        bestIndex = i;
+      }
+    }
+    if (bestIndex < 0) return controller.pageNumber; // 完全捲出版面外。
+    return layout.anchorPageOf(layout.spreadIndexOf(bestIndex)) + 1;
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_error != null) {
@@ -269,6 +304,8 @@ class _PdfReaderViewState extends State<PdfReaderView> {
         // 與 Issue 1 逐欄位相同，這是零回歸的構造性保證（不是靠測試
         // 事後證明）。
         layoutPages: _dualPageEnabled ? _layoutSpreadPages : null,
+        calculateCurrentPageNumber:
+            _dualPageEnabled ? _calculateSpreadAnchorPageNumber : null,
         onViewerReady: (doc, controller) {
           if (!_renderedNotified) {
             _renderedNotified = true;
