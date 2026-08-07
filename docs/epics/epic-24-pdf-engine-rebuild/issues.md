@@ -4,7 +4,14 @@
 
 ## Issue 1：PDF 引擎基礎替換——單頁開書/頁碼/跳頁/`content://` 存取
 
-**Status:** ready-for-agent（2026-08-07，`/to-issues` 依 `spec.md` 拆解）
+**Status:** ✅ 已完成並合併（2026-08-07，PR #123 合併至 `main`，commit `f4fcb79`）
+
+**合併前審查歷程**（三輪 `/superpowers:requesting-code-review`，報告存於本機 `tmp/epic-24/`，未進版控）：第一輪發現 2 Critical（Android 端 `flutter build apk --debug` 編譯失敗；`flutter analyze` 67 issues，皆與計畫核取方塊自陳「已完成」不符）＋2 Important（`content://` 存取整包讀入記憶體，OOM 風險；音量鍵翻頁測試斷言弱化為恆真式）＋2 Minor，全數修正；第二輪複審確認 5/6 項已用實際指令驗證修復，音量鍵測試修復聲明查證不實；第三輪複審確認斷言已改為驗證真實 `pageIndex` 變化，但發現測試覆蓋範圍語意漂移。合併時的實測結果：`flutter build apk --debug` 成功、`flutter analyze` 0 issues、`flutter test` 966/966 全數通過。
+
+**合併時遺留、移交後續工單／人類決定的已知風險**（非本工單封閉範圍內解決，記錄供後續參考）：
+1. `content://` URI 存取最終**未採用** `openCustom` 隨機存取分段讀取（原計畫優先路徑），改走「Kotlin 端串流複製暫存檔＋回傳路徑字串」這條 AC 明確允許的回退路徑（已於 `ReaderResourceChannel.kt` class doc 與對應單元測試記錄）。
+2. `ReaderScreen._handleVolumeKeyCall`（音量鍵事件→翻頁）分派邏輯本身，在 widget test 層級缺乏強斷言覆蓋（僅測「停用」分支，斷言僅 `mounted == true`）；`PdfReaderView.nextPage`/`.previousPage` 底層方法本身已有強斷言。
+3. `app/integration_test/pdf_nav_zone_test.dart`／`volume_key_test.dart` 斷言的頁尾文字格式 `"第 X/Y"` 疑似已因無關的頁尾重構（`fdd0b05`）過期（現況格式為 `"X/Y"`），可能在真機上逾時失敗——尚未在真機上實測確認，建議近期找機會驗證並視需要修正。
 
 **依賴：** 無，其餘 7 張工單皆依賴本張。
 
@@ -24,14 +31,14 @@
 
 ### Acceptance criteria
 
-- [ ] 開啟一個真實 PDF 檔案（本機路徑）成功顯示第一頁，`onPageRendered`／`onError` 語意等價回呼皆正確觸發。
-- [ ] 開啟一個以 `content://` URI 表示的 PDF 檔案（模擬 SAF 匯入情境）成功顯示，且**不會**在裝置儲存產生該檔案的完整複本（除非已證實 `openCustom` 橋接不可行、明確走文件記錄的回退路徑，此情境須有對應測試與文件註記）。
-- [ ] `pageCount`／`jumpToPage(index)` 正確運作，含邊界情況（跳到最後一頁、跳到超出範圍的頁碼須有合理防呆）。
-- [ ] 開啟失敗（檔案不存在／損毀）時觸發等價於現行 `onError` 語意的回呼，閱讀畫面正確顯示錯誤狀態。
-- [ ] 新增一份內容更豐富的 PDF 測試 fixture（多頁，取代現行僅 345 bytes、單頁、無內容的 `sample.pdf`），提交進版控供本工單與後續 7 張工單共用。
-- [ ] 單元測試：直接用 `flutter test`（非 `integration_test/`）對新 fixture 驗證開書／頁數／跳頁行為，比照 spec.md 測試策略——不透過真機/模擬器。
-- [ ] `flutter analyze` 乾淨、`flutter test` 全數通過（含既有測試零回歸）。
-- [ ] 確認 `ReaderScreen` 與相關模組中沒有任何殘留對舊原生 PDF View／method channel 的引用（`grep` 驗證），避免死碼或執行期空參考例外。
+- [x] 開啟一個真實 PDF 檔案（本機路徑）成功顯示第一頁，`onPageRendered`／`onError` 語意等價回呼皆正確觸發。
+- [x] 開啟一個以 `content://` URI 表示的 PDF 檔案（模擬 SAF 匯入情境）成功顯示，且**不會**在裝置儲存產生該檔案的完整複本（除非已證實 `openCustom` 橋接不可行、明確走文件記錄的回退路徑，此情境須有對應測試與文件註記）。——最終走的是文件記錄的回退路徑（見上方「已知風險」第 1 點），符合本條允許的例外。
+- [x] `pageCount`／`jumpToPage(index)` 正確運作，含邊界情況（跳到最後一頁、跳到超出範圍的頁碼須有合理防呆）。
+- [x] 開啟失敗（檔案不存在／損毀）時觸發等價於現行 `onError` 語意的回呼，閱讀畫面正確顯示錯誤狀態。
+- [x] 新增一份內容更豐富的 PDF 測試 fixture（多頁，取代現行僅 345 bytes、單頁、無內容的 `sample.pdf`），提交進版控供本工單與後續 7 張工單共用。
+- [x] 單元測試：直接用 `flutter test`（非 `integration_test/`）對新 fixture 驗證開書／頁數／跳頁行為，比照 spec.md 測試策略——不透過真機/模擬器。
+- [x] `flutter analyze` 乾淨、`flutter test` 全數通過（含既有測試零回歸）。
+- [x] 確認 `ReaderScreen` 與相關模組中沒有任何殘留對舊原生 PDF View／method channel 的引用（`grep` 驗證），避免死碼或執行期空參考例外。
 
 ### Blocked by
 

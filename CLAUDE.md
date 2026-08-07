@@ -4,7 +4,7 @@
 
 ## 儲存庫現況
 
-大多數核心閱讀體驗 Epic 已完成並歸檔（`docs/archive/`）：技術骨架、圖書庫管理（匯入/分類/排序）、直排/橫排核心、字型與版面設定、PDF 專業增強、目錄與頁碼、註記（書籤/劃線/備註）、互動控制（音量鍵/導航熱區）、雙頁顯示、EPUB 渲染引擎遷移（Readium→foliate-js，見下方）皆已可用。尚未開始的功能見 `docs/epics.md` Backlog 列（雲端同步、閱讀統計、全文檢索、TXT 引擎、社群分享、iOS 移植、系統設定、傳統儲存權限）。目前 Active 的 Epic 是真機 UI 精修與書架/閱讀體驗強化，現況與優先順序一律以 `docs/epics.md` 為準——本檔案不重複記錄逐一 Epic 的完成狀態。
+大多數核心閱讀體驗 Epic 已完成並歸檔（`docs/archive/`）：技術骨架、圖書庫管理（匯入/分類/排序）、直排/橫排核心、字型與版面設定、PDF 專業增強、目錄與頁碼、註記（書籤/劃線/備註）、互動控制（音量鍵/導航熱區）、雙頁顯示、EPUB 渲染引擎遷移（Readium→foliate-js，見下方）皆已可用。尚未開始的功能見 `docs/epics.md` Backlog 列（雲端同步、閱讀統計、全文檢索、TXT 引擎、社群分享、iOS 移植、系統設定、傳統儲存權限）。目前 Active 的 Epic 包含真機 UI 精修與書架/閱讀體驗強化，以及 `epic-24-pdf-engine-rebuild`（PDF 渲染引擎自平台原生 API 遷移至 pdfrx／PDFium，見下方「技術棧（已決策）」的「架構遷移中」說明——Issue 1 已合併，Issue 2-8 進行中），現況與優先順序一律以 `docs/epics.md` 為準——本檔案不重複記錄逐一 Epic 的完成狀態。
 
 `prototype/index.html` 是一份獨立、依需求文件製作的 HTML/CSS/JS UI/UX 原型（手機外殼模擬器），後續功能性 Epic 設計畫面時應先參考它，細節見下方「UI/UX 原型參考」。
 
@@ -32,12 +32,12 @@ flutter build apk --debug
 
 ### `ReaderScreen`：唯一的閱讀器 seam
 
-`app/lib/screens/reader_screen.dart` 是格式無關的統一入口，依 `detectBookFormat()`（`app/lib/reader/book_format.dart`，依副檔名判斷 `epub`/`pdf`/`unknown`）與（EPUB 專屬）`Book.isFixedLayout`（是否為固定版面 FXL）分派到兩條完全獨立的原生渲染路徑之一：
+`app/lib/screens/reader_screen.dart` 是格式無關的統一入口，依 `detectBookFormat()`（`app/lib/reader/book_format.dart`，依副檔名判斷 `epub`/`pdf`/`unknown`）與（EPUB 專屬）`Book.isFixedLayout`（是否為固定版面 FXL）分派到兩條完全獨立的渲染路徑之一：
 
-- `PdfReaderView`（`app/lib/reader/pdf_reader_view.dart`）——`AndroidView` 包裝 `android.graphics.pdf.PdfRenderer`。
+- `PdfReaderView`（`app/lib/reader/pdf_reader_view.dart`）——純 Dart widget，底層為 `pdfrx`（PDFium 透過 `dart:ffi` 直接呼叫，非 `PlatformView`，見 ADR 0022、`epic-24-pdf-engine-rebuild` Issue 1，2026-08-07 已合併）。範圍目前限定單頁顯示＋頁碼＋跳頁＋`content://` URI 存取；雙頁/E-Ink 影像濾鏡/裁切/劃線/備註/書籤/目錄/搜尋/縮圖/FAB 工具列皆為後續獨立工單（Issue 2-8，`docs/epics.md` 追蹤），尚未實作——查閱前務必先看 `docs/epics.md` 確認 `epic-24` 實際進度。
 - `FoliateEpubReaderView`（`app/lib/reader/foliate_epub_reader_view.dart`）——**所有 EPUB 使用**（FXL 與流式），`readest/foliate-js`（釘定 commit、直接複製進版控、不經 npm 建置，見 `app/android/app/src/main/assets/foliate/`）跑在 `flutter_inappwebview` 的 `InAppWebView` 內，**不是**傳統 `AndroidView`/`PlatformView`（`MainActivity.kt` 沒有為它註冊 `PlatformView` 類型字串），透過 `foliate_native_bridge.dart` 與原生端（`elinkbook/volume_key` 頻道的 `attachReaderView`/`detachReaderView`）溝通生命週期，JS↔Dart 契約定義在 `main.js`（見 ADR 0011、ADR 0013、ADR 0017）。這份釘定的 vendor 程式碼會無條件使用較新的 ES 內建方法（真機 `/diagnose` 已發現兩輪：`Object.groupBy`/`Map.groupBy`、`Array.prototype.at`/`findLastIndex`），較舊的 Android System WebView 不支援時需要在 `_esCompatPolyfillJs` 補 polyfill（透過 `initialUserScripts` 於 `AT_DOCUMENT_START` 注入，不修改釘定版本本身）；**每次升級這份釘定版本後**都要跑 `node app/tool/check_foliate_es_compat.js` 靜態掃描有沒有新的較新 API 用法還沒設防（見 `app/tool/README.md`）。
 
-`PdfReaderView` 為 `AndroidView` 包裝，Dart 端建構參數固定為 `filePath`/`onPageRendered`/`onError`；原生端（`app/android/app/src/main/kotlin/cc/ugotit/elinkbook/`）實作 method channel 契約 `openBook(path)` → `onPageRendered()`/`onError(message)`。`FoliateEpubReaderView` 刻意不比照這個模式（見上方）。EPUB 一律建構 `FoliateEpubReaderView`，不再依 FXL/流式分派到不同 widget（見 ADR 0017）。
+`PdfReaderView` 對外建構參數為 `filePath`/`onPageRendered`/`onError`/`initialPageIndex`/`onPageChanged`，靜態 helper（`jumpToPage`/`previousPage`/`nextPage`/`refreshAnnotations`，後者目前為 Issue 4 落地前的暫時性 no-op）維持與舊版相容的方法簽章。`content://` URI 存取走原生端 `ReaderResourceChannel.kt`（`elinkbook/reader_resources` channel 的 `readContentUriAll` 方法）串流複製到本機暫存檔後回傳路徑字串，再以 `PdfDocument.openFile()` 開啟——這是計畫原先優先評估的 `pdfrx.openCustom()` 隨機存取分段讀取被證實有 FFI 非同步限制後、已文件記錄的回退路徑，非整包讀進記憶體（見 `ReaderResourceChannel.kt` class doc）。`FoliateEpubReaderView` 刻意不比照這個模式（見上方）。EPUB 一律建構 `FoliateEpubReaderView`，不再依 FXL/流式分派到不同 widget（見 ADR 0017）。
 
 `ReaderScreen` 對外的公開建構參數為 `filePath`／`bookId`／`prefsRepository`／`bookTitle`（`bookTitle` 由 Issue 23 新增，頁首找不到章節資訊時的回退顯示文字；其餘由 `epic-3-fonts-layout` Issue 3 新增；`prefsRepository` 由 `main.dart` 建構後，與 `LibraryRepository`/`BookImportService` 平行、逐層透過建構子參數傳遞下來，`LibraryRepository` 抽象介面本身不受影響，見 `docs/adr/0007-reader-screen-book-id-contract.md`）——載入中／錯誤狀態是內部實作細節，透過固定的 `Key('reader_loading_indicator')`／`Key('reader_error_text')` 暴露給測試觀察，刻意不新增公開 callback 參數。
 
@@ -68,7 +68,7 @@ elinkBook（全能跨平台電子書閱讀器）是一款跨平台電子書閱�
 ### 支援格式與渲染方式
 - **ePub3**（流式與定樣式）、**PDF**、**TXT** 為三大核心格式（P0）。
 - ePub：自動偵測排版方向（見 FR-06），依書本 CSS 是否已宣告 `writing-mode` 判斷（判斷不出來則預設橫排），不做語言猜測。渲染架構已定案——見下方「技術棧（已決策）」（FXL 與流式皆用 foliate-js）。
-- PDF：目標為 100MB 以上檔案開啟速度小於 2 秒；支援影像濾鏡（對比度/亮度/加粗）、智慧/手動裁切，預設採用 page-fit。渲染架構已定案——見下方「技術棧（已決策）」（平台原生 API）。
+- PDF：目標為 100MB 以上檔案開啟速度小於 2 秒；支援影像濾鏡（對比度/亮度/加粗）、智慧/手動裁切，預設採用 page-fit。渲染架構見下方「技術棧（已決策）」（`epic-24-pdf-engine-rebuild` 遷移至 pdfrx／PDFium 進行中，Issue 1 已合併——影像濾鏡/裁切/雙頁等能力待 Issue 2-8 陸續補回，見 `docs/epics.md`）。
 - TXT：自動偵測編碼與章節標題，合成具估算頁碼的階層式目錄（固定字元數量的分頁換算啟發式）。
 - 檔案匯入：本機檔案選擇器，並支援 Google Drive 與 OneDrive 雲端存取。Google Drive 登入/驗證/下載須在無 Google Play Services 的裝置上（例如部分 E-Ink 閱讀器）持續正常運作。
 
@@ -130,7 +130,7 @@ elinkBook（全能跨平台電子書閱讀器）是一款跨平台電子書閱�
 - **EPUB（單引擎，`readest/foliate-js`，見 ADR 0011、ADR 0017）**：
   - **所有 EPUB（FXL 與流式）**：`readest/foliate-js`（釘定 commit、直接複製進版控，不引入 Node.js/npm 建置工具鏈）跑在 `flutter_inappwebview` 的 `InAppWebView` 內（見 ADR 0013——標準 Flutter `AndroidView`+`android.webkit.WebView` 的觸控轉發機制無法完整還原「長按選字→拖曳選取控點」手勢，`flutter_inappwebview` 有自己獨立的原生嵌入機制解決此限制）。`_dispatchedIsFixedLayout` 決定 UI 版面語意（單頁/雙頁），不再決定要建構哪個 widget——EPUB 一律建構 `FoliateEpubReaderView`。
   - **歷史演進**：最初規劃「全部 EPUB 都用 Readium」（epic-0 時期），但 Readium reflowable Navigator 在直排/橫排跳頁上的已知缺口（CSS Multicolumn 規格層級限制，Readium 官方已擱置）促成 ADR 0011 決策改用 foliate-js 處理流式 EPUB；ADR 0017 進一步將 FXL 也遷移至 foliate-js，移除 `readium-navigator` 依賴。`readium-shared`／`readium-streamer` 保留供 `BookMetadataChannel.kt` 使用。
-- **PDF**：各平台內建 API（Android 用 `PdfRenderer`、iOS 用 `PDFKit`），不使用 PDFium，透過 `PlatformView` 渲染。
+- **PDF（架構遷移中，`epic-24-pdf-engine-rebuild`，Active）**：此決策已被 [ADR 0022](docs/adr/0022-pdf-engine-migrate-to-pdfrx.md) 取代——改用 `pdfrx`（PDFium 透過 `dart:ffi` 直接呼叫，非 `PlatformView`）。**Issue 1（引擎基礎替換：單頁開書/頁碼/跳頁/`content://` 存取）已於 2026-08-07 合併**，舊原生 `android.graphics.pdf.PdfRenderer`／`PlatformView` 渲染叢集已完全清退，不再與新架構並存。目錄解析（TOC）、雙頁並列、內文搜尋、頁碼縮圖、E-Ink 影像濾鏡/裁切（FR-11，須達成功能對等）、劃線/備註/書籤遷移仍待 Issue 2-8 陸續補回（`docs/epics/epic-24-pdf-engine-rebuild/issues.md`）——**這段期間 PDF 閱讀處於刻意接受的暫時性能力退化窗口**，查閱前務必先看 `docs/epics.md` 確認 `epic-24` 實際進度。手寫/自由繪圖標註明確排除、另立後續 Epic。
 - **TXT**：自訂的輕量直排 CJK 排版引擎（獨立 epic —— `epic-11-txt-engine`，尚未開始），不採用 Readium/WebView 方案，因為純文字沒有 HTML/CSS 那層需要重新實作。
 
 ## Spec-Driven Development (SDD) 工作流程
