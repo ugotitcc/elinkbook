@@ -13,6 +13,7 @@ import 'package:elinkbook/reader/global_reader_prefs.dart';
 import 'package:elinkbook/reader/page_turn_mode.dart';
 import 'package:elinkbook/reader/pdf_page_info.dart';
 import 'package:elinkbook/reader/pdf_reader_view.dart';
+import 'package:pdfrx/pdfrx.dart';
 import 'package:elinkbook/reader/writing_mode.dart';
 import 'package:elinkbook/reader/zone_action.dart';
 import 'package:elinkbook/screens/fxl_settings_sheet.dart';
@@ -67,6 +68,7 @@ void main() {
   });
 
   setUp(() {
+    pdfrxInitialize();
     prefsManager = FakeReaderPrefsManager();
   });
 
@@ -2652,80 +2654,62 @@ void main() {
     },
   );
 
-  testWidgets('音量鍵 onVolumeKey(up/down) 觸發真實換頁（PDF，模擬原生端會呼叫的全域頻道）', (
+  testWidgets('PdfReaderView.nextPage／previousPage 在真實 pdfrx 載入後正確切換頁碼', (
     tester,
   ) async {
     // 【epic-24-pdf-engine-rebuild Issue 1】新 PdfReaderView 為純 Dart widget
-    // （pdfrx），不再使用 PlatformView。驗證方式改為：確認 onVolumeKey
-    // 觸發後頁碼正確變動。
-    //
-    // 【已知限制】pdfrx 的 PDFium FFI 在 widget test 環境無法載入 PDF，
-    // PdfViewerController.isReady 為 false，因此無法直接驗證頁碼數值。
-    // 使用 sample_multi_page.pdf（多頁 Fixture）以確保測試語意正確，
-    // 但斷言仍限於「事件處理路徑完整走完且不拋出例外」。
-    final binaryMessenger =
-        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
-
-    // mock fullscreen channel 以避免 MissingPluginException
-    //（onPageRendered → _handlePageRendered → _applySystemUiMode → fullscreen channel）
-    const fullscreenChannel = MethodChannel('elinkbook/fullscreen');
-    binaryMessenger.setMockMethodCallHandler(fullscreenChannel, (call) async {
-      return null;
-    });
-    addTearDown(() => binaryMessenger.setMockMethodCallHandler(fullscreenChannel, null));
+    // （pdfrx），不再使用 PlatformView。直接驗證 PdfReaderView.nextPage /
+    // previousPage 靜態方法在真實 pdfrx 載入後能正確切換頁碼。
+    // Volume key → ReaderScreen → PdfReaderView.nextPage 為薄包裝層，
+    // 核心翻頁邏輯在此測試覆蓋。
+    var renderedCount = 0;
+    PdfPageInfo? lastPageInfo;
+    final key = GlobalKey<State<PdfReaderView>>();
 
     await tester.pumpWidget(
       MaterialApp(
-        home: ReaderScreen(
+        home: PdfReaderView(
+          key: key,
           filePath: 'test/fixtures/sample_multi_page.pdf',
-          bookId: 'b1',
-          prefsManager: prefsManager,
+          onPageRendered: () => renderedCount++,
+          onError: (_) {},
+          onPageChanged: (info) => lastPageInfo = info,
         ),
       ),
     );
-    await tester.pump();
-    await tester.runAsync(() => Future.delayed(Duration.zero));
-    await tester.pump();
 
-    // 模擬原生端 onPageRendered，讓 PdfReaderView 進入 rendered 狀態
-    tester.widget<PdfReaderView>(find.byType(PdfReaderView)).onPageRendered();
+    // 等待 pdfrx 真實載入 PDF（非模擬）。
+    await tester.runAsync(() async {
+      for (var i = 0; i < 30 && renderedCount == 0; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+      }
+    });
+    expect(renderedCount, 1);
+    expect(lastPageInfo?.totalPages, 5);
+    expect(lastPageInfo?.pageIndex, 0);
+
+    // PdfReaderView.nextPage 觸發頁碼前進（0 → 1）。
+    PdfReaderView.nextPage(key);
     await tester.pump();
-    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(lastPageInfo?.pageIndex, 1);
+
+    // PdfReaderView.previousPage 觸發頁碼後退（1 → 0）。
+    PdfReaderView.previousPage(key);
     await tester.pump();
-
-    const volumeKeyChannel = MethodChannel('elinkbook/volume_key');
-    Future<void> simulateVolumeKey(String direction) async {
-      final byteData = volumeKeyChannel.codec.encodeMethodCall(
-        MethodCall('onVolumeKey', {'direction': direction}),
-      );
-      await binaryMessenger.handlePlatformMessage(
-        volumeKeyChannel.name,
-        byteData,
-        (data) {},
-      );
-      await tester.pump();
-    }
-
-    // onVolumeKey(down) 應觸發 PdfReaderView.nextPage → 頁碼前進。
-    // 由於 pdfrx FFI 在 widget test 環境無法載入 PDF（isReady = false），
-    // nextPage 內部會 early return，但呼叫路徑完整走完且不拋出例外即為
-    // 本測試的驗證目標。多頁驗證留給 integration test 在真機上執行。
-    await simulateVolumeKey('down');
-    final stateAfterDown =
-        tester.state<State>(find.byType(ReaderScreen));
-    expect(stateAfterDown.mounted, isTrue);
-
-    await simulateVolumeKey('up');
-    expect(stateAfterDown.mounted, isTrue);
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(lastPageInfo?.pageIndex, 0);
   });
 
   testWidgets('全域音量鍵開關關閉時，onVolumeKey 觸發被忽略，不執行翻頁', (tester) async {
-    // 【epic-24-pdf-engine-rebuild Issue 1】新 PdfReaderView 為純 Dart widget
-    // （pdfrx），不再使用 PlatformView。驗證方式：在 volumeKeyEnabled: false
-    // 時發送 onVolumeKey，確認頁碼不變動（間接證明翻頁被忽略）。
+    // 【epic-24-pdf-engine-rebuild Issue 1】驗證 ReaderScreen 在
+    // volumeKeyEnabled: false 時忽略 onVolumeKey 事件。
     //
-    // 【已知限制】同上——pdfrx FFI 在 widget test 環境無法載入 PDF，
-    // 使用 sample_multi_page.pdf 確保測試語意正確。
+    // 【測試範圍】本測試透過 ReaderScreen 驗證全域音量鍵開關的行為。
+    // ReaderScreen 內部的 _pdfPageInfo 為私有欄位，無法從外部直接觀察
+    // 頁碼變化，因此斷言限於：widget 保持 mounted 且無例外拋出。
+    // 核心翻頁邏輯已由 pdf_reader_view_test.dart 的 real loading 測試覆蓋。
     final binaryMessenger =
         TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
 
@@ -2754,11 +2738,13 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    // 模擬原生端 onPageRendered，讓 PdfReaderView 進入 rendered 狀態
-    tester.widget<PdfReaderView>(find.byType(PdfReaderView)).onPageRendered();
-    await tester.pump();
-    await tester.runAsync(() => Future.delayed(Duration.zero));
-    await tester.pump();
+    // 等待 pdfrx 真實載入 PDF（非模擬 onPageRendered）。
+    await tester.runAsync(() async {
+      for (var i = 0; i < 30; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+      }
+    });
 
     const volumeKeyChannel = MethodChannel('elinkbook/volume_key');
     final byteData = volumeKeyChannel.codec.encodeMethodCall(
@@ -2771,9 +2757,12 @@ void main() {
     );
     await tester.pump();
 
-    // volumeKeyEnabled: false 時，onVolumeKey 不應觸發翻頁——頁碼維持不變。
+    // volumeKeyEnabled: false 時，onVolumeKey 不應觸發翻頁。
+    // 由於 ReaderScreen._pdfPageInfo 為私有欄位，無法直接斷言頁碼，
+    // 僅驗證 widget 保持 mounted 且無例外拋出。
     final state = tester.state<State>(find.byType(ReaderScreen));
     expect(state.mounted, isTrue);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('PopScope：pop 動作啟動當下呼叫 notifyLeavingReader，及早通知原生端釋放音量鍵攔截', (
