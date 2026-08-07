@@ -402,4 +402,202 @@ void main() {
     expect(rtlSequence, [0, 1, 3]);
     expect(ltrSequence, [0, 1, 3]);
   });
+
+  testWidgets('執行期由 always 切到 never，版面與步進回到單頁', (tester) async {
+    var renderedCount = 0;
+    PdfPageInfo? lastPageInfo;
+    final key = GlobalKey<State<PdfReaderView>>();
+
+    Widget buildView(DualPageMode mode) => MaterialApp(
+          home: PdfReaderView(
+            key: key,
+            filePath: 'test/fixtures/sample_multi_page.pdf',
+            dualPageMode: mode,
+            dualPageCoverAlone: true,
+            dualPageDirection: DualPageDirection.ltr,
+            onPageRendered: () => renderedCount++,
+            onError: (_) {},
+            onPageChanged: (info) => lastPageInfo = info,
+          ),
+        );
+
+    await tester.pumpWidget(buildView(DualPageMode.always));
+    await waitRendered(tester, () => renderedCount);
+
+    PdfReaderView.jumpToPage(key, 4);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(lastPageInfo?.pageIndex, 3);
+
+    await tester.pumpWidget(buildView(DualPageMode.never));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    // 兩層巢狀 addPostFrameCallback 需要額外的 frame 才能完成。
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    PdfReaderView.nextPage(key);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(lastPageInfo?.pageIndex, 4, reason: '切回單頁後步進應為 1');
+  });
+
+  testWidgets('auto 模式下執行期橫直向切換改變雙頁啟用狀態', (tester) async {
+    var renderedCount = 0;
+    PdfPageInfo? lastPageInfo;
+    final key = GlobalKey<State<PdfReaderView>>();
+
+    Widget buildView(bool isLandscape) => MaterialApp(
+          home: PdfReaderView(
+            key: key,
+            filePath: 'test/fixtures/sample_multi_page.pdf',
+            dualPageMode: DualPageMode.auto,
+            dualPageCoverAlone: true,
+            dualPageDirection: DualPageDirection.ltr,
+            isLandscape: isLandscape,
+            onPageRendered: () => renderedCount++,
+            onError: (_) {},
+            onPageChanged: (info) => lastPageInfo = info,
+          ),
+        );
+
+    await tester.pumpWidget(buildView(true));
+    await waitRendered(tester, () => renderedCount);
+
+    PdfReaderView.nextPage(key);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(lastPageInfo?.pageIndex, 1);
+
+    await tester.pumpWidget(buildView(false)); // 轉為直向。
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    // 兩層巢狀 addPostFrameCallback 需要額外的 frame 才能完成。
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    PdfReaderView.nextPage(key);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(lastPageInfo?.pageIndex, 2, reason: '直向後步進應為 1（單頁）');
+  });
+
+  testWidgets('執行期切換 dualPageCoverAlone，翻頁配對規則正確反映新設定',
+      (tester) async {
+    var renderedCount = 0;
+    PdfPageInfo? lastPageInfo;
+    final key = GlobalKey<State<PdfReaderView>>();
+
+    Widget buildView(bool coverAlone) => MaterialApp(
+          home: PdfReaderView(
+            key: key,
+            filePath: 'test/fixtures/sample_dual_page.pdf', // 6 頁。
+            dualPageMode: DualPageMode.always,
+            dualPageCoverAlone: coverAlone,
+            dualPageDirection: DualPageDirection.ltr,
+            onPageRendered: () => renderedCount++,
+            onError: (_) {},
+            onPageChanged: (info) => lastPageInfo = info,
+          ),
+        );
+
+    await tester.pumpWidget(buildView(true));
+    await waitRendered(tester, () => renderedCount);
+
+    PdfReaderView.nextPage(key);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(lastPageInfo?.pageIndex, 1, reason: 'coverAlone=true，封面步進 1');
+
+    await tester.pumpWidget(buildView(false)); // 執行期關閉封面獨立。
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    // 兩層巢狀 addPostFrameCallback 需要額外的 frame 才能完成。
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    PdfReaderView.nextPage(key);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(
+      lastPageInfo?.pageIndex,
+      2,
+      reason: 'coverAlone=false 後 spreads 變為 [0,1][2,3][4,5]，'
+          '從錨點頁 0 出發下一步應到錨點頁 2',
+    );
+  });
+
+  testWidgets('執行期切換 dualPageDirection，錨點頁步進序列不受影響（僅幾何鏡像）',
+      (tester) async {
+    var renderedCount = 0;
+    PdfPageInfo? lastPageInfo;
+    final key = GlobalKey<State<PdfReaderView>>();
+
+    Widget buildView(DualPageDirection direction) => MaterialApp(
+          home: PdfReaderView(
+            key: key,
+            filePath: 'test/fixtures/sample_multi_page.pdf',
+            dualPageMode: DualPageMode.always,
+            dualPageCoverAlone: true,
+            dualPageDirection: direction,
+            onPageRendered: () => renderedCount++,
+            onError: (_) {},
+            onPageChanged: (info) => lastPageInfo = info,
+          ),
+        );
+
+    await tester.pumpWidget(buildView(DualPageDirection.rtl));
+    await waitRendered(tester, () => renderedCount);
+
+    PdfReaderView.nextPage(key);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(lastPageInfo?.pageIndex, 1);
+
+    await tester.pumpWidget(buildView(DualPageDirection.ltr)); // 執行期切換方向。
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    PdfReaderView.nextPage(key);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(
+      lastPageInfo?.pageIndex,
+      3,
+      reason: '方向切換只影響左右鏡像幾何，錨點頁步進序列不變',
+    );
+  });
+
+  testWidgets('文件載入完成前變更雙頁設定不會當機（isReady == false 防呆）',
+      (tester) async {
+    var renderedCount = 0;
+    final key = GlobalKey<State<PdfReaderView>>();
+
+    Widget buildView(bool isLandscape) => MaterialApp(
+          home: PdfReaderView(
+            key: key,
+            filePath: 'test/fixtures/sample_multi_page.pdf',
+            dualPageMode: DualPageMode.auto,
+            dualPageCoverAlone: true,
+            dualPageDirection: DualPageDirection.ltr,
+            isLandscape: isLandscape,
+            onPageRendered: () => renderedCount++,
+            onError: (_) {},
+            onPageChanged: (_) {},
+          ),
+        );
+
+    await tester.pumpWidget(buildView(true));
+    // 刻意不呼叫 waitRendered：文件仍在非同步開啟中（_controller.isReady
+    // 尚為 false，_document 仍是 null）時就觸發 didUpdateWidget，重現
+    // Critical #1 的當機路徑。
+    await tester.pumpWidget(buildView(false));
+    await tester.pump();
+
+    expect(tester.takeException(), isNull);
+
+    // 讓文件真正開完，確認後續行為仍正常運作（非卡死狀態）。
+    await waitRendered(tester, () => renderedCount);
+    expect(renderedCount, 1);
+  });
 }

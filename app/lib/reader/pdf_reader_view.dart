@@ -171,6 +171,70 @@ class _PdfReaderViewState extends State<PdfReaderView> {
     return PdfDocument.openFile(tmpPath);
   }
 
+  /// 待版面重算後要重新對齊的 spread 錨點頁（0-indexed）。
+  int? _pendingReanchorPageIndex;
+
+  @override
+  void didUpdateWidget(covariant PdfReaderView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final changed = oldWidget.dualPageMode != widget.dualPageMode ||
+        oldWidget.dualPageCoverAlone != widget.dualPageCoverAlone ||
+        oldWidget.dualPageDirection != widget.dualPageDirection ||
+        oldWidget.isLandscape != widget.isLandscape;
+    if (!changed) return;
+
+    // 切換前的錨點頁必須先記下來：relayout 後 pdfrx 會依自己的邏輯推一
+    // 個目前頁，未必落在原本的 spread 上。
+    final anchorBefore = _controller.isReady
+        ? (_controller.pageNumber ?? 1) - 1
+        : (widget.initialPageIndex ?? 0);
+
+    if (!_dualPageEnabled) {
+      _spreadLayout = null; // 停用雙頁後不得再用舊的 spread 矩形導航。
+    }
+    _cachedLayoutKey = null;
+    _cachedPdfLayout = null;
+    _pendingReanchorPageIndex = anchorBefore;
+
+    // 【與 isReady 防呆同等重要】invalidate() 內部是 `_state._invalidate()`
+    // ——`_state` getter 用 `!` 強制解包，若文件仍在非同步開啟中
+    // （PdfViewer 尚未建構、controller 尚未 attach，`_controller.isReady`
+    // 為 false），呼叫 invalidate() 會直接擲出 null-check 例外導致當機。
+    // 未 ready 時不需要 invalidate：文件開完後 layoutPages/
+    // calculateCurrentPageNumber 本來就會用當下最新的 widget 值全新計算，
+    // 不需要手動觸發。
+    if (_controller.isReady) {
+      _controller.invalidate();
+    }
+
+    // 【時序注意，非顯而易見】invalidate() 觸發的 relayout（無論是走本
+    // widget 的 _layoutSpreadPages，還是切回單頁模式時 pdfrx 內建的預設
+    // 版面函式）並非在本次 didUpdateWidget 所屬的這一幀內同步完成——
+    // invalidate() 是透過 pdfrx 內部的 BehaviorSubject（Stream）通知，
+    // Stream 的監聽者（觸發 pdfrx 內部 rebuild 的 StreamBuilder）是在
+    // microtask 才收到事件，而 microtask 要等本幀的
+    // WidgetsBinding.drawFrame() 整個同步呼叫（含本幀所有
+    // postFrameCallback）都返回事件迴圈後才會執行，也就是說實際 relayout
+    // 要等到「下一幀」才會發生。若只註冊單層 addPostFrameCallback，會在
+    // relayout 真正完成「之前」就先觸發，讀到的仍是切換前的舊版面/舊
+    // 頁碼推算結果（尤其從雙頁切回單頁時，_layoutSpreadPages 根本不會
+    // 再被呼叫，改用 pdfrx 內建版面，一樣要等下一幀才計算好）。因此改用
+    // 兩層巢狀 addPostFrameCallback：第一層只是讓本幀先結束、把
+    // microtask 排到的下一幀真正跑起來，第二層才是在那次 relayout
+    // 完成之後才執行 reanchor，兩個方向（切入/切出雙頁模式）都適用，不
+    // 需要依賴 _layoutSpreadPages 是否會被呼叫。
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _applyPendingReanchor());
+    });
+  }
+
+  void _applyPendingReanchor() {
+    final pageIndex = _pendingReanchorPageIndex;
+    _pendingReanchorPageIndex = null;
+    if (pageIndex == null || !mounted || !_controller.isReady) return;
+    _jumpToPage(pageIndex); // 走既有的單/雙頁分派邏輯。
+  }
+
   @override
   void dispose() {
     _document?.dispose();
