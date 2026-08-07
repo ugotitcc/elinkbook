@@ -216,4 +216,70 @@ void main() {
       expect(single.pageRects.length, 1);
     });
   });
+
+  group('PdfSpreadLayout 導航查詢', () {
+    // 5 頁、封面獨立：spreads == [[0],[1,2],[3,4]]，pageToSpread ==
+    // [0,1,1,2,2]。
+    PdfSpreadLayout layout5CoverAlone() => computeSpreadLayout(
+          pageSizes: List.filled(5, const Size(100, 200)),
+          margin: 8,
+          coverAlone: true,
+          direction: DualPageDirection.ltr,
+        );
+
+    // 6 頁、封面不獨立：spreads == [[0,1],[2,3],[4,5]]。
+    PdfSpreadLayout layout6NoCover() => computeSpreadLayout(
+          pageSizes: List.filled(6, const Size(100, 200)),
+          margin: 8,
+          coverAlone: false,
+          direction: DualPageDirection.ltr,
+        );
+
+    test('spreadIndexOf／anchorPageOf 往返一致', () {
+      final layout = layout5CoverAlone();
+      expect(layout.spreadIndexOf(0), 0);
+      expect(layout.spreadIndexOf(1), 1);
+      expect(layout.spreadIndexOf(2), 1); // 與 page 1 同一 spread。
+      expect(layout.spreadIndexOf(3), 2);
+      expect(layout.spreadIndexOf(4), 2);
+      expect(layout.anchorPageOf(0), 0);
+      expect(layout.anchorPageOf(1), 1);
+      expect(layout.anchorPageOf(2), 3);
+    });
+
+    test('封面獨立時 nextSpreadAnchor 的步進與邊界', () {
+      final layout = layout5CoverAlone();
+      expect(layout.nextSpreadAnchor(0), 1); // 封面 → 步進 1。
+      expect(layout.nextSpreadAnchor(1), 3); // spread [1,2] → [3,4]，步進 2。
+      expect(layout.nextSpreadAnchor(2), 3); // 從右頁(2)出發也對。
+      expect(layout.nextSpreadAnchor(3), isNull); // 已在最後一個 spread。
+      expect(layout.nextSpreadAnchor(4), isNull);
+    });
+
+    test('封面獨立時 previousSpreadAnchor 的步進與邊界', () {
+      final layout = layout5CoverAlone();
+      expect(layout.previousSpreadAnchor(1), 0);
+      expect(layout.previousSpreadAnchor(2), 0);
+      expect(layout.previousSpreadAnchor(3), 1);
+      expect(layout.previousSpreadAnchor(0), isNull); // 已在封面。
+    });
+
+    test('封面不獨立時步進恆為 2', () {
+      final layout = layout6NoCover();
+      expect(layout.nextSpreadAnchor(0), 2);
+      expect(layout.nextSpreadAnchor(2), 4);
+      expect(layout.nextSpreadAnchor(4), isNull);
+      expect(layout.previousSpreadAnchor(4), 2);
+      expect(layout.previousSpreadAnchor(2), 0);
+      expect(layout.previousSpreadAnchor(0), isNull);
+    });
+
+    test('spreadIndexOf 對超界 pageIndex 安全 clamp，不擲例外', () {
+      final layout = layout5CoverAlone();
+      expect(() => layout.spreadIndexOf(-1), returnsNormally);
+      expect(() => layout.spreadIndexOf(999), returnsNormally);
+      expect(layout.spreadIndexOf(-1), layout.spreadIndexOf(0));
+      expect(layout.spreadIndexOf(999), layout.spreadIndexOf(4));
+    });
+  });
 }

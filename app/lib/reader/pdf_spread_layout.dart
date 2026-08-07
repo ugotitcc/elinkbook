@@ -82,6 +82,36 @@ class PdfSpreadLayout {
   final Size documentSize;
 
   int get spreadCount => spreads.length;
+
+  /// 0-indexed pageIndex → 所屬 spreadIndex。超界時 clamp 到合法範圍
+  /// （呼叫端不需要自行防呆）。
+  int spreadIndexOf(int pageIndex) {
+    if (pageToSpread.isEmpty) return 0;
+    final clamped = pageIndex.clamp(0, pageToSpread.length - 1);
+    return pageToSpread[clamped];
+  }
+
+  /// spreadIndex → 該 spread 的「錨點頁」= 組內最小的 pageIndex。對外
+  /// 回報的目前頁碼、翻頁步進基準皆用錨點頁（沿用已刪除的舊 Kotlin
+  /// currentPageIndex 語意）。
+  int anchorPageOf(int spreadIndex) {
+    final clamped = spreadIndex.clamp(0, spreads.length - 1);
+    return spreads[clamped].first;
+  }
+
+  /// 下一個 spread 的錨點頁 index；已在最後一個 spread 時回傳 null。
+  int? nextSpreadAnchor(int fromPageIndex) {
+    final current = spreadIndexOf(fromPageIndex);
+    if (current >= spreads.length - 1) return null;
+    return anchorPageOf(current + 1);
+  }
+
+  /// 上一個 spread 的錨點頁 index；已在第一個 spread 時回傳 null。
+  int? previousSpreadAnchor(int fromPageIndex) {
+    final current = spreadIndexOf(fromPageIndex);
+    if (current <= 0) return null;
+    return anchorPageOf(current - 1);
+  }
 }
 
 /// 計算雙頁並列版面。純函式：輸入只有頁面尺寸與設定，無 pdfrx 相依。
