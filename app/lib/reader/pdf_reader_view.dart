@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pdfrx/pdfrx.dart';
 
+import 'dual_page_direction.dart';
+import 'dual_page_mode.dart';
+import 'pdf_spread_layout.dart';
 import 'pdf_annotation_decoration.dart';
 import 'pdf_page_info.dart';
 
@@ -24,6 +27,18 @@ class PdfReaderView extends StatefulWidget {
   final int? initialPageIndex;
   final ValueChanged<PdfPageInfo>? onPageChanged;
 
+  // ── epic-24-pdf-engine-rebuild Issue 2 新增 ──
+  /// 三態雙頁模式。**widget 層預設刻意為 [DualPageMode.never]**（不是
+  /// 產品預設值 auto）：未傳此參數的既有呼叫端（Issue 1 既有測試）行為
+  /// 與 Issue 1 逐位元相同。產品預設 auto 由 ResolvedPreferences 提供，
+  /// 經 reader_screen.dart 明確傳入（見 Task 8）。
+  final DualPageMode dualPageMode;
+  final bool dualPageCoverAlone;
+  final DualPageDirection dualPageDirection;
+  /// 螢幕是否為橫向。由 ReaderScreen 既有的 isLandscape 傳入（與 EPUB
+  /// FXL 分支同源），本 widget 不自行偵測方向。
+  final bool isLandscape;
+
   const PdfReaderView({
     super.key,
     required this.filePath,
@@ -31,6 +46,10 @@ class PdfReaderView extends StatefulWidget {
     required this.onError,
     this.initialPageIndex,
     this.onPageChanged,
+    this.dualPageMode = DualPageMode.never,
+    this.dualPageCoverAlone = true,
+    this.dualPageDirection = DualPageDirection.rtl,
+    this.isLandscape = false,
   });
 
   @override
@@ -80,6 +99,32 @@ class _PdfReaderViewState extends State<PdfReaderView> {
   bool _renderedNotified = false;
   static const _resourceChannel = MethodChannel('elinkbook/reader_resources');
   String? _contentUriTmpPath;
+
+  /// 最近一次雙頁版面計算結果，由 [_layoutSpreadPages] 在 build 期間寫入
+  /// （純快取，不 setState）。單頁模式下為 null。刻意不改用
+  /// `PdfViewerController.layout`：該 getter 在版面尚未建立時會擲
+  /// null-check error，且只回傳合併後的頁面矩形，拿不到 spread 分組
+  /// 資訊。
+  PdfSpreadLayout? _spreadLayout;
+
+  /// computeSpreadLayout 的 memo 鍵——**必須涵蓋所有會影響版面計算結果的
+  /// 輸入**（頁數、封面獨立、配對方向、margin），不能只用頁數：若只用頁
+  /// 數當鍵，快取正確性就會完全依賴呼叫端（Task 7 的 `didUpdateWidget`）
+  /// 手動清空快取這個外部協調，屬脆弱耦合——日後若有人修改
+  /// `didUpdateWidget` 的變更偵測邏輯卻忘記同步處理快取，會靜默沿用過期
+  /// 版面（例如翻頁座標與實際畫面不符）。用完整輸入當鍵，讓
+  /// `_layoutSpreadPages` 自身就具備正確性，不依賴外部協調。
+  ///
+  /// 輸入未變時直接回傳同一個 `PdfPageLayout` 實例，讓 pdfrx 的版面變更
+  /// 比對可以走 `identical()` 快速路徑。
+  ({int pageCount, bool coverAlone, DualPageDirection direction, double margin})?
+      _cachedLayoutKey;
+  PdfPageLayout? _cachedPdfLayout;
+
+  bool get _dualPageEnabled => isDualPageEnabled(
+        mode: widget.dualPageMode,
+        isLandscape: widget.isLandscape,
+      );
 
   @override
   void initState() {
@@ -176,6 +221,34 @@ class _PdfReaderViewState extends State<PdfReaderView> {
     ));
   }
 
+  /// PdfPageLayoutFunction 實作。以 instance method tear-off 形式傳給
+  /// PdfViewerParams（見 build()）——同一個 State 的 tear-off 具備穩定的
+  /// == 語意；設定值（coverAlone/direction）在呼叫當下讀 widget.xxx，
+  /// 設定變更會反映到新算出的 PdfPageLayout 上。
+  PdfPageLayout _layoutSpreadPages(List<PdfPage> pages, PdfViewerParams params) {
+    final key = (
+      pageCount: pages.length,
+      coverAlone: widget.dualPageCoverAlone,
+      direction: widget.dualPageDirection,
+      margin: params.margin,
+    );
+    if (_cachedLayoutKey == key && _cachedPdfLayout != null) {
+      return _cachedPdfLayout!;
+    }
+    final layout = computeSpreadLayout(
+      pageSizes: [for (final p in pages) Size(p.width, p.height)],
+      margin: params.margin,
+      coverAlone: widget.dualPageCoverAlone,
+      direction: widget.dualPageDirection,
+    );
+    _spreadLayout = layout;
+    _cachedLayoutKey = key;
+    return _cachedPdfLayout = PdfPageLayout(
+      pageLayouts: layout.pageRects, // pdfrx 契約：index i 對應第 i+1 頁。
+      documentSize: layout.documentSize,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_error != null) {
@@ -192,6 +265,10 @@ class _PdfReaderViewState extends State<PdfReaderView> {
       controller: _controller,
       initialPageNumber: (widget.initialPageIndex ?? 0) + 1,
       params: PdfViewerParams(
+        // 單頁模式一律傳 null，沿用 pdfrx 內建版面推算——PdfViewerParams
+        // 與 Issue 1 逐欄位相同，這是零回歸的構造性保證（不是靠測試
+        // 事後證明）。
+        layoutPages: _dualPageEnabled ? _layoutSpreadPages : null,
         onViewerReady: (doc, controller) {
           if (!_renderedNotified) {
             _renderedNotified = true;
