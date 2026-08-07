@@ -196,21 +196,42 @@ class _PdfReaderViewState extends State<PdfReaderView> {
   void _jumpToPage(int pageIndex) {
     if (!_controller.isReady) return;
     if (pageIndex < 0 || pageIndex >= _controller.pageCount) return;
-    _controller.goToPage(pageNumber: pageIndex + 1);
+    final layout = _activeSpreadLayout;
+    if (layout == null) {
+      _controller.goToPage(pageNumber: pageIndex + 1); // Issue 1 原邏輯。
+      return;
+    }
+    _goToSpread(layout.spreadIndexOf(pageIndex), layout);
   }
 
   void _nextPage() {
     if (!_controller.isReady) return;
-    final current = _controller.pageNumber ?? 1;
-    if (current >= _controller.pageCount) return;
-    _controller.goToPage(pageNumber: current + 1);
+    final layout = _activeSpreadLayout;
+    if (layout == null) {
+      final current = _controller.pageNumber ?? 1; // Issue 1 原邏輯。
+      if (current >= _controller.pageCount) return;
+      _controller.goToPage(pageNumber: current + 1);
+      return;
+    }
+    final currentIndex = (_controller.pageNumber ?? 1) - 1;
+    final next = layout.nextSpreadAnchor(currentIndex);
+    if (next == null) return; // 已在最後一個 spread。
+    _goToSpread(layout.spreadIndexOf(next), layout);
   }
 
   void _previousPage() {
     if (!_controller.isReady) return;
-    final current = _controller.pageNumber ?? 1;
-    if (current <= 1) return;
-    _controller.goToPage(pageNumber: current - 1);
+    final layout = _activeSpreadLayout;
+    if (layout == null) {
+      final current = _controller.pageNumber ?? 1; // Issue 1 原邏輯。
+      if (current <= 1) return;
+      _controller.goToPage(pageNumber: current - 1);
+      return;
+    }
+    final currentIndex = (_controller.pageNumber ?? 1) - 1;
+    final prev = layout.previousSpreadAnchor(currentIndex);
+    if (prev == null) return; // 已在封面 spread。
+    _goToSpread(layout.spreadIndexOf(prev), layout);
   }
 
   void _handlePageChanged(int? pageNumber) {
@@ -283,6 +304,25 @@ class _PdfReaderViewState extends State<PdfReaderView> {
     if (bestIndex < 0) return controller.pageNumber; // 完全捲出版面外。
     return layout.anchorPageOf(layout.spreadIndexOf(bestIndex)) + 1;
   }
+
+  /// 雙頁模式下的統一導航：把整個 spread 帶入視野。用 goToArea 而非
+  /// goToPage：goToPage 只 fit 單一頁面矩形（會把 spread 的另一半推出
+  /// 畫面），且其內部會直接 _setCurrentPageNumber(目標頁)，繞過
+  /// calculateCurrentPageNumber，造成頁碼有兩個來源。goToArea 不設定
+  /// 頁碼，頁碼一律由 _calculateSpreadAnchorPageNumber 於動畫過程中
+  /// 推導，維持單一事實來源。
+  void _goToSpread(int spreadIndex, PdfSpreadLayout layout) {
+    if (spreadIndex < 0 || spreadIndex >= layout.spreadCount) return;
+    unawaited(_controller.goToArea(
+      rect: layout.spreadRects[spreadIndex],
+      anchor: PdfPageAnchor.all,
+    ));
+  }
+
+  /// 雙頁啟用且版面已算好時回傳版面，否則回傳 null（→ 導航方法走
+  /// Issue 1 原路徑）。
+  PdfSpreadLayout? get _activeSpreadLayout =>
+      _dualPageEnabled ? _spreadLayout : null;
 
   @override
   Widget build(BuildContext context) {

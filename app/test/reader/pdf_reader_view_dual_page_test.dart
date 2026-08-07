@@ -139,4 +139,267 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
     expect(lastPageInfo?.pageIndex, 1, reason: '回報 spread 錨點頁，不是 2');
   });
+
+  testWidgets('always + 封面獨立：翻頁以 spread 為單位，封面步進 1、之後步進 2',
+      (tester) async {
+    var renderedCount = 0;
+    PdfPageInfo? lastPageInfo;
+    final key = GlobalKey<State<PdfReaderView>>();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PdfReaderView(
+          key: key,
+          filePath: 'test/fixtures/sample_multi_page.pdf', // 5 頁。
+          dualPageMode: DualPageMode.always,
+          dualPageCoverAlone: true,
+          dualPageDirection: DualPageDirection.ltr,
+          isLandscape: false, // 證明 always 模式不看方向。
+          onPageRendered: () => renderedCount++,
+          onError: (_) {},
+          onPageChanged: (info) => lastPageInfo = info,
+        ),
+      ),
+    );
+    await waitRendered(tester, () => renderedCount);
+    expect(lastPageInfo?.pageIndex, 0);
+
+    PdfReaderView.nextPage(key);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(lastPageInfo?.pageIndex, 1);
+
+    PdfReaderView.nextPage(key);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(lastPageInfo?.pageIndex, 3);
+
+    // 已在最後一個 spread，再次 nextPage 應 safe 忽略。
+    PdfReaderView.nextPage(key);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(tester.takeException(), isNull);
+    expect(lastPageInfo?.pageIndex, 3);
+  });
+
+  testWidgets('always + 封面獨立：previousPage 對稱回到封面', (tester) async {
+    var renderedCount = 0;
+    PdfPageInfo? lastPageInfo;
+    final key = GlobalKey<State<PdfReaderView>>();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PdfReaderView(
+          key: key,
+          filePath: 'test/fixtures/sample_multi_page.pdf',
+          dualPageMode: DualPageMode.always,
+          dualPageCoverAlone: true,
+          dualPageDirection: DualPageDirection.ltr,
+          onPageRendered: () => renderedCount++,
+          onError: (_) {},
+          onPageChanged: (info) => lastPageInfo = info,
+        ),
+      ),
+    );
+    await waitRendered(tester, () => renderedCount);
+
+    PdfReaderView.jumpToPage(key, 4);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(lastPageInfo?.pageIndex, 3);
+
+    PdfReaderView.previousPage(key);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(lastPageInfo?.pageIndex, 1);
+
+    PdfReaderView.previousPage(key);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(lastPageInfo?.pageIndex, 0);
+
+    PdfReaderView.previousPage(key);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(tester.takeException(), isNull);
+    expect(lastPageInfo?.pageIndex, 0);
+  });
+
+  testWidgets('always + 封面不獨立：步進恆為 2（6 頁 fixture）', (tester) async {
+    var renderedCount = 0;
+    PdfPageInfo? lastPageInfo;
+    final key = GlobalKey<State<PdfReaderView>>();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PdfReaderView(
+          key: key,
+          filePath: 'test/fixtures/sample_dual_page.pdf', // 6 頁。
+          dualPageMode: DualPageMode.always,
+          dualPageCoverAlone: false,
+          dualPageDirection: DualPageDirection.ltr,
+          onPageRendered: () => renderedCount++,
+          onError: (_) {},
+          onPageChanged: (info) => lastPageInfo = info,
+        ),
+      ),
+    );
+    await waitRendered(tester, () => renderedCount);
+    expect(lastPageInfo?.totalPages, 6);
+    expect(lastPageInfo?.pageIndex, 0);
+
+    PdfReaderView.nextPage(key);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(lastPageInfo?.pageIndex, 2);
+
+    PdfReaderView.nextPage(key);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(lastPageInfo?.pageIndex, 4);
+
+    PdfReaderView.nextPage(key);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(tester.takeException(), isNull);
+    expect(lastPageInfo?.pageIndex, 4);
+  });
+
+  testWidgets('auto + 直向：等同單頁模式，步進為 1', (tester) async {
+    var renderedCount = 0;
+    PdfPageInfo? lastPageInfo;
+    final key = GlobalKey<State<PdfReaderView>>();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PdfReaderView(
+          key: key,
+          filePath: 'test/fixtures/sample_multi_page.pdf',
+          dualPageMode: DualPageMode.auto,
+          isLandscape: false,
+          onPageRendered: () => renderedCount++,
+          onError: (_) {},
+          onPageChanged: (info) => lastPageInfo = info,
+        ),
+      ),
+    );
+    await waitRendered(tester, () => renderedCount);
+
+    PdfReaderView.nextPage(key);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(lastPageInfo?.pageIndex, 1);
+  });
+
+  testWidgets('auto + 橫向：等同 always，步進與雙頁一致', (tester) async {
+    var renderedCount = 0;
+    PdfPageInfo? lastPageInfo;
+    final key = GlobalKey<State<PdfReaderView>>();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PdfReaderView(
+          key: key,
+          filePath: 'test/fixtures/sample_multi_page.pdf',
+          dualPageMode: DualPageMode.auto,
+          dualPageCoverAlone: true,
+          isLandscape: true,
+          onPageRendered: () => renderedCount++,
+          onError: (_) {},
+          onPageChanged: (info) => lastPageInfo = info,
+        ),
+      ),
+    );
+    await waitRendered(tester, () => renderedCount);
+
+    PdfReaderView.nextPage(key);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(lastPageInfo?.pageIndex, 1);
+
+    PdfReaderView.nextPage(key);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(lastPageInfo?.pageIndex, 3);
+  });
+
+  testWidgets('總頁數為偶數且封面獨立時，最後一頁單獨成為一個 spread',
+      (tester) async {
+    var renderedCount = 0;
+    PdfPageInfo? lastPageInfo;
+    final key = GlobalKey<State<PdfReaderView>>();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PdfReaderView(
+          key: key,
+          filePath: 'test/fixtures/sample_dual_page.pdf', // 6 頁。
+          dualPageMode: DualPageMode.always,
+          dualPageCoverAlone: true,
+          dualPageDirection: DualPageDirection.ltr,
+          onPageRendered: () => renderedCount++,
+          onError: (_) {},
+          onPageChanged: (info) => lastPageInfo = info,
+        ),
+      ),
+    );
+    await waitRendered(tester, () => renderedCount);
+
+    // spreads == [[0],[1,2],[3,4],[5]]，第 5 頁單獨成一組。
+    PdfReaderView.jumpToPage(key, 5);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(lastPageInfo?.pageIndex, 5);
+
+    PdfReaderView.nextPage(key);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(tester.takeException(), isNull);
+    expect(lastPageInfo?.pageIndex, 5, reason: '已在最後一個 spread');
+
+    PdfReaderView.previousPage(key);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(lastPageInfo?.pageIndex, 3);
+  });
+
+  testWidgets('RTL 與 LTR 產生鏡像版面，但頁碼回報序列完全相同', (tester) async {
+    Future<List<int?>> runSequence(DualPageDirection direction) async {
+      var renderedCount = 0;
+      PdfPageInfo? lastPageInfo;
+      final key = GlobalKey<State<PdfReaderView>>();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: PdfReaderView(
+            key: key,
+            filePath: 'test/fixtures/sample_multi_page.pdf',
+            dualPageMode: DualPageMode.always,
+            dualPageCoverAlone: true,
+            dualPageDirection: direction,
+            onPageRendered: () => renderedCount++,
+            onError: (_) {},
+            onPageChanged: (info) => lastPageInfo = info,
+          ),
+        ),
+      );
+      await waitRendered(tester, () => renderedCount);
+      final sequence = <int?>[lastPageInfo?.pageIndex];
+      PdfReaderView.nextPage(key);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      sequence.add(lastPageInfo?.pageIndex);
+      PdfReaderView.nextPage(key);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      sequence.add(lastPageInfo?.pageIndex);
+      return sequence;
+    }
+
+    final rtlSequence = await runSequence(DualPageDirection.rtl);
+    await tester.pumpWidget(const SizedBox.shrink()); // 清空重來。
+    final ltrSequence = await runSequence(DualPageDirection.ltr);
+
+    expect(rtlSequence, [0, 1, 3]);
+    expect(ltrSequence, [0, 1, 3]);
+  });
 }
