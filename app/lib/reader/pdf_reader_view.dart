@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -107,25 +108,22 @@ class _PdfReaderViewState extends State<PdfReaderView> {
   /// pdfrx 的 PdfDocument.openCustom 雖然宣告 read callback 為 FutureOr(int)，
   /// 但內部 PDFium FFI 實作是在 native 執行緒同步呼叫該 callback，無法等待
   /// MethodChannel 回傳的 Future（已知技術風險，見 plan-issue-1 Task 2）。
-  /// 因此改為：透過平台通道讀取全部位元組後寫入暫存檔，再以 PdfDocument.openFile()
-  /// 開啟。大型 PDF（數百 MB）可能導致記憶體壓力，但這是在避免整包複製到
-  /// 本機快取（見 ADR 0002）與 FFI 同步限制之間的已知取捨。
+  /// 因此改為：原生端透過串流複製將 content:// URI 寫入 App 快取目錄的暫存
+  /// 檔，回傳路徑字串，Dart 端直接以 PdfDocument.openFile() 開啟。避免 Dart 端
+  /// 一次性載入全部位元組（readBytes + writeAsBytes 雙倍記憶體壓力）。
   Future<PdfDocument> _openContentUriDocument() async {
-    // 1. 透過平台通道取得 content:// URI 的全部位元組。
-    final bytes = await _resourceChannel.invokeMethod<Uint8List>(
+    // 1. 透過平台通道取得 content:// URI 串流複製後的暫存檔路徑。
+    final tmpPath = await _resourceChannel.invokeMethod<String>(
       'readContentUriAll',
       {'uri': widget.filePath},
     );
-    if (bytes == null || bytes.isEmpty) {
+    if (tmpPath == null || tmpPath.isEmpty) {
       throw StateError('無法讀取檔案：${widget.filePath}');
     }
-    // 2. 寫入暫存檔後以 openFile() 開啟——PDFium FFI 在 native 執行緒
-    //    同步讀取檔案，不涉及非同步 read callback。
-    final tmpDir = Directory.systemTemp.createTempSync('elinkbook_pdf_');
-    final tmpFile = File('${tmpDir.path}/doc.pdf');
-    await tmpFile.writeAsBytes(bytes);
-    _contentUriTmpPath = tmpFile.path;
-    return PdfDocument.openFile(tmpFile.path);
+    // 2. 直接以 openFile() 開啟——PDFium FFI 在 native 執行緒同步讀取檔案，
+    //    不涉及非同步 read callback。暫存檔在 dispose() 時清理。
+    _contentUriTmpPath = tmpPath;
+    return PdfDocument.openFile(tmpPath);
   }
 
   @override
@@ -133,9 +131,21 @@ class _PdfReaderViewState extends State<PdfReaderView> {
     _document?.dispose();
     final tmpPath = _contentUriTmpPath;
     if (tmpPath != null) {
-      File(tmpPath).delete().catchError((_) => File(''));
+      unawaited(_cleanupTmpFile(tmpPath));
     }
     super.dispose();
+  }
+
+  /// 嘗試刪除暫存檔及其暫存目錄（若為空）。非空時 delete 抛出例外，忽略
+  /// 即可——其他 PdfReaderView 實例可能仍在使用同一目錄下的不同暫存檔。
+  Future<void> _cleanupTmpFile(String path) async {
+    try {
+      final tmpFile = File(path);
+      await tmpFile.delete();
+      try {
+        await tmpFile.parent.delete();
+      } catch (_) {}
+    } catch (_) {}
   }
 
   void _jumpToPage(int pageIndex) {

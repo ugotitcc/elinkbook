@@ -143,7 +143,10 @@ void main() {
       switch (call.method) {
         case 'readContentUriAll':
           readAllCalled = true;
-          return fileBytes;
+          // 模擬原生端 readContentUriAll 行為：寫入暫存檔後回傳路徑字串
+          final tmpFile = File('${Directory.systemTemp.path}/test_content_uri.pdf');
+          await tmpFile.writeAsBytes(fileBytes);
+          return tmpFile.path;
       }
       return null;
     });

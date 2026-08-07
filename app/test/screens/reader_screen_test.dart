@@ -2658,6 +2658,11 @@ void main() {
     // 【epic-24-pdf-engine-rebuild Issue 1】新 PdfReaderView 為純 Dart widget
     // （pdfrx），不再使用 PlatformView。驗證方式改為：確認 onVolumeKey
     // 觸發後頁碼正確變動。
+    //
+    // 【已知限制】pdfrx 的 PDFium FFI 在 widget test 環境無法載入 PDF，
+    // PdfViewerController.isReady 為 false，因此無法直接驗證頁碼數值。
+    // 使用 sample_multi_page.pdf（多頁 Fixture）以確保測試語意正確，
+    // 但斷言仍限於「事件處理路徑完整走完且不拋出例外」。
     final binaryMessenger =
         TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
 
@@ -2672,7 +2677,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: ReaderScreen(
-          filePath: 'test/fixtures/sample.pdf',
+          filePath: 'test/fixtures/sample_multi_page.pdf',
           bookId: 'b1',
           prefsManager: prefsManager,
         ),
@@ -2702,13 +2707,12 @@ void main() {
     }
 
     // onVolumeKey(down) 應觸發 PdfReaderView.nextPage → 頁碼前進。
-    // 由於純 Dart widget 的換頁是同步 controller 操作，pump 後即生效。
+    // 由於 pdfrx FFI 在 widget test 環境無法載入 PDF（isReady = false），
+    // nextPage 內部會 early return，但呼叫路徑完整走完且不拋出例外即為
+    // 本測試的驗證目標。多頁驗證留給 integration test 在真機上執行。
     await simulateVolumeKey('down');
-    // 驗證頁碼已變動（間接證明 nextPage 被呼叫）
     final stateAfterDown =
         tester.state<State>(find.byType(ReaderScreen));
-    // 不直接斷言頁碼數值（fixture 只有 1 頁），改為確認沒有拋出例外
-    // 且 onVolumeKey 呼叫路徑完整走完（若有例外，test 會自動失敗）。
     expect(stateAfterDown.mounted, isTrue);
 
     await simulateVolumeKey('up');
@@ -2719,6 +2723,9 @@ void main() {
     // 【epic-24-pdf-engine-rebuild Issue 1】新 PdfReaderView 為純 Dart widget
     // （pdfrx），不再使用 PlatformView。驗證方式：在 volumeKeyEnabled: false
     // 時發送 onVolumeKey，確認頁碼不變動（間接證明翻頁被忽略）。
+    //
+    // 【已知限制】同上——pdfrx FFI 在 widget test 環境無法載入 PDF，
+    // 使用 sample_multi_page.pdf 確保測試語意正確。
     final binaryMessenger =
         TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
 
@@ -2737,7 +2744,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: ReaderScreen(
-          filePath: 'test/fixtures/sample.pdf',
+          filePath: 'test/fixtures/sample_multi_page.pdf',
           bookId: 'b1',
           prefsManager: disabledPrefsManager,
         ),
