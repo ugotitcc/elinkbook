@@ -1577,11 +1577,18 @@ git commit -m "feat(epic-24): PdfReaderView 三個導航方法新增雙頁 sprea
     await tester.pump(const Duration(milliseconds: 300));
     expect(
       lastPageInfo?.pageIndex,
-      3,
+      2,
       reason: 'coverAlone=false 後 spreads 變為 [0,1][2,3][4,5]，'
-          '從錨點頁 1 出發下一步應到錨點頁 3',
+          '從錨點頁 0 出發下一步應到錨點頁 2',
     );
   });
+
+  // 【review-issue-2 訂正】上面 expect 的預期值與理由，本計畫初版誤寫為
+  // 3／「從錨點頁 1 出發下一步應到錨點頁 3」。實際手算：coverAlone 切換
+  // 當下 `_jumpToPage(1)` 落在新版面（[0,1][2,3][4,5]）下 spreadIndexOf(1)
+  // 所屬 spread [0,1] 的錨點頁 0，之後 nextPage() 才到錨點 2——即使代入
+  // 原計畫「從錨點頁 1 出發」也會算出 2 而非 3。實作已依正確算式提交，
+  // 此處僅訂正計畫文件本身的推算誤差，不代表實作偏離規格。
 
   testWidgets('執行期切換 dualPageDirection，錨點頁步進序列不受影響（僅幾何鏡像）',
       (tester) async {
