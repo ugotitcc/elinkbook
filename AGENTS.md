@@ -17,20 +17,30 @@ flutter devices          # 列出可用裝置
 ### 唯一 Seam：ReaderScreen
 
 `app/lib/screens/reader_screen.dart` 是唯一的閱讀器入口，依副檔名分派到：
-- `FoliateEpubReaderView` → `readest/foliate-js` 跑在 `flutter_inappwebview` 的 `InAppWebView` 內（所有 EPUB，含 FXL 與流式）
-- `PdfReaderView` → android.graphics.pdf.PdfRenderer (AndroidView)
+- `FoliateEpubReaderView` → `readest/foliate-js` 跑在 `flutter_inappwebview` 的 `InAppWebView` 內（所有 EPUB，含 FXL 與流式，見 ADR 0017）
+- `PdfReaderView` → `pdfrx`（PDFium 透過 `dart:ffi` 直接呼叫，非 `PlatformView`，見 ADR 0022）
 
-`PdfReaderView` 為傳統 `AndroidView`/`PlatformView` 包裝，method channel 契約：`openBook(path)` → `onPageRendered()`/`onError(message)`。`FoliateEpubReaderView` 不是傳統 `PlatformView`，透過 `foliate_native_bridge.dart` 與原生端溝通。
+`PdfReaderView` 為純 Dart widget，底層 `pdfrx` 透過 FFI 直接呼叫 PDFium，不再使用原生 `PlatformView`。`content://` URI 存取走原生端 `ReaderResourceChannel.kt` 串流複製到本機暫存檔後回傳路徑。`FoliateEpubReaderView` 不是傳統 `PlatformView`，透過 `foliate_native_bridge.dart` 與原生端溝通。
 
 ### Native 層
 
 Kotlin 原始碼位於 `app/android/app/src/main/kotlin/cc/ugotit/elinkbook/`：
-- `PdfReaderView.kt` + `PdfReaderViewFactory.kt`
 - `MainActivity.kt`（`FlutterFragmentActivity`，因 `registerForActivityResult` 需要）
-- `BookMetadataChannel.kt`
-- `ReaderViewAttachmentTracker.kt`（共用元件）
+- `BookMetadataChannel.kt`（EPUB metadata 讀取，仍依賴 `readium-shared`/`readium-streamer`）
+- `ReaderResourceChannel.kt`（`content://` URI 串流讀取）
+- `ReaderViewAttachmentTracker.kt`（共用元件，音量鍵攔截狀態追蹤）
 
-### 偏好設定系統（Epic 3）
+### Method Channel 契約
+
+| 頻道 | 方向 | 用途 |
+|------|------|------|
+| `elinkbook/volume_key` | Dart↔Kotlin | 音量鍵翻頁、ReaderView 附加/分離通知 |
+| `elinkbook/folder_picker` | Dart→Kotlin | 資料夾選擇器（SAF） |
+| `elinkbook/app_info` | Dart→Kotlin | 取得 WebView 版本、Build 時間 |
+| `elinkbook/fullscreen` | Dart→Kotlin | 全螢幕模式（WindowInsetsController） |
+| `elinkbook/reader_resources` | Dart→Kotlin | `content://` URI 串流讀取 |
+
+### 偏好設定系統
 
 - `BookReaderPrefs`：單書版面偏好（`app/lib/reader/book_reader_prefs.dart`）
 - `BookReaderPrefsRepository`：SQLite 持久化（`app/lib/reader/book_reader_prefs_repository.dart`）
@@ -75,7 +85,7 @@ flutter build apk --debug                       # 建置 debug APK
 | `docs/prd.md` | 完整產品需求 |
 | `docs/epics.md` | Epic 狀態看板（唯一查 epic 位置的地方） |
 | `CONTEXT.md` | 領域詞彙表 |
-| `docs/adr/` | 架構決定紀錄（7 則） |
+| `docs/adr/` | 架構決定紀錄（22 則） |
 | `prototype/index.html` | UI/UX 原型（手機外殼模擬器） |
 | `docs/agents/issue-tracker.md` | 工單追蹤系統慣例 |
 
@@ -96,3 +106,6 @@ flutter build apk --debug                       # 建置 debug APK
 - Integration tests 必須指定 `-d <device-id>`，否則會找不到裝置
 - 原生渲染引擎需要真實裝置檔案路徑，不能直接讀 Flutter asset（見 `stageSampleBookFile()`）
 - `BookReaderPrefs.fontWeight` 使用 Readium 倍率語意（1.0 = normal），非 CSS 300-900 原始值
+- `pdfrx` 透過 FFI 直接呼叫 PDFium，不走 PlatformView——勿與舊版 `PdfReaderView.kt`/`PdfReaderViewFactory.kt` 混淆（已清退）
+- `foliate-js` 釘定版本會使用較新 ES 內建方法（`Object.groupBy`、`Array.prototype.at`），較舊 Android System WebView 不支援時需在 `_esCompatPolyfillJs` 補 polyfill
+- `content://` URI 存取必須走原生端 `ReaderResourceChannel.kt` 串流複製到本機暫存檔，不可直接讀取
