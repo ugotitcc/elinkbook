@@ -48,7 +48,9 @@ None - can start immediately.
 
 ## Issue 2：雙頁並列（Facing Spread）
 
-**Status:** ready-for-agent（2026-08-07，`/to-issues` 依 `spec.md` 拆解）
+**Status:** ✅ 已完成並合併（2026-08-09，PR #124 合併至 `main`，commit `dcb7a67`）
+
+**合併前審查歷程**：`/superpowers:requesting-code-review` 一輪即通過（0 Critical／0 Important／3 Minor），報告存於本機 `tmp/epic-24/review-issue-2.md`（未進版控）。審查另開獨立 git worktree 實測，`pdf_spread_layout_test.dart`／`pdf_reader_view_dual_page_test.dart`／`pdf_reader_view_test.dart` 41 項全數 PASS，全專案 1002 項測試全數 PASS（`pdf_reader_view_test.dart` diff 為空，零回歸宣稱屬實），`flutter analyze` 乾淨；並對照 `pdfrx` 套件原始碼確認 `calculateCurrentPageNumber` 覆寫的設計理由（`_guessCurrentPageNumber` 行為）並非臆測。3 項 Minor（`PdfReaderView` 類別文件註解過時、計畫文件一則測試範例算式誤差、`dualPageDirection` 執行期切換測試時序穩健度）已於合併前修正（commit `40ab20d` 於分支、`65c69b0` 於 `main`）。
 
 **依賴：** Issue 1（需要新 `pdfrx` widget 已能開書顯示）。
 
@@ -60,10 +62,10 @@ None - can start immediately.
 
 ### Acceptance criteria
 
-- [ ] 三態雙頁模式（自動/永遠雙頁/永遠單頁）皆正確驅動 `pdfrx` 的雙頁排版，「自動」模式下橫向時雙頁、直向時單頁。
-- [ ] 封面獨立顯示、之後兩兩配對的既有 Spread 規則正確重現。
-- [ ] 單元測試：`flutter test` 對多頁 fixture 驗證各雙頁模式下的頁面配對結果。
-- [ ] `flutter analyze` 乾淨、`flutter test` 全數通過（含 Issue 1 既有測試零回歸）。
+- [x] 三態雙頁模式（自動/永遠雙頁/永遠單頁）皆正確驅動 `pdfrx` 的雙頁排版，「自動」模式下橫向時雙頁、直向時單頁。
+- [x] 封面獨立顯示、之後兩兩配對的既有 Spread 規則正確重現。
+- [x] 單元測試：`flutter test` 對多頁 fixture 驗證各雙頁模式下的頁面配對結果。
+- [x] `flutter analyze` 乾淨、`flutter test` 全數通過（含 Issue 1 既有測試零回歸）。
 
 ### Blocked by
 
