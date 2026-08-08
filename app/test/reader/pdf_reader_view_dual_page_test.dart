@@ -557,6 +557,9 @@ void main() {
     await tester.pumpWidget(buildView(DualPageDirection.ltr)); // 執行期切換方向。
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
+    // 兩層巢狀 addPostFrameCallback 需要額外的 frame 才能完成。
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
 
     PdfReaderView.nextPage(key);
     await tester.pump();

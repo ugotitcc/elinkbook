@@ -13,9 +13,9 @@ import 'pdf_page_info.dart';
 /// 以 pdfrx（PDFium + Dart FFI）為底層的 PDF 閱讀 widget
 /// （epic-24-pdf-engine-rebuild Issue 1），取代現行以
 /// android.graphics.pdf.PdfRenderer 為底層、透過 AndroidView PlatformView
-/// 渲染的既有實作（ADR 0022）。本工單範圍限定「單頁顯示＋頁碼＋跳頁」，
-/// 雙頁/影像濾鏡/劃線/目錄/搜尋/縮圖/FAB 工具列皆為後續獨立工單，
-/// 尚未實作。
+/// 渲染的既有實作（ADR 0022）。單頁顯示＋頁碼＋跳頁（Issue 1）與雙頁並列
+/// （Issue 2）已實作；影像濾鏡/劃線/目錄/搜尋/縮圖/FAB 工具列皆為後續獨立
+/// 工單，尚未實作。
 ///
 /// 頁碼慣例：pdfrx 的 PdfViewerController 使用 1-indexed pageNumber，本
 /// widget 對外一律維持本專案既有的 0-indexed pageIndex 慣例，換算只發生
