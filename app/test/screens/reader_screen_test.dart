@@ -44,6 +44,7 @@ import 'package:elinkbook/reader/highlight_style.dart';
 import 'package:elinkbook/sync/sync_checkpoint_trigger.dart';
 import 'package:elinkbook/reader/pdf_crop_frame_overlay.dart';
 import 'package:elinkbook/reader/pdf_selection_info.dart';
+import 'package:elinkbook/reader/bookmark.dart';
 
 // 依 spec.md「測試決策」：ReaderScreen 分派到 EpubReaderView/PdfReaderView
 // 後，實際渲染內容存在於原生 PlatformView 之中，一般 flutter test（無真實
@@ -5445,6 +5446,108 @@ void main() {
     // DoubleTapGestureRecognizer 內部有 300ms 計時器，需 flush 否則
     // 測試結束時會擲出 "!timersPending" 斷言。
     await tester.pump(const Duration(milliseconds: 500));
+  });
+
+  testWidgets('PDF 書籤 toggle：目前頁無書籤時呼叫後新增一筆，頁碼定位正確',
+      (tester) async {
+    final binaryMessenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    const fullscreenChannel = MethodChannel('elinkbook/fullscreen');
+    binaryMessenger.setMockMethodCallHandler(
+        fullscreenChannel, (call) async => null);
+    addTearDown(
+      () => binaryMessenger.setMockMethodCallHandler(fullscreenChannel, null),
+    );
+
+    final bookmarksRepository = FakeBookmarksRepository();
+    final key = GlobalKey<State<ReaderScreen>>();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          key: key,
+          filePath: 'test/fixtures/sample_multi_page.pdf',
+          bookId: 'b1',
+          prefsManager: FakeReaderPrefsManager(),
+          bookmarksRepository: bookmarksRepository,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    // 模擬原生端回報頁碼，讓 _pdfPageInfo 非 null（比照既有 PDF 測試
+    // 直接呼叫 PdfReaderView.onPageChanged 的模式）。
+    tester.widget<PdfReaderView>(find.byType(PdfReaderView))
+        .onPageChanged?.call(
+      const PdfPageInfo(pageIndex: 0, totalPages: 5),
+    );
+    await tester.pump();
+
+    ReaderScreen.togglePdfBookmark(key);
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final saved = await bookmarksRepository.listByBook('b1');
+    expect(saved, hasLength(1));
+    expect(saved.single.pdfPageIndex, 0);
+    expect(saved.single.name, '第 1 頁');
+  });
+
+  testWidgets('PDF 書籤 toggle：目前頁已有書籤時呼叫後移除該筆', (tester) async {
+    final binaryMessenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    const fullscreenChannel = MethodChannel('elinkbook/fullscreen');
+    binaryMessenger.setMockMethodCallHandler(
+        fullscreenChannel, (call) async => null);
+    addTearDown(
+      () => binaryMessenger.setMockMethodCallHandler(fullscreenChannel, null),
+    );
+
+    final bookmarksRepository = FakeBookmarksRepository();
+    await bookmarksRepository.insert(Bookmark(
+      id: 'existing',
+      bookId: 'b1',
+      name: '第 1 頁',
+      pdfPageIndex: 0,
+    ));
+    final key = GlobalKey<State<ReaderScreen>>();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          key: key,
+          filePath: 'test/fixtures/sample_multi_page.pdf',
+          bookId: 'b1',
+          prefsManager: FakeReaderPrefsManager(),
+          bookmarksRepository: bookmarksRepository,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    // 模擬原生端回報頁碼，讓 _pdfPageInfo 非 null。
+    tester.widget<PdfReaderView>(find.byType(PdfReaderView))
+        .onPageChanged?.call(
+      const PdfPageInfo(pageIndex: 0, totalPages: 5),
+    );
+    await tester.pump();
+
+    ReaderScreen.togglePdfBookmark(key);
+    await tester.pump();
+    // _togglePdfBookmark 是 async（呼叫 repository.delete + _loadFxlBookmarks），
+    // togglePdfBookmark static seam 以 unawaited 包裝，需多 pump 讓 microtask 完成。
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final saved = await bookmarksRepository.listByBook('b1');
+    expect(saved, isEmpty, reason: '已存在同頁書籤時應移除，而非重複新增');
   });
 
   tearDownAll(() {
