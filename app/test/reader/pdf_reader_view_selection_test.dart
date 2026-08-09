@@ -5,6 +5,10 @@ import 'package:pdfrx/pdfrx.dart';
 import 'package:elinkbook/reader/pdf_page_info.dart';
 import 'package:elinkbook/reader/pdf_reader_view.dart';
 import 'package:elinkbook/reader/pdf_selection_info.dart';
+import 'package:elinkbook/reader/pdf_annotation_decoration.dart';
+import 'package:elinkbook/reader/percent_rect.dart';
+import 'package:elinkbook/reader/pdf_crop_mode.dart';
+import 'package:elinkbook/reader/pdf_crop_rect.dart';
 
 void main() {
   setUp(() => pdfrxInitialize());
@@ -257,5 +261,141 @@ void main() {
     // 第一頁通常從畫面最頂端開始，widgetRect.top 應是一個很小的值。
     expect(computed!.widgetRect.top, greaterThanOrEqualTo(0));
     expect(computed!.widgetRect.top, lessThanOrEqualTo(1));
+  });
+
+  testWidgets('refreshAnnotations 呼叫後，對應頁面顯示標記疊圖', (tester) async {
+    var renderedCount = 0;
+    final key = GlobalKey<State<PdfReaderView>>();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PdfReaderView(
+          key: key,
+          filePath: 'test/fixtures/sample_multi_page.pdf',
+          onPageRendered: () => renderedCount++,
+          onError: (_) {},
+        ),
+      ),
+    );
+    await waitRendered(tester, () => renderedCount);
+
+    expect(find.byKey(const Key('pdf_reader_decoration_0_0')), findsNothing);
+
+    PdfReaderView.refreshAnnotations(key, const [
+      PdfAnnotationDecoration(
+        pageIndex: 0,
+        rect: PercentRect(left: 0.1, top: 0.1, right: 0.5, bottom: 0.2),
+        tint: 0x73FDE047,
+      ),
+    ]);
+    await tester.pump();
+
+    expect(find.byKey(const Key('pdf_reader_decoration_0_0')), findsOneWidget,
+        reason: 'refreshAnnotations 應觸發重繪並顯示對應頁面的標記');
+  });
+
+  testWidgets('同一頁有多筆標記時，逐筆使用不同 key 渲染，不觸發 Duplicate Key 例外',
+      (tester) async {
+    var renderedCount = 0;
+    final key = GlobalKey<State<PdfReaderView>>();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PdfReaderView(
+          key: key,
+          filePath: 'test/fixtures/sample_multi_page.pdf',
+          onPageRendered: () => renderedCount++,
+          onError: (_) {},
+        ),
+      ),
+    );
+    await waitRendered(tester, () => renderedCount);
+
+    PdfReaderView.refreshAnnotations(key, const [
+      PdfAnnotationDecoration(
+        pageIndex: 0,
+        rect: PercentRect(left: 0.1, top: 0.1, right: 0.5, bottom: 0.2),
+        tint: 0x73FDE047,
+      ),
+      PdfAnnotationDecoration(
+        pageIndex: 0,
+        rect: PercentRect(left: 0.1, top: 0.3, right: 0.5, bottom: 0.4),
+        tint: 0x73F472B6,
+      ),
+    ]);
+    await tester.pump();
+
+    // 兩筆標記都在 page 0，若 key 只用 pageIndex 組成會彼此相同，
+    // Flutter 會在 pumpWidget/pump 期間擲出「Multiple widgets used the
+    // same key」例外，tester.pump() 之後 takeException() 會抓到；本測試
+    // 先確認沒有例外，再確認兩個 key 都各自渲染出一個 widget。
+    expect(tester.takeException(), isNull,
+        reason: '同頁多筆標記不應觸發 Duplicate Key 例外');
+    expect(find.byKey(const Key('pdf_reader_decoration_0_0')), findsOneWidget);
+    expect(find.byKey(const Key('pdf_reader_decoration_0_1')), findsOneWidget);
+  });
+
+  testWidgets('再次呼叫 refreshAnnotations 傳入空清單時，既有標記全部移除',
+      (tester) async {
+    var renderedCount = 0;
+    final key = GlobalKey<State<PdfReaderView>>();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PdfReaderView(
+          key: key,
+          filePath: 'test/fixtures/sample_multi_page.pdf',
+          onPageRendered: () => renderedCount++,
+          onError: (_) {},
+        ),
+      ),
+    );
+    await waitRendered(tester, () => renderedCount);
+
+    PdfReaderView.refreshAnnotations(key, const [
+      PdfAnnotationDecoration(
+        pageIndex: 0,
+        rect: PercentRect(left: 0.1, top: 0.1, right: 0.5, bottom: 0.2),
+        tint: 0x73FDE047,
+      ),
+    ]);
+    await tester.pump();
+    expect(find.byKey(const Key('pdf_reader_decoration_0_0')), findsOneWidget);
+
+    PdfReaderView.refreshAnnotations(key, const []);
+    await tester.pump();
+    expect(find.byKey(const Key('pdf_reader_decoration_0_0')), findsNothing,
+        reason: '整批送出語意（非增量 diff）：空清單代表本書已無任何標記');
+  });
+
+  testWidgets('裁切啟用時，完全落在裁切範圍外的標記不渲染', (tester) async {
+    var renderedCount = 0;
+    final key = GlobalKey<State<PdfReaderView>>();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PdfReaderView(
+          key: key,
+          filePath: 'test/fixtures/sample_multi_page.pdf',
+          pdfCropMode: PdfCropMode.manual,
+          pdfCropRect: const PdfCropRect(left: 0.1, top: 0.1, right: 0.9, bottom: 0.9),
+          onPageRendered: () => renderedCount++,
+          onError: (_) {},
+        ),
+      ),
+    );
+    await waitRendered(tester, () => renderedCount);
+
+    PdfReaderView.refreshAnnotations(key, const [
+      PdfAnnotationDecoration(
+        pageIndex: 0,
+        rect: PercentRect(left: 0, top: 0, right: 0.05, bottom: 0.05), // 完全在裁切範圍外。
+        tint: 0x73FDE047,
+      ),
+    ]);
+    await tester.pump();
+
+    expect(find.byKey(const Key('pdf_reader_decoration_0_0')), findsNothing,
+        reason: '標記完全落在裁切可視範圍外時不應渲染');
   });
 }

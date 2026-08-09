@@ -17,6 +17,7 @@ import 'pdf_crop_mode.dart';
 import 'pdf_crop_rect.dart';
 import 'pdf_selection_geometry.dart';
 import 'pdf_selection_info.dart';
+import 'percent_rect.dart';
 
 /// 以 pdfrx（PDFium + Dart FFI）為底層的 PDF 閱讀 widget
 /// （epic-24-pdf-engine-rebuild Issue 1），取代現行以
@@ -119,15 +120,18 @@ class PdfReaderView extends StatefulWidget {
     }
   }
 
-  /// 【epic-24 Issue 1 暫時性 no-op】劃線/備註疊圖刷新——新引擎尚未實作
-  /// 標註渲染（Issue 4 範圍），本工單只保留方法簽章讓既有呼叫端
-  /// （reader_screen.dart 的 _refreshPdfAnnotations）不必修改呼叫點即可
-  /// 編譯通過，呼叫本方法目前無任何效果。
+  /// 一次性送出目前應顯示的完整標記清單（非增量 diff，比照 EPUB
+  /// `EpubDecoration`／`setDecorations` 整組送出慣例）——epic-24 Issue 4
+  /// 落地，取代 Issue 1 暫時性 no-op。[key] 對應的 State 若尚未掛載，
+  /// 靜默忽略。
   static void refreshAnnotations(
     GlobalKey<State<PdfReaderView>> key,
     List<PdfAnnotationDecoration> annotations,
   ) {
-    // 見上方 docstring：Issue 4 落地前刻意無行為。
+    final state = key.currentState;
+    if (state is _PdfReaderViewState) {
+      state._setAnnotations(annotations);
+    }
   }
 }
 
@@ -188,6 +192,13 @@ class _PdfReaderViewState extends State<PdfReaderView> {
   _PdfSelectionDragState? _selectionDrag;
 
   int _activePointerCount = 0;
+
+  List<PdfAnnotationDecoration> _annotations = const [];
+
+  void _setAnnotations(List<PdfAnnotationDecoration> annotations) {
+    if (!mounted) return;
+    setState(() => _annotations = annotations);
+  }
 
   /// contrast/brightness 皆為預設值時回傳 null，讓 build() 省略
   /// ColorFiltered 包裝。
@@ -562,6 +573,23 @@ class _PdfReaderViewState extends State<PdfReaderView> {
       }
     }
 
+    // 渲染既有標記（Issue 4）。
+    var decorationIndex = 0;
+    for (final decoration in _annotations) {
+      if (decoration.pageIndex != pageIndex) continue;
+      final visibleRect = _cropEnabled
+          ? originalToCropRelativePercent(rect: decoration.rect, cropRect: widget.pdfCropRect)
+          : decoration.rect;
+      if (visibleRect == null) continue; // 完全落在裁切範圍外。
+      widgets.add(_buildDecorationWidget(
+        pageIndex,
+        decorationIndex++,
+        decoration,
+        visibleRect,
+        pageRectInViewer.size,
+      ));
+    }
+
     final drag = _selectionDrag;
     if (drag != null && drag.pageIndex == pageIndex) {
       widgets.add(_buildDragIndicator(drag));
@@ -691,6 +719,46 @@ class _PdfReaderViewState extends State<PdfReaderView> {
           color: Colors.yellow.withValues(alpha: 0.3),
           border: Border.all(color: Colors.orange, width: 1.5),
         ),
+      ),
+    );
+  }
+
+  Widget _buildDecorationWidget(
+    int pageIndex,
+    int decorationIndex,
+    PdfAnnotationDecoration decoration,
+    PercentRect visibleRect,
+    Size areaSize,
+  ) {
+    final rect = Rect.fromLTRB(
+      visibleRect.left * areaSize.width,
+      visibleRect.top * areaSize.height,
+      visibleRect.right * areaSize.width,
+      visibleRect.bottom * areaSize.height,
+    );
+    final color = Color(decoration.tint);
+    return Positioned.fromRect(
+      // key 須同時包含 pageIndex 與 decorationIndex——同一頁可能有多筆
+      // 標記，只用 pageIndex 當 key 在同頁多筆標記時會產生重複 key。
+      key: Key('pdf_reader_decoration_${pageIndex}_$decorationIndex'),
+      rect: rect,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          if (decoration.isUnderline)
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: Container(height: 2, color: color),
+            )
+          else
+            Container(color: color),
+          if (decoration.isNoteOnly)
+            const Positioned(
+              right: -6,
+              top: -6,
+              child: Icon(Icons.push_pin, size: 16, color: Colors.black87),
+            ),
+        ],
       ),
     );
   }
