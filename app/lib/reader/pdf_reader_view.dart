@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:isolate';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pdfrx/pdfrx.dart';
@@ -9,6 +11,10 @@ import 'dual_page_mode.dart';
 import 'pdf_spread_layout.dart';
 import 'pdf_annotation_decoration.dart';
 import 'pdf_page_info.dart';
+import 'pdf_image_filters.dart';
+import 'pdf_filter_debounce.dart';
+import 'pdf_crop_mode.dart';
+import 'pdf_crop_rect.dart';
 
 /// 以 pdfrx（PDFium + Dart FFI）為底層的 PDF 閱讀 widget
 /// （epic-24-pdf-engine-rebuild Issue 1），取代現行以
@@ -39,6 +45,21 @@ class PdfReaderView extends StatefulWidget {
   /// FXL 分支同源），本 widget 不自行偵測方向。
   final bool isLandscape;
 
+  // ── epic-24-pdf-engine-rebuild Issue 3 新增 ──
+  /// 對比度 -100..100、亮度 -100..100，皆預設 0（無調整）。
+  final double pdfContrast;
+  final double pdfBrightness;
+  /// 0..1，0=不加粗（預設）。
+  final double pdfBoldStrength;
+  /// 三態裁切模式，預設 `PdfCropMode.none`。
+  final PdfCropMode pdfCropMode;
+  /// `pdfCropMode != none` 時才有意義；null 代表尚未有快取矩形。
+  final PdfCropRect? pdfCropRect;
+  /// 智慧自動裁切首次計算出矩形時觸發。
+  final ValueChanged<PdfCropRect>? onCropRectComputed;
+  /// 手動裁切互動模式是否啟用中，預設 false。
+  final bool cropEditModeActive;
+
   const PdfReaderView({
     super.key,
     required this.filePath,
@@ -50,6 +71,13 @@ class PdfReaderView extends StatefulWidget {
     this.dualPageCoverAlone = true,
     this.dualPageDirection = DualPageDirection.rtl,
     this.isLandscape = false,
+    this.pdfContrast = 0,
+    this.pdfBrightness = 0,
+    this.pdfBoldStrength = 0,
+    this.pdfCropMode = PdfCropMode.none,
+    this.pdfCropRect,
+    this.onCropRectComputed,
+    this.cropEditModeActive = false,
   });
 
   @override
@@ -121,14 +149,41 @@ class _PdfReaderViewState extends State<PdfReaderView> {
       _cachedLayoutKey;
   PdfPageLayout? _cachedPdfLayout;
 
-  bool get _dualPageEnabled => isDualPageEnabled(
+  bool get _dualPageEnabled =>
+      widget.pdfCropMode == PdfCropMode.none &&
+      isDualPageEnabled(
         mode: widget.dualPageMode,
         isLandscape: widget.isLandscape,
       );
 
+  bool get _cropEnabled =>
+      widget.pdfCropMode != PdfCropMode.none && widget.pdfCropRect != null;
+
+  // ── Issue 3: 濾鏡/裁切狀態 ──
+  static const _maxCachedOverlayImages = 6;
+  final _boldOverlayImages = <int, ui.Image>{};
+  final _overlayCacheKey = <int, ({PdfCropRect? crop, double bold})>{};
+  var _committedBoldStrength = 0.0;
+  final _boldDebouncer =
+      PdfFilterDebouncer(delay: const Duration(milliseconds: 300));
+  bool _cropDetectionInFlight = false;
+
+  /// contrast/brightness 皆為預設值時回傳 null，讓 build() 省略
+  /// ColorFiltered 包裝。
+  ColorFilter? get _colorFilter {
+    if (widget.pdfContrast == 0 && widget.pdfBrightness == 0) return null;
+    return ColorFilter.matrix(
+      contrastBrightnessColorMatrix(
+        contrast: widget.pdfContrast,
+        brightness: widget.pdfBrightness,
+      ),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
+    _committedBoldStrength = widget.pdfBoldStrength;
     _openDocument();
   }
 
@@ -177,10 +232,21 @@ class _PdfReaderViewState extends State<PdfReaderView> {
   @override
   void didUpdateWidget(covariant PdfReaderView oldWidget) {
     super.didUpdateWidget(oldWidget);
+
+    // 加粗強度 debounce：300ms 沉澱後才更新 _committedBoldStrength。
+    if (oldWidget.pdfBoldStrength != widget.pdfBoldStrength) {
+      _boldDebouncer.schedule(() {
+        if (!mounted) return;
+        setState(() => _committedBoldStrength = widget.pdfBoldStrength);
+      });
+    }
+
     final changed = oldWidget.dualPageMode != widget.dualPageMode ||
         oldWidget.dualPageCoverAlone != widget.dualPageCoverAlone ||
         oldWidget.dualPageDirection != widget.dualPageDirection ||
-        oldWidget.isLandscape != widget.isLandscape;
+        oldWidget.isLandscape != widget.isLandscape ||
+        oldWidget.pdfCropMode != widget.pdfCropMode ||
+        oldWidget.pdfCropRect != widget.pdfCropRect;
     if (!changed) return;
 
     // 切換前的錨點頁必須先記下來：relayout 後 pdfrx 會依自己的邏輯推一
@@ -237,6 +303,10 @@ class _PdfReaderViewState extends State<PdfReaderView> {
 
   @override
   void dispose() {
+    _boldDebouncer.dispose();
+    for (final image in _boldOverlayImages.values) {
+      image.dispose();
+    }
     _document?.dispose();
     final tmpPath = _contentUriTmpPath;
     if (tmpPath != null) {
@@ -258,6 +328,7 @@ class _PdfReaderViewState extends State<PdfReaderView> {
   }
 
   void _jumpToPage(int pageIndex) {
+    if (widget.cropEditModeActive) return;
     if (!_controller.isReady) return;
     if (pageIndex < 0 || pageIndex >= _controller.pageCount) return;
     final layout = _activeSpreadLayout;
@@ -269,6 +340,7 @@ class _PdfReaderViewState extends State<PdfReaderView> {
   }
 
   void _nextPage() {
+    if (widget.cropEditModeActive) return;
     if (!_controller.isReady) return;
     final layout = _activeSpreadLayout;
     if (layout == null) {
@@ -284,6 +356,7 @@ class _PdfReaderViewState extends State<PdfReaderView> {
   }
 
   void _previousPage() {
+    if (widget.cropEditModeActive) return;
     if (!_controller.isReady) return;
     final layout = _activeSpreadLayout;
     if (layout == null) {
@@ -388,28 +461,166 @@ class _PdfReaderViewState extends State<PdfReaderView> {
   PdfSpreadLayout? get _activeSpreadLayout =>
       _dualPageEnabled ? _spreadLayout : null;
 
+  // ── Issue 3: 裁切偵測 ──
+
+  void _maybeDetectCropRect(PdfPage page, double devicePixelRatio) {
+    if (widget.pdfCropMode != PdfCropMode.autoDetect) return;
+    if (widget.pdfCropRect != null) return;
+    if (_cropDetectionInFlight) return;
+    if (page.pageNumber != 1) return;
+    _cropDetectionInFlight = true;
+    unawaited(_detectCropRect(page, devicePixelRatio));
+  }
+
+  Future<void> _detectCropRect(PdfPage page, double devicePixelRatio) async {
+    final scale = pageRenderScale(devicePixelRatio);
+    final rendered = await page.render(
+      fullWidth: page.width * scale,
+      fullHeight: page.height * scale,
+    );
+    if (rendered == null) {
+      _cropDetectionInFlight = false;
+      return;
+    }
+    try {
+      final rect = await _isolateDetectCropRect(
+        pixels: rendered.pixels,
+        width: rendered.width,
+        height: rendered.height,
+      );
+      if (mounted) {
+        widget.onCropRectComputed?.call(rect);
+      }
+    } finally {
+      rendered.dispose();
+      _cropDetectionInFlight = false;
+    }
+  }
+
+  // ── Issue 3: 覆蓋圖快取 ──
+
+  ui.Image? _touchOverlayCache(int pageNumber) {
+    final image = _boldOverlayImages.remove(pageNumber);
+    if (image == null) return null;
+    _boldOverlayImages[pageNumber] = image;
+    return image;
+  }
+
+  void _putOverlayCache(int pageNumber, ui.Image image) {
+    _boldOverlayImages.remove(pageNumber)?.dispose();
+    if (_boldOverlayImages.length >= _maxCachedOverlayImages) {
+      final oldestKey = _boldOverlayImages.keys.first;
+      _boldOverlayImages.remove(oldestKey)?.dispose();
+      _overlayCacheKey.remove(oldestKey);
+    }
+    _boldOverlayImages[pageNumber] = image;
+  }
+
+  // ── Issue 3: 合併管線（裁切先、加粗後） ──
+
+  List<Widget> _buildProcessedOverlay(
+    BuildContext context,
+    Rect pageRectInViewer,
+    PdfPage page,
+  ) {
+    final devicePixelRatio = MediaQuery.of(context).devicePixelRatio;
+    _maybeDetectCropRect(page, devicePixelRatio);
+    if (!_cropEnabled && _committedBoldStrength <= 0) return const [];
+    final pageNumber = page.pageNumber;
+    final cacheKey = (crop: widget.pdfCropRect, bold: _committedBoldStrength);
+    if (_overlayCacheKey[pageNumber] != cacheKey) {
+      unawaited(_recomputeOverlay(page, cacheKey, devicePixelRatio)
+          .catchError((e) {
+        debugPrint('pdf_reader_view: overlay recompute failed: $e');
+      }));
+      return const [];
+    }
+    final image = _touchOverlayCache(pageNumber);
+    if (image == null) return const [];
+    return [RawImage(image: image, fit: BoxFit.fill)];
+  }
+
+  Future<void> _recomputeOverlay(
+    PdfPage page,
+    ({PdfCropRect? crop, double bold}) cacheKey,
+    double devicePixelRatio,
+  ) async {
+    final scale = pageRenderScale(devicePixelRatio);
+    final rendered = await page.render(
+      fullWidth: page.width * scale,
+      fullHeight: page.height * scale,
+    );
+    if (rendered == null || !mounted) return;
+    try {
+      final processed = await _isolateProcessOverlayPixels(
+        pixels: rendered.pixels,
+        width: rendered.width,
+        height: rendered.height,
+        cropRect: cacheKey.crop,
+        boldStrength: cacheKey.bold,
+      );
+      final currentDesiredKey =
+          (crop: widget.pdfCropRect, bold: _committedBoldStrength);
+      if (!mounted || currentDesiredKey != cacheKey) return;
+      final processedImage = PdfImage.createFromBgraData(
+        processed.pixels,
+        width: processed.width,
+        height: processed.height,
+      );
+      final uiImage = await processedImage.createImage();
+      if (!mounted || currentDesiredKey != cacheKey) {
+        uiImage.dispose();
+        return;
+      }
+      setState(() {
+        _putOverlayCache(page.pageNumber, uiImage);
+        _overlayCacheKey[page.pageNumber] = cacheKey;
+      });
+    } finally {
+      rendered.dispose();
+    }
+  }
+
+  // ── Issue 3: 裁切版面 ──
+
+  PdfPageLayout _layoutCroppedPages(
+      List<PdfPage> pages, PdfViewerParams params) {
+    final cropRect = widget.pdfCropRect!;
+    final margin = params.margin;
+    var y = margin;
+    final rects = <Rect>[];
+    var maxWidth = 0.0;
+    for (final page in pages) {
+      final w = page.width * (cropRect.right - cropRect.left);
+      final h = page.height * (cropRect.bottom - cropRect.top);
+      rects.add(Rect.fromLTWH(margin, y, w, h));
+      if (w > maxWidth) maxWidth = w;
+      y += h + margin;
+    }
+    return PdfPageLayout(
+        pageLayouts: rects, documentSize: Size(maxWidth + margin * 2, y));
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_error != null) {
-      // 已透過 widget.onError 通知呼叫端；呼叫端（ReaderScreen）會切換到
-      // 自己的錯誤畫面並把本 widget 從樹上移除，這裡回傳空白佔位即可。
       return const SizedBox.shrink();
     }
     final document = _document;
     if (document == null) {
       return const SizedBox.shrink();
     }
-    return PdfViewer(
+    final viewer = PdfViewer(
       PdfDocumentRefDirect(document, autoDispose: false),
       controller: _controller,
       initialPageNumber: (widget.initialPageIndex ?? 0) + 1,
       params: PdfViewerParams(
-        // 單頁模式一律傳 null，沿用 pdfrx 內建版面推算——PdfViewerParams
-        // 與 Issue 1 逐欄位相同，這是零回歸的構造性保證（不是靠測試
-        // 事後證明）。
-        layoutPages: _dualPageEnabled ? _layoutSpreadPages : null,
+        layoutPages: _cropEnabled
+            ? _layoutCroppedPages
+            : (_dualPageEnabled ? _layoutSpreadPages : null),
         calculateCurrentPageNumber:
             _dualPageEnabled ? _calculateSpreadAnchorPageNumber : null,
+        pageOverlaysBuilder: _buildProcessedOverlay,
         onViewerReady: (doc, controller) {
           if (!_renderedNotified) {
             _renderedNotified = true;
@@ -423,5 +634,79 @@ class _PdfReaderViewState extends State<PdfReaderView> {
         onPageChanged: _handlePageChanged,
       ),
     );
+    final colorFilter = _colorFilter;
+    return colorFilter == null
+        ? viewer
+        : ColorFiltered(colorFilter: colorFilter, child: viewer);
   }
+}
+
+// ── Issue 3: Isolate.run() 專用的頂層輔助函式 ──
+//
+// 【真機/測試環境實測重現並排除法確認的根因，非臆測】刻意獨立於
+// `_PdfReaderViewState` 的任何方法之外、頂層宣告、參數只接受單純可跨
+// isolate 傳遞的型別（Uint8List／int／double／PdfCropRect 值物件）——
+// 早期實作把 Isolate.run() 的 closure 直接寫在 `_recomputeOverlay`／
+// `_detectCropRect` 方法內部，即使 closure 本身只讀取幾個已經取出的區域
+// 變數（`sourcePixels`/`sourceWidth`/`sourceHeight`/`cropRect`），實測仍
+// 會在執行期擲出：
+//   Illegal argument in isolate message: object is unsendable
+//   - Library:'package:rxdart/.../behavior_subject.dart' Class: BehaviorSubject
+//   <- permissions in _PdfDocumentPdfium <- bbLeft in _PdfPagePdfium
+//   <- Context num_variables: 8 <- Closure: () => (...)
+// 這條鏈證實 closure 的 Context 物件把整個 `_recomputeOverlay`/
+// `_detectCropRect` 方法作用域內的 8 個變數（含 `page: PdfPage` 這個
+// 參數）一併打包，即使 closure 本身從未讀取 `page`——`page` 內部持有
+// pdfrx 的 `_PdfDocumentPdfium`（其 `permissions` 欄位是 rxdart
+// `BehaviorSubject`，不可跨 isolate 傳遞），只要 `page` 曾經是「與該
+// closure 同一個詞法作用域內存在的變數」，就可能被同一個 Context 物件
+// 牽連打包，與 closure 本身有沒有真的用到它無關。改成獨立的頂層函式後，
+// 呼叫端只傳入已經取出的原始資料，這裡的詞法作用域內從頭到尾都不存在
+// `PdfPage`/`PdfDocument`/`_PdfReaderViewState`，Context 物件不可能牽連
+// 到任何不可傳遞的物件。
+
+Future<PdfCropRect> _isolateDetectCropRect({
+  required Uint8List pixels,
+  required int width,
+  required int height,
+}) {
+  return Isolate.run(
+    () => detectCropRectFromBgraPixels(pixels, width: width, height: height),
+  );
+}
+
+Future<({Uint8List pixels, int width, int height})> _isolateProcessOverlayPixels({
+  required Uint8List pixels,
+  required int width,
+  required int height,
+  required PdfCropRect? cropRect,
+  required double boldStrength,
+}) {
+  return Isolate.run(() {
+    var outPixels = pixels;
+    var outWidth = width;
+    var outHeight = height;
+    if (cropRect != null) {
+      final targetWidth =
+          ((cropRect.right - cropRect.left) * outWidth).round().clamp(1, outWidth);
+      final targetHeight =
+          ((cropRect.bottom - cropRect.top) * outHeight).round().clamp(1, outHeight);
+      outPixels = cropBgraPixels(
+        outPixels,
+        width: outWidth,
+        height: outHeight,
+        rect: cropRect,
+        outWidth: targetWidth,
+        outHeight: targetHeight,
+      );
+      outWidth = targetWidth;
+      outHeight = targetHeight;
+    }
+    if (boldStrength > 0) {
+      final radius = (boldStrength * 3).round().clamp(1, 3);
+      outPixels =
+          dilateBgraPixels(outPixels, width: outWidth, height: outHeight, radius: radius);
+    }
+    return (pixels: outPixels, width: outWidth, height: outHeight);
+  });
 }

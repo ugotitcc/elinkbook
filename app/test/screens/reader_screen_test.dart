@@ -41,6 +41,7 @@ import 'package:elinkbook/reader/percent_rect.dart';
 import 'package:elinkbook/reader/highlight.dart';
 import 'package:elinkbook/reader/highlight_style.dart';
 import 'package:elinkbook/sync/sync_checkpoint_trigger.dart';
+import 'package:elinkbook/reader/pdf_crop_frame_overlay.dart';
 
 // 依 spec.md「測試決策」：ReaderScreen 分派到 EpubReaderView/PdfReaderView
 // 後，實際渲染內容存在於原生 PlatformView 之中，一般 flutter test（無真實
@@ -5255,6 +5256,100 @@ void main() {
         reason: '已成功渲染的畫面不應被開書成功後才發生的良性 JS 警告覆蓋成錯誤狀態');
     expect(find.byType(FoliateEpubReaderView), findsOneWidget,
         reason: '書籍內容應維持顯示，使用者仍可繼續閱讀');
+  });
+
+  group('PdfCropFrameOverlay', () {
+    testWidgets('進入手動裁切模式時顯示 PdfCropFrameOverlay，確認後寫回 prefs',
+        (tester) async {
+      final binaryMessenger =
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+      const fullscreenChannel = MethodChannel('elinkbook/fullscreen');
+      binaryMessenger.setMockMethodCallHandler(
+          fullscreenChannel, (call) async => null);
+      addTearDown(
+        () => binaryMessenger.setMockMethodCallHandler(fullscreenChannel, null),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample_multi_page.pdf',
+            bookId: 'b1',
+            prefsManager: prefsManager,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+      await tester.runAsync(() async {
+        for (var i = 0; i < 30; i++) {
+          await tester.pump(const Duration(milliseconds: 100));
+          await Future<void>.delayed(const Duration(milliseconds: 10));
+        }
+      });
+
+      await tester.tap(find.byKey(const Key('reader_layout_settings_button')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('pdf_settings_tab_crop')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('pdf_settings_crop_mode_manual')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(PdfCropFrameOverlay), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('pdf_crop_frame_confirm')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(PdfCropFrameOverlay), findsNothing,
+          reason: '確認後應退出裁切編輯模式');
+    });
+
+    testWidgets('進入手動裁切模式時顯示 PdfCropFrameOverlay，取消後退出且不寫回 prefs',
+        (tester) async {
+      final binaryMessenger =
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+      const fullscreenChannel = MethodChannel('elinkbook/fullscreen');
+      binaryMessenger.setMockMethodCallHandler(
+          fullscreenChannel, (call) async => null);
+      addTearDown(
+        () => binaryMessenger.setMockMethodCallHandler(fullscreenChannel, null),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample_multi_page.pdf',
+            bookId: 'b2',
+            prefsManager: prefsManager,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+      await tester.runAsync(() async {
+        for (var i = 0; i < 30; i++) {
+          await tester.pump(const Duration(milliseconds: 100));
+          await Future<void>.delayed(const Duration(milliseconds: 10));
+        }
+      });
+
+      await tester.tap(find.byKey(const Key('reader_layout_settings_button')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('pdf_settings_tab_crop')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('pdf_settings_crop_mode_manual')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(PdfCropFrameOverlay), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('pdf_crop_frame_cancel')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(PdfCropFrameOverlay), findsNothing,
+          reason: '取消後應退出裁切編輯模式');
+    });
   });
 
   tearDownAll(() {
