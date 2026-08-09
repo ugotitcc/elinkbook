@@ -26,6 +26,9 @@ import '../reader/notes_repository.dart';
 import '../reader/pdf_annotation_decoration.dart';
 
 import '../reader/pdf_page_info.dart';
+import '../reader/pdf_crop_frame_overlay.dart';
+import '../reader/pdf_crop_mode.dart';
+import '../reader/pdf_crop_rect.dart';
 import '../reader/pdf_reader_view.dart';
 import '../reader/pdf_selection_info.dart';
 import '../reader/reading_position.dart';
@@ -1664,6 +1667,20 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                   onNotePressed: _handlePdfNotePressed,
                 ),
               ),
+            if (_cropEditModeActive)
+              Positioned.fill(
+                child: PdfCropFrameOverlay(
+                  initialRect: _prefs.pdfCropRect ??
+                      const PdfCropRect(left: 0, top: 0, right: 1, bottom: 1),
+                  onConfirm: (rect) {
+                    setState(() => _cropEditModeActive = false);
+                    _handlePrefsChanged(
+                      _prefs.copyWith(pdfCropMode: PdfCropMode.manual, pdfCropRect: rect),
+                    );
+                  },
+                  onCancel: () => setState(() => _cropEditModeActive = false),
+                ),
+              ),
             if (_state == _RenderState.loading)
               const Center(
                 key: Key('reader_loading_indicator'),
@@ -1939,12 +1956,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         );
       case BookFormat.pdf:
         // 【epic-24-pdf-engine-rebuild，已知且經人類確認接受的暫時性行為
-        // 退化】新引擎目前支援單頁/雙頁顯示＋頁碼＋跳頁；濾鏡
-        // （contrast/brightness/boldStrength/cropMode/cropRect）、劃線選取
-        // （onSelectionRectComputed 等）、導航熱區（navZoneActions/
-        // onZoneAction）尚未傳遞——這些能力會在 Issue 3-4/8 陸續補回。
-        // 對應設定面板 UI 入口在補回前仍會顯示但操作暫時無效果，這是
-        // 刻意接受的風險排序，非遺漏。
+        // 退化】新引擎目前支援單頁/雙頁顯示＋頁碼＋跳頁＋影像濾鏡/
+        // 裁切（Issue 3）；劃線選取（onSelectionRectComputed 等）、
+        // 導航熱區（navZoneActions/onZoneAction）尚未傳遞——這些能力會在
+        // Issue 4/8 陸續補回。對應設定面板 UI 入口在補回前仍會顯示但操作
+        // 暫時無效果，這是刻意接受的風險排序，非遺漏。
         // 雙頁（Issue 2）已補回：以下四個參數驅動 pdfrx 的 layoutPages。
         return PdfReaderView(
           key: _pdfReaderViewKey,
@@ -1956,6 +1972,15 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           dualPageCoverAlone: resolved.dualPageCoverAlone,
           dualPageDirection: resolved.dualPageDirection,
           isLandscape: isLandscape,
+          pdfContrast: resolved.pdfContrast,
+          pdfBrightness: resolved.pdfBrightness,
+          pdfBoldStrength: resolved.pdfBoldStrength,
+          pdfCropMode: resolved.pdfCropMode,
+          pdfCropRect: resolved.pdfCropRect,
+          cropEditModeActive: _cropEditModeActive,
+          onCropRectComputed: (rect) => _handlePrefsChanged(
+            _prefs.copyWith(pdfCropRect: rect),
+          ),
           onPageChanged: (info) {
             if (!mounted) return;
             setState(() => _pdfPageInfo = info);

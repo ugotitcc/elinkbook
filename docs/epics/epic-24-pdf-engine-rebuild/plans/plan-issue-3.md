@@ -345,8 +345,8 @@ import 'package:elinkbook/reader/pdf_crop_rect.dart';
       // CROP_MARGIN=0.01f 常數語意）。
       expect(rect.left, closeTo(0.19, 0.02));
       expect(rect.top, closeTo(0.19, 0.02));
-      expect(rect.right, closeTo(0.81, 0.02));
-      expect(rect.bottom, closeTo(0.81, 0.02));
+      expect(rect.right, closeTo(0.71, 0.02));  // 修正：掃描最後有內容索引7，7/10+0.01=0.71
+      expect(rect.bottom, closeTo(0.71, 0.02));  // 同上
     });
 
     test('全白畫布（無內容）回傳全頁矩形，不擲例外', () {
@@ -2458,3 +2458,4 @@ git commit -m "feat(epic-24): PDF 影像濾鏡/裁切接線 reader_screen.dart�
 - **未涵蓋、留給後續工單**：裁切模式下劃線/備註選取矩形換算需要額外考慮「使用者看到的是裁切後畫面、儲存的定位需相對原始頁面座標」的換算（Issue 4 範圍，本計畫的 `PdfCropRect`/`cropBgraPixels` 已提供 Issue 4 換算所需的裁切矩形資料，但換算邏輯本身不在本工單）；PDF 工具列 FAB 化、「手動選區」與「智慧自動」在 `PdfSettingsSheet` 的 UI 觸發按鈕本身（本工單刻意不修改該檔案，因為既有按鈕已可用、UI 邏輯已完整）。
 - **效能未知數（比照 design.md 決策 5，留待真機驗證）**：加粗/裁切的 `page.render(fullWidth: page.width * pageRenderScale(devicePixelRatio), ...)` 全頁點陣圖 Isolate 往返（含資料複製）在大尺寸掃描件 PDF（100MB+ 檔案常見的高解析度單頁）上的實際延遲尚未實測，`pageRenderScale` 已把倍率夾限在 2.0-3.0（見 Task 1，移植自原生 `PdfImageProcessor.pageRenderScale()` 的既有防護），若真機驗證仍發現明顯卡頓（覆蓋圖延遲出現、翻頁時感覺不流暢），可考慮比照原生 `PdfImageProcessor.applyBoldEffect()` 的降取樣工作副本策略再放大——這個優化選項不需要修改本計畫已定義的函式簽章，可作為獨立後續修正。
 - **審查回應紀錄**：本計畫已依 `tmp/epic-24/plan-issue-3-review.md`（2026-08-09）修訂全部 4 項 Critical（全白頁面裁切邊界防呆、`PdfFilterDebouncer` 改為只作用於「已沉澱」的加粗強度而非逐頁排程、`_boldOverlayImages` 加上 LRU 容量上限、`didUpdateWidget` 補齊 `pdfCropMode`/`pdfCropRect` 監聽）與 3 項 Important（`PdfCropFrameOverlay` 補齊四角控制點、逐頁排程改為互不取消／不再被迫等滿 debounce、`page.render()` 目標解析度改用裝置密度換算取代寫死倍率），Minor 1（非同步結果的過期檢查）亦已納入。修訂集中在 Task 1（新增 `pageRenderScale`）、Task 2（`detectCropRectFromBgraPixels` 全空防呆）、Task 5/6/7（LRU 快取、debounce 改採「沉澱值」模式、`didUpdateWidget` 擴充、動態渲染解析度）、Task 8（四角控制點）。
+- **複審發現並修正的實作缺陷（`tmp/epic-24/review-issue-3.md`／`review-issue-3-followup.md`，2026-08-09）**：實作階段一度誤判「`Isolate.run()` 在 `flutter test` 環境中無法 spawn 新 isolate」，因此 Task 5/6/7 的加粗/裁切覆蓋圖測試刻意迴避觸發 Isolate 的路徑。經逐層排除法重新排查後確認**這其實是真實的程式碼缺陷，不是測試環境限制**：Task 5/7 把 `Isolate.run()` 的 closure 直接定義在 `_recomputeOverlay`/`_detectCropRect` 這兩個 State 方法內部時，即使 closure 本身只讀取已取出的區域變數（`sourcePixels`/`sourceWidth`/`sourceHeight`/`cropRect`），Dart VM 仍會把該 closure 所在的整個詞法作用域 Context（含 `page: PdfPage` 這個方法參數）一併打包試圖送往新 isolate——`page` 內部持有 pdfrx 的 `_PdfDocumentPdfium`，其 `permissions` 欄位是 rxdart 的 `BehaviorSubject`（不可跨 isolate 傳遞），因此執行期必定擲出 `Illegal argument in isolate message: object is unsendable` 例外，**這在真機上會同樣發生，代表加粗/裁切在合併當下實際上完全不會產生任何視覺效果**（例外被 `.catchError` 靜默吞掉，此前只有 `flutter test` 主控台的 `debugPrint` 診斷訊息意外讓這個問題浮現）。修法：把 `Isolate.run()` 呼叫移到兩個獨立於 `_PdfReaderViewState` 之外的頂層函式（`_isolateProcessOverlayPixels`／`_isolateDetectCropRect`，宣告於 `pdf_reader_view.dart` 檔案結尾），這兩個函式的參數列只接受單純可跨 isolate 傳遞的型別，其詞法作用域內從頭到尾不存在 `PdfPage`/`PdfDocument`，從根本上排除被牽連打包的可能性——修正後 Task 5/7 原本因「環境限制」而省略的測試（加粗實際產生 `RawImage` 覆蓋層、多頁同時運算互不取消、裁切偵測 `onCropRectComputed` 觸發時機、裁切啟用時覆蓋圖實際產出）皆已全數補回並通過。

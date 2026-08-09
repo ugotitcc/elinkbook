@@ -97,10 +97,19 @@ void main() {
   });
 
   // ── Task 5: Bold overlay widget tests ──
-  // 注意：Isolate.run 在 Flutter test 環境中無法 spawn 新 isolate，
-  // 因此覆蓋圖的 Isolate 運算在此環境下會失敗。這裡只驗證「不加粗時
-  // 不產出覆蓋圖」的零回歸行為，加粗覆蓋圖的實際像素處理留给真機
-  // 整合測試驗證。
+  // 【複審修正】原本以為 Isolate.run() 在 Flutter test 環境中無法 spawn
+  // 新 isolate，故只測零回歸分支。實際逐層排查後確認並非環境限制：
+  // pdf_reader_view.dart 內把 Isolate.run() 的 closure 定義在
+  // `_recomputeOverlay`/`_detectCropRect` 方法內部時，即使 closure 只讀取
+  // 已取出的區域變數，Dart VM 仍會把該 closure 所在整個詞法作用域的
+  // Context（含 `page: PdfPage` 參數，因此牽連 pdfrx 內部的
+  // `_PdfDocumentPdfium.permissions`——一個 rxdart `BehaviorSubject`，不可
+  // 跨 isolate 傳遞）一併打包，導致 `Isolate.run()` 在執行期擲出
+  // 「object is unsendable」例外——這是真實的既有實作缺陷，會在真機上
+  // 同樣發生，不是測試環境限定的假象。已改為呼叫獨立於 State 之外的頂層
+  // 輔助函式（`_isolateProcessOverlayPixels`/`_isolateDetectCropRect`，見
+  // `pdf_reader_view.dart` 檔案結尾的詳細說明），Isolate.run() 現在在此
+  // 測試環境中可正常運作，以下測試直接驗證覆蓋圖的實際產出。
 
   group('PdfReaderView bold overlay', () {
     setUp(() => pdfrxInitialize());
@@ -134,12 +143,77 @@ void main() {
 
       expect(find.byType(RawImage), findsNothing);
     });
+
+    testWidgets('pdfBoldStrength > 0 時，第一頁疊加一張處理後的 RawImage 覆蓋層',
+        (tester) async {
+      var renderedCount = 0;
+      final key = GlobalKey<State<PdfReaderView>>();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: PdfReaderView(
+            key: key,
+            filePath: 'test/fixtures/sample_multi_page.pdf',
+            pdfBoldStrength: 1.0,
+            onPageRendered: () => renderedCount++,
+            onError: (_) {},
+          ),
+        ),
+      );
+      await waitRendered(tester, () => renderedCount);
+      await tester.runAsync(() async {
+        for (var i = 0; i < 30 && find.byType(RawImage).evaluate().isEmpty; i++) {
+          await tester.pump(const Duration(milliseconds: 100));
+          await Future<void>.delayed(const Duration(milliseconds: 50));
+        }
+      });
+      await tester.pump();
+
+      expect(find.byType(RawImage), findsWidgets,
+          reason: '加粗啟用且 Isolate 運算成功完成後，應有至少一張處理後的頁面覆蓋圖');
+    });
+
+    testWidgets(
+        '同時有多頁需要加粗運算時，各頁互不取消（Critical 2 回歸測試：'
+        '不得共用單一 debouncer 排程逐頁運算）', (tester) async {
+      var renderedCount = 0;
+      final key = GlobalKey<State<PdfReaderView>>();
+
+      // 用夠高的可視區域讓多於 1 頁同時進入 pageOverlaysBuilder 的呼叫範圍。
+      await tester.pumpWidget(
+        MaterialApp(
+          home: SizedBox(
+            height: 2000,
+            child: PdfReaderView(
+              key: key,
+              filePath: 'test/fixtures/sample_multi_page.pdf',
+              pdfBoldStrength: 1.0,
+              onPageRendered: () => renderedCount++,
+              onError: (_) {},
+            ),
+          ),
+        ),
+      );
+      await waitRendered(tester, () => renderedCount);
+      await tester.runAsync(() async {
+        for (var i = 0; i < 40 && find.byType(RawImage).evaluate().length < 2; i++) {
+          await tester.pump(const Duration(milliseconds: 100));
+          await Future<void>.delayed(const Duration(milliseconds: 50));
+        }
+      });
+      await tester.pump();
+
+      expect(
+        find.byType(RawImage).evaluate().length,
+        greaterThanOrEqualTo(2),
+        reason: '若各頁的加粗運算共用同一個 debouncer 排程，後呼叫的頁面會取消先前'
+            '排程、只會剩下最後一頁算出覆蓋圖；這裡斷言至少 2 頁都完成運算，證明'
+            '各頁是獨立排程、互不取消',
+      );
+    });
   });
 
   // ── Task 6: Crop detection widget tests ──
-  // 注意：onCropRectComputed 與覆蓋圖運算都依賴 Isolate.run，在 Flutter
-  // test 環境中無法 spawn 新 isolate。這裡只驗證「裁切+雙頁互斥」的版面
-  // 行為（不需要 Isolate），其餘留給真機整合測試。
 
   group('PdfReaderView crop detection', () {
     setUp(() => pdfrxInitialize());
@@ -152,6 +226,60 @@ void main() {
         }
       });
     }
+
+    testWidgets('pdfCropMode=autoDetect 且尚無 pdfCropRect 時，首次渲染後觸發 onCropRectComputed',
+        (tester) async {
+      var renderedCount = 0;
+      PdfCropRect? computedRect;
+      final key = GlobalKey<State<PdfReaderView>>();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: PdfReaderView(
+            key: key,
+            filePath: 'test/fixtures/sample_multi_page.pdf',
+            pdfCropMode: PdfCropMode.autoDetect,
+            onPageRendered: () => renderedCount++,
+            onError: (_) {},
+            onCropRectComputed: (rect) => computedRect = rect,
+          ),
+        ),
+      );
+      await waitRendered(tester, () => renderedCount);
+      await tester.runAsync(() async {
+        for (var i = 0; i < 30 && computedRect == null; i++) {
+          await tester.pump(const Duration(milliseconds: 100));
+          await Future<void>.delayed(const Duration(milliseconds: 50));
+        }
+      });
+
+      expect(computedRect, isNotNull);
+    });
+
+    testWidgets('pdfCropMode=autoDetect 且已有 pdfCropRect 時，不重新觸發偵測',
+        (tester) async {
+      var renderedCount = 0;
+      var computeCount = 0;
+      final key = GlobalKey<State<PdfReaderView>>();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: PdfReaderView(
+            key: key,
+            filePath: 'test/fixtures/sample_multi_page.pdf',
+            pdfCropMode: PdfCropMode.autoDetect,
+            pdfCropRect: const PdfCropRect(left: 0.1, top: 0.1, right: 0.9, bottom: 0.9),
+            onPageRendered: () => renderedCount++,
+            onError: (_) {},
+            onCropRectComputed: (rect) => computeCount++,
+          ),
+        ),
+      );
+      await waitRendered(tester, () => renderedCount);
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(computeCount, 0, reason: '已有快取矩形時不應重新計算');
+    });
 
     testWidgets('裁切模式啟用時，即使 dualPageMode=always 也強制單頁', (tester) async {
       var renderedCount = 0;
@@ -182,8 +310,6 @@ void main() {
   });
 
   // ── Task 7: Crop visual effect widget tests ──
-  // 注意：覆蓋圖運算依賴 Isolate.run，在 Flutter test 環境中無法 spawn
-  // 新 isolate。這裡只驗證「不裁切時不影響版面」的零回歸行為。
 
   group('PdfReaderView crop visual', () {
     setUp(() => pdfrxInitialize());
@@ -217,6 +343,36 @@ void main() {
       await waitRendered(tester, () => renderedCount);
       expect(lastPageInfo?.totalPages, 5);
       expect(find.byType(RawImage), findsNothing);
+    });
+
+    testWidgets('裁切啟用時，頁面顯示尺寸依裁切矩形縮小（非原始頁面比例），'
+        '且第一頁疊加裁切後的覆蓋圖', (tester) async {
+      var renderedCount = 0;
+      final key = GlobalKey<State<PdfReaderView>>();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: PdfReaderView(
+            key: key,
+            filePath: 'test/fixtures/sample_multi_page.pdf',
+            pdfCropMode: PdfCropMode.autoDetect,
+            pdfCropRect: const PdfCropRect(left: 0.25, top: 0.1, right: 0.75, bottom: 0.9),
+            onPageRendered: () => renderedCount++,
+            onError: (_) {},
+          ),
+        ),
+      );
+      await waitRendered(tester, () => renderedCount);
+      await tester.runAsync(() async {
+        for (var i = 0; i < 30 && find.byType(RawImage).evaluate().isEmpty; i++) {
+          await tester.pump(const Duration(milliseconds: 100));
+          await Future<void>.delayed(const Duration(milliseconds: 50));
+        }
+      });
+      await tester.pump();
+
+      expect(find.byType(RawImage), findsWidgets,
+          reason: '裁切啟用且 Isolate 運算成功完成後，第一頁應有裁切後的覆蓋圖');
     });
   });
 
