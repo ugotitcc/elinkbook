@@ -2,6 +2,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_inappwebview_platform_interface/flutter_inappwebview_platform_interface.dart';
@@ -42,6 +43,7 @@ import 'package:elinkbook/reader/highlight.dart';
 import 'package:elinkbook/reader/highlight_style.dart';
 import 'package:elinkbook/sync/sync_checkpoint_trigger.dart';
 import 'package:elinkbook/reader/pdf_crop_frame_overlay.dart';
+import 'package:elinkbook/reader/pdf_selection_info.dart';
 
 // 依 spec.md「測試決策」：ReaderScreen 分派到 EpubReaderView/PdfReaderView
 // 後，實際渲染內容存在於原生 PlatformView 之中，一般 flutter test（無真實
@@ -5350,6 +5352,99 @@ void main() {
       expect(find.byType(PdfCropFrameOverlay), findsNothing,
           reason: '取消後應退出裁切編輯模式');
     });
+  });
+
+  testWidgets('PDF 長按拖曳框選完成後，顯示 AnnotationToolbar；點擊螢光筆後 Toolbar 消失且劃線已寫入',
+      (tester) async {
+    // 【epic-24 Issue 4 Task 6 重寫】原本使用手勢模擬（startGesture + moveTo + up）
+    // 觸發 PdfReaderView 的選擇手勢，但在 flutter test 中 ReaderScreen 的
+    // Scaffold→LayoutBuilder→Stack widget tree 會截斷手勢，導致
+    // onSelectionRectComputed 永遠不會被呼叫（pdfrx 的 PdfViewer 在
+    // widget test 環境下攔截手勢）。改為直接呼叫 PdfReaderView 上的
+    // onSelectionRectComputed callback，比照本檔案既有 EPUB 測試對
+    // 「無法在此層級驅動原生渲染」的既定限制處理方式。
+    final highlightsRepository = FakeHighlightsRepository();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample_multi_page.pdf',
+          bookId: 'b1',
+          prefsManager: FakeReaderPrefsManager(),
+          highlightsRepository: highlightsRepository,
+          notesRepository: FakeNotesRepository(),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    // 直接呼叫 onSelectionRectComputed 模擬選取完成回報
+    final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+    pdfView.onSelectionRectComputed!.call(const PdfSelectionInfo(
+      rect: PercentRect(left: 0.1, top: 0.2, right: 0.4, bottom: 0.5),
+      widgetRect: PercentRect(left: 0.1, top: 0.2, right: 0.4, bottom: 0.5),
+      pageIndex: 0,
+    ));
+    await tester.pump();
+
+    expect(find.byType(AnnotationToolbar), findsOneWidget,
+        reason: '選取完成後應顯示 AnnotationToolbar');
+
+    await tester.tap(find.byKey(const Key('annotation_toolbar_highlighter_yellow')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AnnotationToolbar), findsNothing,
+        reason: '選色後應建立劃線並清空選取狀態，Toolbar 隨之消失');
+    final saved = await highlightsRepository.listByBook('b1');
+    expect(saved, hasLength(1));
+    expect(saved.single.pdfPageIndex, 0);
+  });
+
+  testWidgets('PDF 選取被取消（onSelectionCanceled）時，不顯示 AnnotationToolbar',
+      (tester) async {
+    // 【epic-24 Issue 4 Task 6 重寫】比照第一個測試，原本使用多指手勢模擬
+    // 來觸發 onSelectionCanceled，但在 flutter test 中手勢無法到達
+    // PdfReaderView 的 GestureDetector。改為先模擬一次成功的選取
+    // （onSelectionRectComputed），再模擬取消（onSelectionCanceled），
+    // 驗證取消後 AnnotationToolbar 消失且 _currentPdfSelection 清空。
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample_multi_page.pdf',
+          bookId: 'b1',
+          prefsManager: FakeReaderPrefsManager(),
+          highlightsRepository: FakeHighlightsRepository(),
+          notesRepository: FakeNotesRepository(),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+
+    // 先模擬選取完成，讓 AnnotationToolbar 出現
+    pdfView.onSelectionRectComputed!.call(const PdfSelectionInfo(
+      rect: PercentRect(left: 0.1, top: 0.2, right: 0.4, bottom: 0.5),
+      widgetRect: PercentRect(left: 0.1, top: 0.2, right: 0.4, bottom: 0.5),
+      pageIndex: 0,
+    ));
+    await tester.pump();
+    expect(find.byType(AnnotationToolbar), findsOneWidget,
+        reason: '選取完成後應顯示 AnnotationToolbar');
+
+    // 再模擬選取被取消
+    pdfView.onSelectionCanceled!.call();
+    await tester.pump();
+
+    expect(find.byType(AnnotationToolbar), findsNothing,
+        reason: '選取被取消後 AnnotationToolbar 應消失');
+
+    // DoubleTapGestureRecognizer 內部有 300ms 計時器，需 flush 否則
+    // 測試結束時會擲出 "!timersPending" 斷言。
+    await tester.pump(const Duration(milliseconds: 500));
   });
 
   tearDownAll(() {

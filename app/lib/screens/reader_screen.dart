@@ -947,6 +947,22 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     });
   }
 
+  void _handlePdfSelectionRectComputed(PdfSelectionInfo info) {
+    if (!mounted) return;
+    setState(() {
+      _currentPdfSelection = info;
+      _pendingPdfHighlightIdForSelection = null;
+    });
+  }
+
+  void _handlePdfSelectionCanceled() {
+    if (!mounted) return;
+    setState(() {
+      _currentPdfSelection = null;
+      _pendingPdfHighlightIdForSelection = null;
+    });
+  }
+
   Future<void> _handleHighlightStyleSelected(HighlightStyle style) async {
     final selection = _currentSelection;
     final repository = widget.highlightsRepository;
@@ -1955,13 +1971,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           onAnnotationActivated: _handleAnnotationActivated,
         );
       case BookFormat.pdf:
-        // 【epic-24-pdf-engine-rebuild，已知且經人類確認接受的暫時性行為
-        // 退化】新引擎目前支援單頁/雙頁顯示＋頁碼＋跳頁＋影像濾鏡/
-        // 裁切（Issue 3）；劃線選取（onSelectionRectComputed 等）、
-        // 導航熱區（navZoneActions/onZoneAction）尚未傳遞——這些能力會在
-        // Issue 4/8 陸續補回。對應設定面板 UI 入口在補回前仍會顯示但操作
-        // 暫時無效果，這是刻意接受的風險排序，非遺漏。
-        // 雙頁（Issue 2）已補回：以下四個參數驅動 pdfrx 的 layoutPages。
+        // epic-24-pdf-engine-rebuild：單頁/雙頁（Issue 2）、影像濾鏡/
+        // 裁切（Issue 3）、劃線選取回呼（Issue 4）已補回；
+        // 導航熱區（navZoneActions/onZoneAction）留待 Issue 8 接線。
         return PdfReaderView(
           key: _pdfReaderViewKey,
           filePath: widget.filePath,
@@ -1981,6 +1993,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           onCropRectComputed: (rect) => _handlePrefsChanged(
             _prefs.copyWith(pdfCropRect: rect),
           ),
+          onSelectionRectComputed: _handlePdfSelectionRectComputed,
+          onSelectionCanceled: _handlePdfSelectionCanceled,
           onPageChanged: (info) {
             if (!mounted) return;
             setState(() => _pdfPageInfo = info);
