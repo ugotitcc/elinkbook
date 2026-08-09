@@ -145,4 +145,117 @@ void main() {
     expect(find.byKey(const Key('pdf_reader_selection_drag_indicator')), findsNothing,
         reason: '放開後即時回饋應消失（改由呼叫端決定是否顯示 AnnotationToolbar）');
   });
+
+  testWidgets('框選進行中第二指觸控介入時，取消選取並觸發 onSelectionCanceled',
+      (tester) async {
+    var renderedCount = 0;
+    PdfSelectionInfo? computed;
+    var canceled = false;
+    final key = GlobalKey<State<PdfReaderView>>();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PdfReaderView(
+          key: key,
+          filePath: 'test/fixtures/sample_multi_page.pdf',
+          onPageRendered: () => renderedCount++,
+          onError: (_) {},
+          onSelectionRectComputed: (info) => computed = info,
+          onSelectionCanceled: () => canceled = true,
+        ),
+      ),
+    );
+    await waitRendered(tester, () => renderedCount);
+
+    final topLeft = tester.getTopLeft(find.byType(PdfReaderView));
+    final firstFinger = await tester.startGesture(topLeft + const Offset(40, 60));
+    await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+    await firstFinger.moveTo(topLeft + const Offset(120, 160));
+    await tester.pump();
+    expect(find.byKey(const Key('pdf_reader_selection_drag_indicator')), findsOneWidget);
+
+    final secondFinger = await tester.startGesture(topLeft + const Offset(300, 400));
+    await tester.pump();
+
+    expect(canceled, isTrue, reason: '第二指觸控應取消進行中的框選');
+    expect(find.byKey(const Key('pdf_reader_selection_drag_indicator')), findsNothing);
+
+    await firstFinger.up();
+    await secondFinger.up();
+    await tester.pump();
+    // 等待 DoubleTapGestureRecognizer 的逾時計時器結束。
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(computed, isNull, reason: '被取消的選取不應觸發 onSelectionRectComputed');
+  });
+
+  testWidgets('cropEditModeActive=true 時，長按拖曳不觸發框選（與裁切互斥）',
+      (tester) async {
+    var renderedCount = 0;
+    PdfSelectionInfo? computed;
+    final key = GlobalKey<State<PdfReaderView>>();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PdfReaderView(
+          key: key,
+          filePath: 'test/fixtures/sample_multi_page.pdf',
+          cropEditModeActive: true,
+          onPageRendered: () => renderedCount++,
+          onError: (_) {},
+          onSelectionRectComputed: (info) => computed = info,
+        ),
+      ),
+    );
+    await waitRendered(tester, () => renderedCount);
+
+    final topLeft = tester.getTopLeft(find.byType(PdfReaderView));
+    final gesture = await tester.startGesture(topLeft + const Offset(40, 60));
+    await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+    await gesture.moveTo(topLeft + const Offset(160, 220));
+    await tester.pump();
+
+    expect(find.byKey(const Key('pdf_reader_selection_drag_indicator')), findsNothing,
+        reason: '裁切編輯模式下不應顯示框選視覺回饋');
+
+    await gesture.up();
+    await tester.pump();
+    expect(computed, isNull);
+  });
+
+  testWidgets('widgetRect 相對整個 PdfReaderView 尺寸，而非單一頁面（多頁情境下 top 應反映頁面在文件中的位置）',
+      (tester) async {
+    var renderedCount = 0;
+    PdfSelectionInfo? computed;
+    final key = GlobalKey<State<PdfReaderView>>();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SizedBox(
+          height: 2000,
+          child: PdfReaderView(
+            key: key,
+            filePath: 'test/fixtures/sample_multi_page.pdf',
+            onPageRendered: () => renderedCount++,
+            onError: (_) {},
+            onSelectionRectComputed: (info) => computed = info,
+          ),
+        ),
+      ),
+    );
+    await waitRendered(tester, () => renderedCount);
+
+    final topLeft = tester.getTopLeft(find.byType(PdfReaderView));
+    final gesture = await tester.startGesture(topLeft + const Offset(40, 60));
+    await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+    await gesture.moveTo(topLeft + const Offset(160, 220));
+    await tester.pump();
+    await gesture.up();
+    await tester.pump();
+
+    expect(computed, isNotNull);
+    // widgetRect 與 rect 皆為 0-1 範圍內的有效值；在夠高的可視區域內，
+    // 第一頁通常從畫面最頂端開始，widgetRect.top 應是一個很小的值。
+    expect(computed!.widgetRect.top, greaterThanOrEqualTo(0));
+    expect(computed!.widgetRect.top, lessThanOrEqualTo(1));
+  });
 }

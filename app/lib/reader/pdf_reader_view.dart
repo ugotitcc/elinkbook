@@ -187,6 +187,8 @@ class _PdfReaderViewState extends State<PdfReaderView> {
   /// 見上方「手勢架構決策」），以及拖曳起點/目前終點的局部座標。
   _PdfSelectionDragState? _selectionDrag;
 
+  int _activePointerCount = 0;
+
   /// contrast/brightness 皆為預設值時回傳 null，讓 build() 省略
   /// ColorFiltered 包裝。
   ColorFilter? get _colorFilter {
@@ -665,9 +667,18 @@ class _PdfReaderViewState extends State<PdfReaderView> {
       ),
     );
     final colorFilter = _colorFilter;
-    return colorFilter == null
+    final colorFiltered = colorFilter == null
         ? viewer
         : ColorFiltered(colorFilter: colorFilter, child: viewer);
+    return Listener(
+      onPointerDown: (_) {
+        _activePointerCount++;
+        if (_activePointerCount >= 2) _cancelSelectionDrag();
+      },
+      onPointerUp: (_) => _activePointerCount = (_activePointerCount - 1).clamp(0, 999),
+      onPointerCancel: (_) => _activePointerCount = (_activePointerCount - 1).clamp(0, 999),
+      child: colorFiltered,
+    );
   }
 
   Widget _buildDragIndicator(_PdfSelectionDragState drag) {
@@ -694,6 +705,7 @@ class _PdfReaderViewState extends State<PdfReaderView> {
             _selectionDrag = _PdfSelectionDragState(
               pageIndex: pageIndex,
               areaSize: pageRectInViewer.size,
+              pageOffsetInViewer: pageRectInViewer.topLeft,
               start: details.localPosition,
             );
           });
@@ -713,20 +725,30 @@ class _PdfReaderViewState extends State<PdfReaderView> {
     final drag = _selectionDrag;
     if (drag == null) return;
     setState(() => _selectionDrag = null);
-    final draggedRect = percentRectFromDrag(
+    final pageRelativeRect = percentRectFromDrag(
       start: drag.start,
       end: drag.current,
       areaSize: drag.areaSize,
     );
-    if (draggedRect == null) return; // 退化選取，等同取消。
+    if (pageRelativeRect == null) return; // 退化選取，等同取消。
     final originalRect = cropRelativeToOriginalPercent(
-      rect: draggedRect,
+      rect: pageRelativeRect,
       cropRect: _cropEnabled ? widget.pdfCropRect : null,
     );
+    final viewerSize = context.size;
+    final widgetRect = viewerSize == null || viewerSize.isEmpty
+        ? pageRelativeRect
+        : percentRectFromDrag(
+            start: drag.pageOffsetInViewer +
+                Offset(drag.start.dx, drag.start.dy),
+            end: drag.pageOffsetInViewer + Offset(drag.current.dx, drag.current.dy),
+            areaSize: viewerSize,
+            minFraction: 0,
+          )!;
     widget.onSelectionRectComputed?.call(PdfSelectionInfo(
       pageIndex: drag.pageIndex,
       rect: originalRect,
-      widgetRect: draggedRect,
+      widgetRect: widgetRect,
     ));
   }
 
@@ -809,11 +831,16 @@ Future<({Uint8List pixels, int width, int height})> _isolateProcessOverlayPixels
 
 /// [_PdfReaderViewState] 內部使用的框選追蹤狀態，不對外暴露。
 class _PdfSelectionDragState {
-  _PdfSelectionDragState({required this.pageIndex, required this.areaSize, required this.start})
-      : current = start;
+  _PdfSelectionDragState({
+    required this.pageIndex,
+    required this.areaSize,
+    required this.pageOffsetInViewer,
+    required this.start,
+  }) : current = start;
 
   final int pageIndex;
   final Size areaSize;
+  final Offset pageOffsetInViewer;
   final Offset start;
   Offset current;
 }
