@@ -75,7 +75,11 @@ None - can start immediately.
 
 ## Issue 3：E-Ink 影像濾鏡/裁切功能對等
 
-**Status:** ready-for-agent（2026-08-07，`/to-issues` 依 `spec.md` 拆解）
+**Status:** ✅ 已完成並合併（2026-08-09，PR #125 合併至 `main`，commit `a5fbea7`）
+
+**與 spec.md 的刻意偏離（經人類確認採用）**：對比度/亮度改用 Flutter 內建 `ColorFiltered`（`ColorFilter.matrix`，格式與 Android `ColorMatrix` 完全相同）即時包住整個 `PdfViewer`，GPU 合成、不需要背景 Isolate/debounce——比字面規格更簡單且效能更好，並非規避規格意圖。防手震延遲（`PdfFilterDebouncer`）改為只作用於加粗強度（真正連續拖曳觸發背景像素運算的欄位），詳見 `plans/plan-issue-3.md`「與 spec.md 的偏離」段落與 `docs/research/pdfrx-and-saber-image-filter-architecture.md`（調查同樣使用 `pdfrx` 的開源專案 `saber-notes/saber`，其深色模式反相功能採用相同的 `ColorFiltered` 技術，佐證此架構決策）。
+
+**合併前審查歷程**（兩輪 `/superpowers:requesting-code-review`，報告存於本機 `tmp/epic-24/`，未進版控）：第一輪發現 3 Critical（新增的 `flutter_test_config.dart` 造成 `flutter test` 全量回歸失敗；Critical 2/4 專屬回歸測試被整批刪除且未記錄；`reader_screen_test.dart` 對 `PdfCropFrameOverlay` 接線零測試覆蓋）＋2 Important（靜默吞例外；測試基礎設施缺乏文件），修正後複審確認前兩項 Critical 已修正、第三項部分修正並發現一個新阻塞項（孤立殘留測試檔案讓 `flutter analyze` 不乾淨）。處理殘餘測試缺口時進一步發現一個真正的實作缺陷（非測試環境限制）：`_recomputeOverlay`/`_detectCropRect` 把 `Isolate.run()` 的 closure 定義在 State 方法內部時，Dart VM 會把該 closure 所在整個詞法作用域（含 `PdfPage` 參數，牽連 pdfrx 內部不可跨 isolate 傳遞的 rxdart `BehaviorSubject`）一併打包，執行期必定擲出 unsendable 例外並被 `.catchError` 靜默吞掉——**代表加粗/裁切合併前實際上完全不會在真機上產生任何視覺效果**，已改為呼叫獨立於 State 之外、參數列僅含可傳遞型別的頂層函式（`_isolateProcessOverlayPixels`/`_isolateDetectCropRect`）修正，並補回原本因誤判為「環境限制」而省略的測試。合併時 `flutter analyze`／`flutter test`（1045/1045）皆綠燈。
 
 **依賴：** Issue 1。
 
@@ -91,12 +95,12 @@ None - can start immediately.
 
 ### Acceptance criteria
 
-- [ ] 對比度/亮度濾鏡對已知輸入產生與現行原生實作相當的輸出（像素取樣比對或等價的斷言方式）。
-- [ ] 型態學膨脹加粗濾鏡正確運作，於背景 Isolate 執行、不阻塞 UI。
-- [ ] 智慧自動裁切、手動選區裁切維持既有「全書統一套用」語意，非逐頁各自計算。
-- [ ] Slider 連續調整對比度/亮度時有防手震延遲，不會對每一個中間值都觸發一次完整背景運算。
-- [ ] 單元測試：`flutter test` 驗證各濾鏡函式的輸入輸出配對、Isolate 呼叫時機、debounce 行為。
-- [ ] `flutter analyze` 乾淨、`flutter test` 全數通過（含 Issue 1/2 既有測試零回歸）。
+- [x] 對比度/亮度濾鏡對已知輸入產生與現行原生實作相當的輸出（像素取樣比對或等價的斷言方式）——改用 `ColorFiltered`/`ColorFilter.matrix`，矩陣公式與原生 `ColorMatrix` 逐行移植，`contrastBrightnessColorMatrix()` 純函式單元測試涵蓋已知輸入輸出配對。
+- [x] 型態學膨脹加粗濾鏡正確運作，於背景 Isolate 執行、不阻塞 UI（`_isolateProcessOverlayPixels` 頂層函式，修正 Isolate unsendable 例外後實測可正常產生覆蓋圖）。
+- [x] 智慧自動裁切、手動選區裁切維持既有「全書統一套用」語意，非逐頁各自計算。
+- [x] Slider 連續調整時有防手震延遲，不會對每一個中間值都觸發一次完整背景運算——**刻意偏離**：對比度/亮度已無背景運算可言（見上方偏離說明），實際需要 debounce 的是加粗強度，`PdfFilterDebouncer` 已改為只作用於此欄位。
+- [x] 單元測試：`flutter test` 驗證各濾鏡函式的輸入輸出配對、Isolate 呼叫時機、debounce 行為。
+- [x] `flutter analyze` 乾淨、`flutter test` 全數通過（含 Issue 1/2 既有測試零回歸）。
 
 ### Blocked by
 
