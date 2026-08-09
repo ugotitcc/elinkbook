@@ -15,6 +15,8 @@ import 'pdf_image_filters.dart';
 import 'pdf_filter_debounce.dart';
 import 'pdf_crop_mode.dart';
 import 'pdf_crop_rect.dart';
+import 'pdf_selection_geometry.dart';
+import 'pdf_selection_info.dart';
 
 /// 以 pdfrx（PDFium + Dart FFI）為底層的 PDF 閱讀 widget
 /// （epic-24-pdf-engine-rebuild Issue 1），取代現行以
@@ -60,6 +62,13 @@ class PdfReaderView extends StatefulWidget {
   /// 手動裁切互動模式是否啟用中，預設 false。
   final bool cropEditModeActive;
 
+  // ── epic-24-pdf-engine-rebuild Issue 4 新增 ──
+  /// 使用者長按拖曳框選完成（且非退化選取）時觸發，回報的座標已换算為
+  /// 相對原始整頁（裁切啟用時已反向換算，見 pdf_selection_geometry.dart）。
+  final ValueChanged<PdfSelectionInfo>? onSelectionRectComputed;
+  /// 選取被取消時觸發（例如多指觸控介入，見 Task 3）。
+  final VoidCallback? onSelectionCanceled;
+
   const PdfReaderView({
     super.key,
     required this.filePath,
@@ -78,6 +87,8 @@ class PdfReaderView extends StatefulWidget {
     this.pdfCropRect,
     this.onCropRectComputed,
     this.cropEditModeActive = false,
+    this.onSelectionRectComputed,
+    this.onSelectionCanceled,
   });
 
   @override
@@ -167,6 +178,14 @@ class _PdfReaderViewState extends State<PdfReaderView> {
   final _boldDebouncer =
       PdfFilterDebouncer(delay: const Duration(milliseconds: 300));
   bool _cropDetectionInFlight = false;
+
+  // ── Issue 4: 長按拖曳框選 ──
+
+  /// 進行中的框選追蹤：非 null 代表使用者正在某一頁上長按拖曳。記錄手勢
+  /// 開始時所在的頁碼與該頁當下的 `pageRectInViewer`（拖曳過程中頁面
+  /// 理論上不會移動——長按辨識成功後 `pdfrx` 內建平移已經輸掉競技場，
+  /// 見上方「手勢架構決策」），以及拖曳起點/目前終點的局部座標。
+  _PdfSelectionDragState? _selectionDrag;
 
   /// contrast/brightness 皆為預設值時回傳 null，讓 build() 省略
   /// ColorFiltered 包裝。
@@ -525,19 +544,30 @@ class _PdfReaderViewState extends State<PdfReaderView> {
   ) {
     final devicePixelRatio = MediaQuery.of(context).devicePixelRatio;
     _maybeDetectCropRect(page, devicePixelRatio);
-    if (!_cropEnabled && _committedBoldStrength <= 0) return const [];
-    final pageNumber = page.pageNumber;
-    final cacheKey = (crop: widget.pdfCropRect, bold: _committedBoldStrength);
-    if (_overlayCacheKey[pageNumber] != cacheKey) {
-      unawaited(_recomputeOverlay(page, cacheKey, devicePixelRatio)
-          .catchError((e) {
-        debugPrint('pdf_reader_view: overlay recompute failed: $e');
-      }));
-      return const [];
+    final pageIndex = page.pageNumber - 1;
+    final widgets = <Widget>[];
+
+    if (_cropEnabled || _committedBoldStrength > 0) {
+      final cacheKey = (crop: widget.pdfCropRect, bold: _committedBoldStrength);
+      if (_overlayCacheKey[page.pageNumber] != cacheKey) {
+        unawaited(_recomputeOverlay(page, cacheKey, devicePixelRatio)
+            .catchError((e) {
+          debugPrint('pdf_reader_view: overlay recompute failed: $e');
+        }));
+      } else {
+        final image = _touchOverlayCache(page.pageNumber);
+        if (image != null) widgets.add(RawImage(image: image, fit: BoxFit.fill));
+      }
     }
-    final image = _touchOverlayCache(pageNumber);
-    if (image == null) return const [];
-    return [RawImage(image: image, fit: BoxFit.fill)];
+
+    final drag = _selectionDrag;
+    if (drag != null && drag.pageIndex == pageIndex) {
+      widgets.add(_buildDragIndicator(drag));
+    }
+
+    widgets.add(_buildSelectionGestureLayer(pageIndex, pageRectInViewer));
+
+    return widgets;
   }
 
   Future<void> _recomputeOverlay(
@@ -639,6 +669,72 @@ class _PdfReaderViewState extends State<PdfReaderView> {
         ? viewer
         : ColorFiltered(colorFilter: colorFilter, child: viewer);
   }
+
+  Widget _buildDragIndicator(_PdfSelectionDragState drag) {
+    final rect = Rect.fromPoints(drag.start, drag.current);
+    return Positioned.fromRect(
+      key: const Key('pdf_reader_selection_drag_indicator'),
+      rect: rect,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.yellow.withValues(alpha: 0.3),
+          border: Border.all(color: Colors.orange, width: 1.5),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSelectionGestureLayer(int pageIndex, Rect pageRectInViewer) {
+    return Positioned.fill(
+      child: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onLongPressStart: (details) {
+          if (widget.cropEditModeActive) return;
+          setState(() {
+            _selectionDrag = _PdfSelectionDragState(
+              pageIndex: pageIndex,
+              areaSize: pageRectInViewer.size,
+              start: details.localPosition,
+            );
+          });
+        },
+        onLongPressMoveUpdate: (details) {
+          final drag = _selectionDrag;
+          if (drag == null || drag.pageIndex != pageIndex) return;
+          setState(() => drag.current = details.localPosition);
+        },
+        onLongPressEnd: (details) => _finishSelectionDrag(),
+        onLongPressCancel: () => _cancelSelectionDrag(),
+      ),
+    );
+  }
+
+  void _finishSelectionDrag() {
+    final drag = _selectionDrag;
+    if (drag == null) return;
+    setState(() => _selectionDrag = null);
+    final draggedRect = percentRectFromDrag(
+      start: drag.start,
+      end: drag.current,
+      areaSize: drag.areaSize,
+    );
+    if (draggedRect == null) return; // 退化選取，等同取消。
+    final originalRect = cropRelativeToOriginalPercent(
+      rect: draggedRect,
+      cropRect: _cropEnabled ? widget.pdfCropRect : null,
+    );
+    widget.onSelectionRectComputed?.call(PdfSelectionInfo(
+      pageIndex: drag.pageIndex,
+      rect: originalRect,
+      widgetRect: draggedRect,
+    ));
+  }
+
+  void _cancelSelectionDrag() {
+    if (_selectionDrag == null) return;
+    setState(() => _selectionDrag = null);
+    widget.onSelectionCanceled?.call();
+  }
 }
 
 // ── Issue 3: Isolate.run() 專用的頂層輔助函式 ──
@@ -709,4 +805,15 @@ Future<({Uint8List pixels, int width, int height})> _isolateProcessOverlayPixels
     }
     return (pixels: outPixels, width: outWidth, height: outHeight);
   });
+}
+
+/// [_PdfReaderViewState] 內部使用的框選追蹤狀態，不對外暴露。
+class _PdfSelectionDragState {
+  _PdfSelectionDragState({required this.pageIndex, required this.areaSize, required this.start})
+      : current = start;
+
+  final int pageIndex;
+  final Size areaSize;
+  final Offset start;
+  Offset current;
 }
