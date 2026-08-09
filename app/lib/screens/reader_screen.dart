@@ -160,6 +160,17 @@ class ReaderScreen extends StatefulWidget {
       state._handleZoneAction(action);
     }
   }
+
+  /// 供測試（Issue 4 範圍：書籤 toggle 邏輯已完成，對應 FAB 按鈕留給
+  /// Issue 8）安全呼叫 [_ReaderScreenState._togglePdfBookmark] 的強型別
+  /// static helper，比照 [triggerZoneAction] 既有模式。[key] 對應的 State
+  /// 若尚未掛載，靜默忽略。
+  static void togglePdfBookmark(GlobalKey<State<ReaderScreen>> key) {
+    final state = key.currentState;
+    if (state is _ReaderScreenState) {
+      unawaited(state._togglePdfBookmark());
+    }
+  }
 }
 
 enum _RenderState { loading, rendered, error }
@@ -701,6 +712,37 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     await _loadFxlBookmarks();
   }
 
+  /// PDF 版本的書籤 toggle：本工單只需完成邏輯本身（見 issues.md Issue 4
+  /// 範圍界定），對應的 FAB 按鈕留給 Issue 8 統一接線——目前僅能透過
+  /// [ReaderScreen.togglePdfBookmark] 這個測試 seam 觸發，UI 尚無法直接
+  /// 點擊呼叫。
+  Future<void> _togglePdfBookmark() async {
+    final repository = widget.bookmarksRepository;
+    final pageIndex = _pdfPageInfo?.pageIndex;
+    if (repository == null || pageIndex == null) return;
+    // 直接查詢 repository 而非依賴 _fxlBookmarks 快取，避免快取尚未載入時
+    // 導致重複新增（見 issue-4 測試修正）。
+    final all = await repository.listByBook(widget.bookId);
+    Bookmark? existing;
+    for (final b in all) {
+      if (b.pdfPageIndex == pageIndex) {
+        existing = b;
+        break;
+      }
+    }
+    if (existing != null) {
+      await repository.delete(existing.id);
+    } else {
+      await repository.insert(Bookmark(
+        id: const Uuid().v4(),
+        bookId: widget.bookId,
+        name: Bookmark.defaultName(BookmarkPositionContext(pdfPageIndex: pageIndex)),
+        pdfPageIndex: pageIndex,
+      ));
+    }
+    await _loadFxlBookmarks();
+  }
+
   /// 依 `_dispatchedIsFixedLayout` 分派到正確的原生 widget 執行目錄／
   /// 書籤／備註跳轉（epic-17-epub-render-migration Issue 6）：FXL
   /// （Readium）用 `EpubReaderView.jumpToLocator`，流式（foliate-js）用
@@ -944,6 +986,22 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     setState(() {
       _currentSelection = null;
       _pendingHighlightIdForSelection = null;
+    });
+  }
+
+  void _handlePdfSelectionRectComputed(PdfSelectionInfo info) {
+    if (!mounted) return;
+    setState(() {
+      _currentPdfSelection = info;
+      _pendingPdfHighlightIdForSelection = null;
+    });
+  }
+
+  void _handlePdfSelectionCanceled() {
+    if (!mounted) return;
+    setState(() {
+      _currentPdfSelection = null;
+      _pendingPdfHighlightIdForSelection = null;
     });
   }
 
@@ -1955,13 +2013,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           onAnnotationActivated: _handleAnnotationActivated,
         );
       case BookFormat.pdf:
-        // 【epic-24-pdf-engine-rebuild，已知且經人類確認接受的暫時性行為
-        // 退化】新引擎目前支援單頁/雙頁顯示＋頁碼＋跳頁＋影像濾鏡/
-        // 裁切（Issue 3）；劃線選取（onSelectionRectComputed 等）、
-        // 導航熱區（navZoneActions/onZoneAction）尚未傳遞——這些能力會在
-        // Issue 4/8 陸續補回。對應設定面板 UI 入口在補回前仍會顯示但操作
-        // 暫時無效果，這是刻意接受的風險排序，非遺漏。
-        // 雙頁（Issue 2）已補回：以下四個參數驅動 pdfrx 的 layoutPages。
+        // epic-24-pdf-engine-rebuild：單頁/雙頁（Issue 2）、影像濾鏡/
+        // 裁切（Issue 3）、劃線選取回呼（Issue 4）已補回；
+        // 導航熱區（navZoneActions/onZoneAction）留待 Issue 8 接線。
         return PdfReaderView(
           key: _pdfReaderViewKey,
           filePath: widget.filePath,
@@ -1981,6 +2035,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           onCropRectComputed: (rect) => _handlePrefsChanged(
             _prefs.copyWith(pdfCropRect: rect),
           ),
+          onSelectionRectComputed: _handlePdfSelectionRectComputed,
+          onSelectionCanceled: _handlePdfSelectionCanceled,
           onPageChanged: (info) {
             if (!mounted) return;
             setState(() => _pdfPageInfo = info);

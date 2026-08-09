@@ -2,6 +2,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
+
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_inappwebview_platform_interface/flutter_inappwebview_platform_interface.dart';
@@ -42,6 +44,7 @@ import 'package:elinkbook/reader/highlight.dart';
 import 'package:elinkbook/reader/highlight_style.dart';
 import 'package:elinkbook/sync/sync_checkpoint_trigger.dart';
 import 'package:elinkbook/reader/pdf_crop_frame_overlay.dart';
+import 'package:elinkbook/reader/bookmark.dart';
 
 // 依 spec.md「測試決策」：ReaderScreen 分派到 EpubReaderView/PdfReaderView
 // 後，實際渲染內容存在於原生 PlatformView 之中，一般 flutter test（無真實
@@ -71,6 +74,17 @@ void main() {
   setUp(() {
     pdfrxInitialize();
     prefsManager = FakeReaderPrefsManager();
+    // ReaderScreen 初始化時會透過 elinkbook/fullscreen MethodChannel 呼叫
+    // setEnabled（非同步、非 awaited）。若前一個測試的 addTearDown 移除了
+    // mock handler，這段 async 呼叫會在 handler 遺失時完成，導致
+    // MissingPluginException 洩漏到下一個測試。在 setUp 全域註冊 mock
+    // handler 可避免此競態。
+    final binaryMessenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    binaryMessenger.setMockMethodCallHandler(
+      const MethodChannel('elinkbook/fullscreen'),
+      (call) async => null,
+    );
   });
 
   testWidgets('不支援格式顯示明確錯誤訊息', (tester) async {
@@ -5350,6 +5364,239 @@ void main() {
       expect(find.byType(PdfCropFrameOverlay), findsNothing,
           reason: '取消後應退出裁切編輯模式');
     });
+  });
+
+  testWidgets(
+      'PDF 長按拖曳框選完成後，顯示 AnnotationToolbar；點擊螢光筆後劃線已寫入且 Toolbar 仍開啟（可續加備註）',
+      (tester) async {
+    // 【epic-24 Issue 4 Task 6，複審修正】改回真實手勢模擬——原本的版本
+    // 註解宣稱「ReaderScreen 的 widget tree 會截斷手勢／pdfrx 在 widget
+    // test 環境下攔截手勢」，經 /superpowers:receiving-code-review 複審
+    // 追查後證實這個說法是錯的：真正原因有兩個，且都與「手勢被攔截」
+    // 無關。(1) 原本的等待邏輯只有 `Future.delayed(Duration.zero)`
+    // 一個 microtask，遠不足以讓 pdfrx 真正完成非同步文件載入／版面計算
+    // （見下方改用本檔案 PdfCropFrameOverlay 測試已驗證過的 30 次輪詢
+    // 等待樣板），手勢發生時 GestureDetector 根本還沒真正建構出來。
+    // (2) `flutter test` 預設視窗是 800×600（橫向），會讓
+    // `isLandscape` 判定為 true，觸發產品預設 `dualPageMode: auto`
+    // 悄悄啟用雙頁並列——雙頁模式下頁面內容在畫面上的實際位置與單頁
+    // 模式完全不同（頁面通常不會貼齊 widget 左上角），這裡沿用其他
+    // 測試「以左上角為基準取固定偏移量」的觸控座標假設會直接落在頁面
+    // 內容範圍之外，長按自然永遠不會命中任何 GestureDetector——這不是
+    // 本測試要驗證的範圍（雙頁模式下框選正確歸屬單一頁面已有
+    // `pdf_reader_view_selection_test.dart` 的專屬測試涵蓋，見計畫
+    // Task 5），故這裡改用本檔案既有的直向視窗慣例強制單頁模式，讓
+    // 座標假設成立，而非放棄真實手勢模擬。
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.binding.setSurfaceSize(const Size(400, 800)); // 直向。
+    tester.view.physicalSize = const Size(400, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    final highlightsRepository = FakeHighlightsRepository();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample_multi_page.pdf',
+          bookId: 'b1',
+          prefsManager: FakeReaderPrefsManager(),
+          highlightsRepository: highlightsRepository,
+          notesRepository: FakeNotesRepository(),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+    await tester.runAsync(() async {
+      for (var i = 0; i < 30; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+      }
+    });
+
+    final topLeft = tester.getTopLeft(find.byType(PdfReaderView));
+    final gesture = await tester.startGesture(topLeft + const Offset(40, 60));
+    await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+    await gesture.moveTo(topLeft + const Offset(160, 220));
+    await tester.pump();
+    await gesture.up();
+    await tester.pump();
+
+    expect(find.byType(AnnotationToolbar), findsOneWidget,
+        reason: '選取完成後應顯示 AnnotationToolbar');
+
+    await tester.tap(find.byKey(const Key('annotation_toolbar_highlighter_yellow')));
+    await tester.pumpAndSettle();
+
+    // 選色後應建立劃線，但選取狀態與 Toolbar 刻意保持開啟——比照 EPUB
+    // 的 _handleHighlightStyleSelected（reader_screen.dart），讓使用者
+    // 能接著按「備註」把備註掛在同一筆劃線上（見
+    // AnnotationToolbar.onNotePressed 文件註解）；只有按下「備註」或
+    // 取消選取才會清空 _currentPdfSelection。
+    expect(find.byType(AnnotationToolbar), findsOneWidget,
+        reason: '選色後劃線已建立，但 Toolbar 應保持開啟以便續加備註');
+    final saved = await highlightsRepository.listByBook('b1');
+    expect(saved, hasLength(1));
+    expect(saved.single.pdfPageIndex, 0);
+  });
+
+  testWidgets('PDF 選取被取消（onSelectionCanceled）時，不顯示 AnnotationToolbar',
+      (tester) async {
+    // 同上一則測試：改回真實多指手勢模擬，強制直向視窗維持單頁模式，
+    // 並補足 30 次輪詢等待真實 pdfrx 載入完成。
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.binding.setSurfaceSize(const Size(400, 800)); // 直向。
+    tester.view.physicalSize = const Size(400, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample_multi_page.pdf',
+          bookId: 'b1',
+          prefsManager: FakeReaderPrefsManager(),
+          highlightsRepository: FakeHighlightsRepository(),
+          notesRepository: FakeNotesRepository(),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+    await tester.runAsync(() async {
+      for (var i = 0; i < 30; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+      }
+    });
+
+    final topLeft = tester.getTopLeft(find.byType(PdfReaderView));
+    final firstFinger = await tester.startGesture(topLeft + const Offset(40, 60));
+    await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+    await firstFinger.moveTo(topLeft + const Offset(120, 160));
+    await tester.pump();
+    expect(find.byType(AnnotationToolbar), findsNothing,
+        reason: '拖曳進行中尚未放開，不應顯示 Toolbar');
+
+    final secondFinger = await tester.startGesture(topLeft + const Offset(300, 400));
+    await tester.pump();
+
+    expect(find.byType(AnnotationToolbar), findsNothing,
+        reason: '第二指觸控應取消進行中的框選，不顯示 AnnotationToolbar');
+
+    await firstFinger.up();
+    await secondFinger.up();
+    await tester.pump();
+
+    // DoubleTapGestureRecognizer 內部有 300ms 計時器，需 flush 否則
+    // 測試結束時會擲出 "!timersPending" 斷言。
+    await tester.pump(const Duration(milliseconds: 500));
+  });
+
+  testWidgets('PDF 書籤 toggle：目前頁無書籤時呼叫後新增一筆，頁碼定位正確',
+      (tester) async {
+    final bookmarksRepository = FakeBookmarksRepository();
+    final key = GlobalKey<State<ReaderScreen>>();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          key: key,
+          filePath: 'test/fixtures/sample_multi_page.pdf',
+          bookId: 'b1',
+          prefsManager: FakeReaderPrefsManager(),
+          bookmarksRepository: bookmarksRepository,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+    // 等待 pdfrx 真實載入 PDF（30 次輪詢，比照本檔案既有 PDF 測試慣例）。
+    await tester.runAsync(() async {
+      for (var i = 0; i < 30; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+      }
+    });
+
+    // 模擬原生端回報頁碼，讓 _pdfPageInfo 非 null（比照既有 PDF 測試
+    // 直接呼叫 PdfReaderView.onPageChanged 的模式）。
+    tester.widget<PdfReaderView>(find.byType(PdfReaderView))
+        .onPageChanged?.call(
+      const PdfPageInfo(pageIndex: 0, totalPages: 5),
+    );
+    await tester.pump();
+
+    ReaderScreen.togglePdfBookmark(key);
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final saved = await bookmarksRepository.listByBook('b1');
+    expect(saved, hasLength(1));
+    expect(saved.single.pdfPageIndex, 0);
+    expect(saved.single.name, '第 1 頁');
+  });
+
+  testWidgets('PDF 書籤 toggle：目前頁已有書籤時呼叫後移除該筆', (tester) async {
+    final bookmarksRepository = FakeBookmarksRepository();
+    await bookmarksRepository.insert(Bookmark(
+      id: 'existing',
+      bookId: 'b1',
+      name: '第 1 頁',
+      pdfPageIndex: 0,
+    ));
+    final key = GlobalKey<State<ReaderScreen>>();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          key: key,
+          filePath: 'test/fixtures/sample_multi_page.pdf',
+          bookId: 'b1',
+          prefsManager: FakeReaderPrefsManager(),
+          bookmarksRepository: bookmarksRepository,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+    // 等待 pdfrx 真實載入 PDF（30 次輪詢，比照本檔案既有 PDF 測試慣例）。
+    await tester.runAsync(() async {
+      for (var i = 0; i < 30; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+      }
+    });
+
+    // 模擬原生端回報頁碼，讓 _pdfPageInfo 非 null。
+    tester.widget<PdfReaderView>(find.byType(PdfReaderView))
+        .onPageChanged?.call(
+      const PdfPageInfo(pageIndex: 0, totalPages: 5),
+    );
+    await tester.pump();
+
+    ReaderScreen.togglePdfBookmark(key);
+    await tester.pump();
+    // _togglePdfBookmark 是 async（呼叫 repository.delete + _loadFxlBookmarks），
+    // togglePdfBookmark static seam 以 unawaited 包裝，需多 pump 讓 microtask 完成。
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final saved = await bookmarksRepository.listByBook('b1');
+    expect(saved, isEmpty, reason: '已存在同頁書籤時應移除，而非重複新增');
   });
 
   tearDownAll(() {
