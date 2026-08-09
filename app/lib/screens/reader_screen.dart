@@ -723,10 +723,13 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     // 直接查詢 repository 而非依賴 _fxlBookmarks 快取，避免快取尚未載入時
     // 導致重複新增（見 issue-4 測試修正）。
     final all = await repository.listByBook(widget.bookId);
-    final existing = all.cast<Bookmark?>().firstWhere(
-          (b) => b!.pdfPageIndex == pageIndex,
-          orElse: () => null,
-        );
+    Bookmark? existing;
+    for (final b in all) {
+      if (b.pdfPageIndex == pageIndex) {
+        existing = b;
+        break;
+      }
+    }
     if (existing != null) {
       await repository.delete(existing.id);
     } else {

@@ -2,6 +2,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -43,7 +44,6 @@ import 'package:elinkbook/reader/highlight.dart';
 import 'package:elinkbook/reader/highlight_style.dart';
 import 'package:elinkbook/sync/sync_checkpoint_trigger.dart';
 import 'package:elinkbook/reader/pdf_crop_frame_overlay.dart';
-import 'package:elinkbook/reader/pdf_selection_info.dart';
 import 'package:elinkbook/reader/bookmark.dart';
 
 // 依 spec.md「測試決策」：ReaderScreen 分派到 EpubReaderView/PdfReaderView
@@ -5366,15 +5366,36 @@ void main() {
     });
   });
 
-  testWidgets('PDF 長按拖曳框選完成後，顯示 AnnotationToolbar；點擊螢光筆後 Toolbar 消失且劃線已寫入',
+  testWidgets(
+      'PDF 長按拖曳框選完成後，顯示 AnnotationToolbar；點擊螢光筆後劃線已寫入且 Toolbar 仍開啟（可續加備註）',
       (tester) async {
-    // 【epic-24 Issue 4 Task 6 重寫】原本使用手勢模擬（startGesture + moveTo + up）
-    // 觸發 PdfReaderView 的選擇手勢，但在 flutter test 中 ReaderScreen 的
-    // Scaffold→LayoutBuilder→Stack widget tree 會截斷手勢，導致
-    // onSelectionRectComputed 永遠不會被呼叫（pdfrx 的 PdfViewer 在
-    // widget test 環境下攔截手勢）。改為直接呼叫 PdfReaderView 上的
-    // onSelectionRectComputed callback，比照本檔案既有 EPUB 測試對
-    // 「無法在此層級驅動原生渲染」的既定限制處理方式。
+    // 【epic-24 Issue 4 Task 6，複審修正】改回真實手勢模擬——原本的版本
+    // 註解宣稱「ReaderScreen 的 widget tree 會截斷手勢／pdfrx 在 widget
+    // test 環境下攔截手勢」，經 /superpowers:receiving-code-review 複審
+    // 追查後證實這個說法是錯的：真正原因有兩個，且都與「手勢被攔截」
+    // 無關。(1) 原本的等待邏輯只有 `Future.delayed(Duration.zero)`
+    // 一個 microtask，遠不足以讓 pdfrx 真正完成非同步文件載入／版面計算
+    // （見下方改用本檔案 PdfCropFrameOverlay 測試已驗證過的 30 次輪詢
+    // 等待樣板），手勢發生時 GestureDetector 根本還沒真正建構出來。
+    // (2) `flutter test` 預設視窗是 800×600（橫向），會讓
+    // `isLandscape` 判定為 true，觸發產品預設 `dualPageMode: auto`
+    // 悄悄啟用雙頁並列——雙頁模式下頁面內容在畫面上的實際位置與單頁
+    // 模式完全不同（頁面通常不會貼齊 widget 左上角），這裡沿用其他
+    // 測試「以左上角為基準取固定偏移量」的觸控座標假設會直接落在頁面
+    // 內容範圍之外，長按自然永遠不會命中任何 GestureDetector——這不是
+    // 本測試要驗證的範圍（雙頁模式下框選正確歸屬單一頁面已有
+    // `pdf_reader_view_selection_test.dart` 的專屬測試涵蓋，見計畫
+    // Task 5），故這裡改用本檔案既有的直向視窗慣例強制單頁模式，讓
+    // 座標假設成立，而非放棄真實手勢模擬。
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.binding.setSurfaceSize(const Size(400, 800)); // 直向。
+    tester.view.physicalSize = const Size(400, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
     final highlightsRepository = FakeHighlightsRepository();
     await tester.pumpWidget(
       MaterialApp(
@@ -5390,14 +5411,19 @@ void main() {
     await tester.pump();
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
+    await tester.runAsync(() async {
+      for (var i = 0; i < 30; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+      }
+    });
 
-    // 直接呼叫 onSelectionRectComputed 模擬選取完成回報
-    final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
-    pdfView.onSelectionRectComputed!.call(const PdfSelectionInfo(
-      rect: PercentRect(left: 0.1, top: 0.2, right: 0.4, bottom: 0.5),
-      widgetRect: PercentRect(left: 0.1, top: 0.2, right: 0.4, bottom: 0.5),
-      pageIndex: 0,
-    ));
+    final topLeft = tester.getTopLeft(find.byType(PdfReaderView));
+    final gesture = await tester.startGesture(topLeft + const Offset(40, 60));
+    await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+    await gesture.moveTo(topLeft + const Offset(160, 220));
+    await tester.pump();
+    await gesture.up();
     await tester.pump();
 
     expect(find.byType(AnnotationToolbar), findsOneWidget,
@@ -5406,8 +5432,13 @@ void main() {
     await tester.tap(find.byKey(const Key('annotation_toolbar_highlighter_yellow')));
     await tester.pumpAndSettle();
 
-    expect(find.byType(AnnotationToolbar), findsNothing,
-        reason: '選色後應建立劃線並清空選取狀態，Toolbar 隨之消失');
+    // 選色後應建立劃線，但選取狀態與 Toolbar 刻意保持開啟——比照 EPUB
+    // 的 _handleHighlightStyleSelected（reader_screen.dart），讓使用者
+    // 能接著按「備註」把備註掛在同一筆劃線上（見
+    // AnnotationToolbar.onNotePressed 文件註解）；只有按下「備註」或
+    // 取消選取才會清空 _currentPdfSelection。
+    expect(find.byType(AnnotationToolbar), findsOneWidget,
+        reason: '選色後劃線已建立，但 Toolbar 應保持開啟以便續加備註');
     final saved = await highlightsRepository.listByBook('b1');
     expect(saved, hasLength(1));
     expect(saved.single.pdfPageIndex, 0);
@@ -5415,11 +5446,17 @@ void main() {
 
   testWidgets('PDF 選取被取消（onSelectionCanceled）時，不顯示 AnnotationToolbar',
       (tester) async {
-    // 【epic-24 Issue 4 Task 6 重寫】比照第一個測試，原本使用多指手勢模擬
-    // 來觸發 onSelectionCanceled，但在 flutter test 中手勢無法到達
-    // PdfReaderView 的 GestureDetector。改為先模擬一次成功的選取
-    // （onSelectionRectComputed），再模擬取消（onSelectionCanceled），
-    // 驗證取消後 AnnotationToolbar 消失且 _currentPdfSelection 清空。
+    // 同上一則測試：改回真實多指手勢模擬，強制直向視窗維持單頁模式，
+    // 並補足 30 次輪詢等待真實 pdfrx 載入完成。
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.binding.setSurfaceSize(const Size(400, 800)); // 直向。
+    tester.view.physicalSize = const Size(400, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
     await tester.pumpWidget(
       MaterialApp(
         home: ReaderScreen(
@@ -5434,25 +5471,30 @@ void main() {
     await tester.pump();
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
+    await tester.runAsync(() async {
+      for (var i = 0; i < 30; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+      }
+    });
 
-    final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
-
-    // 先模擬選取完成，讓 AnnotationToolbar 出現
-    pdfView.onSelectionRectComputed!.call(const PdfSelectionInfo(
-      rect: PercentRect(left: 0.1, top: 0.2, right: 0.4, bottom: 0.5),
-      widgetRect: PercentRect(left: 0.1, top: 0.2, right: 0.4, bottom: 0.5),
-      pageIndex: 0,
-    ));
+    final topLeft = tester.getTopLeft(find.byType(PdfReaderView));
+    final firstFinger = await tester.startGesture(topLeft + const Offset(40, 60));
+    await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+    await firstFinger.moveTo(topLeft + const Offset(120, 160));
     await tester.pump();
-    expect(find.byType(AnnotationToolbar), findsOneWidget,
-        reason: '選取完成後應顯示 AnnotationToolbar');
+    expect(find.byType(AnnotationToolbar), findsNothing,
+        reason: '拖曳進行中尚未放開，不應顯示 Toolbar');
 
-    // 再模擬選取被取消
-    pdfView.onSelectionCanceled!.call();
+    final secondFinger = await tester.startGesture(topLeft + const Offset(300, 400));
     await tester.pump();
 
     expect(find.byType(AnnotationToolbar), findsNothing,
-        reason: '選取被取消後 AnnotationToolbar 應消失');
+        reason: '第二指觸控應取消進行中的框選，不顯示 AnnotationToolbar');
+
+    await firstFinger.up();
+    await secondFinger.up();
+    await tester.pump();
 
     // DoubleTapGestureRecognizer 內部有 300ms 計時器，需 flush 否則
     // 測試結束時會擲出 "!timersPending" 斷言。
@@ -5478,6 +5520,13 @@ void main() {
     await tester.pump();
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
+    // 等待 pdfrx 真實載入 PDF（30 次輪詢，比照本檔案既有 PDF 測試慣例）。
+    await tester.runAsync(() async {
+      for (var i = 0; i < 30; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+      }
+    });
 
     // 模擬原生端回報頁碼，讓 _pdfPageInfo 非 null（比照既有 PDF 測試
     // 直接呼叫 PdfReaderView.onPageChanged 的模式）。
@@ -5522,6 +5571,13 @@ void main() {
     await tester.pump();
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
+    // 等待 pdfrx 真實載入 PDF（30 次輪詢，比照本檔案既有 PDF 測試慣例）。
+    await tester.runAsync(() async {
+      for (var i = 0; i < 30; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+      }
+    });
 
     // 模擬原生端回報頁碼，讓 _pdfPageInfo 非 null。
     tester.widget<PdfReaderView>(find.byType(PdfReaderView))
