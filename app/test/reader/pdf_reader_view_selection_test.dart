@@ -9,6 +9,8 @@ import 'package:elinkbook/reader/pdf_annotation_decoration.dart';
 import 'package:elinkbook/reader/percent_rect.dart';
 import 'package:elinkbook/reader/pdf_crop_mode.dart';
 import 'package:elinkbook/reader/pdf_crop_rect.dart';
+import 'package:elinkbook/reader/dual_page_mode.dart';
+import 'package:elinkbook/reader/dual_page_direction.dart';
 
 void main() {
   setUp(() => pdfrxInitialize());
@@ -397,5 +399,52 @@ void main() {
 
     expect(find.byKey(const Key('pdf_reader_decoration_0_0')), findsNothing,
         reason: '標記完全落在裁切可視範圍外時不應渲染');
+  });
+
+  testWidgets('雙頁模式下，在右頁長按拖曳，選取結果歸屬右頁而非左頁',
+      (tester) async {
+    var renderedCount = 0;
+    PdfSelectionInfo? computed;
+    final key = GlobalKey<State<PdfReaderView>>();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PdfReaderView(
+          key: key,
+          filePath: 'test/fixtures/sample_multi_page.pdf',
+          dualPageMode: DualPageMode.always,
+          dualPageCoverAlone: true,
+          dualPageDirection: DualPageDirection.ltr,
+          onPageRendered: () => renderedCount++,
+          onError: (_) {},
+          onSelectionRectComputed: (info) => computed = info,
+        ),
+      ),
+    );
+    await waitRendered(tester, () => renderedCount);
+
+    // 封面獨立顯示，第一個雙頁 spread 是 [1,2]（0-indexed page 1、2）。
+    PdfReaderView.nextPage(key);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    // 找到右頁（page 2）的疊加層：以其手勢偵測層的 Positioned.fill 所在
+    // RenderBox 中心點觸發長按拖曳。由於 LTR 排版下 spread [1,2] 內
+    // page 2 在右側，直接對整個 PdfReaderView 右半部觸發手勢即可命中。
+    final box = tester.getRect(find.byType(PdfReaderView));
+    final rightHalfStart = Offset(box.left + box.width * 0.75, box.top + box.height * 0.3);
+    final rightHalfEnd = Offset(box.left + box.width * 0.9, box.top + box.height * 0.5);
+
+    final gesture = await tester.startGesture(rightHalfStart);
+    await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+    await gesture.moveTo(rightHalfEnd);
+    await tester.pump();
+    await gesture.up();
+    await tester.pump();
+
+    expect(computed, isNotNull);
+    expect(computed!.pageIndex, 2,
+        reason: 'spread [1,2] 內觸控畫面右半部應命中 page 2（0-indexed），'
+            '不是 page 1');
   });
 }
