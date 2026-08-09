@@ -74,6 +74,17 @@ void main() {
   setUp(() {
     pdfrxInitialize();
     prefsManager = FakeReaderPrefsManager();
+    // ReaderScreen 初始化時會透過 elinkbook/fullscreen MethodChannel 呼叫
+    // setEnabled（非同步、非 awaited）。若前一個測試的 addTearDown 移除了
+    // mock handler，這段 async 呼叫會在 handler 遺失時完成，導致
+    // MissingPluginException 洩漏到下一個測試。在 setUp 全域註冊 mock
+    // handler 可避免此競態。
+    final binaryMessenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    binaryMessenger.setMockMethodCallHandler(
+      const MethodChannel('elinkbook/fullscreen'),
+      (call) async => null,
+    );
   });
 
   testWidgets('不支援格式顯示明確錯誤訊息', (tester) async {
@@ -5450,15 +5461,6 @@ void main() {
 
   testWidgets('PDF 書籤 toggle：目前頁無書籤時呼叫後新增一筆，頁碼定位正確',
       (tester) async {
-    final binaryMessenger =
-        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
-    const fullscreenChannel = MethodChannel('elinkbook/fullscreen');
-    binaryMessenger.setMockMethodCallHandler(
-        fullscreenChannel, (call) async => null);
-    addTearDown(
-      () => binaryMessenger.setMockMethodCallHandler(fullscreenChannel, null),
-    );
-
     final bookmarksRepository = FakeBookmarksRepository();
     final key = GlobalKey<State<ReaderScreen>>();
 
@@ -5497,15 +5499,6 @@ void main() {
   });
 
   testWidgets('PDF 書籤 toggle：目前頁已有書籤時呼叫後移除該筆', (tester) async {
-    final binaryMessenger =
-        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
-    const fullscreenChannel = MethodChannel('elinkbook/fullscreen');
-    binaryMessenger.setMockMethodCallHandler(
-        fullscreenChannel, (call) async => null);
-    addTearDown(
-      () => binaryMessenger.setMockMethodCallHandler(fullscreenChannel, null),
-    );
-
     final bookmarksRepository = FakeBookmarksRepository();
     await bookmarksRepository.insert(Bookmark(
       id: 'existing',
