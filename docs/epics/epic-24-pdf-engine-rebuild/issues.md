@@ -110,7 +110,9 @@ None - can start immediately.
 
 ## Issue 4：書籤/劃線/備註遷移（矩形選取機制保留，新增 PDF 書籤 toggle）
 
-**Status:** ready-for-agent（2026-08-07，`/to-issues` 依 `spec.md` 拆解）
+**Status:** ✅ 已完成並合併（2026-08-10，PR #126 合併至 `main`，commit `43af3f3`）
+
+**合併前審查歷程**（一輪＋一輪複審 `/superpowers:requesting-code-review`，報告存於本機 `tmp/epic-24/`，未進版控）：初輪發現 0 Critical／2 Important／4 Minor。Important #1（「PDF 書籤 toggle：目前頁已有書籤時呼叫後移除該筆」測試約 1/3 機率間歇性擲出 `!timersPending`）根因為測試省略了本檔案其餘真實載入 PDF 測試皆遵循的 30 次輪詢等待慣例，補回後經多次重跑驗證修復。Important #2（Task 6 選取測試改用直接呼叫 callback 而非真實手勢模擬，程式碼註解宣稱「`ReaderScreen` widget 樹會截斷手勢／`pdfrx` 在 widget test 環境下攔截手勢」）經人類指示「查雙頁模式下手勢為什麼觸發不了」後實測追查：以獨立診斷探針證實該說法為假，真正原因是 (1) 等待不足與 (2) `flutter test` 預設橫向視窗誤觸產品預設 `dualPageMode: auto`、雙頁模式下頁面位置與測試原本「左上角固定偏移量」假設不符——改回真實手勢模擬＋沿用既有直向視窗慣例強制單頁模式後，額外浮現一則因此才被真正執行到的錯誤斷言（誤以為選色後 Toolbar 應消失），追查確認 `_handlePdfHighlightStyleSelected` 選色後刻意保留選取狀態以便續加備註、與 EPUB 對應邏輯行為對稱，修正的是測試斷言本身而非產品程式碼。4 項 Minor 中 3 項審查報告已標註「純記錄、無需處理」，剩餘 1 項（`firstWhere`/`cast` 迂迴寫法）隨 Important #1 修正順手改為簡單 for 迴圈。合併時 `flutter analyze` 乾淨、`reader_screen_test.dart`（135/135）與既有 PDF 測試（61/61）皆綠燈。
 
 **依賴：** Issue 1。
 
@@ -128,12 +130,12 @@ None - can start immediately.
 
 ### Acceptance criteria
 
-- [ ] 長按拖曳框選矩形的選取互動在新引擎上正確運作，選取範圍資料模型（頁碼＋兩種百分比矩形）語意與現行一致。
-- [ ] 雙頁模式下，選取矩形正確以「所在的單一頁面」為座標基準，不受另一頁存在與否影響；單/雙頁切換後既有劃線位置正確、不拉伸錯位。
-- [ ] 劃線/備註可正確新增、持久化、重新開書後正確還原顯示於對應頁面。
-- [ ] 書籤 toggle：目前頁有書籤時圖示狀態正確反映「已加入」，切換行為（新增/移除）正確寫入/刪除 `Bookmark`（`pdfPageIndex` 定位）。
-- [ ] 單元測試：`flutter test` 對多頁 fixture 驗證選取矩形座標換算（含雙頁情境）、劃線/備註持久化往返、書籤 toggle 邏輯。
-- [ ] `flutter analyze` 乾淨、`flutter test` 全數通過（含既有測試零回歸）。
+- [x] 長按拖曳框選矩形的選取互動在新引擎上正確運作，選取範圍資料模型（頁碼＋兩種百分比矩形）語意與現行一致。
+- [x] 雙頁模式下，選取矩形正確以「所在的單一頁面」為座標基準，不受另一頁存在與否影響；單/雙頁切換後既有劃線位置正確、不拉伸錯位。
+- [x] 劃線/備註可正確新增、持久化、重新開書後正確還原顯示於對應頁面。
+- [x] 書籤 toggle：目前頁有書籤時圖示狀態正確反映「已加入」，切換行為（新增/移除）正確寫入/刪除 `Bookmark`（`pdfPageIndex` 定位）。
+- [x] 單元測試：`flutter test` 對多頁 fixture 驗證選取矩形座標換算（含雙頁情境）、劃線/備註持久化往返、書籤 toggle 邏輯。
+- [x] `flutter analyze` 乾淨、`flutter test` 全數通過（含既有測試零回歸）。
 
 ### Blocked by
 
