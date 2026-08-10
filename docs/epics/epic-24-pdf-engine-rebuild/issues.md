@@ -214,7 +214,9 @@ UI 入口為 Issue 5 建立的目錄 Bottom Sheet「搜尋」分頁，不新增�
 
 ## Issue 7：頁碼縮圖（Thumbnails）
 
-**Status:** ready-for-agent（2026-08-07，`/to-issues` 依 `spec.md` 拆解）
+**Status:** ✅ 已完成並合併（2026-08-10，PR #129 合併至 `main`，commit `0d54a58`）
+
+**合併前審查歷程**（`/superpowers:requesting-code-review` 一輪＋一輪複審，報告存於本機 `tmp/epic-24/review-issue-7.md`／`review-issue-7-followup.md`，未進版控）：第一輪審查 0 Critical／0 Important／5 Minor，判定可合併（Minor 項目：整合層級端對端測試遺漏一則邊界斷言、`_renderThumbnail()` 未防禦 `page.width == 0` 退化情境、縮圖快取不跨 Bottom Sheet 開合週期持久化、`GridView` 固定 `childAspectRatio` 未依實際頁面比例調整、新常數與 App Bar 常數混放）；作者針對 Minor 1 修復後（`reader_screen_test.dart` 補上 `pdf_thumbnail_tile_5 findsNothing` 斷言）請求複審，複審發現該修復本身因所用 fixture（`sample_multi_page.pdf`，僅 5 頁）頁數過少而成為恆真命題（index 5 本來就超出 `itemCount` 邊界，與「僅可視範圍延遲建構」的邏輯是否正確無關），未能真正提供整合層級的獨立證據——但「僅可視範圍渲染、不一次渲染全書」這項 Global Constraint 本身已由 Task 3 單元測試（`totalPages: 50` 情境，`expect(requested.length, lessThan(30))`）有效覆蓋，不構成合併阻礙，複審結論仍為可以合併。其餘 4 項 Minor 維持原狀（作者未表示要修復，原本即定性為非合併阻礙的建議性質項目）。合併時測試數量精確 +22（`PdfThumbnailCache` +7、`renderThumbnail()` +4、`PdfThumbnailPanel` +7、`TocBottomSheet` +2、`ReaderScreen` +2），與計畫彙總數字一致。
 
 **依賴：** Issue 1、Issue 5（縮圖分頁掛載於 Issue 5 建立的目錄 Bottom Sheet 分頁籤殼層內，共用同一顆「目錄」FAB 觸發，見 Issue 5「UI 入口決策」）。
 
@@ -228,12 +230,12 @@ UI 入口為 Issue 5 建立的目錄 Bottom Sheet「縮圖」分頁，不新增�
 
 ### Acceptance criteria
 
-- [ ] 縮圖面板正確顯示整本書頁碼縮圖，點擊後正確跳轉至對應頁面。
-- [ ] 縮圖僅於可視範圍內產生，不一次性渲染全書。
-- [ ] 縮圖分頁正確掛載於 Issue 5 的目錄 Bottom Sheet 殼層內，透過既有「目錄」FAB 開啟後可切換至此分頁。
-- [ ] 淘汰快取的縮圖資源正確釋放（`dispose()`），大量頁數書籍快速捲動不造成記憶體持續成長。
-- [ ] 單元測試：`flutter test` 驗證縮圖產生/快取/釋放邏輯（可透過可觀察的快取狀態或資源計數斷言，不需要真機記憶體量測）。
-- [ ] `flutter analyze` 乾淨、`flutter test` 全數通過。
+- [x] 縮圖面板正確顯示整本書頁碼縮圖，點擊後正確跳轉至對應頁面。
+- [x] 縮圖僅於可視範圍內產生，不一次性渲染全書（單元測試以 `totalPages: 50` 驗證；整合層級端對端測試因 fixture 頁數過少而未能提供獨立證據，見上方合併前審查歷程，非合併阻礙）。
+- [x] 縮圖分頁正確掛載於 Issue 5 的目錄 Bottom Sheet 殼層內，透過既有「目錄」FAB 開啟後可切換至此分頁。
+- [x] 淘汰快取的縮圖資源正確釋放（`dispose()`），大量頁數書籍快速捲動不造成記憶體持續成長。
+- [x] 單元測試：`flutter test` 驗證縮圖產生/快取/釋放邏輯（可透過可觀察的快取狀態或資源計數斷言，不需要真機記憶體量測）。
+- [x] `flutter analyze` 乾淨、`flutter test` 全數通過。
 
 ### Blocked by
 
