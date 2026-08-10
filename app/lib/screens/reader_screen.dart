@@ -189,6 +189,11 @@ class ReaderScreen extends StatefulWidget {
 enum _RenderState { loading, rendered, error }
 
 class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver {
+  // PDF 目錄 Bottom Sheet 不需要字元數快取（頁碼在解析大綱時已知），
+  // 但 TocBottomSheet 的建構子要求 ValueListenable<int?> 參數。
+  // 共用同一個靜態實例，避免每次開啟都新建 ValueNotifier（Minor #3 修正）。
+  static final _pdfDummyCharacterCountNotifier = ValueNotifier<int?>(null);
+
   _RenderState _state = _RenderState.loading;
   String? _errorMessage;
   // 自動偵測結果（來自 onLayoutResolved），唯讀、不持久化，每次開書重新
@@ -812,7 +817,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         entries: _pdfTocEntries,
         initiallyExpandedEntries: currentPath.toSet(),
         currentEntry: currentPath.isEmpty ? null : currentPath.last,
-        totalCharacterCountListenable: ValueNotifier<int?>(null),
+        totalCharacterCountListenable: _pdfDummyCharacterCountNotifier,
         resolved: _resolved!,
         onEntrySelected: (entry) {
           Navigator.of(context).pop();
