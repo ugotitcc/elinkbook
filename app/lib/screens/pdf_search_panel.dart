@@ -71,6 +71,7 @@ class _PdfSearchPanelState extends State<PdfSearchPanel> {
           TextField(
             key: const Key('pdf_search_field'),
             controller: _controller,
+            textInputAction: TextInputAction.search,
             decoration: const InputDecoration(
               hintText: '搜尋文字…',
               prefixIcon: Icon(Icons.search),

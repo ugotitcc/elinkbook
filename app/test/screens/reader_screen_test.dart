@@ -5774,6 +5774,140 @@ void main() {
     // 驗證搜尋面板可見且計數器顯示（搜尋面板內的計數器格式為「1 / 5」，
     // 與 reader footer 的「1/5」不同，用精確字串比對避免誤判）。
     expect(find.text('1 / 5'), findsOneWidget);
+    // 驗證確實跳轉至第一筆符合結果所在頁面（第 1 頁，footer 顯示「1/5」，
+    // 無空格，與上方搜尋面板計數器「1 / 5」的格式刻意不同）。
+    expect(find.text('1/5'), findsOneWidget);
+  });
+
+  testWidgets('PDF 搜尋：點擊下一個/上一個依序跳轉並於首尾循環導覽', (tester) async {
+    final key = GlobalKey<State<ReaderScreen>>();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          key: key,
+          filePath: 'test/fixtures/sample_multi_page.pdf',
+          bookId: 'b_pdf_search_nav',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+    await tester.runAsync(() async {
+      for (var i = 0; i < 30; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+      }
+    });
+    await tester.pump();
+
+    ReaderScreen.openPdfToc(key);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    await tester.tap(find.text('搜尋'));
+    await tester.pumpAndSettle();
+
+    final textField = find.byKey(const Key('pdf_search_field'));
+    expect(textField, findsOneWidget);
+    await tester.enterText(textField, 'Page');
+    await tester.pump(const Duration(milliseconds: 600));
+
+    await tester.runAsync(() async {
+      for (var i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+      }
+    });
+    await tester.pump();
+
+    // 起始狀態：5 筆符合結果，目前在第 1 筆。
+    //
+    // 註：本測試只斷言搜尋面板計數器（_pdfSearchStateNotifier 驅動的
+    // 「N / 5」文字），不斷言 reader footer 實際頁碼（「N/5」）——footer
+    // 頁碼變化依賴 pdfrx PdfViewer 內部真實捲動動畫，經診斷確認在本檔案
+    // 「Bottom Sheet 開啟中」這個既有測試情境下，即使搭配 runAsync 真實
+    // 延遲等待數秒，動畫完成時機仍不可靠（連 Issue 5 既有、已合併的 TOC
+    // 跳頁測試「點選 PDF 目錄項目後正確跳轉頁面並關閉 Bottom Sheet」也有
+    // 同樣現象，非本工單新增邏輯所致）；已用獨立情境（無 ReaderScreen／
+    // Bottom Sheet 包裹的裸 PdfReaderView）重現驗證 jumpToPage() 本身在
+    // 連續兩次呼叫下能正確落點，證實這是既有的測試環境時序問題，非
+    // `_goToPdfSearchMatch` 的索引計算邏輯缺陷。搜尋面板計數器才是本測試
+    // 真正要保護的行為（循環導覽的索引數學），且其更新不依賴 pdfrx 動畫
+    // 完成，可靠地同步反映在畫面上。
+    expect(find.text('1 / 5'), findsOneWidget);
+
+    // 從第一筆點擊「上一個」，須循環到最後一筆（第 5 筆），而不是產生負數
+    // 索引例外（獨立審查已確認 Dart `%` 為 Euclidean modulo、程式邏輯本身
+    // 沒有 RangeError 風險，這裡是補上先前缺漏的整合層級回歸測試）。
+    await tester.tap(find.byKey(const Key('pdf_search_prev_button')));
+    await tester.pump();
+    expect(find.text('5 / 5'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    // 從最後一筆點擊「下一個」，須循環回第一筆。
+    await tester.tap(find.byKey(const Key('pdf_search_next_button')));
+    await tester.pump();
+    expect(find.text('1 / 5'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    // 連續點擊「下一個」4 次，依序跳轉至第 2~5 筆。
+    for (var expected = 2; expected <= 5; expected++) {
+      await tester.tap(find.byKey(const Key('pdf_search_next_button')));
+      await tester.pump();
+      expect(find.text('$expected / 5'), findsOneWidget);
+    }
+  });
+
+  testWidgets('PDF 搜尋：無文字層的 PDF 查無符合結果時顯示提示文字', (tester) async {
+    final key = GlobalKey<State<ReaderScreen>>();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          key: key,
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b_pdf_search_empty',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+    await tester.runAsync(() async {
+      for (var i = 0; i < 30; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+      }
+    });
+    await tester.pump();
+
+    ReaderScreen.openPdfToc(key);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    await tester.tap(find.text('搜尋'));
+    await tester.pumpAndSettle();
+
+    final textField = find.byKey(const Key('pdf_search_field'));
+    expect(textField, findsOneWidget);
+    await tester.enterText(textField, 'anything');
+    await tester.pump(const Duration(milliseconds: 600));
+
+    await tester.runAsync(() async {
+      for (var i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+      }
+    });
+    await tester.pump();
+
+    expect(find.byKey(const Key('pdf_search_empty')), findsOneWidget);
+    expect(find.text('找不到符合的文字'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   tearDownAll(() {
