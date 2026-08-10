@@ -145,7 +145,9 @@ None - can start immediately.
 
 ## Issue 5：目錄（TOC）解析與 UI（`BookTocItem` 抽象介面）
 
-**Status:** ready-for-agent（2026-08-07，`/to-issues` 依 `spec.md` 拆解）
+**Status:** ✅ 已完成並合併（2026-08-10，PR #127 合併至 `main`，commit `66ceab5`）
+
+**合併前審查歷程**（三輪 `/superpowers:requesting-code-review`／`/superpowers:receiving-code-review` 循環，報告存於本機 `tmp/epic-24/review-issue-5-independent.md`，未進版控）：初輪發現 0 Critical／2 Important／4 Minor。Important #1（PDF 目錄跳轉測試斷言被移除，且留下「pdfrx 在測試環境中有點擊跳轉限制」的註解）經審查者在獨立暫存 worktree 實測證實這段主張是**假的**——tap／`Navigator.pop`／頁面跳轉在 `flutter test` 下皆真實可運作，只是退場動畫需要多等 500ms，屬於本 Epic 已在 Issue 4 出現過一次的「未經覆查的錯誤技術主張被合併」同類型問題。Important #2（`issues.md` 明確要求的 PDF 分頁籤殼層，`plan-issue-5.md` 規劃階段遺漏未納入）經人類確認後正式納入本工單範圍，補上 `TocBottomSheet` 的 `format` 參數＋`DefaultTabController`（章節目錄可用、縮圖/搜尋分頁預留佔位文字，EPUB 路徑零回歸）。過程中曾發生一次修正意外遺失——4 項已驗證修正（Important #1＋3 個 Minor）當時只存在於未提交的工作目錄異動，後續疊加分頁籤功能時被靜默覆蓋，經複審抓出後改為逐項獨立 commit 重新套用並確認進入 commit history。合併時 `flutter analyze` 乾淨、全專案 `flutter test` 1094/1094 通過，PDF 目錄跳轉測試重複執行 3 次穩定無間歇性失敗。
 
 **依賴：** Issue 1。
 
@@ -163,13 +165,14 @@ None - can start immediately.
 
 ### Acceptance criteria
 
-- [ ] `BookTocItem` 抽象介面定義完成，EPUB 既有目錄 Bottom Sheet 改為消費該介面，EPUB 既有目錄相關測試全數維持通過（零回歸）。
-- [ ] PDF 端正確解析大綱（`loadOutline()`），轉換為 `BookTocItem` 樹狀結構，巢狀層級正確保留。
-- [ ] 點擊 PDF 目錄項目正確跳轉至對應頁面。
-- [ ] 目錄背景載入完成前，目錄相關互動正確停用（防呆）。
-- [ ] 無大綱的 PDF（例如掃描件）目錄為空清單時，UI 有合理呈現（非例外崩潰）。
-- [ ] 單元測試：`flutter test` 對含大綱的 fixture 驗證解析結果與跳轉行為；對既有 EPUB 目錄測試確認零回歸。
-- [ ] `flutter analyze` 乾淨、`flutter test` 全數通過。
+- [x] `BookTocItem` 抽象介面定義完成，EPUB 既有目錄 Bottom Sheet 改為消費該介面，EPUB 既有目錄相關測試全數維持通過（零回歸）。
+- [x] PDF 端正確解析大綱（`loadOutline()`），轉換為 `BookTocItem` 樹狀結構，巢狀層級正確保留。
+- [x] 點擊 PDF 目錄項目正確跳轉至對應頁面。
+- [x] 目錄背景載入完成前，目錄相關互動正確停用（防呆）。
+- [x] 無大綱的 PDF（例如掃描件）目錄為空清單時，UI 有合理呈現（非例外崩潰）。
+- [x] 單元測試：`flutter test` 對含大綱的 fixture 驗證解析結果與跳轉行為；對既有 EPUB 目錄測試確認零回歸。
+- [x] `flutter analyze` 乾淨、`flutter test` 全數通過。
+- [x] PDF 目錄 Bottom Sheet 分頁籤殼層（章節目錄／縮圖／搜尋）——原規劃階段遺漏，經人類確認納入本工單範圍後補上（見上方合併前審查歷程）。
 
 ### Blocked by
 
