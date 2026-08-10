@@ -1,6 +1,6 @@
 # Epic 24 Issue 6 — 內文搜尋 Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** 在已開啟的 PDF 文件內搜尋文字，找出所有符合位置並在頁面上高亮標示，支援「上一個／下一個」逐一跳轉瀏覽；搜尋 UI 掛載於 Issue 5 建立的目錄 Bottom Sheet「搜尋」分頁。
 
@@ -44,7 +44,7 @@
 **Interfaces:**
 - Produces: `class PdfSearchMatch { final int pageIndex; final String text; final PercentRect rect; }`；`PercentRect pdfRectToPercentRect({required PdfRect rect, required double pageWidth, required double pageHeight})`——Task 3 依賴兩者。
 
-- [ ] **Step 1: 建立 `PdfSearchMatch` 模型**
+- [x] **Step 1: 建立 `PdfSearchMatch` 模型**
 
 建立 `app/lib/reader/pdf_search_match.dart`：
 
@@ -86,7 +86,7 @@ class PdfSearchMatch {
 
 （審查修正，review-plan-issue-6.md Minor #1：補上 `==`／`hashCode`／`toString()`，與同為值物件的既有 `PercentRect`／`PdfPageInfo` 慣例一致，便於測試斷言與除錯輸出。）
 
-- [ ] **Step 2: 撰寫 `pdfRectToPercentRect` 的失敗測試**
+- [x] **Step 2: 撰寫 `pdfRectToPercentRect` 的失敗測試**
 
 建立 `app/test/reader/pdf_search_geometry_test.dart`：
 
@@ -172,12 +172,12 @@ import 'package:elinkbook/reader/percent_rect.dart';
 import 'package:elinkbook/reader/pdf_search_match.dart';
 ```
 
-- [ ] **Step 3: 執行測試確認失敗**
+- [x] **Step 3: 執行測試確認失敗**
 
 Run: `flutter test test/reader/pdf_search_geometry_test.dart`
 Expected: FAIL，`pdf_search_geometry.dart` 尚未定義。
 
-- [ ] **Step 4: 實作 `pdfRectToPercentRect`**
+- [x] **Step 4: 實作 `pdfRectToPercentRect`**
 
 建立 `app/lib/reader/pdf_search_geometry.dart`：
 
@@ -215,17 +215,17 @@ PercentRect pdfRectToPercentRect({
 }
 ```
 
-- [ ] **Step 5: 執行測試確認通過**
+- [x] **Step 5: 執行測試確認通過**
 
 Run: `flutter test test/reader/pdf_search_geometry_test.dart -v`
 Expected: 8 項全數通過。
 
-- [ ] **Step 6: `flutter analyze` 確認乾淨**
+- [x] **Step 6: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app/lib/reader/pdf_search_match.dart app/lib/reader/pdf_search_geometry.dart app/test/reader/pdf_search_geometry_test.dart
@@ -243,7 +243,7 @@ git commit -m "feat(epic-24): 新增 PdfSearchMatch 模型與 PdfRect→PercentR
 **Interfaces:**
 - Produces: `class PdfSearchState { final String query; final bool isSearching; final int matchCount; final int? currentIndex; const PdfSearchState({...}); const PdfSearchState.initial(); PdfSearchState copyWith({...}); }`——Task 5、Task 6 依賴此型別。
 
-- [ ] **Step 1: 撰寫失敗測試**
+- [x] **Step 1: 撰寫失敗測試**
 
 建立 `app/test/reader/pdf_search_state_test.dart`：
 
@@ -287,12 +287,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/reader/pdf_search_state_test.dart`
 Expected: FAIL，`pdf_search_state.dart` 尚未定義。
 
-- [ ] **Step 3: 實作 `PdfSearchState`**
+- [x] **Step 3: 實作 `PdfSearchState`**
 
 建立 `app/lib/reader/pdf_search_state.dart`：
 
@@ -346,12 +346,12 @@ class PdfSearchState {
 }
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `flutter test test/reader/pdf_search_state_test.dart -v`
 Expected: 3 項全數通過。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/lib/reader/pdf_search_state.dart app/test/reader/pdf_search_state_test.dart
@@ -370,7 +370,7 @@ git commit -m "feat(epic-24): 新增 PdfSearchState 不可變狀態類別"
 - Consumes: `PdfSearchMatch`（Task 1）、`pdfRectToPercentRect`（Task 1）。
 - Produces: `static Future<List<PdfSearchMatch>> PdfReaderView.search(GlobalKey<State<PdfReaderView>> key, String query)`；`static void PdfReaderView.setSearchHighlights(GlobalKey<State<PdfReaderView>> key, List<PdfSearchMatch> matches, {required int? currentIndex})`——Task 6 依賴兩者的簽章。
 
-- [ ] **Step 1: 撰寫失敗測試**
+- [x] **Step 1: 撰寫失敗測試**
 
 建立 `app/test/reader/pdf_reader_view_search_test.dart`：
 
@@ -570,12 +570,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/reader/pdf_reader_view_search_test.dart`
 Expected: FAIL，`PdfReaderView.search`／`setSearchHighlights` 尚未定義。
 
-- [ ] **Step 3: 實作搜尋與高亮渲染**
+- [x] **Step 3: 實作搜尋與高亮渲染**
 
 修改 `app/lib/reader/pdf_reader_view.dart`，在檔案頂部 import 區塊新增：
 
@@ -737,24 +737,24 @@ import 'pdf_search_geometry.dart';
 ```
 這段之後、`widgets.add(_buildSelectionGestureLayer(pageIndex, pageRectInViewer));` 之前。）
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `flutter test test/reader/pdf_reader_view_search_test.dart -v`
 Expected: 7 項全數通過。
 
 （本計畫撰寫階段已實測驗證過與 Step 1 等價的底層邏輯——`sample_multi_page.pdf` 5 頁搜尋 "Page" 找到 5 筆符合，`sample.pdf` 搜尋任何字串皆回傳空清單——真實輸出見上方「與計畫撰寫階段實測發現相關的技術澄清」第 1 點。）
 
-- [ ] **Step 5: 執行既有 PDF 測試確認零回歸**
+- [x] **Step 5: 執行既有 PDF 測試確認零回歸**
 
 Run: `flutter test test/reader/pdf_reader_view_test.dart test/reader/pdf_reader_view_selection_test.dart test/reader/pdf_reader_view_dual_page_test.dart test/reader/pdf_reader_view_filters_test.dart test/reader/pdf_reader_view_toc_test.dart -v`
 Expected: 全數通過，無新增失敗。
 
-- [ ] **Step 6: `flutter analyze` 確認乾淨**
+- [x] **Step 6: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app/lib/reader/pdf_reader_view.dart app/test/reader/pdf_reader_view_search_test.dart
@@ -772,12 +772,12 @@ git commit -m "feat(epic-24): PdfReaderView 整合內文搜尋——search()/set
 **Interfaces:**
 - Produces: `TocBottomSheet` 新增建構參數 `final Widget? searchTabContent`——Task 6 依賴此參數名稱。
 
-- [ ] **Step 1: 確認既有測試現況（作為零回歸基準）**
+- [x] **Step 1: 確認既有測試現況（作為零回歸基準）**
 
 Run: `flutter test test/screens/toc_bottom_sheet_test.dart test/screens/toc_bottom_sheet_pdf_test.dart -v`
 Expected: 既有 6＋5 項全數通過（修改前的基準線）。
 
-- [ ] **Step 2: 修改 `TocBottomSheet` 新增 `searchTabContent` 參數**
+- [x] **Step 2: 修改 `TocBottomSheet` 新增 `searchTabContent` 參數**
 
 修改 `app/lib/screens/toc_bottom_sheet.dart`，在 `class TocBottomSheet` 內既有 `final BookFormat? format;` 附近新增欄位：
 
@@ -820,7 +820,7 @@ Expected: 既有 6＋5 項全數通過（修改前的基準線）。
                   ),
 ```
 
-- [ ] **Step 3: 撰寫新增情境的失敗測試**
+- [x] **Step 3: 撰寫新增情境的失敗測試**
 
 在 `app/test/screens/toc_bottom_sheet_pdf_test.dart` 既有「PDF 格式下顯示三個分頁籤...」測試之後新增：
 
@@ -873,22 +873,22 @@ Expected: 既有 6＋5 項全數通過（修改前的基準線）。
 
 檔案開頭確認已 import `package:flutter/material.dart`（既有，`Text` 屬於 Material/Widgets 套件，不需要額外 import）。
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `flutter test test/screens/toc_bottom_sheet_pdf_test.dart -v`
 Expected: 既有 5 項＋新增 2 項，共 7 項全數通過。
 
-- [ ] **Step 5: 執行 EPUB 既有測試確認零回歸**
+- [x] **Step 5: 執行 EPUB 既有測試確認零回歸**
 
 Run: `flutter test test/screens/toc_bottom_sheet_test.dart -v`
 Expected: 6 項全數通過（`TocBottomSheet` 未傳 `searchTabContent` 時走既有 `null` 預設值，不影響 EPUB 分支——EPUB 分支根本不會走到 `TabBarView`，這個新參數對它完全無感）。
 
-- [ ] **Step 6: `flutter analyze` 確認乾淨**
+- [x] **Step 6: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app/lib/screens/toc_bottom_sheet.dart app/test/screens/toc_bottom_sheet_pdf_test.dart
@@ -907,7 +907,7 @@ git commit -m "feat(epic-24): TocBottomSheet 新增 searchTabContent 插槽（�
 - Consumes: `PdfSearchState`（Task 2）。
 - Produces: `class PdfSearchPanel extends StatefulWidget { const PdfSearchPanel({required ValueListenable<PdfSearchState> searchStateListenable, required ValueChanged<String> onQueryChanged, required VoidCallback onNext, required VoidCallback onPrevious, String initialQuery = ''}); }`——Task 6 依賴此建構參數簽章。
 
-- [ ] **Step 1: 撰寫失敗測試**
+- [x] **Step 1: 撰寫失敗測試**
 
 建立 `app/test/screens/pdf_search_panel_test.dart`：
 
@@ -1080,12 +1080,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/screens/pdf_search_panel_test.dart`
 Expected: FAIL，`pdf_search_panel.dart` 尚未定義。
 
-- [ ] **Step 3: 實作 `PdfSearchPanel`**
+- [x] **Step 3: 實作 `PdfSearchPanel`**
 
 建立 `app/lib/screens/pdf_search_panel.dart`：
 
@@ -1219,17 +1219,17 @@ class _PdfSearchPanelState extends State<PdfSearchPanel> {
 }
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `flutter test test/screens/pdf_search_panel_test.dart -v`
 Expected: 7 項全數通過。
 
-- [ ] **Step 5: `flutter analyze` 確認乾淨**
+- [x] **Step 5: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/screens/pdf_search_panel.dart app/test/screens/pdf_search_panel_test.dart
@@ -1247,7 +1247,7 @@ git commit -m "feat(epic-24): 新增 PdfSearchPanel widget——搜尋輸入框�
 **Interfaces:**
 - Consumes: `PdfReaderView.search`／`PdfReaderView.setSearchHighlights`（Task 3）、`TocBottomSheet.searchTabContent`（Task 4）、`PdfSearchPanel`（Task 5）、`PdfSearchState`（Task 2）。
 
-- [ ] **Step 1: 在 `_ReaderScreenState` 新增搜尋狀態欄位**
+- [x] **Step 1: 在 `_ReaderScreenState` 新增搜尋狀態欄位**
 
 修改 `app/lib/screens/reader_screen.dart`，在既有 `static final _pdfDummyCharacterCountNotifier = ValueNotifier<int?>(null);`（`reader_screen.dart:195`）附近新增：
 
@@ -1283,7 +1283,7 @@ import 'pdf_search_panel.dart';
     // ...（其餘既有內容不變）
 ```
 
-- [ ] **Step 2: 新增 `_searchPdf`／`_goToPdfSearchMatch` 方法**
+- [x] **Step 2: 新增 `_searchPdf`／`_goToPdfSearchMatch` 方法**
 
 在既有 `_openPdfToc()` 方法（`reader_screen.dart:810-831`）之後新增：
 
@@ -1359,7 +1359,7 @@ import 'pdf_search_panel.dart';
   }
 ```
 
-- [ ] **Step 3: 修改 `_openPdfToc()` 傳入 `searchTabContent`**
+- [x] **Step 3: 修改 `_openPdfToc()` 傳入 `searchTabContent`**
 
 修改既有 `_openPdfToc()`（`reader_screen.dart:810-831`）：
 
@@ -1397,12 +1397,12 @@ import 'pdf_search_panel.dart';
 
 `dart:async`（`unawaited` 來源）已於檔案開頭第 1 行 `import 'dart:async';` 既有，不需新增。
 
-- [ ] **Step 4: `flutter analyze` 確認乾淨**
+- [x] **Step 4: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 5: 撰寫搜尋端對端測試**
+- [x] **Step 5: 撰寫搜尋端對端測試**
 
 在 `app/test/screens/reader_screen_test.dart` 既有 Issue 5 新增的三則 PDF 目錄測試之後新增：
 
@@ -1561,17 +1561,17 @@ Expected: `No issues found!`
 import 'package:elinkbook/screens/pdf_search_panel.dart';
 ```
 
-- [ ] **Step 6: 執行測試確認通過**
+- [x] **Step 6: 執行測試確認通過**
 
 Run: `flutter test test/screens/reader_screen_test.dart --plain-name "PDF 搜尋" --reporter expanded`
 Expected: 3 項全數通過。
 
-- [ ] **Step 7: 重複執行 3 次確認無間歇性失敗**
+- [x] **Step 7: 重複執行 3 次確認無間歇性失敗**
 
 Run（重複 3 次）：`flutter test test/screens/reader_screen_test.dart --plain-name "PDF 搜尋"`
 Expected: 3 次執行皆全數通過（比照 Issue 4/5 審查發現 Timer/動畫時序競態的教訓，新增的非同步互動測試務必重跑數次確認穩定）。
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add app/lib/screens/reader_screen.dart app/test/screens/reader_screen_test.dart
@@ -1584,12 +1584,12 @@ git commit -m "feat(epic-24): ReaderScreen 接上 PDF 搜尋執行與上一個/�
 
 **Files:** 無新增/修改，純驗證。
 
-- [ ] **Step 1: 全量 `flutter analyze`**
+- [x] **Step 1: 全量 `flutter analyze`**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 2: Issue 6 相關測試檔案合併執行三次，確認無間歇性失敗**
+- [x] **Step 2: Issue 6 相關測試檔案合併執行三次，確認無間歇性失敗**
 
 Run（重複 3 次）：
 ```bash
@@ -1600,12 +1600,12 @@ flutter test test/reader/pdf_search_geometry_test.dart test/reader/pdf_search_st
 ```
 Expected: 3 次執行皆全數通過。
 
-- [ ] **Step 3: 全專案測試套件**
+- [x] **Step 3: 全專案測試套件**
 
 Run: `flutter test`
 Expected: 全數通過，通過總數應為 Issue 5 合併時的基準（1094）之上，新增本工單測試數（Task1 +8、Task2 +3、Task3 +7、Task4 +2、Task5 +7、Task6 +3，共 +30）。
 
-- [ ] **Step 4: 對照 `issues.md` Issue 6 驗收條件逐項自我檢查**
+- [x] **Step 4: 對照 `issues.md` Issue 6 驗收條件逐項自我檢查**
 
 - 輸入關鍵字後，正確找出文件內所有符合位置並以高亮標示——Task 3（`_search`／`_buildSearchHighlightWidget`）。
 - 「下一個/上一個」導覽正確依序跳轉至各符合位置對應頁面——Task 6（`_goToPdfSearchMatch`）。
@@ -1614,11 +1614,11 @@ Expected: 全數通過，通過總數應為 Issue 5 合併時的基準（1094）
 - 單元測試：`flutter test` 對含可搜尋文字的 fixture 驗證搜尋結果數量、位置、導覽行為——Task 3／Task 6。
 - `flutter analyze` 乾淨、`flutter test` 全數通過——Step 1／Step 3。
 
-- [ ] **Step 5: 更新本工單計畫檔案的完成狀態**
+- [x] **Step 5: 更新本工單計畫檔案的完成狀態**
 
-回頭把本檔案（`docs/epics/epic-24-pdf-engine-rebuild/plans/plan-issue-6.md`）所有已完成 Task 的 `- [ ]` 改為 `- [x]`。
+回頭把本檔案（`docs/epics/epic-24-pdf-engine-rebuild/plans/plan-issue-6.md`）所有已完成 Task 的 `- [x]` 改為 `- [x]`。
 
-- [ ] **Step 6: 提交追蹤性 commit（若 Step 5 有變更）**
+- [x] **Step 6: 提交追蹤性 commit（若 Step 5 有變更）**
 
 ```bash
 git add docs/epics/epic-24-pdf-engine-rebuild/plans/plan-issue-6.md
