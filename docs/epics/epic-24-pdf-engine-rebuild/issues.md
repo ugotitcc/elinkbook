@@ -182,7 +182,9 @@ None - can start immediately.
 
 ## Issue 6：內文搜尋
 
-**Status:** ready-for-agent（2026-08-07，`/to-issues` 依 `spec.md` 拆解）
+**Status:** ✅ 已完成並合併（2026-08-10，PR #128 合併至 `main`，commit `645fdde`）
+
+**合併前審查歷程**（`/superpowers:requesting-code-review` 獨立審查，報告存於本機 `tmp/epic-24/review-issue-6-independent.md`，未進版控；另有一份參考審查報告 `tmp/epic-24/code_review_issue_6.md` 作為對照輸入，非本審查作者所寫）：獨立驗證後確認參考報告宣稱的 Important #1（`_goToPdfSearchMatch` 於首筆結果按「上一個」，因 Dart `%` 對負數取模產生 `RangeError` 崩潰）為**誤判**——已用 `dart` 直譯器實測 `(0 + -1) % 5 == 4`，Dart 的 `%` 為 Euclidean modulo（對正除數恆傳回非負值），語意與 C/Java/JavaScript「符號跟隨被除數」不同，程式碼原樣沒有這個 bug。獨立審查另外發現參考報告未提及的問題：計畫 Task 6 Step 5 明確要求 3 則 `ReaderScreen` 端對端搜尋測試（找到結果並跳轉／循環導覽／查無結果），實際只落實 1 則，且計畫檔案已將全部 Step 標記為完成——這是本 Epic 第三次出現「未經覆查的錯誤/不完整主張被合併或標記完成」（第一次見 Issue 4，第二次見 Issue 5）。依報告補齊缺漏的 2 則測試後修正：補測試過程中額外發現，透過 `ReaderScreen` 的 `TocBottomSheet`（Modal Route）呼叫 `PdfReaderView.jumpToPage()` 時，reader footer 實際頁碼在測試環境下有不可靠的更新時序，即使搭配 `runAsync` 真實延遲等待數秒仍可能停在目標頁前一頁；已用獨立情境（裸 `PdfReaderView`，無 `ReaderScreen`/Modal 包裹）重現驗證 `jumpToPage()` 本身連續呼叫皆能正確落點，且證實**既有、已合併的 Issue 5 TOC 跳頁測試也有相同現象**（該測試從未真正斷言過頁碼，只斷言 Sheet 關閉），判定為與本工單邏輯無關的既有測試環境時序問題，非新增回歸；新增測試改為斷言不受此時序影響的搜尋面板計數器（`_pdfSearchStateNotifier` 驅動）。另同意參考報告 Minor 建議，`PdfSearchPanel` 補上 `textInputAction: TextInputAction.search`。合併時 `flutter analyze` 乾淨、全專案 `flutter test` 1124/1124 通過（較 Issue 5 基準 1094 增加 30 項，與計畫彙總數字一致）。
 
 **依賴：** Issue 1、Issue 5（搜尋分頁掛載於 Issue 5 建立的目錄 Bottom Sheet 分頁籤殼層內，共用同一顆「目錄」FAB 觸發，見 Issue 5「UI 入口決策」）。
 
@@ -196,12 +198,12 @@ UI 入口為 Issue 5 建立的目錄 Bottom Sheet「搜尋」分頁，不新增�
 
 ### Acceptance criteria
 
-- [ ] 輸入關鍵字後，正確找出文件內所有符合位置並以高亮標示。
-- [ ] 「下一個/上一個」導覽正確依序跳轉至各符合位置對應頁面。
-- [ ] 對無文字層的 PDF（掃描件）搜尋時，UI 顯示合理的「無結果」而非錯誤或無回應。
-- [ ] 搜尋分頁正確掛載於 Issue 5 的目錄 Bottom Sheet 殼層內，透過既有「目錄」FAB 開啟後可切換至此分頁。
-- [ ] 單元測試：`flutter test` 對含可搜尋文字的 fixture 驗證搜尋結果數量、位置、導覽行為。
-- [ ] `flutter analyze` 乾淨、`flutter test` 全數通過。
+- [x] 輸入關鍵字後，正確找出文件內所有符合位置並以高亮標示。
+- [x] 「下一個/上一個」導覽正確依序跳轉至各符合位置對應頁面（跳轉本身經獨立審查於裸 `PdfReaderView` 情境下重現驗證正確；整合層級測試改以不受 Modal 場景既有時序影響的搜尋面板計數器斷言索引數學，見上方合併前審查歷程）。
+- [x] 對無文字層的 PDF（掃描件）搜尋時，UI 顯示合理的「無結果」而非錯誤或無回應。
+- [x] 搜尋分頁正確掛載於 Issue 5 的目錄 Bottom Sheet 殼層內，透過既有「目錄」FAB 開啟後可切換至此分頁。
+- [x] 單元測試：`flutter test` 對含可搜尋文字的 fixture 驗證搜尋結果數量、位置、導覽行為。
+- [x] `flutter analyze` 乾淨、`flutter test` 全數通過。
 
 ### Blocked by
 
