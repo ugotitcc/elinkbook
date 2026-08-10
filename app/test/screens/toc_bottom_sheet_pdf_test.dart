@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:elinkbook/reader/book_format.dart';
 import 'package:elinkbook/reader/dual_page_direction.dart';
 import 'package:elinkbook/reader/dual_page_mode.dart';
 import 'package:elinkbook/reader/pdf_crop_mode.dart';
@@ -124,5 +125,39 @@ void main() {
 
     expect(find.byKey(const Key('toc_bottom_sheet_empty_text')), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('PDF 格式下顯示三個分頁籤，且縮圖與搜尋分頁顯示佔位文字', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: TocBottomSheet(
+          format: BookFormat.pdf,
+          entries: [ch1],
+          initiallyExpandedEntries: const {},
+          currentEntry: null,
+          totalCharacterCountListenable: ValueNotifier<int?>(null),
+          resolved: _testResolved,
+          onEntrySelected: (_) {},
+        ),
+      ),
+    ));
+
+    expect(find.byType(TabBar), findsOneWidget);
+    expect(find.text('章節目錄'), findsOneWidget);
+    expect(find.text('縮圖'), findsOneWidget);
+    expect(find.text('搜尋'), findsOneWidget);
+
+    // 預設顯示章節目錄
+    expect(find.byKey(const Key('toc_bottom_sheet_list')), findsOneWidget);
+
+    // 切換到縮圖分頁
+    await tester.tap(find.text('縮圖'));
+    await tester.pumpAndSettle();
+    expect(find.text('此功能將於後續版本提供'), findsOneWidget);
+
+    // 切換到搜尋分頁
+    await tester.tap(find.text('搜尋'));
+    await tester.pumpAndSettle();
+    expect(find.text('此功能將於後續版本提供'), findsOneWidget);
   });
 }

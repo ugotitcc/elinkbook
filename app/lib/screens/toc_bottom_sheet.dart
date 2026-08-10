@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../reader/book_format.dart';
 import '../reader/book_toc_item.dart';
 import '../reader/epub_page_estimator.dart';
 import '../reader/pdf_toc_item.dart';
@@ -31,6 +32,7 @@ import '../reader/toc_entry.dart';
 /// 透過同一個介面傳入，`_buildEntryRow` 內部以 `is TocEntry`／
 /// `is PdfTocItem` 分流頁碼顯示邏輯。
 class TocBottomSheet extends StatefulWidget {
+  final BookFormat? format;
   final List<BookTocItem> entries;
 
   /// 開啟當下的預設展開集合（通常是 `TocNavigator.findCurrentPath`／
@@ -55,6 +57,7 @@ class TocBottomSheet extends StatefulWidget {
 
   const TocBottomSheet({
     super.key,
+    this.format,
     required this.entries,
     required this.initiallyExpandedEntries,
     required this.currentEntry,
@@ -114,48 +117,77 @@ class _TocBottomSheetState extends State<TocBottomSheet> {
     });
   }
 
+  Widget _buildTocList(int? totalCharacterCount) {
+    final isEmpty = widget.entries.isEmpty;
+    return ListView.builder(
+      key: const Key('toc_bottom_sheet_list'),
+      shrinkWrap: true,
+      padding: const EdgeInsets.all(16),
+      // +1：索引 0 固定是標題列；entries 為空時額外 +1 顯示提示列；
+      // 其餘索引對應 _visibleRows[index - 1]。
+      itemCount: _visibleRows.length + 1 + (isEmpty ? 1 : 0),
+      itemBuilder: (context, index) {
+        if (index == 0) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('📖 目錄',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                IconButton(
+                  key: const Key('toc_bottom_sheet_close_button'),
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ],
+            ),
+          );
+        }
+        if (isEmpty && index == 1) {
+          return const Padding(
+            key: Key('toc_bottom_sheet_empty_text'),
+            padding: EdgeInsets.symmetric(vertical: 24),
+            child: Center(child: Text('本書無目錄資料')),
+          );
+        }
+        return _buildEntryRow(_visibleRows[index - 1], totalCharacterCount);
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
       child: ValueListenableBuilder<int?>(
         valueListenable: widget.totalCharacterCountListenable,
         builder: (context, totalCharacterCount, _) {
-          final isEmpty = widget.entries.isEmpty;
-          return ListView.builder(
-            key: const Key('toc_bottom_sheet_list'),
-            shrinkWrap: true,
-            padding: const EdgeInsets.all(16),
-            // +1：索引 0 固定是標題列；entries 為空時額外 +1 顯示提示列；
-            // 其餘索引對應 _visibleRows[index - 1]。
-            itemCount: _visibleRows.length + 1 + (isEmpty ? 1 : 0),
-            itemBuilder: (context, index) {
-              if (index == 0) {
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('📖 目錄',
-                          style: TextStyle(fontWeight: FontWeight.bold)),
-                      IconButton(
-                        key: const Key('toc_bottom_sheet_close_button'),
-                        icon: const Icon(Icons.close),
-                        onPressed: () => Navigator.of(context).pop(),
-                      ),
+          if (widget.format == BookFormat.pdf) {
+            return DefaultTabController(
+              length: 3,
+              child: Column(
+                children: [
+                  const TabBar(
+                    tabs: [
+                      Tab(text: '章節目錄'),
+                      Tab(text: '縮圖'),
+                      Tab(text: '搜尋'),
                     ],
                   ),
-                );
-              }
-              if (isEmpty && index == 1) {
-                return const Padding(
-                  key: Key('toc_bottom_sheet_empty_text'),
-                  padding: EdgeInsets.symmetric(vertical: 24),
-                  child: Center(child: Text('本書無目錄資料')),
-                );
-              }
-              return _buildEntryRow(_visibleRows[index - 1], totalCharacterCount);
-            },
-          );
+                  Expanded(
+                    child: TabBarView(
+                      children: [
+                        _buildTocList(totalCharacterCount),
+                        const Center(child: Text('此功能將於後續版本提供')),
+                        const Center(child: Text('此功能將於後續版本提供')),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+          return _buildTocList(totalCharacterCount);
         },
       ),
     );

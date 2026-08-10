@@ -779,6 +779,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     );
     _showThemedModalBottomSheet<void>(
       builder: (_) => TocBottomSheet(
+        format: BookFormat.epub,
         entries: _tocEntries,
         initiallyExpandedEntries: currentPath.toSet(),
         currentEntry: currentPath.isEmpty ? null : currentPath.last,
@@ -807,6 +808,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         PdfTocNavigator.findCurrentPath(_pdfTocEntries, _pdfPageInfo?.pageIndex);
     _showThemedModalBottomSheet<void>(
       builder: (_) => TocBottomSheet(
+        format: BookFormat.pdf,
         entries: _pdfTocEntries,
         initiallyExpandedEntries: currentPath.toSet(),
         currentEntry: currentPath.isEmpty ? null : currentPath.last,
