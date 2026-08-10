@@ -4,6 +4,10 @@ import 'package:pdfrx/pdfrx.dart';
 import 'package:elinkbook/reader/pdf_reader_view.dart';
 import 'package:elinkbook/reader/pdf_toc_item.dart';
 
+// 注意：`sample.pdf` 已改為正常頁面尺寸（612×792），因舊版 200×200 極小
+// 頁面會讓 `pdfrx` 的 `InteractiveViewer` 於 `maxScale >= minScale` 斷言失敗。
+// 此變更為必要修正，非隨意異動。
+
 void main() {
   setUp(() => pdfrxInitialize());
 
