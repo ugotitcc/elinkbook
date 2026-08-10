@@ -628,7 +628,9 @@ void main() {
     tester.widget<PdfReaderView>(find.byType(PdfReaderView)).onPageRendered();
     await tester.pump();
 
-    await tester.tap(find.byKey(const Key('reader_layout_settings_button')));
+    // epic-24 Issue 8：PDF 不再使用 AppBar，設定按鈕改為 FAB。
+    // 直接呼叫 onPressed callback 繞過 PdfReaderView gesture arena 問題。
+    tester.widget<IconButton>(find.byKey(const Key('reader_pdf_settings_button'))).onPressed!();
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('pdf_settings_tab_crop')));
     await tester.pumpAndSettle();
@@ -5316,7 +5318,9 @@ void main() {
         }
       });
 
-      await tester.tap(find.byKey(const Key('reader_layout_settings_button')));
+      // epic-24 Issue 8：PDF 不再使用 AppBar，設定按鈕改為 FAB。
+      // 直接呼叫 onPressed callback 繞過 PdfReaderView gesture arena 問題。
+      tester.widget<IconButton>(find.byKey(const Key('reader_pdf_settings_button'))).onPressed!();
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('pdf_settings_tab_crop')));
       await tester.pumpAndSettle();
@@ -5362,7 +5366,9 @@ void main() {
         }
       });
 
-      await tester.tap(find.byKey(const Key('reader_layout_settings_button')));
+      // epic-24 Issue 8：PDF 不再使用 AppBar，設定按鈕改為 FAB。
+      // 直接呼叫 onPressed callback 繞過 PdfReaderView gesture arena 問題。
+      tester.widget<IconButton>(find.byKey(const Key('reader_pdf_settings_button'))).onPressed!();
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('pdf_settings_tab_crop')));
       await tester.pumpAndSettle();
