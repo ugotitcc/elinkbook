@@ -175,6 +175,23 @@ class PdfReaderView extends StatefulWidget {
     if (state is! _PdfReaderViewState) return const [];
     return state._loadTableOfContents();
   }
+
+  /// 產生第 [pageIndex] 頁（0-indexed）的縮圖，寬度縮放至 [maxWidth]、
+  /// 高度依頁面原始長寬比等比例換算（epic-24-pdf-engine-rebuild
+  /// Issue 7）。文件尚未開啟完成、[pageIndex] 超出範圍、或 [key] 尚未掛載
+  /// 時回傳 `null`，比照 [search]／[loadTableOfContents] 等既有靜態
+  /// helper 的靜默忽略慣例。呼叫端負責在使用完畢後釋放回傳影像（
+  /// `dispose()`）——[PdfThumbnailPanel] 透過 `PdfThumbnailCache` 管理
+  /// 生命週期，見 `pdf_thumbnail_cache.dart`／`pdf_thumbnail_panel.dart`。
+  static Future<ui.Image?> renderThumbnail(
+    GlobalKey<State<PdfReaderView>> key,
+    int pageIndex, {
+    required double maxWidth,
+  }) async {
+    final state = key.currentState;
+    if (state is! _PdfReaderViewState) return null;
+    return state._renderThumbnail(pageIndex, maxWidth);
+  }
 }
 
 class _PdfReaderViewState extends State<PdfReaderView> {
@@ -283,6 +300,30 @@ class _PdfReaderViewState extends State<PdfReaderView> {
       }
     }
     return matches;
+  }
+
+  /// 不使用 Isolate——`page.render()` 本身透過 pdfrx FFI 非同步呼叫取得
+  /// 指定尺寸的頁面圖片，不涉及額外的純 Dart 像素運算（與 Issue 3
+  /// `_detectCropRect`／`_recomputeOverlay` 呼叫 `page.render()` 的既有
+  /// 模式相同，兩者皆未用 Isolate 包裹這個呼叫本身，見 Global
+  /// Constraints）。[maxWidth] 是縮圖目標寬度（邏輯像素），高度依頁面
+  /// 原始長寬比等比例換算，避免縮圖影像變形。
+  Future<ui.Image?> _renderThumbnail(int pageIndex, double maxWidth) async {
+    final document = _document;
+    if (document == null) return null;
+    if (pageIndex < 0 || pageIndex >= document.pages.length) return null;
+    final page = document.pages[pageIndex];
+    final scale = maxWidth / page.width;
+    final rendered = await page.render(
+      fullWidth: maxWidth,
+      fullHeight: page.height * scale,
+    );
+    if (rendered == null) return null;
+    try {
+      return await rendered.createImage();
+    } finally {
+      rendered.dispose();
+    }
   }
 
   /// `PdfOutlineNode.dest?.pageNumber` 是 1-indexed（已查證
