@@ -5684,9 +5684,12 @@ void main() {
 
     // 驗證 Chapter 5 存在於目錄中
     expect(find.text('Chapter 5'), findsOneWidget);
-    
-    // 注意：由於 pdfrx 在測試環境中的限制，點擊跳轉功能需要在真機上驗證。
-    // 此測試僅驗證目錄正確載入且 Bottom Sheet 正確顯示。
+
+    // 點選 Chapter 5 後，Bottom Sheet 應關閉（Navigator.pop 生效）。
+    await tester.tap(find.text('Chapter 5'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.byType(TocBottomSheet), findsNothing);
   });
 
   testWidgets('無大綱的 PDF 開啟後，openPdfToc 顯示空清單提示而非崩潰', (tester) async {
