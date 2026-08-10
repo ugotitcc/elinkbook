@@ -8,6 +8,7 @@ import 'package:elinkbook/reader/nav_zone_mode.dart';
 import 'package:elinkbook/reader/page_turn_mode.dart';
 import 'package:elinkbook/reader/resolved_preferences.dart';
 import 'package:elinkbook/reader/screen_orientation_setting.dart';
+import 'package:elinkbook/reader/book_toc_item.dart';
 import 'package:elinkbook/reader/toc_entry.dart';
 import 'package:elinkbook/screens/toc_bottom_sheet.dart';
 
@@ -104,7 +105,7 @@ void main() {
 
   testWidgets('點選項目標題觸發 onEntrySelected 並傳遞正確的 TocEntry',
       (tester) async {
-    TocEntry? selected;
+    BookTocItem? selected;
     await tester.pumpWidget(MaterialApp(
       home: Scaffold(
         body: TocBottomSheet(
