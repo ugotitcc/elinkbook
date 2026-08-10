@@ -1,6 +1,6 @@
 # Epic 24 Issue 8 — 閱讀工具列 FAB 化（6 顆按鈕整合）Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** PDF 頂部工具列（現行傳統 `AppBar`）改為浮動圓形按鈕（FAB），視覺與位置比照 EPUB 既有樣式，最終達到與 EPUB 相同的 6 顆 FAB 按鈕（返回／目錄／版面設定／書籤 toggle／筆記／進度-跳頁）；現行「頁面導覽」從常駐畫面底部的元件改為浮動「進度/跳頁」按鈕觸發的 Bottom Sheet；沉浸模式（介面收合/展開）行為與 EPUB 既有機制一致。
 
@@ -31,7 +31,7 @@
 - Consumes: `ZoneAction`（`app/lib/reader/zone_action.dart`，既有 enum，`previousPage`/`nextPage`/`menu`/`none`）。
 - Produces: `PdfReaderView` 新增建構參數 `List<ZoneAction> navZoneActions`（預設全 `none`）、`ValueChanged<ZoneAction>? onZoneAction`（預設 `null`）、`bool showNavZoneDebugOverlay`（預設 `false`）——Task 2 依賴這三個參數。畫面 Key 慣例：`pdf_reader_nav_zone_$index`（`index` 0-8，左上→右下）。
 
-- [ ] **Step 1: 撰寫失敗測試**
+- [x] **Step 1: 撰寫失敗測試**
 
 建立 `app/test/reader/pdf_reader_view_nav_zone_test.dart`：
 
@@ -223,12 +223,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/reader/pdf_reader_view_nav_zone_test.dart`
 Expected: FAIL（`navZoneActions`/`onZoneAction`/`showNavZoneDebugOverlay` 參數尚未定義，編譯錯誤）。
 
-- [ ] **Step 3: 新增建構參數**
+- [x] **Step 3: 新增建構參數**
 
 在 `app/lib/reader/pdf_reader_view.dart` 檔案開頭新增 import（既有 import 區塊，`percent_rect.dart` 之後）：
 
@@ -264,7 +264,7 @@ import 'zone_action.dart';
     this.showNavZoneDebugOverlay = false,
 ```
 
-- [ ] **Step 4: `build()` 疊加 3×3 熱區**
+- [x] **Step 4: `build()` 疊加 3×3 熱區**
 
 修改 `_PdfReaderViewState.build()` 方法末尾的 `return` 陳述式。原本：
 
@@ -355,7 +355,7 @@ import 'zone_action.dart';
 
 （`_pdfZoneActionLabel` 是 `_PdfReaderViewState` 的新增私有方法，緊接在 `build()` 方法之後；上面程式碼區塊的收尾 `}` 對應 `build()` 方法本身的結束括號。）
 
-- [ ] **Step 5: 新增私有 `_PdfNavZoneTapDetector`**
+- [x] **Step 5: 新增私有 `_PdfNavZoneTapDetector`**
 
 在 `app/lib/reader/pdf_reader_view.dart` 檔案最末尾（既有私有類別 `_PdfSelectionDragState` 之後）新增：
 
@@ -421,22 +421,22 @@ class _PdfNavZoneTapDetectorState extends State<_PdfNavZoneTapDetector> {
 }
 ```
 
-- [ ] **Step 6: 執行測試確認通過**
+- [x] **Step 6: 執行測試確認通過**
 
 Run: `flutter test test/reader/pdf_reader_view_nav_zone_test.dart --reporter expanded`
 Expected: 6 項全數通過。
 
-- [ ] **Step 7: 執行既有 PDF 測試確認零回歸**
+- [x] **Step 7: 執行既有 PDF 測試確認零回歸**
 
 Run: `flutter test test/reader/`
 Expected: 全數通過（特別留意 `pdf_reader_view_selection_test.dart`——新增的 Stack 疊層不應影響既有長按選取手勢測試）。
 
-- [ ] **Step 8: `flutter analyze` 確認乾淨**
+- [x] **Step 8: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add app/lib/reader/pdf_reader_view.dart app/test/reader/pdf_reader_view_nav_zone_test.dart
@@ -457,7 +457,7 @@ git commit -m "feat(epic-24): PdfReaderView 新增 3x3 導覽熱區接線（NavZ
 
 本 Task 涵蓋 AppBar 退場、FAB 骨架、進度 Bottom Sheet、書籤圖示反映——刻意不拆成更細的 Task，因為 FAB 骨架（Step 9）直接引用 `_pdfBookmarkAtCurrentPosition`/`_openPdfProgressSheet`（Step 5-6 新增），若拆開會讓其中一個 Task 在另一個完成前無法通過編譯，違反「每個 Task 都有可獨立驗證的成果」原則。
 
-- [ ] **Step 1: 撰寫失敗測試**
+- [x] **Step 1: 撰寫失敗測試**
 
 在 `app/test/screens/reader_screen_test.dart` 既有 PDF 相關測試群組之後（`tearDownAll` 之前）新增：
 
@@ -773,12 +773,12 @@ git commit -m "feat(epic-24): PdfReaderView 新增 3x3 導覽熱區接線（NavZ
   });
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/screens/reader_screen_test.dart --plain-name "PDF"`
 Expected: FAIL（`reader_pdf_*` 按鈕不存在，`pdf_reader_nav_zone_*` 尚未接線，`_pdfBookmarkAtCurrentPosition`/`_openPdfProgressSheet` 未定義，PDF 開書時尚未載入書籤快取）。
 
-- [ ] **Step 3: 移除舊 PDF AppBar**
+- [x] **Step 3: 移除舊 PDF AppBar**
 
 修改 `app/lib/screens/reader_screen.dart` 的 `build()` 方法，`Scaffold` 的 `appBar:` 三元運算式（原本）：
 
@@ -852,7 +852,7 @@ Expected: FAIL（`reader_pdf_*` 按鈕不存在，`pdf_reader_nav_zone_*` 尚未
         return null;
 ```
 
-- [ ] **Step 4: `_buildNativeView` PDF 分支接上導覽熱區**
+- [x] **Step 4: `_buildNativeView` PDF 分支接上導覽熱區**
 
 修改 `_buildNativeView()` 方法中 `case BookFormat.pdf:` 分支的 `PdfReaderView(...)` 建構呼叫，在既有 `onSelectionCanceled: _handlePdfSelectionCanceled,` 之後新增：
 
@@ -878,7 +878,7 @@ Expected: FAIL（`reader_pdf_*` 按鈕不存在，`pdf_reader_nav_zone_*` 尚未
         // 皆已補回。
 ```
 
-- [ ] **Step 5: 移除既有 in-flow PDF `ReaderFooter`，新增 `_openPdfProgressSheet()`**
+- [x] **Step 5: 移除既有 in-flow PDF `ReaderFooter`，新增 `_openPdfProgressSheet()`**
 
 在 `_buildBody()` 方法內，刪除既有 in-flow PDF 頁尾區塊（原本）：
 
@@ -927,7 +927,7 @@ Expected: FAIL（`reader_pdf_*` 按鈕不存在，`pdf_reader_nav_zone_*` 尚未
   }
 ```
 
-- [ ] **Step 6: 新增 `_pdfBookmarkAtCurrentPosition` getter**
+- [x] **Step 6: 新增 `_pdfBookmarkAtCurrentPosition` getter**
 
 在 `_bookmarkAtCurrentPosition` getter 之後新增：
 
@@ -946,7 +946,7 @@ Expected: FAIL（`reader_pdf_*` 按鈕不存在，`pdf_reader_nav_zone_*` 尚未
   }
 ```
 
-- [ ] **Step 7: PDF 開書時一併載入書籤快取（審查意見 Important 1）**
+- [x] **Step 7: PDF 開書時一併載入書籤快取（審查意見 Important 1）**
 
 `_loadFxlBookmarks()` 目前只在「toggle 書籤」與「筆記 Bottom Sheet 關閉後（Step 7→8，僅 `_isFixedLayout`）」被呼叫，`_handlePageRendered()` 從未在 PDF 開書當下呼叫過——這代表使用者開啟一本**過去已加入書籤的 PDF**、翻到已加書籤的頁面時，`_fxlBookmarks` 仍是空陣列，`_pdfBookmarkAtCurrentPosition` 回傳 `null`，Step 8 新增的書籤 FAB 會誤顯示為空心星號，直到使用者手動 toggle 一次或開過一次筆記面板為止。
 
@@ -982,7 +982,7 @@ Expected: FAIL（`reader_pdf_*` 按鈕不存在，`pdf_reader_nav_zone_*` 尚未
     }
 ```
 
-- [ ] **Step 8: 修正 Notes Sheet 關閉後的書籤快取刷新條件**
+- [x] **Step 8: 修正 Notes Sheet 關閉後的書籤快取刷新條件**
 
 修改 `_openNotesSheet()` 方法內 `.then((_) { ... })` 回呼中的既有條件（原本）：
 
@@ -1001,7 +1001,7 @@ Expected: FAIL（`reader_pdf_*` 按鈕不存在，`pdf_reader_nav_zone_*` 尚未
       if (_isFixedLayout || format == BookFormat.pdf) _loadFxlBookmarks();
 ```
 
-- [ ] **Step 9: 新增 6 顆 PDF FAB**
+- [x] **Step 9: 新增 6 顆 PDF FAB**
 
 在 `_buildBody()` 方法內，既有 6 個 EPUB FAB 的 `Positioned` 區塊（`reader_foliate_progress_button` 那一個，`top: 240, right: 16`）之後、頁首/頁尾文字區塊（`if (format == BookFormat.epub && (_resolved?.showHeader ?? false) ...)`）之前，新增對稱的 6 個 PDF FAB 區塊：
 
@@ -1121,27 +1121,27 @@ Expected: FAIL（`reader_pdf_*` 按鈕不存在，`pdf_reader_nav_zone_*` 尚未
               ),
 ```
 
-- [ ] **Step 10: 執行測試確認通過**
+- [x] **Step 10: 執行測試確認通過**
 
 Run: `flutter test test/screens/reader_screen_test.dart --plain-name "PDF"`
 Expected: 全數通過（本 Task 新增 11 則）。
 
-- [ ] **Step 11: 執行既有 EPUB FAB/AppBar 相關測試確認零回歸**
+- [x] **Step 11: 執行既有 EPUB FAB/AppBar 相關測試確認零回歸**
 
 Run: `flutter test test/screens/reader_screen_test.dart`
 Expected: 全數通過。
 
-- [ ] **Step 12: 執行全專案測試確認零回歸**
+- [x] **Step 12: 執行全專案測試確認零回歸**
 
 Run: `flutter test`
 Expected: 全數通過，通過總數為基準 1146 之上 + 17（Task 1 六則 + 本 Task 十一則），合計 1163。若出現與本工單變更無關的既有間歇性失敗（例如 `pdf_reader_view_dual_page_test.dart`，見 Issue 6/7 合併前審查歷程），單獨重跑該檔案確認通過即可，非本工單需修復範圍。
 
-- [ ] **Step 13: `flutter analyze` 確認乾淨**
+- [x] **Step 13: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 14: Commit**
+- [x] **Step 14: Commit**
 
 ```bash
 git add app/lib/screens/reader_screen.dart app/test/screens/reader_screen_test.dart
@@ -1152,22 +1152,22 @@ git commit -m "feat(epic-24): ReaderScreen PDF AppBar 退場，改用 6 顆 FAB�
 
 ### Task 3: 端對端驗證與計畫收尾
 
-- [ ] **Step 1: `flutter analyze` 確認整專案乾淨**
+- [x] **Step 1: `flutter analyze` 確認整專案乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 2: 執行本工單全部相關測試**
+- [x] **Step 2: 執行本工單全部相關測試**
 
 Run: `flutter test test/reader/pdf_reader_view_nav_zone_test.dart test/screens/reader_screen_test.dart`
 Expected: 全數通過，新增本工單測試數（Task 1 +6、Task 2 +11，共 +17）。
 
-- [ ] **Step 3: 執行全專案測試確認零回歸**
+- [x] **Step 3: 執行全專案測試確認零回歸**
 
 Run: `flutter test`
 Expected: 全數通過，通過總數應為 Issue 7 合併時基準（1146）之上，新增 +17（合計 1163）。
 
-- [ ] **Step 4: 對照 `issues.md` Issue 8 驗收條件自我檢查**
+- [x] **Step 4: 對照 `issues.md` Issue 8 驗收條件自我檢查**
 
 逐項確認：
 - PDF 閱讀畫面顯示 6 顆浮動圓形按鈕（返回／目錄／版面設定／書籤 toggle／筆記／進度-跳頁），底色/圖示色正確跟隨 `Theme.of(context)`（Task 2 重用既有 `_themedFabBackgroundColor`/`_themedFabIconColor`）。
@@ -1178,17 +1178,17 @@ Expected: 全數通過，通過總數應為 Issue 7 合併時基準（1146）之
 - 單元測試驗證 6 顆按鈕的顏色/啟用條件/點擊行為（Task 2）。
 - `flutter analyze` 乾淨、全專案 `flutter test` 全數通過（Step 1-3）。
 
-- [ ] **Step 5: 更新本工單計畫檔案的完成狀態**
+- [x] **Step 5: 更新本工單計畫檔案的完成狀態**
 
-將本檔案（`plan-issue-8.md`）中所有已完成 Task 的 `- [ ]` 改為 `- [x]`。
+將本檔案（`plan-issue-8.md`）中所有已完成 Task 的 `- [x]` 改為 `- [x]`。
 
-- [ ] **Step 6: 提交追蹤性 commit（若 Step 5 有變更）**
+- [x] **Step 6: 提交追蹤性 commit（若 Step 5 有變更）**
 
 ```bash
 git add docs/epics/epic-24-pdf-engine-rebuild/plans/plan-issue-8.md
 git commit -m "docs(epic-24): plan-issue-8 全部 Task 標記完成"
 ```
 
-- [ ] **Step 7: 提醒人類後續文件動作（非本工單程式碼範圍）**
+- [x] **Step 7: 提醒人類後續文件動作（非本工單程式碼範圍）**
 
 `issues.md` Issue 8 現行文字仍包含「頁碼顯示正確依是否有 Page Label 呈現雙顯示或純數字」這項驗收條件字面文字，與本計畫 Global Constraints 記錄的範圍決策（Page Label 移出本工單）不完全一致。建議人類決定：(a) 直接編輯 `issues.md` 該行文字改為「僅純數字頁碼，Page Label 另立技術 Spike 評估」，或 (b) 正式登記一張新的、標記 `needs-triage` 的後續 issue。本 Task 不自行修改 `issues.md`（超出「撰寫實作計畫」範圍，且該檔案的異動應如既有慣例走 `/superpowers:receiving-code-review` 而非本計畫直接動筆）。
