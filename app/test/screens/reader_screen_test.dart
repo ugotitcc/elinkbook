@@ -5949,6 +5949,8 @@ void main() {
     for (var i = 0; i < 5; i++) {
       expect(find.byKey(Key('pdf_thumbnail_tile_$i')), findsOneWidget);
     }
+    // 驗證第 6 格不存在——僅可視範圍內建構（Global Constraint）
+    expect(find.byKey(const Key('pdf_thumbnail_tile_5')), findsNothing);
   });
 
   testWidgets('PDF 縮圖：點擊縮圖後正確關閉 Bottom Sheet，不拋出例外', (tester) async {
