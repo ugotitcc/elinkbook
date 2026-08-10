@@ -1502,4 +1502,188 @@ git add docs/epics/epic-24-pdf-engine-rebuild/plans/plan-issue-5.md
 git commit -m "docs(epic-24): plan-issue-5 全部 Task 標記完成"
 ```
 
+---
+
+### Task 7: PDF 目錄 Bottom Sheet 分頁籤殼層（epic-24 Issue 5 審查 Important #2）
+
+**Files:**
+- Modify: `app/lib/screens/toc_bottom_sheet.dart`
+- Modify: `app/lib/screens/reader_screen.dart`
+- Modify: `app/test/screens/toc_bottom_sheet_pdf_test.dart`
+
+**Interfaces:**
+- Consumes: `BookFormat`（`book_format.dart`）。
+- Produces: `TocBottomSheet` 新增 `format` 參數，PDF 格式下渲染 `TabBar` 殼層。
+
+**背景**：`issues.md` Issue 5 的「UI 入口決策」明確要求：「PDF 版本的目錄 Bottom Sheet 須設計為可容納分頁籤（章節目錄／縮圖／搜尋三個分頁），本工單先建立『章節目錄』分頁與承載分頁籤的殼層結構；縮圖分頁（Issue 7）、搜尋分頁（Issue 6）之後各自把內容掛進同一個殼層」。此需求在原始計畫（Task 1-6）中被遺漏，經審查發現後由人類確認納入本工單範圍。
+
+- [x] **Step 1: 確認既有測試現況（作為零回歸基準）**
+
+Run: `flutter test test/screens/toc_bottom_sheet_test.dart test/screens/toc_bottom_sheet_pdf_test.dart -v`
+Expected: 既有 11 項全數通過（toc_bottom_sheet_test 7 項 + toc_bottom_sheet_pdf_test 4 項）。
+
+- [x] **Step 2: 修改 `TocBottomSheet` 新增 `format` 參數與分頁籤結構**
+
+修改 `app/lib/screens/toc_bottom_sheet.dart`：
+
+1. 檔案開頭 import 區塊新增：
+```dart
+import '../reader/book_format.dart';
+```
+
+2. `TocBottomSheet` 類別新增 `format` 欄位：
+```dart
+class TocBottomSheet extends StatefulWidget {
+  final BookFormat? format;
+  final List<BookTocItem> entries;
+  // ... 其餘欄位不變
+```
+
+3. 建構子新增 `this.format` 參數（可選，預設 `null`）：
+```dart
+const TocBottomSheet({
+  super.key,
+  this.format,
+  required this.entries,
+  // ... 其餘參數不變
+});
+```
+
+4. 將既有的 `build()` 內 `ListView.builder` 抽取為 `_buildTocList(int? totalCharacterCount)` 方法。
+
+5. `build()` 方法改為：
+```dart
+@override
+Widget build(BuildContext context) {
+  return SafeArea(
+    child: ValueListenableBuilder<int?>(
+      valueListenable: widget.totalCharacterCountListenable,
+      builder: (context, totalCharacterCount, _) {
+        if (widget.format == BookFormat.pdf) {
+          return DefaultTabController(
+            length: 3,
+            child: Column(
+              children: [
+                const TabBar(
+                  tabs: [
+                    Tab(text: '章節目錄'),
+                    Tab(text: '縮圖'),
+                    Tab(text: '搜尋'),
+                  ],
+                ),
+                Expanded(
+                  child: TabBarView(
+                    children: [
+                      _buildTocList(totalCharacterCount),
+                      const Center(child: Text('此功能將於後續版本提供')),
+                      const Center(child: Text('此功能將於後續版本提供')),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+        return _buildTocList(totalCharacterCount);
+      },
+    ),
+  );
+}
+```
+
+- [x] **Step 3: 修改 `reader_screen.dart` 傳入 `format` 參數**
+
+修改 `app/lib/screens/reader_screen.dart`：
+
+1. `_openToc()` 方法（EPUB）新增 `format: BookFormat.epub`：
+```dart
+void _openToc() {
+  // ...
+  _showThemedModalBottomSheet<void>(
+    builder: (_) => TocBottomSheet(
+      format: BookFormat.epub,
+      entries: _tocEntries,
+      // ...
+    ),
+  );
+}
+```
+
+2. `_openPdfToc()` 方法（PDF）新增 `format: BookFormat.pdf`：
+```dart
+void _openPdfToc() {
+  // ...
+  _showThemedModalBottomSheet<void>(
+    builder: (_) => TocBottomSheet(
+      format: BookFormat.pdf,
+      entries: _pdfTocEntries,
+      // ...
+    ),
+  );
+}
+```
+
+- [x] **Step 4: 新增 PDF 分頁籤測試**
+
+在 `app/test/screens/toc_bottom_sheet_pdf_test.dart` 新增：
+```dart
+testWidgets('PDF 格式下顯示三個分頁籤，且縮圖與搜尋分頁顯示佔位文字', (tester) async {
+  await tester.pumpWidget(MaterialApp(
+    home: Scaffold(
+      body: TocBottomSheet(
+        format: BookFormat.pdf,
+        entries: [ch1],
+        initiallyExpandedEntries: const {},
+        currentEntry: null,
+        totalCharacterCountListenable: ValueNotifier<int?>(null),
+        resolved: _testResolved,
+        onEntrySelected: (_) {},
+      ),
+    ),
+  ));
+
+  // 驗證三個分頁籤存在
+  expect(find.text('章節目錄'), findsOneWidget);
+  expect(find.text('縮圖'), findsOneWidget);
+  expect(find.text('搜尋'), findsOneWidget);
+
+  // 驗證章節目錄分頁顯示目錄內容
+  expect(find.text('Part One'), findsOneWidget);
+
+  // 點擊縮圖分頁，驗證佔位文字
+  await tester.tap(find.text('縮圖'));
+  await tester.pumpAndSettle();
+  expect(find.text('此功能將於後續版本提供'), findsOneWidget);
+
+  // 點擊搜尋分頁，驗證佔位文字
+  await tester.tap(find.text('搜尋'));
+  await tester.pumpAndSettle();
+  expect(find.text('此功能將於後續版本提供'), findsOneWidget);
+});
+```
+
+檔案開頭確認已 import：
+```dart
+import 'package:elinkbook/reader/book_format.dart';
+```
+
+- [x] **Step 5: 執行測試確認通過**
+
+Run: `flutter test test/screens/toc_bottom_sheet_test.dart test/screens/toc_bottom_sheet_pdf_test.dart -v`
+Expected: 12 項全數通過（既有 11 項 + 新增 1 項）。
+
+- [x] **Step 6: `flutter analyze` 確認乾淨**
+
+Run: `flutter analyze`
+Expected: `No issues found!`
+
+- [x] **Step 7: Commit**
+
+```bash
+git add app/lib/screens/toc_bottom_sheet.dart app/lib/screens/reader_screen.dart app/test/screens/toc_bottom_sheet_pdf_test.dart
+git commit -m "feat(epic-24): TocBottomSheet 新增 PDF 分頁籤殼層（章節目錄/縮圖/搜尋）"
+```
+
+---
+
 （後續發 PR／合併／更新 `docs/epics.md`／`issues.md`／`CLAUDE.md` 進度，比照 Issue 1-4 已建立的既有流程，屬本計畫執行完成之後的下一步，不在本計畫範圍內。）
