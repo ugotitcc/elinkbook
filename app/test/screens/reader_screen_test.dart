@@ -5725,6 +5725,57 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('PDF 搜尋："Page" 找到符合結果，顯示計數器', (tester) async {
+    final key = GlobalKey<State<ReaderScreen>>();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          key: key,
+          filePath: 'test/fixtures/sample_multi_page.pdf',
+          bookId: 'b_pdf_search',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+    await tester.runAsync(() async {
+      for (var i = 0; i < 30; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+      }
+    });
+    await tester.pump();
+
+    ReaderScreen.openPdfToc(key);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    await tester.tap(find.text('搜尋'));
+    await tester.pumpAndSettle();
+
+    // 輸入搜尋關鍵字
+    final textField = find.byKey(const Key('pdf_search_field'));
+    expect(textField, findsOneWidget);
+    await tester.enterText(textField, 'Page');
+    await tester.pump(const Duration(milliseconds: 600));
+
+    // 等待搜尋完成
+    await tester.runAsync(() async {
+      for (var i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+      }
+    });
+    await tester.pump();
+
+    // 驗證搜尋面板可見且計數器顯示（搜尋面板內的計數器格式為「1 / 5」，
+    // 與 reader footer 的「1/5」不同，用精確字串比對避免誤判）。
+    expect(find.text('1 / 5'), findsOneWidget);
+  });
+
   tearDownAll(() {
     // 還原 cacheBookForServing 為原始實作，避免污染其他測試檔
     cacheBookForServing = originalCacheBookForServing;
