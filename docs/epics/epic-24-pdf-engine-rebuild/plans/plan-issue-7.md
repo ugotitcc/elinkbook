@@ -1,6 +1,6 @@
 # Epic 24 Issue 7 — 頁碼縮圖（Thumbnails） Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** 以頁碼格狀縮圖呈現整本 PDF 每一頁的縮小預覽圖，點擊縮圖跳轉至對應頁面；縮圖僅於可視附近範圍內產生（不一次性渲染全書），並以有明確上限的快取策略管理縮圖影像記憶體，淘汰時明確釋放。UI 掛載於 Issue 5 建立的目錄 Bottom Sheet「縮圖」分頁。
 
@@ -30,7 +30,7 @@
 **Interfaces:**
 - Produces: `class PdfThumbnailCache<T> { PdfThumbnailCache({required int maxSize, required void Function(T) dispose}); T? get(int key); void put(int key, T value); bool contains(int key); int get length; void clear(); }`——Task 3（`PdfThumbnailPanel`）依賴此類別。
 
-- [ ] **Step 1: 建立 `PdfThumbnailCache<T>`**
+- [x] **Step 1: 建立 `PdfThumbnailCache<T>`**
 
 建立 `app/lib/reader/pdf_thumbnail_cache.dart`：
 
@@ -92,7 +92,7 @@ class PdfThumbnailCache<T> {
 }
 ```
 
-- [ ] **Step 2: 撰寫失敗測試**
+- [x] **Step 2: 撰寫失敗測試**
 
 建立 `app/test/reader/pdf_thumbnail_cache_test.dart`：
 
@@ -187,17 +187,17 @@ void main() {
 }
 ```
 
-- [ ] **Step 3: 執行測試確認通過**
+- [x] **Step 3: 執行測試確認通過**
 
 Run: `flutter test test/reader/pdf_thumbnail_cache_test.dart --reporter expanded`
 Expected: 7 項全數通過（Step 1 已先寫好實作，此步驟純粹是「先寫好完整實作，跑測試驗證行為正確」的驗證步驟——`PdfThumbnailCache` 的 LRU 邏輯屬於一次性可完整定義清楚的演算法，不透過逐一測試驅動增量開發）。
 
-- [ ] **Step 4: `flutter analyze` 確認乾淨**
+- [x] **Step 4: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/lib/reader/pdf_thumbnail_cache.dart app/test/reader/pdf_thumbnail_cache_test.dart
@@ -216,7 +216,7 @@ git commit -m "feat(epic-24): 新增 PdfThumbnailCache 泛型 LRU 快取（純 D
 - Consumes: `PdfReaderView` 既有的 `_document` 欄位（`PdfDocument?`）與 `document.pages[pageIndex]`（`PdfPage`，含 `.width`/`.height`/`.render()`）——皆為既有欄位/pdfrx API，非本工單新增。
 - Produces: `static Future<ui.Image?> PdfReaderView.renderThumbnail(GlobalKey<State<PdfReaderView>> key, int pageIndex, {required double maxWidth})`——Task 5（`ReaderScreen` 接線）依賴此靜態方法。
 
-- [ ] **Step 1: 撰寫失敗測試**
+- [x] **Step 1: 撰寫失敗測試**
 
 建立 `app/test/reader/pdf_reader_view_thumbnail_test.dart`：
 
@@ -333,12 +333,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/reader/pdf_reader_view_thumbnail_test.dart`
 Expected: FAIL（`renderThumbnail` 尚未定義，編譯錯誤）。
 
-- [ ] **Step 3: 新增靜態方法與私有實作**
+- [x] **Step 3: 新增靜態方法與私有實作**
 
 在 `app/lib/reader/pdf_reader_view.dart` 中，於既有 `loadTableOfContents` 靜態方法（`search`／`setSearchHighlights`／`loadTableOfContents` 所在的靜態方法區塊）之後新增：
 
@@ -389,22 +389,22 @@ Expected: FAIL（`renderThumbnail` 尚未定義，編譯錯誤）。
   }
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `flutter test test/reader/pdf_reader_view_thumbnail_test.dart --reporter expanded`
 Expected: 4 項全數通過。
 
-- [ ] **Step 5: 執行既有 PDF 測試確認零回歸**
+- [x] **Step 5: 執行既有 PDF 測試確認零回歸**
 
 Run: `flutter test test/reader/`
 Expected: 全數通過（含既有 Issue 1-6 的 PDF 相關測試，確認新增的靜態/私有方法未影響既有行為）。
 
-- [ ] **Step 6: `flutter analyze` 確認乾淨**
+- [x] **Step 6: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app/lib/reader/pdf_reader_view.dart app/test/reader/pdf_reader_view_thumbnail_test.dart
@@ -423,7 +423,7 @@ git commit -m "feat(epic-24): PdfReaderView 新增 renderThumbnail() 靜態方�
 - Consumes: `PdfThumbnailCache<T>`（Task 1）。
 - Produces: `class PdfThumbnailPanel extends StatefulWidget { const PdfThumbnailPanel({required int totalPages, required Future<ui.Image?> Function(int) renderThumbnail, required ValueChanged<int> onPageSelected}); }`——Task 5（`ReaderScreen` 接線）依賴此 widget。畫面 Key 慣例：`pdf_thumbnail_panel_empty`（空狀態）、`pdf_thumbnail_panel_grid`（`GridView`）、`pdf_thumbnail_tile_$index`（每格縮圖）。
 
-- [ ] **Step 1: 撰寫實作**
+- [x] **Step 1: 撰寫實作**
 
 建立 `app/lib/screens/pdf_thumbnail_panel.dart`：
 
@@ -551,7 +551,7 @@ class _PdfThumbnailPanelState extends State<PdfThumbnailPanel> {
 }
 ```
 
-- [ ] **Step 2: 撰寫測試**
+- [x] **Step 2: 撰寫測試**
 
 建立 `app/test/screens/pdf_thumbnail_panel_test.dart`：
 
@@ -761,17 +761,17 @@ void main() {
 }
 ```
 
-- [ ] **Step 3: 執行測試確認通過**
+- [x] **Step 3: 執行測試確認通過**
 
 Run: `flutter test test/screens/pdf_thumbnail_panel_test.dart --reporter expanded`
 Expected: 7 項全數通過。
 
-- [ ] **Step 4: `flutter analyze` 確認乾淨**
+- [x] **Step 4: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/lib/screens/pdf_thumbnail_panel.dart app/test/screens/pdf_thumbnail_panel_test.dart
@@ -790,7 +790,7 @@ git commit -m "feat(epic-24): 新增 PdfThumbnailPanel widget——GridView 縮�
 - Consumes: 無（純 `Widget?` 插槽，與 Task 1-3 型別無關，維持 `TocBottomSheet` 對其分頁內容不知情的既有解耦設計）。
 - Produces: `TocBottomSheet(..., thumbnailTabContent: Widget?)`——Task 5（`ReaderScreen` 接線）依賴此參數。
 
-- [ ] **Step 1: 撰寫失敗測試**
+- [x] **Step 1: 撰寫失敗測試**
 
 在 `app/test/screens/toc_bottom_sheet_pdf_test.dart` 既有 `searchTabContent` 相關測試（`'傳入 searchTabContent 時...'`／`'未傳入 searchTabContent 時...'`）之後新增：
 
@@ -841,12 +841,12 @@ git commit -m "feat(epic-24): 新增 PdfThumbnailPanel widget——GridView 縮�
   });
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/screens/toc_bottom_sheet_pdf_test.dart`
 Expected: 第一則新測試 FAIL（`thumbnailTabContent` 參數不存在，編譯錯誤；第二則因縮圖分頁目前已是既有佔位文字而通過，但整檔仍因編譯錯誤無法執行）。
 
-- [ ] **Step 3: 新增 `thumbnailTabContent` 參數並接線**
+- [x] **Step 3: 新增 `thumbnailTabContent` 參數並接線**
 
 修改 `app/lib/screens/toc_bottom_sheet.dart`，在既有 `searchTabContent` 欄位宣告之後新增：
 
@@ -876,22 +876,22 @@ Expected: 第一則新測試 FAIL（`thumbnailTabContent` 參數不存在，編�
                       ],
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `flutter test test/screens/toc_bottom_sheet_pdf_test.dart --reporter expanded`
 Expected: 全數通過（既有測試＋新增 2 則）。
 
-- [ ] **Step 5: 執行既有 EPUB 目錄測試確認零回歸**
+- [x] **Step 5: 執行既有 EPUB 目錄測試確認零回歸**
 
 Run: `flutter test test/screens/toc_bottom_sheet_test.dart`
 Expected: 全數通過（EPUB 路徑不受影響——`thumbnailTabContent` 只在 `format == BookFormat.pdf` 分支被消費）。
 
-- [ ] **Step 6: `flutter analyze` 確認乾淨**
+- [x] **Step 6: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app/lib/screens/toc_bottom_sheet.dart app/test/screens/toc_bottom_sheet_pdf_test.dart
@@ -909,7 +909,7 @@ git commit -m "feat(epic-24): TocBottomSheet 新增 thumbnailTabContent 插槽�
 **Interfaces:**
 - Consumes: `PdfReaderView.renderThumbnail`（Task 2）、`PdfThumbnailPanel`（Task 3）、`TocBottomSheet.thumbnailTabContent`（Task 4）。
 
-- [ ] **Step 1: 新增縮圖寬度常數與匯入**
+- [x] **Step 1: 新增縮圖寬度常數與匯入**
 
 在 `app/lib/screens/reader_screen.dart` 檔案開頭既有 import 區塊（`import 'toc_bottom_sheet.dart';`／`import 'pdf_search_panel.dart';` 附近）新增：
 
@@ -929,7 +929,7 @@ import 'pdf_thumbnail_panel.dart';
   static const double _pdfThumbnailMaxWidth = 120;
 ```
 
-- [ ] **Step 2: 撰寫失敗測試**
+- [x] **Step 2: 撰寫失敗測試**
 
 在 `app/test/screens/reader_screen_test.dart` 既有 PDF 搜尋端對端測試群組之後（`tearDownAll` 之前）新增：
 
@@ -1029,12 +1029,12 @@ import 'pdf_thumbnail_panel.dart';
 
 （斷言設計比照 Issue 6 合併前審查歷程的既有教訓：透過 `TocBottomSheet`（Modal Route）呼叫 `PdfReaderView.jumpToPage()` 的實際頁碼變化，在測試環境下有不可靠的更新時序，即使搭配 `runAsync` 真實延遲等待仍可能停在目標頁前一頁——這是既有、與本工單邏輯無關的測試環境時序問題，不在此新增測試中斷言確切跳轉後頁碼，改為斷言 Bottom Sheet 正確關閉且無例外拋出。）
 
-- [ ] **Step 3: 執行測試確認失敗**
+- [x] **Step 3: 執行測試確認失敗**
 
 Run: `flutter test test/screens/reader_screen_test.dart --plain-name "PDF 縮圖"`
 Expected: FAIL（`pdf_thumbnail_tile_*` 找不到，因為「縮圖」分頁目前仍是佔位文字，尚未接上 `PdfThumbnailPanel`）。
 
-- [ ] **Step 4: 接上 `PdfThumbnailPanel`**
+- [x] **Step 4: 接上 `PdfThumbnailPanel`**
 
 修改 `app/lib/screens/reader_screen.dart` 的 `_openPdfToc()` 方法。在既有 `final currentPath = PdfTocNavigator.findCurrentPath(...);` 之後、`_showThemedModalBottomSheet<void>(...)` 呼叫之前，新增一個依裝置螢幕密度換算的縮圖渲染寬度區域變數（審查建議 Minor 1：邏輯像素 120px 在高 PPI 裝置上放大顯示會模糊，乘上 `devicePixelRatio` 取得更清晰畫質；夾限於 `[1.0, 3.0]` 避免極端高 DPI 值讓 24 張快取上限的縮圖佔用過多記憶體，不直接沿用既有 `pageRenderScale()`——該函式下限鎖定 2.0，是為 Issue 3 全頁加粗/裁切覆蓋圖畫質需求設計，套用在縮圖上會讓一般 1x DPI 裝置也被迫渲染 2 倍尺寸，與縮圖「刻意犧牲畫質換取小記憶體占用」的設計目標相違）：
 
@@ -1062,22 +1062,22 @@ Expected: FAIL（`pdf_thumbnail_tile_*` 找不到，因為「縮圖」分頁目�
 
 （`_openPdfToc()` 已有 `if (!_pdfTocLoaded) return;` 防呆，代表呼叫此方法時文件必已成功開啟過，`_pdfPageInfo` 必已由 `onPageChanged` 回報過至少一次，`totalPages` 不會是「文件根本未開啟」情境下的無意義預設值；`?? 0` 純粹是型別系統要求的空值防呆，非真正會在正常流程觸發的分支。）
 
-- [ ] **Step 5: 執行測試確認通過**
+- [x] **Step 5: 執行測試確認通過**
 
 Run: `flutter test test/screens/reader_screen_test.dart --plain-name "PDF 縮圖" --reporter expanded`
 Expected: 2 項全數通過。
 
-- [ ] **Step 6: 重複執行 3 次確認無間歇性失敗**
+- [x] **Step 6: 重複執行 3 次確認無間歇性失敗**
 
 Run（重複 3 次）：`flutter test test/screens/reader_screen_test.dart --plain-name "PDF 縮圖"`
 Expected: 3 次執行皆全數通過（比照 Issue 4/5/6 審查發現 Timer/動畫時序競態的教訓，新增的非同步互動測試務必重跑數次確認穩定）。
 
-- [ ] **Step 7: `flutter analyze` 確認乾淨**
+- [x] **Step 7: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add app/lib/screens/reader_screen.dart app/test/screens/reader_screen_test.dart
@@ -1088,22 +1088,22 @@ git commit -m "feat(epic-24): ReaderScreen 整合 PDF 頁碼縮圖——縮圖�
 
 ### Task 6: 端對端驗證與計畫收尾
 
-- [ ] **Step 1: `flutter analyze` 確認整專案乾淨**
+- [x] **Step 1: `flutter analyze` 確認整專案乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 2: 執行本工單全部相關測試**
+- [x] **Step 2: 執行本工單全部相關測試**
 
 Run: `flutter test test/reader/pdf_thumbnail_cache_test.dart test/reader/pdf_reader_view_thumbnail_test.dart test/screens/pdf_thumbnail_panel_test.dart test/screens/toc_bottom_sheet_pdf_test.dart test/screens/reader_screen_test.dart`
 Expected: 全數通過，新增本工單測試數（Task1 +7、Task2 +4、Task3 +7、Task4 +2、Task5 +2，共 +22）。
 
-- [ ] **Step 3: 執行全專案測試確認零回歸**
+- [x] **Step 3: 執行全專案測試確認零回歸**
 
 Run: `flutter test`
 Expected: 全數通過，通過總數應為 Issue 6 合併時的基準（1124）之上，新增 +22（合計 1146）。若出現與本工單變更無關的既有間歇性失敗（例如 `pdf_reader_view_dual_page_test.dart`，見 Issue 6 合併前審查歷程），單獨重跑該檔案確認通過即可，非本工單需修復範圍。
 
-- [ ] **Step 4: 對照 `issues.md` Issue 7 驗收條件自我檢查**
+- [x] **Step 4: 對照 `issues.md` Issue 7 驗收條件自我檢查**
 
 逐項確認：
 - 縮圖面板正確顯示整本書頁碼縮圖，點擊後正確跳轉至對應頁面（Task 5）。
@@ -1113,11 +1113,11 @@ Expected: 全數通過，通過總數應為 Issue 6 合併時的基準（1124）
 - 單元測試驗證縮圖產生/快取/釋放邏輯，透過可觀察的快取狀態或資源計數斷言（Task 1／Task 3，`debugDisposed`／假物件計數）。
 - `flutter analyze` 乾淨、`flutter test` 全數通過（Step 1-3）。
 
-- [ ] **Step 5: 更新本工單計畫檔案的完成狀態**
+- [x] **Step 5: 更新本工單計畫檔案的完成狀態**
 
-將本檔案（`plan-issue-7.md`）中所有已完成 Task 的 `- [ ]` 改為 `- [x]`。
+將本檔案（`plan-issue-7.md`）中所有已完成 Task 的 `- [x]` 改為 `- [x]`。
 
-- [ ] **Step 6: 提交追蹤性 commit（若 Step 5 有變更）**
+- [x] **Step 6: 提交追蹤性 commit（若 Step 5 有變更）**
 
 ```bash
 git add docs/epics/epic-24-pdf-engine-rebuild/plans/plan-issue-7.md

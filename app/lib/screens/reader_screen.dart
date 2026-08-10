@@ -53,6 +53,7 @@ import 'reader_footer.dart';
 import 'reader_settings_sheet.dart';
 import 'toc_bottom_sheet.dart';
 import 'pdf_search_panel.dart';
+import 'pdf_thumbnail_panel.dart';
 
 /// 音量鍵事件頻道（epic-7-interaction Issue 7）：原生 `MainActivity.
 /// dispatchKeyEvent()` 攔截音量鍵後呼叫 `onVolumeKey`；`_handleVolumeKeyCall`
@@ -820,6 +821,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     if (!_pdfTocLoaded) return;
     final currentPath =
         PdfTocNavigator.findCurrentPath(_pdfTocEntries, _pdfPageInfo?.pageIndex);
+    final pdfThumbnailMaxWidth =
+        _pdfThumbnailMaxWidth * MediaQuery.of(context).devicePixelRatio.clamp(1.0, 3.0);
     _showThemedModalBottomSheet<void>(
       builder: (_) => TocBottomSheet(
         format: BookFormat.pdf,
@@ -835,6 +838,18 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             PdfReaderView.jumpToPage(_pdfReaderViewKey, pageIndex);
           }
         },
+        thumbnailTabContent: PdfThumbnailPanel(
+          totalPages: _pdfPageInfo?.totalPages ?? 0,
+          renderThumbnail: (pageIndex) => PdfReaderView.renderThumbnail(
+            _pdfReaderViewKey,
+            pageIndex,
+            maxWidth: pdfThumbnailMaxWidth,
+          ),
+          onPageSelected: (pageIndex) {
+            Navigator.of(context).pop();
+            PdfReaderView.jumpToPage(_pdfReaderViewKey, pageIndex);
+          },
+        ),
         searchTabContent: PdfSearchPanel(
           searchStateListenable: _pdfSearchStateNotifier,
           initialQuery: _pdfSearchStateNotifier.value.query,
@@ -1528,6 +1543,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   static const _appBarButtonMinWidth = 32.0;
   static const _appBarIconSize = 18.0;
   static const _appBarTitleFontSize = 13.0;
+  static const double _pdfThumbnailMaxWidth = 120;
 
   List<Widget>? _buildAppBarActions(BookFormat format) {
     if (_isFixedLayout) return null;

@@ -55,6 +55,10 @@ class TocBottomSheet extends StatefulWidget {
 
   final ValueChanged<BookTocItem> onEntrySelected;
 
+  /// PDF「縮圖」分頁要顯示的內容（epic-24-pdf-engine-rebuild Issue 7）；
+  /// `null` 時該分頁顯示既有的「此功能將於後續版本提供」佔位文字。
+  final Widget? thumbnailTabContent;
+
   /// PDF「搜尋」分頁要顯示的內容（epic-24-pdf-engine-rebuild Issue 6）；
   /// `null` 時該分頁顯示既有的「此功能將於後續版本提供」佔位文字。本
   /// widget 刻意不知道傳入的是什麼（維持與 `ReaderScreen` 解耦的既有設計
@@ -70,6 +74,7 @@ class TocBottomSheet extends StatefulWidget {
     required this.totalCharacterCountListenable,
     required this.resolved,
     required this.onEntrySelected,
+    this.thumbnailTabContent,
     this.searchTabContent,
   });
 
@@ -185,7 +190,8 @@ class _TocBottomSheetState extends State<TocBottomSheet> {
                     child: TabBarView(
                       children: [
                         _buildTocList(totalCharacterCount),
-                        const Center(child: Text('此功能將於後續版本提供')),
+                        widget.thumbnailTabContent ??
+                            const Center(child: Text('此功能將於後續版本提供')),
                         widget.searchTabContent ??
                             const Center(child: Text('此功能將於後續版本提供')),
                       ],
