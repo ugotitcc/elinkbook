@@ -236,7 +236,7 @@ class _PdfReaderViewState extends State<PdfReaderView> {
         for (final node in nodes)
           PdfTocItem(
             title: node.title,
-            pageIndex: node.dest == null ? null : node.dest!.pageNumber - 1,
+            pageIndex: (node.dest == null || node.dest!.pageNumber <= 0) ? null : node.dest!.pageNumber - 1,
             stableId: 'pdf_toc_${tocIdCounter++}',
             children: convert(node.children),
           ),
