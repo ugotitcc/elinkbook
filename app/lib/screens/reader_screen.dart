@@ -24,6 +24,8 @@ import '../reader/highlights_repository.dart';
 import '../reader/note.dart';
 import '../reader/notes_repository.dart';
 import '../reader/pdf_annotation_decoration.dart';
+import '../reader/pdf_search_match.dart';
+import '../reader/pdf_search_state.dart';
 
 import '../reader/pdf_page_info.dart';
 import '../reader/pdf_crop_frame_overlay.dart';
@@ -50,6 +52,7 @@ import 'pdf_settings_sheet.dart';
 import 'reader_footer.dart';
 import 'reader_settings_sheet.dart';
 import 'toc_bottom_sheet.dart';
+import 'pdf_search_panel.dart';
 
 /// 音量鍵事件頻道（epic-7-interaction Issue 7）：原生 `MainActivity.
 /// dispatchKeyEvent()` 攔截音量鍵後呼叫 `onVolumeKey`；`_handleVolumeKeyCall`
@@ -193,6 +196,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   // 但 TocBottomSheet 的建構子要求 ValueListenable<int?> 參數。
   // 共用同一個靜態實例，避免每次開啟都新建 ValueNotifier（Minor #3 修正）。
   static final _pdfDummyCharacterCountNotifier = ValueNotifier<int?>(null);
+
+  // ── PDF 內文搜尋狀態（epic-24 Issue 6）──
+  final _pdfSearchStateNotifier = ValueNotifier<PdfSearchState>(const PdfSearchState.initial());
+  List<PdfSearchMatch> _pdfSearchMatches = const [];
+  int _pdfSearchRequestId = 0;
 
   _RenderState _state = _RenderState.loading;
   String? _errorMessage;
@@ -422,6 +430,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     WidgetsBinding.instance.removeObserver(this);
     _volumeKeyChannel.setMethodCallHandler(null);
     _totalCharacterCountNotifier.dispose();
+    _pdfSearchStateNotifier.dispose();
     // 離開閱讀畫面時觸發一次位置寫入（spec.md「本機閱讀位置記憶」寫入
     // 時機之一）。不 await——dispose() 是同步方法，且這是離開畫面前的
     // 最後一次呼叫，不需要等待其完成，比照既有 _handlePrefsChanged 不
@@ -826,8 +835,61 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             PdfReaderView.jumpToPage(_pdfReaderViewKey, pageIndex);
           }
         },
+        searchTabContent: PdfSearchPanel(
+          searchStateListenable: _pdfSearchStateNotifier,
+          initialQuery: _pdfSearchStateNotifier.value.query,
+          onQueryChanged: (query) => unawaited(_searchPdf(query)),
+          onNext: () => _goToPdfSearchMatch(1),
+          onPrevious: () => _goToPdfSearchMatch(-1),
+        ),
       ),
     );
+  }
+
+  /// 執行 PDF 內文搜尋（epic-24-pdf-engine-rebuild Issue 6）：呼叫
+  /// [PdfReaderView.search] 取得符合結果，寫回 [_pdfSearchMatches] 供
+  /// [_goToPdfSearchMatch] 使用，並透過 [PdfReaderView.setSearchHighlights]
+  /// 疊加高亮＋跳轉至第一筆符合結果所在頁面。[query] 為空字串時清空搜尋
+  /// 狀態與畫面高亮，不觸發實際搜尋。
+  Future<void> _searchPdf(String query) async {
+    final requestId = ++_pdfSearchRequestId;
+    if (query.isEmpty) {
+      _pdfSearchMatches = const [];
+      PdfReaderView.setSearchHighlights(_pdfReaderViewKey, const [], currentIndex: null);
+      _pdfSearchStateNotifier.value = const PdfSearchState.initial();
+      return;
+    }
+    _pdfSearchStateNotifier.value = PdfSearchState(
+      query: query,
+      isSearching: true,
+      matchCount: 0,
+      currentIndex: null,
+    );
+    final matches = await PdfReaderView.search(_pdfReaderViewKey, query);
+    if (!mounted || requestId != _pdfSearchRequestId) return;
+    _pdfSearchMatches = matches;
+    final currentIndex = matches.isEmpty ? null : 0;
+    PdfReaderView.setSearchHighlights(_pdfReaderViewKey, matches, currentIndex: currentIndex);
+    if (currentIndex != null) {
+      PdfReaderView.jumpToPage(_pdfReaderViewKey, matches[currentIndex].pageIndex);
+    }
+    _pdfSearchStateNotifier.value = PdfSearchState(
+      query: query,
+      isSearching: false,
+      matchCount: matches.length,
+      currentIndex: currentIndex,
+    );
+  }
+
+  /// 導覽至下一個（[delta] = 1）或上一個（[delta] = -1）符合結果，循環
+  /// 至清單另一端（比照常見 PDF 閱讀器/瀏覽器 Ctrl+F 的既有慣例）。
+  void _goToPdfSearchMatch(int delta) {
+    if (_pdfSearchMatches.isEmpty) return;
+    final current = _pdfSearchStateNotifier.value.currentIndex ?? -1;
+    final next = (current + delta) % _pdfSearchMatches.length;
+    PdfReaderView.setSearchHighlights(_pdfReaderViewKey, _pdfSearchMatches, currentIndex: next);
+    PdfReaderView.jumpToPage(_pdfReaderViewKey, _pdfSearchMatches[next].pageIndex);
+    _pdfSearchStateNotifier.value = _pdfSearchStateNotifier.value.copyWith(currentIndex: next);
   }
 
   void _openNotesSheet(BookFormat format) {

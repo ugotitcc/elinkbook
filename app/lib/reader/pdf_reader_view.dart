@@ -18,6 +18,8 @@ import 'pdf_crop_rect.dart';
 import 'pdf_toc_item.dart';
 import 'pdf_selection_geometry.dart';
 import 'pdf_selection_info.dart';
+import 'pdf_search_match.dart';
+import 'pdf_search_geometry.dart';
 import 'percent_rect.dart';
 
 /// 以 pdfrx（PDFium + Dart FFI）為底層的 PDF 閱讀 widget
@@ -135,6 +137,33 @@ class PdfReaderView extends StatefulWidget {
     }
   }
 
+  /// 在目前已開啟的文件內搜尋 [query]（大小寫不敏感），回傳所有符合位置
+  /// （epic-24-pdf-engine-rebuild Issue 6）。文件尚未開啟完成或 [key]
+  /// 尚未掛載時回傳空清單，比照既有靜態 helper 的靜默忽略慣例。
+  static Future<List<PdfSearchMatch>> search(
+    GlobalKey<State<PdfReaderView>> key,
+    String query,
+  ) async {
+    final state = key.currentState;
+    if (state is! _PdfReaderViewState) return const [];
+    return state._search(query);
+  }
+
+  /// 一次性送出目前應高亮顯示的完整符合結果清單（非增量 diff，比照
+  /// [refreshAnnotations] 整組送出慣例）。[currentIndex] 是 [matches]
+  /// 清單中「目前使用者正在檢視」的索引，用不同顏色標示；`null` 代表尚無
+  /// 目前選取的符合結果。
+  static void setSearchHighlights(
+    GlobalKey<State<PdfReaderView>> key,
+    List<PdfSearchMatch> matches, {
+    required int? currentIndex,
+  }) {
+    final state = key.currentState;
+    if (state is _PdfReaderViewState) {
+      state._setSearchHighlights(matches, currentIndex);
+    }
+  }
+
   /// 解析 PDF 內建大綱（Outline／Bookmark），一次性轉換為 [PdfTocItem]
   /// 樹狀結構（epic-24-pdf-engine-rebuild Issue 5）。文件尚未開啟完成
   /// （State 的 `_document` 為 null）或 [key] 尚未掛載時回傳空清單，比照
@@ -211,6 +240,49 @@ class _PdfReaderViewState extends State<PdfReaderView> {
   void _setAnnotations(List<PdfAnnotationDecoration> annotations) {
     if (!mounted) return;
     setState(() => _annotations = annotations);
+  }
+
+  List<PdfSearchMatch> _searchMatches = const [];
+  int? _currentSearchMatchIndex;
+  int _searchSessionId = 0;
+
+  void _setSearchHighlights(List<PdfSearchMatch> matches, int? currentIndex) {
+    setState(() {
+      _searchMatches = matches;
+      _currentSearchMatchIndex = currentIndex;
+    });
+  }
+
+  /// 直接對 [_document] 逐頁呼叫 `loadStructuredText()`／`allMatches()`，
+  /// 不透過 `PdfViewer`／`PdfViewerController`（見 Global Constraints「不
+  /// 使用 PdfTextSearcher」）。[_searchSessionId] 是簡易的搜尋世代編號
+  /// （比照 `PdfTextSearcher._searchSession` 既有設計精神），避免使用者
+  /// 快速輸入導致前一次尚未完成的搜尋，在完成時覆蓋掉更新一次搜尋已經
+  /// 寫入的結果——每次呼叫先遞增世代編號，逐頁掃描過程中若世代編號已被
+  /// 後續呼叫超車就提早回傳空清單，呼叫端（`ReaderScreen`）以最後一次
+  /// 真正跑完的呼叫結果為準。
+  Future<List<PdfSearchMatch>> _search(String query) async {
+    final sessionId = ++_searchSessionId;
+    final document = _document;
+    if (document == null) return const [];
+    final matches = <PdfSearchMatch>[];
+    for (final page in document.pages) {
+      if (sessionId != _searchSessionId) return const [];
+      final text = await page.loadStructuredText();
+      if (sessionId != _searchSessionId) return const [];
+      await for (final m in text.allMatches(query, caseInsensitive: true)) {
+        matches.add(PdfSearchMatch(
+          pageIndex: page.pageNumber - 1,
+          text: m.text,
+          rect: pdfRectToPercentRect(
+            rect: m.bounds,
+            pageWidth: page.width,
+            pageHeight: page.height,
+          ),
+        ));
+      }
+    }
+    return matches;
   }
 
   /// `PdfOutlineNode.dest?.pageNumber` 是 1-indexed（已查證
@@ -641,6 +713,23 @@ class _PdfReaderViewState extends State<PdfReaderView> {
       widgets.add(_buildDragIndicator(drag));
     }
 
+    // 渲染搜尋符合結果高亮（Issue 6）。
+    for (var i = 0; i < _searchMatches.length; i++) {
+      final match = _searchMatches[i];
+      if (match.pageIndex != pageIndex) continue;
+      final visibleRect = _cropEnabled
+          ? originalToCropRelativePercent(rect: match.rect, cropRect: widget.pdfCropRect)
+          : match.rect;
+      if (visibleRect == null) continue; // 完全落在裁切範圍外。
+      widgets.add(_buildSearchHighlightWidget(
+        pageIndex,
+        i,
+        visibleRect,
+        pageRectInViewer.size,
+        isCurrent: i == _currentSearchMatchIndex,
+      ));
+    }
+
     widgets.add(_buildSelectionGestureLayer(pageIndex, pageRectInViewer));
 
     return widgets;
@@ -805,6 +894,43 @@ class _PdfReaderViewState extends State<PdfReaderView> {
               child: Icon(Icons.push_pin, size: 16, color: Colors.black87),
             ),
         ],
+      ),
+    );
+  }
+
+  /// 搜尋符合結果的高亮 widget，畫法比照 [_buildDecorationWidget]
+  /// （同樣的 `PercentRect`→像素換算），[isCurrent] 為 true（目前使用者
+  /// 正在檢視的符合結果）時額外疊加外框（審查修正，
+  /// review-plan-issue-6.md Minor #3）：純粹用半透明橙色／黃色區分在
+  /// E-Ink 灰階顯示或高對比主題下辨識度不足，外框在灰階轉換後仍能維持
+  /// 明顯的邊界對比，不依賴色相差異。
+  Widget _buildSearchHighlightWidget(
+    int pageIndex,
+    int matchIndex,
+    PercentRect visibleRect,
+    Size areaSize, {
+    required bool isCurrent,
+  }) {
+    final rect = Rect.fromLTRB(
+      visibleRect.left * areaSize.width,
+      visibleRect.top * areaSize.height,
+      visibleRect.right * areaSize.width,
+      visibleRect.bottom * areaSize.height,
+    );
+    return Positioned.fromRect(
+      // key 須同時包含 pageIndex 與 matchIndex（matchIndex 是在
+      // _searchMatches 整份清單中的全域索引，非同頁內重新歸零的計數）——
+      // 理由與 _buildDecorationWidget 的既有註解相同：同一頁可能有多筆
+      // 符合結果，只用 pageIndex 當 key 會產生重複 key。
+      key: Key('pdf_reader_search_highlight_${pageIndex}_$matchIndex'),
+      rect: rect,
+      child: Container(
+        decoration: BoxDecoration(
+          color: (isCurrent ? Colors.orange : Colors.yellow).withValues(alpha: 0.4),
+          border: isCurrent
+              ? Border.all(color: Colors.deepOrange, width: 1.5)
+              : null,
+        ),
       ),
     );
   }
