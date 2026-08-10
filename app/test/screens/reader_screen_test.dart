@@ -5910,6 +5910,89 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('PDF 縮圖：切換到縮圖分頁後正確顯示每一頁的縮圖格', (tester) async {
+    final key = GlobalKey<State<ReaderScreen>>();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          key: key,
+          filePath: 'test/fixtures/sample_multi_page.pdf',
+          bookId: 'b_pdf_thumbnails',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+    await tester.runAsync(() async {
+      for (var i = 0; i < 30; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+      }
+    });
+    await tester.pump();
+
+    ReaderScreen.openPdfToc(key);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    await tester.tap(find.text('縮圖'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // 驗證縮圖面板已顯示
+    expect(find.byKey(const Key('pdf_thumbnail_panel_grid')), findsOneWidget);
+
+    // 驗證 5 頁縮圖格皆存在（sample_multi_page.pdf 有 5 頁）
+    for (var i = 0; i < 5; i++) {
+      expect(find.byKey(Key('pdf_thumbnail_tile_$i')), findsOneWidget);
+    }
+  });
+
+  testWidgets('PDF 縮圖：點擊縮圖後正確關閉 Bottom Sheet，不拋出例外', (tester) async {
+    final key = GlobalKey<State<ReaderScreen>>();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          key: key,
+          filePath: 'test/fixtures/sample_multi_page.pdf',
+          bookId: 'b_pdf_thumbnails_click',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+    await tester.runAsync(() async {
+      for (var i = 0; i < 30; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+      }
+    });
+    await tester.pump();
+
+    ReaderScreen.openPdfToc(key);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    await tester.tap(find.text('縮圖'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // 點擊第 3 頁縮圖（index 2）
+    await tester.tap(find.byKey(const Key('pdf_thumbnail_tile_2')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // 驗證 Bottom Sheet 已關閉
+    expect(find.byType(TocBottomSheet), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   tearDownAll(() {
     // 還原 cacheBookForServing 為原始實作，避免污染其他測試檔
     cacheBookForServing = originalCacheBookForServing;
