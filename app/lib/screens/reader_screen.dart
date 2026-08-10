@@ -30,6 +30,8 @@ import '../reader/pdf_crop_frame_overlay.dart';
 import '../reader/pdf_crop_mode.dart';
 import '../reader/pdf_crop_rect.dart';
 import '../reader/pdf_reader_view.dart';
+import '../reader/pdf_toc_item.dart';
+import '../reader/pdf_toc_navigator.dart';
 import '../reader/pdf_selection_info.dart';
 import '../reader/reading_position.dart';
 import '../reader/reader_prefs_manager.dart';
@@ -171,11 +173,27 @@ class ReaderScreen extends StatefulWidget {
       unawaited(state._togglePdfBookmark());
     }
   }
+
+  /// 供測試（Issue 5 範圍：目錄載入/跳轉邏輯已完成，對應 FAB 按鈕留給
+  /// Issue 8）安全呼叫 [_ReaderScreenState._openPdfToc] 的強型別 static
+  /// helper，比照 [togglePdfBookmark] 既有模式。[key] 對應的 State 若尚未
+  /// 掛載，靜默忽略。
+  static void openPdfToc(GlobalKey<State<ReaderScreen>> key) {
+    final state = key.currentState;
+    if (state is _ReaderScreenState) {
+      state._openPdfToc();
+    }
+  }
 }
 
 enum _RenderState { loading, rendered, error }
 
 class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver {
+  // PDF 目錄 Bottom Sheet 不需要字元數快取（頁碼在解析大綱時已知），
+  // 但 TocBottomSheet 的建構子要求 ValueListenable<int?> 參數。
+  // 共用同一個靜態實例，避免每次開啟都新建 ValueNotifier（Minor #3 修正）。
+  static final _pdfDummyCharacterCountNotifier = ValueNotifier<int?>(null);
+
   _RenderState _state = _RenderState.loading;
   String? _errorMessage;
   // 自動偵測結果（來自 onLayoutResolved），唯讀、不持久化，每次開書重新
@@ -230,6 +248,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   // 背景抓取（見 _handleLayoutResolved）。樹狀結構不隨版面設定變動，開書
   // 期間只抓取一次，不需要每次版面參數變動都重新請求。
   List<TocEntry> _tocEntries = const [];
+  List<PdfTocItem> _pdfTocEntries = const [];
+  bool _pdfTocLoaded = false;
   // 審查修正：背景抓取是否已完成（不論結果是否為空清單）。目錄按鈕的
   // onPressed 須同時檢查這個旗標，而不是只檢查 _autoDetectedWritingMode
   // 非 null——否則使用者可能在按鈕剛變成可點擊、但 loadTableOfContents()
@@ -764,6 +784,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     );
     _showThemedModalBottomSheet<void>(
       builder: (_) => TocBottomSheet(
+        format: BookFormat.epub,
         entries: _tocEntries,
         initiallyExpandedEntries: currentPath.toSet(),
         currentEntry: currentPath.isEmpty ? null : currentPath.last,
@@ -771,7 +792,39 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         resolved: _resolved!,
         onEntrySelected: (entry) {
           Navigator.of(context).pop();
-          _jumpToEpubLocator(entry.locatorJson);
+          _jumpToEpubLocator((entry as TocEntry).locatorJson);
+        },
+      ),
+    );
+  }
+
+  /// PDF 版本的目錄開啟（epic-24-pdf-engine-rebuild Issue 5）：本工單只
+  /// 完成資料載入與 Bottom Sheet 顯示邏輯本身，比照 Issue 4 書籤 toggle
+  /// 的既有先例（「toggle 對應的 FAB 按鈕留給 Issue 8 統一接線」）——目前
+  /// 沒有對應的可見按鈕，只能透過 [ReaderScreen.openPdfToc] 這個測試 seam
+  /// 觸發，UI 尚無法直接互動；FAB 接線見 Issue 8。
+  ///
+  /// 背景載入尚未完成（[_pdfTocLoaded] 仍為 false）時直接忽略，比照 EPUB
+  /// 「reader_toc_button」`onPressed: null` 的既有防呆語意（見
+  /// _buildAppBarActions case BookFormat.epub 對 _tocLoaded 的既有判斷）。
+  void _openPdfToc() {
+    if (!_pdfTocLoaded) return;
+    final currentPath =
+        PdfTocNavigator.findCurrentPath(_pdfTocEntries, _pdfPageInfo?.pageIndex);
+    _showThemedModalBottomSheet<void>(
+      builder: (_) => TocBottomSheet(
+        format: BookFormat.pdf,
+        entries: _pdfTocEntries,
+        initiallyExpandedEntries: currentPath.toSet(),
+        currentEntry: currentPath.isEmpty ? null : currentPath.last,
+        totalCharacterCountListenable: _pdfDummyCharacterCountNotifier,
+        resolved: _resolved!,
+        onEntrySelected: (entry) {
+          Navigator.of(context).pop();
+          final pageIndex = (entry as PdfTocItem).pageIndex;
+          if (pageIndex != null) {
+            PdfReaderView.jumpToPage(_pdfReaderViewKey, pageIndex);
+          }
         },
       ),
     );
@@ -870,6 +923,18 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         widget.notesRepository != null) {
       _annotationsLoaded = true;
       _reloadPdfAnnotationsAndSync();
+    }
+    // epic-24-pdf-engine-rebuild Issue 5：PDF 目錄背景載入，比照上方
+    // _annotationsLoaded 的既有旗標模式（先設 true 再發起非同步呼叫，避免
+    // 短時間內重複觸發）。與 EPUB 的 _tocLoaded 觸發點
+    // （_handleFoliateLayoutResolved）刻意不同——PDF 同樣沒有版面解析
+    // 回呼，onPageRendered 是 PDF 開書成功的唯一既有訊號。
+    if (detectBookFormat(widget.filePath) == BookFormat.pdf && !_pdfTocLoaded) {
+      _pdfTocLoaded = true;
+      PdfReaderView.loadTableOfContents(_pdfReaderViewKey).then((items) {
+        if (!mounted) return;
+        setState(() => _pdfTocEntries = items);
+      });
     }
   }
 

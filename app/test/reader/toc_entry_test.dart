@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:elinkbook/reader/book_toc_item.dart';
 import 'package:elinkbook/reader/toc_entry.dart';
 
 void main() {
@@ -53,6 +54,19 @@ void main() {
 
       expect(entry.title, '');
       expect(entry.locatorJson, '');
+    });
+  });
+
+  group('BookTocItem 介面（Issue 5）', () {
+    test('stableId 回傳 locatorJson 本身', () {
+      const entry = TocEntry(title: '第一章', locatorJson: 'l1', progression: 0.0);
+      expect(entry.stableId, 'l1');
+    });
+
+    test('TocEntry 是 BookTocItem', () {
+      const BookTocItem entry =
+          TocEntry(title: '第一章', locatorJson: 'l1', progression: 0.0);
+      expect(entry, isA<BookTocItem>());
     });
   });
 }

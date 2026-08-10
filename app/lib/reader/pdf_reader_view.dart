@@ -15,6 +15,7 @@ import 'pdf_image_filters.dart';
 import 'pdf_filter_debounce.dart';
 import 'pdf_crop_mode.dart';
 import 'pdf_crop_rect.dart';
+import 'pdf_toc_item.dart';
 import 'pdf_selection_geometry.dart';
 import 'pdf_selection_info.dart';
 import 'percent_rect.dart';
@@ -133,6 +134,18 @@ class PdfReaderView extends StatefulWidget {
       state._setAnnotations(annotations);
     }
   }
+
+  /// 解析 PDF 內建大綱（Outline／Bookmark），一次性轉換為 [PdfTocItem]
+  /// 樹狀結構（epic-24-pdf-engine-rebuild Issue 5）。文件尚未開啟完成
+  /// （State 的 `_document` 為 null）或 [key] 尚未掛載時回傳空清單，比照
+  /// [jumpToPage] 等既有靜態 helper 的靜默忽略慣例。
+  static Future<List<PdfTocItem>> loadTableOfContents(
+    GlobalKey<State<PdfReaderView>> key,
+  ) async {
+    final state = key.currentState;
+    if (state is! _PdfReaderViewState) return const [];
+    return state._loadTableOfContents();
+  }
 }
 
 class _PdfReaderViewState extends State<PdfReaderView> {
@@ -198,6 +211,39 @@ class _PdfReaderViewState extends State<PdfReaderView> {
   void _setAnnotations(List<PdfAnnotationDecoration> annotations) {
     if (!mounted) return;
     setState(() => _annotations = annotations);
+  }
+
+  /// `PdfOutlineNode.dest?.pageNumber` 是 1-indexed（已查證
+  /// `pdfrx_engine-0.4.5` 原始碼：`pdf_viewer.dart` 內部一律以
+  /// `dest.pageNumber - 1` 索引 `document.pages[]`），換算為本專案既有的
+  /// 0-indexed `pageIndex` 慣例。`stableId` 用遞增計數器（前序走訪順序）
+  /// 產生，保證整棵樹唯一，不依賴頁碼或標題（大綱可能有多個節點指向
+  /// 同一頁）——計數器刻意宣告為本方法內的區域變數（透過巢狀函式
+  /// `convert` 閉包捕捉），不放在 State 欄位：若放在 State 欄位，
+  /// `loadTableOfContents` 這個 public static API 被短時間內重入呼叫時
+  /// （例如測試或未來呼叫端不慎重複觸發），後一次呼叫的重置會汙染前一次
+  /// 呼叫尚在進行中的走訪計數，導致 `stableId` 不再保證唯一（審查修正，
+  /// review-plan-issue-5.md Important #1）。改為區域變數後，每次呼叫都有
+  /// 各自獨立的計數器，天生具備重入安全性。
+  Future<List<PdfTocItem>> _loadTableOfContents() async {
+    final document = _document;
+    if (document == null) return const [];
+    final outline = await document.loadOutline();
+    var tocIdCounter = 0;
+
+    List<PdfTocItem> convert(List<PdfOutlineNode> nodes) {
+      return [
+        for (final node in nodes)
+          PdfTocItem(
+            title: node.title,
+            pageIndex: (node.dest == null || node.dest!.pageNumber <= 0) ? null : node.dest!.pageNumber - 1,
+            stableId: 'pdf_toc_${tocIdCounter++}',
+            children: convert(node.children),
+          ),
+      ];
+    }
+
+    return convert(outline);
   }
 
   /// contrast/brightness 皆為預設值時回傳 null，讓 build() 省略

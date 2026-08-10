@@ -1,3 +1,5 @@
+import 'book_toc_item.dart';
+
 /// EPUB 目錄樹狀清單的單一節點（epic-5-toc-pagination Issue 4，spec.md
 /// 「目錄模組」）：原生端一次性讀取 `Publication.tableOfContents` 後序列化
 /// 傳來，保留完整巢狀階層（[children]，不攤平）。
@@ -6,7 +8,14 @@
 /// 回傳的「目前章節路徑」與 UI 的展開狀態集合，判斷依據都是「是否為同一個
 /// 節點物件參照」，只要 `entries` 樹狀結構本身在同一次 build 週期內沒有
 /// 被重新解析成新物件，物件識別語意就足夠正確，不需要值相等語意。
-class TocEntry {
+///
+/// 實作 [BookTocItem]（epic-24-pdf-engine-rebuild Issue 5）：[children]
+/// 欄位型別 `List<TocEntry>` 透過 Dart 協變泛型滿足介面宣告的
+/// `List<BookTocItem>`，不需要額外轉換；[stableId] 直接回傳
+/// [locatorJson]，確保既有的 `Key('toc_entry_${entry.locatorJson}')` 等
+/// 既有 Widget Key 命名（`toc_bottom_sheet.dart`）逐位元組不變。
+class TocEntry implements BookTocItem {
+  @override
   final String title;
 
   /// 原生端 `Locator.toJSON().toString()`，透過
@@ -20,7 +29,11 @@ class TocEntry {
   /// 視為錯誤）。
   final double? progression;
 
+  @override
   final List<TocEntry> children;
+
+  @override
+  String get stableId => locatorJson;
 
   const TocEntry({
     required this.title,

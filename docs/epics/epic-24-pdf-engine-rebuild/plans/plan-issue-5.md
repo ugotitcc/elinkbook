@@ -38,7 +38,7 @@
 **Interfaces:**
 - Produces: `abstract class BookTocItem { String get title; String get stableId; List<BookTocItem> get children; }`——後續所有 Task 皆依賴此介面。
 
-- [ ] **Step 1: 建立 `BookTocItem` 抽象介面**
+- [x] **Step 1: 建立 `BookTocItem` 抽象介面**
 
 建立 `app/lib/reader/book_toc_item.dart`：
 
@@ -68,7 +68,7 @@ abstract class BookTocItem {
 }
 ```
 
-- [ ] **Step 2: 驗證協變覆寫可編譯執行（一次性驗證，非長期測試）**
+- [x] **Step 2: 驗證協變覆寫可編譯執行（一次性驗證，非長期測試）**
 
 這一步驗證「`final List<TocEntry> children` 滿足 `List<BookTocItem> get children`」這個協變寫法在 Dart 是合法的。在專案外任意暫存目錄（例如系統暫存目錄）建立 `covariance_check.dart`：
 
@@ -111,7 +111,7 @@ Expected: 印出 `a` 與 `[]`，無編譯錯誤——確認協變覆寫合法且
 
 （本計畫撰寫階段已實際執行過這個驗證，結果如上——這一步是給實作者的可重現確認手續，不是探索性質。）
 
-- [ ] **Step 3: 修改 `TocEntry` 實作 `BookTocItem`**
+- [x] **Step 3: 修改 `TocEntry` 實作 `BookTocItem`**
 
 修改 `app/lib/reader/toc_entry.dart`，在檔案開頭新增 import，並在既有 `class TocEntry {` 前後做最小異動：
 
@@ -177,7 +177,7 @@ class TocEntry implements BookTocItem {
 }
 ```
 
-- [ ] **Step 4: 新增 `stableId` 的最小驗證測試**
+- [x] **Step 4: 新增 `stableId` 的最小驗證測試**
 
 在 `app/test/reader/toc_entry_test.dart` 既有 `void main() {` 的 `group('TocEntry.fromWire', ...)` 區塊之後（同一個 `main()` 內）新增：
 
@@ -198,12 +198,12 @@ class TocEntry implements BookTocItem {
 
 檔案開頭新增 `import 'package:elinkbook/reader/book_toc_item.dart';`。
 
-- [ ] **Step 5: 執行測試確認通過**
+- [x] **Step 5: 執行測試確認通過**
 
 Run: `flutter test test/reader/toc_entry_test.dart -v`
 Expected: 既有 4 項＋新增 2 項，共 6 項全數通過。
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/reader/book_toc_item.dart app/lib/reader/toc_entry.dart app/test/reader/toc_entry_test.dart
@@ -223,7 +223,7 @@ git commit -m "feat(epic-24): 新增 BookTocItem 抽象介面，TocEntry 實作�
 - Consumes: `BookTocItem`（Task 1）。
 - Produces: `class PdfTocItem implements BookTocItem { final String title; final int? pageIndex; final String stableId; final List<PdfTocItem> children; const PdfTocItem({required title, required pageIndex, required stableId, children = const []}); }`；`class PdfTocNavigator { static List<PdfTocItem> findCurrentPath(List<PdfTocItem> entries, int? currentPageIndex); }`——Task 3、Task 5 皆依賴這兩個型別/方法簽章。
 
-- [ ] **Step 1: 建立 `PdfTocItem`**
+- [x] **Step 1: 建立 `PdfTocItem`**
 
 建立 `app/lib/reader/pdf_toc_item.dart`：
 
@@ -263,7 +263,7 @@ class PdfTocItem implements BookTocItem {
 }
 ```
 
-- [ ] **Step 2: 撰寫 `PdfTocNavigator` 的失敗測試**
+- [x] **Step 2: 撰寫 `PdfTocNavigator` 的失敗測試**
 
 建立 `app/test/reader/pdf_toc_navigator_test.dart`：
 
@@ -338,12 +338,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 3: 執行測試確認失敗（`PdfTocNavigator` 尚未建立）**
+- [x] **Step 3: 執行測試確認失敗（`PdfTocNavigator` 尚未建立）**
 
 Run: `flutter test test/reader/pdf_toc_navigator_test.dart`
 Expected: FAIL，錯誤訊息類似 `Target of URI doesn't exist: 'package:elinkbook/reader/pdf_toc_navigator.dart'`。
 
-- [ ] **Step 4: 實作 `PdfTocNavigator`**
+- [x] **Step 4: 實作 `PdfTocNavigator`**
 
 建立 `app/lib/reader/pdf_toc_navigator.dart`：
 
@@ -388,12 +388,12 @@ class PdfTocNavigator {
 }
 ```
 
-- [ ] **Step 5: 執行測試確認通過**
+- [x] **Step 5: 執行測試確認通過**
 
 Run: `flutter test test/reader/pdf_toc_navigator_test.dart -v`
 Expected: 8 項全數通過。
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/reader/pdf_toc_item.dart app/lib/reader/pdf_toc_navigator.dart app/test/reader/pdf_toc_navigator_test.dart
@@ -414,7 +414,7 @@ git commit -m "feat(epic-24): 新增 PdfTocItem 與 PdfTocNavigator（PDF 目錄
 - Consumes: `PdfTocItem`（Task 2）。
 - Produces: `static Future<List<PdfTocItem>> PdfReaderView.loadTableOfContents(GlobalKey<State<PdfReaderView>> key)`——Task 5 依賴此簽章。
 
-- [ ] **Step 1: 產生含巢狀大綱的 PDF fixture**
+- [x] **Step 1: 產生含巢狀大綱的 PDF fixture**
 
 現行 `sample_multi_page.pdf`（Issue 1 產生）雖然已含一份「扁平」大綱（Chapter 1-5、無巢狀），不足以驗證「巢狀層級正確保留」這項驗收條件，需要一份真正含巢狀結構的 fixture。在 `app/test/fixtures/` 目錄下暫時建立 `_gen_sample_pdf_toc.py`：
 
@@ -536,7 +536,7 @@ Expected: 產生 `sample_pdf_toc.pdf`（約 2.9KB），腳本本身執行後刪�
 
 （本計畫撰寫階段已實際跑過這個腳本並用真實 `pdfrx` 驗證輸出——見下方 Step 2 附上的實測結果，不是未經測試的猜測。）
 
-- [ ] **Step 2: 登錄為 pubspec.yaml asset**
+- [x] **Step 2: 登錄為 pubspec.yaml asset**
 
 修改 `app/pubspec.yaml`，在既有 `- test/fixtures/sample_dual_page.pdf` 那一行之後新增一行：
 
@@ -544,7 +544,7 @@ Expected: 產生 `sample_pdf_toc.pdf`（約 2.9KB），腳本本身執行後刪�
     - test/fixtures/sample_pdf_toc.pdf
 ```
 
-- [ ] **Step 3: 撰寫 `loadTableOfContents` 的失敗測試**
+- [x] **Step 3: 撰寫 `loadTableOfContents` 的失敗測試**
 
 建立 `app/test/reader/pdf_reader_view_toc_test.dart`：
 
@@ -646,12 +646,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 4: 執行測試確認失敗**
+- [x] **Step 4: 執行測試確認失敗**
 
 Run: `flutter test test/reader/pdf_reader_view_toc_test.dart`
 Expected: FAIL，`PdfReaderView.loadTableOfContents` 尚未定義。
 
-- [ ] **Step 5: 實作 `PdfReaderView.loadTableOfContents`**
+- [x] **Step 5: 實作 `PdfReaderView.loadTableOfContents`**
 
 修改 `app/lib/reader/pdf_reader_view.dart`，在檔案頂部 import 區塊新增：
 
@@ -712,19 +712,19 @@ import 'pdf_toc_item.dart';
   }
 ```
 
-- [ ] **Step 6: 執行測試確認通過**
+- [x] **Step 6: 執行測試確認通過**
 
 Run: `flutter test test/reader/pdf_reader_view_toc_test.dart -v`
 Expected: 3 項全數通過。
 
 （本計畫撰寫階段已實際執行過與 Step 3 等價的驗證腳本，真實輸出：`Part One`/`dest.pageNumber=1`/2 children（`Chapter 1`→1、`Chapter 2`→2）；`Part Two`/`dest.pageNumber=3`/2 children；`Chapter 5`/`dest.pageNumber=5`/0 children——與 Step 3 測試斷言的 0-indexed 換算值（0/0/1/2/2/3/4）完全吻合。）
 
-- [ ] **Step 7: 執行既有 PDF 測試確認零回歸**
+- [x] **Step 7: 執行既有 PDF 測試確認零回歸**
 
 Run: `flutter test test/reader/pdf_reader_view_test.dart test/reader/pdf_reader_view_selection_test.dart test/reader/pdf_reader_view_dual_page_test.dart test/reader/pdf_reader_view_filters_test.dart -v`
 Expected: 全數通過，無新增失敗。
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add app/test/fixtures/sample_pdf_toc.pdf app/pubspec.yaml app/lib/reader/pdf_reader_view.dart app/test/reader/pdf_reader_view_toc_test.dart
@@ -744,12 +744,12 @@ git commit -m "feat(epic-24): PdfReaderView.loadTableOfContents——解析 pdfr
 - Consumes: `BookTocItem`（Task 1）、`PdfTocItem`（Task 2）。
 - Produces: `TocBottomSheet` 建構參數型別由 `List<TocEntry>`/`Set<TocEntry>`/`TocEntry?`/`ValueChanged<TocEntry>` 全部加寬為 `BookTocItem` 對應版本，其餘參數名稱/型別不變——Task 5 依賴這個加寬後的簽章。
 
-- [ ] **Step 1: 確認既有測試現況（作為零回歸基準）**
+- [x] **Step 1: 確認既有測試現況（作為零回歸基準）**
 
 Run: `flutter test test/screens/toc_bottom_sheet_test.dart -v`
 Expected: 既有 6 項全數通過（修改前的基準線）。
 
-- [ ] **Step 2: 修改 `TocBottomSheet` 型別與內部邏輯**
+- [x] **Step 2: 修改 `TocBottomSheet` 型別與內部邏輯**
 
 修改 `app/lib/screens/toc_bottom_sheet.dart`。在檔案開頭 import 區塊新增：
 
@@ -963,7 +963,7 @@ class _TocBottomSheetState extends State<TocBottomSheet> {
 }
 ```
 
-- [ ] **Step 3: 修正既有測試檔案中唯一因型別加寬而不相容的一行**
+- [x] **Step 3: 修正既有測試檔案中唯一因型別加寬而不相容的一行**
 
 `app/test/screens/toc_bottom_sheet_test.dart` 第 105-125 行「點選項目標題觸發 onEntrySelected 並傳遞正確的 TocEntry」這則測試宣告 `TocEntry? selected;` 並在回呼中賦值——`onEntrySelected` 型別加寬為 `ValueChanged<BookTocItem>` 後，回呼參數的靜態型別是 `BookTocItem`，賦值給 `TocEntry?` 區域變數會編譯錯誤。這是型別加寬後**唯一**需要修正的一行（其餘 5 則測試傳入的 `List<TocEntry>`／`Set<TocEntry>`／`TocEntry` 皆可透過 Dart 協變泛型直接滿足加寬後的參數型別，不需要修改）：
 
@@ -978,12 +978,12 @@ class _TocBottomSheetState extends State<TocBottomSheet> {
 
 檔案開頭新增 `import 'package:elinkbook/reader/book_toc_item.dart';`。
 
-- [ ] **Step 4: 執行既有測試確認零回歸**
+- [x] **Step 4: 執行既有測試確認零回歸**
 
 Run: `flutter test test/screens/toc_bottom_sheet_test.dart -v`
 Expected: 6 項全數通過，與 Step 1 基準線完全一致（僅型別修正，無行為變更）。
 
-- [ ] **Step 5: 撰寫 PDF 專屬情境的失敗測試**
+- [x] **Step 5: 撰寫 PDF 專屬情境的失敗測試**
 
 建立 `app/test/screens/toc_bottom_sheet_pdf_test.dart`：
 
@@ -1118,17 +1118,17 @@ void main() {
 }
 ```
 
-- [ ] **Step 6: 執行測試確認通過**
+- [x] **Step 6: 執行測試確認通過**
 
 Run: `flutter test test/screens/toc_bottom_sheet_pdf_test.dart -v`
 Expected: 4 項全數通過。
 
-- [ ] **Step 7: `flutter analyze` 確認乾淨**
+- [x] **Step 7: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add app/lib/screens/toc_bottom_sheet.dart app/test/screens/toc_bottom_sheet_test.dart app/test/screens/toc_bottom_sheet_pdf_test.dart
@@ -1147,7 +1147,7 @@ git commit -m "feat(epic-24): TocBottomSheet 泛化為消費 BookTocItem，同�
 - Consumes: `PdfTocItem`／`PdfTocNavigator`（Task 2）、`PdfReaderView.loadTableOfContents`（Task 3）、加寬後的 `TocBottomSheet`（Task 4）。
 - Produces: `static void ReaderScreen.openPdfToc(GlobalKey<State<ReaderScreen>> key)`——測試與（Issue 8 之後的）FAB 按鈕皆呼叫此 static helper。
 
-- [ ] **Step 1: 在 `_ReaderScreenState` 新增欄位與載入觸發**
+- [x] **Step 1: 在 `_ReaderScreenState` 新增欄位與載入觸發**
 
 修改 `app/lib/screens/reader_screen.dart`，在既有 `List<TocEntry> _tocEntries = const [];`／`bool _tocLoaded = false;` 欄位附近新增：
 
@@ -1197,7 +1197,7 @@ import '../reader/pdf_toc_navigator.dart';
   }
 ```
 
-- [ ] **Step 2: 新增 `_openPdfToc()` 與 static 測試 seam**
+- [x] **Step 2: 新增 `_openPdfToc()` 與 static 測試 seam**
 
 在既有 `_openToc()` 方法（`app/lib/screens/reader_screen.dart:760`）之後新增：
 
@@ -1249,7 +1249,7 @@ import '../reader/pdf_toc_navigator.dart';
   }
 ```
 
-- [ ] **Step 3: 修改既有 `_openToc()`（EPUB）的 `onEntrySelected` 回呼**
+- [x] **Step 3: 修改既有 `_openToc()`（EPUB）的 `onEntrySelected` 回呼**
 
 `_openToc()`（`app/lib/screens/reader_screen.dart:760`）的 `entries`／`initiallyExpandedEntries`／`currentEntry` 三個參數傳入值型別不變（仍是 `List<TocEntry>`／`Set<TocEntry>`／`TocEntry?`，透過 Dart 協變泛型直接滿足 `TocBottomSheet` 加寬後的參數型別，不需要修改），**只有** `onEntrySelected` 回呼內部需要一次向下轉型（因為回呼參數的靜態型別從 `TocEntry` 加寬為 `BookTocItem`）：
 
@@ -1275,12 +1275,12 @@ import '../reader/pdf_toc_navigator.dart';
   }
 ```
 
-- [ ] **Step 4: `flutter analyze` 確認乾淨**
+- [x] **Step 4: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 5: 撰寫 `openPdfToc` 測試 seam 的失敗測試**
+- [x] **Step 5: 撰寫 `openPdfToc` 測試 seam 的失敗測試**
 
 在 `app/test/screens/reader_screen_test.dart` 既有 PDF 書籤 toggle 兩則測試（約 `:5498` 起）之後新增：
 
@@ -1436,17 +1436,17 @@ import 'package:elinkbook/screens/toc_bottom_sheet.dart';
 
 「跳轉是否真的發生」改用頁尾 `reader_footer_progress_text` 的實際顯示文字驗證，而非嘗試從測試端攔截 `PdfReaderView.jumpToPage` 的內部呼叫（`PdfReaderView` 沒有可供測試查詢「目前頁碼」的介面，`onPageChanged` 是原生端→Dart 的單向回報，不是查詢管道）——這是本計畫撰寫階段實際跑過的驗證手法（以等價的 `ZoneAction.nextPage` 情境驗證：真實頁面切換經過 30 次輪詢等待後，`reader_footer_progress_text` 確實從 `1/6` 更新為 `2/6`），不是未經測試的猜測。
 
-- [ ] **Step 6: 執行測試確認通過**
+- [x] **Step 6: 執行測試確認通過**
 
 Run: `flutter test test/screens/reader_screen_test.dart --plain-name "PDF" --reporter expanded`
 Expected: 新增 3 項＋既有 PDF 相關測試全數通過。
 
-- [ ] **Step 7: 執行既有「目錄入口按鈕不存在」測試確認零回歸**
+- [x] **Step 7: 執行既有「目錄入口按鈕不存在」測試確認零回歸**
 
 Run: `flutter test test/screens/reader_screen_test.dart --plain-name "目錄入口按鈕不存在"`
 Expected: 通過（本工單未新增 `Key('reader_toc_button')` 給 PDF，此測試不需修改）。
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add app/lib/screens/reader_screen.dart app/test/screens/reader_screen_test.dart
@@ -1459,12 +1459,12 @@ git commit -m "feat(epic-24): ReaderScreen 接上 PDF 目錄背景載入與 open
 
 **Files:** 無新增/修改，純驗證。
 
-- [ ] **Step 1: 全量 `flutter analyze`**
+- [x] **Step 1: 全量 `flutter analyze`**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 2: Issue 5 相關測試檔案合併執行三次，確認無間歇性失敗**
+- [x] **Step 2: Issue 5 相關測試檔案合併執行三次，確認無間歇性失敗**
 
 Run（重複 3 次）：
 ```bash
@@ -1475,12 +1475,12 @@ flutter test test/reader/toc_entry_test.dart test/reader/toc_navigator_test.dart
 ```
 Expected: 3 次執行皆全數通過（比照 Issue 4 審查發現 Timer 競態的教訓，合併執行才能真正驗證跨檔案資源競態，不能只信任單檔案執行結果）。
 
-- [ ] **Step 3: 全專案測試套件**
+- [x] **Step 3: 全專案測試套件**
 
 Run: `flutter test`
 Expected: 全數通過，通過總數應為 Issue 4 合併時的 135（`reader_screen_test.dart` 單檔）＋全專案基準之上，新增本工單新增的測試數（Task 1 起算：Task1 +2、Task2 +8、Task3 +3、Task4 +4、Task5 +3，共 +20，另加 `toc_entry_test.dart`／`toc_navigator_test.dart` 本身既有數量）。
 
-- [ ] **Step 4: 對照 `spec.md`／`issues.md` Issue 5 驗收條件逐項自我檢查**
+- [x] **Step 4: 對照 `spec.md`／`issues.md` Issue 5 驗收條件逐項自我檢查**
 
 逐項核對 `docs/epics/epic-24-pdf-engine-rebuild/issues.md` Issue 5 的 Acceptance criteria：
 - `BookTocItem` 抽象介面完成，EPUB 既有目錄 Bottom Sheet 改為消費該介面，EPUB 既有目錄相關測試全數維持通過（零回歸）——Task 1／Task 4。
@@ -1491,15 +1491,199 @@ Expected: 全數通過，通過總數應為 Issue 4 合併時的 135（`reader_s
 - 單元測試：`flutter test` 對含大綱的 fixture 驗證解析結果與跳轉行為；對既有 EPUB 目錄測試確認零回歸——Task 3／Task 4／Task 5。
 - `flutter analyze` 乾淨、`flutter test` 全數通過——Step 1／Step 3。
 
-- [ ] **Step 5: 更新本工單計畫檔案的完成狀態**
+- [x] **Step 5: 更新本工單計畫檔案的完成狀態**
 
 回頭把本檔案（`docs/epics/epic-24-pdf-engine-rebuild/plans/plan-issue-5.md`）所有已完成 Task 的 `- [ ]` 改為 `- [x]`（比照 CLAUDE.md「Task 的 Step 完成後即時反映進度」的既有慣例）。
 
-- [ ] **Step 6: 提交本次驗證的追蹤性 commit（若 Step 5 有變更）**
+- [x] **Step 6: 提交本次驗證的追蹤性 commit（若 Step 5 有變更）**
 
 ```bash
 git add docs/epics/epic-24-pdf-engine-rebuild/plans/plan-issue-5.md
 git commit -m "docs(epic-24): plan-issue-5 全部 Task 標記完成"
 ```
+
+---
+
+### Task 7: PDF 目錄 Bottom Sheet 分頁籤殼層（epic-24 Issue 5 審查 Important #2）
+
+**Files:**
+- Modify: `app/lib/screens/toc_bottom_sheet.dart`
+- Modify: `app/lib/screens/reader_screen.dart`
+- Modify: `app/test/screens/toc_bottom_sheet_pdf_test.dart`
+
+**Interfaces:**
+- Consumes: `BookFormat`（`book_format.dart`）。
+- Produces: `TocBottomSheet` 新增 `format` 參數，PDF 格式下渲染 `TabBar` 殼層。
+
+**背景**：`issues.md` Issue 5 的「UI 入口決策」明確要求：「PDF 版本的目錄 Bottom Sheet 須設計為可容納分頁籤（章節目錄／縮圖／搜尋三個分頁），本工單先建立『章節目錄』分頁與承載分頁籤的殼層結構；縮圖分頁（Issue 7）、搜尋分頁（Issue 6）之後各自把內容掛進同一個殼層」。此需求在原始計畫（Task 1-6）中被遺漏，經審查發現後由人類確認納入本工單範圍。
+
+- [x] **Step 1: 確認既有測試現況（作為零回歸基準）**
+
+Run: `flutter test test/screens/toc_bottom_sheet_test.dart test/screens/toc_bottom_sheet_pdf_test.dart -v`
+Expected: 既有 11 項全數通過（toc_bottom_sheet_test 7 項 + toc_bottom_sheet_pdf_test 4 項）。
+
+- [x] **Step 2: 修改 `TocBottomSheet` 新增 `format` 參數與分頁籤結構**
+
+修改 `app/lib/screens/toc_bottom_sheet.dart`：
+
+1. 檔案開頭 import 區塊新增：
+```dart
+import '../reader/book_format.dart';
+```
+
+2. `TocBottomSheet` 類別新增 `format` 欄位：
+```dart
+class TocBottomSheet extends StatefulWidget {
+  final BookFormat? format;
+  final List<BookTocItem> entries;
+  // ... 其餘欄位不變
+```
+
+3. 建構子新增 `this.format` 參數（可選，預設 `null`）：
+```dart
+const TocBottomSheet({
+  super.key,
+  this.format,
+  required this.entries,
+  // ... 其餘參數不變
+});
+```
+
+4. 將既有的 `build()` 內 `ListView.builder` 抽取為 `_buildTocList(int? totalCharacterCount)` 方法。
+
+5. `build()` 方法改為：
+```dart
+@override
+Widget build(BuildContext context) {
+  return SafeArea(
+    child: ValueListenableBuilder<int?>(
+      valueListenable: widget.totalCharacterCountListenable,
+      builder: (context, totalCharacterCount, _) {
+        if (widget.format == BookFormat.pdf) {
+          return DefaultTabController(
+            length: 3,
+            child: Column(
+              children: [
+                const TabBar(
+                  tabs: [
+                    Tab(text: '章節目錄'),
+                    Tab(text: '縮圖'),
+                    Tab(text: '搜尋'),
+                  ],
+                ),
+                Expanded(
+                  child: TabBarView(
+                    children: [
+                      _buildTocList(totalCharacterCount),
+                      const Center(child: Text('此功能將於後續版本提供')),
+                      const Center(child: Text('此功能將於後續版本提供')),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+        return _buildTocList(totalCharacterCount);
+      },
+    ),
+  );
+}
+```
+
+- [x] **Step 3: 修改 `reader_screen.dart` 傳入 `format` 參數**
+
+修改 `app/lib/screens/reader_screen.dart`：
+
+1. `_openToc()` 方法（EPUB）新增 `format: BookFormat.epub`：
+```dart
+void _openToc() {
+  // ...
+  _showThemedModalBottomSheet<void>(
+    builder: (_) => TocBottomSheet(
+      format: BookFormat.epub,
+      entries: _tocEntries,
+      // ...
+    ),
+  );
+}
+```
+
+2. `_openPdfToc()` 方法（PDF）新增 `format: BookFormat.pdf`：
+```dart
+void _openPdfToc() {
+  // ...
+  _showThemedModalBottomSheet<void>(
+    builder: (_) => TocBottomSheet(
+      format: BookFormat.pdf,
+      entries: _pdfTocEntries,
+      // ...
+    ),
+  );
+}
+```
+
+- [x] **Step 4: 新增 PDF 分頁籤測試**
+
+在 `app/test/screens/toc_bottom_sheet_pdf_test.dart` 新增：
+```dart
+testWidgets('PDF 格式下顯示三個分頁籤，且縮圖與搜尋分頁顯示佔位文字', (tester) async {
+  await tester.pumpWidget(MaterialApp(
+    home: Scaffold(
+      body: TocBottomSheet(
+        format: BookFormat.pdf,
+        entries: [ch1],
+        initiallyExpandedEntries: const {},
+        currentEntry: null,
+        totalCharacterCountListenable: ValueNotifier<int?>(null),
+        resolved: _testResolved,
+        onEntrySelected: (_) {},
+      ),
+    ),
+  ));
+
+  // 驗證三個分頁籤存在
+  expect(find.text('章節目錄'), findsOneWidget);
+  expect(find.text('縮圖'), findsOneWidget);
+  expect(find.text('搜尋'), findsOneWidget);
+
+  // 驗證章節目錄分頁顯示目錄內容
+  expect(find.text('Part One'), findsOneWidget);
+
+  // 點擊縮圖分頁，驗證佔位文字
+  await tester.tap(find.text('縮圖'));
+  await tester.pumpAndSettle();
+  expect(find.text('此功能將於後續版本提供'), findsOneWidget);
+
+  // 點擊搜尋分頁，驗證佔位文字
+  await tester.tap(find.text('搜尋'));
+  await tester.pumpAndSettle();
+  expect(find.text('此功能將於後續版本提供'), findsOneWidget);
+});
+```
+
+檔案開頭確認已 import：
+```dart
+import 'package:elinkbook/reader/book_format.dart';
+```
+
+- [x] **Step 5: 執行測試確認通過**
+
+Run: `flutter test test/screens/toc_bottom_sheet_test.dart test/screens/toc_bottom_sheet_pdf_test.dart -v`
+Expected: 12 項全數通過（既有 11 項 + 新增 1 項）。
+
+- [x] **Step 6: `flutter analyze` 確認乾淨**
+
+Run: `flutter analyze`
+Expected: `No issues found!`
+
+- [x] **Step 7: Commit**
+
+```bash
+git add app/lib/screens/toc_bottom_sheet.dart app/lib/screens/reader_screen.dart app/test/screens/toc_bottom_sheet_pdf_test.dart
+git commit -m "feat(epic-24): TocBottomSheet 新增 PDF 分頁籤殼層（章節目錄/縮圖/搜尋）"
+```
+
+---
 
 （後續發 PR／合併／更新 `docs/epics.md`／`issues.md`／`CLAUDE.md` 進度，比照 Issue 1-4 已建立的既有流程，屬本計畫執行完成之後的下一步，不在本計畫範圍內。）
