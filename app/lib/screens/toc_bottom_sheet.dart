@@ -55,6 +55,12 @@ class TocBottomSheet extends StatefulWidget {
 
   final ValueChanged<BookTocItem> onEntrySelected;
 
+  /// PDF「搜尋」分頁要顯示的內容（epic-24-pdf-engine-rebuild Issue 6）；
+  /// `null` 時該分頁顯示既有的「此功能將於後續版本提供」佔位文字。本
+  /// widget 刻意不知道傳入的是什麼（維持與 `ReaderScreen` 解耦的既有設計
+  /// 原則，見類別 docstring），只負責把它放進分頁籤殼層的第三個分頁。
+  final Widget? searchTabContent;
+
   const TocBottomSheet({
     super.key,
     this.format,
@@ -64,6 +70,7 @@ class TocBottomSheet extends StatefulWidget {
     required this.totalCharacterCountListenable,
     required this.resolved,
     required this.onEntrySelected,
+    this.searchTabContent,
   });
 
   @override
@@ -179,7 +186,8 @@ class _TocBottomSheetState extends State<TocBottomSheet> {
                       children: [
                         _buildTocList(totalCharacterCount),
                         const Center(child: Text('此功能將於後續版本提供')),
-                        const Center(child: Text('此功能將於後續版本提供')),
+                        widget.searchTabContent ??
+                            const Center(child: Text('此功能將於後續版本提供')),
                       ],
                     ),
                   ),

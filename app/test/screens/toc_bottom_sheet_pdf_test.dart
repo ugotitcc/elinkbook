@@ -160,4 +160,48 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('此功能將於後續版本提供'), findsOneWidget);
   });
+
+  testWidgets('傳入 searchTabContent 時，切換到搜尋分頁顯示該內容而非預設佔位文字',
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: TocBottomSheet(
+          format: BookFormat.pdf,
+          entries: const [],
+          initiallyExpandedEntries: const {},
+          currentEntry: null,
+          totalCharacterCountListenable: ValueNotifier<int?>(null),
+          resolved: _testResolved,
+          onEntrySelected: (_) {},
+          searchTabContent: const Text('SEARCH_PANEL_PLACEHOLDER'),
+        ),
+      ),
+    ));
+
+    await tester.tap(find.text('搜尋'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('SEARCH_PANEL_PLACEHOLDER'), findsOneWidget);
+  });
+
+  testWidgets('未傳入 searchTabContent 時，搜尋分頁維持既有佔位文字（零回歸）', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: TocBottomSheet(
+          format: BookFormat.pdf,
+          entries: const [],
+          initiallyExpandedEntries: const {},
+          currentEntry: null,
+          totalCharacterCountListenable: ValueNotifier<int?>(null),
+          resolved: _testResolved,
+          onEntrySelected: (_) {},
+        ),
+      ),
+    ));
+
+    await tester.tap(find.text('搜尋'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('此功能將於後續版本提供'), findsOneWidget, reason: '搜尋分頁維持既有佔位文字（縮圖分頁不在 widget tree 中）');
+  });
 }
