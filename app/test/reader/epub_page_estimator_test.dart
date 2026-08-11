@@ -39,7 +39,9 @@ void main() {
     });
 
     test('lineHeight 為 0.0 時（epic-18-reader-device-qa Issue 25 行高滑桿範圍改為 '
-        '0~3 後可選到的邊界值），不應除以零拋出 UnsupportedError，改回傳箝制後的合理值',
+        '0~3 後可選到的邊界值），不應除以零拋出 UnsupportedError，改箝制在 0.8'
+        '（與 main.js:99 的 Math.max(0.8, prefs.lineHeight) 實際渲染下限一致，'
+        '審查發現，2026-08-11：先前箝制在 0.1 會讓估算與實際渲染結果脫勾）',
         () {
       expect(
         () => EpubPageEstimator.estimateCharsPerScreen(
@@ -55,7 +57,50 @@ void main() {
           screenHeight: 600,
           lineHeight: 0.0,
         ),
-        16215,
+        2021,
+      );
+    });
+
+    test('fontSize 為 0.0 時，不應除以零拋出 UnsupportedError，改箝制在 0.1'
+        '（審查發現，2026-08-11：與 lineHeight 為 0.0 是結構相同的失效模式，'
+        '先前只有 lineHeight 有防護，fontSize 沒有）', () {
+      expect(
+        () => EpubPageEstimator.estimateCharsPerScreen(
+          screenWidth: 800,
+          screenHeight: 600,
+          fontSize: 0.0,
+        ),
+        returnsNormally,
+      );
+      expect(
+        EpubPageEstimator.estimateCharsPerScreen(
+          screenWidth: 800,
+          screenHeight: 600,
+          fontSize: 0.0,
+        ),
+        20000,
+      );
+    });
+
+    test('paragraphSpacing 為極端負值（-9.0）時，不應讓分母歸零拋出 '
+        'UnsupportedError，改箝制在 0.0（審查發現，2026-08-11：'
+        'paragraphSpacingFactor <= -9.0 會讓 1 + (paragraphSpacingFactor - 1) '
+        '* 0.1 歸零）', () {
+      expect(
+        () => EpubPageEstimator.estimateCharsPerScreen(
+          screenWidth: 800,
+          screenHeight: 600,
+          paragraphSpacing: -9.0,
+        ),
+        returnsNormally,
+      );
+      expect(
+        EpubPageEstimator.estimateCharsPerScreen(
+          screenWidth: 800,
+          screenHeight: 600,
+          paragraphSpacing: -9.0,
+        ),
+        1776,
       );
     });
 

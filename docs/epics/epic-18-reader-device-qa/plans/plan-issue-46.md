@@ -12,7 +12,7 @@
 
 - **範圍已由人類定案**：`issues.md` Issue 46 明確記錄兩個技術方向，本計畫採方向 1（精修估算係數），不做方向 2（向 foliate-js 查詢真實分欄數，需新 JS↔Dart 橋接）——不在本計畫範圍內，不得順便夾帶。
 - **`pageMargins` 是死欄位，不得繼續讀取**：`book_reader_prefs.dart:25` 欄位註解明載「僅供 EpubReaderView／FXL 使用」，`EpubReaderView` 已於 `epic-20-fxl-foliate-migration` 完全移除（見 `CLAUDE.md`），目前唯一的 EPUB 渲染路徑（foliate-js）從未讀取這個欄位。改用 `marginTop`/`marginBottom`/`marginLeft`/`marginRight`（`ResolvedPreferences` 既有欄位，`main.js:269-272` 的 `applyPreferences()` 實際使用的就是這 4 個欄位，預設值 32/16/24/24px）。
-- **`lineHeight` 是原始 CSS 倍率、非「相對 1.5 正規化」的比例**：`main.js` 的 `line-height: ${prefs.lineHeight}` 直接使用該值；`ReaderSettingsSheet._defaultLineHeight = 1.0`（`reader_settings_sheet.dart:45`）是目前的真實產品預設值——舊版估算式內部 `?? 1.5` 的預設假設已經過期（未隨 epic-18 Issue 25/26 的產品預設值變動同步更新），本次一併修正為 `?? 1.0`。
+- **`lineHeight` 是原始 CSS 倍率、非「相對 1.5 正規化」的比例**：`ReaderSettingsSheet._defaultLineHeight = 1.0`（`reader_settings_sheet.dart:45`）是目前的真實產品預設值——舊版估算式內部 `?? 1.5` 的預設假設已經過期（未隨 epic-18 Issue 25/26 的產品預設值變動同步更新），本次一併修正為 `?? 1.0`。**〔審查修正，2026-08-11〕**：本行原文誤寫「`main.js` 的 `line-height: ${prefs.lineHeight}` 直接使用該值」，經 `/superpowers:requesting-code-review` 審查查證，`main.js:99` 實際是 `Math.max(0.8, prefs.lineHeight)`（epic-18 Issue 25 新增的下限保護，本計畫撰寫時引述的是過期版本），已同步修正估算式的下限箝制值從 `0.1` 改為 `0.8`，詳見下方 Task 1 完成後的審查修正記錄。
 - **`screenWidth`／`screenHeight` 為必要參數，不提供預設值**：兩個既有呼叫端（`reader_screen.dart`／`toc_bottom_sheet.dart`）都在 `State` 方法內、都能存取 `MediaQuery.of(context).size`，沒有「呼叫端真的不知道螢幕尺寸」的合法情境；用必要參數強制呼叫端傳入真實值，避免未來新增呼叫端時因為偷懶傳入假設值而重蹈舊版「完全忽略螢幕尺寸」的覆轍。
 - **`paragraphSpacing` 維持既有低權重整體壓縮處理，不做幾何化**：段落間距對可視面積的實際影響取決於書本本身的段落密度（未知、不可預先假設），沒有足夠資訊做真正的幾何換算；沿用舊版「套用低權重壓縮因子」的簡化精神，只是套用對象改成新的幾何計算結果。
 - **`flutter analyze` 全程維持乾淨；每個 Task 結束後相關測試全數通過**是每個 Task 的隱含驗收條件。全專案 `flutter test` 基準為 **1152/1152 通過**（見 `epic-24-pdf-engine-rebuild` Issue 8 合併後狀態，本 Epic 與該 Epic 共用同一個 `app/` 專案、同一份測試母數）。
@@ -430,3 +430,17 @@ Expected: 全數通過。Global Constraints 記錄的基準為 1152（Task 1 新
 git add docs/epics/epic-18-reader-device-qa/issues.md docs/epics/epic-18-reader-device-qa/plans/plan-issue-46.md
 git commit -m "docs(epic-18): Issue 46 標記完成，更新頁次估算精準度優化結果"
 ```
+
+---
+
+## 審查修正（`/superpowers:requesting-code-review`，2026-08-11）
+
+分支 `issue-46-epub-page-estimator` 合併前經審查（`tmp/epic-18/review-code-issue-46.md`），發現並修復 2 項 Important、1 項 Minor：
+
+1. **`fontSize` 缺乏下限防護**：`fontSize: 0.0` 會讓 `fontSizePx` 為 0、`charsPerLine` 對 `Infinity` 呼叫 `.floor()` 拋出 `UnsupportedError`——與 `lineHeight` 是同一種失效模式，但先前只有 `lineHeight` 有 `math.max` 防護。已補上對稱防護（`math.max(0.1, fontSize ?? 1.0)`），並新增對稱單元測試。
+2. **`lineHeight` 下限（0.1）與 `main.js` 實際渲染下限（0.8）不一致**：本計畫 Global Constraints 第 3 點引述的 `main.js` 行為已過期（見上方修正註記），導致行高 0.1~0.7 這段使用者可直接選取的滑桿區間估算與實際渲染結果脫勾，與本工單「提升精準度」的目標直接衝突。已將下限改為 `0.8`，對齊 `main.js:99` 的 `Math.max(0.8, prefs.lineHeight)`；連動更新 `lineHeight: 0.0` 既有測試的期望值（`16215` → `2021`）。
+3. **Minor：`toc_bottom_sheet.dart` 重複呼叫兩次 `MediaQuery.of(context).size`**：已改為存成區域變數 `screenSize` 後取用兩次 `.width`/`.height`，比照 `reader_screen.dart` 既有寫法。
+
+一併補上 `paragraphSpacing` 極端負值（`-9.0`）的對稱防護（審查 Minor 項目，同一失效模式的延伸案例）。
+
+修復後 `flutter analyze` 乾淨、全專案 `flutter test` **1156/1156 全數通過**（基準 1154 + 本次新增 2 則對稱防護測試：`fontSize: 0.0`、`paragraphSpacing: -9.0`）。

@@ -212,6 +212,7 @@ class _TocBottomSheetState extends State<TocBottomSheet> {
     final isCurrent = identical(node, widget.currentEntry);
     final String pageLabel;
     if (node is TocEntry) {
+      final screenSize = MediaQuery.of(context).size;
       // 審查修正：totalCharacterCount 已就緒不代表這個節點本身就有可用的
       // progression——原生端兩層 fallback（locatorFromLink() 自帶的
       // totalProgression、比對 positions() 的近似值）都可能查無資料，此時
@@ -227,8 +228,8 @@ class _TocBottomSheetState extends State<TocBottomSheet> {
               totalPages: EpubPageEstimator.estimateTotalPages(
                 totalCharacterCount: totalCharacterCount,
                 charsPerScreen: EpubPageEstimator.estimateCharsPerScreen(
-                  screenWidth: MediaQuery.of(context).size.width,
-                  screenHeight: MediaQuery.of(context).size.height,
+                  screenWidth: screenSize.width,
+                  screenHeight: screenSize.height,
                   fontSize: widget.resolved.fontSize,
                   lineHeight: widget.resolved.lineHeight,
                   paragraphSpacing: widget.resolved.paragraphSpacing,

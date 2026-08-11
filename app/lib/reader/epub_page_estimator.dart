@@ -37,11 +37,14 @@ class EpubPageEstimator {
   /// `pageMargins` 對目前唯一的 foliate-js 流式渲染路徑是死欄位、從未真正
   /// 影響過實際版面）。
   ///
-  /// [lineHeight] 直接作為 CSS `line-height` 倍率使用（與 `main.js` 的
-  /// `line-height: ${prefs.lineHeight}` 用法一致，非舊版的「相對 1.5 正規化
-  /// 倍率」），預設值 1.0 與 `ReaderSettingsSheet._defaultLineHeight` 一致
-  /// （舊版預設 1.5 是尚未隨 epic-18 Issue 25/26 產品預設值變動同步更新的
-  /// 過期假設）。
+  /// [lineHeight] 直接作為 CSS `line-height` 倍率使用（非舊版的「相對 1.5
+  /// 正規化倍率」），預設值 1.0 與 `ReaderSettingsSheet._defaultLineHeight`
+  /// 一致（舊版預設 1.5 是尚未隨 epic-18 Issue 25/26 產品預設值變動同步更新
+  /// 的過期假設）。下限箝制為 0.8，與 `main.js` 實際渲染時套用的
+  /// `Math.max(0.8, prefs.lineHeight)`（`main.js:99`，epic-18 Issue 25 新增）
+  /// 一致——本函式先前箝制在 0.1，會讓使用者於滑桿選取 0.1~0.7 之間任一值時
+  /// 估算出的每螢幕行數系統性偏多，與實際渲染結果脫勾（審查發現，
+  /// 2026-08-11）。
   static int estimateCharsPerScreen({
     required double screenWidth,
     required double screenHeight,
@@ -53,15 +56,22 @@ class EpubPageEstimator {
     double? marginLeft,
     double? marginRight,
   }) {
-    final fontSizeFactor = fontSize ?? 1.0;
+    // fontSize 若顯式傳入 0.0（而非 null），fontSizePx 會是 0，下方
+    // charsPerLine 對 Infinity 呼叫 .floor() 會直接拋出 UnsupportedError；
+    // 0.1 是避免除以零的下限，與 lineHeight 的既有防護是同一種失效模式
+    // （審查發現，2026-08-11：兩者結構相同，此處先前漏了對稱防護）。
+    final fontSizeFactor = math.max(0.1, fontSize ?? 1.0);
     final fontSizePx = fontSizeFactor * baseFontSizePx;
-    // epic-18-reader-device-qa Issue 25 把行高滑桿範圍下限改為 0 後，
-    // lineHeight 可能真的是 0.0——若不設下限，lineHeightPx 會是 0、
-    // linesPerScreen 除以零得到 double.infinity，對 Infinity 呼叫 .floor()
-    // 在 Dart 會直接拋出 UnsupportedError（審查發現，2026-08-05）。0.1
-    // 只是避免除以零的下限，不代表這是「合理」的行高。
-    final lineHeightFactor = math.max(0.1, lineHeight ?? 1.0);
-    final paragraphSpacingFactor = paragraphSpacing ?? 1.0;
+    // main.js 實際渲染時對 lineHeight 套用 Math.max(0.8, prefs.lineHeight)
+    // （main.js:99，epic-18 Issue 25 新增，防止 CSS line-height 過小造成
+    // 文字重疊不可讀）；此處箝制為相同的 0.8 下限，讓估算與實際渲染結果對齊
+    // （審查發現，2026-08-11：先前箝制在 0.1，會讓行高 0.1~0.7 這段使用者
+    // 可直接選取的區間估算失準）。
+    final lineHeightFactor = math.max(0.8, lineHeight ?? 1.0);
+    // paragraphSpacingFactor <= -9.0 時，下方 (1 + (paragraphSpacingFactor -
+    // 1) * 0.1) 會歸零，adjusted 對 Infinity 呼叫 .round() 同樣會拋出
+    // UnsupportedError；0.0 是合理下限（負值段落間距倍率沒有實際意義）。
+    final paragraphSpacingFactor = math.max(0.0, paragraphSpacing ?? 1.0);
 
     final topPx = marginTop ?? 32.0;
     final bottomPx = marginBottom ?? 16.0;

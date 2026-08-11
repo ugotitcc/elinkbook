@@ -1185,7 +1185,10 @@ AiPaper Reader C 這類 E-Ink 裝置為了讓文字/圖示夠大，`devicePixelR
 - 移除已失效的 `pageMargins` 參數，改讀 `marginTop`/`marginBottom`/`marginLeft`/`marginRight`（與 `main.js` 的 `applyPreferences()` 一致）
 - `lineHeight` 預設值從 1.5 修正為 1.0（與 `ReaderSettingsSheet._defaultLineHeight` 一致）
 - `reader_screen.dart`／`toc_bottom_sheet.dart` 兩個呼叫端已接上真實 `MediaQuery.of(context).size`
-- 全專案 `flutter test` 通過 1154/1154，`flutter analyze` 無問題
+
+**審查修正（`/superpowers:requesting-code-review`，2026-08-11）**：`tmp/epic-18/review-code-issue-46.md` 發現並修復 2 項 Important——(a) `fontSize` 缺乏比照 `lineHeight` 的下限防護，傳入 `0.0` 會拋出 `UnsupportedError`，已補上對稱防護；(b) `lineHeight` 下限（原 0.1）與 `main.js:99` 實際渲染下限（`Math.max(0.8, prefs.lineHeight)`）不一致，導致行高 0.1~0.7 這段可透過滑桿直接選取的區間估算失準、與本工單目標直接衝突，已將下限改為 0.8 對齊實際渲染行為；一併修復 1 項 Minor（`toc_bottom_sheet.dart` 重複呼叫 `MediaQuery.of(context).size`）與延伸補強 `paragraphSpacing` 極端值防護。
+
+全專案 `flutter test` 通過 **1156/1156**（審查修復新增 2 則對稱防護測試），`flutter analyze` 無問題。
 
 ### Issue 47：流式 EPUB 劃線拖曳選取時頁面亂跳（與 `epic-24` Issue 9 同症狀、不同根因）
 
