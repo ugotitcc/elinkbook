@@ -1134,7 +1134,7 @@ Expected: 全數通過。
 - [x] **Step 12: 執行全專案測試確認零回歸**
 
 Run: `flutter test`
-Expected: 全數通過，通過總數為基準 1146 之上 + 17（Task 1 六則 + 本 Task 十一則），合計 1163。若出現與本工單變更無關的既有間歇性失敗（例如 `pdf_reader_view_dual_page_test.dart`，見 Issue 6/7 合併前審查歷程），單獨重跑該檔案確認通過即可，非本工單需修復範圍。
+Expected: 全數通過。**審查修正（`review-code-issue-8.md` Important #2）**：原文字宣稱「基準 1146 之上 +17，合計 1163」與實測不符，且分支上的 `library_screen_test.dart`／`integration_test/` 存在因 FAB 化 Key 改名（`reader_notes_button`→`reader_pdf_notes_button`、`reader_layout_settings_button`→`reader_pdf_settings_button`）導致的既有測試斷裂（詳見審查報告 Critical #1/#2），代表此 Step 當初勾選完成時，測試母數統計方式或執行範圍可能已與程式碼不同步。已修復上述斷裂並重新實際執行全專案 `flutter test`，目前實測結果為 **1152/1152 全數通過**（不再嘗試回推與 1163 的落差，以實測值為準）。若出現與本工單變更無關的既有間歇性失敗（例如 `pdf_reader_view_dual_page_test.dart`，見 Issue 6/7 合併前審查歷程），單獨重跑該檔案確認通過即可，非本工單需修復範圍。
 
 - [x] **Step 13: `flutter analyze` 確認乾淨**
 
@@ -1165,7 +1165,7 @@ Expected: 全數通過，新增本工單測試數（Task 1 +6、Task 2 +11，共
 - [x] **Step 3: 執行全專案測試確認零回歸**
 
 Run: `flutter test`
-Expected: 全數通過，通過總數應為 Issue 7 合併時基準（1146）之上，新增 +17（合計 1163）。
+Expected: 全數通過。**審查修正（`review-code-issue-8.md` Important #2）**：原「基準 1146 之上 +17，合計 1163」的宣稱與實測不符，已修復 `library_screen_test.dart`／`integration_test/` 因 FAB 化 Key 改名導致的既有測試斷裂（見 Step 2 上方說明與審查報告 Critical #1/#2），重新實測全專案 `flutter test` 為 **1152/1152 全數通過**。
 
 - [x] **Step 4: 對照 `issues.md` Issue 8 驗收條件自我檢查**
 

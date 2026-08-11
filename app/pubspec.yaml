@@ -63,6 +63,12 @@ dependencies:
   # PDF 引擎（epic-24-pdf-engine-rebuild）：PDFium 透過 dart:ffi 直接呼叫，
   # 取代 android.graphics.pdf.PdfRenderer（ADR 0022）。
   pdfrx: ^2.4.6
+  # PDF 導覽熱區（epic-24 Issue 8）_PdfNavZoneTapDetector 用 clock.now() 量測
+  # 按壓時長：flutter_test 的 FakeAsync 會攔截 package:clock 的 Zone 覆寫，
+  # 讓測試環境下的計時隨 tester.pump() 正確推進，同時正式裝置上一律取得真實
+  # 系統時間（不像 SchedulerBinding.currentSystemFrameTimeStamp 只在畫面有新
+  # frame 排程時才更新）。
+  clock: ^1.1.2
 
 dev_dependencies:
   flutter_test:

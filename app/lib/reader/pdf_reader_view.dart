@@ -2,8 +2,8 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:isolate';
 import 'dart:ui' as ui;
+import 'package:clock/clock.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:pdfrx/pdfrx.dart';
 
@@ -1210,9 +1210,15 @@ class _PdfSelectionDragState {
 /// 點擊」（位移在 [_tapSlop] 內、耗時在 [_tapMaxDurationMs] 內），完全不
 /// 註冊 GestureRecognizer、不參與手勢競技場——確保不會攔截 `PdfViewer`
 /// 自身的 pan/pinch/雙擊手勢，也不影響既有 per-page 長按選取
-/// GestureDetector（見 Global Constraints）。比照
-/// `foliate_epub_reader_view.dart` 的 `_NavZoneTapDetector` 相同技術手段，
-/// 刻意各自獨立實作、不抽成共用模組（見 Global Constraints）。
+/// GestureDetector（見 Global Constraints）。與
+/// `foliate_epub_reader_view.dart` 的 `_NavZoneTapDetector` 手勢隔離策略
+/// 相同，但按壓時長改用 `package:clock` 的 `clock.now()`（而非該檔案用的
+/// 原生 `DateTime.now()`）量測——`flutter_test` 的 FakeAsync 會攔截
+/// `clock` 套件的 Zone 覆寫使其隨 `tester.pump()` 正確推進，正式裝置上則
+/// 一律取得真實系統時間，不像先前一度嘗試過的
+/// `SchedulerBinding.currentSystemFrameTimeStamp` 只在畫面有新 frame 排程
+/// 時才更新（長按靜止區域可能整段時間都量不到經過的時間）。刻意各自獨立
+/// 實作、不抽成共用模組（見 Global Constraints）。
 class _PdfNavZoneTapDetector extends StatefulWidget {
   final VoidCallback onTap;
   final Widget child;
@@ -1239,20 +1245,18 @@ class _PdfNavZoneTapDetectorState extends State<_PdfNavZoneTapDetector> {
       behavior: HitTestBehavior.translucent,
       onPointerDown: (event) {
         _downPosition = event.position;
-        // 使用 SchedulerBinding 時間戳而非 DateTime.now()：在 Flutter 測試
-        // 環境中 DateTime.now() 受 FakeAsync 控制，不會隨 tester.pump() 推進，
-        // 導致按壓時長判定永遠為 ~0ms，無法正確過濾長按手勢。SchedulerBinding
-        // 的幀時間戳會隨著每次 pump 正確推進。
-        _downTimeStampMs =
-            SchedulerBinding.instance.currentSystemFrameTimeStamp.inMilliseconds;
+        // 用 clock.now()（package:clock）而非裸 DateTime.now()：
+        // flutter_test 的 FakeAsync 會攔截 clock 套件的 Zone 覆寫，讓這裡
+        // 的時間隨 tester.pump() 正確推進；正式裝置上則一律取得真實系統
+        // 時間，不依賴「畫面是否剛好有新 frame 排程」。
+        _downTimeStampMs = clock.now().millisecondsSinceEpoch;
       },
       onPointerUp: (event) {
         final downPosition = _downPosition;
         final downTimeStampMs = _downTimeStampMs;
         if (downPosition == null || downTimeStampMs == null) return;
-        final elapsed = SchedulerBinding
-                .instance.currentSystemFrameTimeStamp.inMilliseconds -
-            downTimeStampMs;
+        final elapsed =
+            clock.now().millisecondsSinceEpoch - downTimeStampMs;
         final distance = (event.position - downPosition).distance;
         if (elapsed <= _tapMaxDurationMs && distance <= _tapSlop) {
           widget.onTap();

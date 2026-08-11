@@ -34,10 +34,13 @@ Future<void> _pumpUntilLoaded(WidgetTester tester) async {
   await tester.pump(const Duration(seconds: 1));
 }
 
-Future<void> _pumpUntilNotesButtonEnabled(WidgetTester tester) async {
+Future<void> _pumpUntilNotesButtonEnabled(
+  WidgetTester tester, {
+  Key key = const Key('reader_notes_button'),
+}) async {
   final deadline = DateTime.now().add(const Duration(seconds: 10));
   while (true) {
-    final finder = find.byKey(const Key('reader_notes_button'));
+    final finder = find.byKey(key);
     if (finder.evaluate().isNotEmpty &&
         tester.widget<IconButton>(finder).onPressed != null) {
       return;
@@ -169,9 +172,12 @@ void main() {
       ),
     );
     await _pumpUntilLoaded(tester);
-    await _pumpUntilNotesButtonEnabled(tester);
+    await _pumpUntilNotesButtonEnabled(
+      tester,
+      key: const Key('reader_pdf_notes_button'),
+    );
 
-    await tester.tap(find.byKey(const Key('reader_notes_button')));
+    await tester.tap(find.byKey(const Key('reader_pdf_notes_button')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('notes_sheet_bookmark_toggle')));
     await tester.pumpAndSettle();
