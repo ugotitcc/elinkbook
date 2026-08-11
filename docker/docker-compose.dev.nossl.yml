@@ -20,16 +20,7 @@ services:
       - 'traefik.enable=true'
       - 'traefik.http.routers.${POCKETBASE_TRAEFIK_ROUTERS_NAME}.entrypoints=${HTTP_ENTRY_POINTS}'
       - 'traefik.http.routers.${POCKETBASE_TRAEFIK_ROUTERS_NAME}.rule=Host(`${POCKETBASE_HOST_NAME}`)'
-      # Redirect these routes to https
-      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
-      - "traefik.http.routers.${POCKETBASE_TRAEFIK_ROUTERS_NAME}.middlewares=redirect-to-https@docker"
-      # https
-      - "traefik.http.routers.${POCKETBASE_HTTPS_TRAEFIK_ROUTERS_NAME}.entrypoints=${HTTPS_ENTRY_POINTS}"
-      - "traefik.http.routers.${POCKETBASE_HTTPS_TRAEFIK_ROUTERS_NAME}.rule=Host(`${POCKETBASE_HOST_NAME}`)"
-      # CERT
-      - "traefik.http.routers.${POCKETBASE_HTTPS_TRAEFIK_ROUTERS_NAME}.tls=true"
-      - "traefik.http.routers.${POCKETBASE_HTTPS_TRAEFIK_ROUTERS_NAME}.tls.certresolver=${CERTIFICATION_RESOLVERS}"
-      - 'traefik.http.services.${POCKETBASE_HTTPS_TRAEFIK_ROUTERS_NAME}.loadbalancer.server.port=${LOADBALANCER_SERVER_PORT}'
+      - 'traefik.http.services.${POCKETBASE_TRAEFIK_ROUTERS_NAME}.loadbalancer.server.port=${LOADBALANCER_SERVER_PORT}'
     restart: unless-stopped
 networks:
   default:
