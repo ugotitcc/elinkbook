@@ -85,17 +85,23 @@ Critical #1）發現「單純距離門檻會讓 `paginator.js` 內部觸控狀�
 `state.x`/`state.y` 累積誤差、放行第一個 touchmove 時一次性暴跳」
 之後的修正。
 
-### 修復前後對照（橫排，`repro-fix.mjs`）
+### 驗證方式：真機人工驗證（非 headless harness）
 
-- 情境 A（無選取）：修復前 `scrollBy` 呼叫 3 次（全部實際移動）；修復後 `0` 次
-- 情境 B（已有選取，對照組）：修復前後皆 `0` 次（既有守衛不受影響）
-- 情境 E（快速滑動，對照組）：修復前後皆有 `scrollBy` 呼叫且確實位移（正常翻頁手勢不受影響）
+計畫 Task 1／Task 2 原訂建立 `repro-fix.mjs` headless harness 做量化迴歸驗證，但實際上此腳本未被建立，也沒有任何修復後的量測輸出——本次修復是以**真機人工測試**驗證，未執行 headless 迴歸腳本。`tmp/epic-18-issue-47-harness/result.json` 是修復前（診斷階段）的舊資料，不代表修復後的狀態，不應被引用為修復效果的證據。
 
-### 驗證限制
+真機驗證涵蓋以下四種情境，結果皆符合預期：
 
-Headless Chromium CDP `Input.dispatchTouchEvent` 注入的觸控事件**不會**走到 `doc` 的 capture 階段（診斷確認 count = 0），因此無法用目前的 harness 驗證 capture 階段攔截器是否生效。修復邏輯本身正確——在真機 Android WebView 上，觸控事件**會**走 capture 階段。橫排模式已由真機確認 bug 存在，修復後需真機驗證確認攔截生效。
+- 橫排、長按選字：不再發生頁面亂跳
+- 橫排、正常拖曳選取：行為正常，未受影響
+- 直排、長按選字：不再發生頁面亂跳
+- 直排、正常拖曳選取：行為正常，未受影響
 
-直排模式：真機已確認 bug 存在（長按後頁面即位移），capture 階段攔截邏輯不區分書寫方向，理論上直排應與橫排行為一致，待真機驗證。
+長按選字瞬間未觀察到原生 WebView 捲動/回彈等視覺副作用（攔截期間 `paginator.js` 的 `e.preventDefault()` 不會被呼叫，理論上原生捲動行為不再被抑制——真機測試未針對此點做專項測試，僅一般性觀察未見異常）。
+
+### 已知未完成事項
+
+- 計畫要求的 `repro-fix.mjs` headless harness（可重跑的量化迴歸驗證）**未建立**，已與使用者確認本次以真機驗證結案、harness 暫不補做。往後若此攔截邏輯被意外改動，沒有自動化測試能攔截迴歸，需仰賴人工重測。
+- 「CDP 觸控事件無法觸發 `doc` 的 capture 階段」曾被誤判為驗證受阻的原因並寫入本文件（已移除，見下方修正說明）。經 code review 查證：`paginator.js` 自身的 bubble 階段 `touchmove` 監聽器就掛在同一個 `doc` 節點上，且已被 CDP 注入的事件觸發過（見上方情境 A 的量測數據，`scrollByCalls=3`）；依 DOM 事件規格，capture 階段先於 bubble 階段在同一節點執行是無條件保證，不可能「bubble 收得到、capture 收不到」。先前的推論缺乏依據，是把掛在 `renderer` 元素上的舊診斷監聽器結果，誤引用成本次新增、掛在 `doc` 上的 capture 監聽器的驗證結果。
 
 **已知限制**：`SWIPE_DISTANCE_DEADZONE_PX`（15px）、
 `SWIPE_VELOCITY_ESCAPE_PX_PER_MS`（0.3px/ms）與 `LONG_PRESS_GATE_MS`
