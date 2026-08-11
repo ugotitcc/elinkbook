@@ -278,3 +278,54 @@ PDF 頂部工具列（現行傳統 `AppBar`，含系統預設返回箭頭 + 版�
 - Issue 3
 - Issue 4
 - Issue 5
+
+---
+
+## Issue 9-11：真機使用回報後續修正（`/diagnose` 第一輪，PDF 相關）
+
+**背景（2026-08-11）：** 使用者於真機回報 6 項問題（劃線拖曳頁面亂跳附截圖、直排橫排切換後翻頁異常、頁次精準度、PDF 畫線工具列不會隱藏、無法手動關閉畫線工具、PDF 換頁動畫選項）。經 `/diagnose` 逐項查證，其中 4 項為 PDF 專屬問題，歸入本 Epic；EPUB 專屬的 2 項（直排橫排切換翻頁異常、頁次精準度）另立於 `epic-18-reader-device-qa` Issue 45-46。本輪僅完成程式碼層級查證與根因假設，**尚未實作修復**——診斷過程見下方各 Issue 內文，未另外產出獨立 `reviews/bugfix-repro.md`。
+
+### Issue 9：PDF 劃線拖曳選取時與 `PdfViewer` 內建 pan/zoom 手勢衝突（頁面隨手指移動亂跳）
+
+**Status:** ready-for-agent
+
+**背景**：使用者長按拖曳劃線時，頁面內容會跟著亂跳（附截圖 `tmp/images/畫線亂跳.jpg`）——不是換頁，而是劃線選取範圍突然往前或往後跳一大塊，越靠近畫面右側越嚴重。
+
+**根因假設（高信心，已查證套件原始碼，未在真機實際重現）**：`_buildSelectionGestureLayer`（`app/lib/reader/pdf_reader_view.dart:1058`）用標準 `GestureDetector`（`onLongPressStart`/`onLongPressMoveUpdate`）實作拖曳框選，會進入 Flutter 手勢競技場。但 `pdfrx` 套件的 `PdfViewer`（`pdfrx-2.4.7/lib/src/widgets/pdf_viewer.dart:609-611`）用 `Listener`（`onPointerDown`/`onPointerMove`）包住內部 `InteractiveViewer` 驅動平移/縮放——`Listener` 完全不參與手勢競技場，代表**不論我方的 `LongPressGestureRecognizer` 是否已經「贏得」該次觸控序列，`PdfViewer` 都會同時、無條件收到同一組原始 pointer 事件並據此平移/縮放內容**。使用者長按拖曳畫線的同時，底層頁面很可能被同時判讀成一次平移手勢而位移，導致：(a) 畫面內容隨手指移動位移；(b) 我方疊加層的 `pageRectInViewer`（決定選取框視覺位置的依據）跟著改變，使用者觀察到選取範圍「跳一大塊」。「越靠近右側越嚴重」與 `InteractiveViewer` 邊界回彈或雙頁模式頁面邊界行為在該側較敏感一致，但此點尚未實機驗證。
+
+**建議修復方向**：`PdfViewerParams` 已提供 `panEnabled`/`scaleEnabled`（`pdfrx-2.4.7/lib/src/widgets/pdf_viewer_params.dart:55-56`）。`PdfReaderView` 建構 `PdfViewer` 時依 `_selectionDrag != null` 動態傳入 `panEnabled: false, scaleEnabled: false`，框選拖曳進行中暫時關閉底層平移/縮放，結束/取消後恢復；需真機驗證修復後長按拖曳不再觸發底層平移，且不影響一般雙指縮放/單指平移的既有手感。
+
+### Issue 10：PDF 劃線工具列缺乏清除機制（選色/換頁後不會自動隱藏、也無手動關閉入口）
+
+**Status:** ready-for-agent
+
+**背景**：使用者回報兩項相關問題：(a) PDF 畫線選完顏色後，浮動工具列（`AnnotationToolbar`）不會隱藏，即使換頁後仍然存在；(b) 沒有任何步驟能讓使用者手動關閉這個工具列。
+
+**根因（高信心，已完整查證程式碼）**：
+1. `_handlePdfHighlightStyleSelected`（`app/lib/screens/reader_screen.dart:1345`）新增劃線後不清空 `_currentPdfSelection`（對照 `_handlePdfNotePressed` 新增備註後有明確清空，同檔案 line 1378-1381）。**這是刻意的既有設計**（見本 Epic Issue 4 完成敘述：「選色後 Toolbar 刻意保持開啟以便續加備註（與 EPUB 既有行為對稱，非 bug）」），EPUB 的 `_handleHighlightStyleSelected`（line 1176）同樣不清空 `_currentSelection`，兩者行為對稱，非新問題。
+2. 但「換頁後仍然存在」這點兩者**不對稱**：EPUB 選取狀態能在換頁後自然消失，是因為 WebView 原生瀏覽器語意——切換頁面時瀏覽器自動清空 `window.getSelection()`，觸發 JS `selectionchange`，經橋接呼叫 `onSelectionCleared`（`_handleSelectionCleared`，line 1152）。PDF 的框選狀態是純 Dart 端矩形選取，`_handleZoneAction`（line 2353）的 `previousPage`/`nextPage` 分支完全沒有呼叫 `_handlePdfSelectionCanceled()`／清空 `_currentPdfSelection` 的邏輯——PDF 架構上就沒有等價於「換頁自動清除選取」的訊號來源。
+3. 「無法手動關閉」對 EPUB／PDF 皆成立：`AnnotationToolbar`（`app/lib/screens/annotation_toolbar.dart`）只有 5 顆按鈕（3 色螢光筆＋底線＋備註），完全沒有關閉／取消按鈕。EPUB 使用者能透過點擊 WebView 內文字以外區域觸發瀏覽器原生取消選取，間接達到相同效果；PDF 的 `_buildSelectionGestureLayer` 只註冊 `onLongPress*` 系列回呼，沒有任何「點擊空白處取消選取」邏輯，使用者完全沒有管道能主動取消已完成的框選。
+
+**建議修復方向**：
+- (a) `_handleZoneAction` 的 PDF `previousPage`/`nextPage` 分支呼叫 `PdfReaderView.previousPage`/`nextPage` 後一併呼叫 `_handlePdfSelectionCanceled()`，換頁即清空選取與工具列。
+- (b) 在 PDF 閱讀畫面新增「點擊空白處取消目前選取」手勢，或在 `AnnotationToolbar` 新增明確關閉按鈕（若採後者，需一併決定 EPUB 是否同步補上，因為 EPUB 目前也沒有明確關閉按鈕，只是有替代手段）。
+
+### Issue 11：PDF 新增「換頁動畫」選項（滑動／無）
+
+**Status:** ready-for-agent
+
+**背景**：使用者要求 PDF 版面設定新增一個選項：換頁動畫 (1) 滑動 (2) 無。
+
+**現況查證（高信心）**：`PdfReaderView.nextPage`/`previousPage`（`app/lib/reader/pdf_reader_view.dart:132-140`）底層呼叫 `pdfrx` 的 `PdfViewerController.goToPage()`：
+
+```dart
+Future<void> goToPage({
+  required int pageNumber,
+  PdfPageAnchor? anchor,
+  Duration duration = const Duration(milliseconds: 200),
+})
+```
+
+（`pdfrx-2.4.7/lib/src/widgets/pdf_viewer.dart:4156-4160`）——目前呼叫端（`pdf_reader_view.dart:561`／`:577`）皆使用預設 200ms 動畫（「滑動」效果）。`duration: Duration.zero` 即可達到「無動畫、瞬間跳頁」效果，`pdfrx` API 已原生支援，不需額外實作換頁動畫本身。
+
+**建議修復方向**：新增 `PdfPageTurnAnimation`（`slide`/`none`）偏好欄位，比照既有 `dualPageMode`／`pdfCropMode` 等偏好欄位的貫穿模式（`ReaderPrefs` → `ResolvedPreferences` → `PdfReaderView` 建構參數），在 `pdf_reader_view.dart` 呼叫 `_controller.goToPage()` 的兩處依此設定傳入 `duration: Duration.zero` 或預設 200ms；並在 `PdfSettingsSheet` 新增對應 UI 選項。

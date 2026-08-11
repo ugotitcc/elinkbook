@@ -1149,3 +1149,31 @@ AiPaper Reader C 這類 E-Ink 裝置為了讓文字/圖示夠大，`devicePixelR
 - 計劃文件 `docs/epics/epic-18-reader-device-qa/plans/plan-issue-42-44.md`（`/superpowers:writing-plans` 產出，全部 Task 已完成）
 - 審查報告 `tmp/epic-18/review-issue-42-44.md`
 - 截圖 `tmp/images/橫屏書架未對齊.jpg`（使用者提供的橫屏截圖，紅線標示錯位邊界）
+
+---
+
+## Issue 45-46：`/diagnose` 第八輪——EPUB 直排橫排切換翻頁異常與頁次精準度
+
+**背景（2026-08-11）：** 使用者於真機回報 6 項問題，其中 4 項為 PDF 專屬問題已歸入 `epic-24-pdf-engine-rebuild` Issue 9-11；本輪 2 項為 EPUB 專屬問題，歸入本 Epic。**本輪僅完成程式碼層級查證與根因假設，尚未實作修復**，未另外產出獨立 `reviews/bugfix-repro.md`。
+
+### Issue 45：EPUB 切換直排／橫排後，翻頁一次跳好幾頁（需退出重進才恢復正常）
+
+**Status:** needs-triage（根因為靜態程式碼推論，下一步：建立 headless Chromium 或 widget test 重現迴圈，量測「切換直排/橫排」前後 `view.next()` 實際位移的欄位數是否符合預期的 1 欄，確認後才可轉 ready-for-agent）
+
+**背景**：使用者回報切換直排/橫排後，若不退出書籍重新進入，上下頁換頁都會一次跳好幾頁；退出重進後恢復正常。
+
+**根因假設（中等信心，僅靜態程式碼推論，未能在此環境重現真實 WebView 行為）**：`window.applyPreferences`（`main.js:154`）套用 `writingMode` 變更時，會更新 `currentWritingMode` 並設定 `max-column-count`/`margin-*`/`max-inline-size` 等 CSS 變數屬性（`main.js:200-255`），這些屬性變更由 `paginator.js` 的 `attributeChangedCallback`（`paginator.js:1545`）攔截並同步呼叫 `render()`（`paginator.js:1903`，內部呼叫 `#beforeRender()`＋`#scrollToAnchor(this.#anchor)`，皆為同步、無 `await`）。已查證 `render()` 本體同步執行，理論上不會與後續立即呼叫的 `window.nextPage()`/`window.previousPage()`（直接呼叫 `view.next()`/`view.prev()`，`main.js:298-304`）產生非同步時序競賽。但尚未查明 `this.#vertical` 這個決定分欄方向的內部欄位實際上是何時／如何從新的 `writingMode` 更新（`render()` 呼叫 `#beforeRender({vertical: this.#vertical, ...})` 時傳入的已經是「新值」，代表更新動作發生在別處，本次查證未能追蹤到確切位置），也未能確認 `#scrollToAnchor(this.#anchor)` 用「切換前記錄的 anchor」在「切換後的新分欄配置」下換算回的位置，是否精確對應同一個邏輯段落起點——若換算有落差，`view.next()`/`view.prev()` 接下來以「目前所在欄位」為基準計算下一步，就可能因為這個落差而跳過或重複多欄，且落差可能隨連續操作疊加（例如連續按兩次「下一頁」各自再疊加一次誤差），符合「一次跳好幾頁」的描述；退出重新進入書籍會強制走 `#display()`（`paginator.js:3018`，讀取全新 anchor 與版面），不受這個殘留落差影響，解釋「重進後恢復正常」。
+
+**此假設信心不足以直接動工**，需先建立可重現的迴圈（比照 Issue 34/38 既有先例用 headless Chromium）量測實際落差，才能確認問題發生在 `#scrollToAnchor` 換算、`this.#vertical` 更新時機、或其他未列出的路徑。
+
+### Issue 46：EPUB 頁次（目前第 N 頁）精準度優化
+
+**Status:** needs-triage（需先決定採哪個方向再進 Architecting/Planning，非直接可動工的實作工單）
+
+**背景**：使用者要求優化「目前第 N 頁」頁碼顯示的精準度。
+
+**現況查證（高信心）**：EPUB 頁碼並非真實逐頁計算，而是 `EpubPageEstimator`（`app/lib/reader/epub_page_estimator.dart`）的啟發式估算：依「參考螢幕字元數」（500 字，`referenceCharsPerScreen`）與目前版面參數（字級/行距/段落間距/邊距）換算「每螢幕字元數」，再除全書字元數快取得出「估計總頁數」；目前頁碼則用 `progression`（全書進度比例，來自 foliate-js 的 `relocate` 事件）乘上估計總頁數四捨五入而得。模組文件明確聲明：「本模組產生的頁碼為模擬估算值，不保證與〔渲染引擎〕實際渲染逐頁精確對齊」——這是刻意的既有架構決策（比照 TXT 引擎「固定字元數分頁換算」的既有精神），非本次新發現的 bug。
+
+**待決策方向（需人類/PM 決定，非單純技術修復）**：
+1. 維持現行「全書進度比例 × 估計總頁數」模型，但精修 `estimateCharsPerScreen()` 的估算公式係數，使其更貼近實際渲染結果；
+2. 或改為向 `foliate-js` 的 paginator 查詢「目前章節實際分欄數／目前欄位索引」等真實渲染狀態（若 `view.js`/`paginator.js` 有暴露對應 API），以「真實欄位數」取代「估算字元數」作為頁碼基礎——此路線可能大幅提升精準度，但需要新的 JS↔Dart 橋接、且「全書頁碼」如何跨章節加總真實欄位數仍需設計（現行架構是全書進度比例模型，不是逐章節累加模型）。
