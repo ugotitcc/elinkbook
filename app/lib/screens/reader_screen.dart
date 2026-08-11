@@ -2046,11 +2046,17 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 任一版面參數變動時，本方法在下一次 build() 會以新的 [resolved] 重新
   /// 計算，不需要額外的快取/失效邏輯（見 spec.md「估計頁數重算時機」）。
   Widget _buildEpubFooter(ResolvedPreferences resolved, int totalCharacterCount) {
+    final screenSize = MediaQuery.of(context).size;
     final charsPerScreen = EpubPageEstimator.estimateCharsPerScreen(
+      screenWidth: screenSize.width,
+      screenHeight: screenSize.height,
       fontSize: resolved.fontSize,
       lineHeight: resolved.lineHeight,
       paragraphSpacing: resolved.paragraphSpacing,
-      pageMargins: resolved.pageMargins,
+      marginTop: resolved.marginTop,
+      marginBottom: resolved.marginBottom,
+      marginLeft: resolved.marginLeft,
+      marginRight: resolved.marginRight,
     );
     final totalPages = EpubPageEstimator.estimateTotalPages(
       totalCharacterCount: totalCharacterCount,

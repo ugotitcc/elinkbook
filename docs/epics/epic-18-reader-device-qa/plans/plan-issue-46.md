@@ -12,7 +12,7 @@
 
 - **範圍已由人類定案**：`issues.md` Issue 46 明確記錄兩個技術方向，本計畫採方向 1（精修估算係數），不做方向 2（向 foliate-js 查詢真實分欄數，需新 JS↔Dart 橋接）——不在本計畫範圍內，不得順便夾帶。
 - **`pageMargins` 是死欄位，不得繼續讀取**：`book_reader_prefs.dart:25` 欄位註解明載「僅供 EpubReaderView／FXL 使用」，`EpubReaderView` 已於 `epic-20-fxl-foliate-migration` 完全移除（見 `CLAUDE.md`），目前唯一的 EPUB 渲染路徑（foliate-js）從未讀取這個欄位。改用 `marginTop`/`marginBottom`/`marginLeft`/`marginRight`（`ResolvedPreferences` 既有欄位，`main.js:269-272` 的 `applyPreferences()` 實際使用的就是這 4 個欄位，預設值 32/16/24/24px）。
-- **`lineHeight` 是原始 CSS 倍率、非「相對 1.5 正規化」的比例**：`main.js` 的 `line-height: ${prefs.lineHeight}` 直接使用該值；`ReaderSettingsSheet._defaultLineHeight = 1.0`（`reader_settings_sheet.dart:45`）是目前的真實產品預設值——舊版估算式內部 `?? 1.5` 的預設假設已經過期（未隨 epic-18 Issue 25/26 的產品預設值變動同步更新），本次一併修正為 `?? 1.0`。
+- **`lineHeight` 是原始 CSS 倍率、非「相對 1.5 正規化」的比例**：`ReaderSettingsSheet._defaultLineHeight = 1.0`（`reader_settings_sheet.dart:45`）是目前的真實產品預設值——舊版估算式內部 `?? 1.5` 的預設假設已經過期（未隨 epic-18 Issue 25/26 的產品預設值變動同步更新），本次一併修正為 `?? 1.0`。**〔審查修正，2026-08-11〕**：本行原文誤寫「`main.js` 的 `line-height: ${prefs.lineHeight}` 直接使用該值」，經 `/superpowers:requesting-code-review` 審查查證，`main.js:99` 實際是 `Math.max(0.8, prefs.lineHeight)`（epic-18 Issue 25 新增的下限保護，本計畫撰寫時引述的是過期版本），已同步修正估算式的下限箝制值從 `0.1` 改為 `0.8`，詳見下方 Task 1 完成後的審查修正記錄。
 - **`screenWidth`／`screenHeight` 為必要參數，不提供預設值**：兩個既有呼叫端（`reader_screen.dart`／`toc_bottom_sheet.dart`）都在 `State` 方法內、都能存取 `MediaQuery.of(context).size`，沒有「呼叫端真的不知道螢幕尺寸」的合法情境；用必要參數強制呼叫端傳入真實值，避免未來新增呼叫端時因為偷懶傳入假設值而重蹈舊版「完全忽略螢幕尺寸」的覆轍。
 - **`paragraphSpacing` 維持既有低權重整體壓縮處理，不做幾何化**：段落間距對可視面積的實際影響取決於書本本身的段落密度（未知、不可預先假設），沒有足夠資訊做真正的幾何換算；沿用舊版「套用低權重壓縮因子」的簡化精神，只是套用對象改成新的幾何計算結果。
 - **`flutter analyze` 全程維持乾淨；每個 Task 結束後相關測試全數通過**是每個 Task 的隱含驗收條件。全專案 `flutter test` 基準為 **1152/1152 通過**（見 `epic-24-pdf-engine-rebuild` Issue 8 合併後狀態，本 Epic 與該 Epic 共用同一個 `app/` 專案、同一份測試母數）。
@@ -29,7 +29,7 @@
 - Consumes: 無（純 Dart 函式，無跨 Task 依賴）
 - Produces: `EpubPageEstimator.estimateCharsPerScreen({required double screenWidth, required double screenHeight, double? fontSize, double? lineHeight, double? paragraphSpacing, double? marginTop, double? marginBottom, double? marginLeft, double? marginRight})` → `int`——**簽章變動**：新增 4 個必要/選用參數、移除 `pageMargins` 參數（Task 2 的兩個呼叫端皆依賴此新簽章）。`EpubPageEstimator.baseFontSizePx`（`double`，值 16.0）為新增的公開常數，取代移除的 `referenceCharsPerScreen`。
 
-- [ ] **Step 1: 寫下失敗的測試（改寫 `estimateCharsPerScreen` group）**
+- [x] **Step 1: 寫下失敗的測試（改寫 `estimateCharsPerScreen` group）**
 
 以下述內容完整取代 `app/test/reader/epub_page_estimator_test.dart` 第 4-50 行（`estimateCharsPerScreen` 這個 `group`），檔案其餘部分（`estimateTotalPages`／`estimateCurrentPage`／`estimateProgression` 三個 group）維持逐字不動：
 
@@ -149,12 +149,12 @@
   });
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `cd app && flutter test test/reader/epub_page_estimator_test.dart`
 Expected: 上述 8 則新測試 FAIL（`estimateCharsPerScreen` 目前簽章沒有 `screenWidth`/`screenHeight`/`marginTop`/`marginBottom`/`marginLeft`/`marginRight` 具名參數，會是編譯期錯誤：`The named parameter 'screenWidth' isn't defined`）；`estimateTotalPages`／`estimateCurrentPage`／`estimateProgression` 三組共 11 則測試維持通過（本 Step 尚未觸碰對應程式碼）。
 
-- [ ] **Step 3: 實作新版 `estimateCharsPerScreen()`**
+- [x] **Step 3: 實作新版 `estimateCharsPerScreen()`**
 
 用以下內容完整取代 `app/lib/reader/epub_page_estimator.dart` 第 1-56 行：
 
@@ -258,12 +258,12 @@ class EpubPageEstimator {
 
 檔案第 57 行起（`estimateTotalPages`／`estimateCurrentPage`／`estimateProgression` 三個函式）維持逐字不動，不需要複製到這裡——本 Step 只取代到 `estimateCharsPerScreen()` 函式結尾（原檔案第 56 行的 `}`）。
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `cd app && flutter test test/reader/epub_page_estimator_test.dart`
 Expected: 全數通過（`estimateCharsPerScreen` 8 則新測試＋其餘三組 11 則既有測試，共 19 則）。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd app
@@ -285,7 +285,7 @@ git commit -m "fix(epic-18): Issue 46 EpubPageEstimator 改用幾何模型精修
 - Consumes: `EpubPageEstimator.estimateCharsPerScreen({required double screenWidth, required double screenHeight, ...})`（Task 1 產出的新簽章）
 - Produces: 無新介面（兩處皆為既有呼叫端的內部實作調整，不影響任何外部可見的 widget 建構參數或方法簽章）
 
-- [ ] **Step 1: 更新 `reader_screen.dart` 的 `_buildEpubFooter()`**
+- [x] **Step 1: 更新 `reader_screen.dart` 的 `_buildEpubFooter()`**
 
 用以下內容取代 `app/lib/screens/reader_screen.dart` 第 2049-2054 行（`EpubPageEstimator.estimateCharsPerScreen(...)` 呼叫本身）：
 
@@ -304,7 +304,7 @@ git commit -m "fix(epic-18): Issue 46 EpubPageEstimator 改用幾何模型精修
     );
 ```
 
-- [ ] **Step 2: 更新 `toc_bottom_sheet.dart` 的 `_buildEntryRow()`**
+- [x] **Step 2: 更新 `toc_bottom_sheet.dart` 的 `_buildEntryRow()`**
 
 用以下內容取代 `app/lib/screens/toc_bottom_sheet.dart` 第 223-236 行（`pageLabel = (totalCharacterCount == null || node.progression == null) ? '…' : ...` 這個三元運算式的完整內容）：
 
@@ -330,12 +330,12 @@ git commit -m "fix(epic-18): Issue 46 EpubPageEstimator 改用幾何模型精修
             ).toString();
 ```
 
-- [ ] **Step 3: 執行 `flutter analyze` 確認新程式碼無型別/語法錯誤**
+- [x] **Step 3: 執行 `flutter analyze` 確認新程式碼無型別/語法錯誤**
 
 Run: `cd app && flutter analyze`
 Expected: 此時尚未更新測試檔的寫死斷言，`flutter analyze` 本身不檢查測試斷言的數值是否正確，應維持乾淨（No issues found!）。
 
-- [ ] **Step 4: 更新 `reader_screen_test.dart` 兩處寫死的頁碼斷言**
+- [x] **Step 4: 更新 `reader_screen_test.dart` 兩處寫死的頁碼斷言**
 
 用以下內容取代 `app/test/screens/reader_screen_test.dart` 第 1252-1253 行：
 
@@ -360,7 +360,7 @@ Expected: 此時尚未更新測試檔的寫死斷言，`flutter analyze` 本身�
     expect(find.text('1/13'), findsOneWidget);
 ```
 
-- [ ] **Step 5: 更新 `toc_bottom_sheet_test.dart` 的過期註解**
+- [x] **Step 5: 更新 `toc_bottom_sheet_test.dart` 的過期註解**
 
 用以下內容取代 `app/test/screens/toc_bottom_sheet_test.dart` 第 181-183 行（斷言本身 `'1'` 不需變動——`progression: 0.0` 恆回傳第 1 頁，與 `charsPerScreen`/`totalPages` 實際數值無關，僅註解描述的計算過程已過期）：
 
@@ -372,12 +372,12 @@ Expected: 此時尚未更新測試檔的寫死斷言，`flutter analyze` 本身�
     // 頁，與 totalPages 實際數值無關）。
 ```
 
-- [ ] **Step 6: 執行測試確認通過**
+- [x] **Step 6: 執行測試確認通過**
 
 Run: `cd app && flutter test test/screens/reader_screen_test.dart test/screens/toc_bottom_sheet_test.dart`
 Expected: 全數通過，無回歸。
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 cd app
@@ -397,17 +397,17 @@ git commit -m "fix(epic-18): Issue 46 兩處呼叫端接上真實螢幕尺寸與
 - Consumes: Task 1、Task 2 的完整實作
 - Produces: 無（收尾工單，不產出新介面）
 
-- [ ] **Step 1: `flutter analyze` 確認全程乾淨**
+- [x] **Step 1: `flutter analyze` 確認全程乾淨**
 
 Run: `cd app && flutter analyze`
 Expected: No issues found!
 
-- [ ] **Step 2: 執行全專案 `flutter test` 確認零回歸**
+- [x] **Step 2: 執行全專案 `flutter test` 確認零回歸**
 
 Run: `cd app && flutter test`
 Expected: 全數通過。Global Constraints 記錄的基準為 1152（Task 1 新增 8 則、移除 6 則舊測試淨增 2 則；Task 2 未新增測試，只更新既有斷言），預期合計 1154；若與此數字不符，以實測結果為準並在下一步的 `issues.md` 更新中如實記錄實際數字，不得回頭竄改本行的「預期」敘述。
 
-- [ ] **Step 3: 對照 `issues.md` Issue 46 內容自我檢查**
+- [x] **Step 3: 對照 `issues.md` Issue 46 內容自我檢查**
 
 逐項確認：
 - `EpubPageEstimator.estimateCharsPerScreen()` 已改用幾何模型，納入真實 `screenWidth`/`screenHeight`（Task 1）。
@@ -416,17 +416,31 @@ Expected: 全數通過。Global Constraints 記錄的基準為 1152（Task 1 新
 - 未觸碰 `estimateTotalPages`／`estimateCurrentPage`／`estimateProgression` 三個函式的簽章與行為（Global Constraints，範圍界線）。
 - 未實作方向 2（向 foliate-js 查詢真實分欄狀態）（Global Constraints，範圍界線）。
 
-- [ ] **Step 4: 更新 `docs/epics/epic-18-reader-device-qa/issues.md` Issue 46 段落**
+- [x] **Step 4: 更新 `docs/epics/epic-18-reader-device-qa/issues.md` Issue 46 段落**
 
 `Status` 由 `needs-triage` 改為 `✅ 已完成`，並在原有「待決策方向」段落後方追加一段實作結果摘要（採用的方向、關鍵修正點、`flutter test` 通過數量），比照本檔案 Issue 37/42-44 等既有已完成 Issue 的敘述慣例。
 
-- [ ] **Step 5: 更新本計畫檔案 Task 1、Task 2 的打勾狀態**
+- [x] **Step 5: 更新本計畫檔案 Task 1、Task 2 的打勾狀態**
 
 將 Task 1、Task 2 已完成的 Step 前面的 `- [ ]` 改為 `- [x]`，本 Task 3 各 Step 完成後同步勾選。
 
-- [ ] **Step 6: 提交文件更新**
+- [x] **Step 6: 提交文件更新**
 
 ```bash
 git add docs/epics/epic-18-reader-device-qa/issues.md docs/epics/epic-18-reader-device-qa/plans/plan-issue-46.md
 git commit -m "docs(epic-18): Issue 46 標記完成，更新頁次估算精準度優化結果"
 ```
+
+---
+
+## 審查修正（`/superpowers:requesting-code-review`，2026-08-11）
+
+分支 `issue-46-epub-page-estimator` 合併前經審查（`tmp/epic-18/review-code-issue-46.md`），發現並修復 2 項 Important、1 項 Minor：
+
+1. **`fontSize` 缺乏下限防護**：`fontSize: 0.0` 會讓 `fontSizePx` 為 0、`charsPerLine` 對 `Infinity` 呼叫 `.floor()` 拋出 `UnsupportedError`——與 `lineHeight` 是同一種失效模式，但先前只有 `lineHeight` 有 `math.max` 防護。已補上對稱防護（`math.max(0.1, fontSize ?? 1.0)`），並新增對稱單元測試。
+2. **`lineHeight` 下限（0.1）與 `main.js` 實際渲染下限（0.8）不一致**：本計畫 Global Constraints 第 3 點引述的 `main.js` 行為已過期（見上方修正註記），導致行高 0.1~0.7 這段使用者可直接選取的滑桿區間估算與實際渲染結果脫勾，與本工單「提升精準度」的目標直接衝突。已將下限改為 `0.8`，對齊 `main.js:99` 的 `Math.max(0.8, prefs.lineHeight)`；連動更新 `lineHeight: 0.0` 既有測試的期望值（`16215` → `2021`）。
+3. **Minor：`toc_bottom_sheet.dart` 重複呼叫兩次 `MediaQuery.of(context).size`**：已改為存成區域變數 `screenSize` 後取用兩次 `.width`/`.height`，比照 `reader_screen.dart` 既有寫法。
+
+一併補上 `paragraphSpacing` 極端負值（`-9.0`）的對稱防護（審查 Minor 項目，同一失效模式的延伸案例）。
+
+修復後 `flutter analyze` 乾淨、全專案 `flutter test` **1156/1156 全數通過**（基準 1154 + 本次新增 2 則對稱防護測試：`fontSize: 0.0`、`paragraphSpacing: -9.0`）。
