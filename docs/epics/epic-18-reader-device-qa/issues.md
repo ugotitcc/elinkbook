@@ -1170,7 +1170,7 @@ AiPaper Reader C 這類 E-Ink 裝置為了讓文字/圖示夠大，`devicePixelR
 
 ### Issue 46：EPUB 頁次（目前第 N 頁）精準度優化
 
-**Status:** needs-triage（需先決定採哪個方向再進 Architecting/Planning，非直接可動工的實作工單）
+**Status:** ✅ 已完成
 
 **背景**：使用者要求優化「目前第 N 頁」頁碼顯示的精準度。
 
@@ -1179,6 +1179,13 @@ AiPaper Reader C 這類 E-Ink 裝置為了讓文字/圖示夠大，`devicePixelR
 **待決策方向（需人類/PM 決定，非單純技術修復）**：
 1. 維持現行「全書進度比例 × 估計總頁數」模型，但精修 `estimateCharsPerScreen()` 的估算公式係數，使其更貼近實際渲染結果；
 2. 或改為向 `foliate-js` 的 paginator 查詢「目前章節實際分欄數／目前欄位索引」等真實渲染狀態（若 `view.js`/`paginator.js` 有暴露對應 API），以「真實欄位數」取代「估算字元數」作為頁碼基礎——此路線可能大幅提升精準度，但需要新的 JS↔Dart 橋接、且「全書頁碼」如何跨章節加總真實欄位數仍需設計（現行架構是全書進度比例模型，不是逐章節累加模型）。
+
+**實作結果（2026-08-11）**：採用方向 1（精修估算公式），已完成以下修正：
+- `estimateCharsPerScreen()` 改用「CJK 全形字元近似正方形字格」的幾何模型，直接納入真實螢幕尺寸（`screenWidth`/`screenHeight` 為必要參數）
+- 移除已失效的 `pageMargins` 參數，改讀 `marginTop`/`marginBottom`/`marginLeft`/`marginRight`（與 `main.js` 的 `applyPreferences()` 一致）
+- `lineHeight` 預設值從 1.5 修正為 1.0（與 `ReaderSettingsSheet._defaultLineHeight` 一致）
+- `reader_screen.dart`／`toc_bottom_sheet.dart` 兩個呼叫端已接上真實 `MediaQuery.of(context).size`
+- 全專案 `flutter test` 通過 1154/1154，`flutter analyze` 無問題
 
 ### Issue 47：流式 EPUB 劃線拖曳選取時頁面亂跳（與 `epic-24` Issue 9 同症狀、不同根因）
 
