@@ -3,47 +3,114 @@ import 'package:elinkbook/reader/epub_page_estimator.dart';
 
 void main() {
   group('estimateCharsPerScreen', () {
-    test('全部參數皆為 null 時，採用預設版面參數，回傳基準值', () {
-      expect(EpubPageEstimator.estimateCharsPerScreen(), 500);
-    });
-
-    test('fontSize 加倍時，每螢幕可容納字元數依平方比例縮減', () {
+    test(
+        '參考情境（screenWidth=800/screenHeight=600，其餘皆用預設版面參數）'
+        '換算出的每螢幕字元數（Issue 46：改用幾何模型，不再是舊版的 500 '
+        '基準常數）', () {
       expect(
-        EpubPageEstimator.estimateCharsPerScreen(fontSize: 2.0),
-        125,
+        EpubPageEstimator.estimateCharsPerScreen(
+          screenWidth: 800,
+          screenHeight: 600,
+        ),
+        1598,
       );
     });
 
-    test('lineHeight 加倍時，每螢幕可容納字元數依線性比例縮減', () {
+    test('fontSize 加倍時，每行字數與每螢幕行數同時減少，可容納字元數大幅縮減', () {
       expect(
-        EpubPageEstimator.estimateCharsPerScreen(lineHeight: 3.0),
-        250,
+        EpubPageEstimator.estimateCharsPerScreen(
+          screenWidth: 800,
+          screenHeight: 600,
+          fontSize: 2.0,
+        ),
+        391,
+      );
+    });
+
+    test('lineHeight 加倍以上時，每螢幕行數依線性比例縮減，每行字數不受影響', () {
+      expect(
+        EpubPageEstimator.estimateCharsPerScreen(
+          screenWidth: 800,
+          screenHeight: 600,
+          lineHeight: 3.0,
+        ),
+        517,
       );
     });
 
     test('lineHeight 為 0.0 時（epic-18-reader-device-qa Issue 25 行高滑桿範圍改為 '
-        '0~3 後可選到的邊界值），不應除以零拋出 UnsupportedError，改回傳箝制後的上限值',
+        '0~3 後可選到的邊界值），不應除以零拋出 UnsupportedError，改回傳箝制後的合理值',
         () {
       expect(
-        () => EpubPageEstimator.estimateCharsPerScreen(lineHeight: 0.0),
+        () => EpubPageEstimator.estimateCharsPerScreen(
+          screenWidth: 800,
+          screenHeight: 600,
+          lineHeight: 0.0,
+        ),
         returnsNormally,
       );
       expect(
-        EpubPageEstimator.estimateCharsPerScreen(lineHeight: 0.0),
-        EpubPageEstimator.referenceCharsPerScreen * 4,
+        EpubPageEstimator.estimateCharsPerScreen(
+          screenWidth: 800,
+          screenHeight: 600,
+          lineHeight: 0.0,
+        ),
+        16215,
       );
     });
 
-    test('pageMargins 加倍時，可容納字元數依較低權重縮減', () {
+    test(
+        'marginLeft／marginRight 加倍時，可用寬度縮減、每行字數隨之減少'
+        '（Issue 46：改讀真實 marginLeft/marginRight，取代已對 foliate-js 路徑'
+        '失效的 pageMargins 欄位）', () {
       expect(
-        EpubPageEstimator.estimateCharsPerScreen(pageMargins: 2.0),
-        417,
+        EpubPageEstimator.estimateCharsPerScreen(
+          screenWidth: 800,
+          screenHeight: 600,
+          marginLeft: 48,
+          marginRight: 48,
+        ),
+        1496,
       );
     });
 
-    test('極端字體大小時，結果被箝制在下限 50，不會估算出荒謬的總頁數', () {
+    test('marginTop／marginBottom 加倍時，可用高度縮減、每螢幕行數隨之減少'
+        '（Issue 46 新增：舊版 pageMargins 是單一倍率、不區分上下左右，'
+        '無法表達「只有上下邊距變動」這個情境）', () {
       expect(
-        EpubPageEstimator.estimateCharsPerScreen(fontSize: 10.0),
+        EpubPageEstimator.estimateCharsPerScreen(
+          screenWidth: 800,
+          screenHeight: 600,
+          marginTop: 64,
+          marginBottom: 32,
+        ),
+        1457,
+      );
+    });
+
+    test(
+        '相同版面參數下，螢幕尺寸加倍時可容納字元數應大幅增加（Issue 46 核心'
+        '回歸測試：證明舊版公式「完全忽略螢幕尺寸」的精準度缺口已修復——'
+        '手機與平板讀同一本書，在相同版面設定下不應估出相同頁數）', () {
+      final reference = EpubPageEstimator.estimateCharsPerScreen(
+        screenWidth: 800,
+        screenHeight: 600,
+      );
+      final doubledScreen = EpubPageEstimator.estimateCharsPerScreen(
+        screenWidth: 1600,
+        screenHeight: 1200,
+      );
+      expect(doubledScreen, greaterThan(reference * 3));
+      expect(doubledScreen, 6984);
+    });
+
+    test('極端字體大小（超出可視寬度）時，結果被箝制在下限 50，不會估算出荒謬的總頁數', () {
+      expect(
+        EpubPageEstimator.estimateCharsPerScreen(
+          screenWidth: 800,
+          screenHeight: 600,
+          fontSize: 50.0,
+        ),
         50,
       );
     });
