@@ -178,9 +178,11 @@ void main() {
     notifier.value = 5000;
     await tester.pump();
 
-    // 預設版面參數下 EpubPageEstimator.estimateCharsPerScreen() = 500，
-    // totalPages = 5000/500 = 10；ch1.progression = 0.0 →
-    // estimateCurrentPage(0.0, 10) = 1。
+    // Issue 46：screenWidth=800/screenHeight=600（flutter_test 預設視窗
+    // 尺寸）、_testResolved 未覆寫任何版面欄位時，
+    // estimateCharsPerScreen() = 1598，totalPages = 5000/1598 = 4；
+    // ch1.progression = 0.0 → estimateCurrentPage(0.0, 4) = 1（恆為第 1
+    // 頁，與 totalPages 實際數值無關）。
     expect(
       tester
           .widget<Text>(find.byKey(Key('toc_entry_page_${ch1.locatorJson}')))

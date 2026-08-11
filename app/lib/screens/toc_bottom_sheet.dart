@@ -227,10 +227,15 @@ class _TocBottomSheetState extends State<TocBottomSheet> {
               totalPages: EpubPageEstimator.estimateTotalPages(
                 totalCharacterCount: totalCharacterCount,
                 charsPerScreen: EpubPageEstimator.estimateCharsPerScreen(
+                  screenWidth: MediaQuery.of(context).size.width,
+                  screenHeight: MediaQuery.of(context).size.height,
                   fontSize: widget.resolved.fontSize,
                   lineHeight: widget.resolved.lineHeight,
                   paragraphSpacing: widget.resolved.paragraphSpacing,
-                  pageMargins: widget.resolved.pageMargins,
+                  marginTop: widget.resolved.marginTop,
+                  marginBottom: widget.resolved.marginBottom,
+                  marginLeft: widget.resolved.marginLeft,
+                  marginRight: widget.resolved.marginRight,
                 ),
               ),
             ).toString();
