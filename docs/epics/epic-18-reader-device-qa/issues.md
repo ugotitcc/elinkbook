@@ -1160,7 +1160,7 @@ AiPaper Reader C 這類 E-Ink 裝置為了讓文字/圖示夠大，`devicePixelR
 
 ### Issue 45：EPUB 切換直排／橫排後，翻頁一次跳好幾頁（需退出重進才恢復正常）
 
-**Status:** needs-triage（根因為靜態程式碼推論，下一步：建立 headless Chromium 或 widget test 重現迴圈，量測「切換直排/橫排」前後 `view.next()` 實際位移的欄位數是否符合預期的 1 欄，確認後才可轉 ready-for-agent）
+**Status:** ✅ 已修復（`/diagnose` 續作，2026-08-11）。原本用 `nextPage()` 在書本前段測試未能重現（見上方 needs-info 段落），改用 `previousPage()`＋更深的書本位置後成功穩定重現：切換方向完成當下（不需任何翻頁動作）位置就已跳動約 4 頁份量，5 種 viewport 皆重現、與解析度無關。**確切根因**（已用除錯 log 直接驗證，非推論）：`Paginator` 內部決定分欄/捲動軸方向的私有欄位 `this.#vertical`，只有 section 第一次載入時才會從 `getDirection(doc)` 正確推導；書已開啟、只是切換方向的情境下，沒有任何路徑會重新推導，直到退出重進強制每個 section 全新載入。**修法**：`main.js` 的 `applyPreferences()` 於 `writingMode` 真的變動時呼叫 `view.goTo(view.lastLocation.cfi)`，觸發 `paginator.js` 既有、原本從未被用到的 `directionChanged` 自我修正路徑（`#goTo()` 讀取當下真實 CSS 狀態，強制重建該 section 修正 `this.#vertical`），完全不修改任何 vendored 檔案（ADR 0011）。修復後 harness 全數重跑穩定通過（`reproduced: false`）。詳見 `reviews/bugfix-repro-issue-45.md`。
 
 **背景**：使用者回報切換直排/橫排後，若不退出書籍重新進入，上下頁換頁都會一次跳好幾頁；退出重進後恢復正常。
 

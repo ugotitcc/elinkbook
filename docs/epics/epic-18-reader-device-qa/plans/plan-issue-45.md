@@ -6,7 +6,7 @@
 
 **Architecture:** 一支獨立、不進版控的 Node.js + Puppeteer（headless Chromium）診斷腳本，透過 Puppeteer 的 request interception 直接伺服真實的 vendored 資源目錄（`app/android/app/src/main/assets/foliate/`）與一份既有測試 fixture EPUB，在無 Flutter/Android 環境下完整驅動真正的 `main.js`／`paginator.js`／`view.js`（比照生產環境 `WebViewAssetLoader` 的虛擬 origin 機制，見 Issue 8 Spike 驗證過的等效手法），透過與正式產品完全相同的橋接契約（`window.flutter_inappwebview.callHandler(...)`）攔截 `onLocatorChanged`／`onPageRendered` 事件，量測「連續呼叫 `window.nextPage()`」在切換排版方向前後，每次呼叫造成的 `fraction`（全書進度比例）位移量是否有異常放大。
 
-**Tech Stack:** Node.js（已安裝 v24）、Puppeteer（headless Chromium，本計畫透過 `npm install --no-save` 安裝於 `tmp/` 內、不進版控）。不涉及任何 Dart/Flutter 程式碼異動。
+**Tech Stack:** Node.js（已安裝 v24）、Puppeteer（headless Chromium，本計畫透過 `npm install` 安裝於 `tmp/` 內、不進版控）。不涉及任何 Dart/Flutter 程式碼異動。
 
 ## Global Constraints
 
@@ -17,6 +17,10 @@
 - **本計畫的「測試」即 harness 腳本本身的量測輸出**（`result.json` 的 `reproduced` 欄位與各項 `delta` 數值），不是傳統紅-綠 TDD 循環——這與本計畫的診斷性質一致，比照 Issue 34 headless Chromium 最小重現案例的既有作法。
 - **量測指標選用 `fraction`（全書進度比例）而非「欄位數」**：`issues.md` 原文要求量測「欄位數」，但 `this.#vertical`／欄位數等內部狀態是 Paginator 的私有欄位（`#` 開頭），JS 私有欄位語法上無法從外部（含 `page.evaluate()` 注入的腳本）存取。改用 `onLocatorChanged` 橋接事件既有公開回傳的 `fraction`（`progress.js` `SectionProgress.getProgress()` 輸出，`main.js:497-513` 已透傳為 `onLocatorChanged` 第 2 個參數）作為等效可觀察量——連續 `nextPage()` 呼叫若每次位移的書本進度比例基本一致，代表「每次翻頁移動一個欄位」；若切換方向後第一次 `nextPage()` 的 `fraction` 位移明顯放大（數倍於切換前的平均值），即是「一次跳好幾頁」症狀的量化證據，效果等同於「欄位數」量測目標，但走的是私有欄位語法允許的公開介面路徑。
 - **已完成的原始碼追蹤（本計畫撰寫時的靜態分析，供 harness 設計與後續診斷報告參考，非量測結論）**：追蹤 `paginator.js` 原始碼確認 `this.#vertical`（Paginator 內部欄位，決定分欄/捲動軸方向）只在兩個路徑更新：(a) `View.load()` 的 iframe `load` 事件處理常式（`paginator.js:618-695`，每個 section **第一次載入**時呼叫 `getDirection(doc)`〔`paginator.js:449-479`，讀取該 iframe 文件目前的 computed `writing-mode`〕並透過 `beforeRender?.({vertical, rtl})` 回呼寫回 Paginator）；(b) `Paginator.render()`（`paginator.js:1903-1918`）呼叫 `#beforeRender({vertical: this.#vertical, ...})`——**這裡傳入的是 `this.#vertical` 自己目前的值**，屬自我參照、並非重新從 DOM 推導。而 `main.js` 切換 `writingMode` 偏好的實際手段是 `Paginator.setStyles()`（`paginator.js:3445-3466`）注入新的 `writing-mode: vertical-rl !important` 覆蓋 CSS 文字——**`setStyles()` 只更新已載入 iframe 內 `<style>` 元素的 `textContent`，完全不呼叫 `getDirection()` 或 `#beforeRender()`**，代表對「書本已經開啟、只是切換方向」這個情境，`this.#vertical` 沒有任何路徑會被重新推導；而緊接著 `main.js` 呼叫的 `setAttribute('max-column-count', ...)` 等屬性變更會觸發 `attributeChangedCallback()`（`paginator.js:1545-1573`）呼叫 `this.render()`，但這個 `render()` 使用的仍是（a）(b) 兩條路徑之外、從未真正更新過的**舊值** `this.#vertical`。這與 `issues.md` 原本「信心不足」的假設方向一致，且已定位到具體、可驗證的分歧點（`setStyles()` 與 `render()`/`#beforeRender()` 之間缺乏重新推導方向的呼叫路徑），但仍需 harness 實際量測確認「這個內部狀態分歧確實會表現為外部可觀察的翻頁位移異常」，而非僅止於靜態推論——這正是本計畫存在的理由。
+
+## 審查修正（Round 2，見 `tmp/epic-18/review-plan-issue-45-round2.md`）
+
+Task 1 執行完成後的獨立審查發現：`repro.mjs` 的 `waitForSettle()` 原本要求「`relocate` 次數增加」與「`stabilized` 次數增加」同時成立才算完成一次量測；連續重跑兩次，逾時（`null`）出現的索引位置每次不同，證實這是量測機制本身的非決定性瑕疵（`'stabilized'` 事件只在 `paginator.js` 觸發 `render()`/`#fill()` 時才 dispatch，`nextPage()` 若走不需要重建 view 的輕量捲動路徑則可能完全不觸發，導致雙條件 AND 卡死到逾時），**不是**原本假設的「書本翻到結尾」。已修正為 `waitForRelocateSettle()`：只依賴 `relocate`（量測目標本身的直接來源），等到新的 `relocate` 之後再等待連續 300ms 內次數不再變動（debounce）才視為穩定，不再要求 `'stabilized'` 同時發生；`switchWritingMode()` 因為 `applyPreferences()` 的 `setAttribute()` 呼叫必定同步觸發 `render()`，`'stabilized'` 訊號在那個呼叫點仍然可靠，維持不變。另把「切換後第一次量測」的判讀邏輯從硬取索引 `[0]` 改為「三筆量測中第一筆非 `null` 的值」（實際採用的索引一併記錄進 `result.json` 的 `firstPostSwitchDeltaIndex`／`firstPostSwitchToHorizontalDeltaIndex`）。修正後連續重跑 3 次，`result.json` 逐位元組完全一致、無任何 `null`，`reproduced`／`reproducedReverse` 皆確認為 `false`（詳見 `reviews/bugfix-repro-issue-45.md`）。
 
 ---
 
@@ -37,7 +41,7 @@
 mkdir -p tmp/epic-18-issue-45-harness
 cd tmp/epic-18-issue-45-harness
 npm init -y
-npm install --no-save puppeteer
+npm install puppeteer
 cd ../..
 ```
 

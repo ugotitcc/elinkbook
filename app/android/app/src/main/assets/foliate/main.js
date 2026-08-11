@@ -197,6 +197,10 @@ window.applyPreferences = function (prefs) {
   }
   // epic-17 Issue 8：劃線/備註繪製需要知道目前實際生效的排版方向，見
   // currentWritingMode 宣告處註解。
+  // /diagnose（Epic 18 Issue 45）：切換方向後修法需要知道「這次呼叫是否
+  // 真的改變了 writingMode」，故在覆蓋前先留一份舊值（見本函式最後的
+  // view.goTo() 修法段落）。
+  const previousWritingMode = currentWritingMode
   if (prefs.writingMode) {
     currentWritingMode = prefs.writingMode
   }
@@ -271,6 +275,37 @@ window.applyPreferences = function (prefs) {
   view.renderer.setAttribute('margin-left', `${marginLeftPx}px`)
   view.renderer.setAttribute('margin-right', `${marginRightPx}px`)
   view.renderer.setStyles([fontFaceCss, buildOverrideCss(prefs)])
+
+  // /diagnose（Epic 18 Issue 45，2026-08-11）：切換書寫方向後翻頁一次跳
+  // 好幾頁、退出重進才恢復正常。根因：Paginator 內部決定分欄/捲動軸
+  // 方向的私有欄位 this.#vertical，只有在 section「第一次載入」時才會
+  // 從 getDirection(doc) 正確推導；書本已經開啟、只是切換方向的情境下，
+  // 上面 setAttribute 觸發的 render() 只會自我參照 this.#vertical 目前
+  // 的值，setStyles()（上一行，真正讓 CSS 翻轉的呼叫）本身也完全不會
+  // 觸發任何重新推導——已用 headless Chromium 量測證實：切換完成當下，
+  // 位置在沒有任何明確翻頁動作的情況下就已經跳動數頁份量（見
+  // docs/epics/epic-18-reader-device-qa/reviews/bugfix-repro-issue-45.md
+  // 「審查修正（Round 2）」之後的 Phase 3/4 稽核紀錄）。
+  //
+  // 修法：writingMode 真的改變時，呼叫 view.goTo() 導覽回目前位置。
+  // Paginator.goTo() 內建的 directionChanged 偵測（paginator.js 私有
+  // 方法 #goTo()，讀取 getDirection(view.document) 這個當下真實 CSS
+  // 狀態，不像 render() 是自我參照）會正確判定方向已變，強制銷毀重建
+  // 該 section 的 view、重新走一次 View.load() 的 getDirection() 推導
+  // 路徑，修正 this.#vertical——這是 paginator.js 既有的公開行為，不是
+  // 新增或修改 vendored 檔案（ADR 0011）。
+  //
+  // 刻意只在 writingMode 真的變動時才觸發（不是「有帶 writingMode 欄位
+  // 就觸發」）：Issue 9 裝置旋轉時會重新呼叫 applyPreferences(lastAppliedPrefs)，
+  // 其中通常包含未變動的 writingMode，若不排除會讓每次旋轉都多一次不必要
+  // 的 view.goTo()（#goTo() 判定 directionChanged=false 時仍會有短暫的
+  // opacity 0→1 淡出淡入，見 paginator.js #goTo() 該分支）。用完整 CFI
+  // （而非 section index）導覽是必要的——若只給 index，#goTo() 的
+  // resolvedAnchor 會退回該 section 開頭而非保留原本閱讀位置。
+  if (prefs.writingMode && prefs.writingMode !== previousWritingMode) {
+    const cfi = view.lastLocation?.cfi
+    if (cfi) view.goTo(cfi)
+  }
 }
 
 // epic-18-reader-device-qa Issue 39：main.js 這個 ES module 執行到這裡時
