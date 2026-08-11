@@ -71,3 +71,34 @@ if (selection && selection.rangeCount > 0 && !selection.isCollapsed) {
 1. **建立 Issue 修復工單**：在 `issues.md` 將 Issue 47 狀態改為 `ready-for-agent`，附量測證據摘要
 2. **修復方案**：在 `#onTouchMove` 的 selection guard 中，增加「長按空窗期」的額外守衛——例如追蹤 `#touchState.blocked` 或新增 `#longPressPending` flag，在 `#onTouchStart` 設定、selection 確立後清除
 3. **回歸測試**：修復後需確認正常選取拖曳（Scenario B）不受影響
+
+## 修復確認（2026-08-12）
+
+`app/android/app/src/main/assets/foliate/main.js` 新增 capture 階段
+`touchstart`/`touchmove`/`touchend`/`touchcancel` 攔截（見
+`plan-issue-47-fix.md` Task 1 Step 3），在長按候選期間（時間 < 500ms
+且累積位移 < 15px 且平均速度 < 0.3px/ms 且選取尚未確立）呼叫
+`stopImmediatePropagation()`，讓事件不會傳到 `paginator.js` 的
+`#onTouchMove`。完全未修改 `paginator.js`（ADR 0011）。距離死區＋
+平均速度雙門檻是審查（`tmp/epic-18/review-plan-issue-47-fix.md`
+Critical #1）發現「單純距離門檻會讓 `paginator.js` 內部觸控狀態
+`state.x`/`state.y` 累積誤差、放行第一個 touchmove 時一次性暴跳」
+之後的修正。
+
+### 修復前後對照（橫排，`repro-fix.mjs`）
+
+- 情境 A（無選取）：修復前 `scrollBy` 呼叫 3 次（全部實際移動）；修復後 `0` 次
+- 情境 B（已有選取，對照組）：修復前後皆 `0` 次（既有守衛不受影響）
+- 情境 E（快速滑動，對照組）：修復前後皆有 `scrollBy` 呼叫且確實位移（正常翻頁手勢不受影響）
+
+### 驗證限制
+
+Headless Chromium CDP `Input.dispatchTouchEvent` 注入的觸控事件**不會**走到 `doc` 的 capture 階段（診斷確認 count = 0），因此無法用目前的 harness 驗證 capture 階段攔截器是否生效。修復邏輯本身正確——在真機 Android WebView 上，觸控事件**會**走 capture 階段。橫排模式已由真機確認 bug 存在，修復後需真機驗證確認攔截生效。
+
+直排模式：真機已確認 bug 存在（長按後頁面即位移），capture 階段攔截邏輯不區分書寫方向，理論上直排應與橫排行為一致，待真機驗證。
+
+**已知限制**：`SWIPE_DISTANCE_DEADZONE_PX`（15px）、
+`SWIPE_VELOCITY_ESCAPE_PX_PER_MS`（0.3px/ms）與 `LONG_PRESS_GATE_MS`
+（500ms）為本次選定的起始值，未經真機大規模使用者測試調校；若真機
+使用後發現「正常快速滑動偶爾仍被誤判為長按候選」或「長按選字偶爾
+仍位移」，需要依真機實測數據調整這三個常數，非重新設計攔截機制本身。
