@@ -640,6 +640,82 @@ async function openBook() {
         reportSelection()
       })
       doc.addEventListener('pointercancel', () => reportSelection())
+
+      // Epic 18 Issue 47 修復：長按候選期間（touchstart 到瀏覽器原生
+      // 選取真正建立之間）攔截 touchmove，避免 paginator.js 的
+      // #onTouchMove 選取守衛（paginator.js:2191-2195，只在
+      // selection.rangeCount > 0 && !selection.isCollapsed 才擋下）在
+      // 這段空窗期誤判為滑動換頁而位移內容（已用 CDP 觸控注入＋真機
+      // 驗證確認橫排/直排皆會重現，見
+      // docs/epics/epic-18-reader-device-qa/reviews/bugfix-repro-issue-47.md）。
+      //
+      // 用 capture 階段監聽器搶在 paginator.js 自己註冊在同一個 doc 上
+      // 的 bubble 階段監聽器（paginator.js:1452-1455）之前執行，呼叫
+      // stopImmediatePropagation() 讓事件完全不會傳到 paginator 的處理
+      // 常式（含其 e.preventDefault() 呼叫與後續所有分支）——不修改
+      // paginator.js 任何一行（ADR 0011）。只攔截「看起來像長按候選」
+      // 的 touchmove（時間短、位移小、平均速度低、選取尚未確立），真正
+      // 的滑動換頁手勢與選取已確立後的 touchmove 都會立即放行。
+      //
+      // 【審查修正 Critical #1，見 tmp/epic-18/review-plan-issue-47-fix.md】
+      // 逃逸條件必須同時看「距離」與「平均速度」，不能只看距離：
+      // paginator.js 的 #touchState.x/y（2203-2204 行）只在 #onTouchMove
+      // 真正執行到那裡才會更新——若前幾個 touchmove 一路被本攔截器擋下，
+      // state.x/y 會停留在 touchstart 當下的初始值；等累積位移終於超過
+      // 純距離門檻、放行第一個 touchmove 給 paginator.js 時，它算出的
+      // dx = state.x - x 會是「手勢一開始到現在」的全部累積位移，而不是
+      // 這一影格的增量，造成 scrollBy() 一次性暴跳（審查報告已用具體
+      // 影格算例驗證：15px→40px→65px，第 3 影格單次跳 65px）。改用
+      // 「距離死區（調降到 15px）＋平均速度」雙門檻：真正的滑動手勢
+      // 通常在第一影格就有夠高的平均速度，會在距離門檻生效、state.x/y
+      // 累積誤差之前就先被速度條件放行，state.x/y 這時仍是準確值，不會
+      // 暴跳；長按選字的手指自然微幅晃動速度遠低於門檻，會正確停留在
+      // 攔截狀態。
+      const LONG_PRESS_GATE_MS = 500 // 對齊 Android ViewConfiguration.getLongPressTimeout() 預設值
+      const SWIPE_DISTANCE_DEADZONE_PX = 15 // 累積位移死區：超過就放行，把最大暴跳量壓到跟正常單影格位移同量級
+      const SWIPE_VELOCITY_ESCAPE_PX_PER_MS = 0.3 // 平均速度（累積位移/累積時間）門檻：真正滑動手勢通常第一影格就超過
+      let longPressGateState = null
+      doc.addEventListener('touchstart', (evt) => {
+        const touch = evt.touches[0]
+        if (!touch || evt.touches.length > 1) {
+          longPressGateState = null
+          return
+        }
+        longPressGateState = { x: touch.screenX, y: touch.screenY, t: evt.timeStamp }
+      }, { capture: true })
+      doc.addEventListener('touchmove', (evt) => {
+        if (!longPressGateState) return
+        if (evt.touches.length > 1) {
+          longPressGateState = null
+          return
+        }
+        const selection = doc.getSelection()
+        if (selection && selection.rangeCount > 0 && !selection.isCollapsed) {
+          // 選取已經確立，paginator.js 既有守衛從這裡開始會正確接手。
+          longPressGateState = null
+          return
+        }
+        const touch = evt.touches[0]
+        if (!touch) return
+        const elapsed = evt.timeStamp - longPressGateState.t
+        const dx = touch.screenX - longPressGateState.x
+        const dy = touch.screenY - longPressGateState.y
+        const distance = Math.hypot(dx, dy)
+        const avgVelocity = elapsed > 0 ? distance / elapsed : Infinity
+        if (elapsed >= LONG_PRESS_GATE_MS
+          || distance > SWIPE_DISTANCE_DEADZONE_PX
+          || avgVelocity > SWIPE_VELOCITY_ESCAPE_PX_PER_MS) {
+          // 超過長按辨識時間、或位移/平均速度已經大到明顯是滑動手勢——
+          // 放行給 paginator.js 正常處理，不再攔截這個手勢剩餘的
+          // touchmove。
+          longPressGateState = null
+          return
+        }
+        // 仍在長按候選期間（時間短、位移小、速度低、尚未確立選取）：攔截。
+        evt.stopImmediatePropagation()
+      }, { capture: true })
+      doc.addEventListener('touchend', () => { longPressGateState = null }, { capture: true })
+      doc.addEventListener('touchcancel', () => { longPressGateState = null }, { capture: true })
     })
     // Epic 20 Issue 2（ADR 0017 決策 4）：isFixedLayoutHint 覆蓋機制。
     // 當 Dart 端傳入 isFixedLayoutHint === true 時，強制將書本的

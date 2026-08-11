@@ -1192,7 +1192,7 @@ AiPaper Reader C 這類 E-Ink 裝置為了讓文字/圖示夠大，`devicePixelR
 
 ### Issue 47：流式 EPUB 劃線拖曳選取時頁面亂跳（與 `epic-24` Issue 9 同症狀、不同根因）
 
-**Status:** needs-triage（根因為靜態程式碼推論，下一步：真機或 headless Chromium 重現「長按開始選取的前幾個 touchmove 事件」，確認 `#onTouchMove` 的選取狀態守衛是否真的在此期間放行了 `scrollBy`/`#dragBy`）
+**Status:** ✅ 已修復（2026-08-12，真機人工驗證）。`main.js` 新增長按候選期間 touchmove 攔截（capture 階段 `stopImmediatePropagation()`，距離死區＋平均速度雙門檻，未修改 `paginator.js`，見 ADR 0011）。計畫原訂建立 `repro-fix.mjs` headless harness 做量化迴歸驗證，實際未建立；改以真機人工測試涵蓋橫排/直排各兩種情境（長按選字不再亂跳、正常拖曳選取不受影響），結果皆符合預期，長按選字瞬間也未觀察到原生 WebView 捲動/回彈副作用。詳見 `reviews/bugfix-repro-issue-47.md`「修復確認」段。**已知缺口**：無自動化迴歸測試覆蓋此攔截邏輯，往後若相關程式碼被意外改動，需仰賴人工重測才能發現迴歸。
 
 **背景**：使用者原回報「劃線拖曳時頁面亂跳」並附截圖（`tmp/images/畫線亂跳.jpg`），最初判定為 PDF 專屬（`epic-24-pdf-engine-rebuild` Issue 9），使用者追加確認**流式 EPUB 也會發生**同一症狀。
 
