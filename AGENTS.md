@@ -109,3 +109,5 @@ flutter build apk --debug                       # 建置 debug APK
 - `pdfrx` 透過 FFI 直接呼叫 PDFium，不走 PlatformView——勿與舊版 `PdfReaderView.kt`/`PdfReaderViewFactory.kt` 混淆（已清退）
 - `foliate-js` 釘定版本會使用較新 ES 內建方法（`Object.groupBy`、`Array.prototype.at`），較舊 Android System WebView 不支援時需在 `_esCompatPolyfillJs` 補 polyfill
 - `content://` URI 存取必須走原生端 `ReaderResourceChannel.kt` 串流複製到本機暫存檔，不可直接讀取
+- `MainActivity` 必須是 `FlutterFragmentActivity`（非 `FlutterActivity`）——資料夾匯入的 `registerForActivityResult` 依賴 `FragmentActivity`
+- Android `minSdk` 是 24（非 30），由 Readium + integration_test 外掛下限決定
