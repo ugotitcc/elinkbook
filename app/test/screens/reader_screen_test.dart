@@ -1249,8 +1249,11 @@ void main() {
     await tester.pump();
     await tester.pump();
 
-    // 5000 字元 / estimateCharsPerScreen(~500) ≈ 10 頁，progression=0 → 1/10。
-    expect(find.text('1/10'), findsOneWidget);
+    // Issue 46：screenWidth=800/screenHeight=600（flutter_test 預設視窗
+    // 尺寸）、其餘版面參數皆為預設值時，estimateCharsPerScreen() = 1598
+    // （見 epub_page_estimator_test.dart 對應測試），totalPages =
+    // ceil(5000/1598) = 4，progression 尚未收到任何回報（null）→ 第 1 頁。
+    expect(find.text('1/4'), findsOneWidget);
 
     // 開啟版面設定，把字型大小從 16 調到 32（加倍），觸發真正的
     // _handlePrefsChanged → setState → rebuild 路徑（而非直接建構帶有
@@ -1280,13 +1283,12 @@ void main() {
 
     // fontSize 倍率變成 2.0，且 16 次點擊過程中 ReaderSettingsSheet 的
     // _notifyChanged() 一併把行高／邊界的目前 UI 狀態（即使使用者未曾觸碰）
-    // 送入 BookReaderPrefs——epic-18 Issue 25/26 把行高／上邊界預設值分別
-    // 從 1.5/64 改為 1.0/32 後，estimateCharsPerScreen() 換算出的總頁數
-    // 也隨之改變（不再是舊預設值年代算出的 40，此為預期中的連動變化，非
-    // 回歸）；expect 值改為目前預設值下的正確結果 27（實測驗證，見
-    // EpubPageEstimator.estimateCharsPerScreen 的 lineHeightFactor／
-    // pageMarginsFactor 計算）。
-    expect(find.text('1/27'), findsOneWidget);
+    // 送入 BookReaderPrefs——這些值恰好等於 estimateCharsPerScreen() 自身
+    // 的預設 fallback（lineHeight 1.0／margin 32-16-24-24），數值不受影響。
+    // fontSize=2.0、screenWidth=800/screenHeight=600 下
+    // estimateCharsPerScreen() = 391（見 epub_page_estimator_test.dart
+    // 對應測試），totalPages = ceil(5000/391) = 13。
+    expect(find.text('1/13'), findsOneWidget);
   });
 
   testWidgets('PDF 頁尾行為不受本工單影響（既有回歸驗證）', (tester) async {
