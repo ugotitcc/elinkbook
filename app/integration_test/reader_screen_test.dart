@@ -64,6 +64,16 @@ bool _layoutSettingsButtonReady(WidgetTester tester) {
   return tester.widget<IconButton>(finder).onPressed != null;
 }
 
+/// PDF 版本的「⚙️版面」FAB 就緒判斷（epic-24-pdf-engine-rebuild Issue 8：
+/// PDF 不再使用 AppBar，改為 Key 為 `reader_pdf_settings_button` 的 FAB，
+/// `onPressed` 於 `_state == _RenderState.rendered` 前恆為 null，見
+/// reader_screen.dart 對應的 Positioned 區塊）。
+bool _pdfSettingsButtonReady(WidgetTester tester) {
+  final finder = find.byKey(const Key('reader_pdf_settings_button'));
+  if (finder.evaluate().isEmpty) return false;
+  return tester.widget<IconButton>(finder).onPressed != null;
+}
+
 Book _book(String id, {BookFileFormat format = BookFileFormat.epub}) => Book(
       id: id,
       title: '書名',
@@ -575,11 +585,11 @@ void main() {
 
     await _pumpUntil(
       tester,
-      () => _layoutSettingsButtonReady(tester),
+      () => _pdfSettingsButtonReady(tester),
       timeout: const Duration(seconds: 10),
     );
 
-    await tester.tap(find.byKey(const Key('reader_layout_settings_button')));
+    await tester.tap(find.byKey(const Key('reader_pdf_settings_button')));
     await tester.pumpAndSettle();
 
     expect(find.byType(PdfSettingsSheet), findsOneWidget);
@@ -608,11 +618,11 @@ void main() {
 
     await _pumpUntil(
       tester,
-      () => _layoutSettingsButtonReady(tester),
+      () => _pdfSettingsButtonReady(tester),
       timeout: const Duration(seconds: 10),
     );
 
-    await tester.tap(find.byKey(const Key('reader_layout_settings_button')));
+    await tester.tap(find.byKey(const Key('reader_pdf_settings_button')));
     await tester.pumpAndSettle();
 
     for (final keySuffix in ['fit_width', 'actual_size', 'page_fit']) {
@@ -647,11 +657,11 @@ void main() {
 
     await _pumpUntil(
       tester,
-      () => _layoutSettingsButtonReady(tester),
+      () => _pdfSettingsButtonReady(tester),
       timeout: const Duration(seconds: 10),
     );
 
-    await tester.tap(find.byKey(const Key('reader_layout_settings_button')));
+    await tester.tap(find.byKey(const Key('reader_pdf_settings_button')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('pdf_settings_tab_filters')));
     await tester.pumpAndSettle();
@@ -690,11 +700,11 @@ void main() {
 
     await _pumpUntil(
       tester,
-      () => _layoutSettingsButtonReady(tester),
+      () => _pdfSettingsButtonReady(tester),
       timeout: const Duration(seconds: 10),
     );
 
-    await tester.tap(find.byKey(const Key('reader_layout_settings_button')));
+    await tester.tap(find.byKey(const Key('reader_pdf_settings_button')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('pdf_settings_tab_filters')));
     await tester.pumpAndSettle();
@@ -731,11 +741,11 @@ void main() {
 
     await _pumpUntil(
       tester,
-      () => _layoutSettingsButtonReady(tester),
+      () => _pdfSettingsButtonReady(tester),
       timeout: const Duration(seconds: 10),
     );
 
-    await tester.tap(find.byKey(const Key('reader_layout_settings_button')));
+    await tester.tap(find.byKey(const Key('reader_pdf_settings_button')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('pdf_settings_tab_crop')));
     await tester.pumpAndSettle();
@@ -771,11 +781,11 @@ void main() {
 
     await _pumpUntil(
       tester,
-      () => _layoutSettingsButtonReady(tester),
+      () => _pdfSettingsButtonReady(tester),
       timeout: const Duration(seconds: 10),
     );
 
-    await tester.tap(find.byKey(const Key('reader_layout_settings_button')));
+    await tester.tap(find.byKey(const Key('reader_pdf_settings_button')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('pdf_settings_tab_crop')));
     await tester.pumpAndSettle();
@@ -834,11 +844,11 @@ void main() {
 
     await _pumpUntil(
       tester,
-      () => _layoutSettingsButtonReady(tester),
+      () => _pdfSettingsButtonReady(tester),
       timeout: const Duration(seconds: 10),
     );
 
-    await tester.tap(find.byKey(const Key('reader_layout_settings_button')));
+    await tester.tap(find.byKey(const Key('reader_pdf_settings_button')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('pdf_settings_tab_crop')));
     await tester.pumpAndSettle();
@@ -884,11 +894,11 @@ void main() {
 
     await _pumpUntil(
       tester,
-      () => _layoutSettingsButtonReady(tester),
+      () => _pdfSettingsButtonReady(tester),
       timeout: const Duration(seconds: 10),
     );
 
-    await tester.tap(find.byKey(const Key('reader_layout_settings_button')));
+    await tester.tap(find.byKey(const Key('reader_pdf_settings_button')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('pdf_settings_tab_crop')));
     await tester.pumpAndSettle();
@@ -967,11 +977,11 @@ void main() {
 
     await _pumpUntil(
       tester,
-      () => _layoutSettingsButtonReady(tester),
+      () => _pdfSettingsButtonReady(tester),
       timeout: const Duration(seconds: 10),
     );
 
-    await tester.tap(find.byKey(const Key('reader_layout_settings_button')));
+    await tester.tap(find.byKey(const Key('reader_pdf_settings_button')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('pdf_settings_tab_crop')));
     await tester.pumpAndSettle();

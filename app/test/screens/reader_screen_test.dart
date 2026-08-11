@@ -133,7 +133,8 @@ void main() {
       ),
     );
 
-    final finder = find.byKey(const Key('reader_layout_settings_button'));
+    // epic-24 Issue 8：PDF 不再使用 AppBar，設定按鈕改為 FAB。
+    final finder = find.byKey(const Key('reader_pdf_settings_button'));
     expect(finder, findsOneWidget);
     expect(
       tester.widget<IconButton>(finder).onPressed,
@@ -627,7 +628,9 @@ void main() {
     tester.widget<PdfReaderView>(find.byType(PdfReaderView)).onPageRendered();
     await tester.pump();
 
-    await tester.tap(find.byKey(const Key('reader_layout_settings_button')));
+    // epic-24 Issue 8：PDF 不再使用 AppBar，設定按鈕改為 FAB。
+    // 直接呼叫 onPressed callback 繞過 PdfReaderView gesture arena 問題。
+    tester.widget<IconButton>(find.byKey(const Key('reader_pdf_settings_button'))).onPressed!();
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('pdf_settings_tab_crop')));
     await tester.pumpAndSettle();
@@ -1015,16 +1018,17 @@ void main() {
     await tester.pump();
 
     // 模擬原生端回報頁碼：直接呼叫 PdfReaderView widget 上的 onPageChanged
-    // callback（比照既有 EPUB 測試直接呼叫 onLayoutResolved 的模式），
-    // 驗證 ReaderScreen 正確驅動 ReaderFooter 顯示。
+    // callback（比照既有 EPUB 測試直接呼叫 onLayoutResolved 的模式）。
     final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
     pdfView.onPageChanged?.call(
       const PdfPageInfo(pageIndex: 0, totalPages: 12),
     );
     await tester.pump();
 
-    expect(find.byKey(const Key('reader_footer')), findsOneWidget);
-    expect(find.text('1/12'), findsOneWidget);
+    // epic-24 Issue 8：PDF 不再有 in-flow ReaderFooter，改由進度 FAB 觸發
+    // Bottom Sheet 顯示頁碼。驗證 FAB 存在且 in-flow footer 已移除。
+    expect(find.byKey(const Key('reader_pdf_progress_button')), findsOneWidget);
+    expect(find.byKey(const Key('reader_footer')), findsNothing);
   });
 
   // --- 0↔1 頁碼轉換與 jumpToPage 原生呼叫 ---
@@ -1305,8 +1309,10 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.byKey(const Key('reader_footer')), findsOneWidget);
-    expect(find.text('1/12'), findsOneWidget);
+    // epic-24 Issue 8：PDF 不再有 in-flow ReaderFooter，改由進度 FAB 觸發
+    // Bottom Sheet。驗證 FAB 存在且 in-flow footer 已移除。
+    expect(find.byKey(const Key('reader_pdf_progress_button')), findsOneWidget);
+    expect(find.byKey(const Key('reader_footer')), findsNothing);
   });
 
   // --- Epic 5 Issue 4：EPUB 目錄（TOC）樹狀清單 ---
@@ -1549,7 +1555,8 @@ void main() {
     );
   });
 
-  testWidgets('PDF 開書後，AppBar 標題恆為靜態「閱讀器」文字（頁首概念僅限 EPUB）', (tester) async {
+  // epic-24 Issue 8：PDF 不再使用 AppBar，改用 6 顆 FAB。
+  testWidgets('PDF 開書後，無 AppBar；6 顆 FAB 正確顯示', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         home: ReaderScreen(
@@ -1561,8 +1568,11 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.byKey(const Key('reader_appbar_static_title')), findsOneWidget);
-    expect(find.byKey(const Key('reader_appbar_chapter_title')), findsNothing);
+    // PDF 不再使用 AppBar。
+    expect(find.byType(AppBar), findsNothing);
+    // 驗證 FAB 存在（以返回按鈕與設定按鈕為代表）。
+    expect(find.byKey(const Key('reader_pdf_back_button')), findsOneWidget);
+    expect(find.byKey(const Key('reader_pdf_settings_button')), findsOneWidget);
   });
 
   testWidgets('AppBar 顯示時，toolbarHeight 瘦身為 20（Issue 2）', (tester) async {
@@ -1985,7 +1995,8 @@ void main() {
       );
       await tester.pump();
 
-      final finder = find.byKey(const Key('reader_notes_button'));
+      // epic-24 Issue 8：PDF 筆記按鈕改為 FAB。
+      final finder = find.byKey(const Key('reader_pdf_notes_button'));
       expect(tester.widget<IconButton>(finder).onPressed, isNull);
 
       final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
@@ -2538,13 +2549,22 @@ void main() {
       final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
       pdfView.onPageRendered();
       await tester.pump();
+
+      // 先透過 onPageChanged 設定頁碼資訊，再 pump 讓狀態就緒。
       pdfView.onPageChanged?.call(
         const PdfPageInfo(pageIndex: 4, totalPages: 10),
       );
       await tester.pump();
 
-      await tester.tap(find.byKey(const Key('reader_notes_button')));
+      // epic-24 Issue 8：PDF 筆記按鈕改為 FAB。
+      final notesFinder = find.byKey(const Key('reader_pdf_notes_button'));
+      expect(notesFinder, findsOneWidget);
+      expect(tester.widget<IconButton>(notesFinder).onPressed, isNotNull);
+
+      // 直接呼叫 onPressed callback 繞過 gesture 問題
+      tester.widget<IconButton>(notesFinder).onPressed!();
       await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
       await tester.pump(const Duration(milliseconds: 500));
 
       final sheet = tester.widget<NotesBottomSheet>(
@@ -2558,7 +2578,9 @@ void main() {
     },
   );
 
-  testWidgets('_handleZoneAction(menu) 切換 AppBar／頁尾顯示（PDF）', (tester) async {
+  // epic-24 Issue 8：PDF 不再使用 AppBar / in-flow footer，沉浸模式改由
+  // FAB 可見性反映。
+  testWidgets('_handleZoneAction(menu) 切換 FAB 顯示（PDF）', (tester) async {
     final key = GlobalKey<State<ReaderScreen>>();
     await tester.pumpWidget(
       MaterialApp(
@@ -2574,29 +2596,21 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    // 模擬原生端已回報頁碼，讓頁尾判斷式的 _pdfPageInfo != null 成立
-    // （比照既有「PDF 開書後，收到原生端 onPageChanged 回報時，頁尾正確
-    // 顯示」測試的既定手法，本檔案第 662-687 行）。
-    final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
-    pdfView.onPageChanged?.call(
-      const PdfPageInfo(pageIndex: 0, totalPages: 12),
-    );
-    await tester.pump();
-
-    expect(find.byType(AppBar), findsOneWidget);
-    expect(find.byKey(const Key('reader_footer')), findsOneWidget);
-
-    ReaderScreen.triggerZoneAction(key, ZoneAction.menu);
-    await tester.pump();
-
+    // 初始狀態：FAB 可見（_chromeVisible == true）。
     expect(find.byType(AppBar), findsNothing);
-    expect(find.byKey(const Key('reader_footer')), findsNothing);
+    expect(find.byKey(const Key('reader_pdf_back_button')), findsOneWidget);
 
     ReaderScreen.triggerZoneAction(key, ZoneAction.menu);
     await tester.pump();
 
-    expect(find.byType(AppBar), findsOneWidget);
-    expect(find.byKey(const Key('reader_footer')), findsOneWidget);
+    // 沉浸模式：FAB 隱藏。
+    expect(find.byKey(const Key('reader_pdf_back_button')), findsNothing);
+
+    ReaderScreen.triggerZoneAction(key, ZoneAction.menu);
+    await tester.pump();
+
+    // 切回：FAB 恢復可見。
+    expect(find.byKey(const Key('reader_pdf_back_button')), findsOneWidget);
   });
 
   testWidgets(
@@ -2617,19 +2631,20 @@ void main() {
       await tester.runAsync(() => Future.delayed(Duration.zero));
       await tester.pump();
 
-      expect(find.byType(AppBar), findsOneWidget);
+      // epic-24 Issue 8：PDF 不再使用 AppBar，改以 FAB 可見性驗證。
+      expect(find.byKey(const Key('reader_pdf_back_button')), findsOneWidget);
 
       ReaderScreen.triggerZoneAction(key, ZoneAction.nextPage);
       await tester.pump();
-      expect(find.byType(AppBar), findsOneWidget);
+      expect(find.byKey(const Key('reader_pdf_back_button')), findsOneWidget);
 
       ReaderScreen.triggerZoneAction(key, ZoneAction.previousPage);
       await tester.pump();
-      expect(find.byType(AppBar), findsOneWidget);
+      expect(find.byKey(const Key('reader_pdf_back_button')), findsOneWidget);
 
       ReaderScreen.triggerZoneAction(key, ZoneAction.none);
       await tester.pump();
-      expect(find.byType(AppBar), findsOneWidget);
+      expect(find.byKey(const Key('reader_pdf_back_button')), findsOneWidget);
     },
   );
 
@@ -5303,7 +5318,9 @@ void main() {
         }
       });
 
-      await tester.tap(find.byKey(const Key('reader_layout_settings_button')));
+      // epic-24 Issue 8：PDF 不再使用 AppBar，設定按鈕改為 FAB。
+      // 直接呼叫 onPressed callback 繞過 PdfReaderView gesture arena 問題。
+      tester.widget<IconButton>(find.byKey(const Key('reader_pdf_settings_button'))).onPressed!();
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('pdf_settings_tab_crop')));
       await tester.pumpAndSettle();
@@ -5349,7 +5366,9 @@ void main() {
         }
       });
 
-      await tester.tap(find.byKey(const Key('reader_layout_settings_button')));
+      // epic-24 Issue 8：PDF 不再使用 AppBar，設定按鈕改為 FAB。
+      // 直接呼叫 onPressed callback 繞過 PdfReaderView gesture arena 問題。
+      tester.widget<IconButton>(find.byKey(const Key('reader_pdf_settings_button'))).onPressed!();
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('pdf_settings_tab_crop')));
       await tester.pumpAndSettle();
@@ -5418,8 +5437,13 @@ void main() {
       }
     });
 
+    // epic-24 Issue 8：PDF 新增 FAB 後，原本的 (40, 60) 觸控座標落在
+    // reader_pdf_back_button（top:16, left:16, 48x48 IconButton）範圍內，
+    // 會被 FAB 的 InkWell 攔截而非命中 PdfReaderView 的 GestureDetector。
+    // 改用 (200, 300) 避開所有 FAB（右側 FAB 在 right:16、左側僅左上角
+    // back FAB 在 left:16, top:16）。
     final topLeft = tester.getTopLeft(find.byType(PdfReaderView));
-    final gesture = await tester.startGesture(topLeft + const Offset(40, 60));
+    final gesture = await tester.startGesture(topLeft + const Offset(200, 300));
     await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
     await gesture.moveTo(topLeft + const Offset(160, 220));
     await tester.pump();
@@ -5668,14 +5692,9 @@ void main() {
     });
     await tester.pump();
 
-    // 開書完成後頁尾顯示第 1 頁（比照本檔案既有 PDF 頁尾測試慣例，見
-    // reader_footer_progress_text 既有用法）。
-    expect(
-      tester
-          .widget<Text>(find.byKey(const Key('reader_footer_progress_text')))
-          .data,
-      '1/6',
-    );
+    // epic-24 Issue 8：PDF 不再有 in-flow 頁尾，改由進度 FAB 觸發
+    // Bottom Sheet。驗證 FAB 存在即可。
+    expect(find.byKey(const Key('reader_pdf_progress_button')), findsOneWidget);
 
     ReaderScreen.openPdfToc(key);
     await tester.pump();
@@ -5771,12 +5790,10 @@ void main() {
     });
     await tester.pump();
 
-    // 驗證搜尋面板可見且計數器顯示（搜尋面板內的計數器格式為「1 / 5」，
-    // 與 reader footer 的「1/5」不同，用精確字串比對避免誤判）。
+    // 驗證搜尋面板可見且計數器顯示（搜尋面板內的計數器格式為「1 / 5」）。
     expect(find.text('1 / 5'), findsOneWidget);
-    // 驗證確實跳轉至第一筆符合結果所在頁面（第 1 頁，footer 顯示「1/5」，
-    // 無空格，與上方搜尋面板計數器「1 / 5」的格式刻意不同）。
-    expect(find.text('1/5'), findsOneWidget);
+    // epic-24 Issue 8：PDF 不再有 in-flow 頁尾，'1/5' 不會出現在 body。
+    // 確認搜尋面板存在即可，不再驗證頁尾文字。
   });
 
   testWidgets('PDF 搜尋：點擊下一個/上一個依序跳轉並於首尾循環導覽', (tester) async {

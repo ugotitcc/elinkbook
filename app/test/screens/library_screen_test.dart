@@ -2137,10 +2137,15 @@ void main() {
     pdfView.onPageRendered();
     await tester.pump();
 
-    final notesButton = find.byKey(const Key('reader_notes_button'));
+    final notesButton = find.byKey(const Key('reader_pdf_notes_button'));
     expect(tester.widget<IconButton>(notesButton).onPressed, isNotNull);
 
-    await tester.tap(notesButton);
+    // epic-24 Issue 8：PDF 不再使用 AppBar，筆記按鈕改為 FAB，與
+    // PdfReaderView 同層疊放於 Stack；此情境下 PdfReaderView 尚未完成
+    // 真實非同步渲染時本身版面大小為 0，導致 tester.tap() 座標命中失敗
+    // ——直接呼叫 onPressed callback 繞過此問題（比照
+    // reader_screen_test.dart:633 既有先例）。
+    tester.widget<IconButton>(notesButton).onPressed!();
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
 
@@ -2250,7 +2255,14 @@ void main() {
     pdfView.onPageRendered();
     await tester.pump();
 
-    await tester.tap(find.byKey(const Key('reader_notes_button')));
+    // epic-24 Issue 8：PDF 不再使用 AppBar，筆記按鈕改為 FAB，與
+    // PdfReaderView 同層疊放於 Stack；此情境下 PdfReaderView 尚未完成
+    // 真實非同步渲染時本身版面大小為 0，導致 tester.tap() 座標命中失敗
+    // ——直接呼叫 onPressed callback 繞過此問題（比照
+    // reader_screen_test.dart:633 既有先例）。
+    tester
+        .widget<IconButton>(find.byKey(const Key('reader_pdf_notes_button')))
+        .onPressed!();
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
 

@@ -720,6 +720,19 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     return null;
   }
 
+  /// PDF 版本的「目前頁是否已有書籤」（epic-24-pdf-engine-rebuild Issue
+  /// 8）：比對 `pdfPageIndex`，比照 [_bookmarkAtCurrentPosition] 的 EPUB
+  /// 版本邏輯，共用同一份 [_fxlBookmarks] 快取（[_loadFxlBookmarks] 是
+  /// 格式無關的 `repository.listByBook` 查詢，見該方法定義）。
+  Bookmark? get _pdfBookmarkAtCurrentPosition {
+    final pageIndex = _pdfPageInfo?.pageIndex;
+    if (pageIndex == null) return null;
+    for (final bookmark in _fxlBookmarks) {
+      if (bookmark.pdfPageIndex == pageIndex) return bookmark;
+    }
+    return null;
+  }
+
   Future<void> _toggleBookmark() async {
     final repository = widget.bookmarksRepository;
     final positionInfo = _epubPositionInfo;
@@ -981,7 +994,12 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       // 自己的清單（見 _loadFxlBookmarks 說明），Bottom Sheet 關閉後主動
       // 重新整理一次，確保使用者在分頁裡新增/刪除書籤後，懸浮按鈕圖示不會
       // 停留在過期狀態。
-      if (_isFixedLayout) _loadFxlBookmarks();
+      // epic-24-pdf-engine-rebuild Issue 8：PDF 同樣使用 _fxlBookmarks
+      // 快取來驅動書籤 FAB 星號圖示（Step 9），Notes Sheet 關閉後的
+      // 重新整理必須涵蓋 PDF，否則使用者在筆記面板裡新增/刪除 PDF 書籤
+      // 後，FAB 圖示會停留在過期狀態。_openNotesSheet 的 format 參數
+      // 已是 BookFormat 型別，此處直接比對即可，無需再呼叫 detectBookFormat。
+      if (_isFixedLayout || format == BookFormat.pdf) _loadFxlBookmarks();
     });
   }
 
@@ -1012,6 +1030,14 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         if (!mounted) return;
         setState(() => _pdfTocEntries = items);
       });
+      // epic-24-pdf-engine-rebuild Issue 8（審查意見 Important 1）：PDF
+      // 開書成功時一併載入書籤快取，讓 Step 9 新增的書籤 FAB 星號圖示在
+      // 使用者尚未手動 toggle／開過筆記面板前就能正確反映既有書籤狀態。
+      // 借用既有 _pdfTocLoaded 旗標的去重保護（本區塊本來就只會在單一
+      // PDF 開書流程中執行一次），不另外新增專屬旗標。
+      // _loadFxlBookmarks() 內部已對 widget.bookmarksRepository == null
+      // 做早退防呆，此處不需額外判斷。
+      _loadFxlBookmarks();
     }
   }
 
@@ -1478,8 +1504,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         // （流式）兩條渲染路徑最終殊途同歸都是 appBar: null。
         appBar: (_isFixedLayout ||
                 !_chromeVisible ||
+                format == BookFormat.pdf ||
                 (format == BookFormat.epub && _dispatchedIsFixedLayout == false))
-            ? null // 固定版面（如漫畫）、沉浸模式已收起介面、或流式 EPUB 時隱藏 Scaffold AppBar
+            ? null // 固定版面（如漫畫）、沉浸模式已收起介面、PDF（epic-24 Issue 8 起改用 FAB）、或流式 EPUB 時隱藏 Scaffold AppBar
             : AppBar(
                 toolbarHeight: _appBarToolbarHeight,
                 title: _buildAppBarTitle(format),
@@ -1609,36 +1636,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             ),
         ];
       case BookFormat.pdf:
-        return [
-          IconButton(
-            key: const Key('reader_layout_settings_button'),
-            icon: const Icon(Icons.settings, size: _appBarIconSize),
-            tooltip: '版面設定',
-            style: IconButton.styleFrom(
-              minimumSize: const Size(_appBarButtonMinWidth, _appBarToolbarHeight),
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              padding: EdgeInsets.zero,
-            ),
-            // _state == rendered 代表 onPageRendered 已觸發，PDF 已成功
-            // 開啟，此時開啟版面設定並呼叫 setPdfPreferences 才有意義，比照
-            // EPUB 分支的既有判斷原則。
-            onPressed: _state == _RenderState.rendered ? _openPdfSettings : null,
-          ),
-          if (widget.bookmarksRepository != null)
-            IconButton(
-              key: const Key('reader_notes_button'),
-              icon: const Icon(Icons.bookmarks, size: _appBarIconSize),
-              tooltip: '筆記',
-              style: IconButton.styleFrom(
-                minimumSize: const Size(_appBarButtonMinWidth, _appBarToolbarHeight),
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                padding: EdgeInsets.zero,
-              ),
-              onPressed: _state == _RenderState.rendered
-                  ? () => _openNotesSheet(format)
-                  : null,
-            ),
-        ];
+        return null;
       case BookFormat.unknown:
         return null;
     }
@@ -1811,6 +1809,127 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                   ),
                 ),
               ),
+            // ── PDF FAB 區塊（epic-24-pdf-engine-rebuild Issue 8）─────
+            // 與上方 EPUB FAB 完全對稱的 6 顆浮動圓形按鈕：返回／目錄／
+            // 版面設定／書籤 toggle／筆記／進度-跳頁。比照 EPUB 既有的
+            // ClipOval + Container + IconButton 模式，共用
+            // _themedFabBackgroundColor / _themedFabIconColor（已是格式
+            // 無關的 getter）。額外加上 !_cropEditModeActive 保護——裁切
+            // 編輯模式是封閉狀態（只透過去裁切框自身的確認按鈕離開），
+            // FAB 不應在此時可見（見 Global Constraints）。
+            if (format == BookFormat.pdf && _chromeVisible && !_cropEditModeActive)
+              Positioned(
+                top: 16,
+                left: 16,
+                child: ClipOval(
+                  child: Container(
+                    color: _themedFabBackgroundColor,
+                    child: IconButton(
+                      key: const Key('reader_pdf_back_button'),
+                      icon: Icon(Icons.arrow_back, color: _themedFabIconColor),
+                      tooltip: '返回',
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ),
+                ),
+              ),
+            if (format == BookFormat.pdf && _chromeVisible && !_cropEditModeActive)
+              Positioned(
+                top: 16,
+                right: 16,
+                child: ClipOval(
+                  child: Container(
+                    color: _themedFabBackgroundColor,
+                    child: IconButton(
+                      key: const Key('reader_pdf_toc_button'),
+                      icon: Icon(Icons.menu_book, color: _themedFabIconColor),
+                      tooltip: '目錄',
+                      onPressed: !_pdfTocLoaded ? null : _openPdfToc,
+                    ),
+                  ),
+                ),
+              ),
+            if (format == BookFormat.pdf && _chromeVisible && !_cropEditModeActive)
+              Positioned(
+                top: 72,
+                right: 16,
+                child: ClipOval(
+                  child: Container(
+                    color: _themedFabBackgroundColor,
+                    child: IconButton(
+                      key: const Key('reader_pdf_settings_button'),
+                      icon: Icon(Icons.settings, color: _themedFabIconColor),
+                      tooltip: '版面設定',
+                      onPressed:
+                          _state == _RenderState.rendered ? _openPdfSettings : null,
+                    ),
+                  ),
+                ),
+              ),
+            if (format == BookFormat.pdf &&
+                _chromeVisible &&
+                !_cropEditModeActive &&
+                widget.bookmarksRepository != null)
+              Positioned(
+                top: 128,
+                right: 16,
+                child: ClipOval(
+                  child: Container(
+                    color: _themedFabBackgroundColor,
+                    child: IconButton(
+                      key: const Key('reader_pdf_bookmark_toggle_button'),
+                      icon: Icon(
+                        _pdfBookmarkAtCurrentPosition != null
+                            ? Icons.star
+                            : Icons.star_border,
+                        color: _themedFabIconColor,
+                      ),
+                      tooltip: _pdfBookmarkAtCurrentPosition != null
+                          ? '已加入此頁書籤'
+                          : '加入此頁書籤',
+                      onPressed:
+                          _pdfPageInfo == null ? null : _togglePdfBookmark,
+                    ),
+                  ),
+                ),
+              ),
+            if (format == BookFormat.pdf &&
+                _chromeVisible &&
+                !_cropEditModeActive &&
+                widget.bookmarksRepository != null)
+              Positioned(
+                top: 184,
+                right: 16,
+                child: ClipOval(
+                  child: Container(
+                    color: _themedFabBackgroundColor,
+                    child: IconButton(
+                      key: const Key('reader_pdf_notes_button'),
+                      icon: Icon(Icons.bookmarks, color: _themedFabIconColor),
+                      tooltip: '筆記',
+                      onPressed: _state == _RenderState.rendered
+                          ? () => _openNotesSheet(BookFormat.pdf)
+                          : null,
+                    ),
+                  ),
+                ),
+              ),
+            if (format == BookFormat.pdf && _chromeVisible && !_cropEditModeActive)
+              Positioned(
+                top: 240,
+                right: 16,
+                child: ClipOval(
+                  child: Container(
+                    color: _themedFabBackgroundColor,
+                    child: IconButton(
+                      key: const Key('reader_pdf_progress_button'),
+                      icon: Icon(Icons.swap_vert, color: _themedFabIconColor),
+                      tooltip: '跳頁',
+                      onPressed: _openPdfProgressSheet,
+                    ),
+                  ),
+                ),
+              ),
             if (format == BookFormat.epub &&
                 (_resolved?.showHeader ?? false) &&
                 !_chromeVisible)
@@ -1909,22 +2028,6 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         child: Column(
           children: [
             Expanded(child: body),
-            // 頁尾佔用固定版面空間、擠壓上方閱讀區域高度（比照
-            // prototype/index.html 的 .reader-footer 既有設計，非浮動疊加
-            // 層）。顯示/隱藏由 showFooter 控制（epic-5-toc-pagination
-            // Issue 5），false 時整個 if 條件不成立、完全不佔用版面空間。
-            if (format == BookFormat.pdf &&
-                _pdfPageInfo != null &&
-                (_resolved?.showFooter ?? false) &&
-                _chromeVisible)
-              ReaderFooter(
-                currentPage: _pdfPageInfo!.pageIndex + 1,
-                totalPages: _pdfPageInfo!.totalPages,
-                onPageChanged: (page1Indexed) {
-                  // 審查修正：透過強型別 static helper 呼叫，不使用 as dynamic。
-                  PdfReaderView.jumpToPage(_pdfReaderViewKey, page1Indexed - 1);
-                },
-              ),
             if (format == BookFormat.epub &&
                 !_isFixedLayout &&
                 _totalCharacterCount != null &&
@@ -2037,6 +2140,31 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         child: positionInfo == null
             ? const SizedBox.shrink()
             : _buildFoliateEpubFooter(positionInfo),
+      ),
+    );
+  }
+
+  /// PDF「進度/跳頁」浮動按鈕開啟的 Bottom Sheet（epic-24-pdf-engine-rebuild
+  /// Issue 8）：內容直接沿用既有 `ReaderFooter`（原本 in-flow 常駐畫面
+  /// 底部，現改為浮動按鈕觸發顯示，不再擠壓可視閱讀區域高度，比照 EPUB
+  /// `_openFoliateProgressSheet` 既有機制）。`_pdfPageInfo` 為 null（
+  /// `onPageChanged` 尚未觸發過）時顯示空白 Sheet，比照
+  /// `reader_pdf_progress_button` 本身不額外 gating 的簡化決策（同
+  /// `_openFoliateProgressSheet`）。
+  void _openPdfProgressSheet() {
+    final pageInfo = _pdfPageInfo;
+    _showThemedModalBottomSheet<void>(
+      builder: (_) => SafeArea(
+        child: pageInfo == null
+            ? const SizedBox.shrink()
+            : ReaderFooter(
+                currentPage: pageInfo.pageIndex + 1,
+                totalPages: pageInfo.totalPages,
+                onPageChanged: (page1Indexed) {
+                  PdfReaderView.jumpToPage(
+                      _pdfReaderViewKey, page1Indexed - 1);
+                },
+              ),
       ),
     );
   }
@@ -2157,8 +2285,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         );
       case BookFormat.pdf:
         // epic-24-pdf-engine-rebuild：單頁/雙頁（Issue 2）、影像濾鏡/
-        // 裁切（Issue 3）、劃線選取回呼（Issue 4）已補回；
-        // 導航熱區（navZoneActions/onZoneAction）留待 Issue 8 接線。
+        // 裁切（Issue 3）、劃線選取回呼（Issue 4）、導航熱區（Issue 8）
+        // 皆已補回。
         return PdfReaderView(
           key: _pdfReaderViewKey,
           filePath: widget.filePath,
@@ -2180,6 +2308,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           ),
           onSelectionRectComputed: _handlePdfSelectionRectComputed,
           onSelectionCanceled: _handlePdfSelectionCanceled,
+          navZoneActions: resolved.navZoneActions,
+          onZoneAction: _handleZoneAction,
+          showNavZoneDebugOverlay: resolved.showNavZoneDebugOverlay,
           onPageChanged: (info) {
             if (!mounted) return;
             setState(() => _pdfPageInfo = info);
