@@ -246,7 +246,9 @@ UI 入口為 Issue 5 建立的目錄 Bottom Sheet「縮圖」分頁，不新增�
 
 ## Issue 8：閱讀工具列 FAB 化（6 顆按鈕整合）
 
-**Status:** ready-for-agent（2026-08-07，`/to-issues` 依 `spec.md` 拆解；原 `epic-23-pdf-fab-toolbar` 併入本 Epic）
+**Status:** ✅ 已完成並合併（2026-08-11，PR #130 → `main`，分支 `feature/epic-24-issue-8-fab`）
+
+**實作與審查歷程**：依 `docs/epics/epic-24-pdf-engine-rebuild/plans/plan-issue-8.md`（Task 1-3）實作，規劃階段經 `AskUserQuestion` 確認兩項範圍決策：(a) Page Label（PDF 邏輯頁碼標籤，例如封面羅馬數字）因查證 `pdfrx` 公開 API 未暴露底層 PDFium 的 `FPDF_GetPageLabel`，本工單先做純數字頁碼、Page Label 移出範圍另立後續工單；(b) PDF 版 3×3 導覽熱區（NavZone）一併實作（新增 `_PdfNavZoneTapDetector`，比照 EPUB 既有 `_NavZoneTapDetector` 手勢隔離策略，刻意獨立複製不共用模組）。計畫文件經 `/superpowers:receiving-code-review` 兩輪審查修正（書籤快取初次載入時序缺口、`onPointerCancel` 防禦性清理）後定案。程式碼實作完成後經**兩輪獨立程式碼審查**（`tmp/epic-24/code_review_issue_8.md`／`tmp/epic-24/review-code-issue-8.md`），第二輪發現並修復：**Critical**——`library_screen_test.dart`／`integration_test/` 多檔案因按鈕 Key 改名（`reader_notes_button`→`reader_pdf_notes_button`、`reader_layout_settings_button`→`reader_pdf_settings_button`）未同步更新導致既有 PDF 測試斷裂，其中 `library_screen_test.dart` 兩則另有更深層問題（FAB 與 `PdfReaderView` 同層疊放於 Stack，非同步渲染時序下 `PdfReaderView` 版面大小為 0 導致 `tester.tap()` 座標命中失敗，改採分支既有先例直接呼叫 `.onPressed!()` 繞過）；**Important**——`_PdfNavZoneTapDetector` 改用 `package:clock` 的 `clock.now()` 取代 `SchedulerBinding.currentSystemFrameTimeStamp` 量測按壓時長，修正正式裝置上靜止區域長按可能誤判為快速點擊的風險，同時維持 `flutter_test` FakeAsync 相容性。合併時 `flutter test` 1152/1152 全數通過、`flutter analyze` 乾淨。
 
 **依賴：** Issue 1、3（版面設定面板需要濾鏡控制項）、4（書籤 toggle）、5（目錄）。
 
@@ -262,13 +264,13 @@ PDF 頂部工具列（現行傳統 `AppBar`，含系統預設返回箭頭 + 版�
 
 ### Acceptance criteria
 
-- [ ] PDF 閱讀畫面顯示 6 顆浮動圓形按鈕（返回／目錄／版面設定／書籤 toggle／筆記／進度-跳頁），底色/圖示色正確跟隨 `Theme.of(context)`。
-- [ ] 各按鈕功能正確：返回離開閱讀畫面、目錄開啟 Issue 5 的目錄 Bottom Sheet、版面設定開啟含 Issue 3 濾鏡控制項的設定面板、書籤 toggle 正確反映/切換 Issue 4 的書籤狀態、筆記開啟既有筆記面板、進度-跳頁開啟含頁碼顯示與跳頁功能的 Bottom Sheet。
-- [ ] 頁碼顯示正確依是否有 Page Label 呈現雙顯示或純數字，跳頁邏輯以絕對頁碼運算、不受 Page Label 格式影響。
-- [ ] 沉浸模式收合/展開行為與 EPUB 既有機制一致。
-- [ ] 現行 PDF `AppBar` 與對應原生 method channel 契約已完全移除，無殘留死碼。
-- [ ] 單元測試：`flutter test` 驗證 6 顆按鈕的顏色/啟用條件/點擊行為，比照既有 EPUB FAB 相關測試的既有模式。
-- [ ] `flutter analyze` 乾淨、全專案 `flutter test` 全數通過。
+- [x] PDF 閱讀畫面顯示 6 顆浮動圓形按鈕（返回／目錄／版面設定／書籤 toggle／筆記／進度-跳頁），底色/圖示色正確跟隨 `Theme.of(context)`。
+- [x] 各按鈕功能正確：返回離開閱讀畫面、目錄開啟 Issue 5 的目錄 Bottom Sheet、版面設定開啟含 Issue 3 濾鏡控制項的設定面板、書籤 toggle 正確反映/切換 Issue 4 的書籤狀態、筆記開啟既有筆記面板、進度-跳頁開啟含頁碼顯示與跳頁功能的 Bottom Sheet。
+- [x] 跳頁邏輯以絕對頁碼運算。**範圍調整（規劃階段人類決策，見上方實作歷程）**：Page Label 雙顯示（例如「iii (3/150)」）因 `pdfrx` 未暴露對應 API，本工單僅實作純數字頁碼顯示，未做雙顯示；Page Label 移出本工單範圍，待後續另立工單追蹤。
+- [x] 沉浸模式收合/展開行為與 EPUB 既有機制一致。
+- [x] 現行 PDF `AppBar` 與對應原生 method channel 契約已完全移除，無殘留死碼。
+- [x] 單元測試：`flutter test` 驗證 6 顆按鈕的顏色/啟用條件/點擊行為，比照既有 EPUB FAB 相關測試的既有模式。
+- [x] `flutter analyze` 乾淨、全專案 `flutter test` 全數通過（1152/1152）。
 
 ### Blocked by
 
