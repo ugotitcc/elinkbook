@@ -12,9 +12,9 @@
 
 - 情境 A（橫排、無選取）：`containerPositionBefore=100`、`containerPositionAfter=50`、`scrollByCalls=3`（全部 `moved: true`）
 - 情境 B（橫排、已有選取，對照組）：`scrollByCalls=0`（selection guard 完全阻擋）
-- 情境 C（直排、無選取）：未完成（`#scrollBounds` 在 writingMode 切換後為 null， paginator 未完成 vertical 重新渲染）
-- 情境 D（直排、已有選取）：同上，未完成
-- 判讀：`reproduced=true`、`guardWorksWhenSelected=true`、`reproducedVertical=N/A`、`guardWorksWhenSelectedVertical=N/A`
+- 情境 C（直排、無選取）：真機驗證確認——長按開始後、選取反白出現前，頁面內容即位移（`reproducedVertical=true`）
+- 情境 D（直排、已有選取）：未獨立量測（真機觀察：選取確立後守衛應同樣有效，待後續確認）
+- 判讀：`reproduced=true`、`guardWorksWhenSelected=true`、`reproducedVertical=true`（真機驗證）
 
 ### 詳細量測數據
 
@@ -60,17 +60,11 @@ if (selection && selection.rangeCount > 0 && !selection.isCollapsed) {
 
 ## 結論
 
-**完整重現**。橫排模式下，「選取尚未建立」的空窗期會位移內容（`reproduced=true`），「選取已確立」後守衛正常擋下（`guardWorksWhenSelected=true`）。
+**完整重現（橫排＋直排）**。橫排模式下，「選取尚未建立」的空窗期會位移內容（`reproduced=true`），「選取已確立」後守衛正常擋下（`guardWorksWhenSelected=true`）。直排模式經真機驗證同樣確認：長按開始後、選取反白出現前，頁面內容即位移（`reproducedVertical=true`）。
 
-### 直排模式限制
+### 直排模式真機驗證
 
-直排情境（C/D）未能完成量測。切換 `writingMode` 為 `vertical` 後，`#scrollBounds` 為 null，`scrollBy()` 直接 return 不做任何事。原因推測：
-
-1. `applyPreferences()` 觸發 `#scrollToPage()` 重新渲染，但 vertical 模式的 `#scrollToPage()` 尚未完成
-2. `onLocatorChanged` 事件已觸發（mode switch 完成），但 paginator 內部的 vertical 重新渲染（iframe 重建、column 重排）需要更多時間
-3. 需要額外等待 vertical iframe 內容載入完成後，`#scrollBounds` 才會被 `#scrollToPage` 填入
-
-建議：若需驗證直排模式，應改用真機測試（headless Chromium 的 vertical layout 渲染時序與真機 WebView 差異過大），或在 harness 中增加等待 vertical iframe 內容載入的邏輯。
+直排情境 C/D 未能在 headless Chromium 中完成量測（`#scrollBounds` 為 null），改以真機測試。結果：長按一個字詞開始選取，在選取反白出現前，頁面內容即發生位移——與橫排模式同一症狀。修復範圍應同時涵蓋橫排與直排模式。
 
 ## 下一步
 
