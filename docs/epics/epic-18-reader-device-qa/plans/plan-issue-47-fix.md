@@ -4,7 +4,7 @@
 
 **Goal:** `issues.md` Issue 47 狀態已是 `ready-for-agent`（分支 `issue-47-diag` 已用 CDP `Input.dispatchTouchEvent`＋真機驗證確認根因，見 `reviews/bugfix-repro-issue-47.md`）——本計畫實作實際修復：在長按候選期間（`touchstart` 到瀏覽器原生選取真正建立之間）攔截 `touchmove`，避免 `paginator.js` 的 `#onTouchMove` 選取守衛在這段空窗期誤判為滑動換頁而位移內容。
 
-**Architecture:** 不修改 `paginator.js`（ADR 0011）。改在 `main.js`（本專案自有檔案）既有的 `view.addEventListener('load', (e) => {...})` 區塊內（`main.js:593`，已經是逐 section iframe 綁定監聽器的既有 hook 點），新增一組 **capture 階段**的 `touchstart`/`touchmove`/`touchend`/`touchcancel` 監聽器。`paginator.js` 自己的同名監聽器是 bubble 階段（`{passive:false}`，`paginator.js:1452-1455`）——依 DOM 事件規格，capture 階段監聽器一定搶在同一個節點的 bubble 階段監聽器之前執行，不受註冊順序影響。本計畫的監聽器在判定「目前仍處於長按候選期間（時間短、位移小、選取尚未確立）」時呼叫 `event.stopPropagation()`，讓事件完全不會傳到 `paginator.js` 的處理常式（包含其 `e.preventDefault()` 呼叫與後續所有分支），真正的滑動換頁手勢（快速或大幅位移）與選取已確立後的 `touchmove` 則立即放行、不受影響。
+**Architecture:** 不修改 `paginator.js`（ADR 0011）。改在 `main.js`（本專案自有檔案）既有的 `view.addEventListener('load', (e) => {...})` 區塊內（`main.js:593`，已經是逐 section iframe 綁定監聽器的既有 hook 點），新增一組 **capture 階段**的 `touchstart`/`touchmove`/`touchend`/`touchcancel` 監聽器。`paginator.js` 自己的同名監聽器是 bubble 階段（`{passive:false}`，`paginator.js:1452-1455`）——依 DOM 事件規格，capture 階段監聽器一定搶在同一個節點的 bubble 階段監聽器之前執行，不受註冊順序影響。本計畫的監聽器在判定「目前仍處於長按候選期間（時間短、位移小、平均速度低、選取尚未確立）」時呼叫 `event.stopImmediatePropagation()`，讓事件完全不會傳到 `paginator.js` 的處理常式（包含其 `e.preventDefault()` 呼叫與後續所有分支），真正的滑動換頁手勢（快速或大幅位移）與選取已確立後的 `touchmove` 則立即放行、不受影響——逃逸條件用「距離死區＋平均速度」雙門檻，避免單純距離門檻在放行第一個 touchmove 時因 `paginator.js` 內部觸控狀態已經累積誤差而暴跳（見 Global Constraints 審查修正段落）。
 
 **Tech Stack:** 純 JS（`main.js`）。驗證沿用 `issue-47-diag` 分支已證實可行的 Puppeteer + CDP `Input.dispatchTouchEvent` 診斷手法（`tmp/epic-18-issue-47-harness/repro.mjs`）——**注意**：synthetic `new TouchEvent()` + `dispatchEvent()` 在 headless Chromium 中無法觸發 `paginator.js` 的 handler（診斷報告已記錄的既有結論），必須用 CDP `Input.dispatchTouchEvent` 走真正的瀏覽器 input pipeline。不涉及 Dart/Flutter 程式碼異動、不影響 `flutter test`/`flutter analyze`。
 
@@ -15,7 +15,8 @@
 - **已查證但診斷報告未涵蓋的重要細節**：`paginator.js:2212` 的 `#onTouchMove`（`if (!this.hasAttribute('animated') || this.hasAttribute('eink')) return`）是 `scrollBy()`/`#dragBy()`（2229-2237 行）之前的一道早退閘門；已用 `grep` 確認全專案（`main.js`／`index.html`／`foliate_epub_reader_view.dart`）**從未設定過 `animated` 這個 attribute**。`issue-47-diag` 分支的 harness（`repro.mjs:95-101`）明確靠 `renderer.setAttribute('animated', '')` 才讓 `#onTouchMove` 走到 `scrollBy` 分支，但這個 workaround 是否反映真實正式環境的行為未經查證。**本計畫的修法不依賴解開這個疑點**：capture 階段攔截發生在 `paginator.js` 的 `#onTouchMove` 執行**之前**，不論真正的位移是透過 `scrollBy()`/`#dragBy()`（`animated` 有設定時）還是透過 `e.preventDefault()` 干擾瀏覽器原生選取拖曳（`animated` 未設定、但 `e.preventDefault()` 在 2198 行仍會對非 stylus 觸控無條件執行）造成，`stopPropagation()` 都會讓 `paginator.js` 的整個 handler 不執行，兩種可能成因都會被同時擋下。
 - **量測指標維持 `issue-47-diag` 分支已驗證的作法**：monkey-patch `view.renderer.scrollBy`（公開方法）記錄呼叫次數與是否真的位移，是判斷「touchmove 期間有沒有觸發內容位移」最直接的信號，比 `containerPosition`/`transform` 前後比較更精確（不受 `touchend` 後 `snap()`/`#settleDrag()` 復原影響，見 `bugfix-repro-issue-47.md`「觸控事件注入方式」段）。
 - **本計畫的「測試」是 harness 腳本本身的量測輸出**，不是 `flutter test`——比照 Issue 34/38/45/47 診斷階段既有慣例，`main.js`／`paginator.js` 無 JS 測試框架可用。harness 腳本與其產物一律放在 `tmp/epic-18-issue-47-harness/`（`tmp/` 已於 `.gitignore` 排除，不進版控）。
-- **新增的門檻常數**：`LONG_PRESS_GATE_MS = 500`（對齊 Android `ViewConfiguration.getLongPressTimeout()` 的標準預設值 500ms，作為「長按辨識通常需要多久」的公認參考基準）、`SWIPE_DISTANCE_ESCAPE_PX = 60`（累積位移超過這個值視為明確的滑動手勢，立即放行——本計畫 Task 1 的測試情境用到的最大累積位移為 50px，60px 留有清楚的安全邊界，不會因為浮點數加總誤差而誤觸發）。兩者皆為本計畫刻意選定的內部實作常數，不對使用者開放設定（YAGNI——沒有需求要求可調整）。
+- **審查修正（Critical #1，見 `tmp/epic-18/review-plan-issue-47-fix.md`）——單純的距離逃逸門檻會造成一次性暴跳**：原設計只用 `SWIPE_DISTANCE_ESCAPE_PX = 60` 判斷，審查用實際的 `paginator.js` 原始碼精確推演出一個真實缺陷：`#touchState.x`/`state.y`（`paginator.js` 內部，`#onTouchMove` 每次執行才會更新，見 2203-2204 行）只要事件被本計畫的攔截器擋下，就完全不會更新，停留在 `#onTouchStart` 當下記下的初始值；一旦累積位移終於超過門檻、放行第一個 touchmove 給 `paginator.js`，`paginator.js:2201` 算出的 `dx = state.x - x` 會是「從手勢一開始到現在」的全部累積位移，而不是這一影格的增量——對照審查報告的具體算例（15px→40px→65px，每影格約 16ms），第 3 影格放行時會讓 `scrollBy(-65, 0)` 一次到位，畫面呈現「前段凍結、之後暴跳」，在 E-Ink 裝置上尤其明顯。已查證 `state.x`/`state.y` 的更新時機（`paginator.js:2203-2204`，只在 `#onTouchMove` 內部賦值）確認這個推演成立。**修法**：改用「距離死區（大幅調降）＋平均速度」雙門檻——`LONG_PRESS_GATE_MS = 500`（對齊 Android `ViewConfiguration.getLongPressTimeout()` 標準預設值，作為時間上限保底）、`SWIPE_DISTANCE_DEADZONE_PX = 15`（審查建議範圍 15-20px 的下限，累積位移一旦超過就放行，把「卡死才暴跳」的最大暴跳量壓低到跟正常單影格位移同量級，不再是 60px 那種明顯量級）、`SWIPE_VELOCITY_ESCAPE_PX_PER_MS = 0.3`（審查建議值；平均速度 = 累積位移 ÷ 累積時間，真正的滑動手勢從第一影格就有夠高的速度，通常在 15px 門檻生效前就已經被速度條件放行——例如審查算例的第 1 影格 15px/16ms ≈ 0.94px/ms，遠超 0.3，會在 `state.x` 完全沒機會累積誤差之前就放行，徹底避開暴跳；長按選字時手指的自然微幅晃動速度遠低於此）。三者皆為本計畫刻意選定的內部實作常數，不對使用者開放設定（YAGNI）。
+- **審查修正（Important #2）**：`evt.stopPropagation()` 改為 `evt.stopImmediatePropagation()`——就目前程式碼而言兩者行為等價（`doc` 上沒有其他 capture 階段的 touchmove 監聽器需要一併擋下，`stopPropagation()` 本身已足以讓事件在到達 `paginator.js` 的 bubble 階段監聽器之前就停止傳遞），但 `stopImmediatePropagation()` 對未來若有人在同一個 capture 階段加掛其他監聽器時更穩健，零成本採納。
 
 ---
 
@@ -261,11 +262,20 @@ async function main() {
     await page.evaluate(() => document.querySelector('foliate-view')?.renderer?.scrollBy(50, 0))
     await new Promise((r) => setTimeout(r, 100))
 
-    // 情境 E：真正的滑動換頁手勢（無選取，單次大幅位移 100px）——修復
-    // 後仍必須正常運作，不得被本次新增的攔截誤傷。
+    // 情境 E：真正的滑動換頁手勢（無選取）——修復後仍必須正常運作，
+    // 不得被本次新增的攔截誤傷。【審查修正 Critical #2】原本用單次
+    // [[100, 0]] 大跳躍，第一影格就直接跨過門檻放行，完全沒有測到
+    // Critical #1 描述的「連續多影格累積、卡頓後暴跳」路徑，會讓有問題
+    // 的版本也回報「一切正常」的假陽性。改用審查報告本身的具體算例
+    // （15px/16ms → 25px/16ms → 25px/16ms，累積 15/40/65px，對應平均
+    // 速度 0.94/1.25/1.35 px/ms，皆遠超 0.3 的速度門檻，理論上第一影格
+    // 就該被放行），並額外斷言每一次 scrollBy 呼叫的 |dx| 都不超過
+    // 30px（略高於本情境最大單影格位移 25px 的安全邊界）——若攔截器
+    // 卡住太久才放行、造成 state.x/y 累積誤差，這裡會直接測出異常大的
+    // 單次 dx。
     const scenarioE = await cdpTouchDrag({
       startX: centerX, startY: centerY,
-      deltas: [[100, 0]],
+      deltas: [[15, 0], [25, 0], [25, 0]],
       preEstablishSelection: false,
       moveDelayMs: 16,
     })
@@ -276,17 +286,20 @@ async function main() {
       scenarioB_scrollByCallCount: scenarioB.length,
       scenarioE_scrollByCallCount: scenarioE.length,
       scenarioE_anyMoved: scenarioE.some((c) => c.moved),
+      scenarioE_maxAbsDx: scenarioE.length ? Math.max(...scenarioE.map((c) => Math.abs(c.dx))) : null,
     }
     console.log(JSON.stringify({ scenarioA, scenarioB, scenarioE, result }, null, 2))
     await writeFile(path.join(__dirname, 'result-fix.json'), JSON.stringify(result, null, 2))
 
     // 判讀（修復後才應該全數成立）：情境 A 無 scrollBy 呼叫（攔截生效）、
     // 情境 B 維持無呼叫（既有守衛不受影響）、情境 E 仍有 scrollBy 呼叫
-    // 且確實位移（真正滑動手勢不受影響）。
+    // 且確實位移（真正滑動手勢不受影響），且沒有任何一次呼叫是異常
+    // 大的一次性暴跳（Critical #1 的回歸檢查）。
     const fixWorks = result.scenarioA_scrollByCallCount === 0
       && result.scenarioB_scrollByCallCount === 0
       && result.scenarioE_scrollByCallCount > 0
       && result.scenarioE_anyMoved === true
+      && result.scenarioE_maxAbsDx <= 30
     process.exitCode = fixWorks ? 0 : 1
   } finally {
     await browser.close()
@@ -311,7 +324,7 @@ echo "exit code: $?"
 cd ../..
 ```
 
-Expected（**修復前**）：stdout 印出的 `result` 應為 `{ scenarioA_scrollByCallCount: <大於 0>, scenarioA_anyMoved: true, scenarioB_scrollByCallCount: 0, scenarioE_scrollByCallCount: 1, scenarioE_anyMoved: true }`——情境 A 有位移（重現 bug）、情境 B 維持既有守衛正常（對照組）、情境 E 滑動手勢本來就正常。`exit code: 1`（`fixWorks` 為 `false`，因為情境 A 還沒被攔截）。這一步是確認測試腳本本身有效、且修復前的行為符合預期的失敗基準，不是最終驗收標準。
+Expected（**修復前**）：stdout 印出的 `result` 應為 `{ scenarioA_scrollByCallCount: <大於 0>, scenarioA_anyMoved: true, scenarioB_scrollByCallCount: 0, scenarioE_scrollByCallCount: <大於 0>, scenarioE_anyMoved: true, scenarioE_maxAbsDx: <合理值，接近 15/25/25 這個量級> }`——情境 A 有位移（重現 bug）、情境 B 維持既有守衛正常（對照組）、情境 E 滑動手勢本來就正常（修復前 `main.js` 完全沒有攔截邏輯，`paginator.js` 從第一個 touchmove 就正常收到每一影格的真實增量，`scenarioE_maxAbsDx` 這時候本來就會是正常值，不會暴跳——暴跳只會發生在「有攔截、但門檻設計錯誤」的情況，見 Step 4）。`exit code: 1`（`fixWorks` 為 `false`，因為情境 A 還沒被攔截）。這一步是確認測試腳本本身有效、且修復前的行為符合預期的失敗基準，不是最終驗收標準。
 
 - [ ] **Step 3: 在 `main.js` 實作攔截邏輯**
 
@@ -345,13 +358,29 @@ Expected（**修復前**）：stdout 印出的 `result` 應為 `{ scenarioA_scro
       //
       // 用 capture 階段監聽器搶在 paginator.js 自己註冊在同一個 doc 上
       // 的 bubble 階段監聽器（paginator.js:1452-1455）之前執行，呼叫
-      // stopPropagation() 讓事件完全不會傳到 paginator 的處理常式（含
-      // 其 e.preventDefault() 呼叫與後續所有分支）——不修改 paginator.js
-      // 任何一行（ADR 0011）。只攔截「看起來像長按候選」的 touchmove
-      // （時間短、位移小、選取尚未確立），真正的滑動換頁手勢（快速或
-      // 大幅位移）與選取已確立後的 touchmove 都會立即放行，不受影響。
+      // stopImmediatePropagation() 讓事件完全不會傳到 paginator 的處理
+      // 常式（含其 e.preventDefault() 呼叫與後續所有分支）——不修改
+      // paginator.js 任何一行（ADR 0011）。只攔截「看起來像長按候選」
+      // 的 touchmove（時間短、位移小、平均速度低、選取尚未確立），真正
+      // 的滑動換頁手勢與選取已確立後的 touchmove 都會立即放行。
+      //
+      // 【審查修正 Critical #1，見 tmp/epic-18/review-plan-issue-47-fix.md】
+      // 逃逸條件必須同時看「距離」與「平均速度」，不能只看距離：
+      // paginator.js 的 #touchState.x/y（2203-2204 行）只在 #onTouchMove
+      // 真正執行到那裡才會更新——若前幾個 touchmove 一路被本攔截器擋下，
+      // state.x/y 會停留在 touchstart 當下的初始值；等累積位移終於超過
+      // 純距離門檻、放行第一個 touchmove 給 paginator.js 時，它算出的
+      // dx = state.x - x 會是「手勢一開始到現在」的全部累積位移，而不是
+      // 這一影格的增量，造成 scrollBy() 一次性暴跳（審查報告已用具體
+      // 影格算例驗證：15px→40px→65px，第 3 影格單次跳 65px）。改用
+      // 「距離死區（調降到 15px）＋平均速度」雙門檻：真正的滑動手勢
+      // 通常在第一影格就有夠高的平均速度，會在距離門檻生效、state.x/y
+      // 累積誤差之前就先被速度條件放行，state.x/y 這時仍是準確值，不會
+      // 暴跳；長按選字的手指自然微幅晃動速度遠低於門檻，會正確停留在
+      // 攔截狀態。
       const LONG_PRESS_GATE_MS = 500 // 對齊 Android ViewConfiguration.getLongPressTimeout() 預設值
-      const SWIPE_DISTANCE_ESCAPE_PX = 60 // 累積位移超過這個值視為明確的滑動手勢，立即放行
+      const SWIPE_DISTANCE_DEADZONE_PX = 15 // 累積位移死區：超過就放行，把最大暴跳量壓到跟正常單影格位移同量級
+      const SWIPE_VELOCITY_ESCAPE_PX_PER_MS = 0.3 // 平均速度（累積位移/累積時間）門檻：真正滑動手勢通常第一影格就超過
       let longPressGateState = null
       doc.addEventListener('touchstart', (evt) => {
         const touch = evt.touches[0]
@@ -379,14 +408,18 @@ Expected（**修復前**）：stdout 印出的 `result` 應為 `{ scenarioA_scro
         const dx = touch.screenX - longPressGateState.x
         const dy = touch.screenY - longPressGateState.y
         const distance = Math.hypot(dx, dy)
-        if (elapsed >= LONG_PRESS_GATE_MS || distance > SWIPE_DISTANCE_ESCAPE_PX) {
-          // 超過長按辨識時間、或位移已經大到明顯是滑動手勢——放行給
-          // paginator.js 正常處理，不再攔截這個手勢剩餘的 touchmove。
+        const avgVelocity = elapsed > 0 ? distance / elapsed : Infinity
+        if (elapsed >= LONG_PRESS_GATE_MS
+          || distance > SWIPE_DISTANCE_DEADZONE_PX
+          || avgVelocity > SWIPE_VELOCITY_ESCAPE_PX_PER_MS) {
+          // 超過長按辨識時間、或位移/平均速度已經大到明顯是滑動手勢——
+          // 放行給 paginator.js 正常處理，不再攔截這個手勢剩餘的
+          // touchmove。
           longPressGateState = null
           return
         }
-        // 仍在長按候選期間（時間短、位移小、尚未確立選取）：攔截。
-        evt.stopPropagation()
+        // 仍在長按候選期間（時間短、位移小、速度低、尚未確立選取）：攔截。
+        evt.stopImmediatePropagation()
       }, { capture: true })
       doc.addEventListener('touchend', () => { longPressGateState = null }, { capture: true })
       doc.addEventListener('touchcancel', () => { longPressGateState = null }, { capture: true })
@@ -402,7 +435,7 @@ echo "exit code: $?"
 cd ../..
 ```
 
-Expected（**修復後**）：`result.scenarioA_scrollByCallCount === 0`（攔截生效，長按候選期間不再位移）、`result.scenarioB_scrollByCallCount === 0`（既有守衛維持正常，不受影響）、`result.scenarioE_scrollByCallCount === 1` 且 `scenarioE_anyMoved === true`（真正的滑動換頁手勢仍正常運作，未被誤傷）。`exit code: 0`。若情境 E 的 `scrollByCallCount` 變成 `0`，代表 `SWIPE_DISTANCE_ESCAPE_PX`／`LONG_PRESS_GATE_MS` 門檻設得過於保守，需要調整（例如降低 `SWIPE_DISTANCE_ESCAPE_PX`），不得略過這個回歸檢查。
+Expected（**修復後**）：`result.scenarioA_scrollByCallCount === 0`（攔截生效，長按候選期間不再位移）、`result.scenarioB_scrollByCallCount === 0`（既有守衛維持正常，不受影響）、`result.scenarioE_scrollByCallCount > 0` 且 `scenarioE_anyMoved === true` 且 `scenarioE_maxAbsDx <= 30`（真正的滑動換頁手勢仍正常運作、且每一影格都是正常增量，沒有 Critical #1 描述的一次性暴跳）。`exit code: 0`。若情境 E 的 `scrollByCallCount` 變成 `0`，代表 `SWIPE_VELOCITY_ESCAPE_PX_PER_MS`／`SWIPE_DISTANCE_DEADZONE_PX`／`LONG_PRESS_GATE_MS` 門檻設得過於保守，需要調整；若 `scenarioE_maxAbsDx > 30`，代表逃逸條件依然太晚才放行、`paginator.js` 的 `state.x`/`state.y` 已經累積了明顯誤差，需要進一步調降 `SWIPE_DISTANCE_DEADZONE_PX` 或提高 `SWIPE_VELOCITY_ESCAPE_PX_PER_MS` 的靈敏度——不得略過任一項回歸檢查。
 
 - [ ] **Step 5: 連續重跑 3 次確認結果穩定**
 
@@ -497,9 +530,12 @@ Expected: `git status` 顯示只有 `main.js` 被修改並已 commit，`tmp/` �
       })
       await page.evaluate(() => document.querySelector('foliate-view')?.renderer?.scrollBy(0, 50))
       await new Promise((r) => setTimeout(r, 100))
+      // 比照橫排情境 E 的審查修正（Critical #2）：用連續多影格的漸增
+      // delta，而不是單次大跳躍，才會真的測到「攔截放行太晚、
+      // state.x/y 累積誤差」這條路徑。
       scenarioF = await cdpTouchDrag({
         startX: centerX, startY: centerY,
-        deltas: [[0, 100]],
+        deltas: [[0, 15], [0, 25], [0, 25]],
         preEstablishSelection: false,
         moveDelayMs: 16,
       })
@@ -510,6 +546,7 @@ Expected: `git status` 顯示只有 `main.js` 被修改並已 commit，`tmp/` �
     result.scenarioD_scrollByCallCount = scenarioD?.length ?? null
     result.scenarioF_scrollByCallCount = scenarioF?.length ?? null
     result.scenarioF_anyMoved = scenarioF?.some((c) => c.moved) ?? null
+    result.scenarioF_maxAbsDy = scenarioF?.length ? Math.max(...scenarioF.map((c) => Math.abs(c.dy))) : null
 ```
 
 同步調整 Step 4 的 exit code 判讀，加入直排情境（僅在 `verticalBoundsReady` 為 `true` 時要求直排三項也成立，否則只看橫排三項並在 `result` 內用 `verticalBoundsReady: false` 標記需要真機覆核）：
@@ -520,11 +557,13 @@ Expected: `git status` 顯示只有 `main.js` 被修改並已 commit，`tmp/` �
       && result.scenarioD_scrollByCallCount === 0
       && result.scenarioF_scrollByCallCount > 0
       && result.scenarioF_anyMoved === true
+      && result.scenarioF_maxAbsDy <= 30
     )
     const fixWorks = result.scenarioA_scrollByCallCount === 0
       && result.scenarioB_scrollByCallCount === 0
       && result.scenarioE_scrollByCallCount > 0
       && result.scenarioE_anyMoved === true
+      && result.scenarioE_maxAbsDx <= 30
       && verticalOk
     process.exitCode = fixWorks ? 0 : 1
 ```
@@ -550,9 +589,14 @@ Expected: 若 `verticalBoundsReady === true`，直排三項情境判讀邏輯與
 `app/android/app/src/main/assets/foliate/main.js` 新增 capture 階段
 `touchstart`/`touchmove`/`touchend`/`touchcancel` 攔截（見
 `plan-issue-47-fix.md` Task 1 Step 3），在長按候選期間（時間 < 500ms
-且累積位移 < 60px 且選取尚未確立）呼叫 `stopPropagation()`，讓事件
-不會傳到 `paginator.js` 的 `#onTouchMove`。完全未修改 `paginator.js`
-（ADR 0011）。
+且累積位移 < 15px 且平均速度 < 0.3px/ms 且選取尚未確立）呼叫
+`stopImmediatePropagation()`，讓事件不會傳到 `paginator.js` 的
+`#onTouchMove`。完全未修改 `paginator.js`（ADR 0011）。距離死區＋
+平均速度雙門檻是審查（`tmp/epic-18/review-plan-issue-47-fix.md`
+Critical #1）發現「單純距離門檻會讓 `paginator.js` 內部觸控狀態
+`state.x`/`state.y` 累積誤差、放行第一個 touchmove 時一次性暴跳」
+之後的修正，已用 harness 情境 E/F 的 `maxAbsDx`/`maxAbsDy` 斷言驗證
+不再暴跳。
 
 修復前後對照（橫排，`tmp/epic-18-issue-47-harness/repro-fix.mjs`，
 連續重跑 3 次結果一致）：
@@ -565,10 +609,11 @@ Expected: 若 `verticalBoundsReady === true`，直排三項情境判讀邏輯與
 為 true，附上情境 C/D/F 對照數據；若為 false，記錄「headless 環境下
 #scrollBounds 未能穩定填入，修復效果待真機覆核」}}`
 
-**已知限制**：`SWIPE_DISTANCE_ESCAPE_PX`（60px）與 `LONG_PRESS_GATE_MS`
+**已知限制**：`SWIPE_DISTANCE_DEADZONE_PX`（15px）、
+`SWIPE_VELOCITY_ESCAPE_PX_PER_MS`（0.3px/ms）與 `LONG_PRESS_GATE_MS`
 （500ms）為本次選定的起始值，未經真機大規模使用者測試調校；若真機
 使用後發現「正常快速滑動偶爾仍被誤判為長按候選」或「長按選字偶爾
-仍位移」，需要依真機實測數據調整這兩個常數，非重新設計攔截機制本身。
+仍位移」，需要依真機實測數據調整這三個常數，非重新設計攔截機制本身。
 ```
 
 - [ ] **Step 4: 更新 `issues.md` Issue 47 段落**
@@ -576,7 +621,7 @@ Expected: 若 `verticalBoundsReady === true`，直排三項情境判讀邏輯與
 依 Task 2 Step 2 的實際結果，更新 `docs/epics/epic-18-reader-device-qa/issues.md` Issue 47 的 `**Status:**` 那一行為：
 
 ```markdown
-**Status:** ✅ 已修復（2026-08-12）。`main.js` 新增長按候選期間 touchmove 攔截（capture 階段 `stopPropagation()`，未修改 `paginator.js`，見 ADR 0011），修復前後對照見 `reviews/bugfix-repro-issue-47.md`「修復確認」段——橫排模式：無選取情境的 `scrollBy` 呼叫從 N 次降為 0 次，已有選取／快速滑動兩個對照組皆不受影響；直排模式：{{ 依實際結果填入 }}。
+**Status:** ✅ 已修復（2026-08-12）。`main.js` 新增長按候選期間 touchmove 攔截（capture 階段 `stopImmediatePropagation()`，距離死區＋平均速度雙門檻，未修改 `paginator.js`，見 ADR 0011），修復前後對照見 `reviews/bugfix-repro-issue-47.md`「修復確認」段——橫排模式：無選取情境的 `scrollBy` 呼叫從 N 次降為 0 次，已有選取／快速滑動兩個對照組皆不受影響且無一次性暴跳；直排模式：{{ 依實際結果填入 }}。
 ```
 
 - [ ] **Step 5: Commit（`issues.md` 與診斷報告更新，`main.js` 已於 Task 1 Step 6 commit）**
