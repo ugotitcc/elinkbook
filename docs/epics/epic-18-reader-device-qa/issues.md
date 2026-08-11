@@ -1152,9 +1152,11 @@ AiPaper Reader C 這類 E-Ink 裝置為了讓文字/圖示夠大，`devicePixelR
 
 ---
 
-## Issue 45-46：`/diagnose` 第八輪——EPUB 直排橫排切換翻頁異常與頁次精準度
+## Issue 45-47：`/diagnose` 第八輪——EPUB 直排橫排切換翻頁異常、頁次精準度、劃線拖曳頁面亂跳
 
-**背景（2026-08-11）：** 使用者於真機回報 6 項問題，其中 4 項為 PDF 專屬問題已歸入 `epic-24-pdf-engine-rebuild` Issue 9-11；本輪 2 項為 EPUB 專屬問題，歸入本 Epic。**本輪僅完成程式碼層級查證與根因假設，尚未實作修復**，未另外產出獨立 `reviews/bugfix-repro.md`。
+**背景（2026-08-11）：** 使用者於真機回報 6 項問題，其中 4 項為 PDF 專屬問題已歸入 `epic-24-pdf-engine-rebuild` Issue 9-11；本輪 3 項為 EPUB 專屬問題，歸入本 Epic。**本輪僅完成程式碼層級查證與根因假設，尚未實作修復**，未另外產出獨立 `reviews/bugfix-repro.md`。
+
+**追加回報（2026-08-11 同日）：** 使用者補充「劃線拖曳時頁面亂跳」（原判定為 PDF 專屬，`epic-24-pdf-engine-rebuild` Issue 9）**流式 EPUB 也會發生**，追加立為本 Epic **Issue 47**——經查證是與 PDF **不同的根因**（PDF 是 Flutter 手勢競技場層級的衝突，EPUB 是 WebView／`paginator.js` 內部的觸控事件時序競賽），兩份程式碼修復互相獨立，不共用實作，但共用同一份使用者回報／截圖背景。
 
 ### Issue 45：EPUB 切換直排／橫排後，翻頁一次跳好幾頁（需退出重進才恢復正常）
 
@@ -1177,3 +1179,24 @@ AiPaper Reader C 這類 E-Ink 裝置為了讓文字/圖示夠大，`devicePixelR
 **待決策方向（需人類/PM 決定，非單純技術修復）**：
 1. 維持現行「全書進度比例 × 估計總頁數」模型，但精修 `estimateCharsPerScreen()` 的估算公式係數，使其更貼近實際渲染結果；
 2. 或改為向 `foliate-js` 的 paginator 查詢「目前章節實際分欄數／目前欄位索引」等真實渲染狀態（若 `view.js`/`paginator.js` 有暴露對應 API），以「真實欄位數」取代「估算字元數」作為頁碼基礎——此路線可能大幅提升精準度，但需要新的 JS↔Dart 橋接、且「全書頁碼」如何跨章節加總真實欄位數仍需設計（現行架構是全書進度比例模型，不是逐章節累加模型）。
+
+### Issue 47：流式 EPUB 劃線拖曳選取時頁面亂跳（與 `epic-24` Issue 9 同症狀、不同根因）
+
+**Status:** needs-triage（根因為靜態程式碼推論，下一步：真機或 headless Chromium 重現「長按開始選取的前幾個 touchmove 事件」，確認 `#onTouchMove` 的選取狀態守衛是否真的在此期間放行了 `scrollBy`/`#dragBy`）
+
+**背景**：使用者原回報「劃線拖曳時頁面亂跳」並附截圖（`tmp/images/畫線亂跳.jpg`），最初判定為 PDF 專屬（`epic-24-pdf-engine-rebuild` Issue 9），使用者追加確認**流式 EPUB 也會發生**同一症狀。
+
+**根因假設（中等信心，已查證 `paginator.js` 原始碼，尚未實機重現）**：與 PDF 版本（Flutter 手勢競技場層級的衝突）**完全不同的機制**——EPUB 排版在 `paginator.js` 內部有自己的觸控滑動換頁處理（`#onTouchMove`，`paginator.js:2177`），且已經內建了一道防呆：
+
+```js
+const selection = doc?.getSelection()
+if (selection && selection.rangeCount > 0 && !selection.isCollapsed) {
+  return
+}
+```
+
+（`paginator.js:2192-2195`）——若目前有非塌縮（non-collapsed）的文字選取範圍，滑動換頁邏輯會直接放棄、不會搶奪 touchmove 事件。但這道守衛只在**選取已經確立之後**才會生效：`#onTouchStart`（`paginator.js:2137`）本身完全不檢查選取狀態；長按開始到瀏覽器原生「長按選字」真正建立一個非塌縮 Range 之間存在一段空窗期，這段期間任何 `touchmove` 事件仍會被視為滑動換頁候選，且緊接著的位移計算（`paginator.js:2196-2210`）**沒有任何最小位移量（slop）門檻**，直接對每個事件呼叫 `scrollBy(dx, 0)`（水平／橫排）或 `#dragBy(dx)`（直排模式下的橫向手指追蹤），代表長按當下手指的細微移動就可能立刻位移頁面內容；等瀏覽器原生選取真正確立、`!selection.isCollapsed` 守衛開始生效時，底層內容已經因為前述位移而偏移，使用者接下來延伸選取範圍的視覺基準點已經對不上手指實際位置，形成「劃線區域突然跳一大塊」的觀感。
+
+另查證 `paginator.js:1467-1491` 有一段「選取延伸超出可視範圍時自動翻頁」的既有功能（`checkPointerSelection`），但呼叫條件 `if (!isPointerSelecting && isPointerSelecting && ...)`（`paginator.js:1490`）是恆假（`!x && x` 對任何布林值恆為 `false`），對應行內註解「FIXME: this won't work on Android WebView, disable for now」——**這段程式碼確認是上游 `readest/foliate-js` 刻意停用、從未真正執行過**，可排除為本次症狀的成因。
+
+**建議修復方向（未經實機驗證，僅列可能路徑）**：`#onTouchMove` 在長按候選期間（可比照 `_NavZoneTapDetector`/PDF `_PdfNavZoneTapDetector` 既有的 tap-slop 概念）加入最小位移門檻，或延遲判定滑動換頁直到確認瀏覽器未進入選取模式；需先建立可重現的迴圈（真機或 headless Chromium 模擬長按+微幅位移）量測是否真的觀察到 `scrollBy` 在選取確立前被呼叫，才能確認這是正確的介入點。
