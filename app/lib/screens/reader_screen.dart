@@ -1646,13 +1646,15 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   // 微調，見 Global Constraints「選取矩形座標協定」）。
   static const _annotationToolbarHeight = 56.0;
   static const _annotationToolbarGap = 8.0;
-  // AnnotationToolbar 實際渲染寬度（5 顆 IconButton，Material 3 預設每顆
-  // 48dp 寬 + Row 外層 Padding 左右各 8dp = 5*48+16 = 256；widget test
+  // AnnotationToolbar 實際渲染寬度（6 顆 IconButton，Material 3 預設每顆
+  // 48dp 寬 + Row 外層 Padding 左右各 8dp = 6*48+16 = 304；widget test
   // 量測值，見 plan-issue-2.md Global Constraints，與既有
   // _annotationToolbarHeight 同一量測手法得出）。選取範圍靠近螢幕右緣時，
   // left 的 clamp 上界須扣除這個寬度，否則工具列本體會整個超出螢幕右側
-  // （issues.md Issue 2）。
-  static const _annotationToolbarWidth = 256.0;
+  // （issues.md Issue 2）。【issues.md Issue 3】新增第 6 顆關閉按鈕後，
+  // 實際渲染寬度從 256（5 顆）變為 304（6 顆），此常數需同步更新，否則
+  // Issue 2 的 clamp 修法會重新出現裁切（見 plan-issue-3.md Task 1）。
+  static const _annotationToolbarWidth = 304.0;
 
   /// 【審查修正】原本無條件把工具列定位在選取範圍上方、clamp 到
   /// `>= 0`，若選取範圍太靠近頂端（`topPct * height < 工具列高度`），
@@ -1982,6 +1984,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                 child: AnnotationToolbar(
                   onStyleSelected: _handleHighlightStyleSelected,
                   onNotePressed: _handleNotePressed,
+                  onClosePressed: _handleSelectionCleared,
                 ),
               ),
             if (pdfSelection != null)
@@ -1994,6 +1997,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                 child: AnnotationToolbar(
                   onStyleSelected: _handlePdfHighlightStyleSelected,
                   onNotePressed: _handlePdfNotePressed,
+                  onClosePressed: _handlePdfSelectionCanceled,
                 ),
               ),
             if (_cropEditModeActive)
