@@ -179,7 +179,7 @@ EPUB／PDF 兩處呼叫端皆須修正。
 
 ## Issue 4：換頁點擊位置與相鄰頁畫線重疊時，誤跳出刪除確認對話框
 
-**Status:** `needs-triage`——根因假說信心中高，但建議先建立 headless 重現迴圈驗證時序後再定案修法，避免像 Epic 18 Issue 47 一樣在計畫審查階段才發現時序假設有誤。
+**Status:** `needs-info`——已依建議建立 headless CDP 時序驗證迴圈（見下方「規劃階段查證」小節），結果為 20 次量測 0 次重現，headless 環境本身無法確認/否證此假說是否適用於真機。下一步需要真機診斷插樁（比照 Epic 25 Issue 1 的 `[DEBUG-e25iN]` 插樁手法）量測真實 Flutter→WebView 橋接延遲與原生 click 合成時序，才能進一步定案；在拿到真機資料前不建議直接動手修法。
 
 **依賴：** 無
 
@@ -199,6 +199,16 @@ doc.addEventListener('click', e => {
 ```
 
 `Overlayer` 用**原生 `click` 事件**做畫線點擊偵測，而 `paginator.js` 的換頁是自己的 `touchstart`/`touchmove`/`touchend` 手勢邏輯驅動、在 `touchend` 當下就立即完成視覺換頁。瀏覽器的合成 `click` 事件在觸控裝置上是 `touchend` **之後才延遲觸發**的相容性事件——這時頁面視覺上已經換到新頁，`click` 事件座標卻拿去對「新頁面此刻的內容」做 `hitTest()`，如果新頁同一螢幕座標剛好也有畫線，就誤判成「使用者點擊了這筆畫線」而彈出刪除確認。與 `epic-18` Issue 47 是同一類「vendored 觸控換頁邏輯 vs 瀏覽器原生延遲事件」的競速問題，但這次競速的對象是 `click` 而非 `touchmove`。
+
+**規劃階段查證（`plan-issue-4.md`，修正原始假說對「點擊換頁」情境的適用範圍）：**
+
+`paginator.js` 原始碼查證（`grep -n "#onTouchStart\|#onClick\|addEventListener('click'\|tap" paginator.js`）確認**沒有任何自己的 tap-to-turn-page click/短按處理**，只有 `touchmove` 驅動的拖曳換頁邏輯。原始假說引用的「`paginator.js` 的換頁是自己的 touchstart/touchmove/touchend 手勢邏輯驅動」精確地說只適用於**滑動換頁**，本專案「點擊換頁」（nav-zone 熱區點擊，即使用者截圖檔名描述的情境）完全是 Flutter 端 `_NavZoneTapDetector` 收到觸控後呼叫 `evaluateJavascript('window.nextPage()')` 實現，與 `paginator.js` 自己的觸控邏輯是兩條獨立路徑（比照 Epic 25 Issue 1 已確立的「Flutter Listener 與 WebView 平行接收同一組觸控、互不阻擋」事實）。
+
+**headless CDP 時序驗證迴圈結果（`tmp/epic-25-issue-4-harness/repro.mjs`，20 次重複量測）：**
+
+模擬「CDP 觸控注入 touchstart/touchend＋緊接著呼叫 `window.nextPage()`」這條路徑（代表 Flutter nav-zone 點擊觸發換頁的最快可能情境——headless `page.evaluate()` 往返延遲，理論上比真機 Flutter→原生橋接→WebView 的實際 IPC 鏈路更短，不會更長），控制組（無換頁介入，單純點擊）正確命中舊頁劃線，證實劃線/座標設置本身無誤；但正式競速測試 **20 次全數命中舊頁內容、0 次重現 Issue 4 症狀**（原生 `click` 合成事件平均只比 `touchend` 晚約 1.5ms 觸發，快於 `page.evaluate()` 往返本身的延遲）。
+
+**解讀（誠實記錄，非下定論）**：此負向結果**不能排除**本假說在真機上成立——有兩種可能同時存在：(a) 若 headless `page.evaluate()` 的往返延遲已經是這條路徑能達到的下限，而真機 Flutter 原生橋接（Dart 事件迴圈→MethodChannel/JS 橋接→Android WebView `evaluateJavascript()`）的實際 IPC 鏈路必然更長，則競速只會更難獲勝，這條假說的可信度應該**下修**；(b) 但也可能是 headless Chromium 的原生 touch-to-click 合成時序特性，與真機 Android System WebView 本身有實質差異（不同瀏覽器引擎組建、不同原生事件合成管線）——這正是 Epic 25 Issue 1 已記錄過的同一類「headless CDP 無法代表真機 WebView 差異」既有限制（Issue 1 是「無法模擬選取控點拖曳」，本次是「觸控轉合成 click 的時序特性未必一致」）。兩者目前無法用 headless 環境本身區辨。
 
 **下一步（Planning 前建議先完成，比照 Issue 47 診斷手法）：**
 
