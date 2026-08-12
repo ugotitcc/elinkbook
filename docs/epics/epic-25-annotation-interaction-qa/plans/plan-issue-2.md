@@ -27,7 +27,7 @@
 - Consumes：既有 `EpubSelectionInfo.rect`／`PdfSelectionInfo.widgetRect`（皆為 `PercentRect`，`app/lib/reader/percent_rect.dart`）、既有 `_annotationToolbarHeight`／`_annotationToolbarGap` 常數宣告模式（`reader_screen.dart:1647-1648`）。
 - Produces：新常數 `_annotationToolbarWidth`（`double`，值 `256.0`），僅本檔案內部使用，不對外暴露。
 
-- [ ] **Step 1：在 `reader_screen_test.dart` 新增 EPUB 端的失敗測試**
+- [x] **Step 1：在 `reader_screen_test.dart` 新增 EPUB 端的失敗測試**
 
 在 `app/test/screens/reader_screen_test.dart` 第 3398 行（既有測試 `'流式 EPUB：FoliateEpubReaderView 回報 onSelectionChanged 時，顯示 AnnotationToolbar'` 結束的 `},\n  );` 之後、下一個測試 `'流式 EPUB：FoliateEpubReaderView 回報 onAnnotationActivated 時，開啟對話框'`（第 3400 行）之前）插入：
 
@@ -102,13 +102,13 @@
 
 ```
 
-- [ ] **Step 2：執行測試，確認失敗**
+- [x] **Step 2：執行測試，確認失敗**
 
 Run: `cd app && flutter test test/screens/reader_screen_test.dart --plain-name "選取範圍靠近畫面右緣時，AnnotationToolbar 右緣不應超出畫面寬度"`
 
 Expected: `流式 EPUB：選取範圍靠近畫面右緣時，AnnotationToolbar 右緣不應超出畫面寬度` FAIL，斷言訊息顯示 `Actual: <636.0>`／`Which: is not <= 400.0>`（本計畫規劃階段已用暫時性量測腳本確認修法前的實際值即為 `636.0`，Task 1 執行時應得到相同結果，證實測試確實在鎖定本 Issue 的症狀，而非測試本身寫錯）。
 
-- [ ] **Step 3：在 `reader_screen_test.dart` 新增 PDF 端的失敗測試**
+- [x] **Step 3：在 `reader_screen_test.dart` 新增 PDF 端的失敗測試**
 
 在同一檔案第 5471 行（既有測試 `'PDF 長按拖曳框選完成後，顯示 AnnotationToolbar；點擊螢光筆後劃線已寫入且 Toolbar 仍開啟（可續加備註）'` 結束的 `});` 之後、下一個測試 `'PDF 選取被取消（onSelectionCanceled）時，不顯示 AnnotationToolbar'`（第 5473 行）之前）插入：
 
@@ -178,13 +178,13 @@ import 'package:elinkbook/reader/pdf_selection_info.dart';
 
 （`PdfSelectionInfo` 目前未被此檔案任何既有測試直接建構，需新增此 import；`PercentRect`／`EpubSelectionInfo` 已於既有第 41-42 行匯入，不需重複新增。）
 
-- [ ] **Step 4：執行測試，確認失敗**
+- [x] **Step 4：執行測試，確認失敗**
 
 Run: `cd app && flutter test test/screens/reader_screen_test.dart --plain-name "PDF：選取範圍靠近畫面右緣時，AnnotationToolbar 右緣不應超出畫面寬度"`
 
 Expected: FAIL，斷言訊息顯示 `Actual: <636.0>`／`Which: is not <= 400.0>`（本計畫規劃階段已用暫時性量測腳本確認：`topLeft=Offset(380.0, 96.0) bottomRight=Offset(636.0, 152.0)`，與 EPUB 端數值一致，因兩條路徑目前是同一段有缺陷的 clamp 邏輯）。
 
-- [ ] **Step 5：實作修法——新增常數並修正兩處 `left` clamp**
+- [x] **Step 5：實作修法——新增常數並修正兩處 `left` clamp**
 
 修改 `app/lib/screens/reader_screen.dart:1647-1648`：
 
@@ -234,13 +234,13 @@ Expected: FAIL，斷言訊息顯示 `Actual: <636.0>`／`Which: is not <= 400.0>
               ),
 ```
 
-- [ ] **Step 6：執行 Step 1／Step 3 新增的兩則測試，確認通過**
+- [x] **Step 6：執行 Step 1／Step 3 新增的兩則測試，確認通過**
 
 Run: `cd app && flutter test test/screens/reader_screen_test.dart --plain-name "AnnotationToolbar 右緣不應超出畫面寬度"`
 
 Expected: 兩則測試皆 PASS（`--plain-name` 為子字串比對，會同時命中 EPUB／PDF 兩則）。修法後預期精確值：`left = (0.95*400).clamp(0.0, 400.0-256.0) = clamp(380.0, 0.0, 144.0) = 144.0`，`bottomRight.dx = 144.0 + 256.0 = 400.0`（恰好貼齊畫面右緣，`lessThanOrEqualTo(400.0)` 成立）。
 
-- [ ] **Step 7：執行完整回歸測試，確認既有選取相關測試未受影響**
+- [x] **Step 7：執行完整回歸測試，確認既有選取相關測試未受影響**
 
 Run: `cd app && flutter test test/screens/reader_screen_test.dart`
 Expected: 全數通過，特別留意既有 `'流式 EPUB：FoliateEpubReaderView 回報 onSelectionChanged 時，顯示 AnnotationToolbar'`（第 3351 行，`rect.left=0.1`）與 `'PDF 長按拖曳框選完成後，顯示 AnnotationToolbar...'`（第 5391 行）——這兩則既有測試的選取範圍皆遠離右緣（`left=0.1` 或由真實手勢產生的中央偏左位置），未觸及新 clamp 上界（`400.0 - 256.0 = 144.0` 遠大於 `0.1*400=40.0`），理論上不受本次修法影響，執行結果須確認零回歸。
@@ -248,12 +248,12 @@ Expected: 全數通過，特別留意既有 `'流式 EPUB：FoliateEpubReaderVie
 Run: `cd app && flutter test test/screens/annotation_toolbar_test.dart`
 Expected: 全數通過（本次未修改 `annotation_toolbar.dart` 本體，僅新增/修改呼叫端的定位計算，此檔案測試理論上不受影響）。
 
-- [ ] **Step 8：`flutter analyze` 確認乾淨**
+- [x] **Step 8：`flutter analyze` 確認乾淨**
 
 Run: `cd app && flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 9：Commit**
+- [x] **Step 9：Commit**
 
 ```bash
 git add app/lib/screens/reader_screen.dart app/test/screens/reader_screen_test.dart
