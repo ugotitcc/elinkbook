@@ -19,6 +19,7 @@
 1.（最可能）視覺選取控點顯示與 `doc.getSelection()` 的 `rangeCount`/`isCollapsed` JS 狀態同步之間，在該機型 WebView 有時間落差——與 Issue 47 根因同一類「JS 選取 API 落後於原生手勢視覺狀態」問題，只是發生在拖曳控點階段而非長按候選階段。
 2. Air Reader Pro C 的 WebView 版本／觸控事件合併（coalesced events）行為與 TCL 14 吋不同（比照 `epic-18` Issue 33／38-41 已知部分機型 WebView 版本偏舊的既有模式）。
 3. 兩者疊加。
+4.（`plan-issue-1.md` 實作審查新增，`tmp/epic-25/review-issue-1-implementation.md`——架構層級假說，目前無法用 headless CDP 驗證或否證）**原生選取控點的拖曳，很可能根本不會產生 DOM `touchmove` 事件**：Android WebView／Chromium 對「已顯示的文字選取控點」的拖曳，慣例是由瀏覽器 UI／合成器層級（`TouchSelectionController` 一類原生元件）直接處理，不一定會被送進頁面的 DOM 事件派發流程。若成立，代表 `epic-18` Issue 47 的既有修復在真正拖控點的階段可能本來就沒有在運作（只在「長按出現控點之前」那段還沒被原生 UI 接管的手指微幅晃動期間有效），而本 Issue 這次的插樁在設計上完全繼承了同一個天生盲區——兩者都是靠監聽 `doc` 上的 DOM `touchmove` 事件。**若下一輪真機資料回報顯示 `[DEBUG-e25i1]` 依然全程零輸出（即使已修正監聽器順序、且測試者已嘗試不同拖曳速度），應優先懷疑這個原因，需要換一種完全不依賴 DOM touch 事件的偵測方式**（例如原生 Android 端用 `WebView` 的捲動變化監聽機制，或改用 `requestAnimationFrame` 輪詢取代事件驅動）。
 
 **下一步（Planning 前需先完成）：** 無法用 headless CDP 模擬選取控點拖曳（不具代表性，與 Issue 47 診斷時發現的局限相同）。需要在 Air Reader Pro C（會重現）與 TCL 14 吋（不會重現）各自部署一份暫時性除錯插樁（記錄拖曳過程中每個 `touchmove` 的 `selection.rangeCount`／`isCollapsed`／座標／時間戳），差異比對兩台裝置的輸出，才能鎖定真正根因並轉為 `ready-for-agent`。
 
@@ -30,8 +31,12 @@
    非裝置因素造成的差異）。
 3. 長按選取一段文字（例如 5-10 個字），確認選取控點已顯示於左右兩側
    （即選取已確立的狀態）。
-4. 用手指拖曳其中一個控點，緩慢橫向移動（模擬使用者實際回報的手勢），
-   同時留意畫面是否出現跳頁/位移。
+4. 用手指拖曳其中一個控點，同時留意畫面是否出現跳頁/位移。**請至少各嘗試
+   一次「緩慢」與「明顯較快」兩種拖曳速度**（`plan-issue-1.md` 實作審查
+   `tmp/epic-25/review-issue-1-implementation.md` 發現：headless 環境下
+   緩慢小幅度的 touchmove 序列，有機率完全不被瀏覽器派發到 JS 層級，只測
+   單一慢速手勢可能系統性地採不到任何資料），並在回報時註記每次操作的
+   拖曳速度主觀感受。
 5. 完成拖曳後，進入「設定」→「閱讀器 Console Log」，點擊右上角「複製全部」
    按鈕，將剪貼簿內容貼到文字檔或直接回報；同步註記該次測試使用的版面
    設定（直排/橫排、單頁/雙頁），以利後續交叉分析是否為版面相關變因。

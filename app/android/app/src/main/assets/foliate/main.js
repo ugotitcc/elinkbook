@@ -641,6 +641,59 @@ async function openBook() {
       })
       doc.addEventListener('pointercancel', () => reportSelection())
 
+      // Epic 25 Issue 1 暫時性除錯插樁 [DEBUG-e25i1]：觀察選取已確立（拖曳
+      // 控點期間）是否仍會位移內容，鎖定「Air Reader Pro C 會跳頁、TCL 14吋
+      // 不會」的裝置相關根因（見
+      // docs/epics/epic-25-annotation-interaction-qa/issues.md Issue 1）。
+      // 純觀察用 capture 階段監聽器，不呼叫 preventDefault()/
+      // stopPropagation()，不修改任何 DOM/選取狀態，不影響既有行為——目的
+      // 是觀察症狀本身，不能因插樁改變症狀是否出現。透過既有「閱讀器
+      // Console Log」診斷畫面（epic-18 Issue 33）在真機上擷取，不需要
+      // USB/ADB 連線。確認根因、產出修復計劃後需整段移除（見
+      // plan-issue-1.md Task 2 的真機資料回報流程，移除排在下一輪計畫）。
+      //
+      // 節流（審查報告 Issue 2）：touchmove 每秒可達 60-120 次，若每一
+      // 影格都記錄，2-3 秒的拖曳手勢就會產生上百條 log，可能洗掉
+      // ReaderConsoleLog 500 筆上限內較早的紀錄。只在「內容真的位移」
+      // （moved）、「選取狀態改變」（selectionKey 變動）、或「這次手勢的
+      // 第一個 touchmove」（debugE25I1LastLoggedKey === null，確保每次
+      // 手勢至少留下一筆基準線）時才輸出。
+      //
+      // 【審查修正 Critical #1，見 tmp/epic-25/review-issue-1-implementation.md】
+      // 必須註冊在 Epic 18 Issue 47 攔截器之前：兩者是同一個 doc 節點、
+      // 同一個事件類型、同一個 capture 階段的監聽器，同節點同階段的監聽器
+      // 按註冊順序依序執行；stopImmediatePropagation() 一旦被呼叫，會讓
+      // 「呼叫當下尚未執行」的其餘監聽器整個不會被呼叫（不論哪個階段），
+      // 已執行過的監聽器不受影響。若插樁註冊在 Issue 47 攔截器之後，長按
+      // 候選期間（Issue 47 攔截器判定為候選、呼叫 stopImmediatePropagation
+      // 的那些 touchmove）插樁會完全收不到事件、整段靜音。
+      let debugE25I1LastPosition = null
+      let debugE25I1LastLoggedKey = null
+      doc.addEventListener('touchstart', () => {
+        debugE25I1LastPosition = null
+        debugE25I1LastLoggedKey = null
+      }, { capture: true })
+      doc.addEventListener('touchmove', (evt) => {
+        const touch = evt.touches[0]
+        if (!touch) return
+        const selection = doc.getSelection()
+        const rangeCount = selection?.rangeCount ?? 0
+        const isCollapsed = selection?.isCollapsed
+        const position = view.renderer.containerPosition
+        const moved = debugE25I1LastPosition !== null && position !== debugE25I1LastPosition
+        debugE25I1LastPosition = position
+        const selectionKey = `${rangeCount}:${isCollapsed}`
+        const isFirstLog = debugE25I1LastLoggedKey === null
+        if (!moved && !isFirstLog && selectionKey === debugE25I1LastLoggedKey) return
+        debugE25I1LastLoggedKey = selectionKey
+        console.log(
+          `[DEBUG-e25i1] t=${evt.timeStamp.toFixed(0)} ` +
+          `rangeCount=${rangeCount} isCollapsed=${isCollapsed} ` +
+          `x=${touch.screenX.toFixed(1)} y=${touch.screenY.toFixed(1)} ` +
+          `containerPosition=${position} moved=${moved}`
+        )
+      }, { capture: true })
+
       // Epic 18 Issue 47 修復：長按候選期間（touchstart 到瀏覽器原生
       // 選取真正建立之間）攔截 touchmove，避免 paginator.js 的
       // #onTouchMove 選取守衛（paginator.js:2191-2195，只在
@@ -716,50 +769,6 @@ async function openBook() {
       }, { capture: true })
       doc.addEventListener('touchend', () => { longPressGateState = null }, { capture: true })
       doc.addEventListener('touchcancel', () => { longPressGateState = null }, { capture: true })
-
-      // Epic 25 Issue 1 暫時性除錯插樁 [DEBUG-e25i1]：觀察選取已確立（拖曳
-      // 控點期間）是否仍會位移內容，鎖定「Air Reader Pro C 會跳頁、TCL 14吋
-      // 不會」的裝置相關根因（見
-      // docs/epics/epic-25-annotation-interaction-qa/issues.md Issue 1）。
-      // 純觀察用 capture 階段監聽器，不呼叫 preventDefault()/
-      // stopPropagation()，不修改任何 DOM/選取狀態，不影響既有行為——目的
-      // 是觀察症狀本身，不能因插樁改變症狀是否出現。透過既有「閱讀器
-      // Console Log」診斷畫面（epic-18 Issue 33）在真機上擷取，不需要
-      // USB/ADB 連線。確認根因、產出修復計劃後需整段移除（見
-      // plan-issue-1.md Task 2 的真機資料回報流程，移除排在下一輪計畫）。
-      //
-      // 節流（審查報告 Issue 2）：touchmove 每秒可達 60-120 次，若每一
-      // 影格都記錄，2-3 秒的拖曳手勢就會產生上百條 log，可能洗掉
-      // ReaderConsoleLog 500 筆上限內較早的紀錄。只在「內容真的位移」
-      // （moved）、「選取狀態改變」（selectionKey 變動）、或「這次手勢的
-      // 第一個 touchmove」（debugE25I1LastLoggedKey === null，確保每次
-      // 手勢至少留下一筆基準線）時才輸出。
-      let debugE25I1LastPosition = null
-      let debugE25I1LastLoggedKey = null
-      doc.addEventListener('touchstart', () => {
-        debugE25I1LastPosition = null
-        debugE25I1LastLoggedKey = null
-      }, { capture: true })
-      doc.addEventListener('touchmove', (evt) => {
-        const touch = evt.touches[0]
-        if (!touch) return
-        const selection = doc.getSelection()
-        const rangeCount = selection?.rangeCount ?? 0
-        const isCollapsed = selection?.isCollapsed
-        const position = view.renderer.containerPosition
-        const moved = debugE25I1LastPosition !== null && position !== debugE25I1LastPosition
-        debugE25I1LastPosition = position
-        const selectionKey = `${rangeCount}:${isCollapsed}`
-        const isFirstLog = debugE25I1LastLoggedKey === null
-        if (!moved && !isFirstLog && selectionKey === debugE25I1LastLoggedKey) return
-        debugE25I1LastLoggedKey = selectionKey
-        console.log(
-          `[DEBUG-e25i1] t=${evt.timeStamp.toFixed(0)} ` +
-          `rangeCount=${rangeCount} isCollapsed=${isCollapsed} ` +
-          `x=${touch.screenX.toFixed(1)} y=${touch.screenY.toFixed(1)} ` +
-          `containerPosition=${position} moved=${moved}`
-        )
-      }, { capture: true })
     })
     // Epic 20 Issue 2（ADR 0017 決策 4）：isFixedLayoutHint 覆蓋機制。
     // 當 Dart 端傳入 isFixedLayoutHint === true 時，強制將書本的
