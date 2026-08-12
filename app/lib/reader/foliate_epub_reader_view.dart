@@ -763,7 +763,20 @@ class _FoliateEpubReaderViewState extends State<FoliateEpubReaderView> {
                     return Expanded(
                       child: _NavZoneTapDetector(
                         key: Key('nav_zone_$index'),
-                        onTap: () => widget.onZoneAction?.call(action),
+                        onTap: () {
+                          // Epic 25 Issue 1 暫時性除錯插樁 [DEBUG-e25i1-navzone]：
+                          // 記錄哪一格九宮格熱區被判定為「快速點擊」而觸發翻頁
+                          // 動作，用來排查「右邊三行」跳頁是否是長按選字手勢
+                          // 被本熱區誤判成快速點擊造成的（與 main.js 的
+                          // [DEBUG-e25i1]/[DEBUG-e25i1-gate]/[DEBUG-e25i1-end]
+                          // 插樁互相佐證，見
+                          // docs/epics/epic-25-annotation-interaction-qa/issues.md
+                          // Issue 1）。確認根因後需與其餘插樁一併移除。
+                          ReaderConsoleLog.add(
+                            '[DEBUG-e25i1-navzone] zone=$index action=$action',
+                          );
+                          widget.onZoneAction?.call(action);
+                        },
                         child: Container(
                           decoration: widget.showNavZoneDebugOverlay
                               ? BoxDecoration(

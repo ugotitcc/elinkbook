@@ -693,6 +693,23 @@ async function openBook() {
           `containerPosition=${position} moved=${moved}`
         )
       }, { capture: true })
+      // Epic 25 Issue 1 暫時性除錯插樁 [DEBUG-e25i1-end]：記錄 touchend
+      // 當下與約 350ms 後（一般 snap() CSS transition 的settle 時間）的
+      // containerPosition，用來抓「跳頁發生在放開手指之後、由
+      // paginator.js 自己的 snap() 觸發一次真實翻頁」這個情境——這種情境
+      // 不會在任何一筆 touchmove 的 moved 欄位上顯示為 true（每次
+      // touchmove 都可能是正常的小位移，真正的整頁跳動是 touchend 後才
+      // 透過動畫完成的）。
+      doc.addEventListener('touchend', () => {
+        const positionAtEnd = view.renderer.containerPosition
+        console.log(`[DEBUG-e25i1-end] touchend containerPosition=${positionAtEnd}`)
+        setTimeout(() => {
+          console.log(
+            `[DEBUG-e25i1-end] +350ms containerPosition=${view.renderer.containerPosition} ` +
+            `deltaFromTouchend=${view.renderer.containerPosition - positionAtEnd}`
+          )
+        }, 350)
+      }, { capture: true })
 
       // Epic 18 Issue 47 修復：長按候選期間（touchstart 到瀏覽器原生
       // 選取真正建立之間）攔截 touchmove，避免 paginator.js 的
@@ -745,6 +762,14 @@ async function openBook() {
         const selection = doc.getSelection()
         if (selection && selection.rangeCount > 0 && !selection.isCollapsed) {
           // 選取已經確立，paginator.js 既有守衛從這裡開始會正確接手。
+          //
+          // Epic 25 Issue 1 暫時性除錯插樁 [DEBUG-e25i1-gate]：記錄放行
+          // 當下的狀態，供比對「右邊三行」跳頁是否與放行時機有關（見
+          // docs/epics/epic-25-annotation-interaction-qa/issues.md Issue 1）。
+          console.log(
+            `[DEBUG-e25i1-gate] released reason=selection-established ` +
+            `t=${evt.timeStamp.toFixed(0)} containerPosition=${view.renderer.containerPosition}`
+          )
           longPressGateState = null
           return
         }
@@ -761,6 +786,20 @@ async function openBook() {
           // 超過長按辨識時間、或位移/平均速度已經大到明顯是滑動手勢——
           // 放行給 paginator.js 正常處理，不再攔截這個手勢剩餘的
           // touchmove。
+          //
+          // Epic 25 Issue 1 暫時性除錯插樁 [DEBUG-e25i1-gate]：記錄放行
+          // 是被哪個門檻觸發、放行當下的 dx/dy/距離/速度，供比對「右邊
+          // 三行」跳頁是否是本攔截器放行後、paginator.js 把這次移動正常
+          // 判定成一次真實翻頁手勢造成的（而非攔截器本身的 bug）。
+          const reason = elapsed >= LONG_PRESS_GATE_MS ? 'elapsed'
+            : distance > SWIPE_DISTANCE_DEADZONE_PX ? 'distance'
+            : 'velocity'
+          console.log(
+            `[DEBUG-e25i1-gate] released reason=${reason} ` +
+            `t=${evt.timeStamp.toFixed(0)} elapsed=${elapsed.toFixed(0)} ` +
+            `dx=${dx.toFixed(1)} dy=${dy.toFixed(1)} distance=${distance.toFixed(1)} ` +
+            `avgVelocity=${avgVelocity.toFixed(3)} containerPosition=${view.renderer.containerPosition}`
+          )
           longPressGateState = null
           return
         }
