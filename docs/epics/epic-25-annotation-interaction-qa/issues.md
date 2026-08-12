@@ -10,6 +10,8 @@
 
 **已知殘留限制（誠實記錄，非聲稱 100% 解決）**：結構性上，700ms 仍是「等待原生長按辨識完成」的一個經驗值，不是理論上界——不同裝置/系統負載下，原生長按實際判定所需時間理論上仍可能超過 700ms，屆時同一類跳頁仍有極低機率重現。人類已確認此殘留風險可接受，**若未來需要進一步優化，應另立新 Issue**，不在本 Issue 範圍內繼續調校。
 
+**Cleanup**：全部暫時性除錯插樁（`main.js` 的 `[DEBUG-e25i1]`／`[DEBUG-e25i1-gate]`／`[DEBUG-e25i1-end]`、`foliate_epub_reader_view.dart` 的 `[DEBUG-e25i1-navzone]`）已整段移除，只保留兩個正式修法本體（`evt.preventDefault()` ＋ `{ passive: false }`、`_hasActiveSelection` 抑制 ＋ `_tapMaxDurationMs = 700`）與其永久性說明註解。`tmp/epic-25-issue-1-harness/smoke.mjs`（未進版控）驗證的是已移除的插樁 log，目前重跑會 `FAIL`（`debugLogs captured: 0`），已是預期中的過期產物，不需要修——該 harness 本來就只是診斷階段的輔助工具，不是永久回歸測試。`flutter test`（`foliate_epub_reader_view_test.dart` 64/64）、`flutter analyze`、`node --check main.js` 語法檢查皆通過。
+
 **依賴：** 無
 
 **背景：** 使用者回報：畫線拖曳選取、控點（handle）已顯示於選取範圍左右兩側（即選取已確立）時，Air Reader Pro C 仍會出現頁面跳動，TCL 14 吋不會發生同一症狀。

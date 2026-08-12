@@ -641,76 +641,6 @@ async function openBook() {
       })
       doc.addEventListener('pointercancel', () => reportSelection())
 
-      // Epic 25 Issue 1 暫時性除錯插樁 [DEBUG-e25i1]：觀察選取已確立（拖曳
-      // 控點期間）是否仍會位移內容，鎖定「Air Reader Pro C 會跳頁、TCL 14吋
-      // 不會」的裝置相關根因（見
-      // docs/epics/epic-25-annotation-interaction-qa/issues.md Issue 1）。
-      // 純觀察用 capture 階段監聽器，不呼叫 preventDefault()/
-      // stopPropagation()，不修改任何 DOM/選取狀態，不影響既有行為——目的
-      // 是觀察症狀本身，不能因插樁改變症狀是否出現。透過既有「閱讀器
-      // Console Log」診斷畫面（epic-18 Issue 33）在真機上擷取，不需要
-      // USB/ADB 連線。確認根因、產出修復計劃後需整段移除（見
-      // plan-issue-1.md Task 2 的真機資料回報流程，移除排在下一輪計畫）。
-      //
-      // 節流（審查報告 Issue 2）：touchmove 每秒可達 60-120 次，若每一
-      // 影格都記錄，2-3 秒的拖曳手勢就會產生上百條 log，可能洗掉
-      // ReaderConsoleLog 500 筆上限內較早的紀錄。只在「內容真的位移」
-      // （moved）、「選取狀態改變」（selectionKey 變動）、或「這次手勢的
-      // 第一個 touchmove」（debugE25I1LastLoggedKey === null，確保每次
-      // 手勢至少留下一筆基準線）時才輸出。
-      //
-      // 【審查修正 Critical #1，見 tmp/epic-25/review-issue-1-implementation.md】
-      // 必須註冊在 Epic 18 Issue 47 攔截器之前：兩者是同一個 doc 節點、
-      // 同一個事件類型、同一個 capture 階段的監聽器，同節點同階段的監聽器
-      // 按註冊順序依序執行；stopImmediatePropagation() 一旦被呼叫，會讓
-      // 「呼叫當下尚未執行」的其餘監聽器整個不會被呼叫（不論哪個階段），
-      // 已執行過的監聽器不受影響。若插樁註冊在 Issue 47 攔截器之後，長按
-      // 候選期間（Issue 47 攔截器判定為候選、呼叫 stopImmediatePropagation
-      // 的那些 touchmove）插樁會完全收不到事件、整段靜音。
-      let debugE25I1LastPosition = null
-      let debugE25I1LastLoggedKey = null
-      doc.addEventListener('touchstart', () => {
-        debugE25I1LastPosition = null
-        debugE25I1LastLoggedKey = null
-      }, { capture: true })
-      doc.addEventListener('touchmove', (evt) => {
-        const touch = evt.touches[0]
-        if (!touch) return
-        const selection = doc.getSelection()
-        const rangeCount = selection?.rangeCount ?? 0
-        const isCollapsed = selection?.isCollapsed
-        const position = view.renderer.containerPosition
-        const moved = debugE25I1LastPosition !== null && position !== debugE25I1LastPosition
-        debugE25I1LastPosition = position
-        const selectionKey = `${rangeCount}:${isCollapsed}`
-        const isFirstLog = debugE25I1LastLoggedKey === null
-        if (!moved && !isFirstLog && selectionKey === debugE25I1LastLoggedKey) return
-        debugE25I1LastLoggedKey = selectionKey
-        console.log(
-          `[DEBUG-e25i1] t=${evt.timeStamp.toFixed(0)} ` +
-          `rangeCount=${rangeCount} isCollapsed=${isCollapsed} ` +
-          `x=${touch.screenX.toFixed(1)} y=${touch.screenY.toFixed(1)} ` +
-          `containerPosition=${position} moved=${moved}`
-        )
-      }, { capture: true })
-      // Epic 25 Issue 1 暫時性除錯插樁 [DEBUG-e25i1-end]：記錄 touchend
-      // 當下與約 350ms 後（一般 snap() CSS transition 的settle 時間）的
-      // containerPosition，用來抓「跳頁發生在放開手指之後、由
-      // paginator.js 自己的 snap() 觸發一次真實翻頁」這個情境——這種情境
-      // 不會在任何一筆 touchmove 的 moved 欄位上顯示為 true（每次
-      // touchmove 都可能是正常的小位移，真正的整頁跳動是 touchend 後才
-      // 透過動畫完成的）。
-      doc.addEventListener('touchend', () => {
-        const positionAtEnd = view.renderer.containerPosition
-        console.log(`[DEBUG-e25i1-end] touchend containerPosition=${positionAtEnd}`)
-        setTimeout(() => {
-          console.log(
-            `[DEBUG-e25i1-end] +350ms containerPosition=${view.renderer.containerPosition} ` +
-            `deltaFromTouchend=${view.renderer.containerPosition - positionAtEnd}`
-          )
-        }, 350)
-      }, { capture: true })
-
       // Epic 18 Issue 47 修復：長按候選期間（touchstart 到瀏覽器原生
       // 選取真正建立之間）攔截 touchmove，避免 paginator.js 的
       // #onTouchMove 選取守衛（paginator.js:2191-2195，只在
@@ -762,14 +692,6 @@ async function openBook() {
         const selection = doc.getSelection()
         if (selection && selection.rangeCount > 0 && !selection.isCollapsed) {
           // 選取已經確立，paginator.js 既有守衛從這裡開始會正確接手。
-          //
-          // Epic 25 Issue 1 暫時性除錯插樁 [DEBUG-e25i1-gate]：記錄放行
-          // 當下的狀態，供比對「右邊三行」跳頁是否與放行時機有關（見
-          // docs/epics/epic-25-annotation-interaction-qa/issues.md Issue 1）。
-          console.log(
-            `[DEBUG-e25i1-gate] released reason=selection-established ` +
-            `t=${evt.timeStamp.toFixed(0)} containerPosition=${view.renderer.containerPosition}`
-          )
           longPressGateState = null
           return
         }
@@ -786,60 +708,30 @@ async function openBook() {
           // 超過長按辨識時間、或位移/平均速度已經大到明顯是滑動手勢——
           // 放行給 paginator.js 正常處理，不再攔截這個手勢剩餘的
           // touchmove。
-          //
-          // Epic 25 Issue 1 暫時性除錯插樁 [DEBUG-e25i1-gate]：記錄放行
-          // 是被哪個門檻觸發、放行當下的 dx/dy/距離/速度，供比對「右邊
-          // 三行」跳頁是否是本攔截器放行後、paginator.js 把這次移動正常
-          // 判定成一次真實翻頁手勢造成的（而非攔截器本身的 bug）。
-          const reason = elapsed >= LONG_PRESS_GATE_MS ? 'elapsed'
-            : distance > SWIPE_DISTANCE_DEADZONE_PX ? 'distance'
-            : 'velocity'
-          console.log(
-            `[DEBUG-e25i1-gate] released reason=${reason} ` +
-            `t=${evt.timeStamp.toFixed(0)} elapsed=${elapsed.toFixed(0)} ` +
-            `dx=${dx.toFixed(1)} dy=${dy.toFixed(1)} distance=${distance.toFixed(1)} ` +
-            `avgVelocity=${avgVelocity.toFixed(3)} containerPosition=${view.renderer.containerPosition}`
-          )
           longPressGateState = null
           return
         }
         // 仍在長按候選期間（時間短、位移小、速度低、尚未確立選取）：攔截。
         //
-        // 【Epic 25 Issue 1 實驗性修法，見
-        // docs/epics/epic-25-annotation-interaction-qa/issues.md Issue 1】
+        // 【Epic 25 Issue 1，見
+        // docs/epics/epic-25-annotation-interaction-qa/issues.md】
         // stopImmediatePropagation() 會讓 paginator.js 的 #onTouchMove 整個
         // 不執行，連帶它在 paginator.js:2198 無條件呼叫的
-        // e.preventDefault() 也不會被呼叫。真機（Air Reader Pro C／
-        // AiPaper Reader C，Chrome 150）實測抓到：手勢最初幾個 touchmove
-        // 若完全沒有任何監聽器呼叫 preventDefault()，Chromium 會判定「沒人
-        // 要攔」而自行接管為原生捲動，並把該手勢剩餘的所有 touchmove 標記
-        // 為不可取消（觀察到大量瀏覽器原生錯誤：「Ignored attempt to
-        // cancel a touchmove event with cancelable=false...scrolling is in
-        // progress and cannot be interrupted」）——這個決定一旦下了不會回頭，
-        // 之後 paginator.js 即使正常執行、呼叫 e.preventDefault() 也會被
-        // 瀏覽器忽略，畫面位移改由瀏覽器合成器直接原生捲動控制，完全繞過
-        // paginator.js 自己的 #touchState/containerPosition 追蹤，可能才是
-        // Issue 1「選取已確立仍跳頁」的真正成因，且與選取狀態本身無關。
-        // 這裡改為由本攔截器自己先呼叫 preventDefault()（僅在 cancelable
-        // 時），讓瀏覽器一開始就看到有人取消了這個 touchmove、不會誤判為
-        // 「沒人要就自己接管」，stopImmediatePropagation() 仍照舊擋掉
-        // paginator.js 自己的邏輯，兩個目的並不衝突。
+        // e.preventDefault() 也不會被呼叫，所以本攔截器自己必須先呼叫
+        // preventDefault()，讓瀏覽器一開始就看到有人取消了這個
+        // touchmove——否則 Chromium 會判定「沒人要攔」而自行接管為原生
+        // 捲動，一旦接管，該手勢剩餘所有 touchmove 都會被標記為不可取消，
+        // 之後不論攔截器還是 paginator.js 再呼叫 preventDefault() 都會被
+        // 忽略，畫面位移改由瀏覽器合成器直接控制，完全繞過 paginator.js
+        // 自己的 #touchState/containerPosition 追蹤（真機重現症狀：選取
+        // 是否已確立無關，任何落入候選窗口且沒被成功取消的手勢皆會誘發）。
         //
-        // 【第二輪真機驗證發現真正根因，見同一個 issues.md Issue 1】上面這個
-        // preventDefault() 呼叫本身在真機上完全沒有生效，額外觀察到瀏覽器
-        // 原生錯誤：「Unable to preventDefault inside passive event listener
-        // due to target being treated as passive」——本監聽器註冊時只給了
-        // { capture: true }，沒有明確指定 passive。Chromium 對直接掛在
-        // Document 物件（doc 正是 iframe 的 contentDocument）上、沒有明確
-        // 指定 passive 的 touchstart/touchmove 監聽器，預設會被當成
-        // passive 處理（效能最佳化），passive 監聽器內呼叫
-        // preventDefault() 一律被靜默忽略（只印警告，不拋例外）。這才是
-        // 「瀏覽器自行接管原生捲動」的真正根因——不只是 stopImmediatePropagation
-        // 讓 paginator.js 的 preventDefault() 沒機會執行，而是連這個攔截器
-        // 自己想呼叫 preventDefault() 都因為 passive 而失敗，從
-        // epic-18 Issue 47 最初合併以來就是如此，不是本次新增
-        // preventDefault() 呼叫才產生的問題。修法：明確加上
-        // passive: false，讓 preventDefault() 真正生效。
+        // 本監聽器必須明確加上 { passive: false }（見下方註冊）：Chromium
+        // 對直接掛在 Document 物件（doc 正是 iframe 的 contentDocument）
+        // 上、沒有明確指定 passive 的 touchstart/touchmove 監聽器，預設
+        // 會當成 passive 處理，passive 監聽器內呼叫 preventDefault() 會被
+        // 靜默忽略（只印警告，不拋例外）——若漏了這個選項，上面的
+        // preventDefault() 呼叫形同虛設。
         evt.preventDefault()
         evt.stopImmediatePropagation()
       }, { capture: true, passive: false })

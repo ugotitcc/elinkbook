@@ -774,31 +774,19 @@ class _FoliateEpubReaderViewState extends State<FoliateEpubReaderView> {
                       child: _NavZoneTapDetector(
                         key: Key('nav_zone_$index'),
                         onTap: () {
-                          // Epic 25 Issue 1 除錯插樁 [DEBUG-e25i1-navzone]：
-                          // 記錄哪一格九宮格熱區被判定為「快速點擊」，以及
-                          // 是否因為下面的選取檢查而被抑制——真機診斷（見
+                          // Epic 25 Issue 1：真機診斷（見
                           // docs/epics/epic-25-annotation-interaction-qa/issues.md
-                          // Issue 1）已直接證實：長按選字手勢即使成功讓
-                          // WebView 建立選取範圍，放開手指的那個動作仍可能
-                          // 同時滿足 _NavZoneTapDetector 自己的「快速點擊」
-                          // 門檻（≤400ms、≤18px）而觸發翻頁——_NavZoneTapDetector
-                          // 刻意使用 Listener、不加入手勢競技場（見上方
-                          // class doc），WebView 贏得選取不會讓這裡的 Tap
-                          // 判定被取消，兩者是完全獨立、各自判讀同一組觸控
-                          // 事件的路徑。確認修復後，log 一併移除，改為純粹
-                          // 依 _hasActiveSelection 抑制。
-                          //
-                          // 修法：目前若有文字選取範圍存在，代表使用者這次
-                          // 觸控是劃線/選字手勢的一部分，不應該連帶觸發翻頁。
-                          if (_hasActiveSelection) {
-                            ReaderConsoleLog.add(
-                              '[DEBUG-e25i1-navzone] zone=$index action=$action suppressed=true',
-                            );
-                            return;
-                          }
-                          ReaderConsoleLog.add(
-                            '[DEBUG-e25i1-navzone] zone=$index action=$action suppressed=false',
-                          );
+                          // Issue 1）證實長按選字手勢即使成功讓 WebView
+                          // 建立選取範圍，放開手指的那個動作仍可能同時滿足
+                          // _NavZoneTapDetector 自己的「快速點擊」門檻而
+                          // 觸發翻頁——_NavZoneTapDetector 刻意使用
+                          // Listener、不加入手勢競技場（見上方 class
+                          // doc），WebView 贏得選取不會讓這裡的 Tap 判定被
+                          // 取消，兩者是完全獨立、各自判讀同一組觸控事件的
+                          // 路徑。若目前有文字選取範圍存在，代表使用者這次
+                          // 觸控是劃線/選字手勢的一部分，不應該連帶觸發
+                          // 翻頁。
+                          if (_hasActiveSelection) return;
                           widget.onZoneAction?.call(action);
                         },
                         child: Container(
