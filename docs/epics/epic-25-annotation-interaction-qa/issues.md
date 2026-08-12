@@ -153,7 +153,7 @@ EPUB／PDF 兩處呼叫端皆須修正。
 
 ## Issue 3：選擇畫線樣式後應可主動關閉工具列
 
-**Status:** `ready-for-agent`——設計方向已與人類確認（採用方向 (a)）。
+**Status:** ✅ 已修復並合併回 `main`（PR #136，分支 `epic-25-issue-3`）。`AnnotationToolbar` 新增第 6 顆「✕ 關閉」按鈕（`onClosePressed` 必要參數）；EPUB 端另新增 `window.clearSelection()` JS 橋接，關閉工具列時一併清除 WebView 原生文字選取（藍色反白＋拖曳控點），PDF 端經查證（`_finishSelectionDrag()` 已在回報選取矩形前清空唯一的視覺疊加層）確認不需要對應處理。實作過程中規劃階段實測發現並同步修正一個連鎖問題：新增第 6 顆按鈕使 `AnnotationToolbar` 實際渲染寬度從 256.0（5 顆）變為 304.0（6 顆），Issue 2 的 `_annotationToolbarWidth` 常數一併更新，避免右緣裁切修法回歸。實作計畫與實作結果皆經 `/superpowers:requesting-code-review` 獨立審查，0 Critical／0 Important（僅 1 項 Minor，純風格不影響合併，詳見 `tmp/epic-25/review-issue-3-implementation.md`）。`reader_screen_test.dart` 147/147、`annotation_toolbar_test.dart` 7/7 全數通過（含 Issue 2 右緣裁切回歸與「選色後保持開啟」回歸），`flutter analyze`／`node --check main.js` 皆乾淨。**已知殘留限制**：`window.clearSelection()` 的 JS 呼叫效果無法在 `flutter_test` 環境下自動化驗證（既有測試基礎設施限制），實際清除效果待真機人工驗證。
 
 **依賴：** 無
 
