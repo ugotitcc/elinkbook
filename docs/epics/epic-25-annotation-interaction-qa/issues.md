@@ -120,7 +120,7 @@
 
 ## Issue 2：畫線工具列在螢幕右側被裁切看不全
 
-**Status:** `ready-for-agent`——根因已用原始碼＋使用者截圖交叉確認，修法明確。
+**Status:** ✅ 已修復並合併回 `main`（PR #135，分支 `epic-25-issue-2`）。實作計畫（`plans/plan-issue-2.md`）與實作結果皆經 `/superpowers:requesting-code-review` 獨立審查，兩輪皆 0 Critical／0 Important（各僅出現風格層級 Minor，不影響合併，詳見 `tmp/epic-25/plan-issue-2-review.md`／`tmp/epic-25/review-issue-2-implementation.md`）。`reader_screen_test.dart` 新增 2 則 widget test（EPUB／PDF 各一）以 `tester.getBottomRight(find.byType(AnnotationToolbar))` 直接量測渲染座標驗證修法前後精確像素值（636.0→400.0），既有選取相關測試零回歸，145/145 全數通過、`flutter analyze` 乾淨。
 
 **依賴：** 無
 
