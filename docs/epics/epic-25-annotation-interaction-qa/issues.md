@@ -6,7 +6,11 @@
 
 ## Issue 1：畫線選取已確立仍跳頁（裝置相關——Air Reader Pro C 會、TCL 14 吋不會）
 
-**Status:** `needs-info`——需要真機插樁資料才能繼續，暫無法建立 headless 重現迴圈。
+**Status:** ✅ 已修復（真機人工驗證，人類確認「改善很多，先這樣」）。兩層防護：`_hasActiveSelection` 抑制（選取已確立時）＋`_NavZoneTapDetector._tapMaxDurationMs` 400ms→700ms（對齊/超過原生長按辨識所需時間）。第六輪真機驗證（`log13.txt` 之後）確認跳頁大幅減少，人類決定以目前狀態結案，不再繼續逐 ms 調校。
+
+**已知殘留限制（誠實記錄，非聲稱 100% 解決）**：結構性上，700ms 仍是「等待原生長按辨識完成」的一個經驗值，不是理論上界——不同裝置/系統負載下，原生長按實際判定所需時間理論上仍可能超過 700ms，屆時同一類跳頁仍有極低機率重現。人類已確認此殘留風險可接受，**若未來需要進一步優化，應另立新 Issue**，不在本 Issue 範圍內繼續調校。
+
+**Cleanup**：全部暫時性除錯插樁（`main.js` 的 `[DEBUG-e25i1]`／`[DEBUG-e25i1-gate]`／`[DEBUG-e25i1-end]`、`foliate_epub_reader_view.dart` 的 `[DEBUG-e25i1-navzone]`）已整段移除，只保留兩個正式修法本體（`evt.preventDefault()` ＋ `{ passive: false }`、`_hasActiveSelection` 抑制 ＋ `_tapMaxDurationMs = 700`）與其永久性說明註解。`tmp/epic-25-issue-1-harness/smoke.mjs`（未進版控）驗證的是已移除的插樁 log，目前重跑會 `FAIL`（`debugLogs captured: 0`），已是預期中的過期產物，不需要修——該 harness 本來就只是診斷階段的輔助工具，不是永久回歸測試。`flutter test`（`foliate_epub_reader_view_test.dart` 64/64）、`flutter analyze`、`node --check main.js` 語法檢查皆通過。
 
 **依賴：** 無
 
@@ -14,13 +18,103 @@
 
 **與 `epic-18` Issue 47 的關係：** Issue 47 的攔截器一旦偵測到 `selection.rangeCount > 0 && !selection.isCollapsed`（選取已確立）即主動放手（`main.js` 的 `longPressGateState = null; return`），之後交由 `paginator.js` 既有守衛（`paginator.js:2191-2195`）處理。本項回報的正是「已確立」情境本身在特定裝置失效，理論上不屬於 Issue 47 修復範圍。
 
-**根因假說（排序，皆未經真機驗證）：**
+**根因假說（排序，第 0 項為 2026-08-12 三輪真機資料〔`tmp/epic-25/log.txt`／`log2.txt`／`log3.txt`〕直接佐證，其餘尚未驗證）：**
 
-1.（最可能）視覺選取控點顯示與 `doc.getSelection()` 的 `rangeCount`/`isCollapsed` JS 狀態同步之間，在該機型 WebView 有時間落差——與 Issue 47 根因同一類「JS 選取 API 落後於原生手勢視覺狀態」問題，只是發生在拖曳控點階段而非長按候選階段。
+0.（**目前信心最高，有真機 log 直接佐證，非純理論，第二輪驗證已鎖定確切機制**）**`epic-18` Issue 47 攔截器的監聽器缺少 `passive: false`，導致其 `preventDefault()` 從未真正生效過，誘發瀏覽器原生捲動接管手勢，與選取狀態本身無關**：
+
+   第一輪真機 log（`log.txt`）顯示，插樁只留下 1 筆 `rangeCount=1 isCollapsed=true moved=false` 之後，立刻出現連續瀏覽器原生錯誤：「Ignored attempt to cancel a touchmove event with cancelable=false...scrolling is in progress and cannot be interrupted」。第一輪修法：在 Issue 47 攔截器 `stopImmediatePropagation()` 前補上 `evt.preventDefault()`。
+
+   **第二輪真機測試（`log2.txt`／`log3.txt`，同一支修改過的 debug build）證實第一輪修法未生效**——新出現一行更早的錯誤：「Unable to preventDefault inside passive event listener due to target being treated as passive」，且使用者回報「亂跳依舊發生」「手指在書籍上任意滑動、只要不停留太久不出現畫線工具就會出現 ERROR」「一旦出現畫線工具就不會有 ERROR」。查證確認：Issue 47 攔截器的 `touchmove` 監聽器註冊時只給了 `{ capture: true }`，**沒有明確指定 `passive`**。Chromium 對直接掛在 `Document` 物件（`doc` 正是 iframe 的 `contentDocument`）上、沒有明確指定 `passive` 的 `touchstart`/`touchmove` 監聽器，預設會被當成 passive 處理（效能最佳化），passive 監聽器內呼叫 `preventDefault()` 一律被靜默忽略（只印警告，不拋例外）——第一輪加的 `preventDefault()` 呼叫本身就在這個被隱性判定為 passive 的監聽器裡，從未真正生效過。這代表 Issue 47 從最初合併以來，攔截器本身就從來沒有能力真正取消 touchmove 的預設行為，只是先前沒有真機資料能觀察到這一層。
+
+   完整成因鏈：任何手勢最初幾個 `touchmove`，若 Issue 47 攔截器判定為候選並呼叫 `stopImmediatePropagation()`（讓 `paginator.js:2198` 的 `preventDefault()` 沒機會執行）、而攔截器自己想呼叫的 `preventDefault()` 又因為 passive 而被忽略 → 全程沒有任何一方成功取消這幾個 touchmove → Chromium 判定「沒人要攔」，自行接管為原生捲動，該手勢剩餘所有 touchmove 標記為不可取消，之後不論 `paginator.js` 或攔截器再怎麼呼叫 `preventDefault()` 都被忽略 → 畫面位移由瀏覽器合成器直接控制，完全繞過 `paginator.js` 自己的 `#touchState`/`containerPosition` 追蹤（插樁量到的 `containerPosition` 因此全程不變、`moved=false`，但畫面實際可能正被原生捲動亂拖）。這解釋了使用者的三項觀察：(1) 任意滑動只要沒觸發選字就會出現 ERROR——因為幾乎任何手勢的最初幾格都會落入 Issue 47 的候選窗口；(2) 一旦選字工具出現就不再有 ERROR——**修正**：不是攔截器放手後 `paginator.js` 成功呼叫 `preventDefault()`，而是 `paginator.js:2193-2195`（`if (selection && rangeCount>0 && !isCollapsed) return`）本身在選取已確立時就提早返回，根本不會執行到 2198 行的 `preventDefault()`，自然不會拋出取消失敗的錯誤（見 `tmp/epic-25/issue-1-cause-and-solution-analysis.md` 2.4 節，查證後採納，比原敘述精確）；(3) 不是每次都重現——是否踩到「候選窗口內完全沒有成功取消」取決於手勢時序的細節。**這與選取是否已確立無關，是 `epic-18` Issue 47 修復本身自合併以來就存在、只是先前未被真機資料揭露的缺陷**，不是獨立於 Issue 47 之外的裝置差異 bug。
+
+   **第二輪修法（`main.js`，`epic-25-issue-1-debug-instrumentation` 分支）**：Issue 47 攔截器的 `touchmove` 監聽器註冊選項改為 `{ capture: true, passive: false }`，讓 `evt.preventDefault()` 真正生效。**待真機第三輪驗證**。
+
+   **外部分析報告交叉驗證**（`tmp/epic-25/issue-1-cause-and-solution-analysis.md`，人類提供）：獨立分析同一組 log，收斂到完全相同的根因與修法（其方案 A＝上述第二輪修法，判定「推薦、符合 ADR 0011」），提高本假說信心。逐項技術評估：
+   - 採納：2.4 節 `paginator.js` 早退細節（已併入上方成因鏈說明）。
+   - 不採納，理由已查證：方案 A 一併建議 `touchstart` 監聽器與診斷插樁的 `touchmove` 監聽器都加 `passive: false`——查證這兩處皆未呼叫 `preventDefault()`，加上不會改變任何行為，維持最小改動、只改真正需要的地方（`epic-18` Issue 47 攔截器的 `touchmove` 監聽器）。
+   - 明確駁回：方案 C（修改 `paginator.js` 加 `e.cancelable` 判斷）違反 ADR 0011（不可修改 vendored 檔案），報告本身也承認且僅列為參考，不採用。
+   - 記錄為備援選項、暫不實作：方案 B（注入 `touch-action` CSS 限制原生手勢方向）——報告定位為「輔助防護」非必要；`passive: false` 已精準對應已確認機制，**若第三輪真機驗證後發現 `passive: false` 單獨不足以解決亂跳，才評估加上**，避免在還沒有證據顯示必要之前，先做影響範圍更廣（可能牽動縮放等其他手勢）的改動。
+
+0.5（**第三輪真機驗證新發現，機制尚未確認、兩個子假說待下一輪資料區辨**）**`passive: false` 已確認解決 ERROR，但跳頁仍會發生，且僅限畫面右側三行（直排模式，對應九宮格右欄熱區）**：
+
+   `log4.txt`／`log5.txt`／`log6.txt` 三份 log 皆**完全沒有**再出現 `Unable to preventDefault...`／`Ignored attempt to cancel...` 兩則錯誤，確認假說 0 的修法本身有效。但使用者回報跳頁仍會發生，且明確定位在畫面右側三行。
+
+   人類提供第二份外部分析報告（`tmp/epic-25/issue-1-right-three-lines-jump-analysis.md`）提出假說：`longPressGate` 因水平飄移超過 15px 死區提早放行，`paginator.js` 誤判為翻頁手勢暴跳一整頁。**查證後對其具體機制描述持保留態度**：報告引用 `log5.txt` 兩行（`t=25215`/`t=27444`，間隔 2.2 秒）論證「單一手勢內 95px 飄移造成暴跳」，但兩行皆明確標示 `moved=false`——若真是同一手勢內位置真的跳動，第二行理應是 `moved=true`；間隔 2.2 秒也不像是連續同一手勢。更可能是兩次分開的手勢（`debugE25I1LastPosition` 在每次 `touchstart` 重置為 `null`，故各自的「該手勢第一筆」都會被記錄、且必為 `moved=false`），中間的位置落差是被某個插樁完全觀察不到的機制造成的。報告描述的「距離死區 15px 就放行、卻累積到 95px 才暴跳」，也與目前雙門檻設計（距離 >15px **或**速度 >0.3px/ms **或** 耗時 ≥500ms，任一成立即放行，飄移一超過 15px 就會提早放行，不會拖到 95px）不完全吻合，較像是描述修復前的舊版邏輯。
+
+   目前兩個未區辨的子假說：
+   - **(a)** 攔截器放行後，`paginator.js` 接手這次移動，`touchend` 時被其自身合法的 `snap()` 判定為一次真實翻頁手勢並提交（不是攔截器的 bug，是放行後的正常後果被使用者感知為非預期跳頁）。
+   - **(b)**（上一輪已提出）`foliate_epub_reader_view.dart:827-868` 的 `_NavZoneTapDetector`（九宮格翻頁熱區，`Listener` 不參與手勢競技場，與 WebView 同時收到同一組觸控）用「耗時 ≤400ms 且位移 ≤18px」判定「快速點擊」觸發翻頁——若長按選字的按壓在被 WebView 判定為長按之前就意外提早放開/中斷，落在右欄熱區範圍內就可能被誤判成翻頁點擊，與 JS `touchmove`/`preventDefault` 完全無關，插樁本來就看不到。
+
+   **本輪新增插樁（`main.js`／`foliate_epub_reader_view.dart`，`epic-25-issue-1-debug-instrumentation` 分支）供下一輪真機測試區辨**：
+   - `[DEBUG-e25i1-gate]`：記錄 Issue 47 攔截器放行時機與原因（`selection-established`／`elapsed`／`distance`／`velocity`）、放行當下的 dx/dy/距離/速度/`containerPosition`。
+   - `[DEBUG-e25i1-end]`：記錄 `touchend` 當下與 +350ms 後（涵蓋一般 `snap()` CSS transition 的 settle 時間）的 `containerPosition`，捕捉子假說 (a)「放開手指後才透過動畫完成的整頁跳動」。
+   - `[DEBUG-e25i1-navzone]`：於 `_NavZoneTapDetector` 的 `onTap` 呼叫點記錄觸發的熱區編號與動作，直接證實/排除子假說 (b)。
+
+   **判讀方式**：若跳頁時 log 出現 `[DEBUG-e25i1-navzone]`，代表子假說 (b) 成立；若出現 `[DEBUG-e25i1-gate] released reason=distance/velocity` 後緊接著 `[DEBUG-e25i1-end]` 顯示 +350ms 位置與 touchend 當下差了一整頁，代表子假說 (a) 成立；兩者也可能並存。
+
+0.6（**第四輪真機資料〔`log7.txt`／`log8.txt`／`log9.txt`／`log10_OK.txt`〕已直接證實，子假說 (b) 成立、(a) 已排除**）**「右邊三行」跳頁的確切根因是 `_NavZoneTapDetector` 九宮格熱區誤判，與 Issue 47／`passive: false` 完全無關**：
+
+   決定性證據（`log9.txt` 第 14-18 行）：
+   ```
+   [DEBUG-e25i1] rangeCount=1 isCollapsed=false ...           選取已成功確立
+   [DEBUG-e25i1-gate] released reason=selection-established   Issue 47 攔截器正確放手
+   [DEBUG-e25i1-navzone] zone=3 action=ZoneAction.nextPage    但九宮格熱區同時判定成快速點擊
+   [DEBUG-e25i1-end] touchend→+350ms delta=714.97              頁面跳了整整一頁
+   ```
+   `log7`／`log8`／`log9` 三份「有跳頁」的 log，每一次跳頁都精準對應到一筆 `[DEBUG-e25i1-navzone]`，跳動量固定 `±714.97px`（一整頁）；log 中唯一一筆 `[DEBUG-e25i1-gate] released reason=elapsed`（距離僅 10.1px）前後 `containerPosition` 完全沒變——子假說 (a)（攔截器放行後 `paginator.js` 誤判翻頁）在這幾次重現中未曾發生。
+
+   **根因**：`_NavZoneTapDetector`（`foliate_epub_reader_view.dart:827-868`）刻意用 `Listener` 不加入手勢競技場（既有設計，避免攔截 WebView 的原生長按選字），純粹依「耗時 ≤400ms 且位移 ≤18px」判定是否為翻頁點擊，**完全不知道同一次觸控是否同時讓 WebView 建立了文字選取**。人類提供的第三份分析報告（`tmp/epic-25/issue-1-navzone-tap-jump-analysis.md`）獨立收斂到同一根因，但兩處細節查證後有誤，已訂正：(1) zone index 與實體位置對應反了（`index = row*3+col`，zone=3 是中欄靠左非右欄，查證目前使用的是 `leftFlipZoneTemplate` 非報告假設的 `rightFlipZoneTemplate`，不影響核心結論）；(2)「WebView 贏得手勢競技場、Flutter Tap 被取消」的解釋是錯的且被 `log9.txt` 直接證據推翻——`_NavZoneTapDetector` 從未加入競技場，選取確立與否不影響它的獨立判定，兩者是各自判讀同一組觸控事件的平行路徑。
+
+   **修法（`foliate_epub_reader_view.dart`，`epic-25-issue-1-debug-instrumentation` 分支）**：`_FoliateEpubReaderViewState` 新增內部欄位 `_hasActiveSelection`，由既有 `onSelectionChanged`/`onSelectionCleared` JS 橋接 handler 直接維護（不透過 `setState`，只在觸控放開當下被讀取一次）；九宮格熱區 `onTap` 判定要觸發翻頁前，先檢查此欄位，若有選取範圍存在則抑制（不呼叫 `widget.onZoneAction`），並保留 `[DEBUG-e25i1-navzone]` log 標註 `suppressed=true/false` 供下一輪驗證。
+
+   **第四輪真機驗證（`log11.txt`／`log12.txt`）：機制有效但覆蓋不足**——`log11.txt` 第 20-22 行確認 `suppressed=true` 時 100% 擋下跳頁，但兩份 log 裡多數造成跳頁的 `[DEBUG-e25i1-navzone]` 之前完全沒有出現任何 `[DEBUG-e25i1]`/`[DEBUG-e25i1-gate]`，代表那幾次觸控從按下到放開，WebView 端根本還沒來得及建立選取（`_hasActiveSelection` 全程是 `false`，沒有東西可以擋）。查明結構性根因：`_NavZoneTapDetector` 判定「快速點擊」的門檻是 400ms，但原生長按辨識（Android `ViewConfiguration.getLongPressTimeout()`，與 `epic-18` Issue 47 `LONG_PRESS_GATE_MS` 同值）需要 500ms 才會開始——任何按壓在 400ms 內放開，熱區永遠搶在原生選取有機會開始之前就裁定成翻頁點擊，與選取有沒有成立無關。
+
+   人類提供第四份報告（`tmp/epic-25/issue-1-navzone-suppression-architecture-study.md`）評估三個方向，逐一查證：
+   - **方案 A**（選字工具跳出後才停用熱區）：時機抓太晚，救不到上述空窗期，報告自己也給了最低評分。
+   - **方案 B-1**（`touchstart` 立即鎖定、`touchend` 後 50ms 視情況解鎖）：查證後發現報告畫的狀態機**缺了「解鎖後要補發原本那次點擊動作」這一步**，字面實作會讓熱區整個失效（任何點擊都在 touchend 當下鎖定狀態仍是 true）；即使補上，50ms 這個非同步等待窗口也只能處理「選取其實已成立、只是橋接還沒傳到」的極端邊界情況，處理不了本輪 log 顯示的主要情境（按壓本身就短於原生辨識所需的 500ms，事後等多久都不會生出選取）。
+   - **方案 B-2**（按壓時間門檻調整）：完全同步、無競速風險，方向正確，但報告給的 150ms 數字會讓使用者自然稍慢的點擊（尤其 E-Ink 裝置）也失效，屬於用一個新的回歸換掉原本的 bug，需要往另一個方向（提高而非降低）校準。
+
+   **採用修法**：`_NavZoneTapDetector._tapMaxDurationMs` 從 400ms 提高到 **500ms**，對齊原生長按辨識門檻與 Issue 47 `LONG_PRESS_GATE_MS` 同一個值——任何有機會演變成長按選字的按壓，一開始就不會被判定為快速點擊，不需要額外等待或跨 JS/Dart 橋接判斷，與既有 `_hasActiveSelection` 抑制（保護選取已確立後續拖曳控點等情境）互補疊加。**已知限制（誠實記錄，非過度承諾）**：不是 100% 保證——若某次按壓落在 400-500ms 之間、但實際裝置辨識長按所需時間比 500ms 更久，理論上仍有機會漏網；500ms 是有依據的起始值，非憑空選定，若真機重測仍偶發重現，下一輪需視真機數據調整至 550-600ms 區間。PDF 端 `_PdfNavZoneTapDetector`（`pdf_reader_view.dart:1208-1240`）是獨立實作、同樣的結構性落差可能也存在，但 PDF 選字機制（Dart `GestureDetector` 長按拖曳框選）與 EPUB（WebView 原生選取）不同，本輪不動，需要的話應另立 Issue 查證。
+
+   **第五輪真機驗證（`log13.txt`）：有改善但仍會發生，門檻進一步調整至 700ms**——使用者回報「仍會發生，不過有改善」「熱區不會感覺變慢」。`log13.txt` 比對前幾輪，`suppressed=true`（成功擋下）的比例明顯提高，證實 500ms 調整方向正確、有實質效果，但仍有相當比例的 `suppressed=false` 造成跳頁；第 9 行 `[DEBUG-e25i1-gate] released reason=distance t=3389 elapsed=497` 顯示部分候選手勢撐到 elapsed≈497ms 才因距離門檻（非選取確立）放行，代表真機實際判定所需時間比 Android 預設的 500ms 更貼近甚至可能略超過——500ms 仍不夠寬裕。使用者主動確認「提高門檻不會讓一般翻頁點擊感覺變慢」，代表目前的體感延遲仍有餘裕，可以再往上調。採用使用者建議的調整幅度（+100~200ms），選定區間上緣 **700ms**（`_tapMaxDurationMs` 500→700），保留較大安全邊際、減少需要再次真機來回調校的次數。**待真機第六輪驗證**：確認選取存在時不再跳頁，且正常翻頁/選單熱區（無選取時）功能不受影響、體感未明顯變慢。若 700ms 仍不足或使用者開始感覺翻頁有感延遲，才需要在「跳頁機率」與「翻頁即時感」之間做更精細的取捨（例如回到方案 B-1／借用 Issue 47 gate 狀態的非同步方案，用短暫等待換取不必要拉長所有點擊的判定門檻）。
+
+   **已知測試覆蓋缺口**：`flutter test` 的 `FakeInAppWebViewPlatform`（`app/test/support/fake_inappwebview_platform.dart`）不會真正建立 `InAppWebViewController`，`controller.addJavaScriptHandler(...)` 註冊的 handler（含 `onSelectionChanged`/`onSelectionCleared`）在 widget test 環境下無法被觸發，故 `_hasActiveSelection` 這個內部狀態追蹤邏輯目前無法在 `flutter test` 層級寫自動化回歸測試（`reader_screen_test.dart` 既有的 `foliateView.onSelectionChanged?.call(...)` 測試手法是從外部直接呼叫 widget 的 public callback，繞過了 JS handler 內部、不會經過 `_hasActiveSelection` 賦值）——這是既有測試基礎設施的既有限制，不是本次修法引入的缺口；驗證只能依賴真機（比照本專案兩層測試架構文件，JS 橋接觸發的行為本來就歸類到 `integration_test`/真機驗證範疇）。既有 `flutter test`（`foliate_epub_reader_view_test.dart` 64/64，含既有 3×3 導航熱區測試確認未回歸）與 `flutter analyze` 皆通過。
+1. 視覺選取控點顯示與 `doc.getSelection()` 的 `rangeCount`/`isCollapsed` JS 狀態同步之間，在該機型 WebView 有時間落差——與 Issue 47 根因同一類「JS 選取 API 落後於原生手勢視覺狀態」問題，只是發生在拖曳控點階段而非長按候選階段。
 2. Air Reader Pro C 的 WebView 版本／觸控事件合併（coalesced events）行為與 TCL 14 吋不同（比照 `epic-18` Issue 33／38-41 已知部分機型 WebView 版本偏舊的既有模式）。
 3. 兩者疊加。
+4.（`plan-issue-1.md` 實作審查新增，`tmp/epic-25/review-issue-1-implementation.md`——架構層級假說，目前無法用 headless CDP 驗證或否證，優先度已因假說 0 的確切機制查明而降低）**原生選取控點的拖曳，很可能根本不會產生 DOM `touchmove` 事件**：Android WebView／Chromium 對「已顯示的文字選取控點」的拖曳，慣例是由瀏覽器 UI／合成器層級（`TouchSelectionController` 一類原生元件）直接處理，不一定會被送進頁面的 DOM 事件派發流程。**若假說 0 的 `passive: false` 修法在下一輪真機驗證後仍未解決跳頁，才需要回頭認真評估這個假說**，需要換一種完全不依賴 DOM touch 事件的偵測方式（例如原生 Android 端用 `WebView` 的捲動變化監聽機制，或改用 `requestAnimationFrame` 輪詢取代事件驅動）。
 
-**下一步（Planning 前需先完成）：** 無法用 headless CDP 模擬選取控點拖曳（不具代表性，與 Issue 47 診斷時發現的局限相同）。需要在 Air Reader Pro C（會重現）與 TCL 14 吋（不會重現）各自部署一份暫時性除錯插樁（記錄拖曳過程中每個 `touchmove` 的 `selection.rangeCount`／`isCollapsed`／座標／時間戳），差異比對兩台裝置的輸出，才能鎖定真正根因並轉為 `ready-for-agent`。
+**下一步：** 已在 `epic-25-issue-1-debug-instrumentation` 分支修正 Issue 47 攔截器的監聽器選項（`{ capture: true, passive: false }`），待使用者重新 build debug APK 裝到 Air Reader Pro C 上第三輪測試（同一台裝置反覆多測幾次，包含「任意滑動不觸發選字」與「長按選字後拖曳控點」兩種情境）。驗證重點：(a) `Unable to preventDefault inside passive event listener` 與 `Ignored attempt to cancel a touchmove event with cancelable=false` 兩則瀏覽器原生錯誤是否不再出現；(b) 任意滑動與拖曳選取控點是否都不再跳頁。若第三輪確認有效，可規劃將 `passive: false` 這項修正正式併入 `epic-18` Issue 47 的既有修復；若仍重現，回頭比對假說 1-4。無法用 headless CDP 模擬選取控點拖曳（不具代表性，與 Issue 47 診斷時發現的局限相同）。
+
+**真機資料蒐集步驟（`plan-issue-1.md` Task 1 完成後可執行）：**
+
+1. 用含 `[DEBUG-e25i1]` 插樁的 debug build（`flutter build apk --debug`）分別安裝到
+   Air Reader Pro C 與 TCL 14 吋兩台裝置。
+2. 兩台裝置分別開啟同一本流式 EPUB（建議用同一本書、同一個章節位置，降低
+   非裝置因素造成的差異）。
+3. 長按選取一段文字（例如 5-10 個字），確認選取控點已顯示於左右兩側
+   （即選取已確立的狀態）。
+4. 用手指拖曳其中一個控點，同時留意畫面是否出現跳頁/位移。**請至少各嘗試
+   一次「緩慢」與「明顯較快」兩種拖曳速度**（`plan-issue-1.md` 實作審查
+   `tmp/epic-25/review-issue-1-implementation.md` 發現：headless 環境下
+   緩慢小幅度的 touchmove 序列，有機率完全不被瀏覽器派發到 JS 層級，只測
+   單一慢速手勢可能系統性地採不到任何資料），並在回報時註記每次操作的
+   拖曳速度主觀感受。
+5. 完成拖曳後，進入「設定」→「閱讀器 Console Log」，點擊右上角「複製全部」
+   按鈕，將剪貼簿內容貼到文字檔或直接回報；同步註記該次測試使用的版面
+   設定（直排/橫排、單頁/雙頁），以利後續交叉分析是否為版面相關變因。
+6. 兩台裝置各重複步驟 3-5 至少 2 次（同一手勢多測幾次，避免單次操作的
+   偶然性），並记錄「當下是否有觀察到跳頁」對應到哪一次操作。
+7. 將兩台裝置的 log 檔案／文字回報回來，交叉比對 `rangeCount`／
+   `isCollapsed`／`containerPosition`／`moved` 欄位在兩台裝置上的差異
+   （特別留意 `moved=true` 但 `rangeCount>0 && isCollapsed=false`
+   同時成立的行——這代表「選取明明已確立，內容卻仍位移」，是本 Issue
+   要鎖定的確切症狀）。
+
+**下一輪（拿到真機資料後）**：依比對結果撰寫 `bugfix-repro-issue-1.md`
+確認根因，另立修復計畫；本插樁需在修復計畫的 Cleanup 階段整段移除
+（`grep -rn "DEBUG-e25i1"` 確認清除乾淨）。
 
 ---
 

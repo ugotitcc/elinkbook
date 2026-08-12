@@ -712,8 +712,29 @@ async function openBook() {
           return
         }
         // 仍在長按候選期間（時間短、位移小、速度低、尚未確立選取）：攔截。
+        //
+        // 【Epic 25 Issue 1，見
+        // docs/epics/epic-25-annotation-interaction-qa/issues.md】
+        // stopImmediatePropagation() 會讓 paginator.js 的 #onTouchMove 整個
+        // 不執行，連帶它在 paginator.js:2198 無條件呼叫的
+        // e.preventDefault() 也不會被呼叫，所以本攔截器自己必須先呼叫
+        // preventDefault()，讓瀏覽器一開始就看到有人取消了這個
+        // touchmove——否則 Chromium 會判定「沒人要攔」而自行接管為原生
+        // 捲動，一旦接管，該手勢剩餘所有 touchmove 都會被標記為不可取消，
+        // 之後不論攔截器還是 paginator.js 再呼叫 preventDefault() 都會被
+        // 忽略，畫面位移改由瀏覽器合成器直接控制，完全繞過 paginator.js
+        // 自己的 #touchState/containerPosition 追蹤（真機重現症狀：選取
+        // 是否已確立無關，任何落入候選窗口且沒被成功取消的手勢皆會誘發）。
+        //
+        // 本監聽器必須明確加上 { passive: false }（見下方註冊）：Chromium
+        // 對直接掛在 Document 物件（doc 正是 iframe 的 contentDocument）
+        // 上、沒有明確指定 passive 的 touchstart/touchmove 監聽器，預設
+        // 會當成 passive 處理，passive 監聽器內呼叫 preventDefault() 會被
+        // 靜默忽略（只印警告，不拋例外）——若漏了這個選項，上面的
+        // preventDefault() 呼叫形同虛設。
+        evt.preventDefault()
         evt.stopImmediatePropagation()
-      }, { capture: true })
+      }, { capture: true, passive: false })
       doc.addEventListener('touchend', () => { longPressGateState = null }, { capture: true })
       doc.addEventListener('touchcancel', () => { longPressGateState = null }, { capture: true })
     })

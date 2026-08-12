@@ -489,6 +489,14 @@ class _FoliateEpubReaderViewState extends State<FoliateEpubReaderView> {
   /// 本實例的唯一 ID，用於區隔快取子目錄（避免螢幕轉場期間的競態）。
   late final String _instanceId = identityHashCode(this).toString();
 
+  /// Epic 25 Issue 1 修法：目前 WebView 內是否有文字選取範圍存在，供
+  /// `_NavZoneTapDetector` 判斷是否要抑制翻頁動作（見下方 onTap 說明）。
+  /// 由 `onSelectionChanged`/`onSelectionCleared` JS 橋接 handler 直接維護，
+  /// 不透過 setState——這個欄位只在使用者放開手指的那一刻被讀取一次
+  /// （事件觸發時的即時值），不影響任何一次 build() 的輸出，不需要為它
+  /// 觸發重繪。
+  bool _hasActiveSelection = false;
+
   late final Uri _initialIndexUri = _buildIndexUri();
 
   @override
@@ -610,6 +618,7 @@ class _FoliateEpubReaderViewState extends State<FoliateEpubReaderView> {
         // 審查修正：同 onLocatorChanged，改用防禦性轉型取代直接強制轉型。
         num? argAt(int index) =>
             args.length > index ? args[index] as num? : null;
+        _hasActiveSelection = true;
         widget.onSelectionChanged?.call(EpubSelectionInfo(
           locatorJson: args.isNotEmpty ? args[0] as String : '',
           progression: argAt(1)?.toDouble() ?? 0.0,
@@ -625,6 +634,7 @@ class _FoliateEpubReaderViewState extends State<FoliateEpubReaderView> {
     controller.addJavaScriptHandler(
       handlerName: 'onSelectionCleared',
       callback: (args) {
+        _hasActiveSelection = false;
         widget.onSelectionCleared?.call();
       },
     );
@@ -763,7 +773,22 @@ class _FoliateEpubReaderViewState extends State<FoliateEpubReaderView> {
                     return Expanded(
                       child: _NavZoneTapDetector(
                         key: Key('nav_zone_$index'),
-                        onTap: () => widget.onZoneAction?.call(action),
+                        onTap: () {
+                          // Epic 25 Issue 1：真機診斷（見
+                          // docs/epics/epic-25-annotation-interaction-qa/issues.md
+                          // Issue 1）證實長按選字手勢即使成功讓 WebView
+                          // 建立選取範圍，放開手指的那個動作仍可能同時滿足
+                          // _NavZoneTapDetector 自己的「快速點擊」門檻而
+                          // 觸發翻頁——_NavZoneTapDetector 刻意使用
+                          // Listener、不加入手勢競技場（見上方 class
+                          // doc），WebView 贏得選取不會讓這裡的 Tap 判定被
+                          // 取消，兩者是完全獨立、各自判讀同一組觸控事件的
+                          // 路徑。若目前有文字選取範圍存在，代表使用者這次
+                          // 觸控是劃線/選字手勢的一部分，不應該連帶觸發
+                          // 翻頁。
+                          if (_hasActiveSelection) return;
+                          widget.onZoneAction?.call(action);
+                        },
                         child: Container(
                           decoration: widget.showNavZoneDebugOverlay
                               ? BoxDecoration(
@@ -842,7 +867,22 @@ class _NavZoneTapDetectorState extends State<_NavZoneTapDetector> {
   int? _downTimeMs;
 
   static const _tapSlop = 18.0;
-  static const _tapMaxDurationMs = 400;
+
+  /// Epic 25 Issue 1 修法：原本是 400ms，真機（Air Reader Pro C）診斷發現
+  /// 這個門檻**短於**原生長按辨識所需時間（Android
+  /// `ViewConfiguration.getLongPressTimeout()` 預設值，也是
+  /// `epic-18` Issue 47 `LONG_PRESS_GATE_MS` 用的同一個值，見 main.js）——
+  /// 使用者長按選字若在門檻內放開手指（原生選取都還來不及開始辨識），本
+  /// 類別會搶先判定成「快速點擊」直接觸發翻頁，與選取是否成立無關，
+  /// `_hasActiveSelection`（見 `_FoliateEpubReaderViewState`）救不到這個
+  /// 情境。第一版對齊 500ms（同 `LONG_PRESS_GATE_MS`）仍能觀察到跳頁（見
+  /// `tmp/epic-25/log13.txt`，`[DEBUG-e25i1-gate]` 顯示部分候選手勢在
+  /// elapsed≈497ms 才因距離/速度門檻放行，代表真機實際辨識所需時間比
+  /// Android 預設值更接近甚至略超過 500ms 本身）；真機測試同時確認提高
+  /// 門檻不會讓一般點擊翻頁的手感變慢（人類真機回報），故進一步調到
+  /// 700ms（詳見
+  /// docs/epics/epic-25-annotation-interaction-qa/issues.md Issue 1）。
+  static const _tapMaxDurationMs = 700;
 
   @override
   Widget build(BuildContext context) {
