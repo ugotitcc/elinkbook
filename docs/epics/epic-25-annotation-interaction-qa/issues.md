@@ -6,7 +6,7 @@
 
 ## Issue 1：畫線選取已確立仍跳頁（裝置相關——Air Reader Pro C 會、TCL 14 吋不會）
 
-**Status:** 修復已實作（`_hasActiveSelection` 抑制九宮格熱區翻頁），**待第四輪真機驗證**確認跳頁不再發生、且正常翻頁/選單熱區功能不受影響。
+**Status:** 修復已實作兩層防護（`_hasActiveSelection` 抑制＋`_tapMaxDurationMs` 400ms→500ms 對齊原生長按門檻），**待第五輪真機驗證**確認跳頁不再發生、且正常翻頁/選單熱區功能不受影響。
 
 **依賴：** 無
 
@@ -62,7 +62,16 @@
 
    **根因**：`_NavZoneTapDetector`（`foliate_epub_reader_view.dart:827-868`）刻意用 `Listener` 不加入手勢競技場（既有設計，避免攔截 WebView 的原生長按選字），純粹依「耗時 ≤400ms 且位移 ≤18px」判定是否為翻頁點擊，**完全不知道同一次觸控是否同時讓 WebView 建立了文字選取**。人類提供的第三份分析報告（`tmp/epic-25/issue-1-navzone-tap-jump-analysis.md`）獨立收斂到同一根因，但兩處細節查證後有誤，已訂正：(1) zone index 與實體位置對應反了（`index = row*3+col`，zone=3 是中欄靠左非右欄，查證目前使用的是 `leftFlipZoneTemplate` 非報告假設的 `rightFlipZoneTemplate`，不影響核心結論）；(2)「WebView 贏得手勢競技場、Flutter Tap 被取消」的解釋是錯的且被 `log9.txt` 直接證據推翻——`_NavZoneTapDetector` 從未加入競技場，選取確立與否不影響它的獨立判定，兩者是各自判讀同一組觸控事件的平行路徑。
 
-   **修法（`foliate_epub_reader_view.dart`，`epic-25-issue-1-debug-instrumentation` 分支）**：`_FoliateEpubReaderViewState` 新增內部欄位 `_hasActiveSelection`，由既有 `onSelectionChanged`/`onSelectionCleared` JS 橋接 handler 直接維護（不透過 `setState`，只在觸控放開當下被讀取一次）；九宮格熱區 `onTap` 判定要觸發翻頁前，先檢查此欄位，若有選取範圍存在則抑制（不呼叫 `widget.onZoneAction`），並保留 `[DEBUG-e25i1-navzone]` log 標註 `suppressed=true/false` 供下一輪驗證。**待真機第四輪驗證**：確認選取存在時不再跳頁，且正常翻頁/選單熱區（無選取時）功能不受影響。
+   **修法（`foliate_epub_reader_view.dart`，`epic-25-issue-1-debug-instrumentation` 分支）**：`_FoliateEpubReaderViewState` 新增內部欄位 `_hasActiveSelection`，由既有 `onSelectionChanged`/`onSelectionCleared` JS 橋接 handler 直接維護（不透過 `setState`，只在觸控放開當下被讀取一次）；九宮格熱區 `onTap` 判定要觸發翻頁前，先檢查此欄位，若有選取範圍存在則抑制（不呼叫 `widget.onZoneAction`），並保留 `[DEBUG-e25i1-navzone]` log 標註 `suppressed=true/false` 供下一輪驗證。
+
+   **第四輪真機驗證（`log11.txt`／`log12.txt`）：機制有效但覆蓋不足**——`log11.txt` 第 20-22 行確認 `suppressed=true` 時 100% 擋下跳頁，但兩份 log 裡多數造成跳頁的 `[DEBUG-e25i1-navzone]` 之前完全沒有出現任何 `[DEBUG-e25i1]`/`[DEBUG-e25i1-gate]`，代表那幾次觸控從按下到放開，WebView 端根本還沒來得及建立選取（`_hasActiveSelection` 全程是 `false`，沒有東西可以擋）。查明結構性根因：`_NavZoneTapDetector` 判定「快速點擊」的門檻是 400ms，但原生長按辨識（Android `ViewConfiguration.getLongPressTimeout()`，與 `epic-18` Issue 47 `LONG_PRESS_GATE_MS` 同值）需要 500ms 才會開始——任何按壓在 400ms 內放開，熱區永遠搶在原生選取有機會開始之前就裁定成翻頁點擊，與選取有沒有成立無關。
+
+   人類提供第四份報告（`tmp/epic-25/issue-1-navzone-suppression-architecture-study.md`）評估三個方向，逐一查證：
+   - **方案 A**（選字工具跳出後才停用熱區）：時機抓太晚，救不到上述空窗期，報告自己也給了最低評分。
+   - **方案 B-1**（`touchstart` 立即鎖定、`touchend` 後 50ms 視情況解鎖）：查證後發現報告畫的狀態機**缺了「解鎖後要補發原本那次點擊動作」這一步**，字面實作會讓熱區整個失效（任何點擊都在 touchend 當下鎖定狀態仍是 true）；即使補上，50ms 這個非同步等待窗口也只能處理「選取其實已成立、只是橋接還沒傳到」的極端邊界情況，處理不了本輪 log 顯示的主要情境（按壓本身就短於原生辨識所需的 500ms，事後等多久都不會生出選取）。
+   - **方案 B-2**（按壓時間門檻調整）：完全同步、無競速風險，方向正確，但報告給的 150ms 數字會讓使用者自然稍慢的點擊（尤其 E-Ink 裝置）也失效，屬於用一個新的回歸換掉原本的 bug，需要往另一個方向（提高而非降低）校準。
+
+   **採用修法**：`_NavZoneTapDetector._tapMaxDurationMs` 從 400ms 提高到 **500ms**，對齊原生長按辨識門檻與 Issue 47 `LONG_PRESS_GATE_MS` 同一個值——任何有機會演變成長按選字的按壓，一開始就不會被判定為快速點擊，不需要額外等待或跨 JS/Dart 橋接判斷，與既有 `_hasActiveSelection` 抑制（保護選取已確立後續拖曳控點等情境）互補疊加。**已知限制（誠實記錄，非過度承諾）**：不是 100% 保證——若某次按壓落在 400-500ms 之間、但實際裝置辨識長按所需時間比 500ms 更久，理論上仍有機會漏網；500ms 是有依據的起始值，非憑空選定，若真機重測仍偶發重現，下一輪需視真機數據調整至 550-600ms 區間。**待真機第五輪驗證**：確認選取存在時不再跳頁，且正常翻頁/選單熱區（無選取時）功能不受影響。PDF 端 `_PdfNavZoneTapDetector`（`pdf_reader_view.dart:1208-1240`）是獨立實作、同樣的 400ms/500ms 結構性落差可能也存在，但 PDF 選字機制（Dart `GestureDetector` 長按拖曳框選）與 EPUB（WebView 原生選取）不同，本輪不動，需要的話應另立 Issue 查證。
 
    **已知測試覆蓋缺口**：`flutter test` 的 `FakeInAppWebViewPlatform`（`app/test/support/fake_inappwebview_platform.dart`）不會真正建立 `InAppWebViewController`，`controller.addJavaScriptHandler(...)` 註冊的 handler（含 `onSelectionChanged`/`onSelectionCleared`）在 widget test 環境下無法被觸發，故 `_hasActiveSelection` 這個內部狀態追蹤邏輯目前無法在 `flutter test` 層級寫自動化回歸測試（`reader_screen_test.dart` 既有的 `foliateView.onSelectionChanged?.call(...)` 測試手法是從外部直接呼叫 widget 的 public callback，繞過了 JS handler 內部、不會經過 `_hasActiveSelection` 賦值）——這是既有測試基礎設施的既有限制，不是本次修法引入的缺口；驗證只能依賴真機（比照本專案兩層測試架構文件，JS 橋接觸發的行為本來就歸類到 `integration_test`/真機驗證範疇）。既有 `flutter test`（`foliate_epub_reader_view_test.dart` 64/64，含既有 3×3 導航熱區測試確認未回歸）與 `flutter analyze` 皆通過。
 1. 視覺選取控點顯示與 `doc.getSelection()` 的 `rangeCount`/`isCollapsed` JS 狀態同步之間，在該機型 WebView 有時間落差——與 Issue 47 根因同一類「JS 選取 API 落後於原生手勢視覺狀態」問題，只是發生在拖曳控點階段而非長按候選階段。

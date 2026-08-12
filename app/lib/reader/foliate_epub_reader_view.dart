@@ -879,7 +879,19 @@ class _NavZoneTapDetectorState extends State<_NavZoneTapDetector> {
   int? _downTimeMs;
 
   static const _tapSlop = 18.0;
-  static const _tapMaxDurationMs = 400;
+
+  /// Epic 25 Issue 1 修法：原本是 400ms，真機（Air Reader Pro C）診斷發現
+  /// 這個門檻**短於**原生長按辨識所需時間（Android
+  /// `ViewConfiguration.getLongPressTimeout()` 預設值，也是
+  /// `epic-18` Issue 47 `LONG_PRESS_GATE_MS` 用的同一個值，見 main.js）——
+  /// 使用者長按選字若在 400-500ms 之間放開手指（原生選取都還來不及開始
+  /// 辨識），本類別會搶先判定成「快速點擊」直接觸發翻頁，與選取是否成立
+  /// 無關，`_hasActiveSelection`（見 `_FoliateEpubReaderViewState`）救不到
+  /// 這個情境。改為對齊同一個 500ms 門檻，讓任何有機會演變成長按選字的
+  /// 按壓，一開始就不會被判定為快速點擊，不需要額外等待或跨 JS/Dart 橋接
+  /// 判斷（詳見
+  /// docs/epics/epic-25-annotation-interaction-qa/issues.md Issue 1）。
+  static const _tapMaxDurationMs = 500;
 
   @override
   Widget build(BuildContext context) {
