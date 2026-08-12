@@ -6,7 +6,7 @@
 
 ## Issue 1：畫線選取已確立仍跳頁（裝置相關——Air Reader Pro C 會、TCL 14 吋不會）
 
-**Status:** 修復已實作兩層防護（`_hasActiveSelection` 抑制＋`_tapMaxDurationMs` 400ms→500ms 對齊原生長按門檻），**待第五輪真機驗證**確認跳頁不再發生、且正常翻頁/選單熱區功能不受影響。
+**Status:** 修復已實作兩層防護（`_hasActiveSelection` 抑制＋`_tapMaxDurationMs` 已調整至 700ms），第五輪真機驗證確認方向正確（`suppressed=true` 比例明顯提高）但仍有殘留，**待第六輪真機驗證**確認 700ms 是否足夠、且正常翻頁/選單熱區功能與體感不受影響。
 
 **依賴：** 無
 
@@ -71,7 +71,9 @@
    - **方案 B-1**（`touchstart` 立即鎖定、`touchend` 後 50ms 視情況解鎖）：查證後發現報告畫的狀態機**缺了「解鎖後要補發原本那次點擊動作」這一步**，字面實作會讓熱區整個失效（任何點擊都在 touchend 當下鎖定狀態仍是 true）；即使補上，50ms 這個非同步等待窗口也只能處理「選取其實已成立、只是橋接還沒傳到」的極端邊界情況，處理不了本輪 log 顯示的主要情境（按壓本身就短於原生辨識所需的 500ms，事後等多久都不會生出選取）。
    - **方案 B-2**（按壓時間門檻調整）：完全同步、無競速風險，方向正確，但報告給的 150ms 數字會讓使用者自然稍慢的點擊（尤其 E-Ink 裝置）也失效，屬於用一個新的回歸換掉原本的 bug，需要往另一個方向（提高而非降低）校準。
 
-   **採用修法**：`_NavZoneTapDetector._tapMaxDurationMs` 從 400ms 提高到 **500ms**，對齊原生長按辨識門檻與 Issue 47 `LONG_PRESS_GATE_MS` 同一個值——任何有機會演變成長按選字的按壓，一開始就不會被判定為快速點擊，不需要額外等待或跨 JS/Dart 橋接判斷，與既有 `_hasActiveSelection` 抑制（保護選取已確立後續拖曳控點等情境）互補疊加。**已知限制（誠實記錄，非過度承諾）**：不是 100% 保證——若某次按壓落在 400-500ms 之間、但實際裝置辨識長按所需時間比 500ms 更久，理論上仍有機會漏網；500ms 是有依據的起始值，非憑空選定，若真機重測仍偶發重現，下一輪需視真機數據調整至 550-600ms 區間。**待真機第五輪驗證**：確認選取存在時不再跳頁，且正常翻頁/選單熱區（無選取時）功能不受影響。PDF 端 `_PdfNavZoneTapDetector`（`pdf_reader_view.dart:1208-1240`）是獨立實作、同樣的 400ms/500ms 結構性落差可能也存在，但 PDF 選字機制（Dart `GestureDetector` 長按拖曳框選）與 EPUB（WebView 原生選取）不同，本輪不動，需要的話應另立 Issue 查證。
+   **採用修法**：`_NavZoneTapDetector._tapMaxDurationMs` 從 400ms 提高到 **500ms**，對齊原生長按辨識門檻與 Issue 47 `LONG_PRESS_GATE_MS` 同一個值——任何有機會演變成長按選字的按壓，一開始就不會被判定為快速點擊，不需要額外等待或跨 JS/Dart 橋接判斷，與既有 `_hasActiveSelection` 抑制（保護選取已確立後續拖曳控點等情境）互補疊加。**已知限制（誠實記錄，非過度承諾）**：不是 100% 保證——若某次按壓落在 400-500ms 之間、但實際裝置辨識長按所需時間比 500ms 更久，理論上仍有機會漏網；500ms 是有依據的起始值，非憑空選定，若真機重測仍偶發重現，下一輪需視真機數據調整至 550-600ms 區間。PDF 端 `_PdfNavZoneTapDetector`（`pdf_reader_view.dart:1208-1240`）是獨立實作、同樣的結構性落差可能也存在，但 PDF 選字機制（Dart `GestureDetector` 長按拖曳框選）與 EPUB（WebView 原生選取）不同，本輪不動，需要的話應另立 Issue 查證。
+
+   **第五輪真機驗證（`log13.txt`）：有改善但仍會發生，門檻進一步調整至 700ms**——使用者回報「仍會發生，不過有改善」「熱區不會感覺變慢」。`log13.txt` 比對前幾輪，`suppressed=true`（成功擋下）的比例明顯提高，證實 500ms 調整方向正確、有實質效果，但仍有相當比例的 `suppressed=false` 造成跳頁；第 9 行 `[DEBUG-e25i1-gate] released reason=distance t=3389 elapsed=497` 顯示部分候選手勢撐到 elapsed≈497ms 才因距離門檻（非選取確立）放行，代表真機實際判定所需時間比 Android 預設的 500ms 更貼近甚至可能略超過——500ms 仍不夠寬裕。使用者主動確認「提高門檻不會讓一般翻頁點擊感覺變慢」，代表目前的體感延遲仍有餘裕，可以再往上調。採用使用者建議的調整幅度（+100~200ms），選定區間上緣 **700ms**（`_tapMaxDurationMs` 500→700），保留較大安全邊際、減少需要再次真機來回調校的次數。**待真機第六輪驗證**：確認選取存在時不再跳頁，且正常翻頁/選單熱區（無選取時）功能不受影響、體感未明顯變慢。若 700ms 仍不足或使用者開始感覺翻頁有感延遲，才需要在「跳頁機率」與「翻頁即時感」之間做更精細的取捨（例如回到方案 B-1／借用 Issue 47 gate 狀態的非同步方案，用短暫等待換取不必要拉長所有點擊的判定門檻）。
 
    **已知測試覆蓋缺口**：`flutter test` 的 `FakeInAppWebViewPlatform`（`app/test/support/fake_inappwebview_platform.dart`）不會真正建立 `InAppWebViewController`，`controller.addJavaScriptHandler(...)` 註冊的 handler（含 `onSelectionChanged`/`onSelectionCleared`）在 widget test 環境下無法被觸發，故 `_hasActiveSelection` 這個內部狀態追蹤邏輯目前無法在 `flutter test` 層級寫自動化回歸測試（`reader_screen_test.dart` 既有的 `foliateView.onSelectionChanged?.call(...)` 測試手法是從外部直接呼叫 widget 的 public callback，繞過了 JS handler 內部、不會經過 `_hasActiveSelection` 賦值）——這是既有測試基礎設施的既有限制，不是本次修法引入的缺口；驗證只能依賴真機（比照本專案兩層測試架構文件，JS 橋接觸發的行為本來就歸類到 `integration_test`/真機驗證範疇）。既有 `flutter test`（`foliate_epub_reader_view_test.dart` 64/64，含既有 3×3 導航熱區測試確認未回歸）與 `flutter analyze` 皆通過。
 1. 視覺選取控點顯示與 `doc.getSelection()` 的 `rangeCount`/`isCollapsed` JS 狀態同步之間，在該機型 WebView 有時間落差——與 Issue 47 根因同一類「JS 選取 API 落後於原生手勢視覺狀態」問題，只是發生在拖曳控點階段而非長按候選階段。
