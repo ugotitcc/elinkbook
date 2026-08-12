@@ -765,6 +765,27 @@ async function openBook() {
           return
         }
         // 仍在長按候選期間（時間短、位移小、速度低、尚未確立選取）：攔截。
+        //
+        // 【Epic 25 Issue 1 實驗性修法，見
+        // docs/epics/epic-25-annotation-interaction-qa/issues.md Issue 1】
+        // stopImmediatePropagation() 會讓 paginator.js 的 #onTouchMove 整個
+        // 不執行，連帶它在 paginator.js:2198 無條件呼叫的
+        // e.preventDefault() 也不會被呼叫。真機（Air Reader Pro C／
+        // AiPaper Reader C，Chrome 150）實測抓到：手勢最初幾個 touchmove
+        // 若完全沒有任何監聽器呼叫 preventDefault()，Chromium 會判定「沒人
+        // 要攔」而自行接管為原生捲動，並把該手勢剩餘的所有 touchmove 標記
+        // 為不可取消（觀察到大量瀏覽器原生錯誤：「Ignored attempt to
+        // cancel a touchmove event with cancelable=false...scrolling is in
+        // progress and cannot be interrupted」）——這個決定一旦下了不會回頭，
+        // 之後 paginator.js 即使正常執行、呼叫 e.preventDefault() 也會被
+        // 瀏覽器忽略，畫面位移改由瀏覽器合成器直接原生捲動控制，完全繞過
+        // paginator.js 自己的 #touchState/containerPosition 追蹤，可能才是
+        // Issue 1「選取已確立仍跳頁」的真正成因，且與選取狀態本身無關。
+        // 這裡改為由本攔截器自己先呼叫 preventDefault()（僅在 cancelable
+        // 時），讓瀏覽器一開始就看到有人取消了這個 touchmove、不會誤判為
+        // 「沒人要就自己接管」，stopImmediatePropagation() 仍照舊擋掉
+        // paginator.js 自己的邏輯，兩個目的並不衝突。待真機重新驗證。
+        if (evt.cancelable) evt.preventDefault()
         evt.stopImmediatePropagation()
       }, { capture: true })
       doc.addEventListener('touchend', () => { longPressGateState = null }, { capture: true })

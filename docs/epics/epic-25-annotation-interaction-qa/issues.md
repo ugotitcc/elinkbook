@@ -14,14 +14,15 @@
 
 **與 `epic-18` Issue 47 的關係：** Issue 47 的攔截器一旦偵測到 `selection.rangeCount > 0 && !selection.isCollapsed`（選取已確立）即主動放手（`main.js` 的 `longPressGateState = null; return`），之後交由 `paginator.js` 既有守衛（`paginator.js:2191-2195`）處理。本項回報的正是「已確立」情境本身在特定裝置失效，理論上不屬於 Issue 47 修復範圍。
 
-**根因假說（排序，皆未經真機驗證）：**
+**根因假說（排序，第 0 項為 2026-08-12 真機資料〔`tmp/epic-25/log.txt`〕直接佐證，其餘尚未驗證）：**
 
-1.（最可能）視覺選取控點顯示與 `doc.getSelection()` 的 `rangeCount`/`isCollapsed` JS 狀態同步之間，在該機型 WebView 有時間落差——與 Issue 47 根因同一類「JS 選取 API 落後於原生手勢視覺狀態」問題，只是發生在拖曳控點階段而非長按候選階段。
+0.（**目前信心最高，有真機 log 直接佐證，非純理論**）**`epic-18` Issue 47 攔截器誘發瀏覽器原生捲動接管手勢，與選取狀態本身無關**：真機（Air Reader Pro C／自報 UA 為 AiPaper Reader C，Chrome 150）擷取到的 log 顯示，插樁只留下 1 筆 `rangeCount=1 isCollapsed=true moved=false` 之後，立刻出現連續十餘筆瀏覽器原生錯誤：「Ignored attempt to cancel a touchmove event with cancelable=false...scrolling is in progress and cannot be interrupted」。成因鏈：Issue 47 攔截器判定長按候選、呼叫 `stopImmediatePropagation()`，導致 `paginator.js:2198`（`if (!isStylus) e.preventDefault()`）完全不會被執行；Chromium 對「手勢最初幾個 touchmove 若完全沒有監聽器呼叫 `preventDefault()`」有一個不可逆的判定：判定沒人要攔，自行接管為原生捲動，並把該手勢剩餘所有 `touchmove` 標記為不可取消——即使 Issue 47 之後正常放行、`paginator.js` 照常呼叫 `preventDefault()` 也會被瀏覽器忽略。一旦原生捲動接管，畫面位移由瀏覽器合成器直接控制，完全繞過 `paginator.js` 自己的 `#touchState`/`containerPosition` 追蹤——這也解釋了為何插樁讀到的 `containerPosition` 全程沒變（`moved=false`）卻不代表畫面沒有位移：插樁量的是 `paginator.js` 的內部帳本，帳本沒被更新，但畫面其實正被原生捲動控制。這與選取是否已確立無關，且**可能是 Issue 47 修復本身的副作用**，而非獨立於 Issue 47 之外的裝置差異 bug；也能解釋使用者回報的「不一定每次都重現」（瀏覽器的捲動接管判定本身是時序相關的啟發式，非決定性）。**已嘗試的實驗性修法**：在 Issue 47 攔截器判定攔截、呼叫 `stopImmediatePropagation()` 之前，先呼叫 `evt.cancelable && evt.preventDefault()`，讓瀏覽器一開始就看到有人取消該 touchmove、不誤判為「沒人要就自己接管」，`stopImmediatePropagation()` 仍照舊擋掉 `paginator.js` 自己的邏輯（`main.js`，`epic-25-issue-1-debug-instrumentation` 分支）。**待真機重新驗證**。
+1. 視覺選取控點顯示與 `doc.getSelection()` 的 `rangeCount`/`isCollapsed` JS 狀態同步之間，在該機型 WebView 有時間落差——與 Issue 47 根因同一類「JS 選取 API 落後於原生手勢視覺狀態」問題，只是發生在拖曳控點階段而非長按候選階段。
 2. Air Reader Pro C 的 WebView 版本／觸控事件合併（coalesced events）行為與 TCL 14 吋不同（比照 `epic-18` Issue 33／38-41 已知部分機型 WebView 版本偏舊的既有模式）。
 3. 兩者疊加。
 4.（`plan-issue-1.md` 實作審查新增，`tmp/epic-25/review-issue-1-implementation.md`——架構層級假說，目前無法用 headless CDP 驗證或否證）**原生選取控點的拖曳，很可能根本不會產生 DOM `touchmove` 事件**：Android WebView／Chromium 對「已顯示的文字選取控點」的拖曳，慣例是由瀏覽器 UI／合成器層級（`TouchSelectionController` 一類原生元件）直接處理，不一定會被送進頁面的 DOM 事件派發流程。若成立，代表 `epic-18` Issue 47 的既有修復在真正拖控點的階段可能本來就沒有在運作（只在「長按出現控點之前」那段還沒被原生 UI 接管的手指微幅晃動期間有效），而本 Issue 這次的插樁在設計上完全繼承了同一個天生盲區——兩者都是靠監聽 `doc` 上的 DOM `touchmove` 事件。**若下一輪真機資料回報顯示 `[DEBUG-e25i1]` 依然全程零輸出（即使已修正監聽器順序、且測試者已嘗試不同拖曳速度），應優先懷疑這個原因，需要換一種完全不依賴 DOM touch 事件的偵測方式**（例如原生 Android 端用 `WebView` 的捲動變化監聽機制，或改用 `requestAnimationFrame` 輪詢取代事件驅動）。
 
-**下一步（Planning 前需先完成）：** 無法用 headless CDP 模擬選取控點拖曳（不具代表性，與 Issue 47 診斷時發現的局限相同）。需要在 Air Reader Pro C（會重現）與 TCL 14 吋（不會重現）各自部署一份暫時性除錯插樁（記錄拖曳過程中每個 `touchmove` 的 `selection.rangeCount`／`isCollapsed`／座標／時間戳），差異比對兩台裝置的輸出，才能鎖定真正根因並轉為 `ready-for-agent`。
+**下一步：** 已在 `epic-25-issue-1-debug-instrumentation` 分支加上假說 0 的實驗性修法（`main.js` Issue 47 攔截器內補上 `evt.preventDefault()`），待使用者重新 build debug APK 裝到 Air Reader Pro C 上重測（同一台裝置反覆多測幾次，因症狀原本就非每次重現）。若假說 0 修法有效（原生錯誤訊息消失、跳頁不再重現），可規劃將這行 `preventDefault()` 補強正式併入 `epic-18` Issue 47 的修復；若真機仍重現，回頭比對假說 1-4，必要時在 TCL 14 吋（若日後可取得）交叉驗證。無法用 headless CDP 模擬選取控點拖曳（不具代表性，與 Issue 47 診斷時發現的局限相同）。
 
 **真機資料蒐集步驟（`plan-issue-1.md` Task 1 完成後可執行）：**
 
