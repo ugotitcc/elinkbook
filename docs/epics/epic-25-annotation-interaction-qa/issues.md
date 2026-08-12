@@ -6,7 +6,7 @@
 
 ## Issue 1：畫線選取已確立仍跳頁（裝置相關——Air Reader Pro C 會、TCL 14 吋不會）
 
-**Status:** `needs-info`——需要真機插樁資料才能繼續，暫無法建立 headless 重現迴圈。
+**Status:** 修復已實作（`_hasActiveSelection` 抑制九宮格熱區翻頁），**待第四輪真機驗證**確認跳頁不再發生、且正常翻頁/選單熱區功能不受影響。
 
 **依賴：** 無
 
@@ -48,6 +48,23 @@
    - `[DEBUG-e25i1-navzone]`：於 `_NavZoneTapDetector` 的 `onTap` 呼叫點記錄觸發的熱區編號與動作，直接證實/排除子假說 (b)。
 
    **判讀方式**：若跳頁時 log 出現 `[DEBUG-e25i1-navzone]`，代表子假說 (b) 成立；若出現 `[DEBUG-e25i1-gate] released reason=distance/velocity` 後緊接著 `[DEBUG-e25i1-end]` 顯示 +350ms 位置與 touchend 當下差了一整頁，代表子假說 (a) 成立；兩者也可能並存。
+
+0.6（**第四輪真機資料〔`log7.txt`／`log8.txt`／`log9.txt`／`log10_OK.txt`〕已直接證實，子假說 (b) 成立、(a) 已排除**）**「右邊三行」跳頁的確切根因是 `_NavZoneTapDetector` 九宮格熱區誤判，與 Issue 47／`passive: false` 完全無關**：
+
+   決定性證據（`log9.txt` 第 14-18 行）：
+   ```
+   [DEBUG-e25i1] rangeCount=1 isCollapsed=false ...           選取已成功確立
+   [DEBUG-e25i1-gate] released reason=selection-established   Issue 47 攔截器正確放手
+   [DEBUG-e25i1-navzone] zone=3 action=ZoneAction.nextPage    但九宮格熱區同時判定成快速點擊
+   [DEBUG-e25i1-end] touchend→+350ms delta=714.97              頁面跳了整整一頁
+   ```
+   `log7`／`log8`／`log9` 三份「有跳頁」的 log，每一次跳頁都精準對應到一筆 `[DEBUG-e25i1-navzone]`，跳動量固定 `±714.97px`（一整頁）；log 中唯一一筆 `[DEBUG-e25i1-gate] released reason=elapsed`（距離僅 10.1px）前後 `containerPosition` 完全沒變——子假說 (a)（攔截器放行後 `paginator.js` 誤判翻頁）在這幾次重現中未曾發生。
+
+   **根因**：`_NavZoneTapDetector`（`foliate_epub_reader_view.dart:827-868`）刻意用 `Listener` 不加入手勢競技場（既有設計，避免攔截 WebView 的原生長按選字），純粹依「耗時 ≤400ms 且位移 ≤18px」判定是否為翻頁點擊，**完全不知道同一次觸控是否同時讓 WebView 建立了文字選取**。人類提供的第三份分析報告（`tmp/epic-25/issue-1-navzone-tap-jump-analysis.md`）獨立收斂到同一根因，但兩處細節查證後有誤，已訂正：(1) zone index 與實體位置對應反了（`index = row*3+col`，zone=3 是中欄靠左非右欄，查證目前使用的是 `leftFlipZoneTemplate` 非報告假設的 `rightFlipZoneTemplate`，不影響核心結論）；(2)「WebView 贏得手勢競技場、Flutter Tap 被取消」的解釋是錯的且被 `log9.txt` 直接證據推翻——`_NavZoneTapDetector` 從未加入競技場，選取確立與否不影響它的獨立判定，兩者是各自判讀同一組觸控事件的平行路徑。
+
+   **修法（`foliate_epub_reader_view.dart`，`epic-25-issue-1-debug-instrumentation` 分支）**：`_FoliateEpubReaderViewState` 新增內部欄位 `_hasActiveSelection`，由既有 `onSelectionChanged`/`onSelectionCleared` JS 橋接 handler 直接維護（不透過 `setState`，只在觸控放開當下被讀取一次）；九宮格熱區 `onTap` 判定要觸發翻頁前，先檢查此欄位，若有選取範圍存在則抑制（不呼叫 `widget.onZoneAction`），並保留 `[DEBUG-e25i1-navzone]` log 標註 `suppressed=true/false` 供下一輪驗證。**待真機第四輪驗證**：確認選取存在時不再跳頁，且正常翻頁/選單熱區（無選取時）功能不受影響。
+
+   **已知測試覆蓋缺口**：`flutter test` 的 `FakeInAppWebViewPlatform`（`app/test/support/fake_inappwebview_platform.dart`）不會真正建立 `InAppWebViewController`，`controller.addJavaScriptHandler(...)` 註冊的 handler（含 `onSelectionChanged`/`onSelectionCleared`）在 widget test 環境下無法被觸發，故 `_hasActiveSelection` 這個內部狀態追蹤邏輯目前無法在 `flutter test` 層級寫自動化回歸測試（`reader_screen_test.dart` 既有的 `foliateView.onSelectionChanged?.call(...)` 測試手法是從外部直接呼叫 widget 的 public callback，繞過了 JS handler 內部、不會經過 `_hasActiveSelection` 賦值）——這是既有測試基礎設施的既有限制，不是本次修法引入的缺口；驗證只能依賴真機（比照本專案兩層測試架構文件，JS 橋接觸發的行為本來就歸類到 `integration_test`/真機驗證範疇）。既有 `flutter test`（`foliate_epub_reader_view_test.dart` 64/64，含既有 3×3 導航熱區測試確認未回歸）與 `flutter analyze` 皆通過。
 1. 視覺選取控點顯示與 `doc.getSelection()` 的 `rangeCount`/`isCollapsed` JS 狀態同步之間，在該機型 WebView 有時間落差——與 Issue 47 根因同一類「JS 選取 API 落後於原生手勢視覺狀態」問題，只是發生在拖曳控點階段而非長按候選階段。
 2. Air Reader Pro C 的 WebView 版本／觸控事件合併（coalesced events）行為與 TCL 14 吋不同（比照 `epic-18` Issue 33／38-41 已知部分機型 WebView 版本偏舊的既有模式）。
 3. 兩者疊加。

@@ -489,6 +489,14 @@ class _FoliateEpubReaderViewState extends State<FoliateEpubReaderView> {
   /// 本實例的唯一 ID，用於區隔快取子目錄（避免螢幕轉場期間的競態）。
   late final String _instanceId = identityHashCode(this).toString();
 
+  /// Epic 25 Issue 1 修法：目前 WebView 內是否有文字選取範圍存在，供
+  /// `_NavZoneTapDetector` 判斷是否要抑制翻頁動作（見下方 onTap 說明）。
+  /// 由 `onSelectionChanged`/`onSelectionCleared` JS 橋接 handler 直接維護，
+  /// 不透過 setState——這個欄位只在使用者放開手指的那一刻被讀取一次
+  /// （事件觸發時的即時值），不影響任何一次 build() 的輸出，不需要為它
+  /// 觸發重繪。
+  bool _hasActiveSelection = false;
+
   late final Uri _initialIndexUri = _buildIndexUri();
 
   @override
@@ -610,6 +618,7 @@ class _FoliateEpubReaderViewState extends State<FoliateEpubReaderView> {
         // 審查修正：同 onLocatorChanged，改用防禦性轉型取代直接強制轉型。
         num? argAt(int index) =>
             args.length > index ? args[index] as num? : null;
+        _hasActiveSelection = true;
         widget.onSelectionChanged?.call(EpubSelectionInfo(
           locatorJson: args.isNotEmpty ? args[0] as String : '',
           progression: argAt(1)?.toDouble() ?? 0.0,
@@ -625,6 +634,7 @@ class _FoliateEpubReaderViewState extends State<FoliateEpubReaderView> {
     controller.addJavaScriptHandler(
       handlerName: 'onSelectionCleared',
       callback: (args) {
+        _hasActiveSelection = false;
         widget.onSelectionCleared?.call();
       },
     );
@@ -764,16 +774,30 @@ class _FoliateEpubReaderViewState extends State<FoliateEpubReaderView> {
                       child: _NavZoneTapDetector(
                         key: Key('nav_zone_$index'),
                         onTap: () {
-                          // Epic 25 Issue 1 暫時性除錯插樁 [DEBUG-e25i1-navzone]：
-                          // 記錄哪一格九宮格熱區被判定為「快速點擊」而觸發翻頁
-                          // 動作，用來排查「右邊三行」跳頁是否是長按選字手勢
-                          // 被本熱區誤判成快速點擊造成的（與 main.js 的
-                          // [DEBUG-e25i1]/[DEBUG-e25i1-gate]/[DEBUG-e25i1-end]
-                          // 插樁互相佐證，見
+                          // Epic 25 Issue 1 除錯插樁 [DEBUG-e25i1-navzone]：
+                          // 記錄哪一格九宮格熱區被判定為「快速點擊」，以及
+                          // 是否因為下面的選取檢查而被抑制——真機診斷（見
                           // docs/epics/epic-25-annotation-interaction-qa/issues.md
-                          // Issue 1）。確認根因後需與其餘插樁一併移除。
+                          // Issue 1）已直接證實：長按選字手勢即使成功讓
+                          // WebView 建立選取範圍，放開手指的那個動作仍可能
+                          // 同時滿足 _NavZoneTapDetector 自己的「快速點擊」
+                          // 門檻（≤400ms、≤18px）而觸發翻頁——_NavZoneTapDetector
+                          // 刻意使用 Listener、不加入手勢競技場（見上方
+                          // class doc），WebView 贏得選取不會讓這裡的 Tap
+                          // 判定被取消，兩者是完全獨立、各自判讀同一組觸控
+                          // 事件的路徑。確認修復後，log 一併移除，改為純粹
+                          // 依 _hasActiveSelection 抑制。
+                          //
+                          // 修法：目前若有文字選取範圍存在，代表使用者這次
+                          // 觸控是劃線/選字手勢的一部分，不應該連帶觸發翻頁。
+                          if (_hasActiveSelection) {
+                            ReaderConsoleLog.add(
+                              '[DEBUG-e25i1-navzone] zone=$index action=$action suppressed=true',
+                            );
+                            return;
+                          }
                           ReaderConsoleLog.add(
-                            '[DEBUG-e25i1-navzone] zone=$index action=$action',
+                            '[DEBUG-e25i1-navzone] zone=$index action=$action suppressed=false',
                           );
                           widget.onZoneAction?.call(action);
                         },
