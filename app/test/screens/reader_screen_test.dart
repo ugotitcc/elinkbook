@@ -40,6 +40,7 @@ import '../support/fake_highlights_repository.dart';
 import '../support/fake_notes_repository.dart';
 import 'package:elinkbook/reader/epub_selection_info.dart';
 import 'package:elinkbook/reader/percent_rect.dart';
+import 'package:elinkbook/reader/pdf_selection_info.dart';
 import 'package:elinkbook/reader/highlight.dart';
 import 'package:elinkbook/reader/highlight_style.dart';
 import 'package:elinkbook/sync/sync_checkpoint_trigger.dart';
@@ -3398,6 +3399,74 @@ void main() {
   );
 
   testWidgets(
+    '流式 EPUB：選取範圍靠近畫面右緣時，AnnotationToolbar 右緣不應超出畫面寬度',
+    (tester) async {
+      // 固定視窗尺寸（400×800，比照既有 PDF 選取測試慣例），讓 clamp 後的
+      // 精確像素值可預期、可斷言，而非依賴 flutter test 預設 800×600。
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.binding.setSurfaceSize(const Size(400, 800));
+      tester.view.physicalSize = const Size(400, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      final highlightsRepo = FakeHighlightsRepository();
+      final notesRepo = FakeNotesRepository();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_foliate_select_edge',
+            prefsManager: prefsManager,
+            highlightsRepository: highlightsRepo,
+            notesRepository: notesRepo,
+            isFixedLayout: false,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final foliateView = tester.widget<FoliateEpubReaderView>(
+        find.byType(FoliateEpubReaderView),
+      );
+      foliateView.onPageRendered();
+      foliateView.onLayoutResolved?.call(
+        const EpubLayoutInfo(
+          isFixedLayout: false,
+          writingMode: WritingMode.horizontal,
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      // 選取範圍靠近畫面右緣（left=0.95），比照使用者截圖回報的症狀
+      // （tmp/images/畫線問題/畫線太右邊無法看到全部工具列.jpg）。
+      foliateView.onSelectionChanged?.call(
+        const EpubSelectionInfo(
+          locatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.9}',
+          progression: 0.9,
+          rect: PercentRect(left: 0.95, top: 0.2, right: 0.99, bottom: 0.3),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.byType(AnnotationToolbar), findsOneWidget);
+      final bottomRight = tester.getBottomRight(find.byType(AnnotationToolbar));
+      expect(
+        bottomRight.dx,
+        lessThanOrEqualTo(400.0),
+        reason: '工具列右緣（現況會落在 636.0）不應超出畫面寬度 400.0，'
+            '否則右半部按鈕會被裁切看不到',
+      );
+    },
+  );
+
+  testWidgets(
     '流式 EPUB：FoliateEpubReaderView 回報 onAnnotationActivated 時，開啟對話框',
     (tester) async {
       final highlightsRepo = FakeHighlightsRepository();
@@ -5468,6 +5537,61 @@ void main() {
     final saved = await highlightsRepository.listByBook('b1');
     expect(saved, hasLength(1));
     expect(saved.single.pdfPageIndex, 0);
+  });
+
+  testWidgets(
+      'PDF：選取範圍靠近畫面右緣時，AnnotationToolbar 右緣不應超出畫面寬度',
+      (tester) async {
+    // 固定視窗尺寸（400×800），讓 clamp 後的精確像素值可預期、可斷言。
+    // 本測試直接呼叫 onSelectionRectComputed 回呼（比照 EPUB 測試對
+    // onSelectionChanged 的呼叫方式），不透過真實長按拖曳手勢，因此不需要
+    // 其他 PDF 測試（如 5391 行）為了等待真實 pdfrx 文件載入完成才需要的
+    // 30 次輪詢等待樣板——本測試只驗證 AnnotationToolbar 收到選取矩形後
+    // 的定位計算，與 pdfrx 是否已完成真實頁面渲染無關。
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.binding.setSurfaceSize(const Size(400, 800));
+    tester.view.physicalSize = const Size(400, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample_multi_page.pdf',
+          bookId: 'b_pdf_select_edge',
+          prefsManager: FakeReaderPrefsManager(),
+          highlightsRepository: FakeHighlightsRepository(),
+          notesRepository: FakeNotesRepository(),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+    // 選取範圍靠近畫面右緣（widgetRect.left=0.95），比照使用者截圖回報的
+    // 症狀（tmp/images/畫線問題/畫線太右邊無法看到全部工具列.jpg）。
+    pdfView.onSelectionRectComputed?.call(
+      const PdfSelectionInfo(
+        pageIndex: 0,
+        rect: PercentRect(left: 0.95, top: 0.2, right: 0.99, bottom: 0.3),
+        widgetRect: PercentRect(left: 0.95, top: 0.2, right: 0.99, bottom: 0.3),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byType(AnnotationToolbar), findsOneWidget);
+    final bottomRight = tester.getBottomRight(find.byType(AnnotationToolbar));
+    expect(
+      bottomRight.dx,
+      lessThanOrEqualTo(400.0),
+      reason: '工具列右緣（現況會落在 636.0）不應超出畫面寬度 400.0，'
+          '否則右半部按鈕會被裁切看不到',
+    );
   });
 
   testWidgets('PDF 選取被取消（onSelectionCanceled）時，不顯示 AnnotationToolbar',

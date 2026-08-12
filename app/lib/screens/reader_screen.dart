@@ -1646,6 +1646,13 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   // 微調，見 Global Constraints「選取矩形座標協定」）。
   static const _annotationToolbarHeight = 56.0;
   static const _annotationToolbarGap = 8.0;
+  // AnnotationToolbar 實際渲染寬度（5 顆 IconButton，Material 3 預設每顆
+  // 48dp 寬 + Row 外層 Padding 左右各 8dp = 5*48+16 = 256；widget test
+  // 量測值，見 plan-issue-2.md Global Constraints，與既有
+  // _annotationToolbarHeight 同一量測手法得出）。選取範圍靠近螢幕右緣時，
+  // left 的 clamp 上界須扣除這個寬度，否則工具列本體會整個超出螢幕右側
+  // （issues.md Issue 2）。
+  static const _annotationToolbarWidth = 256.0;
 
   /// 【審查修正】原本無條件把工具列定位在選取範圍上方、clamp 到
   /// `>= 0`，若選取範圍太靠近頂端（`topPct * height < 工具列高度`），
@@ -1969,7 +1976,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                     ),
             if (selection != null)
               Positioned(
-                left: (selection.rect.left * size.width).clamp(0.0, size.width),
+                left: (selection.rect.left * size.width)
+                    .clamp(0.0, size.width - _annotationToolbarWidth),
                 top: _annotationToolbarTop(selection, size),
                 child: AnnotationToolbar(
                   onStyleSelected: _handleHighlightStyleSelected,
@@ -1980,7 +1988,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
               Positioned(
                 // 同上（見 _pdfAnnotationToolbarTop 註解）：改用相對整個
                 // widget 尺寸的 widgetRect，避免 letterbox 留白造成偏移。
-                left: (pdfSelection.widgetRect.left * size.width).clamp(0.0, size.width),
+                left: (pdfSelection.widgetRect.left * size.width)
+                    .clamp(0.0, size.width - _annotationToolbarWidth),
                 top: _pdfAnnotationToolbarTop(pdfSelection, size),
                 child: AnnotationToolbar(
                   onStyleSelected: _handlePdfHighlightStyleSelected,
