@@ -31,7 +31,7 @@
 - Consumes：既有 `_handleSelectionCleared()`（`reader_screen.dart:1152-1158`）、`_handlePdfSelectionCanceled()`（`reader_screen.dart:1168-1174`）。
 - Produces：`AnnotationToolbar` 新增 `required VoidCallback onClosePressed` 建構參數與 `Key('annotation_toolbar_close')` 按鈕，供 Task 2 與後續呼叫端使用。
 
-- [ ] **Step 1：修改 `annotation_toolbar_test.dart`，既有建構呼叫補上 `onClosePressed`，新增關閉按鈕測試**
+- [x] **Step 1：修改 `annotation_toolbar_test.dart`，既有建構呼叫補上 `onClosePressed`，新增關閉按鈕測試**
 
 完整改寫 `app/test/screens/annotation_toolbar_test.dart`：
 
@@ -159,12 +159,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：執行測試，確認因缺少 `onClosePressed` 建構參數與 `Key('annotation_toolbar_close')` widget 而失敗**
+- [x] **Step 2：執行測試，確認因缺少 `onClosePressed` 建構參數與 `Key('annotation_toolbar_close')` widget 而失敗**
 
 Run: `cd app && flutter test test/screens/annotation_toolbar_test.dart`
 Expected: 編譯失敗（`AnnotationToolbar` 目前建構子沒有 `onClosePressed` 具名參數，`flutter test` 會直接報 analyzer 錯誤 `The named parameter 'onClosePressed' isn't defined`），或若先只改測試檔本身，`flutter analyze` 會先於測試執行前報錯——這正是預期的紅燈狀態，證實測試確實在鎖定「`onClosePressed` 尚未存在」這個症狀。
 
-- [ ] **Step 3：修改 `annotation_toolbar.dart`，新增 `onClosePressed` 參數與第 6 顆按鈕**
+- [x] **Step 3：修改 `annotation_toolbar.dart`，新增 `onClosePressed` 參數與第 6 顆按鈕**
 
 修改 `app/lib/screens/annotation_toolbar.dart`：
 
@@ -258,7 +258,7 @@ class AnnotationToolbar extends StatelessWidget {
 }
 ```
 
-- [ ] **Step 4：執行 `annotation_toolbar_test.dart`，確認通過**
+- [x] **Step 4：執行 `annotation_toolbar_test.dart`，確認通過**
 
 Run: `cd app && flutter test test/screens/annotation_toolbar_test.dart`
 Expected: 7 項測試全數 PASS（既有 5 項＋新增的「顯示...共 6 個按鈕」斷言更新＋「點擊關閉按鈕觸發 onClosePressed」）。
@@ -279,7 +279,7 @@ Expected: 7 項測試全數 PASS（既有 5 項＋新增的「顯示...共 6 個
   static const _annotationToolbarWidth = 304.0;
 ```
 
-- [ ] **Step 6：`reader_screen.dart` 兩處呼叫端接上 `onClosePressed`**
+- [x] **Step 6：`reader_screen.dart` 兩處呼叫端接上 `onClosePressed`**
 
 修改 `app/lib/screens/reader_screen.dart:1982-1985`（EPUB 路徑）：
 
@@ -301,7 +301,7 @@ Expected: 7 項測試全數 PASS（既有 5 項＋新增的「顯示...共 6 個
                 ),
 ```
 
-- [ ] **Step 7：在 `reader_screen_test.dart` 新增 EPUB 端「點擊關閉按鈕」測試**
+- [x] **Step 7：在 `reader_screen_test.dart` 新增 EPUB 端「點擊關閉按鈕」測試**
 
 在 `app/test/screens/reader_screen_test.dart` 第 3467 行（既有測試 `'流式 EPUB：選取範圍靠近畫面右緣時，AnnotationToolbar 右緣不應超出畫面寬度'` 結束的 `},\n  );` 之後、下一個測試 `'流式 EPUB：FoliateEpubReaderView 回報 onAnnotationActivated 時，開啟對話框'`（第 3469 行）之前）插入：
 
@@ -362,7 +362,7 @@ Expected: 7 項測試全數 PASS（既有 5 項＋新增的「顯示...共 6 個
 
 ```
 
-- [ ] **Step 8：在 `reader_screen_test.dart` 新增 PDF 端「點擊關閉按鈕」測試**
+- [x] **Step 8：在 `reader_screen_test.dart` 新增 PDF 端「點擊關閉按鈕」測試**
 
 在同一檔案第 5595 行（既有測試 `'PDF：選取範圍靠近畫面右緣時，AnnotationToolbar 右緣不應超出畫面寬度'` 結束的 `});` 之後、下一個測試 `'PDF 選取被取消（onSelectionCanceled）時，不顯示 AnnotationToolbar'`（第 5597 行）之前）插入：
 
@@ -406,7 +406,7 @@ Expected: 7 項測試全數 PASS（既有 5 項＋新增的「顯示...共 6 個
 
 ```
 
-- [ ] **Step 9：執行完整回歸測試**
+- [x] **Step 9：執行完整回歸測試**
 
 Run: `cd app && flutter test test/screens/reader_screen_test.dart`
 Expected: 全數通過，特別留意兩點：(1) 既有 `'PDF 長按拖曳框選完成後，顯示 AnnotationToolbar；點擊螢光筆後劃線已寫入且 Toolbar 仍開啟（可續加備註）'`（約第 5460 行）——本次修改沒有觸碰 `_handleHighlightStyleSelected`／`_handlePdfHighlightStyleSelected` 本體，這則測試須維持零回歸，證實「選色後保持開啟」流程不受新按鈕影響；(2) Issue 2 新增的 `'流式 EPUB：選取範圍靠近畫面右緣時，AnnotationToolbar 右緣不應超出畫面寬度'`／`'PDF：選取範圍靠近畫面右緣時，...'` 兩則測試須維持通過（`bottomRight.dx` 仍 `<= 400.0`）——這兩則測試若在 Step 5 更新常數前執行會失敗（`Actual: <448.0>`，規劃階段已實測確認），Step 5 更新為 304.0 後應恢復綠燈，此處是最終確認沒有遺漏。
@@ -414,12 +414,12 @@ Expected: 全數通過，特別留意兩點：(1) 既有 `'PDF 長按拖曳框�
 Run: `cd app && flutter test test/screens/annotation_toolbar_test.dart`
 Expected: 7 項全數通過。
 
-- [ ] **Step 10：`flutter analyze` 確認乾淨**
+- [x] **Step 10：`flutter analyze` 確認乾淨**
 
 Run: `cd app && flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 11：Commit**
+- [x] **Step 11：Commit**
 
 ```bash
 git add app/lib/screens/annotation_toolbar.dart app/test/screens/annotation_toolbar_test.dart app/lib/screens/reader_screen.dart app/test/screens/reader_screen_test.dart
@@ -439,7 +439,7 @@ git commit -m "feat(epic-25): Issue 3——AnnotationToolbar 新增關閉按鈕�
 - Consumes：Task 1 新增的 `AnnotationToolbar.onClosePressed`、既有 `_handleSelectionCleared()`、既有 `_evaluate(String source)`（`foliate_epub_reader_view.dart:552-554`）、既有 `_foliateEpubReaderViewKey`（`reader_screen.dart:310`）。
 - Produces：`window.clearSelection()`（JS 全域函式）、`FoliateEpubReaderView.clearSelection(GlobalKey<State<FoliateEpubReaderView>> key)`（Dart static helper）、`_ReaderScreenState._handleCloseAnnotationToolbar()`（無回傳值，供 Task 1 的 EPUB 呼叫端使用）。
 
-- [ ] **Step 1：`main.js` 新增 `window.clearSelection`**
+- [x] **Step 1：`main.js` 新增 `window.clearSelection`**
 
 修改 `app/android/app/src/main/assets/foliate/main.js`，在 `window.setDecorations` 函式結尾（第 395 行 `}`）之後插入：
 
@@ -465,12 +465,12 @@ window.clearSelection = function () {
 }
 ```
 
-- [ ] **Step 2：語法檢查**
+- [x] **Step 2：語法檢查**
 
 Run: `node --check app/android/app/src/main/assets/foliate/main.js`
 Expected: 無輸出、exit code 0（純語法檢查，不執行任何程式邏輯——`evaluateJavascript` 呼叫本身無法在 `flutter_test` 環境下驗證，見 Global Constraints）。
 
-- [ ] **Step 3：`foliate_epub_reader_view.dart` 新增 `clearSelection` static helper**
+- [x] **Step 3：`foliate_epub_reader_view.dart` 新增 `clearSelection` static helper**
 
 修改 `app/lib/reader/foliate_epub_reader_view.dart`，在 `setDecorations` static method（第 466-475 行）之後插入：
 
@@ -486,7 +486,7 @@ Expected: 無輸出、exit code 0（純語法檢查，不執行任何程式邏�
   }
 ```
 
-- [ ] **Step 4：`reader_screen.dart` 新增 `_handleCloseAnnotationToolbar()`，EPUB 呼叫端改用新方法**
+- [x] **Step 4：`reader_screen.dart` 新增 `_handleCloseAnnotationToolbar()`，EPUB 呼叫端改用新方法**
 
 修改 `app/lib/screens/reader_screen.dart`，在 `_handleSelectionCleared()`（第 1152-1158 行）之後插入：
 
@@ -516,17 +516,17 @@ Expected: 無輸出、exit code 0（純語法檢查，不執行任何程式邏�
                 ),
 ```
 
-- [ ] **Step 5：執行既有測試套件，確認新方法不引入崩潰或回歸**
+- [x] **Step 5：執行既有測試套件，確認新方法不引入崩潰或回歸**
 
 Run: `cd app && flutter test test/screens/reader_screen_test.dart`
 Expected: 全數通過，包含 Task 1 新增的「流式 EPUB：點擊 AnnotationToolbar 的關閉按鈕後」測試——`_controller` 在 `flutter test` 環境下為 `null`（未真正建立 `InAppWebViewController`），`_evaluate()` 內的 `_controller?.evaluateJavascript(...)` 對 null 呼叫是安全的 no-op，不會拋出例外，測試能驗證「呼叫路徑不崩潰＋ Dart 端狀態正確清空」，但**無法**驗證 `window.clearSelection()` 實際執行效果（見 Global Constraints，此為既有測試基礎設施限制，非本次修法引入）。
 
-- [ ] **Step 6：`flutter analyze` 確認乾淨**
+- [x] **Step 6：`flutter analyze` 確認乾淨**
 
 Run: `cd app && flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 7：Commit**
+- [x] **Step 7：Commit**
 
 ```bash
 git add app/android/app/src/main/assets/foliate/main.js app/lib/reader/foliate_epub_reader_view.dart app/lib/screens/reader_screen.dart

@@ -474,6 +474,16 @@ class FoliateEpubReaderView extends StatefulWidget {
     }
   }
 
+  /// 主動清除 WebView 原生文字選取狀態（epic-25 Issue 3，見 main.js
+  /// window.clearSelection 註解）。
+  static void clearSelection(GlobalKey<State<FoliateEpubReaderView>> key) {
+    final state = key.currentState;
+    if (state is _FoliateEpubReaderViewState) {
+      state._evaluate('window.clearSelection()');
+    }
+  }
+
+
   @override
   State<FoliateEpubReaderView> createState() => _FoliateEpubReaderViewState();
 }

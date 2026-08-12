@@ -4,20 +4,23 @@ import '../reader/highlight_style.dart';
 
 /// 選字/框選後浮現的浮動工具列（design.md「使用者流程」步驟 1-2；
 /// EPUB（本 Issue）與 PDF（issues.md Issue 3）共用同一組 Widget）：
-/// 螢光筆三色、底線、備註共 5 個按鈕。點擊螢光筆/底線立即觸發
+/// 螢光筆三色、底線、備註、關閉共 6 個按鈕。點擊螢光筆/底線立即觸發
 /// [onStyleSelected]（呼叫端負責建立劃線，並保持選取狀態存在讓使用者
 /// 能接著點備註，見 design.md 使用者流程「若同時已選色/底線，備註與
 /// 劃線共存於同一筆記錄」）；點擊備註觸發 [onNotePressed]（呼叫端負責
 /// 另外呼叫 `showNoteTextDialog` 開啟輸入 Dialog，本 Widget 不含 Dialog
-/// 邏輯，維持單一職責）。
+/// 邏輯，維持單一職責）；點擊關閉觸發 [onClosePressed]（epic-25 Issue 3：
+/// 讓使用者不必依賴點擊換頁間接關閉工具列，呼叫端負責清空選取狀態）。
 class AnnotationToolbar extends StatelessWidget {
   final ValueChanged<HighlightStyle> onStyleSelected;
   final VoidCallback onNotePressed;
+  final VoidCallback onClosePressed;
 
   const AnnotationToolbar({
     super.key,
     required this.onStyleSelected,
     required this.onNotePressed,
+    required this.onClosePressed,
   });
 
   @override
@@ -57,6 +60,12 @@ class AnnotationToolbar extends StatelessWidget {
               icon: const Icon(Icons.edit_note),
               tooltip: '備註',
               onPressed: onNotePressed,
+            ),
+            IconButton(
+              key: const Key('annotation_toolbar_close'),
+              icon: const Icon(Icons.close),
+              tooltip: '關閉',
+              onPressed: onClosePressed,
             ),
           ],
         ),

@@ -4,10 +4,14 @@ import 'package:elinkbook/reader/highlight_style.dart';
 import 'package:elinkbook/screens/annotation_toolbar.dart';
 
 void main() {
-  testWidgets('顯示螢光筆三色、底線、備註共 5 個按鈕', (tester) async {
+  testWidgets('顯示螢光筆三色、底線、備註、關閉共 6 個按鈕', (tester) async {
     await tester.pumpWidget(MaterialApp(
       home: Scaffold(
-        body: AnnotationToolbar(onStyleSelected: (_) {}, onNotePressed: () {}),
+        body: AnnotationToolbar(
+          onStyleSelected: (_) {},
+          onNotePressed: () {},
+          onClosePressed: () {},
+        ),
       ),
     ));
 
@@ -16,6 +20,7 @@ void main() {
     expect(find.byKey(const Key('annotation_toolbar_highlighter_blue')), findsOneWidget);
     expect(find.byKey(const Key('annotation_toolbar_underline')), findsOneWidget);
     expect(find.byKey(const Key('annotation_toolbar_note')), findsOneWidget);
+    expect(find.byKey(const Key('annotation_toolbar_close')), findsOneWidget);
   });
 
   testWidgets('點擊黃色螢光筆按鈕觸發 onStyleSelected(highlighterYellow)', (tester) async {
@@ -25,6 +30,7 @@ void main() {
         body: AnnotationToolbar(
           onStyleSelected: (style) => selected = style,
           onNotePressed: () {},
+          onClosePressed: () {},
         ),
       ),
     ));
@@ -40,6 +46,7 @@ void main() {
         body: AnnotationToolbar(
           onStyleSelected: (style) => selected = style,
           onNotePressed: () {},
+          onClosePressed: () {},
         ),
       ),
     ));
@@ -55,6 +62,7 @@ void main() {
         body: AnnotationToolbar(
           onStyleSelected: (style) => selected = style,
           onNotePressed: () {},
+          onClosePressed: () {},
         ),
       ),
     ));
@@ -70,6 +78,7 @@ void main() {
         body: AnnotationToolbar(
           onStyleSelected: (style) => selected = style,
           onNotePressed: () {},
+          onClosePressed: () {},
         ),
       ),
     ));
@@ -82,11 +91,31 @@ void main() {
     var pressed = false;
     await tester.pumpWidget(MaterialApp(
       home: Scaffold(
-        body: AnnotationToolbar(onStyleSelected: (_) {}, onNotePressed: () => pressed = true),
+        body: AnnotationToolbar(
+          onStyleSelected: (_) {},
+          onNotePressed: () => pressed = true,
+          onClosePressed: () {},
+        ),
       ),
     ));
 
     await tester.tap(find.byKey(const Key('annotation_toolbar_note')));
+    expect(pressed, isTrue);
+  });
+
+  testWidgets('點擊關閉按鈕觸發 onClosePressed', (tester) async {
+    var pressed = false;
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: AnnotationToolbar(
+          onStyleSelected: (_) {},
+          onNotePressed: () {},
+          onClosePressed: () => pressed = true,
+        ),
+      ),
+    ));
+
+    await tester.tap(find.byKey(const Key('annotation_toolbar_close')));
     expect(pressed, isTrue);
   });
 }

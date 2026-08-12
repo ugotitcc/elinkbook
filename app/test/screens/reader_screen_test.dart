@@ -3467,6 +3467,60 @@ void main() {
   );
 
   testWidgets(
+    '流式 EPUB：點擊 AnnotationToolbar 的關閉按鈕後，清空選取狀態、工具列消失',
+    (tester) async {
+      final highlightsRepo = FakeHighlightsRepository();
+      final notesRepo = FakeNotesRepository();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_foliate_close_toolbar',
+            prefsManager: prefsManager,
+            highlightsRepository: highlightsRepo,
+            notesRepository: notesRepo,
+            isFixedLayout: false,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final foliateView = tester.widget<FoliateEpubReaderView>(
+        find.byType(FoliateEpubReaderView),
+      );
+      foliateView.onPageRendered();
+      foliateView.onLayoutResolved?.call(
+        const EpubLayoutInfo(
+          isFixedLayout: false,
+          writingMode: WritingMode.horizontal,
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      foliateView.onSelectionChanged?.call(
+        const EpubSelectionInfo(
+          locatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
+          progression: 0.1,
+          rect: PercentRect(left: 0.1, top: 0.2, right: 0.5, bottom: 0.3),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.byType(AnnotationToolbar), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('annotation_toolbar_close')));
+      await tester.pump();
+
+      expect(find.byType(AnnotationToolbar), findsNothing,
+          reason: '點擊關閉按鈕後應清空選取狀態，工具列從畫面消失');
+    },
+  );
+
+  testWidgets(
     '流式 EPUB：FoliateEpubReaderView 回報 onAnnotationActivated 時，開啟對話框',
     (tester) async {
       final highlightsRepo = FakeHighlightsRepository();
@@ -5592,6 +5646,43 @@ void main() {
       reason: '工具列右緣（現況會落在 636.0）不應超出畫面寬度 400.0，'
           '否則右半部按鈕會被裁切看不到',
     );
+  });
+
+  testWidgets(
+      'PDF：點擊 AnnotationToolbar 的關閉按鈕後，清空選取狀態、工具列消失',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample_multi_page.pdf',
+          bookId: 'b_pdf_close_toolbar',
+          prefsManager: FakeReaderPrefsManager(),
+          highlightsRepository: FakeHighlightsRepository(),
+          notesRepository: FakeNotesRepository(),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+    pdfView.onSelectionRectComputed?.call(
+      const PdfSelectionInfo(
+        pageIndex: 0,
+        rect: PercentRect(left: 0.3, top: 0.2, right: 0.6, bottom: 0.3),
+        widgetRect: PercentRect(left: 0.3, top: 0.2, right: 0.6, bottom: 0.3),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byType(AnnotationToolbar), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('annotation_toolbar_close')));
+    await tester.pump();
+
+    expect(find.byType(AnnotationToolbar), findsNothing,
+        reason: '點擊關閉按鈕後應清空選取狀態，工具列從畫面消失');
   });
 
   testWidgets('PDF 選取被取消（onSelectionCanceled）時，不顯示 AnnotationToolbar',
