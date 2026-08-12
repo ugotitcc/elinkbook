@@ -31,6 +31,23 @@
    - 不採納，理由已查證：方案 A 一併建議 `touchstart` 監聽器與診斷插樁的 `touchmove` 監聽器都加 `passive: false`——查證這兩處皆未呼叫 `preventDefault()`，加上不會改變任何行為，維持最小改動、只改真正需要的地方（`epic-18` Issue 47 攔截器的 `touchmove` 監聽器）。
    - 明確駁回：方案 C（修改 `paginator.js` 加 `e.cancelable` 判斷）違反 ADR 0011（不可修改 vendored 檔案），報告本身也承認且僅列為參考，不採用。
    - 記錄為備援選項、暫不實作：方案 B（注入 `touch-action` CSS 限制原生手勢方向）——報告定位為「輔助防護」非必要；`passive: false` 已精準對應已確認機制，**若第三輪真機驗證後發現 `passive: false` 單獨不足以解決亂跳，才評估加上**，避免在還沒有證據顯示必要之前，先做影響範圍更廣（可能牽動縮放等其他手勢）的改動。
+
+0.5（**第三輪真機驗證新發現，機制尚未確認、兩個子假說待下一輪資料區辨**）**`passive: false` 已確認解決 ERROR，但跳頁仍會發生，且僅限畫面右側三行（直排模式，對應九宮格右欄熱區）**：
+
+   `log4.txt`／`log5.txt`／`log6.txt` 三份 log 皆**完全沒有**再出現 `Unable to preventDefault...`／`Ignored attempt to cancel...` 兩則錯誤，確認假說 0 的修法本身有效。但使用者回報跳頁仍會發生，且明確定位在畫面右側三行。
+
+   人類提供第二份外部分析報告（`tmp/epic-25/issue-1-right-three-lines-jump-analysis.md`）提出假說：`longPressGate` 因水平飄移超過 15px 死區提早放行，`paginator.js` 誤判為翻頁手勢暴跳一整頁。**查證後對其具體機制描述持保留態度**：報告引用 `log5.txt` 兩行（`t=25215`/`t=27444`，間隔 2.2 秒）論證「單一手勢內 95px 飄移造成暴跳」，但兩行皆明確標示 `moved=false`——若真是同一手勢內位置真的跳動，第二行理應是 `moved=true`；間隔 2.2 秒也不像是連續同一手勢。更可能是兩次分開的手勢（`debugE25I1LastPosition` 在每次 `touchstart` 重置為 `null`，故各自的「該手勢第一筆」都會被記錄、且必為 `moved=false`），中間的位置落差是被某個插樁完全觀察不到的機制造成的。報告描述的「距離死區 15px 就放行、卻累積到 95px 才暴跳」，也與目前雙門檻設計（距離 >15px **或**速度 >0.3px/ms **或** 耗時 ≥500ms，任一成立即放行，飄移一超過 15px 就會提早放行，不會拖到 95px）不完全吻合，較像是描述修復前的舊版邏輯。
+
+   目前兩個未區辨的子假說：
+   - **(a)** 攔截器放行後，`paginator.js` 接手這次移動，`touchend` 時被其自身合法的 `snap()` 判定為一次真實翻頁手勢並提交（不是攔截器的 bug，是放行後的正常後果被使用者感知為非預期跳頁）。
+   - **(b)**（上一輪已提出）`foliate_epub_reader_view.dart:827-868` 的 `_NavZoneTapDetector`（九宮格翻頁熱區，`Listener` 不參與手勢競技場，與 WebView 同時收到同一組觸控）用「耗時 ≤400ms 且位移 ≤18px」判定「快速點擊」觸發翻頁——若長按選字的按壓在被 WebView 判定為長按之前就意外提早放開/中斷，落在右欄熱區範圍內就可能被誤判成翻頁點擊，與 JS `touchmove`/`preventDefault` 完全無關，插樁本來就看不到。
+
+   **本輪新增插樁（`main.js`／`foliate_epub_reader_view.dart`，`epic-25-issue-1-debug-instrumentation` 分支）供下一輪真機測試區辨**：
+   - `[DEBUG-e25i1-gate]`：記錄 Issue 47 攔截器放行時機與原因（`selection-established`／`elapsed`／`distance`／`velocity`）、放行當下的 dx/dy/距離/速度/`containerPosition`。
+   - `[DEBUG-e25i1-end]`：記錄 `touchend` 當下與 +350ms 後（涵蓋一般 `snap()` CSS transition 的 settle 時間）的 `containerPosition`，捕捉子假說 (a)「放開手指後才透過動畫完成的整頁跳動」。
+   - `[DEBUG-e25i1-navzone]`：於 `_NavZoneTapDetector` 的 `onTap` 呼叫點記錄觸發的熱區編號與動作，直接證實/排除子假說 (b)。
+
+   **判讀方式**：若跳頁時 log 出現 `[DEBUG-e25i1-navzone]`，代表子假說 (b) 成立；若出現 `[DEBUG-e25i1-gate] released reason=distance/velocity` 後緊接著 `[DEBUG-e25i1-end]` 顯示 +350ms 位置與 touchend 當下差了一整頁，代表子假說 (a) 成立；兩者也可能並存。
 1. 視覺選取控點顯示與 `doc.getSelection()` 的 `rangeCount`/`isCollapsed` JS 狀態同步之間，在該機型 WebView 有時間落差——與 Issue 47 根因同一類「JS 選取 API 落後於原生手勢視覺狀態」問題，只是發生在拖曳控點階段而非長按候選階段。
 2. Air Reader Pro C 的 WebView 版本／觸控事件合併（coalesced events）行為與 TCL 14 吋不同（比照 `epic-18` Issue 33／38-41 已知部分機型 WebView 版本偏舊的既有模式）。
 3. 兩者疊加。
