@@ -1157,6 +1157,20 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     });
   }
 
+  /// Epic 25 Issue 3：使用者主動點擊 AnnotationToolbar 關閉按鈕時呼叫——
+  /// 除了清空 Dart 端選取狀態（比照 [_handleSelectionCleared]）外，額外
+  /// 呼叫 JS 端 window.clearSelection() 清除 WebView 原生選取（藍色反白
+  /// ＋拖曳控點），避免工具列消失後畫面仍殘留原生選取視覺（該視覺層不受
+  /// Dart state 控制，見 main.js window.clearSelection 註解）。PDF 端沒有
+  /// 這個問題（見 Global Constraints「PDF 端不需要對應的原生選取清除
+  /// 機制」的查證結論），故 PDF 呼叫端直接沿用既有
+  /// [_handlePdfSelectionCanceled]，不需要對應的 wrapper。
+  void _handleCloseAnnotationToolbar() {
+    _handleSelectionCleared();
+    FoliateEpubReaderView.clearSelection(_foliateEpubReaderViewKey);
+  }
+
+
   void _handlePdfSelectionRectComputed(PdfSelectionInfo info) {
     if (!mounted) return;
     setState(() {
@@ -1984,7 +1998,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                 child: AnnotationToolbar(
                   onStyleSelected: _handleHighlightStyleSelected,
                   onNotePressed: _handleNotePressed,
-                  onClosePressed: _handleSelectionCleared,
+                  onClosePressed: _handleCloseAnnotationToolbar,
                 ),
               ),
             if (pdfSelection != null)

@@ -395,6 +395,26 @@ window.setDecorations = function (decorations) {
 }
 
 /**
+ * 主動清除目前的原生文字選取狀態（epic-25 Issue 3）：使用者點擊
+ * AnnotationToolbar 的關閉按鈕後，Dart 端會清空 _currentSelection 讓工具列
+ * 消失，但 WebView 原生選取（藍色反白＋拖曳控點）是瀏覽器自己的視覺層，
+ * 不受 Dart state 影響，若不主動清除，畫面會殘留「工具列已消失、但文字
+ * 仍反白」的不一致體驗。逐一走訪目前所有已載入內容（雙頁模式下可能同時
+ * 有兩個 iframe），清空各自的選取——呼叫 removeAllRanges() 會自然觸發
+ * selectionchange，讓既有 reportSelection()（見上方 view.addEventListener
+ * ('load', ...) hook）回報 onSelectionCleared 給 Dart 端，不需要額外手動
+ * 呼叫 callback，也不會與 Dart 端已經呼叫過的 _handleSelectionCleared()
+ * 衝突（該方法本身是 idempotent，重複呼叫只是把已經是 null 的欄位再設一次
+ * null）。
+ */
+window.clearSelection = function () {
+  for (const { doc } of view.renderer.getContents()) {
+    doc.getSelection()?.removeAllRanges()
+  }
+}
+
+
+/**
  * 遞迴解析單一目錄節點：透過 view.book.resolveHref() 取得 {index, anchor}，
  * 載入該 section 的文件（book.sections[index].createDocument()，獨立於
  * 目前實際顯示中的頁面，不影響閱讀畫面）後計算對應 CFI；href 無法解析、
