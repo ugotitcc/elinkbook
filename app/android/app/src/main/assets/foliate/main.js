@@ -784,10 +784,26 @@ async function openBook() {
         // 這裡改為由本攔截器自己先呼叫 preventDefault()（僅在 cancelable
         // 時），讓瀏覽器一開始就看到有人取消了這個 touchmove、不會誤判為
         // 「沒人要就自己接管」，stopImmediatePropagation() 仍照舊擋掉
-        // paginator.js 自己的邏輯，兩個目的並不衝突。待真機重新驗證。
-        if (evt.cancelable) evt.preventDefault()
+        // paginator.js 自己的邏輯，兩個目的並不衝突。
+        //
+        // 【第二輪真機驗證發現真正根因，見同一個 issues.md Issue 1】上面這個
+        // preventDefault() 呼叫本身在真機上完全沒有生效，額外觀察到瀏覽器
+        // 原生錯誤：「Unable to preventDefault inside passive event listener
+        // due to target being treated as passive」——本監聽器註冊時只給了
+        // { capture: true }，沒有明確指定 passive。Chromium 對直接掛在
+        // Document 物件（doc 正是 iframe 的 contentDocument）上、沒有明確
+        // 指定 passive 的 touchstart/touchmove 監聽器，預設會被當成
+        // passive 處理（效能最佳化），passive 監聽器內呼叫
+        // preventDefault() 一律被靜默忽略（只印警告，不拋例外）。這才是
+        // 「瀏覽器自行接管原生捲動」的真正根因——不只是 stopImmediatePropagation
+        // 讓 paginator.js 的 preventDefault() 沒機會執行，而是連這個攔截器
+        // 自己想呼叫 preventDefault() 都因為 passive 而失敗，從
+        // epic-18 Issue 47 最初合併以來就是如此，不是本次新增
+        // preventDefault() 呼叫才產生的問題。修法：明確加上
+        // passive: false，讓 preventDefault() 真正生效。
+        evt.preventDefault()
         evt.stopImmediatePropagation()
-      }, { capture: true })
+      }, { capture: true, passive: false })
       doc.addEventListener('touchend', () => { longPressGateState = null }, { capture: true })
       doc.addEventListener('touchcancel', () => { longPressGateState = null }, { capture: true })
     })
