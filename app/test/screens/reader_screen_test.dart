@@ -5812,6 +5812,78 @@ void main() {
         reason: 'previousPage 換頁後同樣應清空選取狀態，工具列從畫面消失');
   });
 
+  testWidgets(
+      'PDF 換頁時若有進行中的長按拖曳框選（尚未放開手指），應一併中止，放開後不會用換頁前的舊頁面重新彈出 AnnotationToolbar（Epic 24 Issue 10 審查修正）',
+      (tester) async {
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.binding.setSurfaceSize(const Size(400, 800)); // 直向。
+    tester.view.physicalSize = const Size(400, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    final key = GlobalKey<State<ReaderScreen>>();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          key: key,
+          filePath: 'test/fixtures/sample_multi_page.pdf',
+          bookId: 'b_pdf_page_turn_cancels_active_drag',
+          prefsManager: FakeReaderPrefsManager(),
+          highlightsRepository: FakeHighlightsRepository(),
+          notesRepository: FakeNotesRepository(),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+    await tester.runAsync(() async {
+      for (var i = 0; i < 30; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+      }
+    });
+
+    // 觸控位置刻意取畫面中央附近（而非邊角），避開 PDF FAB
+    // （reader_pdf_back_button 等固定在 top:16/left:16 一類螢幕邊角，
+    // 靠邊角的座標會被 FAB 攔截，長按永遠不會到達下方的框選手勢層）。
+    final center = tester.getCenter(find.byType(PdfReaderView));
+    final finger = await tester.startGesture(center);
+    await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+    await finger.moveTo(center + const Offset(80, 100));
+    await tester.pump();
+    expect(
+      find.byKey(const Key('pdf_reader_selection_drag_indicator')),
+      findsOneWidget,
+      reason: '長按拖曳進行中應顯示框選視覺回饋',
+    );
+
+    // 比照真機情境：音量鍵翻頁與觸控手勢是完全獨立的輸入通道，可能在
+    // 使用者手指仍按著螢幕、拖曳框選進行中時觸發——直接呼叫
+    // triggerZoneAction 等價於音量鍵事件經 _handleVolumeKeyCall 分派的
+    // 結果。
+    ReaderScreen.triggerZoneAction(key, ZoneAction.nextPage);
+    await tester.pump();
+
+    expect(
+      find.byKey(const Key('pdf_reader_selection_drag_indicator')),
+      findsNothing,
+      reason: '換頁應一併中止進行中的拖曳，框選視覺回饋消失',
+    );
+
+    await finger.up();
+    await tester.pump();
+
+    expect(
+      find.byType(AnnotationToolbar),
+      findsNothing,
+      reason: '拖曳已被中止，放開手指不應用換頁前的舊頁面座標重新彈出 AnnotationToolbar',
+    );
+  });
+
   testWidgets('PDF 選取被取消（onSelectionCanceled）時，不顯示 AnnotationToolbar',
       (tester) async {
     // 同上一則測試：改回真實多指手勢模擬，強制直向視窗維持單頁模式，

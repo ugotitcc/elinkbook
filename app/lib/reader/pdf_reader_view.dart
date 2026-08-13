@@ -129,6 +129,22 @@ class PdfReaderView extends StatefulWidget {
     }
   }
 
+  /// 中止進行中的長按拖曳框選（若有），不影響已完成的選取（呼叫端另有
+  /// `onSelectionCanceled` 回呼機制，見既有 `_cancelSelectionDrag()` 語意）
+  /// （Epic 24 Issue 10 審查修正）：換頁事件（例如音量鍵，與觸控手勢是
+  /// 完全獨立的輸入通道）可能在使用者長按拖曳框選進行中、尚未放開手指時
+  /// 觸發，此時拖曳狀態內快照的頁碼/座標系仍是換頁前的舊頁面，若不主動
+  /// 中止，使用者稍後放開手指仍會用這組過時快照算出矩形、對應到已經翻
+  /// 過去的舊頁面重新彈出 AnnotationToolbar。[key] 對應的 State 若尚未
+  /// 掛載，或本來就沒有進行中的拖曳，靜默忽略（比照 `_cancelSelectionDrag`
+  /// 既有的空手勢防呆）。
+  static void cancelActiveSelectionDrag(GlobalKey<State<PdfReaderView>> key) {
+    final state = key.currentState;
+    if (state is _PdfReaderViewState) {
+      state._cancelSelectionDrag();
+    }
+  }
+
   /// 導航至下一頁。
   static void nextPage(GlobalKey<State<PdfReaderView>> key) {
     final state = key.currentState;
