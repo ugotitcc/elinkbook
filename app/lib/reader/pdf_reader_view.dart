@@ -22,6 +22,7 @@ import 'pdf_selection_info.dart';
 import 'pdf_search_match.dart';
 import 'pdf_search_geometry.dart';
 import 'percent_rect.dart';
+import 'tap_zone_detector.dart';
 import 'zone_action.dart';
 
 /// 以 pdfrx（PDFium + Dart FFI）為底層的 PDF 閱讀 widget
@@ -922,8 +923,14 @@ class _PdfReaderViewState extends State<PdfReaderView> {
                     final index = row * 3 + col;
                     final action = widget.navZoneActions[index];
                     return Expanded(
-                      child: _PdfNavZoneTapDetector(
+                      child: TapZoneDetector(
                         key: Key('pdf_reader_nav_zone_$index'),
+                        // 原始未校準值——是否需要比照 epic-25 Issue 1
+                        // 真機診斷調整，追蹤於 Epic 26 Issue 3，本次收斂
+                        // 刻意不變更數值本身。
+                        nowMs: () => clock.now().millisecondsSinceEpoch,
+                        tapMaxDurationMs: 400,
+                        tapSlop: 18.0,
                         onTap: () => widget.onZoneAction?.call(action),
                         child: Container(
                           decoration: widget.showNavZoneDebugOverlay
@@ -1205,72 +1212,4 @@ class _PdfSelectionDragState {
   Offset current;
 }
 
-/// 九宮格導覽熱區的單一格子（epic-24-pdf-engine-rebuild Issue 8）。刻意
-/// 用 [Listener] 直接觀察原始 pointer 事件、自行判斷「是否為一次快速
-/// 點擊」（位移在 [_tapSlop] 內、耗時在 [_tapMaxDurationMs] 內），完全不
-/// 註冊 GestureRecognizer、不參與手勢競技場——確保不會攔截 `PdfViewer`
-/// 自身的 pan/pinch/雙擊手勢，也不影響既有 per-page 長按選取
-/// GestureDetector（見 Global Constraints）。與
-/// `foliate_epub_reader_view.dart` 的 `_NavZoneTapDetector` 手勢隔離策略
-/// 相同，但按壓時長改用 `package:clock` 的 `clock.now()`（而非該檔案用的
-/// 原生 `DateTime.now()`）量測——`flutter_test` 的 FakeAsync 會攔截
-/// `clock` 套件的 Zone 覆寫使其隨 `tester.pump()` 正確推進，正式裝置上則
-/// 一律取得真實系統時間，不像先前一度嘗試過的
-/// `SchedulerBinding.currentSystemFrameTimeStamp` 只在畫面有新 frame 排程
-/// 時才更新（長按靜止區域可能整段時間都量不到經過的時間）。刻意各自獨立
-/// 實作、不抽成共用模組（見 Global Constraints）。
-class _PdfNavZoneTapDetector extends StatefulWidget {
-  final VoidCallback onTap;
-  final Widget child;
-  const _PdfNavZoneTapDetector({
-    super.key,
-    required this.onTap,
-    required this.child,
-  });
 
-  @override
-  State<_PdfNavZoneTapDetector> createState() => _PdfNavZoneTapDetectorState();
-}
-
-class _PdfNavZoneTapDetectorState extends State<_PdfNavZoneTapDetector> {
-  Offset? _downPosition;
-  int? _downTimeStampMs;
-
-  static const _tapSlop = 18.0;
-  static const _tapMaxDurationMs = 400;
-
-  @override
-  Widget build(BuildContext context) {
-    return Listener(
-      behavior: HitTestBehavior.translucent,
-      onPointerDown: (event) {
-        _downPosition = event.position;
-        // 用 clock.now()（package:clock）而非裸 DateTime.now()：
-        // flutter_test 的 FakeAsync 會攔截 clock 套件的 Zone 覆寫，讓這裡
-        // 的時間隨 tester.pump() 正確推進；正式裝置上則一律取得真實系統
-        // 時間，不依賴「畫面是否剛好有新 frame 排程」。
-        _downTimeStampMs = clock.now().millisecondsSinceEpoch;
-      },
-      onPointerUp: (event) {
-        final downPosition = _downPosition;
-        final downTimeStampMs = _downTimeStampMs;
-        if (downPosition == null || downTimeStampMs == null) return;
-        final elapsed =
-            clock.now().millisecondsSinceEpoch - downTimeStampMs;
-        final distance = (event.position - downPosition).distance;
-        if (elapsed <= _tapMaxDurationMs && distance <= _tapSlop) {
-          widget.onTap();
-        }
-      },
-      // 審查意見 Minor 1：系統層級手勢中斷（例如滑出螢幕邊緣觸發 OS
-      // 系統手勢）會送出 PointerCancelEvent 而非 PointerUpEvent，須主動
-      // 清除暫存狀態，避免殘留舊值（比照 onPointerUp 判定失敗時的隱含
-      // 語意，這裡明確清空而非留給下一次 onPointerDown 覆寫）。
-      onPointerCancel: (_) {
-        _downPosition = null;
-        _downTimeStampMs = null;
-      },
-      child: widget.child,
-    );
-  }
-}
