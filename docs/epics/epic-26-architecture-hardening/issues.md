@@ -6,7 +6,7 @@
 
 ## Issue 1：流式 EPUB 書籤 toggle 快取未載入時，第一次點擊誤判無書籤而重複新增
 
-**Status:** `ready-for-agent`——根因已由 `/diagnose` 確認（原始碼交叉核對＋widget test 重現），修法方向明確（比照 PDF 端已修過的版本），無需進一步 Discovery/Architecting，可直接進入 `/plan-issue`。
+**Status:** ✅ 已修復。新增純 Dart 共用 module `app/lib/reader/bookmark_toggle.dart`（`toggleBookmark()`，`matches`/`build` 參數化），EPUB `_toggleBookmark()`／PDF `_togglePdfBookmark()` 皆改為呼叫此 module、存在性判斷一律直查 `BookmarksRepository`，不再依賴可能尚未載入的 `_fxlBookmarks` 快取。`bookmark_toggle_test.dart`（3 項純邏輯單元測試）＋ `reader_screen_test.dart` 新增的永久回歸測試（重現「重開已加書籤的流式 EPUB、未開過筆記面板時第一次點擊誤新增重複書籤」symptom，修復後轉為不再誤觸發）皆通過；既有 EPUB／PDF 書籤 toggle 測試零回歸；`flutter analyze` 乾淨。
 
 **依賴：** 無
 

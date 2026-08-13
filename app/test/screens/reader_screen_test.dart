@@ -3735,6 +3735,76 @@ void main() {
     },
   );
 
+  testWidgets(
+    '流式 EPUB：重新開啟已在目前位置有書籤的書，開書後未打開過筆記面板時第一次點擊書籤按鈕應刪除既有書籤而非重複新增（Epic 26 Issue 1 回歸測試）',
+    (tester) async {
+      const locatorJson = '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}';
+      final bookmarksRepository = FakeBookmarksRepository();
+      // 模擬「先前已在此位置加過書籤」：重開書時 repository 已有一筆。
+      await bookmarksRepository.insert(Bookmark(
+        id: 'existing-bookmark',
+        bookId: 'b_epic26_issue1',
+        name: '既有書籤',
+        epubLocatorJson: locatorJson,
+        progression: 0.1,
+      ));
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_epic26_issue1',
+            prefsManager: prefsManager,
+            bookmarksRepository: bookmarksRepository,
+            isFixedLayout: false,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final foliateView = tester.widget<FoliateEpubReaderView>(
+        find.byType(FoliateEpubReaderView),
+      );
+      foliateView.onPageRendered();
+      foliateView.onLocatorChanged?.call(
+        const EpubPositionInfo(
+          locatorJson: locatorJson,
+          progression: 0.1,
+          pageIndex: 0,
+          totalPages: 10,
+        ),
+      );
+      await tester.pump();
+
+      // 刻意不打開 NotesBottomSheet——重現「_fxlBookmarks 快取從未被
+      // 預先載入」的狀態，開書後直接第一次點擊書籤按鈕。
+      final finder = find.byKey(
+        const Key('reader_foliate_bookmark_toggle_button'),
+      );
+
+      await tester.tap(finder);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(
+        (tester.widget<IconButton>(finder).icon as Icon).icon,
+        Icons.star_border,
+        reason: '既有書籤應已被刪除，圖示應變回未加書籤狀態',
+      );
+
+      final afterTap = await bookmarksRepository.listByBook(
+        'b_epic26_issue1',
+      );
+      expect(
+        afterTap,
+        hasLength(0),
+        reason: '目前位置已有書籤時第一次點擊應是刪除，不應變成重複新增',
+      );
+    },
+  );
+
   testWidgets('流式 EPUB：點擊浮動筆記按鈕開啟 NotesBottomSheet（Issue 7）', (
     tester,
   ) async {
