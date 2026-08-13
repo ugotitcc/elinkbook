@@ -879,6 +879,15 @@ class _PdfReaderViewState extends State<PdfReaderView> {
         calculateCurrentPageNumber:
             _dualPageEnabled ? _calculateSpreadAnchorPageNumber : null,
         pageOverlaysBuilder: _buildProcessedOverlay,
+        // Epic 24 Issue 9：pdfrx 的 PdfViewer 內部用 Listener（不參與手勢
+        // 競技場）驅動平移/縮放，與 _buildSelectionGestureLayer 的長按
+        // 拖曳框選 GestureDetector 會同時、無條件收到同一組原始 pointer
+        // 事件，導致長按拖曳劃線時頁面內容跟著平移/縮放亂跳（真機回報，
+        // 見 docs/epics/epic-24-pdf-engine-rebuild/issues.md Issue 9）。
+        // 框選拖曳進行中（_selectionDrag != null）暫時關閉底層平移/縮放，
+        // 放開/取消後（_selectionDrag 變回 null）恢復。
+        panEnabled: _selectionDrag == null,
+        scaleEnabled: _selectionDrag == null,
         onViewerReady: (doc, controller) {
           if (!_renderedNotified) {
             _renderedNotified = true;
