@@ -688,6 +688,40 @@ void main() {
       expect(find.text('下一頁'), findsWidgets);
       expect(find.text('無動作'), findsWidgets);
     });
+
+    testWidgets(
+        'EPUB nav-zone 熱區：onPointerCancel 不會拋出例外，取消手勢本身不觸發 onZoneAction，後續正常點擊仍正確判定',
+        (tester) async {
+      ZoneAction? triggered;
+      final actions = List<ZoneAction>.filled(9, ZoneAction.menu);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: FoliateEpubReaderView(
+            filePath: 'test/fixtures/sample.epub',
+            onPageRendered: () {},
+            onError: (_) {},
+            navZoneActions: actions,
+            onZoneAction: (action) => triggered = action,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final cancelledGesture = await tester.startGesture(
+        tester.getCenter(find.byKey(const Key('nav_zone_4'))),
+      );
+      await cancelledGesture.cancel();
+      await tester.pump();
+
+      expect(triggered, isNull);
+
+      await tester.tap(find.byKey(const Key('nav_zone_4')));
+      await tester.pump();
+      expect(triggered, ZoneAction.menu);
+    });
   });
 
   group('ES 相容性 polyfill（診斷修正）', () {
