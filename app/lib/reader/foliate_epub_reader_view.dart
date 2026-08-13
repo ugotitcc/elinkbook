@@ -18,6 +18,7 @@ import 'foliate_native_bridge.dart';
 import 'page_turn_mode.dart';
 import 'percent_rect.dart';
 import 'reader_console_log.dart';
+import 'tap_zone_detector.dart';
 import 'toc_entry.dart';
 import 'writing_mode.dart';
 import 'zone_action.dart';
@@ -500,7 +501,7 @@ class _FoliateEpubReaderViewState extends State<FoliateEpubReaderView> {
   late final String _instanceId = identityHashCode(this).toString();
 
   /// Epic 25 Issue 1 修法：目前 WebView 內是否有文字選取範圍存在，供
-  /// `_NavZoneTapDetector` 判斷是否要抑制翻頁動作（見下方 onTap 說明）。
+  /// `TapZoneDetector` 判斷是否要抑制翻頁動作（見下方 onTap 說明）。
   /// 由 `onSelectionChanged`/`onSelectionCleared` JS 橋接 handler 直接維護，
   /// 不透過 setState——這個欄位只在使用者放開手指的那一刻被讀取一次
   /// （事件觸發時的即時值），不影響任何一次 build() 的輸出，不需要為它
@@ -781,21 +782,25 @@ class _FoliateEpubReaderViewState extends State<FoliateEpubReaderView> {
                     final index = row * 3 + col;
                     final action = widget.navZoneActions[index];
                     return Expanded(
-                      child: _NavZoneTapDetector(
+                      child: TapZoneDetector(
                         key: Key('nav_zone_$index'),
+                        // Epic 26 Issue 1 校準值（epic-25 Issue 1 六輪
+                        // 真機診斷得出，見 TapZoneDetector class doc）。
+                        nowMs: () => DateTime.now().millisecondsSinceEpoch,
+                        tapMaxDurationMs: 700,
+                        tapSlop: 18.0,
                         onTap: () {
                           // Epic 25 Issue 1：真機診斷（見
                           // docs/epics/epic-25-annotation-interaction-qa/issues.md
                           // Issue 1）證實長按選字手勢即使成功讓 WebView
                           // 建立選取範圍，放開手指的那個動作仍可能同時滿足
-                          // _NavZoneTapDetector 自己的「快速點擊」門檻而
-                          // 觸發翻頁——_NavZoneTapDetector 刻意使用
-                          // Listener、不加入手勢競技場（見上方 class
-                          // doc），WebView 贏得選取不會讓這裡的 Tap 判定被
-                          // 取消，兩者是完全獨立、各自判讀同一組觸控事件的
-                          // 路徑。若目前有文字選取範圍存在，代表使用者這次
-                          // 觸控是劃線/選字手勢的一部分，不應該連帶觸發
-                          // 翻頁。
+                          // TapZoneDetector 自己的「快速點擊」門檻而觸發
+                          // 翻頁——TapZoneDetector 刻意使用 Listener、不
+                          // 加入手勢競技場（見 class doc），WebView 贏得
+                          // 選取不會讓這裡的 Tap 判定被取消，兩者是完全
+                          // 獨立、各自判讀同一組觸控事件的路徑。若目前有
+                          // 文字選取範圍存在，代表使用者這次觸控是劃線/
+                          // 選字手勢的一部分，不應該連帶觸發翻頁。
                           if (_hasActiveSelection) return;
                           widget.onZoneAction?.call(action);
                         },
@@ -836,83 +841,5 @@ class _FoliateEpubReaderViewState extends State<FoliateEpubReaderView> {
       case ZoneAction.none:
         return '無動作';
     }
-  }
-}
-
-/// 九宮格導覽熱區的單一格子，取代原本的 `GestureDetector(onTap: ...)`
-/// （/diagnose 2026-07-27 真機診斷發現的根因修正）。
-///
-/// 根因：`GestureDetector` 的 `TapGestureRecognizer` 沒有時長上限——即使按住
-/// 800ms 才放開，仍會被判定為一次有效的 tap。`InAppWebView`（Hybrid
-/// Composition 平台視圖）與這個 `GestureDetector` 在同一個 Stack 位置競爭
-/// 手勢競技場時，只要有任何 Flutter 側的手勢辨識器參與競爭，平台視圖自己
-/// 的原生觸控轉發就會等待競技場裁定結果——`TapGestureRecognizer` 一路持有
-/// 到放開才裁定為「是」，導致 `InAppWebView` 從頭到尾都沒收到這次觸控序列，
-/// 長按選字的原生選取 UI（控點）完全不會出現（真機 `adb shell input
-/// touchscreen swipe` 模擬長按已驗證：拿掉這層 `GestureDetector` 或改用本
-/// 類別後，選字/控點/劃線皆恢復正常；只有 `HitTestBehavior` 從 opaque 改
-/// translucent 並不夠，因為問題不在 hit-test 可見性、而在手勢競技場裁定）。
-///
-/// 改用 [Listener] 直接觀察原始 pointer 事件、自行判斷「是否為一次快速點擊」
-/// （位移在 [_tapSlop] 內、耗時在 [_tapMaxDurationMs] 內），完全不註冊
-/// `GestureRecognizer`、不參與手勢競技場，讓 `InAppWebView` 的原生觸控轉發
-/// 不再被攔截。原本 `_hasActiveSelection` 這個只放行「已有選取範圍時的拖曳」
-/// 的權宜旗標（Issue 8/ADR 0013）已不再需要——本類別從一開始就不會攔截任何
-/// 非「快速點擊」手勢，選字/拖曳控點/翻頁滑動皆可直接穿透到 `InAppWebView`。
-class _NavZoneTapDetector extends StatefulWidget {
-  final VoidCallback onTap;
-  final Widget child;
-  const _NavZoneTapDetector({
-    super.key,
-    required this.onTap,
-    required this.child,
-  });
-
-  @override
-  State<_NavZoneTapDetector> createState() => _NavZoneTapDetectorState();
-}
-
-class _NavZoneTapDetectorState extends State<_NavZoneTapDetector> {
-  Offset? _downPosition;
-  int? _downTimeMs;
-
-  static const _tapSlop = 18.0;
-
-  /// Epic 25 Issue 1 修法：原本是 400ms，真機（Air Reader Pro C）診斷發現
-  /// 這個門檻**短於**原生長按辨識所需時間（Android
-  /// `ViewConfiguration.getLongPressTimeout()` 預設值，也是
-  /// `epic-18` Issue 47 `LONG_PRESS_GATE_MS` 用的同一個值，見 main.js）——
-  /// 使用者長按選字若在門檻內放開手指（原生選取都還來不及開始辨識），本
-  /// 類別會搶先判定成「快速點擊」直接觸發翻頁，與選取是否成立無關，
-  /// `_hasActiveSelection`（見 `_FoliateEpubReaderViewState`）救不到這個
-  /// 情境。第一版對齊 500ms（同 `LONG_PRESS_GATE_MS`）仍能觀察到跳頁（見
-  /// `tmp/epic-25/log13.txt`，`[DEBUG-e25i1-gate]` 顯示部分候選手勢在
-  /// elapsed≈497ms 才因距離/速度門檻放行，代表真機實際辨識所需時間比
-  /// Android 預設值更接近甚至略超過 500ms 本身）；真機測試同時確認提高
-  /// 門檻不會讓一般點擊翻頁的手感變慢（人類真機回報），故進一步調到
-  /// 700ms（詳見
-  /// docs/epics/epic-25-annotation-interaction-qa/issues.md Issue 1）。
-  static const _tapMaxDurationMs = 700;
-
-  @override
-  Widget build(BuildContext context) {
-    return Listener(
-      behavior: HitTestBehavior.translucent,
-      onPointerDown: (event) {
-        _downPosition = event.position;
-        _downTimeMs = DateTime.now().millisecondsSinceEpoch;
-      },
-      onPointerUp: (event) {
-        final downPosition = _downPosition;
-        final downTimeMs = _downTimeMs;
-        if (downPosition == null || downTimeMs == null) return;
-        final elapsed = DateTime.now().millisecondsSinceEpoch - downTimeMs;
-        final distance = (event.position - downPosition).distance;
-        if (elapsed <= _tapMaxDurationMs && distance <= _tapSlop) {
-          widget.onTap();
-        }
-      },
-      child: widget.child,
-    );
   }
 }

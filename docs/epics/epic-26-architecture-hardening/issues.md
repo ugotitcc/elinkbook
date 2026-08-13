@@ -36,7 +36,7 @@
 
 ## Issue 2：收斂 nav-zone 熱區點擊偵測成一個共用 module（補上 EPUB 缺少的 `onPointerCancel`）
 
-**Status:** `ready-for-agent`——安全的機械式收斂，範圍已明確排除有爭議的門檻值變更（見下方「刻意排除的範圍」），無需真機驗證即可實作與驗收。
+**Status:** ✅ 已修復。新增共用 `app/lib/reader/tap_zone_detector.dart`（`TapZoneDetector`，`nowMs`/`tapMaxDurationMs`/`tapSlop` 皆為呼叫端注入參數，內建 `onPointerCancel` 防禦性清理），EPUB `_NavZoneTapDetector`／PDF `_PdfNavZoneTapDetector` 兩份私有實作整段刪除、呼叫端皆改用此共用 module，各自維持現行數值不變（EPUB 700ms／PDF 400ms，皆 18.0 slop）。EPUB 端新增 `onPointerCancel` 特徵測試鎖定新行為（原本缺少此保護；誠實記錄：單指循序操作情境本來就會因狀態欄位被下一次合法按下覆寫而自我修復，此測試不是重現一個先前可觀察的 bug，價值在於防止未來重構時意外移除這層防禦），PDF 端既有 600ms 排除測試與 `onPointerCancel` 測試皆不需修改斷言即全數通過，證明收斂後兩邊行為零改變。`tap_zone_detector_test.dart`（4 項純邏輯單元測試）＋`flutter test` 全量通過、`flutter analyze` 乾淨。`_tapMaxDurationMs` 數值本身是否需要調整見 Issue 3（獨立範圍，不受本次收斂影響）。
 
 **依賴：** 無（與 Issue 3 互相獨立，`_tapMaxDurationMs` 的實際數值本身不在本 Issue 變更範圍內，見下方）。
 
