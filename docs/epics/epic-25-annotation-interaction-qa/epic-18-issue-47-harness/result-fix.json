@@ -1,0 +1,8 @@
+{
+  "scenarioA_scrollByCallCount": 3,
+  "scenarioA_anyMoved": false,
+  "scenarioB_scrollByCallCount": 0,
+  "scenarioE_scrollByCallCount": 2,
+  "scenarioE_anyMoved": true,
+  "scenarioE_maxAbsDx": 40
+}

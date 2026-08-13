@@ -12,6 +12,7 @@ docs/epics/epic-20-fxl-foliate-migration/reviews/
 docs/epics/epic-24-pdf-engine-rebuild/reviews/
 docs/epics/epic-25-annotation-interaction-qa/reviews/
 tmp/
+**/node_modules/
 app/android/.kotlin/sessions/
 agent/skills/
 .sisyphus/run-continuation/
