@@ -96,3 +96,28 @@
 - `reader_screen.dart` 新 callback：套用到目前書籍即時反映新值、套用到其他書籍時目前畫面不受影響。
 
 **驗收標準：** 使用者可在流式 EPUB 版面設定另存/管理最多 3 組具名預設集，並可從預設集或直接複製其他書籍的設定，套用到目前書籍或批次套用到其他流式 EPUB 書籍；PDF/FXL 書籍不出現在選書清單；`flutter analyze` 乾淨、`flutter test` 全數通過、零回歸。
+
+---
+
+## Issue 4：檢討「設定面板草稿具現化」原則是否意外覆寫書本原生 CSS 樣式
+
+**Status:** `needs-triage`——需要人類決定修法方向（是否調整既有原則、調整範圍多大），本 Issue 僅記錄查證結果，不預設解法。
+
+**依賴：** 無（純調查/決策型工單，不阻塞 Issue 1-3 的實作與合併）。
+
+**來源：** 2026-08-14 `/superpowers:receiving-code-review` 對 `plans/plan-issue-1.md` 的審查 Minor #3（原始提問：`letterSpacing` 為 `0` 時是否應跳過 CSS 注入，避免覆寫書本原生非零字距），經查證後發現這**不是 `letterSpacing` 特有的新問題**，而是既有架構層級的既定行為，人類確認另立獨立 Issue 全面檢討。
+
+**背景／症狀：** `ReaderSettingsSheet`（`app/lib/screens/reader_settings_sheet.dart`）的 `initState()`／`didUpdateWidget()` 對以下 9 個欄位一律採用「`widget.prefs.X ?? 預設值`」把可能為 `null`（未覆寫）的欄位具現化成一個非 null 的本地草稿狀態：`fontSize`／`fontWeight`／`lineHeight`／`paragraphSpacing`／`marginTop`／`marginBottom`／`marginLeft`／`marginRight`，以及 Issue 1 新增的 `letterSpacing`。`_notifyChanged()`（第 136-158 行）每次使用者互動（不論觸碰的是不是這幾個欄位本身，例如只是切換「顯示頁首」開關）都會送出**完整**的 `BookReaderPrefs`，把這 9 個欄位的具現化值（即使使用者從未主動調整過）一併寫入 `book_reader_prefs` 資料表，從此該書的這些欄位不再是 `null`。
+
+**根因（已用原始碼交叉核對確認）：** `main.js` 的 `buildOverrideCss()`（`app/android/app/src/main/assets/foliate/main.js:69-133`）對這 9 個欄位皆用 `typeof prefs.X === 'number'` 判斷是否要注入 `!important` CSS 覆蓋規則——`null`（未覆寫）時完全不注入該條規則，讓書本自己的原生樣式生效；一旦被具現化成任何具體數值（包含恰好等於 UI 預設顯示值，例如 `lineHeight: 1.0`／`letterSpacing: 0`），該規則就會被注入、強制覆蓋書本原生對應樣式。這違反 `CONTEXT.md`「設定面板草稿具現化原則」條目本身寫明的適用前提——「無次要來源、**null 與具體預設值解析結果永遠相同時**」才安全；但這 9 個欄位在 `ReaderPrefsManagerImpl.resolve()`（`app/lib/reader/reader_prefs_manager_impl.dart:160-196`）皆是直接透傳（`fontSize: book.fontSize` 等，無 `?? 預設值`），`null` 會一路傳到 `buildOverrideCss()` 產生「不注入規則」，跟被具現化後的「注入 X=預設值 規則」是兩種**不同**的最終渲染結果——不滿足該原則的安全前提。
+
+**已排除的欄位（同一機制下查證為安全，不在本 Issue 範圍）：** `showHeader`／`showFooter`／`fullscreen`（控制 App 介面顯示，非書本內容樣式，無「書本原生值」可覆蓋）；`columnMode`／`columnSize`（`resolve()` 本身已有 `?? ColumnMode.auto`／`?? 720.0`，null 與具體預設值在 resolve() 層就已經是同一個結果）；`publisherStyles`（`main.js` 只用 `=== false` 判斷選 selector，`null`／`true` 兩者皆落入同一個分支，效果相同）；`fontFamily`／`textAlign`／`writingModeOverride`／`pageTurnModeOverride`／`screenOrientationOverride`（`ReaderSettingsSheet` 本身未對這些欄位做具現化，維持 `null` 直接透傳）。
+
+**下一步（留給人類決定，本 Issue 不預設方向）：**
+1. 維持現狀——9 個欄位皆接受這個既有行為，`letterSpacing` 與其餘 8 個一致，不特殊處理。
+2. 只調整部分欄位（例如 `letterSpacing` 因為預設 `0` 與「無覆蓋」在視覺上更容易混淆，個別加上「數值等於預設值時不注入 CSS」的例外）。
+3. 全面調整——`ReaderSettingsSheet` 改為對這 9 個欄位維持 `null` 語意（比照 `writingModeOverride` 等既有做法，滑桿顯示時用 `?? 預設值` 只影響畫面呈現、不當作已覆寫送出），需要額外 UI 設計一個「重置為書本原生值」的顯式操作，工作量較大且會改變已上線的既有行為，需評估是否有真實使用者已依賴目前行為（例如就是想要每本書字級一致，才刻意觸發過這個「連帶覆寫」效果）。
+
+**單元測試要求：**（待方向 1-3 定案後，於 `plan-issue-4.md` 補齊具體斷言）
+
+**驗收標準：**（待方向定案後補齊）
