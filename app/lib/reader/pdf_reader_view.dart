@@ -911,7 +911,8 @@ class _PdfReaderViewState extends State<PdfReaderView> {
         ),
         // epic-24-pdf-engine-rebuild Issue 8：3×3 導覽熱區，比照
         // FoliateEpubReaderView 既有的 _ZoneOverlay 版面（Column of Row of
-        // Expanded），疊加在 PdfViewer 之上。用 Listener（_PdfNavZoneTapDetector）
+        // Expanded），疊加在 PdfViewer 之上。用 Listener（共用
+        // TapZoneDetector，見 epic-26-architecture-hardening Issue 2）
         // 而非 GestureDetector，故不會攔截 PdfViewer 自身的 pan/pinch/長按選取
         // 手勢。
         Positioned.fill(
@@ -1211,5 +1212,3 @@ class _PdfSelectionDragState {
   final Offset start;
   Offset current;
 }
-
-

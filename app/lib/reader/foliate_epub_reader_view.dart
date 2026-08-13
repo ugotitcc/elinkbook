@@ -501,7 +501,7 @@ class _FoliateEpubReaderViewState extends State<FoliateEpubReaderView> {
   late final String _instanceId = identityHashCode(this).toString();
 
   /// Epic 25 Issue 1 修法：目前 WebView 內是否有文字選取範圍存在，供
-  /// `_NavZoneTapDetector` 判斷是否要抑制翻頁動作（見下方 onTap 說明）。
+  /// `TapZoneDetector` 判斷是否要抑制翻頁動作（見下方 onTap 說明）。
   /// 由 `onSelectionChanged`/`onSelectionCleared` JS 橋接 handler 直接維護，
   /// 不透過 setState——這個欄位只在使用者放開手指的那一刻被讀取一次
   /// （事件觸發時的即時值），不影響任何一次 build() 的輸出，不需要為它
@@ -843,5 +843,3 @@ class _FoliateEpubReaderViewState extends State<FoliateEpubReaderView> {
     }
   }
 }
-
-
