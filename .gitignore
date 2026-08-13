@@ -12,6 +12,8 @@ docs/epics/epic-20-fxl-foliate-migration/reviews/
 docs/epics/epic-24-pdf-engine-rebuild/reviews/
 docs/epics/epic-25-annotation-interaction-qa/reviews/
 docs/epics/epic-26-architecture-hardening/reviews/
+docs/epics/epic-27-reader-device-compat/reviews/
+docs/epics/epic-28-reader-settings-enhancements/reviews/
 tmp/
 **/node_modules/
 app/android/.kotlin/sessions/
