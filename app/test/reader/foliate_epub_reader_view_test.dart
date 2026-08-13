@@ -145,6 +145,7 @@ void main() {
         fontWeight: 1.75,
         lineHeight: 1.6,
         paragraphSpacing: 1.2,
+        letterSpacing: 0.1,
         marginTop: 72,
         marginBottom: 20,
         marginLeft: 30,
@@ -165,6 +166,7 @@ void main() {
         'fontWeight': 1.75,
         'lineHeight': 1.6,
         'paragraphSpacing': 1.2,
+        'letterSpacing': 0.1,
         'marginTop': 72.0,
         'marginBottom': 20.0,
         'marginLeft': 30.0,
@@ -228,6 +230,18 @@ void main() {
       );
       expect(
         buildFoliatePreferencesMap(view).containsKey('isFixedLayoutHint'),
+        isFalse,
+      );
+    });
+
+    test('letterSpacing 未設定（null）時 map 不含該 key', () {
+      const view = FoliateEpubReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+      );
+      expect(
+        buildFoliatePreferencesMap(view).containsKey('letterSpacing'),
         isFalse,
       );
     });
@@ -348,6 +362,22 @@ void main() {
         onPageRendered: _noop,
         onError: _noopError,
         writingMode: WritingMode.vertical,
+      );
+      expect(foliatePreferencesChanged(oldView, newView), isTrue);
+    });
+
+    test('letterSpacing 變動回傳 true', () {
+      const oldView = FoliateEpubReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        letterSpacing: 0.1,
+      );
+      const newView = FoliateEpubReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        letterSpacing: 0.2,
       );
       expect(foliatePreferencesChanged(oldView, newView), isTrue);
     });

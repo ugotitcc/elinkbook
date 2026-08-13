@@ -2282,6 +2282,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           fontWeight: resolved.fontWeight,
           lineHeight: resolved.lineHeight,
           paragraphSpacing: resolved.paragraphSpacing,
+          letterSpacing: resolved.letterSpacing,
           marginTop: resolved.marginTop,
           marginBottom: resolved.marginBottom,
           marginLeft: resolved.marginLeft,
