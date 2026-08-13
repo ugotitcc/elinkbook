@@ -233,6 +233,7 @@ class _TocBottomSheetState extends State<TocBottomSheet> {
                   fontSize: widget.resolved.fontSize,
                   lineHeight: widget.resolved.lineHeight,
                   paragraphSpacing: widget.resolved.paragraphSpacing,
+                  letterSpacing: widget.resolved.letterSpacing,
                   marginTop: widget.resolved.marginTop,
                   marginBottom: widget.resolved.marginBottom,
                   marginLeft: widget.resolved.marginLeft,
