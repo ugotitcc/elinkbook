@@ -8,6 +8,7 @@ import '../reader/annotation_list_item.dart';
 import '../reader/book_format.dart';
 import '../reader/bookmark.dart';
 import '../reader/bookmark_position_context.dart';
+import '../reader/bookmark_toggle.dart' as bookmark_toggle;
 import '../reader/bookmarks_repository.dart';
 import '../reader/book_reader_prefs.dart';
 import '../reader/custom_font.dart';
@@ -737,11 +738,12 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     final repository = widget.bookmarksRepository;
     final positionInfo = _epubPositionInfo;
     if (repository == null || positionInfo == null) return;
-    final existing = _bookmarkAtCurrentPosition;
-    if (existing != null) {
-      await repository.delete(existing.id);
-    } else {
-      await repository.insert(Bookmark(
+    await bookmark_toggle.toggleBookmark(
+      repository: repository,
+      bookId: widget.bookId,
+      matches: (bookmark) =>
+          bookmark.epubLocatorJson == positionInfo.locatorJson,
+      build: () => Bookmark(
         id: const Uuid().v4(),
         bookId: widget.bookId,
         name: Bookmark.defaultName(BookmarkPositionContext(
@@ -750,8 +752,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         )),
         epubLocatorJson: positionInfo.locatorJson,
         progression: positionInfo.progression,
-      ));
-    }
+      ),
+    );
     await _loadFxlBookmarks();
   }
 
