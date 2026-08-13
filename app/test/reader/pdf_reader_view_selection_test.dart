@@ -91,6 +91,92 @@ void main() {
     expect(computed!.rect.top, lessThan(computed!.rect.bottom));
   });
 
+  testWidgets('框選拖曳進行中，PdfViewer 的 panEnabled/scaleEnabled 應暫時關閉；放開後恢復',
+      (tester) async {
+    var renderedCount = 0;
+    final key = GlobalKey<State<PdfReaderView>>();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PdfReaderView(
+          key: key,
+          filePath: 'test/fixtures/sample_multi_page.pdf',
+          onPageRendered: () => renderedCount++,
+          onError: (_) {},
+          onSelectionRectComputed: (_) {},
+        ),
+      ),
+    );
+    await waitRendered(tester, () => renderedCount);
+
+    PdfViewerParams paramsOf() =>
+        tester.widget<PdfViewer>(find.byType(PdfViewer)).params;
+
+    expect(paramsOf().panEnabled, isTrue, reason: '拖曳開始前應維持預設可平移');
+    expect(paramsOf().scaleEnabled, isTrue, reason: '拖曳開始前應維持預設可縮放');
+
+    final topLeft = tester.getTopLeft(find.byType(PdfReaderView));
+    final gesture = await tester.startGesture(topLeft + const Offset(40, 60));
+    await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+
+    expect(paramsOf().panEnabled, isFalse, reason: '框選拖曳進行中應關閉底層平移，避免與長按框選手勢衝突');
+    expect(paramsOf().scaleEnabled, isFalse, reason: '框選拖曳進行中應關閉底層縮放');
+
+    await gesture.moveTo(topLeft + const Offset(160, 220));
+    await tester.pump();
+
+    expect(paramsOf().panEnabled, isFalse, reason: '拖曳移動過程中仍應維持關閉');
+
+    await gesture.up();
+    await tester.pump();
+
+    expect(paramsOf().panEnabled, isTrue, reason: '放開手指、選取完成後應恢復可平移');
+    expect(paramsOf().scaleEnabled, isTrue, reason: '放開手指、選取完成後應恢復可縮放');
+  });
+
+  testWidgets('框選拖曳被第二指觸控取消後，PdfViewer 的 panEnabled/scaleEnabled 應恢復',
+      (tester) async {
+    var renderedCount = 0;
+    final key = GlobalKey<State<PdfReaderView>>();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PdfReaderView(
+          key: key,
+          filePath: 'test/fixtures/sample_multi_page.pdf',
+          onPageRendered: () => renderedCount++,
+          onError: (_) {},
+          onSelectionRectComputed: (_) {},
+        ),
+      ),
+    );
+    await waitRendered(tester, () => renderedCount);
+
+    PdfViewerParams paramsOf() =>
+        tester.widget<PdfViewer>(find.byType(PdfViewer)).params;
+
+    final topLeft = tester.getTopLeft(find.byType(PdfReaderView));
+    final firstFinger =
+        await tester.startGesture(topLeft + const Offset(40, 60));
+    await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+    await firstFinger.moveTo(topLeft + const Offset(120, 160));
+    await tester.pump();
+
+    expect(paramsOf().panEnabled, isFalse, reason: '框選拖曳進行中應關閉底層平移');
+
+    final secondFinger =
+        await tester.startGesture(topLeft + const Offset(300, 400));
+    await tester.pump();
+
+    expect(paramsOf().panEnabled, isTrue, reason: '第二指觸控取消框選後應恢復可平移');
+    expect(paramsOf().scaleEnabled, isTrue, reason: '第二指觸控取消框選後應恢復可縮放');
+
+    await firstFinger.up();
+    await secondFinger.up();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+  });
+
   testWidgets('長按但幾乎沒有拖曳位移（退化選取）時，不觸發 onSelectionRectComputed',
       (tester) async {
     var renderedCount = 0;
