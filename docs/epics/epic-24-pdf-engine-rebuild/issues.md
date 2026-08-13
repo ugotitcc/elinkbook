@@ -289,7 +289,7 @@ PDF 頂部工具列（現行傳統 `AppBar`，含系統預設返回箭頭 + 版�
 
 ### Issue 9：PDF 劃線拖曳選取時與 `PdfViewer` 內建 pan/zoom 手勢衝突（頁面隨手指移動亂跳）
 
-**Status:** ready-for-agent
+**Status:** ✅ 已修復（widget test 驗證，真機驗證待補）。`PdfReaderView` 建構 `PdfViewerParams` 時依 `_selectionDrag == null` 動態傳入 `panEnabled`/`scaleEnabled`，框選拖曳進行中（`onLongPressStart` 起、`onLongPressEnd`／`onLongPressCancel`／第二指觸控取消止）暫時關閉底層 `PdfViewer` 平移/縮放，結束後立即恢復。新增 2 項 widget test（`pdf_reader_view_selection_test.dart`）驗證旗標依框選狀態正確切換（含放開手指恢復、第二指觸控取消恢復兩條路徑），既有選取／PDF 相關測試套件零回歸，`flutter analyze` 乾淨。**已知殘留限制（誠實記錄，非聲稱 100% 解決）**：根因（`Listener` 不參與手勢競技場）已用套件原始碼查證、信心高，但本次修復僅在 widget test 層級驗證旗標切換邏輯本身，尚未在真機實際重現過「頁面亂跳」症狀、也尚未真機驗證修復後不再出現亂跳、且一般雙指縮放／單指平移手感不受影響；「越靠近畫面右側越嚴重」這個真機回報細節（root cause 段落原文）也尚未有進一步驗證，若真機驗證後發現仍有殘留亂跳或手感異常，需另立 Issue 追蹤。
 
 **同症狀跨格式提醒**：使用者已確認流式 EPUB 也有同一種「拖曳選取時頁面亂跳」症狀，但根因不同、另立 `epic-18-reader-device-qa` Issue 47 追蹤，本 Issue 僅處理 PDF 路徑。
 
