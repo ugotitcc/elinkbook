@@ -26,7 +26,7 @@
 - Consumes：既有 `_selectionDrag`（`_PdfSelectionDragState?` 欄位）、`PdfViewerParams.panEnabled`/`scaleEnabled`（`pdfrx` 套件既有建構參數，`bool`，預設 `true`）。
 - Produces：無新增可供其他 Task 呼叫的函式或欄位——純粹是既有 `build()` 內建構 `PdfViewerParams` 時多傳兩個參數。
 
-- [ ] **Step 1：寫失敗測試——框選拖曳進行中應關閉底層平移／縮放**
+- [x] **Step 1：寫失敗測試——框選拖曳進行中應關閉底層平移／縮放**
 
 在 `app/test/reader/pdf_reader_view_selection_test.dart` 找到既有測試「長按拖曳後放開，觸發 onSelectionRectComputed 且矩形座標在合理範圍內」（約 line 55）之後，新增：
 
@@ -118,12 +118,12 @@
   });
 ```
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 Run: `cd app && flutter test test/reader/pdf_reader_view_selection_test.dart --plain-name "panEnabled"`
 Expected: 兩項測試皆 FAIL——`PdfViewerParams` 目前沒有傳入 `panEnabled`/`scaleEnabled`，`pdfrx` 套件預設值恆為 `true`，斷言 `paramsOf().panEnabled, isFalse` 那幾行會失敗。
 
-- [ ] **Step 3：實作修法**
+- [x] **Step 3：實作修法**
 
 修改 `app/lib/reader/pdf_reader_view.dart:875-893`，從：
 
@@ -182,22 +182,22 @@ Expected: 兩項測試皆 FAIL——`PdfViewerParams` 目前沒有傳入 `panEna
       ),
 ```
 
-- [ ] **Step 4：執行測試確認通過**
+- [x] **Step 4：執行測試確認通過**
 
 Run: `cd app && flutter test test/reader/pdf_reader_view_selection_test.dart --plain-name "panEnabled"`
 Expected: 兩項測試皆 PASS。
 
-- [ ] **Step 5：執行整份選取測試檔案確認既有測試零回歸**
+- [x] **Step 5：執行整份選取測試檔案確認既有測試零回歸**
 
 Run: `cd app && flutter test test/reader/pdf_reader_view_selection_test.dart`
 Expected: 全數 PASS（新增 2 項＋既有全部測試，含「不傳選取回呼時，行為與 Issue 1/2/3 完全相同（零回歸基準）」「框選進行中第二指觸控介入時，取消選取並觸發 onSelectionCanceled」「cropEditModeActive=true 時，長按拖曳不觸發框選」等）。
 
-- [ ] **Step 6：執行其餘 PDF 相關測試套件確認無交叉回歸**
+- [x] **Step 6：執行其餘 PDF 相關測試套件確認無交叉回歸**
 
 Run: `cd app && flutter test test/reader/pdf_reader_view_test.dart test/reader/pdf_reader_view_filters_test.dart test/reader/pdf_reader_view_nav_zone_test.dart`
 Expected: 全數 PASS——`panEnabled`/`scaleEnabled` 在 `_selectionDrag == null`（預設狀態，本計畫變更前後皆為 `true`）時行為不變，這些測試不涉及框選拖曳，理論上零回歸；本步驟用實際執行結果佐證，而非僅憑推論。
 
-- [ ] **Step 7：Commit**
+- [x] **Step 7：Commit**
 
 ```bash
 git add app/lib/reader/pdf_reader_view.dart app/test/reader/pdf_reader_view_selection_test.dart
@@ -216,17 +216,17 @@ git commit -m "fix(epic-24): Issue 9——框選拖曳進行中暫時關閉 PdfV
 - Consumes：Task 1 的程式碼變更（無新介面）。
 - Produces：無。
 
-- [ ] **Step 1：`flutter analyze` 確認全專案乾淨**
+- [x] **Step 1：`flutter analyze` 確認全專案乾淨**
 
 Run: `cd app && flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 2：執行完整測試套件確認全域無回歸**
+- [x] **Step 2：執行完整測試套件確認全域無回歸**
 
 Run: `cd app && flutter test`
 Expected: 全數通過（含 Task 1 新增的 2 項測試，以及既有全部測試）。
 
-- [ ] **Step 3：更新 `issues.md` Issue 9 狀態**
+- [x] **Step 3：更新 `issues.md` Issue 9 狀態**
 
 修改 `docs/epics/epic-24-pdf-engine-rebuild/issues.md`，把 Issue 9 的 `Status` 行：
 
@@ -240,7 +240,7 @@ Expected: 全數通過（含 Task 1 新增的 2 項測試，以及既有全部�
 **Status:** ✅ 已修復（widget test 驗證，真機驗證待補）。`PdfReaderView` 建構 `PdfViewerParams` 時依 `_selectionDrag == null` 動態傳入 `panEnabled`/`scaleEnabled`，框選拖曳進行中（`onLongPressStart` 起、`onLongPressEnd`／`onLongPressCancel`／第二指觸控取消止）暫時關閉底層 `PdfViewer` 平移/縮放，結束後立即恢復。新增 2 項 widget test（`pdf_reader_view_selection_test.dart`）驗證旗標依框選狀態正確切換（含放開手指恢復、第二指觸控取消恢復兩條路徑），既有選取／PDF 相關測試套件零回歸，`flutter analyze` 乾淨。**已知殘留限制（誠實記錄，非聲稱 100% 解決）**：根因（`Listener` 不參與手勢競技場）已用套件原始碼查證、信心高，但本次修復僅在 widget test 層級驗證旗標切換邏輯本身，尚未在真機實際重現過「頁面亂跳」症狀、也尚未真機驗證修復後不再出現亂跳、且一般雙指縮放／單指平移手感不受影響；「越靠近畫面右側越嚴重」這個真機回報細節（root cause 段落原文）也尚未有進一步驗證，若真機驗證後發現仍有殘留亂跳或手感異常，需另立 Issue 追蹤。
 ```
 
-- [ ] **Step 4：更新 `docs/epics.md` epic-24 該列備註**
+- [x] **Step 4：更新 `docs/epics.md` epic-24 該列備註**
 
 修改 `docs/epics.md` 的 `epic-24-pdf-engine-rebuild` 該列（搜尋 `epic-24-pdf-engine-rebuild`），在既有備註文字最後補上一句：
 
@@ -248,7 +248,7 @@ Expected: 全數通過（含 Task 1 新增的 2 項測試，以及既有全部�
 **Issue 9（PDF 劃線拖曳選取時與 PdfViewer 內建 pan/zoom 手勢衝突、頁面隨手指移動亂跳）已修復（widget test 驗證，真機驗證待補）**：`PdfViewerParams` 依框選拖曳狀態動態關閉/恢復 `panEnabled`/`scaleEnabled`，2 項新增 widget test 驗證旗標切換邏輯，既有測試零回歸；根因（`pdfrx` `PdfViewer` 內部 `Listener` 不參與手勢競技場、與框選 `GestureDetector` 同時收到原始 pointer 事件）已用套件原始碼查證，但修復後是否真的解決真機回報症狀、一般縮放/平移手感是否受影響，仍待真機驗證。
 ```
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 git add docs/epics/epic-24-pdf-engine-rebuild/issues.md docs/epics.md
