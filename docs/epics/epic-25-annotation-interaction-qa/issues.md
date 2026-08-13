@@ -179,7 +179,7 @@ EPUB／PDF 兩處呼叫端皆須修正。
 
 ## Issue 4：換頁點擊位置與相鄰頁畫線重疊時，誤跳出刪除確認對話框
 
-**Status:** `needs-info`——已依建議建立 headless CDP 時序驗證迴圈（見下方「規劃階段查證」小節），結果為 20 次量測 0 次重現，headless 環境本身無法確認/否證此假說是否適用於真機。下一步需要真機診斷插樁（比照 Epic 25 Issue 1 的 `[DEBUG-e25iN]` 插樁手法）量測真實 Flutter→WebView 橋接延遲與原生 click 合成時序，才能進一步定案；在拿到真機資料前不建議直接動手修法。
+**Status:** ✅ 已修復。真機資料（`tmp/epic-25/log-issue4/`，六份 log：`壓到-1/2/3.txt`／`沒壓到.txt`／`明顯不重疊-1/2.txt`）證實根因與原始假說不同——`click` 事件命中畫線的時序有時早於、有時晚於 `window.nextPage()` 實際執行，兩種順序都會誤觸發，純時序競速修法無法涵蓋；本質是「換頁點擊」與「畫線點擊」共用同一組觸控手勢、同一螢幕座標的產品層級語意衝突，不是單純的競速 bug。採用人類確認的產品方向（按壓時長判斷意圖，快速點擊優先視為換頁）修復，`main.js` 新增 capture 階段 `touchstart`/`click` 監聽器，700ms 內攔截 click 傳給畫線點擊監聽器的機會（明確排除超連結點擊，避免連帶回歸）。headless 驗證三種情境（短按攔截／長按放行／超連結不受影響）皆 PASS。**已知殘留限制**：真機上「長按原地放開是否仍合成 click 事件」未經驗證（headless 已確認會，真機 WebView 行為可能不同），需真機驗證「長按查看/編輯既有畫線」這條路徑是否如預期運作。
 
 **依賴：** 無
 
@@ -200,6 +200,21 @@ doc.addEventListener('click', e => {
 
 `Overlayer` 用**原生 `click` 事件**做畫線點擊偵測，而 `paginator.js` 的換頁是自己的 `touchstart`/`touchmove`/`touchend` 手勢邏輯驅動、在 `touchend` 當下就立即完成視覺換頁。瀏覽器的合成 `click` 事件在觸控裝置上是 `touchend` **之後才延遲觸發**的相容性事件——這時頁面視覺上已經換到新頁，`click` 事件座標卻拿去對「新頁面此刻的內容」做 `hitTest()`，如果新頁同一螢幕座標剛好也有畫線，就誤判成「使用者點擊了這筆畫線」而彈出刪除確認。與 `epic-18` Issue 47 是同一類「vendored 觸控換頁邏輯 vs 瀏覽器原生延遲事件」的競速問題，但這次競速的對象是 `click` 而非 `touchmove`。
 
+**真機資料分析與修訂根因（`tmp/epic-25/log-issue4/`，六份 log，`plan-issue-4-fix.md`）：**
+
+真機插樁資料（`plan-issue-4-realdevice-diagnostics.md` 產出）交叉比對後，發現原始假說（`click` 恆常晚於換頁動作、命中新頁內容）**不成立**：
+
+- `壓到-1.txt:15-19`：`show-annotation`（t=636932）發生在 `window.nextPage() called`（t=636933）**之前**——換頁動作根本還沒執行，click 已命中畫面上現有的畫線。
+- `壓到-1.txt:56-64`：`window.nextPage() called`（t=653673）在 `click`（t=653678）**之前**，中間差 5ms——這次換頁動作先執行。
+
+兩種相反的時序，皆誤觸發**同一筆畫線**（`highlight:10d0a3b5-5d4a-44ec-b1d5-1b4e9eaf5708`）。這代表問題不是「click 打中換頁後的新內容」這種時序競速，而是：**點擊座標剛好落在畫面上（換頁前或換頁後皆可能）某個位置的畫線，vendored `view.js` 的原生 `click` 監聽器就會 hitTest 命中、跳出對話框**，與換頁動作的執行時機無關。
+
+`沒壓到.txt`（人類原始標記「重疊但沒跳出對話框」）交叉核對後，同樣有 2 次 `show-annotation` 正確觸發（`highlight:f31a9173-...`／`highlight:c34dcde0-...`）——人類確認這份 log 錄製時「點擊很快，可能沒注意到」，故此標記不可靠，予以排除，改採信 log 本身（視為真實誤觸發，與「壓到」系列一致）。`明顯不重疊-1.txt`／`明顯不重疊-2.txt` 則完全零 `show-annotation` 觸發，與「明顯不重疊、不會跳出對話框」的標記完全吻合，佐證插樁資料本身可信。
+
+綜合六次真實誤觸發（`壓到-1`×2、`壓到-2`×2、`壓到-3`×1、`沒壓到`×2，扣除重複計算後共 6 次不同時間點的觸發）與零假陽性（`明顯不重疊`×2）的資料，確認根因是**產品層級的手勢語意衝突**：3×3 換頁熱區點擊與「點擊既有畫線查看/編輯」共用同一種手勢（快速點擊）、可能落在同一螢幕座標，技術上沒有任何訊號能區分使用者意圖。
+
+**人類確認的產品方向**：以按壓時長作為判斷依據——「通常要處理畫線手指都會壓比較久，如果是快速點擊就是要換頁」。快速點擊（≤700ms，比照既有 `_NavZoneTapDetector._tapMaxDurationMs`）優先視為換頁意圖，攔截畫線點擊對話框；按壓夠久則視為使用者確實想操作畫線，正常顯示對話框。修法內容見 `plan-issue-4-fix.md`。
+
 **規劃階段查證（`plan-issue-4.md`，修正原始假說對「點擊換頁」情境的適用範圍）：**
 
 `paginator.js` 原始碼查證（`grep -n "#onTouchStart\|#onClick\|addEventListener('click'\|tap" paginator.js`）確認**沒有任何自己的 tap-to-turn-page click/短按處理**，只有 `touchmove` 驅動的拖曳換頁邏輯。原始假說引用的「`paginator.js` 的換頁是自己的 touchstart/touchmove/touchend 手勢邏輯驅動」精確地說只適用於**滑動換頁**，本專案「點擊換頁」（nav-zone 熱區點擊，即使用者截圖檔名描述的情境）完全是 Flutter 端 `_NavZoneTapDetector` 收到觸控後呼叫 `evaluateJavascript('window.nextPage()')` 實現，與 `paginator.js` 自己的觸控邏輯是兩條獨立路徑（比照 Epic 25 Issue 1 已確立的「Flutter Listener 與 WebView 平行接收同一組觸控、互不阻擋」事實）。
@@ -210,14 +225,14 @@ doc.addEventListener('click', e => {
 
 **解讀（誠實記錄，非下定論）**：此負向結果**不能排除**本假說在真機上成立——有兩種可能同時存在：(a) 若 headless `page.evaluate()` 的往返延遲已經是這條路徑能達到的下限，而真機 Flutter 原生橋接（Dart 事件迴圈→MethodChannel/JS 橋接→Android WebView `evaluateJavascript()`）的實際 IPC 鏈路必然更長，則競速只會更難獲勝，這條假說的可信度應該**下修**；(b) 但也可能是 headless Chromium 的原生 touch-to-click 合成時序特性，與真機 Android System WebView 本身有實質差異（不同瀏覽器引擎組建、不同原生事件合成管線）——這正是 Epic 25 Issue 1 已記錄過的同一類「headless CDP 無法代表真機 WebView 差異」既有限制（Issue 1 是「無法模擬選取控點拖曳」，本次是「觸控轉合成 click 的時序特性未必一致」）。兩者目前無法用 headless 環境本身區辨。
 
-**下一步（Planning 前建議先完成，比照 Issue 47 診斷手法）：**
+**下一步：**（已完成，見上方「真機資料分析與修訂根因」與 `plan-issue-4-fix.md`）
 
-1. 用 Puppeteer + headless Chromium＋CDP `Input.dispatchTouchEvent` 建立可重跑的重現迴圈：控制相鄰兩頁在同一螢幕座標各放一筆畫線，模擬「點擊換頁熱區」的觸控手勢，量測是否確實觸發 `show-annotation`／`onAnnotationActivated`，並記錄 `click` 事件實際相對 `touchend` 的延遲時間。
-2. 依實測時序再定案修法方向（可能方向：仿照 Issue 47，在 capture 階段追蹤「這次觸控是否驅動了換頁」，若是則短暫抑制緊接著的合成 `click`；需注意不可誤傷「換頁後、下個獨立點擊」這種合法情境，需要有清楚的時間窗口界定）。
-3. 確認修法不影響「正常點擊畫線開啟編輯/刪除選單」這個既有核心功能（回歸測試）。
+1. ~~用 Puppeteer + headless Chromium＋CDP `Input.dispatchTouchEvent` 建立可重跑的重現迴圈~~——實際改走真機診斷插樁路線（`plan-issue-4-realdevice-diagnostics.md`）直接取得真實時序資料，取代原規劃的 headless 重現迴圈（該路線 20 次量測 0 次重現，見上方「headless CDP 時序驗證迴圈結果」）。
+2. ~~依實測時序再定案修法方向~~——已依真機資料定案：按壓時長判斷意圖（700ms 門檻），見上方「人類確認的產品方向」與 `plan-issue-4-fix.md`。
+3. ~~確認修法不影響「正常點擊畫線開啟編輯/刪除選單」這個既有核心功能（回歸測試）~~——已由 headless 驗證情境 B（長按 900ms 直接點在畫線上）確認未回歸。
 
-**單元測試要求：**（待重現迴圈確認時序後，於 Planning 階段補齊具體斷言）
-- 至少需要一個能重現「換頁＋相鄰頁畫線重疊→誤觸刪除對話框」symptom 的自動化測試（headless harness 或等效方案），修復後同一測試須轉為不再誤觸發。
-- 正常點擊畫線（無換頁介入）仍需正確觸發編輯/刪除對話框的回歸測試。
+**單元測試要求：**（已完成）
+- `tmp/epic-25-issue-4-harness/fix-verify.mjs`（headless Puppeteer + CDP `Input.dispatchTouchEvent`）涵蓋三種情境：短按（≤700ms）直接點在畫線上應攔截、長按（900ms）直接點在畫線上應正常觸發、短按點在超連結上不受影響，三者皆 PASS，即為「換頁＋相鄰頁畫線重疊→誤觸刪除對話框」symptom 的自動化重現與修復後不再誤觸發的驗證。
+- 情境 B 即為「正常點擊畫線（無換頁介入）仍正確觸發編輯/刪除對話框」的回歸測試。
 
-**驗收標準：** 重現迴圈確認修復後不再誤觸發、正常點擊畫線行為不受影響；真機驗證換頁+畫線重疊情境不再誤跳出刪除確認。
+**驗收標準：** 已達成——headless 驗證確認修復後不再誤觸發、正常點擊畫線行為不受影響。**真機驗證換頁+畫線重疊情境不再誤跳出刪除確認尚待補齊**（已知殘留限制，見上方 Status：真機上長按原地放開是否仍合成 click 事件未經驗證）。

@@ -757,6 +757,55 @@ async function openBook() {
       }, { capture: true, passive: false })
       doc.addEventListener('touchend', () => { longPressGateState = null }, { capture: true })
       doc.addEventListener('touchcancel', () => { longPressGateState = null }, { capture: true })
+
+      // Epic 25 Issue 4 修法：nav-zone 熱區點擊與畫線點擊共用同一組觸控
+      // 手勢、同一螢幕座標，兩者天生無法用純技術訊號區分意圖（真機資料已
+      // 證實：click 事件命中畫線的時序有時早於、有時晚於
+      // window.nextPage() 實際執行，純時序競速修法無法涵蓋兩種情況，見
+      // docs/epics/epic-25-annotation-interaction-qa/issues.md Issue 4）。
+      // 採用人類確認的產品方向：按壓時長作為判斷依據——快速點擊視為換頁
+      // 意圖，攔截合成 click 事件、不讓它傳到 view.js #createOverlayer
+      // 註冊的畫線點擊 hitTest 監聽器（view.js:440，bubble 階段）；按壓
+      // 夠久則視為使用者確實想操作畫線，不攔截，讓 click 正常傳遞。門檻
+      // 值 700ms 比照既有 _NavZoneTapDetector._tapMaxDurationMs
+      // （foliate_epub_reader_view.dart，Epic 25 Issue 1 真機多輪校準得出
+      // 的同一個值），維持 Dart／JS 兩側一致的「多短算快速點擊」心智模型
+      // （兩者各自獨立判斷，不透過橋接同步，純粹數值上取一致，避免額外
+      // 跨執行緒往返）。
+      //
+      // 【明確排除超連結點擊，真實回歸非假設性風險】#handleLinks
+      // （view.js:353-380）的超連結點擊監聽器與 #createOverlayer 的畫線
+      // 點擊監聽器是同一個 doc 節點上兩個獨立的 bubble 階段 click 監聽器，
+      // stopImmediatePropagation() 會讓「呼叫當下尚未執行」的其餘監聽器
+      // 整個收不到事件（不分是否與畫線相關）——若不排除超連結，快速點擊
+      // 書本內文超連結會連帶失效，已用原始碼交叉核對排除此風險。排除條件
+      // 選用與 #handleLinks 完全相同的 a[href] 選擇器（非更寬的
+      // role="link"/button/input 等）：已用 grep 逐一核對整個 vendored＋
+      // 整合層（paginator.js/view.js/epub.js/main.js）只有 main.js:679（本
+      // 監聽器）、view.js:356（#handleLinks）、view.js:440
+      // （#createOverlayer）三個 doc 層級 click 監聽器，沒有任何監聽器處理
+      // role="button"/button/input/select/textarea——擴大排除範圍不會保護
+      // 任何現存功能，只會讓這些元素若與畫線重疊時重新出現本次要修的誤觸
+      // 發，故刻意不擴充（獨立審查報告 `tmp/epic-25/
+      // plan-issue-4-fix-review-report.md` 建議擴充，已查證後維持現狀，
+      // 詳見 Global Constraints）。
+      const ANNOTATION_CLICK_TAP_MAX_MS = 700
+      let annotationClickTouchStartTime = null
+      doc.addEventListener('touchstart', (evt) => {
+        annotationClickTouchStartTime = evt.touches.length === 1 ? evt.timeStamp : null
+      }, { capture: true })
+      doc.addEventListener('touchcancel', () => {
+        annotationClickTouchStartTime = null
+      }, { capture: true })
+      doc.addEventListener('click', (evt) => {
+        const startTime = annotationClickTouchStartTime
+        annotationClickTouchStartTime = null
+        if (startTime === null) return // 非觸控手勢產生的 click（例如滑鼠），不受影響
+        if (evt.target.closest('a[href]')) return // 超連結點擊一律放行
+        if (evt.timeStamp - startTime <= ANNOTATION_CLICK_TAP_MAX_MS) {
+          evt.stopImmediatePropagation()
+        }
+      }, { capture: true })
     })
     // Epic 20 Issue 2（ADR 0017 決策 4）：isFixedLayoutHint 覆蓋機制。
     // 當 Dart 端傳入 isFixedLayoutHint === true 時，強制將書本的
