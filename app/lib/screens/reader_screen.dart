@@ -765,26 +765,17 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     final repository = widget.bookmarksRepository;
     final pageIndex = _pdfPageInfo?.pageIndex;
     if (repository == null || pageIndex == null) return;
-    // 直接查詢 repository 而非依賴 _fxlBookmarks 快取，避免快取尚未載入時
-    // 導致重複新增（見 issue-4 測試修正）。
-    final all = await repository.listByBook(widget.bookId);
-    Bookmark? existing;
-    for (final b in all) {
-      if (b.pdfPageIndex == pageIndex) {
-        existing = b;
-        break;
-      }
-    }
-    if (existing != null) {
-      await repository.delete(existing.id);
-    } else {
-      await repository.insert(Bookmark(
+    await bookmark_toggle.toggleBookmark(
+      repository: repository,
+      bookId: widget.bookId,
+      matches: (bookmark) => bookmark.pdfPageIndex == pageIndex,
+      build: () => Bookmark(
         id: const Uuid().v4(),
         bookId: widget.bookId,
         name: Bookmark.defaultName(BookmarkPositionContext(pdfPageIndex: pageIndex)),
         pdfPageIndex: pageIndex,
-      ));
-    }
+      ),
+    );
     await _loadFxlBookmarks();
   }
 
