@@ -38,6 +38,7 @@ void main() {
     expect(prefs.marginBottom, isNull);
     expect(prefs.marginLeft, isNull);
     expect(prefs.marginRight, isNull);
+    expect(prefs.letterSpacing, isNull);
   });
 
   test('兩個欄位值完全相同的 BookReaderPrefs 視為相等', () {
@@ -413,5 +414,32 @@ void main() {
 
     expect(updated.fontSize, 18);
     expect(updated.fullscreen, isTrue);
+  });
+
+  test('letterSpacing 為具體數值／null 皆正確 toMap／fromMap round-trip', () {
+    const withValue = BookReaderPrefs(letterSpacing: 0.15);
+    final valueMap = withValue.toMap('book1');
+    expect(valueMap['letter_spacing'], 0.15);
+    expect(BookReaderPrefs.fromMap(valueMap).letterSpacing, 0.15);
+
+    const withNull = BookReaderPrefs();
+    final nullMap = withNull.toMap('book1');
+    expect(nullMap['letter_spacing'], isNull);
+    expect(BookReaderPrefs.fromMap(nullMap).letterSpacing, isNull);
+  });
+
+  test('fromMap 餵入 int 型別的 letter_spacing（模擬 SQLite/JSON 對整數值的型別行為）不拋例外，正確轉為 double',
+      () {
+    final prefs = BookReaderPrefs.fromMap({'letter_spacing': 0});
+    expect(prefs.letterSpacing, 0.0);
+    expect(prefs.letterSpacing, isA<double>());
+  });
+
+  test('copyWith 更新 letterSpacing 時，其餘欄位保留原值', () {
+    const original = BookReaderPrefs(fontSize: 18, letterSpacing: 0.1);
+    final updated = original.copyWith(letterSpacing: 0.2);
+
+    expect(updated.fontSize, 18);
+    expect(updated.letterSpacing, 0.2);
   });
 }
