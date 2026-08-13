@@ -2382,6 +2382,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       case ZoneAction.previousPage:
         if (format == BookFormat.pdf) {
           PdfReaderView.previousPage(_pdfReaderViewKey);
+          // Epic 24 Issue 10：PDF 框選狀態是純 Dart 端矩形選取，沒有
+          // EPUB 那種 WebView 切頁自動清空 window.getSelection() 的
+          // 瀏覽器原生語意可依賴，換頁時需主動清除既有選取與工具列，
+          // 避免選取範圍/AnnotationToolbar 殘留在已經翻過的頁面上。
+          if (_currentPdfSelection != null) _handlePdfSelectionCanceled();
         } else if (format == BookFormat.epub) {
           // Epic 20 Issue 2：EPUB 一律使用 FoliateEpubReaderView。
           FoliateEpubReaderView.previousPage(_foliateEpubReaderViewKey);
@@ -2390,6 +2395,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       case ZoneAction.nextPage:
         if (format == BookFormat.pdf) {
           PdfReaderView.nextPage(_pdfReaderViewKey);
+          // Epic 24 Issue 10：理由同上方 previousPage 分支。
+          if (_currentPdfSelection != null) _handlePdfSelectionCanceled();
         } else if (format == BookFormat.epub) {
           // Epic 20 Issue 2：EPUB 一律使用 FoliateEpubReaderView。
           FoliateEpubReaderView.nextPage(_foliateEpubReaderViewKey);

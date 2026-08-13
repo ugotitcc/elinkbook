@@ -5755,6 +5755,63 @@ void main() {
         reason: '點擊關閉按鈕後應清空選取狀態，工具列從畫面消失');
   });
 
+  testWidgets(
+      'PDF 換頁時應清除既有選取狀態，AnnotationToolbar 隨之消失（Epic 24 Issue 10）',
+      (tester) async {
+    final key = GlobalKey<State<ReaderScreen>>();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          key: key,
+          filePath: 'test/fixtures/sample_multi_page.pdf',
+          bookId: 'b_pdf_page_turn_clears_selection',
+          prefsManager: FakeReaderPrefsManager(),
+          highlightsRepository: FakeHighlightsRepository(),
+          notesRepository: FakeNotesRepository(),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+
+    // 情境 A：nextPage 應清除既有選取。
+    pdfView.onSelectionRectComputed?.call(
+      const PdfSelectionInfo(
+        pageIndex: 0,
+        rect: PercentRect(left: 0.3, top: 0.2, right: 0.6, bottom: 0.3),
+        widgetRect: PercentRect(left: 0.3, top: 0.2, right: 0.6, bottom: 0.3),
+      ),
+    );
+    await tester.pump();
+    expect(find.byType(AnnotationToolbar), findsOneWidget,
+        reason: '選取完成後應顯示 AnnotationToolbar');
+
+    ReaderScreen.triggerZoneAction(key, ZoneAction.nextPage);
+    await tester.pump();
+    expect(find.byType(AnnotationToolbar), findsNothing,
+        reason: 'nextPage 換頁後應清空選取狀態，工具列從畫面消失');
+
+    // 情境 B：previousPage 同樣應清除既有選取。
+    pdfView.onSelectionRectComputed?.call(
+      const PdfSelectionInfo(
+        pageIndex: 1,
+        rect: PercentRect(left: 0.3, top: 0.2, right: 0.6, bottom: 0.3),
+        widgetRect: PercentRect(left: 0.3, top: 0.2, right: 0.6, bottom: 0.3),
+      ),
+    );
+    await tester.pump();
+    expect(find.byType(AnnotationToolbar), findsOneWidget,
+        reason: '第二次選取完成後應再次顯示 AnnotationToolbar');
+
+    ReaderScreen.triggerZoneAction(key, ZoneAction.previousPage);
+    await tester.pump();
+    expect(find.byType(AnnotationToolbar), findsNothing,
+        reason: 'previousPage 換頁後同樣應清空選取狀態，工具列從畫面消失');
+  });
+
   testWidgets('PDF 選取被取消（onSelectionCanceled）時，不顯示 AnnotationToolbar',
       (tester) async {
     // 同上一則測試：改回真實多指手勢模擬，強制直向視窗維持單頁模式，
