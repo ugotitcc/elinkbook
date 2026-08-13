@@ -112,6 +112,14 @@ function buildOverrideCss(prefs) {
   if (typeof prefs.paragraphSpacing === 'number') {
     rules.push(`p { margin-bottom: ${prefs.paragraphSpacing}em !important; }`)
   }
+  if (typeof prefs.letterSpacing === 'number') {
+    // epic-28-reader-settings-enhancements Issue 1：letter-spacing 作用於
+    // inline 軸方向，vertical-rl 下 inline 軸即為垂直方向，語意依然合法，
+    // 橫排/直排皆套用同一份規則，不需要依 writingMode 分支處理。沿用
+    // fontWeight/lineHeight 既有的廣 selector，避免書本自己直接宣告
+    // letter-spacing 時覆蓋無效（比照 Issue 34 既有教訓）。
+    rules.push(`${selector} { letter-spacing: ${prefs.letterSpacing}em !important; }`)
+  }
   if (prefs.textAlign) {
     rules.push(`p { text-align: ${prefs.textAlign} !important; }`)
   }

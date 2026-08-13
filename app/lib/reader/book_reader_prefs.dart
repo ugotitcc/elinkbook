@@ -22,6 +22,7 @@ class BookReaderPrefs {
   final double? fontWeight; // Readium 倍率語意（1.0 = normal），非 CSS 300-900 原始值
   final double? lineHeight;
   final double? paragraphSpacing;
+  final double? letterSpacing; // em 單位，-0.05~1，null=不覆蓋書本原生字距
   final double? pageMargins; // 單一數值，四邊同步變動，見 ADR 0005（僅供 EpubReaderView／FXL 使用）
 
   /// 流式 EPUB 專用的獨立邊距欄位（epic-18-reader-device-qa Issue 14，見
@@ -68,6 +69,7 @@ class BookReaderPrefs {
     this.fontWeight,
     this.lineHeight,
     this.paragraphSpacing,
+    this.letterSpacing,
     this.pageMargins,
     this.marginTop,
     this.marginBottom,
@@ -105,6 +107,7 @@ class BookReaderPrefs {
       'font_weight': fontWeight,
       'line_height': lineHeight,
       'paragraph_spacing': paragraphSpacing,
+      'letter_spacing': letterSpacing,
       'page_margins': pageMargins,
       'margin_top': marginTop,
       'margin_bottom': marginBottom,
@@ -144,6 +147,7 @@ class BookReaderPrefs {
       fontWeight: (map['font_weight'] as num?)?.toDouble(),
       lineHeight: (map['line_height'] as num?)?.toDouble(),
       paragraphSpacing: (map['paragraph_spacing'] as num?)?.toDouble(),
+      letterSpacing: (map['letter_spacing'] as num?)?.toDouble(),
       pageMargins: (map['page_margins'] as num?)?.toDouble(),
       marginTop: (map['margin_top'] as num?)?.toDouble(),
       marginBottom: (map['margin_bottom'] as num?)?.toDouble(),
@@ -209,6 +213,7 @@ class BookReaderPrefs {
       other.fontWeight == fontWeight &&
       other.lineHeight == lineHeight &&
       other.paragraphSpacing == paragraphSpacing &&
+      other.letterSpacing == letterSpacing &&
       other.pageMargins == pageMargins &&
       other.marginTop == marginTop &&
       other.marginBottom == marginBottom &&
@@ -241,6 +246,7 @@ class BookReaderPrefs {
         fontWeight,
         lineHeight,
         paragraphSpacing,
+        letterSpacing,
         pageMargins,
         marginTop,
         marginBottom,
@@ -278,6 +284,7 @@ class BookReaderPrefs {
     double? fontWeight,
     double? lineHeight,
     double? paragraphSpacing,
+    double? letterSpacing,
     double? pageMargins,
     double? marginTop,
     double? marginBottom,
@@ -309,6 +316,7 @@ class BookReaderPrefs {
       fontWeight: fontWeight ?? this.fontWeight,
       lineHeight: lineHeight ?? this.lineHeight,
       paragraphSpacing: paragraphSpacing ?? this.paragraphSpacing,
+      letterSpacing: letterSpacing ?? this.letterSpacing,
       pageMargins: pageMargins ?? this.pageMargins,
       marginTop: marginTop ?? this.marginTop,
       marginBottom: marginBottom ?? this.marginBottom,

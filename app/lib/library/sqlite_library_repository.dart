@@ -39,7 +39,7 @@ class SqliteLibraryRepository implements LibraryRepository {
   }) async {
     final db = await openDatabase(
       path,
-      version: 18,
+      version: 19,
       singleInstance: singleInstance,
       onConfigure: (db) async {
         // book_reader_prefs 的 ON DELETE CASCADE 需要外鍵約束真正生效，
@@ -180,6 +180,15 @@ class SqliteLibraryRepository implements LibraryRepository {
             // 該表剛由 _createBookReaderPrefsTable 全新建立，不會有任何
             // 舊格式資料需要轉換。
             await _migrateFontFamilyValues(db);
+          }
+          if (oldVersion < 19) {
+            // epic-28-reader-settings-enhancements Issue 1：字距新增的 1
+            // 個欄位。必須放在 else 分支內（oldVersion >= 2）——理由同
+            // _migrateFontFamilyValues：oldVersion < 2 時
+            // _createBookReaderPrefsTable 已一步到位建表含
+            // letter_spacing，若在 else 分支外無條件執行 ALTER TABLE，
+            // oldVersion == 1 的裝置會重複 ALTER TABLE 拋出崩潰。
+            await _addLetterSpacingColumn(db);
           }
         }
         if (oldVersion < 5) {
@@ -331,7 +340,8 @@ class SqliteLibraryRepository implements LibraryRepository {
         margin_bottom REAL,
         margin_left REAL,
         margin_right REAL,
-        fullscreen INTEGER
+        fullscreen INTEGER,
+        letter_spacing REAL
       )
     ''');
   }
@@ -557,6 +567,18 @@ class SqliteLibraryRepository implements LibraryRepository {
     if (tables.isNotEmpty) {
       await db.execute(
           'ALTER TABLE book_reader_prefs ADD COLUMN fullscreen INTEGER');
+    }
+  }
+
+  static Future<void> _addLetterSpacingColumn(Database db) async {
+    // epic-28-reader-settings-enhancements Issue 1：字距欄位，補追加到既有
+    // （version 2 起已存在）的 book_reader_prefs 表。比照 _addFullscreenColumn
+    // 既有慣例，僅在表已存在時才執行 ALTER TABLE。
+    final tables = await db.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='book_reader_prefs'");
+    if (tables.isNotEmpty) {
+      await db.execute(
+          'ALTER TABLE book_reader_prefs ADD COLUMN letter_spacing REAL');
     }
   }
 

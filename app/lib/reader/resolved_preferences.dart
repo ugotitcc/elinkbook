@@ -30,6 +30,7 @@ class ResolvedPreferences {
   final double? fontWeight;
   final double? lineHeight;
   final double? paragraphSpacing;
+  final double? letterSpacing;
   final double? pageMargins;
   final double? marginTop;
   final double? marginBottom;
@@ -84,6 +85,7 @@ class ResolvedPreferences {
     this.fontWeight,
     this.lineHeight,
     this.paragraphSpacing,
+    this.letterSpacing,
     this.pageMargins,
     this.marginTop,
     this.marginBottom,

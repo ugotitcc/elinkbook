@@ -44,6 +44,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   static const _defaultFontWeightMultiplier = 1.0; // 倍率，UI 顯示 400（1.0 × 400）
   static const _defaultLineHeight = 1.0;
   static const _defaultParagraphSpacing = 10.0;
+  static const _defaultLetterSpacing = 0.0;
   static const _defaultMarginTop = 32.0;
   static const _defaultMarginBottom = 16.0;
   static const _defaultMarginLeft = 24.0;
@@ -54,6 +55,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   late double _fontWeightMultiplier;
   late double _lineHeight;
   late double _paragraphSpacing;
+  late double _letterSpacing;
   late double _marginTop;
   late double _marginBottom;
   late double _marginLeft;
@@ -81,6 +83,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     _paragraphSpacing = widget.prefs.paragraphSpacing != null
         ? (widget.prefs.paragraphSpacing! * 10.0).roundToDouble()
         : _defaultParagraphSpacing;
+    _letterSpacing = widget.prefs.letterSpacing ?? _defaultLetterSpacing;
     _marginTop = widget.prefs.marginTop ?? _defaultMarginTop;
     _marginBottom = widget.prefs.marginBottom ?? _defaultMarginBottom;
     _marginLeft = widget.prefs.marginLeft ?? _defaultMarginLeft;
@@ -111,6 +114,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
         _paragraphSpacing = widget.prefs.paragraphSpacing != null
             ? (widget.prefs.paragraphSpacing! * 10.0).roundToDouble()
             : _defaultParagraphSpacing;
+        _letterSpacing = widget.prefs.letterSpacing ?? _defaultLetterSpacing;
         _marginTop = widget.prefs.marginTop ?? _defaultMarginTop;
         _marginBottom = widget.prefs.marginBottom ?? _defaultMarginBottom;
         _marginLeft = widget.prefs.marginLeft ?? _defaultMarginLeft;
@@ -140,6 +144,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
       fontWeight: _fontWeightMultiplier,
       lineHeight: _lineHeight,
       paragraphSpacing: _toMultiplier(_paragraphSpacing, 10.0),
+      letterSpacing: _letterSpacing,
       marginTop: _marginTop,
       marginBottom: _marginBottom,
       marginLeft: _marginLeft,
@@ -236,6 +241,19 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                   displayValue: _paragraphSpacing.round().toString(),
                   onChanged: (v) => setState(() {
                     _paragraphSpacing = v;
+                    _notifyChanged();
+                  }),
+                ),
+                _buildSliderRow(
+                  keyPrefix: 'reader_settings_letter_spacing',
+                  label: '字距',
+                  value: _letterSpacing,
+                  min: -0.05,
+                  max: 1,
+                  step: 0.01,
+                  displayValue: '${_letterSpacing.toStringAsFixed(2)}em',
+                  onChanged: (v) => setState(() {
+                    _letterSpacing = double.parse(v.toStringAsFixed(2));
                     _notifyChanged();
                   }),
                 ),

@@ -250,6 +250,7 @@ Map<String, Object?> buildFoliatePreferencesMap(FoliateEpubReaderView view) {
   if (view.paragraphSpacing != null) {
     map['paragraphSpacing'] = view.paragraphSpacing;
   }
+  if (view.letterSpacing != null) map['letterSpacing'] = view.letterSpacing;
   if (view.marginTop != null) map['marginTop'] = view.marginTop;
   if (view.marginBottom != null) map['marginBottom'] = view.marginBottom;
   if (view.marginLeft != null) map['marginLeft'] = view.marginLeft;
@@ -287,6 +288,7 @@ bool foliatePreferencesChanged(
       oldView.fontWeight != newView.fontWeight ||
       oldView.lineHeight != newView.lineHeight ||
       oldView.paragraphSpacing != newView.paragraphSpacing ||
+      oldView.letterSpacing != newView.letterSpacing ||
       oldView.marginTop != newView.marginTop ||
       oldView.marginBottom != newView.marginBottom ||
       oldView.marginLeft != newView.marginLeft ||
@@ -353,6 +355,7 @@ class FoliateEpubReaderView extends StatefulWidget {
   final double? fontWeight;
   final double? lineHeight;
   final double? paragraphSpacing;
+  final double? letterSpacing;
   final double? marginTop;
   final double? marginBottom;
   final double? marginLeft;
@@ -390,6 +393,7 @@ class FoliateEpubReaderView extends StatefulWidget {
     this.fontWeight,
     this.lineHeight,
     this.paragraphSpacing,
+    this.letterSpacing,
     this.marginTop,
     this.marginBottom,
     this.marginLeft,

@@ -45,12 +45,19 @@ class EpubPageEstimator {
   /// 一致——本函式先前箝制在 0.1，會讓使用者於滑桿選取 0.1~0.7 之間任一值時
   /// 估算出的每螢幕行數系統性偏多，與實際渲染結果脫勾（審查發現，
   /// 2026-08-11）。
+  ///
+  /// [letterSpacing]（epic-28-reader-settings-enhancements Issue 1）為 em
+  /// 單位，對應 `main.js` 的 `letter-spacing: Xem` CSS 覆蓋，`null` 與 `0`
+  /// 皆代表不拉開字距。與 `lineHeight`／`paragraphSpacing` 同一類「版面
+  /// 密度」變數，一併納入估算公式（審查發現，2026-08-14：Issue 1 原始
+  /// 實作漏了這個參數，讓字距調整無法反映在頁碼估算上）。
   static int estimateCharsPerScreen({
     required double screenWidth,
     required double screenHeight,
     double? fontSize,
     double? lineHeight,
     double? paragraphSpacing,
+    double? letterSpacing,
     double? marginTop,
     double? marginBottom,
     double? marginLeft,
@@ -72,6 +79,14 @@ class EpubPageEstimator {
     // 1) * 0.1) 會歸零，adjusted 對 Infinity 呼叫 .round() 同樣會拋出
     // UnsupportedError；0.0 是合理下限（負值段落間距倍率沒有實際意義）。
     final paragraphSpacingFactor = math.max(0.0, paragraphSpacing ?? 1.0);
+    // epic-28-reader-settings-enhancements Issue 1 審查發現：新增字距選項後
+    // 本函式原本完全沒有納入這個版面密度變數，與 lineHeight／paragraphSpacing
+    // 等既有欄位不一致。letterSpacing 為 em 單位（1em = fontSizePx），每字元
+    // 的有效寬度 = fontSizePx * (1 + letterSpacingFactor)——沿用「CJK 全形
+    // 字元近似正方形字格」模型，字距視為每個字格額外拉開的寬度。下限箝制
+    // 為 0.1（與 fontSizeFactor 同一種除以零防呆邏輯），UI 滑桿範圍
+    // -0.05~1 本身不會觸及這個下限，純粹是防禦極端輸入。
+    final letterSpacingFactor = math.max(0.1, 1 + (letterSpacing ?? 0.0));
 
     final topPx = marginTop ?? 32.0;
     final bottomPx = marginBottom ?? 16.0;
@@ -86,7 +101,8 @@ class EpubPageEstimator {
         math.max(fontSizePx, screenHeight - topPx - bottomPx);
 
     final lineHeightPx = fontSizePx * lineHeightFactor;
-    final charsPerLine = (availableWidth / fontSizePx).floor();
+    final effectiveCharWidthPx = fontSizePx * letterSpacingFactor;
+    final charsPerLine = (availableWidth / effectiveCharWidthPx).floor();
     final linesPerScreen = (availableHeight / lineHeightPx).floor();
     final baseChars = charsPerLine * linesPerScreen;
 

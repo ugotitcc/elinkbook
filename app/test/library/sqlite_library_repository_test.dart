@@ -1791,6 +1791,19 @@ void main() {
     expect(row['fullscreen'], 1);
   });
 
+  test('全新安裝的 book_reader_prefs 表包含 letter_spacing 欄位（version 19 起 onCreate 已含括）',
+      () async {
+    await repository.insertBook(_book('b_letter_spacing'));
+    await repository.database.insert('book_reader_prefs', {
+      'book_id': 'b_letter_spacing',
+      'letter_spacing': 0.15,
+    });
+    final row = (await repository.database.query('book_reader_prefs',
+            where: 'book_id = ?', whereArgs: ['b_letter_spacing']))
+        .single;
+    expect(row['letter_spacing'], 0.15);
+  });
+
   test('既有 version 13 裝置升級到 version 14，book_reader_prefs 新增邊距 4 個欄位，既有 page_margins 值不受影響',
       () async {
     final tempDir = await Directory.systemTemp
@@ -2026,6 +2039,131 @@ void main() {
             .query('book_reader_prefs', where: 'book_id = ?', whereArgs: ['b1']))
         .single;
     expect(updated['fullscreen'], 1);
+  });
+
+  test('既有 version 18 裝置升級到 version 19，book_reader_prefs 新增 letter_spacing 欄位，既有 margin_top 值不受影響',
+      () async {
+    final tempDir = await Directory.systemTemp
+        .createTemp('elinkbook_migration_v18_to_v19_test');
+    addTearDown(() => tempDir.delete(recursive: true));
+    final dbPath = p.join(tempDir.path, 'test.db');
+
+    // 模擬「已存在於 version 18」的舊資料庫：book_reader_prefs 表結構自
+    // version 15（fullscreen 欄位加入）起到 version 18 都沒有再變動過
+    // （16/17/18 只動了 books/custom_fonts/sync_* 表），故只需重建
+    // groups/books/book_reader_prefs 三張表即可重現，比照既有
+    // v14→v15 遷移測試的簡化寫法（onUpgrade 的其餘分支在 oldVersion=18
+    // 時皆已是「已滿足」狀態，不會被觸發，見 Global Constraints 對應
+    // 討論）。
+    final oldDb = await databaseFactory.openDatabase(
+      dbPath,
+      options: OpenDatabaseOptions(
+        version: 18,
+        onConfigure: (db) async {
+          await db.execute('PRAGMA foreign_keys = ON');
+        },
+        onCreate: (db, version) async {
+          await db.execute('CREATE TABLE groups (name TEXT PRIMARY KEY)');
+          await db.insert('groups', {'name': '未分類'});
+          await db.execute('''
+            CREATE TABLE books (
+              id TEXT PRIMARY KEY,
+              title TEXT NOT NULL,
+              author TEXT,
+              format TEXT NOT NULL,
+              filePath TEXT NOT NULL,
+              source TEXT NOT NULL,
+              coverPath TEXT,
+              progress REAL NOT NULL DEFAULT 0,
+              epubLocator TEXT,
+              pdfPageIndex INTEGER,
+              totalCharacterCount INTEGER,
+              is_fixed_layout INTEGER,
+              groupName TEXT NOT NULL DEFAULT '未分類',
+              createTime INTEGER NOT NULL,
+              lastReadTime INTEGER NOT NULL,
+              content_fingerprint TEXT,
+              position_updated_at INTEGER,
+              position_synced_server_updated_at TEXT
+            )
+          ''');
+          await db.execute('''
+            CREATE TABLE book_reader_prefs (
+              book_id TEXT PRIMARY KEY REFERENCES books(id) ON DELETE CASCADE,
+              font_family TEXT,
+              font_size REAL,
+              font_weight REAL,
+              line_height REAL,
+              paragraph_spacing REAL,
+              page_margins REAL,
+              text_align TEXT,
+              publisher_styles INTEGER,
+              writing_mode_override TEXT,
+              page_turn_mode_override TEXT,
+              screen_orientation_override TEXT,
+              pdf_fit_mode TEXT,
+              pdf_contrast REAL,
+              pdf_brightness REAL,
+              pdf_bold_strength REAL,
+              pdf_crop_mode TEXT,
+              pdf_crop_rect TEXT,
+              dual_page_mode TEXT,
+              dual_page_cover_alone INTEGER,
+              dual_page_direction TEXT,
+              show_header INTEGER,
+              show_footer INTEGER,
+              column_mode TEXT,
+              column_size REAL,
+              margin_top REAL,
+              margin_bottom REAL,
+              margin_left REAL,
+              margin_right REAL,
+              fullscreen INTEGER
+            )
+          ''');
+        },
+      ),
+    );
+    await oldDb.insert('books', {
+      'id': 'b1',
+      'title': '既有書籍',
+      'format': 'epub',
+      'filePath': 'content://example/b1',
+      'source': 'local',
+      'progress': 0.0,
+      'groupName': '未分類',
+      'createTime': 1000,
+      'lastReadTime': 1000,
+    });
+    await oldDb.insert('book_reader_prefs', {
+      'book_id': 'b1',
+      'margin_top': 72.0,
+    });
+    await oldDb.close();
+
+    // 重新以目前版本開啟同一個檔案，觸發 onUpgrade（oldVersion=18 →
+    // newVersion=19），驗證既有 margin_top 值不受影響、letter_spacing
+    // 新欄位存在且可寫入。
+    final upgraded = await SqliteLibraryRepository.open(dbPath);
+    addTearDown(() => upgraded.close());
+
+    final row = (await upgraded.database
+            .query('book_reader_prefs', where: 'book_id = ?', whereArgs: ['b1']))
+        .single;
+    expect(row['margin_top'], 72.0); // 既有資料不受影響
+    expect(row['letter_spacing'], isNull); // 新欄位存在且預設 NULL
+
+    // 證明新欄位真的可寫入（不只是巧合為 null），確認 ALTER TABLE 確實生效。
+    await upgraded.database.update(
+      'book_reader_prefs',
+      {'letter_spacing': 0.2},
+      where: 'book_id = ?',
+      whereArgs: ['b1'],
+    );
+    final updated = (await upgraded.database
+            .query('book_reader_prefs', where: 'book_id = ?', whereArgs: ['b1']))
+        .single;
+    expect(updated['letter_spacing'], 0.2);
   });
 
   test('全新安裝的 custom_fonts 表可用（version 16 起 onCreate 已含括）', () async {

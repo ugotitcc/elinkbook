@@ -17,6 +17,7 @@ void main() {
       fontWeight: 1.75, // UI 700
       lineHeight: 1.8,
       paragraphSpacing: 2.0, // UI 20.0
+      letterSpacing: 0.2,
       marginTop: 72,
       marginBottom: 20,
       marginLeft: 30,
@@ -61,6 +62,13 @@ void main() {
               .byKey(const Key('reader_settings_paragraph_spacing_slider')))
           .value,
       20.0,
+    );
+    expect(
+      tester
+          .widget<Slider>(
+              find.byKey(const Key('reader_settings_letter_spacing_slider')))
+          .value,
+      0.2,
     );
     expect(
       tester
@@ -129,6 +137,13 @@ void main() {
               .byKey(const Key('reader_settings_paragraph_spacing_slider')))
           .value,
       10.0,
+    );
+    expect(
+      tester
+          .widget<Slider>(
+              find.byKey(const Key('reader_settings_letter_spacing_slider')))
+          .value,
+      0.0,
     );
     expect(
       tester
@@ -585,7 +600,26 @@ void main() {
       (_) {},
     );
 
+    // Slider 不應存在
     expect(find.byKey(const Key('reader_settings_column_size_slider')), findsNothing);
+  });
+
+  testWidgets('點擊字距 + 按鈕後，onChanged 帶入 letterSpacing+0.01 且其他欄位不變',
+      (tester) async {
+    BookReaderPrefs? result;
+    await _pumpSheet(
+      tester,
+      const BookReaderPrefs(letterSpacing: 0.10, marginTop: 64),
+      (prefs) => result = prefs,
+    );
+
+    await tester.tap(
+        find.byKey(const Key('reader_settings_letter_spacing_increment')));
+    await tester.pump();
+
+    expect(result, isNotNull);
+    expect(result!.letterSpacing, closeTo(0.11, 1e-9));
+    expect(result!.marginTop, 64.0, reason: '未被觸碰的欄位應維持原值');
   });
 
   testWidgets('從單欄切換到自動，onChanged 帶入 columnMode=auto（可逆性）', (tester) async {

@@ -253,6 +253,15 @@ void main() {
       expect(resolved.marginLeft, 30);
       expect(resolved.marginRight, 30);
     });
+
+    test('BookReaderPrefs 的 letterSpacing 正確透傳到 ResolvedPreferences', () {
+      final loaded = LoadedPrefs(
+        bookPrefs: const BookReaderPrefs(letterSpacing: 0.15),
+        globalPrefs: const GlobalReaderPrefs.initial(),
+      );
+      final resolved = manager.resolve(loaded);
+      expect(resolved.letterSpacing, 0.15);
+    });
   });
 
   group('load()（async，涵蓋原 global_reader_defaults_test.dart 與部分 reader_screen_test.dart 的回歸覆蓋）',

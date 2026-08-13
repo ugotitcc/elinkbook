@@ -149,6 +149,52 @@ void main() {
       expect(doubledScreen, 6984);
     });
 
+    test('letterSpacing 為正值時，每行可容納字元數減少、可容納字元數隨之縮減'
+        '（epic-28-reader-settings-enhancements Issue 1 審查發現：新增字距'
+        '選項後，估算公式原本完全沒有納入這個版面密度變數，與 lineHeight／'
+        'paragraphSpacing 等既有欄位不一致）', () {
+      expect(
+        EpubPageEstimator.estimateCharsPerScreen(
+          screenWidth: 800,
+          screenHeight: 600,
+          letterSpacing: 1.0,
+        ),
+        782,
+      );
+    });
+
+    test('letterSpacing 為負值（滑桿允許的下限 -0.05）時，每行可容納字元數增加', () {
+      expect(
+        EpubPageEstimator.estimateCharsPerScreen(
+          screenWidth: 800,
+          screenHeight: 600,
+          letterSpacing: -0.05,
+        ),
+        1666,
+      );
+    });
+
+    test('letterSpacing 為極端負值（-9.0）時，不應讓每字元有效寬度歸零或變負值'
+        '拋出例外，改箝制在 0.1（與 fontSize／lineHeight 既有防呆同一種'
+        '失效模式）', () {
+      expect(
+        () => EpubPageEstimator.estimateCharsPerScreen(
+          screenWidth: 800,
+          screenHeight: 600,
+          letterSpacing: -9.0,
+        ),
+        returnsNormally,
+      );
+      expect(
+        EpubPageEstimator.estimateCharsPerScreen(
+          screenWidth: 800,
+          screenHeight: 600,
+          letterSpacing: -9.0,
+        ),
+        15980,
+      );
+    });
+
     test('極端字體大小（超出可視寬度）時，結果被箝制在下限 50，不會估算出荒謬的總頁數', () {
       expect(
         EpubPageEstimator.estimateCharsPerScreen(

@@ -164,6 +164,7 @@ class ReaderPrefsManagerImpl implements ReaderPrefsManager {
       fontWeight: book.fontWeight,
       lineHeight: book.lineHeight,
       paragraphSpacing: book.paragraphSpacing,
+      letterSpacing: book.letterSpacing,
       pageMargins: book.pageMargins,
       marginTop: book.marginTop,
       marginBottom: book.marginBottom,
