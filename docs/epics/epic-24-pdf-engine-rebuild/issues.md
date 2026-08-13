@@ -301,7 +301,7 @@ PDF 頂部工具列（現行傳統 `AppBar`，含系統預設返回箭頭 + 版�
 
 ### Issue 10：PDF 劃線工具列缺乏清除機制（選色/換頁後不會自動隱藏、也無手動關閉入口）
 
-**Status:** ready-for-agent
+**Status:** ✅ 已修復。建議修復方向 (b)「新增手動關閉工具列入口」已被 `epic-25-annotation-interaction-qa` Issue 3 完整實作並合併（`AnnotationToolbar` 新增關閉按鈕，EPUB／PDF 皆已接線），本工單只需處理仍未解決的 (a)：`_handleZoneAction` 的 PDF `previousPage`/`nextPage` 分支新增 `_currentPdfSelection != null` 時呼叫既有 `_handlePdfSelectionCanceled()`，換頁即清空選取與工具列。新增 1 項 widget test（涵蓋 `nextPage`／`previousPage` 兩條路徑）驗證換頁後 `AnnotationToolbar` 正確消失，既有選取／換頁相關測試零回歸，`flutter analyze` 乾淨。**獨立審查（`tmp/epic-24/review-issue-10-implementation.md`）發現 1 項 Important，已修正**：原修法只清除「已完成」的選取（`_currentPdfSelection`），未涵蓋「換頁當下長按拖曳框選仍進行中（手指尚未放開）」的情境——音量鍵換頁與觸控是完全獨立的輸入通道，可能同時發生，`PdfReaderView` 內部進行中的拖曳狀態（`_selectionDrag`）不受換頁影響，放開手指後仍會用換頁前的舊頁面座標重新彈出 `AnnotationToolbar`。已新增 `PdfReaderView.cancelActiveSelectionDrag()` static helper（呼叫既有 `_cancelSelectionDrag()`），`_handleZoneAction` 換頁分支一併呼叫；新增 1 項 widget test（真實長按拖曳手勢模擬，換頁時中止拖曳、放開後不重新彈出工具列），全專案測試（1174 項）與 `flutter analyze` 皆通過。
 
 **背景**：使用者回報兩項相關問題：(a) PDF 畫線選完顏色後，浮動工具列（`AnnotationToolbar`）不會隱藏，即使換頁後仍然存在；(b) 沒有任何步驟能讓使用者手動關閉這個工具列。
 
