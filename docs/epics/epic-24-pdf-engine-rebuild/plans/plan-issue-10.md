@@ -27,7 +27,7 @@
 - Consumes：既有 `_currentPdfSelection`（`PdfSelectionInfo?` 欄位）、`_handlePdfSelectionCanceled()`（既有無參數方法，`:1175`）。
 - Produces：無新增可供其他 Task 呼叫的函式——純粹是 `_handleZoneAction` 既有分支內多一行呼叫。
 
-- [ ] **Step 1：寫失敗測試——換頁應清除既有選取，AnnotationToolbar 隨之消失**
+- [x] **Step 1：寫失敗測試——換頁應清除既有選取，AnnotationToolbar 隨之消失**
 
 在 `app/test/screens/reader_screen_test.dart` 找到既有測試「PDF：點擊 AnnotationToolbar 的關閉按鈕後，清空選取狀態、工具列消失」（約 line 5722）之後，新增：
 
@@ -90,12 +90,12 @@
   });
 ```
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 Run: `cd app && flutter test test/screens/reader_screen_test.dart --plain-name "Epic 24 Issue 10"`
 Expected: FAIL——兩處 `expect(find.byType(AnnotationToolbar), findsNothing, ...)` 皆會失敗（`AnnotationToolbar` 目前換頁後仍找得到，因為 `_handleZoneAction` 沒有清除 `_currentPdfSelection`）。
 
-- [ ] **Step 3：實作修法**
+- [x] **Step 3：實作修法**
 
 修改 `app/lib/screens/reader_screen.dart:2379-2404`，從：
 
@@ -166,27 +166,27 @@ Expected: FAIL——兩處 `expect(find.byType(AnnotationToolbar), findsNothing,
   }
 ```
 
-- [ ] **Step 4：執行測試確認通過**
+- [x] **Step 4：執行測試確認通過**
 
 Run: `cd app && flutter test test/screens/reader_screen_test.dart --plain-name "Epic 24 Issue 10"`
 Expected: PASS。
 
-- [ ] **Step 5：執行既有 PDF 選取／換頁相關測試確認零回歸**
+- [x] **Step 5：執行既有 PDF 選取／換頁相關測試確認零回歸**
 
 Run: `cd app && flutter test test/screens/reader_screen_test.dart --plain-name "PDF"`
 Expected: 全數 PASS——特別確認既有「PDF：點擊 AnnotationToolbar 的關閉按鈕後，清空選取狀態、工具列消失」「PDF 選取被取消（onSelectionCanceled）時，不顯示 AnnotationToolbar」「_handleZoneAction(previousPage/nextPage) 不影響 AppBar 顯示狀態（PDF，design.md 決策 #14）」三項既有測試皆不受影響（後者驗證換頁不影響 `_chromeVisible`，本次修法未觸碰該邏輯）。
 
-- [ ] **Step 6：執行完整測試套件確認全域無回歸**
+- [x] **Step 6：執行完整測試套件確認全域無回歸**
 
 Run: `cd app && flutter test`
 Expected: 全數通過（含 Step 1 新增的 1 項測試，以及既有全部測試）。
 
-- [ ] **Step 7：`flutter analyze` 確認乾淨**
+- [x] **Step 7：`flutter analyze` 確認乾淨**
 
 Run: `cd app && flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 8：Commit**
+- [x] **Step 8：Commit**
 
 ```bash
 git add app/lib/screens/reader_screen.dart app/test/screens/reader_screen_test.dart
@@ -205,7 +205,7 @@ git commit -m "fix(epic-24): Issue 10——PDF 換頁時清除既有劃線選取
 - Consumes：Task 1 的程式碼變更（無新介面）。
 - Produces：無。
 
-- [ ] **Step 1：更新 `issues.md` Issue 10 狀態**
+- [x] **Step 1：更新 `issues.md` Issue 10 狀態**
 
 修改 `docs/epics/epic-24-pdf-engine-rebuild/issues.md`，把 Issue 10 的 `Status` 行：
 
@@ -219,7 +219,7 @@ git commit -m "fix(epic-24): Issue 10——PDF 換頁時清除既有劃線選取
 **Status:** ✅ 已修復。建議修復方向 (b)「新增手動關閉工具列入口」已由 `epic-25-annotation-interaction-qa` Issue 3 完整實作並合併（`AnnotationToolbar` 新增關閉按鈕，EPUB／PDF 皆已接線），本工單只需處理仍未解決的 (a)：`_handleZoneAction` 的 PDF `previousPage`/`nextPage` 分支新增 `_currentPdfSelection != null` 時呼叫既有 `_handlePdfSelectionCanceled()`，換頁即清空選取與工具列。新增 1 項 widget test（涵蓋 `nextPage`／`previousPage` 兩條路徑）驗證換頁後 `AnnotationToolbar` 正確消失，既有選取／換頁相關測試零回歸，`flutter analyze` 乾淨。
 ```
 
-- [ ] **Step 2：更新 `docs/epics.md` epic-24 該列備註**
+- [x] **Step 2：更新 `docs/epics.md` epic-24 該列備註**
 
 修改 `docs/epics.md` 的 `epic-24-pdf-engine-rebuild` 該列（搜尋 `epic-24-pdf-engine-rebuild`），把行尾「**Issue 10、Issue 11 尚未實作修復**」改為：
 
@@ -227,7 +227,7 @@ git commit -m "fix(epic-24): Issue 10——PDF 換頁時清除既有劃線選取
 **Issue 10（PDF 劃線工具列換頁後不會自動隱藏）已修復**：`_handleZoneAction` PDF 換頁分支新增清除既有選取的呼叫，1 項新增 widget test（涵蓋 nextPage／previousPage）驗證，既有測試零回歸；建議修復方向中的「手動關閉入口」部分已由 `epic-25-annotation-interaction-qa` Issue 3 提前完成，本工單未重複實作。**Issue 11 尚未實作修復**；
 ```
 
-- [ ] **Step 3：Commit**
+- [x] **Step 3：Commit**
 
 ```bash
 git add docs/epics/epic-24-pdf-engine-rebuild/issues.md docs/epics.md
