@@ -210,7 +210,19 @@ console.log('[UserAgent] ' + navigator.userAgent);
 /// （`test/support/fake_inappwebview_platform.dart`）底下無法真正觸發完整
 /// 的 `onConsoleMessage` callback 型別鏈（需要一個真實 `InAppWebViewController`
 /// 實例），這段訊息格式化邏輯抽出後才能脫離該型別鏈直接測試。
-void handleFoliateConsoleMessage(String message, String levelName) {
+///
+/// epic-28-reader-settings-enhancements Issue 2：[consoleLogEnabled] 為
+/// `false` 時，只有 `ERROR` 等級（WebView 自動鏡射的未捕捉例外，崩潰診斷
+/// 用途）強制記錄；`LOG`/`WARNING`/`DEBUG`/`[TIP]` 等一般等級一律略過。
+/// `levelName` 來自 `ConsoleMessageLevel.toString()`，恆為大寫字串
+/// （已用套件原始碼確認：`'ERROR'`/`'LOG'`/`'WARNING'`/`'DEBUG'`/`'TIP'`
+/// 五種）。
+void handleFoliateConsoleMessage(
+  String message,
+  String levelName, {
+  required bool consoleLogEnabled,
+}) {
+  if (!consoleLogEnabled && levelName != 'ERROR') return;
   ReaderConsoleLog.add('[$levelName] $message');
 }
 
@@ -374,6 +386,7 @@ class FoliateEpubReaderView extends StatefulWidget {
   final List<ZoneAction> navZoneActions;
   final ValueChanged<ZoneAction>? onZoneAction;
   final bool showNavZoneDebugOverlay;
+  final bool consoleLogEnabled;
   final String? initialLocatorJson;
   final ValueChanged<EpubPositionInfo>? onLocatorChanged;
   final ValueChanged<EpubSelectionInfo>? onSelectionChanged;
@@ -416,6 +429,7 @@ class FoliateEpubReaderView extends StatefulWidget {
     ],
     this.onZoneAction,
     this.showNavZoneDebugOverlay = false,
+    this.consoleLogEnabled = false,
     this.initialLocatorJson,
     this.onLocatorChanged,
     this.onSelectionChanged,
@@ -775,6 +789,7 @@ class _FoliateEpubReaderViewState extends State<FoliateEpubReaderView> {
               handleFoliateConsoleMessage(
             consoleMessage.message,
             consoleMessage.messageLevel.toString(),
+            consoleLogEnabled: widget.consoleLogEnabled,
           ),
         ),
         Positioned.fill(

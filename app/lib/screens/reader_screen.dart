@@ -2302,6 +2302,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           navZoneActions: resolved.navZoneActions,
           onZoneAction: _handleZoneAction,
           showNavZoneDebugOverlay: resolved.showNavZoneDebugOverlay,
+          consoleLogEnabled: resolved.consoleLogEnabled,
           initialLocatorJson: _initialPosition?.epubLocatorJson,
           onLocatorChanged: (info) {
             if (!mounted) return;
