@@ -3105,5 +3105,36 @@ void main() {
       final books = await repo.listReflowableEpubBooks();
       expect(books.map((b) => b.title).toList(), ['第一本', '第三本', '第二本']);
     });
+
+    test('excludeBookId 排除指定書籍（例如當前閱讀中書籍）', () async {
+      final repo = await SqliteLibraryRepository.open(inMemoryDatabasePath);
+      addTearDown(() => repo.close());
+
+      await repo.insertBook(Book(
+        id: 'flow1',
+        title: '書A',
+        format: BookFileFormat.epub,
+        filePath: 'content://example/flow1.epub',
+        source: BookSource.local,
+        isFixedLayout: false,
+        createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+        lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+      ));
+      await repo.insertBook(Book(
+        id: 'flow2',
+        title: '書B',
+        format: BookFileFormat.epub,
+        filePath: 'content://example/flow2.epub',
+        source: BookSource.local,
+        isFixedLayout: false,
+        createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+        lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+      ));
+
+      final result =
+          await repo.listReflowableEpubBooks(excludeBookId: 'flow1');
+
+      expect(result.map((b) => b.id).toList(), ['flow2']);
+    });
   });
 }

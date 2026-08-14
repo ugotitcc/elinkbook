@@ -848,10 +848,18 @@ class SqliteLibraryRepository implements LibraryRepository {
   Future<void> close() => _db.close();
 
   @override
-  Future<List<Book>> listReflowableEpubBooks() async {
+  Future<List<Book>> listReflowableEpubBooks({String? excludeBookId}) async {
+    final where = StringBuffer(
+        "filePath LIKE '%.epub' AND (is_fixed_layout IS NULL OR is_fixed_layout != 1)");
+    final whereArgs = <Object?>[];
+    if (excludeBookId != null) {
+      where.write(' AND id != ?');
+      whereArgs.add(excludeBookId);
+    }
     final rows = await _db.query(
       'books',
-      where: "format = 'epub' AND (is_fixed_layout = 0 OR is_fixed_layout IS NULL)",
+      where: where.toString(),
+      whereArgs: whereArgs.isEmpty ? null : whereArgs,
       orderBy: 'title ASC',
     );
     return rows.map(Book.fromMap).toList();

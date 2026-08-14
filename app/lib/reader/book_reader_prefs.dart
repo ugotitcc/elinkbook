@@ -363,7 +363,7 @@ class BookReaderPrefs {
   }
 
   /// 只保留 [ReaderSettingsSheet]（流式 EPUB 版面設定）實際呈現的 20 個
-  /// 欄位，其餘 10 個欄位（`pageMargins`、6 個 `pdf*`、3 個 `dualPage*`）
+  /// 欄位，其餘 11 個欄位（`pageMargins`、7 個 `pdf*`、3 個 `dualPage*`）
   /// 一律強制設為 `null`，**不論來源物件實際內容為何**——epic-28-reader-
   /// settings-enhancements Issue 3「欄位污染防護」，見 spec.md「資料
   /// 模型」。「另存為預設集」與「書籍設定複製」寫入 `LayoutPreset.prefs`

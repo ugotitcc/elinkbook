@@ -140,13 +140,14 @@ class FakeLibraryRepository implements LibraryRepository {
   }
 
   @override
-  Future<List<Book>> listReflowableEpubBooks() async {
-    return _books
-        .where((b) =>
-            b.format == BookFileFormat.epub &&
-            (b.isFixedLayout == null || b.isFixedLayout == false))
-        .toList()
-      ..sort((a, b) => a.title.compareTo(b.title));
+  Future<List<Book>> listReflowableEpubBooks({String? excludeBookId}) async {
+    final filtered = _books.where((b) {
+      if (excludeBookId != null && b.id == excludeBookId) return false;
+      if (!b.filePath.toLowerCase().endsWith('.epub')) return false;
+      return b.isFixedLayout != true;
+    }).toList();
+    filtered.sort((a, b) => a.title.compareTo(b.title));
+    return filtered;
   }
 
   Book _withGroupName(Book book, String groupName) => Book(
