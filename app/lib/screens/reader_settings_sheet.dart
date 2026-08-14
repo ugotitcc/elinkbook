@@ -236,6 +236,12 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                   max: 80,
                   step: 1,
                   displayValue: _fontSize.round().toString(),
+                  isOverridden: _fontSizeOverridden,
+                  onReset: () => setState(() {
+                    _fontSizeOverridden = false;
+                    _fontSize = _defaultFontSize;
+                    _notifyChanged();
+                  }),
                   onChanged: (v) => setState(() {
                     _fontSize = v;
                     _fontSizeOverridden = true;
@@ -250,6 +256,12 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                   max: 900,
                   step: 100,
                   displayValue: (_fontWeightMultiplier * 400).round().toString(),
+                  isOverridden: _fontWeightOverridden,
+                  onReset: () => setState(() {
+                    _fontWeightOverridden = false;
+                    _fontWeightMultiplier = _defaultFontWeightMultiplier;
+                    _notifyChanged();
+                  }),
                   onChanged: (v) => setState(() {
                     _fontWeightMultiplier = v / 400;
                     _fontWeightOverridden = true;
@@ -264,6 +276,12 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                   max: 3,
                   step: 0.1,
                   displayValue: _lineHeight.toStringAsFixed(1),
+                  isOverridden: _lineHeightOverridden,
+                  onReset: () => setState(() {
+                    _lineHeightOverridden = false;
+                    _lineHeight = _defaultLineHeight;
+                    _notifyChanged();
+                  }),
                   onChanged: (v) => setState(() {
                     _lineHeight = double.parse(v.toStringAsFixed(1));
                     _lineHeightOverridden = true;
@@ -278,6 +296,12 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                   max: 40,
                   step: 1,
                   displayValue: _paragraphSpacing.round().toString(),
+                  isOverridden: _paragraphSpacingOverridden,
+                  onReset: () => setState(() {
+                    _paragraphSpacingOverridden = false;
+                    _paragraphSpacing = _defaultParagraphSpacing;
+                    _notifyChanged();
+                  }),
                   onChanged: (v) => setState(() {
                     _paragraphSpacing = v;
                     _paragraphSpacingOverridden = true;
@@ -292,6 +316,12 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                   max: 1,
                   step: 0.01,
                   displayValue: '${_letterSpacing.toStringAsFixed(2)}em',
+                  isOverridden: _letterSpacingOverridden,
+                  onReset: () => setState(() {
+                    _letterSpacingOverridden = false;
+                    _letterSpacing = _defaultLetterSpacing;
+                    _notifyChanged();
+                  }),
                   onChanged: (v) => setState(() {
                     _letterSpacing = double.parse(v.toStringAsFixed(2));
                     _letterSpacingOverridden = true;
@@ -538,6 +568,8 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     required double step,
     required String displayValue,
     required ValueChanged<double> onChanged,
+    bool? isOverridden,
+    VoidCallback? onReset,
   }) {
     final divisions = ((max - min) / step).round();
     final clampedValue = value.clamp(min, max);
@@ -548,7 +580,36 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [Text(label), Text(displayValue)],
+            children: [
+              Text(label),
+              if (isOverridden == null)
+                Text(displayValue)
+              else if (isOverridden == true)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(displayValue),
+                    IconButton(
+                      key: Key('${keyPrefix}_reset'),
+                      icon: const Icon(Icons.block),
+                      iconSize: 18,
+                      visualDensity: VisualDensity.compact,
+                      tooltip: '恢復本書原樣式',
+                      onPressed: onReset,
+                    ),
+                  ],
+                )
+              else
+                Tooltip(
+                  message: '跟隨本書原樣式，尚未調整',
+                  child: Icon(
+                    Icons.block,
+                    key: Key('${keyPrefix}_unset_indicator'),
+                    size: 18,
+                    color: Theme.of(context).disabledColor,
+                  ),
+                ),
+            ],
           ),
           Row(
             children: [
