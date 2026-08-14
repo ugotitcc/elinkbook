@@ -509,7 +509,8 @@ void main() {
       ..['pdf_crop_mode'] = 'not_a_real_enum_value'
       ..['dual_page_mode'] = 'not_a_real_enum_value'
       ..['dual_page_direction'] = 'not_a_real_enum_value'
-      ..['column_mode'] = 'not_a_real_enum_value';
+      ..['column_mode'] = 'not_a_real_enum_value'
+      ..['pdf_page_turn_animation'] = 'not_a_real_enum_value';
 
     final restored = BookReaderPrefs.fromMap(map);
 
@@ -522,9 +523,10 @@ void main() {
     expect(restored.dualPageMode, isNull);
     expect(restored.dualPageDirection, isNull);
     expect(restored.columnMode, isNull);
+    expect(restored.pdfPageTurnAnimation, isNull);
   });
 
-  test('reflowableEpubFields() 過濾掉 PDF／雙頁／pageMargins 共 10 個欄位，其餘 20 個流式 EPUB 欄位保留（epic-28 Issue 3 欄位污染防護）',
+  test('reflowableEpubFields() 過濾掉 PDF／雙頁／pageMargins 共 11 個欄位，其餘 20 個流式 EPUB 欄位保留（epic-28 Issue 3 欄位污染防護）',
       () {
     const prefs = BookReaderPrefs(
       fontFamily: 'SourceHanSansTC',
@@ -557,6 +559,7 @@ void main() {
       dualPageMode: DualPageMode.always,
       dualPageCoverAlone: false,
       dualPageDirection: DualPageDirection.ltr,
+      pdfPageTurnAnimation: PdfPageTurnAnimation.slide,
     );
 
     final filtered = prefs.reflowableEpubFields();
@@ -583,7 +586,7 @@ void main() {
     expect(filtered.columnMode, ColumnMode.double);
     expect(filtered.columnSize, 800);
 
-    // 10 個強制清空欄位。
+    // 11 個強制清空欄位。
     expect(filtered.pageMargins, isNull);
     expect(filtered.pdfFitMode, isNull);
     expect(filtered.pdfContrast, isNull);
@@ -594,6 +597,7 @@ void main() {
     expect(filtered.dualPageMode, isNull);
     expect(filtered.dualPageCoverAlone, isNull);
     expect(filtered.dualPageDirection, isNull);
+    expect(filtered.pdfPageTurnAnimation, isNull);
   });
 
   test('reflowableEpubFields() 對全部欄位皆為 null 的輸入，回傳值仍全部為 null（不引入非預期的預設值）',
