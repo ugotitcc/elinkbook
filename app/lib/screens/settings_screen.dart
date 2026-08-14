@@ -14,9 +14,10 @@ import 'sync_settings_screen.dart';
 
 /// 設定畫面：「佈景」（主題圓點，原位於 `LibraryScreen` AppBar，見
 /// `epic-18-reader-device-qa` 工具列溢位修復）、「字型管理」、「閱讀預設值」、
-/// 「導航熱區」、「同步」、「閱讀器 Console Log」（Issue 33 診斷用）與
-/// 「關於」七個項目。
-class SettingsScreen extends StatelessWidget {
+/// 「導航熱區」、「同步」、「閱讀器 Console Log」（Issue 33 診斷用）、
+/// Console Log 攔截開關（epic-28-reader-settings-enhancements Issue 2）與
+/// 「關於」項目。
+class SettingsScreen extends StatefulWidget {
   final ReaderPrefsManager prefsManager;
   final AppTheme currentTheme;
   final bool isEinkMode;
@@ -35,6 +36,38 @@ class SettingsScreen extends StatelessWidget {
     this.syncAccountRepository,
     this.syncClient,
   });
+
+  @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
+  /// Console Log 攔截開關目前顯示值（epic-28-reader-settings-enhancements
+  /// Issue 2）。刻意不採用「整頁 loading gate」模式（比照
+  /// `ReadingDefaultsScreen` 的 `_loading` 布林 + `CircularProgressIndicator`
+  /// 擋住整頁）——本畫面其餘 `ListTile`（佈景／字型管理等）與這個開關無關，
+  /// 初始值先顯示預設 `false`，`initState()` 的非同步載入完成後才 `setState`
+  /// 更新為實際已儲存值，不阻塞其餘項目的同步顯示。
+  bool _consoleLogEnabled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadConsoleLogEnabled();
+  }
+
+  Future<void> _loadConsoleLogEnabled() async {
+    final prefs = await widget.prefsManager.loadGlobalPrefs();
+    if (!mounted) return;
+    setState(() => _consoleLogEnabled = prefs.consoleLogEnabled);
+  }
+
+  Future<void> _updateConsoleLogEnabled(bool value) async {
+    setState(() => _consoleLogEnabled = value);
+    final prefs = await widget.prefsManager.loadGlobalPrefs();
+    await widget.prefsManager
+        .saveGlobalPrefs(prefs.copyWith(consoleLogEnabled: value));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -62,13 +95,13 @@ class SettingsScreen extends StatelessWidget {
             key: const Key('settings_font_management_button'),
             title: const Text('字型管理'),
             trailing: const Icon(Icons.chevron_right),
-            onTap: customFontsRepository == null
+            onTap: widget.customFontsRepository == null
                 ? null
                 : () {
                     Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (context) => FontManagementScreen(
-                          repository: customFontsRepository!,
+                          repository: widget.customFontsRepository!,
                         ),
                       ),
                     );
@@ -82,7 +115,7 @@ class SettingsScreen extends StatelessWidget {
               Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (context) =>
-                      ReadingDefaultsScreen(prefsManager: prefsManager),
+                      ReadingDefaultsScreen(prefsManager: widget.prefsManager),
                 ),
               );
             },
@@ -95,7 +128,7 @@ class SettingsScreen extends StatelessWidget {
               Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (context) =>
-                      NavZoneSettingsScreen(prefsManager: prefsManager),
+                      NavZoneSettingsScreen(prefsManager: widget.prefsManager),
                 ),
               );
             },
@@ -104,14 +137,15 @@ class SettingsScreen extends StatelessWidget {
             key: const Key('settings_sync_button'),
             title: const Text('同步'),
             trailing: const Icon(Icons.chevron_right),
-            onTap: syncAccountRepository == null || syncClient == null
+            onTap: widget.syncAccountRepository == null ||
+                    widget.syncClient == null
                 ? null
                 : () {
                     Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (context) => SyncSettingsScreen(
-                          accountRepository: syncAccountRepository!,
-                          syncClient: syncClient!,
+                          accountRepository: widget.syncAccountRepository!,
+                          syncClient: widget.syncClient!,
                         ),
                       ),
                     );
@@ -128,6 +162,13 @@ class SettingsScreen extends StatelessWidget {
                 ),
               );
             },
+          ),
+          SwitchListTile(
+            key: const Key('settings_console_log_switch'),
+            title: const Text('Console Log 攔截'),
+            subtitle: const Text('關閉後僅保留錯誤訊息，用於問題回報時的診斷紀錄'),
+            value: _consoleLogEnabled,
+            onChanged: (value) => _updateConsoleLogEnabled(value),
           ),
           ListTile(
             key: const Key('settings_about_button'),
@@ -148,12 +189,13 @@ class SettingsScreen extends StatelessWidget {
   /// 設計原樣搬移（E-Ink 模式下停用點擊並降低不透明度）。
   Widget _buildThemeDot(
       BuildContext context, AppTheme theme, Color color, String key) {
-    final isSelected = currentTheme == theme && !isEinkMode;
+    final isSelected = widget.currentTheme == theme && !widget.isEinkMode;
     return GestureDetector(
       key: Key(key),
-      onTap: isEinkMode ? null : () => onThemeChanged?.call(theme),
+      onTap:
+          widget.isEinkMode ? null : () => widget.onThemeChanged?.call(theme),
       child: Opacity(
-        opacity: isEinkMode ? 0.4 : 1.0,
+        opacity: widget.isEinkMode ? 0.4 : 1.0,
         child: Container(
           width: 24,
           height: 24,

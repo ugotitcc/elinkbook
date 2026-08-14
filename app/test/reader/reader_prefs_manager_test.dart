@@ -62,6 +62,7 @@ void main() {
       expect(resolved.showNavZoneDebugOverlay, isFalse);
       expect(resolved.fullscreen, isFalse);
       expect(resolved.volumeKeyEnabled, isTrue);
+      expect(resolved.consoleLogEnabled, isFalse);
     });
 
     test('單書覆寫存在時，優先套用單書覆寫，忽略全域預設', () {
@@ -132,6 +133,21 @@ void main() {
             .copyWith(volumeKeyEnabled: false),
       );
       expect(manager.resolve(loadedDisabled).volumeKeyEnabled, isFalse);
+    });
+
+    test('consoleLogEnabled 直接透傳 global 值，無單書覆寫層', () {
+      final loadedDisabled = LoadedPrefs(
+        bookPrefs: BookReaderPrefs.empty,
+        globalPrefs: const GlobalReaderPrefs.initial(),
+      );
+      expect(manager.resolve(loadedDisabled).consoleLogEnabled, isFalse);
+
+      final loadedEnabled = LoadedPrefs(
+        bookPrefs: BookReaderPrefs.empty,
+        globalPrefs:
+            const GlobalReaderPrefs.initial().copyWith(consoleLogEnabled: true),
+      );
+      expect(manager.resolve(loadedEnabled).consoleLogEnabled, isTrue);
     });
 
     test('單書覆寫為 null 時，正確退回全域預設（非硬編碼初始值，證明真的有讀 globalPrefs）',
@@ -394,6 +410,30 @@ void main() {
     test('openLastBookOnLaunch 未儲存過（缺鍵）時，安全回退為預設值 true', () async {
       final loaded = await manager.load('b1');
       expect(loaded.globalPrefs.openLastBookOnLaunch, isTrue);
+    });
+
+    test('saveGlobalPrefs 寫入 consoleLogEnabled 至既有慣例命名的 SharedPreferences key',
+        () async {
+      const globalPrefs = GlobalReaderPrefs(
+        pageTurnMode: PageTurnMode.paginated,
+        screenOrientation: ScreenOrientationSetting.auto,
+        navZoneMode: NavZoneMode.rightFlip,
+        navZoneCustomActions: rightFlipZoneTemplate,
+        showNavZoneDebugOverlay: false,
+        consoleLogEnabled: true,
+      );
+      await manager.saveGlobalPrefs(globalPrefs);
+
+      final sp = await SharedPreferences.getInstance();
+      expect(sp.getBool('global_reader_console_log_enabled'), isTrue);
+
+      final loaded = await manager.load('b1');
+      expect(loaded.globalPrefs.consoleLogEnabled, isTrue);
+    });
+
+    test('consoleLogEnabled 未儲存過（缺鍵）時，安全回退為預設值 false', () async {
+      final loaded = await manager.load('b1');
+      expect(loaded.globalPrefs.consoleLogEnabled, isFalse);
     });
 
     test('navZoneCustomActions 已儲存值為空字串時，安全回退為 rightFlip 模板',

@@ -1040,17 +1040,40 @@ void main() {
     });
 
     test('把 messageLevel 與 message 組成單行文字附加到 ReaderConsoleLog', () {
-      handleFoliateConsoleMessage('測試訊息', 'LOG');
+      handleFoliateConsoleMessage('測試訊息', 'LOG', consoleLogEnabled: true);
 
       expect(ReaderConsoleLog.entries.value, hasLength(1));
       expect(ReaderConsoleLog.entries.value.single, '[LOG] 測試訊息');
     });
 
     test('可連續呼叫多次，依序附加不覆蓋既有訊息', () {
-      handleFoliateConsoleMessage('第一筆', 'LOG');
-      handleFoliateConsoleMessage('第二筆', 'ERROR');
+      handleFoliateConsoleMessage('第一筆', 'LOG', consoleLogEnabled: true);
+      handleFoliateConsoleMessage('第二筆', 'ERROR', consoleLogEnabled: true);
 
       expect(ReaderConsoleLog.entries.value, ['[LOG] 第一筆', '[ERROR] 第二筆']);
+    });
+
+    test('consoleLogEnabled 為 false 時，LOG／WARNING 等非 ERROR 等級不寫入', () {
+      handleFoliateConsoleMessage('一般訊息', 'LOG', consoleLogEnabled: false);
+      handleFoliateConsoleMessage('警告訊息', 'WARNING', consoleLogEnabled: false);
+
+      expect(ReaderConsoleLog.entries.value, isEmpty);
+    });
+
+    test('consoleLogEnabled 為 false 時，ERROR 等級仍強制寫入（崩潰診斷能力不受開關影響）',
+        () {
+      handleFoliateConsoleMessage('例外訊息', 'ERROR', consoleLogEnabled: false);
+
+      expect(ReaderConsoleLog.entries.value, ['[ERROR] 例外訊息']);
+    });
+
+    test('consoleLogEnabled 為 false 時，ERROR 與 LOG 混合呼叫，只有 ERROR 被記錄',
+        () {
+      handleFoliateConsoleMessage('一般訊息', 'LOG', consoleLogEnabled: false);
+      handleFoliateConsoleMessage('例外訊息', 'ERROR', consoleLogEnabled: false);
+      handleFoliateConsoleMessage('警告訊息', 'WARNING', consoleLogEnabled: false);
+
+      expect(ReaderConsoleLog.entries.value, ['[ERROR] 例外訊息']);
     });
   });
 

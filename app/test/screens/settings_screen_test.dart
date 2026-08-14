@@ -9,6 +9,7 @@ import 'package:elinkbook/screens/settings_screen.dart';
 import 'package:elinkbook/sync/sync_account_repository.dart';
 import 'package:elinkbook/sync/sync_client.dart';
 import 'package:elinkbook/theme/app_theme.dart';
+import 'package:elinkbook/reader/global_reader_prefs.dart';
 import '../support/fake_reader_prefs_manager.dart';
 import '../support/fake_custom_fonts_repository.dart';
 
@@ -180,5 +181,64 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('閱讀器 Console Log'), findsOneWidget);
+  });
+
+  testWidgets('SettingsScreen 顯示 Console Log 開關，初始值反映已儲存的 consoleLogEnabled',
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: SettingsScreen(
+        prefsManager: FakeReaderPrefsManager(
+          globalPrefs:
+              const GlobalReaderPrefs.initial().copyWith(consoleLogEnabled: true),
+        ),
+      ),
+    ));
+    await tester.pump();
+
+    expect(find.byKey(const Key('settings_console_log_switch')), findsOneWidget);
+    expect(
+      tester
+          .widget<SwitchListTile>(
+              find.byKey(const Key('settings_console_log_switch')))
+          .value,
+      isTrue,
+    );
+  });
+
+  testWidgets('Console Log 開關預設關閉（尚未儲存過設定時）', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: SettingsScreen(prefsManager: FakeReaderPrefsManager()),
+    ));
+    await tester.pump();
+
+    expect(
+      tester
+          .widget<SwitchListTile>(
+              find.byKey(const Key('settings_console_log_switch')))
+          .value,
+      isFalse,
+    );
+  });
+
+  testWidgets('切換 Console Log 開關後，onChanged 觸發 saveGlobalPrefs 持久化新值',
+      (tester) async {
+    final prefsManager = FakeReaderPrefsManager();
+    await tester.pumpWidget(MaterialApp(
+      home: SettingsScreen(prefsManager: prefsManager),
+    ));
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('settings_console_log_switch')));
+    await tester.pump();
+
+    expect(prefsManager.savedGlobalPrefsCalls, hasLength(1));
+    expect(prefsManager.savedGlobalPrefsCalls.single.consoleLogEnabled, isTrue);
+    expect(
+      tester
+          .widget<SwitchListTile>(
+              find.byKey(const Key('settings_console_log_switch')))
+          .value,
+      isTrue,
+    );
   });
 }
