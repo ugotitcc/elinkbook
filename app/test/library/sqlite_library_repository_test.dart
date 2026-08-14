@@ -3016,4 +3016,94 @@ void main() {
     expect(rows, hasLength(1));
     expect(rows.single['name'], '測試預設集');
   });
+
+  group('listReflowableEpubBooks', () {
+    test('空書庫回傳空清單', () async {
+      final repo = await SqliteLibraryRepository.open(inMemoryDatabasePath);
+      addTearDown(() => repo.close());
+
+      expect(await repo.listReflowableEpubBooks(), isEmpty);
+    });
+
+    test('只回傳 EPUB 書籍，排除 PDF', () async {
+      final repo = await SqliteLibraryRepository.open(inMemoryDatabasePath);
+      addTearDown(() => repo.close());
+
+      await repo.insertBook(Book(
+        id: 'epub1',
+        title: 'EPUB 書',
+        format: BookFileFormat.epub,
+        filePath: '/books/epub1.epub',
+        source: BookSource.local,
+        createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+        lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+      ));
+      await repo.insertBook(Book(
+        id: 'pdf1',
+        title: 'PDF 書',
+        format: BookFileFormat.pdf,
+        filePath: '/books/pdf1.pdf',
+        source: BookSource.local,
+        createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+        lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+      ));
+
+      final books = await repo.listReflowableEpubBooks();
+      expect(books, hasLength(1));
+      expect(books.single.id, 'epub1');
+    });
+
+    test('排除 isFixedLayout=true 的 EPUB（FXL 書籍不適用流式版面設定）',
+        () async {
+      final repo = await SqliteLibraryRepository.open(inMemoryDatabasePath);
+      addTearDown(() => repo.close());
+
+      await repo.insertBook(Book(
+        id: 'epub-reflowable',
+        title: '流式 EPUB',
+        format: BookFileFormat.epub,
+        filePath: '/books/reflowable.epub',
+        source: BookSource.local,
+        isFixedLayout: false,
+        createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+        lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+      ));
+      await repo.insertBook(Book(
+        id: 'epub-fxl',
+        title: 'FXL EPUB',
+        format: BookFileFormat.epub,
+        filePath: '/books/fxl.epub',
+        source: BookSource.local,
+        isFixedLayout: true,
+        createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+        lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+      ));
+
+      final books = await repo.listReflowableEpubBooks();
+      expect(books, hasLength(1));
+      expect(books.single.id, 'epub-reflowable');
+    });
+
+    test('多本 EPUB 依 title ASC 排序', () async {
+      final repo = await SqliteLibraryRepository.open(inMemoryDatabasePath);
+      addTearDown(() => repo.close());
+
+      for (final title in ['第一本', '第三本', '第二本']) {
+        await repo.insertBook(Book(
+          id: 'epub-$title',
+          title: title,
+          format: BookFileFormat.epub,
+          filePath: '/books/$title.epub',
+          source: BookSource.local,
+          createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+          lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+        ));
+      }
+
+      // SQLite title ASC 排序依 Unicode code point，非中文筆畫順序。
+      // 「一」(U+4E00) < 「三」(U+4E09) < 「二」(U+4E8C)。
+      final books = await repo.listReflowableEpubBooks();
+      expect(books.map((b) => b.title).toList(), ['第一本', '第三本', '第二本']);
+    });
+  });
 }

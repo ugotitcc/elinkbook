@@ -848,6 +848,16 @@ class SqliteLibraryRepository implements LibraryRepository {
   Future<void> close() => _db.close();
 
   @override
+  Future<List<Book>> listReflowableEpubBooks() async {
+    final rows = await _db.query(
+      'books',
+      where: "format = 'epub' AND (is_fixed_layout = 0 OR is_fixed_layout IS NULL)",
+      orderBy: 'title ASC',
+    );
+    return rows.map(Book.fromMap).toList();
+  }
+
+  @override
   Future<bool> detectAndCacheEpubLayout(String bookId, String filePath) async {
     final response = await kBookMetadataChannel.invokeMapMethod<String, Object?>(
       'detectEpubLayout',

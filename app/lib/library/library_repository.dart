@@ -30,6 +30,12 @@ abstract class LibraryRepository {
   /// docs/epics/epic-17-epub-render-migration/spec.md「既有書籍回填流程」）。
   /// `ReaderScreen`（Issue 3）建構閱讀器 widget 之前呼叫。
   Future<bool> detectAndCacheEpubLayout(String bookId, String filePath);
+
+  /// 回傳所有**流式 EPUB** 書籍（排除 PDF 與 `isFixedLayout == true` 的
+  /// FXL EPUB），供版面設定預設集套用的書籍選擇器（Issue 3
+  /// `LayoutPresetBookPickerScreen`）使用。排序固定 `title ASC`（依書名
+  /// 筆畫排序），方便使用者快速定位目標書籍。
+  Future<List<Book>> listReflowableEpubBooks();
 }
 
 /// `LibraryRepository` 操作違反資料規則時拋出（例如嘗試刪除/重新命名系統
