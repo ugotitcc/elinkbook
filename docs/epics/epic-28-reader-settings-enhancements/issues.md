@@ -6,7 +6,7 @@
 
 ## Issue 1：流式 EPUB 版面設定新增字距（letter-spacing）選項
 
-**Status:** `ready-for-agent`
+**Status:** ✅ 已完成並合併回 `main`（PR [#142](https://git.jigong.org/huthief/elinkBook/pulls/142)，分支 `feature/epic28-letter-spacing`，5 個 commit：Task 1-4 ＋ 1 個審查修正）。程式碼審查（`reviews/review-issue-1.md`）發現 `EpubPageEstimator.estimateCharsPerScreen()` 版面密度估算公式漏了 `letterSpacing` 變數（與既有 `lineHeight`/`paragraphSpacing` 不一致），已於 commit `ed5b221` 修正（新增 `letterSpacingFactor`，`_buildEpubFooter()`／`TocBottomSheet._buildEntryRow()` 兩個呼叫端同步接上），全專案 1186 項測試與 `flutter analyze` 零回歸通過。
 
 **依賴：** 無，可立即開始
 

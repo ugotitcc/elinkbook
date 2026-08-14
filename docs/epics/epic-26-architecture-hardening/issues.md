@@ -84,3 +84,61 @@
 - 既有 600ms 排除測試等既有斷言需要重新檢視是否仍然正確，不可讓新數值與既有測試互相矛盾卻未察覺。
 
 **驗收標準：** 真機驗證 PDF 長按拖曳建立劃線/備註標註時不再（或顯著減少）誤觸換頁；最終採用的 `tapMaxDurationMs` 數值有真機資料佐證、非憑空沿用 EPUB 數值；相關單元測試與既有測試皆一致、全數通過。
+
+---
+
+## Issue 4：收斂「等待 PDF 就緒」成一個共用測試 adapter
+
+**Status:** `ready-for-agent`——純測試輔助工具重構，不涉及生產程式碼或功能行為變更，機械式收斂，風險低。
+
+**依賴：** 無
+
+**來源：** `docs/research/architecture-review-test-suite-epub-pdf.md` 候選 6（強度 Strong）。2026-08-14 `/diagnose` 重新查證目前程式碼確認候選 6 描述的重複模式依然存在（原文件為 2026-08-11 產出，本次重新核實非直接沿用舊結論）。
+
+**背景／症狀（2026-08-14 撰寫 `plan-issue-4.md` 時，逐檔案逐呼叫點重新核實後修正——原「37 處」低估，只數到函式*定義*、漏算大量呼叫端）：** 「pdfrx 在 widget test 環境下何時真正完成非同步開書」這件事的等待邏輯，以幾乎逐字相同的輪詢迴圈／輔助函式重複散落在 9 個測試檔案，精確統計共 **104 個編輯點**（定義+呼叫點+獨立內嵌迴圈合計）：
+
+```
+app/test/screens/reader_screen_test.dart              20 處，皆無 helper、逐一內嵌（1 處帶 renderedCount 條件＋maxIterations=30；16 處無條件＋maxIterations=30；3 處無條件＋maxIterations=10）
+app/test/reader/pdf_reader_view_test.dart               5 處，無 helper、逐一內嵌（3 處 renderedCount==0&&errorMessage==null；2 處 renderedCount==0，皆 maxIterations=30）
+app/test/reader/pdf_reader_view_filters_test.dart      26 處：6 個 group 內各自重新定義 local `waitRendered`（逐字相同）＋16 處呼叫端＋4 處不經 waitRendered 的獨立內嵌迴圈（2 處等待 RawImage 出現、1 處等待 RawImage 數量 ≥2＝maxIterations 40、1 處等待 computedRect 非 null，皆 delayBetweenPumps=50ms 而非其餘檔案慣用的 10ms）
+app/test/reader/pdf_reader_view_dual_page_test.dart    17 處：1 個 local `waitRendered` 定義＋16 處呼叫端
+app/test/reader/pdf_reader_view_selection_test.dart    15 處：1 個定義＋14 處呼叫端
+app/test/reader/pdf_reader_view_search_test.dart        7 處：1 個定義＋6 處呼叫端
+app/test/reader/pdf_reader_view_nav_zone_test.dart      7 處：1 個定義＋6 處呼叫端
+app/test/reader/pdf_reader_view_thumbnail_test.dart     4 處：1 個定義＋3 處呼叫端
+app/test/reader/pdf_reader_view_toc_test.dart           3 處：1 個定義＋2 處呼叫端
+```
+
+**根因（已用原始碼逐檔案交叉核對確認）：** 三種變形，本質是同一段邏輯的三次獨立重新發明：
+
+1. `reader_screen_test.dart`／`pdf_reader_view_test.dart`：無 helper，`tester.runAsync(() async { for (var i = 0; i < N && <條件或無條件>; i++) { await tester.pump(...); await Future.delayed(...); } })` 逐一內嵌，`N` 與條件依測試情境略有不同（`N` 見過 10／30 兩種，條件見過無條件／`renderedCount == 0`／`renderedCount == 0 && errorMessage == null`）。
+2. `pdf_reader_view_dual_page_test.dart`／`selection_test.dart`／`search_test.dart`／`nav_zone_test.dart`／`thumbnail_test.dart`／`toc_test.dart`：**逐位元組相同**的 `Future<void> waitRendered(WidgetTester tester, int Function() rendered) { return tester.runAsync(() async { for (var i = 0; i < 30 && rendered() == 0; i++) { await tester.pump(const Duration(milliseconds: 100)); await Future<void>.delayed(const Duration(milliseconds: 10)); } }); }` 各自在 6 個檔案獨立定義一次，呼叫端也逐位元組相同：`await waitRendered(tester, () => renderedCount);`（已用 `grep` 核對 63 處呼叫點文字完全一致，可安全用單一 find-and-replace 規則處理，不需逐一客製）。
+3. `pdf_reader_view_filters_test.dart`：同一份 `waitRendered` 函式體在檔案內 6 個 `group` 各自重新定義一次（第 19/117/221/317/384/456 行），另有 4 處不經 `waitRendered`、條件互異的獨立內嵌迴圈（等待特定 widget 出現/數量，`delayBetweenPumps` 用 50ms 而非其餘 8 個檔案慣用的 10ms——需要共用 adapter 支援可調整的 pump 間隔，原設計遺漏此參數）。
+
+**Solution（依本次逐檔案查證結果精確化簽章，較先前版本新增 `delayBetweenPumps` 參數）：** 新增 `app/test/support/pump_until_pdf_ready.dart`：
+
+```dart
+Future<void> pumpUntilPdfReady(
+  WidgetTester tester, {
+  bool Function()? condition,
+  int maxIterations = 30,
+  Duration delayBetweenPumps = const Duration(milliseconds: 10),
+}) {
+  return tester.runAsync(() async {
+    for (var i = 0;
+        i < maxIterations && (condition == null || !condition());
+        i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+      await Future<void>.delayed(delayBetweenPumps);
+    }
+  });
+}
+```
+
+`condition` 為 `null`（省略）時等同「無條件跑滿 `maxIterations` 輪」，涵蓋 `reader_screen_test.dart` 的無條件變形；`maxIterations`／`delayBetweenPumps` 皆可覆寫，涵蓋 `filters_test.dart` 的 40 輪／50ms 變形。9 個檔案的所有呼叫點改為呼叫此共用函式；6 個「單一 local `waitRendered`」檔案與 `filters_test.dart` 的 6 份重複定義整段刪除。呼叫端轉換注意「回傳 0 的 int callback」→「回傳 bool 的 condition callback」是介面轉換非單純改名，`rendered() == 0` 繼續等待 → `condition()` 為 true 時停止，對應 `() => renderedCount != 0`，不可寫反。詳細逐檔案轉換規則見 `plans/plan-issue-4.md`。
+
+**單元測試要求：**
+- 本身即為測試輔助工具重構，「測試」是確保收斂後 9 個檔案原有的全部測試案例依然全數通過、斷言不變——比照候選 6 文件「刪除測試」判定：把重複迴圈換成共用 helper，行為完全不變。
+- 新增 `pump_until_pdf_ready_test.dart`，驗證 `condition` 提前滿足時確實提前跳出、`maxIterations`／`delayBetweenPumps` 覆寫確實生效。
+
+**驗收標準：** 9 個檔案、104 個編輯點的重複等待邏輯全數改用 `test/support/pump_until_pdf_ready.dart` 的 `pumpUntilPdfReady()`；`pdf_reader_view_filters_test.dart` 與其餘 6 個檔案內共 12 份重複的 local `waitRendered` 定義移除；`flutter analyze` 乾淨、`flutter test` 全數通過、零回歸（測試案例數量、斷言內容、通過/失敗結果皆與收斂前一致）。
