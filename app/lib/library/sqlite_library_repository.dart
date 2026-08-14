@@ -39,7 +39,7 @@ class SqliteLibraryRepository implements LibraryRepository {
   }) async {
     final db = await openDatabase(
       path,
-      version: 20,
+      version: 21,
       singleInstance: singleInstance,
       onConfigure: (db) async {
         // book_reader_prefs 的 ON DELETE CASCADE 需要外鍵約束真正生效，
@@ -103,6 +103,7 @@ class SqliteLibraryRepository implements LibraryRepository {
         await _createSyncMetadataTable(db);
         await _createSyncRemoteIdsTable(db);
         await _createSyncPendingRecordsTable(db);
+        await _createLayoutPresetTable(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
@@ -297,6 +298,15 @@ class SqliteLibraryRepository implements LibraryRepository {
           // 檢查即可。
           await _createSyncRemoteIdsTable(db);
           await _createSyncPendingRecordsTable(db);
+        }
+        if (oldVersion < 21) {
+          // epic-28-reader-settings-enhancements Issue 3：版面設定預設集
+          // 新增的全新獨立資料表（非既有表新增欄位）。與 bookmarks
+          // （oldVersion < 8）／custom_fonts（oldVersion < 16）比照同一
+          // 原則——任何 oldVersion < 21 的裝置都必然還沒有這張表，直接
+          // 無條件建立即可，不需要放在 book_reader_prefs 表是否已存在的
+          // if/else 分支內。
+          await _createLayoutPresetTable(db);
         }
       },
       onOpen: (db) async {
@@ -719,6 +729,21 @@ class SqliteLibraryRepository implements LibraryRepository {
         book_fingerprint TEXT NOT NULL,
         payload_json TEXT NOT NULL,
         PRIMARY KEY (collection, client_id)
+      )
+    ''');
+  }
+
+  static Future<void> _createLayoutPresetTable(Database db) async {
+    // 版面設定預設集（epic-28-reader-settings-enhancements Issue 3），見
+    // spec.md「儲存格式」——prefs_json 為過濾後 BookReaderPrefs 的 JSON
+    // 序列化結果，非逐欄位對應，理由見 LayoutPresetRepository 類別文件。
+    await db.execute('''
+      CREATE TABLE layout_preset (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL,
+        prefs_json TEXT NOT NULL
       )
     ''');
   }
