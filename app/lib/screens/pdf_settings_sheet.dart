@@ -5,6 +5,7 @@ import '../reader/dual_page_direction.dart';
 import '../reader/dual_page_mode.dart';
 import '../reader/pdf_fit_mode.dart';
 import '../reader/pdf_crop_mode.dart';
+import '../reader/pdf_page_turn_animation.dart';
 
 /// PDF 專屬版面設定 Bottom Sheet（FR-11），三分頁結構：顯示／濾鏡／裁切，
 /// 見 docs/epics/epic-4-pdf-enhance/design.md 決策 #10（不與 EPUB 用的
@@ -45,6 +46,7 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
   late DualPageMode _dualPageMode;
   late bool _dualPageCoverAlone;
   late DualPageDirection _dualPageDirection;
+  late PdfPageTurnAnimation _pageTurnAnimation;
   late bool _showFooter;
   late bool _fullscreen;
 
@@ -60,6 +62,8 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
     _dualPageMode = widget.prefs.dualPageMode ?? DualPageMode.auto;
     _dualPageCoverAlone = widget.prefs.dualPageCoverAlone ?? true;
     _dualPageDirection = widget.prefs.dualPageDirection ?? DualPageDirection.rtl;
+    _pageTurnAnimation =
+        widget.prefs.pdfPageTurnAnimation ?? PdfPageTurnAnimation.slide;
     _showFooter = widget.prefs.showFooter ?? true;
     _fullscreen = widget.prefs.fullscreen ?? false;
   }
@@ -85,6 +89,7 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
       dualPageMode: _dualPageMode,
       dualPageCoverAlone: _dualPageCoverAlone,
       dualPageDirection: _dualPageDirection,
+      pdfPageTurnAnimation: _pageTurnAnimation,
       showFooter: _showFooter,
       fullscreen: _fullscreen,
     ));
@@ -164,6 +169,10 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
         Icons.format_textdirection_r_to_l,
         '右到左（日漫慣例）',
       ),
+    ];
+    const pageTurnAnimationOptions = [
+      (PdfPageTurnAnimation.slide, 'slide', Icons.swipe, '滑動'),
+      (PdfPageTurnAnimation.none, 'none', Icons.flash_on, '無'),
     ];
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -261,6 +270,27 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
                       selected ? Theme.of(context).colorScheme.primary : null,
                   onPressed: () => setState(() {
                     _dualPageDirection = direction;
+                    _notifyChanged();
+                  }),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 16),
+            const Text('換頁動畫'),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 4,
+              children: pageTurnAnimationOptions.map((option) {
+                final (animation, keySuffix, icon, tooltip) = option;
+                final selected = _pageTurnAnimation == animation;
+                return IconButton(
+                  key: Key('pdf_settings_page_turn_animation_$keySuffix'),
+                  icon: Icon(icon),
+                  tooltip: tooltip,
+                  color:
+                      selected ? Theme.of(context).colorScheme.primary : null,
+                  onPressed: () => setState(() {
+                    _pageTurnAnimation = animation;
                     _notifyChanged();
                   }),
                 );

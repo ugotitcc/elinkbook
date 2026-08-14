@@ -12,6 +12,7 @@ import 'dual_page_mode.dart';
 import 'pdf_spread_layout.dart';
 import 'pdf_annotation_decoration.dart';
 import 'pdf_page_info.dart';
+import 'pdf_page_turn_animation.dart';
 import 'pdf_image_filters.dart';
 import 'pdf_filter_debounce.dart';
 import 'pdf_crop_mode.dart';
@@ -53,6 +54,11 @@ class PdfReaderView extends StatefulWidget {
   /// 螢幕是否為橫向。由 ReaderScreen 既有的 isLandscape 傳入（與 EPUB
   /// FXL 分支同源），本 widget 不自行偵測方向。
   final bool isLandscape;
+
+  // ── epic-24-pdf-engine-rebuild Issue 11 新增 ──
+  /// PDF 換頁動畫，預設 [PdfPageTurnAnimation.slide]（現行既有 200ms 動畫，
+  /// 未傳此參數的既有呼叫端行為不變）。
+  final PdfPageTurnAnimation pdfPageTurnAnimation;
 
   // ── epic-24-pdf-engine-rebuild Issue 3 新增 ──
   /// 對比度 -100..100、亮度 -100..100，皆預設 0（無調整）。
@@ -99,6 +105,7 @@ class PdfReaderView extends StatefulWidget {
     this.dualPageCoverAlone = true,
     this.dualPageDirection = DualPageDirection.rtl,
     this.isLandscape = false,
+    this.pdfPageTurnAnimation = PdfPageTurnAnimation.slide,
     this.pdfContrast = 0,
     this.pdfBrightness = 0,
     this.pdfBoldStrength = 0,
@@ -267,6 +274,16 @@ class _PdfReaderViewState extends State<PdfReaderView> {
         mode: widget.dualPageMode,
         isLandscape: widget.isLandscape,
       );
+
+  /// [pdfPageTurnAnimation] 對應的實際 [Duration]，供全部 4 處導頁呼叫
+  /// （_jumpToPage/_nextPage/_previousPage/_goToSpread）共用單一定義來源。
+  /// pdfrx 的 goToPage()/goToArea() 對 Duration.zero 有專門的同步捷徑（見
+  /// pdfrx-2.4.7 pdf_viewer.dart `_goTo()` 的 `if (duration == Duration.zero)`
+  /// 分支），瞬間跳頁不會跑動畫 ticker。
+  Duration get _pageTurnDuration => widget.pdfPageTurnAnimation ==
+          PdfPageTurnAnimation.none
+      ? Duration.zero
+      : const Duration(milliseconds: 200);
 
   bool get _cropEnabled =>
       widget.pdfCropMode != PdfCropMode.none && widget.pdfCropRect != null;
@@ -562,7 +579,10 @@ class _PdfReaderViewState extends State<PdfReaderView> {
     if (pageIndex < 0 || pageIndex >= _controller.pageCount) return;
     final layout = _activeSpreadLayout;
     if (layout == null) {
-      _controller.goToPage(pageNumber: pageIndex + 1); // Issue 1 原邏輯。
+      _controller.goToPage(
+        pageNumber: pageIndex + 1, // Issue 1 原邏輯。
+        duration: _pageTurnDuration,
+      );
       return;
     }
     _goToSpread(layout.spreadIndexOf(pageIndex), layout);
@@ -575,7 +595,10 @@ class _PdfReaderViewState extends State<PdfReaderView> {
     if (layout == null) {
       final current = _controller.pageNumber ?? 1; // Issue 1 原邏輯。
       if (current >= _controller.pageCount) return;
-      _controller.goToPage(pageNumber: current + 1);
+      _controller.goToPage(
+        pageNumber: current + 1,
+        duration: _pageTurnDuration,
+      );
       return;
     }
     final currentIndex = (_controller.pageNumber ?? 1) - 1;
@@ -591,7 +614,10 @@ class _PdfReaderViewState extends State<PdfReaderView> {
     if (layout == null) {
       final current = _controller.pageNumber ?? 1; // Issue 1 原邏輯。
       if (current <= 1) return;
-      _controller.goToPage(pageNumber: current - 1);
+      _controller.goToPage(
+        pageNumber: current - 1,
+        duration: _pageTurnDuration,
+      );
       return;
     }
     final currentIndex = (_controller.pageNumber ?? 1) - 1;
@@ -682,6 +708,7 @@ class _PdfReaderViewState extends State<PdfReaderView> {
     unawaited(_controller.goToArea(
       rect: layout.spreadRects[spreadIndex],
       anchor: PdfPageAnchor.all,
+      duration: _pageTurnDuration,
     ));
   }
 

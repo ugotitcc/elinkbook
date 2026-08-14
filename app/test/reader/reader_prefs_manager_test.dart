@@ -5,6 +5,7 @@ import 'package:elinkbook/reader/book_reader_prefs_repository.dart';
 import 'package:elinkbook/reader/column_mode.dart';
 import 'package:elinkbook/reader/dual_page_direction.dart';
 import 'package:elinkbook/reader/dual_page_mode.dart';
+import 'package:elinkbook/reader/pdf_page_turn_animation.dart';
 import 'package:elinkbook/reader/global_reader_prefs.dart';
 import 'package:elinkbook/reader/page_turn_mode.dart';
 import 'package:elinkbook/reader/pdf_crop_mode.dart';
@@ -56,6 +57,7 @@ void main() {
       expect(resolved.dualPageMode, DualPageMode.auto);
       expect(resolved.dualPageCoverAlone, isTrue);
       expect(resolved.dualPageDirection, DualPageDirection.rtl);
+      expect(resolved.pdfPageTurnAnimation, PdfPageTurnAnimation.slide);
       expect(resolved.showHeader, isFalse);
       expect(resolved.showFooter, isFalse);
       expect(resolved.navZoneActions, rightFlipZoneTemplate);
@@ -75,6 +77,7 @@ void main() {
           dualPageMode: DualPageMode.always,
           dualPageCoverAlone: false,
           dualPageDirection: DualPageDirection.rtl,
+          pdfPageTurnAnimation: PdfPageTurnAnimation.none,
           showHeader: false,
           showFooter: false,
           columnMode: ColumnMode.single,
@@ -92,6 +95,7 @@ void main() {
       expect(resolved.dualPageMode, DualPageMode.always);
       expect(resolved.dualPageCoverAlone, isFalse);
       expect(resolved.dualPageDirection, DualPageDirection.rtl);
+      expect(resolved.pdfPageTurnAnimation, PdfPageTurnAnimation.none);
       expect(resolved.showHeader, isFalse);
       expect(resolved.showFooter, isFalse);
       expect(resolved.columnMode, ColumnMode.single);

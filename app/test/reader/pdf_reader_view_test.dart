@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pdfrx/pdfrx.dart';
+import 'package:elinkbook/reader/dual_page_mode.dart';
 import 'package:elinkbook/reader/pdf_page_info.dart';
+import 'package:elinkbook/reader/pdf_page_turn_animation.dart';
 import 'package:elinkbook/reader/pdf_reader_view.dart';
 
 void main() {
@@ -174,5 +176,145 @@ void main() {
 
     expect(renderedCount, 1);
     expect(readAllCalled, isTrue);
+  });
+
+  testWidgets(
+      'pdfPageTurnAnimation=none 時，jumpToPage 後單一 pump（無經過時間）已立即反映新頁碼',
+      (tester) async {
+    var renderedCount = 0;
+    PdfPageInfo? lastPageInfo;
+    final key = GlobalKey<State<PdfReaderView>>();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PdfReaderView(
+          key: key,
+          filePath: 'test/fixtures/sample_multi_page.pdf',
+          onPageRendered: () => renderedCount++,
+          onError: (_) {},
+          onPageChanged: (info) => lastPageInfo = info,
+          pdfPageTurnAnimation: PdfPageTurnAnimation.none,
+        ),
+      ),
+    );
+
+    await tester.runAsync(() async {
+      for (var i = 0; i < 30 && renderedCount == 0; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+      }
+    });
+    expect(lastPageInfo?.pageIndex, 0);
+
+    PdfReaderView.jumpToPage(key, 4);
+    await tester.pump(); // 單一 frame、無經過時間。
+    expect(lastPageInfo?.pageIndex, 4);
+  });
+
+  testWidgets(
+      '預設 pdfPageTurnAnimation（slide）時，jumpToPage 後單一 pump（無經過時間）尚未反映新頁碼，需等待 200ms 動畫',
+      (tester) async {
+    var renderedCount = 0;
+    PdfPageInfo? lastPageInfo;
+    final key = GlobalKey<State<PdfReaderView>>();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PdfReaderView(
+          key: key,
+          filePath: 'test/fixtures/sample_multi_page.pdf',
+          onPageRendered: () => renderedCount++,
+          onError: (_) {},
+          onPageChanged: (info) => lastPageInfo = info,
+        ),
+      ),
+    );
+
+    await tester.runAsync(() async {
+      for (var i = 0; i < 30 && renderedCount == 0; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+      }
+    });
+    expect(lastPageInfo?.pageIndex, 0);
+
+    PdfReaderView.jumpToPage(key, 4);
+    await tester.pump(); // 單一 frame、無經過時間——動畫尚未跑完。
+    expect(lastPageInfo?.pageIndex, 0); // 仍是舊頁碼。
+
+    await tester.pump(const Duration(milliseconds: 300)); // 200ms 動畫跑完。
+    expect(lastPageInfo?.pageIndex, 4);
+  });
+
+  testWidgets(
+      'pdfPageTurnAnimation=none 時，nextPage()／previousPage() 也在單一 pump 後立即反映新頁碼',
+      (tester) async {
+    var renderedCount = 0;
+    PdfPageInfo? lastPageInfo;
+    final key = GlobalKey<State<PdfReaderView>>();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PdfReaderView(
+          key: key,
+          filePath: 'test/fixtures/sample_multi_page.pdf',
+          onPageRendered: () => renderedCount++,
+          onError: (_) {},
+          onPageChanged: (info) => lastPageInfo = info,
+          pdfPageTurnAnimation: PdfPageTurnAnimation.none,
+        ),
+      ),
+    );
+
+    await tester.runAsync(() async {
+      for (var i = 0; i < 30 && renderedCount == 0; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+      }
+    });
+    expect(lastPageInfo?.pageIndex, 0);
+
+    PdfReaderView.nextPage(key);
+    await tester.pump();
+    expect(lastPageInfo?.pageIndex, 1);
+
+    PdfReaderView.previousPage(key);
+    await tester.pump();
+    expect(lastPageInfo?.pageIndex, 0);
+  });
+
+  testWidgets(
+      'dualPageMode=always 且 pdfPageTurnAnimation=none 時，跳頁在單一 pump 後立即反映（涵蓋雙頁 _goToSpread／goToArea 路徑）',
+      (tester) async {
+    var renderedCount = 0;
+    PdfPageInfo? lastPageInfo;
+    final key = GlobalKey<State<PdfReaderView>>();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PdfReaderView(
+          key: key,
+          filePath: 'test/fixtures/sample_multi_page.pdf',
+          onPageRendered: () => renderedCount++,
+          onError: (_) {},
+          onPageChanged: (info) => lastPageInfo = info,
+          dualPageMode: DualPageMode.always,
+          pdfPageTurnAnimation: PdfPageTurnAnimation.none,
+        ),
+      ),
+    );
+
+    await tester.runAsync(() async {
+      for (var i = 0; i < 30 && renderedCount == 0; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+      }
+    });
+    await tester.pump(); // 讓雙頁版面計算（_layoutSpreadPages）完成一輪 build。
+    final initialIndex = lastPageInfo?.pageIndex;
+
+    PdfReaderView.nextPage(key);
+    await tester.pump(); // 單一 frame、無經過時間。
+    expect(lastPageInfo?.pageIndex, isNot(initialIndex));
   });
 }

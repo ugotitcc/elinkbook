@@ -10,6 +10,7 @@ import 'nav_zone_mode.dart';
 import 'page_turn_mode.dart';
 import 'pdf_crop_mode.dart';
 import 'pdf_fit_mode.dart';
+import 'pdf_page_turn_animation.dart';
 import 'reader_prefs_manager.dart';
 import 'reading_position.dart';
 import 'epub_character_count_repository.dart';
@@ -189,6 +190,8 @@ class ReaderPrefsManagerImpl implements ReaderPrefsManager {
       dualPageMode: book.dualPageMode ?? DualPageMode.auto,
       dualPageCoverAlone: book.dualPageCoverAlone ?? true,
       dualPageDirection: book.dualPageDirection ?? DualPageDirection.rtl,
+      pdfPageTurnAnimation:
+          book.pdfPageTurnAnimation ?? PdfPageTurnAnimation.slide,
       showHeader: book.showHeader ?? false,
       showFooter: book.showFooter ?? false,
       navZoneActions:

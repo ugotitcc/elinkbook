@@ -9,6 +9,7 @@ import 'package:elinkbook/reader/screen_orientation_setting.dart';
 import 'package:elinkbook/reader/page_turn_mode.dart';
 import 'package:elinkbook/reader/dual_page_direction.dart';
 import 'package:elinkbook/reader/dual_page_mode.dart';
+import 'package:elinkbook/reader/pdf_page_turn_animation.dart';
 import 'package:elinkbook/reader/writing_mode.dart';
 
 void main() {
@@ -39,6 +40,7 @@ void main() {
     expect(prefs.marginLeft, isNull);
     expect(prefs.marginRight, isNull);
     expect(prefs.letterSpacing, isNull);
+    expect(prefs.pdfPageTurnAnimation, isNull);
   });
 
   test('兩個欄位值完全相同的 BookReaderPrefs 視為相等', () {
@@ -244,6 +246,33 @@ void main() {
     expect(BookReaderPrefs.fromMap(nullMap).dualPageCoverAlone, isNull);
   });
 
+  test('換頁動畫欄位值完全相同的 BookReaderPrefs 視為相等', () {
+    const a = BookReaderPrefs(pdfPageTurnAnimation: PdfPageTurnAnimation.none);
+    const b = BookReaderPrefs(pdfPageTurnAnimation: PdfPageTurnAnimation.none);
+    expect(a, b);
+    expect(a.hashCode, b.hashCode);
+  });
+
+  test('換頁動畫欄位不同時視為不相等', () {
+    const a = BookReaderPrefs(pdfPageTurnAnimation: PdfPageTurnAnimation.slide);
+    const b = BookReaderPrefs(pdfPageTurnAnimation: PdfPageTurnAnimation.none);
+    expect(a, isNot(b));
+  });
+
+  test('換頁動畫欄位的 toMap／fromMap round-trip 保留欄位值，null 亦正確 round-trip',
+      () {
+    const withNone =
+        BookReaderPrefs(pdfPageTurnAnimation: PdfPageTurnAnimation.none);
+    final noneMap = withNone.toMap('book-anim-1');
+    expect(noneMap['pdf_page_turn_animation'], 'none');
+    expect(BookReaderPrefs.fromMap(noneMap), withNone);
+
+    const withNull = BookReaderPrefs.empty;
+    final nullMap = withNull.toMap('book-anim-2');
+    expect(nullMap['pdf_page_turn_animation'], isNull);
+    expect(BookReaderPrefs.fromMap(nullMap).pdfPageTurnAnimation, isNull);
+  });
+
   test('頁首/頁尾欄位 BookReaderPrefs.empty 為 null（未覆寫，交由 ResolvedPreferences 決定預設值 true）',
       () {
     const prefs = BookReaderPrefs.empty;
@@ -441,5 +470,17 @@ void main() {
 
     expect(updated.fontSize, 18);
     expect(updated.letterSpacing, 0.2);
+  });
+
+  test('copyWith 更新 pdfPageTurnAnimation 時，其餘欄位保留原值', () {
+    const original = BookReaderPrefs(
+      pdfContrast: 10,
+      pdfPageTurnAnimation: PdfPageTurnAnimation.slide,
+    );
+    final updated =
+        original.copyWith(pdfPageTurnAnimation: PdfPageTurnAnimation.none);
+
+    expect(updated.pdfContrast, 10);
+    expect(updated.pdfPageTurnAnimation, PdfPageTurnAnimation.none);
   });
 }

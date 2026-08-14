@@ -6,6 +6,7 @@ import 'page_turn_mode.dart';
 import 'pdf_crop_mode.dart';
 import 'pdf_crop_rect.dart';
 import 'pdf_fit_mode.dart';
+import 'pdf_page_turn_animation.dart';
 import 'screen_orientation_setting.dart';
 import 'writing_mode.dart';
 
@@ -50,6 +51,10 @@ class BookReaderPrefs {
   final bool? dualPageCoverAlone; // null=true（封面獨立，僅 PDF 有效）
   final DualPageDirection? dualPageDirection; // null=rtl（僅 PDF 有效）
 
+  /// PDF 換頁動畫（epic-24-pdf-engine-rebuild Issue 11）。null=slide
+  /// （預設，200ms 滑動動畫，即現行既有行為）。
+  final PdfPageTurnAnimation? pdfPageTurnAnimation;
+
   final bool? showHeader; // null=true（預設顯示頁首，僅 EPUB 有效，見 spec.md「頁首/頁尾顯示切換」）
   final bool? showFooter; // null=true（預設顯示頁尾，EPUB／PDF 皆有效）
 
@@ -89,6 +94,7 @@ class BookReaderPrefs {
     this.dualPageMode,
     this.dualPageCoverAlone,
     this.dualPageDirection,
+    this.pdfPageTurnAnimation,
     this.showHeader,
     this.showFooter,
     this.columnMode,
@@ -129,6 +135,7 @@ class BookReaderPrefs {
       'dual_page_cover_alone':
           dualPageCoverAlone == null ? null : (dualPageCoverAlone! ? 1 : 0),
       'dual_page_direction': dualPageDirection?.name,
+      'pdf_page_turn_animation': pdfPageTurnAnimation?.name,
       'show_header': showHeader == null ? null : (showHeader! ? 1 : 0),
       'show_footer': showFooter == null ? null : (showFooter! ? 1 : 0),
       'column_mode': columnMode?.name,
@@ -192,6 +199,10 @@ class BookReaderPrefs {
           ? null
           : DualPageDirection.values
               .byName(map['dual_page_direction'] as String),
+      pdfPageTurnAnimation: map['pdf_page_turn_animation'] == null
+          ? null
+          : PdfPageTurnAnimation.values
+              .byName(map['pdf_page_turn_animation'] as String),
       showHeader:
           map['show_header'] == null ? null : (map['show_header'] as int) == 1,
       showFooter:
@@ -233,6 +244,7 @@ class BookReaderPrefs {
       other.dualPageMode == dualPageMode &&
       other.dualPageCoverAlone == dualPageCoverAlone &&
       other.dualPageDirection == dualPageDirection &&
+      other.pdfPageTurnAnimation == pdfPageTurnAnimation &&
       other.showHeader == showHeader &&
       other.showFooter == showFooter &&
       other.columnMode == columnMode &&
@@ -266,6 +278,7 @@ class BookReaderPrefs {
         dualPageMode,
         dualPageCoverAlone,
         dualPageDirection,
+        pdfPageTurnAnimation,
         showHeader,
         showFooter,
         columnMode,
@@ -304,6 +317,7 @@ class BookReaderPrefs {
     DualPageMode? dualPageMode,
     bool? dualPageCoverAlone,
     DualPageDirection? dualPageDirection,
+    PdfPageTurnAnimation? pdfPageTurnAnimation,
     bool? showHeader,
     bool? showFooter,
     ColumnMode? columnMode,
@@ -337,6 +351,7 @@ class BookReaderPrefs {
       dualPageMode: dualPageMode ?? this.dualPageMode,
       dualPageCoverAlone: dualPageCoverAlone ?? this.dualPageCoverAlone,
       dualPageDirection: dualPageDirection ?? this.dualPageDirection,
+      pdfPageTurnAnimation: pdfPageTurnAnimation ?? this.pdfPageTurnAnimation,
       showHeader: showHeader ?? this.showHeader,
       showFooter: showFooter ?? this.showFooter,
       columnMode: columnMode ?? this.columnMode,
