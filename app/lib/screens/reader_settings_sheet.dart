@@ -170,6 +170,18 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     return ((value / base) * 10000).round() / 10000;
   }
 
+  /// **epic-28-reader-settings-enhancements Issue 4 審查回應**：這裡回傳的
+  /// `null`（未覆寫）不只影響本書畫面即時渲染，也會被 [_buildLayoutPresetSection]
+  /// 的「另存為新預設集」／「複製到其他書籍」原封不動存進 [LayoutPreset]／
+  /// 寫進目標書籍——`BookReaderPrefsRepository.save()`／`saveMultiple()`
+  /// 是「整列覆寫」語意（`INSERT OR REPLACE`，見該檔案 class doc），並非
+  /// 逐欄位合併。因此：使用者若存一個只調整過部分欄位的預設集，套用到
+  /// 另一本已有自訂覆寫值的書籍時，本欄位若仍是未覆寫狀態，會把目標書籍
+  /// 對應欄位一併清空回該書自己的原生樣式，不是只套用預設集裡「有值」的
+  /// 那幾項。這是「整列覆寫」既有設計（Epic 28 Issue 3 上線時就如此）與
+  /// 本次修復（未觸碰欄位正確維持 `null`）疊加後的預期結果，不是缺陷——
+  /// 比修復前「未觸碰欄位一律凍結成當時滑桿顯示的預設數字」更符合直覺，
+  /// 但屬於容易被誤判為回歸的跨 Issue 行為，記錄於此供日後排查參考。
   BookReaderPrefs get _currentDraft => BookReaderPrefs(
         fontFamily: _fontFamily,
         fontSize: _fontSizeOverridden ? _toMultiplier(_fontSize, 16.0) : null,
