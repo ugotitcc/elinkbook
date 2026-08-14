@@ -12,6 +12,7 @@ import 'package:elinkbook/reader/column_mode.dart';
 import 'package:elinkbook/reader/custom_font.dart';
 import 'package:elinkbook/reader/dual_page_mode.dart';
 import 'package:elinkbook/reader/global_reader_prefs.dart';
+import 'package:elinkbook/reader/pdf_page_turn_animation.dart';
 import 'package:elinkbook/reader/page_turn_mode.dart';
 import 'package:elinkbook/reader/pdf_page_info.dart';
 import 'package:elinkbook/reader/pdf_reader_view.dart';
@@ -302,6 +303,53 @@ void main() {
       find.byType(FoliateEpubReaderView),
     );
     expect(foliateView.dualPageMode, DualPageMode.auto);
+  });
+
+  testWidgets('開啟該書已有的持久化換頁動畫偏好設定後，PdfReaderView 的 pdfPageTurnAnimation 正確載入',
+      (tester) async {
+    await prefsManager.saveBookPrefs(
+      'b1',
+      const BookReaderPrefs(
+        pdfPageTurnAnimation: PdfPageTurnAnimation.none,
+      ),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b1',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final pdfView =
+        tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+    expect(pdfView.pdfPageTurnAnimation, PdfPageTurnAnimation.none);
+  });
+
+  testWidgets('尚未持久化換頁動畫偏好設定時，PdfReaderView 的 pdfPageTurnAnimation 為 slide（預設值）',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b1',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final pdfView =
+        tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+    expect(pdfView.pdfPageTurnAnimation, PdfPageTurnAnimation.slide);
   });
 
   testWidgets(
