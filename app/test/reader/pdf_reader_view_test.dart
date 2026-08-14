@@ -7,6 +7,7 @@ import 'package:elinkbook/reader/dual_page_mode.dart';
 import 'package:elinkbook/reader/pdf_page_info.dart';
 import 'package:elinkbook/reader/pdf_page_turn_animation.dart';
 import 'package:elinkbook/reader/pdf_reader_view.dart';
+import '../support/pump_until_pdf_ready.dart';
 
 void main() {
   setUp(() => pdfrxInitialize());
@@ -27,12 +28,10 @@ void main() {
     );
 
     // pdfrx 開書為非同步流程，須讓多輪 microtask/frame 有機會完成。
-    await tester.runAsync(() async {
-      for (var i = 0; i < 30 && renderedCount == 0 && errorMessage == null; i++) {
-        await tester.pump(const Duration(milliseconds: 100));
-        await Future<void>.delayed(const Duration(milliseconds: 10));
-      }
-    });
+    await pumpUntilPdfReady(
+      tester,
+      condition: () => renderedCount != 0 || errorMessage != null,
+    );
 
     expect(renderedCount, 1);
     expect(errorMessage, isNull);
@@ -53,12 +52,10 @@ void main() {
       ),
     );
 
-    await tester.runAsync(() async {
-      for (var i = 0; i < 30 && renderedCount == 0 && errorMessage == null; i++) {
-        await tester.pump(const Duration(milliseconds: 100));
-        await Future<void>.delayed(const Duration(milliseconds: 10));
-      }
-    });
+    await pumpUntilPdfReady(
+      tester,
+      condition: () => renderedCount != 0 || errorMessage != null,
+    );
 
     expect(errorMessage, isNotNull);
     expect(renderedCount, 0);
@@ -81,12 +78,7 @@ void main() {
       ),
     );
 
-    await tester.runAsync(() async {
-      for (var i = 0; i < 30 && renderedCount == 0; i++) {
-        await tester.pump(const Duration(milliseconds: 100));
-        await Future<void>.delayed(const Duration(milliseconds: 10));
-      }
-    });
+    await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
     expect(renderedCount, 1);
     expect(lastPageInfo?.totalPages, 5);
     expect(lastPageInfo?.pageIndex, 0);
@@ -120,12 +112,10 @@ void main() {
       ),
     );
 
-    await tester.runAsync(() async {
-      for (var i = 0; i < 30 && renderedCount == 0 && errorMessage == null; i++) {
-        await tester.pump(const Duration(milliseconds: 100));
-        await Future<void>.delayed(const Duration(milliseconds: 10));
-      }
-    });
+    await pumpUntilPdfReady(
+      tester,
+      condition: () => renderedCount != 0 || errorMessage != null,
+    );
 
     expect(renderedCount, 0);
     expect(errorMessage, isNotNull);
@@ -167,12 +157,7 @@ void main() {
       ),
     );
 
-    await tester.runAsync(() async {
-      for (var i = 0; i < 30 && renderedCount == 0; i++) {
-        await tester.pump(const Duration(milliseconds: 100));
-        await Future<void>.delayed(const Duration(milliseconds: 10));
-      }
-    });
+    await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
 
     expect(renderedCount, 1);
     expect(readAllCalled, isTrue);

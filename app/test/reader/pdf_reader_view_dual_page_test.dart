@@ -5,20 +5,10 @@ import 'package:elinkbook/reader/dual_page_direction.dart';
 import 'package:elinkbook/reader/dual_page_mode.dart';
 import 'package:elinkbook/reader/pdf_page_info.dart';
 import 'package:elinkbook/reader/pdf_reader_view.dart';
+import '../support/pump_until_pdf_ready.dart';
 
 void main() {
   setUp(() => pdfrxInitialize());
-
-  /// 等待 pdfrx 真正完成非同步載入（比照 pdf_reader_view_test.dart 既有
-  /// 寫法），最多輪詢 30 次、每次 100ms。
-  Future<void> waitRendered(WidgetTester tester, int Function() rendered) {
-    return tester.runAsync(() async {
-      for (var i = 0; i < 30 && rendered() == 0; i++) {
-        await tester.pump(const Duration(milliseconds: 100));
-        await Future<void>.delayed(const Duration(milliseconds: 10));
-      }
-    });
-  }
 
   testWidgets('不傳雙頁參數時，行為與 Issue 1 完全相同（零回歸基準）',
       (tester) async {
@@ -37,7 +27,7 @@ void main() {
         ),
       ),
     );
-    await waitRendered(tester, () => renderedCount);
+    await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
 
     expect(renderedCount, 1);
     expect(lastPageInfo?.totalPages, 5);
@@ -74,7 +64,7 @@ void main() {
         ),
       ),
     );
-    await waitRendered(tester, () => renderedCount);
+    await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
 
     expect(lastPageInfo?.pageIndex, 0);
     PdfReaderView.nextPage(key);
@@ -103,7 +93,7 @@ void main() {
         ),
       ),
     );
-    await waitRendered(tester, () => renderedCount);
+    await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
 
     // 封面獨立時第 0 頁本身即為一個完整 spread，錨點頁仍是 0——
     // 與單頁模式的初始狀態在「開書即在第 0 頁」這件事上一致，
@@ -131,7 +121,7 @@ void main() {
         ),
       ),
     );
-    await waitRendered(tester, () => renderedCount);
+    await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
 
     // jumpToPage(2)：page 2 屬於 spread [1,2]，錨點頁為 1。
     PdfReaderView.jumpToPage(key, 2);
@@ -161,7 +151,7 @@ void main() {
         ),
       ),
     );
-    await waitRendered(tester, () => renderedCount);
+    await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
     expect(lastPageInfo?.pageIndex, 0);
 
     PdfReaderView.nextPage(key);
@@ -201,7 +191,7 @@ void main() {
         ),
       ),
     );
-    await waitRendered(tester, () => renderedCount);
+    await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
 
     PdfReaderView.jumpToPage(key, 4);
     await tester.pump();
@@ -244,7 +234,7 @@ void main() {
         ),
       ),
     );
-    await waitRendered(tester, () => renderedCount);
+    await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
     expect(lastPageInfo?.totalPages, 6);
     expect(lastPageInfo?.pageIndex, 0);
 
@@ -283,7 +273,7 @@ void main() {
         ),
       ),
     );
-    await waitRendered(tester, () => renderedCount);
+    await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
 
     PdfReaderView.nextPage(key);
     await tester.pump();
@@ -310,7 +300,7 @@ void main() {
         ),
       ),
     );
-    await waitRendered(tester, () => renderedCount);
+    await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
 
     PdfReaderView.nextPage(key);
     await tester.pump();
@@ -343,7 +333,7 @@ void main() {
         ),
       ),
     );
-    await waitRendered(tester, () => renderedCount);
+    await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
 
     // spreads == [[0],[1,2],[3,4],[5]]，第 5 頁單獨成一組。
     PdfReaderView.jumpToPage(key, 5);
@@ -382,7 +372,7 @@ void main() {
           ),
         ),
       );
-      await waitRendered(tester, () => renderedCount);
+      await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
       final sequence = <int?>[lastPageInfo?.pageIndex];
       PdfReaderView.nextPage(key);
       await tester.pump();
@@ -422,7 +412,7 @@ void main() {
         );
 
     await tester.pumpWidget(buildView(DualPageMode.always));
-    await waitRendered(tester, () => renderedCount);
+    await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
 
     PdfReaderView.jumpToPage(key, 4);
     await tester.pump();
@@ -462,7 +452,7 @@ void main() {
         );
 
     await tester.pumpWidget(buildView(true));
-    await waitRendered(tester, () => renderedCount);
+    await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
 
     PdfReaderView.nextPage(key);
     await tester.pump();
@@ -502,7 +492,7 @@ void main() {
         );
 
     await tester.pumpWidget(buildView(true));
-    await waitRendered(tester, () => renderedCount);
+    await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
 
     PdfReaderView.nextPage(key);
     await tester.pump();
@@ -547,7 +537,7 @@ void main() {
         );
 
     await tester.pumpWidget(buildView(DualPageDirection.rtl));
-    await waitRendered(tester, () => renderedCount);
+    await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
 
     PdfReaderView.nextPage(key);
     await tester.pump();
@@ -600,7 +590,7 @@ void main() {
     expect(tester.takeException(), isNull);
 
     // 讓文件真正開完，確認後續行為仍正常運作（非卡死狀態）。
-    await waitRendered(tester, () => renderedCount);
+    await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
     expect(renderedCount, 1);
   });
 }
