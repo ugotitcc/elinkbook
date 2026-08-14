@@ -4979,7 +4979,8 @@ void main() {
   });
 
   testWidgets(
-      '開書逾時（epic-18-reader-device-qa Issue 33）：12 秒內未收到 onPageRendered，'
+      '開書逾時（epic-18-reader-device-qa Issue 33，epic-27-reader-device-compat '
+      'Issue 2 調整為 30 秒）：30 秒內未收到 onPageRendered，'
       '自動切換為錯誤畫面，不會永遠停在載入指示器', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -5000,10 +5001,20 @@ void main() {
     expect(find.byKey(const Key('reader_loading_indicator')), findsOneWidget);
     expect(find.byKey(const Key('reader_error_text')), findsNothing);
 
-    await tester.pump(const Duration(seconds: 12));
+    // epic-27-reader-device-compat Issue 2：先推進 29 秒並斷言「仍是載入
+    // 中」，確認逾時值真的是 30 秒（而不只是某個大於舊值 12 秒的時間點
+    // 剛好也能通過）——若實作仍是舊的 12 秒，這裡會提早看到錯誤畫面而
+    // 斷言失敗。
+    await tester.pump(const Duration(seconds: 29));
+
+    expect(find.byKey(const Key('reader_loading_indicator')), findsOneWidget,
+        reason: '30 秒內尚未逾時，應維持載入中，不應提早顯示錯誤畫面');
+    expect(find.byKey(const Key('reader_error_text')), findsNothing);
+
+    await tester.pump(const Duration(seconds: 1));
 
     expect(find.byKey(const Key('reader_error_text')), findsOneWidget,
-        reason: '逾時後應切換為可見的錯誤畫面，而非讓使用者永遠面對轉圈圈');
+        reason: '滿 30 秒後應切換為可見的錯誤畫面，而非讓使用者永遠面對轉圈圈');
     expect(find.byKey(const Key('reader_loading_indicator')), findsNothing);
   });
 
@@ -5031,7 +5042,10 @@ void main() {
     // 逾時計時器理應在 onPageRendered 觸發當下就被取消；即使沒有取消，
     // 逾時處理本身也必須判斷「已經不是 loading 狀態才動作」，兩者皆可
     // 避免這裡誤把已成功渲染的畫面覆蓋回錯誤狀態。
-    await tester.pump(const Duration(seconds: 12));
+    // epic-27-reader-device-compat Issue 2：逾時值調整為 30 秒，此處同步
+    // 更新推進時長；本測試驗證的是「已成功渲染不受逾時計時器覆蓋」，
+    // 與逾時值本身大小無關，故不需要像 Step 1 那樣拆成兩段推進。
+    await tester.pump(const Duration(seconds: 30));
 
     expect(find.byKey(const Key('reader_error_text')), findsNothing,
         reason: '已成功渲染的畫面不應被逾時計時器事後覆蓋成錯誤狀態');
