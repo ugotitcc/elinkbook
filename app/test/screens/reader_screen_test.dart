@@ -18,6 +18,7 @@ import 'package:elinkbook/reader/pdf_reader_view.dart';
 import 'package:pdfrx/pdfrx.dart';
 import 'package:elinkbook/reader/writing_mode.dart';
 import 'package:elinkbook/reader/zone_action.dart';
+import '../support/pump_until_pdf_ready.dart';
 import 'package:elinkbook/screens/fxl_settings_sheet.dart';
 import 'package:elinkbook/screens/reader_settings_sheet.dart';
 import 'package:elinkbook/reader/toc_entry.dart';
@@ -2712,12 +2713,7 @@ void main() {
     );
 
     // 等待 pdfrx 真實載入 PDF（非模擬）。
-    await tester.runAsync(() async {
-      for (var i = 0; i < 30 && renderedCount == 0; i++) {
-        await tester.pump(const Duration(milliseconds: 100));
-        await Future<void>.delayed(const Duration(milliseconds: 10));
-      }
-    });
+    await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
     expect(renderedCount, 1);
     expect(lastPageInfo?.totalPages, 5);
     expect(lastPageInfo?.pageIndex, 0);
@@ -2772,12 +2768,7 @@ void main() {
     await tester.pump();
 
     // 等待 pdfrx 真實載入 PDF（非模擬 onPageRendered）。
-    await tester.runAsync(() async {
-      for (var i = 0; i < 30; i++) {
-        await tester.pump(const Duration(milliseconds: 100));
-        await Future<void>.delayed(const Duration(milliseconds: 10));
-      }
-    });
+    await pumpUntilPdfReady(tester);
 
     const volumeKeyChannel = MethodChannel('elinkbook/volume_key');
     final byteData = volumeKeyChannel.codec.encodeMethodCall(
@@ -5506,12 +5497,7 @@ void main() {
       await tester.pump();
       await tester.runAsync(() => Future.delayed(Duration.zero));
       await tester.pump();
-      await tester.runAsync(() async {
-        for (var i = 0; i < 30; i++) {
-          await tester.pump(const Duration(milliseconds: 100));
-          await Future<void>.delayed(const Duration(milliseconds: 10));
-        }
-      });
+      await pumpUntilPdfReady(tester);
 
       // epic-24 Issue 8：PDF 不再使用 AppBar，設定按鈕改為 FAB。
       // 直接呼叫 onPressed callback 繞過 PdfReaderView gesture arena 問題。
@@ -5554,12 +5540,7 @@ void main() {
       await tester.pump();
       await tester.runAsync(() => Future.delayed(Duration.zero));
       await tester.pump();
-      await tester.runAsync(() async {
-        for (var i = 0; i < 30; i++) {
-          await tester.pump(const Duration(milliseconds: 100));
-          await Future<void>.delayed(const Duration(milliseconds: 10));
-        }
-      });
+      await pumpUntilPdfReady(tester);
 
       // epic-24 Issue 8：PDF 不再使用 AppBar，設定按鈕改為 FAB。
       // 直接呼叫 onPressed callback 繞過 PdfReaderView gesture arena 問題。
@@ -5625,12 +5606,7 @@ void main() {
     await tester.pump();
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
-    await tester.runAsync(() async {
-      for (var i = 0; i < 30; i++) {
-        await tester.pump(const Duration(milliseconds: 100));
-        await Future<void>.delayed(const Duration(milliseconds: 10));
-      }
-    });
+    await pumpUntilPdfReady(tester);
 
     // epic-24 Issue 8：PDF 新增 FAB 後，原本的 (40, 60) 觸控座標落在
     // reader_pdf_back_button（top:16, left:16, 48x48 IconButton）範圍內，
@@ -5840,12 +5816,7 @@ void main() {
     await tester.pump();
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
-    await tester.runAsync(() async {
-      for (var i = 0; i < 30; i++) {
-        await tester.pump(const Duration(milliseconds: 100));
-        await Future<void>.delayed(const Duration(milliseconds: 10));
-      }
-    });
+    await pumpUntilPdfReady(tester);
 
     // 觸控位置刻意取畫面中央附近（而非邊角），避開 PDF FAB
     // （reader_pdf_back_button 等固定在 top:16/left:16 一類螢幕邊角，
@@ -5911,12 +5882,7 @@ void main() {
     await tester.pump();
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
-    await tester.runAsync(() async {
-      for (var i = 0; i < 30; i++) {
-        await tester.pump(const Duration(milliseconds: 100));
-        await Future<void>.delayed(const Duration(milliseconds: 10));
-      }
-    });
+    await pumpUntilPdfReady(tester);
 
     final topLeft = tester.getTopLeft(find.byType(PdfReaderView));
     final firstFinger = await tester.startGesture(topLeft + const Offset(40, 60));
@@ -5961,12 +5927,7 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
     // 等待 pdfrx 真實載入 PDF（30 次輪詢，比照本檔案既有 PDF 測試慣例）。
-    await tester.runAsync(() async {
-      for (var i = 0; i < 30; i++) {
-        await tester.pump(const Duration(milliseconds: 100));
-        await Future<void>.delayed(const Duration(milliseconds: 10));
-      }
-    });
+    await pumpUntilPdfReady(tester);
 
     // 模擬原生端回報頁碼，讓 _pdfPageInfo 非 null（比照既有 PDF 測試
     // 直接呼叫 PdfReaderView.onPageChanged 的模式）。
@@ -6012,12 +5973,7 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
     // 等待 pdfrx 真實載入 PDF（30 次輪詢，比照本檔案既有 PDF 測試慣例）。
-    await tester.runAsync(() async {
-      for (var i = 0; i < 30; i++) {
-        await tester.pump(const Duration(milliseconds: 100));
-        await Future<void>.delayed(const Duration(milliseconds: 10));
-      }
-    });
+    await pumpUntilPdfReady(tester);
 
     // 模擬原生端回報頁碼，讓 _pdfPageInfo 非 null。
     tester.widget<PdfReaderView>(find.byType(PdfReaderView))
@@ -6065,12 +6021,7 @@ void main() {
     expect(find.byType(TocBottomSheet), findsNothing);
 
     // 等待 pdfrx 真實載入 PDF（30 次輪詢，比照本檔案既有 PDF 測試慣例）。
-    await tester.runAsync(() async {
-      for (var i = 0; i < 30; i++) {
-        await tester.pump(const Duration(milliseconds: 100));
-        await Future<void>.delayed(const Duration(milliseconds: 10));
-      }
-    });
+    await pumpUntilPdfReady(tester);
     // _pdfTocLoaded 由 loadTableOfContents() 這個 async 呼叫的 .then()
     // callback 設定，需要多一次 pump 讓其 microtask 完成、觸發 setState。
     await tester.pump();
@@ -6100,12 +6051,7 @@ void main() {
     await tester.pump();
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
-    await tester.runAsync(() async {
-      for (var i = 0; i < 30; i++) {
-        await tester.pump(const Duration(milliseconds: 100));
-        await Future<void>.delayed(const Duration(milliseconds: 10));
-      }
-    });
+    await pumpUntilPdfReady(tester);
     await tester.pump();
 
     // epic-24 Issue 8：PDF 不再有 in-flow 頁尾，改由進度 FAB 觸發
@@ -6143,12 +6089,7 @@ void main() {
     await tester.pump();
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
-    await tester.runAsync(() async {
-      for (var i = 0; i < 30; i++) {
-        await tester.pump(const Duration(milliseconds: 100));
-        await Future<void>.delayed(const Duration(milliseconds: 10));
-      }
-    });
+    await pumpUntilPdfReady(tester);
     await tester.pump();
 
     ReaderScreen.openPdfToc(key);
@@ -6176,12 +6117,7 @@ void main() {
     await tester.pump();
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
-    await tester.runAsync(() async {
-      for (var i = 0; i < 30; i++) {
-        await tester.pump(const Duration(milliseconds: 100));
-        await Future<void>.delayed(const Duration(milliseconds: 10));
-      }
-    });
+    await pumpUntilPdfReady(tester);
     await tester.pump();
 
     ReaderScreen.openPdfToc(key);
@@ -6198,12 +6134,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 600));
 
     // 等待搜尋完成
-    await tester.runAsync(() async {
-      for (var i = 0; i < 10; i++) {
-        await tester.pump(const Duration(milliseconds: 100));
-        await Future<void>.delayed(const Duration(milliseconds: 10));
-      }
-    });
+    await pumpUntilPdfReady(tester, maxIterations: 10);
     await tester.pump();
 
     // 驗證搜尋面板可見且計數器顯示（搜尋面板內的計數器格式為「1 / 5」）。
@@ -6228,12 +6159,7 @@ void main() {
     await tester.pump();
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
-    await tester.runAsync(() async {
-      for (var i = 0; i < 30; i++) {
-        await tester.pump(const Duration(milliseconds: 100));
-        await Future<void>.delayed(const Duration(milliseconds: 10));
-      }
-    });
+    await pumpUntilPdfReady(tester);
     await tester.pump();
 
     ReaderScreen.openPdfToc(key);
@@ -6248,12 +6174,7 @@ void main() {
     await tester.enterText(textField, 'Page');
     await tester.pump(const Duration(milliseconds: 600));
 
-    await tester.runAsync(() async {
-      for (var i = 0; i < 10; i++) {
-        await tester.pump(const Duration(milliseconds: 100));
-        await Future<void>.delayed(const Duration(milliseconds: 10));
-      }
-    });
+    await pumpUntilPdfReady(tester, maxIterations: 10);
     await tester.pump();
 
     // 起始狀態：5 筆符合結果，目前在第 1 筆。
@@ -6310,12 +6231,7 @@ void main() {
     await tester.pump();
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
-    await tester.runAsync(() async {
-      for (var i = 0; i < 30; i++) {
-        await tester.pump(const Duration(milliseconds: 100));
-        await Future<void>.delayed(const Duration(milliseconds: 10));
-      }
-    });
+    await pumpUntilPdfReady(tester);
     await tester.pump();
 
     ReaderScreen.openPdfToc(key);
@@ -6330,12 +6246,7 @@ void main() {
     await tester.enterText(textField, 'anything');
     await tester.pump(const Duration(milliseconds: 600));
 
-    await tester.runAsync(() async {
-      for (var i = 0; i < 10; i++) {
-        await tester.pump(const Duration(milliseconds: 100));
-        await Future<void>.delayed(const Duration(milliseconds: 10));
-      }
-    });
+    await pumpUntilPdfReady(tester, maxIterations: 10);
     await tester.pump();
 
     expect(find.byKey(const Key('pdf_search_empty')), findsOneWidget);
@@ -6359,12 +6270,7 @@ void main() {
     await tester.pump();
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
-    await tester.runAsync(() async {
-      for (var i = 0; i < 30; i++) {
-        await tester.pump(const Duration(milliseconds: 100));
-        await Future<void>.delayed(const Duration(milliseconds: 10));
-      }
-    });
+    await pumpUntilPdfReady(tester);
     await tester.pump();
 
     ReaderScreen.openPdfToc(key);
@@ -6402,12 +6308,7 @@ void main() {
     await tester.pump();
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
-    await tester.runAsync(() async {
-      for (var i = 0; i < 30; i++) {
-        await tester.pump(const Duration(milliseconds: 100));
-        await Future<void>.delayed(const Duration(milliseconds: 10));
-      }
-    });
+    await pumpUntilPdfReady(tester);
     await tester.pump();
 
     ReaderScreen.openPdfToc(key);
