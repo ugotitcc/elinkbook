@@ -361,4 +361,39 @@ class BookReaderPrefs {
       fullscreen: fullscreen ?? this.fullscreen,
     );
   }
+
+  /// 只保留 [ReaderSettingsSheet]（流式 EPUB 版面設定）實際呈現的 20 個
+  /// 欄位，其餘 10 個欄位（`pageMargins`、6 個 `pdf*`、3 個 `dualPage*`）
+  /// 一律強制設為 `null`，**不論來源物件實際內容為何**——epic-28-reader-
+  /// settings-enhancements Issue 3「欄位污染防護」，見 spec.md「資料
+  /// 模型」。「另存為預設集」與「書籍設定複製」寫入 `LayoutPreset.prefs`
+  /// 前皆須經過這道過濾，不依賴「這些欄位在流式 EPUB 情境下結構性恆為
+  /// null」的假設（來源書籍若曾經歷人工版面覆蓋/FXL↔流式切換，可能殘留
+  /// 非 null 的污染欄位）。刻意不使用 `copyWith()`——`copyWith()` 是
+  /// `newValue ?? this.value` 語意，無法明確把欄位清成 `null`（見
+  /// `copyWith()` 文件註解），需要整列建構。
+  BookReaderPrefs reflowableEpubFields() {
+    return BookReaderPrefs(
+      fontFamily: fontFamily,
+      fontSize: fontSize,
+      fontWeight: fontWeight,
+      lineHeight: lineHeight,
+      paragraphSpacing: paragraphSpacing,
+      letterSpacing: letterSpacing,
+      marginTop: marginTop,
+      marginBottom: marginBottom,
+      marginLeft: marginLeft,
+      marginRight: marginRight,
+      textAlign: textAlign,
+      publisherStyles: publisherStyles,
+      writingModeOverride: writingModeOverride,
+      pageTurnModeOverride: pageTurnModeOverride,
+      screenOrientationOverride: screenOrientationOverride,
+      showHeader: showHeader,
+      showFooter: showFooter,
+      fullscreen: fullscreen,
+      columnMode: columnMode,
+      columnSize: columnSize,
+    );
+  }
 }
