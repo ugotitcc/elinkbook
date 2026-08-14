@@ -2942,7 +2942,7 @@ git commit -m "feat(epic-28): Issue 3 Task 11——App 層級貫穿 layoutPreset
 
 ## 完成後的驗證（對照 `issues.md` Issue 3 驗收標準）
 
-- [ ] `flutter analyze`：全專案 "No issues found!"
-- [ ] `flutter test`：全專案通過，零回歸
-- [ ] `flutter build apk --debug`：編譯成功
+- [x] `flutter analyze`：全專案 "No issues found!"
+- [x] `flutter test`：全專案通過，零回歸
+- [x] `flutter build apk --debug`：編譯成功
 - [ ] （建議，非本計畫強制自動化）於真機或模擬器：開啟一本流式 EPUB，調整版面設定後「另存為新預設集」，確認存滿 3 組後跳出覆蓋選單；套用預設集到目前書籍即時生效；套用到其他書籍時彈出確認對話框且目前畫面不受影響；「從其他書籍複製」流程正確讀取來源書籍設定；PDF/FXL 書籍確認不出現在書籍選擇器清單中。
