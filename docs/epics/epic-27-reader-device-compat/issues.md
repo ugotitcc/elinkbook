@@ -6,7 +6,7 @@
 
 ## Issue 1：EPUB 載入中點擊左側熱區導致崩潰畫面（loading 狀態缺乏點擊防呆）
 
-**Status:** `ready-for-agent`
+**Status:** ✅ 已完成並合併回 `main`（PR [#147](https://git.jigong.org/huthief/elinkBook/pulls/147)，分支 `epic-27-issue1-loading-guard`，2 個 commit：實作＋計畫勾選收尾）。程式碼審查（本機審查報告，依專案慣例不進版控）結論為可以合併——0 Critical／0 Important，僅 2 項 Minor（真機驗證已於 2026-08-14 在 Mobiscribe WAVE 完成，確認不再出現崩潰畫面；既有註解掛載位置為延續既有慣例，非本次引入的新問題）。全專案 `flutter analyze` 乾淨、`flutter test` 零回歸通過。
 
 **依賴：** 無
 
