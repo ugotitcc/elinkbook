@@ -5831,6 +5831,13 @@ void main() {
     await tester.pump();
 
     final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+    // epic-27-reader-device-compat Issue 1：_handleZoneAction 新增的
+    // loading 狀態防呆，若 _state 仍是 loading 會直接 return（包含本測試
+    // 要驗證的清除選取副作用），故需明確模擬 onPageRendered 讓 _state
+    // 轉為 rendered，比照既有 EPUB 測試的既有慣例（測的是「已載入完成後
+    // 換頁」情境，不是本 Issue 要防呆的「載入中換頁」情境）。
+    pdfView.onPageRendered();
+    await tester.pump();
 
     // 情境 A：nextPage 應清除既有選取。
     pdfView.onSelectionRectComputed?.call(
@@ -5865,6 +5872,125 @@ void main() {
     await tester.pump();
     expect(find.byType(AnnotationToolbar), findsNothing,
         reason: 'previousPage 換頁後同樣應清空選取狀態，工具列從畫面消失');
+  });
+
+  testWidgets(
+      'PDF：_state 仍為 loading 時觸發換頁熱區，應被忽略——不清除既有選取狀態（epic-27-reader-device-compat Issue 1）',
+      (tester) async {
+    final key = GlobalKey<State<ReaderScreen>>();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          key: key,
+          filePath: 'test/fixtures/sample_multi_page.pdf',
+          bookId: 'b_pdf_loading_guard',
+          prefsManager: FakeReaderPrefsManager(),
+          highlightsRepository: FakeHighlightsRepository(),
+          notesRepository: FakeNotesRepository(),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    // 刻意**不**呼叫 pdfView.onPageRendered()——維持 _state == loading，
+    // 模擬使用者在書籍仍在載入中時就點擊熱區的真機回報情境。
+    final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+    pdfView.onSelectionRectComputed?.call(
+      const PdfSelectionInfo(
+        pageIndex: 0,
+        rect: PercentRect(left: 0.3, top: 0.2, right: 0.6, bottom: 0.3),
+        widgetRect: PercentRect(left: 0.3, top: 0.2, right: 0.6, bottom: 0.3),
+      ),
+    );
+    await tester.pump();
+    expect(find.byType(AnnotationToolbar), findsOneWidget,
+        reason: '選取完成後應顯示 AnnotationToolbar（此步驟與 loading 防呆無關，只是佈置情境）');
+
+    ReaderScreen.triggerZoneAction(key, ZoneAction.nextPage);
+    await tester.pump();
+    expect(find.byType(AnnotationToolbar), findsOneWidget,
+        reason: '_state 仍是 loading，nextPage 應被忽略——若防呆失效，'
+            'PdfReaderView.nextPage 呼叫路徑會一併清除既有選取，'
+            'AnnotationToolbar 將意外消失（未加防呆前的既有行為，見 '
+            'epic-27-reader-device-compat Issue 1 診斷）');
+
+    ReaderScreen.triggerZoneAction(key, ZoneAction.previousPage);
+    await tester.pump();
+    expect(find.byType(AnnotationToolbar), findsOneWidget,
+        reason: '_state 仍是 loading，previousPage 同樣應被忽略');
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+      'EPUB 流式：_state 仍為 loading 時觸發換頁熱區，不拋出例外（epic-27-reader-device-compat Issue 1；真機上 JS 尚未就緒時是否正確攔截需 integration_test/人工驗證，見 issues.md）',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_epub_loading_guard',
+          prefsManager: prefsManager,
+          isFixedLayout: false,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    // 刻意**不**呼叫 onPageRendered()/onLayoutResolved()——維持
+    // _state == loading。rightFlip 模板：index 0（左欄）＝ previousPage、
+    // index 2（右欄）＝ nextPage（見 nav_zone_mode.dart
+    // rightFlipZoneTemplate）。
+    await tester.tap(find.byKey(const Key('nav_zone_0')));
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+
+    await tester.tap(find.byKey(const Key('nav_zone_2')));
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+      'PDF：_state 已是 rendered 後，換頁熱區維持既有行為不受 loading 防呆影響（回歸檢查，epic-27-reader-device-compat Issue 1）',
+      (tester) async {
+    final key = GlobalKey<State<ReaderScreen>>();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          key: key,
+          filePath: 'test/fixtures/sample_multi_page.pdf',
+          bookId: 'b_pdf_rendered_no_regression',
+          prefsManager: FakeReaderPrefsManager(),
+          highlightsRepository: FakeHighlightsRepository(),
+          notesRepository: FakeNotesRepository(),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+    pdfView.onPageRendered();
+    await tester.pump();
+    pdfView.onSelectionRectComputed?.call(
+      const PdfSelectionInfo(
+        pageIndex: 0,
+        rect: PercentRect(left: 0.3, top: 0.2, right: 0.6, bottom: 0.3),
+        widgetRect: PercentRect(left: 0.3, top: 0.2, right: 0.6, bottom: 0.3),
+      ),
+    );
+    await tester.pump();
+    expect(find.byType(AnnotationToolbar), findsOneWidget);
+
+    ReaderScreen.triggerZoneAction(key, ZoneAction.nextPage);
+    await tester.pump();
+    expect(find.byType(AnnotationToolbar), findsNothing,
+        reason: '_state 已是 rendered，既有「換頁清除選取」行為應維持不變，'
+            '不受新增的 loading 防呆影響（零回歸）');
   });
 
   testWidgets(
