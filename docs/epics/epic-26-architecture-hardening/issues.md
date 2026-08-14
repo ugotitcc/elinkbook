@@ -89,7 +89,7 @@
 
 ## Issue 4：收斂「等待 PDF 就緒」成一個共用測試 adapter
 
-**Status:** ✅ 已完成並通過程式碼審查，可合併回 `main`（分支 `epic-26-issue-4-pump-until-pdf-ready`，6 個 commit）。審查（`reviews/review-issue-4.md`）逐檔案核對 104 個編輯點與 `plan-issue-4.md` 完全吻合，條件反轉方向（最容易出錯之處）全數正確，`flutter analyze` 乾淨、全專案 1189 項測試零回歸，僅 1 項不影響行為的殘留註解用詞（Minor，不阻塞）。
+**Status:** ✅ 已完成並合併回 `main`（PR [#143](https://git.jigong.org/huthief/elinkBook/pulls/143)，分支 `epic-26-issue-4-pump-until-pdf-ready`，6 個 commit）。審查（`reviews/review-issue-4.md`）逐檔案核對 104 個編輯點與 `plan-issue-4.md` 完全吻合，條件反轉方向（最容易出錯之處）全數正確，`flutter analyze` 乾淨、全專案 1189 項測試零回歸，僅 1 項不影響行為的殘留註解用詞（Minor，不阻塞）。
 
 **依賴：** 無
 
