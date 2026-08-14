@@ -10,6 +10,7 @@ import 'reader/bookmarks_repository.dart';
 import 'reader/custom_fonts_repository.dart';
 import 'reader/epub_character_count_repository.dart';
 import 'reader/highlights_repository.dart';
+import 'reader/layout_preset_repository.dart';
 import 'reader/notes_repository.dart';
 import 'reader/reader_prefs_manager.dart';
 import 'reader/reader_prefs_manager_impl.dart';
@@ -54,6 +55,7 @@ Future<void> main() async {
   final highlightsRepository = HighlightsRepository(repository.database);
   final notesRepository = NotesRepository(repository.database);
   final customFontsRepository = CustomFontsRepository(repository.database);
+  final layoutPresetRepository = LayoutPresetRepository(repository.database);
   final syncAccountRepository = SyncAccountRepository();
   final syncClient = SyncClient(accountRepository: syncAccountRepository);
   // epic-8-sync Issue 6：Issue 4/5 只在測試中建構過 SyncEngine，這裡是
@@ -93,6 +95,8 @@ Future<void> main() async {
       highlightsRepository: highlightsRepository,
       notesRepository: notesRepository,
       customFontsRepository: customFontsRepository,
+      layoutPresetRepository: layoutPresetRepository,
+      bookReaderPrefsRepository: prefsRepository,
       syncAccountRepository: syncAccountRepository,
       syncClient: syncClient,
       syncCheckpointTrigger: syncCheckpointTrigger,
@@ -114,6 +118,8 @@ class ElinkBookApp extends StatefulWidget {
   final HighlightsRepository? highlightsRepository;
   final NotesRepository? notesRepository;
   final CustomFontsRepository? customFontsRepository;
+  final LayoutPresetRepository? layoutPresetRepository;
+  final BookReaderPrefsRepository? bookReaderPrefsRepository;
   final SyncAccountRepository? syncAccountRepository;
   final SyncClient? syncClient;
   final SyncCheckpointTrigger? syncCheckpointTrigger;
@@ -131,6 +137,8 @@ class ElinkBookApp extends StatefulWidget {
     this.highlightsRepository,
     this.notesRepository,
     this.customFontsRepository,
+    this.layoutPresetRepository,
+    this.bookReaderPrefsRepository,
     this.syncAccountRepository,
     this.syncClient,
     this.syncCheckpointTrigger,
@@ -203,6 +211,8 @@ class _ElinkBookAppState extends State<ElinkBookApp> with WidgetsBindingObserver
         highlightsRepository: widget.highlightsRepository,
         notesRepository: widget.notesRepository,
         customFontsRepository: widget.customFontsRepository,
+        layoutPresetRepository: widget.layoutPresetRepository,
+        bookReaderPrefsRepository: widget.bookReaderPrefsRepository,
         syncAccountRepository: widget.syncAccountRepository,
         syncClient: widget.syncClient,
         syncCheckpointTrigger: widget.syncCheckpointTrigger,

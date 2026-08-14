@@ -13,4 +13,11 @@ class FakeBookReaderPrefsRepository implements BookReaderPrefsRepository {
   Future<void> save(String bookId, BookReaderPrefs prefs) async {
     _storage[bookId] = prefs;
   }
+
+  @override
+  Future<void> saveMultiple(List<String> bookIds, BookReaderPrefs prefs) async {
+    for (final bookId in bookIds) {
+      _storage[bookId] = prefs;
+    }
+  }
 }

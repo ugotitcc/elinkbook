@@ -2939,4 +2939,202 @@ void main() {
             '同 id 資料（若上一行 insertBook 沒有拋出例外，代表兩者仍是同一個'
             '資料庫但剛好沒有觸發 UNIQUE constraint，這個斷言會抓到這種情況）');
   });
+
+  test('全新安裝的 layout_preset 表可用（version 21 起 onCreate 已含括）', () async {
+    await repository.database.insert('layout_preset', {
+      'name': '測試預設集',
+      'created_at': 1000,
+      'updated_at': 1000,
+      'prefs_json': '{}',
+    });
+    final rows = await repository.database.query('layout_preset');
+    expect(rows, hasLength(1));
+    expect(rows.single['name'], '測試預設集');
+  });
+
+  test('既有 version 20 裝置升級到 version 21，新增 layout_preset 表，可正常寫入讀取',
+      () async {
+    final tempDir = await Directory.systemTemp
+        .createTemp('elinkbook_migration_v20_to_v21_layout_preset_test');
+    addTearDown(() => tempDir.delete(recursive: true));
+    final dbPath = p.join(tempDir.path, 'test.db');
+
+    // 這個遷移只新增一張與 book_reader_prefs 完全無關的獨立表，故「舊
+    // 版本」schema 只需要 groups/books 兩張表即可重現（比照
+    // _migrateFontFamilyValues 既有註解「本測試檔內多個既有測試為了只
+    // 聚焦驗證單一遷移，刻意省略建立 book_reader_prefs 表」的既有簡化
+    // 慣例）。
+    final oldDb = await databaseFactory.openDatabase(
+      dbPath,
+      options: OpenDatabaseOptions(
+        version: 20,
+        onConfigure: (db) async {
+          await db.execute('PRAGMA foreign_keys = ON');
+        },
+        onCreate: (db, version) async {
+          await db.execute('CREATE TABLE groups (name TEXT PRIMARY KEY)');
+          await db.insert('groups', {'name': '未分類'});
+          await db.execute('''
+            CREATE TABLE books (
+              id TEXT PRIMARY KEY,
+              title TEXT NOT NULL,
+              author TEXT,
+              format TEXT NOT NULL,
+              filePath TEXT NOT NULL,
+              source TEXT NOT NULL,
+              coverPath TEXT,
+              progress REAL NOT NULL DEFAULT 0,
+              epubLocator TEXT,
+              pdfPageIndex INTEGER,
+              totalCharacterCount INTEGER,
+              is_fixed_layout INTEGER,
+              groupName TEXT NOT NULL DEFAULT '未分類',
+              createTime INTEGER NOT NULL,
+              lastReadTime INTEGER NOT NULL,
+              content_fingerprint TEXT,
+              position_updated_at INTEGER,
+              position_synced_server_updated_at TEXT
+            )
+          ''');
+        },
+      ),
+    );
+    await oldDb.close();
+
+    // 重新以目前版本開啟同一個檔案，觸發 onUpgrade（oldVersion=20 →
+    // newVersion=21）。
+    final upgraded = await SqliteLibraryRepository.open(dbPath);
+    addTearDown(() => upgraded.close());
+
+    await upgraded.database.insert('layout_preset', {
+      'name': '測試預設集',
+      'created_at': 1000,
+      'updated_at': 1000,
+      'prefs_json': '{}',
+    });
+    final rows = await upgraded.database.query('layout_preset');
+    expect(rows, hasLength(1));
+    expect(rows.single['name'], '測試預設集');
+  });
+
+  group('listReflowableEpubBooks', () {
+    test('空書庫回傳空清單', () async {
+      final repo = await SqliteLibraryRepository.open(inMemoryDatabasePath);
+      addTearDown(() => repo.close());
+
+      expect(await repo.listReflowableEpubBooks(), isEmpty);
+    });
+
+    test('只回傳 EPUB 書籍，排除 PDF', () async {
+      final repo = await SqliteLibraryRepository.open(inMemoryDatabasePath);
+      addTearDown(() => repo.close());
+
+      await repo.insertBook(Book(
+        id: 'epub1',
+        title: 'EPUB 書',
+        format: BookFileFormat.epub,
+        filePath: '/books/epub1.epub',
+        source: BookSource.local,
+        createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+        lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+      ));
+      await repo.insertBook(Book(
+        id: 'pdf1',
+        title: 'PDF 書',
+        format: BookFileFormat.pdf,
+        filePath: '/books/pdf1.pdf',
+        source: BookSource.local,
+        createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+        lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+      ));
+
+      final books = await repo.listReflowableEpubBooks();
+      expect(books, hasLength(1));
+      expect(books.single.id, 'epub1');
+    });
+
+    test('排除 isFixedLayout=true 的 EPUB（FXL 書籍不適用流式版面設定）',
+        () async {
+      final repo = await SqliteLibraryRepository.open(inMemoryDatabasePath);
+      addTearDown(() => repo.close());
+
+      await repo.insertBook(Book(
+        id: 'epub-reflowable',
+        title: '流式 EPUB',
+        format: BookFileFormat.epub,
+        filePath: '/books/reflowable.epub',
+        source: BookSource.local,
+        isFixedLayout: false,
+        createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+        lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+      ));
+      await repo.insertBook(Book(
+        id: 'epub-fxl',
+        title: 'FXL EPUB',
+        format: BookFileFormat.epub,
+        filePath: '/books/fxl.epub',
+        source: BookSource.local,
+        isFixedLayout: true,
+        createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+        lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+      ));
+
+      final books = await repo.listReflowableEpubBooks();
+      expect(books, hasLength(1));
+      expect(books.single.id, 'epub-reflowable');
+    });
+
+    test('多本 EPUB 依 title ASC 排序', () async {
+      final repo = await SqliteLibraryRepository.open(inMemoryDatabasePath);
+      addTearDown(() => repo.close());
+
+      for (final title in ['第一本', '第三本', '第二本']) {
+        await repo.insertBook(Book(
+          id: 'epub-$title',
+          title: title,
+          format: BookFileFormat.epub,
+          filePath: '/books/$title.epub',
+          source: BookSource.local,
+          createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+          lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+        ));
+      }
+
+      // SQLite title ASC 排序依 Unicode code point，非中文筆畫順序。
+      // 「一」(U+4E00) < 「三」(U+4E09) < 「二」(U+4E8C)。
+      final books = await repo.listReflowableEpubBooks();
+      expect(books.map((b) => b.title).toList(), ['第一本', '第三本', '第二本']);
+    });
+
+    test('excludeBookId 排除指定書籍（例如當前閱讀中書籍）', () async {
+      final repo = await SqliteLibraryRepository.open(inMemoryDatabasePath);
+      addTearDown(() => repo.close());
+
+      await repo.insertBook(Book(
+        id: 'flow1',
+        title: '書A',
+        format: BookFileFormat.epub,
+        filePath: 'content://example/flow1.epub',
+        source: BookSource.local,
+        isFixedLayout: false,
+        createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+        lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+      ));
+      await repo.insertBook(Book(
+        id: 'flow2',
+        title: '書B',
+        format: BookFileFormat.epub,
+        filePath: 'content://example/flow2.epub',
+        source: BookSource.local,
+        isFixedLayout: false,
+        createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+        lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+      ));
+
+      final result =
+          await repo.listReflowableEpubBooks(excludeBookId: 'flow1');
+
+      expect(result.map((b) => b.id).toList(), ['flow2']);
+    });
+  });
 }

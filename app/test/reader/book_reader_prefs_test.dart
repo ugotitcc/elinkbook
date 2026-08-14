@@ -483,4 +483,126 @@ void main() {
     expect(updated.pdfContrast, 10);
     expect(updated.pdfPageTurnAnimation, PdfPageTurnAnimation.none);
   });
+
+  group('enumByNameOrNull', () {
+    test('找不到對應名稱時回傳 null，不拋出例外', () {
+      expect(enumByNameOrNull(EpubTextAlign.values, 'not_a_real_value'), isNull);
+    });
+
+    test('name 為 null 時回傳 null', () {
+      expect(enumByNameOrNull(EpubTextAlign.values, null), isNull);
+    });
+
+    test('找得到時正確回傳對應列舉值', () {
+      expect(enumByNameOrNull(EpubTextAlign.values, 'center'), EpubTextAlign.center);
+    });
+  });
+
+  test('fromMap 對未知的列舉名稱字串安全降級為 null，不拋出例外（epic-28 Issue 3 反序列化容錯，服務 SQLite 與 JSON 兩條路徑）',
+      () {
+    final map = BookReaderPrefs.empty.toMap('book-1')
+      ..['text_align'] = 'not_a_real_enum_value'
+      ..['writing_mode_override'] = 'not_a_real_enum_value'
+      ..['page_turn_mode_override'] = 'not_a_real_enum_value'
+      ..['screen_orientation_override'] = 'not_a_real_enum_value'
+      ..['pdf_fit_mode'] = 'not_a_real_enum_value'
+      ..['pdf_crop_mode'] = 'not_a_real_enum_value'
+      ..['dual_page_mode'] = 'not_a_real_enum_value'
+      ..['dual_page_direction'] = 'not_a_real_enum_value'
+      ..['column_mode'] = 'not_a_real_enum_value'
+      ..['pdf_page_turn_animation'] = 'not_a_real_enum_value';
+
+    final restored = BookReaderPrefs.fromMap(map);
+
+    expect(restored.textAlign, isNull);
+    expect(restored.writingModeOverride, isNull);
+    expect(restored.pageTurnModeOverride, isNull);
+    expect(restored.screenOrientationOverride, isNull);
+    expect(restored.pdfFitMode, isNull);
+    expect(restored.pdfCropMode, isNull);
+    expect(restored.dualPageMode, isNull);
+    expect(restored.dualPageDirection, isNull);
+    expect(restored.columnMode, isNull);
+    expect(restored.pdfPageTurnAnimation, isNull);
+  });
+
+  test('reflowableEpubFields() 過濾掉 PDF／雙頁／pageMargins 共 11 個欄位，其餘 20 個流式 EPUB 欄位保留（epic-28 Issue 3 欄位污染防護）',
+      () {
+    const prefs = BookReaderPrefs(
+      fontFamily: 'SourceHanSansTC',
+      fontSize: 18,
+      fontWeight: 1.5,
+      lineHeight: 1.6,
+      paragraphSpacing: 12,
+      letterSpacing: 0.1,
+      marginTop: 40,
+      marginBottom: 20,
+      marginLeft: 24,
+      marginRight: 24,
+      textAlign: EpubTextAlign.justify,
+      publisherStyles: false,
+      writingModeOverride: WritingMode.vertical,
+      pageTurnModeOverride: PageTurnMode.scroll,
+      screenOrientationOverride: ScreenOrientationSetting.lock90,
+      showHeader: true,
+      showFooter: false,
+      fullscreen: true,
+      columnMode: ColumnMode.double,
+      columnSize: 800,
+      pageMargins: 20,
+      pdfFitMode: PdfFitMode.fitWidth,
+      pdfContrast: 20,
+      pdfBrightness: -10,
+      pdfBoldStrength: 0.5,
+      pdfCropMode: PdfCropMode.manual,
+      pdfCropRect: PdfCropRect(left: 0.1, top: 0.1, right: 0.9, bottom: 0.9),
+      dualPageMode: DualPageMode.always,
+      dualPageCoverAlone: false,
+      dualPageDirection: DualPageDirection.ltr,
+      pdfPageTurnAnimation: PdfPageTurnAnimation.slide,
+    );
+
+    final filtered = prefs.reflowableEpubFields();
+
+    // 20 個保留欄位。
+    expect(filtered.fontFamily, 'SourceHanSansTC');
+    expect(filtered.fontSize, 18);
+    expect(filtered.fontWeight, 1.5);
+    expect(filtered.lineHeight, 1.6);
+    expect(filtered.paragraphSpacing, 12);
+    expect(filtered.letterSpacing, 0.1);
+    expect(filtered.marginTop, 40);
+    expect(filtered.marginBottom, 20);
+    expect(filtered.marginLeft, 24);
+    expect(filtered.marginRight, 24);
+    expect(filtered.textAlign, EpubTextAlign.justify);
+    expect(filtered.publisherStyles, isFalse);
+    expect(filtered.writingModeOverride, WritingMode.vertical);
+    expect(filtered.pageTurnModeOverride, PageTurnMode.scroll);
+    expect(filtered.screenOrientationOverride, ScreenOrientationSetting.lock90);
+    expect(filtered.showHeader, isTrue);
+    expect(filtered.showFooter, isFalse);
+    expect(filtered.fullscreen, isTrue);
+    expect(filtered.columnMode, ColumnMode.double);
+    expect(filtered.columnSize, 800);
+
+    // 11 個強制清空欄位。
+    expect(filtered.pageMargins, isNull);
+    expect(filtered.pdfFitMode, isNull);
+    expect(filtered.pdfContrast, isNull);
+    expect(filtered.pdfBrightness, isNull);
+    expect(filtered.pdfBoldStrength, isNull);
+    expect(filtered.pdfCropMode, isNull);
+    expect(filtered.pdfCropRect, isNull);
+    expect(filtered.dualPageMode, isNull);
+    expect(filtered.dualPageCoverAlone, isNull);
+    expect(filtered.dualPageDirection, isNull);
+    expect(filtered.pdfPageTurnAnimation, isNull);
+  });
+
+  test('reflowableEpubFields() 對全部欄位皆為 null 的輸入，回傳值仍全部為 null（不引入非預期的預設值）',
+      () {
+    final filtered = BookReaderPrefs.empty.reflowableEpubFields();
+    expect(filtered, BookReaderPrefs.empty);
+  });
 }

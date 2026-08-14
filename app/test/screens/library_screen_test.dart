@@ -9,7 +9,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:elinkbook/library/sqlite_library_repository.dart';
+import 'package:elinkbook/reader/book_reader_prefs_repository.dart';
 import 'package:elinkbook/reader/global_reader_prefs.dart';
+import 'package:elinkbook/reader/layout_preset_repository.dart';
 import 'package:elinkbook/reader/reader_prefs_manager.dart';
 import 'package:elinkbook/screens/library_screen.dart';
 import 'package:elinkbook/library/book_import_service.dart';
@@ -2728,6 +2730,46 @@ void main() {
             'ReaderScreen，導致 ReaderScreen._loadCustomFonts() 早期 return，'
             '_customFonts 永遠是空清單，自訂字型永遠不會出現在 '
             'ReaderSettingsSheet 的單書字型選單中');
+  });
+
+  testWidgets(
+      'LibraryScreen 點開一本書後，ReaderScreen 收到的 layoutPresetRepository／bookReaderPrefsRepository 正確貫穿',
+      (tester) async {
+    final layoutPresetRepository =
+        LayoutPresetRepository(libraryRepository.database);
+    final bookReaderPrefsRepository =
+        BookReaderPrefsRepository(libraryRepository.database);
+
+    final book = _testBook(
+      id: '1',
+      title: '紅樓夢',
+      author: '曹雪芹',
+      filePath: 'content://example/1.txt',
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: [book]),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+          layoutPresetRepository: layoutPresetRepository,
+          bookReaderPrefsRepository: bookReaderPrefsRepository,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('book_item_1')));
+    await tester.pumpAndSettle();
+
+    final readerScreen = tester.widget<ReaderScreen>(find.byType(ReaderScreen));
+    expect(readerScreen.layoutPresetRepository, same(layoutPresetRepository),
+        reason: 'LibraryScreen._openBook() 未把 layoutPresetRepository 貫穿給 '
+            'ReaderScreen，版面設定預設集功能將完全無法使用。');
+    expect(readerScreen.bookReaderPrefsRepository, same(bookReaderPrefsRepository),
+        reason: 'LibraryScreen._openBook() 未把 bookReaderPrefsRepository 貫穿給 '
+            'ReaderScreen，書籍設定複製與批次套用功能將完全無法使用。');
   });
 
   testWidgets(

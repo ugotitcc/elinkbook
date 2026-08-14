@@ -35,4 +35,17 @@ class BookReaderPrefsRepository {
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
   }
+
+  /// 批次寫入多本書的版面設定，以單一 `Database.transaction()` 包裹
+  /// （epic-28-reader-settings-enhancements Issue 3「批次寫入效能」），
+  /// 避免套用預設集/書籍複製到多本其他書籍時，多次獨立 SQLite 交易造成
+  /// UI 卡頓。單一書籍（套用到目前書籍）請直接呼叫既有 [save]。
+  Future<void> saveMultiple(List<String> bookIds, BookReaderPrefs prefs) async {
+    await _db.transaction((txn) async {
+      for (final bookId in bookIds) {
+        await txn.insert('book_reader_prefs', prefs.toMap(bookId),
+            conflictAlgorithm: ConflictAlgorithm.replace);
+      }
+    });
+  }
 }

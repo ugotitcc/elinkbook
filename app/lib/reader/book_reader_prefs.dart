@@ -10,6 +10,21 @@ import 'pdf_page_turn_animation.dart';
 import 'screen_orientation_setting.dart';
 import 'writing_mode.dart';
 
+/// 依名稱從 [values] 尋找對應列舉值，找不到時回傳 `null`（而非拋出
+/// `ArgumentError`，`EnumType.values.byName()` 的既有行為）——用於服務
+/// 可能讀到「目前 App 版本不認識的列舉名稱」的反序列化路徑（既有
+/// `book_reader_prefs` SQLite 讀取路徑與 epic-28-reader-settings-
+/// enhancements Issue 3 新增的 `layout_preset.prefs_json` JSON 讀取路徑
+/// 皆共用同一份 [BookReaderPrefs.fromMap] 程式碼），`null` 在
+/// [BookReaderPrefs] 語意上正是「未覆寫/採用預設」，是最安全的降級行為。
+T? enumByNameOrNull<T extends Enum>(List<T> values, String? name) {
+  if (name == null) return null;
+  for (final value in values) {
+    if (value.name == name) return value;
+  }
+  return null;
+}
+
 /// 單一書籍的版面偏好設定（FR-09／FR-10／FR-11），對應 `book_reader_prefs`
 /// 表的一列（見 docs/epics/epic-4-pdf-enhance/spec.md「資料模型」）。所有
 /// 欄位皆為 nullable：`null` 代表未覆寫，由呼叫端依各欄位語意決定回退值
@@ -160,56 +175,43 @@ class BookReaderPrefs {
       marginBottom: (map['margin_bottom'] as num?)?.toDouble(),
       marginLeft: (map['margin_left'] as num?)?.toDouble(),
       marginRight: (map['margin_right'] as num?)?.toDouble(),
-      textAlign: map['text_align'] == null
-          ? null
-          : EpubTextAlign.values.byName(map['text_align'] as String),
+      textAlign:
+          enumByNameOrNull(EpubTextAlign.values, map['text_align'] as String?),
       publisherStyles: map['publisher_styles'] == null
           ? null
           : (map['publisher_styles'] as int) == 1,
-      writingModeOverride: map['writing_mode_override'] == null
-          ? null
-          : WritingMode.values.byName(map['writing_mode_override'] as String),
-      pageTurnModeOverride: map['page_turn_mode_override'] == null
-          ? null
-          : PageTurnMode.values
-              .byName(map['page_turn_mode_override'] as String),
-      screenOrientationOverride: map['screen_orientation_override'] == null
-          ? null
-          : ScreenOrientationSetting.values
-              .byName(map['screen_orientation_override'] as String),
-      pdfFitMode: map['pdf_fit_mode'] == null
-          ? null
-          : PdfFitMode.values.byName(map['pdf_fit_mode'] as String),
+      writingModeOverride: enumByNameOrNull(
+          WritingMode.values, map['writing_mode_override'] as String?),
+      pageTurnModeOverride: enumByNameOrNull(
+          PageTurnMode.values, map['page_turn_mode_override'] as String?),
+      screenOrientationOverride: enumByNameOrNull(
+          ScreenOrientationSetting.values,
+          map['screen_orientation_override'] as String?),
+      pdfFitMode:
+          enumByNameOrNull(PdfFitMode.values, map['pdf_fit_mode'] as String?),
       pdfContrast: (map['pdf_contrast'] as num?)?.toDouble(),
       pdfBrightness: (map['pdf_brightness'] as num?)?.toDouble(),
       pdfBoldStrength: (map['pdf_bold_strength'] as num?)?.toDouble(),
-      pdfCropMode: map['pdf_crop_mode'] == null
-          ? null
-          : PdfCropMode.values.byName(map['pdf_crop_mode'] as String),
+      pdfCropMode:
+          enumByNameOrNull(PdfCropMode.values, map['pdf_crop_mode'] as String?),
       pdfCropRect: map['pdf_crop_rect'] == null
           ? null
           : PdfCropRect.fromJson(map['pdf_crop_rect'] as String),
-      dualPageMode: map['dual_page_mode'] == null
-          ? null
-          : DualPageMode.values.byName(map['dual_page_mode'] as String),
+      dualPageMode: enumByNameOrNull(
+          DualPageMode.values, map['dual_page_mode'] as String?),
       dualPageCoverAlone: map['dual_page_cover_alone'] == null
           ? null
           : (map['dual_page_cover_alone'] as int) == 1,
-      dualPageDirection: map['dual_page_direction'] == null
-          ? null
-          : DualPageDirection.values
-              .byName(map['dual_page_direction'] as String),
-      pdfPageTurnAnimation: map['pdf_page_turn_animation'] == null
-          ? null
-          : PdfPageTurnAnimation.values
-              .byName(map['pdf_page_turn_animation'] as String),
+      dualPageDirection: enumByNameOrNull(
+          DualPageDirection.values, map['dual_page_direction'] as String?),
+      pdfPageTurnAnimation: enumByNameOrNull(
+          PdfPageTurnAnimation.values, map['pdf_page_turn_animation'] as String?),
       showHeader:
           map['show_header'] == null ? null : (map['show_header'] as int) == 1,
       showFooter:
           map['show_footer'] == null ? null : (map['show_footer'] as int) == 1,
-      columnMode: map['column_mode'] == null
-          ? null
-          : ColumnMode.values.byName(map['column_mode'] as String),
+      columnMode:
+          enumByNameOrNull(ColumnMode.values, map['column_mode'] as String?),
       columnSize: (map['column_size'] as num?)?.toDouble(),
       fullscreen:
           map['fullscreen'] == null ? null : (map['fullscreen'] as int) == 1,
@@ -357,6 +359,41 @@ class BookReaderPrefs {
       columnMode: columnMode ?? this.columnMode,
       columnSize: columnSize ?? this.columnSize,
       fullscreen: fullscreen ?? this.fullscreen,
+    );
+  }
+
+  /// 只保留 [ReaderSettingsSheet]（流式 EPUB 版面設定）實際呈現的 20 個
+  /// 欄位，其餘 11 個欄位（`pageMargins`、7 個 `pdf*`、3 個 `dualPage*`）
+  /// 一律強制設為 `null`，**不論來源物件實際內容為何**——epic-28-reader-
+  /// settings-enhancements Issue 3「欄位污染防護」，見 spec.md「資料
+  /// 模型」。「另存為預設集」與「書籍設定複製」寫入 `LayoutPreset.prefs`
+  /// 前皆須經過這道過濾，不依賴「這些欄位在流式 EPUB 情境下結構性恆為
+  /// null」的假設（來源書籍若曾經歷人工版面覆蓋/FXL↔流式切換，可能殘留
+  /// 非 null 的污染欄位）。刻意不使用 `copyWith()`——`copyWith()` 是
+  /// `newValue ?? this.value` 語意，無法明確把欄位清成 `null`（見
+  /// `copyWith()` 文件註解），需要整列建構。
+  BookReaderPrefs reflowableEpubFields() {
+    return BookReaderPrefs(
+      fontFamily: fontFamily,
+      fontSize: fontSize,
+      fontWeight: fontWeight,
+      lineHeight: lineHeight,
+      paragraphSpacing: paragraphSpacing,
+      letterSpacing: letterSpacing,
+      marginTop: marginTop,
+      marginBottom: marginBottom,
+      marginLeft: marginLeft,
+      marginRight: marginRight,
+      textAlign: textAlign,
+      publisherStyles: publisherStyles,
+      writingModeOverride: writingModeOverride,
+      pageTurnModeOverride: pageTurnModeOverride,
+      screenOrientationOverride: screenOrientationOverride,
+      showHeader: showHeader,
+      showFooter: showFooter,
+      fullscreen: fullscreen,
+      columnMode: columnMode,
+      columnSize: columnSize,
     );
   }
 }

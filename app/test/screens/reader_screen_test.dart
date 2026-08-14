@@ -47,6 +47,13 @@ import 'package:elinkbook/reader/highlight_style.dart';
 import 'package:elinkbook/sync/sync_checkpoint_trigger.dart';
 import 'package:elinkbook/reader/pdf_crop_frame_overlay.dart';
 import 'package:elinkbook/reader/bookmark.dart';
+import 'package:elinkbook/library/models/book.dart';
+import 'package:elinkbook/library/models/library_enums.dart';
+import 'package:elinkbook/library/sqlite_library_repository.dart';
+import 'package:elinkbook/reader/book_reader_prefs_repository.dart';
+import 'package:elinkbook/reader/layout_preset.dart';
+import 'package:elinkbook/reader/layout_preset_repository.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 // 依 spec.md「測試決策」：ReaderScreen 分派到 EpubReaderView/PdfReaderView
 // 後，實際渲染內容存在於原生 PlatformView 之中，一般 flutter test（無真實
@@ -6474,6 +6481,337 @@ void main() {
     // 驗證 Bottom Sheet 已關閉
     expect(find.byType(TocBottomSheet), findsNothing);
     expect(tester.takeException(), isNull);
+  });
+
+  group('版面設定預設集（epic-28-reader-settings-enhancements Issue 3）', () {
+    setUpAll(() {
+      sqfliteFfiInit();
+      databaseFactory = databaseFactoryFfi;
+    });
+
+    late SqliteLibraryRepository libraryRepository;
+    late LayoutPresetRepository layoutPresetRepository;
+    late BookReaderPrefsRepository bookReaderPrefsRepository;
+
+    setUp(() async {
+      libraryRepository = await SqliteLibraryRepository.open(
+        inMemoryDatabasePath,
+        singleInstance: false,
+      );
+      layoutPresetRepository =
+          LayoutPresetRepository(libraryRepository.database);
+      bookReaderPrefsRepository =
+          BookReaderPrefsRepository(libraryRepository.database);
+      await libraryRepository.insertBook(Book(
+        id: 'b1',
+        title: '目前書籍',
+        format: BookFileFormat.epub,
+        filePath: 'test/fixtures/sample.epub',
+        source: BookSource.local,
+        isFixedLayout: false,
+        createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+        lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+      ));
+      await libraryRepository.insertBook(Book(
+        id: 'b_other',
+        title: '其他流式書',
+        format: BookFileFormat.epub,
+        filePath: 'content://example/other.epub',
+        source: BookSource.local,
+        isFixedLayout: false,
+        createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+        lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+      ));
+      final binaryMessenger =
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+      binaryMessenger.setMockMethodCallHandler(
+        const MethodChannel('elinkbook/volume_key'),
+        (call) async => null,
+      );
+    });
+
+    tearDown(() async {
+      await libraryRepository.close();
+    });
+
+    // 比照既有「流式 EPUB 開書後，ReaderSettingsSheet 變動的偏好正確傳遞到
+    // FoliateEpubReaderView」測試（約 line 351）的既有手法：settings 按鈕
+    // 的 onPressed 要到 `onLayoutResolved` 觸發、_autoDetectedWritingMode
+    // 非 null 後才可用（純 flutter test 環境沒有真實 WebView，須手動呼叫
+    // FoliateEpubReaderView widget 上的 onPageRendered()/onLayoutResolved()
+    // 模擬原生端回報）。按鈕 key 用 `reader_foliate_settings_button`（現行
+    // FAB 化路徑，非舊版 `reader_layout_settings_button`）。
+    Future<void> pumpReaderScreen(WidgetTester tester) async {
+      tester.view.physicalSize = const Size(800, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b1',
+            prefsManager: prefsManager,
+            isFixedLayout: false,
+            libraryRepository: libraryRepository,
+            layoutPresetRepository: layoutPresetRepository,
+            bookReaderPrefsRepository: bookReaderPrefsRepository,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(const Duration(milliseconds: 50)));
+      await tester.pump();
+
+      final foliateView =
+          tester.widget<FoliateEpubReaderView>(find.byType(FoliateEpubReaderView));
+      foliateView.onPageRendered();
+      foliateView.onLayoutResolved?.call(
+        const EpubLayoutInfo(isFixedLayout: false, writingMode: WritingMode.horizontal),
+      );
+      await tester.pump();
+    }
+
+    testWidgets('另存為新預設集：命名對話框輸入名稱後，正確寫入 LayoutPresetRepository',
+        (tester) async {
+      await pumpReaderScreen(tester);
+
+      // 開啟版面設定 Sheet、捲動到「另存為新預設集」按鈕並點擊。
+      await tester
+          .tap(find.byKey(const Key('reader_foliate_settings_button')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(
+          find.byKey(const Key('reader_settings_save_as_preset')));
+      await tester
+          .tap(find.byKey(const Key('reader_settings_save_as_preset')));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+          find.byKey(const Key('layout_preset_name_dialog_field')), '測試預設集');
+      await tester
+          .tap(find.byKey(const Key('layout_preset_name_dialog_confirm')));
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(const Duration(milliseconds: 50)));
+      await tester.pumpAndSettle();
+
+      final all = await tester.runAsync(() => layoutPresetRepository.listAll());
+      expect(all, hasLength(1));
+      expect(all!.single.name, '測試預設集');
+    });
+
+    testWidgets('存滿 3 組後再次另存，跳出覆蓋選單，選擇並確認後正確覆蓋既有一組',
+        (tester) async {
+      for (final name in ['A', 'B', 'C']) {
+        await tester.runAsync(() => layoutPresetRepository.insert(LayoutPreset(
+          id: null,
+          name: name,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+          prefs: const BookReaderPrefs(fontSize: 16),
+        )));
+      }
+
+      await pumpReaderScreen(tester);
+      await tester
+          .tap(find.byKey(const Key('reader_foliate_settings_button')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(
+          find.byKey(const Key('reader_settings_save_as_preset')));
+      await tester
+          .tap(find.byKey(const Key('reader_settings_save_as_preset')));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+          find.byKey(const Key('layout_preset_name_dialog_field')), 'D');
+      await tester
+          .tap(find.byKey(const Key('layout_preset_name_dialog_confirm')));
+      await tester.pumpAndSettle();
+
+      // 覆蓋選單：選第一組（名稱 'A'，這是這個乾淨的記憶體內資料庫本測試
+      // 第一筆 insert，AUTOINCREMENT id 必為 1）。
+      await tester
+          .tap(find.byKey(const Key('layout_preset_overwrite_option_1')));
+      await tester.pumpAndSettle();
+      // 確認覆蓋對話框。
+      await tester
+          .tap(find.byKey(const Key('layout_preset_overwrite_confirm')));
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(const Duration(milliseconds: 50)));
+      await tester.pumpAndSettle();
+
+      final all = await tester.runAsync(() => layoutPresetRepository.listAll());
+      expect(all, hasLength(3));
+      expect(all!.map((p) => p.name).toList(), ['D', 'B', 'C']);
+    });
+
+    testWidgets('套用預設集到目前書籍：立即寫入且畫面即時反映新值（透過 _handlePrefsChanged）',
+        (tester) async {
+      await tester.runAsync(() => layoutPresetRepository.insert(LayoutPreset(
+        id: null,
+        name: '測試預設集',
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        prefs: const BookReaderPrefs(fontSize: 24 / 16),
+      )));
+
+      await pumpReaderScreen(tester);
+      await tester
+          .tap(find.byKey(const Key('reader_foliate_settings_button')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find
+          .byKey(const Key('reader_settings_preset_slot_0_apply_current')));
+      await tester.tap(
+          find.byKey(const Key('reader_settings_preset_slot_0_apply_current')));
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(const Duration(milliseconds: 50)));
+      await tester.pumpAndSettle();
+
+      final saved = await tester.runAsync(() => bookReaderPrefsRepository.load('b1'));
+      expect(saved!.fontSize, 24 / 16);
+
+      // Bottom Sheet 開啟中同步（spec.md「套用當下 Sheet 仍開啟」情境，
+      // 對應審查意見 Minor 2.7）：套用當下 Sheet 仍在畫面上，_prefs 更新
+      // 觸發 ReaderScreen 重建，_openLayoutSettings() 的 builder 以新的
+      // _prefs 重新建構 ReaderSettingsSheet，其既有 didUpdateWidget 邏輯
+      // （本 Task 未改動，沿用既有機制）同步內部草稿——驗證目前畫面上這顆
+      // ReaderSettingsSheet 的 prefs 已是套用後的新值，而非套用前的舊值。
+      final sheetAfterApply =
+          tester.widget<ReaderSettingsSheet>(find.byType(ReaderSettingsSheet));
+      expect(sheetAfterApply.prefs.fontSize, 24 / 16);
+    });
+
+    testWidgets('套用預設集到其他書籍（多本）：跳出「即將覆蓋 N 本書」確認對話框，確認後批次寫入',
+        (tester) async {
+      await tester.runAsync(() => layoutPresetRepository.insert(LayoutPreset(
+        id: null,
+        name: '測試預設集',
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        prefs: const BookReaderPrefs(fontSize: 24 / 16),
+      )));
+
+      await pumpReaderScreen(tester);
+      await tester
+          .tap(find.byKey(const Key('reader_foliate_settings_button')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(
+          find.byKey(const Key('reader_settings_preset_slot_0_apply_others')));
+      await tester.tap(
+          find.byKey(const Key('reader_settings_preset_slot_0_apply_others')));
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(const Duration(milliseconds: 50)));
+      await tester.pumpAndSettle();
+
+      // 書籍選擇器：勾選「其他流式書」後點確定。
+      await tester
+          .tap(find.byKey(const Key('layout_preset_book_picker_item_b_other')));
+      await tester.pumpAndSettle();
+      await tester
+          .tap(find.byKey(const Key('layout_preset_book_picker_confirm')));
+      await tester.pumpAndSettle();
+
+      // 「即將覆蓋 N 本書」確認對話框。
+      await tester.tap(find.byKey(const Key('layout_preset_apply_confirm')));
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(const Duration(milliseconds: 50)));
+      await tester.pumpAndSettle();
+
+      final saved = await tester.runAsync(() => bookReaderPrefsRepository.load('b_other'));
+      expect(saved!.fontSize, 24 / 16);
+      // 目前書籍（b1）不在目標內，不受影響。
+      final currentBookPrefs = await tester.runAsync(() => bookReaderPrefsRepository.load('b1'));
+      expect(currentBookPrefs!.fontSize, isNull);
+    });
+
+    testWidgets('刪除預設集：正確從 LayoutPresetRepository 移除', (tester) async {
+      await tester.runAsync(() => layoutPresetRepository.insert(LayoutPreset(
+        id: null,
+        name: '待刪除',
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        prefs: BookReaderPrefs.empty,
+      )));
+
+      await pumpReaderScreen(tester);
+      await tester
+          .tap(find.byKey(const Key('reader_foliate_settings_button')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(
+          find.byKey(const Key('reader_settings_preset_slot_0_delete')));
+      await tester
+          .tap(find.byKey(const Key('reader_settings_preset_slot_0_delete')));
+      await tester.pumpAndSettle();
+      // 「確認刪除」對話框。
+      await tester.tap(find.byKey(const Key('layout_preset_delete_confirm')));
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(const Duration(milliseconds: 50)));
+      await tester.pumpAndSettle();
+
+      final all = await tester.runAsync(() => layoutPresetRepository.listAll());
+      expect(all, isEmpty);
+    });
+
+    testWidgets('刪除預設集：確認對話框取消時不刪除', (tester) async {
+      await tester.runAsync(() => layoutPresetRepository.insert(LayoutPreset(
+        id: null,
+        name: '不應被刪除',
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        prefs: BookReaderPrefs.empty,
+      )));
+
+      await pumpReaderScreen(tester);
+      await tester
+          .tap(find.byKey(const Key('reader_foliate_settings_button')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(
+          find.byKey(const Key('reader_settings_preset_slot_0_delete')));
+      await tester
+          .tap(find.byKey(const Key('reader_settings_preset_slot_0_delete')));
+      await tester.pumpAndSettle();
+      // 「確認刪除」對話框中點擊「取消」。
+      await tester.tap(find.text('取消').last);
+      await tester.pumpAndSettle();
+
+      final all = await tester.runAsync(() => layoutPresetRepository.listAll());
+      expect(all, hasLength(1));
+    });
+
+    testWidgets('複製其他書籍設定到本書：正確以 reflowableEpubFields() 過濾後寫入並即時反映',
+        (tester) async {
+      await tester.runAsync(() => bookReaderPrefsRepository.save(
+        'b_other',
+        const BookReaderPrefs(
+          fontSize: 20 / 16,
+          pdfContrast: 30, // 應被過濾，不應出現在複製結果中。
+        ),
+      ));
+
+      await pumpReaderScreen(tester);
+      await tester
+          .tap(find.byKey(const Key('reader_foliate_settings_button')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(
+          find.byKey(const Key('reader_settings_copy_from_book_current')));
+      await tester
+          .tap(find.byKey(const Key('reader_settings_copy_from_book_current')));
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(const Duration(milliseconds: 50)));
+      await tester.pumpAndSettle();
+
+      await tester
+          .tap(find.byKey(const Key('layout_preset_book_picker_item_b_other')));
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(const Duration(milliseconds: 50)));
+      await tester.pumpAndSettle();
+
+      final saved = await tester.runAsync(() => bookReaderPrefsRepository.load('b1'));
+      expect(saved!.fontSize, 20 / 16);
+      expect(saved.pdfContrast, isNull);
+    });
   });
 
   tearDownAll(() {

@@ -1286,7 +1286,7 @@ git commit -m "feat(epic-28): Issue 3 Task 7——LibraryRepository.listReflowab
 - Consumes: `LayoutPreset`（Task 3 產出）。
 - Produces: `ReaderSettingsSheet` 新增 `bookId`（`String`，required）、`layoutPresets`（`List<LayoutPreset>`，預設 `const []`）建構參數；新增 5 個 required callback：`onSaveAsPreset(BookReaderPrefs currentDraft)`、`onApplyPreset(LayoutPreset preset, {required List<String> targetBookIds})`、`onApplyFromBook(String sourceBookId, {required List<String> targetBookIds})`、`onRequestBookPicker({required bool multiSelect}) → Future<List<String>?>`、`onDeletePreset(int id)`。
 
-- [ ] **Step 1: 寫失敗測試——預設集區塊顯示與 5 個 callback 觸發**
+- [x] **Step 1: 寫失敗測試——預設集區塊顯示與 5 個 callback 觸發**
 
 編輯 `app/test/screens/reader_settings_sheet_test.dart`：
 
@@ -1622,12 +1622,12 @@ void _noopDeletePreset(int _) {}
   });
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 執行：`cd app && flutter test test/screens/reader_settings_sheet_test.dart`
 預期：編譯錯誤（`bookId`/`layoutPresets`/5 個新 callback 皆不存在於 `ReaderSettingsSheet`）。
 
-- [ ] **Step 3: `ReaderSettingsSheet` 新增建構參數與預設集管理 UI**
+- [x] **Step 3: `ReaderSettingsSheet` 新增建構參數與預設集管理 UI**
 
 編輯 `app/lib/screens/reader_settings_sheet.dart`：
 
@@ -1820,17 +1820,17 @@ class ReaderSettingsSheet extends StatefulWidget {
   }
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 執行：`cd app && flutter test test/screens/reader_settings_sheet_test.dart`
 預期：全數 PASS（含 Step 1 新增測試與全部既有測試——既有測試皆透過更新後的 `_pumpSheet`/`_pumpModalSheet`/`_TestSettingsSheetWrapper` 建構，5 個新 callback 皆有 no-op 預設值，零回歸）。
 
-- [ ] **Step 5: 執行完整分析與既有測試，確認零回歸**
+- [x] **Step 5: 執行完整分析與既有測試，確認零回歸**
 
 執行：`cd app && flutter analyze && flutter test test/screens/reader_settings_sheet_test.dart`
 預期：`flutter analyze` "No issues found!"；`flutter test` 全數 PASS。
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/screens/reader_settings_sheet.dart app/test/screens/reader_settings_sheet_test.dart
@@ -1849,7 +1849,7 @@ git commit -m "feat(epic-28): Issue 3 Task 8——ReaderSettingsSheet 新增版�
 - Consumes: `Book`（既有型別）。
 - Produces: `LayoutPresetBookPickerScreen`（`books: List<Book>`／`multiSelect: bool`，`Navigator.pop()` 單選時回傳 `[book.id]`、複選時回傳已勾選 id 清單、使用者返回時回傳 `null`）。
 
-- [ ] **Step 1: 寫失敗測試**
+- [x] **Step 1: 寫失敗測試**
 
 建立 `app/test/screens/layout_preset_book_picker_screen_test.dart`：
 
@@ -1957,12 +1957,12 @@ Book _book(String id, String title) => Book(
     );
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 執行：`cd app && flutter test test/screens/layout_preset_book_picker_screen_test.dart`
 預期：編譯錯誤（`app/lib/screens/layout_preset_book_picker_screen.dart` 不存在）。
 
-- [ ] **Step 3: 建立 `LayoutPresetBookPickerScreen`**
+- [x] **Step 3: 建立 `LayoutPresetBookPickerScreen`**
 
 建立 `app/lib/screens/layout_preset_book_picker_screen.dart`：
 
@@ -2049,17 +2049,17 @@ class _LayoutPresetBookPickerScreenState
 }
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 執行：`cd app && flutter test test/screens/layout_preset_book_picker_screen_test.dart`
 預期：全數 PASS。
 
-- [ ] **Step 5: 執行完整分析，確認乾淨**
+- [x] **Step 5: 執行完整分析，確認乾淨**
 
 執行：`cd app && flutter analyze`
 預期："No issues found!"
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/screens/layout_preset_book_picker_screen.dart app/test/screens/layout_preset_book_picker_screen_test.dart
@@ -2081,7 +2081,7 @@ git commit -m "feat(epic-28): Issue 3 Task 9——LayoutPresetBookPickerScreen �
 **新增檔案（本 Task 內建立）：**
 - Create: `app/lib/screens/layout_preset_name_dialog.dart`（命名輸入 Dialog，比照既有 `note_edit_dialog.dart` 的 controller 生命週期慣例）
 
-- [ ] **Step 1: 建立 `showLayoutPresetNameDialog()`**
+- [x] **Step 1: 建立 `showLayoutPresetNameDialog()`**
 
 建立 `app/lib/screens/layout_preset_name_dialog.dart`：
 
@@ -2162,7 +2162,7 @@ class _LayoutPresetNameDialogState extends State<_LayoutPresetNameDialog> {
 }
 ```
 
-- [ ] **Step 2: 寫失敗測試——`ReaderScreen` 5 個 callback 的實際行為**
+- [x] **Step 2: 寫失敗測試——`ReaderScreen` 5 個 callback 的實際行為**
 
 編輯 `app/test/screens/reader_screen_test.dart`：
 
@@ -2461,12 +2461,12 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
   });
 ```
 
-- [ ] **Step 3: 執行測試確認失敗**
+- [x] **Step 3: 執行測試確認失敗**
 
 執行：`cd app && flutter test test/screens/reader_screen_test.dart`
 預期：編譯錯誤（`layoutPresetRepository`/`bookReaderPrefsRepository` 不存在於 `ReaderScreen` 建構參數）。
 
-- [ ] **Step 4: `ReaderScreen` 新增建構參數與 5 個 callback 實作**
+- [x] **Step 4: `ReaderScreen` 新增建構參數與 5 個 callback 實作**
 
 編輯 `app/lib/screens/reader_screen.dart`：
 
@@ -2744,17 +2744,17 @@ import 'layout_preset_name_dialog.dart';
   }
 ```
 
-- [ ] **Step 5: 執行測試確認通過**
+- [x] **Step 5: 執行測試確認通過**
 
 執行：`cd app && flutter test test/screens/reader_screen_test.dart`
 預期：全數 PASS（含 Step 2 新增測試與全部既有測試）。
 
-- [ ] **Step 6: 執行完整分析與全專案測試，確認零回歸**
+- [x] **Step 6: 執行完整分析與全專案測試，確認零回歸**
 
 執行：`cd app && flutter analyze && flutter test`
 預期：`flutter analyze` "No issues found!"；`flutter test` 全數 PASS。
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app/lib/screens/reader_screen.dart app/lib/screens/layout_preset_name_dialog.dart app/test/screens/reader_screen_test.dart
@@ -2773,7 +2773,7 @@ git commit -m "feat(epic-28): Issue 3 Task 10——ReaderScreen 實作 5 個版�
 **Interfaces:**
 - Consumes: `LayoutPresetRepository`（Task 5）、`ReaderScreen.layoutPresetRepository`／`.bookReaderPrefsRepository`（Task 10）。
 
-- [ ] **Step 1: 寫失敗測試——貫穿回歸測試**
+- [x] **Step 1: 寫失敗測試——貫穿回歸測試**
 
 編輯 `app/test/screens/library_screen_test.dart`：
 
@@ -2837,12 +2837,12 @@ import 'package:elinkbook/library/sqlite_library_repository.dart';
   });
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 執行：`cd app && flutter test test/screens/library_screen_test.dart`
 預期：編譯錯誤（`layoutPresetRepository`/`bookReaderPrefsRepository` 不存在於 `LibraryScreen`/`ReaderScreen` 建構參數——`ReaderScreen` 部分已由 Task 10 完成，此處新增的是 `LibraryScreen` 部分）。
 
-- [ ] **Step 3: `LibraryScreen`／`ElinkBookApp`／`main.dart` 貫穿新參數**
+- [x] **Step 3: `LibraryScreen`／`ElinkBookApp`／`main.dart` 貫穿新參數**
 
 編輯 `app/lib/screens/library_screen.dart`：
 
@@ -2916,22 +2916,22 @@ import 'reader/layout_preset_repository.dart';
         bookReaderPrefsRepository: widget.bookReaderPrefsRepository,
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 執行：`cd app && flutter test test/screens/library_screen_test.dart`
 預期：全數 PASS。
 
-- [ ] **Step 5: 執行完整分析與全專案測試，確認零回歸**
+- [x] **Step 5: 執行完整分析與全專案測試，確認零回歸**
 
 執行：`cd app && flutter analyze && flutter test`
 預期：`flutter analyze` "No issues found!"；`flutter test` 全數 PASS。
 
-- [ ] **Step 6: `flutter build apk --debug` 確認可編譯**
+- [x] **Step 6: `flutter build apk --debug` 確認可編譯**
 
 執行：`cd app && flutter build apk --debug`
 預期：編譯成功——本 Task 是全部 11 個 Task 中唯一觸及 `main.dart` App 進入點的一個，額外用真實 build 驗證比純 `flutter analyze`/`flutter test` 更貼近實際執行環境的組裝正確性。
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app/lib/main.dart app/lib/screens/library_screen.dart app/test/screens/library_screen_test.dart
@@ -2942,7 +2942,7 @@ git commit -m "feat(epic-28): Issue 3 Task 11——App 層級貫穿 layoutPreset
 
 ## 完成後的驗證（對照 `issues.md` Issue 3 驗收標準）
 
-- [ ] `flutter analyze`：全專案 "No issues found!"
-- [ ] `flutter test`：全專案通過，零回歸
-- [ ] `flutter build apk --debug`：編譯成功
+- [x] `flutter analyze`：全專案 "No issues found!"
+- [x] `flutter test`：全專案通過，零回歸
+- [x] `flutter build apk --debug`：編譯成功
 - [ ] （建議，非本計畫強制自動化）於真機或模擬器：開啟一本流式 EPUB，調整版面設定後「另存為新預設集」，確認存滿 3 組後跳出覆蓋選單；套用預設集到目前書籍即時生效；套用到其他書籍時彈出確認對話框且目前畫面不受影響；「從其他書籍複製」流程正確讀取來源書籍設定；PDF/FXL 書籍確認不出現在書籍選擇器清單中。
