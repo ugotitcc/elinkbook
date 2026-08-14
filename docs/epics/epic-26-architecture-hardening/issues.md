@@ -89,7 +89,7 @@
 
 ## Issue 4：收斂「等待 PDF 就緒」成一個共用測試 adapter
 
-**Status:** `ready-for-agent`——純測試輔助工具重構，不涉及生產程式碼或功能行為變更，機械式收斂，風險低。
+**Status:** ✅ 已完成並通過程式碼審查，可合併回 `main`（分支 `epic-26-issue-4-pump-until-pdf-ready`，6 個 commit）。審查（`reviews/review-issue-4.md`）逐檔案核對 104 個編輯點與 `plan-issue-4.md` 完全吻合，條件反轉方向（最容易出錯之處）全數正確，`flutter analyze` 乾淨、全專案 1189 項測試零回歸，僅 1 項不影響行為的殘留註解用詞（Minor，不阻塞）。
 
 **依賴：** 無
 
