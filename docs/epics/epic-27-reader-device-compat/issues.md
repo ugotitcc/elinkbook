@@ -33,7 +33,7 @@
 
 ## Issue 2：開書逾時時間由固定 12 秒延長為 30 秒
 
-**Status:** `ready-for-agent`
+**Status:** ✅ 已完成並合併回 `main`（PR [#148](https://git.jigong.org/huthief/elinkBook/pulls/148)，分支 `fix/epic-27-issue2-open-book-timeout`，2 個 commit：實作＋計畫勾選收尾）。程式碼審查（本機審查報告，依專案慣例不進版控）結論為可以合併——0 Critical／0 Important／0 Minor。計畫刻意將「開書逾時自動切換錯誤畫面」測試拆成「29 秒仍載入中」＋「滿 30 秒才逾時」兩段斷言，確保測試能真正鑑別「逾時值恰為 30 秒」而非「任何大於舊值 12 秒的時間點」；全專案 `flutter test`（162 項相關測試）與 `flutter analyze` 零回歸通過。
 
 **依賴：** 無（與 Issue 1 互相獨立）
 
