@@ -5,9 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../library/book_import_service.dart';
+import '../reader/book_reader_prefs_repository.dart';
 import '../reader/bookmarks_repository.dart';
 import '../reader/custom_fonts_repository.dart';
 import '../reader/highlights_repository.dart';
+import '../reader/layout_preset_repository.dart';
 import '../reader/notes_repository.dart';
 import '../reader/reader_prefs_manager.dart';
 import '../library/library_preferences.dart';
@@ -37,6 +39,8 @@ class LibraryScreen extends StatefulWidget {
   final HighlightsRepository? highlightsRepository;
   final NotesRepository? notesRepository;
   final CustomFontsRepository? customFontsRepository;
+  final LayoutPresetRepository? layoutPresetRepository;
+  final BookReaderPrefsRepository? bookReaderPrefsRepository;
   final SyncAccountRepository? syncAccountRepository;
   final SyncClient? syncClient;
   final SyncCheckpointTrigger? syncCheckpointTrigger;
@@ -55,6 +59,8 @@ class LibraryScreen extends StatefulWidget {
     this.highlightsRepository,
     this.notesRepository,
     this.customFontsRepository,
+    this.layoutPresetRepository,
+    this.bookReaderPrefsRepository,
     this.syncAccountRepository,
     this.syncClient,
     this.syncCheckpointTrigger,
@@ -459,6 +465,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
               isFixedLayout: book.isFixedLayout,
               libraryRepository: widget.repository,
               customFontsRepository: widget.customFontsRepository,
+              layoutPresetRepository: widget.layoutPresetRepository,
+              bookReaderPrefsRepository: widget.bookReaderPrefsRepository,
               syncCheckpointTrigger: widget.syncCheckpointTrigger,
             ),
           ),
