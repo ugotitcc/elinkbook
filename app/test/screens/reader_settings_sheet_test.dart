@@ -183,6 +183,57 @@ void main() {
     );
   });
 
+  testWidgets(
+      '只切換「顯示頁首」開關，onChanged 帶出的字級/粗細/行高/段落間距/字距皆維持 null'
+      '（epic-28-reader-settings-enhancements Issue 4：草稿具現化不應覆寫書本原生樣式）',
+      (tester) async {
+    BookReaderPrefs? result;
+    await _pumpSheet(
+      tester,
+      BookReaderPrefs.empty,
+      (prefs) => result = prefs,
+    );
+
+    await tester.tap(find.byKey(const Key('reader_settings_show_header')));
+    await tester.pump();
+
+    expect(result, isNotNull);
+    expect(result!.showHeader, isTrue);
+    expect(result!.fontSize, isNull,
+        reason: '使用者從未調整過字級，不應被草稿具現化悄悄寫入');
+    expect(result!.fontWeight, isNull,
+        reason: '使用者從未調整過字型粗細，不應被草稿具現化悄悄寫入');
+    expect(result!.lineHeight, isNull,
+        reason: '使用者從未調整過行高，不應被草稿具現化悄悄寫入');
+    expect(result!.paragraphSpacing, isNull,
+        reason: '使用者從未調整過段落間距，不應被草稿具現化悄悄寫入');
+    expect(result!.letterSpacing, isNull,
+        reason: '使用者從未調整過字距，不應被草稿具現化悄悄寫入');
+  });
+
+  testWidgets(
+      '只調整字距 + 按鈕，onChanged 帶出的字級/粗細/行高/段落間距仍維持 null，'
+      '只有字距被覆寫（epic-28-reader-settings-enhancements Issue 4）',
+      (tester) async {
+    BookReaderPrefs? result;
+    await _pumpSheet(
+      tester,
+      BookReaderPrefs.empty,
+      (prefs) => result = prefs,
+    );
+
+    await tester.tap(
+        find.byKey(const Key('reader_settings_letter_spacing_increment')));
+    await tester.pump();
+
+    expect(result, isNotNull);
+    expect(result!.letterSpacing, closeTo(0.01, 1e-9));
+    expect(result!.fontSize, isNull);
+    expect(result!.fontWeight, isNull);
+    expect(result!.lineHeight, isNull);
+    expect(result!.paragraphSpacing, isNull);
+  });
+
   testWidgets('點擊字型大小 + 按鈕後，onChanged 帶入 fontSize+1 且其他欄位不變',
       (tester) async {
     BookReaderPrefs? result;

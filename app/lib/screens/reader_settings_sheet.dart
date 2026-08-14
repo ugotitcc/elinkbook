@@ -70,10 +70,15 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
 
   late String? _fontFamily;
   late double _fontSize;
+  late bool _fontSizeOverridden;
   late double _fontWeightMultiplier;
+  late bool _fontWeightOverridden;
   late double _lineHeight;
+  late bool _lineHeightOverridden;
   late double _paragraphSpacing;
+  late bool _paragraphSpacingOverridden;
   late double _letterSpacing;
+  late bool _letterSpacingOverridden;
   late double _marginTop;
   late double _marginBottom;
   late double _marginLeft;
@@ -96,12 +101,17 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     _fontSize = widget.prefs.fontSize != null
         ? (widget.prefs.fontSize! * 16.0).roundToDouble()
         : _defaultFontSize;
+    _fontSizeOverridden = widget.prefs.fontSize != null;
     _fontWeightMultiplier = widget.prefs.fontWeight ?? _defaultFontWeightMultiplier;
+    _fontWeightOverridden = widget.prefs.fontWeight != null;
     _lineHeight = widget.prefs.lineHeight ?? _defaultLineHeight;
+    _lineHeightOverridden = widget.prefs.lineHeight != null;
     _paragraphSpacing = widget.prefs.paragraphSpacing != null
         ? (widget.prefs.paragraphSpacing! * 10.0).roundToDouble()
         : _defaultParagraphSpacing;
+    _paragraphSpacingOverridden = widget.prefs.paragraphSpacing != null;
     _letterSpacing = widget.prefs.letterSpacing ?? _defaultLetterSpacing;
+    _letterSpacingOverridden = widget.prefs.letterSpacing != null;
     _marginTop = widget.prefs.marginTop ?? _defaultMarginTop;
     _marginBottom = widget.prefs.marginBottom ?? _defaultMarginBottom;
     _marginLeft = widget.prefs.marginLeft ?? _defaultMarginLeft;
@@ -127,12 +137,17 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
         _fontSize = widget.prefs.fontSize != null
             ? (widget.prefs.fontSize! * 16.0).roundToDouble()
             : _defaultFontSize;
+        _fontSizeOverridden = widget.prefs.fontSize != null;
         _fontWeightMultiplier = widget.prefs.fontWeight ?? _defaultFontWeightMultiplier;
+        _fontWeightOverridden = widget.prefs.fontWeight != null;
         _lineHeight = widget.prefs.lineHeight ?? _defaultLineHeight;
+        _lineHeightOverridden = widget.prefs.lineHeight != null;
         _paragraphSpacing = widget.prefs.paragraphSpacing != null
             ? (widget.prefs.paragraphSpacing! * 10.0).roundToDouble()
             : _defaultParagraphSpacing;
+        _paragraphSpacingOverridden = widget.prefs.paragraphSpacing != null;
         _letterSpacing = widget.prefs.letterSpacing ?? _defaultLetterSpacing;
+        _letterSpacingOverridden = widget.prefs.letterSpacing != null;
         _marginTop = widget.prefs.marginTop ?? _defaultMarginTop;
         _marginBottom = widget.prefs.marginBottom ?? _defaultMarginBottom;
         _marginLeft = widget.prefs.marginLeft ?? _defaultMarginLeft;
@@ -157,11 +172,12 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
 
   BookReaderPrefs get _currentDraft => BookReaderPrefs(
         fontFamily: _fontFamily,
-        fontSize: _toMultiplier(_fontSize, 16.0),
-        fontWeight: _fontWeightMultiplier,
-        lineHeight: _lineHeight,
-        paragraphSpacing: _toMultiplier(_paragraphSpacing, 10.0),
-        letterSpacing: _letterSpacing,
+        fontSize: _fontSizeOverridden ? _toMultiplier(_fontSize, 16.0) : null,
+        fontWeight: _fontWeightOverridden ? _fontWeightMultiplier : null,
+        lineHeight: _lineHeightOverridden ? _lineHeight : null,
+        paragraphSpacing:
+            _paragraphSpacingOverridden ? _toMultiplier(_paragraphSpacing, 10.0) : null,
+        letterSpacing: _letterSpacingOverridden ? _letterSpacing : null,
         marginTop: _marginTop,
         marginBottom: _marginBottom,
         marginLeft: _marginLeft,
@@ -222,6 +238,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                   displayValue: _fontSize.round().toString(),
                   onChanged: (v) => setState(() {
                     _fontSize = v;
+                    _fontSizeOverridden = true;
                     _notifyChanged();
                   }),
                 ),
@@ -235,6 +252,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                   displayValue: (_fontWeightMultiplier * 400).round().toString(),
                   onChanged: (v) => setState(() {
                     _fontWeightMultiplier = v / 400;
+                    _fontWeightOverridden = true;
                     _notifyChanged();
                   }),
                 ),
@@ -248,6 +266,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                   displayValue: _lineHeight.toStringAsFixed(1),
                   onChanged: (v) => setState(() {
                     _lineHeight = double.parse(v.toStringAsFixed(1));
+                    _lineHeightOverridden = true;
                     _notifyChanged();
                   }),
                 ),
@@ -261,6 +280,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                   displayValue: _paragraphSpacing.round().toString(),
                   onChanged: (v) => setState(() {
                     _paragraphSpacing = v;
+                    _paragraphSpacingOverridden = true;
                     _notifyChanged();
                   }),
                 ),
@@ -274,6 +294,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                   displayValue: '${_letterSpacing.toStringAsFixed(2)}em',
                   onChanged: (v) => setState(() {
                     _letterSpacing = double.parse(v.toStringAsFixed(2));
+                    _letterSpacingOverridden = true;
                     _notifyChanged();
                   }),
                 ),

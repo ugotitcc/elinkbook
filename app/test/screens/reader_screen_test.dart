@@ -1338,10 +1338,14 @@ void main() {
       await tester.pump();
     }
 
-    // fontSize 倍率變成 2.0，且 16 次點擊過程中 ReaderSettingsSheet 的
-    // _notifyChanged() 一併把行高／邊界的目前 UI 狀態（即使使用者未曾觸碰）
-    // 送入 BookReaderPrefs——這些值恰好等於 estimateCharsPerScreen() 自身
-    // 的預設 fallback（lineHeight 1.0／margin 32-16-24-24），數值不受影響。
+    // fontSize 倍率變成 2.0。epic-28-reader-settings-enhancements Issue 4
+    // 修復後，ReaderSettingsSheet 只有「使用者實際觸碰過的欄位」才會送出
+    // 具體數值——lineHeight 未被觸碰，因此正確維持 null，不再被具現化；
+    // 邊界（margin）4 個欄位屬於 App 自身版面留白設定、與「書本原生樣式」
+    // 無關，不在本次修復範圍內，_notifyChanged() 仍會送出目前 UI 顯示值
+    // （32-16-24-24）。兩者皆與 estimateCharsPerScreen() 自身的獨立
+    // fallback（lineHeight ?? 1.0 等，見 epub_page_estimator.dart）相同，
+    // 頁碼估算數值不受影響。
     // fontSize=2.0、screenWidth=800/screenHeight=600 下
     // estimateCharsPerScreen() = 391（見 epub_page_estimator_test.dart
     // 對應測試），totalPages = ceil(5000/391) = 13。
