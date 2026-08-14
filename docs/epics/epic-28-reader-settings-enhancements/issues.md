@@ -38,7 +38,7 @@
 
 ## Issue 2：Console Log 攔截可手動關閉
 
-**Status:** `ready-for-agent`
+**Status:** ✅ 已完成並合併回 `main`（PR [#144](https://git.jigong.org/huthief/elinkBook/pulls/144)，分支 `feat/epic-28-issue-2-console-log-switch`，3 個 Task commit ＋ 1 個審查修正）。程式碼審查（`reviews/review-issue-2.md`）結論為可以合併——0 Critical／0 Important，僅 2 項 Minor（`handleFoliateConsoleMessage()` 文件註解 `[TIP]` 拼字瑕疵已於 commit `bb1bb02` 修正；`plan-issue-2.md` 結尾驗證 checkbox 收尾）。全專案 1198 項測試與 `flutter analyze` 零回歸通過。
 
 **依賴：** 無，可立即開始
 

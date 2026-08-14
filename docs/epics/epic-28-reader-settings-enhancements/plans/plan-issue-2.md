@@ -33,7 +33,7 @@
 **Interfaces:**
 - Produces: `GlobalReaderPrefs.consoleLogEnabled`（`bool`，預設 `false`）；`ResolvedPreferences.consoleLogEnabled`（`bool`，預設 `false`，直接透傳 `global.consoleLogEnabled`，無單書覆寫層）。
 
-- [ ] **Step 1: 寫失敗測試——`GlobalReaderPrefs` 新欄位的預設值/copyWith/相等性**
+- [x] **Step 1: 寫失敗測試——`GlobalReaderPrefs` 新欄位的預設值/copyWith/相等性**
 
 編輯 `app/test/reader/global_reader_prefs_test.dart`，於檔案最後一個 `test(...)`（`openLastBookOnLaunch 不同時視為不相等`）之後新增：
 
@@ -58,12 +58,12 @@
   });
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 執行：`cd app && flutter test test/reader/global_reader_prefs_test.dart`
 預期：編譯錯誤（`consoleLogEnabled` 具名參數/getter 不存在於 `GlobalReaderPrefs`）。
 
-- [ ] **Step 3: `GlobalReaderPrefs` 新增 `consoleLogEnabled` 欄位**
+- [x] **Step 3: `GlobalReaderPrefs` 新增 `consoleLogEnabled` 欄位**
 
 編輯 `app/lib/reader/global_reader_prefs.dart`：
 
@@ -119,12 +119,12 @@
         consoleLogEnabled,
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 執行：`cd app && flutter test test/reader/global_reader_prefs_test.dart`
 預期：全數 PASS。
 
-- [ ] **Step 5: 寫失敗測試——`resolve()` 透傳與 SharedPreferences 讀寫**
+- [x] **Step 5: 寫失敗測試——`resolve()` 透傳與 SharedPreferences 讀寫**
 
 編輯 `app/test/reader/reader_prefs_manager_test.dart`：
 
@@ -181,12 +181,12 @@
     });
 ```
 
-- [ ] **Step 6: 執行測試確認失敗**
+- [x] **Step 6: 執行測試確認失敗**
 
 執行：`cd app && flutter test test/reader/reader_prefs_manager_test.dart`
 預期：編譯錯誤（`consoleLogEnabled` 具名參數不存在於 `GlobalReaderPrefs`／`ResolvedPreferences`）。
 
-- [ ] **Step 7: `ResolvedPreferences` 新增 `consoleLogEnabled` 欄位**
+- [x] **Step 7: `ResolvedPreferences` 新增 `consoleLogEnabled` 欄位**
 
 編輯 `app/lib/reader/resolved_preferences.dart`：
 
@@ -202,7 +202,7 @@
     this.consoleLogEnabled = false,
 ```
 
-- [ ] **Step 8: `ReaderPrefsManagerImpl` 讀寫 SharedPreferences**
+- [x] **Step 8: `ReaderPrefsManagerImpl` 讀寫 SharedPreferences**
 
 編輯 `app/lib/reader/reader_prefs_manager_impl.dart`：
 
@@ -230,17 +230,17 @@
       consoleLogEnabled: global.consoleLogEnabled,
 ```
 
-- [ ] **Step 9: 執行測試確認通過**
+- [x] **Step 9: 執行測試確認通過**
 
 執行：`cd app && flutter test test/reader/reader_prefs_manager_test.dart`
 預期：全數 PASS。
 
-- [ ] **Step 10: 執行完整分析與既有測試，確認零回歸**
+- [x] **Step 10: 執行完整分析與既有測試，確認零回歸**
 
 執行：`cd app && flutter analyze && flutter test test/reader/`
 預期：`flutter analyze` "No issues found!"；`flutter test` 全數 PASS。
 
-- [ ] **Step 11: Commit**
+- [x] **Step 11: Commit**
 
 ```bash
 git add app/lib/reader/global_reader_prefs.dart app/lib/reader/reader_prefs_manager_impl.dart app/lib/reader/resolved_preferences.dart app/test/reader/global_reader_prefs_test.dart app/test/reader/reader_prefs_manager_test.dart
@@ -260,7 +260,7 @@ git commit -m "feat(epic-28): Issue 2 Task 1——GlobalReaderPrefs 新增 conso
 - Consumes: `ResolvedPreferences.consoleLogEnabled`（Task 1 產出）。
 - Produces: `FoliateEpubReaderView.consoleLogEnabled`（`bool` 建構參數，預設 `false`）；`handleFoliateConsoleMessage(String message, String levelName, {required bool consoleLogEnabled})`——簽章變更（新增必要具名參數），呼叫端需同步更新。
 
-- [ ] **Step 1: 寫失敗測試——`handleFoliateConsoleMessage` 依開關過濾**
+- [x] **Step 1: 寫失敗測試——`handleFoliateConsoleMessage` 依開關過濾**
 
 編輯 `app/test/reader/foliate_epub_reader_view_test.dart`：
 
@@ -309,12 +309,12 @@ git commit -m "feat(epic-28): Issue 2 Task 1——GlobalReaderPrefs 新增 conso
     });
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 執行：`cd app && flutter test test/reader/foliate_epub_reader_view_test.dart`
 預期：編譯錯誤（`consoleLogEnabled` 具名參數不存在於 `handleFoliateConsoleMessage`）。
 
-- [ ] **Step 3: `handleFoliateConsoleMessage()` 依開關過濾非 ERROR 等級**
+- [x] **Step 3: `handleFoliateConsoleMessage()` 依開關過濾非 ERROR 等級**
 
 編輯 `app/lib/reader/foliate_epub_reader_view.dart`，第 213-215 行原為：
 
@@ -343,12 +343,12 @@ void handleFoliateConsoleMessage(
 }
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 執行：`cd app && flutter test test/reader/foliate_epub_reader_view_test.dart`
 預期：FAIL（`FoliateEpubReaderView`／呼叫端尚未更新，見下一步；`handleFoliateConsoleMessage` 相關的測試本身應已 PASS，其餘既有測試因呼叫端 `onConsoleMessage` 尚未同步更新可能編譯失敗）。
 
-- [ ] **Step 5: `FoliateEpubReaderView` 新增 `consoleLogEnabled` 建構參數並接線**
+- [x] **Step 5: `FoliateEpubReaderView` 新增 `consoleLogEnabled` 建構參數並接線**
 
 編輯 `app/lib/reader/foliate_epub_reader_view.dart`：
 
@@ -385,7 +385,7 @@ void handleFoliateConsoleMessage(
           ),
 ```
 
-- [ ] **Step 6: `reader_screen.dart` 傳遞 `resolved.consoleLogEnabled`**
+- [x] **Step 6: `reader_screen.dart` 傳遞 `resolved.consoleLogEnabled`**
 
 編輯 `app/lib/screens/reader_screen.dart`，於第 2304 行（`case BookFormat.epub:` 分支內）：
 
@@ -401,17 +401,17 @@ void handleFoliateConsoleMessage(
 
 **不要**修改 `case BookFormat.pdf:` 分支（`PdfReaderView` 第 2341 行附近的同名 `showNavZoneDebugOverlay`）——PDF 路徑無 WebView、無 console 訊息可攔截，本 Issue 不涉及 `PdfReaderView`。
 
-- [ ] **Step 7: 執行測試確認通過**
+- [x] **Step 7: 執行測試確認通過**
 
 執行：`cd app && flutter test test/reader/foliate_epub_reader_view_test.dart`
 預期：全數 PASS。
 
-- [ ] **Step 8: 執行完整分析與既有測試，確認零回歸**
+- [x] **Step 8: 執行完整分析與既有測試，確認零回歸**
 
 執行：`cd app && flutter analyze && flutter test`
 預期：`flutter analyze` "No issues found!"；`flutter test` 全數 PASS（尤其確認 `reader_screen_test.dart` 未因 `FoliateEpubReaderView` 建構簽章新增可選參數而回歸——新參數有預設值，既有呼叫端不需修改）。
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add app/lib/reader/foliate_epub_reader_view.dart app/lib/screens/reader_screen.dart app/test/reader/foliate_epub_reader_view_test.dart
@@ -432,7 +432,7 @@ git commit -m "feat(epic-28): Issue 2 Task 2——handleFoliateConsoleMessage �
 
 **背景**：`SettingsScreen` 目前是 `StatelessWidget`，本身不持有任何非同步載入狀態（`ReadingDefaultsScreen`／`NavZoneSettingsScreen` 才各自管理自己的 `GlobalReaderPrefs` 狀態）。本 Task 須將它改為 `StatefulWidget`，但**刻意不採用** `ReadingDefaultsScreen` 的「整頁 loading gate」模式（`_loading` 布林 + `CircularProgressIndicator` 擋住整個畫面）——`SettingsScreen` 有「佈景」「字型管理」等其餘與本開關無關的項目，不應該因為這個開關的非同步載入而讓整頁初次顯示延遲。改為：開關初始顯示 `false`（與 `GlobalReaderPrefs` 預設值一致），載入完成後才透過 `setState` 更新為實際已儲存值，其餘 `ListTile` 完全不受影響、與遷移前行為一致（不需要修改任何既有測試）。
 
-- [ ] **Step 1: 寫失敗測試——開關存在、初始值反映已儲存設定、互動後持久化**
+- [x] **Step 1: 寫失敗測試——開關存在、初始值反映已儲存設定、互動後持久化**
 
 編輯 `app/test/screens/settings_screen_test.dart`：
 
@@ -505,12 +505,12 @@ import 'package:elinkbook/reader/global_reader_prefs.dart';
   });
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 執行：`cd app && flutter test test/screens/settings_screen_test.dart`
 預期：FAIL（找不到 `Key('settings_console_log_switch')`）。
 
-- [ ] **Step 3: `SettingsScreen` 改為 `StatefulWidget` 並新增開關**
+- [x] **Step 3: `SettingsScreen` 改為 `StatefulWidget` 並新增開關**
 
 `app/lib/screens/settings_screen.dart` 涉及的欄位存取散落在 `build()`／`_buildThemeDot()` 多處、且轉換為 `StatefulWidget` 後全部要加上 `widget.` 前綴，逐一 diff 容易遺漏——直接用完整檔案內容覆寫整份檔案：
 
@@ -736,17 +736,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
 （新的 Console Log 開關 `ListTile` 放在「閱讀器 Console Log」入口之後、「關於」之前——與 `design.md`「同一頁」的要求一致，位置選在既有診斷入口旁邊，語意上相鄰。）
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 執行：`cd app && flutter test test/screens/settings_screen_test.dart`
 預期：全數 PASS（含 Step 1 新增的 3 則測試與全部既有測試——既有測試皆未使用 `await tester.pump()` 額外等待即斷言，須確認轉換為 `StatefulWidget` 後這些既有斷言依然成立：`_consoleLogEnabled` 的非同步載入不影響其餘 `ListTile` 的同步顯示，見 Task 3 開頭「背景」說明）。
 
-- [ ] **Step 5: 執行完整分析與全專案測試，確認零回歸**
+- [x] **Step 5: 執行完整分析與全專案測試，確認零回歸**
 
 執行：`cd app && flutter analyze && flutter test`
 預期：`flutter analyze` "No issues found!"；`flutter test` 全數 PASS。
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/screens/settings_screen.dart app/test/screens/settings_screen_test.dart
@@ -757,6 +757,6 @@ git commit -m "feat(epic-28): Issue 2 Task 3——SettingsScreen 新增 Console 
 
 ## 完成後的驗證（對照 `issues.md` Issue 2 驗收標準）
 
-- [ ] `flutter analyze`：全專案 "No issues found!"
-- [ ] `flutter test`：全專案通過，零回歸
-- [ ] （建議，非本計畫強制自動化）於真機或模擬器：開啟一本流式 EPUB 觸發幾筆一般 console log，確認「閱讀器 Console Log」畫面有紀錄；到「設定」關閉 Console Log 攔截開關，重新觸發同樣操作，確認一般訊息不再新增，但故意觸發一個 JS 例外（或參考 `epic-27-reader-device-compat` 已知的載入中點擊崩潰情境，若尚未修復）時 `[ERROR]` 訊息仍正確出現。
+- [x] `flutter analyze`：全專案 "No issues found!"
+- [x] `flutter test`：全專案通過，零回歸
+- [ ] （建議，非本計畫強制自動化，尚未實機驗證）於真機或模擬器：開啟一本流式 EPUB 觸發幾筆一般 console log，確認「閱讀器 Console Log」畫面有紀錄；到「設定」關閉 Console Log 攔截開關，重新觸發同樣操作，確認一般訊息不再新增，但故意觸發一個 JS 例外（或參考 `epic-27-reader-device-compat` 已知的載入中點擊崩潰情境，若尚未修復）時 `[ERROR]` 訊息仍正確出現。
