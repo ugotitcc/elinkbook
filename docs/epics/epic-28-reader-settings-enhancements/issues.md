@@ -64,7 +64,7 @@
 
 ## Issue 3：版面設定預設集（存 3 組具名預設集）＋書籍設定複製
 
-**Status:** `ready-for-agent`
+**Status:** ✅ 已完成並合併回 `main`（PR [#146](https://git.jigong.org/huthief/elinkBook/pulls/146)，分支 `feat/epic-28-issue-3-layout-presets`，全部 11 個 Task commit ＋ 2 個審查修正）。經兩輪 `/superpowers:requesting-code-review` 審查（`reviews/review-issue-3.md`）：第一輪僅涵蓋 Task 1-7 資料層（0 Critical／2 Important／3 Minor，2 項 Important 為 `pdfPageTurnAnimation` 欄位測試覆蓋缺口，已於 commit `329446f` 修正），第二輪擴大為 Task 1-11 全範圍（0 Critical／2 Important／2 Minor，已於 commit `4719a44` 全部修正：刪除預設集新增二次確認對話框、`_loadLayoutPresets()` 補上 try/catch 容錯、覆蓋選單新增顯式「取消」選項、命名 Dialog 對空字串驗證失敗顯示錯誤提示）。全專案 `flutter analyze` 乾淨、`flutter test` 零回歸通過。
 
 **依賴：** Issue 1（`letterSpacing` 欄位須先存在，`reflowableEpubFields()` 允許清單需含它）
 
