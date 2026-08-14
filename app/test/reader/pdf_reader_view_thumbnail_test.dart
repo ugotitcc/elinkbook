@@ -2,18 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pdfrx/pdfrx.dart';
 import 'package:elinkbook/reader/pdf_reader_view.dart';
+import '../support/pump_until_pdf_ready.dart';
 
 void main() {
   setUp(() => pdfrxInitialize());
-
-  Future<void> waitRendered(WidgetTester tester, int Function() rendered) {
-    return tester.runAsync(() async {
-      for (var i = 0; i < 30 && rendered() == 0; i++) {
-        await tester.pump(const Duration(milliseconds: 100));
-        await Future<void>.delayed(const Duration(milliseconds: 10));
-      }
-    });
-  }
 
   testWidgets('renderThumbnail 回傳非 null 影像，寬度符合 maxWidth，高度依頁面比例換算',
       (tester) async {
@@ -30,7 +22,7 @@ void main() {
         ),
       ),
     );
-    await waitRendered(tester, () => renderedCount);
+    await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
 
     final image = await tester.runAsync(
       () => PdfReaderView.renderThumbnail(key, 0, maxWidth: 120),
@@ -59,7 +51,7 @@ void main() {
         ),
       ),
     );
-    await waitRendered(tester, () => renderedCount);
+    await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
 
     final image = await tester.runAsync(
       () => PdfReaderView.renderThumbnail(key, 999, maxWidth: 120),
@@ -91,7 +83,7 @@ void main() {
         ),
       ),
     );
-    await waitRendered(tester, () => renderedCount);
+    await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
 
     final image0 = await tester.runAsync(
       () => PdfReaderView.renderThumbnail(key, 0, maxWidth: 80),

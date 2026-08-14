@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:pdfrx/pdfrx.dart';
 import 'package:elinkbook/reader/pdf_reader_view.dart';
 import 'package:elinkbook/reader/pdf_toc_item.dart';
+import '../support/pump_until_pdf_ready.dart';
 
 // 注意：`sample.pdf` 已改為正常頁面尺寸（612×792），因舊版 200×200 極小
 // 頁面會讓 `pdfrx` 的 `InteractiveViewer` 於 `maxScale >= minScale` 斷言失敗。
@@ -10,15 +11,6 @@ import 'package:elinkbook/reader/pdf_toc_item.dart';
 
 void main() {
   setUp(() => pdfrxInitialize());
-
-  Future<void> waitRendered(WidgetTester tester, int Function() rendered) {
-    return tester.runAsync(() async {
-      for (var i = 0; i < 30 && rendered() == 0; i++) {
-        await tester.pump(const Duration(milliseconds: 100));
-        await Future<void>.delayed(const Duration(milliseconds: 10));
-      }
-    });
-  }
 
   testWidgets('正確解析巢狀大綱，保留階層與頁碼（0-indexed）', (tester) async {
     var renderedCount = 0;
@@ -34,7 +26,7 @@ void main() {
         ),
       ),
     );
-    await waitRendered(tester, () => renderedCount);
+    await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
 
     final items = await tester.runAsync(
       () => PdfReaderView.loadTableOfContents(key),
@@ -82,7 +74,7 @@ void main() {
         ),
       ),
     );
-    await waitRendered(tester, () => renderedCount);
+    await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
 
     final items = await tester.runAsync(
       () => PdfReaderView.loadTableOfContents(key),

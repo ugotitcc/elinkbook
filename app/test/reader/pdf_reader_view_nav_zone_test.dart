@@ -3,18 +3,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:pdfrx/pdfrx.dart';
 import 'package:elinkbook/reader/pdf_reader_view.dart';
 import 'package:elinkbook/reader/zone_action.dart';
+import '../support/pump_until_pdf_ready.dart';
 
 void main() {
   setUp(() => pdfrxInitialize());
-
-  Future<void> waitRendered(WidgetTester tester, int Function() rendered) {
-    return tester.runAsync(() async {
-      for (var i = 0; i < 30 && rendered() == 0; i++) {
-        await tester.pump(const Duration(milliseconds: 100));
-        await Future<void>.delayed(const Duration(milliseconds: 10));
-      }
-    });
-  }
 
   testWidgets('navZoneActions 預設全部為 none 時，點擊格子仍呼叫 onZoneAction 並帶入 none',
       (tester) async {
@@ -31,7 +23,7 @@ void main() {
         ),
       ),
     );
-    await waitRendered(tester, () => renderedCount);
+    await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
 
     await tester.tap(find.byKey(const Key('pdf_reader_nav_zone_4')));
     await tester.pump();
@@ -61,7 +53,7 @@ void main() {
         ),
       ),
     );
-    await waitRendered(tester, () => renderedCount);
+    await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
 
     await tester.tap(find.byKey(const Key('pdf_reader_nav_zone_4')));
     await tester.pump();
@@ -95,7 +87,7 @@ void main() {
         ),
       ),
     );
-    await waitRendered(tester, () => renderedCount);
+    await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
     await tester.pump();
 
     expect(find.text('選單'), findsNothing);
@@ -117,7 +109,7 @@ void main() {
         ),
       ),
     );
-    await waitRendered(tester, () => renderedCount);
+    await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
     await tester.pump();
 
     expect(find.text('選單'), findsOneWidget);
@@ -141,7 +133,7 @@ void main() {
         ),
       ),
     );
-    await waitRendered(tester, () => renderedCount);
+    await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
 
     final gesture = await tester.startGesture(
       tester.getCenter(find.byKey(const Key('pdf_reader_nav_zone_4'))),
@@ -171,7 +163,7 @@ void main() {
         ),
       ),
     );
-    await waitRendered(tester, () => renderedCount);
+    await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
 
     final cancelledGesture = await tester.startGesture(
       tester.getCenter(find.byKey(const Key('pdf_reader_nav_zone_4'))),

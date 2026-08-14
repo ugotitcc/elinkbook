@@ -11,18 +11,10 @@ import 'package:elinkbook/reader/pdf_crop_mode.dart';
 import 'package:elinkbook/reader/pdf_crop_rect.dart';
 import 'package:elinkbook/reader/dual_page_mode.dart';
 import 'package:elinkbook/reader/dual_page_direction.dart';
+import '../support/pump_until_pdf_ready.dart';
 
 void main() {
   setUp(() => pdfrxInitialize());
-
-  Future<void> waitRendered(WidgetTester tester, int Function() rendered) {
-    return tester.runAsync(() async {
-      for (var i = 0; i < 30 && rendered() == 0; i++) {
-        await tester.pump(const Duration(milliseconds: 100));
-        await Future<void>.delayed(const Duration(milliseconds: 10));
-      }
-    });
-  }
 
   testWidgets('不傳選取回呼時，行為與 Issue 1/2/3 完全相同（零回歸基準）',
       (tester) async {
@@ -41,7 +33,7 @@ void main() {
         ),
       ),
     );
-    await waitRendered(tester, () => renderedCount);
+    await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
 
     expect(renderedCount, 1);
     expect(lastPageInfo?.totalPages, 5);
@@ -69,7 +61,7 @@ void main() {
         ),
       ),
     );
-    await waitRendered(tester, () => renderedCount);
+    await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
 
     final pageFinder = find.byType(PdfReaderView);
     final topLeft = tester.getTopLeft(pageFinder);
@@ -107,7 +99,7 @@ void main() {
         ),
       ),
     );
-    await waitRendered(tester, () => renderedCount);
+    await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
 
     PdfViewerParams paramsOf() =>
         tester.widget<PdfViewer>(find.byType(PdfViewer)).params;
@@ -150,7 +142,7 @@ void main() {
         ),
       ),
     );
-    await waitRendered(tester, () => renderedCount);
+    await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
 
     PdfViewerParams paramsOf() =>
         tester.widget<PdfViewer>(find.byType(PdfViewer)).params;
@@ -194,7 +186,7 @@ void main() {
         ),
       ),
     );
-    await waitRendered(tester, () => renderedCount);
+    await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
 
     final topLeft = tester.getTopLeft(find.byType(PdfReaderView));
     final pos = topLeft + const Offset(100, 150);
@@ -221,7 +213,7 @@ void main() {
         ),
       ),
     );
-    await waitRendered(tester, () => renderedCount);
+    await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
 
     final topLeft = tester.getTopLeft(find.byType(PdfReaderView));
     final gesture = await tester.startGesture(topLeft + const Offset(40, 60));
@@ -257,7 +249,7 @@ void main() {
         ),
       ),
     );
-    await waitRendered(tester, () => renderedCount);
+    await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
 
     final topLeft = tester.getTopLeft(find.byType(PdfReaderView));
     final firstFinger = await tester.startGesture(topLeft + const Offset(40, 60));
@@ -298,7 +290,7 @@ void main() {
         ),
       ),
     );
-    await waitRendered(tester, () => renderedCount);
+    await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
 
     final topLeft = tester.getTopLeft(find.byType(PdfReaderView));
     final gesture = await tester.startGesture(topLeft + const Offset(40, 60));
@@ -334,7 +326,7 @@ void main() {
         ),
       ),
     );
-    await waitRendered(tester, () => renderedCount);
+    await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
 
     final topLeft = tester.getTopLeft(find.byType(PdfReaderView));
     final gesture = await tester.startGesture(topLeft + const Offset(40, 60));
@@ -365,7 +357,7 @@ void main() {
         ),
       ),
     );
-    await waitRendered(tester, () => renderedCount);
+    await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
 
     expect(find.byKey(const Key('pdf_reader_decoration_0_0')), findsNothing);
 
@@ -397,7 +389,7 @@ void main() {
         ),
       ),
     );
-    await waitRendered(tester, () => renderedCount);
+    await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
 
     PdfReaderView.refreshAnnotations(key, const [
       PdfAnnotationDecoration(
@@ -438,7 +430,7 @@ void main() {
         ),
       ),
     );
-    await waitRendered(tester, () => renderedCount);
+    await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
 
     PdfReaderView.refreshAnnotations(key, const [
       PdfAnnotationDecoration(
@@ -472,7 +464,7 @@ void main() {
         ),
       ),
     );
-    await waitRendered(tester, () => renderedCount);
+    await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
 
     PdfReaderView.refreshAnnotations(key, const [
       PdfAnnotationDecoration(
@@ -507,7 +499,7 @@ void main() {
         ),
       ),
     );
-    await waitRendered(tester, () => renderedCount);
+    await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
 
     // 封面獨立顯示，第一個雙頁 spread 是 [1,2]（0-indexed page 1、2）。
     PdfReaderView.nextPage(key);

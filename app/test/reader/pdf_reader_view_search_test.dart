@@ -2,18 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pdfrx/pdfrx.dart';
 import 'package:elinkbook/reader/pdf_reader_view.dart';
+import '../support/pump_until_pdf_ready.dart';
 
 void main() {
   setUp(() => pdfrxInitialize());
-
-  Future<void> waitRendered(WidgetTester tester, int Function() rendered) {
-    return tester.runAsync(() async {
-      for (var i = 0; i < 30 && rendered() == 0; i++) {
-        await tester.pump(const Duration(milliseconds: 100));
-        await Future<void>.delayed(const Duration(milliseconds: 10));
-      }
-    });
-  }
 
   testWidgets('搜尋 "Page" 正確找出每頁各一筆符合結果，座標落在合理範圍內', (tester) async {
     var renderedCount = 0;
@@ -29,7 +21,7 @@ void main() {
         ),
       ),
     );
-    await waitRendered(tester, () => renderedCount);
+    await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
 
     final matches = await tester.runAsync(() => PdfReaderView.search(key, 'Page'));
 
@@ -58,7 +50,7 @@ void main() {
         ),
       ),
     );
-    await waitRendered(tester, () => renderedCount);
+    await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
 
     final matches = await tester.runAsync(() => PdfReaderView.search(key, 'elinkbook'));
 
@@ -80,7 +72,7 @@ void main() {
         ),
       ),
     );
-    await waitRendered(tester, () => renderedCount);
+    await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
 
     final matches = await tester.runAsync(() => PdfReaderView.search(key, 'nonexistent_xyz'));
 
@@ -102,7 +94,7 @@ void main() {
         ),
       ),
     );
-    await waitRendered(tester, () => renderedCount);
+    await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
 
     final matches = await tester.runAsync(() => PdfReaderView.search(key, 'anything'));
 
@@ -125,7 +117,7 @@ void main() {
         ),
       ),
     );
-    await waitRendered(tester, () => renderedCount);
+    await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
 
     final matches = await tester.runAsync(() => PdfReaderView.search(key, 'Page'));
     expect(matches, isNotNull);
@@ -151,7 +143,7 @@ void main() {
         ),
       ),
     );
-    await waitRendered(tester, () => renderedCount);
+    await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
 
     final matches = await tester.runAsync(() => PdfReaderView.search(key, 'Page'));
     expect(matches, isNotNull);
