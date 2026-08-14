@@ -2653,6 +2653,13 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// `_resolved!.navZoneActions`（design.md 決策 #19）——`up` 一律上一頁、
   /// `down` 一律下一頁。全域音量鍵開關關閉時（`_resolved?.volumeKeyEnabled
   /// == false`，epic-14-system-settings Issue 4）忽略此次觸發。
+  /// **epic-27-reader-device-compat Issue 1**：`previousPage`/`nextPage`
+  /// 於 `_state == _RenderState.loading`（書籍仍在載入中）時直接忽略，
+  /// 避免 EPUB 端 `window.previousPage`/`nextPage` 賦值早於 `view.renderer`
+  /// 真正建立的空窗期被觸控命中而拋出 JS 例外、被 `_handleError()` 誤判
+  /// 為崩潰畫面（見 `reviews/bugfix-repro.md` Issue 1）。`menu` 動作不受
+  /// 影響——它只切換 Dart 端 `_chromeVisible`，不呼叫任何 JS/native API，
+  /// 無此風險。
   Future<void> _handleVolumeKeyCall(MethodCall call) async {
     if (call.method != 'onVolumeKey') return;
     if (_resolved?.volumeKeyEnabled == false) return;
@@ -2671,6 +2678,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     final format = detectBookFormat(widget.filePath);
     switch (action) {
       case ZoneAction.previousPage:
+        if (_state == _RenderState.loading) return;
         if (format == BookFormat.pdf) {
           PdfReaderView.previousPage(_pdfReaderViewKey);
           // Epic 24 Issue 10：PDF 框選狀態是純 Dart 端矩形選取，沒有
@@ -2690,6 +2698,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         }
         break;
       case ZoneAction.nextPage:
+        if (_state == _RenderState.loading) return;
         if (format == BookFormat.pdf) {
           PdfReaderView.nextPage(_pdfReaderViewKey);
           // Epic 24 Issue 10：理由同上方 previousPage 分支。
