@@ -362,13 +362,16 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// iReader Ocean 4 Plus 開啟書籍時畫面永遠停在載入指示器，5 個推測根因
   /// 皆無真機診斷資料佐證）。單次 Timer，_handlePageRendered()／
   /// _handleError() 觸發時皆會取消（不論成功或失敗都不需要再等）；
-  /// 12 秒後若仍是 loading 狀態，代表底層渲染引擎（PdfRenderer／
+  /// 30 秒後若仍是 loading 狀態，代表底層渲染引擎（PdfRenderer／
   /// FoliateEpubReaderView 的 WebView）從未回報任何結果，主動切換為錯誤
   /// 畫面，避免使用者永遠面對轉圈圈、投訴無門（見上方 Issue 33 的
   /// _globalErrorCaptureJs 診斷能力補強說明——這是「連 JS 例外都沒有拋出」
-  /// 這種更極端情況的最後一道防線）。12 秒取自本 Issue 的原始分析報告
-  /// 建議值，非嚴謹量測結果，未來若真機回報大型書籍在正常情況下也需要
-  /// 較長時間才能完成首頁繪製，可再調整。
+  /// 這種更極端情況的最後一道防線）。原始值為 12 秒（epic-18-reader-device-qa
+  /// Issue 33 的原始分析報告建議值，非嚴謹量測結果）；
+  /// epic-27-reader-device-compat Issue 2 依 Mobiscribe WAVE 真機回報
+  /// 「慢速裝置＋大型 EPUB 組合下 12 秒容易誤判逾時、需反覆重試才能開書
+  /// 成功」調整為 30 秒（2026-08-13 使用者於診斷對話中確認此目標值，完整
+  /// 診斷見 docs/epics/epic-27-reader-device-compat/reviews/bugfix-repro.md）。
   Timer? _openBookTimeoutTimer;
 
   @override
@@ -387,7 +390,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       );
     }
     _openBookTimeoutTimer = Timer(
-      const Duration(seconds: 12),
+      const Duration(seconds: 30),
       _handleOpenBookTimeout,
     );
     widget.prefsManager.load(widget.bookId).then((loaded) {
