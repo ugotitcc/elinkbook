@@ -6,6 +6,7 @@ import 'package:elinkbook/reader/dual_page_direction.dart';
 import 'package:elinkbook/reader/pdf_fit_mode.dart';
 import 'package:elinkbook/reader/pdf_crop_mode.dart';
 import 'package:elinkbook/reader/pdf_crop_rect.dart';
+import 'package:elinkbook/reader/pdf_page_turn_animation.dart';
 import 'package:elinkbook/screens/pdf_settings_sheet.dart';
 
 void main() {
@@ -561,6 +562,87 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(PdfSettingsSheet), findsNothing);
+  });
+
+  testWidgets('換頁動畫兩個選項皆存在', (tester) async {
+    await _pumpSheet(tester, BookReaderPrefs.empty, (_) {});
+
+    // 捲動到換頁動畫選項可見（需要更多捲動量）
+    await tester.dragUntilVisible(
+      find.byKey(const Key('pdf_settings_page_turn_animation_slide')),
+      find.byKey(const Key('pdf_settings_display_scroll')),
+      const Offset(0, -100),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('pdf_settings_page_turn_animation_slide')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('pdf_settings_page_turn_animation_none')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('點擊「無」選項後，onChanged 帶入 pdfPageTurnAnimation=none', (tester) async {
+    BookReaderPrefs? notified;
+    await _pumpSheet(tester, BookReaderPrefs.empty, (prefs) => notified = prefs);
+
+    // 捲動到換頁動畫選項可見
+    await tester.dragUntilVisible(
+      find.byKey(const Key('pdf_settings_page_turn_animation_none')),
+      find.byKey(const Key('pdf_settings_display_scroll')),
+      const Offset(0, -100),
+    );
+    await tester.pumpAndSettle();
+
+    await tester
+        .tap(find.byKey(const Key('pdf_settings_page_turn_animation_none')));
+    await tester.pump();
+
+    expect(notified?.pdfPageTurnAnimation, PdfPageTurnAnimation.none);
+  });
+
+  testWidgets('點擊「滑動」選項後，onChanged 帶入 pdfPageTurnAnimation=slide', (tester) async {
+    BookReaderPrefs? notified;
+    await _pumpSheet(
+      tester,
+      const BookReaderPrefs(pdfPageTurnAnimation: PdfPageTurnAnimation.none),
+      (prefs) => notified = prefs,
+    );
+
+    // 捲動到換頁動畫選項可見
+    await tester.dragUntilVisible(
+      find.byKey(const Key('pdf_settings_page_turn_animation_slide')),
+      find.byKey(const Key('pdf_settings_display_scroll')),
+      const Offset(0, -100),
+    );
+    await tester.pumpAndSettle();
+
+    await tester
+        .tap(find.byKey(const Key('pdf_settings_page_turn_animation_slide')));
+    await tester.pump();
+
+    expect(notified?.pdfPageTurnAnimation, PdfPageTurnAnimation.slide);
+  });
+
+  testWidgets(
+      '已持久化 pdfPageTurnAnimation 時，調整濾鏡分頁不會清空 pdfPageTurnAnimation（回歸檢查）',
+      (tester) async {
+    BookReaderPrefs? notified;
+    await _pumpSheet(
+      tester,
+      const BookReaderPrefs(pdfPageTurnAnimation: PdfPageTurnAnimation.none),
+      (prefs) => notified = prefs,
+    );
+
+    await tester.tap(find.byKey(const Key('pdf_settings_tab_filters')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('pdf_settings_contrast_increment')));
+    await tester.pump();
+
+    expect(notified?.pdfPageTurnAnimation, PdfPageTurnAnimation.none); // 關鍵斷言：未被清空
   });
 }
 
