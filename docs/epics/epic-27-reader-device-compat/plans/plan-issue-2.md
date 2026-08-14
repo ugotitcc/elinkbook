@@ -28,7 +28,7 @@
 - Consumes: 既有 `_RenderState`（`_ReaderScreenState` 私有列舉欄位 `_state`）、既有 `Key('reader_loading_indicator')`／`Key('reader_error_text')`（測試觀察用固定 Key，見 `CLAUDE.md`「`ReaderScreen`」小節）。
 - Produces: 無新增對外介面——`_openBookTimeoutTimer` 的排程時長由 12 秒改為 30 秒，`_handleOpenBookTimeout()` 簽章與行為邏輯本身不變。
 
-- [ ] **Step 1：修改「開書逾時自動切換錯誤畫面」測試——先驗證 30 秒邊界，讓測試在目前 12 秒實作下失敗**
+- [x] **Step 1：修改「開書逾時自動切換錯誤畫面」測試——先驗證 30 秒邊界，讓測試在目前 12 秒實作下失敗**
 
 編輯 `app/test/screens/reader_screen_test.dart`，找到（約第 4981-5008 行）：
 
@@ -107,7 +107,7 @@
   });
 ```
 
-- [ ] **Step 2：修改「逾時計時器不應覆蓋既有成功狀態」測試的推進時長**
+- [x] **Step 2：修改「逾時計時器不應覆蓋既有成功狀態」測試的推進時長**
 
 編輯 `app/test/screens/reader_screen_test.dart`，找到（約第 5010-5038 行）測試「`開書逾時計時器：onPageRendered 在逾時前已觸發時，逾時計時器不應覆蓋既有的成功狀態`」內：
 
@@ -130,13 +130,13 @@
     await tester.pump(const Duration(seconds: 30));
 ```
 
-- [ ] **Step 3：執行測試確認 Step 1 的新斷言失敗（Step 2 因與逾時值大小無關，預期仍為 PASS）**
+- [x] **Step 3：執行測試確認 Step 1 的新斷言失敗（Step 2 因與逾時值大小無關，預期仍為 PASS）**
 
 執行：`cd app && flutter test test/screens/reader_screen_test.dart --plain-name "開書逾時"`
 
 預期：「開書逾時（epic-18-reader-device-qa Issue 33，epic-27-reader-device-compat Issue 2 調整為 30 秒）」FAIL 於 `reader_loading_indicator` 的 `findsOneWidget` 斷言（`推進 29 秒` 後，目前 12 秒的實作已提早觸發逾時，錯誤畫面已出現，載入指示器已消失）；「開書逾時計時器：...不應覆蓋既有的成功狀態」PASS（此測試的斷言與逾時值大小無關，見 Step 2 說明）。
 
-- [ ] **Step 4：修改 `_openBookTimeoutTimer` 實作，12 秒 → 30 秒，同步更新說明註解**
+- [x] **Step 4：修改 `_openBookTimeoutTimer` 實作，12 秒 → 30 秒，同步更新說明註解**
 
 編輯 `app/lib/screens/reader_screen.dart`，找到（約第 361-372 行）：
 
@@ -193,19 +193,19 @@
     );
 ```
 
-- [ ] **Step 5：執行測試確認通過**
+- [x] **Step 5：執行測試確認通過**
 
 執行：`cd app && flutter test test/screens/reader_screen_test.dart --plain-name "開書逾時"`
 
 預期：兩則測試皆 PASS。
 
-- [ ] **Step 6：執行完整分析與全專案測試，確認零回歸**
+- [x] **Step 6：執行完整分析與全專案測試，確認零回歸**
 
 執行：`cd app && flutter analyze && flutter test`
 
 預期：`flutter analyze` 顯示 "No issues found!"；`flutter test` 全數 PASS，零回歸（本次改動只觸及 `_openBookTimeoutTimer` 的排程時長與其註解，不影響其他邏輯路徑，理論上只有 `reader_screen_test.dart` 的兩則逾時測試會受影響，已於 Step 1-5 處理）。
 
-- [ ] **Step 7：Commit**
+- [x] **Step 7：Commit**
 
 ```bash
 git add app/lib/screens/reader_screen.dart app/test/screens/reader_screen_test.dart
@@ -216,7 +216,7 @@ git commit -m "fix(epic-27): Issue 2——開書逾時由 12 秒延長為 30 秒
 
 ## 完成後的驗證（對照 `issues.md` Issue 2 驗收標準）
 
-- [ ] 開書 30 秒內未完成才顯示逾時錯誤畫面（Step 1 新增的 29 秒／30 秒邊界斷言已涵蓋）
-- [ ] `reader_screen_test.dart` 相關測試更新為新數值並通過
-- [ ] `flutter analyze`：全專案 "No issues found!"
-- [ ] `flutter test`：全專案通過，零回歸
+- [x] 開書 30 秒內未完成才顯示逾時錯誤畫面（Step 1 新增的 29 秒／30 秒邊界斷言已涵蓋）
+- [x] `reader_screen_test.dart` 相關測試更新為新數值並通過
+- [x] `flutter analyze`：全專案 "No issues found!"
+- [x] `flutter test`：全專案通過，零回歸
