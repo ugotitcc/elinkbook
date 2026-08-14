@@ -483,4 +483,44 @@ void main() {
     expect(updated.pdfContrast, 10);
     expect(updated.pdfPageTurnAnimation, PdfPageTurnAnimation.none);
   });
+
+  group('enumByNameOrNull', () {
+    test('找不到對應名稱時回傳 null，不拋出例外', () {
+      expect(enumByNameOrNull(EpubTextAlign.values, 'not_a_real_value'), isNull);
+    });
+
+    test('name 為 null 時回傳 null', () {
+      expect(enumByNameOrNull(EpubTextAlign.values, null), isNull);
+    });
+
+    test('找得到時正確回傳對應列舉值', () {
+      expect(enumByNameOrNull(EpubTextAlign.values, 'center'), EpubTextAlign.center);
+    });
+  });
+
+  test('fromMap 對未知的列舉名稱字串安全降級為 null，不拋出例外（epic-28 Issue 3 反序列化容錯，服務 SQLite 與 JSON 兩條路徑）',
+      () {
+    final map = BookReaderPrefs.empty.toMap('book-1')
+      ..['text_align'] = 'not_a_real_enum_value'
+      ..['writing_mode_override'] = 'not_a_real_enum_value'
+      ..['page_turn_mode_override'] = 'not_a_real_enum_value'
+      ..['screen_orientation_override'] = 'not_a_real_enum_value'
+      ..['pdf_fit_mode'] = 'not_a_real_enum_value'
+      ..['pdf_crop_mode'] = 'not_a_real_enum_value'
+      ..['dual_page_mode'] = 'not_a_real_enum_value'
+      ..['dual_page_direction'] = 'not_a_real_enum_value'
+      ..['column_mode'] = 'not_a_real_enum_value';
+
+    final restored = BookReaderPrefs.fromMap(map);
+
+    expect(restored.textAlign, isNull);
+    expect(restored.writingModeOverride, isNull);
+    expect(restored.pageTurnModeOverride, isNull);
+    expect(restored.screenOrientationOverride, isNull);
+    expect(restored.pdfFitMode, isNull);
+    expect(restored.pdfCropMode, isNull);
+    expect(restored.dualPageMode, isNull);
+    expect(restored.dualPageDirection, isNull);
+    expect(restored.columnMode, isNull);
+  });
 }
