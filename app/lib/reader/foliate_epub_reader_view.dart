@@ -213,7 +213,7 @@ console.log('[UserAgent] ' + navigator.userAgent);
 ///
 /// epic-28-reader-settings-enhancements Issue 2：[consoleLogEnabled] 為
 /// `false` 時，只有 `ERROR` 等級（WebView 自動鏡射的未捕捉例外，崩潰診斷
-/// 用途）強制記錄；`LOG`/`WARNING`/`DEBUG`/`[TIP]` 等一般等級一律略過。
+/// 用途）強制記錄；`LOG`/`WARNING`/`DEBUG`/`TIP` 等一般等級一律略過。
 /// `levelName` 來自 `ConsoleMessageLevel.toString()`，恆為大寫字串
 /// （已用套件原始碼確認：`'ERROR'`/`'LOG'`/`'WARNING'`/`'DEBUG'`/`'TIP'`
 /// 五種）。
