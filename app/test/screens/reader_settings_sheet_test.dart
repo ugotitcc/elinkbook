@@ -4,6 +4,7 @@ import 'package:elinkbook/reader/book_reader_prefs.dart';
 import 'package:elinkbook/reader/column_mode.dart';
 import 'package:elinkbook/reader/custom_font.dart';
 import 'package:elinkbook/reader/epub_text_align.dart';
+import 'package:elinkbook/reader/layout_preset.dart';
 import 'package:elinkbook/reader/page_turn_mode.dart';
 import 'package:elinkbook/reader/screen_orientation_setting.dart';
 import 'package:elinkbook/reader/writing_mode.dart';
@@ -754,6 +755,248 @@ void main() {
 
     expect(result?.fontFamily, 'MyCustomFamily');
   });
+
+  testWidgets('空 slot 顯示「（空）」，已存的 slot 顯示名稱與更新日期', (tester) async {
+    final preset = LayoutPreset(
+      id: 1,
+      name: '臥室夜讀直排',
+      createdAt: DateTime(2026, 1, 1),
+      updatedAt: DateTime(2026, 8, 14),
+      prefs: BookReaderPrefs.empty,
+    );
+    await _pumpSheet(tester, BookReaderPrefs.empty, _noopOnChanged,
+        layoutPresets: [preset]);
+
+    expect(find.byKey(const Key('reader_settings_preset_slot_0_label')),
+        findsOneWidget);
+    expect(
+        find.textContaining('臥室夜讀直排'), findsOneWidget);
+    expect(find.byKey(const Key('reader_settings_preset_slot_1_empty')),
+        findsOneWidget);
+    expect(find.byKey(const Key('reader_settings_preset_slot_2_empty')),
+        findsOneWidget);
+  });
+
+  testWidgets('點擊「另存為新預設集」呼叫 onSaveAsPreset 並帶入目前完整草稿', (tester) async {
+    BookReaderPrefs? notified;
+    await _pumpSheet(
+      tester,
+      const BookReaderPrefs(fontSize: 18 / 16, lineHeight: 1.6),
+      _noopOnChanged,
+      onSaveAsPreset: (draft) => notified = draft,
+    );
+
+    await tester.ensureVisible(
+        find.byKey(const Key('reader_settings_save_as_preset')));
+    await tester.tap(find.byKey(const Key('reader_settings_save_as_preset')));
+    await tester.pump();
+
+    expect(notified, isNotNull);
+    expect(notified!.lineHeight, 1.6);
+  });
+
+  testWidgets('點擊 slot 的「套用到本書」呼叫 onApplyPreset 且 targetBookIds=[bookId]',
+      (tester) async {
+    LayoutPreset? appliedPreset;
+    List<String>? appliedTargets;
+    final preset = LayoutPreset(
+      id: 1,
+      name: '預設集A',
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      prefs: BookReaderPrefs.empty,
+    );
+    await _pumpSheet(
+      tester,
+      BookReaderPrefs.empty,
+      _noopOnChanged,
+      bookId: 'current_book',
+      layoutPresets: [preset],
+      onApplyPreset: (p, {required targetBookIds}) {
+        appliedPreset = p;
+        appliedTargets = targetBookIds;
+      },
+    );
+
+    await tester.ensureVisible(
+        find.byKey(const Key('reader_settings_preset_slot_0_apply_current')));
+    await tester
+        .tap(find.byKey(const Key('reader_settings_preset_slot_0_apply_current')));
+    await tester.pump();
+
+    expect(appliedPreset, preset);
+    expect(appliedTargets, ['current_book']);
+  });
+
+  testWidgets(
+      '點擊 slot 的「套用到其他書籍」，onRequestBookPicker 回傳清單後呼叫 onApplyPreset 帶入該清單',
+      (tester) async {
+    List<String>? appliedTargets;
+    final preset = LayoutPreset(
+      id: 1,
+      name: '預設集A',
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      prefs: BookReaderPrefs.empty,
+    );
+    await _pumpSheet(
+      tester,
+      BookReaderPrefs.empty,
+      _noopOnChanged,
+      layoutPresets: [preset],
+      onRequestBookPicker: ({required multiSelect}) async => ['b2', 'b3'],
+      onApplyPreset: (p, {required targetBookIds}) => appliedTargets = targetBookIds,
+    );
+
+    await tester.ensureVisible(
+        find.byKey(const Key('reader_settings_preset_slot_0_apply_others')));
+    await tester
+        .tap(find.byKey(const Key('reader_settings_preset_slot_0_apply_others')));
+    await tester.pumpAndSettle();
+
+    expect(appliedTargets, ['b2', 'b3']);
+  });
+
+  testWidgets('onRequestBookPicker 回傳 null（使用者取消）時，不呼叫 onApplyPreset',
+      (tester) async {
+    var applyCalled = false;
+    final preset = LayoutPreset(
+      id: 1,
+      name: '預設集A',
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      prefs: BookReaderPrefs.empty,
+    );
+    await _pumpSheet(
+      tester,
+      BookReaderPrefs.empty,
+      _noopOnChanged,
+      layoutPresets: [preset],
+      onRequestBookPicker: ({required multiSelect}) async => null,
+      onApplyPreset: (p, {required targetBookIds}) => applyCalled = true,
+    );
+
+    await tester.ensureVisible(
+        find.byKey(const Key('reader_settings_preset_slot_0_apply_others')));
+    await tester
+        .tap(find.byKey(const Key('reader_settings_preset_slot_0_apply_others')));
+    await tester.pumpAndSettle();
+
+    expect(applyCalled, isFalse);
+  });
+
+  testWidgets('點擊 slot 的「刪除」呼叫 onDeletePreset 帶入該 preset 的 id', (tester) async {
+    int? deletedId;
+    final preset = LayoutPreset(
+      id: 42,
+      name: '預設集A',
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      prefs: BookReaderPrefs.empty,
+    );
+    await _pumpSheet(
+      tester,
+      BookReaderPrefs.empty,
+      _noopOnChanged,
+      layoutPresets: [preset],
+      onDeletePreset: (id) => deletedId = id,
+    );
+
+    await tester.ensureVisible(
+        find.byKey(const Key('reader_settings_preset_slot_0_delete')));
+    await tester.tap(find.byKey(const Key('reader_settings_preset_slot_0_delete')));
+    await tester.pump();
+
+    expect(deletedId, 42);
+  });
+
+  testWidgets(
+      '點擊「複製到本書」，onRequestBookPicker(multiSelect:false) 回傳後呼叫 onApplyFromBook(sourceId, targetBookIds:[bookId])',
+      (tester) async {
+    String? appliedSource;
+    List<String>? appliedTargets;
+    bool? capturedMultiSelect;
+    await _pumpSheet(
+      tester,
+      BookReaderPrefs.empty,
+      _noopOnChanged,
+      bookId: 'current_book',
+      onRequestBookPicker: ({required multiSelect}) async {
+        capturedMultiSelect = multiSelect;
+        return ['source_book'];
+      },
+      onApplyFromBook: (source, {required targetBookIds}) {
+        appliedSource = source;
+        appliedTargets = targetBookIds;
+      },
+    );
+
+    await tester.ensureVisible(
+        find.byKey(const Key('reader_settings_copy_from_book_current')));
+    await tester
+        .tap(find.byKey(const Key('reader_settings_copy_from_book_current')));
+    await tester.pumpAndSettle();
+
+    expect(capturedMultiSelect, isFalse);
+    expect(appliedSource, 'source_book');
+    expect(appliedTargets, ['current_book']);
+  });
+
+  testWidgets('點擊「複製到其他書籍」，依序呼叫兩次 onRequestBookPicker 後呼叫 onApplyFromBook',
+      (tester) async {
+    final requestedMultiSelectFlags = <bool>[];
+    String? appliedSource;
+    List<String>? appliedTargets;
+    await _pumpSheet(
+      tester,
+      BookReaderPrefs.empty,
+      _noopOnChanged,
+      onRequestBookPicker: ({required multiSelect}) async {
+        requestedMultiSelectFlags.add(multiSelect);
+        return multiSelect ? ['b2', 'b3'] : ['source_book'];
+      },
+      onApplyFromBook: (source, {required targetBookIds}) {
+        appliedSource = source;
+        appliedTargets = targetBookIds;
+      },
+    );
+
+    await tester.ensureVisible(
+        find.byKey(const Key('reader_settings_copy_from_book_others')));
+    await tester
+        .tap(find.byKey(const Key('reader_settings_copy_from_book_others')));
+    await tester.pumpAndSettle();
+
+    expect(requestedMultiSelectFlags, [false, true]);
+    expect(appliedSource, 'source_book');
+    expect(appliedTargets, ['b2', 'b3']);
+  });
+
+  testWidgets(
+      'Sheet 開啟中，layoutPresets 外部更新後畫面立即反映新清單（Bottom Sheet 開啟中同步）',
+      (tester) async {
+    // 沿用既有 _TestSettingsSheetWrapper 只涵蓋 prefs 更新，這裡改用直接
+    // 重新 pump 不同 layoutPresets 驗證同一顆 State 樹是否正確反映——
+    // ReaderSettingsSheet 對 layoutPresets 是直接在 build() 內消費
+    // widget.layoutPresets（無內部草稿複本），故不需要額外 didUpdateWidget
+    // 邏輯，重新 pumpWidget 同一個 widget tree 即可驗證。
+    await _pumpSheet(tester, BookReaderPrefs.empty, _noopOnChanged);
+    expect(find.byKey(const Key('reader_settings_preset_slot_0_empty')),
+        findsOneWidget);
+
+    final preset = LayoutPreset(
+      id: 1,
+      name: '新存的預設集',
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      prefs: BookReaderPrefs.empty,
+    );
+    await _pumpSheet(tester, BookReaderPrefs.empty, _noopOnChanged,
+        layoutPresets: [preset]);
+
+    expect(find.byKey(const Key('reader_settings_preset_slot_0_label')),
+        findsOneWidget);
+  });
 }
 
 Future<void> _pumpSheet(
@@ -761,10 +1004,17 @@ Future<void> _pumpSheet(
   BookReaderPrefs prefs,
   ValueChanged<BookReaderPrefs> onChanged, {
   List<CustomFont> customFonts = const [],
+  String bookId = 'b1',
+  List<LayoutPreset> layoutPresets = const [],
+  void Function(BookReaderPrefs)? onSaveAsPreset,
+  void Function(LayoutPreset, {required List<String> targetBookIds})? onApplyPreset,
+  void Function(String, {required List<String> targetBookIds})? onApplyFromBook,
+  Future<List<String>?> Function({required bool multiSelect})? onRequestBookPicker,
+  void Function(int)? onDeletePreset,
 }) async {
   // 設定較大的 Viewport，以防 ListView 元件超出預設的 800x600 範圍導致 tap 失敗
-  // （Issue 14 邊距拆為 4 個獨立滑桿後內容變高，1200 已不足，調高至 1600）
-  tester.view.physicalSize = const Size(800, 1600);
+  // （Issue 14 邊距拆為 4 個獨立滑桿後內容變高，1200 已不足，調高至 1600；加入預設集區塊後調高至 2400）
+  tester.view.physicalSize = const Size(800, 2400);
   tester.view.devicePixelRatio = 1.0;
   addTearDown(() {
     tester.view.resetPhysicalSize();
@@ -777,12 +1027,25 @@ Future<void> _pumpSheet(
         prefs: prefs,
         onChanged: onChanged,
         customFonts: customFonts,
+        bookId: bookId,
+        layoutPresets: layoutPresets,
+        onSaveAsPreset: onSaveAsPreset ?? _noopSaveAsPreset,
+        onApplyPreset: onApplyPreset ?? _noopApplyPreset,
+        onApplyFromBook: onApplyFromBook ?? _noopApplyFromBook,
+        onRequestBookPicker: onRequestBookPicker ?? _noopRequestBookPicker,
+        onDeletePreset: onDeletePreset ?? _noopDeletePreset,
       ),
     ),
   ));
 }
 
 void _noopOnChanged(BookReaderPrefs prefs) {}
+void _noopSaveAsPreset(BookReaderPrefs _) {}
+void _noopApplyPreset(LayoutPreset _, {required List<String> targetBookIds}) {}
+void _noopApplyFromBook(String _, {required List<String> targetBookIds}) {}
+Future<List<String>?> _noopRequestBookPicker({required bool multiSelect}) async =>
+    null;
+void _noopDeletePreset(int _) {}
 
 class _TestSettingsSheetWrapper extends StatefulWidget {
   final BookReaderPrefs initialPrefs;
@@ -816,6 +1079,12 @@ class _TestSettingsSheetWrapperState extends State<_TestSettingsSheetWrapper> {
     return ReaderSettingsSheet(
       prefs: _prefs,
       onChanged: (_) {},
+      bookId: 'b1',
+      onSaveAsPreset: _noopSaveAsPreset,
+      onApplyPreset: _noopApplyPreset,
+      onApplyFromBook: _noopApplyFromBook,
+      onRequestBookPicker: _noopRequestBookPicker,
+      onDeletePreset: _noopDeletePreset,
     );
   }
 }
@@ -836,6 +1105,12 @@ Future<void> _pumpModalSheet(
             builder: (_) => ReaderSettingsSheet(
               prefs: prefs,
               onChanged: onChanged,
+              bookId: 'b1',
+              onSaveAsPreset: _noopSaveAsPreset,
+              onApplyPreset: _noopApplyPreset,
+              onApplyFromBook: _noopApplyFromBook,
+              onRequestBookPicker: _noopRequestBookPicker,
+              onDeletePreset: _noopDeletePreset,
             ),
           ),
           child: const Text('open'),

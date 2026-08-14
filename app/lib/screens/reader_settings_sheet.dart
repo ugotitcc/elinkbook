@@ -7,6 +7,7 @@ import '../reader/book_reader_prefs.dart';
 import '../reader/custom_font.dart';
 import '../reader/column_mode.dart';
 import '../reader/epub_text_align.dart';
+import '../reader/layout_preset.dart';
 import '../reader/page_turn_mode.dart';
 import '../reader/screen_orientation_setting.dart';
 import '../reader/writing_mode.dart';
@@ -24,12 +25,29 @@ class ReaderSettingsSheet extends StatefulWidget {
   final BookReaderPrefs prefs;
   final ValueChanged<BookReaderPrefs> onChanged;
   final List<CustomFont> customFonts;
+  final String bookId;
+  final List<LayoutPreset> layoutPresets;
+  final void Function(BookReaderPrefs currentDraft) onSaveAsPreset;
+  final void Function(LayoutPreset preset, {required List<String> targetBookIds})
+      onApplyPreset;
+  final void Function(String sourceBookId, {required List<String> targetBookIds})
+      onApplyFromBook;
+  final Future<List<String>?> Function({required bool multiSelect})
+      onRequestBookPicker;
+  final void Function(int id) onDeletePreset;
 
   const ReaderSettingsSheet({
     super.key,
     required this.prefs,
     required this.onChanged,
     this.customFonts = const [],
+    required this.bookId,
+    this.layoutPresets = const [],
+    required this.onSaveAsPreset,
+    required this.onApplyPreset,
+    required this.onApplyFromBook,
+    required this.onRequestBookPicker,
+    required this.onDeletePreset,
   });
 
   @override
@@ -137,29 +155,31 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     return ((value / base) * 10000).round() / 10000;
   }
 
+  BookReaderPrefs get _currentDraft => BookReaderPrefs(
+        fontFamily: _fontFamily,
+        fontSize: _toMultiplier(_fontSize, 16.0),
+        fontWeight: _fontWeightMultiplier,
+        lineHeight: _lineHeight,
+        paragraphSpacing: _toMultiplier(_paragraphSpacing, 10.0),
+        letterSpacing: _letterSpacing,
+        marginTop: _marginTop,
+        marginBottom: _marginBottom,
+        marginLeft: _marginLeft,
+        marginRight: _marginRight,
+        textAlign: _textAlign,
+        publisherStyles: _publisherStyles,
+        writingModeOverride: _writingModeOverride,
+        pageTurnModeOverride: _pageTurnModeOverride,
+        screenOrientationOverride: _screenOrientationOverride,
+        showHeader: _showHeader,
+        showFooter: _showFooter,
+        fullscreen: _fullscreen,
+        columnMode: _columnMode,
+        columnSize: _columnSize,
+      );
+
   void _notifyChanged() {
-    widget.onChanged(BookReaderPrefs(
-      fontFamily: _fontFamily,
-      fontSize: _toMultiplier(_fontSize, 16.0),
-      fontWeight: _fontWeightMultiplier,
-      lineHeight: _lineHeight,
-      paragraphSpacing: _toMultiplier(_paragraphSpacing, 10.0),
-      letterSpacing: _letterSpacing,
-      marginTop: _marginTop,
-      marginBottom: _marginBottom,
-      marginLeft: _marginLeft,
-      marginRight: _marginRight,
-      textAlign: _textAlign,
-      publisherStyles: _publisherStyles,
-      writingModeOverride: _writingModeOverride,
-      pageTurnModeOverride: _pageTurnModeOverride,
-      screenOrientationOverride: _screenOrientationOverride,
-      showHeader: _showHeader,
-      showFooter: _showFooter,
-      fullscreen: _fullscreen,
-      columnMode: _columnMode,
-      columnSize: _columnSize,
-    ));
+    widget.onChanged(_currentDraft);
   }
 
   @override
@@ -357,6 +377,8 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                 _buildScreenOrientationOverrideRow(),
                 const SizedBox(height: 12),
                 _buildPageTurnModeOverrideRow(),
+                const SizedBox(height: 12),
+                _buildLayoutPresetSection(),
               ],
             ),
           ),
@@ -688,5 +710,112 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
         ),
       ],
     );
+  }
+
+  /// 版面設定預設集管理區塊（epic-28-reader-settings-enhancements
+  /// Issue 3）：3 個 slot 卡片（存在則顯示名稱＋更新日期＋套用/刪除
+  /// 按鈕，空則顯示「（空）」）、「另存為新預設集」按鈕、「從其他書籍
+  /// 複製」兩顆按鈕。本 widget 只負責觸發對應 callback，實際 I/O、
+  /// 「存量是否已滿 3 組」判斷、命名輸入、覆蓋選擇/確認對話框皆由呼叫端
+  /// （`ReaderScreen`）完成，見 spec.md「UI 元件責任劃分」。
+  Widget _buildLayoutPresetSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('版面設定預設集', style: TextStyle(fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        ...List.generate(3, _buildPresetSlot),
+        const SizedBox(height: 8),
+        ElevatedButton(
+          key: const Key('reader_settings_save_as_preset'),
+          onPressed: () => widget.onSaveAsPreset(_currentDraft),
+          child: const Text('另存為新預設集'),
+        ),
+        const SizedBox(height: 16),
+        const Text('從其他書籍複製', style: TextStyle(fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                key: const Key('reader_settings_copy_from_book_current'),
+                onPressed: _handleCopyFromBookToCurrent,
+                child: const Text('複製到本書'),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: OutlinedButton(
+                key: const Key('reader_settings_copy_from_book_others'),
+                onPressed: _handleCopyFromBookToOthers,
+                child: const Text('複製到其他書籍'),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPresetSlot(int index) {
+    if (index >= widget.layoutPresets.length) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Text('（空）', key: Key('reader_settings_preset_slot_${index}_empty')),
+      );
+    }
+    final preset = widget.layoutPresets[index];
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              '${preset.name}（${preset.updatedAt.year}/${preset.updatedAt.month}/${preset.updatedAt.day}）',
+              key: Key('reader_settings_preset_slot_${index}_label'),
+            ),
+          ),
+          IconButton(
+            key: Key('reader_settings_preset_slot_${index}_apply_current'),
+            icon: const Icon(Icons.check),
+            tooltip: '套用到本書',
+            onPressed: () =>
+                widget.onApplyPreset(preset, targetBookIds: [widget.bookId]),
+          ),
+          IconButton(
+            key: Key('reader_settings_preset_slot_${index}_apply_others'),
+            icon: const Icon(Icons.library_books),
+            tooltip: '套用到其他書籍',
+            onPressed: () => _handleApplyPresetToOthers(preset),
+          ),
+          IconButton(
+            key: Key('reader_settings_preset_slot_${index}_delete'),
+            icon: const Icon(Icons.delete),
+            tooltip: '刪除',
+            onPressed: () => widget.onDeletePreset(preset.id!),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _handleApplyPresetToOthers(LayoutPreset preset) async {
+    final targets = await widget.onRequestBookPicker(multiSelect: true);
+    if (targets == null || targets.isEmpty) return;
+    widget.onApplyPreset(preset, targetBookIds: targets);
+  }
+
+  Future<void> _handleCopyFromBookToCurrent() async {
+    final sources = await widget.onRequestBookPicker(multiSelect: false);
+    if (sources == null || sources.isEmpty) return;
+    widget.onApplyFromBook(sources.first, targetBookIds: [widget.bookId]);
+  }
+
+  Future<void> _handleCopyFromBookToOthers() async {
+    final sources = await widget.onRequestBookPicker(multiSelect: false);
+    if (sources == null || sources.isEmpty) return;
+    final targets = await widget.onRequestBookPicker(multiSelect: true);
+    if (targets == null || targets.isEmpty) return;
+    widget.onApplyFromBook(sources.first, targetBookIds: targets);
   }
 }

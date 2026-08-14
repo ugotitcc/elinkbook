@@ -654,6 +654,12 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         prefs: _prefs,
         onChanged: _handlePrefsChanged,
         customFonts: _customFonts,
+        bookId: widget.bookId,
+        onSaveAsPreset: (_) {},
+        onApplyPreset: (_, {required targetBookIds}) {},
+        onApplyFromBook: (_, {required targetBookIds}) {},
+        onRequestBookPicker: ({required multiSelect}) async => null,
+        onDeletePreset: (_) {},
       ),
     );
   }
