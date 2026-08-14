@@ -134,4 +134,33 @@ void main() {
     expect(loaded.fontSize, 18.0);
     expect(loaded.lineHeight, 1.0);
   });
+
+  test('saveMultiple 批次寫入多本書的版面設定，皆可正確讀回', () async {
+    for (final id in ['b2', 'b3']) {
+      await libraryRepository.insertBook(Book(
+        id: id,
+        title: '書名$id',
+        format: BookFileFormat.epub,
+        filePath: 'content://example/$id',
+        source: BookSource.local,
+        createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+        lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+      ));
+    }
+
+    const prefs = BookReaderPrefs(fontSize: 22, lineHeight: 1.5);
+    await repository.saveMultiple(['b1', 'b2', 'b3'], prefs);
+
+    expect(await repository.load('b1'), prefs);
+    expect(await repository.load('b2'), prefs);
+    expect(await repository.load('b3'), prefs);
+  });
+
+  test('saveMultiple 覆寫既有偏好設定（同一批 bookId 再次呼叫）', () async {
+    await repository.save('b1', const BookReaderPrefs(fontSize: 14));
+
+    await repository.saveMultiple(['b1'], const BookReaderPrefs(fontSize: 30));
+
+    expect((await repository.load('b1')).fontSize, 30);
+  });
 }
