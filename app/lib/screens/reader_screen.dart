@@ -769,14 +769,19 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       context: context,
       builder: (dialogContext) => SimpleDialog(
         title: const Text('選擇要覆蓋的預設集'),
-        children: _layoutPresets
-            .map((preset) => SimpleDialogOption(
-                  key: Key('layout_preset_overwrite_option_${preset.id}'),
-                  onPressed: () => Navigator.of(dialogContext).pop(preset),
-                  child: Text(
-                      '${preset.name}（最後更新：${preset.updatedAt.year}/${preset.updatedAt.month}/${preset.updatedAt.day}）'),
-                ))
-            .toList(),
+        children: [
+          ..._layoutPresets.map((preset) => SimpleDialogOption(
+                key: Key('layout_preset_overwrite_option_${preset.id}'),
+                onPressed: () => Navigator.of(dialogContext).pop(preset),
+                child: Text(
+                    '${preset.name}（最後更新：${preset.updatedAt.year}/${preset.updatedAt.month}/${preset.updatedAt.day}）'),
+              )),
+          SimpleDialogOption(
+            key: const Key('layout_preset_overwrite_cancel'),
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('取消'),
+          ),
+        ],
       ),
     );
   }
@@ -891,8 +896,39 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   Future<void> _handleDeletePreset(int id) async {
     final repository = widget.layoutPresetRepository;
     if (repository == null) return;
+    String presetName = '';
+    for (final preset in _layoutPresets) {
+      if (preset.id == id) {
+        presetName = preset.name;
+        break;
+      }
+    }
+    final confirmed = await _confirmDeletePreset(presetName);
+    if (!confirmed) return;
     await repository.delete(id);
     await _loadLayoutPresets();
+  }
+
+  Future<bool> _confirmDeletePreset(String name) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('確認刪除'),
+        content: Text('即將刪除預設集「$name」，此動作無法復原。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            key: const Key('layout_preset_delete_confirm'),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('確認刪除'),
+          ),
+        ],
+      ),
+    );
+    return confirmed ?? false;
   }
 
   /// 書籍選擇器（epic-28-reader-settings-enhancements Issue 3
@@ -949,9 +985,13 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   Future<void> _loadLayoutPresets() async {
     final repository = widget.layoutPresetRepository;
     if (repository == null) return;
-    final presets = await repository.listAll();
-    if (!mounted) return;
-    setState(() => _layoutPresets = presets);
+    try {
+      final presets = await repository.listAll();
+      if (!mounted) return;
+      setState(() => _layoutPresets = presets);
+    } catch (e) {
+      debugPrint('Failed to load layout presets: $e');
+    }
   }
 
   /// 目前頁是否已有書籤——比較 epubLocatorJson 完全相同字串，比照

@@ -6743,12 +6743,41 @@ void main() {
           find.byKey(const Key('reader_settings_preset_slot_0_delete')));
       await tester
           .tap(find.byKey(const Key('reader_settings_preset_slot_0_delete')));
+      await tester.pumpAndSettle();
+      // 「確認刪除」對話框。
+      await tester.tap(find.byKey(const Key('layout_preset_delete_confirm')));
       await tester.pump();
       await tester.runAsync(() => Future.delayed(const Duration(milliseconds: 50)));
       await tester.pumpAndSettle();
 
       final all = await tester.runAsync(() => layoutPresetRepository.listAll());
       expect(all, isEmpty);
+    });
+
+    testWidgets('刪除預設集：確認對話框取消時不刪除', (tester) async {
+      await tester.runAsync(() => layoutPresetRepository.insert(LayoutPreset(
+        id: null,
+        name: '不應被刪除',
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        prefs: BookReaderPrefs.empty,
+      )));
+
+      await pumpReaderScreen(tester);
+      await tester
+          .tap(find.byKey(const Key('reader_foliate_settings_button')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(
+          find.byKey(const Key('reader_settings_preset_slot_0_delete')));
+      await tester
+          .tap(find.byKey(const Key('reader_settings_preset_slot_0_delete')));
+      await tester.pumpAndSettle();
+      // 「確認刪除」對話框中點擊「取消」。
+      await tester.tap(find.text('取消').last);
+      await tester.pumpAndSettle();
+
+      final all = await tester.runAsync(() => layoutPresetRepository.listAll());
+      expect(all, hasLength(1));
     });
 
     testWidgets('複製其他書籍設定到本書：正確以 reflowableEpubFields() 過濾後寫入並即時反映',

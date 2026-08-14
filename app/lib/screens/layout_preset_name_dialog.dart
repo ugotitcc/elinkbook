@@ -32,6 +32,7 @@ class _LayoutPresetNameDialog extends StatefulWidget {
 
 class _LayoutPresetNameDialogState extends State<_LayoutPresetNameDialog> {
   late final TextEditingController _controller;
+  String? _errorText;
 
   @override
   void initState() {
@@ -45,6 +46,15 @@ class _LayoutPresetNameDialogState extends State<_LayoutPresetNameDialog> {
     super.dispose();
   }
 
+  void _handleSave() {
+    final name = validateLayoutPresetName(_controller.text);
+    if (name == null) {
+      setState(() => _errorText = '名稱不可為空');
+      return;
+    }
+    Navigator.of(context).pop(name);
+  }
+
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
@@ -54,6 +64,7 @@ class _LayoutPresetNameDialogState extends State<_LayoutPresetNameDialog> {
         controller: _controller,
         autofocus: true,
         maxLength: 20,
+        decoration: InputDecoration(errorText: _errorText),
       ),
       actions: [
         TextButton(
@@ -62,10 +73,7 @@ class _LayoutPresetNameDialogState extends State<_LayoutPresetNameDialog> {
         ),
         TextButton(
           key: const Key('layout_preset_name_dialog_confirm'),
-          onPressed: () {
-            final name = validateLayoutPresetName(_controller.text);
-            Navigator.of(context).pop(name);
-          },
+          onPressed: _handleSave,
           child: const Text('儲存'),
         ),
       ],
