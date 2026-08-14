@@ -139,4 +139,23 @@ void main() {
     final b = a.copyWith(openLastBookOnLaunch: false);
     expect(a == b, isFalse);
   });
+
+  test('GlobalReaderPrefs.initial() 的 consoleLogEnabled 預設 false', () {
+    const prefs = GlobalReaderPrefs.initial();
+    expect(prefs.consoleLogEnabled, isFalse);
+  });
+
+  test('copyWith 可更新 consoleLogEnabled，不影響其餘欄位', () {
+    const original = GlobalReaderPrefs.initial();
+    final updated = original.copyWith(consoleLogEnabled: true);
+    expect(updated.consoleLogEnabled, isTrue);
+    expect(updated.pageTurnMode, original.pageTurnMode);
+    expect(updated.volumeKeyEnabled, original.volumeKeyEnabled);
+  });
+
+  test('consoleLogEnabled 不同時視為不相等', () {
+    const a = GlobalReaderPrefs.initial();
+    final b = a.copyWith(consoleLogEnabled: true);
+    expect(a == b, isFalse);
+  });
 }

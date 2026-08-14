@@ -78,6 +78,11 @@ class ResolvedPreferences {
   /// resolve() 內 book.fullscreen ?? global.fullscreen（預設關閉，雙層解析）。
   final bool fullscreen;
 
+  /// Console Log 攔截總開關（epic-28-reader-settings-enhancements
+  /// Issue 2）：恆非 null，resolve() 內直接透傳
+  /// global.consoleLogEnabled（無單書覆寫層，epic-28 design.md 決策）。
+  final bool consoleLogEnabled;
+
   const ResolvedPreferences({
     this.writingMode,
     this.fontFamily,
@@ -112,5 +117,6 @@ class ResolvedPreferences {
     required this.showNavZoneDebugOverlay,
     this.volumeKeyEnabled = true,
     this.fullscreen = false,
+    this.consoleLogEnabled = false,
   });
 }
