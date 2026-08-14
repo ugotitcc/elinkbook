@@ -7,6 +7,7 @@ import 'package:elinkbook/reader/pdf_reader_view.dart';
 import 'package:elinkbook/reader/pdf_crop_mode.dart';
 import 'package:elinkbook/reader/pdf_crop_rect.dart';
 import 'package:elinkbook/reader/dual_page_mode.dart';
+import '../support/pump_until_pdf_ready.dart';
 
 void main() {
   // ── Task 1 純函式測試已移至 pdf_image_filters_test.dart（依 plan File Structure）──
@@ -15,15 +16,6 @@ void main() {
 
   group('PdfReaderView ColorFiltered', () {
     setUp(() => pdfrxInitialize());
-
-    Future<void> waitRendered(WidgetTester tester, int Function() rendered) {
-      return tester.runAsync(() async {
-        for (var i = 0; i < 30 && rendered() == 0; i++) {
-          await tester.pump(const Duration(milliseconds: 100));
-          await Future<void>.delayed(const Duration(milliseconds: 10));
-        }
-      });
-    }
 
     testWidgets('不傳濾鏡參數時，不套用 ColorFiltered（零回歸基準）',
         (tester) async {
@@ -40,7 +32,7 @@ void main() {
           ),
         ),
       );
-      await waitRendered(tester, () => renderedCount);
+      await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
 
       final colorFiltered = tester.widgetList<ColorFiltered>(
         find.byType(ColorFiltered),
@@ -66,7 +58,7 @@ void main() {
           ),
         ),
       );
-      await waitRendered(tester, () => renderedCount);
+      await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
 
       final colorFiltered = tester.widget<ColorFiltered>(find.byType(ColorFiltered));
       final filter = colorFiltered.colorFilter;
@@ -90,7 +82,7 @@ void main() {
           ),
         ),
       );
-      await waitRendered(tester, () => renderedCount);
+      await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
 
       expect(find.byType(ColorFiltered), findsOneWidget);
     });
@@ -114,15 +106,6 @@ void main() {
   group('PdfReaderView bold overlay', () {
     setUp(() => pdfrxInitialize());
 
-    Future<void> waitRendered(WidgetTester tester, int Function() rendered) {
-      return tester.runAsync(() async {
-        for (var i = 0; i < 30 && rendered() == 0; i++) {
-          await tester.pump(const Duration(milliseconds: 100));
-          await Future<void>.delayed(const Duration(milliseconds: 10));
-        }
-      });
-    }
-
     testWidgets('pdfBoldStrength == 0（預設）時，不產生任何覆蓋層（零回歸）',
         (tester) async {
       var renderedCount = 0;
@@ -138,7 +121,7 @@ void main() {
           ),
         ),
       );
-      await waitRendered(tester, () => renderedCount);
+      await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
       await tester.pump(const Duration(milliseconds: 500));
 
       expect(find.byType(RawImage), findsNothing);
@@ -160,13 +143,12 @@ void main() {
           ),
         ),
       );
-      await waitRendered(tester, () => renderedCount);
-      await tester.runAsync(() async {
-        for (var i = 0; i < 30 && find.byType(RawImage).evaluate().isEmpty; i++) {
-          await tester.pump(const Duration(milliseconds: 100));
-          await Future<void>.delayed(const Duration(milliseconds: 50));
-        }
-      });
+      await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
+      await pumpUntilPdfReady(
+        tester,
+        condition: () => find.byType(RawImage).evaluate().isNotEmpty,
+        delayBetweenPumps: const Duration(milliseconds: 50),
+      );
       await tester.pump();
 
       expect(find.byType(RawImage), findsWidgets,
@@ -194,13 +176,13 @@ void main() {
           ),
         ),
       );
-      await waitRendered(tester, () => renderedCount);
-      await tester.runAsync(() async {
-        for (var i = 0; i < 40 && find.byType(RawImage).evaluate().length < 2; i++) {
-          await tester.pump(const Duration(milliseconds: 100));
-          await Future<void>.delayed(const Duration(milliseconds: 50));
-        }
-      });
+      await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
+      await pumpUntilPdfReady(
+        tester,
+        condition: () => find.byType(RawImage).evaluate().length >= 2,
+        maxIterations: 40,
+        delayBetweenPumps: const Duration(milliseconds: 50),
+      );
       await tester.pump();
 
       expect(
@@ -217,15 +199,6 @@ void main() {
 
   group('PdfReaderView crop detection', () {
     setUp(() => pdfrxInitialize());
-
-    Future<void> waitRendered(WidgetTester tester, int Function() rendered) {
-      return tester.runAsync(() async {
-        for (var i = 0; i < 30 && rendered() == 0; i++) {
-          await tester.pump(const Duration(milliseconds: 100));
-          await Future<void>.delayed(const Duration(milliseconds: 10));
-        }
-      });
-    }
 
     testWidgets('pdfCropMode=autoDetect 且尚無 pdfCropRect 時，首次渲染後觸發 onCropRectComputed',
         (tester) async {
@@ -245,13 +218,12 @@ void main() {
           ),
         ),
       );
-      await waitRendered(tester, () => renderedCount);
-      await tester.runAsync(() async {
-        for (var i = 0; i < 30 && computedRect == null; i++) {
-          await tester.pump(const Duration(milliseconds: 100));
-          await Future<void>.delayed(const Duration(milliseconds: 50));
-        }
-      });
+      await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
+      await pumpUntilPdfReady(
+        tester,
+        condition: () => computedRect != null,
+        delayBetweenPumps: const Duration(milliseconds: 50),
+      );
 
       expect(computedRect, isNotNull);
     });
@@ -275,7 +247,7 @@ void main() {
           ),
         ),
       );
-      await waitRendered(tester, () => renderedCount);
+      await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
       await tester.pump(const Duration(milliseconds: 500));
 
       expect(computeCount, 0, reason: '已有快取矩形時不應重新計算');
@@ -300,7 +272,7 @@ void main() {
           ),
         ),
       );
-      await waitRendered(tester, () => renderedCount);
+      await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
 
       PdfReaderView.nextPage(key);
       await tester.pump();
@@ -313,15 +285,6 @@ void main() {
 
   group('PdfReaderView crop visual', () {
     setUp(() => pdfrxInitialize());
-
-    Future<void> waitRendered(WidgetTester tester, int Function() rendered) {
-      return tester.runAsync(() async {
-        for (var i = 0; i < 30 && rendered() == 0; i++) {
-          await tester.pump(const Duration(milliseconds: 100));
-          await Future<void>.delayed(const Duration(milliseconds: 10));
-        }
-      });
-    }
 
     testWidgets('pdfCropMode=none（預設）時不影響 layoutPages（零回歸）',
         (tester) async {
@@ -340,7 +303,7 @@ void main() {
           ),
         ),
       );
-      await waitRendered(tester, () => renderedCount);
+      await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
       expect(lastPageInfo?.totalPages, 5);
       expect(find.byType(RawImage), findsNothing);
     });
@@ -362,13 +325,12 @@ void main() {
           ),
         ),
       );
-      await waitRendered(tester, () => renderedCount);
-      await tester.runAsync(() async {
-        for (var i = 0; i < 30 && find.byType(RawImage).evaluate().isEmpty; i++) {
-          await tester.pump(const Duration(milliseconds: 100));
-          await Future<void>.delayed(const Duration(milliseconds: 50));
-        }
-      });
+      await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
+      await pumpUntilPdfReady(
+        tester,
+        condition: () => find.byType(RawImage).evaluate().isNotEmpty,
+        delayBetweenPumps: const Duration(milliseconds: 50),
+      );
       await tester.pump();
 
       expect(find.byType(RawImage), findsWidgets,
@@ -380,15 +342,6 @@ void main() {
 
   group('PdfReaderView cropEditModeActive', () {
     setUp(() => pdfrxInitialize());
-
-    Future<void> waitRendered(WidgetTester tester, int Function() rendered) {
-      return tester.runAsync(() async {
-        for (var i = 0; i < 30 && rendered() == 0; i++) {
-          await tester.pump(const Duration(milliseconds: 100));
-          await Future<void>.delayed(const Duration(milliseconds: 10));
-        }
-      });
-    }
 
     testWidgets('cropEditModeActive=true 時，nextPage/previousPage 暫停回應',
         (tester) async {
@@ -408,7 +361,7 @@ void main() {
           ),
         ),
       );
-      await waitRendered(tester, () => renderedCount);
+      await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
       expect(lastPageInfo?.pageIndex, 0);
 
       PdfReaderView.nextPage(key);
@@ -439,7 +392,7 @@ void main() {
           ),
         ),
       );
-      await waitRendered(tester, () => renderedCount);
+      await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
 
       PdfReaderView.nextPage(key);
       await tester.pump();
@@ -452,15 +405,6 @@ void main() {
 
   group('PdfReaderView debounce and crop invalidation', () {
     setUp(() => pdfrxInitialize());
-
-    Future<void> waitRendered(WidgetTester tester, int Function() rendered) {
-      return tester.runAsync(() async {
-        for (var i = 0; i < 30 && rendered() == 0; i++) {
-          await tester.pump(const Duration(milliseconds: 100));
-          await Future<void>.delayed(const Duration(milliseconds: 10));
-        }
-      });
-    }
 
     testWidgets('執行期連續變更 pdfBoldStrength（模擬 Slider 拖曳）時，在 debounce 沉澱前不會對每個中間值各自觸發一次運算', (tester) async {
       // 說明：此測試不依賴 Isolate.run。我們透過觀察 PdfViewer 實例是否改變，
@@ -479,7 +423,7 @@ void main() {
           ),
         ),
       );
-      await waitRendered(tester, () => renderedCount);
+      await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
       
       // 模擬連續拖曳：第一次變更
       await tester.pumpWidget(
@@ -542,7 +486,7 @@ void main() {
           ),
         ),
       );
-      await waitRendered(tester, () => renderedCount);
+      await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
       
       final viewer1 = tester.widget<PdfViewer>(find.byType(PdfViewer));
       expect(viewer1.params.layoutPages, isNull, reason: '無裁切矩形時，單頁模式下 layoutPages 應為 null');
@@ -583,7 +527,7 @@ void main() {
           ),
         ),
       );
-      await waitRendered(tester, () => renderedCount);
+      await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
       
       final viewer1 = tester.widget<PdfViewer>(find.byType(PdfViewer));
       expect(viewer1.params.calculateCurrentPageNumber, isNotNull, reason: '雙頁模式啟用時，應有自訂頁碼推算邏輯');
