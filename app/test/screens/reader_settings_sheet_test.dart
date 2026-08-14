@@ -183,6 +183,201 @@ void main() {
     );
   });
 
+  testWidgets(
+      '只切換「顯示頁首」開關，onChanged 帶出的字級/粗細/行高/段落間距/字距皆維持 null'
+      '（epic-28-reader-settings-enhancements Issue 4：草稿具現化不應覆寫書本原生樣式）',
+      (tester) async {
+    BookReaderPrefs? result;
+    await _pumpSheet(
+      tester,
+      BookReaderPrefs.empty,
+      (prefs) => result = prefs,
+    );
+
+    await tester.tap(find.byKey(const Key('reader_settings_show_header')));
+    await tester.pump();
+
+    expect(result, isNotNull);
+    expect(result!.showHeader, isTrue);
+    expect(result!.fontSize, isNull,
+        reason: '使用者從未調整過字級，不應被草稿具現化悄悄寫入');
+    expect(result!.fontWeight, isNull,
+        reason: '使用者從未調整過字型粗細，不應被草稿具現化悄悄寫入');
+    expect(result!.lineHeight, isNull,
+        reason: '使用者從未調整過行高，不應被草稿具現化悄悄寫入');
+    expect(result!.paragraphSpacing, isNull,
+        reason: '使用者從未調整過段落間距，不應被草稿具現化悄悄寫入');
+    expect(result!.letterSpacing, isNull,
+        reason: '使用者從未調整過字距，不應被草稿具現化悄悄寫入');
+  });
+
+  testWidgets(
+      '只調整字距 + 按鈕，onChanged 帶出的字級/粗細/行高/段落間距仍維持 null，'
+      '只有字距被覆寫（epic-28-reader-settings-enhancements Issue 4）',
+      (tester) async {
+    BookReaderPrefs? result;
+    await _pumpSheet(
+      tester,
+      BookReaderPrefs.empty,
+      (prefs) => result = prefs,
+    );
+
+    await tester.tap(
+        find.byKey(const Key('reader_settings_letter_spacing_increment')));
+    await tester.pump();
+
+    expect(result, isNotNull);
+    expect(result!.letterSpacing, closeTo(0.01, 1e-9));
+    expect(result!.fontSize, isNull);
+    expect(result!.fontWeight, isNull);
+    expect(result!.lineHeight, isNull);
+    expect(result!.paragraphSpacing, isNull);
+  });
+
+  testWidgets(
+      '5 個受本 Issue 影響欄位皆為 null 時，顯示「原樣式」禁止圖示取代數字；'
+      '邊界 4 個欄位不受影響，仍顯示具體數字，也不出現重置按鈕'
+      '（epic-28-reader-settings-enhancements Issue 4）',
+      (tester) async {
+    await _pumpSheet(tester, BookReaderPrefs.empty, _noopOnChanged);
+
+    for (final keyPrefix in [
+      'reader_settings_font_size',
+      'reader_settings_font_weight',
+      'reader_settings_line_height',
+      'reader_settings_paragraph_spacing',
+      'reader_settings_letter_spacing',
+    ]) {
+      expect(find.byKey(Key('${keyPrefix}_unset_indicator')), findsOneWidget,
+          reason: '$keyPrefix 尚未被使用者調整過，應顯示原樣式圖示而非數字');
+      expect(find.byKey(Key('${keyPrefix}_reset')), findsNothing,
+          reason: '$keyPrefix 尚未覆寫，不應出現重置按鈕');
+    }
+
+    for (final keyPrefix in [
+      'reader_settings_margin_top',
+      'reader_settings_margin_bottom',
+      'reader_settings_margin_left',
+      'reader_settings_margin_right',
+    ]) {
+      expect(find.byKey(Key('${keyPrefix}_unset_indicator')), findsNothing,
+          reason: '$keyPrefix 是 App 版面留白設定，與書本原生樣式無關，不適用本機制');
+      expect(find.byKey(Key('${keyPrefix}_reset')), findsNothing);
+    }
+  });
+
+  testWidgets(
+      '依序調整 5 個受影響欄位，每次只有剛調整的欄位轉為顯示數字＋重置按鈕，'
+      '其餘尚未調整的欄位持續顯示原樣式圖示（不互相污染，'
+      'epic-28-reader-settings-enhancements Issue 4）',
+      (tester) async {
+    await _pumpSheet(tester, BookReaderPrefs.empty, _noopOnChanged);
+
+    const steps = [
+      ('reader_settings_font_size', 'reader_settings_font_size_increment'),
+      (
+        'reader_settings_font_weight',
+        'reader_settings_font_weight_increment'
+      ),
+      (
+        'reader_settings_line_height',
+        'reader_settings_line_height_increment'
+      ),
+      (
+        'reader_settings_paragraph_spacing',
+        'reader_settings_paragraph_spacing_increment'
+      ),
+      (
+        'reader_settings_letter_spacing',
+        'reader_settings_letter_spacing_increment'
+      ),
+    ];
+
+    for (var i = 0; i < steps.length; i++) {
+      final (keyPrefix, incrementKey) = steps[i];
+      await tester.tap(find.byKey(Key(incrementKey)));
+      await tester.pump();
+
+      expect(find.byKey(Key('${keyPrefix}_unset_indicator')), findsNothing,
+          reason: '$keyPrefix 剛被調整，應改顯示數字');
+      expect(find.byKey(Key('${keyPrefix}_reset')), findsOneWidget,
+          reason: '$keyPrefix 剛被調整，應出現重置按鈕');
+
+      for (var j = i + 1; j < steps.length; j++) {
+        final (untouchedPrefix, _) = steps[j];
+        expect(find.byKey(Key('${untouchedPrefix}_unset_indicator')),
+            findsOneWidget,
+            reason: '$untouchedPrefix 尚未被調整，不應被 $keyPrefix 的互動連帶影響');
+      }
+    }
+  });
+
+  testWidgets(
+      '按下字距重置按鈕後，onChanged 帶出 letterSpacing=null，滑桿回到預設位置、'
+      '重新顯示原樣式圖示（epic-28-reader-settings-enhancements Issue 4）',
+      (tester) async {
+    BookReaderPrefs? result;
+    await _pumpSheet(
+      tester,
+      const BookReaderPrefs(letterSpacing: 0.3),
+      (prefs) => result = prefs,
+    );
+
+    expect(find.byKey(const Key('reader_settings_letter_spacing_reset')),
+        findsOneWidget);
+
+    await tester
+        .tap(find.byKey(const Key('reader_settings_letter_spacing_reset')));
+    await tester.pump();
+
+    expect(result, isNotNull);
+    expect(result!.letterSpacing, isNull);
+    expect(
+        tester
+            .widget<Slider>(find
+                .byKey(const Key('reader_settings_letter_spacing_slider')))
+            .value,
+        0.0,
+        reason: '重置後滑桿應回到原型範例預設位置');
+    expect(
+        find.byKey(
+            const Key('reader_settings_letter_spacing_unset_indicator')),
+        findsOneWidget);
+    expect(find.byKey(const Key('reader_settings_letter_spacing_reset')),
+        findsNothing);
+  });
+
+  testWidgets(
+      '按下字型大小重置按鈕後，onChanged 帶出 fontSize=null，滑桿回到 16px 預設位置'
+      '（epic-28-reader-settings-enhancements Issue 4，涵蓋倍率換算路徑）',
+      (tester) async {
+    BookReaderPrefs? result;
+    await _pumpSheet(
+      tester,
+      const BookReaderPrefs(fontSize: 1.375), // UI 22.0
+      (prefs) => result = prefs,
+    );
+
+    expect(find.byKey(const Key('reader_settings_font_size_reset')),
+        findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('reader_settings_font_size_reset')));
+    await tester.pump();
+
+    expect(result, isNotNull);
+    expect(result!.fontSize, isNull);
+    expect(
+        tester
+            .widget<Slider>(
+                find.byKey(const Key('reader_settings_font_size_slider')))
+            .value,
+        16.0,
+        reason: '重置後滑桿應回到原型範例預設位置');
+    expect(
+        find.byKey(const Key('reader_settings_font_size_unset_indicator')),
+        findsOneWidget);
+  });
+
   testWidgets('點擊字型大小 + 按鈕後，onChanged 帶入 fontSize+1 且其他欄位不變',
       (tester) async {
     BookReaderPrefs? result;

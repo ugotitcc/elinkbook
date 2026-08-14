@@ -70,10 +70,15 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
 
   late String? _fontFamily;
   late double _fontSize;
+  late bool _fontSizeOverridden;
   late double _fontWeightMultiplier;
+  late bool _fontWeightOverridden;
   late double _lineHeight;
+  late bool _lineHeightOverridden;
   late double _paragraphSpacing;
+  late bool _paragraphSpacingOverridden;
   late double _letterSpacing;
+  late bool _letterSpacingOverridden;
   late double _marginTop;
   late double _marginBottom;
   late double _marginLeft;
@@ -96,12 +101,17 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     _fontSize = widget.prefs.fontSize != null
         ? (widget.prefs.fontSize! * 16.0).roundToDouble()
         : _defaultFontSize;
+    _fontSizeOverridden = widget.prefs.fontSize != null;
     _fontWeightMultiplier = widget.prefs.fontWeight ?? _defaultFontWeightMultiplier;
+    _fontWeightOverridden = widget.prefs.fontWeight != null;
     _lineHeight = widget.prefs.lineHeight ?? _defaultLineHeight;
+    _lineHeightOverridden = widget.prefs.lineHeight != null;
     _paragraphSpacing = widget.prefs.paragraphSpacing != null
         ? (widget.prefs.paragraphSpacing! * 10.0).roundToDouble()
         : _defaultParagraphSpacing;
+    _paragraphSpacingOverridden = widget.prefs.paragraphSpacing != null;
     _letterSpacing = widget.prefs.letterSpacing ?? _defaultLetterSpacing;
+    _letterSpacingOverridden = widget.prefs.letterSpacing != null;
     _marginTop = widget.prefs.marginTop ?? _defaultMarginTop;
     _marginBottom = widget.prefs.marginBottom ?? _defaultMarginBottom;
     _marginLeft = widget.prefs.marginLeft ?? _defaultMarginLeft;
@@ -127,12 +137,17 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
         _fontSize = widget.prefs.fontSize != null
             ? (widget.prefs.fontSize! * 16.0).roundToDouble()
             : _defaultFontSize;
+        _fontSizeOverridden = widget.prefs.fontSize != null;
         _fontWeightMultiplier = widget.prefs.fontWeight ?? _defaultFontWeightMultiplier;
+        _fontWeightOverridden = widget.prefs.fontWeight != null;
         _lineHeight = widget.prefs.lineHeight ?? _defaultLineHeight;
+        _lineHeightOverridden = widget.prefs.lineHeight != null;
         _paragraphSpacing = widget.prefs.paragraphSpacing != null
             ? (widget.prefs.paragraphSpacing! * 10.0).roundToDouble()
             : _defaultParagraphSpacing;
+        _paragraphSpacingOverridden = widget.prefs.paragraphSpacing != null;
         _letterSpacing = widget.prefs.letterSpacing ?? _defaultLetterSpacing;
+        _letterSpacingOverridden = widget.prefs.letterSpacing != null;
         _marginTop = widget.prefs.marginTop ?? _defaultMarginTop;
         _marginBottom = widget.prefs.marginBottom ?? _defaultMarginBottom;
         _marginLeft = widget.prefs.marginLeft ?? _defaultMarginLeft;
@@ -155,13 +170,26 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     return ((value / base) * 10000).round() / 10000;
   }
 
+  /// **epic-28-reader-settings-enhancements Issue 4 審查回應**：這裡回傳的
+  /// `null`（未覆寫）不只影響本書畫面即時渲染，也會被 [_buildLayoutPresetSection]
+  /// 的「另存為新預設集」／「複製到其他書籍」原封不動存進 [LayoutPreset]／
+  /// 寫進目標書籍——`BookReaderPrefsRepository.save()`／`saveMultiple()`
+  /// 是「整列覆寫」語意（`INSERT OR REPLACE`，見該檔案 class doc），並非
+  /// 逐欄位合併。因此：使用者若存一個只調整過部分欄位的預設集，套用到
+  /// 另一本已有自訂覆寫值的書籍時，本欄位若仍是未覆寫狀態，會把目標書籍
+  /// 對應欄位一併清空回該書自己的原生樣式，不是只套用預設集裡「有值」的
+  /// 那幾項。這是「整列覆寫」既有設計（Epic 28 Issue 3 上線時就如此）與
+  /// 本次修復（未觸碰欄位正確維持 `null`）疊加後的預期結果，不是缺陷——
+  /// 比修復前「未觸碰欄位一律凍結成當時滑桿顯示的預設數字」更符合直覺，
+  /// 但屬於容易被誤判為回歸的跨 Issue 行為，記錄於此供日後排查參考。
   BookReaderPrefs get _currentDraft => BookReaderPrefs(
         fontFamily: _fontFamily,
-        fontSize: _toMultiplier(_fontSize, 16.0),
-        fontWeight: _fontWeightMultiplier,
-        lineHeight: _lineHeight,
-        paragraphSpacing: _toMultiplier(_paragraphSpacing, 10.0),
-        letterSpacing: _letterSpacing,
+        fontSize: _fontSizeOverridden ? _toMultiplier(_fontSize, 16.0) : null,
+        fontWeight: _fontWeightOverridden ? _fontWeightMultiplier : null,
+        lineHeight: _lineHeightOverridden ? _lineHeight : null,
+        paragraphSpacing:
+            _paragraphSpacingOverridden ? _toMultiplier(_paragraphSpacing, 10.0) : null,
+        letterSpacing: _letterSpacingOverridden ? _letterSpacing : null,
         marginTop: _marginTop,
         marginBottom: _marginBottom,
         marginLeft: _marginLeft,
@@ -220,8 +248,15 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                   max: 80,
                   step: 1,
                   displayValue: _fontSize.round().toString(),
+                  isOverridden: _fontSizeOverridden,
+                  onReset: () => setState(() {
+                    _fontSizeOverridden = false;
+                    _fontSize = _defaultFontSize;
+                    _notifyChanged();
+                  }),
                   onChanged: (v) => setState(() {
                     _fontSize = v;
+                    _fontSizeOverridden = true;
                     _notifyChanged();
                   }),
                 ),
@@ -233,8 +268,15 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                   max: 900,
                   step: 100,
                   displayValue: (_fontWeightMultiplier * 400).round().toString(),
+                  isOverridden: _fontWeightOverridden,
+                  onReset: () => setState(() {
+                    _fontWeightOverridden = false;
+                    _fontWeightMultiplier = _defaultFontWeightMultiplier;
+                    _notifyChanged();
+                  }),
                   onChanged: (v) => setState(() {
                     _fontWeightMultiplier = v / 400;
+                    _fontWeightOverridden = true;
                     _notifyChanged();
                   }),
                 ),
@@ -246,8 +288,15 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                   max: 3,
                   step: 0.1,
                   displayValue: _lineHeight.toStringAsFixed(1),
+                  isOverridden: _lineHeightOverridden,
+                  onReset: () => setState(() {
+                    _lineHeightOverridden = false;
+                    _lineHeight = _defaultLineHeight;
+                    _notifyChanged();
+                  }),
                   onChanged: (v) => setState(() {
                     _lineHeight = double.parse(v.toStringAsFixed(1));
+                    _lineHeightOverridden = true;
                     _notifyChanged();
                   }),
                 ),
@@ -259,8 +308,15 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                   max: 40,
                   step: 1,
                   displayValue: _paragraphSpacing.round().toString(),
+                  isOverridden: _paragraphSpacingOverridden,
+                  onReset: () => setState(() {
+                    _paragraphSpacingOverridden = false;
+                    _paragraphSpacing = _defaultParagraphSpacing;
+                    _notifyChanged();
+                  }),
                   onChanged: (v) => setState(() {
                     _paragraphSpacing = v;
+                    _paragraphSpacingOverridden = true;
                     _notifyChanged();
                   }),
                 ),
@@ -272,8 +328,15 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                   max: 1,
                   step: 0.01,
                   displayValue: '${_letterSpacing.toStringAsFixed(2)}em',
+                  isOverridden: _letterSpacingOverridden,
+                  onReset: () => setState(() {
+                    _letterSpacingOverridden = false;
+                    _letterSpacing = _defaultLetterSpacing;
+                    _notifyChanged();
+                  }),
                   onChanged: (v) => setState(() {
                     _letterSpacing = double.parse(v.toStringAsFixed(2));
+                    _letterSpacingOverridden = true;
                     _notifyChanged();
                   }),
                 ),
@@ -517,6 +580,8 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     required double step,
     required String displayValue,
     required ValueChanged<double> onChanged,
+    bool? isOverridden,
+    VoidCallback? onReset,
   }) {
     final divisions = ((max - min) / step).round();
     final clampedValue = value.clamp(min, max);
@@ -527,7 +592,36 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [Text(label), Text(displayValue)],
+            children: [
+              Text(label),
+              if (isOverridden == null)
+                Text(displayValue)
+              else if (isOverridden == true)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(displayValue),
+                    IconButton(
+                      key: Key('${keyPrefix}_reset'),
+                      icon: const Icon(Icons.block),
+                      iconSize: 18,
+                      visualDensity: VisualDensity.compact,
+                      tooltip: '恢復本書原樣式',
+                      onPressed: onReset,
+                    ),
+                  ],
+                )
+              else
+                Tooltip(
+                  message: '跟隨本書原樣式，尚未調整',
+                  child: Icon(
+                    Icons.block,
+                    key: Key('${keyPrefix}_unset_indicator'),
+                    size: 18,
+                    color: Theme.of(context).disabledColor,
+                  ),
+                ),
+            ],
           ),
           Row(
             children: [
