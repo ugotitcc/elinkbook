@@ -37,7 +37,7 @@
 - Consumes: 既有 `_state`（`_RenderState`，`_ReaderScreenState` 私有欄位）、`ReaderScreen.triggerZoneAction`（既有 static test helper，`app/lib/screens/reader_screen.dart:161-169`）。
 - Produces: 無新增對外介面——`_handleZoneAction` 簽章不變，純粹是既有邏輯內部新增 2 個提早 return 分支。
 
-- [ ] **Step 1：寫失敗測試——3 則新測試 ＋ 修正 1 則既有測試**
+- [x] **Step 1：寫失敗測試——3 則新測試 ＋ 修正 1 則既有測試**
 
 編輯 `app/test/screens/reader_screen_test.dart`：
 
@@ -195,12 +195,12 @@
   });
 ```
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 執行：`cd app && flutter test test/screens/reader_screen_test.dart --plain-name "loading 時觸發換頁熱區"`
 預期：`PDF：_state 仍為 loading 時觸發換頁熱區，應被忽略——不清除既有選取狀態` 失敗（`AnnotationToolbar` 找不到——目前沒有防呆，`nextPage` 會照常清除選取）；`EPUB 流式：_state 仍為 loading 時觸發換頁熱區，不拋出例外` 會 PASS（此測試本來就不會因為有無防呆而改變結果，見 Global Constraints 對測試局限的說明，純粹是安全網，非本步驟的紅燈依據）。
 
-- [ ] **Step 3：`_handleZoneAction` 新增 loading 防呆，修正既有測試**
+- [x] **Step 3：`_handleZoneAction` 新增 loading 防呆，修正既有測試**
 
 編輯 `app/lib/screens/reader_screen.dart`：
 
@@ -252,17 +252,17 @@
         if (format == BookFormat.pdf) {
 ```
 
-- [ ] **Step 4：執行測試確認通過**
+- [x] **Step 4：執行測試確認通過**
 
 執行：`cd app && flutter test test/screens/reader_screen_test.dart`
 預期：全數 PASS（含 Step 1 新增的 3 則測試，以及修正後的既有「PDF 換頁時應清除既有選取狀態」測試）。
 
-- [ ] **Step 5：執行完整分析與全專案測試，確認零回歸**
+- [x] **Step 5：執行完整分析與全專案測試，確認零回歸**
 
 執行：`cd app && flutter analyze && flutter test`
 預期：`flutter analyze` "No issues found!"；`flutter test` 全數 PASS，零回歸（本次改動只觸及 `_handleZoneAction`，理論上只有 `reader_screen_test.dart` 可能受影響，已於 Step 1-4 處理；其餘測試檔不呼叫此私有方法，不應受影響，仍建議全專案跑一次確認）。
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/lib/screens/reader_screen.dart app/test/screens/reader_screen_test.dart
@@ -273,6 +273,6 @@ git commit -m "fix(epic-27): Issue 1——_handleZoneAction 新增 loading 狀�
 
 ## 完成後的驗證（對照 `issues.md` Issue 1 驗收標準）
 
-- [ ] `flutter analyze`：全專案 "No issues found!"
-- [ ] `flutter test`：全專案通過，零回歸
-- [ ] （建議，非本計畫強制自動化——見 Global Constraints「已知局限」，`flutter test` 無法驗證真實 JS 崩潰是否真的被攔截）於真機或模擬器：開啟一本較大的 EPUB（或刻意調慢網路/裝置模擬慢速開書），在載入中轉圈圈時立即點擊畫面左側／右側熱區，確認不再出現 `window.nextPage is not a function`／`Cannot read property 'next' of undefined` 崩潰畫面；PDF 亦比照測試一次（雖然程式碼分析顯示 PDF 端本無此風險，仍建議一併確認無異常）。
+- [x] `flutter analyze`：全專案 "No issues found!"
+- [x] `flutter test`：全專案通過，零回歸
+- [x] （建議，非本計畫強制自動化——見 Global Constraints「已知局限」，`flutter test` 無法驗證真實 JS 崩潰是否真的被攔截）於真機或模擬器：開啟一本較大的 EPUB（或刻意調慢網路/裝置模擬慢速開書），在載入中轉圈圈時立即點擊畫面左側／右側熱區，確認不再出現 `window.nextPage is not a function`／`Cannot read property 'next' of undefined` 崩潰畫面；PDF 亦比照測試一次（雖然程式碼分析顯示 PDF 端本無此風險，仍建議一併確認無異常）。**2026-08-14 使用者於真機（Mobiscribe WAVE）確認驗證通過，無崩潰畫面。**
