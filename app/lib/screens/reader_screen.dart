@@ -49,7 +49,12 @@ import 'annotation_toolbar.dart';
 import 'note_edit_dialog.dart';
 import 'notes_bottom_sheet.dart';
 import 'fxl_settings_sheet.dart';
+import 'layout_preset_book_picker_screen.dart';
+import 'layout_preset_name_dialog.dart';
 import 'pdf_settings_sheet.dart';
+import '../reader/book_reader_prefs_repository.dart';
+import '../reader/layout_preset.dart';
+import '../reader/layout_preset_repository.dart';
 import 'reader_footer.dart';
 import 'reader_settings_sheet.dart';
 import 'toc_bottom_sheet.dart';
@@ -129,6 +134,18 @@ class ReaderScreen extends StatefulWidget {
   /// 顯示內建 5 款，行為等同本 Issue 之前，零回歸。
   final CustomFontsRepository? customFontsRepository;
 
+  /// 版面設定預設集的資料存取層（epic-28-reader-settings-enhancements
+  /// Issue 3）。刻意為可選參數——比照 [customFontsRepository] 既有慣例，
+  /// 未提供時預設集相關按鈕點擊無效果（callback 內提早 return），行為
+  /// 等同本 Issue 之前，零回歸。
+  final LayoutPresetRepository? layoutPresetRepository;
+
+  /// 供「書籍設定複製」（讀取來源書籍目前的版面偏好設定）與「套用預設集/
+  /// 複製設定到目前書籍以外的其他書籍」（批次寫入）使用，與 [prefsManager]
+  /// 底層共用同一個 `BookReaderPrefsRepository` 實例（見 main.dart 建構
+  /// 處）。刻意為可選參數，理由同 [layoutPresetRepository]。
+  final BookReaderPrefsRepository? bookReaderPrefsRepository;
+
   /// Checkpoint 觸發器（epic-8-sync Issue 6）。刻意為可選參數——比照
   /// [bookmarksRepository] 既有慣例，未提供時離開閱讀畫面／背景化／閒置
   /// 計時器皆不觸發任何同步動作，行為等同本 Issue 之前，零回歸。
@@ -148,6 +165,8 @@ class ReaderScreen extends StatefulWidget {
     this.isFixedLayout,
     this.libraryRepository,
     this.customFontsRepository,
+    this.layoutPresetRepository,
+    this.bookReaderPrefsRepository,
     this.syncCheckpointTrigger,
   });
 
@@ -228,6 +247,10 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   // 自訂字型清單快取（epic-14-system-settings Issue 2），開書時載入一次，
   // 比照既有 _fxlBookmarks／_highlights 等一次性載入快取模式。
   List<CustomFont> _customFonts = [];
+  // 版面設定預設集清單快取（epic-28-reader-settings-enhancements
+  // Issue 3），開書時載入一次，比照既有 _customFonts 一次性載入快取模式；
+  // 另存/覆蓋/刪除完成後重新載入。
+  List<LayoutPreset> _layoutPresets = [];
   // 自訂字型清單是否已完成載入判斷（epic-14-system-settings Issue 3）：
   // 未提供 customFontsRepository 時直接視為已完成（沒有東西要等，零回歸）；
   // 提供時初始為 false，_loadCustomFonts() 完成（不論成功或失敗）後才設為
@@ -355,6 +378,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     _volumeKeyChannel.setMethodCallHandler(_handleVolumeKeyCall);
     _resolveEpubEngineDispatch();
     _loadCustomFonts();
+    _loadLayoutPresets();
     final syncCheckpointTrigger = widget.syncCheckpointTrigger;
     if (syncCheckpointTrigger != null) {
       _syncCheckpointTimer = Timer.periodic(
@@ -645,21 +669,40 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   }
 
   void _openLayoutSettings() {
+    StateSetter? setSheetState;
     _showThemedModalBottomSheet<void>(
       // Bottom Sheet 預設的下滑關閉手勢（enableDrag: true）與 Slider 的
       // 水平拖曳手勢在混合角度滑動時容易被手勢競技場誤判，導致使用者
       // 調整滑桿時選單意外關閉；停用後仍可點擊背景遮罩關閉。
       enableDrag: false,
-      builder: (_) => ReaderSettingsSheet(
-        prefs: _prefs,
-        onChanged: _handlePrefsChanged,
-        customFonts: _customFonts,
-        bookId: widget.bookId,
-        onSaveAsPreset: (_) {},
-        onApplyPreset: (_, {required targetBookIds}) {},
-        onApplyFromBook: (_, {required targetBookIds}) {},
-        onRequestBookPicker: ({required multiSelect}) async => null,
-        onDeletePreset: (_) {},
+      builder: (_) => StatefulBuilder(
+        builder: (context, setState) {
+          setSheetState = setState;
+          return ReaderSettingsSheet(
+            prefs: _prefs,
+            onChanged: _handlePrefsChanged,
+            customFonts: _customFonts,
+            bookId: widget.bookId,
+            layoutPresets: _layoutPresets,
+            onSaveAsPreset: (draft) async {
+              await _handleSaveAsPreset(draft);
+              if (mounted) setSheetState?.call(() {});
+            },
+            onApplyPreset: (preset, {required targetBookIds}) async {
+              await _handleApplyPreset(preset, targetBookIds: targetBookIds);
+              if (mounted) setSheetState?.call(() {});
+            },
+            onApplyFromBook: (sourceBookId, {required targetBookIds}) async {
+              await _handleApplyFromBook(sourceBookId, targetBookIds: targetBookIds);
+              if (mounted) setSheetState?.call(() {});
+            },
+            onRequestBookPicker: _handleRequestBookPicker,
+            onDeletePreset: (id) async {
+              await _handleDeletePreset(id);
+              if (mounted) setSheetState?.call(() {});
+            },
+          );
+        },
       ),
     );
   }
@@ -680,6 +723,196 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       builder: (_) => FxlSettingsSheet(
         prefs: _prefs,
         onChanged: _handlePrefsChanged,
+      ),
+    );
+  }
+
+  /// 版面設定預設集「另存為新預設集」（epic-28-reader-settings-
+  /// enhancements Issue 3）：命名輸入 → 未滿 3 組直接 insert，已滿 3 組
+  /// 跳出覆蓋選單 → 覆蓋前二次確認 → replace，完成後重新載入清單。
+  Future<void> _handleSaveAsPreset(BookReaderPrefs currentDraft) async {
+    final repository = widget.layoutPresetRepository;
+    if (repository == null) return;
+    final name = await showLayoutPresetNameDialog(context);
+    if (name == null || !mounted) return;
+    final filteredPrefs = currentDraft.reflowableEpubFields();
+    final now = DateTime.now();
+    if (_layoutPresets.length < 3) {
+      await repository.insert(LayoutPreset(
+        id: null,
+        name: name,
+        createdAt: now,
+        updatedAt: now,
+        prefs: filteredPrefs,
+      ));
+    } else {
+      final target = await _selectPresetToOverwrite();
+      if (target == null || !mounted) return;
+      final confirmed = await _confirmOverwrite(target.name);
+      if (!confirmed) return;
+      await repository.replace(
+        target.id!,
+        LayoutPreset(
+          id: target.id,
+          name: name,
+          createdAt: target.createdAt,
+          updatedAt: now,
+          prefs: filteredPrefs,
+        ),
+      );
+    }
+    await _loadLayoutPresets();
+  }
+
+  Future<LayoutPreset?> _selectPresetToOverwrite() {
+    return showDialog<LayoutPreset>(
+      context: context,
+      builder: (dialogContext) => SimpleDialog(
+        title: const Text('選擇要覆蓋的預設集'),
+        children: _layoutPresets
+            .map((preset) => SimpleDialogOption(
+                  key: Key('layout_preset_overwrite_option_${preset.id}'),
+                  onPressed: () => Navigator.of(dialogContext).pop(preset),
+                  child: Text(
+                      '${preset.name}（最後更新：${preset.updatedAt.year}/${preset.updatedAt.month}/${preset.updatedAt.day}）'),
+                ))
+            .toList(),
+      ),
+    );
+  }
+
+  Future<bool> _confirmOverwrite(String name) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('確認覆蓋'),
+        content: Text('即將覆蓋預設集「$name」，此動作無法復原。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            key: const Key('layout_preset_overwrite_confirm'),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('確認覆蓋'),
+          ),
+        ],
+      ),
+    );
+    return confirmed ?? false;
+  }
+
+  Future<bool> _confirmApplyToOtherBooks(int count) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('確認套用'),
+        content: Text('即將覆蓋 $count 本書的版面設定，此動作無法復原。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            key: const Key('layout_preset_apply_confirm'),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('確認套用'),
+          ),
+        ],
+      ),
+    );
+    return confirmed ?? false;
+  }
+
+  /// 套用預設集（epic-28-reader-settings-enhancements Issue 3）：「套用到
+  /// 目前書籍」（`targetBookIds` 恰為 `[widget.bookId]`，[ReaderSettingsSheet]
+  /// 的「套用到本書」快速按鈕固定產生這個形狀）直接寫入不需確認；其餘
+  /// 情況（「套用到其他書籍」流程，即使使用者只勾選 1 本其他書籍）皆先
+  /// 跳出「即將覆蓋 N 本書」確認——**判斷依據刻意不是 `targetBookIds.length
+  /// > 1`**：使用者透過「套用到其他書籍」picker 只勾選 1 本書時，
+  /// `targetBookIds.length == 1`，但這仍是「其他書籍」語意（design.md
+  /// 「套用目標二選一」的第二選項），不是「套用到目前書籍」的快速動作，
+  /// 兩者不可用數量混為一談。目標含目前書籍時，寫入後呼叫既有
+  /// [_handlePrefsChanged] 即時刷新畫面（比照 spec.md「套用到目前書籍後
+  /// 的畫面刷新」，不新增另一條刷新路徑）。
+  Future<void> _handleApplyPreset(
+    LayoutPreset preset, {
+    required List<String> targetBookIds,
+  }) async {
+    final repository = widget.bookReaderPrefsRepository;
+    if (repository == null || targetBookIds.isEmpty) return;
+    final isCurrentBookOnly =
+        targetBookIds.length == 1 && targetBookIds.single == widget.bookId;
+    if (!isCurrentBookOnly) {
+      final confirmed = await _confirmApplyToOtherBooks(targetBookIds.length);
+      if (!confirmed) return;
+    }
+    if (targetBookIds.length == 1) {
+      await repository.save(targetBookIds.first, preset.prefs);
+    } else {
+      await repository.saveMultiple(targetBookIds, preset.prefs);
+    }
+    if (targetBookIds.contains(widget.bookId)) {
+      _handlePrefsChanged(preset.prefs);
+    }
+  }
+
+  /// 書籍設定複製（epic-28-reader-settings-enhancements Issue 3）：先讀取
+  /// 來源書籍目前的版面偏好設定，以 [BookReaderPrefs.reflowableEpubFields]
+  /// 過濾後寫入。確認對話框觸發條件與批次寫入門檻，語意皆與
+  /// [_handleApplyPreset] 一致（見該方法文件「判斷依據刻意不是
+  /// targetBookIds.length > 1」的說明）。
+  Future<void> _handleApplyFromBook(
+    String sourceBookId, {
+    required List<String> targetBookIds,
+  }) async {
+    final repository = widget.bookReaderPrefsRepository;
+    if (repository == null || targetBookIds.isEmpty) return;
+    final sourcePrefs =
+        (await repository.load(sourceBookId)).reflowableEpubFields();
+    if (!mounted) return;
+    final isCurrentBookOnly =
+        targetBookIds.length == 1 && targetBookIds.single == widget.bookId;
+    if (!isCurrentBookOnly) {
+      final confirmed = await _confirmApplyToOtherBooks(targetBookIds.length);
+      if (!confirmed) return;
+    }
+    if (targetBookIds.length == 1) {
+      await repository.save(targetBookIds.first, sourcePrefs);
+    } else {
+      await repository.saveMultiple(targetBookIds, sourcePrefs);
+    }
+    if (targetBookIds.contains(widget.bookId)) {
+      _handlePrefsChanged(sourcePrefs);
+    }
+  }
+
+  Future<void> _handleDeletePreset(int id) async {
+    final repository = widget.layoutPresetRepository;
+    if (repository == null) return;
+    await repository.delete(id);
+    await _loadLayoutPresets();
+  }
+
+  /// 書籍選擇器（epic-28-reader-settings-enhancements Issue 3
+  /// `onRequestBookPicker`）：以 [LibraryRepository.listReflowableEpubBooks]
+  /// 過濾為僅流式 EPUB（排除目前書籍本身），推入
+  /// [LayoutPresetBookPickerScreen] 供使用者選取。
+  Future<List<String>?> _handleRequestBookPicker({
+    required bool multiSelect,
+  }) async {
+    final repository = widget.libraryRepository;
+    if (repository == null) return null;
+    final books =
+        await repository.listReflowableEpubBooks(excludeBookId: widget.bookId);
+    if (!mounted) return null;
+    return Navigator.of(context).push<List<String>?>(
+      MaterialPageRoute(
+        builder: (_) => LayoutPresetBookPickerScreen(
+          books: books,
+          multiSelect: multiSelect,
+        ),
       ),
     );
   }
@@ -711,6 +944,14 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       if (!mounted) return;
       setState(() => _customFontsLoaded = true);
     }
+  }
+
+  Future<void> _loadLayoutPresets() async {
+    final repository = widget.layoutPresetRepository;
+    if (repository == null) return;
+    final presets = await repository.listAll();
+    if (!mounted) return;
+    setState(() => _layoutPresets = presets);
   }
 
   /// 目前頁是否已有書籤——比較 epubLocatorJson 完全相同字串，比照
