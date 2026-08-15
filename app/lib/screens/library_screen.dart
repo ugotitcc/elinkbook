@@ -17,6 +17,7 @@ import '../library/library_repository.dart';
 import '../library/models/book.dart';
 import '../library/models/book_group.dart';
 import '../library/models/library_enums.dart';
+import '../library/widgets/book_cover.dart';
 import '../sync/sync_account_repository.dart';
 import '../sync/sync_checkpoint_trigger.dart';
 import '../sync/sync_client.dart';
@@ -978,7 +979,7 @@ class _GroupGridTile extends StatelessWidget {
 
   Widget _groupTilePreviewCell(int index) {
     return index < tile.previewBooks.length
-        ? _BookCover(book: tile.previewBooks[index])
+        ? BookCover(book: tile.previewBooks[index])
         : ColoredBox(color: Colors.grey.shade200);
   }
 }
@@ -1004,7 +1005,7 @@ class _GroupListTile extends StatelessWidget {
               width: 32,
               height: 48,
               child: i < tile.previewBooks.length
-                  ? _BookCover(book: tile.previewBooks[i])
+                  ? BookCover(book: tile.previewBooks[i])
                   : ColoredBox(color: Colors.grey.shade200),
             ),
           ),
@@ -1030,17 +1031,6 @@ String _sortLabel(LibrarySortBy sortBy) {
   }
 }
 
-IconData _formatIcon(BookFileFormat format) {
-  switch (format) {
-    case BookFileFormat.epub:
-      return Icons.menu_book;
-    case BookFileFormat.pdf:
-      return Icons.picture_as_pdf;
-    case BookFileFormat.txt:
-      return Icons.article;
-  }
-}
-
 IconData _sourceIcon(BookSource source) {
   switch (source) {
     case BookSource.local:
@@ -1053,25 +1043,6 @@ IconData _sourceIcon(BookSource source) {
 }
 
 String _progressText(Book book) => '${(book.progress * 100).round()}%';
-
-/// 書籍封面：有 `coverPath` 且檔案存在時顯示圖片，否則以格式圖示佔位。
-/// `existsSync()` 只是一次本機 stat 呼叫，成本低，不需要 FutureBuilder。
-class _BookCover extends StatelessWidget {
-  final Book book;
-  const _BookCover({required this.book});
-
-  @override
-  Widget build(BuildContext context) {
-    final coverPath = book.coverPath;
-    if (coverPath != null && File(coverPath).existsSync()) {
-      return Image.file(File(coverPath), fit: BoxFit.cover);
-    }
-    return ColoredBox(
-      color: Colors.grey.shade300,
-      child: Center(child: Icon(_formatIcon(book.format), size: 32)),
-    );
-  }
-}
 
 class _BookGridTile extends StatelessWidget {
   final Book book;
@@ -1101,7 +1072,7 @@ class _BookGridTile extends StatelessWidget {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                _BookCover(book: book),
+                BookCover(book: book),
                 if (selectionMode)
                   Align(
                     alignment: Alignment.topRight,
@@ -1200,7 +1171,7 @@ class _BookListTile extends StatelessWidget {
             SizedBox(
               width: 48,
               height: 64,
-              child: _BookCover(book: book),
+              child: BookCover(book: book),
             ),
           ],
         ),

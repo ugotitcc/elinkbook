@@ -1,8 +1,7 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 
 import '../library/models/book.dart';
+import '../library/widgets/book_cover.dart';
 
 /// 版面設定預設集／書籍設定複製的書籍選擇器（epic-28-reader-settings-
 /// enhancements Issue 3「UI 元件責任劃分」`onRequestBookPicker`；格線化＋
@@ -93,10 +92,21 @@ class _LayoutPresetBookPickerScreenState
             child: TextField(
               key: const Key('layout_preset_book_picker_search_field'),
               controller: _searchController,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 hintText: '搜尋書名或作者',
-                prefixIcon: Icon(Icons.search),
-                border: OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        key: const Key(
+                            'layout_preset_book_picker_search_clear'),
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() => _searchQuery = '');
+                        },
+                      )
+                    : null,
+                border: const OutlineInputBorder(),
                 isDense: true,
               ),
               onChanged: (value) => setState(() => _searchQuery = value),
@@ -142,10 +152,7 @@ class _LayoutPresetBookPickerScreenState
 /// 書籍格：封面圖＋書名＋右上角選取指示圖示。單選/複選共用同一套視覺
 /// （`check_circle`／`radio_button_unchecked`＋半透明黑底圓圈確保任何封面
 /// 底色下都有足夠對比度），比照 `LibraryScreen._BookGridTile` 既有的選取
-/// 指示視覺語言（`app/lib/screens/library_screen.dart`）——因跨檔案無法
-/// import 私有 class，本畫面就地實作一份精簡版，只保留封面容錯＋選取圖示，
-/// 省略 `LibraryScreen` 特有的進度百分比／長按批次選取等本畫面用不到的
-/// 邏輯（見 `plan-issue-6.md` Architecture「設計決策」）。
+/// 指示視覺語言。
 class _BookGridItem extends StatelessWidget {
   final Book book;
   final bool selected;
@@ -169,7 +176,7 @@ class _BookGridItem extends StatelessWidget {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                _BookCover(book: book),
+                BookCover(book: book),
                 Align(
                   alignment: Alignment.topRight,
                   child: Padding(
@@ -205,27 +212,6 @@ class _BookGridItem extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-/// 書籍封面：有 `coverPath` 且檔案存在時顯示圖片，否則以通用書本圖示佔位。
-/// 本畫面書籍恆為流式 EPUB（呼叫端已用
-/// `LibraryRepository.listReflowableEpubBooks()` 過濾），不需要
-/// `LibraryScreen._BookCover` 依 `book.format` 選格式專屬圖示的完整邏輯。
-class _BookCover extends StatelessWidget {
-  final Book book;
-  const _BookCover({required this.book});
-
-  @override
-  Widget build(BuildContext context) {
-    final coverPath = book.coverPath;
-    if (coverPath != null && File(coverPath).existsSync()) {
-      return Image.file(File(coverPath), fit: BoxFit.cover);
-    }
-    return const ColoredBox(
-      color: Color(0xFFE0E0E0),
-      child: Center(child: Icon(Icons.menu_book, size: 32)),
     );
   }
 }

@@ -389,6 +389,58 @@ void main() {
           '正確取得剩餘可用高度，避免軟體鍵盤彈出時 RenderFlex overflowed',
     );
   });
+
+  testWidgets('單選模式：未選取任何項目時，確定按鈕停用；選取後啟用',
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: LayoutPresetBookPickerScreen(
+        books: [_book('b1', '書一')],
+        multiSelect: false,
+      ),
+    ));
+
+    final confirmFinder =
+        find.byKey(const Key('layout_preset_book_picker_confirm'));
+    expect(tester.widget<TextButton>(confirmFinder).onPressed, isNull);
+
+    await tester
+        .tap(find.byKey(const Key('layout_preset_book_picker_item_b1')));
+    await tester.pump();
+
+    expect(tester.widget<TextButton>(confirmFinder).onPressed, isNotNull);
+  });
+
+  testWidgets('搜尋輸入關鍵字時顯示清除按鈕，點擊後清空輸入框並恢復完整清單', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: LayoutPresetBookPickerScreen(
+        books: [_book('b1', '書一'), _book('b2', '書二')],
+        multiSelect: false,
+      ),
+    ));
+
+    final searchField =
+        find.byKey(const Key('layout_preset_book_picker_search_field'));
+    final clearButton =
+        find.byKey(const Key('layout_preset_book_picker_search_clear'));
+
+    expect(clearButton, findsNothing);
+
+    await tester.enterText(searchField, '書一');
+    await tester.pump();
+
+    expect(clearButton, findsOneWidget);
+    expect(find.byKey(const Key('layout_preset_book_picker_item_b2')),
+        findsNothing);
+
+    await tester.tap(clearButton);
+    await tester.pump();
+
+    expect(clearButton, findsNothing);
+    expect(find.byKey(const Key('layout_preset_book_picker_item_b1')),
+        findsOneWidget);
+    expect(find.byKey(const Key('layout_preset_book_picker_item_b2')),
+        findsOneWidget);
+  });
 }
 
 Book _book(String id, String title, {String? author, String? coverPath}) =>
