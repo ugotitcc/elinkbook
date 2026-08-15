@@ -136,7 +136,7 @@
 
 ## Issue 6：「選擇書籍」畫面優化（格線化＋統一確認機制＋搜尋）
 
-**Status:** `ready-for-agent`
+**Status:** ✅ 已完成並合併回 `main`（PR [#151](https://git.jigong.org/huthief/elinkBook/pulls/151)，分支 `epic-28-issue-6-book-picker-refactor`，4 個 commit：Task 1-3 ＋ 1 個審查修正）。程式碼審查（`reviews/review-issue-6.md`）結論為可以合併（0 Critical／0 Important／3 Minor，3 項 Minor 已於 commit `92138ce` 全數修訂：補齊單選模式「確定」按鈕停用/啟用專屬測試、搜尋欄位新增一鍵清除 X 按鈕與互動測試、抽出共用 `BookCover` 元件至 `app/lib/library/widgets/book_cover.dart` 並於 `LibraryScreen` 與 `LayoutPresetBookPickerScreen` 完成替換）。全專案 1294 項測試與 `flutter analyze` 零回歸通過。
 
 **依賴：** 無，可立即開始（與 Issue 5 互相獨立，可平行推進）
 
