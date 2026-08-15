@@ -33,6 +33,24 @@ class LayoutPresetBookPickerScreen extends StatefulWidget {
 class _LayoutPresetBookPickerScreenState
     extends State<LayoutPresetBookPickerScreen> {
   final Set<String> _selected = {};
+  final _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  List<Book> get _filteredBooks {
+    final query = _searchQuery.trim().toLowerCase();
+    if (query.isEmpty) return widget.books;
+    return widget.books.where((book) {
+      if (book.title.toLowerCase().contains(query)) return true;
+      final author = book.author;
+      return author != null && author.toLowerCase().contains(query);
+    }).toList();
+  }
 
   void _handleItemTap(Book book) {
     setState(() {
@@ -54,6 +72,7 @@ class _LayoutPresetBookPickerScreenState
 
   @override
   Widget build(BuildContext context) {
+    final filteredBooks = _filteredBooks;
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.multiSelect ? '選擇書籍（可複選）' : '選擇書籍'),
@@ -67,9 +86,31 @@ class _LayoutPresetBookPickerScreenState
           ),
         ],
       ),
-      body: widget.books.isEmpty
-          ? const Center(child: Text('沒有可選擇的流式 EPUB 書籍'))
-          : _buildGrid(widget.books),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(8),
+            child: TextField(
+              key: const Key('layout_preset_book_picker_search_field'),
+              controller: _searchController,
+              decoration: const InputDecoration(
+                hintText: '搜尋書名或作者',
+                prefixIcon: Icon(Icons.search),
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+              onChanged: (value) => setState(() => _searchQuery = value),
+            ),
+          ),
+          Expanded(
+            child: widget.books.isEmpty
+                ? const Center(child: Text('沒有可選擇的流式 EPUB 書籍'))
+                : filteredBooks.isEmpty
+                    ? const Center(child: Text('找不到符合的書籍'))
+                    : _buildGrid(filteredBooks),
+          ),
+        ],
+      ),
     );
   }
 
