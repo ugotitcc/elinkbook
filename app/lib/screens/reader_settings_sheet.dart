@@ -261,6 +261,16 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                   ),
                   Expanded(
                     child: TabBarView(
+                      // 【不可逆的技術決策】必須為 NeverScrollableScrollPhysics，
+                      // 只能點擊 TabBar 切換——「文字內容」／「邊界首尾」頁籤內
+                      // 各有數個橫向拖曳型 Slider，TabBarView 底層 PageView 的
+                      // 預設水平滑動手勢會與這些 Slider 搶手勢競技場，導致調整
+                      // 滑桿時意外切換頁籤。**注意**：這與被借鏡的既有先例
+                      // TocBottomSheet（app/lib/screens/toc_bottom_sheet.dart）
+                      // 不同——該處頁籤內容是章節清單/縮圖格/搜尋結果，沒有
+                      // 橫向拖曳型控制項，不需要這道防護，不可為了「跟先例一致」
+                      // 而移除本行（epic-28-reader-settings-enhancements Issue 5
+                      // 審查發現，詳見 design.md「2026-08-15 追加」審查回應）。
                       physics: const NeverScrollableScrollPhysics(),
                       children: [
                         _buildTextContentTab(),
@@ -279,6 +289,14 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     );
   }
 
+  /// 【不可逆的技術決策】以下 4 個 `_buildXxxTab()` 方法（文字內容／邊界首尾／
+  /// 版面呈現／設定喜好）僅是本 State 的 `build()` 展示分支，一律不得抽成獨立
+  /// `StatefulWidget`。Issue 4 新增的 5 個「是否已覆寫」旗標（`_fontSizeOverridden`
+  /// 等）與其餘全部草稿狀態皆留在 `_ReaderSettingsSheetState` 根層級，這些方法
+  /// 只是直接讀寫同一組欄位——若日後為了重用或拆檔而把某個頁籤抽成獨立
+  /// StatefulWidget，該旗標會變成兩份不同 State 各自管理，Tab 切換時容易被
+  /// 意外重建/遺失（epic-28-reader-settings-enhancements Issue 5 審查，詳見
+  /// design.md「2026-08-15 追加」審查回應 Important #3）。
   Widget _buildTextContentTab() {
     return ListView(
       key: const Key('reader_settings_tab_text_content_list'),

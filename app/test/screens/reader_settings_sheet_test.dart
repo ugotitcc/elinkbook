@@ -344,6 +344,10 @@ void main() {
           reason: '$keyPrefix 尚未覆寫，不應出現重置按鈕');
     }
 
+    // epic-28-reader-settings-enhancements Issue 5 審查：必須真的切到「邊界
+    // 首尾」頁籤才能驗證邊界欄位「不支援本機制」是設計使然，而非單純因為
+    // 該頁籤尚未被掛載而巧合通過。
+    await switchToTab(tester, '邊界首尾');
     for (final keyPrefix in [
       'reader_settings_margin_top',
       'reader_settings_margin_bottom',
