@@ -6859,6 +6859,9 @@ void main() {
       await tester
           .tap(find.byKey(const Key('layout_preset_book_picker_item_b_other')));
       await tester.pump();
+      await tester
+          .tap(find.byKey(const Key('layout_preset_book_picker_confirm')));
+      await tester.pump();
       await tester.runAsync(() => Future.delayed(const Duration(milliseconds: 50)));
       await tester.pumpAndSettle();
 
