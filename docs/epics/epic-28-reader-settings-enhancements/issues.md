@@ -99,6 +99,72 @@
 
 ---
 
+## Issue 5：版面設定畫面 Tab 化重構（`ReaderSettingsSheet`）
+
+**Status:** `ready-for-agent`
+
+**依賴：** 無，可立即開始（與 Issue 6 互相獨立，可平行推進）
+
+**來源：** 使用者需求，2026-08-15 `/grill-with-docs` 三輪問答定案，決策紀錄見 `design.md`「2026-08-15 追加」。
+
+**背景／需求：** `ReaderSettingsSheet`（`app/lib/screens/reader_settings_sheet.dart`）目前是單一 `ListView(shrinkWrap: true)` 平鋪全部控制項，本 Epic Issue 1/3 陸續疊加新欄位後內容量已相當可觀，使用者需要大量捲動才能找到想調整的項目。
+
+**Solution（依 `design.md` 決策）：**
+
+1. 改用 `DefaultTabController` + `TabBar` + `Expanded(child: TabBarView(...))` 包裹既有內容，比照既有先例 `TocBottomSheet`（`app/lib/screens/toc_bottom_sheet.dart:178-202`）的寫法，讓 Bottom Sheet 撐到近全螢幕高度、各頁籤各自獨立捲動。
+2. 4 個頁籤，依「頁籤負載平衡」（非嚴格語意分類）分配既有控制項：
+   - **文字內容**：`_publisherStyles` 開關（「停用本書CSS」）、`_buildFontFamilyDropdown()`、字型大小／字型粗細／行高／段落間距／字距（5 個 `_buildSliderRow`）
+   - **邊界首尾**：上下左右邊界（4 個 `_buildSliderRow`）、顯示頁首／顯示頁尾（`_showHeader`/`_showFooter` 開關）、`_buildTextAlignRow()`
+   - **版面呈現**：全螢幕模式（`_fullscreen` 開關）、`_buildColumnModeRow()`、`_buildWritingModeOverrideRow()`、`_buildScreenOrientationOverrideRow()`、`_buildPageTurnModeOverrideRow()`
+   - **設定喜好**：`_buildLayoutPresetSection()`（版面設定預設集＋從其他書籍複製，維持現有合併在同一區塊）
+3. 針對「版面呈現」頁籤內 4 組圖示列，評估更緊湊的排列方式以節省垂直空間，具體佈局由實作計畫定案，只要求「有助於減少該頁籤捲動」，不強制特定像素數值。
+4. 既有控制項的操作邏輯與測試 `Key`（例如 `reader_settings_font_size_slider`）維持逐位元組不變，只是被移動到不同 Tab 容器內。
+5. **`TabBarView` 明確設定 `physics: const NeverScrollableScrollPhysics()`**（`/superpowers:requesting-code-review` 審查 Important #1）：`TabBarView` 內部即 `PageView`，預設允許水平滑動切頁，會與「文字內容」（5 個 Slider）／「邊界首尾」（4 個 Slider）頁籤內的橫向拖曳型控制項搶手勢競技場，導致調整滑桿時意外切換頁籤；停用水平滑動後只能點擊 `TabBar` 切換，徹底隔絕衝突。
+6. **4 個頁籤只是 `_ReaderSettingsSheetState.build()` 內的展示分支，不得為個別頁籤內容抽出獨立的 `StatefulWidget`**（`/superpowers:requesting-code-review` 審查 Important #3）：Issue 4 新增的 5 個「是否已覆寫」旗標（`_fontSizeOverridden` 等）與其餘既有草稿狀態，一律留在 `_ReaderSettingsSheetState` 根層級，確保 Tab 切換不會意外重建或遺失這些狀態。
+
+**已知範圍風險（實作計畫需明確處理）：** `app/test/screens/reader_settings_sheet_test.dart`（1124+ 行、50+ 則測試）內既有測試皆假設所有欄位同時可見，改為分頁後多數既有測試需要先切換到正確 Tab 才能互動到目標欄位——需要新增測試 helper（建議命名 `switchToTab(WidgetTester tester, String tabLabel)`）並逐一盤點既有測試是否需要補上切換步驟，是本 Issue 工作量最大的部分，實作計畫須逐一列出受影響的測試而非籠統帶過。
+
+**單元測試要求：**
+- 4 個頁籤皆可切換，切換後對應欄位的既有 `Key` 可見、其餘頁籤內容不可見。
+- 既有全部欄位互動測試（大量既有測試）補上「先切換到正確 Tab」的步驟後應維持原有斷言全數通過，零回歸。
+- 「版面設定預設集」相關既有測試（Issue 3 既有測試）在新的「設定喜好」頁籤內功能不變。
+- 於「文字內容」或「邊界首尾」頁籤內對 Slider 做橫向拖曳手勢，斷言 `TabController.index` 不變（頁籤未被意外切換），驗證 `NeverScrollableScrollPhysics` 生效。
+
+**驗收標準：** 使用者開啟版面設定可透過 4 個頁籤切換分類；多數頁籤在一般手機直向螢幕下不需捲動即可看到該頁籤全部控制項；在任一頁籤內對 Slider 做橫向拖曳不會意外切換頁籤；既有全部控制項的互動邏輯、持久化行為、測試 `Key` 不變，只是視覺分組位置改變；`flutter analyze` 乾淨、`flutter test` 全數通過、零回歸。
+
+---
+
+## Issue 6：「選擇書籍」畫面優化（格線化＋統一確認機制＋搜尋）
+
+**Status:** `ready-for-agent`
+
+**依賴：** 無，可立即開始（與 Issue 5 互相獨立，可平行推進）
+
+**來源：** 使用者需求，2026-08-15 `/grill-with-docs` 三輪問答定案，決策紀錄見 `design.md`「2026-08-15 追加」。
+
+**背景／需求：** `LayoutPresetBookPickerScreen`（`app/lib/screens/layout_preset_book_picker_screen.dart`）目前是純文字 `ListView`（書名＋作者），無封面圖；單選模式（複製到本書）`ListTile.onTap` 直接 `Navigator.pop([book.id])`，點擊項目立即觸發複製、無任何確認機制，滑動時有真實的誤觸風險（已用原始碼交叉核對確認，非臆測）；書籍數量多時難以快速找到目標書籍。
+
+**Solution（依 `design.md` 決策）：**
+
+1. 改用格線佈局（`GridView`，比照 `LibraryScreen` 既有 `SliverGridDelegateWithFixedCrossAxisCount` 直向 3 欄／橫向 4 欄慣例），每格顯示封面圖（`Book.coverPath`，無封面時退回格式圖示佔位，比照 `LibraryScreen._BookCover` 既有 fallback 邏輯）＋書名（過長截斷）。**建議**（非強制，`/superpowers:requesting-code-review` 審查 Minor #2）：將 `_BookCover` 從 `library_screen.dart` 抽出為共用元件（例如 `app/lib/library/widgets/book_cover.dart`），供 `LibraryScreen`／`LayoutPresetBookPickerScreen` 兩處共用，避免重複維護封面容錯邏輯；若實作當下評估抽出成本不划算，維持獨立複製一份亦可接受。
+2. 單選模式統一比照既有多選模式：Grid item 改為可選取狀態（Radio 語意，同時最多選 1 格）＋ AppBar 右上角新增「確定」按鈕（未選取時停用），取消目前「點擊即觸發」行為；多選模式維持既有 `CheckboxListTile` 邏輯不變（改為 Grid 呈現），兩種模式視覺與互動邏輯統一，只差可選取數量與 Radio/Checkbox。
+3. 新增常駐顯示於 AppBar 下方的搜尋 `TextField`，即時比對書名＋作者（子字串、大小寫不敏感），純本機記憶體篩選；查無符合結果時顯示「找不到符合的書籍」提示文字（與既有「沒有可選擇的流式 EPUB 書籍」空清單提示區分）。
+4. 多選模式下，被搜尋篩選暫時隱藏的已選取項目須保留選取狀態，清空搜尋詞後該項目仍維持已選取。
+5. **維持既有「未確認即返回」回傳 `null` 的既有契約**（`/superpowers:requesting-code-review` 審查 Important #2；已用原始碼核對確認 `reader_settings_sheet.dart:898/904/910/912` 呼叫端已有 `if (targets == null || targets.isEmpty) return;` 既有防呆，屬既有契約而非新增功能）：使用者未點擊「確定」、直接以返回鍵/系統手勢離開畫面時，一律回傳 `null`；本次重構（尤其單選模式從「點擊即觸發」改為「選取＋確定」）須確保這條既有回傳路徑不被破壞。
+6. **搜尋列與軟體鍵盤的版面適配**（`/superpowers:requesting-code-review` 審查 Minor #3）：`GridView` 以 `Expanded` 包裹，並確認 `Scaffold.resizeToAvoidBottomInset`（預設 `true`）正常運作，避免搜尋 `TextField` 取得焦點、軟體鍵盤彈出時畫面溢位（`RenderFlex overflowed`）。
+
+**單元測試要求：**
+- Grid 正確顯示書籍數量與封面（有／無 `coverPath` 兩種情境）。
+- 單選模式：點擊書籍項目只反白/選取，不立即關閉畫面；「確定」按鈕未選取時停用，選取後啟用；點擊「確定」後正確回傳 `[book.id]`。
+- 單選/多選模式：未點擊「確定」、直接返回時，`onRequestBookPicker` 呼叫結果為 `null`（回歸測試，確認既有呼叫端防呆邏輯不受本次重構影響）。
+- 多選模式：既有選取/確定邏輯回歸測試（改為 Grid 呈現後行為不變）。
+- 搜尋：輸入書名子字串／作者子字串皆可正確篩選；查無符合結果時顯示對應提示文字；清空搜尋詞後清單恢復完整。
+- 多選模式下，篩選隱藏已選取項目後清空搜尋詞，該項目選取狀態仍保留。
+
+**驗收標準：** 選擇書籍畫面以格線＋封面圖呈現；單選與多選皆需經由 Radio/Checkbox 選取＋右上角「確定」按鈕才會關閉畫面，不再有「點擊即觸發」的零確認行為；未確認即返回時不觸發任何複製/覆寫；可透過搜尋列即時依書名/作者篩選書籍，軟體鍵盤彈出時版面不溢位；`flutter analyze` 乾淨、`flutter test` 全數通過、零回歸。
+
+---
+
 ## Issue 4：檢討「設定面板草稿具現化」原則是否意外覆寫書本原生 CSS 樣式
 
 **Status:** ✅ 已完成並合併回 `main`（PR [#149](https://git.jigong.org/huthief/elinkBook/pulls/149)，分支 `epic-28-issue4`，3 個 commit：資料層修正＋UI 圖示/重置按鈕＋審查回應文件補述）。人類決定採用下方**方向 3**，範圍收斂為真正受影響的 5 個欄位（`fontSize`／`fontWeight`／`lineHeight`／`paragraphSpacing`／`letterSpacing`）——上/下/左/右邊界 4 個欄位經查證後排除（`main.js` 用 `view.renderer.setAttribute()` 套用、非 CSS 注入，屬 App 自身版面留白設定，與書本原生樣式無關）；「原樣式」提示採圖示（`Icons.block`）而非即時查詢書本實際渲染值（技術上需 JS 橋接 `getComputedStyle()`＋跨單位換算，複雜度與不確定性高，人類確認捨棄）。程式碼審查（本機審查報告，依專案慣例不進版控）結論為可以合併——0 Critical／0 Important／2 Minor（其一為「預設集套用時整列覆寫會連帶清空未覆寫欄位」的跨 Issue 3／4 行為說明，已補上 dartdoc 記錄；其二為圖示視覺效果尚待真機/模擬器目視確認，非阻塞）。全專案 `flutter test` 1276 項與 `flutter analyze` 零回歸通過。完整實作計畫見 `plans/plan-issue-4.md`。
