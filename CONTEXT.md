@@ -49,11 +49,11 @@ _Avoid_: 雙頁顯示、兩頁模式、分頁模式
 _Avoid_: 跨頁組、頁面組
 
 **固定版面（Fixed-Layout, FXL）**：
-EPUB 的一種排版形式，每頁有固定尺寸（寬×高），內容不隨螢幕大小重排——常見於漫畫、童書、食譜。與「流式（Reflowable）」互斥。指排版形式本身，偵測時機/機制見「引擎分派判斷」（開書前）與 `EpubLayoutInfo.isFixedLayout`（開書後 Readium 執行期回報，僅用於已選定 Readium 路徑時的內部狀態，不決定引擎選擇）。
-_Avoid_: 固定排版、定版式
+書籍的一種排版形式，每頁有固定尺寸（寬×高），內容不隨螢幕大小重排——常見於漫畫、童書、食譜。與「流式（Reflowable）」互斥。原僅描述 EPUB，`epic-11-multi-format-reader` 起廣義化為跨格式通用概念（見 ADR 0023）：EPUB／KF8(AZW3) 依書本 metadata 判斷可能為固定版面或流式；**CBZ 恆為固定版面**（漫畫圖像無流式變體）；TXT／MD 匯入時合成為 EPUB 相容結構後恆為流式（`isFixedLayout = false`，見「合成書籍結構」）；PDF 有獨立的頁面/縮放概念，不套用此旗標（`isFixedLayout` 恆為 `null`）。偵測時機/機制見「引擎分派判斷」（開書前）與 `EpubLayoutInfo.isFixedLayout`（開書後 Readium 執行期回報，僅用於已選定 Readium 路徑時的內部狀態，不決定引擎選擇——僅適用於 EPUB）。
+_Avoid_: 固定排版、定版式、EPUB FXL（`epic-11` 起不再是 EPUB 專屬概念）
 
 **引擎分派判斷（Engine Dispatch Detection）**：
-決定一本 EPUB 該用什麼 UI 版面語意（FXL → 單頁/雙頁模式；流式 → 連續捲動）的**開書前**判斷，結果快取於 `Book.isFixedLayout`（`app/lib/library/models/book.dart:50`，nullable bool，`null` 代表既有書籍尚未判斷過）。判斷來源為 `extractMetadata`（匯入時）或 `detectAndCacheEpubLayout`/`detectEpubLayout`（既有書籍首次開書時補判斷）這兩個原生 channel（讀取 EPUB OPF `rendition:layout` 屬性）。自 ADR 0017 起，EPUB 一律建構 `FoliateEpubReaderView`，不再依此判斷分流到不同 widget——此判斷僅影響 UI 版面參數（單頁/雙頁），不決定引擎選擇。與 `EpubLayoutInfo.isFixedLayout`（開書後才回報的執行期狀態）是兩個不同概念、互不影響——見 `book.dart:44-49` 既有註解。少數漫畫 EPUB 因來源檔案 metadata 不完整/不規範，此判斷可能誤判為流式，見「人工版面覆蓋」。
+決定一本書籍該用什麼 UI 版面語意（固定版面 → 單頁/雙頁模式；流式 → 連續捲動）的**開書前**判斷，結果快取於 `Book.isFixedLayout`（`app/lib/library/models/book.dart:50`，nullable bool，`null` 代表既有書籍尚未判斷過，或格式本身不適用如 PDF）。原僅涵蓋 EPUB，判斷來源為 `extractMetadata`（匯入時）或 `detectAndCacheEpubLayout`/`detectEpubLayout`（既有書籍首次開書時補判斷）這兩個原生 channel（讀取 EPUB OPF `rendition:layout` 屬性）；`epic-11-multi-format-reader` 起同一欄位廣義套用至 KF8(AZW3)（比照 EPUB 判斷 metadata）、CBZ（恆為 `true`，判斷本身是常數而非偵測）——TXT／MD 因匯入時已合成為流式的 EPUB 相容結構，寫入時即為已知結果（`false`），不需要獨立判斷（見 ADR 0023）。自 ADR 0017 起，EPUB 一律建構 `FoliateEpubReaderView`，不再依此判斷分流到不同 widget——此判斷僅影響 UI 版面參數（單頁/雙頁），不決定引擎選擇。與 `EpubLayoutInfo.isFixedLayout`（開書後才回報的執行期狀態，僅適用於 EPUB）是兩個不同概念、互不影響——見 `book.dart:44-49` 既有註解。少數漫畫 EPUB 因來源檔案 metadata 不完整/不規範，此判斷可能誤判為流式，見「人工版面覆蓋」。
 _Avoid_: FXL 偵測、版面偵測（皆容易與 `EpubLayoutInfo` 執行期狀態混淆）
 
 **人工版面覆蓋（Manual Engine Override）**：
@@ -156,4 +156,12 @@ _Avoid_: 上傳字型（動詞誤用成獨立概念）、外部字型（未點�
 **閱讀預設值（Reading Defaults）**：
 `epic-14-system-settings` 新增的 `SettingsScreen` 子畫面，集中呈現四項全域預設值（見「全域預設值」詞條）：音量鍵翻頁開關（FR-36）、螢幕方向 5 選一（FR-37）、翻頁模式 2 選一（FR-38）、全螢幕顯示開關（FR-42）。純粹是 UI 呈現層的分組容器，四項底層資料各自獨立存於 `GlobalReaderPrefs`，不是新的資料模型。
 _Avoid_: 系統偏好、全域設定畫面（後者容易與「設定」App 本身混淆）
+
+**Foliate 格式（Foliate-Rendered Formats）**：
+`epic-11-multi-format-reader` 起，泛指所有透過 `foliate-js` Web 引擎渲染、共用同一個泛化後 widget（原 `FoliateEpubReaderView`，改名 `FoliateReaderView`，見 ADR 0023）與其排版/劃線/書籤/CFI 定位機制的書籍格式集合：EPUB（流式與固定版面）、KF8(AZW3)、CBZ、TXT／MD（皆先轉為「合成書籍結構」再餵入）。與獨立走 `PdfReaderView`（PDFium FFI）的 PDF 格式相對，兩者是 `ReaderScreen` 僅有的兩條原生渲染分派路徑。
+_Avoid_: 統一格式（未點出「透過 foliate-js 渲染」這個關鍵限定範圍——PDF 也屬於格式擴充的一員但不屬於此分類）
+
+**合成書籍結構（Synthesized Book Structure）**：
+`epic-11-multi-format-reader` 引入，TXT／MD 匯入時把原始檔案轉換為一份 EPUB／XHTML 相容結構的衍生檔案，存於 App 私有目錄；`Book.filePath` 之後指向此衍生檔案，原始檔案僅於匯入當下讀取一次、之後不再參照（與「`coverPath` 一律是本機複本」的既有匯入慣例同源）。合成結構恆為流式（`isFixedLayout = false`），供泛化後的 `FoliateReaderView` 直接渲染，取代 `epic-11` 原案「自訂輕量排版引擎」的技術路線（原案已作廢，見 ADR 0023）。
+_Avoid_: TXT/MD 轉檔（未點出「匯入時一次性、`filePath` 改指向合成檔」這個關鍵機制）
 
