@@ -101,7 +101,7 @@
 
 ## Issue 5：版面設定畫面 Tab 化重構（`ReaderSettingsSheet`）
 
-**Status:** `ready-for-agent`
+**Status:** ✅ 已完成並合併回 `main`（PR [#150](https://git.jigong.org/huthief/elinkBook/pulls/150)，分支 `epic-28-issue-5`，3 個 commit：Tab 化重構本體＋間接測試修正＋審查回應修正）。程式碼審查（`reviews/review-issue-5.md`，依專案慣例不進版控）結論為可以合併——0 Critical／2 Important／3 Minor，2 項 Important 已修正並重新驗證通過（一則測試對邊界欄位的斷言原本因頁籤未掛載而巧合通過，補上真正的頁籤切換；`NeverScrollableScrollPhysics` 與「頁籤不得抽成獨立 StatefulWidget」兩項不可逆技術決策補上行內註解，比照專案既有慣例）。全專案 `flutter test` 1280 項與 `flutter analyze` 零回歸通過。
 
 **依賴：** 無，可立即開始（與 Issue 6 互相獨立，可平行推進）
 
