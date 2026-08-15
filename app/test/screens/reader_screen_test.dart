@@ -445,6 +445,7 @@ void main() {
       await tester.tap(find.byKey(const Key('reader_foliate_settings_button')));
       await tester.pumpAndSettle();
 
+      await switchToTab(tester, '版面呈現');
       await tester.tap(
         find.byKey(const Key('reader_settings_writing_mode_vertical')),
       );
@@ -455,6 +456,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      await switchToTab(tester, '邊界首尾');
       await tester.tap(find.byKey(const Key('reader_settings_show_footer')));
       await tester.pumpAndSettle();
 
@@ -6628,6 +6630,7 @@ void main() {
       await tester
           .tap(find.byKey(const Key('reader_foliate_settings_button')));
       await tester.pumpAndSettle();
+      await switchToTab(tester, '設定喜好');
       await tester.ensureVisible(
           find.byKey(const Key('reader_settings_save_as_preset')));
       await tester
@@ -6663,6 +6666,7 @@ void main() {
       await tester
           .tap(find.byKey(const Key('reader_foliate_settings_button')));
       await tester.pumpAndSettle();
+      await switchToTab(tester, '設定喜好');
       await tester.ensureVisible(
           find.byKey(const Key('reader_settings_save_as_preset')));
       await tester
@@ -6706,6 +6710,7 @@ void main() {
       await tester
           .tap(find.byKey(const Key('reader_foliate_settings_button')));
       await tester.pumpAndSettle();
+      await switchToTab(tester, '設定喜好');
       await tester.ensureVisible(find
           .byKey(const Key('reader_settings_preset_slot_0_apply_current')));
       await tester.tap(
@@ -6742,6 +6747,7 @@ void main() {
       await tester
           .tap(find.byKey(const Key('reader_foliate_settings_button')));
       await tester.pumpAndSettle();
+      await switchToTab(tester, '設定喜好');
       await tester.ensureVisible(
           find.byKey(const Key('reader_settings_preset_slot_0_apply_others')));
       await tester.tap(
@@ -6784,6 +6790,7 @@ void main() {
       await tester
           .tap(find.byKey(const Key('reader_foliate_settings_button')));
       await tester.pumpAndSettle();
+      await switchToTab(tester, '設定喜好');
       await tester.ensureVisible(
           find.byKey(const Key('reader_settings_preset_slot_0_delete')));
       await tester
@@ -6812,6 +6819,7 @@ void main() {
       await tester
           .tap(find.byKey(const Key('reader_foliate_settings_button')));
       await tester.pumpAndSettle();
+      await switchToTab(tester, '設定喜好');
       await tester.ensureVisible(
           find.byKey(const Key('reader_settings_preset_slot_0_delete')));
       await tester
@@ -6839,6 +6847,7 @@ void main() {
       await tester
           .tap(find.byKey(const Key('reader_foliate_settings_button')));
       await tester.pumpAndSettle();
+      await switchToTab(tester, '設定喜好');
       await tester.ensureVisible(
           find.byKey(const Key('reader_settings_copy_from_book_current')));
       await tester
@@ -6863,4 +6872,13 @@ void main() {
     // 還原 cacheBookForServing 為原始實作，避免污染其他測試檔
     cacheBookForServing = originalCacheBookForServing;
   });
+}
+
+/// 點擊 `TabBar` 上文字為 [tabLabel] 的頁籤並等待切換動畫完成
+/// （epic-28-reader-settings-enhancements Issue 5，`ReaderSettingsSheet` 的
+/// 4 個頁籤）。與 `reader_settings_sheet_test.dart` 內同名 helper 邏輯相同，
+/// 因測試檔互不 import，各自維護一份。
+Future<void> switchToTab(WidgetTester tester, String tabLabel) async {
+  await tester.tap(find.widgetWithText(Tab, tabLabel));
+  await tester.pumpAndSettle();
 }

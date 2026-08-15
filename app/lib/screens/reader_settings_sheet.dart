@@ -214,7 +214,6 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   Widget build(BuildContext context) {
     return SafeArea(
       child: Column(
-        mainAxisSize: MainAxisSize.min,
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 8, 0),
@@ -234,219 +233,305 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
               ],
             ),
           ),
-          Flexible(
-            child: ListView(
-              shrinkWrap: true,
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              children: [
-                _buildFontFamilyDropdown(),
-                _buildSliderRow(
-                  keyPrefix: 'reader_settings_font_size',
-                  label: '字型大小',
-                  value: _fontSize,
-                  min: 12,
-                  max: 80,
-                  step: 1,
-                  displayValue: _fontSize.round().toString(),
-                  isOverridden: _fontSizeOverridden,
-                  onReset: () => setState(() {
-                    _fontSizeOverridden = false;
-                    _fontSize = _defaultFontSize;
-                    _notifyChanged();
-                  }),
-                  onChanged: (v) => setState(() {
-                    _fontSize = v;
-                    _fontSizeOverridden = true;
-                    _notifyChanged();
-                  }),
-                ),
-                _buildSliderRow(
-                  keyPrefix: 'reader_settings_font_weight',
-                  label: '字型粗細',
-                  value: _fontWeightMultiplier * 400,
-                  min: 300,
-                  max: 900,
-                  step: 100,
-                  displayValue: (_fontWeightMultiplier * 400).round().toString(),
-                  isOverridden: _fontWeightOverridden,
-                  onReset: () => setState(() {
-                    _fontWeightOverridden = false;
-                    _fontWeightMultiplier = _defaultFontWeightMultiplier;
-                    _notifyChanged();
-                  }),
-                  onChanged: (v) => setState(() {
-                    _fontWeightMultiplier = v / 400;
-                    _fontWeightOverridden = true;
-                    _notifyChanged();
-                  }),
-                ),
-                _buildSliderRow(
-                  keyPrefix: 'reader_settings_line_height',
-                  label: '行高',
-                  value: _lineHeight,
-                  min: 0,
-                  max: 3,
-                  step: 0.1,
-                  displayValue: _lineHeight.toStringAsFixed(1),
-                  isOverridden: _lineHeightOverridden,
-                  onReset: () => setState(() {
-                    _lineHeightOverridden = false;
-                    _lineHeight = _defaultLineHeight;
-                    _notifyChanged();
-                  }),
-                  onChanged: (v) => setState(() {
-                    _lineHeight = double.parse(v.toStringAsFixed(1));
-                    _lineHeightOverridden = true;
-                    _notifyChanged();
-                  }),
-                ),
-                _buildSliderRow(
-                  keyPrefix: 'reader_settings_paragraph_spacing',
-                  label: '段落間距',
-                  value: _paragraphSpacing,
-                  min: 0,
-                  max: 40,
-                  step: 1,
-                  displayValue: _paragraphSpacing.round().toString(),
-                  isOverridden: _paragraphSpacingOverridden,
-                  onReset: () => setState(() {
-                    _paragraphSpacingOverridden = false;
-                    _paragraphSpacing = _defaultParagraphSpacing;
-                    _notifyChanged();
-                  }),
-                  onChanged: (v) => setState(() {
-                    _paragraphSpacing = v;
-                    _paragraphSpacingOverridden = true;
-                    _notifyChanged();
-                  }),
-                ),
-                _buildSliderRow(
-                  keyPrefix: 'reader_settings_letter_spacing',
-                  label: '字距',
-                  value: _letterSpacing,
-                  min: -0.05,
-                  max: 1,
-                  step: 0.01,
-                  displayValue: '${_letterSpacing.toStringAsFixed(2)}em',
-                  isOverridden: _letterSpacingOverridden,
-                  onReset: () => setState(() {
-                    _letterSpacingOverridden = false;
-                    _letterSpacing = _defaultLetterSpacing;
-                    _notifyChanged();
-                  }),
-                  onChanged: (v) => setState(() {
-                    _letterSpacing = double.parse(v.toStringAsFixed(2));
-                    _letterSpacingOverridden = true;
-                    _notifyChanged();
-                  }),
-                ),
-                _buildSliderRow(
-                  keyPrefix: 'reader_settings_margin_top',
-                  label: '上邊界',
-                  value: _marginTop,
-                  min: 0,
-                  max: 120,
-                  step: 2,
-                  displayValue: _marginTop.round().toString(),
-                  onChanged: (v) => setState(() {
-                    _marginTop = v;
-                    _notifyChanged();
-                  }),
-                ),
-                _buildSliderRow(
-                  keyPrefix: 'reader_settings_margin_bottom',
-                  label: '下邊界',
-                  value: _marginBottom,
-                  min: 0,
-                  max: 120,
-                  step: 2,
-                  displayValue: _marginBottom.round().toString(),
-                  onChanged: (v) => setState(() {
-                    _marginBottom = v;
-                    _notifyChanged();
-                  }),
-                ),
-                _buildSliderRow(
-                  keyPrefix: 'reader_settings_margin_left',
-                  label: '左邊界',
-                  value: _marginLeft,
-                  min: 0,
-                  max: 120,
-                  step: 2,
-                  displayValue: _marginLeft.round().toString(),
-                  onChanged: (v) => setState(() {
-                    _marginLeft = v;
-                    _notifyChanged();
-                  }),
-                ),
-                _buildSliderRow(
-                  keyPrefix: 'reader_settings_margin_right',
-                  label: '右邊界',
-                  value: _marginRight,
-                  min: 0,
-                  max: 120,
-                  step: 2,
-                  displayValue: _marginRight.round().toString(),
-                  onChanged: (v) => setState(() {
-                    _marginRight = v;
-                    _notifyChanged();
-                  }),
-                ),
-                const SizedBox(height: 12),
-                _buildTextAlignRow(),
-                const SizedBox(height: 12),
-                SwitchListTile(
-                  key: const Key('reader_settings_disable_book_css'),
-                  title: const Text('停用書本 CSS'),
-                  value: !_publisherStyles,
-                  onChanged: (v) => setState(() {
-                    _publisherStyles = !v;
-                    _notifyChanged();
-                  }),
-                ),
-                const SizedBox(height: 12),
-                SwitchListTile(
-                  key: const Key('reader_settings_show_header'),
-                  title: const Text('顯示頁首'),
-                  value: _showHeader,
-                  onChanged: (v) => setState(() {
-                    _showHeader = v;
-                    _notifyChanged();
-                  }),
-                ),
-                SwitchListTile(
-                  key: const Key('reader_settings_show_footer'),
-                  title: const Text('顯示頁尾'),
-                  value: _showFooter,
-                  onChanged: (v) => setState(() {
-                    _showFooter = v;
-                    _notifyChanged();
-                  }),
-                ),
-                SwitchListTile(
-                  key: const Key('reader_settings_fullscreen'),
-                  title: const Text('全螢幕模式'),
-                  value: _fullscreen,
-                  onChanged: (v) => setState(() {
-                    _fullscreen = v;
-                    _notifyChanged();
-                  }),
-                ),
-                const SizedBox(height: 12),
-                _buildColumnModeRow(),
-                const SizedBox(height: 12),
-                _buildWritingModeOverrideRow(),
-                const SizedBox(height: 12),
-                _buildScreenOrientationOverrideRow(),
-                const SizedBox(height: 12),
-                _buildPageTurnModeOverrideRow(),
-                const SizedBox(height: 12),
-                _buildLayoutPresetSection(),
-              ],
+          Expanded(
+            child: DefaultTabController(
+              length: 4,
+              child: Column(
+                children: [
+                  const TabBar(
+                    key: Key('reader_settings_tab_bar'),
+                    tabs: [
+                      Tab(
+                        key: Key('reader_settings_tab_text_content'),
+                        text: '文字內容',
+                      ),
+                      Tab(
+                        key: Key('reader_settings_tab_boundary'),
+                        text: '邊界首尾',
+                      ),
+                      Tab(
+                        key: Key('reader_settings_tab_presentation'),
+                        text: '版面呈現',
+                      ),
+                      Tab(
+                        key: Key('reader_settings_tab_preferences'),
+                        text: '設定喜好',
+                      ),
+                    ],
+                  ),
+                  Expanded(
+                    child: TabBarView(
+                      // 【不可逆的技術決策】必須為 NeverScrollableScrollPhysics，
+                      // 只能點擊 TabBar 切換——「文字內容」／「邊界首尾」頁籤內
+                      // 各有數個橫向拖曳型 Slider，TabBarView 底層 PageView 的
+                      // 預設水平滑動手勢會與這些 Slider 搶手勢競技場，導致調整
+                      // 滑桿時意外切換頁籤。**注意**：這與被借鏡的既有先例
+                      // TocBottomSheet（app/lib/screens/toc_bottom_sheet.dart）
+                      // 不同——該處頁籤內容是章節清單/縮圖格/搜尋結果，沒有
+                      // 橫向拖曳型控制項，不需要這道防護，不可為了「跟先例一致」
+                      // 而移除本行（epic-28-reader-settings-enhancements Issue 5
+                      // 審查發現，詳見 design.md「2026-08-15 追加」審查回應）。
+                      physics: const NeverScrollableScrollPhysics(),
+                      children: [
+                        _buildTextContentTab(),
+                        _buildBoundaryTab(),
+                        _buildPresentationTab(),
+                        _buildPreferencesTab(),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
       ),
+    );
+  }
+
+  /// 【不可逆的技術決策】以下 4 個 `_buildXxxTab()` 方法（文字內容／邊界首尾／
+  /// 版面呈現／設定喜好）僅是本 State 的 `build()` 展示分支，一律不得抽成獨立
+  /// `StatefulWidget`。Issue 4 新增的 5 個「是否已覆寫」旗標（`_fontSizeOverridden`
+  /// 等）與其餘全部草稿狀態皆留在 `_ReaderSettingsSheetState` 根層級，這些方法
+  /// 只是直接讀寫同一組欄位——若日後為了重用或拆檔而把某個頁籤抽成獨立
+  /// StatefulWidget，該旗標會變成兩份不同 State 各自管理，Tab 切換時容易被
+  /// 意外重建/遺失（epic-28-reader-settings-enhancements Issue 5 審查，詳見
+  /// design.md「2026-08-15 追加」審查回應 Important #3）。
+  Widget _buildTextContentTab() {
+    return ListView(
+      key: const Key('reader_settings_tab_text_content_list'),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+      children: [
+        _buildFontFamilyDropdown(),
+        _buildSliderRow(
+          keyPrefix: 'reader_settings_font_size',
+          label: '字型大小',
+          value: _fontSize,
+          min: 12,
+          max: 80,
+          step: 1,
+          displayValue: _fontSize.round().toString(),
+          isOverridden: _fontSizeOverridden,
+          onReset: () => setState(() {
+            _fontSizeOverridden = false;
+            _fontSize = _defaultFontSize;
+            _notifyChanged();
+          }),
+          onChanged: (v) => setState(() {
+            _fontSize = v;
+            _fontSizeOverridden = true;
+            _notifyChanged();
+          }),
+        ),
+        _buildSliderRow(
+          keyPrefix: 'reader_settings_font_weight',
+          label: '字型粗細',
+          value: _fontWeightMultiplier * 400,
+          min: 300,
+          max: 900,
+          step: 100,
+          displayValue: (_fontWeightMultiplier * 400).round().toString(),
+          isOverridden: _fontWeightOverridden,
+          onReset: () => setState(() {
+            _fontWeightOverridden = false;
+            _fontWeightMultiplier = _defaultFontWeightMultiplier;
+            _notifyChanged();
+          }),
+          onChanged: (v) => setState(() {
+            _fontWeightMultiplier = v / 400;
+            _fontWeightOverridden = true;
+            _notifyChanged();
+          }),
+        ),
+        _buildSliderRow(
+          keyPrefix: 'reader_settings_line_height',
+          label: '行高',
+          value: _lineHeight,
+          min: 0,
+          max: 3,
+          step: 0.1,
+          displayValue: _lineHeight.toStringAsFixed(1),
+          isOverridden: _lineHeightOverridden,
+          onReset: () => setState(() {
+            _lineHeightOverridden = false;
+            _lineHeight = _defaultLineHeight;
+            _notifyChanged();
+          }),
+          onChanged: (v) => setState(() {
+            _lineHeight = double.parse(v.toStringAsFixed(1));
+            _lineHeightOverridden = true;
+            _notifyChanged();
+          }),
+        ),
+        _buildSliderRow(
+          keyPrefix: 'reader_settings_paragraph_spacing',
+          label: '段落間距',
+          value: _paragraphSpacing,
+          min: 0,
+          max: 40,
+          step: 1,
+          displayValue: _paragraphSpacing.round().toString(),
+          isOverridden: _paragraphSpacingOverridden,
+          onReset: () => setState(() {
+            _paragraphSpacingOverridden = false;
+            _paragraphSpacing = _defaultParagraphSpacing;
+            _notifyChanged();
+          }),
+          onChanged: (v) => setState(() {
+            _paragraphSpacing = v;
+            _paragraphSpacingOverridden = true;
+            _notifyChanged();
+          }),
+        ),
+        _buildSliderRow(
+          keyPrefix: 'reader_settings_letter_spacing',
+          label: '字距',
+          value: _letterSpacing,
+          min: -0.05,
+          max: 1,
+          step: 0.01,
+          displayValue: '${_letterSpacing.toStringAsFixed(2)}em',
+          isOverridden: _letterSpacingOverridden,
+          onReset: () => setState(() {
+            _letterSpacingOverridden = false;
+            _letterSpacing = _defaultLetterSpacing;
+            _notifyChanged();
+          }),
+          onChanged: (v) => setState(() {
+            _letterSpacing = double.parse(v.toStringAsFixed(2));
+            _letterSpacingOverridden = true;
+            _notifyChanged();
+          }),
+        ),
+        const SizedBox(height: 12),
+        SwitchListTile(
+          key: const Key('reader_settings_disable_book_css'),
+          title: const Text('停用書本 CSS'),
+          value: !_publisherStyles,
+          onChanged: (v) => setState(() {
+            _publisherStyles = !v;
+            _notifyChanged();
+          }),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBoundaryTab() {
+    return ListView(
+      key: const Key('reader_settings_tab_boundary_list'),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+      children: [
+        _buildSliderRow(
+          keyPrefix: 'reader_settings_margin_top',
+          label: '上邊界',
+          value: _marginTop,
+          min: 0,
+          max: 120,
+          step: 2,
+          displayValue: _marginTop.round().toString(),
+          onChanged: (v) => setState(() {
+            _marginTop = v;
+            _notifyChanged();
+          }),
+        ),
+        _buildSliderRow(
+          keyPrefix: 'reader_settings_margin_bottom',
+          label: '下邊界',
+          value: _marginBottom,
+          min: 0,
+          max: 120,
+          step: 2,
+          displayValue: _marginBottom.round().toString(),
+          onChanged: (v) => setState(() {
+            _marginBottom = v;
+            _notifyChanged();
+          }),
+        ),
+        _buildSliderRow(
+          keyPrefix: 'reader_settings_margin_left',
+          label: '左邊界',
+          value: _marginLeft,
+          min: 0,
+          max: 120,
+          step: 2,
+          displayValue: _marginLeft.round().toString(),
+          onChanged: (v) => setState(() {
+            _marginLeft = v;
+            _notifyChanged();
+          }),
+        ),
+        _buildSliderRow(
+          keyPrefix: 'reader_settings_margin_right',
+          label: '右邊界',
+          value: _marginRight,
+          min: 0,
+          max: 120,
+          step: 2,
+          displayValue: _marginRight.round().toString(),
+          onChanged: (v) => setState(() {
+            _marginRight = v;
+            _notifyChanged();
+          }),
+        ),
+        const SizedBox(height: 12),
+        SwitchListTile(
+          key: const Key('reader_settings_show_header'),
+          title: const Text('顯示頁首'),
+          value: _showHeader,
+          onChanged: (v) => setState(() {
+            _showHeader = v;
+            _notifyChanged();
+          }),
+        ),
+        SwitchListTile(
+          key: const Key('reader_settings_show_footer'),
+          title: const Text('顯示頁尾'),
+          value: _showFooter,
+          onChanged: (v) => setState(() {
+            _showFooter = v;
+            _notifyChanged();
+          }),
+        ),
+        const SizedBox(height: 12),
+        _buildTextAlignRow(),
+      ],
+    );
+  }
+
+  Widget _buildPresentationTab() {
+    return ListView(
+      key: const Key('reader_settings_tab_presentation_list'),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+      children: [
+        SwitchListTile(
+          key: const Key('reader_settings_fullscreen'),
+          title: const Text('全螢幕模式'),
+          value: _fullscreen,
+          onChanged: (v) => setState(() {
+            _fullscreen = v;
+            _notifyChanged();
+          }),
+        ),
+        const SizedBox(height: 8),
+        _buildColumnModeRow(),
+        const SizedBox(height: 8),
+        _buildWritingModeOverrideRow(),
+        const SizedBox(height: 8),
+        _buildScreenOrientationOverrideRow(),
+        const SizedBox(height: 8),
+        _buildPageTurnModeOverrideRow(),
+      ],
+    );
+  }
+
+  Widget _buildPreferencesTab() {
+    return ListView(
+      key: const Key('reader_settings_tab_preferences_list'),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+      children: [
+        _buildLayoutPresetSection(),
+      ],
     );
   }
 
@@ -463,6 +548,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
               IconButton(
                 key: const Key('reader_settings_column_mode_auto'),
                 icon: const Icon(Icons.auto_awesome),
+                visualDensity: VisualDensity.compact,
                 tooltip: '自動',
                 color: _columnMode == ColumnMode.auto
                     ? Theme.of(context).colorScheme.primary
@@ -475,6 +561,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
               IconButton(
                 key: const Key('reader_settings_column_mode_single'),
                 icon: const Icon(Icons.crop_portrait),
+                visualDensity: VisualDensity.compact,
                 tooltip: '單欄',
                 color: _columnMode == ColumnMode.single
                     ? Theme.of(context).colorScheme.primary
@@ -487,6 +574,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
               IconButton(
                 key: const Key('reader_settings_column_mode_double'),
                 icon: const Icon(Icons.book),
+                visualDensity: VisualDensity.compact,
                 tooltip: '雙欄',
                 color: _columnMode == ColumnMode.double
                     ? Theme.of(context).colorScheme.primary
@@ -711,6 +799,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
             return IconButton(
               key: Key('reader_settings_writing_mode_$keySuffix'),
               icon: Icon(icon),
+              visualDensity: VisualDensity.compact,
               tooltip: tooltip,
               color: selected ? Theme.of(context).colorScheme.primary : null,
               onPressed: () => setState(() {
@@ -745,6 +834,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
             return IconButton(
               key: Key('reader_settings_page_turn_mode_$keySuffix'),
               icon: Icon(icon),
+              visualDensity: VisualDensity.compact,
               tooltip: tooltip,
               color: selected ? Theme.of(context).colorScheme.primary : null,
               onPressed: () => setState(() {
@@ -793,6 +883,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
               icon: angle == 0.0
                   ? iconWidget
                   : Transform.rotate(angle: angle, child: iconWidget),
+              visualDensity: VisualDensity.compact,
               tooltip: tooltip,
               color: selected ? Theme.of(context).colorScheme.primary : null,
               onPressed: () => setState(() {

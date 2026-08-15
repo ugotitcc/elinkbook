@@ -11,6 +11,87 @@ import 'package:elinkbook/reader/writing_mode.dart';
 import 'package:elinkbook/screens/reader_settings_sheet.dart';
 
 void main() {
+  testWidgets(
+      '4 個頁籤皆可切換，切換後對應欄位的既有 Key 可見、其餘頁籤內容不可見'
+      '（epic-28-reader-settings-enhancements Issue 5）',
+      (tester) async {
+    await _pumpSheet(tester, BookReaderPrefs.empty, _noopOnChanged);
+
+    // 預設應停在「文字內容」頁籤（index 0）。
+    expect(find.byKey(const Key('reader_settings_font_size_slider')),
+        findsOneWidget);
+    expect(find.byKey(const Key('reader_settings_margin_top_slider')),
+        findsNothing);
+
+    await switchToTab(tester, '邊界首尾');
+    expect(find.byKey(const Key('reader_settings_margin_top_slider')),
+        findsOneWidget);
+    expect(find.byKey(const Key('reader_settings_font_size_slider')),
+        findsNothing);
+
+    await switchToTab(tester, '版面呈現');
+    expect(
+        find.byKey(const Key('reader_settings_fullscreen')), findsOneWidget);
+    expect(find.byKey(const Key('reader_settings_margin_top_slider')),
+        findsNothing);
+
+    await switchToTab(tester, '設定喜好');
+    expect(find.byKey(const Key('reader_settings_save_as_preset')),
+        findsOneWidget);
+    expect(
+        find.byKey(const Key('reader_settings_fullscreen')), findsNothing);
+
+    await switchToTab(tester, '文字內容');
+    expect(find.byKey(const Key('reader_settings_font_size_slider')),
+        findsOneWidget);
+    expect(find.byKey(const Key('reader_settings_save_as_preset')),
+        findsNothing);
+  });
+
+  testWidgets(
+      '在「文字內容」頁籤內對 Slider 做橫向拖曳手勢，頁籤不會被意外切換'
+      '（epic-28-reader-settings-enhancements Issue 5：TabBarView 需設定 '
+      'NeverScrollableScrollPhysics，避免與 Slider 搶手勢競技場）',
+      (tester) async {
+    await _pumpSheet(tester, BookReaderPrefs.empty, _noopOnChanged);
+
+    final tabController = DefaultTabController.of(
+      tester.element(find.byKey(const Key('reader_settings_font_size_slider'))),
+    );
+    expect(tabController.index, 0);
+
+    await tester.drag(
+      find.byKey(const Key('reader_settings_font_size_slider')),
+      const Offset(200, 0),
+    );
+    await tester.pump();
+
+    expect(tabController.index, 0,
+        reason: '對 Slider 的橫向拖曳應被 Slider 自己吃掉並調整數值，不應被 TabBarView '
+            '判定為切換頁籤手勢');
+  });
+
+  testWidgets(
+      '在「邊界首尾」頁籤內對邊界 Slider 做橫向拖曳手勢，頁籤不會被意外切換'
+      '（epic-28-reader-settings-enhancements Issue 5）',
+      (tester) async {
+    await _pumpSheet(tester, BookReaderPrefs.empty, _noopOnChanged);
+    await switchToTab(tester, '邊界首尾');
+
+    final tabController = DefaultTabController.of(
+      tester.element(find.byKey(const Key('reader_settings_margin_top_slider'))),
+    );
+    expect(tabController.index, 1);
+
+    await tester.drag(
+      find.byKey(const Key('reader_settings_margin_top_slider')),
+      const Offset(200, 0),
+    );
+    await tester.pump();
+
+    expect(tabController.index, 1);
+  });
+
   testWidgets('初始值正確反映傳入的 BookReaderPrefs', (tester) async {
     const prefs = BookReaderPrefs(
       fontFamily: 'SourceHanSerifTC',
@@ -29,6 +110,7 @@ void main() {
 
     await _pumpSheet(tester, prefs, (_) {});
 
+    // 「文字內容」頁籤（預設）。
     expect(
       tester
           .widget<DropdownButton<String?>>(
@@ -73,6 +155,16 @@ void main() {
     );
     expect(
       tester
+          .widget<SwitchListTile>(
+              find.byKey(const Key('reader_settings_disable_book_css')))
+          .value,
+      true,
+    );
+
+    // 「邊界首尾」頁籤。
+    await switchToTab(tester, '邊界首尾');
+    expect(
+      tester
           .widget<Slider>(
               find.byKey(const Key('reader_settings_margin_top_slider')))
           .value,
@@ -99,18 +191,12 @@ void main() {
           .value,
       30.0,
     );
-    expect(
-      tester
-          .widget<SwitchListTile>(
-              find.byKey(const Key('reader_settings_disable_book_css')))
-          .value,
-      true,
-    );
   });
 
   testWidgets('任一欄位為 null 時，滑桿顯示原型範例預設值', (tester) async {
     await _pumpSheet(tester, BookReaderPrefs.empty, _noopOnChanged);
 
+    // 「文字內容」頁籤（預設）。
     expect(
       tester
           .widget<Slider>(
@@ -148,6 +234,16 @@ void main() {
     );
     expect(
       tester
+          .widget<SwitchListTile>(
+              find.byKey(const Key('reader_settings_disable_book_css')))
+          .value,
+      false,
+    );
+
+    // 「邊界首尾」頁籤。
+    await switchToTab(tester, '邊界首尾');
+    expect(
+      tester
           .widget<Slider>(
               find.byKey(const Key('reader_settings_margin_top_slider')))
           .value,
@@ -174,13 +270,6 @@ void main() {
           .value,
       24.0,
     );
-    expect(
-      tester
-          .widget<SwitchListTile>(
-              find.byKey(const Key('reader_settings_disable_book_css')))
-          .value,
-      false,
-    );
   });
 
   testWidgets(
@@ -193,6 +282,7 @@ void main() {
       BookReaderPrefs.empty,
       (prefs) => result = prefs,
     );
+    await switchToTab(tester, '邊界首尾');
 
     await tester.tap(find.byKey(const Key('reader_settings_show_header')));
     await tester.pump();
@@ -254,6 +344,10 @@ void main() {
           reason: '$keyPrefix 尚未覆寫，不應出現重置按鈕');
     }
 
+    // epic-28-reader-settings-enhancements Issue 5 審查：必須真的切到「邊界
+    // 首尾」頁籤才能驗證邊界欄位「不支援本機制」是設計使然，而非單純因為
+    // 該頁籤尚未被掛載而巧合通過。
+    await switchToTab(tester, '邊界首尾');
     for (final keyPrefix in [
       'reader_settings_margin_top',
       'reader_settings_margin_bottom',
@@ -404,6 +498,7 @@ void main() {
       const BookReaderPrefs(marginTop: 64, marginLeft: 24),
       (prefs) => result = prefs,
     );
+    await switchToTab(tester, '邊界首尾');
 
     await tester
         .tap(find.byKey(const Key('reader_settings_margin_top_increment')));
@@ -459,6 +554,7 @@ void main() {
       BookReaderPrefs.empty,
       (prefs) => result = prefs,
     );
+    await switchToTab(tester, '邊界首尾');
 
     await tester
         .tap(find.byKey(const Key('reader_settings_text_align_center')));
@@ -497,6 +593,7 @@ void main() {
       ),
       (prefs) => result = prefs,
     );
+    await switchToTab(tester, '邊界首尾');
 
     await tester
         .tap(find.byKey(const Key('reader_settings_text_align_justify')));
@@ -558,6 +655,7 @@ void main() {
       ),
       (prefs) => result = prefs,
     );
+    await switchToTab(tester, '版面呈現');
 
     await tester
         .tap(find.byKey(const Key('reader_settings_writing_mode_book')));
@@ -576,6 +674,7 @@ void main() {
       BookReaderPrefs.empty,
       (prefs) => result = prefs,
     );
+    await switchToTab(tester, '版面呈現');
 
     await tester.tap(
         find.byKey(const Key('reader_settings_writing_mode_vertical')));
@@ -593,6 +692,7 @@ void main() {
       BookReaderPrefs.empty,
       (prefs) => result = prefs,
     );
+    await switchToTab(tester, '版面呈現');
 
     await tester
         .tap(find.byKey(const Key('reader_settings_page_turn_mode_scroll')));
@@ -611,6 +711,7 @@ void main() {
       BookReaderPrefs.empty,
       (prefs) => result = prefs,
     );
+    await switchToTab(tester, '版面呈現');
 
     await tester.tap(
         find.byKey(const Key('reader_settings_screen_orientation_lock90')));
@@ -635,6 +736,7 @@ void main() {
       ),
       (prefs) => result = prefs,
     );
+    await switchToTab(tester, '版面呈現');
 
     await tester.tap(
         find.byKey(const Key('reader_settings_writing_mode_horizontal')));
@@ -650,6 +752,7 @@ void main() {
 
   testWidgets('頁首/頁尾開關初始值反映 prefs（未持久化時預設關閉）', (tester) async {
     await _pumpSheet(tester, BookReaderPrefs.empty, (_) {});
+    await switchToTab(tester, '邊界首尾');
 
     expect(
       tester
@@ -673,6 +776,7 @@ void main() {
       const BookReaderPrefs(showHeader: false),
       (_) {},
     );
+    await switchToTab(tester, '邊界首尾');
 
     expect(
       tester
@@ -687,6 +791,7 @@ void main() {
       (tester) async {
     BookReaderPrefs? result;
     await _pumpSheet(tester, const BookReaderPrefs(showHeader: true, showFooter: true), (prefs) => result = prefs);
+    await switchToTab(tester, '邊界首尾');
 
     await tester.tap(find.byKey(const Key('reader_settings_show_header')));
     await tester.pump();
@@ -700,6 +805,7 @@ void main() {
       (tester) async {
     BookReaderPrefs? result;
     await _pumpSheet(tester, const BookReaderPrefs(showHeader: true, showFooter: true), (prefs) => result = prefs);
+    await switchToTab(tester, '邊界首尾');
 
     await tester.tap(find.byKey(const Key('reader_settings_show_footer')));
     await tester.pump();
@@ -715,6 +821,7 @@ void main() {
       const BookReaderPrefs(fullscreen: true),
       (_) {},
     );
+    await switchToTab(tester, '版面呈現');
 
     expect(
       tester
@@ -729,6 +836,7 @@ void main() {
       (tester) async {
     BookReaderPrefs? result;
     await _pumpSheet(tester, const BookReaderPrefs(showHeader: true), (prefs) => result = prefs);
+    await switchToTab(tester, '版面呈現');
 
     await tester.tap(find.byKey(const Key('reader_settings_fullscreen')));
     await tester.pump();
@@ -742,6 +850,7 @@ void main() {
       (tester) async {
     BookReaderPrefs? result;
     await _pumpSheet(tester, BookReaderPrefs.empty, (prefs) => result = prefs);
+    await switchToTab(tester, '版面呈現');
 
     await tester.tap(find.byKey(const Key('reader_settings_column_mode_single')));
     await tester.pump();
@@ -760,6 +869,7 @@ void main() {
       ),
       (prefs) => result = prefs,
     );
+    await switchToTab(tester, '版面呈現');
 
     await tester.tap(find.byKey(const Key('reader_settings_column_mode_single')));
     await tester.pump();
@@ -771,6 +881,7 @@ void main() {
 
   testWidgets('columnMode 預設 auto 時，自動按鈕高亮、Slider 可見', (tester) async {
     await _pumpSheet(tester, BookReaderPrefs.empty, (_) {});
+    await switchToTab(tester, '版面呈現');
 
     // 自動按鈕存在且可見
     expect(find.byKey(const Key('reader_settings_column_mode_auto')), findsOneWidget);
@@ -784,6 +895,7 @@ void main() {
       const BookReaderPrefs(columnMode: ColumnMode.single),
       (_) {},
     );
+    await switchToTab(tester, '版面呈現');
 
     // Slider 不應存在
     expect(find.byKey(const Key('reader_settings_column_size_slider')), findsNothing);
@@ -795,6 +907,7 @@ void main() {
       const BookReaderPrefs(columnMode: ColumnMode.double),
       (_) {},
     );
+    await switchToTab(tester, '版面呈現');
 
     // Slider 不應存在
     expect(find.byKey(const Key('reader_settings_column_size_slider')), findsNothing);
@@ -825,6 +938,7 @@ void main() {
       const BookReaderPrefs(columnMode: ColumnMode.single),
       (prefs) => result = prefs,
     );
+    await switchToTab(tester, '版面呈現');
 
     // 切換到自動
     await tester.tap(find.byKey(const Key('reader_settings_column_mode_auto')));
@@ -842,6 +956,7 @@ void main() {
       ),
       (prefs) => result = prefs,
     );
+    await switchToTab(tester, '邊界首尾');
 
     await tester.tap(find.byKey(const Key('reader_settings_show_header')));
     await tester.pump();
@@ -889,7 +1004,11 @@ void main() {
         reason: '關閉列在 Column 頂端、ListView 之外，捲動內部 ListView 不應移動它的位置');
   });
 
-  testWidgets('內容小於可用高度時，Bottom Sheet 保持緊湊包裹（不撐滿刻意放大的可用高度）',
+  testWidgets(
+      '改用 Tab 化版面後，Bottom Sheet 一律撐到近全螢幕高度（不再依內容量縮小）'
+      '（epic-28-reader-settings-enhancements Issue 5：刻意的設計變更，比照 '
+      'TocBottomSheet 既有先例，讓 Expanded(TabBarView) 有界高度可用，取代舊版 '
+      '「內容小於可用高度時緊湊包裹」的 shrink-wrap 行為）',
       (tester) async {
     tester.view.physicalSize = const Size(800, 3000);
     tester.view.devicePixelRatio = 1.0;
@@ -901,9 +1020,11 @@ void main() {
     await _pumpModalSheet(tester, BookReaderPrefs.empty, (_) {});
 
     final sheetHeight = tester.getSize(find.byType(ReaderSettingsSheet)).height;
-    expect(sheetHeight, lessThan(2500),
+    expect(sheetHeight, greaterThan(2500),
         reason:
-            'mainAxisSize.min 應讓內容較短時 Sheet 緊湊包裹，不應撐滿刻意放大的可用高度 3000');
+            '改用 DefaultTabController + Expanded(TabBarView) 後，Sheet 應撐滿 '
+            'showModalBottomSheet(isScrollControlled: true) 提供的近全高上限，'
+            '不再像舊版 ListView(shrinkWrap: true) 那樣依內容量縮小');
   });
 
   testWidgets('字型選單合併顯示內建 5 款與傳入的自訂字型清單', (tester) async {
@@ -961,6 +1082,7 @@ void main() {
     );
     await _pumpSheet(tester, BookReaderPrefs.empty, _noopOnChanged,
         layoutPresets: [preset]);
+    await switchToTab(tester, '設定喜好');
 
     expect(find.byKey(const Key('reader_settings_preset_slot_0_label')),
         findsOneWidget);
@@ -980,6 +1102,7 @@ void main() {
       _noopOnChanged,
       onSaveAsPreset: (draft) => notified = draft,
     );
+    await switchToTab(tester, '設定喜好');
 
     await tester.ensureVisible(
         find.byKey(const Key('reader_settings_save_as_preset')));
@@ -1012,6 +1135,7 @@ void main() {
         appliedTargets = targetBookIds;
       },
     );
+    await switchToTab(tester, '設定喜好');
 
     await tester.ensureVisible(
         find.byKey(const Key('reader_settings_preset_slot_0_apply_current')));
@@ -1042,6 +1166,7 @@ void main() {
       onRequestBookPicker: ({required multiSelect}) async => ['b2', 'b3'],
       onApplyPreset: (p, {required targetBookIds}) => appliedTargets = targetBookIds,
     );
+    await switchToTab(tester, '設定喜好');
 
     await tester.ensureVisible(
         find.byKey(const Key('reader_settings_preset_slot_0_apply_others')));
@@ -1070,6 +1195,7 @@ void main() {
       onRequestBookPicker: ({required multiSelect}) async => null,
       onApplyPreset: (p, {required targetBookIds}) => applyCalled = true,
     );
+    await switchToTab(tester, '設定喜好');
 
     await tester.ensureVisible(
         find.byKey(const Key('reader_settings_preset_slot_0_apply_others')));
@@ -1096,6 +1222,7 @@ void main() {
       layoutPresets: [preset],
       onDeletePreset: (id) => deletedId = id,
     );
+    await switchToTab(tester, '設定喜好');
 
     await tester.ensureVisible(
         find.byKey(const Key('reader_settings_preset_slot_0_delete')));
@@ -1125,6 +1252,7 @@ void main() {
         appliedTargets = targetBookIds;
       },
     );
+    await switchToTab(tester, '設定喜好');
 
     await tester.ensureVisible(
         find.byKey(const Key('reader_settings_copy_from_book_current')));
@@ -1155,6 +1283,7 @@ void main() {
         appliedTargets = targetBookIds;
       },
     );
+    await switchToTab(tester, '設定喜好');
 
     await tester.ensureVisible(
         find.byKey(const Key('reader_settings_copy_from_book_others')));
@@ -1176,6 +1305,7 @@ void main() {
     // widget.layoutPresets（無內部草稿複本），故不需要額外 didUpdateWidget
     // 邏輯，重新 pumpWidget 同一個 widget tree 即可驗證。
     await _pumpSheet(tester, BookReaderPrefs.empty, _noopOnChanged);
+    await switchToTab(tester, '設定喜好');
     expect(find.byKey(const Key('reader_settings_preset_slot_0_empty')),
         findsOneWidget);
 
@@ -1188,9 +1318,47 @@ void main() {
     );
     await _pumpSheet(tester, BookReaderPrefs.empty, _noopOnChanged,
         layoutPresets: [preset]);
+    await switchToTab(tester, '設定喜好');
 
     expect(find.byKey(const Key('reader_settings_preset_slot_0_label')),
         findsOneWidget);
+  });
+
+  testWidgets(
+      '「版面呈現」頁籤內圖示列的 IconButton 皆使用緊湊視覺密度以節省垂直空間'
+      '（epic-28-reader-settings-enhancements Issue 5，視覺密度調整）',
+      (tester) async {
+    await _pumpSheet(tester, BookReaderPrefs.empty, _noopOnChanged);
+    await switchToTab(tester, '版面呈現');
+
+    expect(
+      tester
+          .widget<IconButton>(
+              find.byKey(const Key('reader_settings_column_mode_auto')))
+          .visualDensity,
+      VisualDensity.compact,
+    );
+    expect(
+      tester
+          .widget<IconButton>(
+              find.byKey(const Key('reader_settings_writing_mode_book')))
+          .visualDensity,
+      VisualDensity.compact,
+    );
+    expect(
+      tester
+          .widget<IconButton>(find
+              .byKey(const Key('reader_settings_screen_orientation_auto')))
+          .visualDensity,
+      VisualDensity.compact,
+    );
+    expect(
+      tester
+          .widget<IconButton>(
+              find.byKey(const Key('reader_settings_page_turn_mode_scroll')))
+          .visualDensity,
+      VisualDensity.compact,
+    );
   });
 }
 
@@ -1315,5 +1483,12 @@ Future<void> _pumpModalSheet(
   ));
 
   await tester.tap(find.text('open'));
+  await tester.pumpAndSettle();
+}
+
+/// 點擊 `TabBar` 上文字為 [tabLabel] 的頁籤並等待切換動畫完成
+/// （epic-28-reader-settings-enhancements Issue 5）。
+Future<void> switchToTab(WidgetTester tester, String tabLabel) async {
+  await tester.tap(find.widgetWithText(Tab, tabLabel));
   await tester.pumpAndSettle();
 }
