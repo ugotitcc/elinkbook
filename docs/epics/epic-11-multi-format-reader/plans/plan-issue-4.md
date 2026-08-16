@@ -485,7 +485,7 @@ git commit -m "feat(epic-11): Issue 4——BookFormat 新增 txt"
 - Consumes：`kBig5TableKeysBase64`／`kBig5TableValuesBase64`／`kGbkTableKeysBase64`／`kGbkTableValuesBase64`（Task 2）。
 - Produces：`enum TxtEncoding { utf8, big5, gbk, utf16, fallback }`；`class TxtDecodeResult { String text; TxtEncoding encoding; }`；`TxtDecodeResult detectAndDecodeTxt(Uint8List bytes)`（供 Task 6 消費）。
 
-- [ ] **Step 1：寫失敗測試**
+- [x] **Step 1：寫失敗測試**
 
 ```dart
 // app/test/library/txt_charset_detection_test.dart
@@ -537,11 +537,13 @@ void main() {
   });
 
   group('detectAndDecodeTxt：GBK', () {
-    test('「测试」的 GBK 位元組（0xB2E2 0xCAD4）正確解碼', () {
-      final bytes = Uint8List.fromList([0xB2, 0xE2, 0xCA, 0xD4]);
+    test('GBK 專有字元（如「嗢」0x86EC，Big5 無此碼位）與「测试」正確解碼為 gbk', () {
+      // 0xB2E2（测）0xCAD4（试）0x86EC（嗢，U+55E2）
+      // 因 0x86EC 落在 GBK 擴充區（高位元組 0x86 在 Big5 未定義），Big5 查表失敗退回 GBK
+      final bytes = Uint8List.fromList([0xB2, 0xE2, 0xCA, 0xD4, 0x86, 0xEC]);
       final result = detectAndDecodeTxt(bytes);
       expect(result.encoding, TxtEncoding.gbk);
-      expect(result.text, '测试');
+      expect(result.text, '测试嗢');
     });
   });
 
@@ -579,7 +581,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：確認測試失敗**
+- [x] **Step 2：確認測試失敗**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -588,7 +590,7 @@ flutter test test/library/txt_charset_detection_test.dart
 
 Expected：FAIL（`txt_charset_detection.dart` 不存在，編譯錯誤）。
 
-- [ ] **Step 3：實作**
+- [x] **Step 3：實作**
 
 ```dart
 // app/lib/library/txt_charset_detection.dart
@@ -748,7 +750,7 @@ TxtDecodeResult detectAndDecodeTxt(Uint8List bytes) {
 }
 ```
 
-- [ ] **Step 4：確認測試通過**
+- [x] **Step 4：確認測試通過**
 
 ```bash
 flutter test test/library/txt_charset_detection_test.dart
@@ -756,7 +758,7 @@ flutter test test/library/txt_charset_detection_test.dart
 
 Expected：PASS（10 個測試）。
 
-- [ ] **Step 5：`flutter analyze`**
+- [x] **Step 5：`flutter analyze`**
 
 ```bash
 flutter analyze
@@ -764,7 +766,7 @@ flutter analyze
 
 Expected：無新增 issue。
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/lib/library/txt_charset_detection.dart app/test/library/txt_charset_detection_test.dart
