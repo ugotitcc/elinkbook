@@ -63,6 +63,8 @@
 **GO** 後續步驟：進入完整 Architecting（`spec.md`，含 `FoliateReaderView` 泛化介面、`Book.isFixedLayout`/`BookFileFormat` schema migration、合成書籍結構的匯入管線介面）與 Scrum Master 拆解（TXT/MD 預處理器另立後續 Issue，比照決策 #12 順序）。
 **NO-GO**（例如 vendor 資產缺漏且升版風險過高）：記錄理由，評估是否降級為「僅 CBZ 上線、KF8 另尋替代解析路徑」的縮小範圍方案。
 
+> **Spike 結果（2026-08-16）：GO**——完整證據見 `reviews/spike-issue1-kf8-cbz-drm.md`。下一步進入完整 Architecting 階段。
+
 ## 審查回應（`reviews/review-design.md`，2026-08-16，結論 APPROVED）
 
 審查結論為核准通過，4 項 Important／3 項 Minor 皆為「Architecting 階段落實建議」而非阻擋 Discovery 成立的缺陷。逐項查證後全數採納並已併入上方「包含範圍」：

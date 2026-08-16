@@ -2,7 +2,23 @@
 
 ## Issue 1：Spike——`mobi.js`／`comic-book.js`（`readest/foliate-js` 釘定 commit）能否正確開啟 KF8 (AZW3) 與 CBZ，KF8 DRM 位元組偵測可行性驗證
 
-**Status:** `ready-for-agent`（計劃已撰寫，見 `plans/plan-issue-1.md`；尚未執行）。
+**Status:** `completed`（2026-08-16，GO——完整證據見 `reviews/spike-issue1-kf8-cbz-drm.md`）。
+
+**判準分類：**
+| 驗證項目 | 結果 |
+|---|---|
+| KF8 開書/渲染/導覽 | 通過 ✓ |
+| KF8 × 直排覆蓋組合性 | 通過 ✓ |
+| CBZ 開書/渲染（`pre-paginated`） | 通過 ✓ |
+| CBZ 零填補頁序 | 正確 ✓ |
+| CBZ 非零填補頁序 | 錯誤（預期）— 字典序排序 |
+| CBZ RTL 覆蓋可行性 | 可行 ✓ |
+| DRM 位元組偵測可行性 | 可行 ✓ |
+
+**Architecting 階段待落實事項：**
+1. CBZ 自然排序：需在匯入管線（Dart 端）對 CBZ 內部圖片檔名做自然排序後重新命名/重建索引
+2. CBZ RTL 覆寫：需在 `main.js` 整合層依使用者偏好（PRD FR-43）於 `makeComicBook()` 之後設定 `book.dir`
+3. KF8 DRM 偵測：Dart 端直接採用 Task 5 驗證過的 offset（`ByteData.getUint16(record0Offset + 12, Endian.big)`），偵測到非 0 即拋出 `DrmProtectedException`
 
 **依賴：** 無（起始工單）。
 
