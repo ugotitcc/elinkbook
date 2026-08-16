@@ -568,6 +568,10 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
     final params = <String, String>{
       'prefs': jsonEncode(buildFoliatePreferencesMap(widget)),
       'fontFaceCss': buildFontFaceCss(customFonts: widget.customFonts),
+      // epic-11-multi-format-reader Issue 3：讓 main.js 的 fetch URL 反映
+      // 真實副檔名（見 foliate_native_bridge.dart cacheFileExtension()
+      // 文件註解——CBZ 需要 view.js 的 isCBZ() 對檔名做副檔名判斷）。
+      'bookFileName': 'current.${cacheFileExtension(widget.filePath)}',
     };
     final cfi = extractCfi(widget.initialLocatorJson);
     if (cfi != null) params['initialCfi'] = cfi;

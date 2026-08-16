@@ -499,7 +499,7 @@ window.getTableOfContents = async function () {
 async function openBook() {
   try {
     const book = await makeBook(
-      'https://appassets.androidplatform.net/book/current.epub',
+      `https://appassets.androidplatform.net/book/${params.get('bookFileName') || 'current.epub'}`,
     )
     // 雙向 writing-mode CSS 覆蓋 + FR-06 偵測：在每個 CSS 資源文字被解析前
     // 攔截——比照 Issue 1 Spike 已驗證的時序（見 Global Constraints），

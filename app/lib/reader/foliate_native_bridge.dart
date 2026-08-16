@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/services.dart' show MethodChannel, rootBundle;
+import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import 'app_font.dart';
@@ -118,6 +119,22 @@ Future<Uint8List?> loadCustomFontBytes(String uri) {
       .invokeMethod<Uint8List>('readCustomFontBytes', {'uri': uri});
 }
 
+/// 依 [filePath] 副檔名推導 WebView 快取檔名應使用的副檔名（不含點號，
+/// 小寫），供 [cacheBookForServing] 決定原生端快取檔名、[FoliateReaderView]
+/// 決定要 fetch 的檔名（epic-11-multi-format-reader Issue 3）。CBZ 依賴
+/// `readest/foliate-js` 的 `isCBZ()` 對「檔名副檔名／MIME type」做格式
+/// 自動偵測（見 view.js 原始碼）；若快取檔名恆為 `current.epub`（Issue 3
+/// 之前的既有寫死行為，KF8/MOBI 靠 magic bytes 偵測不受影響、EPUB 本身
+/// 就是 .epub 無影響），CBZ 會被誤判為 EPUB 而開書失敗——本函式讓快取
+/// 檔名與副檔名判斷都反映書籍真實格式。無法識別副檔名（例如不含副檔名的
+/// `content://` URI）時退回 'epub'，維持 Issue 3 之前對 EPUB／AZW3 的既有
+/// 行為不變（AZW3 走 magic bytes 偵測，副檔名判斷結果對它而言其實不影響
+/// 正確性，僅影響快取檔名字面值）。
+String cacheFileExtension(String filePath) {
+  final ext = p.extension(filePath);
+  return ext.isEmpty ? 'epub' : ext.substring(1).toLowerCase();
+}
+
 /// 將 EPUB 檔案分塊複製到每個 widget 實例獨立的快取子目錄，
 /// 供 `WebViewAssetLoader.InternalStoragePathHandler` 串流服務。
 /// [filePath] 依 ADR 0002 可能是真實檔案系統路徑或 `content://` URI；
@@ -132,9 +149,10 @@ Future<String?> Function(String filePath, String instanceId) cacheBookForServing
     _defaultCacheBookForServing;
 
 Future<String?> _defaultCacheBookForServing(String filePath, String instanceId) async {
+  final extension = cacheFileExtension(filePath);
   if (filePath.contains('://')) {
     return _readerResourcesCacheChannel.invokeMethod<String>(
-        'cacheBookForServing', {'uri': filePath, 'instanceId': instanceId});
+        'cacheBookForServing', {'uri': filePath, 'instanceId': instanceId, 'extension': extension});
   }
   final file = File(filePath);
   final exists = await file.exists();
@@ -154,5 +172,5 @@ Future<String?> _defaultCacheBookForServing(String filePath, String instanceId) 
   final withinRoot = isPathWithinRoot(canonicalPath, allowedRoot);
   if (!withinRoot) return null;
   return _readerResourcesCacheChannel.invokeMethod<String>(
-      'cacheBookForServing', {'filePath': canonicalPath, 'instanceId': instanceId});
+      'cacheBookForServing', {'filePath': canonicalPath, 'instanceId': instanceId, 'extension': extension});
 }

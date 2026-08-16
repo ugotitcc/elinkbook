@@ -68,16 +68,21 @@ class ReaderResourceChannel(
 
     /**
      * 將輸入串流分塊複製到每個 widget 實例獨立的快取子目錄。
-     * 快取路徑為 `foliate_book_cache/<instanceId>/current.epub`，
+     * 快取路徑為 `foliate_book_cache/<instanceId>/current.<extension>`
+     * （epic-11-multi-format-reader Issue 3：extension 依來源書籍真實副
+     * 檔名決定，取代原本寫死 `current.epub` 的既有行為——CBZ 需要
+     * `view.js` 的 `isCBZ()` 對檔名做副檔名判斷才能正確自動分派至
+     * `comic-book.js`，見該處原始碼），
      * 避免螢幕轉場期間兩個 `FoliateEpubReaderView` 實例並存時共用同一個可變檔案的競態。
      *
      * @param input 輸入串流（`content://` URI 或本機檔案）
      * @param instanceId Dart 端產生的實例唯一 ID，用於區隔快取子目錄
+     * @param extension 快取檔名副檔名（不含點號），Dart 端 cacheFileExtension() 推導
      * @return 快取檔案的絕對路徑，失敗回傳 null
      */
-    private fun copyToCache(input: InputStream, instanceId: String): String? {
+    private fun copyToCache(input: InputStream, instanceId: String, extension: String): String? {
         val cacheDir = File(context.filesDir, "foliate_book_cache/$instanceId").apply { mkdirs() }
-        val destFile = File(cacheDir, "current.epub")
+        val destFile = File(cacheDir, "current.$extension")
         try {
             input.use { source ->
                 FileOutputStream(destFile).use { output ->
@@ -133,6 +138,7 @@ class ReaderResourceChannel(
                 val instanceId = call.argument<String>("instanceId")
                 val uriString = call.argument<String>("uri")
                 val filePath = call.argument<String>("filePath")
+                val extension = call.argument<String>("extension") ?: "epub"
                 if (instanceId == null) {
                     result.success(null)
                     return
@@ -146,7 +152,7 @@ class ReaderResourceChannel(
                         filePath != null -> File(filePath).inputStream()
                         else -> null
                     }
-                    input?.let { copyToCache(it, instanceId) }
+                    input?.let { copyToCache(it, instanceId, extension) }
                 } catch (e: Exception) {
                     null
                 }
