@@ -148,7 +148,18 @@
 
 ## Issue 4：TXT 合成書籍結構與閱讀
 
-**Status:** `ready-for-agent`
+**Status:** `merged`（2026-08-17，PR [#154](https://git.jigong.org/huthief/elinkBook/pulls/154) 已合併至 `main`，commit `23f1b58`）。
+
+**完成摘要：**
+- `BookFormat`／`BookFileFormat` 新增 `txt`，`isFoliateFormat()` 擴大涵蓋，`reader_screen.dart` 三處既有 `switch (format)` 合併 case，並補上 `_resolveEpubEngineDispatch()` 對 `txt` 的防禦分支（`isFixedLayout` 為 null 時視為 `false`，比照 Issue 2 C2／Issue 3 Important #1 同一類地雷主動預防）
+- 純 Dart 編碼偵測（`txt_charset_detection.dart`）：UTF-8／UTF-16(BOM)／Big5／GBK 優先序偵測＋最終 UTF-8 寬鬆 fallback；Big5（CP950）／GBK（CP936）對照表向量化自 Unicode.org 發布的 Microsoft 字碼頁對照表（`app/tool/gen_txt_charset_tables.py` 一次性 vendoring 腳本，比照 Issue 1-3 既有 `curl` vendoring 慣例），二分搜尋查表；`big5-hkscs` 與 `big5` 共用同一份表（無可直接沿用的獨立對照表來源，已記錄為已知有界限制）
+- 正則章節/目錄抽取（`txt_chapter_splitter.dart`）：中文「第 X 章/回/卷/節/集」＋英文 `Chapter N`（大小寫不敏感）＋ 400KB 位元組上限雙重分塊防護
+- TXT → 最小合法 EPUB3 結構合成（`txt_epub_synthesizer.dart`，`container.xml`／OPF／`nav.xhtml`／逐章 XHTML，已對照真實 `epub.js` 解析原始碼核實結構正確）；合成後檔名維持 `.txt`（供 `BookFormat.txt` 正確分派，沿用 Issue 3 已修復的 WebView 快取副檔名感知機制，零額外原生/JS 改動）；CPU 密集運算包 `Isolate.run()`，`generateTxtCover()`（`dart:ui`）刻意留在主 isolate 分開執行
+- `contentFingerprint` 對原始輸入檔案計算；合成檔案刪除清理由既有 `library_screen.dart` 通用邏輯自動涵蓋（`book.filePath` 為本機檔案即會被清除，比照 Issue 3 CBZ 已驗證的相同結論，未新增額外程式碼）
+- 抽出共用 `content_uri_reader.dart`（DRY，`cbz_import.dart` 改用）
+- `flutter test`（1383 tests）／`flutter analyze`（0 issues）全數通過；真機整合測試涵蓋 Big5／UTF-8 含章節／約 6MB 無章節標記大型檔案分塊防護，皆通過
+
+**程式碼審查發現並修復（合併前，`reviews/review-issue-4-plan.md`／`reviews/review-issue-4.md`）：** 實作前計畫審查採納「合成順序調整避免孤兒封面殘留」與「章節標題大小寫容錯」兩項建議，查證後不採納「DBCS 解碼容錯率評分」（現行嚴格比對＋UTF-8 寬鬆 fallback 已是優雅降級，容錯率評分換來的風險不亞於它想解決的問題，記錄為已知殘留風險）。實作完成後程式碼審查發現 2 項 Important——**#1**：Task 8 一度誤以為 `isComicBookHint` 參數已存在於呼叫端而遺漏補上，導致 CBZ 的 `book.dir` 覆寫在分支中間提交區間（`828c7e7`～`5cd89a9`）內被靜默跳過，未被任何 `flutter test` 攔截、只有真機整合測試才發現，已於分支最終提交修正但修正過程被埋在一個標示為「docs」的提交訊息裡未揭露；**#2**：CBZ RTL 端到端驗證強度在同一個「docs」提交中被弱化（斷言從 `previousPage` 邊界驗證改為恆真的 `nextPage` 斷言），且未說明原因。修復 #1 已補上迴歸測試把問題收斂到 `flutter test`；修復 #2 恢復驗證強度後真機實測意外發現一個從 Issue 1 Spike 沿用到 Issue 3、從未真機驗證過的錯誤假設本身不成立——詳見下方 Issue 3 條目新增的「架構修正」段落。修復後 `flutter test` 全專案 **1383 tests** 全數通過（較審查當下的 1381 增加 2 個），真機 CBZ 整合測試重新執行 3/3 通過。
 
 **依賴：** Issue 2（技術相依：需要已泛化的 `FoliateReaderView`）；`design.md` 決策 #12 建議待 Issue 2-3 完成後再開始（風險管理排序，非技術相依，可視團隊調度彈性處理）。
 
