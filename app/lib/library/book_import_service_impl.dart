@@ -13,6 +13,7 @@ import 'models/book.dart';
 import 'models/book_group.dart';
 import 'models/library_enums.dart';
 import 'txt_cover_generator.dart';
+import 'txt_epub_synthesizer.dart';
 
 /// 依 URI/路徑字串最後一段（已對 percent-encoding 解碼）判斷書籍格式。
 /// 只依副檔名判斷，僅適用於本機檔案匯入（file_picker/SAF 對本機檔案提供者
@@ -249,6 +250,24 @@ class BookImportServiceImpl implements BookImportService {
     var bookFilePath = resolvedUri;
 
     if (format == BookFileFormat.txt) {
+      // 封面產生（dart:ui）與 EPUB 合成（純 Dart，Isolate.run() 背景執行）
+      // 是兩個獨立步驟，不可合併——dart:ui 綁定在裸 spawn 的 isolate 內
+      // 不可用，見 txt_epub_synthesizer.dart Task 6 開頭「背景」說明。
+      // 審查修正（reviews/review-issue-4-plan.md Important #1）：合成
+      // 必須先於封面產生執行——若先落地封面才發現內容為空而中止匯入，
+      // 會在磁碟留下孤兒封面檔案（沒有對應 Book 記錄，日後刪除書籍的
+      // 既有清理邏輯是依附在 Book 記錄上運作，永遠碰不到它）。
+      TxtSynthesisResult synthesis;
+      try {
+        synthesis = await synthesizeTxtBook(resolvedUri, id, fallbackTitle);
+      } on EmptyTxtException {
+        // 沒有可用內容的 TXT 本質上無法開啟，比照 CBZ 的
+        // NoComicPagesException 既有處置慣例，中止匯入、不建立 Book 記錄
+        // ——此時尚未呼叫 generateTxtCover()，磁碟上不會留下任何殘留檔案。
+        return null;
+      }
+      isFixedLayout = false;
+      bookFilePath = await _landTxtEpub(synthesis.epubBytes, id);
       final coverBytes = await generateTxtCover(fallbackTitle);
       coverPath = await _landCover(coverBytes, id);
     } else if (format == BookFileFormat.azw3) {
@@ -396,6 +415,18 @@ class BookImportServiceImpl implements BookImportService {
   Future<String> _landCbzArchive(Uint8List bytes, String bookId) async {
     final importedDir = await _resolveImportedBooksDirectory();
     final file = File(p.join(importedDir.path, '$bookId.cbz'));
+    await file.writeAsBytes(bytes, flush: true);
+    return file.path;
+  }
+
+  /// 落地 TXT 合成的 EPUB 壓縮檔位元組（epic-11-multi-format-reader
+  /// Issue 4），比照 [_landCover]／[_landCbzArchive] 既有的「以 book id
+  /// 為鍵、獨立子目錄」慣例，重用既有 `imported_books/` 目錄。**檔名副
+  /// 檔名須維持 `.txt`**（Global Constraints 已查證事實 #1：`BookFormat.txt`
+  /// 的分派依 `Book.filePath` 副檔名判斷，不可改為 `.epub`）。
+  Future<String> _landTxtEpub(Uint8List bytes, String bookId) async {
+    final dir = await _resolveImportedBooksDirectory();
+    final file = File(p.join(dir.path, '$bookId.txt'));
     await file.writeAsBytes(bytes, flush: true);
     return file.path;
   }

@@ -1442,7 +1442,7 @@ git commit -m "feat(epic-11): Issue 4——TXT 合成為最小合法 EPUB3 結�
 - Consumes：`synthesizeTxtBook`／`TxtSynthesisResult`／`EmptyTxtException`（Task 6）。
 - Produces：TXT 書籍 `Book.isFixedLayout == false`、`Book.filePath` 指向落地後合成的 `.txt` 檔案（`imported_books/` 既有目錄，`$id.txt`）、`Book.contentFingerprint` 對原始輸入檔案計算。
 
-- [ ] **Step 1：寫失敗測試**
+- [x] **Step 1：寫失敗測試**
 
 於 `app/test/library/book_import_service_test.dart` 頂部 import 區塊新增：
 
@@ -1541,7 +1541,7 @@ import 'package:archive/archive.dart' show ZipDecoder;
 
 於檔案頂部確認已 import `dart:convert`（`utf8`）與 `dart:typed_data`（`Uint8List`）——若既有 import 已涵蓋（Issue 2/3 已使用過 `Uint8List`），不重複新增。
 
-- [ ] **Step 2：確認測試失敗**
+- [x] **Step 2：確認測試失敗**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -1550,7 +1550,7 @@ flutter test test/library/book_import_service_test.dart
 
 Expected：FAIL（`BookFileFormat.txt` 分支尚未產生合成邏輯，`book.filePath` 仍是原始純文字檔路徑而非合法 zip）。
 
-- [ ] **Step 3：實作**
+- [x] **Step 3：實作**
 
 `app/lib/library/book_import_service_impl.dart` 頂部 import 新增：
 
@@ -1612,7 +1612,7 @@ import 'txt_epub_synthesizer.dart';
   }
 ```
 
-- [ ] **Step 4：確認測試通過**
+- [x] **Step 4：確認測試通過**
 
 ```bash
 flutter test test/library/book_import_service_test.dart
@@ -1620,7 +1620,7 @@ flutter test test/library/book_import_service_test.dart
 
 Expected：PASS（既有全部測試＋5 個新增 TXT 測試）。
 
-- [ ] **Step 5：`flutter analyze`**
+- [x] **Step 5：`flutter analyze`**
 
 ```bash
 flutter analyze
@@ -1628,7 +1628,7 @@ flutter analyze
 
 Expected：無新增 issue。
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/lib/library/book_import_service_impl.dart app/test/library/book_import_service_test.dart
