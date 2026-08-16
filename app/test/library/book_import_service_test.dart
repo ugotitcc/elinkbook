@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'dart:typed_data';
-import 'dart:math';
 
 import 'package:archive/archive.dart';
 import 'package:flutter/services.dart';
@@ -772,8 +771,8 @@ void main() {
     // kBookMetadataChannel mock。以下測試用隨機產生的有效 CBZ 封存檔，
     // 比照 azw3 分支的「在 setUp 建好 service、mock channel」模式。
 
-    /// 產生一份內含一張 2x2 PNG 漫畫頁面的有效 CBZ 封存檔位元組。
-    Uint8List _makeValidCbz() {
+    /// 產生一份內含一張 PNG 漫畫頁面的有效 CBZ 封存檔位元組。
+    Uint8List makeValidCbz() {
       // 最小有效 PNG（1x1 灰色像素），避免壓縮空檔案產生「無圖片頁面」。
       final pngBytes = Uint8List.fromList([
         0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, // PNG signature
@@ -789,23 +788,23 @@ void main() {
       final archive = Archive();
       archive.addFile(ArchiveFile('page_001.jpg', pngBytes.length, pngBytes));
       return Uint8List.fromList(
-        ZipEncoder().encode(archive)!,
+        ZipEncoder().encode(archive),
       );
     }
 
     /// 產生一份空的 CBZ 封存檔（無圖片頁面）。
-    Uint8List _makeEmptyCbz() {
+    Uint8List makeEmptyCbz() {
       final archive = Archive();
       archive.addFile(
         ArchiveFile('readme.txt', 5, Uint8List.fromList('hello'.codeUnits)),
       );
       return Uint8List.fromList(
-        ZipEncoder().encode(archive)!,
+        ZipEncoder().encode(archive),
       );
     }
 
     test('匯入有效 CBZ：format=cbz 且封面落地', () async {
-      final cbzBytes = _makeValidCbz();
+      final cbzBytes = makeValidCbz();
       final cbzFile = File('${Directory.systemTemp.path}/import_test.cbz');
       await cbzFile.writeAsBytes(cbzBytes);
       addTearDown(() => cbzFile.deleteSync());
@@ -840,7 +839,7 @@ void main() {
     });
 
     test('匯入空 CBZ（無圖片頁面）：不建立 Book 記錄', () async {
-      final emptyCbzBytes = _makeEmptyCbz();
+      final emptyCbzBytes = makeEmptyCbz();
       final cbzFile = File('${Directory.systemTemp.path}/import_empty.cbz');
       await cbzFile.writeAsBytes(emptyCbzBytes);
       addTearDown(() => cbzFile.deleteSync());
@@ -865,7 +864,7 @@ void main() {
     });
 
     test('匯入本機路徑 CBZ（file:// URI）：不呼叫 takePersistableUriPermission', () async {
-      final cbzBytes = _makeValidCbz();
+      final cbzBytes = makeValidCbz();
       final cbzFile = File('${Directory.systemTemp.path}/import_local.cbz');
       await cbzFile.writeAsBytes(cbzBytes);
       addTearDown(() => cbzFile.deleteSync());

@@ -538,6 +538,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         break;
       case BookFormat.epub:
       case BookFormat.azw3:
+      case BookFormat.cbz:
         final info = _epubPositionInfo;
         if (info == null) return;
         // progression 為 null 時（例如 Readium 對某些定位尚未完全解析版面
@@ -1887,6 +1888,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     switch (format) {
       case BookFormat.epub:
       case BookFormat.azw3:
+      case BookFormat.cbz:
         return [
           IconButton(
             key: const Key('reader_toc_button'),
@@ -2572,6 +2574,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     switch (format) {
       case BookFormat.epub:
       case BookFormat.azw3:
+      case BookFormat.cbz:
         // Epic 11 Issue 2：KF8 (AZW3) 與 EPUB 共用同一個 FoliateReaderView，
         // 建構參數完全相同，不需要依格式分流。
         return FoliateReaderView(

@@ -256,7 +256,7 @@ void main() {
         dualPageMode: DualPageMode.always,
       );
       expect(buildFoliatePreferencesMap(view), {
-        'dualPageMode': 'always', 'isComicBookHint': false,
+        'dualPageMode': 'always',
         'isLandscape': false, 'isComicBookHint': false,
       });
     });
@@ -269,7 +269,7 @@ void main() {
         dualPageMode: DualPageMode.auto,
       );
       expect(buildFoliatePreferencesMap(view), {
-        'dualPageMode': 'auto', 'isComicBookHint': false,
+        'dualPageMode': 'auto',
         'isLandscape': false, 'isComicBookHint': false,
       });
     });
@@ -282,7 +282,7 @@ void main() {
         dualPageMode: DualPageMode.never,
       );
       expect(buildFoliatePreferencesMap(view), {
-        'dualPageMode': 'never', 'isComicBookHint': false,
+        'dualPageMode': 'never',
         'isLandscape': false, 'isComicBookHint': false,
       });
     });
@@ -328,7 +328,7 @@ void main() {
         isLandscape: true,
       );
       expect(buildFoliatePreferencesMap(view), {
-        'dualPageMode': 'always', 'isComicBookHint': false,
+        'dualPageMode': 'always',
         'isLandscape': true, 'isComicBookHint': false,
       });
     });
