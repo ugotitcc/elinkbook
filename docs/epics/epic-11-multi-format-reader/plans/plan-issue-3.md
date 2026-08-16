@@ -2196,14 +2196,14 @@ flutter test integration_test/foliate_kf8_test.dart integration_test/foliate_cbz
 
 Expected：4/4 PASS（KF8 既有 2 個 ＋ CBZ 新增 2 個）。
 
-- [x] **Step 4：手動驗收（比照 issues.md Issue 3 驗收標準逐項確認）**
+- [ ] **Step 4：手動驗收（比照 issues.md Issue 3 驗收標準逐項確認）**
 
 - 真機開啟自製 CBZ（`sample_unpadded.cbz`，非零填補檔名）頁序正確、封面正確：於裝置上實際透過圖書庫匯入畫面選取該檔案，人工目視每頁顏色是否依 1→10 遞增順序顯示（fixture 產生腳本已依 `i * 20 % 256` 遞增紅色分量，肉眼可辨順序）。
 - 翻頁方向切換為 RTL 後，實際點擊左/右熱區的翻頁方向正確；切回 LTR 恢復正常方向：透過 `FxlSettingsSheet` 實際切換，人工操作驗證（自動化涵蓋見 Task 12 Step 2 第二個測試，本步驟為人工複核）。
 - 橫向雙頁模式正常：旋轉裝置至橫向，確認 CBZ 雙頁並排顯示（復用 `epic-20` 既有機制，理論上零額外程式碼即可運作，人工確認無回歸）。
 - 劃線/備註入口不顯示：開啟 CBZ 書籍時確認 AppBar／FXL 懸浮工具列不出現「📚 筆記」相關可點擊劃線/備註功能（見 `reader_screen.dart` 既有 `!_isFixedLayout` gating，CBZ 自動繼承）。
 
-- [x] **Step 5：更新 `issues.md`／`docs/epics.md`（人類確認驗收通過後，比照 Issue 2 既有流程另行處理，不在本計畫任務範圍內）**
+- [ ] **Step 5：更新 `issues.md`／`docs/epics.md`（人類確認驗收通過後，比照 Issue 2 既有流程另行處理，不在本計畫任務範圍內）**
 
 ---
 
