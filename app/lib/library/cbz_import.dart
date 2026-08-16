@@ -4,9 +4,8 @@ import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
 import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 
-import 'library_repository.dart';
+import 'content_uri_reader.dart';
 
 /// comic-book.js（`readest/foliate-js`，釘定 commit
 /// dd71f2be356563c16a23272686189fcfb45d0b82）辨識為漫畫頁面的圖片副檔名
@@ -101,7 +100,11 @@ List<String> _splitIntoChunks(String value) {
 /// YAGNI）。
 Future<CbzImportResult> prepareCbzForImport(String filePath) async {
   final bytes = filePath.contains('://')
-      ? await _readContentUriBytes(filePath)
+      ? await readContentUriBytes(
+          filePath,
+          tempFilePrefix: 'cbz_probe',
+          tempFileExtension: '.cbz',
+        )
       : await File(filePath).readAsBytes();
   // 審查修正（見 reviews/review-issue-3-plan.md Important #1）：解壓/排序/
   // 重新壓縮是純 CPU 運算，對包含數百張高解析度圖片的大型 CBZ 可能耗費
@@ -143,22 +146,4 @@ CbzImportResult _decodeSortAndRebuild(Uint8List bytes) {
     rebuiltArchiveBytes: ZipEncoder().encodeBytes(rebuilt),
     coverBytes: imageFiles.first.readBytes() ?? Uint8List(0),
   );
-}
-
-Future<Uint8List> _readContentUriBytes(String uri) async {
-  final tempDir = await getTemporaryDirectory();
-  final tempPath = p.join(
-    tempDir.path,
-    'cbz_probe_${DateTime.now().microsecondsSinceEpoch}.cbz',
-  );
-  await kBookMetadataChannel.invokeMethod<void>(
-    'copyContentUriToFile',
-    {'uri': uri, 'destinationPath': tempPath},
-  );
-  final tempFile = File(tempPath);
-  try {
-    return await tempFile.readAsBytes();
-  } finally {
-    if (tempFile.existsSync()) tempFile.deleteSync();
-  }
 }

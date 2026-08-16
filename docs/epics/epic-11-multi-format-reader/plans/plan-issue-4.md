@@ -50,7 +50,7 @@
 **Interfaces:**
 - Produces：`Future<Uint8List> readContentUriBytes(String uri, {required String tempFilePrefix, required String tempFileExtension})`（供 Task 6 `txt_epub_synthesizer.dart` 與本 Task 重構後的 `cbz_import.dart` 共用）。
 
-- [ ] **Step 1：寫失敗測試**
+- [x] **Step 1：寫失敗測試**
 
 ```dart
 // app/test/library/content_uri_reader_test.dart
@@ -144,7 +144,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：確認測試失敗**
+- [x] **Step 2：確認測試失敗**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -153,7 +153,7 @@ flutter test test/library/content_uri_reader_test.dart
 
 Expected：FAIL（`content_uri_reader.dart` 不存在，編譯錯誤）。
 
-- [ ] **Step 3：實作**
+- [x] **Step 3：實作**
 
 ```dart
 // app/lib/library/content_uri_reader.dart
@@ -196,7 +196,7 @@ Future<Uint8List> readContentUriBytes(
 }
 ```
 
-- [ ] **Step 4：確認測試通過**
+- [x] **Step 4：確認測試通過**
 
 ```bash
 flutter test test/library/content_uri_reader_test.dart
@@ -204,7 +204,7 @@ flutter test test/library/content_uri_reader_test.dart
 
 Expected：PASS（3 個測試）。
 
-- [ ] **Step 5：重構 `cbz_import.dart` 改用共用版本**
+- [x] **Step 5：重構 `cbz_import.dart` 改用共用版本**
 
 `app/lib/library/cbz_import.dart` 移除私有的 `_readContentUriBytes()` 函式本體，改為：
 
@@ -230,7 +230,7 @@ import 'content_uri_reader.dart';
 
 移除檔案末尾整個 `_readContentUriBytes` 函式定義（現由 `content_uri_reader.dart` 提供）。若 `library_repository.dart` 的 import 已不再被 `cbz_import.dart` 其他地方使用，一併移除該行 import（`kBookMetadataChannel` 呼叫已搬到 `content_uri_reader.dart` 內）。
 
-- [ ] **Step 6：確認 CBZ 既有測試仍通過（零回歸）**
+- [x] **Step 6：確認 CBZ 既有測試仍通過（零回歸）**
 
 ```bash
 flutter test test/library/cbz_import_test.dart test/library/book_import_service_test.dart
@@ -238,7 +238,7 @@ flutter test test/library/cbz_import_test.dart test/library/book_import_service_
 
 Expected：PASS，數量與重構前相同（純內部實作搬移，行為不變）。
 
-- [ ] **Step 7：`flutter analyze`**
+- [x] **Step 7：`flutter analyze`**
 
 ```bash
 flutter analyze
@@ -246,7 +246,7 @@ flutter analyze
 
 Expected：`No issues found!`
 
-- [ ] **Step 8：Commit**
+- [x] **Step 8：Commit**
 
 ```bash
 git add app/lib/library/content_uri_reader.dart app/lib/library/cbz_import.dart app/test/library/content_uri_reader_test.dart
