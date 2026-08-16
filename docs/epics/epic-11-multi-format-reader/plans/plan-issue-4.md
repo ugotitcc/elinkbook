@@ -1945,14 +1945,14 @@ git commit -m "feat(epic-11): Issue 4——ReaderScreen 分派邏輯擴充涵蓋
 **Interfaces:**
 - Consumes：`sample_big5.txt`／`sample_utf8_chapters.txt`（Task 9）；`BookImportServiceImpl`／`ReaderScreen`（既有，Task 7/8 已擴充支援 txt）。
 
-- [ ] **Step 1：確認可用裝置**
+- [x] **Step 1：確認可用裝置**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
 flutter devices
 ```
 
-- [ ] **Step 2：撰寫測試**
+- [x] **Step 2：撰寫測試**
 
 ```dart
 // app/integration_test/foliate_txt_test.dart
@@ -2161,7 +2161,7 @@ void main() {
 
 （新增位置：緊接在既有 `static void openPdfToc(...)` 方法之後，`ReaderScreen` class 結尾 `}` 之前）
 
-- [ ] **Step 3：真機執行**
+- [x] **Step 3：真機執行**
 
 ```bash
 flutter test integration_test/foliate_txt_test.dart -d <device-id>
@@ -2169,7 +2169,7 @@ flutter test integration_test/foliate_txt_test.dart -d <device-id>
 
 Expected：3/3 PASS。若第一個測試（Big5）失敗，優先檢查 `detectAndDecodeTxt()` 是否誤判編碼（可能是測試環境的檔案讀取路徑問題，非解碼邏輯本身——Task 9 Step 2 已用 `flutter test` 驗證過解碼邏輯正確）；若第三個測試（大型檔案）逾時，檢查 `chunkByByteSize()` 是否真的被觸發（`kTxtChunkMaxBytes = 400000`，6MB 檔案應產生約 15 個以上的 XHTML 分塊）。
 
-- [ ] **Step 4：Commit**
+- [x] **Step 4：Commit**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook"
