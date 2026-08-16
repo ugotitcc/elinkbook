@@ -276,6 +276,7 @@ class BookImportServiceImpl implements BookImportService {
     } else if (format == BookFileFormat.cbz) {
       // CBZ 自然排序重建與封面擷取（epic-11-multi-format-reader Issue 3）。
       // 像 azw3 分支一樣做 try/catch 降級，不中斷整批匯入。
+      isFixedLayout = true; // CBZ 恆為定樣式（見 ADR 0023）
       try {
         final result = await prepareCbzForImport(resolvedUri);
         // 重建後的壓縮檔需要落地到本機，讓 ReaderScreen 開啟時有正確
