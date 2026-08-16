@@ -14,13 +14,18 @@
 
 ## 支援格式
 
-- ePub3（流式與定樣式）
+- ePub3（流式與定樣式 FXL）
+- KF8 / AZW3
+- CBZ（漫畫壓縮檔）
+- TXT（自動編碼偵測，含繁體中文常見的 Big5）
 - PDF
-- TXT
+- Markdown（開發中）
 
 ## 目前狀態
 
-技術骨架（Flutter + Android、EPUB 用 Readium、PDF 用平台原生 API）已完成並驗證端到端流程，程式碼位於 [`app/`](app/)。圖書庫管理、直排/橫排排版、字型與版面客製化、註記、雲端同步、全文檢索、閱讀統計等功能尚未實作，開發現況請見 [`docs/epics.md`](docs/epics.md)。
+App 殼層為 Flutter，手機優先、Android 先於 iOS（iOS 尚未啟動）。EPUB／KF8／CBZ／TXT 皆透過 `readest/foliate-js`（釘定版本，`flutter_inappwebview` 內執行）統一渲染，不再使用 Readium；PDF 改用 `pdfrx`（PDFium 透過 `dart:ffi` 直接呼叫），不再使用平台原生 API，詳見 [`CLAUDE.md`](CLAUDE.md) 與 `docs/adr/`。程式碼位於 [`app/`](app/)。
+
+圖書庫管理、直排/橫排排版、字型與版面客製化、書籤/劃線/備註、跨裝置雲端同步（PocketBase）已完成並可正常使用；全文檢索與閱讀統計熱點圖尚未開始開發；iOS 移植、社群分享等留待後續。完整、即時的 Epic/Issue 進度請一律以 [`docs/epics.md`](docs/epics.md) 為準——本檔案僅描述現況大致樣貌，不逐一列舉每個 Epic 的完成細節。
 
 完整需求請見 [`docs/prd.md`](docs/prd.md)；給 Claude Code 的開發指引請見 [`CLAUDE.md`](CLAUDE.md)。
 
