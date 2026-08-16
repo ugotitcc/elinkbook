@@ -118,6 +118,8 @@
 
 **已知殘留風險：** Important #2 修復後的 RTL 真機測試改為讀回 `ReadingPosition` 解析 locator index 斷言方向，程式碼已通過 `flutter analyze` 型別檢查，但該項變更本身因需要真機執行，未在本次修復流程中重新於真機上實測驗證（沿用先前真機驗證的整體流程結果）；Minor（CBZ 解壓無檔案大小上限）為既有已知取捨，非新發現，留待未來視情況評估。
 
+**架構修正（2026-08-17，`epic-11/issue-4-txt` 分支程式碼審查週期中發現並修正，取代上一段「已知殘留風險」對真機驗證缺口的擔憂——該擔憂確實命中了一個真實問題，但根因與原先假設不同）：** 上方「已知殘留風險」段落擔心的「RTL 真機測試未重新驗證」在 Issue 4 審查週期中被實際執行，結果**斷言真的失敗**——並非測試本身寫錯，而是本 Issue（Issue 3）自 Issue 1 Spike 起沿用的假設「切換 RTL 後，熱區的『上一頁』動作應讓頁碼往前進」從未成立。直接讀取 `fixed-layout.js` 原始碼證實：`next()`/`prev()` 內 `this.rtl` 三元運算式實際呼叫的 `#goLeft()`/`#goRight()` 只有在雙頁跨頁模式下才可能成功；CBZ 預設的單頁模式（手機直向）下 `this.#center` 恆為真，兩者恆為 falsy，`book.dir` 對熱區導覽方向**完全沒有作用**。交叉核對本專案既有、已出貨的 PDF `dualPageDirection`（`pdf_spread_layout.dart`：「RTL 的左右鏡像只發生在幾何排版階段」）確認這不是 CBZ 的缺陷，而是本 App 一致的既定設計哲學——`dualPageDirection`／`book.dir` 只影響雙頁跨頁的視覺/幾何排版，不影響熱區導覽方向本身。人類決策（2026-08-17）：**翻頁的規則以熱區為準**，CBZ 沿用與 PDF 一致的既有精神，不新增熱區重新映射邏輯。下方「範圍」第 6 點、「單元測試要求」、「驗收標準」對「熱區方向要反轉」的原始措辭已由此修正取代（原文保留於下方不覆寫，作為決策沿革記錄）；`spec.md`「CBZ 支援」／「Testing Decisions」章節已同步修正；`integration_test/foliate_cbz_test.dart` 已改為驗證「LTR／RTL 對同一組熱區動作產生完全一致的導覽結果」。
+
 **依賴：** Issue 2（需要已泛化的 `FoliateReaderView`）。
 
 **背景：** `spec.md`「CBZ 支援」。`comic-book.js` 已用 Issue 1 Spike 真機驗證可正確開書並觸發 `fixed-layout.js` 渲染路徑，但**沒有**自然排序、**沒有**內建 RTL 偵測，兩者皆須由本 Issue 的匯入/整合層補上。
