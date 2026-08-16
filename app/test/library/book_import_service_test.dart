@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -651,6 +652,42 @@ void main() {
       expect(result.importedBooks.single.title, 'book4');
       expect(result.importedBooks.single.contentFingerprint,
           'still-computed-hash');
+    });
+  });
+
+  group('KF8 (AZW3) 匯入', () {
+    test('匯入 AZW3：title/coverPath 正確寫入 Book', () async {
+      final result = await service.importFiles(
+        ['test/fixtures/sample.azw3'],
+        displayNames: ['sample.azw3'],
+      );
+
+      expect(result.importedBooks, hasLength(1));
+      final book = result.importedBooks.first;
+      expect(book.title, contains('Time Machine'));
+      expect(book.format, BookFileFormat.azw3);
+      expect(book.coverPath, isNotNull);
+      expect(File(book.coverPath!).existsSync(), isTrue);
+    });
+
+    test('匯入受 DRM 保護的 AZW3：不建立 Book 記錄', () async {
+      final bytes = Uint8List(78 + 8 + 132);
+      bytes.setRange(60, 64, 'BOOK'.codeUnits);
+      bytes.setRange(64, 68, 'MOBI'.codeUnits);
+      ByteData.sublistView(bytes, 76, 78).setUint16(0, 1, Endian.big);
+      ByteData.sublistView(bytes, 78, 82).setUint32(0, 86, Endian.big);
+      bytes.setRange(86 + 16, 86 + 20, 'MOBI'.codeUnits);
+      ByteData.sublistView(bytes, 86 + 12, 86 + 14).setUint16(0, 2, Endian.big);
+      final drmFile = File('${Directory.systemTemp.path}/import_test_drm.azw3');
+      await drmFile.writeAsBytes(bytes);
+      addTearDown(() => drmFile.delete());
+
+      final result = await service.importFiles(
+        [drmFile.path],
+        displayNames: ['drm_sample.azw3'],
+      );
+
+      expect(result.importedBooks, isEmpty);
     });
   });
 }
