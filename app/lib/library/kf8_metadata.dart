@@ -2,6 +2,11 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
+
+import 'library_repository.dart';
+
 /// KF8 (AZW3) 檔案偵測到 DRM 加密內容時拋出，呼叫端須中止該書匯入、不寫入
 /// `Book` 記錄（spec.md「KF8 (AZW3) 支援」）。
 class DrmProtectedException implements Exception {
@@ -152,10 +157,21 @@ int? _firstInt(List<Object>? values) =>
 /// 拒絕開啟，偵測必須獨立於 `mobi.js` 之外，見 Issue 1 Spike 查證）。
 Future<Map<String, Object?>> extractKf8Metadata(String filePath) async {
   if (filePath.contains('://')) {
-    // Note: kBookMetadataChannel is not available in this context.
-    // For content:// URIs, the caller should handle copying to local storage.
-    // This is a simplified implementation that only supports local files.
-    throw UnimplementedError('content:// URI 尚未在此模組實作，請先複製到本機路徑');
+    final tempDir = await getTemporaryDirectory();
+    final tempPath = p.join(
+      tempDir.path,
+      'kf8_probe_${DateTime.now().microsecondsSinceEpoch}.azw3',
+    );
+    await kBookMetadataChannel.invokeMethod<void>(
+      'copyContentUriToFile',
+      {'uri': filePath, 'destinationPath': tempPath},
+    );
+    try {
+      return await _extractFromLocalFile(tempPath);
+    } finally {
+      final tempFile = File(tempPath);
+      if (tempFile.existsSync()) tempFile.deleteSync();
+    }
   }
   return _extractFromLocalFile(filePath);
 }
@@ -175,19 +191,33 @@ Future<Map<String, Object?>> _extractFromLocalFile(String filePath) async {
         ? _parseExth(record0, exthOffset, headers.encoding)
         : <int, List<Object>>{};
 
-    final title = _firstString(exth[503]) ??
-        _decodeText(
-          record0.sublist(
-            headers.titleOffset,
-            headers.titleOffset + headers.titleLength,
-          ),
-          headers.encoding,
-        );
+    String? title;
+    try {
+      title = _firstString(exth[503]) ??
+          _decodeText(
+            record0.sublist(
+              headers.titleOffset,
+              headers.titleOffset + headers.titleLength,
+            ),
+            headers.encoding,
+          );
+    } catch (_) {
+      // 標題欄位解析失敗（例如 titleOffset/titleLength 損毀指向超出
+      // record 0 範圍）：降級為 null，不可讓整個函式拋出例外連帶丟失已
+      // 成功解析的 isFixedLayout（epic-11 Issue 2 程式碼審查 I2）。
+    }
 
     Uint8List? coverBytes;
-    final coverOffset = _firstInt(exth[201]) ?? _firstInt(exth[202]);
-    if (coverOffset != null) {
-      coverBytes = await reader.readRecord(headers.resourceStart + coverOffset);
+    try {
+      // 0xFFFFFFFF 是 EXTH「無此值」的哨兵值（比照 mobi.js getCover() 的
+      // `exth?.coverOffset < 0xffffffff` 判斷），必須排除，否則會被當成
+      // 合法 record index 觸發 RangeError。
+      final coverOffset = _firstInt(exth[201]) ?? _firstInt(exth[202]);
+      if (coverOffset != null && coverOffset < 0xFFFFFFFF) {
+        coverBytes = await reader.readRecord(headers.resourceStart + coverOffset);
+      }
+    } catch (_) {
+      // 封面 record 讀取失敗：降級為 null，理由同上。
     }
 
     return {

@@ -535,6 +535,35 @@ void main() {
     },
   );
 
+  testWidgets(
+    'AZW3 書籍 isFixedLayout: null 時，防禦性視為 false 並建構 FoliateReaderView，'
+    '不呼叫 EPUB 專屬的 detectAndCacheEpubLayout（epic-11 Issue 2 程式碼審查 C2 迴歸測試）',
+    (tester) async {
+      final repository = FakeLibraryRepository();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.azw3',
+            bookId: 'b1',
+            prefsManager: prefsManager,
+            libraryRepository: repository,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      // 修復前：_dispatchedIsFixedLayout 永遠停留 null，FoliateReaderView
+      // 永遠無法建構（_buildBody 的 gating 條件永遠不滿足），書籍完全無法
+      // 開啟。修復後應立即（同步、不需等待非同步偵測）建構完成。
+      expect(find.byType(FoliateReaderView), findsOneWidget);
+      // KF8 沒有對應 EPUB OPF/CSS 解析器的執行期重新偵測手段，不應呼叫
+      // 這個 EPUB 專屬方法。
+      expect(repository.detectAndCacheEpubLayoutCalls, isEmpty);
+    },
+  );
+
   testWidgets('開啟該書已有的持久化版面偏好設定後，狀態正確載入', (tester) async {
     await prefsManager.saveBookPrefs(
       'b1',

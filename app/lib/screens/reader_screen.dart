@@ -433,7 +433,19 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       }
       return;
     }
-    if (detectBookFormat(widget.filePath) != BookFormat.epub) return;
+    final format = detectBookFormat(widget.filePath);
+    if (format == BookFormat.azw3) {
+      // KF8 目前沒有對應 EPUB detectAndCacheEpubLayout() 的執行期重新偵測
+      // 手段（容器格式不同，不能沿用 EPUB 的 OPF/CSS 解析器）。isFixedLayout
+      // 為 null 時（多為匯入階段 metadata 擷取失敗的既有書籍），防禦性視為
+      // false（reflowable，絕大多數 AZW3 檔案的常態）而非讓其永遠停留
+      // null——後者會讓 _buildBody 的 gating 條件永遠等不到非 null 值，
+      // FoliateReaderView 永遠無法建構，書籍完全無法開啟（epic-11 Issue 2
+      // 程式碼審查 C2）。
+      _dispatchedIsFixedLayout = false;
+      return;
+    }
+    if (format != BookFormat.epub) return;
     final repository = widget.libraryRepository;
     if (repository == null) {
       // 既有測試/呼叫端未提供 libraryRepository 時，退回 Issue 3 之前的
