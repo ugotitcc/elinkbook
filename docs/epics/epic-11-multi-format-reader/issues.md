@@ -12,13 +12,15 @@
 | CBZ 開書/渲染（`pre-paginated`） | 通過 ✓ |
 | CBZ 零填補頁序 | 正確 ✓ |
 | CBZ 非零填補頁序 | 錯誤（預期）— 字典序排序 |
-| CBZ RTL 覆蓋可行性 | 可行 ✓ |
+| CBZ RTL 覆蓋可行性 | 可行 ✓（僅驗證 `book.dir` 覆寫傳遞，導覽方向未驗證，見下方待落實事項 #2） |
 | DRM 位元組偵測可行性 | 可行 ✓ |
 
 **Architecting 階段待落實事項：**
 1. CBZ 自然排序：需在匯入管線（Dart 端）對 CBZ 內部圖片檔名做自然排序後重新命名/重建索引
-2. CBZ RTL 覆寫：需在 `main.js` 整合層依使用者偏好（PRD FR-43）於 `makeComicBook()` 之後設定 `book.dir`
+2. CBZ RTL 覆寫：需在 `main.js` 整合層依使用者偏好（PRD FR-43）於 `makeComicBook()` 之後設定 `book.dir`，**並確認 `goLeft()`/`goRight()`（或本專案既有 3×3 熱區 `ZoneAction` 分派邏輯）在 `book.dir='rtl'` 時實際回傳正確的翻頁方向**——Spike 的 Harness 熱區按鈕硬編碼呼叫 `view.prev()`/`view.next()`，並未走 `view.js` 真正處理 RTL 語意的 `goLeft()`/`goRight()`，只驗證了 `book.dir` 覆寫值能正確傳遞到 `view.book.dir`，尚未驗證使用者實際點擊熱區時 RTL 模式下翻頁方向是否正確（見 `reviews/review-issue-1-spike-execution.md` Important #1），此點在 Architecting／Issue 實作階段仍需補測
 3. KF8 DRM 偵測：Dart 端直接採用 Task 5 驗證過的 offset（`ByteData.getUint16(record0Offset + 12, Endian.big)`），偵測到非 0 即拋出 `DrmProtectedException`
+
+**測試素材補充說明**：KF8 測試未使用真實繁中直排公版書，改用 Standard Ebooks 英文公版樣本（The Time Machine）＋ CSS `transformTarget` 覆蓋模擬直排——理由是 KF8 特有風險在於容器解析（`mobi.js`），CJK 直排排版品質已由 `epic-17`/`epic-20` 用真實中文書證實、與格式來源無關，見 `plan-issue-1.md` Task 3「背景說明」。
 
 **依賴：** 無（起始工單）。
 
