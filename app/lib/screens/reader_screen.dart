@@ -2652,6 +2652,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           showNavZoneDebugOverlay: resolved.showNavZoneDebugOverlay,
           consoleLogEnabled: resolved.consoleLogEnabled,
           initialLocatorJson: _initialPosition?.epubLocatorJson,
+          isComicBookHint: format == BookFormat.cbz,
+          dualPageDirection: resolved.dualPageDirection,
           onLocatorChanged: (info) {
             if (!mounted) return;
             setState(() => _epubPositionInfo = info);

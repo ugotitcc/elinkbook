@@ -2183,7 +2183,7 @@ git commit -m "test(epic-11): Issue 4——TXT 真機整合測試，涵蓋 Big5/
 
 **Files:** 無新增/修改，純驗證。
 
-- [ ] **Step 1：`flutter analyze`**
+- [x] **Step 1：`flutter analyze`**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -2192,7 +2192,7 @@ flutter analyze
 
 Expected：`No issues found!`
 
-- [ ] **Step 2：完整 `flutter test`**
+- [x] **Step 2：完整 `flutter test`**
 
 ```bash
 flutter test
@@ -2200,7 +2200,7 @@ flutter test
 
 Expected：全數通過（既有 1341 + 本 Issue 新增測試，具體數字以實際輸出為準）。
 
-- [ ] **Step 3：真機整合測試回歸（確認未破壞既有 KF8/CBZ 整合測試）**
+- [x] **Step 3：真機整合測試回歸（確認未破壞既有 KF8/CBZ 整合測試）**
 
 ```bash
 flutter test integration_test/foliate_kf8_test.dart integration_test/foliate_cbz_test.dart integration_test/foliate_txt_test.dart -d <device-id>
@@ -2208,7 +2208,7 @@ flutter test integration_test/foliate_kf8_test.dart integration_test/foliate_cbz
 
 Expected：全數 PASS。
 
-- [ ] **Step 4：手動驗收（比照 issues.md Issue 4 驗收標準逐項確認）**
+- [x] **Step 4：手動驗收（比照 issues.md Issue 4 驗收標準逐項確認）**
 
 - 真機匯入 Big5 與 UTF-8 編碼的 TXT 檔案皆正確顯示、不亂碼：於裝置上實際透過圖書庫匯入畫面選取兩種檔案，人工目視確認無亂碼。
 - 大型 TXT（5MB~20MB 量級，無規範章節標記）開書流暢：實際匯入一份大型網路小說 TXT（若無現成素材，可用 Task 10 測試內產生大型檔案的相同手法自行產生一份留在裝置上手動測試），人工感受翻頁/捲動流暢度。

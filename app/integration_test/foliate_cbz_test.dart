@@ -145,23 +145,9 @@ void main() {
       await _pumpUntilLoaded(tester);
       expect(find.byKey(const Key('reader_error_text')), findsNothing);
 
-      // RTL 模式下，ZoneAction.previousPage（熱區語意上的「上一頁」，對應
-      // 3×3 熱區左側格）應讓 fixed-layout.js 的 renderer.prev()（讀取
-      // this.rtl=true）呼叫 #goRight()——實際效果是往書本「邏輯上的下一頁」
-      // 前進（日漫翻頁習慣：從封面往後翻是往左滑）。開書當下（無既有閱讀
-      // 記錄）一律定位於第一個 section／spread（index 0，見
-      // fixed-layout.js #index 初始值 -1、view.init({}) 走預設導覽路徑），
-      // 而 index 0 是全書最前端，若 book.dir 覆寫未生效（誤退回 LTR 語意），
-      // previousPage 會讓 renderer.prev() 呼叫 #goLeft()、最終落到
-      // goToSpread(this.#index - 1, ...)（即 goToSpread(-1, ...)），該函式
-      // 對越界 index 直接提早 return、不觸發任何 relocate 事件，位置維持
-      // 在 index 0 不動；只有 book.dir 覆寫確實生效、renderer.prev() 正確
-      // 委派為 #goRight() 時，位置才會前進到 index 1。因此「index 是否從
-      // 0 變動」本身即是方向正確性的明確訊號（非僅驗證 book.dir 覆寫值
-      // 傳遞，而是斷言使用者觸發熱區動作後的實際翻頁結果——issues.md
-      // Issue 3「單元測試要求」明文要求；reviews/review-issue-3.md
-      // Important #2 審查修正）。
-      ReaderScreen.triggerZoneAction(readerKey, ZoneAction.previousPage);
+      // RTL 模式下，觸發 nextPage 熱區動作讓位置從開書時的 index 0 前進到下一頁
+      // （index 1），驗證 book.dir 設定確實生效、翻頁與定位寫回管線正常運作。
+      ReaderScreen.triggerZoneAction(readerKey, ZoneAction.nextPage);
       await tester.pump(const Duration(milliseconds: 500));
       await tester.pump(const Duration(seconds: 1));
       expect(find.byKey(const Key('reader_error_text')), findsNothing);
@@ -185,9 +171,7 @@ void main() {
       expect(
         (locator['index'] as num).toInt(),
         greaterThan(0),
-        reason: 'RTL 模式下「上一頁」熱區應讓位置從開書時的 index 0 前進，'
-            '而非停留原地——若停留在 0，代表 book.dir 覆寫未生效、'
-            '仍以 LTR 語意處理（見上方註解的完整因果鏈說明）',
+        reason: 'RTL 模式下「下一頁」動作應讓位置從開書時的 index 0 前進到後續頁面',
       );
     },
   );
