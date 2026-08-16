@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 
 import 'book_content_fingerprint.dart';
 import 'book_import_service.dart';
+import 'cbz_import.dart';
 import 'kf8_metadata.dart';
 import 'library_repository.dart';
 import 'models/book.dart';
@@ -23,6 +24,7 @@ BookFileFormat? detectBookFileFormat(String uriOrPath) {
   if (name.endsWith('.pdf')) return BookFileFormat.pdf;
   if (name.endsWith('.txt')) return BookFileFormat.txt;
   if (name.endsWith('.azw3')) return BookFileFormat.azw3;
+  if (name.endsWith('.cbz')) return BookFileFormat.cbz;
   return null;
 }
 
@@ -242,6 +244,9 @@ class BookImportServiceImpl implements BookImportService {
     String? coverPath;
     bool? isFixedLayout;
     String? epubIdentifier;
+    // CBZ 專屬：重建後檔案的落地路徑，與 resolvedUri（原始來源，指紋計算
+    // 依據）分離維護，見上方說明。其餘格式維持沿用 resolvedUri 本身。
+    var bookFilePath = resolvedUri;
 
     if (format == BookFileFormat.txt) {
       final coverBytes = await generateTxtCover(fallbackTitle);
@@ -266,6 +271,23 @@ class BookImportServiceImpl implements BookImportService {
         return null;
       } catch (_) {
         // 其餘解析失敗（非 DRM，例如檔案損毀）：降級為「檔名為標題、無封面」，
+        // 比照既有 PlatformException 分支慣例，不中斷整批匯入。
+      }
+    } else if (format == BookFileFormat.cbz) {
+      // CBZ 自然排序重建與封面擷取（epic-11-multi-format-reader Issue 3）。
+      // 像 azw3 分支一樣做 try/catch 降級，不中斷整批匯入。
+      try {
+        final result = await prepareCbzForImport(resolvedUri);
+        // 重建後的壓縮檔需要落地到本機，讓 ReaderScreen 開啟時有正確
+        // 的 .cbz 副檔名（觸發 CBZ 分派路徑，見 detectBookFormat）。
+        bookFilePath = await _landCbzArchive(result.rebuiltArchiveBytes, id);
+        coverPath = await _landCover(result.coverBytes, id);
+      } on NoComicPagesException {
+        // CBZ 內不含任何圖片頁面（空封存或僅含非圖片檔案），中止本書匯入
+        // （spec.md「CBZ 支援」）。
+        return null;
+      } catch (_) {
+        // 其餘解析失敗（例如檔案損毀）：降級為「檔名為標題、無封面」，
         // 比照既有 PlatformException 分支慣例，不中斷整批匯入。
       }
     } else {
@@ -298,6 +320,9 @@ class BookImportServiceImpl implements BookImportService {
       }
     }
 
+    // 重建後的 CBZ（bookFilePath ≠ resolvedUri）：指紋仍依原始來源計算，
+    // 跨裝置比對依原始來源內容而非重建後檔案，兩者內容等價但二進位不同，
+    // 不應因為排序重建而改變指紋值。
     String? contentFingerprint;
     try {
       contentFingerprint = await computeBookContentFingerprint(
@@ -317,7 +342,7 @@ class BookImportServiceImpl implements BookImportService {
       title: title,
       author: author,
       format: format,
-      filePath: resolvedUri,
+      filePath: bookFilePath,
       source: BookSource.local,
       coverPath: coverPath,
       isFixedLayout: isFixedLayout,
@@ -361,6 +386,15 @@ class BookImportServiceImpl implements BookImportService {
   Future<String> _landCover(Uint8List bytes, String bookId) async {
     final dir = await _resolveCoversDirectory();
     final file = File(p.join(dir.path, '$bookId.png'));
+    await file.writeAsBytes(bytes, flush: true);
+    return file.path;
+  }
+
+  /// 將重建後的 CBZ 壓縮檔位元組寫入 `imported_books/` 目錄，回傳完整路徑。
+  /// 檔名帶 `.cbz` 副檔名，確保 `detectBookFormat` 偵測正確。
+  Future<String> _landCbzArchive(Uint8List bytes, String bookId) async {
+    final importedDir = await _resolveImportedBooksDirectory();
+    final file = File(p.join(importedDir.path, '$bookId.cbz'));
     await file.writeAsBytes(bytes, flush: true);
     return file.path;
   }

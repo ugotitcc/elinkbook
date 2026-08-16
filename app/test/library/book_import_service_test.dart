@@ -1,6 +1,8 @@
 import 'dart:io';
 import 'dart:typed_data';
+import 'dart:math';
 
+import 'package:archive/archive.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
@@ -763,5 +765,125 @@ void main() {
         expect(result.importedBooks, isEmpty);
       },
     );
+  });
+
+  group('CBZ 匯入', () {
+    // prepareCbzForImport 是純 Dart，需要真實 .cbz 檔案才能運作——不走
+    // kBookMetadataChannel mock。以下測試用隨機產生的有效 CBZ 封存檔，
+    // 比照 azw3 分支的「在 setUp 建好 service、mock channel」模式。
+
+    /// 產生一份內含一張 2x2 PNG 漫畫頁面的有效 CBZ 封存檔位元組。
+    Uint8List _makeValidCbz() {
+      // 最小有效 PNG（1x1 灰色像素），避免壓縮空檔案產生「無圖片頁面」。
+      final pngBytes = Uint8List.fromList([
+        0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, // PNG signature
+        0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52, // IHDR
+        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+        0x08, 0x02, 0x00, 0x00, 0x00, 0x90, 0x77, 0x53,
+        0xde, 0x00, 0x00, 0x00, 0x0c, 0x49, 0x44, 0x41, // IDAT
+        0x54, 0x08, 0xd7, 0x63, 0xf8, 0xcf, 0xc0, 0x00,
+        0x00, 0x00, 0x02, 0x00, 0x01, 0xe2, 0x21, 0xbc,
+        0x33, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, // IEND
+        0x44, 0xae, 0x42, 0x60, 0x82,
+      ]);
+      final archive = Archive();
+      archive.addFile(ArchiveFile('page_001.jpg', pngBytes.length, pngBytes));
+      return Uint8List.fromList(
+        ZipEncoder().encode(archive)!,
+      );
+    }
+
+    /// 產生一份空的 CBZ 封存檔（無圖片頁面）。
+    Uint8List _makeEmptyCbz() {
+      final archive = Archive();
+      archive.addFile(
+        ArchiveFile('readme.txt', 5, Uint8List.fromList('hello'.codeUnits)),
+      );
+      return Uint8List.fromList(
+        ZipEncoder().encode(archive)!,
+      );
+    }
+
+    test('匯入有效 CBZ：format=cbz 且封面落地', () async {
+      final cbzBytes = _makeValidCbz();
+      final cbzFile = File('${Directory.systemTemp.path}/import_test.cbz');
+      await cbzFile.writeAsBytes(cbzBytes);
+      addTearDown(() => cbzFile.deleteSync());
+
+      // 不 mock extractMetadata（CBZ 不走原生詮釋資料提取），只 mock
+      // copyContentUriToFile（content:// URI 降級複製到本機的場景）。
+      mockChannel((call) async {
+        if (call.method == 'takePersistableUriPermission') return null;
+        if (call.method == 'copyContentUriToFile') {
+          final args = call.arguments as Map;
+          await File(args['destinationPath'] as String)
+              .writeAsBytes(cbzBytes);
+          return null;
+        }
+        return null;
+      });
+
+      // 用 content:// URI + displayName 模擬從系統選擇器匯入 CBZ。
+      final result = await service.importFiles(
+        ['content://example/comics.cbz'],
+        displayNames: ['comics.cbz'],
+      );
+
+      expect(result.importedBooks, hasLength(1));
+      final book = result.importedBooks.first;
+      expect(book.format, BookFileFormat.cbz);
+      expect(book.coverPath, isNotNull);
+      expect(File(book.coverPath!).existsSync(), isTrue);
+      // filePath 必須是重建後的 .cbz（本機路徑），不是原始 content:// URI。
+      expect(book.filePath, endsWith('.cbz'));
+      expect(book.filePath, isNot(startsWith('content://')));
+    });
+
+    test('匯入空 CBZ（無圖片頁面）：不建立 Book 記錄', () async {
+      final emptyCbzBytes = _makeEmptyCbz();
+      final cbzFile = File('${Directory.systemTemp.path}/import_empty.cbz');
+      await cbzFile.writeAsBytes(emptyCbzBytes);
+      addTearDown(() => cbzFile.deleteSync());
+
+      mockChannel((call) async {
+        if (call.method == 'takePersistableUriPermission') return null;
+        if (call.method == 'copyContentUriToFile') {
+          final args = call.arguments as Map;
+          await File(args['destinationPath'] as String)
+              .writeAsBytes(emptyCbzBytes);
+          return null;
+        }
+        return null;
+      });
+
+      final result = await service.importFiles(
+        ['content://example/empty_comics.cbz'],
+        displayNames: ['empty_comics.cbz'],
+      );
+
+      expect(result.importedBooks, isEmpty);
+    });
+
+    test('匯入本機路徑 CBZ（file:// URI）：不呼叫 takePersistableUriPermission', () async {
+      final cbzBytes = _makeValidCbz();
+      final cbzFile = File('${Directory.systemTemp.path}/import_local.cbz');
+      await cbzFile.writeAsBytes(cbzBytes);
+      addTearDown(() => cbzFile.deleteSync());
+
+      var takePermissionCalled = false;
+      mockChannel((call) async {
+        if (call.method == 'takePersistableUriPermission') {
+          takePermissionCalled = true;
+          return null;
+        }
+        return null;
+      });
+
+      final result = await service.importFiles([cbzFile.path]);
+
+      expect(takePermissionCalled, isFalse);
+      expect(result.importedBooks, hasLength(1));
+      expect(result.importedBooks.first.format, BookFileFormat.cbz);
+    });
   });
 }
