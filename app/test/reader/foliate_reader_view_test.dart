@@ -5,6 +5,7 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/reader/column_mode.dart';
 import 'package:elinkbook/reader/dual_page_mode.dart';
+import 'package:elinkbook/reader/dual_page_direction.dart';
 import 'package:elinkbook/reader/foliate_reader_view.dart';
 import 'package:elinkbook/reader/reader_console_log.dart';
 import 'package:elinkbook/reader/writing_mode.dart';
@@ -65,7 +66,7 @@ void main() {
         onError: _noopError,
       );
       // isLandscape 為非 nullable 必要參數，預設 false，恆定出現在 map
-      expect(buildFoliatePreferencesMap(view), {'isLandscape': false});
+      expect(buildFoliatePreferencesMap(view), {'isLandscape': false, 'isComicBookHint': false});
     });
 
     test('columnMode: single 時 map 含 columnMode: single', () {
@@ -77,7 +78,7 @@ void main() {
       );
       expect(buildFoliatePreferencesMap(view), {
         'columnMode': 'single',
-        'isLandscape': false,
+        'isLandscape': false, 'isComicBookHint': false,
       });
     });
 
@@ -90,7 +91,7 @@ void main() {
       );
       expect(buildFoliatePreferencesMap(view), {
         'showFooter': false,
-        'isLandscape': false,
+        'isLandscape': false, 'isComicBookHint': false,
       });
     });
 
@@ -103,7 +104,7 @@ void main() {
       );
       expect(buildFoliatePreferencesMap(view), {
         'textColor': '#e8e8ec',
-        'isLandscape': false,
+        'isLandscape': false, 'isComicBookHint': false,
       });
     });
 
@@ -116,7 +117,7 @@ void main() {
       );
       expect(buildFoliatePreferencesMap(view), {
         'backgroundColor': '#121214',
-        'isLandscape': false,
+        'isLandscape': false, 'isComicBookHint': false,
       });
     });
 
@@ -178,7 +179,7 @@ void main() {
         'showFooter': false,
         'textColor': '#e8e8ec',
         'backgroundColor': '#121214',
-        'isLandscape': false,
+        'isLandscape': false, 'isComicBookHint': false,
       });
     });
 
@@ -191,7 +192,7 @@ void main() {
       );
       expect(buildFoliatePreferencesMap(view), {
         'writingMode': 'horizontal',
-        'isLandscape': false,
+        'isLandscape': false, 'isComicBookHint': false,
       });
     });
 
@@ -204,7 +205,7 @@ void main() {
       );
       expect(buildFoliatePreferencesMap(view), {
         'isFixedLayoutHint': true,
-        'isLandscape': false,
+        'isLandscape': false, 'isComicBookHint': false,
       });
     });
 
@@ -217,7 +218,7 @@ void main() {
       );
       expect(buildFoliatePreferencesMap(view), {
         'isFixedLayoutHint': false,
-        'isLandscape': false,
+        'isLandscape': false, 'isComicBookHint': false,
       });
     });
 
@@ -256,7 +257,7 @@ void main() {
       );
       expect(buildFoliatePreferencesMap(view), {
         'dualPageMode': 'always',
-        'isLandscape': false,
+        'isLandscape': false, 'isComicBookHint': false,
       });
     });
 
@@ -269,7 +270,7 @@ void main() {
       );
       expect(buildFoliatePreferencesMap(view), {
         'dualPageMode': 'auto',
-        'isLandscape': false,
+        'isLandscape': false, 'isComicBookHint': false,
       });
     });
 
@@ -282,7 +283,7 @@ void main() {
       );
       expect(buildFoliatePreferencesMap(view), {
         'dualPageMode': 'never',
-        'isLandscape': false,
+        'isLandscape': false, 'isComicBookHint': false,
       });
     });
 
@@ -306,7 +307,7 @@ void main() {
         onError: _noopError,
         isLandscape: true,
       );
-      expect(buildFoliatePreferencesMap(view), {'isLandscape': true});
+      expect(buildFoliatePreferencesMap(view), {'isLandscape': true, 'isComicBookHint': false});
     });
 
     test('isLandscape 預設值（false）時 map 含 isLandscape: false', () {
@@ -315,7 +316,7 @@ void main() {
         onPageRendered: _noop,
         onError: _noopError,
       );
-      expect(buildFoliatePreferencesMap(view), {'isLandscape': false});
+      expect(buildFoliatePreferencesMap(view), {'isLandscape': false, 'isComicBookHint': false});
     });
 
     test('dualPageMode + isLandscape 同時設定時兩者皆出現在 map', () {
@@ -328,7 +329,7 @@ void main() {
       );
       expect(buildFoliatePreferencesMap(view), {
         'dualPageMode': 'always',
-        'isLandscape': true,
+        'isLandscape': true, 'isComicBookHint': false,
       });
     });
   });
@@ -575,6 +576,72 @@ void main() {
         fontSize: 1.0,
       );
       expect(foliatePreferencesChanged(oldView, newView), isFalse);
+    });
+
+    test('isComicBookHint 恆包含於 map（非 nullable 欄位，比照 isLandscape）', () {
+      final view = FoliateReaderView(
+        filePath: 'test.cbz',
+        onPageRendered: () {},
+        onError: (_) {},
+        isComicBookHint: true,
+      );
+      final map = buildFoliatePreferencesMap(view);
+      expect(map['isComicBookHint'], isTrue);
+    });
+
+    test('dualPageDirection 為 null 時不出現在 map 中', () {
+      final view = FoliateReaderView(
+        filePath: 'test.cbz',
+        onPageRendered: () {},
+        onError: (_) {},
+      );
+      final map = buildFoliatePreferencesMap(view);
+      expect(map.containsKey('dualPageDirection'), isFalse);
+    });
+
+    test('dualPageDirection 非 null 時序列化為 rtl/ltr 字串', () {
+      final rtlView = FoliateReaderView(
+        filePath: 'test.cbz',
+        onPageRendered: () {},
+        onError: (_) {},
+        dualPageDirection: DualPageDirection.rtl,
+      );
+      expect(buildFoliatePreferencesMap(rtlView)['dualPageDirection'], 'rtl');
+
+      final ltrView = FoliateReaderView(
+        filePath: 'test.cbz',
+        onPageRendered: () {},
+        onError: (_) {},
+        dualPageDirection: DualPageDirection.ltr,
+      );
+      expect(buildFoliatePreferencesMap(ltrView)['dualPageDirection'], 'ltr');
+    });
+
+    test('foliatePreferencesChanged 偵測 isComicBookHint/dualPageDirection 變動', () {
+      final base = FoliateReaderView(
+        filePath: 'test.cbz',
+        onPageRendered: () {},
+        onError: (_) {},
+        isComicBookHint: true,
+        dualPageDirection: DualPageDirection.ltr,
+      );
+      final changedHint = FoliateReaderView(
+        filePath: 'test.cbz',
+        onPageRendered: () {},
+        onError: (_) {},
+        isComicBookHint: false,
+        dualPageDirection: DualPageDirection.ltr,
+      );
+      final changedDirection = FoliateReaderView(
+        filePath: 'test.cbz',
+        onPageRendered: () {},
+        onError: (_) {},
+        isComicBookHint: true,
+        dualPageDirection: DualPageDirection.rtl,
+      );
+      expect(foliatePreferencesChanged(base, changedHint), isTrue);
+      expect(foliatePreferencesChanged(base, changedDirection), isTrue);
+      expect(foliatePreferencesChanged(base, base), isFalse);
     });
   });
 

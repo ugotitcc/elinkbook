@@ -9,6 +9,7 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'column_mode.dart';
 import 'custom_font.dart';
 import 'dual_page_mode.dart';
+import 'dual_page_direction.dart';
 import 'epub_decoration.dart';
 import 'epub_position_info.dart';
 import 'epub_selection_info.dart';
@@ -283,6 +284,11 @@ Map<String, Object?> buildFoliatePreferencesMap(FoliateReaderView view) {
   }
   if (view.dualPageMode != null) map['dualPageMode'] = view.dualPageMode!.name;
   map['isLandscape'] = view.isLandscape;
+  map['isComicBookHint'] = view.isComicBookHint;
+  if (view.dualPageDirection != null) {
+    map['dualPageDirection'] =
+        view.dualPageDirection == DualPageDirection.rtl ? 'rtl' : 'ltr';
+  }
   return map;
 }
 
@@ -314,7 +320,9 @@ bool foliatePreferencesChanged(
       oldView.textColor != newView.textColor ||
       oldView.backgroundColor != newView.backgroundColor ||
       oldView.dualPageMode != newView.dualPageMode ||
-      oldView.isLandscape != newView.isLandscape;
+      oldView.isLandscape != newView.isLandscape ||
+      oldView.isComicBookHint != newView.isComicBookHint ||
+      oldView.dualPageDirection != newView.dualPageDirection;
 }
 
 /// 從 `InAppWebView.shouldInterceptRequest` 攔截到的請求路徑，判斷是否為
@@ -379,6 +387,25 @@ class FoliateReaderView extends StatefulWidget {
   final bool? showFooter;
   final bool? isFixedLayoutHint;
   final DualPageMode? dualPageMode;
+
+  /// CBZ 專屬提示（epic-11-multi-format-reader Issue 3）：main.js 僅在此為
+  /// `true` 時才覆寫 `book.dir`／虛擬頁碼目錄，避免誤觸 EPUB 固定版面既有
+  /// 的 page-progression-direction 自動偵測（見該檔案 openBook() 對應段落
+  /// 註解）。預設 `false`，比照 [isLandscape] 既有非 nullable＋預設值模式
+  /// ——本欄位並非「格式未知時省略」的選填語意，而是「明確告知這是不是
+  /// 漫畫」的必要旗標。
+  final bool isComicBookHint;
+
+  /// CBZ 翻頁方向（RTL/LTR），重用既有 [DualPageDirection]（原僅 PDF
+  /// 適用，見該檔案文件註解，epic-11-multi-format-reader Issue 3 起擴大
+  /// 適用於 CBZ）。**僅在書籍開啟當下讀取一次**（main.js 的 openBook()，
+  /// 於 `view.open(book)` 之前設定 `book.dir`）——`fixed-layout.js` 的
+  /// `open()` 只在當下一次性讀取 `book.dir` 決定 `this.rtl`（見
+  /// Global Constraints 已查證事實 #2），之後不會重新推導，故本欄位變動
+  /// 不會在既有書籍開啟期間即時生效，需重新開啟該書才會套用新方向
+  /// （比照既有 [isFixedLayoutHint] 同樣「僅開書當下生效」的既有限制，
+  /// 非本 Issue 新增的例外）。
+  final DualPageDirection? dualPageDirection;
   final bool isLandscape;
   final Color? textColor;
   final Color? backgroundColor;
@@ -418,6 +445,8 @@ class FoliateReaderView extends StatefulWidget {
     this.showFooter,
     this.isFixedLayoutHint,
     this.dualPageMode,
+    this.isComicBookHint = false,
+    this.dualPageDirection,
     this.textColor,
     this.backgroundColor,
     this.isLandscape = false,
@@ -568,6 +597,10 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
     final params = <String, String>{
       'prefs': jsonEncode(buildFoliatePreferencesMap(widget)),
       'fontFaceCss': buildFontFaceCss(customFonts: widget.customFonts),
+      // epic-11-multi-format-reader Issue 3：讓 main.js 的 fetch URL 反映
+      // 真實副檔名（見 foliate_native_bridge.dart cacheFileExtension()
+      // 文件註解——CBZ 需要 view.js 的 isCBZ() 對檔名做副檔名判斷）。
+      'bookFileName': 'current.${cacheFileExtension(widget.filePath)}',
     };
     final cfi = extractCfi(widget.initialLocatorJson);
     if (cfi != null) params['initialCfi'] = cfi;

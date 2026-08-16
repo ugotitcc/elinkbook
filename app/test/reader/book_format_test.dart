@@ -32,10 +32,19 @@ void main() {
     expect(detectBookFormat('BOOK.AZW3'), BookFormat.azw3);
   });
 
+  test('detectBookFormat 對 .cbz 副檔名回傳 BookFormat.cbz', () {
+    expect(detectBookFormat('comic.cbz'), BookFormat.cbz);
+    expect(detectBookFormat('COMIC.CBZ'), BookFormat.cbz);
+  });
+
   group('isFoliateFormat', () {
     test('epub／azw3 回傳 true', () {
       expect(isFoliateFormat(BookFormat.epub), isTrue);
       expect(isFoliateFormat(BookFormat.azw3), isTrue);
+    });
+
+    test('cbz 回傳 true', () {
+      expect(isFoliateFormat(BookFormat.cbz), isTrue);
     });
 
     test('pdf／unknown 回傳 false', () {

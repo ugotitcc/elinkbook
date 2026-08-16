@@ -134,7 +134,53 @@ void main() {
     final result = await cacheBookForServing('content://com.example.provider/book.epub', 'test_instance');
 
     expect(captured!.method, 'cacheBookForServing');
-    expect(captured!.arguments, {'uri': 'content://com.example.provider/book.epub', 'instanceId': 'test_instance'});
+    expect(captured!.arguments, {
+      'uri': 'content://com.example.provider/book.epub',
+      'instanceId': 'test_instance',
+      'extension': 'epub',
+    });
     expect(result, '/fake/cache/dir/current.epub');
+  });
+
+  test('cacheBookForServing 對 CBZ 來源正確帶入 extension: cbz（epic-11 Issue 3，CBZ 開書前置修復）', () async {
+    MethodCall? captured;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+      const MethodChannel('elinkbook/reader_resources_cache'),
+      (call) async {
+        captured = call;
+        return '/fake/cache/dir/current.cbz';
+      },
+    );
+
+    await cacheBookForServing('content://com.example.provider/comic.cbz', 'test_instance');
+
+    expect(captured!.arguments, {
+      'uri': 'content://com.example.provider/comic.cbz',
+      'instanceId': 'test_instance',
+      'extension': 'cbz',
+    });
+  });
+
+  group('cacheFileExtension', () {
+    test('依副檔名推導，小寫化', () {
+      expect(cacheFileExtension('foo/bar.CBZ'), 'cbz');
+      expect(cacheFileExtension('foo/bar.epub'), 'epub');
+      expect(cacheFileExtension('foo/bar.azw3'), 'azw3');
+    });
+
+    test('content:// URI 帶有可辨識副檔名時正確推導', () {
+      expect(
+        cacheFileExtension('content://com.example.provider/comic.cbz'),
+        'cbz',
+      );
+    });
+
+    test('無副檔名時退回 epub（維持 Issue 3 之前對 EPUB／AZW3 的既有行為）', () {
+      expect(
+        cacheFileExtension('content://com.android.providers.media.documents/document/document%3A1000001716'),
+        'epub',
+      );
+    });
   });
 }

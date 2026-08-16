@@ -47,6 +47,12 @@ class ReaderResourceChannel(
     private val context: Context,
     messenger: BinaryMessenger,
 ) : MethodChannel.MethodCallHandler {
+    companion object {
+        // "cacheBookForServing" 的 extension 引數白名單（epic-11 Issue 3
+        // 程式碼審查 Minor #2），見該處呼叫點註解。
+        private val EXTENSION_PATTERN = Regex("^[a-z0-9]{1,10}$")
+    }
+
     private val channel = MethodChannel(messenger, "elinkbook/reader_resources")
 
     /**
@@ -68,16 +74,21 @@ class ReaderResourceChannel(
 
     /**
      * 將輸入串流分塊複製到每個 widget 實例獨立的快取子目錄。
-     * 快取路徑為 `foliate_book_cache/<instanceId>/current.epub`，
+     * 快取路徑為 `foliate_book_cache/<instanceId>/current.<extension>`
+     * （epic-11-multi-format-reader Issue 3：extension 依來源書籍真實副
+     * 檔名決定，取代原本寫死 `current.epub` 的既有行為——CBZ 需要
+     * `view.js` 的 `isCBZ()` 對檔名做副檔名判斷才能正確自動分派至
+     * `comic-book.js`，見該處原始碼），
      * 避免螢幕轉場期間兩個 `FoliateEpubReaderView` 實例並存時共用同一個可變檔案的競態。
      *
      * @param input 輸入串流（`content://` URI 或本機檔案）
      * @param instanceId Dart 端產生的實例唯一 ID，用於區隔快取子目錄
+     * @param extension 快取檔名副檔名（不含點號），Dart 端 cacheFileExtension() 推導
      * @return 快取檔案的絕對路徑，失敗回傳 null
      */
-    private fun copyToCache(input: InputStream, instanceId: String): String? {
+    private fun copyToCache(input: InputStream, instanceId: String, extension: String): String? {
         val cacheDir = File(context.filesDir, "foliate_book_cache/$instanceId").apply { mkdirs() }
-        val destFile = File(cacheDir, "current.epub")
+        val destFile = File(cacheDir, "current.$extension")
         try {
             input.use { source ->
                 FileOutputStream(destFile).use { output ->
@@ -133,6 +144,16 @@ class ReaderResourceChannel(
                 val instanceId = call.argument<String>("instanceId")
                 val uriString = call.argument<String>("uri")
                 val filePath = call.argument<String>("filePath")
+                // extension 一律由 Dart 端 cacheFileExtension() 推導（僅來自
+                // 檔案自身副檔名或固定退回值 "epub"，見
+                // foliate_native_bridge.dart 該函式文件註解），但這是跨
+                // Platform Channel 邊界傳入、直接組進檔案路徑
+                // （File(cacheDir, "current.$extension")，見 copyToCache()）
+                // 的字串，加一道白名單驗證作為低成本加固（epic-11 Issue 3
+                // 程式碼審查 Minor #2）——不符合格式時退回 "epub"，比照上面
+                // 缺席時的既有退回值，不中止整個快取流程。
+                val rawExtension = call.argument<String>("extension") ?: "epub"
+                val extension = if (EXTENSION_PATTERN.matches(rawExtension)) rawExtension else "epub"
                 if (instanceId == null) {
                     result.success(null)
                     return
@@ -146,7 +167,7 @@ class ReaderResourceChannel(
                         filePath != null -> File(filePath).inputStream()
                         else -> null
                     }
-                    input?.let { copyToCache(it, instanceId) }
+                    input?.let { copyToCache(it, instanceId, extension) }
                 } catch (e: Exception) {
                     null
                 }

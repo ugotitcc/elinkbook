@@ -50,7 +50,7 @@ void main() {
                       onPressed: () async {
                         final picked = await FilePicker.pickFiles(
                           type: FileType.custom,
-                          allowedExtensions: ['epub', 'pdf', 'txt'],
+                          allowedExtensions: ['epub', 'pdf', 'txt', 'azw3', 'cbz'],
                         );
                         if (picked == null || picked.files.isEmpty) return;
                         final uris = picked.files

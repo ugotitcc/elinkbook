@@ -499,7 +499,7 @@ window.getTableOfContents = async function () {
 async function openBook() {
   try {
     const book = await makeBook(
-      'https://appassets.androidplatform.net/book/current.epub',
+      `https://appassets.androidplatform.net/book/${params.get('bookFileName') || 'current.epub'}`,
     )
     // 雙向 writing-mode CSS 覆蓋 + FR-06 偵測：在每個 CSS 資源文字被解析前
     // 攔截——比照 Issue 1 Spike 已驗證的時序（見 Global Constraints），
@@ -824,6 +824,33 @@ async function openBook() {
     // book.rendition 並據此決定是否動態 import('./fixed-layout.js')。
     if (initialPrefs.isFixedLayoutHint === true && book.rendition?.layout !== 'pre-paginated') {
       book.rendition = { ...book.rendition, layout: 'pre-paginated' }
+    }
+    // epic-11-multi-format-reader Issue 3（CBZ 支援）：翻頁方向覆寫，須在
+    // view.open(book) 之前設定 book.dir——fixed-layout.js 的 open() 只在
+    // 當下一次性讀取 book.dir 決定 this.rtl（見 next()/prev() 固定讀取
+    // this.rtl 決定要呼叫 #goLeft() 還是 #goRight()，不會之後重新推導），
+    // 比照上方 isFixedLayoutHint 覆寫「必須在 open() 之前」的既有限制。
+    // 僅在 isComicBookHint === true 時套用，避免誤觸 EPUB 固定版面既有的
+    // page-progression-direction 自動偵測——comic-book.js 回傳的 book
+    // 物件不含 dir 欄位（見 issues.md Issue 1 Spike 查證），EPUB FXL 則由
+    // epub.js 自行依 OPF metadata 設定，不應被本專案覆寫（spec.md
+    // 「CBZ 支援」）。
+    if (initialPrefs.isComicBookHint === true) {
+      book.dir = initialPrefs.dualPageDirection === 'rtl' ? 'rtl' : 'ltr'
+      // 虛擬頁碼目錄（spec.md「CBZ 支援」）：comic-book.js 的 book.toc
+      // 預設以檔名當作 label（例如重建後的 page_0001.jpg），對使用者無
+      // 意義；book.resolveHref／book.sections 皆以 section.id（＝檔名）
+      // 為鍵，href 沿用 section.id 可讓既有 window.getTableOfContents()
+      // 的 buildTocEntry() 邏輯原樣重用（不需修改），只替換 label 顯示
+      // 文字。buildTocEntry() 內 view.book.sections[index].createDocument()
+      // 對漫畫頁面（無 createDocument 方法）會拋出例外，已有既有
+      // try/catch 優雅退回 section 層級 base CFI（view.getCFI(index,
+      // undefined)）——對漫畫「一頁即一個完整章節」的語意而言，這正是
+      // 正確的行為，不需額外處理。
+      book.toc = book.sections.map((section, i) => ({
+        label: `第 ${i + 1} 頁`,
+        href: section.id,
+      }))
     }
     await view.open(book)
     view.renderer.setAttribute(

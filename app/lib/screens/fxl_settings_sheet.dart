@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../reader/book_reader_prefs.dart';
+import '../reader/dual_page_direction.dart';
 import '../reader/dual_page_mode.dart';
 
 /// EPUB 固定版面（FXL 漫畫）專屬的精簡版設定 Bottom Sheet（見
@@ -24,6 +25,7 @@ class FxlSettingsSheet extends StatefulWidget {
 
 class _FxlSettingsSheetState extends State<FxlSettingsSheet> {
   late DualPageMode _dualPageMode;
+  late DualPageDirection _dualPageDirection;
   late bool _fullscreen;
   late bool _showHeader;
   late bool _showFooter;
@@ -32,6 +34,7 @@ class _FxlSettingsSheetState extends State<FxlSettingsSheet> {
   void initState() {
     super.initState();
     _dualPageMode = widget.prefs.dualPageMode ?? DualPageMode.auto;
+    _dualPageDirection = widget.prefs.dualPageDirection ?? DualPageDirection.rtl;
     _fullscreen = widget.prefs.fullscreen ?? false;
     _showHeader = widget.prefs.showHeader ?? false;
     _showFooter = widget.prefs.showFooter ?? false;
@@ -40,6 +43,7 @@ class _FxlSettingsSheetState extends State<FxlSettingsSheet> {
   void _notifyChanged() {
     widget.onChanged(widget.prefs.copyWith(
       dualPageMode: _dualPageMode,
+      dualPageDirection: _dualPageDirection,
       fullscreen: _fullscreen,
       showHeader: _showHeader,
       showFooter: _showFooter,
@@ -89,6 +93,30 @@ class _FxlSettingsSheetState extends State<FxlSettingsSheet> {
                       selected ? Theme.of(context).colorScheme.primary : null,
                   onPressed: () => setState(() {
                     _dualPageMode = mode;
+                    _notifyChanged();
+                  }),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 16),
+            const Text('翻頁方向'),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 4,
+              children: [
+                (DualPageDirection.ltr, 'ltr', Icons.arrow_forward, '左到右（LTR，美漫慣例）'),
+                (DualPageDirection.rtl, 'rtl', Icons.arrow_back, '右到左（RTL，日漫慣例）'),
+              ].map((option) {
+                final (direction, keySuffix, icon, tooltip) = option;
+                final selected = _dualPageDirection == direction;
+                return IconButton(
+                  key: Key('fxl_settings_direction_$keySuffix'),
+                  icon: Icon(icon),
+                  tooltip: tooltip,
+                  color:
+                      selected ? Theme.of(context).colorScheme.primary : null,
+                  onPressed: () => setState(() {
+                    _dualPageDirection = direction;
                     _notifyChanged();
                   }),
                 );

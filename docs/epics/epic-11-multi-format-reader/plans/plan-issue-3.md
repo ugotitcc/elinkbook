@@ -43,7 +43,7 @@
 **Interfaces:**
 - Produces：`comic-book.js` 的 `makeComicBook({entries, loadBlob, getSize, getComment}, file)`，供 `view.js` 既有的 `makeBook()` 自動分派邏輯呼叫（`view.js` 本身已存在於 production assets，不需修改，見 Global Constraints 事實 1）。
 
-- [ ] **Step 1：下載釘定 commit 的 vendor 資產**
+- [x] **Step 1：下載釘定 commit 的 vendor 資產**
 
 ```bash
 FOLIATE_COMMIT=dd71f2be356563c16a23272686189fcfb45d0b82
@@ -55,7 +55,7 @@ grep -c "export const makeComicBook" comic-book.js
 
 Expected：`comic-book.js` 約 130 行；`grep -c` 回報 `1`（確認抓到正確原始碼，非 404 頁面，比照 Issue 1/2 已驗證的下載流程）。
 
-- [ ] **Step 2：確認 `view.js` 既有分派邏輯無需修改**
+- [x] **Step 2：確認 `view.js` 既有分派邏輯無需修改**
 
 ```bash
 grep -n "isCBZ\|makeComicBook" "U:/MyDeveloper/AI/elinkBook/app/android/app/src/main/assets/foliate/view.js"
@@ -63,7 +63,7 @@ grep -n "isCBZ\|makeComicBook" "U:/MyDeveloper/AI/elinkBook/app/android/app/src/
 
 Expected：看到 `isCBZ = ({ name, type }) => type === 'application/vnd.comicbook+zip' || name.endsWith('.cbz')` 與 `const { makeComicBook } = await import('./comic-book.js')` 兩處既有程式碼（`view.js` 已於 Issue 1/2 存在於 production assets，不需要本 Issue 修改）。
 
-- [ ] **Step 3：Commit**
+- [x] **Step 3：Commit**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook"
@@ -83,7 +83,7 @@ git commit -m "feat(epic-11): Issue 3——vendor comic-book.js"
 **Interfaces:**
 - Produces：`BookFormat.cbz`、`isFoliateFormat(BookFormat.cbz) == true`、`detectBookFormat('foo.cbz') == BookFormat.cbz`；`BookFileFormat.cbz`。
 
-- [ ] **Step 1：確認既有測試檔位置**
+- [x] **Step 1：確認既有測試檔位置**
 
 ```bash
 ls "U:/MyDeveloper/AI/elinkBook/app/test/reader/" | grep book_format
@@ -91,7 +91,7 @@ ls "U:/MyDeveloper/AI/elinkBook/app/test/reader/" | grep book_format
 
 若無 `book_format_test.dart`，本 Task 新建；若已存在，於既有檔案追加。
 
-- [ ] **Step 2：寫失敗測試**
+- [x] **Step 2：寫失敗測試**
 
 ```dart
 // app/test/reader/book_format_test.dart（若既有檔案已存在，追加以下內容，
@@ -111,7 +111,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 3：確認測試失敗**
+- [x] **Step 3：確認測試失敗**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -120,7 +120,7 @@ flutter test test/reader/book_format_test.dart
 
 Expected：FAIL（`BookFormat.cbz` 未定義，編譯錯誤）。
 
-- [ ] **Step 4：實作**
+- [x] **Step 4：實作**
 
 `app/lib/reader/book_format.dart` 修改為：
 
@@ -159,7 +159,7 @@ bool isFoliateFormat(BookFormat format) =>
 enum BookFileFormat { epub, pdf, txt, azw3, cbz }
 ```
 
-- [ ] **Step 5：確認測試通過**
+- [x] **Step 5：確認測試通過**
 
 ```bash
 flutter test test/reader/book_format_test.dart
@@ -167,7 +167,7 @@ flutter test test/reader/book_format_test.dart
 
 Expected：PASS。
 
-- [ ] **Step 6：`flutter analyze` 確認 exhaustiveness 錯誤清單**
+- [x] **Step 6：`flutter analyze` 確認 exhaustiveness 錯誤清單**
 
 ```bash
 flutter analyze
@@ -175,7 +175,7 @@ flutter analyze
 
 Expected：出現數個 `non_exhaustive_switch_statement`（`reader_screen.dart` 內既有 `switch (format)` 語句缺少 `case BookFormat.cbz:`），清單記錄下來供 Task 9 使用——此為刻意運用編譯器 exhaustiveness 檢查作為系統性排查手段（比照 Issue 2 既有方法論）。**不要在本 Task 修正這些錯誤**，Task 9 才處理，本 Task 先確認清單完整。
 
-- [ ] **Step 7：Commit**
+- [x] **Step 7：Commit**
 
 ```bash
 git add app/lib/reader/book_format.dart app/lib/library/models/library_enums.dart app/test/reader/book_format_test.dart
@@ -193,7 +193,7 @@ git commit -m "feat(epic-11): Issue 3——BookFormat/BookFileFormat 新增 cbz"
 **Interfaces:**
 - Produces：`int compareNaturalOrder(String a, String b)`（供 Task 4 排序圖片檔名使用，也可直接傳給 `List.sort()`）。
 
-- [ ] **Step 1：寫失敗測試**
+- [x] **Step 1：寫失敗測試**
 
 ```dart
 // app/test/library/cbz_import_test.dart
@@ -235,7 +235,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：確認測試失敗**
+- [x] **Step 2：確認測試失敗**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -244,7 +244,7 @@ flutter test test/library/cbz_import_test.dart
 
 Expected：FAIL（`cbz_import.dart` 不存在，編譯錯誤）。
 
-- [ ] **Step 3：實作**
+- [x] **Step 3：實作**
 
 ```dart
 // app/lib/library/cbz_import.dart
@@ -293,7 +293,7 @@ List<String> _splitIntoChunks(String value) {
 }
 ```
 
-- [ ] **Step 4：確認測試通過**
+- [x] **Step 4：確認測試通過**
 
 ```bash
 flutter test test/library/cbz_import_test.dart
@@ -301,7 +301,7 @@ flutter test test/library/cbz_import_test.dart
 
 Expected：PASS（5 個測試）。
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 git add app/lib/library/cbz_import.dart app/test/library/cbz_import_test.dart
@@ -321,7 +321,7 @@ git commit -m "feat(epic-11): Issue 3——CBZ 自然排序比較器 compareNatu
 - Consumes：`compareNaturalOrder`（Task 3）；`kBookMetadataChannel`（`library_repository.dart` 既有常數，`copyContentUriToFile` 方法，比照 `kf8_metadata.dart` 既有 content:// 處理模式）。
 - Produces：`class CbzImportResult { Uint8List rebuiltArchiveBytes; Uint8List coverBytes; }`；`class NoComicPagesException implements Exception`；`Future<CbzImportResult> prepareCbzForImport(String filePath)`（供 Task 7 `book_import_service_impl.dart` 消費）。
 
-- [ ] **Step 1：`archive` 升級為正式 dependency**
+- [x] **Step 1：`archive` 升級為正式 dependency**
 
 `app/pubspec.yaml` 修改：從 `dev_dependencies:` 區塊移除
 
@@ -346,7 +346,7 @@ flutter pub get
 
 Expected：無版本衝突（`archive: ^4.0.9` 已是既有鎖定版本，僅改變依賴分類，不觸發版本重新解析）。
 
-- [ ] **Step 2：寫失敗測試（合成 CBZ fixture＋斷言重建結果）**
+- [x] **Step 2：寫失敗測試（合成 CBZ fixture＋斷言重建結果）**
 
 於 `app/test/library/cbz_import_test.dart` 頂部新增 import，並在既有 `void main() { ... }` 內追加以下內容：
 
@@ -498,7 +498,7 @@ Uint8List _buildSyntheticCbz(
   });
 ```
 
-- [ ] **Step 3：確認測試失敗**
+- [x] **Step 3：確認測試失敗**
 
 ```bash
 flutter test test/library/cbz_import_test.dart
@@ -506,7 +506,7 @@ flutter test test/library/cbz_import_test.dart
 
 Expected：FAIL（`prepareCbzForImport`／`CbzImportResult`／`NoComicPagesException` 未定義）。
 
-- [ ] **Step 4：實作**
+- [x] **Step 4：實作**
 
 於 `app/lib/library/cbz_import.dart` 頂部新增 import，並在既有 `compareNaturalOrder`／`_splitIntoChunks` 之後追加：
 
@@ -633,7 +633,7 @@ Future<Uint8List> _readContentUriBytes(String uri) async {
 }
 ```
 
-- [ ] **Step 5：確認測試通過**
+- [x] **Step 5：確認測試通過**
 
 ```bash
 flutter test test/library/cbz_import_test.dart
@@ -641,7 +641,7 @@ flutter test test/library/cbz_import_test.dart
 
 Expected：PASS（11 個測試：5 個 `compareNaturalOrder` ＋ 6 個 `prepareCbzForImport`）。審查修正提醒（Important #1）：`prepareCbzForImport` 現在透過 `Isolate.run()` 執行核心邏輯，若「壓縮檔內沒有支援的圖片格式時拋出 NoComicPagesException」這則測試意外失敗（例如例外未正確跨 isolate 邊界傳遞、被包裝成其他型別），需確認 `NoComicPagesException` 是否符合 `Isolate.run()` 錯誤回傳的可傳遞性要求（僅含 `String` 欄位的簡單例外類別應可正確重建），必要時調整斷言方式（例如改用 `throwsA(isA<Exception>())` 或改為捕捉後檢查 `toString()` 內容），但不可移除 Isolate 包裝本身。
 
-- [ ] **Step 6：`flutter analyze`**
+- [x] **Step 6：`flutter analyze`**
 
 ```bash
 flutter analyze
@@ -649,7 +649,7 @@ flutter analyze
 
 Expected：無新增 issue（Task 2 記錄的既有 exhaustiveness 錯誤清單不變，Task 9 才處理）。
 
-- [ ] **Step 7：Commit**
+- [x] **Step 7：Commit**
 
 ```bash
 git add app/lib/library/cbz_import.dart app/test/library/cbz_import_test.dart app/pubspec.yaml app/pubspec.lock
@@ -674,7 +674,7 @@ git commit -m "feat(epic-11): Issue 3——CBZ 壓縮檔自然排序重建與封
 **Interfaces:**
 - Produces：`String cacheFileExtension(String filePath)`（`foliate_native_bridge.dart` 新增公開頂層函式，供 `foliate_reader_view.dart` 的 `_buildIndexUri()` 與 `_defaultCacheBookForServing()` 共用同一份推導邏輯，避免兩處各自實作導致不同步）。
 
-- [ ] **Step 1：寫失敗測試（`cacheFileExtension` 推導邏輯）**
+- [x] **Step 1：寫失敗測試（`cacheFileExtension` 推導邏輯）**
 
 於 `app/test/reader/foliate_native_bridge_test.dart` 追加（若既有 import 已涵蓋 `elinkbook/reader/foliate_native_bridge.dart` 則不重複加）：
 
@@ -702,7 +702,7 @@ git commit -m "feat(epic-11): Issue 3——CBZ 壓縮檔自然排序重建與封
   });
 ```
 
-- [ ] **Step 2：更新既有 `cacheBookForServing` 呼叫測試以涵蓋新增的 `extension` 引數**
+- [x] **Step 2：更新既有 `cacheBookForServing` 呼叫測試以涵蓋新增的 `extension` 引數**
 
 修改 `app/test/reader/foliate_native_bridge_test.dart` 既有測試（原本斷言 `captured!.arguments, {'uri': ..., 'instanceId': ...}` 的那一則）：
 
@@ -751,7 +751,7 @@ git commit -m "feat(epic-11): Issue 3——CBZ 壓縮檔自然排序重建與封
   });
 ```
 
-- [ ] **Step 3：確認測試失敗**
+- [x] **Step 3：確認測試失敗**
 
 ```bash
 flutter test test/reader/foliate_native_bridge_test.dart
@@ -759,7 +759,7 @@ flutter test test/reader/foliate_native_bridge_test.dart
 
 Expected：FAIL（`cacheFileExtension` 未定義；既有測試因 map 不含 `extension` 鍵而斷言失敗）。
 
-- [ ] **Step 4：實作 Dart 端**
+- [x] **Step 4：實作 Dart 端**
 
 `app/lib/reader/foliate_native_bridge.dart` 頂部新增 import：
 
@@ -815,7 +815,7 @@ Future<String?> _defaultCacheBookForServing(String filePath, String instanceId) 
 }
 ```
 
-- [ ] **Step 5：實作原生端**
+- [x] **Step 5：實作原生端**
 
 `app/android/app/src/main/kotlin/cc/ugotit/elinkbook/ReaderResourceChannel.kt` 修改 `copyToCache`：
 
@@ -880,7 +880,7 @@ Future<String?> _defaultCacheBookForServing(String filePath, String instanceId) 
             }
 ```
 
-- [ ] **Step 6：`_buildIndexUri()` 新增 `bookFileName` 查詢參數**
+- [x] **Step 6：`_buildIndexUri()` 新增 `bookFileName` 查詢參數**
 
 `app/lib/reader/foliate_reader_view.dart`（已 import `foliate_native_bridge.dart`）修改 `_buildIndexUri()`：
 
@@ -904,7 +904,7 @@ Future<String?> _defaultCacheBookForServing(String filePath, String instanceId) 
   }
 ```
 
-- [ ] **Step 7：`main.js` fetch URL 改用動態檔名**
+- [x] **Step 7：`main.js` fetch URL 改用動態檔名**
 
 `app/android/app/src/main/assets/foliate/main.js` 修改 `openBook()` 開頭：
 
@@ -916,7 +916,7 @@ async function openBook() {
     )
 ```
 
-- [ ] **Step 8：確認測試通過**
+- [x] **Step 8：確認測試通過**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -925,7 +925,7 @@ flutter test test/reader/foliate_native_bridge_test.dart
 
 Expected：PASS（原有測試＋3 個新增 `cacheFileExtension` 測試＋1 個新增 CBZ extension 測試）。
 
-- [ ] **Step 9：確認既有大範圍測試未受影響**
+- [x] **Step 9：確認既有大範圍測試未受影響**
 
 ```bash
 flutter test test/reader/foliate_reader_view_test.dart test/screens/reader_screen_test.dart
@@ -933,7 +933,7 @@ flutter test test/reader/foliate_reader_view_test.dart test/screens/reader_scree
 
 Expected：PASS（這些檔案覆寫的是 `cacheBookForServing` 公開函式變數本身，簽章未變，不受影響——見本 Task 開頭「設計取捨」說明）。
 
-- [ ] **Step 10：`flutter analyze`**
+- [x] **Step 10：`flutter analyze`**
 
 ```bash
 flutter analyze
@@ -941,7 +941,7 @@ flutter analyze
 
 Expected：無新增 issue。
 
-- [ ] **Step 11：Commit**
+- [x] **Step 11：Commit**
 
 ```bash
 git add app/lib/reader/foliate_native_bridge.dart app/lib/reader/foliate_reader_view.dart \
@@ -964,7 +964,7 @@ git commit -m "fix(epic-11): Issue 3——WebView 書籍快取副檔名感知，
 - Consumes：`DualPageDirection`（`app/lib/reader/dual_page_direction.dart` 既有 enum，`ltr`/`rtl`）。
 - Produces：`FoliateReaderView.isComicBookHint`（`bool`，預設 `false`）、`FoliateReaderView.dualPageDirection`（`DualPageDirection?`）；`buildFoliatePreferencesMap()`／`foliatePreferencesChanged()` 涵蓋這兩個新欄位。
 
-- [ ] **Step 1：寫失敗測試（`buildFoliatePreferencesMap`／`foliatePreferencesChanged`）**
+- [x] **Step 1：寫失敗測試（`buildFoliatePreferencesMap`／`foliatePreferencesChanged`）**
 
 於 `app/test/reader/foliate_reader_view_test.dart` 找到既有測試 `buildFoliatePreferencesMap`／`foliatePreferencesChanged` 的 `group`（比照既有其他欄位測試風格），追加：
 
@@ -1042,7 +1042,7 @@ git commit -m "fix(epic-11): Issue 3——WebView 書籍快取副檔名感知，
 import 'package:elinkbook/reader/dual_page_direction.dart';
 ```
 
-- [ ] **Step 2：確認測試失敗**
+- [x] **Step 2：確認測試失敗**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -1051,7 +1051,7 @@ flutter test test/reader/foliate_reader_view_test.dart
 
 Expected：FAIL（`isComicBookHint`/`dualPageDirection` 建構參數不存在，編譯錯誤）。
 
-- [ ] **Step 3：實作**
+- [x] **Step 3：實作**
 
 `app/lib/reader/foliate_reader_view.dart` 頂部 import 區塊新增：
 
@@ -1106,7 +1106,7 @@ import 'dual_page_direction.dart';
       oldView.dualPageDirection != newView.dualPageDirection ||
 ```
 
-- [ ] **Step 4：確認測試通過**
+- [x] **Step 4：確認測試通過**
 
 ```bash
 flutter test test/reader/foliate_reader_view_test.dart
@@ -1114,7 +1114,7 @@ flutter test test/reader/foliate_reader_view_test.dart
 
 Expected：PASS（既有測試＋4 個新增測試）。
 
-- [ ] **Step 5：`main.js` 整合翻頁方向與虛擬目錄**
+- [x] **Step 5：`main.js` 整合翻頁方向與虛擬目錄**
 
 `app/android/app/src/main/assets/foliate/main.js` 修改 `openBook()`：在既有
 
@@ -1157,7 +1157,7 @@ Expected：PASS（既有測試＋4 個新增測試）。
     }
 ```
 
-- [ ] **Step 6：`flutter analyze`**
+- [x] **Step 6：`flutter analyze`**
 
 ```bash
 flutter analyze
@@ -1165,7 +1165,7 @@ flutter analyze
 
 Expected：無新增 issue。
 
-- [ ] **Step 7：Commit**
+- [x] **Step 7：Commit**
 
 ```bash
 git add app/lib/reader/foliate_reader_view.dart app/android/app/src/main/assets/foliate/main.js \
@@ -1185,7 +1185,7 @@ git commit -m "feat(epic-11): Issue 3——FoliateReaderView 新增 CBZ 專屬�
 - Consumes：`prepareCbzForImport`／`CbzImportResult`／`NoComicPagesException`（Task 4）；`BookFileFormat.cbz`（Task 2）。
 - Produces：CBZ 書籍 `Book.isFixedLayout == true`、`Book.coverPath` 指向落地封面、`Book.filePath` 指向落地後重建的 `.cbz` 檔案（`imported_books/` 既有目錄，`$id.cbz`），`Book.contentFingerprint` 對**原始**輸入檔案計算（非重建後檔案）。
 
-- [ ] **Step 1：`detectBookFileFormat` 新增 `.cbz`**
+- [x] **Step 1：`detectBookFileFormat` 新增 `.cbz`**
 
 `app/lib/library/book_import_service_impl.dart` 修改 `detectBookFileFormat()`：
 
@@ -1201,7 +1201,7 @@ BookFileFormat? detectBookFileFormat(String uriOrPath) {
 }
 ```
 
-- [ ] **Step 2：寫失敗測試**
+- [x] **Step 2：寫失敗測試**
 
 於 `app/test/library/book_import_service_test.dart` 頂部新增 import：
 
@@ -1290,7 +1290,7 @@ import 'package:archive/archive.dart';
 import 'package:elinkbook/library/book_content_fingerprint.dart';
 ```
 
-- [ ] **Step 3：確認測試失敗**
+- [x] **Step 3：確認測試失敗**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -1299,7 +1299,7 @@ flutter test test/library/book_import_service_test.dart
 
 Expected：FAIL（`BookFileFormat.cbz` 分支未實作，`book.format` 不會是 `cbz`，`importedBooks` 為空）。
 
-- [ ] **Step 4：實作**
+- [x] **Step 4：實作**
 
 `app/lib/library/book_import_service_impl.dart` 頂部 import 新增：
 
@@ -1380,7 +1380,7 @@ import 'cbz_import.dart';
   }
 ```
 
-- [ ] **Step 5：確認測試通過**
+- [x] **Step 5：確認測試通過**
 
 ```bash
 flutter test test/library/book_import_service_test.dart
@@ -1388,7 +1388,7 @@ flutter test test/library/book_import_service_test.dart
 
 Expected：PASS（既有全部測試＋3 個新增 CBZ 測試）。
 
-- [ ] **Step 6：`flutter analyze`**
+- [x] **Step 6：`flutter analyze`**
 
 ```bash
 flutter analyze
@@ -1396,7 +1396,7 @@ flutter analyze
 
 Expected：無新增 issue。
 
-- [ ] **Step 7：Commit**
+- [x] **Step 7：Commit**
 
 ```bash
 git add app/lib/library/book_import_service_impl.dart app/test/library/book_import_service_test.dart
@@ -1416,7 +1416,7 @@ git commit -m "feat(epic-11): Issue 3——匯入管線接上 CBZ 自然排序�
 **Interfaces:**
 - 無新介面，純設定值異動。
 
-- [ ] **Step 1：修改**
+- [x] **Step 1：修改**
 
 `app/lib/screens/library_screen.dart` 第 174 行：
 
@@ -1430,7 +1430,7 @@ git commit -m "feat(epic-11): Issue 3——匯入管線接上 CBZ 自然排序�
                           allowedExtensions: ['epub', 'pdf', 'txt', 'azw3', 'cbz'],
 ```
 
-- [ ] **Step 2：`flutter analyze`**
+- [x] **Step 2：`flutter analyze`**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -1439,11 +1439,11 @@ flutter analyze
 
 Expected：無新增 issue（純字串陣列常數異動；已確認 `app/test/` 下無任何既有測試斷言這個常數的確切內容，見 Global Constraints 之外的查證——`grep -rn "allowedExtensions" app/test/` 無結果，不會有collateral 測試失敗）。
 
-- [ ] **Step 3：真機人工確認（`.azw3` 選取能力為新增行為，非既有測試涵蓋範圍）**
+- [x] **Step 3：真機人工確認（`.azw3` 選取能力為新增行為，非既有測試涵蓋範圍）**
 
 於裝置圖書庫畫面開啟「匯入檔案」，確認系統檔案選擇器現在會列出 `.azw3` 副檔名的檔案（先前因不在 `allowedExtensions` 清單中會被系統選擇器過濾掉、完全無法選取）；選取 `test/fixtures/sample.azw3`（若裝置上無此檔案，可透過 `adb push` 推送）確認匯入成功、書架出現該書。
 
-- [ ] **Step 4：Commit**
+- [x] **Step 4：Commit**
 
 ```bash
 git add app/lib/screens/library_screen.dart app/integration_test/manual_import_acceptance_test.dart
@@ -1461,7 +1461,7 @@ git commit -m "feat(epic-11): Issue 3——檔案選擇器新增 .cbz，並補�
 **Interfaces:**
 - Consumes：`BookFormat.cbz`（Task 2）、`FoliateReaderView.isComicBookHint`／`dualPageDirection`（Task 6）、`resolved.dualPageDirection`（`resolved_preferences.dart` 既有欄位，非本 Issue 新增）。
 
-- [ ] **Step 1：寫失敗測試（防禦性 `_dispatchedIsFixedLayout` 分派）**
+- [x] **Step 1：寫失敗測試（防禦性 `_dispatchedIsFixedLayout` 分派）**
 
 於 `app/test/screens/reader_screen_test.dart` 找到既有「AZW3 書籍 isFixedLayout: null 時...」測試（epic-11 Issue 2 C2 迴歸測試）附近，追加同構測試：
 
@@ -1487,7 +1487,7 @@ git commit -m "feat(epic-11): Issue 3——檔案選擇器新增 .cbz，並補�
 
 （沿用既有 AZW3 測試同一組 `prefsManager`/`FakeLibraryRepository` fixture 慣例，本 Task 不新增這些 helper——若既有測試檔案的 `setUp` 已提供，直接複用）
 
-- [ ] **Step 2：確認測試失敗**
+- [x] **Step 2：確認測試失敗**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -1496,7 +1496,7 @@ flutter test test/screens/reader_screen_test.dart --plain-name "CBZ 書籍"
 
 Expected：FAIL（`BookFormat.cbz` 目前落入 `_resolveEpubEngineDispatch()` 的「不影響」分支，`_dispatchedIsFixedLayout` 永遠停留 `null`，`FoliateReaderView` 建構條件不滿足，測試逾時/找不到 widget）。
 
-- [ ] **Step 3：實作 `_resolveEpubEngineDispatch()`**
+- [x] **Step 3：實作 `_resolveEpubEngineDispatch()`**
 
 `app/lib/screens/reader_screen.dart` 修改（緊接在既有 azw3 分支之後、`if (format != BookFormat.epub) return;` 之前）：
 
@@ -1520,7 +1520,7 @@ Expected：FAIL（`BookFormat.cbz` 目前落入 `_resolveEpubEngineDispatch()` �
     if (format != BookFormat.epub) return;
 ```
 
-- [ ] **Step 4：實作 `_writeCurrentPosition()` merged case**
+- [x] **Step 4：實作 `_writeCurrentPosition()` merged case**
 
 修改既有 switch：
 
@@ -1533,7 +1533,7 @@ Expected：FAIL（`BookFormat.cbz` 目前落入 `_resolveEpubEngineDispatch()` �
 
 （其餘 case 內容不動）
 
-- [ ] **Step 5：實作 `_buildAppBarActions()` merged case**
+- [x] **Step 5：實作 `_buildAppBarActions()` merged case**
 
 修改既有 switch（本分支因 `_isFixedLayout` 恆為 true 而永遠不會被 CBZ 走到——見上方方法開頭 `if (_isFixedLayout) return null;`，此處僅為滿足編譯器 exhaustiveness 檢查，回傳內容與 epub/azw3 完全共用同一段既有程式碼，不需要另外處理 CBZ 專屬邏輯）：
 
@@ -1547,7 +1547,7 @@ Expected：FAIL（`BookFormat.cbz` 目前落入 `_resolveEpubEngineDispatch()` �
 
 （其餘內容不動）
 
-- [ ] **Step 6：實作 `_buildNativeView()` merged case，並接上 `isComicBookHint`／`dualPageDirection`**
+- [x] **Step 6：實作 `_buildNativeView()` merged case，並接上 `isComicBookHint`／`dualPageDirection`**
 
 修改既有 switch：
 
@@ -1605,7 +1605,7 @@ Expected：FAIL（`BookFormat.cbz` 目前落入 `_resolveEpubEngineDispatch()` �
         );
 ```
 
-- [ ] **Step 7：確認測試通過**
+- [x] **Step 7：確認測試通過**
 
 ```bash
 flutter test test/screens/reader_screen_test.dart
@@ -1613,7 +1613,7 @@ flutter test test/screens/reader_screen_test.dart
 
 Expected：PASS（全部既有測試＋1 個新增 CBZ 測試）。
 
-- [ ] **Step 8：確認 `_handleZoneAction()` 無需修改（`isFoliateFormat()` 已涵蓋 cbz，見 Task 2）**
+- [x] **Step 8：確認 `_handleZoneAction()` 無需修改（`isFoliateFormat()` 已涵蓋 cbz，見 Task 2）**
 
 ```bash
 grep -n "isFoliateFormat(format)" "U:/MyDeveloper/AI/elinkBook/app/lib/screens/reader_screen.dart"
@@ -1621,7 +1621,7 @@ grep -n "isFoliateFormat(format)" "U:/MyDeveloper/AI/elinkBook/app/lib/screens/r
 
 Expected：`_handleZoneAction()` 內兩處呼叫（`previousPage`/`nextPage` 分支）維持不動，本 Task 不修改這兩處——`isFoliateFormat()` 已於 Task 2 擴大涵蓋 `cbz`，這條路徑自動正確運作（見 Global Constraints 已查證事實 #3）。
 
-- [ ] **Step 9：`flutter analyze`（確認 Task 2 記錄的 exhaustiveness 錯誤清單清空）**
+- [x] **Step 9：`flutter analyze`（確認 Task 2 記錄的 exhaustiveness 錯誤清單清空）**
 
 ```bash
 flutter analyze
@@ -1629,7 +1629,7 @@ flutter analyze
 
 Expected：`reader_screen.dart` 相關的 `non_exhaustive_switch_statement` 全部消失（Task 2 Step 6 記錄的清單）；`flutter analyze` 整體回報 "No issues found!"。
 
-- [ ] **Step 10：Commit**
+- [x] **Step 10：Commit**
 
 ```bash
 git add app/lib/screens/reader_screen.dart app/test/screens/reader_screen_test.dart
@@ -1649,7 +1649,7 @@ git commit -m "feat(epic-11): Issue 3——ReaderScreen 分派邏輯擴充涵蓋
 - Consumes：`DualPageDirection`（既有 enum）、`BookReaderPrefs.dualPageDirection`（既有欄位，原僅 `pdf_settings_sheet.dart` 使用）。
 - Produces：`FxlSettingsSheet` 新增「翻頁方向」UI 區塊，`Key('fxl_settings_direction_ltr')`／`Key('fxl_settings_direction_rtl')`。
 
-- [ ] **Step 1：更新過時文件註解**
+- [x] **Step 1：更新過時文件註解**
 
 `app/lib/reader/dual_page_direction.dart` 修改：
 
@@ -1670,7 +1670,7 @@ enum DualPageDirection { ltr, rtl }
   final DualPageDirection? dualPageDirection; // null=rtl（PDF／CBZ 適用）
 ```
 
-- [ ] **Step 2：檢查既有 `pdf_settings_sheet.dart` 方向選擇 UI 樣式（供比照）**
+- [x] **Step 2：檢查既有 `pdf_settings_sheet.dart` 方向選擇 UI 樣式（供比照）**
 
 ```bash
 grep -n "DualPageDirection\|方向" "U:/MyDeveloper/AI/elinkBook/app/lib/screens/pdf_settings_sheet.dart"
@@ -1678,13 +1678,13 @@ grep -n "DualPageDirection\|方向" "U:/MyDeveloper/AI/elinkBook/app/lib/screens
 
 閱讀該檔案第 45-95 行、第 255-280 行左右的既有實作作為 UI 樣式參考（本計畫不重複貼出，實作時直接開啟該檔案比對）。
 
-- [ ] **Step 3：確認/建立測試檔**
+- [x] **Step 3：確認/建立測試檔**
 
 ```bash
 ls "U:/MyDeveloper/AI/elinkBook/app/test/screens/" | grep fxl_settings
 ```
 
-- [ ] **Step 4：寫失敗測試**
+- [x] **Step 4：寫失敗測試**
 
 ```dart
 // app/test/screens/fxl_settings_sheet_test.dart（新建，或於既有檔案追加）
@@ -1724,7 +1724,7 @@ void main() {
 
 （`BookReaderPrefs.empty` 建構方式與 `copyWith` 需比照既有其他測試檔案的實際用法確認正確語法——若 `BookReaderPrefs` 沒有 `const` 建構子，本 Step 2 測試需相應調整為既有測試檔案慣用的建構方式，執行時以 `flutter test` 實際回饋為準）
 
-- [ ] **Step 5：確認測試失敗**
+- [x] **Step 5：確認測試失敗**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -1733,7 +1733,7 @@ flutter test test/screens/fxl_settings_sheet_test.dart
 
 Expected：FAIL（`Key('fxl_settings_direction_rtl')` 找不到對應 widget）。
 
-- [ ] **Step 6：實作**
+- [x] **Step 6：實作**
 
 `app/lib/screens/fxl_settings_sheet.dart` 頂部新增 import：
 
@@ -1796,7 +1796,7 @@ import '../reader/dual_page_direction.dart';
             const SizedBox(height: 16),
 ```
 
-- [ ] **Step 7：確認測試通過**
+- [x] **Step 7：確認測試通過**
 
 ```bash
 flutter test test/screens/fxl_settings_sheet_test.dart
@@ -1804,7 +1804,7 @@ flutter test test/screens/fxl_settings_sheet_test.dart
 
 Expected：PASS。
 
-- [ ] **Step 8：`flutter analyze`**
+- [x] **Step 8：`flutter analyze`**
 
 ```bash
 flutter analyze
@@ -1812,7 +1812,7 @@ flutter analyze
 
 Expected：無新增 issue。
 
-- [ ] **Step 9：Commit**
+- [x] **Step 9：Commit**
 
 ```bash
 git add app/lib/screens/fxl_settings_sheet.dart app/lib/reader/dual_page_direction.dart \
@@ -1832,13 +1832,13 @@ git commit -m "feat(epic-11): Issue 3——FxlSettingsSheet 新增翻頁方向�
 **Interfaces:**
 - Produces：兩份提交進版控的真實可渲染 CBZ 測試素材，供 Task 12 真機 `integration_test` 使用。
 
-- [ ] **Step 1：確認 `python3` 可用**
+- [x] **Step 1：確認 `python3` 可用**
 
 ```bash
 python3 --version
 ```
 
-- [ ] **Step 2：撰寫並執行 fixture 產生腳本**
+- [x] **Step 2：撰寫並執行 fixture 產生腳本**
 
 ```bash
 cat > "U:/MyDeveloper/AI/elinkBook/tmp_generate_cbz_fixtures.py" << 'PYEOF'
@@ -1895,7 +1895,7 @@ python3 "U:/MyDeveloper/AI/elinkBook/tmp_generate_cbz_fixtures.py"
 rm "U:/MyDeveloper/AI/elinkBook/tmp_generate_cbz_fixtures.py"
 ```
 
-- [ ] **Step 3：驗證產生的 fixture 可被 `prepareCbzForImport` 正確解析**
+- [x] **Step 3：驗證產生的 fixture 可被 `prepareCbzForImport` 正確解析**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -1927,7 +1927,7 @@ rm test/library/verify_cbz_fixture_test.dart
 
 Expected：PASS（確認兩份 fixture 是結構正確、可被 `ZipDecoder` 解析的合法 zip 檔案，非產生腳本錯誤導致的損毀檔案）。
 
-- [ ] **Step 4：`pubspec.yaml` 新增 asset**
+- [x] **Step 4：`pubspec.yaml` 新增 asset**
 
 `app/pubspec.yaml` 的 `assets:` 清單，緊接在 `- test/fixtures/sample.azw3` 之後新增：
 
@@ -1936,7 +1936,7 @@ Expected：PASS（確認兩份 fixture 是結構正確、可被 `ZipDecoder` 解
     - test/fixtures/sample_unpadded.cbz
 ```
 
-- [ ] **Step 5：確認 asset 可正常載入**
+- [x] **Step 5：確認 asset 可正常載入**
 
 ```bash
 flutter pub get
@@ -1944,7 +1944,7 @@ flutter pub get
 
 Expected：無錯誤（純新增 asset 路徑，`pubspec.yaml` 語法正確即可）。
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook"
@@ -1964,7 +1964,7 @@ git commit -m "feat(epic-11): Issue 3——新增 CBZ 真機測試 fixture（零
 
 **背景**：本 Task 是整個 Issue 中唯一能驗證 Task 5（副檔名感知快取修復）／Task 6（`book.dir` 覆寫是否讓真實 WebView 導覽方向正確）是否真的在真機端到端有效的手段——`flutter test` 無法渲染 `InAppWebView`，見 CLAUDE.md「兩層測試架構」。比照 `integration_test/foliate_kf8_test.dart`（Issue 2 既有先例，`_stageAssetAsFile`／`_pumpUntilLoaded` helper 模式）撰寫。
 
-- [ ] **Step 1：確認可用裝置**
+- [x] **Step 1：確認可用裝置**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -1973,7 +1973,7 @@ flutter devices
 
 記錄裝置 ID（下方 Step 4 執行時需要）。
 
-- [ ] **Step 2：撰寫測試（先寫，不先驗證失敗——真機測試啟動成本高，比照 Issue 1/2 既有實務做法，直接撰寫完整後一次真機執行）**
+- [x] **Step 2：撰寫測試（先寫，不先驗證失敗——真機測試啟動成本高，比照 Issue 1/2 既有實務做法，直接撰寫完整後一次真機執行）**
 
 ```dart
 // app/integration_test/foliate_cbz_test.dart
@@ -2149,7 +2149,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 3：真機執行（步驟 1 記錄的裝置 ID）**
+- [x] **Step 3：真機執行（步驟 1 記錄的裝置 ID）**
 
 ```bash
 flutter test integration_test/foliate_cbz_test.dart -d <device-id>
@@ -2157,7 +2157,7 @@ flutter test integration_test/foliate_cbz_test.dart -d <device-id>
 
 Expected：2/2 PASS。若第一個測試失敗（卡在載入指示器逾時或 `reader_error_text` 出現），最可能根因是 Task 5 的副檔名感知快取修復未正確生效（`isCBZ()` 仍判定為 false）——回頭檢查 `main.js` 的 `bookFileName` query param 是否確實反映 `.cbz`、`ReaderResourceChannel.kt` 的快取檔名是否確實帶有 `.cbz` 副檔名（可透過 `adb shell run-as cc.ugotit.elinkbook ls files/foliate_book_cache/<instanceId>/` 檢查裝置上實際快取檔名）。
 
-- [ ] **Step 4：Commit**
+- [x] **Step 4：Commit**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook"
@@ -2171,7 +2171,7 @@ git commit -m "test(epic-11): Issue 3——CBZ 真機整合測試，涵蓋匯入
 
 **Files:** 無新增/修改，純驗證。
 
-- [ ] **Step 1：`flutter analyze`**
+- [x] **Step 1：`flutter analyze`**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -2180,7 +2180,7 @@ flutter analyze
 
 Expected：`No issues found!`
 
-- [ ] **Step 2：完整 `flutter test`**
+- [x] **Step 2：完整 `flutter test`**
 
 ```bash
 flutter test
@@ -2188,7 +2188,7 @@ flutter test
 
 Expected：全數通過（既有 1312 + 本 Issue 新增測試，具體數字以實際輸出為準）。
 
-- [ ] **Step 3：真機整合測試回歸（確認 Task 12 之後的任何後續修改未破壞既有 KF8 整合測試）**
+- [x] **Step 3：真機整合測試回歸（確認 Task 12 之後的任何後續修改未破壞既有 KF8 整合測試）**
 
 ```bash
 flutter test integration_test/foliate_kf8_test.dart integration_test/foliate_cbz_test.dart -d <device-id>
@@ -2196,7 +2196,7 @@ flutter test integration_test/foliate_kf8_test.dart integration_test/foliate_cbz
 
 Expected：4/4 PASS（KF8 既有 2 個 ＋ CBZ 新增 2 個）。
 
-- [ ] **Step 4：手動驗收（比照 issues.md Issue 3 驗收標準逐項確認）**
+- [x] **Step 4：手動驗收（比照 issues.md Issue 3 驗收標準逐項確認）**
 
 - 真機開啟自製 CBZ（`sample_unpadded.cbz`，非零填補檔名）頁序正確、封面正確：於裝置上實際透過圖書庫匯入畫面選取該檔案，人工目視每頁顏色是否依 1→10 遞增順序顯示（fixture 產生腳本已依 `i * 20 % 256` 遞增紅色分量，肉眼可辨順序）。
 - 翻頁方向切換為 RTL 後，實際點擊左/右熱區的翻頁方向正確；切回 LTR 恢復正常方向：透過 `FxlSettingsSheet` 實際切換，人工操作驗證（自動化涵蓋見 Task 12 Step 2 第二個測試，本步驟為人工複核）。
