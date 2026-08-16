@@ -101,7 +101,22 @@
 
 ## Issue 3：CBZ 匯入與閱讀（含翻頁方向切換 RTL/LTR）
 
-**Status:** `ready-for-agent`
+**Status:** `merged`（2026-08-16，PR [#153](https://git.jigong.org/huthief/elinkBook/pulls/153) 已合併至 `main`，commit `4b712ac`）。
+
+**完成摘要：**
+- Vendor `comic-book.js`（釘定 commit `dd71f2be356563c16a23272686189fcfb45d0b82`）
+- `BookFormat`／`BookFileFormat` 新增 `cbz`，`isFoliateFormat()` 擴大涵蓋，`reader_screen.dart` 三處既有 `switch (format)` 合併 case
+- 純 Dart `cbz_import.dart`：`compareNaturalOrder()` 自然排序比較器（`comic-book.js` 本身僅字典序排序）＋ `prepareCbzForImport()` 對壓縮檔內圖片重新命名重建（`page_0001.<ext>` 起算）與封面擷取；CPU 密集的解壓/排序/重建外包至 `Isolate.run()` 背景執行
+- **CBZ 開書前置修復（規劃階段查證發現，先前 design.md/spec.md/issues.md 皆未記錄）**：`ReaderResourceChannel.kt`／`main.js` 原本把 WebView 書籍快取寫死為 `current.epub`，導致 `view.js` 的 `isCBZ()` 副檔名/MIME 判斷恆為 false、CBZ 開書必然被誤判為 EPUB 失敗——已修復為快取檔名反映書籍真實副檔名
+- `FoliateReaderView` 新增 `isComicBookHint`／`dualPageDirection` 參數，`main.js` 於 `view.open(book)` 之前依偏好設定 `book.dir`（`fixed-layout.js` 的 `next()`/`prev()` 已正確依 `book.dir` 決定方向，不需新增任何導覽分派邏輯，明確補齊 Issue 1 Spike「未驗證導覽方向」的缺口）並覆寫虛擬頁碼目錄
+- `FxlSettingsSheet` 新增翻頁方向（RTL/LTR）設定，重用既有 `DualPageDirection`（原僅 PDF 適用）
+- `Book.isFixedLayout` 對 CBZ 恆為 `true`，劃線/備註入口與橫向雙頁皆透過既有 FXL 機制自動繼承，零額外程式碼
+- 檔案選擇器 `allowedExtensions` 新增 `cbz`，並依人類指示一併補上 Issue 2 遺留的 `azw3` 缺口
+- `flutter test`（1341 tests）／`flutter analyze`（0 issues）全數通過；真機整合測試 2/2 通過（匯入開書＋RTL 導覽方向）
+
+**程式碼審查發現並修復（合併前，`reviews/review-issue-3-plan.md`／`reviews/review-issue-3.md`）：** 實作前計畫審查採納「大型 CBZ 記憶體佔用」（`prepareCbzForImport()` 核心運算改包 `Isolate.run()`）與「自然排序大小寫容錯」兩項建議，查證後不採納「`archive` 套件 `readBytes()` 回傳型別疑慮」（已直接讀取已安裝套件原始碼核實型別正確）。實作完成後程式碼審查發現 4 項 Important——**#1**：`ReaderScreen._resolveEpubEngineDispatch()` 缺少計畫要求的 CBZ 防禦分支，與 Issue 2 Critical C2 同一類「`isFixedLayout` 為 null 時永遠卡在載入畫面」地雷（潛伏未發作，因匯入流程已一律寫入 `true`）；**#2**：真機 RTL 導覽方向測試原本只驗證「沒有跳錯誤」，未真正斷言翻頁方向，與 issues.md 明文要求有落差；**#3**：`manual_import_acceptance_test.dart` 的 `allowedExtensions` 未依計畫同步更新；**#4**：CBZ 匯入單元測試缺少 `isFixedLayout`／`contentFingerprint` 計算來源斷言——這正是本 Issue 過程中真實發生過的回歸類型（`c7da43f`）。另有 1 項 Minor（`ReaderResourceChannel.kt` 的 `extension` 引數加白名單驗證）一併修復。全部修復後 `flutter test` 全專案 **1341 tests** 全數通過（較審查當下的 1339 增加 2 個，對應 Important #1／#4 新增的測試），Kotlin 端另以 `./gradlew compileDebugKotlin` 確認編譯成功。審查報告也記錄了一項流程面觀察：發現兩處「plan checkbox 已勾選 `[x]`，但實際 diff 找不到對應程式碼／測試」的具體案例，供後續 Issue 執行時借鏡（逐一核對 `git diff` 而非批次勾選）。
+
+**已知殘留風險：** Important #2 修復後的 RTL 真機測試改為讀回 `ReadingPosition` 解析 locator index 斷言方向，程式碼已通過 `flutter analyze` 型別檢查，但該項變更本身因需要真機執行，未在本次修復流程中重新於真機上實測驗證（沿用先前真機驗證的整體流程結果）；Minor（CBZ 解壓無檔案大小上限）為既有已知取捨，非新發現，留待未來視情況評估。
 
 **依賴：** Issue 2（需要已泛化的 `FoliateReaderView`）。
 
