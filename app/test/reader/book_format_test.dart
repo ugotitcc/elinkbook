@@ -11,7 +11,7 @@ void main() {
   });
 
   test('不支援的副檔名回傳 unknown', () {
-    expect(detectBookFormat('book.txt'), BookFormat.unknown);
+    expect(detectBookFormat('book.xyz'), BookFormat.unknown);
   });
 
   test('無副檔名的路徑回傳 unknown', () {
@@ -37,6 +37,11 @@ void main() {
     expect(detectBookFormat('COMIC.CBZ'), BookFormat.cbz);
   });
 
+  test('detectBookFormat 對 .txt 副檔名回傳 BookFormat.txt', () {
+    expect(detectBookFormat('novel.txt'), BookFormat.txt);
+    expect(detectBookFormat('NOVEL.TXT'), BookFormat.txt);
+  });
+
   group('isFoliateFormat', () {
     test('epub／azw3 回傳 true', () {
       expect(isFoliateFormat(BookFormat.epub), isTrue);
@@ -45,6 +50,10 @@ void main() {
 
     test('cbz 回傳 true', () {
       expect(isFoliateFormat(BookFormat.cbz), isTrue);
+    });
+
+    test('txt 回傳 true', () {
+      expect(isFoliateFormat(BookFormat.txt), isTrue);
     });
 
     test('pdf／unknown 回傳 false', () {

@@ -208,6 +208,17 @@ class ReaderScreen extends StatefulWidget {
       state._openPdfToc();
     }
   }
+
+  /// 供真機整合測試讀取目前書籍目錄（epic-11-multi-format-reader
+  /// Issue 4），比照既有 [triggerZoneAction] 強型別 static helper 模式。
+  /// [key] 對應的 State 若尚未掛載，回傳空清單。
+  static Future<List<TocEntry>> loadTableOfContentsForTest(
+    GlobalKey<State<ReaderScreen>> key,
+  ) async {
+    final state = key.currentState;
+    if (state is! _ReaderScreenState) return const [];
+    return FoliateReaderView.loadTableOfContents(state._foliateEpubReaderViewKey);
+  }
 }
 
 enum _RenderState { loading, rendered, error }
@@ -458,6 +469,17 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       _dispatchedIsFixedLayout = true;
       return;
     }
+    if (format == BookFormat.txt) {
+      // TXT 合成後恆為流式（無 FXL 變體，spec.md「TXT／Markdown 合成書籍
+      // 結構」），Book.isFixedLayout 理論上匯入時必定已寫入 false
+      // （book_import_service_impl.dart），此處防禦性補上與上方
+      // azw3/cbz 分支相同邏輯的 null-safety 修正（比照 Issue 2 C2／
+      // Issue 3 Important #1 的既有教訓，避免任何未來邊界情況下
+      // _dispatchedIsFixedLayout 永遠停留 null 導致 FoliateReaderView
+      // 永遠無法建構）。
+      _dispatchedIsFixedLayout = false;
+      return;
+    }
     if (format != BookFormat.epub) return;
     final repository = widget.libraryRepository;
     if (repository == null) {
@@ -552,6 +574,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       case BookFormat.epub:
       case BookFormat.azw3:
       case BookFormat.cbz:
+      case BookFormat.txt:
         final info = _epubPositionInfo;
         if (info == null) return;
         // progression 為 null 時（例如 Readium 對某些定位尚未完全解析版面
@@ -1902,6 +1925,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       case BookFormat.epub:
       case BookFormat.azw3:
       case BookFormat.cbz:
+      case BookFormat.txt:
         return [
           IconButton(
             key: const Key('reader_toc_button'),
@@ -2588,8 +2612,12 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       case BookFormat.epub:
       case BookFormat.azw3:
       case BookFormat.cbz:
-        // Epic 11 Issue 2：KF8 (AZW3) 與 EPUB 共用同一個 FoliateReaderView，
-        // 建構參數完全相同，不需要依格式分流。
+      case BookFormat.txt:
+        // Epic 11 Issue 4：TXT 與 EPUB/AZW3/CBZ 共用同一個
+        // FoliateReaderView，建構參數完全相同——TXT 合成後是一份真正的
+        // EPUB，isComicBookHint 恆為 false（非 cbz 格式），dualPageDirection
+        // 對流式格式無意義但傳入無害（main.js 僅在 isComicBookHint===true
+        // 時讀取它，見 Issue 3 main.js 註解）。
         return FoliateReaderView(
           key: _foliateEpubReaderViewKey,
           filePath: widget.filePath,
@@ -2624,6 +2652,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           showNavZoneDebugOverlay: resolved.showNavZoneDebugOverlay,
           consoleLogEnabled: resolved.consoleLogEnabled,
           initialLocatorJson: _initialPosition?.epubLocatorJson,
+          isComicBookHint: format == BookFormat.cbz,
+          dualPageDirection: resolved.dualPageDirection,
           onLocatorChanged: (info) {
             if (!mounted) return;
             setState(() => _epubPositionInfo = info);

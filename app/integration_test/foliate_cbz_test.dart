@@ -88,11 +88,34 @@ void main() {
     },
   );
 
+  /// **架構修正記錄（epic-11 Issue 4 程式碼審查 Important #2，2026-08-17）**：
+  /// 本檔案原本的 RTL 測試假設「切換 RTL 後，熱區的『上一頁』動作應該讓
+  /// 頁碼往前進」，源自 Issue 1 Spike／design.md／spec.md／issues.md Issue 3
+  /// 一路延續下來、從未真機驗證過的假設。真機實測後發現該斷言在單頁模式
+  /// 下（手機直向、CBZ 預設情境）恆為失敗，往下追查 `fixed-layout.js`
+  /// 原始碼證實：`#goLeft()`/`#goRight()`（`next()`/`prev()` 內 `this.rtl`
+  /// 三元運算式實際呼叫的對象）只有在雙頁跨頁模式下才可能成功，單頁模式
+  /// 下 `this.#center` 恆為真、兩者恆為 falsy，`book.dir` 對單頁模式的
+  /// `next()`/`prev()` 導覽方向**完全沒有作用**。
+  ///
+  /// 交叉核對本專案既有、已出貨的 PDF `dualPageDirection`
+  /// （`pdf_spread_layout.dart`／`pdf_reader_view.dart`）證實這不是 CBZ
+  /// 獨有的缺陷，而是本 App 對「RTL/LTR」的既定、一致的設計哲學：
+  /// `dualPageDirection` 只影響雙頁跨頁時的視覺/幾何排版（`pdf_spread_
+  /// layout.dart`：「RTL 的左右鏡像只發生在幾何排版階段」），**不影響**
+  /// 熱區觸發後的導覽方向本身——`_handleZoneAction()` 對 PDF 的
+  /// `previousPage`/`nextPage` 呼叫從未依 `dualPageDirection` 分支。
+  ///
+  /// 人類已確認（2026-08-17）採用「翻頁的規則以熱區為準」——CBZ 沿用與
+  /// PDF 一致的既有精神，`book.dir` 不反轉導覽方向，只透過既有
+  /// `fixed-layout.js` `#spread()` 邏輯影響雙頁跨頁時的頁面配對順序。
+  /// 以下兩則測試驗證「LTR／RTL 對同一組熱區動作產生完全一致的導覽結果」
+  /// 這個修正後的不變量，取代原本試圖證明方向反轉的斷言。
+
   testWidgets(
-    'RTL 翻頁方向：切換為 RTL 後，點擊「上一頁」熱區實際往下一頁方向前進'
-    '（明確補齊 Issue 1 Spike 未驗證的導覽方向缺口，見 '
-    'reviews/review-issue-1-spike-execution.md Important #1——本測試斷言'
-    '實際翻頁結果，非僅 book.dir 覆寫值傳遞）',
+    'RTL 模式：導覽方向完全依熱區設定前進，不因 book.dir 而反轉'
+    '（nextPage 前進、隨後 previousPage 退回原點，驗證 book.dir 覆寫本身'
+    '不會讓 main.js／fixed-layout.js 拋出例外或產生非預期導覽結果）',
     (tester) async {
       sqfliteFfiInit();
       databaseFactory = databaseFactoryFfi;
@@ -118,11 +141,6 @@ void main() {
       );
       final book = result.importedBooks.single;
 
-      // 先寫入 RTL 偏好，讓 ReaderScreen 開書時 resolved.dualPageDirection
-      // 已是 rtl（比照既有 prefsManager 讀寫模式，避免依賴 UI 層
-      // FxlSettingsSheet 互動——本測試聚焦驗證 main.js／fixed-layout.js
-      // 對 book.dir 的實際導覽行為，UI 互動路徑已由 Task 10 widget test
-      // 涵蓋）。
       final loaded = await prefsManager.load(book.id);
       await prefsManager.saveBookPrefs(
         book.id,
@@ -145,36 +163,23 @@ void main() {
       await _pumpUntilLoaded(tester);
       expect(find.byKey(const Key('reader_error_text')), findsNothing);
 
-      // RTL 模式下，ZoneAction.previousPage（熱區語意上的「上一頁」，對應
-      // 3×3 熱區左側格）應讓 fixed-layout.js 的 renderer.prev()（讀取
-      // this.rtl=true）呼叫 #goRight()——實際效果是往書本「邏輯上的下一頁」
-      // 前進（日漫翻頁習慣：從封面往後翻是往左滑）。開書當下（無既有閱讀
-      // 記錄）一律定位於第一個 section／spread（index 0，見
-      // fixed-layout.js #index 初始值 -1、view.init({}) 走預設導覽路徑），
-      // 而 index 0 是全書最前端，若 book.dir 覆寫未生效（誤退回 LTR 語意），
-      // previousPage 會讓 renderer.prev() 呼叫 #goLeft()、最終落到
-      // goToSpread(this.#index - 1, ...)（即 goToSpread(-1, ...)），該函式
-      // 對越界 index 直接提早 return、不觸發任何 relocate 事件，位置維持
-      // 在 index 0 不動；只有 book.dir 覆寫確實生效、renderer.prev() 正確
-      // 委派為 #goRight() 時，位置才會前進到 index 1。因此「index 是否從
-      // 0 變動」本身即是方向正確性的明確訊號（非僅驗證 book.dir 覆寫值
-      // 傳遞，而是斷言使用者觸發熱區動作後的實際翻頁結果——issues.md
-      // Issue 3「單元測試要求」明文要求；reviews/review-issue-3.md
-      // Important #2 審查修正）。
+      // nextPage：index 0 → 1（熱區語意上的「下一頁」，不受 book.dir 影響）。
+      ReaderScreen.triggerZoneAction(readerKey, ZoneAction.nextPage);
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.byKey(const Key('reader_error_text')), findsNothing);
+
+      // previousPage：index 1 → 0（熱區語意上的「上一頁」，同樣不受
+      // book.dir 影響，驗證來回導覽皆正常，非單向巧合）。
       ReaderScreen.triggerZoneAction(readerKey, ZoneAction.previousPage);
       await tester.pump(const Duration(milliseconds: 500));
       await tester.pump(const Duration(seconds: 1));
       expect(find.byKey(const Key('reader_error_text')), findsNothing);
 
       // ReaderScreen 對外未暴露目前定位的公開讀取介面（見 CLAUDE.md
-      // 「ReaderScreen」架構小節：載入中／錯誤狀態刻意只透過固定
-      // Key('reader_loading_indicator')/Key('reader_error_text') 暴露，
-      // 不新增公開 callback 參數）——本專案既有測試手段下能取得「目前
-      // 實際定位」的唯一管道，是卸載畫面觸發 dispose() → 既有的
-      // _writeCurrentPosition() 寫入邏輯，再從 prefsManager 讀回。
-      // saveReadingPosition() 在 dispose() 內未被 await（dispose() 是
-      // 同步方法，見該方法既有文件註解），故卸載後額外 pump 等待這個
-      // fire-and-forget 寫入真正落地。
+      // 「ReaderScreen」架構小節）——卸載畫面觸發 dispose() →
+      // _writeCurrentPosition() 寫入，再從 prefsManager 讀回，是本專案
+      // 既有測試手段下能取得「目前實際定位」的唯一管道。
       await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
       await tester.pump(const Duration(milliseconds: 500));
 
@@ -184,10 +189,92 @@ void main() {
       final locator = jsonDecode(locatorJson!) as Map<String, Object?>;
       expect(
         (locator['index'] as num).toInt(),
-        greaterThan(0),
-        reason: 'RTL 模式下「上一頁」熱區應讓位置從開書時的 index 0 前進，'
-            '而非停留原地——若停留在 0，代表 book.dir 覆寫未生效、'
-            '仍以 LTR 語意處理（見上方註解的完整因果鏈說明）',
+        0,
+        reason: 'RTL 模式下 nextPage 後接 previousPage 應回到開書起始頁 '
+            'index 0——與下一則 LTR 測試預期結果完全相同，佐證 book.dir 不'
+            '影響導覽方向本身（僅影響雙頁跨頁的視覺排版，見上方架構修正'
+            '記錄）',
+      );
+    },
+  );
+
+  testWidgets(
+    'LTR 模式：導覽方向與 RTL 完全一致（佐證 book.dir 不影響熱區導覽語意，'
+    '只是既有 PDF dualPageDirection 精神的延伸——純視覺/幾何排版概念，'
+    '非方向反轉；與上一則 RTL 測試互為對照組，兩者應產生相同的導覽結果）',
+    (tester) async {
+      sqfliteFfiInit();
+      databaseFactory = databaseFactoryFfi;
+      final libraryRepository =
+          await SqliteLibraryRepository.open(inMemoryDatabasePath);
+      addTearDown(() => libraryRepository.close());
+      final prefsManager = ReaderPrefsManagerImpl(
+        BookReaderPrefsRepository(libraryRepository.database),
+        ReadingPositionRepository(libraryRepository.database),
+      );
+      final importService = BookImportServiceImpl(repository: libraryRepository);
+
+      final samplePath = await _stageAssetAsFile(
+          'test/fixtures/sample.cbz', 'foliate_cbz_ltr_control_integration.cbz');
+      addTearDown(() async {
+        final file = File(samplePath);
+        if (await file.exists()) await file.delete();
+      });
+
+      final result = await importService.importFiles(
+        [samplePath],
+        displayNames: ['sample.cbz'],
+      );
+      final book = result.importedBooks.single;
+
+      // 明確寫入 LTR 偏好——elinkBook 全域預設值其實是 RTL（見
+      // dual_page_direction.dart「亦為 elinkBook 全域固定預設值」），若不
+      // 明確覆寫，本測試會跟未設定的預設情境混在一起，喪失「明確 LTR」
+      // 對照組的意義。
+      final loaded = await prefsManager.load(book.id);
+      await prefsManager.saveBookPrefs(
+        book.id,
+        loaded.bookPrefs.copyWith(dualPageDirection: DualPageDirection.ltr),
+      );
+
+      final readerKey = GlobalKey<State<ReaderScreen>>();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            key: readerKey,
+            filePath: book.filePath,
+            bookId: book.id,
+            prefsManager: prefsManager,
+            libraryRepository: libraryRepository,
+            isFixedLayout: book.isFixedLayout,
+          ),
+        ),
+      );
+      await _pumpUntilLoaded(tester);
+      expect(find.byKey(const Key('reader_error_text')), findsNothing);
+
+      ReaderScreen.triggerZoneAction(readerKey, ZoneAction.nextPage);
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.byKey(const Key('reader_error_text')), findsNothing);
+
+      ReaderScreen.triggerZoneAction(readerKey, ZoneAction.previousPage);
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.byKey(const Key('reader_error_text')), findsNothing);
+
+      await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
+      await tester.pump(const Duration(milliseconds: 500));
+
+      final finalPosition = (await prefsManager.load(book.id)).readingPosition;
+      final locatorJson = finalPosition.epubLocatorJson;
+      expect(locatorJson, isNotNull);
+      final locator = jsonDecode(locatorJson!) as Map<String, Object?>;
+      expect(
+        (locator['index'] as num).toInt(),
+        0,
+        reason: 'LTR 模式下 nextPage 後接 previousPage 應回到開書起始頁 '
+            'index 0——與上一則 RTL 測試預期結果完全相同',
       );
     },
   );

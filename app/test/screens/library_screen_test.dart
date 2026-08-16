@@ -290,7 +290,7 @@ void main() {
 
   testWidgets('從閱讀器返回書架時，重新載入書籍清單，避免後續操作以過期資料覆寫最新進度',
       (tester) async {
-    // 使用 .txt 格式讓 ReaderScreen 命中「不支援格式」分支（純 Dart 安全路徑，
+    // 使用 .unknown 格式讓 ReaderScreen 命中「不支援格式」分支（純 Dart 安全路徑，
     // 不觸發 AndroidView），確保 pumpAndSettle 能順利完成。重點是驗證
     // Navigator.pop() 後 _openBook 的 .then() 回呼會呼叫 _loadBooks()，
     // 與實際閱讀器渲染無關。
@@ -298,7 +298,7 @@ void main() {
       id: '1',
       title: '紅樓夢',
       author: '曹雪芹',
-      filePath: 'content://example/1.txt',
+      filePath: 'content://example/1.unknown',
     );
     final repository = FakeLibraryRepository(initialBooks: [book]);
 
@@ -326,8 +326,8 @@ void main() {
       id: '1',
       title: '紅樓夢',
       author: '曹雪芹',
-      format: BookFileFormat.txt,
-      filePath: 'content://example/1.txt',
+      format: BookFileFormat.epub,
+      filePath: 'content://example/1.unknown',
       source: BookSource.local,
       progress: 0.5,
       groupName: BookGroup.uncategorized,
@@ -863,7 +863,7 @@ void main() {
     final book = _testBook(
       id: '1',
       title: '紅樓夢',
-      filePath: 'content://example/1.txt',
+      filePath: 'content://example/1.unknown',
     );
     await tester.pumpWidget(
       MaterialApp(
@@ -890,7 +890,7 @@ void main() {
     await tester.tap(find.byKey(const Key('book_item_1')));
     await tester.pumpAndSettle();
 
-    // 用 .txt 檔名讓 ReaderScreen 命中「不支援格式」分支（純 Dart 安全路徑，
+    // 用 .unknown 檔名讓 ReaderScreen 命中「不支援格式」分支（純 Dart 安全路徑，
     // 不觸發 AndroidView；見 reader_screen_test.dart 既有模式），只用來證明
     // 「導覽確實發生」，不驗證實際閱讀渲染。
     expect(find.text('閱讀器'), findsOneWidget);

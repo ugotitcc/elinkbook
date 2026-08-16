@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -6,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:elinkbook/library/book_content_fingerprint.dart';
 import 'package:elinkbook/library/book_import_service_impl.dart';
 import 'package:elinkbook/library/models/book_group.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
@@ -166,16 +168,21 @@ void main() {
     expect(books.single.isFixedLayout, isNull);
   });
 
-  test('匯入 TXT 檔案時，isFixedLayout 維持 null（不呼叫 extractMetadata）', () async {
+  test('匯入 TXT 檔案時，isFixedLayout 為 false（流式排版，不呼叫 extractMetadata）', () async {
     mockChannel((call) async {
       if (call.method == 'takePersistableUriPermission') return null;
+      if (call.method == 'copyContentUriToFile') {
+        final args = call.arguments as Map;
+        await File(args['destinationPath'] as String).writeAsString('第一章 測試\n內容');
+        return null;
+      }
       return null;
     });
 
     final result = await service.importFiles(['content://example/notes.txt']);
     final books = result.importedBooks;
 
-    expect(books.single.isFixedLayout, isNull);
+    expect(books.single.isFixedLayout, isFalse);
   });
 
   test('匯入 PDF 檔案呼叫 extractMetadata(format: pdf)，詮釋資料無標題時降級為檔名', () async {
@@ -207,6 +214,11 @@ void main() {
       if (call.method == 'takePersistableUriPermission') return null;
       if (call.method == 'extractMetadata') {
         extractMetadataCalled = true;
+      }
+      if (call.method == 'copyContentUriToFile') {
+        final args = call.arguments as Map;
+        await File(args['destinationPath'] as String).writeAsString('第一章 測試\n內容');
+        return null;
       }
       return null;
     });
@@ -626,6 +638,11 @@ void main() {
     test('TXT 匯入時，呼叫 computeSha256 並寫入 content_fingerprint', () async {
       mockChannel((call) async {
         if (call.method == 'takePersistableUriPermission') return null;
+        if (call.method == 'copyContentUriToFile') {
+          final args = call.arguments as Map;
+          await File(args['destinationPath'] as String).writeAsString('第一章 測試\n內容');
+          return null;
+        }
         if (call.method == 'computeSha256') return 'txt-hash-123';
         return null;
       });
@@ -934,6 +951,91 @@ void main() {
       expect(takePermissionCalled, isFalse);
       expect(result.importedBooks, hasLength(1));
       expect(result.importedBooks.first.format, BookFileFormat.cbz);
+    });
+  });
+
+  group('TXT 匯入', () {
+    test('匯入有效 TXT：format=txt、isFixedLayout=false、filePath 指向合成後的 .txt 檔案', () async {
+      final txtFile = File('${Directory.systemTemp.path}/import_test.txt');
+      await txtFile.writeAsBytes(utf8.encode('第一章 開始\n正文內容'));
+      addTearDown(() => txtFile.delete());
+
+      final result = await service.importFiles([txtFile.path], displayNames: ['novel.txt']);
+
+      expect(result.importedBooks, hasLength(1));
+      final book = result.importedBooks.first;
+      expect(book.format, BookFileFormat.txt);
+      expect(book.isFixedLayout, isFalse);
+      expect(book.filePath, isNot(txtFile.path));
+      expect(book.filePath, endsWith('.txt'));
+      expect(File(book.filePath).existsSync(), isTrue);
+      // 合成後的檔案內容須是合法 zip（EPUB），非原始純文字。
+      final archive = ZipDecoder().decodeBytes(await File(book.filePath).readAsBytes());
+      expect(archive.findFile('OEBPS/content.opf'), isNotNull);
+    });
+
+    test('封面仍由 generateTxtCover() 依書名產生（TXT 無內嵌封面/首頁可渲染）', () async {
+      final txtFile = File('${Directory.systemTemp.path}/import_test_cover.txt');
+      await txtFile.writeAsBytes(utf8.encode('第一章 開始\n正文'));
+      addTearDown(() => txtFile.delete());
+
+      final result = await service.importFiles([txtFile.path], displayNames: ['novel.txt']);
+
+      final book = result.importedBooks.first;
+      expect(book.coverPath, isNotNull);
+      expect(File(book.coverPath!).existsSync(), isTrue);
+    });
+
+    test('contentFingerprint 對原始檔案計算，非合成後的 .txt 檔案', () async {
+      final txtFile = File('${Directory.systemTemp.path}/import_test_fingerprint.txt');
+      await txtFile.writeAsBytes(utf8.encode('第一章 開始\n正文'));
+      addTearDown(() => txtFile.delete());
+
+      final result = await service.importFiles([txtFile.path], displayNames: ['novel.txt']);
+
+      final book = result.importedBooks.first;
+      final expectedFingerprint =
+          await computeBookContentFingerprint(txtFile.path, BookFileFormat.txt);
+      expect(book.contentFingerprint, expectedFingerprint);
+    });
+
+    test(
+      '空白 TXT 檔案不建立 Book 記錄，且不留下孤兒封面檔案'
+      '（epic-11 Issue 4 程式碼審查 Important #1 迴歸測試：修復前會先落地封面'
+      '才發現內容為空而中止，導致 covers/ 目錄殘留無主檔案）',
+      () async {
+        final txtFile = File('${Directory.systemTemp.path}/import_test_empty.txt');
+        await txtFile.writeAsBytes(utf8.encode('   \n\n   '));
+        addTearDown(() => txtFile.delete());
+
+        final result = await service.importFiles([txtFile.path], displayNames: ['empty.txt']);
+
+        expect(result.importedBooks, isEmpty);
+        // coversDir 由頂層 setUp() 提供（見既有 service 建構），空匯入不應
+        // 在其中留下任何檔案。
+        expect(coversDir.listSync(), isEmpty);
+      },
+    );
+
+    test('Big5 編碼 TXT 正確匯入（解碼於合成階段完成，匯入結果與 UTF-8 無異）', () async {
+      // 「測試」的 Big5 位元組為 0xB4FA 0xB8D5（見
+      // txt_charset_detection_test.dart 已交叉驗證的已知值）；前綴一個
+      // ASCII 字元涵蓋「非純中文開頭」的較真實檔案內容型態。
+      final big5Bytes = Uint8List.fromList([
+        0x41, // 'A'
+        0xB4, 0xFA, 0xB8, 0xD5, // 測試
+      ]);
+      final txtFile = File('${Directory.systemTemp.path}/import_test_big5.txt');
+      await txtFile.writeAsBytes(big5Bytes);
+      addTearDown(() => txtFile.delete());
+
+      final result = await service.importFiles([txtFile.path], displayNames: ['big5_novel.txt']);
+
+      expect(result.importedBooks, hasLength(1));
+      final book = result.importedBooks.first;
+      final archive = ZipDecoder().decodeBytes(await File(book.filePath).readAsBytes());
+      final chapterContent = utf8.decode(archive.findFile('OEBPS/text/chap0001.xhtml')!.readBytes()!);
+      expect(chapterContent, contains('測試'));
     });
   });
 }

@@ -101,7 +101,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: ReaderScreen(
-          filePath: 'test/fixtures/sample.txt',
+          filePath: 'test/fixtures/sample.unknown',
           bookId: 'b1',
           prefsManager: prefsManager,
         ),
@@ -589,6 +589,78 @@ void main() {
       expect(find.byType(FoliateReaderView), findsOneWidget);
       // CBZ 沒有對應 EPUB OPF/CSS 解析器的執行期重新偵測手段，不應呼叫
       // 這個 EPUB 專屬方法。
+      expect(repository.detectAndCacheEpubLayoutCalls, isEmpty);
+    },
+  );
+
+  testWidgets(
+    'CBZ 書籍建構 FoliateReaderView 時，isComicBookHint 正確傳為 true'
+    '（epic-11 Issue 4 程式碼審查 Important #1 迴歸測試——Task 8 一度誤以為'
+    '這個參數已存在於呼叫端而遺漏補上，導致 CBZ 的 book.dir RTL 覆寫在 '
+    'main.js 端被靜默跳過，這類問題此前只有真機整合測試才抓得到；本測試'
+    '把它收斂到 Seam 1，flutter test 秒級即可攔截同類回歸）',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.cbz',
+            bookId: 'b1',
+            prefsManager: prefsManager,
+            isFixedLayout: true,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final foliateView = tester.widget<FoliateReaderView>(
+        find.byType(FoliateReaderView),
+      );
+      expect(foliateView.isComicBookHint, isTrue);
+    },
+  );
+
+  testWidgets(
+    '非 CBZ 格式建構 FoliateReaderView 時，isComicBookHint 恆為 false'
+    '（EPUB／TXT 皆不應誤觸 main.js 的 CBZ 專屬 book.dir 覆寫邏輯，'
+    '同一則審查修正的對照組）',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b1',
+            prefsManager: prefsManager,
+            isFixedLayout: false,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final foliateView = tester.widget<FoliateReaderView>(
+        find.byType(FoliateReaderView),
+      );
+      expect(foliateView.isComicBookHint, isFalse);
+    },
+  );
+
+  testWidgets(
+    'TXT 書籍 isFixedLayout: null 時，防禦性視為 false 並建構 FoliateReaderView，'
+    '不永遠停留載入中畫面（epic-11 Issue 4，比照 Issue 2 C2／Issue 3 Important #1 '
+    '同構情境；正常匯入流程下 Book.isFixedLayout 必為 false，本測試涵蓋邊界防禦）',
+    (tester) async {
+      final repository = FakeLibraryRepository();
+      await tester.pumpWidget(MaterialApp(home: ReaderScreen(
+        filePath: 'test/fixtures/sample_synth.txt', bookId: 'b1',
+        prefsManager: prefsManager, libraryRepository: repository,
+      )));
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+      expect(find.byType(FoliateReaderView), findsOneWidget);
       expect(repository.detectAndCacheEpubLayoutCalls, isEmpty);
     },
   );

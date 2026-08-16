@@ -50,7 +50,7 @@
 **Interfaces:**
 - Produces：`Future<Uint8List> readContentUriBytes(String uri, {required String tempFilePrefix, required String tempFileExtension})`（供 Task 6 `txt_epub_synthesizer.dart` 與本 Task 重構後的 `cbz_import.dart` 共用）。
 
-- [ ] **Step 1：寫失敗測試**
+- [x] **Step 1：寫失敗測試**
 
 ```dart
 // app/test/library/content_uri_reader_test.dart
@@ -144,7 +144,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：確認測試失敗**
+- [x] **Step 2：確認測試失敗**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -153,7 +153,7 @@ flutter test test/library/content_uri_reader_test.dart
 
 Expected：FAIL（`content_uri_reader.dart` 不存在，編譯錯誤）。
 
-- [ ] **Step 3：實作**
+- [x] **Step 3：實作**
 
 ```dart
 // app/lib/library/content_uri_reader.dart
@@ -196,7 +196,7 @@ Future<Uint8List> readContentUriBytes(
 }
 ```
 
-- [ ] **Step 4：確認測試通過**
+- [x] **Step 4：確認測試通過**
 
 ```bash
 flutter test test/library/content_uri_reader_test.dart
@@ -204,7 +204,7 @@ flutter test test/library/content_uri_reader_test.dart
 
 Expected：PASS（3 個測試）。
 
-- [ ] **Step 5：重構 `cbz_import.dart` 改用共用版本**
+- [x] **Step 5：重構 `cbz_import.dart` 改用共用版本**
 
 `app/lib/library/cbz_import.dart` 移除私有的 `_readContentUriBytes()` 函式本體，改為：
 
@@ -230,7 +230,7 @@ import 'content_uri_reader.dart';
 
 移除檔案末尾整個 `_readContentUriBytes` 函式定義（現由 `content_uri_reader.dart` 提供）。若 `library_repository.dart` 的 import 已不再被 `cbz_import.dart` 其他地方使用，一併移除該行 import（`kBookMetadataChannel` 呼叫已搬到 `content_uri_reader.dart` 內）。
 
-- [ ] **Step 6：確認 CBZ 既有測試仍通過（零回歸）**
+- [x] **Step 6：確認 CBZ 既有測試仍通過（零回歸）**
 
 ```bash
 flutter test test/library/cbz_import_test.dart test/library/book_import_service_test.dart
@@ -238,7 +238,7 @@ flutter test test/library/cbz_import_test.dart test/library/book_import_service_
 
 Expected：PASS，數量與重構前相同（純內部實作搬移，行為不變）。
 
-- [ ] **Step 7：`flutter analyze`**
+- [x] **Step 7：`flutter analyze`**
 
 ```bash
 flutter analyze
@@ -246,7 +246,7 @@ flutter analyze
 
 Expected：`No issues found!`
 
-- [ ] **Step 8：Commit**
+- [x] **Step 8：Commit**
 
 ```bash
 git add app/lib/library/content_uri_reader.dart app/lib/library/cbz_import.dart app/test/library/content_uri_reader_test.dart
@@ -264,7 +264,7 @@ git commit -m "refactor(epic-11): Issue 4——抽出共用 content_uri_reader.d
 **Interfaces:**
 - Produces：`const String kBig5TableKeysBase64`／`kBig5TableValuesBase64`／`kGbkTableKeysBase64`／`kGbkTableValuesBase64`（4 個純資料常數，供 Task 3 `txt_charset_detection.dart` 消費）。
 
-- [ ] **Step 1：撰寫產生腳本**
+- [x] **Step 1：撰寫產生腳本**
 
 ```python
 # app/tool/gen_txt_charset_tables.py
@@ -338,7 +338,7 @@ if __name__ == '__main__':
     main()
 ```
 
-- [ ] **Step 2：執行腳本**
+- [x] **Step 2：執行腳本**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -347,7 +347,7 @@ python3 tool/gen_txt_charset_tables.py
 
 Expected：印出 `寫入 .../txt_charset_tables.dart（約 190000 bytes）`（已於規劃階段實測驗證：Big5 13503 筆／GBK 21791 筆，base64 字元數共約 188240，加上註解與變數宣告文字，檔案總大小落在同一量級）。
 
-- [ ] **Step 3：驗證產生的檔案語法正確、可被匯入**
+- [x] **Step 3：驗證產生的檔案語法正確、可被匯入**
 
 ```bash
 cat > /tmp/verify_charset_tables_test.dart << 'DARTEOF'
@@ -370,7 +370,7 @@ rm test/library/verify_charset_tables_test.dart
 
 Expected：PASS（僅驗證產生的檔案語法正確可編譯匯入；實際解碼正確性由 Task 3 的完整測試驗證）。
 
-- [ ] **Step 4：`flutter analyze`**
+- [x] **Step 4：`flutter analyze`**
 
 ```bash
 flutter analyze
@@ -378,7 +378,7 @@ flutter analyze
 
 Expected：`No issues found!`（產生的檔案僅含常數宣告，不含任何邏輯，不會觸發 lint）。
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 git add app/tool/gen_txt_charset_tables.py app/lib/library/txt_charset_tables.dart
@@ -396,7 +396,7 @@ git commit -m "feat(epic-11): Issue 4——vendor Big5/GBK 對照表（Unicode.o
 **Interfaces:**
 - Produces：`BookFormat.txt`、`detectBookFormat('foo.txt') == BookFormat.txt`、`isFoliateFormat(BookFormat.txt) == true`。
 
-- [ ] **Step 1：寫失敗測試**
+- [x] **Step 1：寫失敗測試**
 
 於 `app/test/reader/book_format_test.dart`（Issue 3 已建立，見該檔案既有內容）追加：
 
@@ -411,7 +411,7 @@ git commit -m "feat(epic-11): Issue 4——vendor Big5/GBK 對照表（Unicode.o
   });
 ```
 
-- [ ] **Step 2：確認測試失敗**
+- [x] **Step 2：確認測試失敗**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -420,7 +420,7 @@ flutter test test/reader/book_format_test.dart
 
 Expected：FAIL（`BookFormat.txt` 未定義，編譯錯誤）。
 
-- [ ] **Step 3：實作**
+- [x] **Step 3：實作**
 
 ```dart
 /// 書籍檔案格式，依副檔名偵測。
@@ -450,7 +450,7 @@ bool isFoliateFormat(BookFormat format) =>
     format == BookFormat.txt;
 ```
 
-- [ ] **Step 4：確認測試通過**
+- [x] **Step 4：確認測試通過**
 
 ```bash
 flutter test test/reader/book_format_test.dart
@@ -458,7 +458,7 @@ flutter test test/reader/book_format_test.dart
 
 Expected：PASS。
 
-- [ ] **Step 5：`flutter analyze` 確認 exhaustiveness 錯誤清單**
+- [x] **Step 5：`flutter analyze` 確認 exhaustiveness 錯誤清單**
 
 ```bash
 flutter analyze
@@ -466,7 +466,7 @@ flutter analyze
 
 Expected：出現數個 `non_exhaustive_switch_statement`（`reader_screen.dart` 內既有 `switch (format)` 語句缺少 `case BookFormat.txt:`），記錄下來供 Task 5 使用（比照 Issue 3 既有方法論）。**不要在本 Task 修正**。
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/lib/reader/book_format.dart app/test/reader/book_format_test.dart
@@ -485,7 +485,7 @@ git commit -m "feat(epic-11): Issue 4——BookFormat 新增 txt"
 - Consumes：`kBig5TableKeysBase64`／`kBig5TableValuesBase64`／`kGbkTableKeysBase64`／`kGbkTableValuesBase64`（Task 2）。
 - Produces：`enum TxtEncoding { utf8, big5, gbk, utf16, fallback }`；`class TxtDecodeResult { String text; TxtEncoding encoding; }`；`TxtDecodeResult detectAndDecodeTxt(Uint8List bytes)`（供 Task 6 消費）。
 
-- [ ] **Step 1：寫失敗測試**
+- [x] **Step 1：寫失敗測試**
 
 ```dart
 // app/test/library/txt_charset_detection_test.dart
@@ -537,11 +537,13 @@ void main() {
   });
 
   group('detectAndDecodeTxt：GBK', () {
-    test('「测试」的 GBK 位元組（0xB2E2 0xCAD4）正確解碼', () {
-      final bytes = Uint8List.fromList([0xB2, 0xE2, 0xCA, 0xD4]);
+    test('GBK 專有字元（如「嗢」0x86EC，Big5 無此碼位）與「测试」正確解碼為 gbk', () {
+      // 0xB2E2（测）0xCAD4（试）0x86EC（嗢，U+55E2）
+      // 因 0x86EC 落在 GBK 擴充區（高位元組 0x86 在 Big5 未定義），Big5 查表失敗退回 GBK
+      final bytes = Uint8List.fromList([0xB2, 0xE2, 0xCA, 0xD4, 0x86, 0xEC]);
       final result = detectAndDecodeTxt(bytes);
       expect(result.encoding, TxtEncoding.gbk);
-      expect(result.text, '测试');
+      expect(result.text, '测试嗢');
     });
   });
 
@@ -579,7 +581,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：確認測試失敗**
+- [x] **Step 2：確認測試失敗**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -588,7 +590,7 @@ flutter test test/library/txt_charset_detection_test.dart
 
 Expected：FAIL（`txt_charset_detection.dart` 不存在，編譯錯誤）。
 
-- [ ] **Step 3：實作**
+- [x] **Step 3：實作**
 
 ```dart
 // app/lib/library/txt_charset_detection.dart
@@ -748,7 +750,7 @@ TxtDecodeResult detectAndDecodeTxt(Uint8List bytes) {
 }
 ```
 
-- [ ] **Step 4：確認測試通過**
+- [x] **Step 4：確認測試通過**
 
 ```bash
 flutter test test/library/txt_charset_detection_test.dart
@@ -756,7 +758,7 @@ flutter test test/library/txt_charset_detection_test.dart
 
 Expected：PASS（10 個測試）。
 
-- [ ] **Step 5：`flutter analyze`**
+- [x] **Step 5：`flutter analyze`**
 
 ```bash
 flutter analyze
@@ -764,7 +766,7 @@ flutter analyze
 
 Expected：無新增 issue。
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/lib/library/txt_charset_detection.dart app/test/library/txt_charset_detection_test.dart
@@ -782,7 +784,7 @@ git commit -m "feat(epic-11): Issue 4——TXT 編碼偵測與解碼 detectAndDe
 **Interfaces:**
 - Produces：`class TxtChapter { String? title; String content; }`；`List<TxtChapter> splitIntoChapters(String text)`；`const int kTxtChunkMaxBytes`；`List<String> chunkByByteSize(String content, {int maxBytes = kTxtChunkMaxBytes})`（供 Task 6 消費）。
 
-- [ ] **Step 1：寫失敗測試**
+- [x] **Step 1：寫失敗測試**
 
 ```dart
 // app/test/library/txt_chapter_splitter_test.dart
@@ -886,7 +888,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：確認測試失敗**
+- [x] **Step 2：確認測試失敗**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -895,7 +897,7 @@ flutter test test/library/txt_chapter_splitter_test.dart
 
 Expected：FAIL（`txt_chapter_splitter.dart` 不存在，編譯錯誤）。
 
-- [ ] **Step 3：實作**
+- [x] **Step 3：實作**
 
 ```dart
 // app/lib/library/txt_chapter_splitter.dart
@@ -972,7 +974,7 @@ List<String> chunkByByteSize(String content, {int maxBytes = kTxtChunkMaxBytes})
 }
 ```
 
-- [ ] **Step 4：確認測試通過**
+- [x] **Step 4：確認測試通過**
 
 ```bash
 flutter test test/library/txt_chapter_splitter_test.dart
@@ -980,7 +982,7 @@ flutter test test/library/txt_chapter_splitter_test.dart
 
 Expected：PASS（10 個測試）。
 
-- [ ] **Step 5：`flutter analyze`**
+- [x] **Step 5：`flutter analyze`**
 
 ```bash
 flutter analyze
@@ -988,7 +990,7 @@ flutter analyze
 
 Expected：無新增 issue。
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/lib/library/txt_chapter_splitter.dart app/test/library/txt_chapter_splitter_test.dart
@@ -1009,7 +1011,7 @@ git commit -m "feat(epic-11): Issue 4——TXT 章節/目錄正則切分與位�
 - Consumes：`detectAndDecodeTxt`（Task 4）；`TxtChapter`／`splitIntoChapters`／`chunkByByteSize`（Task 5）；`readContentUriBytes`（Task 1）。
 - Produces：`class TxtSynthesisResult { Uint8List epubBytes; TxtEncoding detectedEncoding; }`；`class EmptyTxtException implements Exception`；`Future<TxtSynthesisResult> synthesizeTxtBook(String filePath, String bookId, String title)`（供 Task 7 `book_import_service_impl.dart` 消費）。
 
-- [ ] **Step 1：`xml` 套件新增為 dev_dependency（測試驗證合成的 XML 是否良好格式）**
+- [x] **Step 1：`xml` 套件新增為 dev_dependency（測試驗證合成的 XML 是否良好格式）**
 
 `app/pubspec.yaml` 的 `dev_dependencies:` 區塊新增：
 
@@ -1025,7 +1027,7 @@ cd "U:/MyDeveloper/AI/elinkBook/app"
 flutter pub get
 ```
 
-- [ ] **Step 2：寫失敗測試**
+- [x] **Step 2：寫失敗測試**
 
 ```dart
 // app/test/library/txt_epub_synthesizer_test.dart
@@ -1204,7 +1206,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 3：確認測試失敗**
+- [x] **Step 3：確認測試失敗**
 
 ```bash
 flutter test test/library/txt_epub_synthesizer_test.dart
@@ -1212,7 +1214,7 @@ flutter test test/library/txt_epub_synthesizer_test.dart
 
 Expected：FAIL（`txt_epub_synthesizer.dart` 不存在，編譯錯誤）。
 
-- [ ] **Step 4：實作**
+- [x] **Step 4：實作**
 
 ```dart
 // app/lib/library/txt_epub_synthesizer.dart
@@ -1405,7 +1407,7 @@ Future<TxtSynthesisResult> synthesizeTxtBook(
 }
 ```
 
-- [ ] **Step 5：確認測試通過**
+- [x] **Step 5：確認測試通過**
 
 ```bash
 flutter test test/library/txt_epub_synthesizer_test.dart
@@ -1413,7 +1415,7 @@ flutter test test/library/txt_epub_synthesizer_test.dart
 
 Expected：PASS（9 個測試）。
 
-- [ ] **Step 6：`flutter analyze`**
+- [x] **Step 6：`flutter analyze`**
 
 ```bash
 flutter analyze
@@ -1421,7 +1423,7 @@ flutter analyze
 
 Expected：無新增 issue。
 
-- [ ] **Step 7：Commit**
+- [x] **Step 7：Commit**
 
 ```bash
 git add app/lib/library/txt_epub_synthesizer.dart app/test/library/txt_epub_synthesizer_test.dart app/pubspec.yaml app/pubspec.lock
@@ -1440,7 +1442,7 @@ git commit -m "feat(epic-11): Issue 4——TXT 合成為最小合法 EPUB3 結�
 - Consumes：`synthesizeTxtBook`／`TxtSynthesisResult`／`EmptyTxtException`（Task 6）。
 - Produces：TXT 書籍 `Book.isFixedLayout == false`、`Book.filePath` 指向落地後合成的 `.txt` 檔案（`imported_books/` 既有目錄，`$id.txt`）、`Book.contentFingerprint` 對原始輸入檔案計算。
 
-- [ ] **Step 1：寫失敗測試**
+- [x] **Step 1：寫失敗測試**
 
 於 `app/test/library/book_import_service_test.dart` 頂部 import 區塊新增：
 
@@ -1539,7 +1541,7 @@ import 'package:archive/archive.dart' show ZipDecoder;
 
 於檔案頂部確認已 import `dart:convert`（`utf8`）與 `dart:typed_data`（`Uint8List`）——若既有 import 已涵蓋（Issue 2/3 已使用過 `Uint8List`），不重複新增。
 
-- [ ] **Step 2：確認測試失敗**
+- [x] **Step 2：確認測試失敗**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -1548,7 +1550,7 @@ flutter test test/library/book_import_service_test.dart
 
 Expected：FAIL（`BookFileFormat.txt` 分支尚未產生合成邏輯，`book.filePath` 仍是原始純文字檔路徑而非合法 zip）。
 
-- [ ] **Step 3：實作**
+- [x] **Step 3：實作**
 
 `app/lib/library/book_import_service_impl.dart` 頂部 import 新增：
 
@@ -1610,7 +1612,7 @@ import 'txt_epub_synthesizer.dart';
   }
 ```
 
-- [ ] **Step 4：確認測試通過**
+- [x] **Step 4：確認測試通過**
 
 ```bash
 flutter test test/library/book_import_service_test.dart
@@ -1618,7 +1620,7 @@ flutter test test/library/book_import_service_test.dart
 
 Expected：PASS（既有全部測試＋5 個新增 TXT 測試）。
 
-- [ ] **Step 5：`flutter analyze`**
+- [x] **Step 5：`flutter analyze`**
 
 ```bash
 flutter analyze
@@ -1626,7 +1628,7 @@ flutter analyze
 
 Expected：無新增 issue。
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/lib/library/book_import_service_impl.dart app/test/library/book_import_service_test.dart
@@ -1644,7 +1646,7 @@ git commit -m "feat(epic-11): Issue 4——匯入管線接上 TXT 合成為 EPUB
 **Interfaces:**
 - Consumes：`BookFormat.txt`（Task 3）。
 
-- [ ] **Step 1：寫失敗測試（防禦性 `_dispatchedIsFixedLayout` 分派）**
+- [x] **Step 1：寫失敗測試（防禦性 `_dispatchedIsFixedLayout` 分派）**
 
 於 `app/test/screens/reader_screen_test.dart` 找到既有「CBZ 書籍 isFixedLayout: null...」測試（Issue 3 Important #1 迴歸測試）附近，追加同構測試：
 
@@ -1670,7 +1672,7 @@ git commit -m "feat(epic-11): Issue 4——匯入管線接上 TXT 合成為 EPUB
 
 （本測試需要 `test/fixtures/sample_synth.txt` 是一份**已經合成過的合法 EPUB 結構**、僅副檔名為 `.txt` 的檔案——因為 `ReaderScreen`／`FoliateReaderView` widget test 直接建構 widget、不經過匯入管線，若給它原始純文字內容，`FoliateReaderView` 底層 `epub.js` 開書會失敗，但本測試只驗證 Dart 端 `_dispatchedIsFixedLayout` 分派邏輯與 widget 樹建構，不驗證真正開書渲染成功——比照既有 `sample.azw3`／`sample.cbz` 走 widget test 的既有模式，只需檔案存在、`FoliateReaderView` 建構成功即可，不需要真的能被 WebView 渲染。Task 9 會產生此 fixture。）
 
-- [ ] **Step 2：確認測試失敗**
+- [x] **Step 2：確認測試失敗**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -1679,7 +1681,7 @@ flutter test test/screens/reader_screen_test.dart --plain-name "TXT 書籍"
 
 Expected：FAIL（`BookFormat.txt` 目前落入 `_resolveEpubEngineDispatch()` 的「不影響」分支，`_dispatchedIsFixedLayout` 永遠停留 `null`；此外 `test/fixtures/sample_synth.txt` 尚未建立，Task 9 才會產生——本 Step 預期先看到編譯期或執行期的檔案不存在錯誤，待 Task 9 完成 fixture 後才能看到真正代表分派邏輯缺陷的 FAIL；執行順序上可先完成本 Step 3 實作後再跑一次確認）。
 
-- [ ] **Step 3：實作 `_resolveEpubEngineDispatch()`**
+- [x] **Step 3：實作 `_resolveEpubEngineDispatch()`**
 
 `app/lib/screens/reader_screen.dart` 修改（緊接在既有 cbz 分支之後、`if (format != BookFormat.epub) return;` 之前）：
 
@@ -1698,7 +1700,7 @@ Expected：FAIL（`BookFormat.txt` 目前落入 `_resolveEpubEngineDispatch()` �
     if (format != BookFormat.epub) return;
 ```
 
-- [ ] **Step 4：實作 `_writeCurrentPosition()` merged case**
+- [x] **Step 4：實作 `_writeCurrentPosition()` merged case**
 
 修改既有 switch：
 
@@ -1712,7 +1714,7 @@ Expected：FAIL（`BookFormat.txt` 目前落入 `_resolveEpubEngineDispatch()` �
 
 （其餘 case 內容不動）
 
-- [ ] **Step 5：實作 `_buildAppBarActions()` merged case**
+- [x] **Step 5：實作 `_buildAppBarActions()` merged case**
 
 修改既有 switch：
 
@@ -1727,7 +1729,7 @@ Expected：FAIL（`BookFormat.txt` 目前落入 `_resolveEpubEngineDispatch()` �
 
 （TXT 恆為流式，`_isFixedLayout` 為 `false`，本方法不會被上方 `if (_isFixedLayout) return null;` 提早攔截，TXT 書籍會**真的**顯示這組 AppBar 按鈕——與 CBZ 不同，這是預期行為：TXT 是流式格式，需要目錄/版面設定/筆記按鈕，比照一般流式 EPUB。）
 
-- [ ] **Step 6：實作 `_buildNativeView()` merged case**
+- [x] **Step 6：實作 `_buildNativeView()` merged case**
 
 修改既有 switch：
 
@@ -1746,7 +1748,7 @@ Expected：FAIL（`BookFormat.txt` 目前落入 `_resolveEpubEngineDispatch()` �
 
 （`isComicBookHint: format == BookFormat.cbz` 這行既有程式碼已經是布林運算式、天然對 `BookFormat.txt` 產生 `false`，不需要額外修改內部參數列，只需要把 `case BookFormat.txt:` 加進上方 case 清單。）
 
-- [ ] **Step 7：確認測試通過**
+- [x] **Step 7：確認測試通過**
 
 ```bash
 flutter test test/screens/reader_screen_test.dart --plain-name "TXT 書籍"
@@ -1754,7 +1756,7 @@ flutter test test/screens/reader_screen_test.dart --plain-name "TXT 書籍"
 
 Expected：PASS（待 Task 9 的 fixture 就緒後）。
 
-- [ ] **Step 8：確認 `_handleZoneAction()` 無需修改（`isFoliateFormat()` 已涵蓋 txt，見 Task 3）**
+- [x] **Step 8：確認 `_handleZoneAction()` 無需修改（`isFoliateFormat()` 已涵蓋 txt，見 Task 3）**
 
 ```bash
 grep -n "isFoliateFormat(format)" "U:/MyDeveloper/AI/elinkBook/app/lib/screens/reader_screen.dart"
@@ -1762,7 +1764,7 @@ grep -n "isFoliateFormat(format)" "U:/MyDeveloper/AI/elinkBook/app/lib/screens/r
 
 Expected：`_handleZoneAction()` 內兩處呼叫維持不動——`isFoliateFormat()` 已於 Task 3 擴大涵蓋 `txt`，這條路徑自動正確運作。
 
-- [ ] **Step 9：`flutter analyze`（確認 Task 3 記錄的 exhaustiveness 錯誤清單清空）**
+- [x] **Step 9：`flutter analyze`（確認 Task 3 記錄的 exhaustiveness 錯誤清單清空）**
 
 ```bash
 flutter analyze
@@ -1770,7 +1772,7 @@ flutter analyze
 
 Expected：`reader_screen.dart` 相關的 `non_exhaustive_switch_statement` 全部消失；整體回報 `No issues found!`。
 
-- [ ] **Step 10：完整 `flutter test`（確認全套件無回歸）**
+- [x] **Step 10：完整 `flutter test`（確認全套件無回歸）**
 
 ```bash
 flutter test
@@ -1778,7 +1780,7 @@ flutter test
 
 Expected：全數通過（此時仍缺 Task 9 的 `sample_synth.txt` fixture，若尚未完成 Task 9，本 Step 的 TXT 相關測試會失敗——建議 Task 8/9 依序緊接執行，不要中斷在 Task 8 結尾就 commit＋長時間擱置）。
 
-- [ ] **Step 11：Commit**（與 Task 9 一併，待 fixture 就緒後才 commit，見下方 Task 9 Step 5）
+- [x] **Step 11：Commit**（與 Task 9 一併，待 fixture 就緒後才 commit，見下方 Task 9 Step 5）
 
 ---
 
@@ -1793,7 +1795,7 @@ Expected：全數通過（此時仍缺 Task 9 的 `sample_synth.txt` fixture，�
 **Interfaces:**
 - Produces：三份提交進版控的測試素材，供 Task 8 widget test 與 Task 10 真機 `integration_test` 使用。
 
-- [ ] **Step 1：撰寫並執行 fixture 產生腳本**
+- [x] **Step 1：撰寫並執行 fixture 產生腳本**
 
 ```bash
 cat > "U:/MyDeveloper/AI/elinkBook/tmp_generate_txt_fixtures.py" << 'PYEOF'
@@ -1875,7 +1877,7 @@ python3 "U:/MyDeveloper/AI/elinkBook/tmp_generate_txt_fixtures.py"
 rm "U:/MyDeveloper/AI/elinkBook/tmp_generate_txt_fixtures.py"
 ```
 
-- [ ] **Step 2：驗證 `sample_big5.txt` 能被 `detectAndDecodeTxt()` 正確解碼為 big5**
+- [x] **Step 2：驗證 `sample_big5.txt` 能被 `detectAndDecodeTxt()` 正確解碼為 big5**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -1901,7 +1903,7 @@ rm test/library/verify_txt_fixtures_test.dart
 
 Expected：PASS（確認 fixture 產生腳本使用的 Python `'big5'` codec 與本專案 Dart 端解碼器對同一份資料的解讀結果一致）。
 
-- [ ] **Step 3：`pubspec.yaml` 新增 asset**
+- [x] **Step 3：`pubspec.yaml` 新增 asset**
 
 `app/pubspec.yaml` 的 `assets:` 清單，緊接在 `- test/fixtures/sample_unpadded.cbz` 之後新增：
 
@@ -1915,7 +1917,7 @@ Expected：PASS（確認 fixture 產生腳本使用的 Python `'big5'` codec 與
 flutter pub get
 ```
 
-- [ ] **Step 4：重新確認 Task 8 的 widget test 通過**
+- [x] **Step 4：重新確認 Task 8 的 widget test 通過**
 
 ```bash
 flutter test test/screens/reader_screen_test.dart --plain-name "TXT 書籍"
@@ -1923,7 +1925,7 @@ flutter test test/screens/reader_screen_test.dart --plain-name "TXT 書籍"
 
 Expected：PASS。
 
-- [ ] **Step 5：Commit（涵蓋 Task 8 與本 Task）**
+- [x] **Step 5：Commit（涵蓋 Task 8 與本 Task）**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook"
@@ -1943,14 +1945,14 @@ git commit -m "feat(epic-11): Issue 4——ReaderScreen 分派邏輯擴充涵蓋
 **Interfaces:**
 - Consumes：`sample_big5.txt`／`sample_utf8_chapters.txt`（Task 9）；`BookImportServiceImpl`／`ReaderScreen`（既有，Task 7/8 已擴充支援 txt）。
 
-- [ ] **Step 1：確認可用裝置**
+- [x] **Step 1：確認可用裝置**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
 flutter devices
 ```
 
-- [ ] **Step 2：撰寫測試**
+- [x] **Step 2：撰寫測試**
 
 ```dart
 // app/integration_test/foliate_txt_test.dart
@@ -2159,7 +2161,7 @@ void main() {
 
 （新增位置：緊接在既有 `static void openPdfToc(...)` 方法之後，`ReaderScreen` class 結尾 `}` 之前）
 
-- [ ] **Step 3：真機執行**
+- [x] **Step 3：真機執行**
 
 ```bash
 flutter test integration_test/foliate_txt_test.dart -d <device-id>
@@ -2167,7 +2169,7 @@ flutter test integration_test/foliate_txt_test.dart -d <device-id>
 
 Expected：3/3 PASS。若第一個測試（Big5）失敗，優先檢查 `detectAndDecodeTxt()` 是否誤判編碼（可能是測試環境的檔案讀取路徑問題，非解碼邏輯本身——Task 9 Step 2 已用 `flutter test` 驗證過解碼邏輯正確）；若第三個測試（大型檔案）逾時，檢查 `chunkByByteSize()` 是否真的被觸發（`kTxtChunkMaxBytes = 400000`，6MB 檔案應產生約 15 個以上的 XHTML 分塊）。
 
-- [ ] **Step 4：Commit**
+- [x] **Step 4：Commit**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook"
@@ -2181,7 +2183,7 @@ git commit -m "test(epic-11): Issue 4——TXT 真機整合測試，涵蓋 Big5/
 
 **Files:** 無新增/修改，純驗證。
 
-- [ ] **Step 1：`flutter analyze`**
+- [x] **Step 1：`flutter analyze`**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -2190,7 +2192,7 @@ flutter analyze
 
 Expected：`No issues found!`
 
-- [ ] **Step 2：完整 `flutter test`**
+- [x] **Step 2：完整 `flutter test`**
 
 ```bash
 flutter test
@@ -2198,7 +2200,7 @@ flutter test
 
 Expected：全數通過（既有 1341 + 本 Issue 新增測試，具體數字以實際輸出為準）。
 
-- [ ] **Step 3：真機整合測試回歸（確認未破壞既有 KF8/CBZ 整合測試）**
+- [x] **Step 3：真機整合測試回歸（確認未破壞既有 KF8/CBZ 整合測試）**
 
 ```bash
 flutter test integration_test/foliate_kf8_test.dart integration_test/foliate_cbz_test.dart integration_test/foliate_txt_test.dart -d <device-id>
@@ -2206,7 +2208,7 @@ flutter test integration_test/foliate_kf8_test.dart integration_test/foliate_cbz
 
 Expected：全數 PASS。
 
-- [ ] **Step 4：手動驗收（比照 issues.md Issue 4 驗收標準逐項確認）**
+- [x] **Step 4：手動驗收（比照 issues.md Issue 4 驗收標準逐項確認）**
 
 - 真機匯入 Big5 與 UTF-8 編碼的 TXT 檔案皆正確顯示、不亂碼：於裝置上實際透過圖書庫匯入畫面選取兩種檔案，人工目視確認無亂碼。
 - 大型 TXT（5MB~20MB 量級，無規範章節標記）開書流暢：實際匯入一份大型網路小說 TXT（若無現成素材，可用 Task 10 測試內產生大型檔案的相同手法自行產生一份留在裝置上手動測試），人工感受翻頁/捲動流暢度。
