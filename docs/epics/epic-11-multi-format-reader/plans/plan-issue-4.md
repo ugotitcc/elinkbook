@@ -1011,7 +1011,7 @@ git commit -m "feat(epic-11): Issue 4——TXT 章節/目錄正則切分與位�
 - Consumes：`detectAndDecodeTxt`（Task 4）；`TxtChapter`／`splitIntoChapters`／`chunkByByteSize`（Task 5）；`readContentUriBytes`（Task 1）。
 - Produces：`class TxtSynthesisResult { Uint8List epubBytes; TxtEncoding detectedEncoding; }`；`class EmptyTxtException implements Exception`；`Future<TxtSynthesisResult> synthesizeTxtBook(String filePath, String bookId, String title)`（供 Task 7 `book_import_service_impl.dart` 消費）。
 
-- [ ] **Step 1：`xml` 套件新增為 dev_dependency（測試驗證合成的 XML 是否良好格式）**
+- [x] **Step 1：`xml` 套件新增為 dev_dependency（測試驗證合成的 XML 是否良好格式）**
 
 `app/pubspec.yaml` 的 `dev_dependencies:` 區塊新增：
 
@@ -1027,7 +1027,7 @@ cd "U:/MyDeveloper/AI/elinkBook/app"
 flutter pub get
 ```
 
-- [ ] **Step 2：寫失敗測試**
+- [x] **Step 2：寫失敗測試**
 
 ```dart
 // app/test/library/txt_epub_synthesizer_test.dart
@@ -1206,7 +1206,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 3：確認測試失敗**
+- [x] **Step 3：確認測試失敗**
 
 ```bash
 flutter test test/library/txt_epub_synthesizer_test.dart
@@ -1214,7 +1214,7 @@ flutter test test/library/txt_epub_synthesizer_test.dart
 
 Expected：FAIL（`txt_epub_synthesizer.dart` 不存在，編譯錯誤）。
 
-- [ ] **Step 4：實作**
+- [x] **Step 4：實作**
 
 ```dart
 // app/lib/library/txt_epub_synthesizer.dart
@@ -1407,7 +1407,7 @@ Future<TxtSynthesisResult> synthesizeTxtBook(
 }
 ```
 
-- [ ] **Step 5：確認測試通過**
+- [x] **Step 5：確認測試通過**
 
 ```bash
 flutter test test/library/txt_epub_synthesizer_test.dart
@@ -1415,7 +1415,7 @@ flutter test test/library/txt_epub_synthesizer_test.dart
 
 Expected：PASS（9 個測試）。
 
-- [ ] **Step 6：`flutter analyze`**
+- [x] **Step 6：`flutter analyze`**
 
 ```bash
 flutter analyze
@@ -1423,7 +1423,7 @@ flutter analyze
 
 Expected：無新增 issue。
 
-- [ ] **Step 7：Commit**
+- [x] **Step 7：Commit**
 
 ```bash
 git add app/lib/library/txt_epub_synthesizer.dart app/test/library/txt_epub_synthesizer_test.dart app/pubspec.yaml app/pubspec.lock
