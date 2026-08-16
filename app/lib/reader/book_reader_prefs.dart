@@ -64,7 +64,7 @@ class BookReaderPrefs {
 
   final DualPageMode? dualPageMode; // null=auto（橫向自動雙頁）
   final bool? dualPageCoverAlone; // null=true（封面獨立，僅 PDF 有效）
-  final DualPageDirection? dualPageDirection; // null=rtl（僅 PDF 有效）
+  final DualPageDirection? dualPageDirection; // null=rtl（PDF／CBZ 適用）
 
   /// PDF 換頁動畫（epic-24-pdf-engine-rebuild Issue 11）。null=slide
   /// （預設，200ms 滑動動畫，即現行既有行為）。

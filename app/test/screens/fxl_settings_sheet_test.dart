@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/reader/book_reader_prefs.dart';
+import 'package:elinkbook/reader/dual_page_direction.dart';
 import 'package:elinkbook/reader/dual_page_mode.dart';
 import 'package:elinkbook/screens/fxl_settings_sheet.dart';
 
@@ -196,6 +197,58 @@ void main() {
 
     expect(changed?.showFooter, isTrue);
     expect(changed?.fullscreen, isTrue);
+  });
+
+  group('翻頁方向', () {
+    testWidgets('點擊 LTR 按鈕觸發 onChanged，dualPageDirection 更新為 ltr', (tester) async {
+      BookReaderPrefs? changed;
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: FxlSettingsSheet(
+            prefs: const BookReaderPrefs(dualPageDirection: DualPageDirection.rtl),
+            onChanged: (prefs) => changed = prefs,
+          ),
+        ),
+      ));
+
+      await tester.tap(find.byKey(const Key('fxl_settings_direction_ltr')));
+      await tester.pump();
+
+      expect(changed?.dualPageDirection, DualPageDirection.ltr);
+    });
+
+    testWidgets('點擊 RTL 按鈕觸發 onChanged，dualPageDirection 更新為 rtl', (tester) async {
+      BookReaderPrefs? changed;
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: FxlSettingsSheet(
+            prefs: const BookReaderPrefs(dualPageDirection: DualPageDirection.ltr),
+            onChanged: (prefs) => changed = prefs,
+          ),
+        ),
+      ));
+
+      await tester.tap(find.byKey(const Key('fxl_settings_direction_rtl')));
+      await tester.pump();
+
+      expect(changed?.dualPageDirection, DualPageDirection.rtl);
+    });
+
+    testWidgets('未指定時預設選中 RTL（全域預設值）', (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: FxlSettingsSheet(
+            prefs: BookReaderPrefs.empty,
+            onChanged: (_) {},
+          ),
+        ),
+      ));
+
+      final rtlButton = tester.widget<IconButton>(
+        find.byKey(const Key('fxl_settings_direction_rtl')),
+      );
+      expect(rtlButton.color, isNotNull);
+    });
   });
 }
 
