@@ -9,12 +9,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:elinkbook/reader/epub_text_align.dart';
-import 'package:elinkbook/reader/foliate_epub_reader_view.dart';
+import 'package:elinkbook/reader/foliate_reader_view.dart';
 import 'package:elinkbook/reader/writing_mode.dart';
 
 /// Epic 20 Issue 5：EpubReaderView（Readium）刪除後，原本只在（已刪除的）
 /// epub_reader_view_test.dart 驗證的兩個場景（毀損檔案偵測、FXL
-/// isFixedLayout=true 回報）改到這裡沿用 FoliateEpubReaderView 驗證，避免
+/// isFixedLayout=true 回報）改到這裡沿用 FoliateReaderView 驗證，避免
 /// EpubReaderView 類別刪除連帶讓這兩項行為的自動化涵蓋消失。
 
 /// 把 Flutter asset 複製為裝置暫存目錄中的真實檔案，回傳其絕對路徑。
@@ -115,7 +115,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: FoliateEpubReaderView(
+        home: FoliateReaderView(
           filePath: samplePath,
           onPageRendered: () {
             if (!completer.isCompleted) completer.complete();
@@ -146,7 +146,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: FoliateEpubReaderView(
+        home: FoliateReaderView(
           filePath: missingPath,
           onPageRendered: () {
             rendered = true;
@@ -182,7 +182,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: FoliateEpubReaderView(
+        home: FoliateReaderView(
           filePath: outsidePath,
           onPageRendered: () {
             rendered = true;
@@ -224,7 +224,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: FoliateEpubReaderView(
+        home: FoliateReaderView(
           filePath: samplePath,
           onPageRendered: () {},
           onError: (message) {
@@ -260,7 +260,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: FoliateEpubReaderView(
+        home: FoliateReaderView(
           filePath: samplePath,
           onPageRendered: () {},
           onError: (message) {
@@ -290,12 +290,12 @@ void main() {
       if (await file.exists()) await file.delete();
     });
 
-    final key = GlobalKey<State<FoliateEpubReaderView>>();
+    final key = GlobalKey<State<FoliateReaderView>>();
     final completer = Completer<void>();
 
     await tester.pumpWidget(
       MaterialApp(
-        home: FoliateEpubReaderView(
+        home: FoliateReaderView(
           key: key,
           filePath: samplePath,
           onPageRendered: () {
@@ -313,7 +313,7 @@ void main() {
     // 畫面應即時反映（不重新開書、不再次觸發 onPageRendered）。
     await tester.pumpWidget(
       MaterialApp(
-        home: FoliateEpubReaderView(
+        home: FoliateReaderView(
           key: key,
           filePath: samplePath,
           onPageRendered: () {},
@@ -327,7 +327,7 @@ void main() {
     // 再切回橫排，確認雙向皆可逆。
     await tester.pumpWidget(
       MaterialApp(
-        home: FoliateEpubReaderView(
+        home: FoliateReaderView(
           key: key,
           filePath: samplePath,
           onPageRendered: () {},
@@ -342,7 +342,7 @@ void main() {
     // method channel 呼叫皆正常送達；實際排版方向的視覺正確性（欄位是否
     // 真的改變）留待人工於裝置螢幕截圖確認，比照本專案既有 integration_test
     // 對「視覺效果」類驗收標準的既定作法（純程式碼斷言無法檢查像素排列）。
-    expect(find.byType(FoliateEpubReaderView), findsOneWidget);
+    expect(find.byType(FoliateReaderView), findsOneWidget);
   });
 
   testWidgets('字型/字級/行距等偏好設定套用後不觸發 onError（畫面應正確反映變更，人工視覺確認）',
@@ -359,7 +359,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: FoliateEpubReaderView(
+        home: FoliateReaderView(
           filePath: samplePath,
           onPageRendered: () {
             if (!completer.isCompleted) completer.complete();
@@ -409,7 +409,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: FoliateEpubReaderView(
+        home: FoliateReaderView(
           filePath: corruptedFile.path,
           onPageRendered: () {
             rendered = true;
@@ -444,7 +444,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: FoliateEpubReaderView(
+        home: FoliateReaderView(
           filePath: samplePath,
           onPageRendered: () {},
           onError: (message) {
@@ -483,7 +483,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: FoliateEpubReaderView(
+        home: FoliateReaderView(
           filePath: samplePath,
           onPageRendered: () {
             if (!completer.isCompleted) completer.complete();

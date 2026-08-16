@@ -5,7 +5,7 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/reader/column_mode.dart';
 import 'package:elinkbook/reader/dual_page_mode.dart';
-import 'package:elinkbook/reader/foliate_epub_reader_view.dart';
+import 'package:elinkbook/reader/foliate_reader_view.dart';
 import 'package:elinkbook/reader/reader_console_log.dart';
 import 'package:elinkbook/reader/writing_mode.dart';
 import 'package:elinkbook/reader/epub_text_align.dart';
@@ -32,7 +32,7 @@ void main() {
     InAppWebViewPlatform.instance = FakeInAppWebViewPlatform();
     // Issue 8 審查修正：覆寫 cacheBookForServing 頂層函數變數，
     // 繞過 Dart 端檔案系統檢查（File.exists()、resolveSymbolicLinksSync() 等），
-    // 確保 FoliateEpubReaderView 的 _cacheBook() 在測試環境中能順利完成。
+    // 確保 FoliateReaderView 的 _cacheBook() 在測試環境中能順利完成。
     originalCacheBookForServing = cacheBookForServing;
     cacheBookForServing = (filePath, instanceId) async {
       return '/fake/cache/dir/current.epub';
@@ -59,7 +59,7 @@ void main() {
 
   group('buildFoliatePreferencesMap', () {
     test('所有偏好欄位皆為 null 時回傳空 map', () {
-      const view = FoliateEpubReaderView(
+      const view = FoliateReaderView(
         filePath: '/tmp/sample.epub',
         onPageRendered: _noop,
         onError: _noopError,
@@ -69,7 +69,7 @@ void main() {
     });
 
     test('columnMode: single 時 map 含 columnMode: single', () {
-      const view = FoliateEpubReaderView(
+      const view = FoliateReaderView(
         filePath: '/tmp/sample.epub',
         onPageRendered: _noop,
         onError: _noopError,
@@ -82,7 +82,7 @@ void main() {
     });
 
     test('showFooter: false 時 map 含 showFooter: false', () {
-      const view = FoliateEpubReaderView(
+      const view = FoliateReaderView(
         filePath: '/tmp/sample.epub',
         onPageRendered: _noop,
         onError: _noopError,
@@ -95,7 +95,7 @@ void main() {
     });
 
     test('textColor 非 null 時 map 含轉換後的十六進位色碼字串', () {
-      const view = FoliateEpubReaderView(
+      const view = FoliateReaderView(
         filePath: '/tmp/sample.epub',
         onPageRendered: _noop,
         onError: _noopError,
@@ -108,7 +108,7 @@ void main() {
     });
 
     test('backgroundColor 非 null 時 map 含轉換後的十六進位色碼字串', () {
-      const view = FoliateEpubReaderView(
+      const view = FoliateReaderView(
         filePath: '/tmp/sample.epub',
         onPageRendered: _noop,
         onError: _noopError,
@@ -121,7 +121,7 @@ void main() {
     });
 
     test('textColor／backgroundColor 未設定（null）時 map 不含這兩個 key', () {
-      const view = FoliateEpubReaderView(
+      const view = FoliateReaderView(
         filePath: '/tmp/sample.epub',
         onPageRendered: _noop,
         onError: _noopError,
@@ -134,7 +134,7 @@ void main() {
     });
 
     test('所有非 null 建構參數皆正確出現於 map', () {
-      const view = FoliateEpubReaderView(
+      const view = FoliateReaderView(
         filePath: '/tmp/sample.epub',
         onPageRendered: _noop,
         onError: _noopError,
@@ -183,7 +183,7 @@ void main() {
     });
 
     test('writingMode: horizontal 時 map 含 writingMode: horizontal', () {
-      const view = FoliateEpubReaderView(
+      const view = FoliateReaderView(
         filePath: '/tmp/sample.epub',
         onPageRendered: _noop,
         onError: _noopError,
@@ -196,7 +196,7 @@ void main() {
     });
 
     test('isFixedLayoutHint: true 時 map 含 isFixedLayoutHint: true', () {
-      const view = FoliateEpubReaderView(
+      const view = FoliateReaderView(
         filePath: '/tmp/sample.epub',
         onPageRendered: _noop,
         onError: _noopError,
@@ -209,7 +209,7 @@ void main() {
     });
 
     test('isFixedLayoutHint: false 時 map 含 isFixedLayoutHint: false', () {
-      const view = FoliateEpubReaderView(
+      const view = FoliateReaderView(
         filePath: '/tmp/sample.epub',
         onPageRendered: _noop,
         onError: _noopError,
@@ -222,7 +222,7 @@ void main() {
     });
 
     test('isFixedLayoutHint 未設定（null）時 map 不含該 key', () {
-      const view = FoliateEpubReaderView(
+      const view = FoliateReaderView(
         filePath: '/tmp/sample.epub',
         onPageRendered: _noop,
         onError: _noopError,
@@ -235,7 +235,7 @@ void main() {
     });
 
     test('letterSpacing 未設定（null）時 map 不含該 key', () {
-      const view = FoliateEpubReaderView(
+      const view = FoliateReaderView(
         filePath: '/tmp/sample.epub',
         onPageRendered: _noop,
         onError: _noopError,
@@ -248,7 +248,7 @@ void main() {
 
     // Epic 20 Issue 3：dualPageMode／isLandscape 單元測試
     test('dualPageMode: always 時 map 含 dualPageMode: always', () {
-      const view = FoliateEpubReaderView(
+      const view = FoliateReaderView(
         filePath: '/tmp/sample.epub',
         onPageRendered: _noop,
         onError: _noopError,
@@ -261,7 +261,7 @@ void main() {
     });
 
     test('dualPageMode: auto 時 map 含 dualPageMode: auto', () {
-      const view = FoliateEpubReaderView(
+      const view = FoliateReaderView(
         filePath: '/tmp/sample.epub',
         onPageRendered: _noop,
         onError: _noopError,
@@ -274,7 +274,7 @@ void main() {
     });
 
     test('dualPageMode: never 時 map 含 dualPageMode: never', () {
-      const view = FoliateEpubReaderView(
+      const view = FoliateReaderView(
         filePath: '/tmp/sample.epub',
         onPageRendered: _noop,
         onError: _noopError,
@@ -287,7 +287,7 @@ void main() {
     });
 
     test('dualPageMode 未設定（null）時 map 不含該 key', () {
-      const view = FoliateEpubReaderView(
+      const view = FoliateReaderView(
         filePath: '/tmp/sample.epub',
         onPageRendered: _noop,
         onError: _noopError,
@@ -300,7 +300,7 @@ void main() {
     });
 
     test('isLandscape: true 時 map 含 isLandscape: true', () {
-      const view = FoliateEpubReaderView(
+      const view = FoliateReaderView(
         filePath: '/tmp/sample.epub',
         onPageRendered: _noop,
         onError: _noopError,
@@ -310,7 +310,7 @@ void main() {
     });
 
     test('isLandscape 預設值（false）時 map 含 isLandscape: false', () {
-      const view = FoliateEpubReaderView(
+      const view = FoliateReaderView(
         filePath: '/tmp/sample.epub',
         onPageRendered: _noop,
         onError: _noopError,
@@ -319,7 +319,7 @@ void main() {
     });
 
     test('dualPageMode + isLandscape 同時設定時兩者皆出現在 map', () {
-      const view = FoliateEpubReaderView(
+      const view = FoliateReaderView(
         filePath: '/tmp/sample.epub',
         onPageRendered: _noop,
         onError: _noopError,
@@ -335,13 +335,13 @@ void main() {
 
   group('foliatePreferencesChanged', () {
     test('完全相同的參數回傳 false', () {
-      const oldView = FoliateEpubReaderView(
+      const oldView = FoliateReaderView(
         filePath: '/tmp/sample.epub',
         onPageRendered: _noop,
         onError: _noopError,
         fontSize: 1.0,
       );
-      const newView = FoliateEpubReaderView(
+      const newView = FoliateReaderView(
         filePath: '/tmp/sample.epub',
         onPageRendered: _noop,
         onError: _noopError,
@@ -351,13 +351,13 @@ void main() {
     });
 
     test('writingMode 變動回傳 true', () {
-      const oldView = FoliateEpubReaderView(
+      const oldView = FoliateReaderView(
         filePath: '/tmp/sample.epub',
         onPageRendered: _noop,
         onError: _noopError,
         writingMode: WritingMode.horizontal,
       );
-      const newView = FoliateEpubReaderView(
+      const newView = FoliateReaderView(
         filePath: '/tmp/sample.epub',
         onPageRendered: _noop,
         onError: _noopError,
@@ -367,13 +367,13 @@ void main() {
     });
 
     test('letterSpacing 變動回傳 true', () {
-      const oldView = FoliateEpubReaderView(
+      const oldView = FoliateReaderView(
         filePath: '/tmp/sample.epub',
         onPageRendered: _noop,
         onError: _noopError,
         letterSpacing: 0.1,
       );
-      const newView = FoliateEpubReaderView(
+      const newView = FoliateReaderView(
         filePath: '/tmp/sample.epub',
         onPageRendered: _noop,
         onError: _noopError,
@@ -383,13 +383,13 @@ void main() {
     });
 
     test('columnMode 變動回傳 true', () {
-      const oldView = FoliateEpubReaderView(
+      const oldView = FoliateReaderView(
         filePath: '/tmp/sample.epub',
         onPageRendered: _noop,
         onError: _noopError,
         columnMode: ColumnMode.single,
       );
-      const newView = FoliateEpubReaderView(
+      const newView = FoliateReaderView(
         filePath: '/tmp/sample.epub',
         onPageRendered: _noop,
         onError: _noopError,
@@ -398,13 +398,13 @@ void main() {
     });
 
     test('showFooter 變動回傳 true', () {
-      const oldView = FoliateEpubReaderView(
+      const oldView = FoliateReaderView(
         filePath: '/tmp/sample.epub',
         onPageRendered: _noop,
         onError: _noopError,
         showFooter: true,
       );
-      const newView = FoliateEpubReaderView(
+      const newView = FoliateReaderView(
         filePath: '/tmp/sample.epub',
         onPageRendered: _noop,
         onError: _noopError,
@@ -414,13 +414,13 @@ void main() {
     });
 
     test('isFixedLayoutHint 變動回傳 true', () {
-      const oldView = FoliateEpubReaderView(
+      const oldView = FoliateReaderView(
         filePath: '/tmp/sample.epub',
         onPageRendered: _noop,
         onError: _noopError,
         isFixedLayoutHint: false,
       );
-      const newView = FoliateEpubReaderView(
+      const newView = FoliateReaderView(
         filePath: '/tmp/sample.epub',
         onPageRendered: _noop,
         onError: _noopError,
@@ -430,13 +430,13 @@ void main() {
     });
 
     test('非偏好參數（filePath）變動不影響結果', () {
-      const oldView = FoliateEpubReaderView(
+      const oldView = FoliateReaderView(
         filePath: '/tmp/old.epub',
         onPageRendered: _noop,
         onError: _noopError,
         fontSize: 1.0,
       );
-      const newView = FoliateEpubReaderView(
+      const newView = FoliateReaderView(
         filePath: '/tmp/new.epub',
         onPageRendered: _noop,
         onError: _noopError,
@@ -447,13 +447,13 @@ void main() {
 
     // Epic 20 Issue 3：dualPageMode／isLandscape 變動偵測
     test('dualPageMode 變動回傳 true', () {
-      const oldView = FoliateEpubReaderView(
+      const oldView = FoliateReaderView(
         filePath: '/tmp/sample.epub',
         onPageRendered: _noop,
         onError: _noopError,
         dualPageMode: DualPageMode.always,
       );
-      const newView = FoliateEpubReaderView(
+      const newView = FoliateReaderView(
         filePath: '/tmp/sample.epub',
         onPageRendered: _noop,
         onError: _noopError,
@@ -463,12 +463,12 @@ void main() {
     });
 
     test('dualPageMode 從 null 變為 always 回傳 true', () {
-      const oldView = FoliateEpubReaderView(
+      const oldView = FoliateReaderView(
         filePath: '/tmp/sample.epub',
         onPageRendered: _noop,
         onError: _noopError,
       );
-      const newView = FoliateEpubReaderView(
+      const newView = FoliateReaderView(
        filePath: '/tmp/sample.epub',
         onPageRendered: _noop,
         onError: _noopError,
@@ -478,13 +478,13 @@ void main() {
     });
 
     test('isLandscape 變動回傳 true', () {
-      const oldView = FoliateEpubReaderView(
+      const oldView = FoliateReaderView(
         filePath: '/tmp/sample.epub',
         onPageRendered: _noop,
         onError: _noopError,
         isLandscape: false,
       );
-      const newView = FoliateEpubReaderView(
+      const newView = FoliateReaderView(
         filePath: '/tmp/sample.epub',
         onPageRendered: _noop,
         onError: _noopError,
@@ -494,14 +494,14 @@ void main() {
     });
 
     test('dualPageMode + isLandscape 同時變動回傳 true', () {
-      const oldView = FoliateEpubReaderView(
+      const oldView = FoliateReaderView(
         filePath: '/tmp/sample.epub',
         onPageRendered: _noop,
         onError: _noopError,
         dualPageMode: DualPageMode.auto,
         isLandscape: false,
       );
-      const newView = FoliateEpubReaderView(
+      const newView = FoliateReaderView(
         filePath: '/tmp/sample.epub',
         onPageRendered: _noop,
         onError: _noopError,
@@ -512,14 +512,14 @@ void main() {
     });
 
     test('dualPageMode + isLandscape 未變動回傳 false', () {
-      const oldView = FoliateEpubReaderView(
+      const oldView = FoliateReaderView(
         filePath: '/tmp/sample.epub',
         onPageRendered: _noop,
         onError: _noopError,
         dualPageMode: DualPageMode.auto,
         isLandscape: true,
       );
-      const newView = FoliateEpubReaderView(
+      const newView = FoliateReaderView(
         filePath: '/tmp/sample.epub',
         onPageRendered: _noop,
         onError: _noopError,
@@ -530,13 +530,13 @@ void main() {
     });
 
     test('僅 textColor 不同時回傳 true', () {
-      const oldView = FoliateEpubReaderView(
+      const oldView = FoliateReaderView(
         filePath: '/tmp/sample.epub',
         onPageRendered: _noop,
         onError: _noopError,
         textColor: Color(0xFF000000),
       );
-      const newView = FoliateEpubReaderView(
+      const newView = FoliateReaderView(
         filePath: '/tmp/sample.epub',
         onPageRendered: _noop,
         onError: _noopError,
@@ -546,13 +546,13 @@ void main() {
     });
 
     test('僅 backgroundColor 不同時回傳 true', () {
-      const oldView = FoliateEpubReaderView(
+      const oldView = FoliateReaderView(
         filePath: '/tmp/sample.epub',
         onPageRendered: _noop,
         onError: _noopError,
         backgroundColor: Color(0xFFFFFFFF),
       );
-      const newView = FoliateEpubReaderView(
+      const newView = FoliateReaderView(
         filePath: '/tmp/sample.epub',
         onPageRendered: _noop,
         onError: _noopError,
@@ -562,13 +562,13 @@ void main() {
     });
 
     test('textColor／backgroundColor 皆相同（含皆為 null）時回傳 false', () {
-      const oldView = FoliateEpubReaderView(
+      const oldView = FoliateReaderView(
         filePath: '/tmp/sample.epub',
         onPageRendered: _noop,
         onError: _noopError,
         fontSize: 1.0,
       );
-      const newView = FoliateEpubReaderView(
+      const newView = FoliateReaderView(
         filePath: '/tmp/sample.epub',
         onPageRendered: _noop,
         onError: _noopError,
@@ -644,7 +644,7 @@ void main() {
     // Issue 10 審查修正：改寫前（AndroidView）版本用
     // SystemChannels.platform_views/MethodChannel mock 驅動底層原生
     // PlatformView 建立流程（見 git 歷史 b2ea4a3 版本的
-    // _pumpFoliateEpubReaderView），該機制已隨遷移完全消失；改用
+    // _pumpFoliateReaderView），該機制已隨遷移完全消失；改用
     // setUpAll 註冊的 FakeInAppWebViewPlatform 讓 InAppWebView 可直接
     // pump，不需要任何 mock。pump 後接 runAsync(Future.delayed(Duration.zero))
     // 再 pump 一次，比照 test/screens/reader_screen_test.dart 已驗證可行
@@ -655,7 +655,7 @@ void main() {
       final capturedActions = <ZoneAction>[];
       await tester.pumpWidget(
         MaterialApp(
-          home: FoliateEpubReaderView(
+          home: FoliateReaderView(
             filePath: '/tmp/sample.epub',
             onPageRendered: _noop,
             onError: _noopError,
@@ -696,7 +696,7 @@ void main() {
         (tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          home: FoliateEpubReaderView(
+          home: FoliateReaderView(
             filePath: '/tmp/sample.epub',
             onPageRendered: _noop,
             onError: _noopError,
@@ -727,7 +727,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          home: FoliateEpubReaderView(
+          home: FoliateReaderView(
             filePath: 'test/fixtures/sample.epub',
             onPageRendered: () {},
             onError: (_) {},
@@ -776,7 +776,7 @@ void main() {
         (tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          home: FoliateEpubReaderView(
+          home: FoliateReaderView(
             filePath: '/tmp/sample.epub',
             onPageRendered: _noop,
             onError: _noopError,
@@ -810,7 +810,7 @@ void main() {
         (tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          home: FoliateEpubReaderView(
+          home: FoliateReaderView(
             filePath: '/tmp/sample.epub',
             onPageRendered: _noop,
             onError: _noopError,
@@ -837,7 +837,7 @@ void main() {
         (tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          home: FoliateEpubReaderView(
+          home: FoliateReaderView(
             filePath: '/tmp/sample.epub',
             onPageRendered: _noop,
             onError: _noopError,
@@ -861,7 +861,7 @@ void main() {
         'tmp/epic-18/review-issue-38-41.md Important #1）', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          home: FoliateEpubReaderView(
+          home: FoliateReaderView(
             filePath: '/tmp/sample.epub',
             onPageRendered: _noop,
             onError: _noopError,
@@ -892,7 +892,7 @@ void main() {
         'tmp/epic-18/review-issue-38-41.md Important #2）', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          home: FoliateEpubReaderView(
+          home: FoliateReaderView(
             filePath: '/tmp/sample.epub',
             onPageRendered: _noop,
             onError: _noopError,
@@ -928,7 +928,7 @@ void main() {
         'is not a function）', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          home: FoliateEpubReaderView(
+          home: FoliateReaderView(
             filePath: '/tmp/sample.epub',
             onPageRendered: _noop,
             onError: _noopError,
@@ -955,7 +955,7 @@ void main() {
         (tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          home: FoliateEpubReaderView(
+          home: FoliateReaderView(
             filePath: '/tmp/sample.epub',
             onPageRendered: _noop,
             onError: _noopError,
@@ -987,7 +987,7 @@ void main() {
         (tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          home: FoliateEpubReaderView(
+          home: FoliateReaderView(
             filePath: '/tmp/sample.epub',
             onPageRendered: _noop,
             onError: _noopError,
@@ -1018,7 +1018,7 @@ void main() {
     testWidgets('InAppWebView 的 onConsoleMessage 已被賦值', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          home: FoliateEpubReaderView(
+          home: FoliateReaderView(
             filePath: '/tmp/sample.epub',
             onPageRendered: _noop,
             onError: _noopError,
@@ -1126,7 +1126,7 @@ void main() {
 
       await tester.pumpWidget(MaterialApp(
         home: Scaffold(
-          body: FoliateEpubReaderView(
+          body: FoliateReaderView(
             filePath: '/tmp/sample.epub',
             onPageRendered: _noop,
             onError: _noopError,
@@ -1150,7 +1150,7 @@ void main() {
       String? receivedError;
       await tester.pumpWidget(MaterialApp(
         home: Scaffold(
-          body: FoliateEpubReaderView(
+          body: FoliateReaderView(
             filePath: '/tmp/sample.epub',
             onPageRendered: _noop,
             onError: (msg) => receivedError = msg,
@@ -1173,7 +1173,7 @@ void main() {
       String? receivedError;
       await tester.pumpWidget(MaterialApp(
         home: Scaffold(
-          body: FoliateEpubReaderView(
+          body: FoliateReaderView(
             filePath: '/tmp/sample.epub',
             onPageRendered: _noop,
             onError: (msg) => receivedError = msg,

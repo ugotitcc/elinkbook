@@ -27,7 +27,7 @@ import 'package:elinkbook/screens/toc_bottom_sheet.dart';
 
 import 'package:elinkbook/reader/epub_position_info.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
-import 'package:elinkbook/reader/foliate_epub_reader_view.dart';
+import 'package:elinkbook/reader/foliate_reader_view.dart';
 import 'package:elinkbook/reader/foliate_native_bridge.dart';
 import 'package:elinkbook/theme/app_theme.dart';
 import 'package:elinkbook/theme/app_theme_data.dart';
@@ -75,7 +75,7 @@ void main() {
     originalCacheBookForServing = cacheBookForServing;
     // 直接覆寫頂層函數變數，繞過 Dart 端檔案系統檢查（File.exists()、
     // resolveSymbolicLinksSync()、getApplicationDocumentsDirectory() 等），
-    // 確保 FoliateEpubReaderView 的 _cacheBook() 在測試環境中能順利完成。
+    // 確保 FoliateReaderView 的 _cacheBook() 在測試環境中能順利完成。
     cacheBookForServing = (filePath, instanceId) async {
       return '/fake/cache/dir/current.epub';
     };
@@ -156,10 +156,10 @@ void main() {
     );
   });
 
-  // Epic 20 Issue 2：isFixedLayout: true 時改為 FoliateEpubReaderView 並傳遞
+  // Epic 20 Issue 2：isFixedLayout: true 時改為 FoliateReaderView 並傳遞
   // isFixedLayoutHint，不呼叫偵測（main.js 會 early-return 跳過 applyPreferences
   // 的非必要設定）。
-  testWidgets('isFixedLayout: true 時建構 FoliateEpubReaderView 並傳遞 isFixedLayoutHint', (tester) async {
+  testWidgets('isFixedLayout: true 時建構 FoliateReaderView 並傳遞 isFixedLayoutHint', (tester) async {
     final repository = FakeLibraryRepository();
     await tester.pumpWidget(
       MaterialApp(
@@ -176,16 +176,16 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    expect(find.byType(FoliateEpubReaderView), findsOneWidget);
+    expect(find.byType(FoliateReaderView), findsOneWidget);
     expect(repository.detectAndCacheEpubLayoutCalls, isEmpty);
-    // 驗證 isFixedLayoutHint 正確傳遞到 FoliateEpubReaderView
-    final foliateView = tester.widget<FoliateEpubReaderView>(
-      find.byType(FoliateEpubReaderView),
+    // 驗證 isFixedLayoutHint 正確傳遞到 FoliateReaderView
+    final foliateView = tester.widget<FoliateReaderView>(
+      find.byType(FoliateReaderView),
     );
     expect(foliateView.isFixedLayoutHint, isTrue);
   });
 
-  testWidgets('isFixedLayout: false 時直接建構 FoliateEpubReaderView，不呼叫偵測', (
+  testWidgets('isFixedLayout: false 時直接建構 FoliateReaderView，不呼叫偵測', (
     tester,
   ) async {
     final repository = FakeLibraryRepository();
@@ -204,12 +204,12 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    expect(find.byType(FoliateEpubReaderView), findsOneWidget);
+    expect(find.byType(FoliateReaderView), findsOneWidget);
     expect(repository.detectAndCacheEpubLayoutCalls, isEmpty);
   });
 
-  // Epic 20 Issue 3：FoliateEpubReaderView 的 dualPageMode/isLandscape 參數下傳
-  testWidgets('裝置為橫向時，isLandscape 正確下傳給 FoliateEpubReaderView 建構參數', (tester) async {
+  // Epic 20 Issue 3：FoliateReaderView 的 dualPageMode/isLandscape 參數下傳
+  testWidgets('裝置為橫向時，isLandscape 正確下傳給 FoliateReaderView 建構參數', (tester) async {
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.binding.setSurfaceSize(const Size(800, 400)); // 橫向
 
@@ -227,8 +227,8 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    final foliateView = tester.widget<FoliateEpubReaderView>(
-      find.byType(FoliateEpubReaderView),
+    final foliateView = tester.widget<FoliateReaderView>(
+      find.byType(FoliateReaderView),
     );
     expect(foliateView.isLandscape, isTrue);
   });
@@ -258,13 +258,13 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    final foliateView = tester.widget<FoliateEpubReaderView>(
-      find.byType(FoliateEpubReaderView),
+    final foliateView = tester.widget<FoliateReaderView>(
+      find.byType(FoliateReaderView),
     );
     expect(foliateView.isLandscape, isFalse);
   });
 
-  testWidgets('開啟該書已有的持久化雙頁偏好設定後，FoliateEpubReaderView 的 dualPageMode 正確載入', (tester) async {
+  testWidgets('開啟該書已有的持久化雙頁偏好設定後，FoliateReaderView 的 dualPageMode 正確載入', (tester) async {
     await prefsManager.saveBookPrefs(
       'b1',
       const BookReaderPrefs(
@@ -286,13 +286,13 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    final foliateView = tester.widget<FoliateEpubReaderView>(
-      find.byType(FoliateEpubReaderView),
+    final foliateView = tester.widget<FoliateReaderView>(
+      find.byType(FoliateReaderView),
     );
     expect(foliateView.dualPageMode, DualPageMode.always);
   });
 
-  testWidgets('尚未持久化雙頁偏好設定時，FoliateEpubReaderView 的 dualPageMode 為 auto（預設值）', (tester) async {
+  testWidgets('尚未持久化雙頁偏好設定時，FoliateReaderView 的 dualPageMode 為 auto（預設值）', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         home: ReaderScreen(
@@ -307,8 +307,8 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    final foliateView = tester.widget<FoliateEpubReaderView>(
-      find.byType(FoliateEpubReaderView),
+    final foliateView = tester.widget<FoliateReaderView>(
+      find.byType(FoliateReaderView),
     );
     expect(foliateView.dualPageMode, DualPageMode.auto);
   });
@@ -384,8 +384,8 @@ void main() {
         reason: '尚未收到 onLayoutResolved，_autoDetectedWritingMode 仍為 null',
       );
 
-      final foliateView = tester.widget<FoliateEpubReaderView>(
-        find.byType(FoliateEpubReaderView),
+      final foliateView = tester.widget<FoliateReaderView>(
+        find.byType(FoliateReaderView),
       );
       foliateView.onPageRendered();
       foliateView.onLayoutResolved?.call(
@@ -405,7 +405,7 @@ void main() {
   );
 
   testWidgets(
-    '流式 EPUB 開書後，ReaderSettingsSheet 變動的偏好正確傳遞到 FoliateEpubReaderView',
+    '流式 EPUB 開書後，ReaderSettingsSheet 變動的偏好正確傳遞到 FoliateReaderView',
     (tester) async {
       // 設定較大的 Viewport，確保 BottomSheet 內的控制項皆在可點擊範圍內
       // （Issue 14 邊距拆為 4 個獨立滑桿後內容變高，1200 已不足，調高至 1600）
@@ -430,8 +430,8 @@ void main() {
       await tester.runAsync(() => Future.delayed(Duration.zero));
       await tester.pump();
 
-      final initialView = tester.widget<FoliateEpubReaderView>(
-        find.byType(FoliateEpubReaderView),
+      final initialView = tester.widget<FoliateReaderView>(
+        find.byType(FoliateReaderView),
       );
       initialView.onPageRendered(); // 模擬開書成功，脫離 loading 狀態
       initialView.onLayoutResolved?.call(
@@ -460,8 +460,8 @@ void main() {
       await tester.tap(find.byKey(const Key('reader_settings_show_footer')));
       await tester.pumpAndSettle();
 
-      final updatedView = tester.widget<FoliateEpubReaderView>(
-        find.byType(FoliateEpubReaderView),
+      final updatedView = tester.widget<FoliateReaderView>(
+        find.byType(FoliateReaderView),
       );
       expect(updatedView.writingMode, WritingMode.vertical);
       expect(updatedView.columnMode, ColumnMode.single);
@@ -470,7 +470,7 @@ void main() {
   );
 
   testWidgets(
-    'isFixedLayout: null 且提供 libraryRepository 時，呼叫 detectAndCacheEpubLayout 並依結果建構 FoliateEpubReaderView',
+    'isFixedLayout: null 且提供 libraryRepository 時，呼叫 detectAndCacheEpubLayout 並依結果建構 FoliateReaderView',
     (tester) async {
       final repository = FakeLibraryRepository(detectedIsFixedLayout: false);
       await tester.pumpWidget(
@@ -488,7 +488,7 @@ void main() {
       await tester.pump();
 
       expect(repository.detectAndCacheEpubLayoutCalls, ['b1']);
-      expect(find.byType(FoliateEpubReaderView), findsOneWidget);
+      expect(find.byType(FoliateReaderView), findsOneWidget);
     },
   );
 
@@ -511,7 +511,7 @@ void main() {
       await tester.pump();
 
       expect(repository.detectAndCacheEpubLayoutCalls, ['b1']);
-      expect(find.byType(FoliateEpubReaderView), findsOneWidget);
+      expect(find.byType(FoliateReaderView), findsOneWidget);
     },
   );
 
@@ -531,7 +531,7 @@ void main() {
       await tester.runAsync(() => Future.delayed(Duration.zero));
       await tester.pump();
 
-      expect(find.byType(FoliateEpubReaderView), findsOneWidget);
+      expect(find.byType(FoliateReaderView), findsOneWidget);
     },
   );
 
@@ -554,9 +554,9 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    final viewFinder = find.byType(FoliateEpubReaderView);
+    final viewFinder = find.byType(FoliateReaderView);
     expect(viewFinder, findsOneWidget);
-    final epubView = tester.widget<FoliateEpubReaderView>(viewFinder);
+    final epubView = tester.widget<FoliateReaderView>(viewFinder);
     expect(epubView.fontSize, 1.5);
   });
 
@@ -580,7 +580,7 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    final epubView = tester.widget<FoliateEpubReaderView>(find.byType(FoliateEpubReaderView));
+    final epubView = tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
     expect(epubView.writingMode, WritingMode.vertical);
     // 排版方向的雙層解析獨立於「⚙️版面」按鈕的啟用條件——後者仍要求真正
     // 收到 onLayoutResolved（見 _buildAppBarActions 的
@@ -613,7 +613,7 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    final epubView = tester.widget<FoliateEpubReaderView>(find.byType(FoliateEpubReaderView));
+    final epubView = tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
     expect(epubView.pageTurnMode, PageTurnMode.paginated);
   });
 
@@ -635,7 +635,7 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    final epubView = tester.widget<FoliateEpubReaderView>(find.byType(FoliateEpubReaderView));
+    final epubView = tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
     expect(epubView.pageTurnMode, PageTurnMode.scroll);
   });
 
@@ -658,7 +658,7 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    final epubView = tester.widget<FoliateEpubReaderView>(find.byType(FoliateEpubReaderView));
+    final epubView = tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
     expect(epubView.pageTurnMode, PageTurnMode.scroll);
   });
 
@@ -731,7 +731,7 @@ void main() {
       // EpubReaderView.onLayoutResolved 是公開的 ValueChanged<EpubLayoutInfo>?
       // callback prop（epub_reader_view.dart:32），可在純 flutter test 中直接呼叫。
       tester
-          .widget<FoliateEpubReaderView>(find.byType(FoliateEpubReaderView))
+          .widget<FoliateReaderView>(find.byType(FoliateReaderView))
           .onLayoutResolved!(
         const EpubLayoutInfo(
           isFixedLayout: false,
@@ -741,7 +741,7 @@ void main() {
       await tester.pump();
 
       expect(
-        tester.widget<FoliateEpubReaderView>(find.byType(FoliateEpubReaderView)).writingMode,
+        tester.widget<FoliateReaderView>(find.byType(FoliateReaderView)).writingMode,
         WritingMode.vertical,
       );
     },
@@ -766,7 +766,7 @@ void main() {
     // 純 flutter test 環境沒有真實裝置能觸發原生端 onLayoutResolved，直接呼叫
     // EpubReaderView 目前已知的 onLayoutResolved callback 模擬原生端回報，比照
     // 本檔案既有測試對「無法在此層級驅動原生渲染」的既定限制處理方式。
-    final view = tester.widget<FoliateEpubReaderView>(find.byType(FoliateEpubReaderView));
+    final view = tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
     view.onLayoutResolved?.call(
       const EpubLayoutInfo(
         isFixedLayout: true,
@@ -813,8 +813,8 @@ void main() {
       await tester.pump();
       await tester.runAsync(() => Future.delayed(Duration.zero));
       await tester.pump();
-      final fxlView = tester.widget<FoliateEpubReaderView>(
-        find.byType(FoliateEpubReaderView),
+      final fxlView = tester.widget<FoliateReaderView>(
+        find.byType(FoliateReaderView),
       );
       fxlView.onPageRendered();
       fxlView.onLayoutResolved?.call(
@@ -848,8 +848,8 @@ void main() {
       await tester.pump();
       await tester.runAsync(() => Future.delayed(Duration.zero));
       await tester.pump();
-      final reflowableView = tester.widget<FoliateEpubReaderView>(
-        find.byType(FoliateEpubReaderView),
+      final reflowableView = tester.widget<FoliateReaderView>(
+        find.byType(FoliateReaderView),
       );
       reflowableView.onPageRendered();
       reflowableView.onLayoutResolved?.call(
@@ -881,7 +881,7 @@ void main() {
     await tester.pump();
 
     // 直接呼叫 onLayoutResolved 模擬原生端回報 isFixedLayout=true
-    final view = tester.widget<FoliateEpubReaderView>(find.byType(FoliateEpubReaderView));
+    final view = tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
     view.onLayoutResolved?.call(
       const EpubLayoutInfo(
         isFixedLayout: true,
@@ -941,7 +941,7 @@ void main() {
     await tester.pump();
 
     // 直接呼叫 onLayoutResolved 模擬原生端回報 isFixedLayout=true
-    final view = tester.widget<FoliateEpubReaderView>(find.byType(FoliateEpubReaderView));
+    final view = tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
     view.onLayoutResolved?.call(
       const EpubLayoutInfo(
         isFixedLayout: true,
@@ -985,13 +985,13 @@ void main() {
 
     // 引擎分派（_dispatchedIsFixedLayout）已由 widget.isFixedLayout 同步
     // 決定，建構的必為 EpubReaderView（Readium/FXL 路徑）。
-    expect(find.byType(FoliateEpubReaderView), findsOneWidget);
+    expect(find.byType(FoliateReaderView), findsOneWidget);
 
     // 模擬 native 端（Readium 自己對這本書 metadata 的獨立判讀，見
     // EpubReaderView.kt 的 publication?.metadata?.layout）異步回報
     // isFixedLayout: false——比照本檔案既有測試對「無法在此層級驅動原生
     // 渲染」的既定處理方式，直接呼叫 onLayoutResolved callback。
-    final view = tester.widget<FoliateEpubReaderView>(find.byType(FoliateEpubReaderView));
+    final view = tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
     view.onLayoutResolved?.call(
       const EpubLayoutInfo(
         isFixedLayout: false,
@@ -1015,9 +1015,9 @@ void main() {
     // 【Task 4 重寫】原本使用 SystemChannels.platform_views mock 擷取
     // per-instance MethodChannel 來模擬 EpubReaderView（Readium）內部的
     // isFixedLayout 狀態。Epic 17 Issue 2 後 _buildNativeView() 統一返回
-    // FoliateEpubReaderView，其熱區由 Dart 端 _ZoneOverlay（build() 內
+    // FoliateReaderView，其熱區由 Dart 端 _ZoneOverlay（build() 內
     // 3×3 grid）直接渲染，不再依賴 MethodChannel。改用
-    // tester.widget<FoliateEpubReaderView>() 取得 widget 實例、直接呼叫
+    // tester.widget<FoliateReaderView>() 取得 widget 實例、直接呼叫
     // onLayoutResolved 回調來設定 ReaderScreen 的 _isFixedLayout 狀態。
     await tester.pumpWidget(
       MaterialApp(
@@ -1032,10 +1032,10 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    // 直接呼叫 FoliateEpubReaderView 的 onLayoutResolved 回調，模擬原生端
+    // 直接呼叫 FoliateReaderView 的 onLayoutResolved 回調，模擬原生端
     // 回報 isFixedLayout=true，讓 ReaderScreen 顯示 FXL 專屬懸浮按鈕。
     final epubView =
-        tester.widget<FoliateEpubReaderView>(find.byType(FoliateEpubReaderView));
+        tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
     epubView.onLayoutResolved?.call(
       const EpubLayoutInfo(
         isFixedLayout: true,
@@ -1051,7 +1051,7 @@ void main() {
 
     // navZoneMode 預設 rightFlip，index 1（中欄）為 menu
     // （見 app/lib/reader/nav_zone_mode.dart rightFlipZoneTemplate）。
-    // FoliateEpubReaderView 的 _ZoneOverlay 永遠渲染 3×3 熱區，
+    // FoliateReaderView 的 _ZoneOverlay 永遠渲染 3×3 熱區，
     // onZoneAction 回調已接線到 ReaderScreen._handleZoneAction。
     await tester.tap(find.byKey(const Key('nav_zone_1')));
     await tester.pump();
@@ -1184,7 +1184,7 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    final epubView = tester.widget<FoliateEpubReaderView>(find.byType(FoliateEpubReaderView));
+    final epubView = tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
     // 先回報非固定版面（頁尾只在流式 EPUB 顯示）。
     epubView.onLayoutResolved?.call(
       const EpubLayoutInfo(
@@ -1193,14 +1193,14 @@ void main() {
       ),
     );
     await tester.pump();
-    // TODO(epic-20): FoliateEpubReaderView 目前尚未提供
+    // TODO(epic-20): FoliateReaderView 目前尚未提供
     // onCharacterCountReady callback，頁尾不會渲染——符合預期。
-    // 當 FoliateEpubReaderView 加入 onCharacterCountReady 後，
+    // 當 FoliateReaderView 加入 onCharacterCountReady 後，
     // 取消註解並還原驗證邏輯。
     // epubView.onCharacterCountReady?.call(5000);
     // await tester.pump();
 
-    // FoliateEpubReaderView 無 onCharacterCountReady，頁尾不應出現。
+    // FoliateReaderView 無 onCharacterCountReady，頁尾不應出現。
     expect(find.byKey(const Key('reader_footer')), findsNothing);
   });
 
@@ -1220,7 +1220,7 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    final epubView = tester.widget<FoliateEpubReaderView>(find.byType(FoliateEpubReaderView));
+    final epubView = tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
     epubView.onLayoutResolved?.call(
       const EpubLayoutInfo(
         isFixedLayout: false,
@@ -1228,7 +1228,7 @@ void main() {
       ),
     );
     await tester.pump();
-    // TODO(epic-20): FoliateEpubReaderView 目前無 onCharacterCountReady。
+    // TODO(epic-20): FoliateReaderView 目前無 onCharacterCountReady。
     // epubView.onCharacterCountReady?.call(5000); // 總頁數 10
     await tester.pump();
     epubView.onLocatorChanged?.call(
@@ -1259,7 +1259,7 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    final epubView = tester.widget<FoliateEpubReaderView>(find.byType(FoliateEpubReaderView));
+    final epubView = tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
     epubView.onLayoutResolved?.call(
       const EpubLayoutInfo(
         isFixedLayout: true,
@@ -1267,7 +1267,7 @@ void main() {
       ),
     );
     await tester.pump();
-    // TODO(epic-20): FoliateEpubReaderView 目前無 onCharacterCountReady。
+    // TODO(epic-20): FoliateReaderView 目前無 onCharacterCountReady。
     // epubView.onCharacterCountReady?.call(5000);
     await tester.pump();
 
@@ -1275,7 +1275,7 @@ void main() {
   });
 
   testWidgets('版面設定（字型大小）變動後，EPUB 頁尾估算總頁數即時重新計算', (tester) async {
-    // 【Task 4 修正】FoliateEpubReaderView 無 onCharacterCountReady 回調
+    // 【Task 4 修正】FoliateReaderView 無 onCharacterCountReady 回調
     //（EpubReaderView 獨有），改透過 FakeReaderPrefsManager 的
     // totalCharacterCountByBookId 在開書載入階段注入全書字元數（5000）。
     // ReaderScreen._initState 路徑：prefsManager.load(bookId) →
@@ -1297,7 +1297,7 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    final epubView = tester.widget<FoliateEpubReaderView>(find.byType(FoliateEpubReaderView));
+    final epubView = tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
     epubView.onPageRendered();
     epubView.onLayoutResolved?.call(
       const EpubLayoutInfo(
@@ -1436,7 +1436,7 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    final epubView = tester.widget<FoliateEpubReaderView>(find.byType(FoliateEpubReaderView));
+    final epubView = tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
     epubView.onLayoutResolved?.call(
       const EpubLayoutInfo(
         isFixedLayout: true,
@@ -1464,8 +1464,8 @@ void main() {
       await tester.runAsync(() => Future.delayed(Duration.zero));
       await tester.pump();
 
-      final epubView = tester.widget<FoliateEpubReaderView>(
-        find.byType(FoliateEpubReaderView),
+      final epubView = tester.widget<FoliateReaderView>(
+        find.byType(FoliateReaderView),
       );
       epubView.onLayoutResolved?.call(
         const EpubLayoutInfo(
@@ -1507,7 +1507,7 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    final epubView = tester.widget<FoliateEpubReaderView>(find.byType(FoliateEpubReaderView));
+    final epubView = tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
     epubView.onLayoutResolved?.call(
       const EpubLayoutInfo(
         isFixedLayout: false,
@@ -1558,8 +1558,8 @@ void main() {
       await tester.runAsync(() => Future.delayed(Duration.zero));
       await tester.pump();
 
-      final epubView = tester.widget<FoliateEpubReaderView>(
-        find.byType(FoliateEpubReaderView),
+      final epubView = tester.widget<FoliateReaderView>(
+        find.byType(FoliateReaderView),
       );
       epubView.onLayoutResolved?.call(
         const EpubLayoutInfo(
@@ -1601,7 +1601,7 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    final epubView = tester.widget<FoliateEpubReaderView>(find.byType(FoliateEpubReaderView));
+    final epubView = tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
     epubView.onLayoutResolved?.call(
       const EpubLayoutInfo(
         isFixedLayout: false,
@@ -1707,7 +1707,7 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    final epubView = tester.widget<FoliateEpubReaderView>(find.byType(FoliateEpubReaderView));
+    final epubView = tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
     epubView.onLayoutResolved?.call(
       const EpubLayoutInfo(
         isFixedLayout: false,
@@ -1750,7 +1750,7 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    final epubView = tester.widget<FoliateEpubReaderView>(find.byType(FoliateEpubReaderView));
+    final epubView = tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
     epubView.onLayoutResolved?.call(
       const EpubLayoutInfo(
         isFixedLayout: false,
@@ -1758,7 +1758,7 @@ void main() {
       ),
     );
     await tester.pump();
-    // TODO(epic-20): FoliateEpubReaderView 目前無 onCharacterCountReady。
+    // TODO(epic-20): FoliateReaderView 目前無 onCharacterCountReady。
     // epubView.onCharacterCountReady?.call(5000);
     await tester.pump();
 
@@ -1821,7 +1821,7 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    final epubView = tester.widget<FoliateEpubReaderView>(find.byType(FoliateEpubReaderView));
+    final epubView = tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
     epubView.onLayoutResolved?.call(
       const EpubLayoutInfo(
         isFixedLayout: false,
@@ -1829,7 +1829,7 @@ void main() {
       ),
     );
     await tester.pump();
-    // TODO(epic-20): FoliateEpubReaderView 目前無 onCharacterCountReady。
+    // TODO(epic-20): FoliateReaderView 目前無 onCharacterCountReady。
     // epubView.onCharacterCountReady?.call(5000);
     await tester.pump();
 
@@ -1861,7 +1861,7 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    final epubView = tester.widget<FoliateEpubReaderView>(find.byType(FoliateEpubReaderView));
+    final epubView = tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
     epubView.onLayoutResolved?.call(
       const EpubLayoutInfo(
         isFixedLayout: false,
@@ -1869,7 +1869,7 @@ void main() {
       ),
     );
     await tester.pump();
-    // TODO(epic-20): FoliateEpubReaderView 目前無 onCharacterCountReady。
+    // TODO(epic-20): FoliateReaderView 目前無 onCharacterCountReady。
     // epubView.onCharacterCountReady?.call(5000);
     await tester.pump();
 
@@ -1899,8 +1899,8 @@ void main() {
       await tester.runAsync(() => Future.delayed(Duration.zero));
       await tester.pump();
 
-      final epubView = tester.widget<FoliateEpubReaderView>(
-        find.byType(FoliateEpubReaderView),
+      final epubView = tester.widget<FoliateReaderView>(
+        find.byType(FoliateReaderView),
       );
       epubView.onLayoutResolved?.call(
         const EpubLayoutInfo(
@@ -1984,7 +1984,7 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    final epubView = tester.widget<FoliateEpubReaderView>(find.byType(FoliateEpubReaderView));
+    final epubView = tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
     epubView.onLayoutResolved?.call(
       const EpubLayoutInfo(
         isFixedLayout: false,
@@ -2015,8 +2015,8 @@ void main() {
       await tester.runAsync(() => Future.delayed(Duration.zero));
       await tester.pump();
 
-      final epubView = tester.widget<FoliateEpubReaderView>(
-        find.byType(FoliateEpubReaderView),
+      final epubView = tester.widget<FoliateReaderView>(
+        find.byType(FoliateReaderView),
       );
       epubView.onLayoutResolved?.call(
         const EpubLayoutInfo(
@@ -2199,7 +2199,7 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    final view = tester.widget<FoliateEpubReaderView>(find.byType(FoliateEpubReaderView));
+    final view = tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
     view.onLayoutResolved?.call(
       const EpubLayoutInfo(
         isFixedLayout: true,
@@ -2232,7 +2232,7 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    final view = tester.widget<FoliateEpubReaderView>(find.byType(FoliateEpubReaderView));
+    final view = tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
     view.onLayoutResolved?.call(
       const EpubLayoutInfo(
         isFixedLayout: true,
@@ -2273,7 +2273,7 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    final view = tester.widget<FoliateEpubReaderView>(find.byType(FoliateEpubReaderView));
+    final view = tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
     view.onLayoutResolved?.call(
       const EpubLayoutInfo(
         isFixedLayout: true,
@@ -2356,7 +2356,7 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    final view = tester.widget<FoliateEpubReaderView>(find.byType(FoliateEpubReaderView));
+    final view = tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
     view.onLayoutResolved?.call(
       const EpubLayoutInfo(
         isFixedLayout: true,
@@ -2426,7 +2426,7 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    final view = tester.widget<FoliateEpubReaderView>(find.byType(FoliateEpubReaderView));
+    final view = tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
     view.onLayoutResolved?.call(
       const EpubLayoutInfo(
         isFixedLayout: true,
@@ -2491,7 +2491,7 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    final view = tester.widget<FoliateEpubReaderView>(find.byType(FoliateEpubReaderView));
+    final view = tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
     view.onLayoutResolved?.call(
       const EpubLayoutInfo(
         isFixedLayout: true,
@@ -2561,8 +2561,8 @@ void main() {
       await tester.runAsync(() => Future.delayed(Duration.zero));
       await tester.pump();
 
-      final epubView = tester.widget<FoliateEpubReaderView>(
-        find.byType(FoliateEpubReaderView),
+      final epubView = tester.widget<FoliateReaderView>(
+        find.byType(FoliateReaderView),
       );
       epubView.onLayoutResolved?.call(
         const EpubLayoutInfo(
@@ -2936,8 +2936,8 @@ void main() {
     // 完成熱區判讀後的通知，驗證 ReaderScreen 接線到 _handleZoneAction 的
     // 部分（不涉及原生 InputListener 本身是否正確攔截點擊，那部分由
     // integration_test 真機驗證，見 plan-issue-6.md Task 5）。
-    final view = tester.widget<FoliateEpubReaderView>(find.byType(FoliateEpubReaderView));
-    // Epic 20 Issue 2：FoliateEpubReaderView 使用 onZoneAction 回呼
+    final view = tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
+    // Epic 20 Issue 2：FoliateReaderView 使用 onZoneAction 回呼
     // （接收 ZoneAction enum），取代 EpubReaderView 的 onZoneTapped(cellIndex)。
     view.onZoneAction?.call(ZoneAction.menu);
     await tester.pump();
@@ -2980,7 +2980,7 @@ void main() {
     },
   );
 
-  testWidgets('EPUB 流式：previousPage/nextPage 熱區觸發 FoliateEpubReaderView '
+  testWidgets('EPUB 流式：previousPage/nextPage 熱區觸發 FoliateReaderView '
       '換頁，且不影響沉浸模式狀態（design.md 決策 #14；Issue 7 改斷言浮動按鈕）', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -3039,8 +3039,8 @@ void main() {
       await tester.runAsync(() => Future.delayed(Duration.zero));
       await tester.pump();
 
-      final foliateView = tester.widget<FoliateEpubReaderView>(
-        find.byType(FoliateEpubReaderView),
+      final foliateView = tester.widget<FoliateReaderView>(
+        find.byType(FoliateReaderView),
       );
       foliateView.onPageRendered();
       foliateView.onLayoutResolved?.call(
@@ -3051,7 +3051,7 @@ void main() {
       );
       await tester.pump();
       // 比照既有 Readium 分支測試：目錄按鈕的啟用條件額外要求 _tocLoaded，
-      // 該旗標由 FoliateEpubReaderView.loadTableOfContents() 這個 async
+      // 該旗標由 FoliateReaderView.loadTableOfContents() 這個 async
       // 呼叫的 .then() callback 設定，需要多一次 pump 讓其 microtask 完成。
       await tester.pump();
 
@@ -3067,7 +3067,7 @@ void main() {
   );
 
   testWidgets(
-    '流式 EPUB：點選目錄項目呼叫 FoliateEpubReaderView.jumpToLocator（非 EpubReaderView）',
+    '流式 EPUB：點選目錄項目呼叫 FoliateReaderView.jumpToLocator（非 EpubReaderView）',
     (tester) async {
       await tester.pumpWidget(
         MaterialApp(
@@ -3083,8 +3083,8 @@ void main() {
       await tester.runAsync(() => Future.delayed(Duration.zero));
       await tester.pump();
 
-      final foliateView = tester.widget<FoliateEpubReaderView>(
-        find.byType(FoliateEpubReaderView),
+      final foliateView = tester.widget<FoliateReaderView>(
+        find.byType(FoliateReaderView),
       );
       foliateView.onPageRendered();
       foliateView.onLayoutResolved?.call(
@@ -3111,9 +3111,9 @@ void main() {
       );
       await tester.pump();
 
-      // 驗證 FoliateEpubReaderView 存在（代表走對了分支），且
+      // 驗證 FoliateReaderView 存在（代表走對了分支），且
       // EpubReaderView 未被建構——確認目錄跳轉走的是 Foliate 路徑。
-      expect(find.byType(FoliateEpubReaderView), findsOneWidget);
+      expect(find.byType(FoliateReaderView), findsOneWidget);
     },
   );
 
@@ -3134,8 +3134,8 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    final foliateView = tester.widget<FoliateEpubReaderView>(
-      find.byType(FoliateEpubReaderView),
+    final foliateView = tester.widget<FoliateReaderView>(
+      find.byType(FoliateReaderView),
     );
     foliateView.onPageRendered();
     foliateView.onLocatorChanged?.call(
@@ -3173,8 +3173,8 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    final foliateView = tester.widget<FoliateEpubReaderView>(
-      find.byType(FoliateEpubReaderView),
+    final foliateView = tester.widget<FoliateReaderView>(
+      find.byType(FoliateReaderView),
     );
     foliateView.onPageRendered();
     foliateView.onLocatorChanged?.call(
@@ -3242,8 +3242,8 @@ void main() {
       await tester.runAsync(() => Future.delayed(Duration.zero));
       await tester.pump();
 
-      final foliateView = tester.widget<FoliateEpubReaderView>(
-        find.byType(FoliateEpubReaderView),
+      final foliateView = tester.widget<FoliateReaderView>(
+        find.byType(FoliateReaderView),
       );
       foliateView.onPageRendered();
       await tester.pump();
@@ -3272,8 +3272,8 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    final foliateView = tester.widget<FoliateEpubReaderView>(
-      find.byType(FoliateEpubReaderView),
+    final foliateView = tester.widget<FoliateReaderView>(
+      find.byType(FoliateReaderView),
     );
     foliateView.onPageRendered();
     foliateView.onLocatorChanged?.call(
@@ -3295,10 +3295,10 @@ void main() {
     );
   });
 
-  // --- Epic 17 Issue 8：流式 EPUB（FoliateEpubReaderView）劃線與備註 ---
+  // --- Epic 17 Issue 8：流式 EPUB（FoliateReaderView）劃線與備註 ---
 
   testWidgets(
-    '流式 EPUB 開書後，自動載入既有劃線/備註並透過 FoliateEpubReaderView.setDecorations 送給原生端',
+    '流式 EPUB 開書後，自動載入既有劃線/備註並透過 FoliateReaderView.setDecorations 送給原生端',
     (tester) async {
       final highlightsRepo = FakeHighlightsRepository();
       final notesRepo = FakeNotesRepository();
@@ -3328,8 +3328,8 @@ void main() {
       await tester.runAsync(() => Future.delayed(Duration.zero));
       await tester.pump();
 
-      final foliateView = tester.widget<FoliateEpubReaderView>(
-        find.byType(FoliateEpubReaderView),
+      final foliateView = tester.widget<FoliateReaderView>(
+        find.byType(FoliateReaderView),
       );
       foliateView.onLayoutResolved?.call(
         const EpubLayoutInfo(
@@ -3343,19 +3343,19 @@ void main() {
       // InAppWebView 環境下 setDecorations 透過 evaluateJavascript 發送，
       // flutter_test 無法攔截 JS 呼叫。此處驗證 widget 成功建構且不崩潰，
       // 表示劃線載入 → setDecorations 完整流程未拋出例外。
-      expect(find.byType(FoliateEpubReaderView), findsOneWidget);
+      expect(find.byType(FoliateReaderView), findsOneWidget);
     },
   );
 
   // epic-20-fxl-foliate-migration Issue 4 Task 2/3：_sendDecorationsToNative()
   // 修正前對 FXL 書籍會呼叫已無人建構的 EpubReaderView.setDecorations（見
   // tmp/epic-20/issue2-implementation-review.md 原始發現），修正後無條件呼叫
-  // FoliateEpubReaderView.setDecorations——比照上方既有的流式版本測試風格
+  // FoliateReaderView.setDecorations——比照上方既有的流式版本測試風格
   // （InAppWebView 環境下 flutter_test 無法攔截 evaluateJavascript 呼叫本身，
-  // 故以「不崩潰」+「畫面中只有 FoliateEpubReaderView、沒有 EpubReaderView」
+  // 故以「不崩潰」+「畫面中只有 FoliateReaderView、沒有 EpubReaderView」
   // 佐證分派目標正確，是本測試能提供的最強保證）。
   testWidgets(
-    'FXL EPUB 開書後，自動載入既有劃線/備註並透過 FoliateEpubReaderView.setDecorations（而非已無人建構的 EpubReaderView）送給原生端',
+    'FXL EPUB 開書後，自動載入既有劃線/備註並透過 FoliateReaderView.setDecorations（而非已無人建構的 EpubReaderView）送給原生端',
     (tester) async {
       final highlightsRepo = FakeHighlightsRepository();
       final notesRepo = FakeNotesRepository();
@@ -3385,8 +3385,8 @@ void main() {
       await tester.runAsync(() => Future.delayed(Duration.zero));
       await tester.pump();
 
-      final fxlView = tester.widget<FoliateEpubReaderView>(
-        find.byType(FoliateEpubReaderView),
+      final fxlView = tester.widget<FoliateReaderView>(
+        find.byType(FoliateReaderView),
       );
       fxlView.onLayoutResolved?.call(
         const EpubLayoutInfo(
@@ -3397,12 +3397,12 @@ void main() {
       await tester.pump();
       await tester.pump();
 
-      expect(find.byType(FoliateEpubReaderView), findsOneWidget);
+      expect(find.byType(FoliateReaderView), findsOneWidget);
     },
   );
 
   testWidgets(
-    '流式 EPUB：FoliateEpubReaderView 回報 onSelectionChanged 時，顯示 AnnotationToolbar',
+    '流式 EPUB：FoliateReaderView 回報 onSelectionChanged 時，顯示 AnnotationToolbar',
     (tester) async {
       final highlightsRepo = FakeHighlightsRepository();
       final notesRepo = FakeNotesRepository();
@@ -3424,8 +3424,8 @@ void main() {
       await tester.pump();
 
       // 先呼叫 onLayoutResolved 觸發 _resolved 設定（_buildNativeView 所需）
-      final foliateView = tester.widget<FoliateEpubReaderView>(
-        find.byType(FoliateEpubReaderView),
+      final foliateView = tester.widget<FoliateReaderView>(
+        find.byType(FoliateReaderView),
       );
       foliateView.onPageRendered();
       foliateView.onLayoutResolved?.call(
@@ -3483,8 +3483,8 @@ void main() {
       await tester.runAsync(() => Future.delayed(Duration.zero));
       await tester.pump();
 
-      final foliateView = tester.widget<FoliateEpubReaderView>(
-        find.byType(FoliateEpubReaderView),
+      final foliateView = tester.widget<FoliateReaderView>(
+        find.byType(FoliateReaderView),
       );
       foliateView.onPageRendered();
       foliateView.onLayoutResolved?.call(
@@ -3540,8 +3540,8 @@ void main() {
       await tester.runAsync(() => Future.delayed(Duration.zero));
       await tester.pump();
 
-      final foliateView = tester.widget<FoliateEpubReaderView>(
-        find.byType(FoliateEpubReaderView),
+      final foliateView = tester.widget<FoliateReaderView>(
+        find.byType(FoliateReaderView),
       );
       foliateView.onPageRendered();
       foliateView.onLayoutResolved?.call(
@@ -3573,7 +3573,7 @@ void main() {
   );
 
   testWidgets(
-    '流式 EPUB：FoliateEpubReaderView 回報 onAnnotationActivated 時，開啟對話框',
+    '流式 EPUB：FoliateReaderView 回報 onAnnotationActivated 時，開啟對話框',
     (tester) async {
       final highlightsRepo = FakeHighlightsRepository();
       final notesRepo = FakeNotesRepository();
@@ -3604,8 +3604,8 @@ void main() {
       await tester.runAsync(() => Future.delayed(Duration.zero));
       await tester.pump();
 
-      final foliateView = tester.widget<FoliateEpubReaderView>(
-        find.byType(FoliateEpubReaderView),
+      final foliateView = tester.widget<FoliateReaderView>(
+        find.byType(FoliateReaderView),
       );
       foliateView.onPageRendered();
       foliateView.onLayoutResolved?.call(
@@ -3654,8 +3654,8 @@ void main() {
 
     expect(find.byType(AppBar), findsNothing);
 
-    final foliateView = tester.widget<FoliateEpubReaderView>(
-      find.byType(FoliateEpubReaderView),
+    final foliateView = tester.widget<FoliateReaderView>(
+      find.byType(FoliateReaderView),
     );
     foliateView.onPageRendered();
     foliateView.onLayoutResolved?.call(
@@ -3712,8 +3712,8 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    final foliateView = tester.widget<FoliateEpubReaderView>(
-      find.byType(FoliateEpubReaderView),
+    final foliateView = tester.widget<FoliateReaderView>(
+      find.byType(FoliateReaderView),
     );
     foliateView.onPageRendered();
     foliateView.onLayoutResolved?.call(
@@ -3749,8 +3749,8 @@ void main() {
       await tester.runAsync(() => Future.delayed(Duration.zero));
       await tester.pump();
 
-      final foliateView = tester.widget<FoliateEpubReaderView>(
-        find.byType(FoliateEpubReaderView),
+      final foliateView = tester.widget<FoliateReaderView>(
+        find.byType(FoliateReaderView),
       );
       foliateView.onPageRendered();
       foliateView.onLocatorChanged?.call(
@@ -3816,8 +3816,8 @@ void main() {
       await tester.runAsync(() => Future.delayed(Duration.zero));
       await tester.pump();
 
-      final foliateView = tester.widget<FoliateEpubReaderView>(
-        find.byType(FoliateEpubReaderView),
+      final foliateView = tester.widget<FoliateReaderView>(
+        find.byType(FoliateReaderView),
       );
       foliateView.onPageRendered();
       foliateView.onLocatorChanged?.call(
@@ -3876,8 +3876,8 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    final foliateView = tester.widget<FoliateEpubReaderView>(
-      find.byType(FoliateEpubReaderView),
+    final foliateView = tester.widget<FoliateReaderView>(
+      find.byType(FoliateReaderView),
     );
     foliateView.onPageRendered();
     foliateView.onLayoutResolved?.call(
@@ -3923,8 +3923,8 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    final foliateView = tester.widget<FoliateEpubReaderView>(
-      find.byType(FoliateEpubReaderView),
+    final foliateView = tester.widget<FoliateReaderView>(
+      find.byType(FoliateReaderView),
     );
     foliateView.onPageRendered();
     foliateView.onLayoutResolved?.call(
@@ -3969,8 +3969,8 @@ void main() {
       await tester.runAsync(() => Future.delayed(Duration.zero));
       await tester.pump();
 
-      final foliateView = tester.widget<FoliateEpubReaderView>(
-        find.byType(FoliateEpubReaderView),
+      final foliateView = tester.widget<FoliateReaderView>(
+        find.byType(FoliateReaderView),
       );
       foliateView.onPageRendered();
       foliateView.onLayoutResolved?.call(
@@ -4023,8 +4023,8 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    final foliateView = tester.widget<FoliateEpubReaderView>(
-      find.byType(FoliateEpubReaderView),
+    final foliateView = tester.widget<FoliateReaderView>(
+      find.byType(FoliateReaderView),
     );
     foliateView.onPageRendered();
     foliateView.onLayoutResolved?.call(
@@ -4083,8 +4083,8 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    final foliateView = tester.widget<FoliateEpubReaderView>(
-      find.byType(FoliateEpubReaderView),
+    final foliateView = tester.widget<FoliateReaderView>(
+      find.byType(FoliateReaderView),
     );
     foliateView.onPageRendered();
     foliateView.onLayoutResolved?.call(
@@ -4123,8 +4123,8 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    final foliateView = tester.widget<FoliateEpubReaderView>(
-      find.byType(FoliateEpubReaderView),
+    final foliateView = tester.widget<FoliateReaderView>(
+      find.byType(FoliateReaderView),
     );
     foliateView.onPageRendered();
     foliateView.onLayoutResolved?.call(
@@ -4155,8 +4155,8 @@ void main() {
       await tester.runAsync(() => Future.delayed(Duration.zero));
       await tester.pump();
 
-      final foliateView = tester.widget<FoliateEpubReaderView>(
-        find.byType(FoliateEpubReaderView),
+      final foliateView = tester.widget<FoliateReaderView>(
+        find.byType(FoliateReaderView),
       );
       foliateView.onPageRendered();
       foliateView.onLocatorChanged?.call(
@@ -4202,8 +4202,8 @@ void main() {
       await tester.runAsync(() => Future.delayed(Duration.zero));
       await tester.pump();
 
-      final foliateView = tester.widget<FoliateEpubReaderView>(
-        find.byType(FoliateEpubReaderView),
+      final foliateView = tester.widget<FoliateReaderView>(
+        find.byType(FoliateReaderView),
       );
       foliateView.onPageRendered();
       foliateView.onLocatorChanged?.call(
@@ -4257,8 +4257,8 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    final foliateView = tester.widget<FoliateEpubReaderView>(
-      find.byType(FoliateEpubReaderView),
+    final foliateView = tester.widget<FoliateReaderView>(
+      find.byType(FoliateReaderView),
     );
     foliateView.onPageRendered();
     foliateView.onLocatorChanged?.call(
@@ -4311,8 +4311,8 @@ void main() {
       await tester.runAsync(() => Future.delayed(Duration.zero));
       await tester.pump();
 
-      final foliateView = tester.widget<FoliateEpubReaderView>(
-        find.byType(FoliateEpubReaderView),
+      final foliateView = tester.widget<FoliateReaderView>(
+        find.byType(FoliateReaderView),
       );
       foliateView.onPageRendered();
       foliateView.onLocatorChanged?.call(
@@ -4369,8 +4369,8 @@ void main() {
       await tester.runAsync(() => Future.delayed(Duration.zero));
       await tester.pump();
 
-      final foliateView = tester.widget<FoliateEpubReaderView>(
-        find.byType(FoliateEpubReaderView),
+      final foliateView = tester.widget<FoliateReaderView>(
+        find.byType(FoliateReaderView),
       );
       foliateView.onPageRendered();
       foliateView.onLocatorChanged?.call(
@@ -4425,8 +4425,8 @@ void main() {
       await tester.runAsync(() => Future.delayed(Duration.zero));
       await tester.pump();
 
-      final foliateView = tester.widget<FoliateEpubReaderView>(
-        find.byType(FoliateEpubReaderView),
+      final foliateView = tester.widget<FoliateReaderView>(
+        find.byType(FoliateReaderView),
       );
       foliateView.onPageRendered();
       foliateView.onLocatorChanged?.call(
@@ -4491,7 +4491,7 @@ void main() {
     },
   );
 
-  testWidgets('流式 EPUB：邊距 4 個欄位從 ResolvedPreferences 正確透傳到 FoliateEpubReaderView（Issue 14）', (
+  testWidgets('流式 EPUB：邊距 4 個欄位從 ResolvedPreferences 正確透傳到 FoliateReaderView（Issue 14）', (
     tester,
   ) async {
     await prefsManager.saveBookPrefs(
@@ -4517,8 +4517,8 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    final foliateView = tester.widget<FoliateEpubReaderView>(
-      find.byType(FoliateEpubReaderView),
+    final foliateView = tester.widget<FoliateReaderView>(
+      find.byType(FoliateReaderView),
     );
     expect(foliateView.marginTop, 72);
     expect(foliateView.marginBottom, 20);
@@ -4527,7 +4527,7 @@ void main() {
   });
 
   testWidgets(
-      '流式 EPUB：Theme.of(context) 的顏色正確透傳到 FoliateEpubReaderView'
+      '流式 EPUB：Theme.of(context) 的顏色正確透傳到 FoliateReaderView'
       '（epic-22-reader-theme-integration Issue 1）', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -4544,8 +4544,8 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    final foliateView = tester.widget<FoliateEpubReaderView>(
-      find.byType(FoliateEpubReaderView),
+    final foliateView = tester.widget<FoliateReaderView>(
+      find.byType(FoliateReaderView),
     );
     final expectedTheme = buildThemeData(AppTheme.dark);
     expect(foliateView.textColor, expectedTheme.colorScheme.onSurface);
@@ -4571,8 +4571,8 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    final foliateView = tester.widget<FoliateEpubReaderView>(
-      find.byType(FoliateEpubReaderView),
+    final foliateView = tester.widget<FoliateReaderView>(
+      find.byType(FoliateReaderView),
     );
     final expectedTheme = buildThemeData(AppTheme.light);
     expect(foliateView.textColor, expectedTheme.colorScheme.onSurface);
@@ -4580,7 +4580,7 @@ void main() {
   });
 
   testWidgets(
-      'EPUB 固定版面：不論主題為何，傳給 FoliateEpubReaderView 的顏色皆為 null'
+      'EPUB 固定版面：不論主題為何，傳給 FoliateReaderView 的顏色皆為 null'
       '（epic-22-reader-theme-integration Issue 1，圖片內容無法預期背景色）',
       (tester) async {
     await tester.pumpWidget(
@@ -4598,8 +4598,8 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    final foliateView = tester.widget<FoliateEpubReaderView>(
-      find.byType(FoliateEpubReaderView),
+    final foliateView = tester.widget<FoliateReaderView>(
+      find.byType(FoliateReaderView),
     );
     expect(foliateView.textColor, isNull);
     expect(foliateView.backgroundColor, isNull);
@@ -4905,8 +4905,8 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    final epubView = tester.widget<FoliateEpubReaderView>(
-      find.byType(FoliateEpubReaderView),
+    final epubView = tester.widget<FoliateReaderView>(
+      find.byType(FoliateReaderView),
     );
     epubView.onLayoutResolved?.call(
       const EpubLayoutInfo(
@@ -4931,7 +4931,7 @@ void main() {
   });
 
   testWidgets(
-      '提供 customFontsRepository 時，自訂字型清單載入完成前 FoliateEpubReaderView 不建構，載入完成後才建構',
+      '提供 customFontsRepository 時，自訂字型清單載入完成前 FoliateReaderView 不建構，載入完成後才建構',
       (tester) async {
     // ReaderScreen._applySystemUiMode() 開書時一定會呼叫
     // elinkbook/fullscreen 頻道的 setEnabled（Epic 19），未 mock 會導致
@@ -4963,8 +4963,8 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    // 自訂字型清單尚未載入完成，FoliateEpubReaderView 不應建構，仍顯示載入中指示器。
-    expect(find.byType(FoliateEpubReaderView), findsNothing);
+    // 自訂字型清單尚未載入完成，FoliateReaderView 不應建構，仍顯示載入中指示器。
+    expect(find.byType(FoliateReaderView), findsNothing);
     expect(find.byKey(const Key('reader_loading_indicator')), findsOneWidget);
 
     gate.complete();
@@ -4972,7 +4972,7 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    expect(find.byType(FoliateEpubReaderView), findsOneWidget);
+    expect(find.byType(FoliateReaderView), findsOneWidget);
   });
 
   testWidgets(
@@ -5074,8 +5074,8 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    final foliateView = tester.widget<FoliateEpubReaderView>(
-      find.byType(FoliateEpubReaderView),
+    final foliateView = tester.widget<FoliateReaderView>(
+      find.byType(FoliateReaderView),
     );
     foliateView.onPageRendered();
     foliateView.onLocatorChanged?.call(
@@ -5147,8 +5147,8 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    final foliateView = tester.widget<FoliateEpubReaderView>(
-      find.byType(FoliateEpubReaderView),
+    final foliateView = tester.widget<FoliateReaderView>(
+      find.byType(FoliateReaderView),
     );
     foliateView.onPageRendered();
     foliateView.onLocatorChanged?.call(
@@ -5206,8 +5206,8 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    final foliateView = tester.widget<FoliateEpubReaderView>(
-      find.byType(FoliateEpubReaderView),
+    final foliateView = tester.widget<FoliateReaderView>(
+      find.byType(FoliateReaderView),
     );
     foliateView.onPageRendered();
     foliateView.onLocatorChanged?.call(
@@ -5298,8 +5298,8 @@ void main() {
 
     // 「版面設定」按鈕在收到 onLayoutResolved 前是停用的（onPressed 為
     // null），比照既有測試（本檔案第 293 行附近）先觸發一次才能點擊。
-    final foliateView = tester.widget<FoliateEpubReaderView>(
-      find.byType(FoliateEpubReaderView),
+    final foliateView = tester.widget<FoliateReaderView>(
+      find.byType(FoliateReaderView),
     );
     foliateView.onPageRendered();
     foliateView.onLayoutResolved?.call(
@@ -5516,8 +5516,8 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    final foliateView = tester.widget<FoliateEpubReaderView>(
-      find.byType(FoliateEpubReaderView),
+    final foliateView = tester.widget<FoliateReaderView>(
+      find.byType(FoliateReaderView),
     );
     foliateView.onPageRendered();
     foliateView.onLayoutResolved?.call(
@@ -5529,7 +5529,7 @@ void main() {
     await tester.pump();
 
     expect(find.byKey(const Key('reader_error_text')), findsNothing);
-    expect(find.byType(FoliateEpubReaderView), findsOneWidget);
+    expect(find.byType(FoliateReaderView), findsOneWidget);
 
     // 模擬旋轉螢幕時，foliate-js 的 ResizeObserver 觸發瀏覽器層級的
     // 「loop completed with undelivered notifications」警告，被全域
@@ -5544,7 +5544,7 @@ void main() {
 
     expect(find.byKey(const Key('reader_error_text')), findsNothing,
         reason: '已成功渲染的畫面不應被開書成功後才發生的良性 JS 警告覆蓋成錯誤狀態');
-    expect(find.byType(FoliateEpubReaderView), findsOneWidget,
+    expect(find.byType(FoliateReaderView), findsOneWidget,
         reason: '書籍內容應維持顯示，使用者仍可繼續閱讀');
   });
 
@@ -6582,10 +6582,10 @@ void main() {
     });
 
     // 比照既有「流式 EPUB 開書後，ReaderSettingsSheet 變動的偏好正確傳遞到
-    // FoliateEpubReaderView」測試（約 line 351）的既有手法：settings 按鈕
+    // FoliateReaderView」測試（約 line 351）的既有手法：settings 按鈕
     // 的 onPressed 要到 `onLayoutResolved` 觸發、_autoDetectedWritingMode
     // 非 null 後才可用（純 flutter test 環境沒有真實 WebView，須手動呼叫
-    // FoliateEpubReaderView widget 上的 onPageRendered()/onLayoutResolved()
+    // FoliateReaderView widget 上的 onPageRendered()/onLayoutResolved()
     // 模擬原生端回報）。按鈕 key 用 `reader_foliate_settings_button`（現行
     // FAB 化路徑，非舊版 `reader_layout_settings_button`）。
     Future<void> pumpReaderScreen(WidgetTester tester) async {
@@ -6614,7 +6614,7 @@ void main() {
       await tester.pump();
 
       final foliateView =
-          tester.widget<FoliateEpubReaderView>(find.byType(FoliateEpubReaderView));
+          tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
       foliateView.onPageRendered();
       foliateView.onLayoutResolved?.call(
         const EpubLayoutInfo(isFixedLayout: false, writingMode: WritingMode.horizontal),

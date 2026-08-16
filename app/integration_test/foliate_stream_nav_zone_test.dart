@@ -6,7 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:elinkbook/reader/foliate_epub_reader_view.dart';
+import 'package:elinkbook/reader/foliate_reader_view.dart';
 import 'package:elinkbook/reader/zone_action.dart';
 
 Future<String> _stageAssetAsFile(String assetPath, String fileName) async {
@@ -17,13 +17,13 @@ Future<String> _stageAssetAsFile(String assetPath, String fileName) async {
   return file.path;
 }
 
-/// Epic 17 Issue 5：流式 EPUB（FoliateEpubReaderView）3×3 導航熱區——真機
+/// Epic 17 Issue 5：流式 EPUB（FoliateReaderView）3×3 導航熱區——真機
 /// 整合測試。
 ///
-/// 【與 epub_fxl_tap_zone_test.dart 的差異】FoliateEpubReaderView 尚未有
+/// 【與 epub_fxl_tap_zone_test.dart 的差異】FoliateReaderView 尚未有
 /// onLocatorChanged（頁碼/定位回報是 Issue 6 的範圍），本檔案無法比對
 /// locatorJson 變動來證實「真的換頁了」，只能驗證：熱區點擊確實觸發正確
-/// 的 onZoneAction、換頁呼叫（FoliateEpubReaderView.previousPage/
+/// 的 onZoneAction、換頁呼叫（FoliateReaderView.previousPage/
 /// nextPage）送達原生端後不觸發 onError／不崩潰。實際換頁後畫面內容是否
 /// 正確變動，留待人工於裝置畫面截圖確認（比照
 /// foliate_epub_reader_view_test.dart「手動切換橫排→直排」測試既有的
@@ -46,11 +46,11 @@ void main() {
     final completer = Completer<void>();
     String? errorMessage;
     final capturedActions = <ZoneAction>[];
-    final key = GlobalKey<State<FoliateEpubReaderView>>();
+    final key = GlobalKey<State<FoliateReaderView>>();
 
     await tester.pumpWidget(
       MaterialApp(
-        home: FoliateEpubReaderView(
+        home: FoliateReaderView(
           key: key,
           filePath: samplePath,
           onPageRendered: () {
@@ -71,15 +71,15 @@ void main() {
           onZoneAction: (action) {
             capturedActions.add(action);
             // 模擬 ReaderScreen._handleZoneAction 的實際分派邏輯（本測試
-            // 直接建構 FoliateEpubReaderView，不經過 ReaderScreen，故在此
+            // 直接建構 FoliateReaderView，不經過 ReaderScreen，故在此
             // 手動呼叫，讓換頁動作真的送到原生端，而非只驗證回呼有沒有
             // 被呼叫，比照 epub_fxl_tap_zone_test.dart 既有模式）。
             switch (action) {
               case ZoneAction.previousPage:
-                FoliateEpubReaderView.previousPage(key);
+                FoliateReaderView.previousPage(key);
                 break;
               case ZoneAction.nextPage:
-                FoliateEpubReaderView.nextPage(key);
+                FoliateReaderView.nextPage(key);
                 break;
               case ZoneAction.menu:
               case ZoneAction.none:
@@ -97,7 +97,7 @@ void main() {
 
     for (var index = 0; index < 9; index++) {
       expect(find.byKey(Key('nav_zone_$index')), findsOneWidget,
-          reason: 'FoliateEpubReaderView 的九宮格熱區疊加層應恆常顯示');
+          reason: 'FoliateReaderView 的九宮格熱區疊加層應恆常顯示');
     }
 
     await tester.tap(find.byKey(const Key('nav_zone_2'))); // index 2 = nextPage

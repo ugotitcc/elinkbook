@@ -6,7 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:elinkbook/reader/foliate_epub_reader_view.dart';
+import 'package:elinkbook/reader/foliate_reader_view.dart';
 
 const _metadataChannel = MethodChannel('elinkbook/book_metadata');
 
@@ -51,7 +51,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: FoliateEpubReaderView(
+        home: FoliateReaderView(
           filePath: contentUri,
           onPageRendered: () {
             if (!completer.isCompleted) completer.complete();
