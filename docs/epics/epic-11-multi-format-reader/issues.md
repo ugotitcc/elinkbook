@@ -57,3 +57,122 @@
 - `docs/archive/2026-07-24-epic-17-epub-render-migration/plans/plan-issue-1.md`（Spike harness 既有先例，方法論參考，`transformTarget` 直排覆蓋技術原始出處）
 - `app/android/app/src/main/assets/foliate/`（現有已 vendor 之 10 個檔案，本 Issue 新增 `mobi.js`／`comic-book.js`／`vendor/fflate.js` 三個）
 - Readest `foliate-js` fork（`https://github.com/readest/foliate-js`），釘定 commit `dd71f2be356563c16a23272686189fcfb45d0b82`：`view.js`（格式分派邏輯）、`mobi.js`（PALMDOC_HEADER／transformTarget）、`comic-book.js`（排序/RTL 行為）、`fixed-layout.js`（`book.dir` RTL 讀取點）
+
+---
+
+## Issue 2：KF8 (AZW3) 匯入與閱讀
+
+**Status:** `ready-for-agent`
+
+**依賴：** Issue 1（Spike GO）。
+
+**背景：** `spec.md`「格式偵測與渲染分派」「KF8 (AZW3) 支援」。KF8 本質是 EPUB3 衍生格式，透過 `mobi.js` 解出內容後直接繼承既有 EPUB 渲染管線的直排/避頭尾/CFI/劃線/書籤/目錄/同步能力，不需要新增格式專屬的閱讀功能程式碼——本 Issue 的工作集中在「解析與匯入」這一側。
+
+**範圍：**
+1. `FoliateEpubReaderView`（`app/lib/reader/foliate_epub_reader_view.dart`）泛化重構為 `FoliateReaderView`，服務全部 Foliate 格式；`CLAUDE.md`「`ReaderScreen`」架構小節同步更新。後續 Issue 3-5 直接沿用此重構結果，不再重複改名。
+2. Vendor `mobi.js`／`vendor/fflate.js` 至 `app/android/app/src/main/assets/foliate/`（已由 Issue 1 Spike 驗證存在於釘定 commit 且可正確運作）。
+3. `BookFormat`（`app/lib/reader/book_format.dart`）新增 `azw3`；`BookFileFormat`（`app/lib/library/models/library_enums.dart`）新增 `azw3`（依副檔名命名慣例）；`ReaderScreen` 對 `azw3` 一律建構 `FoliateReaderView`。
+4. 純 Dart KF8 metadata／封面擷取器：讀取 PDB/EXTH 標頭取得 title／author，讀取封面圖片所在 Image Record 取得封面位元組，比照現有 `extractMetadata` method channel 回傳格狀一致的介面供 `book_import_service_impl.dart` 消費。
+5. KF8 DRM 位元組偵測：讀取 `PALMDOC_HEADER.encryption`（record 0 內 offset 12、2 bytes、大端序，`ByteData.getUint16(offset, Endian.big)`），非 0 即拋出 `DrmProtectedException`，匯入管線攔截、中止該書匯入、不寫入 `Book` 記錄，UI 顯示友善錯誤訊息。
+6. `Book.isFixedLayout` 廣義化 KF8 分支：依書本 metadata 判斷（沿用與 EPUB 相同的 `rendition:layout` 判讀邏輯）。
+
+**單元測試要求：** metadata／封面／DRM 擷取器以 `flutter test` 對真實 Standard Ebooks AZW3 樣本與合成 DRM 位元組緩衝區驗證（比照 `book_content_fingerprint_test.dart` 對 `computeBookContentFingerprint()` 的測試模式，直接斷言函式回傳值，`encryption=0/1/2` 三種情境皆需覆蓋）；`FoliateReaderView` widget-level 測試涵蓋建構參數傳遞與狀態機轉換（比照既有 `foliate_epub_reader_view_test.dart`）。
+
+**驗收標準：**
+- 真機 `integration_test` 匯入並開啟真實 AZW3 檔案，直排/避頭尾正確、目錄/書籤/劃線/同步皆正常運作（驗證繼承自既有 EPUB 機制、無需額外開發）。
+- 合成 DRM 樣本正確觸發攔截，不建立 `Book` 記錄，UI 顯示友善錯誤訊息。
+- `flutter test`／`flutter analyze` 全數通過。
+
+**相關佐證：** `spec.md`「格式偵測與渲染分派」「KF8 (AZW3) 支援」章節、ADR 0023、`reviews/spike-issue1-kf8-cbz-drm.md`。
+
+---
+
+## Issue 3：CBZ 匯入與閱讀（含翻頁方向切換 RTL/LTR）
+
+**Status:** `ready-for-agent`
+
+**依賴：** Issue 2（需要已泛化的 `FoliateReaderView`）。
+
+**背景：** `spec.md`「CBZ 支援」。`comic-book.js` 已用 Issue 1 Spike 真機驗證可正確開書並觸發 `fixed-layout.js` 渲染路徑，但**沒有**自然排序、**沒有**內建 RTL 偵測，兩者皆須由本 Issue 的匯入/整合層補上。
+
+**範圍：**
+1. Vendor `comic-book.js` 至 `app/android/app/src/main/assets/foliate/`。
+2. `BookFileFormat` 新增 `cbz`。
+3. `Book.isFixedLayout` 對 CBZ 恆為 `true`；復用既有 `FxlSettingsSheet`（`epic-20` 產物），新增翻頁方向設定選項（RTL/LTR）。
+4. 匯入管線（Dart 端）對 CBZ 內部圖片檔名做自然排序，依排序結果重新命名/重建壓縮檔內部索引（不依賴 `comic-book.js` 內建排序）；封面固定取排序後第一張圖片。
+5. 虛擬頁碼目錄（「第 1 頁」～「第 N 頁」，依自然排序後順序自動生成）。
+6. `main.js` 依使用者於 `FxlSettingsSheet` 設定的翻頁方向偏好，於 `makeComicBook()` 之後、`view.open(book)` 之前設定 `book.dir`；**並確認 `goLeft()`/`goRight()`（或本專案既有 3×3 熱區 `ZoneAction` 分派邏輯）在 `book.dir='rtl'` 時對使用者實際點擊熱區回傳正確的翻頁方向**——明確補齊 Issue 1 Spike 只驗證 `book.dir` 傳遞、未驗證導覽方向這個缺口（`reviews/review-issue-1-spike-execution.md` Important #1）。
+7. UI 隱藏劃線/備註相關入口（比照既有 FXL 圖像無文字節點的既定限制），不顯示後點擊無反應。
+8. 橫向雙頁顯示直接復用 `epic-20` 既有的 EPUB FXL 雙頁/封面獨立顯示/`fixed-layout.js` spread 配對機制。
+
+**單元測試要求：** CBZ metadata／自然排序以 `flutter test` 對自製 fixture（含至少一份零填補、一份非零填補檔名的變體）驗證；**RTL 導覽方向須有明確測試覆蓋，不可只驗證 `book.dir` 覆寫值傳遞**——測試須斷言使用者觸發熱區動作後的實際翻頁結果（頁碼/索引變化方向），比照既有 `ZoneAction` 相關測試模式。
+
+**驗收標準：**
+- 真機 `integration_test` 開啟自製 CBZ（含非零填補檔名樣本）頁序正確、封面正確。
+- 翻頁方向切換為 RTL 後，實際點擊左/右熱區的翻頁方向正確（非僅 `book.dir` 值正確）；切回 LTR 恢復正常方向。
+- 橫向雙頁模式正常；劃線/備註入口不顯示。
+- `flutter test`／`flutter analyze` 全數通過。
+
+**相關佐證：** `spec.md`「CBZ 支援」章節、`reviews/spike-issue1-kf8-cbz-drm.md`、`reviews/review-issue-1-spike-execution.md` Important #1。
+
+---
+
+## Issue 4：TXT 合成書籍結構與閱讀
+
+**Status:** `ready-for-agent`
+
+**依賴：** Issue 2（技術相依：需要已泛化的 `FoliateReaderView`）；`design.md` 決策 #12 建議待 Issue 2-3 完成後再開始（風險管理排序，非技術相依，可視團隊調度彈性處理）。
+
+**背景：** `spec.md`「TXT／Markdown 合成書籍結構」。TXT 目前僅在圖書庫資料層存在（`BookFileFormat.txt`、`generateTxtCover()`），`app/lib/reader/book_format.dart` 的 `BookFormat` enum **完全沒有** `txt` 值，代表 TXT 目前無法被開啟閱讀——本 Issue 是 TXT 閱讀能力真正從零到有的實作，非既有功能的擴充。
+
+**範圍：**
+1. `BookFormat`（`book_format.dart`）新增 `txt`；`ReaderScreen` 對 `txt` 建構 `FoliateReaderView`。
+2. TXT 編碼偵測：Big5 優先梯隊（`[utf8, big5, big5-hkscs, gbk, utf16]`），純 Dart 自建 Big5↔Unicode 對照表；編碼偵測、轉碼、分塊等運算包裝於 `Isolate.run()` 背景執行（比照 `book_content_fingerprint.dart` 既有作法）。
+3. 正則章節/目錄抽取（常見「第 X 章/回/卷/節/集」、`Chapter N` 格式）。
+4. 雙重分塊防護：優先依正則 TOC 切分章節，若無 TOC 或單一章節超過閾值（建議 300~500KB）依段落邊界次級分塊。
+5. 匯入時落地轉換為合成書籍結構（EPUB/XHTML 相容），`Book.filePath` 指向衍生檔案，命名/存放以 book id 為鍵、獨立子目錄（比照 `book_import_service_impl.dart` 現有 `_landCover()` 以 `$bookId.png` 存於 `covers/` 子目錄的既有慣例）。
+6. `contentFingerprint` 對「原始輸入檔案」計算，此計算須早於／獨立於合成轉換步驟，不可用合成後的衍生檔案路徑計算。
+7. 合成檔案刪除清理：比照 `library_screen.dart` 既有 `coverPath` 刪除清理模式（`try`/`deleteSync()`、單筆失敗不中斷批次迴圈）。
+8. `Book.isFixedLayout` 對 TXT 合成後恆為 `false`。
+
+**單元測試要求：** 編碼偵測／分塊／TOC 抽取以 `flutter test` 對含 Big5 樣本的 fixture 驗證；`contentFingerprint` 計算順序須有回歸測試（斷言對原始檔案而非合成檔案計算）；刪除書籍時合成檔案清理須有對應測試（比照既有 `coverPath` 清理測試模式）。
+
+**驗收標準：**
+- 真機 `integration_test` 匯入 Big5 與 UTF-8 編碼的 TXT 檔案皆正確顯示、不亂碼。
+- 大型 TXT（5MB~20MB 量級，無規範章節標記）開書流暢、不因超大 DOM section 卡頓或崩潰。
+- 目錄正確產生；直排/橫排切換、劃線、書籤功能與 EPUB 一致。
+- 刪除書籍後對應合成檔案從磁碟移除。
+- `flutter test`／`flutter analyze` 全數通過。
+
+**相關佐證：** `spec.md`「TXT／Markdown 合成書籍結構」章節、`app/lib/library/book_content_fingerprint.dart`、`app/lib/screens/library_screen.dart`（`coverPath` 清理模式）。
+
+---
+
+## Issue 5：Markdown (MD) 合成書籍結構與閱讀
+
+**Status:** `ready-for-agent`
+
+**依賴：** Issue 4（共用「合成書籍結構」基礎設施：檔案命名/清理模式、`contentFingerprint` 計算順序約束、匯入管線接線方式）。
+
+**背景：** `spec.md`「TXT／Markdown 合成書籍結構」。MD 與 TXT 共用同一套「匯入時落地轉換為合成書籍結構」基礎設施，差異僅在預處理器本身（Frontmatter／標題階層 vs. 編碼偵測／正則章節）。
+
+**範圍：**
+1. `BookFormat`（`book_format.dart`）／`BookFileFormat`（`library_enums.dart`）新增 `md`；`ReaderScreen` 對 `md` 建構 `FoliateReaderView`。
+2. YAML Frontmatter 解析：抽取標題／作者／封面；未指定封面時退回比照 TXT 既有的「依書名文字動態生成封面」機制。
+3. 依標題階層（H1-H6）自動生成目錄。
+4. `<pre><code>` 與表格強制注入 `writing-mode: horizontal-tb; direction: ltr;` 並提供橫向捲動，避免直排模式下破版。
+5. 沿用 Issue 4 建立的合成書籍結構落地轉換／檔案命名／刪除清理／`contentFingerprint` 計算順序模式，不重新設計。
+6. `Book.isFixedLayout` 對 MD 合成後恆為 `false`。
+
+**明確不在本 Issue 範圍：** MD 內嵌本機相對路徑圖片（例如 `![](./img/1.png)`）的優雅降級——單檔匯入不會一併帶入該圖片資源，比照瀏覽器/WebView 對缺失圖片資源的既有預設行為（顯示破圖、不中斷分頁），不額外開發（`spec.md`「Out of Scope」）。
+
+**單元測試要求：** Frontmatter 解析／標題階層 TOC／code-block-table CSS 隔離以 `flutter test` 對自製 `.md` fixture 驗證。
+
+**驗收標準：**
+- 真機 `integration_test` 匯入 MD 檔案正確渲染，Frontmatter 標題/封面正確顯示。
+- 程式碼區塊與表格在直排模式下維持橫排、可橫向捲動閱讀。
+- 標題階層目錄正確產生；直排/橫排切換、劃線、書籤功能與其他格式一致。
+- 刪除書籍後對應合成檔案從磁碟移除（沿用 Issue 4 機制）。
+- `flutter test`／`flutter analyze` 全數通過。
+
+**相關佐證：** `spec.md`「TXT／Markdown 合成書籍結構」「Out of Scope」章節。
