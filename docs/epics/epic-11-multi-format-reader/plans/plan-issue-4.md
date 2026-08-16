@@ -264,7 +264,7 @@ git commit -m "refactor(epic-11): Issue 4——抽出共用 content_uri_reader.d
 **Interfaces:**
 - Produces：`const String kBig5TableKeysBase64`／`kBig5TableValuesBase64`／`kGbkTableKeysBase64`／`kGbkTableValuesBase64`（4 個純資料常數，供 Task 3 `txt_charset_detection.dart` 消費）。
 
-- [ ] **Step 1：撰寫產生腳本**
+- [x] **Step 1：撰寫產生腳本**
 
 ```python
 # app/tool/gen_txt_charset_tables.py
@@ -338,7 +338,7 @@ if __name__ == '__main__':
     main()
 ```
 
-- [ ] **Step 2：執行腳本**
+- [x] **Step 2：執行腳本**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -347,7 +347,7 @@ python3 tool/gen_txt_charset_tables.py
 
 Expected：印出 `寫入 .../txt_charset_tables.dart（約 190000 bytes）`（已於規劃階段實測驗證：Big5 13503 筆／GBK 21791 筆，base64 字元數共約 188240，加上註解與變數宣告文字，檔案總大小落在同一量級）。
 
-- [ ] **Step 3：驗證產生的檔案語法正確、可被匯入**
+- [x] **Step 3：驗證產生的檔案語法正確、可被匯入**
 
 ```bash
 cat > /tmp/verify_charset_tables_test.dart << 'DARTEOF'
@@ -370,7 +370,7 @@ rm test/library/verify_charset_tables_test.dart
 
 Expected：PASS（僅驗證產生的檔案語法正確可編譯匯入；實際解碼正確性由 Task 3 的完整測試驗證）。
 
-- [ ] **Step 4：`flutter analyze`**
+- [x] **Step 4：`flutter analyze`**
 
 ```bash
 flutter analyze
@@ -378,7 +378,7 @@ flutter analyze
 
 Expected：`No issues found!`（產生的檔案僅含常數宣告，不含任何邏輯，不會觸發 lint）。
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 git add app/tool/gen_txt_charset_tables.py app/lib/library/txt_charset_tables.dart
