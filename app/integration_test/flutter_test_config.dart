@@ -9,7 +9,7 @@ import 'package:integration_test/integration_test.dart';
 /// 測試明確呼叫 `tester.pump()` 或有指標活動觸發（見 Flutter SDK
 /// `flutter_test/lib/src/binding.dart` 的 `handleBeginFrame`）。
 ///
-/// `FoliateEpubReaderView`（Issue 8 起）在 `initState()` 內非同步完成
+/// `FoliateReaderView`（Issue 8 起）在 `initState()` 內非同步完成
 /// `_cacheBook()` 後才 `setState()` 掛載 `InAppWebView`；既有整合測試多半
 /// 是 `pumpWidget()` 後直接 `await` 一個 completer，中間沒有任何
 /// `pump()`，導致該次 `setState()` 永遠等不到畫面重繪、`InAppWebView`

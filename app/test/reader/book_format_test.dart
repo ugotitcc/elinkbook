@@ -26,4 +26,21 @@ void main() {
     expect(detectBookFormat('book.EPUB'), BookFormat.epub);
     expect(detectBookFormat('book.PDF'), BookFormat.pdf);
   });
+
+  test('.azw3 副檔名回傳 BookFormat.azw3', () {
+    expect(detectBookFormat('book.azw3'), BookFormat.azw3);
+    expect(detectBookFormat('BOOK.AZW3'), BookFormat.azw3);
+  });
+
+  group('isFoliateFormat', () {
+    test('epub／azw3 回傳 true', () {
+      expect(isFoliateFormat(BookFormat.epub), isTrue);
+      expect(isFoliateFormat(BookFormat.azw3), isTrue);
+    });
+
+    test('pdf／unknown 回傳 false', () {
+      expect(isFoliateFormat(BookFormat.pdf), isFalse);
+      expect(isFoliateFormat(BookFormat.unknown), isFalse);
+    });
+  });
 }

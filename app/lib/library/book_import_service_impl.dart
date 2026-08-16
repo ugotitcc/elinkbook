@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 
 import 'book_content_fingerprint.dart';
 import 'book_import_service.dart';
+import 'kf8_metadata.dart';
 import 'library_repository.dart';
 import 'models/book.dart';
 import 'models/book_group.dart';
@@ -21,6 +22,7 @@ BookFileFormat? detectBookFileFormat(String uriOrPath) {
   if (name.endsWith('.epub')) return BookFileFormat.epub;
   if (name.endsWith('.pdf')) return BookFileFormat.pdf;
   if (name.endsWith('.txt')) return BookFileFormat.txt;
+  if (name.endsWith('.azw3')) return BookFileFormat.azw3;
   return null;
 }
 
@@ -244,6 +246,28 @@ class BookImportServiceImpl implements BookImportService {
     if (format == BookFileFormat.txt) {
       final coverBytes = await generateTxtCover(fallbackTitle);
       coverPath = await _landCover(coverBytes, id);
+    } else if (format == BookFileFormat.azw3) {
+      try {
+        final metadata = await extractKf8Metadata(resolvedUri);
+        final extractedTitle = metadata['title'] as String?;
+        if (extractedTitle != null && extractedTitle.isNotEmpty) {
+          title = extractedTitle;
+        }
+        author = metadata['author'] as String?;
+        isFixedLayout = metadata['isFixedLayout'] as bool?;
+        final coverBytes = metadata['coverBytes'] as Uint8List?;
+        if (coverBytes != null) {
+          coverPath = await _landCover(coverBytes, id);
+        }
+      } on DrmProtectedException {
+        // DRM 加密：明確不支援，不可比照下方 PlatformException 分支降級為
+        // 「無封面/檔名為標題」繼續建立書籍記錄——中止本書匯入
+        // （spec.md「KF8 (AZW3) 支援」）。
+        return null;
+      } catch (_) {
+        // 其餘解析失敗（非 DRM，例如檔案損毀）：降級為「檔名為標題、無封面」，
+        // 比照既有 PlatformException 分支慣例，不中斷整批匯入。
+      }
     } else {
       try {
         final metadata = await kBookMetadataChannel.invokeMapMethod<String, Object?>(

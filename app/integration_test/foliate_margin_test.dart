@@ -6,7 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:elinkbook/reader/foliate_epub_reader_view.dart';
+import 'package:elinkbook/reader/foliate_reader_view.dart';
 import 'package:elinkbook/reader/writing_mode.dart';
 
 /// 把 Flutter asset 複製為裝置暫存目錄中的真實檔案，回傳其絕對路徑。
@@ -45,7 +45,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: FoliateEpubReaderView(
+        home: FoliateReaderView(
           filePath: samplePath,
           onPageRendered: () {
             if (!completer.isCompleted) completer.complete();
@@ -80,7 +80,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: FoliateEpubReaderView(
+        home: FoliateReaderView(
           filePath: samplePath,
           onPageRendered: () {
             if (!completer.isCompleted) completer.complete();
@@ -119,7 +119,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: FoliateEpubReaderView(
+        home: FoliateReaderView(
           filePath: samplePath,
           onPageRendered: () {
             if (!completer.isCompleted) completer.complete();

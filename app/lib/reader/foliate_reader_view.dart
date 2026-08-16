@@ -241,11 +241,11 @@ String colorToCssHex(Color color) {
 
 /// 把目前所有非 null 的偏好參數組成一個 map，key 名稱與 `main.js`
 /// `window.applyPreferences`/`window.FoliateBridge` 契約一致（取代原本
-/// `_FoliateEpubReaderViewState._buildPreferencesMap()` 私有方法，改為
+/// `_FoliateReaderViewState._buildPreferencesMap()` 私有方法，改為
 /// 公開頂層純函式以便不透過 `InAppWebView` 直接單元測試，見
 /// docs/epics/epic-18-reader-device-qa/plans/plan-issue-10.md Task 4）。
 /// `null` 值的欄位完全不出現在 map 中。
-Map<String, Object?> buildFoliatePreferencesMap(FoliateEpubReaderView view) {
+Map<String, Object?> buildFoliatePreferencesMap(FoliateReaderView view) {
   final map = <String, Object?>{};
   if (view.writingMode != null) {
     map['writingMode'] =
@@ -288,10 +288,10 @@ Map<String, Object?> buildFoliatePreferencesMap(FoliateEpubReaderView view) {
 
 /// 比較兩次 widget 建構參數，判斷是否需要重新呼叫
 /// `window.applyPreferences()`（取代原本
-/// `_FoliateEpubReaderViewState._preferencesChanged()`）。
+/// `_FoliateReaderViewState._preferencesChanged()`）。
 bool foliatePreferencesChanged(
-  FoliateEpubReaderView oldView,
-  FoliateEpubReaderView newView,
+  FoliateReaderView oldView,
+  FoliateReaderView newView,
 ) {
   return oldView.writingMode != newView.writingMode ||
       oldView.pageTurnMode != newView.pageTurnMode ||
@@ -355,7 +355,7 @@ String? resolveCustomFontUri(String path, List<CustomFont> customFonts) {
 /// `AndroidView`+自建 `android.webkit.WebView`，見 ADR 0013）——本次遷移
 /// 只換底層嵌入/JS 橋接機制，公開建構參數與 callback 契約與遷移前完全
 /// 相同，`ReaderScreen` 等呼叫端不需要任何修改。
-class FoliateEpubReaderView extends StatefulWidget {
+class FoliateReaderView extends StatefulWidget {
   final String filePath;
   final VoidCallback onPageRendered;
   final ValueChanged<String> onError;
@@ -393,7 +393,7 @@ class FoliateEpubReaderView extends StatefulWidget {
   final VoidCallback? onSelectionCleared;
   final ValueChanged<String>? onAnnotationActivated;
 
-  const FoliateEpubReaderView({
+  const FoliateReaderView({
     super.key,
     required this.filePath,
     required this.onPageRendered,
@@ -437,36 +437,36 @@ class FoliateEpubReaderView extends StatefulWidget {
     this.onAnnotationActivated,
   });
 
-  static void nextPage(GlobalKey<State<FoliateEpubReaderView>> key) {
+  static void nextPage(GlobalKey<State<FoliateReaderView>> key) {
     final state = key.currentState;
-    if (state is _FoliateEpubReaderViewState) {
+    if (state is _FoliateReaderViewState) {
       state._evaluate('window.nextPage()');
     }
   }
 
-  static void previousPage(GlobalKey<State<FoliateEpubReaderView>> key) {
+  static void previousPage(GlobalKey<State<FoliateReaderView>> key) {
     final state = key.currentState;
-    if (state is _FoliateEpubReaderViewState) {
+    if (state is _FoliateReaderViewState) {
       state._evaluate('window.previousPage()');
     }
   }
 
   static void jumpToProgression(
-    GlobalKey<State<FoliateEpubReaderView>> key,
+    GlobalKey<State<FoliateReaderView>> key,
     double progression,
   ) {
     final state = key.currentState;
-    if (state is _FoliateEpubReaderViewState) {
+    if (state is _FoliateReaderViewState) {
       state._evaluate('window.jumpToFraction($progression)');
     }
   }
 
   static void jumpToLocator(
-    GlobalKey<State<FoliateEpubReaderView>> key,
+    GlobalKey<State<FoliateReaderView>> key,
     String locatorJson,
   ) {
     final state = key.currentState;
-    if (state is _FoliateEpubReaderViewState) {
+    if (state is _FoliateReaderViewState) {
       final cfi = extractCfi(locatorJson);
       if (cfi != null) {
         state._evaluate('window.jumpToLocator(${jsonEncode(cfi)})');
@@ -475,19 +475,19 @@ class FoliateEpubReaderView extends StatefulWidget {
   }
 
   static Future<List<TocEntry>> loadTableOfContents(
-    GlobalKey<State<FoliateEpubReaderView>> key,
+    GlobalKey<State<FoliateReaderView>> key,
   ) async {
     final state = key.currentState;
-    if (state is! _FoliateEpubReaderViewState) return const [];
+    if (state is! _FoliateReaderViewState) return const [];
     return state._requestTableOfContents();
   }
 
   static void setDecorations(
-    GlobalKey<State<FoliateEpubReaderView>> key,
+    GlobalKey<State<FoliateReaderView>> key,
     List<EpubDecoration> decorations,
   ) {
     final state = key.currentState;
-    if (state is _FoliateEpubReaderViewState) {
+    if (state is _FoliateReaderViewState) {
       final entries = buildDecorationEntries(decorations);
       state._evaluate('window.setDecorations(${jsonEncode(entries)})');
     }
@@ -495,19 +495,19 @@ class FoliateEpubReaderView extends StatefulWidget {
 
   /// 主動清除 WebView 原生文字選取狀態（epic-25 Issue 3，見 main.js
   /// window.clearSelection 註解）。
-  static void clearSelection(GlobalKey<State<FoliateEpubReaderView>> key) {
+  static void clearSelection(GlobalKey<State<FoliateReaderView>> key) {
     final state = key.currentState;
-    if (state is _FoliateEpubReaderViewState) {
+    if (state is _FoliateReaderViewState) {
       state._evaluate('window.clearSelection()');
     }
   }
 
 
   @override
-  State<FoliateEpubReaderView> createState() => _FoliateEpubReaderViewState();
+  State<FoliateReaderView> createState() => _FoliateReaderViewState();
 }
 
-class _FoliateEpubReaderViewState extends State<FoliateEpubReaderView> {
+class _FoliateReaderViewState extends State<FoliateReaderView> {
   InAppWebViewController? _controller;
   Completer<List<TocEntry>>? _pendingToc;
 
@@ -709,7 +709,7 @@ class _FoliateEpubReaderViewState extends State<FoliateEpubReaderView> {
   }
 
   @override
-  void didUpdateWidget(covariant FoliateEpubReaderView oldWidget) {
+  void didUpdateWidget(covariant FoliateReaderView oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (foliatePreferencesChanged(oldWidget, widget)) {
       _evaluate(

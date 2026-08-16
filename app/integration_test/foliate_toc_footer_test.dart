@@ -8,7 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:elinkbook/reader/epub_position_info.dart';
-import 'package:elinkbook/reader/foliate_epub_reader_view.dart';
+import 'package:elinkbook/reader/foliate_reader_view.dart';
 
 Future<String> _stageAssetAsFile(String assetPath, String fileName) async {
   final bytes = await rootBundle.load(assetPath);
@@ -32,12 +32,12 @@ void main() {
 
     final completer = Completer<void>();
     String? errorMessage;
-    final key = GlobalKey<State<FoliateEpubReaderView>>();
+    final key = GlobalKey<State<FoliateReaderView>>();
     EpubPositionInfo? lastPosition;
 
     await tester.pumpWidget(
       MaterialApp(
-        home: FoliateEpubReaderView(
+        home: FoliateReaderView(
           key: key,
           filePath: samplePath,
           onPageRendered: () {
@@ -61,7 +61,7 @@ void main() {
     expect(positionAfterOpen, isNotNull,
         reason: '開書後應已收到至少一次 onLocatorChanged');
 
-    final toc = await FoliateEpubReaderView.loadTableOfContents(key);
+    final toc = await FoliateReaderView.loadTableOfContents(key);
     expect(toc, isNotEmpty, reason: 'issue9_vertical_pagejump.epub 應含目錄項目');
 
     // 解析開書位置的 section index：locatorJson 格式為
@@ -94,7 +94,7 @@ void main() {
     expect(target.locatorJson, isNotEmpty,
         reason: '必須找到與開書位置不同 section 的目錄項目');
 
-    FoliateEpubReaderView.jumpToLocator(key, target.locatorJson);
+    FoliateReaderView.jumpToLocator(key, target.locatorJson);
 
     // 等待原生端處理 jumpToLocator → view.goTo(cfi) → relocate 事件
     // → onLocatorChanged 回傳到 Dart。pumpAndSettle 本身只等 Flutter
@@ -125,12 +125,12 @@ void main() {
 
     final completer = Completer<void>();
     String? errorMessage;
-    final key = GlobalKey<State<FoliateEpubReaderView>>();
+    final key = GlobalKey<State<FoliateReaderView>>();
     EpubPositionInfo? lastPosition;
 
     await tester.pumpWidget(
       MaterialApp(
-        home: FoliateEpubReaderView(
+        home: FoliateReaderView(
           key: key,
           filePath: samplePath,
           onPageRendered: () {
@@ -154,7 +154,7 @@ void main() {
         reason: '開書後應已收到 totalPages，供頁尾顯示使用');
     expect(positionAfterOpen!.totalPages, greaterThan(0));
 
-    FoliateEpubReaderView.nextPage(key);
+    FoliateReaderView.nextPage(key);
     await tester.pumpAndSettle(const Duration(seconds: 2));
 
     expect(errorMessage, isNull, reason: '換頁後不應觸發 onError');
@@ -183,7 +183,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: FoliateEpubReaderView(
+        home: FoliateReaderView(
           filePath: samplePath,
           initialLocatorJson: legacyLocatorJson,
           onPageRendered: () {

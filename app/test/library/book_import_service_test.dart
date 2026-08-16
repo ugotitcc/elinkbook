@@ -1,12 +1,16 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:elinkbook/library/book_import_service_impl.dart';
 import 'package:elinkbook/library/models/book_group.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/library/sqlite_library_repository.dart';
+
+import '../support/fake_path_provider_platform.dart';
 
 const _channel = MethodChannel('elinkbook/book_metadata');
 
@@ -21,6 +25,8 @@ void main() {
   late SqliteLibraryRepository repository;
   late Directory coversDir;
   late Directory importedBooksDir;
+  late Directory kf8TempDir;
+  late PathProviderPlatform originalPathProvider;
   late BookImportServiceImpl service;
 
   setUp(() async {
@@ -29,6 +35,13 @@ void main() {
     importedBooksDir = Directory.systemTemp.createTempSync(
       'book_import_test_imported',
     );
+    // extractKf8Metadata() 對 content:// URI 呼叫 getTemporaryDirectory()
+    // 複製暫存檔（見 kf8_metadata.dart）；`flutter test` 無真實裝置，需以
+    // FakePathProviderPlatform 替身讓其回傳真實可寫入目錄（比照既有
+    // notes_bottom_sheet_test.dart 的既有慣例）。
+    kf8TempDir = Directory.systemTemp.createTempSync('book_import_test_kf8_tmp');
+    originalPathProvider = PathProviderPlatform.instance;
+    PathProviderPlatform.instance = FakePathProviderPlatform(kf8TempDir.path);
     service = BookImportServiceImpl(
       repository: repository,
       coversDirectory: coversDir,
@@ -42,6 +55,8 @@ void main() {
     if (importedBooksDir.existsSync()) {
       importedBooksDir.deleteSync(recursive: true);
     }
+    PathProviderPlatform.instance = originalPathProvider;
+    if (kf8TempDir.existsSync()) kf8TempDir.deleteSync(recursive: true);
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(_channel, null);
   });
@@ -652,5 +667,101 @@ void main() {
       expect(result.importedBooks.single.contentFingerprint,
           'still-computed-hash');
     });
+  });
+
+  group('KF8 (AZW3) 匯入', () {
+    test('匯入 AZW3：title/coverPath 正確寫入 Book', () async {
+      final result = await service.importFiles(
+        ['test/fixtures/sample.azw3'],
+        displayNames: ['sample.azw3'],
+      );
+
+      expect(result.importedBooks, hasLength(1));
+      final book = result.importedBooks.first;
+      expect(book.title, contains('Time Machine'));
+      expect(book.format, BookFileFormat.azw3);
+      expect(book.coverPath, isNotNull);
+      expect(File(book.coverPath!).existsSync(), isTrue);
+    });
+
+    test('匯入受 DRM 保護的 AZW3：不建立 Book 記錄', () async {
+      final bytes = Uint8List(78 + 8 + 132);
+      bytes.setRange(60, 64, 'BOOK'.codeUnits);
+      bytes.setRange(64, 68, 'MOBI'.codeUnits);
+      ByteData.sublistView(bytes, 76, 78).setUint16(0, 1, Endian.big);
+      ByteData.sublistView(bytes, 78, 82).setUint32(0, 86, Endian.big);
+      bytes.setRange(86 + 16, 86 + 20, 'MOBI'.codeUnits);
+      ByteData.sublistView(bytes, 86 + 12, 86 + 14).setUint16(0, 2, Endian.big);
+      final drmFile = File('${Directory.systemTemp.path}/import_test_drm.azw3');
+      await drmFile.writeAsBytes(bytes);
+      addTearDown(() => drmFile.delete());
+
+      final result = await service.importFiles(
+        [drmFile.path],
+        displayNames: ['drm_sample.azw3'],
+      );
+
+      expect(result.importedBooks, isEmpty);
+    });
+
+    test(
+      '匯入 AZW3（content:// URI，權限授予成功且副檔名可辨識——標準 Android '
+      '檔案選擇器匯入的常見情況）：title/coverPath 正確寫入 Book'
+      '（epic-11 Issue 2 程式碼審查 C1 迴歸測試）',
+      () async {
+        mockChannel((call) async {
+          if (call.method == 'takePersistableUriPermission') return null;
+          if (call.method == 'copyContentUriToFile') {
+            final args = call.arguments as Map;
+            final bytes = await File('test/fixtures/sample.azw3').readAsBytes();
+            await File(args['destinationPath'] as String).writeAsBytes(bytes);
+            return null;
+          }
+          return null;
+        });
+
+        final result = await service.importFiles(
+          ['content://example/sample.azw3'],
+          displayNames: ['sample.azw3'],
+        );
+
+        expect(result.importedBooks, hasLength(1));
+        final book = result.importedBooks.first;
+        expect(book.title, contains('Time Machine'));
+        expect(book.coverPath, isNotNull);
+        expect(File(book.coverPath!).existsSync(), isTrue);
+      },
+    );
+
+    test(
+      '匯入受 DRM 保護的 AZW3（content:// URI）：不建立 Book 記錄'
+      '（epic-11 Issue 2 程式碼審查 C1 迴歸測試）',
+      () async {
+        final bytes = Uint8List(78 + 8 + 132);
+        bytes.setRange(60, 64, 'BOOK'.codeUnits);
+        bytes.setRange(64, 68, 'MOBI'.codeUnits);
+        ByteData.sublistView(bytes, 76, 78).setUint16(0, 1, Endian.big);
+        ByteData.sublistView(bytes, 78, 82).setUint32(0, 86, Endian.big);
+        bytes.setRange(86 + 16, 86 + 20, 'MOBI'.codeUnits);
+        ByteData.sublistView(bytes, 86 + 12, 86 + 14).setUint16(0, 2, Endian.big);
+
+        mockChannel((call) async {
+          if (call.method == 'takePersistableUriPermission') return null;
+          if (call.method == 'copyContentUriToFile') {
+            final args = call.arguments as Map;
+            await File(args['destinationPath'] as String).writeAsBytes(bytes);
+            return null;
+          }
+          return null;
+        });
+
+        final result = await service.importFiles(
+          ['content://example/drm_sample.azw3'],
+          displayNames: ['drm_sample.azw3'],
+        );
+
+        expect(result.importedBooks, isEmpty);
+      },
+    );
   });
 }

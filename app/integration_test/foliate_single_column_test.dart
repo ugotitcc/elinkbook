@@ -13,7 +13,7 @@ import 'package:elinkbook/library/sqlite_library_repository.dart';
 import 'package:elinkbook/reader/book_reader_prefs.dart';
 import 'package:elinkbook/reader/book_reader_prefs_repository.dart';
 import 'package:elinkbook/reader/column_mode.dart';
-import 'package:elinkbook/reader/foliate_epub_reader_view.dart';
+import 'package:elinkbook/reader/foliate_reader_view.dart';
 import 'package:elinkbook/reader/reader_prefs_manager_impl.dart';
 import 'package:elinkbook/reader/reading_position_repository.dart';
 import 'package:elinkbook/reader/writing_mode.dart';
@@ -69,11 +69,11 @@ void main() {
       lastReadTime: DateTime.now(),
     ));
 
-    // 建構 FoliateEpubReaderView，明確指定 vertical + columnMode=ColumnMode.single，
-    // 繞過 ReaderScreen 的完整開書流程以直接驗證 FoliateEpubReaderView 本身
+    // 建構 FoliateReaderView，明確指定 vertical + columnMode=ColumnMode.single，
+    // 繞過 ReaderScreen 的完整開書流程以直接驗證 FoliateReaderView 本身
     // 的翻頁行為。使用 onPageRendered 等待原生 PlatformView 載入完成
     // （reader_loading_indicator 只在 ReaderScreen 中存在）。
-    final readerKey = GlobalKey<State<FoliateEpubReaderView>>();
+    final readerKey = GlobalKey<State<FoliateReaderView>>();
     final pageIndexLog = <int>[];
     final loadCompleter = Completer<void>();
     String? error;
@@ -81,7 +81,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: FoliateEpubReaderView(
+          body: FoliateReaderView(
             key: readerKey,
             filePath: samplePath,
             writingMode: WritingMode.vertical,
@@ -113,7 +113,7 @@ void main() {
     // 清空初始載入的數據，確保後續只記錄翻頁結果。
     pageIndexLog.clear();
 
-    // 連續翻頁 5 次，透過 FoliateEpubReaderView 的強型別 static helper
+    // 連續翻頁 5 次，透過 FoliateReaderView 的強型別 static helper
     // （比照 ReaderScreen 實際使用模式）。nextPage() 呼叫原生端
     // view.next()，觸發 paginator.js 的 relocate 事件，經 Kotlin bridge
     // 回呼 Dart 端 onLocatorChanged，因此可觀察 pageIndex 變化。
@@ -125,7 +125,7 @@ void main() {
     // mainHandler.post 切回主執行緒觸發 channel.invokeMethod。
     for (var i = 0; i < 5; i++) {
       await tester.runAsync(() async {
-        FoliateEpubReaderView.nextPage(readerKey);
+        FoliateReaderView.nextPage(readerKey);
         await Future.delayed(const Duration(milliseconds: 3000));
       });
     }

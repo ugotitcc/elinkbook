@@ -120,6 +120,7 @@ flutter:
     - test/fixtures/sample_dual_page.pdf
     - test/fixtures/sample_pdf_toc.pdf
     - test/fixtures/sample.epub
+    - test/fixtures/sample.azw3
     - test/fixtures/sample_no_identifier.epub
     - test/fixtures/sample_horizontal.epub
     - test/fixtures/sample_fixed_layout.epub

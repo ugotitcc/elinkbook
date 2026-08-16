@@ -12,7 +12,7 @@ import 'package:elinkbook/reader/book_reader_prefs_repository.dart';
 import 'package:elinkbook/reader/reader_prefs_manager_impl.dart';
 import 'package:elinkbook/reader/reading_position_repository.dart';
 import 'package:elinkbook/screens/library_screen.dart';
-import 'package:elinkbook/reader/foliate_epub_reader_view.dart';
+import 'package:elinkbook/reader/foliate_reader_view.dart';
 
 const _metadataChannel = MethodChannel('elinkbook/book_metadata');
 
@@ -142,7 +142,7 @@ void main() {
     },
   );
 
-  testWidgets('真實匯入一本流式 EPUB 後點開，由 FoliateEpubReaderView 成功渲染出內容', (
+  testWidgets('真實匯入一本流式 EPUB 後點開，由 FoliateReaderView 成功渲染出內容', (
     tester,
   ) async {
     final tempDir = await getTemporaryDirectory();
@@ -224,15 +224,15 @@ void main() {
       reason: '應觸發 onPageRendered，但畫面顯示了錯誤',
     );
     expect(
-      find.byType(FoliateEpubReaderView),
+      find.byType(FoliateReaderView),
       findsOneWidget,
-      reason: '流式 EPUB 應由 FoliateEpubReaderView 渲染',
+      reason: '流式 EPUB 應由 FoliateReaderView 渲染',
     );
   });
 
   testWidgets(
-    '真實匯入一本 FXL（固定版面）EPUB 後點開，同樣由 FoliateEpubReaderView 成功渲染出內容'
-    '（Epic 20 Issue 2 起 FXL 與流式皆統一走 FoliateEpubReaderView，不再分派到已刪除的 EpubReaderView）',
+    '真實匯入一本 FXL（固定版面）EPUB 後點開，同樣由 FoliateReaderView 成功渲染出內容'
+    '（Epic 20 Issue 2 起 FXL 與流式皆統一走 FoliateReaderView，不再分派到已刪除的 EpubReaderView）',
     (tester) async {
       final tempDir = await getTemporaryDirectory();
       final uniqueSuffix = DateTime.now().microsecondsSinceEpoch;
@@ -304,9 +304,9 @@ void main() {
 
       expect(find.byKey(const Key('reader_error_text')), findsNothing);
       expect(
-        find.byType(FoliateEpubReaderView),
+        find.byType(FoliateReaderView),
         findsOneWidget,
-        reason: 'FXL 書籍自 Epic 20 Issue 2 起同樣由 FoliateEpubReaderView 渲染',
+        reason: 'FXL 書籍自 Epic 20 Issue 2 起同樣由 FoliateReaderView 渲染',
       );
     },
   );
