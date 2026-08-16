@@ -784,7 +784,7 @@ git commit -m "feat(epic-11): Issue 4——TXT 編碼偵測與解碼 detectAndDe
 **Interfaces:**
 - Produces：`class TxtChapter { String? title; String content; }`；`List<TxtChapter> splitIntoChapters(String text)`；`const int kTxtChunkMaxBytes`；`List<String> chunkByByteSize(String content, {int maxBytes = kTxtChunkMaxBytes})`（供 Task 6 消費）。
 
-- [ ] **Step 1：寫失敗測試**
+- [x] **Step 1：寫失敗測試**
 
 ```dart
 // app/test/library/txt_chapter_splitter_test.dart
@@ -888,7 +888,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：確認測試失敗**
+- [x] **Step 2：確認測試失敗**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -897,7 +897,7 @@ flutter test test/library/txt_chapter_splitter_test.dart
 
 Expected：FAIL（`txt_chapter_splitter.dart` 不存在，編譯錯誤）。
 
-- [ ] **Step 3：實作**
+- [x] **Step 3：實作**
 
 ```dart
 // app/lib/library/txt_chapter_splitter.dart
@@ -974,7 +974,7 @@ List<String> chunkByByteSize(String content, {int maxBytes = kTxtChunkMaxBytes})
 }
 ```
 
-- [ ] **Step 4：確認測試通過**
+- [x] **Step 4：確認測試通過**
 
 ```bash
 flutter test test/library/txt_chapter_splitter_test.dart
@@ -982,7 +982,7 @@ flutter test test/library/txt_chapter_splitter_test.dart
 
 Expected：PASS（10 個測試）。
 
-- [ ] **Step 5：`flutter analyze`**
+- [x] **Step 5：`flutter analyze`**
 
 ```bash
 flutter analyze
@@ -990,7 +990,7 @@ flutter analyze
 
 Expected：無新增 issue。
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/lib/library/txt_chapter_splitter.dart app/test/library/txt_chapter_splitter_test.dart
