@@ -47,6 +47,12 @@ class ReaderResourceChannel(
     private val context: Context,
     messenger: BinaryMessenger,
 ) : MethodChannel.MethodCallHandler {
+    companion object {
+        // "cacheBookForServing" 的 extension 引數白名單（epic-11 Issue 3
+        // 程式碼審查 Minor #2），見該處呼叫點註解。
+        private val EXTENSION_PATTERN = Regex("^[a-z0-9]{1,10}$")
+    }
+
     private val channel = MethodChannel(messenger, "elinkbook/reader_resources")
 
     /**
@@ -138,7 +144,16 @@ class ReaderResourceChannel(
                 val instanceId = call.argument<String>("instanceId")
                 val uriString = call.argument<String>("uri")
                 val filePath = call.argument<String>("filePath")
-                val extension = call.argument<String>("extension") ?: "epub"
+                // extension 一律由 Dart 端 cacheFileExtension() 推導（僅來自
+                // 檔案自身副檔名或固定退回值 "epub"，見
+                // foliate_native_bridge.dart 該函式文件註解），但這是跨
+                // Platform Channel 邊界傳入、直接組進檔案路徑
+                // （File(cacheDir, "current.$extension")，見 copyToCache()）
+                // 的字串，加一道白名單驗證作為低成本加固（epic-11 Issue 3
+                // 程式碼審查 Minor #2）——不符合格式時退回 "epub"，比照上面
+                // 缺席時的既有退回值，不中止整個快取流程。
+                val rawExtension = call.argument<String>("extension") ?: "epub"
+                val extension = if (EXTENSION_PATTERN.matches(rawExtension)) rawExtension else "epub"
                 if (instanceId == null) {
                     result.success(null)
                     return

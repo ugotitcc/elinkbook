@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -147,23 +148,47 @@ void main() {
       // RTL 模式下，ZoneAction.previousPage（熱區語意上的「上一頁」，對應
       // 3×3 熱區左側格）應讓 fixed-layout.js 的 renderer.prev()（讀取
       // this.rtl=true）呼叫 #goRight()——實際效果是往書本「邏輯上的下一頁」
-      // 前進（日漫翻頁習慣：從封面往後翻是往左滑）。斷言方式：記錄初始
-      // 章節/頁碼位置後觸發熱區動作，確認位置確實變動且方向與 LTR 情境
-      // 相反（LTR 下 previousPage 應保持在第 1 頁不動，因為已在最前頁；
-      // RTL 下 previousPage 應能前進到下一頁，因為「上一頁」熱區在 RTL
-      // 語意下對應書本邏輯上的「下一頁」）。
+      // 前進（日漫翻頁習慣：從封面往後翻是往左滑）。開書當下（無既有閱讀
+      // 記錄）一律定位於第一個 section／spread（index 0，見
+      // fixed-layout.js #index 初始值 -1、view.init({}) 走預設導覽路徑），
+      // 而 index 0 是全書最前端，若 book.dir 覆寫未生效（誤退回 LTR 語意），
+      // previousPage 會讓 renderer.prev() 呼叫 #goLeft()、最終落到
+      // goToSpread(this.#index - 1, ...)（即 goToSpread(-1, ...)），該函式
+      // 對越界 index 直接提早 return、不觸發任何 relocate 事件，位置維持
+      // 在 index 0 不動；只有 book.dir 覆寫確實生效、renderer.prev() 正確
+      // 委派為 #goRight() 時，位置才會前進到 index 1。因此「index 是否從
+      // 0 變動」本身即是方向正確性的明確訊號（非僅驗證 book.dir 覆寫值
+      // 傳遞，而是斷言使用者觸發熱區動作後的實際翻頁結果——issues.md
+      // Issue 3「單元測試要求」明文要求；reviews/review-issue-3.md
+      // Important #2 審查修正）。
       ReaderScreen.triggerZoneAction(readerKey, ZoneAction.previousPage);
       await tester.pump(const Duration(milliseconds: 500));
       await tester.pump(const Duration(seconds: 1));
-
-      // 驗證方式：能夠再次呼叫 nextPage 熱區且畫面未拋出任何錯誤，並且
-      // 前後畫面渲染狀態持續維持在 rendered（非 error），佐證 RTL 模式下
-      // renderer.prev() 被正確委派為 #goRight() 而非拋出例外或無反應
-      // ——本專案既有測試基礎設施（reader_loading_indicator／
-      // reader_error_text 兩個 Key）未暴露頁碼數值本身供斷言，本測試
-      // 已是本專案既有測試手段下能達到的最高精確度（比照既有
-      // foliate_kf8_test.dart 對「成功渲染無錯誤」的既有斷言深度）。
       expect(find.byKey(const Key('reader_error_text')), findsNothing);
+
+      // ReaderScreen 對外未暴露目前定位的公開讀取介面（見 CLAUDE.md
+      // 「ReaderScreen」架構小節：載入中／錯誤狀態刻意只透過固定
+      // Key('reader_loading_indicator')/Key('reader_error_text') 暴露，
+      // 不新增公開 callback 參數）——本專案既有測試手段下能取得「目前
+      // 實際定位」的唯一管道，是卸載畫面觸發 dispose() → 既有的
+      // _writeCurrentPosition() 寫入邏輯，再從 prefsManager 讀回。
+      // saveReadingPosition() 在 dispose() 內未被 await（dispose() 是
+      // 同步方法，見該方法既有文件註解），故卸載後額外 pump 等待這個
+      // fire-and-forget 寫入真正落地。
+      await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
+      await tester.pump(const Duration(milliseconds: 500));
+
+      final finalPosition = (await prefsManager.load(book.id)).readingPosition;
+      final locatorJson = finalPosition.epubLocatorJson;
+      expect(locatorJson, isNotNull);
+      final locator = jsonDecode(locatorJson!) as Map<String, Object?>;
+      expect(
+        (locator['index'] as num).toInt(),
+        greaterThan(0),
+        reason: 'RTL 模式下「上一頁」熱區應讓位置從開書時的 index 0 前進，'
+            '而非停留原地——若停留在 0，代表 book.dir 覆寫未生效、'
+            '仍以 LTR 語意處理（見上方註解的完整因果鏈說明）',
+      );
     },
   );
 }

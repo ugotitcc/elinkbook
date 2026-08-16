@@ -445,6 +445,19 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       _dispatchedIsFixedLayout = false;
       return;
     }
+    if (format == BookFormat.cbz) {
+      // CBZ 恆為固定版面（無流式變體，spec.md「CBZ 支援」），
+      // Book.isFixedLayout 理論上匯入時必定已寫入 true
+      // （book_import_service_impl.dart），此處防禦性補上與上方 azw3
+      // 分支相同邏輯的 null-safety 修正（比照該分支修復的 epic-11 Issue 2
+      // C2 教訓，避免任何未來邊界情況下 _dispatchedIsFixedLayout 永遠
+      // 停留 null 導致 FoliateReaderView 永遠無法建構）。與 azw3 分支
+      // 不同之處僅在預設值——CBZ 沒有 reflowable 變體，防禦性預設為
+      // `true`，非 azw3 的 `false`（epic-11 Issue 3 程式碼審查 Important
+      // #1：此分支原計畫已寫好，實作階段遺漏未落地）。
+      _dispatchedIsFixedLayout = true;
+      return;
+    }
     if (format != BookFormat.epub) return;
     final repository = widget.libraryRepository;
     if (repository == null) {

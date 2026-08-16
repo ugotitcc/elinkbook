@@ -564,6 +564,35 @@ void main() {
     },
   );
 
+  testWidgets(
+    'CBZ 書籍 isFixedLayout: null 時，防禦性視為 true 並建構 FoliateReaderView，'
+    '不永遠停留載入中畫面（epic-11 Issue 3 程式碼審查 Important #1，比照 Issue 2 '
+    'C2 迴歸測試同構情境；正常匯入流程下 Book.isFixedLayout 必為 true，本測試'
+    '涵蓋邊界防禦——修復前 _dispatchedIsFixedLayout 永遠停留 null，_buildBody '
+    '的 gating 條件永遠不滿足，畫面永遠卡在載入指示器且無錯誤訊息）',
+    (tester) async {
+      final repository = FakeLibraryRepository();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.cbz',
+            bookId: 'b1',
+            prefsManager: prefsManager,
+            libraryRepository: repository,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      expect(find.byType(FoliateReaderView), findsOneWidget);
+      // CBZ 沒有對應 EPUB OPF/CSS 解析器的執行期重新偵測手段，不應呼叫
+      // 這個 EPUB 專屬方法。
+      expect(repository.detectAndCacheEpubLayoutCalls, isEmpty);
+    },
+  );
+
   testWidgets('開啟該書已有的持久化版面偏好設定後，狀態正確載入', (tester) async {
     await prefsManager.saveBookPrefs(
       'b1',

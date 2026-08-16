@@ -836,7 +836,58 @@ void main() {
       // filePath 必須是重建後的 .cbz（本機路徑），不是原始 content:// URI。
       expect(book.filePath, endsWith('.cbz'));
       expect(book.filePath, isNot(startsWith('content://')));
+      // CBZ 恆為固定版面（spec.md「CBZ 支援」）——epic-11 Issue 3 程式碼
+      // 審查 Important #4：這正是 c7da43f 真實修復過的回歸類型（匯入
+      // 分支曾遺漏 isFixedLayout = true），先前測試群完全沒有斷言這個
+      // 欄位，只能靠慢的真機 integration_test 抓到。
+      expect(book.isFixedLayout, isTrue);
     });
+
+    test(
+      'contentFingerprint 對原始 content:// URI 計算，非重建後的本機 .cbz 檔案'
+      '（epic-11 Issue 3 程式碼審查 Important #4）',
+      () async {
+        final cbzBytes = makeValidCbz();
+        const originalUri = 'content://example/fingerprint_comics.cbz';
+        String? capturedFingerprintUri;
+
+        mockChannel((call) async {
+          if (call.method == 'takePersistableUriPermission') return null;
+          if (call.method == 'copyContentUriToFile') {
+            final args = call.arguments as Map;
+            await File(args['destinationPath'] as String)
+                .writeAsBytes(cbzBytes);
+            return null;
+          }
+          if (call.method == 'computeSha256') {
+            final args = call.arguments as Map;
+            capturedFingerprintUri = args['uri'] as String;
+            return 'cbz-original-file-hash';
+          }
+          return null;
+        });
+
+        final result = await service.importFiles(
+          [originalUri],
+          displayNames: ['fingerprint_comics.cbz'],
+        );
+
+        expect(result.importedBooks, hasLength(1));
+        final book = result.importedBooks.first;
+        // computeSha256 必須是對「原始 content:// URI」呼叫，而非重建後
+        // 落地的本機 .cbz 檔案路徑——若計算依據誤植為重建後檔案，不同
+        // 裝置/重建時機產出的壓縮檔在 zip 內部結構層面存在非決定性差異
+        // （zip 內部檔案順序等），會讓同一本書在跨裝置比對時被誤判為
+        // 不同書（spec.md「TXT／Markdown 合成書籍結構」contentFingerprint
+        // 計算順序原則，同一原則套用於 CBZ 的重建步驟）。
+        expect(capturedFingerprintUri, originalUri);
+        expect(book.contentFingerprint, 'cbz-original-file-hash');
+        // 佐證 filePath 確實已指向重建後的本機檔案（與計算指紋所用的
+        // originalUri 不同），排除「兩者剛好相同因而測試恆真」的可能性。
+        expect(book.filePath, isNot(originalUri));
+        expect(book.filePath, endsWith('.cbz'));
+      },
+    );
 
     test('匯入空 CBZ（無圖片頁面）：不建立 Book 記錄', () async {
       final emptyCbzBytes = makeEmptyCbz();
