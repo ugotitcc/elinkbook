@@ -62,7 +62,18 @@
 
 ## Issue 2：KF8 (AZW3) 匯入與閱讀
 
-**Status:** `ready-for-agent`
+**Status:** `completed`（2026-08-16）。
+
+**完成摘要：**
+- `FoliateEpubReaderView` 泛化改名為 `FoliateReaderView`，服務全部 Foliate 格式
+- `BookFormat.azw3`／`BookFileFormat.azw3` 新增完成，`reader_screen.dart` 格式分派擴充
+- Vendor `mobi.js`／`vendor/fflate.js` 已下載至 `app/android/app/src/main/assets/foliate/`
+- 純 Dart KF8 metadata／封面／DRM 擷取器實作完成（`app/lib/library/kf8_metadata.dart`）
+- 匯入管線接上 KF8 metadata/DRM 擷取（`book_import_service_impl.dart`）
+- 真機整合測試通過（`flutter test integration_test/foliate_kf8_test.dart -d 3CEF42ECD491687`，1/1 passed）
+- `flutter test`（1305 tests）／`flutter analyze`（0 issues）全數通過
+
+**已知殘留風險：** KF8 若透過 EXTH `fixedLayout` 標籤宣告為固定版面，其 `_dispatchedIsFixedLayout` 判斷時機與既有 EPUB FXL 邏輯共用同一套機制，但本 Issue 的驗收標準與測試 fixture（`sample.azw3`，reflowable）皆未涵蓋 KF8 FXL 這個子情境的真機驗證深度——若後續真機測試發現 KF8 FXL 書籍有分派時機問題，另立追蹤工單。
 
 **依賴：** Issue 1（Spike GO）。
 
