@@ -141,6 +141,9 @@ flutter:
     - test/fixtures/sample_long_chinese_vertical.epub
     - test/fixtures/sample.cbz
     - test/fixtures/sample_unpadded.cbz
+    - test/fixtures/sample_synth.txt
+    - test/fixtures/sample_big5.txt
+    - test/fixtures/sample_utf8_chapters.txt
     - test/fixtures/sample.ttf
     - assets/fonts/GuanKiapTsingKhai.ttf
     # 開發期暫停用（建置速度優化，其餘 4 款字型檔約 134MB）：檔案暫存於

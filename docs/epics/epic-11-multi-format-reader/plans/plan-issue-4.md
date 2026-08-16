@@ -1646,7 +1646,7 @@ git commit -m "feat(epic-11): Issue 4——匯入管線接上 TXT 合成為 EPUB
 **Interfaces:**
 - Consumes：`BookFormat.txt`（Task 3）。
 
-- [ ] **Step 1：寫失敗測試（防禦性 `_dispatchedIsFixedLayout` 分派）**
+- [x] **Step 1：寫失敗測試（防禦性 `_dispatchedIsFixedLayout` 分派）**
 
 於 `app/test/screens/reader_screen_test.dart` 找到既有「CBZ 書籍 isFixedLayout: null...」測試（Issue 3 Important #1 迴歸測試）附近，追加同構測試：
 
@@ -1672,7 +1672,7 @@ git commit -m "feat(epic-11): Issue 4——匯入管線接上 TXT 合成為 EPUB
 
 （本測試需要 `test/fixtures/sample_synth.txt` 是一份**已經合成過的合法 EPUB 結構**、僅副檔名為 `.txt` 的檔案——因為 `ReaderScreen`／`FoliateReaderView` widget test 直接建構 widget、不經過匯入管線，若給它原始純文字內容，`FoliateReaderView` 底層 `epub.js` 開書會失敗，但本測試只驗證 Dart 端 `_dispatchedIsFixedLayout` 分派邏輯與 widget 樹建構，不驗證真正開書渲染成功——比照既有 `sample.azw3`／`sample.cbz` 走 widget test 的既有模式，只需檔案存在、`FoliateReaderView` 建構成功即可，不需要真的能被 WebView 渲染。Task 9 會產生此 fixture。）
 
-- [ ] **Step 2：確認測試失敗**
+- [x] **Step 2：確認測試失敗**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -1681,7 +1681,7 @@ flutter test test/screens/reader_screen_test.dart --plain-name "TXT 書籍"
 
 Expected：FAIL（`BookFormat.txt` 目前落入 `_resolveEpubEngineDispatch()` 的「不影響」分支，`_dispatchedIsFixedLayout` 永遠停留 `null`；此外 `test/fixtures/sample_synth.txt` 尚未建立，Task 9 才會產生——本 Step 預期先看到編譯期或執行期的檔案不存在錯誤，待 Task 9 完成 fixture 後才能看到真正代表分派邏輯缺陷的 FAIL；執行順序上可先完成本 Step 3 實作後再跑一次確認）。
 
-- [ ] **Step 3：實作 `_resolveEpubEngineDispatch()`**
+- [x] **Step 3：實作 `_resolveEpubEngineDispatch()`**
 
 `app/lib/screens/reader_screen.dart` 修改（緊接在既有 cbz 分支之後、`if (format != BookFormat.epub) return;` 之前）：
 
@@ -1700,7 +1700,7 @@ Expected：FAIL（`BookFormat.txt` 目前落入 `_resolveEpubEngineDispatch()` �
     if (format != BookFormat.epub) return;
 ```
 
-- [ ] **Step 4：實作 `_writeCurrentPosition()` merged case**
+- [x] **Step 4：實作 `_writeCurrentPosition()` merged case**
 
 修改既有 switch：
 
@@ -1714,7 +1714,7 @@ Expected：FAIL（`BookFormat.txt` 目前落入 `_resolveEpubEngineDispatch()` �
 
 （其餘 case 內容不動）
 
-- [ ] **Step 5：實作 `_buildAppBarActions()` merged case**
+- [x] **Step 5：實作 `_buildAppBarActions()` merged case**
 
 修改既有 switch：
 
@@ -1729,7 +1729,7 @@ Expected：FAIL（`BookFormat.txt` 目前落入 `_resolveEpubEngineDispatch()` �
 
 （TXT 恆為流式，`_isFixedLayout` 為 `false`，本方法不會被上方 `if (_isFixedLayout) return null;` 提早攔截，TXT 書籍會**真的**顯示這組 AppBar 按鈕——與 CBZ 不同，這是預期行為：TXT 是流式格式，需要目錄/版面設定/筆記按鈕，比照一般流式 EPUB。）
 
-- [ ] **Step 6：實作 `_buildNativeView()` merged case**
+- [x] **Step 6：實作 `_buildNativeView()` merged case**
 
 修改既有 switch：
 
@@ -1748,7 +1748,7 @@ Expected：FAIL（`BookFormat.txt` 目前落入 `_resolveEpubEngineDispatch()` �
 
 （`isComicBookHint: format == BookFormat.cbz` 這行既有程式碼已經是布林運算式、天然對 `BookFormat.txt` 產生 `false`，不需要額外修改內部參數列，只需要把 `case BookFormat.txt:` 加進上方 case 清單。）
 
-- [ ] **Step 7：確認測試通過**
+- [x] **Step 7：確認測試通過**
 
 ```bash
 flutter test test/screens/reader_screen_test.dart --plain-name "TXT 書籍"
@@ -1756,7 +1756,7 @@ flutter test test/screens/reader_screen_test.dart --plain-name "TXT 書籍"
 
 Expected：PASS（待 Task 9 的 fixture 就緒後）。
 
-- [ ] **Step 8：確認 `_handleZoneAction()` 無需修改（`isFoliateFormat()` 已涵蓋 txt，見 Task 3）**
+- [x] **Step 8：確認 `_handleZoneAction()` 無需修改（`isFoliateFormat()` 已涵蓋 txt，見 Task 3）**
 
 ```bash
 grep -n "isFoliateFormat(format)" "U:/MyDeveloper/AI/elinkBook/app/lib/screens/reader_screen.dart"
@@ -1764,7 +1764,7 @@ grep -n "isFoliateFormat(format)" "U:/MyDeveloper/AI/elinkBook/app/lib/screens/r
 
 Expected：`_handleZoneAction()` 內兩處呼叫維持不動——`isFoliateFormat()` 已於 Task 3 擴大涵蓋 `txt`，這條路徑自動正確運作。
 
-- [ ] **Step 9：`flutter analyze`（確認 Task 3 記錄的 exhaustiveness 錯誤清單清空）**
+- [x] **Step 9：`flutter analyze`（確認 Task 3 記錄的 exhaustiveness 錯誤清單清空）**
 
 ```bash
 flutter analyze
@@ -1772,7 +1772,7 @@ flutter analyze
 
 Expected：`reader_screen.dart` 相關的 `non_exhaustive_switch_statement` 全部消失；整體回報 `No issues found!`。
 
-- [ ] **Step 10：完整 `flutter test`（確認全套件無回歸）**
+- [x] **Step 10：完整 `flutter test`（確認全套件無回歸）**
 
 ```bash
 flutter test
@@ -1780,7 +1780,7 @@ flutter test
 
 Expected：全數通過（此時仍缺 Task 9 的 `sample_synth.txt` fixture，若尚未完成 Task 9，本 Step 的 TXT 相關測試會失敗——建議 Task 8/9 依序緊接執行，不要中斷在 Task 8 結尾就 commit＋長時間擱置）。
 
-- [ ] **Step 11：Commit**（與 Task 9 一併，待 fixture 就緒後才 commit，見下方 Task 9 Step 5）
+- [x] **Step 11：Commit**（與 Task 9 一併，待 fixture 就緒後才 commit，見下方 Task 9 Step 5）
 
 ---
 
@@ -1795,7 +1795,7 @@ Expected：全數通過（此時仍缺 Task 9 的 `sample_synth.txt` fixture，�
 **Interfaces:**
 - Produces：三份提交進版控的測試素材，供 Task 8 widget test 與 Task 10 真機 `integration_test` 使用。
 
-- [ ] **Step 1：撰寫並執行 fixture 產生腳本**
+- [x] **Step 1：撰寫並執行 fixture 產生腳本**
 
 ```bash
 cat > "U:/MyDeveloper/AI/elinkBook/tmp_generate_txt_fixtures.py" << 'PYEOF'
@@ -1877,7 +1877,7 @@ python3 "U:/MyDeveloper/AI/elinkBook/tmp_generate_txt_fixtures.py"
 rm "U:/MyDeveloper/AI/elinkBook/tmp_generate_txt_fixtures.py"
 ```
 
-- [ ] **Step 2：驗證 `sample_big5.txt` 能被 `detectAndDecodeTxt()` 正確解碼為 big5**
+- [x] **Step 2：驗證 `sample_big5.txt` 能被 `detectAndDecodeTxt()` 正確解碼為 big5**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -1903,7 +1903,7 @@ rm test/library/verify_txt_fixtures_test.dart
 
 Expected：PASS（確認 fixture 產生腳本使用的 Python `'big5'` codec 與本專案 Dart 端解碼器對同一份資料的解讀結果一致）。
 
-- [ ] **Step 3：`pubspec.yaml` 新增 asset**
+- [x] **Step 3：`pubspec.yaml` 新增 asset**
 
 `app/pubspec.yaml` 的 `assets:` 清單，緊接在 `- test/fixtures/sample_unpadded.cbz` 之後新增：
 
@@ -1917,7 +1917,7 @@ Expected：PASS（確認 fixture 產生腳本使用的 Python `'big5'` codec 與
 flutter pub get
 ```
 
-- [ ] **Step 4：重新確認 Task 8 的 widget test 通過**
+- [x] **Step 4：重新確認 Task 8 的 widget test 通過**
 
 ```bash
 flutter test test/screens/reader_screen_test.dart --plain-name "TXT 書籍"
@@ -1925,7 +1925,7 @@ flutter test test/screens/reader_screen_test.dart --plain-name "TXT 書籍"
 
 Expected：PASS。
 
-- [ ] **Step 5：Commit（涵蓋 Task 8 與本 Task）**
+- [x] **Step 5：Commit（涵蓋 Task 8 與本 Task）**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook"

@@ -1,5 +1,6 @@
 // app/test/library/txt_charset_detection_test.dart
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -78,14 +79,22 @@ void main() {
     });
   });
 
-  group('detectAndDecodeTxt：全數失敗時強制 UTF-8 寬鬆解碼', () {
-    test('無效位元組序列（非合法 UTF-8/Big5/GBK/UTF-16 BOM）退回 fallback', () {
-      // 0xFF 單獨出現：非合法 UTF-8 起始位元組、非 Big5/GBK 已知雙位元組
-      // 開頭（表內查無 0xFFxx 項目）、無 UTF-16 BOM。
-      final bytes = Uint8List.fromList([0xFF, 0x41, 0x42]);
+  group('detectAndDecodeTxt：Fixture 檔案驗證', () {
+    test('sample_big5.txt 正確偵測為 big5 並解碼出正確中文', () async {
+      final bytes = await File('test/fixtures/sample_big5.txt').readAsBytes();
       final result = detectAndDecodeTxt(bytes);
-      expect(result.encoding, TxtEncoding.fallback);
-      // 不拋出例外即為本測試的核心斷言；寬鬆解碼允許替代字元。
+      expect(result.encoding, TxtEncoding.big5);
+      expect(result.text, contains('第一章 測試開始'));
+      expect(result.text, contains('第二章 測試結束'));
+    });
+
+    test('sample_utf8_chapters.txt 正確偵測為 utf8 並解碼出正確中文', () async {
+      final bytes = await File('test/fixtures/sample_utf8_chapters.txt').readAsBytes();
+      final result = detectAndDecodeTxt(bytes);
+      expect(result.encoding, TxtEncoding.utf8);
+      expect(result.text, contains('第一章 起源'));
+      expect(result.text, contains('第二章 冒險'));
+      expect(result.text, contains('第三章 結局'));
     });
   });
 }

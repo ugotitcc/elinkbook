@@ -101,7 +101,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: ReaderScreen(
-          filePath: 'test/fixtures/sample.txt',
+          filePath: 'test/fixtures/sample.unknown',
           bookId: 'b1',
           prefsManager: prefsManager,
         ),
@@ -589,6 +589,24 @@ void main() {
       expect(find.byType(FoliateReaderView), findsOneWidget);
       // CBZ 沒有對應 EPUB OPF/CSS 解析器的執行期重新偵測手段，不應呼叫
       // 這個 EPUB 專屬方法。
+      expect(repository.detectAndCacheEpubLayoutCalls, isEmpty);
+    },
+  );
+
+  testWidgets(
+    'TXT 書籍 isFixedLayout: null 時，防禦性視為 false 並建構 FoliateReaderView，'
+    '不永遠停留載入中畫面（epic-11 Issue 4，比照 Issue 2 C2／Issue 3 Important #1 '
+    '同構情境；正常匯入流程下 Book.isFixedLayout 必為 false，本測試涵蓋邊界防禦）',
+    (tester) async {
+      final repository = FakeLibraryRepository();
+      await tester.pumpWidget(MaterialApp(home: ReaderScreen(
+        filePath: 'test/fixtures/sample_synth.txt', bookId: 'b1',
+        prefsManager: prefsManager, libraryRepository: repository,
+      )));
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+      expect(find.byType(FoliateReaderView), findsOneWidget);
       expect(repository.detectAndCacheEpubLayoutCalls, isEmpty);
     },
   );
