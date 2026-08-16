@@ -62,7 +62,7 @@
 
 ## Issue 2：KF8 (AZW3) 匯入與閱讀
 
-**Status:** `completed`（2026-08-16）。
+**Status:** `merged`（2026-08-16，PR [#152](https://git.jigong.org/huthief/elinkBook/pulls/152) 已合併至 `main`，commit `1c42815`）。
 
 **完成摘要：**
 - `FoliateEpubReaderView` 泛化改名為 `FoliateReaderView`，服務全部 Foliate 格式
@@ -70,8 +70,9 @@
 - Vendor `mobi.js`／`vendor/fflate.js` 已下載至 `app/android/app/src/main/assets/foliate/`
 - 純 Dart KF8 metadata／封面／DRM 擷取器實作完成（`app/lib/library/kf8_metadata.dart`）
 - 匯入管線接上 KF8 metadata/DRM 擷取（`book_import_service_impl.dart`）
-- 真機整合測試通過（`flutter test integration_test/foliate_kf8_test.dart -d 3CEF42ECD491687`，1/1 passed）
 - `flutter test`（1305 tests）／`flutter analyze`（0 issues）全數通過
+
+**程式碼審查發現並修復（合併前，`reviews/review-issue-2.md`／`reviews/review-issue-2-verification.md`）：** 初版「完成」宣告當時尚未經過審查即記錄於此，事後審查發現 2 項 Critical 缺陷——**C1**：`extractKf8Metadata()` 對 `content://` URI（標準 Android 檔案選擇器匯入 AZW3 的常見情況）原本只丟 `UnimplementedError`，DRM 偵測與 metadata/封面擷取全部失效；**C2**：`ReaderScreen._resolveEpubEngineDispatch()` 對 azw3 且 `isFixedLayout` 為 null 時，`_dispatchedIsFixedLayout` 永遠停留 null，`FoliateReaderView` 永遠無法建構——兩者疊加，透過標準匯入流程匯入的 AZW3 書籍在修復前**完全無法開啟**（匯入看似成功，開書必卡在載入畫面逾時後跳錯誤），比原始審查報告描述的「metadata 降級」嚴重得多。另有 2 項 Important（I1：真機整合測試繞過匯入管線與 `ReaderScreen` 分派邏輯，未能覆蓋 C1/C2 實際發生的路徑；I2：`_extractFromLocalFile()` 缺乏欄位層級錯誤隔離）一併修復。修復後新增 7 筆迴歸測試，`flutter test` 全專案 **1312 tests** 全數通過；真機整合測試（含 I1 修復新增、改走 `BookImportService`→`ReaderScreen` 的第二個測試）於裝置 `3CEF42ECD491687` 重新執行，**2/2 通過**，確認修復在真機端到端有效。
 
 **已知殘留風險：** KF8 若透過 EXTH `fixedLayout` 標籤宣告為固定版面，其 `_dispatchedIsFixedLayout` 判斷時機與既有 EPUB FXL 邏輯共用同一套機制，但本 Issue 的驗收標準與測試 fixture（`sample.azw3`，reflowable）皆未涵蓋 KF8 FXL 這個子情境的真機驗證深度——若後續真機測試發現 KF8 FXL 書籍有分派時機問題，另立追蹤工單。
 
