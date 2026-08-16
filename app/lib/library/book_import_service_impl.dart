@@ -21,6 +21,7 @@ BookFileFormat? detectBookFileFormat(String uriOrPath) {
   if (name.endsWith('.epub')) return BookFileFormat.epub;
   if (name.endsWith('.pdf')) return BookFileFormat.pdf;
   if (name.endsWith('.txt')) return BookFileFormat.txt;
+  if (name.endsWith('.azw3')) return BookFileFormat.azw3;
   return null;
 }
 

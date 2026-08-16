@@ -525,6 +525,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         );
         break;
       case BookFormat.epub:
+      case BookFormat.azw3:
         final info = _epubPositionInfo;
         if (info == null) return;
         // progression 為 null 時（例如 Readium 對某些定位尚未完全解析版面
@@ -1212,13 +1213,13 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     );
     final positionContext = BookmarkPositionContext(
       epubLocatorJson:
-          format == BookFormat.epub ? _epubPositionInfo?.locatorJson : null,
+          isFoliateFormat(format) ? _epubPositionInfo?.locatorJson : null,
       progression:
-          format == BookFormat.epub ? _epubPositionInfo?.progression : null,
+          isFoliateFormat(format) ? _epubPositionInfo?.progression : null,
       pdfPageIndex: format == BookFormat.pdf ? _pdfPageInfo?.pageIndex : null,
       chapterTitle: currentPath.isEmpty ? null : currentPath.last.title,
     );
-    final latestProgress = format == BookFormat.epub
+    final latestProgress = isFoliateFormat(format)
         ? (_epubPositionInfo?.progression ?? widget.bookProgress)
         : (_pdfPageInfo != null && _pdfPageInfo!.totalPages > 0
             ? (_pdfPageInfo!.pageIndex + 1) / _pdfPageInfo!.totalPages
@@ -1234,11 +1235,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         // FXL EPUB 傳入 null（見 _handleSelectionChanged 註解——FXL 頁面
         // 是純點陣圖，無文字節點可選取，劃線/備註排除 FXL 是結構性必然，
         // 非可調整的產品決策，epic-20 Issue 4 審查回應已查證確認）。
-        highlightsRepository: (format == BookFormat.epub && !_isFixedLayout) ||
+        highlightsRepository: (isFoliateFormat(format) && !_isFixedLayout) ||
                 format == BookFormat.pdf
             ? widget.highlightsRepository
             : null,
-        notesRepository: (format == BookFormat.epub && !_isFixedLayout) ||
+        notesRepository: (isFoliateFormat(format) && !_isFixedLayout) ||
                 format == BookFormat.pdf
             ? widget.notesRepository
             : null,
@@ -1802,8 +1803,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         appBar: (_isFixedLayout ||
                 !_chromeVisible ||
                 format == BookFormat.pdf ||
-                (format == BookFormat.epub && _dispatchedIsFixedLayout == false))
-            ? null // 固定版面（如漫畫）、沉浸模式已收起介面、PDF（epic-24 Issue 8 起改用 FAB）、或流式 EPUB 時隱藏 Scaffold AppBar
+                (isFoliateFormat(format) && _dispatchedIsFixedLayout == false))
+            ? null // 固定版面（如漫畫）、沉浸模式已收起介面、PDF（epic-24 Issue 8 起改用 FAB）、或流式 Foliate 格式時隱藏 Scaffold AppBar
             : AppBar(
                 toolbarHeight: _appBarToolbarHeight,
                 title: _buildAppBarTitle(format),
@@ -1823,7 +1824,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 文字，`onTap` 同步以 `_tocLoaded` 防呆，比照 `_buildAppBarActions` 的
   /// 目錄按鈕既有 gating 條件，避免點擊到空白 Bottom Sheet。
   Widget _buildAppBarTitle(BookFormat format) {
-    final showHeader = format == BookFormat.epub && (_resolved?.showHeader ?? false);
+    final showHeader = isFoliateFormat(format) && (_resolved?.showHeader ?? false);
     if (!showHeader) {
       return const Text(
         '閱讀器',
@@ -1873,6 +1874,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     if (_isFixedLayout) return null;
     switch (format) {
       case BookFormat.epub:
+      case BookFormat.azw3:
         return [
           IconButton(
             key: const Key('reader_toc_button'),
@@ -1991,16 +1993,16 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         return Stack(
           children: [
             if (_resolved != null &&
-                (format != BookFormat.epub ||
+                (!isFoliateFormat(format) ||
                     (_dispatchedIsFixedLayout != null && _customFontsLoaded)))
               _buildNativeView(format, isLandscape),
-            // epic-18-reader-device-qa Issue 7：流式 EPUB 的 chrome，結構對稱
+            // epic-18-reader-device-qa Issue 7：流式 Foliate 格式的 chrome，結構對稱
             // 於上方 FXL 浮動按鈕區塊——appBar 已在 build() 恆為 null（見上方
             // 註解），改用這組 Positioned 疊加層承載「功能操作」（返回／TOC／
             // 設定／書籤／筆記／進度-跳頁），另有 2 個純顯示元件（頁眉章節
             // 名稱／進度文字）承載「資訊顯示」，兩者刻意分離（design.md「第
             // 二輪真機使用回報」項目 2）。
-            if (format == BookFormat.epub && _chromeVisible)
+            if (isFoliateFormat(format) && _chromeVisible)
               Positioned(
                 top: 16,
                 left: 16,
@@ -2016,7 +2018,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                   ),
                 ),
               ),
-            if (format == BookFormat.epub && _chromeVisible)
+            if (isFoliateFormat(format) && _chromeVisible)
               Positioned(
                 top: 16,
                 right: 16,
@@ -2034,7 +2036,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                   ),
                 ),
               ),
-            if (format == BookFormat.epub && _chromeVisible)
+            if (isFoliateFormat(format) && _chromeVisible)
               Positioned(
                 top: 72,
                 right: 16,
@@ -2052,7 +2054,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                   ),
                 ),
               ),
-            if (format == BookFormat.epub &&
+            if (isFoliateFormat(format) &&
                 _chromeVisible &&
                 widget.bookmarksRepository != null)
               Positioned(
@@ -2078,7 +2080,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                   ),
                 ),
               ),
-            if (format == BookFormat.epub &&
+            if (isFoliateFormat(format) &&
                 _chromeVisible &&
                 widget.bookmarksRepository != null)
               Positioned(
@@ -2094,12 +2096,12 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                       onPressed: (_autoDetectedWritingMode == null ||
                               _epubPositionInfo == null)
                           ? null
-                          : () => _openNotesSheet(BookFormat.epub),
+                          : () => _openNotesSheet(format),
                     ),
                   ),
                 ),
               ),
-            if (format == BookFormat.epub && _chromeVisible)
+            if (isFoliateFormat(format) && _chromeVisible)
               Positioned(
                 top: 240,
                 right: 16,
@@ -2236,7 +2238,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                   ),
                 ),
               ),
-            if (format == BookFormat.epub &&
+            if (isFoliateFormat(format) &&
                 (_resolved?.showHeader ?? false) &&
                 !_chromeVisible)
               (_resolved?.writingMode == WritingMode.vertical)
@@ -2255,7 +2257,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                       right: 72,
                       child: Center(child: _buildFoliateHeaderText()),
                     ),
-            if (format == BookFormat.epub &&
+            if (isFoliateFormat(format) &&
                 (_resolved?.showFooter ?? false) &&
                 (_epubPositionInfo?.totalPages ?? 0) > 0)
               (_resolved?.writingMode == WritingMode.vertical)
@@ -2338,7 +2340,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         child: Column(
           children: [
             Expanded(child: body),
-            if (format == BookFormat.epub &&
+            if (isFoliateFormat(format) &&
                 !_isFixedLayout &&
                 _totalCharacterCount != null &&
                 _resolved != null &&
@@ -2557,9 +2559,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     final resolved = _resolved!;
     switch (format) {
       case BookFormat.epub:
-        // Epic 20 Issue 2：EPUB 一律透過 FoliateReaderView 渲染。
-        // isFixedLayoutHint 將 widget.isFixedLayout 傳入，讓 main.js 的
-        // isFixedLayoutHint 覆寫機制（ADR 0017 決策 4）生效。
+      case BookFormat.azw3:
+        // Epic 11 Issue 2：KF8 (AZW3) 與 EPUB 共用同一個 FoliateReaderView，
+        // 建構參數完全相同，不需要依格式分流。
         return FoliateReaderView(
           key: _foliateEpubReaderViewKey,
           filePath: widget.filePath,
@@ -2695,8 +2697,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           // 放開手指後仍會用換頁前的舊頁面座標重新彈出 Toolbar，一併
           // 中止它，見 PdfReaderView.cancelActiveSelectionDrag 文件。
           PdfReaderView.cancelActiveSelectionDrag(_pdfReaderViewKey);
-        } else if (format == BookFormat.epub) {
-          // Epic 20 Issue 2：EPUB 一律使用 FoliateReaderView。
+        } else if (isFoliateFormat(format)) {
+          // Epic 11 Issue 2：KF8 (AZW3) 與 EPUB 共用 FoliateReaderView。
           FoliateReaderView.previousPage(_foliateEpubReaderViewKey);
         }
         break;
@@ -2708,8 +2710,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           if (_currentPdfSelection != null) _handlePdfSelectionCanceled();
           // 審查修正：理由同上方 previousPage 分支。
           PdfReaderView.cancelActiveSelectionDrag(_pdfReaderViewKey);
-        } else if (format == BookFormat.epub) {
-          // Epic 20 Issue 2：EPUB 一律使用 FoliateReaderView。
+        } else if (isFoliateFormat(format)) {
+          // Epic 11 Issue 2：KF8 (AZW3) 與 EPUB 共用 FoliateReaderView。
           FoliateReaderView.nextPage(_foliateEpubReaderViewKey);
         }
         break;

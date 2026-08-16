@@ -14,6 +14,8 @@ IconData bookFormatIcon(BookFileFormat format) {
       return Icons.picture_as_pdf;
     case BookFileFormat.txt:
       return Icons.article;
+    case BookFileFormat.azw3:
+      return Icons.menu_book;
   }
 }
 
