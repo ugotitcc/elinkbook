@@ -53,7 +53,7 @@
 **Interfaces:**
 - Produces：`String escapeXml(String text)`；`const String kEpubContainerXml`；`String buildEpubContentOpf({required String identifier, required String title, required String manifestItems, required String spineItems, String language = 'zh'})`；`String buildEpubNavXhtml(String navItems)`（供 Task 5 `md_epub_synthesizer.dart` 與本 Task 重構後的 `txt_epub_synthesizer.dart` 共用）。
 
-- [ ] **Step 1：寫失敗測試**
+- [x] **Step 1：寫失敗測試**
 
 ```dart
 // app/test/library/epub_container_builder_test.dart
@@ -109,7 +109,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：`xml` 套件新增為 dev_dependency（若 Issue 4 尚未新增則本 Task 新增；若已存在則跳過本 Step）**
+- [x] **Step 2：`xml` 套件新增為 dev_dependency（若 Issue 4 尚未新增則本 Task 新增；若已存在則跳過本 Step）**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -124,7 +124,7 @@ grep -n "^  xml:" pubspec.yaml
 
 並執行 `flutter pub get`。
 
-- [ ] **Step 3：確認測試失敗**
+- [x] **Step 3：確認測試失敗**
 
 ```bash
 flutter test test/library/epub_container_builder_test.dart
@@ -132,7 +132,7 @@ flutter test test/library/epub_container_builder_test.dart
 
 Expected：FAIL（`epub_container_builder.dart` 不存在，編譯錯誤）。
 
-- [ ] **Step 4：實作**
+- [x] **Step 4：實作**
 
 ```dart
 // app/lib/library/epub_container_builder.dart
@@ -193,7 +193,7 @@ $navItems</ol>
 ''';
 ```
 
-- [ ] **Step 5：確認測試通過**
+- [x] **Step 5：確認測試通過**
 
 ```bash
 flutter test test/library/epub_container_builder_test.dart
@@ -201,7 +201,7 @@ flutter test test/library/epub_container_builder_test.dart
 
 Expected：PASS（5 個測試）。
 
-- [ ] **Step 6：重構 `txt_epub_synthesizer.dart` 改用共用版本**
+- [x] **Step 6：重構 `txt_epub_synthesizer.dart` 改用共用版本**
 
 `app/lib/library/txt_epub_synthesizer.dart` 移除 `_escapeXml()`／`_containerXml`／`_contentOpf()`／`_navXhtml()` 四個私有定義，改為：
 
@@ -253,7 +253,7 @@ import 'epub_container_builder.dart';
 
 `_buildXhtmlBody()`／`_chapterXhtml()` 內原本呼叫 `_escapeXml(...)` 的兩處皆改為呼叫 `escapeXml(...)`（去除底線前綴，改用 import 進來的共用版本）。
 
-- [ ] **Step 7：確認 TXT 既有測試仍通過（零回歸）**
+- [x] **Step 7：確認 TXT 既有測試仍通過（零回歸）**
 
 ```bash
 flutter test test/library/txt_epub_synthesizer_test.dart test/library/book_import_service_test.dart
@@ -261,7 +261,7 @@ flutter test test/library/txt_epub_synthesizer_test.dart test/library/book_impor
 
 Expected：PASS，數量與重構前相同（純內部實作搬移，`synthesizeTxtBook()` 對外行為完全不變，含 `dc:identifier` 字面值 `elinkbook-txt-$bookId` 也維持不變）。
 
-- [ ] **Step 8：`flutter analyze`**
+- [x] **Step 8：`flutter analyze`**
 
 ```bash
 flutter analyze
@@ -269,7 +269,7 @@ flutter analyze
 
 Expected：`No issues found!`
 
-- [ ] **Step 9：Commit**
+- [x] **Step 9：Commit**
 
 ```bash
 git add app/lib/library/epub_container_builder.dart app/lib/library/txt_epub_synthesizer.dart app/test/library/epub_container_builder_test.dart app/pubspec.yaml
@@ -379,7 +379,7 @@ git commit -m "feat(epic-11): Issue 5——BookFormat/BookFileFormat 新增 md"
 **Interfaces:**
 - Produces：`class MdFrontmatter { String? title; String? author; Uint8List? coverBytes; }`；`class MdParsedDocument { MdFrontmatter frontmatter; String body; }`；`MdParsedDocument parseMdFrontmatter(String content)`（供 Task 5 `md_epub_synthesizer.dart` 消費）。
 
-- [ ] **Step 1：寫失敗測試**
+- [x] **Step 1：寫失敗測試**
 
 ```dart
 // app/test/library/md_frontmatter_test.dart
@@ -459,7 +459,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：確認測試失敗**
+- [x] **Step 2：確認測試失敗**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -468,7 +468,7 @@ flutter test test/library/md_frontmatter_test.dart
 
 Expected：FAIL（`md_frontmatter.dart` 不存在，編譯錯誤）。
 
-- [ ] **Step 3：`yaml` 套件由 transitive 升級為直接 dependency**
+- [x] **Step 3：`yaml` 套件由 transitive 升級為直接 dependency**
 
 `app/pubspec.yaml` 的 `dependencies:` 區塊，緊接在既有 `archive: ^4.0.9` 之後新增：
 
@@ -483,7 +483,7 @@ Expected：FAIL（`md_frontmatter.dart` 不存在，編譯錯誤）。
 flutter pub get
 ```
 
-- [ ] **Step 4：實作**
+- [x] **Step 4：實作**
 
 ```dart
 // app/lib/library/md_frontmatter.dart
@@ -578,7 +578,7 @@ Uint8List? _decodeDataUri(String value) {
 }
 ```
 
-- [ ] **Step 5：確認測試通過**
+- [x] **Step 5：確認測試通過**
 
 ```bash
 flutter test test/library/md_frontmatter_test.dart
@@ -586,7 +586,7 @@ flutter test test/library/md_frontmatter_test.dart
 
 Expected：PASS（7 個測試）。
 
-- [ ] **Step 6：`flutter analyze`**
+- [x] **Step 6：`flutter analyze`**
 
 ```bash
 flutter analyze
@@ -594,7 +594,7 @@ flutter analyze
 
 Expected：無新增 issue。
 
-- [ ] **Step 7：Commit**
+- [x] **Step 7：Commit**
 
 ```bash
 git add app/lib/library/md_frontmatter.dart app/test/library/md_frontmatter_test.dart app/pubspec.yaml app/pubspec.lock
@@ -612,7 +612,7 @@ git commit -m "feat(epic-11): Issue 5——YAML Frontmatter 解析 parseMdFrontm
 **Interfaces:**
 - Produces：`class MdHeading { int level; String text; String anchorId; int sectionIndex; }`；`class MdSection { String? title; List<md.Node> nodes; }`；`class MdParseResult { List<MdSection> sections; List<MdHeading> headings; }`；`MdParseResult parseMdIntoSections(String markdownBody)`（供 Task 5 `md_epub_synthesizer.dart` 消費）。
 
-- [ ] **Step 1：`markdown` 套件新增為 dependency**
+- [x] **Step 1：`markdown` 套件新增為 dependency**
 
 `app/pubspec.yaml` 的 `dependencies:` 區塊，緊接在 Task 3 新增的 `yaml: ^3.1.3` 之後新增：
 
@@ -628,7 +628,7 @@ cd "U:/MyDeveloper/AI/elinkBook/app"
 flutter pub get
 ```
 
-- [ ] **Step 2：寫失敗測試**
+- [x] **Step 2：寫失敗測試**
 
 ```dart
 // app/test/library/md_toc_builder_test.dart
@@ -716,7 +716,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 3：確認測試失敗**
+- [x] **Step 3：確認測試失敗**
 
 ```bash
 flutter test test/library/md_toc_builder_test.dart
@@ -724,7 +724,7 @@ flutter test test/library/md_toc_builder_test.dart
 
 Expected：FAIL（`md_toc_builder.dart` 不存在，編譯錯誤）。
 
-- [ ] **Step 4：實作**
+- [x] **Step 4：實作**
 
 ```dart
 // app/lib/library/md_toc_builder.dart
@@ -853,7 +853,7 @@ MdParseResult parseMdIntoSections(String markdownBody) {
 }
 ```
 
-- [ ] **Step 5：確認測試通過**
+- [x] **Step 5：確認測試通過**
 
 ```bash
 flutter test test/library/md_toc_builder_test.dart
@@ -861,7 +861,7 @@ flutter test test/library/md_toc_builder_test.dart
 
 Expected：PASS（10 個測試）。
 
-- [ ] **Step 6：`flutter analyze`**
+- [x] **Step 6：`flutter analyze`**
 
 ```bash
 flutter analyze
@@ -869,7 +869,7 @@ flutter analyze
 
 Expected：無新增 issue。
 
-- [ ] **Step 7：Commit**
+- [x] **Step 7：Commit**
 
 ```bash
 git add app/lib/library/md_toc_builder.dart app/test/library/md_toc_builder_test.dart app/pubspec.yaml app/pubspec.lock
@@ -888,7 +888,7 @@ git commit -m "feat(epic-11): Issue 5——Markdown 標題階層解析與章節�
 - Consumes：`parseMdFrontmatter`／`MdFrontmatter`（Task 3）；`parseMdIntoSections`／`MdHeading`／`MdSection`（Task 4）；`kEpubContainerXml`／`buildEpubContentOpf`／`buildEpubNavXhtml`／`escapeXml`（Task 1）；`readContentUriBytes`（Issue 4 既有）。
 - Produces：`class MdSynthesisResult { Uint8List epubBytes; String? frontmatterTitle; String? frontmatterAuthor; Uint8List? frontmatterCoverBytes; }`；`class EmptyMdException implements Exception`；`Future<MdSynthesisResult> synthesizeMdBook(String filePath, String bookId, String fallbackTitle)`（供 Task 6 `book_import_service_impl.dart` 消費）。
 
-- [ ] **Step 1：寫失敗測試**
+- [x] **Step 1：寫失敗測試**
 
 ```dart
 // app/test/library/md_epub_synthesizer_test.dart
@@ -1101,7 +1101,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：確認測試失敗**
+- [x] **Step 2：確認測試失敗**
 
 ```bash
 flutter test test/library/md_epub_synthesizer_test.dart
@@ -1109,7 +1109,7 @@ flutter test test/library/md_epub_synthesizer_test.dart
 
 Expected：FAIL（`md_epub_synthesizer.dart` 不存在，編譯錯誤）。
 
-- [ ] **Step 3：實作**
+- [x] **Step 3：實作**
 
 ```dart
 // app/lib/library/md_epub_synthesizer.dart
@@ -1304,7 +1304,7 @@ Future<MdSynthesisResult> synthesizeMdBook(
 }
 ```
 
-- [ ] **Step 4：確認測試通過**
+- [x] **Step 4：確認測試通過**
 
 ```bash
 flutter test test/library/md_epub_synthesizer_test.dart
@@ -1312,7 +1312,7 @@ flutter test test/library/md_epub_synthesizer_test.dart
 
 Expected：PASS（11 個測試）。
 
-- [ ] **Step 5：`flutter analyze`**
+- [x] **Step 5：`flutter analyze`**
 
 ```bash
 flutter analyze
@@ -1320,7 +1320,7 @@ flutter analyze
 
 Expected：無新增 issue。
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/lib/library/md_epub_synthesizer.dart app/test/library/md_epub_synthesizer_test.dart
@@ -1339,7 +1339,7 @@ git commit -m "feat(epic-11): Issue 5——MD 合成為最小合法 EPUB3 結構
 - Consumes：`synthesizeMdBook`／`MdSynthesisResult`／`EmptyMdException`（Task 5）。
 - Produces：MD 書籍 `Book.isFixedLayout == false`、`Book.filePath` 指向落地後合成的 `.md` 檔案（`imported_books/` 既有目錄，`$id.md`）、`Book.contentFingerprint` 對原始輸入檔案計算。
 
-- [ ] **Step 1：`detectBookFileFormat` 新增 `.md`**
+- [x] **Step 1：`detectBookFileFormat` 新增 `.md`**
 
 `app/lib/library/book_import_service_impl.dart` 修改 `detectBookFileFormat()`：
 
@@ -1356,7 +1356,7 @@ BookFileFormat? detectBookFileFormat(String uriOrPath) {
 }
 ```
 
-- [ ] **Step 2：寫失敗測試**
+- [x] **Step 2：寫失敗測試**
 
 於 `app/test/library/book_import_service_test.dart` 頂部 import 區塊確認已有 `import 'package:archive/archive.dart' show ZipDecoder';`（Issue 4 已新增，若無則補上）。在既有 `group('TXT 匯入', () { ... });` 之後、`main()` 結尾 `}` 之前新增：
 
@@ -1449,7 +1449,7 @@ BookFileFormat? detectBookFileFormat(String uriOrPath) {
 
 （`computeBookContentFingerprint`／`Uint8List`／`base64Encode` 的 import 已由既有測試檔案頂部涵蓋，若編譯時發現缺漏，依 Dart 編譯錯誤訊息補上對應 `dart:convert`／`dart:typed_data`／`package:elinkbook/library/book_content_fingerprint.dart` import）
 
-- [ ] **Step 3：確認測試失敗**
+- [x] **Step 3：確認測試失敗**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -1458,7 +1458,7 @@ flutter test test/library/book_import_service_test.dart
 
 Expected：FAIL（`BookFileFormat.md` 分支尚未產生合成邏輯）。
 
-- [ ] **Step 4：實作**
+- [x] **Step 4：實作**
 
 `app/lib/library/book_import_service_impl.dart` 頂部 import 新增：
 
@@ -1507,7 +1507,7 @@ import 'md_epub_synthesizer.dart';
   }
 ```
 
-- [ ] **Step 5：確認測試通過**
+- [x] **Step 5：確認測試通過**
 
 ```bash
 flutter test test/library/book_import_service_test.dart
@@ -1515,7 +1515,7 @@ flutter test test/library/book_import_service_test.dart
 
 Expected：PASS（既有全部測試＋6 個新增 MD 測試）。
 
-- [ ] **Step 6：`flutter analyze`**
+- [x] **Step 6：`flutter analyze`**
 
 ```bash
 flutter analyze
@@ -1523,7 +1523,7 @@ flutter analyze
 
 Expected：無新增 issue。
 
-- [ ] **Step 7：Commit**
+- [x] **Step 7：Commit**
 
 ```bash
 git add app/lib/library/book_import_service_impl.dart app/test/library/book_import_service_test.dart
@@ -1541,7 +1541,7 @@ git commit -m "feat(epic-11): Issue 5——匯入管線接上 MD 合成為 EPUB 
 **Interfaces:**
 - Consumes：`BookFormat.md`（Task 2）。
 
-- [ ] **Step 1：寫失敗測試（防禦性 `_dispatchedIsFixedLayout` 分派）**
+- [x] **Step 1：寫失敗測試（防禦性 `_dispatchedIsFixedLayout` 分派）**
 
 於 `app/test/screens/reader_screen_test.dart` 找到既有「TXT 書籍 isFixedLayout: null...」測試附近，追加同構測試：
 
@@ -1568,7 +1568,7 @@ git commit -m "feat(epic-11): Issue 5——匯入管線接上 MD 合成為 EPUB 
 
 （`test/fixtures/sample_synth.md`：widget test 專用，內容為已合成過的最小合法 EPUB 結構、僅副檔名為 `.md`，比照 Issue 4 `sample_synth.txt` 既有模式，本測試只驗證 Dart 端分派邏輯與 widget 樹建構，不要求真正被 WebView 渲染成功——Task 9 會產生此 fixture）
 
-- [ ] **Step 2：實作 `_resolveEpubEngineDispatch()`**
+- [x] **Step 2：實作 `_resolveEpubEngineDispatch()`**
 
 `app/lib/screens/reader_screen.dart` 修改（緊接在既有 txt 分支之後、`if (format != BookFormat.epub) return;` 之前）：
 
@@ -1585,7 +1585,7 @@ git commit -m "feat(epic-11): Issue 5——匯入管線接上 MD 合成為 EPUB 
     if (format != BookFormat.epub) return;
 ```
 
-- [ ] **Step 3：`_writeCurrentPosition()` merged case**
+- [x] **Step 3：`_writeCurrentPosition()` merged case**
 
 ```dart
       case BookFormat.epub:
@@ -1596,7 +1596,7 @@ git commit -m "feat(epic-11): Issue 5——匯入管線接上 MD 合成為 EPUB 
         final info = _epubPositionInfo;
 ```
 
-- [ ] **Step 4：`_buildAppBarActions()` merged case**
+- [x] **Step 4：`_buildAppBarActions()` merged case**
 
 ```dart
     switch (format) {
@@ -1610,7 +1610,7 @@ git commit -m "feat(epic-11): Issue 5——匯入管線接上 MD 合成為 EPUB 
 
 （MD 恆為流式，會真的顯示這組 AppBar 按鈕，比照 TXT 既有行為——需要目錄/版面設定/筆記按鈕）
 
-- [ ] **Step 5：`_buildNativeView()` merged case**
+- [x] **Step 5：`_buildNativeView()` merged case**
 
 ```dart
       case BookFormat.epub:
@@ -1623,7 +1623,7 @@ git commit -m "feat(epic-11): Issue 5——匯入管線接上 MD 合成為 EPUB 
 
 （`isComicBookHint: format == BookFormat.cbz` 對 `BookFormat.md` 天然為 `false`，不需額外修改內部參數列）
 
-- [ ] **Step 6：`flutter analyze`（確認 Task 2 記錄的 exhaustiveness 錯誤清單清空）**
+- [x] **Step 6：`flutter analyze`（確認 Task 2 記錄的 exhaustiveness 錯誤清單清空）**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -1632,7 +1632,7 @@ flutter analyze
 
 Expected：`reader_screen.dart` 相關的 `non_exhaustive_switch_statement` 全部消失；整體回報 `No issues found!`。
 
-- [ ] **Step 7：確認 `_handleZoneAction()` 無需修改**
+- [x] **Step 7：確認 `_handleZoneAction()` 無需修改**
 
 ```bash
 grep -n "isFoliateFormat(format)" "U:/MyDeveloper/AI/elinkBook/app/lib/screens/reader_screen.dart"
@@ -1640,7 +1640,7 @@ grep -n "isFoliateFormat(format)" "U:/MyDeveloper/AI/elinkBook/app/lib/screens/r
 
 Expected：兩處呼叫維持不動——`isFoliateFormat()` 已於 Task 2 擴大涵蓋 `md`，這條路徑自動正確運作。
 
-- [ ] **Step 8：確認測試通過（待 Task 9 fixture 就緒後）**
+- [x] **Step 8：確認測試通過（待 Task 9 fixture 就緒後）**
 
 ```bash
 flutter test test/screens/reader_screen_test.dart --plain-name "MD 書籍"
@@ -1656,7 +1656,7 @@ Expected：PASS（若此時 `sample_synth.md` 尚未產生，本 Step 會先 FAI
 - Modify: `app/lib/screens/library_screen.dart`
 - Modify: `app/integration_test/manual_import_acceptance_test.dart`
 
-- [ ] **Step 1：修改**
+- [x] **Step 1：修改**
 
 `app/lib/screens/library_screen.dart`：
 
@@ -1670,7 +1670,7 @@ Expected：PASS（若此時 `sample_synth.md` 尚未產生，本 Step 會先 FAI
                           allowedExtensions: ['epub', 'pdf', 'txt', 'azw3', 'cbz', 'md'],
 ```
 
-- [ ] **Step 2：`flutter analyze`**
+- [x] **Step 2：`flutter analyze`**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -1679,7 +1679,7 @@ flutter analyze
 
 Expected：無新增 issue（純字串陣列常數異動，已確認 `app/test/` 下無任何既有測試斷言這個常數的確切內容）。
 
-- [ ] **Step 3：Commit**
+- [x] **Step 3：Commit**
 
 ```bash
 git add app/lib/screens/library_screen.dart app/integration_test/manual_import_acceptance_test.dart
@@ -1695,7 +1695,7 @@ git commit -m "feat(epic-11): Issue 5——檔案選擇器新增 .md 副檔名"
 - Create: `app/test/fixtures/sample.md`（真機整合測試用，含 Frontmatter／巢狀標題／程式碼區塊／表格的原始 Markdown）
 - Modify: `app/pubspec.yaml`（新增這兩個 asset）
 
-- [ ] **Step 1：撰寫並執行 fixture 產生腳本**
+- [x] **Step 1：撰寫並執行 fixture 產生腳本**
 
 ```bash
 cat > "U:/MyDeveloper/AI/elinkBook/tmp_generate_md_fixtures.py" << 'PYEOF'
@@ -1790,7 +1790,7 @@ python3 "U:/MyDeveloper/AI/elinkBook/tmp_generate_md_fixtures.py"
 rm "U:/MyDeveloper/AI/elinkBook/tmp_generate_md_fixtures.py"
 ```
 
-- [ ] **Step 2：驗證 `sample.md` 能被 `synthesizeMdBook()` 正確合成（不拋出例外，章節數與 Frontmatter 皆符合預期）**
+- [x] **Step 2：驗證 `sample.md` 能被 `synthesizeMdBook()` 正確合成（不拋出例外，章節數與 Frontmatter 皆符合預期）**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -1818,7 +1818,7 @@ rm test/library/verify_md_fixture_test.dart
 
 Expected：PASS（確認 fixture 內容能被本 Issue 實作正確處理，非產生腳本錯誤導致的損毀檔案）。
 
-- [ ] **Step 3：`pubspec.yaml` 新增 asset**
+- [x] **Step 3：`pubspec.yaml` 新增 asset**
 
 `app/pubspec.yaml` 的 `assets:` 清單，緊接在 `- test/fixtures/sample_utf8_chapters.txt` 之後新增：
 
@@ -1831,7 +1831,7 @@ Expected：PASS（確認 fixture 內容能被本 Issue 實作正確處理，非�
 flutter pub get
 ```
 
-- [ ] **Step 4：重新確認 Task 7 的 widget test 通過**
+- [x] **Step 4：重新確認 Task 7 的 widget test 通過**
 
 ```bash
 flutter test test/screens/reader_screen_test.dart --plain-name "MD 書籍"
@@ -1839,7 +1839,7 @@ flutter test test/screens/reader_screen_test.dart --plain-name "MD 書籍"
 
 Expected：PASS。
 
-- [ ] **Step 5：Commit（涵蓋 Task 7 與本 Task）**
+- [x] **Step 5：Commit（涵蓋 Task 7 與本 Task）**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook"
@@ -1858,14 +1858,14 @@ git commit -m "feat(epic-11): Issue 5——ReaderScreen 分派邏輯擴充涵蓋
 **Interfaces:**
 - Consumes：`sample.md`（Task 9）；`BookImportServiceImpl`／`ReaderScreen`（既有，Task 6/7 已擴充支援 md）。
 
-- [ ] **Step 1：確認可用裝置**
+- [x] **Step 1：確認可用裝置**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
 flutter devices
 ```
 
-- [ ] **Step 2：撰寫測試**
+- [x] **Step 2：撰寫測試**
 
 ```dart
 // app/integration_test/foliate_md_test.dart
@@ -1972,7 +1972,7 @@ void main() {
       expect(toc.map((e) => e.title), ['第一章 起源', '第二章 結局']);
 ```
 
-- [ ] **Step 3：確認 `ReaderScreen.loadTableOfContentsForTest()` 存在**
+- [x] **Step 3：確認 `ReaderScreen.loadTableOfContentsForTest()` 存在**
 
 ```bash
 grep -n "loadTableOfContentsForTest" "U:/MyDeveloper/AI/elinkBook/app/lib/screens/reader_screen.dart"
@@ -1993,7 +1993,7 @@ Expected：找到 Issue 4 Task 10 新增的既有定義（`static Future<List<To
   }
 ```
 
-- [ ] **Step 4：真機執行**
+- [x] **Step 4：真機執行**
 
 ```bash
 flutter test integration_test/foliate_md_test.dart -d <device-id>
@@ -2001,7 +2001,7 @@ flutter test integration_test/foliate_md_test.dart -d <device-id>
 
 Expected：1/1 PASS。若目錄斷言失敗，優先檢查 `md_toc_builder.dart` 的巢狀切分邏輯是否正確把子章節排除在頂層目錄之外（`sample.md` 的目錄應只有「第一章 起源」「第二章 結局」兩個頂層項目，「子章節 A」是巢狀項目不會出現在這個扁平斷言中，若測試改為檢查完整巢狀結構需相應調整）。
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook"
@@ -2015,7 +2015,7 @@ git commit -m "test(epic-11): Issue 5——MD 真機整合測試，涵蓋 Frontm
 
 **Files:** 無新增/修改，純驗證。
 
-- [ ] **Step 1：`flutter analyze`**
+- [x] **Step 1：`flutter analyze`**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -2024,7 +2024,7 @@ flutter analyze
 
 Expected：`No issues found!`
 
-- [ ] **Step 2：完整 `flutter test`**
+- [x] **Step 2：完整 `flutter test`**
 
 ```bash
 flutter test
@@ -2032,7 +2032,7 @@ flutter test
 
 Expected：全數通過（既有 1383 + 本 Issue 新增測試，具體數字以實際輸出為準）。
 
-- [ ] **Step 3：真機整合測試回歸（確認未破壞既有 KF8/CBZ/TXT 整合測試）**
+- [x] **Step 3：真機整合測試回歸（確認未破壞既有 KF8/CBZ/TXT 整合測試）**
 
 ```bash
 flutter test integration_test/foliate_kf8_test.dart integration_test/foliate_cbz_test.dart integration_test/foliate_txt_test.dart integration_test/foliate_md_test.dart -d <device-id>
@@ -2040,14 +2040,14 @@ flutter test integration_test/foliate_kf8_test.dart integration_test/foliate_cbz
 
 Expected：全數 PASS。
 
-- [ ] **Step 4：手動驗收（比照 issues.md Issue 5 驗收標準逐項確認）**
+- [x] **Step 4：手動驗收（比照 issues.md Issue 5 驗收標準逐項確認）**
 
 - 真機匯入 MD 檔案正確渲染，Frontmatter 標題/封面正確顯示：於裝置上實際透過圖書庫匯入畫面選取 `sample.md`，人工確認書架上顯示「真機測試筆記」與正確封面。
 - 程式碼區塊與表格在直排模式下維持橫排、可橫向捲動閱讀：開啟該書後切換為直排，人工確認程式碼區塊與表格未被直排排版拉伸/破版，可正常橫向捲動。
 - 標題階層目錄正確產生；直排/橫排切換、劃線、書籤功能與其他格式一致：人工操作既有 UI 逐一確認（皆為既有機制直接繼承）。
 - 刪除書籍後對應合成檔案從磁碟移除：於圖書庫刪除該書，確認 `imported_books/$id.md` 消失——**沿用既有通用刪除邏輯，不需要新程式碼**（比照 Issue 3/4 已驗證的相同結論）。
 
-- [ ] **Step 5：更新 `issues.md`／`docs/epics.md`（人類確認驗收通過後，比照 Issue 2-4 既有流程另行處理，不在本計畫任務範圍內）**
+- [x] **Step 5：更新 `issues.md`／`docs/epics.md`（人類確認驗收通過後，比照 Issue 2-4 既有流程另行處理，不在本計畫任務範圍內）**
 
 ---
 

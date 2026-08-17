@@ -190,7 +190,18 @@
 
 ## Issue 5：Markdown (MD) 合成書籍結構與閱讀
 
-**Status:** `ready-for-agent`
+**Status:** `merged`（2026-08-17，PR [#155](https://git.jigong.org/huthief/elinkBook/pulls/155) 已合併至 `main`，commit `4cfed5a`）。
+
+**完成摘要：**
+- `BookFormat`／`BookFileFormat` 新增 `md`，`isFoliateFormat()` 擴大涵蓋，`reader_screen.dart` 既有共用 `switch (format)` 補齊 `case BookFormat.md`（含 `book_cover.dart` 的 `BookFileFormat` exhaustiveness 補丁，計畫未列出但必要，實作中正確發現並補上）
+- YAML Frontmatter 解析（`md_frontmatter.dart`，`package:yaml`）：抽取 `title`／`author`／`cover`（`data:` URI base64 解碼），UTF-8 BOM／YAML 格式錯誤／未閉合 `---` 皆優雅降級為無 metadata；未指定封面時退回既有「依書名文字動態生成封面」機制
+- Markdown AST 解析與標題階層/章節切分（`md_toc_builder.dart`，`package:markdown` 官方純 Dart 解析器＋`ExtensionSet.gitHubWeb`）：依文件內最淺標題層級切分章節，標題 id 捨棄套件內建 slug、改為自訂序號式 `heading_0001` 保證渲染前後一致
+- MD → EPUB 合成（`md_epub_synthesizer.dart`）：巢狀目錄樹 `nav.xhtml`、`<pre>`/`<table>` 強制橫排 CSS 覆蓋、Frontmatter 標題/作者/封面對應、`content://` URI 支援、空白內容拋 `EmptyMdException`
+- 抽出共用 `epub_container_builder.dart`（DRY，承接 Issue 4，`txt_epub_synthesizer.dart` 改用）
+- 匯入管線接上 MD、檔案選擇器新增 `.md`；`contentFingerprint` 對原始檔案計算、合成檔案副檔名維持 `.md`，皆沿用 Issue 4 已建立的模式
+- `flutter test`（1427 tests）／`flutter analyze`（0 issues）全數通過；真機整合測試 `foliate_md_test.dart`（Frontmatter／巢狀目錄／開書渲染）通過
+
+**程式碼審查發現並修復（合併前，`reviews/review-issue-5.md`）：** 結論 With fixes。發現 1 項 Critical——`_sectionXhtml()` 原先直接信任 `md.renderToHtml()` 的原始輸出；`package:markdown` 對使用者輸入中的裸 HTML（CommonMark/GFM raw HTML passthrough，例如手打 `<br>` 換行）不會跳脫、原樣輸出，導致合成出的章節 XHTML 可能不是合法 XML，而本專案釘選的 `epub.js` 是以嚴格 `application/xhtml+xml` 模式解析章節，觸發門檻低（一般使用者手打 `<br>` 即可觸發），會顯示解析錯誤畫面而非原文——此點也揭露計畫文件「已查證的關鍵技術事實 #1」本身查證有誤（非實作偏離計畫），已同步訂正該段文字。修復方式：新增 `package:html` 依賴，對 `renderToHtml()` 輸出做「HTML5 容錯解析＋重新序列化為合法 XML」正規化，並補上直接對章節 XHTML（而非僅 `nav.xhtml`）做 `XmlDocument.parse()` 的回歸測試。另有 3 項 Minor（`MdSection.title` 未被下游消費、查無來源的「Ruling 1」代稱、既有共用 switch 註解未提及 md）——僅「Ruling 1」代稱已修正，其餘 2 項審查報告本身即建議不需改動（`MdSection.title` 是既有測試驗證章節切分正確性的核心斷言依據，`reader_screen.dart` 該處註解計畫明確指示不修改），故維持原樣。修復後 `flutter analyze`／完整 `flutter test`（1427 tests）皆重新驗證通過。
 
 **依賴：** Issue 4（共用「合成書籍結構」基礎設施：檔案命名/清理模式、`contentFingerprint` 計算順序約束、匯入管線接線方式）。
 
