@@ -139,7 +139,8 @@ class OpdsAcquisition {
 - **分頁循環防護**（`review-design.md` Minor #1 採納）：`OpdsClient` 實作內部需追蹤本次瀏覽路徑已造訪過的 Feed URL（例如一個 Set），若 `nextUrl` 指回已造訪過的 URL（部分不規範伺服器的已知行為），視為分頁結束，不繼續請求，避免無限遞迴。
 - **下載行為**：下載到暫存路徑（沿用既有匯入慣例，暫存於專屬子目錄＋UUID 命名，比照 `epic-29` spec.md「暫存檔沙盒與清理」的既定手法），確認匯入成功後才移動/交給 `BookImportService` 落地；使用者取消（`cancellationToken`）或下載失敗時立即清除暫存檔，不留孤兒檔案。**不做斷點續傳**（`design.md` 已定案），失敗後由呼叫端提供「重試」入口，重試即從頭重新呼叫 `downloadBook()`。
 - **測試連線**：`testConnection()` 內部呼叫 `fetchFeed(server, feedUrl: null)` 並捕捉例外，成功回傳 `true`、任何網路/認證/解析錯誤回傳 `false`（不需要細分錯誤類型，UI 統一顯示「連線失敗，請檢查網址/帳密/憑證設定」）。
-- **`OpdsFeedParser`**（`OpdsClient` 真實實作內部使用，非對外 seam 的一部分）：解析失敗容錯——缺失 `<title>` 時取 Feed/Entry 的 `id` 或檔名當標題，缺失作者標記「未知作者」，格式不規範的欄位跳過不拋例外，維持既有匯入流程「降級但不中斷」的一貫風格（比照 `book_import_service_impl.dart` 對外部詮釋資料缺失的既有處理慣例）。
+- **`OpdsFeedParser`**（`OpdsClient` 真實實作內部使用，非對外 seam 的一部分）：解析失敗容錯——缺失 `<title>` 時取 Feed/Entry 的 `id` 或檔名當標題，缺失作者標記「未知作者」，格式不規範的欄位跳過不拋例外，維持既有匯入流程「降級但不中斷」的一貫風格（比照 `book_import_service_impl.dart` 對外部詮釋資料缺失的既有處理慣例）。**〔`review-spec.md` Important #1 核實採納〕** 標準 OPDS Feed 的 `<link href="...">`（Acquisition／縮圖／分類導覽／`next`/`prev` 分頁連結）常為相對路徑，不是完整 URL；`OpdsFeedParser` 解析上述所有 `href` 時，一律以當前 Feed 的來源 URL 呼叫 `Uri.resolve()` 轉為絕對 URL 後才回傳給呼叫端，`OpdsFeed`/`OpdsEntry`/`OpdsAcquisition` 上暴露的 `href`/`thumbnailUrl`/`nextUrl`/`prevUrl` 等欄位皆保證為絕對 URL，呼叫端不需要也不應該自行處理相對路徑。
+- **批次下載為序列執行，非平行**（`design.md`／`/to-spec` 討論多選批次下載時已定案「比照 `epic-29` 模式，逐一序列下載」）：`RemoteCatalogScreen` 勾選多本書後一次下完才下一本，清單逐項顯示等待中/下載中/完成/失敗狀態，不做平行下載——與 `epic-29` 一致的簡化基準，也避免多重連線同時打向同一台家用 NAS 造成頻寬/連線數壓力。**〔`review-spec.md` Minor #1 核實，因既定為序列下載而變為不適用〕** 審查建議的「批次下載並行上限」在序列下載模式下不適用（同時只會有 1 個下載中的連線，天然就是上限 1），此處僅為避免遺漏而明確記錄序列下載的決策本身。
 
 ### 既有匯入管線擴充：`BookImportService`
 
@@ -150,12 +151,13 @@ Future<ImportResult> importFiles(
   String? folderName,
   BookSource source = BookSource.local,
   String? remoteServerId,
-  Map<String, String>? remoteBookIds, // uri -> remote_book_id
+  Map<String, String>? remoteBookIds,     // uri -> remote_book_id
+  Map<String, String>? remoteDownloadUrls, // uri -> 下載當下使用的絕對 URL
 });
 ```
 
-- `source`／`remoteServerId`／`remoteBookIds` 皆為可選參數且有預設值，**既有呼叫端（本機匯入）完全不需要修改**，零回歸風險；與 `epic-29` 的參數疊加方式見上方「順序無關性」。
-- OPDS 下載完成、使用者確認匯入後，把暫存路徑清單連同 `source: BookSource.calibreOpds`、`remoteServerId`（本次批次所屬站點，單一值，因為一次瀏覽/下載動作只會來自同一個站點）與對應的 `remoteBookIds` map 一併呼叫 `importFiles()`；內部 `_importSingleFile()` 現有的格式偵測/封面產生/指紋計算流程**不需要新增任何格式分支**（下載下來的檔案與本機檔案在這條管線裡完全等價），只有最外層組裝 `Book` 物件時需要多寫入 `remoteServerId`／`remoteBookId`／`isDownloaded: true` 三個欄位。
+- `source`／`remoteServerId`／`remoteBookIds`／`remoteDownloadUrls` 皆為可選參數且有預設值，**既有呼叫端（本機匯入）完全不需要修改**，零回歸風險；與 `epic-29` 的參數疊加方式見上方「順序無關性」。
+- OPDS 下載完成、使用者確認匯入後，把暫存路徑清單連同 `source: BookSource.calibreOpds`、`remoteServerId`（本次批次所屬站點，單一值，因為一次瀏覽/下載動作只會來自同一個站點）與對應的 `remoteBookIds`／`remoteDownloadUrls` map 一併呼叫 `importFiles()`；內部 `_importSingleFile()` 現有的格式偵測/封面產生/指紋計算流程**不需要新增任何格式分支**（下載下來的檔案與本機檔案在這條管線裡完全等價），只有最外層組裝 `Book` 物件時需要多寫入 `remoteServerId`／`remoteBookId`／`remoteDownloadUrl`／`isDownloaded: true` 四個欄位。
 
 ### 資料模型與 Schema
 
@@ -176,6 +178,7 @@ Future<ImportResult> importFiles(
   ```sql
   ALTER TABLE books ADD COLUMN remote_server_id TEXT REFERENCES remote_servers(id) ON DELETE SET NULL;
   ALTER TABLE books ADD COLUMN remote_book_id TEXT;
+  ALTER TABLE books ADD COLUMN remote_download_url TEXT;
   ALTER TABLE books ADD COLUMN is_downloaded INTEGER NOT NULL DEFAULT 1;
   CREATE INDEX IF NOT EXISTS idx_books_remote_lookup ON books(remote_server_id, remote_book_id);
   ```
@@ -184,7 +187,7 @@ Future<ImportResult> importFiles(
 - `LibraryRepository` 新增兩個查詢方法（介面＋ `SqliteLibraryRepository` 實作＋ `FakeLibraryRepository` 測試替身，比照既有三件套模式）：
   - `findByRemoteBookId(String serverId, String remoteBookId) → Book?`（選檔前置重複檢查）
   - `findByContentFingerprint(String fingerprint) → Book?`（下載後指紋比對；與 `epic-29` 共用，見上方「順序無關性」）
-- `Book` 模型新增三個欄位對應上方 schema：`remoteServerId`（`String?`）、`remoteBookId`（`String?`）、`isDownloaded`（`bool`，預設 `true`）。**`filePath` 型別與既有 `required String` 契約維持不變**（`review-design.md` Important #2 核實採納）——`isDownloaded == false` 時，`filePath` 保留「最後一次成功下載的本機路徑」字串（實體檔案已被刪除），純粹作為歷史紀錄；任何嘗試開啟該書的呼叫端（`LibraryScreen` 開書入口）都必須先檢查 `isDownloaded`，不可直接信任 `filePath` 指向可讀檔案。
+- `Book` 模型新增四個欄位對應上方 schema：`remoteServerId`（`String?`）、`remoteBookId`（`String?`）、`remoteDownloadUrl`（`String?`，**〔`review-spec.md` Important #2 核實採納，策略 A〕** 每次下載成功（首次下載或重新下載）時，寫入 `OpdsFeedParser` 已解析為絕對 URL 的該次 `OpdsAcquisition.href`，供「重新下載」直接重用，見下方「下載與快取生命週期」）、`isDownloaded`（`bool`，預設 `true`）。**`filePath` 型別與既有 `required String` 契約維持不變**（`review-design.md` Important #2 核實採納）——`isDownloaded == false` 時，`filePath` 保留「最後一次成功下載的本機路徑」字串（實體檔案已被刪除），純粹作為歷史紀錄；任何嘗試開啟該書的呼叫端（`LibraryScreen` 開書入口）都必須先檢查 `isDownloaded`，不可直接信任 `filePath` 指向可讀檔案。
 
 ### 重複匯入偵測（雙層檢查，比照 `epic-29` 機制）
 
@@ -197,7 +200,7 @@ Future<ImportResult> importFiles(
 
 - **移除本機快取**：圖書庫既有的書籍操作選單新增「移除本機快取」選項（**僅對 `source == BookSource.calibreOpds` 的書籍顯示**——本機/雲端硬碟來源的書沒有「重新下載」能力，不適用此選項）。動作內容：刪除 `filePath` 指向的實體檔案，`isDownloaded` 更新為 `false`；`filePath` 字串本身、`coverPath`、劃線／書籤／閱讀進度等其餘欄位完全不變。
 - **待下載狀態呈現**：`isDownloaded == false` 的書籍在書架網格/列表上疊加雲朵角標（沿用既有封面元件擴充，不新增獨立版面）。
-- **重新下載**：點擊「待下載」書籍時，先跳出確認對話框（沿用/仿照 `epic-29` Issue 6 的行動數據下載警示邏輯——偵測目前是否為行動數據連線，是則額外強調流量提示），確認後透過該書 `remoteServerId` 反查 `RemoteServerRepository` 取得站點資訊與密碼，重新呼叫 `OpdsClient.downloadBook()`（需要重新取得下載連結：若原 `OpdsEntry`/`OpdsAcquisition` 的 `href` 仍可直接重用則直接下載，若 OPDS 伺服器的下載連結有時效性則需要先 `fetchFeed()` 重新查出該 `remoteBookId` 對應的最新 Feed 條目——**由實作者依所連線伺服器實測行為決定**，兩種情況下的成功結果一致：下載完成後更新該書 `filePath`／`isDownloaded=true`，不建立新的 `Book` 記錄）。
+- **重新下載**：點擊「待下載」書籍時，先跳出確認對話框（沿用/仿照 `epic-29` Issue 6 的行動數據下載警示邏輯——偵測目前是否為行動數據連線，是則額外強調流量提示），確認後透過該書 `remoteServerId` 反查 `RemoteServerRepository` 取得站點資訊與密碼，直接以該書 `remoteDownloadUrl`（上次下載成功時已存的絕對 URL）呼叫 `OpdsClient.downloadBook()` 重新下載。**〔`review-spec.md` Important #2 核實採納，策略 A〕** 不透過重新 `fetchFeed()`／依 `remoteBookId` 反查目錄取得新連結——OPDS 協議本身不保證提供「依 ID 直接取得單一條目」的標準操作，重新瀏覽目錄找到同一本書並非所有伺服器都能可靠達成；直接重用已知能成功下載的 URL 是更簡單也更穩健的預設策略。若該 URL 因伺服器端下載連結具時效性而失效（例如回傳 403/404），比照一般下載失敗處理——顯示錯誤訊息，不做自動重新瀏覽目錄的復原嘗試（使用者可自行從遠端書庫目錄重新瀏覽該書並視為一次全新匯入，此為已知、可接受的 v1 限制，呼應 `design.md`「不涵蓋重新整理／同步最新版本」的既定範圍界定）。下載完成後更新該書 `filePath`／`remoteDownloadUrl`／`isDownloaded=true`，不建立新的 `Book` 記錄。
 - **站點刪除防護**：見上方「站點管理」小節 `deleteServer()` 的行為描述。
 
 ### UI 落地位置
@@ -215,7 +218,7 @@ Future<ImportResult> importFiles(
 好的測試只驗證外部可觀察行為（畫面上看得到的狀態、呼叫端能觀察到的回傳值/副作用），不測內部實作細節。
 
 - **`RemoteServerRepository`**：Dart 單元測試，不需裝置/網路，比照 `SyncAccountRepository` 既有測試模式（CRUD 狀態轉換、密碼讀取失敗安全退回 `null`、`deleteServer()` 對「有僅雲端紀錄書籍」情境的拒絕邏輯）。`SqliteLibraryRepository`／`FakeLibraryRepository` 兩層皆須覆蓋新增的 `remote_servers` 相關資料存取。
-- **`OpdsClient`**：新增 `FakeOpdsClient`（`app/test/support/`，比照既有 `FakeCloudStorageClient` 命名慣例），回傳預先寫死的 `OpdsFeed`／模擬下載成功或失敗／模擬 `testConnection()` 成功或失敗。所有畫面（站點管理 CRUD＋測試連線、目錄瀏覽含分類下鑽與分頁「載入更多」、格式過濾後的清單、縮圖佔位符、多選批次下載狀態、失敗重試、多格式選擇彈窗、重複匯入偵測彈窗、待下載狀態角標與重新下載確認流程）皆用這個 Fake 驅動 widget test，比照 `ReaderScreen` 用一系列 Fake 驅動測試的既有模式。真實 `OpdsHttpClient` 實作（實際 HTTP 呼叫、XML 解析、Basic Auth header、自簽憑證放行、分頁循環防護的實際觸發）**不做自動化測試**，理由比照 `epic-29` 對 `GoogleDriveStorageClient`／`OneDriveStorageClient` 的既有慣例，留待真機或人工用真實 Calibre/OPDS 伺服器驗證。
+- **`OpdsClient`**：新增 `FakeOpdsClient`（`app/test/support/`，比照既有 `FakeCloudStorageClient` 命名慣例），回傳預先寫死的 `OpdsFeed`／模擬下載成功或失敗／模擬 `testConnection()` 成功或失敗。所有畫面（站點管理 CRUD＋測試連線、目錄瀏覽含分類下鑽與分頁「載入更多」、格式過濾後的清單、縮圖佔位符、多選批次下載狀態、失敗重試、多格式選擇彈窗、重複匯入偵測彈窗、待下載狀態角標與重新下載確認流程）皆用這個 Fake 驅動 widget test，比照 `ReaderScreen` 用一系列 Fake 驅動測試的既有模式。真實 `OpdsHttpClient` 實作（實際 HTTP 呼叫、Basic Auth header、自簽憑證放行、分頁循環防護的實際觸發）**不做自動化測試**，理由比照 `epic-29` 對 `GoogleDriveStorageClient`／`OneDriveStorageClient` 的既有慣例，留待真機或人工用真實 Calibre/OPDS 伺服器驗證。**例外**：`OpdsFeedParser` 的 XML→物件解析邏輯（含 `Uri.resolve()` 相對路徑轉絕對 URL）是純 Dart、不涉及網路，需要**獨立寫 Dart 單元測試**，餵入固定的 OPDS XML 字串樣本（含相對路徑 `href` 的真實案例）斷言解析結果的 `href`/`thumbnailUrl`/`nextUrl` 皆為絕對 URL，不能歸類在「不做自動化測試」的範圍內。
 - **`BookImportService.importFiles()` 擴充**：延伸既有 `BookImportServiceImpl` 測試套件，新增涵蓋 `source == BookSource.calibreOpds`／`remoteServerId`／`remoteBookIds` 參數的案例，確認 `Book.remoteServerId`／`remoteBookId`／`isDownloaded` 正確落地資料庫，且既有本機匯入案例（未傳入新參數）行為不變（零回歸）。
 - **重複匯入偵測**：`findByRemoteBookId()`／`findByContentFingerprint()` 各自的單元測試（`FakeLibraryRepository`／`SqliteLibraryRepository` 兩層皆須覆蓋）；`RemoteCatalogScreen` 對「偵測到重複」情境的 UX（彈窗、選擇不建立新副本時清暫存檔）透過 `FakeOpdsClient` ＋ 預先塞入命中資料的 `FakeLibraryRepository` 驅動 widget test。
 - **移除快取／重新下載生命週期**：widget test 驗證「移除本機快取」動作後 `isDownloaded` 變 `false`、實體檔案被刪除、劃線/書籤/進度資料不受影響（透過既有 `FakeHighlightsRepository`／書籤 repository 等既有測試替身組合驗證）；「重新下載」流程的確認對話框與行動數據警示，透過 `FakeOpdsClient` 驅動。

@@ -1,0 +1,151 @@
+# Epic 30 — Calibre 遠端書架整合：工單清單 (Issues)
+
+依 `spec.md`（Architecting 產出，已通過 `reviews/review-spec.md` 審查修訂）以 `/to-issues` 拆解為 6 個垂直切片（tracer bullet），每個切片皆貫穿 schema/service/UI/測試整條路徑，可獨立驗收。2026-08-17 與使用者確認：原 `review-spec.md` 附帶建議的 8 工單切法是按解析器/資料/網路/UI 分層的水平切分，不符合垂直切片原則，改為本清單的結構；使用者確認顆粒度與相依關係後定案發布。相依順序：Issue 0 無依賴 → Issue 1 依賴 0 → Issue 2 依賴 0＋1 → Issue 3／4 皆依賴 0＋2（互相獨立、可平行）→ Issue 5 依賴 2。
+
+---
+
+## Issue 0：擴充既有匯入/查詢管線與新增站點表（Prefactor）
+
+**Status:** `ready-for-agent`
+
+**依賴：** 無，可立即開始。
+
+**背景：** 本身不含任何使用者可見的遠端書庫功能，是後續全部切片共用的資料層基礎設施（`spec.md`「資料模型與 Schema」「既有匯入管線擴充」已定案介面）。與尚未實作的 `epic-29-cloud-import` 有三個共用觸點（`importFiles()` 的 `source` 參數、`books` schema 版本號、`findByContentFingerprint()`），`spec.md`「與 `epic-29-cloud-import` 的順序無關性」已定案處理方式：**實作前先檢查這三處目前是否已存在**（可能因 `epic-29` 先落地而已經加過），已存在則直接沿用、只疊加本 Epic 需要的新參數/方法，不重複宣告。
+
+**What to build：**
+- 新表 `remote_servers`（id/name/base_url/type/username/allow_insecure/created_at/last_accessed_at）。
+- `books` 表新增四欄：`remote_server_id TEXT`（嘗試以 `REFERENCES remote_servers(id) ON DELETE SET NULL` 內聯宣告；若實測 SQLite／sqflite 版本不支援 `ALTER TABLE ADD COLUMN` 搭配 `REFERENCES`，改為不宣告 FK 約束，`RemoteServerRepository.deleteServer()`——Issue 1——改在交易內手動 `UPDATE books SET remote_server_id = NULL WHERE remote_server_id = ?` 達成同等行為，兩者對外行為完全等價）、`remote_book_id TEXT`、`remote_download_url TEXT`、`is_downloaded INTEGER NOT NULL DEFAULT 1`；新增複合索引 `idx_books_remote_lookup ON books(remote_server_id, remote_book_id)`。schema 版本號取實作當下 `books` 表最新版本號 +1，不寫死特定數字。
+- `pubspec.yaml`：`xml`／`http` 由 `dev_dependencies` 移至正式 `dependencies`。
+- `BookImportService.importFiles()` 簽章擴充：若 `source: BookSource source = BookSource.local` 尚不存在則新增；一律新增本 Epic 專屬的 `remoteServerId`（`String?`）、`remoteBookIds`（`Map<String, String>?`，uri→remote_book_id）、`remoteDownloadUrls`（`Map<String, String>?`，uri→下載當下的絕對 URL）三個可選參數。既有呼叫端不需要任何修改。
+- `LibraryRepository` 新增查詢方法：若 `findByContentFingerprint(String fingerprint) → Book?` 尚不存在則新增；一律新增 `findByRemoteBookId(String serverId, String remoteBookId) → Book?`。兩者皆在 `SqliteLibraryRepository` 與 `FakeLibraryRepository` 落地（比照既有介面/實作/Fake 三件套模式）。
+- `Book` 模型新增四個欄位：`remoteServerId`、`remoteBookId`、`remoteDownloadUrl`（皆 `String?`）、`isDownloaded`（`bool`，預設 `true`）。
+- `BookSource` enum 新增值 `calibreOpds`。
+
+**單元測試要求：**
+- Migration 測試：舊版資料庫升級後新欄位皆為 `NULL`（`is_downloaded` 為 `1`），既有資料不受影響；索引確實建立。
+- `importFiles()`：傳入新參數時對應 `Book` 記錄正確落地；未傳入時（既有本機匯入情境）行為與現行完全一致，既有測試套件維持全綠、零回歸。
+- `findByRemoteBookId()`／`findByContentFingerprint()`：命中/未命中兩種情境，`SqliteLibraryRepository` 與 `FakeLibraryRepository` 兩層皆須覆蓋。
+
+**驗收標準：** `flutter analyze` 乾淨；`flutter test` 全數通過、零回歸；新查詢方法與擴充參數皆有對應測試覆蓋；`remote_server_id` 外鍵約束的可行性已實測確認並記錄採用的方案（內聯 FK 或應用層等效方案）。
+
+**Blocked by：** 無。
+
+---
+
+## Issue 1：站點管理（新增/編輯/刪除/測試連線）與遠端書庫入口
+
+**Status:** `ready-for-agent`
+
+**依賴：** Issue 0（`remote_servers` 表）。
+
+**背景：** `spec.md`「站點管理：`RemoteServerRepository`」「OPDS 瀏覽與下載：`OpdsClient`」已定案介面。本 Issue 一併完成整個 `OpdsClient` 契約（含 `OpdsFeedParser`），因為「測試連線」內部就是呼叫 `fetchFeed()`，與後續 Issue 2 的目錄瀏覽是同一份解析邏輯，拆成兩份會是人工製造的重複工作。同時提供進入這整個功能的唯一入口，否則本 Issue 與 Issue 2 建好的畫面都無法從既有 App 導覽到達。
+
+**What to build：**
+- `RemoteServerRepository`：`listServers`/`addServer`/`updateServer`/`deleteServer`/`loadPassword`。密碼獨立存 `flutter_secure_storage`（key 格式 `remote_server_password_<id>`），讀取失敗比照 `SyncAccountRepository` 既有先例安全退回 `null`。`deleteServer()` 交易內先檢查該站點是否有 `is_downloaded = 0` 的書籍，有則拒絕刪除並回傳清單（供 UI 顯示示警），確認沒有後才真正刪除。
+- `OpdsClient` 抽象介面（`testConnection`/`fetchFeed`/`downloadBook`，含 `OpdsFeed`/`OpdsNavigationLink`/`OpdsEntry`/`OpdsAcquisition` 型別）與真實 `OpdsHttpClient` 實作：HTTP Basic Auth（`username` 為 `null` 則不帶 header）／`allowInsecure` 時單次連線放行憑證錯誤（不可全域關閉驗證）／`OpdsFeedParser` 對所有 `href`（Acquisition／縮圖／導覽／分頁）以 `Uri.resolve()` 轉絕對 URL／分頁循環防護（追蹤已造訪 URL）／格式過濾（MIME type 對應、退回副檔名判斷、皆無法判斷則 `format = null`）。
+- `RemoteServerListScreen`（站點清單，含刪除防護的示警對話框）、`RemoteServerFormScreen`（新增/編輯表單，含「測試連線」按鈕）。
+- `LibraryScreen` 新增一個獨立常駐入口，導向 `RemoteServerListScreen`（不塞進「匯入」選單，具體視覺位置由實作者依既有 IA 慣例決定）。
+
+**單元測試要求：**
+- `RemoteServerRepository`：CRUD 狀態轉換、密碼讀取失敗安全退回 `null`、`deleteServer()` 對「有僅雲端紀錄書籍」情境的拒絕邏輯，`SqliteLibraryRepository`／`FakeLibraryRepository` 兩層皆須覆蓋新增的資料存取。
+- `OpdsFeedParser`：純 Dart 單元測試，餵入固定 OPDS XML 字串樣本（含相對路徑 `href` 的真實案例），斷言解析結果的 `href`/`thumbnailUrl`/`nextUrl`/`prevUrl` 皆為絕對 URL。
+- `FakeOpdsClient`（`app/test/support/`）驅動 `RemoteServerListScreen`／`RemoteServerFormScreen` 的 widget test：新增/編輯/刪除、測試連線成功/失敗、刪除防護示警對話框。
+- 真實 `OpdsHttpClient` 的實際 HTTP 呼叫、憑證處理不做自動化測試，留待真機/人工用真實 Calibre/OPDS 伺服器驗證。
+
+**驗收標準：** 使用者可新增/編輯/刪除/測試連線一個真實 OPDS 站點（含匿名與帳密兩種情境、純 HTTP 與自簽憑證兩種情境）；刪除有僅雲端紀錄書籍的站點會被拒絕並顯示清單；`flutter analyze` 乾淨、`flutter test` 通過。
+
+**Blocked by：** Issue 0。
+
+---
+
+## Issue 2：OPDS 目錄瀏覽＋批次下載＋匯入
+
+**Status:** `ready-for-agent`
+
+**依賴：** Issue 0（匯入管線）、Issue 1（`OpdsClient`／站點入口）。
+
+**背景：** 第一個能讓使用者實際「從 Calibre／OPDS 站點下載一本書」的完整可展示切片，也是 Issue 3（重複偵測）與 Issue 4（快取生命週期）依附的主流程。
+
+**What to build：**
+- `RemoteCatalogScreen`：進入某個站點後的目錄瀏覽——依 `OpdsFeed.navigationLinks` 分類下鑽、依 `nextUrl` 提供「載入更多」、封面縮圖網格（帶 Basic Auth header，含載入佔位符）、多選勾選批次下載。
+- `FormatSelectionDialog`：同一書目提供多個 `OpdsAcquisition` 時彈窗選擇格式；不支援格式（`format == null`）置灰不可選；整本書無任何支援格式時列表中標示不可下載。
+- 批次下載為**序列執行**（非平行）：一本下完才下一本，清單逐項顯示等待中/下載中/完成/失敗狀態；下載失敗顯示錯誤並可針對單一檔案手動重試（不自動重試）；下載中可取消（立即清除暫存檔）；暫存於專屬子目錄、UUID 命名。
+- 全部下載完成後透過 Issue 0 擴充後的 `importFiles()` 寫入圖書庫：`source: BookSource.calibreOpds`、`remoteServerId`、`remoteBookIds`、`remoteDownloadUrls`（記錄該次下載使用的絕對 URL，供 Issue 4 的重新下載重用）一併帶入。
+
+**單元測試要求：**
+- `FakeOpdsClient` 驅動 `RemoteCatalogScreen` 的 widget test：分類下鑽、「載入更多」分頁、格式過濾後的清單、縮圖佔位符、多選狀態、序列下載＋逐項狀態、下載失敗顯示錯誤＋手動重試、下載取消清暫存檔、多格式選擇彈窗（含置灰）。
+- `importFiles()` 呼叫時 `source`/`remoteServerId`/`remoteBookIds`/`remoteDownloadUrls` 正確帶入的整合驗證（透過 `FakeLibraryRepository` 觀察寫入結果）。
+
+**驗收標準：** 使用者可從已新增的站點瀏覽目錄、勾選單/多本書下載，成功匯入圖書庫且封面/格式偵測與本機匯入的書無差異；`flutter analyze` 乾淨、`flutter test` 通過。
+
+**Blocked by：** Issue 0、Issue 1。
+
+---
+
+## Issue 3：雙層重複匯入偵測
+
+**Status:** `ready-for-agent`
+
+**依賴：** Issue 0（`findByRemoteBookId`/`findByContentFingerprint`）、Issue 2（下載/匯入流程）。
+
+**背景：** `spec.md`「重複匯入偵測」已定案雙層檢查設計，比照 `epic-29` 相同機制。與 Issue 4 彼此獨立，可平行進行。
+
+**What to build：**
+- 在 Issue 2 建好的目錄瀏覽/下載流程中掛入雙層重複偵測：
+  1. **選檔前置檢查**——使用者勾選書籍當下，若該 `(remoteServerId, remoteBookId)` 已存在於某本書（`findByRemoteBookId()` 命中），立即彈出「這本書之前匯入過了，仍要建立新的一份嗎？」，不需下載即可判斷。
+  2. **下載後指紋比對**——前置檢查未命中的檔案，下載到暫存位置後計算 `content_fingerprint`（沿用既有匯入管線的計算邏輯），與 `findByContentFingerprint()` 比對；命中則彈出同樣提示，使用者選擇不建立新副本時立即刪除暫存檔。
+- 同一本書若先前用不同格式下載過，因 `remoteBookId` 為書本層級，仍會被前置檢查命中、視為重複並提示，不為「格式不同」開特例。
+- 兩層皆為精確比對，不做書名/作者模糊比對。
+
+**單元測試要求：**
+`FakeOpdsClient` ＋ 預先塞入命中資料的 `FakeLibraryRepository`，驅動下列情境的 widget test：選檔前置命中、下載後指紋命中、使用者取消時暫存檔清除、使用者選擇仍要匯入時正常完成、不同格式仍判定重複。
+
+**驗收標準：** 兩層檢查皆能正確攔截真實重複情境（同一 OPDS 條目重複勾選、與本機已匯入書籍指紋相同的檔案）；使用者可選擇仍要匯入、不被強制阻擋；`flutter analyze` 乾淨、`flutter test` 通過。
+
+**Blocked by：** Issue 0、Issue 2。
+
+---
+
+## Issue 4：圖書庫整合與快取生命週期
+
+**Status:** `ready-for-agent`
+
+**依賴：** Issue 0（`isDownloaded`／`remoteDownloadUrl` 欄位）、Issue 2（下載/匯入流程與 `remoteDownloadUrl` 落地）。
+
+**背景：** `spec.md`「下載與快取生命週期」已定案設計，是本 Epic 相對 `epic-29-cloud-import`（一次性匯入）的核心差異化能力。與 Issue 3 彼此獨立，可平行進行。
+
+**What to build：**
+- 書架上 `isDownloaded == false` 的書籍疊加雲朵角標（沿用既有封面元件擴充）。
+- 圖書庫書籍操作選單新增「移除本機快取」選項（僅 `source == BookSource.calibreOpds` 的書籍顯示）：刪除 `filePath` 指向的實體檔案，`isDownloaded` 更新為 `false`；`filePath`／`coverPath`／劃線／書籤／閱讀進度等其餘欄位不變。
+- 點擊「待下載」書籍時的重新下載流程：先跳出確認對話框（若偵測到目前為行動數據連線，額外強調流量提示，沿用/仿照 `epic-29` Issue 6 的行動數據下載警示邏輯），確認後直接以該書 `remoteDownloadUrl` 呼叫 `OpdsClient.downloadBook()` 重新下載（不重新 `fetchFeed()` 反查目錄）；成功後更新 `filePath`／`isDownloaded=true`，不建立新的 `Book` 記錄；若下載失敗（例如 URL 已失效），顯示錯誤訊息，不做自動重新瀏覽目錄的復原嘗試。
+
+**單元測試要求：**
+- widget test：「移除本機快取」動作後 `isDownloaded` 變 `false`、實體檔案被刪除、劃線/書籤/閱讀進度資料不受影響（透過既有劃線/書籤 repository 測試替身組合驗證）；僅 Calibre 來源書籍顯示此選項（本機/其他來源書籍不顯示）。
+- `FakeOpdsClient` 驅動重新下載流程的 widget test：確認對話框顯示與取消、行動數據情境額外提示、下載成功更新欄位、下載失敗顯示錯誤。
+
+**驗收標準：** 移除快取後書架正確呈現雲朵角標且劃線/書籤/進度資料完整保留；點擊待下載書籍會先確認才觸發重新下載，成功後可正常開啟閱讀；`flutter analyze` 乾淨、`flutter test` 通過。
+
+**Blocked by：** Issue 0、Issue 2。
+
+---
+
+## Issue 5：E-Ink 優化與真機驗收
+
+**Status:** `ready-for-agent`
+
+**依賴：** Issue 2（目錄瀏覽畫面）。
+
+**背景：** `design.md`「E-Ink 與後續優化」已定案獨立成本 Epic 最後一個 Issue，不擋核心瀏覽/下載/入庫先在一般手機上驗證正確性。研究報告原提出三項優化（離散分頁導航、封面縮圖雙層快取、搜尋防抖動），其中「搜尋防抖動」在 v1 沒有適用對象——`spec.md`「Out of Scope」已排除 OPDS 全文/即時搜尋，沒有搜尋框可以防抖動，此項自然略過，非新決策。
+
+**What to build：**
+- `RemoteCatalogScreen` 的「載入更多」在偵測到 E-Ink 模式時，改為離散的「上一頁／下一頁」按鈕列整頁換頁，停用連續捲動載入的高幀率動畫，避免滾動殘影。
+- 封面縮圖雙層快取：記憶體快取（LRU）＋本機磁碟快取，比照 `PdfThumbnailCache` 的既有純 Dart LRU 快取設計精神（非直接重用，縮圖來源為遠端 URL 而非 PDF 頁面渲染，需要獨立實作）。
+- Android 真機（一般裝置，以及 E-Ink 裝置若有可用測試機）／模擬器端到端驗證整個 Epic 的完整流程（新增站點→瀏覽→下載→匯入→閱讀→移除快取→重新下載→刪除站點）。
+
+**單元測試要求：**
+- widget test：E-Ink 模式偵測下 `RemoteCatalogScreen` 改用按鈕列渲染、點擊翻頁行為正確。
+- 縮圖快取單元測試：記憶體/磁碟快取命中與未命中邏輯。
+
+**驗收標準：** E-Ink 模式下瀏覽目錄不觸發連續捲動殘影；縮圖快取有效減少重複請求；真機端到端驗證完整流程無阻塞性問題，驗證結果記錄於審查報告；`flutter analyze` 乾淨、`flutter test` 通過。
+
+**Blocked by：** Issue 2。
