@@ -2893,7 +2893,38 @@ void main() {
     // 到 onUpgrade 分支本身是否存在/正確。
     final v17Db = await databaseFactory.openDatabase(
       dbPath,
-      options: OpenDatabaseOptions(version: 17, onCreate: (db, version) async {}),
+      options: OpenDatabaseOptions(
+        version: 17,
+        onConfigure: (db) async {
+          await db.execute('PRAGMA foreign_keys = ON');
+        },
+        onCreate: (db, version) async {
+          await db.execute('CREATE TABLE groups (name TEXT PRIMARY KEY)');
+          await db.insert('groups', {'name': '未分類'});
+          await db.execute('''
+            CREATE TABLE books (
+              id TEXT PRIMARY KEY,
+              title TEXT NOT NULL,
+              author TEXT,
+              format TEXT NOT NULL,
+              filePath TEXT NOT NULL,
+              source TEXT NOT NULL,
+              coverPath TEXT,
+              progress REAL NOT NULL DEFAULT 0,
+              epubLocator TEXT,
+              pdfPageIndex INTEGER,
+              totalCharacterCount INTEGER,
+              is_fixed_layout INTEGER,
+              groupName TEXT NOT NULL DEFAULT '未分類',
+              createTime INTEGER NOT NULL,
+              lastReadTime INTEGER NOT NULL,
+              content_fingerprint TEXT,
+              position_updated_at INTEGER,
+              position_synced_server_updated_at TEXT
+            )
+          ''');
+        },
+      ),
     );
     await v17Db.close();
 
@@ -3015,6 +3046,133 @@ void main() {
     final rows = await upgraded.database.query('layout_preset');
     expect(rows, hasLength(1));
     expect(rows.single['name'], '測試預設集');
+  });
+
+  test('全新安裝的 remote_servers 表可用（version 22 起 onCreate 已含括）', () async {
+    await repository.database.insert('remote_servers', {
+      'id': 'srv1',
+      'name': '家用 NAS',
+      'base_url': 'http://192.168.1.100:8080/opds',
+      'type': 'opds',
+      'username': null,
+      'allow_insecure': 0,
+      'created_at': 1000,
+      'last_accessed_at': null,
+    });
+    final rows = await repository.database.query('remote_servers');
+    expect(rows, hasLength(1));
+    expect(rows.single['name'], '家用 NAS');
+  });
+
+  test('既有 version 21 裝置升級到 version 22，新增 remote_servers 表與 books 新欄位',
+      () async {
+    final tempDir = await Directory.systemTemp
+        .createTemp('elinkbook_migration_v21_to_v22_remote_library_test');
+    addTearDown(() => tempDir.delete(recursive: true));
+    final dbPath = p.join(tempDir.path, 'test.db');
+
+    final oldDb = await databaseFactory.openDatabase(
+      dbPath,
+      options: OpenDatabaseOptions(
+        version: 21,
+        onConfigure: (db) async {
+          await db.execute('PRAGMA foreign_keys = ON');
+        },
+        onCreate: (db, version) async {
+          await db.execute('CREATE TABLE groups (name TEXT PRIMARY KEY)');
+          await db.insert('groups', {'name': '未分類'});
+          await db.execute('''
+            CREATE TABLE books (
+              id TEXT PRIMARY KEY,
+              title TEXT NOT NULL,
+              author TEXT,
+              format TEXT NOT NULL,
+              filePath TEXT NOT NULL,
+              source TEXT NOT NULL,
+              coverPath TEXT,
+              progress REAL NOT NULL DEFAULT 0,
+              epubLocator TEXT,
+              pdfPageIndex INTEGER,
+              totalCharacterCount INTEGER,
+              is_fixed_layout INTEGER,
+              groupName TEXT NOT NULL DEFAULT '未分類',
+              createTime INTEGER NOT NULL,
+              lastReadTime INTEGER NOT NULL,
+              content_fingerprint TEXT,
+              position_updated_at INTEGER,
+              position_synced_server_updated_at TEXT
+            )
+          ''');
+          await db.insert('books', {
+            'id': 'book1',
+            'title': '舊書',
+            'format': 'epub',
+            'filePath': '/books/book1.epub',
+            'source': 'local',
+            'progress': 0,
+            'groupName': '未分類',
+            'createTime': 1000,
+            'lastReadTime': 1000,
+          });
+        },
+      ),
+    );
+    await oldDb.close();
+
+    // 重新以目前版本開啟同一個檔案，觸發 onUpgrade（oldVersion=21 →
+    // newVersion=22）。
+    final upgraded = await SqliteLibraryRepository.open(dbPath);
+    addTearDown(() => upgraded.close());
+
+    final rows = await upgraded.database.query('books');
+    expect(rows, hasLength(1));
+    expect(rows.single['remote_server_id'], isNull);
+    expect(rows.single['remote_book_id'], isNull);
+    expect(rows.single['remote_download_url'], isNull);
+    expect(rows.single['is_downloaded'], 1);
+
+    await upgraded.database.insert('remote_servers', {
+      'id': 'srv1',
+      'name': '家用 NAS',
+      'base_url': 'http://192.168.1.100:8080/opds',
+      'type': 'opds',
+      'allow_insecure': 0,
+      'created_at': 1000,
+    });
+    final serverRows = await upgraded.database.query('remote_servers');
+    expect(serverRows, hasLength(1));
+  });
+
+  test('刪除 remote_servers 該筆後，關聯 books 的 remote_server_id 自動變為 NULL',
+      () async {
+    final repo = await SqliteLibraryRepository.open(inMemoryDatabasePath);
+    addTearDown(() => repo.close());
+
+    await repo.database.insert('remote_servers', {
+      'id': 'srv1',
+      'name': '家用 NAS',
+      'base_url': 'http://192.168.1.100:8080/opds',
+      'type': 'opds',
+      'allow_insecure': 0,
+      'created_at': 1000,
+    });
+    await repo.database.insert('books', {
+      'id': 'book1',
+      'title': '雲端書',
+      'format': 'epub',
+      'filePath': '/books/book1.epub',
+      'source': 'local',
+      'groupName': '未分類',
+      'createTime': 1000,
+      'lastReadTime': 1000,
+      'remote_server_id': 'srv1',
+      'remote_book_id': 'remote-book-1',
+    });
+
+    await repo.database.delete('remote_servers', where: 'id = ?', whereArgs: ['srv1']);
+
+    final rows = await repo.database.query('books', where: 'id = ?', whereArgs: ['book1']);
+    expect(rows.single['remote_server_id'], isNull);
   });
 
   group('listReflowableEpubBooks', () {
