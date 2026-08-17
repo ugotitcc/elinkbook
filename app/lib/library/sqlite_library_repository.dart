@@ -39,7 +39,7 @@ class SqliteLibraryRepository implements LibraryRepository {
   }) async {
     final db = await openDatabase(
       path,
-      version: 21,
+      version: 22,
       singleInstance: singleInstance,
       onConfigure: (db) async {
         // book_reader_prefs 的 ON DELETE CASCADE 需要外鍵約束真正生效，
@@ -73,6 +73,7 @@ class SqliteLibraryRepository implements LibraryRepository {
           )
         ''');
         await db.insert('groups', {'name': BookGroup.uncategorized});
+        await _createRemoteServersTable(db);
         await db.execute('''
           CREATE TABLE books (
             id TEXT PRIMARY KEY,
@@ -92,9 +93,15 @@ class SqliteLibraryRepository implements LibraryRepository {
             lastReadTime INTEGER NOT NULL,
             content_fingerprint TEXT,
             position_updated_at INTEGER,
-            position_synced_server_updated_at TEXT
+            position_synced_server_updated_at TEXT,
+            remote_server_id TEXT REFERENCES remote_servers(id) ON DELETE SET NULL,
+            remote_book_id TEXT,
+            remote_download_url TEXT,
+            is_downloaded INTEGER NOT NULL DEFAULT 1
           )
         ''');
+        await db.execute(
+            'CREATE INDEX idx_books_remote_lookup ON books(remote_server_id, remote_book_id)');
         await _createBookReaderPrefsTable(db);
         await _createBookmarksTable(db);
         await _createHighlightsTable(db);
@@ -307,6 +314,36 @@ class SqliteLibraryRepository implements LibraryRepository {
           // 無條件建立即可，不需要放在 book_reader_prefs 表是否已存在的
           // if/else 分支內。
           await _createLayoutPresetTable(db);
+        }
+        if (oldVersion < 22) {
+          // epic-30-calibre-remote-library Issue 0：Calibre／OPDS 遠端書架
+          // 站點表，以及 books 表新增的 4 個欄位（見 spec.md「資料模型與
+          // Schema」）。remote_servers 是全新獨立表，比照 bookmarks
+          // （oldVersion < 8）／custom_fonts（oldVersion < 16）既有原則，
+          // 無條件建立即可；books 表 4 個新欄位皆為 nullable 或有預設值，
+          // 既有資料升級後自動補上預設值，不影響既有資料。
+          //
+          // remote_server_id 內聯宣告 REFERENCES remote_servers(id) ON
+          // DELETE SET NULL：實測確認 sqflite 底層 SQLite 版本支援
+          // ALTER TABLE ADD COLUMN 搭配 REFERENCES 子句（本欄位為
+          // nullable、無 NOT NULL 約束，符合 SQLite 官方文件對 ADD
+          // COLUMN 搭配 REFERENCES 的唯一限制）。若未來 sqflite/SQLite
+          // 版本升級後這個假設不再成立，改為移除此處的 REFERENCES 子句、
+          // 只留 `remote_server_id TEXT`，並在 Issue 1 的
+          // `RemoteServerRepository.deleteServer()` 內改為應用層手動
+          // `UPDATE books SET remote_server_id = NULL WHERE remote_server_id = ?`
+          // 達成同等行為（見 spec.md「技術風險與備援方案」）。
+          await _createRemoteServersTable(db);
+          await db.execute(
+              'ALTER TABLE books ADD COLUMN remote_server_id TEXT REFERENCES remote_servers(id) ON DELETE SET NULL');
+          await db.execute(
+              'ALTER TABLE books ADD COLUMN remote_book_id TEXT');
+          await db.execute(
+              'ALTER TABLE books ADD COLUMN remote_download_url TEXT');
+          await db.execute(
+              'ALTER TABLE books ADD COLUMN is_downloaded INTEGER NOT NULL DEFAULT 1');
+          await db.execute(
+              'CREATE INDEX idx_books_remote_lookup ON books(remote_server_id, remote_book_id)');
         }
       },
       onOpen: (db) async {
@@ -748,6 +785,24 @@ class SqliteLibraryRepository implements LibraryRepository {
     ''');
   }
 
+  static Future<void> _createRemoteServersTable(Database db) async {
+    // Calibre／OPDS 遠端書架站點（epic-30-calibre-remote-library
+    // Issue 0），見 spec.md「站點管理：RemoteServerRepository」。密碼
+    // 獨立存 flutter_secure_storage（Issue 1），此表只存非敏感設定。
+    await db.execute('''
+      CREATE TABLE remote_servers (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        base_url TEXT NOT NULL,
+        type TEXT NOT NULL,
+        username TEXT,
+        allow_insecure INTEGER NOT NULL DEFAULT 0,
+        created_at INTEGER NOT NULL,
+        last_accessed_at INTEGER
+      )
+    ''');
+  }
+
   /// 將 bookmarks / highlights / notes 三張表的主鍵從 INTEGER AUTOINCREMENT
   /// 遷移為 UUID TEXT PRIMARY KEY（見 spec.md「本機 Schema 變更」／
   /// 「Migration」）。
@@ -863,6 +918,30 @@ class SqliteLibraryRepository implements LibraryRepository {
       orderBy: 'title ASC',
     );
     return rows.map(Book.fromMap).toList();
+  }
+
+  @override
+  Future<Book?> findByRemoteBookId(String serverId, String remoteBookId) async {
+    final rows = await _db.query(
+      'books',
+      where: 'remote_server_id = ? AND remote_book_id = ?',
+      whereArgs: [serverId, remoteBookId],
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    return Book.fromMap(rows.first);
+  }
+
+  @override
+  Future<Book?> findByContentFingerprint(String fingerprint) async {
+    final rows = await _db.query(
+      'books',
+      where: 'content_fingerprint = ?',
+      whereArgs: [fingerprint],
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    return Book.fromMap(rows.first);
   }
 
   @override

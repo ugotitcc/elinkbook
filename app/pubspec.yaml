@@ -85,6 +85,14 @@ dependencies:
   # 用此套件把 `md.renderToHtml()` 的原始輸出容錯解析後重新序列化為合法
   # XML，確保章節 XHTML 一律可被 `epub.js` 的嚴格 XML 解析模式載入。
   html: ^0.15.6
+  # OPDS Atom XML 解析（epic-30-calibre-remote-library Issue 1 起使用，
+  # 本 Issue 先提升依賴層級）：原僅供測試驗證合成 EPUB 結構的 XML 格式，
+  # 現升級為正式匯入管線的執行期依賴。
+  xml: ^6.6.1
+  # 遠端書庫 HTTP 通訊（epic-30-calibre-remote-library Issue 1 起使用，
+  # 本 Issue 先提升依賴層級）：原僅供測試以 MockClient 取代真實網路請求，
+  # 現升級為正式匯入管線的執行期依賴。
+  http: ^1.6.0
 
 dev_dependencies:
   flutter_test:
@@ -108,12 +116,6 @@ dev_dependencies:
   # 需要這個 platform interface 套件才能取得 FlutterSecureStoragePlatform
   # 型別以設定 .instance。
   flutter_secure_storage_platform_interface: ^2.0.1
-  # 測試 SyncClient 時以 MockClient 取代真實網路請求（sync_client_test.dart）。
-  http: ^1.6.0
-  # 驗證 TXT→EPUB 合成產生的 container.xml／OPF／XHTML 是否為良好格式的
-  # XML（epic-11-multi-format-reader Issue 4）；production 程式碼本身以
-  # 字串模板組裝 XML，不依賴此套件，僅測試端使用。
-  xml: ^6.6.1
 
 # flutter_inappwebview_android 1.1.3 有 toMap() 無限遞迴 bug（line 198 呼叫
 # ...toMap() 而非手動組裝 map），造成 InternalStoragePathHandler 使用時

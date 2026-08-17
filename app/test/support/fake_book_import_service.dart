@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:elinkbook/library/book_import_service.dart';
+import 'package:elinkbook/library/models/library_enums.dart';
 
 /// 供 widget test 使用的 [BookImportService] 假實作。預設立即回傳空清單；
 /// 若設定 [pendingCompleter]，`importFiles`/`importFolder` 改為等待該
@@ -14,6 +15,10 @@ class FakeBookImportService implements BookImportService {
     List<String> uris, {
     List<String?>? displayNames,
     String? folderName,
+    BookSource source = BookSource.local,
+    String? remoteServerId,
+    Map<String, String>? remoteBookIds,
+    Map<String, String>? remoteDownloadUrls,
   }) {
     final completer = pendingCompleter;
     if (completer != null) return completer.future;

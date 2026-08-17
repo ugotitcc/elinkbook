@@ -1039,6 +1039,8 @@ IconData _sourceIcon(BookSource source) {
       return Icons.cloud;
     case BookSource.oneDrive:
       return Icons.cloud_outlined;
+    case BookSource.calibreOpds:
+      return Icons.dns;
   }
 }
 

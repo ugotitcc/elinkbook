@@ -75,6 +75,10 @@ class BookImportServiceImpl implements BookImportService {
     List<String> uris, {
     List<String?>? displayNames,
     String? folderName,
+    BookSource source = BookSource.local,
+    String? remoteServerId,
+    Map<String, String>? remoteBookIds,
+    Map<String, String>? remoteDownloadUrls,
   }) async {
     if (folderName != null) {
       await _repository.upsertGroup(folderName);
@@ -96,6 +100,10 @@ class BookImportServiceImpl implements BookImportService {
         uri,
         displayName: displayName,
         folderName: folderName,
+        source: source,
+        remoteServerId: remoteServerId,
+        remoteBookId: remoteBookIds?[uri],
+        remoteDownloadUrl: remoteDownloadUrls?[uri],
       );
       if (book != null) imported.add(book);
     }
@@ -186,6 +194,10 @@ class BookImportServiceImpl implements BookImportService {
     String? displayName,
     String? folderName,
     bool takePermission = true,
+    BookSource source = BookSource.local,
+    String? remoteServerId,
+    String? remoteBookId,
+    String? remoteDownloadUrl,
   }) async {
     // 優先用呼叫端提供的真實檔名（例如 file_picker 的 PlatformFile.name）
     // 判斷格式，URI 本身當退路。部分文件提供者（例如媒體庫文件提供者
@@ -385,10 +397,14 @@ class BookImportServiceImpl implements BookImportService {
       author: author,
       format: format,
       filePath: bookFilePath,
-      source: BookSource.local,
+      source: source,
       coverPath: coverPath,
       isFixedLayout: isFixedLayout,
       contentFingerprint: contentFingerprint,
+      remoteServerId: remoteServerId,
+      remoteBookId: remoteBookId,
+      remoteDownloadUrl: remoteDownloadUrl,
+      isDownloaded: true,
       groupName: folderName ?? BookGroup.uncategorized,
       createTime: now,
       // 【診斷修正，epic-18-reader-device-qa Issue 29】剛匯入、從未打開過
