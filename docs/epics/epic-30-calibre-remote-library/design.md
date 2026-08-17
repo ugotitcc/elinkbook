@@ -10,7 +10,7 @@ Discovery 前已核實下列事實，直接影響多個分岔的可行選項：
 
 - `BookSource`（`app/lib/library/models/library_enums.dart:8`）目前為 `{local, googleDrive, oneDrive}`，`epic-29-cloud-import` 已定案延伸此 enum 供 Google Drive／OneDrive 使用（尚未實作）。
 - `epic-29-cloud-import` 已完整走完 Discovery→Architecting→Scrum Master（`issues.md` 7 個工單），其帳號模型為「單一帳號＋OAuth＋`cloud_file_id` 單欄」——本次 Discovery 一開始即確認此模式不適合 Calibre（多站點自架伺服器）情境，兩者刻意分屬不同 Epic，不強行合併。
-- `app/pubspec.yaml` 已有 `xml: ^6.6.1`（OPDS Atom XML 解析可直接用）、`http: ^1.6.0`、`flutter_secure_storage: ^10.3.1`（帳密加密儲存可直接用），本 Epic 不需要為這幾項新增依賴。
+- `app/pubspec.yaml` 已有 `flutter_secure_storage: ^10.3.1`（正式 `dependencies`，帳密加密儲存可直接用）。**〔`review-design.md` Important #1 核實修正〕** 原文另稱 `xml: ^6.6.1`／`http: ^1.6.0`「本 Epic 不需要新增依賴」是錯的——經核對 `pubspec.yaml:90-116`，這兩項目前只宣告在 `dev_dependencies`（分別供測試驗證 XML 格式與 `MockClient` 模擬網路請求使用），OPDS Atom XML 解析／HTTP 通訊要進到正式 `lib/` 程式碼，需要在 Architecting 階段把兩者提升為正式 `dependencies`，並非零新增依賴成本。
 - `CONTEXT.md`「雲端匯入來源帳號」詞條明確將範圍限定於「Google Drive／OneDrive 等**雲端硬碟**」——Calibre／OPDS 是自架遠端書庫伺服器，不屬於這個詞條範圍，需要獨立的新詞彙（見下方「`CONTEXT.md` 異動」）。
 
 ## `/grilling` 決策紀錄
@@ -46,9 +46,9 @@ Discovery 前已核實下列事實，直接影響多個分岔的可行選項：
 - 下載完成後透過**對稱擴充的 `BookImportService.importFiles()`** 走既有入庫管線（新增可選參數，例如 `remoteServerId`／`remoteBookIds` map，具體簽章留待 Architecting），維持專案「不新增平行匯入路徑」的既定慣例（`epic-29`／`review-design.md` Critical #1 已確立的原則），既有呼叫端零回歸。
 - **不做斷點續傳**，僅失敗後手動重試（從頭下載）——比照 `epic-29` 的簡化決定，維持專案複雜度基準一致。
 - **支援「移除本機快取、保留雲端紀錄」**——這是本 Epic 相對 `epic-29`（一次性匯入、來源標記純歷史）的核心差異化能力，呼應「遠端書架」的產品定位（可重複造訪瀏覽，不是一次性匯入）。移除快取後：
-  - Book 資料列**留在圖書庫**，`filePath` 清空/失效，書架上以雲朵角標呈現「待下載」狀態；劃線/書籤/閱讀進度**原樣保留**在本機 DB（重新下載後透過既有 `book_id`／`content_fingerprint` 機制接續使用，不遺失）。
+  - Book 資料列**留在圖書庫**，以雲朵角標呈現「待下載」狀態，開啟時需先重新下載；劃線/書籤/閱讀進度**原樣保留**在本機 DB（重新下載後透過既有 `book_id`／`content_fingerprint` 機制接續使用，不遺失）。**〔`review-design.md` Important #2 核實〕** `Book.filePath`／`books.filePath` 目前是 `required String`／`NOT NULL`（`book.dart:14,92`），「待下載」狀態不能靠把 `filePath` 清空或填入無效路徑來實作，否則會破壞既有 non-null 契約，以及書架列表格式圖示判定、封面載入等依賴 `filePath` 的既有邏輯。具體技術手段（例如新增 `isDownloaded`／`downloadStatus` 旗標並讓 `filePath` 保留最後一次下載路徑、或改為可空型別）留待 Architecting／`spec.md` 定案，這裡更正的是產品層級的意圖敘述，不預先鎖定實作方式。
   - 點開「待下載」狀態的書時，**跳出確認對話框**才觸發重新下載（沿用/仿照 `epic-29` Issue 6 的行動數據下載警示邏輯），避免誤觸浪費流量。
-- **站點刪除的邊界情況**：使用者刪除某個 `remote_servers` Profile 時，若圖書庫中存在該站點「僅雲端紀錄、無本機檔案」的書籍，**先示警／協助清理**再刪除，不允許直接刪除站點造成書籍列永久失效——直接刪除會讓使用者卡在「想重新下載卻永遠打不開」的困惑狀態，示警更符合專案「零意外」的既有產品原則。
+- **站點刪除的邊界情況**：使用者刪除某個 `remote_servers` Profile 時，若圖書庫中存在該站點「僅雲端紀錄、無本機檔案」的書籍，**先示警／協助清理**再刪除，不允許直接刪除站點造成書籍列永久失效——直接刪除會讓使用者卡在「想重新下載卻永遠打不開」的困惑狀態，示警更符合專案「零意外」的既有產品原則。**〔`review-design.md` Important #4 核實，補上原文遺漏的另一半情境〕** 對於該站點「已下載完成、本機有檔案」的書籍，刪除站點**不影響**其繼續閱讀——書籍保留在圖書庫，`remote_server_id` 清為 `NULL`，退化為一般本機書籍（不再關聯已刪除站點，僅喪失「重新下載」與「站點名稱反查顯示」兩項能力，劃線/書籤/閱讀進度不受影響）。這與「僅雲端紀錄、無本機檔案」書籍的「先示警／協助清理」是不同情境——差別在於前者刪除站點後書籍仍可正常開啟閱讀（不需要雲端就能用），後者刪除站點後會直接喪失開啟能力（需要雲端才能取得檔案），因此只有後者需要示警防護。
 
 ### 瀏覽與匯入 UI
 
@@ -67,6 +67,15 @@ Discovery 前已核實下列事實，直接影響多個分岔的可行選項：
 - `remote_servers` 資料表的完整 schema（欄位型別、索引、與 `books.remote_server_id` 的外鍵/查詢方式）留待 `spec.md` 定案。
 - OPDS Feed 解析的容錯策略（缺失 Title/Author/縮圖時的預設值、格式不規範時的防禦性解析）為技術細節，留待 `spec.md`。
 - DRM 保護的 OPDS 條目（部分公開書庫可能提供需要 Adobe ACS4 等 DRM 的借閱連結）——PRD 既有「不支援解除 DRM」的產品邊界已涵蓋此情境，實作時比照「不支援格式」的處理方式過濾/置灰即可，非本次需要重新 grill 的新決策。
+
+## `review-design.md` 審查後續（2026-08-17，待 Architecting／`spec.md` 落實，非本 Discovery 待決）
+
+Important #1（`xml`/`http` 依賴分類）已如上更正「依賴事實」小節；Important #2（`filePath` 契約衝突）與 Important #4（站點刪除對已下載書籍的處置）已如上補上「下載與快取生命週期」小節的決策文字。以下項目經核實，性質上屬於實作/部署細節，依 SDD 分工留給 Architecting 階段的 `spec.md` 具體落實，此處僅列出避免遺漏：
+
+- **自簽憑證信任（Important #3，核實後部分修正）**：審查提到「Android 9+ 預設禁止 Cleartext HTTP，需配置 `network_security_config.xml` 開放區網」——經核對 `AndroidManifest.xml:7`，本專案 `<application>` 已全域設定 `android:usesCleartextTraffic="true"`（既有設定，非本 Epic 新增），純 HTTP 連線目前已可用，**不需要**再額外針對區網網段設定 `network_security_config.xml`。但審查同時提出的**自簽憑證信任**問題仍然成立、需要處理：TLS 憑證驗證（例如 `badCertificateCallback` 之類機制）必須**僅**對使用者在該站點明確勾選「允許不安全連線」時放行，不可全域關閉憑證驗證以免波及其他正常連線的安全性，具體實作留待 `spec.md`。
+- OPDS Feed 分頁循環防護（Minor #1）：`OpdsFeedParser` 需追蹤已造訪 URL，避免部分伺服器輸出指回自身/上一頁的 `next` 連結造成無限遞迴請求。
+- 遠端封面縮圖 Basic Auth Header 傳遞（Minor #2）：站點啟用 Basic Auth 時，OPDS Entry 封面縮圖 URL 通常也需要帶 `Authorization` header 才能載入，UI 縮圖載入器需支援自訂 headers。
+- `BookImportService` 擴充避免二次檔案 I/O（Minor #3）：從 OPDS 下載的檔案已在 App 私有下載目錄，擴充註冊邏輯時應避免對已就緒的本機檔案做不必要的重複複製。
 
 ## 範圍界定
 
