@@ -847,6 +847,57 @@ void main() {
     expect(book.acquisitions.single.format, isNull);
   });
 
+  test('〔審查 Finding 2〕MIME type 無法辨識時退回看 href 副檔名（含查詢字串，不誤判）', () {
+    const xml = '''<?xml version="1.0"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>格式退回測試</title>
+  <entry>
+    <id>urn:calibre:book-4</id>
+    <title>MIME 遺失但副檔名可辨識</title>
+    <link rel="http://opds-spec.org/acquisition" type="application/octet-stream"
+          href="download/4.epub?token=abc123"/>
+  </entry>
+</feed>''';
+    final feed = parser.parse(xml, feedUri);
+    final book = feed.entries.single;
+    expect(book.acquisitions.single.format, BookFileFormat.epub);
+    expect(book.acquisitions.single.href,
+        'http://192.168.1.100:8080/opds/download/4.epub?token=abc123');
+  });
+
+  test('〔審查 Finding 2〕MIME type 與副檔名皆無法辨識時 format 仍為 null', () {
+    const xml = '''<?xml version="1.0"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>格式退回測試</title>
+  <entry>
+    <id>urn:calibre:book-5</id>
+    <title>兩者皆無法辨識</title>
+    <link rel="http://opds-spec.org/acquisition" type="application/octet-stream"
+          href="download/5.mobi"/>
+  </entry>
+</feed>''';
+    final feed = parser.parse(xml, feedUri);
+    expect(feed.entries.single.acquisitions.single.format, isNull);
+  });
+
+  test('〔審查 Finding 4〕href 前後帶空白字元時 trim() 後仍正確解析為絕對 URL', () {
+    const xml = '''<?xml version="1.0"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>空白字元測試</title>
+  <entry>
+    <id>urn:calibre:book-6</id>
+    <title>href 帶空白</title>
+    <link rel="http://opds-spec.org/image/thumbnail" href=" /opds/cover/6.jpg "/>
+    <link rel="http://opds-spec.org/acquisition" type="application/epub+zip"
+          href=" download/6.epub "/>
+  </entry>
+</feed>''';
+    final feed = parser.parse(xml, feedUri);
+    final book = feed.entries.single;
+    expect(book.thumbnailUrl, 'http://192.168.1.100:8080/opds/cover/6.jpg');
+    expect(book.acquisitions.single.href, 'http://192.168.1.100:8080/opds/download/6.epub');
+  });
+
   test('缺少 <title> 的書目條目容錯，退回顯示「未知書名」，不拋出例外', () {
     final feed = parser.parse(_sampleFeedXml, feedUri);
     final book = feed.entries.firstWhere((e) => e.remoteBookId == 'urn:calibre:book-3');
@@ -1111,9 +1162,10 @@ class OpdsFeedParser {
         .map((l) {
           final href = l.getAttribute('href');
           if (href == null) return null;
+          final resolvedHref = _resolve(feedUri, href);
           return OpdsAcquisition(
-            href: _resolve(feedUri, href),
-            format: _formatFromMimeType(l.getAttribute('type')),
+            href: resolvedHref,
+            format: _detectFormat(l.getAttribute('type'), resolvedHref),
             sizeBytes: int.tryParse(l.getAttribute('length') ?? ''),
           );
         })
@@ -1146,11 +1198,32 @@ class OpdsFeedParser {
     return null;
   }
 
-  String _resolve(Uri base, String href) => base.resolve(href).toString();
+  /// **〔`review-plan-issue-1.md` Finding 4 採納〕** 部分不規範伺服器的
+  /// XML `href` 屬性值可能帶有前後空白字元，`trim()` 後再交給
+  /// `Uri.resolve()`，避免產生非預期的 URL 編碼或解析例外。
+  String _resolve(Uri base, String href) => base.resolve(href.trim()).toString();
 
-  /// 依 Atom `<link>` 的 `type` 屬性（MIME type）比對 elinkBook 既有 6
-  /// 種支援格式；比對不到已知 MIME type 時回傳 `null`（spec.md「格式
-  /// 過濾」，MOBI 等不支援格式皆落在這個退回分支）。
+  /// **〔`review-plan-issue-1.md` Finding 2 採納〕** 依 `spec.md:138`
+  /// 「格式過濾」規範：先比對 MIME type，比對不到已知 MIME type 時退回
+  /// 看 `href` 副檔名；皆無法判斷才回傳 `null`（MOBI 等真正不支援的
+  /// 格式落在這裡）。[href] 傳入時已經過 [_resolve] 正規化為絕對 URL，
+  /// 用 `Uri.tryParse(href)?.path` 只取路徑部分再判斷副檔名——不能直接
+  /// 對整個 URL 字串做 `endsWith()`，OPDS 下載連結常帶簽章/權杖查詢
+  /// 字串（例如 `download/1.epub?token=abc`），直接比對整串會誤判。
+  BookFileFormat? _detectFormat(String? mimeType, String href) {
+    final fromMime = _formatFromMimeType(mimeType);
+    if (fromMime != null) return fromMime;
+    final path = Uri.tryParse(href)?.path ?? href;
+    final lowerPath = path.toLowerCase();
+    if (lowerPath.endsWith('.epub')) return BookFileFormat.epub;
+    if (lowerPath.endsWith('.pdf')) return BookFileFormat.pdf;
+    if (lowerPath.endsWith('.txt')) return BookFileFormat.txt;
+    if (lowerPath.endsWith('.azw3')) return BookFileFormat.azw3;
+    if (lowerPath.endsWith('.cbz')) return BookFileFormat.cbz;
+    if (lowerPath.endsWith('.md')) return BookFileFormat.md;
+    return null;
+  }
+
   BookFileFormat? _formatFromMimeType(String? mimeType) {
     switch (mimeType) {
       case 'application/epub+zip':
@@ -1177,7 +1250,7 @@ class OpdsFeedParser {
 - [ ] **Step 5: 執行測試確認全數通過**
 
 Run: `flutter test test/remote/opds_feed_parser_test.dart`
-Expected: PASS，9 項測試全數通過。
+Expected: PASS，13 項測試全數通過。
 
 - [ ] **Step 6: 執行全專案測試確認零回歸**
 
@@ -1297,12 +1370,17 @@ class FakeOpdsClient implements OpdsClient {
   Object? downloadError;
 
   final List<String> testConnectionCalls = [];
+  // 〔審查 review-plan-issue-1.md Finding 1 採納〕與 testConnectionCalls
+  // 同索引對應，供 Task 8 的測試驗證「編輯模式密碼欄位留空時，測試連線
+  // 是否正確沿用既有密碼」。
+  final List<String?> testConnectionPasswords = [];
   final List<String?> fetchFeedCalls = [];
   final List<String> downloadBookCalls = [];
 
   @override
   Future<bool> testConnection(RemoteServerProfile server, {String? password}) async {
     testConnectionCalls.add(server.id);
+    testConnectionPasswords.add(password);
     return testConnectionResult;
   }
 
@@ -1484,18 +1562,31 @@ class OpdsHttpClient implements OpdsClient {
       final sink = file.openWrite();
       var received = 0;
       var cancelled = false;
+      // 〔審查 review-plan-issue-1.md Finding 3 採納〕內層 try/finally
+      // 確保 sink 在正常完成／使用者取消（break，非例外）／串流中途拋出
+      // 例外（例如網路中斷 SocketException）三種情況下都會被關閉；外層
+      // try/catch 專門處理「例外」這條路徑——串流寫入中途失敗時，內層
+      // finally 已關閉 sink，這裡刪除殘留的不完整暫存檔後原樣重拋，避免
+      // 留下孤兒檔案（spec.md「OPDS 瀏覽與下載」：「使用者取消...或下載
+      // 失敗時立即清除暫存檔，不留孤兒檔案」，原設計僅涵蓋取消，未涵蓋
+      // 網路中斷等真實下載失敗情境）。
       try {
-        await for (final chunk in streamedResponse.stream) {
-          if (cancellationToken?.isCancelled ?? false) {
-            cancelled = true;
-            break;
+        try {
+          await for (final chunk in streamedResponse.stream) {
+            if (cancellationToken?.isCancelled ?? false) {
+              cancelled = true;
+              break;
+            }
+            sink.add(chunk);
+            received += chunk.length;
+            onProgress?.call(received, total);
           }
-          sink.add(chunk);
-          received += chunk.length;
-          onProgress?.call(received, total);
+        } finally {
+          await sink.close();
         }
-      } finally {
-        await sink.close();
+      } catch (_) {
+        if (await file.exists()) await file.delete();
+        rethrow;
       }
       if (cancelled) {
         if (await file.exists()) await file.delete();
@@ -1901,7 +1992,13 @@ git commit -m "feat(epic-30): 新增 RemoteServerListScreen（含站點刪除防
 - Consumes: Task 3（`RemoteServerRepository`）、Task 5（`OpdsClient`）。
 - Produces: 完整的 `RemoteServerFormScreen`（欄位：名稱／網址／類型／帳號／密碼／允許不安全連線／測試連線／儲存）。
 
-**密碼欄位安全慣例**：編輯模式下**不預填**既有密碼（比照 `sync_settings_screen.dart` 既有慣例，密碼欄位永遠留空由使用者自行決定要不要輸入新密碼）；留空並儲存＝清空既有密碼（退回匿名），與 `RemoteServerRepository` 的密碼語意對稱（見 Task 3 文件）。
+**密碼欄位安全慣例**：編輯模式下**不預填**既有密碼（比照 `sync_settings_screen.dart` 既有慣例，密碼欄位永遠留空由使用者自行決定要不要輸入新密碼）。
+
+**〔`review-plan-issue-1.md` Finding 1 核實採納，修正密碼更新語意〕** 原計畫「留空並儲存＝清空既有密碼」會讓使用者只是想改站點名稱或切換「允許不安全連線」，儲存時就意外把已存密碼洗掉——密碼欄位基於安全考量從不預填，使用者根本看不出「留空」跟「原本就沒有密碼」的差別。修正為：
+- **新增模式**：密碼欄位留空＝匿名連線，語意不變。
+- **編輯模式**：密碼欄位輸入新值＝覆蓋既有密碼；密碼欄位留空但**帳號欄位仍有值**＝視為「不變更密碼」，讀回既有密碼沿用；密碼欄位留空且**帳號欄位也被清空**＝視為使用者主動宣告改用匿名連線，密碼一併清除（帳號清空這個動作本身已經清楚表達意圖，不需要額外的「清除密碼」核取方塊）。
+- 「測試連線」比照相同邏輯解析密碼——編輯模式下密碼欄位留空、帳號未清空時，測試連線也要沿用既有密碼，否則對有密碼保護的站點測試連線必然收到 401 失敗，使用者會誤以為是自己設定錯誤。
+- 這個解析邏輯**只存在於 `RemoteServerFormScreen`**，不修改 `RemoteServerRepository.updateServer()` 的既有契約（Task 3 已測試過的「`password` 參數即這次呼叫後應該有的密碼狀態」維持不變）——留空判斷屬於表單 UI 語意，不該滲透進資料層介面。
 
 - [ ] **Step 1: 寫失敗測試**
 
@@ -2002,6 +2099,33 @@ void main() {
     expect(find.textContaining('連線失敗'), findsOneWidget);
   });
 
+  testWidgets('〔審查 Finding 1〕編輯模式測試連線：密碼欄位留空且帳號未清空時，沿用既有密碼發送請求',
+      (tester) async {
+    final existing = RemoteServerProfile(
+      id: 'srv1',
+      name: '家用 NAS',
+      baseUrl: 'http://192.168.1.100:8080/opds',
+      type: RemoteServerType.opds,
+      username: 'admin',
+      allowInsecure: false,
+      createdAt: DateTime.fromMillisecondsSinceEpoch(1000),
+    );
+    final repository = FakeRemoteServerRepository(initialServers: [existing]);
+    await repository.addServer(existing, password: 'old-secret');
+    final opdsClient = FakeOpdsClient(testConnectionResult: true);
+
+    await pumpScreen(
+      tester,
+      repository: repository,
+      opdsClient: opdsClient,
+      existingProfile: existing,
+    );
+    await tester.tap(find.byKey(const Key('remote_server_form_test_connection_button')));
+    await tester.pumpAndSettle();
+
+    expect(opdsClient.testConnectionPasswords, ['old-secret']);
+  });
+
   testWidgets('新增模式儲存：呼叫 addServer 並帶入輸入的密碼，儲存後關閉畫面', (tester) async {
     final repository = FakeRemoteServerRepository();
     await tester.pumpWidget(MaterialApp(
@@ -2031,7 +2155,42 @@ void main() {
     expect(await repository.loadPassword(servers.single.id), 'secret');
   });
 
-  testWidgets('編輯模式儲存：呼叫 updateServer，密碼欄位留空清除既有密碼', (tester) async {
+  testWidgets(
+      '〔審查 Finding 1 修正〕編輯模式儲存：密碼欄位留空且帳號未清空時，保留既有密碼不被洗掉',
+      (tester) async {
+    final existing = RemoteServerProfile(
+      id: 'srv1',
+      name: '家用 NAS',
+      baseUrl: 'http://192.168.1.100:8080/opds',
+      type: RemoteServerType.opds,
+      username: 'admin',
+      allowInsecure: false,
+      createdAt: DateTime.fromMillisecondsSinceEpoch(1000),
+    );
+    final repository = FakeRemoteServerRepository(initialServers: [existing]);
+    await repository.addServer(existing, password: 'old-secret');
+
+    await pumpScreen(
+      tester,
+      repository: repository,
+      opdsClient: FakeOpdsClient(),
+      existingProfile: existing,
+    );
+
+    // 只改站點名稱，密碼欄位全程不觸碰——這正是 Finding 1 指出的真實回歸
+    // 情境：只做不相干的編輯，不該波及既有密碼。
+    await tester.enterText(
+        find.byKey(const Key('remote_server_form_name_field')), '改名後');
+    await tester.tap(find.byKey(const Key('remote_server_form_save_button')));
+    await tester.pumpAndSettle();
+
+    final servers = await repository.listServers();
+    expect(servers.single.name, '改名後');
+    expect(await repository.loadPassword('srv1'), 'old-secret');
+  });
+
+  testWidgets('〔審查 Finding 1〕編輯模式儲存：帳號欄位被清空時，密碼隨之一併清除（退回匿名）',
+      (tester) async {
     final existing = RemoteServerProfile(
       id: 'srv1',
       name: '家用 NAS',
@@ -2052,13 +2211,41 @@ void main() {
     );
 
     await tester.enterText(
-        find.byKey(const Key('remote_server_form_name_field')), '改名後');
+        find.byKey(const Key('remote_server_form_username_field')), '');
     await tester.tap(find.byKey(const Key('remote_server_form_save_button')));
     await tester.pumpAndSettle();
 
     final servers = await repository.listServers();
-    expect(servers.single.name, '改名後');
+    expect(servers.single.username, isNull);
     expect(await repository.loadPassword('srv1'), isNull);
+  });
+
+  testWidgets('編輯模式儲存：密碼欄位輸入新值時覆蓋既有密碼', (tester) async {
+    final existing = RemoteServerProfile(
+      id: 'srv1',
+      name: '家用 NAS',
+      baseUrl: 'http://192.168.1.100:8080/opds',
+      type: RemoteServerType.opds,
+      username: 'admin',
+      allowInsecure: false,
+      createdAt: DateTime.fromMillisecondsSinceEpoch(1000),
+    );
+    final repository = FakeRemoteServerRepository(initialServers: [existing]);
+    await repository.addServer(existing, password: 'old-secret');
+
+    await pumpScreen(
+      tester,
+      repository: repository,
+      opdsClient: FakeOpdsClient(),
+      existingProfile: existing,
+    );
+
+    await tester.enterText(
+        find.byKey(const Key('remote_server_form_password_field')), 'new-secret');
+    await tester.tap(find.byKey(const Key('remote_server_form_save_button')));
+    await tester.pumpAndSettle();
+
+    expect(await repository.loadPassword('srv1'), 'new-secret');
   });
 
   testWidgets('名稱或網址為空時儲存顯示驗證錯誤，不呼叫 addServer', (tester) async {
@@ -2161,16 +2348,30 @@ class _RemoteServerFormScreenState extends State<RemoteServerFormScreen> {
     );
   }
 
-  String? get _enteredPassword =>
-      _passwordController.text.isEmpty ? null : _passwordController.text;
+  /// **〔`review-plan-issue-1.md` Finding 1 採納〕** 解析「這次應該實際
+  /// 送出的密碼」，供 [_testConnection] 與 [_save] 共用同一套邏輯：
+  /// - 密碼欄位有輸入 → 用新輸入的密碼。
+  /// - 新增模式且密碼欄位留空 → `null`（匿名連線，語意不變）。
+  /// - 編輯模式、密碼欄位留空、帳號欄位已被清空 → `null`（使用者清空
+  ///   帳號等同主動宣告改用匿名連線，密碼一併清除）。
+  /// - 編輯模式、密碼欄位留空、帳號欄位仍有值 → 讀回既有密碼沿用，
+  ///   視為「不變更密碼」——密碼欄位基於安全考量從不預填既有密碼
+  ///   （見上方類別文件），若把「留空」直接當成「清空密碼」，使用者
+  ///   只是想改個站點名稱就會意外把已儲存的密碼洗掉。
+  Future<String?> _resolvePasswordToUse() async {
+    if (_passwordController.text.isNotEmpty) return _passwordController.text;
+    if (!_isEditing) return null;
+    if (_usernameController.text.trim().isEmpty) return null;
+    return widget.repository.loadPassword(widget.existingProfile!.id);
+  }
 
   Future<void> _testConnection() async {
     setState(() {
       _testing = true;
       _testResultText = null;
     });
-    final success =
-        await widget.opdsClient.testConnection(_buildProfile(), password: _enteredPassword);
+    final password = await _resolvePasswordToUse();
+    final success = await widget.opdsClient.testConnection(_buildProfile(), password: password);
     if (!mounted) return;
     setState(() {
       _testing = false;
@@ -2188,10 +2389,11 @@ class _RemoteServerFormScreenState extends State<RemoteServerFormScreen> {
       _validationError = null;
     });
     final profile = _buildProfile();
+    final password = await _resolvePasswordToUse();
     if (_isEditing) {
-      await widget.repository.updateServer(profile, password: _enteredPassword);
+      await widget.repository.updateServer(profile, password: password);
     } else {
-      await widget.repository.addServer(profile, password: _enteredPassword);
+      await widget.repository.addServer(profile, password: password);
     }
     if (!mounted) return;
     Navigator.of(context).pop(true);
@@ -2312,7 +2514,7 @@ class _RemoteServerFormScreenState extends State<RemoteServerFormScreen> {
 - [ ] **Step 4: 執行測試確認全數通過**
 
 Run: `flutter test test/screens/remote_server_form_screen_test.dart`
-Expected: PASS，7 項測試全數通過。
+Expected: PASS，10 項測試全數通過。
 
 - [ ] **Step 5: 執行 Task 7 測試與全專案測試確認零回歸**
 
@@ -2520,6 +2722,8 @@ git commit -m "feat(epic-30): LibraryScreen 新增遠端書庫進入點，main.d
 **4. 邊界原則落實**：`SqliteRemoteServerRepository` 全程未直接觸碰 `books` 表，一律透過注入的 `LibraryRepository`（Task 2 新增的 `listUndownloadedBooksForRemoteServer`），符合 Global Constraints 與既有「`books`/`groups` 兩張表唯一存取入口」原則。
 
 **5. 任務間依賴**：Task 7 刻意先建立 `RemoteServerFormScreen` 的最小可編譯版本（讓 Task 7 的測試能通過而不依賴尚未寫的 Task 8），Task 8 再補齊完整邏輯並重新驗證 Task 7 的測試不受影響——這個「先最小可編譯、後補完整」的安排已在 Task 7/8 文字中明確說明，避免被誤認為 Task 7 本身有缺陷。
+
+**6. `review-plan-issue-1.md` 審查修訂**（2026-08-18，核准並附帶建議，已全數採納並修訂本計畫）：Finding 2（`OpdsFeedParser` 缺 MIME→副檔名退回判定，核實違反 `spec.md:138`）與 Finding 3（`OpdsHttpClient.downloadBook` 串流中途例外未清暫存檔，核實違反 spec.md「下載失敗時立即清除暫存檔」）皆為真實缺漏，已修正 Task 4／Task 6 程式碼與測試。Finding 4（href `trim()`）為低風險防禦性修正，已採納。Finding 1（編輯模式密碼語意）核實問題成立，但**未採用**審查建議在 `RemoteServerRepository.updateServer()` 新增 `clearPassword` 參數——改在 `RemoteServerFormScreen` 這一層自行解析「這次要送出的密碼」，維持 Task 3 已測試過的簡單 Repository 契約不變，理由是「留空即不變更／帳號清空即退回匿名」屬於表單 UI 語意，不該滲透進資料層介面。
 
 ---
 
