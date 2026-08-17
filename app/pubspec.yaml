@@ -74,6 +74,8 @@ dependencies:
   # 使用（見 integration_test/foliate_epub_reader_view_test.dart），本 Issue
   # 起成為正式匯入管線的執行期依賴。
   archive: ^4.0.9
+  # Markdown YAML Frontmatter 解析（epic-11-multi-format-reader Issue 5）。
+  yaml: ^3.1.3
 
 dev_dependencies:
   flutter_test:
