@@ -53,7 +53,7 @@
 
 ## Issue 3：開 App／開書時畫面整個黑色一段時間
 
-**Status:** `ready-for-agent`
+**Status:** ✅ 已完成並合併回 `main`（PR [#156](https://git.jigong.org/huthief/elinkBook/pulls/156)，分支 `fix/epic-27-issue3-black-screen`，2 個 commit：實作＋審查修正）。程式碼審查歷經兩輪（`reviews/review-plan-issue-3.md` 計畫審查、`reviews/review-issue-3.md` 程式碼審查）：第一輪程式碼審查抓到 1 項 Critical——遮罩以 `ColoredBox` 預設的 `HitTestBehavior.opaque` 吞掉 loading 期間全螢幕觸控，連帶破壞 Issue 1 已定案、loading 中仍應可用的 `menu` 熱區（切換沉浸模式）保證，且被此前變更透過修改既有測試（提早呼叫 `onPageRendered()`）掩蓋；已改用 `IgnorePointer` 讓遮罩只負責視覺覆蓋、不吸收觸控，並還原被掩蓋的既有測試、補上直接的觸控穿透迴歸測試。複審結論：0 Critical／0 Important／0 Minor，可合併。全專案 `flutter analyze` 乾淨、`flutter test`（171 項相關測試）零回歸通過。**真機（Mobiscribe WARE）視覺驗證（黑屏是否真的消失、loading 中選單熱區是否正常）仍待使用者回報，尚未勾選。**
 
 **依賴：** 無
 
