@@ -134,12 +134,16 @@ _Avoid_: 複製設定（過於籠統，未點出「以書籍為來源」這個�
 _Avoid_: 雲端帳號（過於籠統，容易與雲端匯入來源帳號混淆）、PocketBase 帳號（實作細節，非使用者視角詞彙）
 
 **雲端匯入來源帳號（Cloud Import Source Account）**：
-PRD FR-02 描述的帳號體系，登入 Google Drive／OneDrive 等雲端硬碟，用途是從中讀取/下載電子書檔案匯入圖書庫。與「elinkBook 同步帳號」完全無關、互不影響。**目前沒有任何 Epic 追蹤此需求**（P0 缺口，`epic-1-library` 未涵蓋），2026-08-02 於 `epic-8-sync` Discovery 階段確認範圍時發現並記錄。
+PRD FR-02 描述的帳號體系，登入 Google Drive／OneDrive 等雲端硬碟，用途是從中讀取/下載電子書檔案匯入圖書庫。與「elinkBook 同步帳號」完全無關、互不影響。每個 provider（Google Drive／OneDrive）**限單一帳號**（同一 provider 只能連結一組，換帳號需先解除連結）；登入狀態會被記住（persist refresh token），不需每次匯入都重新登入。管理入口為「設定」頁常駐（可查看/解除連結），匯入流程中若尚未連結也可直接觸發連結。2026-08-17 `/grill-with-docs` 完成 Discovery，已立案為新 Epic（見 `docs/epics.md`）。
 _Avoid_: 雲端帳號（見上）
 
 **書籍內容指紋（Book Content Fingerprint）**：
-`epic-8-sync` 為解決跨裝置「同一本書」比對問題而新增的穩定識別碼：EPUB 優先取 OPF identifier（通常是 ISBN 或出版社 UUID），缺漏時退而用檔案內容 hash；PDF/TXT 一律用檔案內容 hash。匯入時計算存入 `books.content_fingerprint`。**與本機 `Book.id`（時間戳記+URI hash，僅裝置本地穩定，跨裝置各自不同）是不同概念**，同步邏輯必須用指紋而非本機 id 比對書籍身份。演算法定案為 **SHA-256**（`package:crypto`），PDF/TXT（與 EPUB 缺漏 OPF identifier 時的退回路徑）皆為**全檔案內容雜湊**（非抽樣頭尾），一次性匯入成本換取正確性、避免抽樣造成的誤判碰撞（2026-08-02 `epic-8-sync` Architecting 階段定案）。`books.id` 本身維持現狀不受影響，不因本 Epic 改成 UUID 格式（格式與跨裝置比對無關）。
+`epic-8-sync` 為解決跨裝置「同一本書」比對問題而新增的穩定識別碼：EPUB 優先取 OPF identifier（通常是 ISBN 或出版社 UUID），缺漏時退而用檔案內容 hash；PDF/TXT 一律用檔案內容 hash。匯入時計算存入 `books.content_fingerprint`。**與本機 `Book.id`（時間戳記+URI hash，僅裝置本地穩定，跨裝置各自不同）是不同概念**，同步邏輯必須用指紋而非本機 id 比對書籍身份。演算法定案為 **SHA-256**（`package:crypto`），PDF/TXT（與 EPUB 缺漏 OPF identifier 時的退回路徑）皆為**全檔案內容雜湊**（非抽樣頭尾），一次性匯入成本換取正確性、避免抽樣造成的誤判碰撞（2026-08-02 `epic-8-sync` Architecting 階段定案）。`books.id` 本身維持現狀不受影響，不因本 Epic 改成 UUID 格式（格式與跨裝置比對無關）。**第二個用途（2026-08-17 `/grill-with-docs`，雲端匯入 Epic Discovery 階段新增）**：雲端匯入時的重複匯入偵測直接借用同一個指紋欄位比對——僅在指紋完全相同時才提示「可能重複」，刻意不做書名/作者模糊比對。因指紋對「EPUB 缺漏 identifier／PDF／TXT／CBZ」是全檔案雜湊，跨來源（雲端副本 vs. 本機副本）容器層級位元組差異會導致指紋不同、抓不到重複，此為已知、刻意接受的落差（非本機 bug）。
 _Avoid_: 書籍 ID、書本雜湊（未點出「用於跨裝置比對」這個關鍵用途）、抽樣雜湊（已否決的方案）
+
+**書籍來源（Book Source）**：
+`Book.source`（`BookSource` enum：`local`／`googleDrive`／`oneDrive`）標記這本書當初是從哪裡匯入的。`local`／`googleDrive`／`oneDrive` 三個值在圖書庫管理實作完成當下就已存在，但直到 2026-08-17 雲端匯入 Epic Discovery 之前只是未賦值的 UI stub（僅 `local` 曾被實際指派）。雲端匯入落地後，`googleDrive`／`oneDrive` 才會被真正賦值，並額外搭配一個雲端檔案 ID（存放於哪個欄位待 Architecting 階段定案）供「雲端匯入來源帳號」解除連結後仍保留、也供重複匯入偵測使用。純粹是歷史紀錄用途——解除雲端帳號連結不會清空既有書籍的來源標記，也不影響已下載檔案本身。
+_Avoid_: 匯入來源（過於籠統，容易與「匯入方式」如檔案選擇器/資料夾選擇器混淆）
 
 **Checkpoint 同步（Checkpoint Sync）**：
 `epic-8-sync` 的批次同步觸發機制，三種事件之一發生即觸發一次批次同步（把期間累積的所有本機異動一次送出）：App 背景化、書籍切換（離開閱讀器）、閱讀中每 5 分鐘的閒置計時器（避免長時間不背景化/不切書時另一裝置看不到最新異動）。與「逐筆即時同步」（每次異動立刻各自觸發一次網路請求）相對，見 ADR 0020。批次上傳透過 PocketBase 內建 **Batch API**（`/api/batch`，要求伺服器版本 ≥ 0.23）一次 HTTP 請求送出，交易性（全部成功或全部失敗）；下載遠端異動不批次，4 個 collection 各自查詢一次即可（量體小不需優化）。
