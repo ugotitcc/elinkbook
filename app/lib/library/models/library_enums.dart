@@ -5,7 +5,7 @@ enum BookFileFormat { epub, pdf, txt, azw3, cbz, md }
 
 /// 書籍的匯入來源。本 epic（epic-1-library）僅會產生 [local]；
 /// [googleDrive]/[oneDrive] 為後續雲端匯入 Epic 預留的欄位。
-enum BookSource { local, googleDrive, oneDrive }
+enum BookSource { local, googleDrive, oneDrive, calibreOpds }
 
 /// 書架排序方式（FR-26）。
 enum LibrarySortBy { lastRead, createTime, author, title }

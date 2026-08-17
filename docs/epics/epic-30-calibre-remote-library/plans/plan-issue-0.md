@@ -527,12 +527,12 @@ git commit -m "feat(epic-30): Book 模型新增遠端書架 4 個欄位，copyWi
 **Interfaces:**
 - Produces: `BookSource.calibreOpds`。`Book.toMap()`/`Book.fromMap()`（Task 2 已完成）透過 `.name`/`BookSource.values.byName()` 序列化，不需要為新 enum 值另外修改。
 
-- [ ] **Step 1: 執行測試確認目前因 `BookSource.calibreOpds` 未定義而失敗**
+- [x] **Step 1: 執行測試確認目前因 `BookSource.calibreOpds` 未定義而失敗**
 
 Run: `flutter test test/library/sqlite_library_repository_test.dart`
 Expected: FAIL，錯誤訊息指出 `calibreOpds` 不是 `BookSource` 的成員（Task 2 Step 6 已確認的紅燈）。
 
-- [ ] **Step 2: 新增 enum 值**
+- [x] **Step 2: 新增 enum 值**
 
 修改 `app/lib/library/models/library_enums.dart:8`：
 
@@ -540,12 +540,12 @@ Expected: FAIL，錯誤訊息指出 `calibreOpds` 不是 `BookSource` 的成員�
 enum BookSource { local, googleDrive, oneDrive, calibreOpds }
 ```
 
-- [ ] **Step 3: 執行測試確認全數通過**
+- [x] **Step 3: 執行測試確認全數通過**
 
 Run: `flutter test test/library/sqlite_library_repository_test.dart`
 Expected: PASS——本檔案內 Task 1（3 個測試）＋ Task 2（3 個測試）共 6 個新測試全數通過，既有測試（`listReflowableEpubBooks` 等）零回歸。
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add app/lib/library/models/library_enums.dart
