@@ -2053,11 +2053,29 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         final selection = _currentSelection;
         final pdfSelection = _currentPdfSelection;
         return Stack(
+          key: const Key('reader_body_stack'),
           children: [
             if (_resolved != null &&
                 (!isFoliateFormat(format) ||
                     (_dispatchedIsFixedLayout != null && _customFontsLoaded)))
               _buildNativeView(format, isLandscape),
+            // epic-27-reader-device-compat Issue 3：原生渲染畫面（InAppWebView／
+            // pdfrx 繪圖表面）在真正收到第一次繪製結果前，緩衝區預設顯示黑色
+            // （Android 平台已知行為，見 reviews/bugfix-repro.md Issue 3）。這層
+            // 不透明遮罩必須疊在 _buildNativeView 之上（Stack 依 children 清單
+            // 順序繪製，後面的 child 疊在前面之上）才能真正蓋住原生視圖輸出的
+            // 黑色緩衝區，故放在 _buildNativeView 這個 if 區塊之後；僅在
+            // _state == loading 時顯示——一旦渲染完成立即移除，避免永久蓋住
+            // 已渲染完成的書籍內容或阻擋觸控手勢（見 plans/plan-issue-3.md
+            // 「設計決策」1，初版計畫誤放在 _buildNativeView 之下、且恆常顯示，
+            // 已於審查發現並修正）。
+            if (_state == _RenderState.loading)
+              Positioned.fill(
+                child: ColoredBox(
+                  key: const Key('reader_render_placeholder_background'),
+                  color: Theme.of(context).scaffoldBackgroundColor,
+                ),
+              ),
             // epic-18-reader-device-qa Issue 7：流式 Foliate 格式的 chrome，結構對稱
             // 於上方 FXL 浮動按鈕區塊——appBar 已在 build() 恆為 null（見上方
             // 註解），改用這組 Positioned 疊加層承載「功能操作」（返回／TOC／

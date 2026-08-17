@@ -1191,6 +1191,7 @@ void main() {
         writingMode: WritingMode.horizontal,
       ),
     );
+    epubView.onPageRendered();
     await tester.pump();
 
     expect(
@@ -3109,6 +3110,10 @@ void main() {
       );
       await tester.pump();
       await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+      final foliateView =
+          tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
+      foliateView.onPageRendered();
       await tester.pump();
 
       expect(find.byType(AppBar), findsNothing);
@@ -5198,6 +5203,117 @@ void main() {
   });
 
   testWidgets(
+      'EPUB 載入中：原生視圖上方應有不透明主題遮罩，蓋住原生視圖首幀黑屏'
+      '（epic-27-reader-device-compat Issue 3）', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_black_flash_epub_loading',
+          prefsManager: prefsManager,
+          isFixedLayout: false,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    // 刻意不觸發 onLayoutResolved/onPageRendered，維持 _state == loading。
+    expect(find.byKey(const Key('reader_loading_indicator')), findsOneWidget);
+
+    final placeholder = tester.widget<ColoredBox>(
+      find.byKey(const Key('reader_render_placeholder_background')),
+    );
+    final expectedColor =
+        Theme.of(tester.element(find.byType(ReaderScreen))).scaffoldBackgroundColor;
+    expect(placeholder.color, expectedColor);
+
+    // z-order 迴歸防呆（epic-27-reader-device-compat Issue 3 審查 Critical
+    // #1）：遮罩必須疊在原生視圖「之上」才有蓋住黑幀的效果，若日後有人誤把
+    // 順序寫反，這裡要能直接抓到，而不是只驗證「兩者都存在」。
+    final stack = tester.widget<Stack>(find.byKey(const Key('reader_body_stack')));
+    final nativeViewIndex =
+        stack.children.indexWhere((child) => child is FoliateReaderView);
+    final placeholderIndex = stack.children.indexWhere((child) =>
+        child is Positioned &&
+        child.child is ColoredBox &&
+        (child.child as ColoredBox).key ==
+            const Key('reader_render_placeholder_background'));
+    expect(nativeViewIndex, greaterThanOrEqualTo(0),
+        reason: '應能在 Stack 找到原生視圖 FoliateReaderView');
+    expect(placeholderIndex, greaterThanOrEqualTo(0),
+        reason: '應能在 Stack 找到不透明遮罩');
+    expect(placeholderIndex, greaterThan(nativeViewIndex),
+        reason: '遮罩必須疊在原生視圖之上（z-order 較高）才能真正蓋住原生視圖的首幀'
+            '黑屏——這是初版計畫審查抓到的 Critical 錯誤（reviews/review-plan-issue-3.md），'
+            '此斷言防止未來回歸');
+  });
+
+  testWidgets(
+      'PDF 載入中：原生視圖上方應有不透明主題遮罩，蓋住原生視圖首幀黑屏'
+      '（epic-27-reader-device-compat Issue 3）', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b_black_flash_pdf_loading',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    // 刻意不呼叫 onPageRendered，維持 _state == loading。
+    expect(find.byKey(const Key('reader_loading_indicator')), findsOneWidget);
+
+    final placeholder = tester.widget<ColoredBox>(
+      find.byKey(const Key('reader_render_placeholder_background')),
+    );
+    final expectedColor =
+        Theme.of(tester.element(find.byType(ReaderScreen))).scaffoldBackgroundColor;
+    expect(placeholder.color, expectedColor);
+  });
+
+  testWidgets(
+      'PDF 已渲染完成後：不透明遮罩應隨 _state 轉為 rendered 而消失，不殘留阻擋手勢'
+      '（epic-27-reader-device-compat Issue 3 設計決策 1：僅在 loading 時顯示，'
+      '非恆常存在——恆常存在會在渲染完成後永久蓋住書籍內容，是比原始黑屏更嚴重的回歸）',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b_black_flash_pdf_rendered',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    // 渲染完成前：遮罩應存在（與前一則 PDF loading 測試對稱佈置情境）。
+    expect(find.byKey(const Key('reader_render_placeholder_background')),
+        findsOneWidget);
+
+    tester.widget<PdfReaderView>(find.byType(PdfReaderView)).onPageRendered();
+    await tester.pump();
+
+    expect(find.byKey(const Key('reader_loading_indicator')), findsNothing);
+    expect(find.byType(PdfReaderView), findsOneWidget,
+        reason: '遮罩不應影響既有原生視圖的正常渲染（零回歸）');
+    expect(
+        find.byKey(const Key('reader_render_placeholder_background')),
+        findsNothing,
+        reason: '_state 轉為 rendered 後遮罩必須立即移除，否則會永久蓋住已渲染完成的'
+            '書籍內容、阻擋底層原生視圖的觸控手勢（審查 Critical #1 連帶修正的'
+            '設計決策，見 plan 上方「設計決策」1）');
+  });
+
+  testWidgets(
       '流式 EPUB 頁首/頁尾文字：字級為 12、不含按鈕底色與內距，只佔文字本身空間、'
       '文字顏色跟隨 Theme.of(context)（epic-22-reader-theme-integration '
       'Issue 2；epic-18-reader-device-qa Issue 43 的既有測試在此更新——'
@@ -5831,6 +5947,8 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
     await pumpUntilPdfReady(tester);
+    tester.widget<PdfReaderView>(find.byType(PdfReaderView)).onPageRendered();
+    await tester.pump();
 
     // epic-24 Issue 8：PDF 新增 FAB 後，原本的 (40, 60) 觸控座標落在
     // reader_pdf_back_button（top:16, left:16, 48x48 IconButton）範圍內，
