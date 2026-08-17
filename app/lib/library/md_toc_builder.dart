@@ -33,12 +33,23 @@ int? _headingLevel(String tag) {
   return (n != null && n >= 1 && n <= 6) ? n : null;
 }
 
+String _unescapeHtml(String text) => text
+    .replaceAll('&amp;', '&')
+    .replaceAll('&lt;', '<')
+    .replaceAll('&gt;', '>')
+    .replaceAll('&quot;', '"')
+    .replaceAll('&#39;', "'");
+
 String _textContent(md.Node node) {
-  if (node is md.Text) return node.text;
-  if (node is md.Element) {
-    return (node.children ?? const <md.Node>[]).map(_textContent).join();
+  String extract(md.Node n) {
+    if (n is md.Text) return n.text;
+    if (n is md.Element) {
+      return (n.children ?? const <md.Node>[]).map(extract).join();
+    }
+    return '';
   }
-  return '';
+
+  return _unescapeHtml(extract(node));
 }
 
 /// 解析 [markdownBody]（**不含** Frontmatter，呼叫端須先用
