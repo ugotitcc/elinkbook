@@ -171,7 +171,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
       final picked = await FilePicker.pickFiles(
         allowMultiple: true,
         type: FileType.custom,
-        allowedExtensions: ['epub', 'pdf', 'txt', 'cbz', 'azw3'],
+        allowedExtensions: ['epub', 'pdf', 'txt', 'cbz', 'azw3', 'md'],
       );
       if (picked == null || picked.files.isEmpty) return;
       // uris／displayNames 必須用同一次過濾（f.identifier != null）建立，
