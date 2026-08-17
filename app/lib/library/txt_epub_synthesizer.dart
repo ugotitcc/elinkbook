@@ -7,6 +7,7 @@ import 'dart:typed_data';
 import 'package:archive/archive.dart';
 
 import 'content_uri_reader.dart';
+import 'epub_container_builder.dart';
 import 'txt_chapter_splitter.dart';
 import 'txt_charset_detection.dart';
 
@@ -33,51 +34,6 @@ class TxtSynthesisResult {
   const TxtSynthesisResult({required this.epubBytes, required this.detectedEncoding});
 }
 
-String _escapeXml(String text) =>
-    text.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
-
-const _containerXml = '''<?xml version="1.0" encoding="UTF-8"?>
-<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
-  <rootfiles>
-    <rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/>
-  </rootfiles>
-</container>
-''';
-
-String _contentOpf({
-  required String bookId,
-  required String title,
-  required String manifestItems,
-  required String spineItems,
-}) =>
-    '''<?xml version="1.0" encoding="UTF-8"?>
-<package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="book-id">
-  <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
-    <dc:identifier id="book-id">elinkbook-txt-$bookId</dc:identifier>
-    <dc:title>${_escapeXml(title)}</dc:title>
-    <dc:language>zh</dc:language>
-  </metadata>
-  <manifest>
-    <item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>
-$manifestItems  </manifest>
-  <spine>
-$spineItems  </spine>
-</package>
-''';
-
-String _navXhtml(String navItems) =>
-    '''<?xml version="1.0" encoding="UTF-8"?>
-<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
-<head><title>目錄</title></head>
-<body>
-<nav epub:type="toc">
-<ol>
-$navItems</ol>
-</nav>
-</body>
-</html>
-''';
-
 /// 每行（去除純空白行）成為一個 `<p>` 元素——常見網路小說 TXT 排版慣例
 /// （每行即一段，非以空白行分隔），比照本專案既有排版管線不主動猜測換行
 /// 語意的既定精神（見 spec.md「TXT／Markdown 合成書籍結構」）。
@@ -86,7 +42,7 @@ String _buildXhtmlBody(String content) {
   for (final line in content.split(RegExp(r'\r\n|\r|\n'))) {
     final trimmed = line.trim();
     if (trimmed.isEmpty) continue;
-    buffer.writeln('<p>${_escapeXml(trimmed)}</p>');
+    buffer.writeln('<p>${escapeXml(trimmed)}</p>');
   }
   return buffer.toString();
 }
@@ -120,7 +76,7 @@ TxtSynthesisResult _decodeAndSynthesize(Uint8List bytes, String bookId, String t
     ArchiveFile.bytes('mimetype', utf8.encode('application/epub+zip'))
       ..compression = CompressionType.none,
   );
-  archive.addFile(ArchiveFile.bytes('META-INF/container.xml', utf8.encode(_containerXml)));
+  archive.addFile(ArchiveFile.bytes('META-INF/container.xml', utf8.encode(kEpubContainerXml)));
 
   final manifestItems = StringBuffer();
   final spineItems = StringBuffer();
@@ -147,15 +103,15 @@ TxtSynthesisResult _decodeAndSynthesize(Uint8List bytes, String bookId, String t
     // （見 Task 6 設計討論；比照 Issue 3 CBZ 虛擬目錄「有明確語意才產生
     // 項目」的相同原則，此處反過來是「沒有語意就不產生」）。
     if (chapter.title != null && firstHref != null) {
-      navItems.writeln('<li><a href="$firstHref">${_escapeXml(chapter.title!)}</a></li>');
+      navItems.writeln('<li><a href="$firstHref">${escapeXml(chapter.title!)}</a></li>');
     }
   }
 
-  archive.addFile(ArchiveFile.bytes('OEBPS/nav.xhtml', utf8.encode(_navXhtml(navItems.toString()))));
+  archive.addFile(ArchiveFile.bytes('OEBPS/nav.xhtml', utf8.encode(buildEpubNavXhtml(navItems.toString()))));
   archive.addFile(ArchiveFile.bytes(
     'OEBPS/content.opf',
-    utf8.encode(_contentOpf(
-      bookId: bookId,
+    utf8.encode(buildEpubContentOpf(
+      identifier: 'elinkbook-txt-$bookId',
       title: title,
       manifestItems: manifestItems.toString(),
       spineItems: spineItems.toString(),
