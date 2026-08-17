@@ -8,7 +8,7 @@
 
 Discovery 前已用背景 subagent 查核兩批事實，直接決定了多個分岔的可行選項：
 
-- **現有匯入介面**：`BookImportService.importFiles(uris, {displayNames, folderName})` / `importFolder(folderUri, {autoGroupByFolderName})`——只接受呼叫端已選好的 URI 字串，picker/選檔邏輯不在 service 內，本 Epic 的雲端瀏覽器只需要「選出 URI／下載後的本機路徑」交給既有 `importFiles()`，不需要改動這個介面本身。
+- **現有匯入介面**：`BookImportService.importFiles(uris, {displayNames, folderName})` / `importFolder(folderUri, {autoGroupByFolderName})`——只接受呼叫端已選好的 URI 字串，picker/選檔邏輯不在 service 內。**〔2026-08-17 審查修正〕** 原先誤判「不需要改動這個介面本身」——經 `review-design.md` Critical #1 覆核程式碼證實這是錯的：`book_import_service_impl.dart:388` 的 `_importSingleFile` 內部**硬編碼** `source: BookSource.local`，且 `importFiles()`/`importFolder()` 簽章完全沒有傳遞 `BookSource`／雲端檔案 ID 的通道，與下方「資料模型」小節要求的「匯入完成後 `Book.source` 真正賦值為 `googleDrive`／`oneDrive`、並保留雲端檔案 ID」直接矛盾。**現有介面必須擴充**（新增參數或新增專屬方法）才能承載這兩項資料，正確的簽章設計留待 Architecting／`spec.md` 定案，這裡只更正「不需要改動」這個錯誤的事實陳述。
 - **`BookSource` enum 已存在但從未賦值**（`library_enums.dart`：`local`／`googleDrive`／`oneDrive`，只有 `local` 曾被實際指派）——`Dropbox` 不在列，與 PRD FR-02 只承諾 Google Drive／OneDrive 一致。
 - **ADR 0002 已預先定案**：雲端匯入的檔案一律先下載複製到 App 私有目錄，不會像本機 SAF 匯入那樣直接引用即時 URI——這點不需要在本次 Discovery 重新討論。
 - **「書籍內容指紋」機制已存在**（`epic-8-sync` 為跨裝置同步比對而建，見 `CONTEXT.md`），匯入時對每本書都會計算並存入 `books.content_fingerprint`，原本從未被用於匯入時的重複偵測——本 Epic 是它的第一次「借用」。
@@ -55,9 +55,21 @@ Discovery 前已用背景 subagent 查核兩批事實，直接決定了多個分
 
 ## 依賴事實（供 Architecting 階段參考，非本 Discovery 待決）
 
-- `BookImportService.importFiles()` 接受呼叫端已取得的 URI／本機路徑，雲端瀏覽器只需完成「登入 → 瀏覽 → 選檔 → 下載到本機」，下載完成後即可直接餵給既有 `importFiles()`，不需要改動這個既有介面的簽章。
+- `BookImportService.importFiles()` 接受呼叫端已取得的 URI／本機路徑，雲端瀏覽器只需完成「登入 → 瀏覽 → 選檔 → 下載到本機」，下載完成後即可直接餵給既有 `importFiles()`。**〔2026-08-17 審查修正，同上〕** 但「不需要改動這個既有介面的簽章」是錯的（見上方「現有匯入介面」已更正的說明）——`importFiles()`/`importFolder()` 需擴充才能承載 `BookSource`／雲端檔案 ID，具體簽章留給 Architecting／`spec.md`。
 - Google 官方 OAuth 政策不允許透過內嵌 WebView 完成登入（安全政策要求使用系統瀏覽器／Custom Tabs），OneDrive／Microsoft 的登入流程為求一致，同樣走系統瀏覽器導向的 OAuth 流程——這是外部平台政策的技術限制，不是本次需要 grill 的產品決策，留給 Architecting／`spec.md` 定案 redirect URI scheme 等技術細節。
 - `AndroidManifest.xml` 目前沒有任何 OAuth redirect intent-filter，需要在 Architecting 階段新增。
+
+## `review-design.md` 審查後續（2026-08-17，待 Architecting／`spec.md` 落實，非本 Discovery 待決）
+
+Critical #1（介面契約矛盾）已如上更正說明文字。以下 Important／Minor 項目經核實技術主張成立（例如 `flutter_secure_storage` 確實已是既有依賴，見 `app/pubspec.yaml:62`），性質上屬於介面/技術規格設計，依 SDD 分工留給 Architecting 階段的 `spec.md` 具體落實，此處僅列出避免遺漏，不在 Discovery 階段展開：
+
+- OAuth 安全架構：PKCE＋`state` 參數、refresh token 存入 `flutter_secure_storage`（不可存純文字）、Google Drive scope 選擇（`drive.readonly` 需 Google 應用程式驗證流程 vs. `drive.file` 只能存取本 App 建立/開啟過的檔案，兩者的取捨會影響「瀏覽任意雲端資料夾」這個已定案 UX 能否如實達成，**Architecting 階段須特別檢視此點是否需要回頭調整 UX 假設**）。
+- 重複匯入偵測的時序：指紋需下載後才能計算，選檔當下無法立即比對；下載中/取消時的暫存檔清理機制。
+- 雲端資料夾瀏覽的分頁（Google Drive `pageSize`／Microsoft Graph `@odata.nextLink`）。
+- 資料庫 schema 遷移（新增雲端檔案 ID 欄位，`books` 表現行 version 21）。
+- 行動數據流量警示的具體檔案大小閾值。
+- 雲端縮圖的授權標頭／時效性 URL 處理與本地快取。
+- 下載取消時的孤兒暫存檔清理。
 
 ## 範圍界定
 
