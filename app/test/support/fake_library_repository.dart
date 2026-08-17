@@ -150,6 +150,24 @@ class FakeLibraryRepository implements LibraryRepository {
     return filtered;
   }
 
+  @override
+  Future<Book?> findByRemoteBookId(String serverId, String remoteBookId) async {
+    for (final book in _books) {
+      if (book.remoteServerId == serverId && book.remoteBookId == remoteBookId) {
+        return book;
+      }
+    }
+    return null;
+  }
+
+  @override
+  Future<Book?> findByContentFingerprint(String fingerprint) async {
+    for (final book in _books) {
+      if (book.contentFingerprint == fingerprint) return book;
+    }
+    return null;
+  }
+
   Book _withGroupName(Book book, String groupName) => Book(
         id: book.id,
         title: book.title,
@@ -159,7 +177,17 @@ class FakeLibraryRepository implements LibraryRepository {
         source: book.source,
         coverPath: book.coverPath,
         progress: book.progress,
+        epubLocator: book.epubLocator,
+        pdfPageIndex: book.pdfPageIndex,
+        totalCharacterCount: book.totalCharacterCount,
         isFixedLayout: book.isFixedLayout,
+        contentFingerprint: book.contentFingerprint,
+        positionUpdatedAt: book.positionUpdatedAt,
+        positionSyncedServerUpdatedAt: book.positionSyncedServerUpdatedAt,
+        remoteServerId: book.remoteServerId,
+        remoteBookId: book.remoteBookId,
+        remoteDownloadUrl: book.remoteDownloadUrl,
+        isDownloaded: book.isDownloaded,
         groupName: groupName,
         createTime: book.createTime,
         lastReadTime: book.lastReadTime,

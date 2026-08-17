@@ -612,13 +612,13 @@ git commit -m "feat(epic-30): xml/http 由 dev_dependencies 提升至正式 depe
 
 **⚠️ 順序無關性檢查（`spec.md`「與 `epic-29-cloud-import` 的順序無關性」）**：`findByContentFingerprint()` 這個方法 `epic-29-cloud-import` 的 `spec.md` 也規劃要新增。執行本 Task 前，先確認 `LibraryRepository`（`app/lib/library/library_repository.dart`）目前是否已經有這個方法——若 `epic-29-cloud-import` 已先落地並新增過，直接沿用既有簽章，本 Task 只需要新增 `findByRemoteBookId()`；若尚未存在（撰寫本計畫時核實為尚未存在），本 Task 兩個方法都新增。以下步驟以「兩者皆尚未存在」為例撰寫，若執行時發現 `findByContentFingerprint()` 已存在，略過該方法相關的程式碼片段，只保留 `findByRemoteBookId()` 的部分。
 
-- [ ] **Step 1: 核對 `findByContentFingerprint()` 現況**
+- [x] **Step 1: 核對 `findByContentFingerprint()` 現況**
 
 Run: 在 `app/lib/library/library_repository.dart` 搜尋 `findByContentFingerprint`。
 
 Expected: 若無結果（撰寫本計畫時的現況），繼續下方所有步驟；若已存在，記錄其確切簽章（應為 `Future<Book?> findByContentFingerprint(String fingerprint)`），並在後續步驟中略過重複新增的部分。
 
-- [ ] **Step 2: 寫失敗測試**
+- [x] **Step 2: 寫失敗測試**
 
 在 `app/test/library/sqlite_library_repository_test.dart` 新增（放在 Task 2 新增的測試之後）：
 
@@ -694,12 +694,12 @@ group('findByContentFingerprint', () {
 });
 ```
 
-- [ ] **Step 3: 執行測試確認失敗**
+- [x] **Step 3: 執行測試確認失敗**
 
 Run: `flutter test test/library/sqlite_library_repository_test.dart`
 Expected: FAIL——`LibraryRepository`／`SqliteLibraryRepository` 尚無這兩個方法，編譯錯誤。
 
-- [ ] **Step 4: 實作**
+- [x] **Step 4: 實作**
 
 在 `app/lib/library/library_repository.dart` 的 `abstract class LibraryRepository` 內，緊接在既有 `listReflowableEpubBooks` 方法之後新增（若 `findByContentFingerprint` 已存在則略過該行）：
 
@@ -795,12 +795,12 @@ Expected: FAIL——`LibraryRepository`／`SqliteLibraryRepository` 尚無這兩
       );
 ```
 
-- [ ] **Step 5: 執行測試確認通過**
+- [x] **Step 5: 執行測試確認通過**
 
 Run: `flutter test test/library/sqlite_library_repository_test.dart && flutter test`
 Expected: 全數通過，全專案零回歸（`FakeLibraryRepository` 是廣泛被其他既有 widget test 使用的測試替身，`_withGroupName` 的修正需要確認不會意外改變既有測試斷言的分類異動行為——既有測試只斷言 `groupName` 本身，新增的欄位帶入不影響既有斷言）。
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/library/library_repository.dart app/lib/library/sqlite_library_repository.dart app/test/support/fake_library_repository.dart app/test/library/sqlite_library_repository_test.dart

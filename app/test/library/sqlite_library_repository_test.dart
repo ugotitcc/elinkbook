@@ -3380,4 +3380,92 @@ void main() {
       expect(result.map((b) => b.id).toList(), ['flow2']);
     });
   });
+
+  group('findByRemoteBookId', () {
+    test('命中：回傳對應書籍', () async {
+      final repo = await SqliteLibraryRepository.open(inMemoryDatabasePath);
+      addTearDown(() => repo.close());
+
+      await repo.database.insert('remote_servers', {
+        'id': 'srv1',
+        'name': '測試站點',
+        'base_url': 'http://example.com/opds',
+        'type': 'opds',
+        'allow_insecure': 0,
+        'created_at': 1000,
+      });
+
+      await repo.insertBook(Book(
+        id: 'book1',
+        title: '雲端書',
+        format: BookFileFormat.epub,
+        filePath: '/books/book1.epub',
+        source: BookSource.calibreOpds,
+        createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+        lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+        remoteServerId: 'srv1',
+        remoteBookId: 'remote-book-1',
+      ));
+
+      final found = await repo.findByRemoteBookId('srv1', 'remote-book-1');
+      expect(found?.id, 'book1');
+    });
+
+    test('未命中：不同站點或不同 remoteBookId 皆回傳 null', () async {
+      final repo = await SqliteLibraryRepository.open(inMemoryDatabasePath);
+      addTearDown(() => repo.close());
+
+      await repo.database.insert('remote_servers', {
+        'id': 'srv1',
+        'name': '測試站點',
+        'base_url': 'http://example.com/opds',
+        'type': 'opds',
+        'allow_insecure': 0,
+        'created_at': 1000,
+      });
+
+      await repo.insertBook(Book(
+        id: 'book1',
+        title: '雲端書',
+        format: BookFileFormat.epub,
+        filePath: '/books/book1.epub',
+        source: BookSource.calibreOpds,
+        createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+        lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+        remoteServerId: 'srv1',
+        remoteBookId: 'remote-book-1',
+      ));
+
+      expect(await repo.findByRemoteBookId('srv2', 'remote-book-1'), isNull);
+      expect(await repo.findByRemoteBookId('srv1', 'other-book'), isNull);
+    });
+  });
+
+  group('findByContentFingerprint', () {
+    test('命中：回傳對應書籍', () async {
+      final repo = await SqliteLibraryRepository.open(inMemoryDatabasePath);
+      addTearDown(() => repo.close());
+
+      await repo.insertBook(Book(
+        id: 'book1',
+        title: '本機書',
+        format: BookFileFormat.epub,
+        filePath: '/books/book1.epub',
+        source: BookSource.local,
+        contentFingerprint: 'fingerprint-abc',
+        createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+        lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+      ));
+
+      final found = await repo.findByContentFingerprint('fingerprint-abc');
+      expect(found?.id, 'book1');
+    });
+
+    test('未命中：回傳 null', () async {
+      final repo = await SqliteLibraryRepository.open(inMemoryDatabasePath);
+      addTearDown(() => repo.close());
+
+      expect(await repo.findByContentFingerprint('does-not-exist'), isNull);
+    });
+  });
 }

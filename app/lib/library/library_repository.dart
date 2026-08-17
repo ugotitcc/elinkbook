@@ -37,6 +37,17 @@ abstract class LibraryRepository {
   /// [excludeBookId] 用於「複製其他書籍」流程排除來源書本身。依
   /// `title ASC` 排序。
   Future<List<Book>> listReflowableEpubBooks({String? excludeBookId});
+
+  /// 依 `(remoteServerId, remoteBookId)` 精確比對，供遠端書架選檔前置
+  /// 重複匯入偵測使用（`epic-30-calibre-remote-library`，spec.md「重複
+  /// 匯入偵測」）。命中回傳該本書，未命中回傳 `null`。
+  Future<Book?> findByRemoteBookId(String serverId, String remoteBookId);
+
+  /// 依 `content_fingerprint` 精確比對，供雲端/遠端書架匯入的下載後重複
+  /// 匯入偵測使用（`epic-29-cloud-import`／`epic-30-calibre-remote-library`
+  /// 共用，見 `CONTEXT.md`「書籍內容指紋」）。命中回傳該本書，未命中回傳
+  /// `null`。
+  Future<Book?> findByContentFingerprint(String fingerprint);
 }
 
 /// `LibraryRepository` 操作違反資料規則時拋出（例如嘗試刪除/重新命名系統
