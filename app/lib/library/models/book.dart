@@ -174,7 +174,7 @@ class Book {
       remoteServerId: map['remote_server_id'] as String?,
       remoteBookId: map['remote_book_id'] as String?,
       remoteDownloadUrl: map['remote_download_url'] as String?,
-      isDownloaded: (map['is_downloaded'] as int? ?? 1) == 1,
+      isDownloaded: (map['is_downloaded'] as int) == 1,
       groupName: map['groupName'] as String,
       createTime: DateTime.fromMillisecondsSinceEpoch(map['createTime'] as int),
       lastReadTime:

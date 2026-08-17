@@ -562,7 +562,7 @@ git commit -m "feat(epic-30): BookSource 新增 calibreOpds"
 **Interfaces:**
 - Produces: `xml`／`http` 由 `dev_dependencies` 移至正式 `dependencies`，供後續 Issue 1 的 `OpdsClient`／`OpdsFeedParser` 實作使用。本 Task 不涉及任何程式邏輯改動，純設定檔異動。
 
-- [ ] **Step 1: 修改 `pubspec.yaml`**
+- [x] **Step 1: 修改 `pubspec.yaml`**
 
 在 `app/pubspec.yaml` 的 `dependencies:` 區塊（`html: ^0.15.6` 之後，`dev_dependencies:` 之前）新增：
 
@@ -579,17 +579,17 @@ git commit -m "feat(epic-30): BookSource 新增 calibreOpds"
 
 從 `app/pubspec.yaml` 的 `dev_dependencies:` 區塊移除原本的 `http: ^1.6.0` 與 `xml: ^6.6.1` 兩行（含各自緊鄰的說明註解一併移除，避免與上方新註解重複）。
 
-- [ ] **Step 2: 執行 `flutter pub get` 確認無版本衝突**
+- [x] **Step 2: 執行 `flutter pub get` 確認無版本衝突**
 
 Run: `cd app && flutter pub get`
 Expected: 成功完成，無版本解析錯誤（`pubspec.yaml` 現有註解已記錄 `win32` 相依鏈的既有歷史糾葛，若這步驟出現衝突訊息，需要對照該註解排查，但 `xml`/`http` 本身不涉及 `win32`，預期不會觸發）。
 
-- [ ] **Step 3: 執行既有全專案測試確認零回歸**
+- [x] **Step 3: 執行既有全專案測試確認零回歸**
 
 Run: `cd app && flutter analyze && flutter test`
 Expected: `flutter analyze` 乾淨（`No issues found!`）；`flutter test` 全數通過。
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add app/pubspec.yaml app/pubspec.lock
@@ -822,13 +822,13 @@ git commit -m "feat(epic-30): LibraryRepository 新增 findByRemoteBookId/findBy
 
 **⚠️ 順序無關性檢查（`spec.md`「與 `epic-29-cloud-import` 的順序無關性」）**：`source: BookSource source = BookSource.local` 這個參數 `epic-29-cloud-import` 也規劃要新增。執行本 Task 前，先確認 `BookImportService.importFiles()`（`app/lib/library/book_import_service.dart`）目前是否已經有 `source` 參數——若已存在（`epic-29-cloud-import` 已先落地），沿用既有參數與其在 `_importSingleFile()`／`Book(...)` 建構子內已經接好的既有邏輯，本 Task 只需要疊加 `remoteServerId`/`remoteBookIds`/`remoteDownloadUrls` 三個新參數；若尚未存在（撰寫本計畫時核實為尚未存在），本 Task 一併新增 `source` 參數。以下步驟以「`source` 尚未存在」為例撰寫。
 
-- [ ] **Step 1: 核對 `source` 參數現況**
+- [x] **Step 1: 核對 `source` 參數現況**
 
 Run: 在 `app/lib/library/book_import_service.dart` 搜尋 `source`；在 `app/lib/library/book_import_service_impl.dart` 搜尋 `BookSource.local`（目前硬編碼於 `_importSingleFile` 內組裝 `Book(...)` 處，撰寫本計畫時核實位置為 `book_import_service_impl.dart:388`）。
 
 Expected: 若 `importFiles()` 尚無 `source` 參數、且 `book_import_service_impl.dart:388` 仍是硬編碼 `source: BookSource.local,`（撰寫本計畫時的現況），繼續下方所有步驟；若已存在，記錄其確切簽章與 `_importSingleFile` 內既有的接線方式，後續步驟中略過重複新增 `source` 相關的部分，只新增 `remoteServerId`/`remoteBookIds`/`remoteDownloadUrls`。
 
-- [ ] **Step 2: 寫失敗測試**
+- [x] **Step 2: 寫失敗測試**
 
 在 `app/test/library/book_import_service_test.dart` 新增（放在既有測試之後，可放在檔案末尾；沿用檔案既有的 `mockChannel`/`service`/`repository` setUp 慣例）：
 
@@ -886,12 +886,12 @@ Expected: 若 `importFiles()` 尚無 `source` 參數、且 `book_import_service_
   });
 ```
 
-- [ ] **Step 3: 執行測試確認失敗**
+- [x] **Step 3: 執行測試確認失敗**
 
 Run: `flutter test test/library/book_import_service_test.dart`
 Expected: FAIL——`importFiles()` 不接受新參數，編譯錯誤。
 
-- [ ] **Step 4: 實作介面擴充**
+- [x] **Step 4: 實作介面擴充**
 
 修改 `app/lib/library/book_import_service.dart` 的 `importFiles()` 宣告（`book_import_service.dart:30-34`）：
 
@@ -1019,17 +1019,17 @@ Expected: FAIL——`importFiles()` 不接受新參數，編譯錯誤。
 
 （`isDownloaded` 不需要在此顯式傳入——`Book` 建構子預設值 `true` 已符合「任何走完這條匯入管線的書都是已下載狀態」的語意，本機/雲端硬碟/遠端書架三種來源皆然。）
 
-- [ ] **Step 5: 執行測試確認全數通過**
+- [x] **Step 5: 執行測試確認全數通過**
 
 Run: `flutter test test/library/book_import_service_test.dart`
 Expected: PASS——新增的 2 個測試通過，檔案內既有全部測試（本機匯入各格式情境）零回歸。
 
-- [ ] **Step 6: 執行全專案測試確認零回歸**
+- [x] **Step 6: 執行全專案測試確認零回歸**
 
 Run: `cd app && flutter analyze && flutter test`
 Expected: `flutter analyze` 乾淨；`flutter test` 全數通過（含 `importFolder()` 相關測試——`importFolder()` 本身未修改簽章，僅共用改動後的 `_importSingleFile`，其呼叫處未傳入新參數，全部使用預設值，行為不變）。
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app/lib/library/book_import_service.dart app/lib/library/book_import_service_impl.dart app/test/library/book_import_service_test.dart

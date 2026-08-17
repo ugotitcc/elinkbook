@@ -3143,6 +3143,88 @@ void main() {
     expect(serverRows, hasLength(1));
   });
 
+  test(
+      '既有 version 21 裝置升級到 version 22 後，remote_server_id 的 ON DELETE SET NULL '
+      '外鍵約束仍然生效（審查 Minor #2：專門驗證 ALTER TABLE ADD COLUMN 補上的外鍵，'
+      '而非全新安裝 CREATE TABLE 內宣告的外鍵）', () async {
+    final tempDir = await Directory.systemTemp.createTemp(
+        'elinkbook_migration_v21_to_v22_fk_cascade_test');
+    addTearDown(() => tempDir.delete(recursive: true));
+    final dbPath = p.join(tempDir.path, 'test.db');
+
+    final oldDb = await databaseFactory.openDatabase(
+      dbPath,
+      options: OpenDatabaseOptions(
+        version: 21,
+        onConfigure: (db) async {
+          await db.execute('PRAGMA foreign_keys = ON');
+        },
+        onCreate: (db, version) async {
+          await db.execute('CREATE TABLE groups (name TEXT PRIMARY KEY)');
+          await db.insert('groups', {'name': '未分類'});
+          await db.execute('''
+            CREATE TABLE books (
+              id TEXT PRIMARY KEY,
+              title TEXT NOT NULL,
+              author TEXT,
+              format TEXT NOT NULL,
+              filePath TEXT NOT NULL,
+              source TEXT NOT NULL,
+              coverPath TEXT,
+              progress REAL NOT NULL DEFAULT 0,
+              epubLocator TEXT,
+              pdfPageIndex INTEGER,
+              totalCharacterCount INTEGER,
+              is_fixed_layout INTEGER,
+              groupName TEXT NOT NULL DEFAULT '未分類',
+              createTime INTEGER NOT NULL,
+              lastReadTime INTEGER NOT NULL,
+              content_fingerprint TEXT,
+              position_updated_at INTEGER,
+              position_synced_server_updated_at TEXT
+            )
+          ''');
+        },
+      ),
+    );
+    await oldDb.close();
+
+    // 觸發 onUpgrade（oldVersion=21 → newVersion=22）——remote_server_id
+    // 欄位在這條路徑上是透過 ALTER TABLE ADD COLUMN 事後補上 REFERENCES，
+    // 不是像全新安裝那樣直接宣告在原始 CREATE TABLE books 內，兩者對
+    // SQLite 而言是否等效需要各自驗證。
+    final upgraded = await SqliteLibraryRepository.open(dbPath);
+    addTearDown(() => upgraded.close());
+
+    await upgraded.database.insert('remote_servers', {
+      'id': 'srv1',
+      'name': '家用 NAS',
+      'base_url': 'http://192.168.1.100:8080/opds',
+      'type': 'opds',
+      'allow_insecure': 0,
+      'created_at': 1000,
+    });
+    await upgraded.database.insert('books', {
+      'id': 'book1',
+      'title': '雲端書',
+      'format': 'epub',
+      'filePath': '/books/book1.epub',
+      'source': 'local',
+      'groupName': '未分類',
+      'createTime': 1000,
+      'lastReadTime': 1000,
+      'remote_server_id': 'srv1',
+      'remote_book_id': 'remote-book-1',
+    });
+
+    await upgraded.database
+        .delete('remote_servers', where: 'id = ?', whereArgs: ['srv1']);
+
+    final rows = await upgraded.database
+        .query('books', where: 'id = ?', whereArgs: ['book1']);
+    expect(rows.single['remote_server_id'], isNull);
+  });
+
   test('刪除 remote_servers 該筆後，關聯 books 的 remote_server_id 自動變為 NULL',
       () async {
     final repo = await SqliteLibraryRepository.open(inMemoryDatabasePath);
