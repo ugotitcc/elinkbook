@@ -1038,4 +1038,89 @@ void main() {
       expect(chapterContent, contains('測試'));
     });
   });
+
+  group('MD 匯入', () {
+    test('匯入有效 MD：format=md、isFixedLayout=false、filePath 指向合成後的 .md 檔案', () async {
+      final mdFile = File('${Directory.systemTemp.path}/import_test.md');
+      await mdFile.writeAsBytes(utf8.encode('# 第一章\n內容'));
+      addTearDown(() => mdFile.delete());
+
+      final result = await service.importFiles([mdFile.path], displayNames: ['notes.md']);
+
+      expect(result.importedBooks, hasLength(1));
+      final book = result.importedBooks.first;
+      expect(book.format, BookFileFormat.md);
+      expect(book.isFixedLayout, isFalse);
+      expect(book.filePath, isNot(mdFile.path));
+      expect(book.filePath, endsWith('.md'));
+      expect(File(book.filePath).existsSync(), isTrue);
+      final archive = ZipDecoder().decodeBytes(await File(book.filePath).readAsBytes());
+      expect(archive.findFile('OEBPS/content.opf'), isNotNull);
+    });
+
+    test('Frontmatter 標題/作者正確寫入 Book，無 Frontmatter 時使用檔名標題', () async {
+      final mdFile = File('${Directory.systemTemp.path}/import_test_fm.md');
+      await mdFile.writeAsBytes(
+        utf8.encode('---\ntitle: 我的筆記\nauthor: 作者甲\n---\n# 內容\n正文'),
+      );
+      addTearDown(() => mdFile.delete());
+
+      final result = await service.importFiles([mdFile.path], displayNames: ['notes_fm.md']);
+
+      final book = result.importedBooks.first;
+      expect(book.title, '我的筆記');
+      expect(book.author, '作者甲');
+    });
+
+    test('無 Frontmatter 封面時，封面退回依書名文字動態產生（比照 TXT 既有機制）', () async {
+      final mdFile = File('${Directory.systemTemp.path}/import_test_cover_fallback.md');
+      await mdFile.writeAsBytes(utf8.encode('# 內容\n正文'));
+      addTearDown(() => mdFile.delete());
+
+      final result = await service.importFiles([mdFile.path], displayNames: ['notes_cover.md']);
+
+      final book = result.importedBooks.first;
+      expect(book.coverPath, isNotNull);
+      expect(File(book.coverPath!).existsSync(), isTrue);
+    });
+
+    test('Frontmatter 指定 data: URI 封面時，優先使用該封面而非動態產生', () async {
+      final pngBytes = [0x89, 0x50, 0x4E, 0x47];
+      final base64Data = base64Encode(pngBytes);
+      final mdFile = File('${Directory.systemTemp.path}/import_test_cover_fm.md');
+      await mdFile.writeAsBytes(
+        utf8.encode('---\ntitle: 有封面\ncover: data:image/png;base64,$base64Data\n---\n# 內容\n正文'),
+      );
+      addTearDown(() => mdFile.delete());
+
+      final result = await service.importFiles([mdFile.path], displayNames: ['notes_cover_fm.md']);
+
+      final book = result.importedBooks.first;
+      expect(await File(book.coverPath!).readAsBytes(), pngBytes);
+    });
+
+    test('contentFingerprint 對原始檔案計算，非合成後的 .md 檔案', () async {
+      final mdFile = File('${Directory.systemTemp.path}/import_test_fingerprint.md');
+      await mdFile.writeAsBytes(utf8.encode('# 內容\n正文'));
+      addTearDown(() => mdFile.delete());
+
+      final result = await service.importFiles([mdFile.path], displayNames: ['notes_fp.md']);
+
+      final book = result.importedBooks.first;
+      final expectedFingerprint =
+          await computeBookContentFingerprint(mdFile.path, BookFileFormat.md);
+      expect(book.contentFingerprint, expectedFingerprint);
+    });
+
+    test('空白 MD 檔案不建立 Book 記錄，且不留下孤兒封面檔案', () async {
+      final mdFile = File('${Directory.systemTemp.path}/import_test_empty.md');
+      await mdFile.writeAsBytes(utf8.encode('---\ntitle: 空內容\n---\n   \n\n   '));
+      addTearDown(() => mdFile.delete());
+
+      final result = await service.importFiles([mdFile.path], displayNames: ['empty.md']);
+
+      expect(result.importedBooks, isEmpty);
+      expect(coversDir.listSync(), isEmpty);
+    });
+  });
 }
