@@ -30,13 +30,13 @@
 
 本 Task 同時要**實測**`remote_server_id` 是否能以 `ALTER TABLE ADD COLUMN` 內聯宣告 `REFERENCES remote_servers(id) ON DELETE SET NULL`（`spec.md`「資料模型與 Schema」列為技術風險，需要實測確認）——用 TDD 的紅燈階段直接驗證，不用另外寫實驗腳本。
 
-- [ ] **Step 1: 核對目前最新 schema 版本號**
+- [x] **Step 1: 核對目前最新 schema 版本號**
 
 Run: 在 `app/lib/library/sqlite_library_repository.dart` 搜尋 `version:`（`open()` 方法內）。
 
 Expected: 確認目前值（撰寫本計畫時為 `21`）。若已不是 21（代表 `epic-29-cloud-import` 已先落地取走 22），後續所有步驟中的 `22` 一律替換為「該值 +1」，`if (oldVersion < 22)` 一併替換版本號。以下步驟皆以 22 為例。
 
-- [ ] **Step 2: 寫失敗測試——全新安裝可寫入/讀取 `remote_servers` 表**
+- [x] **Step 2: 寫失敗測試——全新安裝可寫入/讀取 `remote_servers` 表**
 
 在 `app/test/library/sqlite_library_repository_test.dart` 找到既有的 `test('全新安裝的 layout_preset 表可用（version 21 起 onCreate 已含括）', ...)` 測試（緊鄰 `listReflowableEpubBooks` 的 `group(...)` 之前），在它之後新增：
 
@@ -58,7 +58,7 @@ test('全新安裝的 remote_servers 表可用（version 22 起 onCreate 已含�
 });
 ```
 
-- [ ] **Step 3: 寫失敗測試——既有 version 21 裝置升級到 version 22**
+- [x] **Step 3: 寫失敗測試——既有 version 21 裝置升級到 version 22**
 
 緊接著 Step 2 的測試之後新增（比照緊鄰的 `test('既有 version 20 裝置升級到 version 21，新增 layout_preset 表，可正常寫入讀取', ...)` 既有模板，books 表 CREATE TABLE 字串需含 version 21 當下的完整欄位，即現有 `onCreate` 的 books 定義原樣照抄）：
 
@@ -143,7 +143,7 @@ test('既有 version 21 裝置升級到 version 22，新增 remote_servers 表�
 });
 ```
 
-- [ ] **Step 4: 寫失敗測試——刪除站點後，關聯書籍的 `remote_server_id` 自動變為 `NULL`**
+- [x] **Step 4: 寫失敗測試——刪除站點後，關聯書籍的 `remote_server_id` 自動變為 `NULL`**
 
 緊接著 Step 3 的測試之後新增（這個測試同時驗證 `ON DELETE SET NULL` 外鍵約束是否真的生效——TDD 紅燈階段就是實測本身，不需要另外寫實驗腳本）：
 
@@ -182,12 +182,12 @@ test('刪除 remote_servers 該筆後，關聯 books 的 remote_server_id 自動
 
 **這個測試依賴 Task 2 才會新增的 `Book(remoteServerId:, remoteBookId:)` 具名參數**，Step 4 先寫測試碼、確認編譯會失敗（`Book` 建構子還沒有這兩個參數），屬預期中的紅燈——先繼續往下做 Step 5-6（先讓 Step 2/3 兩個不依賴 `Book` 模型的測試通過），Step 4 這個測試留到 Task 2 完成後才會真正跑到綠燈，在本 Task 結尾的 Step 7 一併確認。
 
-- [ ] **Step 5: 執行測試確認全部失敗**
+- [x] **Step 5: 執行測試確認全部失敗**
 
 Run: `flutter test test/library/sqlite_library_repository_test.dart`
 Expected: FAIL——Step 2/3 因 `remote_servers` 表不存在／`books` 缺少新欄位失敗（`no such table: remote_servers` 或 `no such column`）；Step 4 因 `Book` 建構子不接受 `remoteServerId`/`remoteBookId` 參數而編譯失敗。
 
-- [ ] **Step 6: 實作 schema migration**
+- [x] **Step 6: 實作 schema migration**
 
 修改 `app/lib/library/sqlite_library_repository.dart`：
 
@@ -300,12 +300,12 @@ Expected: FAIL——Step 2/3 因 `remote_servers` 表不存在／`books` 缺少�
   }
 ```
 
-- [ ] **Step 7: 執行測試確認 Step 2/3 通過（Step 4 留待 Task 2 完成後）**
+- [x] **Step 7: 執行測試確認 Step 2/3 通過（Step 4 留待 Task 2 完成後）**
 
 Run: `flutter test test/library/sqlite_library_repository_test.dart`
 Expected: Step 2、Step 3 兩個測試 PASS；Step 4 測試因 `Book` 尚無 `remoteServerId`/`remoteBookId` 具名參數，仍是編譯錯誤（預期中，等 Task 2 完成）。
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add app/lib/library/sqlite_library_repository.dart app/test/library/sqlite_library_repository_test.dart
@@ -325,11 +325,11 @@ git commit -m "feat(epic-30): 新增 remote_servers 表與 books 表遠端書架
 
 **⚠️ 已知陷阱**：這個檔案的 `copyWith()` 方法**不是**把所有欄位都開放成具名參數——`positionUpdatedAt`/`positionSyncedServerUpdatedAt` 兩個既有欄位就刻意不開放（見 `book.dart:75-80` 既有註解「不開放為 copyWith() 的具名參數...但仍會原樣帶入 copyWith() 回傳的新物件，不能讓 copyWith() 把這兩個欄位清空」），2026-08-04 曾發生過忘記把既有欄位帶入 `copyWith()` 回傳值、被任何呼叫 `copyWith()` 的地方靜默清空成 `null` 的真實回歸。本 Task 新增的 4 個欄位比照同一原則處理：**不開放為 `copyWith()` 的具名參數**（目前沒有任何呼叫端需要透過 `copyWith()` 修改這 4 個欄位，YAGNI），但**必須**在 `copyWith()` 回傳的新物件中原樣帶入，否則任何既有呼叫（例如 `LibraryScreen` 批次分類異動時呼叫 `copyWith(groupName: ...)`）都會靜默把這本書的遠端書架關聯清空。
 
-- [ ] **Step 1: 補上 Task 1 的紅燈測試（`Book` 建構子）**
+- [x] **Step 1: 補上 Task 1 的紅燈測試（`Book` 建構子）**
 
 確認 Task 1 Step 4 寫的測試（`刪除 remote_servers 該筆後，關聯 books 的 remote_server_id 自動變為 NULL`）目前因缺少 `Book(remoteServerId:, remoteBookId:)` 具名參數而編譯失敗，這就是本 Task 要解決的紅燈，不需要另外重寫。
 
-- [ ] **Step 2: 寫失敗測試——`copyWith()` 不清空新欄位（回歸防護）**
+- [x] **Step 2: 寫失敗測試——`copyWith()` 不清空新欄位（回歸防護）**
 
 在 `app/test/library/sqlite_library_repository_test.dart` 新增一個獨立測試（放在 Task 1 新增的 3 個測試之後）：
 
@@ -360,7 +360,7 @@ test('Book.copyWith() 不會清空 remoteServerId/remoteBookId/remoteDownloadUrl
 });
 ```
 
-- [ ] **Step 3: 寫失敗測試——`insertBook`/`listBooks` 往返保留新欄位（含 `BookSource.calibreOpds`）**
+- [x] **Step 3: 寫失敗測試——`insertBook`/`listBooks` 往返保留新欄位（含 `BookSource.calibreOpds`）**
 
 緊接著 Step 2 的測試之後新增：
 
@@ -417,12 +417,12 @@ test('未指定 remoteServerId 等欄位時，新書預設 isDownloaded=true 且
 });
 ```
 
-- [ ] **Step 4: 執行測試確認全部失敗（編譯錯誤）**
+- [x] **Step 4: 執行測試確認全部失敗（編譯錯誤）**
 
 Run: `flutter test test/library/sqlite_library_repository_test.dart`
 Expected: FAIL——`Book` 建構子不接受 `remoteServerId`/`remoteBookId`/`remoteDownloadUrl`/`isDownloaded`，`BookSource.calibreOpds` 不存在（`library_enums.dart` 尚未新增，Task 3 才會補）。**本 Step 會同時暴露 Task 3 的紅燈，屬預期中——Task 3 會一併處理 `BookSource.calibreOpds`。**
 
-- [ ] **Step 5: 實作 `Book` 模型擴充**
+- [x] **Step 5: 實作 `Book` 模型擴充**
 
 修改 `app/lib/library/models/book.dart`，共 5 處：
 
@@ -505,12 +505,12 @@ Expected: FAIL——`Book` 建構子不接受 `remoteServerId`/`remoteBookId`/`r
         isDownloaded,
 ```
 
-- [ ] **Step 6: 執行測試確認 Task 1 與 Task 2 的測試全數通過**
+- [x] **Step 6: 執行測試確認 Task 1 與 Task 2 的測試全數通過**
 
 Run: `flutter test test/library/sqlite_library_repository_test.dart`
 Expected: 仍會因 `BookSource.calibreOpds` 不存在而 FAIL（Task 3 待辦）；除此之外的斷言邏輯應可編譯（`Book` 相關部分已完整）。若此時錯誤訊息只剩下 `BookSource.calibreOpds` 未定義，代表 Task 2 本身已正確完成，繼續往下做 Task 3。
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app/lib/library/models/book.dart app/test/library/sqlite_library_repository_test.dart

@@ -3175,6 +3175,91 @@ void main() {
     expect(rows.single['remote_server_id'], isNull);
   });
 
+  test('Book.copyWith() 不會清空 remoteServerId/remoteBookId/remoteDownloadUrl/isDownloaded',
+      () async {
+    final original = Book(
+      id: 'book1',
+      title: '雲端書',
+      format: BookFileFormat.epub,
+      filePath: '/books/book1.epub',
+      source: BookSource.calibreOpds,
+      createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+      lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+      remoteServerId: 'srv1',
+      remoteBookId: 'remote-book-1',
+      remoteDownloadUrl: 'http://192.168.1.100:8080/opds/download/1.epub',
+      isDownloaded: false,
+    );
+
+    final copied = original.copyWith(groupName: '新分類');
+
+    expect(copied.remoteServerId, 'srv1');
+    expect(copied.remoteBookId, 'remote-book-1');
+    expect(copied.remoteDownloadUrl,
+        'http://192.168.1.100:8080/opds/download/1.epub');
+    expect(copied.isDownloaded, false);
+  });
+
+  test('insertBook/listBooks 往返保留 remoteServerId/remoteBookId/remoteDownloadUrl/isDownloaded',
+      () async {
+    final repo = await SqliteLibraryRepository.open(inMemoryDatabasePath);
+    addTearDown(() => repo.close());
+
+    await repo.database.insert('remote_servers', {
+      'id': 'srv1',
+      'name': '家用 NAS',
+      'base_url': 'http://192.168.1.100:8080/opds',
+      'type': 'opds',
+      'allow_insecure': 0,
+      'created_at': 1000,
+    });
+
+    await repo.insertBook(Book(
+      id: 'book1',
+      title: '雲端書',
+      format: BookFileFormat.epub,
+      filePath: '/books/book1.epub',
+      source: BookSource.calibreOpds,
+      createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+      lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+      remoteServerId: 'srv1',
+      remoteBookId: 'remote-book-1',
+      remoteDownloadUrl: 'http://192.168.1.100:8080/opds/download/1.epub',
+      isDownloaded: false,
+    ));
+
+    final books = await repo.listBooks();
+    final book = books.single;
+    expect(book.source, BookSource.calibreOpds);
+    expect(book.remoteServerId, 'srv1');
+    expect(book.remoteBookId, 'remote-book-1');
+    expect(book.remoteDownloadUrl,
+        'http://192.168.1.100:8080/opds/download/1.epub');
+    expect(book.isDownloaded, false);
+  });
+
+  test('未指定 remoteServerId 等欄位時，新書預設 isDownloaded=true 且其餘欄位為 null',
+      () async {
+    final repo = await SqliteLibraryRepository.open(inMemoryDatabasePath);
+    addTearDown(() => repo.close());
+
+    await repo.insertBook(Book(
+      id: 'book2',
+      title: '本機書',
+      format: BookFileFormat.epub,
+      filePath: '/books/book2.epub',
+      source: BookSource.local,
+      createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+      lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+    ));
+
+    final book = (await repo.listBooks()).single;
+    expect(book.isDownloaded, true);
+    expect(book.remoteServerId, isNull);
+    expect(book.remoteBookId, isNull);
+    expect(book.remoteDownloadUrl, isNull);
+  });
+
   group('listReflowableEpubBooks', () {
     test('空書庫回傳空清單', () async {
       final repo = await SqliteLibraryRepository.open(inMemoryDatabasePath);

@@ -80,6 +80,18 @@ class Book {
   /// `sqlite_library_repository.dart` 的 `updateBook()` 呼叫端）。
   final String? positionSyncedServerUpdatedAt;
 
+  /// 所屬遠端書庫伺服器 ID（`remote_servers.id` 外鍵），`null` 代表非遠端匯入或遠端站點已被刪除（ON DELETE SET NULL）。
+  final String? remoteServerId;
+
+  /// 遠端書庫（如 Calibre）中的書籍唯一識別碼（例如 OPDS entry ID 或 Calibre numeric id）。
+  final String? remoteBookId;
+
+  /// 遠端書籍下載或串流來源 URL。
+  final String? remoteDownloadUrl;
+
+  /// 本地檔案是否已下載就緒（預設 `true`；遠端僅有詮釋資料尚未下載時為 `false`）。
+  final bool isDownloaded;
+
   final String groupName;
   final DateTime createTime;
   final DateTime lastReadTime;
@@ -100,6 +112,10 @@ class Book {
     this.contentFingerprint,
     this.positionUpdatedAt,
     this.positionSyncedServerUpdatedAt,
+    this.remoteServerId,
+    this.remoteBookId,
+    this.remoteDownloadUrl,
+    this.isDownloaded = true,
     this.groupName = BookGroup.uncategorized,
     required this.createTime,
     required this.lastReadTime,
@@ -125,6 +141,10 @@ class Book {
       'content_fingerprint': contentFingerprint,
       'position_updated_at': positionUpdatedAt,
       'position_synced_server_updated_at': positionSyncedServerUpdatedAt,
+      'remote_server_id': remoteServerId,
+      'remote_book_id': remoteBookId,
+      'remote_download_url': remoteDownloadUrl,
+      'is_downloaded': isDownloaded ? 1 : 0,
       'groupName': groupName,
       'createTime': createTime.millisecondsSinceEpoch,
       'lastReadTime': lastReadTime.millisecondsSinceEpoch,
@@ -151,6 +171,10 @@ class Book {
       positionUpdatedAt: map['position_updated_at'] as int?,
       positionSyncedServerUpdatedAt:
           map['position_synced_server_updated_at'] as String?,
+      remoteServerId: map['remote_server_id'] as String?,
+      remoteBookId: map['remote_book_id'] as String?,
+      remoteDownloadUrl: map['remote_download_url'] as String?,
+      isDownloaded: (map['is_downloaded'] as int? ?? 1) == 1,
       groupName: map['groupName'] as String,
       createTime: DateTime.fromMillisecondsSinceEpoch(map['createTime'] as int),
       lastReadTime:
@@ -161,6 +185,8 @@ class Book {
   /// 回傳欄位值與自身相同的新物件，僅覆寫明確傳入的參數。[groupName] 供
   /// Issue 10 的批次分類異動使用；[isFixedLayout] 供本 Issue 的 EPUB 版面
   /// 判斷/回填流程使用。
+  /// **⚠️ 不開放 remoteServerId/remoteBookId/remoteDownloadUrl/isDownloaded
+  /// 為具名參數（YAGNI），但必須原樣帶入新物件以避免靜默清空**。
   Book copyWith({String? groupName, bool? isFixedLayout}) {
     return Book(
       id: id,
@@ -177,6 +203,10 @@ class Book {
       contentFingerprint: contentFingerprint,
       positionUpdatedAt: positionUpdatedAt,
       positionSyncedServerUpdatedAt: positionSyncedServerUpdatedAt,
+      remoteServerId: remoteServerId,
+      remoteBookId: remoteBookId,
+      remoteDownloadUrl: remoteDownloadUrl,
+      isDownloaded: isDownloaded,
       isFixedLayout: isFixedLayout ?? this.isFixedLayout,
       groupName: groupName ?? this.groupName,
       createTime: createTime,
@@ -204,12 +234,16 @@ class Book {
           contentFingerprint == other.contentFingerprint &&
           positionUpdatedAt == other.positionUpdatedAt &&
           positionSyncedServerUpdatedAt == other.positionSyncedServerUpdatedAt &&
+          remoteServerId == other.remoteServerId &&
+          remoteBookId == other.remoteBookId &&
+          remoteDownloadUrl == other.remoteDownloadUrl &&
+          isDownloaded == other.isDownloaded &&
           groupName == other.groupName &&
           createTime == other.createTime &&
           lastReadTime == other.lastReadTime;
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
         id,
         title,
         author,
@@ -225,8 +259,12 @@ class Book {
         contentFingerprint,
         positionUpdatedAt,
         positionSyncedServerUpdatedAt,
+        remoteServerId,
+        remoteBookId,
+        remoteDownloadUrl,
+        isDownloaded,
         groupName,
         createTime,
         lastReadTime,
-      );
+      ]);
 }
