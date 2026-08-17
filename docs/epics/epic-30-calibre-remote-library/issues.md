@@ -6,7 +6,7 @@
 
 ## Issue 0：擴充既有匯入/查詢管線與新增站點表（Prefactor）
 
-**Status:** `ready-for-agent`
+**Status:** ✅ 已完成並合併回 `main`（PR [#157](https://git.jigong.org/huthief/elinkBook/pulls/157)，分支 `epic-30-issue-0`，7 個 commit：6 個 Task 各自一個 commit＋1 個審查修訂 commit）。`/superpowers:writing-plans` 產出 `plans/plan-issue-0.md`，`/superpowers:requesting-code-review` 派遣獨立 subagent 審查（`reviews/review-issue-0.md`，本機審查報告依專案慣例不進版控，結論 APPROVED WITH FINDINGS，0 Critical／1 Important／2 Minor）：Important（`plan-issue-0.md` Task 4/6 核取方塊未跟上實際完成狀態）與 2 項 Minor（`Book.fromMap()` 的 `isDownloaded` 多餘防禦性寫法、`ON DELETE SET NULL` 外鍵級聯測試未涵蓋 `ALTER TABLE` 升級路徑）皆已修訂並補測試。全專案 `flutter analyze` 乾淨、`flutter test` 1448 項全數通過、零回歸；審查過程另用獨立 `sqlite3` CLI（跳脫 Dart/sqflite）複驗計畫標記為技術風險的 `ALTER TABLE ADD COLUMN` 搭配 `REFERENCES ... ON DELETE SET NULL`，確認可行，走的是主要路徑而非計畫預先寫好的備援方案。
 
 **依賴：** 無，可立即開始。
 
