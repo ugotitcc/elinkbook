@@ -30,7 +30,7 @@
 **Interfaces:**
 - Produces: `RemoteServerType` enum（`opds`/`calibreServer`/`calibreWeb`）、`RemoteServerProfile` 類別（`id`/`name`/`baseUrl`/`type`/`username`/`allowInsecure`/`createdAt`/`lastAccessedAt`，`toMap()`/`fromMap()`/`==`/`hashCode`）。後續 Task 3（`SqliteRemoteServerRepository`）、Task 6（`OpdsHttpClient`）、Task 7-8（UI）皆依賴這個型別。
 
-- [ ] **Step 1: 寫失敗測試**
+- [x] **Step 1: 寫失敗測試**
 
 ```dart
 import 'package:flutter_test/flutter_test.dart';
@@ -95,12 +95,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/remote/remote_server_profile_test.dart`
 Expected: FAIL——`app/lib/remote/remote_server_profile.dart` 尚不存在。
 
-- [ ] **Step 3: 實作**
+- [x] **Step 3: 實作**
 
 ```dart
 /// Calibre／OPDS 遠端書庫站點型別（epic-30-calibre-remote-library
@@ -199,12 +199,12 @@ class RemoteServerProfile {
 }
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `flutter test test/remote/remote_server_profile_test.dart`
 Expected: PASS，4 項測試全數通過。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/lib/remote/remote_server_profile.dart app/test/remote/remote_server_profile_test.dart
@@ -225,7 +225,7 @@ git commit -m "feat(epic-30): 新增 RemoteServerProfile 模型"
 - Consumes: Issue 0 的 `books.remote_server_id`／`books.is_downloaded` 欄位。
 - Produces: `Future<List<Book>> listUndownloadedBooksForRemoteServer(String serverId)`。Task 3 的 `SqliteRemoteServerRepository.deleteServer()` 依賴這個方法維持「不直接查 `books` 表」的邊界（見 Global Constraints）。
 
-- [ ] **Step 1: 寫失敗測試**
+- [x] **Step 1: 寫失敗測試**
 
 在 `app/test/library/sqlite_library_repository_test.dart` 新增（放在既有 `findByRemoteBookId`/`findByContentFingerprint` 兩個 `group` 之後）：
 
@@ -284,12 +284,12 @@ group('listUndownloadedBooksForRemoteServer', () {
 });
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/library/sqlite_library_repository_test.dart`
 Expected: FAIL——`LibraryRepository`／`SqliteLibraryRepository` 尚無這個方法，編譯錯誤。
 
-- [ ] **Step 3: 實作**
+- [x] **Step 3: 實作**
 
 在 `app/lib/library/library_repository.dart` 的 `abstract class LibraryRepository` 內，緊接在既有 `findByContentFingerprint` 之後新增：
 
@@ -327,12 +327,12 @@ Expected: FAIL——`LibraryRepository`／`SqliteLibraryRepository` 尚無這個
   }
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `flutter test test/library/sqlite_library_repository_test.dart && flutter test`
 Expected: 新增 2 項測試通過；全專案零回歸。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/lib/library/library_repository.dart app/lib/library/sqlite_library_repository.dart app/test/support/fake_library_repository.dart app/test/library/sqlite_library_repository_test.dart
@@ -368,7 +368,7 @@ git commit -m "feat(epic-30): LibraryRepository 新增 listUndownloadedBooksForR
 
 **密碼語意（供 Task 8 表單畫面參照）**：`addServer`/`updateServer` 的 `password` 參數即「這次呼叫後密碼應該是什麼狀態」——傳 `null` 代表清空/不使用密碼（匿名連線），傳非 `null` 字串代表寫入/覆蓋。兩個方法語意對稱，不做「留空＝不變更」這種第三種狀態（YAGNI，避免表單畫面需要額外 UI 表達「不變更」）。
 
-- [ ] **Step 1: 寫失敗測試**
+- [x] **Step 1: 寫失敗測試**
 
 ```dart
 import 'package:flutter_secure_storage/test/test_flutter_secure_storage_platform.dart';
@@ -519,12 +519,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/remote/sqlite_remote_server_repository_test.dart`
 Expected: FAIL——`app/lib/remote/remote_server_repository.dart`／`sqlite_remote_server_repository.dart` 尚不存在。
 
-- [ ] **Step 3: 實作介面與例外型別**
+- [x] **Step 3: 實作介面與例外型別**
 
 Create `app/lib/remote/remote_server_repository.dart`：
 
@@ -656,12 +656,12 @@ class SqliteRemoteServerRepository implements RemoteServerRepository {
 }
 ```
 
-- [ ] **Step 4: 執行測試確認全數通過**
+- [x] **Step 4: 執行測試確認全數通過**
 
 Run: `flutter test test/remote/sqlite_remote_server_repository_test.dart`
 Expected: PASS，8 項測試全數通過。
 
-- [ ] **Step 5: 新增 `FakeRemoteServerRepository`**
+- [x] **Step 5: 新增 `FakeRemoteServerRepository`**
 
 Create `app/test/support/fake_remote_server_repository.dart`：
 
@@ -725,12 +725,12 @@ class FakeRemoteServerRepository implements RemoteServerRepository {
 }
 ```
 
-- [ ] **Step 6: 執行全專案測試確認零回歸**
+- [x] **Step 6: 執行全專案測試確認零回歸**
 
 Run: `flutter analyze && flutter test`
 Expected: `flutter analyze` 乾淨；`flutter test` 全數通過（`FakeRemoteServerRepository` 此時尚無呼叫端，純粹編譯檢查）。
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app/lib/remote/remote_server_repository.dart app/lib/remote/sqlite_remote_server_repository.dart app/test/support/fake_remote_server_repository.dart app/test/remote/sqlite_remote_server_repository_test.dart
@@ -751,7 +751,7 @@ git commit -m "feat(epic-30): 新增 RemoteServerRepository（SQLite 實作＋Fa
 
 **這是唯一會做自動化測試的網路解析相關程式碼**（spec.md「Testing Decisions」：`OpdsFeedParser` 是純 Dart、不涉及網路，其餘 `OpdsHttpClient` 的實際 HTTP/憑證行為不做自動化測試）。
 
-- [ ] **Step 1: 寫失敗測試**
+- [x] **Step 1: 寫失敗測試**
 
 ```dart
 import 'package:flutter_test/flutter_test.dart';
@@ -924,12 +924,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/remote/opds_feed_parser_test.dart`
 Expected: FAIL——`opds_types.dart`／`opds_feed_parser.dart` 尚不存在。
 
-- [ ] **Step 3: 實作資料模型**
+- [x] **Step 3: 實作資料模型**
 
 Create `app/lib/remote/opds_types.dart`：
 
@@ -1065,7 +1065,7 @@ bool _listEquals<T>(List<T> a, List<T> b) {
 }
 ```
 
-- [ ] **Step 4: 實作 `OpdsFeedParser`**
+- [x] **Step 4: 實作 `OpdsFeedParser`**
 
 Create `app/lib/remote/opds_feed_parser.dart`：
 
@@ -1247,17 +1247,17 @@ class OpdsFeedParser {
 }
 ```
 
-- [ ] **Step 5: 執行測試確認全數通過**
+- [x] **Step 5: 執行測試確認全數通過**
 
 Run: `flutter test test/remote/opds_feed_parser_test.dart`
 Expected: PASS，13 項測試全數通過。
 
-- [ ] **Step 6: 執行全專案測試確認零回歸**
+- [x] **Step 6: 執行全專案測試確認零回歸**
 
 Run: `flutter analyze && flutter test`
 Expected: 乾淨、全數通過。
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app/lib/remote/opds_types.dart app/lib/remote/opds_feed_parser.dart app/test/remote/opds_feed_parser_test.dart
@@ -1289,7 +1289,7 @@ git commit -m "feat(epic-30): 新增 OPDS 資料模型與 OpdsFeedParser"
 
 本 Task 沒有獨立的紅燈/綠燈測試——`OpdsClient` 是純介面宣告，`FakeOpdsClient` 的正確性由 Task 8 消費它的 widget test 間接驗證（比照 `FakeLibraryRepository` 等既有測試替身「無獨立測試檔，由消費端測試驗證」的慣例，見 `epic-30` Issue 0 的 `fake_library_repository_test.dart` 是例外而非常態——本 Task 的 Fake 邏輯足夠單純，不需要重複這個例外）。
 
-- [ ] **Step 1: 實作介面**
+- [x] **Step 1: 實作介面**
 
 Create `app/lib/remote/opds_client.dart`：
 
@@ -1338,7 +1338,7 @@ abstract class OpdsClient {
 }
 ```
 
-- [ ] **Step 2: 實作 `FakeOpdsClient`**
+- [x] **Step 2: 實作 `FakeOpdsClient`**
 
 Create `app/test/support/fake_opds_client.dart`：
 
@@ -1415,12 +1415,12 @@ class FakeOpdsClient implements OpdsClient {
 }
 ```
 
-- [ ] **Step 3: 執行全專案測試確認零回歸**
+- [x] **Step 3: 執行全專案測試確認零回歸**
 
 Run: `flutter analyze && flutter test`
 Expected: 乾淨、全數通過（兩個新檔案此時尚無呼叫端，純粹編譯檢查）。
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add app/lib/remote/opds_client.dart app/test/support/fake_opds_client.dart
@@ -1440,7 +1440,7 @@ git commit -m "feat(epic-30): 新增 OpdsClient 介面與 FakeOpdsClient"
 
 **本 Task 不做自動化測試**（spec.md「Testing Decisions」：真實 HTTP 呼叫、Basic Auth header、自簽憑證放行、分頁循環防護的實際觸發皆不做自動化測試，比照 `epic-29` 對 `GoogleDriveStorageClient` 的既有慣例），僅需 `flutter analyze` 乾淨與能成功編譯。
 
-- [ ] **Step 1: 實作**
+- [x] **Step 1: 實作**
 
 Create `app/lib/remote/opds_http_client.dart`：
 
@@ -1606,17 +1606,17 @@ class _DownloadCancelledException implements Exception {
 }
 ```
 
-- [ ] **Step 2: 執行 `flutter analyze` 確認乾淨**
+- [x] **Step 2: 執行 `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 3: 執行全專案測試確認零回歸**
+- [x] **Step 3: 執行全專案測試確認零回歸**
 
 Run: `flutter test`
 Expected: 全數通過（本檔案尚無呼叫端，純粹編譯檢查）。
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add app/lib/remote/opds_http_client.dart
@@ -1635,7 +1635,7 @@ git commit -m "feat(epic-30): 新增 OpdsHttpClient 真實實作"
 - Consumes: Task 3（`RemoteServerRepository`／`RemoteServerDeletionBlockedException`）、Task 5（`OpdsClient`，向下傳給 Task 8 的表單畫面）。
 - Produces: `RemoteServerListScreen({required RemoteServerRepository repository, required OpdsClient opdsClient})`。Task 9（`LibraryScreen` 進入點）依賴這個建構子。
 
-- [ ] **Step 1: 寫失敗測試**
+- [x] **Step 1: 寫失敗測試**
 
 ```dart
 import 'package:flutter/material.dart';
@@ -1755,12 +1755,12 @@ Book _fakeBook(String id, String title) {
 }
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/screens/remote_server_list_screen_test.dart`
 Expected: FAIL——`remote_server_list_screen.dart`／`remote_server_form_screen.dart` 尚不存在（後者在 Task 8 才建立；本 Task 先用一個最小可編譯的 `RemoteServerFormScreen` stub 讓測試能編譯，Task 8 再補上完整表單邏輯——見下方 Step 3 的實作已包含最小可用版本，不需要額外 stub 檔）。
 
-- [ ] **Step 3: 實作 `RemoteServerListScreen`**（同時建立 Task 8 將完整化的 `RemoteServerFormScreen` 最小版本，見 Task 8）
+- [x] **Step 3: 實作 `RemoteServerListScreen`**（同時建立 Task 8 將完整化的 `RemoteServerFormScreen` 最小版本，見 Task 8）
 
 先建立 `app/lib/screens/remote_server_form_screen.dart` 的最小可編譯版本（僅供本 Task 的測試通過，Task 8 會補齊完整表單邏輯）：
 
@@ -1963,17 +1963,17 @@ class _RemoteServerListScreenState extends State<RemoteServerListScreen> {
 }
 ```
 
-- [ ] **Step 4: 執行測試確認全數通過**
+- [x] **Step 4: 執行測試確認全數通過**
 
 Run: `flutter test test/screens/remote_server_list_screen_test.dart`
 Expected: PASS，6 項測試全數通過。
 
-- [ ] **Step 5: 執行全專案測試確認零回歸**
+- [x] **Step 5: 執行全專案測試確認零回歸**
 
 Run: `flutter analyze && flutter test`
 Expected: 乾淨、全數通過。
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/screens/remote_server_list_screen.dart app/lib/screens/remote_server_form_screen.dart app/test/screens/remote_server_list_screen_test.dart
@@ -2000,7 +2000,7 @@ git commit -m "feat(epic-30): 新增 RemoteServerListScreen（含站點刪除防
 - 「測試連線」比照相同邏輯解析密碼——編輯模式下密碼欄位留空、帳號未清空時，測試連線也要沿用既有密碼，否則對有密碼保護的站點測試連線必然收到 401 失敗，使用者會誤以為是自己設定錯誤。
 - 這個解析邏輯**只存在於 `RemoteServerFormScreen`**，不修改 `RemoteServerRepository.updateServer()` 的既有契約（Task 3 已測試過的「`password` 參數即這次呼叫後應該有的密碼狀態」維持不變）——留空判斷屬於表單 UI 語意，不該滲透進資料層介面。
 
-- [ ] **Step 1: 寫失敗測試**
+- [x] **Step 1: 寫失敗測試**
 
 ```dart
 import 'package:flutter/material.dart';
@@ -2261,12 +2261,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/screens/remote_server_form_screen_test.dart`
 Expected: FAIL——Task 7 建立的最小版本沒有任何欄位/按鈕，找不到對應 `Key`。
 
-- [ ] **Step 3: 補齊完整表單邏輯**
+- [x] **Step 3: 補齊完整表單邏輯**
 
 修改 `app/lib/screens/remote_server_form_screen.dart`（取代 Task 7 的最小版本）：
 
@@ -2511,17 +2511,17 @@ class _RemoteServerFormScreenState extends State<RemoteServerFormScreen> {
 }
 ```
 
-- [ ] **Step 4: 執行測試確認全數通過**
+- [x] **Step 4: 執行測試確認全數通過**
 
 Run: `flutter test test/screens/remote_server_form_screen_test.dart`
 Expected: PASS，10 項測試全數通過。
 
-- [ ] **Step 5: 執行 Task 7 測試與全專案測試確認零回歸**
+- [x] **Step 5: 執行 Task 7 測試與全專案測試確認零回歸**
 
 Run: `flutter test test/screens/remote_server_list_screen_test.dart && flutter analyze && flutter test`
 Expected: 全數通過、`flutter analyze` 乾淨。
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/screens/remote_server_form_screen.dart app/test/screens/remote_server_form_screen_test.dart
@@ -2540,7 +2540,7 @@ git commit -m "feat(epic-30): RemoteServerFormScreen 補齊完整表單與測試
 **Interfaces:**
 - Consumes: Task 3（`RemoteServerRepository`）、Task 5（`OpdsClient`）、Task 6（`OpdsHttpClient`）、Task 7（`RemoteServerListScreen`）。
 
-- [ ] **Step 1: 寫失敗測試**
+- [x] **Step 1: 寫失敗測試**
 
 在 `app/test/screens/library_screen_test.dart` 新增（放在檔案末尾，`import` 區塊新增對應項目：`import 'package:elinkbook/screens/remote_server_list_screen.dart';`、`import '../support/fake_opds_client.dart';`、`import '../support/fake_remote_server_repository.dart';`）：
 
@@ -2588,12 +2588,12 @@ group('遠端書庫進入點', () {
 
 **Step 1 附註**：上方測試沿用檔案既有的 `FakeLibraryRepository`／`FakeBookImportService`／`FakeReaderPrefsManager` 建構方式——實際撰寫時請對照檔案開頭既有測試的確切建構參數（例如是否需要額外必填參數），維持與既有測試風格一致，不要重新發明。
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/screens/library_screen_test.dart`
 Expected: FAIL——`LibraryScreen` 尚無 `remoteServerRepository`/`opdsClient` 參數，編譯錯誤。
 
-- [ ] **Step 3: 修改 `LibraryScreen`**
+- [x] **Step 3: 修改 `LibraryScreen`**
 
 在 `app/lib/screens/library_screen.dart` 的 import 區塊，`import '../reader/reader_prefs_manager.dart';` 之後（即 `library_screen.dart:14` 之後）新增：
 
@@ -2643,12 +2643,12 @@ import 'remote_server_list_screen.dart';
           ),
 ```
 
-- [ ] **Step 4: 執行測試確認 `LibraryScreen` 本身的測試通過**
+- [x] **Step 4: 執行測試確認 `LibraryScreen` 本身的測試通過**
 
 Run: `flutter test test/screens/library_screen_test.dart`
 Expected: PASS，新增的 2 項測試通過，既有測試零回歸。
 
-- [ ] **Step 5: 接線 `main.dart`**
+- [x] **Step 5: 接線 `main.dart`**
 
 在 `app/lib/main.dart` 開頭 import 區塊，`import 'library/sqlite_library_repository.dart';` 之後新增：
 
@@ -2697,12 +2697,12 @@ import 'remote/sqlite_remote_server_repository.dart';
         opdsClient: widget.opdsClient,
 ```
 
-- [ ] **Step 6: 執行全專案測試確認零回歸**
+- [x] **Step 6: 執行全專案測試確認零回歸**
 
 Run: `flutter analyze && flutter test`
 Expected: `flutter analyze` 乾淨；`flutter test` 全數通過，零回歸。
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app/lib/screens/library_screen.dart app/lib/main.dart app/test/screens/library_screen_test.dart
