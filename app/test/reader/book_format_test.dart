@@ -42,6 +42,11 @@ void main() {
     expect(detectBookFormat('NOVEL.TXT'), BookFormat.txt);
   });
 
+  test('detectBookFormat 對 .md 副檔名回傳 BookFormat.md', () {
+    expect(detectBookFormat('notes.md'), BookFormat.md);
+    expect(detectBookFormat('NOTES.MD'), BookFormat.md);
+  });
+
   group('isFoliateFormat', () {
     test('epub／azw3 回傳 true', () {
       expect(isFoliateFormat(BookFormat.epub), isTrue);
@@ -54,6 +59,10 @@ void main() {
 
     test('txt 回傳 true', () {
       expect(isFoliateFormat(BookFormat.txt), isTrue);
+    });
+
+    test('isFoliateFormat 對 md 回傳 true', () {
+      expect(isFoliateFormat(BookFormat.md), isTrue);
     });
 
     test('pdf／unknown 回傳 false', () {

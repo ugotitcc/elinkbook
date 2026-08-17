@@ -276,7 +276,7 @@ git commit -m "refactor(epic-11): Issue 5——抽出共用 epub_container_build
 **Interfaces:**
 - Produces：`BookFormat.md`、`detectBookFormat('foo.md') == BookFormat.md`、`isFoliateFormat(BookFormat.md) == true`、`BookFileFormat.md`。
 
-- [ ] **Step 1：寫失敗測試**
+- [x] **Step 1：寫失敗測試**
 
 於 `app/test/reader/book_format_test.dart`（Issue 3/4 已建立，見既有內容）追加：
 
@@ -291,7 +291,7 @@ git commit -m "refactor(epic-11): Issue 5——抽出共用 epub_container_build
   });
 ```
 
-- [ ] **Step 2：確認測試失敗**
+- [x] **Step 2：確認測試失敗**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -300,7 +300,7 @@ flutter test test/reader/book_format_test.dart
 
 Expected：FAIL（`BookFormat.md` 未定義，編譯錯誤）。
 
-- [ ] **Step 3：實作**
+- [x] **Step 3：實作**
 
 ```dart
 /// 書籍檔案格式，依副檔名偵測。
@@ -333,7 +333,7 @@ bool isFoliateFormat(BookFormat format) =>
 enum BookFileFormat { epub, pdf, txt, azw3, cbz, md }
 ```
 
-- [ ] **Step 4：確認測試通過**
+- [x] **Step 4：確認測試通過**
 
 ```bash
 flutter test test/reader/book_format_test.dart
@@ -341,7 +341,7 @@ flutter test test/reader/book_format_test.dart
 
 Expected：PASS。
 
-- [ ] **Step 5：`flutter analyze` 確認 exhaustiveness 錯誤清單**
+- [x] **Step 5：`flutter analyze` 確認 exhaustiveness 錯誤清單**
 
 ```bash
 flutter analyze
@@ -349,7 +349,7 @@ flutter analyze
 
 Expected：出現數個 `non_exhaustive_switch_statement`（`reader_screen.dart` 內既有 `switch (format)` 語句缺少 `case BookFormat.md:`），記錄下來供 Task 7 使用（比照 Issue 3/4 既有方法論）。**不要在本 Task 修正**。
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/lib/reader/book_format.dart app/lib/library/models/library_enums.dart app/test/reader/book_format_test.dart
