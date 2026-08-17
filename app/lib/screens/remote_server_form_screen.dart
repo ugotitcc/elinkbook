@@ -7,9 +7,10 @@ import '../remote/remote_server_repository.dart';
 
 /// 新增/編輯遠端書庫站點表單（epic-30-calibre-remote-library Issue 1，
 /// spec.md「UI 落地位置」）。密碼欄位刻意不預填既有密碼（比照
-/// `sync_settings_screen.dart` 既有安全慣例）；留空並儲存＝清空既有密碼
-/// （退回匿名），與 `RemoteServerRepository` 的密碼語意對稱（見
-/// `remote_server_repository.dart` 文件）。
+/// `sync_settings_screen.dart` 既有安全慣例）——編輯模式下密碼欄位留空
+/// 的實際語意見 [_resolvePasswordToUse]（`review-issue-1.md` Important
+/// #2 核實：本處先前的文字描述與該方法的行為不一致，已更正為指向單一
+/// 事實來源，避免兩處各說各話）。
 class RemoteServerFormScreen extends StatefulWidget {
   final RemoteServerRepository repository;
   final OpdsClient opdsClient;
@@ -106,9 +107,22 @@ class _RemoteServerFormScreenState extends State<RemoteServerFormScreen> {
     });
   }
 
+  /// **〔`review-issue-1.md` Minor #2 採納〕** 僅驗證 `baseUrl` 是否具備
+  /// `http`/`https` schema，不驗證主機是否真的可連線（那是「測試連線」
+  /// 按鈕的職責）——避免使用者用明顯不是網址的字串儲存後，才在測試連線
+  /// 得到籠統的「連線失敗」。
+  bool _isValidBaseUrl(String value) {
+    final uri = Uri.tryParse(value);
+    return uri != null && (uri.scheme == 'http' || uri.scheme == 'https');
+  }
+
   Future<void> _save() async {
     if (_nameController.text.trim().isEmpty || _baseUrlController.text.trim().isEmpty) {
       setState(() => _validationError = '請填寫站點名稱與網址');
+      return;
+    }
+    if (!_isValidBaseUrl(_baseUrlController.text.trim())) {
+      setState(() => _validationError = '請輸入有效的伺服器網址（需以 http:// 或 https:// 開頭）');
       return;
     }
     setState(() {
@@ -116,11 +130,24 @@ class _RemoteServerFormScreenState extends State<RemoteServerFormScreen> {
       _validationError = null;
     });
     final profile = _buildProfile();
-    final password = await _resolvePasswordToUse();
-    if (_isEditing) {
-      await widget.repository.updateServer(profile, password: password);
-    } else {
-      await widget.repository.addServer(profile, password: password);
+    // 〔審查 review-issue-1.md Important #3 採納〕SQLite／secure storage
+    // 寫入失敗時（本專案鎖定的低階/E-Ink 裝置上並非不可能發生）不能讓
+    // 畫面卡在「儲存中」且使用者拿不到任何回饋，改為顯示錯誤文字並恢復
+    // 可互動狀態，讓使用者能重試或先排除問題。
+    try {
+      final password = await _resolvePasswordToUse();
+      if (_isEditing) {
+        await widget.repository.updateServer(profile, password: password);
+      } else {
+        await widget.repository.addServer(profile, password: password);
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _saving = false;
+        _validationError = '儲存失敗，請稍後再試';
+      });
+      return;
     }
     if (!mounted) return;
     Navigator.of(context).pop(true);
@@ -182,7 +209,9 @@ class _RemoteServerFormScreenState extends State<RemoteServerFormScreen> {
               autocorrect: false,
               enableSuggestions: false,
               decoration: InputDecoration(
-                labelText: _isEditing ? '密碼（留空代表清除既有密碼）' : '密碼',
+                labelText: _isEditing
+                    ? '密碼（留空＝沿用既有密碼；清空上方帳號欄位則一併清除密碼）'
+                    : '密碼',
               ),
             ),
             SwitchListTile(

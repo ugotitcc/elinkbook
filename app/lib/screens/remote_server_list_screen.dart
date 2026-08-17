@@ -67,6 +67,34 @@ class _RemoteServerListScreenState extends State<RemoteServerListScreen> {
     if (saved == true) _load();
   }
 
+  /// **〔`review-issue-1.md` Minor #1 採納〕** 刪除站點會連帶移除已儲存
+  /// 的帳密憑證，先跳確認對話框避免誤觸；「僅雲端紀錄書籍擋下刪除」的
+  /// 示警對話框（下方）是另一個獨立情境，兩者不衝突。
+  Future<void> _confirmDelete(RemoteServerProfile profile) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        key: const Key('remote_server_delete_confirm_dialog'),
+        title: const Text('刪除站點'),
+        content: Text('確定要刪除站點「${profile.name}」嗎？此動作無法復原。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            key: const Key('remote_server_delete_confirm_button'),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('刪除'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    if (!mounted) return;
+    await _delete(profile);
+  }
+
   Future<void> _delete(RemoteServerProfile profile) async {
     try {
       await widget.repository.deleteServer(profile.id);
@@ -89,6 +117,17 @@ class _RemoteServerListScreenState extends State<RemoteServerListScreen> {
               child: const Text('了解'),
             ),
           ],
+        ),
+      );
+    } catch (_) {
+      // 〔審查 review-issue-1.md Important #3 採納〕刪除防護例外以外的
+      // 其餘失敗（例如 secure storage 刪除失敗）不能被靜默吞掉，至少要
+      // 讓使用者知道發生了什麼事。
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          key: Key('remote_server_delete_error_snackbar'),
+          content: Text('刪除站點失敗，請稍後再試'),
         ),
       );
     }
@@ -143,7 +182,7 @@ class _RemoteServerListScreenState extends State<RemoteServerListScreen> {
                             key: Key('remote_server_item_delete_${profile.id}'),
                             icon: const Icon(Icons.delete),
                             tooltip: '刪除',
-                            onPressed: () => _delete(profile),
+                            onPressed: () => _confirmDelete(profile),
                           ),
                         ],
                       ),

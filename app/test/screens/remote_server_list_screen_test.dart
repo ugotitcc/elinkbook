@@ -81,18 +81,35 @@ void main() {
     expect(find.text('編輯站點'), findsOneWidget);
   });
 
-  testWidgets('刪除沒有阻擋的站點後，該站點從清單消失', (tester) async {
+  testWidgets('〔審查 Minor #1〕點擊刪除按鈕先跳確認對話框，取消時站點不受影響', (tester) async {
     final repository = FakeRemoteServerRepository(initialServers: [profile('srv1')]);
     await pumpScreen(tester, repository: repository);
 
     await tester.tap(find.byKey(const Key('remote_server_item_delete_srv1')));
     await tester.pumpAndSettle();
 
+    expect(find.byKey(const Key('remote_server_delete_confirm_dialog')), findsOneWidget);
+    await tester.tap(find.text('取消'));
+    await tester.pumpAndSettle();
+
+    expect(repository.deleteServerCalls, isEmpty);
+    expect(find.text('家用 NAS'), findsOneWidget);
+  });
+
+  testWidgets('確認刪除沒有阻擋的站點後，該站點從清單消失', (tester) async {
+    final repository = FakeRemoteServerRepository(initialServers: [profile('srv1')]);
+    await pumpScreen(tester, repository: repository);
+
+    await tester.tap(find.byKey(const Key('remote_server_item_delete_srv1')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('remote_server_delete_confirm_button')));
+    await tester.pumpAndSettle();
+
     expect(repository.deleteServerCalls, ['srv1']);
     expect(find.byKey(const Key('remote_server_list_empty_state')), findsOneWidget);
   });
 
-  testWidgets('刪除被擋下的站點時顯示示警對話框，站點仍留在清單', (tester) async {
+  testWidgets('確認刪除被擋下的站點時顯示示警對話框，站點仍留在清單', (tester) async {
     final blockingBook = _fakeBook('book1', '待下載的書');
     final repository = FakeRemoteServerRepository(
       initialServers: [profile('srv1')],
@@ -102,9 +119,28 @@ void main() {
 
     await tester.tap(find.byKey(const Key('remote_server_item_delete_srv1')));
     await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('remote_server_delete_confirm_button')));
+    await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('remote_server_delete_blocked_dialog')), findsOneWidget);
     expect(find.textContaining('待下載的書'), findsOneWidget);
+    expect(find.text('家用 NAS'), findsOneWidget);
+  });
+
+  testWidgets('〔審查 Important #3〕刪除防護以外的其他失敗時顯示錯誤提示，不靜默吞掉例外',
+      (tester) async {
+    final repository = FakeRemoteServerRepository(
+      initialServers: [profile('srv1')],
+      deleteServerError: StateError('模擬 secure storage 刪除失敗'),
+    );
+    await pumpScreen(tester, repository: repository);
+
+    await tester.tap(find.byKey(const Key('remote_server_item_delete_srv1')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('remote_server_delete_confirm_button')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('remote_server_delete_error_snackbar')), findsOneWidget);
     expect(find.text('家用 NAS'), findsOneWidget);
   });
 }

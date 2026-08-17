@@ -253,4 +253,42 @@ void main() {
     expect(await repository.listServers(), isEmpty);
     expect(find.textContaining('請填寫'), findsOneWidget);
   });
+
+  testWidgets('〔審查 Minor #2〕網址格式不合法（缺少 http/https）時儲存顯示驗證錯誤，不呼叫 addServer',
+      (tester) async {
+    final repository = FakeRemoteServerRepository();
+    await pumpScreen(tester, repository: repository, opdsClient: FakeOpdsClient());
+
+    await tester.enterText(
+        find.byKey(const Key('remote_server_form_name_field')), '格式錯誤測試');
+    await tester.enterText(
+        find.byKey(const Key('remote_server_form_base_url_field')), '不是網址');
+    await tester.tap(find.byKey(const Key('remote_server_form_save_button')));
+    await tester.pumpAndSettle();
+
+    expect(await repository.listServers(), isEmpty);
+    expect(find.textContaining('有效的伺服器網址'), findsOneWidget);
+  });
+
+  testWidgets('〔審查 Important #3〕儲存失敗時顯示錯誤訊息並恢復可互動狀態，不會卡在儲存中',
+      (tester) async {
+    final repository = FakeRemoteServerRepository(
+      saveServerError: StateError('模擬 SQLite 寫入失敗'),
+    );
+    await pumpScreen(tester, repository: repository, opdsClient: FakeOpdsClient());
+
+    await tester.enterText(
+        find.byKey(const Key('remote_server_form_name_field')), '公開書庫');
+    await tester.enterText(
+        find.byKey(const Key('remote_server_form_base_url_field')), 'http://example.com/opds');
+    await tester.tap(find.byKey(const Key('remote_server_form_save_button')));
+    await tester.pumpAndSettle();
+
+    // 畫面仍停留在表單（沒有因為儲存成功而 pop），且儲存按鈕恢復可點擊。
+    expect(find.byType(RemoteServerFormScreen), findsOneWidget);
+    expect(find.textContaining('儲存失敗'), findsOneWidget);
+    final saveButton = tester
+        .widget<ElevatedButton>(find.byKey(const Key('remote_server_form_save_button')));
+    expect(saveButton.onPressed, isNotNull);
+  });
 }
