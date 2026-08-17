@@ -1191,7 +1191,6 @@ void main() {
         writingMode: WritingMode.horizontal,
       ),
     );
-    epubView.onPageRendered();
     await tester.pump();
 
     expect(
@@ -1199,6 +1198,10 @@ void main() {
       findsOneWidget,
     );
 
+    // review-issue-3.md Critical #1：刻意不呼叫 onPageRendered()，維持
+    // _state == loading——驗證 menu 熱區在 loading 期間仍可切換沉浸模式
+    // （epic-27-reader-device-compat Issue 1 既有保證，_handleZoneAction
+    // 刻意不對 menu 動作套用 loading 防呆，見 plan-issue-1.md）。
     // navZoneMode 預設 rightFlip，index 1（中欄）為 menu
     // （見 app/lib/reader/nav_zone_mode.dart rightFlipZoneTemplate）。
     // FoliateReaderView 的 _ZoneOverlay 永遠渲染 3×3 熱區，
@@ -3111,10 +3114,6 @@ void main() {
       await tester.pump();
       await tester.runAsync(() => Future.delayed(Duration.zero));
       await tester.pump();
-      final foliateView =
-          tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
-      foliateView.onPageRendered();
-      await tester.pump();
 
       expect(find.byType(AppBar), findsNothing);
       expect(
@@ -3122,6 +3121,10 @@ void main() {
         findsOneWidget,
       );
 
+      // review-issue-3.md Critical #1：刻意不呼叫 onPageRendered()，維持
+      // _state == loading——驗證 menu 熱區在 loading 期間仍可切換沉浸模式
+      // （epic-27-reader-device-compat Issue 1 既有保證，見
+      // plan-issue-1.md）。
       // navZoneMode 預設 rightFlip，index 1（中欄）為 menu（見
       // app/lib/reader/nav_zone_mode.dart rightFlipZoneTemplate）。
       await tester.tap(find.byKey(const Key('nav_zone_1')));
@@ -5231,14 +5234,18 @@ void main() {
 
     // z-order 迴歸防呆（epic-27-reader-device-compat Issue 3 審查 Critical
     // #1）：遮罩必須疊在原生視圖「之上」才有蓋住黑幀的效果，若日後有人誤把
-    // 順序寫反，這裡要能直接抓到，而不是只驗證「兩者都存在」。
+    // 順序寫反，這裡要能直接抓到，而不是只驗證「兩者都存在」。遮罩包了一層
+    // IgnorePointer（review-issue-3.md Critical #1 修正：讓觸控穿透，不擋
+    // Issue 1 保留的 menu 熱區），故從 Positioned.child 找 IgnorePointer.child
+    // 才是 ColoredBox。
     final stack = tester.widget<Stack>(find.byKey(const Key('reader_body_stack')));
     final nativeViewIndex =
         stack.children.indexWhere((child) => child is FoliateReaderView);
     final placeholderIndex = stack.children.indexWhere((child) =>
         child is Positioned &&
-        child.child is ColoredBox &&
-        (child.child as ColoredBox).key ==
+        child.child is IgnorePointer &&
+        (child.child as IgnorePointer).child is ColoredBox &&
+        ((child.child as IgnorePointer).child as ColoredBox).key ==
             const Key('reader_render_placeholder_background'));
     expect(nativeViewIndex, greaterThanOrEqualTo(0),
         reason: '應能在 Stack 找到原生視圖 FoliateReaderView');
@@ -5248,6 +5255,14 @@ void main() {
         reason: '遮罩必須疊在原生視圖之上（z-order 較高）才能真正蓋住原生視圖的首幀'
             '黑屏——這是初版計畫審查抓到的 Critical 錯誤（reviews/review-plan-issue-3.md），'
             '此斷言防止未來回歸');
+
+    // 觸控穿透防呆（review-issue-3.md Critical #1）：遮罩存在時，menu 熱區
+    // 仍應可正常點擊——不應是靠測試繞過 loading 狀態才通過。
+    await tester.tap(find.byKey(const Key('nav_zone_1')));
+    await tester.pump();
+    expect(find.byKey(const Key('reader_foliate_back_button')), findsNothing,
+        reason: '遮罩必須只負責視覺覆蓋，menu 熱區觸控必須能穿透遮罩命中'
+            '_ZoneOverlay，loading 期間仍可切換沉浸模式（Issue 1 既有保證）');
   });
 
   testWidgets(
@@ -5947,8 +5962,6 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
     await pumpUntilPdfReady(tester);
-    tester.widget<PdfReaderView>(find.byType(PdfReaderView)).onPageRendered();
-    await tester.pump();
 
     // epic-24 Issue 8：PDF 新增 FAB 後，原本的 (40, 60) 觸控座標落在
     // reader_pdf_back_button（top:16, left:16, 48x48 IconButton）範圍內，

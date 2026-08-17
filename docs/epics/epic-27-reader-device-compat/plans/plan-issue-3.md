@@ -207,13 +207,17 @@
             // 已於審查發現並修正）。
             if (_state == _RenderState.loading)
               Positioned.fill(
-                child: ColoredBox(
-                  key: const Key('reader_render_placeholder_background'),
-                  color: Theme.of(context).scaffoldBackgroundColor,
+                child: IgnorePointer(
+                  child: ColoredBox(
+                    key: const Key('reader_render_placeholder_background'),
+                    color: Theme.of(context).scaffoldBackgroundColor,
+                  ),
                 ),
               ),
             // epic-18-reader-device-qa Issue 7：流式 Foliate 格式的 chrome，結構對稱
 ```
+
+**【`reviews/review-issue-3.md` Critical #1 修正後追加】** `ColoredBox` 預設以 `HitTestBehavior.opaque` 吸收其涵蓋範圍內的**所有**觸控（即使沒有 `child` 也一樣），而 `Stack` 的預設 hit-test 規則是「z-order 較高者命中就停止往下層探測」。這會連帶擋掉 `epic-27-reader-device-compat` Issue 1 明確保留、loading 期間仍應可用的 `menu` 熱區（切換沉浸模式，不呼叫任何 JS/native API，無崩潰風險，見 `plan-issue-1.md`）——已用還原實驗實測證實（暫時移除既有測試中為了配合本次變更而新增的 `onPageRendered()` 呼叫後重跑，`tester.tap()` 命中不到目標，`_chromeVisible` 未被切換）。修正方式：在 `ColoredBox` 外包一層 `IgnorePointer`，讓觸控直接穿透到底下的原生視圖／`_ZoneOverlay`——`previousPage`/`nextPage` 在 loading 期間仍受 `_handleZoneAction` 既有的邏輯防呆保護（Issue 1），該防呆本來就不依賴這層遮罩擋觸控才成立，故拿掉遮罩的觸控攔截不影響它。
 
 **注意：** 上述插入點刻意選在 FAB Positioned 區塊（`isFoliateFormat(format) && _chromeVisible` 那組返回／TOC／設定按鈕）**之前**，讓遮罩的 z-order 低於 FAB 按鈕——這些浮動按鈕目前的顯示條件不受 `_state` 影響（loading 中也可能顯示，見 `_chromeVisible` 預設值），若遮罩蓋在它們上面會讓 loading 期間這些按鈕被不透明遮罩擋住、無法點擊，屬於非預期的行為變化；蓋在它們下面則維持這些按鈕原本「loading 中也可操作」的既有行為不變。
 
@@ -227,7 +231,9 @@
 
 執行：`cd app && flutter analyze && flutter test`
 
-預期：`flutter analyze` "No issues found!"；`flutter test` 全數 PASS，零回歸（本次改動只在 `_buildBody()` 的 Stack 新增一個僅於 `_state == loading` 時掛載的 `ColoredBox`。注意：`ColoredBox` 預設以 `HitTestBehavior.opaque` 吸收其涵蓋範圍內的觸控——這在 loading 期間是預期行為，此時原生視圖本來就不該回應觸控（見 Issue 1 的 loading 狀態防呆）；`_state` 轉為 `rendered` 後遮罩即從 widget tree 移除，不影響任何既有 `find.byType`/`find.byKey` 定位邏輯或渲染完成後的手勢處理）。
+預期：`flutter analyze` "No issues found!"；`flutter test` 全數 PASS，零回歸（本次改動只在 `_buildBody()` 的 Stack 新增一個僅於 `_state == loading` 時掛載、包了 `IgnorePointer` 的 `ColoredBox`；`_state` 轉為 `rendered` 後遮罩即從 widget tree 移除）。
+
+**【`reviews/review-issue-3.md` Critical #1 修正後更正】** 上一版此處寫著「`ColoredBox` 預設以 `HitTestBehavior.opaque` 吸收其涵蓋範圍內的觸控——這在 loading 期間是預期行為，此時原生視圖本來就不該回應觸控」，這個推論忽略了 `epic-27-reader-device-compat` Issue 1 明確把 `menu` 熱區排除在 loading 防呆範圍外、且已真機驗證過的既有保證，導致遮罩上線後 `menu` 熱區在 loading 期間實際上會失效，而測試套件卻因為既有測試被同步修改（在操作前先手動觸發 `onPageRendered()`）而維持全綠、沒有暴露這個回歸。已改用 `IgnorePointer` 讓遮罩只負責視覺覆蓋、不吸收觸控，並將被掩蓋的既有測試（`reader_screen_test.dart` 內兩則「選單熱區觸發沉浸模式切換」測試）改回原始寫法（loading 中直接點擊，不預先呼叫 `onPageRendered()`），確認在修正後仍然通過；另一則「PDF 長按拖曳框選」測試新增的 `onPageRendered()` 呼叫（`reviews/review-issue-3.md` Important #1）經還原實驗證實純屬 Critical #1 的連帶症狀，同樣一併還原、不再需要。新增的 Issue 3 z-order 迴歸測試（EPUB 載入中那一則）額外補上「loading 中點擊 `nav_zone_1` 仍能切換沉浸模式」的直接斷言，取代只驗證「兩者都存在」的間接推論。
 
 - [x] **Step 6：Commit**
 

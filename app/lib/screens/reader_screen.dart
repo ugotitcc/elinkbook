@@ -2069,11 +2069,22 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             // 已渲染完成的書籍內容或阻擋觸控手勢（見 plans/plan-issue-3.md
             // 「設計決策」1，初版計畫誤放在 _buildNativeView 之下、且恆常顯示，
             // 已於審查發現並修正）。
+            // 【review-issue-3.md Critical #1 修正】ColoredBox 預設以
+            // HitTestBehavior.opaque 吸收其涵蓋範圍內的所有觸控——會連帶擋掉
+            // Issue 1 明確保留、loading 期間仍應可用的 menu 熱區（切換沉浸
+            // 模式，不呼叫任何 JS/native API，無崩潰風險，見
+            // plan-issue-1.md）。這層遮罩只需要「視覺蓋住黑幀」，不該參與
+            // 觸控，故包一層 IgnorePointer 讓觸控直接穿透到底下的原生視圖／
+            // 熱區——previousPage/nextPage 在 loading 期間仍受
+            // _handleZoneAction 既有的邏輯防呆保護（Issue 1），不依賴這層
+            // 遮罩擋觸控才成立。
             if (_state == _RenderState.loading)
               Positioned.fill(
-                child: ColoredBox(
-                  key: const Key('reader_render_placeholder_background'),
-                  color: Theme.of(context).scaffoldBackgroundColor,
+                child: IgnorePointer(
+                  child: ColoredBox(
+                    key: const Key('reader_render_placeholder_background'),
+                    color: Theme.of(context).scaffoldBackgroundColor,
+                  ),
                 ),
               ),
             // epic-18-reader-device-qa Issue 7：流式 Foliate 格式的 chrome，結構對稱
