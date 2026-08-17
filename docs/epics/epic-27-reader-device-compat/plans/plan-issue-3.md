@@ -36,7 +36,7 @@
 - Consumes: 既有 `_buildBody()` 私有方法、`Theme.of(context).scaffoldBackgroundColor`（`BuildContext` 來自 `LayoutBuilder` 的 `builder` 參數）。
 - Produces: 新增 `Key('reader_render_placeholder_background')`（遮罩 `ColoredBox`）與 `Key('reader_body_stack')`（`_buildBody()` 回傳的 `Stack` 本身，供測試讀取 `.children` 清單以斷言 z-order），皆為測試用 Key；不新增任何對外建構參數或 public API。
 
-- [ ] **Step 1：寫失敗測試——3 則新測試**
+- [x] **Step 1：寫失敗測試——3 則新測試**
 
 編輯 `app/test/screens/reader_screen_test.dart`，於第 5198 行（「開書逾時計時器：onPageRendered 在逾時前已觸發時，逾時計時器不應覆蓋既有的成功狀態」測試結尾的 `});`）之後、第 5200 行（下一則「流式 EPUB 頁首/頁尾文字」測試）之前，新增以下 3 則測試：
 
@@ -153,7 +153,7 @@
   });
 ```
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 執行：`cd app && flutter test test/screens/reader_screen_test.dart --plain-name "epic-27-reader-device-compat Issue 3"`
 
@@ -161,7 +161,7 @@
 
 預期：前兩則測試因找不到 `Key('reader_render_placeholder_background')`（`find.byKey` 回傳空，`tester.widget<ColoredBox>` 拋出「找不到符合的 widget」例外，且找不到 `Key('reader_body_stack')`）而 FAIL；第 3 則測試因「渲染完成前應存在」這個佈置斷言（`findsOneWidget`）同樣找不到該 Key 而 FAIL。
 
-- [ ] **Step 3：`_buildBody()` 新增遮罩層（位於原生視圖之上、`_state == loading` 時顯示）**
+- [x] **Step 3：`_buildBody()` 新增遮罩層（位於原生視圖之上、`_state == loading` 時顯示）**
 
 編輯 `app/lib/screens/reader_screen.dart`，找到（約第 2050-2066 行，`_buildNativeView` 掛載之後、下一個 FAB Positioned 區塊之前）：
 
@@ -207,29 +207,35 @@
             // 已於審查發現並修正）。
             if (_state == _RenderState.loading)
               Positioned.fill(
-                child: ColoredBox(
-                  key: const Key('reader_render_placeholder_background'),
-                  color: Theme.of(context).scaffoldBackgroundColor,
+                child: IgnorePointer(
+                  child: ColoredBox(
+                    key: const Key('reader_render_placeholder_background'),
+                    color: Theme.of(context).scaffoldBackgroundColor,
+                  ),
                 ),
               ),
             // epic-18-reader-device-qa Issue 7：流式 Foliate 格式的 chrome，結構對稱
 ```
 
+**【`reviews/review-issue-3.md` Critical #1 修正後追加】** `ColoredBox` 預設以 `HitTestBehavior.opaque` 吸收其涵蓋範圍內的**所有**觸控（即使沒有 `child` 也一樣），而 `Stack` 的預設 hit-test 規則是「z-order 較高者命中就停止往下層探測」。這會連帶擋掉 `epic-27-reader-device-compat` Issue 1 明確保留、loading 期間仍應可用的 `menu` 熱區（切換沉浸模式，不呼叫任何 JS/native API，無崩潰風險，見 `plan-issue-1.md`）——已用還原實驗實測證實（暫時移除既有測試中為了配合本次變更而新增的 `onPageRendered()` 呼叫後重跑，`tester.tap()` 命中不到目標，`_chromeVisible` 未被切換）。修正方式：在 `ColoredBox` 外包一層 `IgnorePointer`，讓觸控直接穿透到底下的原生視圖／`_ZoneOverlay`——`previousPage`/`nextPage` 在 loading 期間仍受 `_handleZoneAction` 既有的邏輯防呆保護（Issue 1），該防呆本來就不依賴這層遮罩擋觸控才成立，故拿掉遮罩的觸控攔截不影響它。
+
 **注意：** 上述插入點刻意選在 FAB Positioned 區塊（`isFoliateFormat(format) && _chromeVisible` 那組返回／TOC／設定按鈕）**之前**，讓遮罩的 z-order 低於 FAB 按鈕——這些浮動按鈕目前的顯示條件不受 `_state` 影響（loading 中也可能顯示，見 `_chromeVisible` 預設值），若遮罩蓋在它們上面會讓 loading 期間這些按鈕被不透明遮罩擋住、無法點擊，屬於非預期的行為變化；蓋在它們下面則維持這些按鈕原本「loading 中也可操作」的既有行為不變。
 
-- [ ] **Step 4：執行測試確認通過**
+- [x] **Step 4：執行測試確認通過**
 
 執行：`cd app && flutter test test/screens/reader_screen_test.dart`
 
 預期：全數 PASS（含 Step 1 新增的 3 則測試）。
 
-- [ ] **Step 5：執行完整分析與全專案測試，確認零回歸**
+- [x] **Step 5：執行完整分析與全專案測試，確認零回歸**
 
 執行：`cd app && flutter analyze && flutter test`
 
-預期：`flutter analyze` "No issues found!"；`flutter test` 全數 PASS，零回歸（本次改動只在 `_buildBody()` 的 Stack 新增一個僅於 `_state == loading` 時掛載的 `ColoredBox`。注意：`ColoredBox` 預設以 `HitTestBehavior.opaque` 吸收其涵蓋範圍內的觸控——這在 loading 期間是預期行為，此時原生視圖本來就不該回應觸控（見 Issue 1 的 loading 狀態防呆）；`_state` 轉為 `rendered` 後遮罩即從 widget tree 移除，不影響任何既有 `find.byType`/`find.byKey` 定位邏輯或渲染完成後的手勢處理）。
+預期：`flutter analyze` "No issues found!"；`flutter test` 全數 PASS，零回歸（本次改動只在 `_buildBody()` 的 Stack 新增一個僅於 `_state == loading` 時掛載、包了 `IgnorePointer` 的 `ColoredBox`；`_state` 轉為 `rendered` 後遮罩即從 widget tree 移除）。
 
-- [ ] **Step 6：Commit**
+**【`reviews/review-issue-3.md` Critical #1 修正後更正】** 上一版此處寫著「`ColoredBox` 預設以 `HitTestBehavior.opaque` 吸收其涵蓋範圍內的觸控——這在 loading 期間是預期行為，此時原生視圖本來就不該回應觸控」，這個推論忽略了 `epic-27-reader-device-compat` Issue 1 明確把 `menu` 熱區排除在 loading 防呆範圍外、且已真機驗證過的既有保證，導致遮罩上線後 `menu` 熱區在 loading 期間實際上會失效，而測試套件卻因為既有測試被同步修改（在操作前先手動觸發 `onPageRendered()`）而維持全綠、沒有暴露這個回歸。已改用 `IgnorePointer` 讓遮罩只負責視覺覆蓋、不吸收觸控，並將被掩蓋的既有測試（`reader_screen_test.dart` 內兩則「選單熱區觸發沉浸模式切換」測試）改回原始寫法（loading 中直接點擊，不預先呼叫 `onPageRendered()`），確認在修正後仍然通過；另一則「PDF 長按拖曳框選」測試新增的 `onPageRendered()` 呼叫（`reviews/review-issue-3.md` Important #1）經還原實驗證實純屬 Critical #1 的連帶症狀，同樣一併還原、不再需要。新增的 Issue 3 z-order 迴歸測試（EPUB 載入中那一則）額外補上「loading 中點擊 `nav_zone_1` 仍能切換沉浸模式」的直接斷言，取代只驗證「兩者都存在」的間接推論。
+
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/lib/screens/reader_screen.dart app/test/screens/reader_screen_test.dart
@@ -240,6 +246,6 @@ git commit -m "fix(epic-27): Issue 3——_buildBody() 於原生視圖上方新�
 
 ## 完成後的驗證（對照 `issues.md` Issue 3 驗收標準）
 
-- [ ] `flutter analyze`：全專案 "No issues found!"
-- [ ] `flutter test`：全專案通過，零回歸
+- [x] `flutter analyze`：全專案 "No issues found!"
+- [x] `flutter test`：全專案通過，零回歸
 - [ ] （建議，非本計畫強制自動化——見 Global Constraints「已知局限」，`flutter test` 無法驗證真實原生視圖的繪製時序）於真機（Mobiscribe WARE）：冷啟動 App、開啟書籍（EPUB 與 PDF 各一次），確認載入過程不再出現全黑畫面，改為與主題一致的過場色；若冷啟動黑屏現象仍明顯，代表主要成因不是「Stack 底色空窗」而是別的因素（例如 Flutter Engine Surface 建立階段），需要另外蒐集 logcat／畫面錄影才能進一步診斷，屬於本計畫已知局限，非本次修復範圍。

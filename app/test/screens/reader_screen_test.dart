@@ -1198,6 +1198,10 @@ void main() {
       findsOneWidget,
     );
 
+    // review-issue-3.md Critical #1：刻意不呼叫 onPageRendered()，維持
+    // _state == loading——驗證 menu 熱區在 loading 期間仍可切換沉浸模式
+    // （epic-27-reader-device-compat Issue 1 既有保證，_handleZoneAction
+    // 刻意不對 menu 動作套用 loading 防呆，見 plan-issue-1.md）。
     // navZoneMode 預設 rightFlip，index 1（中欄）為 menu
     // （見 app/lib/reader/nav_zone_mode.dart rightFlipZoneTemplate）。
     // FoliateReaderView 的 _ZoneOverlay 永遠渲染 3×3 熱區，
@@ -3117,6 +3121,10 @@ void main() {
         findsOneWidget,
       );
 
+      // review-issue-3.md Critical #1：刻意不呼叫 onPageRendered()，維持
+      // _state == loading——驗證 menu 熱區在 loading 期間仍可切換沉浸模式
+      // （epic-27-reader-device-compat Issue 1 既有保證，見
+      // plan-issue-1.md）。
       // navZoneMode 預設 rightFlip，index 1（中欄）為 menu（見
       // app/lib/reader/nav_zone_mode.dart rightFlipZoneTemplate）。
       await tester.tap(find.byKey(const Key('nav_zone_1')));
@@ -5195,6 +5203,129 @@ void main() {
 
     expect(find.byKey(const Key('reader_error_text')), findsNothing,
         reason: '已成功渲染的畫面不應被逾時計時器事後覆蓋成錯誤狀態');
+  });
+
+  testWidgets(
+      'EPUB 載入中：原生視圖上方應有不透明主題遮罩，蓋住原生視圖首幀黑屏'
+      '（epic-27-reader-device-compat Issue 3）', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_black_flash_epub_loading',
+          prefsManager: prefsManager,
+          isFixedLayout: false,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    // 刻意不觸發 onLayoutResolved/onPageRendered，維持 _state == loading。
+    expect(find.byKey(const Key('reader_loading_indicator')), findsOneWidget);
+
+    final placeholder = tester.widget<ColoredBox>(
+      find.byKey(const Key('reader_render_placeholder_background')),
+    );
+    final expectedColor =
+        Theme.of(tester.element(find.byType(ReaderScreen))).scaffoldBackgroundColor;
+    expect(placeholder.color, expectedColor);
+
+    // z-order 迴歸防呆（epic-27-reader-device-compat Issue 3 審查 Critical
+    // #1）：遮罩必須疊在原生視圖「之上」才有蓋住黑幀的效果，若日後有人誤把
+    // 順序寫反，這裡要能直接抓到，而不是只驗證「兩者都存在」。遮罩包了一層
+    // IgnorePointer（review-issue-3.md Critical #1 修正：讓觸控穿透，不擋
+    // Issue 1 保留的 menu 熱區），故從 Positioned.child 找 IgnorePointer.child
+    // 才是 ColoredBox。
+    final stack = tester.widget<Stack>(find.byKey(const Key('reader_body_stack')));
+    final nativeViewIndex =
+        stack.children.indexWhere((child) => child is FoliateReaderView);
+    final placeholderIndex = stack.children.indexWhere((child) =>
+        child is Positioned &&
+        child.child is IgnorePointer &&
+        (child.child as IgnorePointer).child is ColoredBox &&
+        ((child.child as IgnorePointer).child as ColoredBox).key ==
+            const Key('reader_render_placeholder_background'));
+    expect(nativeViewIndex, greaterThanOrEqualTo(0),
+        reason: '應能在 Stack 找到原生視圖 FoliateReaderView');
+    expect(placeholderIndex, greaterThanOrEqualTo(0),
+        reason: '應能在 Stack 找到不透明遮罩');
+    expect(placeholderIndex, greaterThan(nativeViewIndex),
+        reason: '遮罩必須疊在原生視圖之上（z-order 較高）才能真正蓋住原生視圖的首幀'
+            '黑屏——這是初版計畫審查抓到的 Critical 錯誤（reviews/review-plan-issue-3.md），'
+            '此斷言防止未來回歸');
+
+    // 觸控穿透防呆（review-issue-3.md Critical #1）：遮罩存在時，menu 熱區
+    // 仍應可正常點擊——不應是靠測試繞過 loading 狀態才通過。
+    await tester.tap(find.byKey(const Key('nav_zone_1')));
+    await tester.pump();
+    expect(find.byKey(const Key('reader_foliate_back_button')), findsNothing,
+        reason: '遮罩必須只負責視覺覆蓋，menu 熱區觸控必須能穿透遮罩命中'
+            '_ZoneOverlay，loading 期間仍可切換沉浸模式（Issue 1 既有保證）');
+  });
+
+  testWidgets(
+      'PDF 載入中：原生視圖上方應有不透明主題遮罩，蓋住原生視圖首幀黑屏'
+      '（epic-27-reader-device-compat Issue 3）', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b_black_flash_pdf_loading',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    // 刻意不呼叫 onPageRendered，維持 _state == loading。
+    expect(find.byKey(const Key('reader_loading_indicator')), findsOneWidget);
+
+    final placeholder = tester.widget<ColoredBox>(
+      find.byKey(const Key('reader_render_placeholder_background')),
+    );
+    final expectedColor =
+        Theme.of(tester.element(find.byType(ReaderScreen))).scaffoldBackgroundColor;
+    expect(placeholder.color, expectedColor);
+  });
+
+  testWidgets(
+      'PDF 已渲染完成後：不透明遮罩應隨 _state 轉為 rendered 而消失，不殘留阻擋手勢'
+      '（epic-27-reader-device-compat Issue 3 設計決策 1：僅在 loading 時顯示，'
+      '非恆常存在——恆常存在會在渲染完成後永久蓋住書籍內容，是比原始黑屏更嚴重的回歸）',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.pdf',
+          bookId: 'b_black_flash_pdf_rendered',
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    // 渲染完成前：遮罩應存在（與前一則 PDF loading 測試對稱佈置情境）。
+    expect(find.byKey(const Key('reader_render_placeholder_background')),
+        findsOneWidget);
+
+    tester.widget<PdfReaderView>(find.byType(PdfReaderView)).onPageRendered();
+    await tester.pump();
+
+    expect(find.byKey(const Key('reader_loading_indicator')), findsNothing);
+    expect(find.byType(PdfReaderView), findsOneWidget,
+        reason: '遮罩不應影響既有原生視圖的正常渲染（零回歸）');
+    expect(
+        find.byKey(const Key('reader_render_placeholder_background')),
+        findsNothing,
+        reason: '_state 轉為 rendered 後遮罩必須立即移除，否則會永久蓋住已渲染完成的'
+            '書籍內容、阻擋底層原生視圖的觸控手勢（審查 Critical #1 連帶修正的'
+            '設計決策，見 plan 上方「設計決策」1）');
   });
 
   testWidgets(
