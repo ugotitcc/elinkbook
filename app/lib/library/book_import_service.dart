@@ -1,4 +1,5 @@
 import 'models/book.dart';
+import 'models/library_enums.dart';
 
 /// 一次匯入呼叫（[BookImportService.importFiles]／[importFolder]）的結果：
 /// 成功寫入的書籍清單，以及因來源 URI 與圖書庫既有書籍重複而被跳過的檔案數
@@ -27,10 +28,16 @@ abstract class BookImportService {
   /// [folderName] 標記來源資料夾名稱供 FR-34 自動分類判斷，單檔/多檔匯入
   /// （非資料夾匯入）時為 `null`。與圖書庫既有書籍來源 URI 相同的檔案會被
   /// 跳過，不會重複匯入（見 [ImportResult.skippedDuplicateCount]）。
+  /// [source]、[remoteServerId]、[remoteBookIds] 與 [remoteDownloadUrls] 供遠端
+  /// 書架（如 Calibre OPDS）下載落地時寫入對應的伺服器與遠端書籍參照資料。
   Future<ImportResult> importFiles(
     List<String> uris, {
     List<String?>? displayNames,
     String? folderName,
+    BookSource source = BookSource.local,
+    String? remoteServerId,
+    Map<String, String>? remoteBookIds,
+    Map<String, String>? remoteDownloadUrls,
   });
 
   /// 匯入整個資料夾；[autoGroupByFolderName] 對應 FR-34 開關（預設 true）。

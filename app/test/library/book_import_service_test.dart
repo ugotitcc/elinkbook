@@ -1123,4 +1123,68 @@ void main() {
       expect(coversDir.listSync(), isEmpty);
     });
   });
+
+  group('遠端書架參數擴充（epic-30）', () {
+    test('傳入 source/remoteServerId/remoteBookIds/remoteDownloadUrls 時正確落地',
+        () async {
+      await repository.database.insert('remote_servers', {
+        'id': 'srv1',
+        'name': '家用 NAS',
+        'base_url': 'http://192.168.1.100:8080/opds',
+        'type': 'opds',
+        'allow_insecure': 0,
+        'created_at': 1000,
+      });
+
+      mockChannel((call) async {
+        if (call.method == 'takePersistableUriPermission') return null;
+        if (call.method == 'extractMetadata') {
+          return {'title': '遠端書'};
+        }
+        return null;
+      });
+
+      final result = await service.importFiles(
+        ['content://example/remote_book.epub'],
+        source: BookSource.calibreOpds,
+        remoteServerId: 'srv1',
+        remoteBookIds: {'content://example/remote_book.epub': 'remote-book-1'},
+        remoteDownloadUrls: {
+          'content://example/remote_book.epub':
+              'http://192.168.1.100:8080/opds/download/1.epub',
+        },
+      );
+
+      expect(result.importedBooks, hasLength(1));
+      final book = result.importedBooks.single;
+      expect(book.source, BookSource.calibreOpds);
+      expect(book.remoteServerId, 'srv1');
+      expect(book.remoteBookId, 'remote-book-1');
+      expect(book.remoteDownloadUrl,
+          'http://192.168.1.100:8080/opds/download/1.epub');
+      expect(book.isDownloaded, true);
+    });
+
+    test('未傳入新參數時（既有本機匯入情境），行為與現行完全一致', () async {
+      mockChannel((call) async {
+        if (call.method == 'takePersistableUriPermission') return null;
+        if (call.method == 'extractMetadata') {
+          return {'title': '本機書'};
+        }
+        return null;
+      });
+
+      final result =
+          await service.importFiles(['content://example/local_book.epub']);
+
+      expect(result.importedBooks, hasLength(1));
+      final book = result.importedBooks.single;
+      expect(book.source, BookSource.local);
+      expect(book.remoteServerId, isNull);
+      expect(book.remoteBookId, isNull);
+      expect(book.remoteDownloadUrl, isNull);
+      expect(book.isDownloaded, true);
+    });
+  });
 }
+
