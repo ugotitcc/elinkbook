@@ -34,7 +34,7 @@
 
 ## Issue 1：站點管理（新增/編輯/刪除/測試連線）與遠端書庫入口
 
-**Status:** `ready-for-agent`
+**Status:** ✅ 已完成並合併回 `main`（PR [#158](https://git.jigong.org/huthief/elinkBook/pulls/158)，分支 `epic-30-calibre-remote-library`，10 個 commit：9 個 Task 各自一個 commit＋1 個審查修訂 commit）。`/superpowers:writing-plans` 產出 `plans/plan-issue-1.md`，動工前先經 `/superpowers:receiving-code-review` 計畫審查（`reviews/review-plan-issue-1.md`，APPROVED_WITH_SUGGESTIONS，2 Important／2 Minor，已全數修訂：OPDS 格式 MIME→副檔名退回判定、下載異常暫存檔清理、href trim、編輯模式密碼語意改在表單層解析而不動 Repository 契約）；實作完成後再經獨立 subagent 程式審查（`reviews/review-issue-1.md`，APPROVED WITH FINDINGS，3 Important／3 Minor，已全數修訂：密碼欄位 UI 文案與類別文件與 Finding 1 修正後語意矛盾、`_save()`/`_delete()` 缺乏例外處理、刪除確認對話框、`baseUrl` 格式驗證）。全專案 `flutter test` 1495 項與 `flutter analyze` 零回歸通過。
 
 **依賴：** Issue 0（`remote_servers` 表）。
 
