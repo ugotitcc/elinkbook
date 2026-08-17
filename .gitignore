@@ -16,6 +16,7 @@ docs/epics/epic-27-reader-device-compat/reviews/
 docs/epics/epic-28-reader-settings-enhancements/reviews/
 docs/epics/epic-11-multi-format-reader/reviews/
 docs/epics/epic-29-cloud-import/reviews/
+docs/epics/epic-30-calibre-remote-library/reviews/
 tmp/
 **/node_modules/
 app/android/.kotlin/sessions/
