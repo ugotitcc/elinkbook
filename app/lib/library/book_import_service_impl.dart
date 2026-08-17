@@ -12,6 +12,7 @@ import 'library_repository.dart';
 import 'models/book.dart';
 import 'models/book_group.dart';
 import 'models/library_enums.dart';
+import 'md_epub_synthesizer.dart';
 import 'txt_cover_generator.dart';
 import 'txt_epub_synthesizer.dart';
 
@@ -26,6 +27,7 @@ BookFileFormat? detectBookFileFormat(String uriOrPath) {
   if (name.endsWith('.txt')) return BookFileFormat.txt;
   if (name.endsWith('.azw3')) return BookFileFormat.azw3;
   if (name.endsWith('.cbz')) return BookFileFormat.cbz;
+  if (name.endsWith('.md')) return BookFileFormat.md;
   return null;
 }
 
@@ -310,6 +312,26 @@ class BookImportServiceImpl implements BookImportService {
         // 其餘解析失敗（例如檔案損毀）：降級為「檔名為標題、無封面」，
         // 比照既有 PlatformException 分支慣例，不中斷整批匯入。
       }
+    } else if (format == BookFileFormat.md) {
+      // 合成必須先於封面產生執行——比照 Issue 4 Important #1 審查修正的
+      // 既有教訓，避免中止匯入時在磁碟留下孤兒封面檔案。
+      MdSynthesisResult synthesis;
+      try {
+        synthesis = await synthesizeMdBook(resolvedUri, id, fallbackTitle);
+      } on EmptyMdException {
+        return null;
+      }
+      isFixedLayout = false;
+      bookFilePath = await _landMdEpub(synthesis.epubBytes, id);
+      if (synthesis.frontmatterTitle != null && synthesis.frontmatterTitle!.isNotEmpty) {
+        title = synthesis.frontmatterTitle!;
+      }
+      author = synthesis.frontmatterAuthor;
+      // Frontmatter 未指定封面（或指定值無法解析，見 md_frontmatter.dart
+      // 文件註解）時，退回比照 TXT 既有的「依書名文字動態生成封面」機制
+      // （spec.md「TXT／Markdown 合成書籍結構」對 MD 的既定要求）。
+      final coverBytes = synthesis.frontmatterCoverBytes ?? await generateTxtCover(title);
+      coverPath = await _landCover(coverBytes, id);
     } else {
       try {
         final metadata = await kBookMetadataChannel.invokeMapMethod<String, Object?>(
@@ -427,6 +449,17 @@ class BookImportServiceImpl implements BookImportService {
   Future<String> _landTxtEpub(Uint8List bytes, String bookId) async {
     final dir = await _resolveImportedBooksDirectory();
     final file = File(p.join(dir.path, '$bookId.txt'));
+    await file.writeAsBytes(bytes, flush: true);
+    return file.path;
+  }
+
+  /// 落地 MD 合成的 EPUB 壓縮檔位元組（epic-11-multi-format-reader
+  /// Issue 5），比照 [_landTxtEpub] 既有的「以 book id 為鍵、獨立子目錄」
+  /// 慣例，重用既有 `imported_books/` 目錄。**檔名副檔名須維持 `.md`**
+  /// （理由同 `_landTxtEpub` 對 `.txt` 的既有限制）。
+  Future<String> _landMdEpub(Uint8List bytes, String bookId) async {
+    final dir = await _resolveImportedBooksDirectory();
+    final file = File(p.join(dir.path, '$bookId.md'));
     await file.writeAsBytes(bytes, flush: true);
     return file.path;
   }

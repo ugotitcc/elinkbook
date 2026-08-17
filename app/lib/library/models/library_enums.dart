@@ -1,7 +1,7 @@
 /// 圖書庫書籍的檔案格式。獨立於 `reader/book_format.dart` 的 `BookFormat`——
 /// 後者只服務 `ReaderScreen` 的原生渲染分派；圖書庫資料層需要完整表達
 /// FR-01 的支援格式（CBZ 由 epic-11 Issue 3 補上）。
-enum BookFileFormat { epub, pdf, txt, azw3, cbz }
+enum BookFileFormat { epub, pdf, txt, azw3, cbz, md }
 
 /// 書籍的匯入來源。本 epic（epic-1-library）僅會產生 [local]；
 /// [googleDrive]/[oneDrive] 為後續雲端匯入 Epic 預留的欄位。

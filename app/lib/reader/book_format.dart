@@ -1,5 +1,5 @@
 /// 書籍檔案格式，依副檔名偵測。
-enum BookFormat { epub, pdf, azw3, cbz, txt, unknown }
+enum BookFormat { epub, pdf, azw3, cbz, txt, md, unknown }
 
 /// 依檔案路徑的副檔名判斷書籍格式（不分大小寫）。無法識別的副檔名（含無副
 /// 檔名、空字串）一律回傳 [BookFormat.unknown]，絕不拋出例外。
@@ -10,6 +10,7 @@ BookFormat detectBookFormat(String path) {
   if (lowerPath.endsWith('.azw3')) return BookFormat.azw3;
   if (lowerPath.endsWith('.cbz')) return BookFormat.cbz;
   if (lowerPath.endsWith('.txt')) return BookFormat.txt;
+  if (lowerPath.endsWith('.md')) return BookFormat.md;
   return BookFormat.unknown;
 }
 
@@ -22,4 +23,5 @@ bool isFoliateFormat(BookFormat format) =>
     format == BookFormat.epub ||
     format == BookFormat.azw3 ||
     format == BookFormat.cbz ||
-    format == BookFormat.txt;
+    format == BookFormat.txt ||
+    format == BookFormat.md;

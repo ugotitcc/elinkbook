@@ -480,6 +480,15 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       _dispatchedIsFixedLayout = false;
       return;
     }
+    if (format == BookFormat.md) {
+      // MD 合成後恆為流式（無 FXL 變體，spec.md「TXT／Markdown 合成書籍
+      // 結構」），Book.isFixedLayout 理論上匯入時必定已寫入 false
+      // （book_import_service_impl.dart），此處防禦性補上與上方
+      // azw3/cbz/txt 分支相同邏輯的 null-safety 修正（比照 Issue 2 C2／
+      // Issue 3 Important #1／Issue 4 的既有教訓）。
+      _dispatchedIsFixedLayout = false;
+      return;
+    }
     if (format != BookFormat.epub) return;
     final repository = widget.libraryRepository;
     if (repository == null) {
@@ -575,6 +584,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       case BookFormat.azw3:
       case BookFormat.cbz:
       case BookFormat.txt:
+      case BookFormat.md:
         final info = _epubPositionInfo;
         if (info == null) return;
         // progression 為 null 時（例如 Readium 對某些定位尚未完全解析版面
@@ -1926,6 +1936,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       case BookFormat.azw3:
       case BookFormat.cbz:
       case BookFormat.txt:
+      case BookFormat.md:
         return [
           IconButton(
             key: const Key('reader_toc_button'),
@@ -2613,6 +2624,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       case BookFormat.azw3:
       case BookFormat.cbz:
       case BookFormat.txt:
+      case BookFormat.md:
         // Epic 11 Issue 4：TXT 與 EPUB/AZW3/CBZ 共用同一個
         // FoliateReaderView，建構參數完全相同——TXT 合成後是一份真正的
         // EPUB，isComicBookHint 恆為 false（非 cbz 格式），dualPageDirection

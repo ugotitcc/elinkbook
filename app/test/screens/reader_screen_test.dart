@@ -665,6 +665,25 @@ void main() {
     },
   );
 
+  testWidgets(
+    'MD 書籍 isFixedLayout: null 時，防禦性視為 false 並建構 FoliateReaderView，'
+    '不永遠停留載入中畫面（epic-11 Issue 5，比照 Issue 2 C2／Issue 3 Important #1／'
+    'Issue 4 同構情境；正常匯入流程下 Book.isFixedLayout 必為 false，本測試涵蓋'
+    '邊界防禦）',
+    (tester) async {
+      final repository = FakeLibraryRepository();
+      await tester.pumpWidget(MaterialApp(home: ReaderScreen(
+        filePath: 'test/fixtures/sample_synth.md', bookId: 'b1',
+        prefsManager: prefsManager, libraryRepository: repository,
+      )));
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+      expect(find.byType(FoliateReaderView), findsOneWidget);
+      expect(repository.detectAndCacheEpubLayoutCalls, isEmpty);
+    },
+  );
+
   testWidgets('開啟該書已有的持久化版面偏好設定後，狀態正確載入', (tester) async {
     await prefsManager.saveBookPrefs(
       'b1',

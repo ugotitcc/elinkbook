@@ -21,7 +21,19 @@
 - **明確不在本 Issue 範圍**（issues.md Issue 5 已明訂）：MD 內嵌本機相對路徑圖片（例如 `![](./img/1.png)`）的優雅降級——單檔匯入不會一併帶入該圖片資源，比照瀏覽器/WebView 對缺失圖片資源的既有預設行為（顯示破圖、不中斷分頁），不額外開發。
 - **設計取捨備忘（審查確認，見 reviews/review-issue-5-plan.md Minor #2）**：章節切分僅依標題階層進行，完全沒有標題的大型 Markdown 檔案會合成為單一大型 XHTML，不做 TXT 那種位元組門檻式次級分塊（`kTxtChunkMaxBytes`／`chunkByByteSize()`）。Markdown 筆記在實務上鮮少完全無標題，issues.md Issue 5 範圍本身也未要求此能力，維持 YAGNI，不預先實作。
 - **已查證的關鍵技術事實**（供各 Task 撰寫依據，皆已用本次規劃階段對 `package:markdown`／`package:yaml` 官方原始碼交叉核對，非憑空假設）：
-  1. **`package:markdown` 的 HTML 輸出預設就是合法 XHTML**：直接讀取套件原始碼 `html_renderer.dart` 確認空元素（`<hr>`／`<br>`／`<img>` 等）一律以 `<tag ... />` 自我封閉輸出，且 `encodeHtml` 參數預設為 `true`（原始 Markdown 中的裸 HTML 與文字內容皆會被正確跳脫），這代表渲染出的 HTML 片段可以直接嵌入本 Issue 合成的 XHTML `<body>` 而不會產生格式錯誤——若使用者輸入的 Markdown 內含未跳脫的 `<script>` 等原始 HTML，也會被安全跳脫而非原樣輸出，這是套件的既有安全預設值，本 Issue 沿用不需要額外處理。
+  1. **~~`package:markdown` 的 HTML 輸出預設就是合法 XHTML~~（本項查證有誤，見
+     `reviews/review-issue-5.md` Critical #1，已於程式碼審查修復階段訂正）**：
+     `html_renderer.dart` 確實會把套件自己產生的空元素（`<hr>`／`<br>`／
+     `<img>` 等）以 `<tag ... />` 自我封閉輸出，但這僅涵蓋套件**自行產生**的
+     標籤——原查證誤判了另一件事：CommonMark/GFM 規範定義的「raw HTML
+     passthrough」（使用者輸入中「看起來像 HTML 標籤」的裸文字，例如手打
+     `<br>` 換行或標題含 `<C>` 這類字元）並不會被跳脫，而是原樣輸出，
+     `encodeHtml` 參數的跳脫範圍不含這類裸 HTML。已用分支上實際的
+     `synthesizeMdBook()` 重現：僅需一般使用者手打的 `<br>` 就會讓合成出的
+     章節 XHTML 解析失敗（`epub.js` 是以嚴格 `application/xhtml+xml` 模式
+     載入章節）。修復方式：`md_epub_synthesizer.dart` 的 `_sectionXhtml()`
+     改為對 `md.renderToHtml()` 的輸出先跑一次「HTML5 容錯解析（`package:
+     html`）＋重新序列化為合法 XML」的正規化，不再直接信任原始字串。
   2. **表格語法（GFM）不是 CommonMark 核心的一部分**：必須使用 `md.ExtensionSet.gitHubWeb`（含 `TableSyntax()`／`FencedCodeBlockSyntax()`／`HeaderWithIdSyntax()` 等）才會把 `| a | b |` 語法解析為真正的 `<table>` 元素；若僅用預設的 `ExtensionSet.commonMark`，表格語法只會被當成一般段落文字輸出，範圍第 4 點要求的表格 CSS 覆蓋會完全沒有 `<table>` 元素可套用。
   3. **標題 id 不可依賴 `gitHubWeb` 內建的 `HeaderWithIdSyntax`／`generatedId` 自動產生機制**：該機制在「渲染階段」才透過 `HtmlRenderer.uniquifyId()` 對重複標題文字做去重（例如兩個都叫「概述」的標題，第二個會被重新命名為 `概述-1`），但本 Issue 需要在渲染**之前**就知道每個標題最終的 id 字串，才能組出目錄（`nav.xhtml`）指向該 id 的超連結——若沿用內建機制，規劃階段推算出的 id 與實際渲染結果可能不一致（尤其重複標題文字時）。故本 Issue 一律捨棄 `generatedId`／內建 slug id，改為在解析 AST 後自行走訪、依文件出現順序指派保證唯一的序號式 id（`heading_0001` 起算），並直接寫入 `element.attributes['id']`（同時清空 `element.generatedId = null`，避免渲染器同時寫出兩個 `id` 屬性）。
   4. **`Document.parse(String text)` 是可直接呼叫的公開 API**，內部會自動處理換行切割，不需要像 `txt_chapter_splitter.dart` 那樣自己先 `.split(RegExp(...))`；回傳的 `List<md.Node>` 是文件的**頂層區塊節點**（段落、標題、清單、程式碼區塊、表格皆為平行的頂層節點，標題不會巢狀在其他區塊節點內部）——這代表「依標題切分章節」只需要走訪這個頂層清單本身，不需要遞迴下鑽。
@@ -276,7 +288,7 @@ git commit -m "refactor(epic-11): Issue 5——抽出共用 epub_container_build
 **Interfaces:**
 - Produces：`BookFormat.md`、`detectBookFormat('foo.md') == BookFormat.md`、`isFoliateFormat(BookFormat.md) == true`、`BookFileFormat.md`。
 
-- [ ] **Step 1：寫失敗測試**
+- [x] **Step 1：寫失敗測試**
 
 於 `app/test/reader/book_format_test.dart`（Issue 3/4 已建立，見既有內容）追加：
 
@@ -291,7 +303,7 @@ git commit -m "refactor(epic-11): Issue 5——抽出共用 epub_container_build
   });
 ```
 
-- [ ] **Step 2：確認測試失敗**
+- [x] **Step 2：確認測試失敗**
 
 ```bash
 cd "U:/MyDeveloper/AI/elinkBook/app"
@@ -300,7 +312,7 @@ flutter test test/reader/book_format_test.dart
 
 Expected：FAIL（`BookFormat.md` 未定義，編譯錯誤）。
 
-- [ ] **Step 3：實作**
+- [x] **Step 3：實作**
 
 ```dart
 /// 書籍檔案格式，依副檔名偵測。
@@ -333,7 +345,7 @@ bool isFoliateFormat(BookFormat format) =>
 enum BookFileFormat { epub, pdf, txt, azw3, cbz, md }
 ```
 
-- [ ] **Step 4：確認測試通過**
+- [x] **Step 4：確認測試通過**
 
 ```bash
 flutter test test/reader/book_format_test.dart
@@ -341,7 +353,7 @@ flutter test test/reader/book_format_test.dart
 
 Expected：PASS。
 
-- [ ] **Step 5：`flutter analyze` 確認 exhaustiveness 錯誤清單**
+- [x] **Step 5：`flutter analyze` 確認 exhaustiveness 錯誤清單**
 
 ```bash
 flutter analyze
@@ -349,7 +361,7 @@ flutter analyze
 
 Expected：出現數個 `non_exhaustive_switch_statement`（`reader_screen.dart` 內既有 `switch (format)` 語句缺少 `case BookFormat.md:`），記錄下來供 Task 7 使用（比照 Issue 3/4 既有方法論）。**不要在本 Task 修正**。
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/lib/reader/book_format.dart app/lib/library/models/library_enums.dart app/test/reader/book_format_test.dart

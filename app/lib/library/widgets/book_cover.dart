@@ -18,6 +18,8 @@ IconData bookFormatIcon(BookFileFormat format) {
       return Icons.menu_book;
     case BookFileFormat.cbz:
       return Icons.auto_stories;
+    case BookFileFormat.md:
+      return Icons.article;
   }
 }
 
