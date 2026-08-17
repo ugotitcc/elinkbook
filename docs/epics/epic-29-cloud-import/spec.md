@@ -50,7 +50,7 @@
 ### OAuth 登入機制
 
 - 兩個 provider 皆走系統瀏覽器（Custom Tabs／`ASWebAuthenticationSession` 等價機制）導向的 OAuth Authorization Code Flow **搭配 PKCE**（RFC 7636）與 `state` 參數防範 CSRF/攔截攻擊——這是 Google／Microsoft 對公開客戶端（無後端伺服器的行動 App）的政策要求，不是可自由選擇的設計空間。**不使用內嵌 WebView 登入**（Google 政策明確禁止，見 `design.md`「依賴事實」）。
-- 需新增一個處理「開系統瀏覽器 → 攔截 redirect → 換 token」流程的依賴套件（例如 `flutter_web_auth_2` 這類套件，實際套件與版本由實作者於實作階段確認相容性，見下方「風險」）；`AndroidManifest.xml` 需新增對應的 redirect URI intent-filter（目前完全空白，需要新增，非修改既有設定）。
+- 需新增一個處理「開系統瀏覽器 → 攔截 redirect → 換 token」流程的依賴套件（例如 `flutter_web_auth_2` 這類套件，實際套件與版本由實作者於實作階段確認相容性，見下方「風險」）；`AndroidManifest.xml` 需新增對應的 redirect URI intent-filter（目前完全空白，需要新增，非修改既有設定）。**〔審查 Minor #5 採納〕** 兩個 provider 的 redirect URI 格式不同，撰寫 intent-filter 工單時需分別處理：Google 在 Android 上慣例使用反向客戶端 ID 作為自訂 scheme（例如 `com.googleusercontent.apps.CLIENT_ID:/oauth2redirect`），OneDrive/Microsoft 則允許自訂 scheme（例如 `msal<CLIENT_ID>://auth`），兩者不能套用同一組設定。
 - **Google Drive OAuth scope**：採用 `drive.readonly`（唯讀存取使用者所有檔案），**不**採用 `drive.file`（僅限本 App 建立/開啟過的檔案）——因為 Discovery 階段已定案「使用者可瀏覽任意雲端資料夾挑書」，`drive.file` 無法達成這個 UX。**已知外部限制**：`drive.readonly` 屬於 Google 的受限權限（Restricted Scope），未完成 Google 的應用程式驗證/CASA 安全評估流程前，使用者登入時會看到「未驗證應用程式」警告畫面——這是外部平台的既定流程，不是本 Epic 工程範圍內能解決的問題，開發/測試期間可先用 Google Cloud Console 的測試人員白名單機制繞過（見「Further Notes」）。
 - **OneDrive OAuth scope**：採用 Microsoft Graph 的 `Files.Read`（唯讀存取使用者可存取的所有檔案），對應同樣「瀏覽任意資料夾」的需求；Microsoft 側沒有與 Google `drive.readonly` 對等的強制安全評估關卡，摩擦度較低。
 
@@ -65,6 +65,7 @@ abstract class CloudStorageClient {
     CloudFileEntry entry,
     String destinationPath, {
     void Function(int received, int total)? onProgress,
+    CloudDownloadCancellationToken? cancellationToken,
   });
 }
 
@@ -72,16 +73,18 @@ class CloudFileEntry {
   final String id;
   final String name;
   final bool isFolder;
-  final BookFormat? format;   // null 代表不支援的格式，畫面上不會顯示
+  final BookFileFormat? format;   // null 代表不支援的格式，畫面上不會顯示
   final String? thumbnailUrl;
   final int? sizeBytes;
 }
 ```
 （此為決策草圖，非最終原始碼；上方僅為說明本 Epic 的核心契約形狀。）
 
-- 格式過濾（僅顯示 EPUB/PDF/TXT/AZW3/CBZ/MD）：能用伺服器端 MIME type 過濾的格式（Google Drive API 的 `q` 查詢參數支援 EPUB/PDF/TXT 的標準 MIME type）交給伺服器端做；AZW3/CBZ 這類沒有普遍認可標準 MIME type 的格式，各實作內部退回用副檔名做用戶端過濾。兩家 API 的分頁機制（Google Drive `pageSize`+`pageToken`、Microsoft Graph `@odata.nextLink`）皆需要支援，`listFolder()` 內部處理分頁串接，對呼叫端呈現的是「這個資料夾完整的檔案清單」（不把分頁細節外露到這個介面之上）。
+**〔2026-08-17 審查修正〕** `CloudFileEntry.format` 原寫成 `BookFormat?`，已更正為 `BookFileFormat?`。審查（`reviews/review-spec.md` Critical #1）指出的理由——「`BookFormat` 只有 `{epub, pdf, unknown}`」——經核對 `app/lib/reader/book_format.dart:2` 是錯的：`BookFormat` 實際上是 `{epub, pdf, azw3, cbz, txt, md, unknown}`，六種支援格式都在。但**結論仍然正確、只是理由要換**：`Book.format`（`app/lib/library/models/book.dart:10`）本身就是 `BookFileFormat`（非 `BookFormat`），`CloudFileEntry` 是圖書庫匯入層的概念，語意上應該對齊 `Book.format` 而非閱讀器分派用的 `BookFormat`；`BookFileFormat` 沒有 `unknown` 這個值，`CloudFileEntry.format` 用 `null` 表達「不支援的格式」不會跟一個既有的 `unknown` 列舉值語意重疊，比套用 `BookFormat` 更乾淨（`BookFormat` 若拿來用，會同時存在 `null` 與 `BookFormat.unknown` 兩種方式表達「不支援」，容易混淆）。
+
+- 格式過濾（僅顯示 EPUB/PDF/TXT/AZW3/CBZ/MD）：能用伺服器端 MIME type 過濾的格式（Google Drive API 的 `q` 查詢參數支援 EPUB/PDF/TXT 的標準 MIME type）交給伺服器端做；AZW3/CBZ 這類沒有普遍認可標準 MIME type 的格式，各實作內部退回用副檔名做用戶端過濾。兩家 API 的分頁機制（Google Drive `pageSize`+`pageToken`、Microsoft Graph `@odata.nextLink`）皆需要支援，`listFolder()` 內部處理分頁串接，對呼叫端呈現的是「這個資料夾完整的檔案清單」（不把分頁細節外露到這個介面之上）。**〔審查 Important #4 採納〕** 為防禦超大資料夾（數千筆檔案）造成請求逾時或記憶體峰值，`listFolder()` 單一資料夾最多讀取前 **1000 筆**（依各 API 分頁機制累加至上限即停止），超過上限時清單附帶「這個資料夾檔案較多，僅顯示前 1000 筆」提示，不做無上限遞迴。
 - 縮圖（`thumbnailUrl`）需要帶授權標頭或本身是具時效性的簽章 URL，畫面上顯示縮圖時需搭配非同步載入佔位符與快取，避免 E-Ink 螢幕因逐張圖片載入而頻繁局部刷新。
-- `downloadFile()` 下載到暫存路徑而非直接落地到最終匯入位置，確認匯入（含重複匯入偵測，見下方）成功後才移動到最終位置；使用者取消下載或整個匯入流程時，暫存檔案需要被清除，不留孤兒檔案。
+- `downloadFile()` 下載到暫存路徑而非直接落地到最終匯入位置，確認匯入（含重複匯入偵測，見下方）成功後才移動到最終位置；使用者取消下載或整個匯入流程時，暫存檔案需要被清除，不留孤兒檔案。**〔審查 Important #2 採納〕** `downloadFile()` 新增可選的 `cancellationToken` 參數，供使用者中途點擊「取消」或離開畫面時中斷底層下載連線（本專案目前只有 `http` 套件、沒有 `dio`，因此不採用 `dio` 的 `CancelToken` 型別，實作階段設計一個輕量的自訂取消信號即可，語意等價）；下載中止時比照失敗情境立即清除暫存檔。**〔審查 Minor #6 採納〕** 暫存檔統一存放於專屬子目錄（例如 `cache/cloud_import_temp/`），以 UUID 命名（不使用原始檔名，避免特殊字元造成檔案系統錯誤），App 啟動時可批次清理這個子目錄下的孤兒檔案。
 
 ### 既有匯入管線擴充：`BookImportService`
 
@@ -102,7 +105,7 @@ Future<ImportResult> importFiles(
 
 ### 資料模型與 Schema
 
-- `books` 表新增一欄 `cloud_file_id TEXT`（可為 `NULL`），schema version 由現行 21 升至 22，比照既有 `content_fingerprint`／`position_updated_at` 等既有欄位的 `ALTER TABLE` migration 慣例（既有裝置升級後預設 `NULL`，不影響既有資料）。
+- `books` 表新增一欄 `cloud_file_id TEXT`（可為 `NULL`），schema version 由現行 21 升至 22，比照既有 `content_fingerprint`／`position_updated_at` 等既有欄位的 `ALTER TABLE` migration 慣例（既有裝置升級後預設 `NULL`，不影響既有資料）。**〔審查 Important #3 採納〕** 同一次 migration 一併為 `cloud_file_id` 與 `content_fingerprint` 兩欄新增索引（`CREATE INDEX IF NOT EXISTS idx_books_cloud_file_id ON books(cloud_file_id)`／`idx_books_content_fingerprint ON books(content_fingerprint)`）——經核對 `sqlite_library_repository.dart` 確認 `content_fingerprint` 欄位目前完全沒有索引；本 Epic 新增的「選檔前置檢查」與「下載後指紋比對」兩者都是**每次雲端匯入必經**的高頻查詢，書籍量大時沒有索引會全表掃描，值得藉這次 migration 一併補上。
 - 不需要額外的 `cloud_provider` 欄位——`books.source`（既有 `BookSource` enum 欄位）已經區分 `googleDrive`／`oneDrive`，`cloud_file_id` 只需在該欄位範圍內唯一即可，不需要重複記錄 provider。
 - `LibraryRepository` 新增兩個查詢方法（介面＋ `SqliteLibraryRepository` 實作＋ `FakeLibraryRepository` 測試替身，比照既有三件套模式）：
   - `findByCloudFileId(BookSource provider, String cloudFileId) → Book?`
@@ -124,7 +127,7 @@ Future<ImportResult> importFiles(
 好的測試只驗證外部可觀察行為（畫面上看得到的狀態、呼叫端能觀察到的回傳值/副作用），不測內部實作細節（例如不斷言 `CloudStorageClient` 內部呼叫了哪個 HTTP method）。
 
 - **`CloudAccountRepository`**：不需要裝置/網路的 Dart 單元測試，比照 `SyncAccountRepository` 既有測試模式（讀取失敗安全退回、`isLinked()`/`link()`/`unlink()` 狀態轉換）。
-- **`CloudStorageClient`**：新增 `FakeCloudStorageClient`（`app/test/support/`，比照既有 `FakeLibraryRepository` 等命名慣例），回傳預先寫死的資料夾清單／模擬下載成功或失敗。雲端匯入瀏覽畫面（資料夾導覽、格式過濾後的清單、縮圖佔位符、多選狀態、循序下載＋逐項狀態、失敗重試按鈕、行動數據確認對話框）皆用這個 Fake 驅動 widget test，比照 `ReaderScreen` 用 `FakeReaderPrefsManager`/`FakeHighlightsRepository` 等一系列 Fake 驅動測試的既有模式。`GoogleDriveStorageClient`／`OneDriveStorageClient` 兩個真實實作（實際 HTTP 呼叫、OAuth token 帶入 request、分頁串接邏輯）**不做自動化測試**，理由比照這個專案對「原生 WebView 渲染」「pdfrx 原生繪圖」等既有慣例——留待真機或人工用真實帳號驗證。
+- **`CloudStorageClient`**：新增 `FakeCloudStorageClient`（`app/test/support/`，比照既有 `FakeLibraryRepository` 等命名慣例），回傳預先寫死的資料夾清單／模擬下載成功或失敗。雲端匯入瀏覽畫面（資料夾導覽、格式過濾後的清單、縮圖佔位符、多選狀態、循序下載＋逐項狀態、失敗重試按鈕、行動數據確認對話框、下載中途取消、超過 1000 筆的「僅顯示前 1000 筆」提示）皆用這個 Fake 驅動 widget test，比照 `ReaderScreen` 用 `FakeReaderPrefsManager`/`FakeHighlightsRepository` 等一系列 Fake 驅動測試的既有模式。`GoogleDriveStorageClient`／`OneDriveStorageClient` 兩個真實實作（實際 HTTP 呼叫、OAuth token 帶入 request、分頁串接邏輯、1000 筆上限的實際分頁累加、下載取消的底層連線中斷）**不做自動化測試**，理由比照這個專案對「原生 WebView 渲染」「pdfrx 原生繪圖」等既有慣例——留待真機或人工用真實帳號驗證。
 - **`BookImportService.importFiles()` 擴充**：延伸既有 `BookImportServiceImpl` 測試套件，新增涵蓋 `source`/`cloudFileIds` 參數的案例，確認 `Book.source`／`cloudFileId` 正確落地資料庫且既有本機匯入案例（未傳入新參數）行為不變（零回歸）。
 - **重複匯入偵測**：`LibraryRepository` 新增的兩個查詢方法各自的單元測試（`FakeLibraryRepository`／`SqliteLibraryRepository` 兩層皆須覆蓋，比照既有 repository 測試慣例）；雲端瀏覽畫面對「偵測到重複」情境的 UX（彈窗、取消時刪暫存檔）透過 `FakeCloudStorageClient` ＋ 預先塞入命中的 `FakeLibraryRepository` 資料驅動 widget test。
 - **設定頁「已連結的雲端匯入帳戶」區塊**：widget test 比照 `SyncSettingsScreen` 既有測試模式，用 `FakeCloudAccountRepository` 驅動已連結/未連結兩種狀態的畫面呈現與解除連結互動。
@@ -142,6 +145,6 @@ Future<ImportResult> importFiles(
 ## Further Notes
 
 - **新增依賴風險**：本 Epic 至少需要新增一個處理系統瀏覽器 OAuth redirect 的套件（例如 `flutter_web_auth_2`），以及一個偵測目前是否為行動數據連線的套件（例如 `connectivity_plus`）——目前皆未列在 `app/pubspec.yaml`。`pubspec.yaml` 現有版本鎖定已有 `win32`/`package_info_plus` 之間的相容性歷史糾葛（見檔案內註解），新增依賴時需要額外檢查是否引發類似的版本衝突鏈。
-- **Google 應用程式驗證是外部時間風險**：`drive.readonly` 屬受限權限，正式上線前需要通過 Google 的 OAuth 應用程式驗證（可能包含安全評估問卷、隱私權政策頁面、示範影片等要求），這個流程的時程不受本專案工程進度控制，開發/內測階段可先用 Google Cloud Console 的「測試使用者」白名單機制（無需通過驗證即可讓白名單內帳號正常登入，僅會顯示「未驗證應用程式」的過場警告）繼续推進开发，但正式對外發布前必須完成驗證。
+- **Google 應用程式驗證是外部時間風險**：`drive.readonly` 屬受限權限，正式上線前需要通過 Google 的 OAuth 應用程式驗證（可能包含安全評估問卷、隱私權政策頁面、示範影片等要求），這個流程的時程不受本專案工程進度控制，開發/內測階段可先用 Google Cloud Console 的「測試使用者」白名單機制（無需通過驗證即可讓白名單內帳號正常登入，僅會顯示「未驗證應用程式」的過場警告）繼續推進開發，但正式對外發布前必須完成驗證。
 - 行動數據下載警示的具體檔案大小閾值（`design.md` Minor 待定項目）：建議單檔 > 20MB 觸發警示，實作階段可依真機測試結果微調。
 - 下載中途使用者取消的暫存檔清理、縮圖的授權標頭/快取細節，皆已在上方「Implementation Decisions」納入，實作時對照即可，不再重複列出待辦。
