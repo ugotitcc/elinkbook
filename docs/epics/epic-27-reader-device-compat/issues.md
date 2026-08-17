@@ -1,6 +1,6 @@
 # Epic 27 — 裝置相容性強化：工單清單 (Issues)
 
-依使用者於 Mobiscribe WAVE 真機回報的兩項問題，2026-08-13 以 `/diagnose` 查證後立案。兩者皆為既有邏輯的行為修正，不涉及新增介面/型別、無架構異動，依 `epic-26-architecture-hardening` 先例跳過正式 `spec.md`，直接進入本工單清單。診斷過程與程式碼證據見 `reviews/bugfix-repro.md`。
+依使用者於 Mobiscribe WAVE 真機回報的兩項問題，2026-08-13 以 `/diagnose` 查證後立案（Issue 1、2）；Issue 3、4 為 2026-08-17 使用者於 Mobiscribe WARE 真機口頭回報後以 `/diagnose` 查證立案。全數皆為既有邏輯的行為修正，不涉及新增介面/型別、無架構異動，依 `epic-26-architecture-hardening` 先例跳過正式 `spec.md`，直接進入本工單清單。診斷過程與程式碼證據見 `reviews/bugfix-repro.md`。
 
 ---
 
@@ -48,3 +48,59 @@
 - 確認調整後兩則既有測試語意不變（逾時後切換錯誤畫面／成功渲染不被逾時覆蓋），僅數值改變。
 
 **驗收標準：** 開書 30 秒內未完成才顯示逾時錯誤畫面；`reader_screen_test.dart` 相關測試更新為新數值並通過；`flutter analyze` 乾淨、`flutter test` 全數通過。
+
+---
+
+## Issue 3：開 App／開書時畫面整個黑色一段時間
+
+**Status:** `ready-for-agent`
+
+**依賴：** 無
+
+**來源：** 使用者於 Mobiscribe WARE 真機口頭回報，2026-08-17 `/diagnose` 查證，完整診斷見 `reviews/bugfix-repro.md`「Issue 3」。
+
+**背景／症狀：** 冷啟動 App、或開啟書籍時，畫面整個黑色一段時間才進入書架/顯示書籍內容，體驗不佳。已透過對話確認裝置系統與 App 內建主題皆為淺色，排除「深色/夜間模式導致原生啟動畫面變黑」這個假設。
+
+**根因（信心度：開書黑屏「高」、冷啟動黑屏「中」，皆屬有程式碼依據的推論，非真機 log 坐實，見 `reviews/bugfix-repro.md` Issue 3）：**
+
+- `reader_screen.dart` 的 `_buildBody()`（約 2050-2060 行）：原生渲染畫面（`InAppWebView`／`pdfrx`）是 Stack 最底層、`_resolved != null` 就立刻掛載，早於 `_state` 轉為 `rendered`；中間只疊了一顆置中 `CircularProgressIndicator`，沒有任何不透明底色墊著。原生繪圖表面在真正收到第一次繪製結果前，緩衝區預設顯示黑色（Android 平台已知行為）。
+- 冷啟動的黑屏無法歸因於原生啟動畫面（已排除深色模式假設），較可能是同一類「Flutter Engine Surface 建立時的首幀黑幀」現象，加上 `main()`（`main.dart:29-108`）在 `runApp()` 前有多個同步 `await` 拉長曝光時間。
+
+**Solution：**
+
+- 在 `_buildBody()` 的 Stack 中，於原生畫面（`_buildNativeView(...)`）與 `CircularProgressIndicator` 之間，補一層不透明的主題背景色（例如 `ColoredBox(color: Theme.of(context).scaffoldBackgroundColor)` 或既有的 `_themedBackgroundColor` getter），把黑遮住、改成與主題一致的過場色。實作者需確認：這層底色只在 `_state == _RenderState.loading` 時需要顯示、或是否需要恆常墊底（避免原生畫面尺寸調整/重建時再次露出黑色），由實作者於 `plans/plan-issue-3.md` 定案並說明理由。
+- 評估 `main()`（`main.dart:29-108`）內是否有初始化工作可延後到 `runApp()` 之後非同步進行，縮短冷啟動黑屏的曝光時間；若評估後認為風險/複雜度不成比例，可只處理上述 Stack 補底色，並在計畫中說明理由。
+
+**單元測試要求：**
+- 新增/調整 widget test，驗證 `_state == _RenderState.loading` 時，原生畫面底下已有不透明底色 widget（例如透過 `find.byType` 或既有 Key 斷言其存在與疊放順序）。
+- 確認既有「載入完成後畫面正常顯示」的回歸測試不受影響、全數通過。
+- 真機視覺驗證（黑屏是否真的消失）不在 `flutter test` 範圍內，需留待真機或 `integration_test/` 驗證，比照 Issue 1 先例，於本工單完成後標註使用者確認結果。
+
+**驗收標準：** 開書載入中不再出現全黑畫面（改為主題色過場）；`flutter analyze` 乾淨、`flutter test` 全數通過、零回歸；真機（Mobiscribe WARE）驗證黑屏現象明顯改善或消失。
+
+---
+
+## Issue 4：版面設定「另存為新預設集」點擊後彈窗不會出現
+
+**Status:** `ready-for-agent`
+
+**依賴：** 無（與 Issue 3 互相獨立）
+
+**來源：** 使用者於 Mobiscribe WARE 真機口頭回報，2026-08-17 `/diagnose` 查證，完整診斷見 `reviews/bugfix-repro.md`「Issue 4」。
+
+**背景／症狀：** 於流式 EPUB 的「版面設定」→「設定喜好」分頁點擊「另存為新預設集」按鈕（`reader_settings_sheet.dart:914-918`），預期跳出命名輸入 `AlertDialog`，實際上點擊後畫面完全沒有任何變化（含盲點按鈕周邊區域也沒有反應），已確認排除「彈窗其實有畫出來、只是電子紙沒刷新」的假設（見 `reviews/bugfix-repro.md` Issue 4 說明）。
+
+**根因（信心度：中，尚無法 100% 確認，見 `reviews/bugfix-repro.md` Issue 4）：** 呼叫路徑（`reader_settings_sheet.dart:916` → `reader_screen.dart:750-753` → `_handleSaveAsPreset`，`reader_screen.dart:796-828`）在真正呼叫 `showDialog` 之前，唯一會讓整個流程靜默 `return`（不留任何痕跡）的守門條件是 `widget.layoutPresetRepository == null`；已核對建構路徑，正常執行不應為 `null`，故此假設信心不高但無法完全排除。另一種無法透過靜態分析排除的可能：`_currentDraft` getter 或 `showDialog` 呼叫本身在真機環境拋出未預期例外——Release build 下 Gesture handler 內未捕捉的例外會被 `FlutterError.onError` 攔截但不顯示任何畫面，症狀正好吻合。
+
+**Solution（本工單刻意採取「提高可觀測性＋防禦性」而非直接臆測修復，因根因尚未 100% 確認）：**
+
+- 在 `_handleSaveAsPreset` 的 `if (repository == null) return;` 分支補上使用者可見提示（例如 SnackBar 顯示「暫時無法儲存預設集」），把「靜默失敗」改成「至少使用者知道發生了什麼」。
+- 為 `_handleSaveAsPreset` 整個 method body 加上例外攔截（`try`/`catch`），攔截後以 SnackBar／`debugPrint` 呈現例外訊息，避免真機 Release build 下例外被靜默吞掉。
+- 實作者需決定 SnackBar 呈現方式是否比照專案既有其他錯誤提示慣例（例如是否有既有的 SnackBar helper/樣式可重用），於 `plans/plan-issue-4.md` 中定案。
+
+**單元測試要求：**
+- 新增 widget test：`layoutPresetRepository` 為 `null` 時點擊「另存為新預設集」按鈕，斷言出現對應的使用者可見提示（SnackBar 或等效元件），而非完全無反應。
+- 新增 widget test：`_handleSaveAsPreset` 內部（或其呼叫的 repository 方法）拋出例外時，斷言例外被攔截、出現使用者可見提示，且不會讓整個 App 崩潰/無回應。
+- 確認既有「存滿 3 組後再次另存跳出覆蓋選單」等既有測試（約 6802 行起）不受影響、全數通過。
+
+**驗收標準：** `flutter analyze` 乾淨、`flutter test` 全數通過、零回歸；若使用者於真機再次遇到本問題，應能看到明確的錯誤/提示訊息而非毫無反應，據此可判斷是否為 `repository == null`（若是，需再往上追查建構時序，另立新工單）或其他例外原因。
