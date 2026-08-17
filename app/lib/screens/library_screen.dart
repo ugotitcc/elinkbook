@@ -12,6 +12,8 @@ import '../reader/highlights_repository.dart';
 import '../reader/layout_preset_repository.dart';
 import '../reader/notes_repository.dart';
 import '../reader/reader_prefs_manager.dart';
+import '../remote/opds_client.dart';
+import '../remote/remote_server_repository.dart';
 import '../library/library_preferences.dart';
 import '../library/library_repository.dart';
 import '../library/models/book.dart';
@@ -25,6 +27,7 @@ import '../theme/app_theme.dart';
 import 'library_group_management_dialog.dart';
 import 'library_move_to_group_dialog.dart';
 import 'reader_screen.dart';
+import 'remote_server_list_screen.dart';
 import 'settings_screen.dart';
 
 const _folderPickerChannel = MethodChannel('elinkbook/folder_picker');
@@ -45,6 +48,8 @@ class LibraryScreen extends StatefulWidget {
   final SyncAccountRepository? syncAccountRepository;
   final SyncClient? syncClient;
   final SyncCheckpointTrigger? syncCheckpointTrigger;
+  final RemoteServerRepository? remoteServerRepository;
+  final OpdsClient? opdsClient;
   final AppTheme currentTheme;
   final bool isEinkMode;
   final ValueChanged<AppTheme>? onThemeChanged;
@@ -65,6 +70,8 @@ class LibraryScreen extends StatefulWidget {
     this.syncAccountRepository,
     this.syncClient,
     this.syncCheckpointTrigger,
+    this.remoteServerRepository,
+    this.opdsClient,
     this.currentTheme = AppTheme.light,
     this.isEinkMode = false,
     this.onThemeChanged,
@@ -665,6 +672,22 @@ class _LibraryScreenState extends State<LibraryScreen> {
             icon: const Icon(Icons.category),
             tooltip: '管理分類',
             onPressed: _openManageGroupsDialog,
+          ),
+        if (widget.remoteServerRepository != null && widget.opdsClient != null)
+          IconButton(
+            key: const Key('library_remote_library_button'),
+            icon: const Icon(Icons.cloud_outlined),
+            tooltip: '遠端書庫',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => RemoteServerListScreen(
+                    repository: widget.remoteServerRepository!,
+                    opdsClient: widget.opdsClient!,
+                  ),
+                ),
+              );
+            },
           ),
         IconButton(
           key: const Key('library_settings_button'),

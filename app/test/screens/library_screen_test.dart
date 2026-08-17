@@ -23,6 +23,9 @@ import 'package:elinkbook/library/models/library_enums.dart';
 import '../support/fake_book_import_service.dart';
 import '../support/fake_library_repository.dart';
 import '../support/fake_reader_prefs_manager.dart';
+import '../support/fake_opds_client.dart';
+import '../support/fake_remote_server_repository.dart';
+import 'package:elinkbook/screens/remote_server_list_screen.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
 import '../support/fake_highlights_repository.dart';
 import '../support/fake_notes_repository.dart';
@@ -3137,6 +3140,46 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.byKey(const Key('group_tile_奇幻')), findsOneWidget);
     expect(find.byKey(const Key('book_item_b0')), findsOneWidget);
+  });
+
+  group('遠端書庫進入點', () {
+    testWidgets('未提供 remoteServerRepository/opdsClient 時，AppBar 不顯示遠端書庫按鈕', (tester) async {
+      final repository = FakeLibraryRepository();
+      final importService = FakeBookImportService();
+      await tester.pumpWidget(MaterialApp(
+        home: LibraryScreen(
+          repository: repository,
+          importService: importService,
+          prefsManager: FakeReaderPrefsManager(),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('library_remote_library_button')), findsNothing);
+    });
+
+    testWidgets('提供 remoteServerRepository/opdsClient 時，AppBar 顯示遠端書庫按鈕，點擊後導向 RemoteServerListScreen',
+        (tester) async {
+      final repository = FakeLibraryRepository();
+      final importService = FakeBookImportService();
+      await tester.pumpWidget(MaterialApp(
+        home: LibraryScreen(
+          repository: repository,
+          importService: importService,
+          prefsManager: FakeReaderPrefsManager(),
+          remoteServerRepository: FakeRemoteServerRepository(),
+          opdsClient: FakeOpdsClient(),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('library_remote_library_button')), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('library_remote_library_button')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(RemoteServerListScreen), findsOneWidget);
+    });
   });
 }
 

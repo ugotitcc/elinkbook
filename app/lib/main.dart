@@ -15,6 +15,10 @@ import 'reader/notes_repository.dart';
 import 'reader/reader_prefs_manager.dart';
 import 'reader/reader_prefs_manager_impl.dart';
 import 'reader/reading_position_repository.dart';
+import 'remote/opds_client.dart';
+import 'remote/opds_http_client.dart';
+import 'remote/remote_server_repository.dart';
+import 'remote/sqlite_remote_server_repository.dart';
 import 'screens/library_screen.dart';
 import 'screens/reading_position_conflict_dialog.dart';
 import 'sync/sync_account_repository.dart';
@@ -86,6 +90,11 @@ Future<void> main() async {
     isLoggedIn: syncAccountRepository.isLoggedIn,
     runCheckpoint: syncEngine.runCheckpoint,
   );
+  final opdsClient = OpdsHttpClient();
+  final remoteServerRepository = SqliteRemoteServerRepository(
+    database: repository.database,
+    libraryRepository: repository,
+  );
   runApp(
     ElinkBookApp(
       repository: repository,
@@ -100,6 +109,8 @@ Future<void> main() async {
       syncAccountRepository: syncAccountRepository,
       syncClient: syncClient,
       syncCheckpointTrigger: syncCheckpointTrigger,
+      remoteServerRepository: remoteServerRepository,
+      opdsClient: opdsClient,
       navigatorKey: navigatorKey,
       initialTheme: initialTheme,
       initialEinkMode: initialEinkMode,
@@ -123,6 +134,8 @@ class ElinkBookApp extends StatefulWidget {
   final SyncAccountRepository? syncAccountRepository;
   final SyncClient? syncClient;
   final SyncCheckpointTrigger? syncCheckpointTrigger;
+  final RemoteServerRepository? remoteServerRepository;
+  final OpdsClient? opdsClient;
   final GlobalKey<NavigatorState>? navigatorKey;
   final AppThemePreferences themePreferences;
   final AppTheme initialTheme;
@@ -142,6 +155,8 @@ class ElinkBookApp extends StatefulWidget {
     this.syncAccountRepository,
     this.syncClient,
     this.syncCheckpointTrigger,
+    this.remoteServerRepository,
+    this.opdsClient,
     this.navigatorKey,
     this.initialTheme = AppTheme.light,
     this.initialEinkMode = false,
@@ -216,6 +231,8 @@ class _ElinkBookAppState extends State<ElinkBookApp> with WidgetsBindingObserver
         syncAccountRepository: widget.syncAccountRepository,
         syncClient: widget.syncClient,
         syncCheckpointTrigger: widget.syncCheckpointTrigger,
+        remoteServerRepository: widget.remoteServerRepository,
+        opdsClient: widget.opdsClient,
         currentTheme: _theme,
         isEinkMode: _isEinkMode,
         onThemeChanged: _handleThemeChanged,
