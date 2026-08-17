@@ -149,6 +149,29 @@ void main() {
     expect(navDoc.findAllElements('a').single.innerText, 'A&B<C>');
   });
 
+  test('使用者手打常見裸 HTML（<br>/<hr>）不會讓章節 XHTML 解析失敗（審查修正，'
+      '見 reviews/review-issue-5.md Critical #1——package:markdown 對裸 HTML '
+      '原樣輸出，需正規化為合法 XML 才能被 epub.js 的嚴格 XML 解析模式載入，'
+      '本測試直接對章節本身而非僅 nav.xhtml 呼叫 XmlDocument.parse()）', () async {
+    final mdFile = File('${Directory.systemTemp.path}/synth_md_raw_html.md');
+    await mdFile.writeAsBytes(
+      utf8.encode('# 第一章\n第一行<br>第二行\n\n<hr>\n\n看起來像標籤但其實是純文字的 <未定義>'),
+    );
+    addTearDown(() => mdFile.delete());
+
+    final result = await synthesizeMdBook(mdFile.path, 'book12', '備用標題');
+    final archive = decodeArchive(result);
+    final opfDoc = XmlDocument.parse(readEntry(archive, 'OEBPS/content.opf'));
+    final href = opfDoc
+        .findAllElements('item')
+        .firstWhere((e) => e.getAttribute('href')?.startsWith('text/') ?? false)
+        .getAttribute('href')!;
+
+    // 直接對章節 XHTML 本身解析，不是僅解析 nav.xhtml——這正是 Critical #1
+    // 揭露的測試盲點：舊測試從未驗證過章節本身是否為合法 XML。
+    XmlDocument.parse(readEntry(archive, 'OEBPS/$href'));
+  });
+
   test('Frontmatter cover 為 data: URI 時正確回傳於 frontmatterCoverBytes', () async {
     final pngBytes = [0x89, 0x50, 0x4E, 0x47];
     final base64Data = base64Encode(pngBytes);

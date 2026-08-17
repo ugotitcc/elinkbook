@@ -77,9 +77,14 @@ dependencies:
   # Markdown YAML Frontmatter 解析（epic-11-multi-format-reader Issue 5）。
   yaml: ^3.1.3
   # Markdown 解析（epic-11-multi-format-reader Issue 5）：Dart 官方純
-  # Dart AST 解析器，用於 MD 匯入時的章節/標題階層抽取與 HTML 渲染，
-  # 已查證預設輸出為合法 XHTML（見 Global Constraints 已查證事實 #1）。
+  # Dart AST 解析器，用於 MD 匯入時的章節/標題階層抽取與 HTML 渲染。
   markdown: ^7.3.1
+  # HTML5 容錯解析（epic-11-multi-format-reader Issue 5 審查修復，見
+  # reviews/review-issue-5.md Critical #1）：`markdown` 套件對使用者輸入
+  # 中裸 HTML（CommonMark/GFM 規範的 raw HTML passthrough）不會跳脫，
+  # 用此套件把 `md.renderToHtml()` 的原始輸出容錯解析後重新序列化為合法
+  # XML，確保章節 XHTML 一律可被 `epub.js` 的嚴格 XML 解析模式載入。
+  html: ^0.15.6
 
 dev_dependencies:
   flutter_test:

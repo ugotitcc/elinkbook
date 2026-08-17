@@ -5,6 +5,9 @@ import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
+import 'package:html/dom.dart' as html_dom;
+import 'package:html/dom_parsing.dart' show isVoidElement;
+import 'package:html/parser.dart' as html_parser;
 import 'package:markdown/markdown.dart' as md;
 
 import 'content_uri_reader.dart';
@@ -99,13 +102,73 @@ String _renderTocChildren(_TocNode node, List<String> sectionHrefs) {
   return buffer.toString();
 }
 
+/// `escapeXml()`（`epub_container_builder.dart`）只跳脫 `&`/`<`/`>`，屬性值
+/// 以雙引號包住時還需額外跳脫 `"`，否則屬性值本身含雙引號會提前結束屬性。
+String _escapeXmlAttr(String value) => escapeXml(value).replaceAll('"', '&quot;');
+
+/// 將 [node] 遞迴寫成保證合法的 XML 字串——[isVoidElement] 之外的元素一律
+/// 用完整起訖標籤包住（即使沒有子節點也不自我封閉，XML 允許空元素這樣寫，
+/// 不需要額外判斷)，避免對非 HTML5 void element 誤用 `/>`。
+void _writeXmlNode(StringBuffer buffer, html_dom.Node node) {
+  if (node is html_dom.Text) {
+    buffer.write(escapeXml(node.data));
+    return;
+  }
+  if (node is html_dom.Comment) {
+    // XML 註解規格禁止內容出現 `--`；使用者輸入的原始 HTML 註解直接捨棄，
+    // 比照本 Issue 對裸 HTML 一貫的保守態度（不嘗試保留、不冒風險組出不
+    // 合法輸出）。
+    return;
+  }
+  if (node is html_dom.Element) {
+    final tag = node.localName ?? 'span';
+    buffer.write('<$tag');
+    node.attributes.forEach((key, value) {
+      buffer.write(' ${key.toString()}="${_escapeXmlAttr(value)}"');
+    });
+    if (node.nodes.isEmpty && isVoidElement(tag)) {
+      buffer.write('/>');
+      return;
+    }
+    buffer.write('>');
+    for (final child in node.nodes) {
+      _writeXmlNode(buffer, child);
+    }
+    buffer.write('</$tag>');
+    return;
+  }
+  for (final child in node.nodes) {
+    _writeXmlNode(buffer, child);
+  }
+}
+
+/// 對 [rawHtml]（`md.renderToHtml()` 的原始輸出）做一次「HTML5 容錯解析＋
+/// 重新序列化為合法 XML」的正規化（epic-11-multi-format-reader Issue 5
+/// 審查修復，見 reviews/review-issue-5.md Critical #1）——`package:markdown`
+/// 對使用者輸入中「看起來像 HTML 標籤」的裸文字（CommonMark/GFM 規範定義
+/// 的 raw HTML passthrough，例如使用者手打 `<br>` 換行）不會跳脫、原樣輸出，
+/// 但本專案釘選的 `epub.js` 是以嚴格 `application/xhtml+xml` 模式解析章節
+/// （見 `app/android/app/src/main/assets/foliate/epub.js`），不合法 XML 會
+/// 直接顯示解析錯誤畫面而非原文。用 HTML5 解析器（與瀏覽器容錯規則一致）
+/// 把整段輸出——包含套件產生的合法標籤與使用者輸入的裸 HTML——當作同一棵
+/// 樹解析，再依 XML 規則（void element 自我封閉、屬性值/文字內容正確跳脫）
+/// 重新序列化，保證輸出一律是合法 XML。
+String _sanitizeToXhtml(String rawHtml) {
+  final fragment = html_parser.parseFragment(rawHtml);
+  final buffer = StringBuffer();
+  for (final node in fragment.nodes) {
+    _writeXmlNode(buffer, node);
+  }
+  return buffer.toString();
+}
+
 String _sectionXhtml(List<md.Node> nodes) => '''<?xml version="1.0" encoding="UTF-8"?>
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head><title>內容</title>
 $_kCodeTableCss
 </head>
 <body>
-${md.renderToHtml(nodes)}
+${_sanitizeToXhtml(md.renderToHtml(nodes))}
 </body>
 </html>
 ''';

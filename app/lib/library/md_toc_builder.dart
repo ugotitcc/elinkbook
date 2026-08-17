@@ -15,7 +15,9 @@ class MdHeading {
 
 class MdSection {
   /// `null` 代表這是唯一一個 section 且文件內完全沒有偵測到標題（見
-  /// [parseMdIntoSections] 文件註解），或是第一個標題之前的前言 section（Ruling 1）。
+  /// [parseMdIntoSections] 文件註解），或是第一個標題之前的前言 section
+  /// （比照 `txt_chapter_splitter.dart` 對前言的既有處置慣例：獨立成一個
+  /// title 為 null 的章節，不與第一個標題章節合併）。
   final String? title;
   final List<md.Node> nodes;
   const MdSection({this.title, required this.nodes});

@@ -17,7 +17,8 @@ void main() {
       expect(result.sections[1].title, '第二章');
     });
 
-    test('第一個標題之前的內容獨立為前言 section (Ruling 1)', () {
+    test('第一個標題之前的內容獨立為前言 section（比照 txt_chapter_splitter.dart '
+        '對前言的既有處置慣例，不與第一個標題章節合併）', () {
       final result = parseMdIntoSections('前言內容\n\n# 第一章\n內容一');
       expect(result.sections, hasLength(2));
       expect(result.sections[0].title, isNull);
