@@ -945,6 +945,16 @@ class SqliteLibraryRepository implements LibraryRepository {
   }
 
   @override
+  Future<List<Book>> listUndownloadedBooksForRemoteServer(String serverId) async {
+    final rows = await _db.query(
+      'books',
+      where: 'remote_server_id = ? AND is_downloaded = 0',
+      whereArgs: [serverId],
+    );
+    return rows.map(Book.fromMap).toList();
+  }
+
+  @override
   Future<bool> detectAndCacheEpubLayout(String bookId, String filePath) async {
     final response = await kBookMetadataChannel.invokeMapMethod<String, Object?>(
       'detectEpubLayout',

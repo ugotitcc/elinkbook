@@ -168,6 +168,13 @@ class FakeLibraryRepository implements LibraryRepository {
     return null;
   }
 
+  @override
+  Future<List<Book>> listUndownloadedBooksForRemoteServer(String serverId) async {
+    return _books
+        .where((b) => b.remoteServerId == serverId && !b.isDownloaded)
+        .toList();
+  }
+
   Book _withGroupName(Book book, String groupName) => Book(
         id: book.id,
         title: book.title,

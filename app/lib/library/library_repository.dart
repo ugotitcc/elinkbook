@@ -48,6 +48,13 @@ abstract class LibraryRepository {
   /// 共用，見 `CONTEXT.md`「書籍內容指紋」）。命中回傳該本書，未命中回傳
   /// `null`。
   Future<Book?> findByContentFingerprint(String fingerprint);
+
+  /// 供遠端書庫刪除站點前的示警防護使用（epic-30-calibre-remote-library
+  /// Issue 1，spec.md「站點管理」）：回傳指定站點中「僅雲端紀錄、無本機
+  /// 檔案」（`isDownloaded == false`）的書籍清單。`RemoteServerRepository`
+  /// 透過這個方法間接查詢，維持「`books`／`groups` 兩張表唯一存取入口」
+  /// 的既有邊界（見本類別文件），不直接對 `books` 表下 SQL。
+  Future<List<Book>> listUndownloadedBooksForRemoteServer(String serverId);
 }
 
 /// `LibraryRepository` 操作違反資料規則時拋出（例如嘗試刪除/重新命名系統

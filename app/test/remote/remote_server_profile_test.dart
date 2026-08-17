@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/remote/remote_server_profile.dart';
 
 void main() {
-  RemoteServerProfile _profile({String? username, DateTime? lastAccessedAt}) {
+  RemoteServerProfile createProfile({String? username, DateTime? lastAccessedAt}) {
     return RemoteServerProfile(
       id: 'srv1',
       name: '家用 NAS',
@@ -16,7 +16,7 @@ void main() {
   }
 
   test('toMap()/fromMap() 往返保留全部欄位', () {
-    final profile = _profile(
+    final profile = createProfile(
       username: 'admin',
       lastAccessedAt: DateTime.fromMillisecondsSinceEpoch(2000),
     );
@@ -25,7 +25,7 @@ void main() {
   });
 
   test('username／lastAccessedAt 皆為 null 時（匿名連線、尚未存取過）toMap()/fromMap() 往返正確', () {
-    final profile = _profile();
+    final profile = createProfile();
     final restored = RemoteServerProfile.fromMap(profile.toMap());
     expect(restored.username, isNull);
     expect(restored.lastAccessedAt, isNull);

@@ -3550,4 +3550,73 @@ void main() {
       expect(await repo.findByContentFingerprint('does-not-exist'), isNull);
     });
   });
+
+  group('listUndownloadedBooksForRemoteServer', () {
+    test('回傳指定站點中 isDownloaded=false 的書籍，排除已下載與其他站點', () async {
+      final repo = await SqliteLibraryRepository.open(inMemoryDatabasePath);
+      addTearDown(() => repo.close());
+
+      // 先插入 remote_servers 記錄（foreign key 約束）
+      await repo.database.insert('remote_servers', {
+        'id': 'srv1',
+        'name': '測試站點1',
+        'base_url': 'http://example.com/opds',
+        'type': 'opds',
+        'created_at': 1000,
+      });
+      await repo.database.insert('remote_servers', {
+        'id': 'srv2',
+        'name': '測試站點2',
+        'base_url': 'http://example2.com/opds',
+        'type': 'opds',
+        'created_at': 1000,
+      });
+
+      await repo.insertBook(Book(
+        id: 'book1',
+        title: '僅雲端紀錄',
+        format: BookFileFormat.epub,
+        filePath: '/books/book1.epub',
+        source: BookSource.calibreOpds,
+        createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+        lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+        remoteServerId: 'srv1',
+        remoteBookId: 'remote-book-1',
+        isDownloaded: false,
+      ));
+      await repo.insertBook(Book(
+        id: 'book2',
+        title: '已下載',
+        format: BookFileFormat.epub,
+        filePath: '/books/book2.epub',
+        source: BookSource.calibreOpds,
+        createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+        lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+        remoteServerId: 'srv1',
+        remoteBookId: 'remote-book-2',
+        isDownloaded: true,
+      ));
+      await repo.insertBook(Book(
+        id: 'book3',
+        title: '不同站點',
+        format: BookFileFormat.epub,
+        filePath: '/books/book3.epub',
+        source: BookSource.calibreOpds,
+        createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+        lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+        remoteServerId: 'srv2',
+        remoteBookId: 'remote-book-3',
+        isDownloaded: false,
+      ));
+
+      final result = await repo.listUndownloadedBooksForRemoteServer('srv1');
+      expect(result.map((b) => b.id), ['book1']);
+    });
+
+    test('沒有符合條件的書籍時回傳空清單', () async {
+      final repo = await SqliteLibraryRepository.open(inMemoryDatabasePath);
+      addTearDown(() => repo.close());
+      expect(await repo.listUndownloadedBooksForRemoteServer('srv1'), isEmpty);
+    });
+  });
 }
