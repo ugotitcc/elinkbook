@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:elinkbook/remote/opds_client.dart';
@@ -23,6 +24,12 @@ class FakeOpdsClient implements OpdsClient {
 
   /// 非 `null` 時 [downloadBook] 拋出這個例外，模擬下載失敗。
   Object? downloadError;
+
+  /// 供測試控制下載完成時機（比照 `FakeBookImportService.pendingCompleter`
+  /// 既有模式）：非 `null` 時 [downloadBook] 改為等待這個 completer 完成，
+  /// 讓測試能在下載「進行中」時呼叫 `cancellationToken.cancel()` 並斷言
+  /// 正確反應為取消而非直接成功。
+  Completer<void>? downloadPendingCompleter;
 
   final List<String> testConnectionCalls = [];
   // 〔審查 review-plan-issue-1.md Finding 1 採納〕與 testConnectionCalls
@@ -60,6 +67,13 @@ class FakeOpdsClient implements OpdsClient {
     OpdsDownloadCancellationToken? cancellationToken,
   }) async {
     downloadBookCalls.add(acquisition.href);
+    final completer = downloadPendingCompleter;
+    if (completer != null) {
+      await completer.future;
+    }
+    if (cancellationToken?.isCancelled ?? false) {
+      throw StateError('下載已取消');
+    }
     if (downloadError != null) throw downloadError!;
     onProgress?.call(100, 100);
     final file = File(destinationPath);

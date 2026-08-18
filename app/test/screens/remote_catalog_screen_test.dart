@@ -1,5 +1,9 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/remote/remote_server_profile.dart';
 import 'package:elinkbook/remote/opds_types.dart';
@@ -8,6 +12,7 @@ import 'package:elinkbook/screens/remote_catalog_screen.dart';
 import '../support/fake_book_import_service.dart';
 import '../support/fake_opds_client.dart';
 import '../support/fake_remote_server_repository.dart';
+import '../support/fake_path_provider_platform.dart';
 
 void main() {
   final server = RemoteServerProfile(
@@ -173,5 +178,264 @@ void main() {
     await pumpScreen(tester, opdsClient: opdsClient);
 
     expect(find.byKey(const Key('remote_catalog_error_text')), findsOneWidget);
+  });
+
+  group('下載與匯入', () {
+    late Directory tempRoot;
+    late PathProviderPlatform originalPathProvider;
+
+    setUpAll(() {
+      // sqfliteFfiInit 已不需要——整合測試改用 FakeBookImportService，
+      // 不再使用真實 SqliteLibraryRepository。
+    });
+
+    setUp(() {
+      tempRoot = Directory.systemTemp.createTempSync('remote_catalog_test');
+      originalPathProvider = PathProviderPlatform.instance;
+      PathProviderPlatform.instance = FakePathProviderPlatform(tempRoot.path);
+    });
+
+    tearDown(() {
+      PathProviderPlatform.instance = originalPathProvider;
+      if (tempRoot.existsSync()) tempRoot.deleteSync(recursive: true);
+    });
+
+    testWidgets('勾選單本書下載後呼叫 importFiles，帶入 source/remoteServerId/remoteBookIds/remoteDownloadUrls',
+        (tester) async {
+      final opdsClient = FakeOpdsClient(feeds: {
+        server.baseUrl: const OpdsFeed(title: '根目錄', entries: [entry1]),
+      });
+      final importService = FakeBookImportService();
+      await tester.pumpWidget(MaterialApp(
+        home: RemoteCatalogScreen(
+          server: server,
+          repository: FakeRemoteServerRepository(),
+          createOpdsClient: () => opdsClient,
+          importService: importService,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('remote_catalog_entry_book-1')));
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('remote_catalog_download_button')));
+      await tester.pump();
+
+      // 交錯 runAsync（提供真實事件迴圈讓 dart:io 完成）與 pump（處理微佇列），
+      // 驅動 _downloadOne 中的 getTemporaryDirectory → File.create → writeAsBytes
+      // → copy → delete → importFiles → setState 完整鏈。
+      for (var i = 0; i < 30; i++) {
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+        await tester.pump();
+      }
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('download_queue_item_book-1')), findsOneWidget);
+      expect(find.text('完成'), findsWidgets);
+
+      await tester.tap(find.byKey(const Key('download_queue_done_button')));
+      await tester.pumpAndSettle();
+
+      expect(opdsClient.downloadBookCalls, ['http://192.168.1.100:8080/opds/download/1.epub']);
+    });
+
+    testWidgets('同一書目有多個支援格式時彈出 FormatSelectionDialog 讓使用者選擇', (tester) async {
+      const multiFormatEntry = OpdsEntry(
+        remoteBookId: 'book-multi',
+        title: '多格式書',
+        acquisitions: [
+          OpdsAcquisition(href: 'http://x/m.epub', format: BookFileFormat.epub),
+          OpdsAcquisition(href: 'http://x/m.pdf', format: BookFileFormat.pdf),
+        ],
+      );
+      final opdsClient = FakeOpdsClient(feeds: {
+        server.baseUrl: const OpdsFeed(title: '根目錄', entries: [multiFormatEntry]),
+      });
+      await tester.pumpWidget(MaterialApp(
+        home: RemoteCatalogScreen(
+          server: server,
+          repository: FakeRemoteServerRepository(),
+          createOpdsClient: () => opdsClient,
+          importService: FakeBookImportService(),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('remote_catalog_entry_book-multi')));
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('remote_catalog_download_button')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('format_selection_dialog')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('format_selection_option_http://x/m.pdf')));
+      await tester.pump();
+
+      // 交錯 runAsync 與 pump 驅動 dart:io 完成。
+      for (var i = 0; i < 30; i++) {
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+        await tester.pump();
+      }
+      await tester.pumpAndSettle();
+
+      expect(opdsClient.downloadBookCalls, ['http://x/m.pdf']);
+    });
+
+    testWidgets('多選批次下載時逐項序列進行，非平行', (tester) async {
+      const entryA = OpdsEntry(
+        remoteBookId: 'book-a',
+        title: '書 A',
+        acquisitions: [OpdsAcquisition(href: 'http://x/a.epub', format: BookFileFormat.epub)],
+      );
+      const entryB = OpdsEntry(
+        remoteBookId: 'book-b',
+        title: '書 B',
+        acquisitions: [OpdsAcquisition(href: 'http://x/b.epub', format: BookFileFormat.epub)],
+      );
+      final opdsClient = FakeOpdsClient(feeds: {
+        server.baseUrl: const OpdsFeed(title: '根目錄', entries: [entryA, entryB]),
+      });
+      await tester.pumpWidget(MaterialApp(
+        home: RemoteCatalogScreen(
+          server: server,
+          repository: FakeRemoteServerRepository(),
+          createOpdsClient: () => opdsClient,
+          importService: FakeBookImportService(),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('remote_catalog_entry_book-a')));
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('remote_catalog_entry_book-b')));
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('remote_catalog_download_button')));
+      await tester.pump();
+
+      // 交錯 runAsync 與 pump 驅動 dart:io 完成（兩本書序列下載）。
+      for (var i = 0; i < 30; i++) {
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+        await tester.pump();
+      }
+      await tester.pumpAndSettle();
+
+      expect(opdsClient.downloadBookCalls, ['http://x/a.epub', 'http://x/b.epub']);
+    });
+
+    testWidgets('下載失敗時顯示失敗狀態並可手動重試', (tester) async {
+      final opdsClient = FakeOpdsClient(
+        feeds: {
+          server.baseUrl: const OpdsFeed(title: '根目錄', entries: [entry1]),
+        },
+        downloadError: StateError('模擬下載失敗'),
+      );
+      await tester.pumpWidget(MaterialApp(
+        home: RemoteCatalogScreen(
+          server: server,
+          repository: FakeRemoteServerRepository(),
+          createOpdsClient: () => opdsClient,
+          importService: FakeBookImportService(),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('remote_catalog_entry_book-1')));
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('remote_catalog_download_button')));
+      await tester.pump();
+
+      // 交錯 runAsync 與 pump 驅動 dart:io 微佇列（下載失敗仍需 pump 處理微佇列）。
+      for (var i = 0; i < 30; i++) {
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+        await tester.pump();
+      }
+      await tester.pumpAndSettle();
+
+      expect(find.text('失敗'), findsOneWidget);
+      expect(find.byKey(const Key('download_queue_retry_book-1')), findsOneWidget);
+
+      opdsClient.downloadError = null;
+      await tester.tap(find.byKey(const Key('download_queue_retry_book-1')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('完成'), findsWidgets);
+    });
+
+    testWidgets('下載中點擊取消後顯示已取消狀態，暫存檔不殘留', (tester) async {
+      final opdsClient = FakeOpdsClient(feeds: {
+        server.baseUrl: const OpdsFeed(title: '根目錄', entries: [entry1]),
+      });
+      opdsClient.downloadPendingCompleter = Completer<void>();
+      await tester.pumpWidget(MaterialApp(
+        home: RemoteCatalogScreen(
+          server: server,
+          repository: FakeRemoteServerRepository(),
+          createOpdsClient: () => opdsClient,
+          importService: FakeBookImportService(),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('remote_catalog_entry_book-1')));
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('remote_catalog_download_button')));
+      await tester.pump();
+
+      expect(find.byKey(const Key('download_queue_cancel_book-1')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('download_queue_cancel_book-1')));
+      opdsClient.downloadPendingCompleter!.complete();
+
+      // 交錯 runAsync 與 pump 驅動 dart:io 微佇列（取消後仍需處理微佇列）。
+      for (var i = 0; i < 30; i++) {
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+        await tester.pump();
+      }
+      await tester.pumpAndSettle();
+
+      expect(find.text('已取消'), findsOneWidget);
+    });
+
+    testWidgets('整合驗證：FakeBookImportService 正確收到 remoteServerId/remoteBookIds/remoteDownloadUrls',
+        (tester) async {
+      final importService = FakeBookImportService();
+
+      final opdsClient = FakeOpdsClient(feeds: {
+        server.baseUrl: const OpdsFeed(title: '根目錄', entries: [entry1]),
+      });
+      await tester.pumpWidget(MaterialApp(
+        home: RemoteCatalogScreen(
+          server: server,
+          repository: FakeRemoteServerRepository(),
+          createOpdsClient: () => opdsClient,
+          importService: importService,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('remote_catalog_entry_book-1')));
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('remote_catalog_download_button')));
+      await tester.pump();
+
+      // 交錯 runAsync 與 pump 驅動 dart:io 微佇列。
+      for (var i = 0; i < 30; i++) {
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+        await tester.pump();
+      }
+      await tester.pumpAndSettle();
+
+      // 驗證 importFiles 被正確呼叫，帶入遠端書籍 metadata
+      expect(importService.lastImportCall, isNotNull);
+      expect(importService.lastImportCall!.source, BookSource.calibreOpds);
+      expect(importService.lastImportCall!.remoteServerId, 'srv1');
+      expect(importService.lastImportCall!.remoteBookIds, {
+        importService.lastImportCall!.uris.single: 'book-1',
+      });
+      expect(importService.lastImportCall!.remoteDownloadUrls, {
+        importService.lastImportCall!.uris.single: 'http://192.168.1.100:8080/opds/download/1.epub',
+      });
+
+      // 驗證 OPDS client 被正確呼叫
+      expect(opdsClient.downloadBookCalls, ['http://192.168.1.100:8080/opds/download/1.epub']);
+    });
   });
 }

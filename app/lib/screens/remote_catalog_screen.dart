@@ -1,10 +1,17 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
+import 'package:uuid/uuid.dart';
 
 import '../library/book_import_service.dart';
+import '../library/models/library_enums.dart';
 import '../remote/opds_client.dart';
 import '../remote/opds_types.dart';
 import '../remote/remote_server_profile.dart';
 import '../remote/remote_server_repository.dart';
+import 'format_selection_dialog.dart';
 
 /// OPDS 目錄瀏覽畫面（epic-30-calibre-remote-library Issue 2，
 /// spec.md「UI 落地位置」）：依 [OpdsFeed.navigationLinks] 分類下鑽（點擊
@@ -139,10 +146,57 @@ class _RemoteCatalogScreenState extends State<RemoteCatalogScreen> {
     });
   }
 
+  Future<void> _startDownload() async {
+    final selectedEntries =
+        _entries.where((e) => _selectedRemoteBookIds.contains(e.remoteBookId)).toList();
+    if (selectedEntries.isEmpty) return;
+
+    final queue = <_DownloadQueueItem>[];
+    for (final entry in selectedEntries) {
+      final supported = entry.acquisitions.where((a) => a.format != null).toList();
+      OpdsAcquisition? chosen;
+      if (supported.length == 1) {
+        chosen = supported.single;
+      } else if (supported.length > 1) {
+        if (!mounted) return;
+        chosen = await FormatSelectionDialog.show(context, entry);
+      }
+      if (chosen == null) continue;
+      queue.add(_DownloadQueueItem(entry: entry, acquisition: chosen));
+    }
+    if (queue.isEmpty) return;
+
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => _DownloadQueueDialog(
+        key: const Key('download_queue_dialog_root'),
+        queue: queue,
+        client: _client,
+        server: widget.server,
+        password: _password,
+        importService: widget.importService,
+      ),
+    );
+    if (!mounted) return;
+    setState(() => _selectedRemoteBookIds.clear());
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.title ?? widget.server.name)),
+      appBar: AppBar(
+        title: Text(widget.title ?? widget.server.name),
+        actions: [
+          IconButton(
+            key: const Key('remote_catalog_download_button'),
+            icon: const Icon(Icons.download),
+            tooltip: '下載已選取',
+            onPressed: _selectedRemoteBookIds.isEmpty ? null : _startDownload,
+          ),
+        ],
+      ),
       body: _loading
           ? const Center(
               child: CircularProgressIndicator(key: Key('remote_catalog_loading_indicator')),
@@ -262,6 +316,244 @@ class _RemoteCatalogScreenState extends State<RemoteCatalogScreen> {
         key: Key('remote_catalog_thumbnail_error_${entry.remoteBookId}'),
         child: const Icon(Icons.broken_image),
       ),
+    );
+  }
+}
+
+class _DownloadQueueItem {
+  final OpdsEntry entry;
+  final OpdsAcquisition acquisition;
+
+  _DownloadQueueItem({required this.entry, required this.acquisition});
+}
+
+enum _DownloadItemStatus { pending, downloading, done, failed, cancelled }
+
+/// 序列下載佇列對話框（epic-30-calibre-remote-library Issue 2，
+/// spec.md「批次下載為序列執行，非平行」）：一本下完才下一本，逐項顯示
+/// 等待中/下載中/完成/失敗/已取消狀態；下載失敗可針對單一檔案手動重試
+/// （不自動重試）；全部處理完（無論成功/失敗）後，把所有成功下載的檔案
+/// 一次呼叫 [BookImportService.importFiles] 匯入圖書庫；之後對個別失敗
+/// 項目按重試、成功時額外呼叫一次 `importFiles()` 只匯入那一筆。
+class _DownloadQueueDialog extends StatefulWidget {
+  final List<_DownloadQueueItem> queue;
+  final OpdsClient client;
+  final RemoteServerProfile server;
+  final String? password;
+  final BookImportService importService;
+
+  const _DownloadQueueDialog({
+    super.key,
+    required this.queue,
+    required this.client,
+    required this.server,
+    required this.password,
+    required this.importService,
+  });
+
+  @override
+  State<_DownloadQueueDialog> createState() => _DownloadQueueDialogState();
+}
+
+class _DownloadQueueDialogState extends State<_DownloadQueueDialog> {
+  late List<_DownloadItemStatus> _statuses;
+  late List<String?> _permanentPaths;
+  late List<OpdsDownloadCancellationToken?> _tokens;
+  bool _allSettled = false;
+
+  /// 完成佇列處理的 Future，測試可透過此 Future 等待所有下載/匯入完成。
+  late final Future<void> done;
+
+  @override
+  void initState() {
+    super.initState();
+    _statuses = List.filled(widget.queue.length, _DownloadItemStatus.pending);
+    _permanentPaths = List.filled(widget.queue.length, null);
+    _tokens = List.filled(widget.queue.length, null);
+    done = _runQueue();
+  }
+
+  Future<void> _runQueue() async {
+    for (var i = 0; i < widget.queue.length; i++) {
+      await _downloadOne(i);
+    }
+    await _importSuccessful();
+    if (!mounted) return;
+    setState(() => _allSettled = true);
+  }
+
+  String _extensionFor(BookFileFormat format) {
+    switch (format) {
+      case BookFileFormat.epub:
+        return 'epub';
+      case BookFileFormat.pdf:
+        return 'pdf';
+      case BookFileFormat.txt:
+        return 'txt';
+      case BookFileFormat.azw3:
+        return 'azw3';
+      case BookFileFormat.cbz:
+        return 'cbz';
+      case BookFileFormat.md:
+        return 'md';
+    }
+  }
+
+  Future<void> _downloadOne(int index) async {
+    if (!mounted) return;
+    setState(() => _statuses[index] = _DownloadItemStatus.downloading);
+    final item = widget.queue[index];
+    final token = OpdsDownloadCancellationToken();
+    _tokens[index] = token;
+    // 〔審查 review-plan-issue-2.md Finding 3 採納〕宣告在 try 外，讓
+    // catch 區塊也能存取，用於下方「copy 到永久目錄中途失敗」時的暫存檔
+    // 清理。
+    String? tempPath;
+    try {
+      final tempDir = await getTemporaryDirectory();
+      final downloadDir = Directory(p.join(tempDir.path, 'remote_download_temp'));
+      if (!await downloadDir.exists()) await downloadDir.create(recursive: true);
+      final fileName = '${const Uuid().v4()}.${_extensionFor(item.acquisition.format!)}';
+      tempPath = p.join(downloadDir.path, fileName);
+
+      await widget.client.downloadBook(
+        widget.server,
+        item.acquisition,
+        tempPath,
+        password: widget.password,
+        cancellationToken: token,
+      );
+
+      final docsDir = await getApplicationDocumentsDirectory();
+      final permanentDir = Directory(p.join(docsDir.path, 'remote_books'));
+      if (!await permanentDir.exists()) await permanentDir.create(recursive: true);
+      final permanentPath = p.join(permanentDir.path, fileName);
+      final tempFile = File(tempPath);
+      await tempFile.copy(permanentPath);
+      await tempFile.delete();
+
+      if (!mounted) return;
+      setState(() {
+        _permanentPaths[index] = permanentPath;
+        _statuses[index] = _DownloadItemStatus.done;
+      });
+    } catch (_) {
+      // 〔審查 review-plan-issue-2.md Finding 3 採納〕downloadBook() 本身
+      // 失敗/取消時已經自行清過暫存檔（見 OpdsHttpClient 文件），但
+      // copy() 到永久目錄這一步若中途失敗（例如磁碟空間不足），暫存檔
+      // 仍會殘留在 remote_download_temp/ 底下——防禦性再清一次，確保
+      // 任何例外路徑都不留孤兒檔案。
+      if (tempPath != null) {
+        final leftover = File(tempPath);
+        if (await leftover.exists()) await leftover.delete();
+      }
+      if (!mounted) return;
+      setState(() {
+        _statuses[index] =
+            token.isCancelled ? _DownloadItemStatus.cancelled : _DownloadItemStatus.failed;
+      });
+    }
+  }
+
+  Future<void> _importSuccessful() async {
+    final paths = <String>[];
+    final remoteBookIds = <String, String>{};
+    final remoteDownloadUrls = <String, String>{};
+    for (var i = 0; i < widget.queue.length; i++) {
+      final path = _permanentPaths[i];
+      if (path == null) continue;
+      paths.add(path);
+      remoteBookIds[path] = widget.queue[i].entry.remoteBookId;
+      remoteDownloadUrls[path] = widget.queue[i].acquisition.href;
+    }
+    if (paths.isEmpty) return;
+    await widget.importService.importFiles(
+      paths,
+      source: BookSource.calibreOpds,
+      remoteServerId: widget.server.id,
+      remoteBookIds: remoteBookIds,
+      remoteDownloadUrls: remoteDownloadUrls,
+    );
+  }
+
+  Future<void> _retry(int index) async {
+    await _downloadOne(index);
+    if (_statuses[index] != _DownloadItemStatus.done) return;
+    final path = _permanentPaths[index]!;
+    final item = widget.queue[index];
+    await widget.importService.importFiles(
+      [path],
+      source: BookSource.calibreOpds,
+      remoteServerId: widget.server.id,
+      remoteBookIds: {path: item.entry.remoteBookId},
+      remoteDownloadUrls: {path: item.acquisition.href},
+    );
+  }
+
+  void _cancel(int index) {
+    _tokens[index]?.cancel();
+  }
+
+  String _statusLabel(_DownloadItemStatus status) {
+    switch (status) {
+      case _DownloadItemStatus.pending:
+        return '等待中';
+      case _DownloadItemStatus.downloading:
+        return '下載中';
+      case _DownloadItemStatus.done:
+        return '完成';
+      case _DownloadItemStatus.failed:
+        return '失敗';
+      case _DownloadItemStatus.cancelled:
+        return '已取消';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      key: const Key('download_queue_dialog'),
+      title: const Text('下載進度'),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: ListView.builder(
+          shrinkWrap: true,
+          itemCount: widget.queue.length,
+          itemBuilder: (context, index) {
+            final item = widget.queue[index];
+            final status = _statuses[index];
+            final canRetry =
+                status == _DownloadItemStatus.failed || status == _DownloadItemStatus.cancelled;
+            return ListTile(
+              key: Key('download_queue_item_${item.entry.remoteBookId}'),
+              title: Text(item.entry.title),
+              subtitle: Text(_statusLabel(status)),
+              trailing: status == _DownloadItemStatus.downloading
+                  ? IconButton(
+                      key: Key('download_queue_cancel_${item.entry.remoteBookId}'),
+                      icon: const Icon(Icons.close),
+                      tooltip: '取消',
+                      onPressed: () => _cancel(index),
+                    )
+                  : canRetry
+                      ? IconButton(
+                          key: Key('download_queue_retry_${item.entry.remoteBookId}'),
+                          icon: const Icon(Icons.refresh),
+                          tooltip: '重試',
+                          onPressed: () => _retry(index),
+                        )
+                      : null,
+            );
+          },
+        ),
+      ),
+      actions: [
+        TextButton(
+          key: const Key('download_queue_done_button'),
+          onPressed: _allSettled ? () => Navigator.of(context).pop() : null,
+          child: const Text('完成'),
+        ),
+      ],
     );
   }
 }
