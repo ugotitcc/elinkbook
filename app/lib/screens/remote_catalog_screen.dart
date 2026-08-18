@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
@@ -13,6 +14,7 @@ import '../remote/opds_client.dart';
 import '../remote/opds_types.dart';
 import '../remote/remote_server_profile.dart';
 import '../remote/remote_server_repository.dart';
+import '../remote/remote_thumbnail_cache.dart';
 import 'format_selection_dialog.dart';
 
 /// OPDS 目錄瀏覽畫面（epic-30-calibre-remote-library Issue 2，
@@ -34,6 +36,7 @@ class RemoteCatalogScreen extends StatefulWidget {
   final RemoteServerRepository repository;
   final LibraryRepository libraryRepository;
   final ComputeRemoteFingerprint computeFingerprint;
+  final RemoteThumbnailCache thumbnailCache;
   final OpdsClient Function() createOpdsClient;
   final BookImportService importService;
 
@@ -44,16 +47,24 @@ class RemoteCatalogScreen extends StatefulWidget {
   /// AppBar 標題，`null` 時使用 [server.name]（根目錄畫面）。
   final String? title;
 
+  /// E-Ink 模式（epic-30-calibre-remote-library Issue 5，design.md
+  /// 「E-Ink 與後續優化」）：`true` 時把連續捲動「載入更多」換成離散
+  /// 「上一頁／下一頁」整頁換頁，避免高幀率捲動動畫造成的殘影。比照
+  /// 既有 `LibraryScreen.isEinkMode` 的預設值與非空語意。
+  final bool isEinkMode;
+
   const RemoteCatalogScreen({
     super.key,
     required this.server,
     required this.repository,
     required this.libraryRepository,
     required this.computeFingerprint,
+    required this.thumbnailCache,
     required this.createOpdsClient,
     required this.importService,
     this.feedUrl,
     this.title,
+    this.isEinkMode = false,
   });
 
   @override
@@ -67,7 +78,15 @@ class _RemoteCatalogScreenState extends State<RemoteCatalogScreen> {
   final List<OpdsNavigationLink> _navigationLinks = [];
   final List<OpdsEntry> _entries = [];
   String? _nextUrl;
+  String? _prevUrl;
   bool _loadingMore = false;
+  // 〔審查 review-plan-issue-5.md Minor 採納〕ListView 沒有替換 Key，
+  // Element／ScrollableState 在 _goToPage() 整批替換 _entries 後仍是
+  // 同一個，捲動位移預設不會自動歸零——E-Ink 離散換頁若使用者在上一頁
+  // 捲到一半才換頁，新頁面會直接停在同一個像素位移，容易讓使用者誤以為
+  // 換頁沒有生效或畫面跑版，換頁後主動歸零比較符合「翻到新的一頁」的
+  // 直覺。
+  final ScrollController _scrollController = ScrollController();
   final Set<String> _selectedRemoteBookIds = {};
   // 〔審查 review-issue-3.md Minor 採納〕快速連續點擊同一個尚未勾選的
   // 書目時，避免兩次 findByRemoteBookId() 查詢並行、各自可能彈出一次
@@ -80,6 +99,12 @@ class _RemoteCatalogScreenState extends State<RemoteCatalogScreen> {
     super.initState();
     _client = widget.createOpdsClient();
     _load();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   bool _isSelectable(OpdsEntry entry) => entry.acquisitions.any((a) => a.format != null);
@@ -105,6 +130,7 @@ class _RemoteCatalogScreenState extends State<RemoteCatalogScreen> {
           ..clear()
           ..addAll(feed.entries);
         _nextUrl = feed.nextUrl;
+        _prevUrl = feed.prevUrl;
         _loading = false;
       });
     } catch (_) {
@@ -137,6 +163,42 @@ class _RemoteCatalogScreenState extends State<RemoteCatalogScreen> {
     }
   }
 
+  /// E-Ink 模式的離散換頁（epic-30-calibre-remote-library Issue 5）：與
+  /// [_loadMore] 的累加語意不同——整批替換 [_entries]/[_navigationLinks]，
+  /// 不是累加在後面。換頁後清空選取狀態：[_entries] 整批替換後，先前選取
+  /// 的 remoteBookId 可能已經不在畫面上，[_startDownload] 只會處理目前
+  /// [_entries] 內找得到的項目，若保留跨頁選取容易讓使用者誤以為换頁前
+  /// 選的書也會一併下載，實際上卻被靜默忽略——比起保留容易誤解的狀態，
+  /// 換頁清空更符合直覺。
+  Future<void> _goToPage(String pageUrl) async {
+    setState(() => _loadingMore = true);
+    try {
+      final feed = await _client.fetchFeed(widget.server, password: _password, feedUrl: pageUrl);
+      if (!mounted) return;
+      setState(() {
+        _navigationLinks
+          ..clear()
+          ..addAll(feed.navigationLinks);
+        _entries
+          ..clear()
+          ..addAll(feed.entries);
+        _nextUrl = feed.nextUrl;
+        _prevUrl = feed.prevUrl;
+        _selectedRemoteBookIds.clear();
+        _loadingMore = false;
+      });
+      // 〔審查 review-plan-issue-5.md Minor 採納〕換頁成功後把捲動位置
+      // 歸零，避免停留在上一頁的捲動位移。`hasClients` 防禦性檢查——理論
+      // 上 `_buildContent()` 一定會掛上 `ListView`，但 `setState()` 之後
+      // 到下一次 build 完成前的極短暫窗口仍可能尚未附加，直接呼叫
+      // `jumpTo()` 會拋例外。
+      if (_scrollController.hasClients) _scrollController.jumpTo(0);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _loadingMore = false);
+    }
+  }
+
   void _openSubsection(OpdsNavigationLink link) {
     Navigator.of(context).push(MaterialPageRoute(
       builder: (context) => RemoteCatalogScreen(
@@ -144,10 +206,12 @@ class _RemoteCatalogScreenState extends State<RemoteCatalogScreen> {
         repository: widget.repository,
         libraryRepository: widget.libraryRepository,
         computeFingerprint: widget.computeFingerprint,
+        thumbnailCache: widget.thumbnailCache,
         createOpdsClient: widget.createOpdsClient,
         importService: widget.importService,
         feedUrl: link.href,
         title: link.title,
+        isEinkMode: widget.isEinkMode,
       ),
     ));
   }
@@ -252,6 +316,7 @@ class _RemoteCatalogScreenState extends State<RemoteCatalogScreen> {
 
   Widget _buildContent() {
     return ListView(
+      controller: _scrollController,
       children: [
         for (final link in _navigationLinks)
           ListTile(
@@ -271,24 +336,50 @@ class _RemoteCatalogScreenState extends State<RemoteCatalogScreen> {
           itemCount: _entries.length,
           itemBuilder: (context, index) => _buildEntryTile(_entries[index]),
         ),
-        if (_nextUrl != null)
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Center(
-              child: OutlinedButton(
-                key: const Key('remote_catalog_load_more_button'),
-                onPressed: _loadingMore ? null : _loadMore,
-                child: _loadingMore
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('載入更多'),
-              ),
-            ),
-          ),
+        _buildPaginationControls(),
       ],
+    );
+  }
+
+  Widget _buildPaginationControls() {
+    if (widget.isEinkMode) {
+      if (_prevUrl == null && _nextUrl == null) return const SizedBox.shrink();
+      return Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            OutlinedButton(
+              key: const Key('remote_catalog_eink_prev_page_button'),
+              onPressed: _prevUrl == null || _loadingMore ? null : () => _goToPage(_prevUrl!),
+              child: const Text('上一頁'),
+            ),
+            const SizedBox(width: 16),
+            OutlinedButton(
+              key: const Key('remote_catalog_eink_next_page_button'),
+              onPressed: _nextUrl == null || _loadingMore ? null : () => _goToPage(_nextUrl!),
+              child: const Text('下一頁'),
+            ),
+          ],
+        ),
+      );
+    }
+    if (_nextUrl == null) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Center(
+        child: OutlinedButton(
+          key: const Key('remote_catalog_load_more_button'),
+          onPressed: _loadingMore ? null : _loadMore,
+          child: _loadingMore
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('載入更多'),
+        ),
+      ),
     );
   }
 
@@ -341,22 +432,41 @@ class _RemoteCatalogScreenState extends State<RemoteCatalogScreen> {
         ),
       );
     }
-    return Image.network(
-      thumbnailUrl,
-      key: Key('remote_catalog_thumbnail_${entry.remoteBookId}'),
-      headers: buildOpdsAuthHeaders(widget.server, _password),
-      fit: BoxFit.cover,
-      loadingBuilder: (context, child, progress) {
-        if (progress == null) return child;
+    return FutureBuilder<Uint8List>(
+      future: widget.thumbnailCache.fetch(
+        widget.server,
+        thumbnailUrl,
+        buildOpdsAuthHeaders(widget.server, _password),
+      ),
+      // 〔審查 review-plan-issue-5.md Important 採納〕Flutter 的
+      // FutureBuilder.didUpdateWidget() 只要傳入的 future 是新的物件實例
+      // 就會把 connectionState 重置（不是 done），但 snapshot.data 仍保留
+      // 上一輪成功的結果——這個 build() 方法每次重建都會呼叫一次
+      // fetch()、產生新的 Future 實例（即使底層記憶體 LRU 幾乎立即命中），
+      // 若先判斷 connectionState != done 就先回傳載入中佔位符，會讓已經
+      // 載入完成的縮圖在任何無關的 setState()（例如勾選另一本書）後閃爍
+      // 回佔位符一幀，在 E-Ink 螢幕上更明顯、恰好牴觸本 Issue 想解決的
+      // 殘影問題——優先檢查 hasData，已有資料就直接顯示，不受
+      // connectionState 短暫重置影響。
+      builder: (context, snapshot) {
+        if (snapshot.hasData && snapshot.data != null) {
+          return Image.memory(
+            snapshot.data!,
+            key: Key('remote_catalog_thumbnail_${entry.remoteBookId}'),
+            fit: BoxFit.cover,
+          );
+        }
+        if (snapshot.connectionState != ConnectionState.done) {
+          return Center(
+            key: Key('remote_catalog_thumbnail_loading_${entry.remoteBookId}'),
+            child: const Icon(Icons.book),
+          );
+        }
         return Center(
-          key: Key('remote_catalog_thumbnail_loading_${entry.remoteBookId}'),
-          child: const Icon(Icons.book),
+          key: Key('remote_catalog_thumbnail_error_${entry.remoteBookId}'),
+          child: const Icon(Icons.broken_image),
         );
       },
-      errorBuilder: (context, error, stack) => Center(
-        key: Key('remote_catalog_thumbnail_error_${entry.remoteBookId}'),
-        child: const Icon(Icons.broken_image),
-      ),
     );
   }
 }

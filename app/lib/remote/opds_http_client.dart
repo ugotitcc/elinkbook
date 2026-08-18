@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:http/http.dart' as http;
-import 'package:http/io_client.dart';
 
 import 'opds_client.dart';
 import 'opds_feed_parser.dart';
@@ -27,17 +26,6 @@ class OpdsHttpClient implements OpdsClient {
 
   static const _timeout = Duration(seconds: 10);
 
-  /// [server.allowInsecure] 為 `true` 時，回傳的 [http.Client] 透過
-  /// `badCertificateCallback` 放行憑證錯誤——**僅這一次呼叫端持有的
-  /// client 物件生效**（呼叫端用畢即 `close()`），不會影響其他連線，
-  /// 符合「不得全域關閉憑證驗證」的既定原則（Global Constraints）。
-  http.Client _clientFor(RemoteServerProfile server) {
-    if (!server.allowInsecure) return http.Client();
-    final rawClient = HttpClient()
-      ..badCertificateCallback = (cert, host, port) => true;
-    return IOClient(rawClient);
-  }
-
   @override
   Future<bool> testConnection(RemoteServerProfile server, {String? password}) async {
     try {
@@ -56,7 +44,7 @@ class OpdsHttpClient implements OpdsClient {
   }) async {
     final url = feedUrl ?? server.baseUrl;
     _visitedFeedUrls.add(url);
-    final client = _clientFor(server);
+    final client = createOpdsHttpClient(server);
     try {
       final response = await client
           .get(Uri.parse(url), headers: buildOpdsAuthHeaders(server, password))
@@ -91,7 +79,7 @@ class OpdsHttpClient implements OpdsClient {
     void Function(int received, int total)? onProgress,
     OpdsDownloadCancellationToken? cancellationToken,
   }) async {
-    final client = _clientFor(server);
+    final client = createOpdsHttpClient(server);
     try {
       final request = http.Request('GET', Uri.parse(acquisition.href))
         ..headers.addAll(buildOpdsAuthHeaders(server, password));

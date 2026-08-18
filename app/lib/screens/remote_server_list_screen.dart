@@ -6,6 +6,7 @@ import '../library/library_repository.dart';
 import '../remote/opds_client.dart';
 import '../remote/remote_server_profile.dart';
 import '../remote/remote_server_repository.dart';
+import '../remote/remote_thumbnail_cache.dart';
 import 'remote_catalog_screen.dart';
 import 'remote_server_form_screen.dart';
 
@@ -16,16 +17,20 @@ class RemoteServerListScreen extends StatefulWidget {
   final RemoteServerRepository repository;
   final LibraryRepository libraryRepository;
   final ComputeRemoteFingerprint computeFingerprint;
+  final RemoteThumbnailCache thumbnailCache;
   final OpdsClient Function() createOpdsClient;
   final BookImportService importService;
+  final bool isEinkMode;
 
   const RemoteServerListScreen({
     super.key,
     required this.repository,
     required this.libraryRepository,
     required this.computeFingerprint,
+    required this.thumbnailCache,
     required this.createOpdsClient,
     required this.importService,
+    this.isEinkMode = false,
   });
 
   @override
@@ -84,8 +89,10 @@ class _RemoteServerListScreenState extends State<RemoteServerListScreen> {
         repository: widget.repository,
         libraryRepository: widget.libraryRepository,
         computeFingerprint: widget.computeFingerprint,
+        thumbnailCache: widget.thumbnailCache,
         createOpdsClient: widget.createOpdsClient,
         importService: widget.importService,
+        isEinkMode: widget.isEinkMode,
       ),
     ));
   }

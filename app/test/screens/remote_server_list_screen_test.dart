@@ -12,6 +12,7 @@ import '../support/fake_fingerprint_computer.dart';
 import '../support/fake_library_repository.dart';
 import '../support/fake_opds_client.dart';
 import '../support/fake_remote_server_repository.dart';
+import '../support/fake_remote_thumbnail_cache.dart';
 
 Book _fakeBook(String id, String title) {
   return Book(
@@ -47,6 +48,7 @@ void main() {
         repository: repository,
         libraryRepository: FakeLibraryRepository(),
         computeFingerprint: FakeFingerprintComputer().call,
+        thumbnailCache: FakeRemoteThumbnailCache(),
         createOpdsClient: () => FakeOpdsClient(),
         importService: FakeBookImportService(),
       ),

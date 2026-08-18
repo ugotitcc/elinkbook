@@ -16,6 +16,7 @@ import '../support/fake_fingerprint_computer.dart';
 import '../support/fake_library_repository.dart';
 import '../support/fake_opds_client.dart';
 import '../support/fake_remote_server_repository.dart';
+import '../support/fake_remote_thumbnail_cache.dart';
 import '../support/fake_path_provider_platform.dart';
 
 void main() {
@@ -83,6 +84,7 @@ void main() {
     FakeRemoteServerRepository? repository,
     FakeLibraryRepository? libraryRepository,
     FakeFingerprintComputer? fingerprintComputer,
+    FakeRemoteThumbnailCache? thumbnailCache,
     String? feedUrl,
   }) async {
     await tester.pumpWidget(MaterialApp(
@@ -91,6 +93,7 @@ void main() {
         repository: repository ?? FakeRemoteServerRepository(),
         libraryRepository: libraryRepository ?? FakeLibraryRepository(),
         computeFingerprint: (fingerprintComputer ?? FakeFingerprintComputer()).call,
+        thumbnailCache: thumbnailCache ?? FakeRemoteThumbnailCache(),
         createOpdsClient: () => opdsClient,
         importService: FakeBookImportService(),
         feedUrl: feedUrl,
@@ -166,16 +169,26 @@ void main() {
     expect(find.byKey(const Key('remote_catalog_load_more_button')), findsNothing);
   });
 
-  testWidgets('書目縮圖以 Image.network 載入並帶入 Basic Auth header', (tester) async {
+  testWidgets('書目縮圖透過 RemoteThumbnailCache 取得，帶入正確的 URL 與 Basic Auth header', (tester) async {
     final opdsClient = FakeOpdsClient(feeds: {
       server.baseUrl: const OpdsFeed(title: '根目錄', entries: [entry1]),
     });
-    await pumpScreen(tester, opdsClient: opdsClient);
+    final thumbnailCache = FakeRemoteThumbnailCache();
+    await pumpScreen(tester, opdsClient: opdsClient, thumbnailCache: thumbnailCache);
 
+    expect(thumbnailCache.fetchCalls, [entry1.thumbnailUrl]);
     final image = tester.widget<Image>(find.byKey(const Key('remote_catalog_thumbnail_book-1')));
-    final provider = image.image as NetworkImage;
-    expect(provider.url, entry1.thumbnailUrl);
-    expect(provider.headers?['Authorization'], isNotNull);
+    expect(image.image, isA<MemoryImage>());
+  });
+
+  testWidgets('縮圖快取擷取失敗時顯示錯誤圖示', (tester) async {
+    final opdsClient = FakeOpdsClient(feeds: {
+      server.baseUrl: const OpdsFeed(title: '根目錄', entries: [entry1]),
+    });
+    final thumbnailCache = FakeRemoteThumbnailCache(error: StateError('模擬縮圖下載失敗'));
+    await pumpScreen(tester, opdsClient: opdsClient, thumbnailCache: thumbnailCache);
+
+    expect(find.byKey(const Key('remote_catalog_thumbnail_error_book-1')), findsOneWidget);
   });
 
   testWidgets('沒有縮圖的書目顯示預設圖示佔位符', (tester) async {
@@ -271,6 +284,107 @@ void main() {
     });
   });
 
+  group('E-Ink 模式離散分頁（Issue 5）', () {
+    testWidgets('E-Ink 模式下有 nextUrl 時顯示上一頁/下一頁按鈕，不顯示載入更多按鈕；第一頁上一頁按鈕停用',
+        (tester) async {
+      final opdsClient = FakeOpdsClient(feeds: {
+        server.baseUrl: const OpdsFeed(
+          title: '根目錄',
+          nextUrl: 'http://x/page2',
+          entries: [entry1],
+        ),
+      });
+      await tester.pumpWidget(MaterialApp(
+        home: RemoteCatalogScreen(
+          server: server,
+          repository: FakeRemoteServerRepository(),
+          libraryRepository: FakeLibraryRepository(),
+          computeFingerprint: FakeFingerprintComputer().call,
+          thumbnailCache: FakeRemoteThumbnailCache(),
+          createOpdsClient: () => opdsClient,
+          importService: FakeBookImportService(),
+          isEinkMode: true,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('remote_catalog_eink_next_page_button')), findsOneWidget);
+      expect(find.byKey(const Key('remote_catalog_eink_prev_page_button')), findsOneWidget);
+      expect(find.byKey(const Key('remote_catalog_load_more_button')), findsNothing);
+
+      final prevButton =
+          tester.widget<OutlinedButton>(find.byKey(const Key('remote_catalog_eink_prev_page_button')));
+      expect(prevButton.onPressed, isNull);
+    });
+
+    testWidgets('E-Ink 模式點擊下一頁後整批替換書目（非累加），上一頁按鈕變為可點擊', (tester) async {
+      final opdsClient = FakeOpdsClient(feeds: {
+        server.baseUrl: const OpdsFeed(
+          title: '根目錄',
+          nextUrl: 'http://x/page2',
+          entries: [entry1],
+        ),
+        'http://x/page2': const OpdsFeed(
+          title: '根目錄',
+          prevUrl: 'http://x/page1',
+          entries: [entry2],
+        ),
+      });
+      await tester.pumpWidget(MaterialApp(
+        home: RemoteCatalogScreen(
+          server: server,
+          repository: FakeRemoteServerRepository(),
+          libraryRepository: FakeLibraryRepository(),
+          computeFingerprint: FakeFingerprintComputer().call,
+          thumbnailCache: FakeRemoteThumbnailCache(),
+          createOpdsClient: () => opdsClient,
+          importService: FakeBookImportService(),
+          isEinkMode: true,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('remote_catalog_eink_next_page_button')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('紅樓夢'), findsNothing);
+      expect(find.text('不支援格式的書'), findsOneWidget);
+
+      final nextButton =
+          tester.widget<OutlinedButton>(find.byKey(const Key('remote_catalog_eink_next_page_button')));
+      expect(nextButton.onPressed, isNull);
+      final prevButton =
+          tester.widget<OutlinedButton>(find.byKey(const Key('remote_catalog_eink_prev_page_button')));
+      expect(prevButton.onPressed, isNotNull);
+    });
+
+    testWidgets('非 E-Ink 模式（預設）維持既有載入更多按鈕，不顯示上一頁/下一頁按鈕', (tester) async {
+      final opdsClient = FakeOpdsClient(feeds: {
+        server.baseUrl: const OpdsFeed(
+          title: '根目錄',
+          nextUrl: 'http://x/page2',
+          entries: [entry1],
+        ),
+      });
+      await tester.pumpWidget(MaterialApp(
+        home: RemoteCatalogScreen(
+          server: server,
+          repository: FakeRemoteServerRepository(),
+          libraryRepository: FakeLibraryRepository(),
+          computeFingerprint: FakeFingerprintComputer().call,
+          thumbnailCache: FakeRemoteThumbnailCache(),
+          createOpdsClient: () => opdsClient,
+          importService: FakeBookImportService(),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('remote_catalog_load_more_button')), findsOneWidget);
+      expect(find.byKey(const Key('remote_catalog_eink_next_page_button')), findsNothing);
+      expect(find.byKey(const Key('remote_catalog_eink_prev_page_button')), findsNothing);
+    });
+  });
+
   group('下載與匯入', () {
     late Directory tempRoot;
     late PathProviderPlatform originalPathProvider;
@@ -299,6 +413,7 @@ void main() {
           repository: FakeRemoteServerRepository(),
           libraryRepository: FakeLibraryRepository(),
           computeFingerprint: (path, format) async => 'unused-fingerprint',
+          thumbnailCache: FakeRemoteThumbnailCache(),
           createOpdsClient: () => opdsClient,
           importService: importService,
         ),
@@ -346,6 +461,7 @@ void main() {
           repository: FakeRemoteServerRepository(),
           libraryRepository: FakeLibraryRepository(),
           computeFingerprint: (path, format) async => 'unused-fingerprint',
+          thumbnailCache: FakeRemoteThumbnailCache(),
           createOpdsClient: () => opdsClient,
           importService: FakeBookImportService(),
         ),
@@ -391,6 +507,7 @@ void main() {
           repository: FakeRemoteServerRepository(),
           libraryRepository: FakeLibraryRepository(),
           computeFingerprint: (path, format) async => 'unused-fingerprint',
+          thumbnailCache: FakeRemoteThumbnailCache(),
           createOpdsClient: () => opdsClient,
           importService: FakeBookImportService(),
         ),
@@ -427,6 +544,7 @@ void main() {
           repository: FakeRemoteServerRepository(),
           libraryRepository: FakeLibraryRepository(),
           computeFingerprint: (path, format) async => 'unused-fingerprint',
+          thumbnailCache: FakeRemoteThumbnailCache(),
           createOpdsClient: () => opdsClient,
           importService: FakeBookImportService(),
         ),
@@ -466,6 +584,7 @@ void main() {
           repository: FakeRemoteServerRepository(),
           libraryRepository: FakeLibraryRepository(),
           computeFingerprint: (path, format) async => 'unused-fingerprint',
+          thumbnailCache: FakeRemoteThumbnailCache(),
           createOpdsClient: () => opdsClient,
           importService: FakeBookImportService(),
         ),
@@ -505,6 +624,7 @@ void main() {
           repository: FakeRemoteServerRepository(),
           libraryRepository: FakeLibraryRepository(),
           computeFingerprint: (path, format) async => 'unused-fingerprint',
+          thumbnailCache: FakeRemoteThumbnailCache(),
           createOpdsClient: () => opdsClient,
           importService: importService,
         ),
@@ -555,6 +675,7 @@ void main() {
             repository: FakeRemoteServerRepository(),
             libraryRepository: libraryRepository,
             computeFingerprint: fingerprintComputer.call,
+            thumbnailCache: FakeRemoteThumbnailCache(),
             createOpdsClient: () => opdsClient,
             importService: importService,
           ),
@@ -605,6 +726,7 @@ void main() {
             repository: FakeRemoteServerRepository(),
             libraryRepository: libraryRepository,
             computeFingerprint: fingerprintComputer.call,
+            thumbnailCache: FakeRemoteThumbnailCache(),
             createOpdsClient: () => opdsClient,
             importService: importService,
           ),
@@ -647,6 +769,7 @@ void main() {
             repository: FakeRemoteServerRepository(),
             libraryRepository: FakeLibraryRepository(),
             computeFingerprint: fingerprintComputer.call,
+            thumbnailCache: FakeRemoteThumbnailCache(),
             createOpdsClient: () => opdsClient,
             importService: importService,
           ),

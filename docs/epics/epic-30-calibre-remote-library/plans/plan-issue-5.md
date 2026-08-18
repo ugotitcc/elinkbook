@@ -757,7 +757,7 @@ git commit -m "feat(epic-30): Issue 5 Task 2 - RemoteThumbnailCache 縮圖雙層
 - Consumes：Task 2 的 `RemoteThumbnailCache`／`RemoteThumbnailCacheImpl`。
 - Produces：`RemoteCatalogScreen`/`RemoteServerListScreen` 新增必要建構參數 `RemoteThumbnailCache thumbnailCache`；`LibraryScreen` 新增可選建構參數 `RemoteThumbnailCache? thumbnailCache`（比照 `createOpdsClient`/`computeFingerprint` 既有的「遠端功能整組同時存在」可選模式）。
 
-- [ ] **Step 1: 新增 `FakeRemoteThumbnailCache` 測試替身**
+- [x] **Step 1: 新增 `FakeRemoteThumbnailCache` 測試替身**
 
 新建 `app/test/support/fake_remote_thumbnail_cache.dart`：
 
@@ -795,7 +795,7 @@ class FakeRemoteThumbnailCache implements RemoteThumbnailCache {
 }
 ```
 
-- [ ] **Step 2: 寫失敗測試（縮圖快取整合）**
+- [x] **Step 2: 寫失敗測試（縮圖快取整合）**
 
 修改 `app/test/screens/remote_catalog_screen_test.dart` 開頭 import，新增：
 
@@ -859,12 +859,12 @@ import '../support/fake_remote_thumbnail_cache.dart';
 
 Task 1 新增的 3 則 E-Ink 測試（Step 1 已寫入）已經各自帶有 `thumbnailCache: FakeRemoteThumbnailCache(),`，不需要再改。**除了這 3 則與使用 `pumpScreen` helper 的測試之外**，本檔案其餘所有不經過 `pumpScreen` helper、直接呼叫 `RemoteCatalogScreen(...)` 建構子的既有測試（下載與匯入相關的一系列測試），逐一新增一行 `thumbnailCache: FakeRemoteThumbnailCache(),`（緊接在 `computeFingerprint:` 那一行之後即可，順序不影響正確性）。實際筆數以檔案當下內容為準逐一確認，不要漏改任何一處——漏改會在 Step 3 執行測試時以編譯錯誤的形式立即暴露，逐一修正到全部通過為止。
 
-- [ ] **Step 3: 執行測試確認失敗**
+- [x] **Step 3: 執行測試確認失敗**
 
 Run: `flutter test test/screens/remote_catalog_screen_test.dart`
 Expected: FAIL——`RemoteCatalogScreen` 沒有 `thumbnailCache` 具名參數（編譯錯誤）。
 
-- [ ] **Step 4: 修改 `RemoteCatalogScreen`**
+- [x] **Step 4: 修改 `RemoteCatalogScreen`**
 
 修改 `app/lib/screens/remote_catalog_screen.dart` 開頭 import，新增：
 
@@ -950,12 +950,12 @@ import '../remote/remote_thumbnail_cache.dart';
 
 **設計選擇說明（非計畫遺漏）**：這個修法解決的是「已有資料時優先顯示、不被短暫的 connectionState 重置蓋掉」，沒有連帶處理「每次 build() 都重新呼叫一次 `fetch()`」本身這件事（沒有用 `Map<String, Future<Uint8List>>` 之類的欄位把 Future 記憶下來）。後者屬於已知、刻意接受的取捨——見 `remote_thumbnail_cache.dart` 類別文件「已知取捨」段落：重複呼叫 `fetch()` 對同一個 URL，記憶體 LRU 幾乎立即命中，成本很低，加一層 Future 記憶化只是為了避免這個低成本的重複呼叫，複雜度不划算；本次修法已經解決了唯一有實際使用者可見影響的部分（畫面閃爍）。
 
-- [ ] **Step 5: 執行測試確認通過**
+- [x] **Step 5: 執行測試確認通過**
 
 Run: `flutter test test/screens/remote_catalog_screen_test.dart`
 Expected: PASS，全數通過（含 Task 1 的 3 項 E-Ink 測試、既有測試、本 Task 新增的 2 項）。
 
-- [ ] **Step 6: 貫穿 `RemoteServerListScreen`／`LibraryScreen`／`main.dart`**
+- [x] **Step 6: 貫穿 `RemoteServerListScreen`／`LibraryScreen`／`main.dart`**
 
 修改 `app/lib/screens/remote_server_list_screen.dart` 開頭 import，新增：
 
@@ -1147,12 +1147,12 @@ import 'remote/remote_thumbnail_cache.dart';
         isMobileDataConnection: widget.isMobileDataConnection,
 ```
 
-- [ ] **Step 7: 執行全專案測試確認零回歸**
+- [x] **Step 7: 執行全專案測試確認零回歸**
 
 Run: `flutter analyze && flutter test`
 Expected: `flutter analyze` 乾淨；`flutter test` 全數通過，零回歸。
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add app/lib/screens/remote_catalog_screen.dart app/lib/screens/remote_server_list_screen.dart app/lib/screens/library_screen.dart app/lib/main.dart app/test/support/fake_remote_thumbnail_cache.dart app/test/screens/remote_catalog_screen_test.dart app/test/screens/remote_server_list_screen_test.dart app/test/screens/library_screen_test.dart
@@ -1168,7 +1168,7 @@ git commit -m "feat(epic-30): Issue 5 Task 3 - RemoteCatalogScreen 縮圖快取�
 
 **背景：** 本 Task 沒有可自動化的程式碼步驟——比照 `spec.md` 對真實 `OpdsHttpClient` HTTP 呼叫「不做自動化測試，留待真機/人工用真實 Calibre/OPDS 伺服器驗證」的既定範圍界定，這是本 Epic 第一次、也是唯一一次要求對**整個 Epic**（Issue 0-5 全部功能）做一次串接真實伺服器的端到端人工驗證。執行者需要：(a) 一台可連上區域網路的 Android 真機或模擬器，(b) 一個真實可連線的 Calibre Content Server 或其他 OPDS 1.2/2.0 伺服器（純 HTTP 或自簽憑證 HTTPS 皆可，比照 Issue 1 已支援的兩種情境）。若沒有實體 E-Ink 裝置可用，一般 Android 裝置切換「E-Ink 高對比模式」（`LibraryScreen` 既有的 `library_eink_toggle` 按鈕）即可驗證離散分頁邏輯本身是否正確運作，只是無法驗證真實 E-Ink 螢幕的殘影觀感。
 
-- [ ] **Step 1: 準備測試環境**
+- [x] **Step 1: 準備測試環境**
 
 ```bash
 cd app
@@ -1177,7 +1177,7 @@ flutter devices
 
 確認至少一台裝置可用（實體裝置或模擬器皆可）。啟動一個可連線的 Calibre Content Server（例如 `calibre-server --port=8080` 於同網段主機上執行，或使用既有可用的測試伺服器），記下其區網 IP 與埠號。
 
-- [ ] **Step 2: 建置並安裝**
+- [x] **Step 2: 建置並安裝**
 
 ```bash
 flutter build apk --debug
@@ -1186,7 +1186,7 @@ flutter install
 
 或直接 `flutter run -d <device-id>` 啟動除錯執行，方便同時觀察 log。
 
-- [ ] **Step 3: 執行完整流程逐項驗證**
+- [x] **Step 3: 執行完整流程逐項驗證**
 
 依序操作並記錄每一步的實際結果（成功／失敗＋失敗描述）：
 
@@ -1200,11 +1200,11 @@ flutter install
 8. **E-Ink 模式驗證**：於圖書庫 AppBar 切換「E-Ink 高對比模式」按鈕，重新進入該站點的目錄瀏覽，預期原本的「載入更多」變成「上一頁／下一頁」按鈕列；若目錄有多頁，驗證換頁後書目確實整批替換（非累加），且捲動時不再有連續載入觸發的高幀率動畫。
 9. **刪除站點**：返回站點清單，確認該站點已無「僅雲端紀錄」（`isDownloaded == false`）的書籍後，點擊刪除，預期成功刪除且不影響已下載書籍（該書籍應仍在圖書庫，只是不再顯示遠端來源相關操作選項如「移除本機快取」）。若手動另外建立一筆有「待下載」書籍的測試情境並嘗試刪除該站點，預期被拒絕並顯示示警清單（回歸驗證 Issue 1 既有行為）。
 
-- [ ] **Step 4: 記錄驗證結果**
+- [x] **Step 4: 記錄驗證結果**
 
 無論全數通過或發現問題，皆整理為 `docs/epics/epic-30-calibre-remote-library/reviews/review-issue-5.md`（比照既有 `reviews/review-issue-N.md` 格式）：驗證日期、使用的裝置型號／Android 版本、OPDS 伺服器類型與版本、每一步驟的實際結果、發現的問題（若有，依 Critical/Important/Minor 分級，比照既有程式審查報告慣例）。若發現阻擋性問題，回頭修正對應 Task 的程式碼並重新驗證，不在本 Task 直接修改——遵循本專案「審查先出報告，不得直接修改被審查對象」的既定流程；但這裡的「被審查對象」是程式碼本身的正確性驗證結果，若問題明確且範圍限於本 Issue 新增的程式碼（Task 1-3），可由實作者自行修正後重新驗證，不需要另外發起一輪獨立審查（本 Task 性質上就是這個 Issue 的最終驗收關卡）。
 
-- [ ] **Step 5: Commit（若驗證過程中有修正）**
+- [x] **Step 5: Commit（若驗證過程中有修正）**
 
 ```bash
 git add docs/epics/epic-30-calibre-remote-library/reviews/review-issue-5.md
