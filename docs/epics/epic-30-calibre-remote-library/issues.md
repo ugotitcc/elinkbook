@@ -84,7 +84,7 @@
 
 ## Issue 3：雙層重複匯入偵測
 
-**Status:** `ready-for-agent`
+**Status:** ✅ 已完成並合併回 `main`（PR [#160](https://git.jigong.org/huthief/elinkBook/pulls/160)，分支 `epic-30-issue-3`，3 個 commit：Task 1／Task 2 各自一個 commit＋1 個審查修訂 commit）。`/superpowers:writing-plans` 產出 `plans/plan-issue-3.md`；實作完成後經獨立 subagent 程式審查（`reviews/review-issue-3.md`，APPROVED WITH FINDINGS，0 Critical／1 Important／3 Minor，已全數修訂：Layer 1 的 `findByRemoteBookId()` 補上 try/catch，查詢失敗時視同未命中直接放行勾選；新增 `_pendingDuplicateChecks` 防止快速連點並行觸發兩次查詢；Layer 2「無重複」測試補上 `FakeFingerprintComputer.calls` 呼叫時機斷言；長行斷行）。審查特別確認未重新引入 Issue 2 review 已發現的 `Isolate.run()` × `testWidgets()` 卡死問題——新增的 `ComputeRemoteFingerprint` 可注入函式型別讓 widget/測試皆不直接觸碰真實 `computeBookContentFingerprint()`，`main.dart` 生產環境接上真實函式，經程式碼核對＋實際跑滿整套測試套件雙重驗證排除風險。全專案 `flutter test` 1521 項與 `flutter analyze` 零回歸通過。
 
 **依賴：** Issue 0（`findByRemoteBookId`/`findByContentFingerprint`）、Issue 2（下載/匯入流程）。
 
