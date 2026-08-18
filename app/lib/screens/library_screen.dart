@@ -3,6 +3,9 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
+import 'package:uuid/uuid.dart';
 
 import '../library/book_content_fingerprint.dart';
 import '../library/book_import_service.dart';
@@ -14,6 +17,8 @@ import '../reader/layout_preset_repository.dart';
 import '../reader/notes_repository.dart';
 import '../reader/reader_prefs_manager.dart';
 import '../remote/opds_client.dart';
+import '../remote/opds_types.dart';
+import '../remote/remote_server_profile.dart';
 import '../remote/remote_server_repository.dart';
 import '../library/library_preferences.dart';
 import '../library/library_repository.dart';
@@ -52,6 +57,7 @@ class LibraryScreen extends StatefulWidget {
   final RemoteServerRepository? remoteServerRepository;
   final OpdsClient Function()? createOpdsClient;
   final ComputeRemoteFingerprint? computeFingerprint;
+  final Future<bool> Function()? isMobileDataConnection;
   final AppTheme currentTheme;
   final bool isEinkMode;
   final ValueChanged<AppTheme>? onThemeChanged;
@@ -75,6 +81,7 @@ class LibraryScreen extends StatefulWidget {
     this.remoteServerRepository,
     this.createOpdsClient,
     this.computeFingerprint,
+    this.isMobileDataConnection,
     this.currentTheme = AppTheme.light,
     this.isEinkMode = false,
     this.onThemeChanged,
@@ -96,6 +103,10 @@ class _LibraryScreenState extends State<LibraryScreen> {
   String? _groupFilter;
   Set<String>? _selectedBookIds;
   bool _isImporting = false;
+  // 〔比照 epic-30 Issue 3 review-issue-3.md 既定的重入防護模式〕避免
+  // 使用者在重新下載進行中又快速連點同一本「待下載」書籍，重複觸發兩次
+  // 下載/確認流程。
+  final Set<String> _redownloadingBookIds = {};
 
   @override
   void initState() {
@@ -133,6 +144,11 @@ class _LibraryScreenState extends State<LibraryScreen> {
         await widget.repository.listBooks(sortBy: LibrarySortBy.lastRead);
     if (!mounted) return;
     if (books.isEmpty) return;
+    // 〔epic-30-calibre-remote-library Issue 4 補充發現〕最後閱讀的書籍
+    // 若是「待下載」狀態（例如快取已被移除），不應該直接嘗試開啟不存在
+    // 的實體檔案——啟動流程不適合順帶跳出重新下載確認對話框打斷使用者，
+    // 靜默略過即可，使用者仍可從書架手動點擊觸發重新下載。
+    if (!books.first.isDownloaded) return;
     _openBook(books.first);
   }
 
@@ -318,6 +334,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
   void _onBookTap(Book book) {
     if (_inSelectionMode) {
       _toggleBookSelection(book.id);
+    } else if (!book.isDownloaded) {
+      _handleRedownload(book);
     } else {
       _openBook(book);
     }
@@ -459,6 +477,33 @@ class _LibraryScreenState extends State<LibraryScreen> {
     await _loadBooks();
   }
 
+  /// 移除本機快取：對選取集合中所有 Calibre 來源且已下載的書籍，
+  /// 刪除實體檔案並標記 isDownloaded = false。保留 epubLocator / progress
+  /// / 書籤 / 劃線 / 備註等使用者資料。
+  Future<void> _removeLocalCacheForSelectedBooks() async {
+    final selectedIds = _selectedBookIds;
+    final books = _books;
+    if (selectedIds == null || selectedIds.isEmpty || books == null) return;
+    _exitSelectionMode();
+    for (final book in books) {
+      if (!selectedIds.contains(book.id)) continue;
+      if (book.source != BookSource.calibreOpds) continue;
+      if (!book.isDownloaded) continue;
+      // 比照 _deleteSelectedBooks() 既有慣例：用 try-catch 包住檔案系統
+      // 操作，用 deleteSync() 避免 fake zone 限制。
+      try {
+        if (File(book.filePath).existsSync()) {
+          File(book.filePath).deleteSync();
+        }
+      } catch (_) {
+        // 檔案刪除失敗時靜默略過——資料庫標記更新才是核心操作。
+      }
+      await widget.repository
+          .updateBook(book.copyWith(isDownloaded: false));
+    }
+    await _loadBooks();
+  }
+
   void _openBook(Book book) {
     Navigator.of(context)
         .push(
@@ -492,6 +537,128 @@ class _LibraryScreenState extends State<LibraryScreen> {
       // 這裡不檢查 mounted——_loadBooks() 內部已有等效保護（見其既有實作）。
       _loadBooks();
     });
+  }
+
+  Future<bool?> _confirmRedownload(Book book, bool isMobileData) {
+    return showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        key: const Key('library_redownload_dialog'),
+        title: const Text('重新下載'),
+        content: Text(
+          isMobileData
+              ? '即將重新下載「${book.title}」，目前使用行動數據連線，可能產生流量費用，確定要繼續嗎？'
+              : '即將重新下載「${book.title}」，確定要繼續嗎？',
+        ),
+        actions: [
+          TextButton(
+            key: const Key('library_redownload_cancel_button'),
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            key: const Key('library_redownload_confirm_button'),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('重新下載'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 「待下載」書籍點擊重新下載（epic-30-calibre-remote-library Issue 4，
+  /// spec.md「下載與快取生命週期」「重新下載」）：直接重用該書
+  /// [Book.remoteDownloadUrl]（上次下載成功時已存的絕對 URL），不重新
+  /// `fetchFeed()` 反查目錄——OPDS 協議不保證支援依 ID 反查單一條目。
+  /// 下載暫存/永久落地兩段式流程比照 Issue 2 `RemoteCatalogScreen`
+  /// `_DownloadQueueDialogState._downloadOne()` 既有模式（暫存目錄→複製
+  /// 到永久 `remote_books/` 目錄→刪除暫存），避免把永久 `filePath` 指向
+  /// OS 可回收的暫存路徑。
+  Future<void> _handleRedownload(Book book) async {
+    final remoteServerRepository = widget.remoteServerRepository;
+    final createOpdsClient = widget.createOpdsClient;
+    final remoteServerId = book.remoteServerId;
+    final remoteDownloadUrl = book.remoteDownloadUrl;
+    if (remoteServerRepository == null ||
+        createOpdsClient == null ||
+        remoteServerId == null ||
+        remoteDownloadUrl == null) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('遠端書庫功能未啟用，無法重新下載')));
+      return;
+    }
+    if (_redownloadingBookIds.contains(book.id)) return;
+
+    final isMobileData = await (widget.isMobileDataConnection?.call() ?? Future.value(false));
+    if (!mounted) return;
+    final confirmed = await _confirmRedownload(book, isMobileData);
+    if (confirmed != true) return;
+
+    _redownloadingBookIds.add(book.id);
+    // 〔審查 review-plan-issue-4.md Minor 採納〕宣告在 try 外，讓 catch
+    // 區塊也能存取，用於下方「copy 到永久目錄中途失敗」時的暫存檔清理
+    // ——比照 Issue 2 `_DownloadQueueDialogState._downloadOne()` 既有的
+    // 同一防禦手法（`review-plan-issue-2.md` Finding 3）。
+    String? tempPath;
+    try {
+      final servers = await remoteServerRepository.listServers();
+      RemoteServerProfile? server;
+      for (final s in servers) {
+        if (s.id == remoteServerId) {
+          server = s;
+          break;
+        }
+      }
+      if (server == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('找不到對應的遠端書庫站點')));
+        return;
+      }
+      final password = await remoteServerRepository.loadPassword(remoteServerId);
+      final client = createOpdsClient();
+
+      final tempDir = await getTemporaryDirectory();
+      final downloadDir = Directory(p.join(tempDir.path, 'remote_download_temp'));
+      if (!await downloadDir.exists()) await downloadDir.create(recursive: true);
+      final fileName = '${const Uuid().v4()}.${fileExtensionFor(book.format)}';
+      tempPath = p.join(downloadDir.path, fileName);
+
+      await client.downloadBook(
+        server,
+        OpdsAcquisition(href: remoteDownloadUrl, format: book.format),
+        tempPath,
+        password: password,
+      );
+
+      final docsDir = await getApplicationDocumentsDirectory();
+      final permanentDir = Directory(p.join(docsDir.path, 'remote_books'));
+      if (!await permanentDir.exists()) await permanentDir.create(recursive: true);
+      final permanentPath = p.join(permanentDir.path, fileName);
+      final tempFile = File(tempPath);
+      await tempFile.copy(permanentPath);
+      await tempFile.delete();
+
+      await widget.repository
+          .updateBook(book.copyWith(filePath: permanentPath, isDownloaded: true));
+      if (!mounted) return;
+      await _loadBooks();
+    } catch (_) {
+      // 〔審查 review-plan-issue-4.md Minor 採納〕downloadBook() 本身
+      // 失敗/取消時已經自行清過暫存檔（見 OpdsHttpClient 文件），但
+      // copy() 到永久目錄這一步若中途失敗（例如磁碟空間不足），暫存檔
+      // 仍會殘留在 remote_download_temp/ 底下——防禦性再清一次，確保
+      // 任何例外路徑都不留孤兒檔案。
+      if (tempPath != null) {
+        final leftover = File(tempPath);
+        if (await leftover.exists()) await leftover.delete();
+      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('重新下載失敗，請稍後再試')));
+    } finally {
+      _redownloadingBookIds.remove(book.id);
+    }
   }
 
   Future<void> _openManageGroupsDialog() async {
@@ -756,6 +923,12 @@ class _LibraryScreenState extends State<LibraryScreen> {
           icon: const Icon(Icons.delete),
           tooltip: '刪除',
           onPressed: count == 0 ? null : _deleteSelectedBooks,
+        ),
+        IconButton(
+          key: const Key('library_remove_local_cache_button'),
+          icon: const Icon(Icons.cloud_off_outlined),
+          tooltip: '移除本機快取',
+          onPressed: count == 0 ? null : _removeLocalCacheForSelectedBooks,
         ),
       ],
     );

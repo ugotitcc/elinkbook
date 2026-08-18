@@ -335,4 +335,55 @@ void main() {
     expect(copied.positionSyncedServerUpdatedAt, '2026-08-04 12:00:00.000Z');
     expect(copied.groupName, '新分類');
   });
+
+  test('copyWith(isDownloaded: false) 只改變 isDownloaded，filePath 等其餘欄位保持不變', () {
+    final book = Book(
+      id: 'b18',
+      title: '書名',
+      format: BookFileFormat.epub,
+      filePath: '/storage/remote_books/b18.epub',
+      source: BookSource.calibreOpds,
+      remoteServerId: 'srv1',
+      remoteBookId: 'remote-18',
+      remoteDownloadUrl: 'http://example.com/download/18.epub',
+      isDownloaded: true,
+      createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+      lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+    );
+
+    final removed = book.copyWith(isDownloaded: false);
+
+    expect(removed.isDownloaded, isFalse);
+    expect(removed.filePath, '/storage/remote_books/b18.epub');
+    expect(removed.remoteServerId, 'srv1');
+    expect(removed.remoteBookId, 'remote-18');
+    expect(removed.remoteDownloadUrl, 'http://example.com/download/18.epub');
+  });
+
+  test('copyWith(filePath: ..., isDownloaded: true) 同時更新兩個欄位，remoteDownloadUrl 等其餘欄位保持不變',
+      () {
+    final book = Book(
+      id: 'b19',
+      title: '書名',
+      format: BookFileFormat.epub,
+      filePath: '/storage/remote_books/b19.epub',
+      source: BookSource.calibreOpds,
+      remoteServerId: 'srv1',
+      remoteBookId: 'remote-19',
+      remoteDownloadUrl: 'http://example.com/download/19.epub',
+      isDownloaded: false,
+      createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+      lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+    );
+
+    final redownloaded = book.copyWith(
+      filePath: '/storage/remote_books/b19-new.epub',
+      isDownloaded: true,
+    );
+
+    expect(redownloaded.filePath, '/storage/remote_books/b19-new.epub');
+    expect(redownloaded.isDownloaded, isTrue);
+    expect(redownloaded.remoteDownloadUrl, 'http://example.com/download/19.epub');
+    expect(redownloaded.remoteServerId, 'srv1');
+  });
 }

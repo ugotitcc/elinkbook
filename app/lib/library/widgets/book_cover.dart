@@ -36,12 +36,31 @@ class BookCover extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final coverPath = book.coverPath;
-    if (coverPath != null && File(coverPath).existsSync()) {
-      return Image.file(File(coverPath), fit: BoxFit.cover);
-    }
-    return ColoredBox(
-      color: Colors.grey.shade300,
-      child: Center(child: Icon(bookFormatIcon(book.format), size: 32)),
+    final cover = coverPath != null && File(coverPath).existsSync()
+        ? Image.file(File(coverPath), fit: BoxFit.cover)
+        : ColoredBox(
+            color: Colors.grey.shade300,
+            child: Center(child: Icon(bookFormatIcon(book.format), size: 32)),
+          );
+    if (book.isDownloaded) return cover;
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        cover,
+        Positioned(
+          right: 4,
+          top: 4,
+          child: Container(
+            key: const Key('book_cover_cloud_badge'),
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: Colors.black54,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Icons.cloud_outlined, size: 16, color: Colors.white),
+          ),
+        ),
+      ],
     );
   }
 }

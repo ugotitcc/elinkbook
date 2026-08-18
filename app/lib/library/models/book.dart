@@ -184,16 +184,27 @@ class Book {
 
   /// 回傳欄位值與自身相同的新物件，僅覆寫明確傳入的參數。[groupName] 供
   /// Issue 10 的批次分類異動使用；[isFixedLayout] 供本 Issue 的 EPUB 版面
-  /// 判斷/回填流程使用。
-  /// **⚠️ 不開放 remoteServerId/remoteBookId/remoteDownloadUrl/isDownloaded
-  /// 為具名參數（YAGNI），但必須原樣帶入新物件以避免靜默清空**。
-  Book copyWith({String? groupName, bool? isFixedLayout}) {
+  /// 判斷/回填流程使用；[filePath]／[isDownloaded] 供
+  /// epic-30-calibre-remote-library Issue 4 的「移除本機快取」（僅傳
+  /// `isDownloaded: false`）／「重新下載」（`filePath` 與
+  /// `isDownloaded: true` 一併傳入）使用——Issue 0 當時刻意不開放這兩個
+  /// 欄位為具名參數（YAGNI，當時沒有呼叫端需要真的異動它們），本 Issue
+  /// 是第一個需要的呼叫端。
+  /// **⚠️ `remoteServerId`／`remoteBookId`／`remoteDownloadUrl` 仍不開放
+  /// 為具名參數（本 Issue的兩個流程皆不需要異動這三者），但必須原樣帶入
+  /// 新物件以避免靜默清空**。
+  Book copyWith({
+    String? groupName,
+    bool? isFixedLayout,
+    String? filePath,
+    bool? isDownloaded,
+  }) {
     return Book(
       id: id,
       title: title,
       author: author,
       format: format,
-      filePath: filePath,
+      filePath: filePath ?? this.filePath,
       source: source,
       coverPath: coverPath,
       progress: progress,
@@ -206,7 +217,7 @@ class Book {
       remoteServerId: remoteServerId,
       remoteBookId: remoteBookId,
       remoteDownloadUrl: remoteDownloadUrl,
-      isDownloaded: isDownloaded,
+      isDownloaded: isDownloaded ?? this.isDownloaded,
       isFixedLayout: isFixedLayout ?? this.isFixedLayout,
       groupName: groupName ?? this.groupName,
       createTime: createTime,
