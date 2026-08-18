@@ -3168,7 +3168,7 @@ void main() {
           importService: importService,
           prefsManager: FakeReaderPrefsManager(),
           remoteServerRepository: FakeRemoteServerRepository(),
-          opdsClient: FakeOpdsClient(),
+          createOpdsClient: () => FakeOpdsClient(),
         ),
       ));
       await tester.pumpAndSettle();

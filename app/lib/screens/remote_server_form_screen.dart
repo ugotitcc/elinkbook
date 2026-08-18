@@ -13,13 +13,13 @@ import '../remote/remote_server_repository.dart';
 /// 事實來源，避免兩處各說各話）。
 class RemoteServerFormScreen extends StatefulWidget {
   final RemoteServerRepository repository;
-  final OpdsClient opdsClient;
+  final OpdsClient Function() createOpdsClient;
   final RemoteServerProfile? existingProfile;
 
   const RemoteServerFormScreen({
     super.key,
     required this.repository,
-    required this.opdsClient,
+    required this.createOpdsClient,
     this.existingProfile,
   });
 
@@ -99,7 +99,8 @@ class _RemoteServerFormScreenState extends State<RemoteServerFormScreen> {
       _testResultText = null;
     });
     final password = await _resolvePasswordToUse();
-    final success = await widget.opdsClient.testConnection(_buildProfile(), password: password);
+    final success =
+        await widget.createOpdsClient().testConnection(_buildProfile(), password: password);
     if (!mounted) return;
     setState(() {
       _testing = false;

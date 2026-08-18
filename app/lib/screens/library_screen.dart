@@ -49,7 +49,7 @@ class LibraryScreen extends StatefulWidget {
   final SyncClient? syncClient;
   final SyncCheckpointTrigger? syncCheckpointTrigger;
   final RemoteServerRepository? remoteServerRepository;
-  final OpdsClient? opdsClient;
+  final OpdsClient Function()? createOpdsClient;
   final AppTheme currentTheme;
   final bool isEinkMode;
   final ValueChanged<AppTheme>? onThemeChanged;
@@ -71,7 +71,7 @@ class LibraryScreen extends StatefulWidget {
     this.syncClient,
     this.syncCheckpointTrigger,
     this.remoteServerRepository,
-    this.opdsClient,
+    this.createOpdsClient,
     this.currentTheme = AppTheme.light,
     this.isEinkMode = false,
     this.onThemeChanged,
@@ -673,7 +673,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
             tooltip: '管理分類',
             onPressed: _openManageGroupsDialog,
           ),
-        if (widget.remoteServerRepository != null && widget.opdsClient != null)
+        if (widget.remoteServerRepository != null && widget.createOpdsClient != null)
           IconButton(
             key: const Key('library_remote_library_button'),
             icon: const Icon(Icons.cloud_outlined),
@@ -683,7 +683,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 MaterialPageRoute(
                   builder: (context) => RemoteServerListScreen(
                     repository: widget.remoteServerRepository!,
-                    opdsClient: widget.opdsClient!,
+                    createOpdsClient: widget.createOpdsClient!,
+                    importService: widget.importService,
                   ),
                 ),
               );

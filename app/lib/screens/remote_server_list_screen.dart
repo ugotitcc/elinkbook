@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../library/book_import_service.dart';
 import '../remote/opds_client.dart';
 import '../remote/remote_server_profile.dart';
 import '../remote/remote_server_repository.dart';
+import 'remote_catalog_screen.dart';
 import 'remote_server_form_screen.dart';
 
 /// 遠端書庫站點清單畫面（epic-30-calibre-remote-library Issue 1，
@@ -10,12 +12,14 @@ import 'remote_server_form_screen.dart';
 /// 若該站點仍有僅雲端紀錄（尚未下載）的書籍會被拒絕並顯示示警清單。
 class RemoteServerListScreen extends StatefulWidget {
   final RemoteServerRepository repository;
-  final OpdsClient opdsClient;
+  final OpdsClient Function() createOpdsClient;
+  final BookImportService importService;
 
   const RemoteServerListScreen({
     super.key,
     required this.repository,
-    required this.opdsClient,
+    required this.createOpdsClient,
+    required this.importService,
   });
 
   @override
@@ -47,7 +51,7 @@ class _RemoteServerListScreenState extends State<RemoteServerListScreen> {
       MaterialPageRoute(
         builder: (context) => RemoteServerFormScreen(
           repository: widget.repository,
-          opdsClient: widget.opdsClient,
+          createOpdsClient: widget.createOpdsClient,
         ),
       ),
     );
@@ -59,12 +63,23 @@ class _RemoteServerListScreenState extends State<RemoteServerListScreen> {
       MaterialPageRoute(
         builder: (context) => RemoteServerFormScreen(
           repository: widget.repository,
-          opdsClient: widget.opdsClient,
+          createOpdsClient: widget.createOpdsClient,
           existingProfile: profile,
         ),
       ),
     );
     if (saved == true) _load();
+  }
+
+  void _openCatalog(RemoteServerProfile profile) {
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (context) => RemoteCatalogScreen(
+        server: profile,
+        repository: widget.repository,
+        createOpdsClient: widget.createOpdsClient,
+        importService: widget.importService,
+      ),
+    ));
   }
 
   /// **〔`review-issue-1.md` Minor #1 採納〕** 刪除站點會連帶移除已儲存
@@ -168,7 +183,7 @@ class _RemoteServerListScreenState extends State<RemoteServerListScreen> {
                       key: Key('remote_server_item_${profile.id}'),
                       title: Text(profile.name),
                       subtitle: Text(profile.baseUrl),
-                      onTap: () => _openEditForm(profile),
+                      onTap: () => _openCatalog(profile),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [

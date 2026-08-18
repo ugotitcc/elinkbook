@@ -3,9 +3,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/remote/remote_server_profile.dart';
+import 'package:elinkbook/screens/remote_catalog_screen.dart';
 import 'package:elinkbook/screens/remote_server_form_screen.dart';
 import 'package:elinkbook/screens/remote_server_list_screen.dart';
 
+import '../support/fake_book_import_service.dart';
 import '../support/fake_opds_client.dart';
 import '../support/fake_remote_server_repository.dart';
 
@@ -41,7 +43,8 @@ void main() {
     await tester.pumpWidget(MaterialApp(
       home: RemoteServerListScreen(
         repository: repository,
-        opdsClient: FakeOpdsClient(),
+        createOpdsClient: () => FakeOpdsClient(),
+        importService: FakeBookImportService(),
       ),
     ));
     await tester.pumpAndSettle();
@@ -142,5 +145,18 @@ void main() {
 
     expect(find.byKey(const Key('remote_server_delete_error_snackbar')), findsOneWidget);
     expect(find.text('家用 NAS'), findsOneWidget);
+  });
+
+  testWidgets('點擊站點列（非編輯/刪除按鈕）導向 RemoteCatalogScreen', (tester) async {
+    await pumpScreen(
+      tester,
+      repository: FakeRemoteServerRepository(initialServers: [profile('srv1')]),
+    );
+
+    await tester.tap(find.byKey(const Key('remote_server_item_srv1')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(RemoteCatalogScreen), findsOneWidget);
+    expect(find.byType(RemoteServerFormScreen), findsNothing);
   });
 }

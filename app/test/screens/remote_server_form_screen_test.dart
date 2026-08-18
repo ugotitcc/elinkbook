@@ -16,7 +16,7 @@ void main() {
     await tester.pumpWidget(MaterialApp(
       home: RemoteServerFormScreen(
         repository: repository,
-        opdsClient: opdsClient,
+        createOpdsClient: () => opdsClient,
         existingProfile: existingProfile,
       ),
     ));
@@ -128,7 +128,7 @@ void main() {
         onGenerateRoute: (settings) => MaterialPageRoute(
           builder: (context) => RemoteServerFormScreen(
             repository: repository,
-            opdsClient: FakeOpdsClient(),
+            createOpdsClient: () => FakeOpdsClient(),
           ),
         ),
       ),
