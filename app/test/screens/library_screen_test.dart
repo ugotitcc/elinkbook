@@ -25,6 +25,7 @@ import '../support/fake_library_repository.dart';
 import '../support/fake_reader_prefs_manager.dart';
 import '../support/fake_opds_client.dart';
 import '../support/fake_remote_server_repository.dart';
+import '../support/fake_remote_thumbnail_cache.dart';
 import 'package:elinkbook/remote/remote_server_profile.dart';
 import 'package:elinkbook/screens/remote_server_list_screen.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
@@ -3172,6 +3173,7 @@ void main() {
           remoteServerRepository: FakeRemoteServerRepository(),
           createOpdsClient: () => FakeOpdsClient(),
           computeFingerprint: (path, format) async => 'test-fingerprint',
+          thumbnailCache: FakeRemoteThumbnailCache(),
         ),
       ));
       await tester.pumpAndSettle();

@@ -1,5 +1,9 @@
+import 'dart:io';
+
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 import 'package:pdfrx/pdfrx.dart';
 
 import 'library/book_content_fingerprint.dart';
@@ -20,6 +24,7 @@ import 'reader/reading_position_repository.dart';
 import 'remote/opds_client.dart';
 import 'remote/opds_http_client.dart';
 import 'remote/remote_server_repository.dart';
+import 'remote/remote_thumbnail_cache.dart';
 import 'remote/sqlite_remote_server_repository.dart';
 import 'screens/library_screen.dart';
 import 'screens/reading_position_conflict_dialog.dart';
@@ -107,6 +112,10 @@ Future<void> main() async {
     database: repository.database,
     libraryRepository: repository,
   );
+  final thumbnailCacheDir = await getApplicationCacheDirectory();
+  final thumbnailCache = RemoteThumbnailCacheImpl(
+    cacheDir: Directory(p.join(thumbnailCacheDir.path, 'remote_thumbnails')),
+  );
   runApp(
     ElinkBookApp(
       repository: repository,
@@ -124,6 +133,7 @@ Future<void> main() async {
       remoteServerRepository: remoteServerRepository,
       createOpdsClient: () => OpdsHttpClient(),
       computeFingerprint: computeBookContentFingerprint,
+      thumbnailCache: thumbnailCache,
       isMobileDataConnection: _isMobileDataConnection,
       navigatorKey: navigatorKey,
       initialTheme: initialTheme,
@@ -151,6 +161,7 @@ class ElinkBookApp extends StatefulWidget {
   final RemoteServerRepository? remoteServerRepository;
   final OpdsClient Function()? createOpdsClient;
   final ComputeRemoteFingerprint? computeFingerprint;
+  final RemoteThumbnailCache? thumbnailCache;
   final Future<bool> Function()? isMobileDataConnection;
   final GlobalKey<NavigatorState>? navigatorKey;
   final AppThemePreferences themePreferences;
@@ -174,6 +185,7 @@ class ElinkBookApp extends StatefulWidget {
     this.remoteServerRepository,
     this.createOpdsClient,
     this.computeFingerprint,
+    this.thumbnailCache,
     this.isMobileDataConnection,
     this.navigatorKey,
     this.initialTheme = AppTheme.light,
@@ -252,6 +264,7 @@ class _ElinkBookAppState extends State<ElinkBookApp> with WidgetsBindingObserver
         remoteServerRepository: widget.remoteServerRepository,
         createOpdsClient: widget.createOpdsClient,
         computeFingerprint: widget.computeFingerprint,
+        thumbnailCache: widget.thumbnailCache,
         isMobileDataConnection: widget.isMobileDataConnection,
         currentTheme: _theme,
         isEinkMode: _isEinkMode,

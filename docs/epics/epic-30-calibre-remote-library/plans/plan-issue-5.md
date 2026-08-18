@@ -757,7 +757,7 @@ git commit -m "feat(epic-30): Issue 5 Task 2 - RemoteThumbnailCache 縮圖雙層
 - Consumes：Task 2 的 `RemoteThumbnailCache`／`RemoteThumbnailCacheImpl`。
 - Produces：`RemoteCatalogScreen`/`RemoteServerListScreen` 新增必要建構參數 `RemoteThumbnailCache thumbnailCache`；`LibraryScreen` 新增可選建構參數 `RemoteThumbnailCache? thumbnailCache`（比照 `createOpdsClient`/`computeFingerprint` 既有的「遠端功能整組同時存在」可選模式）。
 
-- [ ] **Step 1: 新增 `FakeRemoteThumbnailCache` 測試替身**
+- [x] **Step 1: 新增 `FakeRemoteThumbnailCache` 測試替身**
 
 新建 `app/test/support/fake_remote_thumbnail_cache.dart`：
 
@@ -795,7 +795,7 @@ class FakeRemoteThumbnailCache implements RemoteThumbnailCache {
 }
 ```
 
-- [ ] **Step 2: 寫失敗測試（縮圖快取整合）**
+- [x] **Step 2: 寫失敗測試（縮圖快取整合）**
 
 修改 `app/test/screens/remote_catalog_screen_test.dart` 開頭 import，新增：
 
@@ -859,12 +859,12 @@ import '../support/fake_remote_thumbnail_cache.dart';
 
 Task 1 新增的 3 則 E-Ink 測試（Step 1 已寫入）已經各自帶有 `thumbnailCache: FakeRemoteThumbnailCache(),`，不需要再改。**除了這 3 則與使用 `pumpScreen` helper 的測試之外**，本檔案其餘所有不經過 `pumpScreen` helper、直接呼叫 `RemoteCatalogScreen(...)` 建構子的既有測試（下載與匯入相關的一系列測試），逐一新增一行 `thumbnailCache: FakeRemoteThumbnailCache(),`（緊接在 `computeFingerprint:` 那一行之後即可，順序不影響正確性）。實際筆數以檔案當下內容為準逐一確認，不要漏改任何一處——漏改會在 Step 3 執行測試時以編譯錯誤的形式立即暴露，逐一修正到全部通過為止。
 
-- [ ] **Step 3: 執行測試確認失敗**
+- [x] **Step 3: 執行測試確認失敗**
 
 Run: `flutter test test/screens/remote_catalog_screen_test.dart`
 Expected: FAIL——`RemoteCatalogScreen` 沒有 `thumbnailCache` 具名參數（編譯錯誤）。
 
-- [ ] **Step 4: 修改 `RemoteCatalogScreen`**
+- [x] **Step 4: 修改 `RemoteCatalogScreen`**
 
 修改 `app/lib/screens/remote_catalog_screen.dart` 開頭 import，新增：
 
@@ -950,12 +950,12 @@ import '../remote/remote_thumbnail_cache.dart';
 
 **設計選擇說明（非計畫遺漏）**：這個修法解決的是「已有資料時優先顯示、不被短暫的 connectionState 重置蓋掉」，沒有連帶處理「每次 build() 都重新呼叫一次 `fetch()`」本身這件事（沒有用 `Map<String, Future<Uint8List>>` 之類的欄位把 Future 記憶下來）。後者屬於已知、刻意接受的取捨——見 `remote_thumbnail_cache.dart` 類別文件「已知取捨」段落：重複呼叫 `fetch()` 對同一個 URL，記憶體 LRU 幾乎立即命中，成本很低，加一層 Future 記憶化只是為了避免這個低成本的重複呼叫，複雜度不划算；本次修法已經解決了唯一有實際使用者可見影響的部分（畫面閃爍）。
 
-- [ ] **Step 5: 執行測試確認通過**
+- [x] **Step 5: 執行測試確認通過**
 
 Run: `flutter test test/screens/remote_catalog_screen_test.dart`
 Expected: PASS，全數通過（含 Task 1 的 3 項 E-Ink 測試、既有測試、本 Task 新增的 2 項）。
 
-- [ ] **Step 6: 貫穿 `RemoteServerListScreen`／`LibraryScreen`／`main.dart`**
+- [x] **Step 6: 貫穿 `RemoteServerListScreen`／`LibraryScreen`／`main.dart`**
 
 修改 `app/lib/screens/remote_server_list_screen.dart` 開頭 import，新增：
 
@@ -1147,12 +1147,12 @@ import 'remote/remote_thumbnail_cache.dart';
         isMobileDataConnection: widget.isMobileDataConnection,
 ```
 
-- [ ] **Step 7: 執行全專案測試確認零回歸**
+- [x] **Step 7: 執行全專案測試確認零回歸**
 
 Run: `flutter analyze && flutter test`
 Expected: `flutter analyze` 乾淨；`flutter test` 全數通過，零回歸。
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add app/lib/screens/remote_catalog_screen.dart app/lib/screens/remote_server_list_screen.dart app/lib/screens/library_screen.dart app/lib/main.dart app/test/support/fake_remote_thumbnail_cache.dart app/test/screens/remote_catalog_screen_test.dart app/test/screens/remote_server_list_screen_test.dart app/test/screens/library_screen_test.dart

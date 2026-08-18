@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
@@ -13,6 +14,7 @@ import '../remote/opds_client.dart';
 import '../remote/opds_types.dart';
 import '../remote/remote_server_profile.dart';
 import '../remote/remote_server_repository.dart';
+import '../remote/remote_thumbnail_cache.dart';
 import 'format_selection_dialog.dart';
 
 /// OPDS 目錄瀏覽畫面（epic-30-calibre-remote-library Issue 2，
@@ -34,6 +36,7 @@ class RemoteCatalogScreen extends StatefulWidget {
   final RemoteServerRepository repository;
   final LibraryRepository libraryRepository;
   final ComputeRemoteFingerprint computeFingerprint;
+  final RemoteThumbnailCache thumbnailCache;
   final OpdsClient Function() createOpdsClient;
   final BookImportService importService;
 
@@ -56,6 +59,7 @@ class RemoteCatalogScreen extends StatefulWidget {
     required this.repository,
     required this.libraryRepository,
     required this.computeFingerprint,
+    required this.thumbnailCache,
     required this.createOpdsClient,
     required this.importService,
     this.feedUrl,
@@ -202,6 +206,7 @@ class _RemoteCatalogScreenState extends State<RemoteCatalogScreen> {
         repository: widget.repository,
         libraryRepository: widget.libraryRepository,
         computeFingerprint: widget.computeFingerprint,
+        thumbnailCache: widget.thumbnailCache,
         createOpdsClient: widget.createOpdsClient,
         importService: widget.importService,
         feedUrl: link.href,
@@ -427,22 +432,41 @@ class _RemoteCatalogScreenState extends State<RemoteCatalogScreen> {
         ),
       );
     }
-    return Image.network(
-      thumbnailUrl,
-      key: Key('remote_catalog_thumbnail_${entry.remoteBookId}'),
-      headers: buildOpdsAuthHeaders(widget.server, _password),
-      fit: BoxFit.cover,
-      loadingBuilder: (context, child, progress) {
-        if (progress == null) return child;
+    return FutureBuilder<Uint8List>(
+      future: widget.thumbnailCache.fetch(
+        widget.server,
+        thumbnailUrl,
+        buildOpdsAuthHeaders(widget.server, _password),
+      ),
+      // 〔審查 review-plan-issue-5.md Important 採納〕Flutter 的
+      // FutureBuilder.didUpdateWidget() 只要傳入的 future 是新的物件實例
+      // 就會把 connectionState 重置（不是 done），但 snapshot.data 仍保留
+      // 上一輪成功的結果——這個 build() 方法每次重建都會呼叫一次
+      // fetch()、產生新的 Future 實例（即使底層記憶體 LRU 幾乎立即命中），
+      // 若先判斷 connectionState != done 就先回傳載入中佔位符，會讓已經
+      // 載入完成的縮圖在任何無關的 setState()（例如勾選另一本書）後閃爍
+      // 回佔位符一幀，在 E-Ink 螢幕上更明顯、恰好牴觸本 Issue 想解決的
+      // 殘影問題——優先檢查 hasData，已有資料就直接顯示，不受
+      // connectionState 短暫重置影響。
+      builder: (context, snapshot) {
+        if (snapshot.hasData && snapshot.data != null) {
+          return Image.memory(
+            snapshot.data!,
+            key: Key('remote_catalog_thumbnail_${entry.remoteBookId}'),
+            fit: BoxFit.cover,
+          );
+        }
+        if (snapshot.connectionState != ConnectionState.done) {
+          return Center(
+            key: Key('remote_catalog_thumbnail_loading_${entry.remoteBookId}'),
+            child: const Icon(Icons.book),
+          );
+        }
         return Center(
-          key: Key('remote_catalog_thumbnail_loading_${entry.remoteBookId}'),
-          child: const Icon(Icons.book),
+          key: Key('remote_catalog_thumbnail_error_${entry.remoteBookId}'),
+          child: const Icon(Icons.broken_image),
         );
       },
-      errorBuilder: (context, error, stack) => Center(
-        key: Key('remote_catalog_thumbnail_error_${entry.remoteBookId}'),
-        child: const Icon(Icons.broken_image),
-      ),
     );
   }
 }

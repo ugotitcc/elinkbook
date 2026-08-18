@@ -20,6 +20,7 @@ import '../remote/opds_client.dart';
 import '../remote/opds_types.dart';
 import '../remote/remote_server_profile.dart';
 import '../remote/remote_server_repository.dart';
+import '../remote/remote_thumbnail_cache.dart';
 import '../library/library_preferences.dart';
 import '../library/library_repository.dart';
 import '../library/models/book.dart';
@@ -57,6 +58,7 @@ class LibraryScreen extends StatefulWidget {
   final RemoteServerRepository? remoteServerRepository;
   final OpdsClient Function()? createOpdsClient;
   final ComputeRemoteFingerprint? computeFingerprint;
+  final RemoteThumbnailCache? thumbnailCache;
   final Future<bool> Function()? isMobileDataConnection;
   final AppTheme currentTheme;
   final bool isEinkMode;
@@ -81,6 +83,7 @@ class LibraryScreen extends StatefulWidget {
     this.remoteServerRepository,
     this.createOpdsClient,
     this.computeFingerprint,
+    this.thumbnailCache,
     this.isMobileDataConnection,
     this.currentTheme = AppTheme.light,
     this.isEinkMode = false,
@@ -845,7 +848,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
           ),
         if (widget.remoteServerRepository != null &&
             widget.createOpdsClient != null &&
-            widget.computeFingerprint != null)
+            widget.computeFingerprint != null &&
+            widget.thumbnailCache != null)
           IconButton(
             key: const Key('library_remote_library_button'),
             icon: const Icon(Icons.cloud_outlined),
@@ -857,6 +861,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                     repository: widget.remoteServerRepository!,
                     libraryRepository: widget.repository,
                     computeFingerprint: widget.computeFingerprint!,
+                    thumbnailCache: widget.thumbnailCache!,
                     createOpdsClient: widget.createOpdsClient!,
                     importService: widget.importService,
                     isEinkMode: widget.isEinkMode,
