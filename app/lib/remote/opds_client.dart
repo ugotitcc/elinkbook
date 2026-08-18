@@ -1,6 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:http/http.dart' as http;
+import 'package:http/io_client.dart';
+
 import '../library/models/library_enums.dart';
 import 'opds_types.dart';
 import 'remote_server_profile.dart';
@@ -42,6 +45,18 @@ String fileExtensionFor(BookFileFormat format) {
     case BookFileFormat.md:
       return 'md';
   }
+}
+
+/// 依 [server.allowInsecure] 決定是否放行憑證錯誤的共用 [http.Client]
+/// 建構函式（epic-30-calibre-remote-library Issue 5，從
+/// `OpdsHttpClient` 原本的私有 `_clientFor()` 抽出，供縮圖快取的網路
+/// 擷取共用同一份憑證處理邏輯，避免各自重寫一份）。**僅這一次呼叫端
+/// 持有的 client 物件生效**（呼叫端用畢即 `close()`），不會影響其他
+/// 連線，符合「不得全域關閉憑證驗證」的既定原則。
+http.Client createOpdsHttpClient(RemoteServerProfile server) {
+  if (!server.allowInsecure) return http.Client();
+  final rawClient = HttpClient()..badCertificateCallback = (cert, host, port) => true;
+  return IOClient(rawClient);
 }
 
 /// 下載中途取消的輕量信號（epic-30-calibre-remote-library Issue 1，
