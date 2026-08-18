@@ -3185,6 +3185,49 @@ void main() {
 
       expect(find.byType(RemoteServerListScreen), findsOneWidget);
     });
+
+    testWidgets('從遠端書庫返回書架時，重新載入書籍清單，顯示新下載的書籍'
+        '（review-issue-5-code.md Important #2）', (tester) async {
+      // 比照「從閱讀器返回書架時，重新載入書籍清單」既有測試的手法：
+      // widget test 無法真正走完整下載/匯入流程，改為在使用者停留於
+      // RemoteServerListScreen 期間，直接對 repository 寫入模擬「下載
+      // 完成後已匯入新書」的結果，驗證 Navigator.push().then() 的
+      // _loadBooks() 回呼確實有被觸發。
+      final repository = FakeLibraryRepository();
+      final importService = FakeBookImportService();
+      await tester.pumpWidget(MaterialApp(
+        home: LibraryScreen(
+          repository: repository,
+          importService: importService,
+          prefsManager: FakeReaderPrefsManager(),
+          remoteServerRepository: FakeRemoteServerRepository(),
+          createOpdsClient: () => FakeOpdsClient(),
+          computeFingerprint: (path, format) async => 'test-fingerprint',
+          thumbnailCache: FakeRemoteThumbnailCache(),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('遠端下載的書'), findsNothing);
+
+      await tester.tap(find.byKey(const Key('library_remote_library_button')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(RemoteServerListScreen), findsOneWidget);
+
+      await repository.insertBook(_testBook(
+        id: 'remote-1',
+        title: '遠端下載的書',
+        author: '某作者',
+      ));
+
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+
+      expect(find.text('遠端下載的書'), findsOneWidget,
+          reason: '返回書架後應重新載入書籍清單，顯示遠端下載期間新匯入的書籍，'
+              '而非停留在舊快照');
+    });
   });
 
   testWidgets('選取 Calibre 來源已下載書籍後點擊「移除本機快取」，刪除實體檔案、isDownloaded 變 false，劃線/書籤/進度不受影響',

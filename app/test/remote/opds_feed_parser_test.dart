@@ -212,6 +212,51 @@ void main() {
     expect(feed.entries, isEmpty);
   });
 
+  test('分類 entry 同時帶有 rel="alternate"/"self" 與無 rel 的導覽連結時，'
+      '不會誤把非導覽連結當成分類 href（review-issue-5-code.md Important #1）',
+      () {
+    // 模擬某些非 Calibre 的 OPDS 伺服器：分類 entry 除了真正的導覽連結
+    // 外，還帶有 rel="self"（連回自己）與 rel="alternate"（連到網頁版）
+    // 的 <link>，且這些連結排列在真正的導覽連結之前。退回邏輯不能單純
+    // 取「第一個有 href 的 link」，否則會誤判為導覽分類。
+    const xml = '''<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>某書庫</title>
+  <entry>
+    <title>由 最新</title>
+    <id>navcatalog:newest</id>
+    <link rel="self" href="/opds/navcatalog/newest?self=1"/>
+    <link rel="alternate" type="text/html" href="/browse/newest"/>
+    <link href="/opds/navcatalog/newest?library_id=Library"
+          type="application/atom+xml;type=feed;profile=opds-catalog;kind=navigation"/>
+  </entry>
+</feed>''';
+    final feed = parser.parse(xml, feedUri);
+    expect(feed.navigationLinks, hasLength(1));
+    expect(feed.navigationLinks.single.title, '由 最新');
+    expect(feed.navigationLinks.single.href, contains('/opds/navcatalog/newest?library_id=Library'),
+        reason: '應選中 type 含 kind=navigation 的連結，'
+            '而非排列在前面的 rel="self"/"alternate" 連結');
+  });
+
+  test('分類 entry 的 link 皆無 rel 也無 kind=navigation type 時，仍退回第一個有 href 的 link',
+      () {
+    // 確保收斂 rel 白名單後，原本 Calibre「完全無 rel、也無特別 type」
+    // 的最小情境（見上方既有測試）以外的邊界案例，退回邏輯依然可用。
+    const xml = '''<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>某書庫</title>
+  <entry>
+    <title>由 標籤</title>
+    <id>navcatalog:tags</id>
+    <link href="/opds/navcatalog/tags?library_id=Library"/>
+  </entry>
+</feed>''';
+    final feed = parser.parse(xml, feedUri);
+    expect(feed.navigationLinks, hasLength(1));
+    expect(feed.navigationLinks.single.href, contains('/opds/navcatalog/tags'));
+  });
+
   test('沒有 next 連結時 nextUrl 為 null', () {
     const xml = '''<?xml version="1.0"?>
 <feed xmlns="http://www.w3.org/2005/Atom">

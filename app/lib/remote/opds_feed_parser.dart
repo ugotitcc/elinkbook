@@ -57,12 +57,30 @@ class OpdsFeedParser {
         continue;
       }
 
-      // 導覽分類連結：優先找 rel="subsection"，若無則取第一個有 href 的
-      // <link>（Calibre 的分類 <entry> 不帶 rel 屬性）。
+      // 導覽分類連結：優先找 rel="subsection"；其次找 type 屬性含
+      // kind=navigation（Calibre 分類 entry 實際採用的型別字串，見真機
+      // 驗證樣本 `reviews/review-issue-5.md`）；最後才退回「第一個有
+      // href、且 rel 不是已知非導覽用途」的 link——`review-issue-5-code.md`
+      // Important #1 指出，原本不分 rel 一律取第一個有 href 的 link，
+      // 會誤把 rel="self"／"alternate"／"search" 或縮圖連結當成導覽分類。
+      const nonNavigationRels = {
+        'self',
+        'alternate',
+        'search',
+        'http://opds-spec.org/image',
+        'http://opds-spec.org/image/thumbnail',
+      };
       final subsectionLink =
           _firstWhereOrNull(entryLinks, (l) => l.getAttribute('rel') == 'subsection');
-      final navLink = subsectionLink ??
-          _firstWhereOrNull(entryLinks, (l) => l.getAttribute('href') != null);
+      final navigationTypeLink = subsectionLink ??
+          _firstWhereOrNull(entryLinks,
+              (l) => (l.getAttribute('type') ?? '').contains('kind=navigation'));
+      final navLink = navigationTypeLink ??
+          _firstWhereOrNull(
+              entryLinks,
+              (l) =>
+                  l.getAttribute('href') != null &&
+                  !nonNavigationRels.contains(l.getAttribute('rel') ?? ''));
       final navHref = navLink?.getAttribute('href');
       if (navHref != null) {
         navigationLinks.add(OpdsNavigationLink(

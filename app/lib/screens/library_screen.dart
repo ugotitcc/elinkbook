@@ -857,18 +857,18 @@ class _LibraryScreenState extends State<LibraryScreen> {
             onPressed: () {
               Navigator.of(context)
                   .push(
-                MaterialPageRoute(
-                  builder: (context) => RemoteServerListScreen(
-                    repository: widget.remoteServerRepository!,
-                    libraryRepository: widget.repository,
-                    computeFingerprint: widget.computeFingerprint!,
-                    thumbnailCache: widget.thumbnailCache!,
-                    createOpdsClient: widget.createOpdsClient!,
-                    importService: widget.importService,
-                    isEinkMode: widget.isEinkMode,
-                  ),
-                ),
-              )
+                    MaterialPageRoute(
+                      builder: (context) => RemoteServerListScreen(
+                        repository: widget.remoteServerRepository!,
+                        libraryRepository: widget.repository,
+                        computeFingerprint: widget.computeFingerprint!,
+                        thumbnailCache: widget.thumbnailCache!,
+                        createOpdsClient: widget.createOpdsClient!,
+                        importService: widget.importService,
+                        isEinkMode: widget.isEinkMode,
+                      ),
+                    ),
+                  )
                   .then((_) {
                 // 從遠端書庫返回時重新載入書架，確保新下載的書籍出現。
                 if (mounted) _loadBooks();
