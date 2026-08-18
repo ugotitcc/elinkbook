@@ -108,7 +108,7 @@
 
 ## Issue 4：圖書庫整合與快取生命週期
 
-**Status:** `ready-for-agent`
+**Status:** ✅ 已完成並合併回 `main`（PR [#161](https://git.jigong.org/huthief/elinkBook/pulls/161)，分支 `epic-30-issue-4`，4 個 commit：Task 1-3 各自一個 commit＋1 個修正後重新實作的 Task 3 commit）。`/superpowers:writing-plans` 產出 `plans/plan-issue-4.md`，動工前先經 `/superpowers:receiving-code-review` 計畫審查（`reviews/review-plan-issue-4.md`，APPROVED，1 項 Minor：`_handleRedownload()` 的 `tempPath` 應宣告於 `try` 外部供 `catch` 清理，已於計畫中修訂）。**實作完成後首輪獨立 subagent 程式審查發現分支基底問題**（`reviews/review-issue-4.md`）：`epic-30-issue-4` 分支建立於 Issue 2／Issue 3 合併進 `main` 之前的過期基底（`git merge-base` 核實分叉點早於 `RemoteCatalogScreen` 存在），導致 Task 3 首版缺少可依循的既有兩段式下載模式，出現 4 項 Critical（下載檔案落在 OS 可回收暫存目錄、行動數據警示缺席、`connectivity_plus` 未依計畫注入、無重入防護）。修法：`git rebase main`（尚未推送，純本機操作）修正基底，捨棄過期基底上的 Task 3 commit，依原計畫在正確基底上重新實作；過程中另外發現並修正 `_maybeOpenLastBookOnLaunch()` 繞過 `isDownloaded` 檢查、可能於開機時嘗試開啟不存在檔案的既有缺口。重新實作後第二輪獨立 subagent 複審結論 **READY TO MERGE**（0 Critical／0 Important／1 Minor 計畫勾選同步）。全專案 `flutter test` 1531 項與 `flutter analyze` 零回歸通過。
 
 **依賴：** Issue 0（`isDownloaded`／`remoteDownloadUrl` 欄位）、Issue 2（下載/匯入流程與 `remoteDownloadUrl` 落地）。
 
