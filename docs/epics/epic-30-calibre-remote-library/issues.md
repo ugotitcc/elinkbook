@@ -151,3 +151,31 @@
 **Blocked by：** Issue 2。
 
 **完成摘要：** `isEinkMode` 貫穿 `RemoteServerListScreen`→`RemoteCatalogScreen`，E-Ink 模式下「載入更多」改為離散「上一頁／下一頁」整頁替換（`_goToPage()`），新增 `ScrollController` 於換頁後歸零捲動位置；新增 `RemoteThumbnailCache` 雙層快取（記憶體 LRU＋磁碟 SHA-256 檔名），抽出共用 `createOpdsHttpClient()`；`RemoteCatalogScreen._buildThumbnail()` 改用 `FutureBuilder`（優先檢查 `hasData` 避免閃爍）。真機驗證（Calibre Content Server）9 項情境全數通過，過程中修正 2 個真實 bug（`OpdsFeedParser` Calibre 格式相容性、遠端下載後書架自動刷新），詳見 `reviews/review-issue-5.md`。程式碼審查（`reviews/review-issue-5-code.md`，0 Critical／2 Important／4 Minor）已全數修訂：導覽連結退回邏輯健壯性強化＋補測試、Task 4 修復補回歸測試、格式縮排修正；縮圖快取 TTL/去重等 3 項 Minor 為計畫已載明的刻意取捨，維持原樣。全專案 `flutter test` 1544 項、`flutter analyze` 零回歸通過。
+
+---
+
+## Issue 6：抽出「遠端書籍下載器」深模組（技術債／架構深化）
+
+**Status:** `ready-for-agent`
+
+**依賴：** Issue 2、Issue 4（皆已完成並合併回 `main`）。
+
+**背景：** `/improve-codebase-architecture` 於 2026-08-19 針對 `library_screen.dart`／`remote_catalog_screen.dart` 熱點區域進行架構審查（`docs/research/architecture-review-library-remote-screens.md`），候選 1（Top recommendation）指出 `RemoteCatalogScreen._DownloadQueueDialogState._downloadOne()`（Issue 2 產物）與 `LibraryScreen._handleRedownload()`（Issue 4 產物）各自重複實作了同一段「把一筆 OPDS acquisition 下載並落地成永久檔案」的邏輯：建立 `remote_download_temp/` 暫存目錄、以 UUID＋`fileExtensionFor()` 產生檔名、呼叫 `OpdsClient.downloadBook()`、建立 `remote_books/` 永久目錄、複製、刪暫存檔，並各自補上同一種「複製到一半失敗要清殘留暫存檔」的防禦（`catch` 區塊寫法完全相同，連審查採納註解措辭都一樣）。
+
+`/diagnose` 逐行核對兩處實作後確認：核心重複範圍約 20-25 行（temp dir 建立 → `downloadBook()` → permanent dir 建立 → copy → delete → 例外清理），但**不能整段抽成單一函式**——`_downloadOne()` 在「下載到暫存檔」與「複製到永久目錄」中間插入了 Issue 3 的第二層重複匯入偵測（計算指紋、比對、彈出確認對話框，使用者選擇不建立新副本時直接刪暫存檔並標記 `duplicateSkipped`、不會走到複製步驟），這個決策點是 `_handleRedownload()` 沒有的（它是替換既有書籍記錄的檔案，不需要重複偵測）。架構審查報告的 Before/After 圖把這一步簡化畫成單一 `materialize()` 呼叫，實際設計需拆成兩個獨立方法，見下方「What to build」。
+
+**What to build：**
+- 新增 `lib/remote/remote_book_downloader.dart`，內含兩個獨立方法（非單一 `materialize()`，理由見上）：
+  - `Future<String> downloadToTempFile({required OpdsClient client, required RemoteServerProfile server, required OpdsAcquisition acquisition, required BookFileFormat format, String? password, void Function(int, int)? onProgress, OpdsDownloadCancellationToken? cancellationToken})`：建立 `remote_download_temp/` 目錄、產生 UUID 檔名、呼叫 `client.downloadBook()`，回傳暫存檔路徑；不需額外例外清理（`downloadBook()` 失敗/取消時已自行清過暫存檔，既有文件已記錄此行為）。
+  - `Future<String> promoteToPermanent(String tempPath, BookFileFormat format)`：建立 `remote_books/` 目錄、複製暫存檔到永久路徑、刪暫存檔，回傳永久路徑；任何例外皆先清殘留暫存檔再重新拋出（兩個呼叫端既有的 `catch` 清理邏輯收進這裡，呼叫端不再需要各自宣告 `tempPath` 於 `try` 外）。
+- `RemoteCatalogScreen._DownloadQueueDialogState._downloadOne()` 改為：呼叫 `downloadToTempFile()` → 指紋比對／確認對話框（邏輯不變）→ 使用者確認保留才呼叫 `promoteToPermanent()`；拒絕時維持現有「刪暫存檔＋標記 `duplicateSkipped`」邏輯不變。
+- `LibraryScreen._handleRedownload()` 改為：依序呼叫 `downloadToTempFile()` → `promoteToPermanent()`（中間無決策點，背靠背呼叫）。
+- 兩個呼叫端移除各自重複的 temp/permanent 目錄管理與例外清理程式碼，改為呼叫上述共用方法。
+
+**單元測試要求：**
+- `remote_book_downloader_test.dart`：`downloadToTempFile()` 正確建目錄／組檔名／呼叫 `client.downloadBook()`（Fake client 驗證呼叫參數）；`promoteToPermanent()` 正確複製＋刪暫存檔＋回傳永久路徑；`promoteToPermanent()` 在複製中途失敗時清殘留暫存檔並重新拋出例外（沿用既有 `_handleRedownload`/`_downloadOne` 測試已驗證過的情境，改為對新模組直接測試）。
+- `remote_catalog_screen_test.dart`／`library_screen_test.dart` 既有涵蓋下載/重新下載成功與失敗路徑的測試須維持全數通過（改走新模組後行為不得改變，屬回歸驗證，不需新增案例）。
+
+**驗收標準：** `flutter analyze` 乾淨；`flutter test` 全數通過、零回歸；`_downloadOne()`／`_handleRedownload()` 兩處不再各自宣告 temp/permanent 目錄管理與例外清理邏輯，改為呼叫 `RemoteBookDownloader` 的共用方法；審查報告記錄實際刪除的重複程式碼行數。
+
+**Blocked by：** Issue 2、Issue 4（皆已完成，無實質阻塞）。
