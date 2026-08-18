@@ -271,6 +271,107 @@ void main() {
     });
   });
 
+  group('E-Ink 模式離散分頁（Issue 5）', () {
+    testWidgets('E-Ink 模式下有 nextUrl 時顯示上一頁/下一頁按鈕，不顯示載入更多按鈕；第一頁上一頁按鈕停用',
+        (tester) async {
+      final opdsClient = FakeOpdsClient(feeds: {
+        server.baseUrl: const OpdsFeed(
+          title: '根目錄',
+          nextUrl: 'http://x/page2',
+          entries: [entry1],
+        ),
+      });
+      await tester.pumpWidget(MaterialApp(
+        home: RemoteCatalogScreen(
+          server: server,
+          repository: FakeRemoteServerRepository(),
+          libraryRepository: FakeLibraryRepository(),
+          computeFingerprint: FakeFingerprintComputer().call,
+          thumbnailCache: FakeRemoteThumbnailCache(),
+          createOpdsClient: () => opdsClient,
+          importService: FakeBookImportService(),
+          isEinkMode: true,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('remote_catalog_eink_next_page_button')), findsOneWidget);
+      expect(find.byKey(const Key('remote_catalog_eink_prev_page_button')), findsOneWidget);
+      expect(find.byKey(const Key('remote_catalog_load_more_button')), findsNothing);
+
+      final prevButton =
+          tester.widget<OutlinedButton>(find.byKey(const Key('remote_catalog_eink_prev_page_button')));
+      expect(prevButton.onPressed, isNull);
+    });
+
+    testWidgets('E-Ink 模式點擊下一頁後整批替換書目（非累加），上一頁按鈕變為可點擊', (tester) async {
+      final opdsClient = FakeOpdsClient(feeds: {
+        server.baseUrl: const OpdsFeed(
+          title: '根目錄',
+          nextUrl: 'http://x/page2',
+          entries: [entry1],
+        ),
+        'http://x/page2': const OpdsFeed(
+          title: '根目錄',
+          prevUrl: 'http://x/page1',
+          entries: [entry2],
+        ),
+      });
+      await tester.pumpWidget(MaterialApp(
+        home: RemoteCatalogScreen(
+          server: server,
+          repository: FakeRemoteServerRepository(),
+          libraryRepository: FakeLibraryRepository(),
+          computeFingerprint: FakeFingerprintComputer().call,
+          thumbnailCache: FakeRemoteThumbnailCache(),
+          createOpdsClient: () => opdsClient,
+          importService: FakeBookImportService(),
+          isEinkMode: true,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('remote_catalog_eink_next_page_button')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('紅樓夢'), findsNothing);
+      expect(find.text('不支援格式的書'), findsOneWidget);
+
+      final nextButton =
+          tester.widget<OutlinedButton>(find.byKey(const Key('remote_catalog_eink_next_page_button')));
+      expect(nextButton.onPressed, isNull);
+      final prevButton =
+          tester.widget<OutlinedButton>(find.byKey(const Key('remote_catalog_eink_prev_page_button')));
+      expect(prevButton.onPressed, isNotNull);
+    });
+
+    testWidgets('非 E-Ink 模式（預設）維持既有載入更多按鈕，不顯示上一頁/下一頁按鈕', (tester) async {
+      final opdsClient = FakeOpdsClient(feeds: {
+        server.baseUrl: const OpdsFeed(
+          title: '根目錄',
+          nextUrl: 'http://x/page2',
+          entries: [entry1],
+        ),
+      });
+      await tester.pumpWidget(MaterialApp(
+        home: RemoteCatalogScreen(
+          server: server,
+          repository: FakeRemoteServerRepository(),
+          libraryRepository: FakeLibraryRepository(),
+          computeFingerprint: FakeFingerprintComputer().call,
+          thumbnailCache: FakeRemoteThumbnailCache(),
+          createOpdsClient: () => opdsClient,
+          importService: FakeBookImportService(),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('remote_catalog_load_more_button')), findsOneWidget);
+      expect(find.byKey(const Key('remote_catalog_eink_next_page_button')), findsNothing);
+      expect(find.byKey(const Key('remote_catalog_eink_prev_page_button')), findsNothing);
+    });
+  });
+
   group('下載與匯入', () {
     late Directory tempRoot;
     late PathProviderPlatform originalPathProvider;

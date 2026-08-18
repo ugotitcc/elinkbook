@@ -18,6 +18,7 @@ class RemoteServerListScreen extends StatefulWidget {
   final ComputeRemoteFingerprint computeFingerprint;
   final OpdsClient Function() createOpdsClient;
   final BookImportService importService;
+  final bool isEinkMode;
 
   const RemoteServerListScreen({
     super.key,
@@ -26,6 +27,7 @@ class RemoteServerListScreen extends StatefulWidget {
     required this.computeFingerprint,
     required this.createOpdsClient,
     required this.importService,
+    this.isEinkMode = false,
   });
 
   @override
@@ -86,6 +88,7 @@ class _RemoteServerListScreenState extends State<RemoteServerListScreen> {
         computeFingerprint: widget.computeFingerprint,
         createOpdsClient: widget.createOpdsClient,
         importService: widget.importService,
+        isEinkMode: widget.isEinkMode,
       ),
     ));
   }

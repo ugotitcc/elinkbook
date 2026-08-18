@@ -859,6 +859,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                     computeFingerprint: widget.computeFingerprint!,
                     createOpdsClient: widget.createOpdsClient!,
                     importService: widget.importService,
+                    isEinkMode: widget.isEinkMode,
                   ),
                 ),
               );
