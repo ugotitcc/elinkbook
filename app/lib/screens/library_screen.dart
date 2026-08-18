@@ -684,6 +684,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   builder: (context) => RemoteServerListScreen(
                     repository: widget.remoteServerRepository!,
                     createOpdsClient: widget.createOpdsClient!,
+                    importService: widget.importService,
                   ),
                 ),
               );
