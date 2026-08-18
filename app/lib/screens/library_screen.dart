@@ -855,7 +855,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
             icon: const Icon(Icons.cloud_outlined),
             tooltip: '遠端書庫',
             onPressed: () {
-              Navigator.of(context).push(
+              Navigator.of(context)
+                  .push(
                 MaterialPageRoute(
                   builder: (context) => RemoteServerListScreen(
                     repository: widget.remoteServerRepository!,
@@ -867,7 +868,11 @@ class _LibraryScreenState extends State<LibraryScreen> {
                     isEinkMode: widget.isEinkMode,
                   ),
                 ),
-              );
+              )
+                  .then((_) {
+                // 從遠端書庫返回時重新載入書架，確保新下載的書籍出現。
+                if (mounted) _loadBooks();
+              });
             },
           ),
         IconButton(

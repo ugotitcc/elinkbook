@@ -25,15 +25,24 @@ class OpdsFeedParser {
 
     String? nextUrl;
     String? prevUrl;
+    final navigationLinks = <OpdsNavigationLink>[];
     for (final link in feed.findElements('link')) {
       final rel = link.getAttribute('rel');
       final href = link.getAttribute('href');
       if (href == null) continue;
       if (rel == 'next') nextUrl = _resolve(feedUri, href);
       if (rel == 'previous' || rel == 'prev') prevUrl = _resolve(feedUri, href);
+      // Calibre 等伺服器的根 OPDS feed 會把分類導覽連結直接放在
+      // <feed> 根層級的 <link rel="subsection"> 裡（而非 <entry> 內）。
+      if (rel == 'subsection') {
+        final title = link.getAttribute('title') ?? '未命名分類';
+        navigationLinks.add(OpdsNavigationLink(
+          title: title,
+          href: _resolve(feedUri, href),
+        ));
+      }
     }
 
-    final navigationLinks = <OpdsNavigationLink>[];
     final entries = <OpdsEntry>[];
 
     for (final entry in feed.findElements('entry')) {
@@ -48,13 +57,17 @@ class OpdsFeedParser {
         continue;
       }
 
+      // 導覽分類連結：優先找 rel="subsection"，若無則取第一個有 href 的
+      // <link>（Calibre 的分類 <entry> 不帶 rel 屬性）。
       final subsectionLink =
           _firstWhereOrNull(entryLinks, (l) => l.getAttribute('rel') == 'subsection');
-      final subsectionHref = subsectionLink?.getAttribute('href');
-      if (subsectionHref != null) {
+      final navLink = subsectionLink ??
+          _firstWhereOrNull(entryLinks, (l) => l.getAttribute('href') != null);
+      final navHref = navLink?.getAttribute('href');
+      if (navHref != null) {
         navigationLinks.add(OpdsNavigationLink(
           title: _firstText(entry, 'title') ?? '未命名分類',
-          href: _resolve(feedUri, subsectionHref),
+          href: _resolve(feedUri, navHref),
         ));
       }
     }

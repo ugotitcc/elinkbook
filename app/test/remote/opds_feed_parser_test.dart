@@ -165,6 +165,53 @@ void main() {
     expect(book.acquisitions.single.sizeBytes, isNull);
   });
 
+  test('根層級 <link rel="subsection"> 被歸類到 navigationLinks（Calibre 模式）', () {
+    // Calibre Content Server 的根 OPDS feed 不用 <entry> 包分類，
+    // 而是在 <feed> 根層級放 <link rel="subsection"> 連結。
+    const xml = '''<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xmlns:opds="http://opds-spec.org/2010/catalog">
+  <title>calibre 書庫</title>
+  <link rel="subsection" href="/opds?library_id=Lib" title="書本在您的書庫"/>
+  <link rel="subsection" href="/opds?library_id=Lib&amp;sort=authors" title="依作者"/>
+  <link rel="search" title="Search" href="/opds/search/{searchTerms}?library_id=Lib"/>
+</feed>''';
+    final feed = parser.parse(xml, feedUri);
+    expect(feed.navigationLinks, hasLength(2));
+    expect(feed.navigationLinks[0].title, '書本在您的書庫');
+    expect(feed.navigationLinks[0].href, contains('/opds?library_id=Lib'));
+    expect(feed.navigationLinks[1].title, '依作者');
+    expect(feed.entries, isEmpty);
+  });
+
+  test('Calibre 分類 entry 的 link 不帶 rel 時仍正確解析為導覽連結', () {
+    // Calibre Content Server 的分類 <entry> 的 <link> 不帶 rel 屬性，
+    // 只有 href + type。Parser 應退回取第一個有 href 的 link。
+    const xml = '''<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>calibre 書庫</title>
+  <entry>
+    <title>由 最新</title>
+    <id>calibre-navcatalog:abc</id>
+    <content type="text">書本排序依 日期</content>
+    <link href="/opds/navcatalog/newest?library_id=Library"
+          type="application/atom+xml;type=feed;profile=opds-catalog;kind=navigation"/>
+  </entry>
+  <entry>
+    <title>由 書名</title>
+    <id>calibre-navcatalog:def</id>
+    <content type="text">書本排序依 書名</content>
+    <link href="/opds/navcatalog/title?library_id=Library"
+          type="application/atom+xml;type=feed;profile=opds-catalog;kind=navigation"/>
+  </entry>
+</feed>''';
+    final feed = parser.parse(xml, feedUri);
+    expect(feed.navigationLinks, hasLength(2));
+    expect(feed.navigationLinks[0].title, '由 最新');
+    expect(feed.navigationLinks[0].href, contains('/opds/navcatalog/newest'));
+    expect(feed.navigationLinks[1].title, '由 書名');
+    expect(feed.entries, isEmpty);
+  });
+
   test('沒有 next 連結時 nextUrl 為 null', () {
     const xml = '''<?xml version="1.0"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
