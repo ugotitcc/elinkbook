@@ -3169,6 +3169,7 @@ void main() {
           prefsManager: FakeReaderPrefsManager(),
           remoteServerRepository: FakeRemoteServerRepository(),
           createOpdsClient: () => FakeOpdsClient(),
+          computeFingerprint: (path, format) async => 'test-fingerprint',
         ),
       ));
       await tester.pumpAndSettle();

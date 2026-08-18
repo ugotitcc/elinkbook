@@ -21,6 +21,14 @@ class FakeLibraryRepository implements LibraryRepository {
 
   final bool throwOnListBooks;
 
+  /// 供測試模擬 [findByRemoteBookId] 拋出例外（例如暫時性 SQLite 錯誤），
+  /// 驗證呼叫端的錯誤處理（epic-30-calibre-remote-library Issue 3，
+  /// `reviews/review-issue-3.md` Important 採納）。刻意為可變欄位、非
+  /// [throwOnListBooks] 那樣的建構參數——呼叫端透過 cascade（`..`）在
+  /// 建構後才設定，用法比照 `test/support/fake_remote_server_repository.dart`
+  /// 的 `deleteServerError`／`saveServerError` 既有慣例。
+  bool throwOnFindByRemoteBookId = false;
+
   /// 供測試控制 [detectAndCacheEpubLayout] 的模擬回傳值（比照本檔案「假
   /// 實作」定位——真實的 method channel 呼叫只發生在
   /// `SqliteLibraryRepository`，這裡不觸及任何原生端）。
@@ -152,6 +160,9 @@ class FakeLibraryRepository implements LibraryRepository {
 
   @override
   Future<Book?> findByRemoteBookId(String serverId, String remoteBookId) async {
+    if (throwOnFindByRemoteBookId) {
+      throw Exception('模擬 findByRemoteBookId 查詢失敗');
+    }
     for (final book in _books) {
       if (book.remoteServerId == serverId && book.remoteBookId == remoteBookId) {
         return book;

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pdfrx/pdfrx.dart';
 
+import 'library/book_content_fingerprint.dart';
 import 'library/book_import_service.dart';
 import 'library/book_import_service_impl.dart';
 import 'library/library_repository.dart';
@@ -110,6 +111,7 @@ Future<void> main() async {
       syncCheckpointTrigger: syncCheckpointTrigger,
       remoteServerRepository: remoteServerRepository,
       createOpdsClient: () => OpdsHttpClient(),
+      computeFingerprint: computeBookContentFingerprint,
       navigatorKey: navigatorKey,
       initialTheme: initialTheme,
       initialEinkMode: initialEinkMode,
@@ -135,6 +137,7 @@ class ElinkBookApp extends StatefulWidget {
   final SyncCheckpointTrigger? syncCheckpointTrigger;
   final RemoteServerRepository? remoteServerRepository;
   final OpdsClient Function()? createOpdsClient;
+  final ComputeRemoteFingerprint? computeFingerprint;
   final GlobalKey<NavigatorState>? navigatorKey;
   final AppThemePreferences themePreferences;
   final AppTheme initialTheme;
@@ -156,6 +159,7 @@ class ElinkBookApp extends StatefulWidget {
     this.syncCheckpointTrigger,
     this.remoteServerRepository,
     this.createOpdsClient,
+    this.computeFingerprint,
     this.navigatorKey,
     this.initialTheme = AppTheme.light,
     this.initialEinkMode = false,
@@ -232,6 +236,7 @@ class _ElinkBookAppState extends State<ElinkBookApp> with WidgetsBindingObserver
         syncCheckpointTrigger: widget.syncCheckpointTrigger,
         remoteServerRepository: widget.remoteServerRepository,
         createOpdsClient: widget.createOpdsClient,
+        computeFingerprint: widget.computeFingerprint,
         currentTheme: _theme,
         isEinkMode: _isEinkMode,
         onThemeChanged: _handleThemeChanged,

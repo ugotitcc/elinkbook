@@ -5,7 +5,9 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 
+import '../library/book_content_fingerprint.dart';
 import '../library/book_import_service.dart';
+import '../library/library_repository.dart';
 import '../library/models/library_enums.dart';
 import '../remote/opds_client.dart';
 import '../remote/opds_types.dart';
@@ -30,6 +32,8 @@ import 'format_selection_dialog.dart';
 class RemoteCatalogScreen extends StatefulWidget {
   final RemoteServerProfile server;
   final RemoteServerRepository repository;
+  final LibraryRepository libraryRepository;
+  final ComputeRemoteFingerprint computeFingerprint;
   final OpdsClient Function() createOpdsClient;
   final BookImportService importService;
 
@@ -44,6 +48,8 @@ class RemoteCatalogScreen extends StatefulWidget {
     super.key,
     required this.server,
     required this.repository,
+    required this.libraryRepository,
+    required this.computeFingerprint,
     required this.createOpdsClient,
     required this.importService,
     this.feedUrl,
@@ -63,6 +69,10 @@ class _RemoteCatalogScreenState extends State<RemoteCatalogScreen> {
   String? _nextUrl;
   bool _loadingMore = false;
   final Set<String> _selectedRemoteBookIds = {};
+  // 〔審查 review-issue-3.md Minor 採納〕快速連續點擊同一個尚未勾選的
+  // 書目時，避免兩次 findByRemoteBookId() 查詢並行、各自可能彈出一次
+  // 重複提示——查詢期間先記錄該 remoteBookId，重入的點擊直接忽略。
+  final Set<String> _pendingDuplicateChecks = {};
   String? _password;
 
   @override
@@ -132,6 +142,8 @@ class _RemoteCatalogScreenState extends State<RemoteCatalogScreen> {
       builder: (context) => RemoteCatalogScreen(
         server: widget.server,
         repository: widget.repository,
+        libraryRepository: widget.libraryRepository,
+        computeFingerprint: widget.computeFingerprint,
         createOpdsClient: widget.createOpdsClient,
         importService: widget.importService,
         feedUrl: link.href,
@@ -140,15 +152,38 @@ class _RemoteCatalogScreenState extends State<RemoteCatalogScreen> {
     ));
   }
 
-  void _toggleSelection(OpdsEntry entry) {
+  Future<void> _toggleSelection(OpdsEntry entry) async {
     if (!_isSelectable(entry)) return;
-    setState(() {
-      if (_selectedRemoteBookIds.contains(entry.remoteBookId)) {
-        _selectedRemoteBookIds.remove(entry.remoteBookId);
-      } else {
-        _selectedRemoteBookIds.add(entry.remoteBookId);
-      }
-    });
+    if (_selectedRemoteBookIds.contains(entry.remoteBookId)) {
+      setState(() => _selectedRemoteBookIds.remove(entry.remoteBookId));
+      return;
+    }
+    if (_pendingDuplicateChecks.contains(entry.remoteBookId)) return;
+    _pendingDuplicateChecks.add(entry.remoteBookId);
+    // 〔審查 review-issue-3.md Important 採納〕findByRemoteBookId() 查詢
+    // 失敗（例如暫時性 SQLite 錯誤）時，不應該讓整個點擊動作靜默無反應
+    // ——退化為「視同沒有查到重複」直接放行勾選，比照本畫面對「重複」
+    // 本身的既有態度（偵測到也不強制阻擋，使用者仍可選擇建立新副本）。
+    var hasDuplicate = false;
+    try {
+      hasDuplicate =
+          await widget.libraryRepository.findByRemoteBookId(widget.server.id, entry.remoteBookId) !=
+              null;
+    } catch (_) {
+      hasDuplicate = false;
+    } finally {
+      _pendingDuplicateChecks.remove(entry.remoteBookId);
+    }
+    if (hasDuplicate) {
+      if (!mounted) return;
+      final proceed = await _showDuplicateConfirmDialog(
+        context,
+        '「${entry.title}」之前匯入過了，仍要建立新的一份嗎？',
+      );
+      if (!proceed) return;
+    }
+    if (!mounted) return;
+    setState(() => _selectedRemoteBookIds.add(entry.remoteBookId));
   }
 
   Future<void> _startDownload() async {
@@ -181,6 +216,8 @@ class _RemoteCatalogScreenState extends State<RemoteCatalogScreen> {
         server: widget.server,
         password: _password,
         importService: widget.importService,
+        libraryRepository: widget.libraryRepository,
+        computeFingerprint: widget.computeFingerprint,
       ),
     );
     if (!mounted) return;
@@ -331,7 +368,7 @@ class _DownloadQueueItem {
   _DownloadQueueItem({required this.entry, required this.acquisition});
 }
 
-enum _DownloadItemStatus { pending, downloading, done, failed, cancelled }
+enum _DownloadItemStatus { pending, downloading, checkingDuplicate, done, duplicateSkipped, failed, cancelled }
 
 /// 序列下載佇列對話框（epic-30-calibre-remote-library Issue 2，
 /// spec.md「批次下載為序列執行，非平行」）：一本下完才下一本，逐項顯示
@@ -345,6 +382,8 @@ class _DownloadQueueDialog extends StatefulWidget {
   final RemoteServerProfile server;
   final String? password;
   final BookImportService importService;
+  final LibraryRepository libraryRepository;
+  final ComputeRemoteFingerprint computeFingerprint;
 
   // 私有 widget、唯一呼叫端（_startDownload）不需要指定 key，故不接受
   // `key` 參數（比照 `flutter analyze` 對未使用的可選參數的既有規範）。
@@ -354,6 +393,8 @@ class _DownloadQueueDialog extends StatefulWidget {
     required this.server,
     required this.password,
     required this.importService,
+    required this.libraryRepository,
+    required this.computeFingerprint,
   });
 
   @override
@@ -425,6 +466,26 @@ class _DownloadQueueDialogState extends State<_DownloadQueueDialog> {
         password: widget.password,
         cancellationToken: token,
       );
+
+      if (!mounted) return;
+      setState(() => _statuses[index] = _DownloadItemStatus.checkingDuplicate);
+      final fingerprint = await widget.computeFingerprint(tempPath, item.acquisition.format!);
+      final existingByFingerprint =
+          await widget.libraryRepository.findByContentFingerprint(fingerprint);
+      if (existingByFingerprint != null) {
+        if (!mounted) return;
+        final proceed = await _showDuplicateConfirmDialog(
+          context,
+          '偵測到「${item.entry.title}」與本機已有的一本書內容相同，仍要建立新的一份嗎？',
+        );
+        if (!proceed) {
+          final leftover = File(tempPath);
+          if (await leftover.exists()) await leftover.delete();
+          if (!mounted) return;
+          setState(() => _statuses[index] = _DownloadItemStatus.duplicateSkipped);
+          return;
+        }
+      }
 
       final docsDir = await getApplicationDocumentsDirectory();
       final permanentDir = Directory(p.join(docsDir.path, 'remote_books'));
@@ -502,8 +563,12 @@ class _DownloadQueueDialogState extends State<_DownloadQueueDialog> {
         return '等待中';
       case _DownloadItemStatus.downloading:
         return '下載中';
+      case _DownloadItemStatus.checkingDuplicate:
+        return '比對重複中';
       case _DownloadItemStatus.done:
         return '完成';
+      case _DownloadItemStatus.duplicateSkipped:
+        return '重複已略過（未匯入）';
       case _DownloadItemStatus.failed:
         return '失敗';
       case _DownloadItemStatus.cancelled:
@@ -558,4 +623,32 @@ class _DownloadQueueDialogState extends State<_DownloadQueueDialog> {
       ],
     );
   }
+}
+
+/// 重複匯入確認彈窗（epic-30-calibre-remote-library Issue 3，spec.md
+/// 「重複匯入偵測」）：選檔前置（Layer 1）與下載後指紋比對（Layer 2）
+/// 兩層檢查共用同一個確認 UI，只有提示文字不同——精確比對命中不代表
+/// 強制阻擋，使用者可選擇仍要建立新副本。
+Future<bool> _showDuplicateConfirmDialog(BuildContext context, String message) async {
+  final result = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      key: const Key('remote_catalog_duplicate_dialog'),
+      title: const Text('重複的書籍'),
+      content: Text(message),
+      actions: [
+        TextButton(
+          key: const Key('remote_catalog_duplicate_dialog_cancel'),
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('取消'),
+        ),
+        TextButton(
+          key: const Key('remote_catalog_duplicate_dialog_confirm'),
+          onPressed: () => Navigator.of(context).pop(true),
+          child: const Text('仍要建立'),
+        ),
+      ],
+    ),
+  );
+  return result ?? false;
 }
