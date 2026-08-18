@@ -459,6 +459,33 @@ class _LibraryScreenState extends State<LibraryScreen> {
     await _loadBooks();
   }
 
+  /// 移除本機快取：對選取集合中所有 Calibre 來源且已下載的書籍，
+  /// 刪除實體檔案並標記 isDownloaded = false。保留 epubLocator / progress
+  /// / 書籤 / 劃線 / 備註等使用者資料。
+  Future<void> _removeLocalCacheForSelectedBooks() async {
+    final selectedIds = _selectedBookIds;
+    final books = _books;
+    if (selectedIds == null || selectedIds.isEmpty || books == null) return;
+    _exitSelectionMode();
+    for (final book in books) {
+      if (!selectedIds.contains(book.id)) continue;
+      if (book.source != BookSource.calibreOpds) continue;
+      if (!book.isDownloaded) continue;
+      // 比照 _deleteSelectedBooks() 既有慣例：用 try-catch 包住檔案系統
+      // 操作，用 deleteSync() 避免 fake zone 限制。
+      try {
+        if (File(book.filePath).existsSync()) {
+          File(book.filePath).deleteSync();
+        }
+      } catch (_) {
+        // 檔案刪除失敗時靜默略過——資料庫標記更新才是核心操作。
+      }
+      await widget.repository
+          .updateBook(book.copyWith(isDownloaded: false));
+    }
+    await _loadBooks();
+  }
+
   void _openBook(Book book) {
     Navigator.of(context)
         .push(
@@ -756,6 +783,12 @@ class _LibraryScreenState extends State<LibraryScreen> {
           icon: const Icon(Icons.delete),
           tooltip: '刪除',
           onPressed: count == 0 ? null : _deleteSelectedBooks,
+        ),
+        IconButton(
+          key: const Key('library_remove_local_cache_button'),
+          icon: const Icon(Icons.cloud_download),
+          tooltip: '移除本機快取',
+          onPressed: count == 0 ? null : _removeLocalCacheForSelectedBooks,
         ),
       ],
     );
