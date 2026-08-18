@@ -90,7 +90,6 @@ Future<void> main() async {
     isLoggedIn: syncAccountRepository.isLoggedIn,
     runCheckpoint: syncEngine.runCheckpoint,
   );
-  final opdsClient = OpdsHttpClient();
   final remoteServerRepository = SqliteRemoteServerRepository(
     database: repository.database,
     libraryRepository: repository,
@@ -110,7 +109,7 @@ Future<void> main() async {
       syncClient: syncClient,
       syncCheckpointTrigger: syncCheckpointTrigger,
       remoteServerRepository: remoteServerRepository,
-      opdsClient: opdsClient,
+      createOpdsClient: () => OpdsHttpClient(),
       navigatorKey: navigatorKey,
       initialTheme: initialTheme,
       initialEinkMode: initialEinkMode,
@@ -135,7 +134,7 @@ class ElinkBookApp extends StatefulWidget {
   final SyncClient? syncClient;
   final SyncCheckpointTrigger? syncCheckpointTrigger;
   final RemoteServerRepository? remoteServerRepository;
-  final OpdsClient? opdsClient;
+  final OpdsClient Function()? createOpdsClient;
   final GlobalKey<NavigatorState>? navigatorKey;
   final AppThemePreferences themePreferences;
   final AppTheme initialTheme;
@@ -156,7 +155,7 @@ class ElinkBookApp extends StatefulWidget {
     this.syncClient,
     this.syncCheckpointTrigger,
     this.remoteServerRepository,
-    this.opdsClient,
+    this.createOpdsClient,
     this.navigatorKey,
     this.initialTheme = AppTheme.light,
     this.initialEinkMode = false,
@@ -232,7 +231,7 @@ class _ElinkBookAppState extends State<ElinkBookApp> with WidgetsBindingObserver
         syncClient: widget.syncClient,
         syncCheckpointTrigger: widget.syncCheckpointTrigger,
         remoteServerRepository: widget.remoteServerRepository,
-        opdsClient: widget.opdsClient,
+        createOpdsClient: widget.createOpdsClient,
         currentTheme: _theme,
         isEinkMode: _isEinkMode,
         onThemeChanged: _handleThemeChanged,

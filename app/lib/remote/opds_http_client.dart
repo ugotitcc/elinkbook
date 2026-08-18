@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:http/http.dart' as http;
@@ -39,12 +38,6 @@ class OpdsHttpClient implements OpdsClient {
     return IOClient(rawClient);
   }
 
-  Map<String, String> _authHeaders(RemoteServerProfile server, String? password) {
-    if (server.username == null) return {};
-    final credentials = base64Encode(utf8.encode('${server.username}:${password ?? ''}'));
-    return {'Authorization': 'Basic $credentials'};
-  }
-
   @override
   Future<bool> testConnection(RemoteServerProfile server, {String? password}) async {
     try {
@@ -66,7 +59,7 @@ class OpdsHttpClient implements OpdsClient {
     final client = _clientFor(server);
     try {
       final response = await client
-          .get(Uri.parse(url), headers: _authHeaders(server, password))
+          .get(Uri.parse(url), headers: buildOpdsAuthHeaders(server, password))
           .timeout(_timeout);
       if (response.statusCode < 200 || response.statusCode >= 300) {
         throw HttpException('OPDS 伺服器回應 ${response.statusCode}', uri: Uri.parse(url));
@@ -101,7 +94,7 @@ class OpdsHttpClient implements OpdsClient {
     final client = _clientFor(server);
     try {
       final request = http.Request('GET', Uri.parse(acquisition.href))
-        ..headers.addAll(_authHeaders(server, password));
+        ..headers.addAll(buildOpdsAuthHeaders(server, password));
       final streamedResponse = await client.send(request).timeout(_timeout);
       if (streamedResponse.statusCode < 200 || streamedResponse.statusCode >= 300) {
         throw HttpException(

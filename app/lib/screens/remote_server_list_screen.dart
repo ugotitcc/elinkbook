@@ -10,12 +10,12 @@ import 'remote_server_form_screen.dart';
 /// 若該站點仍有僅雲端紀錄（尚未下載）的書籍會被拒絕並顯示示警清單。
 class RemoteServerListScreen extends StatefulWidget {
   final RemoteServerRepository repository;
-  final OpdsClient opdsClient;
+  final OpdsClient Function() createOpdsClient;
 
   const RemoteServerListScreen({
     super.key,
     required this.repository,
-    required this.opdsClient,
+    required this.createOpdsClient,
   });
 
   @override
@@ -47,7 +47,7 @@ class _RemoteServerListScreenState extends State<RemoteServerListScreen> {
       MaterialPageRoute(
         builder: (context) => RemoteServerFormScreen(
           repository: widget.repository,
-          opdsClient: widget.opdsClient,
+          createOpdsClient: widget.createOpdsClient,
         ),
       ),
     );
@@ -59,7 +59,7 @@ class _RemoteServerListScreenState extends State<RemoteServerListScreen> {
       MaterialPageRoute(
         builder: (context) => RemoteServerFormScreen(
           repository: widget.repository,
-          opdsClient: widget.opdsClient,
+          createOpdsClient: widget.createOpdsClient,
           existingProfile: profile,
         ),
       ),

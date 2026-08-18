@@ -41,7 +41,7 @@ void main() {
     await tester.pumpWidget(MaterialApp(
       home: RemoteServerListScreen(
         repository: repository,
-        opdsClient: FakeOpdsClient(),
+        createOpdsClient: () => FakeOpdsClient(),
       ),
     ));
     await tester.pumpAndSettle();

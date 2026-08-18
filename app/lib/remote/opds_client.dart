@@ -1,7 +1,26 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'opds_types.dart';
 import 'remote_server_profile.dart';
+
+/// 依 [server.username]／[password] 組出 HTTP Basic Auth header；
+/// [server.username] 為 `null` 或空白字串（匿名連線）時回傳空 map（不帶
+/// `Authorization` header）。`OpdsHttpClient` 內部呼叫用於
+/// `fetchFeed`/`downloadBook`，畫面層（`RemoteCatalogScreen`）呼叫用於
+/// 縮圖 `Image.network` 的授權 header——兩處共用同一份邏輯，避免各自
+/// 重寫一份 base64 編碼判斷（spec.md「認證與縮圖」：縮圖載入需要帶與
+/// 目錄/下載相同的 Authorization header 才能存取）。**〔`review-plan-issue-2.md`
+/// Finding 1 採納〕** `RemoteServerFormScreen._buildProfile()` 目前雖然
+/// 已把空白字串正規化為 `null`（見 Issue 1），但這個函式是共用工具，
+/// 不應該依賴唯一目前存在的呼叫端幫忙做過這層正規化，多一層防禦成本
+/// 極低。
+Map<String, String> buildOpdsAuthHeaders(RemoteServerProfile server, String? password) {
+  final username = server.username?.trim();
+  if (username == null || username.isEmpty) return {};
+  final credentials = base64Encode(utf8.encode('$username:${password ?? ''}'));
+  return {'Authorization': 'Basic $credentials'};
+}
 
 /// 下載中途取消的輕量信號（epic-30-calibre-remote-library Issue 1，
 /// spec.md「OPDS 瀏覽與下載」）：本專案僅有 `http` 套件、無 `dio`，故不
