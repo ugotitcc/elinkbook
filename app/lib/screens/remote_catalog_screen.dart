@@ -5,6 +5,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 
+import '../library/book_content_fingerprint.dart';
 import '../library/book_import_service.dart';
 import '../library/library_repository.dart';
 import '../library/models/library_enums.dart';
@@ -32,6 +33,7 @@ class RemoteCatalogScreen extends StatefulWidget {
   final RemoteServerProfile server;
   final RemoteServerRepository repository;
   final LibraryRepository libraryRepository;
+  final ComputeRemoteFingerprint computeFingerprint;
   final OpdsClient Function() createOpdsClient;
   final BookImportService importService;
 
@@ -47,6 +49,7 @@ class RemoteCatalogScreen extends StatefulWidget {
     required this.server,
     required this.repository,
     required this.libraryRepository,
+    required this.computeFingerprint,
     required this.createOpdsClient,
     required this.importService,
     this.feedUrl,
@@ -136,6 +139,7 @@ class _RemoteCatalogScreenState extends State<RemoteCatalogScreen> {
         server: widget.server,
         repository: widget.repository,
         libraryRepository: widget.libraryRepository,
+        computeFingerprint: widget.computeFingerprint,
         createOpdsClient: widget.createOpdsClient,
         importService: widget.importService,
         feedUrl: link.href,
@@ -194,6 +198,8 @@ class _RemoteCatalogScreenState extends State<RemoteCatalogScreen> {
         server: widget.server,
         password: _password,
         importService: widget.importService,
+        libraryRepository: widget.libraryRepository,
+        computeFingerprint: widget.computeFingerprint,
       ),
     );
     if (!mounted) return;
@@ -344,7 +350,7 @@ class _DownloadQueueItem {
   _DownloadQueueItem({required this.entry, required this.acquisition});
 }
 
-enum _DownloadItemStatus { pending, downloading, done, failed, cancelled }
+enum _DownloadItemStatus { pending, downloading, checkingDuplicate, done, duplicateSkipped, failed, cancelled }
 
 /// 序列下載佇列對話框（epic-30-calibre-remote-library Issue 2，
 /// spec.md「批次下載為序列執行，非平行」）：一本下完才下一本，逐項顯示
@@ -358,6 +364,8 @@ class _DownloadQueueDialog extends StatefulWidget {
   final RemoteServerProfile server;
   final String? password;
   final BookImportService importService;
+  final LibraryRepository libraryRepository;
+  final ComputeRemoteFingerprint computeFingerprint;
 
   // 私有 widget、唯一呼叫端（_startDownload）不需要指定 key，故不接受
   // `key` 參數（比照 `flutter analyze` 對未使用的可選參數的既有規範）。
@@ -367,6 +375,8 @@ class _DownloadQueueDialog extends StatefulWidget {
     required this.server,
     required this.password,
     required this.importService,
+    required this.libraryRepository,
+    required this.computeFingerprint,
   });
 
   @override
@@ -438,6 +448,25 @@ class _DownloadQueueDialogState extends State<_DownloadQueueDialog> {
         password: widget.password,
         cancellationToken: token,
       );
+
+      if (!mounted) return;
+      setState(() => _statuses[index] = _DownloadItemStatus.checkingDuplicate);
+      final fingerprint = await widget.computeFingerprint(tempPath, item.acquisition.format!);
+      final existingByFingerprint = await widget.libraryRepository.findByContentFingerprint(fingerprint);
+      if (existingByFingerprint != null) {
+        if (!mounted) return;
+        final proceed = await _showDuplicateConfirmDialog(
+          context,
+          '偵測到「${item.entry.title}」與本機已有的一本書內容相同，仍要建立新的一份嗎？',
+        );
+        if (!proceed) {
+          final leftover = File(tempPath);
+          if (await leftover.exists()) await leftover.delete();
+          if (!mounted) return;
+          setState(() => _statuses[index] = _DownloadItemStatus.duplicateSkipped);
+          return;
+        }
+      }
 
       final docsDir = await getApplicationDocumentsDirectory();
       final permanentDir = Directory(p.join(docsDir.path, 'remote_books'));
@@ -515,8 +544,12 @@ class _DownloadQueueDialogState extends State<_DownloadQueueDialog> {
         return '等待中';
       case _DownloadItemStatus.downloading:
         return '下載中';
+      case _DownloadItemStatus.checkingDuplicate:
+        return '比對重複中';
       case _DownloadItemStatus.done:
         return '完成';
+      case _DownloadItemStatus.duplicateSkipped:
+        return '重複已略過（未匯入）';
       case _DownloadItemStatus.failed:
         return '失敗';
       case _DownloadItemStatus.cancelled:

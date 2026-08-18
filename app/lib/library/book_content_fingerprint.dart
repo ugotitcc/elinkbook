@@ -6,6 +6,20 @@ import 'package:crypto/crypto.dart';
 import 'library_repository.dart';
 import 'models/library_enums.dart';
 
+/// 內容指紋計算函式型別（epic-30-calibre-remote-library Issue 3，
+/// spec.md「重複匯入偵測」第二層檢查）：`RemoteCatalogScreen` 的下載佇列
+/// 透過這個型別注入 [computeBookContentFingerprint]，而不直接呼叫該
+/// 函式——該函式對非 `content://` 路徑內部使用 `Isolate.run()`，這與
+/// `testWidgets()` 的假時間測試環境不相容（epic-30 Issue 2
+/// `reviews/review-issue-2.md` 已確認此組合會卡死至 10 分鐘逾時，
+/// `tester.runAsync()` 亦無法解決），widget test 需要能替換成不觸碰
+/// Isolate 的假函式，比照 `OpdsClient Function() createOpdsClient`
+/// 既有的工廠函式注入先例。
+typedef ComputeRemoteFingerprint = Future<String> Function(
+  String filePath,
+  BookFileFormat format,
+);
+
 /// 計算書籍內容指紋（epic-8-sync Issue 3，spec.md「書籍內容指紋計算」／
 /// 「跨裝置參照設計」）：供跨裝置比對「這是不是同一本書」使用，寫入
 /// `books.content_fingerprint`。EPUB 優先採用 OPF identifier（由呼叫端

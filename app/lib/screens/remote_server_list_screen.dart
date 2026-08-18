@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../library/book_content_fingerprint.dart';
 import '../library/book_import_service.dart';
 import '../library/library_repository.dart';
 import '../remote/opds_client.dart';
@@ -14,6 +15,7 @@ import 'remote_server_form_screen.dart';
 class RemoteServerListScreen extends StatefulWidget {
   final RemoteServerRepository repository;
   final LibraryRepository libraryRepository;
+  final ComputeRemoteFingerprint computeFingerprint;
   final OpdsClient Function() createOpdsClient;
   final BookImportService importService;
 
@@ -21,6 +23,7 @@ class RemoteServerListScreen extends StatefulWidget {
     super.key,
     required this.repository,
     required this.libraryRepository,
+    required this.computeFingerprint,
     required this.createOpdsClient,
     required this.importService,
   });
@@ -80,6 +83,7 @@ class _RemoteServerListScreenState extends State<RemoteServerListScreen> {
         server: profile,
         repository: widget.repository,
         libraryRepository: widget.libraryRepository,
+        computeFingerprint: widget.computeFingerprint,
         createOpdsClient: widget.createOpdsClient,
         importService: widget.importService,
       ),

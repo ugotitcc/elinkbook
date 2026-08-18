@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path/path.dart' as p;
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
@@ -11,6 +12,7 @@ import 'package:elinkbook/remote/opds_types.dart';
 import 'package:elinkbook/screens/remote_catalog_screen.dart';
 
 import '../support/fake_book_import_service.dart';
+import '../support/fake_fingerprint_computer.dart';
 import '../support/fake_library_repository.dart';
 import '../support/fake_opds_client.dart';
 import '../support/fake_remote_server_repository.dart';
@@ -44,7 +46,7 @@ void main() {
     ],
   );
 
-  Book _fakeBookMatchingRemote({
+  Book fakeBookMatchingRemote({
     required String id,
     required String remoteServerId,
     required String remoteBookId,
@@ -62,7 +64,7 @@ void main() {
     );
   }
 
-  Book _fakeBookWithFingerprint(String id, String fingerprint) {
+  Book fakeBookWithFingerprint(String id, String fingerprint) {
     return Book(
       id: id,
       title: '本機已有的書',
@@ -80,6 +82,7 @@ void main() {
     required FakeOpdsClient opdsClient,
     FakeRemoteServerRepository? repository,
     FakeLibraryRepository? libraryRepository,
+    FakeFingerprintComputer? fingerprintComputer,
     String? feedUrl,
   }) async {
     await tester.pumpWidget(MaterialApp(
@@ -87,6 +90,7 @@ void main() {
         server: server,
         repository: repository ?? FakeRemoteServerRepository(),
         libraryRepository: libraryRepository ?? FakeLibraryRepository(),
+        computeFingerprint: (fingerprintComputer ?? FakeFingerprintComputer()).call,
         createOpdsClient: () => opdsClient,
         importService: FakeBookImportService(),
         feedUrl: feedUrl,
@@ -221,7 +225,7 @@ void main() {
         server.baseUrl: const OpdsFeed(title: '根目錄', entries: [entry1]),
       });
       final libraryRepository = FakeLibraryRepository(initialBooks: [
-        _fakeBookMatchingRemote(id: 'local-1', remoteServerId: 'srv1', remoteBookId: 'book-1'),
+        fakeBookMatchingRemote(id: 'local-1', remoteServerId: 'srv1', remoteBookId: 'book-1'),
       ]);
       await pumpScreen(tester, opdsClient: opdsClient, libraryRepository: libraryRepository);
 
@@ -240,7 +244,7 @@ void main() {
         server.baseUrl: const OpdsFeed(title: '根目錄', entries: [entry1]),
       });
       final libraryRepository = FakeLibraryRepository(initialBooks: [
-        _fakeBookMatchingRemote(id: 'local-1', remoteServerId: 'srv1', remoteBookId: 'book-1'),
+        fakeBookMatchingRemote(id: 'local-1', remoteServerId: 'srv1', remoteBookId: 'book-1'),
       ]);
       await pumpScreen(tester, opdsClient: opdsClient, libraryRepository: libraryRepository);
 
@@ -294,6 +298,7 @@ void main() {
           server: server,
           repository: FakeRemoteServerRepository(),
           libraryRepository: FakeLibraryRepository(),
+          computeFingerprint: (path, format) async => 'unused-fingerprint',
           createOpdsClient: () => opdsClient,
           importService: importService,
         ),
@@ -340,6 +345,7 @@ void main() {
           server: server,
           repository: FakeRemoteServerRepository(),
           libraryRepository: FakeLibraryRepository(),
+          computeFingerprint: (path, format) async => 'unused-fingerprint',
           createOpdsClient: () => opdsClient,
           importService: FakeBookImportService(),
         ),
@@ -384,6 +390,7 @@ void main() {
           server: server,
           repository: FakeRemoteServerRepository(),
           libraryRepository: FakeLibraryRepository(),
+          computeFingerprint: (path, format) async => 'unused-fingerprint',
           createOpdsClient: () => opdsClient,
           importService: FakeBookImportService(),
         ),
@@ -419,6 +426,7 @@ void main() {
           server: server,
           repository: FakeRemoteServerRepository(),
           libraryRepository: FakeLibraryRepository(),
+          computeFingerprint: (path, format) async => 'unused-fingerprint',
           createOpdsClient: () => opdsClient,
           importService: FakeBookImportService(),
         ),
@@ -457,6 +465,7 @@ void main() {
           server: server,
           repository: FakeRemoteServerRepository(),
           libraryRepository: FakeLibraryRepository(),
+          computeFingerprint: (path, format) async => 'unused-fingerprint',
           createOpdsClient: () => opdsClient,
           importService: FakeBookImportService(),
         ),
@@ -495,6 +504,7 @@ void main() {
           server: server,
           repository: FakeRemoteServerRepository(),
           libraryRepository: FakeLibraryRepository(),
+          computeFingerprint: (path, format) async => 'unused-fingerprint',
           createOpdsClient: () => opdsClient,
           importService: importService,
         ),
@@ -526,6 +536,137 @@ void main() {
 
       // 驗證 OPDS client 被正確呼叫
       expect(opdsClient.downloadBookCalls, ['http://192.168.1.100:8080/opds/download/1.epub']);
+    });
+
+    group('下載後指紋比對（Layer 2）', () {
+      testWidgets('下載後偵測到與本機書籍內容指紋相同時彈出提示，選擇不建立新副本則刪除暫存檔並標記為略過',
+          (tester) async {
+        final opdsClient = FakeOpdsClient(feeds: {
+          server.baseUrl: const OpdsFeed(title: '根目錄', entries: [entry1]),
+        });
+        final libraryRepository = FakeLibraryRepository(initialBooks: [
+          fakeBookWithFingerprint('local-1', 'dup-fingerprint'),
+        ]);
+        final fingerprintComputer = FakeFingerprintComputer()..nextFingerprint = 'dup-fingerprint';
+        final importService = FakeBookImportService();
+        await tester.pumpWidget(MaterialApp(
+          home: RemoteCatalogScreen(
+            server: server,
+            repository: FakeRemoteServerRepository(),
+            libraryRepository: libraryRepository,
+            computeFingerprint: fingerprintComputer.call,
+            createOpdsClient: () => opdsClient,
+            importService: importService,
+          ),
+        ));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byKey(const Key('remote_catalog_entry_book-1')));
+        await tester.pump();
+        await tester.tap(find.byKey(const Key('remote_catalog_download_button')));
+        await tester.pump();
+
+        for (var i = 0; i < 30; i++) {
+          await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+          await tester.pump();
+          if (find.byKey(const Key('remote_catalog_duplicate_dialog')).evaluate().isNotEmpty) break;
+        }
+
+        expect(find.byKey(const Key('remote_catalog_duplicate_dialog')), findsOneWidget);
+        await tester.tap(find.byKey(const Key('remote_catalog_duplicate_dialog_cancel')));
+        await tester.pump();
+
+        for (var i = 0; i < 30; i++) {
+          await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+          await tester.pump();
+        }
+        await tester.pumpAndSettle();
+
+        expect(find.text('重複已略過（未匯入）'), findsOneWidget);
+        expect(importService.lastImportCall, isNull);
+        expect(
+          Directory(p.join(tempRoot.path, 'remote_download_temp')).listSync(),
+          isEmpty,
+        );
+      });
+
+      testWidgets('下載後偵測到重複時選擇仍要建立新副本，正常完成匯入', (tester) async {
+        final opdsClient = FakeOpdsClient(feeds: {
+          server.baseUrl: const OpdsFeed(title: '根目錄', entries: [entry1]),
+        });
+        final libraryRepository = FakeLibraryRepository(initialBooks: [
+          fakeBookWithFingerprint('local-1', 'dup-fingerprint'),
+        ]);
+        final fingerprintComputer = FakeFingerprintComputer()..nextFingerprint = 'dup-fingerprint';
+        final importService = FakeBookImportService();
+        await tester.pumpWidget(MaterialApp(
+          home: RemoteCatalogScreen(
+            server: server,
+            repository: FakeRemoteServerRepository(),
+            libraryRepository: libraryRepository,
+            computeFingerprint: fingerprintComputer.call,
+            createOpdsClient: () => opdsClient,
+            importService: importService,
+          ),
+        ));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byKey(const Key('remote_catalog_entry_book-1')));
+        await tester.pump();
+        await tester.tap(find.byKey(const Key('remote_catalog_download_button')));
+        await tester.pump();
+
+        for (var i = 0; i < 30; i++) {
+          await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+          await tester.pump();
+          if (find.byKey(const Key('remote_catalog_duplicate_dialog')).evaluate().isNotEmpty) break;
+        }
+
+        await tester.tap(find.byKey(const Key('remote_catalog_duplicate_dialog_confirm')));
+        await tester.pump();
+
+        for (var i = 0; i < 30; i++) {
+          await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+          await tester.pump();
+        }
+        await tester.pumpAndSettle();
+
+        expect(find.text('完成'), findsWidgets);
+        expect(importService.lastImportCall, isNotNull);
+      });
+
+      testWidgets('下載後未偵測到重複時不彈出提示，直接完成', (tester) async {
+        final opdsClient = FakeOpdsClient(feeds: {
+          server.baseUrl: const OpdsFeed(title: '根目錄', entries: [entry1]),
+        });
+        final importService = FakeBookImportService();
+        await tester.pumpWidget(MaterialApp(
+          home: RemoteCatalogScreen(
+            server: server,
+            repository: FakeRemoteServerRepository(),
+            libraryRepository: FakeLibraryRepository(),
+            computeFingerprint: FakeFingerprintComputer().call,
+            createOpdsClient: () => opdsClient,
+            importService: importService,
+          ),
+        ));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byKey(const Key('remote_catalog_entry_book-1')));
+        await tester.pump();
+        await tester.tap(find.byKey(const Key('remote_catalog_download_button')));
+        await tester.pump();
+
+        for (var i = 0; i < 30; i++) {
+          await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+          await tester.pump();
+        }
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(const Key('remote_catalog_duplicate_dialog')), findsNothing);
+        expect(find.text('完成'), findsWidgets);
+        expect(importService.lastImportCall, isNotNull);
+      });
     });
 
     // 〔審查 review-issue-2.md Important #1 核實後修正做法〕上面的
