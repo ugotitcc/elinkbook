@@ -60,7 +60,7 @@
 
 ## Issue 2：OPDS 目錄瀏覽＋批次下載＋匯入
 
-**Status:** `ready-for-agent`
+**Status:** ✅ 已完成並合併回 `main`（PR [#159](https://git.jigong.org/huthief/elinkBook/pulls/159)，分支 `epic-30-issue-2`，7 個 commit：5 個 Task 各自一個 commit＋1 個審查修訂 commit）。`/superpowers:writing-plans` 產出 `plans/plan-issue-2.md`，動工前先經 `/superpowers:receiving-code-review` 計畫審查（`reviews/review-plan-issue-2.md`，0 Critical／0 Important／3 Minor，已全數修訂：`buildOpdsAuthHeaders` 空白字串防禦、`FormatSelectionDialog` 的 `SingleChildScrollView`、下載中途失敗清暫存檔）；實作完成後再經獨立 subagent 程式審查（`reviews/review-issue-2.md`，APPROVED WITH FINDINGS，1 Important／2 Minor，已全數修訂：Task 4 原訂的「真實持久化」整合測試因 `computeBookContentFingerprint()` 對非 `content://` 路徑呼叫 `Isolate.run()` 與 `testWidgets()` 假時間環境根本不相容（兩次重現皆卡死至 10 分鐘逾時），改移至 `book_import_service_test.dart` 的 plain `test()` 補回等效驗證；類別文件對 `OpdsClient` 生命週期的錯誤描述、死碼移除）。全專案 `flutter test` 1514 項與 `flutter analyze` 零回歸通過。
 
 **依賴：** Issue 0（匯入管線）、Issue 1（`OpdsClient`／站點入口）。
 

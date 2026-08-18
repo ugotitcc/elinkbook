@@ -894,7 +894,7 @@ git commit -m "feat(epic-30): 新增 RemoteCatalogScreen 核心瀏覽（目錄�
 
 **下載檔案的暫存→永久位置搬移**：`OpdsClient.downloadBook()` 先寫入 `getTemporaryDirectory()/remote_download_temp/<uuid>.<ext>`；下載成功後複製到 `getApplicationDocumentsDirectory()/remote_books/<相同檔名>` 才刪除暫存檔——**這一步是必要的，不是可省略的講究**：`book_import_service_impl.dart` 的 `_importSingleFile()` 對非 `content://` 開頭的一般檔案路徑（我們下載下來的檔案就是這種）完全不會另外搬移或複製，`resolvedUri` 會直接沿用呼叫 `importFiles()` 時傳入的路徑當作永久 `filePath`；若傳入的是 OS 暫存/快取目錄下的路徑，這本書的檔案未來可能被系統回收清除，等同資料遺失。
 
-- [ ] **Step 1: 擴充 `FakeOpdsClient` 支援測試控制下載完成時機**
+- [x] **Step 1: 擴充 `FakeOpdsClient` 支援測試控制下載完成時機**
 
 修改 `app/test/support/fake_opds_client.dart`：在檔案開頭新增 `import 'dart:async';`；在 `downloadError` 欄位宣告之後新增：
 
@@ -935,7 +935,7 @@ git commit -m "feat(epic-30): 新增 RemoteCatalogScreen 核心瀏覽（目錄�
   }
 ```
 
-- [ ] **Step 2: 寫失敗測試**
+- [x] **Step 2: 寫失敗測試**
 
 在 `app/test/screens/remote_catalog_screen_test.dart` 檔案開頭新增 import：
 
@@ -1181,12 +1181,12 @@ import '../support/fake_path_provider_platform.dart';
   });
 ```
 
-- [ ] **Step 3: 執行測試確認失敗**
+- [x] **Step 3: 執行測試確認失敗**
 
 Run: `flutter test test/screens/remote_catalog_screen_test.dart`
 Expected: FAIL——AppBar 尚無下載按鈕、`_DownloadQueueDialog` 尚不存在。
 
-- [ ] **Step 4: 實作下載佇列與匯入邏輯**
+- [x] **Step 4: 實作下載佇列與匯入邏輯**
 
 修改 `app/lib/screens/remote_catalog_screen.dart`：
 
@@ -1497,17 +1497,17 @@ class _DownloadQueueDialogState extends State<_DownloadQueueDialog> {
 }
 ```
 
-- [ ] **Step 5: 執行測試確認全數通過**
+- [x] **Step 5: 執行測試確認全數通過**
 
 Run: `flutter test test/screens/remote_catalog_screen_test.dart`
 Expected: PASS，全部測試（Task 3 的 8 項＋本 Task 新增的 6 項）通過。
 
-- [ ] **Step 6: 執行全專案測試確認零回歸**
+- [x] **Step 6: 執行全專案測試確認零回歸**
 
 Run: `flutter analyze && flutter test`
 Expected: 乾淨、全數通過。
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app/lib/screens/remote_catalog_screen.dart app/test/screens/remote_catalog_screen_test.dart app/test/support/fake_opds_client.dart
@@ -1530,7 +1530,7 @@ git commit -m "feat(epic-30): RemoteCatalogScreen 下載佇列與 importFiles �
 
 **行為變更說明**：Issue 1 當時 `RemoteServerListScreen` 的站點列 `onTap` 導向編輯表單（因為瀏覽畫面還不存在）。本 Task 起改為導向 `RemoteCatalogScreen`，編輯改為只能透過列表項目的編輯圖示按鈕觸發（該按鈕在 Issue 1 就已存在、本 Task 不變動）。
 
-- [ ] **Step 1: 寫失敗測試**
+- [x] **Step 1: 寫失敗測試**
 
 在 `app/test/screens/remote_server_list_screen_test.dart` 新增 import：
 
@@ -1577,12 +1577,12 @@ import '../support/fake_book_import_service.dart';
   });
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/screens/remote_server_list_screen_test.dart`
 Expected: FAIL——`RemoteServerListScreen` 尚無 `importService` 參數；站點列點擊仍導向編輯表單。
 
-- [ ] **Step 3: 修改 `RemoteServerListScreen`**
+- [x] **Step 3: 修改 `RemoteServerListScreen`**
 
 修改 `app/lib/screens/remote_server_list_screen.dart`：
 
@@ -1624,12 +1624,12 @@ import 'remote_catalog_screen.dart';
                       onTap: () => _openCatalog(profile),
 ```
 
-- [ ] **Step 4: 執行測試確認 `RemoteServerListScreen` 測試通過**
+- [x] **Step 4: 執行測試確認 `RemoteServerListScreen` 測試通過**
 
 Run: `flutter test test/screens/remote_server_list_screen_test.dart`
 Expected: PASS，全數通過（含新增的 1 項）。
 
-- [ ] **Step 5: 接線 `LibraryScreen`／`main.dart`**
+- [x] **Step 5: 接線 `LibraryScreen`／`main.dart`**
 
 修改 `app/lib/screens/library_screen.dart`：找到 `RemoteServerListScreen(repository: widget.remoteServerRepository!, createOpdsClient: widget.createOpdsClient!,)` 這段建構呼叫（Issue 1 的遠端書庫進入點），新增一行：
 
@@ -1641,12 +1641,12 @@ Expected: PASS，全數通過（含新增的 1 項）。
 
 `main.dart` 不需要任何修改——`ElinkBookApp`／`LibraryScreen` 的 `importService` 早已存在於既有建構鏈中。
 
-- [ ] **Step 6: 執行全專案測試確認零回歸**
+- [x] **Step 6: 執行全專案測試確認零回歸**
 
 Run: `flutter analyze && flutter test`
 Expected: `flutter analyze` 乾淨；`flutter test` 全數通過，零回歸。
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app/lib/screens/remote_server_list_screen.dart app/lib/screens/library_screen.dart app/test/screens/remote_server_list_screen_test.dart
