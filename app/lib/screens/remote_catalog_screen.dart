@@ -69,6 +69,10 @@ class _RemoteCatalogScreenState extends State<RemoteCatalogScreen> {
   String? _nextUrl;
   bool _loadingMore = false;
   final Set<String> _selectedRemoteBookIds = {};
+  // 〔審查 review-issue-3.md Minor 採納〕快速連續點擊同一個尚未勾選的
+  // 書目時，避免兩次 findByRemoteBookId() 查詢並行、各自可能彈出一次
+  // 重複提示——查詢期間先記錄該 remoteBookId，重入的點擊直接忽略。
+  final Set<String> _pendingDuplicateChecks = {};
   String? _password;
 
   @override
@@ -154,9 +158,23 @@ class _RemoteCatalogScreenState extends State<RemoteCatalogScreen> {
       setState(() => _selectedRemoteBookIds.remove(entry.remoteBookId));
       return;
     }
-    final existing =
-        await widget.libraryRepository.findByRemoteBookId(widget.server.id, entry.remoteBookId);
-    if (existing != null) {
+    if (_pendingDuplicateChecks.contains(entry.remoteBookId)) return;
+    _pendingDuplicateChecks.add(entry.remoteBookId);
+    // 〔審查 review-issue-3.md Important 採納〕findByRemoteBookId() 查詢
+    // 失敗（例如暫時性 SQLite 錯誤）時，不應該讓整個點擊動作靜默無反應
+    // ——退化為「視同沒有查到重複」直接放行勾選，比照本畫面對「重複」
+    // 本身的既有態度（偵測到也不強制阻擋，使用者仍可選擇建立新副本）。
+    var hasDuplicate = false;
+    try {
+      hasDuplicate =
+          await widget.libraryRepository.findByRemoteBookId(widget.server.id, entry.remoteBookId) !=
+              null;
+    } catch (_) {
+      hasDuplicate = false;
+    } finally {
+      _pendingDuplicateChecks.remove(entry.remoteBookId);
+    }
+    if (hasDuplicate) {
       if (!mounted) return;
       final proceed = await _showDuplicateConfirmDialog(
         context,
@@ -452,7 +470,8 @@ class _DownloadQueueDialogState extends State<_DownloadQueueDialog> {
       if (!mounted) return;
       setState(() => _statuses[index] = _DownloadItemStatus.checkingDuplicate);
       final fingerprint = await widget.computeFingerprint(tempPath, item.acquisition.format!);
-      final existingByFingerprint = await widget.libraryRepository.findByContentFingerprint(fingerprint);
+      final existingByFingerprint =
+          await widget.libraryRepository.findByContentFingerprint(fingerprint);
       if (existingByFingerprint != null) {
         if (!mounted) return;
         final proceed = await _showDuplicateConfirmDialog(

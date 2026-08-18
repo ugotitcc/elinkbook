@@ -640,12 +640,13 @@ void main() {
           server.baseUrl: const OpdsFeed(title: '根目錄', entries: [entry1]),
         });
         final importService = FakeBookImportService();
+        final fingerprintComputer = FakeFingerprintComputer();
         await tester.pumpWidget(MaterialApp(
           home: RemoteCatalogScreen(
             server: server,
             repository: FakeRemoteServerRepository(),
             libraryRepository: FakeLibraryRepository(),
-            computeFingerprint: FakeFingerprintComputer().call,
+            computeFingerprint: fingerprintComputer.call,
             createOpdsClient: () => opdsClient,
             importService: importService,
           ),
@@ -666,6 +667,26 @@ void main() {
         expect(find.byKey(const Key('remote_catalog_duplicate_dialog')), findsNothing);
         expect(find.text('完成'), findsWidgets);
         expect(importService.lastImportCall, isNotNull);
+        // 〔審查 review-issue-3.md Minor 採納〕驗證指紋計算確實在下載成功
+        // 之後才被呼叫恰好一次，且傳入的是下載完成的暫存檔路徑。
+        expect(fingerprintComputer.calls, hasLength(1));
+        expect(fingerprintComputer.calls.single, isNotEmpty);
+      });
+    });
+
+    group('選檔前置重複偵測查詢失敗（Layer 1 錯誤處理，review-issue-3.md Important 採納）', () {
+      testWidgets('findByRemoteBookId 拋出例外時，視同沒有偵測到重複，直接勾選不中斷', (tester) async {
+        final opdsClient = FakeOpdsClient(feeds: {
+          server.baseUrl: const OpdsFeed(title: '根目錄', entries: [entry1]),
+        });
+        final libraryRepository = FakeLibraryRepository()..throwOnFindByRemoteBookId = true;
+        await pumpScreen(tester, opdsClient: opdsClient, libraryRepository: libraryRepository);
+
+        await tester.tap(find.byKey(const Key('remote_catalog_entry_book-1')));
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(const Key('remote_catalog_duplicate_dialog')), findsNothing);
+        expect(find.byKey(const Key('remote_catalog_checkbox_checked_book-1')), findsOneWidget);
       });
     });
 
