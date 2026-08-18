@@ -131,7 +131,7 @@
 
 ## Issue 5：E-Ink 優化與真機驗收
 
-**Status:** `ready-for-agent`
+**Status:** ✅ 已完成並合併回 `main`（PR #162，分支 `epic-30-issue-5`，5 個 commit，2026-08-19）
 
 **依賴：** Issue 2（目錄瀏覽畫面）。
 
@@ -149,3 +149,5 @@
 **驗收標準：** E-Ink 模式下瀏覽目錄不觸發連續捲動殘影；縮圖快取有效減少重複請求；真機端到端驗證完整流程無阻塞性問題，驗證結果記錄於審查報告；`flutter analyze` 乾淨、`flutter test` 通過。
 
 **Blocked by：** Issue 2。
+
+**完成摘要：** `isEinkMode` 貫穿 `RemoteServerListScreen`→`RemoteCatalogScreen`，E-Ink 模式下「載入更多」改為離散「上一頁／下一頁」整頁替換（`_goToPage()`），新增 `ScrollController` 於換頁後歸零捲動位置；新增 `RemoteThumbnailCache` 雙層快取（記憶體 LRU＋磁碟 SHA-256 檔名），抽出共用 `createOpdsHttpClient()`；`RemoteCatalogScreen._buildThumbnail()` 改用 `FutureBuilder`（優先檢查 `hasData` 避免閃爍）。真機驗證（Calibre Content Server）9 項情境全數通過，過程中修正 2 個真實 bug（`OpdsFeedParser` Calibre 格式相容性、遠端下載後書架自動刷新），詳見 `reviews/review-issue-5.md`。程式碼審查（`reviews/review-issue-5-code.md`，0 Critical／2 Important／4 Minor）已全數修訂：導覽連結退回邏輯健壯性強化＋補測試、Task 4 修復補回歸測試、格式縮排修正；縮圖快取 TTL/去重等 3 項 Minor 為計畫已載明的刻意取捨，維持原樣。全專案 `flutter test` 1544 項、`flutter analyze` 零回歸通過。
