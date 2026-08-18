@@ -1185,6 +1185,68 @@ void main() {
       expect(book.remoteDownloadUrl, isNull);
       expect(book.isDownloaded, true);
     });
+
+    // 〔審查 review-issue-2.md Important #1 核實後補上〕上面兩個測試皆用
+    // `content://` URI，未涵蓋 OPDS 遠端書架下載佇列（epic-30 Issue 2）
+    // 實際會傳入的情境——下載完成後搬移到永久位置的檔案是**一般本機路徑
+    // （非 content://）**，`_importSingleFile()` 對這種路徑計算指紋時走
+    // `computeBookContentFingerprint()` 的 `Isolate.run()` 分支（見
+    // book_content_fingerprint.dart），與 `content://` 分支（走 mock
+    // method channel）是完全不同的程式碼路徑，先前完全沒有測試覆蓋過。
+    // 本測試直接餵入一個真實存在的本機檔案（不透過 testWidgets，plain
+    // `test()` 沒有 fake zone 限制，Isolate.run() 可以正常完成），驗證
+    // 欄位持久化與檔案本身確實存活（不是被 _importSingleFile 意外清除或
+    // 忽略）。
+    test('傳入非 content:// 的一般本機路徑（比照 OPDS 下載佇列實際落地情境）時，指紋計算走 Isolate.run() 分支且正確落地',
+        () async {
+      await repository.database.insert('remote_servers', {
+        'id': 'srv1',
+        'name': '家用 NAS',
+        'base_url': 'http://192.168.1.100:8080/opds',
+        'type': 'opds',
+        'allow_insecure': 0,
+        'created_at': 1000,
+      });
+
+      final remoteBooksDir =
+          Directory('${importedBooksDir.path}/remote_books_fixture');
+      remoteBooksDir.createSync(recursive: true);
+      final localFile = File('${remoteBooksDir.path}/remote_book.epub');
+      localFile.writeAsBytesSync([1, 2, 3]);
+
+      mockChannel((call) async {
+        if (call.method == 'extractMetadata') {
+          return {'title': '遠端書（本機路徑）'};
+        }
+        return null;
+      });
+
+      final result = await service.importFiles(
+        [localFile.path],
+        source: BookSource.calibreOpds,
+        remoteServerId: 'srv1',
+        remoteBookIds: {localFile.path: 'remote-book-2'},
+        remoteDownloadUrls: {
+          localFile.path: 'http://192.168.1.100:8080/opds/download/2.epub',
+        },
+      );
+
+      expect(result.importedBooks, hasLength(1));
+      final book = result.importedBooks.single;
+      expect(book.source, BookSource.calibreOpds);
+      expect(book.remoteServerId, 'srv1');
+      expect(book.remoteBookId, 'remote-book-2');
+      expect(book.remoteDownloadUrl,
+          'http://192.168.1.100:8080/opds/download/2.epub');
+      expect(book.isDownloaded, true);
+      // 指紋計算成功（非 null）代表 Isolate.run() 分支確實跑完，不是被
+      // _importSingleFile 既有的 try/catch 靜默吞掉降級成 null。
+      expect(book.contentFingerprint, isNotNull);
+      // _importSingleFile 對一般本機路徑不會另外搬移檔案，filePath 應
+      // 原樣沿用傳入的路徑，檔案本身仍存在於原處。
+      expect(book.filePath, localFile.path);
+      expect(localFile.existsSync(), true);
+    });
   });
 }
 

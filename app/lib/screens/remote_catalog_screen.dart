@@ -18,10 +18,15 @@ import 'format_selection_dialog.dart';
 /// 後 push 新的本畫面實例）、依 [OpdsFeed.nextUrl] 提供「載入更多」、
 /// 封面縮圖網格（帶 Basic Auth header）、多選勾選批次下載。
 ///
-/// [createOpdsClient] 在 [initState] 只呼叫一次，整個瀏覽 session（含
-/// 分頁下鑽、下載）共用同一個 [OpdsClient] 實例——比照
-/// `opds_http_client.dart` 類別文件的生命週期警告，分頁循環防護的
-/// `_visitedFeedUrls` 才會正確對應「一次瀏覽路徑」。
+/// [createOpdsClient] 在 [initState] 只呼叫一次，**本畫面實例**的生命
+/// 週期內（含這一頁 Feed 的「載入更多」分頁與下載佇列）共用同一個
+/// [OpdsClient] 實例——比照 `opds_http_client.dart` 類別文件的生命週期
+/// 警告，分頁循環防護的 `_visitedFeedUrls` 才會正確對應「這個 Feed 的
+/// 分頁路徑」。**〔`review-issue-2.md` Minor #2 核實修正〕** 分類下鑽
+/// （[_openSubsection] push 新的本畫面實例）會呼叫**新的一次**
+/// `createOpdsClient()`，取得另一個全新實例，不是延續上一層的實例——
+/// 這是刻意且安全的行為：不同分類各自的分頁路徑本來就彼此獨立，沒有
+/// 必要、也不應該共用同一份 `_visitedFeedUrls` 循環防護狀態。
 class RemoteCatalogScreen extends StatefulWidget {
   final RemoteServerProfile server;
   final RemoteServerRepository repository;
@@ -171,7 +176,6 @@ class _RemoteCatalogScreenState extends State<RemoteCatalogScreen> {
       context: context,
       barrierDismissible: false,
       builder: (context) => _DownloadQueueDialog(
-        key: const Key('download_queue_dialog_root'),
         queue: queue,
         client: _client,
         server: widget.server,
@@ -342,8 +346,9 @@ class _DownloadQueueDialog extends StatefulWidget {
   final String? password;
   final BookImportService importService;
 
+  // 私有 widget、唯一呼叫端（_startDownload）不需要指定 key，故不接受
+  // `key` 參數（比照 `flutter analyze` 對未使用的可選參數的既有規範）。
   const _DownloadQueueDialog({
-    super.key,
     required this.queue,
     required this.client,
     required this.server,
@@ -361,16 +366,13 @@ class _DownloadQueueDialogState extends State<_DownloadQueueDialog> {
   late List<OpdsDownloadCancellationToken?> _tokens;
   bool _allSettled = false;
 
-  /// 完成佇列處理的 Future，測試可透過此 Future 等待所有下載/匯入完成。
-  late final Future<void> done;
-
   @override
   void initState() {
     super.initState();
     _statuses = List.filled(widget.queue.length, _DownloadItemStatus.pending);
     _permanentPaths = List.filled(widget.queue.length, null);
     _tokens = List.filled(widget.queue.length, null);
-    done = _runQueue();
+    _runQueue();
   }
 
   Future<void> _runQueue() async {

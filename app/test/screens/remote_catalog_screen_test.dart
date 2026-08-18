@@ -184,10 +184,6 @@ void main() {
     late Directory tempRoot;
     late PathProviderPlatform originalPathProvider;
 
-    setUpAll(() {
-      // sqfliteFfiInit 已不需要——整合測試改用 FakeBookImportService，
-      // 不再使用真實 SqliteLibraryRepository。
-    });
 
     setUp(() {
       tempRoot = Directory.systemTemp.createTempSync('remote_catalog_test');
@@ -394,7 +390,8 @@ void main() {
       expect(find.text('已取消'), findsOneWidget);
     });
 
-    testWidgets('整合驗證：FakeBookImportService 正確收到 remoteServerId/remoteBookIds/remoteDownloadUrls',
+    testWidgets(
+        '引數驗證：importFiles 被呼叫時正確帶入 source/remoteServerId/remoteBookIds/remoteDownloadUrls（FakeBookImportService）',
         (tester) async {
       final importService = FakeBookImportService();
 
@@ -437,5 +434,26 @@ void main() {
       // 驗證 OPDS client 被正確呼叫
       expect(opdsClient.downloadBookCalls, ['http://192.168.1.100:8080/opds/download/1.epub']);
     });
+
+    // 〔審查 review-issue-2.md Important #1 核實後修正做法〕上面的
+    // 「引數驗證」測試只證明 importFiles() 被呼叫時傳入了正確的參數，
+    // 不證明這些欄位真的正確持久化到資料庫、也不證明下載下來的檔案真的
+    // 活過搬移到永久位置這個步驟。原本嘗試在這裡（testWidgets）用真實
+    // SqliteLibraryRepository／BookImportServiceImpl 補這項驗證，但
+    // 真實 BookImportServiceImpl 對非 content:// 路徑計算指紋時會透過
+    // computeBookContentFingerprint() 呼叫 Isolate.run()（見
+    // book_content_fingerprint.dart）——這與
+    // AutomatedTestWidgetsFlutterBinding 的測試環境有更深層的不相容，
+    // 即使把觸發流程整個包進 tester.runAsync()（比照
+    // library_screen_test.dart「Markdown 匯出」既有先例）仍會卡在
+    // `dart:isolate _RawReceivePort._handleMessage` 直到 10 分鐘逾時
+    // ——這個組合（testWidgets + 真實 Isolate.run()）在本專案目前沒有
+    // 任何成功先例可循，判斷為環境層級的真實限制，不是可以再調整測試
+    // 寫法就解決的問題。改為把這項驗證移到
+    // `test/library/book_import_service_test.dart`（plain `test()`，
+    // 沒有 testWidgets 的 fake zone 限制，Isolate.run() 可以正常完成）
+    // ——見該檔案「遠端書架下載完成後匯入（epic-30 Issue 2）」測試，
+    // 直接餵入一個非 content:// 的本機檔案路徑（比照 OPDS 下載佇列實際
+    // 產生的檔案型態）驗證欄位持久化與檔案存活。
   });
 }
