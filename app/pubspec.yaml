@@ -93,6 +93,7 @@ dependencies:
   # 本 Issue 先提升依賴層級）：原僅供測試以 MockClient 取代真實網路請求，
   # 現升級為正式匯入管線的執行期依賴。
   http: ^1.6.0
+  connectivity_plus: ^7.3.1
 
 dev_dependencies:
   flutter_test:

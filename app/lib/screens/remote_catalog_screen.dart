@@ -425,23 +425,6 @@ class _DownloadQueueDialogState extends State<_DownloadQueueDialog> {
     setState(() => _allSettled = true);
   }
 
-  String _extensionFor(BookFileFormat format) {
-    switch (format) {
-      case BookFileFormat.epub:
-        return 'epub';
-      case BookFileFormat.pdf:
-        return 'pdf';
-      case BookFileFormat.txt:
-        return 'txt';
-      case BookFileFormat.azw3:
-        return 'azw3';
-      case BookFileFormat.cbz:
-        return 'cbz';
-      case BookFileFormat.md:
-        return 'md';
-    }
-  }
-
   Future<void> _downloadOne(int index) async {
     if (!mounted) return;
     setState(() => _statuses[index] = _DownloadItemStatus.downloading);
@@ -456,7 +439,7 @@ class _DownloadQueueDialogState extends State<_DownloadQueueDialog> {
       final tempDir = await getTemporaryDirectory();
       final downloadDir = Directory(p.join(tempDir.path, 'remote_download_temp'));
       if (!await downloadDir.exists()) await downloadDir.create(recursive: true);
-      final fileName = '${const Uuid().v4()}.${_extensionFor(item.acquisition.format!)}';
+      final fileName = '${const Uuid().v4()}.${fileExtensionFor(item.acquisition.format!)}';
       tempPath = p.join(downloadDir.path, fileName);
 
       await widget.client.downloadBook(

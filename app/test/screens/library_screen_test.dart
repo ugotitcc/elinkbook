@@ -25,6 +25,7 @@ import '../support/fake_library_repository.dart';
 import '../support/fake_reader_prefs_manager.dart';
 import '../support/fake_opds_client.dart';
 import '../support/fake_remote_server_repository.dart';
+import 'package:elinkbook/remote/remote_server_profile.dart';
 import 'package:elinkbook/screens/remote_server_list_screen.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
 import '../support/fake_highlights_repository.dart';
@@ -3283,6 +3284,157 @@ void main() {
     final unchanged = (await repository.listBooks()).single;
     expect(unchanged.isDownloaded, isTrue);
     expect(bookFile.existsSync(), isTrue);
+  });
+
+  group('Issue 4：待下載書籍重新下載', () {
+    late Directory tempRoot;
+    late PathProviderPlatform originalPathProvider;
+
+    setUp(() {
+      tempRoot = Directory.systemTemp.createTempSync('library_redownload_test');
+      originalPathProvider = PathProviderPlatform.instance;
+      PathProviderPlatform.instance = FakePathProviderPlatform(tempRoot.path);
+    });
+
+    tearDown(() {
+      PathProviderPlatform.instance = originalPathProvider;
+      if (tempRoot.existsSync()) tempRoot.deleteSync(recursive: true);
+    });
+
+    final server = RemoteServerProfile(
+      id: 'srv1',
+      name: '家用 NAS',
+      baseUrl: 'http://192.168.1.100:8080/opds',
+      type: RemoteServerType.opds,
+      allowInsecure: false,
+      createdAt: DateTime.fromMillisecondsSinceEpoch(1000),
+    );
+
+    Book pendingBook() => Book(
+          id: 'b1',
+          title: '待下載的書',
+          format: BookFileFormat.epub,
+          filePath: '/no/longer/exists.epub',
+          source: BookSource.calibreOpds,
+          remoteServerId: 'srv1',
+          remoteBookId: 'remote-1',
+          remoteDownloadUrl: 'http://192.168.1.100:8080/opds/download/1.epub',
+          isDownloaded: false,
+          createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+          lastReadTime: DateTime.fromMillisecondsSinceEpoch(2000),
+        );
+
+    testWidgets('點擊待下載書籍先跳出確認對話框，取消則不觸發下載', (tester) async {
+      final repository = FakeLibraryRepository(initialBooks: [pendingBook()]);
+      final opdsClient = FakeOpdsClient();
+      await tester.pumpWidget(MaterialApp(
+        home: LibraryScreen(
+          repository: repository,
+          importService: FakeBookImportService(),
+          prefsManager: FakeReaderPrefsManager(),
+          remoteServerRepository: FakeRemoteServerRepository(initialServers: [server]),
+          createOpdsClient: () => opdsClient,
+          isMobileDataConnection: () async => false,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('book_item_b1')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('library_redownload_dialog')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('library_redownload_cancel_button')));
+      await tester.pumpAndSettle();
+
+      expect(opdsClient.downloadBookCalls, isEmpty);
+    });
+
+    testWidgets('偵測到行動數據連線時，確認對話框額外顯示流量提示文字', (tester) async {
+      final repository = FakeLibraryRepository(initialBooks: [pendingBook()]);
+      await tester.pumpWidget(MaterialApp(
+        home: LibraryScreen(
+          repository: repository,
+          importService: FakeBookImportService(),
+          prefsManager: FakeReaderPrefsManager(),
+          remoteServerRepository: FakeRemoteServerRepository(initialServers: [server]),
+          createOpdsClient: () => FakeOpdsClient(),
+          isMobileDataConnection: () async => true,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('book_item_b1')));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('行動數據'), findsOneWidget);
+    });
+
+    testWidgets('確認後成功重新下載，更新 filePath/isDownloaded，不建立新的 Book 記錄', (tester) async {
+      final repository = FakeLibraryRepository(initialBooks: [pendingBook()]);
+      final opdsClient = FakeOpdsClient();
+      await tester.pumpWidget(MaterialApp(
+        home: LibraryScreen(
+          repository: repository,
+          importService: FakeBookImportService(),
+          prefsManager: FakeReaderPrefsManager(),
+          remoteServerRepository: FakeRemoteServerRepository(initialServers: [server]),
+          createOpdsClient: () => opdsClient,
+          isMobileDataConnection: () async => false,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('book_item_b1')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('library_redownload_confirm_button')));
+      await tester.pump();
+
+      for (var i = 0; i < 30; i++) {
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+        await tester.pump();
+      }
+      await tester.pumpAndSettle();
+
+      final books = await repository.listBooks();
+      expect(books, hasLength(1));
+      expect(books.single.id, 'b1');
+      expect(books.single.isDownloaded, isTrue);
+      expect(books.single.filePath, isNot('/no/longer/exists.epub'));
+      expect(File(books.single.filePath).existsSync(), isTrue);
+      expect(opdsClient.downloadBookCalls, ['http://192.168.1.100:8080/opds/download/1.epub']);
+    });
+
+    testWidgets('下載失敗時顯示錯誤訊息，書籍狀態不變', (tester) async {
+      final repository = FakeLibraryRepository(initialBooks: [pendingBook()]);
+      final opdsClient = FakeOpdsClient(downloadError: StateError('模擬下載失敗'));
+      await tester.pumpWidget(MaterialApp(
+        home: LibraryScreen(
+          repository: repository,
+          importService: FakeBookImportService(),
+          prefsManager: FakeReaderPrefsManager(),
+          remoteServerRepository: FakeRemoteServerRepository(initialServers: [server]),
+          createOpdsClient: () => opdsClient,
+          isMobileDataConnection: () async => false,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('book_item_b1')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('library_redownload_confirm_button')));
+      await tester.pump();
+
+      for (var i = 0; i < 30; i++) {
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+        await tester.pump();
+      }
+      await tester.pumpAndSettle();
+
+      expect(find.text('重新下載失敗，請稍後再試'), findsOneWidget);
+      final books = await repository.listBooks();
+      expect(books.single.isDownloaded, isFalse);
+      expect(books.single.filePath, '/no/longer/exists.epub');
+    });
   });
 }
 

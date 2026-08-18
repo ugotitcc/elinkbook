@@ -1,3 +1,4 @@
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:pdfrx/pdfrx.dart';
 
@@ -30,6 +31,17 @@ import 'sync/sync_metadata_repository.dart';
 import 'theme/app_theme.dart';
 import 'theme/app_theme_data.dart';
 import 'theme/app_theme_preferences.dart';
+
+/// [LibraryScreen.isMobileDataConnection] 生產環境實作
+/// （epic-30-calibre-remote-library Issue 4）：`connectivity_plus` 6.x
+/// 起 `checkConnectivity()` 回傳 `List<ConnectivityResult>`（支援同時
+/// 存在多種連線，例如 VPN 疊加 Wi-Fi），只要清單內含
+/// [ConnectivityResult.mobile] 即視為「目前為行動數據連線」，即使同時
+/// 也有 Wi-Fi——寧可誤判為需要提示，也不要漏掉真正的行動數據情境。
+Future<bool> _isMobileDataConnection() async {
+  final results = await Connectivity().checkConnectivity();
+  return results.contains(ConnectivityResult.mobile);
+}
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -112,6 +124,7 @@ Future<void> main() async {
       remoteServerRepository: remoteServerRepository,
       createOpdsClient: () => OpdsHttpClient(),
       computeFingerprint: computeBookContentFingerprint,
+      isMobileDataConnection: _isMobileDataConnection,
       navigatorKey: navigatorKey,
       initialTheme: initialTheme,
       initialEinkMode: initialEinkMode,
@@ -138,6 +151,7 @@ class ElinkBookApp extends StatefulWidget {
   final RemoteServerRepository? remoteServerRepository;
   final OpdsClient Function()? createOpdsClient;
   final ComputeRemoteFingerprint? computeFingerprint;
+  final Future<bool> Function()? isMobileDataConnection;
   final GlobalKey<NavigatorState>? navigatorKey;
   final AppThemePreferences themePreferences;
   final AppTheme initialTheme;
@@ -160,6 +174,7 @@ class ElinkBookApp extends StatefulWidget {
     this.remoteServerRepository,
     this.createOpdsClient,
     this.computeFingerprint,
+    this.isMobileDataConnection,
     this.navigatorKey,
     this.initialTheme = AppTheme.light,
     this.initialEinkMode = false,
@@ -237,6 +252,7 @@ class _ElinkBookAppState extends State<ElinkBookApp> with WidgetsBindingObserver
         remoteServerRepository: widget.remoteServerRepository,
         createOpdsClient: widget.createOpdsClient,
         computeFingerprint: widget.computeFingerprint,
+        isMobileDataConnection: widget.isMobileDataConnection,
         currentTheme: _theme,
         isEinkMode: _isEinkMode,
         onThemeChanged: _handleThemeChanged,
