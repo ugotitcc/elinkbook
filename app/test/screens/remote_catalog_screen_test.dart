@@ -4,12 +4,14 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
+import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/remote/remote_server_profile.dart';
 import 'package:elinkbook/remote/opds_types.dart';
 import 'package:elinkbook/screens/remote_catalog_screen.dart';
 
 import '../support/fake_book_import_service.dart';
+import '../support/fake_library_repository.dart';
 import '../support/fake_opds_client.dart';
 import '../support/fake_remote_server_repository.dart';
 import '../support/fake_path_provider_platform.dart';
@@ -42,16 +44,49 @@ void main() {
     ],
   );
 
+  Book _fakeBookMatchingRemote({
+    required String id,
+    required String remoteServerId,
+    required String remoteBookId,
+  }) {
+    return Book(
+      id: id,
+      title: '已匯入的書',
+      format: BookFileFormat.epub,
+      filePath: '/books/$id.epub',
+      source: BookSource.calibreOpds,
+      remoteServerId: remoteServerId,
+      remoteBookId: remoteBookId,
+      createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+      lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+    );
+  }
+
+  Book _fakeBookWithFingerprint(String id, String fingerprint) {
+    return Book(
+      id: id,
+      title: '本機已有的書',
+      format: BookFileFormat.epub,
+      filePath: '/books/$id.epub',
+      source: BookSource.local,
+      contentFingerprint: fingerprint,
+      createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+      lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+    );
+  }
+
   Future<void> pumpScreen(
     WidgetTester tester, {
     required FakeOpdsClient opdsClient,
     FakeRemoteServerRepository? repository,
+    FakeLibraryRepository? libraryRepository,
     String? feedUrl,
   }) async {
     await tester.pumpWidget(MaterialApp(
       home: RemoteCatalogScreen(
         server: server,
         repository: repository ?? FakeRemoteServerRepository(),
+        libraryRepository: libraryRepository ?? FakeLibraryRepository(),
         createOpdsClient: () => opdsClient,
         importService: FakeBookImportService(),
         feedUrl: feedUrl,
@@ -160,16 +195,16 @@ void main() {
     await pumpScreen(tester, opdsClient: opdsClient);
 
     await tester.tap(find.byKey(const Key('remote_catalog_entry_book-1')));
-    await tester.pump();
+    await tester.pumpAndSettle();
     expect(find.byKey(const Key('remote_catalog_checkbox_checked_book-1')), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('remote_catalog_entry_book-1')));
-    await tester.pump();
+    await tester.pumpAndSettle();
     expect(find.byKey(const Key('remote_catalog_checkbox_checked_book-1')), findsNothing);
 
     // entry2 完全沒有支援格式，點擊不應該有任何反應。
     await tester.tap(find.byKey(const Key('remote_catalog_entry_book-2')));
-    await tester.pump();
+    await tester.pumpAndSettle();
     expect(find.byKey(const Key('remote_catalog_checkbox_checked_book-2')), findsNothing);
   });
 
@@ -178,6 +213,58 @@ void main() {
     await pumpScreen(tester, opdsClient: opdsClient);
 
     expect(find.byKey(const Key('remote_catalog_error_text')), findsOneWidget);
+  });
+
+  group('選檔前置重複偵測（Layer 1）', () {
+    testWidgets('勾選已存在 remoteServerId/remoteBookId 的書目時彈出重複提示，選擇取消則不勾選', (tester) async {
+      final opdsClient = FakeOpdsClient(feeds: {
+        server.baseUrl: const OpdsFeed(title: '根目錄', entries: [entry1]),
+      });
+      final libraryRepository = FakeLibraryRepository(initialBooks: [
+        _fakeBookMatchingRemote(id: 'local-1', remoteServerId: 'srv1', remoteBookId: 'book-1'),
+      ]);
+      await pumpScreen(tester, opdsClient: opdsClient, libraryRepository: libraryRepository);
+
+      await tester.tap(find.byKey(const Key('remote_catalog_entry_book-1')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('remote_catalog_duplicate_dialog')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('remote_catalog_duplicate_dialog_cancel')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('remote_catalog_checkbox_checked_book-1')), findsNothing);
+    });
+
+    testWidgets('勾選已存在的書目時彈出重複提示，選擇仍要建立則正常勾選', (tester) async {
+      final opdsClient = FakeOpdsClient(feeds: {
+        server.baseUrl: const OpdsFeed(title: '根目錄', entries: [entry1]),
+      });
+      final libraryRepository = FakeLibraryRepository(initialBooks: [
+        _fakeBookMatchingRemote(id: 'local-1', remoteServerId: 'srv1', remoteBookId: 'book-1'),
+      ]);
+      await pumpScreen(tester, opdsClient: opdsClient, libraryRepository: libraryRepository);
+
+      await tester.tap(find.byKey(const Key('remote_catalog_entry_book-1')));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('remote_catalog_duplicate_dialog_confirm')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('remote_catalog_checkbox_checked_book-1')), findsOneWidget);
+    });
+
+    testWidgets('勾選沒有重複紀錄的書目時不彈出提示，直接勾選', (tester) async {
+      final opdsClient = FakeOpdsClient(feeds: {
+        server.baseUrl: const OpdsFeed(title: '根目錄', entries: [entry1]),
+      });
+      await pumpScreen(tester, opdsClient: opdsClient);
+
+      await tester.tap(find.byKey(const Key('remote_catalog_entry_book-1')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('remote_catalog_duplicate_dialog')), findsNothing);
+      expect(find.byKey(const Key('remote_catalog_checkbox_checked_book-1')), findsOneWidget);
+    });
   });
 
   group('下載與匯入', () {
@@ -206,6 +293,7 @@ void main() {
         home: RemoteCatalogScreen(
           server: server,
           repository: FakeRemoteServerRepository(),
+          libraryRepository: FakeLibraryRepository(),
           createOpdsClient: () => opdsClient,
           importService: importService,
         ),
@@ -251,6 +339,7 @@ void main() {
         home: RemoteCatalogScreen(
           server: server,
           repository: FakeRemoteServerRepository(),
+          libraryRepository: FakeLibraryRepository(),
           createOpdsClient: () => opdsClient,
           importService: FakeBookImportService(),
         ),
@@ -294,6 +383,7 @@ void main() {
         home: RemoteCatalogScreen(
           server: server,
           repository: FakeRemoteServerRepository(),
+          libraryRepository: FakeLibraryRepository(),
           createOpdsClient: () => opdsClient,
           importService: FakeBookImportService(),
         ),
@@ -328,6 +418,7 @@ void main() {
         home: RemoteCatalogScreen(
           server: server,
           repository: FakeRemoteServerRepository(),
+          libraryRepository: FakeLibraryRepository(),
           createOpdsClient: () => opdsClient,
           importService: FakeBookImportService(),
         ),
@@ -365,6 +456,7 @@ void main() {
         home: RemoteCatalogScreen(
           server: server,
           repository: FakeRemoteServerRepository(),
+          libraryRepository: FakeLibraryRepository(),
           createOpdsClient: () => opdsClient,
           importService: FakeBookImportService(),
         ),
@@ -402,6 +494,7 @@ void main() {
         home: RemoteCatalogScreen(
           server: server,
           repository: FakeRemoteServerRepository(),
+          libraryRepository: FakeLibraryRepository(),
           createOpdsClient: () => opdsClient,
           importService: importService,
         ),

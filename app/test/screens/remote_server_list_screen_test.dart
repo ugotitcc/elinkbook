@@ -8,6 +8,7 @@ import 'package:elinkbook/screens/remote_server_form_screen.dart';
 import 'package:elinkbook/screens/remote_server_list_screen.dart';
 
 import '../support/fake_book_import_service.dart';
+import '../support/fake_library_repository.dart';
 import '../support/fake_opds_client.dart';
 import '../support/fake_remote_server_repository.dart';
 
@@ -43,6 +44,7 @@ void main() {
     await tester.pumpWidget(MaterialApp(
       home: RemoteServerListScreen(
         repository: repository,
+        libraryRepository: FakeLibraryRepository(),
         createOpdsClient: () => FakeOpdsClient(),
         importService: FakeBookImportService(),
       ),

@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 
 import '../library/book_import_service.dart';
+import '../library/library_repository.dart';
 import '../library/models/library_enums.dart';
 import '../remote/opds_client.dart';
 import '../remote/opds_types.dart';
@@ -30,6 +31,7 @@ import 'format_selection_dialog.dart';
 class RemoteCatalogScreen extends StatefulWidget {
   final RemoteServerProfile server;
   final RemoteServerRepository repository;
+  final LibraryRepository libraryRepository;
   final OpdsClient Function() createOpdsClient;
   final BookImportService importService;
 
@@ -44,6 +46,7 @@ class RemoteCatalogScreen extends StatefulWidget {
     super.key,
     required this.server,
     required this.repository,
+    required this.libraryRepository,
     required this.createOpdsClient,
     required this.importService,
     this.feedUrl,
@@ -132,6 +135,7 @@ class _RemoteCatalogScreenState extends State<RemoteCatalogScreen> {
       builder: (context) => RemoteCatalogScreen(
         server: widget.server,
         repository: widget.repository,
+        libraryRepository: widget.libraryRepository,
         createOpdsClient: widget.createOpdsClient,
         importService: widget.importService,
         feedUrl: link.href,
@@ -140,15 +144,24 @@ class _RemoteCatalogScreenState extends State<RemoteCatalogScreen> {
     ));
   }
 
-  void _toggleSelection(OpdsEntry entry) {
+  Future<void> _toggleSelection(OpdsEntry entry) async {
     if (!_isSelectable(entry)) return;
-    setState(() {
-      if (_selectedRemoteBookIds.contains(entry.remoteBookId)) {
-        _selectedRemoteBookIds.remove(entry.remoteBookId);
-      } else {
-        _selectedRemoteBookIds.add(entry.remoteBookId);
-      }
-    });
+    if (_selectedRemoteBookIds.contains(entry.remoteBookId)) {
+      setState(() => _selectedRemoteBookIds.remove(entry.remoteBookId));
+      return;
+    }
+    final existing =
+        await widget.libraryRepository.findByRemoteBookId(widget.server.id, entry.remoteBookId);
+    if (existing != null) {
+      if (!mounted) return;
+      final proceed = await _showDuplicateConfirmDialog(
+        context,
+        '「${entry.title}」之前匯入過了，仍要建立新的一份嗎？',
+      );
+      if (!proceed) return;
+    }
+    if (!mounted) return;
+    setState(() => _selectedRemoteBookIds.add(entry.remoteBookId));
   }
 
   Future<void> _startDownload() async {
@@ -558,4 +571,32 @@ class _DownloadQueueDialogState extends State<_DownloadQueueDialog> {
       ],
     );
   }
+}
+
+/// 重複匯入確認彈窗（epic-30-calibre-remote-library Issue 3，spec.md
+/// 「重複匯入偵測」）：選檔前置（Layer 1）與下載後指紋比對（Layer 2）
+/// 兩層檢查共用同一個確認 UI，只有提示文字不同——精確比對命中不代表
+/// 強制阻擋，使用者可選擇仍要建立新副本。
+Future<bool> _showDuplicateConfirmDialog(BuildContext context, String message) async {
+  final result = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      key: const Key('remote_catalog_duplicate_dialog'),
+      title: const Text('重複的書籍'),
+      content: Text(message),
+      actions: [
+        TextButton(
+          key: const Key('remote_catalog_duplicate_dialog_cancel'),
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('取消'),
+        ),
+        TextButton(
+          key: const Key('remote_catalog_duplicate_dialog_confirm'),
+          onPressed: () => Navigator.of(context).pop(true),
+          child: const Text('仍要建立'),
+        ),
+      ],
+    ),
+  );
+  return result ?? false;
 }

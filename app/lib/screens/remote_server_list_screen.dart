@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../library/book_import_service.dart';
+import '../library/library_repository.dart';
 import '../remote/opds_client.dart';
 import '../remote/remote_server_profile.dart';
 import '../remote/remote_server_repository.dart';
@@ -12,12 +13,14 @@ import 'remote_server_form_screen.dart';
 /// 若該站點仍有僅雲端紀錄（尚未下載）的書籍會被拒絕並顯示示警清單。
 class RemoteServerListScreen extends StatefulWidget {
   final RemoteServerRepository repository;
+  final LibraryRepository libraryRepository;
   final OpdsClient Function() createOpdsClient;
   final BookImportService importService;
 
   const RemoteServerListScreen({
     super.key,
     required this.repository,
+    required this.libraryRepository,
     required this.createOpdsClient,
     required this.importService,
   });
@@ -76,6 +79,7 @@ class _RemoteServerListScreenState extends State<RemoteServerListScreen> {
       builder: (context) => RemoteCatalogScreen(
         server: profile,
         repository: widget.repository,
+        libraryRepository: widget.libraryRepository,
         createOpdsClient: widget.createOpdsClient,
         importService: widget.importService,
       ),

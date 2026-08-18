@@ -683,6 +683,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 MaterialPageRoute(
                   builder: (context) => RemoteServerListScreen(
                     repository: widget.remoteServerRepository!,
+                    libraryRepository: widget.repository,
                     createOpdsClient: widget.createOpdsClient!,
                     importService: widget.importService,
                   ),
