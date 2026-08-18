@@ -51,15 +51,20 @@ import 'opds_types.dart';
 import 'remote_server_profile.dart';
 
 /// 依 [server.username]／[password] 組出 HTTP Basic Auth header；
-/// [server.username] 為 `null`（匿名連線）時回傳空 map（不帶
+/// [server.username] 為 `null` 或空白字串（匿名連線）時回傳空 map（不帶
 /// `Authorization` header）。`OpdsHttpClient` 內部呼叫用於
 /// `fetchFeed`/`downloadBook`，畫面層（`RemoteCatalogScreen`）呼叫用於
 /// 縮圖 `Image.network` 的授權 header——兩處共用同一份邏輯，避免各自
 /// 重寫一份 base64 編碼判斷（spec.md「認證與縮圖」：縮圖載入需要帶與
-/// 目錄/下載相同的 Authorization header 才能存取）。
+/// 目錄/下載相同的 Authorization header 才能存取）。**〔`review-plan-issue-2.md`
+/// Finding 1 採納〕** `RemoteServerFormScreen._buildProfile()` 目前雖然
+/// 已把空白字串正規化為 `null`（見 Issue 1），但這個函式是共用工具，
+/// 不應該依賴唯一目前存在的呼叫端幫忙做過這層正規化，多一層防禦成本
+/// 極低。
 Map<String, String> buildOpdsAuthHeaders(RemoteServerProfile server, String? password) {
-  if (server.username == null) return {};
-  final credentials = base64Encode(utf8.encode('${server.username}:${password ?? ''}'));
+  final username = server.username?.trim();
+  if (username == null || username.isEmpty) return {};
+  final credentials = base64Encode(utf8.encode('$username:${password ?? ''}'));
   return {'Authorization': 'Basic $credentials'};
 }
 ```
@@ -343,17 +348,22 @@ class FormatSelectionDialog extends StatelessWidget {
     return AlertDialog(
       key: const Key('format_selection_dialog'),
       title: Text('選擇格式：${entry.title}'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: entry.acquisitions.map((acquisition) {
-          final supported = acquisition.format != null;
-          return ListTile(
-            key: Key('format_selection_option_${acquisition.href}'),
-            enabled: supported,
-            title: Text(supported ? acquisition.format!.name.toUpperCase() : '不支援的格式'),
-            onTap: supported ? () => Navigator.of(context).pop(acquisition) : null,
-          );
-        }).toList(),
+      // 〔審查 review-plan-issue-2.md Finding 2 採納〕格式選項較多或在
+      // 橫向/小螢幕裝置上時，固定高度的 AlertDialog 內容可能超出可視
+      // 範圍，外層包 SingleChildScrollView 防禦 RenderFlex overflow。
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: entry.acquisitions.map((acquisition) {
+            final supported = acquisition.format != null;
+            return ListTile(
+              key: Key('format_selection_option_${acquisition.href}'),
+              enabled: supported,
+              title: Text(supported ? acquisition.format!.name.toUpperCase() : '不支援的格式'),
+              onTap: supported ? () => Navigator.of(context).pop(acquisition) : null,
+            );
+          }).toList(),
+        ),
       ),
       actions: [
         TextButton(
@@ -1333,12 +1343,16 @@ class _DownloadQueueDialogState extends State<_DownloadQueueDialog> {
     final item = widget.queue[index];
     final token = OpdsDownloadCancellationToken();
     _tokens[index] = token;
+    // 〔審查 review-plan-issue-2.md Finding 3 採納〕宣告在 try 外，讓
+    // catch 區塊也能存取，用於下方「copy 到永久目錄中途失敗」時的暫存檔
+    // 清理。
+    String? tempPath;
     try {
       final tempDir = await getTemporaryDirectory();
       final downloadDir = Directory(p.join(tempDir.path, 'remote_download_temp'));
       if (!await downloadDir.exists()) await downloadDir.create(recursive: true);
       final fileName = '${const Uuid().v4()}.${_extensionFor(item.acquisition.format!)}';
-      final tempPath = p.join(downloadDir.path, fileName);
+      tempPath = p.join(downloadDir.path, fileName);
 
       await widget.client.downloadBook(
         widget.server,
@@ -1362,6 +1376,15 @@ class _DownloadQueueDialogState extends State<_DownloadQueueDialog> {
         _statuses[index] = _DownloadItemStatus.done;
       });
     } catch (_) {
+      // 〔審查 review-plan-issue-2.md Finding 3 採納〕downloadBook() 本身
+      // 失敗/取消時已經自行清過暫存檔（見 OpdsHttpClient 文件），但
+      // copy() 到永久目錄這一步若中途失敗（例如磁碟空間不足），暫存檔
+      // 仍會殘留在 remote_download_temp/ 底下——防禦性再清一次，確保
+      // 任何例外路徑都不留孤兒檔案。
+      if (tempPath != null) {
+        final leftover = File(tempPath);
+        if (await leftover.exists()) await leftover.delete();
+      }
       if (!mounted) return;
       setState(() {
         _statuses[index] =
@@ -1643,6 +1666,8 @@ git commit -m "feat(epic-30): RemoteServerListScreen 站點列導向 RemoteCatal
 **4. 生命週期原則落實**：`RemoteCatalogScreen` 的 `_client` 在 `initState()` 呼叫一次 `widget.createOpdsClient()` 並存為 `late final`，整個 widget 生命週期（含遞迴下鑽 push 的新實例、下載佇列）共用同一個真正的 session 範圍實例，符合 Issue 1 遺留的生命週期警告；`main.dart` 的 `createOpdsClient: () => OpdsHttpClient()` 確保每次呼叫都拿到全新實例。
 
 **5. 任務間依賴**：Task 1 是純重構、無新行為，安排在最前面讓後續 Task 從一開始就用正確的工廠模式建構程式碼，避免 Task 3/4 寫完後才回頭重構一次；Task 3 刻意先不處理下載按鈕（AppBar 只有標題，無 actions），Task 4 才新增「下載」按鈕與其邏輯，兩者之間沒有互相依賴的斷裂點（Task 3 的測試不會因為 Task 4 新增 AppBar action 而失敗，因為新增 action 不影響既有的 `find.text`/`find.byKey` 斷言）。
+
+**6. `review-plan-issue-2.md` 審查修訂**（2026-08-18，APPROVED，0 Critical／0 Important／3 Minor，已全數採納並修訂本計畫）：Finding 1（`buildOpdsAuthHeaders` 補上空白字串防禦，不只判斷 `null`）、Finding 2（`FormatSelectionDialog` 內容包 `SingleChildScrollView` 防止小螢幕/多格式時 overflow）、Finding 3（`_downloadOne` 的 `copy()` 到永久目錄中途失敗時，`catch` 區塊補上暫存檔清理，避免磁碟空間不足等情境留下孤兒檔案）皆已修訂 Task 1／Task 2／Task 4 的程式碼。
 
 ---
 
