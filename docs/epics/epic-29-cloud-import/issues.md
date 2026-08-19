@@ -59,7 +59,9 @@
 
 ## Issue 2：OneDrive 帳號連結／解除連結
 
-**Status:** `ready-for-agent`
+**Status:** ✅ 已完成（PR #166，分支 `feat/epic-29-issue-2-onedrive-link`，3 個 commit，2026-08-19）
+
+**完成摘要：** 沿用 Issue 1 的 `CloudAccountRepository`／`CloudAccountSettingsScreen`，結構完全比照已審查通過的 `GoogleDriveOAuthClient`。新增 `OneDriveOAuthClient`：Microsoft identity platform v2.0 端點（`login.microsoftonline.com/common`），`Files.Read offline_access email openid profile` scope（`offline_access` 是 Microsoft 換發 refresh token 的必要條件，與 Google 的 `access_type=offline` 機制不同）；PKCE（RFC 7636）＋ `state` 防 CSRF；`ensureValidAccessToken()` 支援 RFC 6749 `refresh_token` 滾動（採納 Issue 1 審查教訓，本次首版即內建，非事後補修）；帳號 email 以 Microsoft Graph `/v1.0/me` 端點的 `mail` 欄位為主、`userPrincipalName` 為備援（個人帳號 `mail` 可能為 `null`）；所有 HTTP 回應的 `jsonDecode` 皆納入 try-catch 防護。`AndroidManifest.xml` 新增 MSAL 自訂 scheme（`msal<CLIENT_ID>://auth`）redirect URI intent-filter，與 Google 反向客戶端 ID 格式並存、互不干擾。`CloudAccountSettingsScreen` 擴充 OneDrive 區塊：因兩段 UI 完全同構，把原本 Google Drive 專屬的 `_buildGoogleDriveTile()` 泛化為共用 `_buildProviderTile()`（`keyPrefix` 參數化），既有 `cloud_account_settings_google_drive_*` key 字串維持不變，Issue 1 既有 widget test 零回歸；兩個 provider 的 `_xxxLinked`/`_xxxLinking`/`_xxxEmail` 狀態各自獨立維護，互不干擾。刻意**不**把 `GoogleDriveOAuthClient`／`OneDriveOAuthClient` 抽成共用抽象介面（YAGNI，避免動到 Issue 1 已審查合併的既有程式碼）。`oneDriveOAuthClient` 貫穿注入至 `SettingsScreen`→`LibraryScreen`（含分類篩選畫面自我遞迴導航點）→`ElinkBookApp`→`main.dart`。計畫審查（`reviews/review-plan-issue-2.md`）與程式碼審查（`reviews/review-issue-2.md`）皆 **APPROVED**，0 Critical／0 Important／0 Minor。全專案 `flutter analyze` 乾淨、`flutter test` 1580 項全數通過、零回歸。OneDrive OAuth 實際登入流程留待真機/人工用真實 Microsoft 帳號驗證，含 Azure 應用程式註冊用戶端 ID 設定。
 
 **依賴：** Issue 1（沿用同一個 `CloudAccountRepository`／設定頁 UI）。
 
