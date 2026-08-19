@@ -6,6 +6,9 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:pdfrx/pdfrx.dart';
 
+import 'cloud_import/cloud_account_repository.dart';
+import 'cloud_import/google_drive_oauth_client.dart';
+import 'cloud_import/secure_storage_cloud_account_repository.dart';
 import 'library/book_content_fingerprint.dart';
 import 'library/book_import_service.dart';
 import 'library/book_import_service_impl.dart';
@@ -116,6 +119,11 @@ Future<void> main() async {
   final thumbnailCache = RemoteThumbnailCacheImpl(
     cacheDir: Directory(p.join(thumbnailCacheDir.path, 'remote_thumbnails')),
   );
+  // epic-29-cloud-import Issue 1：雲端匯入帳號模組
+  final cloudAccountRepository = SecureStorageCloudAccountRepository();
+  final googleDriveOAuthClient = GoogleDriveOAuthClient(
+    accountRepository: cloudAccountRepository,
+  );
   runApp(
     ElinkBookApp(
       repository: repository,
@@ -130,6 +138,8 @@ Future<void> main() async {
       syncAccountRepository: syncAccountRepository,
       syncClient: syncClient,
       syncCheckpointTrigger: syncCheckpointTrigger,
+      cloudAccountRepository: cloudAccountRepository,
+      googleDriveOAuthClient: googleDriveOAuthClient,
       remoteServerRepository: remoteServerRepository,
       createOpdsClient: () => OpdsHttpClient(),
       computeFingerprint: computeBookContentFingerprint,
@@ -158,6 +168,8 @@ class ElinkBookApp extends StatefulWidget {
   final SyncAccountRepository? syncAccountRepository;
   final SyncClient? syncClient;
   final SyncCheckpointTrigger? syncCheckpointTrigger;
+  final CloudAccountRepository? cloudAccountRepository;
+  final GoogleDriveOAuthClient? googleDriveOAuthClient;
   final RemoteServerRepository? remoteServerRepository;
   final OpdsClient Function()? createOpdsClient;
   final ComputeRemoteFingerprint? computeFingerprint;
@@ -182,6 +194,8 @@ class ElinkBookApp extends StatefulWidget {
     this.syncAccountRepository,
     this.syncClient,
     this.syncCheckpointTrigger,
+    this.cloudAccountRepository,
+    this.googleDriveOAuthClient,
     this.remoteServerRepository,
     this.createOpdsClient,
     this.computeFingerprint,
@@ -261,6 +275,8 @@ class _ElinkBookAppState extends State<ElinkBookApp> with WidgetsBindingObserver
         syncAccountRepository: widget.syncAccountRepository,
         syncClient: widget.syncClient,
         syncCheckpointTrigger: widget.syncCheckpointTrigger,
+        cloudAccountRepository: widget.cloudAccountRepository,
+        googleDriveOAuthClient: widget.googleDriveOAuthClient,
         remoteServerRepository: widget.remoteServerRepository,
         createOpdsClient: widget.createOpdsClient,
         computeFingerprint: widget.computeFingerprint,

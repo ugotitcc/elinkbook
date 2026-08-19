@@ -5,11 +5,13 @@ import 'package:flutter_secure_storage_platform_interface/flutter_secure_storage
 import 'package:flutter_test/flutter_test.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:elinkbook/cloud_import/google_drive_oauth_client.dart';
 import 'package:elinkbook/screens/settings_screen.dart';
 import 'package:elinkbook/sync/sync_account_repository.dart';
 import 'package:elinkbook/sync/sync_client.dart';
 import 'package:elinkbook/theme/app_theme.dart';
 import 'package:elinkbook/reader/global_reader_prefs.dart';
+import '../support/fake_cloud_account_repository.dart';
 import '../support/fake_reader_prefs_manager.dart';
 import '../support/fake_custom_fonts_repository.dart';
 
@@ -164,6 +166,29 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('同步'), findsOneWidget);
+  });
+
+  testWidgets('SettingsScreen 顯示「已連結的雲端匯入帳戶」入口，點擊導航至 CloudAccountSettingsScreen',
+      (tester) async {
+    final cloudAccountRepository = FakeCloudAccountRepository();
+    await tester.pumpWidget(MaterialApp(
+      home: SettingsScreen(
+        prefsManager: FakeReaderPrefsManager(),
+        cloudAccountRepository: cloudAccountRepository,
+        googleDriveOAuthClient:
+            GoogleDriveOAuthClient(accountRepository: cloudAccountRepository),
+      ),
+    ));
+
+    expect(
+      find.byKey(const Key('settings_cloud_account_button')),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.byKey(const Key('settings_cloud_account_button')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('已連結的雲端匯入帳戶'), findsOneWidget);
   });
 
   testWidgets(

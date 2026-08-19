@@ -94,6 +94,7 @@ dependencies:
   # 現升級為正式匯入管線的執行期依賴。
   http: ^1.6.0
   connectivity_plus: ^7.3.1
+  flutter_web_auth_2: ^5.1.0
 
 dev_dependencies:
   flutter_test:
