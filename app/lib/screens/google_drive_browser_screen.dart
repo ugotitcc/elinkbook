@@ -54,6 +54,18 @@ class _GoogleDriveBrowserScreenState extends State<GoogleDriveBrowserScreen> {
   String _selectedGroupName = BookGroup.uncategorized;
   final Map<String, Uint8List> _thumbnailCache = {};
 
+  /// 【審查修正 review-issue-3.md Important #2】記憶化「進行中」的縮圖
+  /// Future 本身（不只是解析完成後的位元組）——`_buildThumbnail()` 是在
+  /// `build()` 過程中被 `GridView.builder` 呼叫的一般方法，只要父層因
+  /// 任何原因（最常見即 `_toggleSelection()` 點擊勾選）觸發 `setState()`
+  /// 重建，尚未解析完成的縮圖若每次都呼叫 `widget.client.fetchThumbnail()`
+  /// 建立新 Future，會被 `FutureBuilder` 視為全新的非同步狀態、重新發起
+  /// 一次帶授權標頭的網路請求並閃回載入圖示。比照 `RemoteThumbnailCache`
+  /// 底層 LRU 解決同一個陷阱的既有先例（`RemoteCatalogScreen._buildThumbnail()`
+  /// 已有明確記載），這裡改把 in-flight 的 Future 存起來，同一個
+  /// [thumbnailUrl] 在完成前只會真正發起一次請求。
+  final Map<String, Future<Uint8List>> _pendingThumbnailFetches = {};
+
   @override
   void initState() {
     super.initState();
@@ -285,11 +297,14 @@ class _GoogleDriveBrowserScreenState extends State<GoogleDriveBrowserScreen> {
         fit: BoxFit.cover,
       );
     }
+    final pending = _pendingThumbnailFetches[thumbnailUrl] ??=
+        widget.client.fetchThumbnail(thumbnailUrl).then((bytes) {
+      _thumbnailCache[thumbnailUrl] = bytes;
+      _pendingThumbnailFetches.remove(thumbnailUrl);
+      return bytes;
+    });
     return FutureBuilder<Uint8List>(
-      future: widget.client.fetchThumbnail(thumbnailUrl).then((bytes) {
-        _thumbnailCache[thumbnailUrl] = bytes;
-        return bytes;
-      }),
+      future: pending,
       builder: (context, snapshot) {
         if (snapshot.hasData && snapshot.data != null) {
           return Image.memory(

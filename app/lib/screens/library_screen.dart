@@ -720,6 +720,11 @@ class _LibraryScreenState extends State<LibraryScreen> {
               cloudAccountRepository: widget.cloudAccountRepository,
               googleDriveOAuthClient: widget.googleDriveOAuthClient,
               oneDriveOAuthClient: widget.oneDriveOAuthClient,
+              // 【審查修正 review-issue-3.md Important #1】先前遺漏這個
+              // 欄位，導致從分類篩選路徑進入的 LibraryScreen 內「從
+              // Google Drive 匯入」選單項目永遠停用（比照上方三個雲端
+              // 帳號相關欄位的既有貫穿慣例）。
+              googleDriveStorageClient: widget.googleDriveStorageClient,
               currentTheme: widget.currentTheme,
               isEinkMode: widget.isEinkMode,
               onThemeChanged: widget.onThemeChanged,

@@ -2919,6 +2919,42 @@ void main() {
   });
 
   testWidgets(
+      'LibraryScreen 透過分類篩選路徑（_openGroupFilteredView）進入後，'
+      'googleDriveStorageClient 與外層一致（review-issue-3.md Important #1 採納）',
+      (tester) async {
+    final book = _testBook(
+      id: '1',
+      title: '紅樓夢',
+      author: '曹雪芹',
+      groupName: '奇幻',
+      filePath: 'content://example/1.txt',
+    );
+    final googleDriveStorageClient = FakeCloudStorageClient();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: [book]),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+          googleDriveStorageClient: googleDriveStorageClient,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('group_tile_奇幻')));
+    await tester.pumpAndSettle();
+
+    final filteredScreenFinder = _filteredLibraryScreenFinder('奇幻');
+    final filteredScreen = tester.widget<LibraryScreen>(filteredScreenFinder);
+    expect(filteredScreen.googleDriveStorageClient, same(googleDriveStorageClient),
+        reason: '_openGroupFilteredView() 未把 googleDriveStorageClient 貫穿給下一層 '
+            'LibraryScreen，會導致分類篩選畫面內「從 Google Drive 匯入」選單項目 '
+            '永遠停用');
+  });
+
+  testWidgets(
       'openLastBookOnLaunch=true 且圖書庫有書籍時，App 啟動後自動導向最後閱讀的書籍'
       '（epic-18-reader-device-qa Issue 29）', (tester) async {
     final older = _testBook(

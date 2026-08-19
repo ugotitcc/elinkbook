@@ -24,6 +24,15 @@ class FakeCloudStorageClient implements CloudStorageClient {
 
   Uint8List? thumbnailBytes;
 
+  /// 若設定，[fetchThumbnail] 改為等待這個 completer 完成才回傳，供測試
+  /// 模擬「縮圖仍在載入中」的窗口（review-issue-3.md Important #2 迴歸
+  /// 測試：驗證這段窗口內畫面重建不會重複發起請求）。
+  Completer<void>? pendingThumbnailCompleter;
+
+  /// 記錄每次 [fetchThumbnail] 呼叫的 thumbnailUrl，供測試驗證同一張縮圖
+  /// 在完成前是否被重複請求。
+  final List<String> fetchThumbnailCalls = [];
+
   FakeCloudStorageClient({
     this.folderContents = const {},
     this.downloadContents = const {},
@@ -61,6 +70,11 @@ class FakeCloudStorageClient implements CloudStorageClient {
 
   @override
   Future<Uint8List> fetchThumbnail(String thumbnailUrl) async {
+    fetchThumbnailCalls.add(thumbnailUrl);
+    final completer = pendingThumbnailCompleter;
+    if (completer != null) {
+      await completer.future;
+    }
     return thumbnailBytes ?? Uint8List(0);
   }
 }
