@@ -3225,6 +3225,112 @@ void main() {
     expect(rows.single['remote_server_id'], isNull);
   });
 
+  test('既有 version 22 裝置升級到 version 23，新增 books.cloud_file_id 欄位與索引',
+      () async {
+    final tempDir = await Directory.systemTemp
+        .createTemp('elinkbook_migration_v22_to_v23_cloud_import_test');
+    addTearDown(() => tempDir.delete(recursive: true));
+    final dbPath = p.join(tempDir.path, 'test.db');
+
+    final oldDb = await databaseFactory.openDatabase(
+      dbPath,
+      options: OpenDatabaseOptions(
+        version: 22,
+        onConfigure: (db) async {
+          await db.execute('PRAGMA foreign_keys = ON');
+        },
+        onCreate: (db, version) async {
+          await db.execute('CREATE TABLE groups (name TEXT PRIMARY KEY)');
+          await db.insert('groups', {'name': '未分類'});
+          await db.execute('''
+            CREATE TABLE remote_servers (
+              id TEXT PRIMARY KEY,
+              name TEXT NOT NULL,
+              base_url TEXT NOT NULL,
+              type TEXT NOT NULL,
+              username TEXT,
+              allow_insecure INTEGER NOT NULL DEFAULT 0,
+              created_at INTEGER NOT NULL,
+              last_accessed_at INTEGER
+            )
+          ''');
+          await db.execute('''
+            CREATE TABLE books (
+              id TEXT PRIMARY KEY,
+              title TEXT NOT NULL,
+              author TEXT,
+              format TEXT NOT NULL,
+              filePath TEXT NOT NULL,
+              source TEXT NOT NULL,
+              coverPath TEXT,
+              progress REAL NOT NULL DEFAULT 0,
+              epubLocator TEXT,
+              pdfPageIndex INTEGER,
+              totalCharacterCount INTEGER,
+              is_fixed_layout INTEGER,
+              groupName TEXT NOT NULL DEFAULT '未分類',
+              createTime INTEGER NOT NULL,
+              lastReadTime INTEGER NOT NULL,
+              content_fingerprint TEXT,
+              position_updated_at INTEGER,
+              position_synced_server_updated_at TEXT,
+              remote_server_id TEXT REFERENCES remote_servers(id) ON DELETE SET NULL,
+              remote_book_id TEXT,
+              remote_download_url TEXT,
+              is_downloaded INTEGER NOT NULL DEFAULT 1
+            )
+          ''');
+          await db.insert('books', {
+            'id': 'book1',
+            'title': '既有的書',
+            'format': 'epub',
+            'filePath': '/books/book1.epub',
+            'source': 'local',
+            'progress': 0,
+            'groupName': '未分類',
+            'createTime': 1000,
+            'lastReadTime': 1000,
+            'is_downloaded': 1,
+          });
+        },
+      ),
+    );
+    await oldDb.close();
+
+    // 重新以目前版本開啟同一個檔案，觸發 onUpgrade（oldVersion=22 →
+    // newVersion=23）。
+    final upgraded = await SqliteLibraryRepository.open(dbPath);
+    addTearDown(() => upgraded.close());
+
+    final rows = await upgraded.database.query('books');
+    expect(rows, hasLength(1));
+    expect(rows.single['cloud_file_id'], isNull);
+
+    // cloud_file_id 欄位可正常寫入與查詢。
+    await upgraded.database.update(
+      'books',
+      {'cloud_file_id': 'gdrive-file-1'},
+      where: 'id = ?',
+      whereArgs: ['book1'],
+    );
+    final updated = await upgraded.database
+        .query('books', where: 'id = ?', whereArgs: ['book1']);
+    expect(updated.single['cloud_file_id'], 'gdrive-file-1');
+
+    // 兩個索引皆已建立（idx_books_cloud_file_id 為本次新增；
+    // idx_books_content_fingerprint 為藉本次 migration 補上的既有缺漏）。
+    final indexNames = await upgraded.database.query(
+      'sqlite_master',
+      columns: ['name'],
+      where: "type = 'index' AND name IN (?, ?)",
+      whereArgs: ['idx_books_cloud_file_id', 'idx_books_content_fingerprint'],
+    );
+    expect(
+      indexNames.map((r) => r['name']).toSet(),
+      {'idx_books_cloud_file_id', 'idx_books_content_fingerprint'},
+    );
+  });
+
   test('刪除 remote_servers 該筆後，關聯 books 的 remote_server_id 自動變為 NULL',
       () async {
     final repo = await SqliteLibraryRepository.open(inMemoryDatabasePath);
@@ -3548,6 +3654,56 @@ void main() {
       addTearDown(() => repo.close());
 
       expect(await repo.findByContentFingerprint('does-not-exist'), isNull);
+    });
+  });
+
+  group('findByCloudFileId', () {
+    test('命中：回傳對應書籍', () async {
+      final repo = await SqliteLibraryRepository.open(inMemoryDatabasePath);
+      addTearDown(() => repo.close());
+
+      await repo.insertBook(Book(
+        id: 'book1',
+        title: '雲端匯入的書',
+        format: BookFileFormat.epub,
+        filePath: '/books/book1.epub',
+        source: BookSource.googleDrive,
+        cloudFileId: 'gdrive-file-1',
+        createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+        lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+      ));
+
+      final found =
+          await repo.findByCloudFileId(BookSource.googleDrive, 'gdrive-file-1');
+      expect(found?.id, 'book1');
+    });
+
+    test('未命中：不同 provider 或不同 cloudFileId 皆回傳 null', () async {
+      final repo = await SqliteLibraryRepository.open(inMemoryDatabasePath);
+      addTearDown(() => repo.close());
+
+      await repo.insertBook(Book(
+        id: 'book1',
+        title: '雲端匯入的書',
+        format: BookFileFormat.epub,
+        filePath: '/books/book1.epub',
+        source: BookSource.googleDrive,
+        cloudFileId: 'gdrive-file-1',
+        createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+        lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+      ));
+
+      // 同一個 cloudFileId 字串值出現在另一個 provider 底下不算命中——
+      // cloud_file_id 只在 source 範圍內唯一（spec.md「資料模型與
+      // Schema」），不是全域唯一。
+      expect(
+        await repo.findByCloudFileId(BookSource.oneDrive, 'gdrive-file-1'),
+        isNull,
+      );
+      expect(
+        await repo.findByCloudFileId(BookSource.googleDrive, 'other-file'),
+        isNull,
+      );
     });
   });
 

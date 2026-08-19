@@ -92,6 +92,16 @@ class Book {
   /// 本地檔案是否已下載就緒（預設 `true`；遠端僅有詮釋資料尚未下載時為 `false`）。
   final bool isDownloaded;
 
+  /// 雲端匯入來源（Google Drive／OneDrive）的原始檔案 ID（epic-29-cloud-import
+  /// Issue 0，spec.md「資料模型與 Schema」）：在 [source] 範圍內唯一，供選檔
+  /// 前置重複偵測查詢使用（見 `LibraryRepository.findByCloudFileId`）。與
+  /// [remoteBookId] 是概念上完全獨立的兩個欄位——[remoteBookId] 對應
+  /// `CONTEXT.md`「遠端書庫」（Calibre／OPDS，書籍持續留在遠端伺服器、可
+  /// 重新下載），本欄位對應 `CONTEXT.md`「雲端匯入來源帳號」（Google
+  /// Drive／OneDrive，一次性搬入本機圖書庫、匯入後即與雲端來源無持續
+  /// 關聯）。`null` 代表非雲端匯入或本機/其他來源匯入。
+  final String? cloudFileId;
+
   final String groupName;
   final DateTime createTime;
   final DateTime lastReadTime;
@@ -116,6 +126,7 @@ class Book {
     this.remoteBookId,
     this.remoteDownloadUrl,
     this.isDownloaded = true,
+    this.cloudFileId,
     this.groupName = BookGroup.uncategorized,
     required this.createTime,
     required this.lastReadTime,
@@ -145,6 +156,7 @@ class Book {
       'remote_book_id': remoteBookId,
       'remote_download_url': remoteDownloadUrl,
       'is_downloaded': isDownloaded ? 1 : 0,
+      'cloud_file_id': cloudFileId,
       'groupName': groupName,
       'createTime': createTime.millisecondsSinceEpoch,
       'lastReadTime': lastReadTime.millisecondsSinceEpoch,
@@ -175,6 +187,7 @@ class Book {
       remoteBookId: map['remote_book_id'] as String?,
       remoteDownloadUrl: map['remote_download_url'] as String?,
       isDownloaded: (map['is_downloaded'] as int) == 1,
+      cloudFileId: map['cloud_file_id'] as String?,
       groupName: map['groupName'] as String,
       createTime: DateTime.fromMillisecondsSinceEpoch(map['createTime'] as int),
       lastReadTime:
@@ -190,9 +203,9 @@ class Book {
   /// `isDownloaded: true` 一併傳入）使用——Issue 0 當時刻意不開放這兩個
   /// 欄位為具名參數（YAGNI，當時沒有呼叫端需要真的異動它們），本 Issue
   /// 是第一個需要的呼叫端。
-  /// **⚠️ `remoteServerId`／`remoteBookId`／`remoteDownloadUrl` 仍不開放
-  /// 為具名參數（本 Issue的兩個流程皆不需要異動這三者），但必須原樣帶入
-  /// 新物件以避免靜默清空**。
+  /// **⚠️ `remoteServerId`／`remoteBookId`／`remoteDownloadUrl`／
+  /// `cloudFileId` 仍不開放為具名參數（目前沒有呼叫端需要異動這幾個
+  /// 欄位），但必須原樣帶入新物件以避免靜默清空**。
   Book copyWith({
     String? groupName,
     bool? isFixedLayout,
@@ -218,6 +231,7 @@ class Book {
       remoteBookId: remoteBookId,
       remoteDownloadUrl: remoteDownloadUrl,
       isDownloaded: isDownloaded ?? this.isDownloaded,
+      cloudFileId: cloudFileId,
       isFixedLayout: isFixedLayout ?? this.isFixedLayout,
       groupName: groupName ?? this.groupName,
       createTime: createTime,
@@ -249,6 +263,7 @@ class Book {
           remoteBookId == other.remoteBookId &&
           remoteDownloadUrl == other.remoteDownloadUrl &&
           isDownloaded == other.isDownloaded &&
+          cloudFileId == other.cloudFileId &&
           groupName == other.groupName &&
           createTime == other.createTime &&
           lastReadTime == other.lastReadTime;
@@ -274,6 +289,7 @@ class Book {
         remoteBookId,
         remoteDownloadUrl,
         isDownloaded,
+        cloudFileId,
         groupName,
         createTime,
         lastReadTime,

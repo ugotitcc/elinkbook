@@ -4,13 +4,15 @@ import 'package:elinkbook/library/book_import_service.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 
 /// 記錄最近一次 [BookImportService.importFiles] 的呼叫參數，供測試斷言
-/// 遠端下載落地時帶入的 source/remoteServerId/remoteBookIds/remoteDownloadUrls。
+/// 遠端下載落地時帶入的 source/remoteServerId/remoteBookIds/remoteDownloadUrls
+/// 以及雲端匯入時帶入的 cloudFileIds。
 class ImportCallRecord {
   final List<String> uris;
   final BookSource source;
   final String? remoteServerId;
   final Map<String, String>? remoteBookIds;
   final Map<String, String>? remoteDownloadUrls;
+  final Map<String, String>? cloudFileIds;
 
   const ImportCallRecord({
     required this.uris,
@@ -18,6 +20,7 @@ class ImportCallRecord {
     this.remoteServerId,
     this.remoteBookIds,
     this.remoteDownloadUrls,
+    this.cloudFileIds,
   });
 }
 
@@ -43,6 +46,7 @@ class FakeBookImportService implements BookImportService {
     String? remoteServerId,
     Map<String, String>? remoteBookIds,
     Map<String, String>? remoteDownloadUrls,
+    Map<String, String>? cloudFileIds,
   }) {
     lastImportCall = ImportCallRecord(
       uris: uris,
@@ -50,6 +54,7 @@ class FakeBookImportService implements BookImportService {
       remoteServerId: remoteServerId,
       remoteBookIds: remoteBookIds,
       remoteDownloadUrls: remoteDownloadUrls,
+      cloudFileIds: cloudFileIds,
     );
     final completer = pendingCompleter;
     if (completer != null) return completer.future;

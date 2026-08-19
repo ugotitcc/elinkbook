@@ -79,6 +79,7 @@ class BookImportServiceImpl implements BookImportService {
     String? remoteServerId,
     Map<String, String>? remoteBookIds,
     Map<String, String>? remoteDownloadUrls,
+    Map<String, String>? cloudFileIds,
   }) async {
     if (folderName != null) {
       await _repository.upsertGroup(folderName);
@@ -104,6 +105,7 @@ class BookImportServiceImpl implements BookImportService {
         remoteServerId: remoteServerId,
         remoteBookId: remoteBookIds?[uri],
         remoteDownloadUrl: remoteDownloadUrls?[uri],
+        cloudFileId: cloudFileIds?[uri],
       );
       if (book != null) imported.add(book);
     }
@@ -198,6 +200,7 @@ class BookImportServiceImpl implements BookImportService {
     String? remoteServerId,
     String? remoteBookId,
     String? remoteDownloadUrl,
+    String? cloudFileId,
   }) async {
     // 優先用呼叫端提供的真實檔名（例如 file_picker 的 PlatformFile.name）
     // 判斷格式，URI 本身當退路。部分文件提供者（例如媒體庫文件提供者
@@ -405,6 +408,7 @@ class BookImportServiceImpl implements BookImportService {
       remoteBookId: remoteBookId,
       remoteDownloadUrl: remoteDownloadUrl,
       isDownloaded: true,
+      cloudFileId: cloudFileId,
       groupName: folderName ?? BookGroup.uncategorized,
       createTime: now,
       // 【診斷修正，epic-18-reader-device-qa Issue 29】剛匯入、從未打開過

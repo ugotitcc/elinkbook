@@ -386,4 +386,55 @@ void main() {
     expect(redownloaded.remoteDownloadUrl, 'http://example.com/download/19.epub');
     expect(redownloaded.remoteServerId, 'srv1');
   });
+
+  test('cloudFileId 欄位可正確往返（epic-29-cloud-import Issue 0）', () {
+    final book = Book(
+      id: 'b20',
+      title: '雲端匯入的書',
+      format: BookFileFormat.epub,
+      filePath: '/storage/imported_books/b20.epub',
+      source: BookSource.googleDrive,
+      cloudFileId: 'gdrive-file-abc123',
+      createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+      lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+    );
+
+    final restored = Book.fromMap(book.toMap());
+
+    expect(restored.cloudFileId, 'gdrive-file-abc123');
+  });
+
+  test('cloudFileId 未設定時，往返後仍為 null（代表非雲端匯入）', () {
+    final book = Book(
+      id: 'b21',
+      title: '本機書',
+      format: BookFileFormat.pdf,
+      filePath: '/storage/emulated/0/book.pdf',
+      source: BookSource.local,
+      createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+      lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+    );
+
+    final restored = Book.fromMap(book.toMap());
+
+    expect(restored.cloudFileId, isNull);
+  });
+
+  test('copyWith 保留 cloudFileId（欄位未開放為具名參數，但不可被 copyWith 清空）', () {
+    final book = Book(
+      id: 'b22',
+      title: '雲端匯入的書',
+      format: BookFileFormat.epub,
+      filePath: '/storage/imported_books/b22.epub',
+      source: BookSource.oneDrive,
+      cloudFileId: 'onedrive-file-xyz789',
+      createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+      lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+    );
+
+    final copied = book.copyWith(groupName: '新分類');
+
+    expect(copied.cloudFileId, 'onedrive-file-xyz789');
+    expect(copied.groupName, '新分類');
+  });
 }

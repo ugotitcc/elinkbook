@@ -67,6 +67,49 @@ void main() {
     });
   });
 
+  group('FakeLibraryRepository.findByCloudFileId', () {
+    test('命中：回傳對應書籍', () async {
+      final repo = FakeLibraryRepository();
+      await repo.insertBook(Book(
+        id: 'book1',
+        title: '雲端匯入的書',
+        format: BookFileFormat.epub,
+        filePath: '/books/book1.epub',
+        source: BookSource.googleDrive,
+        cloudFileId: 'gdrive-file-1',
+        createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+        lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+      ));
+
+      final found =
+          await repo.findByCloudFileId(BookSource.googleDrive, 'gdrive-file-1');
+      expect(found?.id, 'book1');
+    });
+
+    test('未命中：不同 provider 或不同 cloudFileId 皆回傳 null', () async {
+      final repo = FakeLibraryRepository();
+      await repo.insertBook(Book(
+        id: 'book1',
+        title: '雲端匯入的書',
+        format: BookFileFormat.epub,
+        filePath: '/books/book1.epub',
+        source: BookSource.googleDrive,
+        cloudFileId: 'gdrive-file-1',
+        createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+        lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+      ));
+
+      expect(
+        await repo.findByCloudFileId(BookSource.oneDrive, 'gdrive-file-1'),
+        isNull,
+      );
+      expect(
+        await repo.findByCloudFileId(BookSource.googleDrive, 'other-file'),
+        isNull,
+      );
+    });
+  });
+
   group('FakeLibraryRepository._withGroupName 保留所有新欄位', () {
     test('renameGroup 後，書籍的 remoteServerId 與 contentFingerprint 等欄位皆保留', () async {
       final repo = FakeLibraryRepository();
@@ -89,6 +132,7 @@ void main() {
         remoteBookId: 'rb-1',
         remoteDownloadUrl: 'http://example.com/1.epub',
         isDownloaded: false,
+        cloudFileId: 'gdrive-file-1',
         createTime: DateTime.fromMillisecondsSinceEpoch(1000),
         lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
       ));
@@ -108,6 +152,7 @@ void main() {
       expect(book.remoteBookId, 'rb-1');
       expect(book.remoteDownloadUrl, 'http://example.com/1.epub');
       expect(book.isDownloaded, false);
+      expect(book.cloudFileId, 'gdrive-file-1');
     });
   });
 }

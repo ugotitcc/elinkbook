@@ -1248,5 +1248,46 @@ void main() {
       expect(localFile.existsSync(), true);
     });
   });
+
+  group('雲端匯入參數擴充（epic-29 Issue 0）', () {
+    test('傳入 source/cloudFileIds 時正確落地', () async {
+      mockChannel((call) async {
+        if (call.method == 'takePersistableUriPermission') return null;
+        if (call.method == 'extractMetadata') {
+          return {'title': '雲端書'};
+        }
+        return null;
+      });
+
+      final result = await service.importFiles(
+        ['content://example/cloud_book.epub'],
+        source: BookSource.googleDrive,
+        cloudFileIds: {'content://example/cloud_book.epub': 'gdrive-file-1'},
+      );
+
+      expect(result.importedBooks, hasLength(1));
+      final book = result.importedBooks.single;
+      expect(book.source, BookSource.googleDrive);
+      expect(book.cloudFileId, 'gdrive-file-1');
+    });
+
+    test('未傳入 cloudFileIds 時（既有本機/OPDS 匯入情境），行為與現行完全一致', () async {
+      mockChannel((call) async {
+        if (call.method == 'takePersistableUriPermission') return null;
+        if (call.method == 'extractMetadata') {
+          return {'title': '本機書'};
+        }
+        return null;
+      });
+
+      final result =
+          await service.importFiles(['content://example/local_book2.epub']);
+
+      expect(result.importedBooks, hasLength(1));
+      final book = result.importedBooks.single;
+      expect(book.source, BookSource.local);
+      expect(book.cloudFileId, isNull);
+    });
+  });
 }
 

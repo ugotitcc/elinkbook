@@ -30,6 +30,11 @@ abstract class BookImportService {
   /// 跳過，不會重複匯入（見 [ImportResult.skippedDuplicateCount]）。
   /// [source]、[remoteServerId]、[remoteBookIds] 與 [remoteDownloadUrls] 供遠端
   /// 書架（如 Calibre OPDS）下載落地時寫入對應的伺服器與遠端書籍參照資料。
+  /// [cloudFileIds]（path 對應雲端原始檔案 ID）供雲端匯入（Google Drive／
+  /// OneDrive）下載落地時寫入 [Book.cloudFileId]，與 [remoteBookIds] 是
+  /// 概念上完全獨立的參數（見 `CONTEXT.md`「雲端匯入來源帳號」／「遠端
+  /// 書庫」的既定區分），可與 [source]／[remoteServerId] 等既有參數並存
+  /// 但實務上不會同時使用。
   Future<ImportResult> importFiles(
     List<String> uris, {
     List<String?>? displayNames,
@@ -38,6 +43,7 @@ abstract class BookImportService {
     String? remoteServerId,
     Map<String, String>? remoteBookIds,
     Map<String, String>? remoteDownloadUrls,
+    Map<String, String>? cloudFileIds,
   });
 
   /// 匯入整個資料夾；[autoGroupByFolderName] 對應 FR-34 開關（預設 true）。

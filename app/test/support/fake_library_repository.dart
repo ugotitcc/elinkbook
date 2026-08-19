@@ -180,6 +180,16 @@ class FakeLibraryRepository implements LibraryRepository {
   }
 
   @override
+  Future<Book?> findByCloudFileId(BookSource provider, String cloudFileId) async {
+    for (final book in _books) {
+      if (book.source == provider && book.cloudFileId == cloudFileId) {
+        return book;
+      }
+    }
+    return null;
+  }
+
+  @override
   Future<List<Book>> listUndownloadedBooksForRemoteServer(String serverId) async {
     return _books
         .where((b) => b.remoteServerId == serverId && !b.isDownloaded)
@@ -206,6 +216,7 @@ class FakeLibraryRepository implements LibraryRepository {
         remoteBookId: book.remoteBookId,
         remoteDownloadUrl: book.remoteDownloadUrl,
         isDownloaded: book.isDownloaded,
+        cloudFileId: book.cloudFileId,
         groupName: groupName,
         createTime: book.createTime,
         lastReadTime: book.lastReadTime,

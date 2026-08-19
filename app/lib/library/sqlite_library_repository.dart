@@ -39,7 +39,7 @@ class SqliteLibraryRepository implements LibraryRepository {
   }) async {
     final db = await openDatabase(
       path,
-      version: 22,
+      version: 23,
       singleInstance: singleInstance,
       onConfigure: (db) async {
         // book_reader_prefs 的 ON DELETE CASCADE 需要外鍵約束真正生效，
@@ -97,11 +97,16 @@ class SqliteLibraryRepository implements LibraryRepository {
             remote_server_id TEXT REFERENCES remote_servers(id) ON DELETE SET NULL,
             remote_book_id TEXT,
             remote_download_url TEXT,
-            is_downloaded INTEGER NOT NULL DEFAULT 1
+            is_downloaded INTEGER NOT NULL DEFAULT 1,
+            cloud_file_id TEXT
           )
         ''');
         await db.execute(
             'CREATE INDEX idx_books_remote_lookup ON books(remote_server_id, remote_book_id)');
+        await db.execute(
+            'CREATE INDEX idx_books_content_fingerprint ON books(content_fingerprint)');
+        await db.execute(
+            'CREATE INDEX idx_books_cloud_file_id ON books(cloud_file_id)');
         await _createBookReaderPrefsTable(db);
         await _createBookmarksTable(db);
         await _createHighlightsTable(db);
@@ -344,6 +349,21 @@ class SqliteLibraryRepository implements LibraryRepository {
               'ALTER TABLE books ADD COLUMN is_downloaded INTEGER NOT NULL DEFAULT 1');
           await db.execute(
               'CREATE INDEX idx_books_remote_lookup ON books(remote_server_id, remote_book_id)');
+        }
+        if (oldVersion < 23) {
+          // epic-29-cloud-import Issue 0：雲端匯入（Google Drive／OneDrive）
+          // 選檔前置重複偵測所需的 books 表新增欄位，見 spec.md「資料模型與
+          // Schema」。cloud_file_id 為 nullable，既有資料升級後自動為
+          // NULL，不影響既有資料。同一次 migration 一併補上
+          // content_fingerprint 的索引——經核對此欄位自 epic-8-sync Issue 3
+          // 引入以來從未建過索引，雲端匯入的下載後指紋比對（Issue 5）與
+          // 既有同步引擎的指紋比對皆是高頻查詢，值得藉這次 migration 一併
+          // 補上，避免書籍量大時全表掃描（spec.md 審查 Important #3）。
+          await db.execute('ALTER TABLE books ADD COLUMN cloud_file_id TEXT');
+          await db.execute(
+              'CREATE INDEX idx_books_cloud_file_id ON books(cloud_file_id)');
+          await db.execute(
+              'CREATE INDEX idx_books_content_fingerprint ON books(content_fingerprint)');
         }
       },
       onOpen: (db) async {
@@ -938,6 +958,18 @@ class SqliteLibraryRepository implements LibraryRepository {
       'books',
       where: 'content_fingerprint = ?',
       whereArgs: [fingerprint],
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    return Book.fromMap(rows.first);
+  }
+
+  @override
+  Future<Book?> findByCloudFileId(BookSource provider, String cloudFileId) async {
+    final rows = await _db.query(
+      'books',
+      where: 'source = ? AND cloud_file_id = ?',
+      whereArgs: [provider.name, cloudFileId],
       limit: 1,
     );
     if (rows.isEmpty) return null;
