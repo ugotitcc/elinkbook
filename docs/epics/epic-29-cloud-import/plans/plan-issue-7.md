@@ -34,7 +34,7 @@
 **Interfaces：**
 - Produces：`abstract class CloudOAuthConfig { static const String googleClientId; static String get googleRedirectScheme; static String get googleRedirectUri; static const String oneDriveClientId; static String get oneDriveRedirectScheme; static String get oneDriveRedirectUri; }`，供 `GoogleDriveOAuthClient`／`OneDriveOAuthClient`（Task 1 內同步更新）與 Task 2 的 Gradle 腳本（僅供對照，Gradle 無法直接讀取 Dart 常數）使用。
 
-- [ ] **Step 1：寫入失敗的 `CloudOAuthConfig` 測試**
+- [x] **Step 1：寫入失敗的 `CloudOAuthConfig` 測試**
 
 建立 `app/test/cloud_import/cloud_oauth_config_test.dart`：
 
@@ -86,12 +86,12 @@ void main() {
 
 **說明**：`flutter test` 執行時不帶 `--dart-define-from-file`，`String.fromEnvironment` 必然回退 `defaultValue`，故上述測試只驗證「未設定時的樣板值」與「兩條推導公式本身正確」，不驗證「真實憑證注入後的值」（那需要真的帶 `--dart-define-from-file` 執行，見 Task 2 手動驗證步驟）。
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 執行：`flutter test test/cloud_import/cloud_oauth_config_test.dart`
 預期：編譯失敗（`CloudOAuthConfig` 尚未定義）。
 
-- [ ] **Step 3：建立 `CloudOAuthConfig`**
+- [x] **Step 3：建立 `CloudOAuthConfig`**
 
 建立 `app/lib/cloud_import/cloud_oauth_config.dart`：
 
@@ -151,12 +151,12 @@ abstract class CloudOAuthConfig {
 }
 ```
 
-- [ ] **Step 4：執行測試確認通過**
+- [x] **Step 4：執行測試確認通過**
 
 執行：`flutter test test/cloud_import/cloud_oauth_config_test.dart`
 預期：全數 PASS。
 
-- [ ] **Step 5：`GoogleDriveOAuthClient` 改用 `CloudOAuthConfig`**
+- [x] **Step 5：`GoogleDriveOAuthClient` 改用 `CloudOAuthConfig`**
 
 在 `app/lib/cloud_import/google_drive_oauth_client.dart` 找到 import 區塊：
 
@@ -254,7 +254,7 @@ import 'cloud_provider.dart';
       });
 ```
 
-- [ ] **Step 6：`OneDriveOAuthClient` 改用 `CloudOAuthConfig`**
+- [x] **Step 6：`OneDriveOAuthClient` 改用 `CloudOAuthConfig`**
 
 在 `app/lib/cloud_import/onedrive_oauth_client.dart` 找到 import 區塊：
 
@@ -356,18 +356,18 @@ import 'cloud_provider.dart';
       });
 ```
 
-- [ ] **Step 7：刪除舊有兩個設定檔**
+- [x] **Step 7：刪除舊有兩個設定檔**
 
 ```bash
 git rm app/lib/cloud_import/google_oauth_config.dart app/lib/cloud_import/onedrive_oauth_config.dart
 ```
 
-- [ ] **Step 8：執行既有 OAuth client 測試與新測試確認通過**
+- [x] **Step 8：執行既有 OAuth client 測試與新測試確認通過**
 
 執行：`flutter test test/cloud_import/`
 預期：全數 PASS（`cloud_oauth_config_test.dart`、`google_drive_oauth_client_test.dart`、`onedrive_oauth_client_test.dart` 皆綠燈，後兩者零回歸——`grep` 已核實它們不依賴被刪除的舊常數字面值）。
 
-- [ ] **Step 9：執行完整測試套件與靜態分析確認零回歸**
+- [x] **Step 9：執行完整測試套件與靜態分析確認零回歸**
 
 執行：`flutter analyze`
 預期："No issues found!"
@@ -375,7 +375,7 @@ git rm app/lib/cloud_import/google_oauth_config.dart app/lib/cloud_import/onedri
 執行：`flutter test`
 預期：全數 PASS。
 
-- [ ] **Step 10：Commit**
+- [x] **Step 10：Commit**
 
 ```bash
 git add app/lib/cloud_import/cloud_oauth_config.dart app/lib/cloud_import/google_drive_oauth_client.dart app/lib/cloud_import/onedrive_oauth_client.dart app/test/cloud_import/cloud_oauth_config_test.dart
@@ -398,7 +398,7 @@ git commit -m "refactor(epic-29): Issue 7——CloudOAuthConfig 取代分散的 
 
 **本 Task 沒有 `flutter test` 可涵蓋的自動化測試 seam**（`/diagnose` 已於 `issues.md` Issue 7 標註此為已知限制，非本計劃遺漏）——Gradle 建置腳本與 Android manifest merge 皆發生在 `flutter test` 執行範圍之外，改以下方明確的手動建置驗證步驟核驗。
 
-- [ ] **Step 1：建立 JSON 設定樣板檔**
+- [x] **Step 1：建立 JSON 設定樣板檔**
 
 建立 `app/config/cloud_oauth.example.json`：
 
@@ -409,7 +409,7 @@ git commit -m "refactor(epic-29): Issue 7——CloudOAuthConfig 取代分散的 
 }
 ```
 
-- [ ] **Step 2：`.gitignore` 新增本機真實設定檔排除規則**
+- [x] **Step 2：`.gitignore` 新增本機真實設定檔排除規則**
 
 在 `U:\MyDeveloper\AI\elinkBook\.gitignore` 找到：
 
@@ -426,7 +426,7 @@ app/config/cloud_oauth.json
 tmp/
 ```
 
-- [ ] **Step 3：`build.gradle.kts` 解析設定檔並注入 `manifestPlaceholders`**
+- [x] **Step 3：`build.gradle.kts` 解析設定檔並注入 `manifestPlaceholders`**
 
 在 `app/android/app/build.gradle.kts` 找到檔案開頭：
 
@@ -544,7 +544,7 @@ val oneDriveOAuthScheme = "msal$rawOneDriveOAuthClientId"
     }
 ```
 
-- [ ] **Step 4：`AndroidManifest.xml` 改用動態佔位符**
+- [x] **Step 4：`AndroidManifest.xml` 改用動態佔位符**
 
 在 `app/android/app/src/main/AndroidManifest.xml` 找到：
 
@@ -580,7 +580,7 @@ val oneDriveOAuthScheme = "msal$rawOneDriveOAuthClientId"
             </intent-filter>
 ```
 
-- [ ] **Step 5：手動驗證——未提供真實設定檔時，退回樣板值仍可正常建置**
+- [x] **Step 5：手動驗證——未提供真實設定檔時，退回樣板值仍可正常建置**
 
 執行（在 `app/` 目錄下，確認此時 `app/config/cloud_oauth.json` 不存在）：
 
@@ -590,7 +590,7 @@ flutter build apk --debug
 
 預期：建置成功（BUILD SUCCESSFUL），與 Issue 7 之前的既有行為一致，不因這次重構而新增建置失敗風險。
 
-- [ ] **Step 6：手動驗證——提供真實設定檔時，`manifestPlaceholders` 確實生效**
+- [x] **Step 6：手動驗證——提供真實設定檔時，`manifestPlaceholders` 確實生效**
 
 建立一個僅供本次驗證用、**不會被提交**的暫存設定檔（`app/config/cloud_oauth.json` 已在 Step 2 加入 `.gitignore`，此步驟操作安全）。以下提供 Bash（Git Bash／POSIX sh）與 PowerShell 兩種等效寫法，依實際可用的終端擇一：
 
@@ -625,7 +625,7 @@ flutter build apk --debug --dart-define-from-file=config/cloud_oauth.json
 Bash：`rm app/config/cloud_oauth.json`
 PowerShell：`Remove-Item app/config/cloud_oauth.json`
 
-- [ ] **Step 7：Commit**
+- [x] **Step 7：Commit**
 
 ```bash
 git add app/config/cloud_oauth.example.json .gitignore app/android/app/build.gradle.kts app/android/app/src/main/AndroidManifest.xml
@@ -642,7 +642,7 @@ git commit -m "feat(epic-29): Issue 7——Gradle 自動注入 app/config/cloud_
 **Interfaces：**
 - Consumes：Task 1、Task 2 的完整成果。
 
-- [ ] **Step 1：`CLAUDE.md`「常用指令」補上帶設定檔的建置指令**
+- [x] **Step 1：`CLAUDE.md`「常用指令」補上帶設定檔的建置指令**
 
 在根目錄 `CLAUDE.md` 找到：
 
@@ -696,7 +696,7 @@ flutter build apk --release --dart-define-from-file=config/cloud_oauth.json
 ```
 ```
 
-- [ ] **Step 2：執行完整測試套件與靜態分析最終確認**
+- [x] **Step 2：執行完整測試套件與靜態分析最終確認**
 
 執行：`flutter analyze`
 預期："No issues found!"
@@ -704,7 +704,7 @@ flutter build apk --release --dart-define-from-file=config/cloud_oauth.json
 執行：`flutter test`
 預期：全數 PASS，零回歸。
 
-- [ ] **Step 3：Commit**
+- [x] **Step 3：Commit**
 
 ```bash
 git add CLAUDE.md
