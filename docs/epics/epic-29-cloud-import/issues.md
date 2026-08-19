@@ -6,7 +6,9 @@
 
 ## Issue 0：擴充既有匯入/查詢管線（Prefactor）
 
-**Status:** `ready-for-agent`
+**Status:** ✅ 已完成（PR #164，分支 `epic-29-cloud-import`，4 個 commit，2026-08-19）
+
+**完成摘要：** 比照 `epic-30-calibre-remote-library` Issue 0 已驗證過的擴充既有介面手法實作。`Book` 模型新增 `cloudFileId`（`String?`）欄位，語意上與 `remoteBookId`（`epic-30`「遠端書庫」）完全獨立，對應 `CONTEXT.md`「雲端匯入來源帳號」；`toMap()`/`fromMap()`/`copyWith()`/`==`/`hashCode` 皆完整納入，`FakeLibraryRepository._withGroupName` 同步補上防禦（避免群組更名時欄位被靜默清空）。SQLite schema migration 由 version 22 升至 23（**非**原訂的 21→22——`epic-30` Issue 0 已先落地佔用了 22，本 Issue 為第二個套用同一擴充模式的 Epic），`books` 表新增 `cloud_file_id` 欄位＋ `idx_books_cloud_file_id` 索引，並藉此次 migration 一併補上 `content_fingerprint` 自 `epic-8-sync` Issue 3 引入以來從未建過的 `idx_books_content_fingerprint` 索引。`LibraryRepository` 新增 `findByCloudFileId(BookSource provider, String cloudFileId)`（`SqliteLibraryRepository`／`FakeLibraryRepository` 三件套完整實作，以 `(source, cloud_file_id)` 複合鍵查詢）；`findByContentFingerprint()` 因 `epic-30` Issue 0 已建置完成，本次不重複宣告/實作，直接復用。`BookImportService.importFiles()` 擴充可選參數 `cloudFileIds`（`Map<String, String>`，path 對應雲端檔案 ID），貫穿 `_importSingleFile()` 落地至 `Book.cloudFileId`，既有本機／OPDS 遠端書架呼叫端零改動、零回歸；測試替身 `FakeBookImportService` 同步擴充 `ImportCallRecord.cloudFileIds` 供後續 Issue 3 的 widget test 斷言使用。計畫審查（`reviews/review-plan-issue-0.md`）與程式碼審查（`reviews/review-issue-0.md`）皆 **APPROVED**，0 Critical／0 Important（計畫審查另有 2 條不影響通過的 Minor 建議，留供後續 Issue 3 整合測試參考，未強制修改本 Issue）。全專案 `flutter analyze` 乾淨、`flutter test` 1559 項全數通過、零回歸。
 
 **依賴：** 無，可立即開始。
 
