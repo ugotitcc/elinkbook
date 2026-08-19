@@ -1,6 +1,6 @@
 # Epic 29 Issue 3：Google Drive 瀏覽＋匯入（單/多檔＋分類選擇）實作計劃
 
-> **給執行者：** 本計劃必須搭配 `superpowers:subagent-driven-development`（建議）或 `superpowers:executing-plans` 逐 Task 執行。每個 Step 用 checkbox（`- [ ]`）追蹤，完成後改為 `- [x]`。
+> **給執行者：** 本計劃必須搭配 `superpowers:subagent-driven-development`（建議）或 `superpowers:executing-plans` 逐 Task 執行。每個 Step 用 checkbox（`- [x]`）追蹤，完成後改為 `- [x]`。
 
 **Goal：** 讓使用者能在「匯入」選單選擇「從 Google Drive 匯入」，逐層瀏覽已連結帳號的雲端硬碟資料夾、勾選單/多個支援格式的檔案、選擇分類，一次完成「瀏覽→勾選→下載→匯入圖書庫」，是第一個讓使用者實際「從雲端匯入一本書」的完整可展示切片。
 
@@ -40,7 +40,7 @@
   - `BookFileFormat? detectCloudFileFormat(String name, String? mimeType)`
   - `class FakeCloudStorageClient implements CloudStorageClient`（供 Task 2/3/4 測試使用）
 
-- [ ] **Step 1：寫入失敗的 `detectCloudFileFormat()` 測試**
+- [x] **Step 1：寫入失敗的 `detectCloudFileFormat()` 測試**
 
 建立 `app/test/cloud_import/cloud_storage_client_test.dart`：
 
@@ -76,12 +76,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 執行：`flutter test test/cloud_import/cloud_storage_client_test.dart`
 預期：編譯失敗（`cloud_storage_client.dart` 尚未存在）。
 
-- [ ] **Step 3：建立 `CloudStorageClient` 介面與型別**
+- [x] **Step 3：建立 `CloudStorageClient` 介面與型別**
 
 建立 `app/lib/cloud_import/cloud_storage_client.dart`：
 
@@ -213,12 +213,12 @@ BookFileFormat? detectCloudFileFormat(String name, String? mimeType) {
 }
 ```
 
-- [ ] **Step 4：執行測試確認通過**
+- [x] **Step 4：執行測試確認通過**
 
 執行：`flutter test test/cloud_import/cloud_storage_client_test.dart`
 預期：全數 PASS。
 
-- [ ] **Step 5：建立 `FakeCloudStorageClient`**
+- [x] **Step 5：建立 `FakeCloudStorageClient`**
 
 建立 `app/test/support/fake_cloud_storage_client.dart`：
 
@@ -291,12 +291,12 @@ class FakeCloudStorageClient implements CloudStorageClient {
 }
 ```
 
-- [ ] **Step 6：執行完整測試套件確認零回歸**
+- [x] **Step 6：執行完整測試套件確認零回歸**
 
 執行：`flutter test`
 預期：全數 PASS（`FakeCloudStorageClient` 目前尚無呼叫端，僅需確認編譯成功）。
 
-- [ ] **Step 7：Commit**
+- [x] **Step 7：Commit**
 
 ```bash
 git add app/lib/cloud_import/cloud_storage_client.dart app/test/support/fake_cloud_storage_client.dart app/test/cloud_import/cloud_storage_client_test.dart
@@ -315,7 +315,7 @@ git commit -m "feat(epic-29): Issue 3——CloudStorageClient 抽象介面/detec
 - Consumes：Task 1 的 `CloudStorageClient`／`CloudFolderListing`／`CloudFileEntry`／`CloudAuthRequiredException`／`detectCloudFileFormat()`，Issue 1 的 `GoogleDriveOAuthClient.ensureValidAccessToken()`。
 - Produces：`class GoogleDriveStorageClient implements CloudStorageClient`，供 Task 4（UI）與 Task 5（貫穿注入）使用。
 
-- [ ] **Step 1：寫入失敗的 `listFolder()` 測試**
+- [x] **Step 1：寫入失敗的 `listFolder()` 測試**
 
 建立 `app/test/cloud_import/google_drive_storage_client_test.dart`：
 
@@ -467,12 +467,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 執行：`flutter test test/cloud_import/google_drive_storage_client_test.dart`
 預期：編譯失敗（`GoogleDriveStorageClient` 尚未定義）。
 
-- [ ] **Step 3：實作 `GoogleDriveStorageClient`**
+- [x] **Step 3：實作 `GoogleDriveStorageClient`**
 
 建立 `app/lib/cloud_import/google_drive_storage_client.dart`：
 
@@ -632,12 +632,12 @@ class GoogleDriveStorageClient implements CloudStorageClient {
 }
 ```
 
-- [ ] **Step 4：執行測試確認通過**
+- [x] **Step 4：執行測試確認通過**
 
 執行：`flutter test test/cloud_import/google_drive_storage_client_test.dart`
 預期：全數 PASS。
 
-- [ ] **Step 5：執行完整測試套件與靜態分析確認零回歸**
+- [x] **Step 5：執行完整測試套件與靜態分析確認零回歸**
 
 執行：`flutter analyze`
 預期："No issues found!"
@@ -645,7 +645,7 @@ class GoogleDriveStorageClient implements CloudStorageClient {
 執行：`flutter test`
 預期：全數 PASS。
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/lib/cloud_import/google_drive_storage_client.dart app/test/cloud_import/google_drive_storage_client_test.dart
@@ -668,7 +668,7 @@ git commit -m "feat(epic-29): Issue 3——GoogleDriveStorageClient（Drive API 
   - `Future<String> promoteCloudFileToPermanent(String tempPath)`
   - `class CloudDownloadQueueDialog extends StatefulWidget { required List<CloudFileEntry> entries; required CloudStorageClient client; required BookImportService importService; required BookSource source; String? folderName; }`，供 Task 4 與未來 Issue 4（OneDrive，傳入 `source: BookSource.oneDrive`）使用。
 
-- [ ] **Step 1：建立下載＋落地函式**
+- [x] **Step 1：建立下載＋落地函式**
 
 建立 `app/lib/cloud_import/cloud_book_downloader.dart`：
 
@@ -744,7 +744,7 @@ Future<String> promoteCloudFileToPermanent(String tempPath) async {
 }
 ```
 
-- [ ] **Step 2：寫入失敗的 `CloudDownloadQueueDialog` widget test**
+- [x] **Step 2：寫入失敗的 `CloudDownloadQueueDialog` widget test**
 
 建立 `app/test/screens/cloud_download_queue_dialog_test.dart`：
 
@@ -882,12 +882,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 3：執行測試確認失敗**
+- [x] **Step 3：執行測試確認失敗**
 
 執行：`flutter test test/screens/cloud_download_queue_dialog_test.dart`
 預期：編譯失敗（`CloudDownloadQueueDialog` 尚未定義）。
 
-- [ ] **Step 4：實作 `CloudDownloadQueueDialog`**
+- [x] **Step 4：實作 `CloudDownloadQueueDialog`**
 
 建立 `app/lib/screens/cloud_download_queue_dialog.dart`：
 
@@ -1087,12 +1087,12 @@ class _CloudDownloadQueueDialogState extends State<CloudDownloadQueueDialog> {
 }
 ```
 
-- [ ] **Step 5：執行測試確認通過**
+- [x] **Step 5：執行測試確認通過**
 
 執行：`flutter test test/screens/cloud_download_queue_dialog_test.dart`
 預期：全數 PASS。
 
-- [ ] **Step 6：執行完整測試套件與靜態分析確認零回歸**
+- [x] **Step 6：執行完整測試套件與靜態分析確認零回歸**
 
 執行：`flutter analyze`
 預期："No issues found!"
@@ -1100,7 +1100,7 @@ class _CloudDownloadQueueDialogState extends State<CloudDownloadQueueDialog> {
 執行：`flutter test`
 預期：全數 PASS。
 
-- [ ] **Step 7：Commit**
+- [x] **Step 7：Commit**
 
 ```bash
 git add app/lib/cloud_import/cloud_book_downloader.dart app/lib/screens/cloud_download_queue_dialog.dart app/test/screens/cloud_download_queue_dialog_test.dart
@@ -1119,7 +1119,7 @@ git commit -m "feat(epic-29): Issue 3——雲端下載/落地函式與 CloudDow
 - Consumes：Task 1 的 `CloudStorageClient`／`CloudFileEntry`／`CloudFolderListing`／`CloudAuthRequiredException`／`FakeCloudStorageClient`，Task 3 的 `CloudDownloadQueueDialog`，既有 `LibraryRepository.listGroups()`／`BookGroup`。
 - Produces：`class GoogleDriveBrowserScreen extends StatefulWidget { required CloudStorageClient client; required LibraryRepository libraryRepository; required BookImportService importService; String? folderId; String? title; }`，供 Task 5 從「匯入」選單導航進入。
 
-- [ ] **Step 1：寫入失敗的 widget test**
+- [x] **Step 1：寫入失敗的 widget test**
 
 建立 `app/test/screens/google_drive_browser_screen_test.dart`：
 
@@ -1335,12 +1335,12 @@ class _ThrowingCloudStorageClient extends FakeCloudStorageClient {
 }
 ```
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 執行：`flutter test test/screens/google_drive_browser_screen_test.dart`
 預期：編譯失敗（`GoogleDriveBrowserScreen` 尚未定義）。
 
-- [ ] **Step 3：實作 `GoogleDriveBrowserScreen`**
+- [x] **Step 3：實作 `GoogleDriveBrowserScreen`**
 
 建立 `app/lib/screens/google_drive_browser_screen.dart`：
 
@@ -1661,12 +1661,12 @@ class _GoogleDriveBrowserScreenState extends State<GoogleDriveBrowserScreen> {
 }
 ```
 
-- [ ] **Step 4：執行測試確認通過**
+- [x] **Step 4：執行測試確認通過**
 
 執行：`flutter test test/screens/google_drive_browser_screen_test.dart`
 預期：全數 PASS。
 
-- [ ] **Step 5：執行完整測試套件與靜態分析確認零回歸**
+- [x] **Step 5：執行完整測試套件與靜態分析確認零回歸**
 
 執行：`flutter analyze`
 預期："No issues found!"
@@ -1674,7 +1674,7 @@ class _GoogleDriveBrowserScreenState extends State<GoogleDriveBrowserScreen> {
 執行：`flutter test`
 預期：全數 PASS。
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/lib/screens/google_drive_browser_screen.dart app/test/screens/google_drive_browser_screen_test.dart
@@ -1694,7 +1694,7 @@ git commit -m "feat(epic-29): Issue 3——GoogleDriveBrowserScreen 瀏覽畫面
 - Consumes：Task 2 的 `GoogleDriveStorageClient`，Task 4 的 `GoogleDriveBrowserScreen`。
 - Produces：`LibraryScreen`／`ElinkBookApp` 新增可選具名參數 `googleDriveStorageClient`，`main.dart` 正式組裝真實實例；「匯入」選單新增「從 Google Drive 匯入」項目。
 
-- [ ] **Step 1：寫入失敗的「匯入」選單測試**
+- [x] **Step 1：寫入失敗的「匯入」選單測試**
 
 在 `app/test/screens/library_screen_test.dart` 找到既有的匯入選單相關測試群組（搜尋 `library_import_button` 找到對應 `group`），在其中新增：
 
@@ -1734,12 +1734,12 @@ import 'package:elinkbook/cloud_import/cloud_storage_client.dart';
 import '../support/fake_cloud_storage_client.dart';
 ```
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 執行：`flutter test test/screens/library_screen_test.dart --plain-name "Google Drive"`
 預期：編譯失敗（`LibraryScreen` 沒有 `googleDriveStorageClient` 具名參數，`library_import_google_drive_option` 不存在）。
 
-- [ ] **Step 3：`LibraryScreen` 新增參數與匯入選單項目**
+- [x] **Step 3：`LibraryScreen` 新增參數與匯入選單項目**
 
 在 `app/lib/screens/library_screen.dart` 找到 import 區塊：
 
@@ -1900,12 +1900,12 @@ import 'reader_screen.dart';
   }
 ```
 
-- [ ] **Step 4：執行測試確認通過**
+- [x] **Step 4：執行測試確認通過**
 
 執行：`flutter test test/screens/library_screen_test.dart`
 預期：全數 PASS。
 
-- [ ] **Step 5：`main.dart` 組裝真實實例並貫穿 `ElinkBookApp`**
+- [x] **Step 5：`main.dart` 組裝真實實例並貫穿 `ElinkBookApp`**
 
 在 `app/lib/main.dart` 找到：
 
@@ -2028,7 +2028,7 @@ import 'library/book_content_fingerprint.dart';
         googleDriveStorageClient: widget.googleDriveStorageClient,
 ```
 
-- [ ] **Step 6：執行完整測試套件與靜態分析確認零回歸**
+- [x] **Step 6：執行完整測試套件與靜態分析確認零回歸**
 
 執行：`flutter analyze`
 預期："No issues found!"
@@ -2036,7 +2036,7 @@ import 'library/book_content_fingerprint.dart';
 執行：`flutter test`
 預期：全數 PASS。
 
-- [ ] **Step 7：Commit**
+- [x] **Step 7：Commit**
 
 ```bash
 git add app/lib/screens/library_screen.dart app/lib/main.dart app/test/screens/library_screen_test.dart
