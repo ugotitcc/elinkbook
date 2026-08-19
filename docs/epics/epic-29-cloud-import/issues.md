@@ -169,3 +169,37 @@
 **驗收標準：** 行動數據下載大檔案前正確跳出確認，Wi-Fi 或小檔案不受影響；`flutter analyze` 乾淨、`flutter test` 通過。
 
 **Blocked by：** Issue 3。
+
+---
+
+## Issue 7：雲端服務 OAuth 統一外部設定檔（技術債／架構深化，2026-08-19 追加）
+
+**Status:** `ready-for-agent`
+
+**依賴：** Issue 1、Issue 2（`google_oauth_config.dart`／`onedrive_oauth_config.dart`／`AndroidManifest.xml` 兩組 intent-filter 皆已存在）。
+
+**背景：** `/diagnose` 針對使用者提出的痛點（「雲端硬碟介接設定散在各程式」）進行核實，並核查 `docs/research/cloud_oauth_unified_configuration_architecture.md` 提出的統一設定檔方案技術可行性。**現況核實屬實**：Google／OneDrive 的用戶端 ID 與其反向推導出的 redirect scheme 目前分散在 3 個檔案（`app/lib/cloud_import/google_oauth_config.dart`、`app/lib/cloud_import/onedrive_oauth_config.dart`、`app/android/app/src/main/AndroidManifest.xml` 的 2 組 intent-filter `android:scheme`），開發者填入真實憑證時必須手動同步全部 3 處、且 scheme 需手動反轉/拼接（`com.googleusercontent.apps.<ID>`／`msal<ID>://auth`），容易出錯。
+
+**技術可行性核實**（`/diagnose` 逐項驗證研究報告的關鍵技術主張，而非照單全收）：
+- **Gradle `project.rootDir` 路徑推導經查證正確，但依賴一個容易被誤改的 Gradle API 語意**：`project.rootDir`（在 `:app` 子專案的 `build.gradle.kts` 內存取）依 Gradle 官方語意恆等於**根專案**（`settings.gradle.kts` 所在的 `app/android/`）目錄，*不是* `:app` 子專案自己的目錄——因此 `project.rootDir.parentFile` 確實等於 `app/`，`File(project.rootDir.parentFile, "config/cloud_oauth.json")` 確實解析為 `app/config/cloud_oauth.json`，與預期相符。但這個結果依賴一個不直觀的 Gradle 語意（「`rootDir` 永遠指根專案，即使在子專案腳本內存取」），未來若有人「順手」把它改成看似更直覺的寫法（例如改用 `project.projectDir.parentFile`，那會變成 `android/` 而非 `app/`，靜默指向錯誤路徑），會重新製造出本 Issue 想解決的那類「設定散落／路徑對不上」問題——實作時必須在該行程式碼加上明確註解說明這個依賴關係，不可省略。
+- **Kotlin DSL（`.kts`）內 `import groovy.json.JsonSlurper` 可正常運作**：Gradle 核心本身以 Groovy 建構，Groovy 執行期一律存在於所有建置腳本（不論 Groovy DSL 或 Kotlin DSL）的 classpath 上，這是業界已有先例的常見手法，非本專案獨創，技術上無風險。
+- **`manifestPlaceholders` 機制**：Android Gradle Plugin 標準功能，`${googleOAuthScheme}` 於 manifest merge 階段替換，技術上無風險。
+- **`--dart-define-from-file` ＋ `String.fromEnvironment`**：Flutter 3.7 起支援的標準機制，本專案 Dart SDK 鎖定 `^3.11.5`（`pubspec.yaml`），遠高於門檻，無相容性風險；`String.fromEnvironment` 是編譯期常數求值，換設定檔後必須重新編譯（`flutter run`／`flutter build apk` 本就會重新編譯，非額外負擔）。
+- **測試零回歸範圍已核實**：`grep` 全 `app/test/` 目錄確認目前沒有任何測試檔案直接引用 `googleOAuthClientId`／`googleOAuthRedirectScheme`／`oneDriveOAuthClientId`／`oneDriveOAuthRedirectScheme` 這幾個常數（Issue 1／2 的 OAuth client 測試僅注入 mock `http.Client`，不涉及這些設定值），本次重構對既有測試套件影響範圍為零。
+- **殘餘風險（已知、可接受）**：Dart 端（`CloudOAuthConfig.googleRedirectScheme` 的 getter）與 Gradle 端（`build.gradle.kts` 內對應的 Kotlin 字串運算）各自獨立實作同一套「由用戶端 ID 反推 scheme」公式，兩處理論上仍可能因未來修改其中一處而失去同步——但比起現狀「開發者手動複製貼上同一個推導後字串到 3 個檔案」，本方案已把「需要手動同步的東西」從「每次換憑證都要同步的最終字串」降階為「幾乎不會再變動的推導公式」，風險大幅降低但非歸零，實作時兩處程式碼應以註解互相參照，明確標註「修改這裡也要同步改另一處」。
+
+**What to build：**
+- 新增 `app/lib/cloud_import/cloud_oauth_config.dart`：`abstract class CloudOAuthConfig` 靜態成員，`googleClientId`／`oneDriveClientId` 由 `String.fromEnvironment('GOOGLE_OAUTH_CLIENT_ID', defaultValue: ...)`／`String.fromEnvironment('ONEDRIVE_OAUTH_CLIENT_ID', defaultValue: ...)` 讀取，`googleRedirectScheme`／`googleRedirectUri`／`oneDriveRedirectScheme`／`oneDriveRedirectUri` 皆為由對應 client ID 推導的 getter（沿用現行 `google_oauth_config.dart`／`onedrive_oauth_config.dart` 既有的推導公式，不變動推導邏輯本身）。**刪除**舊有 `google_oauth_config.dart`／`onedrive_oauth_config.dart` 兩個檔案，`GoogleDriveOAuthClient`／`OneDriveOAuthClient` 改為 import 並參照 `CloudOAuthConfig.xxx`。
+- 新增 `app/config/cloud_oauth.example.json`（提交版控，樣板值）；`.gitignore` 新增 `app/config/cloud_oauth.json`（開發者本機真實憑證，不進版控）。
+- 修改 `app/android/app/build.gradle.kts`：於 `defaultConfig` 區塊前解析 `app/config/cloud_oauth.json`（不存在則退回 `cloud_oauth.example.json` 樣板值），推導兩組 scheme 後寫入 `manifestPlaceholders["googleOAuthScheme"]`／`manifestPlaceholders["oneDriveOAuthScheme"]`；緊鄰該段程式碼加上註解明確說明 `project.rootDir` 語意（上方「技術可行性核實」已核查的路徑推導依據）。
+- 修改 `app/android/app/src/main/AndroidManifest.xml`：兩組既有 intent-filter 的 `android:scheme` 字面值改為 `${googleOAuthScheme}`／`${oneDriveOAuthScheme}` 佔位符。
+- 更新根目錄 `CLAUDE.md`「常用指令」小節，補上 `flutter run --dart-define-from-file=config/cloud_oauth.json`／`flutter build apk --release --dart-define-from-file=config/cloud_oauth.json` 兩則指令，說明何時需要（本機測試真實 OAuth 登入流程時）、何時不需要（`flutter analyze`／`flutter test`／不涉及真實登入的一般開發，皆維持現行指令不變）。
+
+**單元測試要求：**
+- `CloudOAuthConfig` 的 4 個 getter（`googleRedirectScheme`／`googleRedirectUri`／`oneDriveRedirectScheme`／`oneDriveRedirectUri`）各自的推導正確性（純 Dart 單元測試，不需 widget/裝置）：預設 placeholder 值輸入時的推導結果符合預期格式。
+- `GoogleDriveOAuthClient`／`OneDriveOAuthClient` 既有測試套件（Issue 1／2）**不需要修改**即可繼續通過（零回歸，已於上方「技術可行性核實」確認測試零依賴這些常數的具體字面值）。
+- Gradle／`AndroidManifest.xml` 的變更不屬於 `flutter test` 涵蓋範圍，驗收改以真機/本機 `flutter build apk --debug`（不帶 `--dart-define-from-file`，驗證退回樣板值時仍可正常建置）與 `flutter build apk --debug --dart-define-from-file=config/cloud_oauth.json`（放入一組假的測試用 JSON，驗證 `manifestPlaceholders` 確實被覆寫，可用 `unzip -p build/app/outputs/.../AndroidManifest.xml` 或 `aapt dump xmltree` 類指令核對編譯後 manifest 內的 scheme 字面值）兩種情境人工核驗。
+
+**驗收標準：** 全部 OAuth 設定改為單一 `app/config/cloud_oauth.json` 維護點；未提供該檔案時，既有 `flutter analyze`／`flutter test`／`flutter build apk --debug` 皆能以樣板 placeholder 值 100% 正常執行（零回歸）；提供真實設定檔時，`flutter build apk --debug --dart-define-from-file=config/cloud_oauth.json` 建置出的 APK 內 `AndroidManifest.xml` 之 scheme 與 Dart 端 `CloudOAuthConfig` 推導值一致。
+
+**Blocked by：** Issue 1、Issue 2。
