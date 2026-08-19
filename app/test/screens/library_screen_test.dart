@@ -25,6 +25,7 @@ import '../support/fake_library_repository.dart';
 import '../support/fake_reader_prefs_manager.dart';
 import '../support/fake_opds_client.dart';
 import '../support/fake_remote_server_repository.dart';
+import '../support/fake_cloud_storage_client.dart';
 import '../support/fake_remote_thumbnail_cache.dart';
 import 'package:elinkbook/remote/remote_server_profile.dart';
 import 'package:elinkbook/screens/remote_server_list_screen.dart';
@@ -2022,6 +2023,51 @@ void main() {
     expect(find.text('2 本已存在，已跳過'), findsNothing);
   });
 
+  // epic-29-cloud-import Issue 3：Google Drive 匯入選單測試
+  testWidgets('googleDriveStorageClient 為 null 時「從 Google Drive 匯入」選項停用', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('library_import_button')));
+    await tester.pumpAndSettle();
+
+    final option = tester.widget<PopupMenuItem<void>>(
+      find.byKey(const Key('library_import_google_drive_option')),
+    );
+    expect(option.enabled, false);
+  });
+
+  testWidgets('提供 googleDriveStorageClient 時點擊「從 Google Drive 匯入」導航至 GoogleDriveBrowserScreen',
+      (tester) async {
+    final client = FakeCloudStorageClient();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+          googleDriveStorageClient: client,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('library_import_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('library_import_google_drive_option')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Google Drive'), findsOneWidget);
+  });
+
   testWidgets(
       'LibraryScreen 點開一本書後，ReaderScreen 收到的 highlightsRepository／notesRepository 正確貫穿（Issue 6 缺口修正）',
       (tester) async {
@@ -2870,6 +2916,42 @@ void main() {
         reason: '透過分類篩選路徑開書，ReaderScreen 收到的 syncCheckpointTrigger 應與'
             '外層一致，離開閱讀畫面／閱讀中 5 分鐘計時器兩種來源才會正確觸發 '
             'checkpoint');
+  });
+
+  testWidgets(
+      'LibraryScreen 透過分類篩選路徑（_openGroupFilteredView）進入後，'
+      'googleDriveStorageClient 與外層一致（review-issue-3.md Important #1 採納）',
+      (tester) async {
+    final book = _testBook(
+      id: '1',
+      title: '紅樓夢',
+      author: '曹雪芹',
+      groupName: '奇幻',
+      filePath: 'content://example/1.txt',
+    );
+    final googleDriveStorageClient = FakeCloudStorageClient();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: [book]),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+          googleDriveStorageClient: googleDriveStorageClient,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('group_tile_奇幻')));
+    await tester.pumpAndSettle();
+
+    final filteredScreenFinder = _filteredLibraryScreenFinder('奇幻');
+    final filteredScreen = tester.widget<LibraryScreen>(filteredScreenFinder);
+    expect(filteredScreen.googleDriveStorageClient, same(googleDriveStorageClient),
+        reason: '_openGroupFilteredView() 未把 googleDriveStorageClient 貫穿給下一層 '
+            'LibraryScreen，會導致分類篩選畫面內「從 Google Drive 匯入」選單項目 '
+            '永遠停用');
   });
 
   testWidgets(
