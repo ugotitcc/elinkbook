@@ -174,7 +174,9 @@
 
 ## Issue 7：雲端服務 OAuth 統一外部設定檔（技術債／架構深化，2026-08-19 追加）
 
-**Status:** `ready-for-agent`
+**Status:** ✅ 已完成（PR #167，分支 `feat/epic-29-issue7-cloud-oauth-config`，4 個 commit，2026-08-19）
+
+**完成摘要：** 新增 `CloudOAuthConfig`（`app/lib/cloud_import/cloud_oauth_config.dart`）取代 `google_oauth_config.dart`／`onedrive_oauth_config.dart` 兩個檔案，以 `String.fromEnvironment('GOOGLE_OAUTH_CLIENT_ID'/'ONEDRIVE_OAUTH_CLIENT_ID', defaultValue: ...)` 讀取 `--dart-define-from-file` 注入的編譯期常數、未提供時回退既有樣板值，推導公式本身不變動；`GoogleDriveOAuthClient`／`OneDriveOAuthClient` 改為參照 `CloudOAuthConfig.xxx`，既有 OAuth client 測試套件零回歸（`grep` 事先核實零依賴舊常數字面值）。`app/android/app/build.gradle.kts` 獨立解析同一份 `app/config/cloud_oauth.json`（Dart 編譯期常數對 Gradle 建置腳本不可見，兩條建置管線各自解析），推導出的 scheme 寫入 `manifestPlaceholders`；`project.rootDir` 依 Gradle 官方語意恆等於根專案目錄（`app/android/`，非 `:app` 子專案自己的目錄）這個容易被誤改的依賴關係已加註解防護。`AndroidManifest.xml` 兩組既有 intent-filter 改用 `${googleOAuthScheme}`／`${oneDriveOAuthScheme}` 佔位符；新增 `app/config/cloud_oauth.example.json`（提交版控）＋ `.gitignore` 排除本機真實憑證檔；`CLAUDE.md`「常用指令」補上使用說明。計畫審查（`reviews/review-plan-issue-7.md`）與程式碼審查（`reviews/review-issue-7.md`）皆 **APPROVED**，0 Critical／0 Important，僅 2 項 Minor（皆為文件追蹤流程，已補齊）與 1 項已知可接受的殘餘風險（雙軌推導公式須手動同步，已加互相參照註解）。程式碼審查明確標註「Gradle manifest merge 真實建置驗證未獨立覆核」，PR 提交前已補做：實際執行 `flutter build apk --debug`（未帶／帶 `--dart-define-from-file` 假憑證）皆建置成功，`build/app/intermediates/merged_manifest/.../AndroidManifest.xml` 內 `android:scheme` 確認正確反映為 `com.googleusercontent.apps.999999999999-testverify`／`msaltest-verify-id-1234`，與 Dart 端推導公式手動核算結果位元組級一致。全專案 `flutter analyze` 乾淨、`flutter test` 1586 項全數通過、零回歸。
 
 **依賴：** Issue 1、Issue 2（`google_oauth_config.dart`／`onedrive_oauth_config.dart`／`AndroidManifest.xml` 兩組 intent-filter 皆已存在）。
 
