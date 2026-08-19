@@ -206,6 +206,7 @@ class FakeLibraryRepository implements LibraryRepository {
         remoteBookId: book.remoteBookId,
         remoteDownloadUrl: book.remoteDownloadUrl,
         isDownloaded: book.isDownloaded,
+        cloudFileId: book.cloudFileId,
         groupName: groupName,
         createTime: book.createTime,
         lastReadTime: book.lastReadTime,

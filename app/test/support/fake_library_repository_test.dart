@@ -89,6 +89,7 @@ void main() {
         remoteBookId: 'rb-1',
         remoteDownloadUrl: 'http://example.com/1.epub',
         isDownloaded: false,
+        cloudFileId: 'gdrive-file-1',
         createTime: DateTime.fromMillisecondsSinceEpoch(1000),
         lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
       ));
@@ -108,6 +109,7 @@ void main() {
       expect(book.remoteBookId, 'rb-1');
       expect(book.remoteDownloadUrl, 'http://example.com/1.epub');
       expect(book.isDownloaded, false);
+      expect(book.cloudFileId, 'gdrive-file-1');
     });
   });
 }
