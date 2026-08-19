@@ -39,7 +39,7 @@
   - `class SecureStorageCloudAccountRepository implements CloudAccountRepository`
   - `class FakeCloudAccountRepository implements CloudAccountRepository`（供 Task 2/3/4 測試使用）
 
-- [ ] **Step 1：建立 `CloudProvider` enum**
+- [x] **Step 1：建立 `CloudProvider` enum**
 
 建立 `app/lib/cloud_import/cloud_provider.dart`：
 
@@ -51,7 +51,7 @@
 enum CloudProvider { googleDrive, oneDrive }
 ```
 
-- [ ] **Step 2：建立 `CloudAccountRepository` 抽象介面**
+- [x] **Step 2：建立 `CloudAccountRepository` 抽象介面**
 
 建立 `app/lib/cloud_import/cloud_account_repository.dart`：
 
@@ -89,7 +89,7 @@ abstract class CloudAccountRepository {
 }
 ```
 
-- [ ] **Step 3：寫入失敗的 `SecureStorageCloudAccountRepository` 測試**
+- [x] **Step 3：寫入失敗的 `SecureStorageCloudAccountRepository` 測試**
 
 建立 `app/test/cloud_import/secure_storage_cloud_account_repository_test.dart`：
 
@@ -213,12 +213,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 4：執行測試確認失敗**
+- [x] **Step 4：執行測試確認失敗**
 
 執行：`flutter test test/cloud_import/secure_storage_cloud_account_repository_test.dart`
 預期：編譯失敗（`SecureStorageCloudAccountRepository` 尚未定義）。
 
-- [ ] **Step 5：實作 `SecureStorageCloudAccountRepository`**
+- [x] **Step 5：實作 `SecureStorageCloudAccountRepository`**
 
 建立 `app/lib/cloud_import/secure_storage_cloud_account_repository.dart`：
 
@@ -299,12 +299,12 @@ class SecureStorageCloudAccountRepository implements CloudAccountRepository {
 }
 ```
 
-- [ ] **Step 6：執行測試確認通過**
+- [x] **Step 6：執行測試確認通過**
 
 執行：`flutter test test/cloud_import/secure_storage_cloud_account_repository_test.dart`
 預期：全數 PASS。
 
-- [ ] **Step 7：建立 `FakeCloudAccountRepository`**
+- [x] **Step 7：建立 `FakeCloudAccountRepository`**
 
 建立 `app/test/support/fake_cloud_account_repository.dart`：
 
@@ -339,12 +339,12 @@ class FakeCloudAccountRepository implements CloudAccountRepository {
 }
 ```
 
-- [ ] **Step 8：執行完整測試套件確認零回歸**
+- [x] **Step 8：執行完整測試套件確認零回歸**
 
 執行：`flutter test`
 預期：全數 PASS（`FakeCloudAccountRepository` 目前尚無呼叫端，僅需確認編譯成功、不影響既有測試）。
 
-- [ ] **Step 9：Commit**
+- [x] **Step 9：Commit**
 
 ```bash
 git add app/lib/cloud_import/cloud_provider.dart app/lib/cloud_import/cloud_account_repository.dart app/lib/cloud_import/secure_storage_cloud_account_repository.dart app/test/support/fake_cloud_account_repository.dart app/test/cloud_import/secure_storage_cloud_account_repository_test.dart
@@ -366,18 +366,18 @@ git commit -m "feat(epic-29): Issue 1——CloudAccountRepository 抽象介面/S
 - Consumes：Task 1 的 `CloudAccountRepository`／`CloudAccountTokens`／`CloudProvider`／`FakeCloudAccountRepository`。
 - Produces：`class GoogleDriveOAuthClient { Future<bool> link(); Future<void> unlink(); Future<String?> ensureValidAccessToken(); }`，供 Task 3（UI）與後續 Issue 3（Google Drive 瀏覽＋下載，呼叫 `ensureValidAccessToken()` 取得可用 access token）使用。
 
-- [ ] **Step 1：新增 `flutter_web_auth_2` 依賴**
+- [x] **Step 1：新增 `flutter_web_auth_2` 依賴**
 
 執行：`flutter pub add flutter_web_auth_2`
 
 執行後確認 `app/pubspec.yaml` 的 `dependencies:` 區塊新增了一行 `flutter_web_auth_2: ^<版本號>`（實際版本由 `flutter pub add` 自動解析為當下相容的最新版本，`spec.md`「Further Notes」已定案不在計劃中寫死版本號）。
 
-- [ ] **Step 2：執行 `flutter pub get` 確認無相容性衝突**
+- [x] **Step 2：執行 `flutter pub get` 確認無相容性衝突**
 
 執行：`flutter pub get`
 預期：成功解析，無版本衝突錯誤。若出現衝突，對照 `pubspec.yaml` 內既有的 `win32`/`package_info_plus` 版本鎖定歷史註解排查（`spec.md`「Further Notes」已標記此風險）。
 
-- [ ] **Step 3：建立 Google OAuth 設定常數檔**
+- [x] **Step 3：建立 Google OAuth 設定常數檔**
 
 建立 `app/lib/cloud_import/google_oauth_config.dart`：
 
@@ -404,7 +404,7 @@ const String googleOAuthRedirectScheme =
 const String googleOAuthRedirectUri = '$googleOAuthRedirectScheme:/oauth2redirect';
 ```
 
-- [ ] **Step 4：`AndroidManifest.xml` 新增 redirect URI intent-filter**
+- [x] **Step 4：`AndroidManifest.xml` 新增 redirect URI intent-filter**
 
 在 `app/android/app/src/main/AndroidManifest.xml` 找到 `.MainActivity` 既有的 launcher intent-filter：
 
@@ -428,7 +428,7 @@ const String googleOAuthRedirectUri = '$googleOAuthRedirectScheme:/oauth2redirec
 
 `android:scheme` 的值必須與 Step 3 的 `googleOAuthRedirectScheme` 常數完全一致；開發者填入真實用戶端 ID 時，這兩處需同步更新（Global Constraints 已註明）。
 
-- [ ] **Step 5：寫入失敗的 `ensureValidAccessToken()` 測試**
+- [x] **Step 5：寫入失敗的 `ensureValidAccessToken()` 測試**
 
 建立 `app/test/cloud_import/google_drive_oauth_client_test.dart`：
 
@@ -543,12 +543,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 6：執行測試確認失敗**
+- [x] **Step 6：執行測試確認失敗**
 
 執行：`flutter test test/cloud_import/google_drive_oauth_client_test.dart`
 預期：編譯失敗（`GoogleDriveOAuthClient` 尚未定義）。
 
-- [ ] **Step 7：實作 `GoogleDriveOAuthClient`**
+- [x] **Step 7：實作 `GoogleDriveOAuthClient`**
 
 建立 `app/lib/cloud_import/google_drive_oauth_client.dart`：
 
@@ -728,12 +728,12 @@ class GoogleDriveOAuthClient {
 }
 ```
 
-- [ ] **Step 8：執行測試確認通過**
+- [x] **Step 8：執行測試確認通過**
 
 執行：`flutter test test/cloud_import/google_drive_oauth_client_test.dart`
 預期：全數 PASS。
 
-- [ ] **Step 9：執行完整測試套件與靜態分析確認零回歸**
+- [x] **Step 9：執行完整測試套件與靜態分析確認零回歸**
 
 執行：`flutter analyze`
 預期："No issues found!"
@@ -741,7 +741,7 @@ class GoogleDriveOAuthClient {
 執行：`flutter test`
 預期：全數 PASS。
 
-- [ ] **Step 10：Commit**
+- [x] **Step 10：Commit**
 
 ```bash
 git add app/pubspec.yaml app/pubspec.lock app/lib/cloud_import/google_oauth_config.dart app/lib/cloud_import/google_drive_oauth_client.dart app/android/app/src/main/AndroidManifest.xml app/test/cloud_import/google_drive_oauth_client_test.dart
@@ -760,7 +760,7 @@ git commit -m "feat(epic-29): Issue 1——GoogleDriveOAuthClient（PKCE 登入/
 - Consumes：Task 1 的 `CloudAccountRepository`／`CloudProvider`／`FakeCloudAccountRepository`，Task 2 的 `GoogleDriveOAuthClient`。
 - Produces：`class CloudAccountSettingsScreen extends StatefulWidget { required CloudAccountRepository cloudAccountRepository; required GoogleDriveOAuthClient googleDriveOAuthClient; }`，供 Task 4 從 `SettingsScreen` 導航進入。
 
-- [ ] **Step 1：寫入失敗的 widget test**
+- [x] **Step 1：寫入失敗的 widget test**
 
 建立 `app/test/screens/cloud_account_settings_screen_test.dart`：
 
@@ -859,12 +859,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 執行：`flutter test test/screens/cloud_account_settings_screen_test.dart`
 預期：編譯失敗（`CloudAccountSettingsScreen` 尚未定義）。
 
-- [ ] **Step 3：實作 `CloudAccountSettingsScreen`**
+- [x] **Step 3：實作 `CloudAccountSettingsScreen`**
 
 建立 `app/lib/screens/cloud_account_settings_screen.dart`：
 
@@ -1001,12 +1001,12 @@ class _CloudAccountSettingsScreenState
 }
 ```
 
-- [ ] **Step 4：執行測試確認通過**
+- [x] **Step 4：執行測試確認通過**
 
 執行：`flutter test test/screens/cloud_account_settings_screen_test.dart`
 預期：全數 PASS。
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 git add app/lib/screens/cloud_account_settings_screen.dart app/test/screens/cloud_account_settings_screen_test.dart
@@ -1027,7 +1027,7 @@ git commit -m "feat(epic-29): Issue 1——設定頁子畫面 CloudAccountSettin
 - Consumes：Task 1 的 `CloudAccountRepository`，Task 2 的 `GoogleDriveOAuthClient`，Task 3 的 `CloudAccountSettingsScreen`。
 - Produces：`SettingsScreen`／`LibraryScreen`／`ElinkBookApp` 新增可選具名參數 `cloudAccountRepository`／`googleDriveOAuthClient`，`main.dart` 正式組裝真實實例。
 
-- [ ] **Step 1：寫入失敗的 `SettingsScreen` 導航測試**
+- [x] **Step 1：寫入失敗的 `SettingsScreen` 導航測試**
 
 在 `app/test/screens/settings_screen_test.dart` 找到既有的「同步」入口測試（`'SettingsScreen 顯示「同步」入口，點擊導航至 SyncSettingsScreen'`）之後，插入：
 
@@ -1067,12 +1067,12 @@ import 'package:elinkbook/cloud_import/google_drive_oauth_client.dart';
 import '../support/fake_cloud_account_repository.dart';
 ```
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 執行：`flutter test test/screens/settings_screen_test.dart --plain-name "已連結的雲端匯入帳戶"`
 預期：編譯失敗（`SettingsScreen` 沒有 `cloudAccountRepository`／`googleDriveOAuthClient` 具名參數）。
 
-- [ ] **Step 3：`SettingsScreen` 新增參數與 ListTile**
+- [x] **Step 3：`SettingsScreen` 新增參數與 ListTile**
 
 在 `app/lib/screens/settings_screen.dart` 頂部 import 區塊，找到：
 
@@ -1219,12 +1219,12 @@ import 'sync_settings_screen.dart';
             key: const Key('settings_reader_console_log_button'),
 ```
 
-- [ ] **Step 4：執行測試確認通過**
+- [x] **Step 4：執行測試確認通過**
 
 執行：`flutter test test/screens/settings_screen_test.dart`
 預期：全數 PASS。
 
-- [ ] **Step 5：`LibraryScreen` 新增參數並貫穿兩個既有呼叫點**
+- [x] **Step 5：`LibraryScreen` 新增參數並貫穿兩個既有呼叫點**
 
 在 `app/lib/screens/library_screen.dart` 頂部 import 區塊，找到：
 
@@ -1326,7 +1326,7 @@ import '../library/book_import_service.dart';
                 ),
 ```
 
-- [ ] **Step 6：`main.dart` 組裝真實實例並貫穿 `ElinkBookApp`**
+- [x] **Step 6：`main.dart` 組裝真實實例並貫穿 `ElinkBookApp`**
 
 在 `app/lib/main.dart` 頂部 import 區塊，找到：
 
@@ -1434,7 +1434,7 @@ import 'library/book_import_service.dart';
         googleDriveOAuthClient: widget.googleDriveOAuthClient,
 ```
 
-- [ ] **Step 7：執行完整測試套件與靜態分析確認零回歸**
+- [x] **Step 7：執行完整測試套件與靜態分析確認零回歸**
 
 執行：`flutter analyze`
 預期："No issues found!"
@@ -1442,7 +1442,7 @@ import 'library/book_import_service.dart';
 執行：`flutter test`
 預期：全數 PASS。
 
-- [ ] **Step 8：Commit**
+- [x] **Step 8：Commit**
 
 ```bash
 git add app/lib/screens/settings_screen.dart app/lib/screens/library_screen.dart app/lib/main.dart app/test/screens/settings_screen_test.dart
