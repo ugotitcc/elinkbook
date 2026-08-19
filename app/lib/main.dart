@@ -11,6 +11,7 @@ import 'cloud_import/cloud_storage_client.dart';
 import 'cloud_import/google_drive_oauth_client.dart';
 import 'cloud_import/google_drive_storage_client.dart';
 import 'cloud_import/onedrive_oauth_client.dart';
+import 'cloud_import/onedrive_storage_client.dart';
 import 'cloud_import/secure_storage_cloud_account_repository.dart';
 import 'library/book_content_fingerprint.dart';
 import 'library/book_import_service.dart';
@@ -130,11 +131,14 @@ Future<void> main() async {
   final oneDriveOAuthClient = OneDriveOAuthClient(
     accountRepository: cloudAccountRepository,
   );
-  // epic-29-cloud-import Issue 3：Google Drive 瀏覽＋下載。無內部可變的
-  // session 狀態（不像 OpdsHttpClient 的 _visitedFeedUrls），單一共用
-  // 實例即可，不需要比照 createOpdsClient 那樣的工廠函式。
+  // epic-29-cloud-import Issue 3/4：Google Drive／OneDrive 瀏覽＋下載。
+  // 皆無內部可變的 session 狀態（不像 OpdsHttpClient 的
+  // _visitedFeedUrls），單一共用實例即可，不需要比照 createOpdsClient
+  // 那樣的工廠函式。
   final CloudStorageClient googleDriveStorageClient =
       GoogleDriveStorageClient(oauthClient: googleDriveOAuthClient);
+  final CloudStorageClient oneDriveStorageClient =
+      OneDriveStorageClient(oauthClient: oneDriveOAuthClient);
   runApp(
     ElinkBookApp(
       repository: repository,
@@ -153,6 +157,7 @@ Future<void> main() async {
       googleDriveOAuthClient: googleDriveOAuthClient,
       oneDriveOAuthClient: oneDriveOAuthClient,
       googleDriveStorageClient: googleDriveStorageClient,
+      oneDriveStorageClient: oneDriveStorageClient,
       remoteServerRepository: remoteServerRepository,
       createOpdsClient: () => OpdsHttpClient(),
       computeFingerprint: computeBookContentFingerprint,
@@ -185,6 +190,7 @@ class ElinkBookApp extends StatefulWidget {
   final GoogleDriveOAuthClient? googleDriveOAuthClient;
   final OneDriveOAuthClient? oneDriveOAuthClient;
   final CloudStorageClient? googleDriveStorageClient;
+  final CloudStorageClient? oneDriveStorageClient;
   final RemoteServerRepository? remoteServerRepository;
   final OpdsClient Function()? createOpdsClient;
   final ComputeRemoteFingerprint? computeFingerprint;
@@ -213,6 +219,7 @@ class ElinkBookApp extends StatefulWidget {
     this.googleDriveOAuthClient,
     this.oneDriveOAuthClient,
     this.googleDriveStorageClient,
+    this.oneDriveStorageClient,
     this.remoteServerRepository,
     this.createOpdsClient,
     this.computeFingerprint,
@@ -296,6 +303,7 @@ class _ElinkBookAppState extends State<ElinkBookApp> with WidgetsBindingObserver
         googleDriveOAuthClient: widget.googleDriveOAuthClient,
         oneDriveOAuthClient: widget.oneDriveOAuthClient,
         googleDriveStorageClient: widget.googleDriveStorageClient,
+        oneDriveStorageClient: widget.oneDriveStorageClient,
         remoteServerRepository: widget.remoteServerRepository,
         createOpdsClient: widget.createOpdsClient,
         computeFingerprint: widget.computeFingerprint,

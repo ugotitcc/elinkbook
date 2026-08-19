@@ -62,6 +62,7 @@ class LibraryScreen extends StatefulWidget {
   final GoogleDriveOAuthClient? googleDriveOAuthClient;
   final OneDriveOAuthClient? oneDriveOAuthClient;
   final CloudStorageClient? googleDriveStorageClient;
+  final CloudStorageClient? oneDriveStorageClient;
   final RemoteServerRepository? remoteServerRepository;
   final OpdsClient Function()? createOpdsClient;
   final ComputeRemoteFingerprint? computeFingerprint;
@@ -91,6 +92,7 @@ class LibraryScreen extends StatefulWidget {
     this.googleDriveOAuthClient,
     this.oneDriveOAuthClient,
     this.googleDriveStorageClient,
+    this.oneDriveStorageClient,
     this.remoteServerRepository,
     this.createOpdsClient,
     this.computeFingerprint,
@@ -274,6 +276,25 @@ class _LibraryScreenState extends State<LibraryScreen> {
       // `_openGroupFilteredView` 既有慣例，一併重新載入分類——
       // `importFiles(folderName: ...)` 內部會 `upsertGroup()`，回到書架
       // 時分類清單與書籍清單應保持同步一致。
+      if (mounted) {
+        _loadGroups();
+        _loadBooks();
+      }
+    });
+  }
+
+  void _openOneDriveBrowser(CloudStorageClient client) {
+    Navigator.of(context)
+        .push(MaterialPageRoute(
+          builder: (context) => CloudBrowserScreen(
+            client: client,
+            libraryRepository: widget.repository,
+            importService: widget.importService,
+            source: BookSource.oneDrive,
+            title: 'OneDrive',
+          ),
+        ))
+        .then((_) {
       if (mounted) {
         _loadGroups();
         _loadBooks();
@@ -726,6 +747,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
               // Google Drive 匯入」選單項目永遠停用（比照上方三個雲端
               // 帳號相關欄位的既有貫穿慣例）。
               googleDriveStorageClient: widget.googleDriveStorageClient,
+              oneDriveStorageClient: widget.oneDriveStorageClient,
               currentTheme: widget.currentTheme,
               isEinkMode: widget.isEinkMode,
               onThemeChanged: widget.onThemeChanged,
@@ -874,6 +896,14 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   ? null
                   : () => _openGoogleDriveBrowser(widget.googleDriveStorageClient!),
               child: const Text('從 Google Drive 匯入'),
+            ),
+            PopupMenuItem<void>(
+              key: const Key('library_import_onedrive_option'),
+              enabled: widget.oneDriveStorageClient != null,
+              onTap: widget.oneDriveStorageClient == null
+                  ? null
+                  : () => _openOneDriveBrowser(widget.oneDriveStorageClient!),
+              child: const Text('從 OneDrive 匯入'),
             ),
           ],
         ),
