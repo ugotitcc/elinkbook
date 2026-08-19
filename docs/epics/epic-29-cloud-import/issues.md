@@ -32,7 +32,9 @@
 
 ## Issue 1：Google Drive 帳號連結／解除連結
 
-**Status:** `ready-for-agent`
+**Status:** ✅ 已完成（PR #165，分支 `epic-29-cloud-import`，5 個 commit，2026-08-19）
+
+**完成摘要：** 新增 `app/lib/cloud_import/` 模組，比照既有 `app/lib/sync/`（`SyncAccountRepository`／`SyncClient` 職責分工）與 `app/lib/remote/`（抽象介面／實作／Fake 三件套）兩個既有模式的組合。`CloudAccountRepository`（抽象介面，純儲存，以 `CloudProvider` enum 區分 provider，供 Issue 2 OneDrive 沿用）／`SecureStorageCloudAccountRepository`（`FlutterSecureStorage` 實作，四個欄位各自獨立 key、讀取失敗經 `_readSafe` 安全退回未連結）／`FakeCloudAccountRepository`（測試替身）三件套完整落地。`GoogleDriveOAuthClient` 獨立於 repository 之外，封裝系統瀏覽器導向的 OAuth Authorization Code Flow ＋ PKCE（RFC 7636，`S256` code challenge）＋ `state` 防 CSRF、`drive.readonly` scope、`ensureValidAccessToken()` 於到期前 60 秒靜默續期（失敗回傳 `null`、不主動觸發 `unlink`，保留使用者手動決定空間）；`google_oauth_config.dart` 明確標註 Google Cloud Console 用戶端 ID 為必要外部設定值；`AndroidManifest.xml` 新增對應 redirect URI intent-filter。設定頁新增子畫面 `CloudAccountSettingsScreen`（比照 `SyncSettingsScreen` 載入中/已連結/未連結三態結構），透過 `SettingsScreen`→`LibraryScreen`→`ElinkBookApp`→`main.dart` 既定的可選（nullable）參數逐層貫穿注入（含 `LibraryScreen` 分類篩選畫面的自我遞迴導航點），既有呼叫端零改動。計畫審查（`reviews/review-plan-issue-1.md`）**APPROVED**，0 Blocking/Critical/Important。程式碼審查（`reviews/review-issue-1.md`）初次結論 **CHANGES REQUESTED**：1 項 Important（`CloudAccountSettingsScreen._link()` 成功後未重設 `_linking`，導致解除連結後「連結」按鈕永久卡在轉圈停用狀態）與 4 項 Minor（`jsonDecode` 未防護非預期 200 回應、token 續期未相容 RFC 6749 `refresh_token` 滾動、`loadTokens()` 用 `int.parse` 而非 `int.tryParse`、計畫核取方塊未同步）皆已修訂——Important 項修法與審查原始建議略有出入（技術核實後採「併入 `_load()` 的 `setState` 統一收斂狀態」而非審查建議的「在 `_link()` 內 setState 外裸賦值」，理由與修正記錄見程式碼內註解），該項未補自動化回歸測試（`GoogleDriveOAuthClient.link()` 需要真實瀏覽器，widget test 環境下無法在不引入新抽象層的情況下驅動到成功路徑，超出本次修 bug 範圍，已於溝通中說明）。全專案 `flutter analyze` 乾淨、`flutter test` 1572 項全數通過、零回歸。Google OAuth 實際登入流程（真實瀏覽器導向＋換 token）留待真機/人工用真實 Google 帳號驗證，含 Google Cloud Console 用戶端 ID 設定。
 
 **依賴：** 無，可與 Issue 0 平行進行。
 
