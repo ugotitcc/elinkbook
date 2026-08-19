@@ -4,6 +4,8 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../cloud_import/cloud_account_repository.dart';
+import '../cloud_import/google_drive_oauth_client.dart';
 import '../library/book_content_fingerprint.dart';
 import '../library/book_import_service.dart';
 import '../reader/book_reader_prefs_repository.dart';
@@ -53,6 +55,8 @@ class LibraryScreen extends StatefulWidget {
   final SyncAccountRepository? syncAccountRepository;
   final SyncClient? syncClient;
   final SyncCheckpointTrigger? syncCheckpointTrigger;
+  final CloudAccountRepository? cloudAccountRepository;
+  final GoogleDriveOAuthClient? googleDriveOAuthClient;
   final RemoteServerRepository? remoteServerRepository;
   final OpdsClient Function()? createOpdsClient;
   final ComputeRemoteFingerprint? computeFingerprint;
@@ -78,6 +82,8 @@ class LibraryScreen extends StatefulWidget {
     this.syncAccountRepository,
     this.syncClient,
     this.syncCheckpointTrigger,
+    this.cloudAccountRepository,
+    this.googleDriveOAuthClient,
     this.remoteServerRepository,
     this.createOpdsClient,
     this.computeFingerprint,
@@ -683,6 +689,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
               syncAccountRepository: widget.syncAccountRepository,
               syncClient: widget.syncClient,
               syncCheckpointTrigger: widget.syncCheckpointTrigger,
+              cloudAccountRepository: widget.cloudAccountRepository,
+              googleDriveOAuthClient: widget.googleDriveOAuthClient,
               currentTheme: widget.currentTheme,
               isEinkMode: widget.isEinkMode,
               onThemeChanged: widget.onThemeChanged,
@@ -877,6 +885,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   customFontsRepository: widget.customFontsRepository,
                   syncAccountRepository: widget.syncAccountRepository,
                   syncClient: widget.syncClient,
+                  cloudAccountRepository: widget.cloudAccountRepository,
+                  googleDriveOAuthClient: widget.googleDriveOAuthClient,
                 ),
               ),
             );
