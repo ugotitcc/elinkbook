@@ -2068,6 +2068,48 @@ void main() {
     expect(find.text('Google Drive'), findsOneWidget);
   });
 
+  testWidgets('oneDriveStorageClient 為 null 時「從 OneDrive 匯入」選項停用', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+
+    await tester.tap(find.byKey(const Key('library_import_button')));
+    await tester.pumpAndSettle();
+
+    final option = tester.widget<PopupMenuItem<void>>(
+      find.byKey(const Key('library_import_onedrive_option')),
+    );
+    expect(option.enabled, false);
+  });
+
+  testWidgets('提供 oneDriveStorageClient 時點擊「從 OneDrive 匯入」導航至 CloudBrowserScreen',
+      (tester) async {
+    final client = FakeCloudStorageClient();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+          oneDriveStorageClient: client,
+        ),
+      ),
+    );
+
+    await tester.tap(find.byKey(const Key('library_import_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('library_import_onedrive_option')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('OneDrive'), findsOneWidget);
+  });
+
   testWidgets(
       'LibraryScreen 點開一本書後，ReaderScreen 收到的 highlightsRepository／notesRepository 正確貫穿（Issue 6 缺口修正）',
       (tester) async {

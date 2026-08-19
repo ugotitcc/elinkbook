@@ -9,41 +9,56 @@ import '../library/models/book_group.dart';
 import '../library/models/library_enums.dart';
 import 'cloud_download_queue_dialog.dart';
 
-/// Google Drive 雲端匯入瀏覽畫面（epic-29-cloud-import Issue 3，spec.md
-/// 「UI 落地位置」）：逐層資料夾導覽（不做搜尋）、封面縮圖（含載入佔位符
+/// 雲端匯入瀏覽畫面（epic-29-cloud-import Issue 3 建置、Issue 4 泛化為
+/// Google Drive／OneDrive 共用，原名 `GoogleDriveBrowserScreen`——沿用
+/// Issue 2 把 `_buildGoogleDriveTile()` 泛化為 `_buildProviderTile()` 的
+/// 既有先例，用一個寫死 provider 名稱的類別瀏覽另一個 provider 是誤導性
+/// 命名，故重新命名）：逐層資料夾導覽（不做搜尋）、封面縮圖（含載入佔位符
 /// 與記憶體快取）、單選/多選勾選檔案、可選分類，確認匯入後交給
 /// [CloudDownloadQueueDialog] 序列下載＋匯入。畫面本身只依賴
-/// [CloudStorageClient] 介面，Issue 4（OneDrive）注入
-/// `OneDriveStorageClient` 即可直接沿用，不需要重新設計 UI（比照
+/// [CloudStorageClient] 介面，注入 `GoogleDriveStorageClient` 或
+/// `OneDriveStorageClient` 皆可直接沿用，不需要重新設計 UI（比照
 /// `RemoteCatalogScreen` 對 `OpdsClient` 的既有設計原則）。刻意不含重複
-/// 匯入偵測（Issue 5 的範圍）。
-class GoogleDriveBrowserScreen extends StatefulWidget {
+/// 匯入偵測（Issue 5 的範圍）。**內部 `Key('google_drive_browser_...')`
+/// 系列 widget key 字串刻意維持原樣未重新命名**——單純內部測試選擇器、
+/// 非公開 API，重新命名對正確性無益處，只會在 Issue 3 既有測試套件產生
+/// 大量無關 diff。
+class CloudBrowserScreen extends StatefulWidget {
   final CloudStorageClient client;
   final LibraryRepository libraryRepository;
   final BookImportService importService;
+
+  /// 【審查修正 review-plan-issue-4.md Critical #1】原本 Issue 3 版本
+  /// 在 `_startDownload()` 內把 `BookSource.googleDrive` 寫死，泛化成
+  /// `CloudBrowserScreen` 後若不新增這個欄位，OneDrive 匯入的書籍會被
+  /// 誤記為 `BookSource.googleDrive`，破壞資料正確性且讓 Issue 5 未來的
+  /// `findByCloudFileId(BookSource.oneDrive, ...)` 重複偵測永遠查無結果。
+  /// 呼叫端必須明確傳入對應的 provider。
+  final BookSource source;
 
   /// `null` 代表瀏覽雲端硬碟根目錄；非 `null` 時瀏覽指定資料夾（點擊
   /// [CloudFileEntry.isFolder] 為 `true` 的項目下鑽時使用）。
   final String? folderId;
 
-  /// AppBar 標題，`null` 時使用預設「Google Drive」。
+  /// AppBar 標題，`null` 時使用預設「Google Drive」（呼叫端瀏覽 OneDrive
+  /// 時應明確傳入 `title: 'OneDrive'` 覆蓋這個預設值）。
   final String? title;
 
-  const GoogleDriveBrowserScreen({
+  const CloudBrowserScreen({
     super.key,
     required this.client,
     required this.libraryRepository,
     required this.importService,
+    required this.source,
     this.folderId,
     this.title,
   });
 
   @override
-  State<GoogleDriveBrowserScreen> createState() =>
-      _GoogleDriveBrowserScreenState();
+  State<CloudBrowserScreen> createState() => _CloudBrowserScreenState();
 }
 
-class _GoogleDriveBrowserScreenState extends State<GoogleDriveBrowserScreen> {
+class _CloudBrowserScreenState extends State<CloudBrowserScreen> {
   bool _loading = true;
   bool _needsReauth = false;
   String? _errorText;
@@ -105,10 +120,11 @@ class _GoogleDriveBrowserScreenState extends State<GoogleDriveBrowserScreen> {
 
   void _openSubfolder(CloudFileEntry entry) {
     Navigator.of(context).push(MaterialPageRoute(
-      builder: (context) => GoogleDriveBrowserScreen(
+      builder: (context) => CloudBrowserScreen(
         client: widget.client,
         libraryRepository: widget.libraryRepository,
         importService: widget.importService,
+        source: widget.source,
         folderId: entry.id,
         title: entry.name,
       ),
@@ -137,7 +153,7 @@ class _GoogleDriveBrowserScreenState extends State<GoogleDriveBrowserScreen> {
         entries: selected,
         client: widget.client,
         importService: widget.importService,
-        source: BookSource.googleDrive,
+        source: widget.source,
         folderName: folderName,
       ),
     );
@@ -166,12 +182,12 @@ class _GoogleDriveBrowserScreenState extends State<GoogleDriveBrowserScreen> {
               ),
             )
           : _needsReauth
-              ? const Center(
+              ? Center(
                   child: Padding(
-                    padding: EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(16),
                     child: Text(
-                      '登入已過期，請至「設定」重新連結 Google Drive 帳號',
-                      key: Key('google_drive_browser_reauth_text'),
+                      '登入已過期，請至「設定」重新連結 ${widget.title ?? '雲端'} 帳號',
+                      key: const Key('google_drive_browser_reauth_text'),
                       textAlign: TextAlign.center,
                     ),
                   ),
