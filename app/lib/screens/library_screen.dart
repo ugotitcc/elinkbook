@@ -3,9 +3,6 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
-import 'package:uuid/uuid.dart';
 
 import '../library/book_content_fingerprint.dart';
 import '../library/book_import_service.dart';
@@ -18,6 +15,7 @@ import '../reader/notes_repository.dart';
 import '../reader/reader_prefs_manager.dart';
 import '../remote/opds_client.dart';
 import '../remote/opds_types.dart';
+import '../remote/remote_book_downloader.dart';
 import '../remote/remote_server_profile.dart';
 import '../remote/remote_server_repository.dart';
 import '../remote/remote_thumbnail_cache.dart';
@@ -621,26 +619,15 @@ class _LibraryScreenState extends State<LibraryScreen> {
       final password = await remoteServerRepository.loadPassword(remoteServerId);
       final client = createOpdsClient();
 
-      final tempDir = await getTemporaryDirectory();
-      final downloadDir = Directory(p.join(tempDir.path, 'remote_download_temp'));
-      if (!await downloadDir.exists()) await downloadDir.create(recursive: true);
-      final fileName = '${const Uuid().v4()}.${fileExtensionFor(book.format)}';
-      tempPath = p.join(downloadDir.path, fileName);
-
-      await client.downloadBook(
-        server,
-        OpdsAcquisition(href: remoteDownloadUrl, format: book.format),
-        tempPath,
+      tempPath = await downloadToTempFile(
+        client: client,
+        server: server,
+        acquisition: OpdsAcquisition(href: remoteDownloadUrl, format: book.format),
+        format: book.format,
         password: password,
       );
 
-      final docsDir = await getApplicationDocumentsDirectory();
-      final permanentDir = Directory(p.join(docsDir.path, 'remote_books'));
-      if (!await permanentDir.exists()) await permanentDir.create(recursive: true);
-      final permanentPath = p.join(permanentDir.path, fileName);
-      final tempFile = File(tempPath);
-      await tempFile.copy(permanentPath);
-      await tempFile.delete();
+      final permanentPath = await promoteToPermanent(tempPath);
 
       await widget.repository
           .updateBook(book.copyWith(filePath: permanentPath, isDownloaded: true));
