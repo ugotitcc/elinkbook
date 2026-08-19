@@ -35,7 +35,7 @@
 - Consumes：Issue 1 的 `CloudAccountRepository`／`CloudAccountTokens`／`CloudProvider`／`FakeCloudAccountRepository`。
 - Produces：`class OneDriveOAuthClient { Future<bool> link(); Future<void> unlink(); Future<String?> ensureValidAccessToken(); }`，供 Task 2（UI）使用；方法簽章與 Issue 1 的 `GoogleDriveOAuthClient` 完全同構。
 
-- [ ] **Step 1：建立 OneDrive OAuth 設定常數檔**
+- [x] **Step 1：建立 OneDrive OAuth 設定常數檔**
 
 建立 `app/lib/cloud_import/onedrive_oauth_config.dart`：
 
@@ -61,7 +61,7 @@ const String oneDriveOAuthRedirectScheme = 'msalYOUR_ONEDRIVE_OAUTH_CLIENT_ID';
 const String oneDriveOAuthRedirectUri = '$oneDriveOAuthRedirectScheme://auth';
 ```
 
-- [ ] **Step 2：`AndroidManifest.xml` 新增 redirect URI intent-filter**
+- [x] **Step 2：`AndroidManifest.xml` 新增 redirect URI intent-filter**
 
 在 `app/android/app/src/main/AndroidManifest.xml` 找到 Issue 1 新增的 Google redirect intent-filter：
 
@@ -87,7 +87,7 @@ const String oneDriveOAuthRedirectUri = '$oneDriveOAuthRedirectScheme://auth';
 
 `android:scheme` 的值必須與 Step 1 的 `oneDriveOAuthRedirectScheme` 常數完全一致；開發者填入真實用戶端 ID 時，這兩處需同步更新（Global Constraints 已註明）。
 
-- [ ] **Step 3：寫入失敗的 `ensureValidAccessToken()` 測試**
+- [x] **Step 3：寫入失敗的 `ensureValidAccessToken()` 測試**
 
 建立 `app/test/cloud_import/onedrive_oauth_client_test.dart`：
 
@@ -234,12 +234,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 4：執行測試確認失敗**
+- [x] **Step 4：執行測試確認失敗**
 
 執行：`flutter test test/cloud_import/onedrive_oauth_client_test.dart`
 預期：編譯失敗（`OneDriveOAuthClient` 尚未定義）。
 
-- [ ] **Step 5：實作 `OneDriveOAuthClient`**
+- [x] **Step 5：實作 `OneDriveOAuthClient`**
 
 建立 `app/lib/cloud_import/onedrive_oauth_client.dart`：
 
@@ -448,12 +448,12 @@ class OneDriveOAuthClient {
 }
 ```
 
-- [ ] **Step 6：執行測試確認通過**
+- [x] **Step 6：執行測試確認通過**
 
 執行：`flutter test test/cloud_import/onedrive_oauth_client_test.dart`
 預期：全數 PASS。
 
-- [ ] **Step 7：執行完整測試套件與靜態分析確認零回歸**
+- [x] **Step 7：執行完整測試套件與靜態分析確認零回歸**
 
 執行：`flutter analyze`
 預期："No issues found!"
@@ -461,7 +461,7 @@ class OneDriveOAuthClient {
 執行：`flutter test`
 預期：全數 PASS（Google Drive 既有功能不受影響）。
 
-- [ ] **Step 8：Commit**
+- [x] **Step 8：Commit**
 
 ```bash
 git add app/lib/cloud_import/onedrive_oauth_config.dart app/lib/cloud_import/onedrive_oauth_client.dart app/android/app/src/main/AndroidManifest.xml app/test/cloud_import/onedrive_oauth_client_test.dart
@@ -480,7 +480,7 @@ git commit -m "feat(epic-29): Issue 2——OneDriveOAuthClient（PKCE 登入/續
 - Consumes：Task 1 的 `OneDriveOAuthClient`。
 - Produces：`CloudAccountSettingsScreen` 新增必要參數 `oneDriveOAuthClient`（比照既有 `googleDriveOAuthClient`），供 Task 3 貫穿注入使用。
 
-- [ ] **Step 1：寫入失敗的 widget test**
+- [x] **Step 1：寫入失敗的 widget test**
 
 在 `app/test/screens/cloud_account_settings_screen_test.dart` 找到檔案開頭 import 區塊：
 
@@ -636,12 +636,12 @@ import '../support/fake_cloud_account_repository.dart';
   });
 ```
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 執行：`flutter test test/screens/cloud_account_settings_screen_test.dart`
 預期：編譯失敗（`CloudAccountSettingsScreen` 沒有 `oneDriveOAuthClient` 具名參數，`onedrive_oauth_client.dart` 匯入路徑不存在——若 Task 1 已完成，只有第一個原因會出現）。
 
-- [ ] **Step 3：擴充 `CloudAccountSettingsScreen` 加入 OneDrive 區塊**
+- [x] **Step 3：擴充 `CloudAccountSettingsScreen` 加入 OneDrive 區塊**
 
 在 `app/lib/screens/cloud_account_settings_screen.dart` 找到檔案開頭：
 
@@ -999,12 +999,12 @@ class _CloudAccountSettingsScreenState
 
 **注意**：`_buildProviderTile()` 是把 Issue 1 的 `_buildGoogleDriveTile()` 泛化為兩個 provider 共用的私有 helper——這是因為擴充 OneDrive 後兩段 UI 完全同構（只有標題文字/key 前綴/資料來源不同），此時再各寫一份重複的 `_buildOneDriveTile()` 會是單純複製貼上，泛化成單一 helper 更符合 DRY；`keyPrefix` 對外可見的既有 test key 字串（`cloud_account_settings_google_drive_*`）刻意維持與 Issue 1 完全相同，不因這次重構而改變，Issue 1 既有 3 個 widget test 不需要修改即可繼續通過。
 
-- [ ] **Step 4：執行測試確認通過**
+- [x] **Step 4：執行測試確認通過**
 
 執行：`flutter test test/screens/cloud_account_settings_screen_test.dart`
 預期：全數 PASS（含 Issue 1 既有 3 個測試，零回歸）。
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 git add app/lib/screens/cloud_account_settings_screen.dart app/test/screens/cloud_account_settings_screen_test.dart
@@ -1025,7 +1025,7 @@ git commit -m "feat(epic-29): Issue 2——CloudAccountSettingsScreen 擴充 One
 - Consumes：Task 1 的 `OneDriveOAuthClient`，Task 2 的擴充後 `CloudAccountSettingsScreen`。
 - Produces：`SettingsScreen`／`LibraryScreen`／`ElinkBookApp` 新增可選具名參數 `oneDriveOAuthClient`，`main.dart` 正式組裝真實實例。
 
-- [ ] **Step 1：修正既有 `settings_screen_test.dart` 的 `CloudAccountSettingsScreen` 呼叫測試**
+- [x] **Step 1：修正既有 `settings_screen_test.dart` 的 `CloudAccountSettingsScreen` 呼叫測試**
 
 在 `app/test/screens/settings_screen_test.dart` 找到：
 
@@ -1076,12 +1076,12 @@ import 'package:elinkbook/screens/settings_screen.dart';
     ));
 ```
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 執行：`flutter test test/screens/settings_screen_test.dart --plain-name "已連結的雲端匯入帳戶"`
 預期：編譯失敗（`SettingsScreen` 沒有 `oneDriveOAuthClient` 具名參數；即使有此參數，`CloudAccountSettingsScreen` 建構呼叫因缺少必要參數 `oneDriveOAuthClient` 而編譯失敗，因為 Task 2 已把它改為必要參數）。
 
-- [ ] **Step 3：`SettingsScreen` 新增 `oneDriveOAuthClient` 參數**
+- [x] **Step 3：`SettingsScreen` 新增 `oneDriveOAuthClient` 參數**
 
 在 `app/lib/screens/settings_screen.dart` 找到：
 
@@ -1190,12 +1190,12 @@ import '../reader/custom_fonts_repository.dart';
           ),
 ```
 
-- [ ] **Step 4：執行測試確認通過**
+- [x] **Step 4：執行測試確認通過**
 
 執行：`flutter test test/screens/settings_screen_test.dart`
 預期：全數 PASS。
 
-- [ ] **Step 5：`LibraryScreen` 新增參數並貫穿兩個既有呼叫點**
+- [x] **Step 5：`LibraryScreen` 新增參數並貫穿兩個既有呼叫點**
 
 在 `app/lib/screens/library_screen.dart` 找到：
 
@@ -1282,7 +1282,7 @@ import '../library/book_content_fingerprint.dart';
                 ),
 ```
 
-- [ ] **Step 6：`main.dart` 組裝真實實例並貫穿 `ElinkBookApp`**
+- [x] **Step 6：`main.dart` 組裝真實實例並貫穿 `ElinkBookApp`**
 
 在 `app/lib/main.dart` 找到：
 
@@ -1394,7 +1394,7 @@ import 'library/book_content_fingerprint.dart';
         remoteServerRepository: widget.remoteServerRepository,
 ```
 
-- [ ] **Step 7：執行完整測試套件與靜態分析確認零回歸**
+- [x] **Step 7：執行完整測試套件與靜態分析確認零回歸**
 
 執行：`flutter analyze`
 預期："No issues found!"
@@ -1402,7 +1402,7 @@ import 'library/book_content_fingerprint.dart';
 執行：`flutter test`
 預期：全數 PASS（Google Drive 既有功能不受影響）。
 
-- [ ] **Step 8：Commit**
+- [x] **Step 8：Commit**
 
 ```bash
 git add app/lib/screens/settings_screen.dart app/lib/screens/library_screen.dart app/lib/main.dart app/test/screens/settings_screen_test.dart
