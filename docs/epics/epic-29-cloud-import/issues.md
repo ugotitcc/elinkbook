@@ -84,7 +84,9 @@
 
 ## Issue 3：Google Drive 瀏覽＋匯入（單/多檔＋分類選擇）
 
-**Status:** `ready-for-agent`
+**Status:** ✅ 已完成（PR #168，分支 `epic-29/issue-3-cloud-import`，6 個 commit，2026-08-20）
+
+**完成摘要：** 第一個讓使用者實際「從雲端匯入一本書」的完整可展示切片。新增 `CloudStorageClient` 抽象介面（`listFolder`/`downloadFile`/`fetchThumbnail`）＋ `CloudFileEntry`/`CloudFolderListing`/`detectCloudFileFormat()`，是整個瀏覽＋下載 UX 唯一依賴的邊界，比照 `epic-30-calibre-remote-library` 的 `OpdsClient`／`RemoteCatalogScreen` 既有設計原則——Issue 4（OneDrive）可直接沿用同一套 UI，不需重新設計。`GoogleDriveStorageClient`：Drive API v3 真實實作，伺服器端 MIME type 粗篩（EPUB/PDF/TXT 標準 MIME type ＋ AZW3/CBZ/MD `name contains` 粗篩）＋用戶端 `detectCloudFileFormat()` 精確過濾（正確以 `.endsWith()` 排除 `notes.mdx` 這類子字串誤判）、分頁串接＋1000 筆上限截斷（`CloudFolderListing.truncated`，相對 spec.md 決策草圖的必要修訂）、下載時 Windows 安全的檔案控制代碼清理順序（先 `sink.close()` 才 `delete()`）。下載＋落地邏輯（`cloud_book_downloader.dart`）刻意獨立於 `epic-30` 的 `remote_book_downloader.dart` 之外，寫入獨立的 `cloud_import_books/`／`cloud_import_download_temp/` 目錄（`CONTEXT.md`「雲端匯入來源帳號」與「遠端書庫」語意不同，不共用落地目錄）；`promoteCloudFileToPermanent()` 正確區分「複製失敗」與「複製成功、只有刪暫存檔失敗」兩種失敗窗口，未重蹈 `epic-30` 曾被指出的錯誤模式。`GoogleDriveBrowserScreen`（資料夾導覽、縮圖記憶體快取、單選/多選、分類下拉選單、1000 筆截斷提示）＋公開的 `CloudDownloadQueueDialog`（序列下載、逐項狀態、失敗手動重試、取消清暫存檔，刻意設計為公開元件供 Issue 4 直接沿用只需傳入不同的 `source`），貫穿注入至「匯入」選單新增的「從 Google Drive 匯入」項目。計畫審查（`reviews/review-plan-issue-3.md`）**APPROVED**，2 項 Minor 已於實作前納入計畫（`CloudDownloadQueueDialog._retry()` 重試期間暫時關閉「完成」按鈕；`_openGoogleDriveBrowser()` 一併重新載入分類）。程式碼審查（`reviews/review-issue-3.md`）初次結論 **CHANGES REQUESTED**：2 項 Important（`_openGroupFilteredView()` 遞迴自我導航漏未貫穿 `googleDriveStorageClient`，導致分類篩選畫面內雲端匯入功能永遠停用；`GoogleDriveBrowserScreen._buildThumbnail()` 未記憶化 in-flight Future，縮圖載入期間任何父層 `setState()` 會觸發重複網路請求與畫面閃爍，同代碼庫姊妹畫面 `RemoteCatalogScreen` 已解決過同一陷阱但本次未依循）皆已修訂並補上迴歸測試。刻意不含重複匯入偵測（Issue 5 範圍）與行動數據警示（Issue 6 範圍）。全專案 `flutter analyze` 乾淨、`flutter test` 1612 項全數通過、零回歸。`GoogleDriveStorageClient` 真實 API 呼叫（HTTP/OAuth 瀏覽器流程）留待真機/人工用真實帳號驗證。
 
 **依賴：** Issue 0（匯入管線）、Issue 1（帳號連結）。
 
