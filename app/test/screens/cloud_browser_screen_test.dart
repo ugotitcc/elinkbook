@@ -7,7 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:elinkbook/cloud_import/cloud_storage_client.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
-import 'package:elinkbook/screens/google_drive_browser_screen.dart';
+import 'package:elinkbook/screens/cloud_browser_screen.dart';
 
 import '../support/fake_book_import_service.dart';
 import '../support/fake_cloud_storage_client.dart';
@@ -54,10 +54,11 @@ void main() {
     String? folderId,
   }) async {
     await tester.pumpWidget(MaterialApp(
-      home: GoogleDriveBrowserScreen(
+      home: CloudBrowserScreen(
         client: client,
         libraryRepository: libraryRepository ?? FakeLibraryRepository(),
         importService: importService ?? FakeBookImportService(),
+        source: BookSource.googleDrive,
         folderId: folderId,
       ),
     ));

@@ -33,7 +33,7 @@ import '../sync/sync_account_repository.dart';
 import '../sync/sync_checkpoint_trigger.dart';
 import '../sync/sync_client.dart';
 import '../theme/app_theme.dart';
-import 'google_drive_browser_screen.dart';
+import 'cloud_browser_screen.dart';
 import 'library_group_management_dialog.dart';
 import 'library_move_to_group_dialog.dart';
 import 'reader_screen.dart';
@@ -262,10 +262,11 @@ class _LibraryScreenState extends State<LibraryScreen> {
   void _openGoogleDriveBrowser(CloudStorageClient client) {
     Navigator.of(context)
         .push(MaterialPageRoute(
-          builder: (context) => GoogleDriveBrowserScreen(
+          builder: (context) => CloudBrowserScreen(
             client: client,
             libraryRepository: widget.repository,
             importService: widget.importService,
+            source: BookSource.googleDrive,
           ),
         ))
         .then((_) {
