@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 
 import '../cloud_import/cloud_account_repository.dart';
 import '../cloud_import/google_drive_oauth_client.dart';
+import '../cloud_import/onedrive_oauth_client.dart';
 import '../library/book_content_fingerprint.dart';
 import '../library/book_import_service.dart';
 import '../reader/book_reader_prefs_repository.dart';
@@ -57,6 +58,7 @@ class LibraryScreen extends StatefulWidget {
   final SyncCheckpointTrigger? syncCheckpointTrigger;
   final CloudAccountRepository? cloudAccountRepository;
   final GoogleDriveOAuthClient? googleDriveOAuthClient;
+  final OneDriveOAuthClient? oneDriveOAuthClient;
   final RemoteServerRepository? remoteServerRepository;
   final OpdsClient Function()? createOpdsClient;
   final ComputeRemoteFingerprint? computeFingerprint;
@@ -84,6 +86,7 @@ class LibraryScreen extends StatefulWidget {
     this.syncCheckpointTrigger,
     this.cloudAccountRepository,
     this.googleDriveOAuthClient,
+    this.oneDriveOAuthClient,
     this.remoteServerRepository,
     this.createOpdsClient,
     this.computeFingerprint,
@@ -691,6 +694,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
               syncCheckpointTrigger: widget.syncCheckpointTrigger,
               cloudAccountRepository: widget.cloudAccountRepository,
               googleDriveOAuthClient: widget.googleDriveOAuthClient,
+              oneDriveOAuthClient: widget.oneDriveOAuthClient,
               currentTheme: widget.currentTheme,
               isEinkMode: widget.isEinkMode,
               onThemeChanged: widget.onThemeChanged,
@@ -887,6 +891,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   syncClient: widget.syncClient,
                   cloudAccountRepository: widget.cloudAccountRepository,
                   googleDriveOAuthClient: widget.googleDriveOAuthClient,
+                  oneDriveOAuthClient: widget.oneDriveOAuthClient,
                 ),
               ),
             );

@@ -3,20 +3,26 @@ import 'package:flutter/material.dart';
 import '../cloud_import/cloud_account_repository.dart';
 import '../cloud_import/cloud_provider.dart';
 import '../cloud_import/google_drive_oauth_client.dart';
+import '../cloud_import/onedrive_oauth_client.dart';
 
 /// Settings「已連結的雲端匯入帳戶」子頁面（spec.md「UI 落地位置」）：
-/// 顯示 Google Drive 連結狀態（未連結／已連結＋帳號 email），提供連結／
-/// 解除連結操作。比照 `SyncSettingsScreen` 的載入中/已連結/未連結三態
-/// 結構，但資料來源是 [CloudAccountRepository]，與 `SyncAccountRepository`
-/// 完全獨立、不共用元件狀態。OneDrive 由 Issue 2 擴充。
+/// 顯示 Google Drive／OneDrive 各自的連結狀態（未連結／已連結＋帳號
+/// email），各自提供連結／解除連結操作。比照 `SyncSettingsScreen` 的
+/// 載入中/已連結/未連結三態結構，但資料來源是 [CloudAccountRepository]，
+/// 與 `SyncAccountRepository` 完全獨立、不共用元件狀態。兩個 provider
+/// 的狀態各自獨立維護（各自一組 `_xxxLinked`/`_xxxEmail`/`_xxxLinking`
+/// 欄位與 `_linkXxx()`/`_unlinkXxx()` 方法），不共用單一 transient 旗標，
+/// 避免其中一個 provider 的連結流程進行中時誤鎖另一個 provider 的按鈕。
 class CloudAccountSettingsScreen extends StatefulWidget {
   final CloudAccountRepository cloudAccountRepository;
   final GoogleDriveOAuthClient googleDriveOAuthClient;
+  final OneDriveOAuthClient oneDriveOAuthClient;
 
   const CloudAccountSettingsScreen({
     super.key,
     required this.cloudAccountRepository,
     required this.googleDriveOAuthClient,
+    required this.oneDriveOAuthClient,
   });
 
   @override
@@ -27,9 +33,12 @@ class CloudAccountSettingsScreen extends StatefulWidget {
 class _CloudAccountSettingsScreenState
     extends State<CloudAccountSettingsScreen> {
   bool _loading = true;
-  bool _linking = false;
+  bool _googleDriveLinking = false;
   bool _googleDriveLinked = false;
   String? _googleDriveEmail;
+  bool _oneDriveLinking = false;
+  bool _oneDriveLinked = false;
+  String? _oneDriveEmail;
 
   @override
   void initState() {
@@ -38,43 +47,70 @@ class _CloudAccountSettingsScreenState
   }
 
   Future<void> _load() async {
-    final linked =
+    final googleDriveLinked =
         await widget.cloudAccountRepository.isLinked(CloudProvider.googleDrive);
-    final email = linked
+    final googleDriveEmail = googleDriveLinked
         ? await widget.cloudAccountRepository
             .loadAccountEmail(CloudProvider.googleDrive)
         : null;
+    final oneDriveLinked =
+        await widget.cloudAccountRepository.isLinked(CloudProvider.oneDrive);
+    final oneDriveEmail = oneDriveLinked
+        ? await widget.cloudAccountRepository
+            .loadAccountEmail(CloudProvider.oneDrive)
+        : null;
     if (!mounted) return;
     setState(() {
-      _googleDriveLinked = linked;
-      _googleDriveEmail = email;
+      _googleDriveLinked = googleDriveLinked;
+      _googleDriveEmail = googleDriveEmail;
+      _oneDriveLinked = oneDriveLinked;
+      _oneDriveEmail = oneDriveEmail;
       _loading = false;
-      // 【審查修正 review-issue-1.md Important #1】_link() 成功後改呼叫
-      // 這個方法完成畫面狀態刷新，若不在這裡一併重設 _linking，之後解除
-      // 連結會讓「連結」按鈕永久卡在轉圈停用狀態——_load() 是畫面「已完成
-      // 處理、可以恢復互動」的唯一收斂點，比照其餘 transient 旗標在此
-      // 一併清空，而非在呼叫端（_link()）用 setState 外的裸賦值處理。
-      _linking = false;
+      // 【審查修正 review-issue-1.md Important #1，OneDrive 比照沿用】
+      // _load() 是畫面「已完成處理、可以恢復互動」的唯一收斂點，兩個
+      // provider 的 linking 旗標皆在此一併清空。
+      _googleDriveLinking = false;
+      _oneDriveLinking = false;
     });
   }
 
-  Future<void> _link() async {
-    setState(() => _linking = true);
+  Future<void> _linkGoogleDrive() async {
+    setState(() => _googleDriveLinking = true);
     final success = await widget.googleDriveOAuthClient.link();
     if (!mounted) return;
     if (success) {
       await _load();
     } else {
-      setState(() => _linking = false);
+      setState(() => _googleDriveLinking = false);
     }
   }
 
-  Future<void> _unlink() async {
+  Future<void> _unlinkGoogleDrive() async {
     await widget.googleDriveOAuthClient.unlink();
     if (!mounted) return;
     setState(() {
       _googleDriveLinked = false;
       _googleDriveEmail = null;
+    });
+  }
+
+  Future<void> _linkOneDrive() async {
+    setState(() => _oneDriveLinking = true);
+    final success = await widget.oneDriveOAuthClient.link();
+    if (!mounted) return;
+    if (success) {
+      await _load();
+    } else {
+      setState(() => _oneDriveLinking = false);
+    }
+  }
+
+  Future<void> _unlinkOneDrive() async {
+    await widget.oneDriveOAuthClient.unlink();
+    if (!mounted) return;
+    setState(() {
+      _oneDriveLinked = false;
+      _oneDriveEmail = null;
     });
   }
 
@@ -90,38 +126,74 @@ class _CloudAccountSettingsScreenState
             )
           : Padding(
               padding: const EdgeInsets.all(16),
-              child: _buildGoogleDriveTile(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildProviderTile(
+                    title: 'Google Drive',
+                    keyPrefix: 'google_drive',
+                    linked: _googleDriveLinked,
+                    linking: _googleDriveLinking,
+                    email: _googleDriveEmail,
+                    onLink: _linkGoogleDrive,
+                    onUnlink: _unlinkGoogleDrive,
+                  ),
+                  const SizedBox(height: 24),
+                  _buildProviderTile(
+                    title: 'OneDrive',
+                    keyPrefix: 'onedrive',
+                    linked: _oneDriveLinked,
+                    linking: _oneDriveLinking,
+                    email: _oneDriveEmail,
+                    onLink: _linkOneDrive,
+                    onUnlink: _unlinkOneDrive,
+                  ),
+                ],
+              ),
             ),
     );
   }
 
-  Widget _buildGoogleDriveTile() {
+  /// 單一 provider 的連結狀態區塊，`keyPrefix` 對應
+  /// `cloud_account_settings_<keyPrefix>_...` 系列既有測試 key 慣例
+  /// （Google Drive 沿用 Issue 1 已核准的 `google_drive` 前綴，維持不變，
+  /// 不因抽出共用 helper 而變動既有 key 字串，避免破壞 Issue 1 既有
+  /// widget test）。
+  Widget _buildProviderTile({
+    required String title,
+    required String keyPrefix,
+    required bool linked,
+    required bool linking,
+    required String? email,
+    required VoidCallback onLink,
+    required VoidCallback onUnlink,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Google Drive', style: TextStyle(fontWeight: FontWeight.bold)),
+        Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
-        if (_googleDriveLinked) ...[
+        if (linked) ...[
           Text(
-            '已連結：${_googleDriveEmail ?? ''}',
-            key: const Key('cloud_account_settings_google_drive_linked_email'),
+            '已連結：${email ?? ''}',
+            key: Key('cloud_account_settings_${keyPrefix}_linked_email'),
           ),
           const SizedBox(height: 8),
           ElevatedButton(
-            key: const Key('cloud_account_settings_google_drive_unlink_button'),
-            onPressed: _unlink,
+            key: Key('cloud_account_settings_${keyPrefix}_unlink_button'),
+            onPressed: onUnlink,
             child: const Text('解除連結'),
           ),
         ] else ...[
-          const Text(
+          Text(
             '未連結',
-            key: Key('cloud_account_settings_google_drive_unlinked_text'),
+            key: Key('cloud_account_settings_${keyPrefix}_unlinked_text'),
           ),
           const SizedBox(height: 8),
           ElevatedButton(
-            key: const Key('cloud_account_settings_google_drive_link_button'),
-            onPressed: _linking ? null : _link,
-            child: _linking
+            key: Key('cloud_account_settings_${keyPrefix}_link_button'),
+            onPressed: linking ? null : onLink,
+            child: linking
                 ? const SizedBox(
                     width: 16,
                     height: 16,

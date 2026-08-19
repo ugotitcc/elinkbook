@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../cloud_import/cloud_account_repository.dart';
 import '../cloud_import/google_drive_oauth_client.dart';
+import '../cloud_import/onedrive_oauth_client.dart';
 import '../reader/custom_fonts_repository.dart';
 import '../reader/reader_prefs_manager.dart';
 import '../sync/sync_account_repository.dart';
@@ -30,6 +31,7 @@ class SettingsScreen extends StatefulWidget {
   final SyncClient? syncClient;
   final CloudAccountRepository? cloudAccountRepository;
   final GoogleDriveOAuthClient? googleDriveOAuthClient;
+  final OneDriveOAuthClient? oneDriveOAuthClient;
 
   const SettingsScreen({
     super.key,
@@ -42,6 +44,7 @@ class SettingsScreen extends StatefulWidget {
     this.syncClient,
     this.cloudAccountRepository,
     this.googleDriveOAuthClient,
+    this.oneDriveOAuthClient,
   });
 
   @override
@@ -163,7 +166,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             title: const Text('已連結的雲端匯入帳戶'),
             trailing: const Icon(Icons.chevron_right),
             onTap: widget.cloudAccountRepository == null ||
-                    widget.googleDriveOAuthClient == null
+                    widget.googleDriveOAuthClient == null ||
+                    widget.oneDriveOAuthClient == null
                 ? null
                 : () {
                     Navigator.of(context).push(
@@ -171,6 +175,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         builder: (context) => CloudAccountSettingsScreen(
                           cloudAccountRepository: widget.cloudAccountRepository!,
                           googleDriveOAuthClient: widget.googleDriveOAuthClient!,
+                          oneDriveOAuthClient: widget.oneDriveOAuthClient!,
                         ),
                       ),
                     );
