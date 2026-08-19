@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:elinkbook/cloud_import/google_drive_oauth_client.dart';
+import 'package:elinkbook/cloud_import/onedrive_oauth_client.dart';
 import 'package:elinkbook/screens/settings_screen.dart';
 import 'package:elinkbook/sync/sync_account_repository.dart';
 import 'package:elinkbook/sync/sync_client.dart';
@@ -177,6 +178,8 @@ void main() {
         cloudAccountRepository: cloudAccountRepository,
         googleDriveOAuthClient:
             GoogleDriveOAuthClient(accountRepository: cloudAccountRepository),
+        oneDriveOAuthClient:
+            OneDriveOAuthClient(accountRepository: cloudAccountRepository),
       ),
     ));
 
