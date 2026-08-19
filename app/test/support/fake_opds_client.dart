@@ -38,6 +38,12 @@ class FakeOpdsClient implements OpdsClient {
   final List<String?> testConnectionPasswords = [];
   final List<String?> fetchFeedCalls = [];
   final List<String> downloadBookCalls = [];
+  // 〔審查 review-plan-issue-6.md Finding 2 採納〕與 downloadBookCalls
+  // 同索引對應，供 remote_book_downloader_test.dart 驗證
+  // downloadToTempFile() 是否正確透傳 password／cancellationToken 給
+  // client.downloadBook()（比照既有 testConnectionPasswords 的記錄模式）。
+  final List<String?> downloadBookPasswords = [];
+  final List<OpdsDownloadCancellationToken?> downloadBookCancellationTokens = [];
 
   @override
   Future<bool> testConnection(RemoteServerProfile server, {String? password}) async {
@@ -67,6 +73,8 @@ class FakeOpdsClient implements OpdsClient {
     OpdsDownloadCancellationToken? cancellationToken,
   }) async {
     downloadBookCalls.add(acquisition.href);
+    downloadBookPasswords.add(password);
+    downloadBookCancellationTokens.add(cancellationToken);
     final completer = downloadPendingCompleter;
     if (completer != null) {
       await completer.future;
