@@ -2,9 +2,6 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
-import 'package:uuid/uuid.dart';
 
 import '../library/book_content_fingerprint.dart';
 import '../library/book_import_service.dart';
@@ -12,6 +9,7 @@ import '../library/library_repository.dart';
 import '../library/models/library_enums.dart';
 import '../remote/opds_client.dart';
 import '../remote/opds_types.dart';
+import '../remote/remote_book_downloader.dart';
 import '../remote/remote_server_profile.dart';
 import '../remote/remote_server_repository.dart';
 import '../remote/remote_thumbnail_cache.dart';
@@ -541,21 +539,17 @@ class _DownloadQueueDialogState extends State<_DownloadQueueDialog> {
     final item = widget.queue[index];
     final token = OpdsDownloadCancellationToken();
     _tokens[index] = token;
-    // 〔審查 review-plan-issue-2.md Finding 3 採納〕宣告在 try 外，讓
-    // catch 區塊也能存取，用於下方「copy 到永久目錄中途失敗」時的暫存檔
-    // 清理。
+    // 〔審查 review-plan-issue-2.md Finding 3 採納，epic-30 Issue 6 沿用〕
+    // 宣告在 try 外，讓 catch 區塊也能存取——指紋比對／確認對話框這段窗口
+    // 發生例外時，`promoteToPermanent()` 根本還沒被呼叫，仍需要這裡自行
+    // 清理暫存檔（`promoteToPermanent()` 只保證它自己那一步的例外會清理）。
     String? tempPath;
     try {
-      final tempDir = await getTemporaryDirectory();
-      final downloadDir = Directory(p.join(tempDir.path, 'remote_download_temp'));
-      if (!await downloadDir.exists()) await downloadDir.create(recursive: true);
-      final fileName = '${const Uuid().v4()}.${fileExtensionFor(item.acquisition.format!)}';
-      tempPath = p.join(downloadDir.path, fileName);
-
-      await widget.client.downloadBook(
-        widget.server,
-        item.acquisition,
-        tempPath,
+      tempPath = await downloadToTempFile(
+        client: widget.client,
+        server: widget.server,
+        acquisition: item.acquisition,
+        format: item.acquisition.format!,
         password: widget.password,
         cancellationToken: token,
       );
@@ -580,13 +574,7 @@ class _DownloadQueueDialogState extends State<_DownloadQueueDialog> {
         }
       }
 
-      final docsDir = await getApplicationDocumentsDirectory();
-      final permanentDir = Directory(p.join(docsDir.path, 'remote_books'));
-      if (!await permanentDir.exists()) await permanentDir.create(recursive: true);
-      final permanentPath = p.join(permanentDir.path, fileName);
-      final tempFile = File(tempPath);
-      await tempFile.copy(permanentPath);
-      await tempFile.delete();
+      final permanentPath = await promoteToPermanent(tempPath);
 
       if (!mounted) return;
       setState(() {
@@ -594,11 +582,6 @@ class _DownloadQueueDialogState extends State<_DownloadQueueDialog> {
         _statuses[index] = _DownloadItemStatus.done;
       });
     } catch (_) {
-      // 〔審查 review-plan-issue-2.md Finding 3 採納〕downloadBook() 本身
-      // 失敗/取消時已經自行清過暫存檔（見 OpdsHttpClient 文件），但
-      // copy() 到永久目錄這一步若中途失敗（例如磁碟空間不足），暫存檔
-      // 仍會殘留在 remote_download_temp/ 底下——防禦性再清一次，確保
-      // 任何例外路徑都不留孤兒檔案。
       if (tempPath != null) {
         final leftover = File(tempPath);
         if (await leftover.exists()) await leftover.delete();
