@@ -53,11 +53,15 @@ class SecureStorageCloudAccountRepository implements CloudAccountRepository {
     if (accessToken == null || refreshToken == null || email == null || expiresAtRaw == null) {
       return null;
     }
+    // expires_at 若因未知原因損毀而無法解析為數字，比照其餘欄位的安全
+    // 回退慣例視同「憑證不存在」，不拋出例外中斷呼叫端。
+    final expiresAtMillis = int.tryParse(expiresAtRaw);
+    if (expiresAtMillis == null) return null;
     return CloudAccountTokens(
       accessToken: accessToken,
       refreshToken: refreshToken,
       email: email,
-      expiresAt: DateTime.fromMillisecondsSinceEpoch(int.parse(expiresAtRaw)),
+      expiresAt: DateTime.fromMillisecondsSinceEpoch(expiresAtMillis),
     );
   }
 

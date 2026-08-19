@@ -49,6 +49,12 @@ class _CloudAccountSettingsScreenState
       _googleDriveLinked = linked;
       _googleDriveEmail = email;
       _loading = false;
+      // 【審查修正 review-issue-1.md Important #1】_link() 成功後改呼叫
+      // 這個方法完成畫面狀態刷新，若不在這裡一併重設 _linking，之後解除
+      // 連結會讓「連結」按鈕永久卡在轉圈停用狀態——_load() 是畫面「已完成
+      // 處理、可以恢復互動」的唯一收斂點，比照其餘 transient 旗標在此
+      // 一併清空，而非在呼叫端（_link()）用 setState 外的裸賦值處理。
+      _linking = false;
     });
   }
 

@@ -78,10 +78,19 @@ class GoogleDriveOAuthClient {
     }
     if (tokenResponse.statusCode != 200) return false;
 
-    final tokenJson = jsonDecode(tokenResponse.body) as Map<String, dynamic>;
-    final accessToken = tokenJson['access_token'] as String?;
-    final refreshToken = tokenJson['refresh_token'] as String?;
-    final expiresIn = tokenJson['expires_in'] as int?;
+    String? accessToken;
+    String? refreshToken;
+    int? expiresIn;
+    try {
+      final tokenJson = jsonDecode(tokenResponse.body) as Map<String, dynamic>;
+      accessToken = tokenJson['access_token'] as String?;
+      refreshToken = tokenJson['refresh_token'] as String?;
+      expiresIn = tokenJson['expires_in'] as int?;
+    } catch (_) {
+      // 狀態碼為 200 但回應本文非預期 JSON 格式（例如網路代理竄改），
+      // 視同換發失敗，不拋出未捕捉例外中斷呼叫端。
+      return false;
+    }
     if (accessToken == null || refreshToken == null || expiresIn == null) return false;
 
     final email = await _fetchEmail(accessToken);
@@ -127,17 +136,26 @@ class GoogleDriveOAuthClient {
     }
     if (response.statusCode != 200) return null;
 
-    final json = jsonDecode(response.body) as Map<String, dynamic>;
-    final newAccessToken = json['access_token'] as String?;
-    final expiresIn = json['expires_in'] as int?;
+    String? newAccessToken;
+    String? newRefreshToken;
+    int? expiresIn;
+    try {
+      final json = jsonDecode(response.body) as Map<String, dynamic>;
+      newAccessToken = json['access_token'] as String?;
+      // RFC 6749：若回應包含新的 refresh_token 應予採納（token 滾動）；
+      // Google 目前預設換發時不回傳新值，此時沿用既有 refresh token。
+      newRefreshToken = json['refresh_token'] as String? ?? tokens.refreshToken;
+      expiresIn = json['expires_in'] as int?;
+    } catch (_) {
+      return null;
+    }
     if (newAccessToken == null || expiresIn == null) return null;
 
-    // Google 換發時通常不會回傳新的 refresh_token，沿用既有值。
     await _accountRepository.link(
       CloudProvider.googleDrive,
       CloudAccountTokens(
         accessToken: newAccessToken,
-        refreshToken: tokens.refreshToken,
+        refreshToken: newRefreshToken,
         email: tokens.email,
         expiresAt: DateTime.now().add(Duration(seconds: expiresIn)),
       ),
@@ -156,8 +174,12 @@ class GoogleDriveOAuthClient {
       return null;
     }
     if (response.statusCode != 200) return null;
-    final json = jsonDecode(response.body) as Map<String, dynamic>;
-    return json['email'] as String?;
+    try {
+      final json = jsonDecode(response.body) as Map<String, dynamic>;
+      return json['email'] as String?;
+    } catch (_) {
+      return null;
+    }
   }
 
   String _generateRandomUrlSafeString(int byteLength) {
