@@ -965,6 +965,18 @@ class SqliteLibraryRepository implements LibraryRepository {
   }
 
   @override
+  Future<Book?> findByCloudFileId(BookSource provider, String cloudFileId) async {
+    final rows = await _db.query(
+      'books',
+      where: 'source = ? AND cloud_file_id = ?',
+      whereArgs: [provider.name, cloudFileId],
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    return Book.fromMap(rows.first);
+  }
+
+  @override
   Future<List<Book>> listUndownloadedBooksForRemoteServer(String serverId) async {
     final rows = await _db.query(
       'books',

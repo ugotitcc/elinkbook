@@ -49,6 +49,13 @@ abstract class LibraryRepository {
   /// `null`。
   Future<Book?> findByContentFingerprint(String fingerprint);
 
+  /// 依 `(source, cloud_file_id)` 精確比對，供雲端匯入（Google Drive／
+  /// OneDrive）選檔前置重複偵測使用（`epic-29-cloud-import` Issue 0，
+  /// spec.md「重複匯入偵測」）。`cloud_file_id` 只在 [provider] 範圍內
+  /// 唯一，故必須合併比對兩者，不能只比對 `cloud_file_id`。命中回傳該本
+  /// 書，未命中回傳 `null`。
+  Future<Book?> findByCloudFileId(BookSource provider, String cloudFileId);
+
   /// 供遠端書庫刪除站點前的示警防護使用（epic-30-calibre-remote-library
   /// Issue 1，spec.md「站點管理」）：回傳指定站點中「僅雲端紀錄、無本機
   /// 檔案」（`isDownloaded == false`）的書籍清單。`RemoteServerRepository`

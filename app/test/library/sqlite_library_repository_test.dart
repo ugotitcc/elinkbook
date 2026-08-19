@@ -3657,6 +3657,56 @@ void main() {
     });
   });
 
+  group('findByCloudFileId', () {
+    test('命中：回傳對應書籍', () async {
+      final repo = await SqliteLibraryRepository.open(inMemoryDatabasePath);
+      addTearDown(() => repo.close());
+
+      await repo.insertBook(Book(
+        id: 'book1',
+        title: '雲端匯入的書',
+        format: BookFileFormat.epub,
+        filePath: '/books/book1.epub',
+        source: BookSource.googleDrive,
+        cloudFileId: 'gdrive-file-1',
+        createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+        lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+      ));
+
+      final found =
+          await repo.findByCloudFileId(BookSource.googleDrive, 'gdrive-file-1');
+      expect(found?.id, 'book1');
+    });
+
+    test('未命中：不同 provider 或不同 cloudFileId 皆回傳 null', () async {
+      final repo = await SqliteLibraryRepository.open(inMemoryDatabasePath);
+      addTearDown(() => repo.close());
+
+      await repo.insertBook(Book(
+        id: 'book1',
+        title: '雲端匯入的書',
+        format: BookFileFormat.epub,
+        filePath: '/books/book1.epub',
+        source: BookSource.googleDrive,
+        cloudFileId: 'gdrive-file-1',
+        createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+        lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+      ));
+
+      // 同一個 cloudFileId 字串值出現在另一個 provider 底下不算命中——
+      // cloud_file_id 只在 source 範圍內唯一（spec.md「資料模型與
+      // Schema」），不是全域唯一。
+      expect(
+        await repo.findByCloudFileId(BookSource.oneDrive, 'gdrive-file-1'),
+        isNull,
+      );
+      expect(
+        await repo.findByCloudFileId(BookSource.googleDrive, 'other-file'),
+        isNull,
+      );
+    });
+  });
+
   group('listUndownloadedBooksForRemoteServer', () {
     test('回傳指定站點中 isDownloaded=false 的書籍，排除已下載與其他站點', () async {
       final repo = await SqliteLibraryRepository.open(inMemoryDatabasePath);
