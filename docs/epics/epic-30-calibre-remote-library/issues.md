@@ -156,7 +156,7 @@
 
 ## Issue 6：抽出「遠端書籍下載器」深模組（技術債／架構深化）
 
-**Status:** `ready-for-agent`
+**Status:** ✅ 已完成並合併回 `main`（PR [#163](https://git.jigong.org/huthief/elinkBook/pulls/163)，分支 `epic-30/issue-6-remote-book-downloader`，3 個 commit：Task 1-3 各自一個 commit）。
 
 **依賴：** Issue 2、Issue 4（皆已完成並合併回 `main`）。
 
@@ -179,3 +179,5 @@
 **驗收標準：** `flutter analyze` 乾淨；`flutter test` 全數通過、零回歸；`_downloadOne()`／`_handleRedownload()` 兩處不再各自宣告 temp/permanent 目錄管理與例外清理邏輯，改為呼叫 `RemoteBookDownloader` 的共用方法；審查報告記錄實際刪除的重複程式碼行數。
 
 **Blocked by：** Issue 2、Issue 4（皆已完成，無實質阻塞）。
+
+**完成摘要：** 新增 `lib/remote/remote_book_downloader.dart`，`downloadToTempFile()`／`promoteToPermanent()` 兩個獨立純 Dart 函式取代兩處重複實作；`promoteToPermanent()` 以 `copied` 旗標區分「`copy()` 本身失敗」與「`copy()` 成功但刪暫存檔失敗」兩種失敗窗口，只在前者才清理永久路徑殘檔，避免誤刪已下載成功的書籍檔案。`RemoteCatalogScreen._downloadOne()`／`LibraryScreen._handleRedownload()` 皆已改用新模組，控制流程（含 Issue 3 的重複匯入指紋比對決策點）完整保留。計畫審查（`reviews/review-plan-issue-6.md`，2 Important／2 Minor）已全數修訂：Task 3 原稿遺漏 `password:` 傳遞（會導致密碼保護站點重新下載回歸失敗 401）、補上參數透傳驗證測試、`promoteToPermanent()` 例外清理邏輯修正為兩窗口區分設計（審查原始建議的「無差別清理」技術上有誤）。程式碼審查（`reviews/review-issue-6.md`，0 Critical／0 Important／1 Minor）**APPROVED**，逐行核對確認計畫審查的修訂皆已落實到最終程式碼，與計畫無落差。全專案 `flutter test` 1549 項、`flutter analyze` 零回歸通過。
