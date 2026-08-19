@@ -6,8 +6,8 @@ import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
 import 'package:http/http.dart' as http;
 
 import 'cloud_account_repository.dart';
+import 'cloud_oauth_config.dart';
 import 'cloud_provider.dart';
-import 'google_oauth_config.dart';
 
 const _authorizationEndpoint = 'https://accounts.google.com/o/oauth2/v2/auth';
 const _tokenEndpoint = 'https://oauth2.googleapis.com/token';
@@ -38,8 +38,8 @@ class GoogleDriveOAuthClient {
     final state = _generateRandomUrlSafeString(16);
 
     final authUrl = Uri.parse(_authorizationEndpoint).replace(queryParameters: {
-      'client_id': googleOAuthClientId,
-      'redirect_uri': googleOAuthRedirectUri,
+      'client_id': CloudOAuthConfig.googleClientId,
+      'redirect_uri': CloudOAuthConfig.googleRedirectUri,
       'response_type': 'code',
       'scope': '$_driveReadonlyScope email',
       'code_challenge': challenge,
@@ -53,7 +53,7 @@ class GoogleDriveOAuthClient {
     try {
       resultUrl = await FlutterWebAuth2.authenticate(
         url: authUrl.toString(),
-        callbackUrlScheme: googleOAuthRedirectScheme,
+        callbackUrlScheme: CloudOAuthConfig.googleRedirectScheme,
       );
     } catch (_) {
       return false;
@@ -68,10 +68,10 @@ class GoogleDriveOAuthClient {
     try {
       tokenResponse = await _httpClient.post(Uri.parse(_tokenEndpoint), body: {
         'code': code,
-        'client_id': googleOAuthClientId,
+        'client_id': CloudOAuthConfig.googleClientId,
         'code_verifier': verifier,
         'grant_type': 'authorization_code',
-        'redirect_uri': googleOAuthRedirectUri,
+        'redirect_uri': CloudOAuthConfig.googleRedirectUri,
       });
     } catch (_) {
       return false;
@@ -128,7 +128,7 @@ class GoogleDriveOAuthClient {
     try {
       response = await _httpClient.post(Uri.parse(_tokenEndpoint), body: {
         'refresh_token': tokens.refreshToken,
-        'client_id': googleOAuthClientId,
+        'client_id': CloudOAuthConfig.googleClientId,
         'grant_type': 'refresh_token',
       });
     } catch (_) {
