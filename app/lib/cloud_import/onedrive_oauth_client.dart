@@ -6,8 +6,8 @@ import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
 import 'package:http/http.dart' as http;
 
 import 'cloud_account_repository.dart';
+import 'cloud_oauth_config.dart';
 import 'cloud_provider.dart';
-import 'onedrive_oauth_config.dart';
 
 const _authorizationEndpoint =
     'https://login.microsoftonline.com/common/oauth2/v2.0/authorize';
@@ -42,8 +42,8 @@ class OneDriveOAuthClient {
     final state = _generateRandomUrlSafeString(16);
 
     final authUrl = Uri.parse(_authorizationEndpoint).replace(queryParameters: {
-      'client_id': oneDriveOAuthClientId,
-      'redirect_uri': oneDriveOAuthRedirectUri,
+      'client_id': CloudOAuthConfig.oneDriveClientId,
+      'redirect_uri': CloudOAuthConfig.oneDriveRedirectUri,
       'response_type': 'code',
       'scope': _filesReadScope,
       'code_challenge': challenge,
@@ -55,7 +55,7 @@ class OneDriveOAuthClient {
     try {
       resultUrl = await FlutterWebAuth2.authenticate(
         url: authUrl.toString(),
-        callbackUrlScheme: oneDriveOAuthRedirectScheme,
+        callbackUrlScheme: CloudOAuthConfig.oneDriveRedirectScheme,
       );
     } catch (_) {
       return false;
@@ -70,10 +70,10 @@ class OneDriveOAuthClient {
     try {
       tokenResponse = await _httpClient.post(Uri.parse(_tokenEndpoint), body: {
         'code': code,
-        'client_id': oneDriveOAuthClientId,
+        'client_id': CloudOAuthConfig.oneDriveClientId,
         'code_verifier': verifier,
         'grant_type': 'authorization_code',
-        'redirect_uri': oneDriveOAuthRedirectUri,
+        'redirect_uri': CloudOAuthConfig.oneDriveRedirectUri,
         'scope': _filesReadScope,
       });
     } catch (_) {
@@ -131,7 +131,7 @@ class OneDriveOAuthClient {
     try {
       response = await _httpClient.post(Uri.parse(_tokenEndpoint), body: {
         'refresh_token': tokens.refreshToken,
-        'client_id': oneDriveOAuthClientId,
+        'client_id': CloudOAuthConfig.oneDriveClientId,
         'grant_type': 'refresh_token',
         'scope': _filesReadScope,
       });
