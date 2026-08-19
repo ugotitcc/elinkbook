@@ -1,0 +1,314 @@
+import 'dart:typed_data';
+
+import 'package:flutter/material.dart';
+
+import '../cloud_import/cloud_storage_client.dart';
+import '../library/book_import_service.dart';
+import '../library/library_repository.dart';
+import '../library/models/book_group.dart';
+import '../library/models/library_enums.dart';
+import 'cloud_download_queue_dialog.dart';
+
+/// Google Drive 雲端匯入瀏覽畫面（epic-29-cloud-import Issue 3，spec.md
+/// 「UI 落地位置」）：逐層資料夾導覽（不做搜尋）、封面縮圖（含載入佔位符
+/// 與記憶體快取）、單選/多選勾選檔案、可選分類，確認匯入後交給
+/// [CloudDownloadQueueDialog] 序列下載＋匯入。畫面本身只依賴
+/// [CloudStorageClient] 介面，Issue 4（OneDrive）注入
+/// `OneDriveStorageClient` 即可直接沿用，不需要重新設計 UI（比照
+/// `RemoteCatalogScreen` 對 `OpdsClient` 的既有設計原則）。刻意不含重複
+/// 匯入偵測（Issue 5 的範圍）。
+class GoogleDriveBrowserScreen extends StatefulWidget {
+  final CloudStorageClient client;
+  final LibraryRepository libraryRepository;
+  final BookImportService importService;
+
+  /// `null` 代表瀏覽雲端硬碟根目錄；非 `null` 時瀏覽指定資料夾（點擊
+  /// [CloudFileEntry.isFolder] 為 `true` 的項目下鑽時使用）。
+  final String? folderId;
+
+  /// AppBar 標題，`null` 時使用預設「Google Drive」。
+  final String? title;
+
+  const GoogleDriveBrowserScreen({
+    super.key,
+    required this.client,
+    required this.libraryRepository,
+    required this.importService,
+    this.folderId,
+    this.title,
+  });
+
+  @override
+  State<GoogleDriveBrowserScreen> createState() =>
+      _GoogleDriveBrowserScreenState();
+}
+
+class _GoogleDriveBrowserScreenState extends State<GoogleDriveBrowserScreen> {
+  bool _loading = true;
+  bool _needsReauth = false;
+  String? _errorText;
+  List<CloudFileEntry> _entries = const [];
+  bool _truncated = false;
+  final Set<String> _selectedIds = {};
+  List<BookGroup> _groups = const [];
+  String _selectedGroupName = BookGroup.uncategorized;
+  final Map<String, Uint8List> _thumbnailCache = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _errorText = null;
+      _needsReauth = false;
+    });
+    try {
+      final listing = await widget.client.listFolder(folderId: widget.folderId);
+      final groups = await widget.libraryRepository.listGroups();
+      if (!mounted) return;
+      setState(() {
+        _entries = listing.entries;
+        _truncated = listing.truncated;
+        _groups = groups;
+        _loading = false;
+      });
+    } on CloudAuthRequiredException {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _needsReauth = true;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _errorText = '載入失敗，請檢查網路連線';
+      });
+    }
+  }
+
+  void _openSubfolder(CloudFileEntry entry) {
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (context) => GoogleDriveBrowserScreen(
+        client: widget.client,
+        libraryRepository: widget.libraryRepository,
+        importService: widget.importService,
+        folderId: entry.id,
+        title: entry.name,
+      ),
+    ));
+  }
+
+  void _toggleSelection(CloudFileEntry entry) {
+    setState(() {
+      if (_selectedIds.contains(entry.id)) {
+        _selectedIds.remove(entry.id);
+      } else {
+        _selectedIds.add(entry.id);
+      }
+    });
+  }
+
+  Future<void> _startDownload() async {
+    final selected = _entries.where((e) => _selectedIds.contains(e.id)).toList();
+    if (selected.isEmpty) return;
+    final folderName =
+        _selectedGroupName == BookGroup.uncategorized ? null : _selectedGroupName;
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => CloudDownloadQueueDialog(
+        entries: selected,
+        client: widget.client,
+        importService: widget.importService,
+        source: BookSource.googleDrive,
+        folderName: folderName,
+      ),
+    );
+    if (!mounted) return;
+    setState(() => _selectedIds.clear());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.title ?? 'Google Drive'),
+        actions: [
+          IconButton(
+            key: const Key('google_drive_browser_download_button'),
+            icon: const Icon(Icons.download),
+            tooltip: '下載已選取',
+            onPressed: _selectedIds.isEmpty ? null : _startDownload,
+          ),
+        ],
+      ),
+      body: _loading
+          ? const Center(
+              child: CircularProgressIndicator(
+                key: Key('google_drive_browser_loading_indicator'),
+              ),
+            )
+          : _needsReauth
+              ? const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Text(
+                      '登入已過期，請至「設定」重新連結 Google Drive 帳號',
+                      key: Key('google_drive_browser_reauth_text'),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                )
+              : _errorText != null
+                  ? Center(
+                      child: Text(
+                        _errorText!,
+                        key: const Key('google_drive_browser_error_text'),
+                      ),
+                    )
+                  : _buildContent(),
+    );
+  }
+
+  Widget _buildContent() {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(
+            children: [
+              const Text('匯入分類：'),
+              const SizedBox(width: 8),
+              DropdownButton<String>(
+                key: const Key('google_drive_browser_group_dropdown'),
+                value: _selectedGroupName,
+                items: [
+                  const DropdownMenuItem(
+                    value: BookGroup.uncategorized,
+                    child: Text(BookGroup.uncategorized),
+                  ),
+                  for (final group
+                      in _groups.where((g) => g.name != BookGroup.uncategorized))
+                    DropdownMenuItem(value: group.name, child: Text(group.name)),
+                ],
+                onChanged: (value) {
+                  if (value == null) return;
+                  setState(() => _selectedGroupName = value);
+                },
+              ),
+            ],
+          ),
+        ),
+        if (_truncated)
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16),
+            child: Text(
+              '這個資料夾檔案較多，僅顯示前 1000 筆',
+              key: Key('google_drive_browser_truncated_text'),
+            ),
+          ),
+        Expanded(
+          child: GridView.builder(
+            padding: const EdgeInsets.all(8),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              childAspectRatio: 0.6,
+            ),
+            itemCount: _entries.length,
+            itemBuilder: (context, index) => _buildEntryTile(_entries[index]),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEntryTile(CloudFileEntry entry) {
+    final selected = _selectedIds.contains(entry.id);
+    return InkWell(
+      key: Key('google_drive_browser_entry_${entry.id}'),
+      onTap:
+          entry.isFolder ? () => _openSubfolder(entry) : () => _toggleSelection(entry),
+      child: Column(
+        children: [
+          Expanded(
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: entry.isFolder
+                      ? const Icon(Icons.folder, size: 48)
+                      : _buildThumbnail(entry),
+                ),
+                if (selected)
+                  Positioned(
+                    right: 4,
+                    top: 4,
+                    child: Icon(
+                      Icons.check_circle,
+                      key: Key('google_drive_browser_checkbox_checked_${entry.id}'),
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          Text(
+            entry.name,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildThumbnail(CloudFileEntry entry) {
+    final thumbnailUrl = entry.thumbnailUrl;
+    if (thumbnailUrl == null) {
+      return Center(
+        child: Icon(
+          Icons.book,
+          key: Key('google_drive_browser_thumbnail_placeholder_${entry.id}'),
+        ),
+      );
+    }
+    final cached = _thumbnailCache[thumbnailUrl];
+    if (cached != null) {
+      return Image.memory(
+        cached,
+        key: Key('google_drive_browser_thumbnail_${entry.id}'),
+        fit: BoxFit.cover,
+      );
+    }
+    return FutureBuilder<Uint8List>(
+      future: widget.client.fetchThumbnail(thumbnailUrl).then((bytes) {
+        _thumbnailCache[thumbnailUrl] = bytes;
+        return bytes;
+      }),
+      builder: (context, snapshot) {
+        if (snapshot.hasData && snapshot.data != null) {
+          return Image.memory(
+            snapshot.data!,
+            key: Key('google_drive_browser_thumbnail_${entry.id}'),
+            fit: BoxFit.cover,
+          );
+        }
+        if (snapshot.connectionState != ConnectionState.done) {
+          return Center(
+            key: Key('google_drive_browser_thumbnail_loading_${entry.id}'),
+            child: const Icon(Icons.book),
+          );
+        }
+        return Center(
+          key: Key('google_drive_browser_thumbnail_error_${entry.id}'),
+          child: const Icon(Icons.broken_image),
+        );
+      },
+    );
+  }
+}
