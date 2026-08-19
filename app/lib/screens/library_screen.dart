@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../cloud_import/cloud_account_repository.dart';
+import '../cloud_import/cloud_storage_client.dart';
 import '../cloud_import/google_drive_oauth_client.dart';
 import '../cloud_import/onedrive_oauth_client.dart';
 import '../library/book_content_fingerprint.dart';
@@ -32,6 +33,7 @@ import '../sync/sync_account_repository.dart';
 import '../sync/sync_checkpoint_trigger.dart';
 import '../sync/sync_client.dart';
 import '../theme/app_theme.dart';
+import 'google_drive_browser_screen.dart';
 import 'library_group_management_dialog.dart';
 import 'library_move_to_group_dialog.dart';
 import 'reader_screen.dart';
@@ -59,6 +61,7 @@ class LibraryScreen extends StatefulWidget {
   final CloudAccountRepository? cloudAccountRepository;
   final GoogleDriveOAuthClient? googleDriveOAuthClient;
   final OneDriveOAuthClient? oneDriveOAuthClient;
+  final CloudStorageClient? googleDriveStorageClient;
   final RemoteServerRepository? remoteServerRepository;
   final OpdsClient Function()? createOpdsClient;
   final ComputeRemoteFingerprint? computeFingerprint;
@@ -87,6 +90,7 @@ class LibraryScreen extends StatefulWidget {
     this.cloudAccountRepository,
     this.googleDriveOAuthClient,
     this.oneDriveOAuthClient,
+    this.googleDriveStorageClient,
     this.remoteServerRepository,
     this.createOpdsClient,
     this.computeFingerprint,
@@ -253,6 +257,27 @@ class _LibraryScreenState extends State<LibraryScreen> {
     } finally {
       if (mounted) setState(() => _isImporting = false);
     }
+  }
+
+  void _openGoogleDriveBrowser(CloudStorageClient client) {
+    Navigator.of(context)
+        .push(MaterialPageRoute(
+          builder: (context) => GoogleDriveBrowserScreen(
+            client: client,
+            libraryRepository: widget.repository,
+            importService: widget.importService,
+          ),
+        ))
+        .then((_) {
+      // 【審查 review-plan-issue-3.md Minor #2 採納】比照
+      // `_openGroupFilteredView` 既有慣例，一併重新載入分類——
+      // `importFiles(folderName: ...)` 內部會 `upsertGroup()`，回到書架
+      // 時分類清單與書籍清單應保持同步一致。
+      if (mounted) {
+        _loadGroups();
+        _loadBooks();
+      }
+    });
   }
 
   /// 匯入完成後顯示單一合併提示：成功匯入本數與（若有）因來源 URI 與既有
@@ -835,6 +860,14 @@ class _LibraryScreenState extends State<LibraryScreen> {
               key: const Key('library_import_folder_option'),
               onTap: _pickAndImportFolder,
               child: const Text('選擇資料夾'),
+            ),
+            PopupMenuItem<void>(
+              key: const Key('library_import_google_drive_option'),
+              enabled: widget.googleDriveStorageClient != null,
+              onTap: widget.googleDriveStorageClient == null
+                  ? null
+                  : () => _openGoogleDriveBrowser(widget.googleDriveStorageClient!),
+              child: const Text('從 Google Drive 匯入'),
             ),
           ],
         ),

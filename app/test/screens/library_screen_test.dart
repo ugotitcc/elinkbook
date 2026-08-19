@@ -25,6 +25,7 @@ import '../support/fake_library_repository.dart';
 import '../support/fake_reader_prefs_manager.dart';
 import '../support/fake_opds_client.dart';
 import '../support/fake_remote_server_repository.dart';
+import '../support/fake_cloud_storage_client.dart';
 import '../support/fake_remote_thumbnail_cache.dart';
 import 'package:elinkbook/remote/remote_server_profile.dart';
 import 'package:elinkbook/screens/remote_server_list_screen.dart';
@@ -2020,6 +2021,51 @@ void main() {
 
     expect(find.text('已匯入 1 本，2 本已存在，已跳過'), findsOneWidget);
     expect(find.text('2 本已存在，已跳過'), findsNothing);
+  });
+
+  // epic-29-cloud-import Issue 3：Google Drive 匯入選單測試
+  testWidgets('googleDriveStorageClient 為 null 時「從 Google Drive 匯入」選項停用', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('library_import_button')));
+    await tester.pumpAndSettle();
+
+    final option = tester.widget<PopupMenuItem<void>>(
+      find.byKey(const Key('library_import_google_drive_option')),
+    );
+    expect(option.enabled, false);
+  });
+
+  testWidgets('提供 googleDriveStorageClient 時點擊「從 Google Drive 匯入」導航至 GoogleDriveBrowserScreen',
+      (tester) async {
+    final client = FakeCloudStorageClient();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+          googleDriveStorageClient: client,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('library_import_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('library_import_google_drive_option')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Google Drive'), findsOneWidget);
   });
 
   testWidgets(
