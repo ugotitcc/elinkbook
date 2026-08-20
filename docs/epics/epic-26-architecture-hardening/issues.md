@@ -2,6 +2,8 @@
 
 依 `docs/research/architecture-review-test-suite-epub-pdf.md`（2026-08-11，`/improve-codebase-architecture` 流程產出，7 個候選深化機會）逐項評估後立案。候選 1 經 `/diagnose` 確認為現存 bug並拆為 Issue 1（已修復並合併）；候選 2 經 `/diagnose` 深入查證後拆為 Issue 2（安全的機械式收斂，`ready-for-agent`）與 Issue 3（需真機診斷才能定案的門檻值問題，`needs-info`，見 Issue 3 說明「為何不能直接沿用 Issue 2 的收斂結果」）；候選 6 拆為 Issue 4（已完成並合併）；候選 4 於 2026-08-20 `/zoom-out` 深挖後拆為 Issue 5（人類已決策採選項 A 整批除役，`ready-for-agent`）；其餘候選（3 同類但影響較小、5/7 需要先決策或範圍較大）尚未拆案，視後續優先順序決定是否納入本 Epic。
 
+**2026-08-21 併入第二份架構檢視報告的候選深化機會：** `docs/research/architecture-review-library-remote-screens.md`（2026-08-19，`/improve-codebase-architecture` 流程產出，範圍為 `LibraryScreen`／`RemoteCatalogScreen` 熱點區域，6 個候選）。原報告候選 1（抽出 `RemoteBookDownloader` 深模組）已於報告發布後由 `epic-30` Issue 6 獨立完成並合併（`downloadToTempFile()`／`promoteToPermanent()` 已被兩個畫面共用，非本次新增範圍）；其餘候選經現況複核（`epic-29`／`epic-30` 兩個仍在開發中的 Epic 持續為 `LibraryScreen` 增加參數與穿透依賴，數字已比報告當時惡化）後依建議處理順序拆為 **Issue 6**（候選 3，`ComputeRemoteFingerprint` 穿透）、**Issue 7**（候選 5，`LibraryScreen` 建構子參數膨脹）、**Issue 8**（候選 2，`LibraryScreen` God-Widget 拆分）、**Issue 9**（候選 4，`Book.copyWith()` shallow interface），皆標記 `ready-for-agent`。候選 6（5 個批次操作方法骨架重複，Speculative）暫不拆案，預期在 Issue 8 拆分時被自然吸收進 `LibraryBatchActions` module。
+
 ---
 
 ## Issue 1：流式 EPUB 書籤 toggle 快取未載入時，第一次點擊誤判無書籤而重複新增
@@ -183,3 +185,95 @@ Future<void> pumpUntilPdfReady(
 - `flutter analyze` 乾淨、`flutter test` 全數通過、零回歸（不含上述刻意移除/取代的案例）。
 
 **驗收標準：** `EpubPageEstimator`、`EpubCharacterCountRepository`、`Book.totalCharacterCount` 相關程式碼（含死路徑 `_buildEpubFooter()`、TOC 頁碼估算分支）全數移除；`Book.totalCharacterCount` 欄位依規劃階段定案的方式處理（`DROP COLUMN` 或至少停止讀寫），不再維持「schema/repository/估算器齊全但恆為 `null`」的孤兒狀態；`flutter analyze` 乾淨、`flutter test` 全數通過、零回歸。
+
+---
+
+## Issue 6：收斂 `ComputeRemoteFingerprint` 在多個畫面之間的穿透
+
+**Status:** `ready-for-agent`。
+
+**依賴：** 無（建議與 Issue 7 一併規劃——本 Issue 收斂出的依賴 bundle，Issue 7 可望直接沿用來瘦身 `LibraryScreen` 建構子，但兩者可獨立驗收）。
+
+**來源：** `docs/research/architecture-review-library-remote-screens.md` 候選 3（強度 Strong）。2026-08-21 提出處理順序建議時重新核對現況，發現報告完成後短短兩天內已從 5 個檔案惡化為 7 個檔案，且已經真的因此發生過一次生產 bug（見下方），風險已從報告當時的「假設性」變成「已驗證發生」，故列為本次併入候選中優先序最高者。
+
+**背景／症狀（已用原始碼交叉核對確認，非報告原文推論）：** `ComputeRemoteFingerprint`（型別定義＋真身實作於 `app/lib/library/book_content_fingerprint.dart:9-21,47-67`，用 `Isolate.run()` 執行以避開已知的 `testWidgets()` 假時間 zone 死鎖問題，見 `review-issue-2.md`）目前以建構子參數逐層宣告／轉送的方式，穿透以下 7 個彼此業務邏輯無關的檔案：`main.dart`（組裝根）→ `library_screen.dart`／`cloud_browser_screen.dart`／`remote_server_list_screen.dart`／`remote_catalog_screen.dart`（皆為純轉送）→ `cloud_download_queue_dialog.dart:111`／`remote_catalog_screen.dart:559`（僅此兩處為實際呼叫點）。`remote_catalog_screen.dart` 甚至需要宣告兩次（畫面本體＋內部 `_DownloadQueueDialog` state 各一份）。
+
+**已發生的真實事故（報告完成後新增證據）：** commit `925703f`（`fix(epic-29): Issue 5——修復 _openGroupFilteredView() 未轉發 computeFingerprint`）——`LibraryScreen` 內部一個導覽路徑（依分類篩選開啟的畫面）建構下一層畫面時漏轉送這個參數，直到審查才發現。這正是候選 3 描述的核心風險（「每多一層轉送，就多一個可能漏轉送的機會」）從理論變成事實的具體案例。
+
+**與候選 1（`RemoteBookDownloader`）的關係——先確認過、非重工：** 候選 3 原文建議「讓指紋比對成為候選 1 提議的 `RemoteBookDownloader` deep module 的內部細節」，但候選 1 已於 `epic-30` Issue 6 完成（`app/lib/remote/remote_book_downloader.dart`），經查證 `downloadToTempFile()`／`promoteToPermanent()` 兩個函式簽章完全不含指紋比對邏輯——原文建議的收斂路徑並未被採納，`ComputeRemoteFingerprint` 至今仍是獨立穿透的參數，本 Issue 是獨立未償還的技術債，不是候選 1 的殘留尾巴。另外指紋比對的兩個真實呼叫點（下載後比對，供「重複下載偵測」使用）本來就不完全等於「下載」這個動作本身（例如 `CloudBrowserScreen._toggleSelection()` 的選檔前置比對是用 `cloudFileId` 而非內容指紋，是另一層獨立檢查），機械式塞進 `RemoteBookDownloader` 未必是正確邊界，需要規劃階段重新評估。
+
+**Solution（方向）：** 抽出一個獨立、與具體畫面無關的 seam（例如封裝為一個小型不可變資料類別，內含 `computeFingerprint`／`createOpdsClient`／`thumbnailCache`——這三者在現行程式碼中經常一起穿透、生命週期與用途高度相關），畫面建構子只接這一個物件，往下層轉送時同樣只轉送這一個物件，取代目前 3 個獨立具名參數各自宣告/轉送的做法；具體型別/命名/是否額外納入 `remoteServerRepository` 由規劃階段定案，需維持 ADR 0007「平行建構子參數、不用 service locator」的既有組裝哲學，只是把「一堆散落參數」收斂成「一個具名 bundle 參數」，不是引入 service locator。
+
+**單元測試要求：**
+- 既有 `library_screen_test.dart`／`cloud_browser_screen_test.dart`／`remote_catalog_screen_test.dart`／`remote_server_list_screen_test.dart`／`cloud_download_queue_dialog_test.dart`（若存在）等測試改用新 bundle 建構，斷言邏輯本身不變（純重構，零行為變化）。
+- 新增一項回歸測試，鎖定「新畫面/新轉送路徑只需要傳遞一個 bundle 參數，不會重演 `925703f` 那類漏轉送」的意圖（例如驗證 bundle 物件本身不可變、無法只轉送部分欄位）。
+- `flutter analyze` 乾淨、`flutter test` 全數通過、零回歸。
+
+**驗收標準：** `ComputeRemoteFingerprint` 不再以獨立具名參數形式穿透 7 個檔案，收斂為單一 bundle 物件的一部分；`main.dart` 組裝點與所有下游畫面建構子皆改用新介面；既有下載/重複偵測行為零改變；`flutter analyze` 乾淨、`flutter test` 全數通過。
+
+---
+
+## Issue 7：收斂 `LibraryScreen` 建構子的參數膨脹（22→27 個，持續增加中）
+
+**Status:** `ready-for-agent`。
+
+**依賴：** 建議待 Issue 6 完成後再進行（可直接沿用 Issue 6 收斂出的 bundle 物件處理其中 3 個參數），但若優先順序需要也可獨立先行，兩者驗收標準互不重疊。
+
+**來源：** `docs/research/architecture-review-library-remote-screens.md` 候選 5（強度 Worth exploring）。2026-08-21 現況複核發現報告當時的 22 個參數已增至 27 個（新增 `cloudAccountRepository`／`googleDriveOAuthClient`／`oneDriveOAuthClient`／`googleDriveStorageClient`／`oneDriveStorageClient`，皆為 `epic-29` 雲端匯入貫穿注入的產物），且 `epic-29`／`epic-30` 兩個來源 Epic 目前皆仍是 🟡 開發中，會持續增加，越晚處理牽涉範圍越大。
+
+**背景／症狀：** `app/lib/screens/library_screen.dart:32-58`（`_LibraryScreenState` 建構子）目前 27 個具名參數中，絕大多數只是原樣往下轉送給 `ReaderScreen`（12 參數）／`RemoteServerListScreen`（6 參數）／`SettingsScreen`，`LibraryScreen` 自身邏輯並不直接使用。報告原文的「刪除測試」已驗證：這份建構子沒有藏任何複雜度，純粹是轉送管線——合理但 low-leverage 的角色，且驗證方式已證明分拆不會讓複雜度轉移到別處，只會讓可讀性提升。
+
+**Solution（方向）：** 依用途將同質參數分組打包為 2-3 個小型不可變 bundle 物件（例如：既有 repository 群組——`bookmarksRepository`／`highlightsRepository`／`notesRepository`／`customFontsRepository`／`layoutPresetRepository`／`bookReaderPrefsRepository`／`syncAccountRepository`；雲端/遠端群組——`cloudAccountRepository`／`googleDriveOAuthClient`／`oneDriveOAuthClient`／`googleDriveStorageClient`／`oneDriveStorageClient`／`remoteServerRepository`，可與 Issue 6 的 bundle 整合；主題/顯示控制群組——`currentTheme`／`isEinkMode`／`onThemeChanged`／`onEinkModeChanged`），具體分組方式與是否保留 `repository`／`importService`／`prefsManager`／`groupFilter` 等核心參數獨立（不打包）由規劃階段定案。刻意不等候選 2（Issue 8）的 God-Widget 拆分才處理——報告原文預期候選 2 完成後參數會「自然收斂」，但 `epic-29`／`epic-30` 仍在持續增加參數，等待只會讓 Issue 8 的起始狀態更差；本 Issue 完成後，Issue 8 拆分內部 module 時可直接接手這些 bundle，兩者不衝突。
+
+**單元測試要求：**
+- `library_screen_test.dart` 既有全部案例改用新 bundle 建構，斷言邏輯不變（純重構）。
+- `flutter analyze` 乾淨、`flutter test` 全數通過、零回歸。
+
+**驗收標準：** `LibraryScreen` 建構子的具名參數數量明顯減少（27 個收斂為個位數的 bundle＋少數核心參數）；所有既有呼叫點（`main.dart`／測試）更新為新介面；行為零改變；`flutter analyze` 乾淨、`flutter test` 全數通過。
+
+---
+
+## Issue 8：拆分 `LibraryScreen` God-Widget（1504 行，持續增長中）
+
+**Status:** `ready-for-agent`（範圍較大，建議規劃階段拆成多個循序 Task，比照本 Epic 其他多 Task Issue 慣例）。
+
+**依賴：** 建議待 Issue 6／Issue 7 完成後再執行——外部依賴介面先收斂乾淨，內部 module 拆分阻力較小；非強制順序。
+
+**來源：** `docs/research/architecture-review-library-remote-screens.md` 候選 2（強度 Strong）。2026-08-21 現況複核：`app/lib/screens/library_screen.dart` 從報告當時的 1410 行增至 1504 行（短短兩天內 +94 行），持續是全專案 commit 頻率最高的熱點檔案，佐證報告「沒有內部 module 邊界可以吸收新複雜度，只能往同一層堆」的診斷仍然成立且未緩解。
+
+**背景／症狀：** `_LibraryScreenState` 單一 class body 同時裝載：書籍載入／排序／分類篩選狀態機、匯入對話框、5 個批次操作（候選 6，`:353-508`，重複骨架見報告）、導覽樞紐（建構 `ReaderScreen`／`RemoteServerListScreen`／`SettingsScreen`，見 Issue 7）、拼貼格 footer 非線性字級縮放數學，全部同一扁平深度，沒有任何內部 module 邊界。候選 1（`RemoteBookDownloader`）已由 `epic-30` Issue 6 抽出，證明「抽出獨立 module」這個方向本身可行且已有先例可循。
+
+**Solution（依報告 Before/After，並吸收候選 6）：**
+- 抽出 `LibraryBookListController`：書籍載入／排序／分類篩選狀態機。
+- 抽出 `LibraryBatchActions`：現行 5 個批次操作（搬移分類／強制 FXL／恢復自動判斷／刪除／移除本機快取），順帶收斂候選 6 描述的重複骨架（`capture 選取狀態 → 提早退出選取模式 → 過濾迴圈 → repository 呼叫 → _loadBooks()`）為共用 `runBatchAction(action)`，5 種操作各自只提供差異化的「單本書該做什麼」。
+- 抽出 `BookGridTileMetrics`：拼貼格 footer 非線性字級縮放數學（純函式，與 widget 生命週期無關，應可獨立單元測試）。
+- `LibraryScreen` 收斂為呈現＋委派，`RemoteBookDownloader`（候選 1，已完成）與 Issue 6／7 收斂出的 bundle 維持不變、原樣使用。
+- 具體 module 邊界切法、是否需要額外拆出「匯入對話框」「導覽樞紐」為獨立 module，由規劃階段依實際切分後的檔案大小/職責清晰度定案。
+
+**單元測試要求：**
+- 新增 module 各自的獨立單元測試（`LibraryBookListController`／`LibraryBatchActions`／`BookGridTileMetrics`），特別是 `BookGridTileMetrics` 的縮放數學應可脫離 widget 樹直接測試。
+- `library_screen_test.dart` 既有 12 個 fake 依賴／既有案例確認拆分後零回歸；報告已指出「需要 12 個 fake 依賴才能立起一個畫面測試」本身是 low leverage 的證據，拆分後應可觀察到部分測試改為直接測試新 module、不再需要完整 `LibraryScreen` 畫面環境。
+- `flutter analyze` 乾淨、`flutter test` 全數通過、零回歸。
+
+**驗收標準：** `LibraryScreen` 內部關注點依 module 邊界拆分完成，`_LibraryScreenState` 顯著變薄（不要求特定行數門檻，但應可觀察到書籍清單狀態機／批次操作／版面數學不再與呈現邏輯混雜在同一個 class body）；候選 6（批次操作骨架重複）隨本 Issue 一併收斂，不需另立工單；`flutter analyze` 乾淨、`flutter test` 全數通過。
+
+---
+
+## Issue 9：`Book.copyWith()` 全欄位開放為具名參數（shallow interface，已有真實事故佐證）
+
+**Status:** `ready-for-agent`。
+
+**依賴：** 無，範圍侷限 `app/lib/library/models/book.dart` 單一檔案，可獨立於 Issue 6/7/8 任何時間點處理，不阻塞、也不被阻塞。
+
+**來源：** `docs/research/architecture-review-library-remote-screens.md` 候選 4（強度 Worth exploring，已有真實事故佐證）。2026-08-21 現況複核：`Book` 模型自報告完成後新增 `cloudFileId` 欄位（`epic-29` Issue 0，`db08c4d`），該次新增正確依照既有模式把新欄位排除在 `copyWith()` 具名參數之外、於函式本體原樣帶入（`cloudFileId: cloudFileId`），沒有重演事故，但也代表候選 4 描述的「只開放 4/21 欄位、其餘 17（現 18）欄位需手動逐一背」這個結構性風險本身沒有被順手處理，仍然存在。
+
+**背景／症狀：** `app/lib/library/models/book.dart:201-231`（`copyWith()`）目前僅 4 個欄位（`groupName`／`isFixedLayout`／`filePath`／`isDownloaded`）為具名參數，其餘欄位（現為 18 個）在函式本體逐一手動 `fieldName: fieldName` 原樣帶入——寫漏一個不會編譯錯誤，只會在執行期靜默清空該欄位。2026-08-04 曾因此漏帶 `positionSyncedServerUpdatedAt`／`positionUpdatedAt`，任何呼叫 `copyWith()` 的批次操作（例如 `_moveSelectedBooksToGroup`）都會靜默清空同步進度資料，直到後續審查才發現修正（詳見報告候選 4 段落）。
+
+**Solution：** 21 個欄位全部開放為具名參數（`String? id, String? title, ... `），函式本體改為 `field: field ?? this.field` 逐一覆寫，取代目前「4 個具名參數 + 17 個原樣帶入」的不對稱寫法；遺漏欄位會直接編譯失敗（未在新建構子參數列宣告的欄位無法被覆寫也無法被遺漏，因為所有欄位都會出現在同一份參數列，複查即可發現遺漏）。現有 4 個呼叫點（`app/lib/screens/library_screen.dart` 等）呼叫方式不變，純粹是介面擴寬，不需要修改既有呼叫端程式碼。
+
+**單元測試要求：**
+- `book_test.dart` 新增涵蓋「呼叫 `copyWith()` 覆寫先前只能透過建構子設定的欄位（例如 `positionUpdatedAt`／`cloudFileId`）」的案例，證明新開放的具名參數確實可用。
+- 既有 `copyWith()` 相關測試（4 個既有具名參數的行為）零回歸。
+- `flutter analyze` 乾淨、`flutter test` 全數通過。
+
+**驗收標準：** `Book.copyWith()` 21 個欄位全數開放為具名參數；既有 4 個呼叫點行為零改變；`flutter analyze` 乾淨、`flutter test` 全數通過、零回歸。
