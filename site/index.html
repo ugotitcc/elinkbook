@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="zh-TW" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <title>elinkBook (易閱書) - 專為繁體中文直排與 E-Ink 打造的極致電子書閱讀器</title>
+  
+  <!-- SEO & OpenGraph 元標籤 -->
+  <meta name="description" content="elinkBook (易閱書) 是一款專為繁體中文直排排版與 E-Ink 電子墨水屏深度客製的跨平台閱讀器。支援 ePub3、PDF、TXT、KF8、CBZ、Markdown 格式，提供 Calibre 遠端書庫與雲端同步功能。">
+  <meta name="keywords" content="elinkBook, 易閱書, 電子書閱讀器, 繁體中文直排, 直排閱讀器, E-Ink 閱讀器, PDF 閱讀器, ePub3, Calibre OPDS, ugotit.cc">
+  <meta name="author" content="ugotit.cc">
+  
+  <!-- OpenGraph / Facebook / LINE -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="elinkBook (易閱書) - 專為繁體中文直排與 E-Ink 打造的極致電子書閱讀器">
+  <meta property="og:description" content="融匯東方古典美學與現代排版技術，重拾紙質墨香與直排閱讀樂趣。">
+  <meta property="og:image" content="./assets/appicon_v2.jpg">
+  <meta property="og:url" content="https://www.ugotit.cc/elinkbook/">
+
+  <!-- 網站圖示 Favicon -->
+  <link rel="icon" type="image/jpeg" href="./assets/appicon_v2.jpg">
+  <link rel="apple-touch-icon" href="./assets/appicon_v2.jpg">
+
+  <!-- Google 字體：思源宋體、思源黑體 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700;900&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <!-- 專屬樣式表 -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- ======================================================================
+       頂部導覽列 (Site Header & Navigation)
+       ====================================================================== -->
+  <header class="site-header">
+    <div class="container nav-wrap">
+      <!-- 品牌 LOGO -->
+      <a href="#/" class="brand-logo">
+        <img src="./assets/appicon_v2.jpg" alt="elinkBook Logo" class="brand-icon" onerror="this.src='../assets/appicon.jpg'">
+        <div class="brand-titles">
+          <span class="brand-name">elinkBook <span class="brand-badge">E-Ink</span></span>
+          <span class="brand-tagline">易閱書 · 繁體直排閱讀器</span>
+        </div>
+      </a>
+
+      <!-- 導覽連結清單 (SPA 路由切換) -->
+      <ul class="nav-links" id="nav-links-menu">
+        <li><a href="#/" class="nav-link active">首頁介紹</a></li>
+        <li><a href="#/features" class="nav-link">核心特色</a></li>
+        <li><a href="#/specs" class="nav-link">格式與規格</a></li>
+        <li><a href="#/privacy" class="nav-link">隱私權保護政策</a></li>
+        <li><a href="#/terms" class="nav-link">服務條款</a></li>
+      </ul>
+
+      <!-- 頂部操作按鈕 -->
+      <div class="nav-actions">
+        <!-- 深色/紙質主題切換按鈕 -->
+        <button type="button" class="btn-theme-toggle" id="theme-toggle-btn" title="切換色彩模式" aria-label="切換色彩模式">
+          <svg width="20" height="20" viewBox="0 0 24 24" id="theme-icon">
+            <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          </svg>
+        </button>
+
+        <!-- 下載連結按鈕 -->
+        <a href="#/download" class="btn-primary">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          取得 App
+        </a>
+
+        <!-- 手機漢堡選單按鈕 -->
+        <button type="button" class="nav-toggle-btn" id="nav-toggle" aria-label="開啟選單">
+          ☰
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ======================================================================
+       SPA 視圖 1：首頁 (Hero、即時排版展示、功能特色、規格、下載)
+       ====================================================================== -->
+  <main id="view-home" class="spa-view active-view">
+    
+    <!-- Hero 英雄區塊 -->
+    <section class="hero-section">
+      <div class="container">
+        <div class="hero-grid">
+          
+          <!-- 左側文案 -->
+          <div class="hero-content">
+            <div class="hero-badge-wrap">
+              <span class="hero-badge-icon">✦</span>
+              <span class="hero-badge-text">專為繁體中文直排與 E-Ink 深度客製</span>
+            </div>
+
+            <h1 class="hero-title">
+              重拾墨香雅韻<br>
+              <span class="highlight-oriental">極致直排閱讀體驗</span>
+            </h1>
+
+            <p class="hero-subtitle">
+              elinkBook 融匯東方古典書香美學與現代排版技術，解決數位閱讀長久以來的排版痛點。支援 ePub3、PDF、TXT、KF8/AZW3、CBZ 與 Markdown，提供純粹沉浸的讀書享受。
+            </p>
+
+            <div class="hero-cta-group">
+              <a href="#/download" class="btn-primary btn-gold">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="7 10 12 15 17 10"/>
+                  <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                立即免費下載
+              </a>
+              <a href="#/features" class="btn-outline">
+                探索全部功能
+              </a>
+            </div>
+
+            <div class="hero-highlights">
+              <div class="highlight-item">
+                <span class="highlight-num">&lt; 2s</span>
+                <span class="highlight-label">100MB PDF 極速渲染開啟</span>
+              </div>
+              <div class="highlight-item">
+                <span class="highlight-num">100%</span>
+                <span class="highlight-label">直排繁體標點與避頭尾規範</span>
+              </div>
+              <div class="highlight-item">
+                <span class="highlight-num">0 追蹤</span>
+                <span class="highlight-label">本機離線優先，純淨保護隱私</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 右側：互動式閱讀模擬器 -->
+          <div class="reader-mockup-card">
+            <!-- 模擬器頂部操作列 -->
+            <div class="reader-mockup-header">
+              <div class="mockup-controls">
+                <span class="mockup-dot dot-active"></span>
+                <span class="mockup-dot"></span>
+                <span class="mockup-dot"></span>
+              </div>
+
+              <!-- 排版切換控制鈕 -->
+              <div class="mockup-toolbar">
+                <button type="button" class="demo-chip-btn active" id="btn-mode-vertical">直排 (RTL)</button>
+                <button type="button" class="demo-chip-btn" id="btn-mode-horizontal">橫排 (LTR)</button>
+                <button type="button" class="demo-chip-btn active" id="theme-parchment-btn" title="竹韻紙質">紙質</button>
+                <button type="button" class="demo-chip-btn" id="theme-eink-btn" title="E-Ink 墨水屏">E-Ink</button>
+                <button type="button" class="demo-chip-btn" id="theme-dark-btn" title="墨夜深色">夜間</button>
+              </div>
+            </div>
+
+            <!-- 模擬器書頁內容 (直排 / 橫排動態呈現) -->
+            <div class="reader-page-view mode-vertical theme-parchment" id="demo-reader-view">
+              <h2 class="reader-sample-title">《桃花源記》節選</h2>
+              <div class="reader-sample-text">
+                <p>晉太元中，武陵人捕魚為業。緣溪行，忘路之遠近。忽逢桃花林，夾岸數百步，中無雜樹，芳草鮮美，落英繽紛。</p>
+                <p>漁人甚異之，復前行，欲窮其林。林盡水源，便得一山，山有小口，彷彿若有光。便捨船，從口入。初極狹，纔通人。復行數十步，豁然開朗。</p>
+                <p>土地平曠，屋舍儼然，有良田、美池、桑竹之屬。阡陌交通，雞犬相聞。其中往來種作，男女衣著，悉如外人。黃髮垂髫，並怡然自樂。</p>
+              </div>
+            </div>
+
+            <!-- 模擬器頁尾資訊 -->
+            <div class="reader-mockup-footer">
+              <span id="demo-mode-indicator">直排模式 (Vertical RTL)</span>
+              <span>字型：思源楷體 · 頁碼：1 / 12</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- 核心功能特色 (Features Section) -->
+    <section class="features-section" id="features">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-tag">Features & Capabilities</span>
+          <h2 class="section-title">匠心雕琢的六大核心閱讀體驗</h2>
+          <p class="section-desc">從字裡行間的標點對齊到電子墨水屏的硬體適配，每一處細節皆為重度閱讀愛好者量身打造。</p>
+        </div>
+
+        <div class="features-grid">
+          
+          <!-- 功能 1 -->
+          <div class="feature-card">
+            <div class="feature-icon-box">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+              </svg>
+            </div>
+            <h3 class="feature-card-title">繁體直排深度優化</h3>
+            <p class="feature-card-desc">
+              遵循標準繁體中文排版規範，精準處理直排標點居中、破折號與引號直向旋轉、避頭尾法則，杜絕標點落於行首的排版瑕疵。
+            </p>
+            <div class="feature-tags">
+              <span class="feature-tag-item">標點居中</span>
+              <span class="feature-tag-item">避頭尾處理</span>
+              <span class="feature-tag-item">直橫排即時切換</span>
+            </div>
+          </div>
+
+          <!-- 功能 2 -->
+          <div class="feature-card">
+            <div class="feature-icon-box">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+              </svg>
+            </div>
+            <h3 class="feature-card-title">PDFium 原生極速渲染</h3>
+            <p class="feature-card-desc">
+              透過底層 FFI 直接對接 PDFium 高效能引擎，超過 100MB 的大型圖文 PDF 與掃描書均可在 2 秒內極速加載，縮放滑順無卡頓。
+            </p>
+            <div class="feature-tags">
+              <span class="feature-tag-item">Page-fit 模式</span>
+              <span class="feature-tag-item">裁切白邊</span>
+              <span class="feature-tag-item">橫向雙頁模式</span>
+            </div>
+          </div>
+
+          <!-- 功能 3 -->
+          <div class="feature-card">
+            <div class="feature-icon-box">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                <line x1="8" y1="21" x2="16" y2="21"/>
+                <line x1="12" y1="17" x2="12" y2="21"/>
+              </svg>
+            </div>
+            <h3 class="feature-card-title">E-Ink 電子墨水屏適配</h3>
+            <p class="feature-card-desc">
+              專為文石 (Boox)、墨案 (Moan)、讀墨 (Readmoo) 等 E-Ink 裝置設計，支援純黑白高對比渲染、無動畫瞬翻、實體音量鍵翻頁。
+            </p>
+            <div class="feature-tags">
+              <span class="feature-tag-item">音量鍵翻頁</span>
+              <span class="feature-tag-item">零殘影刷新</span>
+              <span class="feature-tag-item">無 GMS 相容</span>
+            </div>
+          </div>
+
+          <!-- 功能 4 -->
+          <div class="feature-card">
+            <div class="feature-icon-box">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/>
+                <path d="M2 12h20"/>
+              </svg>
+            </div>
+            <h3 class="feature-card-title">Calibre & OPDS 遠端書庫</h3>
+            <p class="feature-card-desc">
+              無縫串接私人 Calibre 書庫與標準 OPDS 協議站點，支援目錄瀏覽、線上搜尋與一鍵下載匯入本機，打造無邊界的私人雲端圖書館。
+            </p>
+            <div class="feature-tags">
+              <span class="feature-tag-item">OPDS 2.0</span>
+              <span class="feature-tag-item">Google Drive</span>
+              <span class="feature-tag-item">OneDrive 同步</span>
+            </div>
+          </div>
+
+          <!-- 功能 5 -->
+          <div class="feature-card">
+            <div class="feature-icon-box">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 20h9"/>
+                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+              </svg>
+            </div>
+            <h3 class="feature-card-title">九宮格自由熱區導航</h3>
+            <p class="feature-card-desc">
+              獨創 3×3 觸控熱區自訂系統，提供「左手持機」、「右手翻頁」、「單手操作」多種預設模式，更支援自訂每一格的點擊跳頁動作。
+            </p>
+            <div class="feature-tags">
+              <span class="feature-tag-item">3×3 觸控熱區</span>
+              <span class="feature-tag-item">單手閱讀友善</span>
+              <span class="feature-tag-item">手勢防誤觸</span>
+            </div>
+          </div>
+
+          <!-- 功能 6 -->
+          <div class="feature-card">
+            <div class="feature-icon-box">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="16" y1="13" x2="8" y2="13"/>
+                <line x1="16" y1="17" x2="8" y2="17"/>
+                <polyline points="10 9 9 9 8 9"/>
+              </svg>
+            </div>
+            <h3 class="feature-card-title">Markdown 筆記匯出與語音朗讀</h3>
+            <p class="feature-card-desc">
+              書籍劃線、思考筆記可一鍵匯出為標準 Markdown 格式，輕鬆銜接 Obsidian、Logseq 等知識管理工具；更支援原生 TTS 句級高亮朗讀。
+            </p>
+            <div class="feature-tags">
+              <span class="feature-tag-item">Markdown 匯出</span>
+              <span class="feature-tag-item">句級高亮朗讀</span>
+              <span class="feature-tag-item">多色劃線註記</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- 支援格式與系統規格 (Specs Section) -->
+    <section class="specs-section" id="specs">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-tag">Supported Formats & Specs</span>
+          <h2 class="section-title">全方位格式相容與技術規格</h2>
+          <p class="section-desc">不論是流式排版、固定版面漫畫，或是純文字筆記，均能享有最高品質呈現。</p>
+        </div>
+
+        <!-- 6 大支援格式展示 -->
+        <div class="formats-row">
+          <div class="format-badge-card">
+            <span class="format-name">EPUB 3</span>
+            <span class="format-sub">流式與固定版面 (FXL)</span>
+          </div>
+          <div class="format-badge-card">
+            <span class="format-name">PDF</span>
+            <span class="format-sub">雙頁並排 · 智慧裁邊</span>
+          </div>
+          <div class="format-badge-card">
+            <span class="format-name">TXT</span>
+            <span class="format-sub">智慧分章 · 動態排版</span>
+          </div>
+          <div class="format-badge-card">
+            <span class="format-name">KF8 (AZW3)</span>
+            <span class="format-sub">Kindle 排版無損轉換</span>
+          </div>
+          <div class="format-badge-card">
+            <span class="format-name">CBZ</span>
+            <span class="format-sub">壓縮漫畫 · 跨頁自動合拼</span>
+          </div>
+          <div class="format-badge-card">
+            <span class="format-name">Markdown</span>
+            <span class="format-sub">純文字筆記 · 樣式渲染</span>
+          </div>
+        </div>
+
+        <!-- 規格細節方塊 -->
+        <div class="specs-detail-grid">
+          <div class="spec-box">
+            <h3 class="spec-box-title">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
+                <line x1="12" y1="18" x2="12.01" y2="18"/>
+              </svg>
+              系統與硬體相容性
+            </h3>
+            <ul class="spec-list">
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                <span><strong>作業系統支援</strong>：Android 11.0 (API 30) 及以上版本</span>
+              </li>
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                <span><strong>E-Ink 墨水屏支援</strong>：完美適配 Boox、Moan、HyRead、Meebook 等主流電子書閱讀器</span>
+              </li>
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                <span><strong>無 GMS 環境支援</strong>：即使裝置未搭載 Google Play Services，各項功能依然完全可用</span>
+              </li>
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                <span><strong>儲存取用架構</strong>：遵循 Android 最新 SAF (Storage Access Framework) 安全沙盒機制</span>
+              </li>
+            </ul>
+          </div>
+
+          <div class="spec-box">
+            <h3 class="spec-box-title">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+              </svg>
+              排版字型與外觀自訂
+            </h3>
+            <ul class="spec-list">
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                <span><strong>內建優質字型</strong>：思源宋體、思源黑體、原俠正楷、台灣圓體、源流明體</span>
+              </li>
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                <span><strong>自訂字型匯入</strong>：支援 TTF、OTF 自行載入，並可即時調整字重與字型大小</span>
+              </li>
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                <span><strong>版面精細調節</strong>：行距、字距、段落間距、邊界空白均支援微調控制</span>
+              </li>
+              <li>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                <span><strong>五段旋轉鎖定</strong>：自動感應旋轉、0°、90°、180°、270° 方向鎖定</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 下載橫幅區塊 (Download Banner Section) -->
+    <section class="download-section" id="download">
+      <div class="container">
+        <div class="download-banner">
+          <div>
+            <h2 class="download-title">立即體驗純粹的直排閱讀之美</h2>
+            <p class="download-desc">
+              elinkBook 完全免費且無侵入式廣告，為喜愛繁體中文書籍的您提供最舒適的閱讀新天地。
+            </p>
+            <div class="download-btn-group">
+              <a href="#/download" class="btn-download-app">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M17.523 15.3414c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.551 0 .9992.4482.9992.9993s-.4482.9997-.9992.9997m-11.046 0c-.5511 0-.9993-.4486-.9993-.9997s.4482-.9993.9993-.9993c.5511 0 .9993.4482.9993.9993s-.4482.9997-.9993.9997m11.4045-6.02l1.9973-3.4592a.416.416 0 00-.1521-.5676.416.416 0 00-.5676.1521l-2.0223 3.503C15.5902 8.411 13.8533 8.0817 12 8.0817c-1.8533 0-3.5902.3293-5.1368.868L4.8409 5.4467a.4161.4161 0 00-.5677-.1521.4157.4157 0 00-.152.5676l1.9972 3.4592C2.6889 11.1867.3432 14.6589 0 18.761h24c-.3432-4.1021-2.6889-7.5743-6.1185-9.4396"/>
+                </svg>
+                下載 Android APK
+              </a>
+              <a href="https://www.ugotit.cc" target="_blank" rel="noopener noreferrer" class="btn-outline" style="color: #fff; border-color: rgba(255,255,255,0.4);">
+                造訪 ugotit.cc 官方專區
+              </a>
+            </div>
+          </div>
+
+          <div class="app-meta-box">
+            <div class="app-meta-row">
+              <span class="app-meta-label">目前版本</span>
+              <span class="app-meta-val">v1.2.0 (Stable)</span>
+            </div>
+            <div class="app-meta-row">
+              <span class="app-meta-label">最低系統要求</span>
+              <span class="app-meta-val">Android 11.0+ (API 30)</span>
+            </div>
+            <div class="app-meta-row">
+              <span class="app-meta-label">支援架構</span>
+              <span class="app-meta-val">arm64-v8a / armeabi-v7a / x86_64</span>
+            </div>
+            <div class="app-meta-row">
+              <span class="app-meta-label">授權模式</span>
+              <span class="app-meta-val">免費版 / 個人非商業使用</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ======================================================================
+       SPA 視圖 2：應用程式隱私權保護政策 (Privacy Policy)
+       ====================================================================== -->
+  <section id="view-privacy" class="spa-view legal-container">
+    <div class="container container-narrow">
+      
+      <!-- 標題與操作按鈕 -->
+      <div class="legal-header">
+        <div class="legal-title-wrap">
+          <span class="legal-badge-pill">官方公開宣告</span>
+          <h1>應用程式隱私權保護政策</h1>
+          <div class="legal-meta">
+            發布單位：ugotit.cc · 適用產品：elinkBook (易閱書) APP · 最後修訂日期：2026 年 8 月 20 日
+          </div>
+        </div>
+        <div class="legal-actions">
+          <button type="button" class="btn-outline btn-sm" onclick="window.print()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            列印政策
+          </button>
+          <button type="button" class="btn-outline btn-sm" onclick="copyCurrentUrl()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+            複製連結
+          </button>
+        </div>
+      </div>
+
+      <!-- 政策主體內容 -->
+      <article class="legal-article-card">
+        
+        <div class="legal-highlight-box">
+          非常歡迎您使用<strong>「elinkBook 易閱書 APP」</strong>（以下簡稱本 APP 或本服務，由 ugotit.cc 提供維運與技術支援）。為了讓您能夠安心使用本 APP 的各項服務與功能，特此向您說明本 APP 的隱私權保護政策（以下簡稱本政策），以保障您的合法權益，請您詳閱下列條款：
+        </div>
+
+        <h2>一、隱私權保護政策的適用範圍</h2>
+        <p>
+          本政策內容涵蓋本 APP 如何處理您在安裝、啟動、使用本 APP 及其相關延伸服務時所產生的各項資訊與授權。本政策不適用於本 APP 以外的第三方連結網站，亦不適用於非本 APP 所委託或參與管理的第三方人員或服務提供商（例如：第三方雲端硬碟服務商 Google Drive、OneDrive 或使用者自建之 Calibre/OPDS 伺服器）。
+        </p>
+
+        <h2>二、個人資料與應用程式存取權限之蒐集、處理及利用</h2>
+        <p>
+          elinkBook 秉持<strong>「本機端優先（Local-First）」</strong>與<strong>「資料最小化（Data Minimization）」</strong>原則，本 APP 核心功能無需註冊帳號即可離線使用。具體權限與資料處理說明如下：
+        </p>
+        
+        <h3>1. 檔案與儲存空間存取權限 (Storage & SAF)</h3>
+        <ul>
+          <li><strong>用途說明</strong>：用於讀取您所選取或匯入的電子書檔案（包含 EPUB、PDF、TXT、AZW3、CBZ、Markdown）與字型檔案，並將您的個人閱讀進度、劃線筆記、書籤及偏好設定安全儲存於您裝置本機端。</li>
+          <li><strong>存取範圍</strong>：本 APP 採用 Android 標準儲存存取框架 (Storage Access Framework, SAF)，僅存取您授權之特定目錄或檔案，絕不會在背景掃描或讀取您裝置上的其他私人文件或多媒體相片。</li>
+        </ul>
+
+        <h3>2. 網路連線與雲端服務授權 (Network & Cloud Storage)</h3>
+        <ul>
+          <li><strong>雲端同步與遠端書庫</strong>：當您主動啟用 Google Drive、OneDrive 備份同步或連線至個人 Calibre/OPDS 遠端書庫時，本 APP 透過標準 OAuth 2.0 協議取得傳輸權限。</li>
+          <li><strong>資料傳輸安全</strong>：本 APP 僅傳輸您指定同步之書籍元數據或檔案，所有網路通訊均經過 TLS/HTTPS 加密傳輸，且絕不會將您的雲端授權憑證回傳至任何未經授權的第三方主機。</li>
+        </ul>
+
+        <h3>3. 意見反應與客服支援 (Support & Contact)</h3>
+        <p>
+          當您透過本 APP 或 ugotit.cc 官方網站使用意見反饋、問題回報或客服聯繫服務時，我們會依需求請您提供聯絡電子郵件 (E-mail) 與問題描述，此資訊僅用於回覆您的諮詢與協助排查技術問題。
+        </p>
+
+        <h2>三、資料安全與保護措施</h2>
+        <p>
+          本 APP 及伺服器端均設有嚴密的資訊安全防護措施：
+        </p>
+        <ul>
+          <li>本機資料庫採用安全加密與沙盒隔離機制，防止未授權應用程式讀取您的閱讀資料。</li>
+          <li>主機端均配置有防火牆、防毒與存取控制系統，僅有經過授權之專業維運人員方得接觸相關必要資料，相關人員均簽署嚴格之保密協議。</li>
+          <li>如因業務需要委託第三方協力廠商提供服務時，本 APP 亦嚴格要求其遵守保密義務與安全規範。</li>
+        </ul>
+
+        <h2>四、對外相關連結之聲明</h2>
+        <p>
+          本 APP 介面或相關說明文件可能包含其他網站或第三方服務之網路連結（例如：OPDS 示範站點、字型開源專案或協力雲端平台）。經由本 APP 點選進入其他網站時，該網站並不適用本政策，請您務必詳閱該連結網站之隱私權政策。
+        </p>
+
+        <h2>五、與第三人共用個人資料之政策</h2>
+        <p>
+          本 APP <strong>絕不會提供、交換、出租或出售</strong>任何您的個人資料或閱讀紀錄給其他個人、團體、私人企業或公務機關，但有下列法律依據或合約義務者不在此限：
+        </p>
+        <ol>
+          <li>經由您事前之明確書面或數位授權同意。</li>
+          <li>法律明文規定或司法檢調機關依法令要求配合調查。</li>
+          <li>為免除您生命、身體、自由或財產上之急迫危險。</li>
+          <li>與公務機關或學術研究機構合作，基於公共利益進行不具識別性之統計分析。</li>
+          <li>當您在使用行為上違反服務條款，為維護本 APP 與其他使用者權益，依法採取必要之法律維護措施。</li>
+        </ol>
+
+        <h2>六、使用者權利行使 (個資與資料刪除)</h2>
+        <p>
+          您對儲存於本機端之所有閱讀資料（包括書籍、書籤、註記、進度）擁有完全的控制權：
+        </p>
+        <ul>
+          <li>您可隨時在 APP 內手動刪除單本書籍或一鍵清除所有閱讀紀錄。</li>
+          <li>移除本 APP 將一併自動刪除該 APP 於系統沙盒中所儲存之全部暫存檔與偏好設定。</li>
+          <li>若需撤銷雲端存取權限，您可隨時於 APP 設定中登出雲端帳號，或直接於 Google/Microsoft 帳號後台撤銷授權。</li>
+        </ul>
+
+        <h2>七、隱私權保護政策之修訂</h2>
+        <p>
+          本 APP 隱私權保護政策將因應法令變更、技術進展或產品功能升級隨時進行檢討與修正。修訂後之最新條款將立即刊登於本專屬網頁及 ugotit.cc 官網，並更新修訂日期。
+        </p>
+
+        <h2>八、聯絡與諮詢管道</h2>
+        <p>
+          如果您對本隱私權政策有任何疑問、建議或需要行使相關個人權益，歡迎隨時透過以下管道與我們聯繫：
+        </p>
+        <ul>
+          <li><strong>官方網站</strong>：<a href="https://www.ugotit.cc" target="_blank" rel="noopener noreferrer">https://www.ugotit.cc</a></li>
+          <li><strong>客服與隱私諮詢信箱</strong>：<a href="mailto:app@ugotit.cc">app@ugotit.cc</a></li>
+          <li><strong>回覆時效</strong>：我們將於收到您的來信後 3 至 5 個工作日內給予正式回覆。</li>
+        </ul>
+
+      </article>
+    </div>
+  </section>
+
+  <!-- ======================================================================
+       SPA 視圖 3：應用程式服務條款 (Terms of Service)
+       ====================================================================== -->
+  <section id="view-terms" class="spa-view legal-container">
+    <div class="container container-narrow">
+      
+      <!-- 標題與操作按鈕 -->
+      <div class="legal-header">
+        <div class="legal-title-wrap">
+          <span class="legal-badge-pill">使用者使用規範</span>
+          <h1>應用程式服務條款</h1>
+          <div class="legal-meta">
+            發布單位：ugotit.cc · 適用產品：elinkBook (易閱書) · 最後修訂日期：2026 年 8 月 20 日
+          </div>
+        </div>
+        <div class="legal-actions">
+          <button type="button" class="btn-outline btn-sm" onclick="window.print()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            列印條款
+          </button>
+          <button type="button" class="btn-outline btn-sm" onclick="copyCurrentUrl()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+            複製連結
+          </button>
+        </div>
+      </div>
+
+      <!-- 條款主體內容 -->
+      <article class="legal-article-card">
+        
+        <div class="legal-highlight-box">
+          歡迎使用<strong>「elinkBook 易閱書」</strong>（以下簡稱本軟體或本服務）。當您下載、安裝或使用本軟體時，即表示您已充分閱讀、理解並同意接受本服務條款（以下簡稱本條款）之全部內容。若您不同意本條款之任何部分，請立即停止使用並解除安裝本軟體。
+        </div>
+
+        <h2>一、認知與接受條款</h2>
+        <p>
+          本服務由 ugotit.cc 提供。使用者必須具備完全行為能力；若您為限制行為能力人或無行為能力人，應於法定代理人（如父母或監護人）閱讀、理解並同意本條款後，方得使用本軟體。
+        </p>
+
+        <h2>二、服務內容與授權範圍</h2>
+        <ol>
+          <li>本軟體提供跨平台之電子書檔案解析、排版渲染、書庫管理、筆記標註與雲端輔助同步功能。</li>
+          <li>ugotit.cc 授予使用者一項個人的、非專屬的、不可轉讓的、免費的合法使用授權，使用者僅得依據本條款將本軟體用於個人非商業用途。</li>
+          <li>本軟體本身為純閱讀工具，<strong>不內建、不販售、亦不提供任何受著作權保護之商業電子書籍內容</strong>，使用者須自行匯入合法取得之電子書檔案。</li>
+        </ol>
+
+        <h2>三、使用者守法義務與承諾</h2>
+        <p>使用者在使用本服務時，承諾遵守相關法令並不得從事下列行為：</p>
+        <ul>
+          <li>匯入、散佈或傳輸任何侵害他人著作權、商標權、專利權或營業秘密之非法檔案。</li>
+          <li>對本軟體進行反向工程、反編譯、反彙編或企圖擷取原始碼（除法規特別允許或開源授權組件除外）。</li>
+          <li>利用本軟體從事任何可能干擾、阻斷或危害網路安全與其他使用者權益之行為。</li>
+          <li>以自動化工具（如爬蟲程式）對本服務之雲端伺服器進行異常負載請求。</li>
+        </ul>
+
+        <h2>四、智慧財產權聲明</h2>
+        <ul>
+          <li><strong>軟體著作權</strong>：本軟體之介面設計、原始碼、LOGO、圖標（包括 appicon_v2.jpg 視覺）與專案文件均屬 ugotit.cc 或各該開源授權者所有，受著作權法與智慧財產權法規保護。</li>
+          <li><strong>第三方開源套件</strong>：本軟體使用之開源函式庫（如 Flutter、PDFium、foliate-js 等）均遵守其各自之開源授權條款（如 MIT、Apache 2.0、BSD 授權），詳細開源授權資訊可於 APP 內「關於」頁面查閱。</li>
+          <li><strong>使用者書籍內容</strong>：使用者匯入本軟體之書籍內容與文字筆記，其著作權仍歸原著作權人或使用者本人所有，本軟體不主張任何著作權利。</li>
+        </ul>
+
+        <h2>五、第三方服務與免責聲明</h2>
+        <ol>
+          <li>本軟體支援連接第三方服務（如 Google Drive、OneDrive、OPDS 遠端伺服器）。使用者應自行評估該第三方服務之可用性與安全性，ugotit.cc 對第三方服務之穩定度、傳輸中斷或資料遺失不負連帶責任。</li>
+          <li>本軟體依「現況 (AS-IS)」提供服務，不保證在所有硬體型號或作業系統版本上完全無錯誤或永不中斷。</li>
+          <li>在法律允許之最大範圍內，ugotit.cc 不承擔因使用或無法使用本軟體所產生之任何直接、間接、附帶或衍生性損失。</li>
+        </ol>
+
+        <h2>六、條款修改與終止</h2>
+        <p>
+          ugotit.cc 保留隨時修改本服務條款之權利。修改後之條款一經公佈於本網站即產生效力。若您於條款修改後繼續使用本軟體，即視為您已接受並同意遵守修訂後之條款。
+        </p>
+
+        <h2>七、準據法與管轄法院</h2>
+        <p>
+          本服務條款之解釋與適用，以及因使用本服務所衍生之爭議，均以中華民國法令為準據法。雙方同意以台灣士林地方法院為第一審管轄法院。
+        </p>
+
+      </article>
+    </div>
+  </section>
+
+  <!-- ======================================================================
+       頁尾 (Site Footer)
+       ====================================================================== -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        
+        <!-- 品牌簡介 -->
+        <div class="footer-brand-col">
+          <a href="#/" class="brand-logo">
+            <img src="./assets/appicon_v2.jpg" alt="elinkBook Logo" class="brand-icon" style="width: 36px; height: 36px;" onerror="this.src='../assets/appicon.jpg'">
+            <span class="brand-name" style="font-size: 1.15rem;">elinkBook (易閱書)</span>
+          </a>
+          <p class="footer-desc">
+            專為繁體中文直排排版與 E-Ink 電子墨水屏量身打造的跨平台開源閱讀器，重拾純粹的紙質閱讀樂趣。
+          </p>
+        </div>
+
+        <!-- 快速導覽 -->
+        <div>
+          <h4 class="footer-col-title">快速導覽</h4>
+          <ul class="footer-links">
+            <li><a href="#/">首頁介紹</a></li>
+            <li><a href="#/features">核心特色</a></li>
+            <li><a href="#/specs">格式與規格</a></li>
+            <li><a href="#/download">取得 App</a></li>
+          </ul>
+        </div>
+
+        <!-- 政策與條款 -->
+        <div>
+          <h4 class="footer-col-title">法律與條款</h4>
+          <ul class="footer-links">
+            <li><a href="#/privacy">應用程式隱私權保護政策</a></li>
+            <li><a href="#/terms">應用程式服務條款</a></li>
+            <li><a href="https://www.ugotit.cc/index.php/menu-privacy-policy" target="_blank" rel="noopener noreferrer">ugotit.cc 官方隱私政策</a></li>
+            <li><a href="privacy.html" target="_blank">獨立隱私政策頁面 (Direct URL)</a></li>
+          </ul>
+        </div>
+
+        <!-- 聯絡與支援 -->
+        <div>
+          <h4 class="footer-col-title">聯絡與支援</h4>
+          <ul class="footer-links">
+            <li><a href="https://www.ugotit.cc" target="_blank" rel="noopener noreferrer">ugotit.cc 官方網站</a></li>
+            <li><a href="mailto:app@ugotit.cc">app@ugotit.cc</a></li>
+            <li><a href="https://github.com" target="_blank" rel="noopener noreferrer">開源專案與回饋</a></li>
+          </ul>
+        </div>
+
+      </div>
+
+      <!-- 頁尾版權宣告 -->
+      <div class="footer-bottom">
+        <div class="footer-copyright">
+          © 2026 <a href="https://www.ugotit.cc" target="_blank" rel="noopener noreferrer">ugotit.cc</a>. All Rights Reserved. 保留所有權利。
+        </div>
+        <div style="font-size: 0.8rem; color: var(--text-muted);">
+          Crafted with care for Traditional Chinese Readers & E-Ink enthusiasts.
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- SPA 互動與路由核心腳本 -->
+  <script src="app.js"></script>
+</body>
+</html>
