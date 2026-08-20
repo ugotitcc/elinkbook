@@ -22,11 +22,22 @@ class GoogleDriveOAuthClient {
   GoogleDriveOAuthClient({
     required CloudAccountRepository accountRepository,
     http.Client? httpClient,
+    String clientSecret = CloudOAuthConfig.googleClientSecret,
   })  : _accountRepository = accountRepository,
-        _httpClient = httpClient ?? http.Client();
+        _httpClient = httpClient ?? http.Client(),
+        _clientSecret = clientSecret;
 
   final CloudAccountRepository _accountRepository;
   final http.Client _httpClient;
+
+  /// 是否在 token 請求 body 內帶入 `client_secret`，由這個值是否為空字串
+  /// 決定（見 [_tokenRequestBody]）。預設值取自
+  /// [CloudOAuthConfig.googleClientSecret] 這個編譯期常數，正式組裝
+  /// （`main.dart`）不需要顯式傳入；測試環境透過建構子注入不同值，涵蓋
+  /// Android（空字串）／電腦應用程式（非空字串）兩種情境（`flutter test`
+  /// 執行期無法動態切換 `CloudOAuthConfig.googleClientSecret` 這個編譯期
+  /// 常數本身的值，注入是唯一可測試的做法）。
+  final String _clientSecret;
 
   /// 走系統瀏覽器 OAuth Authorization Code Flow ＋ PKCE（不使用內嵌
   /// WebView，Google 政策明確禁止）；成功後寫入 [CloudAccountRepository]
@@ -66,14 +77,16 @@ class GoogleDriveOAuthClient {
 
     http.Response tokenResponse;
     try {
-      tokenResponse = await _httpClient.post(Uri.parse(_tokenEndpoint), body: {
-        'code': code,
-        'client_id': CloudOAuthConfig.googleClientId,
-        'client_secret': CloudOAuthConfig.googleClientSecret,
-        'code_verifier': verifier,
-        'grant_type': 'authorization_code',
-        'redirect_uri': CloudOAuthConfig.googleRedirectUri,
-      });
+      tokenResponse = await _httpClient.post(
+        Uri.parse(_tokenEndpoint),
+        body: _tokenRequestBody({
+          'code': code,
+          'client_id': CloudOAuthConfig.googleClientId,
+          'code_verifier': verifier,
+          'grant_type': 'authorization_code',
+          'redirect_uri': CloudOAuthConfig.googleRedirectUri,
+        }),
+      );
     } catch (_) {
       return false;
     }
@@ -127,11 +140,14 @@ class GoogleDriveOAuthClient {
 
     http.Response response;
     try {
-      response = await _httpClient.post(Uri.parse(_tokenEndpoint), body: {
-        'refresh_token': tokens.refreshToken,
-        'client_id': CloudOAuthConfig.googleClientId,
-        'grant_type': 'refresh_token',
-      });
+      response = await _httpClient.post(
+        Uri.parse(_tokenEndpoint),
+        body: _tokenRequestBody({
+          'refresh_token': tokens.refreshToken,
+          'client_id': CloudOAuthConfig.googleClientId,
+          'grant_type': 'refresh_token',
+        }),
+      );
     } catch (_) {
       return null;
     }
@@ -192,5 +208,16 @@ class GoogleDriveOAuthClient {
   String _codeChallengeFor(String verifier) {
     final digest = sha256.convert(utf8.encode(verifier));
     return base64UrlEncode(digest.bytes).replaceAll('=', '');
+  }
+
+  /// 組出 token 端點請求的 body：[_clientSecret] 非空字串（電腦應用程式
+  /// 機密客戶端）時併入 `client_secret` 欄位，空字串（Android 公開客戶端，
+  /// 見 [CloudOAuthConfig.googleClientSecret] 文件說明）時不帶這個欄位
+  /// ——[link] 與 [ensureValidAccessToken] 兩處 token 端點呼叫皆改用這個
+  /// 共用方法，避免兩處各自處理、彼此不一致（此前 `link()` 有帶、
+  /// `ensureValidAccessToken()` 沒帶，正是這個共用化要防止的錯誤模式）。
+  Map<String, String> _tokenRequestBody(Map<String, String> params) {
+    if (_clientSecret.isEmpty) return params;
+    return {...params, 'client_secret': _clientSecret};
   }
 }
