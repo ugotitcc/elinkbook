@@ -13,7 +13,7 @@ const _authorizationEndpoint =
     'https://login.microsoftonline.com/common/oauth2/v2.0/authorize';
 const _tokenEndpoint = 'https://login.microsoftonline.com/common/oauth2/v2.0/token';
 const _userInfoEndpoint = 'https://graph.microsoft.com/v1.0/me';
-const _filesReadScope = 'Files.Read offline_access email openid profile';
+const _filesReadScope = 'Files.Read User.Read offline_access email openid profile';
 
 /// OneDrive 匯入來源帳號的 OAuth 登入流程執行者（spec.md「OAuth 登入
 /// 機制」，epic-29 Issue 2）：結構與職責分工完全比照 Issue 1 的

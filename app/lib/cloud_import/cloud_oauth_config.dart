@@ -11,14 +11,18 @@
 abstract class CloudOAuthConfig {
   // ==================== Google Drive ====================
 
-  /// Google Cloud Console 建立的 OAuth 2.0 用戶端 ID（Android 應用程式
-  /// 類型，公開客戶端、無 client secret，符合 spec.md「OAuth 登入機制」
-  /// 對 PKCE 公開客戶端流程的要求）。開發/測試期間可用 Google Cloud
-  /// Console 的「測試使用者」白名單機制讓白名單內帳號正常登入（僅顯示
-  /// 「未驗證應用程式」過場警告）。
+  /// Google Cloud Console 建立的 OAuth 2.0 用戶端 ID（電腦應用程式類型）。
+  /// 開發/測試期間可用 Google Cloud Console 的「測試使用者」白名單機制
+  /// 讓白名單內帳號正常登入（僅顯示「未驗證應用程式」過場警告）。
   static const String googleClientId = String.fromEnvironment(
     'GOOGLE_OAUTH_CLIENT_ID',
     defaultValue: 'YOUR_GOOGLE_OAUTH_CLIENT_ID.apps.googleusercontent.com',
+  );
+
+  /// Google OAuth 用戶端密鑰（電腦應用程式類型需要，用於 token 交換）。
+  static const String googleClientSecret = String.fromEnvironment(
+    'GOOGLE_OAUTH_CLIENT_SECRET',
+    defaultValue: 'YOUR_GOOGLE_OAUTH_CLIENT_SECRET',
   );
 
   /// 依 [googleClientId] 推導的反向客戶端 ID格式 redirect URI scheme

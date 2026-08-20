@@ -12,7 +12,7 @@ import 'cloud_provider.dart';
 const _authorizationEndpoint = 'https://accounts.google.com/o/oauth2/v2/auth';
 const _tokenEndpoint = 'https://oauth2.googleapis.com/token';
 const _userInfoEndpoint = 'https://www.googleapis.com/oauth2/v2/userinfo';
-const _driveReadonlyScope = 'https://www.googleapis.com/auth/drive.readonly';
+const _driveReadonlyScope = 'https://www.googleapis.com/auth/drive.readonly email openid profile';
 
 /// Google Drive 匯入來源帳號的 OAuth 登入流程執行者（spec.md「OAuth 登入
 /// 機制」）：負責「怎麼登入／怎麼續期」，登入成功後把憑證交給
@@ -41,12 +41,12 @@ class GoogleDriveOAuthClient {
       'client_id': CloudOAuthConfig.googleClientId,
       'redirect_uri': CloudOAuthConfig.googleRedirectUri,
       'response_type': 'code',
-      'scope': '$_driveReadonlyScope email',
+      'scope': _driveReadonlyScope,
       'code_challenge': challenge,
       'code_challenge_method': 'S256',
       'state': state,
       'access_type': 'offline',
-      'prompt': 'consent',
+      'prompt': 'select_account',
     });
 
     String resultUrl;
@@ -69,6 +69,7 @@ class GoogleDriveOAuthClient {
       tokenResponse = await _httpClient.post(Uri.parse(_tokenEndpoint), body: {
         'code': code,
         'client_id': CloudOAuthConfig.googleClientId,
+        'client_secret': CloudOAuthConfig.googleClientSecret,
         'code_verifier': verifier,
         'grant_type': 'authorization_code',
         'redirect_uri': CloudOAuthConfig.googleRedirectUri,
