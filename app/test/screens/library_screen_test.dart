@@ -2965,7 +2965,8 @@ void main() {
 
   testWidgets(
       'LibraryScreen 透過分類篩選路徑（_openGroupFilteredView）進入後，'
-      'googleDriveStorageClient 與外層一致（review-issue-3.md Important #1 採納）',
+      'googleDriveStorageClient／computeFingerprint 皆與外層一致'
+      '（review-issue-3.md Important #1、review-issue-5.md Important #1 採納）',
       (tester) async {
     final book = _testBook(
       id: '1',
@@ -2975,6 +2976,7 @@ void main() {
       filePath: 'content://example/1.txt',
     );
     final googleDriveStorageClient = FakeCloudStorageClient();
+    final computeFingerprint = FakeFingerprintComputer().call;
 
     await tester.pumpWidget(
       MaterialApp(
@@ -2983,6 +2985,7 @@ void main() {
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
           googleDriveStorageClient: googleDriveStorageClient,
+          computeFingerprint: computeFingerprint,
         ),
       ),
     );
@@ -2997,6 +3000,11 @@ void main() {
         reason: '_openGroupFilteredView() 未把 googleDriveStorageClient 貫穿給下一層 '
             'LibraryScreen，會導致分類篩選畫面內「從 Google Drive 匯入」選單項目 '
             '永遠停用');
+    expect(filteredScreen.computeFingerprint, same(computeFingerprint),
+        reason: '_openGroupFilteredView() 未把 computeFingerprint 貫穿給下一層 '
+            'LibraryScreen，會導致分類篩選畫面內「從 Google Drive／OneDrive 匯入」'
+            '選單項目一起被誤停用（Issue 5 新增的門檻條件同時檢查 '
+            'computeFingerprint != null）');
   });
 
   testWidgets(
