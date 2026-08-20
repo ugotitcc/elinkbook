@@ -105,4 +105,63 @@ void main() {
 
     expect(await client.ensureValidAccessToken(), isNull);
   });
+
+  group('client_secret 是否併入 token 請求 body（Epic 29 Issue 8）', () {
+    test('未傳入 clientSecret（沿用預設空字串，等同 Android 公開客戶端）時，'
+        'refresh token 換發不帶 client_secret', () async {
+      await accountRepository.link(
+        CloudProvider.googleDrive,
+        CloudAccountTokens(
+          accessToken: 'expiring-token',
+          refreshToken: 'refresh-1',
+          email: 'reader@example.com',
+          expiresAt: DateTime.now().add(const Duration(seconds: 10)),
+        ),
+      );
+      final mockClient = MockClient((request) async {
+        expect(request.bodyFields.containsKey('client_secret'), isFalse);
+        return http.Response(
+          jsonEncode({'access_token': 'refreshed-token', 'expires_in': 3600}),
+          200,
+        );
+      });
+      final client = GoogleDriveOAuthClient(
+        accountRepository: accountRepository,
+        httpClient: mockClient,
+      );
+
+      final result = await client.ensureValidAccessToken();
+
+      expect(result, 'refreshed-token');
+    });
+
+    test('傳入非空 clientSecret（等同電腦應用程式機密客戶端）時，'
+        'refresh token 換發帶入正確的 client_secret', () async {
+      await accountRepository.link(
+        CloudProvider.googleDrive,
+        CloudAccountTokens(
+          accessToken: 'expiring-token',
+          refreshToken: 'refresh-1',
+          email: 'reader@example.com',
+          expiresAt: DateTime.now().add(const Duration(seconds: 10)),
+        ),
+      );
+      final mockClient = MockClient((request) async {
+        expect(request.bodyFields['client_secret'], 'test-secret-value');
+        return http.Response(
+          jsonEncode({'access_token': 'refreshed-token', 'expires_in': 3600}),
+          200,
+        );
+      });
+      final client = GoogleDriveOAuthClient(
+        accountRepository: accountRepository,
+        httpClient: mockClient,
+        clientSecret: 'test-secret-value',
+      );
+
+      final result = await client.ensureValidAccessToken();
+
+      expect(result, 'refreshed-token');
+    });
+  });
 }

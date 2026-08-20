@@ -42,7 +42,7 @@
 **Interfaces:**
 - Produces：`CloudOAuthConfig.googleClientSecret`（型別不變，仍是 `String`，只改 `defaultValue`）；新增 `static bool get googleIsConfidentialClient`，供 Task 2 的 `GoogleDriveOAuthClient` 參考語意（Task 2 實際判斷邏輯直接用建構子注入值的 `.isNotEmpty`，不會呼叫這個 getter，但這個 getter 本身要存在、有測試，供其他呼叫端或未來人工核對設定時使用，語意與 Task 2 的判斷邏輯必須一致）。
 
-- [ ] **Step 1：寫失敗測試**
+- [x] **Step 1：寫失敗測試**
 
 在 `app/test/cloud_import/cloud_oauth_config_test.dart` 內，`oneDriveClientId` 那組測試之前（第 24 行 `test('googleRedirectUri...'` 之後）新增：
 
@@ -56,7 +56,7 @@
   });
 ```
 
-- [ ] **Step 2：執行測試，確認失敗**
+- [x] **Step 2：執行測試，確認失敗**
 
 ```bash
 cd app
@@ -66,7 +66,7 @@ flutter test test/cloud_import/cloud_oauth_config_test.dart --plain-name "google
 
 預期：第一則因為目前 `defaultValue` 是樣板字串而非空字串，斷言失敗；第二則因為 `googleIsConfidentialClient` 尚未定義，編譯失敗。
 
-- [ ] **Step 3：修改 `cloud_oauth_config.dart`**
+- [x] **Step 3：修改 `cloud_oauth_config.dart`**
 
 找到目前的：
 
@@ -110,7 +110,7 @@ flutter test test/cloud_import/cloud_oauth_config_test.dart --plain-name "google
   static bool get googleIsConfidentialClient => googleClientSecret.isNotEmpty;
 ```
 
-- [ ] **Step 4：更新 `cloud_oauth.example.json`**
+- [x] **Step 4：更新 `cloud_oauth.example.json`**
 
 把 `app/config/cloud_oauth.example.json` 改成：
 
@@ -124,7 +124,7 @@ flutter test test/cloud_import/cloud_oauth_config_test.dart --plain-name "google
 
 （`GOOGLE_OAUTH_CLIENT_SECRET` 留空字串——Android 類型用戶端的正確設定就是留空；若改用電腦應用程式類型，開發者自行把這個值換成 Google Cloud Console 提供的密鑰。）
 
-- [ ] **Step 5：執行測試，確認通過**
+- [x] **Step 5：執行測試，確認通過**
 
 ```bash
 cd app
@@ -133,7 +133,7 @@ flutter test test/cloud_import/cloud_oauth_config_test.dart
 
 預期：全數 PASS，含新增的 2 則。
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/lib/cloud_import/cloud_oauth_config.dart app/config/cloud_oauth.example.json app/test/cloud_import/cloud_oauth_config_test.dart
@@ -152,7 +152,7 @@ git commit -m "feat(epic-29): Issue 8 Task 1——CloudOAuthConfig 新增 google
 - Consumes：Task 1 產出的 `CloudOAuthConfig.googleClientSecret`（作為建構子預設值來源，編譯期常數）。
 - Produces：`GoogleDriveOAuthClient` 新增的可選具名建構參數 `String clientSecret = CloudOAuthConfig.googleClientSecret`；新增私有方法 `Map<String, String> _tokenRequestBody(Map<String, String> params)`（僅本類別內部使用）。
 
-- [ ] **Step 1：寫失敗測試——公開客戶端（預設）時，refresh token 換發不帶 `client_secret`**
+- [x] **Step 1：寫失敗測試——公開客戶端（預設）時，refresh token 換發不帶 `client_secret`**
 
 在 `app/test/cloud_import/google_drive_oauth_client_test.dart` 內，找到現有第 52-83 行「access token 即將到期時，成功換發新 token 並更新 repository」這則測試，在它前後新增一個新的 `group`（或直接在檔案最後 `}` 之前新增，維持與現有測試同一層級即可）：
 
@@ -217,7 +217,7 @@ git commit -m "feat(epic-29): Issue 8 Task 1——CloudOAuthConfig 新增 google
   });
 ```
 
-- [ ] **Step 2：執行測試，確認失敗**
+- [x] **Step 2：執行測試，確認失敗**
 
 ```bash
 cd app
@@ -226,7 +226,7 @@ flutter test test/cloud_import/google_drive_oauth_client_test.dart --plain-name 
 
 預期：第一則因為目前 `ensureValidAccessToken()` 本來就沒帶 `client_secret`，實際上**可能已經通過**（這是本次要保護住的既有正確行為，不是要修的 bug）；第二則因為 `clientSecret` 具名參數尚未定義，編譯失敗——兩則合在一起跑會因編譯錯誤全部失敗，這是預期的。
 
-- [ ] **Step 3：修改 `google_drive_oauth_client.dart`**
+- [x] **Step 3：修改 `google_drive_oauth_client.dart`**
 
 在 class 欄位宣告（第 22-29 行左右）新增 `_clientSecret`：
 
@@ -319,7 +319,7 @@ class GoogleDriveOAuthClient {
       );
 ```
 
-- [ ] **Step 4：執行測試，確認通過**
+- [x] **Step 4：執行測試，確認通過**
 
 ```bash
 cd app
@@ -328,7 +328,7 @@ flutter test test/cloud_import/google_drive_oauth_client_test.dart
 
 預期：全數 PASS，含新增的 2 則（原本 4 則 + 新增 2 則 = 6 則）。
 
-- [ ] **Step 5：確認其餘既有呼叫端零回歸**
+- [x] **Step 5：確認其餘既有呼叫端零回歸**
 
 ```bash
 cd app
@@ -339,7 +339,7 @@ flutter test test/screens/settings_screen_test.dart
 
 預期：全數 PASS——這 3 個測試檔案內建構 `GoogleDriveOAuthClient(...)` 的 7 處呼叫皆未傳 `clientSecret`，沿用新的預設值（`CloudOAuthConfig.googleClientSecret`，測試環境下為空字串），不影響任何既有斷言。
 
-- [ ] **Step 6：執行完整測試套件與靜態分析**
+- [x] **Step 6：執行完整測試套件與靜態分析**
 
 ```bash
 cd app
@@ -349,7 +349,7 @@ flutter test
 
 預期：`flutter analyze` "No issues found!"；`flutter test` 全數 PASS（相對目前 main 分支的 1633 項，Task 1 新增 2 項、Task 2 新增 2 項，共增加 4 項）。
 
-- [ ] **Step 7：Commit**
+- [x] **Step 7：Commit**
 
 ```bash
 git add app/lib/cloud_import/google_drive_oauth_client.dart app/test/cloud_import/google_drive_oauth_client_test.dart

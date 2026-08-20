@@ -19,11 +19,33 @@ abstract class CloudOAuthConfig {
     defaultValue: 'YOUR_GOOGLE_OAUTH_CLIENT_ID.apps.googleusercontent.com',
   );
 
-  /// Google OAuth 用戶端密鑰（電腦應用程式類型需要，用於 token 交換）。
+  /// Google OAuth 用戶端密鑰。**是否需要填這個欄位，取決於 Google Cloud
+  /// Console 建立的是哪一種類型的 OAuth 用戶端**：
+  /// - **Android** 類型（公開客戶端）：Google 不核發、也不接受
+  ///   client secret，這個欄位應留空（不設定 `GOOGLE_OAUTH_CLIENT_SECRET`
+  ///   或設為空字串）。但 Android 類型的用戶端需要通過 Google Play
+  ///   Console 的應用程式擁有權驗證（連結 SHA-1 簽署憑證）才能正常登入，
+  ///   這道驗證跟 OAuth 同意畫面的「測試使用者」白名單是**兩件獨立的事**、
+  ///   無法用白名單繞過，且需要時間完成（`/diagnose` 已核實，見
+  ///   `docs/epics/epic-29-cloud-import/issues.md` Issue 8「背景」）。
+  /// - **電腦應用程式（Desktop）** 類型（機密客戶端）：不受上面那道
+  ///   Android 專屬的擁有權驗證限制，但 token 交換／換發時都必須帶入
+  ///   client secret，這個欄位要填入 Google Cloud Console 該用戶端頁面
+  ///   提供的密鑰值。
+  ///
+  /// 留空（預設值）代表目前使用 Android 類型；[GoogleDriveOAuthClient]
+  /// 依這個欄位是否為空字串決定要不要在 token 請求內帶入 `client_secret`
+  /// （見該類別的 `_tokenRequestBody()`），呼叫端不需要另外指定「目前是
+  /// 哪一種類型」——這個欄位本身就是那個開關。
   static const String googleClientSecret = String.fromEnvironment(
     'GOOGLE_OAUTH_CLIENT_SECRET',
-    defaultValue: 'YOUR_GOOGLE_OAUTH_CLIENT_SECRET',
+    defaultValue: '',
   );
+
+  /// 目前設定的 [googleClientSecret] 是否代表「機密客戶端」（電腦應用程式
+  /// 類型）。`false` 代表公開客戶端（Android 類型，見 [googleClientSecret]
+  /// 文件說明）。
+  static bool get googleIsConfidentialClient => googleClientSecret.isNotEmpty;
 
   /// 依 [googleClientId] 推導的反向客戶端 ID格式 redirect URI scheme
   /// （Android 慣例，`spec.md`「OAuth 登入機制」審查 Minor #5 採納）。
