@@ -48,7 +48,7 @@ Issue 6 的「What to build」明確把「多選批次時對每個超過閾值�
 - Consumes：`CloudFileEntry.sizeBytes`（`app/lib/cloud_import/cloud_storage_client.dart:59`，既有欄位，`int?`）；`FakeCloudStorageClient`（`app/test/support/fake_cloud_storage_client.dart`，既有測試替身，無需修改）；`FakeBookImportService.lastImportCall`（`app/test/support/fake_book_import_service.dart:38`，既有欄位，`ImportCallRecord?`）。
 - Produces：`CloudBrowserScreen` 新增的必要（實際上是可選，維持與其他選填欄位一致的 nullable 慣例）建構參數 `final Future<bool> Function()? isMobileDataConnection;`，供 Task 2 的 `library_screen.dart` 貫穿注入；新增的私有方法 `_confirmMobileDataDownload()` 與私有頂層常數 `_mobileDataWarningThresholdBytes`（僅本檔案內部使用，不對外暴露）。
 
-- [ ] **Step 1：寫失敗測試——行動數據連線且勾選檔案超過門檻時，下載前跳出確認對話框，確認後正常下載**
+- [x] **Step 1：寫失敗測試——行動數據連線且勾選檔案超過門檻時，下載前跳出確認對話框，確認後正常下載**
 
 在 `app/test/screens/cloud_browser_screen_test.dart` 第 34 行（`fileEntryWithThumbnail` 常數定義之後）新增兩個測試用 `CloudFileEntry` 常數：
 
@@ -140,7 +140,7 @@ Issue 6 的「What to build」明確把「多選批次時對每個超過閾值�
   });
 ```
 
-- [ ] **Step 2：執行測試，確認失敗**
+- [x] **Step 2：執行測試，確認失敗**
 
 ```bash
 cd app
@@ -149,7 +149,7 @@ flutter test test/screens/cloud_browser_screen_test.dart --plain-name "行動數
 
 預期：編譯失敗（`isMobileDataConnection` 不是 `CloudBrowserScreen` 的已知具名參數）或執行期找不到 `Key('cloud_mobile_data_dialog')`。
 
-- [ ] **Step 3：實作 `CloudBrowserScreen` 行動數據警示邏輯**
+- [x] **Step 3：實作 `CloudBrowserScreen` 行動數據警示邏輯**
 
 修改 `app/lib/screens/cloud_browser_screen.dart`。在檔案頂部 import 區塊之後（第 11 行 `import 'cloud_download_queue_dialog.dart';` 之後）新增門檻常數：
 
@@ -268,7 +268,7 @@ const _mobileDataWarningThresholdBytes = 20 * 1024 * 1024;
   }
 ```
 
-- [ ] **Step 4：執行測試，確認通過**
+- [x] **Step 4：執行測試，確認通過**
 
 ```bash
 cd app
@@ -277,7 +277,7 @@ flutter test test/screens/cloud_browser_screen_test.dart --plain-name "行動數
 
 預期：PASS。
 
-- [ ] **Step 5：補齊其餘 3 個必要情境的測試**
+- [x] **Step 5：補齊其餘 3 個必要情境的測試**
 
 在同一個 `group('行動數據下載警示（Epic 29 Issue 6）', () { ... })` 內，緊接 Step 1 新增的測試之後，補上以下三個測試：
 
@@ -361,7 +361,7 @@ flutter test test/screens/cloud_browser_screen_test.dart --plain-name "行動數
   });
 ```
 
-- [ ] **Step 6：執行整個測試檔案，確認全數通過、零回歸**
+- [x] **Step 6：執行整個測試檔案，確認全數通過、零回歸**
 
 ```bash
 cd app
@@ -371,7 +371,7 @@ flutter analyze
 
 預期：`flutter analyze` 顯示 "No issues found!"；`cloud_browser_screen_test.dart` 內全部測試（既有＋本次新增的 4 則）皆 PASS。
 
-- [ ] **Step 7：Commit**
+- [x] **Step 7：Commit**
 
 ```bash
 git add app/lib/screens/cloud_browser_screen.dart app/test/screens/cloud_browser_screen_test.dart
