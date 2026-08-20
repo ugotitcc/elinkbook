@@ -390,7 +390,7 @@ git commit -m "feat(epic-29): Issue 6 Task 1——CloudBrowserScreen 行動數�
 - Consumes：Task 1 產出的 `CloudBrowserScreen.isMobileDataConnection`（`Future<bool> Function()?`）；`LibraryScreen` 既有欄位 `widget.isMobileDataConnection`（`app/lib/screens/library_screen.dart:70`，`epic-30-calibre-remote-library` Issue 4 已建置，本 Task 不新增、只擴大貫穿範圍）。
 - Produces：無新公開介面——本 Task 純粹是既有欄位的貫穿範圍擴大。
 
-- [ ] **Step 1：寫失敗測試——`_openGoogleDriveBrowser()`／`_openOneDriveBrowser()` 轉發 `isMobileDataConnection`**
+- [x] **Step 1：寫失敗測試——`_openGoogleDriveBrowser()`／`_openOneDriveBrowser()` 轉發 `isMobileDataConnection`**
 
 在 `app/test/screens/library_screen_test.dart` 內尋找建構 `CloudBrowserScreen` 相關的既有測試（搜尋 `googleDriveStorageClient:` 附近、驗證「從 Google Drive 匯入」選單項目點擊後 push 的畫面的測試），若既有測試中沒有直接斷言 push 出的 `CloudBrowserScreen.isMobileDataConnection` 欄位，新增一則測試：
 
@@ -430,7 +430,7 @@ git commit -m "feat(epic-29): Issue 6 Task 1——CloudBrowserScreen 行動數�
 
 `library_import_button`（第 885 行）／`library_import_google_drive_option`（第 901 行）為 `library_screen.dart` 既有選單/選項的實際 `Key` 字串，已核對無誤，可直接套用。
 
-- [ ] **Step 2：執行測試，確認失敗**
+- [x] **Step 2：執行測試，確認失敗**
 
 ```bash
 cd app
@@ -439,7 +439,7 @@ flutter test test/screens/library_screen_test.dart --plain-name "isMobileDataCon
 
 預期：編譯失敗（`CloudBrowserScreen` 尚無 `isMobileDataConnection` 具名參數，此為 Task 1 產出，若 Task 1 已完成則改為執行期斷言失敗：`isMobileDataConnection` 為 `null`）。
 
-- [ ] **Step 3：修改 `_openGoogleDriveBrowser()`／`_openOneDriveBrowser()`**
+- [x] **Step 3：修改 `_openGoogleDriveBrowser()`／`_openOneDriveBrowser()`**
 
 修改 `app/lib/screens/library_screen.dart` 第 264-305 行：
 
@@ -488,7 +488,7 @@ flutter test test/screens/library_screen_test.dart --plain-name "isMobileDataCon
 
 （只新增 `isMobileDataConnection: widget.isMobileDataConnection,` 這一行到兩個方法內，其餘程式碼不變。）
 
-- [ ] **Step 4：執行測試，確認通過**
+- [x] **Step 4：執行測試，確認通過**
 
 ```bash
 cd app
@@ -497,7 +497,7 @@ flutter test test/screens/library_screen_test.dart --plain-name "isMobileDataCon
 
 預期：PASS。
 
-- [ ] **Step 5：擴充 `_openGroupFilteredView()` 既有回歸測試，補上 `isMobileDataConnection` 斷言**
+- [x] **Step 5：擴充 `_openGroupFilteredView()` 既有回歸測試，補上 `isMobileDataConnection` 斷言**
 
 `app/test/screens/library_screen_test.dart` 內既有一則測試（`review-issue-3.md Important #1`、`review-issue-5.md Important #1` 採納，約第 2966-3008 行），驗證 `_openGroupFilteredView()` 正確轉發 `googleDriveStorageClient`／`computeFingerprint`。找到這則測試，把測試標題與內容一併擴充：
 
@@ -555,7 +555,7 @@ flutter test test/screens/library_screen_test.dart --plain-name "isMobileDataCon
 
 （只在既有測試的標題與 `LibraryScreen(...)` 建構參數內新增 `isMobileDataConnection` 相關的一行，並在既有兩個 `expect` 之後新增第三個 `expect`，其餘程式碼不變。）
 
-- [ ] **Step 6：修改 `_openGroupFilteredView()`**
+- [x] **Step 6：修改 `_openGroupFilteredView()`**
 
 修改 `app/lib/screens/library_screen.dart` 第 725-788 行，在 `computeFingerprint: widget.computeFingerprint,` 之後（`currentTheme: widget.currentTheme,` 之前）新增：
 
@@ -575,7 +575,7 @@ flutter test test/screens/library_screen_test.dart --plain-name "isMobileDataCon
 
 （把新增的 `isMobileDataConnection: widget.isMobileDataConnection,` 放在既有 `computeFingerprint: widget.computeFingerprint,` 那一行的前面或後面皆可，上方範例放在前面；確保這行確實加入 `_openGroupFilteredView()` 內建構的 `LibraryScreen(...)` 參數清單即可。）
 
-- [ ] **Step 7：執行測試，確認通過**
+- [x] **Step 7：執行測試，確認通過**
 
 ```bash
 cd app
@@ -584,7 +584,7 @@ flutter test test/screens/library_screen_test.dart --plain-name "isMobileDataCon
 
 預期：Step 1 與 Step 5 新增/擴充的測試皆 PASS。
 
-- [ ] **Step 8：執行完整測試套件與靜態分析，確認零回歸**
+- [x] **Step 8：執行完整測試套件與靜態分析，確認零回歸**
 
 ```bash
 cd app
@@ -594,7 +594,7 @@ flutter test
 
 預期：`flutter analyze` "No issues found!"；`flutter test` 全數 PASS（相對 Issue 5 完成時的 1628 項，Task 1 新增 4 項、Task 2 新增 1 項，共增加 5 項，其餘既有測試不受影響）。
 
-- [ ] **Step 9：Commit**
+- [x] **Step 9：Commit**
 
 ```bash
 git add app/lib/screens/library_screen.dart app/test/screens/library_screen_test.dart
