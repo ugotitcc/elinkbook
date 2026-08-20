@@ -1723,8 +1723,6 @@ void main() {
       ),
     );
     await tester.pump();
-    // TODO(epic-20): FoliateReaderView 目前無 onCharacterCountReady。
-    // epubView.onCharacterCountReady?.call(5000);
     await tester.pump();
 
     expect(find.byKey(const Key('reader_footer')), findsNothing);
@@ -1794,8 +1792,6 @@ void main() {
       ),
     );
     await tester.pump();
-    // TODO(epic-20): FoliateReaderView 目前無 onCharacterCountReady。
-    // epubView.onCharacterCountReady?.call(5000);
     await tester.pump();
 
     expect(
@@ -1834,12 +1830,10 @@ void main() {
       ),
     );
     await tester.pump();
-    // TODO(epic-20): FoliateReaderView 目前無 onCharacterCountReady。
-    // epubView.onCharacterCountReady?.call(5000);
     await tester.pump();
 
     expect(find.byKey(const Key('reader_appbar_static_title')), findsOneWidget);
-    // 無 onCharacterCountReady，頁尾不出現。
+    // 頁尾不出現。
     expect(find.byKey(const Key('reader_footer')), findsNothing);
   });
 

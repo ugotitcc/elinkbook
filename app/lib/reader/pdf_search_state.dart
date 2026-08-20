@@ -1,9 +1,7 @@
 /// PDF 內文搜尋的目前狀態（epic-24-pdf-engine-rebuild Issue 6），由
 /// `ReaderScreen` 擁有並透過 `ValueNotifier<PdfSearchState>` 廣播給
 /// `PdfSearchPanel`（`ValueListenableBuilder`），讓已開啟的目錄 Bottom
-/// Sheet 能在背景搜尋完成當下即時更新——比照 `TocBottomSheet` 既有的
-/// `totalCharacterCountListenable` 解決同一類「外部非同步狀態更新已開啟
-/// 的 Bottom Sheet」問題的既有模式。
+/// Sheet 能在背景搜尋完成當下即時更新。
 ///
 /// [currentIndex] 是 0-indexed，指向目前使用者正在檢視的符合結果在
 /// `ReaderScreen` 所持有的符合結果清單中的位置；`null` 代表尚無符合結果

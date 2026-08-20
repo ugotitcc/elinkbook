@@ -223,11 +223,6 @@ class ReaderScreen extends StatefulWidget {
 enum _RenderState { loading, rendered, error }
 
 class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver {
-  // PDF 目錄 Bottom Sheet 不需要字元數快取（頁碼在解析大綱時已知），
-  // 但 TocBottomSheet 的建構子要求 ValueListenable<int?> 參數。
-  // 共用同一個靜態實例，避免每次開啟都新建 ValueNotifier（Minor #3 修正）。
-  static final _pdfDummyCharacterCountNotifier = ValueNotifier<int?>(null);
-
   // ── PDF 內文搜尋狀態（epic-24 Issue 6）──
   final _pdfSearchStateNotifier = ValueNotifier<PdfSearchState>(const PdfSearchState.initial());
   List<PdfSearchMatch> _pdfSearchMatches = const [];
@@ -316,9 +311,6 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   // null（同一次只會開啟一種格式的書籍）。
   PdfSelectionInfo? _currentPdfSelection;
   String? _pendingPdfHighlightIdForSelection;
-  // 供 TocBottomSheet 訂閱、在已開啟的目錄畫面即時反映全書字元數背景計算
-  // 完成事件（spec.md「目錄模組」載入中狀態決策）。
-  final _totalCharacterCountNotifier = ValueNotifier<int?>(null);
   // 開書時讀到的既有位置記錄（若有），只在 initState 賦值一次，之後
   // 不變——僅用於 _buildNativeView() 建構 EpubReaderView/PdfReaderView
   // 時傳入 initialLocatorJson/initialPageIndex 這兩個一次性開書起始值。
@@ -1141,8 +1133,6 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         entries: _tocEntries,
         initiallyExpandedEntries: currentPath.toSet(),
         currentEntry: currentPath.isEmpty ? null : currentPath.last,
-        totalCharacterCountListenable: _totalCharacterCountNotifier,
-        resolved: _resolved!,
         onEntrySelected: (entry) {
           Navigator.of(context).pop();
           _jumpToEpubLocator((entry as TocEntry).locatorJson);
@@ -1172,8 +1162,6 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         entries: _pdfTocEntries,
         initiallyExpandedEntries: currentPath.toSet(),
         currentEntry: currentPath.isEmpty ? null : currentPath.last,
-        totalCharacterCountListenable: _pdfDummyCharacterCountNotifier,
-        resolved: _resolved!,
         onEntrySelected: (entry) {
           Navigator.of(context).pop();
           final pageIndex = (entry as PdfTocItem).pageIndex;

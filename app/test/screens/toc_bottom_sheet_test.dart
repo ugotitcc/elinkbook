@@ -1,33 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:elinkbook/reader/dual_page_direction.dart';
-import 'package:elinkbook/reader/dual_page_mode.dart';
-import 'package:elinkbook/reader/pdf_crop_mode.dart';
-import 'package:elinkbook/reader/pdf_fit_mode.dart';
-import 'package:elinkbook/reader/nav_zone_mode.dart';
-import 'package:elinkbook/reader/page_turn_mode.dart';
-import 'package:elinkbook/reader/resolved_preferences.dart';
-import 'package:elinkbook/reader/screen_orientation_setting.dart';
 import 'package:elinkbook/reader/book_toc_item.dart';
 import 'package:elinkbook/reader/toc_entry.dart';
 import 'package:elinkbook/screens/toc_bottom_sheet.dart';
-
-const _testResolved = ResolvedPreferences(
-  pageTurnMode: PageTurnMode.paginated,
-  screenOrientation: ScreenOrientationSetting.auto,
-  pdfFitMode: PdfFitMode.pageFit,
-  pdfContrast: 0,
-  pdfBrightness: 0,
-  pdfBoldStrength: 0,
-  pdfCropMode: PdfCropMode.none,
-  dualPageMode: DualPageMode.auto,
-  dualPageCoverAlone: true,
-  dualPageDirection: DualPageDirection.rtl,
-  showHeader: true,
-  showFooter: true,
-  navZoneActions: rightFlipZoneTemplate,
-  showNavZoneDebugOverlay: false,
-);
 
 void main() {
   final ch1 =
@@ -60,8 +35,6 @@ void main() {
           entries: entries,
           initiallyExpandedEntries: {ch2, ch2s1},
           currentEntry: ch2s1,
-          totalCharacterCountListenable: ValueNotifier<int?>(null),
-          resolved: _testResolved,
           onEntrySelected: (_) {},
         ),
       ),
@@ -89,8 +62,6 @@ void main() {
           entries: entries,
           initiallyExpandedEntries: {ch2, ch2s1},
           currentEntry: ch2s1,
-          totalCharacterCountListenable: ValueNotifier<int?>(null),
-          resolved: _testResolved,
           onEntrySelected: (_) {},
         ),
       ),
@@ -112,8 +83,6 @@ void main() {
           entries: entries,
           initiallyExpandedEntries: const {},
           currentEntry: null,
-          totalCharacterCountListenable: ValueNotifier<int?>(null),
-          resolved: _testResolved,
           onEntrySelected: (entry) => selected = entry,
         ),
       ),
@@ -134,8 +103,6 @@ void main() {
           entries: entries,
           initiallyExpandedEntries: const {},
           currentEntry: null,
-          totalCharacterCountListenable: ValueNotifier<int?>(null),
-          resolved: _testResolved,
           onEntrySelected: (_) => selectedCount++,
         ),
       ),
@@ -150,77 +117,26 @@ void main() {
         reason: '展開按鈕本身仍應正常運作');
   });
 
-  testWidgets('全書字元數尚未計算完成時顯示佔位符，計算完成後即時替換為估算頁碼',
-      (tester) async {
-    final notifier = ValueNotifier<int?>(null);
-    addTearDown(notifier.dispose);
-
+  testWidgets(
+      'EPUB／TXT／MD 目錄項目不顯示頁碼標籤（僅標題），epic-26-architecture-hardening '
+      'Issue 5：EpubPageEstimator／totalCharacterCount 估算管線已移除', (tester) async {
     await tester.pumpWidget(MaterialApp(
       home: Scaffold(
         body: TocBottomSheet(
           entries: entries,
           initiallyExpandedEntries: const {},
           currentEntry: null,
-          totalCharacterCountListenable: notifier,
-          resolved: _testResolved,
           onEntrySelected: (_) {},
         ),
       ),
     ));
 
     expect(
-      tester
-          .widget<Text>(find.byKey(Key('toc_entry_page_${ch1.locatorJson}')))
-          .data,
-      '…',
+      find.byKey(Key('toc_entry_page_${ch1.locatorJson}')),
+      findsNothing,
+      reason: 'EPUB 目錄項目不再顯示頁碼標籤（Issue 5 選項 A：不重新設計字元數回報管道）',
     );
-
-    notifier.value = 5000;
-    await tester.pump();
-
-    // Issue 46：screenWidth=800/screenHeight=600（flutter_test 預設視窗
-    // 尺寸）、_testResolved 未覆寫任何版面欄位時，
-    // estimateCharsPerScreen() = 1598，totalPages = 5000/1598 = 4；
-    // ch1.progression = 0.0 → estimateCurrentPage(0.0, 4) = 1（恆為第 1
-    // 頁，與 totalPages 實際數值無關）。
-    expect(
-      tester
-          .widget<Text>(find.byKey(Key('toc_entry_page_${ch1.locatorJson}')))
-          .data,
-      '1',
-    );
-  });
-
-  testWidgets(
-      '全書字元數已計算完成，但節點本身 progression 為 null（原生端兩層 fallback 皆查無位置）時，'
-      '頁碼仍顯示佔位符而非誤植為第 1 頁（審查修正）', (tester) async {
-    const unknownPositionEntry =
-        TocEntry(title: '位置不明章節', locatorJson: 'l_unknown', progression: null);
-    final notifier = ValueNotifier<int?>(5000);
-    addTearDown(notifier.dispose);
-
-    await tester.pumpWidget(MaterialApp(
-      home: Scaffold(
-        body: TocBottomSheet(
-          entries: const [unknownPositionEntry],
-          initiallyExpandedEntries: const {},
-          currentEntry: null,
-          totalCharacterCountListenable: notifier,
-          resolved: _testResolved,
-          onEntrySelected: (_) {},
-        ),
-      ),
-    ));
-
-    expect(
-      tester
-          .widget<Text>(
-              find.byKey(Key('toc_entry_page_${unknownPositionEntry.locatorJson}')))
-          .data,
-      '…',
-      reason: 'progression 為 null 時應顯示佔位符，不應誤植為 estimateCurrentPage 的 '
-          'null-fallback 值（第 1 頁），避免誤導使用者以為該章節就在全書開頭',
-    );
+    expect(find.text('第一章'), findsOneWidget, reason: '標題仍正常顯示');
   });
 
   testWidgets('點擊右上角 X 取消按鈕後，Bottom Sheet 關閉（Navigator.pop 生效）',
@@ -251,8 +167,6 @@ Future<void> _pumpModalSheet(
               entries: entries,
               initiallyExpandedEntries: const {},
               currentEntry: null,
-              totalCharacterCountListenable: ValueNotifier<int?>(null),
-              resolved: _testResolved,
               onEntrySelected: (_) {},
             ),
           ),
