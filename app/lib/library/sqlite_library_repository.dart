@@ -74,6 +74,11 @@ class SqliteLibraryRepository implements LibraryRepository {
         ''');
         await db.insert('groups', {'name': BookGroup.uncategorized});
         await _createRemoteServersTable(db);
+        // 【epic-26-architecture-hardening Issue 5】totalCharacterCount 欄位
+        // 自 Issue 5 起不再被任何 Dart 程式碼讀寫（Book 模型已移除對應欄位）
+        // ——刻意保留於 schema 中不刪除，因 ALTER TABLE DROP COLUMN 需要
+        // SQLite 3.35+，本專案 minSdk=24 對應的系統內建 SQLite 版本無法
+        // 保證支援，見 plan-issue-5.md Global Constraints。
         await db.execute('''
           CREATE TABLE books (
             id TEXT PRIMARY KEY,

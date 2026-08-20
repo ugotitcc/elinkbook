@@ -215,7 +215,6 @@ class FakeLibraryRepository implements LibraryRepository {
         progress: book.progress,
         epubLocator: book.epubLocator,
         pdfPageIndex: book.pdfPageIndex,
-        totalCharacterCount: book.totalCharacterCount,
         isFixedLayout: book.isFixedLayout,
         contentFingerprint: book.contentFingerprint,
         positionUpdatedAt: book.positionUpdatedAt,
