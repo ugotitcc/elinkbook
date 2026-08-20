@@ -134,7 +134,9 @@
 
 ## Issue 5：重複匯入偵測（雙層檢查）
 
-**Status:** `ready-for-agent`
+**Status:** ✅ 已完成（PR #170，分支 `epic-29-issue-5`，4 個 commit，2026-08-20）
+
+**完成摘要：** 完整比照 `epic-30-calibre-remote-library`（`RemoteCatalogScreen`）已審查合併、已在生產環境驗證過的雙層重複偵測設計，只抽換識別鍵（`remoteBookId` → `cloudFileId`）與呼叫端型別。**Layer 1（選檔前置）**：`CloudBrowserScreen._toggleSelection()` 改為非同步，以 `(provider, cloudFileId)` 呼叫 `LibraryRepository.findByCloudFileId()`，命中時彈出確認對話框、選擇取消則不進入下載佇列；`_pendingDuplicateChecks` 重入防護避免快速連點觸發多次並行查詢與多重彈窗；查詢例外時安全降級為「視同無重複」直接放行，不阻礙使用者操作。**Layer 2（下載後指紋比對）**：`CloudDownloadQueueDialog._downloadOne()` 在「下載到暫存檔」與「搬移至永久位置」之間插入指紋計算（`ComputeRemoteFingerprint`，與 `RemoteCatalogScreen`／`main.dart` 共用同一個 provider 無關的 typedef）與 `findByContentFingerprint()` 查詢，命中且使用者選擇取消時立即刪除暫存檔並標記 `duplicateSkipped`（新增狀態列舉，連同 `checkingDuplicate` 一併補上 `_statusLabel`）；`tempPath` 提升至 `try` 外層區域變數，確保彈窗或比對期間發生任何非預期例外時暫存檔仍能被 `catch` 區塊可靠清理，零孤兒檔案殘留。兩層共用新增的公開頂層函式 `showCloudDuplicateConfirmDialog()`（定義於 `cloud_download_queue_dialog.dart`，因兩層分屬 `cloud_browser_screen.dart`／`cloud_download_queue_dialog.dart` 兩個不同檔案，不像 epic-30 兩層同檔案可用私有函式）。`computeFingerprint` 貫穿注入 `CloudBrowserScreen`（新增必填欄位，含 `_openSubfolder()`／`_startDownload()` 兩個轉發點）與 `library_screen.dart` 的 `_openGoogleDriveBrowser()`／`_openOneDriveBrowser()`，「從 Google Drive／OneDrive 匯入」選單門檻同步改為同時檢查 `widget.computeFingerprint != null`（比照既有「遠端書庫」按鈕的既定門檻慣例）。計畫審查（`reviews/review-plan-issue-5.md`）初次結論 **CHANGES REQUESTED**：1 項 Critical（Task 3 選單門檻變更遺漏同步更新 `library_screen_test.dart` 兩則既有導航測試，兩者皆未提供 `computeFingerprint`，套用門檻變更後會直接回歸失敗）已於計畫階段修訂補上測試更新步驟。程式碼審查（`reviews/review-issue-5.md`）首次自動產出的報告誤判 APPROVED（「自我遞迴導航點無遺漏貫穿」查核有誤）——複核後發現 `_openGroupFilteredView()` 實際上**未**轉發 `computeFingerprint`，會導致分類篩選畫面內「從 Google Drive／OneDrive 匯入」兩個選單項目一起被靜默停用（等同重現 `review-issue-3.md` Important #1 同一種「自我遞迴導航點漏轉發新依賴」錯誤模式，且未被既有測試攔截——既有回歸測試只斷言 `googleDriveStorageClient`，未涵蓋 `computeFingerprint`）；審查報告已改判 CHANGES REQUESTED 並列為 Important #1，隨即修復（補上轉發＋擴充既有回歸測試斷言範圍）後改回 APPROVED。全專案 `flutter analyze` 乾淨、`flutter test` 1628 項全數通過、零回歸。
 
 **依賴：** Issue 0（`findByCloudFileId`/`findByContentFingerprint`）、Issue 3（下載/匯入流程）。
 
