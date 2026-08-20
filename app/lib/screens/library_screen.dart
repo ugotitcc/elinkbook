@@ -270,6 +270,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
             importService: widget.importService,
             source: BookSource.googleDrive,
             computeFingerprint: widget.computeFingerprint!,
+            isMobileDataConnection: widget.isMobileDataConnection,
           ),
         ))
         .then((_) {
@@ -293,6 +294,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
             importService: widget.importService,
             source: BookSource.oneDrive,
             computeFingerprint: widget.computeFingerprint!,
+            isMobileDataConnection: widget.isMobileDataConnection,
             title: 'OneDrive',
           ),
         ))
@@ -756,6 +758,15 @@ class _LibraryScreenState extends State<LibraryScreen> {
               // 篩選路徑內兩個雲端匯入選項會一起被誤停用（同一種錯誤模式
               // 見上方 googleDriveStorageClient 的審查修正註解）。
               computeFingerprint: widget.computeFingerprint,
+              // 【Epic 29 Issue 6】isMobileDataConnection 自 epic-30 Issue 4
+              // 加入以來，這個自我遞迴導航點便一直未轉發（當時沒有下游畫面
+              // 需要它）；Issue 6 讓 CloudBrowserScreen 開始依賴這個欄位後，
+              // 若不轉發，分類篩選路徑內的雲端下載流量警示會靜默失效——比照
+              // 上方 computeFingerprint／googleDriveStorageClient 兩次漏轉發
+              // 的既有修正慣例，這次主動補上，避免同一種錯誤模式第三次重演
+              // （見 review-issue-3.md Important #1、review-issue-5.md
+              // Important #1）。
+              isMobileDataConnection: widget.isMobileDataConnection,
               currentTheme: widget.currentTheme,
               isEinkMode: widget.isEinkMode,
               onThemeChanged: widget.onThemeChanged,

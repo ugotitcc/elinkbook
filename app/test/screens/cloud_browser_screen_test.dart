@@ -32,6 +32,20 @@ void main() {
     format: BookFileFormat.pdf,
     thumbnailUrl: 'https://drive.google.com/thumbnail/2',
   );
+  const largeFileEntry = CloudFileEntry(
+    id: 'file-large',
+    name: '大檔案.epub',
+    isFolder: false,
+    format: BookFileFormat.epub,
+    sizeBytes: 25 * 1024 * 1024, // 25MB，超過 20MB 門檻
+  );
+  const smallFileEntry = CloudFileEntry(
+    id: 'file-small',
+    name: '小檔案.epub',
+    isFolder: false,
+    format: BookFileFormat.epub,
+    sizeBytes: 1 * 1024 * 1024, // 1MB，未超過門檻
+  );
 
   // 有效的 1x1 像素紅色 PNG 圖片（base64 等效原始位元組）——`Image.memory()`
   // 會真的嘗試解碼縮圖位元組，任何測試需要驗證縮圖成功顯示時都必須提供
@@ -68,6 +82,7 @@ void main() {
     FakeLibraryRepository? libraryRepository,
     FakeBookImportService? importService,
     FakeFingerprintComputer? fingerprintComputer,
+    Future<bool> Function()? isMobileDataConnection,
     String? folderId,
   }) async {
     await tester.pumpWidget(MaterialApp(
@@ -77,6 +92,7 @@ void main() {
         importService: importService ?? FakeBookImportService(),
         source: BookSource.googleDrive,
         computeFingerprint: (fingerprintComputer ?? FakeFingerprintComputer()).call,
+        isMobileDataConnection: isMobileDataConnection,
         folderId: folderId,
       ),
     ));
@@ -352,6 +368,137 @@ void main() {
         find.byKey(const Key('google_drive_browser_checkbox_checked_file-1')),
         findsOneWidget,
       );
+    });
+  });
+
+  group('行動數據下載警示（Epic 29 Issue 6）', () {
+    late Directory tempRoot;
+    late PathProviderPlatform originalPathProvider;
+
+    setUp(() {
+      tempRoot = Directory.systemTemp.createTempSync('mobile_data_warning_test');
+      originalPathProvider = PathProviderPlatform.instance;
+      PathProviderPlatform.instance = FakePathProviderPlatform(tempRoot.path);
+    });
+
+    tearDown(() {
+      PathProviderPlatform.instance = originalPathProvider;
+      if (tempRoot.existsSync()) tempRoot.deleteSync(recursive: true);
+    });
+
+    testWidgets('行動數據連線且勾選檔案超過門檻時，下載前跳出確認對話框，確認後正常下載',
+        (tester) async {
+      final importService = FakeBookImportService();
+      final client = FakeCloudStorageClient(
+        folderContents: {
+          null: const CloudFolderListing(entries: [largeFileEntry]),
+        },
+        downloadContents: {'file-large': [1, 2, 3]},
+      );
+      await pumpScreen(
+        tester,
+        client: client,
+        importService: importService,
+        isMobileDataConnection: () async => true,
+      );
+
+      await tester.tap(find.byKey(const Key('google_drive_browser_entry_file-large')));
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('google_drive_browser_download_button')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('cloud_mobile_data_dialog')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('cloud_mobile_data_dialog_confirm')));
+      await tester.pump();
+
+      for (var i = 0; i < 30; i++) {
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+        await tester.pump();
+      }
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('cloud_download_queue_dialog')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('cloud_download_queue_done_button')));
+      await tester.pumpAndSettle();
+
+      expect(importService.lastImportCall, isNotNull);
+    });
+
+    testWidgets('Wi-Fi 連線時即使檔案超過門檻也不跳出確認對話框，直接開始下載',
+        (tester) async {
+      final importService = FakeBookImportService();
+      final client = FakeCloudStorageClient(
+        folderContents: {
+          null: const CloudFolderListing(entries: [largeFileEntry]),
+        },
+        downloadContents: {'file-large': [1, 2, 3]},
+      );
+      await pumpScreen(
+        tester,
+        client: client,
+        importService: importService,
+        isMobileDataConnection: () async => false,
+      );
+
+      await tester.tap(find.byKey(const Key('google_drive_browser_entry_file-large')));
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('google_drive_browser_download_button')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('cloud_mobile_data_dialog')), findsNothing);
+      expect(find.byKey(const Key('cloud_download_queue_dialog')), findsOneWidget);
+    });
+
+    testWidgets('行動數據連線但勾選檔案未超過門檻時不跳出確認對話框，直接開始下載',
+        (tester) async {
+      final importService = FakeBookImportService();
+      final client = FakeCloudStorageClient(
+        folderContents: {
+          null: const CloudFolderListing(entries: [smallFileEntry]),
+        },
+        downloadContents: {'file-small': [1, 2, 3]},
+      );
+      await pumpScreen(
+        tester,
+        client: client,
+        importService: importService,
+        isMobileDataConnection: () async => true,
+      );
+
+      await tester.tap(find.byKey(const Key('google_drive_browser_entry_file-small')));
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('google_drive_browser_download_button')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('cloud_mobile_data_dialog')), findsNothing);
+      expect(find.byKey(const Key('cloud_download_queue_dialog')), findsOneWidget);
+    });
+
+    testWidgets('行動數據確認對話框選擇取消時不開始下載', (tester) async {
+      final importService = FakeBookImportService();
+      final client = FakeCloudStorageClient(
+        folderContents: {
+          null: const CloudFolderListing(entries: [largeFileEntry]),
+        },
+        downloadContents: {'file-large': [1, 2, 3]},
+      );
+      await pumpScreen(
+        tester,
+        client: client,
+        importService: importService,
+        isMobileDataConnection: () async => true,
+      );
+
+      await tester.tap(find.byKey(const Key('google_drive_browser_entry_file-large')));
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('google_drive_browser_download_button')));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('cloud_mobile_data_dialog_cancel')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('cloud_download_queue_dialog')), findsNothing);
+      expect(importService.lastImportCall, isNull);
     });
   });
 }

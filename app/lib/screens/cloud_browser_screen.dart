@@ -10,6 +10,11 @@ import '../library/models/book_group.dart';
 import '../library/models/library_enums.dart';
 import 'cloud_download_queue_dialog.dart';
 
+/// 【Epic 29 Issue 6，spec.md「Further Notes」建議值】單檔案大小門檻——
+/// 目前為行動數據連線且勾選的檔案中有任何一個超過此值時，下載前顯示流量
+/// 警示（見本檔案 `_startDownload()`／`_confirmMobileDataDownload()`）。
+const _mobileDataWarningThresholdBytes = 20 * 1024 * 1024;
+
 /// 雲端匯入瀏覽畫面（epic-29-cloud-import Issue 3 建置、Issue 4 泛化為
 /// Google Drive／OneDrive 共用，原名 `GoogleDriveBrowserScreen`——沿用
 /// Issue 2 把 `_buildGoogleDriveTile()` 泛化為 `_buildProviderTile()` 的
@@ -42,6 +47,14 @@ class CloudBrowserScreen extends StatefulWidget {
   /// [libraryRepository]，不需要指紋計算，故不在這裡使用。
   final ComputeRemoteFingerprint computeFingerprint;
 
+  /// 【Epic 29 Issue 6】偵測目前是否為行動數據連線，與
+  /// `library_screen.dart._handleRedownload()` 共用同一個 provider 無關的
+  /// callback 型別（定義於 `main.dart._isMobileDataConnection`，底層為
+  /// `connectivity_plus` 的 `Connectivity().checkConnectivity()`）。`null`
+  /// 時視同「無法判斷連線類型」，不顯示警示（比照 `library_screen.dart`
+  /// 既有 `?? Future.value(false)` 退回慣例）。
+  final Future<bool> Function()? isMobileDataConnection;
+
   /// `null` 代表瀏覽雲端硬碟根目錄；非 `null` 時瀏覽指定資料夾（點擊
   /// [CloudFileEntry.isFolder] 為 `true` 的項目下鑽時使用）。
   final String? folderId;
@@ -57,6 +70,7 @@ class CloudBrowserScreen extends StatefulWidget {
     required this.importService,
     required this.source,
     required this.computeFingerprint,
+    this.isMobileDataConnection,
     this.folderId,
     this.title,
   });
@@ -139,6 +153,7 @@ class _CloudBrowserScreenState extends State<CloudBrowserScreen> {
         importService: widget.importService,
         source: widget.source,
         computeFingerprint: widget.computeFingerprint,
+        isMobileDataConnection: widget.isMobileDataConnection,
         folderId: entry.id,
         title: entry.name,
       ),
@@ -176,6 +191,21 @@ class _CloudBrowserScreenState extends State<CloudBrowserScreen> {
   Future<void> _startDownload() async {
     final selected = _entries.where((e) => _selectedIds.contains(e.id)).toList();
     if (selected.isEmpty) return;
+
+    final hasLargeFile = selected.any(
+      (e) => e.sizeBytes != null && e.sizeBytes! > _mobileDataWarningThresholdBytes,
+    );
+    if (hasLargeFile) {
+      final isMobileData =
+          await (widget.isMobileDataConnection?.call() ?? Future.value(false));
+      if (!mounted) return;
+      if (isMobileData) {
+        final proceed = await _confirmMobileDataDownload();
+        if (!mounted) return;
+        if (proceed != true) return;
+      }
+    }
+
     final folderName =
         _selectedGroupName == BookGroup.uncategorized ? null : _selectedGroupName;
     await showDialog<void>(
@@ -193,6 +223,36 @@ class _CloudBrowserScreenState extends State<CloudBrowserScreen> {
     );
     if (!mounted) return;
     setState(() => _selectedIds.clear());
+  }
+
+  /// 【Epic 29 Issue 6】整批判斷一次的行動數據流量警示彈窗（見本計劃「批次
+  /// 判斷方式決策」）——只在 `_startDownload()` 偵測到「行動數據連線＋勾選
+  /// 檔案內有超過門檻的項目」時才會被呼叫一次，不逐檔案詢問。UI 慣例比照
+  /// `library_screen.dart._confirmRedownload()`。
+  Future<bool?> _confirmMobileDataDownload() {
+    return showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        key: const Key('cloud_mobile_data_dialog'),
+        title: const Text('行動數據下載提醒'),
+        content: const Text(
+          '目前使用行動數據連線，勾選的檔案中有超過 20MB 的項目，下載可能產生流量費用，'
+          '確定要繼續嗎？',
+        ),
+        actions: [
+          TextButton(
+            key: const Key('cloud_mobile_data_dialog_cancel'),
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            key: const Key('cloud_mobile_data_dialog_confirm'),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('繼續下載'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override

@@ -14,6 +14,7 @@ import 'package:elinkbook/reader/global_reader_prefs.dart';
 import 'package:elinkbook/reader/layout_preset_repository.dart';
 import 'package:elinkbook/reader/reader_prefs_manager.dart';
 import 'package:elinkbook/screens/library_screen.dart';
+import 'package:elinkbook/screens/cloud_browser_screen.dart';
 import 'package:elinkbook/library/book_import_service.dart';
 import 'package:elinkbook/library/book_import_service_impl.dart';
 import 'package:elinkbook/library/models/book.dart';
@@ -2070,6 +2071,38 @@ void main() {
     expect(find.text('Google Drive'), findsOneWidget);
   });
 
+  testWidgets(
+      '點擊「從 Google Drive 匯入」push 出的 CloudBrowserScreen，isMobileDataConnection '
+      '與外層一致（Epic 29 Issue 6）', (tester) async {
+    final googleDriveStorageClient = FakeCloudStorageClient();
+    final computeFingerprint = FakeFingerprintComputer().call;
+    Future<bool> isMobileDataConnection() async => false;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+          googleDriveStorageClient: googleDriveStorageClient,
+          computeFingerprint: computeFingerprint,
+          isMobileDataConnection: isMobileDataConnection,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('library_import_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('library_import_google_drive_option')));
+    await tester.pumpAndSettle();
+
+    final browserScreen = tester.widget<CloudBrowserScreen>(find.byType(CloudBrowserScreen));
+    expect(browserScreen.isMobileDataConnection, same(isMobileDataConnection),
+        reason: '_openGoogleDriveBrowser() 未把 isMobileDataConnection 貫穿給 '
+            'CloudBrowserScreen，行動數據下載警示會靜默失效');
+  });
+
   testWidgets('oneDriveStorageClient 為 null 時「從 OneDrive 匯入」選項停用', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -2965,8 +2998,9 @@ void main() {
 
   testWidgets(
       'LibraryScreen 透過分類篩選路徑（_openGroupFilteredView）進入後，'
-      'googleDriveStorageClient／computeFingerprint 皆與外層一致'
-      '（review-issue-3.md Important #1、review-issue-5.md Important #1 採納）',
+      'googleDriveStorageClient／computeFingerprint／isMobileDataConnection 皆與外層一致'
+      '（review-issue-3.md Important #1、review-issue-5.md Important #1、'
+      'Epic 29 Issue 6 一併補上 採納）',
       (tester) async {
     final book = _testBook(
       id: '1',
@@ -2977,6 +3011,7 @@ void main() {
     );
     final googleDriveStorageClient = FakeCloudStorageClient();
     final computeFingerprint = FakeFingerprintComputer().call;
+    Future<bool> isMobileDataConnection() async => false;
 
     await tester.pumpWidget(
       MaterialApp(
@@ -2986,6 +3021,7 @@ void main() {
           prefsManager: prefsManager,
           googleDriveStorageClient: googleDriveStorageClient,
           computeFingerprint: computeFingerprint,
+          isMobileDataConnection: isMobileDataConnection,
         ),
       ),
     );
@@ -3005,6 +3041,9 @@ void main() {
             'LibraryScreen，會導致分類篩選畫面內「從 Google Drive／OneDrive 匯入」'
             '選單項目一起被誤停用（Issue 5 新增的門檻條件同時檢查 '
             'computeFingerprint != null）');
+    expect(filteredScreen.isMobileDataConnection, same(isMobileDataConnection),
+        reason: '_openGroupFilteredView() 未把 isMobileDataConnection 貫穿給下一層 '
+            'LibraryScreen，會導致分類篩選畫面內雲端下載流量警示靜默失效（Issue 6）');
   });
 
   testWidgets(
