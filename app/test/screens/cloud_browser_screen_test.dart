@@ -13,6 +13,7 @@ import 'package:elinkbook/library/models/book.dart';
 
 import '../support/fake_book_import_service.dart';
 import '../support/fake_cloud_storage_client.dart';
+import '../support/fake_fingerprint_computer.dart';
 import '../support/fake_library_repository.dart';
 import '../support/fake_path_provider_platform.dart';
 
@@ -66,6 +67,7 @@ void main() {
     required FakeCloudStorageClient client,
     FakeLibraryRepository? libraryRepository,
     FakeBookImportService? importService,
+    FakeFingerprintComputer? fingerprintComputer,
     String? folderId,
   }) async {
     await tester.pumpWidget(MaterialApp(
@@ -74,6 +76,7 @@ void main() {
         libraryRepository: libraryRepository ?? FakeLibraryRepository(),
         importService: importService ?? FakeBookImportService(),
         source: BookSource.googleDrive,
+        computeFingerprint: (fingerprintComputer ?? FakeFingerprintComputer()).call,
         folderId: folderId,
       ),
     ));

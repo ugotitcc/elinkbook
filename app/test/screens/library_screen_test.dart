@@ -26,6 +26,7 @@ import '../support/fake_reader_prefs_manager.dart';
 import '../support/fake_opds_client.dart';
 import '../support/fake_remote_server_repository.dart';
 import '../support/fake_cloud_storage_client.dart';
+import '../support/fake_fingerprint_computer.dart';
 import '../support/fake_remote_thumbnail_cache.dart';
 import 'package:elinkbook/remote/remote_server_profile.dart';
 import 'package:elinkbook/screens/remote_server_list_screen.dart';
@@ -2055,6 +2056,7 @@ void main() {
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
           googleDriveStorageClient: client,
+          computeFingerprint: FakeFingerprintComputer().call,
         ),
       ),
     );
@@ -2098,6 +2100,7 @@ void main() {
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
           oneDriveStorageClient: client,
+          computeFingerprint: FakeFingerprintComputer().call,
         ),
       ),
     );

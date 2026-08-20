@@ -269,6 +269,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
             libraryRepository: widget.repository,
             importService: widget.importService,
             source: BookSource.googleDrive,
+            computeFingerprint: widget.computeFingerprint!,
           ),
         ))
         .then((_) {
@@ -291,6 +292,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
             libraryRepository: widget.repository,
             importService: widget.importService,
             source: BookSource.oneDrive,
+            computeFingerprint: widget.computeFingerprint!,
             title: 'OneDrive',
           ),
         ))
@@ -891,16 +893,20 @@ class _LibraryScreenState extends State<LibraryScreen> {
             ),
             PopupMenuItem<void>(
               key: const Key('library_import_google_drive_option'),
-              enabled: widget.googleDriveStorageClient != null,
-              onTap: widget.googleDriveStorageClient == null
+              enabled: widget.googleDriveStorageClient != null &&
+                  widget.computeFingerprint != null,
+              onTap: (widget.googleDriveStorageClient == null ||
+                      widget.computeFingerprint == null)
                   ? null
                   : () => _openGoogleDriveBrowser(widget.googleDriveStorageClient!),
               child: const Text('從 Google Drive 匯入'),
             ),
             PopupMenuItem<void>(
               key: const Key('library_import_onedrive_option'),
-              enabled: widget.oneDriveStorageClient != null,
-              onTap: widget.oneDriveStorageClient == null
+              enabled: widget.oneDriveStorageClient != null &&
+                  widget.computeFingerprint != null,
+              onTap: (widget.oneDriveStorageClient == null ||
+                      widget.computeFingerprint == null)
                   ? null
                   : () => _openOneDriveBrowser(widget.oneDriveStorageClient!),
               child: const Text('從 OneDrive 匯入'),

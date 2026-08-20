@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
 import '../cloud_import/cloud_storage_client.dart';
+import '../library/book_content_fingerprint.dart';
 import '../library/book_import_service.dart';
 import '../library/library_repository.dart';
 import '../library/models/book_group.dart';
@@ -36,6 +37,11 @@ class CloudBrowserScreen extends StatefulWidget {
   /// 呼叫端必須明確傳入對應的 provider。
   final BookSource source;
 
+  /// 【Epic 29 Issue 5】貫穿轉發給 [CloudDownloadQueueDialog] 做 Layer 2
+  /// 下載後指紋比對；本畫面自己的 Layer 1（選檔前置）只需要
+  /// [libraryRepository]，不需要指紋計算，故不在這裡使用。
+  final ComputeRemoteFingerprint computeFingerprint;
+
   /// `null` 代表瀏覽雲端硬碟根目錄；非 `null` 時瀏覽指定資料夾（點擊
   /// [CloudFileEntry.isFolder] 為 `true` 的項目下鑽時使用）。
   final String? folderId;
@@ -50,6 +56,7 @@ class CloudBrowserScreen extends StatefulWidget {
     required this.libraryRepository,
     required this.importService,
     required this.source,
+    required this.computeFingerprint,
     this.folderId,
     this.title,
   });
@@ -131,6 +138,7 @@ class _CloudBrowserScreenState extends State<CloudBrowserScreen> {
         libraryRepository: widget.libraryRepository,
         importService: widget.importService,
         source: widget.source,
+        computeFingerprint: widget.computeFingerprint,
         folderId: entry.id,
         title: entry.name,
       ),
@@ -177,6 +185,8 @@ class _CloudBrowserScreenState extends State<CloudBrowserScreen> {
         entries: selected,
         client: widget.client,
         importService: widget.importService,
+        libraryRepository: widget.libraryRepository,
+        computeFingerprint: widget.computeFingerprint,
         source: widget.source,
         folderName: folderName,
       ),
