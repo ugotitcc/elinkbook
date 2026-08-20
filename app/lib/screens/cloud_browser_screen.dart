@@ -81,6 +81,12 @@ class _CloudBrowserScreenState extends State<CloudBrowserScreen> {
   /// [thumbnailUrl] 在完成前只會真正發起一次請求。
   final Map<String, Future<Uint8List>> _pendingThumbnailFetches = {};
 
+  /// 【Epic 29 Issue 5，比照 `remote_catalog_screen.dart` 的
+  /// `_pendingDuplicateChecks` 既有先例】快速連續點擊同一個尚未勾選的
+  /// 檔案時，避免兩次 `findByCloudFileId()` 查詢並行、各自可能彈出一次
+  /// 重複提示——查詢期間先記錄該 entry id，重入的點擊直接忽略。
+  final Set<String> _pendingDuplicateChecks = {};
+
   @override
   void initState() {
     super.initState();
@@ -131,14 +137,32 @@ class _CloudBrowserScreenState extends State<CloudBrowserScreen> {
     ));
   }
 
-  void _toggleSelection(CloudFileEntry entry) {
-    setState(() {
-      if (_selectedIds.contains(entry.id)) {
-        _selectedIds.remove(entry.id);
-      } else {
-        _selectedIds.add(entry.id);
-      }
-    });
+  Future<void> _toggleSelection(CloudFileEntry entry) async {
+    if (_selectedIds.contains(entry.id)) {
+      setState(() => _selectedIds.remove(entry.id));
+      return;
+    }
+    if (_pendingDuplicateChecks.contains(entry.id)) return;
+    _pendingDuplicateChecks.add(entry.id);
+    var hasDuplicate = false;
+    try {
+      hasDuplicate =
+          await widget.libraryRepository.findByCloudFileId(widget.source, entry.id) != null;
+    } catch (_) {
+      hasDuplicate = false;
+    } finally {
+      _pendingDuplicateChecks.remove(entry.id);
+    }
+    if (hasDuplicate) {
+      if (!mounted) return;
+      final proceed = await showCloudDuplicateConfirmDialog(
+        context,
+        '「${entry.name}」之前匯入過了，仍要建立新的一份嗎？',
+      );
+      if (!proceed) return;
+    }
+    if (!mounted) return;
+    setState(() => _selectedIds.add(entry.id));
   }
 
   Future<void> _startDownload() async {

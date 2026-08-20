@@ -191,3 +191,36 @@ class _CloudDownloadQueueDialogState extends State<CloudDownloadQueueDialog> {
     );
   }
 }
+
+/// 重複匯入確認彈窗（epic-29-cloud-import Issue 5，完整比照
+/// `remote_catalog_screen.dart` 的 `_showDuplicateConfirmDialog` 既有
+/// 設計）：選檔前置（Layer 1，[CloudBrowserScreen]）與下載後指紋比對
+/// （Layer 2，本檔案的 [CloudDownloadQueueDialog]）兩層檢查共用同一個
+/// 確認 UI，只有提示文字不同——精確比對命中不代表強制阻擋，使用者可選擇
+/// 仍要建立新副本。刻意宣告為公開（非私有）頂層函式而非私有於單一檔案，
+/// 因為 Layer 1 與 Layer 2 分屬 `cloud_browser_screen.dart`／
+/// `cloud_download_queue_dialog.dart` 兩個不同檔案（不像 epic-30 兩層都在
+/// 同一個檔案內，可以用私有函式）。
+Future<bool> showCloudDuplicateConfirmDialog(BuildContext context, String message) async {
+  final result = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      key: const Key('cloud_duplicate_dialog'),
+      title: const Text('重複的書籍'),
+      content: Text(message),
+      actions: [
+        TextButton(
+          key: const Key('cloud_duplicate_dialog_cancel'),
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('取消'),
+        ),
+        TextButton(
+          key: const Key('cloud_duplicate_dialog_confirm'),
+          onPressed: () => Navigator.of(context).pop(true),
+          child: const Text('仍要建立'),
+        ),
+      ],
+    ),
+  );
+  return result ?? false;
+}

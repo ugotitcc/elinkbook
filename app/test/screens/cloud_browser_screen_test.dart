@@ -9,6 +9,8 @@ import 'package:elinkbook/cloud_import/cloud_storage_client.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/screens/cloud_browser_screen.dart';
 
+import 'package:elinkbook/library/models/book.dart';
+
 import '../support/fake_book_import_service.dart';
 import '../support/fake_cloud_storage_client.dart';
 import '../support/fake_library_repository.dart';
@@ -45,6 +47,19 @@ void main() {
     0x33, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, // IEND chunk
     0x44, 0xAE, 0x42, 0x60, 0x82,
   ]);
+
+  Book fakeBookWithCloudFileId(String id, BookSource source, String cloudFileId) {
+    return Book(
+      id: id,
+      title: '已匯入的書',
+      format: BookFileFormat.epub,
+      filePath: '/books/$id.epub',
+      source: source,
+      cloudFileId: cloudFileId,
+      createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+      lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+    );
+  }
 
   Future<void> pumpScreen(
     WidgetTester tester, {
@@ -131,7 +146,14 @@ void main() {
 
     // 縮圖仍在載入中（completer 尚未完成）時，勾選另一個檔案觸發父層
     // setState 重建整個 GridView，包含尚未載入完成的縮圖項目。
+    //
+    // 【Epic 29 Issue 5】file-1 的勾選現在會先經過一次
+    // `findByCloudFileId()` 非同步查詢才 setState，需 pump 兩次：
+    // 第一次啟動 async 查詢，第二次讓查詢完成並觸發 setState。
+    // 不能用 pumpAndSettle()——等待中的縮圖 completer 尚未 complete，
+    // pumpAndSettle() 會因 Future 未 settled 而超時。
     await tester.tap(find.byKey(const Key('google_drive_browser_entry_file-1')));
+    await tester.pump();
     await tester.pump();
 
     // 修正前：_buildThumbnail() 每次 build() 都會呼叫一次 fetchThumbnail()，
@@ -159,7 +181,7 @@ void main() {
     );
 
     await tester.tap(find.byKey(const Key('google_drive_browser_entry_file-1')));
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     expect(
       find.byKey(const Key('google_drive_browser_checkbox_checked_file-1')),
@@ -249,6 +271,84 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(importService.lastImportCall?.source, BookSource.googleDrive);
+    });
+  });
+
+  group('選檔前置重複偵測（Layer 1）', () {
+    testWidgets('勾選已存在 cloudFileId 的檔案時彈出重複提示，選擇取消則不勾選', (tester) async {
+      final client = FakeCloudStorageClient(folderContents: {
+        null: const CloudFolderListing(entries: [fileEntryNoThumbnail]),
+      });
+      final libraryRepository = FakeLibraryRepository(initialBooks: [
+        fakeBookWithCloudFileId('local-1', BookSource.googleDrive, 'file-1'),
+      ]);
+      await pumpScreen(tester, client: client, libraryRepository: libraryRepository);
+
+      await tester.tap(find.byKey(const Key('google_drive_browser_entry_file-1')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('cloud_duplicate_dialog')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('cloud_duplicate_dialog_cancel')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('google_drive_browser_checkbox_checked_file-1')),
+        findsNothing,
+      );
+    });
+
+    testWidgets('勾選已存在 cloudFileId 的檔案時彈出重複提示，選擇仍要建立則正常勾選', (tester) async {
+      final client = FakeCloudStorageClient(folderContents: {
+        null: const CloudFolderListing(entries: [fileEntryNoThumbnail]),
+      });
+      final libraryRepository = FakeLibraryRepository(initialBooks: [
+        fakeBookWithCloudFileId('local-1', BookSource.googleDrive, 'file-1'),
+      ]);
+      await pumpScreen(tester, client: client, libraryRepository: libraryRepository);
+
+      await tester.tap(find.byKey(const Key('google_drive_browser_entry_file-1')));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('cloud_duplicate_dialog_confirm')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('google_drive_browser_checkbox_checked_file-1')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('勾選沒有重複紀錄的檔案時不彈出提示，直接勾選', (tester) async {
+      final client = FakeCloudStorageClient(folderContents: {
+        null: const CloudFolderListing(entries: [fileEntryNoThumbnail]),
+      });
+      await pumpScreen(tester, client: client);
+
+      await tester.tap(find.byKey(const Key('google_drive_browser_entry_file-1')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('cloud_duplicate_dialog')), findsNothing);
+      expect(
+        find.byKey(const Key('google_drive_browser_checkbox_checked_file-1')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('findByCloudFileId 拋出例外時，視同沒有偵測到重複，直接勾選不中斷', (tester) async {
+      final client = FakeCloudStorageClient(folderContents: {
+        null: const CloudFolderListing(entries: [fileEntryNoThumbnail]),
+      });
+      final libraryRepository = FakeLibraryRepository()..throwOnFindByCloudFileId = true;
+      await pumpScreen(tester, client: client, libraryRepository: libraryRepository);
+
+      await tester.tap(find.byKey(const Key('google_drive_browser_entry_file-1')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('cloud_duplicate_dialog')), findsNothing);
+      expect(
+        find.byKey(const Key('google_drive_browser_checkbox_checked_file-1')),
+        findsOneWidget,
+      );
     });
   });
 }

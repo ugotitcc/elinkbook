@@ -29,6 +29,11 @@ class FakeLibraryRepository implements LibraryRepository {
   /// 的 `deleteServerError`／`saveServerError` 既有慣例。
   bool throwOnFindByRemoteBookId = false;
 
+  /// 供測試模擬 [findByCloudFileId] 拋出例外，驗證呼叫端的錯誤處理（比照
+  /// 上方 [throwOnFindByRemoteBookId] 既有慣例，epic-29-cloud-import
+  /// Issue 5）。
+  bool throwOnFindByCloudFileId = false;
+
   /// 供測試控制 [detectAndCacheEpubLayout] 的模擬回傳值（比照本檔案「假
   /// 實作」定位——真實的 method channel 呼叫只發生在
   /// `SqliteLibraryRepository`，這裡不觸及任何原生端）。
@@ -181,6 +186,9 @@ class FakeLibraryRepository implements LibraryRepository {
 
   @override
   Future<Book?> findByCloudFileId(BookSource provider, String cloudFileId) async {
+    if (throwOnFindByCloudFileId) {
+      throw Exception('模擬 findByCloudFileId 查詢失敗');
+    }
     for (final book in _books) {
       if (book.source == provider && book.cloudFileId == cloudFileId) {
         return book;
