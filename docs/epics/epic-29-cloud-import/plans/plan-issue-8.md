@@ -42,7 +42,7 @@
 **Interfaces:**
 - Produces：`CloudOAuthConfig.googleClientSecret`（型別不變，仍是 `String`，只改 `defaultValue`）；新增 `static bool get googleIsConfidentialClient`，供 Task 2 的 `GoogleDriveOAuthClient` 參考語意（Task 2 實際判斷邏輯直接用建構子注入值的 `.isNotEmpty`，不會呼叫這個 getter，但這個 getter 本身要存在、有測試，供其他呼叫端或未來人工核對設定時使用，語意與 Task 2 的判斷邏輯必須一致）。
 
-- [ ] **Step 1：寫失敗測試**
+- [x] **Step 1：寫失敗測試**
 
 在 `app/test/cloud_import/cloud_oauth_config_test.dart` 內，`oneDriveClientId` 那組測試之前（第 24 行 `test('googleRedirectUri...'` 之後）新增：
 
@@ -56,7 +56,7 @@
   });
 ```
 
-- [ ] **Step 2：執行測試，確認失敗**
+- [x] **Step 2：執行測試，確認失敗**
 
 ```bash
 cd app
@@ -66,7 +66,7 @@ flutter test test/cloud_import/cloud_oauth_config_test.dart --plain-name "google
 
 預期：第一則因為目前 `defaultValue` 是樣板字串而非空字串，斷言失敗；第二則因為 `googleIsConfidentialClient` 尚未定義，編譯失敗。
 
-- [ ] **Step 3：修改 `cloud_oauth_config.dart`**
+- [x] **Step 3：修改 `cloud_oauth_config.dart`**
 
 找到目前的：
 
@@ -110,7 +110,7 @@ flutter test test/cloud_import/cloud_oauth_config_test.dart --plain-name "google
   static bool get googleIsConfidentialClient => googleClientSecret.isNotEmpty;
 ```
 
-- [ ] **Step 4：更新 `cloud_oauth.example.json`**
+- [x] **Step 4：更新 `cloud_oauth.example.json`**
 
 把 `app/config/cloud_oauth.example.json` 改成：
 
@@ -124,7 +124,7 @@ flutter test test/cloud_import/cloud_oauth_config_test.dart --plain-name "google
 
 （`GOOGLE_OAUTH_CLIENT_SECRET` 留空字串——Android 類型用戶端的正確設定就是留空；若改用電腦應用程式類型，開發者自行把這個值換成 Google Cloud Console 提供的密鑰。）
 
-- [ ] **Step 5：執行測試，確認通過**
+- [x] **Step 5：執行測試，確認通過**
 
 ```bash
 cd app
@@ -133,7 +133,7 @@ flutter test test/cloud_import/cloud_oauth_config_test.dart
 
 預期：全數 PASS，含新增的 2 則。
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/lib/cloud_import/cloud_oauth_config.dart app/config/cloud_oauth.example.json app/test/cloud_import/cloud_oauth_config_test.dart

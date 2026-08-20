@@ -23,6 +23,14 @@ void main() {
     );
   });
 
+  test('googleClientSecret 未提供 --dart-define 時預設為空字串', () {
+    expect(CloudOAuthConfig.googleClientSecret, '');
+  });
+
+  test('googleIsConfidentialClient 在 googleClientSecret 為空字串時為 false', () {
+    expect(CloudOAuthConfig.googleIsConfidentialClient, isFalse);
+  });
+
   test('oneDriveClientId 未提供 --dart-define 時回退為樣板 placeholder 值', () {
     expect(CloudOAuthConfig.oneDriveClientId, 'YOUR_ONEDRIVE_OAUTH_CLIENT_ID');
   });
