@@ -1,6 +1,6 @@
 # Epic 26 — 架構深化機會：工單清單 (Issues)
 
-依 `docs/research/architecture-review-test-suite-epub-pdf.md`（2026-08-11，`/improve-codebase-architecture` 流程產出，7 個候選深化機會）逐項評估後立案。候選 1 經 `/diagnose` 確認為現存 bug並拆為 Issue 1（已修復並合併）；候選 2 經 `/diagnose` 深入查證後拆為 Issue 2（安全的機械式收斂，`ready-for-agent`）與 Issue 3（需真機診斷才能定案的門檻值問題，`needs-info`，見 Issue 3 說明「為何不能直接沿用 Issue 2 的收斂結果」）；其餘候選（3/6 同類但影響較小、4/5/7 需要先決策或範圍較大）尚未拆案，視後續優先順序決定是否納入本 Epic。
+依 `docs/research/architecture-review-test-suite-epub-pdf.md`（2026-08-11，`/improve-codebase-architecture` 流程產出，7 個候選深化機會）逐項評估後立案。候選 1 經 `/diagnose` 確認為現存 bug並拆為 Issue 1（已修復並合併）；候選 2 經 `/diagnose` 深入查證後拆為 Issue 2（安全的機械式收斂，`ready-for-agent`）與 Issue 3（需真機診斷才能定案的門檻值問題，`needs-info`，見 Issue 3 說明「為何不能直接沿用 Issue 2 的收斂結果」）；候選 6 拆為 Issue 4（已完成並合併）；候選 4 於 2026-08-20 `/zoom-out` 深挖後拆為 Issue 5（人類已決策採選項 A 整批除役，`ready-for-agent`）；其餘候選（3 同類但影響較小、5/7 需要先決策或範圍較大）尚未拆案，視後續優先順序決定是否納入本 Epic。
 
 ---
 
@@ -142,3 +142,44 @@ Future<void> pumpUntilPdfReady(
 - 新增 `pump_until_pdf_ready_test.dart`，驗證 `condition` 提前滿足時確實提前跳出、`maxIterations`／`delayBetweenPumps` 覆寫確實生效。
 
 **驗收標準：** 9 個檔案、104 個編輯點的重複等待邏輯全數改用 `test/support/pump_until_pdf_ready.dart` 的 `pumpUntilPdfReady()`；`pdf_reader_view_filters_test.dart` 與其餘 6 個檔案內共 12 份重複的 local `waitRendered` 定義移除；`flutter analyze` 乾淨、`flutter test` 全數通過、零回歸（測試案例數量、斷言內容、通過/失敗結果皆與收斂前一致）。
+
+---
+
+## Issue 5：收斂已死的 EPUB 頁次估算管線（`totalCharacterCount`／`EpubPageEstimator`）
+
+**Status:** `ready-for-agent`——人類已於 2026-08-20 決策採用選項 A（整批除役），規格已完整，可進入規劃階段撰寫 `plans/plan-issue-5.md`。
+
+**依賴：** 無
+
+**來源：** `docs/research/architecture-review-test-suite-epub-pdf.md` 候選 4（強度 Worth exploring）。2026-08-20 `/zoom-out` 針對「流式格式頁碼/進度計算」模組地圖進行深挖時，重新查證 git 歷史與規劃文件，確認此問題並非單純的規劃疏漏，而是三度被看見、三度被有意識延後、始終未被排入任何工單執行，累積至今成為孤兒程式碼；完整溯源見 `docs/zoomout/pagination-flowable-formats.md` 第三部分。
+
+**背景／症狀：** `Book.totalCharacterCount` schema 欄位、`EpubCharacterCountRepository`、`EpubPageEstimator`（用字元數估算頁碼的純函式，含 `letterSpacing`/`lineHeight`/`paragraphSpacing` 等精修過的幾何模型）、`reader_screen.dart` 的 `_buildEpubFooter()`、`toc_bottom_sheet.dart` 的 EPUB 目錄頁碼標籤計算，全部依賴 `totalCharacterCount` 這個欄位——但正式（非測試）程式碼中沒有任何地方呼叫 `saveTotalCharacterCount()` 寫入它，該欄位恆為 `null`。可觀察到的實際行為：
+
+- `_buildEpubFooter()`（`reader_screen.dart`）永遠不會被建構（明確標註的死路徑，現行頁尾走的是 `_buildFoliateEpubFooter()`，資料來自 foliate-js `SectionProgress` 回報的 `pageIndex`/`totalPages`，與此無關）。
+- `toc_bottom_sheet.dart:210-243` 的 EPUB 目錄項目頁碼標籤因 `totalCharacterCount` 恆為 `null`，**目前恆顯示佔位符「…」**——與 CLAUDE.md「目錄元件須顯示標題+頁碼」的要求有落差，是此問題目前唯一使用者可見的缺口。
+
+**根因（已用 git 歷史交叉核對確認，非臆測）：** 字元數的唯一寫入來源是 Readium 原生端的 `onCharacterCountReady` 回呼，隨 epic-20 Issue 5（`cc1d5a5`／`3e76c69`，2026-07-31）移除 `EpubReaderView`（Readium 渲染路徑）一併被刪除；接手的 `FoliateReaderView` 從未實作替代回呼。此問題在規劃階段即被明確記載但責任層層轉手未被接手：
+
+1. **epic-17**（ADR 0011、spec.md、issues.md Issue 6）：規劃時已決定流式路徑不再送出/接收字元數，「FXL 路徑是否也一併清理，留待未來 Epic 評估」。
+2. **epic-20 Issue 4**（`plan-issue-4.md`）：審查時再次查證確認是死碼，Global Constraints 明文「不擴大範圍清理」，並轉交給 Issue 5。
+3. **epic-20 Issue 5**：實際執行範圍只涵蓋刪除 `EpubReaderView.kt`／`epub_reader_view.dart` 本體，未接手 Issue 4 轉交的清理項目——轉手落空。
+4. **架構檢視報告**（`bc06de6`，2026-08-11）：獨立重新發現完整問題全貌並記錄為候選 4，但未被轉化為可執行工單；報告發布後 3 天內，`epic-28` Issue 1 審查修正（`ed5b221`）仍持續對這條已知不可觸達的路徑新增 `letterSpacing` 功能。
+
+**已決策範圍（2026-08-20 人類決策：選項 A——整批除役）：** 確認現行 `_buildFoliateEpubFooter()`（頁尾頁碼/進度顯示，資料來自 foliate-js `SectionProgress` 的 `pageIndex`/`totalPages`）已完全取代舊估算管線的顯示需求；唯一遺留缺口（TOC 頁碼標籤恆顯示「…」）接受移除、不再顯示頁碼（僅顯示章節標題）。移除範圍：
+
+- `app/lib/reader/epub_page_estimator.dart`（`EpubPageEstimator`）整檔刪除。
+- `app/lib/reader/epub_character_count_repository.dart`（`EpubCharacterCountRepository`）整檔刪除；`reader_prefs_manager.dart`/`reader_prefs_manager_impl.dart` 的 `saveTotalCharacterCount()` 一併移除（正式程式碼已零呼叫點，可安全移除）。
+- `Book.totalCharacterCount` 欄位——**規劃階段須先確認處理方式**：新增一筆 schema migration 用 `DROP COLUMN`（SQLite 3.35+ 原生支援，需確認專案目前 sqflite/SQLite 版本是否滿足；不滿足則需改用「建新表搬資料」手法，比照 `sqlite_library_repository.dart` v17 UUID 遷移的既有作法）移除該欄位，或至少從 `Book` 模型的 `toMap()`/`fromMap()`/建構子移除此欄位（schema 欄位本身保留但不再讀寫，作為過渡方案）；兩種作法擇一在 `plans/plan-issue-5.md` 定案並說明理由。
+- `app/lib/screens/reader_screen.dart` 的 `_buildEpubFooter()`（死路徑本體）與其呼叫端條件式整段移除。
+- `app/lib/screens/toc_bottom_sheet.dart:210-243` EPUB 頁碼估算分支移除，改為 EPUB 目錄項目只顯示標題（比照移除前「無法算出頁碼」的既有 fallback 分支精神，但轉為預設行為而非 fallback）。
+- 對應測試：`app/test/reader/epub_page_estimator_test.dart` 整檔刪除；`app/test/support/fake_epub_character_count_repository.dart` 整檔刪除；`app/test/reader/reader_prefs_manager_test.dart` 移除 `saveTotalCharacterCount`/`EpubCharacterCountRepository` 相關案例；`app/test/library/models/book_test.dart`／`app/test/library/sqlite_library_repository_test.dart` 移除 `totalCharacterCount` 相關斷言（若採 `DROP COLUMN` migration，需新增對應 migration 測試）。
+
+**未選用（記錄供未來參考）：** 選項 B——補上 foliate-js 版字元數回報管道，保留 TOC 頁碼顯示需求。理由：`foliate-js` 目前完全沒有全書字元計數邏輯，需另外設計計算與回傳管道且需確認效能（不可阻塞開書流程），工作量明顯大於選項 A；現行頁尾已用 foliate-js 原生 `location` 概念滿足主要頁碼顯示需求，TOC 頁碼標籤非核心需求，不值得為此投入。
+
+**單元測試要求：**
+- 確認 `EpubPageEstimator`/`EpubCharacterCountRepository`/`totalCharacterCount` 相關測試隨程式碼一併移除，不殘留引用已刪除型別的測試。
+- `toc_bottom_sheet_test.dart` 補上「EPUB 目錄項目不顯示頁碼標籤（僅標題）」的新斷言，取代原本驗證「…」佔位符的既有測試。
+- 若採 `DROP COLUMN` migration：新增 migration 測試比照既有 `sqlite_library_repository_test.dart` 慣例（含跳級升級情境）。
+- `flutter analyze` 乾淨、`flutter test` 全數通過、零回歸（不含上述刻意移除/取代的案例）。
+
+**驗收標準：** `EpubPageEstimator`、`EpubCharacterCountRepository`、`Book.totalCharacterCount` 相關程式碼（含死路徑 `_buildEpubFooter()`、TOC 頁碼估算分支）全數移除；`Book.totalCharacterCount` 欄位依規劃階段定案的方式處理（`DROP COLUMN` 或至少停止讀寫），不再維持「schema/repository/估算器齊全但恆為 `null`」的孤兒狀態；`flutter analyze` 乾淨、`flutter test` 全數通過、零回歸。
