@@ -2424,7 +2424,7 @@ void main() {
     expect(footerProgressTextFinder, findsOneWidget);
     final totalPagesText =
         (tester.widget<Text>(footerProgressTextFinder)).data ?? '';
-    final match = RegExp(r'第 \d+/(\d+) 頁').firstMatch(totalPagesText);
+    final match = RegExp(r'^\d+/(\d+)$').firstMatch(totalPagesText);
     expect(match, isNotNull);
     final totalPages = int.parse(match!.group(1)!);
     final targetPage = (totalPages / 2).ceil().clamp(1, totalPages);
@@ -2436,7 +2436,7 @@ void main() {
 
     final progressText =
         (tester.widget<Text>(footerProgressTextFinder)).data ?? '';
-    expect(progressText, contains('第 $targetPage/$totalPages 頁'),
+    expect(progressText, contains('$targetPage/$totalPages'),
         reason: '輸入框跳頁後 Bottom Sheet 內的頁尾應更新為目標頁');
     expect(find.byKey(const Key('reader_error_text')), findsNothing);
   });
