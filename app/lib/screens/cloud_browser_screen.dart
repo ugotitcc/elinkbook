@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
 import '../cloud_import/cloud_storage_client.dart';
+import '../library/book_content_fingerprint.dart';
 import '../library/book_import_service.dart';
 import '../library/library_repository.dart';
 import '../library/models/book_group.dart';
@@ -36,6 +37,11 @@ class CloudBrowserScreen extends StatefulWidget {
   /// 呼叫端必須明確傳入對應的 provider。
   final BookSource source;
 
+  /// 【Epic 29 Issue 5】貫穿轉發給 [CloudDownloadQueueDialog] 做 Layer 2
+  /// 下載後指紋比對；本畫面自己的 Layer 1（選檔前置）只需要
+  /// [libraryRepository]，不需要指紋計算，故不在這裡使用。
+  final ComputeRemoteFingerprint computeFingerprint;
+
   /// `null` 代表瀏覽雲端硬碟根目錄；非 `null` 時瀏覽指定資料夾（點擊
   /// [CloudFileEntry.isFolder] 為 `true` 的項目下鑽時使用）。
   final String? folderId;
@@ -50,6 +56,7 @@ class CloudBrowserScreen extends StatefulWidget {
     required this.libraryRepository,
     required this.importService,
     required this.source,
+    required this.computeFingerprint,
     this.folderId,
     this.title,
   });
@@ -80,6 +87,12 @@ class _CloudBrowserScreenState extends State<CloudBrowserScreen> {
   /// 已有明確記載），這裡改把 in-flight 的 Future 存起來，同一個
   /// [thumbnailUrl] 在完成前只會真正發起一次請求。
   final Map<String, Future<Uint8List>> _pendingThumbnailFetches = {};
+
+  /// 【Epic 29 Issue 5，比照 `remote_catalog_screen.dart` 的
+  /// `_pendingDuplicateChecks` 既有先例】快速連續點擊同一個尚未勾選的
+  /// 檔案時，避免兩次 `findByCloudFileId()` 查詢並行、各自可能彈出一次
+  /// 重複提示——查詢期間先記錄該 entry id，重入的點擊直接忽略。
+  final Set<String> _pendingDuplicateChecks = {};
 
   @override
   void initState() {
@@ -125,20 +138,39 @@ class _CloudBrowserScreenState extends State<CloudBrowserScreen> {
         libraryRepository: widget.libraryRepository,
         importService: widget.importService,
         source: widget.source,
+        computeFingerprint: widget.computeFingerprint,
         folderId: entry.id,
         title: entry.name,
       ),
     ));
   }
 
-  void _toggleSelection(CloudFileEntry entry) {
-    setState(() {
-      if (_selectedIds.contains(entry.id)) {
-        _selectedIds.remove(entry.id);
-      } else {
-        _selectedIds.add(entry.id);
-      }
-    });
+  Future<void> _toggleSelection(CloudFileEntry entry) async {
+    if (_selectedIds.contains(entry.id)) {
+      setState(() => _selectedIds.remove(entry.id));
+      return;
+    }
+    if (_pendingDuplicateChecks.contains(entry.id)) return;
+    _pendingDuplicateChecks.add(entry.id);
+    var hasDuplicate = false;
+    try {
+      hasDuplicate =
+          await widget.libraryRepository.findByCloudFileId(widget.source, entry.id) != null;
+    } catch (_) {
+      hasDuplicate = false;
+    } finally {
+      _pendingDuplicateChecks.remove(entry.id);
+    }
+    if (hasDuplicate) {
+      if (!mounted) return;
+      final proceed = await showCloudDuplicateConfirmDialog(
+        context,
+        '「${entry.name}」之前匯入過了，仍要建立新的一份嗎？',
+      );
+      if (!proceed) return;
+    }
+    if (!mounted) return;
+    setState(() => _selectedIds.add(entry.id));
   }
 
   Future<void> _startDownload() async {
@@ -153,6 +185,8 @@ class _CloudBrowserScreenState extends State<CloudBrowserScreen> {
         entries: selected,
         client: widget.client,
         importService: widget.importService,
+        libraryRepository: widget.libraryRepository,
+        computeFingerprint: widget.computeFingerprint,
         source: widget.source,
         folderName: folderName,
       ),

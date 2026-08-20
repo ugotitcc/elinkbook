@@ -5,11 +5,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:elinkbook/cloud_import/cloud_storage_client.dart';
+import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/screens/cloud_download_queue_dialog.dart';
 
 import '../support/fake_book_import_service.dart';
 import '../support/fake_cloud_storage_client.dart';
+import '../support/fake_fingerprint_computer.dart';
+import '../support/fake_library_repository.dart';
 import '../support/fake_path_provider_platform.dart';
 
 void main() {
@@ -34,13 +37,29 @@ void main() {
     format: BookFileFormat.epub,
   );
 
+  Book fakeBookWithFingerprint(String id, String fingerprint) {
+    return Book(
+      id: id,
+      title: '本機已有的書',
+      format: BookFileFormat.epub,
+      filePath: '/books/$id.epub',
+      source: BookSource.local,
+      contentFingerprint: fingerprint,
+      createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+      lastReadTime: DateTime.fromMillisecondsSinceEpoch(1000),
+    );
+  }
+
   Future<void> pumpDialog(
     WidgetTester tester, {
     required FakeCloudStorageClient client,
     required FakeBookImportService importService,
+    FakeLibraryRepository? libraryRepository,
+    FakeFingerprintComputer? fingerprintComputer,
     List<CloudFileEntry> entries = const [entry1],
     String? folderName,
   }) async {
+    final fingerprint = fingerprintComputer ?? FakeFingerprintComputer();
     await tester.pumpWidget(MaterialApp(
       home: Scaffold(
         body: Builder(
@@ -52,6 +71,8 @@ void main() {
                 entries: entries,
                 client: client,
                 importService: importService,
+                libraryRepository: libraryRepository ?? FakeLibraryRepository(),
+                computeFingerprint: fingerprint.call,
                 source: BookSource.googleDrive,
                 folderName: folderName,
               ),
@@ -137,5 +158,103 @@ void main() {
       tempDownloadDir.existsSync() ? tempDownloadDir.listSync() : const [],
       isEmpty,
     );
+  });
+
+  group('下載後指紋比對（Layer 2）', () {
+    testWidgets('下載後偵測到與本機書籍內容指紋相同時彈出提示，選擇不建立新副本則刪除暫存檔並標記為略過',
+        (tester) async {
+      final client = FakeCloudStorageClient(downloadContents: {
+        'file-1': [1, 2, 3],
+      });
+      final importService = FakeBookImportService();
+      final libraryRepository = FakeLibraryRepository(initialBooks: [
+        fakeBookWithFingerprint('local-1', 'dup-fingerprint'),
+      ]);
+      final fingerprintComputer = FakeFingerprintComputer()..nextFingerprint = 'dup-fingerprint';
+      await pumpDialog(
+        tester,
+        client: client,
+        importService: importService,
+        libraryRepository: libraryRepository,
+        fingerprintComputer: fingerprintComputer,
+      );
+
+      for (var i = 0; i < 30; i++) {
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+        await tester.pump();
+        if (find.byKey(const Key('cloud_duplicate_dialog')).evaluate().isNotEmpty) break;
+      }
+
+      expect(find.byKey(const Key('cloud_duplicate_dialog')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('cloud_duplicate_dialog_cancel')));
+      await settleDownload(tester);
+
+      expect(find.text('重複已略過（未匯入）'), findsOneWidget);
+      expect(importService.lastImportCall, isNull);
+      final tempDownloadDir = Directory('${tempRoot.path}/cloud_import_download_temp');
+      expect(
+        tempDownloadDir.existsSync() ? tempDownloadDir.listSync() : const [],
+        isEmpty,
+      );
+    });
+
+    testWidgets('下載後偵測到重複時選擇仍要建立新副本，正常完成匯入', (tester) async {
+      final client = FakeCloudStorageClient(downloadContents: {
+        'file-1': [1, 2, 3],
+      });
+      final importService = FakeBookImportService();
+      final libraryRepository = FakeLibraryRepository(initialBooks: [
+        fakeBookWithFingerprint('local-1', 'dup-fingerprint'),
+      ]);
+      final fingerprintComputer = FakeFingerprintComputer()..nextFingerprint = 'dup-fingerprint';
+      await pumpDialog(
+        tester,
+        client: client,
+        importService: importService,
+        libraryRepository: libraryRepository,
+        fingerprintComputer: fingerprintComputer,
+      );
+
+      for (var i = 0; i < 30; i++) {
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+        await tester.pump();
+        if (find.byKey(const Key('cloud_duplicate_dialog')).evaluate().isNotEmpty) break;
+      }
+
+      await tester.tap(find.byKey(const Key('cloud_duplicate_dialog_confirm')));
+      await settleDownload(tester);
+
+      final listTile =
+          tester.widget<ListTile>(find.byKey(const Key('cloud_download_queue_item_file-1')));
+      expect((listTile.subtitle as Text).data, '完成');
+      expect(importService.lastImportCall, isNotNull);
+    });
+
+    testWidgets('下載後未偵測到重複時不彈出提示，直接完成', (tester) async {
+      final client = FakeCloudStorageClient(downloadContents: {
+        'file-1': [1, 2, 3],
+      });
+      final importService = FakeBookImportService();
+      final fingerprintComputer = FakeFingerprintComputer();
+      await pumpDialog(
+        tester,
+        client: client,
+        importService: importService,
+        fingerprintComputer: fingerprintComputer,
+      );
+
+      await settleDownload(tester);
+
+      expect(find.byKey(const Key('cloud_duplicate_dialog')), findsNothing);
+      final listTile =
+          tester.widget<ListTile>(find.byKey(const Key('cloud_download_queue_item_file-1')));
+      expect((listTile.subtitle as Text).data, '完成');
+      expect(importService.lastImportCall, isNotNull);
+      // 驗證指紋計算確實在下載成功之後才被呼叫恰好一次，且傳入的是下載
+      // 完成的暫存檔路徑（比照 review-issue-3.md 對 remote_catalog 版本的
+      // 既有斷言慣例）。
+      expect(fingerprintComputer.calls, hasLength(1));
+      expect(fingerprintComputer.calls.single, isNotEmpty);
+    });
   });
 }

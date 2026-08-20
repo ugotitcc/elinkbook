@@ -269,6 +269,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
             libraryRepository: widget.repository,
             importService: widget.importService,
             source: BookSource.googleDrive,
+            computeFingerprint: widget.computeFingerprint!,
           ),
         ))
         .then((_) {
@@ -291,6 +292,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
             libraryRepository: widget.repository,
             importService: widget.importService,
             source: BookSource.oneDrive,
+            computeFingerprint: widget.computeFingerprint!,
             title: 'OneDrive',
           ),
         ))
@@ -748,6 +750,12 @@ class _LibraryScreenState extends State<LibraryScreen> {
               // 帳號相關欄位的既有貫穿慣例）。
               googleDriveStorageClient: widget.googleDriveStorageClient,
               oneDriveStorageClient: widget.oneDriveStorageClient,
+              // 【審查修正 review-issue-5.md Important #1】Issue 5 新增的
+              // 「從 Google Drive／OneDrive 匯入」選單門檻改為同時檢查
+              // `widget.computeFingerprint != null`，這裡若不轉發，分類
+              // 篩選路徑內兩個雲端匯入選項會一起被誤停用（同一種錯誤模式
+              // 見上方 googleDriveStorageClient 的審查修正註解）。
+              computeFingerprint: widget.computeFingerprint,
               currentTheme: widget.currentTheme,
               isEinkMode: widget.isEinkMode,
               onThemeChanged: widget.onThemeChanged,
@@ -891,16 +899,20 @@ class _LibraryScreenState extends State<LibraryScreen> {
             ),
             PopupMenuItem<void>(
               key: const Key('library_import_google_drive_option'),
-              enabled: widget.googleDriveStorageClient != null,
-              onTap: widget.googleDriveStorageClient == null
+              enabled: widget.googleDriveStorageClient != null &&
+                  widget.computeFingerprint != null,
+              onTap: (widget.googleDriveStorageClient == null ||
+                      widget.computeFingerprint == null)
                   ? null
                   : () => _openGoogleDriveBrowser(widget.googleDriveStorageClient!),
               child: const Text('從 Google Drive 匯入'),
             ),
             PopupMenuItem<void>(
               key: const Key('library_import_onedrive_option'),
-              enabled: widget.oneDriveStorageClient != null,
-              onTap: widget.oneDriveStorageClient == null
+              enabled: widget.oneDriveStorageClient != null &&
+                  widget.computeFingerprint != null,
+              onTap: (widget.oneDriveStorageClient == null ||
+                      widget.computeFingerprint == null)
                   ? null
                   : () => _openOneDriveBrowser(widget.oneDriveStorageClient!),
               child: const Text('從 OneDrive 匯入'),

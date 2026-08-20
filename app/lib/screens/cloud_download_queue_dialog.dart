@@ -1,11 +1,23 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 
 import '../cloud_import/cloud_book_downloader.dart';
 import '../cloud_import/cloud_storage_client.dart';
+import '../library/book_content_fingerprint.dart';
 import '../library/book_import_service.dart';
+import '../library/library_repository.dart';
 import '../library/models/library_enums.dart';
 
-enum CloudDownloadItemStatus { pending, downloading, done, failed, cancelled }
+enum CloudDownloadItemStatus {
+  pending,
+  downloading,
+  checkingDuplicate,
+  done,
+  duplicateSkipped,
+  failed,
+  cancelled,
+}
 
 /// 序列下載佇列對話框（epic-29-cloud-import Issue 3，spec.md「確認匯入後，
 /// 多選檔案循序下載...並顯示逐項狀態」）：一本下完才下一本，逐項顯示等待
@@ -19,6 +31,20 @@ class CloudDownloadQueueDialog extends StatefulWidget {
   final List<CloudFileEntry> entries;
   final CloudStorageClient client;
   final BookImportService importService;
+
+  /// 【Epic 29 Issue 5，Layer 2：下載後指紋比對】下載完成、搬移至永久
+  /// 位置之前，用來查詢是否已存在內容指紋相同的本機書籍。
+  final LibraryRepository libraryRepository;
+
+  /// 【Epic 29 Issue 5，Layer 2】計算暫存檔內容指紋的函式，與
+  /// `RemoteCatalogScreen`／`main.dart` 共用同一個 `ComputeRemoteFingerprint`
+  /// typedef（provider 無關）。真機組裝時傳入
+  /// `computeBookContentFingerprint`；widget test 環境必須改注入
+  /// `FakeFingerprintComputer`（真實函式內部對本機路徑用 `Isolate.run()`
+  /// 計算 SHA-256，在 `testWidgets()` 的 fake-time 測試環境下會死鎖，見
+  /// `book_content_fingerprint.dart` 文件說明）。
+  final ComputeRemoteFingerprint computeFingerprint;
+
   final BookSource source;
   final String? folderName;
 
@@ -27,6 +53,8 @@ class CloudDownloadQueueDialog extends StatefulWidget {
     required this.entries,
     required this.client,
     required this.importService,
+    required this.libraryRepository,
+    required this.computeFingerprint,
     required this.source,
     this.folderName,
   });
@@ -65,12 +93,39 @@ class _CloudDownloadQueueDialogState extends State<CloudDownloadQueueDialog> {
     final entry = widget.entries[index];
     final token = CloudDownloadCancellationToken();
     _tokens[index] = token;
+    String? tempPath;
     try {
-      final tempPath = await downloadCloudFileToTempFile(
+      tempPath = await downloadCloudFileToTempFile(
         client: widget.client,
         entry: entry,
         cancellationToken: token,
       );
+
+      if (!mounted) return;
+      setState(() => _statuses[index] = CloudDownloadItemStatus.checkingDuplicate);
+      // entry.format 在此保證非 null：能被使用者勾選、進而進入下載佇列的
+      // 檔案，其 format 必然已通過 detectCloudFileFormat() 驗證——偵測不到
+      // 支援格式的項目在 listFolder() 就已被過濾掉，不會出現在 _entries
+      // 內（比照 remote_catalog_screen.dart._downloadOne 的
+      // `item.acquisition.format!` 既有做法）。
+      final fingerprint = await widget.computeFingerprint(tempPath, entry.format!);
+      final existingByFingerprint =
+          await widget.libraryRepository.findByContentFingerprint(fingerprint);
+      if (existingByFingerprint != null) {
+        if (!mounted) return;
+        final proceed = await showCloudDuplicateConfirmDialog(
+          context,
+          '偵測到「${entry.name}」與本機已有的一本書內容相同，仍要建立新的一份嗎？',
+        );
+        if (!proceed) {
+          final leftover = File(tempPath);
+          if (await leftover.exists()) await leftover.delete();
+          if (!mounted) return;
+          setState(() => _statuses[index] = CloudDownloadItemStatus.duplicateSkipped);
+          return;
+        }
+      }
+
       final permanentPath = await promoteCloudFileToPermanent(tempPath);
       if (!mounted) return;
       setState(() {
@@ -78,6 +133,10 @@ class _CloudDownloadQueueDialogState extends State<CloudDownloadQueueDialog> {
         _statuses[index] = CloudDownloadItemStatus.done;
       });
     } catch (_) {
+      if (tempPath != null) {
+        final leftover = File(tempPath);
+        if (await leftover.exists()) await leftover.delete();
+      }
       if (!mounted) return;
       setState(() {
         _statuses[index] = token.isCancelled
@@ -134,8 +193,12 @@ class _CloudDownloadQueueDialogState extends State<CloudDownloadQueueDialog> {
         return '等待中';
       case CloudDownloadItemStatus.downloading:
         return '下載中';
+      case CloudDownloadItemStatus.checkingDuplicate:
+        return '比對重複中';
       case CloudDownloadItemStatus.done:
         return '完成';
+      case CloudDownloadItemStatus.duplicateSkipped:
+        return '重複已略過（未匯入）';
       case CloudDownloadItemStatus.failed:
         return '失敗';
       case CloudDownloadItemStatus.cancelled:
@@ -190,4 +253,37 @@ class _CloudDownloadQueueDialogState extends State<CloudDownloadQueueDialog> {
       ],
     );
   }
+}
+
+/// 重複匯入確認彈窗（epic-29-cloud-import Issue 5，完整比照
+/// `remote_catalog_screen.dart` 的 `_showDuplicateConfirmDialog` 既有
+/// 設計）：選檔前置（Layer 1，[CloudBrowserScreen]）與下載後指紋比對
+/// （Layer 2，本檔案的 [CloudDownloadQueueDialog]）兩層檢查共用同一個
+/// 確認 UI，只有提示文字不同——精確比對命中不代表強制阻擋，使用者可選擇
+/// 仍要建立新副本。刻意宣告為公開（非私有）頂層函式而非私有於單一檔案，
+/// 因為 Layer 1 與 Layer 2 分屬 `cloud_browser_screen.dart`／
+/// `cloud_download_queue_dialog.dart` 兩個不同檔案（不像 epic-30 兩層都在
+/// 同一個檔案內，可以用私有函式）。
+Future<bool> showCloudDuplicateConfirmDialog(BuildContext context, String message) async {
+  final result = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      key: const Key('cloud_duplicate_dialog'),
+      title: const Text('重複的書籍'),
+      content: Text(message),
+      actions: [
+        TextButton(
+          key: const Key('cloud_duplicate_dialog_cancel'),
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('取消'),
+        ),
+        TextButton(
+          key: const Key('cloud_duplicate_dialog_confirm'),
+          onPressed: () => Navigator.of(context).pop(true),
+          child: const Text('仍要建立'),
+        ),
+      ],
+    ),
+  );
+  return result ?? false;
 }
