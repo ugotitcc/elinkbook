@@ -10,7 +10,6 @@ import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/library/sqlite_library_repository.dart';
 import 'package:elinkbook/reader/book_reader_prefs_repository.dart';
-import 'package:elinkbook/reader/epub_character_count_repository.dart';
 import 'package:elinkbook/reader/reader_prefs_manager_impl.dart';
 import 'package:elinkbook/reader/reading_position_repository.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
@@ -91,7 +90,6 @@ void main() {
     final prefsManager = ReaderPrefsManagerImpl(
       BookReaderPrefsRepository(libraryRepository.database),
       ReadingPositionRepository(libraryRepository.database),
-      EpubCharacterCountRepository(libraryRepository.database),
     );
 
     final samplePath = await _stageAssetAsFile(

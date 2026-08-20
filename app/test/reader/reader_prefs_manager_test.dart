@@ -21,7 +21,6 @@ import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/library/sqlite_library_repository.dart';
 import 'package:elinkbook/reader/reading_position.dart';
-import 'package:elinkbook/reader/epub_character_count_repository.dart';
 import 'package:elinkbook/reader/reading_position_repository.dart';
 import '../support/fake_book_reader_prefs_repository.dart';
 import '../support/fake_reading_position_repository.dart';
@@ -474,31 +473,6 @@ void main() {
       await manager.saveReadingPosition('b1', position);
       final loaded = await manager.load('b1');
       expect(loaded.readingPosition, position);
-    });
-
-    test('EpubCharacterCountRepository 有註冊時，load 回傳 totalCharacterCount，saveTotalCharacterCount 寫入後可讀回',
-        () async {
-      final managerWithCounting = ReaderPrefsManagerImpl(
-        BookReaderPrefsRepository(libraryRepository.database),
-        ReadingPositionRepository(libraryRepository.database),
-        EpubCharacterCountRepository(libraryRepository.database),
-      );
-
-      final beforeSave = await managerWithCounting.load('b1');
-      expect(beforeSave.totalCharacterCount, isNull);
-
-      await managerWithCounting.saveTotalCharacterCount('b1', 12345);
-      final afterSave = await managerWithCounting.load('b1');
-      expect(afterSave.totalCharacterCount, 12345);
-    });
-
-    test('未提供 EpubCharacterCountRepository（第 3 個建構參數省略）時，totalCharacterCount 一律為 null 且 saveTotalCharacterCount 安全無操作',
-        () async {
-      // manager 沿用既有（2 參數）setUp 建立的實例，驗證省略第 3 個建構
-      // 參數時仍可安全編譯與執行（見 Global Constraints）。
-      await manager.saveTotalCharacterCount('b1', 999); // 不應拋出例外
-      final loaded = await manager.load('b1');
-      expect(loaded.totalCharacterCount, isNull);
     });
   });
 }

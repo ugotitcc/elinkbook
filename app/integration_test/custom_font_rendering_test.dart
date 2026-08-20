@@ -12,7 +12,6 @@ import 'package:elinkbook/reader/book_reader_prefs.dart';
 import 'package:elinkbook/reader/book_reader_prefs_repository.dart';
 import 'package:elinkbook/reader/custom_font.dart';
 import 'package:elinkbook/reader/custom_fonts_repository.dart';
-import 'package:elinkbook/reader/epub_character_count_repository.dart';
 import 'package:elinkbook/reader/reader_prefs_manager_impl.dart';
 import 'package:elinkbook/reader/reading_position_repository.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
@@ -76,7 +75,6 @@ void main() {
     final prefsManager = ReaderPrefsManagerImpl(
       prefsRepository,
       ReadingPositionRepository(repository.database),
-      EpubCharacterCountRepository(repository.database),
     );
 
     await tester.pumpWidget(MaterialApp(

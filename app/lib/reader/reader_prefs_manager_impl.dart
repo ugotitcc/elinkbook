@@ -13,7 +13,6 @@ import 'pdf_fit_mode.dart';
 import 'pdf_page_turn_animation.dart';
 import 'reader_prefs_manager.dart';
 import 'reading_position.dart';
-import 'epub_character_count_repository.dart';
 import 'reading_position_repository.dart';
 import 'resolved_preferences.dart';
 import 'screen_orientation_setting.dart';
@@ -27,13 +26,11 @@ import 'zone_action.dart';
 class ReaderPrefsManagerImpl implements ReaderPrefsManager {
   final BookReaderPrefsRepository _sqliteRepository;
   final ReadingPositionRepository _positionRepository;
-  final EpubCharacterCountRepository? _characterCountRepository;
 
   const ReaderPrefsManagerImpl(
     this._sqliteRepository,
-    this._positionRepository, [
-    this._characterCountRepository,
-  ]);
+    this._positionRepository,
+  );
 
   static const _pageTurnModeKey = 'global_reader_page_turn_mode';
   static const _screenOrientationKey = 'global_reader_screen_orientation';
@@ -53,13 +50,11 @@ class ReaderPrefsManagerImpl implements ReaderPrefsManager {
       _sqliteRepository.load(bookId),
       loadGlobalPrefs(),
       _positionRepository.load(bookId),
-      _characterCountRepository?.load(bookId) ?? Future.value(null),
     ]);
     return LoadedPrefs(
       bookPrefs: results[0] as BookReaderPrefs,
       globalPrefs: results[1] as GlobalReaderPrefs,
       readingPosition: results[2] as ReadingPosition,
-      totalCharacterCount: results[3] as int?,
     );
   }
 
@@ -148,11 +143,6 @@ class ReaderPrefsManagerImpl implements ReaderPrefsManager {
   @override
   Future<void> saveReadingPosition(String bookId, ReadingPosition position) =>
       _positionRepository.save(bookId, position);
-
-  @override
-  Future<void> saveTotalCharacterCount(String bookId, int totalCharacterCount) =>
-      _characterCountRepository?.save(bookId, totalCharacterCount) ??
-      Future.value();
 
   @override
   ResolvedPreferences resolve(

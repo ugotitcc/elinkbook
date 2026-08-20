@@ -17,13 +17,11 @@ class LoadedPrefs {
   final BookReaderPrefs bookPrefs;
   final GlobalReaderPrefs globalPrefs;
   final ReadingPosition readingPosition;
-  final int? totalCharacterCount;
 
   const LoadedPrefs({
     required this.bookPrefs,
     required this.globalPrefs,
     this.readingPosition = const ReadingPosition(),
-    this.totalCharacterCount,
   });
 }
 
@@ -49,11 +47,6 @@ abstract class ReaderPrefsManager {
   /// 呼叫（見 docs/epics/epic-5-toc-pagination/spec.md「本機閱讀位置
   /// 記憶」）。
   Future<void> saveReadingPosition(String bookId, ReadingPosition position);
-
-  /// 寫入全書字元數快取（epic-5-toc-pagination Issue 3）。呼叫時機為原生端
-  /// 背景計算完成、透過 EpubReaderView.onCharacterCountReady 回報之後，
-  /// 只在該書尚無快取值時觸發一次（見 spec.md「執行緒與快取」）。
-  Future<void> saveTotalCharacterCount(String bookId, int totalCharacterCount);
 
   /// 純同步合併（單書覆寫 `??` 全域預設／既存安全預設值），不觸發任何
   /// I/O，可在同一個 `setState` 內依需要重複呼叫（例如原生 layout 解析

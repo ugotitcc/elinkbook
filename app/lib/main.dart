@@ -21,7 +21,6 @@ import 'library/sqlite_library_repository.dart';
 import 'reader/book_reader_prefs_repository.dart';
 import 'reader/bookmarks_repository.dart';
 import 'reader/custom_fonts_repository.dart';
-import 'reader/epub_character_count_repository.dart';
 import 'reader/highlights_repository.dart';
 import 'reader/layout_preset_repository.dart';
 import 'reader/notes_repository.dart';
@@ -78,7 +77,6 @@ Future<void> main() async {
   final prefsManager = ReaderPrefsManagerImpl(
     prefsRepository,
     ReadingPositionRepository(repository.database),
-    EpubCharacterCountRepository(repository.database),
   );
   final bookmarksRepository = BookmarksRepository(repository.database);
   final highlightsRepository = HighlightsRepository(repository.database);

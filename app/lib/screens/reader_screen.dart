@@ -657,7 +657,6 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           bookPrefs: prefs,
           globalPrefs: loaded.globalPrefs,
           readingPosition: loaded.readingPosition,
-          totalCharacterCount: loaded.totalCharacterCount,
         );
         _loaded = newLoaded;
         _resolved = widget.prefsManager.resolve(
