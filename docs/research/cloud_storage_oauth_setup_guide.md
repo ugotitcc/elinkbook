@@ -1,16 +1,16 @@
 # Google Drive 與 OneDrive 介接服務申請與設定指南 (OAuth 2.0 & PKCE)
 
-本文件依據 [`docs/epics/epic-29-cloud-import/issues.md`](file:///U:/MyDeveloper/AI/elinkBook/docs/epics/epic-29-cloud-import/issues.md)、[`spec.md`](file:///U:/MyDeveloper/AI/elinkBook/docs/epics/epic-29-cloud-import/spec.md) 以及 **Epic 29 Issue 7 統一外部設定檔架構**規範撰寫，提供開發者與維運人員在 **Google Cloud Console** 與 **Microsoft Entra ID (Azure Portal)** 申請、配置雲端 API 憑證，取得用戶端 ID (Client ID)，並透過單一設定檔（`cloud_oauth.json`）整合至 elinkBook 專案的標準作業程序（SOP）。
+本文件依據 [`docs/epics/epic-29-cloud-import/issues.md`](file:///U:/MyDeveloper/AI/elinkBook/docs/epics/epic-29-cloud-import/issues.md)、[`spec.md`](file:///U:/MyDeveloper/AI/elinkBook/docs/epics/epic-29-cloud-import/spec.md) 以及 **Epic 29 Issue 7 統一外部設定檔架構**、**Issue 8 Google Drive OAuth 用戶端類型改為設定檔驅動**規範撰寫，提供開發者與維運人員在 **Google Cloud Console** 與 **Microsoft Entra ID (Azure Portal)** 申請、配置雲端 API 憑證，取得用戶端 ID (Client ID) 及密鑰 (Client Secret)，並透過單一設定檔（`cloud_oauth.json`）整合至 elinkBook 專案的標準作業程序（SOP）。
 
 ---
 
 ## 1. 架構概述與設定對照表
 
-elinkBook 採用無後端伺服器的公開用戶端架構（Public Client），透過系統瀏覽器發起 **OAuth 2.0 Authorization Code Flow 搭配 PKCE (RFC 7636, S256)** 進行身分驗證，並使用 Android Intent Filter 攔截 Redirect URI 回傳授權碼。
+elinkBook 採用現代化 OAuth 2.0 架構，透過系統瀏覽器發起 **OAuth 2.0 Authorization Code Flow 搭配 PKCE (RFC 7636, S256)** 進行身分驗證，並使用 Android Intent Filter 攔截 Redirect URI 回傳授權碼。
 
-### 統一外部設定檔架構 (Epic 29 Issue 7)
+### 統一外部設定檔與用戶端類型驅動 (Epic 29 Issue 7 & Issue 8)
 
-為避免 Client ID 與 Redirect Scheme 分散於多個 Dart 檔案與 Android XML 中導致同步維護困難，專案採用**單一外部設定檔維護點**：
+為避免 Client ID、Client Secret 與 Redirect Scheme 分散於多個 Dart 檔案與 Android XML 中導致同步維護困難，專案採用**單一外部設定檔維護點**與**設定檔驅動機制**：
 
 ```mermaid
 flowchart TD
@@ -37,18 +37,21 @@ flowchart TD
     Placeholders --> Manifest
 ```
 
-- **單一設定檔維護**：開發者只需在 [`app/config/cloud_oauth.json`](file:///U:/MyDeveloper/AI/elinkBook/app/config/cloud_oauth.json) 設定 Google 與 OneDrive 的 Client ID。
+- **單一設定檔維護**：開發者只需在 [`app/config/cloud_oauth.json`](file:///U:/MyDeveloper/AI/elinkBook/app/config/cloud_oauth.json) 設定 Google 的 Client ID、Client Secret（若使用電腦應用程式類型）與 OneDrive 的 Client ID。
+- **用戶端類型自動判定（Epic 29 Issue 8）**：
+  - **Android 類型（公開客戶端）**：`GOOGLE_OAUTH_CLIENT_SECRET` 留空字串 `""`。Token 請求與換發時不帶 `client_secret`。
+  - **電腦應用程式（Desktop）類型（機密客戶端）**：`GOOGLE_OAUTH_CLIENT_SECRET` 填入憑證密鑰。Token 請求與換發時自動帶入 `client_secret`。
 - **Dart 端自動推導**：[`app/lib/cloud_import/cloud_oauth_config.dart`](file:///U:/MyDeveloper/AI/elinkBook/app/lib/cloud_import/cloud_oauth_config.dart) 透過 `String.fromEnvironment` 讀取並自動計算 Redirect Scheme 與 Redirect URI。
 - **Android 端自動注入**：[`app/android/app/build.gradle.kts`](file:///U:/MyDeveloper/AI/elinkBook/app/android/app/build.gradle.kts) 於建置時解析同一份 JSON 檔，將推導後的 Scheme 注入 [`AndroidManifest.xml`](file:///U:/MyDeveloper/AI/elinkBook/app/android/app/src/main/AndroidManifest.xml) 的動態佔位符 `${googleOAuthScheme}` 與 `${oneDriveOAuthScheme}`。
-- **完全免改程式碼與 XML**：更新憑證時**無需修改任何 Dart 程式碼或 `AndroidManifest.xml`**。
+- **完全免改程式碼與 XML**：切換 Google OAuth 用戶端類型或更新憑證時**無需修改任何 Dart 程式碼或 `AndroidManifest.xml`**。
 
 ### 專案設定檔案位置對照表
 
 | 項目 | 檔案路徑 | 說明 |
 | :--- | :--- | :--- |
 | **真實憑證設定檔** | `app/config/cloud_oauth.json` | 開發者本機真實憑證設定檔（已被 `.gitignore` 排除，**不進版控**） |
-| **設定檔範本樣板** | [`app/config/cloud_oauth.example.json`](file:///U:/MyDeveloper/AI/elinkBook/app/config/cloud_oauth.example.json) | 提供給新環境複製使用的標準 JSON 樣板檔（已進版控） |
-| **Dart 統一設定** | [`app/lib/cloud_import/cloud_oauth_config.dart`](file:///U:/MyDeveloper/AI/elinkBook/app/lib/cloud_import/cloud_oauth_config.dart) | 讀取編譯期環境常數並自動計算兩平台 Redirect Scheme/URI |
+| **設定檔範本樣板** | [`app/config/cloud_oauth.example.json`](file:///U:/MyDeveloper/AI/elinkBook/app/config/cloud_oauth.example.json) | 提供給新環境複製使用的標準 JSON 樣板檔（已進版控，預設 `GOOGLE_OAUTH_CLIENT_SECRET` 為空字串） |
+| **Dart 統一設定** | [`app/lib/cloud_import/cloud_oauth_config.dart`](file:///U:/MyDeveloper/AI/elinkBook/app/lib/cloud_import/cloud_oauth_config.dart) | 讀取編譯期環境常數、判定客戶端類型並自動計算兩平台 Redirect Scheme/URI |
 | **Gradle 自動注入** | [`app/android/app/build.gradle.kts`](file:///U:/MyDeveloper/AI/elinkBook/app/android/app/build.gradle.kts) | 解析 `cloud_oauth.json` 並寫入 `manifestPlaceholders` |
 | **Android 清單** | [`app/android/app/src/main/AndroidManifest.xml`](file:///U:/MyDeveloper/AI/elinkBook/app/android/app/src/main/AndroidManifest.xml) | 透過 `${googleOAuthScheme}` 與 `${oneDriveOAuthScheme}` 宣告 `intent-filter` |
 | **套件名稱** | `cc.ugotit.elinkbook` | 定義於 `app/android/app/build.gradle.kts` 的 `applicationId` |
@@ -98,13 +101,13 @@ Google 要求發起 OAuth 驗證前必須設定同意畫面：
 
 ---
 
-### 步驟 2.4：建立並取得 OAuth 2.0 用戶端 ID (Client ID)
+### 步驟 2.4：建立並取得 OAuth 2.0 用戶端 ID (Client ID) 與 Client Secret
 
 #### 1. 建立憑證
 1. 在左側功能表點選「**API 和服務 (APIs & Services)**」$\rightarrow$「**憑證 (Credentials)**」。
 2. 點擊頂部「**+ 建立憑證 (Create Credentials)**」$\rightarrow$ 選擇「**OAuth 用戶端 ID (OAuth client ID)**」。
 3. **應用程式類型 (Application type)** 建議與設定方式：
-   - **選項 A（Android 應用程式類型，正規推薦）**：
+   - **選項 A（Android 應用程式類型，正式發布推薦）**：
      - 應用程式類型選擇「**Android**」。
      - **名稱**：`elinkBook Android Client`。
      - **套件名稱 (Package name)**：`cc.ugotit.elinkbook`。
@@ -120,46 +123,69 @@ Google 要求發起 OAuth 驗證前必須設定同意畫面：
          ```
        - 複製輸出中的 `SHA1:` 指紋（例如 `AA:BB:CC:DD:...`）並貼入 Console。
      - 點擊「**建立 (Create)**」。
-   - **選項 B（桌面應用程式類型，免 SHA-1 指紋彈性測試用）**：
-     - 若希望在不綁定特定 SHA-1 指紋下快速進行測試，亦可建立「**桌面應用程式 (Desktop App)**」類型憑證。
-     - 填入名稱後直接點擊「**建立**」。
+     - > [!IMPORTANT]
+       > Android 類型為**公開客戶端**（Google 不核發也不接受 Client Secret）。但 Android 類型需要通過 **Google Play Console 的應用程式擁有權驗證**（連結 SHA-1 憑證與發布商身份）。這道驗證與 OAuth 同意畫面的「測試使用者」白名單是兩件獨立的事、無法用白名單繞過。若在未完成 Play Console 驗證的開發階段，登入可能會被 Google 阻擋。
+   - **選項 B（電腦應用程式／桌面應用程式類型，開發測試推薦）**：
+     - 若希望在開發測試期間快速進行真機除錯，**強烈建議建立此類型憑證**。
+     - 應用程式類型選擇「**桌面應用程式 (Desktop App)**」（或部分語系顯示為「**電腦應用程式**」）。
+     - **名稱**：`elinkBook Desktop Dev Client`。
+     - 點擊「**建立 (Create)**」。
+     - > [!TIP]
+       > 電腦應用程式類型為**機密客戶端**，不受 Android 專屬的 Play Console 擁有權驗證限制，只需在步驟 2.3 加入「測試使用者」白名單即可順暢登入與測試。但 token 換發時必須帶入 Client Secret。
 
-#### 2. 如何取得與複製 Client ID
-完成建立後，有兩種方式可取得 Client ID：
+#### 2. 如何取得與複製 Client ID 與 Client Secret
+完成建立後，可取得憑證資訊：
 
 - **方式一（建立完成當下複製）**：
-  點擊「建立」後，頁面會自動彈出「**已建立 OAuth 用戶端 (OAuth client created)**」對話方塊。在對話方塊中找到「**用戶端 ID (Client ID)**」，點擊右側的 **「複製 (Copy)」圖示**。
+  點擊「建立」後，頁面會自動彈出「**已建立 OAuth 用戶端 (OAuth client created)**」對話方塊：
+  - 複製「**用戶端 ID (Client ID)**」。
+  - （若為電腦應用程式類型）複製「**用戶端密鑰 (Client Secret)**」（例如 `GOCSPX-xxxxxxxxxxxxxxxxxxxxxxxx`）。
 - **方式二（事後隨時查詢與複製）**：
   1. 前往「**API 和服務**」$\rightarrow$「**憑證 (Credentials)**」。
   2. 向下捲動至「**OAuth 2.0 用戶端 ID**」清單。
-  3. 找到剛剛建立的用戶端項目（例如 `elinkBook Android Client`）。
-  4. 點擊該列最右側的 **「複製用戶端 ID」圖示**（或直接點擊名稱進入詳情頁面，複製右上方的「用戶端 ID」）。
+  3. 找到剛剛建立的用戶端項目。
+  4. 點擊該列最右側的「複製用戶端 ID」圖示；若需查詢 Client Secret，可點擊名稱進入詳情頁面，複製右上方的「用戶端密鑰 (Client Secret)」。
 
 > [!NOTE]
-> Google Client ID 的標準格式為：
-> `xxxxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com`
-> （由「專案數字前綴 - 32 位元英數字元.apps.googleusercontent.com」組成）。
+> - Google Client ID 標準格式：`xxxxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com`
+> - Google Client Secret 標準格式：`GOCSPX-xxxxxxxxxxxxxxxxxxxxxxxx`
 
 ---
 
-### 步驟 2.5：將 Google Client ID 代入專案設定檔
+### 步驟 2.5：將 Google 憑證代入專案設定檔 (設定檔驅動)
 
-依據 Epic 29 Issue 7 新架構，**不需要修改任何 Dart 程式碼與 `AndroidManifest.xml`**。只需將複製的 Client ID 貼入 `app/config/cloud_oauth.json`：
+依據 Epic 29 Issue 7 與 Issue 8 架構，**完全不需要修改任何 Dart 程式碼與 `AndroidManifest.xml`**。是否為機密客戶端完全由 `GOOGLE_OAUTH_CLIENT_SECRET` 是否填入自動決定：
 
 1. 若專案尚未建立 `app/config/cloud_oauth.json`，請複製樣板檔：
    ```bash
    cp app/config/cloud_oauth.example.json app/config/cloud_oauth.json
    ```
-2. 開啟 `app/config/cloud_oauth.json`，將 `GOOGLE_OAUTH_CLIENT_ID` 替換為步驟 2.4 複製的完整 Client ID：
+2. 開啟 `app/config/cloud_oauth.json`，依據步驟 2.4 所選的用戶端類型填入設定：
+
+   **情境 A：使用電腦應用程式類型（開發測試推薦）**
+   將取得的 Client ID 與 Client Secret 同時填入：
    ```json
    {
      "GOOGLE_OAUTH_CLIENT_ID": "123456789012-abcdefghijklmnopqrstuvwxyz123456.apps.googleusercontent.com",
+     "GOOGLE_OAUTH_CLIENT_SECRET": "GOCSPX-yourClientSecretValueHere123456",
      "ONEDRIVE_OAUTH_CLIENT_ID": "YOUR_ONEDRIVE_OAUTH_CLIENT_ID"
    }
    ```
-3. 專案自動推導與注入機制：
-   - **Dart 端**：[`CloudOAuthConfig.googleRedirectScheme`](file:///U:/MyDeveloper/AI/elinkBook/app/lib/cloud_import/cloud_oauth_config.dart) 自動由 Client ID 推導出反向 Scheme：`com.googleusercontent.apps.123456789012-abcdefghijklmnopqrstuvwxyz123456`。
-   - **Android 端**：Gradle 建置腳本解析同一份 JSON 檔，將該 Scheme 注入 [`AndroidManifest.xml`](file:///U:/MyDeveloper/AI/elinkBook/app/android/app/src/main/AndroidManifest.xml) 的 `${googleOAuthScheme}` 佔位符。
+
+   **情境 B：使用 Android 應用程式類型（正式發布推薦）**
+   `GOOGLE_OAUTH_CLIENT_SECRET` 保持留空字串 `""`（或不設定）：
+   ```json
+   {
+     "GOOGLE_OAUTH_CLIENT_ID": "123456789012-abcdefghijklmnopqrstuvwxyz123456.apps.googleusercontent.com",
+     "GOOGLE_OAUTH_CLIENT_SECRET": "",
+     "ONEDRIVE_OAUTH_CLIENT_ID": "YOUR_ONEDRIVE_OAUTH_CLIENT_ID"
+   }
+   ```
+
+3. 專案自動推導與驅動機制：
+   - **客戶端類型判定**：[`CloudOAuthConfig.googleIsConfidentialClient`](file:///U:/MyDeveloper/AI/elinkBook/app/lib/cloud_import/cloud_oauth_config.dart) 依 `GOOGLE_OAUTH_CLIENT_SECRET` 是否非空字串自動判定。
+   - **Token 請求一致性**：[`GoogleDriveOAuthClient`](file:///U:/MyDeveloper/AI/elinkBook/app/lib/cloud_import/google_drive_oauth_client.dart) 於 `link()`（授權碼交換）與 `ensureValidAccessToken()`（Refresh Token 換發）兩處統一透過內部共用邏輯帶入 `client_secret`。
+   - **Redirect Scheme 自動推導**：Dart 與 Gradle 自動由 Client ID 推導出 `com.googleusercontent.apps.123456789012-abcdefghijklmnopqrstuvwxyz123456` 並注入 AndroidManifest。
 
 ---
 
@@ -309,7 +335,9 @@ flowchart TD
 | 錯誤現象 | 可能原因 | 解決方法 |
 | :--- | :--- | :--- |
 | **`403: access_denied` / `此應用程式未通過驗證` 且無法點擊繼續** | 測試帳號未加入 OAuth 同意畫面的測試使用者清單。 | 前往 Google Cloud Console $\rightarrow$ OAuth 同意畫面 $\rightarrow$「測試使用者」新增該 Google 帳號。 |
+| **Android 憑證登入時遭 Google 阻擋（應用程式擁有權驗證未通過）** | Android 類型憑證需要 Google Play Console 發布商憑證連結驗證，且無法透過測試白名單繞過。 | 開發除錯期間請改用**電腦應用程式（Desktop）**類型憑證，並在 `cloud_oauth.json` 填入對應的 `GOOGLE_OAUTH_CLIENT_SECRET`。 |
 | **`400: redirect_uri_mismatch`** | 執行時未帶入設定檔或 `cloud_oauth.json` 內的 Client ID 有誤。 | 確認執行時有加上 `--dart-define-from-file=config/cloud_oauth.json`，且 JSON 內的 Client ID 與 Google Cloud Console 一致。 |
+| **`401: unauthorized_client` / `invalid_client`（授權碼交換或 Token 自動換發失敗）** | 使用電腦應用程式類型憑證，但 `GOOGLE_OAUTH_CLIENT_SECRET` 留空或密鑰值不正確。 | 前往 Google Cloud Console 憑證頁面複製正確的用戶端密鑰，並貼入 `cloud_oauth.json` 的 `GOOGLE_OAUTH_CLIENT_SECRET`。 |
 | **登入成功但瀏覽器卡住未跳回 App** | Gradle 建置時未抓到真實的 `cloud_oauth.json`。 | 確認 `app/config/cloud_oauth.json` 存在於正確路徑（`app/config/`），並重新執行 `flutter clean` 後再重新建置。 |
 | **Token 很快過期且無法自動續期** | 發起授權時未取得 Refresh Token。 | 確認 `GoogleDriveOAuthClient` 請求中帶有 `access_type=offline` 與 `prompt=consent`。 |
 
