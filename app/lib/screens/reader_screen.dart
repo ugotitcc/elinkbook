@@ -14,7 +14,6 @@ import '../reader/book_reader_prefs.dart';
 import '../reader/custom_font.dart';
 import '../reader/custom_fonts_repository.dart';
 import '../reader/epub_decoration.dart';
-import '../reader/epub_page_estimator.dart';
 import '../reader/epub_position_info.dart';
 import '../reader/epub_selection_info.dart';
 import '../reader/foliate_reader_view.dart';
@@ -283,11 +282,6 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   // Issue 2）。寫入本機資料庫時讀取此欄位的最新值，比照 _pdfPageInfo
   // 對 PDF 的既有作法。
   EpubPositionInfo? _epubPositionInfo;
-  // EPUB 全書字元數快取，由 LoadedPrefs.totalCharacterCount 載入（若有）
-  // 或 EpubReaderView.onCharacterCountReady 回報更新（Epic 5 Issue 3）。
-  // null 代表尚未計算完成，此時 EPUB 頁尾不顯示（比照 PDF 頁尾等待
-  // _pdfPageInfo 非 null 的既有模式）。
-  int? _totalCharacterCount;
   // 目錄樹狀結構快取（Epic 5 Issue 4），由 onLayoutResolved 觸發一次性
   // 背景抓取（見 _handleLayoutResolved）。樹狀結構不隨版面設定變動，開書
   // 期間只抓取一次，不需要每次版面參數變動都重新請求。
@@ -323,11 +317,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   PdfSelectionInfo? _currentPdfSelection;
   String? _pendingPdfHighlightIdForSelection;
   // 供 TocBottomSheet 訂閱、在已開啟的目錄畫面即時反映全書字元數背景計算
-  // 完成事件（spec.md「目錄模組」載入中狀態決策）——與 _totalCharacterCount
-  // 這個驅動頁尾 rebuild 的既有欄位（Issue 3）刻意分開維護，避免耦合兩條
-  // 目的不同的更新路徑（頁尾靠 setState 觸發整個 ReaderScreen rebuild；
-  // 目錄靠 ValueNotifier 只更新已開啟的 Bottom Sheet 子樹，不驚動
-  // ReaderScreen 本身）。
+  // 完成事件（spec.md「目錄模組」載入中狀態決策）。
   final _totalCharacterCountNotifier = ValueNotifier<int?>(null);
   // 開書時讀到的既有位置記錄（若有），只在 initState 賦值一次，之後
   // 不變——僅用於 _buildNativeView() 建構 EpubReaderView/PdfReaderView
@@ -410,8 +400,6 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         _prefs = loaded.bookPrefs;
         _loaded = loaded;
         _initialPosition = loaded.readingPosition;
-        _totalCharacterCount = loaded.totalCharacterCount;
-        _totalCharacterCountNotifier.value = loaded.totalCharacterCount;
         _resolved = widget.prefsManager.resolve(
           loaded,
           autoDetectedWritingMode: _autoDetectedWritingMode,
@@ -514,7 +502,6 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     _openBookTimeoutTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     _volumeKeyChannel.setMethodCallHandler(null);
-    _totalCharacterCountNotifier.dispose();
     _pdfSearchStateNotifier.dispose();
     // 離開閱讀畫面時觸發一次位置寫入（spec.md「本機閱讀位置記憶」寫入
     // 時機之一）。不 await——dispose() 是同步方法，且這是離開畫面前的
@@ -1841,18 +1828,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         // extendBodyBehindAppBar：搭配 _buildBody() 內的 Padding+SafeArea(top:
         // false) 改造（審查修正），讓 body 版面約束不受 AppBar 顯示/隱藏
         // 影響，AppBar 只是視覺疊加、不觸發 body 底下 PlatformView 的
-        // resize。【最終審查修正】這只解決了 AppBar 這一半的問題——頁尾
-        // （ReaderFooter／_buildEpubFooter，見 _buildBody() 內同樣受
-        // _chromeVisible 控制的 in-flow Column 子項）顯示/隱藏仍會改變
-        // body 實際配置高度，PlatformView 仍會 resize。PDF 目前僅是微幅
-        // 重繪、可接受；但這代表本機制尚未完全解決 resize 問題，Issue 6
-        // （EPUB 流式、Readium WebView）若要沿用同一套 _chromeVisible／
-        // _buildBody() 基礎設施，必須先把頁尾也改為浮動疊加層（而非
-        // in-flow），否則頁尾切換仍會觸發 WebView 整本重新分頁。
-        // 【Issue 7 更新】流式 EPUB（FoliateReaderView）的頁尾已改為
-        // _buildBody() 內的浮動疊加層（見下方新增區塊），上述 resize 問題對
-        // 這條路徑已解決；僅 EpubReaderView＋_buildEpubFooter()（legacy
-        // reflowable 內容）路徑仍受此限制。
+        // 流式 EPUB（FoliateReaderView）的頁尾已改為浮動疊加層，resize
+        // 問題對此路徑已解決。
         extendBodyBehindAppBar: true,
         // epic-18-reader-device-qa Issue 7：流式 EPUB（_dispatchedIsFixedLayout
         // == false）一律不建構 AppBar，改用 _buildBody() 內對稱於 FXL 的
@@ -2422,66 +2399,20 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       // 改用不受 AppBar 影響、只反映裝置實際安全區域（狀態列/瀏海）的
       // MediaQuery.viewPadding.top，SafeArea 本身關閉頂端判斷（top:
       // false），讓 AppBar 顯示/隱藏不再改變 body 高度。頁尾（下方
-      // ReaderFooter／_buildEpubFooter）仍是 in-flow 子項，其顯示/隱藏
-      // 仍會改變 body 實際高度——這是另一個尚未解決的 resize 來源，見上方
-      // Scaffold 建構處的完整說明。
+      // 流式 EPUB 頁尾已改為浮動疊加層，不再影響 body 高度。
       padding: EdgeInsets.only(top: MediaQuery.of(context).viewPadding.top),
       child: SafeArea(
         top: false,
         child: Column(
           children: [
             Expanded(child: body),
-            if (isFoliateFormat(format) &&
-                !_isFixedLayout &&
-                _totalCharacterCount != null &&
-                _resolved != null &&
-                _resolved!.showFooter &&
-                _chromeVisible)
-              _buildEpubFooter(_resolved!, _totalCharacterCount!),
           ],
         ),
       ),
     );
   }
 
-  /// EPUB 估算頁碼頁尾（Epic 5 Issue 3）：依目前生效版面參數＋全書字元數
-  /// 快取換算總頁數，再依 _epubPositionInfo 的全書進度比例換算目前頁碼；
-  /// 任一版面參數變動時，本方法在下一次 build() 會以新的 [resolved] 重新
-  /// 計算，不需要額外的快取/失效邏輯（見 spec.md「估計頁數重算時機」）。
-  Widget _buildEpubFooter(ResolvedPreferences resolved, int totalCharacterCount) {
-    final screenSize = MediaQuery.of(context).size;
-    final charsPerScreen = EpubPageEstimator.estimateCharsPerScreen(
-      screenWidth: screenSize.width,
-      screenHeight: screenSize.height,
-      fontSize: resolved.fontSize,
-      lineHeight: resolved.lineHeight,
-      paragraphSpacing: resolved.paragraphSpacing,
-      letterSpacing: resolved.letterSpacing,
-      marginTop: resolved.marginTop,
-      marginBottom: resolved.marginBottom,
-      marginLeft: resolved.marginLeft,
-      marginRight: resolved.marginRight,
-    );
-    final totalPages = EpubPageEstimator.estimateTotalPages(
-      totalCharacterCount: totalCharacterCount,
-      charsPerScreen: charsPerScreen,
-    );
-    final currentPage = EpubPageEstimator.estimateCurrentPage(
-      progression: _epubPositionInfo?.progression,
-      totalPages: totalPages,
-    );
-    return ReaderFooter(
-      currentPage: currentPage,
-      totalPages: totalPages,
-      onPageChanged: (targetPage) {
-        final progression = EpubPageEstimator.estimateProgression(
-          targetPage: targetPage,
-          totalPages: totalPages,
-        );
-        FoliateReaderView.jumpToProgression(_foliateEpubReaderViewKey, progression);
-      },
-    );
-  }
+
 
   /// 流式 EPUB 頁眉（epic-18-reader-device-qa Issue 7）：純顯示章節名稱、
   /// 不可點擊（點擊開 TOC 這個功能已交給獨立的 reader_foliate_toc_button，
@@ -2583,14 +2514,10 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// Issue 6）：直接使用原生端 relocate 事件回報的 pageIndex／totalPages
   /// （foliate-js SectionProgress.getProgress() 的 location.current／
   /// location.total，近似頁碼概念，非精確渲染頁數，見 spec.md「頁碼
-  /// 估算」）——與 _buildEpubFooter（Readium 遺留路徑，依全書字元數估算
-  /// 頁數，post-epic-17 對流式書籍已是死路徑，見 plans/plan-issue-5.md
-  /// 對 onZoneTapped 的相同結論）刻意不同，不重用其估算邏輯；本 widget
-  /// 完全不呼叫任何字數統計（不送出 totalCharacterCount）。pageIndex 為
-  /// 0-indexed（比照原生端既有慣例），ReaderFooter 要求 1-indexed，此處
-  /// +1 換算。onPageChanged 透過既有 jumpToProgression（Issue 5）換算
-  /// 目標頁對應的全書進度比例，與 _buildEpubFooter 的 onPageChanged 作法
-  /// 相同（近似值，非精確反解頁碼）。
+  /// 估算」）。pageIndex 為 0-indexed（比照原生端既有慣例），ReaderFooter
+  /// 要求 1-indexed，此處 +1 換算。onPageChanged 透過既有
+  /// jumpToProgression（Issue 5）換算目標頁對應的全書進度比例（近似值，
+  /// 非精確反解頁碼）。
   Widget _buildFoliateEpubFooter(EpubPositionInfo info) {
     final totalPages = info.totalPages ?? 0;
     if (totalPages <= 0) return const SizedBox.shrink();
