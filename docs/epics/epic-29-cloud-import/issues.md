@@ -159,7 +159,9 @@
 
 ## Issue 6：行動數據下載警示
 
-**Status:** `ready-for-agent`
+**Status:** ✅ 已完成（PR #171，分支 `feat/epic-29-issue-6-mobile-data-warning`，2 個 commit，2026-08-20）
+
+**完成摘要：** 在 Issue 3/4/5 已建好的雲端瀏覽/下載流程中加入行動數據流量警示，沿用 `epic-30-calibre-remote-library` Issue 4 已建置、`main.dart`／`library_screen.dart` 現行貫穿到位的 `Future<bool> Function()? isMobileDataConnection` callback（底層 `connectivity_plus`，未新增任何依賴），只需把這個既有 callback 再往下貫穿到 `CloudBrowserScreen`。多選批次的判斷方式（整批一次 vs. 逐檔）由實作計劃定案採**整批判斷一次**：`CloudBrowserScreen._startDownload()` 在開啟 `CloudDownloadQueueDialog` 之前，用勾選檔案清單中 `CloudFileEntry.sizeBytes`（`listFolder()` 當下即已知道，不需真的下載）判斷是否有任一檔案超過 20MB 門檻，若有且目前為行動數據連線，跳出單一次確認對話框（新增 `_confirmMobileDataDownload()`，key `cloud_mobile_data_dialog`），確認才繼續、取消則整批都不下載；未超過門檻或非行動數據時不跳出，直接照常依序下載。刻意選擇整批判斷（而非在 `CloudDownloadQueueDialog` 執行中途逐檔暫停詢問），理由是 `CloudDownloadQueueDialog` 是已在 `initState()` 直接跑 `_runQueue()` 的 `StatefulWidget`，逐檔判斷需要對其做暫停/恢復的狀態機改造，會外溢到 Issue 5 剛審查合併、已驗證穩定的 `cloud_download_queue_dialog.dart`——本次實作該檔案完全未改動一行。`CloudBrowserScreen` 新增 `isMobileDataConnection` 欄位並在 `_openSubfolder()` 遞迴下鑽時一併轉發；`library_screen.dart` 的 `_openGoogleDriveBrowser()`／`_openOneDriveBrowser()` 貫穿注入。同時主動修正 `_openGroupFilteredView()`（分類篩選畫面的自我遞迴導航點）長期未轉發 `isMobileDataConnection` 的既有缺口——這個自我遞迴導航點漏轉發新依賴的錯誤模式此前已出現兩次（`review-issue-3.md` Important #1：`googleDriveStorageClient`；`review-issue-5.md` Important #1：`computeFingerprint`），本次實作階段主動一併補上並補齊回歸測試斷言，第三次未再演變成審查缺陷。程式碼審查（`reviews/review-issue-6.md`）**APPROVED**，0 Critical／0 Important，僅 2 項不影響通過的 Minor（`sizeBytes == null` 的項目不會觸發警示，屬計劃內既定設計；測試檔案沿用既有 `FakePathProviderPlatform` setUp/tearDown 基礎設施）；審查者的關鍵結論（含 `_openGroupFilteredView()` 轉發是否確實落實、`cloud_download_queue_dialog.dart` 是否確實未被觸碰）已由獨立複核直接讀取 worktree 原始碼與 diff 核實無誤。全專案 `flutter analyze` 乾淨、`flutter test` 1633 項全數通過（1628 + 5 新增），零回歸。
 
 **依賴：** Issue 3（下載流程）。
 
