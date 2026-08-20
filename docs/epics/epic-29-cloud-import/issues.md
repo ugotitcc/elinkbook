@@ -213,3 +213,35 @@
 **驗收標準：** 全部 OAuth 設定改為單一 `app/config/cloud_oauth.json` 維護點；未提供該檔案時，既有 `flutter analyze`／`flutter test`／`flutter build apk --debug` 皆能以樣板 placeholder 值 100% 正常執行（零回歸）；提供真實設定檔時，`flutter build apk --debug --dart-define-from-file=config/cloud_oauth.json` 建置出的 APK 內 `AndroidManifest.xml` 之 scheme 與 Dart 端 `CloudOAuthConfig` 推導值一致。
 
 **Blocked by：** Issue 1、Issue 2。
+
+---
+
+## Issue 8：Google Drive OAuth 用戶端類型（Android／電腦應用程式）改為設定檔驅動（技術債，2026-08-20 追加）
+
+**Status:** `ready-for-agent`
+
+**依賴：** Issue 1（`GoogleDriveOAuthClient`）、Issue 7（`CloudOAuthConfig`）。
+
+**背景：** `/diagnose` 針對使用者真機實測 Google Drive 登入時卡在「已封鎖存取權」且不出現帳號選擇畫面進行排查。核實出兩層原因：(1) 原本 `prompt: 'consent'` 不會強制出現帳號選擇畫面，系統瀏覽器已登入的帳號若剛好不是白名單帳號，會直接對該帳號判斷未通過驗證並封鎖，使用者完全沒有機會換選正確帳號；(2) 更根本的原因是 **Android 類型的 OAuth 用戶端**在 Google Cloud Console 有一道獨立於「OAuth 同意畫面測試使用者白名單」之外的**應用程式擁有權驗證**（需連結 Google Play Console／驗證 SHA-1 簽署憑證），不管同意畫面是「測試中」還是「已發布」都必須完成、且需要時間，無法用白名單繞過。使用者已手動改用「電腦應用程式（Desktop）」類型的用戶端測試成功（不受這道擁有權驗證限制），並直接把這個修復手動提交上 `main`（commit `eaf8ba1`，未經過計劃/審查流程）。
+
+**現況核實**（`/diagnose` 核對 `eaf8ba1` 實際 diff，非憑空假設）：
+- `prompt: 'select_account'`、`scope` 整併為單一字串——皆與用戶端類型無關，兩種類型都適用，不需要再改。
+- `googleRedirectScheme`／`googleRedirectUri`（反向網域名稱自訂 scheme）——完全未變動，Desktop 類型能登入成功，代表這組 redirect URI 已被手動登記在 Desktop 用戶端的「已授權的重新導向 URI」清單內；Android 類型則是靠套件名稱＋SHA-1 自動辨識同一個格式。兩種類型都能吃這組 URI，不需要因為切換類型而改動。
+- **唯一真正跟用戶端類型綁死的地方**：`google_drive_oauth_client.dart` 的 `link()` 在 token 交換時，現在無條件帶入 `'client_secret': CloudOAuthConfig.googleClientSecret`——Android/iOS 類型的 OAuth 用戶端是「公開客戶端」，Google 不核發、也不接受 client secret；Desktop 類型是「機密客戶端」，token 交換必須帶 client secret。若切回 Android 用戶端 ID，這行會帶入一個 Android 用戶端根本沒有的 client secret，可能被 Google 判定為無效請求。
+- **額外發現（`/diagnose` 過程中順帶抓到的既有落差，非使用者原本詢問的範圍，但同一個根因、應一併修復）**：`ensureValidAccessToken()` 的 refresh_token 換發呼叫**完全沒有帶 `client_secret`**——即使是現在的 Desktop 機密客戶端，依 RFC 6749，機密客戶端在 refresh_token grant 也必須帶 client secret 驗證身分。這代表就算 Desktop 類型登入當下能成功，一旦 access token 過期需要靜默換發，很可能會失敗（被 Google 判定為 `invalid_client`），退化成強制使用者重新登入，而非預期的無感續期。這是與使用者提問同一個「client_secret 何時該帶」根因下的另一個實際缺陷，非推測。
+
+**What to build：**
+- `app/lib/cloud_import/cloud_oauth_config.dart`：`googleClientSecret` 的 `defaultValue` 從目前的樣板字串改為空字串 `''`（語意上「留空」才是這個欄位在 Android 類型下的合法狀態，不像 `googleClientId`/`oneDriveClientId` 恆為必填，用樣板字串促使開發者注意到未設定；空字串搭配下面新增的 `isNotEmpty` 判斷更直接、不依賴字串比對樣板文字，避免樣板文字未來被改動時判斷邏輯跟著默默失效）；新增 `static bool get googleIsConfidentialClient => googleClientSecret.isNotEmpty;` 說明兩種用戶端類型與 client secret 的對應關係。
+- `app/lib/cloud_import/google_drive_oauth_client.dart`：`GoogleDriveOAuthClient` 建構子新增可選具名參數 `String clientSecret = CloudOAuthConfig.googleClientSecret`（編譯期常數預設值，`main.dart` 完全不需要改動，既有依賴既有的「不顯式傳入、用預設值」慣例）；新增私有共用方法 `_tokenRequestBody(Map<String, String> params)`，只有 `clientSecret` 非空時才把 `client_secret` 併入回傳的 body map；`link()`（authorization_code 換發）與 `ensureValidAccessToken()`（refresh_token 換發）**兩處**皆改用這個共用方法組 token 請求 body，取代目前兩處各自寫一份、且已經彼此不一致的邏輯——這個共用化本身就是防止「兩個 token 端點呼叫點對 client_secret 的處理方式又不小心分岔」這個已經真實發生過一次的錯誤模式再度發生的機制。
+- `app/config/cloud_oauth.example.json`：新增 `"GOOGLE_OAUTH_CLIENT_SECRET": ""` 鍵，並在同一段落的說明文件（`CLAUDE.md`「常用指令」或本檔案的 What to build 描述層級即可，不強制新增獨立文件）註明「Android 用戶端類型留空即可；電腦應用程式類型才需要填入 Google Cloud Console 提供的 client secret」。
+
+**單元測試要求：**
+- `cloud_oauth_config_test.dart`：`googleClientSecret` 預設空字串；`googleIsConfidentialClient` 在預設（空字串）情境下為 `false`。
+- `google_drive_oauth_client_test.dart`：新增／擴充涵蓋 `ensureValidAccessToken()` 換發 token 時的兩種情境（這是唯一已有可用 `MockClient` 測試 seam 的 token 交換呼叫點；`link()` 因需要 `FlutterWebAuth2.authenticate()`，比照 Issue 1 既定決策不做自動化測試，但 `link()` 與 `ensureValidAccessToken()` 共用同一個 `_tokenRequestBody()` 私有方法，覆蓋其中一個呼叫點等同驗證共用邏輯本身）：
+  - 建構子不傳 `clientSecret`（沿用預設空字串，等同 Android 類型）時，request body **不含** `client_secret` 鍵。
+  - 建構子明確傳入非空 `clientSecret` 值（等同 Desktop 類型）時，request body **含** `client_secret` 鍵且值正確。
+- 既有 4 則 `google_drive_oauth_client_test.dart` 測試與其他 7 處建構 `GoogleDriveOAuthClient(...)` 未傳 `clientSecret` 的呼叫點（`google_drive_storage_client_test.dart`／`cloud_account_settings_screen_test.dart`／`settings_screen_test.dart`）**不需要修改**即可繼續通過（零回歸，預設值沿用 `CloudOAuthConfig.googleClientSecret` 編譯期常數，測試環境下恆為空字串，不影響既有斷言）。
+
+**驗收標準：** 未來要在 Android／電腦應用程式兩種 Google OAuth 用戶端類型間切換，只需要編輯 `app/config/cloud_oauth.json`（換 `GOOGLE_OAUTH_CLIENT_ID`、視情況填入或留空 `GOOGLE_OAUTH_CLIENT_SECRET`），不需要修改任何 `.dart` 程式碼；`flutter analyze` 乾淨、`flutter test` 全數通過、零回歸；`ensureValidAccessToken()` 的靜默續期在機密客戶端情境下正確帶入 `client_secret`。
+
+**Blocked by：** Issue 1、Issue 7。
