@@ -123,7 +123,6 @@ void main() {
         groupName: '自訂分類',
         epubLocator: '{"href":"/c1.xhtml"}',
         pdfPageIndex: null,
-        totalCharacterCount: 12345,
         isFixedLayout: false,
         contentFingerprint: 'fp-123',
         positionUpdatedAt: 2000,
@@ -143,7 +142,6 @@ void main() {
       final book = books.single;
       expect(book.groupName, '新分類');
       expect(book.epubLocator, '{"href":"/c1.xhtml"}');
-      expect(book.totalCharacterCount, 12345);
       expect(book.isFixedLayout, false);
       expect(book.contentFingerprint, 'fp-123');
       expect(book.positionUpdatedAt, 2000);

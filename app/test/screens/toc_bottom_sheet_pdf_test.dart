@@ -1,33 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/reader/book_format.dart';
-import 'package:elinkbook/reader/dual_page_direction.dart';
-import 'package:elinkbook/reader/dual_page_mode.dart';
-import 'package:elinkbook/reader/pdf_crop_mode.dart';
-import 'package:elinkbook/reader/pdf_fit_mode.dart';
-import 'package:elinkbook/reader/nav_zone_mode.dart';
-import 'package:elinkbook/reader/page_turn_mode.dart';
 import 'package:elinkbook/reader/pdf_toc_item.dart';
-import 'package:elinkbook/reader/resolved_preferences.dart';
-import 'package:elinkbook/reader/screen_orientation_setting.dart';
 import 'package:elinkbook/screens/toc_bottom_sheet.dart';
-
-const _testResolved = ResolvedPreferences(
-  pageTurnMode: PageTurnMode.paginated,
-  screenOrientation: ScreenOrientationSetting.auto,
-  pdfFitMode: PdfFitMode.pageFit,
-  pdfContrast: 0,
-  pdfBrightness: 0,
-  pdfBoldStrength: 0,
-  pdfCropMode: PdfCropMode.none,
-  dualPageMode: DualPageMode.auto,
-  dualPageCoverAlone: true,
-  dualPageDirection: DualPageDirection.rtl,
-  showHeader: true,
-  showFooter: true,
-  navZoneActions: rightFlipZoneTemplate,
-  showNavZoneDebugOverlay: false,
-);
 
 void main() {
   final ch1 = const PdfTocItem(title: 'Part One', pageIndex: 0, stableId: 'p0');
@@ -42,7 +17,7 @@ void main() {
   final noDest =
       const PdfTocItem(title: '無目的地章節', pageIndex: null, stableId: 'pNull');
 
-  testWidgets('PDF 節點頁碼顯示為 pageIndex+1（1-indexed），不使用 EpubPageEstimator',
+  testWidgets('PDF 節點頁碼顯示為 pageIndex+1（1-indexed）',
       (tester) async {
     await tester.pumpWidget(MaterialApp(
       home: Scaffold(
@@ -50,8 +25,6 @@ void main() {
           entries: [ch1WithChild],
           initiallyExpandedEntries: {ch1WithChild},
           currentEntry: null,
-          totalCharacterCountListenable: ValueNotifier<int?>(null),
-          resolved: _testResolved,
           onEntrySelected: (_) {},
         ),
       ),
@@ -74,8 +47,6 @@ void main() {
           entries: [noDest],
           initiallyExpandedEntries: const {},
           currentEntry: null,
-          totalCharacterCountListenable: ValueNotifier<int?>(null),
-          resolved: _testResolved,
           onEntrySelected: (_) {},
         ),
       ),
@@ -96,8 +67,6 @@ void main() {
           entries: [ch1],
           initiallyExpandedEntries: const {},
           currentEntry: null,
-          totalCharacterCountListenable: ValueNotifier<int?>(null),
-          resolved: _testResolved,
           onEntrySelected: (entry) => selected = entry as PdfTocItem,
         ),
       ),
@@ -116,8 +85,6 @@ void main() {
           entries: const [],
           initiallyExpandedEntries: const {},
           currentEntry: null,
-          totalCharacterCountListenable: ValueNotifier<int?>(null),
-          resolved: _testResolved,
           onEntrySelected: (_) {},
         ),
       ),
@@ -135,8 +102,6 @@ void main() {
           entries: [ch1],
           initiallyExpandedEntries: const {},
           currentEntry: null,
-          totalCharacterCountListenable: ValueNotifier<int?>(null),
-          resolved: _testResolved,
           onEntrySelected: (_) {},
         ),
       ),
@@ -170,8 +135,6 @@ void main() {
           entries: const [],
           initiallyExpandedEntries: const {},
           currentEntry: null,
-          totalCharacterCountListenable: ValueNotifier<int?>(null),
-          resolved: _testResolved,
           onEntrySelected: (_) {},
           searchTabContent: const Text('SEARCH_PANEL_PLACEHOLDER'),
         ),
@@ -192,8 +155,6 @@ void main() {
           entries: const [],
           initiallyExpandedEntries: const {},
           currentEntry: null,
-          totalCharacterCountListenable: ValueNotifier<int?>(null),
-          resolved: _testResolved,
           onEntrySelected: (_) {},
         ),
       ),
@@ -214,8 +175,6 @@ void main() {
           entries: const [],
           initiallyExpandedEntries: const {},
           currentEntry: null,
-          totalCharacterCountListenable: ValueNotifier<int?>(null),
-          resolved: _testResolved,
           onEntrySelected: (_) {},
           thumbnailTabContent: const Text('THUMBNAIL_GRID_PLACEHOLDER'),
         ),
@@ -236,8 +195,6 @@ void main() {
           entries: const [],
           initiallyExpandedEntries: const {},
           currentEntry: null,
-          totalCharacterCountListenable: ValueNotifier<int?>(null),
-          resolved: _testResolved,
           onEntrySelected: (_) {},
         ),
       ),

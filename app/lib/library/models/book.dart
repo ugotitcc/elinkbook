@@ -33,11 +33,6 @@ class Book {
   /// PDF 頁索引（0-indexed），`null` 代表尚無記錄。與 [epubLocator] 互斥。
   final int? pdfPageIndex;
 
-  /// 全書字元數快取（epic-5-toc-pagination Issue 3，spec.md「分頁估算
-  /// 模組」決策 #16），僅 EPUB 有值。`null` 代表尚未計算過，開書時原生端
-  /// 據此觸發一次背景計算；非 `null` 則直接讀取快取，不重新走訪全書。
-  final int? totalCharacterCount;
-
   /// 本書是否為固定版面（FXL）EPUB，`null` 代表尚未判斷過（涵蓋 Phase 1
   /// 上線前已匯入的既有書籍）或本書非 EPUB 格式（PDF/TXT 恆為 `null`，
   /// 語意上不適用，見 epic-17-epub-render-migration/spec.md「資料模型」）。
@@ -117,7 +112,6 @@ class Book {
     this.progress = 0,
     this.epubLocator,
     this.pdfPageIndex,
-    this.totalCharacterCount,
     this.isFixedLayout,
     this.contentFingerprint,
     this.positionUpdatedAt,
@@ -144,7 +138,6 @@ class Book {
       'progress': progress,
       'epubLocator': epubLocator,
       'pdfPageIndex': pdfPageIndex,
-      'totalCharacterCount': totalCharacterCount,
       // 欄位名刻意用 snake_case（spec.md「資料模型」決策），與本表其餘
       // 欄位的 camelCase 命名不一致，不是疏漏。
       'is_fixed_layout':
@@ -175,7 +168,6 @@ class Book {
       progress: (map['progress'] as num).toDouble(),
       epubLocator: map['epubLocator'] as String?,
       pdfPageIndex: map['pdfPageIndex'] as int?,
-      totalCharacterCount: map['totalCharacterCount'] as int?,
       isFixedLayout: map['is_fixed_layout'] == null
           ? null
           : (map['is_fixed_layout'] as int) == 1,
@@ -223,7 +215,6 @@ class Book {
       progress: progress,
       epubLocator: epubLocator,
       pdfPageIndex: pdfPageIndex,
-      totalCharacterCount: totalCharacterCount,
       contentFingerprint: contentFingerprint,
       positionUpdatedAt: positionUpdatedAt,
       positionSyncedServerUpdatedAt: positionSyncedServerUpdatedAt,
@@ -254,7 +245,6 @@ class Book {
           progress == other.progress &&
           epubLocator == other.epubLocator &&
           pdfPageIndex == other.pdfPageIndex &&
-          totalCharacterCount == other.totalCharacterCount &&
           isFixedLayout == other.isFixedLayout &&
           contentFingerprint == other.contentFingerprint &&
           positionUpdatedAt == other.positionUpdatedAt &&
@@ -280,7 +270,6 @@ class Book {
         progress,
         epubLocator,
         pdfPageIndex,
-        totalCharacterCount,
         isFixedLayout,
         contentFingerprint,
         positionUpdatedAt,

@@ -11,7 +11,6 @@ import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/library/sqlite_library_repository.dart';
 import 'package:elinkbook/reader/book_reader_prefs_repository.dart';
 import 'package:elinkbook/reader/bookmarks_repository.dart';
-import 'package:elinkbook/reader/epub_character_count_repository.dart';
 import 'package:elinkbook/reader/highlight.dart';
 import 'package:elinkbook/reader/highlight_style.dart';
 import 'package:elinkbook/reader/highlights_repository.dart';
@@ -96,7 +95,6 @@ void main() {
     final prefsManager = ReaderPrefsManagerImpl(
       BookReaderPrefsRepository(libraryRepository.database),
       ReadingPositionRepository(libraryRepository.database),
-      EpubCharacterCountRepository(libraryRepository.database),
     );
     final bookmarksRepository = BookmarksRepository(libraryRepository.database);
     final highlightsRepository = HighlightsRepository(libraryRepository.database);

@@ -732,8 +732,8 @@ void main() {
     expect(row['font_size'], 18.0); // 既有 EPUB 資料不受影響
   });
 
-  test('全新安裝的 books 表包含 totalCharacterCount 欄位（version 6 起 onCreate 已含括）',
-      () async {
+  test('全新安裝的 books 表包含 totalCharacterCount 欄位（version 6 起 onCreate 已含括，'
+      '欄位保留但不再經 Book 模型讀寫，見 epic-26 Issue 5）', () async {
     await repository.insertBook(_book('b_char_count').copyWith());
     await repository.database.update(
       'books',
@@ -742,8 +742,14 @@ void main() {
       whereArgs: ['b_char_count'],
     );
 
-    final books = await repository.listBooks();
-    expect(books.single.totalCharacterCount, 55000);
+    final row = (await repository.database.query(
+      'books',
+      columns: ['totalCharacterCount'],
+      where: 'id = ?',
+      whereArgs: ['b_char_count'],
+    ))
+        .single;
+    expect(row['totalCharacterCount'], 55000);
   });
 
   test('既有 version 5 裝置升級到 version 6，totalCharacterCount 欄位正確補上、既有資料不受影響',
@@ -808,7 +814,14 @@ void main() {
     final books = await upgraded.listBooks();
     expect(books.single.title, 'Version 5 既有書籍'); // 既有資料不受影響
     expect(books.single.progress, 0.3);
-    expect(books.single.totalCharacterCount, isNull); // 新欄位存在且預設 NULL
+    final rowBeforeWrite = (await upgraded.database.query(
+      'books',
+      columns: ['totalCharacterCount'],
+      where: 'id = ?',
+      whereArgs: ['b1'],
+    ))
+        .single;
+    expect(rowBeforeWrite['totalCharacterCount'], isNull); // 新欄位存在且預設 NULL
 
     // 證明欄位真的可寫入（不只是巧合為 null），確認 ALTER TABLE 確實生效。
     await upgraded.database.update(
@@ -817,8 +830,14 @@ void main() {
       where: 'id = ?',
       whereArgs: ['b1'],
     );
-    final updated = await upgraded.listBooks();
-    expect(updated.single.totalCharacterCount, 88888);
+    final rowAfterWrite = (await upgraded.database.query(
+      'books',
+      columns: ['totalCharacterCount'],
+      where: 'id = ?',
+      whereArgs: ['b1'],
+    ))
+        .single;
+    expect(rowAfterWrite['totalCharacterCount'], 88888);
   });
 
   test('既有 version 1 裝置跳級升級到 version 6，全部遷移依序執行、既有資料不受影響',
@@ -881,7 +900,14 @@ void main() {
     expect(books.single.title, '最早期書籍');
     expect(books.single.epubLocator, isNull);
     expect(books.single.pdfPageIndex, isNull);
-    expect(books.single.totalCharacterCount, isNull);
+    final rowBeforeWrite = (await upgraded.database.query(
+      'books',
+      columns: ['totalCharacterCount'],
+      where: 'id = ?',
+      whereArgs: ['b1'],
+    ))
+        .single;
+    expect(rowBeforeWrite['totalCharacterCount'], isNull);
 
     await upgraded.database.update(
       'books',
@@ -889,8 +915,14 @@ void main() {
       where: 'id = ?',
       whereArgs: ['b1'],
     );
-    final updated = await upgraded.listBooks();
-    expect(updated.single.totalCharacterCount, 12345);
+    final rowAfterWrite = (await upgraded.database.query(
+      'books',
+      columns: ['totalCharacterCount'],
+      where: 'id = ?',
+      whereArgs: ['b1'],
+    ))
+        .single;
+    expect(rowAfterWrite['totalCharacterCount'], 12345);
   });
 
   test('既有 version 6 裝置升級到 version 7，book_reader_prefs 新增頁首/頁尾欄位且既有資料不受影響',

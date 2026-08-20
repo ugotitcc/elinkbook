@@ -1,11 +1,8 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../reader/book_format.dart';
 import '../reader/book_toc_item.dart';
-import '../reader/epub_page_estimator.dart';
 import '../reader/pdf_toc_item.dart';
-import '../reader/resolved_preferences.dart';
 import '../reader/toc_entry.dart';
 
 /// 目錄樹狀清單 Bottom Sheet（epic-24-pdf-engine-rebuild Issue 5，
@@ -29,8 +26,9 @@ import '../reader/toc_entry.dart';
 /// `itemBuilder` 回傳的 widget。
 ///
 /// 泛化為消費 [BookTocItem]（epic-24 Issue 5）：EPUB 與 PDF 的目錄項目
-/// 透過同一個介面傳入，`_buildEntryRow` 內部以 `is TocEntry`／
-/// `is PdfTocItem` 分流頁碼顯示邏輯。
+/// 透過同一個介面傳入，`_buildEntryRow` 內部以 `is PdfTocItem` 判斷是否
+/// 顯示頁碼標籤——EPUB／TXT／MD（[TocEntry]）不顯示頁碼標籤
+/// （epic-26-architecture-hardening Issue 5，見 plan-issue-5.md）。
 class TocBottomSheet extends StatefulWidget {
   final BookFormat? format;
   final List<BookTocItem> entries;
@@ -42,16 +40,6 @@ class TocBottomSheet extends StatefulWidget {
 
   /// 目前所在章節（用於高亮），`null` 代表尚無法判斷。
   final BookTocItem? currentEntry;
-
-  /// 全書字元數快取，`null` 時所有 EPUB 項目的頁碼顯示佔位符（`…`）；
-  /// PDF 項目不使用此欄位（頁碼在解析大綱當下就已知，見
-  /// `PdfReaderView._loadTableOfContents`），PDF 呼叫端可傳入任何值
-  /// （建議 `ValueNotifier<int?>(null)`）。
-  final ValueListenable<int?> totalCharacterCountListenable;
-
-  /// 目前生效的版面參數，供換算「每螢幕可容納字元數」（僅 EPUB 項目使用，
-  /// 見 [_buildEntryRow]）。
-  final ResolvedPreferences resolved;
 
   final ValueChanged<BookTocItem> onEntrySelected;
 
@@ -71,8 +59,6 @@ class TocBottomSheet extends StatefulWidget {
     required this.entries,
     required this.initiallyExpandedEntries,
     required this.currentEntry,
-    required this.totalCharacterCountListenable,
-    required this.resolved,
     required this.onEntrySelected,
     this.thumbnailTabContent,
     this.searchTabContent,
@@ -129,7 +115,7 @@ class _TocBottomSheetState extends State<TocBottomSheet> {
     });
   }
 
-  Widget _buildTocList(int? totalCharacterCount) {
+  Widget _buildTocList() {
     final isEmpty = widget.entries.isEmpty;
     return ListView.builder(
       key: const Key('toc_bottom_sheet_list'),
@@ -163,7 +149,7 @@ class _TocBottomSheetState extends State<TocBottomSheet> {
             child: Center(child: Text('本書無目錄資料')),
           );
         }
-        return _buildEntryRow(_visibleRows[index - 1], totalCharacterCount);
+        return _buildEntryRow(_visibleRows[index - 1]);
       },
     );
   }
@@ -171,11 +157,8 @@ class _TocBottomSheetState extends State<TocBottomSheet> {
   @override
   Widget build(BuildContext context) {
     return SafeArea(
-      child: ValueListenableBuilder<int?>(
-        valueListenable: widget.totalCharacterCountListenable,
-        builder: (context, totalCharacterCount, _) {
-          if (widget.format == BookFormat.pdf) {
-            return DefaultTabController(
+      child: widget.format == BookFormat.pdf
+          ? DefaultTabController(
               length: 3,
               child: Column(
                 children: [
@@ -189,7 +172,7 @@ class _TocBottomSheetState extends State<TocBottomSheet> {
                   Expanded(
                     child: TabBarView(
                       children: [
-                        _buildTocList(totalCharacterCount),
+                        _buildTocList(),
                         widget.thumbnailTabContent ??
                             const Center(child: Text('此功能將於後續版本提供')),
                         widget.searchTabContent ??
@@ -199,56 +182,21 @@ class _TocBottomSheetState extends State<TocBottomSheet> {
                   ),
                 ],
               ),
-            );
-          }
-          return _buildTocList(totalCharacterCount);
-        },
-      ),
+            )
+          : _buildTocList(),
     );
   }
 
-  Widget _buildEntryRow(_FlatTocRow row, int? totalCharacterCount) {
+  /// [pageLabel] 為 `null` 時目錄項目不顯示頁碼標籤（epic-26-architecture-hardening
+  /// Issue 5，選項 A：EPUB／TXT／MD 目錄項目不再嘗試估算頁碼，見
+  /// plan-issue-5.md）——目前只有 [PdfTocItem] 在解析大綱當下就已知目標
+  /// 頁碼，其餘 [BookTocItem] 實作一律不顯示頁碼標籤，僅顯示標題。
+  Widget _buildEntryRow(_FlatTocRow row) {
     final node = row.entry;
     final isCurrent = identical(node, widget.currentEntry);
-    final String pageLabel;
-    if (node is TocEntry) {
-      final screenSize = MediaQuery.of(context).size;
-      // 審查修正：totalCharacterCount 已就緒不代表這個節點本身就有可用的
-      // progression——原生端兩層 fallback（locatorFromLink() 自帶的
-      // totalProgression、比對 positions() 的近似值）都可能查無資料，此時
-      // node.progression 仍是 null。EpubPageEstimator.estimateCurrentPage
-      // 對 progression == null 的既有語意是回傳第 1 頁（給「尚未收到任何
-      // onLocatorChanged 回報」這個完全不同的情境使用），若不在這裡額外判斷
-      // node.progression == null，會讓「查無位置」的章節被誤植成「第 1
-      // 頁」，比顯示佔位符更誤導使用者。
-      pageLabel = (totalCharacterCount == null || node.progression == null)
-          ? '…'
-          : EpubPageEstimator.estimateCurrentPage(
-              progression: node.progression,
-              totalPages: EpubPageEstimator.estimateTotalPages(
-                totalCharacterCount: totalCharacterCount,
-                charsPerScreen: EpubPageEstimator.estimateCharsPerScreen(
-                  screenWidth: screenSize.width,
-                  screenHeight: screenSize.height,
-                  fontSize: widget.resolved.fontSize,
-                  lineHeight: widget.resolved.lineHeight,
-                  paragraphSpacing: widget.resolved.paragraphSpacing,
-                  letterSpacing: widget.resolved.letterSpacing,
-                  marginTop: widget.resolved.marginTop,
-                  marginBottom: widget.resolved.marginBottom,
-                  marginLeft: widget.resolved.marginLeft,
-                  marginRight: widget.resolved.marginRight,
-                ),
-              ),
-            ).toString();
-    } else if (node is PdfTocItem) {
-      // PDF 大綱項目的目標頁碼在解析當下就已知（見
-      // PdfReaderView._loadTableOfContents），不像 EPUB 需要背景估算，
-      // 不使用 totalCharacterCount／EpubPageEstimator。
-      pageLabel = node.pageIndex == null ? '…' : (node.pageIndex! + 1).toString();
-    } else {
-      pageLabel = '…';
-    }
+    final String? pageLabel = node is PdfTocItem
+        ? (node.pageIndex == null ? '…' : (node.pageIndex! + 1).toString())
+        : null;
 
     return Padding(
       padding: EdgeInsets.only(left: row.depth * 16),
@@ -263,7 +211,8 @@ class _TocBottomSheetState extends State<TocBottomSheet> {
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(pageLabel, key: Key('toc_entry_page_${node.stableId}')),
+            if (pageLabel != null)
+              Text(pageLabel, key: Key('toc_entry_page_${node.stableId}')),
             if (node.children.isNotEmpty)
               IconButton(
                 key: Key('toc_entry_expand_${node.stableId}'),
