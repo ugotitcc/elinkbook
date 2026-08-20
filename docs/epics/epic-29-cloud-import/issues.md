@@ -218,7 +218,9 @@
 
 ## Issue 8：Google Drive OAuth 用戶端類型（Android／電腦應用程式）改為設定檔驅動（技術債，2026-08-20 追加）
 
-**Status:** `ready-for-agent`
+**Status:** ✅ 已完成（PR #172，分支 `feature/epic-29-issue8-oauth-config-driven`，2 個 commit，2026-08-20）
+
+**完成摘要：** `CloudOAuthConfig.googleClientSecret` 的 `defaultValue` 由樣板字串改為空字串 `''`（留空即代表 Android 公開客戶端，不像 `googleClientId`/`oneDriveClientId` 恆為必填），新增 `googleIsConfidentialClient`（`googleClientSecret.isNotEmpty`）供人工核對語意；`app/config/cloud_oauth.example.json` 新增 `GOOGLE_OAUTH_CLIENT_SECRET` 鍵並留空。`GoogleDriveOAuthClient` 建構子新增可選具名參數 `String clientSecret = CloudOAuthConfig.googleClientSecret`（編譯期常數作預設值，`main.dart` 完全不需要改動），新增私有共用方法 `_tokenRequestBody()`：只有 `clientSecret` 非空時才把 `client_secret` 併入 token 請求 body，`link()`（authorization_code 換發）與 `ensureValidAccessToken()`（refresh_token 換發）**兩處**皆改用這個共用方法——修復了 `/diagnose` 排查時額外發現的既有缺陷：先前 `link()` 有帶 `client_secret`、`ensureValidAccessToken()` 完全沒帶，若使用電腦應用程式（機密客戶端）類型，access token 過期後的靜默續期會因缺少 `client_secret` 被 Google 判定為 `invalid_client` 而失敗，退化成強制使用者重新登入。透過建構子注入（而非直接讀 `CloudOAuthConfig` 靜態常數）讓這個行為在測試環境下可覆寫、可驗證——`google_drive_oauth_client_test.dart` 新增 2 則測試分別涵蓋「不帶 `clientSecret`（預設空字串）時 refresh 請求不含 `client_secret`」與「傳入非空 `clientSecret` 時正確帶入」；`link()` 本身因需要 `FlutterWebAuth2.authenticate()` 無法自動化測試（比照 Issue 1 既定決策），但與 `ensureValidAccessToken()` 共用同一個 `_tokenRequestBody()`，覆蓋其中一個呼叫點等同驗證共用邏輯本身。既有 7 處 `GoogleDriveOAuthClient(...)` 呼叫端（`google_drive_storage_client_test.dart`／`cloud_account_settings_screen_test.dart`／`settings_screen_test.dart`／`main.dart`）皆未傳入 `clientSecret`、沿用新預設值，零回歸。計畫審查與程式碼審查（`review-issue-8.md`）皆 **APPROVED**，0 Critical／0 Important／0 Minor；審查者除核對實作與計畫逐項一致外，特別確認了 `main.dart` diff 為空、`_tokenRequestBody()` 確實是兩處呼叫點唯一的 `client_secret` 處理邏輯（無殘留直接讀取 `CloudOAuthConfig.googleClientSecret` 的分支）。全專案 `flutter analyze` 乾淨、`flutter test` 1637 項全數通過（1633 + 4 新增），零回歸。此修法建立於使用者先前手動、未經計劃/審查流程直接提交上 `main` 的 commit `eaf8ba1`（改用電腦應用程式類型讓真機登入先恢復可用）之上，本 Issue 收斂該手動修法為可設定檔驅動、兩處呼叫邏輯一致的正式版本，未變更「目前使用電腦應用程式類型」這個既有事實。
 
 **依賴：** Issue 1（`GoogleDriveOAuthClient`）、Issue 7（`CloudOAuthConfig`）。
 
