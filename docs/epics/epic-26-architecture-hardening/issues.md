@@ -147,7 +147,7 @@ Future<void> pumpUntilPdfReady(
 
 ## Issue 5：收斂已死的 EPUB 頁次估算管線（`totalCharacterCount`／`EpubPageEstimator`）
 
-**Status:** `ready-for-agent`——人類已於 2026-08-20 決策採用選項 A（整批除役），規格已完整，可進入規劃階段撰寫 `plans/plan-issue-5.md`。
+**Status:** ✅ 已完成並合併回 `main`（PR [#173](https://git.jigong.org/huthief/elinkBook/pulls/173)，分支 `epic-26-issue-5`，5 個 commit：Task 1–4 各一個＋審查修正一個）。審查（`reviews/review-issue-5.md`）逐 Task 對照 `plan-issue-5.md` 的 old_string/new_string 核對，還原度極高，`Task 5` 全域殘留掃描（`totalCharacterCount`／`EpubPageEstimator`／`EpubCharacterCountRepository`）確認乾淨；發現 1 項 Important（`epub_pagination_test.dart` 跳頁測試斷言格式與 `ReaderFooter` 實際輸出不符）與 3 項 Minor（殘留空行、過時測試標題、中繼 commit 資源釋放時序），Important 與可處理的 Minor 已修正並隨 PR 合併，`flutter analyze` 乾淨、`reader_screen_test.dart` 167 項測試零回歸。
 
 **依賴：** 無
 
