@@ -2399,8 +2399,6 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     );
   }
 
-
-
   /// 流式 EPUB 頁眉（epic-18-reader-device-qa Issue 7）：純顯示章節名稱、
   /// 不可點擊（點擊開 TOC 這個功能已交給獨立的 reader_foliate_toc_button，
   /// 見 design.md「第二輪真機使用回報」項目 2 的「資訊與功能分離」原則）。

@@ -1694,7 +1694,7 @@ void main() {
     expect(find.byType(TocBottomSheet), findsOneWidget);
   });
 
-  testWidgets('showFooter=false 時，EPUB 頁尾即使收到 onCharacterCountReady 也不顯示', (
+  testWidgets('showFooter=false 時，EPUB 頁尾不顯示', (
     tester,
   ) async {
     await prefsManager.saveBookPrefs(
