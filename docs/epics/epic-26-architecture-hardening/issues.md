@@ -261,7 +261,7 @@ Future<void> pumpUntilPdfReady(
 
 ## Issue 9：`Book.copyWith()` 全欄位開放為具名參數（shallow interface，已有真實事故佐證）
 
-**Status:** `ready-for-agent`。
+**Status:** ✅ 已完成並合併回 `main`（PR [#177](https://git.jigong.org/huthief/elinkBook/pulls/177)，分支 `feat/epic-26-issue-9-book-copywith-all-fields`，2 個 commit：Task 1＋Task 2）。`copyWith()` 除 `id` 外全部 21 個欄位皆改為具名參數、`field: field ?? this.field` 逐一覆寫，取代原本「4 個具名參數＋17 個手動原樣帶入」的不對稱寫法，讓漏帶欄位（2026-08-04 曾因此靜默清空同步進度資料的真實事故）直接變成編譯期錯誤；`id` 刻意排除（`copyWith()` 語意上是複製同一本書、不是建立新書），並同步改寫兩段因此過時的 doc comment。審查（`reviews/review-issue-9.md`）逐一核對欄位對帳（22 個欄位、21 個開放、`id` 排除）與兩段文件皆正確、既有 4 個呼叫點（`library_screen.dart`／`library_batch_actions.dart` 三處）經 `git diff`／`grep` 雙重確認零異動、非 nullable 欄位（`progress`／`isDownloaded`）假值覆寫語意正確；獨立 worktree 實測 `flutter analyze` 乾淨、`book_test.dart` 21 項全過、全專案 1629 個測試全數通過，零回歸。審查發現 0 項 Critical、1 項 Important（計畫 Task 2 最終驗證當時尚未正式提交簽核，純流程缺口非程式碼問題，已於合併前補上 Task 2 commit 解決）、2 項 Minor（測試邊界案例可加強、文件分行稍生硬，皆不影響合併，未另修正）。Epic 26 第二份架構檢視報告併入的四個候選 Issue（6/7/8/9）至此全數完成。
 
 **依賴：** 無，範圍侷限 `app/lib/library/models/book.dart` 單一檔案，可獨立於 Issue 6/7/8 任何時間點處理，不阻塞、也不被阻塞。
 
