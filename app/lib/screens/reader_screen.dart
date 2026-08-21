@@ -2314,7 +2314,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                     ),
             if (isFoliateFormat(format) &&
                 (_resolved?.showFooter ?? false) &&
-                (_epubPositionInfo?.totalPages ?? 0) > 0)
+                (_epubPositionInfo?.displayTotalPages ?? 0) > 0)
               (_resolved?.writingMode == WritingMode.vertical)
                   ? Positioned(
                       left: 0,
@@ -2429,15 +2429,17 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   }
 
   /// 流式 EPUB 進度純顯示（epic-18-reader-device-qa Issue 7）：內容換算邏輯
-  /// 與 _buildFoliateEpubFooter() 相同（pageIndex/totalPages 皆為 0-indexed/
-  /// 近似頁碼，+1 換算為人類慣用的 1-indexed），呼叫端已保證
-  /// totalPages > 0 才會建構本 widget。跳頁互動已獨立到
-  /// reader_foliate_progress_button 開啟的 Bottom Sheet，本 widget 不含任何
-  /// 手勢 widget。
+  /// 與 _buildFoliateEpubFooter() 相同（displayPageIndex/displayTotalPages
+  /// 皆為 0-indexed，+1 換算為人類慣用的 1-indexed，見
+  /// epic-26-architecture-hardening Issue 10：兩個 getter 依格式互斥挑選
+  /// 精確視覺頁碼或估計刻度），呼叫端已保證 displayTotalPages > 0 才會
+  /// 建構本 widget。跳頁互動已獨立到 reader_foliate_progress_button 開啟的
+  /// Bottom Sheet，本 widget 不含任何手勢 widget。
   Widget _buildFoliateProgressText() {
     final info = _epubPositionInfo!;
-    final totalPages = info.totalPages!;
-    final currentPage = ((info.pageIndex ?? 0) + 1).clamp(1, totalPages);
+    final totalPages = info.displayTotalPages!;
+    final currentPage =
+        ((info.displayPageIndex ?? 0) + 1).clamp(1, totalPages);
     return Container(
       key: const Key('reader_foliate_progress_text'),
       child: Text(
@@ -2495,18 +2497,20 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     );
   }
 
-  /// 流式 EPUB（FoliateReaderView）頁尾（epic-17-epub-render-migration
-  /// Issue 6）：直接使用原生端 relocate 事件回報的 pageIndex／totalPages
-  /// （foliate-js SectionProgress.getProgress() 的 location.current／
-  /// location.total，近似頁碼概念，非精確渲染頁數，見 spec.md「頁碼
-  /// 估算」）。pageIndex 為 0-indexed（比照原生端既有慣例），ReaderFooter
-  /// 要求 1-indexed，此處 +1 換算。onPageChanged 透過既有
-  /// jumpToProgression（Issue 5）換算目標頁對應的全書進度比例（近似值，
-  /// 非精確反解頁碼）。
+  /// 流式 EPUB／FXL／CBZ（FoliateReaderView）頁尾：直接使用原生端 relocate
+  /// 事件回報的 displayPageIndex／displayTotalPages（epic-26-architecture-
+  /// hardening Issue 10：流式格式是 foliate-js SectionProgress 的位元組
+  /// 估計刻度，FXL／CBZ 是 FixedLayout 的全書真實視覺頁數，兩個 getter
+  /// 依格式互斥挑選，見 EpubPositionInfo 型別文件）。displayPageIndex 為
+  /// 0-indexed（比照原生端既有慣例），ReaderFooter 要求 1-indexed，此處
+  /// +1 換算。onPageChanged 透過既有 jumpToProgression（Issue 5）換算目標
+  /// 頁對應的全書進度比例（流式格式為近似值，非精確反解頁碼；FXL/CBZ 沿用
+  /// 既有行為不變）。
   Widget _buildFoliateEpubFooter(EpubPositionInfo info) {
-    final totalPages = info.totalPages ?? 0;
+    final totalPages = info.displayTotalPages ?? 0;
     if (totalPages <= 0) return const SizedBox.shrink();
-    final currentPage = ((info.pageIndex ?? 0) + 1).clamp(1, totalPages);
+    final currentPage =
+        ((info.displayPageIndex ?? 0) + 1).clamp(1, totalPages);
     return ReaderFooter(
       currentPage: currentPage,
       totalPages: totalPages,
