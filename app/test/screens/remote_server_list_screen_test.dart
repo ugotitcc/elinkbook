@@ -6,6 +6,7 @@ import 'package:elinkbook/remote/remote_server_profile.dart';
 import 'package:elinkbook/screens/remote_catalog_screen.dart';
 import 'package:elinkbook/screens/remote_server_form_screen.dart';
 import 'package:elinkbook/screens/remote_server_list_screen.dart';
+import 'package:elinkbook/remote/remote_catalog_dependencies.dart';
 
 import '../support/fake_book_import_service.dart';
 import '../support/fake_fingerprint_computer.dart';
@@ -47,9 +48,11 @@ void main() {
       home: RemoteServerListScreen(
         repository: repository,
         libraryRepository: FakeLibraryRepository(),
-        computeFingerprint: FakeFingerprintComputer().call,
-        thumbnailCache: FakeRemoteThumbnailCache(),
-        createOpdsClient: () => FakeOpdsClient(),
+        dependencies: RemoteCatalogDependencies(
+          computeFingerprint: FakeFingerprintComputer().call,
+          thumbnailCache: FakeRemoteThumbnailCache(),
+          createOpdsClient: () => FakeOpdsClient(),
+        ),
         importService: FakeBookImportService(),
       ),
     ));
