@@ -33,6 +33,7 @@ import 'remote/remote_server_repository.dart';
 import 'remote/remote_thumbnail_cache.dart';
 import 'remote/sqlite_remote_server_repository.dart';
 import 'screens/library_screen.dart';
+import 'screens/library_screen_dependencies.dart';
 import 'screens/reading_position_conflict_dialog.dart';
 import 'sync/sync_account_repository.dart';
 import 'sync/sync_checkpoint_trigger.dart';
@@ -288,12 +289,14 @@ class _ElinkBookAppState extends State<ElinkBookApp> with WidgetsBindingObserver
         repository: widget.repository,
         importService: widget.importService,
         prefsManager: widget.prefsManager,
-        bookmarksRepository: widget.bookmarksRepository,
-        highlightsRepository: widget.highlightsRepository,
-        notesRepository: widget.notesRepository,
-        customFontsRepository: widget.customFontsRepository,
-        layoutPresetRepository: widget.layoutPresetRepository,
-        bookReaderPrefsRepository: widget.bookReaderPrefsRepository,
+        readerFeatureRepositories: LibraryReaderFeatureRepositories(
+          bookmarksRepository: widget.bookmarksRepository,
+          highlightsRepository: widget.highlightsRepository,
+          notesRepository: widget.notesRepository,
+          customFontsRepository: widget.customFontsRepository,
+          layoutPresetRepository: widget.layoutPresetRepository,
+          bookReaderPrefsRepository: widget.bookReaderPrefsRepository,
+        ),
         syncAccountRepository: widget.syncAccountRepository,
         syncClient: widget.syncClient,
         syncCheckpointTrigger: widget.syncCheckpointTrigger,

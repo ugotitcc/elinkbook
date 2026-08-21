@@ -14,6 +14,7 @@ import 'package:elinkbook/reader/global_reader_prefs.dart';
 import 'package:elinkbook/reader/layout_preset_repository.dart';
 import 'package:elinkbook/reader/reader_prefs_manager.dart';
 import 'package:elinkbook/screens/library_screen.dart';
+import 'package:elinkbook/screens/library_screen_dependencies.dart';
 import 'package:elinkbook/screens/cloud_browser_screen.dart';
 import 'package:elinkbook/library/book_import_service.dart';
 import 'package:elinkbook/library/book_import_service_impl.dart';
@@ -2167,8 +2168,10 @@ void main() {
           repository: FakeLibraryRepository(initialBooks: [book]),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
-          highlightsRepository: highlightsRepository,
-          notesRepository: notesRepository,
+          readerFeatureRepositories: LibraryReaderFeatureRepositories(
+            highlightsRepository: highlightsRepository,
+            notesRepository: notesRepository,
+          ),
         ),
       ),
     );
@@ -2250,9 +2253,11 @@ void main() {
           repository: FakeLibraryRepository(initialBooks: [book]),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
-          bookmarksRepository: bookmarksRepository,
-          highlightsRepository: highlightsRepository,
-          notesRepository: notesRepository,
+          readerFeatureRepositories: LibraryReaderFeatureRepositories(
+            bookmarksRepository: bookmarksRepository,
+            highlightsRepository: highlightsRepository,
+            notesRepository: notesRepository,
+          ),
         ),
       ),
     );
@@ -2371,9 +2376,11 @@ void main() {
           repository: FakeLibraryRepository(initialBooks: [book]),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
-          bookmarksRepository: bookmarksRepository,
-          highlightsRepository: highlightsRepository,
-          notesRepository: notesRepository,
+          readerFeatureRepositories: LibraryReaderFeatureRepositories(
+            bookmarksRepository: bookmarksRepository,
+            highlightsRepository: highlightsRepository,
+            notesRepository: notesRepository,
+          ),
         ),
       ),
     );
@@ -2812,7 +2819,9 @@ void main() {
         repository: FakeLibraryRepository(initialBooks: const []),
         importService: FakeBookImportService(),
         prefsManager: prefsManager,
-        customFontsRepository: customFontsRepository,
+        readerFeatureRepositories: LibraryReaderFeatureRepositories(
+          customFontsRepository: customFontsRepository,
+        ),
       ),
     ));
     await tester.pumpAndSettle();
@@ -2845,7 +2854,9 @@ void main() {
           repository: FakeLibraryRepository(initialBooks: [book]),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
-          customFontsRepository: customFontsRepository,
+          readerFeatureRepositories: LibraryReaderFeatureRepositories(
+            customFontsRepository: customFontsRepository,
+          ),
         ),
       ),
     );
@@ -2883,8 +2894,10 @@ void main() {
           repository: FakeLibraryRepository(initialBooks: [book]),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
-          layoutPresetRepository: layoutPresetRepository,
-          bookReaderPrefsRepository: bookReaderPrefsRepository,
+          readerFeatureRepositories: LibraryReaderFeatureRepositories(
+            layoutPresetRepository: layoutPresetRepository,
+            bookReaderPrefsRepository: bookReaderPrefsRepository,
+          ),
         ),
       ),
     );
@@ -3442,7 +3455,9 @@ void main() {
           globalPrefs: const GlobalReaderPrefs.initial()
               .copyWith(openLastBookOnLaunch: false),
         ),
-        bookmarksRepository: bookmarksRepository,
+        readerFeatureRepositories: LibraryReaderFeatureRepositories(
+          bookmarksRepository: bookmarksRepository,
+        ),
       ),
     ));
     await tester.pumpAndSettle();

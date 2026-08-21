@@ -26,6 +26,7 @@ import '../remote/remote_thumbnail_cache.dart';
 import '../remote/remote_catalog_dependencies.dart';
 import '../library/library_preferences.dart';
 import '../library/library_repository.dart';
+import 'library_screen_dependencies.dart';
 import '../library/models/book.dart';
 import '../library/models/book_group.dart';
 import '../library/models/library_enums.dart';
@@ -50,12 +51,11 @@ class LibraryScreen extends StatefulWidget {
   final LibraryRepository repository;
   final BookImportService importService;
   final ReaderPrefsManager prefsManager;
-  final BookmarksRepository? bookmarksRepository;
-  final HighlightsRepository? highlightsRepository;
-  final NotesRepository? notesRepository;
-  final CustomFontsRepository? customFontsRepository;
-  final LayoutPresetRepository? layoutPresetRepository;
-  final BookReaderPrefsRepository? bookReaderPrefsRepository;
+  /// 收斂原本 `bookmarksRepository`／`highlightsRepository`／
+  /// `notesRepository`／`customFontsRepository`／`layoutPresetRepository`／
+  /// `bookReaderPrefsRepository` 六個獨立參數（epic-26-architecture-hardening
+  /// Issue 7）。
+  final LibraryReaderFeatureRepositories readerFeatureRepositories;
   final SyncAccountRepository? syncAccountRepository;
   final SyncClient? syncClient;
   final SyncCheckpointTrigger? syncCheckpointTrigger;
@@ -80,12 +80,7 @@ class LibraryScreen extends StatefulWidget {
     required this.repository,
     required this.importService,
     required this.prefsManager,
-    this.bookmarksRepository,
-    this.highlightsRepository,
-    this.notesRepository,
-    this.customFontsRepository,
-    this.layoutPresetRepository,
-    this.bookReaderPrefsRepository,
+    this.readerFeatureRepositories = const LibraryReaderFeatureRepositories(),
     this.syncAccountRepository,
     this.syncClient,
     this.syncCheckpointTrigger,
@@ -574,17 +569,17 @@ class _LibraryScreenState extends State<LibraryScreen> {
               filePath: book.filePath,
               bookId: book.id,
               prefsManager: widget.prefsManager,
-              bookmarksRepository: widget.bookmarksRepository,
-              highlightsRepository: widget.highlightsRepository,
-              notesRepository: widget.notesRepository,
+              bookmarksRepository: widget.readerFeatureRepositories.bookmarksRepository,
+              highlightsRepository: widget.readerFeatureRepositories.highlightsRepository,
+              notesRepository: widget.readerFeatureRepositories.notesRepository,
               bookTitle: book.title,
               bookAuthor: book.author,
               bookProgress: book.progress,
               isFixedLayout: book.isFixedLayout,
               libraryRepository: widget.repository,
-              customFontsRepository: widget.customFontsRepository,
-              layoutPresetRepository: widget.layoutPresetRepository,
-              bookReaderPrefsRepository: widget.bookReaderPrefsRepository,
+              customFontsRepository: widget.readerFeatureRepositories.customFontsRepository,
+              layoutPresetRepository: widget.readerFeatureRepositories.layoutPresetRepository,
+              bookReaderPrefsRepository: widget.readerFeatureRepositories.bookReaderPrefsRepository,
               syncCheckpointTrigger: widget.syncCheckpointTrigger,
             ),
           ),
@@ -733,10 +728,12 @@ class _LibraryScreenState extends State<LibraryScreen> {
               repository: widget.repository,
               importService: widget.importService,
               prefsManager: widget.prefsManager,
-              bookmarksRepository: widget.bookmarksRepository,
-              highlightsRepository: widget.highlightsRepository,
-              notesRepository: widget.notesRepository,
-              customFontsRepository: widget.customFontsRepository,
+              readerFeatureRepositories: LibraryReaderFeatureRepositories(
+                bookmarksRepository: widget.readerFeatureRepositories.bookmarksRepository,
+                highlightsRepository: widget.readerFeatureRepositories.highlightsRepository,
+                notesRepository: widget.readerFeatureRepositories.notesRepository,
+                customFontsRepository: widget.readerFeatureRepositories.customFontsRepository,
+              ),
               // epic-8-sync Issue 10：先前遺漏這三個同步相關欄位，導致從這條
               // 分類篩選路徑開書時 syncCheckpointTrigger 無法貫穿到
               // ReaderScreen，「離開畫面」／「閱讀中 5 分鐘計時器」兩種
@@ -981,7 +978,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   currentTheme: widget.currentTheme,
                   isEinkMode: widget.isEinkMode,
                   onThemeChanged: widget.onThemeChanged,
-                  customFontsRepository: widget.customFontsRepository,
+                  customFontsRepository: widget.readerFeatureRepositories.customFontsRepository,
                   syncAccountRepository: widget.syncAccountRepository,
                   syncClient: widget.syncClient,
                   cloudAccountRepository: widget.cloudAccountRepository,
