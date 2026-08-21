@@ -3105,8 +3105,8 @@ void main() {
       const EpubPositionInfo(
         locatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
         progression: 0.1,
-        pageIndex: 9,
-        totalPages: 100,
+        locationIndex: 9,
+        locationTotal: 100,
       ),
     );
     await tester.pump();
@@ -3144,8 +3144,8 @@ void main() {
       const EpubPositionInfo(
         locatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
         progression: 0.1,
-        pageIndex: 9,
-        totalPages: 100,
+        locationIndex: 9,
+        locationTotal: 100,
       ),
     );
     await tester.pump();
@@ -3243,8 +3243,8 @@ void main() {
       const EpubPositionInfo(
         locatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
         progression: 0.1,
-        pageIndex: 0,
-        totalPages: 0,
+        locationIndex: 0,
+        locationTotal: 0,
       ),
     );
     await tester.pump();
@@ -3634,8 +3634,8 @@ void main() {
       const EpubPositionInfo(
         locatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
         progression: 0.1,
-        pageIndex: 0,
-        totalPages: 10,
+        locationIndex: 0,
+        locationTotal: 10,
       ),
     );
     await tester.pump();
@@ -3720,8 +3720,8 @@ void main() {
         const EpubPositionInfo(
           locatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
           progression: 0.1,
-          pageIndex: 0,
-          totalPages: 10,
+          locationIndex: 0,
+          locationTotal: 10,
         ),
       );
       await tester.pump();
@@ -3787,8 +3787,8 @@ void main() {
         const EpubPositionInfo(
           locatorJson: locatorJson,
           progression: 0.1,
-          pageIndex: 0,
-          totalPages: 10,
+          locationIndex: 0,
+          locationTotal: 10,
         ),
       );
       await tester.pump();
@@ -4126,8 +4126,8 @@ void main() {
         const EpubPositionInfo(
           locatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
           progression: 0.1,
-          pageIndex: 167,
-          totalPages: 197,
+          locationIndex: 167,
+          locationTotal: 197,
         ),
       );
       await tester.pump();
@@ -4173,8 +4173,8 @@ void main() {
         const EpubPositionInfo(
           locatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
           progression: 0.1,
-          pageIndex: 167,
-          totalPages: 197,
+          locationIndex: 167,
+          locationTotal: 197,
         ),
       );
       await tester.pump();
@@ -4228,8 +4228,8 @@ void main() {
       const EpubPositionInfo(
         locatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
         progression: 0.1,
-        pageIndex: 167,
-        totalPages: 197,
+        locationIndex: 167,
+        locationTotal: 197,
       ),
     );
     await tester.pump();
@@ -4282,8 +4282,8 @@ void main() {
         const EpubPositionInfo(
           locatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
           progression: 0.1,
-          pageIndex: 0,
-          totalPages: 10,
+          locationIndex: 0,
+          locationTotal: 10,
         ),
       );
       await tester.pump();
@@ -4340,8 +4340,8 @@ void main() {
         const EpubPositionInfo(
           locatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
           progression: 0.1,
-          pageIndex: 9,
-          totalPages: 100,
+          locationIndex: 9,
+          locationTotal: 100,
         ),
       );
       await tester.pump();
@@ -4396,8 +4396,8 @@ void main() {
         const EpubPositionInfo(
           locatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
           progression: 0.1,
-          pageIndex: 0,
-          totalPages: 10,
+          locationIndex: 0,
+          locationTotal: 10,
         ),
       );
       await tester.pump();
@@ -5168,8 +5168,8 @@ void main() {
       const EpubPositionInfo(
         locatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
         progression: 0.1,
-        pageIndex: 9,
-        totalPages: 100,
+        locationIndex: 9,
+        locationTotal: 100,
       ),
     );
     await tester.pump();
@@ -5241,8 +5241,8 @@ void main() {
       const EpubPositionInfo(
         locatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
         progression: 0.1,
-        pageIndex: 9,
-        totalPages: 100,
+        locationIndex: 9,
+        locationTotal: 100,
       ),
     );
     await tester.pump();
@@ -5300,8 +5300,8 @@ void main() {
       const EpubPositionInfo(
         locatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
         progression: 0.1,
-        pageIndex: 9,
-        totalPages: 100,
+        visualPageIndex: 9,
+        visualTotalPages: 100,
       ),
     );
     await tester.pump();

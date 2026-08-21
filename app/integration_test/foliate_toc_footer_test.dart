@@ -114,7 +114,7 @@ void main() {
     );
   });
 
-  testWidgets('頁尾頁碼正確反映 pageIndex/totalPages，且隨翻頁更新',
+  testWidgets('頁尾頁碼正確反映 displayPageIndex/displayTotalPages，且隨翻頁更新',
       (tester) async {
     final samplePath = await _stageAssetAsFile(
         'test/fixtures/issue9_vertical_pagejump.epub', 'foliate_footer.epub');
@@ -150,16 +150,16 @@ void main() {
     expect(errorMessage, isNull);
 
     final positionAfterOpen = lastPosition;
-    expect(positionAfterOpen?.totalPages, isNotNull,
-        reason: '開書後應已收到 totalPages，供頁尾顯示使用');
-    expect(positionAfterOpen!.totalPages, greaterThan(0));
+    expect(positionAfterOpen?.displayTotalPages, isNotNull,
+        reason: '開書後應已收到 displayTotalPages，供頁尾顯示使用');
+    expect(positionAfterOpen!.displayTotalPages, greaterThan(0));
 
     FoliateReaderView.nextPage(key);
     await tester.pumpAndSettle(const Duration(seconds: 2));
 
     expect(errorMessage, isNull, reason: '換頁後不應觸發 onError');
-    expect(lastPosition?.totalPages, positionAfterOpen.totalPages,
-        reason: '同一本書換頁不應改變 totalPages');
+    expect(lastPosition?.displayTotalPages, positionAfterOpen.displayTotalPages,
+        reason: '同一本書換頁不應改變 displayTotalPages');
   });
 
   testWidgets('舊格式（Readium Locator JSON）initialLocatorJson 優雅退回：不崩潰、從書本開頭開始',
@@ -206,7 +206,7 @@ void main() {
     expect(errorMessage, isNull,
         reason: '舊格式 initialLocatorJson 不應導致 onError 或崩潰');
     expect(firstPosition, isNotNull);
-    expect(firstPosition!.pageIndex, anyOf(isNull, equals(0)),
-        reason: '優雅退回後應從書本開頭開始（pageIndex 0 或尚未回報）');
+    expect(firstPosition!.displayPageIndex, anyOf(isNull, equals(0)),
+        reason: '優雅退回後應從書本開頭開始（displayPageIndex 0 或尚未回報）');
   });
 }

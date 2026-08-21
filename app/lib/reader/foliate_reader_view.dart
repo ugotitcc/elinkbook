@@ -647,23 +647,12 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
     );
     controller.addJavaScriptHandler(
       handlerName: 'onLocatorChanged',
-      callback: (args) {
-        // 審查修正：main.js 目前以 `fraction ?? 0`／`location?.current ?? 0`／
-        // `location?.total ?? 0` 保底，理論上不會送出 null；但改用 `as num?`
-        // + `?? 0` 防禦性轉型，與本檔案其餘 handler（onPageRendered/onError/
-        // onTableOfContentsReady 的 `args.isNotEmpty` 檢查）保持一致的防禦
-        //風格，避免未來 main.js 若不慎移除 `?? 0` 保底時整個閱讀畫面直接
-        // 因 TypeError 崩潰。
-        widget.onLocatorChanged?.call(EpubPositionInfo(
-          locatorJson: args.isNotEmpty ? args[0] as String : '',
-          progression:
-              (args.length > 1 ? args[1] as num? : null)?.toDouble() ?? 0.0,
-          pageIndex:
-              (args.length > 2 ? args[2] as num? : null)?.toInt() ?? 0,
-          totalPages:
-              (args.length > 3 ? args[3] as num? : null)?.toInt() ?? 0,
-        ));
-      },
+      // epic-26-architecture-hardening Issue 10：解析邏輯抽成
+      // foliate_bridge_codec.dart 的 parseLocatorChanged() 純函式（比照
+      // extractCfi()/parseTableOfContents() 既有慣例），可脫離 WebView
+      // 直接單元測試，不再是這個 widget 內無法獨立驗證的匿名 closure。
+      callback: (args) =>
+          widget.onLocatorChanged?.call(parseLocatorChanged(args)),
     );
     controller.addJavaScriptHandler(
       handlerName: 'onTableOfContentsReady',

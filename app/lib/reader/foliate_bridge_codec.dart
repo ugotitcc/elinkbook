@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'epub_decoration.dart';
+import 'epub_position_info.dart';
 import 'toc_entry.dart';
 
 /// 解析/擷取 epic-17-epub-render-migration Issue 6 新增的定位 JSON 格式
@@ -37,6 +38,38 @@ List<TocEntry> parseTableOfContents(String tocJson) {
   } catch (_) {
     return const [];
   }
+}
+
+/// 把 `main.js` `onLocatorChanged` relocate handler 送出的 JS→Dart 橋接
+/// 參數（epic-26-architecture-hardening Issue 10，取代原本 4 個 positional
+/// 參數混用 pageIndex/location 語意的舊格式）解析為 [EpubPositionInfo]。
+/// [args] 恰好 2 個元素：`args[0]` 為 [EpubPositionInfo.locatorJson]（含
+/// cfi 的字串，原樣不動，見 [extractCfi]）；`args[1]` 為具名 JSON 物件
+/// 字串，包含 `fraction`／`locationIndex`／`locationTotal`／
+/// `visualPageIndex`／`visualTotalPages` 五個鍵，依書籍是否為固定版面
+/// （FXL／CBZ）互斥填值。[args] 元素不足、`args[1]` 缺席或格式錯誤時，
+/// 位置相關欄位一律回傳 `null`，不拋出例外（比照 [extractCfi] 既有的優雅
+/// 退回原則）。
+EpubPositionInfo parseLocatorChanged(List<dynamic> args) {
+  final locatorJson =
+      args.isNotEmpty && args[0] is String ? args[0] as String : '';
+  Map<String, dynamic> position = const {};
+  if (args.length > 1 && args[1] is String) {
+    try {
+      final decoded = jsonDecode(args[1] as String);
+      if (decoded is Map<String, dynamic>) position = decoded;
+    } catch (_) {
+      // 格式錯誤時維持空 map，位置相關欄位一律回傳 null。
+    }
+  }
+  return EpubPositionInfo(
+    locatorJson: locatorJson,
+    progression: (position['fraction'] as num?)?.toDouble() ?? 0.0,
+    locationIndex: (position['locationIndex'] as num?)?.toInt(),
+    locationTotal: (position['locationTotal'] as num?)?.toInt(),
+    visualPageIndex: (position['visualPageIndex'] as num?)?.toInt(),
+    visualTotalPages: (position['visualTotalPages'] as num?)?.toInt(),
+  );
 }
 
 /// 把 Dart `Color.toARGB32()`／Android `Color` int 皆採用的 0xAARRGGBB
