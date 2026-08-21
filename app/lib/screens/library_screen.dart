@@ -16,6 +16,7 @@ import '../library/library_preferences.dart';
 import '../library/library_repository.dart';
 import 'library_screen_dependencies.dart';
 import 'book_grid_tile_metrics.dart';
+import 'library_book_list_controller.dart';
 import '../library/models/book.dart';
 import '../library/models/book_group.dart';
 import '../library/models/library_enums.dart';
@@ -81,12 +82,9 @@ class LibraryScreen extends StatefulWidget {
 
 class _LibraryScreenState extends State<LibraryScreen> {
   final _preferences = LibraryPreferences();
+  late final LibraryBookListController _bookListController;
 
-  List<Book>? _books;
-  List<BookGroup> _groups = const [];
   LibraryViewMode _viewMode = LibraryViewMode.grid;
-  LibrarySortBy _sortBy = LibrarySortBy.lastRead;
-  String? _groupFilter;
   Set<String>? _selectedBookIds;
   bool _isImporting = false;
   // 〔比照 epic-30 Issue 3 review-issue-3.md 既定的重入防護模式〕避免
@@ -97,19 +95,28 @@ class _LibraryScreenState extends State<LibraryScreen> {
   @override
   void initState() {
     super.initState();
-    _groupFilter = widget.groupFilter;
+    _bookListController = LibraryBookListController(
+      repository: widget.repository,
+      groupFilter: widget.groupFilter,
+    )..addListener(_onBookListChanged);
     _initialize();
+  }
+
+  void _onBookListChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _bookListController.dispose();
+    super.dispose();
   }
 
   Future<void> _initialize() async {
     final viewMode = await _preferences.loadViewMode();
-    final sortBy = await _preferences.loadSortBy();
     if (!mounted) return;
-    setState(() {
-      _viewMode = viewMode;
-      _sortBy = sortBy;
-    });
-    await Future.wait([_loadGroups(), _loadBooks()]);
+    setState(() => _viewMode = viewMode);
+    await _bookListController.initialLoad();
     await _maybeOpenLastBookOnLaunch();
   }
 
@@ -138,45 +145,6 @@ class _LibraryScreenState extends State<LibraryScreen> {
     _openBook(books.first);
   }
 
-  Future<void> _loadGroups() async {
-    try {
-      final groups = await widget.repository.listGroups();
-      if (!mounted) return;
-      setState(() => _groups = groups);
-    } catch (_) {
-      // 暫時性錯誤時保留先前已載入的群組清單，避免因為單次讀取失敗就讓
-      // 畫面的分類 tab 列與目前的篩選狀態不一致（見 Issue 7 審查）。若是
-      // 第一次載入就失敗，_groups 會維持初始的空清單（連「未分類」都不
-      // 顯示）——這是「沒有最後已知正確狀態可保留」下的必然結果，安全但
-      // 不完美，之後重新整理即可恢復。
-    }
-  }
-
-  Future<void> _loadBooks() async {
-    // 擷取呼叫當下的排序/分類篩選條件；若使用者在這次非同步查詢完成前又
-    // 切換了排序或分類 tab，較晚回應但較早發出的查詢結果會對應到舊條件，
-    // 此時不應覆蓋畫面（避免顯示內容與目前選定的條件不一致）。
-    final requestedSortBy = _sortBy;
-    final requestedGroupFilter = _groupFilter;
-    try {
-      final books = await widget.repository.listBooks(
-        sortBy: requestedSortBy,
-        groupFilter: requestedGroupFilter,
-      );
-      if (!mounted) return;
-      if (_sortBy != requestedSortBy || _groupFilter != requestedGroupFilter) {
-        return;
-      }
-      setState(() => _books = books);
-    } catch (_) {
-      // 如果載入失敗，把它當作空列表，顯示既有的空狀態 UI
-      if (!mounted) return;
-      if (_sortBy != requestedSortBy || _groupFilter != requestedGroupFilter) {
-        return;
-      }
-      setState(() => _books = []);
-    }
-  }
 
   Future<void> _pickAndImportFiles() async {
     try {
@@ -197,7 +165,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
       setState(() => _isImporting = true);
       final result =
           await widget.importService.importFiles(uris, displayNames: displayNames);
-      await _loadBooks();
+      await _bookListController.loadBooks();
       _showImportResultSnackBar(result);
     } catch (_) {
       // 匯入失敗時靜默吞掉，避免異常傳播破壞 widget 樹或留下不一致狀態
@@ -221,8 +189,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
         folderUri,
         autoGroupByFolderName: autoGroup,
       );
-      await _loadGroups();
-      await _loadBooks();
+      await _bookListController.loadGroups();
+      await _bookListController.loadBooks();
       _showImportResultSnackBar(result);
     } catch (_) {
       // 匯入失敗時靜默吞掉，避免異常傳播破壞 widget 樹或留下不一致狀態
@@ -249,8 +217,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
       // `importFiles(folderName: ...)` 內部會 `upsertGroup()`，回到書架
       // 時分類清單與書籍清單應保持同步一致。
       if (mounted) {
-        _loadGroups();
-        _loadBooks();
+        _bookListController.loadGroups();
+        _bookListController.loadBooks();
       }
     });
   }
@@ -270,8 +238,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
         ))
         .then((_) {
       if (mounted) {
-        _loadGroups();
-        _loadBooks();
+        _bookListController.loadGroups();
+        _bookListController.loadBooks();
       }
     });
   }
@@ -334,11 +302,6 @@ class _LibraryScreenState extends State<LibraryScreen> {
     _preferences.saveViewMode(newMode);
   }
 
-  Future<void> _changeSortBy(LibrarySortBy sortBy) async {
-    setState(() => _sortBy = sortBy);
-    await _preferences.saveSortBy(sortBy);
-    await _loadBooks();
-  }
 
   bool get _inSelectionMode => _selectedBookIds != null;
 
@@ -380,11 +343,11 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
   Future<void> _moveSelectedBooksToGroup() async {
     final selectedIds = _selectedBookIds;
-    final books = _books;
+    final books = _bookListController.books;
     if (selectedIds == null || selectedIds.isEmpty || books == null) return;
     final destination = await showDialog<String>(
       context: context,
-      builder: (context) => LibraryMoveToGroupDialog(groups: _groups),
+      builder: (context) =>           LibraryMoveToGroupDialog(groups: _bookListController.groups),
     );
     if (destination == null) return;
     // 立即退出選取模式，而非等到逐筆寫入資料庫的迴圈結束後才退出：這個迴圈
@@ -395,7 +358,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
       if (!selectedIds.contains(book.id)) continue;
       await widget.repository.updateBook(book.copyWith(groupName: destination));
     }
-    await _loadBooks();
+    await _bookListController.loadBooks();
   }
 
   /// 對選取集合中所有 EPUB 書籍手動覆寫「引擎分派判斷」結果為固定版面
@@ -411,7 +374,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
   /// （已於 plan-issue-15.md 審查階段確認，見 `reviews/` 對應報告）。
   Future<void> _forceFixedLayoutForSelectedBooks() async {
     final selectedIds = _selectedBookIds;
-    final books = _books;
+    final books = _bookListController.books;
     if (selectedIds == null || selectedIds.isEmpty || books == null) return;
     _exitSelectionMode();
     for (final book in books) {
@@ -419,7 +382,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
       if (book.format != BookFileFormat.epub) continue;
       await widget.repository.updateBook(book.copyWith(isFixedLayout: true));
     }
-    await _loadBooks();
+    await _bookListController.loadBooks();
   }
 
   /// 對選取集合中所有 EPUB 書籍重新呼叫既有 detectAndCacheEpubLayout()，
@@ -429,7 +392,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
   /// 參考早於 _exitSelectionMode() 是安全的」註記。
   Future<void> _restoreAutoLayoutForSelectedBooks() async {
     final selectedIds = _selectedBookIds;
-    final books = _books;
+    final books = _bookListController.books;
     if (selectedIds == null || selectedIds.isEmpty || books == null) return;
     _exitSelectionMode();
     for (final book in books) {
@@ -437,7 +400,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
       if (book.format != BookFileFormat.epub) continue;
       await widget.repository.detectAndCacheEpubLayout(book.id, book.filePath);
     }
-    await _loadBooks();
+    await _bookListController.loadBooks();
   }
 
   Future<bool?> _confirmDeleteBooks(int count) {
@@ -465,7 +428,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
   Future<void> _deleteSelectedBooks() async {
     final selectedIds = _selectedBookIds;
-    final books = _books;
+    final books = _bookListController.books;
     if (selectedIds == null || selectedIds.isEmpty || books == null) return;
     final confirmed = await _confirmDeleteBooks(selectedIds.length);
     if (confirmed != true) return;
@@ -505,7 +468,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
         // 檔案不影響功能正確性。
       }
     }
-    await _loadBooks();
+    await _bookListController.loadBooks();
   }
 
   /// 移除本機快取：對選取集合中所有 Calibre 來源且已下載的書籍，
@@ -513,7 +476,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
   /// / 書籤 / 劃線 / 備註等使用者資料。
   Future<void> _removeLocalCacheForSelectedBooks() async {
     final selectedIds = _selectedBookIds;
-    final books = _books;
+    final books = _bookListController.books;
     if (selectedIds == null || selectedIds.isEmpty || books == null) return;
     _exitSelectionMode();
     for (final book in books) {
@@ -532,7 +495,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
       await widget.repository
           .updateBook(book.copyWith(isDownloaded: false));
     }
-    await _loadBooks();
+    await _bookListController.loadBooks();
   }
 
   void _openBook(Book book) {
@@ -566,7 +529,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
       // _moveSelectedBooksToGroup()）會用舊值覆蓋掉剛剛寫入的最新進度，
       // 造成資料遺失（`/superpowers:requesting-code-review` Critical 2）。
       // 這裡不檢查 mounted——_loadBooks() 內部已有等效保護（見其既有實作）。
-      _loadBooks();
+      _bookListController.loadBooks();
     });
   }
 
@@ -662,7 +625,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
       await widget.repository
           .updateBook(book.copyWith(filePath: permanentPath, isDownloaded: true));
       if (!mounted) return;
-      await _loadBooks();
+      await _bookListController.loadBooks();
     } catch (_) {
       // 〔審查 review-plan-issue-4.md Minor 採納〕downloadBook() 本身
       // 失敗/取消時已經自行清過暫存檔（見 OpdsHttpClient 文件），但
@@ -686,12 +649,12 @@ class _LibraryScreenState extends State<LibraryScreen> {
       context: context,
       builder: (context) => LibraryGroupManagementDialog(
         repository: widget.repository,
-        initialGroups: _groups,
+        initialGroups: _bookListController.groups,
       ),
     );
-    await _loadGroups();
+    await _bookListController.loadGroups();
     if (!mounted) return;
-    await _loadBooks();
+    await _bookListController.loadBooks();
   }
 
   void _openGroupFilteredView(String groupName) {
@@ -760,14 +723,14 @@ class _LibraryScreenState extends State<LibraryScreen> {
       // 把新分類排到「未分類」之後，違反「未分類固定排最後」的不變量，
       // 故改為與 _loadBooks() 一起重新載入。
       if (!mounted) return;
-      _loadGroups();
-      _loadBooks();
+        _bookListController.loadGroups();
+      _bookListController.loadBooks();
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final books = _books;
+    final books = _bookListController.books;
     return PopScope(
       canPop: !_inSelectionMode,
       onPopInvokedWithResult: (didPop, result) {
@@ -836,9 +799,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
         PopupMenuButton<LibrarySortBy>(
           key: const Key('library_sort_button'),
           icon: const Icon(Icons.sort),
-          tooltip: '排序：${_sortLabel(_sortBy)}',
+          tooltip: '排序：${_sortLabel(_bookListController.sortBy)}',
           enabled: books != null,
-          onSelected: _changeSortBy,
+          onSelected: _bookListController.changeSortBy,
           itemBuilder: (context) => LibrarySortBy.values
               .map(
                 (sortBy) => PopupMenuItem<LibrarySortBy>(
@@ -933,7 +896,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   )
                   .then((_) {
                 // 從遠端書庫返回時重新載入書架，確保新下載的書籍出現。
-                if (mounted) _loadBooks();
+                if (mounted) _bookListController.loadBooks();
               });
             },
           ),
