@@ -6,7 +6,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/remote/remote_catalog_dependencies.dart';
 import 'package:elinkbook/remote/opds_client.dart';
 
-import '../support/fake_fingerprint_computer.dart';
 import '../support/fake_opds_client.dart';
 import '../support/fake_remote_thumbnail_cache.dart';
 
