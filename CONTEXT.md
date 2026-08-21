@@ -52,6 +52,14 @@ _Avoid_: 跨頁組、頁面組
 書籍的一種排版形式，每頁有固定尺寸（寬×高），內容不隨螢幕大小重排——常見於漫畫、童書、食譜。與「流式（Reflowable）」互斥。原僅描述 EPUB，`epic-11-multi-format-reader` 起廣義化為跨格式通用概念（見 ADR 0023）：EPUB／KF8(AZW3) 依書本 metadata 判斷可能為固定版面或流式；**CBZ 恆為固定版面**（漫畫圖像無流式變體）；TXT／MD 匯入時合成為 EPUB 相容結構後恆為流式（`isFixedLayout = false`，見「合成書籍結構」）；PDF 有獨立的頁面/縮放概念，不套用此旗標（`isFixedLayout` 恆為 `null`）。偵測時機/機制見「引擎分派判斷」（開書前）與 `EpubLayoutInfo.isFixedLayout`（開書後 Readium 執行期回報，僅用於已選定 Readium 路徑時的內部狀態，不決定引擎選擇——僅適用於 EPUB）。
 _Avoid_: 固定排版、定版式、EPUB FXL（`epic-11` 起不再是 EPUB 專屬概念）
 
+**Location 刻度（Location Tick）**：
+流式格式（EPUB 流式／TXT／MD）頁碼／進度顯示的近似值，來自 foliate-js `SectionProgress.getProgress()`，以 spine 檔案的未壓縮位元組數（非可見文字字元數）除以固定常數 1500 算出，與畫面實際排版渲染出來的視覺頁完全無關，僅供粗略進度顯示用途。與「視覺頁碼」是完全不同精度層級的概念。
+_Avoid_: 頁碼、頁次（過於籠統，未點出「這是估計值」這個關鍵限定）
+
+**視覺頁碼（Visual Page）**：
+固定版面（FXL）／CBZ 走 `FixedLayout.pages`（`#spreads.length`）算出的全書真實頁數，精度等同實際渲染結果。流式格式目前無此資料（見 `docs/epics/epic-26-architecture-hardening/issues.md` Issue 10 候選 2）。與「Location 刻度」於 `EpubPositionInfo` 分屬 `visualPageIndex`/`visualTotalPages` 與 `locationIndex`/`locationTotal` 兩組互斥欄位，同一本書恆缺其中一組。
+_Avoid_: 頁碼（過於籠統）
+
 **引擎分派判斷（Engine Dispatch Detection）**：
 決定一本書籍該用什麼 UI 版面語意（固定版面 → 單頁/雙頁模式；流式 → 連續捲動）的**開書前**判斷，結果快取於 `Book.isFixedLayout`（`app/lib/library/models/book.dart:50`，nullable bool，`null` 代表既有書籍尚未判斷過，或格式本身不適用如 PDF）。原僅涵蓋 EPUB，判斷來源為 `extractMetadata`（匯入時）或 `detectAndCacheEpubLayout`/`detectEpubLayout`（既有書籍首次開書時補判斷）這兩個原生 channel（讀取 EPUB OPF `rendition:layout` 屬性）；`epic-11-multi-format-reader` 起同一欄位廣義套用至 KF8(AZW3)（比照 EPUB 判斷 metadata）、CBZ（恆為 `true`，判斷本身是常數而非偵測）——TXT／MD 因匯入時已合成為流式的 EPUB 相容結構，寫入時即為已知結果（`false`），不需要獨立判斷（見 ADR 0023）。自 ADR 0017 起，EPUB 一律建構 `FoliateEpubReaderView`，不再依此判斷分流到不同 widget——此判斷僅影響 UI 版面參數（單頁/雙頁），不決定引擎選擇。與 `EpubLayoutInfo.isFixedLayout`（開書後才回報的執行期狀態，僅適用於 EPUB）是兩個不同概念、互不影響——見 `book.dart:44-49` 既有註解。少數漫畫 EPUB 因來源檔案 metadata 不完整/不規範，此判斷可能誤判為流式，見「人工版面覆蓋」。
 _Avoid_: FXL 偵測、版面偵測（皆容易與 `EpubLayoutInfo` 執行期狀態混淆）

@@ -4,6 +4,8 @@
 
 **2026-08-21 併入第二份架構檢視報告的候選深化機會：** `docs/research/architecture-review-library-remote-screens.md`（2026-08-19，`/improve-codebase-architecture` 流程產出，範圍為 `LibraryScreen`／`RemoteCatalogScreen` 熱點區域，6 個候選）。原報告候選 1（抽出 `RemoteBookDownloader` 深模組）已於報告發布後由 `epic-30` Issue 6 獨立完成並合併（`downloadToTempFile()`／`promoteToPermanent()` 已被兩個畫面共用，非本次新增範圍）；其餘候選經現況複核（`epic-29`／`epic-30` 兩個仍在開發中的 Epic 持續為 `LibraryScreen` 增加參數與穿透依賴，數字已比報告當時惡化）後依建議處理順序拆為 **Issue 6**（候選 3，`ComputeRemoteFingerprint` 穿透）、**Issue 7**（候選 5，`LibraryScreen` 建構子參數膨脹）、**Issue 8**（候選 2，`LibraryScreen` God-Widget 拆分）、**Issue 9**（候選 4，`Book.copyWith()` shallow interface），皆標記 `ready-for-agent`。候選 6（5 個批次操作方法骨架重複，Speculative）暫不拆案，預期在 Issue 8 拆分時被自然吸收進 `LibraryBatchActions` module。
 
+**2026-08-21 併入第三份架構檢視報告的候選深化機會：** `docs/research/flowable_pagination_precision_architecture_review.md`（2026-08-21，`/improve-codebase-architecture` 流程產出，範圍為流式格式頁次計算精準化，3 個候選）。候選 1（`EpubPositionInfo` 的 `pageIndex`／`location` 語意混用，強度 Strong）已用 `/grilling` 敲定細節並拆為 **Issue 10**，標記 `ready-for-agent`。候選 2（用已渲染 section 視覺頁密度校正 location 估算，強度 Strong 但牴觸 ADR 0011 既有取捨）與候選 3（`EpubPositionInfo` 三層座標重新分層，依附候選 1）尚未拆案，待 Issue 10 完成後視優先順序評估。
+
 ---
 
 ## Issue 1：流式 EPUB 書籤 toggle 快取未載入時，第一次點擊誤判無書籤而重複新增
@@ -277,3 +279,24 @@ Future<void> pumpUntilPdfReady(
 - `flutter analyze` 乾淨、`flutter test` 全數通過。
 
 **驗收標準：** `Book.copyWith()` 21 個欄位全數開放為具名參數；既有 4 個呼叫點行為零改變；`flutter analyze` 乾淨、`flutter test` 全數通過、零回歸。
+
+---
+
+## Issue 10：拆開 `EpubPositionInfo` 的 `pageIndex`／`location` 語意混用
+
+**Status:** `ready-for-agent`（已完成 `/grilling` 規劃階段，規格完整，`plans/plan-issue-10.md` 已產出）。
+
+**依賴：** 無，範圍侷限 `epub_position_info.dart`／`foliate_reader_view.dart`／`main.js`／`reader_screen.dart` 頁尾相關程式碼，可獨立於 Issue 1-9 任何時間點處理。
+
+**來源：** `docs/research/flowable_pagination_precision_architecture_review.md`（2026-08-21，`/improve-codebase-architecture` 流程產出，聚焦「流式頁次計算精準化」，3 個候選）候選 1（強度 Strong）。與候選 2（用已渲染 section 的視覺頁密度校正 location 估算，牴觸 ADR 0011 既有取捨，需另外決策是否重開討論）、候選 3（`EpubPositionInfo` 三層座標重新分層，依附本 Issue，不必獨立立案）為同一份報告的另外兩個候選，尚未拆案。
+
+**背景／症狀：** `app/android/app/src/main/assets/foliate/main.js:560-575` 的 `relocate` 事件處理常式裡，「index」這個詞先後代表兩個完全不同的東西：`section?.current`（章節序號）與 `location?.current`（位元組估計刻度），退回邏輯 `location?.current ?? pageIndex` 悄悄跨單位轉換；Dart 端 `EpubPositionInfo.pageIndex`／`totalPages` 的欄位名稱讓呼叫者直覺以為拿到的是精確視覺頁碼，實際上流式格式收到的是估計值。規劃階段進一步查證發現：FXL／CBZ 分支（`fixed-layout.js:1586-1593` 的 `FixedLayout.page`／`.pages`，`#spreads.length`）其實是全書真實視覺頁碼，與流式格式的估計值精度完全不同，但兩者目前共用同一組欄位輸出——若只做「重新命名」，會把問題從流式格式一側搬到 FXL 一側，而非真正解決。
+
+**Solution：** `EpubPositionInfo` 拆成兩組互斥欄位：`locationIndex`／`locationTotal`（流式格式專用，估計刻度）與 `visualPageIndex`／`visualTotalPages`（FXL／CBZ 專用，真實頁碼），同一本書恆缺其中一組（另一組為 `null`）。`main.js` 的 `onLocatorChanged` 改為兩參數：`locatorJson`（含 cfi 的字串，維持原樣不動，因會被持久化並跨裝置同步，不可混入估計值）＋新的具名 JSON 物件 `{fraction, locationIndex, locationTotal, visualPageIndex, visualTotalPages}`，依 `isFixedLayout` 分流只填其中一組。`main.js:571` 內嵌在 `locatorJson` 裡的 `index`（章節序號，`extractCfi()` 從未讀取）維持原樣不動，超出本次範圍。硬換名，同一個 PR 全部改掉，不留 deprecated alias（純 in-process 型別重構，Dart 靜態編譯是安全網）。頁尾 UI 顯示格式不變，不新增「估計值」視覺標示（該決定屬於候選 1 之外的 UX 範疇）。詳細任務拆解與精確程式碼異動見 `plans/plan-issue-10.md`。
+
+**單元測試要求：**
+- 新增 `onLocatorChanged` handler 解析新 payload 形狀（兩參數、位置物件依格式分流填值）的單元測試——目前完全沒有測試覆蓋這個 JS→Dart 邊界解析邏輯。
+- `reader_screen_test.dart` 既有 15 處帶 `pageIndex:`/`totalPages:` 值的 `EpubPositionInfo(...)` 建構呼叫（22 處建構呼叫中，只有 15 處實際帶這兩個欄位值）全數改用新欄位名，其中 14 處（流式 EPUB 情境）改為 `locationIndex`/`locationTotal`，1 處（`EPUB 固定版面` 情境，行 5300）改為 `visualPageIndex`/`visualTotalPages`。
+- `flutter analyze` 乾淨、`flutter test` 全數通過、零回歸。
+
+**驗收標準：** `EpubPositionInfo` 不再有 `pageIndex`／`totalPages` 欄位，改為 `locationIndex`／`locationTotal`／`visualPageIndex`／`visualTotalPages` 四個欄位，同一本書恆有一組為 `null`；`main.js` 的 `onLocatorChanged` payload 改為兩參數，`locatorJson` 內容不受影響；流式與 FXL／CBZ 書籍的頁尾顯示行為零改變；`flutter analyze` 乾淨、`flutter test` 全數通過、零回歸。
