@@ -66,13 +66,12 @@ class Book {
   /// 伺服器時間戳記字串（epic-8-sync Issue 5，spec.md「本機 Schema
   /// 變更」）：供同步引擎偵測「其他裝置是否在此之後又推送過」用——與
   /// 本機快取值不同即代表衝突。`null` 代表這本書的閱讀位置從未成功同步
-  /// 過。
-  /// **不開放為 `copyWith()` 的具名參數**（本 Issue 對這兩個欄位的所有
-  /// 寫入皆透過 partial update 完成，沒有呼叫端需要透過 `copyWith()`
-  /// 修改，YAGNI）——但仍會原樣帶入 `copyWith()` 回傳的新物件，不能
-  /// 讓 `copyWith()` 把這兩個欄位清空（2026-08-04 最終全分支審查修正：
-  /// 原本沒有帶入，會被任何呼叫 `copyWith()` 的地方靜默清成 null，見
-  /// `sqlite_library_repository.dart` 的 `updateBook()` 呼叫端）。
+  /// 過。與 [positionUpdatedAt] 目前的主要寫入路徑仍是
+  /// `ReadingPositionRepository.save()` 的 partial update，但
+  /// `copyWith()` 自 epic-26-architecture-hardening Issue 9 起已開放為
+  /// 具名參數（原本刻意不開放，2026-08-04 曾因未帶入原樣值而被任何呼叫
+  /// `copyWith()` 的地方靜默清成 `null`，見 `sqlite_library_repository.
+  /// dart` 的 `updateBook()` 呼叫端），不傳入時仍維持原值不被清空。
   final String? positionSyncedServerUpdatedAt;
 
   /// 所屬遠端書庫伺服器 ID（`remote_servers.id` 外鍵），`null` 代表非遠端匯入或遠端站點已被刪除（ON DELETE SET NULL）。
@@ -187,46 +186,72 @@ class Book {
     );
   }
 
-  /// 回傳欄位值與自身相同的新物件，僅覆寫明確傳入的參數。[groupName] 供
-  /// Issue 10 的批次分類異動使用；[isFixedLayout] 供本 Issue 的 EPUB 版面
-  /// 判斷/回填流程使用；[filePath]／[isDownloaded] 供
-  /// epic-30-calibre-remote-library Issue 4 的「移除本機快取」（僅傳
-  /// `isDownloaded: false`）／「重新下載」（`filePath` 與
-  /// `isDownloaded: true` 一併傳入）使用——Issue 0 當時刻意不開放這兩個
-  /// 欄位為具名參數（YAGNI，當時沒有呼叫端需要真的異動它們），本 Issue
-  /// 是第一個需要的呼叫端。
-  /// **⚠️ `remoteServerId`／`remoteBookId`／`remoteDownloadUrl`／
-  /// `cloudFileId` 仍不開放為具名參數（目前沒有呼叫端需要異動這幾個
-  /// 欄位），但必須原樣帶入新物件以避免靜默清空**。
+  /// 回傳欄位值與自身相同的新物件，可覆寫除 [id] 外的全部 21 個欄位
+  /// （epic-26-architecture-hardening Issue 9）。[id] 刻意不開放為具名
+  /// 參數——`copyWith()` 語意上是「複製同一本書、覆寫部分欄位」，不是
+  /// 「建立一本新書」，識別碼不應該被覆寫；真的需要一本新 [id] 的書，
+  /// 應直接呼叫 [Book] 建構子。可為 `null` 型別的欄位（例如
+  /// [contentFingerprint]／[cloudFileId]）比照既有 [isFixedLayout] 慣例，
+  /// 不傳入時維持原值、無法透過本方法明確清空為 `null`（YAGNI，目前沒有
+  /// 呼叫端需要這個語意）。
+  ///
+  /// 【epic-26-architecture-hardening Issue 9 前情提要，避免未來重演】
+  /// 本方法原本只開放 4 個欄位（[groupName]／[isFixedLayout]／[filePath]／
+  /// [isDownloaded]）為具名參數，其餘欄位在函式本體逐一手動
+  /// `fieldName: fieldName` 原樣帶入——寫漏一個不會編譯錯誤，只會在執行期
+  /// 靜默清空該欄位；2026-08-04 曾因此漏帶 [positionSyncedServerUpdatedAt]／
+  /// [positionUpdatedAt]，任何呼叫 `copyWith()` 的批次操作（例如
+  /// `LibraryBatchActions`）都會靜默清空同步進度資料，直到審查才發現修正
+  /// （詳見 `docs/research/architecture-review-library-remote-screens.md`
+  /// 候選 4）。全欄位開放為具名參數後，遺漏欄位會直接編譯失敗，這個
+  /// bug class 不會再發生。
   Book copyWith({
-    String? groupName,
-    bool? isFixedLayout,
+    String? title,
+    String? author,
+    BookFileFormat? format,
     String? filePath,
+    BookSource? source,
+    String? coverPath,
+    double? progress,
+    String? epubLocator,
+    int? pdfPageIndex,
+    bool? isFixedLayout,
+    String? contentFingerprint,
+    int? positionUpdatedAt,
+    String? positionSyncedServerUpdatedAt,
+    String? remoteServerId,
+    String? remoteBookId,
+    String? remoteDownloadUrl,
     bool? isDownloaded,
+    String? cloudFileId,
+    String? groupName,
+    DateTime? createTime,
+    DateTime? lastReadTime,
   }) {
     return Book(
       id: id,
-      title: title,
-      author: author,
-      format: format,
+      title: title ?? this.title,
+      author: author ?? this.author,
+      format: format ?? this.format,
       filePath: filePath ?? this.filePath,
-      source: source,
-      coverPath: coverPath,
-      progress: progress,
-      epubLocator: epubLocator,
-      pdfPageIndex: pdfPageIndex,
-      contentFingerprint: contentFingerprint,
-      positionUpdatedAt: positionUpdatedAt,
-      positionSyncedServerUpdatedAt: positionSyncedServerUpdatedAt,
-      remoteServerId: remoteServerId,
-      remoteBookId: remoteBookId,
-      remoteDownloadUrl: remoteDownloadUrl,
-      isDownloaded: isDownloaded ?? this.isDownloaded,
-      cloudFileId: cloudFileId,
+      source: source ?? this.source,
+      coverPath: coverPath ?? this.coverPath,
+      progress: progress ?? this.progress,
+      epubLocator: epubLocator ?? this.epubLocator,
+      pdfPageIndex: pdfPageIndex ?? this.pdfPageIndex,
       isFixedLayout: isFixedLayout ?? this.isFixedLayout,
+      contentFingerprint: contentFingerprint ?? this.contentFingerprint,
+      positionUpdatedAt: positionUpdatedAt ?? this.positionUpdatedAt,
+      positionSyncedServerUpdatedAt:
+          positionSyncedServerUpdatedAt ?? this.positionSyncedServerUpdatedAt,
+      remoteServerId: remoteServerId ?? this.remoteServerId,
+      remoteBookId: remoteBookId ?? this.remoteBookId,
+      remoteDownloadUrl: remoteDownloadUrl ?? this.remoteDownloadUrl,
+      isDownloaded: isDownloaded ?? this.isDownloaded,
+      cloudFileId: cloudFileId ?? this.cloudFileId,
       groupName: groupName ?? this.groupName,
-      createTime: createTime,
-      lastReadTime: lastReadTime,
+      createTime: createTime ?? this.createTime,
+      lastReadTime: lastReadTime ?? this.lastReadTime,
     );
   }
 

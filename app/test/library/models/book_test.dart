@@ -387,7 +387,85 @@ void main() {
     expect(restored.cloudFileId, isNull);
   });
 
-  test('copyWith 保留 cloudFileId（欄位未開放為具名參數，但不可被 copyWith 清空）', () {
+  test(
+      'copyWith() 覆寫全部新開放的具名參數（epic-26-architecture-hardening '
+      'Issue 9），值正確套用，未覆寫的既有具名參數維持原值', () {
+    final original = Book(
+      id: 'b23',
+      title: '原書名',
+      author: '原作者',
+      format: BookFileFormat.pdf,
+      filePath: '/storage/original.pdf',
+      source: BookSource.local,
+      coverPath: '/storage/original_cover.png',
+      progress: 0.1,
+      epubLocator: 'original-locator',
+      pdfPageIndex: 3,
+      isFixedLayout: false,
+      contentFingerprint: 'fp-original',
+      positionUpdatedAt: 1000,
+      positionSyncedServerUpdatedAt: '2026-01-01 00:00:00.000Z',
+      remoteServerId: 'srv-original',
+      remoteBookId: 'remote-original',
+      remoteDownloadUrl: 'http://example.com/original.pdf',
+      isDownloaded: true,
+      cloudFileId: 'cloud-original',
+      groupName: '原分類',
+      createTime: DateTime.fromMillisecondsSinceEpoch(1000),
+      lastReadTime: DateTime.fromMillisecondsSinceEpoch(2000),
+    );
+
+    final updated = original.copyWith(
+      title: '新書名',
+      author: '新作者',
+      format: BookFileFormat.epub,
+      source: BookSource.googleDrive,
+      coverPath: '/storage/new_cover.png',
+      progress: 0.9,
+      epubLocator: 'new-locator',
+      pdfPageIndex: 7,
+      contentFingerprint: 'fp-new',
+      positionUpdatedAt: 5000,
+      positionSyncedServerUpdatedAt: '2026-08-21 00:00:00.000Z',
+      remoteServerId: 'srv-new',
+      remoteBookId: 'remote-new',
+      remoteDownloadUrl: 'http://example.com/new.pdf',
+      cloudFileId: 'cloud-new',
+      createTime: DateTime.fromMillisecondsSinceEpoch(9000),
+      lastReadTime: DateTime.fromMillisecondsSinceEpoch(9999),
+    );
+
+    expect(updated.id, 'b23', reason: 'id 不開放為具名參數，不可能改變');
+    expect(updated.title, '新書名');
+    expect(updated.author, '新作者');
+    expect(updated.format, BookFileFormat.epub);
+    expect(updated.source, BookSource.googleDrive);
+    expect(updated.coverPath, '/storage/new_cover.png');
+    expect(updated.progress, 0.9);
+    expect(updated.epubLocator, 'new-locator');
+    expect(updated.pdfPageIndex, 7);
+    expect(updated.contentFingerprint, 'fp-new');
+    expect(updated.positionUpdatedAt, 5000);
+    expect(updated.positionSyncedServerUpdatedAt, '2026-08-21 00:00:00.000Z');
+    expect(updated.remoteServerId, 'srv-new');
+    expect(updated.remoteBookId, 'remote-new');
+    expect(updated.remoteDownloadUrl, 'http://example.com/new.pdf');
+    expect(updated.cloudFileId, 'cloud-new');
+    expect(updated.createTime, DateTime.fromMillisecondsSinceEpoch(9000));
+    expect(updated.lastReadTime, DateTime.fromMillisecondsSinceEpoch(9999));
+
+    // 既有 4 個具名參數本次未傳入，維持原值——證明新開放的 17 個參數不影響
+    // 既有行為。
+    expect(updated.filePath, '/storage/original.pdf');
+    expect(updated.isFixedLayout, isFalse);
+    expect(updated.isDownloaded, isTrue);
+    expect(updated.groupName, '原分類');
+  });
+
+  test(
+      'copyWith() 不傳入 cloudFileId 時維持原值（epic-26-architecture-hardening '
+      'Issue 9 已開放為具名參數，沿用既有「不傳入即維持原值」慣例，不可被'
+      '靜默清空）', () {
     final book = Book(
       id: 'b22',
       title: '雲端匯入的書',
