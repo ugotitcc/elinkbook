@@ -190,7 +190,7 @@ Future<void> pumpUntilPdfReady(
 
 ## Issue 6：收斂 `ComputeRemoteFingerprint` 在多個畫面之間的穿透
 
-**Status:** `ready-for-agent`。
+**Status:** ✅ 已完成並合併回 `main`（PR [#174](https://git.jigong.org/huthief/elinkBook/pulls/174)，分支 `epic-26/issue-6`，5 個 commit：Task 1–4 各一個＋Task 4 移除未使用 import 一個）。新增不可變資料類別 `RemoteCatalogDependencies`（`app/lib/remote/remote_catalog_dependencies.dart`），`RemoteServerListScreen`／`RemoteCatalogScreen`（含自我遞迴 `_openSubsection()`）皆改用單一 `dependencies` 參數取代原本 3 個獨立具名參數；範圍刻意侷限這兩個畫面，`LibraryScreen`／`main.dart`／`CloudBrowserScreen`／`CloudDownloadQueueDialog` 完全未動（僅 `library_screen.dart` 一處呼叫點多做一次 bundle 組裝，見計畫書「規劃階段查證」段落）。審查（`reviews/review-issue-6.md`）確認最終狀態與計畫完全吻合、範圍邊界確實守住，`flutter analyze` 乾淨、`flutter test` 1607 項測試全數通過，自我遞迴 `same()` 回歸測試（鎖定 `925703f` 那類漏轉送事故不再重演）確認存在且正確。審查發現 1 項 Important（過渡期 commit `fb999e9` 混入部分 Task 3 改動、單獨 checkout 無法編譯，違反計畫「每個 commit 皆可編譯」原則）與 1 項 Minor（Task 1 測試留有未使用 import 直到 Task 4 才清除）——因最終合併狀態無功能性問題，經人類確認接受現況，不另補修正 commit。
 
 **依賴：** 無（建議與 Issue 7 一併規劃——本 Issue 收斂出的依賴 bundle，Issue 7 可望直接沿用來瘦身 `LibraryScreen` 建構子，但兩者可獨立驗收）。
 
