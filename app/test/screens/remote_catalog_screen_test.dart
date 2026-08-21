@@ -10,6 +10,7 @@ import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/remote/remote_server_profile.dart';
 import 'package:elinkbook/remote/opds_types.dart';
 import 'package:elinkbook/screens/remote_catalog_screen.dart';
+import 'package:elinkbook/remote/remote_catalog_dependencies.dart';
 
 import '../support/fake_book_import_service.dart';
 import '../support/fake_fingerprint_computer.dart';
@@ -92,9 +93,11 @@ void main() {
         server: server,
         repository: repository ?? FakeRemoteServerRepository(),
         libraryRepository: libraryRepository ?? FakeLibraryRepository(),
-        computeFingerprint: (fingerprintComputer ?? FakeFingerprintComputer()).call,
-        thumbnailCache: thumbnailCache ?? FakeRemoteThumbnailCache(),
-        createOpdsClient: () => opdsClient,
+        dependencies: RemoteCatalogDependencies(
+          computeFingerprint: (fingerprintComputer ?? FakeFingerprintComputer()).call,
+          thumbnailCache: thumbnailCache ?? FakeRemoteThumbnailCache(),
+          createOpdsClient: () => opdsClient,
+        ),
         importService: FakeBookImportService(),
         feedUrl: feedUrl,
       ),
@@ -135,6 +138,42 @@ void main() {
 
     expect(find.text('紅樓夢'), findsOneWidget);
     expect(opdsClient.fetchFeedCalls, [null, 'http://192.168.1.100:8080/opds/by-author']);
+  });
+
+  testWidgets('點擊分類導覽項目下鑽後，新畫面沿用同一個 RemoteCatalogDependencies 實例（epic-26 Issue 6 回歸鎖定）',
+      (tester) async {
+    final opdsClient = FakeOpdsClient(feeds: {
+      server.baseUrl: const OpdsFeed(
+        title: '根目錄',
+        navigationLinks: [OpdsNavigationLink(title: '作者分類', href: 'http://192.168.1.100:8080/opds/by-author')],
+      ),
+      'http://192.168.1.100:8080/opds/by-author': const OpdsFeed(
+        title: '作者分類',
+        entries: [entry1],
+      ),
+    });
+    final dependencies = RemoteCatalogDependencies(
+      computeFingerprint: FakeFingerprintComputer().call,
+      thumbnailCache: FakeRemoteThumbnailCache(),
+      createOpdsClient: () => opdsClient,
+    );
+    await tester.pumpWidget(MaterialApp(
+      home: RemoteCatalogScreen(
+        server: server,
+        repository: FakeRemoteServerRepository(),
+        libraryRepository: FakeLibraryRepository(),
+        dependencies: dependencies,
+        importService: FakeBookImportService(),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('作者分類'));
+    await tester.pumpAndSettle();
+
+    final pushedScreen = tester.widget<RemoteCatalogScreen>(find.byType(RemoteCatalogScreen).last);
+    expect(pushedScreen.dependencies, same(dependencies),
+        reason: '下鑽後的新畫面應沿用同一個 bundle 實例，不是重新組裝的另一份');
   });
 
   testWidgets('有 nextUrl 時顯示載入更多按鈕，點擊後累加下一頁書目', (tester) async {
@@ -299,9 +338,11 @@ void main() {
           server: server,
           repository: FakeRemoteServerRepository(),
           libraryRepository: FakeLibraryRepository(),
-          computeFingerprint: FakeFingerprintComputer().call,
-          thumbnailCache: FakeRemoteThumbnailCache(),
-          createOpdsClient: () => opdsClient,
+          dependencies: RemoteCatalogDependencies(
+            computeFingerprint: FakeFingerprintComputer().call,
+            thumbnailCache: FakeRemoteThumbnailCache(),
+            createOpdsClient: () => opdsClient,
+          ),
           importService: FakeBookImportService(),
           isEinkMode: true,
         ),
@@ -335,9 +376,11 @@ void main() {
           server: server,
           repository: FakeRemoteServerRepository(),
           libraryRepository: FakeLibraryRepository(),
-          computeFingerprint: FakeFingerprintComputer().call,
-          thumbnailCache: FakeRemoteThumbnailCache(),
-          createOpdsClient: () => opdsClient,
+          dependencies: RemoteCatalogDependencies(
+            computeFingerprint: FakeFingerprintComputer().call,
+            thumbnailCache: FakeRemoteThumbnailCache(),
+            createOpdsClient: () => opdsClient,
+          ),
           importService: FakeBookImportService(),
           isEinkMode: true,
         ),
@@ -371,9 +414,11 @@ void main() {
           server: server,
           repository: FakeRemoteServerRepository(),
           libraryRepository: FakeLibraryRepository(),
-          computeFingerprint: FakeFingerprintComputer().call,
-          thumbnailCache: FakeRemoteThumbnailCache(),
-          createOpdsClient: () => opdsClient,
+          dependencies: RemoteCatalogDependencies(
+            computeFingerprint: FakeFingerprintComputer().call,
+            thumbnailCache: FakeRemoteThumbnailCache(),
+            createOpdsClient: () => opdsClient,
+          ),
           importService: FakeBookImportService(),
         ),
       ));
@@ -412,9 +457,11 @@ void main() {
           server: server,
           repository: FakeRemoteServerRepository(),
           libraryRepository: FakeLibraryRepository(),
-          computeFingerprint: (path, format) async => 'unused-fingerprint',
-          thumbnailCache: FakeRemoteThumbnailCache(),
-          createOpdsClient: () => opdsClient,
+          dependencies: RemoteCatalogDependencies(
+            computeFingerprint: (path, format) async => 'unused-fingerprint',
+            thumbnailCache: FakeRemoteThumbnailCache(),
+            createOpdsClient: () => opdsClient,
+          ),
           importService: importService,
         ),
       ));
@@ -460,9 +507,11 @@ void main() {
           server: server,
           repository: FakeRemoteServerRepository(),
           libraryRepository: FakeLibraryRepository(),
-          computeFingerprint: (path, format) async => 'unused-fingerprint',
-          thumbnailCache: FakeRemoteThumbnailCache(),
-          createOpdsClient: () => opdsClient,
+          dependencies: RemoteCatalogDependencies(
+            computeFingerprint: (path, format) async => 'unused-fingerprint',
+            thumbnailCache: FakeRemoteThumbnailCache(),
+            createOpdsClient: () => opdsClient,
+          ),
           importService: FakeBookImportService(),
         ),
       ));
@@ -506,9 +555,11 @@ void main() {
           server: server,
           repository: FakeRemoteServerRepository(),
           libraryRepository: FakeLibraryRepository(),
-          computeFingerprint: (path, format) async => 'unused-fingerprint',
-          thumbnailCache: FakeRemoteThumbnailCache(),
-          createOpdsClient: () => opdsClient,
+          dependencies: RemoteCatalogDependencies(
+            computeFingerprint: (path, format) async => 'unused-fingerprint',
+            thumbnailCache: FakeRemoteThumbnailCache(),
+            createOpdsClient: () => opdsClient,
+          ),
           importService: FakeBookImportService(),
         ),
       ));
@@ -543,9 +594,11 @@ void main() {
           server: server,
           repository: FakeRemoteServerRepository(),
           libraryRepository: FakeLibraryRepository(),
-          computeFingerprint: (path, format) async => 'unused-fingerprint',
-          thumbnailCache: FakeRemoteThumbnailCache(),
-          createOpdsClient: () => opdsClient,
+          dependencies: RemoteCatalogDependencies(
+            computeFingerprint: (path, format) async => 'unused-fingerprint',
+            thumbnailCache: FakeRemoteThumbnailCache(),
+            createOpdsClient: () => opdsClient,
+          ),
           importService: FakeBookImportService(),
         ),
       ));
@@ -583,9 +636,11 @@ void main() {
           server: server,
           repository: FakeRemoteServerRepository(),
           libraryRepository: FakeLibraryRepository(),
-          computeFingerprint: (path, format) async => 'unused-fingerprint',
-          thumbnailCache: FakeRemoteThumbnailCache(),
-          createOpdsClient: () => opdsClient,
+          dependencies: RemoteCatalogDependencies(
+            computeFingerprint: (path, format) async => 'unused-fingerprint',
+            thumbnailCache: FakeRemoteThumbnailCache(),
+            createOpdsClient: () => opdsClient,
+          ),
           importService: FakeBookImportService(),
         ),
       ));
@@ -623,9 +678,11 @@ void main() {
           server: server,
           repository: FakeRemoteServerRepository(),
           libraryRepository: FakeLibraryRepository(),
-          computeFingerprint: (path, format) async => 'unused-fingerprint',
-          thumbnailCache: FakeRemoteThumbnailCache(),
-          createOpdsClient: () => opdsClient,
+          dependencies: RemoteCatalogDependencies(
+            computeFingerprint: (path, format) async => 'unused-fingerprint',
+            thumbnailCache: FakeRemoteThumbnailCache(),
+            createOpdsClient: () => opdsClient,
+          ),
           importService: importService,
         ),
       ));
@@ -674,9 +731,11 @@ void main() {
             server: server,
             repository: FakeRemoteServerRepository(),
             libraryRepository: libraryRepository,
-            computeFingerprint: fingerprintComputer.call,
-            thumbnailCache: FakeRemoteThumbnailCache(),
-            createOpdsClient: () => opdsClient,
+            dependencies: RemoteCatalogDependencies(
+              computeFingerprint: fingerprintComputer.call,
+              thumbnailCache: FakeRemoteThumbnailCache(),
+              createOpdsClient: () => opdsClient,
+            ),
             importService: importService,
           ),
         ));
@@ -725,9 +784,11 @@ void main() {
             server: server,
             repository: FakeRemoteServerRepository(),
             libraryRepository: libraryRepository,
-            computeFingerprint: fingerprintComputer.call,
-            thumbnailCache: FakeRemoteThumbnailCache(),
-            createOpdsClient: () => opdsClient,
+            dependencies: RemoteCatalogDependencies(
+              computeFingerprint: fingerprintComputer.call,
+              thumbnailCache: FakeRemoteThumbnailCache(),
+              createOpdsClient: () => opdsClient,
+            ),
             importService: importService,
           ),
         ));
@@ -768,9 +829,11 @@ void main() {
             server: server,
             repository: FakeRemoteServerRepository(),
             libraryRepository: FakeLibraryRepository(),
-            computeFingerprint: fingerprintComputer.call,
-            thumbnailCache: FakeRemoteThumbnailCache(),
-            createOpdsClient: () => opdsClient,
+            dependencies: RemoteCatalogDependencies(
+              computeFingerprint: fingerprintComputer.call,
+              thumbnailCache: FakeRemoteThumbnailCache(),
+              createOpdsClient: () => opdsClient,
+            ),
             importService: importService,
           ),
         ));
