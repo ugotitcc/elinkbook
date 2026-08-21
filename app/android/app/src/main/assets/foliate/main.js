@@ -166,6 +166,14 @@ window.applyPreferences = function (prefs) {
   // 旋轉當下手邊剛好有的局部資料。
   lastAppliedPrefs = prefs
 
+  // epic-26-architecture-hardening Issue 11：字級/行距/段落間距/邊距/
+  // 單雙欄/螢幕方向/直橫排切換全部流經這個唯一入口，任一項改變都會讓
+  // SectionProgress 已記錄的密度校正資料失真，整包清空重算（FXL 書籍
+  // 沒有這筆資料，clearLocationDensity() 內部為 no-op，此處無條件呼叫
+  // 不需要額外判斷 isFixedLayout，見 plans/plan-issue-11.md 規劃階段
+  // 查證第 3 點）。
+  view.clearLocationDensity()
+
   // Epic 20 Issue 2：FXL（定樣式）書籍不套用流式（reflowable） Paginator
   // 專屬的排版參數。`foliate-fxl` 的 observedAttributes 只有
   // ['zoom', 'scale-factor', 'spread', 'flow', 'scroll-gap']，其中只有
