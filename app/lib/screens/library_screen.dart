@@ -59,11 +59,11 @@ class LibraryScreen extends StatefulWidget {
   /// 收斂原本 `syncAccountRepository`／`syncClient`／`syncCheckpointTrigger`
   /// 三個獨立參數（epic-26-architecture-hardening Issue 7）。
   final LibrarySyncDependencies syncDependencies;
-  final CloudAccountRepository? cloudAccountRepository;
-  final GoogleDriveOAuthClient? googleDriveOAuthClient;
-  final OneDriveOAuthClient? oneDriveOAuthClient;
-  final CloudStorageClient? googleDriveStorageClient;
-  final CloudStorageClient? oneDriveStorageClient;
+  /// 收斂原本 `cloudAccountRepository`／`googleDriveOAuthClient`／
+  /// `oneDriveOAuthClient`／`googleDriveStorageClient`／
+  /// `oneDriveStorageClient` 五個獨立參數（epic-26-architecture-hardening
+  /// Issue 7）。
+  final LibraryCloudAccountDependencies cloudAccountDependencies;
   final RemoteServerRepository? remoteServerRepository;
   final OpdsClient Function()? createOpdsClient;
   final ComputeRemoteFingerprint? computeFingerprint;
@@ -82,11 +82,7 @@ class LibraryScreen extends StatefulWidget {
     required this.prefsManager,
     this.readerFeatureRepositories = const LibraryReaderFeatureRepositories(),
     this.syncDependencies = const LibrarySyncDependencies(),
-    this.cloudAccountRepository,
-    this.googleDriveOAuthClient,
-    this.oneDriveOAuthClient,
-    this.googleDriveStorageClient,
-    this.oneDriveStorageClient,
+    this.cloudAccountDependencies = const LibraryCloudAccountDependencies(),
     this.remoteServerRepository,
     this.createOpdsClient,
     this.computeFingerprint,
@@ -733,15 +729,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 customFontsRepository: widget.readerFeatureRepositories.customFontsRepository,
               ),
               syncDependencies: widget.syncDependencies,
-              cloudAccountRepository: widget.cloudAccountRepository,
-              googleDriveOAuthClient: widget.googleDriveOAuthClient,
-              oneDriveOAuthClient: widget.oneDriveOAuthClient,
-              // 【審查修正 review-issue-3.md Important #1】先前遺漏這個
-              // 欄位，導致從分類篩選路徑進入的 LibraryScreen 內「從
-              // Google Drive 匯入」選單項目永遠停用（比照上方三個雲端
-              // 帳號相關欄位的既有貫穿慣例）。
-              googleDriveStorageClient: widget.googleDriveStorageClient,
-              oneDriveStorageClient: widget.oneDriveStorageClient,
+              cloudAccountDependencies: widget.cloudAccountDependencies,
               // 【審查修正 review-issue-5.md Important #1】Issue 5 新增的
               // 「從 Google Drive／OneDrive 匯入」選單門檻改為同時檢查
               // `widget.computeFingerprint != null`，這裡若不轉發，分類
@@ -900,22 +888,24 @@ class _LibraryScreenState extends State<LibraryScreen> {
             ),
             PopupMenuItem<void>(
               key: const Key('library_import_google_drive_option'),
-              enabled: widget.googleDriveStorageClient != null &&
+              enabled: widget.cloudAccountDependencies.googleDriveStorageClient != null &&
                   widget.computeFingerprint != null,
-              onTap: (widget.googleDriveStorageClient == null ||
+              onTap: (widget.cloudAccountDependencies.googleDriveStorageClient == null ||
                       widget.computeFingerprint == null)
                   ? null
-                  : () => _openGoogleDriveBrowser(widget.googleDriveStorageClient!),
+                  : () => _openGoogleDriveBrowser(
+                      widget.cloudAccountDependencies.googleDriveStorageClient!),
               child: const Text('從 Google Drive 匯入'),
             ),
             PopupMenuItem<void>(
               key: const Key('library_import_onedrive_option'),
-              enabled: widget.oneDriveStorageClient != null &&
+              enabled: widget.cloudAccountDependencies.oneDriveStorageClient != null &&
                   widget.computeFingerprint != null,
-              onTap: (widget.oneDriveStorageClient == null ||
+              onTap: (widget.cloudAccountDependencies.oneDriveStorageClient == null ||
                       widget.computeFingerprint == null)
                   ? null
-                  : () => _openOneDriveBrowser(widget.oneDriveStorageClient!),
+                  : () => _openOneDriveBrowser(
+                      widget.cloudAccountDependencies.oneDriveStorageClient!),
               child: const Text('從 OneDrive 匯入'),
             ),
           ],
@@ -973,9 +963,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   customFontsRepository: widget.readerFeatureRepositories.customFontsRepository,
                   syncAccountRepository: widget.syncDependencies.syncAccountRepository,
                   syncClient: widget.syncDependencies.syncClient,
-                  cloudAccountRepository: widget.cloudAccountRepository,
-                  googleDriveOAuthClient: widget.googleDriveOAuthClient,
-                  oneDriveOAuthClient: widget.oneDriveOAuthClient,
+                  cloudAccountRepository: widget.cloudAccountDependencies.cloudAccountRepository,
+                  googleDriveOAuthClient: widget.cloudAccountDependencies.googleDriveOAuthClient,
+                  oneDriveOAuthClient: widget.cloudAccountDependencies.oneDriveOAuthClient,
                 ),
               ),
             );

@@ -2057,7 +2057,9 @@ void main() {
           repository: FakeLibraryRepository(),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
-          googleDriveStorageClient: client,
+          cloudAccountDependencies: LibraryCloudAccountDependencies(
+            googleDriveStorageClient: client,
+          ),
           computeFingerprint: FakeFingerprintComputer().call,
         ),
       ),
@@ -2085,7 +2087,9 @@ void main() {
           repository: FakeLibraryRepository(),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
-          googleDriveStorageClient: googleDriveStorageClient,
+          cloudAccountDependencies: LibraryCloudAccountDependencies(
+            googleDriveStorageClient: googleDriveStorageClient,
+          ),
           computeFingerprint: computeFingerprint,
           isMobileDataConnection: isMobileDataConnection,
         ),
@@ -2133,7 +2137,9 @@ void main() {
           repository: FakeLibraryRepository(),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
-          oneDriveStorageClient: client,
+          cloudAccountDependencies: LibraryCloudAccountDependencies(
+            oneDriveStorageClient: client,
+          ),
           computeFingerprint: FakeFingerprintComputer().call,
         ),
       ),
@@ -3036,7 +3042,9 @@ void main() {
           repository: FakeLibraryRepository(initialBooks: [book]),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
-          googleDriveStorageClient: googleDriveStorageClient,
+          cloudAccountDependencies: LibraryCloudAccountDependencies(
+            googleDriveStorageClient: googleDriveStorageClient,
+          ),
           computeFingerprint: computeFingerprint,
           isMobileDataConnection: isMobileDataConnection,
         ),
@@ -3049,8 +3057,9 @@ void main() {
 
     final filteredScreenFinder = _filteredLibraryScreenFinder('奇幻');
     final filteredScreen = tester.widget<LibraryScreen>(filteredScreenFinder);
-    expect(filteredScreen.googleDriveStorageClient, same(googleDriveStorageClient),
-        reason: '_openGroupFilteredView() 未把 googleDriveStorageClient 貫穿給下一層 '
+    expect(filteredScreen.cloudAccountDependencies.googleDriveStorageClient,
+        same(googleDriveStorageClient),
+        reason: '_openGroupFilteredView() 未把 cloudAccountDependencies 貫穿給下一層 '
             'LibraryScreen，會導致分類篩選畫面內「從 Google Drive 匯入」選單項目 '
             '永遠停用');
     expect(filteredScreen.computeFingerprint, same(computeFingerprint),
