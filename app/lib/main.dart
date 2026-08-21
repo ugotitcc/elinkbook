@@ -315,10 +315,12 @@ class _ElinkBookAppState extends State<ElinkBookApp> with WidgetsBindingObserver
           thumbnailCache: widget.thumbnailCache,
         ),
         isMobileDataConnection: widget.isMobileDataConnection,
-        currentTheme: _theme,
-        isEinkMode: _isEinkMode,
-        onThemeChanged: _handleThemeChanged,
-        onEinkModeChanged: _handleEinkModeChanged,
+        themeDependencies: LibraryThemeDependencies(
+          currentTheme: _theme,
+          isEinkMode: _isEinkMode,
+          onThemeChanged: _handleThemeChanged,
+          onEinkModeChanged: _handleEinkModeChanged,
+        ),
       ),
     );
   }

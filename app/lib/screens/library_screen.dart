@@ -69,10 +69,9 @@ class LibraryScreen extends StatefulWidget {
   final LibraryRemoteLibraryDependencies remoteLibraryDependencies;
   final ComputeRemoteFingerprint? computeFingerprint;
   final Future<bool> Function()? isMobileDataConnection;
-  final AppTheme currentTheme;
-  final bool isEinkMode;
-  final ValueChanged<AppTheme>? onThemeChanged;
-  final ValueChanged<bool>? onEinkModeChanged;
+  /// 收斂原本 `currentTheme`／`isEinkMode`／`onThemeChanged`／`onEinkModeChanged`
+  /// 四個獨立參數（epic-26-architecture-hardening Issue 7）。
+  final LibraryThemeDependencies themeDependencies;
   final String? groupFilter;
 
   const LibraryScreen({
@@ -86,10 +85,7 @@ class LibraryScreen extends StatefulWidget {
     this.remoteLibraryDependencies = const LibraryRemoteLibraryDependencies(),
     this.computeFingerprint,
     this.isMobileDataConnection,
-    this.currentTheme = AppTheme.light,
-    this.isEinkMode = false,
-    this.onThemeChanged,
-    this.onEinkModeChanged,
+    this.themeDependencies = const LibraryThemeDependencies(),
     this.groupFilter,
   });
 
@@ -743,10 +739,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
               // （見 review-issue-3.md Important #1、review-issue-5.md
               // Important #1）。
               isMobileDataConnection: widget.isMobileDataConnection,
-              currentTheme: widget.currentTheme,
-              isEinkMode: widget.isEinkMode,
-              onThemeChanged: widget.onThemeChanged,
-              onEinkModeChanged: widget.onEinkModeChanged,
+              themeDependencies: widget.themeDependencies,
               groupFilter: groupName,
             ),
           ),
@@ -834,12 +827,12 @@ class _LibraryScreenState extends State<LibraryScreen> {
         IconButton(
           key: const Key('library_eink_toggle'),
           icon: Icon(
-            widget.isEinkMode ? Icons.contrast : Icons.contrast_outlined,
+            widget.themeDependencies.isEinkMode ? Icons.contrast : Icons.contrast_outlined,
             color:
-                widget.isEinkMode ? Theme.of(context).colorScheme.primary : null,
+                widget.themeDependencies.isEinkMode ? Theme.of(context).colorScheme.primary : null,
           ),
           tooltip: 'E-Ink 高對比模式',
-          onPressed: () => widget.onEinkModeChanged?.call(!widget.isEinkMode),
+          onPressed: () => widget.themeDependencies.onEinkModeChanged?.call(!widget.themeDependencies.isEinkMode),
         ),
         const VerticalDivider(width: 1, indent: 12, endIndent: 12),
         PopupMenuButton<LibrarySortBy>(
@@ -936,7 +929,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                           createOpdsClient: widget.remoteLibraryDependencies.createOpdsClient!,
                         ),
                         importService: widget.importService,
-                        isEinkMode: widget.isEinkMode,
+                        isEinkMode: widget.themeDependencies.isEinkMode,
                       ),
                     ),
                   )
@@ -955,9 +948,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
               MaterialPageRoute(
                 builder: (context) => SettingsScreen(
                   prefsManager: widget.prefsManager,
-                  currentTheme: widget.currentTheme,
-                  isEinkMode: widget.isEinkMode,
-                  onThemeChanged: widget.onThemeChanged,
+                  currentTheme: widget.themeDependencies.currentTheme,
+                  isEinkMode: widget.themeDependencies.isEinkMode,
+                  onThemeChanged: widget.themeDependencies.onThemeChanged,
                   customFontsRepository: widget.readerFeatureRepositories.customFontsRepository,
                   syncAccountRepository: widget.syncDependencies.syncAccountRepository,
                   syncClient: widget.syncDependencies.syncClient,
