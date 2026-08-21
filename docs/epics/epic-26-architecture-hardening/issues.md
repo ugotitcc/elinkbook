@@ -284,7 +284,7 @@ Future<void> pumpUntilPdfReady(
 
 ## Issue 10：拆開 `EpubPositionInfo` 的 `pageIndex`／`location` 語意混用
 
-**Status:** `ready-for-agent`（已完成 `/grilling` 規劃階段，規格完整，`plans/plan-issue-10.md` 已產出）。
+**Status:** ✅ 已完成並合併回 `main`（PR [#178](https://git.jigong.org/huthief/elinkBook/pulls/178)，分支 `feat/epic-26-issue-10-epub-position-info-refactor`，6 個 commit：Task 1-5＋1 個審查修正）。`EpubPositionInfo` 的 `pageIndex`／`totalPages` 拆成語意誠實、互斥的兩組：`locationIndex`／`locationTotal`（流式格式，位元組估計刻度）與 `visualPageIndex`／`visualTotalPages`（FXL／CBZ，全書真實視覺頁碼），新增 `displayPageIndex`／`displayTotalPages` 便利 getter 供 UI 消費端挑值；`main.js` 的 `onLocatorChanged` JS→Dart payload 改為兩參數，解析邏輯抽成 `foliate_bridge_codec.dart` 的 `parseLocatorChanged()` 純函式（比照既有 `extractCfi()` 慣例）。審查（`reviews/review-issue-10.md`）發現 0 項 Critical、3 項 Important（`reader_screen_test.dart` 2 處流式/FXL 測試欄位對調已修正；main.js 移除了一個從未生效的 FXL 覆寫條件閘，經數學驗算〔`location.total = Math.ceil(sizeTotal/1500)` 對任何有內容的書籍恆 ≥ 1〕確認 FXL／CBZ 頁尾顯示先前實際顯示的是位元組估計值而非真頁碼，決定保留此附帶修正並更新驗收標準用語，見下方「實作後追加澄清」；Task 5 最終驗證當時尚未簽核，已補上）、2 項 Minor（縮排偏差、doc comment 錯字，皆已修正）；`flutter analyze` 乾淨、全專案 1637 個測試全數通過（流式格式零回歸）。
 
 **依賴：** 無，範圍侷限 `epub_position_info.dart`／`foliate_reader_view.dart`／`main.js`／`reader_screen.dart` 頁尾相關程式碼，可獨立於 Issue 1-9 任何時間點處理。
 
