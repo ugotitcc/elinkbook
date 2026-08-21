@@ -2935,7 +2935,9 @@ void main() {
           repository: FakeLibraryRepository(initialBooks: [book]),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
-          syncCheckpointTrigger: syncCheckpointTrigger,
+          syncDependencies: LibrarySyncDependencies(
+            syncCheckpointTrigger: syncCheckpointTrigger,
+          ),
         ),
       ),
     );
@@ -2974,9 +2976,11 @@ void main() {
           repository: FakeLibraryRepository(initialBooks: [book]),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
-          syncAccountRepository: syncAccountRepository,
-          syncClient: syncClient,
-          syncCheckpointTrigger: syncCheckpointTrigger,
+          syncDependencies: LibrarySyncDependencies(
+            syncAccountRepository: syncAccountRepository,
+            syncClient: syncClient,
+            syncCheckpointTrigger: syncCheckpointTrigger,
+          ),
         ),
       ),
     );
@@ -2987,13 +2991,13 @@ void main() {
 
     final filteredScreenFinder = _filteredLibraryScreenFinder('奇幻');
     final filteredScreen = tester.widget<LibraryScreen>(filteredScreenFinder);
-    expect(filteredScreen.syncAccountRepository, same(syncAccountRepository),
-        reason: '_openGroupFilteredView() 未把 syncAccountRepository 貫穿給下一層 '
+    expect(filteredScreen.syncDependencies.syncAccountRepository, same(syncAccountRepository),
+        reason: '_openGroupFilteredView() 未把 syncDependencies 貫穿給下一層 '
             'LibraryScreen');
-    expect(filteredScreen.syncClient, same(syncClient),
-        reason: '_openGroupFilteredView() 未把 syncClient 貫穿給下一層 LibraryScreen');
-    expect(filteredScreen.syncCheckpointTrigger, same(syncCheckpointTrigger),
-        reason: '_openGroupFilteredView() 未把 syncCheckpointTrigger 貫穿給下一層 '
+    expect(filteredScreen.syncDependencies.syncClient, same(syncClient),
+        reason: '_openGroupFilteredView() 未把 syncDependencies 貫穿給下一層 LibraryScreen');
+    expect(filteredScreen.syncDependencies.syncCheckpointTrigger, same(syncCheckpointTrigger),
+        reason: '_openGroupFilteredView() 未把 syncDependencies 貫穿給下一層 '
             'LibraryScreen');
 
     await tester.tap(find.descendant(

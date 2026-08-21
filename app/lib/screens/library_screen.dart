@@ -56,9 +56,9 @@ class LibraryScreen extends StatefulWidget {
   /// `bookReaderPrefsRepository` 六個獨立參數（epic-26-architecture-hardening
   /// Issue 7）。
   final LibraryReaderFeatureRepositories readerFeatureRepositories;
-  final SyncAccountRepository? syncAccountRepository;
-  final SyncClient? syncClient;
-  final SyncCheckpointTrigger? syncCheckpointTrigger;
+  /// 收斂原本 `syncAccountRepository`／`syncClient`／`syncCheckpointTrigger`
+  /// 三個獨立參數（epic-26-architecture-hardening Issue 7）。
+  final LibrarySyncDependencies syncDependencies;
   final CloudAccountRepository? cloudAccountRepository;
   final GoogleDriveOAuthClient? googleDriveOAuthClient;
   final OneDriveOAuthClient? oneDriveOAuthClient;
@@ -81,9 +81,7 @@ class LibraryScreen extends StatefulWidget {
     required this.importService,
     required this.prefsManager,
     this.readerFeatureRepositories = const LibraryReaderFeatureRepositories(),
-    this.syncAccountRepository,
-    this.syncClient,
-    this.syncCheckpointTrigger,
+    this.syncDependencies = const LibrarySyncDependencies(),
     this.cloudAccountRepository,
     this.googleDriveOAuthClient,
     this.oneDriveOAuthClient,
@@ -580,7 +578,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
               customFontsRepository: widget.readerFeatureRepositories.customFontsRepository,
               layoutPresetRepository: widget.readerFeatureRepositories.layoutPresetRepository,
               bookReaderPrefsRepository: widget.readerFeatureRepositories.bookReaderPrefsRepository,
-              syncCheckpointTrigger: widget.syncCheckpointTrigger,
+              syncCheckpointTrigger: widget.syncDependencies.syncCheckpointTrigger,
             ),
           ),
         )
@@ -734,13 +732,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 notesRepository: widget.readerFeatureRepositories.notesRepository,
                 customFontsRepository: widget.readerFeatureRepositories.customFontsRepository,
               ),
-              // epic-8-sync Issue 10：先前遺漏這三個同步相關欄位，導致從這條
-              // 分類篩選路徑開書時 syncCheckpointTrigger 無法貫穿到
-              // ReaderScreen，「離開畫面」／「閱讀中 5 分鐘計時器」兩種
-              // checkpoint 觸發來源會靜默失效（見 plans/plan-issue-10.md）。
-              syncAccountRepository: widget.syncAccountRepository,
-              syncClient: widget.syncClient,
-              syncCheckpointTrigger: widget.syncCheckpointTrigger,
+              syncDependencies: widget.syncDependencies,
               cloudAccountRepository: widget.cloudAccountRepository,
               googleDriveOAuthClient: widget.googleDriveOAuthClient,
               oneDriveOAuthClient: widget.oneDriveOAuthClient,
@@ -979,8 +971,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   isEinkMode: widget.isEinkMode,
                   onThemeChanged: widget.onThemeChanged,
                   customFontsRepository: widget.readerFeatureRepositories.customFontsRepository,
-                  syncAccountRepository: widget.syncAccountRepository,
-                  syncClient: widget.syncClient,
+                  syncAccountRepository: widget.syncDependencies.syncAccountRepository,
+                  syncClient: widget.syncDependencies.syncClient,
                   cloudAccountRepository: widget.cloudAccountRepository,
                   googleDriveOAuthClient: widget.googleDriveOAuthClient,
                   oneDriveOAuthClient: widget.oneDriveOAuthClient,
