@@ -91,7 +91,7 @@ void main() {
             },
             onError: (msg) => error = msg,
             onLocatorChanged: (info) {
-              final pageIndex = info.pageIndex;
+              final pageIndex = info.locationIndex;
               if (pageIndex != null) {
                 pageIndexLog.add(pageIndex);
               }
