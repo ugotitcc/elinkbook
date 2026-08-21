@@ -1,4 +1,5 @@
 import 'package:elinkbook/reader/epub_decoration.dart';
+import 'package:elinkbook/reader/epub_position_info.dart';
 import 'package:elinkbook/reader/foliate_bridge_codec.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -229,6 +230,96 @@ void main() {
         ),
         isFalse,
       );
+    });
+  });
+
+  group('parseLocatorChanged', () {
+    test('流式格式：position 帶 locationIndex/locationTotal，'
+        'visualPageIndex/visualTotalPages 為 null', () {
+      final info = parseLocatorChanged([
+        '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
+        '{"fraction":0.1,"locationIndex":9,"locationTotal":100,'
+            '"visualPageIndex":null,"visualTotalPages":null}',
+      ]);
+      expect(info.locatorJson, '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}');
+      expect(info.progression, 0.1);
+      expect(info.locationIndex, 9);
+      expect(info.locationTotal, 100);
+      expect(info.visualPageIndex, isNull);
+      expect(info.visualTotalPages, isNull);
+    });
+
+    test('FXL/CBZ 格式：position 帶 visualPageIndex/visualTotalPages，'
+        'locationIndex/locationTotal 為 null', () {
+      final info = parseLocatorChanged([
+        '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.5}',
+        '{"fraction":0.5,"locationIndex":null,"locationTotal":null,'
+            '"visualPageIndex":3,"visualTotalPages":20}',
+      ]);
+      expect(info.locationIndex, isNull);
+      expect(info.locationTotal, isNull);
+      expect(info.visualPageIndex, 3);
+      expect(info.visualTotalPages, 20);
+    });
+
+    test('args 只有 1 個元素（第二參數缺席）：位置欄位皆為 null，'
+        'progression 退回 0.0，locatorJson 仍取自 args[0]', () {
+      final info = parseLocatorChanged(['{"cfi":"epubcfi(/6/4)"}']);
+      expect(info.locatorJson, '{"cfi":"epubcfi(/6/4)"}');
+      expect(info.progression, 0.0);
+      expect(info.locationIndex, isNull);
+      expect(info.locationTotal, isNull);
+      expect(info.visualPageIndex, isNull);
+      expect(info.visualTotalPages, isNull);
+    });
+
+    test('args 為空清單：locatorJson 為空字串，位置欄位皆為 null', () {
+      final info = parseLocatorChanged(const []);
+      expect(info.locatorJson, '');
+      expect(info.progression, 0.0);
+      expect(info.locationIndex, isNull);
+    });
+
+    test('args[1] 格式錯誤（非合法 JSON）：位置欄位皆為 null，不拋出例外', () {
+      final info = parseLocatorChanged([
+        '{"cfi":"epubcfi(/6/4)"}',
+        'not a json string',
+      ]);
+      expect(info.locationIndex, isNull);
+      expect(info.locationTotal, isNull);
+      expect(info.visualPageIndex, isNull);
+      expect(info.visualTotalPages, isNull);
+    });
+  });
+
+  group('EpubPositionInfo.displayPageIndex / displayTotalPages', () {
+    test('流式格式（只有 locationIndex/locationTotal 有值）：'
+        'display getter 退回採用 location 值', () {
+      const info = EpubPositionInfo(
+        locatorJson: '{}',
+        locationIndex: 9,
+        locationTotal: 100,
+      );
+      expect(info.displayPageIndex, 9);
+      expect(info.displayTotalPages, 100);
+    });
+
+    test('FXL 格式（只有 visualPageIndex/visualTotalPages 有值）：'
+        'display getter 優先採用 visual 值', () {
+      const info = EpubPositionInfo(
+        locatorJson: '{}',
+        visualPageIndex: 3,
+        visualTotalPages: 20,
+      );
+      expect(info.displayPageIndex, 3);
+      expect(info.displayTotalPages, 20);
+    });
+
+    test('兩組皆為 null（尚未收到任何 relocate 事件）：display getter 回傳 null',
+        () {
+      const info = EpubPositionInfo(locatorJson: '{}');
+      expect(info.displayPageIndex, isNull);
+      expect(info.displayTotalPages, isNull);
     });
   });
 }
