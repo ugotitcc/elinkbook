@@ -1,6 +1,6 @@
 # Epic 26 Issue 8：拆分 `LibraryScreen` God-Widget Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development（推薦）或 superpowers:executing-plans 以逐 Task 執行本計畫。步驟採用 checkbox（`- [ ]`）語法追蹤進度。
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development（推薦）或 superpowers:executing-plans 以逐 Task 執行本計畫。步驟採用 checkbox（`- [x]`）語法追蹤進度。
 
 **Goal:** 把 `_LibraryScreenState`（現行 1474 行單一 class body，同時裝載書籍清單狀態機、5 個批次操作、拼貼格 footer 非線性字級縮放數學、匯入對話框、導覽樞紐）依關注點拆出 3 個獨立、可脫離 widget 樹直接單元測試的 module（`LibraryBookListController`／`LibraryBatchActions`／`BookGridTileMetrics`），`LibraryScreen` 收斂為呈現＋委派，同時吸收候選 6（5 個批次操作方法骨架重複）為共用 `_runEach()` 骨架，全程維持零行為改變。
 
@@ -54,7 +54,7 @@ Issue 8 原文明講「具體 module 邊界切法、是否需要額外拆出『�
   - `double gridTileFooterHeight(TextScaler scaler)`
   - Task 2 會 import 並在 `library_screen.dart` 的 `_GroupGridTile`／`_BookGridTile` 兩處呼叫點改用這個函式（改傳入 `MediaQuery.textScalerOf(context)` 而非 `context` 本身）。
 
-- [ ] **Step 1：寫失敗測試，驗證線性與非線性 `TextScaler` 下的高度計算**
+- [x] **Step 1：寫失敗測試，驗證線性與非線性 `TextScaler` 下的高度計算**
 
 ```dart
 // app/test/screens/book_grid_tile_metrics_test.dart
@@ -115,12 +115,12 @@ class _NonLinearTextScaler extends TextScaler {
 
 `fontSize.sqrt()` 並非 `double` 內建方法，需改用 `dart:math` 的 `sqrt()`；請在檔案頂端補上 `import 'dart:math' show sqrt;`，並把 `fontSize.sqrt()` 改為 `sqrt(fontSize)`。
 
-- [ ] **Step 2：執行測試確認失敗（型別尚未存在）**
+- [x] **Step 2：執行測試確認失敗（型別尚未存在）**
 
 執行：`cd app && flutter test test/screens/book_grid_tile_metrics_test.dart`
 預期：`FAIL`，錯誤訊息為找不到 `package:elinkbook/screens/book_grid_tile_metrics.dart`。
 
-- [ ] **Step 3：實作 `BookGridTileMetrics`（原樣搬移 `library_screen.dart:1151-1190` 的常數/函式與其歷史註解）**
+- [x] **Step 3：實作 `BookGridTileMetrics`（原樣搬移 `library_screen.dart:1151-1190` 的常數/函式與其歷史註解）**
 
 ```dart
 // app/lib/screens/book_grid_tile_metrics.dart
@@ -173,12 +173,12 @@ double gridTileFooterHeight(TextScaler scaler) {
 }
 ```
 
-- [ ] **Step 4：執行測試確認通過**
+- [x] **Step 4：執行測試確認通過**
 
 執行：`cd app && flutter test test/screens/book_grid_tile_metrics_test.dart`
 預期：`PASS`
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 git add app/lib/screens/book_grid_tile_metrics.dart app/test/screens/book_grid_tile_metrics_test.dart
@@ -195,7 +195,7 @@ git commit -m "refactor(epic-26): Issue 8 Task 1——新增 BookGridTileMetrics
 **Interfaces:**
 - Consumes：Task 1 的 `kGridTileFooterHeightAtScale1`／`kGridTileFooterTitleFontSize`／`kGridTileFooterProgressFontSize`／`kGridTileFooterLineHeightFactor`／`gridTileFooterHeight(TextScaler)`。
 
-- [ ] **Step 1：刪除 `library_screen.dart:1151-1190` 整段常數與函式（連同其歷史註解，已完整搬到 Task 1 的新檔案，不留副本）**
+- [x] **Step 1：刪除 `library_screen.dart:1151-1190` 整段常數與函式（連同其歷史註解，已完整搬到 Task 1 的新檔案，不留副本）**
 
 刪除以下整段（原檔案 `_GroupTile` class 定義之後、`_GroupGridTile` class 定義之前）：
 
@@ -219,7 +219,7 @@ double _gridTileFooterHeight(BuildContext context) {
 }
 ```
 
-- [ ] **Step 2：新增 import**
+- [x] **Step 2：新增 import**
 
 在檔案頂端 import 區塊新增（置於 `import 'library_screen_dependencies.dart';` 之後的合理位置）：
 
@@ -227,7 +227,7 @@ double _gridTileFooterHeight(BuildContext context) {
 import 'book_grid_tile_metrics.dart';
 ```
 
-- [ ] **Step 3：`_GroupGridTile.build()` 呼叫點改寫**
+- [x] **Step 3：`_GroupGridTile.build()` 呼叫點改寫**
 
 原本：
 
@@ -249,7 +249,7 @@ import 'book_grid_tile_metrics.dart';
               '${tile.name} (${tile.totalCount})',
 ```
 
-- [ ] **Step 4：`_BookGridTile.build()` 呼叫點改寫**
+- [x] **Step 4：`_BookGridTile.build()` 呼叫點改寫**
 
 原本：
 
@@ -277,17 +277,17 @@ import 'book_grid_tile_metrics.dart';
                   book.title,
 ```
 
-- [ ] **Step 5：執行測試確認既有相關測試通過**
+- [x] **Step 5：執行測試確認既有相關測試通過**
 
 執行：`cd app && flutter test test/screens/library_screen_test.dart`
 預期：`PASS`（全部既有案例，含系統字級放大/非線性縮放相關的兩項測試，因公式完全等價、只是換了函式簽章，渲染結果應與修改前逐像素一致）。
 
-- [ ] **Step 6：執行 `flutter analyze` 確認無殘留未使用宣告**
+- [x] **Step 6：執行 `flutter analyze` 確認無殘留未使用宣告**
 
 執行：`cd app && flutter analyze app/lib/screens/library_screen.dart`
 預期：`No issues found!`
 
-- [ ] **Step 7：Commit**
+- [x] **Step 7：Commit**
 
 ```bash
 git add app/lib/screens/library_screen.dart
@@ -307,7 +307,7 @@ git commit -m "refactor(epic-26): Issue 8 Task 2——LibraryScreen 改用 gridT
   - `class LibraryBookListController extends ChangeNotifier { LibraryBookListController({required LibraryRepository repository, String? groupFilter}); List<Book>? books; List<BookGroup> groups; LibrarySortBy sortBy; Future<void> initialLoad(); Future<void> loadGroups(); Future<void> loadBooks(); Future<void> changeSortBy(LibrarySortBy newSortBy); }`
   - Task 4 會 import 並在 `LibraryScreen` 中以 `late final LibraryBookListController _bookListController;` 持有一個實例，於 `initState()` 建立、`dispose()` 釋放。
 
-- [ ] **Step 1：寫失敗測試，驗證載入、失敗降級、排序切換、dispose 後不再通知**
+- [x] **Step 1：寫失敗測試，驗證載入、失敗降級、排序切換、dispose 後不再通知**
 
 ```dart
 // app/test/screens/library_book_list_controller_test.dart
@@ -464,12 +464,12 @@ class _ThrowingListGroupsRepository extends FakeLibraryRepository {
 }
 ```
 
-- [ ] **Step 2：執行測試確認失敗（型別尚未存在）**
+- [x] **Step 2：執行測試確認失敗（型別尚未存在）**
 
 執行：`cd app && flutter test test/screens/library_book_list_controller_test.dart`
 預期：`FAIL`，錯誤訊息為找不到 `package:elinkbook/screens/library_book_list_controller.dart`。
 
-- [ ] **Step 3：實作 `LibraryBookListController`**
+- [x] **Step 3：實作 `LibraryBookListController`**
 
 ```dart
 // app/lib/screens/library_book_list_controller.dart
@@ -587,12 +587,12 @@ class LibraryBookListController extends ChangeNotifier {
 }
 ```
 
-- [ ] **Step 4：執行測試確認通過**
+- [x] **Step 4：執行測試確認通過**
 
 執行：`cd app && flutter test test/screens/library_book_list_controller_test.dart`
 預期：`PASS`
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 git add app/lib/screens/library_book_list_controller.dart app/test/screens/library_book_list_controller_test.dart
@@ -609,7 +609,7 @@ git commit -m "refactor(epic-26): Issue 8 Task 3——新增 LibraryBookListCont
 **Interfaces:**
 - Consumes：Task 3 的 `LibraryBookListController`。
 
-- [ ] **Step 1：欄位宣告——移除 `_books`／`_groups`／`_sortBy`／`_groupFilter`，新增 `_bookListController`**
+- [x] **Step 1：欄位宣告——移除 `_books`／`_groups`／`_sortBy`／`_groupFilter`，新增 `_bookListController`**
 
 修改 `app/lib/screens/library_screen.dart`（`_LibraryScreenState` 欄位區），原本：
 
@@ -640,7 +640,7 @@ git commit -m "refactor(epic-26): Issue 8 Task 3——新增 LibraryBookListCont
 import 'library_book_list_controller.dart';
 ```
 
-- [ ] **Step 2：`initState()`／新增 `dispose()`／新增 `_onBookListChanged()`**
+- [x] **Step 2：`initState()`／新增 `dispose()`／新增 `_onBookListChanged()`**
 
 原本：
 
@@ -677,7 +677,7 @@ import 'library_book_list_controller.dart';
   }
 ```
 
-- [ ] **Step 3：`_initialize()` 改寫**
+- [x] **Step 3：`_initialize()` 改寫**
 
 原本：
 
@@ -709,11 +709,11 @@ import 'library_book_list_controller.dart';
 
 （`_maybeOpenLastBookOnLaunch()` 本身不需要任何修改，維持原樣——見 Global Constraints 與「規劃階段查證」第 7 點。）
 
-- [ ] **Step 4：刪除 `_loadGroups()` 與 `_loadBooks()`（已移至 Task 3 控制器）**
+- [x] **Step 4：刪除 `_loadGroups()` 與 `_loadBooks()`（已移至 Task 3 控制器）**
 
 刪除整個 `_loadGroups()` 方法（原 `library_screen.dart:140-152`）與整個 `_loadBooks()` 方法（原 `library_screen.dart:154-178`）。
 
-- [ ] **Step 5：`_pickAndImportFiles()` 呼叫點改寫**
+- [x] **Step 5：`_pickAndImportFiles()` 呼叫點改寫**
 
 原本：
 
@@ -733,7 +733,7 @@ import 'library_book_list_controller.dart';
       _showImportResultSnackBar(result);
 ```
 
-- [ ] **Step 6：`_pickAndImportFolder()` 呼叫點改寫**
+- [x] **Step 6：`_pickAndImportFolder()` 呼叫點改寫**
 
 原本：
 
@@ -759,7 +759,7 @@ import 'library_book_list_controller.dart';
       _showImportResultSnackBar(result);
 ```
 
-- [ ] **Step 7：`_openGoogleDriveBrowser()` 與 `_openOneDriveBrowser()` 的 `.then()` 回呼改寫**
+- [x] **Step 7：`_openGoogleDriveBrowser()` 與 `_openOneDriveBrowser()` 的 `.then()` 回呼改寫**
 
 `_openGoogleDriveBrowser()` 原本：
 
@@ -821,7 +821,7 @@ import 'library_book_list_controller.dart';
   }
 ```
 
-- [ ] **Step 8：刪除 `_changeSortBy()`（已移至 Task 3 控制器 `changeSortBy()`）**
+- [x] **Step 8：刪除 `_changeSortBy()`（已移至 Task 3 控制器 `changeSortBy()`）**
 
 刪除整個方法（原 `library_screen.dart:336-340`）：
 
@@ -833,7 +833,7 @@ import 'library_book_list_controller.dart';
   }
 ```
 
-- [ ] **Step 9：5 個批次操作方法內的 `_books`／`_groups`／`_loadBooks()` 讀取點改寫（本 Task 只換讀取來源，迴圈邏輯本身維持不動，留待 Task 6 抽出 `LibraryBatchActions`）**
+- [x] **Step 9：5 個批次操作方法內的 `_books`／`_groups`／`_loadBooks()` 讀取點改寫（本 Task 只換讀取來源，迴圈邏輯本身維持不動，留待 Task 6 抽出 `LibraryBatchActions`）**
 
 `_moveSelectedBooksToGroup()` 原本：
 
@@ -1086,7 +1086,7 @@ import 'library_book_list_controller.dart';
   }
 ```
 
-- [ ] **Step 10：`_openBook()` 的 `.then()` 回呼改寫**
+- [x] **Step 10：`_openBook()` 的 `.then()` 回呼改寫**
 
 原本：
 
@@ -1121,7 +1121,7 @@ import 'library_book_list_controller.dart';
   }
 ```
 
-- [ ] **Step 11：`_openManageGroupsDialog()` 改寫**
+- [x] **Step 11：`_openManageGroupsDialog()` 改寫**
 
 原本：
 
@@ -1157,7 +1157,7 @@ import 'library_book_list_controller.dart';
   }
 ```
 
-- [ ] **Step 12：`_openGroupFilteredView()` 的 `.then()` 回呼改寫**
+- [x] **Step 12：`_openGroupFilteredView()` 的 `.then()` 回呼改寫**
 
 原本結尾（`.then((_) { ... })` 區塊）：
 
@@ -1213,7 +1213,7 @@ import 'library_book_list_controller.dart';
   }
 ```
 
-- [ ] **Step 13：`build()` 改用控制器的 `books`**
+- [x] **Step 13：`build()` 改用控制器的 `books`**
 
 原本：
 
@@ -1231,7 +1231,7 @@ import 'library_book_list_controller.dart';
     final books = _bookListController.books;
 ```
 
-- [ ] **Step 14：`_buildNormalAppBar()` 排序按鈕改用控制器**
+- [x] **Step 14：`_buildNormalAppBar()` 排序按鈕改用控制器**
 
 原本：
 
@@ -1255,16 +1255,16 @@ import 'library_book_list_controller.dart';
           onSelected: _bookListController.changeSortBy,
 ```
 
-- [ ] **Step 15：確認殘留 import／型別是否仍需要**
+- [x] **Step 15：確認殘留 import／型別是否仍需要**
 
 跑 `flutter analyze app/lib/screens/library_screen.dart`，確認 `LibraryPreferences`／`LibrarySortBy`（`_sortLabel()` 參數型別仍會用到，預期不會變成未使用）等既有 import 是否仍需要，依實際結果決定是否移除（原則同 Issue 7 Task 2 Step 5，不要憑空猜測）。
 
-- [ ] **Step 16：執行測試確認通過**
+- [x] **Step 16：執行測試確認通過**
 
 執行：`cd app && flutter test test/screens/library_screen_test.dart`
 預期：`PASS`（全部既有案例，本 Task 未變動任何測試檔案——所有斷言皆透過 widget 樹/按鍵行為進行黑箱測試，不直接存取 `_LibraryScreenState` 私有欄位，預期零回歸零修改）。
 
-- [ ] **Step 17：Commit**
+- [x] **Step 17：Commit**
 
 ```bash
 git add app/lib/screens/library_screen.dart
@@ -1284,7 +1284,7 @@ git commit -m "refactor(epic-26): Issue 8 Task 4——LibraryScreen 改用 Libra
   - `class LibraryBatchActions { const LibraryBatchActions({required LibraryRepository repository}); Future<void> moveToGroup(Set<String> selectedIds, List<Book> books, String destination); Future<void> forceFixedLayout(Set<String> selectedIds, List<Book> books); Future<void> restoreAutoLayout(Set<String> selectedIds, List<Book> books); Future<void> deleteBooks(Set<String> selectedIds, List<Book> books); Future<void> removeLocalCache(Set<String> selectedIds, List<Book> books); }`
   - Task 6 會 import 並在 `LibraryScreen` 中以 `late final LibraryBatchActions _batchActions;` 持有一個實例，於 `initState()` 建立。
 
-- [ ] **Step 1：寫失敗測試，驗證 5 個批次操作的差異化過濾與 repository 呼叫**
+- [x] **Step 1：寫失敗測試，驗證 5 個批次操作的差異化過濾與 repository 呼叫**
 
 ```dart
 // app/test/screens/library_batch_actions_test.dart
@@ -1402,12 +1402,12 @@ Book _book({
 
 `Book` 建構子沒有 `isDownloaded` 具名參數的話這個測試會編譯失敗——請先確認 `app/lib/library/models/book.dart` 的主建構子是否已開放 `isDownloaded` 具名參數（Book 主建構子第 122 行 `this.isDownloaded = true,` 已是既有具名參數，不需新增）。
 
-- [ ] **Step 2：執行測試確認失敗（型別尚未存在）**
+- [x] **Step 2：執行測試確認失敗（型別尚未存在）**
 
 執行：`cd app && flutter test test/screens/library_batch_actions_test.dart`
 預期：`FAIL`，錯誤訊息為找不到 `package:elinkbook/screens/library_batch_actions.dart`。
 
-- [ ] **Step 3：實作 `LibraryBatchActions`（原樣搬移 5 個批次操作的迴圈本體與歷史註解，收斂共用骨架 `_runEach`）**
+- [x] **Step 3：實作 `LibraryBatchActions`（原樣搬移 5 個批次操作的迴圈本體與歷史註解，收斂共用骨架 `_runEach`）**
 
 ```dart
 // app/lib/screens/library_batch_actions.dart
@@ -1537,12 +1537,12 @@ class LibraryBatchActions {
 }
 ```
 
-- [ ] **Step 4：執行測試確認通過**
+- [x] **Step 4：執行測試確認通過**
 
 執行：`cd app && flutter test test/screens/library_batch_actions_test.dart`
 預期：`PASS`
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 git add app/lib/screens/library_batch_actions.dart app/test/screens/library_batch_actions_test.dart
@@ -1559,7 +1559,7 @@ git commit -m "refactor(epic-26): Issue 8 Task 5——新增 LibraryBatchActions
 **Interfaces:**
 - Consumes：Task 5 的 `LibraryBatchActions`。
 
-- [ ] **Step 1：新增 import 與 `_batchActions` 欄位**
+- [x] **Step 1：新增 import 與 `_batchActions` 欄位**
 
 在檔案頂端 import 區塊新增（置於 `import 'library_book_list_controller.dart';` 之後）：
 
@@ -1579,7 +1579,7 @@ import 'library_batch_actions.dart';
     _batchActions = LibraryBatchActions(repository: widget.repository);
 ```
 
-- [ ] **Step 2：`_moveSelectedBooksToGroup()` 改為委派 `LibraryBatchActions.moveToGroup()`**
+- [x] **Step 2：`_moveSelectedBooksToGroup()` 改為委派 `LibraryBatchActions.moveToGroup()`**
 
 原本（Task 4 之後的狀態）：
 
@@ -1628,7 +1628,7 @@ import 'library_batch_actions.dart';
   }
 ```
 
-- [ ] **Step 3：`_forceFixedLayoutForSelectedBooks()` 改為委派**
+- [x] **Step 3：`_forceFixedLayoutForSelectedBooks()` 改為委派**
 
 原本（Task 4 之後的狀態，doc comment 省略未變）：
 
@@ -1662,7 +1662,7 @@ import 'library_batch_actions.dart';
 
 上方原有的 doc comment（`/// 對選取集合中所有 EPUB 書籍手動覆寫...`）維持在方法上方不動——它同時解釋了「為何需要這個功能」與「為何在 `_exitSelectionMode()` 之前捕捉 `selectedIds` 是安全的」，後者仍是 `_LibraryScreenState` 這個呼叫端本身的不變量說明，即使差異化邏輯搬到 `LibraryBatchActions`，這段說明依然成立、不需要更動。
 
-- [ ] **Step 4：`_restoreAutoLayoutForSelectedBooks()` 改為委派**
+- [x] **Step 4：`_restoreAutoLayoutForSelectedBooks()` 改為委派**
 
 原本（Task 4 之後的狀態）：
 
@@ -1694,7 +1694,7 @@ import 'library_batch_actions.dart';
   }
 ```
 
-- [ ] **Step 5：`_deleteSelectedBooks()` 改為委派（`_confirmDeleteBooks()` 對話框維持不動）**
+- [x] **Step 5：`_deleteSelectedBooks()` 改為委派（`_confirmDeleteBooks()` 對話框維持不動）**
 
 原本（Task 4 之後的狀態）：
 
@@ -1769,7 +1769,7 @@ import 'library_batch_actions.dart';
 
 （`import 'dart:io';` 與 `File` 相關程式碼因搬到 `LibraryBatchActions` 而不再需要留在 `library_screen.dart`——留待 Step 7 統一以 `flutter analyze` 確認後處理。）
 
-- [ ] **Step 6：`_removeLocalCacheForSelectedBooks()` 改為委派**
+- [x] **Step 6：`_removeLocalCacheForSelectedBooks()` 改為委派**
 
 原本（Task 4 之後的狀態）：
 
@@ -1812,16 +1812,16 @@ import 'library_batch_actions.dart';
   }
 ```
 
-- [ ] **Step 7：確認 `dart:io`／`File` 是否仍需要，依 `flutter analyze` 實際結果決定是否移除 import**
+- [x] **Step 7：確認 `dart:io`／`File` 是否仍需要，依 `flutter analyze` 實際結果決定是否移除 import**
 
 跑 `flutter analyze app/lib/screens/library_screen.dart`。`import 'dart:io';` 原本只服務於已搬走的 3 個批次操作（`_deleteSelectedBooks`／`_removeLocalCacheForSelectedBooks`）內的 `File(...)` 呼叫，本 Task 完成後 `library_screen.dart` 預期不再使用 `File`；若 analyze 回報 `unused_import`，移除該行 import（不要憑空猜測，以 analyze 實際結果為準）。
 
-- [ ] **Step 8：執行測試確認通過**
+- [x] **Step 8：執行測試確認通過**
 
 執行：`cd app && flutter test test/screens/library_screen_test.dart`
 預期：`PASS`（全部既有案例，含刪除/移除本機快取/搬移分類/強制FXL/恢復自動判斷 5 組既有測試，零回歸零修改）。
 
-- [ ] **Step 9：Commit**
+- [x] **Step 9：Commit**
 
 ```bash
 git add app/lib/screens/library_screen.dart
@@ -1835,7 +1835,7 @@ git commit -m "refactor(epic-26): Issue 8 Task 6——LibraryScreen 5 個批次�
 **Files:**
 - 無新增/修改檔案，純驗證。
 
-- [ ] **Step 1：全域殘留掃描，確認舊的內嵌邏輯已無殘留**
+- [x] **Step 1：全域殘留掃描，確認舊的內嵌邏輯已無殘留**
 
 執行：
 
@@ -1856,24 +1856,24 @@ grep -n "LibraryScreen(" ../app/lib/main.dart
 
 確認呼叫點existing 建構參數列與 Issue 7 合併後狀態一致（比照 `review-issue-7.md` Important #2 的教訓，任何「內部拆分」類型的計畫都必須明確驗證組裝根未被波及，即使本計畫理論上不觸碰 `main.dart`）。
 
-- [ ] **Step 2：執行 `flutter analyze`**
+- [x] **Step 2：執行 `flutter analyze`**
 
 執行：`cd app && flutter analyze`
 預期：`No issues found!`（確認 Task 2、4、6 提到「依實際結果決定是否移除的 import」皆已正確處理，無 `unused_import` 或其他警告；`integration_test/` 不受影響）。
 
-- [ ] **Step 3：執行全專案測試**
+- [x] **Step 3：執行全專案測試**
 
 執行：`cd app && flutter test`
 預期：全數通過，零回歸（相較 Issue 7 合併後的基準數字 1613，本 Issue Task 1/3/5 新增 3 個新檔案的獨立單元測試，其餘為既有 `library_screen_test.dart` 案例零修改地繼續通過，總數應為「1613 ＋ 新增測試數」）。
 
-- [ ] **Step 4：逐項核對驗收標準**
+- [x] **Step 4：逐項核對驗收標準**
 
-- [ ] `LibraryScreen` 內部關注點依 module 邊界拆分完成：`LibraryBookListController`（書籍清單狀態機）／`LibraryBatchActions`（批次操作）／`BookGridTileMetrics`（拼貼格版面數學）皆已獨立成檔案，`_LibraryScreenState` 不再直接持有 `_books`／`_groups`／`_sortBy`／`_groupFilter`／`_gridTileFooterHeight` 等內嵌實作。
-- [ ] 候選 6（批次操作骨架重複）隨本 Issue 一併收斂：`LibraryBatchActions._runEach()` 是唯一的過濾/迭代骨架，5 個公開方法各自只提供差異化邏輯，不需另立工單。
-- [ ] 行為零改變：既有不對稱行為（`_moveSelectedBooksToGroup()` 缺少 `!mounted` 檢查等既有缺口）原樣保留；`main.dart` 組裝根與所有既有測試皆未變動。
-- [ ] `flutter analyze` 乾淨、`flutter test` 全數通過。
+- [x] `LibraryScreen` 內部關注點依 module 邊界拆分完成：`LibraryBookListController`（書籍清單狀態機）／`LibraryBatchActions`（批次操作）／`BookGridTileMetrics`（拼貼格版面數學）皆已獨立成檔案，`_LibraryScreenState` 不再直接持有 `_books`／`_groups`／`_sortBy`／`_groupFilter`／`_gridTileFooterHeight` 等內嵌實作。
+- [x] 候選 6（批次操作骨架重複）隨本 Issue 一併收斂：`LibraryBatchActions._runEach()` 是唯一的過濾/迭代骨架，5 個公開方法各自只提供差異化邏輯，不需另立工單。
+- [x] 行為零改變：既有不對稱行為（`_moveSelectedBooksToGroup()` 缺少 `!mounted` 檢查等既有缺口）原樣保留；`main.dart` 組裝根與所有既有測試皆未變動。
+- [x] `flutter analyze` 乾淨、`flutter test` 全數通過。
 
-- [ ] **Step 5：Commit（若 Step 1-4 有任何微調）**
+- [x] **Step 5：Commit（若 Step 1-4 有任何微調）**
 
 ```bash
 git add -A
