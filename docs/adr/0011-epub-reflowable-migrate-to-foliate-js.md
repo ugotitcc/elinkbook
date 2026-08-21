@@ -2,7 +2,7 @@
 
 ## 狀態
 
-已採納
+已採納。**「頁碼估算改用 `SectionProgress.getProgress()`」該項決策裡「總頁數估算值不影響正確性」的取捨，已由 [ADR 0024](0024-flowable-pagination-density-calibration-reopen-adr-0011.md) 重新開放並補上密度校正——其餘決策項不受影響，仍為本 ADR 現行內容。**
 
 ## 背景
 

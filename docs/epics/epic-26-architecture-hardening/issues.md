@@ -302,3 +302,25 @@ Future<void> pumpUntilPdfReady(
 **驗收標準：** `EpubPositionInfo` 不再有 `pageIndex`／`totalPages` 欄位，改為 `locationIndex`／`locationTotal`／`visualPageIndex`／`visualTotalPages` 四個欄位，同一本書恆有一組為 `null`；`main.js` 的 `onLocatorChanged` payload 改為兩參數，`locatorJson` 內容不受影響；流式格式頁尾顯示行為零改變；`flutter analyze` 乾淨、`flutter test` 全數通過、零回歸。
 
 **實作後追加澄清（程式審查 `reviews/review-issue-10.md` Important #2 發現，非規劃階段已知事項）：** FXL／CBZ 頁尾顯示**並非**零行為改變。重構前 `main.js` 的 FXL 覆寫條件多了 `!totalPages`（`location?.total` 恰好為 0 才覆寫成真頁碼），但 `location.total = Math.ceil(sizeTotal / 1500)` 對任何有實際內容（位元組數 > 0）的書籍恆 `>= 1`，這個條件在真實書籍上幾乎從未成立過——也就是說，FXL／CBZ 書籍先前實際顯示的其實長期是位元組估計值（對圖片檔案較大的 CBZ 而言，可能是遠超真實頁數的離譜數字），而非本 Issue 背景描述所假設的「真實視覺頁碼」。本次重構移除了這個從未生效的條件閘，讓 FXL／CBZ 一律採用真實視覺頁數——這是本 Issue 順帶修正的一個既有頁碼顯示錯誤，經權衡後決定保留此修正並更新本驗收標準用語，而非為了維持字面上的零行為改變而還原成從未生效的舊條件。
+
+---
+
+## Issue 11：流式 EPUB 頁碼估算改用已渲染 section 密度校正
+
+**Status:** `ready-for-agent`（已完成 `/grill-with-docs` 規劃階段，規格完整；架構決策見 [ADR 0024](../../adr/0024-flowable-pagination-density-calibration-reopen-adr-0011.md)）。
+
+**依賴：** 依附 Issue 10（需要 `locationIndex`／`locationTotal` 欄位已存在）；Issue 10 已完成並合併回 `main`，無阻塞。
+
+**來源：** `docs/research/flowable_pagination_precision_architecture_review.md`（2026-08-21，`/improve-codebase-architecture` 流程產出）候選 2（強度 Strong）。與候選 3（`EpubPositionInfo` 三層座標重新分層，依附本 Issue，在下方「校正可信度旗標」決策下已確認不需要獨立工作）為同一份報告的另外一個候選。
+
+**背景／症狀：** `SectionProgress.getProgress()`（`app/android/app/src/main/assets/foliate/progress.js`）用全書統一常數「1500 bytes = 1 個 location」換算流式格式的 `locationIndex`／`locationTotal`，完全忽略使用者當下實際的字體大小／行距／段落間距／邊距／單雙欄設定；`paginator.js` 的 `View.expand()` 對每一個已渲染 section 都精確算得出 `contentPages`（`Math.ceil(contentSize / columnSize)`），但這個數字從未回饋給 `SectionProgress`，兩套計算永不交會。ADR 0011 曾明確接受「總頁數估算值不影響正確性」這項取捨；`/grill-with-docs` 會談（已查證 `contentPages` 隨排版設定變動、預載範圍上限 8 個 section、捲動模式完全不計算這筆資料等限制後）決定投入校正，正式重新開放該取捨，詳細理由見 [ADR 0024](../../adr/0024-flowable-pagination-density-calibration-reopen-adr-0011.md)。
+
+**Solution：** `SectionProgress` 新增一個密度紀錄方法與內部 Map 狀態（section index → 實測密度），`getProgress()` 換算 `locationIndex`／`locationTotal` 時，已知 section 用實測密度、未知 section 用「章節索引距離最近的已知 section」外插（索引距離相等時取索引較小者），取代全書統一常數 1500。密度資料串接：`paginator.js` 計算 `detail.fraction`／`detail.size` 的同一處（`#afterScroll()`），多帶一個 `detail.contentPages` 欄位進 `relocate` 事件 detail；`view.js` 的 `#onRelocate()` 直接把這個現成數字轉呼叫 `SectionProgress` 新方法，不透過既有 `fraction`／`size` 反推。範圍侷限分頁（無捲動）模式——`Paginator` 只在非捲動分支才計算 `contentPages`，捲動模式維持原本位元組估計不變，本 Issue 不處理。密度快取只存在單次開書 session（純 JS 記憶體 Map，跟著 `View`／`SectionProgress` 生命週期走），不持久化到 SQLite。`window.applyPreferences()` 被呼叫時（已查證字體大小／行距／段落間距／邊距／單雙欄／螢幕方向／直排橫排切換皆流經此唯一入口）整包清空重算。呼叫端（`reader_screen.dart` 的 `displayPageIndex`／`displayTotalPages`）完全無感沿用既有 `EpubPositionInfo` 欄位名，不新增校正可信度旗標或 UI 上「這是校正過的估計值」標示。
+
+**單元測試要求：**
+- `SectionProgress` 新增密度紀錄方法的純邏輯單元測試：已知單一 section 密度時換算結果正確反映該密度；多個已知 section 時，未知 section 正確外插到「索引距離最近」者，含索引距離相等的 tie-break（取索引較小者）情境；尚未收到任何密度紀錄時，退回原本統一常數 1500 的既有換算行為（零回歸）。
+- 快取清空行為的單元測試：模擬 `applyPreferences()` 對應的 Dart 端測試替身被呼叫後，先前記錄的密度不再影響換算結果，退回統一常數直到下一次收到新的 `contentPages`。
+- 捲動模式（`scrolled`）下 `relocate` 事件 detail 不含 `contentPages` 欄位、密度紀錄方法未被呼叫的既有行為確認（可附掛於既有捲動模式測試斷言，不需新增獨立測試檔）。
+- `flutter analyze` 乾淨、`flutter test` 全數通過、零回歸；`main.js` 無自動化測試框架可用，驗證手段是逐鍵核對 `relocate` detail 新增的 `contentPages` 欄位只在非捲動分支出現，比照 Issue 10 Task 2 的既有作法。
+
+**驗收標準：** 流式 EPUB／TXT／MD 分頁（無捲動）模式下，`locationIndex`／`locationTotal` 換算優先採用使用者當下實際排版設定下已知 section 的實測密度，未知 section 外插自索引距離最近的已知 section；捲動模式與 FXL／CBZ 頁碼顯示行為零改變；任何流經 `applyPreferences()` 的排版設定變更後，密度快取正確清空重算；`EpubPositionInfo` 對外欄位名與型別簽章不變（呼叫端零改動）；`flutter analyze` 乾淨、`flutter test` 全數通過、零回歸。
