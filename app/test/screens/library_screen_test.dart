@@ -14,6 +14,7 @@ import 'package:elinkbook/reader/global_reader_prefs.dart';
 import 'package:elinkbook/reader/layout_preset_repository.dart';
 import 'package:elinkbook/reader/reader_prefs_manager.dart';
 import 'package:elinkbook/screens/library_screen.dart';
+import 'package:elinkbook/screens/library_screen_dependencies.dart';
 import 'package:elinkbook/screens/cloud_browser_screen.dart';
 import 'package:elinkbook/library/book_import_service.dart';
 import 'package:elinkbook/library/book_import_service_impl.dart';
@@ -2056,7 +2057,9 @@ void main() {
           repository: FakeLibraryRepository(),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
-          googleDriveStorageClient: client,
+          cloudAccountDependencies: LibraryCloudAccountDependencies(
+            googleDriveStorageClient: client,
+          ),
           computeFingerprint: FakeFingerprintComputer().call,
         ),
       ),
@@ -2084,7 +2087,9 @@ void main() {
           repository: FakeLibraryRepository(),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
-          googleDriveStorageClient: googleDriveStorageClient,
+          cloudAccountDependencies: LibraryCloudAccountDependencies(
+            googleDriveStorageClient: googleDriveStorageClient,
+          ),
           computeFingerprint: computeFingerprint,
           isMobileDataConnection: isMobileDataConnection,
         ),
@@ -2132,7 +2137,9 @@ void main() {
           repository: FakeLibraryRepository(),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
-          oneDriveStorageClient: client,
+          cloudAccountDependencies: LibraryCloudAccountDependencies(
+            oneDriveStorageClient: client,
+          ),
           computeFingerprint: FakeFingerprintComputer().call,
         ),
       ),
@@ -2167,8 +2174,10 @@ void main() {
           repository: FakeLibraryRepository(initialBooks: [book]),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
-          highlightsRepository: highlightsRepository,
-          notesRepository: notesRepository,
+          readerFeatureRepositories: LibraryReaderFeatureRepositories(
+            highlightsRepository: highlightsRepository,
+            notesRepository: notesRepository,
+          ),
         ),
       ),
     );
@@ -2250,9 +2259,11 @@ void main() {
           repository: FakeLibraryRepository(initialBooks: [book]),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
-          bookmarksRepository: bookmarksRepository,
-          highlightsRepository: highlightsRepository,
-          notesRepository: notesRepository,
+          readerFeatureRepositories: LibraryReaderFeatureRepositories(
+            bookmarksRepository: bookmarksRepository,
+            highlightsRepository: highlightsRepository,
+            notesRepository: notesRepository,
+          ),
         ),
       ),
     );
@@ -2371,9 +2382,11 @@ void main() {
           repository: FakeLibraryRepository(initialBooks: [book]),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
-          bookmarksRepository: bookmarksRepository,
-          highlightsRepository: highlightsRepository,
-          notesRepository: notesRepository,
+          readerFeatureRepositories: LibraryReaderFeatureRepositories(
+            bookmarksRepository: bookmarksRepository,
+            highlightsRepository: highlightsRepository,
+            notesRepository: notesRepository,
+          ),
         ),
       ),
     );
@@ -2812,7 +2825,9 @@ void main() {
         repository: FakeLibraryRepository(initialBooks: const []),
         importService: FakeBookImportService(),
         prefsManager: prefsManager,
-        customFontsRepository: customFontsRepository,
+        readerFeatureRepositories: LibraryReaderFeatureRepositories(
+          customFontsRepository: customFontsRepository,
+        ),
       ),
     ));
     await tester.pumpAndSettle();
@@ -2845,7 +2860,9 @@ void main() {
           repository: FakeLibraryRepository(initialBooks: [book]),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
-          customFontsRepository: customFontsRepository,
+          readerFeatureRepositories: LibraryReaderFeatureRepositories(
+            customFontsRepository: customFontsRepository,
+          ),
         ),
       ),
     );
@@ -2883,8 +2900,10 @@ void main() {
           repository: FakeLibraryRepository(initialBooks: [book]),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
-          layoutPresetRepository: layoutPresetRepository,
-          bookReaderPrefsRepository: bookReaderPrefsRepository,
+          readerFeatureRepositories: LibraryReaderFeatureRepositories(
+            layoutPresetRepository: layoutPresetRepository,
+            bookReaderPrefsRepository: bookReaderPrefsRepository,
+          ),
         ),
       ),
     );
@@ -2922,7 +2941,9 @@ void main() {
           repository: FakeLibraryRepository(initialBooks: [book]),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
-          syncCheckpointTrigger: syncCheckpointTrigger,
+          syncDependencies: LibrarySyncDependencies(
+            syncCheckpointTrigger: syncCheckpointTrigger,
+          ),
         ),
       ),
     );
@@ -2961,9 +2982,11 @@ void main() {
           repository: FakeLibraryRepository(initialBooks: [book]),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
-          syncAccountRepository: syncAccountRepository,
-          syncClient: syncClient,
-          syncCheckpointTrigger: syncCheckpointTrigger,
+          syncDependencies: LibrarySyncDependencies(
+            syncAccountRepository: syncAccountRepository,
+            syncClient: syncClient,
+            syncCheckpointTrigger: syncCheckpointTrigger,
+          ),
         ),
       ),
     );
@@ -2974,13 +2997,13 @@ void main() {
 
     final filteredScreenFinder = _filteredLibraryScreenFinder('奇幻');
     final filteredScreen = tester.widget<LibraryScreen>(filteredScreenFinder);
-    expect(filteredScreen.syncAccountRepository, same(syncAccountRepository),
-        reason: '_openGroupFilteredView() 未把 syncAccountRepository 貫穿給下一層 '
+    expect(filteredScreen.syncDependencies.syncAccountRepository, same(syncAccountRepository),
+        reason: '_openGroupFilteredView() 未把 syncDependencies 貫穿給下一層 '
             'LibraryScreen');
-    expect(filteredScreen.syncClient, same(syncClient),
-        reason: '_openGroupFilteredView() 未把 syncClient 貫穿給下一層 LibraryScreen');
-    expect(filteredScreen.syncCheckpointTrigger, same(syncCheckpointTrigger),
-        reason: '_openGroupFilteredView() 未把 syncCheckpointTrigger 貫穿給下一層 '
+    expect(filteredScreen.syncDependencies.syncClient, same(syncClient),
+        reason: '_openGroupFilteredView() 未把 syncDependencies 貫穿給下一層 LibraryScreen');
+    expect(filteredScreen.syncDependencies.syncCheckpointTrigger, same(syncCheckpointTrigger),
+        reason: '_openGroupFilteredView() 未把 syncDependencies 貫穿給下一層 '
             'LibraryScreen');
 
     await tester.tap(find.descendant(
@@ -3019,7 +3042,9 @@ void main() {
           repository: FakeLibraryRepository(initialBooks: [book]),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
-          googleDriveStorageClient: googleDriveStorageClient,
+          cloudAccountDependencies: LibraryCloudAccountDependencies(
+            googleDriveStorageClient: googleDriveStorageClient,
+          ),
           computeFingerprint: computeFingerprint,
           isMobileDataConnection: isMobileDataConnection,
         ),
@@ -3032,8 +3057,9 @@ void main() {
 
     final filteredScreenFinder = _filteredLibraryScreenFinder('奇幻');
     final filteredScreen = tester.widget<LibraryScreen>(filteredScreenFinder);
-    expect(filteredScreen.googleDriveStorageClient, same(googleDriveStorageClient),
-        reason: '_openGroupFilteredView() 未把 googleDriveStorageClient 貫穿給下一層 '
+    expect(filteredScreen.cloudAccountDependencies.googleDriveStorageClient,
+        same(googleDriveStorageClient),
+        reason: '_openGroupFilteredView() 未把 cloudAccountDependencies 貫穿給下一層 '
             'LibraryScreen，會導致分類篩選畫面內「從 Google Drive 匯入」選單項目 '
             '永遠停用');
     expect(filteredScreen.computeFingerprint, same(computeFingerprint),
@@ -3344,10 +3370,12 @@ void main() {
           repository: repository,
           importService: importService,
           prefsManager: FakeReaderPrefsManager(),
-          remoteServerRepository: FakeRemoteServerRepository(),
-          createOpdsClient: () => FakeOpdsClient(),
+          remoteLibraryDependencies: LibraryRemoteLibraryDependencies(
+            remoteServerRepository: FakeRemoteServerRepository(),
+            createOpdsClient: () => FakeOpdsClient(),
+            thumbnailCache: FakeRemoteThumbnailCache(),
+          ),
           computeFingerprint: (path, format) async => 'test-fingerprint',
-          thumbnailCache: FakeRemoteThumbnailCache(),
         ),
       ));
       await tester.pumpAndSettle();
@@ -3374,10 +3402,12 @@ void main() {
           repository: repository,
           importService: importService,
           prefsManager: FakeReaderPrefsManager(),
-          remoteServerRepository: FakeRemoteServerRepository(),
-          createOpdsClient: () => FakeOpdsClient(),
+          remoteLibraryDependencies: LibraryRemoteLibraryDependencies(
+            remoteServerRepository: FakeRemoteServerRepository(),
+            createOpdsClient: () => FakeOpdsClient(),
+            thumbnailCache: FakeRemoteThumbnailCache(),
+          ),
           computeFingerprint: (path, format) async => 'test-fingerprint',
-          thumbnailCache: FakeRemoteThumbnailCache(),
         ),
       ));
       await tester.pumpAndSettle();
@@ -3442,7 +3472,9 @@ void main() {
           globalPrefs: const GlobalReaderPrefs.initial()
               .copyWith(openLastBookOnLaunch: false),
         ),
-        bookmarksRepository: bookmarksRepository,
+        readerFeatureRepositories: LibraryReaderFeatureRepositories(
+          bookmarksRepository: bookmarksRepository,
+        ),
       ),
     ));
     await tester.pumpAndSettle();
@@ -3551,8 +3583,10 @@ void main() {
           repository: repository,
           importService: FakeBookImportService(),
           prefsManager: FakeReaderPrefsManager(),
-          remoteServerRepository: FakeRemoteServerRepository(initialServers: [server]),
-          createOpdsClient: () => opdsClient,
+          remoteLibraryDependencies: LibraryRemoteLibraryDependencies(
+            remoteServerRepository: FakeRemoteServerRepository(initialServers: [server]),
+            createOpdsClient: () => opdsClient,
+          ),
           isMobileDataConnection: () async => false,
         ),
       ));
@@ -3575,8 +3609,10 @@ void main() {
           repository: repository,
           importService: FakeBookImportService(),
           prefsManager: FakeReaderPrefsManager(),
-          remoteServerRepository: FakeRemoteServerRepository(initialServers: [server]),
-          createOpdsClient: () => FakeOpdsClient(),
+          remoteLibraryDependencies: LibraryRemoteLibraryDependencies(
+            remoteServerRepository: FakeRemoteServerRepository(initialServers: [server]),
+            createOpdsClient: () => FakeOpdsClient(),
+          ),
           isMobileDataConnection: () async => true,
         ),
       ));
@@ -3596,8 +3632,10 @@ void main() {
           repository: repository,
           importService: FakeBookImportService(),
           prefsManager: FakeReaderPrefsManager(),
-          remoteServerRepository: FakeRemoteServerRepository(initialServers: [server]),
-          createOpdsClient: () => opdsClient,
+          remoteLibraryDependencies: LibraryRemoteLibraryDependencies(
+            remoteServerRepository: FakeRemoteServerRepository(initialServers: [server]),
+            createOpdsClient: () => opdsClient,
+          ),
           isMobileDataConnection: () async => false,
         ),
       ));
@@ -3631,8 +3669,10 @@ void main() {
           repository: repository,
           importService: FakeBookImportService(),
           prefsManager: FakeReaderPrefsManager(),
-          remoteServerRepository: FakeRemoteServerRepository(initialServers: [server]),
-          createOpdsClient: () => opdsClient,
+          remoteLibraryDependencies: LibraryRemoteLibraryDependencies(
+            remoteServerRepository: FakeRemoteServerRepository(initialServers: [server]),
+            createOpdsClient: () => opdsClient,
+          ),
           isMobileDataConnection: () async => false,
         ),
       ));

@@ -6,6 +6,7 @@ import 'package:elinkbook/main.dart';
 import 'package:elinkbook/theme/app_theme.dart';
 import 'package:elinkbook/theme/app_theme_preferences.dart';
 import 'package:elinkbook/screens/library_screen.dart';
+import 'package:elinkbook/screens/library_screen_dependencies.dart';
 import 'package:elinkbook/screens/settings_screen.dart';
 import 'package:elinkbook/library/sqlite_library_repository.dart';
 import 'package:elinkbook/reader/reader_prefs_manager.dart';
@@ -124,10 +125,12 @@ void main() {
           repository: FakeLibraryRepository(),
           importService: FakeBookImportService(),
           prefsManager: prefsManager,
-          currentTheme: AppTheme.light,
-          isEinkMode: false,
-          onThemeChanged: (_) {},
-          onEinkModeChanged: (enabled) => receivedEinkMode = enabled,
+          themeDependencies: LibraryThemeDependencies(
+            currentTheme: AppTheme.light,
+            isEinkMode: false,
+            onThemeChanged: (_) {},
+            onEinkModeChanged: (enabled) => receivedEinkMode = enabled,
+          ),
         ),
       ),
     );

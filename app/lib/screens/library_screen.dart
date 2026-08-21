@@ -4,36 +4,22 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../cloud_import/cloud_account_repository.dart';
 import '../cloud_import/cloud_storage_client.dart';
-import '../cloud_import/google_drive_oauth_client.dart';
-import '../cloud_import/onedrive_oauth_client.dart';
 import '../library/book_content_fingerprint.dart';
 import '../library/book_import_service.dart';
-import '../reader/book_reader_prefs_repository.dart';
-import '../reader/bookmarks_repository.dart';
-import '../reader/custom_fonts_repository.dart';
-import '../reader/highlights_repository.dart';
-import '../reader/layout_preset_repository.dart';
-import '../reader/notes_repository.dart';
 import '../reader/reader_prefs_manager.dart';
-import '../remote/opds_client.dart';
 import '../remote/opds_types.dart';
 import '../remote/remote_book_downloader.dart';
 import '../remote/remote_server_profile.dart';
-import '../remote/remote_server_repository.dart';
-import '../remote/remote_thumbnail_cache.dart';
 import '../remote/remote_catalog_dependencies.dart';
 import '../library/library_preferences.dart';
 import '../library/library_repository.dart';
+import 'library_screen_dependencies.dart';
 import '../library/models/book.dart';
 import '../library/models/book_group.dart';
 import '../library/models/library_enums.dart';
 import '../library/widgets/book_cover.dart';
-import '../sync/sync_account_repository.dart';
-import '../sync/sync_checkpoint_trigger.dart';
-import '../sync/sync_client.dart';
-import '../theme/app_theme.dart';
+
 import 'cloud_browser_screen.dart';
 import 'library_group_management_dialog.dart';
 import 'library_move_to_group_dialog.dart';
@@ -50,29 +36,27 @@ class LibraryScreen extends StatefulWidget {
   final LibraryRepository repository;
   final BookImportService importService;
   final ReaderPrefsManager prefsManager;
-  final BookmarksRepository? bookmarksRepository;
-  final HighlightsRepository? highlightsRepository;
-  final NotesRepository? notesRepository;
-  final CustomFontsRepository? customFontsRepository;
-  final LayoutPresetRepository? layoutPresetRepository;
-  final BookReaderPrefsRepository? bookReaderPrefsRepository;
-  final SyncAccountRepository? syncAccountRepository;
-  final SyncClient? syncClient;
-  final SyncCheckpointTrigger? syncCheckpointTrigger;
-  final CloudAccountRepository? cloudAccountRepository;
-  final GoogleDriveOAuthClient? googleDriveOAuthClient;
-  final OneDriveOAuthClient? oneDriveOAuthClient;
-  final CloudStorageClient? googleDriveStorageClient;
-  final CloudStorageClient? oneDriveStorageClient;
-  final RemoteServerRepository? remoteServerRepository;
-  final OpdsClient Function()? createOpdsClient;
+  /// 收斂原本 `bookmarksRepository`／`highlightsRepository`／
+  /// `notesRepository`／`customFontsRepository`／`layoutPresetRepository`／
+  /// `bookReaderPrefsRepository` 六個獨立參數（epic-26-architecture-hardening
+  /// Issue 7）。
+  final LibraryReaderFeatureRepositories readerFeatureRepositories;
+  /// 收斂原本 `syncAccountRepository`／`syncClient`／`syncCheckpointTrigger`
+  /// 三個獨立參數（epic-26-architecture-hardening Issue 7）。
+  final LibrarySyncDependencies syncDependencies;
+  /// 收斂原本 `cloudAccountRepository`／`googleDriveOAuthClient`／
+  /// `oneDriveOAuthClient`／`googleDriveStorageClient`／
+  /// `oneDriveStorageClient` 五個獨立參數（epic-26-architecture-hardening
+  /// Issue 7）。
+  final LibraryCloudAccountDependencies cloudAccountDependencies;
+  /// 收斂原本 `remoteServerRepository`／`createOpdsClient`／`thumbnailCache`
+  /// 三個獨立參數（epic-26-architecture-hardening Issue 7）。
+  final LibraryRemoteLibraryDependencies remoteLibraryDependencies;
   final ComputeRemoteFingerprint? computeFingerprint;
-  final RemoteThumbnailCache? thumbnailCache;
   final Future<bool> Function()? isMobileDataConnection;
-  final AppTheme currentTheme;
-  final bool isEinkMode;
-  final ValueChanged<AppTheme>? onThemeChanged;
-  final ValueChanged<bool>? onEinkModeChanged;
+  /// 收斂原本 `currentTheme`／`isEinkMode`／`onThemeChanged`／`onEinkModeChanged`
+  /// 四個獨立參數（epic-26-architecture-hardening Issue 7）。
+  final LibraryThemeDependencies themeDependencies;
   final String? groupFilter;
 
   const LibraryScreen({
@@ -80,29 +64,13 @@ class LibraryScreen extends StatefulWidget {
     required this.repository,
     required this.importService,
     required this.prefsManager,
-    this.bookmarksRepository,
-    this.highlightsRepository,
-    this.notesRepository,
-    this.customFontsRepository,
-    this.layoutPresetRepository,
-    this.bookReaderPrefsRepository,
-    this.syncAccountRepository,
-    this.syncClient,
-    this.syncCheckpointTrigger,
-    this.cloudAccountRepository,
-    this.googleDriveOAuthClient,
-    this.oneDriveOAuthClient,
-    this.googleDriveStorageClient,
-    this.oneDriveStorageClient,
-    this.remoteServerRepository,
-    this.createOpdsClient,
+    this.readerFeatureRepositories = const LibraryReaderFeatureRepositories(),
+    this.syncDependencies = const LibrarySyncDependencies(),
+    this.cloudAccountDependencies = const LibraryCloudAccountDependencies(),
+    this.remoteLibraryDependencies = const LibraryRemoteLibraryDependencies(),
     this.computeFingerprint,
-    this.thumbnailCache,
     this.isMobileDataConnection,
-    this.currentTheme = AppTheme.light,
-    this.isEinkMode = false,
-    this.onThemeChanged,
-    this.onEinkModeChanged,
+    this.themeDependencies = const LibraryThemeDependencies(),
     this.groupFilter,
   });
 
@@ -574,18 +542,18 @@ class _LibraryScreenState extends State<LibraryScreen> {
               filePath: book.filePath,
               bookId: book.id,
               prefsManager: widget.prefsManager,
-              bookmarksRepository: widget.bookmarksRepository,
-              highlightsRepository: widget.highlightsRepository,
-              notesRepository: widget.notesRepository,
+              bookmarksRepository: widget.readerFeatureRepositories.bookmarksRepository,
+              highlightsRepository: widget.readerFeatureRepositories.highlightsRepository,
+              notesRepository: widget.readerFeatureRepositories.notesRepository,
               bookTitle: book.title,
               bookAuthor: book.author,
               bookProgress: book.progress,
               isFixedLayout: book.isFixedLayout,
               libraryRepository: widget.repository,
-              customFontsRepository: widget.customFontsRepository,
-              layoutPresetRepository: widget.layoutPresetRepository,
-              bookReaderPrefsRepository: widget.bookReaderPrefsRepository,
-              syncCheckpointTrigger: widget.syncCheckpointTrigger,
+              customFontsRepository: widget.readerFeatureRepositories.customFontsRepository,
+              layoutPresetRepository: widget.readerFeatureRepositories.layoutPresetRepository,
+              bookReaderPrefsRepository: widget.readerFeatureRepositories.bookReaderPrefsRepository,
+              syncCheckpointTrigger: widget.syncDependencies.syncCheckpointTrigger,
             ),
           ),
         )
@@ -637,8 +605,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
   /// 到永久 `remote_books/` 目錄→刪除暫存），避免把永久 `filePath` 指向
   /// OS 可回收的暫存路徑。
   Future<void> _handleRedownload(Book book) async {
-    final remoteServerRepository = widget.remoteServerRepository;
-    final createOpdsClient = widget.createOpdsClient;
+    final remoteServerRepository = widget.remoteLibraryDependencies.remoteServerRepository;
+    final createOpdsClient = widget.remoteLibraryDependencies.createOpdsClient;
     final remoteServerId = book.remoteServerId;
     final remoteDownloadUrl = book.remoteDownloadUrl;
     if (remoteServerRepository == null ||
@@ -733,26 +701,26 @@ class _LibraryScreenState extends State<LibraryScreen> {
               repository: widget.repository,
               importService: widget.importService,
               prefsManager: widget.prefsManager,
-              bookmarksRepository: widget.bookmarksRepository,
-              highlightsRepository: widget.highlightsRepository,
-              notesRepository: widget.notesRepository,
-              customFontsRepository: widget.customFontsRepository,
+              readerFeatureRepositories: LibraryReaderFeatureRepositories(
+                bookmarksRepository: widget.readerFeatureRepositories.bookmarksRepository,
+                highlightsRepository: widget.readerFeatureRepositories.highlightsRepository,
+                notesRepository: widget.readerFeatureRepositories.notesRepository,
+                customFontsRepository: widget.readerFeatureRepositories.customFontsRepository,
+              ),
               // epic-8-sync Issue 10：先前遺漏這三個同步相關欄位，導致從這條
               // 分類篩選路徑開書時 syncCheckpointTrigger 無法貫穿到
               // ReaderScreen，「離開畫面」／「閱讀中 5 分鐘計時器」兩種
               // checkpoint 觸發來源會靜默失效（見 plans/plan-issue-10.md）。
-              syncAccountRepository: widget.syncAccountRepository,
-              syncClient: widget.syncClient,
-              syncCheckpointTrigger: widget.syncCheckpointTrigger,
-              cloudAccountRepository: widget.cloudAccountRepository,
-              googleDriveOAuthClient: widget.googleDriveOAuthClient,
-              oneDriveOAuthClient: widget.oneDriveOAuthClient,
-              // 【審查修正 review-issue-3.md Important #1】先前遺漏這個
-              // 欄位，導致從分類篩選路徑進入的 LibraryScreen 內「從
-              // Google Drive 匯入」選單項目永遠停用（比照上方三個雲端
-              // 帳號相關欄位的既有貫穿慣例）。
-              googleDriveStorageClient: widget.googleDriveStorageClient,
-              oneDriveStorageClient: widget.oneDriveStorageClient,
+              // 本次改為整包轉送 syncDependencies bundle，結構上不會再重演
+              // 「轉 A 忘轉 B」的部分欄位漏轉發（見 review-issue-7.md Minor #1）。
+              syncDependencies: widget.syncDependencies,
+              // 【審查修正 review-issue-3.md Important #1】先前遺漏
+              // googleDriveStorageClient／oneDriveStorageClient 兩個欄位，
+              // 導致從分類篩選路徑進入的 LibraryScreen 內「從 Google Drive
+              // 匯入」選單項目永遠停用。本次改為整包轉送
+              // cloudAccountDependencies bundle，結構上不會再重演「轉 A
+              // 忘轉 B」的部分欄位漏轉發（見 review-issue-7.md Minor #1）。
+              cloudAccountDependencies: widget.cloudAccountDependencies,
               // 【審查修正 review-issue-5.md Important #1】Issue 5 新增的
               // 「從 Google Drive／OneDrive 匯入」選單門檻改為同時檢查
               // `widget.computeFingerprint != null`，這裡若不轉發，分類
@@ -768,10 +736,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
               // （見 review-issue-3.md Important #1、review-issue-5.md
               // Important #1）。
               isMobileDataConnection: widget.isMobileDataConnection,
-              currentTheme: widget.currentTheme,
-              isEinkMode: widget.isEinkMode,
-              onThemeChanged: widget.onThemeChanged,
-              onEinkModeChanged: widget.onEinkModeChanged,
+              themeDependencies: widget.themeDependencies,
               groupFilter: groupName,
             ),
           ),
@@ -859,12 +824,12 @@ class _LibraryScreenState extends State<LibraryScreen> {
         IconButton(
           key: const Key('library_eink_toggle'),
           icon: Icon(
-            widget.isEinkMode ? Icons.contrast : Icons.contrast_outlined,
+            widget.themeDependencies.isEinkMode ? Icons.contrast : Icons.contrast_outlined,
             color:
-                widget.isEinkMode ? Theme.of(context).colorScheme.primary : null,
+                widget.themeDependencies.isEinkMode ? Theme.of(context).colorScheme.primary : null,
           ),
           tooltip: 'E-Ink 高對比模式',
-          onPressed: () => widget.onEinkModeChanged?.call(!widget.isEinkMode),
+          onPressed: () => widget.themeDependencies.onEinkModeChanged?.call(!widget.themeDependencies.isEinkMode),
         ),
         const VerticalDivider(width: 1, indent: 12, endIndent: 12),
         PopupMenuButton<LibrarySortBy>(
@@ -911,22 +876,24 @@ class _LibraryScreenState extends State<LibraryScreen> {
             ),
             PopupMenuItem<void>(
               key: const Key('library_import_google_drive_option'),
-              enabled: widget.googleDriveStorageClient != null &&
+              enabled: widget.cloudAccountDependencies.googleDriveStorageClient != null &&
                   widget.computeFingerprint != null,
-              onTap: (widget.googleDriveStorageClient == null ||
+              onTap: (widget.cloudAccountDependencies.googleDriveStorageClient == null ||
                       widget.computeFingerprint == null)
                   ? null
-                  : () => _openGoogleDriveBrowser(widget.googleDriveStorageClient!),
+                  : () => _openGoogleDriveBrowser(
+                      widget.cloudAccountDependencies.googleDriveStorageClient!),
               child: const Text('從 Google Drive 匯入'),
             ),
             PopupMenuItem<void>(
               key: const Key('library_import_onedrive_option'),
-              enabled: widget.oneDriveStorageClient != null &&
+              enabled: widget.cloudAccountDependencies.oneDriveStorageClient != null &&
                   widget.computeFingerprint != null,
-              onTap: (widget.oneDriveStorageClient == null ||
+              onTap: (widget.cloudAccountDependencies.oneDriveStorageClient == null ||
                       widget.computeFingerprint == null)
                   ? null
-                  : () => _openOneDriveBrowser(widget.oneDriveStorageClient!),
+                  : () => _openOneDriveBrowser(
+                      widget.cloudAccountDependencies.oneDriveStorageClient!),
               child: const Text('從 OneDrive 匯入'),
             ),
           ],
@@ -938,10 +905,10 @@ class _LibraryScreenState extends State<LibraryScreen> {
             tooltip: '管理分類',
             onPressed: _openManageGroupsDialog,
           ),
-        if (widget.remoteServerRepository != null &&
-            widget.createOpdsClient != null &&
+        if (widget.remoteLibraryDependencies.remoteServerRepository != null &&
+            widget.remoteLibraryDependencies.createOpdsClient != null &&
             widget.computeFingerprint != null &&
-            widget.thumbnailCache != null)
+            widget.remoteLibraryDependencies.thumbnailCache != null)
           IconButton(
             key: const Key('library_remote_library_button'),
             icon: const Icon(Icons.cloud_outlined),
@@ -951,15 +918,15 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   .push(
                     MaterialPageRoute(
                       builder: (context) => RemoteServerListScreen(
-                        repository: widget.remoteServerRepository!,
+                        repository: widget.remoteLibraryDependencies.remoteServerRepository!,
                         libraryRepository: widget.repository,
                         dependencies: RemoteCatalogDependencies(
                           computeFingerprint: widget.computeFingerprint!,
-                          thumbnailCache: widget.thumbnailCache!,
-                          createOpdsClient: widget.createOpdsClient!,
+                          thumbnailCache: widget.remoteLibraryDependencies.thumbnailCache!,
+                          createOpdsClient: widget.remoteLibraryDependencies.createOpdsClient!,
                         ),
                         importService: widget.importService,
-                        isEinkMode: widget.isEinkMode,
+                        isEinkMode: widget.themeDependencies.isEinkMode,
                       ),
                     ),
                   )
@@ -978,15 +945,15 @@ class _LibraryScreenState extends State<LibraryScreen> {
               MaterialPageRoute(
                 builder: (context) => SettingsScreen(
                   prefsManager: widget.prefsManager,
-                  currentTheme: widget.currentTheme,
-                  isEinkMode: widget.isEinkMode,
-                  onThemeChanged: widget.onThemeChanged,
-                  customFontsRepository: widget.customFontsRepository,
-                  syncAccountRepository: widget.syncAccountRepository,
-                  syncClient: widget.syncClient,
-                  cloudAccountRepository: widget.cloudAccountRepository,
-                  googleDriveOAuthClient: widget.googleDriveOAuthClient,
-                  oneDriveOAuthClient: widget.oneDriveOAuthClient,
+                  currentTheme: widget.themeDependencies.currentTheme,
+                  isEinkMode: widget.themeDependencies.isEinkMode,
+                  onThemeChanged: widget.themeDependencies.onThemeChanged,
+                  customFontsRepository: widget.readerFeatureRepositories.customFontsRepository,
+                  syncAccountRepository: widget.syncDependencies.syncAccountRepository,
+                  syncClient: widget.syncDependencies.syncClient,
+                  cloudAccountRepository: widget.cloudAccountDependencies.cloudAccountRepository,
+                  googleDriveOAuthClient: widget.cloudAccountDependencies.googleDriveOAuthClient,
+                  oneDriveOAuthClient: widget.cloudAccountDependencies.oneDriveOAuthClient,
                 ),
               ),
             );
