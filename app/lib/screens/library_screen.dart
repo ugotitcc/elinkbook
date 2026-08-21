@@ -23,6 +23,7 @@ import '../remote/remote_book_downloader.dart';
 import '../remote/remote_server_profile.dart';
 import '../remote/remote_server_repository.dart';
 import '../remote/remote_thumbnail_cache.dart';
+import '../remote/remote_catalog_dependencies.dart';
 import '../library/library_preferences.dart';
 import '../library/library_repository.dart';
 import '../library/models/book.dart';
@@ -952,9 +953,11 @@ class _LibraryScreenState extends State<LibraryScreen> {
                       builder: (context) => RemoteServerListScreen(
                         repository: widget.remoteServerRepository!,
                         libraryRepository: widget.repository,
-                        computeFingerprint: widget.computeFingerprint!,
-                        thumbnailCache: widget.thumbnailCache!,
-                        createOpdsClient: widget.createOpdsClient!,
+                        dependencies: RemoteCatalogDependencies(
+                          computeFingerprint: widget.computeFingerprint!,
+                          thumbnailCache: widget.thumbnailCache!,
+                          createOpdsClient: widget.createOpdsClient!,
+                        ),
                         importService: widget.importService,
                         isEinkMode: widget.isEinkMode,
                       ),

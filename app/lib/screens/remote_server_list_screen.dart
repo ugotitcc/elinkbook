@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 
-import '../library/book_content_fingerprint.dart';
 import '../library/book_import_service.dart';
 import '../library/library_repository.dart';
-import '../remote/opds_client.dart';
+import '../remote/remote_catalog_dependencies.dart';
 import '../remote/remote_server_profile.dart';
 import '../remote/remote_server_repository.dart';
-import '../remote/remote_thumbnail_cache.dart';
 import 'remote_catalog_screen.dart';
 import 'remote_server_form_screen.dart';
 
@@ -16,9 +14,11 @@ import 'remote_server_form_screen.dart';
 class RemoteServerListScreen extends StatefulWidget {
   final RemoteServerRepository repository;
   final LibraryRepository libraryRepository;
-  final ComputeRemoteFingerprint computeFingerprint;
-  final RemoteThumbnailCache thumbnailCache;
-  final OpdsClient Function() createOpdsClient;
+
+  /// 收斂原本 `computeFingerprint`／`thumbnailCache`／`createOpdsClient`
+  /// 三個獨立參數（epic-26-architecture-hardening Issue 6）。
+  final RemoteCatalogDependencies dependencies;
+
   final BookImportService importService;
   final bool isEinkMode;
 
@@ -26,9 +26,7 @@ class RemoteServerListScreen extends StatefulWidget {
     super.key,
     required this.repository,
     required this.libraryRepository,
-    required this.computeFingerprint,
-    required this.thumbnailCache,
-    required this.createOpdsClient,
+    required this.dependencies,
     required this.importService,
     this.isEinkMode = false,
   });
@@ -62,7 +60,7 @@ class _RemoteServerListScreenState extends State<RemoteServerListScreen> {
       MaterialPageRoute(
         builder: (context) => RemoteServerFormScreen(
           repository: widget.repository,
-          createOpdsClient: widget.createOpdsClient,
+          createOpdsClient: widget.dependencies.createOpdsClient,
         ),
       ),
     );
@@ -74,7 +72,7 @@ class _RemoteServerListScreenState extends State<RemoteServerListScreen> {
       MaterialPageRoute(
         builder: (context) => RemoteServerFormScreen(
           repository: widget.repository,
-          createOpdsClient: widget.createOpdsClient,
+          createOpdsClient: widget.dependencies.createOpdsClient,
           existingProfile: profile,
         ),
       ),
@@ -88,9 +86,7 @@ class _RemoteServerListScreenState extends State<RemoteServerListScreen> {
         server: profile,
         repository: widget.repository,
         libraryRepository: widget.libraryRepository,
-        computeFingerprint: widget.computeFingerprint,
-        thumbnailCache: widget.thumbnailCache,
-        createOpdsClient: widget.createOpdsClient,
+        dependencies: widget.dependencies,
         importService: widget.importService,
         isEinkMode: widget.isEinkMode,
       ),

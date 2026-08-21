@@ -7,12 +7,12 @@ import '../library/book_content_fingerprint.dart';
 import '../library/book_import_service.dart';
 import '../library/library_repository.dart';
 import '../library/models/library_enums.dart';
+import '../remote/remote_catalog_dependencies.dart';
 import '../remote/opds_client.dart';
 import '../remote/opds_types.dart';
 import '../remote/remote_book_downloader.dart';
 import '../remote/remote_server_profile.dart';
 import '../remote/remote_server_repository.dart';
-import '../remote/remote_thumbnail_cache.dart';
 import 'format_selection_dialog.dart';
 
 /// OPDS 目錄瀏覽畫面（epic-30-calibre-remote-library Issue 2，
@@ -33,9 +33,11 @@ class RemoteCatalogScreen extends StatefulWidget {
   final RemoteServerProfile server;
   final RemoteServerRepository repository;
   final LibraryRepository libraryRepository;
-  final ComputeRemoteFingerprint computeFingerprint;
-  final RemoteThumbnailCache thumbnailCache;
-  final OpdsClient Function() createOpdsClient;
+
+  /// 收斂原本 `computeFingerprint`／`thumbnailCache`／`createOpdsClient`
+  /// 三個獨立參數（epic-26-architecture-hardening Issue 6）。
+  final RemoteCatalogDependencies dependencies;
+
   final BookImportService importService;
 
   /// `null` 代表載入 [server.baseUrl]（站點根目錄）；非 `null` 時載入指定
@@ -56,9 +58,7 @@ class RemoteCatalogScreen extends StatefulWidget {
     required this.server,
     required this.repository,
     required this.libraryRepository,
-    required this.computeFingerprint,
-    required this.thumbnailCache,
-    required this.createOpdsClient,
+    required this.dependencies,
     required this.importService,
     this.feedUrl,
     this.title,
@@ -95,7 +95,7 @@ class _RemoteCatalogScreenState extends State<RemoteCatalogScreen> {
   @override
   void initState() {
     super.initState();
-    _client = widget.createOpdsClient();
+    _client = widget.dependencies.createOpdsClient();
     _load();
   }
 
@@ -203,9 +203,7 @@ class _RemoteCatalogScreenState extends State<RemoteCatalogScreen> {
         server: widget.server,
         repository: widget.repository,
         libraryRepository: widget.libraryRepository,
-        computeFingerprint: widget.computeFingerprint,
-        thumbnailCache: widget.thumbnailCache,
-        createOpdsClient: widget.createOpdsClient,
+        dependencies: widget.dependencies,
         importService: widget.importService,
         feedUrl: link.href,
         title: link.title,
@@ -279,7 +277,7 @@ class _RemoteCatalogScreenState extends State<RemoteCatalogScreen> {
         password: _password,
         importService: widget.importService,
         libraryRepository: widget.libraryRepository,
-        computeFingerprint: widget.computeFingerprint,
+        computeFingerprint: widget.dependencies.computeFingerprint,
       ),
     );
     if (!mounted) return;
@@ -431,7 +429,7 @@ class _RemoteCatalogScreenState extends State<RemoteCatalogScreen> {
       );
     }
     return FutureBuilder<Uint8List>(
-      future: widget.thumbnailCache.fetch(
+      future: widget.dependencies.thumbnailCache.fetch(
         widget.server,
         thumbnailUrl,
         buildOpdsAuthHeaders(widget.server, _password),
