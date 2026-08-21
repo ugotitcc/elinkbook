@@ -4332,18 +4332,18 @@ void main() {
       await tester.runAsync(() => Future.delayed(Duration.zero));
       await tester.pump();
 
-    final foliateView = tester.widget<FoliateReaderView>(
-      find.byType(FoliateReaderView),
-    );
-    foliateView.onPageRendered();
-    foliateView.onLocatorChanged?.call(
-      const EpubPositionInfo(
-        locatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
-        progression: 0.1,
-        visualPageIndex: 9,
-        visualTotalPages: 100,
-      ),
-    );
+      final foliateView = tester.widget<FoliateReaderView>(
+        find.byType(FoliateReaderView),
+      );
+      foliateView.onPageRendered();
+      foliateView.onLocatorChanged?.call(
+        const EpubPositionInfo(
+          locatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
+          progression: 0.1,
+          locationIndex: 9,
+          locationTotal: 100,
+        ),
+      );
       await tester.pump();
 
       // Bottom Sheet 開啟前，舊 in-flow ReaderFooter 應已不存在（見 Task 2
@@ -5300,8 +5300,8 @@ void main() {
       const EpubPositionInfo(
         locatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
         progression: 0.1,
-        locationIndex: 9,
-        locationTotal: 100,
+        visualPageIndex: 9,
+        visualTotalPages: 100,
       ),
     );
     await tester.pump();
