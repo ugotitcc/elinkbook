@@ -17,6 +17,7 @@ import '../library/library_repository.dart';
 import 'library_screen_dependencies.dart';
 import 'book_grid_tile_metrics.dart';
 import 'library_book_list_controller.dart';
+import 'library_batch_actions.dart';
 import '../library/models/book.dart';
 import '../library/models/book_group.dart';
 import '../library/models/library_enums.dart';
@@ -83,6 +84,7 @@ class LibraryScreen extends StatefulWidget {
 class _LibraryScreenState extends State<LibraryScreen> {
   final _preferences = LibraryPreferences();
   late final LibraryBookListController _bookListController;
+  late final LibraryBatchActions _batchActions;
 
   LibraryViewMode _viewMode = LibraryViewMode.grid;
   Set<String>? _selectedBookIds;
@@ -99,6 +101,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
       repository: widget.repository,
       groupFilter: widget.groupFilter,
     )..addListener(_onBookListChanged);
+    _batchActions = LibraryBatchActions(repository: widget.repository);
     _initialize();
   }
 
@@ -354,10 +357,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
     // 期間「移動到分類」按鈕仍會顯示在選取模式的 App Bar 上，若不提早退出，
     // 使用者理論上可以在寫入尚未完成時再次點擊，重複觸發本方法。
     _exitSelectionMode();
-    for (final book in books) {
-      if (!selectedIds.contains(book.id)) continue;
-      await widget.repository.updateBook(book.copyWith(groupName: destination));
-    }
+    await _batchActions.moveToGroup(selectedIds, books, destination);
     await _bookListController.loadBooks();
   }
 
@@ -377,11 +377,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
     final books = _bookListController.books;
     if (selectedIds == null || selectedIds.isEmpty || books == null) return;
     _exitSelectionMode();
-    for (final book in books) {
-      if (!selectedIds.contains(book.id)) continue;
-      if (book.format != BookFileFormat.epub) continue;
-      await widget.repository.updateBook(book.copyWith(isFixedLayout: true));
-    }
+    await _batchActions.forceFixedLayout(selectedIds, books);
     await _bookListController.loadBooks();
   }
 
@@ -395,11 +391,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
     final books = _bookListController.books;
     if (selectedIds == null || selectedIds.isEmpty || books == null) return;
     _exitSelectionMode();
-    for (final book in books) {
-      if (!selectedIds.contains(book.id)) continue;
-      if (book.format != BookFileFormat.epub) continue;
-      await widget.repository.detectAndCacheEpubLayout(book.id, book.filePath);
-    }
+    await _batchActions.restoreAutoLayout(selectedIds, books);
     await _bookListController.loadBooks();
   }
 
@@ -433,41 +425,14 @@ class _LibraryScreenState extends State<LibraryScreen> {
     final confirmed = await _confirmDeleteBooks(selectedIds.length);
     if (confirmed != true) return;
     // 比照既有 _openManageGroupsDialog() 的既有慣例：await 跳出 dialog 的
-    // 操作之後、觸碰 state 之前先確認 widget 是否仍在畫面上（見
-    // library_screen.dart:322，同檔案內多數 await-dialog 後的路徑皆有此
-    // 檢查，_moveSelectedBooksToGroup() 缺這道檢查屬既有缺口，不在本工單
-    // 範圍內一併修正）。
+    // 操作之後、觸碰 state 之前先確認 widget 是否仍在畫面上（同檔案內
+    // 多數 await-dialog 後的路徑皆有此檢查，_moveSelectedBooksToGroup()
+    // 缺這道檢查屬既有缺口，不在本工單範圍內一併修正）。
     if (!mounted) return;
     // 比照既有 _moveSelectedBooksToGroup()：先退出選取模式，避免刪除迴圈
     // 執行期間使用者重複點擊觸發本方法。
     _exitSelectionMode();
-    for (final book in books) {
-      if (!selectedIds.contains(book.id)) continue;
-      await widget.repository.deleteBook(book.id);
-      // existsSync() 防護對 content:// 來源的 filePath 安全（design.md
-      // 調查結論——content:// 字串永遠不會判定為存在的本機路徑，故此處
-      // 不需要分辨 filePath 是本機複本還是原始外部檔案參照）。比照既有
-      // _pickAndImportFiles()/_pickAndImportFolder() 的既有慣例，用
-      // try-catch 包住檔案系統操作：單一檔案刪除失敗（例如被其他程序鎖
-      // 定、權限異常）不應中斷整個批次刪除迴圈——deleteBook()（資料庫紀
-      // 錄，使用者最關心的「書從書架消失」）已在上一行完成，迴圈仍要繼
-      // 續處理其餘已選取的書籍並跑到最後的 _loadBooks()。
-      try {
-        // 使用 deleteSync() 而非 await delete()：widget test 的 fake zone
-        // 無法完成真實 I/O 的 Future，deleteSync() 是同步系統呼叫，可直接完
-        // 成，不受 zone 限制。
-        if (File(book.filePath).existsSync()) {
-          File(book.filePath).deleteSync();
-        }
-        final coverPath = book.coverPath;
-        if (coverPath != null && File(coverPath).existsSync()) {
-          File(coverPath).deleteSync();
-        }
-      } catch (_) {
-        // 檔案刪除失敗時靜默略過，不中斷主流程；資料庫紀錄已刪除，殘留
-        // 檔案不影響功能正確性。
-      }
-    }
+    await _batchActions.deleteBooks(selectedIds, books);
     await _bookListController.loadBooks();
   }
 
@@ -479,22 +444,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
     final books = _bookListController.books;
     if (selectedIds == null || selectedIds.isEmpty || books == null) return;
     _exitSelectionMode();
-    for (final book in books) {
-      if (!selectedIds.contains(book.id)) continue;
-      if (book.source != BookSource.calibreOpds) continue;
-      if (!book.isDownloaded) continue;
-      // 比照 _deleteSelectedBooks() 既有慣例：用 try-catch 包住檔案系統
-      // 操作，用 deleteSync() 避免 fake zone 限制。
-      try {
-        if (File(book.filePath).existsSync()) {
-          File(book.filePath).deleteSync();
-        }
-      } catch (_) {
-        // 檔案刪除失敗時靜默略過——資料庫標記更新才是核心操作。
-      }
-      await widget.repository
-          .updateBook(book.copyWith(isDownloaded: false));
-    }
+    await _batchActions.removeLocalCache(selectedIds, books);
     await _bookListController.loadBooks();
   }
 
