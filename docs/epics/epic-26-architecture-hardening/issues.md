@@ -235,7 +235,7 @@ Future<void> pumpUntilPdfReady(
 
 ## Issue 8：拆分 `LibraryScreen` God-Widget（1504 行，持續增長中）
 
-**Status:** `ready-for-agent`（範圍較大，建議規劃階段拆成多個循序 Task，比照本 Epic 其他多 Task Issue 慣例）。
+**Status:** ✅ 已完成並合併回 `main`（PR [#176](https://git.jigong.org/huthief/elinkBook/pulls/176)，分支 `epic-26-issue-8`，7 個 commit：Task 1-7 各一個）。依關注點拆出 3 個獨立、可脫離 widget 樹直接單元測試的 module：`LibraryBookListController`（`ChangeNotifier`，書籍/分類清單載入與排序切換的非同步競態防護）、`LibraryBatchActions`（不可變類別，收斂 5 個批次操作共用的過濾迴圈骨架 `_runEach`，一併吸收候選 6 描述的重複骨架）、`BookGridTileMetrics`（拼貼格 footer 高度純函式，改接受 `TextScaler` 而非 `BuildContext`）；`LibraryScreen` 收斂為呈現＋委派，導覽樞紐／選取模式狀態機／匯入對話框／呈現 widget 依計畫「規劃階段查證」的 10 點理由刻意維持原樣不搬移。審查（`reviews/review-issue-8.md`）逐一核對「刻意不拆」的關注點確認皆未被誤動、`main.dart`／`library_screen_test.dart` 確認完全零異動、三個新模組的搬移程式碼與歷史註解逐一核對完整保留；`flutter analyze` 乾淨，全專案 1628 項測試全數通過（與計畫預測數字精確吻合），零回歸；審查發現 0 項 Critical、0 項 Important、4 項 Minor（皆為純格式瑕疵：多餘空白字元、縮排不一致、殘留空白行、殘留掃描說明文字與實際 grep 命中略有落差），不影響合併、未另補修正 commit。
 
 **依賴：** 建議待 Issue 6／Issue 7 完成後再執行——外部依賴介面先收斂乾淨，內部 module 拆分阻力較小；非強制順序。
 
