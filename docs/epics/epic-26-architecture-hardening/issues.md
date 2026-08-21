@@ -215,7 +215,7 @@ Future<void> pumpUntilPdfReady(
 
 ## Issue 7：收斂 `LibraryScreen` 建構子的參數膨脹（22→27 個，持續增加中）
 
-**Status:** `ready-for-agent`。
+**Status:** ✅ 已完成並合併回 `main`（PR [#175](https://git.jigong.org/huthief/elinkBook/pulls/175)，分支 `refactor/issue-7-library-screen-bundle`，8 個 commit：Task 1-7 各一個＋審查修正一個）。新增 5 個不可變 dependency bundle（`LibraryReaderFeatureRepositories`／`LibrarySyncDependencies`／`LibraryCloudAccountDependencies`／`LibraryRemoteLibraryDependencies`／`LibraryThemeDependencies`，`app/lib/screens/library_screen_dependencies.dart`），`LibraryScreen` 建構子的 27 個具名參數收斂為 5 個 bundle＋6 個核心參數（`repository`／`importService`／`prefsManager`／`computeFingerprint`／`isMobileDataConnection`／`groupFilter`，依規劃階段查證維持獨立）。審查（`reviews/review-issue-7.md`）確認 Task 1-6 與計畫的「規劃階段查證」推理完全吻合、既有不對稱轉送行為皆正確保留，但發現 1 項 Critical（Task 5 對應 commit 把 `main.dart` 組裝 `LibraryScreen` 時漏轉發 `computeFingerprint`，會讓正式 App 的 Google Drive／OneDrive 匯入與遠端書庫功能永久停用/隱藏，`flutter analyze`／`flutter test` 皆測不出來——與 `925703f`、`review-issue-3.md`、`review-issue-5.md` 同一種「漏轉發」錯誤模式第三次重演）；已於審查修正 commit 補回，並新增 `elinkbook_app_wiring_test.dart` 鎖定 `ElinkBookApp`→`LibraryScreen` 這條先前完全無測試涵蓋的組裝路徑，防止同類問題再次不被攔截。另有 2 項 Important（測試套件未覆蓋組裝根、計畫 Task 7 最終驗證的殘留掃描未涵蓋 `main.dart` 轉發完整性，已於 `plan-issue-7.md` 補充審查修正說明）與 2 項 Minor（歷史事故註解遺失已補回、環境偶發測試失敗與本次改動無關）皆已處理；`flutter analyze` 乾淨，`flutter test` 全專案 1613 項測試全數通過（含本次新增 6 項，含原 1607 基準）。
 
 **依賴：** 建議待 Issue 6 完成後再進行（可直接沿用 Issue 6 收斂出的 bundle 物件處理其中 3 個參數），但若優先順序需要也可獨立先行，兩者驗收標準互不重疊。
 
