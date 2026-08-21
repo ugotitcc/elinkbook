@@ -561,6 +561,16 @@ async function openBook() {
       // locatorJson 內嵌的 index 是章節/spine index，非頁碼——沿用既有
       // 寫法不動（extractCfi() 從未讀取這個鍵，見規劃階段查證）。
       const chapterIndex = section?.current ?? 0
+      // 重構前的判斷式多了 `!totalPages`（即 `location?.total ?? 0` 恰好為
+      // 0 才覆寫成 view.renderer.page/.pages）：`location.total` 是
+      // `Math.ceil(sizeTotal / 1500)`（progress.js），sizeTotal 只要 > 0
+      // 該值恆 >= 1，代表這個舊條件對任何有實際內容的真實書籍幾乎從未
+      // 成立過——FXL／CBZ 書籍先前實際顯示的其實長期是這個位元組估計值
+      // （對圖片較大的 CBZ 而言可能是遠大於真實頁數的離譜數字），而非
+      // 真實視覺頁碼。這裡刻意移除該條件閘，讓 FXL／CBZ 一律採用真實
+      // 視覺頁數——這是本 Issue 順帶修正的一個既有頁碼顯示錯誤，不是嚴格
+      // 的零行為改變（見 review-issue-10.md Important #2、issues.md
+      // Issue 10 驗收標準）。
       const position = view.isFixedLayout && view.renderer
         // FXL/CBZ：view.renderer.page/.pages（fixed-layout.js）是全書
         // 真實視覺頁數，非估計值。

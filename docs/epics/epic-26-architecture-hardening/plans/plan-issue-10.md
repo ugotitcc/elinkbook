@@ -4,7 +4,7 @@
 
 **Goal:** `EpubPositionInfo` 的 `pageIndex`／`totalPages` 兩個欄位，正常情況下裝的其實是 foliate-js `SectionProgress` 算出的位元組估計刻度（`location.current`／`location.total`），只有在少數退回情況才裝章節序號；欄位名稱卻讓呼叫端誤以為拿到的是精確視覺頁碼。本 Issue 把這兩個欄位拆成語意誠實、互斥的兩組：`locationIndex`／`locationTotal`（流式格式，估計值）與 `visualPageIndex`／`visualTotalPages`（FXL／CBZ，全書真實頁碼），讓介面精度誠實對應底層實作精度。
 
-**Architecture:** 純介面重構，不改變任何使用者可觀察行為。`main.js` 的 `onLocatorChanged` payload 從 4 個 positional 參數改為 2 個參數（`locatorJson` 字串維持不動＋新的具名 JSON 物件），依 `view.isFixedLayout` 分流只填其中一組頁碼欄位。Dart 端新增 `foliate_bridge_codec.dart` 的 `parseLocatorChanged()` 純函式（比照既有 `extractCfi()`／`parseTableOfContents()` 慣例，把 JS→Dart 邊界的解析邏輯從 widget 內的匿名 closure 抽成可直接單元測試的頂層函式），`EpubPositionInfo` 新增 `displayPageIndex`／`displayTotalPages` 兩個便利 getter（`visualPageIndex ?? locationIndex`／`visualTotalPages ?? locationTotal`）集中「挑值」邏輯，`reader_screen.dart` 的 3 處消費點改用這兩個 getter。
+**Architecture:** 主要為純介面重構，流式格式不改變任何使用者可觀察行為；FXL／CBZ 頁尾顯示則有一項刻意保留的附帶修正（見 Global Constraints「零行為改變」條目與 `issues.md` Issue 10「實作後追加澄清」）。`main.js` 的 `onLocatorChanged` payload 從 4 個 positional 參數改為 2 個參數（`locatorJson` 字串維持不動＋新的具名 JSON 物件），依 `view.isFixedLayout` 分流只填其中一組頁碼欄位。Dart 端新增 `foliate_bridge_codec.dart` 的 `parseLocatorChanged()` 純函式（比照既有 `extractCfi()`／`parseTableOfContents()` 慣例，把 JS→Dart 邊界的解析邏輯從 widget 內的匿名 closure 抽成可直接單元測試的頂層函式），`EpubPositionInfo` 新增 `displayPageIndex`／`displayTotalPages` 兩個便利 getter（`visualPageIndex ?? locationIndex`／`visualTotalPages ?? locationTotal`）集中「挑值」邏輯，`reader_screen.dart` 的 3 處消費點改用這兩個 getter。
 
 **Tech Stack:** Flutter／Dart（JS→Dart 橋接解析）＋ `flutter_inappwebview` JS 橋接（payload 形狀）。無新增套件依賴。
 
@@ -38,7 +38,7 @@
 ## Global Constraints
 
 - 程式碼註解／變數說明使用中文，遵循既有檔案風格。
-- 零行為改變：流式與 FXL／CBZ 書籍的頁尾／進度顯示、跳頁互動，改動前後輸出完全一致（`locationIndex`/`visualPageIndex` 二擇一的挑值結果，等同舊 `pageIndex` 原本在對應情境下的實際值）。
+- 零行為改變（僅限流式格式）：流式書籍的頁尾／進度顯示、跳頁互動，改動前後輸出完全一致（`locationIndex` 挑值結果，等同舊 `pageIndex` 原本在對應情境下的實際值）。FXL／CBZ **不在此保證範圍內**——程式審查（`reviews/review-issue-10.md` Important #2）發現並經查證屬實：main.js 重構前 FXL 覆寫條件多了 `!totalPages`，但 `location.total`（`Math.ceil(sizeTotal/1500)`）對任何有實際內容的書籍恆 `>= 1`，該條件在真實書籍上幾乎從未成立過，FXL／CBZ 先前實際顯示的其實是位元組估計值而非真頁碼；本次重構順帶移除這個從未生效的條件閘，讓 FXL／CBZ 一律採用真實視覺頁數，是刻意保留的一次附帶修正，詳見 `issues.md` Issue 10「實作後追加澄清」。
 - 硬換名，不保留 `pageIndex`／`totalPages` 作為 deprecated alias。
 - 本 Issue 不涉及 `main.js` 內嵌 `index` 欄位（`locatorJson` 內部結構）、不新增 UI 上的「估計值」視覺標示、不牴觸任何 ADR（純介面重構）。
 - `main.js` 無自動化測試框架可用（比照專案既有兩層測試架構限制，見 CLAUDE.md「兩層測試架構」），Task 2 的驗證手段是逐鍵核對 payload 形狀與 Task 1 `parseLocatorChanged()` 讀取的鍵名完全一致，而非新增 JS 測試。
@@ -59,7 +59,7 @@
 - Produces：`EpubPositionInfo({required String locatorJson, double? progression, int? locationIndex, int? locationTotal, int? visualPageIndex, int? visualTotalPages})`，新增 `int? get displayPageIndex`／`int? get displayTotalPages` 兩個 getter。
 - Produces：`EpubPositionInfo parseLocatorChanged(List<dynamic> args)`（`foliate_bridge_codec.dart`）。
 
-- [ ] **Step 1：寫失敗測試，涵蓋 `parseLocatorChanged()` 的流式／FXL／缺席／格式錯誤四種情境，以及 `displayPageIndex`／`displayTotalPages` 兩個 getter**
+- [x] **Step 1：寫失敗測試，涵蓋 `parseLocatorChanged()` 的流式／FXL／缺席／格式錯誤四種情境，以及 `displayPageIndex`／`displayTotalPages` 兩個 getter**
 
 ```dart
 // app/test/reader/foliate_bridge_codec_test.dart
@@ -159,12 +159,12 @@
   });
 ```
 
-- [ ] **Step 2：執行測試確認失敗（`parseLocatorChanged`／新欄位／新 getter 尚未存在，編譯失敗）**
+- [x] **Step 2：執行測試確認失敗（`parseLocatorChanged`／新欄位／新 getter 尚未存在，編譯失敗）**
 
 執行：`cd app && flutter test test/reader/foliate_bridge_codec_test.dart`
 預期：`FAIL`，編譯期錯誤（找不到 `parseLocatorChanged`、`EpubPositionInfo` 找不到 `locationIndex` 等具名參數）。
 
-- [ ] **Step 3：`epub_position_info.dart` 改為新欄位＋新增 `displayPageIndex`/`displayTotalPages` getter**
+- [x] **Step 3：`epub_position_info.dart` 改為新欄位＋新增 `displayPageIndex`/`displayTotalPages` getter**
 
 修改 `app/lib/reader/epub_position_info.dart`，整份取代為：
 
@@ -244,7 +244,7 @@ class EpubPositionInfo {
 }
 ```
 
-- [ ] **Step 4：`foliate_bridge_codec.dart` 新增 `parseLocatorChanged()`**
+- [x] **Step 4：`foliate_bridge_codec.dart` 新增 `parseLocatorChanged()`**
 
 在檔案頂端新增 `import 'epub_position_info.dart';`，並在 `extractCfi()` 之後、`parseTableOfContents()` 之前新增：
 
@@ -282,7 +282,7 @@ EpubPositionInfo parseLocatorChanged(List<dynamic> args) {
 }
 ```
 
-- [ ] **Step 5：`foliate_reader_view.dart` 的 `onLocatorChanged` handler 改呼叫 `parseLocatorChanged()`**
+- [x] **Step 5：`foliate_reader_view.dart` 的 `onLocatorChanged` handler 改呼叫 `parseLocatorChanged()`**
 
 修改 `app/lib/reader/foliate_reader_view.dart`，原本（`foliate_reader_view.dart:648-666`）：
 
@@ -323,12 +323,12 @@ EpubPositionInfo parseLocatorChanged(List<dynamic> args) {
     );
 ```
 
-- [ ] **Step 6：執行測試確認 Step 1 新增的案例全數通過**
+- [x] **Step 6：執行測試確認 Step 1 新增的案例全數通過**
 
 執行：`cd app && flutter test test/reader/foliate_bridge_codec_test.dart`
 預期：`PASS`。
 
-- [ ] **Step 7：Commit**
+- [x] **Step 7：Commit**
 
 ```bash
 git add app/lib/reader/epub_position_info.dart app/lib/reader/foliate_bridge_codec.dart app/lib/reader/foliate_reader_view.dart app/test/reader/foliate_bridge_codec_test.dart
@@ -342,7 +342,7 @@ git commit -m "refactor(epic-26): Issue 10 Task 1——EpubPositionInfo 新欄�
 **Files:**
 - Modify: `app/android/app/src/main/assets/foliate/main.js`
 
-- [ ] **Step 1：修改 `relocate` 事件處理常式**
+- [x] **Step 1：修改 `relocate` 事件處理常式**
 
 修改 `app/android/app/src/main/assets/foliate/main.js`，原本（`main.js:549-576`，含前導註解）：
 
@@ -418,15 +418,15 @@ git commit -m "refactor(epic-26): Issue 10 Task 1——EpubPositionInfo 新欄�
     })
 ```
 
-- [ ] **Step 2：逐鍵核對 payload 形狀與 Task 1 `parseLocatorChanged()` 完全一致（無 JS 測試框架，手動核對取代自動化測試）**
+- [x] **Step 2：逐鍵核對 payload 形狀與 Task 1 `parseLocatorChanged()` 完全一致（無 JS 測試框架，手動核對取代自動化測試）**
 
 核對清單：
-- [ ] `callHandler` 第 1 個參數（字串）：`args[0]`，`parseLocatorChanged()` 原樣取用為 `locatorJson`——確認未變更内部結構（仍是 `{cfi, index, fraction}`）。
-- [ ] `callHandler` 第 2 個參數（`JSON.stringify(position)`）：`args[1]`，`parseLocatorChanged()` 用 `jsonDecode` 還原後讀取 `fraction`／`locationIndex`／`locationTotal`／`visualPageIndex`／`visualTotalPages` 五個鍵——逐一確認 `main.js` 兩個分支（FXL／流式）皆完整填滿這五個鍵（互斥的一組為 `null`），鍵名逐字相同（大小寫敏感）。
-- [ ] FXL 分支：`visualPageIndex`/`visualTotalPages` 為 `view.renderer.page ?? 0`/`view.renderer.pages ?? 0`（`?? 0` 是既有退回值，非本次新增邏輯，維持原樣）。
-- [ ] 流式分支：`locationIndex`/`locationTotal` 為 `location?.current ?? chapterIndex`/`location?.total ?? 0`（與舊版 `pageIndex`/`totalPages` 在對應情境下的計算方式逐一比對相同，只是欄位名稱與位置改變）。
+- [x] `callHandler` 第 1 個參數（字串）：`args[0]`，`parseLocatorChanged()` 原樣取用為 `locatorJson`——確認未變更内部結構（仍是 `{cfi, index, fraction}`）。
+- [x] `callHandler` 第 2 個參數（`JSON.stringify(position)`）：`args[1]`，`parseLocatorChanged()` 用 `jsonDecode` 還原後讀取 `fraction`／`locationIndex`／`locationTotal`／`visualPageIndex`／`visualTotalPages` 五個鍵——逐一確認 `main.js` 兩個分支（FXL／流式）皆完整填滿這五個鍵（互斥的一組為 `null`），鍵名逐字相同（大小寫敏感）。
+- [x] FXL 分支：`visualPageIndex`/`visualTotalPages` 為 `view.renderer.page ?? 0`/`view.renderer.pages ?? 0`（`?? 0` 是既有退回值，非本次新增邏輯，維持原樣）。
+- [x] 流式分支：`locationIndex`/`locationTotal` 為 `location?.current ?? chapterIndex`/`location?.total ?? 0`（與舊版 `pageIndex`/`totalPages` 在對應情境下的計算方式逐一比對相同，只是欄位名稱與位置改變）。
 
-- [ ] **Step 3：Commit**
+- [x] **Step 3：Commit**
 
 ```bash
 git add app/android/app/src/main/assets/foliate/main.js
@@ -440,7 +440,7 @@ git commit -m "refactor(epic-26): Issue 10 Task 2——main.js onLocatorChanged 
 **Files:**
 - Modify: `app/lib/screens/reader_screen.dart`
 
-- [ ] **Step 1：頁尾／進度文字顯示 gating 條件**
+- [x] **Step 1：頁尾／進度文字顯示 gating 條件**
 
 修改 `app/lib/screens/reader_screen.dart:2315-2317`，原本：
 
@@ -458,7 +458,7 @@ git commit -m "refactor(epic-26): Issue 10 Task 2——main.js onLocatorChanged 
                 (_epubPositionInfo?.displayTotalPages ?? 0) > 0)
 ```
 
-- [ ] **Step 2：`_buildFoliateProgressText()`，並改寫過時 doc comment**
+- [x] **Step 2：`_buildFoliateProgressText()`，並改寫過時 doc comment**
 
 修改 `app/lib/screens/reader_screen.dart:2431-2440`，原本：
 
@@ -492,7 +492,7 @@ git commit -m "refactor(epic-26): Issue 10 Task 2——main.js onLocatorChanged 
         ((info.displayPageIndex ?? 0) + 1).clamp(1, totalPages);
 ```
 
-- [ ] **Step 3：`_buildFoliateEpubFooter()`，並改寫過時 doc comment**
+- [x] **Step 3：`_buildFoliateEpubFooter()`，並改寫過時 doc comment**
 
 修改 `app/lib/screens/reader_screen.dart:2498-2509`，原本：
 
@@ -530,12 +530,12 @@ git commit -m "refactor(epic-26): Issue 10 Task 2——main.js onLocatorChanged 
         ((info.displayPageIndex ?? 0) + 1).clamp(1, totalPages);
 ```
 
-- [ ] **Step 4：執行 `flutter analyze` 確認編譯乾淨（本 Task 尚未更新測試檔，預期此時 `reader_screen_test.dart` 因舊欄位名消失而編譯失敗，屬預期中的中繼狀態，留待 Task 4 處理）**
+- [x] **Step 4：執行 `flutter analyze` 確認編譯乾淨（本 Task 尚未更新測試檔，預期此時 `reader_screen_test.dart` 因舊欄位名消失而編譯失敗，屬預期中的中繼狀態，留待 Task 4 處理）**
 
 執行：`cd app && flutter analyze lib/`
 預期：`No issues found!`（僅檢查 `lib/`，`test/` 留待 Task 4 完成後再一併驗證）。
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 git add app/lib/screens/reader_screen.dart
@@ -551,7 +551,7 @@ git commit -m "refactor(epic-26): Issue 10 Task 3——reader_screen.dart 消費
 - Modify: `app/integration_test/foliate_single_column_test.dart`
 - Modify: `app/integration_test/foliate_toc_footer_test.dart`
 
-- [ ] **Step 1：14 處「流式 EPUB」情境，`pageIndex:`/`totalPages:` 改為 `locationIndex:`/`locationTotal:`**
+- [x] **Step 1：14 處「流式 EPUB」情境，`pageIndex:`/`totalPages:` 改為 `locationIndex:`/`locationTotal:`**
 
 涉及行號（改動前，逐一核對後手動修改，數值本身不變，只改欄位名）：`3105-3109`／`3144-3148`（`pageIndex=9 totalPages=100`）、`3243-3247`（`pageIndex=0 totalPages=0`）、`3634-3638`／`3720-3724`／`3787-3791`／`4282-4286`／`4396-4400`（`pageIndex=0 totalPages=10`）、`4126-4130`／`4173-4177`／`4228-4232`（`pageIndex=167 totalPages=197`）、`4340-4344`（`pageIndex=9 totalPages=100`）、`5168-5172`／`5241-5245`（`pageIndex=9 totalPages=100`）。
 
@@ -579,7 +579,7 @@ git commit -m "refactor(epic-26): Issue 10 Task 3——reader_screen.dart 消費
 
 其餘 13 處比照同一模式（`pageIndex: N` → `locationIndex: N`，`totalPages: N` → `locationTotal: N`，`locatorJson`/`progression` 值不動）逐一修改。
 
-- [ ] **Step 2：1 處「EPUB 固定版面」（FXL）情境，`pageIndex:`/`totalPages:` 改為 `visualPageIndex:`/`visualTotalPages:`**
+- [x] **Step 2：1 處「EPUB 固定版面」（FXL）情境，`pageIndex:`/`totalPages:` 改為 `visualPageIndex:`/`visualTotalPages:`**
 
 修改 `reader_screen_test.dart:5296-5305` 附近（測試標題「EPUB 固定版面：不論主題為何，頁首/頁尾文字色維持既有寫死 Colors.black」），原本：
 
@@ -605,7 +605,7 @@ git commit -m "refactor(epic-26): Issue 10 Task 3——reader_screen.dart 消費
 
 （`locatorJson`/`progression` 實際值以檔案現況為準，不在此列出——只改頁碼欄位名稱與所屬欄位組。）
 
-- [ ] **Step 3：2 份整合測試檔案同步改名（審查報告 `review-plan-issue-10.md` Important #1：Task 1 移除舊欄位後，這兩份檔案原本會編譯失敗）**
+- [x] **Step 3：2 份整合測試檔案同步改名（審查報告 `review-plan-issue-10.md` Important #1：Task 1 移除舊欄位後，這兩份檔案原本會編譯失敗）**
 
 1. `app/integration_test/foliate_single_column_test.dart:94`——該測試（`sample_long_chinese_vertical.epub`，流式格式，非 FXL）doc comment 明確說明驗證對象是 `SectionProgress` 位元組估計刻度的嚴格遞增行為，選用 `locationIndex`（與 `displayPageIndex` 挑值結果一致，但語意更精確對應測試意圖），原本：
 
@@ -675,12 +675,12 @@ git commit -m "refactor(epic-26): Issue 10 Task 3——reader_screen.dart 消費
 
 同步將行 117 測試標題「頁尾頁碼正確反映 pageIndex/totalPages，且隨翻頁更新」改為「頁尾頁碼正確反映 displayPageIndex/displayTotalPages，且隨翻頁更新」。
 
-- [ ] **Step 4：執行 `reader_screen_test.dart` 確認全數通過（整合測試需真實裝置，留待 Task 5 `flutter analyze` 做編譯期驗證，見 Global Constraints 與兩層測試架構限制）**
+- [x] **Step 4：執行 `reader_screen_test.dart` 確認全數通過（整合測試需真實裝置，留待 Task 5 `flutter analyze` 做編譯期驗證，見 Global Constraints 與兩層測試架構限制）**
 
 執行：`cd app && flutter test test/screens/reader_screen_test.dart`
 預期：`PASS`，全數既有案例零回歸（15 處欄位改名不影響任何斷言邏輯，數值與挑值後的 `displayPageIndex`/`displayTotalPages` 結果與修改前完全一致）。
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 git add app/test/screens/reader_screen_test.dart app/integration_test/foliate_single_column_test.dart app/integration_test/foliate_toc_footer_test.dart
@@ -694,7 +694,7 @@ git commit -m "refactor(epic-26): Issue 10 Task 4——reader_screen_test.dart 1
 **Files:**
 - 無新增/修改檔案，純驗證。
 
-- [ ] **Step 1：全域殘留掃描，確認 `pageIndex`／`totalPages` 舊欄位名已從 `EpubPositionInfo` 相關程式碼徹底移除**
+- [x] **Step 1：全域殘留掃描，確認 `pageIndex`／`totalPages` 舊欄位名已從 `EpubPositionInfo` 相關程式碼徹底移除**
 
 執行：
 
@@ -707,24 +707,24 @@ grep -rn "\.pageIndex\b\|\.totalPages\b" integration_test/
 
 預期：第一條指令零輸出（`EpubPositionInfo` 相關檔案已無舊欄位讀取）；第二條指令零輸出（`EpubPositionInfo(...)` 建構呼叫已無舊欄位名——注意這條指令會連帶掃到 `PdfPageInfo`／`PdfTocItem` 等同名不相關型別的建構呼叫，若有殘留輸出需逐一核對是否為 PDF 端既有程式碼，非本 Issue 遺漏）；第三條指令零輸出（審查報告 Important #1／Minor #2：`integration_test/` 下 `EpubPositionInfo` 相關的舊欄位讀取已在 Task 4 Step 3 改名，此處連帶掃到的 PDF 端 `PdfPageInfo`／`PdfSelectionInfo` 等同名型別若有殘留輸出，同樣需逐一核對非本 Issue 遺漏）。
 
-- [ ] **Step 2：執行 `flutter analyze`**
+- [x] **Step 2：執行 `flutter analyze`**
 
 執行：`cd app && flutter analyze`
 預期：`No issues found!`
 
-- [ ] **Step 3：執行全專案測試**
+- [x] **Step 3：執行全專案測試**
 
 執行：`cd app && flutter test`
 預期：全數通過，零回歸（相較 Issue 9 合併後的基準數字 1629，本 Issue Task 1 新增 8 項 `parseLocatorChanged()`／`displayPageIndex`/`displayTotalPages` 單元測試，其餘為既有測試逐欄位改名，總數應為「1629 + 8」）。
 
-- [ ] **Step 4：逐項核對驗收標準**
+- [x] **Step 4：逐項核對驗收標準**
 
-- [ ] `EpubPositionInfo` 不再有 `pageIndex`／`totalPages` 欄位，改為 `locationIndex`／`locationTotal`／`visualPageIndex`／`visualTotalPages` 四個欄位，同一本書恆有一組為 `null`。
-- [ ] `main.js` 的 `onLocatorChanged` payload 改為兩參數，`locatorJson` 內容不受影響。
-- [ ] 流式與 FXL／CBZ 書籍的頁尾顯示行為零改變。
-- [ ] `flutter analyze` 乾淨、`flutter test` 全數通過、零回歸。
+- [x] `EpubPositionInfo` 不再有 `pageIndex`／`totalPages` 欄位，改為 `locationIndex`／`locationTotal`／`visualPageIndex`／`visualTotalPages` 四個欄位，同一本書恆有一組為 `null`。
+- [x] `main.js` 的 `onLocatorChanged` payload 改為兩參數，`locatorJson` 內容不受影響。
+- [x] 流式書籍的頁尾顯示行為零改變；FXL／CBZ 頁尾顯示改為真實視覺頁數（刻意保留的附帶修正，非零行為改變，見 Global Constraints 與 `issues.md` Issue 10「實作後追加澄清」）。
+- [x] `flutter analyze` 乾淨、`flutter test` 全數通過、零回歸。
 
-- [ ] **Step 5：Commit（若 Step 1-4 有任何微調）**
+- [x] **Step 5：Commit（若 Step 1-4 有任何微調）**
 
 ```bash
 git add -A

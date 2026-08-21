@@ -299,4 +299,6 @@ Future<void> pumpUntilPdfReady(
 - `reader_screen_test.dart` 既有 15 處帶 `pageIndex:`/`totalPages:` 值的 `EpubPositionInfo(...)` 建構呼叫（22 處建構呼叫中，只有 15 處實際帶這兩個欄位值）全數改用新欄位名，其中 14 處（流式 EPUB 情境）改為 `locationIndex`/`locationTotal`，1 處（`EPUB 固定版面` 情境，行 5300）改為 `visualPageIndex`/`visualTotalPages`。
 - `flutter analyze` 乾淨、`flutter test` 全數通過、零回歸。
 
-**驗收標準：** `EpubPositionInfo` 不再有 `pageIndex`／`totalPages` 欄位，改為 `locationIndex`／`locationTotal`／`visualPageIndex`／`visualTotalPages` 四個欄位，同一本書恆有一組為 `null`；`main.js` 的 `onLocatorChanged` payload 改為兩參數，`locatorJson` 內容不受影響；流式與 FXL／CBZ 書籍的頁尾顯示行為零改變；`flutter analyze` 乾淨、`flutter test` 全數通過、零回歸。
+**驗收標準：** `EpubPositionInfo` 不再有 `pageIndex`／`totalPages` 欄位，改為 `locationIndex`／`locationTotal`／`visualPageIndex`／`visualTotalPages` 四個欄位，同一本書恆有一組為 `null`；`main.js` 的 `onLocatorChanged` payload 改為兩參數，`locatorJson` 內容不受影響；流式格式頁尾顯示行為零改變；`flutter analyze` 乾淨、`flutter test` 全數通過、零回歸。
+
+**實作後追加澄清（程式審查 `reviews/review-issue-10.md` Important #2 發現，非規劃階段已知事項）：** FXL／CBZ 頁尾顯示**並非**零行為改變。重構前 `main.js` 的 FXL 覆寫條件多了 `!totalPages`（`location?.total` 恰好為 0 才覆寫成真頁碼），但 `location.total = Math.ceil(sizeTotal / 1500)` 對任何有實際內容（位元組數 > 0）的書籍恆 `>= 1`，這個條件在真實書籍上幾乎從未成立過——也就是說，FXL／CBZ 書籍先前實際顯示的其實長期是位元組估計值（對圖片檔案較大的 CBZ 而言，可能是遠超真實頁數的離譜數字），而非本 Issue 背景描述所假設的「真實視覺頁碼」。本次重構移除了這個從未生效的條件閘，讓 FXL／CBZ 一律採用真實視覺頁數——這是本 Issue 順帶修正的一個既有頁碼顯示錯誤，經權衡後決定保留此修正並更新本驗收標準用語，而非為了維持字面上的零行為改變而還原成從未生效的舊條件。
