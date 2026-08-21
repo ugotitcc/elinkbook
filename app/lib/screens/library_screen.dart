@@ -64,10 +64,10 @@ class LibraryScreen extends StatefulWidget {
   /// `oneDriveStorageClient` 五個獨立參數（epic-26-architecture-hardening
   /// Issue 7）。
   final LibraryCloudAccountDependencies cloudAccountDependencies;
-  final RemoteServerRepository? remoteServerRepository;
-  final OpdsClient Function()? createOpdsClient;
+  /// 收斂原本 `remoteServerRepository`／`createOpdsClient`／`thumbnailCache`
+  /// 三個獨立參數（epic-26-architecture-hardening Issue 7）。
+  final LibraryRemoteLibraryDependencies remoteLibraryDependencies;
   final ComputeRemoteFingerprint? computeFingerprint;
-  final RemoteThumbnailCache? thumbnailCache;
   final Future<bool> Function()? isMobileDataConnection;
   final AppTheme currentTheme;
   final bool isEinkMode;
@@ -83,10 +83,8 @@ class LibraryScreen extends StatefulWidget {
     this.readerFeatureRepositories = const LibraryReaderFeatureRepositories(),
     this.syncDependencies = const LibrarySyncDependencies(),
     this.cloudAccountDependencies = const LibraryCloudAccountDependencies(),
-    this.remoteServerRepository,
-    this.createOpdsClient,
+    this.remoteLibraryDependencies = const LibraryRemoteLibraryDependencies(),
     this.computeFingerprint,
-    this.thumbnailCache,
     this.isMobileDataConnection,
     this.currentTheme = AppTheme.light,
     this.isEinkMode = false,
@@ -626,8 +624,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
   /// 到永久 `remote_books/` 目錄→刪除暫存），避免把永久 `filePath` 指向
   /// OS 可回收的暫存路徑。
   Future<void> _handleRedownload(Book book) async {
-    final remoteServerRepository = widget.remoteServerRepository;
-    final createOpdsClient = widget.createOpdsClient;
+    final remoteServerRepository = widget.remoteLibraryDependencies.remoteServerRepository;
+    final createOpdsClient = widget.remoteLibraryDependencies.createOpdsClient;
     final remoteServerId = book.remoteServerId;
     final remoteDownloadUrl = book.remoteDownloadUrl;
     if (remoteServerRepository == null ||
@@ -917,10 +915,10 @@ class _LibraryScreenState extends State<LibraryScreen> {
             tooltip: '管理分類',
             onPressed: _openManageGroupsDialog,
           ),
-        if (widget.remoteServerRepository != null &&
-            widget.createOpdsClient != null &&
+        if (widget.remoteLibraryDependencies.remoteServerRepository != null &&
+            widget.remoteLibraryDependencies.createOpdsClient != null &&
             widget.computeFingerprint != null &&
-            widget.thumbnailCache != null)
+            widget.remoteLibraryDependencies.thumbnailCache != null)
           IconButton(
             key: const Key('library_remote_library_button'),
             icon: const Icon(Icons.cloud_outlined),
@@ -930,12 +928,12 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   .push(
                     MaterialPageRoute(
                       builder: (context) => RemoteServerListScreen(
-                        repository: widget.remoteServerRepository!,
+                        repository: widget.remoteLibraryDependencies.remoteServerRepository!,
                         libraryRepository: widget.repository,
                         dependencies: RemoteCatalogDependencies(
                           computeFingerprint: widget.computeFingerprint!,
-                          thumbnailCache: widget.thumbnailCache!,
-                          createOpdsClient: widget.createOpdsClient!,
+                          thumbnailCache: widget.remoteLibraryDependencies.thumbnailCache!,
+                          createOpdsClient: widget.remoteLibraryDependencies.createOpdsClient!,
                         ),
                         importService: widget.importService,
                         isEinkMode: widget.isEinkMode,

@@ -3370,10 +3370,12 @@ void main() {
           repository: repository,
           importService: importService,
           prefsManager: FakeReaderPrefsManager(),
-          remoteServerRepository: FakeRemoteServerRepository(),
-          createOpdsClient: () => FakeOpdsClient(),
+          remoteLibraryDependencies: LibraryRemoteLibraryDependencies(
+            remoteServerRepository: FakeRemoteServerRepository(),
+            createOpdsClient: () => FakeOpdsClient(),
+            thumbnailCache: FakeRemoteThumbnailCache(),
+          ),
           computeFingerprint: (path, format) async => 'test-fingerprint',
-          thumbnailCache: FakeRemoteThumbnailCache(),
         ),
       ));
       await tester.pumpAndSettle();
@@ -3400,10 +3402,12 @@ void main() {
           repository: repository,
           importService: importService,
           prefsManager: FakeReaderPrefsManager(),
-          remoteServerRepository: FakeRemoteServerRepository(),
-          createOpdsClient: () => FakeOpdsClient(),
+          remoteLibraryDependencies: LibraryRemoteLibraryDependencies(
+            remoteServerRepository: FakeRemoteServerRepository(),
+            createOpdsClient: () => FakeOpdsClient(),
+            thumbnailCache: FakeRemoteThumbnailCache(),
+          ),
           computeFingerprint: (path, format) async => 'test-fingerprint',
-          thumbnailCache: FakeRemoteThumbnailCache(),
         ),
       ));
       await tester.pumpAndSettle();
@@ -3579,8 +3583,10 @@ void main() {
           repository: repository,
           importService: FakeBookImportService(),
           prefsManager: FakeReaderPrefsManager(),
-          remoteServerRepository: FakeRemoteServerRepository(initialServers: [server]),
-          createOpdsClient: () => opdsClient,
+          remoteLibraryDependencies: LibraryRemoteLibraryDependencies(
+            remoteServerRepository: FakeRemoteServerRepository(initialServers: [server]),
+            createOpdsClient: () => opdsClient,
+          ),
           isMobileDataConnection: () async => false,
         ),
       ));
@@ -3603,8 +3609,10 @@ void main() {
           repository: repository,
           importService: FakeBookImportService(),
           prefsManager: FakeReaderPrefsManager(),
-          remoteServerRepository: FakeRemoteServerRepository(initialServers: [server]),
-          createOpdsClient: () => FakeOpdsClient(),
+          remoteLibraryDependencies: LibraryRemoteLibraryDependencies(
+            remoteServerRepository: FakeRemoteServerRepository(initialServers: [server]),
+            createOpdsClient: () => FakeOpdsClient(),
+          ),
           isMobileDataConnection: () async => true,
         ),
       ));
@@ -3624,8 +3632,10 @@ void main() {
           repository: repository,
           importService: FakeBookImportService(),
           prefsManager: FakeReaderPrefsManager(),
-          remoteServerRepository: FakeRemoteServerRepository(initialServers: [server]),
-          createOpdsClient: () => opdsClient,
+          remoteLibraryDependencies: LibraryRemoteLibraryDependencies(
+            remoteServerRepository: FakeRemoteServerRepository(initialServers: [server]),
+            createOpdsClient: () => opdsClient,
+          ),
           isMobileDataConnection: () async => false,
         ),
       ));
@@ -3659,8 +3669,10 @@ void main() {
           repository: repository,
           importService: FakeBookImportService(),
           prefsManager: FakeReaderPrefsManager(),
-          remoteServerRepository: FakeRemoteServerRepository(initialServers: [server]),
-          createOpdsClient: () => opdsClient,
+          remoteLibraryDependencies: LibraryRemoteLibraryDependencies(
+            remoteServerRepository: FakeRemoteServerRepository(initialServers: [server]),
+            createOpdsClient: () => opdsClient,
+          ),
           isMobileDataConnection: () async => false,
         ),
       ));
