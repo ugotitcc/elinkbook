@@ -549,29 +549,41 @@ async function openBook() {
     }, { once: true })
     // 目前定位變動持續推播（epic-17 Issue 6）：與上方 { once: true } 的
     // FR-06/onPageRendered 監聽器各自獨立、互不影響，開書當下的第一次
-    // relocate 事件兩者皆會觸發。location.current／location.total 為
-    // foliate-js SectionProgress.getProgress() 既有輸出（見
-    // progress.js），近似頁碼概念，非精確渲染頁數。
-    // Epic 20 Issue 2：FXL 書籍的 relocate 事件 e.detail 欄位形狀可能與
-    // 流式書籍不同——fixed-layout.js 有 page/pages/index 等 getter，但
-    // location.current/location.total 可能不存在。依 view.isFixedLayout 分流
-    // 組裝 onLocatorChanged payload，確保 FXL 書籍的 pageIndex/totalPages
-    // 仍有意義。
+    // relocate 事件兩者皆會觸發。
+    // epic-26-architecture-hardening Issue 10：payload 改為兩參數——
+    // 第 1 個參數（locatorJson）內容維持不動，會被 Dart 端持久化並跨裝置
+    // 同步，不可混入下方估計/真實頁碼；第 2 個參數是具名 JSON 物件，依
+    // view.isFixedLayout 分流只填其中一組頁碼欄位，另一組明確傳 null
+    // （取代原本 pageIndex/totalPages 兩個欄位在不同格式下語意不一致的
+    // 舊寫法）。
     view.addEventListener('relocate', (e) => {
       const { cfi, section, fraction, location } = e.detail
-      let pageIndex = section?.current ?? 0
-      let totalPages = location?.total ?? 0
-      // FXL 書籍：若 location.current/total 不存在，改用 renderer 的 page/pages
-      if (view.isFixedLayout && !totalPages && view.renderer) {
-        pageIndex = view.renderer.page ?? pageIndex
-        totalPages = view.renderer.pages ?? totalPages
-      }
+      // locatorJson 內嵌的 index 是章節/spine index，非頁碼——沿用既有
+      // 寫法不動（extractCfi() 從未讀取這個鍵，見規劃階段查證）。
+      const chapterIndex = section?.current ?? 0
+      const position = view.isFixedLayout && view.renderer
+        // FXL/CBZ：view.renderer.page/.pages（fixed-layout.js）是全書
+        // 真實視覺頁數，非估計值。
+        ? {
+            fraction: fraction ?? 0,
+            locationIndex: null,
+            locationTotal: null,
+            visualPageIndex: view.renderer.page ?? 0,
+            visualTotalPages: view.renderer.pages ?? 0,
+          }
+        // 流式格式：location.current/.total 是 SectionProgress 的位元組
+        // 估計刻度（每 1500 bytes 一個刻度），非精確視覺頁數。
+        : {
+            fraction: fraction ?? 0,
+            locationIndex: location?.current ?? chapterIndex,
+            locationTotal: location?.total ?? 0,
+            visualPageIndex: null,
+            visualTotalPages: null,
+          }
       window.flutter_inappwebview.callHandler(
         'onLocatorChanged',
-        JSON.stringify({ cfi, index: pageIndex, fraction: fraction ?? 0 }),
-        fraction ?? 0,
-        location?.current ?? pageIndex,
-        totalPages,
+        JSON.stringify({ cfi, index: chapterIndex, fraction: fraction ?? 0 }),
+        JSON.stringify(position),
       )
     })
     // 劃線/備註繪製（epic-17 Issue 8）：view.addAnnotation() 對於一般
