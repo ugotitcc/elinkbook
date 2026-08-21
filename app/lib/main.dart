@@ -314,6 +314,7 @@ class _ElinkBookAppState extends State<ElinkBookApp> with WidgetsBindingObserver
           createOpdsClient: widget.createOpdsClient,
           thumbnailCache: widget.thumbnailCache,
         ),
+        computeFingerprint: widget.computeFingerprint,
         isMobileDataConnection: widget.isMobileDataConnection,
         themeDependencies: LibraryThemeDependencies(
           currentTheme: _theme,

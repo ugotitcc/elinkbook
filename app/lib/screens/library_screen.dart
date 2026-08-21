@@ -707,7 +707,19 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 notesRepository: widget.readerFeatureRepositories.notesRepository,
                 customFontsRepository: widget.readerFeatureRepositories.customFontsRepository,
               ),
+              // epic-8-sync Issue 10：先前遺漏這三個同步相關欄位，導致從這條
+              // 分類篩選路徑開書時 syncCheckpointTrigger 無法貫穿到
+              // ReaderScreen，「離開畫面」／「閱讀中 5 分鐘計時器」兩種
+              // checkpoint 觸發來源會靜默失效（見 plans/plan-issue-10.md）。
+              // 本次改為整包轉送 syncDependencies bundle，結構上不會再重演
+              // 「轉 A 忘轉 B」的部分欄位漏轉發（見 review-issue-7.md Minor #1）。
               syncDependencies: widget.syncDependencies,
+              // 【審查修正 review-issue-3.md Important #1】先前遺漏
+              // googleDriveStorageClient／oneDriveStorageClient 兩個欄位，
+              // 導致從分類篩選路徑進入的 LibraryScreen 內「從 Google Drive
+              // 匯入」選單項目永遠停用。本次改為整包轉送
+              // cloudAccountDependencies bundle，結構上不會再重演「轉 A
+              // 忘轉 B」的部分欄位漏轉發（見 review-issue-7.md Minor #1）。
               cloudAccountDependencies: widget.cloudAccountDependencies,
               // 【審查修正 review-issue-5.md Important #1】Issue 5 新增的
               // 「從 Google Drive／OneDrive 匯入」選單門檻改為同時檢查

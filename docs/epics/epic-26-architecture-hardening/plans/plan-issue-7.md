@@ -1772,6 +1772,8 @@ grep -rn "widget\.currentTheme\b\|widget\.isEinkMode\b\|widget\.onThemeChanged\b
 ```
 預期：全數皆無輸出（`widget.customFontsRepository` 這類子字串在 `widget.readerFeatureRepositories.customFontsRepository` 中不會誤命中——`widget\.customFontsRepository\b` 要求緊接在 `widget.` 之後，中間插入 `readerFeatureRepositories.` 後已不再符合此樣式，無需另外排除）。
 
+**【審查修正 review-issue-7.md Important #2】** 本 Step 原始設計的掃描範圍只涵蓋 `lib/screens/library_screen.dart`（確認「舊參數存取模式是否還在」），沒有反向掃描 `lib/main.dart`（確認「新 bundle 呼叫點是否仍逐一轉發所有原始欄位」）——這正是 Task 5 把 `computeFingerprint` 漏轉發到 `main.dart` 組裝根的 Critical 問題（見 review-issue-7.md Critical #1）能一路通過本 Task 卻未被攔截的根因。日後同類「多處呼叫點需要同步改寫」的計畫，最終驗證除了掃描「新介面殘留舊寫法」外，也應對每一個涉及的**呼叫端組裝檔案**（尤其是 `main.dart` 這種組裝根）加一條「新舊欄位數量/清單比對」的驗證步驟，不要只信任計畫文件裡摘錄的 before/after 片段，改用 `git show`／實際檔案內容重新核對。
+
 - [ ] **Step 2：執行 `flutter analyze`**
 
 執行：`cd app && flutter analyze`
