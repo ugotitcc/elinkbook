@@ -167,12 +167,18 @@ export class PageProgress {
 }
 
 export class SectionProgress {
+    #density = new Map()
+    #pagesForSection
+    #cumulativePagesBefore
+    #pagesTotal
+
     constructor(sections, sizePerLoc, sizePerTimeUnit) {
         this.sizes = sections.map(s => s.linear != 'no' && s.size > 0 ? s.size : 0)
         this.sizePerLoc = sizePerLoc
         this.sizePerTimeUnit = sizePerTimeUnit
         this.sizeTotal = this.sizes.reduce((a, b) => a + b, 0)
         this.sectionFractions = this.#getSectionFractions()
+        this.#recomputePages()
     }
     #getSectionFractions() {
         const { sizeTotal } = this
@@ -181,15 +187,68 @@ export class SectionProgress {
         for (const size of this.sizes) results.push((sum += size) / sizeTotal)
         return results
     }
+    // epic-26-architecture-hardening Issue 11：某個 section 完成渲染、量到
+    // 真實視覺頁數（View.expand() 的 contentPages）時記錄下來，取代該
+    // section 原本「位元組數 / sizePerLoc」的估計值。非線性
+    // （linear='no'，sizes[index] 恆為 0）section 忽略，避免外插公式
+    // 除以 0（見 plans/plan-issue-11.md 規劃階段查證第 5 點）。
+    recordDensity(index, contentPages) {
+        if (!(this.sizes[index] > 0)) return
+        this.#density.set(index, contentPages)
+        this.#recomputePages()
+    }
+    // 排版設定變更（字級/行距/邊距/欄數/螢幕方向/直橫排）時，已記錄的密度
+    // 全數失真，整包清空、退回統一常數估計，等使用者繼續翻頁重新累積。
+    clearDensity() {
+        if (this.#density.size === 0) return
+        this.#density.clear()
+        this.#recomputePages()
+    }
+    #nearestKnownIndex(index) {
+        let nearest = null, nearestDist = Infinity
+        for (const known of this.#density.keys()) {
+            const dist = Math.abs(known - index)
+            if (dist < nearestDist || (dist === nearestDist && known < nearest)) {
+                nearest = known
+                nearestDist = dist
+            }
+        }
+        return nearest
+    }
+    // 依目前已知密度重新算出「每個 section 換算後的頁數」與其累積和：
+    // 已知 section 直接採用實測值；未知 section 套用「章節索引距離最近的
+    // 已知 section」之密度比例外插；完全沒有任何已知密度時，逐 section
+    // 退回原本「位元組數 / sizePerLoc」的估計值（與 Issue 11 之前的行為
+    // 逐位元組等價，見 plans/plan-issue-11.md 規劃階段查證第 4 點）。
+    #recomputePages() {
+        const { sizes, sizePerLoc } = this
+        const pagesForSection = sizes.map((size, index) => {
+            if (size <= 0) return 0
+            if (this.#density.has(index)) return this.#density.get(index)
+            if (this.#density.size === 0) return size / sizePerLoc
+            const nearest = this.#nearestKnownIndex(index)
+            return size * (this.#density.get(nearest) / sizes[nearest])
+        })
+        const cumulativePagesBefore = [0]
+        let sum = 0
+        for (const pages of pagesForSection) cumulativePagesBefore.push(sum += pages)
+        this.#pagesForSection = pagesForSection
+        this.#cumulativePagesBefore = cumulativePagesBefore
+        this.#pagesTotal = sum
+    }
     // get progress given index of and fractions within a section
     getProgress(index, fractionInSection, pageFraction = 0) {
-        const { sizes, sizePerLoc, sizePerTimeUnit, sizeTotal } = this
+        const { sizes, sizePerTimeUnit, sizeTotal } = this
         const sizeInSection = sizes[index] ?? 0
         const sizeBefore = sizes.slice(0, index).reduce((a, b) => a + b, 0)
         const size = sizeBefore + fractionInSection * sizeInSection
         const nextSize = size + pageFraction * sizeInSection
         const remainingTotal = sizeTotal - size
         const remainingSection = (1 - fractionInSection) * sizeInSection
+        const pagesInSection = this.#pagesForSection[index] ?? 0
+        const pagesBeforeSection = this.#cumulativePagesBefore[index] ?? 0
+        const current = pagesBeforeSection + fractionInSection * pagesInSection
+        const next = current + pageFraction * pagesInSection
         return {
             fraction: nextSize / sizeTotal,
             section: {
@@ -197,9 +256,9 @@ export class SectionProgress {
                 total: sizes.length,
             },
             location: {
-                current: Math.floor(size / sizePerLoc),
-                next: Math.floor(nextSize / sizePerLoc),
-                total: Math.ceil(sizeTotal / sizePerLoc),
+                current: Math.floor(current),
+                next: Math.floor(next),
+                total: Math.ceil(this.#pagesTotal),
             },
             time: {
                 section: remainingSection / sizePerTimeUnit,
