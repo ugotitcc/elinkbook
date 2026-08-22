@@ -53,11 +53,11 @@ _Avoid_: 跨頁組、頁面組
 _Avoid_: 固定排版、定版式、EPUB FXL（`epic-11` 起不再是 EPUB 專屬概念）
 
 **Location 刻度（Location Tick）**：
-流式格式（EPUB 流式／TXT／MD）頁碼／進度顯示的近似值，來自 foliate-js `SectionProgress.getProgress()`，以 spine 檔案的未壓縮位元組數（非可見文字字元數）除以固定常數 1500 算出，與畫面實際排版渲染出來的視覺頁完全無關，僅供粗略進度顯示用途。與「視覺頁碼」是完全不同精度層級的概念。
+流式格式（EPUB 流式／TXT／MD）頁碼／進度顯示的估計值，來自 foliate-js `SectionProgress.getProgress()`。分頁（無捲動）模式下，已渲染過的 section 採用實測視覺頁數校正，未渲染過的 section 外插自章節索引距離最近的已知 section（皆未知時退回固定常數 1500 bytes/頁）；捲動模式維持純粹以 spine 檔案未壓縮位元組數除以固定常數 1500 算出。兩者皆與畫面實際排版渲染出來的視覺頁存在誤差，僅供粗略進度顯示用途（見 `docs/adr/0024-flowable-pagination-density-calibration-reopen-adr-0011.md`）。與「視覺頁碼」是完全不同精度層級的概念。
 _Avoid_: 頁碼、頁次（過於籠統，未點出「這是估計值」這個關鍵限定）
 
 **視覺頁碼（Visual Page）**：
-固定版面（FXL）／CBZ 走 `FixedLayout.pages`（`#spreads.length`）算出的全書真實頁數，精度等同實際渲染結果。流式格式目前無此資料（見 `docs/epics/epic-26-architecture-hardening/issues.md` Issue 10 候選 2）。與「Location 刻度」於 `EpubPositionInfo` 分屬 `visualPageIndex`/`visualTotalPages` 與 `locationIndex`/`locationTotal` 兩組互斥欄位，同一本書恆缺其中一組。
+固定版面（FXL）／CBZ 走 `FixedLayout.pages`（`#spreads.length`）算出的全書真實頁數，精度等同實際渲染結果。流式格式沒有這筆資料——`epic-26-architecture-hardening` Issue 11 改善的是「Location 刻度」本身的估計精準度（見 `docs/adr/0024-flowable-pagination-density-calibration-reopen-adr-0011.md`），刻意不追求讓流式格式也擁有真實視覺頁碼（會需要強制渲染全書）。與「Location 刻度」於 `EpubPositionInfo` 分屬 `visualPageIndex`/`visualTotalPages` 與 `locationIndex`/`locationTotal` 兩組互斥欄位，同一本書恆缺其中一組。
 _Avoid_: 頁碼（過於籠統）
 
 **引擎分派判斷（Engine Dispatch Detection）**：

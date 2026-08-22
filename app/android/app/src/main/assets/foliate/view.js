@@ -329,7 +329,12 @@ export class View extends HTMLElement {
     #emit(name, detail, cancelable) {
         return this.dispatchEvent(new CustomEvent(name, { detail, cancelable }))
     }
-    #onRelocate({ reason, range, index, fraction, size }) {
+    #onRelocate({ reason, range, index, fraction, size, contentPages }) {
+        // epic-26-architecture-hardening Issue 11：只有非捲動、已渲染出精確
+        // 視覺頁數的情境才會帶 contentPages，用它回饋給 SectionProgress 做
+        // 密度校正；捲動模式或尚未渲染完成時 contentPages 為 undefined，
+        // 不記錄（維持該 section 原本的位元組估計）。
+        if (contentPages) this.#sectionProgress?.recordDensity(index, contentPages)
         const progress = this.#sectionProgress?.getProgress(index, fraction, size) ?? {}
         const tocItem = this.#tocProgress?.getProgress(index, range)
         const pageItem = this.#pageProgress?.getProgress(index, range)
@@ -539,6 +544,12 @@ export class View extends HTMLElement {
     getSectionFractions() {
         return (this.#sectionProgress?.sectionFractions ?? [])
             .map(x => x + Number.EPSILON)
+    }
+    // epic-26-architecture-hardening Issue 11：排版設定變更時，main.js 的
+    // window.applyPreferences() 呼叫這個方法清空已記錄的密度校正資料——
+    // 字級/行距/邊距/欄數/螢幕方向/直橫排改變後，舊密度全部失真。
+    clearLocationDensity() {
+        this.#sectionProgress?.clearDensity()
     }
     getProgressOf(index, range) {
         const tocItem = this.#tocProgress?.getProgress(index, range)

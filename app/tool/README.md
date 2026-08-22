@@ -54,3 +54,27 @@ node app/tool/check_foliate_es_compat.js
 `String.prototype.at` 無關）。設計上寧可偶爾多提醒一次、也不要漏掉真正的
 風險，故不追求零誤判；`RISKY_APIS` 清單本身也需要在發現新的較新 ES 內建
 方法時手動擴充維護。
+
+## `test_section_progress_density.mjs`
+
+驗證 `progress.js` 的 `SectionProgress`（epic-26-architecture-hardening
+Issue 11：已渲染 section 密度校正流式頁碼估算）純邏輯正確性——已知密度
+換算、未知 section 最近鄰外插與 tie-break、清空快取退回統一常數、非線性
+section 忽略共 5 項情境。`progress.js` 零 DOM 依賴，腳本用 Node.js 內建
+`node:assert/strict` 直接執行，不需要任何測試框架。
+
+### 何時該執行
+
+- 每次修改 `progress.js` 的 `SectionProgress` 之後。
+- 升級 `foliate/` 目錄下的釘定版本（bump commit）之後，若上游改動了
+  `progress.js` 的既有邏輯，用這支腳本確認密度校正邏輯與新版上游程式碼
+  仍相容。
+
+### 執行方式
+
+```bash
+node app/tool/test_section_progress_density.mjs
+```
+
+- 結束碼 `0`：5 項情境全數通過。
+- 非 `0`：斷言失敗或拋出例外，會印出對應的錯誤訊息與堆疊。

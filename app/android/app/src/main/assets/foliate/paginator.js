@@ -3009,6 +3009,11 @@ export class Paginator extends HTMLElement {
             const localColumn = localPage * this.columnCount
             detail.fraction = textPages > 0 ? Math.max(0, Math.min(1, localColumn / textPages)) : 0
             detail.size = textPages > 0 ? this.columnCount / textPages : 1
+            // epic-26-architecture-hardening Issue 11：把這個 section 目前
+            // 已知的精確視覺頁數一併送出，供 View 回饋給 SectionProgress
+            // 做密度校正——只有這個非捲動分支才會算出 textPages，捲動模式
+            // 天生沒有這筆資料，detail.contentPages 維持 undefined。
+            detail.contentPages = textPages
             if (reason === 'container-scroll' && localPage === 0) return
         }
         // Update per-column backgrounds for the current scroll position
