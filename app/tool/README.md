@@ -55,7 +55,7 @@ node app/tool/check_foliate_es_compat.js
 風險，故不追求零誤判；`RISKY_APIS` 清單本身也需要在發現新的較新 ES 內建
 方法時手動擴充維護。
 
-## `test_section_progress_density.js`
+## `test_section_progress_density.mjs`
 
 驗證 `progress.js` 的 `SectionProgress`（epic-26-architecture-hardening
 Issue 11：已渲染 section 密度校正流式頁碼估算）純邏輯正確性——已知密度

@@ -194,6 +194,7 @@ export class SectionProgress {
     // 除以 0（見 plans/plan-issue-11.md 規劃階段查證第 5 點）。
     recordDensity(index, contentPages) {
         if (!(this.sizes[index] > 0)) return
+        if (this.#density.get(index) === contentPages) return
         this.#density.set(index, contentPages)
         this.#recomputePages()
     }
@@ -238,17 +239,29 @@ export class SectionProgress {
     }
     // get progress given index of and fractions within a section
     getProgress(index, fractionInSection, pageFraction = 0) {
-        const { sizes, sizePerTimeUnit, sizeTotal } = this
+        const { sizes, sizePerLoc, sizePerTimeUnit, sizeTotal } = this
         const sizeInSection = sizes[index] ?? 0
         const sizeBefore = sizes.slice(0, index).reduce((a, b) => a + b, 0)
         const size = sizeBefore + fractionInSection * sizeInSection
         const nextSize = size + pageFraction * sizeInSection
         const remainingTotal = sizeTotal - size
         const remainingSection = (1 - fractionInSection) * sizeInSection
+        // epic-26-architecture-hardening Issue 11 審查修正（Important #1，
+        // reviews/review-issue-11.md）：完全沒有任何已知密度時，直接沿用
+        // 改動前「位元組數一次性相除」的公式，不經過 #pagesForSection 逐
+        // section 除法後再加總——IEEE754 浮點數加法不具結合律，逐 section
+        // 相加在極少數情況下會產生跨越 Math.floor/Math.ceil 整數邊界的誤
+        // 差，讓零回歸不變式在數學上嚴格成立，而非僅絕大多數情況成立。
+        const noKnownDensity = this.#density.size === 0
         const pagesInSection = this.#pagesForSection[index] ?? 0
         const pagesBeforeSection = this.#cumulativePagesBefore[index] ?? 0
-        const current = pagesBeforeSection + fractionInSection * pagesInSection
-        const next = current + pageFraction * pagesInSection
+        const current = noKnownDensity
+            ? size / sizePerLoc
+            : pagesBeforeSection + fractionInSection * pagesInSection
+        const next = noKnownDensity
+            ? nextSize / sizePerLoc
+            : current + pageFraction * pagesInSection
+        const total = noKnownDensity ? sizeTotal / sizePerLoc : this.#pagesTotal
         return {
             fraction: nextSize / sizeTotal,
             section: {
@@ -258,7 +271,7 @@ export class SectionProgress {
             location: {
                 current: Math.floor(current),
                 next: Math.floor(next),
-                total: Math.ceil(this.#pagesTotal),
+                total: Math.ceil(total),
             },
             time: {
                 section: remainingSection / sizePerTimeUnit,
