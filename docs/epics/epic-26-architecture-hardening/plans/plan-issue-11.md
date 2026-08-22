@@ -18,7 +18,7 @@
 
 3. **`window.applyPreferences()` 是本 Issue 所有排版設定變更的唯一入口，且無條件呼叫 `clearLocationDensity()` 對 FXL 書籍安全。** 已查證 `main.js` 第 162 行起的 `applyPreferences` 函式：`writingMode`（直橫排切換，`prefs.writingMode`）與其餘 9 項排版設定（字級／行距／段落間距／邊距／單雙欄／螢幕方向的裝置旋轉重呼叫）皆流經這一個函式，沒有另一條路。FXL 分支（`if (view.isFixedLayout) { ... return }`，第 174-197 行）會在流式專屬邏輯之前提早 `return`；但 `View.#sectionProgress` 是否存在與 `isFixedLayout` 無關（`open()` 內建構條件是 `book.splitTOCHref && book.getTOCFragment`，FXL／CBZ／流式皆滿足），只是 FXL 書籍的 `Paginator.#afterScroll()`（`paginator.js` 專屬）從未被觸發過，`recordDensity()` 天生不會被呼叫，`clearLocationDensity()` 對 FXL 書籍呼叫必為 no-op——因此把清空呼叫放在 `applyPreferences()` 函式最前面、`isFixedLayout` 判斷式之前，不需要額外判斷格式，FXL／流式兩種書籍都安全。
 
-4. **零回歸已用 500 組隨機輸入實測驗證，非僅手算。** 規劃階段已把 Task 1 Step 3 的完整實作與改動前的 `progress.js` 並排執行，對 500 組隨機產生的 section 陣列（含隨機 `linear='no'`／`size`）與隨機 `index`／`fractionInSection`／`pageFraction` 組合，在「尚未呼叫任何 `recordDensity()`」的狀態下比對 `getProgress()` 回傳的 `location.current`／`location.next`／`location.total`／`fraction` 四個數值，200 組全數逐位元組一致（含 `NaN`／`NaN` 用 `Object.is` 正確判定相等的邊界情況：全書皆為非線性 section 時 `sizeTotal=0`，`fraction` 為 `NaN`，改動前後皆然）。這保證「尚未收到任何密度紀錄」狀態下的行為與改動前逐位元組等價。
+4. **零回歸並非僅靠隨機取樣驗證，而是 `getProgress()` 在「尚未收到任何 `recordDensity()`」狀態下直接沿用改動前的原始公式，數學上嚴格成立。**（本段已依 `reviews/review-issue-11.md` Important #1／#2 審查修正：規劃階段原記錄「500 組」與「200 組」隨機輸入驗證兩個數字互相矛盾，且純隨機取樣本就無法排除低機率邊界情況——實測顯示逐 section 分別除以 `sizePerLoc` 再加總，因 IEEE754 浮點數加法不具結合律，約有 0.02%-0.03% 機率會在 `Math.floor`／`Math.ceil` 整數邊界產生 ±1 誤差。）最終實作因此改為：`SectionProgress.getProgress()` 在 `this.#density.size === 0` 時，`location.current`／`location.next`／`location.total` 三個值直接用 `size / sizePerLoc`／`nextSize / sizePerLoc`／`sizeTotal / sizePerLoc`（`size`／`nextSize`／`sizeTotal` 皆為位元組整數一次加總後的結果，與改動前 `progress.js` 逐式相同），完全繞開 `#pagesForSection`／`#cumulativePagesBefore`／`#pagesTotal` 這條「逐 section 除法後再加總」的路徑，保證「尚未收到任何密度紀錄」狀態下的行為與改動前逐位元組等價，不依賴取樣機率。
 
 5. **`recordDensity()` 對非線性（`linear='no'`）section 必須忽略，否則會在外插公式除以 0。** `SectionProgress` 建構子既有邏輯 `s.linear != 'no' && s.size > 0 ? s.size : 0` 讓非線性 section 的 `sizes[index]` 恆為 `0`；若允許對這種 section 記錄密度，後續有其他未知 section 外插到它時會算出 `size * (density / 0)`（`Infinity`／`NaN`）。`recordDensity(index, contentPages)` 因此在最前面用 `if (!(this.sizes[index] > 0)) return` 擋掉，比照既有程式碼「非線性 section 不參與位元組估計」的既有不變式。
 
@@ -30,7 +30,7 @@
 
 - 程式碼註解使用中文，遵循既有檔案風格（`progress.js`／`paginator.js`／`view.js`／`main.js` 皆為既有 `//` 行內註解風格，非 JSDoc 區塊）。
 - 零 Dart 端改動：`EpubPositionInfo`、`parseLocatorChanged()`、`reader_screen.dart` 的 `displayPageIndex`／`displayTotalPages` 完全不動——呼叫端拿到的仍是同一組欄位名，只是背後算法更準。
-- 零回歸保證（已用 500 組隨機輸入驗證，見規劃階段查證第 4 點）：`SectionProgress` 尚未收到任何 `recordDensity()` 呼叫時，`getProgress()` 回傳值須與改動前的 `progress.js` 逐位元組等價。
+- 零回歸保證（見規劃階段查證第 4 點）：`SectionProgress` 尚未收到任何 `recordDensity()` 呼叫時，`getProgress()` 回傳值須與改動前的 `progress.js` 逐位元組等價——`location.current`／`location.next`／`location.total` 直接沿用原始位元組公式，不經過逐 section 除法加總，數學上嚴格成立，非僅隨機取樣機率性驗證。
 - 只涵蓋分頁（無捲動）模式；捲動模式的 `relocate` payload 與 `SectionProgress` 換算行為不受影響。
 - 密度快取只存在單次開書 session，不新增任何 Dart／SQLite／JS↔Dart 序列化管線。
 - `paginator.js`／`view.js`／`main.js` 無自動化測試框架可用（比照專案既有兩層測試架構限制與 Issue 10 Task 2 既有作法，見 CLAUDE.md「兩層測試架構」），驗證手段是逐鍵核對邏輯與 Global Constraints 逐項比對，而非新增 JS 測試框架。`progress.js` 例外——零 DOM 依賴，可直接用 Node.js 執行驗證腳本（Task 1）。
