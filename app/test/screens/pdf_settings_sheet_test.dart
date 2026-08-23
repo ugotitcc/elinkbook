@@ -8,6 +8,7 @@ import 'package:elinkbook/reader/pdf_crop_mode.dart';
 import 'package:elinkbook/reader/pdf_crop_rect.dart';
 import 'package:elinkbook/reader/pdf_page_turn_animation.dart';
 import 'package:elinkbook/screens/pdf_settings_sheet.dart';
+import 'package:elinkbook/theme/app_theme_data.dart';
 
 void main() {
   testWidgets('三個分頁標籤皆存在', (tester) async {
@@ -643,6 +644,28 @@ void main() {
     await tester.pump();
 
     expect(notified?.pdfPageTurnAnimation, PdfPageTurnAnimation.none); // 關鍵斷言：未被清空
+  });
+
+  testWidgets('PdfSettingsSheet 在 E-Ink 模式下選中項目呈現高對比底色', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      theme: buildEinkThemeData(),
+      home: Scaffold(
+        body: PdfSettingsSheet(
+          prefs: const BookReaderPrefs(pdfFitMode: PdfFitMode.fitWidth),
+          onChanged: (_) {},
+          onRequestManualCrop: () {},
+        ),
+      ),
+    ));
+
+    // 【審查修正 Important】key 直接掛在帶 BoxDecoration 的 Container 上
+    // （見 Task 1 ReaderOptionTile 實作），不再用
+    // find.descendant(...).first 這種依賴子樹結構的脆弱寫法。
+    expect(find.byKey(const Key('pdf_settings_fit_mode_fit_width')), findsOneWidget);
+    final container = tester.widget<Container>(
+      find.byKey(const Key('pdf_settings_fit_mode_fit_width')),
+    );
+    expect((container.decoration as BoxDecoration).color, Colors.black);
   });
 }
 

@@ -4,6 +4,7 @@ import 'package:elinkbook/reader/book_reader_prefs.dart';
 import 'package:elinkbook/reader/dual_page_direction.dart';
 import 'package:elinkbook/reader/dual_page_mode.dart';
 import 'package:elinkbook/screens/fxl_settings_sheet.dart';
+import 'package:elinkbook/theme/app_theme_data.dart';
 
 void main() {
   // 本檔案既有測試自 epic-19 Issue 1 起改用 `home: Scaffold(body: ...)` 包裹
@@ -58,10 +59,28 @@ void main() {
       ),
     );
 
-    final button = tester.widget<IconButton>(
+    // 【審查修正 Minor：見 reviews/review-issue-5-8.md Issue 6 Minor #2】
+    // 原本斷言 isNotNull——但 ReaderOptionTile 不論選中與否，
+    // BoxDecoration.color 恆為非 null（選中是 primaryContainer，未選中
+    // 是 surface），改造後這個斷言不論選中邏輯對不對都會通過，等同於
+    // 失去鑑別力。改為精確比對選中/未選中應有的背景色，並確認兩者不同。
+    final theme = Theme.of(tester.element(find.byType(FxlSettingsSheet)));
+    final selectedContainer = tester.widget<Container>(
       find.byKey(const Key('fxl_settings_dual_page_mode_never')),
     );
-    expect(button.color, isNotNull, reason: '目前選中的選項應以主題色標示');
+    final unselectedContainer = tester.widget<Container>(
+      find.byKey(const Key('fxl_settings_dual_page_mode_auto')),
+    );
+    expect(
+      (selectedContainer.decoration as BoxDecoration).color,
+      theme.colorScheme.primaryContainer,
+      reason: '目前選中的選項應以 primaryContainer 背景標示',
+    );
+    expect(
+      (unselectedContainer.decoration as BoxDecoration).color,
+      theme.colorScheme.surface,
+      reason: '未選中的選項應以 surface 背景標示',
+    );
   });
 
   testWidgets('已持久化 fullscreen=true 時，全螢幕模式開關初始值反映為開啟', (tester) async {
@@ -244,11 +263,47 @@ void main() {
         ),
       ));
 
-      final rtlButton = tester.widget<IconButton>(
+      // 【審查修正 Minor：見 reviews/review-issue-5-8.md Issue 6 Minor #2】
+      // 原本改成 findsOneWidget 只驗證元件存在，完全放棄了測試名稱宣稱
+      // 的「預設選中 RTL」這件事。改為精確比對 rtl（選中）與 ltr（未
+      // 選中）的背景色，真正鑑別選中狀態。
+      final theme = Theme.of(tester.element(find.byType(FxlSettingsSheet)));
+      final rtlContainer = tester.widget<Container>(
         find.byKey(const Key('fxl_settings_direction_rtl')),
       );
-      expect(rtlButton.color, isNotNull);
+      final ltrContainer = tester.widget<Container>(
+        find.byKey(const Key('fxl_settings_direction_ltr')),
+      );
+      expect(
+        (rtlContainer.decoration as BoxDecoration).color,
+        theme.colorScheme.primaryContainer,
+        reason: 'RTL 為全域預設值，應以 primaryContainer 背景標示選中',
+      );
+      expect(
+        (ltrContainer.decoration as BoxDecoration).color,
+        theme.colorScheme.surface,
+        reason: 'LTR 未選中，應以 surface 背景標示',
+      );
     });
+  });
+
+  testWidgets('FxlSettingsSheet 在 E-Ink 模式下雙頁模式選項具備高對比選中底色', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      theme: buildEinkThemeData(),
+      home: Scaffold(
+        body: FxlSettingsSheet(
+          prefs: BookReaderPrefs.empty,
+          onChanged: (_) {},
+        ),
+      ),
+    ));
+
+    // 【審查修正 Important】key 直接掛在帶 BoxDecoration 的 Container 上
+    // （見 Task 1 ReaderOptionTile 實作）。
+    final autoTile = find.byKey(const Key('fxl_settings_dual_page_mode_auto'));
+    expect(autoTile, findsOneWidget);
+    final container = tester.widget<Container>(autoTile);
+    expect((container.decoration as BoxDecoration).color, Colors.black);
   });
 }
 

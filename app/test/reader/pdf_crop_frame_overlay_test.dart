@@ -154,4 +154,47 @@ void main() {
     expect(confirmed!.left, 0.01);
     expect(confirmed!.bottom, 0.99);
   });
+
+  testWidgets(
+      'PdfCropFrameOverlay 包含 CustomPaint 遮罩層與帶背景之 Material 按鈕',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            width: 800,
+            height: 1600,
+            child: PdfCropFrameOverlay(
+              initialRect: const PdfCropRect(
+                  left: 0.2, top: 0.2, right: 0.8, bottom: 0.8),
+              onConfirm: (_) {},
+              onCancel: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+
+    // 驗證存在 CustomPaint 遮罩層（取代舊版 Positioned.fromRect + Container）
+    expect(find.byType(CustomPaint), findsWidgets);
+    expect(find.byKey(const Key('pdf_crop_frame_confirm')), findsOneWidget);
+    expect(find.byKey(const Key('pdf_crop_frame_cancel')), findsOneWidget);
+
+    // 【重要】驗證確認按鈕被高對比 FAB 樣式 Material 包裹
+    // IconButton 內部雖有 Material 祖先，但 elevation 為 0——
+    // FAB 樣式的 Material elevation=6，以此區分兩者
+    final confirmMaterialFinder = find.ancestor(
+      of: find.byKey(const Key('pdf_crop_frame_confirm')),
+      matching: find.byType(Material),
+    );
+    final confirmMaterials = confirmMaterialFinder
+        .evaluate()
+        .map((e) => e.widget as Material)
+        .toList();
+    expect(
+      confirmMaterials.any((m) => m.elevation == 6),
+      isTrue,
+      reason: '確認按鈕的 Material 祖先中應有 elevation=6 的 FAB 樣式容器',
+    );
+  });
 }

@@ -6,6 +6,7 @@ import '../reader/dual_page_mode.dart';
 import '../reader/pdf_fit_mode.dart';
 import '../reader/pdf_crop_mode.dart';
 import '../reader/pdf_page_turn_animation.dart';
+import 'widgets/reader_option_tile.dart';
 
 /// PDF 專屬版面設定 Bottom Sheet（FR-11），三分頁結構：顯示／濾鏡／裁切，
 /// 見 docs/epics/epic-4-pdf-enhance/design.md 決策 #10（不與 EPUB 用的
@@ -191,15 +192,14 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
               spacing: 4,
               children: fitOptions.map((option) {
                 final (mode, keySuffix, icon, tooltip) = option;
-                final selected = _fitMode == mode;
-                return IconButton(
-                  key: Key('pdf_settings_fit_mode_$keySuffix'),
-                  icon: Icon(icon),
+                return ReaderOptionTile<PdfFitMode>(
+                  itemKey: Key('pdf_settings_fit_mode_$keySuffix'),
+                  value: mode,
+                  groupValue: _fitMode,
+                  icon: icon,
                   tooltip: tooltip,
-                  color:
-                      selected ? Theme.of(context).colorScheme.primary : null,
-                  onPressed: () => setState(() {
-                    _fitMode = mode;
+                  onSelected: (v) => setState(() {
+                    _fitMode = v;
                     _notifyChanged();
                   }),
                 );
@@ -212,15 +212,14 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
               spacing: 4,
               children: dualPageOptions.map((option) {
                 final (mode, keySuffix, icon, tooltip) = option;
-                final selected = _dualPageMode == mode;
-                return IconButton(
-                  key: Key('pdf_settings_dual_page_mode_$keySuffix'),
-                  icon: Icon(icon),
+                return ReaderOptionTile<DualPageMode>(
+                  itemKey: Key('pdf_settings_dual_page_mode_$keySuffix'),
+                  value: mode,
+                  groupValue: _dualPageMode,
+                  icon: icon,
                   tooltip: tooltip,
-                  color:
-                      selected ? Theme.of(context).colorScheme.primary : null,
-                  onPressed: () => setState(() {
-                    _dualPageMode = mode;
+                  onSelected: (v) => setState(() {
+                    _dualPageMode = v;
                     _notifyChanged();
                   }),
                 );
@@ -261,15 +260,14 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
               spacing: 4,
               children: directionOptions.map((option) {
                 final (direction, keySuffix, icon, tooltip) = option;
-                final selected = _dualPageDirection == direction;
-                return IconButton(
-                  key: Key('pdf_settings_dual_page_direction_$keySuffix'),
-                  icon: Icon(icon),
+                return ReaderOptionTile<DualPageDirection>(
+                  itemKey: Key('pdf_settings_dual_page_direction_$keySuffix'),
+                  value: direction,
+                  groupValue: _dualPageDirection,
+                  icon: icon,
                   tooltip: tooltip,
-                  color:
-                      selected ? Theme.of(context).colorScheme.primary : null,
-                  onPressed: () => setState(() {
-                    _dualPageDirection = direction;
+                  onSelected: (v) => setState(() {
+                    _dualPageDirection = v;
                     _notifyChanged();
                   }),
                 );
@@ -282,15 +280,14 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
               spacing: 4,
               children: pageTurnAnimationOptions.map((option) {
                 final (animation, keySuffix, icon, tooltip) = option;
-                final selected = _pageTurnAnimation == animation;
-                return IconButton(
-                  key: Key('pdf_settings_page_turn_animation_$keySuffix'),
-                  icon: Icon(icon),
+                return ReaderOptionTile<PdfPageTurnAnimation>(
+                  itemKey: Key('pdf_settings_page_turn_animation_$keySuffix'),
+                  value: animation,
+                  groupValue: _pageTurnAnimation,
+                  icon: icon,
                   tooltip: tooltip,
-                  color:
-                      selected ? Theme.of(context).colorScheme.primary : null,
-                  onPressed: () => setState(() {
-                    _pageTurnAnimation = animation;
+                  onSelected: (v) => setState(() {
+                    _pageTurnAnimation = v;
                     _notifyChanged();
                   }),
                 );
@@ -366,15 +363,14 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
             children: [
               ...options.map((option) {
                 final (mode, keySuffix, icon, tooltip) = option;
-                final selected = _cropMode == mode;
-                return IconButton(
-                  key: Key('pdf_settings_crop_mode_$keySuffix'),
-                  icon: Icon(icon),
+                return ReaderOptionTile<PdfCropMode>(
+                  itemKey: Key('pdf_settings_crop_mode_$keySuffix'),
+                  value: mode,
+                  groupValue: _cropMode,
+                  icon: icon,
                   tooltip: tooltip,
-                  color:
-                      selected ? Theme.of(context).colorScheme.primary : null,
-                  onPressed: () => setState(() {
-                    _cropMode = mode;
+                  onSelected: (v) => setState(() {
+                    _cropMode = v;
                     _notifyChanged();
                   }),
                 );
@@ -383,11 +379,17 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
               // _cropMode／呼叫 _notifyChanged），實際的 pdfCropMode=manual
               // 與 pdfCropRect 由 ReaderScreen 在使用者完成框選確認後才
               // 一併寫入（見 spec.md「ReaderScreen 內部行為異動」）。
-              IconButton(
-                key: const Key('pdf_settings_crop_mode_manual'),
-                icon: const Icon(Icons.crop),
+              // 【審查修正 Minor】維持既有行為不變，本 Task 只需把它從
+              // IconButton 換成 ReaderOptionTile 的「未選中」樣式（value
+              // 與 groupValue 傳入兩個恆不相等的值，確保視覺上恆為未選中
+              // 狀態），不要自行擴充成會反映 _cropMode 的單選項目。
+              ReaderOptionTile<bool>(
+                itemKey: const Key('pdf_settings_crop_mode_manual'),
+                value: true,
+                groupValue: false,
+                icon: Icons.crop,
                 tooltip: '手動選區',
-                onPressed: widget.onRequestManualCrop,
+                onSelected: (_) => widget.onRequestManualCrop(),
               ),
             ],
           ),

@@ -34,7 +34,7 @@
 - Consumes: `_bookListController.sortBy`
 - Produces: 含有 `Icons.check` 與粗體標記之 `PopupMenuItem<LibrarySortBy>`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 在 `app/test/screens/library_screen_test.dart` 中追加測試（【審查修正 Critical】原片段 `LibraryScreen()` 完全沒有提供任何建構參數，而 `repository`／`importService`／`prefsManager` 三個參數皆為 `required`、無預設值，會直接編譯失敗；改用檔案既有 `setUp()` 已建立的 `FakeLibraryRepository()`／`FakeBookImportService()`／共用 `prefsManager` fixture 模式，比照同檔案第 100-105 行既有寫法——Issue 5 的計畫也會修改同一份測試檔案，兩者須採用同一套 fixture 模式）：
 
@@ -64,12 +64,12 @@ testWidgets('LibraryScreen 點擊排序按鈕，彈出選單中當前選中的�
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 執行：`cd app && flutter test test/screens/library_screen_test.dart --plain-name "LibraryScreen 點擊排序按鈕，彈出選單中當前選中的排序項目顯示 Checkmark"`
 預期：FAIL（因既有選單項目內無 `Icons.check`）。
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 在 `app/lib/screens/library_screen.dart` 的 `_buildNormalAppBar` 中：
 ```dart
@@ -114,12 +114,12 @@ PopupMenuButton<LibrarySortBy>(
 ),
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 執行：`cd app && flutter test test/screens/library_screen_test.dart --plain-name "LibraryScreen 點擊排序按鈕，彈出選單中當前選中的排序項目顯示 Checkmark"`
 預期：PASS。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/lib/screens/library_screen.dart app/test/screens/library_screen_test.dart

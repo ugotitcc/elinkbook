@@ -26,6 +26,7 @@ class SettingsScreen extends StatefulWidget {
   final AppTheme currentTheme;
   final bool isEinkMode;
   final ValueChanged<AppTheme>? onThemeChanged;
+  final ValueChanged<bool>? onEinkModeChanged;
   final CustomFontsRepository? customFontsRepository;
   final SyncAccountRepository? syncAccountRepository;
   final SyncClient? syncClient;
@@ -39,6 +40,7 @@ class SettingsScreen extends StatefulWidget {
     this.currentTheme = AppTheme.light,
     this.isEinkMode = false,
     this.onThemeChanged,
+    this.onEinkModeChanged,
     this.customFontsRepository,
     this.syncAccountRepository,
     this.syncClient,
@@ -100,6 +102,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     const Color(0xFFF4ECD8), 'settings_theme_dot_sepia'),
               ],
             ),
+          ),
+          SwitchListTile(
+            key: const Key('settings_eink_mode_switch'),
+            title: const Text('E-Ink 高對比模式'),
+            subtitle: const Text('停用動畫與漸層，以純黑白高對比顯示，專為電子紙螢幕最佳化'),
+            value: widget.isEinkMode,
+            onChanged: widget.onEinkModeChanged,
           ),
           ListTile(
             key: const Key('settings_font_management_button'),
