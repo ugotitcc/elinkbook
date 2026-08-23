@@ -109,7 +109,7 @@
 
 ## Issue 5：E-Ink 高對比模式狀態感知與切換識別強化
 
-**Status:** `ready-for-agent`
+**Status:** ✅ 實作與審查修正皆完成，分支 `feat/epic-27-reader-device-compat`，待合併。程式碼審查（`reviews/review-issue-5-8.md`）發現 Task 1（`SettingsScreen` E-Ink 開關）完全未實作，且 Task 2 的改動被誤植進 Issue 8 的 commit（`2136e86`）沒有自己的 commit——已補齊 Task 1（commit `bfe50ea`），連帶修正 `library_screen.dart` 遺漏的 `onEinkModeChanged` 貫穿傳遞（否則畫面上的開關雖存在但點擊無反應）與新開關撐高畫面導致的既有測試回歸。全專案 `flutter analyze` 乾淨、`flutter test`（1647 項）零回歸通過。
 
 **依賴：** 無
 
@@ -133,7 +133,7 @@
 
 ## Issue 6：閱讀器版面設定面板（PDF / EPUB / FXL）圖示選項高對比選中狀態重構
 
-**Status:** `ready-for-agent`
+**Status:** ✅ 實作與審查修正皆完成，分支 `feat/epic-27-reader-device-compat`，待合併。程式碼審查（`reviews/review-issue-5-8.md`）發現 Task 1（`ReaderOptionTile` 共用元件）與 Task 2（`PdfSettingsSheet`）完全未實作，導致已提交的 Task 3（`ReaderSettingsSheet`／`FxlSettingsSheet`）引用不存在的元件、整個分支無法編譯（`flutter analyze` 12 error）；另外發現 Task 3 排版方向／翻頁模式／螢幕方向三組含 `null`（採用書籍/全域預設）選項的群組有邏輯 bug——用「某個真實 enum 值當 sentinel 代表 null」但該值剛好也是清單中的真實選項，導致預設狀態下兩顆 tile 同時顯示為選中。已補齊 Task 1（commit `04f18b3`）／Task 2（commit `4e71c1b`），並改用 `ReaderOptionTile<T?>` 直接傳遞 nullable 值修正 sentinel 衝突（commit `4bfc83e`），補上能鑑別此 bug 的回歸測試，一併修正 2 處被弱化、失去鑑別力的既有測試斷言。全專案 `flutter analyze` 乾淨、`flutter test`（1647 項）零回歸通過。
 
 **依賴：** 無
 
@@ -159,7 +159,7 @@
 
 ## Issue 7：PDF 手動裁切疊加層（PdfCropFrameOverlay）高對比視覺與 FAB 按鈕重構
 
-**Status:** `ready-for-agent`
+**Status:** ✅ 已完成（commit `7750cc6`），分支 `feat/epic-27-reader-device-compat`，待合併。程式碼審查（`reviews/review-issue-5-8.md`）結論為此分支中執行品質最好的一個——忠實對照計畫（含計畫審查修正版：四矩形色帶取代 `Path.combine` 布林運算、圓形手柄、`Material(elevation:6)` FAB 按鈕），0 Critical／0 Important／0 Minor，`pdf_crop_frame_overlay_test.dart` 獨立執行 7/7 全過，不受 Issue 6 編譯錯誤影響。
 
 **依賴：** 無
 
@@ -187,7 +187,7 @@
 
 ## Issue 8：書架排序選單加入當前模式選中指示
 
-**Status:** `ready-for-agent`
+**Status:** ✅ 已完成（commit `2136e86`），分支 `feat/epic-27-reader-device-compat`，待合併。程式碼審查（`reviews/review-issue-5-8.md`）確認忠實對照計畫、邏輯正確，測試遵循既有 fixture 模式。**注意：此 commit 訊息僅提及「Issue 8」，實際上一併夾帶了 Issue 5 Task 2（`LibraryScreen` AppBar E-Ink 按鈕）的改動，commit 邊界不乾淨，於此如實註記，未回頭拆分歷史 commit。**
 
 **依賴：** 無
 
