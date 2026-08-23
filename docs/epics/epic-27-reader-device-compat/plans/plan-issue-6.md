@@ -306,9 +306,12 @@ git commit -m "feat(epic-27): Issue 6——PdfSettingsSheet 圖示選項全面�
 
 - [ ] **Step 1: Write the failing test**
 
-在 `app/test/screens/reader_settings_sheet_test.dart` 中追加測試：
+在 `app/test/screens/reader_settings_sheet_test.dart` 中追加測試（【審查修正 Important】既有檔案第 1-11 行目前**沒有**匯入 `package:elinkbook/theme/app_theme_data.dart`，須新增這行 import，否則 `buildEinkThemeData` 找不到符號、編譯失敗）：
 
 ```dart
+// 新增 import（既有檔案尚未匯入）：
+import 'package:elinkbook/theme/app_theme_data.dart';
+
 testWidgets('ReaderSettingsSheet 文字對齊與排版方向在 E-Ink 模式下具備高對比選中底色', (tester) async {
   await tester.pumpWidget(MaterialApp(
     theme: buildEinkThemeData(),
@@ -326,12 +329,12 @@ testWidgets('ReaderSettingsSheet 文字對齊與排版方向在 E-Ink 模式下�
     ),
   ));
 
+  // 【審查修正 Important】key 直接掛在帶 BoxDecoration 的 Container 上
+  // （見 Task 1 ReaderOptionTile 實作），不再用
+  // find.descendant(...).first 這種依賴子樹結構的脆弱寫法。
   final justifyTile = find.byKey(const Key('reader_settings_text_align_justify'));
   expect(justifyTile, findsOneWidget);
-  final container = tester.widget<Container>(find.descendant(
-    of: justifyTile,
-    matching: find.byType(Container),
-  ).first);
+  final container = tester.widget<Container>(justifyTile);
   expect((container.decoration as BoxDecoration).color, Colors.black);
 });
 ```
