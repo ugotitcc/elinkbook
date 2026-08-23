@@ -307,7 +307,7 @@ Future<void> pumpUntilPdfReady(
 
 ## Issue 11：流式 EPUB 頁碼估算改用已渲染 section 密度校正
 
-**Status:** `ready-for-agent`（已完成 `/grill-with-docs` 規劃階段，規格完整；架構決策見 [ADR 0024](../../adr/0024-flowable-pagination-density-calibration-reopen-adr-0011.md)）。
+**Status:** ✅ 已完成並合併回 `main`（分支 `epic-26-issue-11-density-calibration`，5 個 commit：Task 1-5 各一個＋審查修正 2 個，合併 commit `94ff0b1`；架構決策見 [ADR 0024](../../adr/0024-flowable-pagination-density-calibration-reopen-adr-0011.md)）。`SectionProgress` 新增密度紀錄方法與內部 Map 狀態（已知 section 採實測密度、未知 section 外插自索引距離最近已知 section，tie-break 取索引較小者），`paginator.js` 非捲動分支帶入 `detail.contentPages`，`view.js` `#onRelocate()` 轉發並提供公開 `clearLocationDensity()`，`main.js` `applyPreferences()` 前置呼叫清空。審查（`reviews/review-issue-11.md`）發現 0 項 Critical、2 項 Important（「零回歸」因 IEEE754 浮點加法不具結合律存在極低機率邊界誤差，已於 `59e1c6f` 改回在無已知密度時直接沿用改動前位元組公式一次性相除，經 20,000 組隨機輸入模糊測試確認 0 次不一致；計畫書數字矛盾已於 `3affdbc` 修正）、2 項 Minor（已加入未變動短路防禦並修正 README 標題檔名筆誤）；`flutter analyze` 乾淨、Node 驗證腳本 5 項全數通過，零回歸。
 
 **依賴：** 依附 Issue 10（需要 `locationIndex`／`locationTotal` 欄位已存在）；Issue 10 已完成並合併回 `main`，無阻塞。
 

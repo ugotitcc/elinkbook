@@ -1,6 +1,6 @@
 # Epic 26 Issue 11：流式 EPUB 頁碼估算改用已渲染 section 密度校正 Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development（推薦）或 superpowers:executing-plans 以逐 Task 執行本計畫。步驟採用 checkbox（`- [ ]`）語法追蹤進度。
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development（推薦）或 superpowers:executing-plans 以逐 Task 執行本計畫。步驟採用 checkbox（`- [x]`）語法追蹤進度。
 
 **Goal:** `SectionProgress.getProgress()`（`app/android/app/src/main/assets/foliate/progress.js`）目前用全書統一常數「1500 bytes = 1 個 location」換算流式格式的 `locationIndex`／`locationTotal`，完全忽略使用者當下實際的字體大小／行距／段落間距／邊距／單雙欄設定。`paginator.js` 的 `View.expand()` 對每個已渲染 section 都精確算得出 `contentPages`，但這個數字從未回饋給 `SectionProgress`。本 Issue 讓 `SectionProgress` 吃「已知 section 用實測密度、未知 section 用索引距離最近的已知 section 外插」，取代全書統一常數，正式重新開放 ADR 0011 該項取捨。
 
@@ -50,7 +50,7 @@
 - Produces：`SectionProgress.clearDensity(): void`（新增公開方法）。
 - `SectionProgress.getProgress(index, fractionInSection, pageFraction)` 既有簽章與回傳形狀不變，只有 `location.current`／`location.next`／`location.total` 三個數值的內部換算邏輯改變。
 
-- [ ] **Step 1：寫失敗測試，涵蓋零回歸／單一已知密度／多個已知密度外插與 tie-break／清空快取／非線性 section 五種情境**
+- [x] **Step 1：寫失敗測試，涵蓋零回歸／單一已知密度／多個已知密度外插與 tie-break／清空快取／非線性 section 五種情境**
 
 建立 `app/tool/test_section_progress_density.mjs`：
 
@@ -126,12 +126,12 @@ function makeSections(sizes, linear = []) {
 console.log('SectionProgress 密度校正驗證：5 項全數通過')
 ```
 
-- [ ] **Step 2：執行腳本確認失敗（`recordDensity`／`clearDensity` 尚未存在）**
+- [x] **Step 2：執行腳本確認失敗（`recordDensity`／`clearDensity` 尚未存在）**
 
 執行：`node app/tool/test_section_progress_density.mjs`
 預期：拋出 `TypeError: sp.recordDensity is not a function`（測試 2 執行時）。
 
-- [ ] **Step 3：`progress.js` 的 `SectionProgress` class 整段改為新實作**
+- [x] **Step 3：`progress.js` 的 `SectionProgress` class 整段改為新實作**
 
 修改 `app/android/app/src/main/assets/foliate/progress.js`，把整個 `SectionProgress` class（`export class SectionProgress { ... }`，含 `constructor`／`#getSectionFractions`／`getProgress`／`getSection`）整段取代為：
 
@@ -255,12 +255,12 @@ export class SectionProgress {
 
 （`getSection()` 操作的是 `fraction`／`sectionFractions`，與本次改動的 `location` 換算邏輯完全無關，維持原樣不動。）
 
-- [ ] **Step 4：執行腳本確認 Step 1 新增的 5 項案例全數通過**
+- [x] **Step 4：執行腳本確認 Step 1 新增的 5 項案例全數通過**
 
 執行：`node app/tool/test_section_progress_density.mjs`
 預期：印出 `SectionProgress 密度校正驗證：5 項全數通過`，結束碼 `0`。
 
-- [ ] **Step 5：`app/tool/README.md` 新增這支腳本的說明**
+- [x] **Step 5：`app/tool/README.md` 新增這支腳本的說明**
 
 在 `app/tool/README.md` 的 `## check_foliate_es_compat.js` 區塊之後新增：
 
@@ -290,7 +290,7 @@ node app/tool/test_section_progress_density.mjs
 - 非 `0`：斷言失敗或拋出例外，會印出對應的錯誤訊息與堆疊。
 ```
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/android/app/src/main/assets/foliate/progress.js app/tool/test_section_progress_density.mjs app/tool/README.md
@@ -304,7 +304,7 @@ git commit -m "refactor(epic-26): Issue 11 Task 1——SectionProgress 新增密
 **Files:**
 - Modify: `app/android/app/src/main/assets/foliate/paginator.js`
 
-- [ ] **Step 1：修改 `#afterScroll()` 非捲動分支**
+- [x] **Step 1：修改 `#afterScroll()` 非捲動分支**
 
 修改 `app/android/app/src/main/assets/foliate/paginator.js`，原本（第 3002-3013 行）：
 
@@ -347,14 +347,14 @@ git commit -m "refactor(epic-26): Issue 11 Task 1——SectionProgress 新增密
 
 （捲動分支 `if (this.scrolled) { ... }`，第 2992-3001 行，維持原樣不動——`detail.contentPages` 在這個分支天生不存在。）
 
-- [ ] **Step 2：逐鍵核對，確認捲動模式不受影響（無自動化測試，人工核對取代）**
+- [x] **Step 2：逐鍵核對，確認捲動模式不受影響（無自動化測試，人工核對取代）**
 
 核對清單：
-- [ ] `detail.contentPages` 只出現在非捲動分支（`else if (this.#renderedPages > 0 && primaryView)`）內，捲動分支（`if (this.scrolled)`）沒有新增這個欄位。
-- [ ] `textPages` 是既有變數，本次改動沒有新增計算路徑，只是把既有值多送一份出去。
-- [ ] `detail.fraction`／`detail.size` 兩個既有欄位的計算邏輯完全未變動。
+- [x] `detail.contentPages` 只出現在非捲動分支（`else if (this.#renderedPages > 0 && primaryView)`）內，捲動分支（`if (this.scrolled)`）沒有新增這個欄位。
+- [x] `textPages` 是既有變數，本次改動沒有新增計算路徑，只是把既有值多送一份出去。
+- [x] `detail.fraction`／`detail.size` 兩個既有欄位的計算邏輯完全未變動。
 
-- [ ] **Step 3：Commit**
+- [x] **Step 3：Commit**
 
 ```bash
 git add app/android/app/src/main/assets/foliate/paginator.js
@@ -372,7 +372,7 @@ git commit -m "refactor(epic-26): Issue 11 Task 2——paginator.js #afterScroll
 - Consumes：`SectionProgress.recordDensity(index, contentPages)`／`SectionProgress.clearDensity()`（Task 1）。
 - Produces：`View.clearLocationDensity(): void`（新增公開方法，供 `main.js` 呼叫）。
 
-- [ ] **Step 1：`#onRelocate()` 收到 `contentPages` 時呼叫 `recordDensity()`**
+- [x] **Step 1：`#onRelocate()` 收到 `contentPages` 時呼叫 `recordDensity()`**
 
 修改 `app/android/app/src/main/assets/foliate/view.js`，原本（第 332-341 行）：
 
@@ -409,7 +409,7 @@ git commit -m "refactor(epic-26): Issue 11 Task 2——paginator.js #afterScroll
     }
 ```
 
-- [ ] **Step 2：新增公開方法 `clearLocationDensity()`**
+- [x] **Step 2：新增公開方法 `clearLocationDensity()`**
 
 修改 `app/android/app/src/main/assets/foliate/view.js`，原本（第 539-543 行）：
 
@@ -437,14 +437,14 @@ git commit -m "refactor(epic-26): Issue 11 Task 2——paginator.js #afterScroll
     getProgressOf(index, range) {
 ```
 
-- [ ] **Step 3：逐鍵核對，確認呼叫鏈與 Task 1 的公開介面命名一致（無自動化測試，人工核對取代）**
+- [x] **Step 3：逐鍵核對，確認呼叫鏈與 Task 1 的公開介面命名一致（無自動化測試，人工核對取代）**
 
 核對清單：
-- [ ] `#onRelocate()` 的 `if (contentPages)` 判斷式：`contentPages` 為 `undefined`（捲動模式／舊版 payload 缺席）或 `0` 時皆不呼叫 `recordDensity()`，與 Task 1 `recordDensity()` 內部的 `sizes[index] > 0` 防禦互為雙保險，不衝突。
-- [ ] `this.#sectionProgress?.recordDensity(index, contentPages)`／`this.#sectionProgress?.clearDensity()` 方法名稱與 Task 1 `progress.js` 內定義的 `recordDensity`／`clearDensity` 逐字相同（大小寫敏感）。
-- [ ] `clearLocationDensity()` 為新增的公開方法（無 `#` 前綴），命名比照既有 `getSectionFractions()`／`clearSearch()` 的 camelCase 慣例。
+- [x] `#onRelocate()` 的 `if (contentPages)` 判斷式：`contentPages` 為 `undefined`（捲動模式／舊版 payload 缺席）或 `0` 時皆不呼叫 `recordDensity()`，與 Task 1 `recordDensity()` 內部的 `sizes[index] > 0` 防禦互為雙保險，不衝突。
+- [x] `this.#sectionProgress?.recordDensity(index, contentPages)`／`this.#sectionProgress?.clearDensity()` 方法名稱與 Task 1 `progress.js` 內定義的 `recordDensity`／`clearDensity` 逐字相同（大小寫敏感）。
+- [x] `clearLocationDensity()` 為新增的公開方法（無 `#` 前綴），命名比照既有 `getSectionFractions()`／`clearSearch()` 的 camelCase 慣例。
 
-- [ ] **Step 4：Commit**
+- [x] **Step 4：Commit**
 
 ```bash
 git add app/android/app/src/main/assets/foliate/view.js
@@ -461,7 +461,7 @@ git commit -m "refactor(epic-26): Issue 11 Task 3——view.js #onRelocate() 記
 **Interfaces:**
 - Consumes：`View.clearLocationDensity()`（Task 3）。
 
-- [ ] **Step 1：`applyPreferences()` 函式最前面新增清空呼叫**
+- [x] **Step 1：`applyPreferences()` 函式最前面新增清空呼叫**
 
 修改 `app/android/app/src/main/assets/foliate/main.js`，原本（第 162-169 行）：
 
@@ -497,14 +497,14 @@ window.applyPreferences = function (prefs) {
   // Epic 20 Issue 2：FXL（定樣式）書籍不套用流式（reflowable） Paginator
 ```
 
-- [ ] **Step 2：逐鍵核對，確認呼叫時機在 FXL 判斷式之前、且方法名稱與 Task 3 一致（無自動化測試，人工核對取代）**
+- [x] **Step 2：逐鍵核對，確認呼叫時機在 FXL 判斷式之前、且方法名稱與 Task 3 一致（無自動化測試，人工核對取代）**
 
 核對清單：
-- [ ] `view.clearLocationDensity()` 呼叫位置在 `if (view.isFixedLayout) { ... return }` 判斷式**之前**——確保 FXL 與流式書籍都會執行到這行，不需要在兩個分支各自重複呼叫。
-- [ ] 方法名稱 `clearLocationDensity` 與 Task 3 `view.js` 內定義的公開方法逐字相同（大小寫敏感）。
-- [ ] 這一行以外，`applyPreferences()` 函式其餘既有邏輯（FXL 分支、流式分支的 `setStyles()`／`setAttribute()` 呼叫）完全未變動。
+- [x] `view.clearLocationDensity()` 呼叫位置在 `if (view.isFixedLayout) { ... return }` 判斷式**之前**——確保 FXL 與流式書籍都會執行到這行，不需要在兩個分支各自重複呼叫。
+- [x] 方法名稱 `clearLocationDensity` 與 Task 3 `view.js` 內定義的公開方法逐字相同（大小寫敏感）。
+- [x] 這一行以外，`applyPreferences()` 函式其餘既有邏輯（FXL 分支、流式分支的 `setStyles()`／`setAttribute()` 呼叫）完全未變動。
 
-- [ ] **Step 3：Commit**
+- [x] **Step 3：Commit**
 
 ```bash
 git add app/android/app/src/main/assets/foliate/main.js
@@ -518,22 +518,22 @@ git commit -m "refactor(epic-26): Issue 11 Task 4——main.js applyPreferences(
 **Files:**
 - Modify: `CONTEXT.md`
 
-- [ ] **Step 1：執行 Task 1 的 Node 驗證腳本，確認 5 項情境全數通過**
+- [x] **Step 1：執行 Task 1 的 Node 驗證腳本，確認 5 項情境全數通過**
 
 執行：`node app/tool/test_section_progress_density.mjs`
 預期：印出 `SectionProgress 密度校正驗證：5 項全數通過`，結束碼 `0`。
 
-- [ ] **Step 2：執行 `flutter analyze`**
+- [x] **Step 2：執行 `flutter analyze`**
 
 執行：`cd app && flutter analyze`
 預期：`No issues found!`（本 Issue 未改動任何 Dart 檔案，此步驟純粹確認未意外動到 Dart 端）。
 
-- [ ] **Step 3：執行全專案 `flutter test`**
+- [x] **Step 3：執行全專案 `flutter test`**
 
 執行：`cd app && flutter test`
 預期：全數通過，測試總數與 Epic 26 Issue 10 合併後的基準數字 1637 完全一致（本 Issue 未新增／修改任何 Dart 測試）。
 
-- [ ] **Step 4：更新 `CONTEXT.md` 的「Location 刻度」詞條，反映密度校正後的行為**
+- [x] **Step 4：更新 `CONTEXT.md` 的「Location 刻度」詞條，反映密度校正後的行為**
 
 修改 `CONTEXT.md`，原本：
 
@@ -551,7 +551,7 @@ _Avoid_: 頁碼、頁次（過於籠統，未點出「這是估計值」這個�
 _Avoid_: 頁碼、頁次（過於籠統，未點出「這是估計值」這個關鍵限定）
 ```
 
-- [ ] **Step 5：修正 `CONTEXT.md`「視覺頁碼」詞條內已過時的 Issue 編號指向**
+- [x] **Step 5：修正 `CONTEXT.md`「視覺頁碼」詞條內已過時的 Issue 編號指向**
 
 修改 `CONTEXT.md`，原本：
 
@@ -567,15 +567,15 @@ _Avoid_: 頁碼、頁次（過於籠統，未點出「這是估計值」這個�
 固定版面（FXL）／CBZ 走 `FixedLayout.pages`（`#spreads.length`）算出的全書真實頁數，精度等同實際渲染結果。流式格式沒有這筆資料——`epic-26-architecture-hardening` Issue 11 改善的是「Location 刻度」本身的估計精準度（見 `docs/adr/0024-flowable-pagination-density-calibration-reopen-adr-0011.md`），刻意不追求讓流式格式也擁有真實視覺頁碼（會需要強制渲染全書）。與「Location 刻度」於 `EpubPositionInfo` 分屬 `visualPageIndex`/`visualTotalPages` 與 `locationIndex`/`locationTotal` 兩組互斥欄位，同一本書恆缺其中一組。
 ```
 
-- [ ] **Step 6：逐項核對驗收標準**
+- [x] **Step 6：逐項核對驗收標準**
 
-- [ ] 流式 EPUB／TXT／MD 分頁（無捲動）模式下，`locationIndex`／`locationTotal` 換算優先採用使用者當下實際排版設定下已知 section 的實測密度，未知 section 外插自索引距離最近的已知 section。
-- [ ] 捲動模式與 FXL／CBZ 頁碼顯示行為零改變。
-- [ ] 任何流經 `applyPreferences()` 的排版設定變更後，密度快取正確清空重算。
-- [ ] `EpubPositionInfo` 對外欄位名與型別簽章不變（呼叫端零改動）。
-- [ ] `flutter analyze` 乾淨、`flutter test` 全數通過、零回歸。
+- [x] 流式 EPUB／TXT／MD 分頁（無捲動）模式下，`locationIndex`／`locationTotal` 換算優先採用使用者當下實際排版設定下已知 section 的實測密度，未知 section 外插自索引距離最近的已知 section。
+- [x] 捲動模式與 FXL／CBZ 頁碼顯示行為零改變。
+- [x] 任何流經 `applyPreferences()` 的排版設定變更後，密度快取正確清空重算。
+- [x] `EpubPositionInfo` 對外欄位名與型別簽章不變（呼叫端零改動）。
+- [x] `flutter analyze` 乾淨、`flutter test` 全數通過、零回歸。
 
-- [ ] **Step 7：Commit（若 Step 4-5 有任何微調）**
+- [x] **Step 7：Commit（若 Step 4-5 有任何微調）**
 
 ```bash
 git add CONTEXT.md
