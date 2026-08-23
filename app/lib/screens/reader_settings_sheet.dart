@@ -775,22 +775,23 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
           spacing: 4,
           children: options.map((option) {
             final (mode, keySuffix, icon, tooltip) = option;
-            // 特殊處理：null 選項代表「採用書籍排版」，用 WritingMode? 的 null 值
-            // 但 ReaderOptionTile 需要具體值，這裡用 WritingMode.horizontal 作為
-            // 暫存值，實際值由 groupValue 決定
-            final effectiveValue = mode ?? WritingMode.horizontal;
-            final isNullSelected = _writingModeOverride == null;
-            return ReaderOptionTile<WritingMode>(
+            // 【審查修正 Important：見 reviews/review-issue-5-8.md Issue 6
+            // Important #1】原本用「某個真實 enum 值當 sentinel 代表 null」
+            // （例如 WritingMode.horizontal），但 options 清單裡剛好也有一個
+            // 真實選項是 WritingMode.horizontal，兩者的 effectiveValue 會
+            // 撞在一起，導致 _writingModeOverride == null 時「採用書籍排版」
+            // 與「強制橫排」兩顆 tile 同時判定為選中。改用
+            // ReaderOptionTile<WritingMode?>，value／groupValue 直接傳原始
+            // nullable 值，不需要 fallback，null 只會跟 null 相等。
+            return ReaderOptionTile<WritingMode?>(
               itemKey: Key('reader_settings_writing_mode_$keySuffix'),
-              value: effectiveValue,
-              groupValue: isNullSelected
-                  ? effectiveValue
-                  : (_writingModeOverride ?? WritingMode.horizontal),
+              value: mode,
+              groupValue: _writingModeOverride,
               icon: icon,
               tooltip: tooltip,
               visualDensity: VisualDensity.compact,
               onSelected: (v) => setState(() {
-                _writingModeOverride = mode;
+                _writingModeOverride = v;
                 _notifyChanged();
               }),
             );
@@ -817,22 +818,18 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
           spacing: 4,
           children: options.map((option) {
             final (mode, keySuffix, icon, tooltip) = option;
-            // 特殊處理：null 選項代表「使用全域預設」，用 PageTurnMode? 的 null 值
-            // 但 ReaderOptionTile 需要具體值，這裡用 PageTurnMode.scroll 作為
-            // 暫存值，實際值由 groupValue 決定
-            final effectiveValue = mode ?? PageTurnMode.scroll;
-            final isNullSelected = _pageTurnModeOverride == null;
-            return ReaderOptionTile<PageTurnMode>(
+            // 【審查修正 Important，同排版方向覆寫的修法】改用
+            // ReaderOptionTile<PageTurnMode?>，避免 sentinel 值與真實選項
+            // （PageTurnMode.scroll）衝突。
+            return ReaderOptionTile<PageTurnMode?>(
               itemKey: Key('reader_settings_page_turn_mode_$keySuffix'),
-              value: effectiveValue,
-              groupValue: isNullSelected
-                  ? effectiveValue
-                  : (_pageTurnModeOverride ?? PageTurnMode.scroll),
+              value: mode,
+              groupValue: _pageTurnModeOverride,
               icon: icon,
               tooltip: tooltip,
               visualDensity: VisualDensity.compact,
               onSelected: (v) => setState(() {
-                _pageTurnModeOverride = mode;
+                _pageTurnModeOverride = v;
                 _notifyChanged();
               }),
             );
@@ -870,22 +867,18 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
           spacing: 4,
           children: options.map((option) {
             final (setting, keySuffix, icon, tooltip, angle) = option;
-            // 特殊處理：null 選項代表「使用全域預設」，用 ScreenOrientationSetting? 的 null 值
-            // 但 ReaderOptionTile 需要具體值，這裡用 ScreenOrientationSetting.auto 作為
-            // 暫存值，實際值由 groupValue 決定
-            final effectiveValue = setting ?? ScreenOrientationSetting.auto;
-            final isNullSelected = _screenOrientationOverride == null;
-            return ReaderOptionTile<ScreenOrientationSetting>(
+            // 【審查修正 Important，同排版方向覆寫的修法】改用
+            // ReaderOptionTile<ScreenOrientationSetting?>，避免 sentinel 值
+            // 與真實選項（ScreenOrientationSetting.auto）衝突。
+            return ReaderOptionTile<ScreenOrientationSetting?>(
               itemKey: Key('reader_settings_screen_orientation_$keySuffix'),
-              value: effectiveValue,
-              groupValue: isNullSelected
-                  ? effectiveValue
-                  : (_screenOrientationOverride ?? ScreenOrientationSetting.auto),
+              value: setting,
+              groupValue: _screenOrientationOverride,
               icon: icon,
               tooltip: tooltip,
               visualDensity: VisualDensity.compact,
               onSelected: (v) => setState(() {
-                _screenOrientationOverride = setting;
+                _screenOrientationOverride = v;
                 _notifyChanged();
               }),
             );

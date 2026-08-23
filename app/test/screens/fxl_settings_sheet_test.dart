@@ -59,14 +59,27 @@ void main() {
       ),
     );
 
-    // 選中項目在 E-Ink 模式下會呈現黑底白字（見 ReaderOptionTile 實作）。
-    final container = tester.widget<Container>(
+    // 【審查修正 Minor：見 reviews/review-issue-5-8.md Issue 6 Minor #2】
+    // 原本斷言 isNotNull——但 ReaderOptionTile 不論選中與否，
+    // BoxDecoration.color 恆為非 null（選中是 primaryContainer，未選中
+    // 是 surface），改造後這個斷言不論選中邏輯對不對都會通過，等同於
+    // 失去鑑別力。改為精確比對選中/未選中應有的背景色，並確認兩者不同。
+    final theme = Theme.of(tester.element(find.byType(FxlSettingsSheet)));
+    final selectedContainer = tester.widget<Container>(
       find.byKey(const Key('fxl_settings_dual_page_mode_never')),
     );
+    final unselectedContainer = tester.widget<Container>(
+      find.byKey(const Key('fxl_settings_dual_page_mode_auto')),
+    );
     expect(
-      (container.decoration as BoxDecoration).color,
-      isNotNull,
-      reason: '目前選中的選項應以深色背景標示',
+      (selectedContainer.decoration as BoxDecoration).color,
+      theme.colorScheme.primaryContainer,
+      reason: '目前選中的選項應以 primaryContainer 背景標示',
+    );
+    expect(
+      (unselectedContainer.decoration as BoxDecoration).color,
+      theme.colorScheme.surface,
+      reason: '未選中的選項應以 surface 背景標示',
     );
   });
 
@@ -250,9 +263,27 @@ void main() {
         ),
       ));
 
-      // ReaderOptionTile 在未選中狀態使用預設視覺密度，
-      // 這裡只驗證 widget 存在即可。
-      expect(find.byKey(const Key('fxl_settings_direction_rtl')), findsOneWidget);
+      // 【審查修正 Minor：見 reviews/review-issue-5-8.md Issue 6 Minor #2】
+      // 原本改成 findsOneWidget 只驗證元件存在，完全放棄了測試名稱宣稱
+      // 的「預設選中 RTL」這件事。改為精確比對 rtl（選中）與 ltr（未
+      // 選中）的背景色，真正鑑別選中狀態。
+      final theme = Theme.of(tester.element(find.byType(FxlSettingsSheet)));
+      final rtlContainer = tester.widget<Container>(
+        find.byKey(const Key('fxl_settings_direction_rtl')),
+      );
+      final ltrContainer = tester.widget<Container>(
+        find.byKey(const Key('fxl_settings_direction_ltr')),
+      );
+      expect(
+        (rtlContainer.decoration as BoxDecoration).color,
+        theme.colorScheme.primaryContainer,
+        reason: 'RTL 為全域預設值，應以 primaryContainer 背景標示選中',
+      );
+      expect(
+        (ltrContainer.decoration as BoxDecoration).color,
+        theme.colorScheme.surface,
+        reason: 'LTR 未選中，應以 surface 背景標示',
+      );
     });
   });
 

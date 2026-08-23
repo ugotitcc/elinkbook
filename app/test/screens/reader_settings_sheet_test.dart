@@ -1383,6 +1383,52 @@ void main() {
     final container = tester.widget<Container>(justifyTile);
     expect((container.decoration as BoxDecoration).color, Colors.black);
   });
+
+  // 【審查修正 Important：見 reviews/review-issue-5-8.md Issue 6
+  // Important #1】排版方向／翻頁模式／螢幕方向三組含 null（採用書籍/
+  // 全域預設）選項的 ReaderOptionTile 群組，原本用「某個真實 enum 值當
+  // sentinel 代表 null」，但該 sentinel 剛好也是清單中的一個真實選項，
+  // 導致 override 為 null（預設狀態）時兩顆 tile 同時判定為選中。這個
+  // bug 在既有測試套件下完全不可見（既有 E-Ink 測試只測了文字對齊，不
+  // 含 null 分支），故補上這則測試直接鑑別「override 為 null 時只有
+  // 一顆 tile 選中」。
+  testWidgets('排版方向覆寫為 null（預設）時，僅「採用書籍排版」一顆 tile 呈現選中底色',
+      (tester) async {
+    tester.view.physicalSize = const Size(800, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    await tester.pumpWidget(MaterialApp(
+      theme: buildEinkThemeData(),
+      home: Scaffold(
+        body: ReaderSettingsSheet(
+          bookId: 'test-book',
+          prefs: BookReaderPrefs.empty,
+          onChanged: (_) {},
+          onSaveAsPreset: (_) {},
+          onApplyPreset: (_, {required targetBookIds}) {},
+          onApplyFromBook: (_, {required targetBookIds}) {},
+          onRequestBookPicker: ({required multiSelect}) async => null,
+          onDeletePreset: (_) {},
+        ),
+      ),
+    ));
+    await switchToTab(tester, '版面呈現');
+
+    Color tileColor(String keySuffix) {
+      final container = tester.widget<Container>(
+        find.byKey(Key('reader_settings_writing_mode_$keySuffix')),
+      );
+      return (container.decoration as BoxDecoration).color!;
+    }
+
+    expect(tileColor('book'), Colors.black, reason: '採用書籍排版：null 覆寫，應為選中');
+    expect(tileColor('vertical'), Colors.white, reason: '強制直排：非選中');
+    expect(tileColor('horizontal'), Colors.white, reason: '強制橫排：非選中，過去的 bug 會誤判成選中');
+  });
 }
 
 Future<void> _pumpSheet(
