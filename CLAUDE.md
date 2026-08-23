@@ -29,7 +29,7 @@ flutter build apk --debug
 
 # 需要測試 Google Drive／OneDrive 真實 OAuth 登入流程時才需要帶入這個設定檔
 # （app/config/cloud_oauth.json，樣板見 cloud_oauth.example.json，不進版控，
-# 見 docs/epics/epic-29-cloud-import/issues.md Issue 7）；一般開發／
+# 見 docs/archive/2026-08-24-epic-29-cloud-import/issues.md Issue 7）；一般開發／
 # flutter analyze／flutter test 不涉及真實登入流程，維持上方指令即可，
 # 不帶這個旗標時會自動退回樣板 placeholder 值，不影響任何既有功能。
 flutter run --dart-define-from-file=config/cloud_oauth.json
