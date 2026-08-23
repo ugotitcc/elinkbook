@@ -34,7 +34,7 @@
 - Consumes: `PdfCropFrameOverlay({required initialRect, required onConfirm, required onCancel})`
 - Produces: 包含 `CropOverlayPainter` 遮罩與高對比 FAB 樣式之 `PdfCropFrameOverlay`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 在 `app/test/reader/pdf_crop_frame_overlay_test.dart` 中追加測試：
 
@@ -69,12 +69,12 @@ testWidgets('PdfCropFrameOverlay 包含 CustomPaint 遮罩層與帶背景之 Mat
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 執行：`cd app && flutter test test/reader/pdf_crop_frame_overlay_test.dart`
 預期：FAIL（因既有實作確認按鈕只是 IconButton，沒有 Material 祖先）。
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 在 `app/lib/reader/pdf_crop_frame_overlay.dart`：
 1. 新增 `CropOverlayPainter`（【審查修正 Important】改用四個不重疊矩形色帶取代 `Path.combine` 布林運算，理由見上方 Architecture 段落）：
@@ -206,12 +206,12 @@ Positioned(
 )
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 執行：`cd app && flutter test test/reader/pdf_crop_frame_overlay_test.dart`
 預期：全數 7 個測試 PASS。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/lib/reader/pdf_crop_frame_overlay.dart app/test/reader/pdf_crop_frame_overlay_test.dart

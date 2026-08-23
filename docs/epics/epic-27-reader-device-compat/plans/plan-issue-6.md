@@ -32,7 +32,7 @@
 **Interfaces:**
 - Produces: `ReaderOptionTile<T>`（`key`, `value`, `groupValue`, `icon`, `label` 可選, `tooltip`, `onSelected`）
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 建立 `app/test/screens/widgets/reader_option_tile_test.dart`：
 
@@ -95,12 +95,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 執行：`cd app && flutter test test/screens/widgets/reader_option_tile_test.dart`
 預期：FAIL（找不到 `reader_option_tile.dart`）。
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 建立 `app/lib/screens/widgets/reader_option_tile.dart`：
 
@@ -211,12 +211,12 @@ class ReaderOptionTile<T> extends StatelessWidget {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 執行：`cd app && flutter test test/screens/widgets/reader_option_tile_test.dart`
 預期：PASS。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/lib/screens/widgets/reader_option_tile.dart app/test/screens/widgets/reader_option_tile_test.dart
@@ -235,7 +235,7 @@ git commit -m "feat(epic-27): Issue 6——新增共用高對比選項元件 Rea
 - Consumes: `ReaderOptionTile<T>`
 - Produces: 替換 Fit 模式、雙頁模式、頁面方向、換頁動畫、裁切模式為 `ReaderOptionTile`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 在 `app/test/screens/pdf_settings_sheet_test.dart` 中追加測試（【審查修正 Important】既有檔案第 1-11 行目前**沒有**匯入 `package:elinkbook/theme/app_theme_data.dart`，須新增這行 import，否則 `buildEinkThemeData` 找不到符號、編譯失敗）：
 
@@ -266,24 +266,24 @@ testWidgets('PdfSettingsSheet 在 E-Ink 模式下選中項目呈現高對比底�
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 執行：`cd app && flutter test test/screens/pdf_settings_sheet_test.dart --plain-name "PdfSettingsSheet 在 E-Ink 模式下選中項目呈現高對比底色"`
 預期：FAIL。
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 在 `app/lib/screens/pdf_settings_sheet.dart` 中：
 1. Import `widgets/reader_option_tile.dart`。
 2. 將 `fitOptions`、`dualPageOptions`、`directionOptions`、`pageTurnAnimationOptions`、`cropMode options` 中的 `IconButton` 改用 `ReaderOptionTile`，並保留既有的 `Key` 與 `tooltip`。
 3. 手動選區裁切按鈕（`pdf_settings_crop_mode_manual`，`pdf_settings_sheet.dart:386-391`）亦改為高對比外框按鈕。【審查修正 Minor：釐清模糊地帶，見 `reviews/review-plan-issue-5-8.md` Issue 6 Minor #4】現有程式碼中這顆按鈕完全沒有「選中」語意（點擊只呼叫 `widget.onRequestManualCrop` 進入互動裁切模式，不會設定 `_cropMode` 或呼叫 `_notifyChanged()`，即使 `_cropMode == PdfCropMode.manual` 也不反映選中樣式）——維持這個既有行為不變，本 Task 只需把它從 `IconButton` 換成 `ReaderOptionTile` 的「未選中」樣式（`value`／`groupValue` 傳入兩個恆不相等的值，例如 `value: true, groupValue: false`，確保視覺上恆為未選中狀態，不需要新增選中語意），不要自行擴充成會反映 `_cropMode` 的單選項目。
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 執行：`cd app && flutter test test/screens/pdf_settings_sheet_test.dart`
 預期：全數 PASS。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/lib/screens/pdf_settings_sheet.dart app/test/screens/pdf_settings_sheet_test.dart

@@ -32,7 +32,7 @@
 - Consumes: `SettingsScreen` 新增 `final ValueChanged<bool>? onEinkModeChanged;` 參數。
 - Produces: `SwitchListTile(key: Key('settings_eink_mode_switch'), value: widget.isEinkMode, onChanged: widget.onEinkModeChanged)`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 在 `app/test/screens/settings_screen_test.dart` 中新增測試：
 
@@ -58,12 +58,12 @@ testWidgets('SettingsScreen 顯示 E-Ink 模式開關，點擊切換觸發 onEin
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 執行：`cd app && flutter test test/screens/settings_screen_test.dart`
 預期：FAIL，因 `settings_eink_mode_switch` 尚未建立。
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 在 `app/lib/screens/settings_screen.dart`：
 1. `SettingsScreen` 建構子新增 `this.onEinkModeChanged`。
@@ -79,12 +79,12 @@ SwitchListTile(
 ```
 3. 在 `app/lib/screens/library_screen.dart:860` 導航至 `SettingsScreen` 處傳入 `onEinkModeChanged: widget.themeDependencies.onEinkModeChanged`。
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 執行：`cd app && flutter test test/screens/settings_screen_test.dart`
 預期：PASS。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/lib/screens/settings_screen.dart app/lib/screens/library_screen.dart app/test/screens/settings_screen_test.dart
@@ -103,7 +103,7 @@ git commit -m "feat(epic-27): Issue 5——SettingsScreen 新增 E-Ink 高對比
 - Consumes: `widget.themeDependencies.isEinkMode`
 - Produces: 帶有實心反白容器的 `IconButton(key: Key('library_eink_toggle'))`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 在 `app/test/screens/library_screen_test.dart` 中新增測試（【審查修正 Critical】`LibraryScreen` 建構子的 `repository`／`importService`／`prefsManager` 三個參數皆為 `required`、無預設值，原片段完全沒有提供會直接編譯失敗；改用檔案既有 `setUp()` 已建立的 `FakeLibraryRepository()`／`FakeBookImportService()`／共用 `prefsManager` fixture 模式，比照同檔案第 100-105 行既有寫法）：
 
@@ -135,12 +135,12 @@ testWidgets('LibraryScreen 在 E-Ink 模式開啟與關閉時，切換按鈕具�
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 執行：`cd app && flutter test test/screens/library_screen_test.dart --plain-name "LibraryScreen 在 E-Ink 模式開啟與關閉時"`
 預期：FAIL（因 tooltip 或樣式不匹配）。
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 在 `app/lib/screens/library_screen.dart` 的 `_buildNormalAppBar` 中修改 E-Ink 切換按鈕（【審查修正 Important】原片段用 `Theme.of(context).brightness == Brightness.dark` 判斷按鈕黑/白配色，但核對 `app_theme_data.dart:127-152` 的 `_buildEinkTheme()` 可知只要 `isEinkMode == true`，全域主題一律套用 `_buildEinkTheme()`，且該函式寫死 `brightness: Brightness.light`——`isEinkMode == true` 時 `brightness` 永遠不可能是 `Brightness.dark`，這個分支是永遠不會被走到的死碼，會誤導後續維護者以為深色主題下配色會不同；已拿掉該判斷，固定使用黑底白圖示）：
 ```dart
@@ -175,12 +175,12 @@ Container(
 ),
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 執行：`cd app && flutter test test/screens/library_screen_test.dart --plain-name "LibraryScreen 在 E-Ink 模式開啟與關閉時"`
 預期：PASS。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/lib/screens/library_screen.dart app/test/screens/library_screen_test.dart
