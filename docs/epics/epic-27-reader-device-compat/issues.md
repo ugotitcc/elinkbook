@@ -104,3 +104,106 @@
 - 確認既有「存滿 3 組後再次另存跳出覆蓋選單」等既有測試（約 6802 行起）不受影響、全數通過。
 
 **驗收標準：** `flutter analyze` 乾淨、`flutter test` 全數通過、零回歸；若使用者於真機再次遇到本問題，應能看到明確的錯誤/提示訊息而非毫無反應，據此可判斷是否為 `repository == null`（若是，需再往上追查建構時序，另立新工單）或其他例外原因。
+
+---
+
+## Issue 5：E-Ink 高對比模式狀態感知與切換識別強化
+
+**Status:** `ready-for-agent`
+
+**依賴：** 無
+
+**來源：** 使用者回報「無法知道目前是 ELINK 還是非 ELINK 模式」（2026-08-22）。
+
+**背景／症狀：**
+1. 書架主畫面（`LibraryScreen`）AppBar 上的 E-Ink 切換按鈕（`Key('library_eink_toggle')`）僅使用 `IconButton` 切換 `Icons.contrast` 與 `Icons.contrast_outlined`。在 E-Ink 模式下 `Theme.of(context).colorScheme.primary` 為 `Colors.black`，未選中與選中時圖示皆為黑色，使用者無法判斷當前模式是開啟還是關閉。
+2. 設定頁面（`SettingsScreen`）缺乏獨立的「E-Ink 高對比模式」開關，僅將主題圓點透明度降為 0.4，缺乏主動狀態回饋與說明。
+
+**Solution：**
+1. 在 `LibraryScreen` 的 AppBar 中，為 E-Ink 切換按鈕加上具備高對比底色與外框的狀態容器（例如反白黑底膠囊/圓形背景與白圖示），明確標示開啟狀態，Tooltip 顯示「E-Ink 模式：開啟／關閉（點擊切換）」。
+2. 在 `SettingsScreen` 中新增「E-Ink 高對比模式」`SwitchListTile`（`Key('settings_eink_mode_switch')`），提供即時開關切換與詳細說明文字，並貫穿 `onEinkModeChanged` 回呼。
+
+**單元測試要求：**
+- 新增 widget test：`LibraryScreen` 在 `isEinkMode: true` 與 `false` 下，E-Ink 切換按鈕外觀與 tooltip 具備可鑑別之狀態。
+- 新增 widget test：`SettingsScreen` 顯示 E-Ink 模式開關，點擊切換時正確呼叫 `onEinkModeChanged`。
+
+**驗收標準：** `flutter analyze` 乾淨、`flutter test` 全數通過、零回歸。
+
+---
+
+## Issue 6：閱讀器版面設定面板（PDF / EPUB / FXL）圖示選項高對比選中狀態重構
+
+**Status:** `ready-for-agent`
+
+**依賴：** 無
+
+**來源：** 使用者回報「白色與 ELINK 模式下，PDF/EPUB 設定面板只要是以 ICON 顯示的，都無法判讀目前是選用哪一種模式」（2026-08-22）。
+
+**背景／症狀：**
+1. `PdfSettingsSheet`（Fit 模式、雙頁模式、頁面方向、換頁動畫、裁切模式）、`ReaderSettingsSheet`（文字對齊、排版方向、翻頁模式、螢幕方向、分欄模式）及 `FxlSettingsSheet`（雙頁模式、翻頁方向）使用純 `IconButton`，選中狀態僅透過 `color: selected ? primary : null` 區分。
+2. 在 E-Ink 模式下，`primary` 為 `Colors.black`，未選中圖示也是黑色（黑 vs 黑），兩者完全相同無差別。在 Light 白色主題下，紫色與深灰色缺乏背景容器，在電子紙或強光下辨識度極低。
+
+**Solution：**
+1. 將所有 ICON 單選項目封裝為高對比選項容器（`ReaderOptionTile` 或高對比 `SegmentedButton` / 帶背景邊框的 Tile）。
+2. 選中狀態樣式規則：
+   - **E-Ink 主題**：選中為 **純黑實心背景（`Colors.black`）＋ 純白前景色（`Colors.white`）**；未選中為 **純白背景 ＋ 1.5dp 純黑邊框 ＋ 純黑前景色**。
+   - **一般主題（Light/Dark/Sepia）**：選中為實心 `primaryContainer` 背景 ＋ 主題色邊框 ＋ `onPrimaryContainer` 前景色；未選中為一般表面背景 ＋ 淺灰外框。
+
+**單元測試要求：**
+- 新增 widget test：驗證 `PdfSettingsSheet`、`ReaderSettingsSheet`、`FxlSettingsSheet` 在 E-Ink 與 Light 主題下，選中項目具有明確的選中背景與外框標記。
+- 確認既有設定變更回呼與單元測試全數相容通過。
+
+**驗收標準：** `flutter analyze` 乾淨、`flutter test` 全數通過、零回歸。
+
+---
+
+## Issue 7：PDF 手動裁切疊加層（PdfCropFrameOverlay）高對比視覺與 FAB 按鈕重構
+
+**Status:** `ready-for-agent`
+
+**依賴：** 無
+
+**來源：** 使用者回報「PDF 裁切模式選擇框為白色，白底書籍無法識別；確認/取消按鈕為白色完全看不到，請比照 FAB 改為有背景的深對比樣式」（2026-08-22）。
+
+**背景／症狀：**
+1. `PdfCropFrameOverlay` 裁切框僅有 `Border.all(color: Colors.white, width: 2)`，且外部無遮罩，白底 PDF 頁面上完全隱形。
+2. 四角控制點為純白方塊 `Container(color: Colors.white)`。
+3. 確認（`pdf_crop_frame_confirm`）與取消（`pdf_crop_frame_cancel`）按鈕使用無背景的 `IconButton(icon: Icon(..., color: Colors.white))`，在白底頁面上不可見。
+
+**Solution：**
+1. 裁切區域外部加入 50% 黑半透明挖空遮罩（Cutout Scrim），高亮保留區域、變暗排除區域。
+2. 裁切框改用雙色高對比邊框（外黑內白或粗邊對比線），四角控制點改為帶邊框與陰影之圓形手柄。
+3. 確認與取消按鈕改為高對比 **FAB 圓形浮動按鈕樣式**（帶 elevation 陰影與實心底色）：
+   - 取消按鈕（✕）：深色背景（`Color(0xFF2A2A2E)`）＋ 白色圖示 ＋ 白色細邊框。
+   - 確認按鈕（✓）：高對比綠色/主題色背景（`Color(0xFF16A34A)`）＋ 白色圖示 ＋ 白色細邊框。
+
+**單元測試要求：**
+- 新增 widget test：驗證 `PdfCropFrameOverlay` 包含遮罩繪製元件與帶背景樣式的確認/取消按鈕。
+- 確認既有手勢拖曳調整矩形、確認、取消的 6 則測試全數維持通過。
+
+**驗收標準：** `flutter analyze` 乾淨、`flutter test` 全數通過、零回歸。
+
+---
+
+## Issue 8：書架排序選單加入當前模式選中指示
+
+**Status:** `ready-for-agent`
+
+**依賴：** 無
+
+**來源：** 使用者回報「書架排序無法辨識目前是選用哪一種排序模式」（2026-08-22）。
+
+**背景／症狀：**
+- `LibraryScreen` 的排序按鈕（`Key('library_sort_button')`）彈出的 `PopupMenuButton<LibrarySortBy>` 中，各選項僅有純文字 `Text(_sortLabel(sortBy))`，無任何圖示、打勾或高亮指示目前生效的排序方式。
+
+**Solution：**
+- 將排序選單項目（`PopupMenuItem<LibrarySortBy>`）改造為包含 Checkmark 圖示之佈局：
+  - 當前選中的排序方式：顯示 `Icons.check` 圖示、文字設為粗體（`FontWeight.bold`）並使用主題色/高對比色。
+  - 未選中的排序方式：前方保留相同寬度之透明佔位（維持文字左對齊一致），文字為一般字重。
+
+**單元測試要求：**
+- 新增 widget test：點擊排序按鈕開啟選單後，斷言當前選中的排序方式項目含有 `Icons.check` 圖示與粗體樣式。
+- 確認既有排序切換測試（`library_sort_option_title`、`library_sort_option_author` 等）全數通過。
+
+**驗收標準：** `flutter analyze` 乾淨、`flutter test` 全數通過、零回歸。
+
