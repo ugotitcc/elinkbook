@@ -735,15 +735,34 @@ class _LibraryScreenState extends State<LibraryScreen> {
     return AppBar(
       title: Text(widget.groupFilter ?? '書架'),
       actions: [
-        IconButton(
-          key: const Key('library_eink_toggle'),
-          icon: Icon(
-            widget.themeDependencies.isEinkMode ? Icons.contrast : Icons.contrast_outlined,
-            color:
-                widget.themeDependencies.isEinkMode ? Theme.of(context).colorScheme.primary : null,
+        Container(
+          margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+          decoration: BoxDecoration(
+            // E-Ink 開啟時全域主題一律為 _buildEinkTheme()（brightness 恆為
+            // Brightness.light），不需要再判斷 brightness，固定黑底即可。
+            color: widget.themeDependencies.isEinkMode ? Colors.black : Colors.transparent,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: widget.themeDependencies.isEinkMode
+                  ? Colors.transparent
+                  : Theme.of(context).colorScheme.outline.withValues(alpha: 0.5),
+              width: 1.5,
+            ),
           ),
-          tooltip: 'E-Ink 高對比模式',
-          onPressed: () => widget.themeDependencies.onEinkModeChanged?.call(!widget.themeDependencies.isEinkMode),
+          child: IconButton(
+            key: const Key('library_eink_toggle'),
+            icon: Icon(
+              widget.themeDependencies.isEinkMode ? Icons.contrast : Icons.contrast_outlined,
+              color: widget.themeDependencies.isEinkMode
+                  ? Colors.white
+                  : Theme.of(context).colorScheme.onSurface,
+              size: 20,
+            ),
+            tooltip: widget.themeDependencies.isEinkMode
+                ? 'E-Ink 模式：已開啟（點擊切換）'
+                : 'E-Ink 模式：已關閉（點擊切換）',
+            onPressed: () => widget.themeDependencies.onEinkModeChanged?.call(!widget.themeDependencies.isEinkMode),
+          ),
         ),
         const VerticalDivider(width: 1, indent: 12, endIndent: 12),
         PopupMenuButton<LibrarySortBy>(
@@ -752,15 +771,39 @@ class _LibraryScreenState extends State<LibraryScreen> {
           tooltip: '排序：${_sortLabel(_bookListController.sortBy)}',
           enabled: books != null,
           onSelected: _bookListController.changeSortBy,
-          itemBuilder: (context) => LibrarySortBy.values
-              .map(
-                (sortBy) => PopupMenuItem<LibrarySortBy>(
+          itemBuilder: (context) {
+            final currentSort = _bookListController.sortBy;
+            final primaryColor = Theme.of(context).colorScheme.primary;
+
+            return LibrarySortBy.values.map(
+              (sortBy) {
+                final isSelected = currentSort == sortBy;
+                return PopupMenuItem<LibrarySortBy>(
                   key: Key('library_sort_option_${sortBy.name}'),
                   value: sortBy,
-                  child: Text(_sortLabel(sortBy)),
-                ),
-              )
-              .toList(),
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: 24,
+                        child: isSelected
+                            ? Icon(Icons.check, size: 20, color: primaryColor)
+                            : null,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        _sortLabel(sortBy),
+                        style: TextStyle(
+                          fontWeight:
+                              isSelected ? FontWeight.bold : FontWeight.normal,
+                          color: isSelected ? primaryColor : null,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ).toList();
+          },
         ),
         IconButton(
           key: const Key('library_view_mode_toggle'),

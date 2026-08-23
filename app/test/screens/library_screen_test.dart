@@ -3695,6 +3695,60 @@ void main() {
       expect(books.single.filePath, '/no/longer/exists.epub');
     });
   });
+
+  testWidgets('LibraryScreen 在 E-Ink 模式開啟與關閉時，切換按鈕具備明確狀態容器與 tooltip', (tester) async {
+    bool? toggledValue;
+    await tester.pumpWidget(MaterialApp(
+      home: LibraryScreen(
+        repository: FakeLibraryRepository(),
+        importService: FakeBookImportService(),
+        prefsManager: prefsManager,
+        themeDependencies: LibraryThemeDependencies(
+          isEinkMode: true,
+          onEinkModeChanged: (val) => toggledValue = val,
+        ),
+      ),
+    ));
+
+    final toggleFinder = find.byKey(const Key('library_eink_toggle'));
+    expect(toggleFinder, findsOneWidget);
+
+    final iconButton = tester.widget<IconButton>(toggleFinder);
+    expect(iconButton.tooltip, contains('開啟'));
+
+    await tester.tap(toggleFinder);
+    await tester.pump();
+
+    expect(toggledValue, isFalse);
+  });
+
+  testWidgets(
+      'LibraryScreen 點擊排序按鈕，彈出選單中當前選中的排序項目顯示 Checkmark 圖示',
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: LibraryScreen(
+        repository: FakeLibraryRepository(),
+        importService: FakeBookImportService(),
+        prefsManager: prefsManager,
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('library_sort_button')));
+    await tester.pumpAndSettle();
+
+    // 預設排序為最近閱讀（lastRead）
+    final lastReadItemFinder =
+        find.byKey(const Key('library_sort_option_lastRead'));
+    expect(lastReadItemFinder, findsOneWidget);
+
+    // 驗證該項目包含 check 圖示
+    expect(
+      find.descendant(
+          of: lastReadItemFinder, matching: find.byIcon(Icons.check)),
+      findsOneWidget,
+    );
+  });
 }
 
 /// 刻意「非線性」的測試用 TextScaler：對較大的輸入值套用較低的有效縮放
