@@ -304,7 +304,7 @@ git commit -m "feat(epic-27): Issue 6——PdfSettingsSheet 圖示選項全面�
 - Consumes: `ReaderOptionTile<T>`
 - Produces: 替換文字對齊、排版方向、翻頁模式、螢幕旋轉鎖定、分欄、FXL 雙頁與方向選項
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 在 `app/test/screens/reader_settings_sheet_test.dart` 中追加測試（【審查修正 Important】既有檔案第 1-11 行目前**沒有**匯入 `package:elinkbook/theme/app_theme_data.dart`，須新增這行 import，否則 `buildEinkThemeData` 找不到符號、編譯失敗）：
 
@@ -339,25 +339,25 @@ testWidgets('ReaderSettingsSheet 文字對齊與排版方向在 E-Ink 模式下�
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 執行：`cd app && flutter test test/screens/reader_settings_sheet_test.dart --plain-name "ReaderSettingsSheet 文字對齊與排版方向在 E-Ink 模式下"`
 預期：FAIL。
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 在 `app/lib/screens/reader_settings_sheet.dart` 與 `app/lib/screens/fxl_settings_sheet.dart` 中：
 1. Import `widgets/reader_option_tile.dart`。
 2. 將文字對齊（`reader_settings_text_align_*`）、排版方向（`reader_settings_writing_mode_*`）、翻頁模式（`reader_settings_page_turn_mode_*`）、螢幕旋轉（`reader_settings_screen_orientation_*`）、分欄模式（`reader_settings_column_mode_*`）及 FXL 設定中的 `IconButton` 替換為 `ReaderOptionTile`。
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 執行：
 `cd app && flutter test test/screens/reader_settings_sheet_test.dart`
 `cd app && flutter test test/screens/fxl_settings_sheet_test.dart`
 預期：全數 PASS。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/lib/screens/reader_settings_sheet.dart app/lib/screens/fxl_settings_sheet.dart app/test/screens/reader_settings_sheet_test.dart app/test/screens/fxl_settings_sheet_test.dart

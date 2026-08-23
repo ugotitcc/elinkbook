@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../reader/book_reader_prefs.dart';
 import '../reader/dual_page_direction.dart';
 import '../reader/dual_page_mode.dart';
+import 'widgets/reader_option_tile.dart';
 
 /// EPUB 固定版面（FXL 漫畫）專屬的精簡版設定 Bottom Sheet（見
 /// docs/epics/epic-16-dual-page/spec.md「模組」段落）：提供「雙頁模式」
@@ -84,15 +85,15 @@ class _FxlSettingsSheetState extends State<FxlSettingsSheet> {
               spacing: 4,
               children: dualPageOptions.map((option) {
                 final (mode, keySuffix, icon, tooltip) = option;
-                final selected = _dualPageMode == mode;
-                return IconButton(
-                  key: Key('fxl_settings_dual_page_mode_$keySuffix'),
-                  icon: Icon(icon),
+                return ReaderOptionTile<DualPageMode>(
+                  itemKey: Key('fxl_settings_dual_page_mode_$keySuffix'),
+                  value: mode,
+                  groupValue: _dualPageMode,
+                  icon: icon,
                   tooltip: tooltip,
-                  color:
-                      selected ? Theme.of(context).colorScheme.primary : null,
-                  onPressed: () => setState(() {
-                    _dualPageMode = mode;
+                  visualDensity: VisualDensity.compact,
+                  onSelected: (v) => setState(() {
+                    _dualPageMode = v;
                     _notifyChanged();
                   }),
                 );
@@ -108,15 +109,15 @@ class _FxlSettingsSheetState extends State<FxlSettingsSheet> {
                 (DualPageDirection.rtl, 'rtl', Icons.arrow_back, '右到左（RTL，日漫慣例）'),
               ].map((option) {
                 final (direction, keySuffix, icon, tooltip) = option;
-                final selected = _dualPageDirection == direction;
-                return IconButton(
-                  key: Key('fxl_settings_direction_$keySuffix'),
-                  icon: Icon(icon),
+                return ReaderOptionTile<DualPageDirection>(
+                  itemKey: Key('fxl_settings_direction_$keySuffix'),
+                  value: direction,
+                  groupValue: _dualPageDirection,
+                  icon: icon,
                   tooltip: tooltip,
-                  color:
-                      selected ? Theme.of(context).colorScheme.primary : null,
-                  onPressed: () => setState(() {
-                    _dualPageDirection = direction;
+                  visualDensity: VisualDensity.compact,
+                  onSelected: (v) => setState(() {
+                    _dualPageDirection = v;
                     _notifyChanged();
                   }),
                 );

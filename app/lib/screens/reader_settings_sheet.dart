@@ -11,6 +11,7 @@ import '../reader/layout_preset.dart';
 import '../reader/page_turn_mode.dart';
 import '../reader/screen_orientation_setting.dart';
 import '../reader/writing_mode.dart';
+import 'widgets/reader_option_tile.dart';
 
 /// 版面設定 Bottom Sheet（FR-09／FR-10 字型、數值型控制項與三個持久化覆寫
 /// 選擇器），比照 prototype/index.html 第 1379-1520 行設計。
@@ -543,48 +544,27 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
         children: [
           const Text('欄數'),
           const SizedBox(height: 4),
-          Row(
+          Wrap(
+            spacing: 4,
             children: [
-              IconButton(
-                key: const Key('reader_settings_column_mode_auto'),
-                icon: const Icon(Icons.auto_awesome),
+              (ColumnMode.auto, 'auto', Icons.auto_awesome, '自動'),
+              (ColumnMode.single, 'single', Icons.crop_portrait, '單欄'),
+              (ColumnMode.double, 'double', Icons.book, '雙欄'),
+            ].map((option) {
+              final (mode, keySuffix, icon, tooltip) = option;
+              return ReaderOptionTile<ColumnMode>(
+                itemKey: Key('reader_settings_column_mode_$keySuffix'),
+                value: mode,
+                groupValue: _columnMode,
+                icon: icon,
+                tooltip: tooltip,
                 visualDensity: VisualDensity.compact,
-                tooltip: '自動',
-                color: _columnMode == ColumnMode.auto
-                    ? Theme.of(context).colorScheme.primary
-                    : null,
-                onPressed: () => setState(() {
-                  _columnMode = ColumnMode.auto;
+                onSelected: (v) => setState(() {
+                  _columnMode = v;
                   _notifyChanged();
                 }),
-              ),
-              IconButton(
-                key: const Key('reader_settings_column_mode_single'),
-                icon: const Icon(Icons.crop_portrait),
-                visualDensity: VisualDensity.compact,
-                tooltip: '單欄',
-                color: _columnMode == ColumnMode.single
-                    ? Theme.of(context).colorScheme.primary
-                    : null,
-                onPressed: () => setState(() {
-                  _columnMode = ColumnMode.single;
-                  _notifyChanged();
-                }),
-              ),
-              IconButton(
-                key: const Key('reader_settings_column_mode_double'),
-                icon: const Icon(Icons.book),
-                visualDensity: VisualDensity.compact,
-                tooltip: '雙欄',
-                color: _columnMode == ColumnMode.double
-                    ? Theme.of(context).colorScheme.primary
-                    : null,
-                onPressed: () => setState(() {
-                  _columnMode = ColumnMode.double;
-                  _notifyChanged();
-                }),
-              ),
-            ],
+              );
+            }).toList(),
           ),
           if (_columnMode == ColumnMode.auto) ...[
             const SizedBox(height: 8),
@@ -761,14 +741,14 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
           spacing: 4,
           children: options.map((option) {
             final (align, icon, tooltip) = option;
-            final selected = _textAlign == align;
-            return IconButton(
-              key: Key('reader_settings_text_align_${align.name}'),
-              icon: Icon(icon),
+            return ReaderOptionTile<EpubTextAlign>(
+              itemKey: Key('reader_settings_text_align_${align.name}'),
+              value: align,
+              groupValue: _textAlign ?? EpubTextAlign.justify,
+              icon: icon,
               tooltip: tooltip,
-              color: selected ? Theme.of(context).colorScheme.primary : null,
-              onPressed: () => setState(() {
-                _textAlign = align;
+              onSelected: (v) => setState(() {
+                _textAlign = v;
                 _notifyChanged();
               }),
             );
@@ -795,14 +775,21 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
           spacing: 4,
           children: options.map((option) {
             final (mode, keySuffix, icon, tooltip) = option;
-            final selected = _writingModeOverride == mode;
-            return IconButton(
-              key: Key('reader_settings_writing_mode_$keySuffix'),
-              icon: Icon(icon),
-              visualDensity: VisualDensity.compact,
+            // 特殊處理：null 選項代表「採用書籍排版」，用 WritingMode? 的 null 值
+            // 但 ReaderOptionTile 需要具體值，這裡用 WritingMode.horizontal 作為
+            // 暫存值，實際值由 groupValue 決定
+            final effectiveValue = mode ?? WritingMode.horizontal;
+            final isNullSelected = _writingModeOverride == null;
+            return ReaderOptionTile<WritingMode>(
+              itemKey: Key('reader_settings_writing_mode_$keySuffix'),
+              value: effectiveValue,
+              groupValue: isNullSelected
+                  ? effectiveValue
+                  : (_writingModeOverride ?? WritingMode.horizontal),
+              icon: icon,
               tooltip: tooltip,
-              color: selected ? Theme.of(context).colorScheme.primary : null,
-              onPressed: () => setState(() {
+              visualDensity: VisualDensity.compact,
+              onSelected: (v) => setState(() {
                 _writingModeOverride = mode;
                 _notifyChanged();
               }),
@@ -830,14 +817,21 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
           spacing: 4,
           children: options.map((option) {
             final (mode, keySuffix, icon, tooltip) = option;
-            final selected = _pageTurnModeOverride == mode;
-            return IconButton(
-              key: Key('reader_settings_page_turn_mode_$keySuffix'),
-              icon: Icon(icon),
-              visualDensity: VisualDensity.compact,
+            // 特殊處理：null 選項代表「使用全域預設」，用 PageTurnMode? 的 null 值
+            // 但 ReaderOptionTile 需要具體值，這裡用 PageTurnMode.scroll 作為
+            // 暫存值，實際值由 groupValue 決定
+            final effectiveValue = mode ?? PageTurnMode.scroll;
+            final isNullSelected = _pageTurnModeOverride == null;
+            return ReaderOptionTile<PageTurnMode>(
+              itemKey: Key('reader_settings_page_turn_mode_$keySuffix'),
+              value: effectiveValue,
+              groupValue: isNullSelected
+                  ? effectiveValue
+                  : (_pageTurnModeOverride ?? PageTurnMode.scroll),
+              icon: icon,
               tooltip: tooltip,
-              color: selected ? Theme.of(context).colorScheme.primary : null,
-              onPressed: () => setState(() {
+              visualDensity: VisualDensity.compact,
+              onSelected: (v) => setState(() {
                 _pageTurnModeOverride = mode;
                 _notifyChanged();
               }),
@@ -876,17 +870,21 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
           spacing: 4,
           children: options.map((option) {
             final (setting, keySuffix, icon, tooltip, angle) = option;
-            final selected = _screenOrientationOverride == setting;
-            final iconWidget = Icon(icon);
-            return IconButton(
-              key: Key('reader_settings_screen_orientation_$keySuffix'),
-              icon: angle == 0.0
-                  ? iconWidget
-                  : Transform.rotate(angle: angle, child: iconWidget),
-              visualDensity: VisualDensity.compact,
+            // 特殊處理：null 選項代表「使用全域預設」，用 ScreenOrientationSetting? 的 null 值
+            // 但 ReaderOptionTile 需要具體值，這裡用 ScreenOrientationSetting.auto 作為
+            // 暫存值，實際值由 groupValue 決定
+            final effectiveValue = setting ?? ScreenOrientationSetting.auto;
+            final isNullSelected = _screenOrientationOverride == null;
+            return ReaderOptionTile<ScreenOrientationSetting>(
+              itemKey: Key('reader_settings_screen_orientation_$keySuffix'),
+              value: effectiveValue,
+              groupValue: isNullSelected
+                  ? effectiveValue
+                  : (_screenOrientationOverride ?? ScreenOrientationSetting.auto),
+              icon: icon,
               tooltip: tooltip,
-              color: selected ? Theme.of(context).colorScheme.primary : null,
-              onPressed: () => setState(() {
+              visualDensity: VisualDensity.compact,
+              onSelected: (v) => setState(() {
                 _screenOrientationOverride = setting;
                 _notifyChanged();
               }),

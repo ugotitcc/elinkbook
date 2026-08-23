@@ -3,12 +3,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/reader/book_reader_prefs.dart';
 import 'package:elinkbook/reader/column_mode.dart';
 import 'package:elinkbook/reader/custom_font.dart';
+import 'package:elinkbook/screens/widgets/reader_option_tile.dart';
 import 'package:elinkbook/reader/epub_text_align.dart';
 import 'package:elinkbook/reader/layout_preset.dart';
 import 'package:elinkbook/reader/page_turn_mode.dart';
 import 'package:elinkbook/reader/screen_orientation_setting.dart';
 import 'package:elinkbook/reader/writing_mode.dart';
 import 'package:elinkbook/screens/reader_settings_sheet.dart';
+import 'package:elinkbook/theme/app_theme_data.dart';
 
 void main() {
   testWidgets(
@@ -1325,40 +1327,61 @@ void main() {
   });
 
   testWidgets(
-      '「版面呈現」頁籤內圖示列的 IconButton 皆使用緊湊視覺密度以節省垂直空間'
-      '（epic-28-reader-settings-enhancements Issue 5，視覺密度調整）',
+      '「版面呈現」頁籤內圖示列的 ReaderOptionTile 皆使用緊湊視覺密度以節省垂直空間'
+      '（epic-27-reader-device-compat Issue 6 Task 3：IconButton 已重構為 ReaderOptionTile）',
       (tester) async {
     await _pumpSheet(tester, BookReaderPrefs.empty, _noopOnChanged);
     await switchToTab(tester, '版面呈現');
 
-    expect(
-      tester
-          .widget<IconButton>(
-              find.byKey(const Key('reader_settings_column_mode_auto')))
-          .visualDensity,
-      VisualDensity.compact,
+    // 【重要】find.byKey 回傳持有 key 的 Container（ReaderOptionTile 內部子元件）
+    // 改用 find.descendant 從版面呈現頁籤的 ListView 向下搜尋所有 ReaderOptionTile
+    final presentationList =
+        find.byKey(const Key('reader_settings_tab_presentation_list'));
+    final tiles = find.descendant(
+      of: presentationList,
+      matching: find.byType(ReaderOptionTile),
     );
-    expect(
-      tester
-          .widget<IconButton>(
-              find.byKey(const Key('reader_settings_writing_mode_book')))
-          .visualDensity,
-      VisualDensity.compact,
-    );
-    expect(
-      tester
-          .widget<IconButton>(find
-              .byKey(const Key('reader_settings_screen_orientation_auto')))
-          .visualDensity,
-      VisualDensity.compact,
-    );
-    expect(
-      tester
-          .widget<IconButton>(
-              find.byKey(const Key('reader_settings_page_turn_mode_scroll')))
-          .visualDensity,
-      VisualDensity.compact,
-    );
+    final tileWidgets = tester.widgetList<ReaderOptionTile>(tiles);
+    for (final tile in tileWidgets) {
+      expect(tile.visualDensity, VisualDensity.compact);
+    }
+  });
+
+  testWidgets('ReaderSettingsSheet 文字對齊與排版方向在 E-Ink 模式下具備高對比選中底色', (tester) async {
+    // 設定較大的 Viewport（與 _pumpSheet 一致），以防 ListView 元件超出
+    tester.view.physicalSize = const Size(800, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    await tester.pumpWidget(MaterialApp(
+      theme: buildEinkThemeData(),
+      home: Scaffold(
+        body: ReaderSettingsSheet(
+          bookId: 'test-book',
+          prefs: const BookReaderPrefs(textAlign: EpubTextAlign.justify),
+          onChanged: (_) {},
+          onSaveAsPreset: (_) {},
+          onApplyPreset: (_, {required targetBookIds}) {},
+          onApplyFromBook: (_, {required targetBookIds}) {},
+          onRequestBookPicker: ({required multiSelect}) async => null,
+          onDeletePreset: (_) {},
+        ),
+      ),
+    ));
+
+    // 切換到「邊界首尾」頁籤（文字對齊選項在此頁籤）
+    await switchToTab(tester, '邊界首尾');
+
+    // 【審查修正 Important】key 直接掛在帶 BoxDecoration 的 Container 上
+    // （見 Task 1 ReaderOptionTile 實作），不再用
+    // find.descendant(...).first 這種依賴子樹結構的脆弱寫法。
+    final justifyTile = find.byKey(const Key('reader_settings_text_align_justify'));
+    expect(justifyTile, findsOneWidget);
+    final container = tester.widget<Container>(justifyTile);
+    expect((container.decoration as BoxDecoration).color, Colors.black);
   });
 }
 
