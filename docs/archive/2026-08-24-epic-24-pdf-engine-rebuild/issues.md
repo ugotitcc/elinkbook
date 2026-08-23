@@ -316,7 +316,7 @@ PDF 頂部工具列（現行傳統 `AppBar`，含系統預設返回箭頭 + 版�
 
 ### Issue 11：PDF 新增「換頁動畫」選項（滑動／無）
 
-**Status:** ✅ 已完成實作並通過程式碼審查，可合併（分支 `epic-24/issue-11-page-turn-animation`，5 個 commit，對應 `plan-issue-11.md` Task 1-5；`reviews/review-issue-11.md`：0 Critical／0 Important，3 項 Minor 皆非合併阻礙——1 項為既有、與本次變更無因果關係的 flaky test，1 項為本狀態欄位更新本身，1 項為測試落地時必要的捲動調整。`flutter analyze` 乾淨，本次變更觸及的 6 個測試檔 333 則測試全數通過，全專案 1214 則測試零回歸）。
+**Status:** ✅ 已完成並合併回 `main`（PR [#145](https://git.jigong.org/huthief/elinkBook/pulls/145)，分支 `epic-24/issue-11-page-turn-animation`，5 個 commit，對應 `plan-issue-11.md` Task 1-5；`reviews/review-issue-11.md`：0 Critical／0 Important，3 項 Minor 皆非合併阻礙——1 項為既有、與本次變更無因果關係的 flaky test，1 項為本狀態欄位更新本身，1 項為測試落地時必要的捲動調整。`flutter analyze` 乾淨，本次變更觸及的 6 個測試檔 333 則測試全數通過，全專案 1214 則測試零回歸）。
 
 **背景**：使用者要求 PDF 版面設定新增一個選項：換頁動畫 (1) 滑動 (2) 無。
 
