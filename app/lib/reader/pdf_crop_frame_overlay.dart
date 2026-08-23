@@ -2,6 +2,51 @@ import 'package:flutter/material.dart';
 
 import 'pdf_crop_rect.dart';
 
+/// 四矩形色帶遮罩繪製器：以四個不重疊矩形（上/下/左/右）繪製外部半透明
+/// 暗色遮罩，並繪製雙層高對比邊框（外黑 3px ＋ 內白 1.5px）。
+///
+/// 【效能考量】原案採 `Path.combine(PathOperation.difference, ...)` 布林運算，
+/// 但裁切框拖曳互動下每個觸控影格都會重繪——四矩形運算量遠低於 Path 布林運算，
+/// 對 E-Ink／低效能裝置更友善（epic-27 Issue 7 Important #2）。
+class CropOverlayPainter extends CustomPainter {
+  final Rect cropRect;
+  final Size canvasSize;
+  CropOverlayPainter({required this.cropRect, required this.canvasSize});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // 外部半透明遮罩：上/下/左/右四個不重疊色帶
+    final maskPaint = Paint()..color = Colors.black.withValues(alpha: 0.5);
+    canvas.drawRect(
+        Rect.fromLTRB(0, 0, size.width, cropRect.top), maskPaint);
+    canvas.drawRect(
+        Rect.fromLTRB(0, cropRect.bottom, size.width, size.height), maskPaint);
+    canvas.drawRect(
+        Rect.fromLTRB(0, cropRect.top, cropRect.left, cropRect.bottom),
+        maskPaint);
+    canvas.drawRect(
+        Rect.fromLTRB(cropRect.right, cropRect.top, size.width, cropRect.bottom),
+        maskPaint);
+
+    // 雙層高對比邊框（外黑 3.0px，內白 1.5px）
+    final outerBorder = Paint()
+      ..color = Colors.black
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3.0;
+    final innerBorder = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+
+    canvas.drawRect(cropRect, outerBorder);
+    canvas.drawRect(cropRect, innerBorder);
+  }
+
+  @override
+  bool shouldRepaint(covariant CropOverlayPainter oldDelegate) =>
+      cropRect != oldDelegate.cropRect || canvasSize != oldDelegate.canvasSize;
+}
+
 /// 手動裁切框選 UI（epic-24-pdf-engine-rebuild Issue 3）：全螢幕疊加層，
 /// 顯示一個可拖曳右下角控制點縮放的矩形框，確認/取消由呼叫端
 /// （`ReaderScreen`）決定後續動作（本 widget 不直接持有 `PdfReaderView`
@@ -78,7 +123,19 @@ class _PdfCropFrameOverlayState extends State<PdfCropFrameOverlay> {
           movesLeft: movesLeft,
           movesTop: movesTop,
         ),
-        child: Container(width: 32, height: 32, color: Colors.white),
+        child: Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.white,
+            border: Border.all(color: Colors.black, width: 1.5),
+            boxShadow: const [
+              BoxShadow(
+                  color: Colors.black38, blurRadius: 4, offset: Offset(0, 1)),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -96,12 +153,11 @@ class _PdfCropFrameOverlayState extends State<PdfCropFrameOverlay> {
         );
         return Stack(
           children: [
-            Positioned.fromRect(
-              rect: frameRect,
-              child: Container(
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.white, width: 2),
-                ),
+            // 半透明遮罩＋雙層高對比邊框：鋪滿整個可用畫布，以絕對座標繪製
+            Positioned.fill(
+              child: CustomPaint(
+                painter: CropOverlayPainter(
+                    cropRect: frameRect, canvasSize: size),
               ),
             ),
             _buildHandle(
@@ -137,23 +193,44 @@ class _PdfCropFrameOverlayState extends State<PdfCropFrameOverlay> {
               movesTop: false,
             ),
             Positioned(
-              bottom: 24,
+              bottom: 32,
               left: 0,
               right: 0,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  IconButton(
-                    key: const Key('pdf_crop_frame_cancel'),
-                    icon: const Icon(Icons.close, color: Colors.white),
-                    onPressed: widget.onCancel,
+                  Material(
+                    elevation: 6,
+                    shape: const CircleBorder(
+                        side: BorderSide(color: Colors.white, width: 1.5)),
+                    color: const Color(0xFF2A2A2E),
+                    child: InkWell(
+                      key: const Key('pdf_crop_frame_cancel'),
+                      customBorder: const CircleBorder(),
+                      onTap: widget.onCancel,
+                      child: const Padding(
+                        padding: EdgeInsets.all(14),
+                        child: Icon(Icons.close, color: Colors.white, size: 28),
+                      ),
+                    ),
                   ),
-                  const SizedBox(width: 32),
-                  IconButton(
-                    key: const Key('pdf_crop_frame_confirm'),
-                    icon: const Icon(Icons.check, color: Colors.white),
-                    onPressed: () => widget.onConfirm(
-                      PdfCropRect(left: _left, top: _top, right: _right, bottom: _bottom),
+                  const SizedBox(width: 48),
+                  Material(
+                    elevation: 6,
+                    shape: const CircleBorder(
+                        side: BorderSide(color: Colors.white, width: 1.5)),
+                    color: const Color(0xFF16A34A),
+                    child: InkWell(
+                      key: const Key('pdf_crop_frame_confirm'),
+                      customBorder: const CircleBorder(),
+                      onTap: () => widget.onConfirm(
+                        PdfCropRect(
+                            left: _left, top: _top, right: _right, bottom: _bottom),
+                      ),
+                      child: const Padding(
+                        padding: EdgeInsets.all(14),
+                        child: Icon(Icons.check, color: Colors.white, size: 28),
+                      ),
                     ),
                   ),
                 ],
