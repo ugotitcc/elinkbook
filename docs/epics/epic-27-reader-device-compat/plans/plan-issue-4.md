@@ -40,7 +40,7 @@
 **Interfaces:**
 - Produces：`_handleSaveAsPreset()` 對外行為（透過 UI 觀察）——`widget.layoutPresetRepository == null` 時顯示 `Key('reader_save_as_preset_repository_unavailable_snackbar')` 的 `SnackBar`；方法本體任何一步拋出例外時顯示 `Key('reader_save_as_preset_error_snackbar')` 的 `SnackBar`。方法簽章 `Future<void> _handleSaveAsPreset(BookReaderPrefs currentDraft)` 不變。
 
-- [ ] **Step 1：寫失敗測試 1——`layoutPresetRepository` 為 `null` 時顯示提示**
+- [x] **Step 1：寫失敗測試 1——`layoutPresetRepository` 為 `null` 時顯示提示**
 
 修改 `app/test/screens/reader_screen_test.dart`，原本（`pumpReaderScreen` 定義，約 6677-6709 行）：
 
@@ -162,12 +162,12 @@
     });
 ```
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 執行：`cd app && flutter test test/screens/reader_screen_test.dart --plain-name "layoutPresetRepository 為 null 時顯示提示"`
 預期：`expect(find.byKey(const Key('reader_save_as_preset_repository_unavailable_snackbar')), findsOneWidget)` 斷言失敗（`findsNothing`，因為 `_handleSaveAsPreset()` 目前只是靜默 `return`，沒有顯示任何 `SnackBar`）。
 
-- [ ] **Step 3（階段一）：只實作 `repository == null` 分支的提示，暫不包 `try`/`catch`**
+- [x] **Step 3（階段一）：只實作 `repository == null` 分支的提示，暫不包 `try`/`catch`**
 
 〔`reviews/review-plan-issue-4.md` Important #1 修正〕若本步驟一併把 `try`/`catch` 也寫進去，Step 5 新增的例外測試在 Step 6 就不會是紅燈（例外會直接被還沒該出現的 `catch` 接住），TDD 的紅燈驗證會失效。本步驟因此**只**改 `repository == null` 分支，方法其餘部分（含成功路徑）原樣保留，`try`/`catch` 留到階段二（Step 7）才加。
 
@@ -267,12 +267,12 @@
   }
 ```
 
-- [ ] **Step 4：執行測試確認 Step 1 新增案例通過**
+- [x] **Step 4：執行測試確認 Step 1 新增案例通過**
 
 執行：`cd app && flutter test test/screens/reader_screen_test.dart --plain-name "layoutPresetRepository 為 null 時顯示提示"`
 預期：`All tests passed!`
 
-- [ ] **Step 5：寫失敗測試 2——方法本體拋出例外時顯示提示**
+- [x] **Step 5：寫失敗測試 2——方法本體拋出例外時顯示提示**
 
 修改 `app/test/screens/reader_screen_test.dart`，在 `void main() {`（第 68 行）之前新增：
 
@@ -334,12 +334,12 @@ class _ThrowingLayoutPresetRepository extends LayoutPresetRepository {
     });
 ```
 
-- [ ] **Step 6：執行測試確認失敗**
+- [x] **Step 6：執行測試確認失敗**
 
 執行：`cd app && flutter test test/screens/reader_screen_test.dart --plain-name "寫入過程拋出例外時顯示提示"`
 預期：測試失敗——`_ThrowingLayoutPresetRepository.insert()` 拋出的例外目前未被 `_handleSaveAsPreset()` 攔截，會在 `onSaveAsPreset` 的 `await _handleSaveAsPreset(draft)` 處成為未捕捉的非同步例外，於 `pumpAndSettle()`／`tester.takeException()` 處被測試框架偵測到並使測試失敗（實際錯誤訊息可能是測試逾時或例外堆疊輸出，非固定字串，但結果必為失敗，非 `findsOneWidget` 的斷言通過）。
 
-- [ ] **Step 7（階段二）：方法本體其餘部分包上 `try`/`catch`**
+- [x] **Step 7（階段二）：方法本體其餘部分包上 `try`/`catch`**
 
 修改 `app/lib/screens/reader_screen.dart`，原本（Step 3 階段一改完後的版本）：
 
@@ -463,22 +463,22 @@ class _ThrowingLayoutPresetRepository extends LayoutPresetRepository {
   }
 ```
 
-- [ ] **Step 8：執行測試確認 Step 5 新增案例通過**
+- [x] **Step 8：執行測試確認 Step 5 新增案例通過**
 
 執行：`cd app && flutter test test/screens/reader_screen_test.dart --plain-name "寫入過程拋出例外時顯示提示"`
 預期：`All tests passed!`
 
-- [ ] **Step 9：執行整個測試檔案，確認零回歸**
+- [x] **Step 9：執行整個測試檔案，確認零回歸**
 
 執行：`cd app && flutter test test/screens/reader_screen_test.dart`
 預期：全數通過，含「版面設定預設集（epic-28-reader-settings-enhancements Issue 3）」`group` 內既有 7 則測試（「另存為新預設集：命名對話框輸入名稱後...」「存滿 3 組後再次另存...」「套用預設集到目前書籍...」「套用預設集到其他書籍（多本）...」「刪除預設集：正確從 LayoutPresetRepository 移除」「刪除預設集：確認對話框取消時不刪除」「複製其他書籍設定到本書...」）與本 Task 新增 2 則測試皆通過，其餘檔案內既有測試不受影響。
 
-- [ ] **Step 10：執行完整分析與全專案測試，確認零回歸**
+- [x] **Step 10：執行完整分析與全專案測試，確認零回歸**
 
 執行：`cd app && flutter analyze && flutter test`
 預期：`flutter analyze` "No issues found!"；`flutter test` 全數通過，測試總數較目前 main 分支基準（epic-27 Issue 5-8 合併後，見 `issues.md` Issue 5 段落記載為 1647 項）多 2 項（Step 1、Step 5 新增的 2 則測試），無既有測試失敗或被跳過。
 
-- [ ] **Step 11：Commit**
+- [x] **Step 11：Commit**
 
 ```bash
 git add app/lib/screens/reader_screen.dart app/test/screens/reader_screen_test.dart
@@ -489,9 +489,10 @@ git commit -m "fix(epic-27): Issue 4——_handleSaveAsPreset() 補上 repositor
 
 ## 完成後的驗證（對照 `issues.md` Issue 4 驗收標準）
 
-- [ ] `flutter analyze`：全專案 "No issues found!"
-- [ ] `flutter test`：全專案通過，零回歸
-- [ ] `layoutPresetRepository == null` 時，點擊「另存為新預設集」顯示 `Key('reader_save_as_preset_repository_unavailable_snackbar')` 的 `SnackBar`（文字「暫時無法儲存預設集」），不再毫無反應。
-- [ ] `_handleSaveAsPreset()` 方法本體任一步拋出例外時，顯示 `Key('reader_save_as_preset_error_snackbar')` 的 `SnackBar`（含例外訊息），並透過 `debugPrint` 記錄完整例外與堆疊，不再被靜默吞掉。
-- [ ] 既有「另存為新預設集」成功路徑（命名輸入、存滿 3 組覆蓋選單、套用、刪除、複製）行為與斷言完全不變。
-- [ ]（建議，非本計畫強制自動化）若使用者於真機再次遇到本問題，應能看到明確的錯誤/提示訊息而非毫無反應——據此可判斷是 `repository == null`（需再往上追查建構時序，另立新工單）或其他例外原因（`debugPrint` 訊息可直接提供根因線索），屬於 `issues.md` Issue 4 驗收標準的真機驗證部分，非 `flutter test` 範圍。
+- [x] `flutter analyze`：全專案 "No issues found!"
+- [x] `flutter test`：全專案通過，零回歸
+- [x] `layoutPresetRepository == null` 時，點擊「另存為新預設集」顯示 `Key('reader_save_as_preset_repository_unavailable_snackbar')` 的 `SnackBar`（文字「暫時無法儲存預設集」），不再毫無反應。
+- [x] `_handleSaveAsPreset()` 方法本體任一步拋出例外時，顯示 `Key('reader_save_as_preset_error_snackbar')` 的 `SnackBar`（含例外訊息），並透過 `debugPrint` 記錄完整例外與堆疊，不再被靜默吞掉。
+- [x] 既有「另存為新預設集」成功路徑（命名輸入、存滿 3 組覆蓋選單、套用、刪除、複製）行為與斷言完全不變。
+- [x]（建議，非本計畫強制自動化）若使用者於真機再次遇到本問題，應能看到明確的錯誤/提示訊息而非毫無反應——據此可判斷是 `repository == null`（需再往上追查建構時序，另立新工單）或其他例外原因（`debugPrint` 訊息可直接提供根因線索），屬於 `issues.md` Issue 4 驗收標準的真機驗證部分，非 `flutter test` 範圍。
+
