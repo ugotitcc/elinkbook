@@ -905,6 +905,11 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   currentTheme: widget.themeDependencies.currentTheme,
                   isEinkMode: widget.themeDependencies.isEinkMode,
                   onThemeChanged: widget.themeDependencies.onThemeChanged,
+                  // 【審查修正 Critical：見 reviews/review-issue-5-8.md
+                  // 補件審查】原本漏傳這個參數，SettingsScreen 的 E-Ink
+                  // 開關雖然畫面上存在，但 onChanged 收到 null 會被 Flutter
+                  // 判定為停用（灰階、無法點擊），點了完全沒反應。
+                  onEinkModeChanged: widget.themeDependencies.onEinkModeChanged,
                   customFontsRepository: widget.readerFeatureRepositories.customFontsRepository,
                   syncAccountRepository: widget.syncDependencies.syncAccountRepository,
                   syncClient: widget.syncDependencies.syncClient,

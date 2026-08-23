@@ -98,6 +98,18 @@ void main() {
   });
 
   testWidgets('點擊「關於」導航至 AboutScreen，可返回 SettingsScreen', (tester) async {
+    // 【審查修正 Important：見補件審查】新增 E-Ink 開關（Issue 5 Task 1）
+    // 把畫面內容撐高，「關於」項目在預設 800x600 測試視窗下會被擠出可視
+    // 範圍，tap() 打不到——放大測試視窗，比照本檔案 ensureVisible() 對
+    // ListView 內 ListTile 無效時的既有替代慣例（見
+    // reader_settings_sheet_test.dart）。
+    tester.view.physicalSize = const Size(800, 1000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
     await tester.pumpWidget(MaterialApp(
       home: SettingsScreen(prefsManager: FakeReaderPrefsManager()),
     ));
@@ -268,5 +280,25 @@ void main() {
           .value,
       isTrue,
     );
+  });
+
+  testWidgets('SettingsScreen 顯示 E-Ink 模式開關，點擊切換觸發 onEinkModeChanged', (tester) async {
+    bool? receivedEink;
+    await tester.pumpWidget(MaterialApp(
+      home: SettingsScreen(
+        prefsManager: FakeReaderPrefsManager(),
+        currentTheme: AppTheme.light,
+        isEinkMode: false,
+        onEinkModeChanged: (val) => receivedEink = val,
+      ),
+    ));
+
+    expect(find.byKey(const Key('settings_eink_mode_switch')), findsOneWidget);
+    expect(find.text('E-Ink 高對比模式'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('settings_eink_mode_switch')));
+    await tester.pumpAndSettle();
+
+    expect(receivedEink, isTrue);
   });
 }

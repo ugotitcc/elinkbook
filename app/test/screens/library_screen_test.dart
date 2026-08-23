@@ -2840,6 +2840,38 @@ void main() {
     expect(settingsScreen.customFontsRepository, customFontsRepository);
   });
 
+  // 【審查修正 Critical：見 reviews/review-issue-5-8.md 補件審查】
+  // library_screen.dart 呼叫 SettingsScreen(...) 時原本漏傳
+  // onEinkModeChanged，導致設定頁的 E-Ink 開關雖然畫面上存在，
+  // onChanged 收到 null 會被 Flutter 判定為停用、點擊完全沒反應。
+  testWidgets('LibraryScreen 貫穿 onEinkModeChanged 至 SettingsScreen',
+      (tester) async {
+    bool? toggledValue;
+    await tester.pumpWidget(MaterialApp(
+      home: LibraryScreen(
+        repository: FakeLibraryRepository(initialBooks: const []),
+        importService: FakeBookImportService(),
+        prefsManager: prefsManager,
+        themeDependencies: LibraryThemeDependencies(
+          onEinkModeChanged: (val) => toggledValue = val,
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('library_settings_button')));
+    await tester.pumpAndSettle();
+
+    final settingsScreen =
+        tester.widget<SettingsScreen>(find.byType(SettingsScreen));
+    expect(settingsScreen.onEinkModeChanged, isNotNull);
+
+    await tester.tap(find.byKey(const Key('settings_eink_mode_switch')));
+    await tester.pumpAndSettle();
+
+    expect(toggledValue, isTrue);
+  });
+
   testWidgets(
       'LibraryScreen 點開一本書後，ReaderScreen 收到的 customFontsRepository 正確貫穿（自訂字型無法在單書閱讀字型選單出現的診斷回歸測試）',
       (tester) async {
