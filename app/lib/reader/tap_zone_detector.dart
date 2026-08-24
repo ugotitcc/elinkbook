@@ -44,12 +44,17 @@ import 'package:flutter/widgets.dart';
 /// 超過 [tapSlop]，即立刻將按壓狀態作廢（清除 `_downPosition` 與 `_downTimeMs`）。
 /// 避免長按選字或劃線手勢中途小幅拖曳後手指移回原點附近放開時，被 [onPointerUp]
 /// 誤判為一次快速點擊而誤觸翻頁。
+///
+/// [tapDebounceMs] 防彈跳（Epic 27 Issue 12）：同一熱區判定為合格點擊後，
+/// 記錄該次放開時間。若在 [tapDebounceMs] 毫秒內再次判定為合格點擊，
+/// 則直接忽略（吸收觸控面板硬體彈跳雜訊）。
 class TapZoneDetector extends StatefulWidget {
   final VoidCallback onTap;
   final Widget child;
   final int Function() nowMs;
   final int tapMaxDurationMs;
   final double tapSlop;
+  final int tapDebounceMs;
 
   const TapZoneDetector({
     super.key,
@@ -58,6 +63,7 @@ class TapZoneDetector extends StatefulWidget {
     required this.nowMs,
     required this.tapMaxDurationMs,
     required this.tapSlop,
+    required this.tapDebounceMs,
   });
 
   @override
@@ -67,6 +73,7 @@ class TapZoneDetector extends StatefulWidget {
 class _TapZoneDetectorState extends State<TapZoneDetector> {
   Offset? _downPosition;
   int? _downTimeMs;
+  int? _lastQualifyingTapUpTimeMs;
 
   @override
   Widget build(BuildContext context) {
@@ -92,11 +99,17 @@ class _TapZoneDetectorState extends State<TapZoneDetector> {
         final downPosition = _downPosition;
         final downTimeMs = _downTimeMs;
         if (downPosition == null || downTimeMs == null) return;
-        final elapsed = widget.nowMs() - downTimeMs;
+        final now = widget.nowMs();
+        final elapsed = now - downTimeMs;
         final distance = (event.position - downPosition).distance;
         if (elapsed <= widget.tapMaxDurationMs &&
             distance <= widget.tapSlop) {
-          widget.onTap();
+          final previousTapUpTimeMs = _lastQualifyingTapUpTimeMs;
+          _lastQualifyingTapUpTimeMs = now;
+          if (previousTapUpTimeMs == null ||
+              now - previousTapUpTimeMs >= widget.tapDebounceMs) {
+            widget.onTap();
+          }
         }
       },
       // 系統層級手勢中斷（例如滑出螢幕邊緣觸發 OS 系統手勢）會送出

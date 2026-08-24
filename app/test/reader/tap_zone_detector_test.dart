@@ -8,6 +8,7 @@ void main() {
     required int Function() nowMs,
     int tapMaxDurationMs = 400,
     double tapSlop = 18.0,
+    int tapDebounceMs = 350,
   }) {
     return MaterialApp(
       home: TapZoneDetector(
@@ -15,6 +16,7 @@ void main() {
         nowMs: nowMs,
         tapMaxDurationMs: tapMaxDurationMs,
         tapSlop: tapSlop,
+        tapDebounceMs: tapDebounceMs,
         child: const SizedBox(width: 100, height: 100),
       ),
     );
@@ -120,6 +122,98 @@ void main() {
             '這件事沒有被記住，放開時位置又落回容許範圍內會被誤判為一次快速點擊'
             '——這正是使用者真機回報「劃線時容易誤觸翻頁」的其中一種真實手勢形狀，'
             '本測試在加入 onPointerMove 熔斷前應為 FAIL（tapped 會是 true）');
+  });
+
+  testWidgets('短時間內同一格熱區收到第二次觸發時，只有第一次觸發 onTap（防彈跳機制）', (tester) async {
+    var tapCount = 0;
+    var fakeNowMs = 1000;
+    await tester.pumpWidget(wrap(
+      onTap: () => tapCount++,
+      nowMs: () => fakeNowMs,
+      tapDebounceMs: 350,
+    ));
+
+    // 第一次點擊：耗時 50ms 放開
+    final gesture1 = await tester.startGesture(const Offset(50, 50));
+    fakeNowMs += 50;
+    await gesture1.up();
+    await tester.pump();
+    expect(tapCount, 1);
+
+    // 第二次點擊（間隔 100ms < 350ms）：耗時 50ms 放開，應被防彈跳機制過濾
+    fakeNowMs += 100;
+    final gesture2 = await tester.startGesture(const Offset(50, 50));
+    fakeNowMs += 50;
+    await gesture2.up();
+    await tester.pump();
+    expect(tapCount, 1);
+  });
+
+  testWidgets(
+      '重現真機 adb getevent 側錄到的實際硬體彈跳間隔序列，連續 7 次快速觸發只會觸發 1 次 onTap',
+      (tester) async {
+    var tapCount = 0;
+    var fakeNowMs = 1000;
+    await tester.pumpWidget(wrap(
+      onTap: () => tapCount++,
+      nowMs: () => fakeNowMs,
+      tapDebounceMs: 350,
+    ));
+
+    // 真機 adb getevent 側錄到的 6 段「按下→按下」（DOWN to DOWN）事件
+    // 間隔（毫秒）：[86, 152, 261, 326, 87, 207]。
+    final bounceIntervalsMs = [86, 152, 261, 326, 87, 207];
+
+    // 第 1 次觸發
+    final firstGesture = await tester.startGesture(const Offset(50, 50));
+    fakeNowMs += 20;
+    await firstGesture.up();
+    await tester.pump();
+    expect(tapCount, 1);
+
+    // 後續 6 次硬體彈跳觸發（間隔皆小於 350ms）。迴圈內先扣掉本次模擬
+    // 按壓耗時（20ms）再推進，確保兩次 startGesture() 之間量到的
+    // DOWN-to-DOWN 間隔精確等於 interval 本身（而非 interval + 20）——
+    // 審查修正（review-issue-12.md Important）：先前版本漏了這一步，
+    // 導致重播出來的最大間隔是 346ms 而非真機實際側錄到的 326ms。
+    for (final interval in bounceIntervalsMs) {
+      fakeNowMs += interval - 20;
+      final bounceGesture = await tester.startGesture(const Offset(50, 50));
+      fakeNowMs += 20;
+      await bounceGesture.up();
+      await tester.pump();
+    }
+
+    expect(tapCount, 1,
+        reason: '連續的硬體彈跳訊號在 350ms 窗口內應全數被吸收，只保留第 1 次 onTap');
+  });
+
+  testWidgets('間隔超過防彈跳門檻（400ms > 350ms）後再次點擊，仍正常觸發第二次 onTap',
+      (tester) async {
+    var tapCount = 0;
+    var fakeNowMs = 1000;
+    await tester.pumpWidget(wrap(
+      onTap: () => tapCount++,
+      nowMs: () => fakeNowMs,
+      tapDebounceMs: 350,
+    ));
+
+    // 第一次點擊
+    final gesture1 = await tester.startGesture(const Offset(50, 50));
+    fakeNowMs += 50;
+    await gesture1.up();
+    await tester.pump();
+    expect(tapCount, 1);
+
+    // 間隔 400ms（超過 350ms 門檻）
+    fakeNowMs += 400;
+
+    // 第二次點擊
+    final gesture2 = await tester.startGesture(const Offset(50, 50));
+    fakeNowMs += 50;
+    await gesture2.up();
+    await tester.pump();
+    expect(tapCount, 2);
   });
 }
 

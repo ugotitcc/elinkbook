@@ -830,6 +830,8 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
                         nowMs: () => DateTime.now().millisecondsSinceEpoch,
                         tapMaxDurationMs: 700,
                         tapSlop: 18.0,
+                        // Epic 27 Issue 12 防彈跳門檻（吸收真機觸控硬體彈跳雜訊）
+                        tapDebounceMs: 350,
                         onTap: () {
                           // Epic 25 Issue 1：真機診斷（見
                           // docs/epics/epic-25-annotation-interaction-qa/issues.md
