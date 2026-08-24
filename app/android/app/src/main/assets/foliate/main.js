@@ -883,6 +883,19 @@ async function openBook() {
       }))
     }
     await view.open(book)
+    // epic-27-reader-device-compat Issue 9：停用 paginator.js（FXL 為
+    // foliate-fxl，兩者皆讀取同一個 view.renderer 參照）內建的滑動翻頁與
+    // 放開時的 snap() 翻頁判定（paginator.js:2186/2499/2558 皆讀取此
+    // 屬性）。已查證全專案目前從未設定過這個屬性，也沒有任何功能依賴滑動
+    // 翻頁——本產品的導覽模型只有 3×3 熱區與音量鍵（見 CLAUDE.md／
+    // prd.md）。不設定此屬性時，長按選字/拖曳劃線手勢會與 paginator.js
+    // 內建的滑動翻頁搶同一組觸控事件，選取確立前的最初幾個 touchmove
+    // 影格若被 main.js 自己的 longPressGate 攔截器放行，會被 paginator.js
+    // 記錄成滑動位移，放開手指時可能誤判翻頁（見
+    // docs/epics/epic-27-reader-device-compat/reviews/bugfix-repro.md
+    // Issue 9 根因 B）。`setAttribute` 對任何自訂元素皆安全（不像呼叫該
+    // 元素不存在的方法會拋例外），故不需要依 view.isFixedLayout 另外判斷。
+    view.renderer.setAttribute('no-swipe', '')
     view.renderer.setAttribute(
       'flow',
       initialPrefs.pageTurnMode === 'scroll' ? 'scrolled' : 'paginated',
