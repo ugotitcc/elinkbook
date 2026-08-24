@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:uuid/uuid.dart';
 
 import '../reader/annotation_list_item.dart';
+import '../reader/annotation_resolution.dart';
 import '../reader/book_format.dart';
 import '../reader/bookmark.dart';
 import '../reader/bookmark_position_context.dart';
@@ -1513,6 +1514,43 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     FoliateReaderView.clearSelection(_foliateEpubReaderViewKey);
   }
 
+  /// 刪除既有畫線/備註的共用邏輯（epic-27-reader-device-compat Issue 11，
+  /// 直接搬用舊 `_showAnnotationActionDialog` 的 delete 分支：note/
+  /// highlight 各自存在才各自刪除，單筆刪除＝整筆一起刪，spec.md 決策
+  /// #13）。EPUB／PDF 各自的 reload／關閉工具列方式不同，由呼叫端各自的
+  /// wrapper 負責。
+  Future<void> _deleteAnnotationRecords(AnnotationListItem item) async {
+    final note = item.note;
+    final highlight = item.highlight;
+    if (note != null) await widget.notesRepository!.delete(note.id);
+    if (highlight != null) await widget.highlightsRepository!.delete(highlight.id);
+  }
+
+  Future<void> _handleDeleteExistingAnnotation(AnnotationListItem item) async {
+    await _deleteAnnotationRecords(item);
+    await _reloadAnnotationsAndRefreshDecorations();
+    _handleCloseAnnotationToolbar();
+  }
+
+  Future<void> _handlePdfDeleteExistingAnnotation(AnnotationListItem item) async {
+    await _deleteAnnotationRecords(item);
+    await _reloadPdfAnnotationsAndSync();
+    _handlePdfSelectionCanceled();
+  }
+
+  Future<void> _handleCopySelection(String text) async {
+    await Clipboard.setData(ClipboardData(text: text));
+  }
+
+  /// 刪除按鈕的 tooltip 文字，依 [item] 實際含有的內容組合而定
+  /// （epic-27-reader-device-compat Issue 11）。
+  String _annotationDeleteButtonLabel(AnnotationListItem item) {
+    final hasHighlight = item.highlight != null;
+    final hasNote = item.note != null;
+    if (hasHighlight && hasNote) return '刪除畫線與備註';
+    if (hasHighlight) return '刪除畫線';
+    return '刪除備註';
+  }
 
   void _handlePdfSelectionRectComputed(PdfSelectionInfo info) {
     if (!mounted) return;
@@ -1550,16 +1588,29 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     final selection = _currentSelection;
     final repository = widget.notesRepository;
     if (selection == null || repository == null) return;
-    final text = await showNoteTextDialog(context, title: '新增備註');
+    final existing = resolveEpubExistingAnnotation(
+      existingAnnotationId: selection.existingAnnotationId,
+      highlights: _highlights,
+      notes: _notes,
+    )?.note;
+    final text = await showNoteTextDialog(
+      context,
+      initialText: existing?.text ?? '',
+      title: existing != null ? '編輯備註' : '新增備註',
+    );
     if (text == null) return;
-    await repository.insert(Note(
-      id: const Uuid().v4(),
-      bookId: widget.bookId,
-      text: text,
-      epubLocatorJson: selection.locatorJson,
-      progression: selection.progression,
-      highlightId: _pendingHighlightIdForSelection,
-    ));
+    if (existing != null) {
+      await repository.updateText(existing.id, text);
+    } else {
+      await repository.insert(Note(
+        id: const Uuid().v4(),
+        bookId: widget.bookId,
+        text: text,
+        epubLocatorJson: selection.locatorJson,
+        progression: selection.progression,
+        highlightId: _pendingHighlightIdForSelection,
+      ));
+    }
     await _reloadAnnotationsAndRefreshDecorations();
     if (!mounted) return;
     setState(() {
@@ -1719,17 +1770,29 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     final selection = _currentPdfSelection;
     final repository = widget.notesRepository;
     if (selection == null || repository == null) return;
-    final text = await showNoteTextDialog(context, title: '新增備註');
+    final existing = resolvePdfExistingAnnotation(
+      selection: selection,
+      highlights: _highlights,
+      notes: _notes,
+    )?.note;
+    final text = await showNoteTextDialog(
+      context,
+      initialText: existing?.text ?? '',
+      title: existing != null ? '編輯備註' : '新增備註',
+    );
     if (text == null) return;
-    final noteId = const Uuid().v4();
-    await repository.insert(Note(
-      id: noteId,
-      bookId: widget.bookId,
-      text: text,
-      pdfPageIndex: selection.pageIndex,
-      pdfRect: selection.rect,
-      highlightId: _pendingPdfHighlightIdForSelection,
-    ));
+    if (existing != null) {
+      await repository.updateText(existing.id, text);
+    } else {
+      await repository.insert(Note(
+        id: const Uuid().v4(),
+        bookId: widget.bookId,
+        text: text,
+        pdfPageIndex: selection.pageIndex,
+        pdfRect: selection.rect,
+        highlightId: _pendingPdfHighlightIdForSelection,
+      ));
+    }
     await _reloadPdfAnnotationsAndSync();
     if (!mounted) return;
     setState(() {
@@ -1995,17 +2058,17 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
 
   // 浮動工具列估計高度／與選取範圍的間距（初始選擇，真機測試後可能需
   // 微調，見 Global Constraints「選取矩形座標協定」）。
-  static const _annotationToolbarHeight = 56.0;
+  //
+  // 【epic-27-reader-device-compat Issue 11】改為雙列版面後的估計值：
+  // 第一列 5 顆 IconButton（3 色+底線+關閉）＝5*48=240，第二列最多 3 顆
+  // （複製/備註/刪除）＝3*48=144，寬度取兩列較大者 240，加上外層 Padding
+  // 左右各 8dp＝256；高度為兩列各 48dp 加上外層 Padding 上下各 4dp＝104。
+  // 這是估計值，不是嚴謹量測結果——若 widget test（例如既有的「工具列
+  // 右緣不應超出畫面寬度」測試）顯示與實際渲染尺寸有落差，以測試回報的
+  // 真實數值為準調整這兩個常數，不可保留錯誤估計值。
+  static const _annotationToolbarHeight = 104.0;
   static const _annotationToolbarGap = 8.0;
-  // AnnotationToolbar 實際渲染寬度（6 顆 IconButton，Material 3 預設每顆
-  // 48dp 寬 + Row 外層 Padding 左右各 8dp = 6*48+16 = 304；widget test
-  // 量測值，見 plan-issue-2.md Global Constraints，與既有
-  // _annotationToolbarHeight 同一量測手法得出）。選取範圍靠近螢幕右緣時，
-  // left 的 clamp 上界須扣除這個寬度，否則工具列本體會整個超出螢幕右側
-  // （issues.md Issue 2）。【issues.md Issue 3】新增第 6 顆關閉按鈕後，
-  // 實際渲染寬度從 256（5 顆）變為 304（6 顆），此常數需同步更新，否則
-  // Issue 2 的 clamp 修法會重新出現裁切（見 plan-issue-3.md Task 1）。
-  static const _annotationToolbarWidth = 304.0;
+  static const _annotationToolbarWidth = 256.0;
 
   /// 【審查修正】原本無條件把工具列定位在選取範圍上方、clamp 到
   /// `>= 0`，若選取範圍太靠近頂端（`topPct * height < 工具列高度`），
@@ -2042,6 +2105,23 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         final size = constraints.biggest;
         final selection = _currentSelection;
         final pdfSelection = _currentPdfSelection;
+        // epic-27-reader-device-compat Issue 11：每次 build 都重新計算，
+        // 不快取在 State 欄位——_highlights/_notes 可能在選取進行中被其他
+        // 途徑更動，重新計算才能保證資料是最新的。
+        final existingItem = selection == null
+            ? null
+            : resolveEpubExistingAnnotation(
+                existingAnnotationId: selection.existingAnnotationId,
+                highlights: _highlights,
+                notes: _notes,
+              );
+        final pdfExistingItem = pdfSelection == null
+            ? null
+            : resolvePdfExistingAnnotation(
+                selection: pdfSelection,
+                highlights: _highlights,
+                notes: _notes,
+              );
         return Stack(
           key: const Key('reader_body_stack'),
           children: [
@@ -2365,6 +2445,14 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                   onStyleSelected: _handleHighlightStyleSelected,
                   onNotePressed: _handleNotePressed,
                   onClosePressed: _handleCloseAnnotationToolbar,
+                  onCopyPressed: () => _handleCopySelection(selection.text),
+                  onDeletePressed: existingItem == null
+                      ? null
+                      : () => _handleDeleteExistingAnnotation(existingItem),
+                  deleteButtonLabel: existingItem == null
+                      ? null
+                      : _annotationDeleteButtonLabel(existingItem),
+                  hasExistingNote: existingItem?.note != null,
                 ),
               ),
             if (pdfSelection != null)
@@ -2378,6 +2466,14 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                   onStyleSelected: _handlePdfHighlightStyleSelected,
                   onNotePressed: _handlePdfNotePressed,
                   onClosePressed: _handlePdfSelectionCanceled,
+                  onCopyPressed: () => _handleCopySelection(pdfSelection.text),
+                  onDeletePressed: pdfExistingItem == null
+                      ? null
+                      : () => _handlePdfDeleteExistingAnnotation(pdfExistingItem),
+                  deleteButtonLabel: pdfExistingItem == null
+                      ? null
+                      : _annotationDeleteButtonLabel(pdfExistingItem),
+                  hasExistingNote: pdfExistingItem?.note != null,
                 ),
               ),
             if (_cropEditModeActive)
