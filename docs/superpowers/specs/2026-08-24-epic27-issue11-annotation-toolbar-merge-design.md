@@ -47,6 +47,8 @@ const existingAnnotationId = hitCfi ? (decorationIdByCfi.get(hitCfi) ?? null) : 
 
 搜尋結果的高亮（`SEARCH_PREFIX` 開頭的 cfi）不需要額外排除——它們不是透過 `setDecorations()` 建立的，`decorationIdByCfi` 裡查不到對應 key，`existingAnnotationId` 自然是 `null`。
 
+**已知限制（審查報告 Minor #1）：** `overlayer.hitTest()` 是反向遍歷內部 `#map`、只回傳第一個命中結果，不是回傳所有命中結果的清單。如果畫面上同時存在搜尋高亮（開著搜尋面板時）且它剛好疊在使用者畫線正上方、又比畫線晚加入 `#map`，`hitTest` 會先命中搜尋高亮、遮住底下真正的畫線，導致 `existingAnnotationId` 判斷成 `null`（沒命中），即使那個位置其實有畫線。要完整解決需要修改 vendored 的 `overlayer.js`（讓 `hitTest` 支援跳過搜尋結果、繼續往下找），違反 ADR 0011（不改 vendored 檔案內容），且觸發條件窄（必須同時符合「搜尋面板開著」+「搜尋高亮與畫線像素重疊」）。本次不處理，留作已知限制；使用者長按會拿到「一般選字工具列」（沒有刪除按鈕），行為上跟目前一致，不算功能倒退。
+
 **已知簡化，先寫明白：** 只用選取範圍第一個 client rect 的中點做 hit test，不逐行檢查整個選取範圍。多行選取、或選取起點剛好在畫線外緣的邊界情況，可能測不準。這個簡化對應「長按已畫線文字」這個主要場景（選取起點就在畫線範圍內）已經足夠，之後如果真機回報邊界誤判，再加強不遲（YAGNI）。
 
 `text`（選取文字）用 `selection.toString()`，同一次 `callHandler` 呼叫內一起送出。
@@ -141,7 +143,30 @@ controller.addJavaScriptHandler(
 
 ### `pdf_reader_view.dart` 框選結束流程
 
-框選手勢結束、原本呼叫 `widget.onSelectionRectComputed`（送出 `PdfSelectionInfo`）之前，新增一段文字萃取：
+**座標系換算（審查修正 Important #1）：** `pdfrx` 的 `PdfRect` 建構子是 `PdfRect(left, top, right, bottom)`，並帶 `assert(top >= bottom)`（PDF points 座標，左下角原點、Y 軸向上，見 `pdf_search_geometry.dart` 既有文件註解）；本專案的 `PercentRect` 是左上角原點、Y 軸向下（`top <= bottom`）。兩者 Y 軸方向相反，不能直接把 `PercentRect` 的 `top`/`bottom` 乘上 `pageHeight` 後原樣塞進 `PdfRect`——那樣會讓 `top < bottom`，直接觸發上述 assert（debug 模式會拋例外，不是安靜地算錯）。
+
+需要在 `pdf_search_geometry.dart` 新增 `pdfRectToPercentRect` 的反向轉換 helper（與既有函式放在同一檔案，維持「PDF 座標轉換集中一處」的既有慣例）：
+
+```dart
+/// [pdfRectToPercentRect] 的反向轉換，供 Issue 11「框選矩形換算回 PDF
+/// points 座標以查詢 charRects」使用。公式為 pdfRectToPercentRect 的代數
+/// 逆推：percentRect.top = 1.0 - pdfRect.top/pageHeight，故
+/// pdfRect.top = (1.0 - percentRect.top) * pageHeight，bottom 同理。
+PdfRect percentRectToPdfRect({
+  required PercentRect rect,
+  required double pageWidth,
+  required double pageHeight,
+}) {
+  return PdfRect(
+    rect.left * pageWidth,
+    (1.0 - rect.top) * pageHeight,    // PdfRect.top（較大值）
+    rect.right * pageWidth,
+    (1.0 - rect.bottom) * pageHeight, // PdfRect.bottom（較小值）
+  );
+}
+```
+
+框選手勢結束時（`_finishSelectionDrag()`，`pdf_reader_view.dart:1146`，目前整個方法是**同步**的），原本呼叫 `widget.onSelectionRectComputed`（送出 `PdfSelectionInfo`）之前，新增一段文字萃取：
 
 ```dart
 Future<String> _extractTextInRect(int pageIndex, PercentRect rect) async {
@@ -150,11 +175,10 @@ Future<String> _extractTextInRect(int pageIndex, PercentRect rect) async {
   if (pageIndex < 0 || pageIndex >= document.pages.length) return '';
   final page = document.pages[pageIndex];
   final pageText = await page.loadStructuredText();
-  final targetRect = PdfRect(
-    rect.left * page.width,
-    rect.top * page.height,
-    rect.right * page.width,
-    rect.bottom * page.height,
+  final targetRect = percentRectToPdfRect(
+    rect: rect,
+    pageWidth: page.width,
+    pageHeight: page.height,
   );
   final buffer = StringBuffer();
   for (var i = 0; i < pageText.charRects.length; i++) {
@@ -166,7 +190,11 @@ Future<String> _extractTextInRect(int pageIndex, PercentRect rect) async {
 }
 ```
 
-（`_rectsOverlap` 為新增的簡單矩形重疊判斷函式；`PdfRect` 座標系是否為左上原點需要在實作時對照既有 `pdf_search_geometry.dart` 的既有換算慣例確認方向一致，不可憑空假設。）
+（`_rectsOverlap` 為新增的簡單矩形重疊判斷函式，比較兩個 `PdfRect`。）
+
+**非同步競速防護（審查修正 Important #2）：** `_finishSelectionDrag()` 目前是同步方法，一進來就同步呼叫 `setState(() => _selectionDrag = null)`。改成需要 `await page.loadStructuredText()`（大檔案/慢裝置可能耗時）之後，中間這段空隙使用者可能離開畫面、或放開後立刻開始下一次框選——若不防護，過期的萃取結果回來時會呼叫 `widget.onSelectionRectComputed`，用舊資料覆蓋掉使用者新一次框選已經產生的狀態。
+
+比照本檔案既有的 `_searchSessionId`（`_search()` 方法，見上方）世代編號慣例，新增一個 `_selectionDragGenerationId`（`int`，初始 0）欄位：`_finishSelectionDrag()` 一開始同步遞增並記錄局部變數 `final generationId = ++_selectionDragGenerationId;`；`await _extractTextInRect(...)` 回來後，先檢查 `if (!mounted || generationId != _selectionDragGenerationId) return;`，通過才呼叫 `widget.onSelectionRectComputed`。任何會開始新框選手勢的地方（拖曳起點建立 `_selectionDrag = _PdfSelectionDragState(...)` 處，`pdf_reader_view.dart:1127`）也要遞增這個計數器，讓「使用者放開後立刻開始下一次框選」這個情境也能讓上一次的過期結果被正確擋下。
 
 `existingAnnotationId` 的命中判斷不需要動到 `pdf_reader_view.dart`——`Highlight`/`Note` 清單本來就只存在 `reader_screen.dart`，重疊比對直接在 `reader_screen.dart` 收到 `PdfSelectionInfo` 之後算即可（見下方）。
 
@@ -300,7 +328,7 @@ AnnotationToolbar(
 
 （`existingItem` 為 build 方法內先算好的 `_resolveExistingAnnotation(selection.existingAnnotationId)`；`_deleteButtonLabel` 為新增的小 helper，依 `highlight`/`note` 是否同時存在回傳對應文字。）
 
-`_annotationToolbarHeight`（`reader_screen.dart:1998`）常數需要調整為雙列高度（原本 56.0 為單列估計值，雙列需要重新量測，實作時以實際 widget render 尺寸為準，不可憑空套用兩倍）。
+`_annotationToolbarHeight`（`reader_screen.dart:1998`）常數需要調整為雙列高度（原本 56.0 為單列估計值，雙列需要重新量測，實作時以實際 widget render 尺寸為準，不可憑空套用兩倍；概估含 padding 後兩列合計約落在 96-112dp 區間，僅供實作時抓量測範圍參考，實際數值仍須以 widget test 量出的 render 尺寸為準）。
 
 ## 舊機制移除清單
 
@@ -325,9 +353,12 @@ AnnotationToolbar(
   - 移除 `_showAnnotationActionDialog`／`_handleAnnotationActivated` 相關的既有測試（若有）並確認沒有殘留引用。
 - `foliate_reader_view_test.dart`：靜態回歸測試，斷言 `main.js` 的 `reportSelection` 內含 `overlayer.hitTest`／`decorationIdByCfi.get` 呼叫，且 `callHandler('onSelectionChanged', ...)` 參數數量增加為 8 個；`show-annotation` 監聽器已移除。
 - `pdf_reader_view_test.dart`：文字萃取函式用已知 `charRects` 座標的假資料驗證抓到的文字正確；命中/未命中既有畫線的矩形重疊測試用已知座標驗證。
+- `pdf_search_geometry_test.dart`（既有測試檔，擴充）：新增 `percentRectToPdfRect` 與既有 `pdfRectToPercentRect` 互為反函式的斷言（`percentRectToPdfRect(pdfRectToPercentRect(r))` 近似等於 `r`，浮點數用近似比較），並斷言換算結果一律滿足 `PdfRect` 的 `top >= bottom`（不觸發 assert）。
+- `pdf_reader_view_test.dart`：新增競速回歸測試——框選完成、文字萃取尚未 `await` 完成前就觸發下一次框選（或模擬 widget unmount），斷言只有最後一次框選的結果會呼叫 `onSelectionRectComputed`，過期結果被正確擋下。
 - 全部既有 `flutter test`／`flutter analyze` 需維持零回歸。
 
 ## 風險與限制
 
 - EPUB 端的 hit test 只測選取範圍第一個 client rect 的中點（見上方「已知簡化」），多行選取的邊界情況未涵蓋，不在本次範圍內處理。
+- EPUB 端搜尋高亮若剛好疊在畫線正上方且較晚加入，會讓 `hitTest` 命中搜尋高亮而非底下的畫線，導致該次長按判斷為「沒有既有標記」（見上方「已知限制」段落）；修正需要改動 vendored 檔案，違反 ADR 0011，本次不處理。
 - 本次改動不涉及真機專屬的時間門檻調校（不像 Issue 9/10/12），理論上可以純靠 widget test 驗證完整，但畫線/備註互動屬於使用者體感高敏感區塊，仍建議合併後請使用者在真機（WAVE／AiPaper Reader C 任一台）做一次手感驗證，確認長按已畫線文字能穩定跳出刪除按鈕。
