@@ -674,6 +674,7 @@ async function openBook() {
       const reportSelection = async () => {
         const selection = doc.getSelection()
         if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
+          lastNonCollapsedSelectionAtMs = null
           window.flutter_inappwebview.callHandler('onSelectionCleared')
           return
         }
