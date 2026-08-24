@@ -211,7 +211,7 @@
 
 ## Issue 9：流式 EPUB 長按選字／劃線時容易誤觸翻頁，右側／上側邊緣最明顯
 
-**Status:** `ready-for-agent`——根因已透過 `/diagnose` 查證並有原始碼交叉核對證據，可交付實作；因涉及手勢時序調校（`tapMaxDurationMs` 等數值），比照 `epic-25` Issue 1 先例，最終數值需真機驗證。
+**Status:** ✅ 已完成並合併回 `main`（PR [#181](https://git.jigong.org/huthief/elinkBook/pulls/181)，分支 `feat/epic-27-issue-9`，4 個 commit：`main.js` 開啟 `no-swipe`＋`TapZoneDetector` 新增 `onPointerMove` 熔斷＋計畫勾選收尾＋審查 Minor 補上 `no-swipe` 回歸測試）。獨立程式碼審查（`reviews/review-issue-9.md`）結論可以合併——0 Critical／0 Important／2 Minor（其中 1 項已當場處理：`main.js` 的 `no-swipe` 設定原本缺乏自動化回歸防呆，已於 `foliate_reader_view_test.dart` 補上靜態內容比對測試，並用「暫時刪除該行→重跑確認真的 FAIL→還原」的方式實測驗證測試真的抓得到迴歸；另 1 項為人工真機驗證步驟天生缺乏可稽核產出物的既有限制，非本次疏漏）。Solution 第 1、2 項（`no-swipe`＋`onPointerMove` 熔斷）為本次實際採用的最小可行修復範圍；第 3-5 項（`tapMaxDurationMs` 收斂等時序數值調校）留待後續真機回饋另立工單，未包含在本次範圍。全專案 `flutter analyze` 乾淨、`flutter test`（1651 項）零回歸通過，皆於獨立 worktree 實測。
 
 **依賴：** 無
 
@@ -292,7 +292,7 @@
 
 ## Issue 12：觸控硬體「彈跳」訊號導致連續失控自動翻頁，伴隨畫面殘影
 
-**Status:** `ready-for-agent`——根因已用硬體層級證據（`adb shell getevent` 直接側錄觸控 IC 原始訊號）確定為觸控硬體本身的既知現象，非本 App 軟體錯誤；若要處理，做法是新增防禦性的節流/防彈跳機制，規格已足夠清楚可交付實作，非必要（見下方 Solution 說明）。
+**Status:** ✅ 已完成並合併回 `main`（PR [#182](https://git.jigong.org/huthief/elinkBook/pulls/182)，分支 `feat/epic-27-issue-12`，3 個 commit：實作＋計畫勾選收尾＋審查 Important 修正）。獨立程式碼審查（`reviews/review-issue-12.md`）結論可以合併——0 Critical／1 Important／3 Minor（皆非阻塞，1 項 Important 已當場處理）：`TapZoneDetector` 新增 `tapDebounceMs`（採用值 350ms，取自真機側錄資料的最大觀測間隔 326ms 留餘裕，比照既有慣例仍需真機使用後再校準），放在同一格熱區的「合格點擊」判定內以滾動冷卻窗機制吸收硬體彈跳訊號，逐行追蹤確認正確、範圍界定精準（不影響音量鍵翻頁與 PDF 拖曳選取）。發現的 Important 問題是「重現真機側錄間隔」回歸測試的時間推算未套用計畫核准的精確度修正（實際重播間隔比真機側錄值多出約 20ms 持壓時間，仍小於 350ms 門檻、不影響測試有效性），已於 `9c15ec3` 修正對齊。全專案 `flutter analyze` 乾淨、`flutter test`（1654 項）零回歸通過，皆於獨立 worktree 實測。
 
 **依賴：** 無
 
