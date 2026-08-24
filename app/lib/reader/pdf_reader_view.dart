@@ -984,6 +984,8 @@ class _PdfReaderViewState extends State<PdfReaderView> {
                         nowMs: () => clock.now().millisecondsSinceEpoch,
                         tapMaxDurationMs: 400,
                         tapSlop: 18.0,
+                        // Epic 27 Issue 12 防彈跳門檻（吸收真機觸控硬體彈跳雜訊）
+                        tapDebounceMs: 350,
                         onTap: () => widget.onZoneAction?.call(action),
                         child: Container(
                           decoration: widget.showNavZoneDebugOverlay
