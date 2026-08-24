@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
@@ -1179,6 +1180,45 @@ void main() {
 
     test('never + portrait → false', () {
       expect(isDualPageEnabled('never', false), isFalse);
+    });
+  });
+
+  // Epic 27 Issue 9 審查 Minor #1：main.js 的 no-swipe 屬性設定原本完全
+  // 沒有自動化回歸防呆。審查建議比照 check_foliate_es_compat.js 寫一支
+  // Node 靜態掃描腳本，但該腳本的既有觸發時機是「升級 foliate/ 釘定版本
+  // 後才跑」（見 app/tool/README.md）——對「有人在不相關的 openBook()
+  // 重構中不小心刪掉/搬動這一行」這個真正的風險情境完全不會被觸發到。
+  // 改用 flutter test 直接讀取 main.js 原始碼字串斷言：本專案沒有接
+  // CI（見 app/tool/README.md），flutter test 是唯一在每個 Issue 驗收
+  // 標準都明文要求執行的既有關卡，比獨立 Node 腳本更可能被實際跑到。
+  group('main.js no-swipe 屬性 regression guard（Epic 27 Issue 9）', () {
+    late String mainJsSource;
+
+    setUpAll(() {
+      mainJsSource = File('android/app/src/main/assets/foliate/main.js')
+          .readAsStringSync();
+    });
+
+    test('openBook() 內設定 no-swipe 屬性，且位置晚於 await view.open(book)',
+        () {
+      const openCall = 'await view.open(book)';
+      const noSwipeCall = "view.renderer.setAttribute('no-swipe', '')";
+
+      final openIndex = mainJsSource.indexOf(openCall);
+      final noSwipeIndex = mainJsSource.indexOf(noSwipeCall);
+
+      expect(openIndex, greaterThanOrEqualTo(0),
+          reason: 'main.js 內找不到 "$openCall"——若上游改了寫法，'
+              '下面的順序斷言也需要一併更新。');
+      expect(noSwipeIndex, greaterThanOrEqualTo(0),
+          reason: 'main.js 內找不到 "$noSwipeCall"——這一行負責停用 '
+              'paginator.js 內建滑動翻頁（見 '
+              'docs/epics/epic-27-reader-device-compat/reviews/'
+              'bugfix-repro.md「Issue 9」根因 B），若被刪掉，長按選字/'
+              '拖曳劃線手勢會重新容易誤觸翻頁。');
+      expect(noSwipeIndex, greaterThan(openIndex),
+          reason: '"$noSwipeCall" 必須晚於 "$openCall"——view.renderer 是 '
+              'view.open() 內部同步賦值，寫在它之前會存取到 null。');
     });
   });
 

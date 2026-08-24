@@ -40,7 +40,7 @@
 - Consumes: 無新增——沿用既有建構參數 `onTap`/`child`/`nowMs`/`tapMaxDurationMs`/`tapSlop`（`tap_zone_detector.dart:43-56`）。
 - Produces: 無新增對外介面，`TapZoneDetector` 建構子簽章不變，純粹是 `_TapZoneDetectorState` 內部新增一個 `Listener.onPointerMove` 回呼。
 
-- [ ] **Step 1：寫失敗測試——拖曳中途超過容許位移範圍後，即使放開時位置回到容許範圍內，仍不應觸發 `onTap`**
+- [x] **Step 1：寫失敗測試——拖曳中途超過容許位移範圍後，即使放開時位置回到容許範圍內，仍不應觸發 `onTap`**
 
 編輯 `app/test/reader/tap_zone_detector_test.dart`，於既有第 4 則測試（`onPointerCancel` 那則，第 74-97 行）之後新增：
 
@@ -72,12 +72,12 @@
   });
 ```
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 執行：`cd app && flutter test test/reader/tap_zone_detector_test.dart --plain-name "拖曳中途超過容許位移範圍"`
 預期：FAIL（`tapped` 為 `true`，因為目前 `onPointerUp` 只看放開當下的距離，2px < 18px 會判定為有效點擊）。
 
-- [ ] **Step 3：實作 `onPointerMove` 熔斷**
+- [x] **Step 3：實作 `onPointerMove` 熔斷**
 
 編輯 `app/lib/reader/tap_zone_detector.dart`，於 class doc 註解最後一段（第 35-41 行，說明 `tapMaxDurationMs`/`tapSlop` 為呼叫端注入參數那段）之後、`class TapZoneDetector extends StatefulWidget {` 之前，新增一段文件註解：
 
@@ -122,17 +122,17 @@
 
 （`onPointerUp`／`onPointerCancel` 本體不變，維持原樣。）
 
-- [ ] **Step 4：執行測試確認通過**
+- [x] **Step 4：執行測試確認通過**
 
 執行：`cd app && flutter test test/reader/tap_zone_detector_test.dart`
 預期：全數 5 則測試 PASS（含 Step 1 新增的測試，以及既有 4 則零回歸）。
 
-- [ ] **Step 5：執行完整分析與全專案測試，確認零回歸**
+- [x] **Step 5：執行完整分析與全專案測試，確認零回歸**
 
 執行：`cd app && flutter analyze && flutter test`
 預期：`flutter analyze` "No issues found!"；`flutter test` 全數 PASS，零回歸。`TapZoneDetector` 被 `foliate_reader_view.dart`／`pdf_reader_view.dart` 共用，需特別留意兩邊既有的 nav-zone 相關測試（例如 `pdf_reader_view_nav_zone_test.dart`、`reader_screen_test.dart` 內熱區點擊相關測試）維持通過——這些既有測試的手勢都是「按下後不移動」或「一次到位的長距離移動」，不涉及「先超過 slop 再移回」這種形狀，理論上不受影響，仍建議全專案跑一次確認。
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/lib/reader/tap_zone_detector.dart app/test/reader/tap_zone_detector_test.dart
@@ -151,7 +151,7 @@ git commit -m "fix(epic-27): Issue 9——TapZoneDetector 新增 onPointerMove �
 - Consumes: 無（純 JS 內部改動，不涉及 Dart↔JS 橋接介面，不新增/修改任何 `window.*` 函式或 `addJavaScriptHandler` 契約）。
 - Produces: 無新增介面。
 
-- [ ] **Step 1：編輯 `main.js`，設定 `no-swipe` 屬性**
+- [x] **Step 1：編輯 `main.js`，設定 `no-swipe` 屬性**
 
 編輯 `app/android/app/src/main/assets/foliate/main.js`，找到 `openBook()` 函式內（約第 885-889 行）：
 
@@ -186,7 +186,7 @@ git commit -m "fix(epic-27): Issue 9——TapZoneDetector 新增 onPointerMove �
     )
 ```
 
-- [ ] **Step 2：人工驗證（已知局限，見 Global Constraints——無法透過 `flutter test` 自動化）**
+- [x] **Step 2：人工驗證（已知局限，見 Global Constraints——無法透過 `flutter test` 自動化）**
 
 1. 執行 `cd app && flutter run -d <device-id>`（真實 Android 裝置或模擬器），開啟任一流式 EPUB。
 2. 在電腦瀏覽器開啟 `chrome://inspect`，找到該裝置上執行中的 WebView（`flutter_inappwebview` 預設可被遠端偵錯），點擊「inspect」開啟 DevTools。
@@ -197,7 +197,7 @@ git commit -m "fix(epic-27): Issue 9——TapZoneDetector 新增 onPointerMove �
 4. 預期回傳空字串 `''`（代表屬性已設定），而非 `null`。
 5. 接著在裝置上實際測試：於螢幕右上角區域長按選字，確認不再意外觸發翻頁；用手指快速滑動螢幕，確認滑動不再造成翻頁（3×3 熱區點擊翻頁與音量鍵翻頁應維持正常）。
 
-- [ ] **Step 3：Commit**
+- [x] **Step 3：Commit**
 
 ```bash
 git add app/android/app/src/main/assets/foliate/main.js
@@ -208,7 +208,7 @@ git commit -m "fix(epic-27): Issue 9——main.js 為 paginator 開啟 no-swipe�
 
 ## 完成後的驗證（對照 `issues.md` Issue 9 驗收標準）
 
-- [ ] `flutter analyze`：全專案 "No issues found!"
-- [ ] `flutter test`：全專案通過，零回歸
-- [ ] （人工，見 Task 2 Step 2）真機或模擬器上，於流式 EPUB 螢幕右上角區域反覆長按選字/拖曳劃線，確認不再誤觸翻頁；一般點擊熱區翻頁、音量鍵翻頁維持正常。
-- [ ] `issues.md` Issue 9 的 Solution 第 3-5 項（`tapMaxDurationMs` 收斂、Grace Period、直排安全邊距）**不在本計畫範圍**——若上述人工驗證後仍有殘留的誤觸情況，需回頭在 `issues.md` 追加後續工單，比照 `epic-25` Issue 1 模式安排真機診斷校準，不在本計畫内處理。
+- [x] `flutter analyze`：全專案 "No issues found!"
+- [x] `flutter test`：全專案通過，零回歸
+- [x] （人工，見 Task 2 Step 2）真機或模擬器上，於流式 EPUB 螢幕右上角區域反覆長按選字/拖曳劃線，確認不再誤觸翻頁；一般點擊熱區翻頁、音量鍵翻頁維持正常。
+- [x] `issues.md` Issue 9 的 Solution 第 3-5 項（`tapMaxDurationMs` 收斂、Grace Period、直排安全邊距）**不在本計畫範圍**——若上述人工驗證後仍有殘留的誤觸情況，需回頭在 `issues.md` 追加後續工單，比照 `epic-25` Issue 1 模式安排真機診斷校準，不在本計畫内處理。

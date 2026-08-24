@@ -95,4 +95,31 @@ void main() {
 
     expect(tapped, isTrue);
   });
+
+  testWidgets(
+      '拖曳中途超過容許位移範圍後，即使放開時位置回到容許範圍內，仍不觸發 onTap（epic-27-reader-device-compat Issue 9：模擬選字/劃線手勢中途小幅拖曳後手指移回原點附近才放開）',
+      (tester) async {
+    var tapped = false;
+    var fakeNowMs = 1000;
+    await tester.pumpWidget(wrap(
+      onTap: () => tapped = true,
+      nowMs: () => fakeNowMs,
+      tapSlop: 18.0,
+    ));
+
+    final gesture = await tester.startGesture(const Offset(50, 50));
+    fakeNowMs += 50;
+    await gesture.moveTo(const Offset(50, 90)); // 位移 40px > 18px，途中已超過容許範圍
+    fakeNowMs += 50;
+    await gesture.moveTo(const Offset(50, 52)); // 放開前移回幾乎原點，此刻與按下點僅距 2px < 18px
+    await gesture.up();
+    await tester.pump();
+
+    expect(tapped, isFalse,
+        reason: '目前實作只在 onPointerUp 那一瞬間比較距離，中途曾超過 tapSlop '
+            '這件事沒有被記住，放開時位置又落回容許範圍內會被誤判為一次快速點擊'
+            '——這正是使用者真機回報「劃線時容易誤觸翻頁」的其中一種真實手勢形狀，'
+            '本測試在加入 onPointerMove 熔斷前應為 FAIL（tapped 會是 true）');
+  });
 }
+
