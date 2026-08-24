@@ -29,3 +29,21 @@ PercentRect pdfRectToPercentRect({
     bottom: (1.0 - (rect.bottom / pageHeight)).clamp(0.0, 1.0),
   );
 }
+
+/// [pdfRectToPercentRect] 的反向轉換，供 Issue 11「PDF 框選矩形換算回
+/// PDF points 座標以查詢 charRects」使用。公式為代數逆推：
+/// percentRect.top = 1.0 - pdfRect.top/pageHeight，故
+/// pdfRect.top = (1.0 - percentRect.top) * pageHeight，bottom 同理。
+PdfRect percentRectToPdfRect({
+  required PercentRect rect,
+  required double pageWidth,
+  required double pageHeight,
+}) {
+  return PdfRect(
+    rect.left * pageWidth,
+    (1.0 - rect.top) * pageHeight,
+    rect.right * pageWidth,
+    (1.0 - rect.bottom) * pageHeight,
+  );
+}
+
