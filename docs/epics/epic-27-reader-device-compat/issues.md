@@ -207,3 +207,36 @@
 
 **驗收標準：** `flutter analyze` 乾淨、`flutter test` 全數通過、零回歸。
 
+---
+
+## Issue 9：流式 EPUB 長按選字／劃線時容易誤觸翻頁，右側／上側邊緣最明顯
+
+**Status:** `ready-for-agent`——根因已透過 `/diagnose` 查證並有原始碼交叉核對證據，可交付實作；因涉及手勢時序調校（`tapMaxDurationMs` 等數值），比照 `epic-25` Issue 1 先例，最終數值需真機驗證。
+
+**依賴：** 無
+
+**來源：** 使用者於對話中口頭回報「目前在流式 EPUB 畫線，仍容易觸發上下頁跳動，尤其右側越靠近右邊測，或上邊測越容易觸發」，2026-08-24 `/diagnose` 查證。使用者另提供研究文件 `tmp/research/epub_highlight_page_jump_analysis_and_solutions.md`；本工單根因已將該文件假設逐條與原始碼交叉核對，完整診斷（含未獨立驗證部分的信心度註記）見 `reviews/bugfix-repro.md`「Issue 9」。
+
+**背景／症狀：** 流式 EPUB（`FoliateReaderView`，涵蓋 EPUB／KF8／TXT／MD）長按選字或拖曳劃線時，經常在放開手指的瞬間意外觸發上一頁／下一頁翻頁；越靠近螢幕右側邊緣、越靠近螢幕頂部邊緣，觸發頻率越高。
+
+**根因（已用原始碼交叉核對確認，兩個獨立根因疊加，見 `reviews/bugfix-repro.md` Issue 9 段落）：**
+
+1. **主因（可解釋位置相關性）**：`tap_zone_detector.dart:74-84` 的 `TapZoneDetector.onPointerUp` 是放開手指當下同步判斷，`foliate_reader_view.dart:826-847` 的 `_hasActiveSelection` 防呆卻只在 `main.js:661-683` 那條「JS 事件迴圈→額外 await→跨 WebView 進程橋接」的多重非同步鏈路跑完才會變 `true`。雙擊選字這類快、位移小的手勢，放開手指當下 `_hasActiveSelection` 十之八九還沒更新，防呆來不及攔。預設熱區模板 `rightFlipZoneTemplate`（`nav_zone_mode.dart:18-22`）每列只有中間欄是無害的「選單」，左右兩欄都是真的翻頁；直排中文「從右到左、從上到下」的閱讀順序，讓使用者選字的落點天然集中在右上角、也就是天然集中在真的會翻頁的格子裡。
+2. **次因（與位置無直接關聯，但會加重跳動感）**：`paginator.js:2191-2195`（vendored、未修改）選取確立後只是「不再更新」觸控狀態，不會歸零；若選取確立前的最初幾個 `touchmove` 影格被 `main.js` 的 Issue-47 攔截器（`main.js:732-769`）放行，這些過時的位移／速度會在放開手指時被 `#onTouchEnd`（`paginator.js:2476-2538`）拿去呼叫 `snap()`，可能誤判翻頁。已查證 `paginator.js:2186/2499/2558` 支援的 `no-swipe` 屬性可完全停用這條路徑，且全專案目前從未設定過此屬性、也沒有任何功能依賴滑動翻頁（PRD／CLAUDE.md 導覽模型只講 3×3 熱區＋音量鍵）。
+
+**Solution（依優先順序，前兩項為最小可行修復範圍，建議一併處理，第 3-5 項可留待真機驗證後視情況追加）：**
+
+1. `main.js` 於初始化 `view` 之後，對 `view.renderer`（即 `<foliate-paginator>` 自訂元素本身，見 `main.js:901` 註解）呼叫 `setAttribute('no-swipe', '')`，完全消除次因，符合 ADR 0011（不改 vendored 檔案內容）。
+2. `tap_zone_detector.dart` 補上 `onPointerMove` 熔斷機制：位移超過 `tapSlop` 就立刻清空 `_downPosition`/`_downTimeMs`（目前只在 `onPointerUp` 檢查一次距離），解決 Flutter 側自己的時序競賽，與第 1 項互補、缺一不可。
+3. 視真機驗證結果決定是否需要收斂 `tapMaxDurationMs`（EPUB 現行 700ms）；比照 `epic-25` Issue 1 模式，需真機診斷才能定案新數值，不可憑空調整，不建議與第 1、2 項同批次定案。
+4. 視真機驗證結果決定是否需要「選取清除後短暫抑制熱區點擊」（Grace Period），處理拖曳控點導致選取暫時折疊的邊角情況。
+5.（選配、非根因修復）直排模式首行安全邊距（`marginRight`/`marginTop`）確認留白，屬人因改善，可獨立施作或跳過。
+
+**單元測試要求：**
+- 新增 widget test：`TapZoneDetector` 在 `onPointerMove` 位移超過 `tapSlop` 後即使 `onPointerUp` 落在原點附近，也不觸發 `onTap`。
+- 新增測試（或人工確認）：`main.js` 初始化後 `view.renderer` 具有 `no-swipe` 屬性。
+- 確認既有 EPUB 熱區點擊翻頁、長按選字、拖曳畫線的既有測試（`foliate_reader_view` 相關測試、選取相關測試）全數通過、零回歸。
+- 若調整 `tapMaxDurationMs`，比照既有測試命名慣例更新對應數值與測試名稱描述。
+
+**驗收標準：** 流式 EPUB 長按選字／拖曳劃線不再誤觸翻頁，尤其右側／上側邊緣；`flutter analyze` 乾淨、`flutter test` 全數通過、零回歸；建議真機（比照本 Epic 既有先例）驗證右上角高密度選字場景不再誤觸翻頁。
+
