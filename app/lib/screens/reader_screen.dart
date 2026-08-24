@@ -1664,91 +1664,6 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     FoliateReaderView.setDecorations(_foliateEpubReaderViewKey, decorations);
   }
 
-  Highlight? _findHighlightById(String id) {
-    for (final highlight in _highlights) {
-      if (highlight.id == id) return highlight;
-    }
-    return null;
-  }
-
-  Note? _findNoteByHighlightId(String highlightId) {
-    for (final note in _notes) {
-      if (note.highlightId == highlightId) return note;
-    }
-    return null;
-  }
-
-  Note? _findNoteById(String id) {
-    for (final note in _notes) {
-      if (note.id == id) return note;
-    }
-    return null;
-  }
-
-  /// 原生端 onAnnotationActivated 回呼（使用者點擊既有標記）：依
-  /// [decodeAnnotationId] 反查是哪一筆記錄，開啟編輯/刪除 Dialog
-  /// （design.md 使用者流程步驟 3）。id 格式不明或查無對應記錄時靜默
-  /// 忽略——理論上不會發生（送給原生端的 id 皆由
-  /// [EpubDecoration.forHighlight]/[EpubDecoration.forNote] 產生），但
-  /// 點擊當下記錄可能已被其他途徑刪除（極短競速窗口），静默忽略比拋出
-  /// 例外更穩妥。
-  void _handleAnnotationActivated(String decorationId) {
-    final decoded = decodeAnnotationId(decorationId);
-    if (decoded == null) return;
-    AnnotationListItem item;
-    switch (decoded.kind) {
-      case AnnotationKind.highlight:
-        final highlight = _findHighlightById(decoded.id);
-        if (highlight == null) return;
-        item = AnnotationListItem(
-          highlight: highlight,
-          note: _findNoteByHighlightId(decoded.id),
-        );
-        break;
-      case AnnotationKind.note:
-        final note = _findNoteById(decoded.id);
-        if (note == null) return;
-        item = AnnotationListItem(note: note);
-        break;
-    }
-    _showAnnotationActionDialog(item);
-  }
-
-  Future<void> _showAnnotationActionDialog(AnnotationListItem item) async {
-    final action = await showDialog<String>(
-      context: context,
-      builder: (dialogContext) => SimpleDialog(
-        title: const Text('劃線/備註'),
-        children: [
-          if (item.note != null)
-            SimpleDialogOption(
-              onPressed: () => Navigator.of(dialogContext).pop('edit'),
-              child: const Text('✍️ 編輯備註文字'),
-            ),
-          SimpleDialogOption(
-            onPressed: () => Navigator.of(dialogContext).pop('delete'),
-            child: const Text('🗑️ 刪除此劃線與備註'),
-          ),
-        ],
-      ),
-    );
-    if (!mounted) return;
-    final note = item.note;
-    final highlight = item.highlight;
-    if (action == 'edit' && note != null) {
-      final newText = await showNoteTextDialog(context, initialText: note.text, title: '編輯備註');
-      if (newText != null) {
-        await widget.notesRepository!.updateText(note.id, newText);
-        await _reloadAnnotationsAndRefreshDecorations();
-      }
-    } else if (action == 'delete') {
-      // 單筆刪除＝整筆一起刪（spec.md 決策 #13），比照
-      // NotesBottomSheet._deleteAnnotationItem 的既有原則。
-      if (note != null) await widget.notesRepository!.delete(note.id);
-      if (highlight != null) await widget.highlightsRepository!.delete(highlight.id);
-      await _reloadAnnotationsAndRefreshDecorations();
-    }
-  }
 
   Future<void> _handlePdfHighlightStyleSelected(HighlightStyle style) async {
     final selection = _currentPdfSelection;
@@ -2739,7 +2654,6 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           },
           onSelectionChanged: _handleSelectionChanged,
           onSelectionCleared: _handleSelectionCleared,
-          onAnnotationActivated: _handleAnnotationActivated,
         );
       case BookFormat.pdf:
         // epic-24-pdf-engine-rebuild：單頁/雙頁（Issue 2）、影像濾鏡/

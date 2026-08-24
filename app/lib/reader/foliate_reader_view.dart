@@ -418,7 +418,6 @@ class FoliateReaderView extends StatefulWidget {
   final ValueChanged<EpubPositionInfo>? onLocatorChanged;
   final ValueChanged<EpubSelectionInfo>? onSelectionChanged;
   final VoidCallback? onSelectionCleared;
-  final ValueChanged<String>? onAnnotationActivated;
 
   const FoliateReaderView({
     super.key,
@@ -463,7 +462,6 @@ class FoliateReaderView extends StatefulWidget {
     this.onLocatorChanged,
     this.onSelectionChanged,
     this.onSelectionCleared,
-    this.onAnnotationActivated,
   });
 
   static void nextPage(GlobalKey<State<FoliateReaderView>> key) {
@@ -691,12 +689,6 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
       callback: (args) {
         _hasActiveSelection = false;
         widget.onSelectionCleared?.call();
-      },
-    );
-    controller.addJavaScriptHandler(
-      handlerName: 'onAnnotationActivated',
-      callback: (args) {
-        widget.onAnnotationActivated?.call(args[0] as String);
       },
     );
     await attachReaderView();

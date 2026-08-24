@@ -1387,6 +1387,14 @@ void main() {
               'args[6]/args[7] 的固定順序，foliate_reader_view.dart 的 '
               'onSelectionChanged handler 依此順序解析）。');
     });
+
+    test('main.js 不再監聽 show-annotation 事件（舊機制已由 Issue 11 汰除）', () {
+      expect(mainJsSource.contains("addEventListener('show-annotation'"), isFalse,
+          reason: 'show-annotation 監聽器應已隨 Issue 11 移除——長按已畫線'
+              '文字的刪除功能現在改由選取範圍 hit-test（見同一 group 前面'
+              '幾則測試）統一處理，不再依賴這個永遠不會被原生選字放行的 '
+              'click 事件路徑。');
+    });
   });
 
   // Issue 8 審查 Important #7：mounted 守衛/dispose 競態測試

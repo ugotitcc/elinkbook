@@ -3802,61 +3802,6 @@ void main() {
     },
   );
 
-  testWidgets(
-    '流式 EPUB：FoliateReaderView 回報 onAnnotationActivated 時，開啟對話框',
-    (tester) async {
-      final highlightsRepo = FakeHighlightsRepository();
-      final notesRepo = FakeNotesRepository();
-      const highlightId = 'h_fa1';
-      await highlightsRepo.insert(
-        const Highlight(
-          id: highlightId,
-          bookId: 'b_foliate_active',
-          style: HighlightStyle.highlighterYellow,
-          epubLocatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
-          progression: 0.1,
-        ),
-      );
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: ReaderScreen(
-            filePath: 'test/fixtures/sample.epub',
-            bookId: 'b_foliate_active',
-            prefsManager: prefsManager,
-            highlightsRepository: highlightsRepo,
-            notesRepository: notesRepo,
-            isFixedLayout: false,
-          ),
-        ),
-      );
-      await tester.pump();
-      await tester.runAsync(() => Future.delayed(Duration.zero));
-      await tester.pump();
-
-      final foliateView = tester.widget<FoliateReaderView>(
-        find.byType(FoliateReaderView),
-      );
-      foliateView.onPageRendered();
-      foliateView.onLayoutResolved?.call(
-        const EpubLayoutInfo(
-          isFixedLayout: false,
-          writingMode: WritingMode.horizontal,
-        ),
-      );
-      await tester.pump();
-      // _reloadAnnotationsAndRefreshDecorations() 內部 await repository
-      // 呼叫，需多一次 pump 讓 microtask 完成。
-      await tester.pump();
-      await tester.pump();
-
-      foliateView.onAnnotationActivated?.call('highlight:$highlightId');
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 500));
-
-      expect(find.byType(SimpleDialog), findsOneWidget);
-    },
-  );
 
   // ─────────────────────────────────────────────────────────────────────
   // epic-18-reader-device-qa Issue 7：流式 EPUB Chrome 重構（浮動選單列＋
