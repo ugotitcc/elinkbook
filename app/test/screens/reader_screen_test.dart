@@ -5797,7 +5797,8 @@ void main() {
     await gesture.moveTo(topLeft + const Offset(160, 220));
     await tester.pump();
     await gesture.up();
-    await tester.pump();
+    await pumpUntilPdfReady(tester,
+        condition: () => find.byType(AnnotationToolbar).evaluate().isNotEmpty);
 
     expect(find.byType(AnnotationToolbar), findsOneWidget,
         reason: '選取完成後應顯示 AnnotationToolbar');

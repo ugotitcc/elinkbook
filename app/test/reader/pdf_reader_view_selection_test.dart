@@ -73,7 +73,7 @@ void main() {
     await gesture.moveTo(endPos);
     await tester.pump();
     await gesture.up();
-    await tester.pump();
+    await pumpUntilPdfReady(tester, condition: () => computed != null);
 
     expect(computed, isNotNull, reason: '長按滿足時長且有明顯拖曳位移，應觸發選取回呼');
     expect(computed!.pageIndex, 0);
@@ -334,7 +334,7 @@ void main() {
     await gesture.moveTo(topLeft + const Offset(160, 220));
     await tester.pump();
     await gesture.up();
-    await tester.pump();
+    await pumpUntilPdfReady(tester, condition: () => computed != null);
 
     expect(computed, isNotNull);
     // widgetRect 與 rect 皆為 0-1 範圍內的有效值；在夠高的可視區域內，
@@ -518,11 +518,105 @@ void main() {
     await gesture.moveTo(rightHalfEnd);
     await tester.pump();
     await gesture.up();
-    await tester.pump();
+    await pumpUntilPdfReady(tester, condition: () => computed != null);
 
     expect(computed, isNotNull);
     expect(computed!.pageIndex, 2,
         reason: 'spread [1,2] 內觸控畫面右半部應命中 page 2（0-indexed），'
             '不是 page 1');
+  });
+
+  testWidgets('框選涵蓋整頁時，onSelectionRectComputed 回報的 text 內含頁面文字',
+      (tester) async {
+    var renderedCount = 0;
+    PdfSelectionInfo? computed;
+    final key = GlobalKey<State<PdfReaderView>>();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PdfReaderView(
+          key: key,
+          filePath: 'test/fixtures/sample_multi_page.pdf',
+          onPageRendered: () => renderedCount++,
+          onError: (_) {},
+          onSelectionRectComputed: (info) => computed = info,
+        ),
+      ),
+    );
+    await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
+
+    final box = tester.getRect(find.byType(PdfReaderView));
+    final startPos = Offset(box.left + 20, box.top + 20);
+    final endPos = Offset(box.right - 20, box.bottom - 20);
+
+    final gesture = await tester.startGesture(startPos);
+    await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+    await gesture.moveTo(endPos);
+    await tester.pump();
+    await gesture.up();
+    await pumpUntilPdfReady(tester, condition: () => computed != null);
+
+    expect(computed, isNotNull);
+    expect(computed!.text.toLowerCase(), contains('page'),
+        reason: '框選涵蓋整頁時應萃取出頁面上的文字內容（例如 "Page 1"，'
+            '見 pdf_reader_view_search_test.dart 已驗證此 fixture 每頁'
+            '皆含 "Page" 字樣）。');
+  });
+
+  testWidgets('框選完成後文字萃取尚未完成前又開始下一次框選，只有最後一次結果生效（競速防護）',
+      (tester) async {
+    var renderedCount = 0;
+    final results = <PdfSelectionInfo>[];
+    final key = GlobalKey<State<PdfReaderView>>();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PdfReaderView(
+          key: key,
+          filePath: 'test/fixtures/sample_multi_page.pdf',
+          onPageRendered: () => renderedCount++,
+          onError: (_) {},
+          onSelectionRectComputed: (info) => results.add(info),
+        ),
+      ),
+    );
+    await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
+
+    final box = tester.getRect(find.byType(PdfReaderView));
+
+    // 第一次框選：放開手指、觸發文字萃取，但刻意不用 tester.runAsync 讓它
+    // 有機會真正推進（沒有 runAsync 包住，真實 FFI 呼叫不會實際完成），
+    // 模擬「文字萃取還卡在半路」的狀態。
+    final firstGesture = await tester.startGesture(
+      Offset(box.left + 20, box.top + 20),
+    );
+    await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+    await firstGesture.moveTo(Offset(box.left + 100, box.top + 100));
+    await tester.pump();
+    await firstGesture.up();
+    await tester.pump();
+
+    // 第二次框選：在第一次的文字萃取還沒完成前就開始，正常完整跑完。
+    final secondGesture = await tester.startGesture(
+      Offset(box.left + 20, box.top + 20),
+    );
+    await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+    await secondGesture.moveTo(Offset(box.right - 20, box.bottom - 20));
+    await tester.pump();
+    await secondGesture.up();
+    await pumpUntilPdfReady(tester, condition: () => results.isNotEmpty);
+
+    // 讓第一次可能還卡著的文字萃取有機會跑完——若世代編號防護失效，
+    // 這裡才會補上一筆過期結果。
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 50)),
+    );
+    await tester.pump();
+
+    expect(results.length, 1,
+        reason: '第一次框選的過期文字萃取結果應被世代編號防護擋下，不應'
+            '呼叫 onSelectionRectComputed；只有第二次（最新一次）框選的'
+            '結果應該送達，否則使用者新一次框選的狀態會被過期結果覆蓋'
+            '（見審查報告 Important #2）。');
   });
 }

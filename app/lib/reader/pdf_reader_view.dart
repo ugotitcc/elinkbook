@@ -304,6 +304,13 @@ class _PdfReaderViewState extends State<PdfReaderView> {
   /// 理論上不會移動——長按辨識成功後 `pdfrx` 內建平移已經輸掉競技場，
   /// 見上方「手勢架構決策」），以及拖曳起點/目前終點的局部座標。
   _PdfSelectionDragState? _selectionDrag;
+  // epic-27-reader-device-compat Issue 11：_finishSelectionDrag() 改為
+  // 非同步（需要 await page.loadStructuredText() 萃取選取文字）後，任何
+  // 會開始新框選手勢的地方都遞增這個世代編號；_finishSelectionDrag()
+  // 在 await 之前先記下當下的編號，await 完成後比對編號是否仍相同，不同
+  // 就代表使用者已經開始了下一次框選，這次的萃取結果是過期資料，直接
+  // 丟棄不送出（比照既有 _searchSessionId 世代編號慣例，見 _search()）。
+  int _selectionDragGenerationId = 0;
 
   int _activePointerCount = 0;
 
@@ -1123,6 +1130,7 @@ class _PdfReaderViewState extends State<PdfReaderView> {
         behavior: HitTestBehavior.translucent,
         onLongPressStart: (details) {
           if (widget.cropEditModeActive) return;
+          _selectionDragGenerationId++;
           setState(() {
             _selectionDrag = _PdfSelectionDragState(
               pageIndex: pageIndex,
@@ -1143,7 +1151,33 @@ class _PdfReaderViewState extends State<PdfReaderView> {
     );
   }
 
-  void _finishSelectionDrag() {
+  /// 框選矩形內文字萃取（epic-27-reader-device-compat Issue 11）：把框選
+  /// 的 [rect]（PercentRect，同一套換算慣例見 percent_rect.dart）換算回
+  /// PDF points 座標，找出落在這個矩形內的字元，組成文字供「複製」按鈕
+  /// 使用。座標系換算必須用 percentRectToPdfRect（見審查報告 Important
+  /// #1）——PercentRect 是左上角原點、Y 軸向下，PdfRect 是左下角原點、
+  /// Y 軸向上，方向相反，不能直接相乘頁面尺寸後原樣塞進 PdfRect。
+  Future<String> _extractTextInRect(int pageIndex, PercentRect rect) async {
+    final document = _document;
+    if (document == null) return '';
+    if (pageIndex < 0 || pageIndex >= document.pages.length) return '';
+    final page = document.pages[pageIndex];
+    final pageText = await page.loadStructuredText();
+    final targetRect = percentRectToPdfRect(
+      rect: rect,
+      pageWidth: page.width,
+      pageHeight: page.height,
+    );
+    final buffer = StringBuffer();
+    for (var i = 0; i < pageText.charRects.length; i++) {
+      if (pageText.charRects[i].overlaps(targetRect)) {
+        buffer.write(pageText.fullText[i]);
+      }
+    }
+    return buffer.toString();
+  }
+
+  Future<void> _finishSelectionDrag() async {
     final drag = _selectionDrag;
     if (drag == null) return;
     setState(() => _selectionDrag = null);
@@ -1167,10 +1201,17 @@ class _PdfReaderViewState extends State<PdfReaderView> {
             areaSize: viewerSize,
             minFraction: 0,
           )!;
+    // epic-27-reader-device-compat Issue 11（審查報告 Important #2）：
+    // page.loadStructuredText() 是真實 FFI 呼叫，可能耗時；這段 await
+    // 期間使用者可能離開畫面或開始下一次框選，過期結果不能覆蓋新狀態。
+    final generationId = _selectionDragGenerationId;
+    final text = await _extractTextInRect(drag.pageIndex, originalRect);
+    if (!mounted || generationId != _selectionDragGenerationId) return;
     widget.onSelectionRectComputed?.call(PdfSelectionInfo(
       pageIndex: drag.pageIndex,
       rect: originalRect,
       widgetRect: widgetRect,
+      text: text,
     ));
   }
 
