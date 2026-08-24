@@ -679,6 +679,10 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
             right: argAt(4)?.toDouble() ?? 0.0,
             bottom: argAt(5)?.toDouble() ?? 0.0,
           ),
+          // epic-27-reader-device-compat Issue 11：main.js 新增送出的選取
+          // 文字與 hit-test 結果，見上方 JS 端 reportSelection() 註解。
+          text: args.length > 6 ? (args[6] as String? ?? '') : '',
+          existingAnnotationId: args.length > 7 ? args[7] as String? : null,
         ));
       },
     );

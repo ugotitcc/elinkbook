@@ -1317,6 +1317,78 @@ void main() {
     });
   });
 
+  group('main.js 選取範圍 hit-test 既有標記＋回傳文字 regression guard'
+      '（Epic 27 Issue 11）', () {
+    late String mainJsSource;
+
+    setUpAll(() {
+      mainJsSource = File('android/app/src/main/assets/foliate/main.js')
+          .readAsStringSync()
+          .replaceAll('\r\n', '\n');
+    });
+
+    test('reportSelection 內含 overlayer.hitTest 呼叫，位置晚於取得 rect、早於 callHandler',
+        () {
+      const rectCall = 'const rect = range.getClientRects()[0]';
+      const hitTestCall = '.hitTest({ x: (rect.left + rect.right) / 2, y: (rect.top + rect.bottom) / 2 })';
+      const callHandlerCall = "window.flutter_inappwebview.callHandler(\n          'onSelectionChanged',";
+
+      final rectIndex = mainJsSource.indexOf(rectCall);
+      final hitTestIndex = mainJsSource.indexOf(hitTestCall);
+      final callHandlerIndex = mainJsSource.indexOf(callHandlerCall);
+
+      expect(rectIndex, greaterThanOrEqualTo(0),
+          reason: 'main.js 內找不到 "$rectCall"——若上游改了寫法，下面的順序'
+              '斷言也需要一併更新。');
+      expect(hitTestIndex, greaterThanOrEqualTo(0),
+          reason: 'main.js 內找不到 overlayer.hitTest 呼叫——選取範圍變動'
+              '時應查詢是否命中既有畫線/備註裝飾（見'
+              'docs/superpowers/specs/2026-08-24-epic27-issue11-'
+              'annotation-toolbar-merge-design.md），若被刪掉，長按已畫線'
+              '文字時工具列不會出現刪除按鈕。');
+      expect(callHandlerIndex, greaterThanOrEqualTo(0),
+          reason: 'main.js 內找不到既有的 onSelectionChanged callHandler '
+              '呼叫——若上游改了寫法，下面的順序斷言也需要一併更新。');
+      expect(rectIndex, lessThan(hitTestIndex),
+          reason: 'hitTest 必須在取得 rect 之後才能執行（需要 rect 座標）。');
+      expect(hitTestIndex, lessThan(callHandlerIndex),
+          reason: 'hitTest 的結果必須在 callHandler 呼叫之前算好，才能當作'
+              '參數送出。');
+    });
+
+    test('decorationIdByCfi.get 用於反查 hit 結果對應的既有標記 id', () {
+      expect(mainJsSource.contains('decorationIdByCfi.get(hitCfi)'), isTrue,
+          reason: 'main.js 內找不到 "decorationIdByCfi.get(hitCfi)"——hitTest '
+              '查到的是 cfi 字串，須反查回 Dart 端可解讀的 "highlight:x"/'
+              '"note:y" 格式，否則 existingAnnotationId 永遠等於 hitTest '
+              '回傳的原始 cfi，reader_screen.dart 的 decodeAnnotationId '
+              '會解析失敗。');
+    });
+
+    test('callHandler(onSelectionChanged, ...) 最後兩個參數依序為選取文字與 existingAnnotationId',
+        () {
+      const callHandlerCall = "window.flutter_inappwebview.callHandler(\n          'onSelectionChanged',";
+      final callHandlerIndex = mainJsSource.indexOf(callHandlerCall);
+      expect(callHandlerIndex, greaterThanOrEqualTo(0));
+
+      const textArg = 'selection.toString(),';
+      const idArg = 'existingAnnotationId,';
+      final textArgIndex = mainJsSource.indexOf(textArg, callHandlerIndex);
+      final idArgIndex = mainJsSource.indexOf(idArg, callHandlerIndex);
+
+      expect(textArgIndex, greaterThanOrEqualTo(0),
+          reason: 'callHandler(onSelectionChanged, ...) 呼叫內找不到 '
+              '"$textArg"——選取文字須一併送給 Dart 端，供「複製」按鈕使用。');
+      expect(idArgIndex, greaterThanOrEqualTo(0),
+          reason: 'callHandler(onSelectionChanged, ...) 呼叫內找不到 '
+              '"$idArg"——hit-test 結果須一併送給 Dart 端。');
+      expect(textArgIndex, lessThan(idArgIndex),
+          reason: '選取文字必須排在 existingAnnotationId 之前（對應 Dart 端 '
+              'args[6]/args[7] 的固定順序，foliate_reader_view.dart 的 '
+              'onSelectionChanged handler 依此順序解析）。');
+    });
+  });
+
   // Issue 8 審查 Important #7：mounted 守衛/dispose 競態測試
   // 驗證「快取完成前 dispose」不會導致快取目錄洩漏
   group('mounted guard / dispose race', () {
