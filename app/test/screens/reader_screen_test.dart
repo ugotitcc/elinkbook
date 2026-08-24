@@ -65,6 +65,23 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 // 翻頁模式雙層解析邏輯（後者不依賴 onLayoutResolved，可離線驗證，見
 // docs/epics/epic-3-fonts-layout/plans/plan-issue-4.md）。
 
+// epic-27-reader-device-compat Issue 4：模擬 LayoutPresetRepository.insert()
+// 在真機環境拋出未預期例外的情境（見 reviews/bugfix-repro.md Issue 4
+// 「未能透過程式碼靜態確認、但無法排除的可能」）。LayoutPresetRepository
+// 是一般 class（非 final/sealed），可安全繼承並只覆寫 insert()；listAll()
+// 不覆寫、沿用真實記憶體內 SQLite 連線正常運作，確保 ReaderScreen
+// initState() 時機的 _loadLayoutPresets() 不受影響（見
+// docs/epics/epic-27-reader-device-compat/plans/plan-issue-4.md
+// 規劃階段查證第 5 點）。
+class _ThrowingLayoutPresetRepository extends LayoutPresetRepository {
+  _ThrowingLayoutPresetRepository(super.db);
+
+  @override
+  Future<void> insert(LayoutPreset preset) async {
+    throw Exception('模擬 insert 失敗（測試用）');
+  }
+}
+
 void main() {
   late FakeReaderPrefsManager prefsManager;
   // 保存原始實作， tearDownAll 時還原
@@ -6674,13 +6691,23 @@ void main() {
     // FoliateReaderView widget 上的 onPageRendered()/onLayoutResolved()
     // 模擬原生端回報）。按鈕 key 用 `reader_foliate_settings_button`（現行
     // FAB 化路徑，非舊版 `reader_layout_settings_button`）。
-    Future<void> pumpReaderScreen(WidgetTester tester) async {
+    Future<void> pumpReaderScreen(
+      WidgetTester tester, {
+      // epic-27-reader-device-compat Issue 4：讓「另存為新預設集」的兩則
+      // 新測試可以分別模擬 layoutPresetRepository 為 null、或注入一個會
+      // 拋出例外的假 repository；其餘既有呼叫點沿用預設值，行為不變。
+      bool includeLayoutPresetRepository = true,
+      LayoutPresetRepository? layoutPresetRepositoryOverride,
+    }) async {
       tester.view.physicalSize = const Size(800, 2400);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(() {
         tester.view.resetPhysicalSize();
         tester.view.resetDevicePixelRatio();
       });
+
+      final effectiveLayoutPresetRepository = layoutPresetRepositoryOverride ??
+          (includeLayoutPresetRepository ? layoutPresetRepository : null);
 
       await tester.pumpWidget(
         MaterialApp(
@@ -6690,7 +6717,7 @@ void main() {
             prefsManager: prefsManager,
             isFixedLayout: false,
             libraryRepository: libraryRepository,
-            layoutPresetRepository: layoutPresetRepository,
+            layoutPresetRepository: effectiveLayoutPresetRepository,
             bookReaderPrefsRepository: bookReaderPrefsRepository,
           ),
         ),
@@ -6780,6 +6807,70 @@ void main() {
       final all = await tester.runAsync(() => layoutPresetRepository.listAll());
       expect(all, hasLength(3));
       expect(all!.map((p) => p.name).toList(), ['D', 'B', 'C']);
+    });
+
+    testWidgets(
+        '另存為新預設集：layoutPresetRepository 為 null 時顯示提示，而非毫無反應',
+        (tester) async {
+      await pumpReaderScreen(tester, includeLayoutPresetRepository: false);
+
+      await tester
+          .tap(find.byKey(const Key('reader_foliate_settings_button')));
+      await tester.pumpAndSettle();
+      await switchToTab(tester, '設定喜好');
+      await tester.ensureVisible(
+          find.byKey(const Key('reader_settings_save_as_preset')));
+      await tester
+          .tap(find.byKey(const Key('reader_settings_save_as_preset')));
+      await tester.pump();
+
+      expect(
+        find.byKey(
+            const Key('reader_save_as_preset_repository_unavailable_snackbar')),
+        findsOneWidget,
+      );
+      expect(find.text('暫時無法儲存預設集'), findsOneWidget);
+      // 命名對話框不應該被誤開——確認「靜默失敗」已被提示取代，而不是
+      // 多開出一個對話框（兩者都算「有反應」，但語意不同，須分開鑑別）。
+      expect(
+        find.byKey(const Key('layout_preset_name_dialog_field')),
+        findsNothing,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets(
+        '另存為新預設集：寫入過程拋出例外時顯示提示，不被靜默吞掉',
+        (tester) async {
+      final throwingRepository =
+          _ThrowingLayoutPresetRepository(libraryRepository.database);
+      await pumpReaderScreen(
+        tester,
+        layoutPresetRepositoryOverride: throwingRepository,
+      );
+
+      await tester
+          .tap(find.byKey(const Key('reader_foliate_settings_button')));
+      await tester.pumpAndSettle();
+      await switchToTab(tester, '設定喜好');
+      await tester.ensureVisible(
+          find.byKey(const Key('reader_settings_save_as_preset')));
+      await tester
+          .tap(find.byKey(const Key('reader_settings_save_as_preset')));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+          find.byKey(const Key('layout_preset_name_dialog_field')), '測試預設集');
+      await tester
+          .tap(find.byKey(const Key('layout_preset_name_dialog_confirm')));
+      await tester.pump();
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('reader_save_as_preset_error_snackbar')),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('套用預設集到目前書籍：立即寫入且畫面即時反映新值（透過 _handlePrefsChanged）',

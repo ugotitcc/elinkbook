@@ -771,38 +771,64 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 版面設定預設集「另存為新預設集」（epic-28-reader-settings-
   /// enhancements Issue 3）：命名輸入 → 未滿 3 組直接 insert，已滿 3 組
   /// 跳出覆蓋選單 → 覆蓋前二次確認 → replace，完成後重新載入清單。
+  ///
+  /// epic-27-reader-device-compat Issue 4：真機回報點擊後畫面完全無反應
+  /// （`reviews/bugfix-repro.md` Issue 4），根因無法 100% 確認（可能是
+  /// `repository == null`〔階段一〕，也可能是真機環境某處拋出未預期例外
+  /// 〔階段二〕），故本次採「提高可觀測性＋防禦性」而非直接臆測修復——
+  /// 把兩種原本會靜默失敗的路徑都改成使用者可見的 SnackBar 提示，並保留
+  /// debugPrint 供日後若再次收到回報時排查根因。
   Future<void> _handleSaveAsPreset(BookReaderPrefs currentDraft) async {
     final repository = widget.layoutPresetRepository;
-    if (repository == null) return;
-    final name = await showLayoutPresetNameDialog(context);
-    if (name == null || !mounted) return;
-    final filteredPrefs = currentDraft.reflowableEpubFields();
-    final now = DateTime.now();
-    if (_layoutPresets.length < 3) {
-      await repository.insert(LayoutPreset(
-        id: null,
-        name: name,
-        createdAt: now,
-        updatedAt: now,
-        prefs: filteredPrefs,
-      ));
-    } else {
-      final target = await _selectPresetToOverwrite();
-      if (target == null || !mounted) return;
-      final confirmed = await _confirmOverwrite(target.name);
-      if (!confirmed) return;
-      await repository.replace(
-        target.id!,
-        LayoutPreset(
-          id: target.id,
+    if (repository == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          key: Key('reader_save_as_preset_repository_unavailable_snackbar'),
+          content: Text('暫時無法儲存預設集'),
+        ),
+      );
+      return;
+    }
+    try {
+      final name = await showLayoutPresetNameDialog(context);
+      if (name == null || !mounted) return;
+      final filteredPrefs = currentDraft.reflowableEpubFields();
+      final now = DateTime.now();
+      if (_layoutPresets.length < 3) {
+        await repository.insert(LayoutPreset(
+          id: null,
           name: name,
-          createdAt: target.createdAt,
+          createdAt: now,
           updatedAt: now,
           prefs: filteredPrefs,
+        ));
+      } else {
+        final target = await _selectPresetToOverwrite();
+        if (target == null || !mounted) return;
+        final confirmed = await _confirmOverwrite(target.name);
+        if (!confirmed) return;
+        await repository.replace(
+          target.id!,
+          LayoutPreset(
+            id: target.id,
+            name: name,
+            createdAt: target.createdAt,
+            updatedAt: now,
+            prefs: filteredPrefs,
+          ),
+        );
+      }
+      await _loadLayoutPresets();
+    } catch (e, stackTrace) {
+      debugPrint('另存為新預設集失敗：$e\n$stackTrace');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          key: const Key('reader_save_as_preset_error_snackbar'),
+          content: Text('另存為新預設集失敗：$e'),
         ),
       );
     }
-    await _loadLayoutPresets();
   }
 
   Future<LayoutPreset?> _selectPresetToOverwrite() {
