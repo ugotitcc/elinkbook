@@ -39,6 +39,11 @@ import 'package:flutter/widgets.dart';
 /// 需真機診斷才能定案 PDF 端數值，不可貿然套用 EPUB 數值），故此次收斂
 /// 刻意只共用「偵測機制本身」（含 [onPointerCancel] 防禦性清理），不
 /// 共用數值。
+///
+/// [onPointerMove] 熔斷（Epic 27 Issue 9）：在觸控移動過程中，若手指位移曾
+/// 超過 [tapSlop]，即立刻將按壓狀態作廢（清除 `_downPosition` 與 `_downTimeMs`）。
+/// 避免長按選字或劃線手勢中途小幅拖曳後手指移回原點附近放開時，被 [onPointerUp]
+/// 誤判為一次快速點擊而誤觸翻頁。
 class TapZoneDetector extends StatefulWidget {
   final VoidCallback onTap;
   final Widget child;
@@ -70,6 +75,18 @@ class _TapZoneDetectorState extends State<TapZoneDetector> {
       onPointerDown: (event) {
         _downPosition = event.position;
         _downTimeMs = widget.nowMs();
+      },
+      onPointerMove: (event) {
+        final downPosition = _downPosition;
+        if (downPosition == null) return;
+        final distance = (event.position - downPosition).distance;
+        if (distance > widget.tapSlop) {
+          // 位移已超過容許範圍，永久作廢本次按壓——即使之後手指移回附近
+          // 才放開，onPointerUp 也不會再誤判為一次快速點擊（Epic 27
+          // Issue 9）。
+          _downPosition = null;
+          _downTimeMs = null;
+        }
       },
       onPointerUp: (event) {
         final downPosition = _downPosition;
