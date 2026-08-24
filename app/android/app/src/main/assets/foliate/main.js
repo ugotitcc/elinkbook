@@ -652,6 +652,19 @@ async function openBook() {
       const doc = e.detail.doc
       const index = e.detail.index
 
+      // 選取收尾保護期（Selection Release Guard，
+      // epic-27-reader-device-compat Issue 10）：見下方 click 監聽器內
+      // 完整說明。這裡只負責記錄「選取上一次被判定為非折疊（真的有選到
+      // 文字）」的時間點，供該監聽器判斷這次 click 是否可能是選字收尾
+      // 動作本身觸發的雜訊。真機 log 佐證見
+      // docs/epics/epic-27-reader-device-compat/reviews/bugfix-repro.md
+      // 「Issue 10」；門檻值 150ms 取自
+      // issue-10-11-12-analysis.md「Issue 10」建議解法方向的區間
+      // （100～150ms）上緣，尚未經真機校準，比照 epic-25 Issue 1／
+      // epic-26 Issue 3 先例，後續若真機回報需要調整，另立工單處理。
+      const SELECTION_RELEASE_GUARD_MS = 150
+      let lastNonCollapsedSelectionAtMs = null
+
       // 選取範圍即時回報（epic-17 Issue 8）：抽成共用函式，供既有
       // selectionchange 與下方 ADR 0013 既定的 Android 專用
       // contextmenu/pointercancel 分支共同呼叫，避免重複實作同一段
@@ -661,9 +674,20 @@ async function openBook() {
       const reportSelection = async () => {
         const selection = doc.getSelection()
         if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
+          lastNonCollapsedSelectionAtMs = null
           window.flutter_inappwebview.callHandler('onSelectionCleared')
           return
         }
+        // 用 iframe 自己的時鐘（doc.defaultView.performance.now()），不用
+        // 最外層頁面的 performance.now()——兩者的時間原點（timeOrigin）
+        // 不同，iframe 通常比最外層頁面晚啟動，若混用會讓下方 mousedown
+        // 監聽器內 evt.timeStamp（同樣是 iframe 自己的時鐘，因為事件目標
+        // 落在 iframe 文件內）減去這裡記錄的值時，算出一個恆為負數的
+        // 差值，導致保護期判斷「時間差 <= 門檻」永遠成立、門檻形同虛設
+        // （已用 Puppeteer 差分測試＋跨 frame 時鐘診斷埋點親自驗證重現，
+        // 見 verify-issue10-guard.mjs 執行紀錄：iframe 時鐘與最外層頁面
+        // 時鐘相差近 850ms，且此差值在單一次頁面載入內固定不變）。
+        lastNonCollapsedSelectionAtMs = doc.defaultView.performance.now()
         const range = selection.getRangeAt(0)
         const rect = range.getClientRects()[0]
         if (!rect) return
@@ -835,9 +859,43 @@ async function openBook() {
       doc.addEventListener('touchcancel', () => {
         annotationClickTouchStartTime = null
       }, { capture: true })
+      // 選取收尾保護期（epic-27-reader-device-compat Issue 10）：使用者
+      // 放開手指前的最後一個小動作，若被瀏覽器判讀成「點擊」而非「拖曳
+      // 延伸的收尾」，瀏覽器會把點擊處設為新的插入點、連帶折疊既有選取。
+      //
+      // 【審查修正，見 docs/epics/epic-27-reader-device-compat/reviews/
+      // review-issue-10.md Critical #1】原本把這段判斷寫在下面的 click
+      // 監聽器內，經 Puppeteer 實測＋事件時序埋點證實無效：折疊選取是
+      // 瀏覽器處理 mousedown（原生觸控手勢下由 touchend 合成而來）時的
+      // 內部預設動作，不是 click 的預設動作——click 觸發當下（實測
+      // t≈23ms），真正驅動選取折疊的 selectionchange 事件其實還要再等
+      // 約 51ms（t≈74ms）才非同步觸發，且與 click 是否呼叫過
+      // preventDefault() 完全無關。這是前端已知慣例：要保留文字選取、
+      // 避免點擊清空選取，必須攔 mousedown（或 pointerdown），不是攔
+      // click。改攔 mousedown 才是真正在「選取被折疊」這個動作的源頭
+      // 阻止它——mousedown 的預設動作被取消後，click 事件本身仍會照常
+      // 觸發（不影響下面既有的 700ms 快速點擊判斷／畫線點擊攔截機制）。
+      // 若選取上一次被判定為非折疊的時間點在 SELECTION_RELEASE_GUARD_MS
+      // 之內，代表這次 mousedown 很可能就是使用者放開手指那個動作本身
+      // 觸發的收尾雜訊，非使用者刻意點擊別處要取消選取；超過門檻則視為
+      // 使用者確實想點別的地方，正常放行讓瀏覽器折疊選取。真機重現序列見
+      // docs/epics/epic-27-reader-device-compat/reviews/bugfix-repro.md
+      // 「Issue 10」，建議解法方向見同目錄
+      // issue-10-11-12-analysis.md「Issue 10」。
+      doc.addEventListener('mousedown', (evt) => {
+        if (
+          !evt.target.closest('a[href]') &&
+          lastNonCollapsedSelectionAtMs !== null &&
+          evt.timeStamp - lastNonCollapsedSelectionAtMs <= SELECTION_RELEASE_GUARD_MS
+        ) {
+          evt.preventDefault()
+        }
+      }, { capture: true })
+
       doc.addEventListener('click', (evt) => {
         const startTime = annotationClickTouchStartTime
         annotationClickTouchStartTime = null
+
         if (startTime === null) return // 非觸控手勢產生的 click（例如滑鼠），不受影響
         if (evt.target.closest('a[href]')) return // 超連結點擊一律放行
         if (evt.timeStamp - startTime <= ANNOTATION_CLICK_TAP_MAX_MS) {

@@ -1222,6 +1222,101 @@ void main() {
     });
   });
 
+  group('main.js 選取收尾保護期（Selection Release Guard）regression guard'
+      '（Epic 27 Issue 10）', () {
+    late String mainJsSource;
+
+    setUpAll(() {
+      mainJsSource = File('android/app/src/main/assets/foliate/main.js')
+          .readAsStringSync();
+    });
+
+    test('reportSelection 內，選取非折疊時用 iframe 自己的時鐘記錄時間戳記，'
+        '且位置早於取得 range', () {
+      const rangeCall = 'const range = selection.getRangeAt(0)';
+      // 【自行驗證發現的額外根因，見 review-issue-10.md 之外，實作時另行
+      // 追查】必須用 doc.defaultView.performance.now()（iframe 自己的
+      // 時鐘），不能用最外層頁面的 performance.now()——兩者 timeOrigin
+      // 不同，若混用，下方 mousedown 監聽器內 evt.timeStamp（同樣是
+      // iframe 自己的時鐘）減去這裡記錄的值會恆為負數，保護期判斷永遠
+      // 成立、門檻形同虛設，已用 Puppeteer 差分測試＋跨 frame 時鐘診斷
+      // 埋點親自驗證重現。
+      const timestampCall =
+          'lastNonCollapsedSelectionAtMs = doc.defaultView.performance.now()';
+
+      final rangeIndex = mainJsSource.indexOf(rangeCall);
+      final timestampIndex = mainJsSource.indexOf(timestampCall);
+
+      expect(rangeIndex, greaterThanOrEqualTo(0),
+          reason: 'main.js 內找不到 "$rangeCall"——若上游改了寫法，'
+              '下面的順序斷言也需要一併更新。');
+      expect(timestampIndex, greaterThanOrEqualTo(0),
+          reason: 'main.js 內找不到 "$timestampCall"——這一行負責記錄'
+              '「選取上一次被判定為非折疊」的時間點，供 mousedown 監聽器'
+              '內的選取收尾保護期判斷使用（見 '
+              'docs/epics/epic-27-reader-device-compat/reviews/'
+              'bugfix-repro.md「Issue 10」），若被刪掉，保護期機制會'
+              '永遠判定為「無最近選取」而完全失效；若被誤改回裸的 '
+              'performance.now()，會重新引入跨 frame 時鐘混用的 bug'
+              '（門檻形同虛設，見上方註解）。');
+      expect(timestampIndex, lessThan(rangeIndex),
+          reason: '"$timestampCall" 必須早於 "$rangeCall"——保護期記錄的'
+              '是「選取剛被判定為非折疊」這個時間點本身，應緊接在 '
+              'isCollapsed 判斷之後、取得 range 之前，避免遺漏。');
+    });
+
+    // 【審查修正，見 docs/epics/epic-27-reader-device-compat/reviews/
+    // review-issue-10.md Critical #1】原本這則測試斷言保護期的
+    // preventDefault() 寫在 click 監聽器內；經 Puppeteer 實測＋事件時序
+    // 埋點證實無效（折疊選取是 mousedown 的預設動作，不是 click 的），已
+    // 改為攔截 mousedown。測試同步改為斷言 mousedown 監聽器，不再斷言
+    // click 監聽器內含這段判斷。
+    test('mousedown 監聽器內含選取收尾保護期的 preventDefault()，'
+        '且獨立註冊於既有 click 監聽器之前、門檻值為 150ms', () {
+      const guardConstant = 'const SELECTION_RELEASE_GUARD_MS = 150';
+      const mousedownListenerStart =
+          "doc.addEventListener('mousedown', (evt) => {";
+      const clickListenerStart = "doc.addEventListener('click', (evt) => {";
+
+      final guardConstantIndex = mainJsSource.indexOf(guardConstant);
+      final mousedownListenerIndex =
+          mainJsSource.indexOf(mousedownListenerStart);
+      final clickListenerIndex = mainJsSource.indexOf(clickListenerStart);
+
+      expect(guardConstantIndex, greaterThanOrEqualTo(0),
+          reason: 'main.js 內找不到 "$guardConstant"——選取收尾保護期的'
+              '門檻值（真機證據見 bugfix-repro.md「Issue 10」，起始值'
+              '150ms，理由見 plan-issue-10.md 設計決策段落）遺失或被改名。');
+      expect(mousedownListenerIndex, greaterThanOrEqualTo(0),
+          reason: 'main.js 內找不到選取收尾保護期的 mousedown 監聽器'
+              '註冊 "$mousedownListenerStart"——折疊選取是瀏覽器處理'
+              'mousedown（原生觸控手勢下由 touchend 合成而來）時的內部'
+              '預設動作，不是 click 的預設動作，攔在 click 上'
+              'preventDefault() 已證實無效（見上方審查修正說明），若這個'
+              'mousedown 監聽器被刪掉或誤改回攔 click，症狀（選字選完後'
+              '常常消失）不會被真正修復。');
+      expect(clickListenerIndex, greaterThanOrEqualTo(0),
+          reason: 'main.js 內找不到既有的 click 監聽器註冊 '
+              '"$clickListenerStart"——若上游改了寫法，下面的順序斷言'
+              '也需要一併更新。');
+      expect(mousedownListenerIndex, lessThan(clickListenerIndex),
+          reason: '選取收尾保護期的 mousedown 監聽器應註冊在既有 click '
+              '監聽器之前，維持與原始碼實際排列順序一致，方便閱讀。');
+
+      final preventDefaultIndex = mainJsSource.indexOf(
+          'evt.preventDefault()', mousedownListenerIndex);
+
+      expect(preventDefaultIndex, greaterThanOrEqualTo(0),
+          reason: 'mousedown 監聽器內找不到 "evt.preventDefault()"——選取'
+              '收尾保護期未攔截瀏覽器對 mousedown 的預設動作，選取仍會被'
+              '瀏覽器折疊，症狀（選字選完後常常消失）不會被修復。');
+      expect(preventDefaultIndex, lessThan(clickListenerIndex),
+          reason: '"evt.preventDefault()" 必須落在 mousedown 監聽器內'
+              '（早於 click 監聽器註冊處），確認它不是誤植進 click 監聽器'
+              '內部——那正是本次審查修正要排除的舊寫法。');
+    });
+  });
+
   // Issue 8 審查 Important #7：mounted 守衛/dispose 競態測試
   // 驗證「快取完成前 dispose」不會導致快取目錄洩漏
   group('mounted guard / dispose race', () {
