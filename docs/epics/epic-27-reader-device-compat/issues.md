@@ -82,7 +82,7 @@
 
 ## Issue 4：版面設定「另存為新預設集」點擊後彈窗不會出現
 
-**Status:** `ready-for-agent`
+**Status:** ✅ 已完成並合併回 `main`（PR [#180](https://git.jigong.org/huthief/elinkBook/pulls/180)，分支 `feat/epic-27-issue-4`，2 個 commit：實作＋計畫勾選收尾）。程式碼審查（本機審查報告，依專案慣例不進版控，`reviews/review-issue-4.md`）結論為可以合併——0 Critical／0 Important／3 Minor（皆為觀察性建議，如 `catch` 攔截範圍寬泛、錯誤訊息顯示原始例外字串，均為計畫刻意設計，非缺陷）。全專案 `flutter analyze` 乾淨、`flutter test` 由 base 1647 項增至 1649 項（新增 2 則測試），零回歸通過。**真機（Mobiscribe WARE）驗證（再次觸發本問題時是否確實看到明確提示）仍待使用者回報，尚未勾選。**
 
 **依賴：** 無（與 Issue 3 互相獨立）
 
