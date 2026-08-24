@@ -627,16 +627,6 @@ async function openBook() {
         })
       }
     })
-    // 點擊既有標記（epic-17 Issue 8）：value 即建立時傳入的 cfi（見
-    // window.setDecorations()），透過 decorationIdByCfi 反查 Dart 端的
-    // 不透明 id 字串（"highlight:5"/"note:12"，見 epub_decoration.dart
-    // decodeAnnotationId() 編碼慣例）。查無對應（理論上不會發生，標記
-    // 只可能在 setDecorations 已呼叫過後才可能被點擊）時靜默忽略，比照
-    // 本檔案既有對非致命錯誤的處理原則。
-    view.addEventListener('show-annotation', (e) => {
-      const id = decorationIdByCfi.get(e.detail.value)
-      if (id) window.flutter_inappwebview.callHandler('onAnnotationActivated', id)
-    })
     // 選取範圍即時回報（epic-17 Issue 8）：'load' 事件對 look-ahead
     // 預讀章節同樣會觸發，故 doc/index 皆從本次 'load' 呼叫的區域變數
     // 閉包讀取，不快取到模組級共用變數再事後讀取（見
@@ -695,6 +685,20 @@ async function openBook() {
         const progress = await view.getCFIProgress(cfi)
         const iframeRect = doc.defaultView.frameElement.getBoundingClientRect()
         const viewportRect = view.getBoundingClientRect()
+        // epic-27-reader-device-compat Issue 11：長按已畫線文字時，原生
+        // 選字機制會搶先啟動，click 事件永遠不會發生，靠 click 觸發的舊版
+        // 刪除確認機制形同虛設（見 bugfix-repro.md「Issue 10」新問題 A）。
+        // 改成每次選取範圍變動時，直接查詢這次選取是否命中既有的畫線/
+        // 備註裝飾，讓 Dart 端能在同一個 AnnotationToolbar 上顯示「刪除」
+        // 按鈕。overlayer.hitTest() 是 view.js 既有公開方法，只用選取範圍
+        // 第一個 client rect 的中點做判斷（已知簡化，見上述設計文件），
+        // 不修改任何 vendored 檔案（ADR 0011）。
+        const overlayerEntry = view.renderer.getContents().find(c => c.index === index)
+        const hit = overlayerEntry?.overlayer
+          ? overlayerEntry.overlayer.hitTest({ x: (rect.left + rect.right) / 2, y: (rect.top + rect.bottom) / 2 })
+          : []
+        const hitCfi = hit[0]
+        const existingAnnotationId = hitCfi ? (decorationIdByCfi.get(hitCfi) ?? null) : null
         window.flutter_inappwebview.callHandler(
           'onSelectionChanged',
           JSON.stringify({ cfi, index, fraction: progress?.fraction ?? 0 }),
@@ -703,6 +707,8 @@ async function openBook() {
           (iframeRect.top + rect.top - viewportRect.top) / viewportRect.height,
           (iframeRect.left + rect.right - viewportRect.left) / viewportRect.width,
           (iframeRect.top + rect.bottom - viewportRect.top) / viewportRect.height,
+          selection.toString(),
+          existingAnnotationId,
         )
       }
 

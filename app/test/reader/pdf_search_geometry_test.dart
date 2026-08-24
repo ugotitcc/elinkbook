@@ -53,6 +53,36 @@ void main() {
     });
   });
 
+  group('percentRectToPdfRect', () {
+    test('與 pdfRectToPercentRect 互為反函式（US Letter 612x792）', () {
+      const original = PdfRect(153, 594, 459, 198);
+      final percent = pdfRectToPercentRect(rect: original, pageWidth: 612, pageHeight: 792);
+      final restored = percentRectToPdfRect(rect: percent, pageWidth: 612, pageHeight: 792);
+      expect(restored.left, closeTo(original.left, 0.001));
+      expect(restored.right, closeTo(original.right, 0.001));
+      expect(restored.top, closeTo(original.top, 0.001));
+      expect(restored.bottom, closeTo(original.bottom, 0.001));
+    });
+
+    test('換算結果一律滿足 PdfRect 的 top >= bottom（不觸發 assert）', () {
+      const rect = PercentRect(left: 0.1, top: 0.2, right: 0.5, bottom: 0.4);
+      final result = percentRectToPdfRect(rect: rect, pageWidth: 612, pageHeight: 792);
+      expect(result.top, greaterThanOrEqualTo(result.bottom),
+          reason: 'PercentRect.top（螢幕座標，數值較小）換算回 PdfRect 後，'
+              '必須對應到較大的 top 值（PDF 座標左下角原點、Y 軸向上），'
+              '否則 PdfRect 建構子的 assert(top >= bottom) 會直接拋出例外。');
+    });
+
+    test('頁面正中央的百分比矩形換算回 PDF points 座標正確', () {
+      const rect = PercentRect(left: 0.25, top: 0.25, right: 0.75, bottom: 0.75);
+      final result = percentRectToPdfRect(rect: rect, pageWidth: 612, pageHeight: 792);
+      expect(result.left, closeTo(153, 0.001));
+      expect(result.right, closeTo(459, 0.001));
+      expect(result.top, closeTo(594, 0.001));
+      expect(result.bottom, closeTo(198, 0.001));
+    });
+  });
+
   // 審查修正（review-plan-issue-6.md Minor #1）：驗證 PdfSearchMatch 的值
   // 相等性，與同為值物件的既有 PercentRect／PdfPageInfo 慣例一致。
   group('PdfSearchMatch 值相等性', () {

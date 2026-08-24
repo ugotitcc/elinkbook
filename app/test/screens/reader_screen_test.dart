@@ -44,6 +44,7 @@ import 'package:elinkbook/reader/epub_selection_info.dart';
 import 'package:elinkbook/reader/percent_rect.dart';
 import 'package:elinkbook/reader/pdf_selection_info.dart';
 import 'package:elinkbook/reader/highlight.dart';
+import 'package:elinkbook/reader/note.dart';
 import 'package:elinkbook/reader/highlight_style.dart';
 import 'package:elinkbook/sync/sync_checkpoint_trigger.dart';
 import 'package:elinkbook/reader/pdf_crop_frame_overlay.dart';
@@ -3553,15 +3554,15 @@ void main() {
   );
 
   testWidgets(
-    '流式 EPUB：FoliateReaderView 回報 onAnnotationActivated 時，開啟對話框',
+    '流式 EPUB：長按選取範圍命中既有畫線時，工具列顯示刪除按鈕，點擊後刪除該畫線',
     (tester) async {
       final highlightsRepo = FakeHighlightsRepository();
       final notesRepo = FakeNotesRepository();
-      const highlightId = 'h_fa1';
+      const highlightId = 'h_merge1';
       await highlightsRepo.insert(
         const Highlight(
           id: highlightId,
-          bookId: 'b_foliate_active',
+          bookId: 'b_foliate_merge1',
           style: HighlightStyle.highlighterYellow,
           epubLocatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
           progression: 0.1,
@@ -3572,7 +3573,7 @@ void main() {
         MaterialApp(
           home: ReaderScreen(
             filePath: 'test/fixtures/sample.epub',
-            bookId: 'b_foliate_active',
+            bookId: 'b_foliate_merge1',
             prefsManager: prefsManager,
             highlightsRepository: highlightsRepo,
             notesRepository: notesRepo,
@@ -3595,18 +3596,212 @@ void main() {
         ),
       );
       await tester.pump();
-      // _reloadAnnotationsAndRefreshDecorations() 內部 await repository
-      // 呼叫，需多一次 pump 讓 microtask 完成。
+      await tester.pump();
+
+      foliateView.onSelectionChanged?.call(
+        const EpubSelectionInfo(
+          locatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
+          progression: 0.1,
+          rect: PercentRect(left: 0.1, top: 0.2, right: 0.5, bottom: 0.3),
+          text: '選取的文字',
+          existingAnnotationId: 'highlight:$highlightId',
+        ),
+      );
+      await tester.pump();
+
+      expect(find.byKey(const Key('annotation_toolbar_delete')), findsOneWidget,
+          reason: '選取範圍命中既有畫線時，工具列應顯示刪除按鈕');
+
+      await tester.tap(find.byKey(const Key('annotation_toolbar_delete')));
       await tester.pump();
       await tester.pump();
 
-      foliateView.onAnnotationActivated?.call('highlight:$highlightId');
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 500));
-
-      expect(find.byType(SimpleDialog), findsOneWidget);
+      expect(await highlightsRepo.listByBook('b_foliate_merge1'), isEmpty,
+          reason: '點擊刪除按鈕後，該畫線應從 repository 移除');
+      expect(find.byType(AnnotationToolbar), findsNothing,
+          reason: '刪除後工具列應一併關閉');
     },
   );
+
+  testWidgets(
+    '流式 EPUB：長按選取範圍未命中既有標記時，工具列不顯示刪除按鈕',
+    (tester) async {
+      final highlightsRepo = FakeHighlightsRepository();
+      final notesRepo = FakeNotesRepository();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_foliate_merge2',
+            prefsManager: prefsManager,
+            highlightsRepository: highlightsRepo,
+            notesRepository: notesRepo,
+            isFixedLayout: false,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final foliateView = tester.widget<FoliateReaderView>(
+        find.byType(FoliateReaderView),
+      );
+      foliateView.onPageRendered();
+      foliateView.onLayoutResolved?.call(
+        const EpubLayoutInfo(
+          isFixedLayout: false,
+          writingMode: WritingMode.horizontal,
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      foliateView.onSelectionChanged?.call(
+        const EpubSelectionInfo(
+          locatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
+          progression: 0.1,
+          rect: PercentRect(left: 0.1, top: 0.2, right: 0.5, bottom: 0.3),
+          text: '沒有畫線的文字',
+        ),
+      );
+      await tester.pump();
+
+      expect(find.byType(AnnotationToolbar), findsOneWidget);
+      expect(find.byKey(const Key('annotation_toolbar_delete')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    '流式 EPUB：長按選取範圍命中既有備註時，點擊備註按鈕開啟編輯對話框且文字已預填',
+    (tester) async {
+      final highlightsRepo = FakeHighlightsRepository();
+      final notesRepo = FakeNotesRepository();
+      const noteId = 'n_merge1';
+      await notesRepo.insert(
+        const Note(
+          id: noteId,
+          bookId: 'b_foliate_merge3',
+          text: '既有備註內容',
+          epubLocatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
+          progression: 0.1,
+        ),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_foliate_merge3',
+            prefsManager: prefsManager,
+            highlightsRepository: highlightsRepo,
+            notesRepository: notesRepo,
+            isFixedLayout: false,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final foliateView = tester.widget<FoliateReaderView>(
+        find.byType(FoliateReaderView),
+      );
+      foliateView.onPageRendered();
+      foliateView.onLayoutResolved?.call(
+        const EpubLayoutInfo(
+          isFixedLayout: false,
+          writingMode: WritingMode.horizontal,
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      foliateView.onSelectionChanged?.call(
+        const EpubSelectionInfo(
+          locatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
+          progression: 0.1,
+          rect: PercentRect(left: 0.1, top: 0.2, right: 0.5, bottom: 0.3),
+          text: '既有備註內容',
+          existingAnnotationId: 'note:$noteId',
+        ),
+      );
+      await tester.pump();
+
+      await tester.tap(find.byKey(const Key('annotation_toolbar_note')));
+      await tester.pump();
+
+      expect(find.text('編輯備註'), findsOneWidget);
+      expect(find.text('既有備註內容'), findsOneWidget,
+          reason: '編輯備註對話框應預填既有備註文字');
+    },
+  );
+
+  testWidgets(
+    '流式 EPUB：點擊複製按鈕，選取文字寫入剪貼簿',
+    (tester) async {
+      final highlightsRepo = FakeHighlightsRepository();
+      final notesRepo = FakeNotesRepository();
+      final clipboardCalls = <String>[];
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, (call) async {
+        if (call.method == 'Clipboard.setData') {
+          clipboardCalls.add(call.arguments['text'] as String);
+        }
+        return null;
+      });
+      addTearDown(() {
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(SystemChannels.platform, null);
+      });
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_foliate_merge4',
+            prefsManager: prefsManager,
+            highlightsRepository: highlightsRepo,
+            notesRepository: notesRepo,
+            isFixedLayout: false,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final foliateView = tester.widget<FoliateReaderView>(
+        find.byType(FoliateReaderView),
+      );
+      foliateView.onPageRendered();
+      foliateView.onLayoutResolved?.call(
+        const EpubLayoutInfo(
+          isFixedLayout: false,
+          writingMode: WritingMode.horizontal,
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      foliateView.onSelectionChanged?.call(
+        const EpubSelectionInfo(
+          locatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
+          progression: 0.1,
+          rect: PercentRect(left: 0.1, top: 0.2, right: 0.5, bottom: 0.3),
+          text: '要複製的文字',
+        ),
+      );
+      await tester.pump();
+
+      await tester.tap(find.byKey(const Key('annotation_toolbar_copy')));
+      await tester.pump();
+
+      expect(clipboardCalls, ['要複製的文字']);
+    },
+  );
+
 
   // ─────────────────────────────────────────────────────────────────────
   // epic-18-reader-device-qa Issue 7：流式 EPUB Chrome 重構（浮動選單列＋
@@ -5797,7 +5992,8 @@ void main() {
     await gesture.moveTo(topLeft + const Offset(160, 220));
     await tester.pump();
     await gesture.up();
-    await tester.pump();
+    await pumpUntilPdfReady(tester,
+        condition: () => find.byType(AnnotationToolbar).evaluate().isNotEmpty);
 
     expect(find.byType(AnnotationToolbar), findsOneWidget,
         reason: '選取完成後應顯示 AnnotationToolbar');
@@ -7046,6 +7242,98 @@ void main() {
       expect(saved!.fontSize, 20 / 16);
       expect(saved.pdfContrast, isNull);
     });
+
+    testWidgets(
+      'PDF：框選矩形命中既有畫線時，工具列顯示刪除按鈕，點擊後刪除該畫線',
+      (tester) async {
+        final highlightsRepo = FakeHighlightsRepository();
+        final notesRepo = FakeNotesRepository();
+        const highlightId = 'ph_merge1';
+        await highlightsRepo.insert(
+          const Highlight(
+            id: highlightId,
+            bookId: 'b_pdf_merge1',
+            style: HighlightStyle.highlighterYellow,
+            pdfPageIndex: 0,
+            pdfRect: PercentRect(left: 0.1, top: 0.1, right: 0.5, bottom: 0.3),
+          ),
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: ReaderScreen(
+              filePath: 'test/fixtures/sample_multi_page.pdf',
+              bookId: 'b_pdf_merge1',
+              prefsManager: prefsManager,
+              highlightsRepository: highlightsRepo,
+              notesRepository: notesRepo,
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.runAsync(() => Future.delayed(Duration.zero));
+        await tester.pump();
+        await pumpUntilPdfReady(tester);
+
+        final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+        pdfView.onSelectionRectComputed?.call(
+          const PdfSelectionInfo(
+            pageIndex: 0,
+            rect: PercentRect(left: 0.2, top: 0.15, right: 0.4, bottom: 0.25),
+            widgetRect: PercentRect(left: 0.2, top: 0.15, right: 0.4, bottom: 0.25),
+            text: '框選文字',
+          ),
+        );
+        await tester.pump();
+
+        expect(find.byKey(const Key('annotation_toolbar_delete')), findsOneWidget);
+
+        await tester.tap(find.byKey(const Key('annotation_toolbar_delete')));
+        await tester.pump();
+        await tester.pump();
+
+        expect(await highlightsRepo.listByBook('b_pdf_merge1'), isEmpty);
+        expect(find.byType(AnnotationToolbar), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'PDF：框選矩形未命中既有標記時，工具列不顯示刪除按鈕',
+      (tester) async {
+        final highlightsRepo = FakeHighlightsRepository();
+        final notesRepo = FakeNotesRepository();
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: ReaderScreen(
+              filePath: 'test/fixtures/sample_multi_page.pdf',
+              bookId: 'b_pdf_merge2',
+              prefsManager: prefsManager,
+              highlightsRepository: highlightsRepo,
+              notesRepository: notesRepo,
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.runAsync(() => Future.delayed(Duration.zero));
+        await tester.pump();
+        await pumpUntilPdfReady(tester);
+
+        final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+        pdfView.onSelectionRectComputed?.call(
+          const PdfSelectionInfo(
+            pageIndex: 0,
+            rect: PercentRect(left: 0.2, top: 0.15, right: 0.4, bottom: 0.25),
+            widgetRect: PercentRect(left: 0.2, top: 0.15, right: 0.4, bottom: 0.25),
+            text: '框選文字',
+          ),
+        );
+        await tester.pump();
+
+        expect(find.byType(AnnotationToolbar), findsOneWidget);
+        expect(find.byKey(const Key('annotation_toolbar_delete')), findsNothing);
+      },
+    );
   });
 
   tearDownAll(() {

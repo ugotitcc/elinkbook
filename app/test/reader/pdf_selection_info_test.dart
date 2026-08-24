@@ -31,4 +31,29 @@ void main() {
     );
     expect(a == b, isFalse);
   });
+
+  test('text 欄位不同時，兩個 PdfSelectionInfo 不視為相等', () {
+    const a = PdfSelectionInfo(
+      pageIndex: 3,
+      rect: PercentRect(left: 0.1, top: 0.2, right: 0.3, bottom: 0.4),
+      widgetRect: PercentRect(left: 0.15, top: 0.25, right: 0.35, bottom: 0.45),
+      text: 'hello',
+    );
+    const b = PdfSelectionInfo(
+      pageIndex: 3,
+      rect: PercentRect(left: 0.1, top: 0.2, right: 0.3, bottom: 0.4),
+      widgetRect: PercentRect(left: 0.15, top: 0.25, right: 0.35, bottom: 0.45),
+      text: 'world',
+    );
+    expect(a == b, isFalse);
+  });
+
+  test('不傳 text 時預設為空字串', () {
+    const a = PdfSelectionInfo(
+      pageIndex: 0,
+      rect: PercentRect(left: 0.1, top: 0.2, right: 0.3, bottom: 0.4),
+      widgetRect: PercentRect(left: 0.1, top: 0.2, right: 0.3, bottom: 0.4),
+    );
+    expect(a.text, '');
+  });
 }

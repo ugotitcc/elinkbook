@@ -11,6 +11,7 @@ void main() {
           onStyleSelected: (_) {},
           onNotePressed: () {},
           onClosePressed: () {},
+          onCopyPressed: () {},
         ),
       ),
     ));
@@ -21,6 +22,8 @@ void main() {
     expect(find.byKey(const Key('annotation_toolbar_underline')), findsOneWidget);
     expect(find.byKey(const Key('annotation_toolbar_note')), findsOneWidget);
     expect(find.byKey(const Key('annotation_toolbar_close')), findsOneWidget);
+    expect(find.byKey(const Key('annotation_toolbar_copy')), findsOneWidget,
+        reason: '雙列版面第二列應永遠顯示複製按鈕（epic-27 Issue 11）');
   });
 
   testWidgets('點擊黃色螢光筆按鈕觸發 onStyleSelected(highlighterYellow)', (tester) async {
@@ -31,6 +34,7 @@ void main() {
           onStyleSelected: (style) => selected = style,
           onNotePressed: () {},
           onClosePressed: () {},
+          onCopyPressed: () {},
         ),
       ),
     ));
@@ -47,6 +51,7 @@ void main() {
           onStyleSelected: (style) => selected = style,
           onNotePressed: () {},
           onClosePressed: () {},
+          onCopyPressed: () {},
         ),
       ),
     ));
@@ -63,6 +68,7 @@ void main() {
           onStyleSelected: (style) => selected = style,
           onNotePressed: () {},
           onClosePressed: () {},
+          onCopyPressed: () {},
         ),
       ),
     ));
@@ -79,6 +85,7 @@ void main() {
           onStyleSelected: (style) => selected = style,
           onNotePressed: () {},
           onClosePressed: () {},
+          onCopyPressed: () {},
         ),
       ),
     ));
@@ -95,6 +102,7 @@ void main() {
           onStyleSelected: (_) {},
           onNotePressed: () => pressed = true,
           onClosePressed: () {},
+          onCopyPressed: () {},
         ),
       ),
     ));
@@ -111,11 +119,99 @@ void main() {
           onStyleSelected: (_) {},
           onNotePressed: () {},
           onClosePressed: () => pressed = true,
+          onCopyPressed: () {},
         ),
       ),
     ));
 
     await tester.tap(find.byKey(const Key('annotation_toolbar_close')));
     expect(pressed, isTrue);
+  });
+
+  testWidgets('點擊複製按鈕觸發 onCopyPressed', (tester) async {
+    var pressed = false;
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: AnnotationToolbar(
+          onStyleSelected: (_) {},
+          onNotePressed: () {},
+          onClosePressed: () {},
+          onCopyPressed: () => pressed = true,
+        ),
+      ),
+    ));
+
+    await tester.tap(find.byKey(const Key('annotation_toolbar_copy')));
+    expect(pressed, isTrue);
+  });
+
+  testWidgets('onDeletePressed 為 null 時不顯示刪除按鈕', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: AnnotationToolbar(
+          onStyleSelected: (_) {},
+          onNotePressed: () {},
+          onClosePressed: () {},
+          onCopyPressed: () {},
+        ),
+      ),
+    ));
+
+    expect(find.byKey(const Key('annotation_toolbar_delete')), findsNothing);
+  });
+
+  testWidgets('onDeletePressed 非 null 時顯示刪除按鈕，tooltip 對應 deleteButtonLabel',
+      (tester) async {
+    var pressed = false;
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: AnnotationToolbar(
+          onStyleSelected: (_) {},
+          onNotePressed: () {},
+          onClosePressed: () {},
+          onCopyPressed: () {},
+          onDeletePressed: () => pressed = true,
+          deleteButtonLabel: '刪除畫線',
+        ),
+      ),
+    ));
+
+    final finder = find.byKey(const Key('annotation_toolbar_delete'));
+    expect(finder, findsOneWidget);
+    final button = tester.widget<IconButton>(finder);
+    expect(button.tooltip, '刪除畫線');
+
+    await tester.tap(finder);
+    expect(pressed, isTrue);
+  });
+
+  testWidgets('hasExistingNote 為 true 時，備註按鈕 tooltip 顯示「編輯備註」；'
+      'false 時顯示「新增備註」', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: AnnotationToolbar(
+          onStyleSelected: (_) {},
+          onNotePressed: () {},
+          onClosePressed: () {},
+          onCopyPressed: () {},
+          hasExistingNote: true,
+        ),
+      ),
+    ));
+    var button = tester.widget<IconButton>(find.byKey(const Key('annotation_toolbar_note')));
+    expect(button.tooltip, '編輯備註');
+
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: AnnotationToolbar(
+          onStyleSelected: (_) {},
+          onNotePressed: () {},
+          onClosePressed: () {},
+          onCopyPressed: () {},
+        ),
+      ),
+    ));
+    button = tester.widget<IconButton>(find.byKey(const Key('annotation_toolbar_note')));
+    expect(button.tooltip, '新增備註');
   });
 }

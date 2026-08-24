@@ -418,7 +418,6 @@ class FoliateReaderView extends StatefulWidget {
   final ValueChanged<EpubPositionInfo>? onLocatorChanged;
   final ValueChanged<EpubSelectionInfo>? onSelectionChanged;
   final VoidCallback? onSelectionCleared;
-  final ValueChanged<String>? onAnnotationActivated;
 
   const FoliateReaderView({
     super.key,
@@ -463,7 +462,6 @@ class FoliateReaderView extends StatefulWidget {
     this.onLocatorChanged,
     this.onSelectionChanged,
     this.onSelectionCleared,
-    this.onAnnotationActivated,
   });
 
   static void nextPage(GlobalKey<State<FoliateReaderView>> key) {
@@ -679,6 +677,10 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
             right: argAt(4)?.toDouble() ?? 0.0,
             bottom: argAt(5)?.toDouble() ?? 0.0,
           ),
+          // epic-27-reader-device-compat Issue 11：main.js 新增送出的選取
+          // 文字與 hit-test 結果，見上方 JS 端 reportSelection() 註解。
+          text: args.length > 6 ? (args[6] as String? ?? '') : '',
+          existingAnnotationId: args.length > 7 ? args[7] as String? : null,
         ));
       },
     );
@@ -687,12 +689,6 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
       callback: (args) {
         _hasActiveSelection = false;
         widget.onSelectionCleared?.call();
-      },
-    );
-    controller.addJavaScriptHandler(
-      handlerName: 'onAnnotationActivated',
-      callback: (args) {
-        widget.onAnnotationActivated?.call(args[0] as String);
       },
     );
     await attachReaderView();

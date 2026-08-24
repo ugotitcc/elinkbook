@@ -10,15 +10,25 @@ import 'percent_rect.dart';
 /// 長寬比與螢幕不同而產生 letterbox，若拿 [rect] 直接乘上整個 widget
 /// 尺寸來定位 UI，會偏移 letterbox 留白的量（見 review 修正 Finding 1）。
 /// [pageIndex] 為框選發生的頁碼（0-indexed）。
+///
+/// [text]（epic-27-reader-device-compat Issue 11）為框選矩形內萃取出的
+/// 文字（見 `_PdfReaderViewState._extractTextInRect`），供
+/// `AnnotationToolbar` 的「複製」按鈕使用；預設空字串。PDF 沒有對應
+/// EPUB 的 `existingAnnotationId` 欄位——PDF 的既有標記命中判斷直接在
+/// `ReaderScreen`（已持有 `_highlights`/`_notes`）用
+/// `resolvePdfExistingAnnotation` 純函式計算，不需要像 EPUB 那樣跨
+/// WebView bridge 傳遞一個中間編碼字串。
 class PdfSelectionInfo {
   final int pageIndex;
   final PercentRect rect;
   final PercentRect widgetRect;
+  final String text;
 
   const PdfSelectionInfo({
     required this.pageIndex,
     required this.rect,
     required this.widgetRect,
+    this.text = '',
   });
 
   @override
@@ -26,12 +36,14 @@ class PdfSelectionInfo {
       other is PdfSelectionInfo &&
       other.pageIndex == pageIndex &&
       other.rect == rect &&
-      other.widgetRect == widgetRect;
+      other.widgetRect == widgetRect &&
+      other.text == text;
 
   @override
-  int get hashCode => Object.hash(pageIndex, rect, widgetRect);
+  int get hashCode => Object.hash(pageIndex, rect, widgetRect, text);
 
   @override
   String toString() =>
-      'PdfSelectionInfo(pageIndex: $pageIndex, rect: $rect, widgetRect: $widgetRect)';
+      'PdfSelectionInfo(pageIndex: $pageIndex, rect: $rect, widgetRect: $widgetRect, text: $text)';
 }
+

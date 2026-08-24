@@ -268,7 +268,7 @@
 
 ## Issue 11：長按已畫線區域完全不會跳出刪除確認視窗，只會觸發建立新劃線的工具列
 
-**Status:** `needs-info`——根因已有真機 log 明確證據支持（`show-annotation` 事件全程 0 次觸發），但這可能是既有架構層級的衝突（非 Issue 9 造成），修法需要設計決策（例如調整原生選字與畫線點擊 hit-test 的優先順序），不建議在未經人類/設計討論前直接動手改。
+**Status:** ✅ 已完成實作並通過全分支審查（分支 `feat/epic-27-issue-11`，8 個 commit：Task 1～Task 8）。設計文件（`docs/superpowers/specs/2026-08-24-epic27-issue11-annotation-toolbar-merge-design.md`）與實作計畫（`docs/epics/epic-27-reader-device-compat/plans/plan-issue-11.md`）經審查核准後，以 SDD 模式逐一執行 8 個 Task 與各 Task 審查。實作方案：將舊有靠原生 click 觸發的 `_showAnnotationActionDialog` 完全汰除，改由選取浮動工具列 `AnnotationToolbar` 改版為雙列排版統一承接（永遠顯示複製，命中既有畫線/備註時顯示刪除與編輯備註）；EPUB 端透過 `main.js` `overlayer.hitTest`、PDF 端透過 `resolvePdfExistingAnnotation` 矩形重疊比對判定命中；加入 `_selectionDragGenerationId` 非同步競速防護與 `percentRectToPdfRect` 逆向幾何轉換。全專案 `flutter analyze` 乾淨（0 warning/0 error）、`flutter test` 1,690 則測試全部通過（零回歸）。
 
 **依賴：** 無
 

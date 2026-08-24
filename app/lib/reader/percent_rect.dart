@@ -40,6 +40,18 @@ class PercentRect {
     );
   }
 
+  /// 判斷此矩形與 [other] 是否有重疊區域（epic-27-reader-device-compat
+  /// Issue 11，供 PDF 框選矩形比對既有畫線/備註使用）。僅邊緣相接（無
+  /// 重疊面積）視為不重疊，比照 `pdfrx_engine` 的 `PdfRect.overlaps` 同一
+  /// 慣例（不等式皆為嚴格 `<`/`>`）。
+  bool overlaps(PercentRect other) {
+    return left < other.right &&
+        right > other.left &&
+        top < other.bottom &&
+        bottom > other.top;
+  }
+
+
   @override
   bool operator ==(Object other) =>
       other is PercentRect &&
