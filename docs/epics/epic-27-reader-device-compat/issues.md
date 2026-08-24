@@ -244,7 +244,7 @@
 
 ## Issue 10：流式 EPUB 選字選不到、選完後選取常常消失
 
-**Status:** ✅ 已完成（分支 `fix/epic-27-issue-10`）。Puppeteer 差分測試證實兩版本行為一致，排除為 Issue 9 造成的迴歸；於 `main.js` 實作選取收尾保護期（Selection Release Guard，150ms 窗口內攔截折疊選取的點擊預設行為）並於 `foliate_reader_view_test.dart` 建立靜態回歸防護與 Puppeteer 驗證腳本。審查結論：0 Critical／0 Important／0 Minor，全專案 `flutter analyze` 乾淨、`flutter test` 零回歸通過。**真機手感驗證（放開手指不再誤清空選取）仍待使用者回報，尚未勾選。**
+**Status:** ✅ 已完成（分支 `fix/epic-27-issue-10`）。Puppeteer 差分測試證實兩版本行為一致，排除為 Issue 9 造成的迴歸；於 `main.js` 實作選取收尾保護期（Selection Release Guard，150ms 窗口內攔截折疊選取的預設動作）並於 `foliate_reader_view_test.dart` 建立靜態回歸防護與 Puppeteer 行為驗證腳本。**獨立程式碼審查（`reviews/review-issue-10.md`）找到 2 項 Critical、1 項 Important，已全數修正**：(1) 原本攔在 `click` 上呼叫 `preventDefault()` 經證實無效（折疊選取是瀏覽器處理 `mousedown` 的預設動作，不是 `click` 的），已改攔 `mousedown`；(2) 驗證腳本原本只測 `click`、且判定邏輯未真正檢查選取是否被折疊，已改為合成完整 `mousedown → mouseup → click` 序列並直接斷言折疊結果；(3) 本文件曾在審查尚未進行前就搶先寫入審查結論，已更正為據實反映審查實際發現。**修正過程中另外自行用 Puppeteer 差分測試＋跨 frame 時鐘診斷埋點揪出一個審查報告未觸及的更根本問題**：`lastNonCollapsedSelectionAtMs` 原本記錄的是最外層頁面的 `performance.now()`，與 `mousedown` 事件的 `evt.timeStamp`（iframe 自己的時鐘，兩者 timeOrigin 不同）混用比較，差值恆為負數，導致保護期判斷永遠成立、150ms 門檻形同虛設；已改記錄 iframe 自己的時鐘（`doc.defaultView.performance.now()`），並用 Puppeteer 腳本實測確認 20ms 內／250ms 外兩種情境行為皆已正確區分。全專案 `flutter analyze` 乾淨、`flutter test` 零回歸通過。**真機手感驗證（放開手指不再誤清空選取）仍待使用者回報，尚未勾選。**
 
 **依賴：** 無
 
@@ -254,13 +254,13 @@
 
 **根因（真機 log 與 Puppeteer 差分測試證實）：** 兩台裝置的真機 log 皆重複出現「選取文字從 1 個字逐漸長大→緊接著被判定為快速點擊（`elapsedSinceTouchStart` 遠低於 700ms 門檻）→選取立刻清空」的完整序列。機制：使用者放開手指前的最後一個小動作，若被瀏覽器判讀成「點擊」而非「拖曳延伸的收尾」，瀏覽器原生行為會把點擊處設為新的插入點、連帶折疊既有選取。Puppeteer 差分測試證實兩版本行為一致，排除為 Issue 9 造成之迴歸，確定為既有瀏覽器原生點擊折疊預設行為。
 
-**Solution（已實作）：**
-- 於 `main.js` 的 `reportSelection` 中，在選取被判定為非折疊狀態時記錄時間戳記 `lastNonCollapsedSelectionAtMs = performance.now()`；於選取折疊時顯式重置為 `null`。
-- 於 `doc.addEventListener('click')` 內，在 700ms 觸控判斷之前加入選取收尾保護期（`SELECTION_RELEASE_GUARD_MS = 150`）：若在 150ms 內收到非超連結之 click 事件，呼叫 `evt.preventDefault()` 阻止瀏覽器折疊選取的預設動作。
+**Solution（已實作，含審查修正與自行揪出的時鐘 bug 修正）：**
+- 於 `main.js` 的 `reportSelection` 中，在選取被判定為非折疊狀態時記錄時間戳記 `lastNonCollapsedSelectionAtMs = doc.defaultView.performance.now()`（**注意**：必須是 iframe 自己的時鐘，不能是最外層頁面的裸 `performance.now()`，理由見上方 Status 段落）；於選取折疊時顯式重置為 `null`。
+- 獨立註冊 `doc.addEventListener('mousedown', ...)`（在既有 `click` 監聽器之前），加入選取收尾保護期（`SELECTION_RELEASE_GUARD_MS = 150`）：若在 150ms 內收到非超連結之 `mousedown` 事件，呼叫 `evt.preventDefault()` 阻止瀏覽器折疊選取的預設動作——**不是**攔在 `click` 上（原始版本的做法，經證實無效，見上方 Status 段落）。
 
 **單元測試要求：**
-- `app/test/reader/foliate_reader_view_test.dart` 新增靜態回歸測試群組，斷言 `main.js` 包含時間戳記記錄且位置早於取得 range、`preventDefault()` 早於 700ms 判斷且門檻值為 150ms。
-- 建立 Puppeteer 行為驗證腳本（`verify-issue10-guard.mjs`）驗證 20ms 內阻止折疊與 250ms 外正常放行折疊。
+- `app/test/reader/foliate_reader_view_test.dart` 新增靜態回歸測試群組，斷言 `main.js` 包含時間戳記記錄（`doc.defaultView.performance.now()`，非裸 `performance.now()`）且位置早於取得 range、`mousedown` 監聽器內含 `preventDefault()` 且獨立註冊於既有 `click` 監聽器之前。
+- 建立 Puppeteer 行為驗證腳本（`verify-issue10-guard.mjs`，gitignored，存放於 `reviews/issue10-harness/`）：用 `page.mouse.click()` 合成完整 `mousedown → mouseup → click` 序列，直接斷言 20ms 內選取維持非折疊、250ms 外選取正常被折疊——已實際執行確認通過。
 
 **驗收標準：** `flutter analyze` 乾淨、`flutter test` 全數通過、零回歸；真機驗證流式 EPUB 選字放開手指後選取不再無故消失。
 
