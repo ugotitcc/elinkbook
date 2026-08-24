@@ -1,6 +1,6 @@
 # Epic 27 Issue 11 — 長按已畫線區域改由畫線工具列統一處理 實作計畫
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** 長按已畫線文字時，不再依賴瀏覽器原生 `click` 事件觸發刪除確認視窗（這條路徑已被真機 log 證實會被原生選字搶走，永遠不會發生）。改成：長按（不論有沒有畫線）一律跳出同一個 `AnnotationToolbar`；若長按處剛好命中既有畫線／備註，工具列上多出「刪除」按鈕（可刪除、也可編輯既有備註），並新增「複製」按鈕把選取文字複製到剪貼簿。工具列改為雙列版面。範圍涵蓋 EPUB（含 KF8/TXT/MD）與 PDF。
 
@@ -44,7 +44,7 @@
 - Consumes: 無新增——沿用既有 `PercentRect`（`app/lib/reader/percent_rect.dart`）與 `pdfrx` 套件的 `PdfRect`。
 - Produces: `PdfRect percentRectToPdfRect({required PercentRect rect, required double pageWidth, required double pageHeight})`，供 Task 4 的 PDF 文字萃取使用。
 
-- [ ] **Step 1：寫失敗的測試——驗證 `percentRectToPdfRect` 與既有 `pdfRectToPercentRect` 互為反函式**
+- [x] **Step 1：寫失敗的測試——驗證 `percentRectToPdfRect` 與既有 `pdfRectToPercentRect` 互為反函式**
 
 在 `app/test/reader/pdf_search_geometry_test.dart` 的 `pdfRectToPercentRect` 這個 `group` 結尾 `});`（第 54 行）之後、`PdfSearchMatch 值相等性` 這個 `group` 開始之前，新增：
 
@@ -83,12 +83,12 @@
 
 **Files 匯入注意：** 本檔案已 `import 'package:pdfrx/pdfrx.dart';` 與 `import 'package:elinkbook/reader/percent_rect.dart';`（見既有第 2、5 行），不需新增 import。
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 Run: `cd app && flutter test test/reader/pdf_search_geometry_test.dart`
 Expected: 新增的 3 則測試 FAIL（`percentRectToPdfRect` 尚未定義），既有 8 則測試維持通過。
 
-- [ ] **Step 3：實作 `percentRectToPdfRect`**
+- [x] **Step 3：實作 `percentRectToPdfRect`**
 
 在 `app/lib/reader/pdf_search_geometry.dart` 檔案結尾（第 31 行 `pdfRectToPercentRect` 函式結束的 `}` 之後）新增：
 
@@ -112,17 +112,17 @@ PdfRect percentRectToPdfRect({
 }
 ```
 
-- [ ] **Step 4：執行測試確認通過**
+- [x] **Step 4：執行測試確認通過**
 
 Run: `cd app && flutter test test/reader/pdf_search_geometry_test.dart`
 Expected: 全部 11 則測試（既有 8 + 新增 3）PASS。
 
-- [ ] **Step 5：`flutter analyze`**
+- [x] **Step 5：`flutter analyze`**
 
 Run: `cd app && flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/lib/reader/pdf_search_geometry.dart app/test/reader/pdf_search_geometry_test.dart
@@ -143,7 +143,7 @@ git commit -m "feat(epic-27): Issue 11 Task 1——新增 percentRectToPdfRect P
 - Consumes: 無新增。
 - Produces: `EpubSelectionInfo.text`（`String`，預設 `''`）、`PdfSelectionInfo.text`（`String`，預設 `''`），供 Task 3（EPUB）／Task 4（PDF）填入真正的選取文字，供 Task 7 的「複製」按鈕使用。
 
-- [ ] **Step 1：寫失敗的測試——`text` 欄位參與相等性比較**
+- [x] **Step 1：寫失敗的測試——`text` 欄位參與相等性比較**
 
 在 `app/test/reader/epub_selection_info_test.dart` 新增一則測試（附加在既有測試之後）：
 
@@ -203,12 +203,12 @@ git commit -m "feat(epic-27): Issue 11 Task 1——新增 percentRectToPdfRect P
   });
 ```
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 Run: `cd app && flutter test test/reader/epub_selection_info_test.dart test/reader/pdf_selection_info_test.dart`
 Expected: 新增的 4 則測試 FAIL（`text` 具名參數不存在，編譯錯誤）。
 
-- [ ] **Step 3：`EpubSelectionInfo` 新增欄位**
+- [x] **Step 3：`EpubSelectionInfo` 新增欄位**
 
 把 `app/lib/reader/epub_selection_info.dart` 整份改為：
 
@@ -262,7 +262,7 @@ class EpubSelectionInfo {
 }
 ```
 
-- [ ] **Step 4：`PdfSelectionInfo` 新增欄位**
+- [x] **Step 4：`PdfSelectionInfo` 新增欄位**
 
 把 `app/lib/reader/pdf_selection_info.dart` 整份改為：
 
@@ -317,17 +317,17 @@ class PdfSelectionInfo {
 }
 ```
 
-- [ ] **Step 5：執行測試確認通過**
+- [x] **Step 5：執行測試確認通過**
 
 Run: `cd app && flutter test test/reader/epub_selection_info_test.dart test/reader/pdf_selection_info_test.dart`
 Expected: 全部測試 PASS（既有 2 則 + 新增 4 則）。
 
-- [ ] **Step 6：全專案編譯檢查（確認預設值讓既有 9 處呼叫點不受影響）**
+- [x] **Step 6：全專案編譯檢查（確認預設值讓既有 9 處呼叫點不受影響）**
 
 Run: `cd app && flutter analyze`
 Expected: `No issues found!`（若這裡出現 `text`/`existingAnnotationId` 相關錯誤，代表某處呼叫點使用了不支援具名參數的方式建構，需檢查是否誤用 positional 建構）。
 
-- [ ] **Step 7：Commit**
+- [x] **Step 7：Commit**
 
 ```bash
 git add app/lib/reader/epub_selection_info.dart app/lib/reader/pdf_selection_info.dart app/test/reader/epub_selection_info_test.dart app/test/reader/pdf_selection_info_test.dart
@@ -347,7 +347,7 @@ git commit -m "feat(epic-27): Issue 11 Task 2——EpubSelectionInfo/PdfSelectio
 - Consumes: Task 2 的 `EpubSelectionInfo.text`/`existingAnnotationId`。
 - Produces: `main.js` 的 `callHandler('onSelectionChanged', ...)` 送出 8 個位置參數（原 6 個 + `text` + `existingAnnotationId`）；`foliate_reader_view.dart` 的 `widget.onSelectionChanged` 回呼收到完整填入 `text`/`existingAnnotationId` 的 `EpubSelectionInfo`。
 
-- [ ] **Step 1：寫失敗的靜態內容回歸測試**
+- [x] **Step 1：寫失敗的靜態內容回歸測試**
 
 在 `app/test/reader/foliate_reader_view_test.dart`，找到既有的「main.js 選取收尾保護期（Selection Release Guard）regression guard（Epic 27 Issue 10）」這個 `group`（Issue 10 新增，見 plan-issue-10.md），在它結尾的 `});` 之後新增：
 
@@ -426,12 +426,12 @@ git commit -m "feat(epic-27): Issue 11 Task 2——EpubSelectionInfo/PdfSelectio
 
 **Files 匯入注意：** 本檔案已 `import 'dart:io';`（見 Issue 10 既有 group 用到 `File(...)`），不需新增 import。
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 Run: `cd app && flutter test test/reader/foliate_reader_view_test.dart`
 Expected: 新增的 3 則測試 FAIL（`main.js` 尚未有 `overlayer.hitTest`/`decorationIdByCfi.get(hitCfi)`/新增的 2 個參數），既有測試維持通過。
 
-- [ ] **Step 3：修改 `main.js` 的 `reportSelection`**
+- [x] **Step 3：修改 `main.js` 的 `reportSelection`**
 
 在 `app/android/app/src/main/assets/foliate/main.js`，找到 `reportSelection` 閉包內（約第 691-707 行）：
 
@@ -491,7 +491,7 @@ Expected: 新增的 3 則測試 FAIL（`main.js` 尚未有 `overlayer.hitTest`/`
         )
 ```
 
-- [ ] **Step 4：修改 `foliate_reader_view.dart` 的 `onSelectionChanged` handler**
+- [x] **Step 4：修改 `foliate_reader_view.dart` 的 `onSelectionChanged` handler**
 
 在 `app/lib/reader/foliate_reader_view.dart`，找到（約第 666-684 行）：
 
@@ -543,17 +543,17 @@ Expected: 新增的 3 則測試 FAIL（`main.js` 尚未有 `overlayer.hitTest`/`
 
 **說明（本步驟不需另外新增 widget test）：** 這段 JS→Dart 參數解析邏輯與既有 6 個參數的解析邏輯屬於同一種「WebView JS 橋接的薄轉接層」，本專案既有慣例（`foliate_reader_view_test.dart` 全檔案沒有任何測試直接呼叫 `addJavaScriptHandler` 註冊的內部 callback，一律靠 Step 1 的靜態內容檢查驗證 JS 端送出正確的資料形狀，實際的下游行為由 Task 7 在 `reader_screen_test.dart` 透過 `foliateView.onSelectionChanged?.call(EpubSelectionInfo(...))` 這個既有的 bypass 測試手法驗證）比照辦理，不新增測試基礎設施。
 
-- [ ] **Step 5：執行測試確認通過**
+- [x] **Step 5：執行測試確認通過**
 
 Run: `cd app && flutter test test/reader/foliate_reader_view_test.dart`
 Expected: 全部測試 PASS。
 
-- [ ] **Step 6：`flutter analyze`**
+- [x] **Step 6：`flutter analyze`**
 
 Run: `cd app && flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 7：Commit**
+- [x] **Step 7：Commit**
 
 ```bash
 git add app/android/app/src/main/assets/foliate/main.js app/lib/reader/foliate_reader_view.dart app/test/reader/foliate_reader_view_test.dart
@@ -572,7 +572,7 @@ git commit -m "feat(epic-27): Issue 11 Task 3——EPUB 選取範圍 hit-test �
 - Consumes: Task 1 的 `percentRectToPdfRect`；Task 2 的 `PdfSelectionInfo.text`。
 - Produces: `_finishSelectionDrag()` 改為 `Future<void>`，完成後才呼叫 `widget.onSelectionRectComputed`（帶有真正萃取出的 `text`）；過期的萃取結果會被世代編號防護擋下，不會覆蓋新一次框選的狀態。
 
-- [ ] **Step 1：寫失敗的測試——框選涵蓋整頁時，`onSelectionRectComputed` 回報的 `text` 內含頁面文字**
+- [x] **Step 1：寫失敗的測試——框選涵蓋整頁時，`onSelectionRectComputed` 回報的 `text` 內含頁面文字**
 
 在 `app/test/reader/pdf_reader_view_selection_test.dart`，於檔案結尾（最後一個 `testWidgets` 之後、`}` 之前）新增：
 
@@ -683,12 +683,12 @@ git commit -m "feat(epic-27): Issue 11 Task 3——EPUB 選取範圍 hit-test �
   });
 ```
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 Run: `cd app && flutter test test/reader/pdf_reader_view_selection_test.dart`
 Expected: 新增的 2 則測試 FAIL（`PdfSelectionInfo` 目前永遠 `text: ''`；`_finishSelectionDrag` 仍是同步、沒有世代編號防護，第二則測試可能因 `results.length` 不等於 1 而失敗，或因當前同步實作根本不會有過期結果問題而通不過「有意義」檢查——兩則皆預期先 FAIL）。
 
-- [ ] **Step 3：新增 `_selectionDragGenerationId` 欄位**
+- [x] **Step 3：新增 `_selectionDragGenerationId` 欄位**
 
 在 `app/lib/reader/pdf_reader_view.dart`，找到（約第 306 行）：
 
@@ -709,7 +709,7 @@ Expected: 新增的 2 則測試 FAIL（`PdfSelectionInfo` 目前永遠 `text: ''
   int _selectionDragGenerationId = 0;
 ```
 
-- [ ] **Step 4：`onLongPressStart` 遞增世代編號**
+- [x] **Step 4：`onLongPressStart` 遞增世代編號**
 
 找到（約第 1124-1134 行）：
 
@@ -744,7 +744,7 @@ Expected: 新增的 2 則測試 FAIL（`PdfSelectionInfo` 目前永遠 `text: ''
         },
 ```
 
-- [ ] **Step 5：新增 `_extractTextInRect`，`_finishSelectionDrag` 改為非同步**
+- [x] **Step 5：新增 `_extractTextInRect`，`_finishSelectionDrag` 改為非同步**
 
 找到（約第 1146-1175 行）：
 
@@ -851,17 +851,17 @@ Expected: 新增的 2 則測試 FAIL（`PdfSelectionInfo` 目前永遠 `text: ''
 
 **說明：** `onLongPressEnd: (details) => _finishSelectionDrag(),`（約第 1140 行）不需要修改——`_finishSelectionDrag` 改回傳 `Future<void>` 後，這個箭頭函式回傳值被隱式捨棄（fire-and-forget），這是合法的 `VoidCallback` 用法，本專案 `analysis_options.yaml` 未啟用 `unawaited_futures` 這類會標記此用法的 lint 規則。
 
-- [ ] **Step 6：執行測試確認通過**
+- [x] **Step 6：執行測試確認通過**
 
 Run: `cd app && flutter test test/reader/pdf_reader_view_selection_test.dart`
 Expected: 全部測試 PASS（含既有 10 則 + 新增 2 則）。
 
-- [ ] **Step 7：`flutter analyze`**
+- [x] **Step 7：`flutter analyze`**
 
 Run: `cd app && flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 8：Commit**
+- [x] **Step 8：Commit**
 
 ```bash
 git add app/lib/reader/pdf_reader_view.dart app/test/reader/pdf_reader_view_selection_test.dart
@@ -886,7 +886,7 @@ git commit -m "feat(epic-27): Issue 11 Task 4——PDF 框選文字萃取，補�
   - `PercentRect.overlaps(PercentRect other) → bool`
   這三者供 Task 7 在 `reader_screen.dart` 呼叫。
 
-- [ ] **Step 1：寫失敗的測試——`PercentRect.overlaps`**
+- [x] **Step 1：寫失敗的測試——`PercentRect.overlaps`**
 
 在 `app/test/reader/percent_rect_test.dart` 結尾（既有 3 則測試之後）新增：
 
@@ -1098,12 +1098,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 Run: `cd app && flutter test test/reader/percent_rect_test.dart test/reader/annotation_resolution_test.dart`
 Expected: `percent_rect_test.dart` 新增 3 則 FAIL（`overlaps` 未定義）；`annotation_resolution_test.dart` 因為 `annotation_resolution.dart` 檔案不存在而整份編譯失敗。
 
-- [ ] **Step 3：`PercentRect` 新增 `overlaps`**
+- [x] **Step 3：`PercentRect` 新增 `overlaps`**
 
 在 `app/lib/reader/percent_rect.dart`，於 `toString()` 方法（第 54-55 行）之前新增：
 
@@ -1121,7 +1121,7 @@ Expected: `percent_rect_test.dart` 新增 3 則 FAIL（`overlaps` 未定義）�
 
 ```
 
-- [ ] **Step 4：新增 `annotation_resolution.dart`**
+- [x] **Step 4：新增 `annotation_resolution.dart`**
 
 ```dart
 import 'annotation_list_item.dart';
@@ -1205,17 +1205,17 @@ AnnotationListItem? resolvePdfExistingAnnotation({
 }
 ```
 
-- [ ] **Step 5：執行測試確認通過**
+- [x] **Step 5：執行測試確認通過**
 
 Run: `cd app && flutter test test/reader/percent_rect_test.dart test/reader/annotation_resolution_test.dart`
 Expected: 全部測試 PASS。
 
-- [ ] **Step 6：`flutter analyze`**
+- [x] **Step 6：`flutter analyze`**
 
 Run: `cd app && flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 7：Commit**
+- [x] **Step 7：Commit**
 
 ```bash
 git add app/lib/reader/annotation_resolution.dart app/test/reader/annotation_resolution_test.dart app/lib/reader/percent_rect.dart app/test/reader/percent_rect_test.dart
@@ -1234,7 +1234,7 @@ git commit -m "feat(epic-27): Issue 11 Task 5——新增既有標記命中判�
 - Consumes: 無新增（純 UI widget）。
 - Produces: `AnnotationToolbar` 新增建構參數 `onCopyPressed`（`VoidCallback`，必填）、`onDeletePressed`（`VoidCallback?`，選填，`null` 代表不顯示刪除按鈕）、`deleteButtonLabel`（`String?`）、`hasExistingNote`（`bool`，預設 `false`）；新增 `Key('annotation_toolbar_copy')`／`Key('annotation_toolbar_delete')`。供 Task 7 呼叫。
 
-- [ ] **Step 1：寫失敗的測試——新按鈕的顯示與互動**
+- [x] **Step 1：寫失敗的測試——新按鈕的顯示與互動**
 
 在 `app/test/screens/annotation_toolbar_test.dart`，把既有 7 個 `testWidgets` 呼叫全部補上 `onCopyPressed: () {},`（放在 `onClosePressed` 之後），例如第一個測試改為：
 
@@ -1356,12 +1356,12 @@ git commit -m "feat(epic-27): Issue 11 Task 5——新增既有標記命中判�
   });
 ```
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 Run: `cd app && flutter test test/screens/annotation_toolbar_test.dart`
 Expected: 全部測試 FAIL（`onCopyPressed` 具名參數不存在，整份檔案編譯錯誤）。
 
-- [ ] **Step 3：改版 `AnnotationToolbar`**
+- [x] **Step 3：改版 `AnnotationToolbar`**
 
 把 `app/lib/screens/annotation_toolbar.dart` 整份改為：
 
@@ -1497,17 +1497,17 @@ class AnnotationToolbar extends StatelessWidget {
 }
 ```
 
-- [ ] **Step 4：執行測試確認通過**
+- [x] **Step 4：執行測試確認通過**
 
 Run: `cd app && flutter test test/screens/annotation_toolbar_test.dart`
 Expected: 全部測試 PASS（既有 7 則 + 新增 4 則）。
 
-- [ ] **Step 5：`flutter analyze`**
+- [x] **Step 5：`flutter analyze`**
 
 Run: `cd app && flutter analyze`
 Expected: `No issues found!`（`reader_screen.dart` 目前呼叫 `AnnotationToolbar(...)` 的兩處尚未補上 `onCopyPressed` 這個新的必填參數，這裡會出現編譯錯誤，屬預期中——留給 Task 7 修正，本步驟只需確認 `annotation_toolbar.dart` 與其測試檔本身沒有問題，可用 `flutter analyze lib/screens/annotation_toolbar.dart test/screens/annotation_toolbar_test.dart` 縮小範圍確認，全專案分析要到 Task 7 結束才會乾淨）。
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/lib/screens/annotation_toolbar.dart app/test/screens/annotation_toolbar_test.dart
@@ -1526,7 +1526,7 @@ git commit -m "feat(epic-27): Issue 11 Task 6——AnnotationToolbar 改版雙�
 - Consumes: Task 5 的 `resolveEpubExistingAnnotation`/`resolvePdfExistingAnnotation`；Task 6 的 `AnnotationToolbar` 新參數。
 - Produces: `_handleDeleteExistingAnnotation`（EPUB）/`_handlePdfDeleteExistingAnnotation`（PDF）/`_handleCopySelection`/`_annotationDeleteButtonLabel` 新增方法；`_handleNotePressed`/`_handlePdfNotePressed` 改為依既有備註分流。
 
-- [ ] **Step 1：寫失敗的測試——命中既有畫線時顯示刪除按鈕並可刪除（EPUB）**
+- [x] **Step 1：寫失敗的測試——命中既有畫線時顯示刪除按鈕並可刪除（EPUB）**
 
 在 `app/test/screens/reader_screen_test.dart`，找到「流式 EPUB：FoliateReaderView 回報 onAnnotationActivated 時，開啟對話框」這個測試（約第 3555-3609 行）**正上方**插入新測試（這個既有測試會在 Task 8 被移除，本步驟先在它之前新增，避免插入位置在 Task 8 刪除範圍內造成混淆）：
 
@@ -1881,12 +1881,12 @@ git commit -m "feat(epic-27): Issue 11 Task 6——AnnotationToolbar 改版雙�
 
 **Files 匯入注意：** `reader_screen_test.dart` 需確認已 `import 'package:flutter/services.dart';`（供 `SystemChannels`），若尚未匯入請於檔案頂端補上。
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 Run: `cd app && flutter test test/screens/reader_screen_test.dart`
 Expected: 新增的 6 則測試 FAIL（`AnnotationToolbar` 呼叫端尚未傳入 `onCopyPressed` 導致整份測試檔編譯錯誤，或執行期找不到 `annotation_toolbar_delete`/`annotation_toolbar_copy` 對應行為）。
 
-- [ ] **Step 3：新增 import**
+- [x] **Step 3：新增 import**
 
 在 `app/lib/screens/reader_screen.dart` 頂端 import 區塊（約第 7 行之後）新增：
 
@@ -1894,7 +1894,7 @@ Expected: 新增的 6 則測試 FAIL（`AnnotationToolbar` 呼叫端尚未傳入
 import '../reader/annotation_resolution.dart';
 ```
 
-- [ ] **Step 4：`build()` 內算出 `existingItem`/`pdfExistingItem`**
+- [x] **Step 4：`build()` 內算出 `existingItem`/`pdfExistingItem`**
 
 找到（約第 2040-2044 行）：
 
@@ -1931,7 +1931,7 @@ import '../reader/annotation_resolution.dart';
               );
 ```
 
-- [ ] **Step 5：新增刪除／複製 handler，`_annotationDeleteButtonLabel` helper**
+- [x] **Step 5：新增刪除／複製 handler，`_annotationDeleteButtonLabel` helper**
 
 在 `app/lib/screens/reader_screen.dart`，找到 `_handleCloseAnnotationToolbar`（約第 1511-1514 行）結尾的 `}` 之後，新增：
 
@@ -1976,7 +1976,7 @@ import '../reader/annotation_resolution.dart';
   }
 ```
 
-- [ ] **Step 6：`_handleNotePressed`／`_handlePdfNotePressed` 改為依既有備註分流**
+- [x] **Step 6：`_handleNotePressed`／`_handlePdfNotePressed` 改為依既有備註分流**
 
 找到（約第 1549-1569 行）：
 
@@ -2109,7 +2109,7 @@ import '../reader/annotation_resolution.dart';
   }
 ```
 
-- [ ] **Step 7：更新工具列常數與呼叫端**
+- [x] **Step 7：更新工具列常數與呼叫端**
 
 找到（約第 1996-2008 行）：
 
@@ -2221,17 +2221,17 @@ import '../reader/annotation_resolution.dart';
               ),
 ```
 
-- [ ] **Step 8：執行測試確認通過**
+- [x] **Step 8：執行測試確認通過**
 
 Run: `cd app && flutter test test/screens/reader_screen_test.dart`
 Expected: 全部測試 PASS（含既有測試、Task 7 新增 6 則）。若「工具列右緣不應超出畫面寬度」（約第 3490-3497 行）或其他既有定位測試因新常數而失敗，依失敗訊息回報的實際數值調整 Step 7 的 `_annotationToolbarHeight`/`_annotationToolbarWidth`，不可略過失敗。
 
-- [ ] **Step 9：`flutter analyze`**
+- [x] **Step 9：`flutter analyze`**
 
 Run: `cd app && flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 10：Commit**
+- [x] **Step 10：Commit**
 
 ```bash
 git add app/lib/screens/reader_screen.dart app/test/screens/reader_screen_test.dart
@@ -2252,16 +2252,16 @@ git commit -m "feat(epic-27): Issue 11 Task 7——reader_screen.dart 接線刪�
 - Consumes: 無。
 - Produces: 無——本 Task 只刪除程式碼，不新增任何介面。
 
-- [ ] **Step 1：移除既有的 `onAnnotationActivated` 測試**
+- [x] **Step 1：移除既有的 `onAnnotationActivated` 測試**
 
 在 `app/test/screens/reader_screen_test.dart`，刪除「流式 EPUB：FoliateReaderView 回報 onAnnotationActivated 時，開啟對話框」這整個 `testWidgets` 區塊（Task 7 Step 1 已確認它緊接在新增的 4 則 EPUB 測試之後，內容見本計畫前段引用的原始碼，約在移除前的行號 3555-3609 一帶，實際行號因 Task 7 新增測試而順延，以文字內容「流式 EPUB：FoliateReaderView 回報 onAnnotationActivated 時，開啟對話框」定位）。
 
-- [ ] **Step 2：執行測試確認移除後其餘測試仍通過（但 `_handleAnnotationActivated` 尚未刪除，此步驟只是先拿掉會失效的舊測試）**
+- [x] **Step 2：執行測試確認移除後其餘測試仍通過（但 `_handleAnnotationActivated` 尚未刪除，此步驟只是先拿掉會失效的舊測試）**
 
 Run: `cd app && flutter test test/screens/reader_screen_test.dart`
 Expected: 全部測試 PASS（少了 1 則，其餘不受影響）。
 
-- [ ] **Step 3：刪除 `reader_screen.dart` 內的舊機制程式碼**
+- [x] **Step 3：刪除 `reader_screen.dart` 內的舊機制程式碼**
 
 刪除 `_handleAnnotationActivated`（原約第 1637-1664 行，含其上方的文件註解）：
 
@@ -2369,7 +2369,7 @@ Expected: 全部測試 PASS（少了 1 則，其餘不受影響）。
 
 整行刪除。
 
-- [ ] **Step 4：刪除 `foliate_reader_view.dart` 內的 `onAnnotationActivated`**
+- [x] **Step 4：刪除 `foliate_reader_view.dart` 內的 `onAnnotationActivated`**
 
 刪除建構參數宣告（約第 421 行）：
 
@@ -2394,12 +2394,12 @@ Expected: 全部測試 PASS（少了 1 則，其餘不受影響）。
     );
 ```
 
-- [ ] **Step 5：`flutter analyze` 確認無殘留引用**
+- [x] **Step 5：`flutter analyze` 確認無殘留引用**
 
 Run: `cd app && flutter analyze`
 Expected: `No issues found!`（若出現 `decodeAnnotationId`/`AnnotationKind`/`AnnotationListItem` 未使用的 import 警告，檢查是否還有其他地方使用——`AnnotationListItem` 應仍被 `annotation_resolution.dart` 使用；`decodeAnnotationId`/`AnnotationKind` 應仍被 `annotation_resolution.dart` 使用，`reader_screen.dart` 本身若不再直接引用這兩者，需移除對應的 `import '../reader/epub_decoration.dart';`——先確認 `reader_screen.dart` 是否還有其他地方用到 `epub_decoration.dart` 匯出的符號再決定是否移除整行 import）。
 
-- [ ] **Step 6：刪除 `main.js` 的 `show-annotation` 監聽器**
+- [x] **Step 6：刪除 `main.js` 的 `show-annotation` 監聽器**
 
 找到（約第 636-639 行）：
 
@@ -2412,7 +2412,7 @@ Expected: `No issues found!`（若出現 `decodeAnnotationId`/`AnnotationKind`/`
 
 整段連同上方緊接的說明註解（約第 630-635 行，「點擊既有標記（epic-17 Issue 8）...」這段，因為它只是解釋這個監聽器的存在理由，監聽器本身移除後這段註解也失去意義）一併刪除。
 
-- [ ] **Step 7：新增靜態內容回歸測試——確認舊機制已移除**
+- [x] **Step 7：新增靜態內容回歸測試——確認舊機制已移除**
 
 在 `app/test/reader/foliate_reader_view_test.dart` Task 3 新增的「main.js 選取範圍 hit-test 既有標記＋回傳文字 regression guard（Epic 27 Issue 11）」group 結尾，新增一則測試：
 
@@ -2427,17 +2427,17 @@ Expected: `No issues found!`（若出現 `decodeAnnotationId`/`AnnotationKind`/`
     });
 ```
 
-- [ ] **Step 8：執行完整測試套件**
+- [x] **Step 8：執行完整測試套件**
 
 Run: `cd app && flutter test`
 Expected: 全專案測試 PASS，零回歸。
 
-- [ ] **Step 9：`flutter analyze`**
+- [x] **Step 9：`flutter analyze`**
 
 Run: `cd app && flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 10：Commit**
+- [x] **Step 10：Commit**
 
 ```bash
 git add app/lib/screens/reader_screen.dart app/lib/reader/foliate_reader_view.dart app/android/app/src/main/assets/foliate/main.js app/test/screens/reader_screen_test.dart app/test/reader/foliate_reader_view_test.dart
@@ -2448,12 +2448,12 @@ git commit -m "refactor(epic-27): Issue 11 Task 8——移除舊版點擊觸發�
 
 ## 完成後的驗證（對照 `issues.md` Issue 11，本計畫執行後應同步更新該工單）
 
-- [ ] `cd app && flutter analyze` 全專案乾淨（`No issues found!`）。
-- [ ] `cd app && flutter test` 全專案零回歸通過。
-- [ ] 長按 EPUB 已畫線文字：工具列出現「刪除」按鈕，點擊後畫線（含依附備註）從資料庫刪除、工具列關閉。
-- [ ] 長按 EPUB 已有備註（無畫線）文字：點擊「備註」按鈕開啟編輯對話框，文字已預填。
-- [ ] 長按 EPUB 空白文字：工具列不顯示刪除按鈕，「備註」按鈕開新增對話框。
-- [ ] PDF 框選命中既有畫線／備註／空白區域三種情境，行為與 EPUB 對稱。
-- [ ] 點擊「複製」按鈕，選取/框選文字寫入剪貼簿。
-- [ ] 本計畫完成後，同步更新 `docs/epics/epic-27-reader-device-compat/issues.md`「Issue 11」的 `Status`（`needs-info` → 完成後之對應狀態），並在 Solution 段落註記實際採用的機制（選取範圍 hit-test 既有標記，取代原本依賴 click 事件的方案），不覆蓋掉原文的診斷歷程記錄。
-- [ ] 建議合併後請使用者在真機（WAVE／AiPaper Reader C 任一台）做一次手感驗證：長按已畫線文字能否穩定跳出刪除按鈕；PDF 框選命中既有畫線的手感是否符合預期。
+- [x] `cd app && flutter analyze` 全專案乾淨（`No issues found!`）。
+- [x] `cd app && flutter test` 全專案零回歸通過。
+- [x] 長按 EPUB 已畫線文字：工具列出現「刪除」按鈕，點擊後畫線（含依附備註）從資料庫刪除、工具列關閉。
+- [x] 長按 EPUB 已有備註（無畫線）文字：點擊「備註」按鈕開啟編輯對話框，文字已預填。
+- [x] 長按 EPUB 空白文字：工具列不顯示刪除按鈕，「備註」按鈕開新增對話框。
+- [x] PDF 框選命中既有畫線／備註／空白區域三種情境，行為與 EPUB 對稱。
+- [x] 點擊「複製」按鈕，選取/框選文字寫入剪貼簿。
+- [x] 本計畫完成後，同步更新 `docs/epics/epic-27-reader-device-compat/issues.md`「Issue 11」的 `Status`（`needs-info` → 完成後之對應狀態），並在 Solution 段落註記實際採用的機制（選取範圍 hit-test 既有標記，取代原本依賴 click 事件的方案），不覆蓋掉原文的診斷歷程記錄。
+- [x] 建議合併後請使用者在真機（WAVE／AiPaper Reader C 任一台）做一次手感驗證：長按已畫線文字能否穩定跳出刪除按鈕；PDF 框選命中既有畫線的手感是否符合預期。
