@@ -268,7 +268,7 @@
 
 ## Issue 11：長按已畫線區域完全不會跳出刪除確認視窗，只會觸發建立新劃線的工具列
 
-**Status:** ✅ 已完成實作並通過全分支審查（分支 `feat/epic-27-issue-11`，8 個 commit：Task 1～Task 8）。設計文件（`docs/superpowers/specs/2026-08-24-epic27-issue11-annotation-toolbar-merge-design.md`）與實作計畫（`docs/epics/epic-27-reader-device-compat/plans/plan-issue-11.md`）經審查核准後，以 SDD 模式逐一執行 8 個 Task 與各 Task 審查。實作方案：將舊有靠原生 click 觸發的 `_showAnnotationActionDialog` 完全汰除，改由選取浮動工具列 `AnnotationToolbar` 改版為雙列排版統一承接（永遠顯示複製，命中既有畫線/備註時顯示刪除與編輯備註）；EPUB 端透過 `main.js` `overlayer.hitTest`、PDF 端透過 `resolvePdfExistingAnnotation` 矩形重疊比對判定命中；加入 `_selectionDragGenerationId` 非同步競速防護與 `percentRectToPdfRect` 逆向幾何轉換。全專案 `flutter analyze` 乾淨（0 warning/0 error）、`flutter test` 1,690 則測試全部通過（零回歸）。
+**Status:** ✅ 已完成並合併回 `main`（PR [#184](https://git.jigong.org/huthief/elinkBook/pulls/184)，分支 `feat/epic-27-issue-11`，9 個 commit：Task 1～Task 8＋計畫勾選收尾）。獨立程式碼審查（`reviews/review-issue-11.md`）結論為可以合併——0 Critical／1 Important（文件收尾異動當時仍是未提交的本機修改，已補提交為分支上的第 9 個 commit）／2 Minor（皆為非阻塞的程式碼風格建議）。設計文件（`docs/superpowers/specs/2026-08-24-epic27-issue11-annotation-toolbar-merge-design.md`）與實作計畫（`docs/epics/epic-27-reader-device-compat/plans/plan-issue-11.md`）經審查核准後，以 SDD 模式逐一執行 8 個 Task 與各 Task 審查。實作方案：將舊有靠原生 click 觸發的 `_showAnnotationActionDialog` 完全汰除，改由選取浮動工具列 `AnnotationToolbar` 改版為雙列排版統一承接（永遠顯示複製，命中既有畫線/備註時顯示刪除與編輯備註）；EPUB 端透過 `main.js` `overlayer.hitTest`、PDF 端透過 `resolvePdfExistingAnnotation` 矩形重疊比對判定命中；加入 `_selectionDragGenerationId` 非同步競速防護與 `percentRectToPdfRect` 逆向幾何轉換。全專案 `flutter analyze` 乾淨（0 warning/0 error）、`flutter test` 1,690 則測試全部通過（零回歸）。
 
 **依賴：** 無
 
