@@ -160,20 +160,24 @@ void main() {
       tapDebounceMs: 350,
     ));
 
-    // 真機 adb getevent 側錄到的 6 段彈跳間隔（毫秒）：
-    // [86, 152, 261, 326, 87, 207]
+    // 真機 adb getevent 側錄到的 6 段「按下→按下」（DOWN to DOWN）事件
+    // 間隔（毫秒）：[86, 152, 261, 326, 87, 207]。
     final bounceIntervalsMs = [86, 152, 261, 326, 87, 207];
 
     // 第 1 次觸發
     final firstGesture = await tester.startGesture(const Offset(50, 50));
-    fakeNowMs += 30;
+    fakeNowMs += 20;
     await firstGesture.up();
     await tester.pump();
     expect(tapCount, 1);
 
-    // 後續 6 次硬體彈跳觸發（間隔皆小於 350ms）
+    // 後續 6 次硬體彈跳觸發（間隔皆小於 350ms）。迴圈內先扣掉本次模擬
+    // 按壓耗時（20ms）再推進，確保兩次 startGesture() 之間量到的
+    // DOWN-to-DOWN 間隔精確等於 interval 本身（而非 interval + 20）——
+    // 審查修正（review-issue-12.md Important）：先前版本漏了這一步，
+    // 導致重播出來的最大間隔是 346ms 而非真機實際側錄到的 326ms。
     for (final interval in bounceIntervalsMs) {
-      fakeNowMs += interval;
+      fakeNowMs += interval - 20;
       final bounceGesture = await tester.startGesture(const Offset(50, 50));
       fakeNowMs += 20;
       await bounceGesture.up();
