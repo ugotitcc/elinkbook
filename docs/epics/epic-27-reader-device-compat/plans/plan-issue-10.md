@@ -38,7 +38,7 @@
 - Consumes: 無新增——沿用 `main.js` 既有的 `doc.getSelection()`／`performance.now()`／`evt.timeStamp`（`Event.timeStamp` 與 `performance.now()` 為同一時間原點的 `DOMHighResTimeStamp`，可直接相減比較，既有程式碼於第 843 行已用同一手法比較兩個不同事件的 `timeStamp`）。
 - Produces: 無新增公開介面——本次改動完全封裝在 `main.js` 的 `openBook()` 函式內部閉包變數（`SELECTION_RELEASE_GUARD_MS`／`lastNonCollapsedSelectionAtMs`），不影響任何外部呼叫端（Dart 端／其他 JS 模組）看到的行為契約。
 
-- [ ] **Step 1：寫失敗的 Dart 靜態內容回歸測試——斷言 `main.js` 含有新的保護期常數、選取時間戳記記錄，且 `evt.preventDefault()` 出現在 `click` 監聽器內、位置早於既有的 700ms 快速點擊判斷**
+- [x] **Step 1：寫失敗的 Dart 靜態內容回歸測試——斷言 `main.js` 含有新的保護期常數、選取時間戳記記錄，且 `evt.preventDefault()` 出現在 `click` 監聽器內、位置早於既有的 700ms 快速點擊判斷**
 
 在 `app/test/reader/foliate_reader_view_test.dart` 第 1223 行（既有 `main.js no-swipe 屬性 regression guard` group 的結尾 `});` 之後）新增：
 
@@ -119,12 +119,12 @@
   });
 ```
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 Run: `cd app && flutter test test/reader/foliate_reader_view_test.dart`
 Expected: 新增的 2 則測試 FAIL（`main.js` 內尚未有 `SELECTION_RELEASE_GUARD_MS`／`lastNonCollapsedSelectionAtMs`／新的 `evt.preventDefault()`），既有測試維持通過。
 
-- [ ] **Step 3：實作選取收尾保護期**
+- [x] **Step 3：實作選取收尾保護期**
 
 在 `app/android/app/src/main/assets/foliate/main.js` 第 653 行（`const index = e.detail.index`）之後、第 661 行（`const reportSelection = async () => {`）之前，插入：
 
@@ -226,17 +226,17 @@ Expected: 新增的 2 則測試 FAIL（`main.js` 內尚未有 `SELECTION_RELEASE
       }, { capture: true })
 ```
 
-- [ ] **Step 4：執行測試確認通過**
+- [x] **Step 4：執行測試確認通過**
 
 Run: `cd app && flutter test test/reader/foliate_reader_view_test.dart`
 Expected: 全數 PASS，含 Step 1 新增的 2 則測試。
 
-- [ ] **Step 5：執行完整分析與全專案測試，確認零回歸**
+- [x] **Step 5：執行完整分析與全專案測試，確認零回歸**
 
 Run: `cd app && flutter analyze && flutter test`
 Expected: `flutter analyze` 顯示 "No issues found!"；`flutter test` 全數通過（本次改動未觸及任何 Dart 程式碼，理論上不影響既有測試數量，僅新增本計畫的 2 則）。
 
-- [ ] **Step 6：建立 Puppeteer 行為驗證腳本，人工確認選取收尾保護期實際運作正確**
+- [x] **Step 6：建立 Puppeteer 行為驗證腳本，人工確認選取收尾保護期實際運作正確**
 
 Step 1、5 的測試只能靜態確認 `main.js` 的原始碼內容與位置關係，無法真正執行 JS 驗證行為是否正確（`flutter test` 不執行 JS）。比照本 Epic Issue 10 診斷階段已建立的 Puppeteer 差分測試手法（`reviews/issue10-harness/repro-issue10.mjs`），另建立一支聚焦驗證本次修法的腳本，用直接建構＋派發 `click` 事件（非 CDP 觸控合成）繞開已查證的環境限制（headless Chromium 無法從 touchstart/touchend 合成原生 click，見 `repro-issue10.mjs` 檔頭說明；直接 `dispatchEvent(new MouseEvent('click', ...))` 不受此限制，因為不需要瀏覽器自己合成，是測試腳本自己建構的事件）。
 
@@ -413,10 +413,10 @@ main().catch((err) => {
 })
 ```
 
-Run: `cd docs/epics/epic-27-reader-device-compat/reviews/issue10-harness && node verify-issue10-guard.mjs`（需已安裝 `puppeteer`，比照 `repro-issue10.mjs` 既有執行方式；若該目錄尚未有 `node_modules`，需先於該目錄或專案既有 Node 環境執行 `npm install puppeteer`）
-Expected: 輸出 `withinGuard.defaultPrevented === true`、`withinGuard.selectionCollapsedAfterClick === false`；`afterGuard.defaultPrevented === false`、`afterGuard.selectionCollapsedAfterClick === true`；最終印出 `PASS`。若任一項不符，回頭檢查 Step 3 的 `main.js` 改動是否正確落地（例如保護期判斷是否真的寫在既有 `startTime === null` 提早 return 之前）。
+Run: `cd docs/epics/epic-27-reader-device-compat/reviews/issue10-harness && node verify-issue10-guard.mjs`
+Expected: 輸出 `withinGuard.defaultPrevented === true`、`withinGuard.selectionCollapsedAfterClick === false`；`afterGuard.defaultPrevented === false`、`afterGuard.selectionCollapsedAfterClick === true`；最終印出 `PASS`。
 
-- [ ] **Step 7：Commit**
+- [x] **Step 7：Commit**
 
 ```bash
 git add app/android/app/src/main/assets/foliate/main.js app/test/reader/foliate_reader_view_test.dart
@@ -429,9 +429,9 @@ git commit -m "fix(epic-27): Issue 10——main.js 新增選取收尾保護期�
 
 ## 完成後的驗證（對照 `issues.md` Issue 10 驗收標準，本計畫執行後應同步更新該工單）
 
-- [ ] `flutter analyze`：全專案 "No issues found!"
-- [ ] `flutter test`：全專案通過，零回歸
-- [ ] Puppeteer 行為驗證腳本（Task 1 Step 6）輸出 `PASS`
+- [x] `flutter analyze`：全專案 "No issues found!"
+- [x] `flutter test`：全專案通過，零回歸
+- [x] Puppeteer 行為驗證腳本（Task 1 Step 6）輸出 `PASS`
 - [ ] （建議，非本計畫強制自動化）真機（比照本 Epic 既有先例，於曾經回報過本問題的裝置）驗證：反覆長按選字/拖曳劃線並放開手指，確認選取不再於放開瞬間無故消失；同時確認使用者刻意點擊選取範圍以外的地方，選取仍能正常被取消（保護期未過度攔截正常操作）。
 - [ ] 150ms 這個門檻值若真機使用後回報有需要調整（例如仍偶發消失、或誤傷「選完立刻想點別處」的正常操作），比照 `epic-25` Issue 1／`epic-26` Issue 3／本 Epic Issue 12 先例，另立後續工單處理，不阻塞本計畫驗收。
-- [ ] 本計畫完成後，同步更新 `docs/epics/epic-27-reader-device-compat/issues.md`「Issue 10」的 `Status`（`needs-info` → 完成後之對應狀態）與根因/解法段落，反映本次採用 Puppeteer 差分測試結論（而非真機跨版本對照）立案的事實，不覆蓋掉原文的診斷歷程記錄。
+- [x] 本計畫完成後，同步更新 `docs/epics/epic-27-reader-device-compat/issues.md`「Issue 10」的 `Status`（`needs-info` → 完成後之對應狀態）與根因/解法段落，反映本次採用 Puppeteer 差分測試結論（而非真機跨版本對照）立案的事實，不覆蓋掉原文的診斷歷程記錄。

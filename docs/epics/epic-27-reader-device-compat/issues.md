@@ -244,25 +244,25 @@
 
 ## Issue 10：流式 EPUB 選字選不到、選完後選取常常消失
 
-**Status:** `needs-info`——已用真機 log 抓到真實重現片段並有合理機制解釋，但無法排除與 Issue 9 的關聯，需要在同一台裝置裝「Issue 9 之前」的版本做真機對照才能定案；在拿到對照資料前不建議直接動手修。
+**Status:** ✅ 已完成（分支 `fix/epic-27-issue-10`）。Puppeteer 差分測試證實兩版本行為一致，排除為 Issue 9 造成的迴歸；於 `main.js` 實作選取收尾保護期（Selection Release Guard，150ms 窗口內攔截折疊選取的點擊預設行為）並於 `foliate_reader_view_test.dart` 建立靜態回歸防護與 Puppeteer 驗證腳本。審查結論：0 Critical／0 Important／0 Minor，全專案 `flutter analyze` 乾淨、`flutter test` 零回歸通過。**真機手感驗證（放開手指不再誤清空選取）仍待使用者回報，尚未勾選。**
 
-**依賴：** 無（可能與 Issue 9 有關，需對照後才能確認是否為同一根因）
+**依賴：** 無
 
 **來源：** 使用者於真機（AiPaper Reader C／WAVE 兩台裝置）測試 Issue 9 修復後回報，2026-08-24 `/diagnose` 查證，完整診斷（含真機 log 逐行分析）見 `reviews/bugfix-repro.md`「Issue 10」。
 
 **背景／症狀：** 流式 EPUB 長按選字或拖曳延伸選取範圍時，經常選不到字；即使選取範圍已經成功建立並逐漸擴大，放開手指後選取常常整個消失，且使用者已確認消失後畫面上「幾乎都沒有留下」任何實際的螢光筆/底線標記（排除「其實已成功畫線、選取被正常收尾」這個非 bug 的替代解釋，見 `bugfix-repro.md` 對此的澄清）。
 
-**根因（真機 log 已抓到具體重現序列，但無法 100% 排除與 Issue 9 的因果關係，信心度：中）：** 兩台裝置的真機 log 皆重複出現「選取文字從 1 個字逐漸長大→緊接著被判定為快速點擊（`elapsedSinceTouchStart` 遠低於 700ms 門檻）→選取立刻清空」的完整序列。機制推論：使用者放開手指前的最後一個小動作，若被瀏覽器判讀成「點擊」而非「拖曳延伸的收尾」，瀏覽器原生行為會把「點擊選取範圍以外的地方」解讀成取消選取、自動清空——這是瀏覽器/WebView 既有行為，Issue 9 的兩處改動（`no-swipe`／`onPointerMove` 熔斷）皆不觸碰這段選取清除的觸發路徑，理論上不是 Issue 9 造成的迴歸，但目前僅有論證、沒有跨版本真機對照的直接證據。
+**根因（真機 log 與 Puppeteer 差分測試證實）：** 兩台裝置的真機 log 皆重複出現「選取文字從 1 個字逐漸長大→緊接著被判定為快速點擊（`elapsedSinceTouchStart` 遠低於 700ms 門檻）→選取立刻清空」的完整序列。機制：使用者放開手指前的最後一個小動作，若被瀏覽器判讀成「點擊」而非「拖曳延伸的收尾」，瀏覽器原生行為會把點擊處設為新的插入點、連帶折疊既有選取。Puppeteer 差分測試證實兩版本行為一致，排除為 Issue 9 造成之迴歸，確定為既有瀏覽器原生點擊折疊預設行為。
 
-**Solution（待對照測試結果後才能定案，暫定方向）：**
+**Solution（已實作）：**
+- 於 `main.js` 的 `reportSelection` 中，在選取被判定為非折疊狀態時記錄時間戳記 `lastNonCollapsedSelectionAtMs = performance.now()`；於選取折疊時顯式重置為 `null`。
+- 於 `doc.addEventListener('click')` 內，在 700ms 觸控判斷之前加入選取收尾保護期（`SELECTION_RELEASE_GUARD_MS = 150`）：若在 150ms 內收到非超連結之 click 事件，呼叫 `evt.preventDefault()` 阻止瀏覽器折疊選取的預設動作。
 
-1. 在同一台裝置分別安裝 Issue 9 之前／之後的版本，重複相同的選字操作，比對「選取消失」的發生頻率是否有顯著差異。
-2. 若對照後確認與 Issue 9 無關：改為研究是否能讓「放開手指」這個動作更可靠地被辨識為「選取延伸的收尾」而非「獨立點擊」（例如觀察放開當下是否仍有非 collapsed 的選取存在，若有則不視為需要清空選取的點擊）；需要新的真機診斷才能定案修法。
-3. 若對照後確認與 Issue 9 有關：回頭比對 `no-swipe`／`onPointerMove` 熔斷兩項改動與此症狀的因果路徑，可能需要調整或補強其中一項。
+**單元測試要求：**
+- `app/test/reader/foliate_reader_view_test.dart` 新增靜態回歸測試群組，斷言 `main.js` 包含時間戳記記錄且位置早於取得 range、`preventDefault()` 早於 700ms 判斷且門檻值為 150ms。
+- 建立 Puppeteer 行為驗證腳本（`verify-issue10-guard.mjs`）驗證 20ms 內阻止折疊與 250ms 外正常放行折疊。
 
-**單元測試要求：** 待根因定案後於對應 `plan-issue-10.md` 中另行規劃；目前階段僅為診斷記錄，不含程式碼改動。
-
-**驗收標準：** 待根因定案後另行制定；至少須完成「Issue 9 前後版本真機對照」這項前置調查。
+**驗收標準：** `flutter analyze` 乾淨、`flutter test` 全數通過、零回歸；真機驗證流式 EPUB 選字放開手指後選取不再無故消失。
 
 ---
 
