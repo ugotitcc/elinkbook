@@ -81,10 +81,6 @@ _Avoid_: 偏好設定服務、設定 Facade
 表示閱讀偏好管理器解析後的最終生效偏好設定。其屬性大多為 non-nullable（例如確定的翻頁模式、邊距與字型），直接提供給閱讀器原生視圖套用，不含「是否覆寫」的 nullable 狀態。
 _Avoid_: 最終偏好、生效設定
 
-**FXL 換頁熱區（暫代版）（FXL Tap-Zone Navigation, Interim）**：
-固定版面（FXL）EPUB 專屬的最小化點擊換頁機制：畫面左／右各 1/3 寬度熱區點擊觸發上一頁／下一頁（透過 `ZoneAction` 執行 `foliate-js` 的 `paginate.js` 分頁命令，不使用滑動動畫，換頁後懸浮控制項一律自動收起），中間 1/3 熱區切換懸浮控制項（返回鍵／設定鍵）顯示或隱藏（切換語意，與左右熱區的「強制收起」不同）。用來取代原生滑動手勢，避免 E-Ink 裝置換頁動畫殘留殘影，也繞開 FXL 相鄰頁 WebView 預載零尺寸造成的縮放跳動（見 `epic-16-dual-page` 已知限制）。左右熱區固定不隨閱讀方向鏡像、不可自訂，僅適用於 FXL；流式 EPUB 不受影響、維持原生手勢。熱區疊加層會擋住底層 WebView 的所有觸控（含 FXL 內嵌超連結，若有的話），刻意接受的暫代方案限制。**與 PRD「可自訂 3×3 點擊九宮格」（傳統/單手/類 Kindle 多種對應模式、RTL 鏡像）是不同東西**——後者是尚未開始的獨立功能，本機制只是範圍受限的暫時方案。
-_Avoid_: 九宮格、熱區導航（皆容易與 PRD 完整版混淆，應明確加註「暫代版」或「FXL 專屬」）
-
 **設定面板草稿具現化原則（Settings Sheet Draft Concretization Rule）**：
 判斷「版面設定 Bottom Sheet」（`PdfSettingsSheet`／`ReaderSettingsSheet`）的本地 State 欄位該不該保留 `BookReaderPrefs` 的 nullable「未覆寫」語意，依據是該欄位**是否存在次要權威來源可回退**（全域預設值、書籍自動偵測值等）——有次要來源時，本地狀態應維持 nullable，並提供一個「不覆寫／採用書籍內建」的重置選項（例如 `ReaderSettingsSheet` 的 `_writingModeOverride`）；無次要來源、null 與具體預設值解析結果永遠相同時（例如 PDF 相關欄位——`docs/epics.md` 已明文排除 PDF/雙頁欄位於 `epic-14-system-settings` 全域預設層之外），本地狀態在 `initState()` 用 `??` 具現化為非 null 值是安全的，不視為違反「null = 不覆寫」慣例。
 _Avoid_: null 語意破壞（脫離「是否存在次要權威來源」這個前提單獨評斷時容易誤判）
