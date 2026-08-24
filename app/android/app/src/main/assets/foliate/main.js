@@ -652,6 +652,19 @@ async function openBook() {
       const doc = e.detail.doc
       const index = e.detail.index
 
+      // 選取收尾保護期（Selection Release Guard，
+      // epic-27-reader-device-compat Issue 10）：見下方 click 監聽器內
+      // 完整說明。這裡只負責記錄「選取上一次被判定為非折疊（真的有選到
+      // 文字）」的時間點，供該監聽器判斷這次 click 是否可能是選字收尾
+      // 動作本身觸發的雜訊。真機 log 佐證見
+      // docs/epics/epic-27-reader-device-compat/reviews/bugfix-repro.md
+      // 「Issue 10」；門檻值 150ms 取自
+      // issue-10-11-12-analysis.md「Issue 10」建議解法方向的區間
+      // （100～150ms）上緣，尚未經真機校準，比照 epic-25 Issue 1／
+      // epic-26 Issue 3 先例，後續若真機回報需要調整，另立工單處理。
+      const SELECTION_RELEASE_GUARD_MS = 150
+      let lastNonCollapsedSelectionAtMs = null
+
       // 選取範圍即時回報（epic-17 Issue 8）：抽成共用函式，供既有
       // selectionchange 與下方 ADR 0013 既定的 Android 專用
       // contextmenu/pointercancel 分支共同呼叫，避免重複實作同一段
@@ -664,6 +677,7 @@ async function openBook() {
           window.flutter_inappwebview.callHandler('onSelectionCleared')
           return
         }
+        lastNonCollapsedSelectionAtMs = performance.now()
         const range = selection.getRangeAt(0)
         const rect = range.getClientRects()[0]
         if (!rect) return
@@ -838,6 +852,30 @@ async function openBook() {
       doc.addEventListener('click', (evt) => {
         const startTime = annotationClickTouchStartTime
         annotationClickTouchStartTime = null
+
+        // 選取收尾保護期（epic-27-reader-device-compat Issue 10）：使用者
+        // 放開手指前的最後一個小動作，若被瀏覽器判讀成「點擊」而非「拖曳
+        // 延伸的收尾」，瀏覽器對點擊文字的預設動作會把點擊處設為新的
+        // 插入點、連帶折疊既有選取——這與下面既有的 700ms 快速點擊判斷是
+        // 兩件不同的事（那段判斷的目的是攔截「畫線點擊誤觸換頁」，用
+        // stopImmediatePropagation() 擋掉事件冒泡到畫線點擊監聽器，並不會
+        // 阻止瀏覽器這個預設動作，兩者需要各自獨立處理）。若選取上一次被
+        // 判定為非折疊的時間點在 SELECTION_RELEASE_GUARD_MS 之內，代表這
+        // 次 click 很可能就是使用者放開手指那個動作本身觸發的收尾雜訊，
+        // 非使用者刻意點擊別處要取消選取，主動 preventDefault() 保留選取；
+        // 超過門檻則視為使用者確實想點別的地方，正常放行讓瀏覽器折疊
+        // 選取。真機重現序列見
+        // docs/epics/epic-27-reader-device-compat/reviews/bugfix-repro.md
+        // 「Issue 10」，建議解法方向見同目錄
+        // issue-10-11-12-analysis.md「Issue 10」。
+        if (
+          !evt.target.closest('a[href]') &&
+          lastNonCollapsedSelectionAtMs !== null &&
+          evt.timeStamp - lastNonCollapsedSelectionAtMs <= SELECTION_RELEASE_GUARD_MS
+        ) {
+          evt.preventDefault()
+        }
+
         if (startTime === null) return // 非觸控手勢產生的 click（例如滑鼠），不受影響
         if (evt.target.closest('a[href]')) return // 超連結點擊一律放行
         if (evt.timeStamp - startTime <= ANNOTATION_CLICK_TAP_MAX_MS) {

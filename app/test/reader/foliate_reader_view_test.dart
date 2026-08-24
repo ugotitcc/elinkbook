@@ -1222,6 +1222,77 @@ void main() {
     });
   });
 
+  group('main.js 選取收尾保護期（Selection Release Guard）regression guard'
+      '（Epic 27 Issue 10）', () {
+    late String mainJsSource;
+
+    setUpAll(() {
+      mainJsSource = File('android/app/src/main/assets/foliate/main.js')
+          .readAsStringSync();
+    });
+
+    test('reportSelection 內，選取非折疊時記錄時間戳記，且位置早於取得 range',
+        () {
+      const rangeCall = 'const range = selection.getRangeAt(0)';
+      const timestampCall = 'lastNonCollapsedSelectionAtMs = performance.now()';
+
+      final rangeIndex = mainJsSource.indexOf(rangeCall);
+      final timestampIndex = mainJsSource.indexOf(timestampCall);
+
+      expect(rangeIndex, greaterThanOrEqualTo(0),
+          reason: 'main.js 內找不到 "$rangeCall"——若上游改了寫法，'
+              '下面的順序斷言也需要一併更新。');
+      expect(timestampIndex, greaterThanOrEqualTo(0),
+          reason: 'main.js 內找不到 "$timestampCall"——這一行負責記錄'
+              '「選取上一次被判定為非折疊」的時間點，供 click 監聽器內的'
+              '選取收尾保護期判斷使用（見 '
+              'docs/epics/epic-27-reader-device-compat/reviews/'
+              'bugfix-repro.md「Issue 10」），若被刪掉，保護期機制會'
+              '永遠判定為「無最近選取」而完全失效。');
+      expect(timestampIndex, lessThan(rangeIndex),
+          reason: '"$timestampCall" 必須早於 "$rangeCall"——保護期記錄的'
+              '是「選取剛被判定為非折疊」這個時間點本身，應緊接在 '
+              'isCollapsed 判斷之後、取得 range 之前，避免遺漏。');
+    });
+
+    test('click 監聽器內，選取收尾保護期的 preventDefault() 早於既有 700ms '
+        '快速點擊判斷、且門檻值為 150ms', () {
+      const guardConstant = 'const SELECTION_RELEASE_GUARD_MS = 150';
+      const clickListenerStart = "doc.addEventListener('click', (evt) => {";
+      const startTimeNullReturn = 'if (startTime === null) return';
+
+      final guardConstantIndex = mainJsSource.indexOf(guardConstant);
+      final clickListenerIndex = mainJsSource.indexOf(clickListenerStart);
+
+      expect(guardConstantIndex, greaterThanOrEqualTo(0),
+          reason: 'main.js 內找不到 "$guardConstant"——選取收尾保護期的'
+              '門檻值（真機證據見 bugfix-repro.md「Issue 10」，起始值'
+              '150ms，理由見 plan-issue-10.md 設計決策段落）遺失或被改名。');
+      expect(clickListenerIndex, greaterThanOrEqualTo(0),
+          reason: 'main.js 內找不到既有的 click 監聽器註冊 '
+              '"$clickListenerStart"——若上游改了寫法，下面的順序斷言'
+              '也需要一併更新。');
+
+      final preventDefaultIndex =
+          mainJsSource.indexOf('evt.preventDefault()', clickListenerIndex);
+      final startTimeNullReturnIndex =
+          mainJsSource.indexOf(startTimeNullReturn, clickListenerIndex);
+
+      expect(preventDefaultIndex, greaterThanOrEqualTo(0),
+          reason: 'click 監聽器內找不到 "evt.preventDefault()"——選取收尾'
+              '保護期未攔截瀏覽器對點擊的預設動作，選取仍會被瀏覽器'
+              '折疊，症狀（選字選完後常常消失）不會被修復。');
+      expect(startTimeNullReturnIndex, greaterThanOrEqualTo(0),
+          reason: 'click 監聽器內找不到既有的 "$startTimeNullReturn"——'
+              '若上游改了寫法，下面的順序斷言也需要一併更新。');
+      expect(preventDefaultIndex, lessThan(startTimeNullReturnIndex),
+          reason: '選取收尾保護期的判斷必須獨立於既有 700ms 快速點擊'
+              '判斷之前執行——後者在 startTime 為 null（非觸控手勢產生的 '
+              'click，例如滑鼠）時會提早 return，若保護期判斷寫在它之後，'
+              '滑鼠點擊等非觸控情境會意外跳過保護期判斷。');
+    });
+  });
+
   // Issue 8 審查 Important #7：mounted 守衛/dispose 競態測試
   // 驗證「快取完成前 dispose」不會導致快取目錄洩漏
   group('mounted guard / dispose race', () {
