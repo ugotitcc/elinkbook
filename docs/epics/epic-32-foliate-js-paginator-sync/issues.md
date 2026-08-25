@@ -52,7 +52,7 @@
 
 ## Issue 3：真機 QA＋文件收尾
 
-**Status:** ready-for-agent
+**Status:** completed（已完成：經 TCL 14 吋與 ViWoods AiPaper Reader C 兩台真機驗證，4 項測試包含 Epic 18 Issue 47 長按無暴跳、Epic 25 Issue 1 選取不誤跳頁、Epic 27 Issue 9 no-swipe 阻止滑動、直排連續翻頁 5 頁往返文字錨點對稱全數 PASS，記錄於 `reviews/review-issue-3.md`；`foliate_js_sync_update_strategy.md` Pinned Commit 與 `epics.md` 看板狀態已更新收尾）
 
 **依賴：** Issue 2（要先換上新版 `paginator.js` 才有得測）
 

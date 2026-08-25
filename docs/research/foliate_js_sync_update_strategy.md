@@ -22,7 +22,7 @@
 
 ### 2.1 上游來源與當前釘定狀態
 - **上游 Repository**：`https://github.com/readest/foliate-js`
-- **當前 Pinned Commit**：`dd71f2be356563c16a23272686189fcfb45d0b82` (2026-07-19)
+- **當前 Pinned Commit**：`6c6a491cf540696182d6fae70d6e26879b1e8369` (2026-07-25)
 - **資產存放路徑**：`app/android/app/src/main/assets/foliate/`
 
 ### 2.2 資產與職責劃分表

@@ -31,7 +31,7 @@
 **Interfaces:**
 - Produces: `review-issue-3.md` 內 4 個章節標題（`## 1. Epic 18 Issue 47`／`## 2. Epic 25 Issue 1`／`## 3. Epic 27 Issue 9`／`## 4. 直排連續翻頁 smoke test`），供 Task 2-5 各自填入該節內容；`app-debug.apk`（`app/build/app/outputs/flutter-apk/app-debug.apk`）供 Task 2-5 安裝到裝置。
 
-- [ ] **Step 1: 確認目前連線的裝置清單**
+- [x] **Step 1: 確認目前連線的裝置清單**
 
 ```bash
 adb devices -l
@@ -41,7 +41,7 @@ Expected：列出所有**支援 adb** 的已連線裝置（例如 TCL 14 吋，�
 
 Epic 25 Issue 1 這兩台裝置（Air Reader Pro C／TCL 14 吋）是 design.md 明確指名、缺一不可的機型——若其中一台（不論哪種連線方式）目前不在身邊，**停下來**請人類先準備好再繼續，不要用其他機型代替（原始症狀本來就是「其中一台會跳頁、另一台不會」，用別的機型測不出這個回歸）。
 
-- [ ] **Step 2: 建置 debug APK**
+- [x] **Step 2: 建置 debug APK**
 
 ```bash
 cd app && flutter build apk --debug
@@ -49,7 +49,7 @@ cd app && flutter build apk --debug
 
 Expected：成功產出 `app/build/app/outputs/flutter-apk/app-debug.apk`。
 
-- [ ] **Step 3a: 把 APK 安裝到每一台支援 adb 的裝置**
+- [x] **Step 3a: 把 APK 安裝到每一台支援 adb 的裝置**
 
 對 Step 1 確認到的每個 adb 裝置序號（例如 TCL 14 吋，以及其他有連線、方便一併測 Task 2/4/5 的裝置）執行：
 
@@ -59,7 +59,7 @@ adb -s <device-id> install -r app/build/app/outputs/flutter-apk/app-debug.apk
 
 Expected：每台都印出 `Success`。
 
-- [ ] **Step 3b（僅 Air Reader Pro C，人類手動操作）：透過 MTP 側載 APK**
+- [x] **Step 3b（僅 Air Reader Pro C，人類手動操作）：透過 MTP 側載 APK**
 
 請人類依序操作：
 
@@ -72,7 +72,7 @@ Expected：每台都印出 `Success`。
 
 Expected：Air Reader Pro C 的主畫面出現這個 App 的圖示，可以正常開啟。
 
-- [ ] **Step 4a: 推送測試書籍到每台支援 adb 的裝置**
+- [x] **Step 4a: 推送測試書籍到每台支援 adb 的裝置**
 
 ```bash
 adb -s <device-id> push app/test/fixtures/sample_long_chinese_vertical.epub /sdcard/Download/
@@ -81,13 +81,13 @@ adb -s <device-id> push app/test/fixtures/sample_horizontal.epub /sdcard/Downloa
 
 Expected：兩個檔案都成功推送到每台裝置的 `/sdcard/Download/`。
 
-- [ ] **Step 4b（僅 Air Reader Pro C，人類手動操作）：透過 MTP 複製測試書籍**
+- [x] **Step 4b（僅 Air Reader Pro C，人類手動操作）：透過 MTP 複製測試書籍**
 
 延續 Step 3b 開著的檔案總管視窗，把 `app/test/fixtures/sample_long_chinese_vertical.epub` 與 `app/test/fixtures/sample_horizontal.epub`（Windows 路徑：`U:\MyDeveloper\AI\elinkBook\app\test\fixtures\`）一併拖曳複製進裝置的同一個 `Download` 資料夾（跟 APK 放在一起即可）。
 
 Expected：裝置的 `Download` 資料夾裡看到這兩個 `.epub` 檔案。`sample_long_chinese_vertical.epub` 供 Task 2 的直排情境與 Task 5 的 smoke test 使用；`sample_horizontal.epub` 供 Task 2 的橫排情境使用。Task 3／Task 4 沿用同一批已匯入的書即可，不需要另外準備。
 
-- [ ] **Step 5: 建立 `review-issue-3.md` 骨架**
+- [x] **Step 5: 建立 `review-issue-3.md` 骨架**
 
 ```markdown
 # Epic 32 Issue 3 — 真機重測報告
@@ -119,7 +119,7 @@ Expected：裝置的 `Download` 資料夾裡看到這兩個 `.epub` 檔案。`sa
 **Interfaces:**
 - Consumes: Task 1 已安裝好的 App、已推送的 `sample_horizontal.epub`／`sample_long_chinese_vertical.epub`。
 
-- [ ] **Step 1: 準備並交付操作步驟給人類**
+- [x] **Step 1: 準備並交付操作步驟給人類**
 
 任選 Task 1 已安裝好的其中一台裝置（不需要特定機型——原始 Issue 47 驗證時「未指名特定機型」），請人類依序操作並回報觀察結果：
 
@@ -130,7 +130,7 @@ Expected：裝置的 `Download` 資料夾裡看到這兩個 `.epub` 檔案。`sa
 5. **直排長按選字**：重複步驟 2 的長按動作，觀察前幾個影格是否暴跳。
 6. **直排正常拖曳選取**：重複步驟 3 的拖曳動作，觀察是否流暢。
 
-- [ ] **Step 2: 記錄人類回報的結果**
+- [x] **Step 2: 記錄人類回報的結果**
 
 把人類針對 4 個情境（橫排長按／橫排拖曳／直排長按／直排拖曳）各自回報的 PASS/FAIL 與具體描述（例如「長按後畫面沒有跳動，直接顯示選取控點」或「長按後畫面先往下跳了一下才穩定」），逐項寫入 `review-issue-3.md` 的「## 1. Epic 18 Issue 47」章節。若任一情境 FAIL，額外記錄人類描述的具體現象（跳動方向、大概幅度），供 Task 6 判斷是否需要 revert。
 
@@ -144,7 +144,7 @@ Expected：裝置的 `Download` 資料夾裡看到這兩個 `.epub` 檔案。`sa
 **Interfaces:**
 - Consumes: Task 1 已安裝好 App 的 **Air Reader Pro C**、**TCL 14 吋**兩台裝置。
 
-- [ ] **Step 1: 準備並交付操作步驟給人類（兩台裝置都要做）**
+- [x] **Step 1: 準備並交付操作步驟給人類（兩台裝置都要做）**
 
 在 **Air Reader Pro C** 與 **TCL 14 吋** 各自：
 
@@ -154,7 +154,7 @@ Expected：裝置的 `Download` 資料夾裡看到這兩個 `.epub` 檔案。`sa
 4. 步驟 2-3 在同一台裝置上至少重複 2 次（總共至少 2 輪慢速+快速）。
 5. 進入「設定 → 閱讀器 Console Log」，把畫面內容複製或截圖下來（若過程中真的發生跳頁，這份 log 有助於後續判斷）。
 
-- [ ] **Step 2: 記錄人類回報的結果**
+- [x] **Step 2: 記錄人類回報的結果**
 
 把兩台裝置各自的回報（是否出現跳頁、幾次重複中出現幾次、慢速/快速是否有差異）寫入 `review-issue-3.md` 的「## 2. Epic 25 Issue 1」章節，兩台裝置分開記錄。原始驗收標準是人類主觀判定「改善很多，可接受」而非要求 0% 重現率——若這次仍有極低機率的偶發跳頁但頻率/幅度沒有比 Issue 2 同步前更差，記錄下來讓人類自行判斷是否算 PASS，不要自己代替人類下結論。
 
@@ -168,7 +168,7 @@ Expected：裝置的 `Download` 資料夾裡看到這兩個 `.epub` 檔案。`sa
 **Interfaces:**
 - Consumes: Task 1 已安裝好 App 的任一裝置。
 
-- [ ] **Step 1: 準備並交付操作步驟給人類**
+- [x] **Step 1: 準備並交付操作步驟給人類**
 
 **建議直接沿用 Task 2 測試的同一台裝置**（省去重新匯入書籍的步驟）。若改用其他裝置，先執行「圖書庫 → 匯入 → 選擇檔案 → 導覽到 `Download` 資料夾 → 選取 `sample_horizontal.epub`」把書匯入這台裝置的圖書庫，再開始下列步驟：
 
@@ -177,7 +177,7 @@ Expected：裝置的 `Download` 資料夾裡看到這兩個 `.epub` 檔案。`sa
 3. **3×3 熱區點擊仍正常**：點擊畫面九宮格中任一觸發翻頁的格子，確認正常翻到下一頁/上一頁（`no-swipe` 只停用滑動手勢，不該影響熱區點擊翻頁）。
 4. **音量鍵仍正常**：按音量上/下鍵，確認正常翻到上一頁/下一頁。
 
-- [ ] **Step 2: 記錄人類回報的結果**
+- [x] **Step 2: 記錄人類回報的結果**
 
 把 4 個情境的 PASS/FAIL 與描述寫入 `review-issue-3.md` 的「## 3. Epic 27 Issue 9」章節。研究階段已確認這個修法原本合併時「真機驗證」只是建議、非強制勾選項——這次是它第一次被真正驗收，若發現任何一項 FAIL，如實記錄，不要因為「反正原本就沒真的驗過」而放寬標準。
 
@@ -191,7 +191,7 @@ Expected：裝置的 `Download` 資料夾裡看到這兩個 `.epub` 檔案。`sa
 **Interfaces:**
 - Consumes: Task 1 已安裝好 App、已推送的 `sample_long_chinese_vertical.epub`。
 
-- [ ] **Step 1: 準備並交付操作步驟給人類**
+- [x] **Step 1: 準備並交付操作步驟給人類**
 
 **建議直接沿用 Task 2 測試直排情境的同一台裝置**（該裝置的圖書庫裡已經有 `sample_long_chinese_vertical.epub`）。若改用其他裝置，先執行「圖書庫 → 匯入 → 選擇檔案 → 導覽到 `Download` 資料夾 → 選取 `sample_long_chinese_vertical.epub`」把書匯入，再請人類依序操作並回報：
 
@@ -201,7 +201,7 @@ Expected：裝置的 `Download` 資料夾裡看到這兩個 `.epub` 檔案。`sa
 4. 再連續**往後翻頁 5 次**（方向相反，翻回起點）。
 5. **比對終點與起點**：翻完後這一頁最上一行的文字，是否跟步驟 2 抄錄/截圖的起始錨點文字**完全一致**（不是「感覺差不多」，是逐字比對）。
 
-- [ ] **Step 2: 記錄人類回報的結果**
+- [x] **Step 2: 記錄人類回報的結果**
 
 把「是否精確回到起始錨點」（是/否，若否則記錄實際落在哪個位置、差了幾個字/幾頁）寫入 `review-issue-3.md` 的「## 4. 直排連續翻頁 smoke test」章節。判準是客觀的文字比對，不是主觀的「順不順」。
 
@@ -218,11 +218,11 @@ Expected：裝置的 `Download` 資料夾裡看到這兩個 `.epub` 檔案。`sa
 - Consumes: Task 2-5 記錄在 `review-issue-3.md` 的 4 節結果。
 - Produces: 若走 Branch A，交給 Task 7 繼續；若走 Branch B，本 Task 即為 Issue 3 的終點，Task 7 不執行。
 
-- [ ] **Step 1: 彙整 4 項測試結果，寫「## 5. 總結與判定」**
+- [x] **Step 1: 彙整 4 項測試結果，寫「## 5. 總結與判定」**
 
 檢視 Task 2-5 記錄的 4 節結果，逐項列出 PASS/FAIL，寫進 `review-issue-3.md` 最後的「## 5. 總結與判定」章節。
 
-- [ ] **Step 2: 判斷分支**
+- [x] **Step 2: 判斷分支**
 
 - **若 4 項全數 PASS（含 Epic 25 Issue 1 人類主觀判定為可接受）**：在「## 5. 總結與判定」寫下「4 項全數通過，判定為 Branch A：放行」，接續執行 Task 7。
 - **若有任一項 FAIL，且評估無法在合理時間內修復**：判定為 Branch B，執行下方 Step 3-5，**不要**執行 Task 7。design.md 明講「不在時間壓力下硬修」——這裡的「合理時間」由人類判斷，agent 發現 FAIL 時應如實回報現象並詢問人類「這個要嘗試修復還是直接 revert」，不要自己決定嘗試修復（可能牽動 `main.js`／`tap_zone_detector.dart` 等既有橋接層邏輯，屬於需要另外走 Discovery/Plan 流程的範疇，不是這個 Issue 的工作）。
@@ -268,7 +268,7 @@ Branch B 到此結束，不執行 Task 7。
 
 **Interfaces:** 無（純文件更新，收尾本工單）。
 
-- [ ] **Step 1: 更新 Pinned Commit 記錄**
+- [x] **Step 1: 更新 Pinned Commit 記錄**
 
 `docs/research/foliate_js_sync_update_strategy.md` 目前「2.1 上游來源與當前釘定狀態」內容：
 
@@ -282,7 +282,7 @@ Branch B 到此結束，不執行 Task 7。
 - **當前 Pinned Commit**：`6c6a491cf540696182d6fae70d6e26879b1e8369` (2026-07-25)
 ```
 
-- [ ] **Step 2: 移除 `docs/epics.md` 第 54 行 epic-31 那一列的「暫緩實作」備註**
+- [x] **Step 2: 移除 `docs/epics.md` 第 54 行 epic-31 那一列的「暫緩實作」備註**
 
 目前該列備註結尾含這段文字：
 
@@ -292,7 +292,7 @@ Branch B 到此結束，不執行 Task 7。
 
 把這段整句刪除（epic-31 這個 blocker 已解除，該列其餘描述文字——Discovery/`design.md`/`issues.md`/`plans/plan-issue-1.md` 進度——維持不動）。
 
-- [ ] **Step 3: 更新 `docs/epics.md` 第 55 行 epic-32 那一列的描述**
+- [x] **Step 3: 更新 `docs/epics.md` 第 55 行 epic-32 那一列的描述**
 
 目前該列描述結尾是：
 
@@ -306,11 +306,11 @@ Branch B 到此結束，不執行 Task 7。
 ...驗收標準明確納入上述 3 個歷史修法的真機重測。Issue 1（`3e82e23`）／Issue 2（`769aba7`）／Issue 3 皆已完成：`paginator.js` 已同步至 `6c6a491`，4 項真機重測全數通過（記錄於 `reviews/review-issue-3.md`），`docs/research/foliate_js_sync_update_strategy.md` Pinned Commit 已更新，`epic-31` 暫緩備註已移除、可繼續。待人類確認歸檔。
 ```
 
-- [ ] **Step 4: 更新 `issues.md` Issue 3 狀態**
+- [x] **Step 4: 更新 `issues.md` Issue 3 狀態**
 
 在 `docs/epics/epic-32-foliate-js-paginator-sync/issues.md` Issue 3 的 `**Status:** ready-for-agent` 行，改為記錄已完成，簡述 4 項真機測試結果與測試裝置。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add docs/research/foliate_js_sync_update_strategy.md docs/epics.md docs/epics/epic-32-foliate-js-paginator-sync/issues.md
