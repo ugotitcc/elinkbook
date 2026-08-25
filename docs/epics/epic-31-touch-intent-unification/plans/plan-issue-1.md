@@ -480,7 +480,7 @@ git commit -m "test(epic-31): 新增 Epic 25 Issue 4 快速點擊攔截回歸測
 
 **已知範圍限制（誠實記錄）**：原始 Issue 10 bug 是「拖曳選取控點後放開」的場景，本測試無法用 CDP 模擬真實拖曳控點手勢（`touchmove` 不可靠，見 Global Constraints），改為「選取剛確立後立刻做一次短按（`touchStart`/`touchEnd`，不含 `touchmove`）」，直接測試 `SELECTION_RELEASE_GUARD_MS` 這個實際的生產機制本身，不是重現原始拖曳手勢。
 
-- [ ] **Step 1: 撰寫情境腳本**
+- [x] **Step 1: 撰寫情境腳本**
 
 寫入 `app/tool/foliate_touch_harness/scenario-issue10-selection-release-guard.mjs`：
 
@@ -547,7 +547,7 @@ async function main() {
 main().catch((err) => { console.error(err); process.exitCode = 2 })
 ```
 
-- [ ] **Step 2: 執行並確認全數 PASS**
+- [x] **Step 2: 執行並確認全數 PASS**
 
 ```bash
 cd app/tool/foliate_touch_harness && node scenario-issue10-selection-release-guard.mjs
@@ -555,7 +555,7 @@ cd app/tool/foliate_touch_harness && node scenario-issue10-selection-release-gua
 
 Expected: 2 行 `[PASS] ...`。
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add app/tool/foliate_touch_harness/scenario-issue10-selection-release-guard.mjs
