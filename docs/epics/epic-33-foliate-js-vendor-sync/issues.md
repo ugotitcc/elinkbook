@@ -8,7 +8,15 @@
 
 ## Issue 1：同步 7 個 vendored 檔案至 `c09f06d`＋補回 ADR 0024 patch＋第一/二層測試防護
 
-**Status:** ready-for-agent
+**Status:** 已完成（Commit `2028baf`）
+
+**完成摘要：**
+- 替換 7 個 vendored 檔案為上游 `c09f06d`（`paginator.js`、`epub.js`、`fixed-layout.js`、`view.js`、`overlayer.js`、`epubcfi.js`、`comic-book.js`）。
+- 補回 ADR 0024 密度校正 patch（`paginator.js` 的 `relocate` 事件 `detail.contentPages`；`view.js` 的 `#onRelocate()` 消費與 `clearLocationDensity()` 方法）。
+- ES 相容性掃描（`node app/tool/check_foliate_es_compat.js`）結束碼為 `0` 乾淨，無未宣告之現代 ES 語法需求。
+- 觸控 Harness（`node app/tool/foliate_touch_harness/run-all.mjs`）4 個情境 9 項斷言全數 PASS。
+- Bridge 公開簽章對齊通過（`next`/`prev`/`goToFraction`/`goToCfi`、`relocate` 事件 payload、`no-swipe`/`turn-gesture-left-inset` 屬性讀取、`clearLocationDensity` 呼叫端核對一致；`main.js` 未啟用 `scroll-direction` 與 `subpixelOffset`）。
+- `flutter analyze` 乾淨（No issues found!），`flutter test` 通過 1693 項測試零回歸。
 
 **依賴：** 無，可立即開始（`epic-31` Issue 3 已合併，排期依賴已解除）
 
