@@ -365,14 +365,14 @@ git commit -m "test(epic-31): 建立 foliate_touch_harness 共用函式庫與 sm
 
 **背景**：main.js 的 `ANNOTATION_CLICK_TAP_MAX_MS = 700` 機制，按壓 ≤700ms 判定為快速點擊、攔截 `click` 不讓它傳到畫線的 `hitTest` 監聽器（`onAnnotationActivated` 不會觸發）；按壓 >700ms 判定為刻意操作、放行（`onAnnotationActivated` 正常觸發）；超連結一律排除，不受影響。
 
-- [ ] **Step 1: 撰寫情境腳本**
+- [x] **Step 1: 撰寫情境腳本**
 
 寫入 `app/tool/foliate_touch_harness/scenario-epic25-issue4-fast-tap.mjs`：
 
 ```js
 import {
   launchHarnessPage, locateVisibleText, setDecorationsAt,
-  resetHarnessEvents, harnessEvents, cdpTap, report,
+  cdpTap, report,
 } from './lib/harness.mjs'
 
 async function main() {
@@ -387,23 +387,30 @@ async function main() {
     await setDecorationsAt(page, [{ id: 'target', cfi: target.cfi, color: 'yellow', isUnderline: false }])
     await new Promise((r) => setTimeout(r, 200))
 
+    // 監聽 foliate-view 上的 show-annotation 事件（view.js 在 click 命中
+    // 畫線且未被 main.js 攔截時發出），記錄觸發次數。
+    await page.evaluate(() => {
+      window.__showAnnotationFired = 0
+      document.querySelector('foliate-view')?.addEventListener('show-annotation', () => {
+        window.__showAnnotationFired++
+      })
+    })
+
     // 情境 A：短按（80ms）直接點在畫線上，應被攔截，不觸發
-    // onAnnotationActivated。
-    await resetHarnessEvents(page)
+    // show-annotation。
+    await page.evaluate(() => { window.__showAnnotationFired = 0 })
     await cdpTap(client, target.pageX, target.pageY, 80)
     await new Promise((r) => setTimeout(r, 300))
-    const shortTapEvents = await harnessEvents(page)
-    report('短按 80ms 直接點在畫線上，click 被攔截',
-      !shortTapEvents.some((e) => e.name === 'onAnnotationActivated'))
+    const shortTapFired = await page.evaluate(() => window.__showAnnotationFired)
+    report('短按 80ms 直接點在畫線上，click 被攔截', shortTapFired === 0)
 
     // 情境 B：長按（900ms，原地不動）直接點在畫線上，應正常觸發
-    // onAnnotationActivated（900ms > ANNOTATION_CLICK_TAP_MAX_MS=700ms）。
-    await resetHarnessEvents(page)
+    // show-annotation（900ms > ANNOTATION_CLICK_TAP_MAX_MS=700ms）。
+    await page.evaluate(() => { window.__showAnnotationFired = 0 })
     await cdpTap(client, target.pageX, target.pageY, 900)
     await new Promise((r) => setTimeout(r, 300))
-    const longPressEvents = await harnessEvents(page)
-    report('長按 900ms 直接點在畫線上，click 正常觸發',
-      longPressEvents.some((e) => e.name === 'onAnnotationActivated'))
+    const longPressFired = await page.evaluate(() => window.__showAnnotationFired)
+    report('長按 900ms 直接點在畫線上，click 正常觸發', longPressFired > 0)
 
     // 情境 C：短按（80ms）點在超連結上，連結點擊不受畫線攔截邏輯影響
     // （main.js 明確排除 a[href]）。動態插入 <a> 到目前可視 doc，純測試
@@ -443,7 +450,7 @@ async function main() {
 main().catch((err) => { console.error(err); process.exitCode = 2 })
 ```
 
-- [ ] **Step 2: 執行並確認全數 PASS**
+- [x] **Step 2: 執行並確認全數 PASS**
 
 ```bash
 cd app/tool/foliate_touch_harness && node scenario-epic25-issue4-fast-tap.mjs
@@ -451,7 +458,7 @@ cd app/tool/foliate_touch_harness && node scenario-epic25-issue4-fast-tap.mjs
 
 Expected: 3 行 `[PASS] ...`。
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add app/tool/foliate_touch_harness/scenario-epic25-issue4-fast-tap.mjs
