@@ -1,5 +1,14 @@
 import 'package:flutter/widgets.dart';
 
+/// EPUB／PDF 兩端共用的九宮格熱區點擊容許位移／防彈跳門檻（Epic 31
+/// Issue 3：`TapZoneDetector` 常數收斂）。兩端原本各自宣告完全相同的
+/// 數值（`tapSlop: 18.0`／`tapDebounceMs: 350`），純粹是宣告位置重複，
+/// 收斂成這裡的模組級常數，供下方建構子當作預設值使用，呼叫端不再需要
+/// 各自重複宣告，見下方 [TapZoneDetector.tapSlop]／
+/// [TapZoneDetector.tapDebounceMs] 說明。
+const double kTapZoneSlop = 18.0;
+const int kTapZoneDebounceMs = 350;
+
 /// 九宮格導覽熱區的單一格子共用偵測器（Epic 26 Issue 2，收斂自
 /// `foliate_epub_reader_view.dart` 原 `_NavZoneTapDetector` 與
 /// `pdf_reader_view.dart` 原 `_PdfNavZoneTapDetector`——兩者原本刻意各自
@@ -32,13 +41,17 @@ import 'package:flutter/widgets.dart';
 /// 排程時才更新，長按靜止區域可能整段時間都量不到經過的時間）。兩邊
 /// 各自傳入各自現行的計時來源，不強制統一。
 ///
-/// [tapMaxDurationMs]／[tapSlop] 同樣為呼叫端注入參數，刻意不在本
-/// module 內設共用預設值/常數——EPUB 現行 700ms（`epic-25` Issue 1
-/// 六輪真機診斷校準值）與 PDF 現行 400ms（原始未校準值）已被查證存在
-/// 真實差異，兩者適用的正確門檻值可能本來就不同（見 Epic 26 Issue 3，
-/// 需真機診斷才能定案 PDF 端數值，不可貿然套用 EPUB 數值），故此次收斂
-/// 刻意只共用「偵測機制本身」（含 [onPointerCancel] 防禦性清理），不
-/// 共用數值。
+/// [tapMaxDurationMs] 為呼叫端注入參數，刻意不在本 module 內設共用預設
+/// 值/常數——EPUB 現行 700ms（`epic-25` Issue 1 六輪真機診斷校準值）與
+/// PDF 現行 400ms（原始未校準值）已被查證存在真實差異，兩者適用的正確
+/// 門檻值可能本來就不同（見 Epic 26 Issue 3，需真機診斷才能定案 PDF 端
+/// 數值，不可貿然套用 EPUB 數值），故刻意維持各自宣告字面值，不共用
+/// 數值（epic-31-touch-intent-unification Issue 3 待辦：本工單稍後會把
+/// PDF 端數值改為對齊 EPUB 的 700ms，屆時這段說明會再更新，見 Task 2）。
+/// [tapSlop] 已收斂為模組級共用常數 [kTapZoneSlop]（見上方宣告），呼叫端
+/// 不再需要各自宣告——EPUB／PDF 兩端這個欄位的數值本來就完全相同（皆為
+/// 18.0），純粹是宣告位置重複，不像 [tapMaxDurationMs] 存在真實的校準
+/// 狀態差異。
 ///
 /// [onPointerMove] 熔斷（Epic 27 Issue 9）：在觸控移動過程中，若手指位移曾
 /// 超過 [tapSlop]，即立刻將按壓狀態作廢（清除 `_downPosition` 與 `_downTimeMs`）。
@@ -62,8 +75,8 @@ class TapZoneDetector extends StatefulWidget {
     required this.child,
     required this.nowMs,
     required this.tapMaxDurationMs,
-    required this.tapSlop,
-    required this.tapDebounceMs,
+    this.tapSlop = kTapZoneSlop,
+    this.tapDebounceMs = kTapZoneDebounceMs,
   });
 
   @override

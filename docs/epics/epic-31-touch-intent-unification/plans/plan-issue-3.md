@@ -32,7 +32,7 @@
   - 模組級常數 `const double kTapZoneSlop = 18.0`、`const int kTapZoneDebounceMs = 350`（`app/lib/reader/tap_zone_detector.dart` 頂端，`import` 之後、class 宣告之前）。
   - `TapZoneDetector` 建構子簽章變更：`tapSlop`／`tapDebounceMs` 從 `required` 具名參數改為有預設值的具名參數（`this.tapSlop = kTapZoneSlop`／`this.tapDebounceMs = kTapZoneDebounceMs`），呼叫端可以不傳這兩個引數；`tapMaxDurationMs` 維持 `required`，簽章不變。欄位型別（`final double tapSlop`／`final int tapDebounceMs`）不變。
 
-- [ ] **Step 1: 執行既有測試，確認基準線**
+- [x] **Step 1: 執行既有測試，確認基準線**
 
 ```bash
 cd app && flutter test test/reader/tap_zone_detector_test.dart
@@ -40,7 +40,7 @@ cd app && flutter test test/reader/tap_zone_detector_test.dart
 
 Expected: 全數 PASS（重構前基準線，目前 8 個 `testWidgets` 案例）。
 
-- [ ] **Step 2: 新增模組級共用常數，建構子改為可選具名參數**
+- [x] **Step 2: 新增模組級共用常數，建構子改為可選具名參數**
 
 用 Read 工具開啟 `app/lib/reader/tap_zone_detector.dart`，找到：
 
@@ -125,7 +125,7 @@ const int kTapZoneDebounceMs = 350;
   });
 ```
 
-- [ ] **Step 3: 新增測試驗證常數值與建構子預設值**
+- [x] **Step 3: 新增測試驗證常數值與建構子預設值**
 
 用 Read 工具開啟 `app/test/reader/tap_zone_detector_test.dart`，找到檔案結尾：
 
@@ -181,7 +181,7 @@ const int kTapZoneDebounceMs = 350;
 
 **驗證要點**（不是新規則，只是確認這個測試真的測到了預設值）：這個新測試刻意**不傳** `tapSlop` 具名參數，完全依賴建構子的 `this.tapSlop = kTapZoneSlop` 預設值；若 Step 2 的預設值設定有誤（例如打錯常數名稱、或忘了拿掉 `required`），這個測試會因為編譯錯誤或行為不符直接失敗。
 
-- [ ] **Step 4: 執行測試，確認新測試通過且既有測試未受影響**
+- [x] **Step 4: 執行測試，確認新測試通過且既有測試未受影響**
 
 ```bash
 cd app && flutter test test/reader/tap_zone_detector_test.dart
@@ -189,7 +189,7 @@ cd app && flutter test test/reader/tap_zone_detector_test.dart
 
 Expected: 全數 PASS（原本 8 個既有案例 + 新增 3 個，共 11 個）。
 
-- [ ] **Step 5: `flutter analyze` 確認乾淨**
+- [x] **Step 5: `flutter analyze` 確認乾淨**
 
 ```bash
 cd app && flutter analyze
@@ -197,7 +197,7 @@ cd app && flutter analyze
 
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/reader/tap_zone_detector.dart app/test/reader/tap_zone_detector_test.dart
