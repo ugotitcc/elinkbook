@@ -916,13 +916,11 @@ async function openBook() {
       // 發，故刻意不擴充（獨立審查報告 `tmp/epic-25/
       // plan-issue-4-fix-review-report.md` 建議擴充，已查證後維持現狀，
       // 詳見 Global Constraints）。
-      const ANNOTATION_CLICK_TAP_MAX_MS = 700
-      let annotationClickTouchStartTime = null
       doc.addEventListener('touchstart', (evt) => {
-        annotationClickTouchStartTime = evt.touches.length === 1 ? evt.timeStamp : null
+        classifier.lastTouchStartTime = evt.touches.length === 1 ? evt.timeStamp : null
       }, { capture: true })
       doc.addEventListener('touchcancel', () => {
-        annotationClickTouchStartTime = null
+        classifier.lastTouchStartTime = null
       }, { capture: true })
       // 選取收尾保護期（epic-27-reader-device-compat Issue 10）：使用者
       // 放開手指前的最後一個小動作，若被瀏覽器判讀成「點擊」而非「拖曳
@@ -958,8 +956,8 @@ async function openBook() {
       }, { capture: true })
 
       doc.addEventListener('click', (evt) => {
-        const startTime = annotationClickTouchStartTime
-        annotationClickTouchStartTime = null
+        const startTime = classifier.lastTouchStartTime
+        classifier.lastTouchStartTime = null
 
         if (startTime === null) return // 非觸控手勢產生的 click（例如滑鼠），不受影響
         if (evt.target.closest('a[href]')) return // 超連結點擊一律放行

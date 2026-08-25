@@ -339,7 +339,7 @@ git commit -m "refactor(epic-31): 建立 TouchIntentClassifier 骨架並遷移�
 - Consumes: Task 1 的 `classifier`（`TouchIntentClassifier` 實例，`load` 監聽器內區域變數）、模組層級常數 `ANNOTATION_CLICK_TAP_MAX_MS`。
 - Produces: 無新增（`classifier.lastTouchStartTime` 欄位本身已由 Task 1 的 constructor 建立，本 Task 只是接上讀寫的呼叫端）。
 
-- [ ] **Step 1: 執行回歸測試，確認 Task 1 完成後的基準線**
+- [x] **Step 1: 執行回歸測試，確認 Task 1 完成後的基準線**
 
 ```bash
 cd app/tool/foliate_touch_harness && node run-all.mjs
@@ -347,7 +347,7 @@ cd app/tool/foliate_touch_harness && node run-all.mjs
 
 Expected: 4 個情境全數 PASS。
 
-- [ ] **Step 2: 遷移 touchstart／touchcancel 寫入端，移除本機重複宣告的門檻常數**
+- [x] **Step 2: 遷移 touchstart／touchcancel 寫入端，移除本機重複宣告的門檻常數**
 
 找到（緊接在 Task 1 剛遷移完的長按候選攔截區塊之後）：
 
@@ -375,7 +375,7 @@ Expected: 4 個情境全數 PASS。
 
 （`ANNOTATION_CLICK_TAP_MAX_MS` 已在 Task 1 移到模組層級，這裡的區域宣告直接刪除，不留 shadow。緊接這個區塊之前的大段說明註解——超連結排除理由、Dart/JS 門檻心智模型一致性、click 監聽器清查記錄——維持原地不動，不隨這次搬遷刪除，它描述的是下面 click 監聽器的行為理由，不是這個常數宣告本身。）
 
-- [ ] **Step 3: 遷移 click 監聽器讀取端**
+- [x] **Step 3: 遷移 click 監聽器讀取端**
 
 找到：
 
@@ -407,7 +407,7 @@ Expected: 4 個情境全數 PASS。
       }, { capture: true })
 ```
 
-- [ ] **Step 4: 重新執行回歸測試，確認未引入回歸**
+- [x] **Step 4: 重新執行回歸測試，確認未引入回歸**
 
 ```bash
 cd app/tool/foliate_touch_harness && node run-all.mjs
@@ -415,7 +415,7 @@ cd app/tool/foliate_touch_harness && node run-all.mjs
 
 Expected: 4 個情境全數 PASS（`scenario-epic25-issue4-fast-tap.mjs` 直接驗證本 Task 遷移的機制本身：短按 80ms 攔截／長按 900ms 放行／超連結不受影響 3 項斷言皆須維持 PASS）。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/android/app/src/main/assets/foliate/main.js
