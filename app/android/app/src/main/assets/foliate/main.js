@@ -504,6 +504,60 @@ window.getTableOfContents = async function () {
   }
 }
 
+// ------------------------------------------------------------------
+// 觸控意圖狀態機（TouchIntentClassifier，epic-31-touch-intent-unification
+// Issue 2）：收斂下方 view.addEventListener('load', ...) 內原本各自獨立
+// 宣告的觸控/選取共用狀態，讓 5 個既有機制（Epic 18 Issue 47 長按候選
+// 攔截／Epic 25 Issue 4 快速點擊判斷／epic-27 Issue 9 no-swipe／Issue 10
+// 選取收尾保護／Issue 11 hitTest 命中判斷）改讀寫這裡的 3 個欄位，不再
+// 各自宣告獨立變數。行為規則（門檻值、判斷邏輯）與重構前完全相同，只
+// 收斂「誰來管理共用狀態」，見
+// docs/epics/epic-31-touch-intent-unification/design.md「整體機制」。
+//
+// 長按候選門檻對齊 Android ViewConfiguration.getLongPressTimeout() 預設
+// 值；累積位移死區＋平均速度雙門檻（而非純距離單一門檻）的理由，見下方
+// touchmove 監聽器內的完整說明——純距離門檻在 paginator.js 內部
+// #touchState.x/y 只在真正放行的 touchmove 才更新的前提下，會讓第一個
+// 放行的 touchmove 算出「手勢一開始到現在」的全部累積位移而非單影格
+// 增量，造成畫面暴跳（docs/epics/epic-18-reader-device-qa/reviews/
+// bugfix-repro-issue-47.md）。
+const LONG_PRESS_GATE_MS = 500
+const SWIPE_DISTANCE_DEADZONE_PX = 15
+const SWIPE_VELOCITY_ESCAPE_PX_PER_MS = 0.3
+// 快速點擊 vs. 刻意點擊畫線的判斷門檻（epic-25-annotation-interaction-qa
+// Issue 4，真機多輪校準值），與 Dart 端
+// _NavZoneTapDetector._tapMaxDurationMs（foliate_epub_reader_view.dart）
+// 維持同一個數值心智模型，兩側各自獨立判斷、不透過橋接同步。
+const ANNOTATION_CLICK_TAP_MAX_MS = 700
+// 選取收尾保護期門檻（epic-27-reader-device-compat Issue 10），取自
+// issue-10-11-12-analysis.md「Issue 10」建議解法方向區間（100～150ms）
+// 上緣，尚未經真機校準，比照 epic-25 Issue 1／epic-26 Issue 3 先例，後續
+// 若真機回報需要調整，另立工單處理。
+const SELECTION_RELEASE_GUARD_MS = 150
+
+console.assert(LONG_PRESS_GATE_MS <= ANNOTATION_CLICK_TAP_MAX_MS,
+  '長按候選門檻必須 <= 快速點擊門檻，否則兩個機制的優先順序假設會被破壞')
+
+/**
+ * 每次 view.addEventListener('load', ...) 觸發（含 look-ahead 預讀章節）
+ * 各自產生一個實例，維持 3 個彼此獨立的欄位（見上方模組註解）：
+ * - gesture：只服務長按候選攔截（Epic 18 Issue 47），touchend/touchcancel
+ *   會重置它為 idle。
+ * - lastTouchStartTime：供快速點擊判斷（Epic 25 Issue 4）讀取，touchstart
+ *   寫入、touchcancel 或 click 消耗時才清空，touchend 刻意不清空（供
+ *   click 事件之後才判斷用）。
+ * - lastNonCollapsedSelectionAtMs：供選取收尾保護（Issue 10）讀取，由
+ *   selectionchange（經 reportSelection()）寫入/清空，與手勢子狀態完全
+ *   無關。
+ */
+class TouchIntentClassifier {
+  constructor() {
+    this.gesture = { state: 'idle', startX: 0, startY: 0, startTime: 0 }
+    this.lastTouchStartTime = null
+    this.lastNonCollapsedSelectionAtMs = null
+  }
+}
+
 async function openBook() {
   try {
     const book = await makeBook(
@@ -641,6 +695,7 @@ async function openBook() {
     view.addEventListener('load', (e) => {
       const doc = e.detail.doc
       const index = e.detail.index
+      const classifier = new TouchIntentClassifier()
 
       // 選取收尾保護期（Selection Release Guard，
       // epic-27-reader-device-compat Issue 10）：見下方 click 監聽器內
@@ -759,35 +814,33 @@ async function openBook() {
       // 累積誤差之前就先被速度條件放行，state.x/y 這時仍是準確值，不會
       // 暴跳；長按選字的手指自然微幅晃動速度遠低於門檻，會正確停留在
       // 攔截狀態。
-      const LONG_PRESS_GATE_MS = 500 // 對齊 Android ViewConfiguration.getLongPressTimeout() 預設值
-      const SWIPE_DISTANCE_DEADZONE_PX = 15 // 累積位移死區：超過就放行，把最大暴跳量壓到跟正常單影格位移同量級
-      const SWIPE_VELOCITY_ESCAPE_PX_PER_MS = 0.3 // 平均速度（累積位移/累積時間）門檻：真正滑動手勢通常第一影格就超過
-      let longPressGateState = null
       doc.addEventListener('touchstart', (evt) => {
         const touch = evt.touches[0]
         if (!touch || evt.touches.length > 1) {
-          longPressGateState = null
+          classifier.gesture = { state: 'idle', startX: 0, startY: 0, startTime: 0 }
           return
         }
-        longPressGateState = { x: touch.screenX, y: touch.screenY, t: evt.timeStamp }
+        classifier.gesture = {
+          state: 'longPressCandidate', startX: touch.screenX, startY: touch.screenY, startTime: evt.timeStamp,
+        }
       }, { capture: true })
       doc.addEventListener('touchmove', (evt) => {
-        if (!longPressGateState) return
+        if (classifier.gesture.state !== 'longPressCandidate') return
         if (evt.touches.length > 1) {
-          longPressGateState = null
+          classifier.gesture = { state: 'idle', startX: 0, startY: 0, startTime: 0 }
           return
         }
         const selection = doc.getSelection()
         if (selection && selection.rangeCount > 0 && !selection.isCollapsed) {
           // 選取已經確立，paginator.js 既有守衛從這裡開始會正確接手。
-          longPressGateState = null
+          classifier.gesture = { state: 'idle', startX: 0, startY: 0, startTime: 0 }
           return
         }
         const touch = evt.touches[0]
         if (!touch) return
-        const elapsed = evt.timeStamp - longPressGateState.t
-        const dx = touch.screenX - longPressGateState.x
-        const dy = touch.screenY - longPressGateState.y
+        const elapsed = evt.timeStamp - classifier.gesture.startTime
+        const dx = touch.screenX - classifier.gesture.startX
+        const dy = touch.screenY - classifier.gesture.startY
         const distance = Math.hypot(dx, dy)
         const avgVelocity = elapsed > 0 ? distance / elapsed : Infinity
         if (elapsed >= LONG_PRESS_GATE_MS
@@ -795,8 +848,10 @@ async function openBook() {
           || avgVelocity > SWIPE_VELOCITY_ESCAPE_PX_PER_MS) {
           // 超過長按辨識時間、或位移/平均速度已經大到明顯是滑動手勢——
           // 放行給 paginator.js 正常處理，不再攔截這個手勢剩餘的
-          // touchmove。
-          longPressGateState = null
+          // touchmove。轉入 swiping（而非 idle）：語意上是「這個手勢已經
+          // 確定不是長按候選」，直到下次 touchstart 前都不會再回到
+          // longPressCandidate（見 design.md 狀態轉換圖）。
+          classifier.gesture.state = 'swiping'
           return
         }
         // 仍在長按候選期間（時間短、位移小、速度低、尚未確立選取）：攔截。
@@ -823,8 +878,12 @@ async function openBook() {
         evt.preventDefault()
         evt.stopImmediatePropagation()
       }, { capture: true, passive: false })
-      doc.addEventListener('touchend', () => { longPressGateState = null }, { capture: true })
-      doc.addEventListener('touchcancel', () => { longPressGateState = null }, { capture: true })
+      doc.addEventListener('touchend', () => {
+        classifier.gesture = { state: 'idle', startX: 0, startY: 0, startTime: 0 }
+      }, { capture: true })
+      doc.addEventListener('touchcancel', () => {
+        classifier.gesture = { state: 'idle', startX: 0, startY: 0, startTime: 0 }
+      }, { capture: true })
 
       // Epic 25 Issue 4 修法：nav-zone 熱區點擊與畫線點擊共用同一組觸控
       // 手勢、同一螢幕座標，兩者天生無法用純技術訊號區分意圖（真機資料已

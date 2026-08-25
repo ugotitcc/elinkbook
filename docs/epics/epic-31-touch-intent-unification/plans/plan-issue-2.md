@@ -34,7 +34,7 @@
   - `class TouchIntentClassifier`，欄位：`this.gesture = { state, startX, startY, startTime }`（`state` 為 `'idle'`／`'longPressCandidate'`／`'swiping'` 三選一字串）、`this.lastTouchStartTime`（`number | null`）、`this.lastNonCollapsedSelectionAtMs`（`number | null`）。
   - `view.addEventListener('load', ...)` 監聽器內、`const doc =`/`const index =` 之後宣告的區域變數 `classifier`（`new TouchIntentClassifier()` 實例），供該次 `load` 觸發內所有子監聽器的閉包讀取。
 
-- [ ] **Step 1: 執行既有回歸測試，確認基準線**
+- [x] **Step 1: 執行既有回歸測試，確認基準線**
 
 先確認 Issue 1 建立的回歸套件目前全數 PASS（重構前基準線）：
 
@@ -44,7 +44,7 @@ cd app/tool/foliate_touch_harness && node run-all.mjs
 
 Expected: 依序看到 4 個 `=== scenario-*.mjs ===` 區塊全部 `[PASS]`，結尾印出「整體結果：全部 PASS」。若非全數 PASS，先排除環境問題（例如 `npm install` 是否已執行），不可在基準線本身就是紅燈的狀態下開始本計畫。
 
-- [ ] **Step 2: 在 `async function openBook()` 之前插入模組層級狀態機骨架**
+- [x] **Step 2: 在 `async function openBook()` 之前插入模組層級狀態機骨架**
 
 用 Read 工具開啟 `app/android/app/src/main/assets/foliate/main.js`，找到以下區塊（`window.getTableOfContents` 結尾與 `async function openBook() {` 之間）：
 
@@ -138,7 +138,7 @@ class TouchIntentClassifier {
 async function openBook() {
 ```
 
-- [ ] **Step 3: 在 `load` 監聽器內建立 classifier 實例**
+- [x] **Step 3: 在 `load` 監聽器內建立 classifier 實例**
 
 找到：
 
@@ -163,7 +163,7 @@ async function openBook() {
 
 （本 Step 只新增這一行，緊接著的 `SELECTION_RELEASE_GUARD_MS`／`lastNonCollapsedSelectionAtMs` 區塊留到 Task 3 才動。）
 
-- [ ] **Step 4: 遷移長按候選攔截機制（Epic 18 Issue 47）讀寫 `classifier.gesture`**
+- [x] **Step 4: 遷移長按候選攔截機制（Epic 18 Issue 47）讀寫 `classifier.gesture`**
 
 找到（`ANNOTATION_CLICK_TAP_MAX_MS` 宣告之前的完整長按候選攔截區塊）：
 
@@ -313,7 +313,7 @@ async function openBook() {
 
 **行為確認要點**（不是新規則，只是確認遷移沒有改變語意）：`classifier.gesture.state !== 'longPressCandidate'` 涵蓋原本 `!longPressGateState`（`idle` 與 `swiping` 都會使這個條件成立，效果與原本 `null` 完全相同——touchmove 一律不攔截）；`elapsed`/`dx`/`dy` 改讀 `classifier.gesture.startTime`/`.startX`/`.startY`，數值來源與原本 `longPressGateState.t`/`.x`/`.y` 相同（都是 `touchstart` 當下寫入、期間不變）。
 
-- [ ] **Step 5: 重新執行回歸測試，確認未引入回歸**
+- [x] **Step 5: 重新執行回歸測試，確認未引入回歸**
 
 ```bash
 cd app/tool/foliate_touch_harness && node run-all.mjs
@@ -321,7 +321,7 @@ cd app/tool/foliate_touch_harness && node run-all.mjs
 
 Expected: 4 個情境全數 PASS（本 Task 遷移的長按候選攔截機制本身不在 Issue 1 自動化範圍內，見 `design.md`「測試策略」，這裡驗證的是「沒有破壞其餘 3 個機制」；長按候選攔截本身的正確性由本計畫最後的真機重測把關）。
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/android/app/src/main/assets/foliate/main.js
