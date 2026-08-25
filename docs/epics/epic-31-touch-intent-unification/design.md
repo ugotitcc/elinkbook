@@ -116,7 +116,8 @@ EPUB（`foliate_reader_view.dart`）與 PDF（`pdf_reader_view.dart`）呼叫端
 
 - 逐一涵蓋 4 個歷史 bug 場景各自的自動化重現：Issue 47（長按候選攔截）、Epic 25 Issue 1/4（快速點擊 vs. 畫線點擊）、Issue 10（選取收尾保護）、Issue 11（`hitTest` 命中判斷）。
 - 新增**跨機制干擾測試**：長按候選期間選取突然確立、快速點擊門檻邊界時選取狀態同時變動——驗證狀態機沒有把 3 個狀態的優先順序關係搞錯，而不只是各自獨立驗證。
-- **設計審查修正（Important #2）**：`docs/epics/epic-27-reader-device-compat/reviews/issue10-harness/repro-issue10.mjs` 已記錄並證實——headless Chromium 透過 CDP 觸控注入（不論自寫 `Input.dispatchTouchEvent` 或 Puppeteer 的 `page.touchscreen.tap()`），**不會**從 `touchstart`/`touchend` 序列自動合成原生 `click`，靜止長按 700ms 也**不會**自動觸發原生文字選取。因此「快速點擊攔截」（Epic 25 Issue 4）跟「長按選字建立選取」（Issue 10/11 的選取相關場景）這兩類測試，不能只靠 CDP touch 模擬觸發，必須改用 `page.mouse.click()` 或直接透過 DOM API（`window.getSelection().selectAllChildren()` 等）注入選取範圍/帶時間戳的合成事件，才能真正驗證到監聽器邏輯本身。
+- **設計審查 Important #2 的說法，經 Issue 1 規劃階段實測後訂正**：審查報告與 `repro-issue10.mjs` 舊註解都宣稱「CDP 觸控注入不會合成原生 `click`」，實測（`Input.dispatchTouchEvent` touchStart/touchEnd 序列，掃描 80ms～900ms 各種按壓時長）證實**這個說法不成立**——click 事件確實會合成，且各種時長都會，先前的判讀是被 main.js 自己 capture 階段的 `stopImmediatePropagation()` 攔截混淆了（用 `page.evaluateOnNewDocument()` 把觀察用的監聽器註冊在 main.js 自己的監聽器**之前**，click 事件在所有時長下都量得到）。既有的 `tmp/epic-25-issue-4-harness/fix-verify.mjs`（透過真實 app 的 `onAnnotationActivated` bridge callback 觀察，而非獨立監聽器）方法本來就沒有這個混淆問題，可直接沿用。**「快速點擊攔截」（Epic 25 Issue 4）場景可以直接用 CDP `touchStart`/`touchEnd` 真實觸發**，不需要 `page.mouse.click()` 或 DOM API 替代。
+- **審查報告的另一半說法，實測確認成立**：靜止長按（CDP touchStart 後等待 900ms 不移動、再 touchEnd）**不會**建立非折疊的原生文字選取（`isCollapsed` 全程維持 `true`），這點與 `repro-issue10.mjs` 原記錄一致。因此「長按選字建立選取」（Issue 10/11 的選取相關場景）仍然無法單靠 CDP touch 模擬觸發選取本身，需要延用既有手法：用 `execCommand`/`Range` API 直接注入一段選取範圍模擬「選取已存在」的狀態，再測後續的 `touchmove`/`touchend`/`mousedown` 行為（`repro-issue10.mjs`／`repro-fix.mjs` 既有手法）。
 
 **真機重測**（本次為全面重寫，不可只靠自動化測試結案）：合併前在真實裝置上手動重跑以下 4 個歷史 bug 的重現步驟，逐項記錄在該 Issue 的 review 報告裡：
 
