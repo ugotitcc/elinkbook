@@ -1,4 +1,4 @@
-import 'construct-style-sheets-polyfill'
+import './construct-style-sheets-polyfill.js'
 
 const parseViewport = str => str
     ?.split(/[,;\s]/) // NOTE: technically, only the comma is valid
