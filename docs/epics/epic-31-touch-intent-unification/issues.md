@@ -35,7 +35,7 @@
 
 ## Issue 2：main.js 觸控意圖分類器重構（TouchIntentClassifier）
 
-**Status:** ready-for-agent
+**Status:** ready-for-human（main.js 5 個機制已收斂進 `TouchIntentClassifier`，`app/tool/foliate_touch_harness/` 4 個情境連續執行維持全數 PASS，`flutter analyze`／`flutter test` 未受影響（本工單未異動任何 Dart 檔案）；**仍待人工完成 5 項真機重測**（Issue 47／Epic 25 Issue 1/4／Issue 10／Issue 11／長按候選期間選取突然確立），記錄於 `reviews/review-issue-2.md` 後才能視為完成並合併。）
 
 **依賴：** Issue 1（需要先有回歸測試套件作為重構安全網）
 

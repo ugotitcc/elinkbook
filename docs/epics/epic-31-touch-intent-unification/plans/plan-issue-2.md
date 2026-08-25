@@ -592,7 +592,7 @@ git commit -m "refactor(epic-31): 遷移選取收尾保護機制至 TouchIntentC
 - **Issue 11**：`reportSelection()` 內的 `overlayer.hitTest()` 查詢邏輯（`overlayerEntry`/`hit`/`hitCfi`/`existingAnnotationId` 皆為函式內區域變數）本來就沒有使用任何跨機制共用的可變狀態，design.md 所指的「額外呼叫寫入 `lastNonCollapsedSelectionAtMs`」，正是 Task 3 Step 3 已經完成的兩處 `classifier.lastNonCollapsedSelectionAtMs =` 賦值——Issue 11 本身的 hitTest 邏輯不需要、也不會有額外程式碼異動。
 - **Issue 9**：`view.renderer.setAttribute('no-swipe', '')`（`openBook()` 內、`await view.open(book)` 之後，不在 `view.addEventListener('load', ...)` 監聽器內）是一次性、無條件執行的屬性設定，從未讀取任何觸控/選取共用狀態變數，design.md「讀這個 class 的欄位而非原本獨立變數」的敘述在這裡對不上實際程式碼——**這是 design.md 本身的敘述誤差，不是實作缺漏**，本 Task 會在該行加一則簡短註解說明，不修改這行程式碼本身。
 
-- [ ] **Step 1: 全文檢索確認舊變數名稱已無殘留**
+- [x] **Step 1: 全文檢索確認舊變數名稱已無殘留**
 
 ```bash
 grep -n "longPressGateState\|annotationClickTouchStartTime" app/android/app/src/main/assets/foliate/main.js
@@ -606,7 +606,7 @@ grep -n "let lastNonCollapsedSelectionAtMs" app/android/app/src/main/assets/foli
 
 Expected: 無任何輸出（該區域變數宣告已在 Task 3 移除，只剩 `classifier.lastNonCollapsedSelectionAtMs` 這個欄位存取寫法）。
 
-- [ ] **Step 2: 在 `no-swipe` 屬性設定處加上說明性註解，記錄與 design.md 的敘述落差**
+- [x] **Step 2: 在 `no-swipe` 屬性設定處加上說明性註解，記錄與 design.md 的敘述落差**
 
 找到：
 
@@ -631,7 +631,7 @@ Expected: 無任何輸出（該區域變數宣告已在 Task 3 移除，只剩 `
     view.renderer.setAttribute('no-swipe', '')
 ```
 
-- [ ] **Step 3: 完整回歸測試，連續執行確認穩定（比照 Issue 1 審查已建立的驗收慣例）**
+- [x] **Step 3: 完整回歸測試，連續執行確認穩定（比照 Issue 1 審查已建立的驗收慣例）**
 
 ```bash
 cd app/tool/foliate_touch_harness
@@ -640,7 +640,7 @@ for i in 1 2 3 4; do echo "===== run $i ====="; node run-all.mjs 2>&1 | grep -E 
 
 Expected: 4 次執行皆印出「整體結果：全部 PASS」，無任何 `[FAIL]`。
 
-- [ ] **Step 4: 跑 ES 相容性掃描，確認新增的 `class` 語法未引入無防護的較新 API**
+- [x] **Step 4: 跑 ES 相容性掃描，確認新增的 `class` 語法未引入無防護的較新 API**
 
 ```bash
 node app/tool/check_foliate_es_compat.js
@@ -648,7 +648,7 @@ node app/tool/check_foliate_es_compat.js
 
 Expected: 結束碼 `0`（`class` 語法本身是 ES2015 基礎特性，不在該腳本掃描的較新 API 清單內，這裡只是既有慣例的免費健檢，預期乾淨）。
 
-- [ ] **Step 5: 確認未修改任何 vendored 檔案**
+- [x] **Step 5: 確認未修改任何 vendored 檔案**
 
 ```bash
 git diff --stat main -- app/android/app/src/main/assets/foliate/
@@ -656,11 +656,11 @@ git diff --stat main -- app/android/app/src/main/assets/foliate/
 
 Expected: 只列出 `main.js` 一個檔案，`paginator.js`／`view.js`／`epub.js`／`overlayer.js`／`fixed-layout.js` 皆未出現在異動清單中。
 
-- [ ] **Step 6: 更新工單狀態**
+- [x] **Step 6: 更新工單狀態**
 
 在 `docs/epics/epic-31-touch-intent-unification/issues.md` Issue 2 的 `**Status:**` 那一行，改為 `ready-for-human`，並在下方補一段簡短總結：main.js 5 個機制已收斂進 `TouchIntentClassifier`，`app/tool/foliate_touch_harness/` 4 個情境連續執行維持全數 PASS，`flutter analyze`／`flutter test` 未受影響（本工單未異動任何 Dart 檔案）；**仍待人工完成 5 項真機重測**（Issue 47／Epic 25 Issue 1/4／Issue 10／Issue 11／長按候選期間選取突然確立），記錄於 `reviews/review-issue-2.md` 後才能視為完成並合併。
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app/android/app/src/main/assets/foliate/main.js docs/epics/epic-31-touch-intent-unification/issues.md

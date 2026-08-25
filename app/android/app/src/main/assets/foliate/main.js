@@ -1003,6 +1003,11 @@ async function openBook() {
     // docs/epics/epic-27-reader-device-compat/reviews/bugfix-repro.md
     // Issue 9 根因 B）。`setAttribute` 對任何自訂元素皆安全（不像呼叫該
     // 元素不存在的方法會拋例外），故不需要依 view.isFixedLayout 另外判斷。
+    //
+    // 【epic-31-touch-intent-unification Issue 2】這行是一次性、無條件的
+    // 屬性設定，從未讀取 TouchIntentClassifier 管理的任何欄位，維持原樣
+    // 不動——design.md「整體機制」把它列為需要「改讀 class 欄位」的第 5
+    // 個機制，經比對實際程式碼確認是設計文件本身的敘述誤差，非本次遺漏。
     view.renderer.setAttribute('no-swipe', '')
     view.renderer.setAttribute(
       'flow',
