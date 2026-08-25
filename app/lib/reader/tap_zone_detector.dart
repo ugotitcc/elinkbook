@@ -42,12 +42,12 @@ const int kTapZoneDebounceMs = 350;
 /// 各自傳入各自現行的計時來源，不強制統一。
 ///
 /// [tapMaxDurationMs] 為呼叫端注入參數，刻意不在本 module 內設共用預設
-/// 值/常數——EPUB 現行 700ms（`epic-25` Issue 1 六輪真機診斷校準值）與
-/// PDF 現行 400ms（原始未校準值）已被查證存在真實差異，兩者適用的正確
-/// 門檻值可能本來就不同（見 Epic 26 Issue 3，需真機診斷才能定案 PDF 端
-/// 數值，不可貿然套用 EPUB 數值），故刻意維持各自宣告字面值，不共用
-/// 數值（epic-31-touch-intent-unification Issue 3 待辦：本工單稍後會把
-/// PDF 端數值改為對齊 EPUB 的 700ms，屆時這段說明會再更新，見 Task 2）。
+/// 值/常數——EPUB 的 700ms 是 `epic-25` Issue 1 六輪真機診斷校準值，PDF
+/// 的 700ms 是 epic-31-touch-intent-unification Issue 3 刻意對齊、未經
+/// 真機驗證的決定，兩者數值現在剛好相同，但校準狀態不同，各自明確傳值
+/// 才能讓這個差異留在程式碼裡，不被「常數收斂」的動作悄悄合併掉（若之後
+/// 真機回報 PDF 端門檻不合適，需另立工單依真機資料重新校準，比照
+/// `epic-25` Issue 1／Epic 26 Issue 3 先例，不可逕自沿用 EPUB 數值）。
 /// [tapSlop] 已收斂為模組級共用常數 [kTapZoneSlop]（見上方宣告），呼叫端
 /// 不再需要各自宣告——EPUB／PDF 兩端這個欄位的數值本來就完全相同（皆為
 /// 18.0），純粹是宣告位置重複，不像 [tapMaxDurationMs] 存在真實的校準

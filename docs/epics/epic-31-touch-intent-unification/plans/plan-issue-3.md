@@ -218,7 +218,7 @@ git commit -m "refactor(epic-31): TapZoneDetector 新增 kTapZoneSlop/kTapZoneDe
 - Consumes: Task 1 的 `kTapZoneSlop`／`kTapZoneDebounceMs`（已是 `TapZoneDetector` 建構子預設值，呼叫端只需要**不再傳** `tapSlop`／`tapDebounceMs` 這兩個具名引數即可套用）。
 - Produces: 無新增（本 Task 是把 Task 1 建立的預設值機制實際接上兩個呼叫端）。
 
-- [ ] **Step 1: 執行既有測試，確認 Task 1 完成後的基準線**
+- [x] **Step 1: 執行既有測試，確認 Task 1 完成後的基準線**
 
 ```bash
 cd app && flutter test test/reader/tap_zone_detector_test.dart test/reader/foliate_reader_view_test.dart test/reader/pdf_reader_view_nav_zone_test.dart
@@ -226,7 +226,7 @@ cd app && flutter test test/reader/tap_zone_detector_test.dart test/reader/folia
 
 Expected: 全數 PASS。
 
-- [ ] **Step 2: EPUB 呼叫端移除字面值，改用建構子預設值**
+- [x] **Step 2: EPUB 呼叫端移除字面值，改用建構子預設值**
 
 用 Read 工具開啟 `app/lib/reader/foliate_reader_view.dart`，找到：
 
@@ -258,7 +258,7 @@ Expected: 全數 PASS。
                         onTap: () {
 ```
 
-- [ ] **Step 3: PDF 呼叫端移除字面值、門檻對齊 700ms**
+- [x] **Step 3: PDF 呼叫端移除字面值、門檻對齊 700ms**
 
 用 Read 工具開啟 `app/lib/reader/pdf_reader_view.dart`，找到：
 
@@ -294,7 +294,7 @@ Expected: 全數 PASS。
                         onTap: () => widget.onZoneAction?.call(action),
 ```
 
-- [ ] **Step 4: 確認呼叫端已不再寫死這兩個引數（grep 驗證）**
+- [x] **Step 4: 確認呼叫端已不再寫死這兩個引數（grep 驗證）**
 
 ```bash
 grep -n "tapSlop:\|tapDebounceMs:" app/lib/reader/foliate_reader_view.dart app/lib/reader/pdf_reader_view.dart
@@ -302,7 +302,7 @@ grep -n "tapSlop:\|tapDebounceMs:" app/lib/reader/foliate_reader_view.dart app/l
 
 Expected: 無任何輸出——兩個呼叫端都已改成完全依賴 `TapZoneDetector` 建構子的預設值（`kTapZoneSlop`／`kTapZoneDebounceMs`），這正是「呼叫端確實使用該常數、不寫死字面值」的直接證據：呼叫端連常數名稱都不需要重複打一次，值完全來自單一宣告來源（`tap_zone_detector.dart` 的建構子預設值）。
 
-- [ ] **Step 5: 回頭更新 `tap_zone_detector.dart` class doc，反映 PDF 端已對齊 700ms**
+- [x] **Step 5: 回頭更新 `tap_zone_detector.dart` class doc，反映 PDF 端已對齊 700ms**
 
 用 Read 工具開啟 `app/lib/reader/tap_zone_detector.dart`，找到 Task 1 Step 2 暫時保留的這段：
 
@@ -336,7 +336,7 @@ Expected: 無任何輸出——兩個呼叫端都已改成完全依賴 `TapZoneD
 /// 狀態差異。
 ```
 
-- [ ] **Step 6: 修正 PDF 門檻改變後失真的既有測試**
+- [x] **Step 6: 修正 PDF 門檻改變後失真的既有測試**
 
 用 Read 工具開啟 `app/test/reader/pdf_reader_view_nav_zone_test.dart`，找到（測試名稱「按壓超過快速點擊時長判定門檻不觸發 onZoneAction，避免與長按選取手勢衝突」內）：
 
@@ -370,7 +370,7 @@ Expected: 無任何輸出——兩個呼叫端都已改成完全依賴 `TapZoneD
 
 **為什麼必須改**：這個測試驗證「按壓時間超過快速點擊門檻時不觸發 `onZoneAction`」。門檻改成 700ms 之前，600ms 已經超過舊門檻（400ms），測試成立；門檻改成 700ms 之後，600ms 反而落在**合格點擊範圍內**（600 ≤ 700），會被判定為一次快速點擊而觸發 `onZoneAction`，導致 `expect(triggered, isNull)` 失敗——把等待時間改成 800ms（> 700ms 新門檻）才能維持這個測試原本要驗證的意圖。
 
-- [ ] **Step 7: 執行完整測試，確認全數通過**
+- [x] **Step 7: 執行完整測試，確認全數通過**
 
 ```bash
 cd app && flutter test test/reader/tap_zone_detector_test.dart test/reader/foliate_reader_view_test.dart test/reader/pdf_reader_view_nav_zone_test.dart
@@ -378,7 +378,7 @@ cd app && flutter test test/reader/tap_zone_detector_test.dart test/reader/folia
 
 Expected: 全數 PASS。
 
-- [ ] **Step 8: `flutter analyze` 確認乾淨**
+- [x] **Step 8: `flutter analyze` 確認乾淨**
 
 ```bash
 cd app && flutter analyze
@@ -386,7 +386,7 @@ cd app && flutter analyze
 
 Expected: `No issues found!`
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add app/lib/reader/foliate_reader_view.dart app/lib/reader/pdf_reader_view.dart app/lib/reader/tap_zone_detector.dart app/test/reader/pdf_reader_view_nav_zone_test.dart

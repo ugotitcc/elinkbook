@@ -138,7 +138,7 @@ void main() {
     final gesture = await tester.startGesture(
       tester.getCenter(find.byKey(const Key('pdf_reader_nav_zone_4'))),
     );
-    await tester.pump(const Duration(milliseconds: 600));
+    await tester.pump(const Duration(milliseconds: 800));
     await gesture.up();
     await tester.pump();
 
