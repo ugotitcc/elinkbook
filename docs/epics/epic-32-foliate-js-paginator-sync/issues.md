@@ -28,7 +28,7 @@
 
 ## Issue 2：同步 `paginator.js` 至 `6c6a491`
 
-**Status:** ready-for-agent
+**Status:** completed（已完成：`paginator.js` 已整份覆蓋為上游 commit `6c6a491`；ES 相容性掃描結束碼為 `0` 乾淨，未觸發額外 polyfill；Bridge 公開方法簽章 `next`/`prev`/`goTo`、`relocate` payload 起點、`no-swipe` 屬性讀取核對全數一致；`main.js` 未設定 `turn-gesture-left-inset`；`flutter analyze` 為「No issues found!」；`flutter test` 通過 1690 項測試基準線零回歸，commit: `769aba7`）
 
 **依賴：** Issue 1（掃描工具要先能正常執行）
 

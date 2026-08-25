@@ -29,7 +29,7 @@
 
 **Interfaces:** 無（vendored 檔案，無對外 Dart/Flutter 介面變動於本 Task）。
 
-- [ ] **Step 1: 記錄替換前的基準行數**
+- [x] **Step 1: 記錄替換前的基準行數**
 
 ```bash
 wc -l app/android/app/src/main/assets/foliate/paginator.js
@@ -37,7 +37,7 @@ wc -l app/android/app/src/main/assets/foliate/paginator.js
 
 Expected: `3504`（目前釘定版本，`dd71f2b`）。若不是這個數字，代表工作目錄的釘定版本已被其他變更動過，先停下來確認原因，不要繼續本工單。
 
-- [ ] **Step 2: 下載上游 `6c6a491` 版本並整份覆蓋**
+- [x] **Step 2: 下載上游 `6c6a491` 版本並整份覆蓋**
 
 ```bash
 curl -sS --retry 3 --retry-delay 2 -o app/android/app/src/main/assets/foliate/paginator.js "https://raw.githubusercontent.com/readest/foliate-js/6c6a491/paginator.js"
@@ -45,7 +45,7 @@ curl -sS --retry 3 --retry-delay 2 -o app/android/app/src/main/assets/foliate/pa
 
 Expected: 指令結束碼為 `0`，不輸出任何錯誤訊息（`--retry 3` 是因為這個環境對 `raw.githubusercontent.com` 偶爾會有連線被重置的情形，規劃階段已實測需要加重試才穩定下載成功）。
 
-- [ ] **Step 3: 驗證下載內容不是錯誤頁面、且行數符合預期**
+- [x] **Step 3: 驗證下載內容不是錯誤頁面、且行數符合預期**
 
 ```bash
 head -c 200 app/android/app/src/main/assets/foliate/paginator.js
@@ -54,7 +54,7 @@ wc -l app/android/app/src/main/assets/foliate/paginator.js
 
 Expected：`head` 印出的開頭是合法 JavaScript（例如 `const wait = ms => ...` 這類程式碼開頭，**不是** `<!DOCTYPE html>` 或 `404: Not Found` 這種錯誤頁面內容）；`wc -l` 結果為 `3782`（規劃階段已實際下載驗證過的行數，對應 design.md 記載的「兩個 commit 合併 +338/-55」淨變動）。
 
-- [ ] **Step 4: 確認 git diff 範圍只有這一個檔案**
+- [x] **Step 4: 確認 git diff 範圍只有這一個檔案**
 
 ```bash
 git status --porcelain
@@ -63,7 +63,7 @@ git diff --stat -- app/android/app/src/main/assets/foliate/
 
 Expected：`git status` 只列出 `app/android/app/src/main/assets/foliate/paginator.js` 一個異動檔案；`git diff --stat` 也只顯示這一個檔案有變更，沒有動到 `view.js`／`epub.js` 等其餘 10 個釘定檔案或 `main.js`／`index.html`。
 
-- [ ] **Step 5: 快速核對新版確實含有目標 commit 的觸控重寫內容**
+- [x] **Step 5: 快速核對新版確實含有目標 commit 的觸控重寫內容**
 
 ```bash
 grep -n "layeredGesture\|turn-gesture-left-inset\|#rejectLayeredGesture" app/android/app/src/main/assets/foliate/paginator.js
@@ -82,7 +82,7 @@ Expected：至少能找到 `layeredGesture`（多處）、`turn-gesture-left-ins
 - Consumes: Task 1 已替換完成的 `app/android/app/src/main/assets/foliate/paginator.js`。
 - Produces: 若本 Task 觸發 polyfill 補強，`_esCompatPolyfillJs` 常數（`app/lib/reader/foliate_reader_view.dart`）內容會增加新的 `if (!X) { ... }` 區塊，供 Task 4 的 `flutter test` 驗證。
 
-- [ ] **Step 1: 執行掃描工具**
+- [x] **Step 1: 執行掃描工具**
 
 ```bash
 node app/tool/check_foliate_es_compat.js
@@ -93,7 +93,7 @@ Expected：結束碼 `0`，印出「乾淨」訊息。
 
 規劃階段已用下載到的副本手動核對過：新版 `paginator.js` 相對舊版新增的較新 API 用法只有 `.at(-1)`（2 處）與 `.findLastIndex(`（1 處，位於新增的 `landmarks` 相關邏輯），這兩者在目前 `_esCompatPolyfillJs`（`app/lib/reader/foliate_reader_view.dart` 第 68-150 行）已經分別有 `Array.prototype.at`／`Array.prototype.findLastIndex` 的 polyfill 定義與對應的 marker 字串，`check_foliate_es_compat.js` 的比對邏輯（`polyfillMarkers.some(marker => polyfillJs.includes(marker))`）會直接判定這兩個 API 已受防護、不會再列入 findings。其餘 `RISKY_APIS` 清單中的 API（`Object.hasOwn`／`toReversed`／`toSorted`／`toSpliced`／`.with(`／`Object.groupBy`／`Map.groupBy`／`Promise.withResolvers`／`isWellFormed`／`toWellFormed`／`structuredClone`／`Array.fromAsync`／`replaceAll`／`WeakRef`）在新版 `paginator.js` 中規劃階段也都沒有掃到新用法。因此本步驟預期結束碼為 `0`，不需要進到下方 Step 2 的條件分支。
 
-- [ ] **Step 2（僅當 Step 1 結束碼非 0 時才執行）：依腳本輸出的清單補齊 polyfill**
+- [x] **Step 2（僅當 Step 1 結束碼非 0 時才執行）：依腳本輸出的清單補齊 polyfill**
 
 若 Step 1 結束碼不是 `0`，腳本會印出每個未防護 API 的名稱、所在的 `paginator.js` 檔案/行號、以及該 API 所需的最低 Chromium 版本。針對輸出清單中的每一項：
 
@@ -113,7 +113,7 @@ Expected：結束碼 `0`，印出「乾淨」訊息。
 - Consumes: Task 1 替換後的 `app/android/app/src/main/assets/foliate/paginator.js`；既有未變動的 `app/android/app/src/main/assets/foliate/view.js`；既有未變動的 `app/android/app/src/main/assets/foliate/main.js`。
 - Produces: 本 Task 若一切符合預期，不產生任何檔案變更，直接進入 Task 4。
 
-- [ ] **Step 1: 核對 `paginator.js` 的 `next`/`prev`/`goTo` 公開方法簽章**
+- [x] **Step 1: 核對 `paginator.js` 的 `next`/`prev`/`goTo` 公開方法簽章**
 
 ```bash
 grep -n "async next(\|async prev(\|async goTo(" app/android/app/src/main/assets/foliate/paginator.js
@@ -121,7 +121,7 @@ grep -n "async next(\|async prev(\|async goTo(" app/android/app/src/main/assets/
 
 Expected：三個方法都存在，簽章分別為 `async next(distance)`、`async prev(distance)`、`async goTo(target)`——與替換前舊版（`dd71f2b`）完全相同的簽章（規劃階段已對照確認）。`renderer` 即為 `paginator.js` 這個自訂元素實例，`view.js`（本次未變動）的四個對外方法全部只是薄轉呼叫：`view.next(distance)`/`view.prev(distance)` 直接轉呼叫 `renderer.next(distance)`/`renderer.prev(distance)`；`view.goToFraction(frac)` 轉呼叫 `renderer.goTo({ index, anchor })`；`view.goTo(target)`（`main.js` 的 `window.jumpToLocator` 呼叫這個，即 design.md 所稱的 `goToCfi`）轉呼叫 `renderer.goTo(resolved)`。因此 `main.js` 實際用到的 `view.next()`／`view.prev()`／`view.goToFraction()`／`view.goTo()` 四條路徑，只要這裡核對的 `renderer.next`/`renderer.prev`/`renderer.goTo` 三個簽章不變，就全數不受影響。
 
-- [ ] **Step 2: 核對 `relocate` 事件 payload 建構邏輯**
+- [x] **Step 2: 核對 `relocate` 事件 payload 建構邏輯**
 
 ```bash
 grep -n "const detail = { reason, range, index }" app/android/app/src/main/assets/foliate/paginator.js
@@ -129,7 +129,7 @@ grep -n "const detail = { reason, range, index }" app/android/app/src/main/asset
 
 Expected：找到這一行（新版行號約在 3260 附近，僅供參考，行號本身不是驗證重點）。這是 `paginator.js` 內部 `relocate` 事件（`Renderer` 層級，非 `main.js` 直接監聽的那個）的 payload 起點，`{ reason, range, index }` 這個結構與替換前舊版完全相同，後續依 `this.scrolled` 分支補上的 `detail.fraction`／`detail.size` 邏輯也相同。`view.js`（本次未變動）的 `#onRelocate()` 會消費這個 payload、組出 `main.js` 實際監聽的 `{ cfi, fraction, location, index, head, tail }` 欄位（見 `main.js` 第 552/567 行的兩個 `view.addEventListener('relocate', ...)`），結構起點不變代表下游欄位也不會變。
 
-- [ ] **Step 3: 核對 `no-swipe` 屬性讀取仍存在（Epic 27 Issue 9 依賴）**
+- [x] **Step 3: 核對 `no-swipe` 屬性讀取仍存在（Epic 27 Issue 9 依賴）**
 
 ```bash
 grep -n "hasAttribute('no-swipe')" app/android/app/src/main/assets/foliate/paginator.js
@@ -137,7 +137,7 @@ grep -n "hasAttribute('no-swipe')" app/android/app/src/main/assets/foliate/pagin
 
 Expected：找到 3 處（新版行號約 2295/2706/2820，僅供參考），與替換前舊版同樣是 3 處讀取（舊版行號 2186/2499/2558）。`main.js` 第 962 行 `view.renderer.setAttribute('no-swipe', '')` 這個既有設定不需要更動——這一項的真機行為驗證留給 Issue 3，本 Task 只確認程式碼層級的讀取邏輯還在。
 
-- [ ] **Step 4: 確認 `main.js` 沒有設定 `turn-gesture-left-inset`**
+- [x] **Step 4: 確認 `main.js` 沒有設定 `turn-gesture-left-inset`**
 
 ```bash
 grep -n "turn-gesture-left-inset" app/android/app/src/main/assets/foliate/main.js
@@ -156,7 +156,7 @@ Expected：無任何輸出（`grep` 結束碼非 0）。design.md 已用 diff �
 
 **Interfaces:** 無。
 
-- [ ] **Step 1: `flutter analyze`**
+- [x] **Step 1: `flutter analyze`**
 
 ```bash
 cd app && flutter analyze
@@ -164,7 +164,7 @@ cd app && flutter analyze
 
 Expected：「No issues found!」（cwd 需在 `app/`，之後步驟若沿用同一個終端機工作階段，記得指令前綴或先切回上一層再視需要重新 `cd app`）。
 
-- [ ] **Step 2: `flutter test`**
+- [x] **Step 2: `flutter test`**
 
 ```bash
 flutter test
@@ -180,7 +180,7 @@ flutter test --concurrency=1
 
 這只是失敗時的備援手段，不是預設做法——目前沒有證據顯示這個 repo 曾經實際發生過這個問題，正常情況下直接跑 `flutter test` 即可。
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add app/android/app/src/main/assets/foliate/paginator.js
@@ -205,7 +205,7 @@ EOF
 git add app/android/app/src/main/assets/foliate/paginator.js app/lib/reader/foliate_reader_view.dart app/test/reader/foliate_reader_view_test.dart
 ```
 
-- [ ] **Step 4: 更新工單狀態**
+- [x] **Step 4: 更新工單狀態**
 
 在 `docs/epics/epic-32-foliate-js-paginator-sync/issues.md` Issue 2 的 `**Status:** ready-for-agent` 那一行，改為記錄已完成，並比照 Issue 1 的寫法補一段簡短總結：ES 掃描結束碼（Task 2 Step 1 結果，是否有觸發 Step 2 的 polyfill 補強）、Bridge 對齊檢查結果（Task 3 四個 Step 是否皆與 Expected 相符）、`flutter test` 實際測試總數（Task 4 Step 2 結果）、commit hash。
 
