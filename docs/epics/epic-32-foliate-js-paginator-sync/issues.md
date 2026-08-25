@@ -6,7 +6,7 @@
 
 ## Issue 1：修復 ES 相容性掃描工具＋確認基準線
 
-**Status:** ready-for-agent
+**Status:** completed（已完成：`check_foliate_es_compat.js` 4 處過時路徑已修復；ES 掃描結束碼為 `0` 乾淨；`flutter analyze` 為「No issues found!」；`flutter test` 通過 1690 項測試基準線，commit: `3e82e23`）
 
 **依賴：** 無，可立即開始
 
