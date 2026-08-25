@@ -404,7 +404,7 @@ git commit -m "refactor(epic-31): EPUB/PDF 改用 TapZoneDetector 共用常數�
 - Consumes: Task 1-2 完成後的 `tap_zone_detector.dart`／`foliate_reader_view.dart`／`pdf_reader_view.dart`。
 - Produces: 無（本 Task 是驗收與收尾）。
 
-- [ ] **Step 1: 全專案 `flutter analyze`**
+- [x] **Step 1: 全專案 `flutter analyze`**
 
 ```bash
 cd app && flutter analyze
@@ -412,7 +412,7 @@ cd app && flutter analyze
 
 Expected: `No issues found!`
 
-- [ ] **Step 2: 全專案 `flutter test`**
+- [x] **Step 2: 全專案 `flutter test`**
 
 ```bash
 cd app && flutter test
@@ -420,7 +420,7 @@ cd app && flutter test
 
 Expected: 全數 PASS，比對 Epic 31 Issue 2 合併時記錄的基準（`reviews/review-issue-2.md`：1690/1690 PASS）——本工單只新增 3 個測試（Task 1 Step 3），總數應為 1693/1693 PASS 左右（實際數字以執行結果為準，重點是「全數 PASS、無 SKIP、無新增失敗」）。
 
-- [ ] **Step 3: 確認未修改範圍外的檔案**
+- [x] **Step 3: 確認未修改範圍外的檔案**
 
 ```bash
 git diff --stat main -- app/lib app/test
@@ -428,11 +428,11 @@ git diff --stat main -- app/lib app/test
 
 Expected: 只列出 `app/lib/reader/tap_zone_detector.dart`／`app/lib/reader/foliate_reader_view.dart`／`app/lib/reader/pdf_reader_view.dart`／`app/test/reader/tap_zone_detector_test.dart`／`app/test/reader/pdf_reader_view_nav_zone_test.dart` 這 5 個檔案，沒有其他 Dart 檔案被異動。
 
-- [ ] **Step 4: 更新工單狀態**
+- [x] **Step 4: 更新工單狀態**
 
 在 `docs/epics/epic-31-touch-intent-unification/issues.md` Issue 3 的 `**Status:**` 那一行，改為記錄已完成（PR 編號待實際發 PR 時補上），並在下方補一段簡短總結：`kTapZoneSlop`/`kTapZoneDebounceMs` 常數已收斂、EPUB／PDF 呼叫端已不再各自宣告字面值、PDF `tapMaxDurationMs` 已對齊 700ms（未經真機驗證，風險已記錄於程式碼註解），`flutter analyze`／`flutter test` 皆通過。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add docs/epics/epic-31-touch-intent-unification/issues.md
