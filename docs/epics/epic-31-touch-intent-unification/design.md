@@ -1,7 +1,7 @@
 # 觸控意圖判讀統一（設計文件）
 
-**狀態：** 待人類審閱
-**對應工單：** 尚未建立（新 Epic，暫定編號 `epic-31-touch-intent-unification`，正式編號於 Scrum Master 階段建立 `issues.md` 時定案）
+**狀態：** 已審閱通過，已拆解為工單
+**對應工單：** `epic-31-touch-intent-unification`，見 `docs/epics/epic-31-touch-intent-unification/issues.md`
 **診斷依據：** `docs/research/architecture-review-touch-gesture-handling.md` 候選 1
 
 ## 背景
