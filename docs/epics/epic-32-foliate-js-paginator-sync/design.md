@@ -36,7 +36,9 @@ Epic 31 目前只有規劃文件、尚未開始實作（一行程式都還沒動
 
 ### `#touchState` 結構變動摘要（供 Bridge 對齊檢查參考）
 
-新版新增私有欄位：`releaseSamples`（速度取樣佇列）、`lastMovementTime`、`active`、`layeredGesture`（`'pending'`/`'rejected'` 等狀態）、`layeredEarlyClaimBlocked`、`layeredEdgeDirection`、`layeredHorizontalDirection` 等，並新增 `#rejectLayeredGesture()` 方法與一個新的 host 可設定屬性 `turn-gesture-left-inset`（保留左側控制區不參與快速判定，但仍允許一般翻頁後備路徑）。這些欄位/方法皆為 `Paginator` 類別的私有實作細節（`#` 前綴），`main.js` 本來就無法、也沒有直接存取，理論上不構成 Bridge 契約層級的破壞性變更——但仍須逐一核對 `main.js` 實際呼叫到的**公開**方法（`view.next()`／`view.prev()`／`view.goToFraction()`／`view.goToCfi()`／`relocate` 事件 payload 等）簽章是否不變，不能只憑「是私有欄位」就跳過檢查。
+新版新增私有欄位：`releaseSamples`（速度取樣佇列）、`lastMovementTime`、`active`、`layeredGesture`（`'pending'`/`'rejected'` 等狀態）、`layeredEarlyClaimBlocked`、`layeredEdgeDirection`、`layeredHorizontalDirection` 等，並新增 `#rejectLayeredGesture()` 方法與一個新的 host 可設定屬性 `turn-gesture-left-inset`。這些欄位/方法皆為 `Paginator` 類別的私有實作細節（`#` 前綴），`main.js` 本來就無法、也沒有直接存取，理論上不構成 Bridge 契約層級的破壞性變更——但仍須逐一核對 `main.js` 實際呼叫到的**公開**方法（`view.next()`／`view.prev()`／`view.goToFraction()`／`view.goToCfi()`／`relocate` 事件 payload 等）簽章是否不變，不能只憑「是私有欄位」就跳過檢查。
+
+**`turn-gesture-left-inset` 屬性（設計審查 Important #1，已用 diff 確認具體結論）**：這個新屬性讓 host（我們的 `main.js`）保留左側一塊控制區，不參與翻頁手勢的低位移快速判定路徑（原始 commit 註解舉例：垂直方向的亮度調整手勢）。程式碼是 `reservedLeftRatio = Number(this.getAttribute('turn-gesture-left-inset')) || 0`——屬性未設定時 `Number(null)` 為 `NaN`，`NaN || 0` 結果為 `0`，`earlyClaimBlocked` 恆為 `false`，即**預設狀態下不保留任何區域，不影響現有橫排/直排熱區行為，也不會跟 `main.js` 既有的 `no-swipe` 屬性（Epic 27 Issue 9，語意是完全停用滑動翻頁，跟這個屬性「只保留一塊區域、其餘正常」是不同語意）衝突**。因為 `main.js` 目前不會設定這個新屬性，Bridge 對齊檢查這項只需確認「確實沒有設定」即可，不需要額外開發或測試這個屬性本身的行為。
 
 ### 先決條件：修復 ES 相容性掃描工具
 
@@ -46,7 +48,10 @@ Epic 31 目前只有規劃文件、尚未開始實作（一行程式都還沒動
 
 **基準線**：`flutter analyze` 需為「No issues found!」，`flutter test` 全數通過。
 
-**ES 相容性掃描**：`node app/tool/check_foliate_es_compat.js`（修復路徑後）結束碼須為 0；若非 0，依腳本列出的清單在 `_esCompatPolyfillJs`（`foliate_reader_view.dart`）補齊 polyfill，比照既有規範（僅在 `if (!TargetAPI)` 缺席時定義、本體維持 ES5/ES2020 相容語法）。
+**ES 相容性掃描**：`node app/tool/check_foliate_es_compat.js`（修復路徑後）結束碼須為 0；若非 0，依腳本列出的清單在 `_esCompatPolyfillJs`（`foliate_reader_view.dart`）補齊 polyfill，硬性規範（與 `docs/research/foliate_js_sync_update_strategy.md` 階段 3 一致，設計審查 Important #2 採納）：
+
+1. 僅在 `if (!TargetAPI)` 缺席時才定義，不可覆寫瀏覽器原生實作。
+2. **嚴禁使用 ES2021+ 語法糖**（禁止 `??=`、`||=`、`&&=`、可選鏈 `?.`、標籤模板等），本體必須為 ES5/ES2020 相容語法，確保能在 Chromium 83 上被正確解析。
 
 **Puppeteer 自動化測試不是本次驗收的主要手段**：`epic-31` 規劃階段已實測確認，這個環境的 Chromium 版本（`151.0.7922.77`）下 CDP `touchmove` 事件送達 iframe 不可靠，這是與 `paginator.js` 版本無關的環境限制，換了新版一樣測不準。
 
@@ -55,7 +60,7 @@ Epic 31 目前只有規劃文件、尚未開始實作（一行程式都還沒動
 - Issue 47：橫排/直排長按選字前幾影格畫面不暴跳。
 - Epic 25 Issue 1：畫線選取已確立時不誤觸跳頁（真機比對 Air Reader Pro C／TCL 14 吋兩種機型，比照原始 Issue 記錄的驗證方式）。
 - Epic 27 Issue 9：特定情境下滑動手勢確實被 `no-swipe` 屬性正確阻止。
-- 額外基本 smoke：一般橫排/直排連續翻頁（前後各 5 次）內容無縫銜接、無跳頁/重複——確認這次同步至少沒有引入全新的、既有 3 個修法之外的回歸。
+- 額外基本 smoke（設計審查 Minor #1，採納，改用客觀判準）：直排 EPUB 連續往前翻頁 5 次、再反向翻頁 5 次，比對是否精確回到原始文字錨點（不只是「感覺無縫」，而是往返後畫面內容/位置與出發點一致），確認這次同步至少沒有引入全新的、既有 3 個修法之外的回歸。
 
 ## 已知風險
 
