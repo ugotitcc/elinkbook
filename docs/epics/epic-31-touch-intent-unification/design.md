@@ -114,17 +114,19 @@ EPUB（`foliate_reader_view.dart`）與 PDF（`pdf_reader_view.dart`）呼叫端
 
 放在 `app/tool/` 而非 `app/test/`——`app/test/` 是 `flutter test` 專用的 Dart 測試目錄（見 CLAUDE.md 兩層測試架構），Puppeteer 是 Node.js 腳本，比照這個 repo 既有慣例（`app/tool/check_foliate_es_compat.js`），不混進 Dart 測試目錄。
 
-- 逐一涵蓋 4 個歷史 bug 場景各自的自動化重現：Issue 47（長按候選攔截）、Epic 25 Issue 1/4（快速點擊 vs. 畫線點擊）、Issue 10（選取收尾保護）、Issue 11（`hitTest` 命中判斷）。
-- 新增**跨機制干擾測試**：長按候選期間選取突然確立、快速點擊門檻邊界時選取狀態同時變動——驗證狀態機沒有把 3 個狀態的優先順序關係搞錯，而不只是各自獨立驗證。
-- **設計審查 Important #2 的說法，經 Issue 1 規劃階段實測後訂正**：審查報告與 `repro-issue10.mjs` 舊註解都宣稱「CDP 觸控注入不會合成原生 `click`」，實測（`Input.dispatchTouchEvent` touchStart/touchEnd 序列，掃描 80ms～900ms 各種按壓時長）證實**這個說法不成立**——click 事件確實會合成，且各種時長都會，先前的判讀是被 main.js 自己 capture 階段的 `stopImmediatePropagation()` 攔截混淆了（用 `page.evaluateOnNewDocument()` 把觀察用的監聽器註冊在 main.js 自己的監聽器**之前**，click 事件在所有時長下都量得到）。既有的 `tmp/epic-25-issue-4-harness/fix-verify.mjs`（透過真實 app 的 `onAnnotationActivated` bridge callback 觀察，而非獨立監聽器）方法本來就沒有這個混淆問題，可直接沿用。**「快速點擊攔截」（Epic 25 Issue 4）場景可以直接用 CDP `touchStart`/`touchEnd` 真實觸發**，不需要 `page.mouse.click()` 或 DOM API 替代。
-- **審查報告的另一半說法，實測確認成立**：靜止長按（CDP touchStart 後等待 900ms 不移動、再 touchEnd）**不會**建立非折疊的原生文字選取（`isCollapsed` 全程維持 `true`），這點與 `repro-issue10.mjs` 原記錄一致。因此「長按選字建立選取」（Issue 10/11 的選取相關場景）仍然無法單靠 CDP touch 模擬觸發選取本身，需要延用既有手法：用 `execCommand`/`Range` API 直接注入一段選取範圍模擬「選取已存在」的狀態，再測後續的 `touchmove`/`touchend`/`mousedown` 行為（`repro-issue10.mjs`／`repro-fix.mjs` 既有手法）。
+- **設計審查 Important #2 的說法，經 Issue 1 規劃階段實測後訂正**：審查報告與 `repro-issue10.mjs` 舊註解都宣稱「CDP 觸控注入不會合成原生 `click`」，實測（`Input.dispatchTouchEvent` touchStart/touchEnd 序列，掃描 80ms～900ms 各種按壓時長）證實**這個說法不成立**——click 事件確實會合成，且各種時長都會，先前的判讀是被 main.js 自己 capture 階段的 `stopImmediatePropagation()` 攔截混淆了（用 `page.evaluateOnNewDocument()` 把觀察用的監聽器註冊在 main.js 自己的監聽器**之前**，click 事件在所有時長下都量得到）。**「快速點擊攔截」（Epic 25 Issue 4）場景可以直接用 CDP `touchStart`/`touchEnd`（不含中途 `touchmove`）真實觸發**，不需要 `page.mouse.click()` 或 DOM API 替代。
+- **審查報告的另一半說法，實測確認成立**：靜止長按（CDP touchStart 後等待 900ms 不移動、再 touchEnd）**不會**建立非折疊的原生文字選取（`isCollapsed` 全程維持 `true`），這點與 `repro-issue10.mjs` 原記錄一致。因此「長按選字建立選取」相關場景無法單靠 CDP touch 模擬觸發選取本身，需要用 `execCommand`/`Range` API 直接注入一段選取範圍模擬「選取已存在」的狀態，再測後續行為。
+- **Issue 1 規劃階段新發現、範圍因此調整的問題**：進一步實測發現，這個環境目前安裝的 Puppeteer/Chromium（`151.0.7922.77`，明顯新於這批既有 harness 上次驗證通過時的版本）透過 CDP 送出的 **`touchmove`** 事件，似乎不會可靠地送達 iframe 內的 JS 事件監聽器——就連既有、文件記錄「已驗證通過」的 `repro-fix.mjs`（Issue 47 修法驗證，路徑修正後重跑），連情境 E（真實滑動換頁手勢，理論上必定觸發 `scrollBy`）都量到 0 次呼叫，判斷是 Chromium 版本演進造成的既有 harness 手法失效，不是 main.js 本身有回歸。**只有 `touchStart`/`touchEnd`（不含中途 `touchmove`）的序列，經實測仍可靠**（快速點擊、長按皆是）。人類決策：**Issue 47 場景（長按候選攔截，本質依賴 `touchmove`）在本 Epic 的 Puppeteer 自動化測試中降級為 best-effort，不強求可靠通過，改由 Issue 2 原本就規劃的真機重測把關**；同一個技術原因也適用於「長按候選期間選取突然確立」這個跨機制情境（同樣依賴 `touchmove`），一併降級、併入真機重測範圍，不強求自動化。
+- 因此，本 Epic 的 Puppeteer 回歸測試改為**只涵蓋不依賴 `touchmove` 的 3 個歷史場景**：Epic 25 Issue 1/4（快速點擊 vs. 畫線點擊，`touchStart`/`touchEnd`）、Issue 10（選取收尾保護，`touchStart`/`touchEnd`＋`mousedown`）、Issue 11（`hitTest` 命中判斷，選取用 Range API 注入、不經觸控）。
+- 新增**跨機制干擾測試（不依賴 `touchmove` 的部分）**：快速點擊門檻邊界時選取狀態同時變動（驗證選取收尾保護與快速點擊分類這兩個獨立機制不會互相干擾）。「長按候選期間選取突然確立」這個跨機制情境依賴 `touchmove`，如上一點所述併入真機重測，不在自動化範圍內。
 
-**真機重測**（本次為全面重寫，不可只靠自動化測試結案）：合併前在真實裝置上手動重跑以下 4 個歷史 bug 的重現步驟，逐項記錄在該 Issue 的 review 報告裡：
+**真機重測**（本次為全面重寫，不可只靠自動化測試結案）：合併前在真實裝置上手動重跑以下重現步驟，逐項記錄在該 Issue 的 review 報告裡：
 
-- Issue 47：橫排/直排長按選字前幾影格畫面不暴跳。
+- Issue 47：橫排/直排長按選字前幾影格畫面不暴跳。**本項為主要把關手段**（Puppeteer 自動化在本 Epic 降級為 best-effort，見上方測試策略）。
 - Epic 25 Issue 1/4：快速點擊換頁正常、刻意點擊畫線正常叫出工具列。
 - Issue 10：選字放開手指時選取不折疊。
 - Issue 11：長按已畫線文字時工具列正確顯示「刪除」按鈕。
+- **長按候選期間選取突然確立**（跨機制情境，同上方說明併入真機重測範圍）：長按選字過程中，選取一旦被系統判定成立，畫面不應再出現滑動誤判/暴跳。
 
 **Dart 端**：
 
@@ -136,4 +138,5 @@ EPUB（`foliate_reader_view.dart`）與 PDF（`pdf_reader_view.dart`）呼叫端
 ## 已知風險
 
 - PDF 的 `tapMaxDurationMs` 改為 700ms 未經真機驗證，若之後真機回報「PDF 長按判斷變得比預期遲鈍」，需另開工單依真機資料重新校準（比照 Epic 25 Issue 1／Epic 26 Issue 3 先例）。
+- **Puppeteer/Chromium 版本脆弱性（Issue 1 規劃階段新發現）**：目前環境的 CDP `touchmove` 事件送達 iframe 的可靠性隨 Chromium 版本演進而改變（實測 `151.0.7922.77` 下既有「已驗證通過」的 harness 也失效），代表任何依賴 `touchmove` 的 Puppeteer 測試，未來 Puppeteer/Chromium 升級後都可能重新失效，不是本 Epic 一次修好就永久有效。長期若要讓長按候選攔截這類場景恢復可自動化驗證，需要另立技術債工單評估固定 Chromium 版本或改用其他測試技術（例如直接呼叫狀態機的公開方法做單元測試，繞開真實 DOM 事件派送），不在本 Epic 範圍內處理。
 - main.js 狀態機是對已驗證邏輯的重寫，即使 Puppeteer 測試全過，仍需真機重測 4 個歷史場景才能排除回歸風險（見上方測試策略）。
