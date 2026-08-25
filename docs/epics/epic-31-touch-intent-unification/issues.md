@@ -35,7 +35,7 @@
 
 ## Issue 2：main.js 觸控意圖分類器重構（TouchIntentClassifier）
 
-**Status:** completed（已完成並通過 5 項真機驗收，記錄於 `reviews/review-issue-2.md`）
+**Status:** completed（已完成並合併：PR [#186](https://git.jigong.org/huthief/elinkBook/pulls/186)。通過 5 項真機驗收，記錄於 `reviews/review-issue-2.md`；程式碼審查 `reviews/review-code-issue-2.md` Critical/Important 皆 0）
 
 **依賴：** Issue 1（需要先有回歸測試套件作為重構安全網）
 
