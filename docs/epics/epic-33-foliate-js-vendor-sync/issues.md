@@ -2,9 +2,11 @@
 
 依 `design.md`（Discovery：`/grill-with-docs`；已依 `/superpowers:receiving-code-review` 審查修訂）拆解為 2 個線性依賴的工單，`epic-31` Issue 3 已合併回 `main`（commit `8a9be2cd`），排期依賴已解除，可立即開始。
 
+**Issue 1 範圍已擴充**：撰寫 Issue 1 實作計畫（`/superpowers:writing-plans`）時發現一個既有缺陷——`paginator.js`／`view.js` 實際上並非純淨 vendored 檔案，依 `docs/adr/0024-flowable-pagination-density-calibration-reopen-adr-0011.md`（`epic-26` Issue 11）帶有正式重新開放 ADR 0011 的手動 patch，`epic-32` 整份覆蓋同步 `paginator.js` 時已靜默移除其中一半（`detail.contentPages`）。原規劃把修復另立獨立 Issue 3、依賴 Issue 1 完成後才做；但 `/superpowers:receiving-code-review` 審查 `plans/plan-issue-1.md` 時發現：若不補回 `view.js` 的 `clearLocationDensity()`，Issue 1 自己的觸控 Harness（Task 4）會在第一次 `relocate` 事件觸發 `applyPreferences()` 時 100% 拋出例外、逾時崩潰，無法完成 Issue 1 本身。因此改為**把 ADR 0024 patch 補回併入 Issue 1**（見下方設計要點新增的 Task 2），不再另立 Issue 3。
+
 ---
 
-## Issue 1：同步 7 個 vendored 檔案至 `c09f06d`＋第一/二層測試防護
+## Issue 1：同步 7 個 vendored 檔案至 `c09f06d`＋補回 ADR 0024 patch＋第一/二層測試防護
 
 **Status:** ready-for-agent
 
@@ -23,6 +25,7 @@
   - `overlayer.js`（1 個 commit，+8/-0）
   - `epubcfi.js`（1 個 commit，+2/-2）
   - `comic-book.js`（1 個 commit，+15/-1）
+- **補回 ADR 0024 密度校正 patch**：整份覆蓋 `paginator.js`／`view.js` 會移除 `docs/adr/0024-flowable-pagination-density-calibration-reopen-adr-0011.md`（`epic-26` Issue 11）在這兩個檔案內正式重新開放 ADR 0011 的手動 patch，須在下載完成後立即補回——`paginator.js` 的 `relocate` 事件 `detail` 補回 `contentPages` 欄位；`view.js` 的 `#onRelocate()` 補回 `contentPages` 消費、新增 `clearLocationDensity()` 方法（`main.js` 第 175 行 `window.applyPreferences()` 無條件呼叫，若缺席會直接拋例外）。`progress.js` 的另一半 patch（`recordDensity`/`clearDensity`）這次未變動、不需處理。
 - **第一層：靜態與單元測試**——執行 ES 相容性掃描（`node app/tool/check_foliate_es_compat.js`），若結束碼非 0，依硬性規範在 `_esCompatPolyfillJs`（`foliate_reader_view.dart`）補齊 polyfill（① 僅在 `if (!TargetAPI)` 缺席時定義；② 嚴禁 ES2021+ 語法糖）。注意此掃描為 Regex 掃描已知 API 清單，**無法**攔截語法解析期（Parse Time）的 `SyntaxError`（例如 `?.`／`??=`），語法層級問題留待 Issue 2 真機驗收把關，不在本工單自動化範圍內。
 - **第二層：觸控 Harness 自動化**——執行 `node app/tool/foliate_touch_harness/run-all.mjs`（`epic-31` Issue 1 建立），4 個情境須全數 PASS，作為攔截 `TouchIntentClassifier`（`epic-31` Issue 2 成果）與上游觸控／捲動邏輯衝突的自動化防線。
 - **Bridge 對齊檢查**：逐一核對 `main.js` 呼叫到的 `Paginator`/`view` 公開方法簽章（`view.next()`／`view.prev()`／`view.goToFraction()`／`view.goToCfi()`／`relocate` 事件 payload 的 `{ cfi, fraction, location, index, head, tail }` 欄位）是否不變；確認 `main.js` 沒有設定 `fixed-layout.js` 新增的 `scroll-direction` 屬性、也沒有呼叫 `paginator.js` 新暴露的 sub-pixel scroll offset API（只求相容不擴充行為）；`fd91451`（連續捲動時定期發射 `relocate`）需額外確認快速連續翻頁／捲動時 `onLocatorChanged` 橋接通訊仍流暢無卡頓，`ReadingPositionRepository` 沒有被異常高頻寫入。
@@ -32,7 +35,7 @@
 - `node app/tool/foliate_touch_harness/run-all.mjs` 4 個情境全數 PASS。
 - `flutter analyze` 為「No issues found!」、`flutter test` 全數通過，零回歸。
 
-**驗收標準：** 7 個檔案已替換為 `c09f06d` 版本；ES 掃描乾淨；觸控 Harness 4 情境全過；Bridge 公開方法簽章與 `relocate` payload 核對通過（不變，或已對應調整並記錄）；`flutter analyze`／`flutter test` 通過。
+**驗收標準：** 7 個檔案已替換為 `c09f06d` 版本；`paginator.js`／`view.js` 的 ADR 0024 patch 已補回（`detail.contentPages`／`clearLocationDensity()`）；ES 掃描乾淨；觸控 Harness 4 情境全過；Bridge 公開方法簽章與 `relocate` payload 核對通過（不變，或已對應調整並記錄）；`flutter analyze`／`flutter test` 通過。
 
 ---
 
@@ -40,7 +43,7 @@
 
 **Status:** ready-for-agent
 
-**依賴：** Issue 1（要先換上新版檔案才有得測）
+**依賴：** Issue 1（要先換上新版檔案才有得測；Issue 1 現已涵蓋 ADR 0024 patch 補回，`applyPreferences()` 崩潰風險已在 Issue 1 內解決，本工單不需要額外依賴）
 
 **來源：** `design.md`「目標」第 3/4 項、「測試策略」第三層、「已知風險」。
 
