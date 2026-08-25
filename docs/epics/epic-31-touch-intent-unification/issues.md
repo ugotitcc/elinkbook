@@ -14,18 +14,22 @@
 
 **背景／需求：** 現有的觸控/選取相關 Puppeteer diff-testing 腳本（例如 `docs/epics/epic-27-reader-device-compat/reviews/issue10-harness/repro-issue10.mjs`）散落在暫存/審查目錄下，不是正式回歸測試。Issue 2 即將把 main.js 5 個觸控機制全面重寫，重寫前必須先有一套能捕捉「現行行為」的自動化安全網，重寫後才能拿它驗證有沒有回歸。
 
-**設計要點（依 `design.md`）：**
+**設計要點（依 `design.md`，含 Issue 1 規劃階段實測後的範圍調整）：**
 - 正式存放路徑：`app/tool/foliate_touch_harness/`（**不是** `app/test/`——`app/test/` 是 `flutter test` 專用的 Dart 測試目錄，Puppeteer 是 Node.js 腳本，比照本 repo 既有慣例 `app/tool/check_foliate_es_compat.js`）。
-- 逐一涵蓋 4 個歷史 bug 場景的自動化重現：Issue 47（長按候選攔截）、Epic 25 Issue 1/4（快速點擊 vs. 畫線點擊）、Issue 10（選取收尾保護）、Issue 11（`hitTest` 命中判斷）。
-- 新增**跨機制干擾測試**（本 Epic 新增，非既有）：長按候選期間選取突然確立；快速點擊門檻邊界時選取狀態同時變動。
-- **CDP 限制因應**：`repro-issue10.mjs` 既有記錄證實，headless Chromium 的 CDP 觸控注入（`Input.dispatchTouchEvent`／`page.touchscreen.tap()`）不會自動合成原生 `click`，靜止長按 700ms 也不會自動觸發原生選取。「快速點擊攔截」與「長按選字建立選取」這兩類場景，改用 `page.mouse.click()` 或直接透過 DOM API（例如注入選取範圍、發出帶時間戳的合成事件）驗證監聽器邏輯本身，不能只靠純 CDP touch 模擬。
+- **CDP `click` 合成，實測已訂正**：headless Chromium 透過 CDP `touchStart`/`touchEnd`（不含中途 `touchmove`）**確實會**合成原生 `click`，任何按壓時長皆會。「快速點擊攔截」場景可直接用真實 CDP touch 序列觸發，不需要 `page.mouse.click()` 替代（舊審查意見在此點有誤，已訂正）。
+- **CDP `touchmove` 送達 iframe 不可靠，本工單範圍因此調整**：實測目前環境（Puppeteer 綁定 Chromium `151.0.7922.77`）下，依賴 CDP `touchmove` 事件的測試手法不可靠（就連既有、文件記錄「已驗證通過」的 Issue 47 harness 重跑也測不出東西）。人類決策：**Issue 47（長按候選攔截）與「長按候選期間選取突然確立」跨機制情境，兩者皆依賴 `touchmove`，在本工單降級為 best-effort、不強制自動化**，改由 Issue 2 既有規劃的真機重測把關（見 Issue 2 真機重測清單）。
+- 本工單改為涵蓋**只需 `touchStart`/`touchEnd`（不含 `touchmove`）** 的場景：
+  1. Epic 25 Issue 1/4（快速點擊 vs. 畫線點擊）——CDP `touchStart`/`touchEnd` 直接觸發，透過 `onAnnotationActivated` bridge callback 觀察。
+  2. Issue 10（選取收尾保護）——用 `execCommand`/`Range` API 注入選取，緊接著 CDP 短按（`touchStart`/`touchEnd`）在選取附近，驗證選取未被誤判折疊。
+  3. Issue 11（`hitTest` 命中判斷）——用 `window.setDecorations()` 建立畫線，`Range` API 注入命中該畫線的選取，驗證 `onSelectionChanged` bridge 回傳的 `existingAnnotationId` 正確。
+  4. **跨機制測試**：快速點擊門檻邊界時選取狀態同時變動——選取收尾保護期內／期外分別做 CDP 短按，驗證兩個獨立機制（選取收尾保護、快速點擊分類）在同一個觸控事件上不會互相干擾。
 - 本工單針對**現行（尚未重構）** main.js 撰寫測試，作為 Issue 2 的重構前基準線。
 
 **測試要求：**
-- 上述 6 個情境（4 歷史＋2 跨機制）各自可獨立執行，執行後有明確的 PASS/FAIL 輸出。
+- 上述 4 個情境各自可獨立執行，執行後有明確的 PASS/FAIL 輸出。
 - 全部腳本針對目前 main.js 執行，必須全數 PASS。
 
-**驗收標準：** `app/tool/foliate_touch_harness/` 下有 6 支以上情境測試腳本，全部針對現行 main.js 通過；腳本內或同目錄下有說明如何執行。
+**驗收標準：** `app/tool/foliate_touch_harness/` 下有共用 harness 函式庫（`lib/harness.mjs`）＋ 4 支以上情境測試腳本＋彙整執行腳本，全部針對現行 main.js 通過；README 說明如何執行；Issue 47 與「長按候選期間選取確立」不在本工單自動化範圍內，已於 `design.md`「已知風險」明確記錄原因與後續（真機重測、技術債追蹤）。
 
 ---
 
@@ -49,15 +53,15 @@
 - 不修改任何 vendored 檔案（`paginator.js`／`view.js`／`epub.js`／`overlayer.js`／`fixed-layout.js`），符合 ADR 0011。
 
 **測試要求：**
-- Issue 1 建立的 `app/tool/foliate_touch_harness/` 全數維持 PASS（行為完全不變，只是重構）。
-- 新增跨機制干擾測試（Issue 1 已含）驗證 3 個欄位的優先順序關係沒有被重構破壞。
-- **真機重測清單**（本工單為全面重寫，不可只靠自動化測試結案，合併前需人工在真實裝置上逐項驗證並記錄在 `reviews/review-issue-2.md`）：
+- Issue 1 建立的 `app/tool/foliate_touch_harness/` 4 個情境全數維持 PASS（行為完全不變，只是重構）。
+- **真機重測清單**（本工單為全面重寫，不可只靠自動化測試結案，合併前需人工在真實裝置上逐項驗證並記錄在 `reviews/review-issue-2.md`）——**Issue 47 與「長按候選期間選取突然確立」這兩項，因 Issue 1 已記錄的 Puppeteer/Chromium 限制，本工單是它們唯一的把關手段，不可省略：**
   - Issue 47：橫排/直排長按選字前幾影格畫面不暴跳。
+  - **長按候選期間選取突然確立**（跨機制情境）：長按選字過程中，選取一旦被系統判定成立，畫面不應再出現滑動誤判/暴跳。
   - Epic 25 Issue 1/4：快速點擊換頁正常、刻意點擊畫線正常叫出工具列。
   - Issue 10：選字放開手指時選取不折疊。
   - Issue 11：長按已畫線文字時工具列正確顯示「刪除」按鈕。
 
-**驗收標準：** main.js 5 個機制收斂成單一 `TouchIntentClassifier`；Issue 1 全部 Puppeteer 測試通過；上述 4 項真機重測全過並記錄；`flutter analyze` 乾淨、`flutter test` 全數通過；不修改任何 vendored 檔案。
+**驗收標準：** main.js 5 個機制收斂成單一 `TouchIntentClassifier`；Issue 1 全部 Puppeteer 測試通過；上述 5 項真機重測全過並記錄；`flutter analyze` 乾淨、`flutter test` 全數通過；不修改任何 vendored 檔案。
 
 ---
 
