@@ -433,7 +433,7 @@ git commit -m "refactor(epic-31): 遷移快速點擊判斷機制至 TouchIntentC
 - Consumes: Task 1 的 `classifier`、模組層級常數 `SELECTION_RELEASE_GUARD_MS`。
 - Produces: 無新增。
 
-- [ ] **Step 1: 執行回歸測試，確認 Task 2 完成後的基準線**
+- [x] **Step 1: 執行回歸測試，確認 Task 2 完成後的基準線**
 
 ```bash
 cd app/tool/foliate_touch_harness && node run-all.mjs
@@ -441,7 +441,7 @@ cd app/tool/foliate_touch_harness && node run-all.mjs
 
 Expected: 4 個情境全數 PASS。
 
-- [ ] **Step 2: 移除本機重複宣告的門檻常數與區域變數**
+- [x] **Step 2: 移除本機重複宣告的門檻常數與區域變數**
 
 找到（`view.addEventListener('load', (e) => {` 開頭、Task 1 Step 3 新增的 `const classifier = new TouchIntentClassifier()` 之後）：
 
@@ -474,7 +474,7 @@ Expected: 4 個情境全數 PASS。
 
 （`SELECTION_RELEASE_GUARD_MS` 的完整由來說明已在 Task 1 移到模組層級常數宣告處，這裡整段連同區域常數／變數一併刪除，不留重複說明。緊接在後面的 `reportSelection` 函式本身完全不動位置，只在下一步修改其內部兩處寫入點。）
 
-- [ ] **Step 3: 遷移 `reportSelection()` 內的寫入端**
+- [x] **Step 3: 遷移 `reportSelection()` 內的寫入端**
 
 找到（`reportSelection` 函式開頭的提前返回分支）：
 
@@ -530,7 +530,7 @@ Expected: 4 個情境全數 PASS。
         classifier.lastNonCollapsedSelectionAtMs = doc.defaultView.performance.now()
 ```
 
-- [ ] **Step 4: 遷移 mousedown 監聽器讀取端**
+- [x] **Step 4: 遷移 mousedown 監聽器讀取端**
 
 找到：
 
@@ -560,7 +560,7 @@ Expected: 4 個情境全數 PASS。
       }, { capture: true })
 ```
 
-- [ ] **Step 5: 重新執行回歸測試，確認未引入回歸**
+- [x] **Step 5: 重新執行回歸測試，確認未引入回歸**
 
 ```bash
 cd app/tool/foliate_touch_harness && node run-all.mjs
@@ -568,7 +568,7 @@ cd app/tool/foliate_touch_harness && node run-all.mjs
 
 Expected: 4 個情境全數 PASS，特別是 `scenario-issue10-selection-release-guard.mjs`（保護期內／期外兩個情境）與 `scenario-cross-mechanism-tap-boundary.mjs`（選取保護與快速點擊分類跨機制邊界）直接驗證本 Task 遷移的機制本身。若 `scenario-cross-mechanism-tap-boundary.mjs` 偶發 FAIL，先重跑一次排除 `reviews/review-code-issue-1.md` 已記錄的已知計時競態，再判斷是否為本次遷移引入的回歸。
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/android/app/src/main/assets/foliate/main.js
