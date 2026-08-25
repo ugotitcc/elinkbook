@@ -1,0 +1,68 @@
+# Epic 33 — foliate-js 持續同步：工單清單 (Issues)
+
+依 `design.md`（Discovery：`/grill-with-docs`；已依 `/superpowers:receiving-code-review` 審查修訂）拆解為 2 個線性依賴的工單，`epic-31` Issue 3 已合併回 `main`（commit `8a9be2cd`），排期依賴已解除，可立即開始。
+
+---
+
+## Issue 1：同步 7 個 vendored 檔案至 `c09f06d`＋第一/二層測試防護
+
+**Status:** ready-for-agent
+
+**依賴：** 無，可立即開始（`epic-31` Issue 3 已合併，排期依賴已解除）
+
+**來源：** `design.md`「目標」第 1/2 項、「整體機制」（資產盤點表、`paginator.js` 7 個新 commit 摘要、`fixed-layout.js` 2 個 commit 詳情）。
+
+**背景／需求：** 上游 `readest/foliate-js` 自 `epic-32` 同步至 `6c6a491` 後，又累積 22 個新 commit（HEAD 已到 `c09f06d`），其中 17 個觸及本專案已釘定使用的 vendored 檔案。逐位元組比對確認以下 7 個檔案有變動、需要整份替換；其餘 5 個已釘定檔案（`progress.js`／`text-walker.js`／`mobi.js`／`vendor/zip.js`／`construct-style-sheets-polyfill.js`）全程零變動，不需同步。
+
+**設計要點（依 `design.md`，含審查修訂）：**
+- 從 `https://raw.githubusercontent.com/readest/foliate-js/c09f06d/<檔名>` 下載內容，整份覆蓋 `app/android/app/src/main/assets/foliate/` 下對應檔案，不手動修改內容（符合 ADR 0011）：
+  - `paginator.js`（7 個 commit，+156/-20，含 3 個 WebKit 相關 commit `cf9829d`／`887a0ae`／`68d54b1`，隨檔案整份帶入、不額外測試其 WebKit 行為）
+  - `epub.js`（4 個 commit，+58/-5）
+  - `fixed-layout.js`（2 個 commit，+248/-77；新增水平捲動模式**不啟用**，`main.js` 不設定 `scroll-direction` 屬性）
+  - `view.js`（1 個 commit，+8/-0）
+  - `overlayer.js`（1 個 commit，+8/-0）
+  - `epubcfi.js`（1 個 commit，+2/-2）
+  - `comic-book.js`（1 個 commit，+15/-1）
+- **第一層：靜態與單元測試**——執行 ES 相容性掃描（`node app/tool/check_foliate_es_compat.js`），若結束碼非 0，依硬性規範在 `_esCompatPolyfillJs`（`foliate_reader_view.dart`）補齊 polyfill（① 僅在 `if (!TargetAPI)` 缺席時定義；② 嚴禁 ES2021+ 語法糖）。注意此掃描為 Regex 掃描已知 API 清單，**無法**攔截語法解析期（Parse Time）的 `SyntaxError`（例如 `?.`／`??=`），語法層級問題留待 Issue 2 真機驗收把關，不在本工單自動化範圍內。
+- **第二層：觸控 Harness 自動化**——執行 `node app/tool/foliate_touch_harness/run-all.mjs`（`epic-31` Issue 1 建立），4 個情境須全數 PASS，作為攔截 `TouchIntentClassifier`（`epic-31` Issue 2 成果）與上游觸控／捲動邏輯衝突的自動化防線。
+- **Bridge 對齊檢查**：逐一核對 `main.js` 呼叫到的 `Paginator`/`view` 公開方法簽章（`view.next()`／`view.prev()`／`view.goToFraction()`／`view.goToCfi()`／`relocate` 事件 payload 的 `{ cfi, fraction, location, index, head, tail }` 欄位）是否不變；確認 `main.js` 沒有設定 `fixed-layout.js` 新增的 `scroll-direction` 屬性、也沒有呼叫 `paginator.js` 新暴露的 sub-pixel scroll offset API（只求相容不擴充行為）；`fd91451`（連續捲動時定期發射 `relocate`）需額外確認快速連續翻頁／捲動時 `onLocatorChanged` 橋接通訊仍流暢無卡頓，`ReadingPositionRepository` 沒有被異常高頻寫入。
+
+**測試要求：**
+- ES 相容性掃描結束碼為 0（若有補 polyfill，需重跑確認）。
+- `node app/tool/foliate_touch_harness/run-all.mjs` 4 個情境全數 PASS。
+- `flutter analyze` 為「No issues found!」、`flutter test` 全數通過，零回歸。
+
+**驗收標準：** 7 個檔案已替換為 `c09f06d` 版本；ES 掃描乾淨；觸控 Harness 4 情境全過；Bridge 公開方法簽章與 `relocate` payload 核對通過（不變，或已對應調整並記錄）；`flutter analyze`／`flutter test` 通過。
+
+---
+
+## Issue 2：真機深度驗收（8 項）＋文件收尾
+
+**Status:** ready-for-agent
+
+**依賴：** Issue 1（要先換上新版檔案才有得測）
+
+**來源：** `design.md`「目標」第 3/4 項、「測試策略」第三層、「已知風險」。
+
+**背景／需求：** `paginator.js` 與 `fixed-layout.js` 這次改動涉及觸控／捲動內部行為與 FXL 排版，Puppeteer 自動化在目前環境對 `touchmove` 場景不可靠（`epic-31`／`epic-32` 已記錄的限制），核心驗收一律真機進行，逐項記錄於 `reviews/review-issue-2.md`。
+
+**測試要求（真機重測清單，共 8 項）：**
+- **歷史修法（3 項，比照 `epic-32`）**：
+  - Epic 18 Issue 47：長按選字前幾影格畫面不暴跳。
+  - Epic 25 Issue 1：畫線選取已確立時不誤觸跳頁。
+  - Epic 27 Issue 9：`no-swipe` 屬性正確阻止滑動。
+- **直排核心（2 項）**：
+  - 直排 EPUB 連續往前翻頁 5 次、再反向翻頁 5 次，精確回到原始文字錨點。
+  - 繁中流式 EPUB 閱讀中即時切換橫排／直排，閱讀位置（錨點）精確維持（對應 `2b6ea0a`，呼應 Epic 18 Issue 45）。
+- **固定版面（3 項）**：
+  - CBZ／FXL 漫畫 RTL 頁序正確。
+  - FXL 橫向雙頁跨頁排版與封面單頁顯示正常（對應 `663e630`，呼應 Epic 18 Issue 19）。
+  - 劃線標註縮放（zoom）後正確刷新，不需手動觸發其他操作（對應 `9fde61a`）。
+
+**快速停損指標：** 若真機重測中「直排對稱翻頁」失敗，或出現舊版 WebView（Mobiscribe WAVE／iReader Ocean 4 Plus 等 Chromium 83-91 機型）`SyntaxError` 且無法透過 Dart 端 Polyfill 在 **2 小時內**排除，直接 `git revert` 這次同步的 commit，退回 `6c6a491`，不在時間壓力下硬修。
+
+**設計要點（文件收尾）：**
+- 更新 `docs/research/foliate_js_sync_update_strategy.md`「2.1 上游來源與當前釘定狀態」的 Pinned Commit 記錄為 `c09f06d`（含日期）。
+- 更新 `docs/epics.md`：本 Epic 狀態視結果更新（完成則等待人類確認歸檔）。
+
+**驗收標準：** 8 項真機測試全數通過並記錄；若有回歸已依快速停損指標處理；`docs/research/foliate_js_sync_update_strategy.md`／`docs/epics.md` 已更新。
