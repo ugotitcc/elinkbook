@@ -985,14 +985,16 @@ class _PdfReaderViewState extends State<PdfReaderView> {
                     return Expanded(
                       child: TapZoneDetector(
                         key: Key('pdf_reader_nav_zone_$index'),
-                        // 原始未校準值——是否需要比照 epic-25 Issue 1
-                        // 真機診斷調整，追蹤於 Epic 26 Issue 3，本次收斂
-                        // 刻意不變更數值本身。
+                        // epic-31-touch-intent-unification Issue 3：對齊
+                        // EPUB 端 700ms——刻意決定、未經真機驗證（見
+                        // TapZoneDetector class doc），若之後真機回報
+                        // PDF 長按判斷變遲鈍，需另立工單依真機資料重新
+                        // 校準，不可逕自沿用這裡的數值。
+                        // tapSlop／tapDebounceMs 改用建構子預設值
+                        // （kTapZoneSlop／kTapZoneDebounceMs，同一 Issue
+                        // 常數收斂），不再各自宣告字面值。
                         nowMs: () => clock.now().millisecondsSinceEpoch,
-                        tapMaxDurationMs: 400,
-                        tapSlop: 18.0,
-                        // Epic 27 Issue 12 防彈跳門檻（吸收真機觸控硬體彈跳雜訊）
-                        tapDebounceMs: 350,
+                        tapMaxDurationMs: 700,
                         onTap: () => widget.onZoneAction?.call(action),
                         child: Container(
                           decoration: widget.showNavZoneDebugOverlay

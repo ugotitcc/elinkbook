@@ -67,7 +67,7 @@
 
 ## Issue 3：TapZoneDetector 常數收斂＋PDF 門檻對齊
 
-**Status:** ready-for-agent
+**Status:** completed（已完成，待發 PR。`kTapZoneSlop`/`kTapZoneDebounceMs` 常數已收斂至 `TapZoneDetector` 建構子預設值、EPUB／PDF 呼叫端已不再各自宣告字面值、PDF `tapMaxDurationMs` 已對齊 700ms〔刻意決定、未經真機驗證，風險已記錄於程式碼註解與 class doc〕；`flutter analyze` 乾淨、`flutter test` 1693/1693 全數 PASS）
 
 **依賴：** 無，可與 Issue 1/2 平行進行
 

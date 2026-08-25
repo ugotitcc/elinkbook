@@ -215,5 +215,41 @@ void main() {
     await tester.pump();
     expect(tapCount, 2);
   });
+
+  test('kTapZoneSlop 為 EPUB／PDF 共用的位移容許值 18.0', () {
+    expect(kTapZoneSlop, 18.0);
+  });
+
+  test('kTapZoneDebounceMs 為 EPUB／PDF 共用的防彈跳門檻 350ms', () {
+    expect(kTapZoneDebounceMs, 350);
+  });
+
+  testWidgets(
+      '未明確傳入 tapSlop 時，建構子預設值等同 kTapZoneSlop——位移剛好超過 '
+      'kTapZoneSlop 仍會被判定為超出容許範圍，不觸發 onTap',
+      (tester) async {
+    var tapped = false;
+    var fakeNowMs = 1000;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: TapZoneDetector(
+          onTap: () => tapped = true,
+          nowMs: () => fakeNowMs,
+          tapMaxDurationMs: 400,
+          child: const SizedBox(width: 100, height: 100),
+        ),
+      ),
+    );
+
+    final gesture = await tester.startGesture(const Offset(50, 50));
+    fakeNowMs += 50;
+    await gesture.moveTo(Offset(50, 50 + kTapZoneSlop + 1));
+    await gesture.up();
+    await tester.pump();
+
+    expect(tapped, isFalse,
+        reason: '若建構子預設值不是 kTapZoneSlop（例如意外退回舊的某個字面值），'
+            '這個剛好超過 kTapZoneSlop 的位移可能不會被正確判定為超出範圍');
+  });
 }
 

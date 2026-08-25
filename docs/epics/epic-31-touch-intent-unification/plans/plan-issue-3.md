@@ -32,7 +32,7 @@
   - 模組級常數 `const double kTapZoneSlop = 18.0`、`const int kTapZoneDebounceMs = 350`（`app/lib/reader/tap_zone_detector.dart` 頂端，`import` 之後、class 宣告之前）。
   - `TapZoneDetector` 建構子簽章變更：`tapSlop`／`tapDebounceMs` 從 `required` 具名參數改為有預設值的具名參數（`this.tapSlop = kTapZoneSlop`／`this.tapDebounceMs = kTapZoneDebounceMs`），呼叫端可以不傳這兩個引數；`tapMaxDurationMs` 維持 `required`，簽章不變。欄位型別（`final double tapSlop`／`final int tapDebounceMs`）不變。
 
-- [ ] **Step 1: 執行既有測試，確認基準線**
+- [x] **Step 1: 執行既有測試，確認基準線**
 
 ```bash
 cd app && flutter test test/reader/tap_zone_detector_test.dart
@@ -40,7 +40,7 @@ cd app && flutter test test/reader/tap_zone_detector_test.dart
 
 Expected: 全數 PASS（重構前基準線，目前 8 個 `testWidgets` 案例）。
 
-- [ ] **Step 2: 新增模組級共用常數，建構子改為可選具名參數**
+- [x] **Step 2: 新增模組級共用常數，建構子改為可選具名參數**
 
 用 Read 工具開啟 `app/lib/reader/tap_zone_detector.dart`，找到：
 
@@ -125,7 +125,7 @@ const int kTapZoneDebounceMs = 350;
   });
 ```
 
-- [ ] **Step 3: 新增測試驗證常數值與建構子預設值**
+- [x] **Step 3: 新增測試驗證常數值與建構子預設值**
 
 用 Read 工具開啟 `app/test/reader/tap_zone_detector_test.dart`，找到檔案結尾：
 
@@ -181,7 +181,7 @@ const int kTapZoneDebounceMs = 350;
 
 **驗證要點**（不是新規則，只是確認這個測試真的測到了預設值）：這個新測試刻意**不傳** `tapSlop` 具名參數，完全依賴建構子的 `this.tapSlop = kTapZoneSlop` 預設值；若 Step 2 的預設值設定有誤（例如打錯常數名稱、或忘了拿掉 `required`），這個測試會因為編譯錯誤或行為不符直接失敗。
 
-- [ ] **Step 4: 執行測試，確認新測試通過且既有測試未受影響**
+- [x] **Step 4: 執行測試，確認新測試通過且既有測試未受影響**
 
 ```bash
 cd app && flutter test test/reader/tap_zone_detector_test.dart
@@ -189,7 +189,7 @@ cd app && flutter test test/reader/tap_zone_detector_test.dart
 
 Expected: 全數 PASS（原本 8 個既有案例 + 新增 3 個，共 11 個）。
 
-- [ ] **Step 5: `flutter analyze` 確認乾淨**
+- [x] **Step 5: `flutter analyze` 確認乾淨**
 
 ```bash
 cd app && flutter analyze
@@ -197,7 +197,7 @@ cd app && flutter analyze
 
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/reader/tap_zone_detector.dart app/test/reader/tap_zone_detector_test.dart
@@ -218,7 +218,7 @@ git commit -m "refactor(epic-31): TapZoneDetector 新增 kTapZoneSlop/kTapZoneDe
 - Consumes: Task 1 的 `kTapZoneSlop`／`kTapZoneDebounceMs`（已是 `TapZoneDetector` 建構子預設值，呼叫端只需要**不再傳** `tapSlop`／`tapDebounceMs` 這兩個具名引數即可套用）。
 - Produces: 無新增（本 Task 是把 Task 1 建立的預設值機制實際接上兩個呼叫端）。
 
-- [ ] **Step 1: 執行既有測試，確認 Task 1 完成後的基準線**
+- [x] **Step 1: 執行既有測試，確認 Task 1 完成後的基準線**
 
 ```bash
 cd app && flutter test test/reader/tap_zone_detector_test.dart test/reader/foliate_reader_view_test.dart test/reader/pdf_reader_view_nav_zone_test.dart
@@ -226,7 +226,7 @@ cd app && flutter test test/reader/tap_zone_detector_test.dart test/reader/folia
 
 Expected: 全數 PASS。
 
-- [ ] **Step 2: EPUB 呼叫端移除字面值，改用建構子預設值**
+- [x] **Step 2: EPUB 呼叫端移除字面值，改用建構子預設值**
 
 用 Read 工具開啟 `app/lib/reader/foliate_reader_view.dart`，找到：
 
@@ -258,7 +258,7 @@ Expected: 全數 PASS。
                         onTap: () {
 ```
 
-- [ ] **Step 3: PDF 呼叫端移除字面值、門檻對齊 700ms**
+- [x] **Step 3: PDF 呼叫端移除字面值、門檻對齊 700ms**
 
 用 Read 工具開啟 `app/lib/reader/pdf_reader_view.dart`，找到：
 
@@ -294,7 +294,7 @@ Expected: 全數 PASS。
                         onTap: () => widget.onZoneAction?.call(action),
 ```
 
-- [ ] **Step 4: 確認呼叫端已不再寫死這兩個引數（grep 驗證）**
+- [x] **Step 4: 確認呼叫端已不再寫死這兩個引數（grep 驗證）**
 
 ```bash
 grep -n "tapSlop:\|tapDebounceMs:" app/lib/reader/foliate_reader_view.dart app/lib/reader/pdf_reader_view.dart
@@ -302,7 +302,7 @@ grep -n "tapSlop:\|tapDebounceMs:" app/lib/reader/foliate_reader_view.dart app/l
 
 Expected: 無任何輸出——兩個呼叫端都已改成完全依賴 `TapZoneDetector` 建構子的預設值（`kTapZoneSlop`／`kTapZoneDebounceMs`），這正是「呼叫端確實使用該常數、不寫死字面值」的直接證據：呼叫端連常數名稱都不需要重複打一次，值完全來自單一宣告來源（`tap_zone_detector.dart` 的建構子預設值）。
 
-- [ ] **Step 5: 回頭更新 `tap_zone_detector.dart` class doc，反映 PDF 端已對齊 700ms**
+- [x] **Step 5: 回頭更新 `tap_zone_detector.dart` class doc，反映 PDF 端已對齊 700ms**
 
 用 Read 工具開啟 `app/lib/reader/tap_zone_detector.dart`，找到 Task 1 Step 2 暫時保留的這段：
 
@@ -336,7 +336,7 @@ Expected: 無任何輸出——兩個呼叫端都已改成完全依賴 `TapZoneD
 /// 狀態差異。
 ```
 
-- [ ] **Step 6: 修正 PDF 門檻改變後失真的既有測試**
+- [x] **Step 6: 修正 PDF 門檻改變後失真的既有測試**
 
 用 Read 工具開啟 `app/test/reader/pdf_reader_view_nav_zone_test.dart`，找到（測試名稱「按壓超過快速點擊時長判定門檻不觸發 onZoneAction，避免與長按選取手勢衝突」內）：
 
@@ -370,7 +370,7 @@ Expected: 無任何輸出——兩個呼叫端都已改成完全依賴 `TapZoneD
 
 **為什麼必須改**：這個測試驗證「按壓時間超過快速點擊門檻時不觸發 `onZoneAction`」。門檻改成 700ms 之前，600ms 已經超過舊門檻（400ms），測試成立；門檻改成 700ms 之後，600ms 反而落在**合格點擊範圍內**（600 ≤ 700），會被判定為一次快速點擊而觸發 `onZoneAction`，導致 `expect(triggered, isNull)` 失敗——把等待時間改成 800ms（> 700ms 新門檻）才能維持這個測試原本要驗證的意圖。
 
-- [ ] **Step 7: 執行完整測試，確認全數通過**
+- [x] **Step 7: 執行完整測試，確認全數通過**
 
 ```bash
 cd app && flutter test test/reader/tap_zone_detector_test.dart test/reader/foliate_reader_view_test.dart test/reader/pdf_reader_view_nav_zone_test.dart
@@ -378,7 +378,7 @@ cd app && flutter test test/reader/tap_zone_detector_test.dart test/reader/folia
 
 Expected: 全數 PASS。
 
-- [ ] **Step 8: `flutter analyze` 確認乾淨**
+- [x] **Step 8: `flutter analyze` 確認乾淨**
 
 ```bash
 cd app && flutter analyze
@@ -386,7 +386,7 @@ cd app && flutter analyze
 
 Expected: `No issues found!`
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add app/lib/reader/foliate_reader_view.dart app/lib/reader/pdf_reader_view.dart app/lib/reader/tap_zone_detector.dart app/test/reader/pdf_reader_view_nav_zone_test.dart
@@ -404,7 +404,7 @@ git commit -m "refactor(epic-31): EPUB/PDF 改用 TapZoneDetector 共用常數�
 - Consumes: Task 1-2 完成後的 `tap_zone_detector.dart`／`foliate_reader_view.dart`／`pdf_reader_view.dart`。
 - Produces: 無（本 Task 是驗收與收尾）。
 
-- [ ] **Step 1: 全專案 `flutter analyze`**
+- [x] **Step 1: 全專案 `flutter analyze`**
 
 ```bash
 cd app && flutter analyze
@@ -412,7 +412,7 @@ cd app && flutter analyze
 
 Expected: `No issues found!`
 
-- [ ] **Step 2: 全專案 `flutter test`**
+- [x] **Step 2: 全專案 `flutter test`**
 
 ```bash
 cd app && flutter test
@@ -420,7 +420,7 @@ cd app && flutter test
 
 Expected: 全數 PASS，比對 Epic 31 Issue 2 合併時記錄的基準（`reviews/review-issue-2.md`：1690/1690 PASS）——本工單只新增 3 個測試（Task 1 Step 3），總數應為 1693/1693 PASS 左右（實際數字以執行結果為準，重點是「全數 PASS、無 SKIP、無新增失敗」）。
 
-- [ ] **Step 3: 確認未修改範圍外的檔案**
+- [x] **Step 3: 確認未修改範圍外的檔案**
 
 ```bash
 git diff --stat main -- app/lib app/test
@@ -428,11 +428,11 @@ git diff --stat main -- app/lib app/test
 
 Expected: 只列出 `app/lib/reader/tap_zone_detector.dart`／`app/lib/reader/foliate_reader_view.dart`／`app/lib/reader/pdf_reader_view.dart`／`app/test/reader/tap_zone_detector_test.dart`／`app/test/reader/pdf_reader_view_nav_zone_test.dart` 這 5 個檔案，沒有其他 Dart 檔案被異動。
 
-- [ ] **Step 4: 更新工單狀態**
+- [x] **Step 4: 更新工單狀態**
 
 在 `docs/epics/epic-31-touch-intent-unification/issues.md` Issue 3 的 `**Status:**` 那一行，改為記錄已完成（PR 編號待實際發 PR 時補上），並在下方補一段簡短總結：`kTapZoneSlop`/`kTapZoneDebounceMs` 常數已收斂、EPUB／PDF 呼叫端已不再各自宣告字面值、PDF `tapMaxDurationMs` 已對齊 700ms（未經真機驗證，風險已記錄於程式碼註解），`flutter analyze`／`flutter test` 皆通過。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add docs/epics/epic-31-touch-intent-unification/issues.md

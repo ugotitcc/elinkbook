@@ -823,11 +823,11 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
                         key: Key('nav_zone_$index'),
                         // Epic 26 Issue 1 校準值（epic-25 Issue 1 六輪
                         // 真機診斷得出，見 TapZoneDetector class doc）。
+                        // tapSlop／tapDebounceMs 改用建構子預設值
+                        // （kTapZoneSlop／kTapZoneDebounceMs，epic-31
+                        // Issue 3 常數收斂），不再各自宣告字面值。
                         nowMs: () => DateTime.now().millisecondsSinceEpoch,
                         tapMaxDurationMs: 700,
-                        tapSlop: 18.0,
-                        // Epic 27 Issue 12 防彈跳門檻（吸收真機觸控硬體彈跳雜訊）
-                        tapDebounceMs: 350,
                         onTap: () {
                           // Epic 25 Issue 1：真機診斷（見
                           // docs/epics/epic-25-annotation-interaction-qa/issues.md
