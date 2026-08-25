@@ -6,7 +6,7 @@
 
 ## Issue 1：Puppeteer 回歸測試套件正式化＋跨機制干擾測試
 
-**Status:** completed（已完成：`app/tool/foliate_touch_harness/` 共用 harness 函式庫 `lib/harness.mjs`、4 個情境測試腳本及 `run-all.mjs` 彙整腳本已建立；`node run-all.mjs` 執行 4 個場景全數 PASS。Issue 47／長按候選跨機制情境已知因 CDP `touchmove` 在目前環境限制不在自動化範圍內，交給 Issue 2 真機重測把關）
+**Status:** completed（已完成並合併：PR [#185](https://git.jigong.org/huthief/elinkBook/pulls/185)。`app/tool/foliate_touch_harness/` 共用 harness 函式庫 `lib/harness.mjs`、4 個情境測試腳本及 `run-all.mjs` 彙整腳本已建立；`node run-all.mjs` 執行 4 個場景全數 PASS。Issue 47／長按候選跨機制情境已知因 CDP `touchmove` 在目前環境限制不在自動化範圍內，交給 Issue 2 真機重測把關。程式碼審查（`reviews/review-code-issue-1.md`）發現的 Important 計時競態與 2 項 Minor 已於合併前修訂〔commit `64136de`〕：`scenario-cross-mechanism-tap-boundary.mjs` 情境 A 移除多餘往返查詢並加重試上限至 5 次，本機連續執行 `run-all.mjs` 8 次全數 PASS；`lib/harness.mjs` 改用官方 `page.createCDPSession()`；引號風格統一）
 
 **依賴：** 無，可立即開始
 
