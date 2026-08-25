@@ -1,0 +1,13 @@
+{
+  "name": "foliate_touch_harness",
+  "version": "1.0.0",
+  "private": true,
+  "description": "elinkBook main.js 觸控/選取行為 Puppeteer 回歸測試（epic-31 Issue 1）",
+  "type": "module",
+  "scripts": {
+    "test": "node run-all.mjs"
+  },
+  "dependencies": {
+    "puppeteer": "^25.6.0"
+  }
+}
