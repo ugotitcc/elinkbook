@@ -6,7 +6,7 @@
 
 ## Issue 1：Puppeteer 回歸測試套件正式化＋跨機制干擾測試
 
-**Status:** ready-for-agent
+**Status:** completed（已完成：`app/tool/foliate_touch_harness/` 共用 harness 函式庫 `lib/harness.mjs`、4 個情境測試腳本及 `run-all.mjs` 彙整腳本已建立；`node run-all.mjs` 執行 4 個場景全數 PASS。Issue 47／長按候選跨機制情境已知因 CDP `touchmove` 在目前環境限制不在自動化範圍內，交給 Issue 2 真機重測把關）
 
 **依賴：** 無，可立即開始
 

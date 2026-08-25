@@ -42,7 +42,7 @@
   - `setDecorationsAt(page, decorations) => Promise<void>`（呼叫 `window.setDecorations(decorations)`）
   - `report(name, passed, detail = '') => void`（印出 `[PASS]`/`[FAIL]`，失敗時設定 `process.exitCode = 1`）
 
-- [ ] **Step 1: 建立目錄與 `package.json`**
+- [x] **Step 1: 建立目錄與 `package.json`**
 
 先確認父目錄存在：
 
@@ -74,7 +74,7 @@ mkdir -p app/tool/foliate_touch_harness/lib
 }
 ```
 
-- [ ] **Step 2: 安裝依賴**
+- [x] **Step 2: 安裝依賴**
 
 ```bash
 cd app/tool/foliate_touch_harness && npm install
@@ -82,7 +82,7 @@ cd app/tool/foliate_touch_harness && npm install
 
 Expected: 產生 `node_modules/`／`package-lock.json`，`puppeteer` 安裝完成（含自動下載的 Chromium）。
 
-- [ ] **Step 3: 撰寫共用 harness 函式庫**
+- [x] **Step 3: 撰寫共用 harness 函式庫**
 
 寫入 `app/tool/foliate_touch_harness/lib/harness.mjs`：
 
@@ -289,7 +289,7 @@ export function report(name, passed, detail = '') {
 }
 ```
 
-- [ ] **Step 4: 撰寫 smoke test，驗證函式庫本身可用**
+- [x] **Step 4: 撰寫 smoke test，驗證函式庫本身可用**
 
 寫入 `app/tool/foliate_touch_harness/smoke-test.mjs`：
 
@@ -335,7 +335,7 @@ async function main() {
 main().catch((err) => { console.error(err); process.exitCode = 2 })
 ```
 
-- [ ] **Step 5: 執行 smoke test，確認全部 PASS**
+- [x] **Step 5: 執行 smoke test，確認全部 PASS**
 
 ```bash
 cd app/tool/foliate_touch_harness && node smoke-test.mjs
@@ -343,7 +343,7 @@ cd app/tool/foliate_touch_harness && node smoke-test.mjs
 
 Expected: 4 行 `[PASS] ...`，沒有任何 `[FAIL]`，`process.exitCode` 為 0（可用 `echo $?` 確認，PowerShell 用 `$LASTEXITCODE`）。
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/tool/foliate_touch_harness/package.json app/tool/foliate_touch_harness/package-lock.json app/tool/foliate_touch_harness/lib/harness.mjs app/tool/foliate_touch_harness/smoke-test.mjs
@@ -365,14 +365,14 @@ git commit -m "test(epic-31): 建立 foliate_touch_harness 共用函式庫與 sm
 
 **背景**：main.js 的 `ANNOTATION_CLICK_TAP_MAX_MS = 700` 機制，按壓 ≤700ms 判定為快速點擊、攔截 `click` 不讓它傳到畫線的 `hitTest` 監聽器（`onAnnotationActivated` 不會觸發）；按壓 >700ms 判定為刻意操作、放行（`onAnnotationActivated` 正常觸發）；超連結一律排除，不受影響。
 
-- [ ] **Step 1: 撰寫情境腳本**
+- [x] **Step 1: 撰寫情境腳本**
 
 寫入 `app/tool/foliate_touch_harness/scenario-epic25-issue4-fast-tap.mjs`：
 
 ```js
 import {
   launchHarnessPage, locateVisibleText, setDecorationsAt,
-  resetHarnessEvents, harnessEvents, cdpTap, report,
+  cdpTap, report,
 } from './lib/harness.mjs'
 
 async function main() {
@@ -387,23 +387,30 @@ async function main() {
     await setDecorationsAt(page, [{ id: 'target', cfi: target.cfi, color: 'yellow', isUnderline: false }])
     await new Promise((r) => setTimeout(r, 200))
 
+    // 監聽 foliate-view 上的 show-annotation 事件（view.js 在 click 命中
+    // 畫線且未被 main.js 攔截時發出），記錄觸發次數。
+    await page.evaluate(() => {
+      window.__showAnnotationFired = 0
+      document.querySelector('foliate-view')?.addEventListener('show-annotation', () => {
+        window.__showAnnotationFired++
+      })
+    })
+
     // 情境 A：短按（80ms）直接點在畫線上，應被攔截，不觸發
-    // onAnnotationActivated。
-    await resetHarnessEvents(page)
+    // show-annotation。
+    await page.evaluate(() => { window.__showAnnotationFired = 0 })
     await cdpTap(client, target.pageX, target.pageY, 80)
     await new Promise((r) => setTimeout(r, 300))
-    const shortTapEvents = await harnessEvents(page)
-    report('短按 80ms 直接點在畫線上，click 被攔截',
-      !shortTapEvents.some((e) => e.name === 'onAnnotationActivated'))
+    const shortTapFired = await page.evaluate(() => window.__showAnnotationFired)
+    report('短按 80ms 直接點在畫線上，click 被攔截', shortTapFired === 0)
 
     // 情境 B：長按（900ms，原地不動）直接點在畫線上，應正常觸發
-    // onAnnotationActivated（900ms > ANNOTATION_CLICK_TAP_MAX_MS=700ms）。
-    await resetHarnessEvents(page)
+    // show-annotation（900ms > ANNOTATION_CLICK_TAP_MAX_MS=700ms）。
+    await page.evaluate(() => { window.__showAnnotationFired = 0 })
     await cdpTap(client, target.pageX, target.pageY, 900)
     await new Promise((r) => setTimeout(r, 300))
-    const longPressEvents = await harnessEvents(page)
-    report('長按 900ms 直接點在畫線上，click 正常觸發',
-      longPressEvents.some((e) => e.name === 'onAnnotationActivated'))
+    const longPressFired = await page.evaluate(() => window.__showAnnotationFired)
+    report('長按 900ms 直接點在畫線上，click 正常觸發', longPressFired > 0)
 
     // 情境 C：短按（80ms）點在超連結上，連結點擊不受畫線攔截邏輯影響
     // （main.js 明確排除 a[href]）。動態插入 <a> 到目前可視 doc，純測試
@@ -443,7 +450,7 @@ async function main() {
 main().catch((err) => { console.error(err); process.exitCode = 2 })
 ```
 
-- [ ] **Step 2: 執行並確認全數 PASS**
+- [x] **Step 2: 執行並確認全數 PASS**
 
 ```bash
 cd app/tool/foliate_touch_harness && node scenario-epic25-issue4-fast-tap.mjs
@@ -451,7 +458,7 @@ cd app/tool/foliate_touch_harness && node scenario-epic25-issue4-fast-tap.mjs
 
 Expected: 3 行 `[PASS] ...`。
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add app/tool/foliate_touch_harness/scenario-epic25-issue4-fast-tap.mjs
@@ -473,7 +480,7 @@ git commit -m "test(epic-31): 新增 Epic 25 Issue 4 快速點擊攔截回歸測
 
 **已知範圍限制（誠實記錄）**：原始 Issue 10 bug 是「拖曳選取控點後放開」的場景，本測試無法用 CDP 模擬真實拖曳控點手勢（`touchmove` 不可靠，見 Global Constraints），改為「選取剛確立後立刻做一次短按（`touchStart`/`touchEnd`，不含 `touchmove`）」，直接測試 `SELECTION_RELEASE_GUARD_MS` 這個實際的生產機制本身，不是重現原始拖曳手勢。
 
-- [ ] **Step 1: 撰寫情境腳本**
+- [x] **Step 1: 撰寫情境腳本**
 
 寫入 `app/tool/foliate_touch_harness/scenario-issue10-selection-release-guard.mjs`：
 
@@ -540,7 +547,7 @@ async function main() {
 main().catch((err) => { console.error(err); process.exitCode = 2 })
 ```
 
-- [ ] **Step 2: 執行並確認全數 PASS**
+- [x] **Step 2: 執行並確認全數 PASS**
 
 ```bash
 cd app/tool/foliate_touch_harness && node scenario-issue10-selection-release-guard.mjs
@@ -548,7 +555,7 @@ cd app/tool/foliate_touch_harness && node scenario-issue10-selection-release-gua
 
 Expected: 2 行 `[PASS] ...`。
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add app/tool/foliate_touch_harness/scenario-issue10-selection-release-guard.mjs
@@ -568,7 +575,7 @@ git commit -m "test(epic-31): 新增 Issue 10 選取收尾保護回歸測試"
 
 **背景**：main.js 的 `reportSelection()` 在選取變動時，用 `overlayer.hitTest()` 查詢選取範圍中點是否命中既有畫線裝飾，命中則把該畫線的 id（`decorationIdByCfi.get(hitCfi)`）當作 `onSelectionChanged` bridge call 最後一個參數（`existingAnnotationId`）送給 Dart 端；沒命中則是 `null`。
 
-- [ ] **Step 1: 撰寫情境腳本**
+- [x] **Step 1: 撰寫情境腳本**
 
 寫入 `app/tool/foliate_touch_harness/scenario-issue11-hittest-existing-highlight.mjs`：
 
@@ -626,7 +633,7 @@ async function main() {
 main().catch((err) => { console.error(err); process.exitCode = 2 })
 ```
 
-- [ ] **Step 2: 執行並確認全數 PASS**
+- [x] **Step 2: 執行並確認全數 PASS**
 
 ```bash
 cd app/tool/foliate_touch_harness && node scenario-issue11-hittest-existing-highlight.mjs
@@ -634,7 +641,7 @@ cd app/tool/foliate_touch_harness && node scenario-issue11-hittest-existing-high
 
 Expected: 2 行 `[PASS] ...`。
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add app/tool/foliate_touch_harness/scenario-issue11-hittest-existing-highlight.mjs
@@ -654,7 +661,7 @@ git commit -m "test(epic-31): 新增 Issue 11 hitTest 命中判斷回歸測試"
 
 **背景**：這是本 Epic 新增的跨機制情境，驗證「選取收尾保護」（`SELECTION_RELEASE_GUARD_MS`）與「快速點擊分類」（`ANNOTATION_CLICK_TAP_MAX_MS`）這兩個獨立機制在**同一個觸控事件**上不會互相干擾——選取存在時，一次快速點擊別處，click 事件本身仍正常合成（不受選取保護機制影響），但選取要看時機是否還在保護期內決定要不要被折疊。與 Task 3 的差異：Task 3 測「點在選取本身位置」，本情境測「點在選取以外的位置＋保護期邊界時機」。
 
-- [ ] **Step 1: 撰寫情境腳本**
+- [x] **Step 1: 撰寫情境腳本**
 
 寫入 `app/tool/foliate_touch_harness/scenario-cross-mechanism-tap-boundary.mjs`：
 
@@ -713,7 +720,7 @@ async function main() {
 main().catch((err) => { console.error(err); process.exitCode = 2 })
 ```
 
-- [ ] **Step 2: 執行並確認全數 PASS**
+- [x] **Step 2: 執行並確認全數 PASS**
 
 ```bash
 cd app/tool/foliate_touch_harness && node scenario-cross-mechanism-tap-boundary.mjs
@@ -721,7 +728,7 @@ cd app/tool/foliate_touch_harness && node scenario-cross-mechanism-tap-boundary.
 
 Expected: 2 行 `[PASS] ...`。
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add app/tool/foliate_touch_harness/scenario-cross-mechanism-tap-boundary.mjs
@@ -740,7 +747,7 @@ git commit -m "test(epic-31): 新增選取保護與快速點擊分類的跨機�
 - Consumes: Task 2-5 產出的全部 `scenario-*.mjs` 檔名規律（`scenario-` 開頭、`.mjs` 結尾）。
 - Produces: 無（本工單最終驗收用的彙整腳本）。
 
-- [ ] **Step 1: 撰寫彙整執行腳本**
+- [x] **Step 1: 撰寫彙整執行腳本**
 
 寫入 `app/tool/foliate_touch_harness/run-all.mjs`：
 
@@ -780,7 +787,7 @@ async function main() {
 main()
 ```
 
-- [ ] **Step 2: 執行彙整腳本，確認全數 PASS**
+- [x] **Step 2: 執行彙整腳本，確認全數 PASS**
 
 ```bash
 cd app/tool/foliate_touch_harness && node run-all.mjs
@@ -788,7 +795,7 @@ cd app/tool/foliate_touch_harness && node run-all.mjs
 
 Expected: 依序看到 4 個 `=== scenario-*.mjs ===` 區塊，每個區塊內全是 `[PASS]`，結尾印出「整體結果：全部 PASS」。
 
-- [ ] **Step 3: 撰寫 README**
+- [x] **Step 3: 撰寫 README**
 
 寫入 `app/tool/foliate_touch_harness/README.md`：
 
@@ -831,13 +838,13 @@ node run-all.mjs
   的跨機制邊界情境。
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add app/tool/foliate_touch_harness/run-all.mjs app/tool/foliate_touch_harness/README.md
 git commit -m "test(epic-31): 新增回歸測試彙整腳本與 README，Issue 1 完成"
 ```
 
-- [ ] **Step 5: 更新工單狀態**
+- [x] **Step 5: 更新工單狀態**
 
 在 `docs/epics/epic-31-touch-intent-unification/issues.md` Issue 1 的 `**Status:**` 那一行，改為記錄已完成（PR 編號待實際發 PR 時補上），並在下方補一段簡短總結（4 個場景全過、Issue 47／長按候選跨機制情境已知不在自動化範圍內，交給 Issue 2 真機重測）。
