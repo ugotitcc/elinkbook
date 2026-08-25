@@ -34,7 +34,7 @@
   - `class TouchIntentClassifier`，欄位：`this.gesture = { state, startX, startY, startTime }`（`state` 為 `'idle'`／`'longPressCandidate'`／`'swiping'` 三選一字串）、`this.lastTouchStartTime`（`number | null`）、`this.lastNonCollapsedSelectionAtMs`（`number | null`）。
   - `view.addEventListener('load', ...)` 監聽器內、`const doc =`/`const index =` 之後宣告的區域變數 `classifier`（`new TouchIntentClassifier()` 實例），供該次 `load` 觸發內所有子監聽器的閉包讀取。
 
-- [ ] **Step 1: 執行既有回歸測試，確認基準線**
+- [x] **Step 1: 執行既有回歸測試，確認基準線**
 
 先確認 Issue 1 建立的回歸套件目前全數 PASS（重構前基準線）：
 
@@ -44,7 +44,7 @@ cd app/tool/foliate_touch_harness && node run-all.mjs
 
 Expected: 依序看到 4 個 `=== scenario-*.mjs ===` 區塊全部 `[PASS]`，結尾印出「整體結果：全部 PASS」。若非全數 PASS，先排除環境問題（例如 `npm install` 是否已執行），不可在基準線本身就是紅燈的狀態下開始本計畫。
 
-- [ ] **Step 2: 在 `async function openBook()` 之前插入模組層級狀態機骨架**
+- [x] **Step 2: 在 `async function openBook()` 之前插入模組層級狀態機骨架**
 
 用 Read 工具開啟 `app/android/app/src/main/assets/foliate/main.js`，找到以下區塊（`window.getTableOfContents` 結尾與 `async function openBook() {` 之間）：
 
@@ -138,7 +138,7 @@ class TouchIntentClassifier {
 async function openBook() {
 ```
 
-- [ ] **Step 3: 在 `load` 監聽器內建立 classifier 實例**
+- [x] **Step 3: 在 `load` 監聽器內建立 classifier 實例**
 
 找到：
 
@@ -163,7 +163,7 @@ async function openBook() {
 
 （本 Step 只新增這一行，緊接著的 `SELECTION_RELEASE_GUARD_MS`／`lastNonCollapsedSelectionAtMs` 區塊留到 Task 3 才動。）
 
-- [ ] **Step 4: 遷移長按候選攔截機制（Epic 18 Issue 47）讀寫 `classifier.gesture`**
+- [x] **Step 4: 遷移長按候選攔截機制（Epic 18 Issue 47）讀寫 `classifier.gesture`**
 
 找到（`ANNOTATION_CLICK_TAP_MAX_MS` 宣告之前的完整長按候選攔截區塊）：
 
@@ -313,7 +313,7 @@ async function openBook() {
 
 **行為確認要點**（不是新規則，只是確認遷移沒有改變語意）：`classifier.gesture.state !== 'longPressCandidate'` 涵蓋原本 `!longPressGateState`（`idle` 與 `swiping` 都會使這個條件成立，效果與原本 `null` 完全相同——touchmove 一律不攔截）；`elapsed`/`dx`/`dy` 改讀 `classifier.gesture.startTime`/`.startX`/`.startY`，數值來源與原本 `longPressGateState.t`/`.x`/`.y` 相同（都是 `touchstart` 當下寫入、期間不變）。
 
-- [ ] **Step 5: 重新執行回歸測試，確認未引入回歸**
+- [x] **Step 5: 重新執行回歸測試，確認未引入回歸**
 
 ```bash
 cd app/tool/foliate_touch_harness && node run-all.mjs
@@ -321,7 +321,7 @@ cd app/tool/foliate_touch_harness && node run-all.mjs
 
 Expected: 4 個情境全數 PASS（本 Task 遷移的長按候選攔截機制本身不在 Issue 1 自動化範圍內，見 `design.md`「測試策略」，這裡驗證的是「沒有破壞其餘 3 個機制」；長按候選攔截本身的正確性由本計畫最後的真機重測把關）。
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/android/app/src/main/assets/foliate/main.js
@@ -339,7 +339,7 @@ git commit -m "refactor(epic-31): 建立 TouchIntentClassifier 骨架並遷移�
 - Consumes: Task 1 的 `classifier`（`TouchIntentClassifier` 實例，`load` 監聽器內區域變數）、模組層級常數 `ANNOTATION_CLICK_TAP_MAX_MS`。
 - Produces: 無新增（`classifier.lastTouchStartTime` 欄位本身已由 Task 1 的 constructor 建立，本 Task 只是接上讀寫的呼叫端）。
 
-- [ ] **Step 1: 執行回歸測試，確認 Task 1 完成後的基準線**
+- [x] **Step 1: 執行回歸測試，確認 Task 1 完成後的基準線**
 
 ```bash
 cd app/tool/foliate_touch_harness && node run-all.mjs
@@ -347,7 +347,7 @@ cd app/tool/foliate_touch_harness && node run-all.mjs
 
 Expected: 4 個情境全數 PASS。
 
-- [ ] **Step 2: 遷移 touchstart／touchcancel 寫入端，移除本機重複宣告的門檻常數**
+- [x] **Step 2: 遷移 touchstart／touchcancel 寫入端，移除本機重複宣告的門檻常數**
 
 找到（緊接在 Task 1 剛遷移完的長按候選攔截區塊之後）：
 
@@ -375,7 +375,7 @@ Expected: 4 個情境全數 PASS。
 
 （`ANNOTATION_CLICK_TAP_MAX_MS` 已在 Task 1 移到模組層級，這裡的區域宣告直接刪除，不留 shadow。緊接這個區塊之前的大段說明註解——超連結排除理由、Dart/JS 門檻心智模型一致性、click 監聽器清查記錄——維持原地不動，不隨這次搬遷刪除，它描述的是下面 click 監聽器的行為理由，不是這個常數宣告本身。）
 
-- [ ] **Step 3: 遷移 click 監聽器讀取端**
+- [x] **Step 3: 遷移 click 監聽器讀取端**
 
 找到：
 
@@ -407,7 +407,7 @@ Expected: 4 個情境全數 PASS。
       }, { capture: true })
 ```
 
-- [ ] **Step 4: 重新執行回歸測試，確認未引入回歸**
+- [x] **Step 4: 重新執行回歸測試，確認未引入回歸**
 
 ```bash
 cd app/tool/foliate_touch_harness && node run-all.mjs
@@ -415,7 +415,7 @@ cd app/tool/foliate_touch_harness && node run-all.mjs
 
 Expected: 4 個情境全數 PASS（`scenario-epic25-issue4-fast-tap.mjs` 直接驗證本 Task 遷移的機制本身：短按 80ms 攔截／長按 900ms 放行／超連結不受影響 3 項斷言皆須維持 PASS）。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add app/android/app/src/main/assets/foliate/main.js
@@ -433,7 +433,7 @@ git commit -m "refactor(epic-31): 遷移快速點擊判斷機制至 TouchIntentC
 - Consumes: Task 1 的 `classifier`、模組層級常數 `SELECTION_RELEASE_GUARD_MS`。
 - Produces: 無新增。
 
-- [ ] **Step 1: 執行回歸測試，確認 Task 2 完成後的基準線**
+- [x] **Step 1: 執行回歸測試，確認 Task 2 完成後的基準線**
 
 ```bash
 cd app/tool/foliate_touch_harness && node run-all.mjs
@@ -441,7 +441,7 @@ cd app/tool/foliate_touch_harness && node run-all.mjs
 
 Expected: 4 個情境全數 PASS。
 
-- [ ] **Step 2: 移除本機重複宣告的門檻常數與區域變數**
+- [x] **Step 2: 移除本機重複宣告的門檻常數與區域變數**
 
 找到（`view.addEventListener('load', (e) => {` 開頭、Task 1 Step 3 新增的 `const classifier = new TouchIntentClassifier()` 之後）：
 
@@ -474,7 +474,7 @@ Expected: 4 個情境全數 PASS。
 
 （`SELECTION_RELEASE_GUARD_MS` 的完整由來說明已在 Task 1 移到模組層級常數宣告處，這裡整段連同區域常數／變數一併刪除，不留重複說明。緊接在後面的 `reportSelection` 函式本身完全不動位置，只在下一步修改其內部兩處寫入點。）
 
-- [ ] **Step 3: 遷移 `reportSelection()` 內的寫入端**
+- [x] **Step 3: 遷移 `reportSelection()` 內的寫入端**
 
 找到（`reportSelection` 函式開頭的提前返回分支）：
 
@@ -530,7 +530,7 @@ Expected: 4 個情境全數 PASS。
         classifier.lastNonCollapsedSelectionAtMs = doc.defaultView.performance.now()
 ```
 
-- [ ] **Step 4: 遷移 mousedown 監聽器讀取端**
+- [x] **Step 4: 遷移 mousedown 監聽器讀取端**
 
 找到：
 
@@ -560,7 +560,7 @@ Expected: 4 個情境全數 PASS。
       }, { capture: true })
 ```
 
-- [ ] **Step 5: 重新執行回歸測試，確認未引入回歸**
+- [x] **Step 5: 重新執行回歸測試，確認未引入回歸**
 
 ```bash
 cd app/tool/foliate_touch_harness && node run-all.mjs
@@ -568,7 +568,7 @@ cd app/tool/foliate_touch_harness && node run-all.mjs
 
 Expected: 4 個情境全數 PASS，特別是 `scenario-issue10-selection-release-guard.mjs`（保護期內／期外兩個情境）與 `scenario-cross-mechanism-tap-boundary.mjs`（選取保護與快速點擊分類跨機制邊界）直接驗證本 Task 遷移的機制本身。若 `scenario-cross-mechanism-tap-boundary.mjs` 偶發 FAIL，先重跑一次排除 `reviews/review-code-issue-1.md` 已記錄的已知計時競態，再判斷是否為本次遷移引入的回歸。
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/android/app/src/main/assets/foliate/main.js
@@ -592,7 +592,7 @@ git commit -m "refactor(epic-31): 遷移選取收尾保護機制至 TouchIntentC
 - **Issue 11**：`reportSelection()` 內的 `overlayer.hitTest()` 查詢邏輯（`overlayerEntry`/`hit`/`hitCfi`/`existingAnnotationId` 皆為函式內區域變數）本來就沒有使用任何跨機制共用的可變狀態，design.md 所指的「額外呼叫寫入 `lastNonCollapsedSelectionAtMs`」，正是 Task 3 Step 3 已經完成的兩處 `classifier.lastNonCollapsedSelectionAtMs =` 賦值——Issue 11 本身的 hitTest 邏輯不需要、也不會有額外程式碼異動。
 - **Issue 9**：`view.renderer.setAttribute('no-swipe', '')`（`openBook()` 內、`await view.open(book)` 之後，不在 `view.addEventListener('load', ...)` 監聽器內）是一次性、無條件執行的屬性設定，從未讀取任何觸控/選取共用狀態變數，design.md「讀這個 class 的欄位而非原本獨立變數」的敘述在這裡對不上實際程式碼——**這是 design.md 本身的敘述誤差，不是實作缺漏**，本 Task 會在該行加一則簡短註解說明，不修改這行程式碼本身。
 
-- [ ] **Step 1: 全文檢索確認舊變數名稱已無殘留**
+- [x] **Step 1: 全文檢索確認舊變數名稱已無殘留**
 
 ```bash
 grep -n "longPressGateState\|annotationClickTouchStartTime" app/android/app/src/main/assets/foliate/main.js
@@ -606,7 +606,7 @@ grep -n "let lastNonCollapsedSelectionAtMs" app/android/app/src/main/assets/foli
 
 Expected: 無任何輸出（該區域變數宣告已在 Task 3 移除，只剩 `classifier.lastNonCollapsedSelectionAtMs` 這個欄位存取寫法）。
 
-- [ ] **Step 2: 在 `no-swipe` 屬性設定處加上說明性註解，記錄與 design.md 的敘述落差**
+- [x] **Step 2: 在 `no-swipe` 屬性設定處加上說明性註解，記錄與 design.md 的敘述落差**
 
 找到：
 
@@ -631,7 +631,7 @@ Expected: 無任何輸出（該區域變數宣告已在 Task 3 移除，只剩 `
     view.renderer.setAttribute('no-swipe', '')
 ```
 
-- [ ] **Step 3: 完整回歸測試，連續執行確認穩定（比照 Issue 1 審查已建立的驗收慣例）**
+- [x] **Step 3: 完整回歸測試，連續執行確認穩定（比照 Issue 1 審查已建立的驗收慣例）**
 
 ```bash
 cd app/tool/foliate_touch_harness
@@ -640,7 +640,7 @@ for i in 1 2 3 4; do echo "===== run $i ====="; node run-all.mjs 2>&1 | grep -E 
 
 Expected: 4 次執行皆印出「整體結果：全部 PASS」，無任何 `[FAIL]`。
 
-- [ ] **Step 4: 跑 ES 相容性掃描，確認新增的 `class` 語法未引入無防護的較新 API**
+- [x] **Step 4: 跑 ES 相容性掃描，確認新增的 `class` 語法未引入無防護的較新 API**
 
 ```bash
 node app/tool/check_foliate_es_compat.js
@@ -648,7 +648,7 @@ node app/tool/check_foliate_es_compat.js
 
 Expected: 結束碼 `0`（`class` 語法本身是 ES2015 基礎特性，不在該腳本掃描的較新 API 清單內，這裡只是既有慣例的免費健檢，預期乾淨）。
 
-- [ ] **Step 5: 確認未修改任何 vendored 檔案**
+- [x] **Step 5: 確認未修改任何 vendored 檔案**
 
 ```bash
 git diff --stat main -- app/android/app/src/main/assets/foliate/
@@ -656,11 +656,11 @@ git diff --stat main -- app/android/app/src/main/assets/foliate/
 
 Expected: 只列出 `main.js` 一個檔案，`paginator.js`／`view.js`／`epub.js`／`overlayer.js`／`fixed-layout.js` 皆未出現在異動清單中。
 
-- [ ] **Step 6: 更新工單狀態**
+- [x] **Step 6: 更新工單狀態**
 
 在 `docs/epics/epic-31-touch-intent-unification/issues.md` Issue 2 的 `**Status:**` 那一行，改為 `ready-for-human`，並在下方補一段簡短總結：main.js 5 個機制已收斂進 `TouchIntentClassifier`，`app/tool/foliate_touch_harness/` 4 個情境連續執行維持全數 PASS，`flutter analyze`／`flutter test` 未受影響（本工單未異動任何 Dart 檔案）；**仍待人工完成 5 項真機重測**（Issue 47／Epic 25 Issue 1/4／Issue 10／Issue 11／長按候選期間選取突然確立），記錄於 `reviews/review-issue-2.md` 後才能視為完成並合併。
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app/android/app/src/main/assets/foliate/main.js docs/epics/epic-31-touch-intent-unification/issues.md
