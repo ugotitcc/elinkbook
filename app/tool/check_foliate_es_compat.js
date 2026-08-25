@@ -2,7 +2,7 @@
 /**
  * 靜態掃描 app/android/app/src/main/assets/foliate/（readest/foliate-js
  * 釘定版本，見 ADR 0011「不修改釘定版本」）是否使用了較新的 ES 內建方法，
- * 而目前 lib/reader/foliate_epub_reader_view.dart 的 _esCompatPolyfillJs
+ * 而目前 lib/reader/foliate_reader_view.dart 的 _esCompatPolyfillJs
  * 還沒有對應的 polyfill。
  *
  * 背景（見 epic-19 兩輪 /diagnose 紀錄）：這份釘定的 vendor 程式碼會無條件
@@ -36,7 +36,7 @@ const FOLIATE_ASSETS_DIR = path.join(
 );
 const POLYFILL_SOURCE_FILE = path.join(
   REPO_ROOT,
-  'app', 'lib', 'reader', 'foliate_epub_reader_view.dart',
+  'app', 'lib', 'reader', 'foliate_reader_view.dart',
 );
 
 /**
@@ -200,7 +200,7 @@ function extractPolyfillSource(dartSource) {
   );
   if (!match) {
     throw new Error(
-      '在 foliate_epub_reader_view.dart 找不到 _esCompatPolyfillJs 常數' +
+      '在 foliate_reader_view.dart 找不到 _esCompatPolyfillJs 常數' +
       '——是不是被改名或搬移了？請同步更新這支腳本的 POLYFILL_SOURCE_FILE' +
       '/extractPolyfillSource() 邏輯。',
     );
@@ -272,7 +272,7 @@ function main() {
     );
   }
   console.error(
-    '請至 app/lib/reader/foliate_epub_reader_view.dart 的 ' +
+    '請至 app/lib/reader/foliate_reader_view.dart 的 ' +
     '_esCompatPolyfillJs 補上對應的 polyfill（僅在缺席時才定義，比照既有' +
     '寫法），並用 Node.js + @xmldom/xmldom 對照未經修改的實際 epub.js 驗證' +
     '過缺席時會拋出例外、補上後可修復，再重新執行這支腳本確認乾淨。',
