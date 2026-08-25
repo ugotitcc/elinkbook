@@ -477,6 +477,7 @@ const getImageMediaType = (path) => {
         'png': 'image/png',
         'gif': 'image/gif',
         'webp': 'image/webp',
+        'svg': 'image/svg+xml',
     }
     return mediaTypeMap[extension] || 'image/jpeg'
 }
@@ -490,6 +491,19 @@ const getFontMediaType = (path) => {
         'otf': 'font/otf',
     }
     return mediaTypeMap[extension] || 'font/ttf'
+}
+
+// Container entry whose file name ends in `cover`/`couv` (the French
+// spelling) plus an image extension, e.g. `cover.jpg`, `Images/Cover.PNG`,
+// `couv.jpeg`. Same shape `gnome-epub-thumbnailer` falls back to.
+const UNDECLARED_COVER_RE = /(?:cover|couv)\.(?:jpe?g|png|gif|webp|svg)$/i
+
+// Last-ditch cover lookup for EPUBs where the manifest resolves to nothing:
+// scan the container's own file names. `names` is iterated in central
+// directory order, so the first match wins.
+const findUndeclaredCover = names => {
+    for (const name of names) if (UNDECLARED_COVER_RE.test(name)) return name
+    return null
 }
 
 class MediaOverlay extends EventTarget {
@@ -871,6 +885,19 @@ class Loader {
         return url
     }
     ref(href, parent) {
+        // A top-level load -- a view opening a section -- has no parent
+        // document to hang the reference on, and is released by exactly one
+        // `unloadItem`, so it must always be counted. Recording it under an
+        // absent parent instead put every top-level load in the book into one
+        // shared `#children` bucket that nothing ever cleared, so the second
+        // view to open an already-loaded section (a footnote popup, which
+        // opens another view on the same book) skipped its increment yet still
+        // decremented on close. The count underflowed to zero and revoked the
+        // section along with its images while a view was still showing them.
+        if (!parent) {
+            this.#refCount.set(href, this.#refCount.get(href) + 1)
+            return this.#cache.get(href)
+        }
         const childList = this.#children.get(parent)
         if (!childList?.includes(href)) {
             this.#refCount.set(href, this.#refCount.get(href) + 1)
@@ -923,7 +950,11 @@ class Loader {
         return this.createURL(href, tryLoadBlob, mediaType, parent)
     }
     async loadItemXHTMLContent(item, parents = []) {
-        const url = await this.loadItem(item, parents)
+        // Callers read the source of a section they have just loaded (the
+        // renderer pairs `section.load()` with `section.loadContent()`), and
+        // there is no matching unload for this call, so reuse the reference
+        // they already hold rather than taking one that is never released.
+        const url = this.#cache.get(item?.href) ?? await this.loadItem(item, parents)
         if (url) return this.#cacheXHTMLContent.get(url)?.data
     }
     tryImageEntryItem(path) {
@@ -1188,6 +1219,11 @@ ${doc.querySelector('parsererror').innerText}`)
                 unload: () => this.#loader.unloadItem(item),
                 loadText: () => this.#loader.loadText(item.href),
                 loadContent: () => this.#loader.loadItemXHTMLContent(item),
+                // Load a resource a script references after the section was
+                // rendered (a <video src> built on click); `loadReplaced` only
+                // saw what was in the markup. The section is its parent, so it
+                // is released together with the section.
+                loadHref: href => this.#loader.loadHref(href, item.href),
                 createDocument: () => this.loadDocument(item),
                 size: this.getSize(item.href),
                 cfi: this.resources.cfis[index],
@@ -1247,7 +1283,16 @@ ${doc.querySelector('parsererror').innerText}`)
     }
     async loadDocument(item) {
         const str = await this.loadText(item.href)
-        return this.parser.parseFromString(str, item.mediaType)
+        const doc = this.parser.parseFromString(str, item.mediaType)
+        // Same fallback as the render path in `loadReplaced`: a file the
+        // manifest declares as XHTML but which isn't well-formed XML (an
+        // unclosed `<meta charset>` is the usual culprit) parses into a
+        // `parsererror` document whose `body` is null. Callers of
+        // `createDocument` walk that body, so retry as HTML instead.
+        if (item.mediaType === MIME.XHTML
+        && (doc.querySelector('parsererror') || !doc.documentElement?.namespaceURI))
+            return this.parser.parseFromString(str, MIME.HTML)
+        return doc
     }
     getMediaOverlay() {
         return new MediaOverlay(this, this.#loadXML.bind(this))
@@ -1275,9 +1320,17 @@ ${doc.querySelector('parsererror').innerText}`)
     }
     async getCover() {
         const cover = this.resources?.cover
-        return cover?.href
-            ? new Blob([await this.loadBlob(cover.href)], { type: cover.mediaType })
-            : null
+        if (cover?.href) return new Blob([await this.loadBlob(cover.href)],
+            { type: cover.mediaType })
+        // Fall back to a cover-named container entry. Some EPUBs ship the
+        // cover image without ever declaring it (no `cover-image` property,
+        // no `<meta name="cover">` target, no manifest item), which leaves
+        // every manifest-driven lookup above empty even though the image is
+        // sitting right there in the zip.
+        const href = findUndeclaredCover(this.entries.keys())
+        if (!href) return null
+        const blob = await this.loadBlob(href)
+        return blob ? new Blob([blob], { type: getImageMediaType(href) }) : null
     }
     async getCalibreBookmarks() {
         const txt = await this.loadText('META-INF/calibre_bookmarks.txt')

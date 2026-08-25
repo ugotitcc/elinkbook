@@ -34,7 +34,7 @@
 
 **Interfaces:** 無（vendored 檔案，無對外 Dart/Flutter 介面變動於本 Task；Task 5 才驗證公開介面）。
 
-- [ ] **Step 1: 記錄替換前的基準行數**
+- [x] **Step 1: 記錄替換前的基準行數**
 
 ```bash
 cd app/android/app/src/main/assets/foliate
@@ -54,7 +54,7 @@ Expected（目前釘定版本 `6c6a491`，規劃階段已實測）：
 
 若任何數字不符，代表工作目錄的釘定版本已被其他變更動過，先停下來確認原因，不要繼續本工單。
 
-- [ ] **Step 2: 下載上游 `c09f06d` 版本並整份覆蓋**
+- [x] **Step 2: 下載上游 `c09f06d` 版本並整份覆蓋**
 
 ```bash
 for f in paginator.js epub.js fixed-layout.js view.js overlayer.js epubcfi.js comic-book.js; do
@@ -65,7 +65,7 @@ echo "全部下載完成，結束碼: $?"
 
 Expected：結束碼 `0`，不輸出任何錯誤訊息（`--retry 3` 是這個環境對 `raw.githubusercontent.com` 偶爾連線被重置的既有對策）。
 
-- [ ] **Step 3: 驗證下載內容不是錯誤頁面、且行數符合預期**
+- [x] **Step 3: 驗證下載內容不是錯誤頁面、且行數符合預期**
 
 ```bash
 for f in paginator.js epub.js fixed-layout.js view.js overlayer.js epubcfi.js comic-book.js; do
@@ -87,7 +87,7 @@ Expected：每個檔案 `head` 印出的開頭是合法 JavaScript（`import`／
     154 comic-book.js
 ```
 
-- [ ] **Step 4: 確認 git diff 範圍只有這 7 個檔案**
+- [x] **Step 4: 確認 git diff 範圍只有這 7 個檔案**
 
 ```bash
 cd "$(git rev-parse --show-toplevel)"
@@ -108,7 +108,7 @@ Expected：`git status` 只列出這 7 個檔案，沒有 `progress.js`／`text-
 ```
 （確切的欄寬/省略符號顯示可能因終端機寬度略有差異，重點是 7 個檔案、497 insertions/118 deletions 這個總數應該一致。這個數字還沒算進 Task 2 要補的 patch。）
 
-- [ ] **Step 5: 逐檔核對確實含有目標 commit 才會出現的內容，排除誤下載到舊版/其他 commit 的可能**
+- [x] **Step 5: 逐檔核對確實含有目標 commit 才會出現的內容，排除誤下載到舊版/其他 commit 的可能**
 
 ```bash
 grep -n "subpixelOffset" app/android/app/src/main/assets/foliate/paginator.js
@@ -136,7 +136,7 @@ Expected：7 個 grep 都至少找到 1 處符合（`paginator.js` 的 `subpixel
 
 **背景**：`docs/adr/0024-flowable-pagination-density-calibration-reopen-adr-0011.md`（已採納）讓 `paginator.js`／`view.js`／`progress.js` 三個檔案協作，把流式 EPUB 已渲染 section 的真實視覺頁數回饋給頁碼估算。Task 1 整份覆蓋 `paginator.js`／`view.js` 為純淨上游版本後，這兩個檔案裡的 ADR 0024 patch 會消失，必須立即補回——尤其 `view.js` 的 `clearLocationDensity()` 方法，`main.js` 第 175 行的 `window.applyPreferences()` 無條件呼叫它，若缺席會直接拋出 `TypeError`，讓 Task 4 的觸控 Harness 在第一次 `relocate` 事件就崩潰逾時。
 
-- [ ] **Step 1: 在 `paginator.js` 補回 `detail.contentPages` 賦值**
+- [x] **Step 1: 在 `paginator.js` 補回 `detail.contentPages` 賦值**
 
 先確認目前（Task 1 下載後）的確切上下文：
 
@@ -165,7 +165,7 @@ Expected：找到 1 處，約第 3416 行。
 
 （只插入 `detail.contentPages = textPages` 這一行，縮排比照同一個區塊其餘行，前後其他行不變。）
 
-- [ ] **Step 2: 驗證 Step 1 的插入**
+- [x] **Step 2: 驗證 Step 1 的插入**
 
 ```bash
 grep -n "detail.contentPages = textPages" app/android/app/src/main/assets/foliate/paginator.js
@@ -175,7 +175,7 @@ echo "syntax check exit code: $?"
 
 Expected：`grep` 找到 1 處；`node --check` 結束碼 `0`（純語法檢查，不執行程式，確認插入沒有打錯字元導致語法錯誤）。
 
-- [ ] **Step 3: 在 `view.js` 補回 `#onRelocate()` 的 `contentPages` 處理**
+- [x] **Step 3: 在 `view.js` 補回 `#onRelocate()` 的 `contentPages` 處理**
 
 先確認目前（Task 1 下載後）的確切上下文：
 
@@ -202,7 +202,7 @@ Expected：找到 1 處。
         if (contentPages) this.#sectionProgress?.recordDensity(index, contentPages)
 ```
 
-- [ ] **Step 4: 在 `view.js` 補回 `clearLocationDensity()` 方法**
+- [x] **Step 4: 在 `view.js` 補回 `clearLocationDensity()` 方法**
 
 先確認目前（Task 1 下載後）的確切上下文：
 
@@ -226,7 +226,7 @@ Expected：找到 1 處。
 
 （也就是把 `clearLocationDensity() { ... }` 整段方法插在 `getProgressOf` 前面，`getProgressOf` 本身內容不變。）
 
-- [ ] **Step 5: 驗證 Step 3-4 的插入**
+- [x] **Step 5: 驗證 Step 3-4 的插入**
 
 ```bash
 grep -n "contentPages" app/android/app/src/main/assets/foliate/view.js
@@ -237,7 +237,7 @@ echo "syntax check exit code: $?"
 
 Expected：`contentPages` 至少找到 4 處（方法簽章 1 處＋註解 3 行皆含中文說明不含這個字串，實際上英文字串 `contentPages` 只會在簽章與 `if (contentPages)` 那行出現，共 2 處，這裡抓寬鬆一點確認不是 0）；`clearLocationDensity` 找到 1 處（方法定義本身；`main.js` 那邊的呼叫端不算在這個檔案內）；`node --check` 結束碼 `0`。
 
-- [ ] **Step 6: 確認 `progress.js` 沒有被誤動**
+- [x] **Step 6: 確認 `progress.js` 沒有被誤動**
 
 ```bash
 git status --porcelain -- app/android/app/src/main/assets/foliate/progress.js
@@ -256,7 +256,7 @@ Expected：無任何輸出（`progress.js` 不在本次同步範圍內，Task 1/
 - Consumes: Task 1 替換、Task 2 補回 patch 後的 7 個檔案。
 - Produces: 若本 Task 觸發 polyfill 補強，`_esCompatPolyfillJs` 常數會增加新的 `if (!X) { ... }` 區塊，供 Task 6 的 `flutter test` 驗證。
 
-- [ ] **Step 1: 執行掃描工具**
+- [x] **Step 1: 執行掃描工具**
 
 ```bash
 node app/tool/check_foliate_es_compat.js
@@ -265,7 +265,7 @@ echo "exit code: $?"
 
 Expected：結束碼 `0`，印出「乾淨」訊息（規劃階段已用下載到的 7 個檔案＋Task 2 要補的 patch 內容實際跑過，結果乾淨——Task 2 補的 patch 只用了既有的 `?.`（可選鏈）語法，這在既有 `paginator.js`／`view.js` 大量既有用法中本來就存在，不是新引入的風險，掃描工具的 `RISKY_APIS` 清單本來就不掃可選鏈語法糖，只掃特定 API 方法名稱，預期不會進到下方 Step 2 的條件分支）。
 
-- [ ] **Step 2（僅當 Step 1 結束碼非 0 時才執行）：依腳本輸出的清單補齊 polyfill**
+- [x] **Step 2（僅當 Step 1 結束碼非 0 時才執行）：依腳本輸出的清單補齊 polyfill**
 
 若 Step 1 結束碼不是 `0`，腳本會印出每個未防護 API 的名稱、所在檔案/行號、以及該 API 所需的最低 Chromium 版本。針對輸出清單中的每一項：
 
@@ -285,7 +285,7 @@ Expected：結束碼 `0`，印出「乾淨」訊息（規劃階段已用下載�
 - Consumes: Task 1/2 處理後的 vendored 檔案；`app/tool/foliate_touch_harness/`（`epic-31` Issue 1 建立，內含 `run-all.mjs` 與 4 個情境腳本）。
 - Produces: 無檔案異動；若失敗，需回到 Task 1/2 確認是否誤下載、patch 補錯，不在本工單自行修改 `main.js`。
 
-- [ ] **Step 1: 安裝依賴（第一次執行需要，會自動下載 Chromium）**
+- [x] **Step 1: 安裝依賴（第一次執行需要，會自動下載 Chromium）**
 
 ```bash
 cd app/tool/foliate_touch_harness
@@ -294,7 +294,7 @@ npm install
 
 Expected：安裝成功，結束碼 `0`。若這台機器先前已執行過 `epic-31` Issue 1/2 的驗證、`node_modules` 已存在，這步驟會很快跳過大部分下載。
 
-- [ ] **Step 2: 執行全部情境**
+- [x] **Step 2: 執行全部情境**
 
 ```bash
 node run-all.mjs
@@ -304,7 +304,7 @@ Expected：4 個情境（`scenario-epic25-issue4-fast-tap.mjs`／`scenario-issue
 
 若排除 Task 2 patch 問題後仍有情境 FAIL：這代表 Task 1 替換進來的新版 `paginator.js`（7 個新 commit，多為觸控/捲動相關修法）與 `epic-31` Issue 2 重構的 `TouchIntentClassifier` 有實際行為衝突，**不要自行修改 `main.js` 或 harness 腳本來讓測試通過**，停下來記錄實際失敗的情境與錯誤訊息，回報給人類決定如何處理。
 
-- [ ] **Step 3: 回到 repo 根目錄**
+- [x] **Step 3: 回到 repo 根目錄**
 
 ```bash
 cd "$(git rev-parse --show-toplevel)"
@@ -321,7 +321,7 @@ cd "$(git rev-parse --show-toplevel)"
 - Consumes: Task 1/2 處理後的 7 個檔案；既有未變動的 `app/android/app/src/main/assets/foliate/main.js`。
 - Produces: 本 Task 若一切符合預期，不產生任何檔案變更，直接進入 Task 6。
 
-- [ ] **Step 1: 核對 `paginator.js` 的 `next`/`prev`/`goTo` 公開方法簽章**
+- [x] **Step 1: 核對 `paginator.js` 的 `next`/`prev`/`goTo` 公開方法簽章**
 
 ```bash
 grep -n "async next(\|async prev(\|async goTo(" app/android/app/src/main/assets/foliate/paginator.js
@@ -329,7 +329,7 @@ grep -n "async next(\|async prev(\|async goTo(" app/android/app/src/main/assets/
 
 Expected：三個方法都存在，簽章分別為 `async goTo(target)`（約第 3756 行）、`async prev(distance)`（約第 3827 行）、`async next(distance)`（約第 3830 行，Task 2 補的 patch 只在更前面的 `#onRelocate` 一帶插入 1 行，不影響這幾個方法的行號太多，若有小幅位移屬正常）——與替換前完全相同的簽章。`main.js` 實際呼叫的 `view.next()`／`view.prev()`／`view.goToFraction()`／`view.goTo()`（`main.js` 第 350/354/358/370 行）都是透過 `view.js` 轉呼叫這三個方法，簽章不變代表這幾條路徑不受影響。
 
-- [ ] **Step 2: 核對 `relocate` 事件 payload 建構邏輯起點**
+- [x] **Step 2: 核對 `relocate` 事件 payload 建構邏輯起點**
 
 ```bash
 grep -n "const detail = { reason, range, index }" app/android/app/src/main/assets/foliate/paginator.js
@@ -337,7 +337,7 @@ grep -n "const detail = { reason, range, index }" app/android/app/src/main/asset
 
 Expected：找到這一行（新版行號約在 3396 附近）。`{ reason, range, index }` 這個結構與替換前完全相同，`detail.fraction`／`detail.size`／Task 2 補回的 `detail.contentPages` 依序賦值。`view.js` 的 `#onRelocate()` 消費這個 payload、組出 `main.js` 實際監聽的 `{ cfi, fraction, location, index, head, tail }` 欄位，結構起點不變代表下游欄位也不會變。
 
-- [ ] **Step 3: 核對 `no-swipe`／`turn-gesture-left-inset` 屬性讀取仍存在**
+- [x] **Step 3: 核對 `no-swipe`／`turn-gesture-left-inset` 屬性讀取仍存在**
 
 ```bash
 grep -n "hasAttribute('no-swipe')\|turn-gesture-left-inset" app/android/app/src/main/assets/foliate/paginator.js
@@ -345,7 +345,7 @@ grep -n "hasAttribute('no-swipe')\|turn-gesture-left-inset" app/android/app/src/
 
 Expected：`turn-gesture-left-inset` 找到 1 處（約第 2317 行）、`no-swipe` 找到 3 處（約第 2394/2805/2919 行），與替換前同樣是 1+3 處讀取。`main.js` 第 1011 行 `view.renderer.setAttribute('no-swipe', '')` 這個既有設定不需要更動；`turn-gesture-left-inset` 真機行為驗證留給 Issue 2，本 Task 只確認程式碼層級的讀取邏輯還在。
 
-- [ ] **Step 4: 確認 `main.js` 沒有設定/呼叫上游新暴露的能力**
+- [x] **Step 4: 確認 `main.js` 沒有設定/呼叫上游新暴露的能力**
 
 ```bash
 grep -n "scroll-direction\|turn-gesture-left-inset\|subpixelOffset" app/android/app/src/main/assets/foliate/main.js
@@ -353,7 +353,7 @@ grep -n "scroll-direction\|turn-gesture-left-inset\|subpixelOffset" app/android/
 
 Expected：無任何輸出（`grep` 結束碼非 0）。`design.md`「非目標」已明訂本次不啟用 `fixed-layout.js` 的水平捲動模式（`scroll-direction` 屬性）與 `paginator.js` 的 sub-pixel scroll offset（`subpixelOffset` 屬性），本步驟只需確認「確實沒有設定/存取」，不需要新增邏輯。
 
-- [ ] **Step 5: 核對 `view.clearLocationDensity()` 呼叫端與 Task 2 補回的方法對得上**
+- [x] **Step 5: 核對 `view.clearLocationDensity()` 呼叫端與 Task 2 補回的方法對得上**
 
 ```bash
 grep -n "clearLocationDensity" app/android/app/src/main/assets/foliate/main.js
@@ -361,7 +361,7 @@ grep -n "clearLocationDensity" app/android/app/src/main/assets/foliate/main.js
 
 Expected：找到 1 處（約第 175 行，`view.clearLocationDensity()`），跟 Task 2 Step 4 補回的方法名稱完全一致（大小寫、無多餘空格）。
 
-- [ ] **Step 6: 記錄 `fd91451`（連續捲動時定期發射 `relocate`）的觀察待辦**
+- [x] **Step 6: 記錄 `fd91451`（連續捲動時定期發射 `relocate`）的觀察待辦**
 
 不需要在本 Task 執行任何指令——這一項無法透過靜態檢查或 `flutter test` 驗證，留待 Issue 2 真機驗收時，順便觀察快速連續翻頁／捲動時 `onLocatorChanged` 橋接通訊是否流暢無卡頓。本 Task 只需確認 `main.js` 的 `onLocatorChanged` handler 註冊仍然存在：
 
@@ -382,7 +382,7 @@ Expected：找到 1 處（約第 656 行）。
 
 **Interfaces:** 無。
 
-- [ ] **Step 1: `flutter analyze`**
+- [x] **Step 1: `flutter analyze`**
 
 ```bash
 cd app && flutter analyze
@@ -390,7 +390,7 @@ cd app && flutter analyze
 
 Expected：「No issues found!」（cwd 需在 `app/`）。
 
-- [ ] **Step 2: `flutter test`**
+- [x] **Step 2: `flutter test`**
 
 ```bash
 flutter test
@@ -406,7 +406,7 @@ flutter test --concurrency=1
 
 這只是失敗時的備援手段，不是預設做法。
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 cd "$(git rev-parse --show-toplevel)"
@@ -445,7 +445,7 @@ EOF
 git add app/lib/reader/foliate_reader_view.dart app/test/reader/foliate_reader_view_test.dart
 ```
 
-- [ ] **Step 4: 更新工單狀態**
+- [x] **Step 4: 更新工單狀態**
 
 在 `docs/epics/epic-33-foliate-js-vendor-sync/issues.md` Issue 1 的 `**Status:** ready-for-agent` 那一行，改為記錄已完成，補一段簡短總結：ES 掃描結束碼（是否有觸發 polyfill 補強）、ADR 0024 patch 補回結果、觸控 Harness 4 情境是否全過、Bridge 對齊檢查結果、`flutter test` 實際測試總數、commit hash。
 

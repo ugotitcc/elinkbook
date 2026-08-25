@@ -8,7 +8,16 @@
 
 ## Issue 1：同步 7 個 vendored 檔案至 `c09f06d`＋補回 ADR 0024 patch＋第一/二層測試防護
 
-**Status:** ready-for-agent
+**Status:** 已完成（Commit `2028baf`）
+
+**完成摘要：**
+- 替換 7 個 vendored 檔案為上游 `c09f06d`（`paginator.js`、`epub.js`、`fixed-layout.js`、`view.js`、`overlayer.js`、`epubcfi.js`、`comic-book.js`）。
+- 補回 ADR 0024 密度校正 patch（`paginator.js` 的 `relocate` 事件 `detail.contentPages`；`view.js` 的 `#onRelocate()` 消費與 `clearLocationDensity()` 方法）。
+- ES 相容性掃描（`node app/tool/check_foliate_es_compat.js`）結束碼為 `0` 乾淨，無未宣告之現代 ES 語法需求。
+- 觸控 Harness（`node app/tool/foliate_touch_harness/run-all.mjs`）4 個情境 9 項斷言全數 PASS。
+- Bridge 公開簽章對齊通過（`next`/`prev`/`goToFraction`/`goTo`、`relocate` 事件 payload、`no-swipe`/`turn-gesture-left-inset` 屬性讀取、`clearLocationDensity` 呼叫端核對一致；`main.js` 未啟用 `scroll-direction` 與 `subpixelOffset`）。
+- `flutter analyze` 乾淨（No issues found!），`flutter test` 通過 1693 項測試零回歸。
+- **額外修正（commit `08b3ccf8`）**：`fixed-layout.js` 第 1 行整份覆蓋後被還原成上游裸模組匯入 `import 'construct-style-sheets-polyfill'`，在本專案無 import map／無打包工具的環境下會直接讓 FXL/CBZ 書籍載入失敗，已改回同步前既有的相對路徑寫法 `import './construct-style-sheets-polyfill.js'`。程式碼審查（`reviews/review-code-issue-1.md` Important #1/#2）發現這其實是早於本次同步就存在、卻從未被記錄過的既有例外，已正式登記為 [ADR 0025](../../adr/0025-fixed-layout-relative-module-specifier-reopen-adr-0011.md)。**這處修正目前完全沒有被本 Issue 任一層自動化驗證覆蓋到**（觸控 Harness 4 個情境的 fixture 皆為 reflowable EPUB，不會觸發 `fixed-layout.js` 的動態載入路徑），正確性仰賴 Issue 2 真機開啟 CBZ／FXL 書籍驗證，若這行有誤，症狀會是 FXL/CBZ 書籍完全無法開啟、WebView console 出現 `Failed to resolve module specifier` 例外。
 
 **依賴：** 無，可立即開始（`epic-31` Issue 3 已合併，排期依賴已解除）
 
@@ -28,14 +37,14 @@
 - **補回 ADR 0024 密度校正 patch**：整份覆蓋 `paginator.js`／`view.js` 會移除 `docs/adr/0024-flowable-pagination-density-calibration-reopen-adr-0011.md`（`epic-26` Issue 11）在這兩個檔案內正式重新開放 ADR 0011 的手動 patch，須在下載完成後立即補回——`paginator.js` 的 `relocate` 事件 `detail` 補回 `contentPages` 欄位；`view.js` 的 `#onRelocate()` 補回 `contentPages` 消費、新增 `clearLocationDensity()` 方法（`main.js` 第 175 行 `window.applyPreferences()` 無條件呼叫，若缺席會直接拋例外）。`progress.js` 的另一半 patch（`recordDensity`/`clearDensity`）這次未變動、不需處理。
 - **第一層：靜態與單元測試**——執行 ES 相容性掃描（`node app/tool/check_foliate_es_compat.js`），若結束碼非 0，依硬性規範在 `_esCompatPolyfillJs`（`foliate_reader_view.dart`）補齊 polyfill（① 僅在 `if (!TargetAPI)` 缺席時定義；② 嚴禁 ES2021+ 語法糖）。注意此掃描為 Regex 掃描已知 API 清單，**無法**攔截語法解析期（Parse Time）的 `SyntaxError`（例如 `?.`／`??=`），語法層級問題留待 Issue 2 真機驗收把關，不在本工單自動化範圍內。
 - **第二層：觸控 Harness 自動化**——執行 `node app/tool/foliate_touch_harness/run-all.mjs`（`epic-31` Issue 1 建立），4 個情境須全數 PASS，作為攔截 `TouchIntentClassifier`（`epic-31` Issue 2 成果）與上游觸控／捲動邏輯衝突的自動化防線。
-- **Bridge 對齊檢查**：逐一核對 `main.js` 呼叫到的 `Paginator`/`view` 公開方法簽章（`view.next()`／`view.prev()`／`view.goToFraction()`／`view.goToCfi()`／`relocate` 事件 payload 的 `{ cfi, fraction, location, index, head, tail }` 欄位）是否不變；確認 `main.js` 沒有設定 `fixed-layout.js` 新增的 `scroll-direction` 屬性、也沒有呼叫 `paginator.js` 新暴露的 sub-pixel scroll offset API（只求相容不擴充行為）；`fd91451`（連續捲動時定期發射 `relocate`）需額外確認快速連續翻頁／捲動時 `onLocatorChanged` 橋接通訊仍流暢無卡頓，`ReadingPositionRepository` 沒有被異常高頻寫入。
+- **Bridge 對齊檢查**：逐一核對 `main.js` 呼叫到的 `Paginator`/`view` 公開方法簽章（`view.next()`／`view.prev()`／`view.goToFraction()`／`view.goTo()`／`relocate` 事件 payload 的 `{ cfi, fraction, location, index, head, tail }` 欄位）是否不變；確認 `main.js` 沒有設定 `fixed-layout.js` 新增的 `scroll-direction` 屬性、也沒有呼叫 `paginator.js` 新暴露的 sub-pixel scroll offset API（只求相容不擴充行為）；`fd91451`（連續捲動時定期發射 `relocate`）需額外確認快速連續翻頁／捲動時 `onLocatorChanged` 橋接通訊仍流暢無卡頓，`ReadingPositionRepository` 沒有被異常高頻寫入。
 
 **測試要求：**
 - ES 相容性掃描結束碼為 0（若有補 polyfill，需重跑確認）。
 - `node app/tool/foliate_touch_harness/run-all.mjs` 4 個情境全數 PASS。
 - `flutter analyze` 為「No issues found!」、`flutter test` 全數通過，零回歸。
 
-**驗收標準：** 7 個檔案已替換為 `c09f06d` 版本；`paginator.js`／`view.js` 的 ADR 0024 patch 已補回（`detail.contentPages`／`clearLocationDensity()`）；ES 掃描乾淨；觸控 Harness 4 情境全過；Bridge 公開方法簽章與 `relocate` payload 核對通過（不變，或已對應調整並記錄）；`flutter analyze`／`flutter test` 通過。
+**驗收標準：** 6 個檔案（`paginator.js`／`epub.js`／`view.js`／`overlayer.js`／`epubcfi.js`／`comic-book.js`）逐位元組替換為 `c09f06d` 版本；`fixed-layout.js` 除第 1 行依 ADR 0025 維持既有相對路徑 import 外，其餘逐位元組相同；`paginator.js`／`view.js` 的 ADR 0024 patch 已補回（`detail.contentPages`／`clearLocationDensity()`）；ES 掃描乾淨；觸控 Harness 4 情境全過；Bridge 公開方法簽章與 `relocate` payload 核對通過（不變，或已對應調整並記錄）；`flutter analyze`／`flutter test` 通過。
 
 ---
 
@@ -48,6 +57,8 @@
 **來源：** `design.md`「目標」第 3/4 項、「測試策略」第三層、「已知風險」。
 
 **背景／需求：** `paginator.js` 與 `fixed-layout.js` 這次改動涉及觸控／捲動內部行為與 FXL 排版，Puppeteer 自動化在目前環境對 `touchmove` 場景不可靠（`epic-31`／`epic-32` 已記錄的限制），核心驗收一律真機進行，逐項記錄於 `reviews/review-issue-2.md`。
+
+**優先驗證項目**：Issue 1 程式碼審查（`reviews/review-code-issue-1.md` Important #2）發現 `fixed-layout.js`（依 [ADR 0025](../../adr/0025-fixed-layout-relative-module-specifier-reopen-adr-0011.md) 補回的相對路徑 import 修正）完全沒有被 Issue 1 任何自動化驗證層覆蓋過——本 Epic 目前唯一的自動化觸控 Harness 只用 reflowable EPUB fixture，不會觸發這個檔案的動態載入路徑。**真機測試請優先開啟一本 CBZ 與一本 FXL EPUB，確認能正常開書**（不要按下方清單順序排到最後才測）；若這行修正實際有誤，症狀是 FXL/CBZ 書籍完全無法開啟，WebView console 會出現 `Failed to resolve module specifier` 例外。
 
 **測試要求（真機重測清單，共 8 項）：**
 - **歷史修法（3 項，比照 `epic-32`）**：
