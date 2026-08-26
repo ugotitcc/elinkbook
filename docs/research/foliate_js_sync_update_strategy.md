@@ -70,6 +70,7 @@
   1. `paginator.js`：在 `detail.fraction`／`detail.size` 賦值之後，補回 `detail.contentPages = textPages`（`relocate` 事件 payload）。
   2. `view.js`：`#onRelocate({ reason, range, index, fraction, size })` 簽章補上 `contentPages` 參數，方法內補回 `if (contentPages) this.#sectionProgress?.recordDensity(index, contentPages)`；並新增 `clearLocationDensity() { this.#sectionProgress?.clearDensity() }` 方法。
   3. `progress.js` 通常不需改動（`recordDensity`／`clearDensity`／`#density` Map 是消費端，patch 主體在 `paginator.js`／`view.js`），但仍要跑上方「同步前檢查」確認上游這次有沒有變動這個檔案本身。
+  4. **執行語意層級驗證**：`grep` 只能確認補回的文字還在，不能確認密度校正邏輯本身仍然正確——執行 `node app/tool/test_section_progress_density.mjs`，確認結束碼 `0`（5 項情境全數通過：零回歸不變式、密度換算比例、最近鄰外插 tie-break、`clearDensity()` 退回、非線性 section 跳過）。這支腳本 `epic-26-architecture-hardening` Issue 11 落地時就已寫好（見 `app/tool/README.md`），**`epic-33` 同步時漏跑過一次**（純屬疏忽，非腳本本身有問題），故在此明確列為必要步驟，不要再遺漏。
   - 完整逐步操作範例（含確切程式碼與驗證指令）見 `docs/epics/epic-33-foliate-js-vendor-sync/plans/plan-issue-1.md` Task 2。
 - **為什麼這是 Critical 等級**：`main.js` 第 175 行左右 `window.applyPreferences()`（使用者調整任何排版設定都會觸發）無條件呼叫 `view.clearLocationDensity()`。若 `view.js` 缺這個方法，會直接拋出 `TypeError`；`app/tool/foliate_touch_harness/run-all.mjs` 觸控 Harness 執行真實 `main.js`／`view.js`，會在第一次 `relocate` 事件觸發 `applyPreferences()` 時 100% 逾時崩潰，導致**連同步工單本身的自動化測試都無法通過**（`epic-33` Issue 1 規劃階段實際發生過）。
 
@@ -228,7 +229,7 @@
    - `construct-style-sheets-polyfill.js`
 2. **嚴格禁止覆蓋專案自建檔案**：
    - 保持 `index.html` 與 `main.js` 不被覆寫。
-3. **下載完成後，立即依 2.3 節「已知手動 Patch 清單」逐項補回**——這一步不可省略、不可延後到後續工單才做，見 2.3 節說明的崩潰風險。
+3. **下載完成後，立即依 2.3 節「已知手動 Patch 清單」逐項補回**——這一步不可省略、不可延後到後續工單才做，見 2.3 節說明的崩潰風險。補回 Patch 1（ADR 0024）後，除了 `grep` 確認文字還在，還要跑 `node app/tool/test_section_progress_density.mjs` 做語意層級驗證（結束碼 `0`）——這支腳本跟 `check_foliate_es_compat.js` 一樣是同步流程的標準檢查項，`epic-33` 曾漏跑過一次，往後不要再漏。
 
 ### 階段 3：ES 相容性靜態掃描與 Polyfill 防護 (ES Compatibility)
 1. **執行靜態掃描腳本**：
