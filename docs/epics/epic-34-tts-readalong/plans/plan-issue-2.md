@@ -1,6 +1,6 @@
 # Issue 2：最小朗讀閉環——系統語音逐句朗讀＋手動播放/暫停 Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** 讓使用者在 EPUB／KF8／TXT／MD（Foliate 格式，CBZ 除外）書籍畫面按下播放，聽到系統語音逐句朗讀目前章節，可暫停/繼續，章節唸完自動停止；不含同步高亮（Issue 3）、背景播放（Issue 7）、上一句/下一句與語速調整（Issue 5）、完整 Mini Player UI（Issue 6）。
 
@@ -31,7 +31,7 @@
 - Consumes：無
 - Produces：`flutter_tts`／`just_audio` 套件可供後續 Task import
 
-- [ ] **Step 1：加入相依套件**
+- [x] **Step 1：加入相依套件**
 
 在 `app/pubspec.yaml` 的 `dependencies:` 區塊（`flutter_web_auth_2: ^5.1.0` 那行之後）新增：
 
@@ -45,7 +45,7 @@
   just_audio: ^0.10.6
 ```
 
-- [ ] **Step 2：安裝並驗證無衝突**
+- [x] **Step 2：安裝並驗證無衝突**
 
 在 `app/` 目錄下執行：
 
@@ -61,7 +61,7 @@ flutter analyze
 
 Expected：`No issues found!`
 
-- [ ] **Step 3：確認 `share_plus`/`file_picker`/`package_info_plus`/`win32` 版本未被牽動**
+- [x] **Step 3：確認 `share_plus`/`file_picker`/`package_info_plus`/`win32` 版本未被牽動**
 
 ```
 git diff app/pubspec.lock | grep -E "share_plus|file_picker|package_info_plus|win32" -A2 -B2
@@ -69,7 +69,7 @@ git diff app/pubspec.lock | grep -E "share_plus|file_picker|package_info_plus|wi
 
 Expected：無輸出，或輸出中這四個套件的版本號沒有變化（只有新增 `flutter_tts`/`just_audio`/它們的 transitive 依賴的區塊）。
 
-- [ ] **Step 4：Commit**
+- [x] **Step 4：Commit**
 
 ```
 git add app/pubspec.yaml app/pubspec.lock
@@ -88,7 +88,7 @@ git commit -m "deps(epic-34): 新增 flutter_tts/just_audio（Issue 2 最小朗�
 - Consumes：無
 - Produces：`abstract class TtsProvider { Future<List<TtsVoice>> getAvailableVoices(); Future<TtsSynthesisResult> synthesize(String text, {required TtsVoice voice, double speed = 1.0, double pitch = 1.0}); }`、`class TtsVoice { final String id; final String displayName; }`、`class TtsSynthesisResult { final String audioFilePath; final List<TtsWordTiming> wordTimings; }`、`class TtsWordTiming { final String text; final int startMs; final int endMs; }`、`class TtsSynthesisException implements Exception { final String message; }`——供 Task 3（`SystemTtsProvider`）與 Task 6（`TtsController`）使用。
 
-- [ ] **Step 1：寫型別與介面**
+- [x] **Step 1：寫型別與介面**
 
 建立 `app/lib/reader/tts_provider.dart`：
 
@@ -167,7 +167,7 @@ class TtsSynthesisException implements Exception {
 }
 ```
 
-- [ ] **Step 2：寫測試（型別建構/相等性）**
+- [x] **Step 2：寫測試（型別建構/相等性）**
 
 建立 `app/test/reader/tts_provider_test.dart`：
 
@@ -201,7 +201,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 3：跑測試**
+- [x] **Step 3：跑測試**
 
 ```
 flutter test test/reader/tts_provider_test.dart
@@ -209,7 +209,7 @@ flutter test test/reader/tts_provider_test.dart
 
 Expected：4 個測試全數 PASS。
 
-- [ ] **Step 4：Commit**
+- [x] **Step 4：Commit**
 
 ```
 git add app/lib/reader/tts_provider.dart app/test/reader/tts_provider_test.dart
@@ -228,7 +228,7 @@ git commit -m "feat(epic-34): 新增 TtsProvider 抽象介面與型別（Issue 2
 - Consumes：Task 2 的 `TtsProvider`／`TtsVoice`／`TtsSynthesisResult`／`TtsSynthesisException`；`test/support/fake_path_provider_platform.dart` 既有的 `FakePathProviderPlatform`
 - Produces：`class SystemTtsProvider implements TtsProvider`，供 Task 6（`TtsController`）與 Task 7（`ReaderScreen`）建構真實 Provider 時使用
 
-- [ ] **Step 1：寫實作**
+- [x] **Step 1：寫實作**
 
 建立 `app/lib/reader/system_tts_provider.dart`：
 
@@ -301,7 +301,7 @@ class SystemTtsProvider implements TtsProvider {
 }
 ```
 
-- [ ] **Step 2：寫測試（mock `flutter_tts` MethodChannel）**
+- [x] **Step 2：寫測試（mock `flutter_tts` MethodChannel）**
 
 建立 `app/test/reader/system_tts_provider_test.dart`：
 
@@ -397,7 +397,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 3：跑測試**
+- [x] **Step 3：跑測試**
 
 ```
 flutter test test/reader/system_tts_provider_test.dart
@@ -405,7 +405,7 @@ flutter test test/reader/system_tts_provider_test.dart
 
 Expected：2 個測試全數 PASS。若 `synth.onError` 的 `MethodCall` 建構參數在你的 Flutter/flutter_tts 版本下型別不符（例如需要 Map 而非純字串），依實際 `platformCallHandler`（`flutter_tts-4.2.5/lib/flutter_tts.dart` 第 655 行附近 `case "synth.onError":`）的參數解析方式調整第二個測試的 `MethodCall` 引數，不要刪除這個測試。
 
-- [ ] **Step 4：Commit**
+- [x] **Step 4：Commit**
 
 ```
 git add app/lib/reader/system_tts_provider.dart app/test/reader/system_tts_provider_test.dart
@@ -427,7 +427,7 @@ git commit -m "feat(epic-34): 新增 SystemTtsProvider（flutter_tts 實作，Is
 - Consumes：既有 `main.js` 的 `view.book.sections[index].createDocument()`／`view.getCFI(index, range)`（`buildTocEntry()` 已示範用法）、既有 `window.flutter_inappwebview.callHandler` 慣例
 - Produces：`class TtsSegmentCfi { final String segmentId; final String cfi; final String text; }`、`List<TtsSegmentCfi> parseTtsSegments(String segmentsJson)`、`int? extractChapterIndex(String? locatorJson)`、`static Future<List<TtsSegmentCfi>> FoliateReaderView.loadTtsSegments(GlobalKey<State<FoliateReaderView>> key, int sectionIndex)`——供 Task 6／Task 7 的 `loadSegments` callback 使用
 
-- [ ] **Step 1：`TtsSegmentCfi` 模型**
+- [x] **Step 1：`TtsSegmentCfi` 模型**
 
 建立 `app/lib/reader/tts_segment_cfi.dart`：
 
@@ -457,7 +457,7 @@ class TtsSegmentCfi {
 }
 ```
 
-- [ ] **Step 2：`main.js` 新增 `window.buildTtsSegments()`**
+- [x] **Step 2：`main.js` 新增 `window.buildTtsSegments()`**
 
 在 `app/android/app/src/main/assets/foliate/main.js` 的 `window.getTableOfContents` 函式定義之後（第 503 行之後），新增：
 
@@ -555,7 +555,7 @@ window.buildTtsSegments = async function (sectionIndex) {
 }
 ```
 
-- [ ] **Step 3：Dart codec——`parseTtsSegments()`／`extractChapterIndex()`**
+- [x] **Step 3：Dart codec——`parseTtsSegments()`／`extractChapterIndex()`**
 
 在 `app/lib/reader/foliate_bridge_codec.dart` 頂部新增 import：
 
@@ -604,7 +604,7 @@ List<TtsSegmentCfi> parseTtsSegments(String segmentsJson) {
 }
 ```
 
-- [ ] **Step 4：`FoliateReaderView` 新增 `loadTtsSegments()` 靜態 helper**
+- [x] **Step 4：`FoliateReaderView` 新增 `loadTtsSegments()` 靜態 helper**
 
 在 `app/lib/reader/foliate_reader_view.dart` 頂部 import 區塊新增：
 
@@ -671,7 +671,7 @@ import 'tts_segment_cfi.dart';
     );
 ```
 
-- [ ] **Step 5：`parseTtsSegments()`／`extractChapterIndex()` 單元測試**
+- [x] **Step 5：`parseTtsSegments()`／`extractChapterIndex()` 單元測試**
 
 在 `app/test/reader/foliate_bridge_codec_test.dart` 檔案結尾（`main()` 函式內最後一個 `test()`/`group()` 之後、`}` 之前）新增：
 
@@ -749,7 +749,7 @@ import 'tts_segment_cfi.dart';
 
 **注意（測試涵蓋範圍的誠實邊界）**：上面「跨標籤句子」測試只驗證 Dart 端 `parseTtsSegments()` 對「JS 已經產生單一合併 CFI」這個結果的解析正確——**不驗證** `main.js window.buildTtsSegments()` 本身橫跨 TextNode 建立 Range／呼叫 `view.getCFI()` 的邏輯是否正確，因為 `flutter test` 環境下 `FoliateReaderView` 的 `_controller` 恆為 `null`（WebView 不會真的初始化，比照 `loadTableOfContents()` 既有的測試涵蓋範圍限制）。`window.buildTtsSegments()` 的實際正確性（含跨標籤句子、`<rt>` 過濾）**必須在 Task 7 完成後以真機開啟一本含 `<em>`/`<ruby>` 標籤句子的 EPUB 手動驗證**，見本計畫「測試策略」總結。
 
-- [ ] **Step 6：跑測試＋ES 相容性掃描**
+- [x] **Step 6：跑測試＋ES 相容性掃描**
 
 ```
 flutter test test/reader/foliate_bridge_codec_test.dart
@@ -769,7 +769,7 @@ flutter analyze
 
 Expected：`No issues found!`
 
-- [ ] **Step 7：Commit**
+- [x] **Step 7：Commit**
 
 ```
 git add app/lib/reader/tts_segment_cfi.dart app/android/app/src/main/assets/foliate/main.js app/lib/reader/foliate_bridge_codec.dart app/lib/reader/foliate_reader_view.dart app/test/reader/foliate_bridge_codec_test.dart
@@ -787,7 +787,7 @@ git commit -m "feat(epic-34): 朗讀段擷取——main.js buildTtsSegments 與 
 - Consumes：`just_audio` 套件（Task 1 已加入）
 - Produces：`abstract class TtsAudioPlayer { Future<void> loadFile(String path); Future<void> play(); Future<void> pause(); Stream<void> get completedStream; Future<void> dispose(); }`、`class JustAudioTtsPlayer implements TtsAudioPlayer`——供 Task 6（`TtsController`）與 Task 7（`ReaderScreen` 建構真實 `TtsController`）使用
 
-- [ ] **Step 1：寫抽象介面與實作**
+- [x] **Step 1：寫抽象介面與實作**
 
 建立 `app/lib/reader/tts_audio_player.dart`：
 
@@ -851,7 +851,7 @@ class JustAudioTtsPlayer implements TtsAudioPlayer {
 }
 ```
 
-- [ ] **Step 2：驗證編譯**
+- [x] **Step 2：驗證編譯**
 
 ```
 flutter analyze
@@ -859,7 +859,7 @@ flutter analyze
 
 Expected：`No issues found!`（本 Task 沒有可在 `flutter test` 下驗證的單元測試——`JustAudioTtsPlayer` 需要真機才能驗證實際播放行為，見本計畫「測試策略」總結；`TtsAudioPlayer` 抽象介面本身的行為由 Task 6 用 Fake 實作間接驗證。）
 
-- [ ] **Step 3：Commit**
+- [x] **Step 3：Commit**
 
 ```
 git add app/lib/reader/tts_audio_player.dart
@@ -880,7 +880,7 @@ git commit -m "feat(epic-34): 新增 TtsAudioPlayer 抽象介面與 JustAudioTts
 - Consumes：Task 2 的 `TtsProvider`/`TtsVoice`；Task 4 的 `TtsSegmentCfi`；Task 5 的 `TtsAudioPlayer`
 - Produces：`enum TtsPlaybackStatus { idle, playing, paused }`、`class TtsController extends ChangeNotifier { TtsController({required TtsProvider provider, required TtsAudioPlayer player, required Future<List<TtsSegmentCfi>> Function() loadSegments}); TtsPlaybackStatus get status; List<TtsSegmentCfi> get segments; int get currentIndex; Future<void> play(); void pause(); }`——供 Task 7（`ReaderScreen`）使用
 
-- [ ] **Step 1：寫 Fake 測試替身**
+- [x] **Step 1：寫 Fake 測試替身**
 
 建立 `app/test/support/fake_tts_provider.dart`：
 
@@ -964,7 +964,7 @@ class FakeTtsAudioPlayer implements TtsAudioPlayer {
 }
 ```
 
-- [ ] **Step 2：寫失敗測試（`TtsController` 尚未存在）**
+- [x] **Step 2：寫失敗測試（`TtsController` 尚未存在）**
 
 建立 `app/test/reader/tts_controller_test.dart`：
 
@@ -1157,7 +1157,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 3：跑測試確認失敗**
+- [x] **Step 3：跑測試確認失敗**
 
 ```
 flutter test test/reader/tts_controller_test.dart
@@ -1165,7 +1165,7 @@ flutter test test/reader/tts_controller_test.dart
 
 Expected：FAIL（`tts_controller.dart`／`TtsController` 尚不存在，編譯錯誤）。
 
-- [ ] **Step 4：寫 `TtsController` 實作**
+- [x] **Step 4：寫 `TtsController` 實作**
 
 建立 `app/lib/reader/tts_controller.dart`：
 
@@ -1314,7 +1314,7 @@ class TtsController extends ChangeNotifier {
 }
 ```
 
-- [ ] **Step 5：跑測試確認通過**
+- [x] **Step 5：跑測試確認通過**
 
 ```
 flutter test test/reader/tts_controller_test.dart
@@ -1322,7 +1322,7 @@ flutter test test/reader/tts_controller_test.dart
 
 Expected：13 個測試全數 PASS（含審查修訂新增的例外處理／防重入 3 個測試）。若「目前段落播放完畢後自動合成並播放下一段」等依賴 `completedStream` 事件的測試出現時序問題（事件在 `expect` 執行前還沒被消費），確認 `Future<void>.delayed(Duration.zero)` 那行有留著（把目前巨集任務排到事件迴圈之後，讓 `StreamController.broadcast()` 的監聽器有機會執行）。
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```
 git add app/lib/reader/tts_controller.dart app/test/support/fake_tts_provider.dart app/test/support/fake_tts_audio_player.dart app/test/reader/tts_controller_test.dart
@@ -1341,7 +1341,7 @@ git commit -m "feat(epic-34): 新增 TtsController 播放狀態機（Issue 2 Tas
 - Consumes：Task 2 的 `TtsProvider`；Task 4 的 `FoliateReaderView.loadTtsSegments`／`extractChapterIndex`；Task 5 的 `JustAudioTtsPlayer`；Task 6 的 `TtsController`/`TtsPlaybackStatus`
 - Produces：`ReaderScreen` 新增可選建構參數 `final TtsProvider? ttsProvider;`；新增 `Key('reader_tts_play_pause_button')` 供測試/後續 Issue 觀察
 
-- [ ] **Step 1：新增建構參數**
+- [x] **Step 1：新增建構參數**
 
 在 `app/lib/screens/reader_screen.dart` 頂部 import 區塊新增：
 
@@ -1368,7 +1368,7 @@ import '../reader/tts_provider.dart';
     this.ttsProvider,
 ```
 
-- [ ] **Step 2：State 新增 `TtsController` lazy getter 與 dispose**
+- [x] **Step 2：State 新增 `TtsController` lazy getter 與 dispose**
 
 在 `class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver` 內，緊接 `EpubPositionInfo? _epubPositionInfo;`（第 280 行附近）之後新增欄位：
 
@@ -1409,7 +1409,7 @@ import '../reader/tts_provider.dart';
     _ttsController?.dispose();
 ```
 
-- [ ] **Step 3：新增播放/暫停按鈕**
+- [x] **Step 3：新增播放/暫停按鈕**
 
 在 `_buildNativeView` 所在的 build 方法內，找到既有 EPUB FAB 區塊最後一個（`Key('reader_foliate_progress_button')`，`top: 240`）的 `Positioned` 區塊，緊接其後新增：
 
@@ -1463,7 +1463,7 @@ import '../reader/tts_provider.dart';
               ),
 ```
 
-- [ ] **Step 4：寫 widget test**
+- [x] **Step 4：寫 widget test**
 
 在 `app/test/screens/reader_screen_test.dart` 找一個既有的「流式 EPUB」`testWidgets` 區塊（例如 Task 說明中提過的「流式 EPUB：點擊複製按鈕」測試）附近，新增以下測試（若檔案頂部尚未 import `FakeTtsProvider`，補上 `import '../support/fake_tts_provider.dart';`）：
 
@@ -1592,7 +1592,7 @@ import '../reader/tts_provider.dart';
 
 若 `test/fixtures/sample.cbz` 這個 fixture 檔在既有測試中的正確 `isFixedLayout`/開書驗證方式與上面寫的不同（例如需要不同的 `onLayoutResolved` 呼叫時機或格式判斷路徑），比照檔案內其他既有 CBZ/FXL 測試案例（搜尋 `sample.cbz` 或 `isFixedLayout: true` 既有用法）調整，不要憑空假設。
 
-- [ ] **Step 5：跑測試確認全數通過、零回歸**
+- [x] **Step 5：跑測試確認全數通過、零回歸**
 
 ```
 flutter test test/screens/reader_screen_test.dart
@@ -1612,7 +1612,7 @@ flutter analyze
 
 Expected：`No issues found!`
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```
 git add app/lib/screens/reader_screen.dart app/test/screens/reader_screen_test.dart

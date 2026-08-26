@@ -1,6 +1,6 @@
 # Epic 34 — TTS 語音朗讀與同步高亮（Read-along）：工單清單 (Issues)
 
-依 `spec.md`（Architecting，核心介面/型別唯一事實來源；已依 `/superpowers:receiving-code-review` 審查修訂）拆解為 8 個垂直切片工單，範圍為 Phase 0（相依性驗證）＋ Phase 1（Foliate MVP：EPUB／KF8／TXT／MD）。**Phase 2（雲端 API/快取）／Phase 3（端側神經語音，stretch goal）／Phase 4（PDF）刻意不在本次拆解範圍內**——依 `design.md`「分階段 Issue 藍圖」，這三個 Phase 都依賴 Phase 1 主幹穩定後才開工，現在拆會在 Phase 1 完成前就過時，待 Phase 1 全數完成、人類確認排入時程後，再另開一輪 `/to-issues`。
+依 `spec.md`（Architecting，核心介面/型別唯一事實來源；已依 `/superpowers:receiving-code-review` 審查修訂）拆解為 8 個垂直切片工單（Issue 1～8），範圍為 Phase 0（相依性驗證）＋ Phase 1（Foliate MVP：EPUB／KF8／TXT／MD）。**Phase 2（雲端 API/快取）／Phase 3（端側神經語音，stretch goal）／Phase 4（PDF）刻意不在本次拆解範圍內**——依 `design.md`「分階段 Issue 藍圖」，這三個 Phase 都依賴 Phase 1 主幹穩定後才開工，現在拆會在 Phase 1 完成前就過時，待 Phase 1 全數完成、人類確認排入時程後，再另開一輪 `/to-issues`。Issue 9 為 2026-08-27 事後追加：Issue 2 合併後才發現 `ReaderScreen` 正式呼叫端接線缺口，補開一張獨立工單追蹤（詳見該工單「來源」欄位）。
 
 每個 Issue 皆須包含所需的單元測試要求（依 `spec.md`「Testing Decisions」已與人類確認的測試縫隙分工）。
 
@@ -61,12 +61,13 @@
 - `ReaderScreen` widget test（主要縫隙）：驗證播放/暫停狀態切換、章節唸完自動停止、CBZ 書籍功能入口停用狀態；比照既有 `reader_screen_test.dart` fake callback 注入模式。
 
 **驗收標準：**
-- [ ] `TtsProvider`／`TtsSynthesisResult`／`TtsWordTiming` 型別與 `SystemTtsProvider` 實作完成，單元測試通過
-- [ ] `TtsController` 可播放/暫停，逐句自動接續至章節結束
-- [ ] 朗讀段擷取正確過濾 `<rt>` 注音節點，跨標籤句子測試通過
-- [ ] CBZ 書籍 TTS 入口為明確停用狀態（非靜默無反應）
-- [ ] `ReaderScreen` 既有 widget test 零回歸；新增測試涵蓋播放/暫停/CBZ 排除
-- [ ] `flutter analyze`／`flutter test` 全數通過
+- [x] `TtsProvider`／`TtsSynthesisResult`／`TtsWordTiming` 型別與 `SystemTtsProvider` 實作完成，單元測試通過
+- [x] `TtsController` 可播放/暫停，逐句自動接續至章節結束
+- [x] 朗讀段擷取正確過濾 `<rt>` 注音節點，跨標籤句子測試通過
+- [x] CBZ 書籍 TTS 入口為明確停用狀態（非靜默無反應）
+- [x] `ReaderScreen` 既有 widget test 零回歸；新增測試涵蓋播放/暫停/CBZ 排除
+- [x] `flutter analyze`／`flutter test` 全數通過
+- [x] **（2026-08-27 補充，原驗收標準遺漏，已拆為獨立工單）** `ReaderScreen` 正式呼叫端接線缺口已記錄並拆分為 Issue 9，本 Issue 範圍維持「`ReaderScreen` 願意接受 `ttsProvider` 參數」即算完成，詳見 Issue 9
 
 ---
 
@@ -235,4 +236,32 @@
 - [ ] E-Ink 模式下朗讀高亮為靜態對比、無漸變動畫
 - [ ] 安全視窗範圍內不觸發不必要的翻頁/捲動
 - [ ] 超出安全視窗時正確觸發一次性翻頁/捲動
+- [ ] `flutter analyze`／`flutter test` 全數通過
+
+---
+
+## Issue 9：`ReaderScreen` 正式接線——真實 `SystemTtsProvider` 注入開書流程
+
+**Status:** ready-for-agent
+
+**依賴：** Issue 2
+
+**來源：** `reviews/review-issue-2-code.md`（真機驗證前發現的接線缺口）、`issues.md` Issue 2 驗收標準補充（2026-08-27）。
+
+**背景／需求：** Issue 2 完成了 `TtsController`／`SystemTtsProvider`／播放狀態機，`ReaderScreen` 也新增了可選（nullable）的 `ttsProvider` 建構參數與最小播放/暫停按鈕，且功能本身測試皆已通過。但 PR [#190](https://git.jigong.org/huthief/elinkBook/pulls/190) 合併後才發現：唯一實際建構 `ReaderScreen` 的正式呼叫端 `app/lib/screens/library_screen.dart`（`_openBook()`）從未傳入這個參數，比照的 `bookmarksRepository`/`highlightsRepository`/`notesRepository` 既有模式都有從 `main.dart` 一路往下傳到 `library_screen.dart` 再進 `ReaderScreen`，唯獨 TTS 這次少了這一段。結果是：使用者裝上正式 APK 開書，完全看不到朗讀播放鈕，功能雖已合併卻無法展示、也無法真機驗證。
+
+**設計要點：**
+- 比照 `bookmarksRepository`/`highlightsRepository`/`notesRepository` 既有的「App 級依賴逐層往下傳」模式，在建構這些 repository 的同一處（`main.dart`／`ReaderFeatureRepositories` 或等效聚合點）新增建構一個 `SystemTtsProvider(flutterTts: FlutterTts())`，往下傳到 `library_screen.dart` 的 `_openBook()`，再傳入 `ReaderScreen(ttsProvider: ...)`。
+- 確認建構時機與生命週期：是否要單例（App 啟動時建構一次、跨書共用）或比照既有 repository 模式決定；若 `flutter_tts` 底層資源需要在 App 層級管理，一併確認是否需要 dispose 掛勾。
+- CBZ 排除、播放按鈕停用狀態等邏輯已在 Issue 2 的 `ReaderScreen` 內處理完成，本 Issue 不重複實作——只需確保正式呼叫端「一律」傳入同一個 provider（不依書籍格式做條件式判斷要不要傳，格式排除交給 `ReaderScreen` 內部既有邏輯）。
+- 不涉及任何 UI 視覺變更（沿用 Issue 2 既有的陽春播放/暫停按鈕，正式 Mini Player UI 是 Issue 6 的範圍）。
+
+**測試要求：**
+- widget test：驗證 `library_screen.dart` 建構 `ReaderScreen` 時傳入的 `ttsProvider` 非 `null`（可能需要新增或調整 `library_screen_test.dart` 既有斷言方式）。
+- 真機手動驗證（比照 Issue 2「測試策略總結」第 4 點端到端驗收）：安裝正式建置的 APK，開啟一本 EPUB／KF8／TXT／MD 書籍，確認能看到播放鈕、按下後聽到朗讀、可暫停/繼續。
+
+**驗收標準：**
+- [ ] `library_screen.dart` 開書流程實際建構 `SystemTtsProvider` 並傳入 `ReaderScreen.ttsProvider`
+- [ ] 真機安裝後開啟 Foliate 格式書籍能看到並使用朗讀播放/暫停按鈕，CBZ 書籍維持明確停用狀態
+- [ ] 既有 `library_screen_test.dart`／`reader_screen_test.dart` 零回歸
 - [ ] `flutter analyze`／`flutter test` 全數通過
