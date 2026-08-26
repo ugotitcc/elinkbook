@@ -40,6 +40,7 @@ import '../support/fake_bookmarks_repository.dart';
 import 'package:elinkbook/screens/annotation_toolbar.dart';
 import '../support/fake_highlights_repository.dart';
 import '../support/fake_notes_repository.dart';
+import '../support/fake_tts_provider.dart';
 import 'package:elinkbook/reader/epub_selection_info.dart';
 import 'package:elinkbook/reader/percent_rect.dart';
 import 'package:elinkbook/reader/pdf_selection_info.dart';
@@ -7336,6 +7337,124 @@ void main() {
         expect(find.byKey(const Key('annotation_toolbar_delete')), findsNothing);
       },
     );
+  });
+
+  group('TTS 語音朗讀（epic-34-tts-readalong Issue 2）', () {
+    testWidgets('未提供 ttsProvider 時，不顯示 TTS 播放按鈕', (tester) async {
+      final highlightsRepo = FakeHighlightsRepository();
+      final notesRepo = FakeNotesRepository();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_tts_no_provider',
+            prefsManager: prefsManager,
+            highlightsRepository: highlightsRepo,
+            notesRepository: notesRepo,
+            isFixedLayout: false,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final foliateView =
+          tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
+      foliateView.onPageRendered();
+      foliateView.onLayoutResolved?.call(
+        const EpubLayoutInfo(
+          isFixedLayout: false,
+          writingMode: WritingMode.horizontal,
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.byKey(const Key('reader_tts_play_pause_button')), findsNothing);
+    });
+
+    testWidgets('提供 ttsProvider 時，流式 EPUB 顯示 TTS 播放按鈕，初始為播放圖示',
+        (tester) async {
+      final highlightsRepo = FakeHighlightsRepository();
+      final notesRepo = FakeNotesRepository();
+      final ttsProvider = FakeTtsProvider();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_tts_with_provider',
+            prefsManager: prefsManager,
+            highlightsRepository: highlightsRepo,
+            notesRepository: notesRepo,
+            isFixedLayout: false,
+            ttsProvider: ttsProvider,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final foliateView =
+          tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
+      foliateView.onPageRendered();
+      foliateView.onLayoutResolved?.call(
+        const EpubLayoutInfo(
+          isFixedLayout: false,
+          writingMode: WritingMode.horizontal,
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      final buttonFinder = find.byKey(const Key('reader_tts_play_pause_button'));
+      expect(buttonFinder, findsOneWidget);
+      final icon = tester.widget<Icon>(find.descendant(
+        of: buttonFinder,
+        matching: find.byType(Icon),
+      ));
+      expect(icon.icon, Icons.play_arrow);
+
+      await tester.tap(buttonFinder);
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('CBZ 格式提供 ttsProvider 時，TTS 按鈕顯示但為停用狀態', (tester) async {
+      final ttsProvider = FakeTtsProvider();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.cbz',
+            bookId: 'b_tts_cbz',
+            prefsManager: prefsManager,
+            isFixedLayout: true,
+            ttsProvider: ttsProvider,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final foliateView =
+          tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
+      foliateView.onPageRendered();
+      foliateView.onLayoutResolved?.call(
+        const EpubLayoutInfo(isFixedLayout: true, writingMode: WritingMode.horizontal),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      final buttonFinder = find.byKey(const Key('reader_tts_play_pause_button'));
+      expect(buttonFinder, findsOneWidget);
+      final button = tester.widget<IconButton>(buttonFinder);
+      expect(button.onPressed, isNull);
+    });
   });
 
   tearDownAll(() {

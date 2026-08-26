@@ -17,7 +17,11 @@ import '../reader/custom_fonts_repository.dart';
 import '../reader/epub_decoration.dart';
 import '../reader/epub_position_info.dart';
 import '../reader/epub_selection_info.dart';
+import '../reader/foliate_bridge_codec.dart';
 import '../reader/foliate_reader_view.dart';
+import '../reader/tts_audio_player.dart';
+import '../reader/tts_controller.dart';
+import '../reader/tts_provider.dart';
 import '../library/library_repository.dart';
 import '../reader/highlight.dart';
 import '../reader/highlight_style.dart';
@@ -151,6 +155,13 @@ class ReaderScreen extends StatefulWidget {
   /// 計時器皆不觸發任何同步動作，行為等同本 Issue 之前，零回歸。
   final SyncCheckpointTrigger? syncCheckpointTrigger;
 
+  /// 語音朗讀（TTS）的語音來源（epic-34-tts-readalong Issue 2）。刻意為
+  /// 可選參數——比照 [bookmarksRepository] 既有慣例，未提供時朗讀播放
+  /// 按鈕不顯示，行為等同本 Issue 之前，零回歸。CBZ 格式即使提供本參數
+  /// 也會顯示明確停用狀態的按鈕（非隱藏，見 `issues.md` Issue 2 驗收
+  /// 標準），因為 CBZ 是純圖像格式、沒有文字可朗讀。
+  final TtsProvider? ttsProvider;
+
   const ReaderScreen({
     super.key,
     required this.filePath,
@@ -168,6 +179,7 @@ class ReaderScreen extends StatefulWidget {
     this.layoutPresetRepository,
     this.bookReaderPrefsRepository,
     this.syncCheckpointTrigger,
+    this.ttsProvider,
   });
 
   @override
@@ -278,6 +290,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   // Issue 2）。寫入本機資料庫時讀取此欄位的最新值，比照 _pdfPageInfo
   // 對 PDF 的既有作法。
   EpubPositionInfo? _epubPositionInfo;
+  TtsController? _ttsController;
   // 目錄樹狀結構快取（Epic 5 Issue 4），由 onLayoutResolved 觸發一次性
   // 背景抓取（見 _handleLayoutResolved）。樹狀結構不隨版面設定變動，開書
   // 期間只抓取一次，不需要每次版面參數變動都重新請求。
@@ -496,6 +509,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     WidgetsBinding.instance.removeObserver(this);
     _volumeKeyChannel.setMethodCallHandler(null);
     _pdfSearchStateNotifier.dispose();
+    _ttsController?.dispose();
     // 離開閱讀畫面時觸發一次位置寫入（spec.md「本機閱讀位置記憶」寫入
     // 時機之一）。不 await——dispose() 是同步方法，且這是離開畫面前的
     // 最後一次呼叫，不需要等待其完成，比照既有 _handlePrefsChanged 不
@@ -2200,6 +2214,53 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                   ),
                 ),
               ),
+            if (isFoliateFormat(format) &&
+                _chromeVisible &&
+                widget.ttsProvider != null)
+              Positioned(
+                top: 296,
+                right: 16,
+                child: format == BookFormat.cbz
+                    // CBZ 為純圖像格式，無文字可朗讀——明確顯示停用狀態
+                    // 的按鈕（onPressed: null），不是整個隱藏（見
+                    // issues.md Issue 2 驗收標準：「CBZ 書籍 TTS 入口為
+                    // 明確停用狀態，非靜默無反應」）。
+                    ? ClipOval(
+                        child: Container(
+                          color: _themedFabBackgroundColor,
+                          child: IconButton(
+                            key: const Key('reader_tts_play_pause_button'),
+                            icon: Icon(Icons.play_arrow,
+                                color: _themedFabIconColor),
+                            tooltip: 'CBZ 為純圖像格式，不支援語音朗讀',
+                            onPressed: null,
+                          ),
+                        ),
+                      )
+                    : AnimatedBuilder(
+                        animation: _ttsControllerOrNull!,
+                        builder: (context, _) {
+                          final controller = _ttsControllerOrNull!;
+                          final playing =
+                              controller.status == TtsPlaybackStatus.playing;
+                          return ClipOval(
+                            child: Container(
+                              color: _themedFabBackgroundColor,
+                              child: IconButton(
+                                key: const Key('reader_tts_play_pause_button'),
+                                icon: Icon(
+                                  playing ? Icons.pause : Icons.play_arrow,
+                                  color: _themedFabIconColor,
+                                ),
+                                tooltip: playing ? '暫停朗讀' : '開始朗讀',
+                                onPressed:
+                                    playing ? controller.pause : () => controller.play(),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+              ),
             // ── PDF FAB 區塊（epic-24-pdf-engine-rebuild Issue 8）─────
             // 與上方 EPUB FAB 完全對稱的 6 顆浮動圓形按鈕：返回／目錄／
             // 版面設定／書籤 toggle／筆記／進度-跳頁。比照 EPUB 既有的
@@ -2605,6 +2666,29 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       _isFixedLayout ? Colors.black54 : Theme.of(context).colorScheme.onSurface;
   Color get _themedFabIconColor =>
       _isFixedLayout ? Colors.white : Theme.of(context).colorScheme.surface;
+
+  /// 首次存取時才建構 [TtsController]（[widget.ttsProvider] 為 `null` 時
+  /// 回傳 `null`，播放按鈕不顯示）。[loadSegments] 內部從
+  /// [_epubPositionInfo] 反推目前章節 index（`extractChapterIndex()`，
+  /// 缺席時預設第 0 章，比照 `main.js` `section?.current ?? 0` 既有預設
+  /// 行為），呼叫 [FoliateReaderView.loadTtsSegments]——完全不需要
+  /// [TtsController] 知道 [FoliateReaderView] 或 [GlobalKey] 的存在。
+  TtsController? get _ttsControllerOrNull {
+    final provider = widget.ttsProvider;
+    if (provider == null) return null;
+    return _ttsController ??= TtsController(
+      provider: provider,
+      player: JustAudioTtsPlayer(),
+      loadSegments: () async {
+        final chapterIndex =
+            extractChapterIndex(_epubPositionInfo?.locatorJson) ?? 0;
+        return FoliateReaderView.loadTtsSegments(
+          _foliateEpubReaderViewKey,
+          chapterIndex,
+        );
+      },
+    );
+  }
 
   Widget _buildNativeView(BookFormat format, bool isLandscape) {
     final resolved = _resolved!;
