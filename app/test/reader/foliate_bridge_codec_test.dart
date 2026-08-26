@@ -290,6 +290,18 @@ void main() {
       expect(info.visualPageIndex, isNull);
       expect(info.visualTotalPages, isNull);
     });
+
+    test('args[1] 違反互斥不變式（locationIndex/locationTotal 與 '
+        'visualPageIndex/visualTotalPages 同時給值）：拋出 AssertionError', () {
+      expect(
+        () => parseLocatorChanged([
+          '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.1}',
+          '{"fraction":0.1,"locationIndex":9,"locationTotal":100,'
+              '"visualPageIndex":3,"visualTotalPages":20}',
+        ]),
+        throwsA(isA<AssertionError>()),
+      );
+    });
   });
 
   group('EpubPositionInfo.displayPageIndex / displayTotalPages', () {
@@ -320,6 +332,51 @@ void main() {
       const info = EpubPositionInfo(locatorJson: '{}');
       expect(info.displayPageIndex, isNull);
       expect(info.displayTotalPages, isNull);
+    });
+  });
+
+  group('EpubPositionInfo 建構子互斥不變式', () {
+    test('locationIndex/locationTotal 與 visualPageIndex/visualTotalPages '
+        '同時非 null：拋出 AssertionError', () {
+      expect(
+        () => EpubPositionInfo(
+          locatorJson: '{}',
+          locationIndex: 1,
+          locationTotal: 10,
+          visualPageIndex: 2,
+          visualTotalPages: 20,
+        ),
+        throwsA(isA<AssertionError>()),
+      );
+    });
+
+    test('只有 locationIndex 非 null（另一組完全 null）：正常建構', () {
+      expect(
+        () => EpubPositionInfo(
+          locatorJson: '{}',
+          locationIndex: 1,
+          visualPageIndex: null,
+        ),
+        returnsNormally,
+      );
+    });
+
+    test('只有 visualPageIndex 非 null（另一組完全 null）：正常建構', () {
+      expect(
+        () => EpubPositionInfo(
+          locatorJson: '{}',
+          locationIndex: null,
+          visualPageIndex: 2,
+        ),
+        returnsNormally,
+      );
+    });
+
+    test('兩組皆為 null：正常建構', () {
+      expect(
+        () => const EpubPositionInfo(locatorJson: '{}'),
+        returnsNormally,
+      );
     });
   });
 }
