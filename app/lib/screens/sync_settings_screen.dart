@@ -27,6 +27,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
   bool _connecting = false;
   String? _loggedInEmail;
   String? _errorText;
+  bool _obscurePassword = true;
 
   final _baseUrlController = TextEditingController();
   final _emailController = TextEditingController();
@@ -154,10 +155,18 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
         TextField(
           key: const Key('sync_settings_password_field'),
           controller: _passwordController,
-          obscureText: true,
+          obscureText: _obscurePassword,
           autocorrect: false,
           enableSuggestions: false,
-          decoration: const InputDecoration(labelText: '密碼'),
+          decoration: InputDecoration(
+            labelText: '密碼',
+            suffixIcon: IconButton(
+              key: const Key('sync_settings_password_visibility_toggle'),
+              icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off),
+              tooltip: _obscurePassword ? '顯示密碼' : '隱藏密碼',
+              onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+            ),
+          ),
         ),
         const SizedBox(height: 16),
         if (_errorText != null)

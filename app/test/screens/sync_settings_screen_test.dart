@@ -60,6 +60,32 @@ void main() {
         find.byKey(const Key('sync_settings_logout_button')), findsNothing);
   });
 
+  testWidgets('密碼欄位預設遮蔽，點擊眼睛圖示可切換顯示/隱藏', (tester) async {
+    final client = buildClient(MockClient((request) async {
+      throw StateError('本測試不應該真的發出網路請求');
+    }));
+
+    await tester.pumpWidget(MaterialApp(
+      home: SyncSettingsScreen(
+        accountRepository: accountRepository,
+        syncClient: client,
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    TextField passwordField() =>
+        tester.widget<TextField>(find.byKey(const Key('sync_settings_password_field')));
+    expect(passwordField().obscureText, isTrue);
+
+    await tester.tap(find.byKey(const Key('sync_settings_password_visibility_toggle')));
+    await tester.pump();
+    expect(passwordField().obscureText, isFalse);
+
+    await tester.tap(find.byKey(const Key('sync_settings_password_visibility_toggle')));
+    await tester.pump();
+    expect(passwordField().obscureText, isTrue);
+  });
+
   testWidgets('已登入時，載入完成後顯示登入中的 email 與登出按鈕，不顯示輸入欄位',
       (tester) async {
     await accountRepository.saveCredentials(

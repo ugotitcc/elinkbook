@@ -1540,6 +1540,13 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
 
   Future<void> _handleCopySelection(String text) async {
     await Clipboard.setData(ClipboardData(text: text));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        key: Key('reader_copy_selection_snackbar'),
+        content: Text('已複製到剪貼簿'),
+      ),
+    );
   }
 
   /// 刪除按鈕的 tooltip 文字，依 [item] 實際含有的內容組合而定

@@ -39,6 +39,7 @@ class _RemoteServerFormScreenState extends State<RemoteServerFormScreen> {
   String? _testResultText;
   bool _saving = false;
   String? _validationError;
+  bool _obscurePassword = true;
 
   bool get _isEditing => widget.existingProfile != null;
 
@@ -206,13 +207,19 @@ class _RemoteServerFormScreenState extends State<RemoteServerFormScreen> {
             TextField(
               key: const Key('remote_server_form_password_field'),
               controller: _passwordController,
-              obscureText: true,
+              obscureText: _obscurePassword,
               autocorrect: false,
               enableSuggestions: false,
               decoration: InputDecoration(
                 labelText: _isEditing
                     ? '密碼（留空＝沿用既有密碼；清空上方帳號欄位則一併清除密碼）'
                     : '密碼',
+                suffixIcon: IconButton(
+                  key: const Key('remote_server_form_password_visibility_toggle'),
+                  icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off),
+                  tooltip: _obscurePassword ? '顯示密碼' : '隱藏密碼',
+                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                ),
               ),
             ),
             SwitchListTile(

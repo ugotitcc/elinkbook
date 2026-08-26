@@ -3799,6 +3799,8 @@ void main() {
       await tester.pump();
 
       expect(clipboardCalls, ['要複製的文字']);
+      expect(find.byKey(const Key('reader_copy_selection_snackbar')), findsOneWidget);
+      expect(find.text('已複製到剪貼簿'), findsOneWidget);
     },
   );
 

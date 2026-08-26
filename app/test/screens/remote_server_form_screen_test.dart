@@ -70,6 +70,27 @@ void main() {
     expect(allowInsecureSwitch.value, true);
   });
 
+  testWidgets('密碼欄位預設遮蔽，點擊眼睛圖示可切換顯示/隱藏', (tester) async {
+    await pumpScreen(
+      tester,
+      repository: FakeRemoteServerRepository(),
+      opdsClient: FakeOpdsClient(),
+    );
+
+    TextField passwordField() => tester
+        .widget<TextField>(find.byKey(const Key('remote_server_form_password_field')));
+
+    expect(passwordField().obscureText, isTrue);
+
+    await tester.tap(find.byKey(const Key('remote_server_form_password_visibility_toggle')));
+    await tester.pump();
+    expect(passwordField().obscureText, isFalse);
+
+    await tester.tap(find.byKey(const Key('remote_server_form_password_visibility_toggle')));
+    await tester.pump();
+    expect(passwordField().obscureText, isTrue);
+  });
+
   testWidgets('測試連線成功時顯示成功文字', (tester) async {
     await pumpScreen(
       tester,
