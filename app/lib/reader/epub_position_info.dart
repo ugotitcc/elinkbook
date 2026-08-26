@@ -25,7 +25,7 @@
 ///   foliate-js `FixedLayout`（`fixed-layout.js`）的 `page`/`pages`——全書
 ///   真實視覺頁數，精度等同實際渲染結果（見 `CONTEXT.md`「視覺頁碼」
 ///   詞條）。流式格式恆為 `null`（`docs/research/
-///   flowable_pagination_precision_architecture_review.md` 候選 2 落地後
+///   architecture_review_flowable_pagination_precision.md` 候選 2 落地後
 ///   才會有值）。
 /// [displayPageIndex]/[displayTotalPages] 是集中「挑值」邏輯的便利 getter，
 /// `ReaderScreen` 建構頁尾一律用這兩個 getter，不直接依賴任何一組單獨欄位。

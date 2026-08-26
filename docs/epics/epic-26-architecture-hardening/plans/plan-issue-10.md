@@ -8,7 +8,7 @@
 
 **Tech Stack:** Flutter／Dart（JS→Dart 橋接解析）＋ `flutter_inappwebview` JS 橋接（payload 形狀）。無新增套件依賴。
 
-**Spec:** `docs/epics/epic-26-architecture-hardening/issues.md` Issue 10；`docs/research/flowable_pagination_precision_architecture_review.md` 候選 1；`/grilling` 會談記錄（Q1-Q11，本文件「規劃階段查證」逐項落地）。
+**Spec:** `docs/epics/epic-26-architecture-hardening/issues.md` Issue 10；`docs/research/architecture_review_flowable_pagination_precision.md` 候選 1；`/grilling` 會談記錄（Q1-Q11，本文件「規劃階段查證」逐項落地）。
 
 ## 規劃階段查證：欄位對帳、FXL 真頁碼佐證、持久化邊界、既有測試分類（務必先讀）
 
@@ -196,7 +196,7 @@
 ///   foliate-js `FixedLayout`（`fixed-layout.js`）的 `page`/`pages`——全書
 ///   真實視覺頁數，精度等同實際渲染結果（見 `CONTEXT.md`「視覺頁碼」
 ///   詞條）。流式格式恆為 `null`（`docs/research/
-///   flowable_pagination_precision_architecture_review.md` 候選 2 落地後
+///   architecture_review_flowable_pagination_precision.md` 候選 2 落地後
 ///   才會有值）。
 /// [displayPageIndex]/[displayTotalPages] 是集中「挑值」邏輯的便利 getter，
 /// `ReaderScreen` 建構頁尾一律用這兩個 getter，不直接依賴任何一組單獨欄位。
