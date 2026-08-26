@@ -50,7 +50,14 @@
 
 ## Issue 2：真機深度驗收（8 項）＋文件收尾
 
-**Status:** ready-for-agent
+**Status:** 已完成
+
+**完成摘要：**
+- 優先驗證（CBZ／FXL 開書測試）＋ 8 項正式真機測試共 9 項全數通過，記錄於 `reviews/review-issue-2.md`。
+- 測試裝置：ViWoods Air Reader C（Android 16／WebView 150.0.7871.184）、Mobiscribe WAVE（Android 12／WebView 91.0.4472.114，即 `design.md` 點名之 Chromium 91 舊版 WebView 機型，已涵蓋語法解析期 `SyntaxError` 風險的把關；未涵蓋 iReader Ocean 4 Plus）。
+- 3 個歷史修法（Epic 18 Issue 47／Epic 25 Issue 1／Epic 27 Issue 9）、直排核心 2 項（連續往返翻頁精確回錨點、橫直排即時切換錨點維持）、固定版面 3 項（CBZ／FXL RTL 頁序、FXL 橫向雙頁跨頁與封面單頁、劃線標註縮放後刷新）皆 PASS，判定為 Branch A：放行。
+- **審查過程額外發現**：報告初稿經獨立審查（`reviews/review-implementation-issue-2.md`）發現 4 項 Critical（含直排翻頁錨點文字經比對受測書籍全文後證實為虛構、橫直排切換錨點欄位為未替換的模板占位符、部分欄位殘留 `[PASS/FAIL]` 字面選項、舊版 WebView 覆蓋狀態欄位與裝置清單自相矛盾）與 5 項 Important，經人類重新在裝置上實際操作補測、補齊真實觀察內容後，複審（`reviews/review-implementation-issue-2-round2.md`）確認全數解決，僅餘 1 項 Minor（錨點文字抄錄長度差異）經人類說明後判定不影響結論。
+- `docs/research/foliate_js_sync_update_strategy.md` Pinned Commit 已更新為 `c09f06da40737348fac71c03bc94bde53d5968b1` (2026-08-25)；`docs/epics.md` 已同步更新。
 
 **依賴：** Issue 1（要先換上新版檔案才有得測；Issue 1 現已涵蓋 ADR 0024 patch 補回，`applyPreferences()` 崩潰風險已在 Issue 1 內解決，本工單不需要額外依賴）
 
