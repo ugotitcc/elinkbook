@@ -28,7 +28,7 @@
 - Consumes：無
 - Produces：三次 `flutter pub add --dry-run` 執行的原始輸出文字，供 Task 2 撰寫檢查清單文件時引用
 
-- [ ] **Step 1：確認目前工作目錄乾淨，記錄執行前基準狀態**
+- [x] **Step 1：確認目前工作目錄乾淨，記錄執行前基準狀態**
 
 在 `app/` 目錄下執行：
 
@@ -38,7 +38,7 @@ git status --short pubspec.yaml pubspec.lock
 
 Expected：無任何輸出（代表 `pubspec.yaml`／`pubspec.lock` 目前沒有未提交的異動）。若有輸出，先停下來確認那是不是別的工作留下的未提交變更，不要在髒的工作區上開始這個 Issue。
 
-- [ ] **Step 2：試算加入 `audio_service`＋`just_audio`（Phase 1 背景播放與播放器）**
+- [x] **Step 2：試算加入 `audio_service`＋`just_audio`（Phase 1 背景播放與播放器）**
 
 在 `app/` 目錄下執行：
 
@@ -67,7 +67,7 @@ Would change 9 dependencies.
 
 **驗證重點**：`share_plus`／`package_info_plus`／`win32`／`file_picker` 版本號維持不變（前面沒有 `+`／`-` 符號，只有「有新版可用」的提示），代表沒有觸發 `app/pubspec.yaml` 第 40-49 行註解記載的那種三方版本鏈衝突；`flutter_inappwebview_android` 的本機 patch override 也未受影響。若你實際執行時看到 `share_plus`／`package_info_plus`／`win32`／`file_picker` 前面出現 `+` 或版本號變動，代表相依鏈狀態已與撰寫本計畫時不同，**停下來**，不要繼續 Task 2，回報實際輸出供人類決定下一步。
 
-- [ ] **Step 3：試算加入 `flutter_tts`（Phase 1 `SystemTtsProvider`）**
+- [x] **Step 3：試算加入 `flutter_tts`（Phase 1 `SystemTtsProvider`）**
 
 在 `app/` 目錄下執行：
 
@@ -87,7 +87,7 @@ Would change 1 dependency.
 
 **驗證重點**：同 Step 2，`share_plus`／`package_info_plus`／`win32` 版本不變。
 
-- [ ] **Step 4：試算三個套件一起加入，確認組合起來也無衝突**
+- [x] **Step 4：試算三個套件一起加入，確認組合起來也無衝突**
 
 在 `app/` 目錄下執行：
 
@@ -97,7 +97,7 @@ flutter pub add --dry-run audio_service just_audio flutter_tts
 
 Expected：`Would change 10 dependencies.`（9 + 1，跟 Step 2／3 分開試算的數量相加一致，代表三者組合起來沒有互相衝突或額外連鎖升級）；`share_plus`／`package_info_plus`／`win32` 版本依然不變。
 
-- [ ] **Step 5：確認 dry-run 沒有實際修改任何檔案**
+- [x] **Step 5：確認 dry-run 沒有實際修改任何檔案**
 
 在 `app/` 目錄下執行：
 
@@ -118,7 +118,7 @@ Expected：無任何輸出（與 Step 1 相同）——`--dry-run` 不應該寫�
 - Consumes：Task 1 的三次 dry-run 輸出（本 Task 直接把 Task 1 的驗證結果整理進文件，不需要重新執行指令）
 - Produces：`docs/epics/epic-34-tts-readalong/dependency-spike-findings.md`——Issue 2（新增 `audio_service`/`just_audio`/`flutter_tts` 到 `pubspec.yaml`）與 Issue 7（`audio_service` manifest 整合）直接引用此文件，不需重新調查
 
-- [ ] **Step 1：撰寫檢查清單文件**
+- [x] **Step 1：撰寫檢查清單文件**
 
 建立 `docs/epics/epic-34-tts-readalong/dependency-spike-findings.md`，內容如下（`{DATE}` 替換為執行本 Task 當天日期，格式 `YYYY-MM-DD`）：
 
@@ -168,7 +168,7 @@ Expected：無任何輸出（與 Step 1 相同）——`--dry-run` 不應該寫�
 三個套件皆可安全加入，不需要額外的版本鎖定策略或相依鏈調整。Issue 2 可直接在 `app/pubspec.yaml` 加入 `audio_service`／`just_audio`／`flutter_tts`（依實際需要，`flutter_tts` 是 Issue 2 必要項，`audio_service`／`just_audio` 若 Issue 2 尚未整合播放器可延後到 Issue 7 才加入，避免加入目前程式碼還用不到的相依套件）；Issue 7 直接依上方 targetSdk manifest 需求清單補齊宣告，不需要重新調查。
 ```
 
-- [ ] **Step 2：確認基準線無回歸**
+- [x] **Step 2：確認基準線無回歸**
 
 在 `app/` 目錄下執行：
 
@@ -186,7 +186,7 @@ flutter test
 
 Expected：全數測試通過（PASS），因為本 Issue 未修改任何 Dart 程式碼，測試結果應與 Issue 開始前完全一致（零回歸）。
 
-- [ ] **Step 3：確認變更範圍只有新增的檢查清單文件**
+- [x] **Step 3：確認變更範圍只有新增的檢查清單文件**
 
 在儲存庫根目錄執行：
 
@@ -196,7 +196,7 @@ git status --short
 
 Expected：只看到一筆 `?? docs/epics/epic-34-tts-readalong/dependency-spike-findings.md`（新增的未追蹤檔案），沒有任何其他檔案被修改——特別確認 `app/pubspec.yaml`／`app/pubspec.lock`／`app/android/app/src/main/AndroidManifest.xml` 都不在變更清單中。若看到其他檔案被異動，先排查原因（可能是 Task 1 的 dry-run 意外寫入了什麼、或環境中有其他未關閉的編輯），不要直接提交。
 
-- [ ] **Step 4：Commit**
+- [x] **Step 4：Commit**
 
 ```
 git add docs/epics/epic-34-tts-readalong/dependency-spike-findings.md
