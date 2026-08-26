@@ -26,6 +26,7 @@ import 'support/fake_opds_client.dart';
 import 'support/fake_reader_prefs_manager.dart';
 import 'support/fake_remote_server_repository.dart';
 import 'support/fake_remote_thumbnail_cache.dart';
+import 'support/fake_tts_provider.dart';
 
 /// epic-26-architecture-hardening Issue 7 審查修正（review-issue-7.md
 /// Important #1）：Issue 7 把 `LibraryScreen` 27 個具名參數收斂為 5 個
@@ -89,6 +90,7 @@ void main() {
     final computeFingerprint = FakeFingerprintComputer().call;
     final thumbnailCache = FakeRemoteThumbnailCache();
     Future<bool> isMobileDataConnection() async => false;
+    final ttsProvider = FakeTtsProvider();
 
     await tester.pumpWidget(
       ElinkBookApp(
@@ -114,6 +116,7 @@ void main() {
         computeFingerprint: computeFingerprint,
         thumbnailCache: thumbnailCache,
         isMobileDataConnection: isMobileDataConnection,
+        ttsProvider: ttsProvider,
         initialTheme: AppTheme.dark,
         initialEinkMode: true,
       ),
@@ -139,6 +142,8 @@ void main() {
         same(layoutPresetRepository));
     expect(libraryScreen.readerFeatureRepositories.bookReaderPrefsRepository,
         same(bookReaderPrefsRepository));
+    expect(libraryScreen.readerFeatureRepositories.ttsProvider,
+        same(ttsProvider));
 
     expect(libraryScreen.syncDependencies.syncAccountRepository,
         same(syncAccountRepository));

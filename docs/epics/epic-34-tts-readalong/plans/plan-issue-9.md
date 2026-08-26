@@ -31,7 +31,7 @@
 - Consumes：既有 `TtsProvider`（`app/lib/reader/tts_provider.dart`）、既有 `ReaderScreen.ttsProvider` 建構參數（Issue 2 已定義）、測試替身 `FakeTtsProvider`（`app/test/support/fake_tts_provider.dart`，Issue 2 已建立）
 - Produces：`LibraryReaderFeatureRepositories.ttsProvider`（`TtsProvider?`）——供 Task 2 的 `main.dart` 呼叫端使用
 
-- [ ] **Step 1：寫失敗測試**
+- [x] **Step 1：寫失敗測試**
 
 在 `app/test/screens/library_screen_test.dart` 頂部 import 區塊（`../support/fake_notes_repository.dart` 那一行附近）新增：
 
@@ -133,7 +133,7 @@ import '../support/fake_tts_provider.dart';
   });
 ```
 
-- [ ] **Step 2：跑測試確認失敗**
+- [x] **Step 2：跑測試確認失敗**
 
 ```
 flutter test test/screens/library_screen_test.dart --plain-name "ttsProvider"
@@ -141,7 +141,7 @@ flutter test test/screens/library_screen_test.dart --plain-name "ttsProvider"
 
 Expected：編譯失敗（`LibraryReaderFeatureRepositories` 沒有名為 `ttsProvider` 的具名參數），或相關 `same(ttsProvider)` 斷言因實際值為 `null` 而失敗（視 Dart 分析器是否先擋在編譯階段而定，兩者皆代表測試正確反映目前缺口）；篩選出的兩個新測試（`_openBook()` 路徑與 `_openGroupFilteredView()` 路徑）皆應失敗。
 
-- [ ] **Step 3：實作最小改動**
+- [x] **Step 3：實作最小改動**
 
 `app/lib/screens/library_screen_dependencies.dart`：在檔案頂部 import 區塊新增（依現有字母序排在 `notes_repository.dart` 之後）：
 
@@ -197,7 +197,7 @@ class LibraryReaderFeatureRepositories {
               ),
 ```
 
-- [ ] **Step 4：跑測試確認通過**
+- [x] **Step 4：跑測試確認通過**
 
 ```
 flutter test test/screens/library_screen_test.dart
@@ -205,7 +205,7 @@ flutter test test/screens/library_screen_test.dart
 
 Expected：全數 PASS（含新增測試與既有測試零回歸）。
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```
 git add app/lib/screens/library_screen_dependencies.dart app/lib/screens/library_screen.dart app/test/screens/library_screen_test.dart
@@ -224,7 +224,7 @@ git commit -m "feat(epic-34): LibraryReaderFeatureRepositories 新增 ttsProvide
 - Consumes：Task 1 的 `LibraryReaderFeatureRepositories.ttsProvider`；既有 `SystemTtsProvider`（`app/lib/reader/system_tts_provider.dart`，Issue 2 已定義，預設建構子 `SystemTtsProvider()` 內部自行建立 `FlutterTts()`，不需外部傳入）
 - Produces：`ElinkBookApp.ttsProvider`（`TtsProvider?` 建構參數）——本 Issue 最後一棒，之後無其他 Task 依賴它
 
-- [ ] **Step 1：寫失敗測試**
+- [x] **Step 1：寫失敗測試**
 
 `app/test/elinkbook_app_wiring_test.dart` 頂部 import 區塊新增：
 
@@ -254,7 +254,7 @@ import 'support/fake_tts_provider.dart';
         same(ttsProvider));
 ```
 
-- [ ] **Step 2：跑測試確認失敗**
+- [x] **Step 2：跑測試確認失敗**
 
 ```
 flutter test test/elinkbook_app_wiring_test.dart
@@ -262,7 +262,7 @@ flutter test test/elinkbook_app_wiring_test.dart
 
 Expected：編譯失敗（`ElinkBookApp` 建構子沒有名為 `ttsProvider` 的具名參數）。
 
-- [ ] **Step 3：實作最小改動**
+- [x] **Step 3：實作最小改動**
 
 `app/lib/main.dart` 頂部 import 區塊新增（現行字母序中 `reader/reading_position_repository.dart` 是 `reader/` 底下最後一個 import，接續插在其後、`remote/opds_client.dart` 之前）：
 
@@ -318,7 +318,7 @@ import 'reader/tts_provider.dart';
         ),
 ```
 
-- [ ] **Step 4：跑測試確認通過**
+- [x] **Step 4：跑測試確認通過**
 
 ```
 flutter test test/elinkbook_app_wiring_test.dart
@@ -326,7 +326,7 @@ flutter test test/elinkbook_app_wiring_test.dart
 
 Expected：全數 PASS。
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```
 git add app/lib/main.dart app/test/elinkbook_app_wiring_test.dart
