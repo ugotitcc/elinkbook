@@ -95,6 +95,13 @@ dependencies:
   http: ^1.6.0
   connectivity_plus: ^7.3.1
   flutter_web_auth_2: ^5.1.0
+  # TTS 語音朗讀（epic-34-tts-readalong Issue 2）：系統原生語音合成，見
+  # dependency-spike-findings.md 已驗證與現有相依鏈無衝突（minSdk=24，
+  # 未拉高專案現有下限）。
+  flutter_tts: ^4.2.5
+  # TTS 本機音訊播放（epic-34-tts-readalong Issue 2）：見
+  # dependency-spike-findings.md，minSdk=16，未拉高專案現有下限。
+  just_audio: ^0.10.6
 
 dev_dependencies:
   flutter_test:
