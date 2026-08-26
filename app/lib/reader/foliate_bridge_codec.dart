@@ -3,6 +3,33 @@ import 'dart:convert';
 import 'epub_decoration.dart';
 import 'epub_position_info.dart';
 import 'toc_entry.dart';
+import 'tts_segment_cfi.dart';
+
+/// 從 `locatorJson` 取出章節/spine index
+int? extractChapterIndex(String? locatorJson) {
+  if (locatorJson == null) return null;
+  try {
+    final obj = jsonDecode(locatorJson);
+    if (obj is Map && obj['index'] is num) {
+      return (obj['index'] as num).toInt();
+    }
+    return null;
+  } catch (_) {
+    return null;
+  }
+}
+
+/// 解析 JSON 為 TtsSegmentCfi 清單
+List<TtsSegmentCfi> parseTtsSegments(String segmentsJson) {
+  try {
+    final array = jsonDecode(segmentsJson) as List<dynamic>;
+    return array
+        .map((e) => TtsSegmentCfi.fromWire(e as Map<Object?, Object?>))
+        .toList();
+  } catch (_) {
+    return const [];
+  }
+}
 
 /// 解析/擷取 epic-17-epub-render-migration Issue 6 新增的定位 JSON 格式
 /// （`{"cfi":"epubcfi(...)","index":N,"fraction":F}`），取代原本

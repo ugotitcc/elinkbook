@@ -1,6 +1,7 @@
 import 'package:elinkbook/reader/epub_decoration.dart';
 import 'package:elinkbook/reader/epub_position_info.dart';
 import 'package:elinkbook/reader/foliate_bridge_codec.dart';
+import 'package:elinkbook/reader/tts_segment_cfi.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -377,6 +378,115 @@ void main() {
         () => const EpubPositionInfo(locatorJson: '{}'),
         returnsNormally,
       );
+    });
+  });
+
+  group('extractChapterIndex', () {
+    test('正確取出 index 整數值', () {
+      const json = '{"cfi":"epubcfi(/6/4)","index":3,"fraction":0.1}';
+      expect(extractChapterIndex(json), 3);
+    });
+
+    test('index 為 0 時正確回傳 0', () {
+      const json = '{"cfi":"epubcfi(/6/2)","index":0,"fraction":0.0}';
+      expect(extractChapterIndex(json), 0);
+    });
+
+    test('index 為浮點數 num 時轉換為 int', () {
+      const json = '{"cfi":"epubcfi(/6/4)","index":5.0,"fraction":0.5}';
+      expect(extractChapterIndex(json), 5);
+    });
+
+    test('缺少 index 欄位時回傳 null', () {
+      const json = '{"cfi":"epubcfi(/6/4)","fraction":0.1}';
+      expect(extractChapterIndex(json), isNull);
+    });
+
+    test('index 為 null 時回傳 null', () {
+      const json = '{"cfi":"epubcfi(/6/4)","index":null,"fraction":0.1}';
+      expect(extractChapterIndex(json), isNull);
+    });
+
+    test('index 為非數字型別時回傳 null', () {
+      const json = '{"cfi":"epubcfi(/6/4)","index":"3","fraction":0.1}';
+      expect(extractChapterIndex(json), isNull);
+    });
+
+    test('格式錯誤字串回傳 null，不拋出例外', () {
+      expect(extractChapterIndex('not a json string'), isNull);
+    });
+
+    test('null 輸入回傳 null', () {
+      expect(extractChapterIndex(null), isNull);
+    });
+  });
+
+  group('parseTtsSegments', () {
+    test('解析合法 JSON 陣列為 TtsSegmentCfi 清單', () {
+      const json = '['
+          '{"segmentId":"0","cfi":"epubcfi(/6/4!/4/2/1:0,/4/2/1:10)","text":"這是第一句話。"},'
+          '{"segmentId":"1","cfi":"epubcfi(/6/4!/4/2/1:10,/4/2/1:20)","text":"這是第二句話！"}'
+          ']';
+      final segments = parseTtsSegments(json);
+      expect(segments.length, 2);
+      expect(segments[0].segmentId, '0');
+      expect(segments[0].cfi, 'epubcfi(/6/4!/4/2/1:0,/4/2/1:10)');
+      expect(segments[0].text, '這是第一句話。');
+      expect(segments[1].segmentId, '1');
+      expect(segments[1].cfi, 'epubcfi(/6/4!/4/2/1:10,/4/2/1:20)');
+      expect(segments[1].text, '這是第二句話！');
+    });
+
+    test('缺失欄位時以空字串防呆（寬容解析）', () {
+      const json = '[{"segmentId":null,"cfi":null,"text":null}]';
+      final segments = parseTtsSegments(json);
+      expect(segments.length, 1);
+      expect(segments[0].segmentId, '');
+      expect(segments[0].cfi, '');
+      expect(segments[0].text, '');
+    });
+
+    test('空陣列回傳空清單', () {
+      expect(parseTtsSegments('[]'), isEmpty);
+    });
+
+    test('格式錯誤字串回傳空清單，不拋出例外', () {
+      expect(parseTtsSegments('not a json array'), isEmpty);
+    });
+
+    test('非陣列 JSON 物件回傳空清單，不拋出例外', () {
+      expect(parseTtsSegments('{"segmentId":"0"}'), isEmpty);
+    });
+  });
+
+  group('TtsSegmentCfi', () {
+    test('建構子與欄位正常賦值', () {
+      const seg = TtsSegmentCfi(
+        segmentId: '0',
+        cfi: 'epubcfi(/6/4)',
+        text: '測試內文',
+      );
+      expect(seg.segmentId, '0');
+      expect(seg.cfi, 'epubcfi(/6/4)');
+      expect(seg.text, '測試內文');
+    });
+
+    test('fromWire 正常解析 map', () {
+      final seg = TtsSegmentCfi.fromWire({
+        'segmentId': '1',
+        'cfi': 'epubcfi(/6/6)',
+        'text': '另一段',
+      });
+      expect(seg.segmentId, '1');
+      expect(seg.cfi, 'epubcfi(/6/6)');
+      expect(seg.text, '另一段');
+    });
+
+    test('fromWire 缺欄位或型別不符時以空字串防呆', () {
+      final seg = TtsSegmentCfi.fromWire({});
+      expect(seg.segmentId, '');
+      expect(seg.cfi, '');
+      expect(seg.text, '');
     });
   });
 }
