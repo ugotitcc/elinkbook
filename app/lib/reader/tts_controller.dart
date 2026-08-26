@@ -98,6 +98,8 @@ class TtsController extends ChangeNotifier {
   Future<void> _playCurrentSegment() async {
     final segment = _segments[_currentIndex];
     try {
+      _status = TtsPlaybackStatus.playing;
+      notifyListeners();
       final result = await provider.synthesize(
         segment.text,
         voice: TtsVoice.systemDefault,
@@ -105,8 +107,6 @@ class TtsController extends ChangeNotifier {
       if (_disposed) return;
       await player.loadFile(result.audioFilePath);
       if (_disposed) return;
-      _status = TtsPlaybackStatus.playing;
-      notifyListeners();
       await player.play();
     } catch (_) {
       if (_disposed) return;

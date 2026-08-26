@@ -29,7 +29,9 @@ class JustAudioTtsPlayer implements TtsAudioPlayer {
   JustAudioTtsPlayer({AudioPlayer? player}) : _player = player ?? AudioPlayer() {
     _stateSub = _player.playerStateStream.listen((state) {
       if (state.processingState == ProcessingState.completed) {
-        _completedController.add(null);
+        if (!_completedController.isClosed) {
+          _completedController.add(null);
+        }
       }
     });
   }

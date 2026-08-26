@@ -183,4 +183,25 @@ void main() {
     expect(loadSegmentsCallCount, 1);
     expect(provider.synthesizeCallCount, 1);
   });
+
+  test('play() 於 synthesize() 尚未完成時重複呼叫，只觸發一次 synthesize（防重入）',
+      () async {
+    final controller = buildController();
+    final synthCompleter = Completer<void>();
+    provider.nextSynthesizeCompleter = synthCompleter;
+
+    final firstPlay = controller.play();
+    // 讓 loadSegments 完成並進入 _playCurrentSegment
+    await Future<void>.delayed(Duration.zero);
+    expect(controller.status, TtsPlaybackStatus.playing);
+
+    final secondPlay = controller.play(); // 連點：synthesize() 尚未完成
+
+    synthCompleter.complete();
+    await firstPlay;
+    await secondPlay;
+
+    expect(provider.synthesizeCallCount, 1);
+    expect(player.callLog, ['loadFile', 'play']);
+  });
 }
