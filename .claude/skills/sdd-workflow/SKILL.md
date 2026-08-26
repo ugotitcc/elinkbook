@@ -23,13 +23,13 @@ docs/
 
 ## `docs/epics.md` —— 全域狀態看板
 
-每個 Epic 佔一列：代號/名稱、狀態、目前存放路徑、關聯的 PRD 章節、備註。
+每個 Epic 佔一列：順位、代號/名稱、狀態、備註。**備註欄位只寫精簡摘要**——已歸檔一律寫「已完成，已歸檔」；開發中寫「最後處理的 Issue 編號」（例如「Issue 3 已完成」）或「全數完成，待歸檔」；未開始（Backlog）沿用原本就很短的一句話說明。**嚴禁把完整開發歷程（Discovery 決策細節、逐 Issue 完成記錄、審查修訂摘要）寫進這個檔案的備註欄位**——那是 `epic.md` 的責任（見下）。這個看板曾經因為每個 Epic 的備註欄位不斷累加完整歷程文字，膨脹到十萬字級、變得完全無法閱讀，2026-08-26 已重構為精簡摘要表＋各 Epic 自己的 `epic.md`，往後新增/更新條目時務必維持這個分工，不要走回頭路。
 
-- ⚪ **未開始 (Backlog)**——已規劃但尚未啟動，尚無目錄
-- 🟡 **開發中 (Active)**——設計/規格/程式撰寫進行中，存放於 `docs/epics/<epic-name>/`
-- 🟢 **已歸檔 (Archived)**——已合併且穩定，已搬移至 `docs/archive/<YYYY-MM-DD>-<簡稱>/`
+- ⚪ **未開始 (Backlog)**——已規劃但尚未啟動，尚無目錄，備註直接寫在 `docs/epics.md` 本身（沒有目錄可以放 `epic.md`）
+- 🟡 **開發中 (Active)**——設計/規格/程式撰寫進行中，存放於 `docs/epics/<epic-name>/`，完整歷程記錄於 `docs/epics/<epic-name>/epic.md`
+- 🟢 **已歸檔 (Archived)**——已合併且穩定，已搬移至 `docs/archive/<YYYY-MM-DD>-<簡稱>/`，完整歷程記錄於 `docs/archive/<YYYY-MM-DD>-<簡稱>/epic.md`
 
-在啟動一個 Epic 的 Discovery 階段*之前*，須先在此登錄該 Epic（狀態設為 `Active`，填入路徑）。歸檔時將狀態/路徑更新為 `Archived`。這份檔案是唯一能查到「我要找的 Epic 在哪裡、目前狀態如何」的地方——目前的 Epic 清單與優先順序請見 `docs/epics.md` 本身。
+在啟動一個 Epic 的 Discovery 階段*之前*，須先在此登錄該 Epic（狀態設為 `Active`，填入路徑），並同時建立該 Epic 目錄下的 `epic.md`（背景、目標等 Discovery 產出的長篇說明寫在這裡，不要寫進 `docs/epics.md`）。歸檔時將狀態更新為 `Archived`、`epic.md` 隨整個目錄搬移至 `docs/archive/`，`docs/epics.md` 的備註同步收斂為「已完成，已歸檔」。這份檔案是唯一能查到「我要找的 Epic 在哪裡、目前狀態如何」的地方；要查某個 Epic 完整的來龍去脈，去讀它自己目錄下的 `epic.md`。
 
 ## 生命週期
 
