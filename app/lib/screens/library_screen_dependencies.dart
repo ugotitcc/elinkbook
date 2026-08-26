@@ -10,6 +10,7 @@ import '../reader/custom_fonts_repository.dart';
 import '../reader/highlights_repository.dart';
 import '../reader/layout_preset_repository.dart';
 import '../reader/notes_repository.dart';
+import '../reader/tts_provider.dart';
 import '../remote/opds_client.dart';
 import '../remote/remote_server_repository.dart';
 import '../remote/remote_thumbnail_cache.dart';
@@ -33,6 +34,7 @@ class LibraryReaderFeatureRepositories {
   final CustomFontsRepository? customFontsRepository;
   final LayoutPresetRepository? layoutPresetRepository;
   final BookReaderPrefsRepository? bookReaderPrefsRepository;
+  final TtsProvider? ttsProvider;
 
   const LibraryReaderFeatureRepositories({
     this.bookmarksRepository,
@@ -41,6 +43,7 @@ class LibraryReaderFeatureRepositories {
     this.customFontsRepository,
     this.layoutPresetRepository,
     this.bookReaderPrefsRepository,
+    this.ttsProvider,
   });
 }
 
