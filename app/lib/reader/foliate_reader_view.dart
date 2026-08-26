@@ -21,6 +21,7 @@ import 'percent_rect.dart';
 import 'reader_console_log.dart';
 import 'tap_zone_detector.dart';
 import 'toc_entry.dart';
+import 'tts_segment_cfi.dart';
 import 'writing_mode.dart';
 import 'zone_action.dart';
 
@@ -509,6 +510,15 @@ class FoliateReaderView extends StatefulWidget {
     return state._requestTableOfContents();
   }
 
+  static Future<List<TtsSegmentCfi>> loadTtsSegments(
+    GlobalKey<State<FoliateReaderView>> key,
+    int sectionIndex,
+  ) async {
+    final state = key.currentState;
+    if (state is! _FoliateReaderViewState) return const [];
+    return state._requestTtsSegments(sectionIndex);
+  }
+
   static void setDecorations(
     GlobalKey<State<FoliateReaderView>> key,
     List<EpubDecoration> decorations,
@@ -537,6 +547,7 @@ class FoliateReaderView extends StatefulWidget {
 class _FoliateReaderViewState extends State<FoliateReaderView> {
   InAppWebViewController? _controller;
   Completer<List<TocEntry>>? _pendingToc;
+  Completer<List<TtsSegmentCfi>>? _pendingTtsSegments;
 
   /// 每個 widget 實例獨立的快取子目錄路徑，供 `InternalStoragePathHandler` 使用。
   /// null 表示快取尚未完成或失敗。
@@ -621,6 +632,20 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
     return completer.future;
   }
 
+  Future<List<TtsSegmentCfi>> _requestTtsSegments(int sectionIndex) {
+    if (_controller == null) return Future.value(const []);
+    final completer = Completer<List<TtsSegmentCfi>>();
+    _pendingTtsSegments = completer;
+    _evaluate('window.buildTtsSegments($sectionIndex)');
+    return completer.future.timeout(
+      const Duration(seconds: 5),
+      onTimeout: () {
+        _pendingTtsSegments = null;
+        return const [];
+      },
+    );
+  }
+
   Future<void> _onWebViewCreated(InAppWebViewController controller) async {
     _controller = controller;
     controller.addJavaScriptHandler(
@@ -659,6 +684,15 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
         _pendingToc = null;
         final json = args.isNotEmpty ? args[0] as String : '[]';
         completer?.complete(parseTableOfContents(json));
+      },
+    );
+    controller.addJavaScriptHandler(
+      handlerName: 'onTtsSegmentsReady',
+      callback: (args) {
+        final completer = _pendingTtsSegments;
+        _pendingTtsSegments = null;
+        final json = args.length > 1 ? args[1] as String : '[]';
+        completer?.complete(parseTtsSegments(json));
       },
     );
     controller.addJavaScriptHandler(

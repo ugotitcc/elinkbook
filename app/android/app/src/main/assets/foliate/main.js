@@ -504,6 +504,98 @@ window.getTableOfContents = async function () {
   }
 }
 
+/**
+ * 建立指定章節（section）的「句子 → CFI」對照表（epic-34-tts-readalong
+ * Issue 2，spec.md「朗讀段擷取」）。獨立載入該 section 的文件
+ * （view.book.sections[index].createDocument()，同 buildTocEntry() 既有
+ * 用法，獨立於目前實際顯示中的頁面），不影響閱讀畫面。
+ *
+ * 兩階段實作（避免跨 TextNode 邊界的狀態機錯誤）：
+ * 第一階段用 TreeWalker 掃描全部符合條件的文字節點（過濾 <rt> 注音／
+ * <script>），串接成單一字串 fullText，同時記錄「全域字元索引 -> (node,
+ * 節點內偏移)」對照表 offsetMap；第二階段依標點切句，每句用 offsetMap
+ * 查出起訖各自所在的 (node, offset)，建立可能跨多個 TextNode/標籤的
+ * Range（例如「這是<em>重要</em>觀念。」），呼叫既有 view.getCFI(index,
+ * range) 算 CFI，不重新實作 CFI 轉換邏輯。
+ *
+ * 已知限制：句子切分僅用常見中英文句末標點的簡單規則（不含精細避頭尾/
+ * 引號內句界判斷），供 Phase 1 MVP 使用；不使用 Intl.Segmenter，避免對
+ * 較舊 Android System WebView 的相容性風險（見
+ * app/tool/check_foliate_es_compat.js 掃描範圍涵蓋本檔案）。
+ *
+ * 供 Dart 端 FoliateReaderView.loadTtsSegments()（透過
+ * InAppWebViewController.evaluateJavascript）呼叫；非同步計算完成後主動
+ * 透過 window.flutter_inappwebview.callHandler('onTtsSegmentsReady', ...)
+ * 回呼 Dart 端，理由同 window.getTableOfContents()（evaluateJavascript
+ * 不會等待內部 Promise resolve）。
+ */
+window.buildTtsSegments = async function (sectionIndex) {
+  try {
+    const doc = await view.book.sections[sectionIndex].createDocument()
+    const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT, {
+      acceptNode: (node) => {
+        // 不分大小寫比對（審查 review-plan-issue-2.md Minor #1）：EPUB
+        // 章節是 XHTML，走 XML 解析器而非 HTML 解析器，tagName 不會被
+        // 自動正規化為大寫，不能保證所有書都乖乖用小寫標籤。
+        const tag = node.parentElement
+          ? node.parentElement.tagName.toUpperCase()
+          : ''
+        return (tag === 'RT' || tag === 'SCRIPT')
+          ? NodeFilter.FILTER_REJECT
+          : NodeFilter.FILTER_ACCEPT
+      },
+    })
+
+    let fullText = ''
+    const offsetMap = []
+    let node = walker.nextNode()
+    while (node) {
+      const text = node.textContent || ''
+      for (let i = 0; i < text.length; i++) {
+        offsetMap.push({ node, offset: i })
+      }
+      fullText += text
+      node = walker.nextNode()
+    }
+
+    const terminators = /[。！？；.!?;]/
+    const segments = []
+    let start = 0
+    let segmentIndex = 0
+    for (let i = 0; i < fullText.length; i++) {
+      const isLast = i === fullText.length - 1
+      if (terminators.test(fullText[i]) || isLast) {
+        // Range 起點跳過開頭空白字元（審查 review-plan-issue-2.md
+        // Minor #2）：段落縮排空格若被含進 Range，Issue 3 高亮跟隨時
+        // 反白區塊會多一截空白；Issue 2 本身不影響朗讀，但現在順手對齊
+        // 比 Issue 3 再回頭補便宜。
+        let rangeStart = start
+        while (rangeStart < i && /\s/.test(fullText[rangeStart])) rangeStart++
+        const trimmed = fullText.slice(start, i + 1).trim()
+        if (trimmed.length > 0) {
+          const startMap = offsetMap[rangeStart]
+          const endMap = offsetMap[i]
+          const range = doc.createRange()
+          range.setStart(startMap.node, startMap.offset)
+          range.setEnd(endMap.node, endMap.offset + 1)
+          const cfi = view.getCFI(sectionIndex, range)
+          segments.push({ segmentId: String(segmentIndex), cfi, text: trimmed })
+          segmentIndex++
+        }
+        start = i + 1
+      }
+    }
+
+    window.flutter_inappwebview.callHandler(
+      'onTtsSegmentsReady', sectionIndex, JSON.stringify(segments),
+    )
+  } catch (e) {
+    window.flutter_inappwebview.callHandler(
+      'onTtsSegmentsReady', sectionIndex, JSON.stringify([]),
+    )
+  }
+}
+
 // ------------------------------------------------------------------
 // 觸控意圖狀態機（TouchIntentClassifier，epic-31-touch-intent-unification
 // Issue 2）：收斂下方 view.addEventListener('load', ...) 內原本各自獨立
