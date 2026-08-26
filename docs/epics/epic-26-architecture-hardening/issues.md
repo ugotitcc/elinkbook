@@ -4,7 +4,7 @@
 
 **2026-08-21 併入第二份架構檢視報告的候選深化機會：** `docs/research/architecture-review-library-remote-screens.md`（2026-08-19，`/improve-codebase-architecture` 流程產出，範圍為 `LibraryScreen`／`RemoteCatalogScreen` 熱點區域，6 個候選）。原報告候選 1（抽出 `RemoteBookDownloader` 深模組）已於報告發布後由 `epic-30` Issue 6 獨立完成並合併（`downloadToTempFile()`／`promoteToPermanent()` 已被兩個畫面共用，非本次新增範圍）；其餘候選經現況複核（`epic-29`／`epic-30` 兩個仍在開發中的 Epic 持續為 `LibraryScreen` 增加參數與穿透依賴，數字已比報告當時惡化）後依建議處理順序拆為 **Issue 6**（候選 3，`ComputeRemoteFingerprint` 穿透）、**Issue 7**（候選 5，`LibraryScreen` 建構子參數膨脹）、**Issue 8**（候選 2，`LibraryScreen` God-Widget 拆分）、**Issue 9**（候選 4，`Book.copyWith()` shallow interface），皆標記 `ready-for-agent`。候選 6（5 個批次操作方法骨架重複，Speculative）暫不拆案，預期在 Issue 8 拆分時被自然吸收進 `LibraryBatchActions` module。
 
-**2026-08-21 併入第三份架構檢視報告的候選深化機會：** `docs/research/architecture_review_flowable_pagination_precision.md`（2026-08-21，`/improve-codebase-architecture` 流程產出，範圍為流式格式頁次計算精準化，3 個候選）。候選 1（`EpubPositionInfo` 的 `pageIndex`／`location` 語意混用，強度 Strong）已用 `/grilling` 敲定細節並拆為 **Issue 10**，標記 `ready-for-agent`。候選 2（用已渲染 section 視覺頁密度校正 location 估算，強度 Strong 但牴觸 ADR 0011 既有取捨）與候選 3（`EpubPositionInfo` 三層座標重新分層，依附候選 1）尚未拆案，待 Issue 10 完成後視優先順序評估。
+**2026-08-21 併入第三份架構檢視報告的候選深化機會：** `docs/research/architecture-review-flowable-pagination-precision.md`（2026-08-21，`/improve-codebase-architecture` 流程產出，範圍為流式格式頁次計算精準化，3 個候選）。候選 1（`EpubPositionInfo` 的 `pageIndex`／`location` 語意混用，強度 Strong）已用 `/grilling` 敲定細節並拆為 **Issue 10**，標記 `ready-for-agent`。候選 2（用已渲染 section 視覺頁密度校正 location 估算，強度 Strong 但牴觸 ADR 0011 既有取捨）與候選 3（`EpubPositionInfo` 三層座標重新分層，依附候選 1）尚未拆案，待 Issue 10 完成後視優先順序評估。
 
 ---
 
@@ -288,7 +288,7 @@ Future<void> pumpUntilPdfReady(
 
 **依賴：** 無，範圍侷限 `epub_position_info.dart`／`foliate_reader_view.dart`／`main.js`／`reader_screen.dart` 頁尾相關程式碼，可獨立於 Issue 1-9 任何時間點處理。
 
-**來源：** `docs/research/architecture_review_flowable_pagination_precision.md`（2026-08-21，`/improve-codebase-architecture` 流程產出，聚焦「流式頁次計算精準化」，3 個候選）候選 1（強度 Strong）。與候選 2（用已渲染 section 的視覺頁密度校正 location 估算，牴觸 ADR 0011 既有取捨，需另外決策是否重開討論）、候選 3（`EpubPositionInfo` 三層座標重新分層，依附本 Issue，不必獨立立案）為同一份報告的另外兩個候選，尚未拆案。
+**來源：** `docs/research/architecture-review-flowable-pagination-precision.md`（2026-08-21，`/improve-codebase-architecture` 流程產出，聚焦「流式頁次計算精準化」，3 個候選）候選 1（強度 Strong）。與候選 2（用已渲染 section 的視覺頁密度校正 location 估算，牴觸 ADR 0011 既有取捨，需另外決策是否重開討論）、候選 3（`EpubPositionInfo` 三層座標重新分層，依附本 Issue，不必獨立立案）為同一份報告的另外兩個候選，尚未拆案。
 
 **背景／症狀：** `app/android/app/src/main/assets/foliate/main.js:560-575` 的 `relocate` 事件處理常式裡，「index」這個詞先後代表兩個完全不同的東西：`section?.current`（章節序號）與 `location?.current`（位元組估計刻度），退回邏輯 `location?.current ?? pageIndex` 悄悄跨單位轉換；Dart 端 `EpubPositionInfo.pageIndex`／`totalPages` 的欄位名稱讓呼叫者直覺以為拿到的是精確視覺頁碼，實際上流式格式收到的是估計值。規劃階段進一步查證發現：FXL／CBZ 分支（`fixed-layout.js:1586-1593` 的 `FixedLayout.page`／`.pages`，`#spreads.length`）其實是全書真實視覺頁碼，與流式格式的估計值精度完全不同，但兩者目前共用同一組欄位輸出——若只做「重新命名」，會把問題從流式格式一側搬到 FXL 一側，而非真正解決。
 
@@ -311,7 +311,7 @@ Future<void> pumpUntilPdfReady(
 
 **依賴：** 依附 Issue 10（需要 `locationIndex`／`locationTotal` 欄位已存在）；Issue 10 已完成並合併回 `main`，無阻塞。
 
-**來源：** `docs/research/architecture_review_flowable_pagination_precision.md`（2026-08-21，`/improve-codebase-architecture` 流程產出）候選 2（強度 Strong）。與候選 3（`EpubPositionInfo` 三層座標重新分層，依附本 Issue，在下方「校正可信度旗標」決策下已確認不需要獨立工作）為同一份報告的另外一個候選。
+**來源：** `docs/research/architecture-review-flowable-pagination-precision.md`（2026-08-21，`/improve-codebase-architecture` 流程產出）候選 2（強度 Strong）。與候選 3（`EpubPositionInfo` 三層座標重新分層，依附本 Issue，在下方「校正可信度旗標」決策下已確認不需要獨立工作）為同一份報告的另外一個候選。
 
 **背景／症狀：** `SectionProgress.getProgress()`（`app/android/app/src/main/assets/foliate/progress.js`）用全書統一常數「1500 bytes = 1 個 location」換算流式格式的 `locationIndex`／`locationTotal`，完全忽略使用者當下實際的字體大小／行距／段落間距／邊距／單雙欄設定；`paginator.js` 的 `View.expand()` 對每一個已渲染 section 都精確算得出 `contentPages`（`Math.ceil(contentSize / columnSize)`），但這個數字從未回饋給 `SectionProgress`，兩套計算永不交會。ADR 0011 曾明確接受「總頁數估算值不影響正確性」這項取捨；`/grill-with-docs` 會談（已查證 `contentPages` 隨排版設定變動、預載範圍上限 8 個 section、捲動模式完全不計算這筆資料等限制後）決定投入校正，正式重新開放該取捨，詳細理由見 [ADR 0024](../../adr/0024-flowable-pagination-density-calibration-reopen-adr-0011.md)。
 

@@ -8,7 +8,7 @@
 
 **Tech Stack:** 純 JavaScript（`readest/foliate-js` 釘定 vendor 檔案，見 ADR 0011）。`progress.js` 零 DOM 依賴，可直接用 Node.js 內建模組（`node:assert/strict`）執行驗證腳本，不需要 npm install 或任何測試框架（比照 `app/tool/check_foliate_es_compat.js` 既有慣例）。無新增套件依賴。
 
-**Spec:** `docs/epics/epic-26-architecture-hardening/issues.md` Issue 11；`docs/adr/0024-flowable-pagination-density-calibration-reopen-adr-0011.md`；`docs/research/architecture_review_flowable_pagination_precision.md` 候選 2；`/grill-with-docs` 會談記錄（本文件「規劃階段查證」與 Global Constraints 逐項落地）。
+**Spec:** `docs/epics/epic-26-architecture-hardening/issues.md` Issue 11；`docs/adr/0024-flowable-pagination-density-calibration-reopen-adr-0011.md`；`docs/research/architecture-review-flowable-pagination-precision.md` 候選 2；`/grill-with-docs` 會談記錄（本文件「規劃階段查證」與 Global Constraints 逐項落地）。
 
 ## 規劃階段查證：串接點、公開介面、零回歸驗算（務必先讀）
 

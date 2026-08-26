@@ -8,7 +8,7 @@
 
 ADR 0011 決策項「頁碼估算改用 foliate-js `SectionProgress.getProgress()`」明確接受一項取捨：「換算出的總頁數估算值與使用者原本看到的數字可能不同，但兩者本來就都只是估算值，不影響正確性」——固定用「1500 bytes（XHTML 原始檔位元組數）＝ 1 個 location」的全書統一常數換算頁碼，完全不管使用者當下實際的字體大小／行距／段落間距／邊距／單雙欄設定。
 
-`docs/research/architecture_review_flowable_pagination_precision.md`（候選 2）指出：`paginator.js` 的 `View.expand()` 對每一個已渲染 section 都精確算得出 `contentPages`（`Math.ceil(contentSize / columnSize)`），但這個數字從未回饋給 `SectionProgress`，兩套計算永不交會。`/grill-with-docs` 會談（Epic 26 Issue 11 規劃階段）逐一查證：`contentPages` 完全隨使用者排版設定變動、預載範圍有上限（同時最多渲染 8 個 section）、目前的捲動模式完全不計算這筆資料。即便有這些限制，只要能抓到使用者當下正在看的 section 的真實密度、套用回全書估計，精準度也會比「完全忽略使用者排版設定」的現狀好上不少，經權衡後決定投入，正式重新開放 ADR 0011 這項取捨。
+`docs/research/architecture-review-flowable-pagination-precision.md`（候選 2）指出：`paginator.js` 的 `View.expand()` 對每一個已渲染 section 都精確算得出 `contentPages`（`Math.ceil(contentSize / columnSize)`），但這個數字從未回饋給 `SectionProgress`，兩套計算永不交會。`/grill-with-docs` 會談（Epic 26 Issue 11 規劃階段）逐一查證：`contentPages` 完全隨使用者排版設定變動、預載範圍有上限（同時最多渲染 8 個 section）、目前的捲動模式完全不計算這筆資料。即便有這些限制，只要能抓到使用者當下正在看的 section 的真實密度、套用回全書估計，精準度也會比「完全忽略使用者排版設定」的現狀好上不少，經權衡後決定投入，正式重新開放 ADR 0011 這項取捨。
 
 ## 決策
 
