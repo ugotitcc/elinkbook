@@ -204,4 +204,68 @@ void main() {
     expect(provider.synthesizeCallCount, 1);
     expect(player.callLog, ['loadFile', 'play']);
   });
+
+  test('play() 於 synthesize() 進行中呼叫 pause()，完成後維持 paused 不自動播放，事後呼叫 play() 正常播放（審查修復 Important #1）',
+      () async {
+    final controller = buildController();
+    final synthCompleter = Completer<void>();
+    provider.nextSynthesizeCompleter = synthCompleter;
+
+    final playFuture = controller.play();
+    await Future<void>.delayed(Duration.zero);
+    expect(controller.status, TtsPlaybackStatus.playing);
+
+    // 在合成進行中按下暫停
+    controller.pause();
+    expect(controller.status, TtsPlaybackStatus.paused);
+
+    // 合成完成
+    synthCompleter.complete();
+    await playFuture;
+
+    // 驗證：音訊檔案已載入，但 player.play() 絕不會被呼叫，狀態仍維持 paused
+    expect(controller.status, TtsPlaybackStatus.paused);
+    expect(player.callLog, ['pause', 'loadFile']);
+
+    // 使用者事後主動按下播放
+    await controller.play();
+    expect(controller.status, TtsPlaybackStatus.playing);
+    expect(player.callLog, ['pause', 'loadFile', 'play']);
+
+    // 播放完畢後能正常接續下一段
+    player.simulateCompleted();
+    await Future<void>.delayed(Duration.zero);
+    expect(controller.currentIndex, 1);
+    expect(controller.status, TtsPlaybackStatus.playing);
+    expect(provider.synthesizeCallCount, 2);
+  });
+
+  test('play() 於 loadFile() 進行中呼叫 pause()，完成後維持 paused 不自動播放，事後呼叫 play() 正常播放（審查修復 Important #1）',
+      () async {
+    final controller = buildController();
+    final loadFileCompleter = Completer<void>();
+    player.nextLoadFileCompleter = loadFileCompleter;
+
+    final playFuture = controller.play();
+    await Future<void>.delayed(Duration.zero);
+    expect(controller.status, TtsPlaybackStatus.playing);
+
+    // 在 loadFile 進行中按下暫停
+    controller.pause();
+    expect(controller.status, TtsPlaybackStatus.paused);
+
+    // 檔案載入完成
+    loadFileCompleter.complete();
+    await playFuture;
+
+    // 驗證：player.play() 不會被呼叫，狀態維持 paused
+    expect(controller.status, TtsPlaybackStatus.paused);
+    expect(player.callLog, ['loadFile', 'pause']);
+
+    // 使用者事後主動按下播放
+    await controller.play();
+    expect(controller.status, TtsPlaybackStatus.playing);
+    expect(player.callLog, ['loadFile', 'pause', 'play']);
+  });
 }
+

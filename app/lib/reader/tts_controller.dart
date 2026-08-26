@@ -60,7 +60,15 @@ class TtsController extends ChangeNotifier {
     if (_status == TtsPlaybackStatus.paused) {
       _status = TtsPlaybackStatus.playing;
       notifyListeners();
-      await player.play();
+      try {
+        await player.play();
+      } catch (_) {
+        if (_disposed) return;
+        _status = TtsPlaybackStatus.idle;
+        _currentIndex = -1;
+        _segments = const [];
+        notifyListeners();
+      }
       return;
     }
     // idle：第一次播放，先載入目前章節的朗讀段。
@@ -82,7 +90,9 @@ class TtsController extends ChangeNotifier {
     if (_status != TtsPlaybackStatus.playing) return;
     _status = TtsPlaybackStatus.paused;
     notifyListeners();
-    player.pause();
+    try {
+      player.pause();
+    } catch (_) {}
   }
 
   /// 合成並播放 [_currentIndex] 對應的朗讀段。`provider.synthesize()`／
@@ -106,7 +116,10 @@ class TtsController extends ChangeNotifier {
       );
       if (_disposed) return;
       await player.loadFile(result.audioFilePath);
-      if (_disposed) return;
+      // 重要修復（review-issue-2-code.md Important #1）：若在 synthesize/loadFile
+      // 非同步期間使用者按下了暫停鍵（_status 變更為 paused），檔案載入完成後
+      // 不得再呼叫 player.play()，應維持在 paused 狀態，等待使用者下次主動按下播放鍵。
+      if (_disposed || _status != TtsPlaybackStatus.playing) return;
       await player.play();
     } catch (_) {
       if (_disposed) return;

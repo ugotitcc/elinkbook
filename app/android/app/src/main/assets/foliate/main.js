@@ -596,7 +596,6 @@ window.buildTtsSegments = async function (sectionIndex) {
   }
 }
 
-
 // ------------------------------------------------------------------
 // 觸控意圖狀態機（TouchIntentClassifier，epic-31-touch-intent-unification
 // Issue 2）：收斂下方 view.addEventListener('load', ...) 內原本各自獨立

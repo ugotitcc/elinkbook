@@ -11,6 +11,10 @@ class FakeTtsAudioPlayer implements TtsAudioPlayer {
       StreamController<void>.broadcast();
   bool disposed = false;
 
+  /// 測試設定後，下一次 [loadFile] 呼叫會等待此 [Completer] 完成，
+  /// 供驗證檔案載入非同步期間的狀態機與暫停中斷邏輯。
+  Completer<void>? nextLoadFileCompleter;
+
   @override
   Stream<void> get completedStream => _completedController.stream;
 
@@ -18,6 +22,11 @@ class FakeTtsAudioPlayer implements TtsAudioPlayer {
   Future<void> loadFile(String path) async {
     loadedFiles.add(path);
     callLog.add('loadFile');
+    final completer = nextLoadFileCompleter;
+    if (completer != null) {
+      nextLoadFileCompleter = null;
+      await completer.future;
+    }
   }
 
   @override

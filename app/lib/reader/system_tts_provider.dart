@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter_tts/flutter_tts.dart';
@@ -9,9 +9,8 @@ import 'tts_provider.dart';
 
 /// 系統原生語音朗讀（Android `TextToSpeech`，透過 `flutter_tts` 套件）。
 /// [synthesize] 呼叫 `synthesizeToFile()`（檔案合成，非 `speak()` 即時
-/// 朗讀——見 design.md 決策 9），固定寫入單一暫存檔路徑並每次覆寫（見
-/// Global Constraints「暫存音訊檔生命週期」），呼叫端（[TtsController]）
-/// 負責在播放完成/切換書籍/dispose 時視需要清除該檔案。
+/// 朗讀——見 design.md 決策 9），固定寫入單一暫存檔路徑（`current_segment.wav`）
+/// 並每次覆寫（見 Global Constraints「暫存音訊檔生命週期」），不逐段累積孤兒檔案。
 class SystemTtsProvider implements TtsProvider {
   final FlutterTts _flutterTts;
 
