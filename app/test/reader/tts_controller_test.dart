@@ -89,6 +89,17 @@ void main() {
     expect(provider.synthesizeCallCount, 1);
   });
 
+  test('pause() 呼叫 player.pause() 非同步失敗時不產生未捕捉例外（複審殘留技術細節修正）',
+      () async {
+    final controller = buildController();
+    await controller.play();
+    player.pauseShouldThrow = true;
+    controller.pause();
+
+    expect(controller.status, TtsPlaybackStatus.paused);
+    await Future<void>.delayed(Duration.zero);
+  });
+
   test('paused 狀態下再次呼叫 play() 只呼叫 player.play()，不重新合成', () async {
     final controller = buildController();
     await controller.play();

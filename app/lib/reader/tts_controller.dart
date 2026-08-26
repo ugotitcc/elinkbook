@@ -90,8 +90,11 @@ class TtsController extends ChangeNotifier {
     if (_status != TtsPlaybackStatus.playing) return;
     _status = TtsPlaybackStatus.paused;
     notifyListeners();
+    // player.pause() 回傳的 Future 若稍後才 reject（常見於平台 channel API），
+    // 同步 try/catch 攔不到——一律改用 catchError 承接，避免變成未捕捉的
+    // 非同步例外（複審 review-issue-2-code.md 殘留技術細節）。
     try {
-      player.pause();
+      player.pause().catchError((_) {});
     } catch (_) {}
   }
 

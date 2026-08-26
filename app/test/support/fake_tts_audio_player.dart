@@ -15,6 +15,10 @@ class FakeTtsAudioPlayer implements TtsAudioPlayer {
   /// 供驗證檔案載入非同步期間的狀態機與暫停中斷邏輯。
   Completer<void>? nextLoadFileCompleter;
 
+  /// 設為 true 時，下一次 [pause] 呼叫會（以 `async` 函式的方式，非同步）
+  /// 丟出例外，模擬 `just_audio` 以「稍後才 reject 的 Future」回報錯誤的情況。
+  bool pauseShouldThrow = false;
+
   @override
   Stream<void> get completedStream => _completedController.stream;
 
@@ -37,6 +41,10 @@ class FakeTtsAudioPlayer implements TtsAudioPlayer {
   @override
   Future<void> pause() async {
     callLog.add('pause');
+    if (pauseShouldThrow) {
+      pauseShouldThrow = false;
+      throw Exception('fake pause failure');
+    }
   }
 
   @override
