@@ -236,7 +236,7 @@ git commit -m "feat(epic-34): main.js 朗讀高亮橋接——key 空間隔離�
 - Consumes：既有 `TtsSegmentCfi`（`tts_segment_cfi.dart`）
 - Produces：`TtsController` 建構子新增可選具名參數 `void Function(TtsSegmentCfi? segment)? onHighlightSegment`——供 Task 3 的 `ReaderScreen._ttsControllerOrNull` 使用
 
-- [ ] **Step 1：寫失敗測試**
+- [x] **Step 1：寫失敗測試**
 
 在 `app/test/reader/tts_controller_test.dart` 檔案結尾（最後一個 `test()` 之後、`}` 之前）新增：
 
@@ -327,7 +327,7 @@ git commit -m "feat(epic-34): main.js 朗讀高亮橋接——key 空間隔離�
   });
 ```
 
-- [ ] **Step 2：跑測試確認失敗**
+- [x] **Step 2：跑測試確認失敗**
 
 ```
 flutter test test/reader/tts_controller_test.dart
@@ -335,7 +335,7 @@ flutter test test/reader/tts_controller_test.dart
 
 Expected：FAIL（`TtsController` 建構子尚未接受 `onHighlightSegment` 具名參數，編譯錯誤）。
 
-- [ ] **Step 3：實作 `onHighlightSegment`**
+- [x] **Step 3：實作 `onHighlightSegment`**
 
 在 `app/lib/reader/tts_controller.dart` 找到以下既有欄位/建構子（第 26-37 行）：
 
@@ -515,7 +515,7 @@ class TtsController extends ChangeNotifier {
   }
 ```
 
-- [ ] **Step 4：跑測試確認通過**
+- [x] **Step 4：跑測試確認通過**
 
 ```
 flutter test test/reader/tts_controller_test.dart
@@ -529,7 +529,7 @@ flutter analyze
 
 Expected：`No issues found!`
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```
 git add app/lib/reader/tts_controller.dart app/test/reader/tts_controller_test.dart
