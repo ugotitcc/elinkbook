@@ -31,7 +31,7 @@
 - Consumes：`epubcfi.js` 既有匯出的 `compare(a, b)`（CFI 排序比較，`a`／`b` 可為 CFI 字串，回傳 `-1`/`0`/`1`，見 `epubcfi.js` 第 163-186 行）；既有 `_evaluate()`／`Completer`／`addJavaScriptHandler` 橋接慣例（`_requestTtsSegments` 已示範用法）
 - Produces：`window.lookupTtsSegmentIndex(visibleCfi, segmentCfis)` 全域函式；`static Future<int> FoliateReaderView.lookupSegmentByCfi(GlobalKey<State<FoliateReaderView>> key, String visibleCfi, List<String> segmentCfis)`——供 Task 2／Task 3 使用
 
-- [ ] **Step 1：`main.js` 匯入 `compare()` 並新增 `window.lookupTtsSegmentIndex`**
+- [x] **Step 1：`main.js` 匯入 `compare()` 並新增 `window.lookupTtsSegmentIndex`**
 
 在 `app/android/app/src/main/assets/foliate/main.js` 檔案最頂部，找到既有的 import 區塊：
 
@@ -89,7 +89,7 @@ window.lookupTtsSegmentIndex = function (visibleCfi, segmentCfis) {
 }
 ```
 
-- [ ] **Step 2：`FoliateReaderView` 新增靜態 helper 與內部橋接管線**
+- [x] **Step 2：`FoliateReaderView` 新增靜態 helper 與內部橋接管線**
 
 在 `app/lib/reader/foliate_reader_view.dart` 找到以下既有的 `loadTtsSegments` 靜態方法：
 
@@ -201,7 +201,7 @@ window.lookupTtsSegmentIndex = function (visibleCfi, segmentCfis) {
     );
 ```
 
-- [ ] **Step 3：main.js regression guard 測試**
+- [x] **Step 3：main.js regression guard 測試**
 
 在 `app/test/reader/foliate_reader_view_test.dart` 找到 Issue 3 新增的 `group('main.js 朗讀高亮 regression guard（epic-34-tts-readalong Issue 3，ADR 0026）', ...)` 結尾的 `});`，在它之後、`group('mounted guard / dispose race'...)` 之前，新增：
 
@@ -252,7 +252,7 @@ window.lookupTtsSegmentIndex = function (visibleCfi, segmentCfis) {
 
 ```
 
-- [ ] **Step 4：跑測試**
+- [x] **Step 4：跑測試**
 
 ```
 flutter test test/reader/foliate_reader_view_test.dart
@@ -268,7 +268,7 @@ Expected：`No issues found!`
 
 **注意（測試涵蓋範圍的誠實邊界）**：上面兩則測試只驗證 `main.js` 原始碼字串包含正確的邏輯片段（比照 Issue 3 Task 1 既有慣例），不驗證 `compareCfi()`／`findIndex()` 在真實瀏覽器環境下對真實 CFI 字串的排序結果是否正確——`flutter_test` 環境無 JS 執行能力，`window.lookupTtsSegmentIndex()` 的實際反向查找正確性須真機手動驗證（見本計畫「測試策略總結」）。
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```
 git add app/android/app/src/main/assets/foliate/main.js app/lib/reader/foliate_reader_view.dart app/test/reader/foliate_reader_view_test.dart
@@ -287,7 +287,7 @@ git commit -m "feat(epic-34): main.js/FoliateReaderView 新增朗讀段反向查
 - Consumes：既有 `TtsSegmentCfi`（`tts_segment_cfi.dart`）
 - Produces：`TtsController` 建構子新增可選具名參數 `Future<int> Function(List<TtsSegmentCfi> segments)? lookupStartIndex`；新增公開方法 `void handleExternalPositionChange()`——皆供 Task 3 的 `ReaderScreen` 使用
 
-- [ ] **Step 1：寫失敗測試**
+- [x] **Step 1：寫失敗測試**
 
 在 `app/test/reader/tts_controller_test.dart` 檔案結尾（最後一個 `test()` 之後、`}` 之前）新增：
 
@@ -454,7 +454,7 @@ git commit -m "feat(epic-34): main.js/FoliateReaderView 新增朗讀段反向查
   });
 ```
 
-- [ ] **Step 2：跑測試確認失敗**
+- [x] **Step 2：跑測試確認失敗**
 
 ```
 flutter test test/reader/tts_controller_test.dart
@@ -462,7 +462,7 @@ flutter test test/reader/tts_controller_test.dart
 
 Expected：FAIL（`TtsController` 建構子尚未接受 `lookupStartIndex` 具名參數、`handleExternalPositionChange` 方法不存在，編譯錯誤）。
 
-- [ ] **Step 3：實作**
+- [x] **Step 3：實作**
 
 在 `app/lib/reader/tts_controller.dart` 找到以下既有欄位/建構子：
 
@@ -617,7 +617,7 @@ Expected：FAIL（`TtsController` 建構子尚未接受 `lookupStartIndex` 具�
   }
 ```
 
-- [ ] **Step 4：跑測試確認通過**
+- [x] **Step 4：跑測試確認通過**
 
 ```
 flutter test test/reader/tts_controller_test.dart
@@ -631,7 +631,7 @@ flutter analyze
 
 Expected：`No issues found!`
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```
 git add app/lib/reader/tts_controller.dart app/test/reader/tts_controller_test.dart
@@ -650,7 +650,7 @@ git commit -m "feat(epic-34): TtsController 新增反向查找起始段落與手
 - Consumes：Task 1 的 `FoliateReaderView.lookupSegmentByCfi`；Task 2 的 `TtsController.lookupStartIndex`／`handleExternalPositionChange()`；既有 `extractCfi()`（`foliate_bridge_codec.dart`）、既有 `_epubPositionInfo`／`onLocatorChanged`
 - Produces：`ReaderScreen` 內部接線（無新增公開 API）
 
-- [ ] **Step 1：`_ttsControllerOrNull` 新增 `lookupStartIndex` 注入**
+- [x] **Step 1：`_ttsControllerOrNull` 新增 `lookupStartIndex` 注入**
 
 在 `app/lib/screens/reader_screen.dart` 找到以下既有的 `_ttsControllerOrNull` getter（Issue 3 已新增 `onHighlightSegment`）：
 
@@ -743,7 +743,7 @@ git commit -m "feat(epic-34): TtsController 新增反向查找起始段落與手
   }
 ```
 
-- [ ] **Step 2：`onLocatorChanged` 觸發手動導覽重置**
+- [x] **Step 2：`onLocatorChanged` 觸發手動導覽重置**
 
 在 `app/lib/screens/reader_screen.dart` 找到以下既有的 `onLocatorChanged` 回呼（`_buildNativeView` 內 `FoliateReaderView(...)` 建構參數之一）：
 
@@ -771,7 +771,7 @@ git commit -m "feat(epic-34): TtsController 新增反向查找起始段落與手
           },
 ```
 
-- [ ] **Step 3：寫 widget test**
+- [x] **Step 3：寫 widget test**
 
 在 `app/test/screens/reader_screen_test.dart` 找到 Issue 3 新增的 `group('同步高亮跟隨（epic-34-tts-readalong Issue 3）', ...)` 結尾的 `});`，在它之後新增一個新的 group：
 
@@ -849,7 +849,7 @@ git commit -m "feat(epic-34): TtsController 新增反向查找起始段落與手
 
 若 `EpubPositionInfo` 的建構參數與上方寫法不符（例如欄位名稱、是否為必要參數），比照本檔案其他既有直接建構 `EpubPositionInfo(...)` 的測試案例（搜尋 `EpubPositionInfo(`）調整，不要憑空假設欄位。
 
-- [ ] **Step 4：跑測試確認全數通過、零回歸**
+- [x] **Step 4：跑測試確認全數通過、零回歸**
 
 ```
 flutter test test/screens/reader_screen_test.dart
@@ -869,7 +869,7 @@ flutter analyze
 
 Expected：`No issues found!`
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```
 git add app/lib/screens/reader_screen.dart app/test/screens/reader_screen_test.dart
@@ -889,6 +889,8 @@ git commit -m "feat(epic-34): ReaderScreen 接線——反向查找起始段落�
   3. 手動導覽後按下播放鍵，確認朗讀從畫面新位置對應的段落開始，不回跳到手動導覽前的舊音訊位置。
   4. 朗讀中手動翻到很遠的頁面又翻回原頁面（不按播放），確認沒有殘留過期高亮（Issue 3 遺留的邊界情況，本 Issue 的 `handleExternalPositionChange()` 已一併涵蓋）。
   5. 使用者純粹按下暫停鍵（未做任何手動導覽）後再按播放，確認行為維持 Issue 2 既有的「簡單恢復，不重新查找」——`handleExternalPositionChange()` 只在偵測到 `onLocatorChanged` 事件時觸發，純粹按暫停鍵不會經過這個路徑。
+  6.（程式審查 `review-issue-4-code.md` Important #1 追加，已有自動化測試涵蓋，這裡是額外的真機體感確認）連續快速點兩下播放鍵，確認不會聽到同一句話被念兩次、也不會卡在奇怪狀態。
+  7.（程式審查 `review-issue-4-code.md` Important #2 追加，已有自動化測試涵蓋）按下播放鍵後、朗讀真正開始出聲之前的極短空檔立刻手動翻頁，確認朗讀不會念出翻頁前那個舊位置的內容。
 
 ---
 
