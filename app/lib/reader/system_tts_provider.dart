@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -36,9 +37,9 @@ class SystemTtsProvider implements TtsProvider {
     try {
       engines = await _flutterTts.getEngines ?? const [];
       defaultEngine = await _flutterTts.getDefaultEngine;
-      print('[TTS Diagnostic] Available Engines: $engines, Default: $defaultEngine');
+      debugPrint('[TTS Diagnostic] Available Engines: $engines, Default: $defaultEngine');
     } catch (e) {
-      print('[TTS Diagnostic] Failed to query engines: $e');
+      debugPrint('[TTS Diagnostic] Failed to query engines: $e');
     }
 
     if (engines.isEmpty) {
@@ -55,7 +56,7 @@ class SystemTtsProvider implements TtsProvider {
         await _flutterTts.setLanguage("zh-CN");
       }
     } catch (e) {
-      print('[TTS Diagnostic] Failed to set language: $e');
+      debugPrint('[TTS Diagnostic] Failed to set language: $e');
     }
 
     final filePath = await _resolveOutputPath();
@@ -92,7 +93,7 @@ class SystemTtsProvider implements TtsProvider {
     final file = File(filePath);
     if (!await file.exists() || await file.length() == 0) {
       throw TtsSynthesisException(
-        '語音合成檔案無效或大小為 0。'
+        '語音合成檔案無效或大小為 0。可用的 TTS 引擎列表：$engines。'
         '請確認系統中已安裝並啟用可用的「文字轉語音 (TTS)」引擎。',
       );
     }

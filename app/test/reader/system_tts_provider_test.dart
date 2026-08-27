@@ -118,4 +118,42 @@ void main() {
       throwsA(isA<TtsSynthesisException>()),
     );
   });
+
+  test(
+      'synthesize() 在合成檔案不存在或大小為 0 時拋出 TtsSynthesisException'
+      '（真機無聲問題防禦）', () async {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async {
+      if (call.method == 'getEngines') {
+        return ['com.google.android.tts'];
+      }
+      if (call.method == 'getDefaultEngine') {
+        return 'com.google.android.tts';
+      }
+      if (call.method == 'setLanguage') {
+        return 1;
+      }
+      if (call.method == 'setSpeechRate') {
+        return 1;
+      }
+      if (call.method == 'synthesizeToFile') {
+        // 刻意不寫入任何檔案內容，模擬引擎回報完成但音訊檔為空/不存在
+        // （真機無聲問題的根因情境）。
+        scheduleMicrotask(() {
+          final message = const StandardMethodCodec()
+              .encodeMethodCall(const MethodCall('synth.onComplete'));
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+              .handlePlatformMessage(channel.name, message, (_) {});
+        });
+      }
+      return null;
+    });
+
+    final provider = SystemTtsProvider(flutterTts: FlutterTts());
+
+    await expectLater(
+      provider.synthesize('測試文字', voice: TtsVoice.systemDefault),
+      throwsA(isA<TtsSynthesisException>()),
+    );
+  });
 }
