@@ -524,6 +524,66 @@ void main() {
     expect(() => controller.handleExternalPositionChange(), returnsNormally);
     expect(notifyCount, 0);
   });
+
+  test('play() 於 lookupStartIndex() 尚未完成時重複呼叫，只觸發一次 loadSegments／lookupStartIndex（審查 review-issue-4-code.md Important #1）',
+      () async {
+    final lookupCompleter = Completer<int>();
+    var loadSegmentsCallCount = 0;
+    var lookupCallCount = 0;
+    provider = FakeTtsProvider();
+    player = FakeTtsAudioPlayer();
+    final controller = TtsController(
+      provider: provider,
+      player: player,
+      loadSegments: () async {
+        loadSegmentsCallCount++;
+        return segments;
+      },
+      lookupStartIndex: (segs) {
+        lookupCallCount++;
+        return lookupCompleter.future;
+      },
+    );
+
+    final firstPlay = controller.play();
+    // 讓 loadSegments() 完成、進入 lookupStartIndex() 等待——這正是修復前
+    // _isLoadingSegments 已被提前重設為 false 的那段窗口。
+    await Future<void>.delayed(Duration.zero);
+    final secondPlay = controller.play(); // 連點：lookupStartIndex() 尚未完成
+    lookupCompleter.complete(0);
+    await firstPlay;
+    await secondPlay;
+
+    expect(loadSegmentsCallCount, 1);
+    expect(lookupCallCount, 1);
+    expect(provider.synthesizeCallCount, 1);
+  });
+
+  test('handleExternalPositionChange() 於 play() 正在 loadSegments()／lookupStartIndex() 進行中呼叫時，讓該次 play() 中止，不播放過期段落（審查 review-issue-4-code.md Important #2）',
+      () async {
+    final lookupCompleter = Completer<int>();
+    provider = FakeTtsProvider();
+    player = FakeTtsAudioPlayer();
+    final controller = TtsController(
+      provider: provider,
+      player: player,
+      loadSegments: () async => segments,
+      lookupStartIndex: (segs) => lookupCompleter.future,
+    );
+
+    final playFuture = controller.play();
+    // 讓 loadSegments() 完成、進入 lookupStartIndex() 等待。
+    await Future<void>.delayed(Duration.zero);
+
+    controller.handleExternalPositionChange(); // 模擬 loading 期間發生手動導覽
+    lookupCompleter.complete(1); // lookupStartIndex() 這時才回應（結果已過期）
+    await playFuture;
+
+    expect(controller.status, TtsPlaybackStatus.idle);
+    expect(controller.segments, isEmpty);
+    expect(controller.currentIndex, -1);
+    expect(provider.synthesizeCallCount, 0); // 過期結果不應該被拿去合成/播放
+  });
 }
 
 

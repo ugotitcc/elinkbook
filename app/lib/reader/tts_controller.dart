@@ -72,11 +72,27 @@ class TtsController extends ChangeNotifier {
   StreamSubscription<void>? _completedSub;
   bool _disposed = false;
 
-  /// `play()` 在 `idle` 狀態下要先 `await loadSegments()`（涉及 JS bridge
-  /// 往返，非立即完成）——這段期間 `_status` 仍是 `idle`，若不設防重入
-  /// 旗標，使用者連點播放鍵會觸發第二次 `loadSegments()`／合成流程互相
-  /// 打架（審查 review-plan-issue-2.md Important #2）。
+  /// `play()` 在 `idle` 狀態下要先 `await loadSegments()`／`lookupStartIndex()`
+  /// （皆涉及 JS bridge 往返，非立即完成）——這段期間 `_status` 仍是
+  /// `idle`，若不設防重入旗標，使用者連點播放鍵會觸發第二次
+  /// `loadSegments()`／合成流程互相打架（審查 review-plan-issue-2.md
+  /// Important #2）。**必須包住 idle 分支內兩個 await（不能只包第一個）**
+  /// ——審查 `review-issue-4-code.md` Important #1 已用可控 `Completer`
+  /// 實測重現：若只包住 `loadSegments()`，`lookupStartIndex()` 進行中這段
+  /// 期間本旗標已提前重設為 `false`、`_status` 仍是 `idle`，使用者連按
+  /// 播放鍵會讓第二次 `play()` 呼叫直接通過所有既有守衛、與第一次呼叫
+  /// 並行執行，導致 `loadSegments()` 被呼叫兩次、`_segments` 互相覆寫，
+  /// 最終聽到「同一句話被合成兩次」而非預期內容。
   bool _isLoadingSegments = false;
+
+  /// `play()` 每次進入 idle 分支時遞增的世代編號（審查
+  /// `review-issue-4-code.md` Important #2）：`handleExternalPositionChange()`
+  /// 偵測到手動導覽時無條件遞增本欄位，讓當時「正在 loadSegments()／
+  /// lookupStartIndex() 兩次 JS bridge 往返中、尚未真正開始播放」的
+  /// `play()` 呼叫，在兩個 await 分別回來後比對世代編號、發現自己已經
+  /// 過期便主動中止——否則那次呼叫會沿用導覽前算出的（現已過期的）
+  /// 章節/起始段落開始朗讀，使用者剛翻到的新頁面反而聽不到對應內容。
+  int _playGeneration = 0;
 
   Future<void> play() async {
     if (_status == TtsPlaybackStatus.playing) return;
@@ -99,27 +115,31 @@ class TtsController extends ChangeNotifier {
     // idle：第一次播放（或手動導覽觸發重置後的播放，見
     // handleExternalPositionChange），先載入目前章節的朗讀段。
     _isLoadingSegments = true;
-    List<TtsSegmentCfi> loaded;
+    final generation = ++_playGeneration;
     try {
-      loaded = await loadSegments();
+      final loaded = await loadSegments();
+      if (_disposed || generation != _playGeneration) return;
+      if (loaded.isEmpty) return; // 沒有可朗讀的內容，維持 idle。
+      // 起始段落改由 lookupStartIndex 依「畫面目前可視位置」決定
+      // （epic-34-tts-readalong Issue 4），不再固定從第 0 段開始——這個
+      // 分支同時涵蓋「使用者從未開始朗讀，直接按下播放鍵」與「手動導覽
+      // 觸發自動暫停（見 handleExternalPositionChange）後再次按下播放鍵」
+      // 兩種情境，因為後者也會先把狀態重設回 idle，兩者共用同一段程式碼
+      // 路徑。未提供 lookupStartIndex 時（例如尚未接上 ReaderScreen 的
+      // 測試情境）退回既有的「從第 0 段開始」行為，向後相容。
+      final startIndex =
+          lookupStartIndex == null ? 0 : await lookupStartIndex!(loaded);
+      if (_disposed || generation != _playGeneration) return;
+      // _segments／_currentIndex 一起賦值、放在兩個 await 之後、確認世代
+      // 仍有效才寫入——避免中途被中止的呼叫留下「_segments 已覆寫、但
+      // 從未真正開始播放」的孤兒狀態（同一個 review Important #1／#2 的
+      // 修法延伸）。
+      _segments = loaded;
+      _currentIndex =
+          (startIndex >= 0 && startIndex < _segments.length) ? startIndex : 0;
     } finally {
       _isLoadingSegments = false;
     }
-    if (_disposed) return;
-    if (loaded.isEmpty) return; // 沒有可朗讀的內容，維持 idle。
-    _segments = loaded;
-    // 起始段落改由 lookupStartIndex 依「畫面目前可視位置」決定
-    // （epic-34-tts-readalong Issue 4），不再固定從第 0 段開始——這個
-    // 分支同時涵蓋「使用者從未開始朗讀，直接按下播放鍵」與「手動導覽
-    // 觸發自動暫停（見 handleExternalPositionChange）後再次按下播放鍵」
-    // 兩種情境，因為後者也會先把狀態重設回 idle，兩者共用同一段程式碼
-    // 路徑。未提供 lookupStartIndex 時（例如尚未接上 ReaderScreen 的
-    // 測試情境）退回既有的「從第 0 段開始」行為，向後相容。
-    final startIndex =
-        lookupStartIndex == null ? 0 : await lookupStartIndex!(loaded);
-    if (_disposed) return;
-    _currentIndex =
-        (startIndex >= 0 && startIndex < _segments.length) ? startIndex : 0;
     await _playCurrentSegment();
   }
 
@@ -159,8 +179,16 @@ class TtsController extends ChangeNotifier {
   /// `ChangeNotifier` 會拋出「used after being disposed」例外導致崩潰——
   /// 比照本類別其餘會呼叫 [notifyListeners] 的方法（[_playCurrentSegment]／
   /// [_handleSegmentCompleted]）皆已有的既有防護慣例。
+  ///
+  /// `_playGeneration` 無條件遞增（審查 `review-issue-4-code.md`
+  /// Important #2）：即使目前 `_status` 仍是 `idle`（`play()` 正在
+  /// `loadSegments()`／`lookupStartIndex()` 兩次 JS bridge 往返中，尚未
+  /// 真正開始播放），也不能讓那次呼叫沿用導覽前算出的（現已過期的）
+  /// 章節/起始段落——遞增世代編號讓 [play] 內對應的比對自行偵測並中止，
+  /// 不需要在這裡額外判斷「是否有 play() 正在進行中」。
   void handleExternalPositionChange() {
     if (_disposed) return;
+    _playGeneration++;
     if (_status == TtsPlaybackStatus.idle) return;
     _status = TtsPlaybackStatus.idle;
     _currentIndex = -1;
