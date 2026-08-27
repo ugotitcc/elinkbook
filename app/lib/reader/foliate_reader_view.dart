@@ -519,6 +519,24 @@ class FoliateReaderView extends StatefulWidget {
     return state._requestTtsSegments(sectionIndex);
   }
 
+  /// 依「畫面目前可視位置」cfi 反查對應或緊隨其後的第一個朗讀段索引
+  /// （epic-34-tts-readalong Issue 4）。[segmentCfis] 為呼叫端
+  /// （[TtsController] 透過 [ReaderScreen] 注入的 `lookupStartIndex`
+  /// callback）目前持有、已依文件順序排序的朗讀段 cfi 清單。WebView 尚未
+  /// 就緒／JS 端回傳 -1（無法判斷順序，例如 [segmentCfis] 為空）／5 秒
+  /// 逾時，皆安全退回 `0`（從第一段開始），不拋出例外——比照
+  /// [loadTtsSegments] 逾時時退回空清單的既有優雅退回慣例。
+  static Future<int> lookupSegmentByCfi(
+    GlobalKey<State<FoliateReaderView>> key,
+    String visibleCfi,
+    List<String> segmentCfis,
+  ) async {
+    final state = key.currentState;
+    if (state is! _FoliateReaderViewState) return 0;
+    final index = await state._requestTtsSegmentIndex(visibleCfi, segmentCfis);
+    return index < 0 ? 0 : index;
+  }
+
   static void setDecorations(
     GlobalKey<State<FoliateReaderView>> key,
     List<EpubDecoration> decorations,
@@ -578,6 +596,7 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
   InAppWebViewController? _controller;
   Completer<List<TocEntry>>? _pendingToc;
   Completer<List<TtsSegmentCfi>>? _pendingTtsSegments;
+  Completer<int>? _pendingTtsSegmentIndex;
 
   /// 每個 widget 實例獨立的快取子目錄路徑，供 `InternalStoragePathHandler` 使用。
   /// null 表示快取尚未完成或失敗。
@@ -676,6 +695,25 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
     );
   }
 
+  Future<int> _requestTtsSegmentIndex(
+    String visibleCfi,
+    List<String> segmentCfis,
+  ) {
+    if (_controller == null) return Future.value(0);
+    final completer = Completer<int>();
+    _pendingTtsSegmentIndex = completer;
+    _evaluate(
+      'window.lookupTtsSegmentIndex(${jsonEncode(visibleCfi)}, ${jsonEncode(segmentCfis)})',
+    );
+    return completer.future.timeout(
+      const Duration(seconds: 5),
+      onTimeout: () {
+        _pendingTtsSegmentIndex = null;
+        return 0;
+      },
+    );
+  }
+
   Future<void> _onWebViewCreated(InAppWebViewController controller) async {
     _controller = controller;
     controller.addJavaScriptHandler(
@@ -723,6 +761,15 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
         _pendingTtsSegments = null;
         final json = args.length > 1 ? args[1] as String : '[]';
         completer?.complete(parseTtsSegments(json));
+      },
+    );
+    controller.addJavaScriptHandler(
+      handlerName: 'onTtsSegmentIndexReady',
+      callback: (args) {
+        final completer = _pendingTtsSegmentIndex;
+        _pendingTtsSegmentIndex = null;
+        final index = args.isNotEmpty ? (args[0] as num).toInt() : 0;
+        completer?.complete(index);
       },
     );
     controller.addJavaScriptHandler(

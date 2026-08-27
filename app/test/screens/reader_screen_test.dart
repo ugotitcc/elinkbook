@@ -7563,6 +7563,76 @@ void main() {
     });
   });
 
+  group('手動導覽自動暫停與恢復播放（epic-34-tts-readalong Issue 4）', () {
+    // 誠實測試邊界（比照 Issue 3 Task 3 既有慣例）：flutter_test 環境下
+    // FoliateReaderView 的 _controller 恆為 null，TtsController.play() 的
+    // loadSegments() 因此恆回傳空清單，永遠不會真正進入 playing 狀態——
+    // 這裡驗證的是「onLocatorChanged 觸發手動導覽重置這段 wiring 不崩潰」
+    // 這個結構性保證；handleExternalPositionChange() 實際重設狀態/清除
+    // 高亮/清空段落的行為，由 tts_controller_test.dart（純 Dart，見
+    // Task 2）完整涵蓋；真實「翻頁時朗讀自動暫停、恢復播放從新位置開始」
+    // 的端到端正確性須真機手動驗證（見本計畫「測試策略總結」）。
+    testWidgets(
+        '提供 ttsProvider 時，onLocatorChanged 觸發（模擬手動翻頁）不崩潰，'
+        '按播放鍵仍可正常運作', (tester) async {
+      final highlightsRepo = FakeHighlightsRepository();
+      final notesRepo = FakeNotesRepository();
+      final ttsProvider = FakeTtsProvider();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_tts_manual_nav',
+            prefsManager: prefsManager,
+            highlightsRepository: highlightsRepo,
+            notesRepository: notesRepo,
+            isFixedLayout: false,
+            ttsProvider: ttsProvider,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final foliateView =
+          tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
+      foliateView.onPageRendered();
+      foliateView.onLayoutResolved?.call(
+        const EpubLayoutInfo(
+          isFixedLayout: false,
+          writingMode: WritingMode.horizontal,
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      final buttonFinder =
+          find.byKey(const Key('reader_tts_play_pause_button'));
+      await tester.tap(buttonFinder);
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+
+      // 模擬手動翻頁：main.js 端 onLocatorChanged 事件（比照既有
+      // foliate_bridge_codec_test.dart／reader_screen_test.dart 對這個
+      // callback 的既有觸發方式，直接呼叫 widget 建構時傳入的 closure）。
+      foliateView.onLocatorChanged?.call(
+        const EpubPositionInfo(
+          locatorJson: '{"cfi":"epubcfi(/6/6!/4/2,/1:0,/1:5)","index":1,"fraction":0.3}',
+          progression: 0.3,
+        ),
+      );
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+
+      // 翻頁後按鈕仍可正常點擊（未卡在任何非預期狀態）。
+      await tester.tap(buttonFinder);
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+    });
+  });
+
   tearDownAll(() {
     // 還原 cacheBookForServing 為原始實作，避免污染其他測試檔
     cacheBookForServing = originalCacheBookForServing;
