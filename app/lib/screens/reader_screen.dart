@@ -2270,7 +2270,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             if (isFoliateFormat(format) &&
                 _chromeVisible &&
                 widget.ttsProvider != null &&
-                format != BookFormat.cbz)
+                format != BookFormat.cbz) ...[
               Positioned(
                 top: 352,
                 right: 16,
@@ -2292,10 +2292,6 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                   },
                 ),
               ),
-            if (isFoliateFormat(format) &&
-                _chromeVisible &&
-                widget.ttsProvider != null &&
-                format != BookFormat.cbz)
               Positioned(
                 top: 408,
                 right: 16,
@@ -2317,10 +2313,6 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                   },
                 ),
               ),
-            if (isFoliateFormat(format) &&
-                _chromeVisible &&
-                widget.ttsProvider != null &&
-                format != BookFormat.cbz)
               Positioned(
                 top: 464,
                 right: 16,
@@ -2351,6 +2343,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                   },
                 ),
               ),
+            ],
             // ── PDF FAB 區塊（epic-24-pdf-engine-rebuild Issue 8）─────
             // 與上方 EPUB FAB 完全對稱的 6 顆浮動圓形按鈕：返回／目錄／
             // 版面設定／書籤 toggle／筆記／進度-跳頁。比照 EPUB 既有的

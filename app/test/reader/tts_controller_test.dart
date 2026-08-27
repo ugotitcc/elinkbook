@@ -674,6 +674,7 @@ void main() {
     expect(controller.currentIndex, -1);
     expect(controller.segments, isEmpty);
     expect(highlighted.last, isNull);
+    expect(player.callLog, contains('pause'));
   });
 
   test('nextSegment() 於 paused 狀態下呼叫，跳到下一段並自動恢復播放', () async {

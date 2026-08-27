@@ -192,9 +192,13 @@ class TtsController extends ChangeNotifier {
     if (_status == TtsPlaybackStatus.idle) return;
     final nextIndex = _currentIndex + 1;
     if (nextIndex >= _segments.length) {
+      _segmentGeneration++;
       _status = TtsPlaybackStatus.idle;
       _currentIndex = -1;
       _segments = const [];
+      try {
+        player.pause().catchError((_) {});
+      } catch (_) {}
       onHighlightSegment?.call(null);
       notifyListeners();
       return;
