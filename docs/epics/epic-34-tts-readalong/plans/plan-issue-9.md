@@ -31,7 +31,7 @@
 - Consumes：既有 `TtsProvider`（`app/lib/reader/tts_provider.dart`）、既有 `ReaderScreen.ttsProvider` 建構參數（Issue 2 已定義）、測試替身 `FakeTtsProvider`（`app/test/support/fake_tts_provider.dart`，Issue 2 已建立）
 - Produces：`LibraryReaderFeatureRepositories.ttsProvider`（`TtsProvider?`）——供 Task 2 的 `main.dart` 呼叫端使用
 
-- [ ] **Step 1：寫失敗測試**
+- [x] **Step 1：寫失敗測試**
 
 在 `app/test/screens/library_screen_test.dart` 頂部 import 區塊（`../support/fake_notes_repository.dart` 那一行附近）新增：
 
@@ -133,7 +133,7 @@ import '../support/fake_tts_provider.dart';
   });
 ```
 
-- [ ] **Step 2：跑測試確認失敗**
+- [x] **Step 2：跑測試確認失敗**
 
 ```
 flutter test test/screens/library_screen_test.dart --plain-name "ttsProvider"
@@ -141,7 +141,7 @@ flutter test test/screens/library_screen_test.dart --plain-name "ttsProvider"
 
 Expected：編譯失敗（`LibraryReaderFeatureRepositories` 沒有名為 `ttsProvider` 的具名參數），或相關 `same(ttsProvider)` 斷言因實際值為 `null` 而失敗（視 Dart 分析器是否先擋在編譯階段而定，兩者皆代表測試正確反映目前缺口）；篩選出的兩個新測試（`_openBook()` 路徑與 `_openGroupFilteredView()` 路徑）皆應失敗。
 
-- [ ] **Step 3：實作最小改動**
+- [x] **Step 3：實作最小改動**
 
 `app/lib/screens/library_screen_dependencies.dart`：在檔案頂部 import 區塊新增（依現有字母序排在 `notes_repository.dart` 之後）：
 
@@ -197,7 +197,7 @@ class LibraryReaderFeatureRepositories {
               ),
 ```
 
-- [ ] **Step 4：跑測試確認通過**
+- [x] **Step 4：跑測試確認通過**
 
 ```
 flutter test test/screens/library_screen_test.dart
@@ -205,7 +205,7 @@ flutter test test/screens/library_screen_test.dart
 
 Expected：全數 PASS（含新增測試與既有測試零回歸）。
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```
 git add app/lib/screens/library_screen_dependencies.dart app/lib/screens/library_screen.dart app/test/screens/library_screen_test.dart
@@ -224,7 +224,7 @@ git commit -m "feat(epic-34): LibraryReaderFeatureRepositories 新增 ttsProvide
 - Consumes：Task 1 的 `LibraryReaderFeatureRepositories.ttsProvider`；既有 `SystemTtsProvider`（`app/lib/reader/system_tts_provider.dart`，Issue 2 已定義，預設建構子 `SystemTtsProvider()` 內部自行建立 `FlutterTts()`，不需外部傳入）
 - Produces：`ElinkBookApp.ttsProvider`（`TtsProvider?` 建構參數）——本 Issue 最後一棒，之後無其他 Task 依賴它
 
-- [ ] **Step 1：寫失敗測試**
+- [x] **Step 1：寫失敗測試**
 
 `app/test/elinkbook_app_wiring_test.dart` 頂部 import 區塊新增：
 
@@ -254,7 +254,7 @@ import 'support/fake_tts_provider.dart';
         same(ttsProvider));
 ```
 
-- [ ] **Step 2：跑測試確認失敗**
+- [x] **Step 2：跑測試確認失敗**
 
 ```
 flutter test test/elinkbook_app_wiring_test.dart
@@ -262,7 +262,7 @@ flutter test test/elinkbook_app_wiring_test.dart
 
 Expected：編譯失敗（`ElinkBookApp` 建構子沒有名為 `ttsProvider` 的具名參數）。
 
-- [ ] **Step 3：實作最小改動**
+- [x] **Step 3：實作最小改動**
 
 `app/lib/main.dart` 頂部 import 區塊新增（現行字母序中 `reader/reading_position_repository.dart` 是 `reader/` 底下最後一個 import，接續插在其後、`remote/opds_client.dart` 之前）：
 
@@ -318,7 +318,7 @@ import 'reader/tts_provider.dart';
         ),
 ```
 
-- [ ] **Step 4：跑測試確認通過**
+- [x] **Step 4：跑測試確認通過**
 
 ```
 flutter test test/elinkbook_app_wiring_test.dart
@@ -326,7 +326,7 @@ flutter test test/elinkbook_app_wiring_test.dart
 
 Expected：全數 PASS。
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```
 git add app/lib/main.dart app/test/elinkbook_app_wiring_test.dart
@@ -346,7 +346,7 @@ git commit -m "feat(epic-34): main.dart 建構真實 SystemTtsProvider 並貫穿
 
 **背景（審查 `reviews/review-plan-issue-9.md` Critical，執行前必讀）：** `flutter_tts` 套件官方文件明載：「Apps targeting Android 11 that use text-to-speech should declare `TextToSpeech.Engine.INTENT_ACTION_TTS_SERVICE` in the `queries` elements of their manifest」。本專案 `targetSdk` 已解析為 36（遠高於 Android 11 的套件可見性限制門檻），`AndroidManifest.xml` 目前的 `<queries>` 區塊（第 66-71 行）只宣告了 `PROCESS_TEXT`，沒有 `TTS_SERVICE`。若不補上，`TextToSpeech` 綁定語音引擎的隱式 Intent 查詢會被系統擋下——播放按鈕本身會正常顯示（顯示與否只看 `ttsProvider != null`，與這項設定無關），但實際按下播放極可能靜默失敗或拋出例外，直接牴觸 Issue 9「真機能看到並使用朗讀」的核心目標。Task 1／Task 2 的 Dart 接線即使全部正確，沒有這個宣告，真機驗收清單第 3 點仍會失敗。
 
-- [ ] **Step 1：修改 manifest**
+- [x] **Step 1：修改 manifest**
 
 `app/android/app/src/main/AndroidManifest.xml` 現有 `<queries>` 區塊（第 66-71 行）：
 
@@ -377,7 +377,7 @@ git commit -m "feat(epic-34): main.dart 建構真實 SystemTtsProvider 並貫穿
     </queries>
 ```
 
-- [ ] **Step 2：確認 manifest 仍是合法 XML、建置成功**
+- [x] **Step 2：確認 manifest 仍是合法 XML、建置成功**
 
 ```
 flutter build apk --debug
@@ -385,7 +385,7 @@ flutter build apk --debug
 
 Expected：建置成功（`flutter analyze`／`flutter test` 不涵蓋 Android manifest 內容，本步驟是本檔案唯一的自動化防呆——XML 語法錯誤或標籤未正確關閉會在此直接建置失敗）。
 
-- [ ] **Step 3：Commit**
+- [x] **Step 3：Commit**
 
 ```
 git add app/android/app/src/main/AndroidManifest.xml
@@ -405,7 +405,7 @@ git commit -m "fix(epic-34): AndroidManifest.xml 補上 TTS_SERVICE queries 宣�
 - Consumes：Task 1／Task 2 完成的接線、Task 3 補上的 manifest 宣告
 - Produces：無（本 Task 為收尾與文件更新，不產出程式介面）
 
-- [ ] **Step 1：全專案分析與測試**
+- [x] **Step 1：全專案分析與測試**
 
 ```
 flutter analyze
@@ -414,19 +414,19 @@ flutter test
 
 Expected：`flutter analyze` 顯示 `No issues found!`；`flutter test` 全數 PASS，較 Issue 2 合併時的基準線多 3 個測試（Task 1 新增 2 個：`_openBook()`／`_openGroupFilteredView()` 兩條路徑；Task 2 新增 1 個），零回歸。
 
-- [ ] **Step 2：更新 `issues.md` Issue 9 驗收標準勾選狀態**
+- [x] **Step 2：更新 `issues.md` Issue 9 驗收標準勾選狀態**
 
 將 Issue 9 的四條驗收標準（`library_screen.dart` 接線完成、真機可見播放鈕、既有測試零回歸、`flutter analyze`／`flutter test` 全數通過）依實際完成狀況打勾；**真機驗證那一條保留未勾選**，待人類實際安裝 APK 驗證後再手動勾選（本計畫的自動化步驟無法驗證真機行為）。
 
-- [ ] **Step 3：補一筆 `epic.md` 開發記錄**
+- [x] **Step 3：補一筆 `epic.md` 開發記錄**
 
 依既有風格（單一長段落，日期前綴）在 `## 開發記錄` 段落末尾接續新增一句，說明 Issue 9 已完成接線、通過 `flutter analyze`／`flutter test`、待真機驗證播放鈕可見性。
 
-- [ ] **Step 4：更新 `docs/epics.md` 全域看板備註**
+- [x] **Step 4：更新 `docs/epics.md` 全域看板備註**
 
 將 epic-34 這一列備註改為簡潔摘要，例如「Issue 9 已完成接線，待真機驗證」。
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```
 git add docs/epics/epic-34-tts-readalong/issues.md docs/epics/epic-34-tts-readalong/epic.md docs/epics.md

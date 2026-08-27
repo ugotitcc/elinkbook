@@ -261,7 +261,7 @@
 - 真機手動驗證（比照 Issue 2「測試策略總結」第 4 點端到端驗收）：安裝正式建置的 APK，開啟一本 EPUB／KF8／TXT／MD 書籍，確認能看到播放鈕、按下後聽到朗讀、可暫停/繼續。
 
 **驗收標準：**
-- [ ] `library_screen.dart` 開書流程實際建構 `SystemTtsProvider` 並傳入 `ReaderScreen.ttsProvider`
+- [x] `library_screen.dart` 開書流程實際建構 `SystemTtsProvider` 並傳入 `ReaderScreen.ttsProvider`
 - [ ] 真機安裝後開啟 Foliate 格式書籍能看到並使用朗讀播放/暫停按鈕，CBZ 書籍維持明確停用狀態
-- [ ] 既有 `library_screen_test.dart`／`reader_screen_test.dart` 零回歸
-- [ ] `flutter analyze`／`flutter test` 全數通過
+- [x] 既有 `library_screen_test.dart`／`reader_screen_test.dart` 零回歸
+- [x] `flutter analyze`／`flutter test` 全數通過
