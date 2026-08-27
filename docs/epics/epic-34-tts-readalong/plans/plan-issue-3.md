@@ -549,7 +549,7 @@ git commit -m "feat(epic-34): TtsController 新增 onHighlightSegment 高亮回�
 - Consumes：Task 1 的 `window.showTtsHighlight`/`window.clearTtsHighlight`；Task 2 的 `TtsController.onHighlightSegment`；既有 `ReaderScreen._resolved`（目前實際生效的排版方向，含使用者手動切換結果）、`WritingMode`
 - Produces：`FoliateReaderView.showTtsHighlight(key, cfi, {required bool vertical})`／`FoliateReaderView.clearTtsHighlight(key)` 靜態方法；`ReaderScreen._ttsControllerOrNull` 內部接線（無新增公開 API）
 
-- [ ] **Step 1：`FoliateReaderView` 新增靜態 helper**
+- [x] **Step 1：`FoliateReaderView` 新增靜態 helper**
 
 在 `app/lib/reader/foliate_reader_view.dart` 找到以下既有的 `setDecorations` 靜態方法：
 
@@ -629,7 +629,7 @@ git commit -m "feat(epic-34): TtsController 新增 onHighlightSegment 高亮回�
   }
 ```
 
-- [ ] **Step 2：`ReaderScreen` 接線**
+- [x] **Step 2：`ReaderScreen` 接線**
 
 在 `app/lib/screens/reader_screen.dart` 頂部 import 區塊，緊接 `import '../reader/tts_provider.dart';` 之後新增：
 
@@ -698,7 +698,7 @@ import '../reader/tts_segment_cfi.dart';
   }
 ```
 
-- [ ] **Step 3：寫 widget test**
+- [x] **Step 3：寫 widget test**
 
 在 `app/test/screens/reader_screen_test.dart` 找到既有的 `group('TTS 語音朗讀（epic-34-tts-readalong Issue 2）', ...)` 結尾的 `});`（緊接在 `CBZ 格式提供 ttsProvider 時，TTS 按鈕顯示但為停用狀態` 測試之後），在它之後新增一個新的 group：
 
@@ -810,7 +810,7 @@ import '../reader/tts_segment_cfi.dart';
   });
 ```
 
-- [ ] **Step 4：跑測試確認全數通過、零回歸**
+- [x] **Step 4：跑測試確認全數通過、零回歸**
 
 ```
 flutter test test/screens/reader_screen_test.dart
@@ -830,7 +830,7 @@ flutter analyze
 
 Expected：`No issues found!`
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```
 git add app/lib/reader/foliate_reader_view.dart app/lib/screens/reader_screen.dart app/test/screens/reader_screen_test.dart
