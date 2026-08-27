@@ -129,7 +129,7 @@
 - [x] `lookupSegmentByCfi()` 邊界情況測試通過
 - [x] `flutter analyze`／`flutter test` 全數通過——全專案 1769/1769 測試通過（含程式審查修復後新增的 2 個回歸測試）
 
-**狀態：已發 PR（[#193](https://git.jigong.org/huthief/elinkBook/pulls/193)，分支 `feat/epic-34-issue-4-tts-nav`，2026-08-28，尚未合併）並完成真機驗收，五條驗收標準與程式審查修復對應的兩項情境全數驗證通過。** 程式審查（`reviews/review-issue-4-code.md`，本機檔案不進版控）首輪結論 With fixes（0 Critical／2 Important／2 Minor）——`play()` 新增的 `lookupStartIndex` await 未被既有防重入旗標涵蓋，重新打開連按播放鍵的競態（已實測重現「同一句話被合成兩次」），且連帶讓手動導覽在該窗口內攔不住；已改用世代編號機制修復並補上 2 個回歸測試，`flutter analyze`／全專案 `flutter test`（1769 項）皆已通過。2026-08-28 真機驗證：原始 5 項情境（首次播放從畫面位置開始、手動導覽自動暫停與高亮清除、恢復播放從新位置開始、翻遠頁再翻回無殘留高亮、純暫停後恢復不受影響）與審查修復對應的 2 項情境（連按播放鍵、播放啟動瞬間手動導覽）皆全數通過。
+**狀態：已合併回 `main`（PR [#193](https://git.jigong.org/huthief/elinkBook/pulls/193)，分支 `feat/epic-34-issue-4-tts-nav`，2026-08-28）並完成真機驗收，五條驗收標準與程式審查修復對應的兩項情境全數驗證通過。** 程式審查（`reviews/review-issue-4-code.md`，本機檔案不進版控）首輪結論 With fixes（0 Critical／2 Important／2 Minor）——`play()` 新增的 `lookupStartIndex` await 未被既有防重入旗標涵蓋，重新打開連按播放鍵的競態（已實測重現「同一句話被合成兩次」），且連帶讓手動導覽在該窗口內攔不住；已改用世代編號機制修復並補上 2 個回歸測試，`flutter analyze`／全專案 `flutter test`（1769 項）皆已通過。2026-08-28 真機驗證：原始 5 項情境（首次播放從畫面位置開始、手動導覽自動暫停與高亮清除、恢復播放從新位置開始、翻遠頁再翻回無殘留高亮、純暫停後恢復不受影響）與審查修復對應的 2 項情境（連按播放鍵、播放啟動瞬間手動導覽）皆全數通過。
 
 ---
 
