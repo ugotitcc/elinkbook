@@ -51,6 +51,20 @@ class SystemTtsProvider implements TtsProvider {
     await _flutterTts.synthesizeToFile(text, filePath, true);
     await completer.future;
 
+    final file = File(filePath);
+    if (!await file.exists() || await file.length() == 0) {
+      List<dynamic> engines = const [];
+      try {
+        engines = await _flutterTts.getEngines;
+      } catch (e) {
+        // 忽略取得引擎列表的錯誤
+      }
+      throw TtsSynthesisException(
+        '語音合成檔案無效或大小為 0。可用的 TTS 引擎列表：$engines。'
+        '請確認系統中已安裝並啟用可用的「文字轉語音 (TTS)」中文語音引擎。',
+      );
+    }
+
     return TtsSynthesisResult(audioFilePath: filePath);
   }
 

@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/services.dart';
@@ -38,6 +38,9 @@ void main() {
         .setMockMethodCallHandler(channel, (call) async {
       calls.add(call);
       if (call.method == 'synthesizeToFile') {
+        final filePath = (call.arguments as Map)['fileName'] as String;
+        File(filePath).writeAsStringSync('dummy wave content');
+
         // 模擬原生端非同步完成合成：透過同一個 channel 送回
         // synth.onComplete，讓 FlutterTts() 建構子註冊的
         // platformCallHandler 觸發 SystemTtsProvider 內的 completer。
