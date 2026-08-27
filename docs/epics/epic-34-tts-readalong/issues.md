@@ -1,6 +1,6 @@
 # Epic 34 — TTS 語音朗讀與同步高亮（Read-along）：工單清單 (Issues)
 
-依 `spec.md`（Architecting，核心介面/型別唯一事實來源；已依 `/superpowers:receiving-code-review` 審查修訂）拆解為 8 個垂直切片工單（Issue 1～8），範圍為 Phase 0（相依性驗證）＋ Phase 1（Foliate MVP：EPUB／KF8／TXT／MD）。**Phase 2（雲端 API/快取）／Phase 3（端側神經語音，stretch goal）／Phase 4（PDF）刻意不在本次拆解範圍內**——依 `design.md`「分階段 Issue 藍圖」，這三個 Phase 都依賴 Phase 1 主幹穩定後才開工，現在拆會在 Phase 1 完成前就過時，待 Phase 1 全數完成、人類確認排入時程後，再另開一輪 `/to-issues`。Issue 9 為 2026-08-27 事後追加：Issue 2 合併後才發現 `ReaderScreen` 正式呼叫端接線缺口，補開一張獨立工單追蹤（詳見該工單「來源」欄位）。Issue 10 同樣為 2026-08-27 事後追加：Issue 9 真機驗收時發現 CBZ 停用按鈕缺乏視覺區隔，補開一張獨立工單追蹤（詳見該工單「來源」欄位）。
+依 `spec.md`（Architecting，核心介面/型別唯一事實來源；已依 `/superpowers:receiving-code-review` 審查修訂）拆解為 8 個垂直切片工單（Issue 1～8），範圍為 Phase 0（相依性驗證）＋ Phase 1（Foliate MVP：EPUB／KF8／TXT／MD）。**Phase 2（雲端 API/快取）／Phase 3（端側神經語音，stretch goal）／Phase 4（PDF）刻意不在本次拆解範圍內**——依 `design.md`「分階段 Issue 藍圖」，這三個 Phase 都依賴 Phase 1 主幹穩定後才開工，現在拆會在 Phase 1 完成前就過時，待 Phase 1 全數完成、人類確認排入時程後，再另開一輪 `/to-issues`。Issue 9 為 2026-08-27 事後追加：Issue 2 合併後才發現 `ReaderScreen` 正式呼叫端接線缺口，補開一張獨立工單追蹤（詳見該工單「來源」欄位）。Issue 10 同樣為 2026-08-27 事後追加：Issue 9 真機驗收時發現 CBZ 停用按鈕缺乏視覺區隔，補開一張獨立工單追蹤（詳見該工單「來源」欄位）。Issue 11 同樣為 2026-08-27 事後追加：Issue 3 真機驗收時發現部分自製 EPUB（經文/善書類排版，整段/整章不含標點）朗讀合成失敗，補開一張獨立工單追蹤；同一次真機驗收另發現的「首次按播放固定從章節第一句開始」問題，已直接併入既有 Issue 4 範圍（詳見兩工單各自「來源」欄位）。
 
 每個 Issue 皆須包含所需的單元測試要求（依 `spec.md`「Testing Decisions」已與人類確認的測試縫隙分工）。
 
@@ -92,10 +92,12 @@
 - 跨標籤句子（Issue 2 已建立測試樣本）驗證高亮能正確渲染，不只是 CFI 能還原。
 
 **驗收標準：**
-- [ ] 朗讀時畫面即時高亮目前朗讀句，直排/橫排皆正確跟隨
-- [ ] 高亮不寫入 `highlights`/`notes` 資料表、不出現在既有劃線/備註清單（ADR 0026 驗證點）
-- [ ] 播放結束/朗讀段切換時正確清除前一個高亮，無殘留
-- [ ] `flutter analyze`／`flutter test` 全數通過，既有劃線/備註測試零回歸
+- [x] 朗讀時畫面即時高亮目前朗讀句，直排/橫排皆正確跟隨——2026-08-27 真機驗證通過（直排/橫排皆正確）
+- [x] 高亮不寫入 `highlights`/`notes` 資料表、不出現在既有劃線/備註清單（ADR 0026 驗證點）——`TtsController`／`onHighlightSegment` 回呼鏈路全程未引用 `highlightsRepository`/`notesRepository`，並有自動化 widget test 迴歸防護（`reader_screen_test.dart`）
+- [x] 播放結束/朗讀段切換時正確清除前一個高亮，無殘留——2026-08-27 真機驗證通過（無殘留）
+- [x] `flutter analyze`／`flutter test` 全數通過，既有劃線/備註測試零回歸——全專案 1756/1756 測試通過（`reviews/review-issue-3-code.md`）
+
+**狀態：已合併回 `main`（PR [#192](https://git.jigong.org/huthief/elinkBook/pulls/192)，分支 `feat/epic-34-issue-3-tts-highlight`，2026-08-27）並完成真機驗收，四條驗收標準全數通過。** 程式審查（`reviews/review-issue-3-code.md`，本機檔案不進版控）結論 Ready to merge: Yes，0 Critical／0 Important／2 Minor（皆為可接受的既有限制，非需修正的缺陷）。**真機驗收過程中另外發現兩個不在本 Issue 範圍內的問題**，已分別記錄：(1) 首次按下播放鍵時朗讀固定從章節第一句開始，與畫面目前顯示位置不符——已追加進 Issue 4 範圍（見該工單「來源」欄位）；(2) 部分自製 EPUB（經文/善書類排版，整段/整章不含「。！？」等標點）合成失敗（`ERROR_OUTPUT -8`）——已拆為獨立工單 Issue 11。
 
 ---
 
@@ -105,23 +107,25 @@
 
 **依賴：** Issue 3
 
-**來源：** `design.md`／`spec.md` 已拍板決策第 8 點、`review-design.md` Important #2（反向索引契約）、User Story 15、16。
+**來源：** `design.md`／`spec.md` 已拍板決策第 8 點、`review-design.md` Important #2（反向索引契約）、User Story 15、16。**2026-08-27 Issue 3 真機驗收追加範圍**：真機測試發現使用者從未開始朗讀、直接按下播放鍵時，朗讀固定從目前章節第一句開始，與畫面目前實際顯示的位置不符（例如已捲動到章節中段才按播放，卻聽到章節開頭）——本 Issue 原設計的反向查找機制（`lookupSegmentByCfi`）範圍已擴大，須同時涵蓋「手動導覽觸發的自動暫停後恢復播放」與「從未播放過、直接按下播放鍵（`idle` → `playing`）」兩種情境，不能只處理前者。
 
-**背景／需求：** 使用者朗讀中手動翻頁/捲動/跳章時，播放自動暫停；恢復播放時從畫面目前顯示的新位置重新開始朗讀，不回到暫停前的舊音訊位置。
+**背景／需求：** 使用者朗讀中手動翻頁/捲動/跳章時，播放自動暫停；恢復播放時從畫面目前顯示的新位置重新開始朗讀，不回到暫停前的舊音訊位置。同一套反向查找邏輯，也須套用在使用者從 `idle` 狀態直接按下播放鍵的情境——目前（Issue 2）`TtsController.play()` 於 `idle` 狀態下把 `_currentIndex` 寫死為 `0`，恆從目前章節第一句開始朗讀，不會考慮使用者實際捲動到章節中的哪個位置。
 
 **設計要點：**
 - `TtsController` 訂閱既有 `FoliateReaderView` 的位置變化事件（relocate 類事件），偵測到非 TTS 自身觸發的位置變化時自動呼叫 `pause()`。
 - `TtsTimeline` 新增反向查找介面：`lookupSegmentByCfi(String visibleCfi)`，依畫面目前可視位置反查對應或緊隨其後的第一個朗讀段。
 - 播放鍵恢復邏輯：不回到暫停前的音訊位置，改為呼叫 `lookupSegmentByCfi()` 取得新位置對應的朗讀段，從該段重新開始合成/播放。
+- **`idle` → `playing` 的首次播放同樣須改用反向查找（2026-08-27 真機驗收追加）**：`TtsController.play()` 於 `idle` 狀態下不得再寫死 `_currentIndex = 0`，須呼叫 `lookupSegmentByCfi()` 依目前畫面可視 CFI 決定起始段落；找不到對應段落時（例如章節開頭本來就沒有更早的位置）才退回第 0 段。`loadSegments()` 呼叫端（`ReaderScreen`）需一併提供「目前畫面可視 CFI」給 `TtsController`，比照既有 `_epubPositionInfo` 既有欄位取用即可，不需要新增額外的位置追蹤機制。
 - **手動導覽觸發暫停時須清除舊高亮**（審查 `review-issues.md` Important #1）：偵測到手動導覽事件觸發自動暫停時，`TtsController` 主動清除畫面上的暫態高亮，不留殘影；否則使用者翻到很遠的頁面又翻回原頁面時，會看到一個過期的高亮（Issue 3 的驗收標準只涵蓋「播放結束/朗讀段切換」，字面上不含「暫停」這個情況）。待使用者按下播放鍵時，再由 `lookupSegmentByCfi()` 於新位置重新繪製高亮。
 
 **測試要求：**
 - 純 Dart 單元測試：`lookupSegmentByCfi()` 邊界情況（段落交界、目前位置早於/晚於全部已知段落）。
-- `ReaderScreen` widget test：模擬手動翻頁事件觸發自動暫停；模擬翻頁後按播放，驗證朗讀從新位置的對應段落開始，而非舊音訊位置。
+- `ReaderScreen` widget test：模擬手動翻頁事件觸發自動暫停；模擬翻頁後按播放，驗證朗讀從新位置的對應段落開始，而非舊音訊位置。**額外驗證「從未開始朗讀、直接按下播放鍵」情境**：模擬畫面目前捲動至章節中段，直接按播放，驗證朗讀從對應段落開始，不是固定從章節第一句開始。
 
 **驗收標準：**
 - [ ] 朗讀中手動翻頁/捲動時播放自動暫停，且畫面舊高亮同步清除、不留殘影
 - [ ] 按播放鍵後從畫面新位置對應的朗讀段開始，不回跳舊位置
+- [ ] 從未開始朗讀時直接按下播放鍵，朗讀從畫面目前顯示的段落開始，而非固定從章節第一句開始（2026-08-27 真機驗收追加）
 - [ ] `lookupSegmentByCfi()` 邊界情況測試通過
 - [ ] `flutter analyze`／`flutter test` 全數通過
 
@@ -293,4 +297,32 @@
 - [ ] CBZ 書籍的朗讀停用按鈕，圖示顏色/透明度與啟用狀態有明確視覺區隔
 - [ ] 新增 widget test 驗證停用狀態顏色與啟用狀態不同
 - [ ] 既有 `reader_screen_test.dart` 零回歸
+- [ ] `flutter analyze`／`flutter test` 全數通過
+
+---
+
+## Issue 11：長段落缺乏終止標點時朗讀失敗（超出 TTS 引擎輸入長度上限）
+
+**Status:** ready-for-agent
+
+**依賴：** Issue 2
+
+**來源：** Issue 3 真機驗收（2026-08-27）人類提供實際樣本重現：部分自製 EPUB（經文/善書類排版常見寫法——整段甚至整章以全形空格「　」分隔語句、完全不使用「。！？」等標點）朗讀時完全無聲，原生端診斷 log 回報 `Error from TextToSpeech (synth) - -8`（Android `TextToSpeech.ERROR_OUTPUT`）。已用該書實際檔案比對 `main.js buildTtsSegments()` 切句邏輯，模擬重現：該書其中一章（`bodymatter_0_0.xhtml`）全章 17,908 字完全沒有任何終止標點，被切成單一朗讀段；另一章甚至產生 23,890 字的單一段落。
+
+**背景／需求：** `main.js window.buildTtsSegments()`（Issue 2）只用 `/[。！？；.!?;]/` 判斷句界，遇到完全不使用這些標點的文字，會一路掃到整個章節結尾（`isLast` 條件）才切出「一整個章節」當作單一朗讀段。Android `TextToSpeech` 對單次合成的輸入長度有上限（`flutter_tts` 套件已透過 `getMaxSpeechInputLength` 暴露此 API），超過上限時原生端 `synthesizeToFile()` 會直接失敗並回傳 `ERROR_OUTPUT (-8)`，使用者只會看到播放鍵按下去沒有聲音、沒有任何畫面提示，容易誤以為功能故障。
+
+**設計要點：**
+- `main.js buildTtsSegments()` 切句規則新增次要分隔符：找不到主要終止標點（`。！？；.!?;`）、但遇到全形/半形空白（例如「　」）或换行/段落邊界（對應 `<br>`／區塊層級標籤邊界）時，也視為可切分的次要邊界——不改變既有「優先用標點切句」的行為，只在一段文字明顯過長、且缺乏標點時才退而求其次用空白/段落邊界切分。
+- 新增硬性長度上限防線（防禦不可預期的極端排版，例如完全沒有任何空白或標點的超長字串）：Dart 端呼叫 `synthesize()` 前，先用 `flutter_tts` 既有的 `getMaxSpeechInputLength()` API 查詢目前引擎的實際上限，若切句後的單一段落仍超過此上限，強制依字數硬切為多個子段落再個別合成——這是最後一道防線，不取代上面的切句規則改善。
+- 若某段落合成仍然失敗（`ERROR_OUTPUT` 或其他原生錯誤），`TtsController` 不得讓整個朗讀流程卡死或靜默無反應——應跳過該段落、記錄診斷 log（比照 Issue 9 已建立的 `ReaderConsoleLog` 診斷慣例），並嘗試接續下一段，讓使用者至少能聽到書的其餘部分，而非整章都念不出來。
+
+**測試要求：**
+- 純 Dart 單元測試：新增的硬性長度上限切分邏輯，驗證超過上限的文字會被正確拆成多個不超過上限長度的子段落。
+- `main.js` 對應的 regression guard 測試（比照既有慣例，讀取原始碼字串斷言）或 Dart 端切句 codec 測試：驗證全形空格/換行次要分隔符邏輯不影響既有「優先用標點」行為，Issue 2 既有跨標籤句子／`<rt>` 過濾測試須零回歸。
+- `TtsController` 狀態機測試：單一段落合成失敗時能正確跳過並接續下一段，不卡死、不靜默無反應。
+
+**驗收標準：**
+- [ ] 真機測試 `tmp/2023大狀元經典會考經訓彙整.epub`（或等效無標點長段落樣本）可正常朗讀，不再出現 `ERROR_OUTPUT (-8)`
+- [ ] 既有跨標籤句子／`<rt>` 過濾測試零回歸
+- [ ] 單一段落合成失敗時能跳過並接續下一段，不卡死整個朗讀流程
 - [ ] `flutter analyze`／`flutter test` 全數通過
