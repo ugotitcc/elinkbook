@@ -1,5 +1,6 @@
 import { makeBook } from './view.js'
 import { Overlayer } from './overlayer.js'
+import { compare as compareCfi } from './epubcfi.js'
 
 const view = document.getElementById('view')
 
@@ -445,6 +446,33 @@ window.clearTtsHighlight = function () {
   if (!currentTtsAnnotationValue) return
   view.deleteAnnotation({ value: currentTtsAnnotationValue })
   currentTtsAnnotationValue = null
+}
+
+/**
+ * 依「畫面目前可視位置」cfi 反查對應或緊隨其後的第一個朗讀段索引
+ * （epic-34-tts-readalong Issue 4，2026-08-27 Issue 3 真機驗收追加範圍：
+ * 首次播放與手動導覽後恢復播放皆須從畫面目前位置開始，見 issues.md
+ * Issue 4「來源」欄位）。[segmentCfis] 為 Dart 端目前持有、已依文件順序
+ * 排序的朗讀段 cfi 陣列（[window.buildTtsSegments()] 既有輸出順序），
+ * 本函式直接重用 epubcfi.js 既有匯出的 compareCfi()（CFI 排序比較），不
+ * 重新實作 CFI 解析/排序邏輯（未修改 epubcfi.js 本身，符合 ADR 0011）。
+ *
+ * 找不到「cfi 大於等於 visibleCfi」的段落時（使用者目前位置已在本章節
+ * 最後一段之後），回傳最後一段索引，而非固定回傳 0 或 -1；[segmentCfis]
+ * 為空陣列時回傳 -1（呼叫端 Dart 端不應該在段落清單為空時呼叫本函式，
+ * 這裡僅作防禦，Dart 端靜態 helper 收到 -1 時會自行 clamp 回 0）。
+ */
+window.lookupTtsSegmentIndex = function (visibleCfi, segmentCfis) {
+  try {
+    let index = -1
+    if (segmentCfis.length > 0) {
+      index = segmentCfis.findIndex((cfi) => compareCfi(cfi, visibleCfi) >= 0)
+      if (index === -1) index = segmentCfis.length - 1
+    }
+    window.flutter_inappwebview.callHandler('onTtsSegmentIndexReady', index)
+  } catch (e) {
+    window.flutter_inappwebview.callHandler('onTtsSegmentIndexReady', -1)
+  }
 }
 
 /**

@@ -1452,6 +1452,50 @@ void main() {
     });
   });
 
+  group('main.js 朗讀段反向查找 regression guard（epic-34-tts-readalong Issue 4）', () {
+    late String mainJsSource;
+
+    setUpAll(() {
+      mainJsSource = File('android/app/src/main/assets/foliate/main.js')
+          .readAsStringSync();
+    });
+
+    test('main.js 匯入 epubcfi.js 既有 compare()，不重新實作 CFI 排序邏輯', () {
+      expect(
+        mainJsSource
+            .contains("import { compare as compareCfi } from './epubcfi.js'"),
+        isTrue,
+        reason: 'main.js 必須重用 epubcfi.js 既有匯出的 compare()（CFI 排序'
+            '比較），不得重新實作一套 CFI 解析/排序邏輯（風險高、容易與 '
+            'epubcfi.js 本身的判斷不一致，違反 ADR 0011「不修改任何 '
+            'vendored 檔案」的精神——重新實作等於繞過既有正確實作）。',
+      );
+    });
+
+    test('window.lookupTtsSegmentIndex 使用 compareCfi 尋找第一個 cfi >= visibleCfi 的段落，找不到時退回最後一段',
+        () {
+      expect(
+        mainJsSource.contains('window.lookupTtsSegmentIndex = function'),
+        isTrue,
+        reason: 'main.js 內找不到 window.lookupTtsSegmentIndex——朗讀段反向'
+            '查找橋接函式缺失。',
+      );
+      expect(
+        mainJsSource.contains(
+          'segmentCfis.findIndex((cfi) => compareCfi(cfi, visibleCfi) >= 0)',
+        ),
+        isTrue,
+      );
+      expect(
+        mainJsSource.contains('index = segmentCfis.length - 1'),
+        isTrue,
+        reason: '找不到「cfi 大於等於 visibleCfi」的段落時（使用者目前位置'
+            '已在本章節最後一段之後），須退回最後一段索引，而非固定回傳 '
+            '0 或 -1，否則使用者在章節結尾按播放會被拉回章節開頭。',
+      );
+    });
+  });
+
   // Issue 8 審查 Important #7：mounted 守衛/dispose 競態測試
   // 驗證「快取完成前 dispose」不會導致快取目錄洩漏
   group('mounted guard / dispose race', () {
