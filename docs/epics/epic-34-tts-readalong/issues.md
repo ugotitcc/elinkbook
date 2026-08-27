@@ -266,6 +266,8 @@
 - [x] 既有 `library_screen_test.dart`／`reader_screen_test.dart` 零回歸
 - [x] `flutter analyze`／`flutter test` 全數通過
 
+**狀態：已合併回 `main`（PR [#191](https://git.jigong.org/huthief/elinkBook/pulls/191)，2026-08-27）。** 真機驗證於 Air Reader C／AiPaper Reader C E-Ink 裝置完成；驗證過程中另發現 CBZ 停用按鈕視覺區隔不足，已拆為 Issue 10。
+
 ---
 
 ## Issue 10：CBZ 朗讀停用按鈕缺乏視覺區隔——與啟用狀態顏色相同
