@@ -584,6 +584,213 @@ void main() {
     expect(controller.currentIndex, -1);
     expect(provider.synthesizeCallCount, 0); // 過期結果不應該被拿去合成/播放
   });
+
+  test('初始 speed 為 1.0', () {
+    final controller = buildController();
+    expect(controller.speed, 1.0);
+  });
+
+  test('setSpeed() 於 idle 狀態下只更新 speed 值，不呼叫 player.setSpeed()（尚無正在播放的段落可變速）',
+      () async {
+    final controller = buildController();
+
+    await controller.setSpeed(1.5);
+
+    expect(controller.speed, 1.5);
+    expect(player.callLog, isEmpty);
+  });
+
+  test('setSpeed() 於 playing 狀態下呼叫 player.setSpeed()，不重新呼叫 synthesize'
+      '（目前段落零延遲變速，語速契約澄清 review-spec.md Minor #2）', () async {
+    final controller = buildController();
+    await controller.play();
+    expect(provider.synthesizeCallCount, 1);
+
+    await controller.setSpeed(1.5);
+
+    expect(controller.speed, 1.5);
+    expect(player.speedCalls, [1.5]);
+    expect(provider.synthesizeCallCount, 1); // 不重新合成
+  });
+
+  test('setSpeed() 於 paused 狀態下同樣呼叫 player.setSpeed()（暫停中的段落之後恢復時沿用新語速）',
+      () async {
+    final controller = buildController();
+    await controller.play();
+    controller.pause();
+
+    await controller.setSpeed(0.75);
+
+    expect(player.speedCalls, [0.75]);
+  });
+
+  test('setSpeed() 後，自動接續下一段時 synthesize() 收到新的 speed 值（下一段才用新語速合成）',
+      () async {
+    final controller = buildController();
+    await controller.play();
+    await controller.setSpeed(1.5);
+    player.simulateCompleted();
+    await Future<void>.delayed(Duration.zero);
+
+    expect(provider.synthesizeSpeeds, [1.0, 1.5]);
+  });
+
+  test('nextSegment() 於 idle 狀態下為 no-op，不呼叫 synthesize', () async {
+    final controller = buildController();
+
+    await controller.nextSegment();
+
+    expect(controller.status, TtsPlaybackStatus.idle);
+    expect(provider.synthesizeCallCount, 0);
+  });
+
+  test('nextSegment() 從第一段跳到第二段並開始播放', () async {
+    final controller = buildController();
+    await controller.play();
+
+    await controller.nextSegment();
+
+    expect(controller.currentIndex, 1);
+    expect(provider.synthesizedTexts, ['第一句。', '第二句。']);
+    expect(controller.status, TtsPlaybackStatus.playing);
+  });
+
+  test('nextSegment() 於最後一段時，回到 idle 並清除高亮（等同自然播放完畢）', () async {
+    final highlighted = <TtsSegmentCfi?>[];
+    provider = FakeTtsProvider();
+    player = FakeTtsAudioPlayer();
+    final controller = TtsController(
+      provider: provider,
+      player: player,
+      loadSegments: () async => segments,
+      onHighlightSegment: highlighted.add,
+    );
+    await controller.play();
+    await controller.nextSegment(); // 到第二段（最後一段）
+
+    await controller.nextSegment(); // 已是最後一段，視同播放完畢
+
+    expect(controller.status, TtsPlaybackStatus.idle);
+    expect(controller.currentIndex, -1);
+    expect(controller.segments, isEmpty);
+    expect(highlighted.last, isNull);
+  });
+
+  test('nextSegment() 於 paused 狀態下呼叫，跳到下一段並自動恢復播放', () async {
+    final controller = buildController();
+    await controller.play();
+    controller.pause();
+    expect(controller.status, TtsPlaybackStatus.paused);
+
+    await controller.nextSegment();
+
+    expect(controller.currentIndex, 1);
+    expect(controller.status, TtsPlaybackStatus.playing);
+  });
+
+  test('previousSegment() 於 idle 狀態下為 no-op', () async {
+    final controller = buildController();
+
+    await controller.previousSegment();
+
+    expect(controller.status, TtsPlaybackStatus.idle);
+    expect(provider.synthesizeCallCount, 0);
+  });
+
+  test('previousSegment() 於第一段（currentIndex=0）呼叫為 no-op，不迴繞到最後一段', () async {
+    final controller = buildController();
+    await controller.play();
+    expect(controller.currentIndex, 0);
+
+    await controller.previousSegment();
+
+    expect(controller.currentIndex, 0);
+    expect(provider.synthesizeCallCount, 1); // 沒有新的合成呼叫
+  });
+
+  test('previousSegment() 從第二段跳回第一段並重新播放', () async {
+    final controller = buildController();
+    await controller.play();
+    await controller.nextSegment(); // 到第二段
+
+    await controller.previousSegment();
+
+    expect(controller.currentIndex, 0);
+    expect(provider.synthesizedTexts, ['第一句。', '第二句。', '第一句。']);
+  });
+
+  test('nextSegment() 連續快速呼叫兩次時，只有最後一次呼叫的結果生效，不播放到過期段落'
+      '（防重入，比照 review-issue-4-code.md Important #2 手法）', () async {
+    const threeSegments = [
+      TtsSegmentCfi(segmentId: '0', cfi: 'epubcfi(/6/4!/1:0)', text: '第一句。'),
+      TtsSegmentCfi(segmentId: '1', cfi: 'epubcfi(/6/4!/1:5)', text: '第二句。'),
+      TtsSegmentCfi(segmentId: '2', cfi: 'epubcfi(/6/4!/1:10)', text: '第三句。'),
+    ];
+    provider = FakeTtsProvider();
+    player = FakeTtsAudioPlayer();
+    final controller = TtsController(
+      provider: provider,
+      player: player,
+      loadSegments: () async => threeSegments,
+    );
+    await controller.play(); // 目前在第 0 段（playing）
+
+    final firstSynthCompleter = Completer<void>();
+    provider.nextSynthesizeCompleter = firstSynthCompleter;
+    final firstNext = controller.nextSegment(); // 跳到第 1 段，等待合成
+    await Future<void>.delayed(Duration.zero);
+
+    final secondSynthCompleter = Completer<void>();
+    provider.nextSynthesizeCompleter = secondSynthCompleter;
+    final secondNext = controller.nextSegment(); // 跳到第 2 段，等待合成
+    await Future<void>.delayed(Duration.zero);
+
+    // 讓第一次呼叫（較舊、應該過期）反而先完成合成。
+    firstSynthCompleter.complete();
+    await Future<void>.delayed(Duration.zero);
+    secondSynthCompleter.complete();
+    await firstNext;
+    await secondNext;
+
+    // 只有第 2 段（最新一次呼叫）的音訊被實際載入播放，第 1 段的
+    // （過期）合成結果被安全捨棄，不會讓使用者聽到「跳回舊句子」。
+    expect(controller.currentIndex, 2);
+    expect(player.loadedFiles, ['/fake/segment_1.wav', '/fake/segment_3.wav']);
+  });
+
+  test('handleExternalPositionChange() 於 nextSegment() 合成進行中呼叫時，讓該次呼叫的音訊'
+      '不被載入播放器（review-plan-issue-5.md 建議 1：_segmentGeneration 提前失效）',
+      () async {
+    final controller = buildController();
+    await controller.play(); // 第 0 段已在播放中
+
+    final synthCompleter = Completer<void>();
+    provider.nextSynthesizeCompleter = synthCompleter;
+    final nextFuture = controller.nextSegment(); // 跳到第 1 段，合成進行中
+    await Future<void>.delayed(Duration.zero);
+
+    controller.handleExternalPositionChange(); // 模擬合成期間發生手動導覽
+    synthCompleter.complete(); // 合成這時才完成（結果已過期）
+    await nextFuture;
+
+    expect(controller.status, TtsPlaybackStatus.idle);
+    // 過期結果不應該被載入播放器——沒有這項修法時，loadFile() 仍會被呼叫
+    // （只是事後因 _status != playing 而不會真的播放出聲音，loadedFiles 會包含
+    // '/fake/segment_2.wav'）；本測試驗證 handleExternalPositionChange() 讓
+    // _segmentGeneration 提前失效後，連 loadFile() 這個不必要的呼叫也不會發生，
+    // loadedFiles 僅保留初始 play() 載入的第 0 段音訊。
+    expect(player.loadedFiles, ['/fake/segment_1.wav']);
+  });
+
+  test('dispose() 後呼叫 nextSegment()/previousSegment()/setSpeed() 不拋出例外', () async {
+    final controller = buildController();
+    await controller.play();
+    controller.dispose();
+
+    expect(() => controller.nextSegment(), returnsNormally);
+    expect(() => controller.previousSegment(), returnsNormally);
+    expect(() => controller.setSpeed(1.5), returnsNormally);
+  });
 }
 
 
