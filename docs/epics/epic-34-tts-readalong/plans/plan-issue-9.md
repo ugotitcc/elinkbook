@@ -346,7 +346,7 @@ git commit -m "feat(epic-34): main.dart 建構真實 SystemTtsProvider 並貫穿
 
 **背景（審查 `reviews/review-plan-issue-9.md` Critical，執行前必讀）：** `flutter_tts` 套件官方文件明載：「Apps targeting Android 11 that use text-to-speech should declare `TextToSpeech.Engine.INTENT_ACTION_TTS_SERVICE` in the `queries` elements of their manifest」。本專案 `targetSdk` 已解析為 36（遠高於 Android 11 的套件可見性限制門檻），`AndroidManifest.xml` 目前的 `<queries>` 區塊（第 66-71 行）只宣告了 `PROCESS_TEXT`，沒有 `TTS_SERVICE`。若不補上，`TextToSpeech` 綁定語音引擎的隱式 Intent 查詢會被系統擋下——播放按鈕本身會正常顯示（顯示與否只看 `ttsProvider != null`，與這項設定無關），但實際按下播放極可能靜默失敗或拋出例外，直接牴觸 Issue 9「真機能看到並使用朗讀」的核心目標。Task 1／Task 2 的 Dart 接線即使全部正確，沒有這個宣告，真機驗收清單第 3 點仍會失敗。
 
-- [ ] **Step 1：修改 manifest**
+- [x] **Step 1：修改 manifest**
 
 `app/android/app/src/main/AndroidManifest.xml` 現有 `<queries>` 區塊（第 66-71 行）：
 
@@ -377,7 +377,7 @@ git commit -m "feat(epic-34): main.dart 建構真實 SystemTtsProvider 並貫穿
     </queries>
 ```
 
-- [ ] **Step 2：確認 manifest 仍是合法 XML、建置成功**
+- [x] **Step 2：確認 manifest 仍是合法 XML、建置成功**
 
 ```
 flutter build apk --debug
@@ -385,7 +385,7 @@ flutter build apk --debug
 
 Expected：建置成功（`flutter analyze`／`flutter test` 不涵蓋 Android manifest 內容，本步驟是本檔案唯一的自動化防呆——XML 語法錯誤或標籤未正確關閉會在此直接建置失敗）。
 
-- [ ] **Step 3：Commit**
+- [x] **Step 3：Commit**
 
 ```
 git add app/android/app/src/main/AndroidManifest.xml
