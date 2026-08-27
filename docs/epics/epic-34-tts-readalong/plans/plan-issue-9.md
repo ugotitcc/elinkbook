@@ -405,7 +405,7 @@ git commit -m "fix(epic-34): AndroidManifest.xml 補上 TTS_SERVICE queries 宣�
 - Consumes：Task 1／Task 2 完成的接線、Task 3 補上的 manifest 宣告
 - Produces：無（本 Task 為收尾與文件更新，不產出程式介面）
 
-- [ ] **Step 1：全專案分析與測試**
+- [x] **Step 1：全專案分析與測試**
 
 ```
 flutter analyze
@@ -414,19 +414,19 @@ flutter test
 
 Expected：`flutter analyze` 顯示 `No issues found!`；`flutter test` 全數 PASS，較 Issue 2 合併時的基準線多 3 個測試（Task 1 新增 2 個：`_openBook()`／`_openGroupFilteredView()` 兩條路徑；Task 2 新增 1 個），零回歸。
 
-- [ ] **Step 2：更新 `issues.md` Issue 9 驗收標準勾選狀態**
+- [x] **Step 2：更新 `issues.md` Issue 9 驗收標準勾選狀態**
 
 將 Issue 9 的四條驗收標準（`library_screen.dart` 接線完成、真機可見播放鈕、既有測試零回歸、`flutter analyze`／`flutter test` 全數通過）依實際完成狀況打勾；**真機驗證那一條保留未勾選**，待人類實際安裝 APK 驗證後再手動勾選（本計畫的自動化步驟無法驗證真機行為）。
 
-- [ ] **Step 3：補一筆 `epic.md` 開發記錄**
+- [x] **Step 3：補一筆 `epic.md` 開發記錄**
 
 依既有風格（單一長段落，日期前綴）在 `## 開發記錄` 段落末尾接續新增一句，說明 Issue 9 已完成接線、通過 `flutter analyze`／`flutter test`、待真機驗證播放鈕可見性。
 
-- [ ] **Step 4：更新 `docs/epics.md` 全域看板備註**
+- [x] **Step 4：更新 `docs/epics.md` 全域看板備註**
 
 將 epic-34 這一列備註改為簡潔摘要，例如「Issue 9 已完成接線，待真機驗證」。
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```
 git add docs/epics/epic-34-tts-readalong/issues.md docs/epics/epic-34-tts-readalong/epic.md docs/epics.md
