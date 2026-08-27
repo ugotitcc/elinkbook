@@ -39,11 +39,23 @@ class TtsController extends ChangeNotifier {
   /// 「顯示新的之前先清除舊的」，呼叫端只需忠實轉發每次收到的值。
   final void Function(TtsSegmentCfi? segment)? onHighlightSegment;
 
+  /// 依「畫面目前可視位置」決定 [play] 從 `idle` 開始播放時的起始段落索引
+  /// （epic-34-tts-readalong Issue 4，2026-08-27 Issue 3 真機驗收追加範圍：
+  /// 首次播放與手動導覽後恢復播放皆須套用，見 [handleExternalPositionChange]
+  /// 文件註解）。呼叫端（[ReaderScreen]）注入實際呼叫
+  /// `FoliateReaderView.lookupSegmentByCfi()` 的邏輯——本類別完全不知道
+  /// `FoliateReaderView` 存在，比照 [loadSegments]／[onHighlightSegment]
+  /// 既有的解耦模式。回傳值超出 [segments] 範圍（含負數）時，[play] 會
+  /// 安全 clamp 回 `0`；未提供本參數時退回既有的「固定從第 0 段開始」
+  /// 行為，向後相容既有呼叫端。
+  final Future<int> Function(List<TtsSegmentCfi> segments)? lookupStartIndex;
+
   TtsController({
     required this.provider,
     required this.player,
     required this.loadSegments,
     this.onHighlightSegment,
+    this.lookupStartIndex,
   }) {
     _completedSub = player.completedStream.listen((_) => _handleSegmentCompleted());
   }
@@ -84,7 +96,8 @@ class TtsController extends ChangeNotifier {
       }
       return;
     }
-    // idle：第一次播放，先載入目前章節的朗讀段。
+    // idle：第一次播放（或手動導覽觸發重置後的播放，見
+    // handleExternalPositionChange），先載入目前章節的朗讀段。
     _isLoadingSegments = true;
     List<TtsSegmentCfi> loaded;
     try {
@@ -95,7 +108,18 @@ class TtsController extends ChangeNotifier {
     if (_disposed) return;
     if (loaded.isEmpty) return; // 沒有可朗讀的內容，維持 idle。
     _segments = loaded;
-    _currentIndex = 0;
+    // 起始段落改由 lookupStartIndex 依「畫面目前可視位置」決定
+    // （epic-34-tts-readalong Issue 4），不再固定從第 0 段開始——這個
+    // 分支同時涵蓋「使用者從未開始朗讀，直接按下播放鍵」與「手動導覽
+    // 觸發自動暫停（見 handleExternalPositionChange）後再次按下播放鍵」
+    // 兩種情境，因為後者也會先把狀態重設回 idle，兩者共用同一段程式碼
+    // 路徑。未提供 lookupStartIndex 時（例如尚未接上 ReaderScreen 的
+    // 測試情境）退回既有的「從第 0 段開始」行為，向後相容。
+    final startIndex =
+        lookupStartIndex == null ? 0 : await lookupStartIndex!(loaded);
+    if (_disposed) return;
+    _currentIndex =
+        (startIndex >= 0 && startIndex < _segments.length) ? startIndex : 0;
     await _playCurrentSegment();
   }
 
@@ -109,6 +133,45 @@ class TtsController extends ChangeNotifier {
     try {
       player.pause().catchError((_) {});
     } catch (_) {}
+  }
+
+  /// 偵測到非 TTS 自身觸發的畫面位置變化時呼叫（epic-34-tts-readalong
+  /// Issue 4，`issues.md`「手動導覽觸發暫停時須清除舊高亮」）——呼叫端
+  /// （[ReaderScreen]）在既有 relocate 類事件（`onLocatorChanged`）內
+  /// 無條件呼叫本方法即可，不需要自行判斷「是否為 TTS 自身觸發」：
+  /// [TtsController] 在目前架構下從未呼叫任何導覽方法（只呼叫
+  /// [onHighlightSegment] 疊加高亮，不移動畫面），故每一次
+  /// `onLocatorChanged` 事件必然是使用者手動導覽（翻頁/捲動/跳章/開書）。
+  ///
+  /// 完全重設回 [TtsPlaybackStatus.idle]（而非停在 [TtsPlaybackStatus.paused]）
+  /// ——不只是暫停播放，是刻意清空 [_segments]／[_currentIndex]：手動導覽
+  /// 後使用者可能已經跳到不同章節，舊的朗讀段清單已經不適用，下一次呼叫
+  /// [play] 時必須重新呼叫 [loadSegments] 取得目前章節的朗讀段。這也讓
+  /// 「首次播放」與「手動導覽後恢復播放」共用完全同一段起始邏輯（見
+  /// [play] 內 `lookupStartIndex` 呼叫處），不需要另外維護一個「暫停原因」
+  /// 的旗標。狀態本來就是 idle（尚未播放過，或已經自然播放完畢）時為
+  /// no-op，避免每次翻頁都觸發不必要的 [notifyListeners]。
+  ///
+  /// [_disposed] 防護（審查 `review-plan-issue-4.md` Important #1）：
+  /// `ReaderScreen` 銷毀過程中，WebView 的 JS 橋接回呼（`onLocatorChanged`）
+  /// 可能在 `_ttsController?.dispose()` 已執行、但 `ReaderScreen` 自身尚未
+  /// 完全 unmount 之間的窄縫觸發，若在此時仍呼叫 [notifyListeners]，
+  /// `ChangeNotifier` 會拋出「used after being disposed」例外導致崩潰——
+  /// 比照本類別其餘會呼叫 [notifyListeners] 的方法（[_playCurrentSegment]／
+  /// [_handleSegmentCompleted]）皆已有的既有防護慣例。
+  void handleExternalPositionChange() {
+    if (_disposed) return;
+    if (_status == TtsPlaybackStatus.idle) return;
+    _status = TtsPlaybackStatus.idle;
+    _currentIndex = -1;
+    _segments = const [];
+    // 同 pause()：player.pause() 若非同步才失敗，同步 try/catch 攔不到，
+    // 改用 catchError 承接（比照既有 pause() 的既有修法）。
+    try {
+      player.pause().catchError((_) {});
+    } catch (_) {}
+    onHighlightSegment?.call(null);
+    notifyListeners();
   }
 
   /// 合成並播放 [_currentIndex] 對應的朗讀段。`provider.synthesize()`／
