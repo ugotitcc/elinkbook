@@ -120,6 +120,55 @@ void main() {
   });
 
   test(
+      'synthesize() 在 getDefaultEngine 回傳 null 時明確呼叫 setEngine()'
+      '（真機無預設引擎防禦）', () async {
+    final calls = <MethodCall>[];
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async {
+      calls.add(call);
+      if (call.method == 'getEngines') {
+        return ['com.google.android.tts'];
+      }
+      if (call.method == 'getDefaultEngine') {
+        // 模擬部分裝置（例如特規 E-Ink 韌體）系統中已裝妥引擎，卻沒有
+        // 登記「預設引擎」的情境。
+        return null;
+      }
+      if (call.method == 'setEngine') {
+        return 1;
+      }
+      if (call.method == 'setLanguage') {
+        return 1;
+      }
+      if (call.method == 'setSpeechRate') {
+        return 1;
+      }
+      if (call.method == 'synthesizeToFile') {
+        final filePath = (call.arguments as Map)['fileName'] as String;
+        File(filePath).writeAsStringSync('dummy wave content');
+        scheduleMicrotask(() {
+          final message = const StandardMethodCodec()
+              .encodeMethodCall(const MethodCall('synth.onComplete'));
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+              .handlePlatformMessage(channel.name, message, (_) {});
+        });
+      }
+      return null;
+    });
+
+    final provider = SystemTtsProvider(flutterTts: FlutterTts());
+    final result = await provider.synthesize(
+      '測試文字',
+      voice: TtsVoice.systemDefault,
+    );
+
+    expect(result.audioFilePath, isNotEmpty);
+    final setEngineCall =
+        calls.firstWhere((c) => c.method == 'setEngine');
+    expect(setEngineCall.arguments, 'com.google.android.tts');
+  });
+
+  test(
       'synthesize() 在合成檔案不存在或大小為 0 時拋出 TtsSynthesisException'
       '（真機無聲問題防禦）', () async {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger

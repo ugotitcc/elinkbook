@@ -25,6 +25,15 @@ class SystemTtsProvider implements TtsProvider {
     return const [TtsVoice.systemDefault];
   }
 
+  /// 同時寫入 debug console 與 App 內建的閱讀器 Console Log 畫面
+  /// （「設定 → 閱讀器 Console Log」，見 [ReaderConsoleLog]），
+  /// 讓真機診斷不必接電腦跑 `adb logcat`。
+  void _log(String message) {
+    final tagged = '[TTS Diagnostic] $message';
+    debugPrint(tagged);
+    ReaderConsoleLog.add(tagged);
+  }
+
   @override
   Future<TtsSynthesisResult> synthesize(
     String text, {
@@ -38,14 +47,9 @@ class SystemTtsProvider implements TtsProvider {
     try {
       engines = await _flutterTts.getEngines ?? const [];
       defaultEngine = await _flutterTts.getDefaultEngine;
-      final message =
-          '[TTS Diagnostic] Available Engines: $engines, Default: $defaultEngine';
-      debugPrint(message);
-      ReaderConsoleLog.add(message);
+      _log('Available Engines: $engines, Default: $defaultEngine');
     } catch (e) {
-      final message = '[TTS Diagnostic] Failed to query engines: $e';
-      debugPrint(message);
-      ReaderConsoleLog.add(message);
+      _log('Failed to query engines: $e');
     }
 
     if (engines.isEmpty) {
@@ -55,6 +59,24 @@ class SystemTtsProvider implements TtsProvider {
       );
     }
 
+    // 1b. 部分裝置（尤其是特規 E-Ink 韌體）系統中已裝妥引擎，卻沒有登記
+    // 「預設引擎」（getDefaultEngine 回傳 null），導致 flutter_tts 底層
+    // TextToSpeech 初始化行為不可靠。此時明確指定引擎：偵測到的清單中
+    // 優先選 com.google.android.tts（穩定、支援中文），否則退回清單
+    // 第一個——不寫死成只認 Google TTS，避免沒裝 Google TTS 的裝置被
+    // 這段防禦誤傷。
+    if (defaultEngine == null) {
+      final chosenEngine = engines.contains('com.google.android.tts')
+          ? 'com.google.android.tts'
+          : engines.first as String;
+      try {
+        await _flutterTts.setEngine(chosenEngine);
+        _log('No default engine reported; explicitly set engine to $chosenEngine');
+      } catch (e) {
+        _log('Failed to explicitly set engine to $chosenEngine: $e');
+      }
+    }
+
     // 2. 明確設定語言（elinkBook 為繁體中文排版，優先設 zh-TW，若不支援則設 zh-CN）
     try {
       int langResult = await _flutterTts.setLanguage("zh-TW");
@@ -62,9 +84,7 @@ class SystemTtsProvider implements TtsProvider {
         await _flutterTts.setLanguage("zh-CN");
       }
     } catch (e) {
-      final message = '[TTS Diagnostic] Failed to set language: $e';
-      debugPrint(message);
-      ReaderConsoleLog.add(message);
+      _log('Failed to set language: $e');
     }
 
     final filePath = await _resolveOutputPath();
@@ -79,6 +99,7 @@ class SystemTtsProvider implements TtsProvider {
     });
     _flutterTts.setErrorHandler((dynamic message) {
       if (!completer.isCompleted) {
+        _log('Native engine reported synthesis error: $message');
         completer.completeError(TtsSynthesisException(message.toString()));
       }
     });
@@ -86,11 +107,12 @@ class SystemTtsProvider implements TtsProvider {
     // isFullPath=true：呼叫端自己決定完整路徑並覆寫，不依賴套件自行組裝
     // 路徑的預設行為（見 Global Constraints「固定命名空間、覆寫」）。
     await _flutterTts.synthesizeToFile(text, filePath, true);
-    
+
     // 3. Timeout 兜底防懸掛
     try {
       await completer.future.timeout(const Duration(seconds: 5));
     } on TimeoutException {
+      _log('synthesizeToFile timed out after 5s (engine: ${defaultEngine ?? engines}）');
       throw TtsSynthesisException(
         '語音合成逾時（5秒）。這通常是因為系統預設的 TTS 語音引擎卡死或未完成初始化。'
         '請確認系統中已安裝並啟用可用的「文字轉語音 (TTS)」引擎。',
@@ -100,6 +122,7 @@ class SystemTtsProvider implements TtsProvider {
     // 4. 合成音訊檔案防禦性檢查
     final file = File(filePath);
     if (!await file.exists() || await file.length() == 0) {
+      _log('Synthesized file missing or empty at $filePath. Engines: $engines');
       throw TtsSynthesisException(
         '語音合成檔案無效或大小為 0。可用的 TTS 引擎列表：$engines。'
         '請確認系統中已安裝並啟用可用的「文字轉語音 (TTS)」引擎。',
