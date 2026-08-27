@@ -30,6 +30,34 @@ class SystemTtsProvider implements TtsProvider {
     double speed = 1.0,
     double pitch = 1.0,
   }) async {
+    // 1. 診斷與防禦性檢查：確認裝置是否有可用 TTS 引擎
+    List<dynamic> engines = const [];
+    String? defaultEngine;
+    try {
+      engines = await _flutterTts.getEngines ?? const [];
+      defaultEngine = await _flutterTts.getDefaultEngine;
+      print('[TTS Diagnostic] Available Engines: $engines, Default: $defaultEngine');
+    } catch (e) {
+      print('[TTS Diagnostic] Failed to query engines: $e');
+    }
+
+    if (engines.isEmpty) {
+      throw TtsSynthesisException(
+        '系統中未偵測到任何「文字轉語音 (TTS)」引擎。'
+        '請前往 Android 系統設定安裝並啟用支援中文的 TTS 引擎（例如 Google 文字轉語音）。',
+      );
+    }
+
+    // 2. 明確設定語言（elinkBook 為繁體中文排版，優先設 zh-TW，若不支援則設 zh-CN）
+    try {
+      int langResult = await _flutterTts.setLanguage("zh-TW");
+      if (langResult == 0) {
+        await _flutterTts.setLanguage("zh-CN");
+      }
+    } catch (e) {
+      print('[TTS Diagnostic] Failed to set language: $e');
+    }
+
     final filePath = await _resolveOutputPath();
 
     // flutter_tts 的語速範圍是 0.0（最慢）～1.0（最快），本專案呼叫端
@@ -49,19 +77,23 @@ class SystemTtsProvider implements TtsProvider {
     // isFullPath=true：呼叫端自己決定完整路徑並覆寫，不依賴套件自行組裝
     // 路徑的預設行為（見 Global Constraints「固定命名空間、覆寫」）。
     await _flutterTts.synthesizeToFile(text, filePath, true);
-    await completer.future;
+    
+    // 3. Timeout 兜底防懸掛
+    try {
+      await completer.future.timeout(const Duration(seconds: 5));
+    } on TimeoutException {
+      throw TtsSynthesisException(
+        '語音合成逾時（5秒）。這通常是因為系統預設的 TTS 語音引擎卡死或未完成初始化。'
+        '請確認系統中已安裝並啟用可用的「文字轉語音 (TTS)」引擎。',
+      );
+    }
 
+    // 4. 合成音訊檔案防禦性檢查
     final file = File(filePath);
     if (!await file.exists() || await file.length() == 0) {
-      List<dynamic> engines = const [];
-      try {
-        engines = await _flutterTts.getEngines;
-      } catch (e) {
-        // 忽略取得引擎列表的錯誤
-      }
       throw TtsSynthesisException(
-        '語音合成檔案無效或大小為 0。可用的 TTS 引擎列表：$engines。'
-        '請確認系統中已安裝並啟用可用的「文字轉語音 (TTS)」中文語音引擎。',
+        '語音合成檔案無效或大小為 0。'
+        '請確認系統中已安裝並啟用可用的「文字轉語音 (TTS)」引擎。',
       );
     }
 

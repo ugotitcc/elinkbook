@@ -37,6 +37,18 @@ void main() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (call) async {
       calls.add(call);
+      if (call.method == 'getEngines') {
+        return ['com.google.android.tts'];
+      }
+      if (call.method == 'getDefaultEngine') {
+        return 'com.google.android.tts';
+      }
+      if (call.method == 'setLanguage') {
+        return 1;
+      }
+      if (call.method == 'setSpeechRate') {
+        return 1;
+      }
       if (call.method == 'synthesizeToFile') {
         final filePath = (call.arguments as Map)['fileName'] as String;
         File(filePath).writeAsStringSync('dummy wave content');
@@ -75,6 +87,18 @@ void main() {
   test('synthesize() 在 synth.onError 後拋出 TtsSynthesisException', () async {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (call) async {
+      if (call.method == 'getEngines') {
+        return ['com.google.android.tts'];
+      }
+      if (call.method == 'getDefaultEngine') {
+        return 'com.google.android.tts';
+      }
+      if (call.method == 'setLanguage') {
+        return 1;
+      }
+      if (call.method == 'setSpeechRate') {
+        return 1;
+      }
       if (call.method == 'synthesizeToFile') {
         scheduleMicrotask(() {
           final message = const StandardMethodCodec().encodeMethodCall(
