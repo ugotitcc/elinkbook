@@ -278,5 +278,91 @@ void main() {
     expect(controller.status, TtsPlaybackStatus.playing);
     expect(player.callLog, ['loadFile', 'pause', 'play']);
   });
+
+  test('play() 開始播放時，onHighlightSegment 收到目前段落（epic-34-tts-readalong Issue 3）',
+      () async {
+    final highlighted = <TtsSegmentCfi?>[];
+    provider = FakeTtsProvider();
+    player = FakeTtsAudioPlayer();
+    final controller = TtsController(
+      provider: provider,
+      player: player,
+      loadSegments: () async => segments,
+      onHighlightSegment: highlighted.add,
+    );
+
+    await controller.play();
+
+    expect(highlighted, [segments[0]]);
+  });
+
+  test('自動接續下一段時，onHighlightSegment 依序收到新段落（不需呼叫端自行先清除舊值）',
+      () async {
+    final highlighted = <TtsSegmentCfi?>[];
+    provider = FakeTtsProvider();
+    player = FakeTtsAudioPlayer();
+    final controller = TtsController(
+      provider: provider,
+      player: player,
+      loadSegments: () async => segments,
+      onHighlightSegment: highlighted.add,
+    );
+
+    await controller.play();
+    player.simulateCompleted();
+    await Future<void>.delayed(Duration.zero);
+
+    expect(highlighted, [segments[0], segments[1]]);
+  });
+
+  test('最後一段播放完畢回到 idle 時，onHighlightSegment 收到 null（清除高亮）', () async {
+    final highlighted = <TtsSegmentCfi?>[];
+    provider = FakeTtsProvider();
+    player = FakeTtsAudioPlayer();
+    final controller = TtsController(
+      provider: provider,
+      player: player,
+      loadSegments: () async => segments,
+      onHighlightSegment: highlighted.add,
+    );
+
+    await controller.play();
+    player.simulateCompleted();
+    await Future<void>.delayed(Duration.zero);
+    player.simulateCompleted();
+    await Future<void>.delayed(Duration.zero);
+
+    expect(highlighted, [segments[0], segments[1], null]);
+  });
+
+  test('play() 合成失敗重設回 idle 時，onHighlightSegment 最後收到 null', () async {
+    final highlighted = <TtsSegmentCfi?>[];
+    provider = FakeTtsProvider();
+    player = FakeTtsAudioPlayer();
+    provider.nextSynthesizeError = const TtsSynthesisException('模擬引擎失敗');
+    final controller = TtsController(
+      provider: provider,
+      player: player,
+      loadSegments: () async => segments,
+      onHighlightSegment: highlighted.add,
+    );
+
+    await controller.play();
+
+    expect(highlighted, [segments[0], null]);
+  });
+
+  test('不提供 onHighlightSegment 時，play()/自動接續/播放結束皆不拋出例外（可選 callback）',
+      () async {
+    final controller = buildController();
+    await controller.play();
+    player.simulateCompleted();
+    await Future<void>.delayed(Duration.zero);
+    player.simulateCompleted();
+    await Future<void>.delayed(Duration.zero);
+
+    expect(controller.status, TtsPlaybackStatus.idle);
+  });
 }
+
 

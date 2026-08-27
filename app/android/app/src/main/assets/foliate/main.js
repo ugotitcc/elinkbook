@@ -411,6 +411,43 @@ window.setDecorations = function (decorations) {
 }
 
 /**
+ * 朗讀高亮（epic-34-tts-readalong Issue 3，ADR 0026「TTS 朗讀高亮採暫態
+ * UI 狀態，不寫入 highlights/notes 資料表」）：使用 view.js 既有但本應用
+ * 程式劃線/備註功能（window.setDecorations()，見上方）目前未使用到的
+ * `foliate-note:` 前綴（NOTE_PREFIX，見 view.js 第 8、410-427 行），組成
+ * annotation value，讓 Overlayer 內部 Map 的 key（"foliate-note:" + cfi）
+ * 天然與劃線/備註直接以裸 cfi 當 key 的既有 key 空間分開——同一句子若剛好
+ * 也被使用者手動劃線，兩者互不覆蓋、互不干擾（view.js addAnnotation()
+ * 對於帶 NOTE_PREFIX 的 value，仍會 resolveNavigation() 去掉前綴後的 cfi
+ * 算出 Range，並透過既有 draw-annotation 事件把繪製決定權交還給下方監聽器，
+ * 與劃線/備註走的是同一段程式碼路徑，只是 Map key 不同——不需要修改任何
+ * vendored 檔案）。全程只有一個 TTS 高亮存在，故 currentTtsAnnotationValue
+ * 直接記錄「目前這個」的完整 prefixed value，供 clearTtsHighlight() 精確
+ * 刪除；show 新的之前先刪除舊的，呼叫端不需要自行先呼叫 clear 再呼叫 show。
+ */
+const TTS_HIGHLIGHT_COLOR = 'rgba(251, 146, 60, 0.45)'
+let currentTtsAnnotationValue = null
+
+window.showTtsHighlight = function (cfi, vertical) {
+  if (currentTtsAnnotationValue) {
+    view.deleteAnnotation({ value: currentTtsAnnotationValue })
+  }
+  currentTtsAnnotationValue = 'foliate-note:' + cfi
+  view.addAnnotation({
+    value: currentTtsAnnotationValue,
+    color: TTS_HIGHLIGHT_COLOR,
+    isUnderline: false,
+    vertical,
+  })
+}
+
+window.clearTtsHighlight = function () {
+  if (!currentTtsAnnotationValue) return
+  view.deleteAnnotation({ value: currentTtsAnnotationValue })
+  currentTtsAnnotationValue = null
+}
+
+/**
  * 主動清除目前的原生文字選取狀態（epic-25 Issue 3）：使用者點擊
  * AnnotationToolbar 的關閉按鈕後，Dart 端會清空 _currentSelection 讓工具列
  * 消失，但 WebView 原生選取（藍色反白＋拖曳控點）是瀏覽器自己的視覺層，
@@ -761,15 +798,24 @@ async function openBook() {
     // spike-overlayer-annotations.md「已記錄的既有 API 落差」）。
     view.addEventListener('draw-annotation', (e) => {
       const { draw, annotation } = e.detail
+      // epic-34-tts-readalong Issue 3：annotation.vertical 由
+      // window.showTtsHighlight() 明確傳入（見上方），讓朗讀高亮的直排/
+      // 橫排判斷不依賴 currentWritingMode 的更新時機（理論上兩者恆一致，
+      // 這裡是額外的顯式保險，也讓 Dart 端呼叫參數本身可被觀察/測試）。
+      // 劃線/備註既有呼叫（window.setDecorations()）從未設定這個欄位，
+      // ??（nullish coalescing，非 ||）確保只有 undefined 才落回
+      // currentWritingMode——若誤用 ||，annotation.vertical 為合法值
+      // false（橫排）時會被誤判為「未設定」而錯誤退回 currentWritingMode。
+      const isVertical = annotation.vertical ?? (currentWritingMode === 'vertical')
       if (annotation.isUnderline) {
         draw(Overlayer.underline, {
           color: annotation.color,
-          writingMode: currentWritingMode === 'vertical' ? 'vertical-rl' : 'horizontal-tb',
+          writingMode: isVertical ? 'vertical-rl' : 'horizontal-tb',
         })
       } else {
         draw(Overlayer.highlight, {
           color: annotation.color,
-          vertical: currentWritingMode === 'vertical',
+          vertical: isVertical,
         })
       }
     })

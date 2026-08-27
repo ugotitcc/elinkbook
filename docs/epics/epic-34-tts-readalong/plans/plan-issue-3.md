@@ -32,7 +32,7 @@
 - Consumes：既有 `view.addAnnotation()`/`view.deleteAnnotation()`（`window.setDecorations()` 已示範用法，見第 402-411 行）、既有 `draw-annotation` 事件監聽器（第 762-775 行）
 - Produces：`window.showTtsHighlight(cfi, vertical)`／`window.clearTtsHighlight()` 兩個全域函式——供 Task 3 的 `FoliateReaderView.showTtsHighlight`/`clearTtsHighlight` 靜態 helper（透過 `InAppWebViewController.evaluateJavascript`）呼叫
 
-- [ ] **Step 1：新增 `window.showTtsHighlight`/`window.clearTtsHighlight`**
+- [x] **Step 1：新增 `window.showTtsHighlight`/`window.clearTtsHighlight`**
 
 在 `app/android/app/src/main/assets/foliate/main.js` 找到以下既有的 `window.setDecorations` 函式（第 402-411 行）：
 
@@ -90,7 +90,7 @@ window.clearTtsHighlight = function () {
 }
 ```
 
-- [ ] **Step 2：`draw-annotation` 監聽器接受 `annotation.vertical` 顯式覆寫**
+- [x] **Step 2：`draw-annotation` 監聽器接受 `annotation.vertical` 顯式覆寫**
 
 找到以下既有的 `draw-annotation` 監聽器（第 762-775 行）：
 
@@ -139,7 +139,7 @@ window.clearTtsHighlight = function () {
     })
 ```
 
-- [ ] **Step 3：main.js regression guard 測試**
+- [x] **Step 3：main.js regression guard 測試**
 
 在 `app/test/reader/foliate_reader_view_test.dart` 找到既有的 `group('main.js 選取範圍 hit-test 既有標記＋回傳文字 regression guard...')`（比照該 group 讀取 `mainJsSource` 的既有寫法，見檔案內 `setUpAll` 用法），在它結尾的 `});` 之後、`group('mounted guard / dispose race'...)` 之前，新增：
 
@@ -201,7 +201,7 @@ window.clearTtsHighlight = function () {
 
 ```
 
-- [ ] **Step 4：跑測試**
+- [x] **Step 4：跑測試**
 
 ```
 flutter test test/reader/foliate_reader_view_test.dart
@@ -217,7 +217,7 @@ Expected：`No issues found!`
 
 不需要重新執行 `node app/tool/check_foliate_es_compat.js`——本次新增的 JS 語法（`??` nullish coalescing、模板字串、`Map`）在 `main.js` 既有程式碼中已大量使用（例如第 465/469/473/496/700/717/732/735/736 行皆已使用 `??`），不是本次新引入的相容性風險面，該掃描腳本的既有觸發時機本就是「升級 vendored 版本後才跑」（見 `app/tool/README.md`），非本 Issue 範圍。
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```
 git add app/android/app/src/main/assets/foliate/main.js app/test/reader/foliate_reader_view_test.dart
@@ -236,7 +236,7 @@ git commit -m "feat(epic-34): main.js 朗讀高亮橋接——key 空間隔離�
 - Consumes：既有 `TtsSegmentCfi`（`tts_segment_cfi.dart`）
 - Produces：`TtsController` 建構子新增可選具名參數 `void Function(TtsSegmentCfi? segment)? onHighlightSegment`——供 Task 3 的 `ReaderScreen._ttsControllerOrNull` 使用
 
-- [ ] **Step 1：寫失敗測試**
+- [x] **Step 1：寫失敗測試**
 
 在 `app/test/reader/tts_controller_test.dart` 檔案結尾（最後一個 `test()` 之後、`}` 之前）新增：
 
@@ -327,7 +327,7 @@ git commit -m "feat(epic-34): main.js 朗讀高亮橋接——key 空間隔離�
   });
 ```
 
-- [ ] **Step 2：跑測試確認失敗**
+- [x] **Step 2：跑測試確認失敗**
 
 ```
 flutter test test/reader/tts_controller_test.dart
@@ -335,7 +335,7 @@ flutter test test/reader/tts_controller_test.dart
 
 Expected：FAIL（`TtsController` 建構子尚未接受 `onHighlightSegment` 具名參數，編譯錯誤）。
 
-- [ ] **Step 3：實作 `onHighlightSegment`**
+- [x] **Step 3：實作 `onHighlightSegment`**
 
 在 `app/lib/reader/tts_controller.dart` 找到以下既有欄位/建構子（第 26-37 行）：
 
@@ -515,7 +515,7 @@ class TtsController extends ChangeNotifier {
   }
 ```
 
-- [ ] **Step 4：跑測試確認通過**
+- [x] **Step 4：跑測試確認通過**
 
 ```
 flutter test test/reader/tts_controller_test.dart
@@ -529,7 +529,7 @@ flutter analyze
 
 Expected：`No issues found!`
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```
 git add app/lib/reader/tts_controller.dart app/test/reader/tts_controller_test.dart
@@ -549,7 +549,7 @@ git commit -m "feat(epic-34): TtsController 新增 onHighlightSegment 高亮回�
 - Consumes：Task 1 的 `window.showTtsHighlight`/`window.clearTtsHighlight`；Task 2 的 `TtsController.onHighlightSegment`；既有 `ReaderScreen._resolved`（目前實際生效的排版方向，含使用者手動切換結果）、`WritingMode`
 - Produces：`FoliateReaderView.showTtsHighlight(key, cfi, {required bool vertical})`／`FoliateReaderView.clearTtsHighlight(key)` 靜態方法；`ReaderScreen._ttsControllerOrNull` 內部接線（無新增公開 API）
 
-- [ ] **Step 1：`FoliateReaderView` 新增靜態 helper**
+- [x] **Step 1：`FoliateReaderView` 新增靜態 helper**
 
 在 `app/lib/reader/foliate_reader_view.dart` 找到以下既有的 `setDecorations` 靜態方法：
 
@@ -629,7 +629,7 @@ git commit -m "feat(epic-34): TtsController 新增 onHighlightSegment 高亮回�
   }
 ```
 
-- [ ] **Step 2：`ReaderScreen` 接線**
+- [x] **Step 2：`ReaderScreen` 接線**
 
 在 `app/lib/screens/reader_screen.dart` 頂部 import 區塊，緊接 `import '../reader/tts_provider.dart';` 之後新增：
 
@@ -698,7 +698,7 @@ import '../reader/tts_segment_cfi.dart';
   }
 ```
 
-- [ ] **Step 3：寫 widget test**
+- [x] **Step 3：寫 widget test**
 
 在 `app/test/screens/reader_screen_test.dart` 找到既有的 `group('TTS 語音朗讀（epic-34-tts-readalong Issue 2）', ...)` 結尾的 `});`（緊接在 `CBZ 格式提供 ttsProvider 時，TTS 按鈕顯示但為停用狀態` 測試之後），在它之後新增一個新的 group：
 
@@ -810,7 +810,7 @@ import '../reader/tts_segment_cfi.dart';
   });
 ```
 
-- [ ] **Step 4：跑測試確認全數通過、零回歸**
+- [x] **Step 4：跑測試確認全數通過、零回歸**
 
 ```
 flutter test test/screens/reader_screen_test.dart
@@ -830,7 +830,7 @@ flutter analyze
 
 Expected：`No issues found!`
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```
 git add app/lib/reader/foliate_reader_view.dart app/lib/screens/reader_screen.dart app/test/screens/reader_screen_test.dart

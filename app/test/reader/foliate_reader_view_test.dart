@@ -1397,6 +1397,61 @@ void main() {
     });
   });
 
+  group('main.js 朗讀高亮 regression guard（epic-34-tts-readalong Issue 3，ADR 0026）', () {
+    late String mainJsSource;
+
+    setUpAll(() {
+      mainJsSource = File('android/app/src/main/assets/foliate/main.js')
+          .readAsStringSync();
+    });
+
+    test('window.showTtsHighlight 使用 foliate-note: 前綴，與劃線/備註直接以 cfi 當 key 的既有 key 空間分開',
+        () {
+      expect(mainJsSource.contains('window.showTtsHighlight = function'), isTrue,
+          reason: 'main.js 內找不到 window.showTtsHighlight——朗讀高亮橋接'
+              '函式缺失。');
+      expect(mainJsSource.contains("'foliate-note:' + cfi"), isTrue,
+          reason: '朗讀高亮必須使用 foliate-note: 前綴組成 annotation '
+              'value，讓 Overlayer 內部 Map 的 key 與劃線/備註直接以 cfi '
+              '當 key 的既有 key 空間分開（ADR 0026「使用獨立 annotation '
+              'key」），否則同一句子若剛好也被使用者手動劃線，會互相覆蓋。');
+      expect(mainJsSource.contains('view.addAnnotation({'), isTrue);
+    });
+
+    test('window.clearTtsHighlight 存在且呼叫 view.deleteAnnotation', () {
+      final showFnIndex =
+          mainJsSource.indexOf('window.showTtsHighlight = function');
+      final clearFnIndex =
+          mainJsSource.indexOf('window.clearTtsHighlight = function');
+      expect(clearFnIndex, greaterThanOrEqualTo(0),
+          reason: 'main.js 內找不到 window.clearTtsHighlight——朗讀高亮'
+              '清除橋接函式缺失，播放結束/朗讀段切換時高亮會無法清除、'
+              '留下殘影。');
+      final deleteCallIndex =
+          mainJsSource.indexOf('view.deleteAnnotation(', clearFnIndex);
+      expect(deleteCallIndex, greaterThanOrEqualTo(0),
+          reason: 'window.clearTtsHighlight 內找不到 view.deleteAnnotation '
+              '呼叫。');
+      expect(showFnIndex, greaterThanOrEqualTo(0));
+    });
+
+    test('draw-annotation 監聽器含 annotation.vertical 覆寫，用 ?? 而非 ||（避免 vertical:false 被誤判為未設定）',
+        () {
+      expect(
+        mainJsSource.contains(
+          "annotation.vertical ?? (currentWritingMode === 'vertical')",
+        ),
+        isTrue,
+        reason: 'draw-annotation 監聽器必須讓 annotation.vertical（朗讀'
+            '高亮由 Dart 端明確傳入）優先於 currentWritingMode（劃線/'
+            '備註既有推斷依據），且必須用 ??（nullish coalescing）而非 '
+            '||——若誤用 ||，annotation.vertical 為合法值 false（橫排）'
+            '時會被誤判為「未設定」而錯誤退回 currentWritingMode，橫排'
+            '書籍的朗讀高亮可能在某些情境下被畫成直排樣式。',
+      );
+    });
+  });
+
   // Issue 8 審查 Important #7：mounted 守衛/dispose 競態測試
   // 驗證「快取完成前 dispose」不會導致快取目錄洩漏
   group('mounted guard / dispose race', () {

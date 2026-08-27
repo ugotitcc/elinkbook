@@ -530,6 +530,36 @@ class FoliateReaderView extends StatefulWidget {
     }
   }
 
+  /// 顯示朗讀高亮（epic-34-tts-readalong Issue 3，ADR 0026）：呼叫 main.js
+  /// window.showTtsHighlight()，使用與劃線/備註分開的獨立 annotation key
+  /// 空間（見 main.js 該函式註解），不寫入任何資料表。[vertical] 由呼叫端
+  /// （[ReaderScreen]）依目前實際生效的排版方向傳入，供 main.js
+  /// draw-annotation 監聽器決定 Overlayer.highlight() 的 vertical 參數，
+  /// 直排/橫排皆正確跟隨。
+  static void showTtsHighlight(
+    GlobalKey<State<FoliateReaderView>> key,
+    String cfi, {
+    required bool vertical,
+  }) {
+    final state = key.currentState;
+    if (state is _FoliateReaderViewState) {
+      state._evaluate(
+        'window.showTtsHighlight(${jsonEncode(cfi)}, $vertical)',
+      );
+    }
+  }
+
+  /// 清除目前的朗讀高亮（epic-34-tts-readalong Issue 3）。朗讀段切換時不
+  /// 需要呼叫端先呼叫這個方法再呼叫 [showTtsHighlight]——main.js
+  /// window.showTtsHighlight() 內部已處理「顯示新的之前先清除舊的」，本
+  /// 方法只在播放結束（不再有下一段可顯示）時由 [ReaderScreen] 呼叫。
+  static void clearTtsHighlight(GlobalKey<State<FoliateReaderView>> key) {
+    final state = key.currentState;
+    if (state is _FoliateReaderViewState) {
+      state._evaluate('window.clearTtsHighlight()');
+    }
+  }
+
   /// 主動清除 WebView 原生文字選取狀態（epic-25 Issue 3，見 main.js
   /// window.clearSelection 註解）。
   static void clearSelection(GlobalKey<State<FoliateReaderView>> key) {

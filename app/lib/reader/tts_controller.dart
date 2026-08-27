@@ -28,10 +28,22 @@ class TtsController extends ChangeNotifier {
   final TtsAudioPlayer player;
   final Future<List<TtsSegmentCfi>> Function() loadSegments;
 
+  /// 朗讀段切換時呼叫（epic-34-tts-readalong Issue 3，spec.md「高亮渲染」／
+  /// ADR 0026）：帶入即將開始朗讀的 [TtsSegmentCfi]，或在播放結束/合成失敗
+  /// 導致重設回 idle 時帶入 `null` 通知呼叫端清除高亮。呼叫端
+  /// （[ReaderScreen]）注入實際呼叫 `FoliateReaderView.showTtsHighlight()`/
+  /// `clearTtsHighlight()` 的邏輯——本類別完全不知道 `FoliateReaderView`
+  /// 或高亮如何渲染，只負責在正確時機通知「現在該顯示哪一段」，比照
+  /// [loadSegments] 既有的解耦模式。切換到新段落時呼叫端不需要自行先清除
+  /// 舊高亮再顯示新高亮——`window.showTtsHighlight()`（main.js）內部已處理
+  /// 「顯示新的之前先清除舊的」，呼叫端只需忠實轉發每次收到的值。
+  final void Function(TtsSegmentCfi? segment)? onHighlightSegment;
+
   TtsController({
     required this.provider,
     required this.player,
     required this.loadSegments,
+    this.onHighlightSegment,
   }) {
     _completedSub = player.completedStream.listen((_) => _handleSegmentCompleted());
   }
@@ -67,6 +79,7 @@ class TtsController extends ChangeNotifier {
         _status = TtsPlaybackStatus.idle;
         _currentIndex = -1;
         _segments = const [];
+        onHighlightSegment?.call(null);
         notifyListeners();
       }
       return;
@@ -112,6 +125,7 @@ class TtsController extends ChangeNotifier {
     final segment = _segments[_currentIndex];
     try {
       _status = TtsPlaybackStatus.playing;
+      onHighlightSegment?.call(segment);
       notifyListeners();
       final result = await provider.synthesize(
         segment.text,
@@ -129,6 +143,7 @@ class TtsController extends ChangeNotifier {
       _status = TtsPlaybackStatus.idle;
       _currentIndex = -1;
       _segments = const [];
+      onHighlightSegment?.call(null);
       notifyListeners();
     }
   }
@@ -141,6 +156,7 @@ class TtsController extends ChangeNotifier {
       _status = TtsPlaybackStatus.idle;
       _currentIndex = -1;
       _segments = const [];
+      onHighlightSegment?.call(null);
       notifyListeners();
       return;
     }
