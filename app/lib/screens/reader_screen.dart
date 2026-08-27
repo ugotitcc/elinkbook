@@ -22,7 +22,6 @@ import '../reader/foliate_reader_view.dart';
 import '../reader/tts_audio_player.dart';
 import '../reader/tts_controller.dart';
 import '../reader/tts_provider.dart';
-import '../reader/tts_segment_cfi.dart';
 import '../library/library_repository.dart';
 import '../reader/highlight.dart';
 import '../reader/highlight_style.dart';
@@ -2694,7 +2693,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       // 手動切換的結果，非僅書本 CSS 宣告的 _autoDetectedWritingMode），
       // 比照本檔案既有頁首/頁尾直排判斷寫法（_resolved?.writingMode ==
       // WritingMode.vertical）。
-      onHighlightSegment: (TtsSegmentCfi? segment) {
+      onHighlightSegment: (segment) {
         if (segment == null) {
           FoliateReaderView.clearTtsHighlight(_foliateEpubReaderViewKey);
         } else {
@@ -2704,6 +2703,21 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             vertical: _resolved?.writingMode == WritingMode.vertical,
           );
         }
+      },
+      // 反向查找起始段落（epic-34-tts-readalong Issue 4，2026-08-27
+      // Issue 3 真機驗收追加範圍）：從 _epubPositionInfo 讀取畫面目前可視
+      // 位置的 cfi（與 loadSegments 內的 extractChapterIndex 同一份
+      // _epubPositionInfo，同一次 play() 呼叫序列內不會中途改變），找不到
+      // （例如尚未收到任何 onLocatorChanged 事件）時回傳 0，交由
+      // TtsController 既有的「從第 0 段開始」向後相容行為處理。
+      lookupStartIndex: (segs) async {
+        final visibleCfi = extractCfi(_epubPositionInfo?.locatorJson);
+        if (visibleCfi == null) return 0;
+        return FoliateReaderView.lookupSegmentByCfi(
+          _foliateEpubReaderViewKey,
+          visibleCfi,
+          segs.map((s) => s.cfi).toList(),
+        );
       },
     );
   }
@@ -2760,6 +2774,14 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           onLocatorChanged: (info) {
             if (!mounted) return;
             setState(() => _epubPositionInfo = info);
+            // 手動導覽自動暫停並清除舊高亮（epic-34-tts-readalong
+            // Issue 4）：直接用既有的 nullable _ttsController 欄位（不用
+            // _ttsControllerOrNull getter）——尚未曾建構過 TtsController
+            // 時（TTS 從未被使用）保持 null，避免每次翻頁都意外觸發
+            // lazy 建構；一旦已建構過，無條件呼叫即可，TtsController 自己
+            // 在 idle 狀態下呼叫本方法是 no-op（見 handleExternalPositionChange
+            // 文件註解，本檔案不需要自行判斷目前是否正在播放）。
+            _ttsController?.handleExternalPositionChange();
           },
           onSelectionChanged: _handleSelectionChanged,
           onSelectionCleared: _handleSelectionCleared,
