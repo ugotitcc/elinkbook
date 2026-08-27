@@ -35,6 +35,7 @@ import 'package:elinkbook/screens/remote_server_list_screen.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
 import '../support/fake_highlights_repository.dart';
 import '../support/fake_notes_repository.dart';
+import '../support/fake_tts_provider.dart';
 import 'package:elinkbook/reader/highlight.dart';
 import 'package:elinkbook/reader/highlight_style.dart';
 import 'package:elinkbook/reader/pdf_reader_view.dart';
@@ -2194,6 +2195,43 @@ void main() {
   });
 
   testWidgets(
+      'LibraryScreen 點開一本書後，ReaderScreen 收到的 ttsProvider 正確貫穿（Issue 9 缺口修正）',
+      (tester) async {
+    // 使用 .txt 格式讓 ReaderScreen 命中「不支援格式」分支（純 Dart 安全
+    // 路徑，不觸發 AndroidView），比照本檔案既有的貫穿驗證測試手法——本
+    // 測試只關心建構參數是否正確貫穿，與實際閱讀器渲染無關。
+    final book = _testBook(
+      id: '1',
+      title: '紅樓夢',
+      author: '曹雪芹',
+      filePath: 'content://example/1.txt',
+    );
+    final ttsProvider = FakeTtsProvider();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: [book]),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+          readerFeatureRepositories: LibraryReaderFeatureRepositories(
+            ttsProvider: ttsProvider,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('book_item_1')));
+    await tester.pumpAndSettle();
+
+    final readerScreen = tester.widget<ReaderScreen>(find.byType(ReaderScreen));
+    expect(readerScreen.ttsProvider, same(ttsProvider),
+        reason: 'LibraryScreen._openBook() 修正前，ttsProvider 從未貫穿給 '
+            'ReaderScreen，一律為 null（見 issues.md Issue 9 背景）');
+  });
+
+  testWidgets(
       'LibraryScreen 點開一本書後，ReaderScreen 收到的 isFixedLayout／libraryRepository 正確貫穿（epic-17-epub-render-migration Issue 3）',
       (tester) async {
     // 使用 .txt 格式讓 ReaderScreen 命中「不支援格式」分支（純 Dart 安全
@@ -3049,6 +3087,55 @@ void main() {
         reason: '透過分類篩選路徑開書，ReaderScreen 收到的 syncCheckpointTrigger 應與'
             '外層一致，離開閱讀畫面／閱讀中 5 分鐘計時器兩種來源才會正確觸發 '
             'checkpoint');
+  });
+
+  testWidgets(
+      'LibraryScreen 透過分類篩選路徑（_openGroupFilteredView）開書後，'
+      'ReaderScreen 收到的 ttsProvider 與外層一致（Issue 9 缺口修正）',
+      (tester) async {
+    final book = _testBook(
+      id: '1',
+      title: '紅樓夢',
+      author: '曹雪芹',
+      groupName: '奇幻',
+      filePath: 'content://example/1.txt',
+    );
+    final ttsProvider = FakeTtsProvider();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: [book]),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+          readerFeatureRepositories: LibraryReaderFeatureRepositories(
+            ttsProvider: ttsProvider,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('group_tile_奇幻')));
+    await tester.pumpAndSettle();
+
+    final filteredScreenFinder = _filteredLibraryScreenFinder('奇幻');
+    final filteredScreen = tester.widget<LibraryScreen>(filteredScreenFinder);
+    expect(filteredScreen.readerFeatureRepositories.ttsProvider,
+        same(ttsProvider),
+        reason: '_openGroupFilteredView() 未把 ttsProvider 貫穿給下一層 '
+            'LibraryScreen');
+
+    await tester.tap(find.descendant(
+      of: filteredScreenFinder,
+      matching: find.byKey(const Key('book_item_1')),
+    ));
+    await tester.pumpAndSettle();
+
+    final readerScreen = tester.widget<ReaderScreen>(find.byType(ReaderScreen));
+    expect(readerScreen.ttsProvider, same(ttsProvider),
+        reason: '透過分類篩選路徑開書，ReaderScreen 收到的 ttsProvider 應與外層 '
+            '一致');
   });
 
   testWidgets(

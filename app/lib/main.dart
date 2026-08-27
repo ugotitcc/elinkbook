@@ -27,6 +27,8 @@ import 'reader/notes_repository.dart';
 import 'reader/reader_prefs_manager.dart';
 import 'reader/reader_prefs_manager_impl.dart';
 import 'reader/reading_position_repository.dart';
+import 'reader/system_tts_provider.dart';
+import 'reader/tts_provider.dart';
 import 'remote/opds_client.dart';
 import 'remote/opds_http_client.dart';
 import 'remote/remote_server_repository.dart';
@@ -84,6 +86,9 @@ Future<void> main() async {
   final notesRepository = NotesRepository(repository.database);
   final customFontsRepository = CustomFontsRepository(repository.database);
   final layoutPresetRepository = LayoutPresetRepository(repository.database);
+  // epic-34-tts-readalong Issue 9：SystemTtsProvider 預設建構子內部會自行
+  // 建立 FlutterTts()，App 層級不需要另外管理其生命週期或提供假物件。
+  final ttsProvider = SystemTtsProvider();
   final syncAccountRepository = SyncAccountRepository();
   final syncClient = SyncClient(accountRepository: syncAccountRepository);
   // epic-8-sync Issue 6：Issue 4/5 只在測試中建構過 SyncEngine，這裡是
@@ -149,6 +154,7 @@ Future<void> main() async {
       customFontsRepository: customFontsRepository,
       layoutPresetRepository: layoutPresetRepository,
       bookReaderPrefsRepository: prefsRepository,
+      ttsProvider: ttsProvider,
       syncAccountRepository: syncAccountRepository,
       syncClient: syncClient,
       syncCheckpointTrigger: syncCheckpointTrigger,
@@ -182,6 +188,7 @@ class ElinkBookApp extends StatefulWidget {
   final CustomFontsRepository? customFontsRepository;
   final LayoutPresetRepository? layoutPresetRepository;
   final BookReaderPrefsRepository? bookReaderPrefsRepository;
+  final TtsProvider? ttsProvider;
   final SyncAccountRepository? syncAccountRepository;
   final SyncClient? syncClient;
   final SyncCheckpointTrigger? syncCheckpointTrigger;
@@ -211,6 +218,7 @@ class ElinkBookApp extends StatefulWidget {
     this.customFontsRepository,
     this.layoutPresetRepository,
     this.bookReaderPrefsRepository,
+    this.ttsProvider,
     this.syncAccountRepository,
     this.syncClient,
     this.syncCheckpointTrigger,
@@ -296,6 +304,7 @@ class _ElinkBookAppState extends State<ElinkBookApp> with WidgetsBindingObserver
           customFontsRepository: widget.customFontsRepository,
           layoutPresetRepository: widget.layoutPresetRepository,
           bookReaderPrefsRepository: widget.bookReaderPrefsRepository,
+          ttsProvider: widget.ttsProvider,
         ),
         syncDependencies: LibrarySyncDependencies(
           syncAccountRepository: widget.syncAccountRepository,

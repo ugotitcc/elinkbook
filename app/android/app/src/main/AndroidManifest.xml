@@ -63,10 +63,17 @@
          https://developer.android.com/reference/android/content/Intent#ACTION_PROCESS_TEXT.
 
          In particular, this is used by the Flutter engine in io.flutter.plugin.text.ProcessTextPlugin. -->
+    <!-- epic-34-tts-readalong Issue 9：flutter_tts 官方文件要求 targeting
+         Android 11+ 的 App 須在 queries 宣告 TTS_SERVICE，否則
+         TextToSpeech 綁定語音引擎的隱式 Intent 查詢會被套件可見性限制擋下，
+         SystemTtsProvider.synthesize() 在真機上會靜默失敗。 -->
     <queries>
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE"/>
         </intent>
     </queries>
 </manifest>

@@ -468,6 +468,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
               layoutPresetRepository: widget.readerFeatureRepositories.layoutPresetRepository,
               bookReaderPrefsRepository: widget.readerFeatureRepositories.bookReaderPrefsRepository,
               syncCheckpointTrigger: widget.syncDependencies.syncCheckpointTrigger,
+              ttsProvider: widget.readerFeatureRepositories.ttsProvider,
             ),
           ),
         )
@@ -620,6 +621,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                 highlightsRepository: widget.readerFeatureRepositories.highlightsRepository,
                 notesRepository: widget.readerFeatureRepositories.notesRepository,
                 customFontsRepository: widget.readerFeatureRepositories.customFontsRepository,
+                ttsProvider: widget.readerFeatureRepositories.ttsProvider,
               ),
               // epic-8-sync Issue 10：先前遺漏這三個同步相關欄位，導致從這條
               // 分類篩選路徑開書時 syncCheckpointTrigger 無法貫穿到

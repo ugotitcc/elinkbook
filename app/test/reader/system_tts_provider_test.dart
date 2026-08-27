@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/services.dart';
@@ -37,7 +37,22 @@ void main() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (call) async {
       calls.add(call);
+      if (call.method == 'getEngines') {
+        return ['com.google.android.tts'];
+      }
+      if (call.method == 'getDefaultEngine') {
+        return 'com.google.android.tts';
+      }
+      if (call.method == 'setLanguage') {
+        return 1;
+      }
+      if (call.method == 'setSpeechRate') {
+        return 1;
+      }
       if (call.method == 'synthesizeToFile') {
+        final filePath = (call.arguments as Map)['fileName'] as String;
+        File(filePath).writeAsStringSync('dummy wave content');
+
         // 模擬原生端非同步完成合成：透過同一個 channel 送回
         // synth.onComplete，讓 FlutterTts() 建構子註冊的
         // platformCallHandler 觸發 SystemTtsProvider 內的 completer。
@@ -72,11 +87,110 @@ void main() {
   test('synthesize() 在 synth.onError 後拋出 TtsSynthesisException', () async {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (call) async {
+      if (call.method == 'getEngines') {
+        return ['com.google.android.tts'];
+      }
+      if (call.method == 'getDefaultEngine') {
+        return 'com.google.android.tts';
+      }
+      if (call.method == 'setLanguage') {
+        return 1;
+      }
+      if (call.method == 'setSpeechRate') {
+        return 1;
+      }
       if (call.method == 'synthesizeToFile') {
         scheduleMicrotask(() {
           final message = const StandardMethodCodec().encodeMethodCall(
             const MethodCall('synth.onError', '模擬引擎錯誤'),
           );
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+              .handlePlatformMessage(channel.name, message, (_) {});
+        });
+      }
+      return null;
+    });
+
+    final provider = SystemTtsProvider(flutterTts: FlutterTts());
+
+    await expectLater(
+      provider.synthesize('測試文字', voice: TtsVoice.systemDefault),
+      throwsA(isA<TtsSynthesisException>()),
+    );
+  });
+
+  test(
+      'synthesize() 在 getDefaultEngine 回傳 null 時明確呼叫 setEngine()'
+      '（真機無預設引擎防禦）', () async {
+    final calls = <MethodCall>[];
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async {
+      calls.add(call);
+      if (call.method == 'getEngines') {
+        return ['com.google.android.tts'];
+      }
+      if (call.method == 'getDefaultEngine') {
+        // 模擬部分裝置（例如特規 E-Ink 韌體）系統中已裝妥引擎，卻沒有
+        // 登記「預設引擎」的情境。
+        return null;
+      }
+      if (call.method == 'setEngine') {
+        return 1;
+      }
+      if (call.method == 'setLanguage') {
+        return 1;
+      }
+      if (call.method == 'setSpeechRate') {
+        return 1;
+      }
+      if (call.method == 'synthesizeToFile') {
+        final filePath = (call.arguments as Map)['fileName'] as String;
+        File(filePath).writeAsStringSync('dummy wave content');
+        scheduleMicrotask(() {
+          final message = const StandardMethodCodec()
+              .encodeMethodCall(const MethodCall('synth.onComplete'));
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+              .handlePlatformMessage(channel.name, message, (_) {});
+        });
+      }
+      return null;
+    });
+
+    final provider = SystemTtsProvider(flutterTts: FlutterTts());
+    final result = await provider.synthesize(
+      '測試文字',
+      voice: TtsVoice.systemDefault,
+    );
+
+    expect(result.audioFilePath, isNotEmpty);
+    final setEngineCall =
+        calls.firstWhere((c) => c.method == 'setEngine');
+    expect(setEngineCall.arguments, 'com.google.android.tts');
+  });
+
+  test(
+      'synthesize() 在合成檔案不存在或大小為 0 時拋出 TtsSynthesisException'
+      '（真機無聲問題防禦）', () async {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async {
+      if (call.method == 'getEngines') {
+        return ['com.google.android.tts'];
+      }
+      if (call.method == 'getDefaultEngine') {
+        return 'com.google.android.tts';
+      }
+      if (call.method == 'setLanguage') {
+        return 1;
+      }
+      if (call.method == 'setSpeechRate') {
+        return 1;
+      }
+      if (call.method == 'synthesizeToFile') {
+        // 刻意不寫入任何檔案內容，模擬引擎回報完成但音訊檔為空/不存在
+        // （真機無聲問題的根因情境）。
+        scheduleMicrotask(() {
+          final message = const StandardMethodCodec()
+              .encodeMethodCall(const MethodCall('synth.onComplete'));
           TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
               .handlePlatformMessage(channel.name, message, (_) {});
         });
