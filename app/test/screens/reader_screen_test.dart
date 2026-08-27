@@ -7457,6 +7457,112 @@ void main() {
     });
   });
 
+  group('同步高亮跟隨（epic-34-tts-readalong Issue 3）', () {
+    // 誠實測試邊界（比照既有 setDecorations 測試慣例，見本檔案「流式
+    // EPUB 開書後...透過 FoliateReaderView.setDecorations 送給原生端」
+    // 測試的既有註解）：flutter_test 環境下 FoliateReaderView 的
+    // _controller 恆為 null，FoliateReaderView.showTtsHighlight()/
+    // clearTtsHighlight() 實際送出的 JS 呼叫參數（含 cfi／vertical 旗標）
+    // 無法在這層直接攔截斷言——同一個既有限制也適用於 setDecorations。
+    // 這裡驗證的是「直排書籍下這段 wiring 不崩潰」這個結構性保證；
+    // 「onHighlightSegment 在正確時機被呼叫、帶正確的段落」由
+    // tts_controller_test.dart（純 Dart，見 Task 2）完整涵蓋；main.js
+    // 端 key 空間隔離／vertical 覆寫邏輯由 foliate_reader_view_test.dart
+    // 的 main.js regression guard（見 Task 1）涵蓋；真實 JS 高亮渲染
+    // 正確性（含直排/橫排實際跟隨、朗讀段切換時無殘影）須真機手動驗證
+    // （見本計畫「測試策略總結」）。
+    testWidgets(
+        '提供 ttsProvider 且書本為直排（vertical）時，ReaderScreen 正常建構、'
+        'TTS 按鈕存在且可點擊，不崩潰', (tester) async {
+      final highlightsRepo = FakeHighlightsRepository();
+      final notesRepo = FakeNotesRepository();
+      final ttsProvider = FakeTtsProvider();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_tts_vertical',
+            prefsManager: prefsManager,
+            highlightsRepository: highlightsRepo,
+            notesRepository: notesRepo,
+            isFixedLayout: false,
+            ttsProvider: ttsProvider,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final foliateView =
+          tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
+      foliateView.onPageRendered();
+      foliateView.onLayoutResolved?.call(
+        const EpubLayoutInfo(
+          isFixedLayout: false,
+          writingMode: WritingMode.vertical,
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      final buttonFinder =
+          find.byKey(const Key('reader_tts_play_pause_button'));
+      expect(buttonFinder, findsOneWidget);
+
+      await tester.tap(buttonFinder);
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets(
+        'TTS 播放按鈕點擊後，highlightsRepository/notesRepository 內容不受影響'
+        '（ADR 0026：朗讀高亮不寫入劃線/備註資料表）', (tester) async {
+      final highlightsRepo = FakeHighlightsRepository();
+      final notesRepo = FakeNotesRepository();
+      final ttsProvider = FakeTtsProvider();
+      const bookId = 'b_tts_adr0026';
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: bookId,
+            prefsManager: prefsManager,
+            highlightsRepository: highlightsRepo,
+            notesRepository: notesRepo,
+            isFixedLayout: false,
+            ttsProvider: ttsProvider,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final foliateView =
+          tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
+      foliateView.onPageRendered();
+      foliateView.onLayoutResolved?.call(
+        const EpubLayoutInfo(
+          isFixedLayout: false,
+          writingMode: WritingMode.horizontal,
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      await tester.tap(find.byKey(const Key('reader_tts_play_pause_button')));
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      expect(await highlightsRepo.listByBook(bookId), isEmpty);
+      expect(await notesRepo.listByBook(bookId), isEmpty);
+    });
+  });
+
   tearDownAll(() {
     // 還原 cacheBookForServing 為原始實作，避免污染其他測試檔
     cacheBookForServing = originalCacheBookForServing;

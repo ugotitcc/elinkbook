@@ -22,6 +22,7 @@ import '../reader/foliate_reader_view.dart';
 import '../reader/tts_audio_player.dart';
 import '../reader/tts_controller.dart';
 import '../reader/tts_provider.dart';
+import '../reader/tts_segment_cfi.dart';
 import '../library/library_repository.dart';
 import '../reader/highlight.dart';
 import '../reader/highlight_style.dart';
@@ -2686,6 +2687,23 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           _foliateEpubReaderViewKey,
           chapterIndex,
         );
+      },
+      // 朗讀同步高亮（epic-34-tts-readalong Issue 3，ADR 0026）：只呼叫
+      // 既有 Overlayer 管線，不引用 highlightsRepository/notesRepository。
+      // vertical 旗標讀取 _resolved（目前實際生效的排版方向，含使用者
+      // 手動切換的結果，非僅書本 CSS 宣告的 _autoDetectedWritingMode），
+      // 比照本檔案既有頁首/頁尾直排判斷寫法（_resolved?.writingMode ==
+      // WritingMode.vertical）。
+      onHighlightSegment: (TtsSegmentCfi? segment) {
+        if (segment == null) {
+          FoliateReaderView.clearTtsHighlight(_foliateEpubReaderViewKey);
+        } else {
+          FoliateReaderView.showTtsHighlight(
+            _foliateEpubReaderViewKey,
+            segment.cfi,
+            vertical: _resolved?.writingMode == WritingMode.vertical,
+          );
+        }
       },
     );
   }
