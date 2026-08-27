@@ -1,6 +1,6 @@
 # Epic 34 — TTS 語音朗讀與同步高亮（Read-along）：工單清單 (Issues)
 
-依 `spec.md`（Architecting，核心介面/型別唯一事實來源；已依 `/superpowers:receiving-code-review` 審查修訂）拆解為 8 個垂直切片工單（Issue 1～8），範圍為 Phase 0（相依性驗證）＋ Phase 1（Foliate MVP：EPUB／KF8／TXT／MD）。**Phase 2（雲端 API/快取）／Phase 3（端側神經語音，stretch goal）／Phase 4（PDF）刻意不在本次拆解範圍內**——依 `design.md`「分階段 Issue 藍圖」，這三個 Phase 都依賴 Phase 1 主幹穩定後才開工，現在拆會在 Phase 1 完成前就過時，待 Phase 1 全數完成、人類確認排入時程後，再另開一輪 `/to-issues`。Issue 9 為 2026-08-27 事後追加：Issue 2 合併後才發現 `ReaderScreen` 正式呼叫端接線缺口，補開一張獨立工單追蹤（詳見該工單「來源」欄位）。
+依 `spec.md`（Architecting，核心介面/型別唯一事實來源；已依 `/superpowers:receiving-code-review` 審查修訂）拆解為 8 個垂直切片工單（Issue 1～8），範圍為 Phase 0（相依性驗證）＋ Phase 1（Foliate MVP：EPUB／KF8／TXT／MD）。**Phase 2（雲端 API/快取）／Phase 3（端側神經語音，stretch goal）／Phase 4（PDF）刻意不在本次拆解範圍內**——依 `design.md`「分階段 Issue 藍圖」，這三個 Phase 都依賴 Phase 1 主幹穩定後才開工，現在拆會在 Phase 1 完成前就過時，待 Phase 1 全數完成、人類確認排入時程後，再另開一輪 `/to-issues`。Issue 9 為 2026-08-27 事後追加：Issue 2 合併後才發現 `ReaderScreen` 正式呼叫端接線缺口，補開一張獨立工單追蹤（詳見該工單「來源」欄位）。Issue 10 同樣為 2026-08-27 事後追加：Issue 9 真機驗收時發現 CBZ 停用按鈕缺乏視覺區隔，補開一張獨立工單追蹤（詳見該工單「來源」欄位）。
 
 每個 Issue 皆須包含所需的單元測試要求（依 `spec.md`「Testing Decisions」已與人類確認的測試縫隙分工）。
 
@@ -264,4 +264,31 @@
 - [ ] `library_screen.dart` 開書流程實際建構 `SystemTtsProvider` 並傳入 `ReaderScreen.ttsProvider`
 - [ ] 真機安裝後開啟 Foliate 格式書籍能看到並使用朗讀播放/暫停按鈕，CBZ 書籍維持明確停用狀態
 - [ ] 既有 `library_screen_test.dart`／`reader_screen_test.dart` 零回歸
+- [ ] `flutter analyze`／`flutter test` 全數通過
+
+---
+
+## Issue 10：CBZ 朗讀停用按鈕缺乏視覺區隔——與啟用狀態顏色相同
+
+**Status:** ready-for-agent
+
+**依賴：** Issue 2
+
+**來源：** Issue 9 真機驗收（2026-08-27，Air Reader C／AiPaper Reader C E-Ink 裝置）發現：使用者按驗收清單開啟 CBZ 書籍，回報「按鈕有出現，但按了沒有用，電子紙看不出是否是灰色」。對照 `app/lib/screens/reader_screen.dart:2223-2262`，CBZ 停用按鈕（`onPressed: null`）與正常啟用的播放/暫停按鈕，圖示顏色皆固定寫死使用同一個 `_themedFabIconColor`，兩者視覺上完全相同，只有 `onPressed` 是否為 `null` 這個功能性差異，沒有任何顏色/透明度上的區別。
+
+**背景／需求：** Issue 2 驗收標準第 4 點明訂「CBZ 書籍 TTS 入口為明確停用狀態（非靜默無反應）」，原意是要讓使用者能一眼看出「這顆按鈕按了沒用、不是壞掉」。目前實作只做到「按鈕仍顯示、不隱藏」與「附上 tooltip 說明文字」，但 tooltip 在觸控裝置上需要長按才會出現，一般使用者不會發現；且圖示顏色與啟用狀態完全一致，在色彩對比度較低的 E-Ink 裝置上尤其難以分辨，等同視覺上仍是「靜默無反應」。
+
+**設計要點：**
+- CBZ 停用按鈕的圖示顏色需與啟用狀態明確區隔，例如降低透明度（`color.withValues(alpha: ...)` 或等效 API）或改用主題的 `disabledColor`，讓「按了沒用」在畫面上一眼可辨識，不需要依賴 tooltip。
+- 沿用既有 `_themedFabBackgroundColor`/`_themedFabIconColor` 已是格式無關 getter 的模式，新增一個「停用狀態」變體（例如 `_themedFabIconColor.withValues(alpha: 0.4)`），不需重新設計整套顏色系統。
+- 僅限 CBZ 停用按鈕本身，不影響其他既有 FAB／按鈕的顏色邏輯（`reader_pdf_back_button` 等其餘按鈕不在本工單範圍內）。
+- 純視覺調整，不涉及 `TtsController`／`SystemTtsProvider` 等既有播放邏輯，範圍限縮在 `reader_screen.dart` 該按鈕的 `Icon` 顏色參數。
+
+**測試要求：**
+- `reader_screen_test.dart` widget test：驗證 CBZ 格式下 `reader_tts_play_pause_button` 的圖示顏色與非 CBZ 啟用狀態的圖示顏色不同（例如比對 `Icon.color` 或其 alpha 值）。
+
+**驗收標準：**
+- [ ] CBZ 書籍的朗讀停用按鈕，圖示顏色/透明度與啟用狀態有明確視覺區隔
+- [ ] 新增 widget test 驗證停用狀態顏色與啟用狀態不同
+- [ ] 既有 `reader_screen_test.dart` 零回歸
 - [ ] `flutter analyze`／`flutter test` 全數通過
