@@ -6,6 +6,7 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import 'reader_console_log.dart';
 import 'tts_provider.dart';
 
 /// 系統原生語音朗讀（Android `TextToSpeech`，透過 `flutter_tts` 套件）。
@@ -37,9 +38,14 @@ class SystemTtsProvider implements TtsProvider {
     try {
       engines = await _flutterTts.getEngines ?? const [];
       defaultEngine = await _flutterTts.getDefaultEngine;
-      debugPrint('[TTS Diagnostic] Available Engines: $engines, Default: $defaultEngine');
+      final message =
+          '[TTS Diagnostic] Available Engines: $engines, Default: $defaultEngine';
+      debugPrint(message);
+      ReaderConsoleLog.add(message);
     } catch (e) {
-      debugPrint('[TTS Diagnostic] Failed to query engines: $e');
+      final message = '[TTS Diagnostic] Failed to query engines: $e';
+      debugPrint(message);
+      ReaderConsoleLog.add(message);
     }
 
     if (engines.isEmpty) {
@@ -56,7 +62,9 @@ class SystemTtsProvider implements TtsProvider {
         await _flutterTts.setLanguage("zh-CN");
       }
     } catch (e) {
-      debugPrint('[TTS Diagnostic] Failed to set language: $e');
+      final message = '[TTS Diagnostic] Failed to set language: $e';
+      debugPrint(message);
+      ReaderConsoleLog.add(message);
     }
 
     final filePath = await _resolveOutputPath();
