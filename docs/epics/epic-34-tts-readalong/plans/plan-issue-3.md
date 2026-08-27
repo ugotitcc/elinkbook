@@ -32,7 +32,7 @@
 - Consumes：既有 `view.addAnnotation()`/`view.deleteAnnotation()`（`window.setDecorations()` 已示範用法，見第 402-411 行）、既有 `draw-annotation` 事件監聽器（第 762-775 行）
 - Produces：`window.showTtsHighlight(cfi, vertical)`／`window.clearTtsHighlight()` 兩個全域函式——供 Task 3 的 `FoliateReaderView.showTtsHighlight`/`clearTtsHighlight` 靜態 helper（透過 `InAppWebViewController.evaluateJavascript`）呼叫
 
-- [ ] **Step 1：新增 `window.showTtsHighlight`/`window.clearTtsHighlight`**
+- [x] **Step 1：新增 `window.showTtsHighlight`/`window.clearTtsHighlight`**
 
 在 `app/android/app/src/main/assets/foliate/main.js` 找到以下既有的 `window.setDecorations` 函式（第 402-411 行）：
 
@@ -90,7 +90,7 @@ window.clearTtsHighlight = function () {
 }
 ```
 
-- [ ] **Step 2：`draw-annotation` 監聽器接受 `annotation.vertical` 顯式覆寫**
+- [x] **Step 2：`draw-annotation` 監聽器接受 `annotation.vertical` 顯式覆寫**
 
 找到以下既有的 `draw-annotation` 監聽器（第 762-775 行）：
 
@@ -139,7 +139,7 @@ window.clearTtsHighlight = function () {
     })
 ```
 
-- [ ] **Step 3：main.js regression guard 測試**
+- [x] **Step 3：main.js regression guard 測試**
 
 在 `app/test/reader/foliate_reader_view_test.dart` 找到既有的 `group('main.js 選取範圍 hit-test 既有標記＋回傳文字 regression guard...')`（比照該 group 讀取 `mainJsSource` 的既有寫法，見檔案內 `setUpAll` 用法），在它結尾的 `});` 之後、`group('mounted guard / dispose race'...)` 之前，新增：
 
@@ -201,7 +201,7 @@ window.clearTtsHighlight = function () {
 
 ```
 
-- [ ] **Step 4：跑測試**
+- [x] **Step 4：跑測試**
 
 ```
 flutter test test/reader/foliate_reader_view_test.dart
@@ -217,7 +217,7 @@ Expected：`No issues found!`
 
 不需要重新執行 `node app/tool/check_foliate_es_compat.js`——本次新增的 JS 語法（`??` nullish coalescing、模板字串、`Map`）在 `main.js` 既有程式碼中已大量使用（例如第 465/469/473/496/700/717/732/735/736 行皆已使用 `??`），不是本次新引入的相容性風險面，該掃描腳本的既有觸發時機本就是「升級 vendored 版本後才跑」（見 `app/tool/README.md`），非本 Issue 範圍。
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```
 git add app/android/app/src/main/assets/foliate/main.js app/test/reader/foliate_reader_view_test.dart
