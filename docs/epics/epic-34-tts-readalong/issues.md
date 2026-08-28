@@ -310,6 +310,8 @@
 - [x] 既有 `reader_screen_test.dart` 零回歸
 - [x] `flutter analyze`／`flutter test` 全數通過
 
+**狀態：已合併回 `main`（PR [#198](https://git.jigong.org/huthief/elinkBook/pulls/198)，分支 `feat/epic-34-issue-10-cbz-disabled-icon`，2026-08-28）。** CBZ 停用播放鍵圖示改為不透明的 `Colors.grey`，與啟用狀態的 `Colors.white` 明確區隔；刻意不用 alpha 透明度做區隔——沿用 epic-22-reader-theme-integration Issue 4 的真機教訓（alpha 混合出的中間灰在電子紙灰階抖動渲染下會辨識不出圖示形狀）。程式審查（`reviews/review-issue-10-code.md`，本機檔案不進版控）結論 Ready to merge: Yes，0 Critical／0 Important／3 Minor（1 個既存格式落差刻意不在本次處理、1 個冗餘測試斷言已修復、1 個真機驗證項目已完成）。2026-08-28 真機（E-Ink 裝置）驗證：CBZ 停用按鈕圖示與啟用狀態清楚可辨。
+
 ---
 
 ## Issue 11：長段落缺乏終止標點時朗讀失敗（超出 TTS 引擎輸入長度上限）
