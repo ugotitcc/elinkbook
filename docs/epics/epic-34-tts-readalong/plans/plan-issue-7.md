@@ -1014,7 +1014,7 @@ git commit -m "feat(epic-34): 新增 TtsAudioHandler（Issue 7 Task 4）"
 - Consumes：Task 3 `AudioSessionFocusSource`／`TtsAudioFocusSource`、Task 4 `TtsAudioHandler`。
 - Produces：`ElinkBookApp` 新增建構參數 `ttsAudioHandler`／`ttsAudioFocusSource`；`LibraryReaderFeatureRepositories` 新增同名兩個欄位。
 
-- [ ] **Step 1：`library_screen_dependencies.dart` 新增兩個欄位**
+- [x] **Step 1：`library_screen_dependencies.dart` 新增兩個欄位**
 
 在 `app/lib/screens/library_screen_dependencies.dart` 檔案頂端 import 區塊，找到既有的：
 
@@ -1065,7 +1065,7 @@ import '../reader/tts_audio_handler.dart';
   });
 ```
 
-- [ ] **Step 2：`main.dart` 建構 `AudioSession`／`TtsAudioHandler`**
+- [x] **Step 2：`main.dart` 建構 `AudioSession`／`TtsAudioHandler`**
 
 在 `app/lib/main.dart` 頂端 import 區塊，找到既有的：
 
@@ -1187,7 +1187,7 @@ import 'package:audio_session/audio_session.dart';
           ttsAudioFocusSource: widget.ttsAudioFocusSource,
 ```
 
-- [ ] **Step 3：驗證**
+- [x] **Step 3：驗證**
 
 ```
 flutter analyze
@@ -1195,7 +1195,7 @@ flutter analyze
 
 Expected：`No issues found!`（本 Task 純組裝接線，`LibraryReaderFeatureRepositories`／`ReaderScreen` 新增欄位尚未在 Task 6 前完全接上前，`ReaderScreen` 建構子還沒有這兩個參數——**此步驟須等 Task 6 完成後才會真正編譯成功**，若依序執行到本 Task 立即跑 `flutter analyze` 預期會因 `ReaderScreen(... ttsAudioHandler: ...)` 尚未定義該具名參數而報錯；建議 Task 5／Task 6 視為同一次可驗證的整體，Task 5 先完成、Task 6 完成後再一併跑本驗證步驟）。
 
-- [ ] **Step 4：Commit**（與 Task 6 合併提交，見 Task 6 Step 5）
+- [x] **Step 4：Commit**（與 Task 6 合併提交，見 Task 6 Step 5）
 
 本 Task 暫不獨立 commit——`main.dart` 傳入 `ttsAudioHandler`/`ttsAudioFocusSource` 給 `ElinkBookApp`／`LibraryScreen` 后，最終仍要靠 Task 6 `ReaderScreen` 實際定義這兩個具名參數才能編譯成功；為了維持「每個 commit 皆可獨立編譯/測試」的既有慣例（比照本檔案其餘 Task 每步驟結尾皆驗證 `flutter analyze` 乾淨），Task 5 與 Task 6 的變更**一併於 Task 6 Step 5 提交同一個 commit**，訊息涵蓋兩者。
 
@@ -1211,7 +1211,7 @@ Expected：`No issues found!`（本 Task 純組裝接線，`LibraryReaderFeature
 - Consumes：Task 3 `TtsAudioFocusSource`／`TtsAudioFocusCoordinator`、Task 4 `TtsAudioHandler`、Task 2 `TtsController.resyncHighlight()`。
 - Produces：`ReaderScreen` 新增可選建構參數 `ttsAudioHandler`（`TtsAudioHandler?`）／`ttsAudioFocusSource`（`TtsAudioFocusSource?`）。
 
-- [ ] **Step 1：寫失敗測試**
+- [x] **Step 1：寫失敗測試**
 
 在 `app/test/screens/reader_screen_test.dart` 找到既有「Mini Player 與既有底部元件顯示連動（epic-34-tts-readalong Issue 6）」`group` 結尾（該 group 的收尾 `});`），緊接其後新增一個新的 group：
 
@@ -1337,7 +1337,7 @@ import 'package:elinkbook/reader/tts_audio_handler.dart';
 import '../support/fake_tts_audio_focus_source.dart';
 ```
 
-- [ ] **Step 2：跑測試確認新測試失敗**
+- [x] **Step 2：跑測試確認新測試失敗**
 
 ```
 flutter test test/screens/reader_screen_test.dart
@@ -1345,7 +1345,7 @@ flutter test test/screens/reader_screen_test.dart
 
 Expected：FAIL（編譯錯誤）——`ReaderScreen` 尚未定義 `ttsAudioHandler`／`ttsAudioFocusSource` 具名參數。
 
-- [ ] **Step 3：`ReaderScreen` 新增建構參數與欄位**
+- [x] **Step 3：`ReaderScreen` 新增建構參數與欄位**
 
 在 `app/lib/screens/reader_screen.dart` 頂端 import 區塊找到既有的：
 
@@ -1411,7 +1411,7 @@ import '../reader/tts_provider.dart';
   });
 ```
 
-- [ ] **Step 4：接線——`_ttsControllerOrNull` getter、`dispose()`、`didChangeAppLifecycleState`**
+- [x] **Step 4：接線——`_ttsControllerOrNull` getter、`dispose()`、`didChangeAppLifecycleState`**
 
 在 `app/lib/screens/reader_screen.dart` 找到既有的：
 
@@ -1594,7 +1594,7 @@ import '../reader/tts_provider.dart';
     }
 ```
 
-- [ ] **Step 5：跑測試確認全數通過、零回歸；Commit（含 Task 5）**
+- [x] **Step 5：跑測試確認全數通過、零回歸；Commit（含 Task 5）**
 
 ```
 flutter test test/screens/reader_screen_test.dart

@@ -41,6 +41,10 @@ import 'package:elinkbook/screens/annotation_toolbar.dart';
 import '../support/fake_highlights_repository.dart';
 import '../support/fake_notes_repository.dart';
 import '../support/fake_tts_provider.dart';
+import 'package:elinkbook/reader/tts_audio_focus_source.dart';
+import 'package:elinkbook/reader/tts_audio_handler.dart';
+
+import '../support/fake_tts_audio_focus_source.dart';
 import 'package:elinkbook/reader/epub_selection_info.dart';
 import 'package:elinkbook/reader/percent_rect.dart';
 import 'package:elinkbook/reader/pdf_selection_info.dart';
@@ -7972,6 +7976,116 @@ void main() {
         find.byKey(const Key('reader_tts_speed_button')),
         findsNothing,
       );
+    });
+  });
+
+  group('背景播放與系統整合（epic-34-tts-readalong Issue 7）', () {
+    testWidgets(
+        '提供 ttsAudioHandler／ttsAudioFocusSource 時，開書/播放/離開畫面'
+        '皆不崩潰（誠實測試邊界：flutter_test 環境下 loadSegments() 恆'
+        '回傳空清單，TtsController 永遠不會真正進入 playing，這裡驗證的'
+        '是接線本身的結構性保證，深層狀態機正確性由'
+        'tts_audio_focus_coordinator_test.dart／tts_audio_handler_test.dart'
+        '（純 Dart）完整涵蓋，見 plan-issue-7.md「測試分層」）',
+        (tester) async {
+      final ttsProvider = FakeTtsProvider();
+      final ttsAudioHandler = TtsAudioHandler();
+      final ttsAudioFocusSource = FakeTtsAudioFocusSource();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_tts7_wiring',
+            prefsManager: prefsManager,
+            isFixedLayout: false,
+            ttsProvider: ttsProvider,
+            ttsAudioHandler: ttsAudioHandler,
+            ttsAudioFocusSource: ttsAudioFocusSource,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final foliateView =
+          tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
+      foliateView.onPageRendered();
+      foliateView.onLayoutResolved?.call(
+        const EpubLayoutInfo(
+          isFixedLayout: false,
+          writingMode: WritingMode.horizontal,
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      final buttonFinder = find.byKey(const Key('reader_tts_play_pause_button'));
+      expect(buttonFinder, findsOneWidget);
+      await tester.tap(buttonFinder);
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+
+      // TtsAudioHandler 應已綁定書名（attachController 已被呼叫）。
+      expect(ttsAudioHandler.mediaItem.value?.title, '未知書籍');
+
+      // 焦點事件送達不應造成崩潰（idle 狀態下為 no-op）。
+      ttsAudioFocusSource.emit(TtsAudioFocusEvent.transientLoss);
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+
+      // App 從背景恢復前景時，resyncHighlight() 接線不應崩潰。
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+
+      // 離開畫面（dispose）應呼叫 detachController()
+      await tester.pumpWidget(const SizedBox());
+      expect(tester.takeException(), isNull);
+      expect(ttsAudioHandler.mediaItem.value, isNull,
+          reason: '離開畫面（dispose）應呼叫 detachController()');
+    });
+
+    testWidgets('未提供 ttsAudioHandler／ttsAudioFocusSource 時，既有播放/暫停行為零回歸',
+        (tester) async {
+      final ttsProvider = FakeTtsProvider();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_tts7_no_wiring',
+            prefsManager: prefsManager,
+            isFixedLayout: false,
+            ttsProvider: ttsProvider,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final foliateView =
+          tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
+      foliateView.onPageRendered();
+      foliateView.onLayoutResolved?.call(
+        const EpubLayoutInfo(
+          isFixedLayout: false,
+          writingMode: WritingMode.horizontal,
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      final buttonFinder = find.byKey(const Key('reader_tts_play_pause_button'));
+      await tester.tap(buttonFinder);
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pump();
+      expect(tester.takeException(), isNull);
     });
   });
 

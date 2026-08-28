@@ -11,6 +11,8 @@ import '../reader/highlights_repository.dart';
 import '../reader/layout_preset_repository.dart';
 import '../reader/notes_repository.dart';
 import '../reader/tts_provider.dart';
+import '../reader/tts_audio_focus_source.dart';
+import '../reader/tts_audio_handler.dart';
 import '../remote/opds_client.dart';
 import '../remote/remote_server_repository.dart';
 import '../remote/remote_thumbnail_cache.dart';
@@ -35,6 +37,8 @@ class LibraryReaderFeatureRepositories {
   final LayoutPresetRepository? layoutPresetRepository;
   final BookReaderPrefsRepository? bookReaderPrefsRepository;
   final TtsProvider? ttsProvider;
+  final TtsAudioHandler? ttsAudioHandler;
+  final TtsAudioFocusSource? ttsAudioFocusSource;
 
   const LibraryReaderFeatureRepositories({
     this.bookmarksRepository,
@@ -44,6 +48,8 @@ class LibraryReaderFeatureRepositories {
     this.layoutPresetRepository,
     this.bookReaderPrefsRepository,
     this.ttsProvider,
+    this.ttsAudioHandler,
+    this.ttsAudioFocusSource,
   });
 }
 

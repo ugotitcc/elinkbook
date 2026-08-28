@@ -4,6 +4,8 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'package:audio_service/audio_service.dart';
+import 'package:audio_session/audio_session.dart';
 import 'package:pdfrx/pdfrx.dart';
 
 import 'cloud_import/cloud_account_repository.dart';
@@ -28,6 +30,8 @@ import 'reader/reader_prefs_manager.dart';
 import 'reader/reader_prefs_manager_impl.dart';
 import 'reader/reading_position_repository.dart';
 import 'reader/system_tts_provider.dart';
+import 'reader/tts_audio_focus_source.dart';
+import 'reader/tts_audio_handler.dart';
 import 'reader/tts_provider.dart';
 import 'remote/opds_client.dart';
 import 'remote/opds_http_client.dart';
@@ -89,6 +93,38 @@ Future<void> main() async {
   // epic-34-tts-readalong Issue 9：SystemTtsProvider 預設建構子內部會自行
   // 建立 FlutterTts()，App 層級不需要另外管理其生命週期或提供假物件。
   final ttsProvider = SystemTtsProvider();
+  // epic-34-tts-readalong Issue 7：AudioSession 設定一次即為 App 全程式
+  // 共用（audio_session 套件內部本身即單例，見該套件 AudioSession.instance
+  // 文件），朗讀內容一律視為 speech（語音），並要求「降低音量」型的暫時
+  // 失焦（AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK）也一律當成需要暫停處理
+  // （androidWillPauseWhenDucked: true）——降低音量的人聲朗讀無法辨識，
+  // 與音樂/Podcast 那種可以被降低音量、繼續播放的內容性質不同。
+  final ttsAudioSession = await AudioSession.instance;
+  await ttsAudioSession.configure(const AudioSessionConfiguration(
+    androidAudioAttributes: AndroidAudioAttributes(
+      contentType: AndroidAudioContentType.speech,
+      usage: AndroidAudioUsage.media,
+    ),
+    androidAudioFocusGainType: AndroidAudioFocusGainType.gain,
+    androidWillPauseWhenDucked: true,
+  ));
+  final ttsAudioFocusSource = AudioSessionFocusSource(ttsAudioSession);
+  // AudioService.init() 全程式生命週期只能呼叫一次（見
+  // plans/plan-issue-7.md Global Constraints），建構出的單一 handler
+  // 由 ReaderScreen 於每次開書時呼叫 attachController()／
+  // detachController() 綁定/解綁目前的 TtsController。
+  final ttsAudioHandler = await AudioService.init(
+    builder: () => TtsAudioHandler(),
+    config: const AudioServiceConfig(
+      androidNotificationChannelId: 'cc.ugotit.elinkbook.tts_channel',
+      androidNotificationChannelName: '朗讀播放中',
+      // Android 12 起背景重啟前景服務有限制（見 audio_service 官方
+      // README「Android setup」段落說明），保持 false（暫停時服務維持
+      // 前景狀態，不釋放通知），避免使用者暫停朗讀後、App 進一步被系統
+      // 節流時無法重新啟動前景服務。
+      androidStopForegroundOnPause: false,
+    ),
+  );
   final syncAccountRepository = SyncAccountRepository();
   final syncClient = SyncClient(accountRepository: syncAccountRepository);
   // epic-8-sync Issue 6：Issue 4/5 只在測試中建構過 SyncEngine，這裡是
@@ -155,6 +191,8 @@ Future<void> main() async {
       layoutPresetRepository: layoutPresetRepository,
       bookReaderPrefsRepository: prefsRepository,
       ttsProvider: ttsProvider,
+      ttsAudioHandler: ttsAudioHandler,
+      ttsAudioFocusSource: ttsAudioFocusSource,
       syncAccountRepository: syncAccountRepository,
       syncClient: syncClient,
       syncCheckpointTrigger: syncCheckpointTrigger,
@@ -189,6 +227,8 @@ class ElinkBookApp extends StatefulWidget {
   final LayoutPresetRepository? layoutPresetRepository;
   final BookReaderPrefsRepository? bookReaderPrefsRepository;
   final TtsProvider? ttsProvider;
+  final TtsAudioHandler? ttsAudioHandler;
+  final TtsAudioFocusSource? ttsAudioFocusSource;
   final SyncAccountRepository? syncAccountRepository;
   final SyncClient? syncClient;
   final SyncCheckpointTrigger? syncCheckpointTrigger;
@@ -219,6 +259,8 @@ class ElinkBookApp extends StatefulWidget {
     this.layoutPresetRepository,
     this.bookReaderPrefsRepository,
     this.ttsProvider,
+    this.ttsAudioHandler,
+    this.ttsAudioFocusSource,
     this.syncAccountRepository,
     this.syncClient,
     this.syncCheckpointTrigger,
@@ -305,6 +347,8 @@ class _ElinkBookAppState extends State<ElinkBookApp> with WidgetsBindingObserver
           layoutPresetRepository: widget.layoutPresetRepository,
           bookReaderPrefsRepository: widget.bookReaderPrefsRepository,
           ttsProvider: widget.ttsProvider,
+          ttsAudioHandler: widget.ttsAudioHandler,
+          ttsAudioFocusSource: widget.ttsAudioFocusSource,
         ),
         syncDependencies: LibrarySyncDependencies(
           syncAccountRepository: widget.syncAccountRepository,
