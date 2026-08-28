@@ -64,6 +64,7 @@ import 'reader_settings_sheet.dart';
 import 'toc_bottom_sheet.dart';
 import 'pdf_search_panel.dart';
 import 'pdf_thumbnail_panel.dart';
+import 'tts_mini_player.dart';
 
 /// 音量鍵事件頻道（epic-7-interaction Issue 7）：原生 `MainActivity.
 /// dispatchKeyEvent()` 攔截音量鍵後呼叫 `onVolumeKey`；`_handleVolumeKeyCall`
@@ -2218,132 +2219,32 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                 _chromeVisible &&
                 widget.ttsProvider != null)
               Positioned(
-                top: 296,
+                left: 16,
                 right: 16,
-                child: format == BookFormat.cbz
-                    // CBZ 為純圖像格式，無文字可朗讀——明確顯示停用狀態
-                    // 的按鈕（onPressed: null），不是整個隱藏（見
-                    // issues.md Issue 2 驗收標準：「CBZ 書籍 TTS 入口為
-                    // 明確停用狀態，非靜默無反應」）。
-                    ? ClipOval(
-                        child: Container(
-                          color: _themedFabBackgroundColor,
-                          child: IconButton(
-                            key: const Key('reader_tts_play_pause_button'),
-                            icon: Icon(Icons.play_arrow,
-                                color: _themedFabIconColor),
-                            tooltip: 'CBZ 為純圖像格式，不支援語音朗讀',
-                            onPressed: null,
-                          ),
-                        ),
-                      )
-                    : AnimatedBuilder(
-                        animation: _ttsControllerOrNull!,
-                        builder: (context, _) {
-                          final controller = _ttsControllerOrNull!;
-                          final playing =
-                              controller.status == TtsPlaybackStatus.playing;
-                          return ClipOval(
-                            child: Container(
-                              color: _themedFabBackgroundColor,
-                              child: IconButton(
-                                key: const Key('reader_tts_play_pause_button'),
-                                icon: Icon(
-                                  playing ? Icons.pause : Icons.play_arrow,
-                                  color: _themedFabIconColor,
-                                ),
-                                tooltip: playing ? '暫停朗讀' : '開始朗讀',
-                                onPressed:
-                                    playing ? controller.pause : () => controller.play(),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-              ),
-            // 上一句/下一句/語速調整（epic-34-tts-readalong Issue 5）：CBZ
-            // 完全不支援朗讀（無文字節點），連同播放/暫停以外的三顆控制
-            // 按鈕一併排除，不只顯示停用狀態——這三顆按鈕本來就不該出現
-            // 在 CBZ 畫面上，跟播放/暫停按鈕「顯示但停用」的既有設計不同。
-            // 陽春 FAB 樣式（沿用 Issue 2 既有慣例），Issue 6 會整理成正式
-            // Mini Player 版面。
-            if (isFoliateFormat(format) &&
-                _chromeVisible &&
-                widget.ttsProvider != null &&
-                format != BookFormat.cbz) ...[
-              Positioned(
-                top: 352,
-                right: 16,
-                child: AnimatedBuilder(
-                  animation: _ttsControllerOrNull!,
-                  builder: (context, _) {
-                    final controller = _ttsControllerOrNull!;
-                    return ClipOval(
-                      child: Container(
-                        color: _themedFabBackgroundColor,
-                        child: IconButton(
-                          key: const Key('reader_tts_previous_button'),
-                          icon: Icon(Icons.skip_previous, color: _themedFabIconColor),
-                          tooltip: '上一句',
-                          onPressed: () => controller.previousSegment(),
-                        ),
-                      ),
-                    );
-                  },
+                bottom: _ttsMiniPlayerBottomOffset,
+                child: Center(
+                  child: AnimatedBuilder(
+                    animation: _ttsControllerOrNull!,
+                    builder: (context, _) {
+                      final controller = _ttsControllerOrNull!;
+                      return TtsMiniPlayer(
+                        status: controller.status,
+                        speed: controller.speed,
+                        isCbz: format == BookFormat.cbz,
+                        backgroundColor: _themedFabBackgroundColor,
+                        iconColor: _themedFabIconColor,
+                        onPlayPause: controller.status == TtsPlaybackStatus.playing
+                            ? controller.pause
+                            : () => controller.play(),
+                        onPrevious: () => controller.previousSegment(),
+                        onNext: () => controller.nextSegment(),
+                        onSpeedTap: () => controller
+                            .setSpeed(_nextTtsSpeedPreset(controller.speed)),
+                      );
+                    },
+                  ),
                 ),
               ),
-              Positioned(
-                top: 408,
-                right: 16,
-                child: AnimatedBuilder(
-                  animation: _ttsControllerOrNull!,
-                  builder: (context, _) {
-                    final controller = _ttsControllerOrNull!;
-                    return ClipOval(
-                      child: Container(
-                        color: _themedFabBackgroundColor,
-                        child: IconButton(
-                          key: const Key('reader_tts_next_button'),
-                          icon: Icon(Icons.skip_next, color: _themedFabIconColor),
-                          tooltip: '下一句',
-                          onPressed: () => controller.nextSegment(),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-              Positioned(
-                top: 464,
-                right: 16,
-                child: AnimatedBuilder(
-                  animation: _ttsControllerOrNull!,
-                  builder: (context, _) {
-                    final controller = _ttsControllerOrNull!;
-                    final speedLabel = '${controller.speed.toStringAsFixed(2)}x';
-                    return ClipOval(
-                      child: Container(
-                        color: _themedFabBackgroundColor,
-                        child: IconButton(
-                          key: const Key('reader_tts_speed_button'),
-                          icon: Text(
-                            speedLabel,
-                            style: TextStyle(
-                              color: _themedFabIconColor,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          tooltip: '朗讀語速：$speedLabel（點擊切換）',
-                          onPressed: () => controller
-                              .setSpeed(_nextTtsSpeedPreset(controller.speed)),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
             // ── PDF FAB 區塊（epic-24-pdf-engine-rebuild Issue 8）─────
             // 與上方 EPUB FAB 完全對稱的 6 顆浮動圓形按鈕：返回／目錄／
             // 版面設定／書籤 toggle／筆記／進度-跳頁。比照 EPUB 既有的
@@ -2819,6 +2720,15 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         _ttsSpeedPresets.indexWhere((p) => (p - current).abs() < 0.001);
     if (index == -1) return 1.0;
     return _ttsSpeedPresets[(index + 1) % _ttsSpeedPresets.length];
+  }
+
+  /// Mini Player 底部邊距（epic-34-tts-readalong Issue 6）：當頁尾進度文字
+  /// 可見時（showFooter 開啟且總頁數 > 0），往上抬高 40dp 避開頁尾；頁尾未顯示
+  /// 則貼齊底邊 12dp。
+  double get _ttsMiniPlayerBottomOffset {
+    final footerVisible = (_resolved?.showFooter ?? false) &&
+        (_epubPositionInfo?.displayTotalPages ?? 0) > 0;
+    return footerVisible ? 40 : 12;
   }
 
   Widget _buildNativeView(BookFormat format, bool isLandscape) {
