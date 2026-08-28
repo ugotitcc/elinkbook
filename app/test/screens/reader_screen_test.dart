@@ -8089,6 +8089,77 @@ void main() {
     });
   });
 
+  group('安全視窗跟隨翻頁（epic-34-tts-readalong Issue 8）', () {
+    testWidgets(
+        '提供 ttsProvider 時，onTtsHighlightOutOfSafeWindow 觸發（模擬 next/prev）不崩潰',
+        (tester) async {
+      final ttsProvider = FakeTtsProvider();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_tts8_safe_window',
+            prefsManager: prefsManager,
+            isFixedLayout: false,
+            ttsProvider: ttsProvider,
+            isEinkMode: true,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final foliateView =
+          tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
+      foliateView.onPageRendered();
+      foliateView.onLayoutResolved?.call(
+        const EpubLayoutInfo(
+          isFixedLayout: false,
+          writingMode: WritingMode.horizontal,
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      await tester.tap(find.byKey(const Key('reader_tts_play_pause_button')));
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+
+      foliateView.onTtsHighlightOutOfSafeWindow?.call('next');
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+
+      foliateView.onTtsHighlightOutOfSafeWindow?.call('prev');
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('未提供 ttsProvider 時，onTtsHighlightOutOfSafeWindow 欄位為 null（未建構 TtsController）',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_tts8_no_provider',
+            prefsManager: prefsManager,
+            isFixedLayout: false,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final foliateView =
+          tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
+      foliateView.onTtsHighlightOutOfSafeWindow?.call('next');
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+    });
+  });
+
   tearDownAll(() {
     // 還原 cacheBookForServing 為原始實作，避免污染其他測試檔
     cacheBookForServing = originalCacheBookForServing;

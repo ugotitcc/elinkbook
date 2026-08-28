@@ -420,6 +420,16 @@ class FoliateReaderView extends StatefulWidget {
   final ValueChanged<EpubSelectionInfo>? onSelectionChanged;
   final VoidCallback? onSelectionCleared;
 
+  /// 安全視窗跟隨翻頁（epic-34-tts-readalong Issue 8）：main.js
+  /// draw-annotation 監聽器偵測到目前朗讀高亮超出安全視窗（可視範圍
+  /// 20%～80%）時觸發，帶入 `'next'` 或 `'prev'`（main.js 依 isVertical
+  /// 分流判斷出的方向）。呼叫端（[ReaderScreen]）收到後呼叫
+  /// [FoliateReaderView.nextPage]/[previousPage] 觸發一次性翻頁——本欄位
+  /// 只負責回報「超出範圍了、該往哪個方向」這個事實，不自行決定要不要
+  /// 真的翻頁，比照 [onLocatorChanged]/[onSelectionChanged] 既有的
+  /// 「JS 回報事實、Dart 決定政策」分工慣例。
+  final ValueChanged<String>? onTtsHighlightOutOfSafeWindow;
+
   const FoliateReaderView({
     super.key,
     required this.filePath,
@@ -463,6 +473,7 @@ class FoliateReaderView extends StatefulWidget {
     this.onLocatorChanged,
     this.onSelectionChanged,
     this.onSelectionCleared,
+    this.onTtsHighlightOutOfSafeWindow,
   });
 
   static void nextPage(GlobalKey<State<FoliateReaderView>> key) {
@@ -558,11 +569,12 @@ class FoliateReaderView extends StatefulWidget {
     GlobalKey<State<FoliateReaderView>> key,
     String cfi, {
     required bool vertical,
+    required bool einkMode,
   }) {
     final state = key.currentState;
     if (state is _FoliateReaderViewState) {
       state._evaluate(
-        'window.showTtsHighlight(${jsonEncode(cfi)}, $vertical)',
+        'window.showTtsHighlight(${jsonEncode(cfi)}, $vertical, $einkMode)',
       );
     }
   }
@@ -770,6 +782,20 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
         _pendingTtsSegmentIndex = null;
         final index = args.isNotEmpty ? (args[0] as num).toInt() : 0;
         completer?.complete(index);
+      },
+    );
+    controller.addJavaScriptHandler(
+      handlerName: 'onTtsHighlightOutOfSafeWindow',
+      callback: (args) {
+        // 審查修正（review-plan-issue-8.md Important #3）：比照既有
+        // onSelectionChanged 的防禦性轉型慣例（見上方 argAt()），用
+        // `is String` 檢查取代直接 `as String` 強制轉型——main.js 端目前
+        // 恆傳字串常值，但若未來橋接參數格式意外變動（例如傳入 null 或
+        // 未定義物件），直接強制轉型會拋出執行期 TypeError。
+        final direction = (args.isNotEmpty && args[0] is String)
+            ? args[0] as String
+            : 'next';
+        widget.onTtsHighlightOutOfSafeWindow?.call(direction);
       },
     );
     controller.addJavaScriptHandler(

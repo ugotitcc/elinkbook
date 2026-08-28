@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/reader/tts_controller.dart';
 import 'package:elinkbook/reader/tts_provider.dart';
@@ -479,6 +480,118 @@ void main() {
 
     expect(controller.status, TtsPlaybackStatus.idle);
     expect(controller.segments, isEmpty);
+  });
+
+  test(
+      'suppressNextExternalPositionChange() 後緊接著一次 handleExternalPositionChange() 呼叫，'
+      '不重設播放狀態（epic-34-tts-readalong Issue 8：安全視窗自動翻頁不應誤觸發暫停）',
+      () async {
+    final highlighted = <TtsSegmentCfi?>[];
+    provider = FakeTtsProvider();
+    player = FakeTtsAudioPlayer();
+    final controller = TtsController(
+      provider: provider,
+      player: player,
+      loadSegments: () async => segments,
+      onHighlightSegment: highlighted.add,
+    );
+    await controller.play();
+    expect(controller.status, TtsPlaybackStatus.playing);
+    highlighted.clear();
+    player.callLog.clear();
+
+    controller.suppressNextExternalPositionChange();
+    controller.handleExternalPositionChange();
+
+    expect(controller.status, TtsPlaybackStatus.playing);
+    expect(controller.currentIndex, 0);
+    expect(controller.segments, segments);
+    expect(highlighted, isEmpty,
+        reason: '不應清除高亮——這次位置變化是 TTS 自己造成的安全視窗翻頁，'
+            '不是使用者手動導覽。');
+    expect(player.callLog, isEmpty,
+        reason: '不應呼叫 player.pause()——播放不應中斷。');
+  });
+
+  // 2026-08-28 真機驗收發現：橫排/直排跨頁自動翻頁、上一句/下一句跨頁時，
+  // 翻頁方向皆正確，但翻頁後朗讀會中斷。追查 paginator.js 發現分頁模式下
+  // 單次 view.next()/view.prev() 實際上會觸發兩次 relocate 事件——一次是
+  // 換頁本身，另一次來自 #container 原生 scroll 事件的 250ms debounce
+  // （paginator.js 第 1493-1502 行，!this.scrolled 分支沒有 #isAnimating
+  // 防護）。原本的一次性抑制旗標（呼叫一次 handleExternalPositionChange()
+  // 就消耗掉）只擋得住第一次，第二次會被誤判為使用者手動導覽而錯誤暫停
+  // 播放——這正是「翻頁方向正確、但翻頁後朗讀中斷」的成因。修法改為
+  // 500ms 時間窗（見 suppressNextExternalPositionChange() 文件註解），
+  // 以下測試直接模擬這個「250ms 後補觸發第二次 relocate」的真實情境。
+  test(
+      '抑制旗標為 500ms 時間窗：窗內（含模擬 250ms debounce 補觸發的第二次 relocate）'
+      '多次 handleExternalPositionChange() 呼叫皆被抑制，窗口到期後才恢復既有暫停行為',
+      () {
+    fakeAsync((async) {
+      provider = FakeTtsProvider();
+      player = FakeTtsAudioPlayer();
+      final controller = TtsController(
+        provider: provider,
+        player: player,
+        loadSegments: () async => segments,
+      );
+      controller.play();
+      async.flushMicrotasks();
+      expect(controller.status, TtsPlaybackStatus.playing);
+
+      controller.suppressNextExternalPositionChange();
+      controller.handleExternalPositionChange(); // 換頁本身觸發的第一次 relocate
+      expect(controller.status, TtsPlaybackStatus.playing);
+
+      async.elapse(const Duration(milliseconds: 250));
+      controller.handleExternalPositionChange(); // debounce 補觸發的第二次 relocate
+      expect(controller.status, TtsPlaybackStatus.playing,
+          reason: '窗口（500ms）尚未到期，這次呼叫仍須視為 TTS 自己造成的'
+              '位置變化——一次性旗標會在這裡錯誤重設狀態，正是真機發現的'
+              '「翻頁後朗讀中斷」成因。');
+
+      async.elapse(const Duration(milliseconds: 300)); // 累計 550ms，窗口已到期
+      controller.handleExternalPositionChange(); // 真正的使用者手動導覽
+
+      expect(controller.status, TtsPlaybackStatus.idle);
+      expect(controller.currentIndex, -1);
+    });
+  });
+
+  // 審查修正（review-plan-issue-8.md Important #2）：抑制旗標若在設下後
+  // 從未被 handleExternalPositionChange() 消耗（例如安全視窗觸發的翻頁
+  // 剛好是全書最後一頁、next() 沒有效果、不會產生新的 relocate 事件），
+  // 會一路殘留到下一次全新播放，錯誤抑制之後完全不相關的一次手動導覽。
+  test(
+      '抑制旗標若在章節自然播畢（未經 handleExternalPositionChange 消耗）前設下，'
+      '不會遺留到下一輪播放、誤抑制之後真正的手動導覽（審查 review-plan-issue-8.md Important #2）',
+      () async {
+    provider = FakeTtsProvider();
+    player = FakeTtsAudioPlayer();
+    final controller = TtsController(
+      provider: provider,
+      player: player,
+      loadSegments: () async => segments,
+    );
+    await controller.play();
+    controller.suppressNextExternalPositionChange();
+    // 模擬「安全視窗觸發的翻頁最終沒有送出 relocate 事件」——章節透過
+    // 連續按下一句到底自然播畢，而非透過 handleExternalPositionChange()
+    // 消耗掉旗標。
+    await controller.nextSegment(); // -> index 1
+    await controller.nextSegment(); // 超出範圍，重設為 idle
+    expect(controller.status, TtsPlaybackStatus.idle);
+
+    // 重新開始一次全新的播放。
+    await controller.play();
+    expect(controller.status, TtsPlaybackStatus.playing);
+
+    controller.handleExternalPositionChange(); // 這次是真正的使用者手動導覽
+
+    expect(controller.status, TtsPlaybackStatus.idle,
+        reason: '若抑制旗標從上一輪播放遺留下來，這裡會被誤判為 TTS 自己'
+            '造成的位置變化而維持 playing，導致這次真正的手動導覽沒有'
+            '正確觸發自動暫停。');
   });
 
   test('handleExternalPositionChange() 重設後再次 play()，重新呼叫 loadSegments() 並套用 lookupStartIndex（與首次播放共用同一路徑）',

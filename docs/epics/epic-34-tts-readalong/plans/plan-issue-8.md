@@ -6,7 +6,9 @@
 
 **Architecture:** 安全視窗的幾何判斷（「目前朗讀高亮的矩形位置是否還在可視範圍 20%～80% 之內」）只有 JS 端（`main.js`）能算——需要 DOM `Range.getClientRects()` 與 iframe/viewport 座標換算，這是既有 `reportSelection()`（選取範圍即時回報，`main.js` 既有函式）已經用過的同一套正規化算法，本 Issue 直接重用同一套算法，套用在既有 `draw-annotation` 監聽器（`window.showTtsHighlight()` 觸發的那一次）上。JS 端只負責回報事實（「超出範圍了，該往哪個方向」），透過新的 `onTtsHighlightOutOfSafeWindow` 橋接事件送給 Dart；**是否真的要翻頁、由誰觸發**，仍由 Dart 端（`ReaderScreen`）決定並呼叫既有 `FoliateReaderView.nextPage()`/`previousPage()`，比照 `onLocatorChanged`/`onSelectionChanged` 既有「JS 回報事實、Dart 決定政策」分工慣例，`main.js` 不自行呼叫 `view.next()`/`view.prev()`。
 
-這個自動翻頁本身會觸發一次 `relocate` 事件（→ `onLocatorChanged`），若不處理，既有 Issue 4 邏輯（`TtsController.handleExternalPositionChange()`）會把它誤判為「使用者手動導覽」而錯誤暫停朗讀。`TtsController` 因此新增一個一次性抑制旗標 `suppressNextExternalPositionChange()`——`ReaderScreen` 觸發翻頁前先呼叫它，讓緊接著到來的那一次 `handleExternalPositionChange()` 判斷為「TTS 自己造成的位置變化」而不重設播放狀態。
+這個自動翻頁本身會觸發一次 `relocate` 事件（→ `onLocatorChanged`），若不處理，既有 Issue 4 邏輯（`TtsController.handleExternalPositionChange()`）會把它誤判為「使用者手動導覽」而錯誤暫停朗讀。`TtsController` 因此新增一個抑制機制 `suppressNextExternalPositionChange()`——`ReaderScreen` 觸發翻頁前先呼叫它，讓接下來一段時間內到來的 `handleExternalPositionChange()` 呼叫判斷為「TTS 自己造成的位置變化」而不重設播放狀態。
+
+**2026-08-28 真機驗收修復**：原始版本是「一次性消耗」旗標（呼叫一次 `handleExternalPositionChange()` 就清除），真機測試發現橫排/直排跨頁自動翻頁、上一句/下一句跨頁時，翻頁方向皆正確、但翻頁後朗讀會中斷。追查 `paginator.js` 發現分頁（非捲動）模式下單次 `view.next()`/`view.prev()` 實際上會觸發**兩次** `relocate` 事件：一次是換頁本身，另一次來自 `#container` 原生 `scroll` 事件的 250ms debounce（`paginator.js` 第 1493-1502 行，`!this.scrolled` 分支沒有 `#isAnimating` 防護）。一次性旗標只擋得住第一次，第二次會被誤判為使用者手動導覽而錯誤暫停播放。修法改為 500ms 時間窗（`Timer`，見 `tts_controller.dart` `suppressNextExternalPositionChange()`/`_suppressExpiryTimer` 文件註解）：窗口內任何一次 `handleExternalPositionChange()` 呼叫皆視為抑制範圍，不消耗、不重設播放狀態，直到計時器到期才自動恢復正常判斷；既有 5 個「重設回 idle」的既有位置一併取消計時器。以 `fake_async` 套件新增回歸測試模擬「250ms 後補觸發第二次 relocate」的真實情境（`tts_controller_test.dart`）。
 
 由於 `resyncHighlight()`（Issue 7）與一般朗讀段切換（Issue 3）都是透過同一個 `window.showTtsHighlight()` 進入 `draw-annotation` 監聽器，安全視窗檢查天然覆蓋這兩條既有路徑，不需要另外處理。
 
