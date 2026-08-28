@@ -111,6 +111,7 @@ class TtsController extends ChangeNotifier {
         await player.play();
       } catch (_) {
         if (_disposed) return;
+        _suppressExpiryTimer?.cancel();
         _suppressNextPositionChange = false;
         _status = TtsPlaybackStatus.idle;
         _currentIndex = -1;
@@ -194,6 +195,7 @@ class TtsController extends ChangeNotifier {
     final nextIndex = _currentIndex + 1;
     if (nextIndex >= _segments.length) {
       _segmentGeneration++;
+      _suppressExpiryTimer?.cancel();
       _suppressNextPositionChange = false;
       _status = TtsPlaybackStatus.idle;
       _currentIndex = -1;
@@ -222,20 +224,38 @@ class TtsController extends ChangeNotifier {
     await _playCurrentSegment();
   }
 
-  /// 安全視窗跟隨翻頁（epic-34-tts-readalong Issue 8）觸發的一次性自動
-  /// 翻頁，即將呼叫端（[ReaderScreen]）對 [FoliateReaderView] 送出下一頁/
-  /// 上一頁指令前，須先呼叫本方法設下這個旗標——讓緊接著到來的那一次
+  /// 安全視窗跟隨翻頁（epic-34-tts-readalong Issue 8）觸發的自動翻頁，
+  /// 即將呼叫端（[ReaderScreen]）對 [FoliateReaderView] 送出下一頁/上一頁
+  /// 指令前，須先呼叫本方法——讓接下來一段時間內到來的
   /// [handleExternalPositionChange] 呼叫（由該次翻頁觸發的 relocate 事件
   /// 間接引發）被判斷為「TTS 自己造成的位置變化」而不重設播放狀態，而非
-  /// 誤判為使用者手動導覽而錯誤暫停播放。旗標只抑制「緊接著的下一次」
-  /// 呼叫，用過即清除——若安全視窗翻頁與真正的使用者手動導覽幾乎同時
-  /// 發生，只有先抵達的那一次呼叫會被抑制，屬可接受的邊界情況（見
-  /// `plan-issue-8.md` 設計理由）。
+  /// 誤判為使用者手動導覽而錯誤暫停播放。
+  ///
+  /// **時間窗而非一次性消耗（2026-08-28 真機驗收修復）**：原始版本用一次性
+  /// 旗標（呼叫一次 [handleExternalPositionChange] 就消耗掉），真機測試
+  /// 發現翻頁方向正確、但翻頁後朗讀仍會中斷——追查 `paginator.js` 發現
+  /// 單次 `view.next()`/`view.prev()` 在分頁（非捲動）模式下實際上會觸發
+  /// 兩次 `relocate` 事件：一次是換頁本身觸發，另一次來自 `#container`
+  /// 原生 `scroll` 事件的 debounce（`paginator.js` 第 1493-1502 行，
+  /// `debounce(..., 250)`，`!this.scrolled` 分支沒有 `#isAnimating` 防護，
+  /// 換頁動畫造成的 `scrollLeft`/`scrollTop` 位移一定會補觸發這個 250ms
+  /// 後才落地的第二次 `relocate`）。一次性旗標只擋得住第一次，第二次會被
+  /// 誤判為使用者手動導覽，讓 [TtsController] 重設回 idle、暫停播放器
+  /// ——這正是「翻頁方向正確、但翻頁後朗讀中斷」的成因。改為時間窗
+  /// （500ms，留有餘裕覆蓋 250ms 的 debounce 加上 JS↔Dart 橋接往返延遲）：
+  /// 窗口內任何一次 [handleExternalPositionChange] 呼叫皆視為抑制範圍，
+  /// 不消耗、不重設播放狀態，直到 [_suppressExpiryTimer] 到期才自動恢復
+  /// 正常判斷。
   bool _suppressNextPositionChange = false;
+  Timer? _suppressExpiryTimer;
 
   void suppressNextExternalPositionChange() {
     if (_disposed) return;
     _suppressNextPositionChange = true;
+    _suppressExpiryTimer?.cancel();
+    _suppressExpiryTimer = Timer(const Duration(milliseconds: 500), () {
+      _suppressNextPositionChange = false;
+    });
   }
 
   /// 偵測到非 TTS 自身觸發的畫面位置變化時呼叫（epic-34-tts-readalong
@@ -271,10 +291,10 @@ class TtsController extends ChangeNotifier {
   /// 不需要在這裡額外判斷「是否有 play() 正在進行中」。
   void handleExternalPositionChange() {
     if (_disposed) return;
-    if (_suppressNextPositionChange) {
-      _suppressNextPositionChange = false;
-      return;
-    }
+    // 時間窗抑制期間（見 suppressNextExternalPositionChange() 文件註解）
+    // 內到來的每一次呼叫都直接返回、不消耗旗標——旗標由到期計時器統一
+    // 清除，讓單次翻頁觸發的多次 relocate 事件都能被正確吸收。
+    if (_suppressNextPositionChange) return;
     _playGeneration++;
     // epic-34-tts-readalong Issue 5（審查 review-plan-issue-5.md 建議 1）：
     // 手動導覽發生時，可能正好有一個 nextSegment()／previousSegment()／
@@ -370,6 +390,7 @@ class TtsController extends ChangeNotifier {
       await player.play();
     } catch (_) {
       if (_disposed || generation != _segmentGeneration) return;
+      _suppressExpiryTimer?.cancel();
       _suppressNextPositionChange = false;
       _status = TtsPlaybackStatus.idle;
       _currentIndex = -1;
@@ -384,6 +405,7 @@ class TtsController extends ChangeNotifier {
     if (_status != TtsPlaybackStatus.playing) return;
     final nextIndex = _currentIndex + 1;
     if (nextIndex >= _segments.length) {
+      _suppressExpiryTimer?.cancel();
       _suppressNextPositionChange = false;
       _status = TtsPlaybackStatus.idle;
       _currentIndex = -1;
@@ -399,6 +421,7 @@ class TtsController extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    _suppressExpiryTimer?.cancel();
     _suppressNextPositionChange = false;
     _completedSub?.cancel();
     player.dispose();

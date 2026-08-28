@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/reader/tts_controller.dart';
 import 'package:elinkbook/reader/tts_provider.dart';
@@ -512,25 +513,49 @@ void main() {
         reason: '不應呼叫 player.pause()——播放不應中斷。');
   });
 
-  test('抑制旗標只抑制「緊接著的下一次」呼叫，之後的 handleExternalPositionChange() 恢復既有暫停行為',
-      () async {
-    provider = FakeTtsProvider();
-    player = FakeTtsAudioPlayer();
-    final controller = TtsController(
-      provider: provider,
-      player: player,
-      loadSegments: () async => segments,
-    );
-    await controller.play();
+  // 2026-08-28 真機驗收發現：橫排/直排跨頁自動翻頁、上一句/下一句跨頁時，
+  // 翻頁方向皆正確，但翻頁後朗讀會中斷。追查 paginator.js 發現分頁模式下
+  // 單次 view.next()/view.prev() 實際上會觸發兩次 relocate 事件——一次是
+  // 換頁本身，另一次來自 #container 原生 scroll 事件的 250ms debounce
+  // （paginator.js 第 1493-1502 行，!this.scrolled 分支沒有 #isAnimating
+  // 防護）。原本的一次性抑制旗標（呼叫一次 handleExternalPositionChange()
+  // 就消耗掉）只擋得住第一次，第二次會被誤判為使用者手動導覽而錯誤暫停
+  // 播放——這正是「翻頁方向正確、但翻頁後朗讀中斷」的成因。修法改為
+  // 500ms 時間窗（見 suppressNextExternalPositionChange() 文件註解），
+  // 以下測試直接模擬這個「250ms 後補觸發第二次 relocate」的真實情境。
+  test(
+      '抑制旗標為 500ms 時間窗：窗內（含模擬 250ms debounce 補觸發的第二次 relocate）'
+      '多次 handleExternalPositionChange() 呼叫皆被抑制，窗口到期後才恢復既有暫停行為',
+      () {
+    fakeAsync((async) {
+      provider = FakeTtsProvider();
+      player = FakeTtsAudioPlayer();
+      final controller = TtsController(
+        provider: provider,
+        player: player,
+        loadSegments: () async => segments,
+      );
+      controller.play();
+      async.flushMicrotasks();
+      expect(controller.status, TtsPlaybackStatus.playing);
 
-    controller.suppressNextExternalPositionChange();
-    controller.handleExternalPositionChange(); // 消耗掉旗標，維持 playing
-    expect(controller.status, TtsPlaybackStatus.playing);
+      controller.suppressNextExternalPositionChange();
+      controller.handleExternalPositionChange(); // 換頁本身觸發的第一次 relocate
+      expect(controller.status, TtsPlaybackStatus.playing);
 
-    controller.handleExternalPositionChange(); // 真正的使用者手動導覽
+      async.elapse(const Duration(milliseconds: 250));
+      controller.handleExternalPositionChange(); // debounce 補觸發的第二次 relocate
+      expect(controller.status, TtsPlaybackStatus.playing,
+          reason: '窗口（500ms）尚未到期，這次呼叫仍須視為 TTS 自己造成的'
+              '位置變化——一次性旗標會在這裡錯誤重設狀態，正是真機發現的'
+              '「翻頁後朗讀中斷」成因。');
 
-    expect(controller.status, TtsPlaybackStatus.idle);
-    expect(controller.currentIndex, -1);
+      async.elapse(const Duration(milliseconds: 300)); // 累計 550ms，窗口已到期
+      controller.handleExternalPositionChange(); // 真正的使用者手動導覽
+
+      expect(controller.status, TtsPlaybackStatus.idle);
+      expect(controller.currentIndex, -1);
+    });
   });
 
   // 審查修正（review-plan-issue-8.md Important #2）：抑制旗標若在設下後
