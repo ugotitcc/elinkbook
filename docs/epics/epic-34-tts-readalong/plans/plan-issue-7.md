@@ -363,7 +363,7 @@ git commit -m "feat(epic-34): TtsController 新增 resyncHighlight()（Issue 7 T
 
 供 Task 6 `ReaderScreen` 使用；`FakeTtsAudioFocusSource` 供本 Task 與 Task 6 測試共用。
 
-- [ ] **Step 1：寫失敗測試——先建立 Fake 測試替身**
+- [x] **Step 1：寫失敗測試——先建立 Fake 測試替身**
 
 建立 `app/test/support/fake_tts_audio_focus_source.dart`：
 
@@ -377,7 +377,7 @@ import 'package:elinkbook/reader/tts_audio_focus_source.dart';
 /// 審查 `review-issues.md` Important #2「測試分流」自動化層）。
 class FakeTtsAudioFocusSource implements TtsAudioFocusSource {
   final StreamController<TtsAudioFocusEvent> _controller =
-      StreamController<TtsAudioFocusEvent>.broadcast();
+      StreamController<TtsAudioFocusEvent>.broadcast(sync: true);
   bool disposed = false;
 
   @override
@@ -393,7 +393,7 @@ class FakeTtsAudioFocusSource implements TtsAudioFocusSource {
 }
 ```
 
-- [ ] **Step 2：寫失敗測試——`TtsAudioFocusCoordinator` 狀態機**
+- [x] **Step 2：寫失敗測試——`TtsAudioFocusCoordinator` 狀態機**
 
 建立 `app/test/reader/tts_audio_focus_coordinator_test.dart`：
 
@@ -535,12 +535,12 @@ void main() {
     await Future<void>.delayed(Duration.zero);
 
     expect(controller.status, TtsPlaybackStatus.playing,
-        reason: 'dispose() 後协調器不應再訂閱事件、不應再操作 controller');
+        reason: 'dispose() 後協調器不應再訂閱事件、不應再操作 controller');
   });
 }
 ```
 
-- [ ] **Step 3：跑測試確認全數失敗**
+- [x] **Step 3：跑測試確認全數失敗**
 
 ```
 flutter test test/reader/tts_audio_focus_coordinator_test.dart
@@ -548,11 +548,13 @@ flutter test test/reader/tts_audio_focus_coordinator_test.dart
 
 Expected：FAIL——`package:elinkbook/reader/tts_audio_focus_source.dart`／`tts_audio_focus_coordinator.dart` 尚不存在，編譯期即報錯。
 
-- [ ] **Step 4：實作 `TtsAudioFocusSource`／`AudioSessionFocusSource`**
+- [x] **Step 4：實作 `TtsAudioFocusSource`／`AudioSessionFocusSource`**
 
 建立 `app/lib/reader/tts_audio_focus_source.dart`：
 
 ```dart
+import 'dart:async';
+
 import 'package:audio_session/audio_session.dart';
 
 /// 音訊焦點事件（epic-34-tts-readalong Issue 7，spec.md「Audio Focus
@@ -604,7 +606,7 @@ abstract class TtsAudioFocusSource {
 /// [dispose] 能明確對應到唯一一組訂閱、確實可以取消。
 class AudioSessionFocusSource implements TtsAudioFocusSource {
   final StreamController<TtsAudioFocusEvent> _controller =
-      StreamController<TtsAudioFocusEvent>.broadcast();
+      StreamController<TtsAudioFocusEvent>.broadcast(sync: true);
   late final StreamSubscription<AudioInterruptionEvent> _interruptionSub;
   late final StreamSubscription<void> _noisySub;
 
@@ -646,7 +648,7 @@ class AudioSessionFocusSource implements TtsAudioFocusSource {
 
 `app/lib/reader/tts_audio_focus_source.dart` 頂端補上 `import 'dart:async';`（`StreamController`／`StreamSubscription` 需要）。
 
-- [ ] **Step 5：實作 `TtsAudioFocusCoordinator`**
+- [x] **Step 5：實作 `TtsAudioFocusCoordinator`**
 
 建立 `app/lib/reader/tts_audio_focus_coordinator.dart`：
 
@@ -723,7 +725,7 @@ class TtsAudioFocusCoordinator {
 }
 ```
 
-- [ ] **Step 6：跑測試確認全數通過**
+- [x] **Step 6：跑測試確認全數通過**
 
 ```
 flutter test test/reader/tts_audio_focus_coordinator_test.dart
@@ -737,10 +739,10 @@ flutter analyze
 
 Expected：`No issues found!`
 
-- [ ] **Step 7：Commit**
+- [x] **Step 7：Commit**
 
 ```bash
-git add app/lib/reader/tts_audio_focus_source.dart app/lib/reader/tts_audio_focus_coordinator.dart app/test/support/fake_tts_audio_focus_source.dart app/test/reader/tts_audio_focus_coordinator_test.dart
+git add app/lib/reader/tts_audio_focus_source.dart app/lib/reader/tts_audio_focus_coordinator.dart app/test/support/fake_tts_audio_focus_source.dart app/test/reader/tts_audio_focus_coordinator_test.dart docs/epics/epic-34-tts-readalong/plans/plan-issue-7.md
 git commit -m "feat(epic-34): 新增 TtsAudioFocusSource／TtsAudioFocusCoordinator（Issue 7 Task 3）"
 ```
 
