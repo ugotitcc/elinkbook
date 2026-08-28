@@ -19,6 +19,10 @@ class FakeTtsProvider implements TtsProvider {
   @override
   Future<List<TtsVoice>> getAvailableVoices() async => const [TtsVoice.systemDefault];
 
+  /// 記錄每次 [synthesize] 呼叫實際收到的 `speed` 參數（epic-34-tts-readalong
+  /// Issue 5），供測試驗證「下一段」合成確實套用了呼叫當下的最新語速。
+  final List<double> synthesizeSpeeds = [];
+
   @override
   Future<TtsSynthesisResult> synthesize(
     String text, {
@@ -28,6 +32,7 @@ class FakeTtsProvider implements TtsProvider {
   }) async {
     synthesizeCallCount++;
     synthesizedTexts.add(text);
+    synthesizeSpeeds.add(speed);
     final completer = nextSynthesizeCompleter;
     if (completer != null) {
       nextSynthesizeCompleter = null;

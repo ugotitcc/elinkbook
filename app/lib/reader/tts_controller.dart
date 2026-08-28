@@ -69,6 +69,13 @@ class TtsController extends ChangeNotifier {
   int _currentIndex = -1;
   int get currentIndex => _currentIndex;
 
+  /// 目前語速（epic-34-tts-readalong Issue 5）。初始值 `1.0`——與
+  /// [TtsProvider.synthesize] 既有預設參數值一致（見 `tts_provider.dart`），
+  /// 也是 [TtsAudioPlayer.setSpeed] 的「正常速度」語意，兩者恰好在 `1.0`
+  /// 這個值上一致，初始狀態不需要額外轉換。
+  double _speed = 1.0;
+  double get speed => _speed;
+
   StreamSubscription<void>? _completedSub;
   bool _disposed = false;
 
@@ -155,6 +162,64 @@ class TtsController extends ChangeNotifier {
     } catch (_) {}
   }
 
+  /// 調整語速（epic-34-tts-readalong Issue 5，spec.md「語速調整的生效
+  /// 時機」契約／`review-spec.md` Minor #2）。無論目前狀態為何都先更新
+  /// [_speed]——即使目前是 [TtsPlaybackStatus.idle]，之後第一次 [play]
+  /// 呼叫 [_playCurrentSegment] 合成第一段時也要用這個新值，不能遺漏。
+  /// 只有 `idle` 以外（`playing`／`paused`，代表 [player] 目前已載入某一段
+  /// 音訊）才呼叫 [TtsAudioPlayer.setSpeed]——這是「目前正在播放的段落
+  /// 改用播放器的執行期變速，不重新合成、不中斷播放」這句契約的直接對應：
+  /// `idle` 狀態下沒有已載入的音訊可以變速，呼叫 [player] 沒有意義。
+  Future<void> setSpeed(double newSpeed) async {
+    if (_disposed) return;
+    _speed = newSpeed;
+    notifyListeners();
+    if (_status == TtsPlaybackStatus.idle) return;
+    try {
+      await player.setSpeed(newSpeed);
+    } catch (_) {}
+  }
+
+  /// 跳到下一段並立即開始播放（epic-34-tts-readalong Issue 5）。`idle`
+  /// 狀態下（尚未開始朗讀）為 no-op——沒有「目前段落」可以跳過。已是最後
+  /// 一段時，行為等同自然播放完畢（見 [_handleSegmentCompleted]）：回到
+  /// `idle` 並清除高亮，而非停在原地不動，讓「跳過已經聽懂的內容」在
+  /// 章節結尾有明確、可預期的結果。`paused` 狀態下呼叫會自動恢復播放
+  /// （[_playCurrentSegment] 一律把狀態設回 `playing`）——比照一般播放器
+  /// 「按下一句／上一句視同要繼續聽」的慣例行為。
+  Future<void> nextSegment() async {
+    if (_disposed) return;
+    if (_status == TtsPlaybackStatus.idle) return;
+    final nextIndex = _currentIndex + 1;
+    if (nextIndex >= _segments.length) {
+      _segmentGeneration++;
+      _status = TtsPlaybackStatus.idle;
+      _currentIndex = -1;
+      _segments = const [];
+      try {
+        player.pause().catchError((_) {});
+      } catch (_) {}
+      onHighlightSegment?.call(null);
+      notifyListeners();
+      return;
+    }
+    _currentIndex = nextIndex;
+    await _playCurrentSegment();
+  }
+
+  /// 跳到上一段並立即開始播放（epic-34-tts-readalong Issue 5）。`idle`
+  /// 狀態下為 no-op；已是第一段（[currentIndex] 為 `0`）時同樣為 no-op——
+  /// 不存在「上一段」可以倒回，維持在目前段落，不迴繞到最後一段（迴繞
+  /// 行為不符合「重聽剛剛沒聽清楚的句子」這個使用情境的直覺）。
+  Future<void> previousSegment() async {
+    if (_disposed) return;
+    if (_status == TtsPlaybackStatus.idle) return;
+    final prevIndex = _currentIndex - 1;
+    if (prevIndex < 0) return;
+    _currentIndex = prevIndex;
+    await _playCurrentSegment();
+  }
+
   /// 偵測到非 TTS 自身觸發的畫面位置變化時呼叫（epic-34-tts-readalong
   /// Issue 4，`issues.md`「手動導覽觸發暫停時須清除舊高亮」）——呼叫端
   /// （[ReaderScreen]）在既有 relocate 類事件（`onLocatorChanged`）內
@@ -189,12 +254,20 @@ class TtsController extends ChangeNotifier {
   void handleExternalPositionChange() {
     if (_disposed) return;
     _playGeneration++;
+    // epic-34-tts-readalong Issue 5（審查 review-plan-issue-5.md 建議 1）：
+    // 手動導覽發生時，可能正好有一個 nextSegment()／previousSegment()／
+    // 自動接續觸發的 _playCurrentSegment() 呼叫正在等待 synthesize() 回應
+    // ——不遞增 _segmentGeneration 的話，那次呼叫在 synthesize() 返回時
+    // 世代編號仍然相符，會繼續呼叫 player.loadFile() 把已經過期的音訊
+    // 寫入播放器（雖然之後會因 _status != playing 而不會真的播放出聲音，
+    // 邏輯上無害，但這個 loadFile() 呼叫本身是完全不必要的）。跟
+    // _playGeneration 一樣無條件遞增，讓過期呼叫能在 synthesize() 一返回
+    // 就提前放棄，不用等到 loadFile() 之後才被攔下。
+    _segmentGeneration++;
     if (_status == TtsPlaybackStatus.idle) return;
     _status = TtsPlaybackStatus.idle;
     _currentIndex = -1;
     _segments = const [];
-    // 同 pause()：player.pause() 若非同步才失敗，同步 try/catch 攔不到，
-    // 改用 catchError 承接（比照既有 pause() 的既有修法）。
     try {
       player.pause().catchError((_) {});
     } catch (_) {}
@@ -202,18 +275,26 @@ class TtsController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// 合成並播放 [_currentIndex] 對應的朗讀段。`provider.synthesize()`／
-  /// `player.loadFile()` 任一步驟拋出例外時（例如真機上 Android TTS
-  /// 引擎失敗、磁碟寫入錯誤），一律捕捉並重設回 `idle`——不重新拋出
-  /// （審查 review-plan-issue-2.md Important #1）。這個方法同時被
-  /// [play] 與 [_handleSegmentCompleted]（自動接續下一句）呼叫，後者是
-  /// 在 `completedStream` 的 `listen()` callback 內以「非 async 回呼
-  /// 型別」的方式觸發（`void Function(T)`，Dart 不會 await 這個
-  /// callback 回傳的 `Future`），若不在這裡就地捕捉例外，會變成沒人
-  /// 接住的非同步例外，且 `_status` 會永遠卡在 `playing`（使用者看到
-  /// 暫停圖示但實際上沒在播放，怎麼點都沒反應）。
+  /// 每次呼叫 [_playCurrentSegment] 取得的世代編號（epic-34-tts-readalong
+  /// Issue 5）：本方法目前有四個呼叫端——[play]（idle 分支尾端）、
+  /// [_handleSegmentCompleted]（自動接續下一句）、[nextSegment]、
+  /// [previousSegment]。前兩者過去彼此天然不會重疊（同一時間只有一個
+  /// 正在進行），但 [nextSegment]／[previousSegment] 讓使用者能在前一次
+  /// 呼叫的 `synthesize()` 尚未回應時就再次呼叫本方法（例如連續快速點擊
+  /// 「下一句」），而 `synthesize()` 的延遲不固定，兩次呼叫實際完成的
+  /// 先後順序無法保證跟呼叫順序一致——若不加防護，較慢完成的那次呼叫會
+  /// 在較快完成的呼叫「之後」才把（已過期的）音訊載入播放器，使用者會
+  /// 聽到「跳回舊句子」。比照 [play] 既有 `_playGeneration` 的防重入手法
+  /// （見該欄位文件註解），這裡新增一個專屬於「目前正在播放哪一段」的
+  /// 世代編號：每次呼叫本方法就取得新編號並覆寫本欄位，兩個 await 之後
+  /// 只要編號已被後續呼叫超越，就安全放棄、不寫入任何狀態、不呼叫
+  /// [player]。既有呼叫路徑（[play]／[_handleSegmentCompleted]）因為從不
+  /// 重疊呼叫本方法，這個檢查對它們恆為真、不改變既有行為。
+  int _segmentGeneration = 0;
+
   Future<void> _playCurrentSegment() async {
     final segment = _segments[_currentIndex];
+    final generation = ++_segmentGeneration;
     try {
       _status = TtsPlaybackStatus.playing;
       onHighlightSegment?.call(segment);
@@ -221,16 +302,18 @@ class TtsController extends ChangeNotifier {
       final result = await provider.synthesize(
         segment.text,
         voice: TtsVoice.systemDefault,
+        speed: _speed,
       );
-      if (_disposed) return;
+      if (_disposed || generation != _segmentGeneration) return;
       await player.loadFile(result.audioFilePath);
       // 重要修復（review-issue-2-code.md Important #1）：若在 synthesize/loadFile
       // 非同步期間使用者按下了暫停鍵（_status 變更為 paused），檔案載入完成後
       // 不得再呼叫 player.play()，應維持在 paused 狀態，等待使用者下次主動按下播放鍵。
-      if (_disposed || _status != TtsPlaybackStatus.playing) return;
+      if (_disposed || generation != _segmentGeneration) return;
+      if (_status != TtsPlaybackStatus.playing) return;
       await player.play();
     } catch (_) {
-      if (_disposed) return;
+      if (_disposed || generation != _segmentGeneration) return;
       _status = TtsPlaybackStatus.idle;
       _currentIndex = -1;
       _segments = const [];
