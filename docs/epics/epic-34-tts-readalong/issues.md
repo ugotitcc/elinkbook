@@ -220,7 +220,7 @@
 - [ ] 耳機線控與耳機拔出自動暫停正常（真機驗證）
 - [ ] App 前景恢復時畫面高亮正確重新同步（真機驗證）
 - [ ] Audio Focus 暫時/永久失去焦點的行為符合設計要點（真機驗證）
-- [ ] `flutter analyze`／`flutter test` 全數通過
+- [x] `flutter analyze`／`flutter test` 全數通過
 
 ---
 
