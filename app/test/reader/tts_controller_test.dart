@@ -1111,6 +1111,48 @@ void main() {
       expect(controller.currentIndex, 4);
       expect(provider.synthesizedTexts, ['最後。']);
     });
+
+    test(
+        'lookupStartIndex 回傳的（切分前）索引恰好指向被切分的長段落本身時，'
+        '換算到該段落切分後的第一個子段落（審查 review-issue-11-code.md '
+        'Minor #1）', () async {
+      final longText = List.generate(25, (i) => '字').join();
+      final loaded = [
+        const TtsSegmentCfi(
+          segmentId: '0',
+          cfi: 'epubcfi(/6/4!/1:0)',
+          text: '短句。', // 3 字，不切分
+        ),
+        TtsSegmentCfi(
+          segmentId: '1',
+          cfi: 'epubcfi(/6/4!/2:0)',
+          text: longText, // 25 字，上限 10 字時切成 3 段
+        ),
+        const TtsSegmentCfi(
+          segmentId: '2',
+          cfi: 'epubcfi(/6/4!/3:0)',
+          text: '最後。', // 3 字，不切分
+        ),
+      ];
+      provider = FakeTtsProvider();
+      player = FakeTtsAudioPlayer();
+      provider.maxInputLength = 10;
+      final controller = TtsController(
+        provider: provider,
+        player: player,
+        loadSegments: () async => loaded,
+        lookupStartIndex: (segs) async => 1, // 指向切分前的長段落本身
+      );
+
+      await controller.play();
+
+      // 切分後清單：[短句, 長句子段1, 長句子段2, 長句子段3, 最後]，
+      // 原始索引 1（長段落本身）換算後應是切分後索引 1（第一個子段落），
+      // 不是跳過整段長句子落到索引 4。
+      expect(controller.segments.length, 5);
+      expect(controller.currentIndex, 1);
+      expect(provider.synthesizedTexts, [longText.substring(0, 10)]);
+    });
   });
 }
 

@@ -836,3 +836,13 @@ git commit -m "feat(epic-34): Issue 11 TtsController 段落合成失敗改為跳
 **2. Placeholder 掃描：** 全文無「TBD」/「稍後補上」/「加上適當的錯誤處理」等字樣，所有程式碼區塊皆為可直接套用的完整內容。
 
 **3. 型別/命名一致性：** `getMaxInputLength()`（`TtsProvider`／`SystemTtsProvider`／`FakeTtsProvider` 三處簽章一致，皆為 `Future<int?> getMaxInputLength()`）、`_capSegmentsToMaxLength()`（Task 3 定義與 Task 3 Step 3 套用點一致）、`TTS_SECONDARY_BOUNDARY_MIN_LENGTH`／`secondaryBoundary`（Task 1 main.js 定義與測試斷言字串一致）全文檢查皆一致，無命名分裂。Task 3 的 record 型別 `({List<TtsSegmentCfi> segments, List<int> startOffsets})` 在定義處與 `play()` 消費處（`capped.segments`／`capped.startOffsets[...]`）欄位名稱一致。
+
+---
+
+## 計畫修訂記錄（2026-08-29，依 `/superpowers:requesting-code-review`）
+
+程式審查（`reviews/review-issue-11-code.md`，本機檔案不進版控）結論 With fixes（0 Critical／1 Important／2 Minor）。已依審查結果修訂：
+
+- **Important #1（`main.js` 未涵蓋 issues.md 設計要點提到的「换行/段落邊界（對應 `<br>`／區塊層級標籤邊界）」）**：確認為刻意取捨，非遺漏。原因：`fullText` 組裝時單純串接各文字節點 `textContent`，不同區塊層級標籤（例如相鄰 `<p>`）之間若彼此緊鄰且內部文字無空白字元，不會產生 `secondaryBoundary` 可偵測的訊號；正確處理需要在 TreeWalker 掃描時額外比對父元素變化並插入合成邊界字元，同時避免污染 `offsetMap`／CFI range 計算，複雜度不小。已在 `main.js` `TTS_SECONDARY_BOUNDARY_MIN_LENGTH` 常數上方補上決策說明（見程式碼），並記錄於此——`TtsController` 的硬性長度上限切分（Task 3）＋段落失敗跳過並接續（Task 4）兩層防線仍保證「不會整章念不出來」這個核心驗收標準成立，即使某本書恰好完全落在本層偵測不到的情境。若之後真機回報此路徑仍有問題，再依實際案例另立工單處理。
+- **Minor #1（`_capSegmentsToMaxLength()` 索引換算「指向被切分段落自身」情境缺乏直接測試）**：已採納，於 `tts_controller_test.dart`「硬性長度上限切分」group 新增第四則測試（`lookupStartIndex: (segs) async => 1`，斷言 `controller.currentIndex == 1`），驗證索引恰好指向被切分段落本身時正確換算到該段落的第一個子段落。
+- **Minor #2（`getMaxInputLength()` 每次播放皆重新查詢，未快取）**：審查報告本身已標註「非必要修復」，不採納，保持現況（單次 method channel 呼叫延遲可忽略）。

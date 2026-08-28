@@ -647,6 +647,20 @@ window.buildTtsSegments = async function (sectionIndex) {
     // 切分點。門檻刻意設得比一般正常句子長（既有跨標籤句子測試樣本
     // 遠低於此門檻），確保「優先用標點切句」這個既有行為不受影響——
     // 只有真的很長、又缺乏標點時才會退而求其次觸發次要邊界。
+    //
+    // **刻意不處理的範圍**（審查 review-issue-11-code.md Important #1）：
+    // issues.md 設計要點原文亦提到「换行/段落邊界（對應 <br>／區塊層級
+    // 標籤邊界）」可作為次要邊界，但本實作只偵測 fullText 字面上已存在
+    // 的空白字元——上方 TreeWalker 組裝 fullText 時單純把各文字節點的
+    // textContent 直接串接，不同 <p> 等區塊層級標籤之間若彼此緊鄰、內部
+    // 文字又沒有空白字元（中文排版常見），不會產生任何可偵測的邊界訊號。
+    // 這是刻意的取捨：正確判斷「區塊層級」邊界需要在 TreeWalker 掃描時
+    // 額外比對父元素變化並插入合成邊界字元，同時得處理 offsetMap／CFI
+    // range 計算不能被這個合成字元污染，複雜度不小；而 TtsController 端
+    // 另有兩層防線兜底（硬性長度上限切分＋段落失敗跳過並接續，見
+    // tts_controller.dart），足以保證「不會整章念不出來」這個核心驗收
+    // 標準成立，即使某本書恰好完全落在本層偵測不到的情境。若之後真機
+    // 回報這條路徑仍有問題，再依實際案例評估是否要另立工單補齊。
     const TTS_SECONDARY_BOUNDARY_MIN_LENGTH = 200
     const secondaryBoundary = /\s/
     const segments = []
