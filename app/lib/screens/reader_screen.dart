@@ -2223,26 +2223,45 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                 right: 16,
                 bottom: _ttsMiniPlayerBottomOffset,
                 child: Center(
-                  child: AnimatedBuilder(
-                    animation: _ttsControllerOrNull!,
-                    builder: (context, _) {
-                      final controller = _ttsControllerOrNull!;
-                      return TtsMiniPlayer(
-                        status: controller.status,
-                        speed: controller.speed,
-                        isCbz: format == BookFormat.cbz,
-                        backgroundColor: _themedFabBackgroundColor,
-                        iconColor: _themedFabIconColor,
-                        onPlayPause: controller.status == TtsPlaybackStatus.playing
-                            ? controller.pause
-                            : () => controller.play(),
-                        onPrevious: () => controller.previousSegment(),
-                        onNext: () => controller.nextSegment(),
-                        onSpeedTap: () => controller
-                            .setSpeed(_nextTtsSpeedPreset(controller.speed)),
-                      );
-                    },
-                  ),
+                  // CBZ 為純圖像格式，無文字可朗讀——刻意不存取
+                  // _ttsControllerOrNull（具副作用的 lazy getter，首次
+                  // 存取即會建構 TtsController／原生 AudioPlayer），避免
+                  // 每次開啟 CBZ 書籍都白白配置一顆用不到的播放器資源
+                  // （見 review-issues.md Important #1）。isCbz 分支不會
+                  // 讀取 status/speed，此處固定傳入預設值即可。
+                  child: format == BookFormat.cbz
+                      ? TtsMiniPlayer(
+                          status: TtsPlaybackStatus.idle,
+                          speed: 1.0,
+                          isCbz: true,
+                          backgroundColor: _themedFabBackgroundColor,
+                          iconColor: _themedFabIconColor,
+                          onPlayPause: () {},
+                          onPrevious: () {},
+                          onNext: () {},
+                          onSpeedTap: () {},
+                        )
+                      : AnimatedBuilder(
+                          animation: _ttsControllerOrNull!,
+                          builder: (context, _) {
+                            final controller = _ttsControllerOrNull!;
+                            return TtsMiniPlayer(
+                              status: controller.status,
+                              speed: controller.speed,
+                              isCbz: false,
+                              backgroundColor: _themedFabBackgroundColor,
+                              iconColor: _themedFabIconColor,
+                              onPlayPause:
+                                  controller.status == TtsPlaybackStatus.playing
+                                      ? controller.pause
+                                      : () => controller.play(),
+                              onPrevious: () => controller.previousSegment(),
+                              onNext: () => controller.nextSegment(),
+                              onSpeedTap: () => controller.setSpeed(
+                                  _nextTtsSpeedPreset(controller.speed)),
+                            );
+                          },
+                        ),
                 ),
               ),
             // ── PDF FAB 區塊（epic-24-pdf-engine-rebuild Issue 8）─────
