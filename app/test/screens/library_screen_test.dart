@@ -3966,6 +3966,38 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets(
+      'LibraryScreen 點開一本書後，ReaderScreen 收到的 isEinkMode 與 themeDependencies.isEinkMode 一致',
+      (tester) async {
+    final book = _testBook(
+      id: '1',
+      title: '紅樓夢',
+      author: '曹雪芹',
+      filePath: 'content://example/1.txt',
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: [book]),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+          themeDependencies: LibraryThemeDependencies(isEinkMode: true),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('book_item_1')));
+    await tester.pumpAndSettle();
+
+    final readerScreen = tester.widget<ReaderScreen>(find.byType(ReaderScreen));
+    expect(readerScreen.isEinkMode, isTrue,
+        reason: 'LibraryScreen._openBook() 未把 themeDependencies.isEinkMode '
+            '貫穿給 ReaderScreen，導致朗讀高亮在 E-Ink 模式下仍使用一般的'
+            '半透明色，在低對比度螢幕上難以辨識。');
+  });
 }
 
 /// 刻意「非線性」的測試用 TextScaler：對較大的輸入值套用較低的有效縮放

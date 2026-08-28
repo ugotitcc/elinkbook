@@ -167,6 +167,7 @@ class ReaderScreen extends StatefulWidget {
   final TtsProvider? ttsProvider;
   final TtsAudioHandler? ttsAudioHandler;
   final TtsAudioFocusSource? ttsAudioFocusSource;
+  final bool isEinkMode;
 
   const ReaderScreen({
     super.key,
@@ -188,6 +189,7 @@ class ReaderScreen extends StatefulWidget {
     this.ttsProvider,
     this.ttsAudioHandler,
     this.ttsAudioFocusSource,
+    this.isEinkMode = false,
   });
 
   @override
@@ -2716,6 +2718,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             _foliateEpubReaderViewKey,
             segment.cfi,
             vertical: _resolved?.writingMode == WritingMode.vertical,
+            einkMode: widget.isEinkMode,
           );
         }
       },
@@ -2830,6 +2833,14 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             // 在 idle 狀態下呼叫本方法是 no-op（見 handleExternalPositionChange
             // 文件註解，本檔案不需要自行判斷目前是否正在播放）。
             _ttsController?.handleExternalPositionChange();
+          },
+          onTtsHighlightOutOfSafeWindow: (direction) {
+            _ttsController?.suppressNextExternalPositionChange();
+            if (direction == 'prev') {
+              FoliateReaderView.previousPage(_foliateEpubReaderViewKey);
+            } else {
+              FoliateReaderView.nextPage(_foliateEpubReaderViewKey);
+            }
           },
           onSelectionChanged: _handleSelectionChanged,
           onSelectionCleared: _handleSelectionCleared,
