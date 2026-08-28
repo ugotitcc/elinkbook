@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'tts_audio_player.dart';
 import 'tts_provider.dart';
 import 'tts_segment_cfi.dart';
+import 'reader_console_log.dart';
 
 enum TtsPlaybackStatus { idle, playing, paused }
 
@@ -379,34 +380,54 @@ class TtsController extends ChangeNotifier {
   int _segmentGeneration = 0;
 
   Future<void> _playCurrentSegment() async {
-    final segment = _segments[_currentIndex];
     final generation = ++_segmentGeneration;
-    try {
-      _status = TtsPlaybackStatus.playing;
-      onHighlightSegment?.call(segment);
-      notifyListeners();
-      final result = await provider.synthesize(
-        segment.text,
-        voice: TtsVoice.systemDefault,
-        speed: _speed,
-      );
+    // epic-34-tts-readalong Issue 11：單一段落合成/播放失敗時不得讓整個
+    // 朗讀流程卡死或靜默無反應（例如遇到超出 TTS 引擎輸入長度上限、或
+    // 原生端回報 ERROR_OUTPUT 的段落）——改為迴圈跳過失敗段落並嘗試
+    // 下一段，直到成功播放某一段，或已無下一段可嘗試（視同章節自然
+    // 播放完畢，走既有「重設回 idle」路徑）。
+    while (true) {
       if (_disposed || generation != _segmentGeneration) return;
-      await player.loadFile(result.audioFilePath);
-      // 重要修復（review-issue-2-code.md Important #1）：若在 synthesize/loadFile
-      // 非同步期間使用者按下了暫停鍵（_status 變更為 paused），檔案載入完成後
-      // 不得再呼叫 player.play()，應維持在 paused 狀態，等待使用者下次主動按下播放鍵。
-      if (_disposed || generation != _segmentGeneration) return;
-      if (_status != TtsPlaybackStatus.playing) return;
-      await player.play();
-    } catch (_) {
-      if (_disposed || generation != _segmentGeneration) return;
-      _suppressExpiryTimer?.cancel();
-      _suppressNextPositionChange = false;
-      _status = TtsPlaybackStatus.idle;
-      _currentIndex = -1;
-      _segments = const [];
-      onHighlightSegment?.call(null);
-      notifyListeners();
+      if (_currentIndex < 0 || _currentIndex >= _segments.length) {
+        // 已跳過所有剩餘段落（或呼叫當下本來就已經沒有下一段）：視同
+        // 播放自然結束，重設回 idle（比照既有 _handleSegmentCompleted()
+        // 章節結尾分支）。
+        _suppressExpiryTimer?.cancel();
+        _suppressNextPositionChange = false;
+        _status = TtsPlaybackStatus.idle;
+        _currentIndex = -1;
+        _segments = const [];
+        onHighlightSegment?.call(null);
+        notifyListeners();
+        return;
+      }
+      final segment = _segments[_currentIndex];
+      try {
+        _status = TtsPlaybackStatus.playing;
+        onHighlightSegment?.call(segment);
+        notifyListeners();
+        final result = await provider.synthesize(
+          segment.text,
+          voice: TtsVoice.systemDefault,
+          speed: _speed,
+        );
+        if (_disposed || generation != _segmentGeneration) return;
+        await player.loadFile(result.audioFilePath);
+        // 重要修復（review-issue-2-code.md Important #1）：若在 synthesize/loadFile
+        // 非同步期間使用者按下了暫停鍵（_status 變更為 paused），檔案載入完成後
+        // 不得再呼叫 player.play()，應維持在 paused 狀態，等待使用者下次主動按下播放鍵。
+        if (_disposed || generation != _segmentGeneration) return;
+        if (_status != TtsPlaybackStatus.playing) return;
+        await player.play();
+        return;
+      } catch (e) {
+        if (_disposed || generation != _segmentGeneration) return;
+        final message = '[TTS Diagnostic] 段落索引 $_currentIndex 合成/播放'
+            '失敗，跳過並嘗試下一段：$e';
+        debugPrint(message);
+        ReaderConsoleLog.add(message);
+        _currentIndex++;
+      }
     }
   }
 
