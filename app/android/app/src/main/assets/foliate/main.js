@@ -427,7 +427,17 @@ window.setDecorations = function (decorations) {
  * 刪除；show 新的之前先刪除舊的，呼叫端不需要自行先呼叫 clear 再呼叫 show。
  */
 const TTS_HIGHLIGHT_COLOR = 'rgba(251, 146, 60, 0.45)'
+// epic-34-tts-readalong Issue 8：E-Ink 高對比模式的朗讀高亮改用高對比純
+// 色——半透明橙色（TTS_HIGHLIGHT_COLOR）在低對比度 E-Ink 螢幕上容易被
+// 灰階轉換抹平成幾乎看不見的淡灰色。本專案目前對朗讀高亮沒有任何漸變/
+// 淡入淡出動畫（overlayer.js 的 Overlayer.highlight() 純粹同步建立 SVG
+// 元素，沒有 CSS transition），故「E-Ink 模式停用漸變動畫」這項需求落地
+// 後只剩「改用靜態高對比色」這一半有實際程式碼；「非 E-Ink 模式維持既有
+// 動畫效果」在沒有既有動畫的前提下等同維持現狀，不需要另外實作。
 const TTS_HIGHLIGHT_COLOR_EINK = 'rgba(0, 0, 0, 0.75)'
+// epic-34-tts-readalong Issue 8：安全視窗（issues.md「可視範圍 20%～
+// 80%」）——朗讀高亮的可視範圍正規化位置只要落在這個區間內就不觸發翻頁，
+// 避免逐句捲動造成頻繁刷新（E-Ink 殘影）／頻繁跳動（一般裝置）。
 const TTS_SAFE_WINDOW_MIN = 0.2
 const TTS_SAFE_WINDOW_MAX = 0.8
 let currentTtsAnnotationValue = null
@@ -829,6 +839,14 @@ async function openBook() {
     // spike-overlayer-annotations.md「已記錄的既有 API 落差」）。
     view.addEventListener('draw-annotation', (e) => {
       const { draw, annotation, doc, range } = e.detail
+      // epic-34-tts-readalong Issue 3：annotation.vertical 由
+      // window.showTtsHighlight() 明確傳入（見上方），讓朗讀高亮的直排/
+      // 橫排判斷不依賴 currentWritingMode 的更新時機（理論上兩者恆一致，
+      // 這裡是額外的顯式保險，也讓 Dart 端呼叫參數本身可被觀察/測試）。
+      // 劃線/備註既有呼叫（window.setDecorations()）從未設定這個欄位，
+      // ??（nullish coalescing，非 ||）確保只有 undefined 才落回
+      // currentWritingMode——若誤用 ||，annotation.vertical 為合法值
+      // false（橫排）時會被誤判為「未設定」而錯誤退回 currentWritingMode。
       const isVertical = annotation.vertical ?? (currentWritingMode === 'vertical')
       if (annotation.isUnderline) {
         draw(Overlayer.underline, {
@@ -841,6 +859,12 @@ async function openBook() {
           vertical: isVertical,
         })
       }
+      // epic-34-tts-readalong Issue 8：安全視窗跟隨翻頁。只在這是「目前
+      // 的朗讀高亮」時才檢查——annotation.value 與 currentTtsAnnotationValue
+      // 相符時才成立；劃線/備註（window.setDecorations()）走的是不帶
+      // foliate-note: 前綴的裸 cfi key，恆不相符，不受影響。
+      // resyncHighlight()（Issue 7）與一般朗讀段切換（Issue 3）都是透過
+      // 同一個 window.showTtsHighlight() 進來，天然共用這段判斷。
       if (annotation.value === currentTtsAnnotationValue) {
         const rect = range.getClientRects()[0]
         const frameEl = doc.defaultView && doc.defaultView.frameElement
@@ -849,6 +873,20 @@ async function openBook() {
           const viewportRect = view.getBoundingClientRect()
           const normX = (iframeRect.left + (rect.left + rect.right) / 2 - viewportRect.left) / viewportRect.width
           const normY = (iframeRect.top + (rect.top + rect.bottom) / 2 - viewportRect.top) / viewportRect.height
+          // 審查修正（review-plan-issue-8.md Critical #1／Important #1）：
+          // 分頁模式下「頁首」是正常可見內容，不能因為位置接近 0 就誤判
+          // 為「還沒進入視野」而觸發 prev()——否則剛翻到新頁的第一句會
+          // 立刻被翻回上一頁，跟前一頁之間無限來回翻頁震盪。next 用安全
+          // 視窗軟門檻（0.2/0.8，提早觸發、體驗較平滑）；prev 只能用
+          // 「段落真的已經落在目前頁面範圍之外」的硬邊界（0.0/1.0）判斷
+          // ——只有使用者連按「上一句」（Issue 5）跳回前一頁時才會發生。
+          // X／Y 兩軸皆檢查、不只看單一軸向：分頁模式底層 CSS
+          // multi-column 實際的分欄/分頁軸向依排版方向而不同（見
+          // paginator.js columnize()——直排固定 width、橫排固定
+          // height，兩者互為相反），為避免對「哪一軸才是分頁進程軸」的
+          // 判斷有誤，兩軸個別檢查、任一軸超出即視為不可見；此推導仍須
+          // 真機分別驗證橫排/直排兩種模式，見 plan-issue-8.md 真機驗收
+          // 清單。
           const needNext = isVertical
             ? normX < TTS_SAFE_WINDOW_MIN || normY > 1.0
             : normY > TTS_SAFE_WINDOW_MAX || normX > 1.0

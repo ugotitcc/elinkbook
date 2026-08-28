@@ -222,6 +222,22 @@ class TtsController extends ChangeNotifier {
     await _playCurrentSegment();
   }
 
+  /// 安全視窗跟隨翻頁（epic-34-tts-readalong Issue 8）觸發的一次性自動
+  /// 翻頁，即將呼叫端（[ReaderScreen]）對 [FoliateReaderView] 送出下一頁/
+  /// 上一頁指令前，須先呼叫本方法設下這個旗標——讓緊接著到來的那一次
+  /// [handleExternalPositionChange] 呼叫（由該次翻頁觸發的 relocate 事件
+  /// 間接引發）被判斷為「TTS 自己造成的位置變化」而不重設播放狀態，而非
+  /// 誤判為使用者手動導覽而錯誤暫停播放。旗標只抑制「緊接著的下一次」
+  /// 呼叫，用過即清除——若安全視窗翻頁與真正的使用者手動導覽幾乎同時
+  /// 發生，只有先抵達的那一次呼叫會被抑制，屬可接受的邊界情況（見
+  /// `plan-issue-8.md` 設計理由）。
+  bool _suppressNextPositionChange = false;
+
+  void suppressNextExternalPositionChange() {
+    if (_disposed) return;
+    _suppressNextPositionChange = true;
+  }
+
   /// 偵測到非 TTS 自身觸發的畫面位置變化時呼叫（epic-34-tts-readalong
   /// Issue 4，`issues.md`「手動導覽觸發暫停時須清除舊高亮」）——呼叫端
   /// （[ReaderScreen]）在既有 relocate 類事件（`onLocatorChanged`）內
@@ -253,13 +269,6 @@ class TtsController extends ChangeNotifier {
   /// 真正開始播放），也不能讓那次呼叫沿用導覽前算出的（現已過期的）
   /// 章節/起始段落——遞增世代編號讓 [play] 內對應的比對自行偵測並中止，
   /// 不需要在這裡額外判斷「是否有 play() 正在進行中」。
-  bool _suppressNextPositionChange = false;
-
-  void suppressNextExternalPositionChange() {
-    if (_disposed) return;
-    _suppressNextPositionChange = true;
-  }
-
   void handleExternalPositionChange() {
     if (_disposed) return;
     if (_suppressNextPositionChange) {

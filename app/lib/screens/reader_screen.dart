@@ -167,6 +167,16 @@ class ReaderScreen extends StatefulWidget {
   final TtsProvider? ttsProvider;
   final TtsAudioHandler? ttsAudioHandler;
   final TtsAudioFocusSource? ttsAudioFocusSource;
+
+  /// E-Ink 高對比模式（epic-34-tts-readalong Issue 8）：App 層級主題設定
+  /// （見 `main.dart`／`LibraryThemeDependencies.isEinkMode`），由
+  /// [LibraryScreen._openBook] 貫穿傳入。目前唯一用途是朗讀高亮的視覺
+  /// 呈現方式——[onHighlightSegment] 呼叫
+  /// `FoliateReaderView.showTtsHighlight()` 時傳入的 `einkMode` 參數，
+  /// E-Ink 模式下改用靜態高對比色，非既有半透明色。非 nullable，預設
+  /// `false`：這是既有 App 層級設定值的直接貫穿，不是「未提供時功能不
+  /// 啟用」的可選功能旗標（比照 [FoliateReaderView.isLandscape] 既有
+  /// 非 nullable＋預設值模式）。
   final bool isEinkMode;
 
   const ReaderScreen({
@@ -2835,6 +2845,12 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             _ttsController?.handleExternalPositionChange();
           },
           onTtsHighlightOutOfSafeWindow: (direction) {
+            // epic-34-tts-readalong Issue 8：main.js 偵測到目前朗讀高亮
+            // 超出安全視窗時回報方向，這裡觸發一次性翻頁；呼叫前先讓
+            // TtsController 抑制緊接著那一次 handleExternalPositionChange()
+            // ——否則這次翻頁觸發的 onLocatorChanged 事件會被既有 Issue 4
+            // 邏輯誤判為使用者手動導覽，錯誤暫停朗讀（見 tts_controller.dart
+            // suppressNextExternalPositionChange() 文件註解）。
             _ttsController?.suppressNextExternalPositionChange();
             if (direction == 'prev') {
               FoliateReaderView.previousPage(_foliateEpubReaderViewKey);

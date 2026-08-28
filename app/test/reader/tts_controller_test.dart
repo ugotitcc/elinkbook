@@ -569,7 +569,6 @@ void main() {
             '正確觸發自動暫停。');
   });
 
-
   test('handleExternalPositionChange() 重設後再次 play()，重新呼叫 loadSegments() 並套用 lookupStartIndex（與首次播放共用同一路徑）',
       () async {
     var loadSegmentsCallCount = 0;
