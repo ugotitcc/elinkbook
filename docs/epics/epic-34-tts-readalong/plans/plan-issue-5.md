@@ -32,7 +32,7 @@
 - Consumes：既有 `TtsSegmentCfi`（`tts_segment_cfi.dart`）、既有 `TtsProvider.synthesize()` 的 `speed` 具名參數（`tts_provider.dart`，已存在，未變更簽章）
 - Produces：`TtsAudioPlayer` 新增抽象方法 `Future<void> setSpeed(double speed)`（`JustAudioTtsPlayer` 實作）；`TtsController` 新增公開方法 `Future<void> nextSegment()`／`Future<void> previousSegment()`／`Future<void> setSpeed(double newSpeed)` 與公開 getter `double get speed`——皆供 Task 2 的 `ReaderScreen` 使用
 
-- [ ] **Step 1：`FakeTtsAudioPlayer`／`FakeTtsProvider` 測試替身新增 speed 記錄能力**
+- [x] **Step 1：`FakeTtsAudioPlayer`／`FakeTtsProvider` 測試替身新增 speed 記錄能力**
 
 在 `app/test/support/fake_tts_audio_player.dart` 找到既有的 `pause()`／`dispose()` 之間的區塊：
 
@@ -111,7 +111,7 @@
     final completer = nextSynthesizeCompleter;
 ```
 
-- [ ] **Step 2：寫失敗測試**
+- [x] **Step 2：寫失敗測試**
 
 在 `app/test/reader/tts_controller_test.dart` 檔案結尾（最後一個 `test()` 之後、`}` 之前）新增：
 
@@ -323,7 +323,7 @@
   });
 ```
 
-- [ ] **Step 3：跑測試確認全數失敗**
+- [x] **Step 3：跑測試確認全數失敗**
 
 ```
 flutter test test/reader/tts_controller_test.dart
@@ -331,7 +331,7 @@ flutter test test/reader/tts_controller_test.dart
 
 Expected：FAIL——`TtsController`／`TtsAudioPlayer`／`FakeTtsAudioPlayer`／`FakeTtsProvider` 尚未有 `speed`／`setSpeed`／`nextSegment`／`previousSegment`／`speedCalls`／`synthesizeSpeeds` 等成員，編譯期即報錯。
 
-- [ ] **Step 4：`TtsAudioPlayer` 新增 `setSpeed()`**
+- [x] **Step 4：`TtsAudioPlayer` 新增 `setSpeed()`**
 
 在 `app/lib/reader/tts_audio_player.dart` 找到既有的抽象介面：
 
@@ -396,7 +396,7 @@ abstract class TtsAudioPlayer {
   Future<void> setSpeed(double speed) => _player.setSpeed(speed);
 ```
 
-- [ ] **Step 5：`TtsController` 新增 `speed` 欄位**
+- [x] **Step 5：`TtsController` 新增 `speed` 欄位**
 
 在 `app/lib/reader/tts_controller.dart` 找到既有的：
 
@@ -423,7 +423,7 @@ abstract class TtsAudioPlayer {
   StreamSubscription<void>? _completedSub;
 ```
 
-- [ ] **Step 6：`TtsController` 新增 `setSpeed()`／`nextSegment()`／`previousSegment()`**
+- [x] **Step 6：`TtsController` 新增 `setSpeed()`／`nextSegment()`／`previousSegment()`**
 
 找到既有的 `pause()` 方法：
 
@@ -499,7 +499,7 @@ abstract class TtsAudioPlayer {
   }
 ```
 
-- [ ] **Step 7：`handleExternalPositionChange()` 一併使 `_segmentGeneration` 提前失效（審查 `review-plan-issue-5.md` 建議 1）**
+- [x] **Step 7：`handleExternalPositionChange()` 一併使 `_segmentGeneration` 提前失效（審查 `review-plan-issue-5.md` 建議 1）**
 
 找到既有的 `handleExternalPositionChange()` 方法（Issue 4 已新增）：
 
@@ -549,7 +549,7 @@ abstract class TtsAudioPlayer {
   }
 ```
 
-- [ ] **Step 8：`_playCurrentSegment()` 新增世代防重入機制與 speed 參數**
+- [x] **Step 8：`_playCurrentSegment()` 新增世代防重入機制與 speed 參數**
 
 找到既有的：
 
@@ -633,7 +633,7 @@ abstract class TtsAudioPlayer {
   }
 ```
 
-- [ ] **Step 9：跑測試確認全數通過**
+- [x] **Step 9：跑測試確認全數通過**
 
 ```
 flutter test test/reader/tts_controller_test.dart
@@ -647,7 +647,7 @@ flutter analyze
 
 Expected：`No issues found!`
 
-- [ ] **Step 10：Commit**
+- [x] **Step 10：Commit**
 
 ```bash
 git add app/lib/reader/tts_audio_player.dart app/lib/reader/tts_controller.dart app/test/support/fake_tts_audio_player.dart app/test/support/fake_tts_provider.dart app/test/reader/tts_controller_test.dart
@@ -666,7 +666,7 @@ git commit -m "feat(epic-34): TtsController 新增上一句/下一句/語速調�
 - Consumes：Task 1 的 `TtsController.nextSegment()`／`previousSegment()`／`setSpeed()`／`speed` getter；既有 `_ttsControllerOrNull`／`_themedFabBackgroundColor`／`_themedFabIconColor`
 - Produces：`ReaderScreen` 內部接線（無新增公開 API），新增三個 `Key`：`reader_tts_previous_button`／`reader_tts_next_button`／`reader_tts_speed_button`
 
-- [ ] **Step 1：寫失敗測試**
+- [x] **Step 1：寫失敗測試**
 
 在 `app/test/screens/reader_screen_test.dart` 找到 Issue 4 新增的 `group('手動導覽自動暫停與恢復播放（epic-34-tts-readalong Issue 4）', ...)` 結尾的 `});`，在它之後新增一個新的 group：
 
@@ -898,7 +898,7 @@ git commit -m "feat(epic-34): TtsController 新增上一句/下一句/語速調�
   });
 ```
 
-- [ ] **Step 2：跑測試確認全數失敗**
+- [x] **Step 2：跑測試確認全數失敗**
 
 ```
 flutter test test/screens/reader_screen_test.dart
@@ -906,7 +906,7 @@ flutter test test/screens/reader_screen_test.dart
 
 Expected：FAIL——`reader_tts_previous_button`／`reader_tts_next_button`／`reader_tts_speed_button` 尚不存在，`findsOneWidget` 斷言失敗。
 
-- [ ] **Step 3：新增語速預設清單與循環 helper**
+- [x] **Step 3：新增語速預設清單與循環 helper**
 
 在 `app/lib/screens/reader_screen.dart` 找到既有的 `_ttsControllerOrNull` getter 結尾（Issue 4 已新增 `lookupStartIndex`）：
 
@@ -945,7 +945,7 @@ Expected：FAIL——`reader_tts_previous_button`／`reader_tts_next_button`／`
   }
 ```
 
-- [ ] **Step 4：新增上一句/下一句/語速三顆 FAB 按鈕**
+- [x] **Step 4：新增上一句/下一句/語速三顆 FAB 按鈕**
 
 在 `app/lib/screens/reader_screen.dart` 找到既有的 TTS 播放/暫停按鈕區塊結尾（CBZ 三元運算式的 `AnimatedBuilder` 分支結束處）：
 
@@ -1095,7 +1095,7 @@ Expected：FAIL——`reader_tts_previous_button`／`reader_tts_next_button`／`
               ),
 ```
 
-- [ ] **Step 5：跑測試確認全數通過、零回歸**
+- [x] **Step 5：跑測試確認全數通過、零回歸**
 
 ```
 flutter test test/screens/reader_screen_test.dart
@@ -1115,7 +1115,7 @@ flutter analyze
 
 Expected：`No issues found!`
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/lib/screens/reader_screen.dart app/test/screens/reader_screen_test.dart
