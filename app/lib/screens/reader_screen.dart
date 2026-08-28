@@ -2258,7 +2258,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                           speed: 1.0,
                           isCbz: true,
                           backgroundColor: _themedFabBackgroundColor,
-                          iconColor: _themedFabIconColor,
+                          iconColor: _themedTtsDisabledIconColor,
                           onPlayPause: () {},
                           onPrevious: () {},
                           onNext: () {},
@@ -2692,6 +2692,21 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       _isFixedLayout ? Colors.black54 : Theme.of(context).colorScheme.onSurface;
   Color get _themedFabIconColor =>
       _isFixedLayout ? Colors.white : Theme.of(context).colorScheme.surface;
+
+  /// CBZ 朗讀停用播放鍵專用的圖示色（epic-34-tts-readalong Issue 10）——
+  /// 與 [_themedFabIconColor] 明確區隔，讓「按了沒用」不需要依賴
+  /// tooltip 就能一眼辨識（Issue 9 真機驗收發現：兩者顏色目前完全
+  /// 相同，且 tooltip 在觸控裝置上要長按才會出現，等同視覺上仍是靜默
+  /// 無反應）。CBZ 恆為固定版面（`Book.isFixedLayout == true`，見
+  /// CLAUDE.md「技術棧」段），本 getter 因此不需要比照
+  /// [_themedFabIconColor] 依 `_isFixedLayout` 分支——固定寫死單一值
+  /// 即可，避免引入永遠不會被走到的分支。**刻意不使用 alpha 透明度**
+  /// （例如 `Colors.white.withValues(alpha: 0.4)`）：
+  /// epic-22-reader-theme-integration Issue 4 已在真機電子紙硬體實測
+  /// 發現，alpha 混合運算出的「即時中間灰」會落在電子紙灰階抖動渲染
+  /// 最弱的區間，圖示無法辨識形狀（詳見 [_themedFabIconColor] 上方
+  /// doc comment）；改用不透明實色 [Colors.grey]，避免重蹈相同問題。
+  Color get _themedTtsDisabledIconColor => Colors.grey;
 
   /// 首次存取時才建構 [TtsController]（[widget.ttsProvider] 為 `null` 時
   /// 回傳 `null`，播放按鈕不顯示）。[loadSegments] 內部從
