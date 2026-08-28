@@ -222,7 +222,7 @@
 - [x] Audio Focus 暫時/永久失去焦點的行為符合設計要點（真機驗證）——2026-08-28 真機驗證通過（暫時失焦自動恢復、永久失焦不自動恢復皆符合預期）
 - [x] `flutter analyze`／`flutter test` 全數通過
 
-**狀態：開發、程式審查（含 1 項 Important 修復）、七項真機驗收清單全數完成（分支 `feat/epic-34-issue-7-audio-service`，2026-08-28）。** 程式審查報告見 `reviews/review-issue-7-code.md`；審查發現的 `resyncHighlight()` 邊界檢查與計畫決策不一致問題已修復（人類複核後決定保留檢查並補上新理由，commit `36c4a030`）。待發 PR 合併回 `main`。
+**狀態：已合併回 `main`（PR [#196](https://git.jigong.org/huthief/elinkBook/pulls/196)，分支 `feat/epic-34-issue-7-audio-service`，2026-08-28）。** 程式審查報告見 `reviews/review-issue-7-code.md`；審查發現的 `resyncHighlight()` 邊界檢查與計畫決策不一致問題已修復（人類複核後決定保留檢查並補上新理由，commit `36c4a030`）；七項真機驗收情境全數通過。
 
 ---
 
