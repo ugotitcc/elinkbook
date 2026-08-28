@@ -1496,6 +1496,66 @@ void main() {
     });
   });
 
+  group(
+      'main.js 朗讀段長段落次要邊界切分 regression guard '
+      '（epic-34-tts-readalong Issue 11）', () {
+    late String mainJsSource;
+
+    setUpAll(() {
+      mainJsSource = File('android/app/src/main/assets/foliate/main.js')
+          .readAsStringSync();
+    });
+
+    test('buildTtsSegments 定義次要邊界門檻常數與空白字元判斷', () {
+      expect(
+        mainJsSource
+            .contains('const TTS_SECONDARY_BOUNDARY_MIN_LENGTH = 200'),
+        isTrue,
+        reason: 'main.js 內找不到 TTS_SECONDARY_BOUNDARY_MIN_LENGTH——長'
+            '段落缺乏標點時的次要邊界防線缺失，完全不使用標點的長段落'
+            '（例如經文/善書類排版整段以「　」分隔語句）會被切成單一超長'
+            '段落，超出 Android TextToSpeech 單次合成輸入長度上限'
+            '（ERROR_OUTPUT -8）。',
+      );
+      expect(
+        mainJsSource.contains('const secondaryBoundary = /\\s/'),
+        isTrue,
+        reason: 'JS 的 \\s 已涵蓋全形空格 U+3000（Unicode Space_Separator '
+            '類別），不需要另外處理全形/半形空白的差異。',
+      );
+    });
+
+    test('切分判斷式優先採用主要標點，次要邊界只在累積長度達門檻且無主要標點時才生效',
+        () {
+      expect(
+        mainJsSource
+            .contains('const isPrimaryBoundary = terminators.test(fullText[i])'),
+        isTrue,
+      );
+      expect(
+        mainJsSource.contains('!isPrimaryBoundary &&'),
+        isTrue,
+        reason: '次要邊界判斷式必須以「非主要標點」為第一個條件，確保只要'
+            '遇到主要標點就一律優先切句，不受次要邊界邏輯影響。',
+      );
+      expect(
+        mainJsSource
+            .contains('(i - start) >= TTS_SECONDARY_BOUNDARY_MIN_LENGTH &&'),
+        isTrue,
+        reason: '次要邊界必須同時滿足「累積長度已達門檻」才生效，否則會'
+            '提早在一般正常長度的句子中間就用空白切句，改變既有「優先用'
+            '標點切句」的行為，跨標籤句子等既有測試樣本會被破壞。',
+      );
+      expect(
+        mainJsSource
+            .contains('if (isPrimaryBoundary || isSecondaryBoundary || isLast) {'),
+        isTrue,
+        reason: '切句判斷式必須同時涵蓋主要標點／次要邊界／章節結尾三種'
+            '情況，缺一即會改變既有行為或無法處理長段落。',
+      );
+    });
+  });
+
   group('main.js 安全視窗跟隨翻頁 + E-Ink 高對比 regression guard（epic-34-tts-readalong Issue 8）', () {
     late String mainJsSource;
 

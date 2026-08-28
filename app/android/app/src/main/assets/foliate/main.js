@@ -637,12 +637,28 @@ window.buildTtsSegments = async function (sectionIndex) {
     }
 
     const terminators = /[。！？；.!?;]/
+    // 次要切分邊界（epic-34-tts-readalong Issue 11，issues.md「來源」
+    // 欄位真機重現紀錄：部分自製 EPUB 整段/整章以全形空格「　」分隔
+    // 語句、完全不使用「。！？」等標點，導致單一朗讀段長達近 2 萬字，
+    // 超出 Android TextToSpeech 單次合成輸入長度上限，回報
+    // ERROR_OUTPUT -8）。找不到主要標點、且目前累積片段長度已達
+    // TTS_SECONDARY_BOUNDARY_MIN_LENGTH 時，遇到空白字元（JS \s 已
+    // 涵蓋全形空格 U+3000／半形空白／換行，不需要另外處理）也視為可
+    // 切分點。門檻刻意設得比一般正常句子長（既有跨標籤句子測試樣本
+    // 遠低於此門檻），確保「優先用標點切句」這個既有行為不受影響——
+    // 只有真的很長、又缺乏標點時才會退而求其次觸發次要邊界。
+    const TTS_SECONDARY_BOUNDARY_MIN_LENGTH = 200
+    const secondaryBoundary = /\s/
     const segments = []
     let start = 0
     let segmentIndex = 0
     for (let i = 0; i < fullText.length; i++) {
       const isLast = i === fullText.length - 1
-      if (terminators.test(fullText[i]) || isLast) {
+      const isPrimaryBoundary = terminators.test(fullText[i])
+      const isSecondaryBoundary = !isPrimaryBoundary &&
+        (i - start) >= TTS_SECONDARY_BOUNDARY_MIN_LENGTH &&
+        secondaryBoundary.test(fullText[i])
+      if (isPrimaryBoundary || isSecondaryBoundary || isLast) {
         // Range 起點跳過開頭空白字元（審查 review-plan-issue-2.md
         // Minor #2）：段落縮排空格若被含進 Range，Issue 3 高亮跟隨時
         // 反白區塊會多一截空白；Issue 2 本身不影響朗讀，但現在順手對齊
