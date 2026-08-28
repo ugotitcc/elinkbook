@@ -156,7 +156,7 @@
 - [x] 語速調整對目前播放段落即時生效（播放器變速），下一段才用新語速合成——2026-08-28 真機驗證通過（大於 `1.0` 的語速選項於下一段合成時因既有 `SystemTtsProvider` 的 `clamp(0.0, 1.0)` 收斂為最快速，屬計畫已記錄的已知限制，非缺陷）
 - [x] `flutter analyze`／`flutter test` 全數通過——全專案測試通過，零回歸
 
-**狀態：PR [#194](https://git.jigong.org/huthief/elinkBook/pulls/194) 已建立（分支 `feat/epic-34-issue-5-tts-controls`），尚未合併。** 程式審查（`reviews/review-issue-5-code.md`，本機檔案不進版控）結論 Approved with minor notes（0 Critical／0 Important／2 Minor），兩項 Minor 已修復（commit `8c9919cc`）。2026-08-28 真機驗證：`plans/plan-issue-5.md`「測試策略總結」5 項手動驗證情境全數通過。**真機驗證過程中另外發現一個問題**：目前段落朗讀完畢、開始朗讀下一頁內容時，畫面不會自動翻頁跟上進度——判斷這正是 Issue 8（E-Ink 安全視窗與靜態高亮策略）「安全視窗判斷……只有高亮超出安全視窗時，才觸發一次性整頁翻頁或跳躍捲動」尚未實作的既有範圍，並非 Issue 5 的迴歸；已於 Issue 8「來源」欄位補上這次真機發現的紀錄，不另立新工單，排到 Issue 8 動工時一併處理。
+**狀態：已合併回 `main`（PR [#194](https://git.jigong.org/huthief/elinkBook/pulls/194)，分支 `feat/epic-34-issue-5-tts-controls`，2026-08-28）。** 程式審查（`reviews/review-issue-5-code.md`，本機檔案不進版控）結論 Approved with minor notes（0 Critical／0 Important／2 Minor），兩項 Minor 已修復（commit `8c9919cc`）。2026-08-28 真機驗證：`plans/plan-issue-5.md`「測試策略總結」5 項手動驗證情境全數通過。**真機驗證過程中另外發現一個問題**：目前段落朗讀完畢、開始朗讀下一頁內容時，畫面不會自動翻頁跟上進度——判斷這正是 Issue 8（E-Ink 安全視窗與靜態高亮策略）「安全視窗判斷……只有高亮超出安全視窗時，才觸發一次性整頁翻頁或跳躍捲動」尚未實作的既有範圍，並非 Issue 5 的迴歸；已於 Issue 8「來源」欄位補上這次真機發現的紀錄，不另立新工單，排到 Issue 8 動工時一併處理。
 
 ---
 
