@@ -148,6 +148,8 @@ elinkBook（全能跨平台電子書閱讀器）是一款跨平台電子書閱�
 
 **審查一律先產出報告，嚴禁直接修改。** 不論是文件審查（`design.md`/`spec.md`/`plans/plan-issue-N.md`）或程式審查，審查者（Claude Code）必須先產出審查報告（存於該 Epic 的 `reviews/`），列出發現的問題，交由人類或原作者決定如何處理；審查者本身不得在審查當下直接修改被審查的文件或程式碼。
 
+**測試執行範圍（避免重複跑全套 `flutter test`）：** 全專案測試案例已逾 1,800 個（144 個測試檔），完整跑一次約需 5 分鐘。單一 Task 的 TDD 步驟、單輪程式審查、審查後的修復驗證，一律只跑「這次異動實際觸及」的測試檔（例如 `flutter test test/reader/tts_controller_test.dart`），不需要每次都重跑全套；完整 `flutter test`（無參數）只在以下兩個時機執行一次：(1) 整張 `plan-issue-N.md` 計畫的最後一個 Task 完成時（既有慣例，計畫檔案本身已這樣安排）、(2) 該 Issue 準備發 PR／合併進 `main` 前的最終確認。程式審查報告若要聲稱「零回歸」，只需列出「已跑過異動檔案的測試」＋「上一次全套通過的時間點／commit」，不必為了同一個結論在同一個 Issue 內反覆重跑全套。
+
 目錄結構、`docs/epics.md` 圖例與 Discovery→歸檔的完整七步驟生命週期見 `sdd-workflow` skill（做 Epic/Issue 規劃工作時載入）。
 
 ## Agent skills
