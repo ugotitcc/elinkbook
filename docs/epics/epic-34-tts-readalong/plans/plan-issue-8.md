@@ -46,7 +46,7 @@
 - Consumes：既有 `view.addAnnotation()`/`draw-annotation` 事件（`{ draw, annotation, doc, range }`，`view.js` 既有 API，`range`/`doc` 目前既有程式碼未解構，本 Task 新增解構）、既有 `NOTE_PREFIX`/`currentTtsAnnotationValue`（Issue 3 既有機制）、既有 `window.flutter_inappwebview.callHandler()`（`flutter_inappwebview` 既有橋接 API）。
 - Produces：`window.showTtsHighlight(cfi, vertical, einkMode)`（第三參數變動，供 Task 2 的 Dart 端呼叫）；新橋接事件 `onTtsHighlightOutOfSafeWindow`，帶一個字串參數 `'next'` 或 `'prev'`（供 Task 2 的 Dart 端註冊監聽）。
 
-- [ ] **Step 1：寫 regression guard 測試（預期失敗）**
+- [x] **Step 1：寫 regression guard 測試（預期失敗）**
 
 在 `app/test/reader/foliate_reader_view_test.dart` 第 1497 行（既有「main.js 朗讀段反向查找 regression guard」group 的結尾 `});` 之後）插入：
 
@@ -165,12 +165,12 @@
 
 ```
 
-- [ ] **Step 2：執行測試，確認因找不到字串而失敗**
+- [x] **Step 2：執行測試，確認因找不到字串而失敗**
 
 Run: `flutter test test/reader/foliate_reader_view_test.dart --plain-name "main.js 安全視窗跟隨翻頁"`
 Expected: FAIL——六個 `test()` 皆因對應字串在 `main.js` 內尚不存在而失敗。
 
-- [ ] **Step 3：修改 `main.js`——`showTtsHighlight` 新增 `einkMode` 參數與高對比色常數**
+- [x] **Step 3：修改 `main.js`——`showTtsHighlight` 新增 `einkMode` 參數與高對比色常數**
 
 找到既有第 429-443 行（`TTS_HIGHLIGHT_COLOR` 常數到 `window.showTtsHighlight` 結尾）：
 
@@ -220,7 +220,7 @@ window.showTtsHighlight = function (cfi, vertical, einkMode) {
 }
 ```
 
-- [ ] **Step 4：修改 `main.js`——`draw-annotation` 監聽器新增安全視窗幾何判斷**
+- [x] **Step 4：修改 `main.js`——`draw-annotation` 監聽器新增安全視窗幾何判斷**
 
 找到既有 `draw-annotation` 監聽器（約第 827-849 行）：
 
@@ -331,12 +331,12 @@ const TTS_SAFE_WINDOW_MAX = 0.8
     })
 ```
 
-- [ ] **Step 5：執行測試，確認通過**
+- [x] **Step 5：執行測試，確認通過**
 
 Run: `flutter test test/reader/foliate_reader_view_test.dart --plain-name "main.js 安全視窗跟隨翻頁"`
 Expected: PASS（6 個測試）。另外重跑既有「main.js 朗讀高亮 regression guard（Issue 3）」與「main.js 朗讀段反向查找 regression guard（Issue 4）」兩個既有 group（`--plain-name "main.js 朗讀高亮"` / `"main.js 朗讀段反向查找"`），確認零回歸（`draw-annotation` 監聽器解構新增 `doc, range` 不影響既有 `isVertical`/draw 分支邏輯）。
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add android/app/src/main/assets/foliate/main.js test/reader/foliate_reader_view_test.dart
@@ -355,7 +355,7 @@ git commit -m "feat(epic-34): main.js 安全視窗跟隨翻頁判斷與 E-Ink �
 - Consumes：Task 1 產出的 `window.showTtsHighlight(cfi, vertical, einkMode)`／`onTtsHighlightOutOfSafeWindow` JS 事件。
 - Produces：`FoliateReaderView.onTtsHighlightOutOfSafeWindow`（`ValueChanged<String>?` 欄位，供 Task 4 的 `ReaderScreen` 注入）；`FoliateReaderView.showTtsHighlight(key, cfi, {required bool vertical, required bool einkMode})`（供 Task 4 呼叫）。
 
-- [ ] **Step 1：寫測試（預期失敗——欄位/具名參數尚不存在，無法編譯）**
+- [x] **Step 1：寫測試（預期失敗——欄位/具名參數尚不存在，無法編譯）**
 
 在 Task 1 新增的 group 之後（同一份測試檔）插入：
 
@@ -384,12 +384,12 @@ git commit -m "feat(epic-34): main.js 安全視窗跟隨翻頁判斷與 E-Ink �
 
 ```
 
-- [ ] **Step 2：執行測試，確認因編譯錯誤失敗**
+- [x] **Step 2：執行測試，確認因編譯錯誤失敗**
 
 Run: `flutter test test/reader/foliate_reader_view_test.dart --plain-name "onTtsHighlightOutOfSafeWindow"`
 Expected: FAIL——`onTtsHighlightOutOfSafeWindow` 具名參數不存在，編譯錯誤。
 
-- [ ] **Step 3：`foliate_reader_view.dart` 新增欄位與建構參數**
+- [x] **Step 3：`foliate_reader_view.dart` 新增欄位與建構參數**
 
 在既有 `final VoidCallback? onSelectionCleared;`（第 421 行）之後新增：
 
@@ -411,7 +411,7 @@ Expected: FAIL——`onTtsHighlightOutOfSafeWindow` 具名參數不存在，編�
     this.onTtsHighlightOutOfSafeWindow,
 ```
 
-- [ ] **Step 4：註冊 JS handler**
+- [x] **Step 4：註冊 JS handler**
 
 在既有 `onTtsSegmentIndexReady` handler 註冊區塊（第 766-774 行）之後新增：
 
@@ -432,7 +432,7 @@ Expected: FAIL——`onTtsHighlightOutOfSafeWindow` 具名參數不存在，編�
     );
 ```
 
-- [ ] **Step 5：更新 `showTtsHighlight` 靜態方法簽章**
+- [x] **Step 5：更新 `showTtsHighlight` 靜態方法簽章**
 
 第 557-568 行既有：
 
@@ -469,12 +469,12 @@ Expected: FAIL——`onTtsHighlightOutOfSafeWindow` 具名參數不存在，編�
   }
 ```
 
-- [ ] **Step 6：執行測試，確認通過**
+- [x] **Step 6：執行測試，確認通過**
 
 Run: `flutter test test/reader/foliate_reader_view_test.dart`
 Expected: PASS（全檔案，含 Task 1/2 新增測試與既有測試皆通過——這一步先跑整個檔案，確認 `showTtsHighlight` 簽章變動沒有波及本檔案內其他既有測試）。
 
-- [ ] **Step 7：Commit**
+- [x] **Step 7：Commit**
 
 ```bash
 git add lib/reader/foliate_reader_view.dart test/reader/foliate_reader_view_test.dart
@@ -493,7 +493,7 @@ git commit -m "feat(epic-34): FoliateReaderView 新增安全視窗事件橋接�
 - Consumes：無新依賴，純狀態機內部邏輯。
 - Produces：`TtsController.suppressNextExternalPositionChange()`（無回傳值），供 Task 4 的 `ReaderScreen` 在觸發安全視窗自動翻頁前呼叫。
 
-- [ ] **Step 1：寫失敗測試**
+- [x] **Step 1：寫失敗測試**
 
 在 `app/test/reader/tts_controller_test.dart` 既有 `handleExternalPositionChange()` 測試群組附近（第 466-479 行「paused 狀態下呼叫」測試之後）插入：
 
@@ -586,12 +586,12 @@ git commit -m "feat(epic-34): FoliateReaderView 新增安全視窗事件橋接�
   });
 ```
 
-- [ ] **Step 2：執行測試，確認失敗**
+- [x] **Step 2：執行測試，確認失敗**
 
 Run: `flutter test test/reader/tts_controller_test.dart --plain-name "suppressNextExternalPositionChange"`
 Expected: FAIL——`suppressNextExternalPositionChange` 方法不存在，編譯錯誤。
 
-- [ ] **Step 3：實作**
+- [x] **Step 3：實作**
 
 在 `app/lib/reader/tts_controller.dart` 既有 `handleExternalPositionChange()` 方法（第 254-276 行）之前新增欄位與方法：
 
@@ -793,12 +793,12 @@ Expected: FAIL——`suppressNextExternalPositionChange` 方法不存在，編�
   }
 ```
 
-- [ ] **Step 4：執行測試，確認通過**
+- [x] **Step 4：執行測試，確認通過**
 
 Run: `flutter test test/reader/tts_controller_test.dart`
 Expected: PASS（全檔案，含 Step 1 新增的三個測試與既有測試——確認 `handleExternalPositionChange()` 開頭新增的提早 return、以及四個既有「重設回 idle」位置＋`dispose()` 新增的旗標清除，不影響既有測試案例，因為既有測試從未呼叫過 `suppressNextExternalPositionChange()`，旗標恆為預設值 `false`）。
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 git add lib/reader/tts_controller.dart test/reader/tts_controller_test.dart
@@ -818,7 +818,7 @@ git commit -m "feat(epic-34): TtsController 新增 suppressNextExternalPositionC
 - Consumes：Task 2 的 `FoliateReaderView.onTtsHighlightOutOfSafeWindow`/`showTtsHighlight(..., einkMode: ...)`、Task 3 的 `TtsController.suppressNextExternalPositionChange()`、既有 `LibraryThemeDependencies.isEinkMode`（`library_screen_dependencies.dart` 既有欄位）。
 - Produces：`ReaderScreen.isEinkMode`（`bool`，預設 `false`），供 `library_screen.dart` 與測試注入。
 
-- [ ] **Step 1：寫 `reader_screen_test.dart` 失敗測試**
+- [x] **Step 1：寫 `reader_screen_test.dart` 失敗測試**
 
 在既有「手動導覽自動暫停與恢復播放（epic-34-tts-readalong Issue 4）」group（第 7570-7638 行）之後插入：
 
@@ -945,13 +945,13 @@ git commit -m "feat(epic-34): TtsController 新增 suppressNextExternalPositionC
 
 ```
 
-- [ ] **Step 2：執行測試，確認失敗**
+- [x] **Step 2：執行測試，確認失敗**
 
 Run: `flutter test test/screens/reader_screen_test.dart --plain-name "安全視窗跟隨翻頁"`
 Run: `flutter test test/screens/library_screen_test.dart --plain-name "isEinkMode 與 themeDependencies"`
 Expected: 兩者皆 FAIL——`ReaderScreen.isEinkMode`／`FoliateReaderView.onTtsHighlightOutOfSafeWindow` 皆不存在，編譯錯誤。
 
-- [ ] **Step 3：`reader_screen.dart` 新增 `isEinkMode` 建構參數**
+- [x] **Step 3：`reader_screen.dart` 新增 `isEinkMode` 建構參數**
 
 在既有 `final TtsAudioFocusSource? ttsAudioFocusSource;`（第 169 行）之後新增：
 
@@ -974,7 +974,7 @@ Expected: 兩者皆 FAIL——`ReaderScreen.isEinkMode`／`FoliateReaderView.onT
     this.isEinkMode = false,
 ```
 
-- [ ] **Step 4：`reader_screen.dart` 更新 `onHighlightSegment` 閉包**
+- [x] **Step 4：`reader_screen.dart` 更新 `onHighlightSegment` 閉包**
 
 第 2711-2721 行既有：
 
@@ -1009,7 +1009,7 @@ Expected: 兩者皆 FAIL——`ReaderScreen.isEinkMode`／`FoliateReaderView.onT
       },
 ```
 
-- [ ] **Step 5：`reader_screen.dart` 的 `FoliateReaderView(...)` 建構新增 `onTtsHighlightOutOfSafeWindow`**
+- [x] **Step 5：`reader_screen.dart` 的 `FoliateReaderView(...)` 建構新增 `onTtsHighlightOutOfSafeWindow`**
 
 在 `_buildNativeView` 內既有 `onLocatorChanged: (info) { ... _ttsController?.handleExternalPositionChange(); },`（第 2822-2833 行）之後、`onSelectionChanged: _handleSelectionChanged,` 之前新增：
 
@@ -1030,7 +1030,7 @@ Expected: 兩者皆 FAIL——`ReaderScreen.isEinkMode`／`FoliateReaderView.onT
           },
 ```
 
-- [ ] **Step 6：`library_screen.dart` 新增 `isEinkMode` 轉送**
+- [x] **Step 6：`library_screen.dart` 新增 `isEinkMode` 轉送**
 
 第 471-473 行既有：
 
@@ -1049,23 +1049,23 @@ Expected: 兩者皆 FAIL——`ReaderScreen.isEinkMode`／`FoliateReaderView.onT
               isEinkMode: widget.themeDependencies.isEinkMode,
 ```
 
-- [ ] **Step 7：執行測試，確認通過**
+- [x] **Step 7：執行測試，確認通過**
 
 Run: `flutter test test/screens/reader_screen_test.dart`
 Run: `flutter test test/screens/library_screen_test.dart`
 Expected: 兩份測試檔皆 PASS（全檔案——`isEinkMode` 為新增非 nullable 參數但有預設值 `false`，不影響任何既有呼叫端）。
 
-- [ ] **Step 8：跑一次全套 `flutter test`（本計畫最後一個 Task，依專案既有政策執行一次）**
+- [x] **Step 8：跑一次全套 `flutter test`（本計畫最後一個 Task，依專案既有政策執行一次）**
 
 Run: `flutter test`
 Expected: PASS，測試總數較 Issue 7 合併時（1803+ 之後陸續累加）增加約 9 個（Task 1 四個＋Task 2 兩個＋Task 3 兩個＋Task 4 兩個，實際數字以執行結果為準）。
 
-- [ ] **Step 9：`flutter analyze`**
+- [x] **Step 9：`flutter analyze`**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 10：Commit**
+- [x] **Step 10：Commit**
 
 ```bash
 git add lib/screens/reader_screen.dart lib/screens/library_screen.dart test/screens/reader_screen_test.dart test/screens/library_screen_test.dart
