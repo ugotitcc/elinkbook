@@ -984,6 +984,86 @@ void main() {
 
     expect(() => controller.resyncHighlight(), returnsNormally);
   });
+
+  group('硬性長度上限切分（epic-34-tts-readalong Issue 11）', () {
+    test('provider.getMaxInputLength() 回傳 null 時不切分，既有行為不變',
+        () async {
+      final controller = buildController();
+      provider.maxInputLength = null;
+
+      await controller.play();
+
+      expect(controller.segments.length, segments.length);
+      expect(provider.synthesizedTexts, ['第一句。']);
+    });
+
+    test('段落文字長度超過上限時硬切為多個子段落，各自依序合成', () async {
+      final longText = List.generate(25, (i) => '字').join();
+      final controller = buildController(segs: [
+        TtsSegmentCfi(
+          segmentId: '0',
+          cfi: 'epubcfi(/6/4!/1:0)',
+          text: longText,
+        ),
+      ]);
+      provider.maxInputLength = 10;
+
+      await controller.play();
+
+      // 25 字、上限 10 字，應切成 3 段（10+10+5）。
+      expect(controller.segments.length, 3);
+      expect(controller.segments[0].text.length, 10);
+      expect(controller.segments[1].text.length, 10);
+      expect(controller.segments[2].text.length, 5);
+      // 子段落沿用原始 CFI（精確子範圍 CFI 需回到 JS 端重新計算，
+      // 超出本硬性防線的職責範圍）。
+      expect(controller.segments[0].cfi, 'epubcfi(/6/4!/1:0)');
+      expect(controller.segments[1].cfi, 'epubcfi(/6/4!/1:0)');
+      expect(controller.segments[2].cfi, 'epubcfi(/6/4!/1:0)');
+      expect(provider.synthesizedTexts.first.length, 10);
+      expect(controller.currentIndex, 0);
+    });
+
+    test(
+        'lookupStartIndex 回傳的（切分前）索引，在切分後正確換算到對應'
+        '子段落的起始位置', () async {
+      final longText = List.generate(25, (i) => '字').join();
+      final loaded = [
+        const TtsSegmentCfi(
+          segmentId: '0',
+          cfi: 'epubcfi(/6/4!/1:0)',
+          text: '短句。', // 3 字，不切分
+        ),
+        TtsSegmentCfi(
+          segmentId: '1',
+          cfi: 'epubcfi(/6/4!/2:0)',
+          text: longText, // 25 字，上限 10 字時切成 3 段
+        ),
+        const TtsSegmentCfi(
+          segmentId: '2',
+          cfi: 'epubcfi(/6/4!/3:0)',
+          text: '最後。', // 3 字，不切分
+        ),
+      ];
+      provider = FakeTtsProvider();
+      player = FakeTtsAudioPlayer();
+      provider.maxInputLength = 10;
+      final controller = TtsController(
+        provider: provider,
+        player: player,
+        loadSegments: () async => loaded,
+        lookupStartIndex: (segs) async => 2, // 指向切分前的第三個原始段落
+      );
+
+      await controller.play();
+
+      // 切分後清單：[短句, 長句子段1, 長句子段2, 長句子段3, 最後]，
+      // 原始索引 2（「最後。」）換算後應是切分後索引 4。
+      expect(controller.segments.length, 5);
+      expect(controller.currentIndex, 4);
+      expect(provider.synthesizedTexts, ['最後。']);
+    });
+  });
 }
 
 

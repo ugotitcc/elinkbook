@@ -139,13 +139,23 @@ class TtsController extends ChangeNotifier {
       final startIndex =
           lookupStartIndex == null ? 0 : await lookupStartIndex!(loaded);
       if (_disposed || generation != _playGeneration) return;
-      // _segments／_currentIndex 一起賦值、放在兩個 await 之後、確認世代
+      // 硬性長度上限防線（epic-34-tts-readalong Issue 11）：main.js
+      // buildTtsSegments() 已有標點/次要邊界切句規則（見 issues.md Issue
+      // 11 設計要點第 1 點），但無法涵蓋所有極端排版，這裡是最後一道
+      // 防線——依引擎回報的實際上限，把任何仍然過長的段落硬切成多個
+      // 子段落再個別合成。maxInputLength 為 null（引擎未回報上限）時
+      // _capSegmentsToMaxLength 直接原樣回傳，不套用任何切分。
+      final maxInputLength = await provider.getMaxInputLength();
+      if (_disposed || generation != _playGeneration) return;
+      final capped = _capSegmentsToMaxLength(loaded, maxInputLength);
+      // _segments／_currentIndex 一起賦值、放在所有 await 之後、確認世代
       // 仍有效才寫入——避免中途被中止的呼叫留下「_segments 已覆寫、但
       // 從未真正開始播放」的孤兒狀態（同一個 review Important #1／#2 的
       // 修法延伸）。
-      _segments = loaded;
-      _currentIndex =
-          (startIndex >= 0 && startIndex < _segments.length) ? startIndex : 0;
+      _segments = capped.segments;
+      final clampedStartIndex =
+          (startIndex >= 0 && startIndex < loaded.length) ? startIndex : 0;
+      _currentIndex = capped.startOffsets[clampedStartIndex];
     } finally {
       _isLoadingSegments = false;
     }
@@ -427,4 +437,47 @@ class TtsController extends ChangeNotifier {
     player.dispose();
     super.dispose();
   }
+}
+
+/// 把 [original] 清單中任何 `text.length` 超過 [maxLength] 的段落，依
+/// 字數硬切為多個子段落（沿用同一個原始 CFI——精確的子範圍 CFI 需要
+/// 回到 JS 端重新計算，超出本硬性防線的職責範圍；子段落只共用同一個
+/// 原始 CFI，高亮在這極端情境下會維持指向整個原段落，不影響「朗讀能
+/// 正常繼續進行」這個核心目標，見 epic-34-tts-readalong Issue 11）。
+/// [maxLength] 為 `null` 或 `<= 0`（引擎未回報上限）時原樣回傳，不套用
+/// 任何切分。回傳值的 `startOffsets[i]` 是 [original] 第 `i` 個段落
+/// （切分前）對應到切分後清單中「第一個子段落」的索引，供 `play()` 把
+/// `lookupStartIndex` 算出的（切分前）索引正確換算到切分後的位置。
+({List<TtsSegmentCfi> segments, List<int> startOffsets}) _capSegmentsToMaxLength(
+  List<TtsSegmentCfi> original,
+  int? maxLength,
+) {
+  if (maxLength == null || maxLength <= 0) {
+    return (
+      segments: original,
+      startOffsets: List<int>.generate(original.length, (i) => i),
+    );
+  }
+  final result = <TtsSegmentCfi>[];
+  final startOffsets = <int>[];
+  for (final segment in original) {
+    startOffsets.add(result.length);
+    final text = segment.text;
+    if (text.length <= maxLength) {
+      result.add(segment);
+      continue;
+    }
+    var chunkIndex = 0;
+    for (var start = 0; start < text.length; start += maxLength) {
+      final end =
+          (start + maxLength < text.length) ? start + maxLength : text.length;
+      result.add(TtsSegmentCfi(
+        segmentId: '${segment.segmentId}_$chunkIndex',
+        cfi: segment.cfi,
+        text: text.substring(start, end),
+      ));
+      chunkIndex++;
+    }
+  }
+  return (segments: result, startOffsets: startOffsets);
 }
