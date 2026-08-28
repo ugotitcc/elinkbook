@@ -7502,8 +7502,8 @@ void main() {
       // CBZ 恆為固定版面，啟用狀態的既有圖示色固定為 Colors.white
       // （_themedFabIconColor，reader_screen.dart:2693-2694）；停用狀態
       // 須與其明確不同，且不得只是同一顏色套上透明度（見本計畫 Global
-      // Constraints 說明），故直接斷言為不透明的 Colors.grey。
-      expect(icon.color, isNot(Colors.white));
+      // Constraints 說明），故直接斷言為不透明的 Colors.grey（已隱含
+      // 「不是 Colors.white」，不需另外斷言 isNot）。
       expect(icon.color, Colors.grey);
     });
   });
