@@ -305,7 +305,7 @@
 - `reader_screen_test.dart` widget test：驗證 CBZ 格式下 `reader_tts_play_pause_button` 的圖示顏色與非 CBZ 啟用狀態的圖示顏色不同（例如比對 `Icon.color` 或其 alpha 值）。
 
 **驗收標準：**
-- [x] CBZ 書籍的朗讀停用按鈕，圖示顏色/透明度與啟用狀態有明確視覺區隔
+- [x] CBZ 書籍的朗讀停用按鈕，圖示顏色/透明度與啟用狀態有明確視覺區隔——2026-08-28 真機驗證通過
 - [x] 新增 widget test 驗證停用狀態顏色與啟用狀態不同
 - [x] 既有 `reader_screen_test.dart` 零回歸
 - [x] `flutter analyze`／`flutter test` 全數通過
