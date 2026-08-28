@@ -1496,6 +1496,107 @@ void main() {
     });
   });
 
+  group('main.js 安全視窗跟隨翻頁 + E-Ink 高對比 regression guard（epic-34-tts-readalong Issue 8）', () {
+    late String mainJsSource;
+
+    setUpAll(() {
+      mainJsSource = File('android/app/src/main/assets/foliate/main.js')
+          .readAsStringSync();
+    });
+
+    test('window.showTtsHighlight 依 einkMode 選用高對比純色或既有半透明色', () {
+      expect(
+        mainJsSource.contains(
+          'color: einkMode ? TTS_HIGHLIGHT_COLOR_EINK : TTS_HIGHLIGHT_COLOR,',
+        ),
+        isTrue,
+        reason: 'main.js 內找不到 einkMode 三元判斷式——E-Ink 高對比模式下'
+            '朗讀高亮須改用高對比純色，非既有半透明橙色（低對比度 E-Ink '
+            '螢幕上容易被灰階轉換抹平成幾乎看不見的淡灰色）。',
+      );
+      expect(
+        mainJsSource.contains(
+          "window.showTtsHighlight = function (cfi, vertical, einkMode)",
+        ),
+        isTrue,
+        reason: 'window.showTtsHighlight 須新增 einkMode 第三參數。',
+      );
+    });
+
+    test('安全視窗常數為 0.2～0.8（issues.md「可視範圍 20%～80%」）', () {
+      expect(mainJsSource.contains('const TTS_SAFE_WINDOW_MIN = 0.2'), isTrue,
+          reason: 'main.js 內找不到安全視窗下限常數。');
+      expect(mainJsSource.contains('const TTS_SAFE_WINDOW_MAX = 0.8'), isTrue,
+          reason: 'main.js 內找不到安全視窗上限常數。');
+    });
+
+    test('draw-annotation 監聽器僅在目前朗讀高亮（value 與 currentTtsAnnotationValue 相符）時才觸發安全視窗檢查',
+        () {
+      expect(
+        mainJsSource.contains('annotation.value === currentTtsAnnotationValue'),
+        isTrue,
+        reason: '若少了這個判斷，一般劃線/備註（window.setDecorations()，'
+            '走裸 cfi key，非 foliate-note: 前綴）的 draw-annotation 事件'
+            '也會誤觸發翻頁。',
+      );
+    });
+
+    test('超出安全視窗時呼叫 onTtsHighlightOutOfSafeWindow', () {
+      expect(
+        mainJsSource
+            .contains("callHandler('onTtsHighlightOutOfSafeWindow', 'next')"),
+        isTrue,
+      );
+      expect(
+        mainJsSource
+            .contains("callHandler('onTtsHighlightOutOfSafeWindow', 'prev')"),
+        isTrue,
+      );
+    });
+
+    test('needNext 使用安全視窗軟門檻（0.2/0.8），X/Y 兩軸皆檢查', () {
+      expect(
+        mainJsSource.contains('normX < TTS_SAFE_WINDOW_MIN || normY > 1.0'),
+        isTrue,
+        reason: '直排分支缺少這個條件——next 判斷須同時檢查 X 軸軟門檻與 '
+            'Y 軸硬邊界。',
+      );
+      expect(
+        mainJsSource.contains('normY > TTS_SAFE_WINDOW_MAX || normX > 1.0'),
+        isTrue,
+        reason: '橫排分支缺少這個條件——next 判斷須同時檢查 Y 軸軟門檻與 '
+            'X 軸硬邊界。',
+      );
+    });
+
+    test('needPrev 只能用真正超出頁面範圍的硬邊界（0.0/1.0）判斷，不可沿用安全視窗軟門檻（避免翻頁死循環）',
+        () {
+      expect(
+        mainJsSource.contains('normX > 1.0 || normY < 0.0'),
+        isTrue,
+        reason: '直排分支的 prev 判斷式缺少或誤用了門檻——不可出現 '
+            'TTS_SAFE_WINDOW_MIN/MAX，否則新頁頁首會被誤判為需要翻回'
+            '上一頁。',
+      );
+      expect(
+        mainJsSource.contains('normY < 0.0 || normX < 0.0'),
+        isTrue,
+        reason: '橫排分支的 prev 判斷式缺少或誤用了門檻——不可出現 '
+            'TTS_SAFE_WINDOW_MIN/MAX，否則新頁頁首會被誤判為需要翻回'
+            '上一頁。',
+      );
+      expect(
+        mainJsSource.contains(
+          'const needPrev = isVertical\n            ? center > TTS_SAFE_WINDOW_MAX\n            : center < TTS_SAFE_WINDOW_MIN',
+        ),
+        isFalse,
+        reason: '找到舊版對稱門檻寫法殘留——這正是造成翻頁死循環的錯誤'
+            '版本（review-plan-issue-8.md Critical #1），必須確認已被'
+            '取代，不是新舊兩份判斷式同時存在。',
+      );
+    });
+  });
+
   // Issue 8 審查 Important #7：mounted 守衛/dispose 競態測試
   // 驗證「快取完成前 dispose」不會導致快取目錄洩漏
   group('mounted guard / dispose race', () {

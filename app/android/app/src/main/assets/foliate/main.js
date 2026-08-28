@@ -427,16 +427,19 @@ window.setDecorations = function (decorations) {
  * 刪除；show 新的之前先刪除舊的，呼叫端不需要自行先呼叫 clear 再呼叫 show。
  */
 const TTS_HIGHLIGHT_COLOR = 'rgba(251, 146, 60, 0.45)'
+const TTS_HIGHLIGHT_COLOR_EINK = 'rgba(0, 0, 0, 0.75)'
+const TTS_SAFE_WINDOW_MIN = 0.2
+const TTS_SAFE_WINDOW_MAX = 0.8
 let currentTtsAnnotationValue = null
 
-window.showTtsHighlight = function (cfi, vertical) {
+window.showTtsHighlight = function (cfi, vertical, einkMode) {
   if (currentTtsAnnotationValue) {
     view.deleteAnnotation({ value: currentTtsAnnotationValue })
   }
   currentTtsAnnotationValue = 'foliate-note:' + cfi
   view.addAnnotation({
     value: currentTtsAnnotationValue,
-    color: TTS_HIGHLIGHT_COLOR,
+    color: einkMode ? TTS_HIGHLIGHT_COLOR_EINK : TTS_HIGHLIGHT_COLOR,
     isUnderline: false,
     vertical,
   })
@@ -825,15 +828,7 @@ async function openBook() {
     // isUnderline 分流組裝，不可共用同一組參數物件（見
     // spike-overlayer-annotations.md「已記錄的既有 API 落差」）。
     view.addEventListener('draw-annotation', (e) => {
-      const { draw, annotation } = e.detail
-      // epic-34-tts-readalong Issue 3：annotation.vertical 由
-      // window.showTtsHighlight() 明確傳入（見上方），讓朗讀高亮的直排/
-      // 橫排判斷不依賴 currentWritingMode 的更新時機（理論上兩者恆一致，
-      // 這裡是額外的顯式保險，也讓 Dart 端呼叫參數本身可被觀察/測試）。
-      // 劃線/備註既有呼叫（window.setDecorations()）從未設定這個欄位，
-      // ??（nullish coalescing，非 ||）確保只有 undefined 才落回
-      // currentWritingMode——若誤用 ||，annotation.vertical 為合法值
-      // false（橫排）時會被誤判為「未設定」而錯誤退回 currentWritingMode。
+      const { draw, annotation, doc, range } = e.detail
       const isVertical = annotation.vertical ?? (currentWritingMode === 'vertical')
       if (annotation.isUnderline) {
         draw(Overlayer.underline, {
@@ -845,6 +840,27 @@ async function openBook() {
           color: annotation.color,
           vertical: isVertical,
         })
+      }
+      if (annotation.value === currentTtsAnnotationValue) {
+        const rect = range.getClientRects()[0]
+        const frameEl = doc.defaultView && doc.defaultView.frameElement
+        if (rect && frameEl) {
+          const iframeRect = frameEl.getBoundingClientRect()
+          const viewportRect = view.getBoundingClientRect()
+          const normX = (iframeRect.left + (rect.left + rect.right) / 2 - viewportRect.left) / viewportRect.width
+          const normY = (iframeRect.top + (rect.top + rect.bottom) / 2 - viewportRect.top) / viewportRect.height
+          const needNext = isVertical
+            ? normX < TTS_SAFE_WINDOW_MIN || normY > 1.0
+            : normY > TTS_SAFE_WINDOW_MAX || normX > 1.0
+          const needPrev = isVertical
+            ? normX > 1.0 || normY < 0.0
+            : normY < 0.0 || normX < 0.0
+          if (needNext) {
+            window.flutter_inappwebview.callHandler('onTtsHighlightOutOfSafeWindow', 'next')
+          } else if (needPrev) {
+            window.flutter_inappwebview.callHandler('onTtsHighlightOutOfSafeWindow', 'prev')
+          }
+        }
       }
     })
     // 選取範圍即時回報（epic-17 Issue 8）：'load' 事件對 look-ahead
