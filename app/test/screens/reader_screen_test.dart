@@ -7859,6 +7859,122 @@ void main() {
     });
   });
 
+  group('Mini Player 與既有底部元件顯示連動（epic-34-tts-readalong Issue 6）', () {
+    testWidgets(
+        '頁尾預設顯示（showFooter 預設 null＝true）且提供 ttsProvider 時，頁尾進度文字與 Mini Player 播放鍵同時存在，互不排斥',
+        (tester) async {
+      final highlightsRepo = FakeHighlightsRepository();
+      final notesRepo = FakeNotesRepository();
+      final ttsProvider = FakeTtsProvider();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_mini_player_footer',
+            prefsManager: prefsManager,
+            highlightsRepository: highlightsRepo,
+            notesRepository: notesRepo,
+            isFixedLayout: false,
+            ttsProvider: ttsProvider,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final foliateView =
+          tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
+      foliateView.onPageRendered();
+      foliateView.onLayoutResolved?.call(
+        const EpubLayoutInfo(
+          isFixedLayout: false,
+          writingMode: WritingMode.horizontal,
+        ),
+      );
+      foliateView.onLocatorChanged?.call(
+        const EpubPositionInfo(
+          locatorJson: '{"cfi":"epubcfi(/6/4)","index":0,"fraction":0.25}',
+          progression: 0.25,
+          locationIndex: 4,
+          locationTotal: 20,
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.byKey(const Key('reader_foliate_progress_text')), findsOneWidget);
+      expect(find.text('5/20'), findsOneWidget);
+      expect(
+        find.byKey(const Key('reader_tts_play_pause_button')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('reader_tts_previous_button')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('reader_tts_next_button')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('reader_tts_speed_button')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('未提供 ttsProvider 時，Mini Player 四顆按鈕皆不顯示', (tester) async {
+      final highlightsRepo = FakeHighlightsRepository();
+      final notesRepo = FakeNotesRepository();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_mini_player_no_provider',
+            prefsManager: prefsManager,
+            highlightsRepository: highlightsRepo,
+            notesRepository: notesRepo,
+            isFixedLayout: false,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final foliateView =
+          tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
+      foliateView.onPageRendered();
+      foliateView.onLayoutResolved?.call(
+        const EpubLayoutInfo(
+          isFixedLayout: false,
+          writingMode: WritingMode.horizontal,
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      expect(
+        find.byKey(const Key('reader_tts_play_pause_button')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const Key('reader_tts_previous_button')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const Key('reader_tts_next_button')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const Key('reader_tts_speed_button')),
+        findsNothing,
+      );
+    });
+  });
+
   tearDownAll(() {
     // 還原 cacheBookForServing 為原始實作，避免污染其他測試檔
     cacheBookForServing = originalCacheBookForServing;
