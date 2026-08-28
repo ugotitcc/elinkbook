@@ -184,7 +184,7 @@
 - [x] 與既有底部導覽列/目錄側邊欄顯示連動正常，無遮擋
 - [x] `flutter analyze`／`flutter test` 全數通過，既有底部工具列相關測試零回歸（全專案 1803 個測試通過）
 
-**狀態：開發與全分支審查完成（Approved，分支 `feat/epic-34-issue-6-mini-player`，2026-08-28）。** 程式審查報告見 `reviews/review-issue-6-code.md`。
+**狀態：已合併回 `main`（PR [#195](https://git.jigong.org/huthief/elinkBook/pulls/195)，分支 `feat/epic-34-issue-6-mini-player`，2026-08-28）。** 程式審查報告見 `reviews/review-issue-6-code.md`；審查發現 Important #1（CBZ 書籍會無條件建構 `TtsController`／原生 `AudioPlayer`，即使 CBZ 完全用不到，白白多耗資源）已修復（commit `52221a57`：CBZ 分支改為直接建構 `TtsMiniPlayer(isCbz: true)`，不再存取具副作用的 `_ttsControllerOrNull`），合併前全專案 `flutter test`（198 個相關測試）與 `flutter analyze` 皆重新確認乾淨。
 
 ---
 
