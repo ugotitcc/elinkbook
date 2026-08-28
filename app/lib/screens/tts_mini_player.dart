@@ -11,9 +11,12 @@ import '../reader/tts_controller.dart';
 /// [status]／[speed]，本 widget 完全不維護任何私有狀態（`spec.md`
 /// 「單一事實來源」要求，審查 `review-issues.md` Minor #1）。
 ///
-/// [isCbz] 為 `true` 時，只顯示一顆停用狀態的播放鍵（CBZ 為純圖像格式，
-/// 無文字可朗讀，見 Issue 2 既有設計），不建構上一句/下一句/語速三顆
-/// 按鈕——沿用 Issue 5 既有的 CBZ 排除範圍，本 Issue 不新增播放邏輯。
+/// [isCbz] 為 `true` 時，只顯示一顆停用狀態的播放鍵＋一顆關閉鍵（CBZ 為
+/// 純圖像格式，無文字可朗讀，見 Issue 2 既有設計），不建構上一句/下一句/
+/// 語速三顆按鈕——沿用 Issue 5 既有的 CBZ 排除範圍，本 Issue 不新增播放
+/// 邏輯。[onClose] 只負責收合本控制列本身（呼叫端把 Mini Player 的顯示/
+/// 隱藏狀態改為 `false`），不影響 [TtsController] 的播放狀態——關閉控制
+/// 列不會暫停朗讀。
 class TtsMiniPlayer extends StatelessWidget {
   final TtsPlaybackStatus status;
   final double speed;
@@ -24,6 +27,7 @@ class TtsMiniPlayer extends StatelessWidget {
   final VoidCallback onPrevious;
   final VoidCallback onNext;
   final VoidCallback onSpeedTap;
+  final VoidCallback onClose;
 
   const TtsMiniPlayer({
     super.key,
@@ -36,6 +40,7 @@ class TtsMiniPlayer extends StatelessWidget {
     required this.onPrevious,
     required this.onNext,
     required this.onSpeedTap,
+    required this.onClose,
   });
 
   @override
@@ -48,11 +53,22 @@ class TtsMiniPlayer extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 4),
         child: isCbz
-            ? IconButton(
-                key: const Key('reader_tts_play_pause_button'),
-                icon: Icon(Icons.play_arrow, color: iconColor),
-                tooltip: 'CBZ 為純圖像格式，不支援語音朗讀',
-                onPressed: null,
+            ? Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    key: const Key('reader_tts_play_pause_button'),
+                    icon: Icon(Icons.play_arrow, color: iconColor),
+                    tooltip: 'CBZ 為純圖像格式，不支援語音朗讀',
+                    onPressed: null,
+                  ),
+                  IconButton(
+                    key: const Key('reader_tts_mini_player_close_button'),
+                    icon: Icon(Icons.close, color: iconColor),
+                    tooltip: '關閉朗讀控制列',
+                    onPressed: onClose,
+                  ),
+                ],
               )
             : Row(
                 mainAxisSize: MainAxisSize.min,
@@ -90,6 +106,12 @@ class TtsMiniPlayer extends StatelessWidget {
                     ),
                     tooltip: '朗讀語速：${speed.toStringAsFixed(2)}x（點擊切換）',
                     onPressed: onSpeedTap,
+                  ),
+                  IconButton(
+                    key: const Key('reader_tts_mini_player_close_button'),
+                    icon: Icon(Icons.close, color: iconColor),
+                    tooltip: '關閉朗讀控制列',
+                    onPressed: onClose,
                   ),
                 ],
               ),

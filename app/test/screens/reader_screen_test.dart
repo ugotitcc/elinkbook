@@ -7414,6 +7414,12 @@ void main() {
       await tester.pump();
       await tester.pump();
 
+      // Mini Player 預設隱藏，須先按下朗讀 FAB 按鈕才會顯示
+      // （epic-34-tts-readalong 追加需求）。
+      await tester
+          .tap(find.byKey(const Key('reader_foliate_tts_toggle_button')));
+      await tester.pump();
+
       final buttonFinder = find.byKey(const Key('reader_tts_play_pause_button'));
       expect(buttonFinder, findsOneWidget);
       final icon = tester.widget<Icon>(find.descendant(
@@ -7454,6 +7460,10 @@ void main() {
       await tester.pump();
       await tester.pump();
 
+      await tester
+          .tap(find.byKey(const Key('reader_foliate_tts_toggle_button')));
+      await tester.pump();
+
       final buttonFinder = find.byKey(const Key('reader_tts_play_pause_button'));
       expect(buttonFinder, findsOneWidget);
       final button = tester.widget<IconButton>(buttonFinder);
@@ -7490,6 +7500,10 @@ void main() {
         ),
       );
       await tester.pump();
+      await tester.pump();
+
+      await tester
+          .tap(find.byKey(const Key('reader_foliate_tts_toggle_button')));
       await tester.pump();
 
       final buttonFinder =
@@ -7558,6 +7572,10 @@ void main() {
       await tester.pump();
       await tester.pump();
 
+      await tester
+          .tap(find.byKey(const Key('reader_foliate_tts_toggle_button')));
+      await tester.pump();
+
       final buttonFinder =
           find.byKey(const Key('reader_tts_play_pause_button'));
       expect(buttonFinder, findsOneWidget);
@@ -7602,6 +7620,10 @@ void main() {
         ),
       );
       await tester.pump();
+      await tester.pump();
+
+      await tester
+          .tap(find.byKey(const Key('reader_foliate_tts_toggle_button')));
       await tester.pump();
 
       await tester.tap(find.byKey(const Key('reader_tts_play_pause_button')));
@@ -7657,6 +7679,10 @@ void main() {
         ),
       );
       await tester.pump();
+      await tester.pump();
+
+      await tester
+          .tap(find.byKey(const Key('reader_foliate_tts_toggle_button')));
       await tester.pump();
 
       final buttonFinder =
@@ -7751,6 +7777,10 @@ void main() {
       await tester.pump();
       await tester.pump();
 
+      await tester
+          .tap(find.byKey(const Key('reader_foliate_tts_toggle_button')));
+      await tester.pump();
+
       expect(find.byKey(const Key('reader_tts_play_pause_button')), findsOneWidget);
       expect(find.byKey(const Key('reader_tts_previous_button')), findsNothing);
       expect(find.byKey(const Key('reader_tts_next_button')), findsNothing);
@@ -7791,6 +7821,10 @@ void main() {
         ),
       );
       await tester.pump();
+      await tester.pump();
+
+      await tester
+          .tap(find.byKey(const Key('reader_foliate_tts_toggle_button')));
       await tester.pump();
 
       expect(find.byKey(const Key('reader_tts_previous_button')), findsOneWidget);
@@ -7842,6 +7876,10 @@ void main() {
       await tester.pump();
       await tester.pump();
 
+      await tester
+          .tap(find.byKey(const Key('reader_foliate_tts_toggle_button')));
+      await tester.pump();
+
       await tester.tap(find.byKey(const Key('reader_tts_previous_button')));
       await tester.pump();
       expect(tester.takeException(), isNull);
@@ -7886,6 +7924,10 @@ void main() {
         ),
       );
       await tester.pump();
+      await tester.pump();
+
+      await tester
+          .tap(find.byKey(const Key('reader_foliate_tts_toggle_button')));
       await tester.pump();
 
       final speedButtonFinder = find.byKey(const Key('reader_tts_speed_button'));
@@ -7953,6 +7995,10 @@ void main() {
         ),
       );
       await tester.pump();
+      await tester.pump();
+
+      await tester
+          .tap(find.byKey(const Key('reader_foliate_tts_toggle_button')));
       await tester.pump();
 
       expect(find.byKey(const Key('reader_foliate_progress_text')), findsOneWidget);
@@ -8024,6 +8070,113 @@ void main() {
         findsNothing,
       );
     });
+
+    testWidgets(
+        '提供 ttsProvider 時，Mini Player 預設隱藏，須按下朗讀 FAB 按鈕才顯示，'
+        '再按一次收合', (tester) async {
+      final ttsProvider = FakeTtsProvider();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_mini_player_toggle',
+            prefsManager: prefsManager,
+            isFixedLayout: false,
+            ttsProvider: ttsProvider,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final foliateView =
+          tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
+      foliateView.onPageRendered();
+      foliateView.onLayoutResolved?.call(
+        const EpubLayoutInfo(
+          isFixedLayout: false,
+          writingMode: WritingMode.horizontal,
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      final toggleFinder =
+          find.byKey(const Key('reader_foliate_tts_toggle_button'));
+      expect(toggleFinder, findsOneWidget,
+          reason: '朗讀 FAB 按鈕本身在有 ttsProvider 時一律顯示');
+      expect(
+        find.byKey(const Key('reader_tts_play_pause_button')),
+        findsNothing,
+        reason: 'Mini Player 預設隱藏，比照跳頁進度條需先按 FAB 才出現',
+      );
+
+      await tester.tap(toggleFinder);
+      await tester.pump();
+      expect(
+        find.byKey(const Key('reader_tts_play_pause_button')),
+        findsOneWidget,
+      );
+
+      await tester.tap(toggleFinder);
+      await tester.pump();
+      expect(
+        find.byKey(const Key('reader_tts_play_pause_button')),
+        findsNothing,
+      );
+    });
+
+    testWidgets('點擊 Mini Player 的關閉鍵可收合，不影響 TtsController 播放狀態',
+        (tester) async {
+      final ttsProvider = FakeTtsProvider();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_mini_player_close',
+            prefsManager: prefsManager,
+            isFixedLayout: false,
+            ttsProvider: ttsProvider,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final foliateView =
+          tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
+      foliateView.onPageRendered();
+      foliateView.onLayoutResolved?.call(
+        const EpubLayoutInfo(
+          isFixedLayout: false,
+          writingMode: WritingMode.horizontal,
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      await tester.tap(
+          find.byKey(const Key('reader_foliate_tts_toggle_button')));
+      await tester.pump();
+      expect(
+        find.byKey(const Key('reader_tts_play_pause_button')),
+        findsOneWidget,
+      );
+
+      await tester.tap(
+          find.byKey(const Key('reader_tts_mini_player_close_button')));
+      await tester.pump();
+      expect(
+        find.byKey(const Key('reader_tts_play_pause_button')),
+        findsNothing,
+        reason: '關閉鍵只收合控制列本身，不需要底層 TtsController 進入任何特定狀態即可驗證',
+      );
+      expect(tester.takeException(), isNull);
+    });
   });
 
   group('背景播放與系統整合（epic-34-tts-readalong Issue 7）', () {
@@ -8066,6 +8219,10 @@ void main() {
         ),
       );
       await tester.pump();
+      await tester.pump();
+
+      await tester
+          .tap(find.byKey(const Key('reader_foliate_tts_toggle_button')));
       await tester.pump();
 
       final buttonFinder = find.byKey(const Key('reader_tts_play_pause_button'));
@@ -8125,6 +8282,10 @@ void main() {
       await tester.pump();
       await tester.pump();
 
+      await tester
+          .tap(find.byKey(const Key('reader_foliate_tts_toggle_button')));
+      await tester.pump();
+
       final buttonFinder = find.byKey(const Key('reader_tts_play_pause_button'));
       await tester.tap(buttonFinder);
       await tester.pump();
@@ -8168,6 +8329,10 @@ void main() {
         ),
       );
       await tester.pump();
+      await tester.pump();
+
+      await tester
+          .tap(find.byKey(const Key('reader_foliate_tts_toggle_button')));
       await tester.pump();
 
       await tester.tap(find.byKey(const Key('reader_tts_play_pause_button')));

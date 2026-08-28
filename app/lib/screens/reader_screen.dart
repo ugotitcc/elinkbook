@@ -275,6 +275,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   // Issue 9；epic-7 Issue 5 擴充為九宮格）與新的 PDF 熱區皆共用同一個
   // 狀態。預設顯示。
   bool _chromeVisible = true;
+  // TTS Mini Player 是否顯示（epic-34-tts-readalong 追加需求）：預設隱藏，
+  // 由新增的「朗讀」FAB 按鈕（麥克風圖示）切換，Mini Player 本身也有 X
+  // 關閉鍵可收合——純顯示/隱藏開關，不影響 TtsController 播放狀態本身
+  // （關閉 Mini Player 不會暫停朗讀）。
+  bool _ttsMiniPlayerVisible = false;
   // FXL 懸浮「🔖 書籤 toggle」按鈕圖示所需的最小狀態快取
   // （epic-6-annotations Issue 4）：與 NotesBottomSheet 內部「🔖 書籤」
   // 分頁各自獨立載入自己的清單（比照既有分頁按鈕 toggle 與 Bottom Sheet
@@ -2242,6 +2247,28 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                 _chromeVisible &&
                 widget.ttsProvider != null)
               Positioned(
+                top: 296,
+                right: 16,
+                child: ClipOval(
+                  child: Container(
+                    color: _themedFabBackgroundColor,
+                    child: IconButton(
+                      key: const Key('reader_foliate_tts_toggle_button'),
+                      icon: Icon(Icons.record_voice_over,
+                          color: _themedFabIconColor),
+                      tooltip:
+                          _ttsMiniPlayerVisible ? '隱藏朗讀控制列' : '顯示朗讀控制列',
+                      onPressed: () => setState(
+                          () => _ttsMiniPlayerVisible = !_ttsMiniPlayerVisible),
+                    ),
+                  ),
+                ),
+              ),
+            if (isFoliateFormat(format) &&
+                _chromeVisible &&
+                widget.ttsProvider != null &&
+                _ttsMiniPlayerVisible)
+              Positioned(
                 left: 16,
                 right: 16,
                 bottom: _ttsMiniPlayerBottomOffset,
@@ -2263,6 +2290,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                           onPrevious: () {},
                           onNext: () {},
                           onSpeedTap: () {},
+                          onClose: () =>
+                              setState(() => _ttsMiniPlayerVisible = false),
                         )
                       : AnimatedBuilder(
                           animation: _ttsControllerOrNull!,
@@ -2282,6 +2311,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                               onNext: () => controller.nextSegment(),
                               onSpeedTap: () => controller.setSpeed(
                                   _nextTtsSpeedPreset(controller.speed)),
+                              onClose: () =>
+                                  setState(() => _ttsMiniPlayerVisible = false),
                             );
                           },
                         ),

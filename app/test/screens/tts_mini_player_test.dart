@@ -18,6 +18,7 @@ void main() {
         onPrevious: () {},
         onNext: () {},
         onSpeedTap: () {},
+        onClose: () {},
       )));
 
       expect(find.byKey(const Key('reader_tts_play_pause_button')), findsOneWidget);
@@ -37,6 +38,7 @@ void main() {
         onPrevious: () {},
         onNext: () {},
         onSpeedTap: () {},
+        onClose: () {},
       )));
 
       final button = tester.widget<IconButton>(
@@ -61,6 +63,7 @@ void main() {
         onPrevious: () {},
         onNext: () {},
         onSpeedTap: () {},
+        onClose: () {},
       )));
 
       final button = tester.widget<IconButton>(
@@ -85,6 +88,7 @@ void main() {
         onPrevious: () {},
         onNext: () {},
         onSpeedTap: () {},
+        onClose: () {},
       )));
 
       final button = tester.widget<IconButton>(
@@ -109,6 +113,7 @@ void main() {
         onPrevious: () {},
         onNext: () {},
         onSpeedTap: () {},
+        onClose: () {},
       )));
 
       final button = tester.widget<IconButton>(
@@ -136,6 +141,7 @@ void main() {
         onPrevious: () {},
         onNext: () {},
         onSpeedTap: () {},
+        onClose: () {},
       )));
 
       await tester.tap(find.byKey(const Key('reader_tts_play_pause_button')));
@@ -154,6 +160,7 @@ void main() {
         onPrevious: () => tapped = true,
         onNext: () {},
         onSpeedTap: () {},
+        onClose: () {},
       )));
 
       await tester.tap(find.byKey(const Key('reader_tts_previous_button')));
@@ -172,10 +179,36 @@ void main() {
         onPrevious: () {},
         onNext: () => tapped = true,
         onSpeedTap: () {},
+        onClose: () {},
       )));
 
       await tester.tap(find.byKey(const Key('reader_tts_next_button')));
       expect(tapped, isTrue);
+    });
+
+    testWidgets('顯示關閉按鈕，點擊觸發 onClose', (tester) async {
+      var closed = false;
+      await tester.pumpWidget(wrap(TtsMiniPlayer(
+        status: TtsPlaybackStatus.idle,
+        speed: 1.0,
+        isCbz: false,
+        backgroundColor: Colors.black,
+        iconColor: Colors.white,
+        onPlayPause: () {},
+        onPrevious: () {},
+        onNext: () {},
+        onSpeedTap: () {},
+        onClose: () => closed = true,
+      )));
+
+      expect(
+        find.byKey(const Key('reader_tts_mini_player_close_button')),
+        findsOneWidget,
+      );
+      await tester.tap(
+        find.byKey(const Key('reader_tts_mini_player_close_button')),
+      );
+      expect(closed, isTrue);
     });
 
     testWidgets('點擊語速按鈕觸發 onSpeedTap', (tester) async {
@@ -190,6 +223,7 @@ void main() {
         onPrevious: () {},
         onNext: () {},
         onSpeedTap: () => tapped = true,
+        onClose: () {},
       )));
 
       await tester.tap(find.byKey(const Key('reader_tts_speed_button')));
@@ -197,8 +231,8 @@ void main() {
     });
   });
 
-  group('CBZ：只顯示停用的播放鍵', () {
-    testWidgets('只顯示 reader_tts_play_pause_button，其餘三顆按鈕不存在', (tester) async {
+  group('CBZ：只顯示停用的播放鍵＋關閉鍵', () {
+    testWidgets('顯示 reader_tts_play_pause_button 與關閉鍵，其餘三顆按鈕不存在', (tester) async {
       await tester.pumpWidget(wrap(TtsMiniPlayer(
         status: TtsPlaybackStatus.idle,
         speed: 1.0,
@@ -209,12 +243,38 @@ void main() {
         onPrevious: () {},
         onNext: () {},
         onSpeedTap: () {},
+        onClose: () {},
       )));
 
       expect(find.byKey(const Key('reader_tts_play_pause_button')), findsOneWidget);
+      expect(
+        find.byKey(const Key('reader_tts_mini_player_close_button')),
+        findsOneWidget,
+      );
       expect(find.byKey(const Key('reader_tts_previous_button')), findsNothing);
       expect(find.byKey(const Key('reader_tts_next_button')), findsNothing);
       expect(find.byKey(const Key('reader_tts_speed_button')), findsNothing);
+    });
+
+    testWidgets('點擊關閉鍵觸發 onClose（即使播放鍵本身停用）', (tester) async {
+      var closed = false;
+      await tester.pumpWidget(wrap(TtsMiniPlayer(
+        status: TtsPlaybackStatus.idle,
+        speed: 1.0,
+        isCbz: true,
+        backgroundColor: Colors.black,
+        iconColor: Colors.white,
+        onPlayPause: () {},
+        onPrevious: () {},
+        onNext: () {},
+        onSpeedTap: () {},
+        onClose: () => closed = true,
+      )));
+
+      await tester.tap(
+        find.byKey(const Key('reader_tts_mini_player_close_button')),
+      );
+      expect(closed, isTrue);
     });
 
     testWidgets('播放/暫停按鈕為停用狀態（onPressed 為 null），圖示固定為播放箭頭且 tooltip 提示純圖像格式', (tester) async {
@@ -228,6 +288,7 @@ void main() {
         onPrevious: () {},
         onNext: () {},
         onSpeedTap: () {},
+        onClose: () {},
       )));
 
       final button = tester.widget<IconButton>(
