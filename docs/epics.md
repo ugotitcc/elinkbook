@@ -42,7 +42,7 @@
 | 32 | `epic-31-touch-intent-unification` 觸控意圖判讀統一 | 🟡 開發中 (Active) | Issue 1-3 全數完成，待人類確認歸檔 |
 | 33 | `epic-32-foliate-js-paginator-sync` foliate-js paginator.js 上游同步 | 🟡 開發中 (Active) | Issue 1-3 全數完成，待人類確認歸檔 |
 | 34 | `epic-33-foliate-js-vendor-sync` foliate-js vendored 檔案持續同步 | 🟡 開發中 (Active) | Issue 1-2 全數完成，待人類確認歸檔 |
-| 35 | `epic-34-tts-readalong` 語音朗讀（TTS）與同步高亮（Read-along） | 🟡 開發中 (Active) | Issue 1／2／3／4／5／9 已合併並完成真機驗收，Issue 6 計畫已產出（`plans/plan-issue-6.md`）待執行，Issue 10／11 待認領 |
+| 35 | `epic-34-tts-readalong` 語音朗讀（TTS）與同步高亮（Read-along） | 🟡 開發中 (Active) | Issue 1／2／3／4／5／9 已合併，Issue 6 已完成開發與代碼審查（`feat/epic-34-issue-6-mini-player`），Issue 7／8／10／11 待認領 |
 
 **狀態燈號定義**：
 - ⚪ **未開始 (Backlog)**：已被規劃但尚未啟動。無實際目錄。

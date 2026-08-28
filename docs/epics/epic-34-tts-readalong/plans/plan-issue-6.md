@@ -35,7 +35,7 @@ CBZ（無文字可朗讀）維持 Issue 2 既有的「顯示但停用」設計�
 - Consumes：既有 `TtsPlaybackStatus`（`app/lib/reader/tts_controller.dart`，`enum TtsPlaybackStatus { idle, playing, paused }`）
 - Produces：`class TtsMiniPlayer extends StatelessWidget`，建構參數 `status`（`TtsPlaybackStatus`，必要）／`speed`（`double`，必要）／`isCbz`（`bool`，必要）／`backgroundColor`（`Color`，必要）／`iconColor`（`Color`，必要）／`onPlayPause`（`VoidCallback`，必要）／`onPrevious`（`VoidCallback`，必要）／`onNext`（`VoidCallback`，必要）／`onSpeedTap`（`VoidCallback`，必要）——皆供 Task 2 的 `ReaderScreen` 使用。本元件不依賴 `TtsController`、不依賴 `ReaderScreen`，可被完全獨立 pump 測試（不像 `ReaderScreen` widget test 有 WebView 誠實邊界限制）。
 
-- [ ] **Step 1：寫失敗測試**
+- [x] **Step 1：寫失敗測試**
 
 建立 `app/test/screens/tts_mini_player_test.dart`：
 
@@ -263,7 +263,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：跑測試確認全數失敗**
+- [x] **Step 2：跑測試確認全數失敗**
 
 ```
 flutter test test/screens/tts_mini_player_test.dart
@@ -271,7 +271,7 @@ flutter test test/screens/tts_mini_player_test.dart
 
 Expected：FAIL——`package:elinkbook/screens/tts_mini_player.dart` 尚不存在，編譯期即報錯。
 
-- [ ] **Step 3：實作 `TtsMiniPlayer`**
+- [x] **Step 3：實作 `TtsMiniPlayer`**
 
 建立 `app/lib/screens/tts_mini_player.dart`：
 
@@ -377,7 +377,7 @@ class TtsMiniPlayer extends StatelessWidget {
 }
 ```
 
-- [ ] **Step 4：跑測試確認全數通過**
+- [x] **Step 4：跑測試確認全數通過**
 
 ```
 flutter test test/screens/tts_mini_player_test.dart
@@ -391,7 +391,7 @@ flutter analyze
 
 Expected：`No issues found!`
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 git add app/lib/screens/tts_mini_player.dart app/test/screens/tts_mini_player_test.dart
@@ -410,7 +410,7 @@ git commit -m "feat(epic-34): 新增 TtsMiniPlayer 獨立元件（Issue 6 Task 1
 - Consumes：Task 1 的 `TtsMiniPlayer`；既有 `_ttsControllerOrNull`／`_themedFabBackgroundColor`／`_themedFabIconColor`／`_ttsSpeedPresets`／`_nextTtsSpeedPreset`／`_resolved`／`_epubPositionInfo`／`_chromeVisible`
 - Produces：`ReaderScreen` 內部接線（無新增公開 API），新增私有 getter `double get _ttsMiniPlayerBottomOffset`
 
-- [ ] **Step 1：寫失敗測試**
+- [x] **Step 1：寫失敗測試**
 
 在 `app/test/screens/reader_screen_test.dart` 找到本檔案結尾（最後一個 `group` 之後、`main()` 函式收尾 `}` 之前——若不確定確切收尾位置，搜尋檔案最後一次出現的 `});` 後接 `}`），新增一個新的 group：
 
@@ -514,7 +514,7 @@ git commit -m "feat(epic-34): 新增 TtsMiniPlayer 獨立元件（Issue 6 Task 1
   });
 ```
 
-- [ ] **Step 2：跑測試確認新測試失敗（其餘既有測試仍應通過）**
+- [x] **Step 2：跑測試確認新測試失敗（其餘既有測試仍應通過）**
 
 ```
 flutter test test/screens/reader_screen_test.dart
@@ -522,7 +522,7 @@ flutter test test/screens/reader_screen_test.dart
 
 Expected：新增的 2 個測試 FAIL（`TtsMiniPlayer` 尚未接線，`reader_foliate_progress_text` 與 `reader_tts_play_pause_button` 可能因版面衝突或尚未共存而失敗；實際失敗原因以當下執行結果為準），既有測試維持原本通過狀態。
 
-- [ ] **Step 3：新增 `_ttsMiniPlayerBottomOffset` getter**
+- [x] **Step 3：新增 `_ttsMiniPlayerBottomOffset` getter**
 
 在 `app/lib/screens/reader_screen.dart` 找到 `_ttsSpeedPresets`／`_nextTtsSpeedPreset` 定義（Issue 5 已新增）：
 
@@ -556,7 +556,7 @@ Expected：新增的 2 個測試 FAIL（`TtsMiniPlayer` 尚未接線，`reader_f
   }
 ```
 
-- [ ] **Step 4：以 `TtsMiniPlayer` 取代既有兩個 FAB 區塊**
+- [x] **Step 4：以 `TtsMiniPlayer` 取代既有兩個 FAB 區塊**
 
 在 `app/lib/screens/reader_screen.dart` 找到既有的播放/暫停 FAB 區塊（Issue 2）與上一句/下一句/語速 FAB 區塊（Issue 5）——從播放/暫停區塊的 `if (isFoliateFormat(format) &&\n                _chromeVisible &&\n                widget.ttsProvider != null)` 開始，到上一句/下一句/語速區塊結尾的 `],`（collection-if spread 結尾）為止，完整內容為：
 
@@ -736,7 +736,7 @@ Expected：新增的 2 個測試 FAIL（`TtsMiniPlayer` 尚未接線，`reader_f
               ),
 ```
 
-- [ ] **Step 5：新增 import**
+- [x] **Step 5：新增 import**
 
 在 `app/lib/screens/reader_screen.dart` 找到既有的：
 
@@ -750,7 +750,7 @@ import 'annotation_toolbar.dart';
 import 'tts_mini_player.dart';
 ```
 
-- [ ] **Step 6：跑測試確認全數通過、零回歸**
+- [x] **Step 6：跑測試確認全數通過、零回歸**
 
 ```
 flutter test test/screens/reader_screen_test.dart
@@ -770,7 +770,7 @@ flutter analyze
 
 Expected：`No issues found!`
 
-- [ ] **Step 7：Commit**
+- [x] **Step 7：Commit**
 
 ```bash
 git add app/lib/screens/reader_screen.dart app/test/screens/reader_screen_test.dart

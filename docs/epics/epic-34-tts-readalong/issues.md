@@ -180,9 +180,11 @@
 - `ReaderScreen` widget test：Mini Player 各按鈕正確觸發對應的 `TtsController` 方法；與底部導覽列同時顯示時的版面不互相遮擋（可用 widget tree 結構斷言，不需要視覺回歸測試）。
 
 **驗收標準：**
-- [ ] Mini Player 正式 UI 完成，整合播放/暫停/上一句/下一句/語速控制
-- [ ] 與既有底部導覽列/目錄側邊欄顯示連動正常，無遮擋
-- [ ] `flutter analyze`／`flutter test` 全數通過，既有底部工具列相關測試零回歸
+- [x] Mini Player 正式 UI 完成，整合播放/暫停/上一句/下一句/語速控制
+- [x] 與既有底部導覽列/目錄側邊欄顯示連動正常，無遮擋
+- [x] `flutter analyze`／`flutter test` 全數通過，既有底部工具列相關測試零回歸（全專案 1803 個測試通過）
+
+**狀態：開發與全分支審查完成（Approved，分支 `feat/epic-34-issue-6-mini-player`，2026-08-28）。** 程式審查報告見 `reviews/review-issue-6-code.md`。
 
 ---
 
