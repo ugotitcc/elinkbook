@@ -275,6 +275,26 @@ class TtsController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// App 從背景恢復前景時，主動重新送出目前播放位置對應的高亮（
+  /// epic-34-tts-readalong Issue 7，spec.md「TtsController」Audio Focus
+  /// 段落前的 User Story 28，對應 design.md「App 背景/前景切換時的高亮
+  /// 同步落差」／`review-design.md` Important #3）。呼叫端（[ReaderScreen]）
+  /// 在 `didChangeAppLifecycleState` 的 `AppLifecycleState.resumed` 分支
+  /// 無條件呼叫本方法即可，不需要自行判斷「目前是否正在播放」——`idle`
+  /// 狀態下為 no-op（沒有目前段落可以重新顯示），比照 [handleExternalPositionChange]
+  /// 既有的「呼叫端無條件呼叫、內部自行判斷是否需要動作」設計慣例。
+  ///
+  /// **只重送「高亮」，不含 design.md 原文一併提到的「翻頁指令」**：安全
+  /// 視窗跟隨翻頁機制是 Issue 8（尚未實作）的範圍，本方法目前只能重新
+  /// 顯示高亮本身，不觸發任何捲動/翻頁；Issue 8 完成後若需要一併重新
+  /// 觸發跟隨翻頁，屬於該 Issue 落地時的範圍，本方法不預先假設其存在。
+  void resyncHighlight() {
+    if (_disposed) return;
+    if (_status == TtsPlaybackStatus.idle) return;
+    if (_currentIndex < 0 || _currentIndex >= _segments.length) return;
+    onHighlightSegment?.call(_segments[_currentIndex]);
+  }
+
   /// 每次呼叫 [_playCurrentSegment] 取得的世代編號（epic-34-tts-readalong
   /// Issue 5）：本方法目前有四個呼叫端——[play]（idle 分支尾端）、
   /// [_handleSegmentCompleted]（自動接續下一句）、[nextSegment]、

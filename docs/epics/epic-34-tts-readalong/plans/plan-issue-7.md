@@ -230,7 +230,7 @@ git commit -m "feat(epic-34): Android 平台設定——audio_service 依賴與 
 - Consumes：既有 `TtsController` 私有欄位 `_status`／`_segments`／`_currentIndex`／`_disposed`、既有建構參數 `onHighlightSegment`。
 - Produces：`void resyncHighlight()`（公開方法，`TtsController` 新增），供 Task 6 `ReaderScreen` 呼叫。
 
-- [ ] **Step 1：寫失敗測試**
+- [x] **Step 1：寫失敗測試**
 
 在 `app/test/reader/tts_controller_test.dart` 找到既有的最後一個 `test(...)` 區塊結尾（檔案內搜尋最後一次出現的 `});`，緊接其後、`main()` 收尾 `}` 之前）新增：
 
@@ -285,7 +285,7 @@ git commit -m "feat(epic-34): Android 平台設定——audio_service 依賴與 
   });
 ```
 
-- [ ] **Step 2：跑測試確認新增測試皆失敗**
+- [x] **Step 2：跑測試確認新增測試皆失敗**
 
 ```
 flutter test test/reader/tts_controller_test.dart
@@ -293,7 +293,7 @@ flutter test test/reader/tts_controller_test.dart
 
 Expected：FAIL——`resyncHighlight` 方法尚不存在，編譯期即報錯。
 
-- [ ] **Step 3：實作 `resyncHighlight()`**
+- [x] **Step 3：實作 `resyncHighlight()`**
 
 在 `app/lib/reader/tts_controller.dart` 找到既有 `handleExternalPositionChange()` 方法結尾（第 276 行 `}`）與其後的 `_segmentGeneration` 欄位文件註解（第 278 行起）之間，插入：
 
@@ -315,13 +315,12 @@ Expected：FAIL——`resyncHighlight` 方法尚不存在，編譯期即報錯�
   void resyncHighlight() {
     if (_disposed) return;
     if (_status == TtsPlaybackStatus.idle) return;
+    if (_currentIndex < 0 || _currentIndex >= _segments.length) return;
     onHighlightSegment?.call(_segments[_currentIndex]);
   }
 ```
 
-**審查 `review-plan-issue-7.md` 4.1（`_currentIndex` 邊界檢查）不採納**：`_status != idle` 時 `_currentIndex` 恆為 `_segments` 的合法索引，這個不變量是結構性成立的——`play()` 的 `idle` 分支內，`_segments`／`_currentIndex` 賦值與 `_status` 變成非 `idle`（`_playCurrentSegment()` 內）之間沒有任何 `await` 造成的執行權讓渡（Dart 單執行緒，同步程式碼區塊不會被其他呼叫插入），不存在「狀態非 idle 但索引無效」的可達路徑；本類別既有的 `_playCurrentSegment()`（第 296 行）本身就是 `_segments[_currentIndex]` 直接存取、無邊界檢查，是同一個不變量的既有先例。加上邊界檢查不會讓程式更正確，只會讓 `resyncHighlight()` 跟同類別內這個既有先例的寫法不一致，屬於 `CLAUDE.md`「不要為不可能發生的情境新增驗證」明確排除的情況，故維持上方程式碼原樣，不加此檢查。
-
-- [ ] **Step 4：跑測試確認全數通過**
+- [x] **Step 4：跑測試確認全數通過**
 
 ```
 flutter test test/reader/tts_controller_test.dart
@@ -335,10 +334,10 @@ flutter analyze
 
 Expected：`No issues found!`
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
-git add app/lib/reader/tts_controller.dart app/test/reader/tts_controller_test.dart
+git add app/lib/reader/tts_controller.dart app/test/reader/tts_controller_test.dart docs/epics/epic-34-tts-readalong/plans/plan-issue-7.md
 git commit -m "feat(epic-34): TtsController 新增 resyncHighlight()（Issue 7 Task 2）"
 ```
 
