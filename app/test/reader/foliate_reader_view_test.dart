@@ -1597,6 +1597,28 @@ void main() {
     });
   });
 
+  group('onTtsHighlightOutOfSafeWindow（epic-34-tts-readalong Issue 8）', () {
+    test('建構參數正確保存於 widget 欄位', () {
+      void handler(String direction) {}
+      final view = FoliateReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+        onTtsHighlightOutOfSafeWindow: handler,
+      );
+      expect(view.onTtsHighlightOutOfSafeWindow, same(handler));
+    });
+
+    test('未提供時預設為 null（既有呼叫端零回歸）', () {
+      const view = FoliateReaderView(
+        filePath: '/tmp/sample.epub',
+        onPageRendered: _noop,
+        onError: _noopError,
+      );
+      expect(view.onTtsHighlightOutOfSafeWindow, isNull);
+    });
+  });
+
   // Issue 8 審查 Important #7：mounted 守衛/dispose 競態測試
   // 驗證「快取完成前 dispose」不會導致快取目錄洩漏
   group('mounted guard / dispose race', () {
