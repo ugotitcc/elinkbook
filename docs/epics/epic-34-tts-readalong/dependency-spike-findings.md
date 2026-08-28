@@ -31,6 +31,8 @@
 
 ## targetSdk manifest 需求清單（供 Issue 7 落實）
 
+**Issue 7 落實時的追加修正**：官方 `audio_service` 套件 README「Android setup」段落另要求 `android.permission.WAKE_LOCK`（前景服務保持 CPU 喚醒狀態所需），本清單原五項遺漏此項——Issue 1 spike 階段核對的是套件 `example/android/app/src/main/AndroidManifest.xml`（該檔案第 5 行確實含此權限，但撰寫本清單時漏抄）。Issue 7 落實時已直接依 README 正文重新核對並補上，見 `plans/plan-issue-7.md` Task 1「規劃階段查證」。
+
 專案 `targetSdk` 解析為 `36`（Android 16），`audio_service` 依此 targetSdk 觸發以下 `AndroidManifest.xml` 宣告需求（`app/android/app/src/main/AndroidManifest.xml` 目前完全沒有任何 `<service>` 宣告或前景服務相關權限，Issue 7 是從零開始新增，不是修改既有宣告）：
 
 1. **前景服務型別宣告**：`audio_service` 註冊的 Service 需標註 `android:foregroundServiceType="mediaPlayback"`。

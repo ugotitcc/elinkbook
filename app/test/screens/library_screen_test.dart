@@ -36,6 +36,8 @@ import 'package:elinkbook/screens/reader_screen.dart';
 import '../support/fake_highlights_repository.dart';
 import '../support/fake_notes_repository.dart';
 import '../support/fake_tts_provider.dart';
+import 'package:elinkbook/reader/tts_audio_handler.dart';
+import '../support/fake_tts_audio_focus_source.dart';
 import 'package:elinkbook/reader/highlight.dart';
 import 'package:elinkbook/reader/highlight_style.dart';
 import 'package:elinkbook/reader/pdf_reader_view.dart';
@@ -2232,6 +2234,42 @@ void main() {
   });
 
   testWidgets(
+      'LibraryScreen 點開一本書後，ReaderScreen 收到的 ttsAudioHandler／'
+      'ttsAudioFocusSource 正確貫穿（epic-34-tts-readalong Issue 7）',
+      (tester) async {
+    final book = _testBook(
+      id: '1',
+      title: '紅樓夢',
+      author: '曹雪芹',
+      filePath: 'content://example/1.txt',
+    );
+    final ttsAudioHandler = TtsAudioHandler();
+    final ttsAudioFocusSource = FakeTtsAudioFocusSource();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: [book]),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+          readerFeatureRepositories: LibraryReaderFeatureRepositories(
+            ttsAudioHandler: ttsAudioHandler,
+            ttsAudioFocusSource: ttsAudioFocusSource,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('book_item_1')));
+    await tester.pumpAndSettle();
+
+    final readerScreen = tester.widget<ReaderScreen>(find.byType(ReaderScreen));
+    expect(readerScreen.ttsAudioHandler, same(ttsAudioHandler));
+    expect(readerScreen.ttsAudioFocusSource, same(ttsAudioFocusSource));
+  });
+
+  testWidgets(
       'LibraryScreen 點開一本書後，ReaderScreen 收到的 isFixedLayout／libraryRepository 正確貫穿（epic-17-epub-render-migration Issue 3）',
       (tester) async {
     // 使用 .txt 格式讓 ReaderScreen 命中「不支援格式」分支（純 Dart 安全
@@ -3136,6 +3174,66 @@ void main() {
     expect(readerScreen.ttsProvider, same(ttsProvider),
         reason: '透過分類篩選路徑開書，ReaderScreen 收到的 ttsProvider 應與外層 '
             '一致');
+  });
+
+  testWidgets(
+      '透過分類篩選路徑開書，ReaderScreen 收到的 ttsAudioHandler／'
+      'ttsAudioFocusSource 應與外層一致（epic-34-tts-readalong Issue 7）；'
+      '順帶驗證改為整包轉送後，先前遺漏的 layoutPresetRepository／'
+      'bookReaderPrefsRepository 也一併正確貫穿（審查 review-plan-issue-7.md '
+      '4.3 採納，修復既有缺口，非本 Issue 造成，見 Task 7 Step 3「理由」）',
+      (tester) async {
+    final book = _testBook(
+      id: '1',
+      title: '紅樓夢',
+      author: '曹雪芹',
+      filePath: 'content://example/1.txt',
+      groupName: '奇幻',
+    );
+    final ttsAudioHandler = TtsAudioHandler();
+    final ttsAudioFocusSource = FakeTtsAudioFocusSource();
+    final layoutPresetRepository =
+        LayoutPresetRepository(libraryRepository.database);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: [book]),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+          readerFeatureRepositories: LibraryReaderFeatureRepositories(
+            ttsAudioHandler: ttsAudioHandler,
+            ttsAudioFocusSource: ttsAudioFocusSource,
+            layoutPresetRepository: layoutPresetRepository,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('group_tile_奇幻')));
+    await tester.pumpAndSettle();
+
+    final filteredScreenFinder = _filteredLibraryScreenFinder('奇幻');
+    final filteredScreen = tester.widget<LibraryScreen>(filteredScreenFinder);
+    expect(filteredScreen.readerFeatureRepositories.ttsAudioHandler,
+        same(ttsAudioHandler));
+    expect(filteredScreen.readerFeatureRepositories.ttsAudioFocusSource,
+        same(ttsAudioFocusSource));
+    expect(filteredScreen.readerFeatureRepositories.layoutPresetRepository,
+        same(layoutPresetRepository),
+        reason: '改為整包轉送（Step 3）前，_openGroupFilteredView() 手動列舉'
+            '欄位時遺漏了 layoutPresetRepository，此處鎖定該既有缺口已修復。');
+
+    await tester.tap(find.descendant(
+      of: filteredScreenFinder,
+      matching: find.byKey(const Key('book_item_1')),
+    ));
+    await tester.pumpAndSettle();
+
+    final readerScreen = tester.widget<ReaderScreen>(find.byType(ReaderScreen));
+    expect(readerScreen.ttsAudioHandler, same(ttsAudioHandler));
+    expect(readerScreen.ttsAudioFocusSource, same(ttsAudioFocusSource));
   });
 
   testWidgets(

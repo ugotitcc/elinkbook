@@ -822,6 +822,55 @@ void main() {
     expect(() => controller.previousSegment(), returnsNormally);
     expect(() => controller.setSpeed(1.5), returnsNormally);
   });
+
+  test('resyncHighlight() 於 idle 狀態（從未播放過）為 no-op，不呼叫 onHighlightSegment', () {
+    TtsSegmentCfi? received;
+    var callCount = 0;
+    final controller = TtsController(
+      provider: FakeTtsProvider(),
+      player: FakeTtsAudioPlayer(),
+      loadSegments: () async => segments,
+      onHighlightSegment: (segment) {
+        received = segment;
+        callCount++;
+      },
+    );
+    controller.resyncHighlight();
+    expect(callCount, 0);
+    expect(received, isNull);
+  });
+
+  test('resyncHighlight() 於 playing 狀態重新呼叫 onHighlightSegment，帶目前段落', () async {
+    TtsSegmentCfi? received;
+    var callCount = 0;
+    final provider = FakeTtsProvider();
+    final player = FakeTtsAudioPlayer();
+    final controller = TtsController(
+      provider: provider,
+      player: player,
+      loadSegments: () async => segments,
+      onHighlightSegment: (segment) {
+        received = segment;
+        callCount++;
+      },
+    );
+    await controller.play();
+    final callCountAfterPlay = callCount;
+
+    controller.resyncHighlight();
+
+    expect(callCount, callCountAfterPlay + 1,
+        reason: 'resyncHighlight() 應額外觸發一次 onHighlightSegment');
+    expect(received, segments[0]);
+  });
+
+  test('resyncHighlight() 於 disposed 後為 no-op（不拋出例外）', () async {
+    final controller = buildController();
+    await controller.play();
+    controller.dispose();
+
+    expect(() => controller.resyncHighlight(), returnsNormally);
+  });
 }
 
 

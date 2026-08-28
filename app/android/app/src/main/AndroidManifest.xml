@@ -1,4 +1,5 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <application
         android:label="elinkBook"
         android:name="${applicationName}"
@@ -53,11 +54,44 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
+
+        <!-- epic-34-tts-readalong Issue 7：audio_service 背景播放服務，
+             宣告內容逐字核對自套件官方參考實作（見本計畫「規劃階段查證」）。
+             exported="true" 是必要值，非疏漏——MediaButtonReceiver 需要
+             接收系統層（藍牙/有線耳機線控）送進來的按鍵廣播，AudioService
+             需要接收系統媒體瀏覽器查詢；兩者皆設為 false 會讓耳機線控與
+             背景服務啟動整組失效。 -->
+        <service
+            android:name="com.ryanheise.audioservice.AudioService"
+            android:foregroundServiceType="mediaPlayback"
+            android:exported="true"
+            tools:ignore="Instantiatable">
+            <intent-filter>
+                <action android:name="android.media.browse.MediaBrowserService" />
+            </intent-filter>
+        </service>
+
+        <receiver
+            android:name="com.ryanheise.audioservice.MediaButtonReceiver"
+            android:exported="true"
+            tools:ignore="Instantiatable">
+            <intent-filter>
+                <action android:name="android.intent.action.MEDIA_BUTTON" />
+            </intent-filter>
+        </receiver>
     </application>
     <!-- epic-8-sync：PocketBase 同步需要網路存取；本專案自架架構下
          base URL 常見為純 http://（見 docs/epics/epic-8-sync/
          pocketbase-self-hosting.md「測試環境」），故同時允許明文流量。 -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- epic-34-tts-readalong Issue 7：audio_service 背景播放前景服務所需
+         權限（見 dependency-spike-findings.md「targetSdk manifest 需求
+         清單」；WAKE_LOCK 為本 Issue 規劃階段查證官方 README 後補上，
+         Issue 1 spike 原清單遺漏此項）。 -->
+    <uses-permission android:name="android.permission.WAKE_LOCK"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"/>
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
          https://developer.android.com/reference/android/content/Intent#ACTION_PROCESS_TEXT.

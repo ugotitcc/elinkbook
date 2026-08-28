@@ -275,6 +275,40 @@ class TtsController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// App 從背景恢復前景時，主動重新送出目前播放位置對應的高亮（
+  /// epic-34-tts-readalong Issue 7，spec.md「TtsController」Audio Focus
+  /// 段落前的 User Story 28，對應 design.md「App 背景/前景切換時的高亮
+  /// 同步落差」／`review-design.md` Important #3）。呼叫端（[ReaderScreen]）
+  /// 在 `didChangeAppLifecycleState` 的 `AppLifecycleState.resumed` 分支
+  /// 無條件呼叫本方法即可，不需要自行判斷「目前是否正在播放」——`idle`
+  /// 狀態下為 no-op（沒有目前段落可以重新顯示），比照 [handleExternalPositionChange]
+  /// 既有的「呼叫端無條件呼叫、內部自行判斷是否需要動作」設計慣例。
+  ///
+  /// **只重送「高亮」，不含 design.md 原文一併提到的「翻頁指令」**：安全
+  /// 視窗跟隨翻頁機制是 Issue 8（尚未實作）的範圍，本方法目前只能重新
+  /// 顯示高亮本身，不觸發任何捲動/翻頁；Issue 8 完成後若需要一併重新
+  /// 觸發跟隨翻頁，屬於該 Issue 落地時的範圍，本方法不預先假設其存在。
+  ///
+  /// **保留 `_currentIndex` 邊界檢查（審查 `review-plan-issue-7.md` 4.1／
+  /// `reviews/review-issue-7-code.md` 追蹤，2026-08-28 人類確認保留）**：
+  /// `_status != idle` 時 `_currentIndex` 目前確實恆為 `_segments` 的合法
+  /// 索引（由 [play]／[_playCurrentSegment] 等既有內部方法保證，
+  /// `_playCurrentSegment()` 本身即無邊界檢查直接存取），但本方法與那些
+  /// 方法性質不同——它是本類別**唯一一個由 App 生命週期事件（
+  /// `AppLifecycleState.resumed`）觸發的公開方法**，呼叫時機與內部狀態
+  /// 轉換完全解耦，不像 `_playCurrentSegment()` 只會被同一組緊密耦合的
+  /// 內部呼叫路徑呼叫。這道檢查是刻意留給這個對外邊界的防禦性寫法：即使
+  /// 未來 [handleExternalPositionChange]／[play] 的內部順序被改動、
+  /// 不慎打破「非 idle 時索引恆合法」這個不變量，本方法也不會因此拋出
+  /// `RangeError` 讓 App 崩潰，只是安靜地不重送高亮——這正是本方法既有
+  /// 「呼叫端無條件呼叫、內部自行判斷是否需要動作」設計慣例的自然延伸。
+  void resyncHighlight() {
+    if (_disposed) return;
+    if (_status == TtsPlaybackStatus.idle) return;
+    if (_currentIndex < 0 || _currentIndex >= _segments.length) return;
+    onHighlightSegment?.call(_segments[_currentIndex]);
+  }
+
   /// 每次呼叫 [_playCurrentSegment] 取得的世代編號（epic-34-tts-readalong
   /// Issue 5）：本方法目前有四個呼叫端——[play]（idle 分支尾端）、
   /// [_handleSegmentCompleted]（自動接續下一句）、[nextSegment]、

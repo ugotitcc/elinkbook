@@ -19,6 +19,9 @@ import '../reader/epub_position_info.dart';
 import '../reader/epub_selection_info.dart';
 import '../reader/foliate_bridge_codec.dart';
 import '../reader/foliate_reader_view.dart';
+import '../reader/tts_audio_focus_coordinator.dart';
+import '../reader/tts_audio_focus_source.dart';
+import '../reader/tts_audio_handler.dart';
 import '../reader/tts_audio_player.dart';
 import '../reader/tts_controller.dart';
 import '../reader/tts_provider.dart';
@@ -162,6 +165,8 @@ class ReaderScreen extends StatefulWidget {
   /// 也會顯示明確停用狀態的按鈕（非隱藏，見 `issues.md` Issue 2 驗收
   /// 標準），因為 CBZ 是純圖像格式、沒有文字可朗讀。
   final TtsProvider? ttsProvider;
+  final TtsAudioHandler? ttsAudioHandler;
+  final TtsAudioFocusSource? ttsAudioFocusSource;
 
   const ReaderScreen({
     super.key,
@@ -181,6 +186,8 @@ class ReaderScreen extends StatefulWidget {
     this.bookReaderPrefsRepository,
     this.syncCheckpointTrigger,
     this.ttsProvider,
+    this.ttsAudioHandler,
+    this.ttsAudioFocusSource,
   });
 
   @override
@@ -292,6 +299,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   // 對 PDF 的既有作法。
   EpubPositionInfo? _epubPositionInfo;
   TtsController? _ttsController;
+  TtsAudioFocusCoordinator? _ttsAudioFocusCoordinator;
   // 目錄樹狀結構快取（Epic 5 Issue 4），由 onLayoutResolved 觸發一次性
   // 背景抓取（見 _handleLayoutResolved）。樹狀結構不隨版面設定變動，開書
   // 期間只抓取一次，不需要每次版面參數變動都重新請求。
@@ -510,6 +518,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     WidgetsBinding.instance.removeObserver(this);
     _volumeKeyChannel.setMethodCallHandler(null);
     _pdfSearchStateNotifier.dispose();
+    _ttsAudioFocusCoordinator?.dispose();
+    widget.ttsAudioHandler?.detachController();
     _ttsController?.dispose();
     // 離開閱讀畫面時觸發一次位置寫入（spec.md「本機閱讀位置記憶」寫入
     // 時機之一）。不 await——dispose() 是同步方法，且這是離開畫面前的
@@ -552,6 +562,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       // 快取後無條件重新呼叫一次（epic-19 Issue 1 review Critical 2）。
       _lastAppliedFullscreen = null;
       _applySystemUiMode();
+      _ttsController?.resyncHighlight();
     }
   }
 
@@ -2679,7 +2690,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   TtsController? get _ttsControllerOrNull {
     final provider = widget.ttsProvider;
     if (provider == null) return null;
-    return _ttsController ??= TtsController(
+    if (_ttsController != null) return _ttsController;
+    final controller = TtsController(
       provider: provider,
       player: JustAudioTtsPlayer(),
       loadSegments: () async {
@@ -2723,6 +2735,14 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         );
       },
     );
+    _ttsController = controller;
+    widget.ttsAudioHandler?.attachController(controller, bookTitle: widget.bookTitle);
+    final focusSource = widget.ttsAudioFocusSource;
+    if (focusSource != null) {
+      _ttsAudioFocusCoordinator =
+          TtsAudioFocusCoordinator(source: focusSource, controller: controller);
+    }
+    return controller;
   }
 
   /// 語速調整（epic-34-tts-readalong Issue 5）的 UI 預設清單，`1.0` 為

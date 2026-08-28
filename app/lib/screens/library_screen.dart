@@ -469,6 +469,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
               bookReaderPrefsRepository: widget.readerFeatureRepositories.bookReaderPrefsRepository,
               syncCheckpointTrigger: widget.syncDependencies.syncCheckpointTrigger,
               ttsProvider: widget.readerFeatureRepositories.ttsProvider,
+              ttsAudioHandler: widget.readerFeatureRepositories.ttsAudioHandler,
+              ttsAudioFocusSource: widget.readerFeatureRepositories.ttsAudioFocusSource,
             ),
           ),
         )
@@ -616,13 +618,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
               repository: widget.repository,
               importService: widget.importService,
               prefsManager: widget.prefsManager,
-              readerFeatureRepositories: LibraryReaderFeatureRepositories(
-                bookmarksRepository: widget.readerFeatureRepositories.bookmarksRepository,
-                highlightsRepository: widget.readerFeatureRepositories.highlightsRepository,
-                notesRepository: widget.readerFeatureRepositories.notesRepository,
-                customFontsRepository: widget.readerFeatureRepositories.customFontsRepository,
-                ttsProvider: widget.readerFeatureRepositories.ttsProvider,
-              ),
+              readerFeatureRepositories: widget.readerFeatureRepositories,
               // epic-8-sync Issue 10：先前遺漏這三個同步相關欄位，導致從這條
               // 分類篩選路徑開書時 syncCheckpointTrigger 無法貫穿到
               // ReaderScreen，「離開畫面」／「閱讀中 5 分鐘計時器」兩種
