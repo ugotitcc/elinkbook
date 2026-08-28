@@ -783,6 +783,36 @@ void main() {
     expect(player.loadedFiles, ['/fake/segment_1.wav']);
   });
 
+  test('nextSegment() 於合成進行中，另一次 nextSegment() 呼叫直接跳出章節範圍時，'
+      '過期呼叫完成後不會再呼叫 player.loadFile()（review-issue-5-code.md Minor #2：'
+      '章節末尾分支的 _segmentGeneration 提前失效）', () async {
+    final controller = buildController(); // 只有兩段：segments[0]/segments[1]
+    await controller.play(); // 第 0 段已在播放中
+
+    final synthCompleter = Completer<void>();
+    provider.nextSynthesizeCompleter = synthCompleter;
+    final firstNext = controller.nextSegment(); // 跳到第 1 段，合成進行中
+    await Future<void>.delayed(Duration.zero);
+
+    // 第二次呼叫時 nextIndex（=2）已超出 segments.length（=2），同步走
+    // 「章節末尾」分支——_segmentGeneration 立即遞增、狀態立即重設為
+    // idle，不等待任何 synthesize()。
+    await controller.nextSegment();
+
+    expect(controller.status, TtsPlaybackStatus.idle);
+    expect(controller.currentIndex, -1);
+    expect(player.callLog, contains('pause'));
+
+    // 讓第一次呼叫（較舊、此時已過期）的合成才完成。
+    synthCompleter.complete();
+    await firstNext;
+
+    // 過期結果不應該被載入播放器——只有初次 play() 合成的第 0 段音訊，
+    // 第一次 nextSegment() 對應的第 1 段音訊不應該出現在這裡。
+    expect(player.loadedFiles, ['/fake/segment_1.wav']);
+    expect(controller.status, TtsPlaybackStatus.idle);
+  });
+
   test('dispose() 後呼叫 nextSegment()/previousSegment()/setSpeed() 不拋出例外', () async {
     final controller = buildController();
     await controller.play();
