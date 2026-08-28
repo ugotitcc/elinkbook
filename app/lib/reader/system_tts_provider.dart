@@ -25,6 +25,21 @@ class SystemTtsProvider implements TtsProvider {
     return const [TtsVoice.systemDefault];
   }
 
+  /// 查詢目前引擎單次合成文字長度上限（epic-34-tts-readalong Issue 11）。
+  /// 呼叫失敗（例如平台方法未實作、逾時）時回傳 `null` 而非拋出例外——
+  /// 呼叫端（`TtsController`）把 `null` 視為「未知上限，不套用硬性長度
+  /// 上限防線」，比照本類別其餘防禦性查詢（`getEngines`/`getDefaultEngine`）
+  /// 既有的容錯風格。
+  @override
+  Future<int?> getMaxInputLength() async {
+    try {
+      return await _flutterTts.getMaxSpeechInputLength;
+    } catch (e) {
+      _log('Failed to query getMaxSpeechInputLength: $e');
+      return null;
+    }
+  }
+
   /// 同時寫入 debug console 與 App 內建的閱讀器 Console Log 畫面
   /// （「設定 → 閱讀器 Console Log」，見 [ReaderConsoleLog]），
   /// 讓真機診斷不必接電腦跑 `adb logcat`。

@@ -5,6 +5,15 @@
 abstract class TtsProvider {
   Future<List<TtsVoice>> getAvailableVoices();
 
+  /// 目前引擎單次合成文字長度上限（epic-34-tts-readalong Issue 11）。
+  /// `null` 代表引擎未回報或不支援查詢此限制——呼叫端此時不套用硬性
+  /// 長度上限防線，僅依賴 main.js buildTtsSegments() 既有的標點/次要
+  /// 邊界切句規則（見 Task 1）。Phase 1 僅 SystemTtsProvider 有意義的
+  /// 實作（透過 flutter_tts getMaxSpeechInputLength，Android 專屬
+  /// API）；Phase 2/3 的雲端/端側神經語音 Provider 若無對應概念，可
+  /// 直接回傳 null。
+  Future<int?> getMaxInputLength();
+
   /// 合成 [text] 為音訊檔並回傳結果。音訊管線統一走檔案合成（見
   /// design.md 決策 9），不支援直接輸出喇叭的即時朗讀。
   Future<TtsSynthesisResult> synthesize(
