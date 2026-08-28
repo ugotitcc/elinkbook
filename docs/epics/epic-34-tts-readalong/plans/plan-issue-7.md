@@ -760,7 +760,7 @@ git commit -m "feat(epic-34): 新增 TtsAudioFocusSource／TtsAudioFocusCoordina
 - Consumes：`TtsController`（`status`／`speed` getter、`play()`／`pause()`／`nextSegment()`／`previousSegment()`，`ChangeNotifier.addListener`/`removeListener`）。
 - Produces：`class TtsAudioHandler extends BaseAudioHandler`，公開方法 `void attachController(TtsController controller, {required String bookTitle})`／`void detachController()`，供 Task 6 `ReaderScreen` 使用；`main.dart`（Task 5）以 `AudioService.init(builder: () => TtsAudioHandler(), ...)` 建構單一實例。
 
-- [ ] **Step 1：寫失敗測試**
+- [x] **Step 1：寫失敗測試**
 
 建立 `app/test/reader/tts_audio_handler_test.dart`：
 
@@ -880,7 +880,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：跑測試確認全數失敗**
+- [x] **Step 2：跑測試確認全數失敗**
 
 ```
 flutter test test/reader/tts_audio_handler_test.dart
@@ -888,7 +888,7 @@ flutter test test/reader/tts_audio_handler_test.dart
 
 Expected：FAIL——`package:elinkbook/reader/tts_audio_handler.dart` 尚不存在，編譯期即報錯。
 
-- [ ] **Step 3：實作 `TtsAudioHandler`**
+- [x] **Step 3：實作 `TtsAudioHandler`**
 
 建立 `app/lib/reader/tts_audio_handler.dart`：
 
@@ -981,7 +981,7 @@ class TtsAudioHandler extends BaseAudioHandler {
 }
 ```
 
-- [ ] **Step 4：跑測試確認全數通過**
+- [x] **Step 4：跑測試確認全數通過**
 
 ```
 flutter test test/reader/tts_audio_handler_test.dart
@@ -995,7 +995,7 @@ flutter analyze
 
 Expected：`No issues found!`
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 git add app/lib/reader/tts_audio_handler.dart app/test/reader/tts_audio_handler_test.dart
