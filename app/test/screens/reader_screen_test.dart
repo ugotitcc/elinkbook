@@ -7633,6 +7633,232 @@ void main() {
     });
   });
 
+  group('上一句/下一句/語速調整控制（epic-34-tts-readalong Issue 5）', () {
+    testWidgets('未提供 ttsProvider 時，不顯示上一句/下一句/語速按鈕', (tester) async {
+      final highlightsRepo = FakeHighlightsRepository();
+      final notesRepo = FakeNotesRepository();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_tts5_no_provider',
+            prefsManager: prefsManager,
+            highlightsRepository: highlightsRepo,
+            notesRepository: notesRepo,
+            isFixedLayout: false,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final foliateView =
+          tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
+      foliateView.onPageRendered();
+      foliateView.onLayoutResolved?.call(
+        const EpubLayoutInfo(
+          isFixedLayout: false,
+          writingMode: WritingMode.horizontal,
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.byKey(const Key('reader_tts_previous_button')), findsNothing);
+      expect(find.byKey(const Key('reader_tts_next_button')), findsNothing);
+      expect(find.byKey(const Key('reader_tts_speed_button')), findsNothing);
+    });
+
+    testWidgets(
+        'CBZ 格式提供 ttsProvider 時，上一句/下一句/語速按鈕皆不顯示（僅播放/暫停停用按鈕存在）',
+        (tester) async {
+      final ttsProvider = FakeTtsProvider();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.cbz',
+            bookId: 'b_tts5_cbz',
+            prefsManager: prefsManager,
+            isFixedLayout: true,
+            ttsProvider: ttsProvider,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final foliateView =
+          tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
+      foliateView.onPageRendered();
+      foliateView.onLayoutResolved?.call(
+        const EpubLayoutInfo(isFixedLayout: true, writingMode: WritingMode.horizontal),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.byKey(const Key('reader_tts_play_pause_button')), findsOneWidget);
+      expect(find.byKey(const Key('reader_tts_previous_button')), findsNothing);
+      expect(find.byKey(const Key('reader_tts_next_button')), findsNothing);
+      expect(find.byKey(const Key('reader_tts_speed_button')), findsNothing);
+    });
+
+    testWidgets(
+        '提供 ttsProvider 時，流式 EPUB 顯示上一句/下一句/語速按鈕，初始語速顯示 1.00x',
+        (tester) async {
+      final highlightsRepo = FakeHighlightsRepository();
+      final notesRepo = FakeNotesRepository();
+      final ttsProvider = FakeTtsProvider();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_tts5_buttons',
+            prefsManager: prefsManager,
+            highlightsRepository: highlightsRepo,
+            notesRepository: notesRepo,
+            isFixedLayout: false,
+            ttsProvider: ttsProvider,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final foliateView =
+          tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
+      foliateView.onPageRendered();
+      foliateView.onLayoutResolved?.call(
+        const EpubLayoutInfo(
+          isFixedLayout: false,
+          writingMode: WritingMode.horizontal,
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.byKey(const Key('reader_tts_previous_button')), findsOneWidget);
+      expect(find.byKey(const Key('reader_tts_next_button')), findsOneWidget);
+      final speedButtonFinder = find.byKey(const Key('reader_tts_speed_button'));
+      expect(speedButtonFinder, findsOneWidget);
+      expect(
+        find.descendant(of: speedButtonFinder, matching: find.text('1.00x')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets(
+        '提供 ttsProvider 時，點擊上一句/下一句按鈕不崩潰（誠實測試邊界：flutter_test 環境下'
+        'FoliateReaderView 的 _controller 恆為 null，loadSegments 恆回傳空清單，'
+        'TtsController 永遠不會真正進入 playing 狀態，這裡驗證的是 UI 接線不崩潰這個'
+        '結構性保證；真正的段落跳轉行為由 tts_controller_test.dart（Task 1）完整涵蓋）',
+        (tester) async {
+      final highlightsRepo = FakeHighlightsRepository();
+      final notesRepo = FakeNotesRepository();
+      final ttsProvider = FakeTtsProvider();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_tts5_tap',
+            prefsManager: prefsManager,
+            highlightsRepository: highlightsRepo,
+            notesRepository: notesRepo,
+            isFixedLayout: false,
+            ttsProvider: ttsProvider,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final foliateView =
+          tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
+      foliateView.onPageRendered();
+      foliateView.onLayoutResolved?.call(
+        const EpubLayoutInfo(
+          isFixedLayout: false,
+          writingMode: WritingMode.horizontal,
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      await tester.tap(find.byKey(const Key('reader_tts_previous_button')));
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+
+      await tester.tap(find.byKey(const Key('reader_tts_next_button')));
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets(
+        '點擊語速按鈕依序循環預設語速清單，畫面數字同步更新'
+        '（單一事實來源：直接顯示 TtsController.speed，比照既有播放/暫停按鈕的'
+        'AnimatedBuilder 訂閱模式）', (tester) async {
+      final highlightsRepo = FakeHighlightsRepository();
+      final notesRepo = FakeNotesRepository();
+      final ttsProvider = FakeTtsProvider();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_tts5_speed',
+            prefsManager: prefsManager,
+            highlightsRepository: highlightsRepo,
+            notesRepository: notesRepo,
+            isFixedLayout: false,
+            ttsProvider: ttsProvider,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final foliateView =
+          tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
+      foliateView.onPageRendered();
+      foliateView.onLayoutResolved?.call(
+        const EpubLayoutInfo(
+          isFixedLayout: false,
+          writingMode: WritingMode.horizontal,
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      final speedButtonFinder = find.byKey(const Key('reader_tts_speed_button'));
+      expect(
+        find.descendant(of: speedButtonFinder, matching: find.text('1.00x')),
+        findsOneWidget,
+      );
+
+      await tester.tap(speedButtonFinder);
+      await tester.pump();
+      expect(
+        find.descendant(of: speedButtonFinder, matching: find.text('1.25x')),
+        findsOneWidget,
+      );
+
+      await tester.tap(speedButtonFinder);
+      await tester.pump();
+      expect(
+        find.descendant(of: speedButtonFinder, matching: find.text('1.50x')),
+        findsOneWidget,
+      );
+    });
+  });
+
   tearDownAll(() {
     // 還原 cacheBookForServing 為原始實作，避免污染其他測試檔
     cacheBookForServing = originalCacheBookForServing;

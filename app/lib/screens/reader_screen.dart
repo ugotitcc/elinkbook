@@ -2261,6 +2261,89 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                         },
                       ),
               ),
+            // 上一句/下一句/語速調整（epic-34-tts-readalong Issue 5）：CBZ
+            // 完全不支援朗讀（無文字節點），連同播放/暫停以外的三顆控制
+            // 按鈕一併排除，不只顯示停用狀態——這三顆按鈕本來就不該出現
+            // 在 CBZ 畫面上，跟播放/暫停按鈕「顯示但停用」的既有設計不同。
+            // 陽春 FAB 樣式（沿用 Issue 2 既有慣例），Issue 6 會整理成正式
+            // Mini Player 版面。
+            if (isFoliateFormat(format) &&
+                _chromeVisible &&
+                widget.ttsProvider != null &&
+                format != BookFormat.cbz) ...[
+              Positioned(
+                top: 352,
+                right: 16,
+                child: AnimatedBuilder(
+                  animation: _ttsControllerOrNull!,
+                  builder: (context, _) {
+                    final controller = _ttsControllerOrNull!;
+                    return ClipOval(
+                      child: Container(
+                        color: _themedFabBackgroundColor,
+                        child: IconButton(
+                          key: const Key('reader_tts_previous_button'),
+                          icon: Icon(Icons.skip_previous, color: _themedFabIconColor),
+                          tooltip: '上一句',
+                          onPressed: () => controller.previousSegment(),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              Positioned(
+                top: 408,
+                right: 16,
+                child: AnimatedBuilder(
+                  animation: _ttsControllerOrNull!,
+                  builder: (context, _) {
+                    final controller = _ttsControllerOrNull!;
+                    return ClipOval(
+                      child: Container(
+                        color: _themedFabBackgroundColor,
+                        child: IconButton(
+                          key: const Key('reader_tts_next_button'),
+                          icon: Icon(Icons.skip_next, color: _themedFabIconColor),
+                          tooltip: '下一句',
+                          onPressed: () => controller.nextSegment(),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              Positioned(
+                top: 464,
+                right: 16,
+                child: AnimatedBuilder(
+                  animation: _ttsControllerOrNull!,
+                  builder: (context, _) {
+                    final controller = _ttsControllerOrNull!;
+                    final speedLabel = '${controller.speed.toStringAsFixed(2)}x';
+                    return ClipOval(
+                      child: Container(
+                        color: _themedFabBackgroundColor,
+                        child: IconButton(
+                          key: const Key('reader_tts_speed_button'),
+                          icon: Text(
+                            speedLabel,
+                            style: TextStyle(
+                              color: _themedFabIconColor,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          tooltip: '朗讀語速：$speedLabel（點擊切換）',
+                          onPressed: () => controller
+                              .setSpeed(_nextTtsSpeedPreset(controller.speed)),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
             // ── PDF FAB 區塊（epic-24-pdf-engine-rebuild Issue 8）─────
             // 與上方 EPUB FAB 完全對稱的 6 顆浮動圓形按鈕：返回／目錄／
             // 版面設定／書籤 toggle／筆記／進度-跳頁。比照 EPUB 既有的
@@ -2720,6 +2803,22 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         );
       },
     );
+  }
+
+  /// 語速調整（epic-34-tts-readalong Issue 5）的 UI 預設清單，`1.0` 為
+  /// 正常速度、其餘為使用者常見的加速/減速倍率選項。點擊「語速」按鈕
+  /// 依序循環，找不到目前值（理論上不會發生，僅作防禦）時回退到 `1.0`。
+  /// 這批數值直接轉發給 [TtsController.setSpeed]，大於 `1.0` 的選項在
+  /// 「下一段」合成時會被 `SystemTtsProvider` 既有的 `clamp(0.0, 1.0)`
+  /// 收斂成最快速——僅「目前段落」的執行期變速會如實呈現差異（見
+  /// `plan-issue-5.md` Global Constraints「語速刻度不做轉換」說明）。
+  static const List<double> _ttsSpeedPresets = [0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
+
+  double _nextTtsSpeedPreset(double current) {
+    final index =
+        _ttsSpeedPresets.indexWhere((p) => (p - current).abs() < 0.001);
+    if (index == -1) return 1.0;
+    return _ttsSpeedPresets[(index + 1) % _ttsSpeedPresets.length];
   }
 
   Widget _buildNativeView(BookFormat format, bool isLandscape) {

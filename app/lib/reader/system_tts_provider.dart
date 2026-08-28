@@ -89,8 +89,13 @@ class SystemTtsProvider implements TtsProvider {
 
     final filePath = await _resolveOutputPath();
 
-    // flutter_tts 的語速範圍是 0.0（最慢）～1.0（最快），本專案呼叫端
-    // 目前恆傳 1.0（Issue 5 才會有語速調整 UI），clamp 純防禦。
+    // flutter_tts 的語速範圍是 0.0（最慢）～1.0（最快）。呼叫端
+    // （TtsController，epic-34-tts-readalong Issue 5）會傳入使用者實際
+    // 選擇的語速，經 clamp(0.0, 1.0) 收斂——大於 1.0 的加速選項（例如
+    // UI 上的 1.5x／2.0x）在這裡會被統一收斂成最快速，只有播放器端
+    // TtsAudioPlayer.setSpeed() 的執行期變速才能呈現真正差異化的加速
+    // 效果（見 plan-issue-5.md Global Constraints「語速刻度不做轉換」
+    // 已記錄的已知限制）。
     await _flutterTts.setSpeechRate(speed.clamp(0.0, 1.0));
 
     final completer = Completer<void>();

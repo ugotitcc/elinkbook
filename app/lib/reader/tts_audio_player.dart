@@ -13,6 +13,16 @@ abstract class TtsAudioPlayer {
   Future<void> play();
   Future<void> pause();
 
+  /// 執行期變速（epic-34-tts-readalong Issue 5，spec.md「語速調整的生效
+  /// 時機」契約）：只影響「目前已載入、可能正在播放/暫停中」的音訊，不
+  /// 重新合成、不中斷播放。[speed] 為 `just_audio` 慣例的倍率語意
+  /// （`1.0`＝正常速度），與 [TtsProvider.synthesize] 的 `speed` 參數
+  /// （`flutter_tts` 慣例的 `0.0`（最慢）～`1.0`（最快）語意）刻度不同——
+  /// [TtsController] 目前刻意把同一個數值直接轉發給兩邊 API，未做刻度
+  /// 換算（見 `tts_controller.dart` 對應註解），真機實際聽感落差待真機
+  /// 測試後再校準。
+  Future<void> setSpeed(double speed);
+
   /// 目前載入的音訊播放完畢時發出一個事件（不攜帶資料）。
   Stream<void> get completedStream;
 
@@ -49,6 +59,9 @@ class JustAudioTtsPlayer implements TtsAudioPlayer {
 
   @override
   Future<void> pause() => _player.pause();
+
+  @override
+  Future<void> setSpeed(double speed) => _player.setSpeed(speed);
 
   @override
   Future<void> dispose() async {
