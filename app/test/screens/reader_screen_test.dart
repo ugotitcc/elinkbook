@@ -7459,6 +7459,53 @@ void main() {
       final button = tester.widget<IconButton>(buttonFinder);
       expect(button.onPressed, isNull);
     });
+
+    testWidgets(
+        'CBZ 停用播放鍵圖示顏色與啟用狀態明確區隔（epic-34-tts-readalong Issue 10）',
+        (tester) async {
+      final ttsProvider = FakeTtsProvider();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.cbz',
+            bookId: 'b_tts_cbz_disabled_color',
+            prefsManager: prefsManager,
+            isFixedLayout: true,
+            ttsProvider: ttsProvider,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final foliateView =
+          tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
+      foliateView.onPageRendered();
+      foliateView.onLayoutResolved?.call(
+        const EpubLayoutInfo(
+          isFixedLayout: true,
+          writingMode: WritingMode.horizontal,
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      final buttonFinder =
+          find.byKey(const Key('reader_tts_play_pause_button'));
+      final icon = tester.widget<Icon>(find.descendant(
+        of: buttonFinder,
+        matching: find.byType(Icon),
+      ));
+
+      // CBZ 恆為固定版面，啟用狀態的既有圖示色固定為 Colors.white
+      // （_themedFabIconColor，reader_screen.dart:2693-2694）；停用狀態
+      // 須與其明確不同，且不得只是同一顏色套上透明度（見本計畫 Global
+      // Constraints 說明），故直接斷言為不透明的 Colors.grey（已隱含
+      // 「不是 Colors.white」，不需另外斷言 isNot）。
+      expect(icon.color, Colors.grey);
+    });
   });
 
   group('同步高亮跟隨（epic-34-tts-readalong Issue 3）', () {

@@ -32,7 +32,7 @@
 - Consumes：既有 `TtsMiniPlayer` widget 的 `iconColor` 參數（`Color` 型別，`app/lib/screens/tts_mini_player.dart:22`，已是建構參數，不需修改該檔案）；既有 `_isFixedLayout`（`bool`，`reader_screen.dart:270`）僅供 doc comment 說明對照，不在本 getter 邏輯中使用。
 - Produces：`Color get _themedTtsDisabledIconColor`（`reader_screen.dart`，`ReaderScreen` state class 私有 getter），固定回傳 `Colors.grey`，供 CBZ 分支的 `TtsMiniPlayer` 呼叫點使用。
 
-- [ ] **Step 1: 寫失敗測試**
+- [x] **Step 1: 寫失敗測試**
 
 在 `app/test/screens/reader_screen_test.dart` 第 7461 行（既有「CBZ 格式提供 ttsProvider 時，TTS 按鈕顯示但為停用狀態」測試的結尾 `});`）之後，新增以下測試：
 
@@ -85,13 +85,13 @@
     });
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/screens/reader_screen_test.dart --plain-name "CBZ 停用播放鍵圖示顏色與啟用狀態明確區隔"`（於 `app/` 目錄下執行）
 
 Expected: FAIL —— `icon.color` 目前仍是 `Colors.white`（沿用既有 `_themedFabIconColor`），`expect(icon.color, isNot(Colors.white))` 這一行斷言失敗。
 
-- [ ] **Step 3: 寫最小實作**
+- [x] **Step 3: 寫最小實作**
 
 在 `app/lib/screens/reader_screen.dart` 第 2694 行（`_themedFabIconColor` getter 結尾）之後，新增：
 
@@ -132,19 +132,19 @@ Expected: FAIL —— `icon.color` 目前仍是 `Colors.white`（沿用既有 `_
 
 （只改這一行的 `iconColor:` 參數值；`backgroundColor`、`onPlayPause` 等其餘參數與非 CBZ 分支的 `TtsMiniPlayer(...)` 呼叫點——`reader_screen.dart:2267-2287`——維持不動。）
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `flutter test test/screens/reader_screen_test.dart --plain-name "CBZ 停用播放鍵圖示顏色與啟用狀態明確區隔"`（於 `app/` 目錄下執行）
 
 Expected: PASS
 
-- [ ] **Step 5: 執行本檔案完整測試，確認零回歸**
+- [x] **Step 5: 執行本檔案完整測試，確認零回歸**
 
 Run: `flutter test test/screens/reader_screen_test.dart`（於 `app/` 目錄下執行）
 
 Expected: 全數 PASS，特別留意既有「CBZ 格式提供 ttsProvider 時，TTS 按鈕顯示但為停用狀態」（斷言 `button.onPressed` 為 `null`）與「提供 ttsProvider 時，流式 EPUB 顯示 TTS 播放按鈕，初始為播放圖示」（斷言 `icon.icon == Icons.play_arrow`，非 CBZ 情境，走 `_themedFabIconColor` 分支不受影響）兩個既有測試依然通過。
 
-- [ ] **Step 6: 執行 `flutter analyze` 與全專案 `flutter test`**
+- [x] **Step 6: 執行 `flutter analyze` 與全專案 `flutter test`**
 
 Run（於 `app/` 目錄下）：
 ```bash
@@ -154,7 +154,7 @@ flutter test
 
 Expected: `flutter analyze` 顯示 `No issues found!`；`flutter test` 全數通過（本計畫為 Issue 10 唯一一個 Task，依 `CLAUDE.md`「測試執行範圍」慣例，計畫最後一個 Task 完成時須跑一次完整 `flutter test`）。
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app/lib/screens/reader_screen.dart app/test/screens/reader_screen_test.dart
