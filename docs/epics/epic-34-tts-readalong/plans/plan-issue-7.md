@@ -38,7 +38,7 @@
 
 **規劃階段查證**：直接核對本機 pub cache 內 `audio_service-0.18.19`／`audio_session-0.2.4` 套件原始碼與官方 `README.md`「Android setup」段落（`C:\Users\huthief\AppData\Local\Pub\Cache\hosted\pub.dev\audio_service-0.18.19\README.md` 第 320-355 行），確認官方要求的 manifest 宣告清單與 `dependency-spike-findings.md`「targetSdk manifest 需求清單」（Issue 1 產出）逐項核對：`FOREGROUND_SERVICE`／`FOREGROUND_SERVICE_MEDIA_PLAYBACK`／`<service>`／`<receiver>`／`exported="true"` 五項完全吻合；但官方文件另外要求 **`android.permission.WAKE_LOCK`**（`dependency_spike-findings.md` 清單遺漏此項，Issue 1 spike 未涵蓋——本 Task 一併補上並在該文件加註記錄，不重新調查其餘四項）。`MainActivity` 部分核對 README「Custom Android activity」段落：本專案 `MainActivity` 是自訂 `FragmentActivity`（`.MainActivity`，非套件預設的 `AudioServiceActivity`），須改繼承套件提供的 `AudioServiceFragmentActivity`（`extends FlutterFragmentActivity`，內部把 `provideFlutterEngine()`/`getCachedEngineId()`/`shouldDestroyEngineWithHost()` 導向 `audio_service` 管理的共用 `FlutterEngine`，讓背景服務與 UI 共用同一個 Dart isolate，這樣 `TtsAudioHandler` 才能直接持有前景 `ReaderScreen` 建構出的同一個 `TtsController` 實例，不需要跨 isolate 通訊）——原始碼位置：`C:\Users\huthief\AppData\Local\Pub\Cache\hosted\pub.dev\audio_service-0.18.19\android\src\main\java\com\ryanheise\audioservice\AudioServiceFragmentActivity.java`。
 
-- [ ] **Step 1：`pubspec.yaml` 新增相依套件**
+- [x] **Step 1：`pubspec.yaml` 新增相依套件**
 
 在 `app/pubspec.yaml` 找到既有：
 
@@ -62,7 +62,7 @@
   audio_session: ^0.2.4
 ```
 
-- [ ] **Step 2：安裝相依套件**
+- [x] **Step 2：安裝相依套件**
 
 ```
 flutter pub get
@@ -70,7 +70,7 @@ flutter pub get
 
 Expected：解析成功，無版本衝突（Issue 1 spike 已驗證過相容性，本次為正式加入 `pubspec.yaml` 後的覆核）。
 
-- [ ] **Step 3：`AndroidManifest.xml` 新增權限、Service、Receiver**
+- [x] **Step 3：`AndroidManifest.xml` 新增權限、Service、Receiver**
 
 在 `app/android/app/src/main/AndroidManifest.xml` 第一行，`<manifest>` 根元素新增 `xmlns:tools` 命名空間（`tools:ignore="Instantiatable"` 屬性需要）：
 
@@ -153,7 +153,7 @@ Expected：解析成功，無版本衝突（Issue 1 spike 已驗證過相容性�
     </application>
 ```
 
-- [ ] **Step 4：`MainActivity.kt` 改繼承 `AudioServiceFragmentActivity`**
+- [x] **Step 4：`MainActivity.kt` 改繼承 `AudioServiceFragmentActivity`**
 
 在 `app/android/app/src/main/kotlin/cc/ugotit/elinkbook/MainActivity.kt` 找到既有的 import：
 
@@ -183,7 +183,7 @@ class MainActivity : AudioServiceFragmentActivity() {
 
 其餘程式碼（`onCreate`／`dispatchKeyEvent`／`configureFlutterEngine`／`onDestroy` 等既有方法）完全不需要改動——`AudioServiceFragmentActivity` 只覆寫 `provideFlutterEngine()`/`getCachedEngineId()`/`shouldDestroyEngineWithHost()` 三個方法，本檔案原本就沒有覆寫過這三者，不會產生衝突。
 
-- [ ] **Step 5：`dependency-spike-findings.md` 補上遺漏權限的修正記錄**
+- [x] **Step 5：`dependency-spike-findings.md` 補上遺漏權限的修正記錄**
 
 在 `docs/epics/epic-34-tts-readalong/dependency-spike-findings.md` 找到既有的：
 
@@ -197,7 +197,7 @@ class MainActivity : AudioServiceFragmentActivity() {
 **Issue 7 落實時的追加修正**：官方 `audio_service` 套件 README「Android setup」段落另要求 `android.permission.WAKE_LOCK`（前景服務保持 CPU 喚醒狀態所需），本清單原五項遺漏此項——Issue 1 spike 階段核對的是套件 `example/android/app/src/main/AndroidManifest.xml`（該檔案第 5 行確實含此權限，但撰寫本清單時漏抄）。Issue 7 落實時已直接依 README 正文重新核對並補上，見 `plans/plan-issue-7.md` Task 1「規劃階段查證」。
 ```
 
-- [ ] **Step 6：驗證建置**
+- [x] **Step 6：驗證建置**
 
 ```
 flutter analyze
@@ -211,7 +211,7 @@ flutter build apk --debug
 
 Expected：建置成功——這是本 Task 唯一能驗證的「正確性」層級：`AndroidManifest.xml` XML 語法正確、`MainActivity.kt` 繼承鏈可編譯、`audio_service`/`audio_session` 原生端 Gradle 相依可解析。實際背景播放/通知欄/耳機線控行為須留待真機驗收（見本計畫「測試策略總結」），本 Task 範圍不含。
 
-- [ ] **Step 7：Commit**
+- [x] **Step 7：Commit**
 
 ```bash
 git add app/pubspec.yaml app/pubspec.lock app/android/app/src/main/AndroidManifest.xml app/android/app/src/main/kotlin/cc/ugotit/elinkbook/MainActivity.kt docs/epics/epic-34-tts-readalong/dependency-spike-findings.md

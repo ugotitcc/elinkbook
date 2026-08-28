@@ -102,6 +102,15 @@ dependencies:
   # TTS 本機音訊播放（epic-34-tts-readalong Issue 2）：見
   # dependency-spike-findings.md，minSdk=16，未拉高專案現有下限。
   just_audio: ^0.10.6
+  # TTS 背景播放與系統整合（epic-34-tts-readalong Issue 7）：前景服務、
+  # 通知欄/鎖定畫面控制、耳機線控，見 dependency-spike-findings.md，
+  # minSdk=19，未拉高專案現有下限。
+  audio_service: ^0.18.19
+  # TTS 音訊焦點中斷/耳機拔出事件（epic-34-tts-readalong Issue 7）：
+  # audio_service 的既有相依，本專案額外顯式宣告以直接呼叫其 API
+  # （AudioSession.instance／interruptionEventStream／
+  # becomingNoisyEventStream），不依賴透過遞移相依隱式取用。
+  audio_session: ^0.2.4
 
 dev_dependencies:
   flutter_test:
