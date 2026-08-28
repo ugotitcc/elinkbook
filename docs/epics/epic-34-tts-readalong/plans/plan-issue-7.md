@@ -1630,7 +1630,7 @@ git commit -m "feat(epic-34): main.dart 組裝與 ReaderScreen 接線——Audio
 **Interfaces:**
 - Consumes：Task 5 `LibraryReaderFeatureRepositories.ttsAudioHandler`／`.ttsAudioFocusSource`、Task 6 `ReaderScreen.ttsAudioHandler`／`.ttsAudioFocusSource`。
 
-- [ ] **Step 1：寫失敗測試**
+- [x] **Step 1：寫失敗測試**
 
 在 `app/test/screens/library_screen_test.dart` 找到既有「`LibraryScreen` 點開一本書後，`ReaderScreen` 收到的 `ttsProvider` 正確貫穿（Issue 9 缺口修正）」測試結尾（第 2232 行 `});`），緊接其後新增：
 
@@ -1740,7 +1740,7 @@ import 'package:elinkbook/reader/tts_audio_handler.dart';
 import '../support/fake_tts_audio_focus_source.dart';
 ```
 
-- [ ] **Step 2：跑測試確認新測試失敗**
+- [x] **Step 2：跑測試確認新測試失敗**
 
 ```
 flutter test test/screens/library_screen_test.dart
@@ -1748,7 +1748,7 @@ flutter test test/screens/library_screen_test.dart
 
 Expected：FAIL（編譯錯誤或欄位不存在）——`_openBook()`／`_openGroupFilteredView()` 尚未轉送這兩個新欄位。
 
-- [ ] **Step 3：`library_screen.dart` 轉送兩個新欄位**
+- [x] **Step 3：`library_screen.dart` 轉送兩個新欄位**
 
 在 `app/lib/screens/library_screen.dart` 找到 `_openBook()` 內既有的：
 
@@ -1784,7 +1784,7 @@ Expected：FAIL（編譯錯誤或欄位不存在）——`_openBook()`／`_openG
 
 **理由**：上方既有的逐欄位列舉方式，本來就已經遺漏 `layoutPresetRepository`／`bookReaderPrefsRepository` 兩個既有欄位（`LibraryReaderFeatureRepositories` 目前共 7 個欄位，這裡只列了 5 個）——這不是本 Issue 造成的問題，但如果本 Task 只是比照既有方式再手動加兩行（`ttsAudioHandler`／`ttsAudioFocusSource`），會讓「逐欄位列舉、忘了轉某個欄位」這個既有的錯誤模式繼續重演，且本 Task 新增的兩個欄位本身也會立刻曝露在同一種風險下。本專案已有明確先例：`library_screen.dart` 的 `syncDependencies: widget.syncDependencies,`（`epic-8-sync` Issue 10，該處註解原文：「先前遺漏這三個同步相關欄位……本次改為整包轉送 `syncDependencies` bundle，結構上不會再重演『轉 A 忘轉 B』的部分欄位漏轉發」）——`LibraryReaderFeatureRepositories` 沒有像 `LibraryCloudAccountDependencies`／`LibraryRemoteLibraryDependencies` 那樣在 `library_screen_dependencies.dart` 留下「刻意不含某欄位」的排除說明（比對後兩者的文件註解可知那是特意排除、有明確理由），代表這裡的欄位缺漏是單純疏漏，不是設計上的邊界，改整包轉送同時修好這個既有缺口與本 Task 新增欄位的風險，範圍內的改動就在同一行程式碼上，不是另外去動其他無關程式碼。
 
-- [ ] **Step 4：跑測試確認全數通過、零回歸**
+- [x] **Step 4：跑測試確認全數通過、零回歸**
 
 ```
 flutter test test/screens/library_screen_test.dart
@@ -1804,7 +1804,7 @@ flutter analyze
 
 Expected：`No issues found!`
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 git add app/lib/screens/library_screen.dart app/test/screens/library_screen_test.dart
