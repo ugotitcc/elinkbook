@@ -111,6 +111,7 @@ class TtsController extends ChangeNotifier {
         await player.play();
       } catch (_) {
         if (_disposed) return;
+        _suppressNextPositionChange = false;
         _status = TtsPlaybackStatus.idle;
         _currentIndex = -1;
         _segments = const [];
@@ -193,6 +194,7 @@ class TtsController extends ChangeNotifier {
     final nextIndex = _currentIndex + 1;
     if (nextIndex >= _segments.length) {
       _segmentGeneration++;
+      _suppressNextPositionChange = false;
       _status = TtsPlaybackStatus.idle;
       _currentIndex = -1;
       _segments = const [];
@@ -251,8 +253,19 @@ class TtsController extends ChangeNotifier {
   /// 真正開始播放），也不能讓那次呼叫沿用導覽前算出的（現已過期的）
   /// 章節/起始段落——遞增世代編號讓 [play] 內對應的比對自行偵測並中止，
   /// 不需要在這裡額外判斷「是否有 play() 正在進行中」。
+  bool _suppressNextPositionChange = false;
+
+  void suppressNextExternalPositionChange() {
+    if (_disposed) return;
+    _suppressNextPositionChange = true;
+  }
+
   void handleExternalPositionChange() {
     if (_disposed) return;
+    if (_suppressNextPositionChange) {
+      _suppressNextPositionChange = false;
+      return;
+    }
     _playGeneration++;
     // epic-34-tts-readalong Issue 5（審查 review-plan-issue-5.md 建議 1）：
     // 手動導覽發生時，可能正好有一個 nextSegment()／previousSegment()／
@@ -348,6 +361,7 @@ class TtsController extends ChangeNotifier {
       await player.play();
     } catch (_) {
       if (_disposed || generation != _segmentGeneration) return;
+      _suppressNextPositionChange = false;
       _status = TtsPlaybackStatus.idle;
       _currentIndex = -1;
       _segments = const [];
@@ -361,6 +375,7 @@ class TtsController extends ChangeNotifier {
     if (_status != TtsPlaybackStatus.playing) return;
     final nextIndex = _currentIndex + 1;
     if (nextIndex >= _segments.length) {
+      _suppressNextPositionChange = false;
       _status = TtsPlaybackStatus.idle;
       _currentIndex = -1;
       _segments = const [];
@@ -375,6 +390,7 @@ class TtsController extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    _suppressNextPositionChange = false;
     _completedSub?.cancel();
     player.dispose();
     super.dispose();
