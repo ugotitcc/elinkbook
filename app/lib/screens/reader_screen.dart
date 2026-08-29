@@ -317,6 +317,15 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   EpubPositionInfo? _epubPositionInfo;
   TtsController? _ttsController;
   TtsAudioFocusCoordinator? _ttsAudioFocusCoordinator;
+  // 安全視窗跟隨翻頁節流（epic-34-tts-readalong Issue 11 真機驗收發現）：
+  // 長段落（尤其直排、欄寬窄）朗讀進度快時，main.js 安全視窗檢查可能在
+  // 極短時間內連續多次判定「需要翻頁」，若不加節流會連續多次呼叫
+  // FoliateReaderView.nextPage()/previousPage()——真機實測發現直排在
+  // 前一次翻頁動畫（paginator.js 內部轉場約 300ms）尚未播完時疊加下一次
+  // 觸發，畫面會卡住不再更新（橫排耐受度較高，仍會動但斷頁位置不穩定）。
+  // 手動點擊翻頁不受影響（真機已確認正常）——這個節流只作用於 TTS 自動
+  // 觸發的路徑。冷卻時間 400ms（略高於動畫時長，留一點餘裕）。
+  DateTime? _lastTtsPageTurnAt;
   // 目錄樹狀結構快取（Epic 5 Issue 4），由 onLayoutResolved 觸發一次性
   // 背景抓取（見 _handleLayoutResolved）。樹狀結構不隨版面設定變動，開書
   // 期間只抓取一次，不需要每次版面參數變動都重新請求。
@@ -2897,6 +2906,16 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             // ——否則這次翻頁觸發的 onLocatorChanged 事件會被既有 Issue 4
             // 邏輯誤判為使用者手動導覽，錯誤暫停朗讀（見 tts_controller.dart
             // suppressNextExternalPositionChange() 文件註解）。
+            // 節流（見 _lastTtsPageTurnAt 文件註解）：冷卻時間內的重複
+            // 觸發直接跳過，不呼叫翻頁——下一個朗讀段落的安全視窗檢查
+            // 仍會重新判斷，若還是沒跟上會再次觸發，不會漏掉。
+            final now = DateTime.now();
+            if (_lastTtsPageTurnAt != null &&
+                now.difference(_lastTtsPageTurnAt!) <
+                    const Duration(milliseconds: 400)) {
+              return;
+            }
+            _lastTtsPageTurnAt = now;
             _ttsController?.suppressNextExternalPositionChange();
             if (direction == 'prev') {
               FoliateReaderView.previousPage(_foliateEpubReaderViewKey);
