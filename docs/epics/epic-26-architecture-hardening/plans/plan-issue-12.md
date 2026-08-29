@@ -297,7 +297,7 @@ git commit -m "feat(epic-26): Issue 12 Task 1——新增 resolveTtsSafeWindowDi
 **Interfaces:**
 - Consumes: Task 1 產出的 `resolveTtsSafeWindowDirection(firstRect, lastRect, iframeRect, viewportRect, isVertical)`（回傳 `'next' | 'prev' | null`）。
 
-- [ ] **Step 1: 修改 `main.js` 的 import 區塊**
+- [x] **Step 1: 修改 `main.js` 的 import 區塊**
 
 `main.js` 第 1-3 行目前為：
 
@@ -316,7 +316,7 @@ import { compare as compareCfi } from './epubcfi.js'
 import { resolveTtsSafeWindowDirection } from './tts-safe-window.js'
 ```
 
-- [ ] **Step 2: 移除 `main.js` 內原本的 `TTS_SAFE_WINDOW_MIN`／`TTS_SAFE_WINDOW_MAX` 常數宣告**
+- [x] **Step 2: 移除 `main.js` 內原本的 `TTS_SAFE_WINDOW_MIN`／`TTS_SAFE_WINDOW_MAX` 常數宣告**
 
 `main.js` 第 438-443 行目前為：
 
@@ -336,7 +336,7 @@ let currentTtsAnnotationValue = null
 let currentTtsAnnotationValue = null
 ```
 
-- [ ] **Step 3: 修改 `draw-annotation` 監聽器內的安全視窗判斷區塊**
+- [x] **Step 3: 修改 `draw-annotation` 監聽器內的安全視窗判斷區塊**
 
 `main.js` 第 892-950 行目前為（`if (annotation.value === currentTtsAnnotationValue) { ... }` 這個區塊）：
 
@@ -436,7 +436,7 @@ let currentTtsAnnotationValue = null
       }
 ```
 
-- [ ] **Step 4: 更新 `foliate_reader_view_test.dart` 的 regression-guard 測試**
+- [x] **Step 4: 更新 `foliate_reader_view_test.dart` 的 regression-guard 測試**
 
 `app/test/reader/foliate_reader_view_test.dart` 第 1559-1727 行目前是兩個
 獨立 group：
@@ -695,32 +695,32 @@ let currentTtsAnnotationValue = null
 `group('onTtsHighlightOutOfSafeWindow（epic-34-tts-readalong Issue 8）', ...)`
 測試 `FoliateReaderView` widget 建構參數，與本次改動無關，維持不動。）
 
-- [ ] **Step 5: 執行受影響測試確認全數通過**
+- [x] **Step 5: 執行受影響測試確認全數通過**
 
 執行：`flutter test test/reader/foliate_reader_view_test.dart`（於 `app/`
 目錄下執行）
 
 預期結果：全數通過，無 `mainJsSource.contains(...)` 斷言失敗。
 
-- [ ] **Step 6: 再次執行 Task 1 的 Node 測試腳本確認未受影響**
+- [x] **Step 6: 再次執行 Task 1 的 Node 測試腳本確認未受影響**
 
 執行：`node app/tool/test_tts_safe_window.mjs`
 
 預期結果：印出 `resolveTtsSafeWindowDirection 安全視窗判斷驗證：9 項全數通過`，結束碼 0。
 
-- [ ] **Step 7: 執行 `flutter analyze` 確認乾淨**
+- [x] **Step 7: 執行 `flutter analyze` 確認乾淨**
 
 執行（於 `app/` 目錄下）：`flutter analyze`
 
 預期結果：`No issues found!`
 
-- [ ] **Step 8: 執行完整 `flutter test`（本計畫最後一個 Task，依 Global Constraints 慣例整套跑一次）**
+- [x] **Step 8: 執行完整 `flutter test`（本計畫最後一個 Task，依 Global Constraints 慣例整套跑一次）**
 
 執行（於 `app/` 目錄下）：`flutter test`
 
 預期結果：全數通過，零回歸。
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add app/android/app/src/main/assets/foliate/main.js app/test/reader/foliate_reader_view_test.dart

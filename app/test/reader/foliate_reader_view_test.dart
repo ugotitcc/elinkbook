@@ -1556,7 +1556,7 @@ void main() {
     });
   });
 
-  group('main.js 安全視窗跟隨翻頁 + E-Ink 高對比 regression guard（epic-34-tts-readalong Issue 8）', () {
+  group('main.js 安全視窗跟隨翻頁 + E-Ink 高對比 regression guard（epic-34-tts-readalong Issue 8／epic-26-architecture-hardening Issue 12）', () {
     late String mainJsSource;
 
     setUpAll(() {
@@ -1583,13 +1583,6 @@ void main() {
       );
     });
 
-    test('安全視窗常數為 0.2～0.8（issues.md「可視範圍 20%～80%」）', () {
-      expect(mainJsSource.contains('const TTS_SAFE_WINDOW_MIN = 0.2'), isTrue,
-          reason: 'main.js 內找不到安全視窗下限常數。');
-      expect(mainJsSource.contains('const TTS_SAFE_WINDOW_MAX = 0.8'), isTrue,
-          reason: 'main.js 內找不到安全視窗上限常數。');
-    });
-
     test('draw-annotation 監聽器僅在目前朗讀高亮（value 與 currentTtsAnnotationValue 相符）時才觸發安全視窗檢查',
         () {
       expect(
@@ -1601,127 +1594,38 @@ void main() {
       );
     });
 
-    test('超出安全視窗時呼叫 onTtsHighlightOutOfSafeWindow', () {
-      expect(
-        mainJsSource
-            .contains("callHandler('onTtsHighlightOutOfSafeWindow', 'next')"),
-        isTrue,
-      );
-      expect(
-        mainJsSource
-            .contains("callHandler('onTtsHighlightOutOfSafeWindow', 'prev')"),
-        isTrue,
-      );
-    });
-
-    test('needNext 使用安全視窗軟門檻（0.2/0.8），依 Range 結尾矩形（last）的 X/Y 兩軸皆檢查'
-        '（epic-34-tts-readalong Issue 11：改看 Range 結尾而非開頭，見下方獨立 group）',
+    test(
+        'draw-annotation 監聽器透過 resolveTtsSafeWindowDirection() 判斷方向'
+        '（epic-26-architecture-hardening Issue 12：座標數學已抽成 '
+        'tts-safe-window.js 純函式並由 app/tool/test_tts_safe_window.mjs '
+        '單元測試涵蓋，這裡只驗證 main.js 接線正確，不重複驗證數學細節）',
         () {
       expect(
-        mainJsSource.contains('last.x < TTS_SAFE_WINDOW_MIN || last.y > 1.0'),
-        isTrue,
-        reason: '直排分支缺少這個條件——next 判斷須同時檢查 X 軸軟門檻與 '
-            'Y 軸硬邊界。',
-      );
-      expect(
-        mainJsSource.contains('last.y > TTS_SAFE_WINDOW_MAX || last.x > 1.0'),
-        isTrue,
-        reason: '橫排分支缺少這個條件——next 判斷須同時檢查 Y 軸軟門檻與 '
-            'X 軸硬邊界。',
-      );
-    });
-
-    test('needPrev 只能用真正超出頁面範圍的硬邊界（0.0/1.0）判斷，依 Range 開頭矩形（first），'
-        '不可沿用安全視窗軟門檻（避免翻頁死循環）', () {
-      expect(
-        mainJsSource.contains('first.x > 1.0 || first.y < 0.0'),
-        isTrue,
-        reason: '直排分支的 prev 判斷式缺少或誤用了門檻——不可出現 '
-            'TTS_SAFE_WINDOW_MIN/MAX，否則新頁頁首會被誤判為需要翻回'
-            '上一頁。',
-      );
-      expect(
-        mainJsSource.contains('first.y < 0.0 || first.x < 0.0'),
-        isTrue,
-        reason: '橫排分支的 prev 判斷式缺少或誤用了門檻——不可出現 '
-            'TTS_SAFE_WINDOW_MIN/MAX，否則新頁頁首會被誤判為需要翻回'
-            '上一頁。',
-      );
-      expect(
         mainJsSource.contains(
-          'const needPrev = isVertical\n            ? center > TTS_SAFE_WINDOW_MAX\n            : center < TTS_SAFE_WINDOW_MIN',
+          "import { resolveTtsSafeWindowDirection } from './tts-safe-window.js'",
         ),
+        isTrue,
+        reason: 'main.js 須從 tts-safe-window.js 匯入純函式，不可自行內嵌'
+            '安全視窗座標數學邏輯。',
+      );
+      expect(
+        mainJsSource.contains('resolveTtsSafeWindowDirection('),
+        isTrue,
+        reason: 'draw-annotation 監聽器須呼叫這個純函式取得翻頁方向。',
+      );
+      expect(
+        mainJsSource
+            .contains("callHandler('onTtsHighlightOutOfSafeWindow', direction)"),
+        isTrue,
+        reason: '監聽器須把 resolveTtsSafeWindowDirection() 的回傳值原樣'
+            '轉送給 callHandler，不可自行重新判斷 next/prev（該判斷已收進'
+            '純函式內部，見 tts-safe-window.js）。',
+      );
+      expect(
+        mainJsSource.contains('const TTS_SAFE_WINDOW_MIN'),
         isFalse,
-        reason: '找到舊版對稱門檻寫法殘留——這正是造成翻頁死循環的錯誤'
-            '版本（review-plan-issue-8.md Critical #1），必須確認已被'
-            '取代，不是新舊兩份判斷式同時存在。',
-      );
-    });
-  });
-
-  group(
-      'main.js 安全視窗跟隨翻頁 × 硬性長度上限切分交互作用修復 regression guard '
-      '（epic-34-tts-readalong Issue 11 真機驗收發現）', () {
-    late String mainJsSource;
-
-    setUpAll(() {
-      mainJsSource = File('android/app/src/main/assets/foliate/main.js')
-          .readAsStringSync();
-    });
-
-    test('安全視窗檢查改用 Range 的開頭矩形與結尾矩形分別判斷，不再固定只看第一個', () {
-      expect(
-        mainJsSource.contains('const rects = range.getClientRects()'),
-        isTrue,
-        reason: '這句話的 cfi Range 本身（不論是否被硬性長度上限切分過）'
-            '可能橫跨多行/多頁，getClientRects() 因此可能回傳多個矩形；'
-            '固定只看 [0] 會讓安全視窗檢查永遠盯著這句話開頭的位置判斷，'
-            '偵測不到這句話後半段早已超出目前頁面範圍的情況（真機實測：'
-            '橫排/直排皆無法自動翻頁）。',
-      );
-      expect(mainJsSource.contains('const firstRect = rects[0]'), isTrue);
-      expect(
-        mainJsSource.contains('const lastRect = rects[rects.length - 1]'),
-        isTrue,
-      );
-      expect(
-        mainJsSource.contains('const first = normOf(firstRect)'),
-        isTrue,
-      );
-      expect(mainJsSource.contains('const last = normOf(lastRect)'), isTrue);
-    });
-
-    test('needNext 依 Range 結尾矩形（last）判斷，needPrev 依 Range 開頭矩形（first）判斷', () {
-      expect(
-        mainJsSource.contains('const needNext = isVertical'),
-        isTrue,
-      );
-      expect(
-        mainJsSource.contains('? last.x < TTS_SAFE_WINDOW_MIN || last.y > 1.0'),
-        isTrue,
-        reason: 'needNext 必須依 Range 結尾矩形判斷——這句話開始播放的'
-            '當下就先確認「唸到最後一個字時，畫面來不來得及顯示」，提前'
-            '翻頁；若誤用開頭矩形，會重蹈真機發現的「這句話開頭還在畫面'
-            '上就永遠判斷安全」問題。',
-      );
-      expect(
-        mainJsSource.contains(': last.y > TTS_SAFE_WINDOW_MAX || last.x > 1.0'),
-        isTrue,
-      );
-      expect(
-        mainJsSource.contains('const needPrev = isVertical'),
-        isTrue,
-      );
-      expect(
-        mainJsSource.contains('? first.x > 1.0 || first.y < 0.0'),
-        isTrue,
-        reason: 'needPrev 須維持依 Range 開頭矩形判斷（Issue 8 既有「新頁'
-            '頁首不可誤判為需要翻回上一頁」保護對象是「這句話的開頭位置」'
-            '，不是結尾）。',
-      );
-      expect(
-        mainJsSource.contains(': first.y < 0.0 || first.x < 0.0'),
-        isTrue,
+        reason: '安全視窗常數已搬進 tts-safe-window.js，main.js 不應再'
+            '殘留這個宣告。',
       );
     });
   });
