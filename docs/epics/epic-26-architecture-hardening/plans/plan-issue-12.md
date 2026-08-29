@@ -32,7 +32,7 @@
 **Interfaces:**
 - Produces: `tts-safe-window.js` 匯出 `function resolveTtsSafeWindowDirection(firstRect, lastRect, iframeRect, viewportRect, isVertical)`，回傳 `'next' | 'prev' | null`。`firstRect`／`lastRect`／`iframeRect`／`viewportRect` 皆為 `{left, right, top, bottom}` 形狀的純數字物件（或 `null`/`undefined`）——`DOMRect` 本身即符合此形狀，呼叫端不需轉型。`TTS_SAFE_WINDOW_MIN`（0.2）／`TTS_SAFE_WINDOW_MAX`（0.8）常數不對外匯出，僅供函式內部使用。Task 2 會匯入並呼叫這個函式。
 
-- [ ] **Step 1: 寫測試腳本（先寫完整份，這支腳本本身就是測試——比照 `test_section_progress_density.mjs` 慣例，不是逐一累加）**
+- [x] **Step 1: 寫測試腳本（先寫完整份，這支腳本本身就是測試——比照 `test_section_progress_density.mjs` 慣例，不是逐一累加）**
 
 建立 `app/tool/test_tts_safe_window.mjs`：
 
@@ -154,13 +154,13 @@ const SAFE = point(50, 50) // 正規化座標 (0.5, 0.5)，橫排/直排皆不�
 console.log('resolveTtsSafeWindowDirection 安全視窗判斷驗證：9 項全數通過')
 ```
 
-- [ ] **Step 2: 執行測試腳本確認它會失敗**
+- [x] **Step 2: 執行測試腳本確認它會失敗**
 
 執行：`node app/tool/test_tts_safe_window.mjs`
 
 預期結果：因為 `tts-safe-window.js` 還不存在，Node 會拋出模組解析錯誤（`Cannot find module '.../tts-safe-window.js'` 或等效訊息），非結束碼 0。
 
-- [ ] **Step 3: 建立 `tts-safe-window.js` 最小實作**
+- [x] **Step 3: 建立 `tts-safe-window.js` 最小實作**
 
 建立 `app/android/app/src/main/assets/foliate/tts-safe-window.js`：
 
@@ -240,13 +240,13 @@ export function resolveTtsSafeWindowDirection(
 }
 ```
 
-- [ ] **Step 4: 執行測試腳本確認全數通過**
+- [x] **Step 4: 執行測試腳本確認全數通過**
 
 執行：`node app/tool/test_tts_safe_window.mjs`
 
 預期結果：印出 `resolveTtsSafeWindowDirection 安全視窗判斷驗證：9 項全數通過`，結束碼 0。
 
-- [ ] **Step 5: 補充 `app/tool/README.md` 文件章節**
+- [x] **Step 5: 補充 `app/tool/README.md` 文件章節**
 
 在 `app/tool/README.md` 的 `## \`test_section_progress_density.mjs\`` 小節之後（檔案末尾）新增一節，格式比照該小節：
 
@@ -277,7 +277,7 @@ node app/tool/test_tts_safe_window.mjs
 - 非 `0`：斷言失敗或拋出例外，會印出對應的錯誤訊息與堆疊。
 ```
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/android/app/src/main/assets/foliate/tts-safe-window.js app/tool/test_tts_safe_window.mjs app/tool/README.md
