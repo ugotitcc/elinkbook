@@ -6,6 +6,8 @@
 
 **2026-08-21 併入第三份架構檢視報告的候選深化機會：** `docs/research/architecture-review-flowable-pagination-precision.md`（2026-08-21，`/improve-codebase-architecture` 流程產出，範圍為流式格式頁次計算精準化，3 個候選）。候選 1（`EpubPositionInfo` 的 `pageIndex`／`location` 語意混用，強度 Strong）已用 `/grilling` 敲定細節並拆為 **Issue 10**，標記 `ready-for-agent`。候選 2（用已渲染 section 視覺頁密度校正 location 估算，強度 Strong 但牴觸 ADR 0011 既有取捨）與候選 3（`EpubPositionInfo` 三層座標重新分層，依附候選 1）尚未拆案，待 Issue 10 完成後視優先順序評估。
 
+**2026-08-29 併入第四份架構檢視報告的候選深化機會：** `docs/research/architecture-review-epic34-tts.md`（2026-08-29，`/improve-codebase-architecture` 流程產出，範圍為 `epic-34-tts-readalong` 語音朗讀模組，4 個候選）。候選 1（把安全視窗判斷抽成純函式，直接對應 Issue 11 真機除錯兩次誤診斷的真實痛點，強度 Strong）已用 `/grilling` 敲定細節並拆為 **Issue 12**，標記 `ready-for-agent`。候選 2（收斂重複三次的 JS 請求／回應樣板，強度 Strong）、候選 3（400ms 翻頁節流搬進 `TtsController`，強度 Worth exploring，建議待 Issue 12 完成後再評估）、候選 4（三個 callback 收斂成 `TtsReaderBridge`，強度 Speculative，會重開 Issue 2／Issue 4 已定案的解耦設計取捨）尚未拆案。
+
 ---
 
 ## Issue 1：流式 EPUB 書籤 toggle 快取未載入時，第一次點擊誤判無書籤而重複新增
@@ -324,3 +326,53 @@ Future<void> pumpUntilPdfReady(
 - `flutter analyze` 乾淨、`flutter test` 全數通過、零回歸；`main.js` 無自動化測試框架可用，驗證手段是逐鍵核對 `relocate` detail 新增的 `contentPages` 欄位只在非捲動分支出現，比照 Issue 10 Task 2 的既有作法。
 
 **驗收標準：** 流式 EPUB／TXT／MD 分頁（無捲動）模式下，`locationIndex`／`locationTotal` 換算優先採用使用者當下實際排版設定下已知 section 的實測密度，未知 section 外插自索引距離最近的已知 section；捲動模式與 FXL／CBZ 頁碼顯示行為零改變；任何流經 `applyPreferences()` 的排版設定變更後，密度快取正確清空重算；`EpubPositionInfo` 對外欄位名與型別簽章不變（呼叫端零改動）；`flutter analyze` 乾淨、`flutter test` 全數通過、零回歸。
+
+---
+
+## Issue 12：把 TTS 安全視窗判斷抽成純函式，讓它真正可單元測試
+
+**Status:** `ready-for-agent`
+
+**依賴：** 無，範圍侷限 `main.js` 的安全視窗判斷區塊與其對應 Dart 測試，可獨立於本 Epic 其他 Issue 任何時間點處理。
+
+**來源：** `docs/research/architecture-review-epic34-tts.md`（2026-08-29，`/improve-codebase-architecture` 流程產出，範圍為 `epic-34-tts-readalong`）候選 1（強度 Strong）。2026-08-29 `/grilling` 敲定實作細節。
+
+**背景／症狀：** `epic-34-tts-readalong` Issue 11 真機除錯時，安全視窗（Safe Viewport，見 CONTEXT.md）翻頁判斷邏輯繞了兩次誤診斷才定位到真正問題（依比例挑矩形、同一 CFI 只檢查一次，皆已回退）。根本原因：`needNext`/`needPrev` 的判斷邏輯（`app/android/app/src/main/assets/foliate/main.js:898-950`）完全焊在 `draw-annotation` 監聽器裡，沒有獨立介面——真機除錯時只能靠「改程式碼→編 APK→真機測試→看 log」這個緩慢的回饋迴圈驗證假設。既有 Dart regression-guard 測試（`app/test/reader/foliate_reader_view_test.dart:1559-1725`，兩組 group）也只能對著 `mainJsSource` 原始碼字串做 `contains()` 比對，測不到真正的行為，只能確認「程式碼長什麼樣子」而非「算出來的結果對不對」。
+
+**Solution（`/grilling` 已敲定的具體設計）：**
+
+1. 新增零 DOM 依賴的獨立檔案 `app/android/app/src/main/assets/foliate/tts-safe-window.js`（比照同目錄 `progress.js` 的既有先例——`main.js` 第 5 行 `const view = document.getElementById('view')` 是模組頂層就會執行的程式碼，若把純函式留在 `main.js` 裡 `export`，Node 匯入整份 `main.js` 時會直接因 `document is not defined` 掛掉，故必須是獨立檔案）。
+2. 把 `TTS_SAFE_WINDOW_MIN = 0.2`／`TTS_SAFE_WINDOW_MAX = 0.8` 這兩個常數（目前只有第 938-940 行用到，無其他使用點）一併搬進此檔案，不再對外暴露。
+3. 該檔案 `export function resolveTtsSafeWindowDirection(firstRect, lastRect, iframeRect, viewportRect, isVertical)`，簽章與行為：
+   - `firstRect`／`lastRect`：純數字物件 `{left, right, top, bottom}`（對應 `range.getClientRects()` 的頭尾矩形，呼叫端傳入前不需轉型，`DOMRect` 本身即符合此形狀）。
+   - 內含原本的座標正規化（原 `normOf`）＋`needNext`/`needPrev` 判斷＋「兩者皆成立時 next 優先」的既有順序規則——這條優先順序規則目前寫在呼叫端（`main.js` 原第 944-948 行的 `if/else if`），一併收進函式，不留在呼叫端。
+   - 回傳 `'next' | 'prev' | null`（三選一的最終決定，不是 `{needNext, needPrev}` 布林值對）。
+4. `main.js` 的 `draw-annotation` 監聽器改為 `import { resolveTtsSafeWindowDirection } from './tts-safe-window.js'`，原第 911-949 行那段（取 rects、`normOf`、`needNext`/`needPrev`、`if/else if callHandler`）縮成：
+   ```js
+   const rects = range.getClientRects()
+   const direction = resolveTtsSafeWindowDirection(
+     rects[0], rects[rects.length - 1],
+     frameEl && frameEl.getBoundingClientRect(),
+     view.getBoundingClientRect(),
+     isVertical,
+   )
+   if (direction) {
+     window.flutter_inappwebview.callHandler('onTtsHighlightOutOfSafeWindow', direction)
+   }
+   ```
+   （`frameEl`/`firstRect`/`lastRect` 為 `null`/`undefined` 時的既有防呆判斷，由 `resolveTtsSafeWindowDirection()` 內部處理，行為與搬移前一致：任一必要輸入缺席時回傳 `null`。）
+5. 新增 `app/tool/test_tts_safe_window.mjs`（比照既有 `app/tool/test_section_progress_density.mjs`：`import` 純函式、Node 內建 `node:assert/strict`、無需 npm install 或任何測試框架，手動執行 `node app/tool/test_tts_safe_window.mjs`），涵蓋橫排／直排各自的邊界值情境（例如 `last.y` 恰好等於／超過 `TTS_SAFE_WINDOW_MAX`、`first.x`／`first.y` 恰好等於／超過硬邊界 `0.0`/`1.0`）、頭尾矩形不同（模擬跨頁句子）情境、`needNext`／`needPrev` 同時成立時 next 優先的情境、任一必要輸入缺席時回傳 `null` 的情境。
+6. `app/tool/README.md` 仿照 `test_section_progress_density.mjs` 既有格式新增一節，註明「修改 `tts-safe-window.js` 之後要跑」與「升級 `foliate/` 釘定版本後若上游改動了相關渲染機制也要跑」。
+
+**既有 Dart 測試處理（`/grilling` 決策：保留 wiring 測試、刪除數學細節測試）：**
+- `app/test/reader/foliate_reader_view_test.dart:1559-1725` 兩組現有 group 中，斷言數學算式細節的測試（例如斷言 `last.x < TTS_SAFE_WINDOW_MIN || last.y > 1.0` 這類字面運算式、斷言 `TTS_SAFE_WINDOW_MIN`/`MAX` 常數值 0.2/0.8）全數刪除——這些行為已被新的 Node 單元測試（步驟 5）真正涵蓋，常數搬離 `main.js` 後這些字串比對也已經找不到目標，不刪除會直接測試失敗。
+- 保留一則精簡後的「wiring 測試」：確認 `draw-annotation` 監聽器內有 `import`／呼叫 `resolveTtsSafeWindowDirection(...)`，且回傳值有被傳給 `window.flutter_inappwebview.callHandler('onTtsHighlightOutOfSafeWindow', ...)`——這是「`main.js` 有沒有正確接線」，Dart 測試沒辦法真的跑 WebView，仍只能靠字串比對確認，但範圍縮小到只驗證「接線正確」，不再驗證數學本身。
+- 「draw-annotation 監聽器僅在目前朗讀高亮時才觸發安全視窗檢查」（原第 1593 行附近）這則測試與呼叫端邏輯無關，維持不變。
+
+**單元測試要求：**
+- `app/tool/test_tts_safe_window.mjs`：橫排／直排的 `needNext`／`needPrev`／`null` 三種結果各自至少一個情境、邊界值（軟門檻 0.2/0.8、硬邊界 0.0/1.0）各自的等於/超過情境、頭尾矩形不同（模擬跨頁句子）情境、`needNext`/`needPrev` 同時成立時 next 優先的情境、`firstRect`/`lastRect`/`frameEl` 任一為 `null`/`undefined` 時回傳 `null` 的情境。
+- `foliate_reader_view_test.dart`：更新後的「wiring 測試」確認呼叫鏈存在；既有「僅在目前朗讀高亮時才檢查」測試零回歸。
+- `flutter analyze` 乾淨、`flutter test` 全數通過。
+- 本 Issue 為純重構（座標數學逐字搬移，不改變任何行為），不需要真機重新驗證安全視窗翻頁邏輯本身（Issue 11 真機驗收的橫排/直排翻頁行為已確認正確，本次不變動該行為，只變動它的可測試性）。
+
+**驗收標準：** 安全視窗判斷邏輯收斂為獨立、零 DOM 依賴的 `resolveTtsSafeWindowDirection()` 純函式，可被 Node 直接單元測試；`main.js` 呼叫端縮減為「取資料→呼叫函式→視結果呼叫 callHandler」；既有 Dart regression-guard 測試裡驗證數學細節的部分全數由新 Node 測試取代，僅保留 wiring 測試；`flutter analyze` 乾淨、`flutter test` 全數通過、零回歸；`node app/tool/test_tts_safe_window.mjs` 全數通過。
