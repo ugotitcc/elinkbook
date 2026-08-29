@@ -637,12 +637,42 @@ window.buildTtsSegments = async function (sectionIndex) {
     }
 
     const terminators = /[。！？；.!?;]/
+    // 次要切分邊界（epic-34-tts-readalong Issue 11，issues.md「來源」
+    // 欄位真機重現紀錄：部分自製 EPUB 整段/整章以全形空格「　」分隔
+    // 語句、完全不使用「。！？」等標點，導致單一朗讀段長達近 2 萬字，
+    // 超出 Android TextToSpeech 單次合成輸入長度上限，回報
+    // ERROR_OUTPUT -8）。找不到主要標點、且目前累積片段長度已達
+    // TTS_SECONDARY_BOUNDARY_MIN_LENGTH 時，遇到空白字元（JS \s 已
+    // 涵蓋全形空格 U+3000／半形空白／換行，不需要另外處理）也視為可
+    // 切分點。門檻刻意設得比一般正常句子長（既有跨標籤句子測試樣本
+    // 遠低於此門檻），確保「優先用標點切句」這個既有行為不受影響——
+    // 只有真的很長、又缺乏標點時才會退而求其次觸發次要邊界。
+    //
+    // **刻意不處理的範圍**（審查 review-issue-11-code.md Important #1）：
+    // issues.md 設計要點原文亦提到「换行/段落邊界（對應 <br>／區塊層級
+    // 標籤邊界）」可作為次要邊界，但本實作只偵測 fullText 字面上已存在
+    // 的空白字元——上方 TreeWalker 組裝 fullText 時單純把各文字節點的
+    // textContent 直接串接，不同 <p> 等區塊層級標籤之間若彼此緊鄰、內部
+    // 文字又沒有空白字元（中文排版常見），不會產生任何可偵測的邊界訊號。
+    // 這是刻意的取捨：正確判斷「區塊層級」邊界需要在 TreeWalker 掃描時
+    // 額外比對父元素變化並插入合成邊界字元，同時得處理 offsetMap／CFI
+    // range 計算不能被這個合成字元污染，複雜度不小；而 TtsController 端
+    // 另有兩層防線兜底（硬性長度上限切分＋段落失敗跳過並接續，見
+    // tts_controller.dart），足以保證「不會整章念不出來」這個核心驗收
+    // 標準成立，即使某本書恰好完全落在本層偵測不到的情境。若之後真機
+    // 回報這條路徑仍有問題，再依實際案例評估是否要另立工單補齊。
+    const TTS_SECONDARY_BOUNDARY_MIN_LENGTH = 200
+    const secondaryBoundary = /\s/
     const segments = []
     let start = 0
     let segmentIndex = 0
     for (let i = 0; i < fullText.length; i++) {
       const isLast = i === fullText.length - 1
-      if (terminators.test(fullText[i]) || isLast) {
+      const isPrimaryBoundary = terminators.test(fullText[i])
+      const isSecondaryBoundary = !isPrimaryBoundary &&
+        (i - start) >= TTS_SECONDARY_BOUNDARY_MIN_LENGTH &&
+        secondaryBoundary.test(fullText[i])
+      if (isPrimaryBoundary || isSecondaryBoundary || isLast) {
         // Range 起點跳過開頭空白字元（審查 review-plan-issue-2.md
         // Minor #2）：段落縮排空格若被含進 Range，Issue 3 高亮跟隨時
         // 反白區塊會多一截空白；Issue 2 本身不影響朗讀，但現在順手對齊
@@ -866,13 +896,31 @@ async function openBook() {
       // resyncHighlight()（Issue 7）與一般朗讀段切換（Issue 3）都是透過
       // 同一個 window.showTtsHighlight() 進來，天然共用這段判斷。
       if (annotation.value === currentTtsAnnotationValue) {
-        const rect = range.getClientRects()[0]
+        // epic-34-tts-readalong Issue 11 真機驗收發現：這句話的 cfi
+        // Range 本身（不論是否被 TtsController 硬性長度上限切分過）
+        // 可能橫跨多行/多頁——range.getClientRects() 依文件順序回傳一行
+        // 一個矩形。原本固定只看 getClientRects()[0]（Range 最開頭那一
+        // 行）判斷要不要翻頁：只要這句話的開頭還在畫面上就永遠判斷「安
+        // 全」，即使這句話後半段早已超出目前頁面範圍，畫面也完全不會
+        // 跟著翻頁（真機實測重現：橫排/直排皆無法自動翻頁）。改為：
+        // needNext 看 Range 結尾那一行的位置——這句話開始播放的當下就
+        // 先確認「唸到最後一個字時，畫面來不來得及顯示」，提前翻頁；
+        // needPrev 仍看 Range 開頭那一行，維持下方既有「新頁頁首不可
+        // 誤判為需要翻回上一頁」的保護。一般不橫跨頁面的短句，開頭/
+        // 結尾矩形位置幾乎相同，行為與修改前一致。
+        const rects = range.getClientRects()
+        const firstRect = rects[0]
+        const lastRect = rects[rects.length - 1]
         const frameEl = doc.defaultView && doc.defaultView.frameElement
-        if (rect && frameEl) {
+        if (firstRect && lastRect && frameEl) {
           const iframeRect = frameEl.getBoundingClientRect()
           const viewportRect = view.getBoundingClientRect()
-          const normX = (iframeRect.left + (rect.left + rect.right) / 2 - viewportRect.left) / viewportRect.width
-          const normY = (iframeRect.top + (rect.top + rect.bottom) / 2 - viewportRect.top) / viewportRect.height
+          const normOf = (rect) => ({
+            x: (iframeRect.left + (rect.left + rect.right) / 2 - viewportRect.left) / viewportRect.width,
+            y: (iframeRect.top + (rect.top + rect.bottom) / 2 - viewportRect.top) / viewportRect.height,
+          })
+          const first = normOf(firstRect)
+          const last = normOf(lastRect)
           // 審查修正（review-plan-issue-8.md Critical #1／Important #1）：
           // 分頁模式下「頁首」是正常可見內容，不能因為位置接近 0 就誤判
           // 為「還沒進入視野」而觸發 prev()——否則剛翻到新頁的第一句會
@@ -888,11 +936,11 @@ async function openBook() {
           // 真機分別驗證橫排/直排兩種模式，見 plan-issue-8.md 真機驗收
           // 清單。
           const needNext = isVertical
-            ? normX < TTS_SAFE_WINDOW_MIN || normY > 1.0
-            : normY > TTS_SAFE_WINDOW_MAX || normX > 1.0
+            ? last.x < TTS_SAFE_WINDOW_MIN || last.y > 1.0
+            : last.y > TTS_SAFE_WINDOW_MAX || last.x > 1.0
           const needPrev = isVertical
-            ? normX > 1.0 || normY < 0.0
-            : normY < 0.0 || normX < 0.0
+            ? first.x > 1.0 || first.y < 0.0
+            : first.y < 0.0 || first.x < 0.0
           if (needNext) {
             window.flutter_inappwebview.callHandler('onTtsHighlightOutOfSafeWindow', 'next')
           } else if (needPrev) {

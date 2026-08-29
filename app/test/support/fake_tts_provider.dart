@@ -16,6 +16,15 @@ class FakeTtsProvider implements TtsProvider {
   /// 供驗證非同步合成期間的狀態與防重入邏輯。
   Completer<void>? nextSynthesizeCompleter;
 
+  /// 測試設定後，[getMaxInputLength] 回傳這個值（預設 `null`，代表未
+  /// 設定任何上限，等同引擎未回報——既有測試不需要修改即可維持原行為，
+  /// 因為 [TtsController] 在 `null` 時不套用硬性長度上限防線，見
+  /// epic-34-tts-readalong Issue 11）。
+  int? maxInputLength;
+
+  @override
+  Future<int?> getMaxInputLength() async => maxInputLength;
+
   @override
   Future<List<TtsVoice>> getAvailableVoices() async => const [TtsVoice.systemDefault];
 

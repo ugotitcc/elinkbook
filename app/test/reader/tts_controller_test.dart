@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/reader/tts_controller.dart';
 import 'package:elinkbook/reader/tts_provider.dart';
 import 'package:elinkbook/reader/tts_segment_cfi.dart';
+import 'package:elinkbook/reader/reader_console_log.dart';
 
 import '../support/fake_tts_audio_player.dart';
 import '../support/fake_tts_provider.dart';
@@ -142,9 +143,14 @@ void main() {
     expect(player.disposed, isTrue);
   });
 
-  test('play() 時 synthesize() 拋出例外，重設回 idle 而非卡在 playing（審查 Important #1）',
-      () async {
-    final controller = buildController();
+  test(
+      'play() 時唯一段落 synthesize() 拋出例外、已無下一段可嘗試，重設回 idle '
+      '而非卡在 playing（審查 review-issue-2-code.md Important #1；'
+      'epic-34-tts-readalong Issue 11 起僅適用於「無下一段可跳過」情境，'
+      '見下一則測試）', () async {
+    final controller = buildController(segs: const [
+      TtsSegmentCfi(segmentId: '0', cfi: 'epubcfi(/6/4!/1:0)', text: '第一句。'),
+    ]);
     provider.nextSynthesizeError = const TtsSynthesisException('模擬引擎失敗');
 
     await controller.play();
@@ -152,8 +158,43 @@ void main() {
     expect(controller.status, TtsPlaybackStatus.idle);
     expect(controller.currentIndex, -1);
     expect(controller.segments, isEmpty);
-    // player.loadFile()/play() 不應該被呼叫——合成本身就失敗了。
+    // player.loadFile()/play() 不應該被呼叫——合成本身就失敗了，且已無
+    // 下一段可嘗試。
     expect(player.callLog, isEmpty);
+  });
+
+  test(
+      'play() 時第一段 synthesize() 拋出例外，自動跳過並成功合成播放下一段'
+      '（epic-34-tts-readalong Issue 11：單一段落失敗不得讓整個朗讀流程'
+      '卡死）', () async {
+    final controller = buildController(); // 預設兩段
+    provider.nextSynthesizeError = const TtsSynthesisException('模擬引擎失敗');
+
+    await controller.play();
+
+    expect(controller.status, TtsPlaybackStatus.playing);
+    expect(controller.currentIndex, 1);
+    // 第一段合成失敗（被跳過，未呼叫 loadFile/play）、第二段合成成功
+    // 並播放。
+    expect(provider.synthesizedTexts, ['第一句。', '第二句。']);
+    expect(player.callLog, ['loadFile', 'play']);
+  });
+
+  test(
+      'play() 段落合成失敗被跳過時，寫入 ReaderConsoleLog 診斷紀錄'
+      '（epic-34-tts-readalong Issue 11）', () async {
+    ReaderConsoleLog.clear();
+    final controller = buildController();
+    provider.nextSynthesizeError = const TtsSynthesisException('模擬引擎失敗');
+
+    await controller.play();
+
+    expect(
+      ReaderConsoleLog.entries.value.any((entry) =>
+          entry.contains('[TTS Diagnostic]') &&
+          entry.contains('跳過並嘗試下一段')),
+      isTrue,
+    );
   });
 
   test('自動接續下一句時 synthesize() 拋出例外，重設回 idle 而非卡在 playing（審查 Important #1）',
@@ -336,21 +377,28 @@ void main() {
     expect(highlighted, [segments[0], segments[1], null]);
   });
 
-  test('play() 合成失敗重設回 idle 時，onHighlightSegment 最後收到 null', () async {
+  test(
+      'play() 唯一段落合成失敗、已無下一段可嘗試，重設回 idle 時 '
+      'onHighlightSegment 最後收到 null（epic-34-tts-readalong Issue 11 '
+      '起僅適用於「無下一段可跳過」情境，見上方「自動跳過並成功合成'
+      '播放下一段」測試）', () async {
     final highlighted = <TtsSegmentCfi?>[];
     provider = FakeTtsProvider();
     player = FakeTtsAudioPlayer();
     provider.nextSynthesizeError = const TtsSynthesisException('模擬引擎失敗');
+    const singleSegment = [
+      TtsSegmentCfi(segmentId: '0', cfi: 'epubcfi(/6/4!/1:0)', text: '第一句。'),
+    ];
     final controller = TtsController(
       provider: provider,
       player: player,
-      loadSegments: () async => segments,
+      loadSegments: () async => singleSegment,
       onHighlightSegment: highlighted.add,
     );
 
     await controller.play();
 
-    expect(highlighted, [segments[0], null]);
+    expect(highlighted, [singleSegment[0], null]);
   });
 
   test('不提供 onHighlightSegment 時，play()/自動接續/播放結束皆不拋出例外（可選 callback）',
@@ -983,6 +1031,128 @@ void main() {
     controller.dispose();
 
     expect(() => controller.resyncHighlight(), returnsNormally);
+  });
+
+  group('硬性長度上限切分（epic-34-tts-readalong Issue 11）', () {
+    test('provider.getMaxInputLength() 回傳 null 時不切分，既有行為不變',
+        () async {
+      final controller = buildController();
+      provider.maxInputLength = null;
+
+      await controller.play();
+
+      expect(controller.segments.length, segments.length);
+      expect(provider.synthesizedTexts, ['第一句。']);
+    });
+
+    test('段落文字長度超過上限時硬切為多個子段落，各自依序合成', () async {
+      final longText = List.generate(25, (i) => '字').join();
+      final controller = buildController(segs: [
+        TtsSegmentCfi(
+          segmentId: '0',
+          cfi: 'epubcfi(/6/4!/1:0)',
+          text: longText,
+        ),
+      ]);
+      provider.maxInputLength = 10;
+
+      await controller.play();
+
+      // 25 字、上限 10 字，應切成 3 段（10+10+5）。
+      expect(controller.segments.length, 3);
+      expect(controller.segments[0].text.length, 10);
+      expect(controller.segments[1].text.length, 10);
+      expect(controller.segments[2].text.length, 5);
+      // 子段落沿用原始 CFI（精確子範圍 CFI 需回到 JS 端重新計算，
+      // 超出本硬性防線的職責範圍）。
+      expect(controller.segments[0].cfi, 'epubcfi(/6/4!/1:0)');
+      expect(controller.segments[1].cfi, 'epubcfi(/6/4!/1:0)');
+      expect(controller.segments[2].cfi, 'epubcfi(/6/4!/1:0)');
+      expect(provider.synthesizedTexts.first.length, 10);
+      expect(controller.currentIndex, 0);
+    });
+
+    test(
+        'lookupStartIndex 回傳的（切分前）索引，在切分後正確換算到對應'
+        '子段落的起始位置', () async {
+      final longText = List.generate(25, (i) => '字').join();
+      final loaded = [
+        const TtsSegmentCfi(
+          segmentId: '0',
+          cfi: 'epubcfi(/6/4!/1:0)',
+          text: '短句。', // 3 字，不切分
+        ),
+        TtsSegmentCfi(
+          segmentId: '1',
+          cfi: 'epubcfi(/6/4!/2:0)',
+          text: longText, // 25 字，上限 10 字時切成 3 段
+        ),
+        const TtsSegmentCfi(
+          segmentId: '2',
+          cfi: 'epubcfi(/6/4!/3:0)',
+          text: '最後。', // 3 字，不切分
+        ),
+      ];
+      provider = FakeTtsProvider();
+      player = FakeTtsAudioPlayer();
+      provider.maxInputLength = 10;
+      final controller = TtsController(
+        provider: provider,
+        player: player,
+        loadSegments: () async => loaded,
+        lookupStartIndex: (segs) async => 2, // 指向切分前的第三個原始段落
+      );
+
+      await controller.play();
+
+      // 切分後清單：[短句, 長句子段1, 長句子段2, 長句子段3, 最後]，
+      // 原始索引 2（「最後。」）換算後應是切分後索引 4。
+      expect(controller.segments.length, 5);
+      expect(controller.currentIndex, 4);
+      expect(provider.synthesizedTexts, ['最後。']);
+    });
+
+    test(
+        'lookupStartIndex 回傳的（切分前）索引恰好指向被切分的長段落本身時，'
+        '換算到該段落切分後的第一個子段落（審查 review-issue-11-code.md '
+        'Minor #1）', () async {
+      final longText = List.generate(25, (i) => '字').join();
+      final loaded = [
+        const TtsSegmentCfi(
+          segmentId: '0',
+          cfi: 'epubcfi(/6/4!/1:0)',
+          text: '短句。', // 3 字，不切分
+        ),
+        TtsSegmentCfi(
+          segmentId: '1',
+          cfi: 'epubcfi(/6/4!/2:0)',
+          text: longText, // 25 字，上限 10 字時切成 3 段
+        ),
+        const TtsSegmentCfi(
+          segmentId: '2',
+          cfi: 'epubcfi(/6/4!/3:0)',
+          text: '最後。', // 3 字，不切分
+        ),
+      ];
+      provider = FakeTtsProvider();
+      player = FakeTtsAudioPlayer();
+      provider.maxInputLength = 10;
+      final controller = TtsController(
+        provider: provider,
+        player: player,
+        loadSegments: () async => loaded,
+        lookupStartIndex: (segs) async => 1, // 指向切分前的長段落本身
+      );
+
+      await controller.play();
+
+      // 切分後清單：[短句, 長句子段1, 長句子段2, 長句子段3, 最後]，
+      // 原始索引 1（長段落本身）換算後應是切分後索引 1（第一個子段落），
+      // 不是跳過整段長句子落到索引 4。
+      expect(controller.segments.length, 5);
+      expect(controller.currentIndex, 1);
+      expect(provider.synthesizedTexts, [longText.substring(0, 10)]);
+    });
   });
 }
 

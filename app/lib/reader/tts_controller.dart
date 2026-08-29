@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'tts_audio_player.dart';
 import 'tts_provider.dart';
 import 'tts_segment_cfi.dart';
+import 'reader_console_log.dart';
 
 enum TtsPlaybackStatus { idle, playing, paused }
 
@@ -139,13 +140,23 @@ class TtsController extends ChangeNotifier {
       final startIndex =
           lookupStartIndex == null ? 0 : await lookupStartIndex!(loaded);
       if (_disposed || generation != _playGeneration) return;
-      // _segments／_currentIndex 一起賦值、放在兩個 await 之後、確認世代
+      // 硬性長度上限防線（epic-34-tts-readalong Issue 11）：main.js
+      // buildTtsSegments() 已有標點/次要邊界切句規則（見 issues.md Issue
+      // 11 設計要點第 1 點），但無法涵蓋所有極端排版，這裡是最後一道
+      // 防線——依引擎回報的實際上限，把任何仍然過長的段落硬切成多個
+      // 子段落再個別合成。maxInputLength 為 null（引擎未回報上限）時
+      // _capSegmentsToMaxLength 直接原樣回傳，不套用任何切分。
+      final maxInputLength = await provider.getMaxInputLength();
+      if (_disposed || generation != _playGeneration) return;
+      final capped = _capSegmentsToMaxLength(loaded, maxInputLength);
+      // _segments／_currentIndex 一起賦值、放在所有 await 之後、確認世代
       // 仍有效才寫入——避免中途被中止的呼叫留下「_segments 已覆寫、但
       // 從未真正開始播放」的孤兒狀態（同一個 review Important #1／#2 的
       // 修法延伸）。
-      _segments = loaded;
-      _currentIndex =
-          (startIndex >= 0 && startIndex < _segments.length) ? startIndex : 0;
+      _segments = capped.segments;
+      final clampedStartIndex =
+          (startIndex >= 0 && startIndex < loaded.length) ? startIndex : 0;
+      _currentIndex = capped.startOffsets[clampedStartIndex];
     } finally {
       _isLoadingSegments = false;
     }
@@ -369,34 +380,54 @@ class TtsController extends ChangeNotifier {
   int _segmentGeneration = 0;
 
   Future<void> _playCurrentSegment() async {
-    final segment = _segments[_currentIndex];
     final generation = ++_segmentGeneration;
-    try {
-      _status = TtsPlaybackStatus.playing;
-      onHighlightSegment?.call(segment);
-      notifyListeners();
-      final result = await provider.synthesize(
-        segment.text,
-        voice: TtsVoice.systemDefault,
-        speed: _speed,
-      );
+    // epic-34-tts-readalong Issue 11：單一段落合成/播放失敗時不得讓整個
+    // 朗讀流程卡死或靜默無反應（例如遇到超出 TTS 引擎輸入長度上限、或
+    // 原生端回報 ERROR_OUTPUT 的段落）——改為迴圈跳過失敗段落並嘗試
+    // 下一段，直到成功播放某一段，或已無下一段可嘗試（視同章節自然
+    // 播放完畢，走既有「重設回 idle」路徑）。
+    while (true) {
       if (_disposed || generation != _segmentGeneration) return;
-      await player.loadFile(result.audioFilePath);
-      // 重要修復（review-issue-2-code.md Important #1）：若在 synthesize/loadFile
-      // 非同步期間使用者按下了暫停鍵（_status 變更為 paused），檔案載入完成後
-      // 不得再呼叫 player.play()，應維持在 paused 狀態，等待使用者下次主動按下播放鍵。
-      if (_disposed || generation != _segmentGeneration) return;
-      if (_status != TtsPlaybackStatus.playing) return;
-      await player.play();
-    } catch (_) {
-      if (_disposed || generation != _segmentGeneration) return;
-      _suppressExpiryTimer?.cancel();
-      _suppressNextPositionChange = false;
-      _status = TtsPlaybackStatus.idle;
-      _currentIndex = -1;
-      _segments = const [];
-      onHighlightSegment?.call(null);
-      notifyListeners();
+      if (_currentIndex < 0 || _currentIndex >= _segments.length) {
+        // 已跳過所有剩餘段落（或呼叫當下本來就已經沒有下一段）：視同
+        // 播放自然結束，重設回 idle（比照既有 _handleSegmentCompleted()
+        // 章節結尾分支）。
+        _suppressExpiryTimer?.cancel();
+        _suppressNextPositionChange = false;
+        _status = TtsPlaybackStatus.idle;
+        _currentIndex = -1;
+        _segments = const [];
+        onHighlightSegment?.call(null);
+        notifyListeners();
+        return;
+      }
+      final segment = _segments[_currentIndex];
+      try {
+        _status = TtsPlaybackStatus.playing;
+        onHighlightSegment?.call(segment);
+        notifyListeners();
+        final result = await provider.synthesize(
+          segment.text,
+          voice: TtsVoice.systemDefault,
+          speed: _speed,
+        );
+        if (_disposed || generation != _segmentGeneration) return;
+        await player.loadFile(result.audioFilePath);
+        // 重要修復（review-issue-2-code.md Important #1）：若在 synthesize/loadFile
+        // 非同步期間使用者按下了暫停鍵（_status 變更為 paused），檔案載入完成後
+        // 不得再呼叫 player.play()，應維持在 paused 狀態，等待使用者下次主動按下播放鍵。
+        if (_disposed || generation != _segmentGeneration) return;
+        if (_status != TtsPlaybackStatus.playing) return;
+        await player.play();
+        return;
+      } catch (e) {
+        if (_disposed || generation != _segmentGeneration) return;
+        final message = '[TTS Diagnostic] 段落索引 $_currentIndex 合成/播放'
+            '失敗，跳過並嘗試下一段：$e';
+        debugPrint(message);
+        ReaderConsoleLog.add(message);
+        _currentIndex++;
+      }
     }
   }
 
@@ -427,4 +458,47 @@ class TtsController extends ChangeNotifier {
     player.dispose();
     super.dispose();
   }
+}
+
+/// 把 [original] 清單中任何 `text.length` 超過 [maxLength] 的段落，依
+/// 字數硬切為多個子段落（沿用同一個原始 CFI——精確的子範圍 CFI 需要
+/// 回到 JS 端重新計算，超出本硬性防線的職責範圍；子段落只共用同一個
+/// 原始 CFI，高亮在這極端情境下會維持指向整個原段落，不影響「朗讀能
+/// 正常繼續進行」這個核心目標，見 epic-34-tts-readalong Issue 11）。
+/// [maxLength] 為 `null` 或 `<= 0`（引擎未回報上限）時原樣回傳，不套用
+/// 任何切分。回傳值的 `startOffsets[i]` 是 [original] 第 `i` 個段落
+/// （切分前）對應到切分後清單中「第一個子段落」的索引，供 `play()` 把
+/// `lookupStartIndex` 算出的（切分前）索引正確換算到切分後的位置。
+({List<TtsSegmentCfi> segments, List<int> startOffsets}) _capSegmentsToMaxLength(
+  List<TtsSegmentCfi> original,
+  int? maxLength,
+) {
+  if (maxLength == null || maxLength <= 0) {
+    return (
+      segments: original,
+      startOffsets: List<int>.generate(original.length, (i) => i),
+    );
+  }
+  final result = <TtsSegmentCfi>[];
+  final startOffsets = <int>[];
+  for (final segment in original) {
+    startOffsets.add(result.length);
+    final text = segment.text;
+    if (text.length <= maxLength) {
+      result.add(segment);
+      continue;
+    }
+    var chunkIndex = 0;
+    for (var start = 0; start < text.length; start += maxLength) {
+      final end =
+          (start + maxLength < text.length) ? start + maxLength : text.length;
+      result.add(TtsSegmentCfi(
+        segmentId: '${segment.segmentId}_$chunkIndex',
+        cfi: segment.cfi,
+        text: text.substring(start, end),
+      ));
+      chunkIndex++;
+    }
+  }
+  return (segments: result, startOffsets: startOffsets);
 }

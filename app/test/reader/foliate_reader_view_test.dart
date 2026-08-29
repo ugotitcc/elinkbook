@@ -1496,6 +1496,66 @@ void main() {
     });
   });
 
+  group(
+      'main.js 朗讀段長段落次要邊界切分 regression guard '
+      '（epic-34-tts-readalong Issue 11）', () {
+    late String mainJsSource;
+
+    setUpAll(() {
+      mainJsSource = File('android/app/src/main/assets/foliate/main.js')
+          .readAsStringSync();
+    });
+
+    test('buildTtsSegments 定義次要邊界門檻常數與空白字元判斷', () {
+      expect(
+        mainJsSource
+            .contains('const TTS_SECONDARY_BOUNDARY_MIN_LENGTH = 200'),
+        isTrue,
+        reason: 'main.js 內找不到 TTS_SECONDARY_BOUNDARY_MIN_LENGTH——長'
+            '段落缺乏標點時的次要邊界防線缺失，完全不使用標點的長段落'
+            '（例如經文/善書類排版整段以「　」分隔語句）會被切成單一超長'
+            '段落，超出 Android TextToSpeech 單次合成輸入長度上限'
+            '（ERROR_OUTPUT -8）。',
+      );
+      expect(
+        mainJsSource.contains('const secondaryBoundary = /\\s/'),
+        isTrue,
+        reason: 'JS 的 \\s 已涵蓋全形空格 U+3000（Unicode Space_Separator '
+            '類別），不需要另外處理全形/半形空白的差異。',
+      );
+    });
+
+    test('切分判斷式優先採用主要標點，次要邊界只在累積長度達門檻且無主要標點時才生效',
+        () {
+      expect(
+        mainJsSource
+            .contains('const isPrimaryBoundary = terminators.test(fullText[i])'),
+        isTrue,
+      );
+      expect(
+        mainJsSource.contains('!isPrimaryBoundary &&'),
+        isTrue,
+        reason: '次要邊界判斷式必須以「非主要標點」為第一個條件，確保只要'
+            '遇到主要標點就一律優先切句，不受次要邊界邏輯影響。',
+      );
+      expect(
+        mainJsSource
+            .contains('(i - start) >= TTS_SECONDARY_BOUNDARY_MIN_LENGTH &&'),
+        isTrue,
+        reason: '次要邊界必須同時滿足「累積長度已達門檻」才生效，否則會'
+            '提早在一般正常長度的句子中間就用空白切句，改變既有「優先用'
+            '標點切句」的行為，跨標籤句子等既有測試樣本會被破壞。',
+      );
+      expect(
+        mainJsSource
+            .contains('if (isPrimaryBoundary || isSecondaryBoundary || isLast) {'),
+        isTrue,
+        reason: '切句判斷式必須同時涵蓋主要標點／次要邊界／章節結尾三種'
+            '情況，缺一即會改變既有行為或無法處理長段落。',
+      );
+    });
+  });
+
   group('main.js 安全視窗跟隨翻頁 + E-Ink 高對比 regression guard（epic-34-tts-readalong Issue 8）', () {
     late String mainJsSource;
 
@@ -1554,32 +1614,34 @@ void main() {
       );
     });
 
-    test('needNext 使用安全視窗軟門檻（0.2/0.8），X/Y 兩軸皆檢查', () {
+    test('needNext 使用安全視窗軟門檻（0.2/0.8），依 Range 結尾矩形（last）的 X/Y 兩軸皆檢查'
+        '（epic-34-tts-readalong Issue 11：改看 Range 結尾而非開頭，見下方獨立 group）',
+        () {
       expect(
-        mainJsSource.contains('normX < TTS_SAFE_WINDOW_MIN || normY > 1.0'),
+        mainJsSource.contains('last.x < TTS_SAFE_WINDOW_MIN || last.y > 1.0'),
         isTrue,
         reason: '直排分支缺少這個條件——next 判斷須同時檢查 X 軸軟門檻與 '
             'Y 軸硬邊界。',
       );
       expect(
-        mainJsSource.contains('normY > TTS_SAFE_WINDOW_MAX || normX > 1.0'),
+        mainJsSource.contains('last.y > TTS_SAFE_WINDOW_MAX || last.x > 1.0'),
         isTrue,
         reason: '橫排分支缺少這個條件——next 判斷須同時檢查 Y 軸軟門檻與 '
             'X 軸硬邊界。',
       );
     });
 
-    test('needPrev 只能用真正超出頁面範圍的硬邊界（0.0/1.0）判斷，不可沿用安全視窗軟門檻（避免翻頁死循環）',
-        () {
+    test('needPrev 只能用真正超出頁面範圍的硬邊界（0.0/1.0）判斷，依 Range 開頭矩形（first），'
+        '不可沿用安全視窗軟門檻（避免翻頁死循環）', () {
       expect(
-        mainJsSource.contains('normX > 1.0 || normY < 0.0'),
+        mainJsSource.contains('first.x > 1.0 || first.y < 0.0'),
         isTrue,
         reason: '直排分支的 prev 判斷式缺少或誤用了門檻——不可出現 '
             'TTS_SAFE_WINDOW_MIN/MAX，否則新頁頁首會被誤判為需要翻回'
             '上一頁。',
       );
       expect(
-        mainJsSource.contains('normY < 0.0 || normX < 0.0'),
+        mainJsSource.contains('first.y < 0.0 || first.x < 0.0'),
         isTrue,
         reason: '橫排分支的 prev 判斷式缺少或誤用了門檻——不可出現 '
             'TTS_SAFE_WINDOW_MIN/MAX，否則新頁頁首會被誤判為需要翻回'
@@ -1593,6 +1655,73 @@ void main() {
         reason: '找到舊版對稱門檻寫法殘留——這正是造成翻頁死循環的錯誤'
             '版本（review-plan-issue-8.md Critical #1），必須確認已被'
             '取代，不是新舊兩份判斷式同時存在。',
+      );
+    });
+  });
+
+  group(
+      'main.js 安全視窗跟隨翻頁 × 硬性長度上限切分交互作用修復 regression guard '
+      '（epic-34-tts-readalong Issue 11 真機驗收發現）', () {
+    late String mainJsSource;
+
+    setUpAll(() {
+      mainJsSource = File('android/app/src/main/assets/foliate/main.js')
+          .readAsStringSync();
+    });
+
+    test('安全視窗檢查改用 Range 的開頭矩形與結尾矩形分別判斷，不再固定只看第一個', () {
+      expect(
+        mainJsSource.contains('const rects = range.getClientRects()'),
+        isTrue,
+        reason: '這句話的 cfi Range 本身（不論是否被硬性長度上限切分過）'
+            '可能橫跨多行/多頁，getClientRects() 因此可能回傳多個矩形；'
+            '固定只看 [0] 會讓安全視窗檢查永遠盯著這句話開頭的位置判斷，'
+            '偵測不到這句話後半段早已超出目前頁面範圍的情況（真機實測：'
+            '橫排/直排皆無法自動翻頁）。',
+      );
+      expect(mainJsSource.contains('const firstRect = rects[0]'), isTrue);
+      expect(
+        mainJsSource.contains('const lastRect = rects[rects.length - 1]'),
+        isTrue,
+      );
+      expect(
+        mainJsSource.contains('const first = normOf(firstRect)'),
+        isTrue,
+      );
+      expect(mainJsSource.contains('const last = normOf(lastRect)'), isTrue);
+    });
+
+    test('needNext 依 Range 結尾矩形（last）判斷，needPrev 依 Range 開頭矩形（first）判斷', () {
+      expect(
+        mainJsSource.contains('const needNext = isVertical'),
+        isTrue,
+      );
+      expect(
+        mainJsSource.contains('? last.x < TTS_SAFE_WINDOW_MIN || last.y > 1.0'),
+        isTrue,
+        reason: 'needNext 必須依 Range 結尾矩形判斷——這句話開始播放的'
+            '當下就先確認「唸到最後一個字時，畫面來不來得及顯示」，提前'
+            '翻頁；若誤用開頭矩形，會重蹈真機發現的「這句話開頭還在畫面'
+            '上就永遠判斷安全」問題。',
+      );
+      expect(
+        mainJsSource.contains(': last.y > TTS_SAFE_WINDOW_MAX || last.x > 1.0'),
+        isTrue,
+      );
+      expect(
+        mainJsSource.contains('const needPrev = isVertical'),
+        isTrue,
+      );
+      expect(
+        mainJsSource.contains('? first.x > 1.0 || first.y < 0.0'),
+        isTrue,
+        reason: 'needPrev 須維持依 Range 開頭矩形判斷（Issue 8 既有「新頁'
+            '頁首不可誤判為需要翻回上一頁」保護對象是「這句話的開頭位置」'
+            '，不是結尾）。',
+      );
+      expect(
+        mainJsSource.contains(': first.y < 0.0 || first.x < 0.0'),
+        isTrue,
       );
     });
   });

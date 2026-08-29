@@ -205,4 +205,34 @@ void main() {
       throwsA(isA<TtsSynthesisException>()),
     );
   });
+
+  test('getMaxInputLength() 回傳 getMaxSpeechInputLength 平台呼叫結果', () async {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async {
+      if (call.method == 'getMaxSpeechInputLength') {
+        return 4000;
+      }
+      return null;
+    });
+
+    final provider = SystemTtsProvider(flutterTts: FlutterTts());
+    final result = await provider.getMaxInputLength();
+
+    expect(result, 4000);
+  });
+
+  test('getMaxInputLength() 於平台呼叫拋出例外時回傳 null（不拋出例外）', () async {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async {
+      if (call.method == 'getMaxSpeechInputLength') {
+        throw PlatformException(code: 'error', message: '模擬平台呼叫失敗');
+      }
+      return null;
+    });
+
+    final provider = SystemTtsProvider(flutterTts: FlutterTts());
+    final result = await provider.getMaxInputLength();
+
+    expect(result, isNull);
+  });
 }
