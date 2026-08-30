@@ -29,9 +29,11 @@
 **測試要求：** 本 Issue 無新增程式碼邏輯，`flutter analyze`／`flutter test` 基準線須維持不受影響（僅新增/鎖定 `pubspec.yaml` 相依版本）。
 
 **驗收標準：**
-- [ ] `flutter pub add --dry-run`（或等效試算）確認無相依衝突，或衝突已有明確版本鎖定策略記錄
-- [ ] targetSdk manifest 宣告清單已文件化，供後續 Issue 引用
-- [ ] `flutter analyze`／`flutter test` 基準線無回歸
+- [x] `flutter pub add --dry-run`（或等效試算）確認無相依衝突，或衝突已有明確版本鎖定策略記錄
+- [x] targetSdk manifest 宣告清單已文件化，供後續 Issue 引用
+- [x] `flutter analyze`／`flutter test` 基準線無回歸
+
+**狀態：已完成（補記，2026-08-30）。** 本 Issue 為 Phase 0 前置驗證 spike，未獨立開分支/PR，驗證結果直接在後續 Issue 2／Issue 7 的實作中落地，事後回頭核對確認全數符合：`app/pubspec.yaml` 已鎖定 `flutter_tts: ^4.2.5`／`just_audio: ^0.10.6`／`audio_service: ^0.18.19`，與既有相依鏈無版本衝突；`android/app/src/main/AndroidManifest.xml` 已宣告 `foregroundServiceType="mediaPlayback"`、`FOREGROUND_SERVICE`／`FOREGROUND_SERVICE_MEDIA_PLAYBACK`／`POST_NOTIFICATIONS` 三項權限，`exported` 屬性依 Android 12+ 要求逐一明確標註；`minSdk` 維持 `24`，未被三個套件的 minSdk 21 往上拉。Issue 2-11 皆已完成並合併，全程未再出現相依衝突，佐證本 Issue 驗收標準已滿足，僅漏補回勾選與收尾記錄。
 
 ---
 

@@ -1,0 +1,28 @@
+{
+  "baseResult": {
+    "variantName": "BASE(pre-Issue9,no no-swipe)",
+    "scenario1_selectionBeforeDrag": {
+      "rangeCount": 1,
+      "collapsed": false,
+      "text": "This is "
+    },
+    "scenario1_selectionAfterSmallDragRelease": {
+      "rangeCount": 1,
+      "collapsed": false,
+      "text": "This is "
+    }
+  },
+  "fixedResult": {
+    "variantName": "FIXED(post-Issue9,no-swipe)",
+    "scenario1_selectionBeforeDrag": {
+      "rangeCount": 1,
+      "collapsed": false,
+      "text": "This is "
+    },
+    "scenario1_selectionAfterSmallDragRelease": {
+      "rangeCount": 1,
+      "collapsed": false,
+      "text": "This is "
+    }
+  }
+}
