@@ -1,6 +1,7 @@
 import { makeBook } from './view.js'
 import { Overlayer } from './overlayer.js'
 import { compare as compareCfi } from './epubcfi.js'
+import { resolveTtsSafeWindowDirection } from './tts-safe-window.js'
 
 const view = document.getElementById('view')
 
@@ -435,11 +436,6 @@ const TTS_HIGHLIGHT_COLOR = 'rgba(251, 146, 60, 0.45)'
 // 後只剩「改用靜態高對比色」這一半有實際程式碼；「非 E-Ink 模式維持既有
 // 動畫效果」在沒有既有動畫的前提下等同維持現狀，不需要另外實作。
 const TTS_HIGHLIGHT_COLOR_EINK = 'rgba(0, 0, 0, 0.75)'
-// epic-34-tts-readalong Issue 8：安全視窗（issues.md「可視範圍 20%～
-// 80%」）——朗讀高亮的可視範圍正規化位置只要落在這個區間內就不觸發翻頁，
-// 避免逐句捲動造成頻繁刷新（E-Ink 殘影）／頻繁跳動（一般裝置）。
-const TTS_SAFE_WINDOW_MIN = 0.2
-const TTS_SAFE_WINDOW_MAX = 0.8
 let currentTtsAnnotationValue = null
 
 window.showTtsHighlight = function (cfi, vertical, einkMode) {
@@ -896,56 +892,22 @@ async function openBook() {
       // resyncHighlight()（Issue 7）與一般朗讀段切換（Issue 3）都是透過
       // 同一個 window.showTtsHighlight() 進來，天然共用這段判斷。
       if (annotation.value === currentTtsAnnotationValue) {
-        // epic-34-tts-readalong Issue 11 真機驗收發現：這句話的 cfi
-        // Range 本身（不論是否被 TtsController 硬性長度上限切分過）
-        // 可能橫跨多行/多頁——range.getClientRects() 依文件順序回傳一行
-        // 一個矩形。原本固定只看 getClientRects()[0]（Range 最開頭那一
-        // 行）判斷要不要翻頁：只要這句話的開頭還在畫面上就永遠判斷「安
-        // 全」，即使這句話後半段早已超出目前頁面範圍，畫面也完全不會
-        // 跟著翻頁（真機實測重現：橫排/直排皆無法自動翻頁）。改為：
-        // needNext 看 Range 結尾那一行的位置——這句話開始播放的當下就
-        // 先確認「唸到最後一個字時，畫面來不來得及顯示」，提前翻頁；
-        // needPrev 仍看 Range 開頭那一行，維持下方既有「新頁頁首不可
-        // 誤判為需要翻回上一頁」的保護。一般不橫跨頁面的短句，開頭/
-        // 結尾矩形位置幾乎相同，行為與修改前一致。
+        // epic-26-architecture-hardening Issue 12：座標數學（含 Issue 11
+        // 真機驗收發現的「needNext 看 Range 結尾矩形、needPrev 看開頭
+        // 矩形」判斷）已抽成 tts-safe-window.js 的純函式，這裡只負責
+        // 取得 Range 的頭尾矩形與座標系資料再轉呼叫，方便脫離真機用
+        // app/tool/test_tts_safe_window.mjs 單元測試整段判斷邏輯。
         const rects = range.getClientRects()
-        const firstRect = rects[0]
-        const lastRect = rects[rects.length - 1]
         const frameEl = doc.defaultView && doc.defaultView.frameElement
-        if (firstRect && lastRect && frameEl) {
-          const iframeRect = frameEl.getBoundingClientRect()
-          const viewportRect = view.getBoundingClientRect()
-          const normOf = (rect) => ({
-            x: (iframeRect.left + (rect.left + rect.right) / 2 - viewportRect.left) / viewportRect.width,
-            y: (iframeRect.top + (rect.top + rect.bottom) / 2 - viewportRect.top) / viewportRect.height,
-          })
-          const first = normOf(firstRect)
-          const last = normOf(lastRect)
-          // 審查修正（review-plan-issue-8.md Critical #1／Important #1）：
-          // 分頁模式下「頁首」是正常可見內容，不能因為位置接近 0 就誤判
-          // 為「還沒進入視野」而觸發 prev()——否則剛翻到新頁的第一句會
-          // 立刻被翻回上一頁，跟前一頁之間無限來回翻頁震盪。next 用安全
-          // 視窗軟門檻（0.2/0.8，提早觸發、體驗較平滑）；prev 只能用
-          // 「段落真的已經落在目前頁面範圍之外」的硬邊界（0.0/1.0）判斷
-          // ——只有使用者連按「上一句」（Issue 5）跳回前一頁時才會發生。
-          // X／Y 兩軸皆檢查、不只看單一軸向：分頁模式底層 CSS
-          // multi-column 實際的分欄/分頁軸向依排版方向而不同（見
-          // paginator.js columnize()——直排固定 width、橫排固定
-          // height，兩者互為相反），為避免對「哪一軸才是分頁進程軸」的
-          // 判斷有誤，兩軸個別檢查、任一軸超出即視為不可見；此推導仍須
-          // 真機分別驗證橫排/直排兩種模式，見 plan-issue-8.md 真機驗收
-          // 清單。
-          const needNext = isVertical
-            ? last.x < TTS_SAFE_WINDOW_MIN || last.y > 1.0
-            : last.y > TTS_SAFE_WINDOW_MAX || last.x > 1.0
-          const needPrev = isVertical
-            ? first.x > 1.0 || first.y < 0.0
-            : first.y < 0.0 || first.x < 0.0
-          if (needNext) {
-            window.flutter_inappwebview.callHandler('onTtsHighlightOutOfSafeWindow', 'next')
-          } else if (needPrev) {
-            window.flutter_inappwebview.callHandler('onTtsHighlightOutOfSafeWindow', 'prev')
-          }
+        const direction = resolveTtsSafeWindowDirection(
+          rects[0],
+          rects[rects.length - 1],
+          frameEl && frameEl.getBoundingClientRect(),
+          view.getBoundingClientRect(),
+          isVertical,
+        )
+        if (direction) {
+          window.flutter_inappwebview.callHandler('onTtsHighlightOutOfSafeWindow', direction)
         }
       }
     })

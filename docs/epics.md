@@ -34,7 +34,7 @@
 | 24 | `epic-20-fxl-foliate-migration` FXL 渲染引擎遷移評估（foliate-js Phase 2） | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 25 | `epic-24-pdf-engine-rebuild` PDF 渲染引擎重建（遷移至 pdfrx/PDFium） | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 26 | `epic-25-annotation-interaction-qa` 劃線/備註真機互動精修 | 🟡 開發中 (Active) | Issue 1-4 已完成（Issue 1 尚有極低機率真機殘留限制待驗證） |
-| 27 | `epic-26-architecture-hardening` 架構深化機會（測試套件效率／EPUB-PDF 底層架構） | 🟡 開發中 (Active) | Issue 11 已完成（架構深化仍在進行中，尚未全部結束） |
+| 27 | `epic-26-architecture-hardening` 架構深化機會（測試套件效率／EPUB-PDF 底層架構） | 🟡 開發中 (Active) | Issue 11 已完成，Issue 12 待認領（`ready-for-agent`） |
 | 28 | `epic-27-reader-device-compat` 裝置相容性強化（開書逾時／載入中點擊防護／高對比視覺強化） | 🟡 開發中 (Active) | Issue 1-12 全數完成，待人類指示歸檔 |
 | 29 | `epic-28-reader-settings-enhancements` 閱讀器設定強化（字距／Console Log 開關／版面設定預設集） | 🟡 開發中 (Active) | Issue 1-6 全數完成，待人類指示歸檔 |
 | 30 | `epic-29-cloud-import` 雲端服務匯入書籍（Google Drive／OneDrive） | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
@@ -42,7 +42,7 @@
 | 32 | `epic-31-touch-intent-unification` 觸控意圖判讀統一 | 🟡 開發中 (Active) | Issue 1-3 全數完成，待人類確認歸檔 |
 | 33 | `epic-32-foliate-js-paginator-sync` foliate-js paginator.js 上游同步 | 🟡 開發中 (Active) | Issue 1-3 全數完成，待人類確認歸檔 |
 | 34 | `epic-33-foliate-js-vendor-sync` foliate-js vendored 檔案持續同步 | 🟡 開發中 (Active) | Issue 1-2 全數完成，待人類確認歸檔 |
-| 35 | `epic-34-tts-readalong` 語音朗讀（TTS）與同步高亮（Read-along） | 🟡 開發中 (Active) | Issue 1／2／3／4／5／6／7／8／9／10 已合併，Issue 11 待認領 |
+| 35 | `epic-34-tts-readalong` 語音朗讀（TTS）與同步高亮（Read-along） | 🟡 開發中 (Active) | Issue 1-11 全數完成，待人類指示歸檔 |
 
 **狀態燈號定義**：
 - ⚪ **未開始 (Backlog)**：已被規劃但尚未啟動。無實際目錄。

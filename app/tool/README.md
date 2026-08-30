@@ -78,3 +78,28 @@ node app/tool/test_section_progress_density.mjs
 
 - 結束碼 `0`：5 項情境全數通過。
 - 非 `0`：斷言失敗或拋出例外，會印出對應的錯誤訊息與堆疊。
+
+## `test_tts_safe_window.mjs`
+
+驗證 `tts-safe-window.js` 的 `resolveTtsSafeWindowDirection()`（epic-26-architecture-hardening
+Issue 12：TTS 安全視窗判斷邏輯純函式化）——橫排/直排各自的軟門檻/硬邊界
+邊界值、needNext 與 needPrev 同時成立時的優先順序、必要輸入缺席共 13
+項情境。
+`tts-safe-window.js` 零 DOM 依賴，腳本用 Node.js 內建 `node:assert/strict`
+直接執行，不需要任何測試框架。
+
+### 何時該執行
+
+- 每次修改 `tts-safe-window.js` 之後。
+- 升級 `foliate/` 目錄下的釘定版本（bump commit）之後，若上游改動了
+  `draw-annotation` 事件（`view.js`／`overlayer.js`）相關機制，確認安全
+  視窗判斷邏輯仍與新版上游行為相容。
+
+### 執行方式
+
+```bash
+node app/tool/test_tts_safe_window.mjs
+```
+
+- 結束碼 `0`：13 項情境全數通過。
+- 非 `0`：斷言失敗或拋出例外，會印出對應的錯誤訊息與堆疊。
