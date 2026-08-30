@@ -48,7 +48,7 @@ class JsBridgeGateway {
         // （已查證：不會讓 App crash，但 completer 永遠不會被 complete，
         // 呼叫端的 await 會無限期卡住；若這個請求類型沒有設 timeout，
         // 沒有其他機制能救回來）。這是本次重構額外新增的防護，非單純
-        // 從 foliate_reader_view.dart 搬移過來的既在行為。
+        // 從 foliate_reader_view.dart 搬移過來的既有行為。
         completer.complete(fallback);
       }
       return null;
