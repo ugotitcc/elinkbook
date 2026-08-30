@@ -381,7 +381,7 @@ Future<void> pumpUntilPdfReady(
 
 ## Issue 13：把重複三次的 JS 請求／回應樣板收斂成 `JsBridgeGateway`
 
-**Status:** `ready-for-agent`
+**Status:** ✅ 已完成並合併回 `main`（PR [#201](https://git.jigong.org/huthief/elinkBook/pulls/201)，分支 `feature/issue-13-js-bridge-gateway`，4 個 commit：Task 1、Task 2 各一個＋審查修正 1 個＋計畫本身 1 個）。「發一個 JS 請求、等 JS 呼叫 handler 回來、完成 Completer」這個重複三次的樣板收斂為獨立、不依賴 `InAppWebViewController` 具體型別的深模組 `JsBridgeGateway`（`app/lib/reader/js_bridge_gateway.dart`）；三個 `_requestXxx` 方法各縮成呼叫 `_gateway.request<T>()` 的薄包裝，三個獨立 Completer 欄位改由 `JsBridgeGateway` 內部 Map 統一管理；新增 `parse()` 例外防護（JS 回傳格式損壞時立即退回 fallback，這是本次唯一的行為改變，其餘為純重構，已於文件與程式碼中明確標註）。計畫審查（`reviews/review-plan-issue-13.md`）發現 3 項 Minor（`request<T>()` 開頭 handler 已註冊斷言、逾時後遲到回呼的測試補強、`_gateway` 延遲初始化生命週期確認），皆於實作前修訂進計畫。程式碼審查（`reviews/review-issue-13.md`）逐項核對這些發現皆已落實在實際程式碼與測試腳本，並實際執行 `flutter test test/reader/js_bridge_gateway_test.dart`（4 個測試全數通過）／`flutter test test/reader/foliate_reader_view_test.dart`（93 個測試全數通過）／`flutter analyze`（No issues found!）三項驗證，另發現 1 項 Minor（行內註解錯字）已於 commit `96290408` 修正，另 1 項（Task 1 多帶的 import）於 Task 2 commit 已自然清除；對外公開 API（`loadTableOfContents`／`loadTtsSegments`／`lookupSegmentByCfi`）簽章與呼叫端零改動，零回歸。
 
 **依賴：** 無，範圍侷限 `app/lib/reader/foliate_reader_view.dart` 的三個 `_requestXxx` 方法與其對應的 Completer／handler 樣板，可獨立於本 Epic 其他 Issue 任何時間點處理。
 
