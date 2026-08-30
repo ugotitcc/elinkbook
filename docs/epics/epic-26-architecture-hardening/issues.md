@@ -6,7 +6,7 @@
 
 **2026-08-21 併入第三份架構檢視報告的候選深化機會：** `docs/research/architecture-review-flowable-pagination-precision.md`（2026-08-21，`/improve-codebase-architecture` 流程產出，範圍為流式格式頁次計算精準化，3 個候選）。候選 1（`EpubPositionInfo` 的 `pageIndex`／`location` 語意混用，強度 Strong）已用 `/grilling` 敲定細節並拆為 **Issue 10**，標記 `ready-for-agent`。候選 2（用已渲染 section 視覺頁密度校正 location 估算，強度 Strong 但牴觸 ADR 0011 既有取捨）與候選 3（`EpubPositionInfo` 三層座標重新分層，依附候選 1）尚未拆案，待 Issue 10 完成後視優先順序評估。
 
-**2026-08-29 併入第四份架構檢視報告的候選深化機會：** `docs/research/architecture-review-epic34-tts.md`（2026-08-29，`/improve-codebase-architecture` 流程產出，範圍為 `epic-34-tts-readalong` 語音朗讀模組，4 個候選）。候選 1（把安全視窗判斷抽成純函式，直接對應 Issue 11 真機除錯兩次誤診斷的真實痛點，強度 Strong）已用 `/grilling` 敲定細節並拆為 **Issue 12**，標記 `ready-for-agent`。候選 2（收斂重複三次的 JS 請求／回應樣板，強度 Strong）、候選 3（400ms 翻頁節流搬進 `TtsController`，強度 Worth exploring，建議待 Issue 12 完成後再評估）、候選 4（三個 callback 收斂成 `TtsReaderBridge`，強度 Speculative，會重開 Issue 2／Issue 4 已定案的解耦設計取捨）尚未拆案。
+**2026-08-29 併入第四份架構檢視報告的候選深化機會：** `docs/research/architecture-review-epic34-tts.md`（2026-08-29，`/improve-codebase-architecture` 流程產出，範圍為 `epic-34-tts-readalong` 語音朗讀模組，4 個候選）。候選 1（把安全視窗判斷抽成純函式，直接對應 Issue 11 真機除錯兩次誤診斷的真實痛點，強度 Strong）已用 `/grilling` 敲定細節並拆為 **Issue 12**，標記 `ready-for-agent`。候選 2（收斂重複三次的 JS 請求／回應樣板，強度 Strong）已用 `/grilling` 敲定細節並拆為 **Issue 13**，標記 `ready-for-agent`。候選 3（400ms 翻頁節流搬進 `TtsController`，強度 Worth exploring，建議待 Issue 12 完成後再評估）、候選 4（三個 callback 收斂成 `TtsReaderBridge`，強度 Speculative，會重開 Issue 2／Issue 4 已定案的解耦設計取捨）尚未拆案。
 
 ---
 
@@ -376,3 +376,43 @@ Future<void> pumpUntilPdfReady(
 - 本 Issue 為純重構（座標數學逐字搬移，不改變任何行為），不需要真機重新驗證安全視窗翻頁邏輯本身（Issue 11 真機驗收的橫排/直排翻頁行為已確認正確，本次不變動該行為，只變動它的可測試性）。
 
 **驗收標準：** 安全視窗判斷邏輯收斂為獨立、零 DOM 依賴的 `resolveTtsSafeWindowDirection()` 純函式，可被 Node 直接單元測試；`main.js` 呼叫端縮減為「取資料→呼叫函式→視結果呼叫 callHandler」；既有 Dart regression-guard 測試裡驗證數學細節的部分全數由新 Node 測試取代，僅保留 wiring 測試；`flutter analyze` 乾淨、`flutter test` 全數通過、零回歸；`node app/tool/test_tts_safe_window.mjs` 全數通過。
+
+---
+
+## Issue 13：把重複三次的 JS 請求／回應樣板收斂成 `JsBridgeGateway`
+
+**Status:** `ready-for-agent`
+
+**依賴：** 無，範圍侷限 `app/lib/reader/foliate_reader_view.dart` 的三個 `_requestXxx` 方法與其對應的 Completer／handler 樣板，可獨立於本 Epic 其他 Issue 任何時間點處理。
+
+**來源：** `docs/research/architecture-review-epic34-tts.md`（2026-08-29，`/improve-codebase-architecture` 流程產出，範圍為 `epic-34-tts-readalong`）候選 2（強度 Strong）。2026-08-30 `/diagnose`＋`/grilling` 敲定實作細節。
+
+**背景／症狀：** `app/lib/reader/foliate_reader_view.dart` 裡「發一個 JS 請求、等 JS 呼叫 handler 回來、完成 Completer」這個模式重複寫了三次：
+
+- `_requestTableOfContents()`（第 688-694 行）＋ `_pendingToc` 欄位（第 609 行）＋ `onTableOfContentsReady` handler（第 760-768 行）——這組**沒有逾時保護**。
+- `_requestTtsSegments()`（第 696-708 行）＋ `_pendingTtsSegments` 欄位（第 610 行）＋ `onTtsSegmentsReady` handler（第 769-777 行）——5 秒逾時，逾時退回空清單。
+- `_requestTtsSegmentIndex()`（第 710-727 行）＋ `_pendingTtsSegmentIndex` 欄位（第 611 行）＋ `onTtsSegmentIndexReady` handler（第 778-786 行）——5 秒逾時，逾時退回 0。
+
+三組樣板九成相同，要新增下一個一次性 JS→Dart 查詢就得再複製一次整組樣板。對外公開 API（`FoliateReaderView.loadTableOfContents`／`loadTtsSegments`／`lookupSegmentByCfi` 三個 static 方法，第 516-549 行）目前完全不會變動。
+
+`/grilling` 敲定會談期間額外查證出一個真實存在、目前完全沒有防護的風險（非候選報告原本指出，是查證後才發現）：`onTableOfContentsReady` handler 呼叫 `parseTableOfContents(json)` 時完全沒有 try/catch。已用子代理逐層追查 `flutter_inappwebview` 6.1.5（Android 端實作 pin 在 `flutter_inappwebview_android` 1.1.3）原始碼確認：若 `parseTableOfContents(json)` 拋出例外，該行例外會依序被套件本身、`platform_interface`、Flutter `MethodChannel` 三層 catch 吞掉（**不會讓 App crash**），但也代表 `completer.complete(...)` 那一行根本執行不到；`_requestTableOfContents()` 又沒有逾時包裝（跟另外兩組不同），呼叫端的 `await` 因此會**永遠卡住**，沒有任何錯誤訊息、沒有恢復機會。
+
+**Solution（`/grilling` 已敲定的具體設計）：**
+
+1. 新增獨立檔案 `app/lib/reader/js_bridge_gateway.dart`，定義 `JsBridgeGateway` 類別，不直接依賴 `InAppWebViewController` 型別——建構時收兩個注入函式：`evaluate: Future<void> Function(String js)`（實際呼叫端傳 `(js) => _controller?.evaluateJavascript(source: js)`）與一個掛 handler 的注入點（實際呼叫端在 `_onWebViewCreated` 用既有 `controller.addJavaScriptHandler(...)` 轉呼叫）。這個設計讓 `JsBridgeGateway` 可以脫離真正的 WebView，被一組假的 evaluate／handler 組合直接單元測試——這是本次重構要解決的核心問題（現在的三個 `_requestXxx` 完全沒有 Dart 測試涵蓋，既有 `fake_inappwebview_platform.dart` 也沒有能力模擬 JS handler 回呼）。
+2. 提供兩個對外方法：設定期用的 handler 註冊方法（每種請求類型註冊一次，對應現在 `_onWebViewCreated` 裡的三次 `addJavaScriptHandler` 呼叫）；`Future<T> request<T>({required String jsCall, required String handlerName, required T fallback, Duration? timeout})`（每次呼叫用）——負責建立 Completer、呼叫注入的 `evaluate`、視 `timeout` 是否為 `null` 決定要不要套用逾時退回 `fallback`。
+3. `request<T>()` 內部呼叫 `parse` 時包 try/catch——`parse` 拋出例外時立即用呼叫端提供的 `fallback` 完成 Future，不再依賴「框架吞例外→逾時退回」這條間接路徑（TOC 目前連逾時都沒有，這個防護是唯一救得了它的機制）。**這是本次重構額外新增的防護，非單純搬移**——比照 Issue 12 對 `viewportRect` 除零防護的處理方式，須在計畫與 commit 訊息中明確標註為新增防護，不可含糊帶過成「純搬移」。
+4. `foliate_reader_view.dart` 的 `_requestTableOfContents()`／`_requestTtsSegments()`／`_requestTtsSegmentIndex()` 各自縮成一行呼叫 `_gateway.request<T>(...)`；`_pendingToc`／`_pendingTtsSegments`／`_pendingTtsSegmentIndex` 三個 Completer 欄位改由 `JsBridgeGateway` 內部的 `Map<String, Completer<dynamic>>` 統一管理，`_FoliateReaderViewState` 不再持有這三個欄位。
+5. 對外公開 API（`loadTableOfContents`／`loadTtsSegments`／`lookupSegmentByCfi`）簽章與行為完全不變，呼叫端（`reader_screen.dart`／`TtsController`）零改動。
+6. TOC 的 `timeout` 傳 `null`，維持現狀不逾時——這是刻意的零行為改變決定（見下方「已知限制」），不在本 Issue 順便補上。
+
+**已知限制（`/grilling` 決策：不在本 Issue 一併處理，留待未來獨立 Issue）：**
+- 同一種請求類型被連續呼叫兩次、前一次尚未回應時，後一次會直接覆蓋 `JsBridgeGateway` 內部 Map 裡的 Completer，前一次的 Completer 從此沒人認領、永遠不會被 complete（`main` 分支現況已有這個問題，本次原封不動搬過去，不修）。
+- TOC 請求本身仍然沒有逾時保護（`timeout: null`）——若未來要補上，需要另外決定合理的逾時秒數與 UI 端的失敗顯示方式，不在本次範圍內。
+
+**單元測試要求：**
+- 新增 `app/test/reader/js_bridge_gateway_test.dart`，用假的 `evaluate`／handler 註冊組合，涵蓋：正常請求→handler 回呼→Future 正確完成、有逾時的請求在時限內未回應時正確退回 `fallback`、`timeout: null` 的請求不會被逾時機制打斷（模擬 TOC 現況）、`parse` 拋出例外時立即退回 `fallback`（不必等到逾時或框架吞例外那條路徑）。
+- `foliate_reader_view_test.dart`：確認三個 `_requestXxx` 呼叫鏈已改用 `JsBridgeGateway`，既有涵蓋這三個公開 API 的測試（如果有）零回歸。
+- `flutter analyze` 乾淨、`flutter test` 全數通過。
+
+**驗收標準：** 三組重複的 Completer＋evaluateJavascript＋addJavaScriptHandler 樣板收斂為 `JsBridgeGateway` 單一深模組，可被 Dart 單元測試直接驗證（不需要真正的 WebView）；`foliate_reader_view.dart` 三個 `_requestXxx` 方法各自縮成一行呼叫；對外公開 API（`loadTableOfContents`／`loadTtsSegments`／`lookupSegmentByCfi`）簽章與呼叫端零改動；`parse` 例外防護到位（TOC「JSON 壞掉時永遠卡住」的風險解除）；`flutter analyze` 乾淨、`flutter test` 全數通過、零回歸。
