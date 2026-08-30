@@ -94,7 +94,41 @@ const SAFE = point(50, 50) // 正規化座標 (0.5, 0.5)，橫排/直排皆不�
   assert.equal(direction, 'prev')
 }
 
-// 測試 5：橫排邊界——last.y 恰好等於 0.8（軟門檻）不觸發 next（條件是
+// 測試 5：直排邊界——last.x 恰好等於 0.2（軟門檻）不觸發 next（條件是
+// `<`，非 `<=`）。
+{
+  const direction = resolveTtsSafeWindowDirection(
+    SAFE, point(20, 50), IFRAME_RECT, VIEWPORT_RECT, true,
+  )
+  assert.equal(direction, null)
+}
+
+// 測試 6：直排邊界——last.x 略低於 0.2（19.9/100）觸發 next。
+{
+  const direction = resolveTtsSafeWindowDirection(
+    SAFE, point(19.9, 50), IFRAME_RECT, VIEWPORT_RECT, true,
+  )
+  assert.equal(direction, 'next')
+}
+
+// 測試 7：直排邊界——first.x 恰好等於 1.0（硬邊界）不觸發 prev（條件是
+// `>`，非 `>=`）。
+{
+  const direction = resolveTtsSafeWindowDirection(
+    point(100, 50), SAFE, IFRAME_RECT, VIEWPORT_RECT, true,
+  )
+  assert.equal(direction, null)
+}
+
+// 測試 8：直排邊界——first.x 略高於 1.0（100.1/100）觸發 prev。
+{
+  const direction = resolveTtsSafeWindowDirection(
+    point(100.1, 50), SAFE, IFRAME_RECT, VIEWPORT_RECT, true,
+  )
+  assert.equal(direction, 'prev')
+}
+
+// 測試 9：橫排邊界——last.y 恰好等於 0.8（軟門檻）不觸發 next（條件是
 // `>`，非 `>=`）。
 {
   const direction = resolveTtsSafeWindowDirection(
@@ -103,7 +137,7 @@ const SAFE = point(50, 50) // 正規化座標 (0.5, 0.5)，橫排/直排皆不�
   assert.equal(direction, null)
 }
 
-// 測試 6：橫排邊界——last.y 略高於 0.8（80.1/100）觸發 next。
+// 測試 10：橫排邊界——last.y 略高於 0.8（80.1/100）觸發 next。
 {
   const direction = resolveTtsSafeWindowDirection(
     SAFE, point(50, 80.1), IFRAME_RECT, VIEWPORT_RECT, false,
@@ -111,7 +145,7 @@ const SAFE = point(50, 50) // 正規化座標 (0.5, 0.5)，橫排/直排皆不�
   assert.equal(direction, 'next')
 }
 
-// 測試 7：橫排邊界——first.y 恰好等於 0.0（硬邊界）不觸發 prev（條件是
+// 測試 11：橫排邊界——first.y 恰好等於 0.0（硬邊界）不觸發 prev（條件是
 // `< 0.0`，非 `<= 0.0`）。
 {
   const direction = resolveTtsSafeWindowDirection(
@@ -120,7 +154,7 @@ const SAFE = point(50, 50) // 正規化座標 (0.5, 0.5)，橫排/直排皆不�
   assert.equal(direction, null)
 }
 
-// 測試 8：needNext 與 needPrev 同時成立時，next 優先（沿用原本焊在
+// 測試 12：needNext 與 needPrev 同時成立時，next 優先（沿用原本焊在
 // main.js 呼叫端的 if/else if 順序規則，收進函式內部）。
 {
   const direction = resolveTtsSafeWindowDirection(
@@ -129,7 +163,7 @@ const SAFE = point(50, 50) // 正規化座標 (0.5, 0.5)，橫排/直排皆不�
   assert.equal(direction, 'next')
 }
 
-// 測試 9：firstRect／lastRect／iframeRect／viewportRect 任一缺席時回傳
+// 測試 13：firstRect／lastRect／iframeRect／viewportRect 任一缺席時回傳
 // null（對應 main.js 原本 `if (firstRect && lastRect && frameEl)` 防呆，
 // 行為與搬移前一致）。
 {
@@ -151,7 +185,7 @@ const SAFE = point(50, 50) // 正規化座標 (0.5, 0.5)，橫排/直排皆不�
   )
 }
 
-console.log('resolveTtsSafeWindowDirection 安全視窗判斷驗證：9 項全數通過')
+console.log('resolveTtsSafeWindowDirection 安全視窗判斷驗證：13 項全數通過')
 ```
 
 - [x] **Step 2: 執行測試腳本確認它會失敗**
@@ -203,8 +237,16 @@ export function resolveTtsSafeWindowDirection(
 ) {
   // 對應 main.js 原本 `if (firstRect && lastRect && frameEl)` 防呆——
   // 任一必要輸入缺席（例如朗讀高亮尚未附著在任何可視 iframe 上）時，
-  // 視為無法判斷，不觸發翻頁。
-  if (!firstRect || !lastRect || !iframeRect || !viewportRect) {
+  // 視為無法判斷，不觸發翻頁。另外防護 viewportRect 寬高為 0 的除零情況
+  // （正常渲染下不會發生，純屬邊界防呆，不影響任何真實場景行為）。
+  if (
+    !firstRect ||
+    !lastRect ||
+    !iframeRect ||
+    !viewportRect ||
+    !viewportRect.width ||
+    !viewportRect.height
+  ) {
     return null
   }
 
@@ -244,7 +286,7 @@ export function resolveTtsSafeWindowDirection(
 
 執行：`node app/tool/test_tts_safe_window.mjs`
 
-預期結果：印出 `resolveTtsSafeWindowDirection 安全視窗判斷驗證：9 項全數通過`，結束碼 0。
+預期結果：印出 `resolveTtsSafeWindowDirection 安全視窗判斷驗證：13 項全數通過`，結束碼 0。
 
 - [x] **Step 5: 補充 `app/tool/README.md` 文件章節**
 
@@ -255,8 +297,9 @@ export function resolveTtsSafeWindowDirection(
 ## `test_tts_safe_window.mjs`
 
 驗證 `tts-safe-window.js` 的 `resolveTtsSafeWindowDirection()`（epic-26-architecture-hardening
-Issue 12：TTS 安全視窗判斷邏輯純函式化）——橫排/直排、軟門檻/硬邊界、
-needNext 與 needPrev 同時成立時的優先順序、必要輸入缺席共 9 項情境。
+Issue 12：TTS 安全視窗判斷邏輯純函式化）——橫排/直排各自的軟門檻/硬邊界
+邊界值、needNext 與 needPrev 同時成立時的優先順序、必要輸入缺席共 13
+項情境。
 `tts-safe-window.js` 零 DOM 依賴，腳本用 Node.js 內建 `node:assert/strict`
 直接執行，不需要任何測試框架。
 
@@ -273,7 +316,7 @@ needNext 與 needPrev 同時成立時的優先順序、必要輸入缺席共 9 �
 node app/tool/test_tts_safe_window.mjs
 ```
 
-- 結束碼 `0`：9 項情境全數通過。
+- 結束碼 `0`：13 項情境全數通過。
 - 非 `0`：斷言失敗或拋出例外，會印出對應的錯誤訊息與堆疊。
 ```
 
@@ -403,7 +446,11 @@ let currentTtsAnnotationValue = null
 ```
 
 改為（座標數學逐字搬進 `resolveTtsSafeWindowDirection()`，這裡只剩「取
-資料 → 呼叫純函式 → 有結果才 callHandler」）：
+資料 → 呼叫純函式 → 有結果才 callHandler」；`callHandler(...)` 務必維持
+單行寫法，與既有 `main.js`（945/947 行）及下方 Step 4 Dart wiring 測試的
+單行字串比對一致——若改成跨行呼叫，Step 4 的
+`mainJsSource.contains("callHandler('onTtsHighlightOutOfSafeWindow', direction)")`
+斷言會判定失敗）：
 
 ```js
       // epic-34-tts-readalong Issue 8：安全視窗跟隨翻頁。只在這是「目前
@@ -428,10 +475,7 @@ let currentTtsAnnotationValue = null
           isVertical,
         )
         if (direction) {
-          window.flutter_inappwebview.callHandler(
-            'onTtsHighlightOutOfSafeWindow',
-            direction,
-          )
+          window.flutter_inappwebview.callHandler('onTtsHighlightOutOfSafeWindow', direction)
         }
       }
 ```
@@ -706,7 +750,7 @@ let currentTtsAnnotationValue = null
 
 執行：`node app/tool/test_tts_safe_window.mjs`
 
-預期結果：印出 `resolveTtsSafeWindowDirection 安全視窗判斷驗證：9 項全數通過`，結束碼 0。
+預期結果：印出 `resolveTtsSafeWindowDirection 安全視窗判斷驗證：13 項全數通過`，結束碼 0。
 
 - [x] **Step 7: 執行 `flutter analyze` 確認乾淨**
 
@@ -731,6 +775,6 @@ git commit -m "refactor(epic-26): Issue 12 Task 2——main.js 接線改用 reso
 
 ## Self-Review（撰寫計畫時的自我檢查記錄）
 
-1. **Spec 涵蓋度**：Issue 12 的 6 條 Solution 要點（新檔案／常數搬移／函式簽章／main.js 接線／Node 測試／README）對應 Task 1 Step 1-5；既有 Dart 測試處理（保留 wiring、刪除數學細節）對應 Task 2 Step 4；單元測試要求（Node 測試 9 種情境、wiring 測試、`flutter analyze`／`flutter test`）對應 Task 1 Step 4 與 Task 2 Step 5-8；驗收標準逐項對應 Task 2 完成後的狀態。無遺漏。
+1. **Spec 涵蓋度**：Issue 12 的 6 條 Solution 要點（新檔案／常數搬移／函式簽章／main.js 接線／Node 測試／README）對應 Task 1 Step 1-5；既有 Dart 測試處理（保留 wiring、刪除數學細節）對應 Task 2 Step 4；單元測試要求（Node 測試 13 種情境、wiring 測試、`flutter analyze`／`flutter test`）對應 Task 1 Step 4 與 Task 2 Step 5-8；驗收標準逐項對應 Task 2 完成後的狀態。無遺漏。
 2. **Placeholder 掃描**：全文無 TBD／「補上驗證邏輯」等佔位字樣，所有程式碼步驟皆附完整內容。
 3. **型別/簽章一致性**：`resolveTtsSafeWindowDirection(firstRect, lastRect, iframeRect, viewportRect, isVertical)` 在 Task 1（定義）與 Task 2（呼叫、Dart 測試斷言）三處逐字一致。

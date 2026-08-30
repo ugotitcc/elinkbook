@@ -331,7 +331,7 @@ Future<void> pumpUntilPdfReady(
 
 ## Issue 12：把 TTS 安全視窗判斷抽成純函式，讓它真正可單元測試
 
-**Status:** `ready-for-agent`
+**Status:** ✅ 已完成並合併回 `main`（PR [#200](https://git.jigong.org/huthief/elinkBook/pulls/200)，分支 `epic-26-issue-12-tts-safe-window`，4 個 commit：Task 1、Task 2 各一個＋審查修正 1 個＋計畫審查修訂 1 個）。安全視窗判斷邏輯收斂為獨立、零 DOM 依賴的 `resolveTtsSafeWindowDirection()` 純函式（`app/android/app/src/main/assets/foliate/tts-safe-window.js`），`main.js` 呼叫端縮減為「取資料→呼叫純函式→視結果呼叫 `callHandler`」；既有 Dart regression-guard 測試裡驗證數學細節的部分全數由新 Node 測試腳本 `app/tool/test_tts_safe_window.mjs`（13 項情境）取代，僅保留 wiring 測試。計畫審查（`reviews/review-plan-issue-12.md`）發現 1 項 Important（`callHandler(...)` 須維持單行寫法，否則與 Dart wiring 測試的字串比對斷言衝突）、2 項 Minor（`viewportRect` 除零防呆、直排邊界值測試對稱），皆於實作前修訂進計畫。程式碼審查（`reviews/review-issue-12.md`）逐項核對這 3 項發現皆已落實在實際程式碼與測試腳本上（非僅計畫文件），並實際執行 `node app/tool/test_tts_safe_window.mjs`（13 項全數通過）／`flutter test test/reader/foliate_reader_view_test.dart`（93 個測試全數通過）／`flutter analyze`（No issues found!）三項驗證，另發現 2 項 Minor（`TTS_SAFE_WINDOW_MAX` 殘留檢查未與 `MIN` 對稱、JSDoc 未載明除零邊界行為），已於 commit `9c98fe8a` 修正；座標數學逐字等價搬移，零行為改變，零回歸。
 
 **依賴：** 無，範圍侷限 `main.js` 的安全視窗判斷區塊與其對應 Dart 測試，可獨立於本 Epic 其他 Issue 任何時間點處理。
 
