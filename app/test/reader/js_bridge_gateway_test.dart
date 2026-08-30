@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:elinkbook/reader/js_bridge_gateway.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
