@@ -1627,6 +1627,12 @@ void main() {
         reason: '安全視窗常數已搬進 tts-safe-window.js，main.js 不應再'
             '殘留這個宣告。',
       );
+      expect(
+        mainJsSource.contains('const TTS_SAFE_WINDOW_MAX'),
+        isFalse,
+        reason: '安全視窗常數已搬進 tts-safe-window.js，main.js 不應再'
+            '殘留這個宣告。',
+      );
     });
   });
 

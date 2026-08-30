@@ -23,7 +23,8 @@ const TTS_SAFE_WINDOW_MAX = 0.8
  * @param {{left: number, top: number} | null | undefined} iframeRect
  *   內容 iframe 的 getBoundingClientRect()。
  * @param {{left: number, top: number, width: number, height: number} | null | undefined} viewportRect
- *   外層 view 的 getBoundingClientRect()。
+ *   外層 view 的 getBoundingClientRect()；`width`／`height` 為 0（或缺席）
+ *   時視為無法判斷，回傳 null（除零防呆，正常渲染下不會發生）。
  * @param {boolean} isVertical 目前是否為直排(vertical-RL)排版。
  * @returns {'next' | 'prev' | null} 需要翻頁的方向；不需要翻頁則回傳 null。
  */
