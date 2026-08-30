@@ -16,6 +16,7 @@ import 'epub_selection_info.dart';
 import 'epub_text_align.dart';
 import 'foliate_bridge_codec.dart';
 import 'foliate_native_bridge.dart';
+import 'js_bridge_gateway.dart';
 import 'page_turn_mode.dart';
 import 'percent_rect.dart';
 import 'reader_console_log.dart';
@@ -606,9 +607,7 @@ class FoliateReaderView extends StatefulWidget {
 
 class _FoliateReaderViewState extends State<FoliateReaderView> {
   InAppWebViewController? _controller;
-  Completer<List<TocEntry>>? _pendingToc;
-  Completer<List<TtsSegmentCfi>>? _pendingTtsSegments;
-  Completer<int>? _pendingTtsSegmentIndex;
+  late final JsBridgeGateway _gateway;
 
   /// 每個 widget 實例獨立的快取子目錄路徑，供 `InternalStoragePathHandler` 使用。
   /// null 表示快取尚未完成或失敗。
@@ -687,23 +686,18 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
 
   Future<List<TocEntry>> _requestTableOfContents() {
     if (_controller == null) return Future.value(const []);
-    final completer = Completer<List<TocEntry>>();
-    _pendingToc = completer;
-    _evaluate('window.getTableOfContents()');
-    return completer.future;
+    return _gateway.request<List<TocEntry>>(
+      jsCall: 'window.getTableOfContents()',
+      handlerName: 'onTableOfContentsReady',
+    );
   }
 
   Future<List<TtsSegmentCfi>> _requestTtsSegments(int sectionIndex) {
     if (_controller == null) return Future.value(const []);
-    final completer = Completer<List<TtsSegmentCfi>>();
-    _pendingTtsSegments = completer;
-    _evaluate('window.buildTtsSegments($sectionIndex)');
-    return completer.future.timeout(
-      const Duration(seconds: 5),
-      onTimeout: () {
-        _pendingTtsSegments = null;
-        return const [];
-      },
+    return _gateway.request<List<TtsSegmentCfi>>(
+      jsCall: 'window.buildTtsSegments($sectionIndex)',
+      handlerName: 'onTtsSegmentsReady',
+      timeout: const Duration(seconds: 5),
     );
   }
 
@@ -712,22 +706,40 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
     List<String> segmentCfis,
   ) {
     if (_controller == null) return Future.value(0);
-    final completer = Completer<int>();
-    _pendingTtsSegmentIndex = completer;
-    _evaluate(
-      'window.lookupTtsSegmentIndex(${jsonEncode(visibleCfi)}, ${jsonEncode(segmentCfis)})',
-    );
-    return completer.future.timeout(
-      const Duration(seconds: 5),
-      onTimeout: () {
-        _pendingTtsSegmentIndex = null;
-        return 0;
-      },
+    return _gateway.request<int>(
+      jsCall:
+          'window.lookupTtsSegmentIndex(${jsonEncode(visibleCfi)}, ${jsonEncode(segmentCfis)})',
+      handlerName: 'onTtsSegmentIndexReady',
+      timeout: const Duration(seconds: 5),
     );
   }
 
   Future<void> _onWebViewCreated(InAppWebViewController controller) async {
     _controller = controller;
+    _gateway = JsBridgeGateway(
+      evaluate: _evaluate,
+      registerHandler: (name, callback) => controller.addJavaScriptHandler(
+        handlerName: name,
+        callback: callback,
+      ),
+    );
+    _gateway.register<List<TocEntry>>(
+      handlerName: 'onTableOfContentsReady',
+      parse: (args) =>
+          parseTableOfContents(args.isNotEmpty ? args[0] as String : '[]'),
+      fallback: const [],
+    );
+    _gateway.register<List<TtsSegmentCfi>>(
+      handlerName: 'onTtsSegmentsReady',
+      parse: (args) =>
+          parseTtsSegments(args.length > 1 ? args[1] as String : '[]'),
+      fallback: const [],
+    );
+    _gateway.register<int>(
+      handlerName: 'onTtsSegmentIndexReady',
+      parse: (args) => args.isNotEmpty ? (args[0] as num).toInt() : 0,
+      fallback: 0,
+    );
     controller.addJavaScriptHandler(
       handlerName: 'onPageRendered',
       callback: (args) {
@@ -756,33 +768,6 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
       // 直接單元測試，不再是這個 widget 內無法獨立驗證的匿名 closure。
       callback: (args) =>
           widget.onLocatorChanged?.call(parseLocatorChanged(args)),
-    );
-    controller.addJavaScriptHandler(
-      handlerName: 'onTableOfContentsReady',
-      callback: (args) {
-        final completer = _pendingToc;
-        _pendingToc = null;
-        final json = args.isNotEmpty ? args[0] as String : '[]';
-        completer?.complete(parseTableOfContents(json));
-      },
-    );
-    controller.addJavaScriptHandler(
-      handlerName: 'onTtsSegmentsReady',
-      callback: (args) {
-        final completer = _pendingTtsSegments;
-        _pendingTtsSegments = null;
-        final json = args.length > 1 ? args[1] as String : '[]';
-        completer?.complete(parseTtsSegments(json));
-      },
-    );
-    controller.addJavaScriptHandler(
-      handlerName: 'onTtsSegmentIndexReady',
-      callback: (args) {
-        final completer = _pendingTtsSegmentIndex;
-        _pendingTtsSegmentIndex = null;
-        final index = args.isNotEmpty ? (args[0] as num).toInt() : 0;
-        completer?.complete(index);
-      },
     );
     controller.addJavaScriptHandler(
       handlerName: 'onTtsHighlightOutOfSafeWindow',
