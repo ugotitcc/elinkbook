@@ -120,7 +120,7 @@ void main() {
     expect(paramsOf().panEnabled, isFalse, reason: '拖曳移動過程中仍應維持關閉');
 
     await gesture.up();
-    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 350));
 
     expect(paramsOf().panEnabled, isTrue, reason: '放開手指、選取完成後應恢復可平移');
     expect(paramsOf().scaleEnabled, isTrue, reason: '放開手指、選取完成後應恢復可縮放');
@@ -225,7 +225,7 @@ void main() {
         reason: '拖曳過程中應顯示即時選取矩形視覺回饋');
 
     await gesture.up();
-    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 350));
     expect(find.byKey(const Key('pdf_reader_selection_drag_indicator')), findsNothing,
         reason: '放開後即時回饋應消失（改由呼叫端決定是否顯示 AnnotationToolbar）');
   });

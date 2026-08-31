@@ -22,6 +22,7 @@ import 'pdf_selection_geometry.dart';
 import 'pdf_selection_info.dart';
 import 'pdf_search_match.dart';
 import 'pdf_search_geometry.dart';
+import 'bounce_tolerant_long_press_detector.dart';
 import 'percent_rect.dart';
 import 'reader_console_log.dart';
 import 'tap_zone_detector.dart';
@@ -1135,40 +1136,27 @@ class _PdfReaderViewState extends State<PdfReaderView> {
 
   Widget _buildSelectionGestureLayer(int pageIndex, Rect pageRectInViewer) {
     return Positioned.fill(
-      child: GestureDetector(
-        behavior: HitTestBehavior.translucent,
-        onLongPressStart: (details) {
+      child: BounceTolerantLongPressDetector(
+        onLongPressStart: (position) {
           if (widget.cropEditModeActive) return;
-          // Epic 26 Issue 3 暫時性真機診斷插樁：量測長按拖曳框選手勢與
-          // 九宮格熱區判定之間的真機時序，與 [DEBUG-e26i3] 系列交叉比對。
-          // 診斷結束後需整段移除。
-          ReaderConsoleLog.add(
-              '[DEBUG-e26i3-selection] longPressStart page=$pageIndex t=${clock.now().millisecondsSinceEpoch}');
           _selectionDragGenerationId++;
           setState(() {
             _selectionDrag = _PdfSelectionDragState(
               pageIndex: pageIndex,
               areaSize: pageRectInViewer.size,
               pageOffsetInViewer: pageRectInViewer.topLeft,
-              start: details.localPosition,
+              start: position,
             );
           });
         },
-        onLongPressMoveUpdate: (details) {
+        onLongPressMoveUpdate: (position) {
           final drag = _selectionDrag;
           if (drag == null || drag.pageIndex != pageIndex) return;
-          setState(() => drag.current = details.localPosition);
+          setState(() => drag.current = position);
         },
-        onLongPressEnd: (details) {
-          ReaderConsoleLog.add(
-              '[DEBUG-e26i3-selection] longPressEnd page=$pageIndex t=${clock.now().millisecondsSinceEpoch}');
-          _finishSelectionDrag();
-        },
-        onLongPressCancel: () {
-          ReaderConsoleLog.add(
-              '[DEBUG-e26i3-selection] longPressCancel page=$pageIndex t=${clock.now().millisecondsSinceEpoch}');
-          _cancelSelectionDrag();
-        },
+        onLongPressEnd: () => _finishSelectionDrag(),
+        onLongPressCancel: () => _cancelSelectionDrag(),
+        child: const SizedBox.shrink(),
       ),
     );
   }
