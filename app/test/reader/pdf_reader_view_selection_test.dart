@@ -83,6 +83,76 @@ void main() {
     expect(computed!.rect.top, lessThan(computed!.rect.bottom));
   });
 
+  testWidgets(
+      '重現真機彈跳雜訊（tmp/epic-25/log-issue5/device-2.txt 前 21 行）'
+      '仍能觸發 onSelectionRectComputed（Epic 25 Issue 5 回歸測試——'
+      '修復前，同樣的彈跳序列會讓 GestureDetector 的內建長按計時器不斷'
+      '被新的 down 打斷，onLongPressStart 永遠不會觸發，選取完全無法啟動）',
+      (tester) async {
+    var renderedCount = 0;
+    PdfSelectionInfo? computed;
+    final key = GlobalKey<State<PdfReaderView>>();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PdfReaderView(
+          key: key,
+          filePath: 'test/fixtures/sample_multi_page.pdf',
+          onPageRendered: () => renderedCount++,
+          onError: (_) {},
+          onSelectionRectComputed: (info) => computed = info,
+        ),
+      ),
+    );
+    await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
+
+    final pageFinder = find.byType(PdfReaderView);
+    final topLeft = tester.getTopLeft(pageFinder);
+    // 真實裝置 2 彈跳序列的相對位移量（毫米級微幅飄移，非憑空編造，
+    // 換算自 device-2.txt 前 21 行的實際座標差值），疊加在頁面上一個
+    // 固定基準點之上。
+    Offset at(double dx, double dy) => topLeft + Offset(60 + dx, 80 + dy);
+
+    final downTimes = [0, 69, 183, 196, 253, 257, 313, 399, 413];
+    final downOffsets = [
+      const Offset(0, 0),
+      const Offset(0, 0),
+      const Offset(-1.4, 2.0),
+      const Offset(-1.4, 2.0),
+      const Offset(-1.0, 2.0),
+      const Offset(2.5, 5.4),
+      const Offset(3.5, 5.9),
+      const Offset(11.8, 13.8),
+      const Offset(11.8, 13.8),
+    ];
+    final upTimes = [49, 134, 190, 251, 255, 302, 322, 409, 538];
+
+    var lastEventTime = 0;
+    for (var i = 0; i < downTimes.length; i++) {
+      await tester.pump(Duration(milliseconds: downTimes[i] - lastEventTime));
+      final gesture = await tester.startGesture(at(
+        downOffsets[i].dx,
+        downOffsets[i].dy,
+      ));
+      lastEventTime = downTimes[i];
+      await tester.pump(Duration(milliseconds: upTimes[i] - lastEventTime));
+      await gesture.up();
+      lastEventTime = upTimes[i];
+    }
+
+    // 明顯的拖曳，確保不是退化選取。
+    final finalGesture = await tester.startGesture(at(11.8, 13.8));
+    await tester.pump(const Duration(milliseconds: 40));
+    await finalGesture.moveTo(at(160, 160));
+    await tester.pump();
+    await finalGesture.up();
+    await pumpUntilPdfReady(tester, condition: () => computed != null);
+
+    expect(computed, isNotNull,
+        reason: '修復前這段彈跳序列會讓長按永遠無法啟動，selection 回呼'
+            '永遠不會觸發；修復後應正確判定為一次連續長按並完成選取');
+  });
+
   testWidgets('框選拖曳進行中，PdfViewer 的 panEnabled/scaleEnabled 應暫時關閉；放開後恢復',
       (tester) async {
     var renderedCount = 0;
