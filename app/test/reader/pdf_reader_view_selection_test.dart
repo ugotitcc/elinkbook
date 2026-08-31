@@ -264,7 +264,7 @@ void main() {
     final gesture = await tester.startGesture(pos);
     await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
     await gesture.up();
-    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 350));
 
     expect(computed, isNull, reason: '沒有明顯拖曳位移的長按不應建立選取');
   });

@@ -243,7 +243,9 @@ doc.addEventListener('click', e => {
 
 ## Issue 5：PDF 長按拖曳建立標註在觸控雜訊（彈跳）較嚴重的裝置上幾乎無法啟動
 
-**Status:** ✅ 已實作並通過自動化測試（比照 `plan-issue-5.md`）。新增 `BounceTolerantLongPressDetector`（`app/lib/reader/bounce_tolerant_long_press_detector.dart`）取代 `_buildSelectionGestureLayer()` 原本的 `GestureDetector`／`LongPressGestureRecognizer`，用真機校準過的既有常數（`kTapZoneDebounceMs`＝350ms、`kTapZoneSlop`＝18px）合併判定彈跳雜訊。用裝置 2 真實彈跳資料（`tmp/epic-25/log-issue5/device-2.txt`）重播的單元測試與端對端測試皆通過，證實修復前 0 次成功啟動的彈跳序列，修復後能正確判定為一次連續長按並完成選取。**待人類真機直接試用回報**（依 Issue 5 敲定的驗證方式，刻意不另排正式插樁診斷這一輪，見「Solution」段落）。
+**Status:** ✅ 已實作、通過程式碼審查、通過自動化測試（比照 `plan-issue-5.md`）。新增 `BounceTolerantLongPressDetector`（`app/lib/reader/bounce_tolerant_long_press_detector.dart`）取代 `_buildSelectionGestureLayer()` 原本的 `GestureDetector`／`LongPressGestureRecognizer`，用真機校準過的既有常數（`kTapZoneDebounceMs`＝350ms、`kTapZoneSlop`＝18px）合併判定彈跳雜訊。用裝置 2 真實彈跳資料（`tmp/epic-25/log-issue5/device-2.txt`）重播的單元測試與端對端測試皆通過，證實修復前 0 次成功啟動的彈跳序列，修復後能正確判定為一次連續長按並完成選取。**待人類真機直接試用回報**（依 Issue 5 敲定的驗證方式，刻意不另排正式插樁診斷這一輪，見「Solution」段落）。
+
+**2026-08-31 程式碼審查（`reviews/review-issue-5.md`）：** 0 Critical、1 Important、2 Minor。Important——既有「長按但幾乎沒有拖曳位移（退化選取）時，不觸發 `onSelectionRectComputed`」測試在 `gesture.up()` 後只 `pump()` 一格畫面、未等滿 `mergeGapMs`（350ms），導致新元件的非同步 `onLongPressEnd` 根本還沒觸發、斷言淪為空判定；審查者實測植入 bug（移除 `_finishSelectionDrag()` 的退化選取防呆）證實該測試當時抓不到問題。已修正等待時間為 350ms，並用同一招植入 bug 實驗重新驗證：修好後的測試會正確失敗，還原實驗改動後確認乾淨。兩項 Minor（計畫程式碼片段遺漏 `child` 參數、既有雙層多指觸控防禦架構）皆確認非缺陷，不需改動。
 
 **來源：** `epic-26-architecture-hardening` Issue 3（PDF 熱區快速點擊時長門檻真機診斷）真機資料蒐集過程中的意外發現——插樁資料證實 700ms 門檻本身沒問題（見該 Issue「2026-08-31 真機驗證結果」段落），但同一批 log 意外暴露另一個更嚴重、範圍完全不同的問題：長按拖曳建立劃線/備註這個手勢，在觸控雜訊較嚴重的裝置上幾乎完全無法啟動。與 `tapMaxDurationMs` 無關，不影響 Issue 3 結案。
 
