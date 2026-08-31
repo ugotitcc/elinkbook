@@ -243,7 +243,7 @@ doc.addEventListener('click', e => {
 
 ## Issue 5：PDF 長按拖曳建立標註在觸控雜訊（彈跳）較嚴重的裝置上幾乎無法啟動
 
-**Status:** 🔍 已用真機資料診斷出根因，尚未定案修復方案（規劃階段需要設計具彈跳容忍度的長按判定邏輯，或評估其他替代方案）。
+**Status:** `ready-for-agent`——已用 `/grill-with-docs` 敲定修復方向與細節（見下方「Solution」），可進入規劃階段（`/superpowers:writing-plans` 產出 `plan-issue-5.md`）。
 
 **來源：** `epic-26-architecture-hardening` Issue 3（PDF 熱區快速點擊時長門檻真機診斷）真機資料蒐集過程中的意外發現——插樁資料證實 700ms 門檻本身沒問題（見該 Issue「2026-08-31 真機驗證結果」段落），但同一批 log 意外暴露另一個更嚴重、範圍完全不同的問題：長按拖曳建立劃線/備註這個手勢，在觸控雜訊較嚴重的裝置上幾乎完全無法啟動。與 `tapMaxDurationMs` 無關，不影響 Issue 3 結案。
 
@@ -272,13 +272,22 @@ doc.addEventListener('click', e => {
 
 **與 Issue 3（`epic-26`）的界線：** `tapMaxDurationMs`／`TapZoneDetector` 本身在這兩份 log 中運作正常——快速點擊都在 700ms 門檻內迅速觸發翻頁（`elapsed` 皆為個位數到兩百多 ms），沒有證據顯示 700ms 造成誤翻頁或手感遲鈍。本 Issue 的根因在完全不同的元件（`_buildSelectionGestureLayer` 的 `LongPressGestureRecognizer`），修復不應該去動 `TapZoneDetector`／`tapMaxDurationMs`。
 
-**下一步（規劃階段待決）：**
-1. 評估是否需要放棄 Flutter 內建 `LongPressGestureRecognizer`，改用類似 `TapZoneDetector` 的做法——自製一個具彈跳容忍度的長按判定邏輯（例如：短暫的 up 後，若下一個 down 在極短時間內〔如 <100ms〕發生在幾乎同一位置，視為同一次按壓的延續，不重置計時器）。
-2. 或評估是否有更簡單的替代方案（例如客製 `RawGestureDetector` 自訂 recognizer，取代內建 `LongPressGestureRecognizer`）。
-3. 修復後需要真機重新驗證（比照本 Issue 的診斷方式），確認兩台裝置皆能穩定啟動並完成長按拖曳選取。
+**Solution（方向，2026-08-31 `/grill-with-docs` 敲定）：**
 
-**單元測試要求：**（待規劃階段補齊具體斷言）
-- 需模擬「持續按壓期間夾雜快速的 down/up 雜訊」情境，驗證新邏輯仍能正確判定為一次連續長按。
-- 既有的正常長按拖曳框選（無雜訊情境）測試須維持通過，零回歸。
+完全放棄 `_buildSelectionGestureLayer()` 現行的 `GestureDetector`／`LongPressGestureRecognizer`，改用跟 `TapZoneDetector`（`app/lib/reader/tap_zone_detector.dart`，見 Epic 26 Issue 2）同一套架構——自製一個不參與手勢競技場的 `Listener` 狀態機，取代內建元件：
 
-**驗收標準：** 真機驗證觸控雜訊較嚴重的裝置上，長按拖曳建立劃線/備註能穩定啟動並完成選取；相關單元測試與既有測試皆一致、全數通過。
+- **彈跳合併判定**（兩個條件皆須滿足才視為「同一次按壓的延續」，不重置狀態）：時間——兩次 `down` 間隔 < 350ms（沿用既有真機校準值 `kTapZoneDebounceMs`）；位置——位移 < 18px（沿用既有 `tapSlop`）。兩者皆改為建構參數注入、有預設值，不寫死於邏輯內部。
+- **長按判定**：累積按壓時長從整串延續裡「最早那次 `down`」開始持續累加（雜訊造成的空隙時間也算在內，因為判定上就是同一次按壓沒放開），門檻維持 Flutter 預設的 `kLongPressTimeout`（500ms），同樣改為建構參數注入。
+- **選取起點**：固定使用「最早那次 `down`」的座標，不會因雜訊本身的位置飄移（真機資料中觀察到雜訊事件位置最大可飄移近 100px）讓選取起點跳動。
+- **拖曳中途保護**：長按正式啟動、進入拖曳階段後，同一套合併邏輯需持續適用（不只保護啟動前），中途發生的雜訊一樣要被吸收，矩形不閃爍、不跳回舊位置。
+- **`_selectionDragGenerationId`**：維持現行設計不變，只在真正一次全新的長按啟動時遞增（`pdf_reader_view.dart:1147`），雜訊延續不觸發遞增——這是「延續＝同一次長按」設計下的直接結果，不需要額外改動。
+
+**驗證方式（刻意不另排真機插樁診斷）**：已有裝置 2 真實彈跳間隔資料（`tmp/epic-25/log-issue5/device-2.txt`）可直接寫成自動化回歸測試，比照 `tap_zone_detector_test.dart` 既有「重現真機 adb getevent 側錄到的實際硬體彈跳間隔序列」測試的手法（用真實記錄的間隔值重播，而非憑空編造數字）。修復完成後由人類直接真機試用回報，若仍有殘留問題，再另開一輪比照 Issue 3 的真機插樁診斷模式處理。
+
+**單元測試要求：**
+- 用 `device-2.txt` 記錄的真實 `up→down` 間隔序列（2ms～122ms，見 Solution 段落）重播，驗證新邏輯能正確判定為一次連續長按、`onLongPressStart`／drag callback 只觸發一次（不因雜訊誤判為多次獨立手勢）。
+- 驗證位置飄移超過 18px 或時間間隔超過 350ms 時，正確視為兩次獨立按壓（不誤合併）。
+- 驗證拖曳階段中途發生雜訊時，選取矩形的目前位置不受影響（沿用拖曳前最後一筆真實移動位置）。
+- 既有的正常長按拖曳框選（無雜訊情境）行為須維持不變，零回歸。
+
+**驗收標準：** 用 `device-2.txt` 真實彈跳資料重播的自動化測試通過，證明新邏輯能在該雜訊模式下正確判定為一次連續長按；既有正常長按拖曳框選行為零回歸；`flutter analyze` 乾淨、`flutter test` 全數通過。真機驗證（人類直接試用回報，非正式插樁診斷）待實作完成後進行。
