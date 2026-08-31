@@ -243,7 +243,7 @@ doc.addEventListener('click', e => {
 
 ## Issue 5：PDF 長按拖曳建立標註在觸控雜訊（彈跳）較嚴重的裝置上幾乎無法啟動
 
-**Status:** `ready-for-agent`——已用 `/grill-with-docs` 敲定修復方向與細節（見下方「Solution」），可進入規劃階段（`/superpowers:writing-plans` 產出 `plan-issue-5.md`）。
+**Status:** ✅ 已實作並通過自動化測試（比照 `plan-issue-5.md`）。新增 `BounceTolerantLongPressDetector`（`app/lib/reader/bounce_tolerant_long_press_detector.dart`）取代 `_buildSelectionGestureLayer()` 原本的 `GestureDetector`／`LongPressGestureRecognizer`，用真機校準過的既有常數（`kTapZoneDebounceMs`＝350ms、`kTapZoneSlop`＝18px）合併判定彈跳雜訊。用裝置 2 真實彈跳資料（`tmp/epic-25/log-issue5/device-2.txt`）重播的單元測試與端對端測試皆通過，證實修復前 0 次成功啟動的彈跳序列，修復後能正確判定為一次連續長按並完成選取。**待人類真機直接試用回報**（依 Issue 5 敲定的驗證方式，刻意不另排正式插樁診斷這一輪，見「Solution」段落）。
 
 **來源：** `epic-26-architecture-hardening` Issue 3（PDF 熱區快速點擊時長門檻真機診斷）真機資料蒐集過程中的意外發現——插樁資料證實 700ms 門檻本身沒問題（見該 Issue「2026-08-31 真機驗證結果」段落），但同一批 log 意外暴露另一個更嚴重、範圍完全不同的問題：長按拖曳建立劃線/備註這個手勢，在觸控雜訊較嚴重的裝置上幾乎完全無法啟動。與 `tapMaxDurationMs` 無關，不影響 Issue 3 結案。
 
