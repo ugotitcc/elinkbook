@@ -2,6 +2,8 @@
 
 依 `design.md`「第一輪真機使用回報」（2026-08-12，4 項回報）拆解為 Issue 1-4。全部工單彼此獨立、無依賴關係，可任意順序或平行開始。
 
+**2026-08-31 新增 Issue 5：** `epic-26-architecture-hardening` Issue 3（PDF 熱區快速點擊時長門檻真機診斷）蒐集真機資料過程中意外發現的獨立問題——PDF 長按拖曳建立劃線/備註在觸控雜訊較嚴重的裝置上幾乎無法啟動，與 Issue 3 本身的 `tapMaxDurationMs` 校準無關，拆為本 Epic 的 Issue 5，與 Issue 1-4 同樣彼此獨立。
+
 ---
 
 ## Issue 1：畫線選取已確立仍跳頁（裝置相關——Air Reader Pro C 會、TCL 14 吋不會）
@@ -236,3 +238,47 @@ doc.addEventListener('click', e => {
 - 情境 B 即為「正常點擊畫線（無換頁介入）仍正確觸發編輯/刪除對話框」的回歸測試。
 
 **驗收標準：** 已達成——headless 驗證確認修復後不再誤觸發、正常點擊畫線行為不受影響。**真機驗證換頁+畫線重疊情境不再誤跳出刪除確認尚待補齊**（已知殘留限制，見上方 Status：真機上長按原地放開是否仍合成 click 事件未經驗證）。
+
+---
+
+## Issue 5：PDF 長按拖曳建立標註在觸控雜訊（彈跳）較嚴重的裝置上幾乎無法啟動
+
+**Status:** 🔍 已用真機資料診斷出根因，尚未定案修復方案（規劃階段需要設計具彈跳容忍度的長按判定邏輯，或評估其他替代方案）。
+
+**來源：** `epic-26-architecture-hardening` Issue 3（PDF 熱區快速點擊時長門檻真機診斷）真機資料蒐集過程中的意外發現——插樁資料證實 700ms 門檻本身沒問題（見該 Issue「2026-08-31 真機驗證結果」段落），但同一批 log 意外暴露另一個更嚴重、範圍完全不同的問題：長按拖曳建立劃線/備註這個手勢，在觸控雜訊較嚴重的裝置上幾乎完全無法啟動。與 `tapMaxDurationMs` 無關，不影響 Issue 3 結案。
+
+**依賴：** 無
+
+**背景／症狀：** 人類於兩台真機各自進行一輪操作測試，回報「基本上都無法順利選取」。真機 log（已存於 `tmp/epic-25/log-issue5/device-1.txt`／`device-2.txt`，未進版控）逐行核對確認：
+
+| 指標 | 裝置 1 | 裝置 2 |
+|---|---|---|
+| `onPointerDown` 次數（`[DEBUG-e26i3] down`） | 45 | 48 |
+| `onLongPressStart` 次數（長按選取真正啟動） | 3 | **0** |
+| `onLongPressCancel` 次數（長按被取消） | 25 | 22 |
+| `onLongPressEnd` 次數（長按選取完整跑完） | 3 | **0** |
+| 快速點擊成功觸發翻頁（`qualified=true fired=true`） | 17 | 17 |
+| 快速點擊被防彈跳吸收（`qualified=true fired=false`） | 4 | **30** |
+
+裝置 2 整段 log 完全沒有一次 `onLongPressStart`——長按選取一次都沒有真正啟動過。裝置 1 雖然啟動過 3 次，但相對 45 次按壓，成功率同樣極低。
+
+**根因（已用 log 交叉比對確認，非臆測）：**
+
+裝置 2 的 log 中，同一秒內同一個位置（`zone=5`）連續出現十幾組 `down`／`up`，每組間隔僅幾毫秒到一百多毫秒（例如 `t=306429`／`306498`／`306612`／`306625`／`306682`／`306686`／`306742`…，見 `device-2.txt:2-31`），這不是人類手指的正常按壓節奏，是觸控/數位板硬體雜訊（俗稱「彈跳」）——同一根手指持續按住不放，硬體卻回報成一連串極短暫的獨立 down/up 事件。這個專案先前已確認過同一類現象存在（`tap_zone_detector_test.dart` 的「重現真機 adb getevent 側錄到的實際硬體彈跳間隔序列」測試，`epic-27` Issue 12 為此加上 `tapDebounceMs` 防彈跳機制）。
+
+`TapZoneDetector`（九宮格熱區）本身有 350ms 防彈跳保護，這批雜訊大多被正確吸收（裝置 2 高達 30 次 `qualified=true fired=false`，代表沒有連續誤翻頁）。但 `_buildSelectionGestureLayer()`（`app/lib/reader/pdf_reader_view.dart`）用的是 Flutter 內建 `GestureDetector` 的 `LongPressGestureRecognizer`，這個元件**沒有任何彈跳容忍度**——每一次新的 `down` 都會讓它的內部長按計時器（預設約 500ms）重新歸零。只要雜訊持續在計時器歸零前就送出下一組 `down`，計時器永遠無法累積到啟動長按判定所需的時間，`onLongPressStart` 便永遠不會觸發，使用者的手指明明持續按著不放，選取功能卻完全沒有反應。
+
+裝置 1 雜訊較輕（同一根手指偶爾在拖曳過程中冒出一次多餘的 `down`/`up`，例如 `device-1.txt` 中 `t=1788169151508`／`1788169151577` 兩個相隔僅 69ms 的 `down`），因此長按仍偶爾能啟動，但成功率同樣偏低。
+
+**與 Issue 3（`epic-26`）的界線：** `tapMaxDurationMs`／`TapZoneDetector` 本身在這兩份 log 中運作正常——快速點擊都在 700ms 門檻內迅速觸發翻頁（`elapsed` 皆為個位數到兩百多 ms），沒有證據顯示 700ms 造成誤翻頁或手感遲鈍。本 Issue 的根因在完全不同的元件（`_buildSelectionGestureLayer` 的 `LongPressGestureRecognizer`），修復不應該去動 `TapZoneDetector`／`tapMaxDurationMs`。
+
+**下一步（規劃階段待決）：**
+1. 評估是否需要放棄 Flutter 內建 `LongPressGestureRecognizer`，改用類似 `TapZoneDetector` 的做法——自製一個具彈跳容忍度的長按判定邏輯（例如：短暫的 up 後，若下一個 down 在極短時間內〔如 <100ms〕發生在幾乎同一位置，視為同一次按壓的延續，不重置計時器）。
+2. 或評估是否有更簡單的替代方案（例如客製 `RawGestureDetector` 自訂 recognizer，取代內建 `LongPressGestureRecognizer`）。
+3. 修復後需要真機重新驗證（比照本 Issue 的診斷方式），確認兩台裝置皆能穩定啟動並完成長按拖曳選取。
+
+**單元測試要求：**（待規劃階段補齊具體斷言）
+- 需模擬「持續按壓期間夾雜快速的 down/up 雜訊」情境，驗證新邏輯仍能正確判定為一次連續長按。
+- 既有的正常長按拖曳框選（無雜訊情境）測試須維持通過，零回歸。
+
+**驗收標準：** 真機驗證觸控雜訊較嚴重的裝置上，長按拖曳建立劃線/備註能穩定啟動並完成選取；相關單元測試與既有測試皆一致、全數通過。
