@@ -23,6 +23,7 @@ import 'pdf_selection_info.dart';
 import 'pdf_search_match.dart';
 import 'pdf_search_geometry.dart';
 import 'percent_rect.dart';
+import 'reader_console_log.dart';
 import 'tap_zone_detector.dart';
 import 'zone_action.dart';
 
@@ -995,6 +996,12 @@ class _PdfReaderViewState extends State<PdfReaderView> {
                         // 常數收斂），不再各自宣告字面值。
                         nowMs: () => clock.now().millisecondsSinceEpoch,
                         tapMaxDurationMs: 700,
+                        // Epic 26 Issue 3 暫時性真機診斷插樁：僅 PDF 端接上
+                        // onDebugEvent，EPUB 端（foliate_reader_view.dart）
+                        // 不接、不受影響。診斷結束後需整段移除（grep
+                        // "DEBUG-e26i3" 確認清除乾淨）。
+                        onDebugEvent: (message) =>
+                            ReaderConsoleLog.add('$message zone=$index'),
                         onTap: () => widget.onZoneAction?.call(action),
                         child: Container(
                           decoration: widget.showNavZoneDebugOverlay
@@ -1132,6 +1139,11 @@ class _PdfReaderViewState extends State<PdfReaderView> {
         behavior: HitTestBehavior.translucent,
         onLongPressStart: (details) {
           if (widget.cropEditModeActive) return;
+          // Epic 26 Issue 3 暫時性真機診斷插樁：量測長按拖曳框選手勢與
+          // 九宮格熱區判定之間的真機時序，與 [DEBUG-e26i3] 系列交叉比對。
+          // 診斷結束後需整段移除。
+          ReaderConsoleLog.add(
+              '[DEBUG-e26i3-selection] longPressStart page=$pageIndex t=${clock.now().millisecondsSinceEpoch}');
           _selectionDragGenerationId++;
           setState(() {
             _selectionDrag = _PdfSelectionDragState(
@@ -1147,8 +1159,16 @@ class _PdfReaderViewState extends State<PdfReaderView> {
           if (drag == null || drag.pageIndex != pageIndex) return;
           setState(() => drag.current = details.localPosition);
         },
-        onLongPressEnd: (details) => _finishSelectionDrag(),
-        onLongPressCancel: () => _cancelSelectionDrag(),
+        onLongPressEnd: (details) {
+          ReaderConsoleLog.add(
+              '[DEBUG-e26i3-selection] longPressEnd page=$pageIndex t=${clock.now().millisecondsSinceEpoch}');
+          _finishSelectionDrag();
+        },
+        onLongPressCancel: () {
+          ReaderConsoleLog.add(
+              '[DEBUG-e26i3-selection] longPressCancel page=$pageIndex t=${clock.now().millisecondsSinceEpoch}');
+          _cancelSelectionDrag();
+        },
       ),
     );
   }
