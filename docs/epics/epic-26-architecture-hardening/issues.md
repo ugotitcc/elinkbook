@@ -68,28 +68,31 @@
 
 ---
 
-## Issue 3：PDF 熱區快速點擊時長門檻（400ms）是否需要比照 EPUB Issue 1 重新真機診斷校準
+## Issue 3：PDF 熱區快速點擊時長門檻（現行 700ms，未經真機驗證）是否需要真機診斷校準
 
-**Status:** `needs-info`——需要真機資料才能定案，不可在缺乏真機驗證的情況下逕自把數值改成與 EPUB 相同（見下方「為何不能直接沿用」）；在拿到真機資料前不建議直接動手改值。
+**Status:** `needs-info`——700ms 已上線但未經真機驗證，需真機資料才能確認是否合適；真機驗證沒問題可直接結案，有問題才需重新校準（見下方「2026-08-31 更新」）。
 
-**依賴：** 建議待 Issue 2（module 收斂）完成後再進行本 Issue 的真機診斷，理由是 Issue 2 完成後兩邊的計時邏輯已收斂成同一份程式碼，届時真機診斷插樁只需要寫一次、兩邊共用（比照 Issue 2 module 抽出後「一次修復兩邊」的同一個 leverage 效益）；但若優先順序需要，也可以在 Issue 2 之前先對現行 `_PdfNavZoneTapDetectorState` 独立插樁診斷，無強制先後順序。
+**2026-08-31 更新（`/grill-with-docs` 校準）：** 本 Issue 立案當時 PDF 門檻仍是 400ms，之後 `epic-31-touch-intent-unification` Issue 3（已完成並歸檔，PR #187）搶先把 PDF `tapMaxDurationMs` 從 400 改為 700，對齊 EPUB，程式碼註解與該工單皆明確標註「刻意對齊、未經真機驗證」，並點名本 Issue 為後續真機驗證/重新校準的工單。下方「背景／症狀」「為何不能直接沿用」兩段是立案當時（PDF 仍為 400ms）的推論過程，保留作為歷史紀錄，不代表現況；現況與後續行動見「依賴」「下一步」「驗收標準」各段（已同步更新）。既有「600ms 排除測試」也已隨 `epic-31` Issue 3 改為「800ms 排除測試」（`pdf_reader_view_nav_zone_test.dart:141`）。
 
-**來源：** `docs/research/architecture-review-test-suite-epub-pdf.md` 候選 2 的延伸發現——原文件描述「同一組常數（逐字相同）」，但本次 `/diagnose` 查證目前實際程式碼發現此描述已不成立（EPUB 700ms／PDF 400ms），此差異是本次診斷過程中新發現、原文件未預期到的問題。
+**依賴：** 無（Issue 2 已完成，共用 `TapZoneDetector` module 已存在於 `app/lib/reader/tap_zone_detector.dart`，PDF／EPUB 呼叫端皆已收斂至此，真機插樁可直接對此共用 module 進行，不需再等待）。
+
+**來源：** `docs/research/architecture-review-test-suite-epub-pdf.md` 候選 2 的延伸發現——原文件描述「同一組常數（逐字相同）」，但本次 `/diagnose` 查證目前實際程式碼發現此描述已不成立（EPUB 700ms／PDF 400ms，立案當時的現況），此差異是本次診斷過程中新發現、原文件未預期到的問題。PDF 門檻其後已被 `epic-31` Issue 3 改為 700ms，見上方「2026-08-31 更新」。
 
 **背景／症狀（尚未真機驗證，以下為根據既有 Issue 1 證據的合理推論，非確認結論）：** `epic-25` Issue 1 經六輪真機診斷（Air Reader Pro C／AiPaper Reader C）確認 EPUB 的 `_NavZoneTapDetector._tapMaxDurationMs` 原始值 400ms 會導致「使用者長按選字、原生選取辨識還來不及開始生效前放開手指」這個情境被熱區搶先判定成快速點擊而誤觸換頁，須調高（400→500→700ms）才能大幅減少此問題（詳見 `docs/epics/epic-25-annotation-interaction-qa/issues.md` Issue 1）。`_PdfNavZoneTapDetector` 是同一種 `Listener` 機制、同一個目的（避免熱區點擊與 PDF 長按拖曳框選畫線/備註手勢衝突，見 CLAUDE.md「`PdfReaderView`」小節），卻仍停留在未經校準的原始 400ms——PDF 使用者在長按拖曳建立劃線/備註標註時，理論上可能遭遇與 EPUB Issue 1 修復前相同類型的症狀（長按建立標註的手勢被熱區誤判成點擊、觸發換頁）。
 
 **為何不能直接沿用 EPUB 校準出的 700ms（本次 `/diagnose` 查證發現，避免下一位讀者重新推導一次）：** 若假設「PDF 也應該是 700ms」並直接套用，`pdf_reader_view_nav_zone_test.dart:126-155` 既有測試（600ms 按壓應被排除、不觸發 `onZoneAction`）依目前程式碼邏輯（`elapsed <= _tapMaxDurationMs` 才觸發）會反轉為「600ms ≤ 700ms → 觸發」而失敗——這代表沿用 700ms 並非單純「補齊漏掉的修復」，而是會讓一個目前刻意通過、有明確設計意圖（「避免與長按選取手勢衝突」，見該測試命名）的既有驗證失效。EPUB／PDF 兩邊的內容渲染機制完全不同（WebView 原生文字選取 vs. `PdfViewer` 長按拖曳框選矩形，見 CLAUDE.md），兩者的原生手勢辨識延遲、觸控事件傳遞路徑很可能不同，EPUB 校準出的 700ms 沒有理由自動適用於 PDF——正確數值必須依 `epic-25` Issue 1 同樣的真機多輪診斷手法（比照 Issue 1 的 `[DEBUG-e25iN]` 插樁模式）才能確定，`/diagnose` 在沒有真機存取的情況下無法在本次工作階段內定案。
 
 **下一步：**
-1. 比照 `epic-25` Issue 1 的真機診斷手法（`plan-issue-1-realdevice-diagnostics.md` 類型的插樁計畫），在 `_PdfNavZoneTapDetectorState`（或 Issue 2 完成後的共用 `TapZoneDetector` module）加上暫時性插樁，量測真機上「長按拖曳建立劃線/備註」手勢與熱區判定之間的實際時序關係。
-2. 依真機資料決定 PDF（或收斂後共用邏輯的 PDF 呼叫端注入值）的正確 `tapMaxDurationMs`，可能維持 400、調整到與 EPUB 相同的 700，或是完全不同的第三個數值——三種結果都要用真機資料佐證，不能假設。
-3. 調整後需重新確認 `pdf_reader_view_nav_zone_test.dart` 既有的 600ms 排除測試等既有斷言是否需要跟著更新為新數值，並補上真機診斷過程中發現的新情境的回歸測試。
+1. 比照 `epic-25` Issue 1 的真機診斷手法，在共用 `TapZoneDetector` module（`app/lib/reader/tap_zone_detector.dart`，PDF 呼叫端見 `pdf_reader_view.dart`）加上暫時性插樁，量測真機上「長按拖曳建立劃線/備註」手勢與熱區判定之間的實際時序關係；真機裝置依實作當下手邊可用的裝置測試，不預先指定機型。
+2. 除了「長按拖曳建立標註是否誤觸換頁」，同時比照 `epic-25` Issue 1 校準 EPUB 時的做法，確認「一般快速點擊翻頁，門檻拉到 700ms 後手感是否變遲鈍」這個相反方向，避免只顧修好一邊卻沒人發現另一邊出現新的隱藏 regression。
+3. 依真機資料決定 PDF 的正確 `tapMaxDurationMs`：維持現行 700（真機驗證沒問題）、或調整到其他數值（真機驗證發現問題）——兩種結果都要用真機資料佐證，不能假設。
+4. 調整後需重新確認 `pdf_reader_view_nav_zone_test.dart` 既有的 800ms 排除測試等既有斷言是否需要跟著更新為新數值，並補上真機診斷過程中發現的新情境的回歸測試。
 
 **單元測試要求：**（待真機診斷定案時序後，於實作計畫階段補齊具體斷言）
-- 依真機診斷結果，補上或調整涵蓋「PDF 長按拖曳建立標註不應誤觸換頁」的自動化測試。
-- 既有 600ms 排除測試等既有斷言需要重新檢視是否仍然正確，不可讓新數值與既有測試互相矛盾卻未察覺。
+- 依真機診斷結果，補上或調整涵蓋「PDF 長按拖曳建立標註不應誤觸換頁」與「一般快速點擊翻頁手感未變遲鈍」的自動化測試。
+- 既有 800ms 排除測試（`pdf_reader_view_nav_zone_test.dart:141`，`epic-31` Issue 3 已從 600ms 調整而來）等既有斷言需要重新檢視是否仍然正確，不可讓新數值與既有測試互相矛盾卻未察覺。
 
-**驗收標準：** 真機驗證 PDF 長按拖曳建立劃線/備註標註時不再（或顯著減少）誤觸換頁；最終採用的 `tapMaxDurationMs` 數值有真機資料佐證、非憑空沿用 EPUB 數值；相關單元測試與既有測試皆一致、全數通過。
+**驗收標準：** 真機驗證現行 700ms 是否合適，涵蓋「長按拖曳建立劃線/備註不再（或顯著減少）誤觸換頁」與「一般快速點擊翻頁手感未變遲鈍」兩個方向；驗證沒問題則直接結案（700ms 確認合適，有真機資料佐證），驗證有問題則依真機資料重新校準出新數值——不論哪種結局，最終狀態都要有真機資料佐證，不能維持「已上線但未經驗證」的現況；相關單元測試與既有測試皆一致、全數通過。
 
 ---
 
