@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="../../../_ds/organic-e4b4eddd-cbe5-4c02-9ddd-d38c30c05696/styles.css">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@600;700&display=swap">
+<script src="../../../_ds/organic-e4b4eddd-cbe5-4c02-9ddd-d38c30c05696/_ds_bundle.js"></script>
+<style>
+  body{margin:0}
+  h1,h2,h3,h4,h5,h6{font-family:"Caprasimo","Noto Serif TC",serif}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+</style>
+</helmet>
+<div style="background:var(--color-bg);color:var(--color-text);font-family:'Figtree','Noto Sans TC',system-ui,sans-serif;min-height:100vh;padding:0 0 96px;line-height:1.75">
+
+<header style="max-width:1080px;margin:0 auto;padding:72px 32px 40px">
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px">
+    <span class="tag tag-accent" style="white-space:nowrap;height:auto;line-height:1.7;padding:5px 12px">UI/UX 稽核報告</span>
+    <span class="tag tag-neutral" style="white-space:nowrap;height:auto;line-height:1.7;padding:5px 12px">唯讀分析 · 未修改任何程式碼</span>
+    <span class="tag tag-outline" style="white-space:nowrap;height:auto;line-height:1.7;padding:5px 12px">elinkBook · Flutter</span>
+  </div>
+  <h1 style="font-size:52px;max-width:20ch;margin-bottom:16px;line-height:1.25">elinkBook<br>UI／UX 全面稽核</h1>
+  <p style="font-size:18px;max-width:60ch;color:var(--color-neutral-800);text-wrap:pretty">
+    完整閱讀現行 Flutter 客戶端的導覽、畫面、元件、主題，以及閱讀器／TTS／劃線備註／OPDS 等核心介面，接著提出建議的設計系統、元件層級、畫面層級，以及 P0／P1／P2 的改善順序。<code>app/lib</code> 底下未更動任何一行程式碼。
+  </p>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:2px;margin-top:36px;background:var(--color-divider);border-radius:var(--radius-md);overflow:hidden">
+    <div style="background:var(--color-bg);padding:18px 20px"><div style="font-family:'Caprasimo',serif;font-size:30px;line-height:1">約 25</div><div style="font-size:12px;color:var(--color-neutral-700);margin-top:4px">個畫面／面板</div></div>
+    <div style="background:var(--color-bg);padding:18px 20px"><div style="font-family:'Caprasimo',serif;font-size:30px;line-height:1">3,048</div><div style="font-size:12px;color:var(--color-neutral-700);margin-top:4px">reader_screen.dart 行數</div></div>
+    <div style="background:var(--color-bg);padding:18px 20px"><div style="font-family:'Caprasimo',serif;font-size:30px;line-height:1">4</div><div style="font-size:12px;color:var(--color-neutral-700);margin-top:4px">手工建構的 ThemeData</div></div>
+    <div style="background:var(--color-bg);padding:18px 20px"><div style="font-family:'Caprasimo',serif;font-size:30px;line-height:1">0</div><div style="font-size:12px;color:var(--color-neutral-700);margin-top:4px">字級／間距 token</div></div>
+    <div style="background:var(--color-bg);padding:18px 20px"><div style="font-family:'Caprasimo',serif;font-size:30px;line-height:1">3</div><div style="font-size:12px;color:var(--color-neutral-700);margin-top:4px">可共用的元件</div></div>
+  </div>
+</header>
+
+<nav style="max-width:1080px;margin:0 auto;padding:0 32px 44px;display:flex;flex-wrap:wrap;gap:8px">
+  <a href="#arch" class="tag tag-outline" style="text-decoration:none;white-space:nowrap;height:auto;line-height:1.7;padding:5px 12px">1 · 現行 UI 架構</a>
+  <a href="#ds-now" class="tag tag-outline" style="text-decoration:none;white-space:nowrap;height:auto;line-height:1.7;padding:5px 12px">2 · 現行設計系統</a>
+  <a href="#inventory" class="tag tag-outline" style="text-decoration:none;white-space:nowrap;height:auto;line-height:1.7;padding:5px 12px">3 · 畫面與元件盤點</a>
+  <a href="#findings" class="tag tag-outline" style="text-decoration:none;white-space:nowrap;height:auto;line-height:1.7;padding:5px 12px">4 · 問題發現</a>
+  <a href="#ds-next" class="tag tag-outline" style="text-decoration:none;white-space:nowrap;height:auto;line-height:1.7;padding:5px 12px">5 · 建議設計系統</a>
+  <a href="#comp-next" class="tag tag-outline" style="text-decoration:none;white-space:nowrap;height:auto;line-height:1.7;padding:5px 12px">6 · 建議元件層級</a>
+  <a href="#screen-next" class="tag tag-outline" style="text-decoration:none;white-space:nowrap;height:auto;line-height:1.7;padding:5px 12px">7 · 建議畫面層級</a>
+  <a href="#priority" class="tag tag-outline" style="text-decoration:none;white-space:nowrap;height:auto;line-height:1.7;padding:5px 12px">8 · 改善優先順序</a>
+  <a href="#eli5" class="tag tag-accent" style="text-decoration:none">9 · 後續怎麼做（白話版）</a>
+</nav>
+
+<!-- 1 -->
+<section id="arch" style="max-width:1080px;margin:0 auto;padding:0 32px 64px;scroll-margin-top:20px">
+  <h6 style="color:var(--color-accent-700)">第 1 節</h6>
+  <h2 style="margin-bottom:20px;font-size:30px">現行 UI 架構</h2>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:20px;margin-bottom:28px">
+    <div class="card elev-sm">
+      <div class="card-kicker">App 外殼</div>
+      <div class="card-body" style="font-size:14px;line-height:1.8"><code>main.dart</code> 手動建構所有 repository、client 與服務，再把約 30 個依賴一次交給 <code>ElinkBookApp</code>，最後只渲染一個 <code>MaterialApp</code>，<code>home: LibraryScreen</code>。沒有路由表、沒有 router 套件、沒有 deep link、沒有 navigation observer。</div>
+    </div>
+    <div class="card elev-sm">
+      <div class="card-kicker">導覽模型</div>
+      <div class="card-body" style="font-size:14px;line-height:1.8">100% 是在 widget callback 裡直接 <code>Navigator.push(MaterialPageRoute(...))</code>，每個目的地都在呼叫點就地建構、就地填入完整依賴清單；返回後靠零散的 <code>.then((_) =&gt; reload())</code> 重新載入。</div>
+    </div>
+    <div class="card elev-sm">
+      <div class="card-kicker">狀態管理</div>
+      <div class="card-body" style="font-size:14px;line-height:1.8">全面 <code>setState</code>，加上兩個 <code>ChangeNotifier</code>（<code>LibraryBookListController</code>、<code>TtsController</code>）。沒有全域 store；主題與 E-Ink 模式是從 <code>_ElinkBookAppState</code> 以 callback 一層層往下傳。</div>
+    </div>
+  </div>
+
+  <h4 style="margin:32px 0 12px;font-size:20px">目前的導覽結構</h4>
+  <div style="background:var(--color-neutral-100);border:1px solid var(--color-divider);border-radius:var(--radius-md);padding:24px 26px;font-size:13.5px;line-height:1.95;font-family:ui-monospace,SFMono-Regular,monospace;overflow-x:auto;white-space:pre">LibraryScreen（唯一的根畫面）
+├─ LibraryScreen(groupFilter: "…")      ← 進入分類 = 在堆疊上「再推一個書架」
+├─ ReaderScreen                          ← 全螢幕；EPUB/KF8/CBZ/TXT/MD（foliate-js + InAppWebView）＋ PDF（pdfrx）
+│    ├─ 目錄 Sheet        ├─ 筆記 Sheet（2 分頁）      ├─ 版面設定 Sheet（4 分頁）
+│    ├─ FXL 設定 Sheet    ├─ PDF 設定 Sheet            ├─ PDF 縮圖面板
+│    ├─ PDF 搜尋面板      ├─ 備註編輯對話框            ├─ 版面預設命名對話框
+│    └─ 版面預設套用書籍選擇畫面
+├─ CloudBrowserScreen（Google Drive）    ← 由「＋」彈出選單進入
+├─ CloudBrowserScreen（OneDrive）        ← 由「＋」彈出選單進入
+├─ RemoteServerListScreen                ← 由另一顆雲朵圖示進入
+│    ├─ RemoteServerFormScreen
+│    └─ RemoteCatalogScreen → RemoteCatalogScreen → …（每下鑽一層分類推一個新畫面）
+└─ SettingsScreen
+     ├─ 字型管理    ├─ 閱讀預設值    ├─ 導航熱區
+     ├─ 同步        ├─ 雲端匯入帳戶
+     ├─ 閱讀器 Console Log            └─ 關於</div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:16px;margin-top:24px">
+    <div style="border-left:3px solid var(--color-accent-500);padding:4px 0 4px 16px">
+      <div style="font-weight:700;font-size:15px;margin-bottom:4px">依賴靠 prop 一層層硬傳</div>
+      <div style="font-size:14px;color:var(--color-neutral-800)"><code>LibraryScreen</code> 收下四組依賴包，純粹只為了轉交給 <code>ReaderScreen</code> 與 <code>SettingsScreen</code>；<code>SettingsScreen</code> 收 11 個參數，其中 6 個只是再轉交一次。</div>
+    </div>
+    <div style="border-left:3px solid var(--color-accent-500);padding:4px 0 4px 16px">
+      <div style="font-weight:700;font-size:15px;margin-bottom:4px">可為 null 的依賴被當成功能開關</div>
+      <div style="font-size:14px;color:var(--color-neutral-800)">依賴為 <code>null</code> 時 UI 靜默停用該項目。檔案內註解已記錄過一個 Critical bug：漏傳 callback 導致 E-Ink 開關「看得到、按了沒反應」。</div>
+    </div>
+    <div style="border-left:3px solid var(--color-accent-500);padding:4px 0 4px 16px">
+      <div style="font-weight:700;font-size:15px;margin-bottom:4px">閱讀器是一個巨型 widget</div>
+      <div style="font-size:14px;color:var(--color-neutral-800)"><code>ReaderScreen</code> 3,048 行、單一 <code>State</code> 類別，同時承擔兩套渲染引擎、TTS、劃線備註、書籤、目錄、PDF 裁切、PDF 搜尋、同步 checkpoint 與沉浸模式。</div>
+    </div>
+  </div>
+</section>
+
+<!-- 2 -->
+<section id="ds-now" style="max-width:1080px;margin:0 auto;padding:0 32px 64px;scroll-margin-top:20px">
+  <h6 style="color:var(--color-accent-700)">第 2 節</h6>
+  <h2 style="margin-bottom:8px;font-size:30px">現行設計系統</h2>
+  <p style="max-width:66ch;color:var(--color-neutral-800)">目前只有「色彩系統」，其餘皆無。<code>theme/app_theme_data.dart</code> 依照 <code>prototype/index.html</code> 的 CSS 變數手工建了四套 <code>ThemeData</code>（淺色／深色／羊皮紙，加上 E-Ink 強制覆蓋）。字級、間距、圓角、陰影、動態與密度完全沒有被建模。</p>
+
+  <h4 style="margin:28px 0 12px;font-size:20px">實際有定義的色彩角色</h4>
+  <div style="overflow-x:auto"><table class="table" style="min-width:660px;font-size:14px">
+    <thead><tr><th>角色</th><th>淺色</th><th>深色</th><th>羊皮紙</th><th>E-Ink</th></tr></thead>
+    <tbody>
+      <tr><td>背景 scaffold</td><td><code>#F8F8FA</code></td><td><code>#121214</code></td><td><code>#F4ECD8</code></td><td><code>#FFFFFF</code></td></tr>
+      <tr><td>surface／card</td><td><code>#FFFFFF</code></td><td><code>#1E1E22</code></td><td><code>#FAF3E3</code></td><td><code>#FFFFFF</code></td></tr>
+      <tr><td>onSurface</td><td><code>#1A1A2E</code></td><td><code>#E8E8EC</code></td><td><code>#5B4636</code></td><td><code>#000000</code></td></tr>
+      <tr><td>outline／分隔線</td><td><code>#E0E0E5</code></td><td><code>#86868F</code></td><td><code>#E6DCBF</code></td><td><code>#000000</code></td></tr>
+      <tr><td>primary</td><td><code>#8B5CF6</code></td><td><code>#BB86FC</code></td><td><code>#B45309</code></td><td><code>#000000</code></td></tr>
+      <tr><td>其餘所有角色</td><td colspan="4" style="color:var(--color-accent-700);font-weight:700">未設定 → 由 Flutter M3 預設調色盤自動補上 secondary、tertiary、error、所有 container 與所有 -Variant</td></tr>
+    </tbody>
+  </table></div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px;margin-top:28px">
+    <div class="card">
+      <div class="card-kicker" style="color:var(--color-accent-2-700)">做得好的地方</div>
+      <ul style="margin:0;padding-left:18px;font-size:14px;line-height:1.85">
+        <li>深色主題的 outline 與 Switch 軌道色，是依真機電子紙硬體實測反覆調整的，且把感知亮度差的推導完整寫在註解裡。</li>
+        <li>E-Ink 主題停用 splash／hover／highlight，方向完全正確。</li>
+        <li>書架格子的頁尾高度由 <code>MediaQuery.textScalerOf</code> 推算，系統放大字級時不會被裁切。</li>
+        <li>主題與 E-Ink 偏好在 <code>runApp</code> 之前載入，開機不閃白屏。</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-kicker" style="color:var(--color-accent-700)">缺少的部分</div>
+      <ul style="margin:0;padding-left:18px;font-size:14px;line-height:1.85">
+        <li><strong>沒有 <code>TextTheme</code>。</strong>所有字級都是字面值：<code>10</code>、<code>12</code>、<code>13</code>、<code>16</code>，還有各檔各自的 <code>_appBarTitleFontSize = 13</code>。</li>
+        <li><strong>沒有間距尺標。</strong><code>SizedBox</code>／<code>EdgeInsets</code> 的 2、4、6、8、12、16 都是各呼叫點自行決定。</li>
+        <li><strong>沒有圓角與陰影 token。</strong>選項是 <code>8</code>、封面徽章是 <code>12</code>、TTS 控制列是 <code>28</code>、<code>elevation: 4</code> 只出現一次。</li>
+        <li><strong>沒有動態與密度 token</strong>，因此 E-Ink 無法被表達成一個「修飾子」。</li>
+        <li><strong>寫死的非主題色</strong>（<code>Colors.grey.shade200/300</code>、<code>black45</code>、<code>black54</code>、<code>Colors.white</code>）散落在封面、徽章與清單列。</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 3 -->
+<section id="inventory" style="max-width:1080px;margin:0 auto;padding:0 32px 64px;scroll-margin-top:20px">
+  <h6 style="color:var(--color-accent-700)">第 3 節</h6>
+  <h2 style="margin-bottom:20px;font-size:30px">畫面與元件盤點</h2>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px">
+    <div style="background:var(--color-neutral-100);border-radius:var(--radius-md);padding:20px 22px">
+      <div style="font-family:'Caprasimo','Noto Serif TC',serif;font-size:18px;margin-bottom:10px">完整畫面 · 16</div>
+      <div style="font-size:13.5px;line-height:1.9;color:var(--color-neutral-800)">書架 · 書架（分類篩選）· 閱讀器 · 設定 · 閱讀預設值 · 導航熱區 · 字型管理 · 同步 · 雲端帳戶 · 雲端瀏覽 · 遠端伺服器清單 · 遠端伺服器表單 · OPDS 目錄 · 版面預設書籍選擇 · Console Log · 關於</div>
+    </div>
+    <div style="background:var(--color-neutral-100);border-radius:var(--radius-md);padding:20px 22px">
+      <div style="font-family:'Caprasimo','Noto Serif TC',serif;font-size:18px;margin-bottom:10px">Sheet 與面板 · 8</div>
+      <div style="font-size:13.5px;line-height:1.9;color:var(--color-neutral-800)">版面設定（4 分頁）· FXL 設定 · PDF 設定 · 目錄 · 筆記（2 分頁）· PDF 縮圖 · PDF 搜尋 · TTS Mini Player</div>
+    </div>
+    <div style="background:var(--color-neutral-100);border-radius:var(--radius-md);padding:20px 22px">
+      <div style="font-family:'Caprasimo','Noto Serif TC',serif;font-size:18px;margin-bottom:10px">對話框 · 9</div>
+      <div style="font-size:13.5px;line-height:1.9;color:var(--color-neutral-800)">備註編輯 · 格式選擇 · 版面預設命名 · 分類管理 · 移動到分類 · 雲端下載佇列 · 閱讀位置衝突 · 資料夾匯入確認 · 刪除確認</div>
+    </div>
+    <div style="background:var(--color-accent-100);border-radius:var(--radius-md);padding:20px 22px">
+      <div style="font-family:'Caprasimo','Noto Serif TC',serif;font-size:18px;margin-bottom:10px">可共用元件 · 3</div>
+      <div style="font-size:13.5px;line-height:1.9;color:var(--color-neutral-800)"><code>BookCover</code>、<code>ReaderOptionTile</code>、<code>AnnotationToolbar</code>。其餘全是各畫面內的私有 <code>_Widget</code> 或 inline <code>_build…()</code> 方法。</div>
+    </div>
+  </div>
+
+  <p style="margin-top:22px;max-width:72ch;color:var(--color-neutral-800);font-size:15px">比例比數字重要：<strong>33 個介面只由 3 個共用元件支撐。</strong>按鈕、清單列、區段標題、空狀態、載入狀態、錯誤狀態、帶標籤的滑桿、確認對話框、Bottom Sheet 外殼，全部在各畫面重寫一次——這就是下方幾乎所有不一致問題的機械成因。</p>
+
+  <p style="margin-top:14px;max-width:72ch;color:var(--color-neutral-800);font-size:15px"><strong>關於 WebDAV：</strong><code>app/lib</code> 內找不到任何 WebDAV client 或畫面。目前的遠端來源是 OPDS（<code>remote/</code>）與 Google Drive／OneDrive（<code>cloud_import/</code>）；PocketBase 僅負責同步（<code>sync/</code>），UI 只有同步設定畫面與位置衝突對話框。若 WebDAV 已在規劃中，應該接進第 7 節的「統一來源模型」，而不是再開第四個瀏覽器。</p>
+</section>
+
+<!-- 4 -->
+<section id="findings" style="max-width:1080px;margin:0 auto;padding:0 32px 24px;scroll-margin-top:20px">
+  <h6 style="color:var(--color-accent-700)">第 4 節</h6>
+  <h2 style="margin-bottom:8px;font-size:30px">問題發現</h2>
+  <p style="max-width:68ch;color:var(--color-neutral-800)">依介面分組，涵蓋「UI 不一致」與「UX 問題」。<span class="tag tag-accent" style="vertical-align:middle;height:auto;line-height:1.7;padding:3px 10px">P0</span> 會阻斷或破壞核心任務、<span class="tag tag-neutral" style="vertical-align:middle">P1</span> 明顯消耗使用者時間與信任、<span class="tag tag-accent-2" style="vertical-align:middle">P2</span> 為精緻化。</p>
+</section>
+
+<div style="max-width:1080px;margin:0 auto;padding:0 32px 24px">
+
+  <h3 style="margin:36px 0 14px;font-size:24px">A · 導覽與資訊架構</h3>
+
+  <div data-p="P1" class="card elev-sm" style="margin-bottom:14px;display:{{ p1Display }}">
+    <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px"><span class="tag tag-neutral">P1</span><strong style="font-size:16.5px">「堆疊一層書架」不等於資料夾</strong></div>
+    <div style="font-size:15px">進入分類會推一個全新的 <code>LibraryScreen</code>。沒有麵包屑、AppBar 標題不顯示分類名稱、排序／檢視／匯入按鈕全部重複出現，返回只能賭返回鍵。使用者無法判斷自己是在「篩選」還是在「另一個地方」。</div>
+    <div style="display:{{ evidenceDisplay }};font-size:12.5px;font-family:ui-monospace,monospace;color:var(--color-neutral-700);margin-top:10px">library_screen.dart · <code>_openGroupFilteredView</code>、<code>groupFilter</code></div>
+  </div>
+
+  <div data-p="P1" class="card elev-sm" style="margin-bottom:14px;display:{{ p1Display }}">
+    <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px"><span class="tag tag-neutral">P1</span><strong style="font-size:16.5px">「把書弄進來」有四道門、分散在三個位置</strong></div>
+    <div style="font-size:15px">本機檔案、資料夾、Google Drive、OneDrive 在同一個「＋」選單；OPDS 在隔兩格的雲朵圖示；雲端「帳戶」則在設定裡。四種瀏覽器、四套選取與確認流程，目標卻只有一個。</div>
+    <div style="display:{{ evidenceDisplay }};font-size:12.5px;font-family:ui-monospace,monospace;color:var(--color-neutral-700);margin-top:10px">library_screen.dart · <code>library_import_button</code>、<code>library_remote_library_button</code>／cloud_browser_screen.dart／remote_catalog_screen.dart</div>
+  </div>
+
+  <div data-p="P2" class="card elev-sm" style="margin-bottom:14px;display:{{ p2Display }}">
+    <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px"><span class="tag tag-accent-2">P2</span><strong style="font-size:16.5px">沒有路由表，就沒有 deep link 與狀態還原</strong></div>
+    <div style="font-size:15px">所有目的地都是就地建構。從通知「繼續閱讀」、Android 桌面捷徑直接開某本書、行程被系統回收後還原閱讀器，都需要一層目前不存在的路由。</div>
+  </div>
+
+  <h3 style="margin:36px 0 14px;font-size:24px">B · 主題、色彩與深色模式</h3>
+
+  <div data-p="P0" class="card elev-sm" style="margin-bottom:14px;border-left:4px solid var(--color-accent-600);display:{{ p0Display }}">
+    <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px"><span class="tag tag-accent">P0</span><strong style="font-size:16.5px">寫死的灰與黑，穿透了每一個主題</strong></div>
+    <div style="font-size:15px">空白封面用 <code>Colors.grey.shade300</code>、分類拼貼空格用 <code>shade200</code>、選取勾選與「未下載」徽章用 <code>black45</code>／<code>black54</code> 配白色圖示、格狀進度文字用 <code>Colors.grey</code>。在深色模式下，這些是近黑書架上的亮斑；在 E-Ink 模式下，它們正是那個「承諾純黑白」的模式最無法乾淨呈現的中間灰。</div>
+    <div style="display:{{ evidenceDisplay }};font-size:12.5px;font-family:ui-monospace,monospace;color:var(--color-neutral-700);margin-top:10px">book_cover.dart · library_screen.dart <code>_GroupGridTile</code>、<code>_GroupListTile</code>、<code>_BookGridTile</code></div>
+  </div>
+
+  <div data-p="P0" class="card elev-sm" style="margin-bottom:14px;border-left:4px solid var(--color-accent-600);display:{{ p0Display }}">
+    <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px"><span class="tag tag-accent">P0</span><strong style="font-size:16.5px">只定義 5 個角色，約 25 個由 Material 預設補齊</strong></div>
+    <div style="font-size:15px">每個 <code>ColorScheme</code> 只給 primary、surface、onSurface、outline。Material 實際拿去畫的 <code>primaryContainer</code>、<code>onSurfaceVariant</code>、<code>secondary</code>、<code>error</code>、各種 <code>surfaceContainer*</code> 全部回退到 M3 baseline。羊皮紙主題最慘：一張溫暖的米色書頁，選中的晶片、對話框、SnackBar、Switch 卻是原廠淡紫。而 <code>ReaderOptionTile</code> 的「選中樣式」正好就吃這兩個沒被定義的角色。</div>
+    <div style="display:{{ evidenceDisplay }};font-size:12.5px;font-family:ui-monospace,monospace;color:var(--color-neutral-700);margin-top:10px">app_theme_data.dart <code>_buildSepiaTheme</code>／widgets/reader_option_tile.dart</div>
+  </div>
+
+  <div data-p="P1" class="card elev-sm" style="margin-bottom:14px;display:{{ p1Display }}">
+    <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px"><span class="tag tag-neutral">P1</span><strong style="font-size:16.5px">E-Ink 模式是用「比對兩個顏色」猜出來的</strong></div>
+    <div style="font-size:15px"><code>ReaderOptionTile</code> 用 <code>primary == Colors.black &amp;&amp; scaffoldBackgroundColor == Colors.white</code> 判斷自己在 E-Ink。未來任何純黑白／高對比主題都會被誤判，而且其他 widget 根本無從詢問這個問題——所以整個 App 只有一個元件做了 E-Ink 適配。</div>
+  </div>
+
+  <div data-p="P2" class="card elev-sm" style="margin-bottom:14px;display:{{ p2Display }}">
+    <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px"><span class="tag tag-accent-2">P2</span><strong style="font-size:16.5px">主題是全域的，但「閱讀頁面」本質上是分離的</strong></div>
+    <div style="font-size:15px">淺色／深色／羊皮紙同時改變 App 介面與書頁。多數讀者想要的是「深色介面 ＋ 羊皮紙書頁」，或「書頁跟隨環境光、書架維持不變」。目前沒有把「App chrome 主題」與「閱讀頁主題」分開。</div>
+  </div>
+
+  <h3 style="margin:36px 0 14px;font-size:24px">C · 字級與間距</h3>
+
+  <div data-p="P1" class="card elev-sm" style="margin-bottom:14px;display:{{ p1Display }}">
+    <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px"><span class="tag tag-neutral">P1</span><strong style="font-size:16.5px">書名 12px、進度 10px 灰字</strong></div>
+    <div style="font-size:15px">在使用者看最久的書架上，書名是寫死的 <code>fontSize: 12</code> 且限制單行，進度是 <code>fontSize: 10</code> 的未定義灰。對一個以正體中文為核心、讀者年齡層偏成熟的閱讀器來說，這低於舒適閱讀尺寸，而且單行會截斷大多數中文書名。</div>
+  </div>
+
+  <div data-p="P1" class="card elev-sm" style="margin-bottom:14px;display:{{ p1Display }}">
+    <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px"><span class="tag tag-neutral">P1</span><strong style="font-size:16.5px">沒有字級層級，所以到處都沒有階層</strong></div>
+    <div style="font-size:15px">設定列、Sheet 內的區段標籤（「欄數」「上邊界」）、對話框標題、清單副標，全都用 Material 預設字級與字重，長選項面板讀起來就是一整欄毫無區分的控制項。版面設定 Sheet 有四個分頁的滑桿，分頁內完全沒有視覺分組。</div>
+  </div>
+
+  <div data-p="P2" class="card elev-sm" style="margin-bottom:14px;display:{{ p2Display }}">
+    <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px"><span class="tag tag-accent-2">P2</span><strong style="font-size:16.5px">臨機間距造成看得見的節奏斷裂</strong></div>
+    <div style="font-size:15px">格狀 padding <code>8</code>、橫向間距 <code>8</code>、縱向 <code>12</code>；Sheet padding <code>(16,12,16,16)</code>；頁尾 <code>(16,8)</code>；<code>2/4/6/8/12</code> 各處自訂。單看都沒錯，合起來就是沒有格線。</div>
+  </div>
+
+  <h3 style="margin:36px 0 14px;font-size:24px">D · 按鈕、卡片、對話框與 Bottom Sheet</h3>
+
+  <div data-p="P1" class="card elev-sm" style="margin-bottom:14px;display:{{ p1Display }}">
+    <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px"><span class="tag tag-neutral">P1</span><strong style="font-size:16.5px">四種互不相干的「單選」語彙</strong></div>
+    <div style="font-size:15px">版面 Sheet 用自訂描邊晶片 <code>ReaderOptionTile</code>；字型用裸 <code>DropdownButton</code>；排序用 <code>PopupMenuButton</code> 並以粗體＋主色標示目前值；布林用 <code>SwitchListTile</code>。四種「選一個」的表達方式，出現在相鄰的兩個介面裡。</div>
+  </div>
+
+  <div data-p="P1" class="card elev-sm" style="margin-bottom:14px;display:{{ p1Display }}">
+    <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px"><span class="tag tag-neutral">P1</span><strong style="font-size:16.5px">破壞性操作的確認標準不一致</strong></div>
+    <div style="font-size:15px">批次刪除會確認；「移除本機快取」「強制 FXL」「恢復自動判斷」則從純圖示按鈕立即執行、立刻退出選取模式、沒有復原。而且後兩者在書架上完全看不出結果，使用者無法確認自己到底有沒有按到。</div>
+    <div style="display:{{ evidenceDisplay }};font-size:12.5px;font-family:ui-monospace,monospace;color:var(--color-neutral-700);margin-top:10px">library_screen.dart · <code>_buildSelectionAppBar</code> 等</div>
+  </div>
+
+  <div data-p="P2" class="card elev-sm" style="margin-bottom:14px;display:{{ p2Display }}">
+    <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px"><span class="tag tag-accent-2">P2</span><strong style="font-size:16.5px">沒有共用的 Sheet 外殼</strong></div>
+    <div style="font-size:15px">目錄、筆記、版面設定、FXL 設定、PDF 設定與兩個跳頁 Sheet 各自建容器，因此拖曳把手、標題、關閉方式、最大高度與安全區 padding 都不一樣。</div>
+  </div>
+
+  <h3 style="margin:36px 0 14px;font-size:24px">E · 圖書庫／書架</h3>
+
+  <div data-p="P0" class="card elev-sm" style="margin-bottom:14px;border-left:4px solid var(--color-accent-600);display:{{ p0Display }}">
+    <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px"><span class="tag tag-accent">P0</span><strong style="font-size:16.5px">匯入失敗被靜默吞掉</strong></div>
+    <div style="font-size:15px">兩條匯入路徑都用 <code>catch (_) { }</code> 包住，註解說明用意是保護 widget 樹。但使用者看到的結果是：檔案損毀、權限不足、無法解壓——通通長得跟「什麼都沒發生」一模一樣。而且成功提示在「匯入 0 本」時也被抑制，所以整批不支援的檔案是完全無聲的。</div>
+    <div style="display:{{ evidenceDisplay }};font-size:12.5px;font-family:ui-monospace,monospace;color:var(--color-neutral-700);margin-top:10px">library_screen.dart · <code>_pickAndImportFiles</code>、<code>_pickAndImportFolder</code>、<code>_showImportResultSnackBar</code></div>
+  </div>
+
+  <div data-p="P0" class="card elev-sm" style="margin-bottom:14px;border-left:4px solid var(--color-accent-600);display:{{ p0Display }}">
+    <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px"><span class="tag tag-accent">P0</span><strong style="font-size:16.5px">沒有任何方式可以「找一本書」</strong></div>
+    <div style="font-size:15px">沒有搜尋框、沒有書名／作者篩選、沒有注音或 A–Z 索引、沒有「最近閱讀」列。唯一的收斂工具是四種排序與手動分類。書量到幾十本就變成線性掃描，到幾百本就無法使用。全文檢索是已知的路線圖項目，但目前連「詮釋資料篩選」都沒有。</div>
+  </div>
+
+  <div data-p="P1" class="card elev-sm" style="margin-bottom:14px;display:{{ p1Display }}">
+    <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px"><span class="tag tag-neutral">P1</span><strong style="font-size:16.5px">歸類後的書會從頂層書架消失</strong></div>
+    <div style="font-size:15px">為了避免重複顯示，頂層書架只顯示分類拼貼格＋<em>未分類</em>書籍。使用者一旦把書歸類，它就從主畫面消失，包含正在讀的書。而且 2×2 拼貼格外型跟一本書幾乎一樣，書架上變成兩種同輪廓的物件，只能靠標題括號裡的數字分辨。</div>
+  </div>
+
+  <div data-p="P1" class="card elev-sm" style="margin-bottom:14px;display:{{ p1Display }}">
+    <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px"><span class="tag tag-neutral">P1</span><strong style="font-size:16.5px">書架 AppBar 上有六個彼此競爭的動作</strong></div>
+    <div style="font-size:15px">排序、檢視切換、匯入、管理分類、遠端書庫、設定——全是純圖示、全是同等權重，其中「匯入」還是本畫面的主要動作。檔案內已有一段關於工具列溢位修復的註解，正是這個壓力造成的。匯入應該是 FAB，而不是跟診斷性質的齒輪並列。</div>
+  </div>
+
+  <div data-p="P2" class="card elev-sm" style="margin-bottom:14px;display:{{ p2Display }}">
+    <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px"><span class="tag tag-accent-2">P2</span><strong style="font-size:16.5px">空狀態過於單薄</strong></div>
+    <div style="font-size:15px">只有「尚未匯入書籍」加一顆按鈕。首次啟動正是說明「四種匯入方式」與「支援哪些格式」的最佳時機。</div>
+  </div>
+
+  <h3 style="margin:36px 0 14px;font-size:24px">F · EPUB／PDF 閱讀器</h3>
+
+  <div data-p="P0" class="card elev-sm" style="margin-bottom:14px;border-left:4px solid var(--color-accent-600);display:{{ p0Display }}">
+    <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px"><span class="tag tag-accent">P0</span><strong style="font-size:16.5px">右側的「浮動按鈕塔」</strong></div>
+    <div style="font-size:15px">閱讀器介面是七顆手動定位的 <code>ClipOval</code> 圓形按鈕：返回在左上，目錄／設定／書籤／筆記／跳頁／朗讀沿右緣堆在 <code>top: 16, 72, 128, 184, 240, 296</code>。在手機上那是一條約 344dp 的不透明長柱壓在內文上——而這個 App 的核心差異化正是「正確的中文直排」，右側恰恰是直排書頁的起始邊。更嚴重的是，這整組按鈕被寫了<strong>兩次</strong>：foliate 一份、PDF 一份，幾乎完全重複。</div>
+    <div style="display:{{ evidenceDisplay }};font-size:12.5px;font-family:ui-monospace,monospace;color:var(--color-neutral-700);margin-top:10px">reader_screen.dart · <code>_buildBody</code>，約 2190–2450 行</div>
+  </div>
+
+  <div data-p="P0" class="card elev-sm" style="margin-bottom:14px;border-left:4px solid var(--color-accent-600);display:{{ p0Display }}">
+    <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px"><span class="tag tag-accent">P0</span><strong style="font-size:16.5px">20dp 高的 AppBar 搭配 18px 圖示</strong></div>
+    <div style="font-size:15px">殘存的 AppBar 路徑設定 <code>toolbarHeight: 20</code>、<code>iconSize: 18</code>、標題 13px，並強制 <code>shrinkWrap</code> 觸控區——不到 48dp 最小值的一半，而且是在單手操作、電子紙觸控精度更差的裝置上。檔案註解自己也承認結果「偏擠」。</div>
+  </div>
+
+  <div data-p="P1" class="card elev-sm" style="margin-bottom:14px;display:{{ p1Display }}">
+    <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px"><span class="tag tag-neutral">P1</span><strong style="font-size:16.5px">兩套介面系統並存，其中一套幾乎已是死碼</strong></div>
+    <div style="font-size:15px">Scaffold AppBar 對流式 foliate、FXL 與 PDF 一律被抑制——也就是對幾乎所有真實書籍都不生效——實際工作由浮動按鈕塔承擔。但那條死分支仍保有自己的標題 widget、「點章節名開目錄」行為與 action 清單，而浮動塔刻意不重現這些。同一組介面存在兩份互相偏離的定義，是長期的回歸風險。</div>
+  </div>
+
+  <div data-p="P1" class="card elev-sm" style="margin-bottom:14px;display:{{ p1Display }}">
+    <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px"><span class="tag tag-neutral">P1</span><strong style="font-size:16.5px">選取工具列用「估計尺寸」定位</strong></div>
+    <div style="font-size:15px"><code>_annotationToolbarHeight = 104</code>／<code>Width = 256</code> 註解明說是估計值，卻被用來把工具列箝制在畫面內。日後多一個劃線顏色、刪除按鈕文案變長、或使用者放大系統字級，工具列就會被推出畫面或蓋住選取內容。</div>
+  </div>
+
+  <div data-p="P1" class="card elev-sm" style="margin-bottom:14px;display:{{ p1Display }}">
+    <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px"><span class="tag tag-neutral">P1</span><strong style="font-size:16.5px">開書時只有一個轉圈圈疊在純色上</strong></div>
+    <div style="font-size:15px">一層全幅底色遮罩加置中的 <code>CircularProgressIndicator</code> 蓋住原生視圖直到首次繪製。在 App 最長的一段等待中，畫面上完全沒有書的身分（封面、書名、上次位置）；而無限旋轉的轉圈圈，是電子紙上最糟糕的載入表現方式。</div>
+  </div>
+
+  <div data-p="P2" class="card elev-sm" style="margin-bottom:14px;display:{{ p2Display }}">
+    <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px"><span class="tag tag-accent-2">P2</span><strong style="font-size:16.5px">直排介面是把橫排整個轉 90 度</strong></div>
+    <div style="font-size:15px">直排模式的頁眉與進度文字，是把橫排 widget 放進 <code>RotatedBox(quarterTurns: 1)</code>。能動，但截斷、對齊與觸控區都在錯誤的軸向上被推理——而且按鈕塔並不會跟著轉。</div>
+  </div>
+
+  <h3 style="margin:36px 0 14px;font-size:24px">G · TTS 朗讀</h3>
+
+  <div data-p="P0" class="card elev-sm" style="margin-bottom:14px;border-left:4px solid var(--color-accent-600);display:{{ p0Display }}">
+    <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px"><span class="tag tag-accent">P0</span><strong style="font-size:16.5px">關閉控制列＝弄丟 App 內唯一的停止鍵</strong></div>
+    <div style="font-size:15px">✕ 只收合控制列、不暫停朗讀（這是刻意設計並寫在註解裡，tooltip 也寫「關閉朗讀控制列」）。使用者以為在關掉浮層，結果是聲音繼續播、畫面上再也沒有控制項；只能回到按鈕塔的朗讀鍵或系統通知救援。「關閉但不停止」必須配一個常駐的「正在朗讀」提示，而不是把它藏起來。</div>
+  </div>
+
+  <div data-p="P1" class="card elev-sm" style="margin-bottom:14px;display:{{ p1Display }}">
+    <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px"><span class="tag tag-neutral">P1</span><strong style="font-size:16.5px">語速是「塞在圖示按鈕裡的文字」，而且盲目輪播</strong></div>
+    <div style="font-size:15px"><code>1.00x</code> 被當成 <code>IconButton</code> 的 <code>icon</code> 渲染，點一下跳到下一個預設值，沒有清單、沒有範圍、要退回只能整圈轉完。使用者看不到有哪些選項，也無法直接跳到想要的值。</div>
+  </div>
+
+  <div data-p="P1" class="card elev-sm" style="margin-bottom:14px;display:{{ p1Display }}">
+    <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px"><span class="tag tag-neutral">P1</span><strong style="font-size:16.5px">跟讀朗讀在 UI 上沒有任何「狀態」</strong></div>
+    <div style="font-size:15px">五顆傳輸鍵，就這樣：沒有目前句子、沒有章節、沒有章內進度、沒有語音選擇、沒有睡眠定時、沒有引擎資訊。底層的 CFI 段落同步做得很紮實，卻只呈現為頁面上的高亮。</div>
+  </div>
+
+  <div data-p="P2" class="card elev-sm" style="margin-bottom:14px;display:{{ p2Display }}">
+    <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px"><span class="tag tag-accent-2">P2</span><strong style="font-size:16.5px">CBZ 顯示一個永遠停用的播放器</strong></div>
+    <div style="font-size:15px">漫畫會拿到一顆灰掉的播放鍵加解釋用的 tooltip。tooltip 以滑鼠 hover 為前提，觸控裝置幾乎不會被發現；純圖像格式應該直接不提供這個入口。</div>
+  </div>
+
+  <h3 style="margin:36px 0 14px;font-size:24px">H · 筆記與劃線</h3>
+
+  <div data-p="P1" class="card elev-sm" style="margin-bottom:14px;display:{{ p1Display }}">
+    <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px"><span class="tag tag-neutral">P1</span><strong style="font-size:16.5px">書籤與筆記的圖示語言互相矛盾</strong></div>
+    <div style="font-size:15px">加書籤用<strong>星星</strong>；而包含書籤／劃線／備註的筆記 Sheet，入口卻是 <code>Icons.bookmarks</code>、標籤寫「筆記」。也就是：書籤動作是星星，書籤圖示打開的是筆記。進到 Sheet 裡，兩個分頁又用 🔖／✏️ emoji，是第三套圖示語言。</div>
+  </div>
+
+  <div data-p="P1" class="card elev-sm" style="margin-bottom:14px;display:{{ p1Display }}">
+    <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px"><span class="tag tag-neutral">P1</span><strong style="font-size:16.5px">兩列、最多 8 顆按鈕的工具列蓋在剛選取的字上</strong></div>
+    <div style="font-size:15px">第一列三色＋底線＋關閉，第二列複製／備註／刪除，固定 256×104 的方塊錨在選取矩形旁。在手機上大約是頁寬的三分之一、頁高的八分之一，而且不論選取範圍留下多少空間，版面都不變。</div>
+  </div>
+
+  <div data-p="P2" class="card elev-sm" style="margin-bottom:14px;display:{{ p2Display }}">
+    <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px"><span class="tag tag-accent-2">P2</span><strong style="font-size:16.5px">劃線備註只存在於單本書內</strong></div>
+    <div style="font-size:15px">只能從書內開啟。沒有全書庫的「所有劃線」檢視、沒有跨書搜尋，Markdown 匯出也是單本——這其實低估了資料層已經支援的能力。</div>
+  </div>
+
+  <h3 style="margin:36px 0 14px;font-size:24px">I · OPDS、雲端來源與同步</h3>
+
+  <div data-p="P1" class="card elev-sm" style="margin-bottom:14px;display:{{ p1Display }}">
+    <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px"><span class="tag tag-neutral">P1</span><strong style="font-size:16.5px">每下鑽一層 OPDS 分類就推一個畫面</strong></div>
+    <div style="font-size:15px">在 Calibre 書庫往下四層，堆疊上就留了四個完整畫面，各自帶著自己的 client 實例、選取集合與分頁狀態。沒有麵包屑，回到目錄根只能連按返回。</div>
+  </div>
+
+  <div data-p="P1" class="card elev-sm" style="margin-bottom:14px;display:{{ p1Display }}">
+    <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px"><span class="tag tag-neutral">P1</span><strong style="font-size:16.5px">雲端與 OPDS 沒有共用的瀏覽模式</strong></div>
+    <div style="font-size:15px">兩個獨立畫面在做同一件事：認證、列出、選取、查重、排下載佇列、顯示進度、行動數據警告——卻是各自實作。再加一個 WebDAV，就是第三份。</div>
+  </div>
+
+  <div data-p="P2" class="card elev-sm" style="margin-bottom:14px;display:{{ p2Display }}">
+    <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px"><span class="tag tag-accent-2">P2</span><strong style="font-size:16.5px">同步在出事之前完全隱形</strong></div>
+    <div style="font-size:15px">PocketBase 引擎在 App 進背景與各 checkpoint 執行，UI 只有一個設定畫面加一個「位置衝突」對話框。書架上沒有同步狀態、沒有最後同步時間，也沒有靠近內容的「立即同步」。</div>
+  </div>
+
+  <h3 style="margin:36px 0 14px;font-size:24px">J · 設定</h3>
+
+  <div data-p="P1" class="card elev-sm" style="margin-bottom:14px;display:{{ p1Display }}">
+    <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px"><span class="tag tag-neutral">P1</span><strong style="font-size:16.5px">八列扁平清單，沒有任何分組</strong></div>
+    <div style="font-size:15px">外觀、閱讀預設、手勢、同步、雲端帳戶、診斷、關於全擠在同一個 <code>ListView</code>，沒有區段標題、沒有圖示、沒有說明文字。「導航熱區」與「閱讀預設值」光看標題根本猜不到內容。</div>
+  </div>
+
+  <div data-p="P1" class="card elev-sm" style="margin-bottom:14px;display:{{ p1Display }}">
+    <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px"><span class="tag tag-neutral">P1</span><strong style="font-size:16.5px">閱讀偏好散落在三個地方</strong></div>
+    <div style="font-size:15px">全域預設在「設定 → 閱讀預設值」、單書覆寫在閱讀器 Sheet、具名版面預設在該 Sheet 的第四分頁。「覆寫 ?? 自動偵測 ?? 全域」這個解析順序在程式裡實作得很正確，但 UI 從未說明；於是「拉了滑桿卻沒反應（因為存在單書覆寫）」與「這是 bug」在使用者眼中無法區分。</div>
+  </div>
+
+  <div data-p="P2" class="card elev-sm" style="margin-bottom:14px;display:{{ p2Display }}">
+    <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px"><span class="tag tag-accent-2">P2</span><strong style="font-size:16.5px">開發診斷功能出現在使用者選單裡</strong></div>
+    <div style="font-size:15px">「閱讀器 Console Log」與其攔截開關夾在同步與關於之間，應該收進「關於」畫面連點版號後才顯示的除錯區。</div>
+  </div>
+
+  <h3 style="margin:36px 0 14px;font-size:24px">K · 手機／平板響應式</h3>
+
+  <div data-p="P1" class="card elev-sm" style="margin-bottom:14px;display:{{ p1Display }}">
+    <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px"><span class="tag tag-neutral">P1</span><strong style="font-size:16.5px">只看方向、從不看寬度</strong></div>
+    <div style="font-size:15px">書架直向 3 欄、橫向 4 欄——7 吋電子書、13 吋平板、摺疊機一視同仁。大平板上就是超巨大的封面配一整螢幕的說明文字。沒有斷點、沒有 <code>NavigationRail</code>、沒有雙欄主從版面，設定畫面也沒有最大內容寬度。</div>
+  </div>
+
+  <div data-p="P2" class="card elev-sm" style="margin-bottom:14px;display:{{ p2Display }}">
+    <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px"><span class="tag tag-accent-2">P2</span><strong style="font-size:16.5px">閱讀器介面錨在絕對像素座標上</strong></div>
+    <div style="font-size:15px">按鈕塔的 <code>16/72/128/184/240/296</code> 與工具列的 256×104，都是為手機挑的 dp 值。平板上會擠在角落；小尺寸電子書橫向時，按鈕塔會超出畫面底部。</div>
+  </div>
+
+  <h3 style="margin:36px 0 14px;font-size:24px">L · 電子紙（E-Ink）裝置可用性</h3>
+
+  <div data-p="P0" class="card elev-sm" style="margin-bottom:14px;border-left:4px solid var(--color-accent-600);display:{{ p0Display }}">
+    <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px"><span class="tag tag-accent">P0</span><strong style="font-size:16.5px">E-Ink 模式下的主要控制項竟是滑桿與轉圈圈</strong></div>
+    <div style="font-size:15px">字級、字重、行距、段距、字距、四邊邊界、欄寬與跳頁全部是 <code>Slider</code>；載入是 <code>CircularProgressIndicator</code>。兩者都是連續動態元件：拖一次滑桿會觸發數十次局部刷新與嚴重殘影，而轉圈圈永遠不會靜止。E-Ink 模式關掉了 splash 與水波紋，卻放過了最傷的兩個。</div>
+  </div>
+
+  <div data-p="P1" class="card elev-sm" style="margin-bottom:14px;display:{{ p1Display }}">
+    <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px"><span class="tag tag-neutral">P1</span><strong style="font-size:16.5px">E-Ink 適配只存在於兩個地方</strong></div>
+    <div style="font-size:15px">這個旗標只到達 <code>RemoteCatalogScreen</code>（把無限捲動換成離散換頁，做法完全正確）與 <code>ReaderOptionTile</code>（靠比色猜出來）。書架仍是連續捲動、頁面轉場仍有動畫、Bottom Sheet 仍會滑入，也沒有任何畫面提供離散換頁。正確的直覺，只落實在十六分之一的畫面上。</div>
+  </div>
+
+  <div data-p="P1" class="card elev-sm" style="margin-bottom:14px;display:{{ p1Display }}">
+    <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px"><span class="tag tag-neutral">P1</span><strong style="font-size:16.5px">純黑白模式裡仍殘留中間灰</strong></div>
+    <div style="font-size:15px">E-Ink 主題本身嚴格黑白，但寫死的 <code>grey.shade200/300</code> 佔位、<code>black45</code> 徽章與灰色進度文字完全繞過它——正是這個模式存在的目的所要消除的抖動中間調。</div>
+  </div>
+
+  <div data-p="P2" class="card elev-sm" style="margin-bottom:14px;display:{{ p2Display }}">
+    <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;margin-bottom:8px"><span class="tag tag-accent-2">P2</span><strong style="font-size:16.5px">沒有手動全刷，也沒有實體鍵提示</strong></div>
+    <div style="font-size:15px">音量鍵翻頁已在平台通道接好、導航熱區也可設定，但 UI 從未告訴第一次使用電子書裝置的人這些功能存在；殘影累積時也沒有「手動全螢幕刷新」的手勢。</div>
+  </div>
+
+</div>
+
+<!-- 5 -->
+<section id="ds-next" style="max-width:1080px;margin:0 auto;padding:56px 32px 64px;scroll-margin-top:20px">
+  <h6 style="color:var(--color-accent-700)">第 5 節</h6>
+  <h2 style="margin-bottom:8px;font-size:30px">建議的設計系統</h2>
+  <p style="max-width:70ch;color:var(--color-neutral-800)">用一個 <code>ThemeExtension</code>——命名為 <code>ElinkTokens</code>——掛在每一份 <code>ThemeData</code> 上，讓 widget 永遠不再讀字面值，也讓 E-Ink 從「換一套主題」變成「套在現行主題上的修飾子」。</p>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px;margin-top:26px">
+    <div class="card"><div class="card-kicker">1 · 兩層色彩</div><div class="card-body" style="font-size:14px;line-height:1.8">把 <strong>chrome（書架、設定、Sheet）</strong>與 <strong>page（閱讀頁）</strong>分開。淺色／深色／羊皮紙各自填滿完整 M3 <code>ColorScheme</code>，不留任何角色給 baseline。再加上 App 真正需要的語意色：<code>highlightYellow/Green/Blue</code>、<code>underline</code>、<code>progressTrack</code>、<code>coverPlaceholder</code>、<code>badgeScrim</code>。</div></div>
+    <div class="card"><div class="card-kicker">2 · 字級層級</div><div class="card-body" style="font-size:14px;line-height:1.8">真正的 <code>TextTheme</code>，行高採 CJK 安全值（1.5–1.7），任何常駐標籤下限 14sp。書架書名 15sp／2 行、詮釋資料 13sp、區段標題 13sp 加字距、Sheet 標籤 15sp 半粗。全部尊重 <code>textScaler</code>——現有那段 scaler-aware 的頁尾高度計算，應該變成通則而不是特例。</div></div>
+    <div class="card"><div class="card-kicker">3 · 間距與形狀</div><div class="card-body" style="font-size:14px;line-height:1.8">4dp 尺標，開放為 <code>space.xs…xxl</code>（4/8/12/16/24/32），圓角三階（<code>8 / 16 / 28</code>，對齊現有形狀），陰影只留兩階。另加 <code>maxContentWidth</code>，讓設定與表單在平板上不再無限拉寬。</div></div>
+    <div class="card"><div class="card-kicker">4 · E-Ink 作為修飾子</div><div class="card-body" style="font-size:14px;line-height:1.8"><code>tokens.isEink</code> 加上 <code>tokens.motion</code>（<code>full / reduced / none</code>）與 <code>tokens.paging</code>（<code>scroll / discrete</code>），任何 widget 都能查詢。綁定到：零時長轉場、離散清單換頁、以 stepper 取代 slider、以確定式進度取代轉圈圈、邊框 ≥1.5dp。</div></div>
+    <div class="card"><div class="card-kicker">5 · 密度與觸控目標</div><div class="card-body" style="font-size:14px;line-height:1.8">由共用按鈕元件強制 48dp 最小觸控目標，<code>isEink</code> 時提高到 56dp，並淘汰各處自行加的 <code>shrinkWrap</code> 覆寫。</div></div>
+    <div class="card"><div class="card-kicker">6 · 圖示與語氣</div><div class="card-body" style="font-size:14px;line-height:1.8">一個概念一個圖示並寫成文件：書籤＝<code>bookmark</code>（不是星星）、劃線備註＝<code>edit_note</code>、目錄＝<code>toc</code>、來源＝<code>cloud_download</code>。分頁標籤不用 emoji。每個純圖示控制項都要有可見標籤或長按標籤，而不是只有 tooltip。</div></div>
+  </div>
+</section>
+
+<!-- 6 -->
+<section id="comp-next" style="max-width:1080px;margin:0 auto;padding:0 32px 64px;scroll-margin-top:20px">
+  <h6 style="color:var(--color-accent-700)">第 6 節</h6>
+  <h2 style="margin-bottom:8px;font-size:30px">建議的元件層級</h2>
+  <p style="max-width:70ch;color:var(--color-neutral-800)">三層，放在 <code>lib/ui/</code>，並訂一條硬規則：<strong>畫面只負責組合，不負責樣式。</strong>畫面檔案裡出現字面色值、尺寸或 padding，即視為 code review 不通過。</p>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px;margin-top:24px">
+    <div style="background:var(--color-neutral-100);border-radius:var(--radius-md);padding:22px 24px">
+      <div style="font-family:'Caprasimo','Noto Serif TC',serif;font-size:19px;margin-bottom:4px">第 1 層 · 基礎元件</div>
+      <div style="font-size:12px;color:var(--color-neutral-700);margin-bottom:12px">吃 token，完全不懂業務</div>
+      <div style="font-size:13.5px;line-height:1.95;font-family:ui-monospace,monospace">EBButton · EBIconButton · EBSegmented · EBStepper（取代 slider）· EBSwitchRow · EBListRow · EBSectionHeader · EBCard · EBTag · EBSheetShell · EBDialogShell · EBEmptyState · EBErrorState · EBLoading（骨架、確定式）· EBPagedList</div>
+    </div>
+    <div style="background:var(--color-neutral-100);border-radius:var(--radius-md);padding:22px 24px">
+      <div style="font-family:'Caprasimo','Noto Serif TC',serif;font-size:19px;margin-bottom:4px">第 2 層 · 領域元件</div>
+      <div style="font-size:12px;color:var(--color-neutral-700);margin-bottom:12px">懂「書」，但不懂「畫面」</div>
+      <div style="font-size:13.5px;line-height:1.95;font-family:ui-monospace,monospace">BookCoverTile · BookListRow · GroupTile · ProgressRing · SourceBadge · ReaderChromeBar · ReaderOverlayScrim · SelectionToolbar · TocList · AnnotationRow · BookmarkRow · TtsPlayer · TtsExpandedSheet · SourceBrowser（列出＋選取＋佇列）· DownloadQueueRow · SyncStatusChip</div>
+    </div>
+    <div style="background:var(--color-neutral-100);border-radius:var(--radius-md);padding:22px 24px">
+      <div style="font-family:'Caprasimo','Noto Serif TC',serif;font-size:19px;margin-bottom:4px">第 3 層 · 外殼</div>
+      <div style="font-size:12px;color:var(--color-neutral-700);margin-bottom:12px">畫面所在的響應式框架</div>
+      <div style="font-size:13.5px;line-height:1.95;font-family:ui-monospace,monospace">AdaptiveScaffold（底部列 → rail → rail＋詳細窗格）· SettingsScaffold（最大寬度、分區）· ReaderScaffold（統一掌管介面顯隱、沉浸模式、安全區，以及所有格式共用的唯一一份 chrome 定義）</div>
+    </div>
+  </div>
+
+  <div style="margin-top:26px;background:var(--color-accent-100);border-radius:var(--radius-md);padding:22px 26px">
+    <div style="font-weight:700;margin-bottom:8px;font-size:16px">不論如何都值得做的一項結構調整</div>
+    <div style="font-size:15px;max-width:78ch">沿著程式碼裡<strong>已經存在</strong>的接縫把 <code>ReaderScreen</code> 拆開：一個 <code>ReaderShell</code> 負責 chrome、沉浸模式、各 Sheet 與生命週期；格式控制器（<code>FoliateReaderController</code>、<code>PdfReaderController</code>）藏在同一個介面後，對外只暴露位置、目錄、選取、書籤狀態與 TTS 段落。重複的 EPUB／PDF 兩份 chrome 會塌縮成一份，而 CFI 處理、foliate bridge、同步 checkpoint、音訊焦點等業務邏輯原封不動搬過去即可。</div>
+  </div>
+</section>
+
+<!-- 7 -->
+<section id="screen-next" style="max-width:1080px;margin:0 auto;padding:0 32px 64px;scroll-margin-top:20px">
+  <h6 style="color:var(--color-accent-700)">第 7 節</h6>
+  <h2 style="margin-bottom:8px;font-size:30px">建議的畫面層級</h2>
+  <p style="max-width:70ch;color:var(--color-neutral-800)">用三個常駐目的地取代「單一根畫面＋散落圖示」；用一個來源模型取代四個瀏覽器；閱讀器是唯一的全螢幕路由。</p>
+
+  <div style="background:var(--color-neutral-100);border:1px solid var(--color-divider);border-radius:var(--radius-md);padding:24px 26px;margin-top:22px;font-size:13.5px;line-height:1.95;font-family:ui-monospace,SFMono-Regular,monospace;overflow-x:auto;white-space:pre">AdaptiveScaffold            手機＝底部列 → 平板＝側邊 rail → 大螢幕＝rail＋詳細窗格
+│
+├─ 書架
+│   ├─ 搜尋＋篩選列          ← 新增：先做書名／作者，全文檢索之後接上
+│   ├─ 繼續閱讀              ← 最近讀的書，永遠看得到
+│   ├─ 書架（格狀｜清單）    ← 分類改用晶片篩選，不再推畫面
+│   └─ 書籍 Sheet（長按）    ← 詳細資料 · 移動 · 版面覆寫 · 移除快取 · 刪除
+│
+├─ 來源                      ← 所有「把書弄進來」的方式集中於此
+│   ├─ 本機檔案 · 資料夾
+│   ├─ Google Drive · OneDrive ·（WebDAV）
+│   ├─ OPDS／Calibre 伺服器  ← 麵包屑導覽，單一畫面，不再堆疊
+│   └─ 下載佇列              ← 所有來源共用
+│
+├─ 設定                      ← 分區
+│   ├─ 外觀        主題 · E-Ink · 字型
+│   ├─ 閱讀        預設值 · 版面預設 · 導航熱區 · 朗讀語音與語速
+│   ├─ 同步與帳號  PocketBase 同步 · 已連結雲端帳戶
+│   └─ 關於        關於 ·（診斷藏在連點版號之後）
+│
+└─ 閱讀器（全螢幕路由，任何地方都能推入）
+    ├─ ReaderChromeBar   上：返回 · 書名/章節 · 目錄 · 搜尋
+    │                    下：進度與跳頁 · 書籤 · 劃線備註 · 版面設定 · 朗讀
+    ├─ Sheet             目錄 · 劃線備註 · 版面設定 · 朗讀
+    └─ 朗讀列            播放中常駐；可收合，但不會消失</div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-top:24px">
+    <div style="border-left:3px solid var(--color-accent-2-500);padding:4px 0 4px 16px"><div style="font-weight:700;font-size:15px;margin-bottom:4px">分類變成篩選，不是一個「地方」</div><div style="font-size:14px;color:var(--color-neutral-800)">書架上方一列晶片。不推畫面、不重複 AppBar、書也不會消失——歸類過的書在「全部」底下仍然看得到。</div></div>
+    <div style="border-left:3px solid var(--color-accent-2-500);padding:4px 0 4px 16px"><div style="font-weight:700;font-size:15px;margin-bottom:4px">閱讀器介面收斂成上下兩條</div><div style="font-size:14px;color:var(--color-neutral-800)">滿版、48dp 觸控目標、隨沉浸模式一起淡入淡出。把頁面右緣還給文字——那正是中文直排開始閱讀的地方。</div></div>
+    <div style="border-left:3px solid var(--color-accent-2-500);padding:4px 0 4px 16px"><div style="font-weight:700;font-size:15px;margin-bottom:4px">一個瀏覽器，多個 provider</div><div style="font-size:14px;color:var(--color-neutral-800)">瀏覽、選取、查重、佇列、行動數據警告只實作一次；各 provider 只提供列出／認證／下載。之後 WebDAV 的成本是一個 provider，不是一個畫面。</div></div>
+  </div>
+</section>
+
+<!-- 8 -->
+<section id="priority" style="max-width:1080px;margin:0 auto;padding:0 32px 40px;scroll-margin-top:20px">
+  <h6 style="color:var(--color-accent-700)">第 8 節</h6>
+  <h2 style="margin-bottom:8px;font-size:30px">UI 改善優先順序</h2>
+  <p style="max-width:70ch;color:var(--color-neutral-800)">刻意排成「每一步都讓下一步更便宜」。以下沒有任何一項需要動到 foliate bridge、CFI 處理、同步引擎、OPDS 解析或 TTS 音訊管線。</p>
+
+  <div style="margin-top:28px;border-radius:var(--radius-md);overflow:hidden;border:1px solid var(--color-divider)">
+    <div style="background:var(--color-accent-600);color:#fff;padding:14px 22px;font-family:'Caprasimo','Noto Serif TC',serif;font-size:19px">P0 · critical — 正確性、可及性與信任</div>
+    <div style="background:var(--color-neutral-100);padding:8px 0">
+      <div style="display:flex;gap:14px;padding:12px 22px;font-size:15px"><span style="font-family:'Caprasimo',serif;color:var(--color-accent-700);min-width:26px">01</span><div><strong>導入 <code>ElinkTokens</code>，清除所有寫死顏色。</strong>每個 <code>Colors.grey/black45/black54/white</code> 都改成語意角色。一次修好深色、羊皮紙與 E-Ink，並解鎖以下所有項目。</div></div>
+      <div style="display:flex;gap:14px;padding:12px 22px;font-size:15px"><span style="font-family:'Caprasimo',serif;color:var(--color-accent-700);min-width:26px">02</span><div><strong>補齊四套 ColorScheme。</strong>不留任何角色給 M3 baseline，消除羊皮紙與淺色主題的淡紫外洩。</div></div>
+      <div style="display:flex;gap:14px;padding:12px 22px;font-size:15px"><span style="font-family:'Caprasimo',serif;color:var(--color-accent-700);min-width:26px">03</span><div><strong>用上下兩條 chrome bar 取代按鈕塔</strong>，48dp 觸控目標，foliate 與 PDF 共用同一份定義，並淘汰 20dp AppBar。</div></div>
+      <div style="display:flex;gap:14px;padding:12px 22px;font-size:15px"><span style="font-family:'Caprasimo',serif;color:var(--color-accent-700);min-width:26px">04</span><div><strong>把匯入失敗顯示出來。</strong>拿掉靜默 <code>catch (_)</code>，改成逐檔結果面板：已匯入／重複略過／失敗＋原因。</div></div>
+      <div style="display:flex;gap:14px;padding:12px 22px;font-size:15px"><span style="font-family:'Caprasimo',serif;color:var(--color-accent-700);min-width:26px">05</span><div><strong>讓 TTS 狀態不可能弄丟。</strong>收合成常駐細列「正在朗讀」；✕ 要嘛停止播放，要嘛列不消失。</div></div>
+      <div style="display:flex;gap:14px;padding:12px 22px;font-size:15px"><span style="font-family:'Caprasimo',serif;color:var(--color-accent-700);min-width:26px">06</span><div><strong>加上書庫搜尋。</strong>書架 AppBar 的書名／作者篩選——目前缺席控制項中價值最高的一個。</div></div>
+      <div style="display:flex;gap:14px;padding:12px 22px;font-size:15px"><span style="font-family:'Caprasimo',serif;color:var(--color-accent-700);min-width:26px">07</span><div><strong>E-Ink：以 stepper 取代 slider、以確定式進度取代轉圈圈。</strong>兩者都綁 <code>tokens.isEink</code>，改動是一個條件而不是一次重寫。</div></div>
+    </div>
+  </div>
+
+  <div style="margin-top:20px;border-radius:var(--radius-md);overflow:hidden;border:1px solid var(--color-divider)">
+    <div style="background:var(--color-neutral-800);color:#fff;padding:14px 22px;font-family:'Caprasimo','Noto Serif TC',serif;font-size:19px">P1 · important — 時間、理解與一致性</div>
+    <div style="background:var(--color-neutral-100);padding:8px 0">
+      <div style="display:flex;gap:14px;padding:12px 22px;font-size:15px"><span style="font-family:'Caprasimo',serif;color:var(--color-neutral-800);min-width:26px">08</span><div>建立字級與間距尺標；書架書名提高到 15sp／2 行，詮釋資料 13sp。</div></div>
+      <div style="display:flex;gap:14px;padding:12px 22px;font-size:15px"><span style="font-family:'Caprasimo',serif;color:var(--color-neutral-800);min-width:26px">09</span><div>抽出第 1 層基礎元件；設定改為分區的 <code>SettingsScaffold</code> 並補說明文字。</div></div>
+      <div style="display:flex;gap:14px;padding:12px 22px;font-size:15px"><span style="font-family:'Caprasimo',serif;color:var(--color-neutral-800);min-width:26px">10</span><div>分類改成篩選晶片；歸類後的書不再從書架消失。</div></div>
+      <div style="display:flex;gap:14px;padding:12px 22px;font-size:15px"><span style="font-family:'Caprasimo',serif;color:var(--color-neutral-800);min-width:26px">11</span><div>把來源瀏覽器統一到 <code>SourceBrowser</code>＋provider 介面；OPDS 加麵包屑。</div></div>
+      <div style="display:flex;gap:14px;padding:12px 22px;font-size:15px"><span style="font-family:'Caprasimo',serif;color:var(--color-neutral-800);min-width:26px">12</span><div>修正圖示語言（書籤≠星星≠筆記）；移除 emoji 分頁標籤；為破壞性批次操作加上文字標籤與快取移除確認。</div></div>
+      <div style="display:flex;gap:14px;padding:12px 22px;font-size:15px"><span style="font-family:'Caprasimo',serif;color:var(--color-neutral-800);min-width:26px">13</span><div>擴充 TTS 播放器：目前句子、章節、語音、語速清單、睡眠定時。</div></div>
+      <div style="display:flex;gap:14px;padding:12px 22px;font-size:15px"><span style="font-family:'Caprasimo',serif;color:var(--color-neutral-800);min-width:26px">14</span><div>在版面 Sheet 標示偏好層級（「此書覆寫 · 全域預設」）並提供逐項還原。</div></div>
+      <div style="display:flex;gap:14px;padding:12px 22px;font-size:15px"><span style="font-family:'Caprasimo',serif;color:var(--color-neutral-800);min-width:26px">15</span><div>寬度斷點：書架欄數依可用寬度計算、≥600dp 用 <code>NavigationRail</code>、設定與表單設最大寬度。</div></div>
+      <div style="display:flex;gap:14px;padding:12px 22px;font-size:15px"><span style="font-family:'Caprasimo',serif;color:var(--color-neutral-800);min-width:26px">16</span><div>選取工具列改為實測尺寸，並依選取後剩餘空間自適應版面。</div></div>
+      <div style="display:flex;gap:14px;padding:12px 22px;font-size:15px"><span style="font-family:'Caprasimo',serif;color:var(--color-neutral-800);min-width:26px">17</span><div>開書骨架畫面：封面、書名、續讀位置——不要轉圈圈。</div></div>
+    </div>
+  </div>
+
+  <div style="margin-top:20px;border-radius:var(--radius-md);overflow:hidden;border:1px solid var(--color-divider)">
+    <div style="background:var(--color-accent-2-600);color:#fff;padding:14px 22px;font-family:'Caprasimo','Noto Serif TC',serif;font-size:19px">P2 · polish — 深度與長尾</div>
+    <div style="background:var(--color-neutral-100);padding:8px 0">
+      <div style="display:flex;gap:14px;padding:12px 22px;font-size:15px"><span style="font-family:'Caprasimo',serif;color:var(--color-accent-2-700);min-width:26px">18</span><div>把 App 介面主題與閱讀頁主題拆開；加入自動跟隨系統深淺色。</div></div>
+      <div style="display:flex;gap:14px;padding:12px 22px;font-size:15px"><span style="font-family:'Caprasimo',serif;color:var(--color-accent-2-700);min-width:26px">19</span><div>書庫層級的劃線備註總覽：跨書搜尋與匯出。</div></div>
+      <div style="display:flex;gap:14px;padding:12px 22px;font-size:15px"><span style="font-family:'Caprasimo',serif;color:var(--color-accent-2-700);min-width:26px">20</span><div>書架上顯示同步狀態；把「立即同步」放到內容旁邊。</div></div>
+      <div style="display:flex;gap:14px;padding:12px 22px;font-size:15px"><span style="font-family:'Caprasimo',serif;color:var(--color-accent-2-700);min-width:26px">21</span><div>完整的空狀態與首次啟動引導；介紹導航熱區與音量鍵翻頁。</div></div>
+      <div style="display:flex;gap:14px;padding:12px 22px;font-size:15px"><span style="font-family:'Caprasimo',serif;color:var(--color-accent-2-700);min-width:26px">22</span><div>直排採用原生版面而非 <code>RotatedBox</code>；診斷功能移到「關於」連點之後。</div></div>
+      <div style="display:flex;gap:14px;padding:12px 22px;font-size:15px"><span style="font-family:'Caprasimo',serif;color:var(--color-accent-2-700);min-width:26px">23</span><div>建立路由表，支援 deep link、桌面捷徑與閱讀器狀態還原。</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 9 ELI5 -->
+<section id="eli5" style="max-width:1080px;margin:0 auto;padding:0 32px 40px;scroll-margin-top:20px">
+  <h6 style="color:var(--color-accent-700)">第 9 節</h6>
+  <h2 style="margin-bottom:8px;font-size:30px">後續應該怎麼做（白話版）</h2>
+  <p style="max-width:70ch;color:var(--color-neutral-800)">用最簡單的比喻說一次。</p>
+
+  <div style="background:var(--color-accent-2-100);border-radius:var(--radius-lg);padding:28px 30px;margin-top:22px">
+    <div style="font-size:17px;line-height:1.9;max-width:78ch">
+      你的 App 就像一間<strong>藏書非常好、但沒有請過室內設計師的書店</strong>。書（功能）很齊全而且品質很高——直排排版、CFI 同步、朗讀、雲端同步都紮實。問題出在「裝潢」：每個房間是不同師傅、在不同時間、用不同油漆和不同尺寸的層板做的。所以走進去會覺得亂，不是因為東西不好，而是因為<strong>沒有一本共用的裝潢規格書</strong>。
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px;margin-top:24px">
+    <div class="card elev-sm">
+      <div class="card-kicker">第一步（1–2 週）</div>
+      <div style="font-family:'Caprasimo','Noto Serif TC',serif;font-size:20px;margin:2px 0 8px">先寫「裝潢規格書」</div>
+      <div style="font-size:15px;line-height:1.8">也就是 <code>ElinkTokens</code>：顏色、字級、間距、圓角各只有一份定義。<strong>先不要改任何畫面長相</strong>，只是把散落各處的 <code>Colors.grey</code>、<code>fontSize: 12</code> 換成規格書上的名稱。<br><br><strong>為什麼先做：</strong>深色模式、羊皮紙、E-Ink 的一堆毛病會在這一步一起消失，而且之後每一項改動都會變便宜。</div>
+    </div>
+    <div class="card elev-sm">
+      <div class="card-kicker">第二步（2–3 週）</div>
+      <div style="font-family:'Caprasimo','Noto Serif TC',serif;font-size:20px;margin:2px 0 8px">修三個「會讓人生氣」的地方</div>
+      <div style="font-size:15px;line-height:1.8">① 閱讀器右邊那排浮動圓鈕 → 改成上下兩條工具列。<br>② 匯入失敗要出聲音 → 不要再靜靜吞掉。<br>③ 書架加搜尋框。<br><br><strong>為什麼：</strong>這三件事分別對應「讀不舒服」「以為壞掉」「找不到書」，是使用者最容易流失的三個點。</div>
+    </div>
+    <div class="card elev-sm">
+      <div class="card-kicker">第三步（持續）</div>
+      <div style="font-family:'Caprasimo','Noto Serif TC',serif;font-size:20px;margin:2px 0 8px">把重複的零件收成共用件</div>
+      <div style="font-size:15px;line-height:1.8">按鈕、清單列、Bottom Sheet 外殼、空狀態各做一個共用元件，之後新畫面用組的，不再重寫。<br><br><strong>為什麼：</strong>現在 33 個介面只靠 3 個共用元件，這是所有不一致的根源。收好之後，新功能開發速度會明顯變快。</div>
+    </div>
+  </div>
+
+  <div style="margin-top:24px;background:var(--color-accent-100);border-radius:var(--radius-md);padding:24px 26px">
+    <div style="font-weight:700;font-size:16px;margin-bottom:10px">一句話原則</div>
+    <div style="font-size:16px;line-height:1.85;max-width:78ch">
+      <strong>不要一次重做整個 App。</strong>先建立規格書（token），再用規格書修最痛的三個點，最後把零件收成共用件。業務邏輯（foliate、CFI、同步、TTS、OPDS）從頭到尾<strong>完全不用動</strong>——這是這份報告刻意的設計，因為那些正是你最不該冒險的部分。
+    </div>
+  </div>
+
+  <div style="margin-top:24px;padding:24px 26px;background:var(--color-neutral-100);border-radius:var(--radius-md)">
+    <div style="font-weight:700;font-size:16px;margin-bottom:10px">我需要你回答的三件事，才能開始設計</div>
+    <ol style="margin:0;padding-left:20px;font-size:15.5px;line-height:1.9">
+      <li><strong>主要目標裝置是手機，還是 Android 電子紙閱讀器？</strong>這一題會改變幾乎所有 P0 的答案（滑桿 vs 步進器、介面密度、捲動 vs 換頁）。</li>
+      <li><strong>原則上可以接受「底部三個目的地（書架／來源／設定）」的架構嗎？</strong>不能的話我改用另一種收斂方式。</li>
+      <li><strong>WebDAV 真的在規劃中嗎？</strong>是的話，來源模型現在就要一次設計對。</li>
+    </ol>
+    <div style="font-size:15.5px;margin-top:14px">回覆之後，我會先<strong>依現有程式碼像素級重建目前的畫面</strong>（不是憑印象畫），再把新設計疊上去做對照。</div>
+  </div>
+</section>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;priority&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;All&quot;,&quot;P0&quot;,&quot;P1&quot;,&quot;P2&quot;],&quot;default&quot;:&quot;All&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;問題發現&quot;},&quot;showEvidence&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;問題發現&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const p = this.props.priority ?? 'All';
+    const hide = 'none';
+    return {
+      p0Display: (p === 'All' || p === 'P0') ? '' : hide,
+      p1Display: (p === 'All' || p === 'P1') ? '' : hide,
+      p2Display: (p === 'All' || p === 'P2') ? '' : hide,
+      evidenceDisplay: (this.props.showEvidence ?? true) ? '' : hide,
+    };
+  }
+}
+</script>
+</body>
+</html>

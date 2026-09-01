@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="../../../_ds/organic-e4b4eddd-cbe5-4c02-9ddd-d38c30c05696/styles.css">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@600;700&display=swap">
+<script src="../../../_ds/organic-e4b4eddd-cbe5-4c02-9ddd-d38c30c05696/_ds_bundle.js"></script>
+<style>
+  body{margin:0;background:var(--color-bg)}
+  h1,h2,h3,h4,h5,h6{font-family:"Caprasimo","Noto Serif TC",serif}
+  .dv-turn{padding:44px 44px 36px;border-bottom:1px solid var(--color-divider)}
+  .dv-thd{display:flex;align-items:baseline;gap:12px;margin:0 0 6px}
+  .dv-tid{font:600 11px ui-monospace,Menlo,monospace;padding:4px 9px;background:#201e1d;color:#fff;border-radius:999px;text-decoration:none}
+  .dv-oid{font:600 11px ui-monospace,Menlo,monospace;padding:3px 8px;background:var(--color-neutral-300);color:#201e1d;border-radius:999px;text-decoration:none}
+  .dv-opt:target .dv-oid{background:var(--color-accent-500);color:#fff}
+  .dv-opts{display:flex;flex-wrap:wrap;gap:34px;align-items:flex-start;margin-top:26px}
+  .dv-opt{flex:none;display:flex;flex-direction:column;gap:10px;scroll-margin-top:16px;width:470px}
+  .dv-olabel{display:flex;align-items:baseline;gap:9px;font:400 12.5px/1.5 "Figtree","Noto Sans TC",sans-serif;color:var(--color-neutral-700)}
+  .scr{width:470px;font-family:"Noto Sans TC","Roboto",system-ui,sans-serif;overflow:hidden;position:relative}
+</style>
+</helmet>
+
+<!-- ══════════════ TURN 2 · E-INK 新設計 ══════════════ -->
+<section class="dv-turn" id="t2">
+  <div class="dv-thd"><a class="dv-tid" href="#t2">2</a><span style="font:700 15px 'Figtree','Noto Sans TC',sans-serif">E-Ink 優先重新設計</span></div>
+  <p style="margin:0;max-width:82ch;font:14.5px/1.7 'Figtree','Noto Sans TC',sans-serif;color:var(--color-neutral-800)">
+    前提改變：主要裝置是 Android 電子紙。所以這一輪的規則是——<strong>純黑白、無中間灰、無動畫、無滑桿、無轉圈圈</strong>；捲動改成離散換頁；觸控目標 56dp；邊框 ≥1.5px（電子紙上細線不可靠）。底部三個目的地：書架／來源／設定。
+  </p>
+
+  <div class="dv-opts">
+
+    <!-- 2a 書架 -->
+    <div class="dv-opt" id="2a">
+      <div class="dv-olabel"><a class="dv-oid" href="#2a">2a</a>書架 — 沿用現行格線模型：分類格與書籍同格、直排 3 欄／橫排 4 欄</div>
+      <div class="scr" style="height:820px;background:#fff;border:2px solid #000;display:flex;flex-direction:column">
+        <div style="height:56px;display:flex;align-items:center;padding:0 14px;border-bottom:2px solid #000;gap:10px;flex:none">
+          <div style="font-size:19px;font-weight:700;color:#000">書架</div>
+          <div style="flex:1"></div>
+          <div style="width:44px;height:44px;border:1.5px solid #000;border-radius:6px;display:grid;place-items:center;font-size:19px;font-weight:700">＋</div>
+          <div style="width:44px;height:44px;border:1.5px solid #000;border-radius:6px;display:grid;place-items:center;font-size:15px;font-weight:700">☰</div>
+        </div>
+        <div style="padding:12px 14px 0;flex:none">
+          <div style="height:46px;border:1.5px solid #000;border-radius:6px;display:flex;align-items:center;padding:0 14px;gap:10px">
+            <span style="font-size:16px;font-weight:700">⌕</span>
+            <span style="font-size:15px;color:#000;opacity:.45">搜尋書名或作者</span>
+          </div>
+        </div>
+        <div style="flex:1;min-height:0;padding:12px 14px 0;overflow:hidden">
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px 12px">
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <div style="aspect-ratio:.62/1;border:1.5px solid #000;position:relative;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:1.5px;background:#000;padding:1.5px">
+                <div style="background:#fff;display:grid;place-items:center;font-size:9px;text-align:center;padding:2px;line-height:1.2">論語</div>
+                <div style="background:#fff;display:grid;place-items:center;font-size:9px;text-align:center;padding:2px;line-height:1.2">孟子</div>
+                <div style="background:#fff;display:grid;place-items:center;font-size:9px;text-align:center;padding:2px;line-height:1.2">大學</div>
+                <div style="background:#fff;display:grid;place-items:center;font-size:9px;text-align:center;padding:2px;line-height:1.2">中庸</div>
+                <div style="position:absolute;left:0;top:0;background:#000;color:#fff;font-size:10px;font-weight:700;padding:2px 7px;letter-spacing:.1em">分類</div>
+              </div>
+              <div style="height:46px;display:flex;flex-direction:column;gap:6px;overflow:hidden"><div style="font-size:14px;font-weight:700;line-height:1.4">經典</div><div style="font-size:12px">22 本</div></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <div style="aspect-ratio:.62/1;border:1.5px solid #000;position:relative;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:1.5px;background:#000;padding:1.5px">
+                <div style="background:#fff;display:grid;place-items:center;font-size:9px;text-align:center;padding:2px;line-height:1.2">膽大黨</div>
+                <div style="background:#fff;display:grid;place-items:center;font-size:9px;text-align:center;padding:2px;line-height:1.2">10</div>
+                <div style="background:#fff"></div><div style="background:#fff"></div>
+                <div style="position:absolute;left:0;top:0;background:#000;color:#fff;font-size:10px;font-weight:700;padding:2px 7px;letter-spacing:.1em">分類</div>
+              </div>
+              <div style="height:46px;display:flex;flex-direction:column;gap:6px;overflow:hidden"><div style="font-size:14px;font-weight:700;line-height:1.4">漫畫</div><div style="font-size:12px">2 本</div></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <div style="aspect-ratio:.62/1;border:1.5px solid #000;display:grid;place-items:center;text-align:center;padding:8px;font-size:13px;font-weight:700;line-height:1.5">失落的<br>百年<br>致富聖經</div>
+              <div style="height:46px;display:flex;flex-direction:column;gap:6px;overflow:hidden"><div style="font-size:14px;font-weight:500;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">失落的百年致富聖經</div><div style="display:flex;align-items:center;gap:6px"><div style="flex:1;height:7px;border:1.5px solid #000;display:flex"><div style="width:64%;background:#000"></div></div><span style="font-size:12px;font-weight:700">64%</span></div></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <div style="aspect-ratio:.62/1;border:1.5px solid #000;display:grid;place-items:center;text-align:center;padding:8px;font-size:13px;font-weight:700;line-height:1.5">2023<br>大狀元<br>經典</div>
+              <div style="height:46px;display:flex;flex-direction:column;gap:6px;overflow:hidden"><div style="font-size:14px;font-weight:500;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">2023 大狀元經典會考經訓彙整</div><div style="display:flex;align-items:center;gap:6px"><div style="flex:1;height:7px;border:1.5px solid #000;display:flex"><div style="width:12%;background:#000"></div></div><span style="font-size:12px;font-weight:700">12%</span></div></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <div style="aspect-ratio:.62/1;border:1.5px solid #000;display:grid;place-items:center;text-align:center;padding:8px;font-size:13px;font-weight:700;line-height:1.5">深度<br>工作力</div>
+              <div style="height:46px;display:flex;flex-direction:column;gap:6px;overflow:hidden"><div style="font-size:14px;font-weight:500;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">深度工作力</div><div style="display:flex;align-items:center;gap:6px"><div style="flex:1;height:7px;border:1.5px solid #000;display:flex"><div style="width:100%;background:#000"></div></div><span style="font-size:12px;font-weight:700">✓</span></div></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <div style="aspect-ratio:.62/1;border:1.5px solid #000;display:grid;place-items:center;text-align:center;padding:8px;font-size:13px;font-weight:700;line-height:1.5">一弦<br>定音</div>
+              <div style="height:46px;display:flex;flex-direction:column;gap:6px;overflow:hidden"><div style="font-size:14px;font-weight:500;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">一弦定音</div><div style="display:flex;align-items:center;gap:6px"><div style="flex:1;height:7px;border:1.5px solid #000;display:flex"><div style="width:39%;background:#000"></div></div><span style="font-size:12px;font-weight:700">39%</span></div></div>
+            </div>
+          </div>
+        </div>
+        <div style="height:52px;border-top:2px solid #000;display:flex;align-items:center;justify-content:center;gap:20px;flex:none">
+          <div style="width:56px;height:38px;border:1.5px solid #000;border-radius:6px;display:grid;place-items:center;font-size:17px;font-weight:700">‹</div>
+          <div style="font-size:14px;font-weight:700">第 1 頁 / 共 22 頁</div>
+          <div style="width:56px;height:38px;border:1.5px solid #000;border-radius:6px;display:grid;place-items:center;font-size:17px;font-weight:700">›</div>
+        </div>
+        <div style="height:66px;border-top:2px solid #000;display:flex;flex:none">
+          <div style="flex:1;display:grid;place-items:center;gap:2px;background:#000;color:#fff"><div style="font-size:17px">▦</div><div style="font-size:12px;font-weight:700">書架</div></div>
+          <div style="flex:1;display:grid;place-items:center;gap:2px;border-left:1.5px solid #000"><div style="font-size:17px">⇩</div><div style="font-size:12px">來源</div></div>
+          <div style="flex:1;display:grid;place-items:center;gap:2px;border-left:1.5px solid #000"><div style="font-size:17px">⚙</div><div style="font-size:12px">設定</div></div>
+        </div>
+      </div>
+      <div style="font:13px/1.7 'Figtree','Noto Sans TC',sans-serif;color:var(--color-neutral-800)">
+        <strong>已依現行程式修正：</strong>分類不做成篩選晶片，維持 <code>_buildBookList()</code> 的模型——分類拼貼格與書籍在<strong>同一個 GridView</strong>、各佔一格，分類格排在書籍之前；欄數同 <code>crossAxisCount</code>：直排 3、橫排 4；封面比例維持 <code>childAspectRatio: 0.62</code>。<br>
+        改的是可讀性與電子紙適配：分類格左上加黑底「分類」標籤（解決分類格與書本同輪廓難以分辨）；書名 12px 單行 → 14sp 兩行；10px 灰字進度 → 黑白進度條；灰底空封面 → 描邊＋書名；AppBar 七個圖示 → 兩個；新增搜尋列；無限捲動 → 離散換頁。<br>
+        <strong>換頁的代價（設計取捨）：</strong>3 欄 × 0.62 比例下，一列約佔螢幕 273dp，離散換頁的「一頁」必須是完整列，否則會露出半截封面、看起來像跑版。因此這張是以 7.8" 面板高度繪製、一頁 = 完整兩列（6 格）。若之後要在較矮的裝置上維持一頁兩列，需要把封面比例改短（例如 0.72）或改回捲動——這一項需要您決定。
+      </div>
+    </div>
+
+    <!-- 2b 閱讀器 -->
+    <div class="dv-opt" id="2b">
+      <div class="dv-olabel"><a class="dv-oid" href="#2b">2b</a>閱讀器 — 上下兩條 chrome bar，右緣還給直排內文</div>
+      <div class="scr" style="height:650px;background:#fff;border:2px solid #000;display:flex;flex-direction:column">
+        <div style="height:56px;border-bottom:2px solid #000;display:flex;align-items:center;padding:0 8px;gap:6px;flex:none">
+          <div style="width:52px;height:44px;display:grid;place-items:center;font-size:19px;font-weight:700">‹</div>
+          <div style="flex:1;min-width:0;text-align:center;font-size:15px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">第七章 · 弦外之音</div>
+          <div style="width:52px;height:44px;display:grid;place-items:center;font-size:17px">⌕</div>
+          <div style="width:52px;height:44px;display:grid;place-items:center;font-size:17px">☰</div>
+        </div>
+        <div style="flex:1;min-height:0;padding:26px 22px;display:flex;justify-content:flex-end;overflow:hidden">
+          <div style="writing-mode:vertical-rl;font-family:'Noto Serif TC',serif;font-size:19px;line-height:1.95;letter-spacing:.06em;text-align:justify;height:100%;color:#000">
+            琴聲停了。她把手指從弦上收回來，指腹還留著壓弦的凹痕，像是某種只有自己讀得懂的記號。窗外的雨已經下了整個下午，屋簷的水線連成一片，把對面那排老屋的輪廓洗得模糊。<br>「再一次。」老師沒有抬頭，只是把譜翻過一頁。她深吸一口氣，重新按上第七弦——這一次，音準了。
+          </div>
+        </div>
+        <div style="height:34px;border-top:1.5px solid #000;display:flex;align-items:center;justify-content:space-between;padding:0 16px;font-size:13px;font-weight:500;flex:none">
+          <span>一弦定音</span><span>184 / 468 · 39%</span>
+        </div>
+        <div style="height:56px;border-top:1.5px solid #000;display:flex;align-items:center;padding:0 12px;gap:10px;flex:none">
+          <span style="font-size:13px;font-weight:700;width:34px">184</span>
+          <div style="flex:1;height:10px;border:1.5px solid #000;display:flex"><div style="width:39%;background:#000"></div></div>
+          <div style="width:44px;height:38px;border:1.5px solid #000;border-radius:6px;display:grid;place-items:center;font-size:15px;font-weight:700">跳</div>
+        </div>
+        <div style="height:64px;border-top:2px solid #000;display:flex;flex:none">
+          <div style="flex:1;display:grid;place-items:center;gap:3px"><div style="font-size:16px">⚑</div><div style="font-size:12px;font-weight:500">書籤</div></div>
+          <div style="flex:1;display:grid;place-items:center;gap:3px;border-left:1.5px solid #000"><div style="font-size:16px">✎</div><div style="font-size:12px;font-weight:500">劃線備註</div></div>
+          <div style="flex:1;display:grid;place-items:center;gap:3px;border-left:1.5px solid #000"><div style="font-size:16px">Aa</div><div style="font-size:12px;font-weight:500">版面</div></div>
+          <div style="flex:1;display:grid;place-items:center;gap:3px;border-left:1.5px solid #000"><div style="font-size:16px">◗</div><div style="font-size:12px;font-weight:500">朗讀</div></div>
+        </div>
+      </div>
+      <div style="font:13px/1.7 'Figtree','Noto Sans TC',sans-serif;color:var(--color-neutral-800)">七顆浮動圓鈕（<a class="dv-oid" href="#1b">1b</a>）收成上下兩條滿版列，右緣完整還給直排內文。所有目標 ≥52dp。EPUB 與 PDF 共用同一份定義，不再寫兩次。</div>
+    </div>
+
+    <!-- 2c 朗讀 -->
+    <div class="dv-opt" id="2c">
+      <div class="dv-olabel"><a class="dv-oid" href="#2c">2c</a>朗讀中 — 常駐狀態列，關不掉、丟不了</div>
+      <div class="scr" style="height:650px;background:#fff;border:2px solid #000;display:flex;flex-direction:column">
+        <div style="height:56px;border-bottom:2px solid #000;display:flex;align-items:center;padding:0 8px;gap:6px;flex:none">
+          <div style="width:52px;height:44px;display:grid;place-items:center;font-size:19px;font-weight:700">‹</div>
+          <div style="flex:1;text-align:center;font-size:15px;font-weight:700">第七章 · 弦外之音</div>
+          <div style="width:52px;height:44px;display:grid;place-items:center;font-size:17px">⌕</div>
+          <div style="width:52px;height:44px;display:grid;place-items:center;font-size:17px">☰</div>
+        </div>
+        <div style="flex:1;min-height:0;padding:26px 22px;display:flex;justify-content:flex-end;overflow:hidden">
+          <div style="writing-mode:vertical-rl;font-family:'Noto Serif TC',serif;font-size:19px;line-height:1.95;letter-spacing:.06em;height:100%">
+            琴聲停了。她把手指從弦上收回來，指腹還留著壓弦的凹痕，<span style="background:#000;color:#fff">像是某種只有自己讀得懂的記號。</span>窗外的雨已經下了整個下午，屋簷的水線連成一片，把對面那排老屋的輪廓洗得模糊。
+          </div>
+        </div>
+        <div style="border-top:2px solid #000;padding:12px 14px;flex:none;display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:11px;font-weight:700;letter-spacing:.14em;border:1.5px solid #000;padding:2px 8px;border-radius:999px">朗讀中</span>
+            <span style="font-size:13px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">像是某種只有自己讀得懂的記號。</span>
+            <span style="font-size:12px;font-weight:700">3 / 41 句</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="flex:1;height:52px;border:1.5px solid #000;border-radius:6px;display:grid;place-items:center;font-size:18px">⏮</div>
+            <div style="flex:1.4;height:52px;background:#000;color:#fff;border-radius:6px;display:grid;place-items:center;font-size:18px">⏸ 暫停</div>
+            <div style="flex:1;height:52px;border:1.5px solid #000;border-radius:6px;display:grid;place-items:center;font-size:18px">⏭</div>
+            <div style="flex:1;height:52px;border:1.5px solid #000;border-radius:6px;display:grid;place-items:center;font-size:15px;font-weight:700">1.0x</div>
+            <div style="flex:1;height:52px;border:1.5px solid #000;border-radius:6px;display:grid;place-items:center;font-size:15px;font-weight:700">語音</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="flex:1;height:44px;border:1.5px solid #000;border-radius:6px;display:grid;place-items:center;font-size:14px">睡眠 30 分</div>
+            <div style="flex:1;height:44px;border:1.5px solid #000;border-radius:6px;display:grid;place-items:center;font-size:14px">收合成細列</div>
+            <div style="flex:1;height:44px;background:#000;color:#fff;border-radius:6px;display:grid;place-items:center;font-size:14px;font-weight:700">停止朗讀</div>
+          </div>
+        </div>
+      </div>
+      <div style="font:13px/1.7 'Figtree','Noto Sans TC',sans-serif;color:var(--color-neutral-800)">「關閉」被拆成兩個不同的動作：<strong>收合成細列</strong>（仍在播、仍看得到）與<strong>停止朗讀</strong>。加上目前句子、句數進度、語音、睡眠定時——這些底層都已經有了，只是沒被呈現。</div>
+    </div>
+
+    <!-- 2d 版面設定 -->
+    <div class="dv-opt" id="2d">
+      <div class="dv-olabel"><a class="dv-oid" href="#2d">2d</a>版面設定 — 步進器取代滑桿，並標示偏好來源</div>
+      <div class="scr" style="height:650px;background:#fff;border:2px solid #000;display:flex;flex-direction:column">
+        <div style="height:56px;border-bottom:2px solid #000;display:flex;align-items:center;padding:0 14px;flex:none">
+          <div style="flex:1;font-size:18px;font-weight:700">版面設定</div>
+          <div style="width:44px;height:44px;border:1.5px solid #000;border-radius:6px;display:grid;place-items:center;font-size:16px;font-weight:700">✕</div>
+        </div>
+        <div style="height:52px;border-bottom:1.5px solid #000;display:flex;flex:none">
+          <div style="flex:1;display:grid;place-items:center;font-size:14px;font-weight:700;background:#000;color:#fff">文字</div>
+          <div style="flex:1;display:grid;place-items:center;font-size:14px;border-left:1.5px solid #000">邊界</div>
+          <div style="flex:1;display:grid;place-items:center;font-size:14px;border-left:1.5px solid #000">呈現</div>
+          <div style="flex:1;display:grid;place-items:center;font-size:14px;border-left:1.5px solid #000">預設集</div>
+        </div>
+        <div style="flex:1;min-height:0;padding:16px 14px;display:flex;flex-direction:column;gap:14px;overflow:hidden">
+          <div style="display:flex;align-items:center;gap:10px;border:1.5px solid #000;border-radius:6px;padding:10px 12px">
+            <div style="flex:1;min-width:0">
+              <div style="font-size:15px;font-weight:700">字級</div>
+              <div style="font-size:12px;margin-top:2px"><span style="border:1.5px solid #000;padding:1px 6px;border-radius:999px">此書覆寫</span> <span style="opacity:.6">全域為 16</span></div>
+            </div>
+            <div style="width:52px;height:52px;border:1.5px solid #000;border-radius:6px;display:grid;place-items:center;font-size:22px;font-weight:700">−</div>
+            <div style="width:56px;text-align:center;font-size:19px;font-weight:700">19</div>
+            <div style="width:52px;height:52px;border:1.5px solid #000;border-radius:6px;display:grid;place-items:center;font-size:22px;font-weight:700">＋</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;border:1.5px solid #000;border-radius:6px;padding:10px 12px">
+            <div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:700">行距</div><div style="font-size:12px;margin-top:2px;opacity:.6">使用全域預設</div></div>
+            <div style="width:52px;height:52px;border:1.5px solid #000;border-radius:6px;display:grid;place-items:center;font-size:22px;font-weight:700">−</div>
+            <div style="width:56px;text-align:center;font-size:19px;font-weight:700">1.8</div>
+            <div style="width:52px;height:52px;border:1.5px solid #000;border-radius:6px;display:grid;place-items:center;font-size:22px;font-weight:700">＋</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;border:1.5px solid #000;border-radius:6px;padding:10px 12px">
+            <div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:700">字重</div><div style="font-size:12px;margin-top:2px;opacity:.6">使用全域預設</div></div>
+            <div style="width:52px;height:52px;border:1.5px solid #000;border-radius:6px;display:grid;place-items:center;font-size:22px;font-weight:700">−</div>
+            <div style="width:56px;text-align:center;font-size:19px;font-weight:700">400</div>
+            <div style="width:52px;height:52px;border:1.5px solid #000;border-radius:6px;display:grid;place-items:center;font-size:22px;font-weight:700">＋</div>
+          </div>
+          <div>
+            <div style="font-size:12px;font-weight:700;letter-spacing:.14em;margin-bottom:8px">書寫方向</div>
+            <div style="display:flex;gap:10px">
+              <div style="flex:1;height:56px;background:#000;color:#fff;border-radius:6px;display:grid;place-items:center;font-size:15px;font-weight:700">直排</div>
+              <div style="flex:1;height:56px;border:1.5px solid #000;border-radius:6px;display:grid;place-items:center;font-size:15px">橫排</div>
+              <div style="flex:1;height:56px;border:1.5px solid #000;border-radius:6px;display:grid;place-items:center;font-size:15px">自動</div>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;border:1.5px solid #000;border-radius:6px;padding:12px">
+            <div style="flex:1;font-size:15px;font-weight:700">停用書本 CSS</div>
+            <div style="width:64px;height:36px;border:1.5px solid #000;border-radius:999px;display:flex;align-items:center;padding:3px"><div style="width:28px;height:28px;background:#000;border-radius:999px"></div></div>
+          </div>
+        </div>
+        <div style="border-top:1.5px solid #000;padding:12px 14px;display:flex;gap:10px;flex:none">
+          <div style="flex:1;height:52px;border:1.5px solid #000;border-radius:6px;display:grid;place-items:center;font-size:15px">還原此書覆寫</div>
+          <div style="flex:1;height:52px;background:#000;color:#fff;border-radius:6px;display:grid;place-items:center;font-size:15px;font-weight:700">另存為預設集</div>
+        </div>
+      </div>
+      <div style="font:13px/1.7 'Figtree','Noto Sans TC',sans-serif;color:var(--color-neutral-800)">每個滑桿換成「− 值 ＋」步進器：一次點擊 = 一次刷新，不再是拖曳造成的數十次殘影。每列直接標示「此書覆寫／使用全域預設」，解決 <a class="dv-oid" href="#1c">1c</a> 那個「拉了沒反應」無法自我解釋的問題。</div>
+    </div>
+
+    <!-- 2e 來源 -->
+    <div class="dv-opt" id="2e">
+      <div class="dv-olabel"><a class="dv-oid" href="#2e">2e</a>來源 — 四道門收成一個目的地</div>
+      <div class="scr" style="height:650px;background:#fff;border:2px solid #000;display:flex;flex-direction:column">
+        <div style="height:56px;display:flex;align-items:center;padding:0 14px;border-bottom:2px solid #000;flex:none"><div style="font-size:19px;font-weight:700">來源</div></div>
+        <div style="flex:1;min-height:0;padding:16px 14px;display:flex;flex-direction:column;gap:12px;overflow:hidden">
+          <div style="font-size:12px;font-weight:700;letter-spacing:.14em">本機</div>
+          <div style="display:flex;gap:12px">
+            <div style="flex:1;height:76px;border:1.5px solid #000;border-radius:6px;display:grid;place-items:center;gap:4px"><div style="font-size:19px">▤</div><div style="font-size:14px;font-weight:700">選擇檔案</div></div>
+            <div style="flex:1;height:76px;border:1.5px solid #000;border-radius:6px;display:grid;place-items:center;gap:4px"><div style="font-size:19px">▣</div><div style="font-size:14px;font-weight:700">選擇資料夾</div></div>
+          </div>
+          <div style="font-size:12px;font-weight:700;letter-spacing:.14em;margin-top:6px">已連結的服務</div>
+          <div style="border:1.5px solid #000;border-radius:6px;height:64px;display:flex;align-items:center;padding:0 14px;gap:12px"><span style="font-size:18px">☁</span><div style="flex:1"><div style="font-size:15px;font-weight:700">Google Drive</div><div style="font-size:12px;opacity:.65">已連結 · you@gmail.com</div></div><span style="font-size:18px;font-weight:700">›</span></div>
+          <div style="border:1.5px solid #000;border-radius:6px;height:64px;display:flex;align-items:center;padding:0 14px;gap:12px"><span style="font-size:18px">☁</span><div style="flex:1"><div style="font-size:15px;font-weight:700">OneDrive</div><div style="font-size:12px;opacity:.65">尚未連結</div></div><span style="font-size:18px;font-weight:700">›</span></div>
+          <div style="border:1.5px solid #000;border-radius:6px;height:64px;display:flex;align-items:center;padding:0 14px;gap:12px"><span style="font-size:18px">▥</span><div style="flex:1"><div style="font-size:15px;font-weight:700">Calibre / OPDS</div><div style="font-size:12px;opacity:.65">2 台伺服器</div></div><span style="font-size:18px;font-weight:700">›</span></div>
+          <div style="font-size:12px;font-weight:700;letter-spacing:.14em;margin-top:6px">下載佇列</div>
+          <div style="border:1.5px solid #000;border-radius:6px;padding:12px 14px;display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;align-items:center;gap:10px"><div style="flex:1;font-size:14px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">膽大黨 10</div><div style="width:100px;height:8px;border:1.5px solid #000;display:flex"><div style="width:72%;background:#000"></div></div><span style="font-size:12px;font-weight:700;width:34px;text-align:right">72%</span></div>
+            <div style="display:flex;align-items:center;gap:10px"><div style="flex:1;font-size:14px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">失落的百年致富聖經</div><div style="width:100px;height:8px;border:1.5px solid #000"></div><span style="font-size:12px;width:34px;text-align:right;opacity:.65">待機</span></div>
+          </div>
+        </div>
+        <div style="height:66px;border-top:2px solid #000;display:flex;flex:none">
+          <div style="flex:1;display:grid;place-items:center;gap:2px"><div style="font-size:17px">▦</div><div style="font-size:12px">書架</div></div>
+          <div style="flex:1;display:grid;place-items:center;gap:2px;border-left:1.5px solid #000;background:#000;color:#fff"><div style="font-size:17px">⇩</div><div style="font-size:12px;font-weight:700">來源</div></div>
+          <div style="flex:1;display:grid;place-items:center;gap:2px;border-left:1.5px solid #000"><div style="font-size:17px">⚙</div><div style="font-size:12px">設定</div></div>
+        </div>
+      </div>
+      <div style="font:13px/1.7 'Figtree','Noto Sans TC',sans-serif;color:var(--color-neutral-800)">「＋」選單、雲朵圖示、設定裡的雲端帳戶合併成一頁；下載佇列所有來源共用。OPDS 下鑽改成單一畫面＋麵包屑，不再每層推一個 screen。</div>
+    </div>
+
+    <!-- 2f 設定 -->
+    <div class="dv-opt" id="2f">
+      <div class="dv-olabel"><a class="dv-oid" href="#2f">2f</a>設定 — 分區、有說明、診斷收起來</div>
+      <div class="scr" style="height:650px;background:#fff;border:2px solid #000;display:flex;flex-direction:column">
+        <div style="height:56px;display:flex;align-items:center;padding:0 14px;border-bottom:2px solid #000;flex:none"><div style="font-size:19px;font-weight:700">設定</div></div>
+        <div style="flex:1;min-height:0;overflow:hidden">
+          <div style="padding:16px 14px 8px;font-size:12px;font-weight:700;letter-spacing:.14em">外觀</div>
+          <div style="padding:0 14px 14px">
+            <div style="border:1.5px solid #000;border-radius:6px;padding:12px 14px;display:flex;align-items:center;gap:12px">
+              <div style="flex:1"><div style="font-size:15px;font-weight:700">E-Ink 高對比模式</div><div style="font-size:12px;opacity:.65;margin-top:2px">純黑白、無動畫、離散換頁</div></div>
+              <div style="width:64px;height:36px;background:#000;border-radius:999px;display:flex;align-items:center;justify-content:flex-end;padding:3px"><div style="width:28px;height:28px;background:#fff;border-radius:999px"></div></div>
+            </div>
+          </div>
+          <div style="padding:0 14px 14px"><div style="border:1.5px solid #000;border-radius:6px;height:60px;display:flex;align-items:center;padding:0 14px"><div style="flex:1;font-size:15px;font-weight:700">佈景</div><div style="display:flex;gap:8px"><div style="width:30px;height:30px;border:1.5px solid #000;border-radius:999px;background:#fff"></div><div style="width:30px;height:30px;border:1.5px solid #000;border-radius:999px;background:#000"></div><div style="width:30px;height:30px;border:1.5px solid #000;border-radius:999px;background:repeating-linear-gradient(45deg,#000,#000 2px,#fff 2px,#fff 5px)"></div></div></div></div>
+          <div style="padding:6px 14px 8px;font-size:12px;font-weight:700;letter-spacing:.14em">閱讀</div>
+          <div style="padding:0 14px;display:flex;flex-direction:column;gap:10px">
+            <div style="border:1.5px solid #000;border-radius:6px;height:64px;display:flex;align-items:center;padding:0 14px"><div style="flex:1"><div style="font-size:15px;font-weight:700">閱讀預設值</div><div style="font-size:12px;opacity:.65">所有新書的字級、行距、邊界起始值</div></div><span style="font-size:18px;font-weight:700">›</span></div>
+            <div style="border:1.5px solid #000;border-radius:6px;height:64px;display:flex;align-items:center;padding:0 14px"><div style="flex:1"><div style="font-size:15px;font-weight:700">翻頁與熱區</div><div style="font-size:12px;opacity:.65">音量鍵翻頁、點擊區域配置</div></div><span style="font-size:18px;font-weight:700">›</span></div>
+            <div style="border:1.5px solid #000;border-radius:6px;height:64px;display:flex;align-items:center;padding:0 14px"><div style="flex:1"><div style="font-size:15px;font-weight:700">字型管理</div><div style="font-size:12px;opacity:.65">內建 5 種 · 自訂 2 種</div></div><span style="font-size:18px;font-weight:700">›</span></div>
+          </div>
+          <div style="padding:16px 14px 8px;font-size:12px;font-weight:700;letter-spacing:.14em">同步與帳號</div>
+          <div style="padding:0 14px"><div style="border:1.5px solid #000;border-radius:6px;height:64px;display:flex;align-items:center;padding:0 14px"><div style="flex:1"><div style="font-size:15px;font-weight:700">跨裝置同步</div><div style="font-size:12px;opacity:.65">已登入 · 3 分鐘前同步</div></div><span style="font-size:18px;font-weight:700">›</span></div></div>
+        </div>
+        <div style="height:66px;border-top:2px solid #000;display:flex;flex:none">
+          <div style="flex:1;display:grid;place-items:center;gap:2px"><div style="font-size:17px">▦</div><div style="font-size:12px">書架</div></div>
+          <div style="flex:1;display:grid;place-items:center;gap:2px;border-left:1.5px solid #000"><div style="font-size:17px">⇩</div><div style="font-size:12px">來源</div></div>
+          <div style="flex:1;display:grid;place-items:center;gap:2px;border-left:1.5px solid #000;background:#000;color:#fff"><div style="font-size:17px">⚙</div><div style="font-size:12px;font-weight:700">設定</div></div>
+        </div>
+      </div>
+      <div style="font:13px/1.7 'Figtree','Noto Sans TC',sans-serif;color:var(--color-neutral-800)">八列扁平清單（<a class="dv-oid" href="#1d">1d</a>）分成四區並補上說明文字；「導航熱區」改名「翻頁與熱區」；Console Log 移到「關於」連點版號之後。</div>
+    </div>
+
+  </div>
+
+  <p style="margin:26px 0 0;font:13px/1.7 'Figtree','Noto Sans TC',sans-serif;color:var(--color-neutral-700)">
+    可以這樣接著說：「<a class="dv-oid" href="#2a">2a</a> 的封面再大一點、一排一本」 ·「<a class="dv-oid" href="#2b">2b</a> 下面兩條合併成一條」 ·「<a class="dv-oid" href="#2d">2d</a> 我要看有滑桿的版本比較」 ·「先把 <a class="dv-oid" href="#2a">2a</a> 和 <a class="dv-oid" href="#2b">2b</a> 做成可點擊的原型」
+  </p>
+</section>
+
+<!-- ══════════════ TURN 1 · 現況重建 ══════════════ -->
+<section class="dv-turn" id="t1">
+  <div class="dv-thd"><a class="dv-tid" href="#t1">1</a><span style="font:700 15px 'Figtree','Noto Sans TC',sans-serif">現況重建（依現有程式碼逐值還原，非憑印象）</span></div>
+  <p style="margin:0;max-width:82ch;font:14.5px/1.7 'Figtree','Noto Sans TC',sans-serif;color:var(--color-neutral-800)">
+    以預設淺色主題重建。所有數值都來自實際讀過的原始碼：色票取自 <code>app_theme_data.dart</code>，格線與字級取自 <code>library_screen.dart</code>，浮動按鈕座標取自 <code>reader_screen.dart</code> <code>_buildBody()</code>，設定列取自 <code>settings_screen.dart</code>。
+  </p>
+
+  <div class="dv-opts">
+
+    <!-- 1a -->
+    <div class="dv-opt" id="1a">
+      <div class="dv-olabel"><a class="dv-oid" href="#1a">1a</a>書架（格狀）— AppBar 七個動作、3 欄 0.62 比例、書名 12px</div>
+      <div class="scr" style="height:650px;background:#F8F8FA;border:1px solid #E0E0E5;display:flex;flex-direction:column">
+        <div style="height:64px;background:#fff;display:flex;align-items:center;padding:0 4px 0 16px;gap:0;flex:none">
+          <div style="font-size:22px;color:#1A1A2E;flex:none">書架</div>
+          <div style="flex:1"></div>
+          <div style="width:40px;height:40px;margin:0 4px;border:1.5px solid rgba(224,224,229,.9);border-radius:20px;display:grid;place-items:center;font-size:15px;color:#1A1A2E;flex:none">◐</div>
+          <div style="width:1px;height:40px;background:#E0E0E5;flex:none"></div>
+          <div style="width:38px;height:38px;display:grid;place-items:center;font-size:16px;color:#1A1A2E;flex:none">⇅</div>
+          <div style="width:38px;height:38px;display:grid;place-items:center;font-size:16px;color:#1A1A2E;flex:none">☰</div>
+          <div style="width:38px;height:38px;display:grid;place-items:center;font-size:19px;color:#1A1A2E;flex:none">＋</div>
+          <div style="width:38px;height:38px;display:grid;place-items:center;font-size:15px;color:#1A1A2E;flex:none">▧</div>
+          <div style="width:38px;height:38px;display:grid;place-items:center;font-size:15px;color:#1A1A2E;flex:none">☁</div>
+          <div style="width:38px;height:38px;display:grid;place-items:center;font-size:16px;color:#1A1A2E;flex:none">⚙</div>
+        </div>
+        <div style="flex:1;min-height:0;padding:8px;overflow:hidden">
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px 8px">
+            <div style="display:flex;flex-direction:column">
+              <div style="aspect-ratio:.62/1;position:relative;display:flex;flex-direction:column">
+                <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:2px">
+                  <div style="background:#E0E0E0;display:grid;place-items:center;font-size:15px;color:#555">▤</div>
+                  <div style="background:#E0E0E0;display:grid;place-items:center;font-size:15px;color:#555">▤</div>
+                  <div style="background:#EEEEEE"></div><div style="background:#EEEEEE"></div>
+                </div>
+                <div style="height:4px"></div>
+                <div style="height:30px;display:grid;place-items:center;font-size:12px;color:#1A1A2E">經典 (2)</div>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column">
+              <div style="aspect-ratio:.62/1;display:flex;flex-direction:column">
+                <div style="flex:1;background:#E0E0E0;display:grid;place-items:center;font-size:26px;color:#555">▤</div>
+                <div style="height:4px"></div>
+                <div style="height:30px;display:flex;flex-direction:column;align-items:center;justify-content:flex-start">
+                  <div style="font-size:12px;color:#1A1A2E;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">失落的百年致富聖…</div>
+                  <div style="font-size:10px;color:#9e9e9e">64%</div>
+                </div>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column">
+              <div style="aspect-ratio:.62/1;display:flex;flex-direction:column">
+                <div style="flex:1;background:#E0E0E0;display:grid;place-items:center;font-size:26px;color:#555">▤</div>
+                <div style="height:4px"></div>
+                <div style="height:30px;display:flex;flex-direction:column;align-items:center">
+                  <div style="font-size:12px;color:#1A1A2E;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">2023大狀元經典會…</div>
+                  <div style="font-size:10px;color:#9e9e9e">12%</div>
+                </div>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column">
+              <div style="aspect-ratio:.62/1;display:flex;flex-direction:column">
+                <div style="flex:1;background:#E0E0E0;position:relative;display:grid;place-items:center;font-size:26px;color:#555">▤
+                  <div style="position:absolute;right:4px;top:4px;background:rgba(0,0,0,.54);border-radius:12px;padding:4px;color:#fff;font-size:11px;line-height:1">☁</div>
+                </div>
+                <div style="height:4px"></div>
+                <div style="height:30px;display:flex;flex-direction:column;align-items:center">
+                  <div style="font-size:12px;color:#1A1A2E;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">膽大黨10</div>
+                  <div style="font-size:10px;color:#9e9e9e">0%</div>
+                </div>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column">
+              <div style="aspect-ratio:.62/1;display:flex;flex-direction:column">
+                <div style="flex:1;background:#E0E0E0;display:grid;place-items:center;font-size:26px;color:#555">▤</div>
+                <div style="height:4px"></div>
+                <div style="height:30px;display:flex;flex-direction:column;align-items:center">
+                  <div style="font-size:12px;color:#1A1A2E;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">一弦定音</div>
+                  <div style="font-size:10px;color:#9e9e9e">39%</div>
+                </div>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column">
+              <div style="aspect-ratio:.62/1;display:flex;flex-direction:column">
+                <div style="flex:1;background:#E0E0E0;display:grid;place-items:center;font-size:26px;color:#555">▤</div>
+                <div style="height:4px"></div>
+                <div style="height:30px;display:flex;flex-direction:column;align-items:center">
+                  <div style="font-size:12px;color:#1A1A2E;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">深度工作力</div>
+                  <div style="font-size:10px;color:#9e9e9e">100%</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="font:13px/1.7 'Figtree','Noto Sans TC',sans-serif;color:var(--color-neutral-800)">七個等重圖示擠在 AppBar；分類拼貼格與書本同輪廓；灰底空封面（<code>grey.shade300</code>）與 10px 灰進度在深色／E-Ink 下都會出問題；沒有搜尋。</div>
+    </div>
+
+    <!-- 1b -->
+    <div class="dv-opt" id="1b">
+      <div class="dv-olabel"><a class="dv-oid" href="#1b">1b</a>閱讀器（流式 EPUB）— 右緣 6 顆浮動圓鈕，座標 16/72/128/184/240/296</div>
+      <div class="scr" style="height:650px;background:#F8F8FA;border:1px solid #E0E0E5;position:relative">
+        <div style="position:absolute;inset:0;padding:44px 22px 30px;display:flex;justify-content:flex-end;overflow:hidden">
+          <div style="writing-mode:vertical-rl;font-family:'Noto Serif TC',serif;font-size:17px;line-height:1.9;letter-spacing:.05em;height:100%;color:#1A1A2E">
+            琴聲停了。她把手指從弦上收回來，指腹還留著壓弦的凹痕，像是某種只有自己讀得懂的記號。窗外的雨已經下了整個下午，屋簷的水線連成一片，把對面那排老屋的輪廓洗得模糊。「再一次。」老師沒有抬頭。
+          </div>
+        </div>
+        <div style="position:absolute;top:2px;left:72px;right:72px;text-align:center;font-size:12px;color:#1A1A2E;opacity:.8">第七章 · 弦外之音</div>
+        <div style="position:absolute;bottom:2px;left:0;right:0;text-align:center;font-size:12px;color:#1A1A2E;opacity:.8">184 / 468</div>
+        <div style="position:absolute;top:16px;left:16px;width:48px;height:48px;border-radius:999px;background:rgba(255,255,255,.92);display:grid;place-items:center;font-size:17px;color:#1A1A2E">←</div>
+        <div style="position:absolute;top:16px;right:16px;width:48px;height:48px;border-radius:999px;background:rgba(255,255,255,.92);display:grid;place-items:center;font-size:16px;color:#1A1A2E">▤</div>
+        <div style="position:absolute;top:72px;right:16px;width:48px;height:48px;border-radius:999px;background:rgba(255,255,255,.92);display:grid;place-items:center;font-size:16px;color:#1A1A2E">⚙</div>
+        <div style="position:absolute;top:128px;right:16px;width:48px;height:48px;border-radius:999px;background:rgba(255,255,255,.92);display:grid;place-items:center;font-size:17px;color:#1A1A2E">☆</div>
+        <div style="position:absolute;top:184px;right:16px;width:48px;height:48px;border-radius:999px;background:rgba(255,255,255,.92);display:grid;place-items:center;font-size:16px;color:#1A1A2E">❏</div>
+        <div style="position:absolute;top:240px;right:16px;width:48px;height:48px;border-radius:999px;background:rgba(255,255,255,.92);display:grid;place-items:center;font-size:17px;color:#1A1A2E">⇕</div>
+        <div style="position:absolute;top:296px;right:16px;width:48px;height:48px;border-radius:999px;background:rgba(255,255,255,.92);display:grid;place-items:center;font-size:16px;color:#1A1A2E">◗</div>
+        <div style="position:absolute;left:16px;right:16px;bottom:24px;display:flex;justify-content:center">
+          <div style="background:#fff;border-radius:28px;box-shadow:0 2px 8px rgba(0,0,0,.22);padding:0 4px;display:flex;align-items:center">
+            <div style="width:48px;height:48px;display:grid;place-items:center;font-size:15px;color:#1A1A2E">⏮</div>
+            <div style="width:48px;height:48px;display:grid;place-items:center;font-size:15px;color:#1A1A2E">▶</div>
+            <div style="width:48px;height:48px;display:grid;place-items:center;font-size:15px;color:#1A1A2E">⏭</div>
+            <div style="width:48px;height:48px;display:grid;place-items:center;font-size:12px;font-weight:700;color:#1A1A2E">1.00x</div>
+            <div style="width:48px;height:48px;display:grid;place-items:center;font-size:15px;color:#1A1A2E">✕</div>
+          </div>
+        </div>
+        <div style="position:absolute;left:14px;bottom:88px;font:11px/1.5 ui-monospace,monospace;color:#8B5CF6;background:#fff;border:1px solid #8B5CF6;border-radius:4px;padding:3px 6px">約 344dp 的按鈕柱</div>
+      </div>
+      <div style="font:13px/1.7 'Figtree','Noto Sans TC',sans-serif;color:var(--color-neutral-800)">右緣被 6 顆 48dp 圓鈕佔滿——正是直排中文開始閱讀的那一邊。這整組在 <code>_buildBody()</code> 內為 foliate 與 PDF 各寫了一份。✕ 只收合、不停止朗讀。</div>
+    </div>
+
+    <!-- 1c -->
+    <div class="dv-opt" id="1c">
+      <div class="dv-olabel"><a class="dv-oid" href="#1c">1c</a>版面設定 Sheet — 4 分頁、整排滑桿、emoji 標題</div>
+      <div class="scr" style="height:650px;background:#F8F8FA;border:1px solid #E0E0E5;display:flex;flex-direction:column;justify-content:flex-end">
+        <div style="flex:1;background:rgba(0,0,0,.32)"></div>
+        <div style="background:#fff;border-radius:16px 16px 0 0;display:flex;flex-direction:column;height:76%">
+          <div style="padding:12px 8px 0 16px;display:flex;align-items:center"><div style="flex:1;font-size:15px;font-weight:700;color:#1A1A2E">⚙️ 版面設定</div><div style="width:44px;height:44px;display:grid;place-items:center;font-size:15px;color:#1A1A2E">✕</div></div>
+          <div style="display:flex;border-bottom:1px solid #E0E0E5">
+            <div style="flex:1;height:46px;display:grid;place-items:center;font-size:14px;color:#8B5CF6;font-weight:700;border-bottom:2px solid #8B5CF6">文字內容</div>
+            <div style="flex:1;height:46px;display:grid;place-items:center;font-size:14px;color:#1A1A2E;opacity:.65">邊界首尾</div>
+            <div style="flex:1;height:46px;display:grid;place-items:center;font-size:14px;color:#1A1A2E;opacity:.65">版面呈現</div>
+            <div style="flex:1;height:46px;display:grid;place-items:center;font-size:14px;color:#1A1A2E;opacity:.65">設定喜好</div>
+          </div>
+          <div style="flex:1;min-height:0;padding:12px 16px;overflow:hidden;display:flex;flex-direction:column;gap:2px">
+            <div style="display:flex;align-items:center;padding:8px 0"><div style="flex:1;font-size:14px;color:#1A1A2E">單書閱讀字型</div><div style="font-size:14px;color:#1A1A2E">使用書本內建字型 ▾</div></div>
+            <div style="padding:6px 0"><div style="font-size:14px;color:#1A1A2E;margin-bottom:2px">字型大小 19</div><div style="height:24px;display:flex;align-items:center"><div style="flex:1;height:4px;background:#E0E0E5;border-radius:2px;position:relative"><div style="position:absolute;left:0;top:0;bottom:0;width:46%;background:#8B5CF6;border-radius:2px"></div><div style="position:absolute;left:46%;top:-6px;width:16px;height:16px;border-radius:999px;background:#8B5CF6;margin-left:-8px"></div></div></div></div>
+            <div style="padding:6px 0"><div style="font-size:14px;color:#1A1A2E;margin-bottom:2px">字重 400</div><div style="height:24px;display:flex;align-items:center"><div style="flex:1;height:4px;background:#E0E0E5;border-radius:2px;position:relative"><div style="position:absolute;left:0;top:0;bottom:0;width:30%;background:#8B5CF6;border-radius:2px"></div><div style="position:absolute;left:30%;top:-6px;width:16px;height:16px;border-radius:999px;background:#8B5CF6;margin-left:-8px"></div></div></div></div>
+            <div style="padding:6px 0"><div style="font-size:14px;color:#1A1A2E;margin-bottom:2px">行距 1.8</div><div style="height:24px;display:flex;align-items:center"><div style="flex:1;height:4px;background:#E0E0E5;border-radius:2px;position:relative"><div style="position:absolute;left:0;top:0;bottom:0;width:62%;background:#8B5CF6;border-radius:2px"></div><div style="position:absolute;left:62%;top:-6px;width:16px;height:16px;border-radius:999px;background:#8B5CF6;margin-left:-8px"></div></div></div></div>
+            <div style="padding:6px 0"><div style="font-size:14px;color:#1A1A2E;margin-bottom:2px">段落間距 10</div><div style="height:24px;display:flex;align-items:center"><div style="flex:1;height:4px;background:#E0E0E5;border-radius:2px;position:relative"><div style="position:absolute;left:0;top:0;bottom:0;width:24%;background:#8B5CF6;border-radius:2px"></div><div style="position:absolute;left:24%;top:-6px;width:16px;height:16px;border-radius:999px;background:#8B5CF6;margin-left:-8px"></div></div></div></div>
+            <div style="padding:6px 0"><div style="font-size:14px;color:#1A1A2E;margin-bottom:2px">字距 0.00</div><div style="height:24px;display:flex;align-items:center"><div style="flex:1;height:4px;background:#E0E0E5;border-radius:2px;position:relative"><div style="position:absolute;left:0;top:0;bottom:0;width:8%;background:#8B5CF6;border-radius:2px"></div><div style="position:absolute;left:8%;top:-6px;width:16px;height:16px;border-radius:999px;background:#8B5CF6;margin-left:-8px"></div></div></div></div>
+            <div style="display:flex;align-items:center;padding:10px 0"><div style="flex:1;font-size:14px;color:#1A1A2E">停用書本 CSS</div><div style="width:52px;height:32px;border-radius:999px;border:2px solid #E0E0E5;display:flex;align-items:center;padding:2px"><div style="width:20px;height:20px;border-radius:999px;background:#79747E"></div></div></div>
+          </div>
+        </div>
+      </div>
+      <div style="font:13px/1.7 'Figtree','Noto Sans TC',sans-serif;color:var(--color-neutral-800)">五個連續滑桿——在電子紙上每拖一次就是數十次局部刷新。分頁內沒有分組，也沒有任何地方說明「這個值是此書覆寫還是全域預設」。標題用 ⚙️ emoji。</div>
+    </div>
+
+    <!-- 1d -->
+    <div class="dv-opt" id="1d">
+      <div class="dv-olabel"><a class="dv-oid" href="#1d">1d</a>設定 — 八列扁平清單，診斷混在其中</div>
+      <div class="scr" style="height:650px;background:#F8F8FA;border:1px solid #E0E0E5;display:flex;flex-direction:column">
+        <div style="height:64px;background:#fff;display:flex;align-items:center;padding:0 16px;flex:none;font-size:22px;color:#1A1A2E">設定</div>
+        <div style="flex:1;min-height:0;overflow:hidden">
+          <div style="height:56px;display:flex;align-items:center;padding:0 16px"><div style="flex:1;font-size:16px;color:#1A1A2E">佈景</div><div style="display:flex;gap:8px"><div style="width:26px;height:26px;border-radius:999px;background:#F5F5F5;border:2px solid #8B5CF6"></div><div style="width:26px;height:26px;border-radius:999px;background:#121212"></div><div style="width:26px;height:26px;border-radius:999px;background:#F4ECD8"></div></div></div>
+          <div style="min-height:72px;display:flex;align-items:center;padding:8px 16px;gap:12px"><div style="flex:1"><div style="font-size:16px;color:#1A1A2E">E-Ink 高對比模式</div><div style="font-size:13px;color:#1A1A2E;opacity:.6;line-height:1.4;margin-top:2px">停用動畫與漸層，以純黑白高對比顯示，專為電子紙螢幕最佳化</div></div><div style="width:52px;height:32px;border-radius:999px;border:2px solid #E0E0E5;display:flex;align-items:center;padding:2px;flex:none"><div style="width:20px;height:20px;border-radius:999px;background:#79747E"></div></div></div>
+          <div style="height:56px;display:flex;align-items:center;padding:0 16px"><div style="flex:1;font-size:16px;color:#1A1A2E">字型管理</div><span style="font-size:17px;color:#1A1A2E;opacity:.6">›</span></div>
+          <div style="height:56px;display:flex;align-items:center;padding:0 16px"><div style="flex:1;font-size:16px;color:#1A1A2E">閱讀預設值</div><span style="font-size:17px;color:#1A1A2E;opacity:.6">›</span></div>
+          <div style="height:56px;display:flex;align-items:center;padding:0 16px"><div style="flex:1;font-size:16px;color:#1A1A2E">導航熱區</div><span style="font-size:17px;color:#1A1A2E;opacity:.6">›</span></div>
+          <div style="height:56px;display:flex;align-items:center;padding:0 16px"><div style="flex:1;font-size:16px;color:#1A1A2E">同步</div><span style="font-size:17px;color:#1A1A2E;opacity:.6">›</span></div>
+          <div style="height:56px;display:flex;align-items:center;padding:0 16px"><div style="flex:1;font-size:16px;color:#1A1A2E">已連結的雲端匯入帳戶</div><span style="font-size:17px;color:#1A1A2E;opacity:.6">›</span></div>
+          <div style="height:56px;display:flex;align-items:center;padding:0 16px"><div style="flex:1;font-size:16px;color:#1A1A2E">閱讀器 Console Log</div><span style="font-size:17px;color:#1A1A2E;opacity:.6">›</span></div>
+          <div style="height:56px;display:flex;align-items:center;padding:0 16px"><div style="flex:1;font-size:16px;color:#1A1A2E">關於</div><span style="font-size:17px;color:#1A1A2E;opacity:.6">›</span></div>
+        </div>
+      </div>
+      <div style="font:13px/1.7 'Figtree','Noto Sans TC',sans-serif;color:var(--color-neutral-800)">沒有區段標題、沒有圖示、只有一列有說明文字。「導航熱區」與「閱讀預設值」光看標題猜不到內容；開發用的 Console Log 夾在同步與關於之間。</div>
+    </div>
+
+  </div>
+</section>
+</x-dc>
+</body>
+</html>
