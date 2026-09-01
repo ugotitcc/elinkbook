@@ -82,4 +82,13 @@
 
 Minor 的 4 項使用者要求一併修正，也已完成：可及性語意已併入 C1 修正一起處理；§12「統一 the ReaderScaffold」殘留英文字已刪除；§14.2 筆記面板分頁標籤 Emoji 自相矛盾已改為 `Icons.bookmark_outline`／`Icons.edit_note`（原 🔖／✏️ 保留在「已淘汰」欄位當歷史紀錄，非現行規格）；§6.1 圖示對照表補上「排序/檢視切換」一列，並在 §15.2 把 AppBar 三圖示逐一連回 §6.1 對應的 Material Icon。
 
-**階段 B 收尾（含審查與修正）。等待使用者確認是否要開始階段 C（開 Epic／Issue，走 SDD 流程改 Flutter 正式程式碼）。**
+**階段 B 收尾（含審查與修正）。**
+
+## 階段 C：已開 Epic，交棒給正式 SDD 文件
+
+階段 C 透過另一輪 `/grill-with-docs` 規劃完成，並核對過 `UI_DESIGN_RULES.md`（無衝突）。拆成兩個 Epic：
+
+- **`docs/epics/epic-35-design-system-tokens/`**（地基，先做）：`ElinkTokens` 落地，含三主題色值對齊 `DESIGN.md` 色表、8 個檔案的寫死顏色清理。
+- **`docs/epics/epic-36-adaptive-shelf-navigation/`**（蓋在地基上）：三目的地導覽、書架繼續閱讀列／`PagingBar`／單書動作選單、設定四分區。依賴 `epic-35` 先歸檔，但 Discovery／Architecting 規劃已可同步進行。
+
+兩者的 `epic.md`／`design.md` 是正式的 SDD 施工依據，**這份文件（`eink-redesign-rebuild-plan.md`）到此完成階段 A／B 的任務，階段 C 起續接的規劃記錄請看上述兩個 Epic 自己的文件，不再回頭更新本檔案。**

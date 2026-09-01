@@ -1,0 +1,432 @@
+<title>印泥盒色卡</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@600;700&family=Noto+Sans+TC:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+  :root{
+    --paper:#f7f2e7;
+    --paper-raised:#fffdf7;
+    --ink:#1f2022;
+    --ink-soft:#79726a;
+    --line:#e3d6bc;
+    --seal:#b8362d;
+    --seal-soft:#f3e2df;
+    --shadow: 0 1px 0 rgba(31,32,34,.06);
+
+    --demo-light-primary:#0284c7; --demo-light-onprimary:#ffffff; --demo-light-surface:#ffffff; --demo-light-onsurface:#0f172a; --demo-light-outline:#cbdfe9;
+    --demo-dark-primary:#38bdf8;  --demo-dark-onprimary:#141416;  --demo-dark-surface:#1d1d22;  --demo-dark-onsurface:#f2efe6;  --demo-dark-outline:#2c2c34;
+    --demo-sepia-primary:#b8362d; --demo-sepia-onprimary:#ffffff; --demo-sepia-surface:#faf3e3; --demo-sepia-onsurface:#1f2022; --demo-sepia-outline:#e6dfcb;
+    --demo-eink-primary:#000000; --demo-eink-onprimary:#ffffff; --demo-eink-surface:#ffffff; --demo-eink-onsurface:#000000; --demo-eink-outline:#000000;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#15161a;
+      --paper-raised:#1c1d22;
+      --ink:#ece7da;
+      --ink-soft:#a49d8f;
+      --line:#33342f;
+      --seal:#e0776c;
+      --seal-soft:#3a2422;
+      --shadow: 0 1px 0 rgba(0,0,0,.4);
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#15161a;
+    --paper-raised:#1c1d22;
+    --ink:#ece7da;
+    --ink-soft:#a49d8f;
+    --line:#33342f;
+    --seal:#e0776c;
+    --seal-soft:#3a2422;
+    --shadow: 0 1px 0 rgba(0,0,0,.4);
+  }
+
+  *{box-sizing:border-box}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+    line-height:1.75;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--seal-soft);color:var(--ink)}
+
+  .page{max-width:640px;margin:0 auto;padding:64px 24px 96px}
+
+  h1,h2,h3{
+    font-family:"Noto Serif TC",serif;
+    font-weight:700;
+    text-wrap:balance;
+    margin:0;
+  }
+  code, .mono{
+    font-family:"JetBrains Mono",ui-monospace,monospace;
+  }
+
+  /* ---------- Hero ---------- */
+  .hero{margin-bottom:72px}
+  .hero h1{font-size:clamp(28px,5vw,38px);line-height:1.4;letter-spacing:.01em}
+  .hero p{
+    margin:16px 0 0;
+    color:var(--ink-soft);
+    font-size:16px;
+    max-width:34ch;
+  }
+  .hero-strip{
+    margin-top:36px;
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:2px;
+    border:1px solid var(--line);
+    border-radius:4px;
+    overflow:hidden;
+  }
+  .hero-strip .cell{
+    aspect-ratio:1;
+    display:flex;
+    align-items:flex-end;
+    justify-content:center;
+    padding-bottom:10px;
+  }
+  .hero-strip .dot{width:22px;height:22px;border-radius:999px}
+  .hero-strip .label{
+    grid-column:1/-1;
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    font-size:11px;
+    color:var(--ink-soft);
+    text-align:center;
+    padding:8px 4px 0;
+    letter-spacing:.02em;
+  }
+
+  /* ---------- Section shell ---------- */
+  section{margin-bottom:64px}
+  .kicker{
+    font-family:"JetBrains Mono",monospace;
+    font-size:11px;
+    letter-spacing:.14em;
+    color:var(--seal);
+    text-transform:uppercase;
+    margin:0 0 10px;
+  }
+  h2{font-size:22px;margin-bottom:14px}
+  section > p{color:var(--ink-soft);font-size:15.5px;max-width:38ch}
+  section > p + p{margin-top:10px}
+  strong{color:var(--ink);font-weight:700}
+
+  /* ---------- Compare row ---------- */
+  .compare{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:14px;
+    margin-top:24px;
+  }
+  @media (max-width:480px){ .compare{grid-template-columns:1fr} }
+  .compare .card{
+    border:1px solid var(--line);
+    border-radius:6px;
+    padding:16px;
+    background:var(--paper-raised);
+  }
+  .compare .mark{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:22px;height:22px;border-radius:999px;
+    font-size:13px;font-weight:700;margin-bottom:10px;
+  }
+  .compare .no .mark{background:var(--seal-soft);color:var(--seal)}
+  .compare .yes .mark{background:var(--seal);color:var(--paper-raised)}
+  .compare .card h3{font-family:"Noto Sans TC",sans-serif;font-size:14.5px;font-weight:700;margin-bottom:6px}
+  .compare .card .swatches{display:flex;gap:6px;margin-top:12px}
+  .compare .card .sw{width:16px;height:16px;border-radius:3px;flex:none}
+  .compare .no .swatches .sw:nth-child(1){background:#c94f3d}
+  .compare .no .swatches .sw:nth-child(2){background:#3d6bc9}
+  .compare .no .swatches .sw:nth-child(3){background:#3dc98f}
+  .compare .no .swatches .sw:nth-child(4){background:#c9a83d}
+  .compare .yes .swatches .sw{background:var(--seal)}
+  .compare .card .cap{font-size:12px;color:var(--ink-soft);margin-top:8px}
+
+  /* ---------- Ink boxes ---------- */
+  .boxes{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:12px;
+    margin-top:22px;
+  }
+  @media (max-width:560px){ .boxes{grid-template-columns:1fr} }
+  .box{
+    border-radius:8px;
+    padding:16px 14px 14px;
+    border:1px solid var(--bxline, var(--line));
+    background:var(--bxsurface);
+    color:var(--bxtext);
+    position:relative;
+  }
+  .box .name{font-size:13px;font-weight:700;margin-bottom:12px;font-family:"Noto Sans TC"}
+  .box .chip{
+    display:flex;align-items:center;gap:8px;
+    font-family:"JetBrains Mono",monospace;font-size:10.5px;
+    padding:5px 0;
+    border-top:1px dashed var(--bxline);
+  }
+  .box .chip:first-of-type{border-top:none}
+  .box .chip .sw{width:12px;height:12px;border-radius:3px;flex:none;border:1px solid rgba(0,0,0,.15)}
+  .box .chip .hex{opacity:.75}
+  .box-light{--bxsurface:#ffffff;--bxtext:#0f172a;--bxline:#cbdfe9}
+  .box-dark{--bxsurface:#1d1d22;--bxtext:#f2efe6;--bxline:#3a3b41}
+  .box-sepia{--bxsurface:#faf3e3;--bxtext:#1f2022;--bxline:#e6dfcb}
+
+  /* ---------- Live demo ---------- */
+  .demo{
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:20px;
+    background:var(--paper-raised);
+    margin-top:22px;
+  }
+  .demo-controls{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
+  .demo-controls label{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:7px 12px;
+    border:1px solid var(--line);
+    border-radius:999px;
+    font-size:13px;
+    cursor:pointer;
+    user-select:none;
+  }
+  .demo-controls input{accent-color:var(--seal)}
+  .demo-controls label:has(input:checked){
+    border-color:var(--seal);
+    background:var(--seal-soft);
+    color:var(--ink);
+  }
+  .demo-controls .sep{width:1px;background:var(--line);margin:2px 4px}
+  .demo-stage{
+    display:flex;
+    align-items:center;
+    gap:18px;
+    flex-wrap:wrap;
+    padding:20px;
+    border-radius:8px;
+    transition:background-color .15s ease;
+  }
+  #demoBtn{
+    padding:11px 20px;
+    border-radius:6px;
+    font-family:"Noto Sans TC";
+    font-weight:700;
+    font-size:14px;
+    border:1.5px solid transparent;
+    transition:background-color .15s ease, color .15s ease, border-color .15s ease;
+  }
+  .demo-readout{
+    display:flex;gap:10px;flex-wrap:wrap;
+    font-family:"JetBrains Mono",monospace;
+    font-size:11px;
+  }
+  .demo-readout div{display:flex;align-items:center;gap:6px}
+  .demo-readout .sw{width:13px;height:13px;border-radius:3px;border:1px solid rgba(0,0,0,.15)}
+  .demo-cap{font-size:12.5px;color:var(--ink-soft);margin-top:14px}
+  .demo-cap b{color:var(--ink)}
+
+  /* ---------- Flow ---------- */
+  .flow{margin-top:24px;display:flex;flex-direction:column;gap:0}
+  .flow .step{
+    display:flex;gap:14px;align-items:flex-start;
+    padding:14px 0;
+  }
+  .flow .num{
+    flex:none;width:26px;height:26px;border-radius:999px;
+    border:1.5px solid var(--seal);color:var(--seal);
+    display:flex;align-items:center;justify-content:center;
+    font-family:"JetBrains Mono";font-size:12px;font-weight:700;
+  }
+  .flow .step h3{font-size:14.5px;font-weight:700;margin-bottom:3px;font-family:"Noto Sans TC"}
+  .flow .step p{margin:0;font-size:13.5px;color:var(--ink-soft)}
+  .flow .step code{
+    background:var(--seal-soft);
+    padding:1px 6px;
+    border-radius:4px;
+    font-size:12.5px;
+  }
+  .flow .connector{
+    width:1.5px;height:16px;background:var(--line);margin-left:12.5px;
+  }
+
+  /* ---------- Closing ---------- */
+  .closer{
+    border-top:1px solid var(--line);
+    padding-top:28px;
+    text-align:left;
+  }
+  .closer p{font-size:15.5px;color:var(--ink-soft);max-width:40ch}
+  .closer .rule{
+    font-family:"Noto Serif TC";
+    font-weight:700;
+    font-size:18px;
+    color:var(--ink);
+    margin:0 0 12px;
+  }
+  .source{
+    margin-top:28px;
+    font-size:11.5px;
+    color:var(--ink-soft);
+    font-family:"JetBrains Mono",monospace;
+  }
+</style>
+
+<div class="page">
+
+  <div class="hero">
+    <h1>同一顆按鈕，怎麼會換色？</h1>
+    <p>elinkBook 不是每個畫面各自決定顏色，而是共用「一張色卡」——換主題，等於換整張色卡。</p>
+    <div class="hero-strip">
+      <div class="cell" style="background:#eaf5fc"><div class="dot" style="background:#0284c7"></div></div>
+      <div class="cell" style="background:#1d1d22"><div class="dot" style="background:#38bdf8"></div></div>
+      <div class="cell" style="background:#faf3e3"><div class="dot" style="background:#b8362d"></div></div>
+      <div class="cell" style="background:#fff;border-left:1px solid #000"><div class="dot" style="background:#000;border:1.5px solid #000"></div></div>
+      <div class="label">
+        <span>晴空藍天</span><span>夜讀水墨</span><span>宣紙古風</span><span>電子紙</span>
+      </div>
+    </div>
+  </div>
+
+  <section>
+    <p class="kicker">問題</p>
+    <h2>別讓每個畫面自己調墨</h2>
+    <p>如果書架、閱讀器、設定頁，各自寫死「螢光筆用黃色」，換一次主題，就要一個畫面一個畫面去改。改到後來，一定有漏掉的角落。</p>
+    <div class="compare">
+      <div class="card no">
+        <span class="mark">✕</span>
+        <h3>各畫面自己上色</h3>
+        <div class="swatches"><div class="sw"></div><div class="sw"></div><div class="sw"></div><div class="sw"></div></div>
+        <p class="cap">四個畫面，四種寫死的顏色，四個要改的地方。</p>
+      </div>
+      <div class="card yes">
+        <span class="mark">✓</span>
+        <h3>共用一張色卡</h3>
+        <div class="swatches"><div class="sw"></div><div class="sw"></div><div class="sw"></div><div class="sw"></div></div>
+        <p class="cap">四個畫面，問同一張卡，換卡就全部一起換。</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker">角色一</p>
+    <h2>三個印泥盒</h2>
+    <p>elinkBook 準備了三個「印泥盒」，每個盒子裡都放一張色卡，寫著這個盒子的「主色」「底色」「邊框色」該長什麼樣。</p>
+    <div class="boxes">
+      <div class="box box-light">
+        <div class="name">晴空藍天</div>
+        <div class="chip"><span class="sw" style="background:#0284c7"></span><span>primary</span><span class="hex">#0284c7</span></div>
+        <div class="chip"><span class="sw" style="background:#ffffff"></span><span>surface</span><span class="hex">#ffffff</span></div>
+        <div class="chip"><span class="sw" style="background:#cbdfe9"></span><span>outline</span><span class="hex">#cbdfe9</span></div>
+      </div>
+      <div class="box box-dark">
+        <div class="name">夜讀水墨</div>
+        <div class="chip"><span class="sw" style="background:#38bdf8"></span><span>primary</span><span class="hex">#38bdf8</span></div>
+        <div class="chip"><span class="sw" style="background:#1d1d22"></span><span>surface</span><span class="hex">#1d1d22</span></div>
+        <div class="chip"><span class="sw" style="background:#2c2c34"></span><span>outline</span><span class="hex">#2c2c34</span></div>
+      </div>
+      <div class="box box-sepia">
+        <div class="name">宣紙古風</div>
+        <div class="chip"><span class="sw" style="background:#b8362d"></span><span>primary</span><span class="hex">#b8362d</span></div>
+        <div class="chip"><span class="sw" style="background:#faf3e3"></span><span>surface</span><span class="hex">#faf3e3</span></div>
+        <div class="chip"><span class="sw" style="background:#e6dfcb"></span><span>outline</span><span class="hex">#e6dfcb</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker">角色二</p>
+    <h2>電子紙開關，蓋過所有盒子</h2>
+    <p>電子紙螢幕印不出漸層灰，只印得出黑跟白。所以「電子紙模式」不是第四個盒子，是一個開關——不管現在打開哪個盒子，開關一開，答案通通被改成純黑或純白。</p>
+    <p>下面試試看：選一個盒子，再打開電子紙開關，看按鈕跟色卡怎麼變。</p>
+
+    <div class="demo">
+      <div class="demo-controls" role="radiogroup" aria-label="選擇印泥盒">
+        <label><input type="radio" name="theme" value="light" checked> 晴空藍天</label>
+        <label><input type="radio" name="theme" value="dark"> 夜讀水墨</label>
+        <label><input type="radio" name="theme" value="sepia"> 宣紙古風</label>
+        <span class="sep"></span>
+        <label><input type="checkbox" id="einkToggle"> 電子紙模式</label>
+      </div>
+      <div class="demo-stage" id="demoStage">
+        <button id="demoBtn" type="button">螢光筆按鈕</button>
+        <div class="demo-readout" id="demoReadout"></div>
+      </div>
+      <p class="demo-cap">現在問的色卡：<b id="demoLabel">晴空藍天</b></p>
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker">運作方式</p>
+    <h2>畫面怎麼問色卡要顏色</h2>
+    <p>畫面裡的每一顆按鈕，從來不記得自己的顏色。它每次要畫的時候，才問一次「現在開著的色卡，主色是什麼？」</p>
+    <div class="flow">
+      <div class="step">
+        <div class="num">1</div>
+        <div><h3>畫面元件要上色</h3><p>例如：螢光筆按鈕，準備畫自己的底色。</p></div>
+      </div>
+      <div class="connector"></div>
+      <div class="step">
+        <div class="num">2</div>
+        <div><h3>舉手問色卡</h3><p>寫成程式碼，就是 <code>Theme.of(context).extension&lt;ElinkTokens&gt;()</code>——「跟目前開著的色卡，要一份顏色清單」。</p></div>
+      </div>
+      <div class="connector"></div>
+      <div class="step">
+        <div class="num">3</div>
+        <div><h3>色卡回答，畫面照做</h3><p>色卡依照目前的主題／電子紙狀態回一組顏色，按鈕就用這組顏色畫自己，不多問、不亂猜。</p></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="closer">
+    <p class="rule">換色卡，不用改畫面。</p>
+    <p>因為所有畫面都是「問了才畫」，色卡換了，全部畫面下一次重畫就自動跟上——不用一個一個找出來改。</p>
+    <p class="source">DESIGN.md §1 · class ElinkTokens extends ThemeExtension&lt;ElinkTokens&gt;</p>
+  </div>
+
+</div>
+
+<script>
+  const TOKENS = {
+    light: { primary:'#0284c7', onPrimary:'#ffffff', surface:'#ffffff', onSurface:'#0f172a', outline:'#cbdfe9', label:'晴空藍天' },
+    dark:  { primary:'#38bdf8', onPrimary:'#141416', surface:'#1d1d22', onSurface:'#f2efe6', outline:'#2c2c34', label:'夜讀水墨' },
+    sepia: { primary:'#b8362d', onPrimary:'#ffffff', surface:'#faf3e3', onSurface:'#1f2022', outline:'#e6dfcb', label:'宣紙古風' },
+  };
+  const EINK = { primary:'#000000', onPrimary:'#ffffff', surface:'#ffffff', onSurface:'#000000', outline:'#000000', label:'電子紙' };
+
+  const stage = document.getElementById('demoStage');
+  const btn = document.getElementById('demoBtn');
+  const readout = document.getElementById('demoReadout');
+  const label = document.getElementById('demoLabel');
+  const einkToggle = document.getElementById('einkToggle');
+
+  function currentThemeKey(){
+    const checked = document.querySelector('input[name="theme"]:checked');
+    return checked ? checked.value : 'light';
+  }
+
+  function render(){
+    const key = currentThemeKey();
+    const isEink = einkToggle.checked;
+    const t = isEink ? EINK : TOKENS[key];
+
+    stage.style.backgroundColor = t.surface;
+    btn.style.backgroundColor = t.primary;
+    btn.style.color = t.onPrimary;
+    btn.style.borderColor = isEink ? t.outline : 'transparent';
+    stage.style.border = '1.5px solid ' + t.outline;
+    stage.style.borderRadius = '8px';
+
+    label.textContent = isEink ? (TOKENS[key].label + ' ・ 電子紙模式') : TOKENS[key].label;
+
+    readout.innerHTML = ['primary','surface','outline'].map(k => {
+      return '<div><span class="sw" style="background:'+t[k]+'"></span>'+k+' '+t[k]+'</div>';
+    }).join('');
+  }
+
+  document.querySelectorAll('input[name="theme"]').forEach(r => r.addEventListener('change', render));
+  einkToggle.addEventListener('change', render);
+  render();
+</script>
