@@ -325,14 +325,29 @@
 
         <!-- Tabs -->
         <div class="h-11 border-b-[1.5px] border-black flex flex-shrink-0 bg-white">
-          <button class="flex-1 bg-black text-white text-xs font-black">文字</button>
-          <button class="flex-1 border-l-[1.5px] border-black text-xs font-bold active:bg-black active:text-white">邊界</button>
-          <button class="flex-1 border-l-[1.5px] border-black text-xs font-bold active:bg-black active:text-white">呈現</button>
-          <button class="flex-1 border-l-[1.5px] border-black text-xs font-bold active:bg-black active:text-white">預設集</button>
+          <button onclick="switchLayoutTab('text')" id="tab-btn-text" class="flex-1 bg-black text-white text-xs font-black">文字</button>
+          <button onclick="switchLayoutTab('margin')" id="tab-btn-margin" class="flex-1 border-l-[1.5px] border-black text-xs font-bold active:bg-black active:text-white">邊界</button>
+          <button onclick="switchLayoutTab('display')" id="tab-btn-display" class="flex-1 border-l-[1.5px] border-black text-xs font-bold active:bg-black active:text-white">呈現</button>
+          <button onclick="switchLayoutTab('presets')" id="tab-btn-presets" class="flex-1 border-l-[1.5px] border-black text-xs font-bold active:bg-black active:text-white">預設集</button>
         </div>
 
-        <!-- 步進器滾動區 (全邊框，無灰色) -->
-        <div class="flex-grow p-4 space-y-3.5 overflow-y-auto no-scrollbar bg-white">
+        <!-- 分頁內容捲動區 (全邊框，無灰色) -->
+        <div class="flex-grow overflow-y-auto no-scrollbar bg-white">
+
+        <!-- 分頁一：文字 -->
+        <div id="layout-tab-text" class="p-4 space-y-3.5">
+          <!-- 0. 字型（單書覆寫，點擊循環切換） -->
+          <div class="border-[1.5px] border-black rounded-md p-2.5 flex items-center justify-between">
+            <div class="flex-1 pr-2">
+              <div class="text-sm font-black">字型</div>
+              <div class="text-[10px] mt-0.5 opacity-60 font-medium">此書覆寫，不影響其他書</div>
+            </div>
+            <button onclick="cycleFont()" class="h-11 px-3 border-[1.5px] border-black rounded-md flex items-center justify-center gap-1.5 active:bg-black active:text-white flex-shrink-0">
+              <span id="val-font-family" class="text-sm font-bold">思源黑體</span>
+              <span class="text-xs">▾</span>
+            </button>
+          </div>
+
           <!-- 1. 字級步進器 (EBStepper) -->
           <div class="border-[1.5px] border-black rounded-md p-2.5 flex items-center justify-between">
             <div class="flex-1 pr-2">
@@ -355,7 +370,18 @@
             <button onclick="adjustVal('line-height', 0.1)" class="w-12 h-12 border-[1.5px] border-black rounded-md flex items-center justify-center text-xl font-bold active:bg-black active:text-white">＋</button>
           </div>
 
-          <!-- 3. 字重步進器 (EBStepper) -->
+          <!-- 3. 段落間距步進器 (EBStepper) -->
+          <div class="border-[1.5px] border-black rounded-md p-2.5 flex items-center justify-between">
+            <div class="flex-1 pr-2">
+              <div class="text-sm font-black">段落間距</div>
+              <div class="text-[10px] mt-0.5 opacity-60 font-medium">使用全域預設</div>
+            </div>
+            <button onclick="adjustVal('paragraph-spacing', -2)" class="w-12 h-12 border-[1.5px] border-black rounded-md flex items-center justify-center text-xl font-bold active:bg-black active:text-white">−</button>
+            <span id="val-paragraph-spacing" class="w-12 text-center text-lg font-black">10</span>
+            <button onclick="adjustVal('paragraph-spacing', 2)" class="w-12 h-12 border-[1.5px] border-black rounded-md flex items-center justify-center text-xl font-bold active:bg-black active:text-white">＋</button>
+          </div>
+
+          <!-- 4. 字重步進器 (EBStepper) -->
           <div class="border-[1.5px] border-black rounded-md p-2.5 flex items-center justify-between">
             <div class="flex-1 pr-2">
               <div class="text-sm font-black">字重</div>
@@ -366,14 +392,15 @@
             <button onclick="adjustVal('font-weight', 100)" class="w-12 h-12 border-[1.5px] border-black rounded-md flex items-center justify-center text-xl font-bold active:bg-black active:text-white">＋</button>
           </div>
 
-          <!-- 書寫方向 (SegmentedButton 樣式) -->
-          <div class="space-y-1.5">
-            <div class="text-xs font-bold tracking-wider uppercase">書寫方向</div>
-            <div class="flex gap-2.5">
-              <button onclick="setDirection('vertical')" id="dir-vertical" class="flex-1 h-11 bg-black text-white border-[1.5px] border-black rounded-md text-xs font-black">直排</button>
-              <button onclick="setDirection('horizontal')" id="dir-horizontal" class="flex-1 h-11 border-[1.5px] border-black rounded-md text-xs font-bold active:bg-black active:text-white">橫排</button>
-              <button onclick="setDirection('auto')" id="dir-auto" class="flex-1 h-11 border-[1.5px] border-black rounded-md text-xs font-bold active:bg-black active:text-white">自動</button>
+          <!-- 5. 字距步進器 (EBStepper) -->
+          <div class="border-[1.5px] border-black rounded-md p-2.5 flex items-center justify-between">
+            <div class="flex-1 pr-2">
+              <div class="text-sm font-black">字距</div>
+              <div class="text-[10px] mt-0.5 opacity-60 font-medium">使用全域預設</div>
             </div>
+            <button onclick="adjustVal('letter-spacing', -0.02)" class="w-12 h-12 border-[1.5px] border-black rounded-md flex items-center justify-center text-xl font-bold active:bg-black active:text-white">−</button>
+            <span id="val-letter-spacing" class="w-12 text-center text-lg font-black">0.00</span>
+            <button onclick="adjustVal('letter-spacing', 0.02)" class="w-12 h-12 border-[1.5px] border-black rounded-md flex items-center justify-center text-xl font-bold active:bg-black active:text-white">＋</button>
           </div>
 
           <!-- 停用 CSS (EBSwitchRow) -->
@@ -385,10 +412,164 @@
           </div>
         </div>
 
-        <!-- 底部確認列 (52dp) -->
-        <div class="border-t-[1.5px] border-black p-3 flex gap-2.5 flex-shrink-0 bg-white">
-          <button onclick="showNotification('已還原此書覆寫值')" class="flex-1 h-12 border-[1.5px] border-black rounded-md text-xs font-bold active:bg-black active:text-white">還原此書覆寫</button>
-          <button onclick="showNotification('已另存為版面預設集')" class="flex-1 h-12 bg-black text-white border-[1.5px] border-black rounded-md text-xs font-black">另存為預設集</button>
+        <!-- 分頁二：邊界（原「邊界首尾」，含四邊步進器與頁首/頁尾開關） -->
+        <div id="layout-tab-margin" class="hidden p-4 space-y-3.5">
+          <!-- 上下左右邊界，各自獨立一行（跟文字分頁的步進器列同款式） -->
+          <div class="border-[1.5px] border-black rounded-md p-2.5 flex items-center justify-between">
+            <div class="flex-1 pr-2">
+              <div class="text-sm font-black">上邊界</div>
+              <div class="text-[10px] mt-0.5 opacity-60 font-medium">使用全域預設</div>
+            </div>
+            <button onclick="adjustMargin('top', -2)" class="w-12 h-12 border-[1.5px] border-black rounded-md flex items-center justify-center text-xl font-bold active:bg-black active:text-white">−</button>
+            <span id="val-margin-top" class="w-12 text-center text-lg font-black">24</span>
+            <button onclick="adjustMargin('top', 2)" class="w-12 h-12 border-[1.5px] border-black rounded-md flex items-center justify-center text-xl font-bold active:bg-black active:text-white">＋</button>
+          </div>
+          <div class="border-[1.5px] border-black rounded-md p-2.5 flex items-center justify-between">
+            <div class="flex-1 pr-2">
+              <div class="text-sm font-black">下邊界</div>
+              <div class="text-[10px] mt-0.5 opacity-60 font-medium">使用全域預設</div>
+            </div>
+            <button onclick="adjustMargin('bottom', -2)" class="w-12 h-12 border-[1.5px] border-black rounded-md flex items-center justify-center text-xl font-bold active:bg-black active:text-white">−</button>
+            <span id="val-margin-bottom" class="w-12 text-center text-lg font-black">24</span>
+            <button onclick="adjustMargin('bottom', 2)" class="w-12 h-12 border-[1.5px] border-black rounded-md flex items-center justify-center text-xl font-bold active:bg-black active:text-white">＋</button>
+          </div>
+          <div class="border-[1.5px] border-black rounded-md p-2.5 flex items-center justify-between">
+            <div class="flex-1 pr-2">
+              <div class="text-sm font-black">左邊界</div>
+              <div class="text-[10px] mt-0.5 opacity-60 font-medium">使用全域預設</div>
+            </div>
+            <button onclick="adjustMargin('left', -2)" class="w-12 h-12 border-[1.5px] border-black rounded-md flex items-center justify-center text-xl font-bold active:bg-black active:text-white">−</button>
+            <span id="val-margin-left" class="w-12 text-center text-lg font-black">20</span>
+            <button onclick="adjustMargin('left', 2)" class="w-12 h-12 border-[1.5px] border-black rounded-md flex items-center justify-center text-xl font-bold active:bg-black active:text-white">＋</button>
+          </div>
+          <div class="border-[1.5px] border-black rounded-md p-2.5 flex items-center justify-between">
+            <div class="flex-1 pr-2">
+              <div class="text-sm font-black">右邊界</div>
+              <div class="text-[10px] mt-0.5 opacity-60 font-medium">使用全域預設</div>
+            </div>
+            <button onclick="adjustMargin('right', -2)" class="w-12 h-12 border-[1.5px] border-black rounded-md flex items-center justify-center text-xl font-bold active:bg-black active:text-white">−</button>
+            <span id="val-margin-right" class="w-12 text-center text-lg font-black">20</span>
+            <button onclick="adjustMargin('right', 2)" class="w-12 h-12 border-[1.5px] border-black rounded-md flex items-center justify-center text-xl font-bold active:bg-black active:text-white">＋</button>
+          </div>
+
+          <div class="text-xs font-bold tracking-wider uppercase pt-1">頁首頁尾</div>
+          <div class="border-[1.5px] border-black rounded-md p-2.5 flex items-center justify-between">
+            <span class="text-sm font-black">顯示頁首</span>
+            <button onclick="toggleSwitch('switch-header')" id="switch-header" class="w-14 h-9 border-[1.5px] border-black rounded-full flex items-center p-0.5 bg-black flex-shrink-0">
+              <div id="switch-header-dot" class="w-7.5 h-7.5 bg-white rounded-full translate-x-5 transition-none"></div>
+            </button>
+          </div>
+          <div class="border-[1.5px] border-black rounded-md p-2.5 flex items-center justify-between">
+            <span class="text-sm font-black">顯示頁尾</span>
+            <button onclick="toggleSwitch('switch-footer')" id="switch-footer" class="w-14 h-9 border-[1.5px] border-black rounded-full flex items-center p-0.5 bg-black flex-shrink-0">
+              <div id="switch-footer-dot" class="w-7.5 h-7.5 bg-white rounded-full translate-x-5 transition-none"></div>
+            </button>
+          </div>
+        </div>
+
+        <!-- 分頁三：呈現（換頁模式／文字對齊／螢幕方向鎖定） -->
+        <div id="layout-tab-display" class="hidden p-4 space-y-3.5">
+          <div class="space-y-1.5">
+            <div class="text-xs font-bold tracking-wider uppercase">換頁模式</div>
+            <div class="flex gap-2.5">
+              <button onclick="setPagingMode('global')" id="paging-global" class="flex-1 h-11 border-[1.5px] border-black rounded-md text-xs font-bold active:bg-black active:text-white">全域預設</button>
+              <button onclick="setPagingMode('tap')" id="paging-tap" class="flex-1 h-11 bg-black text-white border-[1.5px] border-black rounded-md text-xs font-black">點擊</button>
+              <button onclick="setPagingMode('scroll')" id="paging-scroll" class="flex-1 h-11 border-[1.5px] border-black rounded-md text-xs font-bold active:bg-black active:text-white">捲動</button>
+            </div>
+            <div class="text-[10px] opacity-60">E-Ink 模式下建議使用「點擊」，避免連續捲動殘影</div>
+          </div>
+
+          <div class="space-y-1.5">
+            <div class="text-xs font-bold tracking-wider uppercase">欄數</div>
+            <div class="flex gap-2.5">
+              <button onclick="setColumnMode('default')" id="column-default" class="flex-1 h-11 bg-black text-white border-[1.5px] border-black rounded-md text-xs font-black">預設</button>
+              <button onclick="setColumnMode('single')" id="column-single" class="flex-1 h-11 border-[1.5px] border-black rounded-md text-xs font-bold active:bg-black active:text-white">單欄</button>
+              <button onclick="setColumnMode('double')" id="column-double" class="flex-1 h-11 border-[1.5px] border-black rounded-md text-xs font-bold active:bg-black active:text-white">雙欄</button>
+            </div>
+            <!-- 只有「預設」（自動判斷單/雙欄）時才需要設定門檻寬度，單欄／雙欄是固定結果，不需要 -->
+            <div id="column-size-row" class="border-[1.5px] border-black rounded-md p-2.5 flex items-center justify-between">
+              <div class="flex-1 pr-2">
+                <div class="text-sm font-black">欄位大小</div>
+                <div class="text-[10px] mt-0.5 opacity-60 font-medium">單欄最小寬度，超過門檻自動切雙欄</div>
+              </div>
+              <button onclick="adjustVal('column-size', -20)" class="w-12 h-12 border-[1.5px] border-black rounded-md flex items-center justify-center text-xl font-bold active:bg-black active:text-white">−</button>
+              <span id="val-column-size" class="w-14 text-center text-lg font-black">360</span>
+              <button onclick="adjustVal('column-size', 20)" class="w-12 h-12 border-[1.5px] border-black rounded-md flex items-center justify-center text-xl font-bold active:bg-black active:text-white">＋</button>
+            </div>
+          </div>
+
+          <div class="space-y-1.5">
+            <div class="text-xs font-bold tracking-wider uppercase">書寫方向</div>
+            <div class="flex gap-2.5">
+              <button onclick="setDirection('auto')" id="dir-auto" class="flex-1 h-11 border-[1.5px] border-black rounded-md text-xs font-bold active:bg-black active:text-white">自動</button>
+              <button onclick="setDirection('vertical')" id="dir-vertical" class="flex-1 h-11 bg-black text-white border-[1.5px] border-black rounded-md text-xs font-black">直排</button>
+              <button onclick="setDirection('horizontal')" id="dir-horizontal" class="flex-1 h-11 border-[1.5px] border-black rounded-md text-xs font-bold active:bg-black active:text-white">橫排</button>
+            </div>
+          </div>
+
+          <div class="space-y-1.5">
+            <div class="text-xs font-bold tracking-wider uppercase">文字對齊</div>
+            <div class="flex gap-2.5">
+              <button onclick="setTextAlign('justify')" id="align-justify" class="flex-1 h-11 bg-black text-white border-[1.5px] border-black rounded-md text-xs font-black">齊行</button>
+              <button onclick="setTextAlign('left')" id="align-left" class="flex-1 h-11 border-[1.5px] border-black rounded-md text-xs font-bold active:bg-black active:text-white">靠左</button>
+              <button onclick="setTextAlign('center')" id="align-center" class="flex-1 h-11 border-[1.5px] border-black rounded-md text-xs font-bold active:bg-black active:text-white">置中</button>
+            </div>
+          </div>
+
+          <div class="space-y-1.5">
+            <div class="text-xs font-bold tracking-wider uppercase">螢幕方向鎖定</div>
+            <div class="grid grid-cols-3 gap-2.5">
+              <button onclick="setOrientationLock('auto')" id="orient-auto" class="h-11 bg-black text-white border-[1.5px] border-black rounded-md text-xs font-black">自動</button>
+              <button onclick="setOrientationLock('0')" id="orient-0" class="h-11 border-[1.5px] border-black rounded-md text-xs font-bold active:bg-black active:text-white">0°</button>
+              <button onclick="setOrientationLock('90')" id="orient-90" class="h-11 border-[1.5px] border-black rounded-md text-xs font-bold active:bg-black active:text-white">90°</button>
+              <button onclick="setOrientationLock('180')" id="orient-180" class="h-11 border-[1.5px] border-black rounded-md text-xs font-bold active:bg-black active:text-white">180°</button>
+              <button onclick="setOrientationLock('270')" id="orient-270" class="h-11 border-[1.5px] border-black rounded-md text-xs font-bold active:bg-black active:text-white">270°</button>
+            </div>
+          </div>
+
+          <div class="border-[1.5px] border-black rounded-md p-2.5 flex items-center justify-between">
+            <span class="text-sm font-black">全螢幕模式</span>
+            <button onclick="toggleSwitch('switch-fullscreen')" id="switch-fullscreen" class="w-14 h-9 border-[1.5px] border-black rounded-full flex items-center p-0.5 bg-white flex-shrink-0">
+              <div id="switch-fullscreen-dot" class="w-7.5 h-7.5 bg-black rounded-full transition-none"></div>
+            </button>
+          </div>
+        </div>
+
+        <!-- 分頁四：預設集（套用／刪除既有預設集） -->
+        <div id="layout-tab-presets" class="p-4 space-y-2.5 hidden">
+          <button onclick="showNotification('已將目前設定另存為新預設集')" class="w-full h-12 bg-black text-white border-[1.5px] border-black rounded-md text-sm font-black">＋ 將目前設定存為新預設集</button>
+
+          <div class="text-xs font-bold tracking-wider uppercase pt-1">已儲存的預設集</div>
+
+          <!-- 系統預設：不可刪除 -->
+          <div id="preset-system" class="border-[1.5px] border-black rounded-md p-3 flex items-center gap-3">
+            <div class="flex-1">
+              <div class="text-sm font-black">系統預設</div>
+              <div class="text-[10px] opacity-60 mt-0.5">字級 16 · 行距 1.6 · 橫排</div>
+            </div>
+            <button onclick="applyPreset('preset-system')" class="h-10 px-3 border-[1.5px] border-black rounded-md text-xs font-bold active:bg-black active:text-white flex-shrink-0">套用</button>
+          </div>
+
+          <!-- 使用者自訂，預設為目前套用中 -->
+          <div id="preset-a" class="border-[1.5px] border-black rounded-md p-3 flex items-center gap-3 bg-black text-white">
+            <div class="flex-1">
+              <div class="text-sm font-black">睡前直排・大字</div>
+              <div class="text-[10px] opacity-75 mt-0.5">字級 22 · 行距 2.0 · 直排</div>
+            </div>
+            <span id="preset-a-check" class="text-lg font-bold flex-shrink-0">✓</span>
+            <button onclick="deletePreset('preset-a', '睡前直排・大字')" class="w-10 h-10 border-[1.5px] border-white rounded-md flex items-center justify-center text-sm font-bold flex-shrink-0">✕</button>
+          </div>
+
+          <div id="preset-b" class="border-[1.5px] border-black rounded-md p-3 flex items-center gap-3">
+            <div class="flex-1">
+              <div class="text-sm font-black">通勤橫排</div>
+              <div class="text-[10px] opacity-60 mt-0.5">字級 18 · 行距 1.6 · 橫排</div>
+            </div>
+            <button onclick="applyPreset('preset-b')" class="h-10 px-3 border-[1.5px] border-black rounded-md text-xs font-bold active:bg-black active:text-white flex-shrink-0">套用</button>
+            <button onclick="deletePreset('preset-b', '通勤橫排')" class="w-10 h-10 border-[1.5px] border-black rounded-md flex items-center justify-center text-sm font-bold active:bg-black active:text-white flex-shrink-0">✕</button>
+          </div>
+        </div>
+
         </div>
       </div>
 
@@ -580,6 +761,11 @@
     let fontSize = 19;
     let lineHeight = 1.8;
     let fontWeight = 400;
+    let paragraphSpacing = 10;
+    let letterSpacing = 0.00;
+    let columnSize = 360;
+    const fontFamilies = ['思源黑體', '思源宋體', '原俠正楷', '台灣圓體', '源流明體', '使用書本內建字型'];
+    let fontFamilyIdx = 0;
     let isCssDisabled = false;
     let isEinkMode = true; // 預設 E-Ink 模式為開
 
@@ -680,7 +866,23 @@
         if (fontWeight < 100) fontWeight = 100;
         if (fontWeight > 900) fontWeight = 900;
         document.getElementById('val-font-weight').innerText = fontWeight;
+      } else if (type === 'paragraph-spacing') {
+        paragraphSpacing = Math.max(0, paragraphSpacing + amount);
+        document.getElementById('val-paragraph-spacing').innerText = paragraphSpacing;
+      } else if (type === 'letter-spacing') {
+        letterSpacing = (parseFloat(letterSpacing) + amount).toFixed(2);
+        document.getElementById('val-letter-spacing').innerText = letterSpacing;
+      } else if (type === 'column-size') {
+        columnSize = Math.max(120, columnSize + amount);
+        document.getElementById('val-column-size').innerText = columnSize;
       }
+      triggerFlash();
+    }
+
+    // 字型：點擊循環切換（原型簡化，不做下拉選單）
+    function cycleFont() {
+      fontFamilyIdx = (fontFamilyIdx + 1) % fontFamilies.length;
+      document.getElementById('val-font-family').innerText = fontFamilies[fontFamilyIdx];
       triggerFlash();
     }
 
@@ -734,6 +936,95 @@
           btn.className = "flex-1 h-11 border-[1.5px] border-black rounded-md text-xs font-bold active:bg-black active:text-white";
         }
       });
+      triggerFlash();
+    }
+
+    // 2d 分頁切換：文字／邊界／呈現／預設集
+    const layoutTabs = ['text', 'margin', 'display', 'presets'];
+    function switchLayoutTab(tab) {
+      layoutTabs.forEach(t => {
+        document.getElementById(`layout-tab-${t}`).classList.toggle('hidden', t !== tab);
+        const btn = document.getElementById(`tab-btn-${t}`);
+        if (t === tab) {
+          btn.className = "flex-1 bg-black text-white text-xs font-black";
+        } else {
+          btn.className = t === 'text'
+            ? "flex-1 text-xs font-bold active:bg-black active:text-white"
+            : "flex-1 border-l-[1.5px] border-black text-xs font-bold active:bg-black active:text-white";
+        }
+      });
+      triggerFlash();
+    }
+
+    // 邊界步進器
+    let margins = { top: 24, bottom: 24, left: 20, right: 20 };
+    function adjustMargin(side, amount) {
+      margins[side] = Math.max(0, margins[side] + amount);
+      document.getElementById(`val-margin-${side}`).innerText = margins[side];
+      triggerFlash();
+    }
+
+    // 呈現：欄數（僅「預設」需要額外的欄位大小門檻）
+    function setColumnMode(mode) {
+      ['default', 'single', 'double'].forEach(m => {
+        document.getElementById(`column-${m}`).className = m === mode
+          ? "flex-1 h-11 bg-black text-white border-[1.5px] border-black rounded-md text-xs font-black"
+          : "flex-1 h-11 border-[1.5px] border-black rounded-md text-xs font-bold active:bg-black active:text-white";
+      });
+      document.getElementById('column-size-row').classList.toggle('hidden', mode !== 'default');
+      triggerFlash();
+    }
+
+    // 呈現：換頁模式
+    function setPagingMode(mode) {
+      ['global', 'tap', 'scroll'].forEach(m => {
+        document.getElementById(`paging-${m}`).className = m === mode
+          ? "flex-1 h-11 bg-black text-white border-[1.5px] border-black rounded-md text-xs font-black"
+          : "flex-1 h-11 border-[1.5px] border-black rounded-md text-xs font-bold active:bg-black active:text-white";
+      });
+      triggerFlash();
+    }
+
+    // 呈現：文字對齊
+    function setTextAlign(align) {
+      ['justify', 'left', 'center'].forEach(a => {
+        document.getElementById(`align-${a}`).className = a === align
+          ? "flex-1 h-11 bg-black text-white border-[1.5px] border-black rounded-md text-xs font-black"
+          : "flex-1 h-11 border-[1.5px] border-black rounded-md text-xs font-bold active:bg-black active:text-white";
+      });
+      triggerFlash();
+    }
+
+    // 呈現：螢幕方向鎖定
+    function setOrientationLock(o) {
+      ['auto', '0', '90', '180', '270'].forEach(v => {
+        document.getElementById(`orient-${v}`).className = v === o
+          ? "h-11 bg-black text-white border-[1.5px] border-black rounded-md text-xs font-black"
+          : "h-11 border-[1.5px] border-black rounded-md text-xs font-bold active:bg-black active:text-white";
+      });
+      triggerFlash();
+    }
+
+    // 預設集：套用（互斥選取，黑底反白＋✓ 標示目前套用中）
+    function applyPreset(id) {
+      ['preset-system', 'preset-a', 'preset-b'].forEach(p => {
+        const el = document.getElementById(p);
+        const check = document.getElementById(`${p}-check`);
+        if (p === id) {
+          el.classList.add('bg-black', 'text-white');
+          if (check) check.classList.remove('hidden');
+        } else {
+          el.classList.remove('bg-black', 'text-white');
+          if (check) check.classList.add('hidden');
+        }
+      });
+      showNotification('已套用預設集');
+      triggerFlash();
+    }
+
+    // 預設集：刪除（此原型僅提示，不實際移除列表項目）
+    function deletePreset(id, name) {
+      showNotification(`已刪除預設集：${name}`);
       triggerFlash();
     }
 
