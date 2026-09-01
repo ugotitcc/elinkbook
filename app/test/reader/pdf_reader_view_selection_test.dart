@@ -239,8 +239,10 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
   });
 
-  testWidgets('長按但幾乎沒有拖曳位移（退化選取）時，不觸發 onSelectionRectComputed',
-      (tester) async {
+  testWidgets(
+      '長按但幾乎沒有拖曳位移（退化選取）時，仍觸發 onSelectionRectComputed，'
+      '矩形為長按落點本身的零面積點（epic-25 Issue 6，是否顯示工具列的判斷'
+      '交給 ReaderScreen，見 reader_screen_test.dart）', (tester) async {
     var renderedCount = 0;
     PdfSelectionInfo? computed;
     final key = GlobalKey<State<PdfReaderView>>();
@@ -264,9 +266,57 @@ void main() {
     final gesture = await tester.startGesture(pos);
     await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
     await gesture.up();
-    await tester.pump(const Duration(milliseconds: 350));
+    await pumpUntilPdfReady(tester, condition: () => computed != null);
 
-    expect(computed, isNull, reason: '沒有明顯拖曳位移的長按不應建立選取');
+    expect(computed, isNotNull,
+        reason: '退化選取（長按無明顯拖曳）不應再被整個吞掉，須送出落點本身');
+    expect(computed!.rect.left, computed!.rect.right,
+        reason: '退化選取換算出的矩形須是零面積的點（left==right）');
+    expect(computed!.rect.top, computed!.rect.bottom,
+        reason: '退化選取換算出的矩形須是零面積的點（top==bottom）');
+  });
+
+  testWidgets(
+      '長按有些微拖曳但仍小於 minFraction 門檻時，一樣視為退化選取，'
+      '送出的落點固定用長按起點、不隨拖曳終點飄移', (tester) async {
+    var renderedCount = 0;
+    PdfSelectionInfo? computed;
+    final key = GlobalKey<State<PdfReaderView>>();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PdfReaderView(
+          key: key,
+          filePath: 'test/fixtures/sample_multi_page.pdf',
+          onPageRendered: () => renderedCount++,
+          onError: (_) {},
+          onSelectionRectComputed: (info) => computed = info,
+        ),
+      ),
+    );
+    await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
+
+    final topLeft = tester.getTopLeft(find.byType(PdfReaderView));
+    final areaSize = tester.getSize(find.byType(PdfReaderView));
+    final start = topLeft + const Offset(100, 150);
+    // 位移只有頁面寬度的 0.3%，遠小於 minFraction（1%），仍應視為退化選取。
+    final end = start + Offset(areaSize.width * 0.003, 0);
+
+    final gesture = await tester.startGesture(start);
+    await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+    await gesture.moveTo(end);
+    await tester.pump();
+    await gesture.up();
+    await pumpUntilPdfReady(tester, condition: () => computed != null);
+
+    expect(computed, isNotNull);
+    expect(computed!.rect.left, computed!.rect.right,
+        reason: '仍在 minFraction 門檻內的微小移動，一樣視為退化選取的點');
+    expect(computed!.rect.top, computed!.rect.bottom,
+        reason: '退化選取換算出的矩形須是零面積的點（top==bottom）');
+    // 落點須在 [0,1] 百分比範圍內（退化選取的點矩形）。
+    expect(computed!.rect.left, inInclusiveRange(0.0, 1.0));
+    expect(computed!.rect.top, inInclusiveRange(0.0, 1.0));
   });
 
   testWidgets('長按拖曳過程中即時顯示選取矩形視覺回饋', (tester) async {
