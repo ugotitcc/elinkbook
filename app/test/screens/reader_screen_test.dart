@@ -7343,6 +7343,103 @@ void main() {
     );
   });
 
+  group('PDF 原地長按既有標記（退化選取，epic-25-annotation-interaction-qa Issue 6）', () {
+    testWidgets(
+      'PDF：退化選取命中既有劃線時，顯示工具列且帶刪除鈕（epic-25 Issue 6）',
+      (tester) async {
+        final highlightsRepo = FakeHighlightsRepository();
+        final notesRepo = FakeNotesRepository();
+        await highlightsRepo.insert(
+          const Highlight(
+            id: 'h_issue6_hit',
+            bookId: 'b_pdf_issue6_hit',
+            style: HighlightStyle.highlighterYellow,
+            pdfPageIndex: 0,
+            // 覆蓋幾乎整頁，確保退化選取落點一定落在這筆劃線範圍內。
+            pdfRect: PercentRect(left: 0.05, top: 0.05, right: 0.95, bottom: 0.95),
+          ),
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: ReaderScreen(
+              filePath: 'test/fixtures/sample_multi_page.pdf',
+              bookId: 'b_pdf_issue6_hit',
+              prefsManager: prefsManager,
+              highlightsRepository: highlightsRepo,
+              notesRepository: notesRepo,
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.runAsync(() => Future.delayed(Duration.zero));
+        await tester.pump();
+        await pumpUntilPdfReady(tester);
+
+        // 直接透過 PdfReaderView 的 onSelectionRectComputed 回呼模擬退化選取
+        // （長按無明顯拖曳位移），比照既有 PDF 標註工具列測試的直接回呼模式
+        // （手勢觸發在 widget test 環境下無法可靠啟動 PdfReaderView 內部的手勢
+        // 偵測層）。
+        final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+        pdfView.onSelectionRectComputed?.call(
+          // 退化選取：left == right, top == bottom（零面積點矩形）。
+          const PdfSelectionInfo(
+            pageIndex: 0,
+            rect: PercentRect(left: 0.3, top: 0.4, right: 0.3, bottom: 0.4),
+            widgetRect: PercentRect(left: 0.3, top: 0.4, right: 0.3, bottom: 0.4),
+            text: '',
+          ),
+        );
+        await tester.pump();
+
+        expect(find.byType(AnnotationToolbar), findsOneWidget,
+            reason: '退化選取命中既有劃線，應顯示工具列（Issue 6）');
+        expect(find.byKey(const Key('annotation_toolbar_delete')), findsOneWidget,
+            reason: '命中既有劃線，工具列應帶刪除鈕');
+      },
+    );
+
+    testWidgets(
+      'PDF：退化選取未命中任何既有標記時，不顯示工具列（epic-25 Issue 6）',
+      (tester) async {
+        final highlightsRepo = FakeHighlightsRepository();
+        final notesRepo = FakeNotesRepository();
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: ReaderScreen(
+              filePath: 'test/fixtures/sample_multi_page.pdf',
+              bookId: 'b_pdf_issue6_miss',
+              prefsManager: prefsManager,
+              highlightsRepository: highlightsRepo,
+              notesRepository: notesRepo,
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.runAsync(() => Future.delayed(Duration.zero));
+        await tester.pump();
+        await pumpUntilPdfReady(tester);
+
+        // 直接模擬退化選取回呼（無任何劃線/備註資料）。
+        final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+        pdfView.onSelectionRectComputed?.call(
+          const PdfSelectionInfo(
+            pageIndex: 0,
+            rect: PercentRect(left: 0.3, top: 0.4, right: 0.3, bottom: 0.4),
+            widgetRect: PercentRect(left: 0.3, top: 0.4, right: 0.3, bottom: 0.4),
+            text: '',
+          ),
+        );
+        await tester.pump();
+
+        expect(find.byType(AnnotationToolbar), findsNothing,
+            reason: '沒有命中任何既有標記的退化選取，須維持原本「什麼都不做」'
+                '的行為，不能彈出建立工具列');
+      },
+    );
+  });
+
   group('TTS 語音朗讀（epic-34-tts-readalong Issue 2）', () {
     testWidgets('未提供 ttsProvider 時，不顯示 TTS 播放按鈕', (tester) async {
       final highlightsRepo = FakeHighlightsRepository();
