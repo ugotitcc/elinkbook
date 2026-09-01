@@ -298,7 +298,7 @@ doc.addEventListener('click', e => {
 
 ## Issue 6：PDF 原地長按既有劃線不會跳出編輯工具列（AnnotationToolbar）
 
-**Status:** 🔍 已診斷（`/diagnose`），待 `/grill-with-docs` 敲定修法方向與撰寫實作計畫。
+**Status:** ✅ 已實作並通過自動化測試（比照 `plan-issue-6.md`）。`PdfReaderView._finishSelectionDrag()` 退化選取（長按無明顯拖曳位移）不再整個吞掉，改用長按落點本身（`pointPercentRect()`，零面積的點）送出；`ReaderScreen._handlePdfSelectionRectComputed()` 收到退化選取時，先跑既有 `resolvePdfExistingAnnotation()`，命中既有劃線/備註才顯示工具列，沒命中維持原本「什麼都不做」的行為。純 Dart 邏輯修法，不需要真機驗證（見 Solution 段落）。
 
 **來源：** Issue 5 修復後，人類真機試用回報——「長壓正常，選取畫線正常。但在畫線的上面再次長壓不會跳出畫線工具」。
 
@@ -316,4 +316,23 @@ doc.addEventListener('click', e => {
 
 **與 Issue 5 的界線：** 這段退化選取防呆邏輯（`percentRectFromDrag`／`_finishSelectionDrag` 的 null 檢查）在 Issue 5 的 Task 2 完全沒有被觸碰——Task 2 只替換了偵測長按手勢的底層元件（`GestureDetector` → `BounceTolerantLongPressDetector`），選取狀態管理與退化選取判斷邏輯原封不動（見 `plan-issue-5.md` Global Constraints 與 Self-Review）。這個問題很可能從 `epic-24` 這個防呆常數導入以來就一直存在，只是這台真機在 Issue 5 修復前，長按拖曳本身幾乎無法啟動（見 Issue 5 根因），使用者根本沒機會測到「原地再長按編輯」這個情境——Issue 5 讓長按終於能穩定啟動，才讓這個原本就存在的缺口第一次被真機試用發現，不是 Issue 5 的迴歸。既有測試套件裡涉及 `resolvePdfExistingAnnotation`／`AnnotationToolbar` 命中判斷的測試（`reader_screen_test.dart`）皆直接呼叫 `pdfView.onSelectionRectComputed?.call(...)` 灌入現成的 `PdfSelectionInfo`，完全繞過真實手勢→退化選取判斷這段路徑，因此從未測出這個缺口。
 
-**待決策（下一步 `/grill-with-docs` 處理）：** 至少三個可能修法方向，優劣未評估——(a) 退化選取時額外檢查落點是否命中既有劃線/備註，命中則仍照樣觸發 `onSelectionRectComputed`（沿用該劃線既有矩形或以落點為準）；(b) 調整/移除 `minFraction` 判定邏輯本身；(c) 另立一條與長按拖曳選取平行的「原地長按命中既有標記」偵測路徑。
+**Solution（方向，2026-09-01 `/grill-with-docs` 敲定）：**
+
+原本列出的三個候選方向（(a) 退化選取時額外檢查是否命中既有標記；(b) 調整/移除 `minFraction` 判定邏輯本身；(c) 另立一條平行的「原地長按命中既有標記」偵測路徑）收斂為 (a) 的一個精確變體，(b)／(c) 明確不採用：(b) 會讓一般誤觸也彈出建立工具列，破壞既有防呆的原始用意；(c) 純屬多餘——現有長按拖曳這條路徑本來就會走到退化選取這個判定點，只是被防呆整個攔掉，不需要另開一條平行路徑。
+
+- **`_finishSelectionDrag()` 判定退化選取時，不再整個吞掉、什麼都不做**——改成仍然送出 `widget.onSelectionRectComputed`，矩形用長按落點本身（一個零面積的點：`left==right`、`top==bottom`）。
+- **`PdfReaderView` 不需要認識 `Highlight`/`Note`**——真正決定「要不要開工具列」的判斷，留在 `ReaderScreen` 的回呼裡：收到退化選取時，先跑既有的 `resolvePdfExistingAnnotation()`；命中既有劃線/備註，才真的顯示工具列（`pdfExistingItem` 非 null，刪除鈕會出現）；沒命中，維持現在「什麼都不做」的行為（不會設定 `_currentPdfSelection`，不會生出一個空的建立工具列）。
+- **工具列定位直接用長按點本身**，不改寫成該筆既有劃線的完整矩形——長按點通常本來就落在劃線範圍內，工具列位置已經很接近劃線，不值得多寫一段座標轉換程式碼（YAGNI）。已查證 `_pdfAnnotationToolbarTop()`／`left` clamp 兩處定位計算只用到 `rect.top`/`.bottom`/`.left`，零面積的點矩形不會造成除以零或其他例外。
+- **零面積矩形的重疊判定已確認可正常運作**，不需要特殊處理：`PercentRect.overlaps()` 用嚴格不等式（`left < other.right && right > other.left && ...`），代入一個點（`left==right==px`）化簡為「`highlight.left < px && highlight.right > px`」，只要長按點嚴格落在既有標記矩形內部就會正確判定命中；點剛好壓在標記邊緣上不算命中，與既有「僅邊緣相接不算重疊」慣例一致，不是本次修法新增的邊界情況。
+- **`_extractTextInRect()` 對零面積矩形回傳空字串**（`overlaps()` 同一套嚴格不等式，字元矩形不太可能剛好嚴格包住一個數學上的點），工具列「複製」按鈕在命中既有標記時會複製空字串——維持現狀不特別處理，這是既有程式路徑對「空選取範圍」本來就有的行為，不是本次修法引入的新問題。
+
+**驗收方式（不需要真機驗證這一輪）**：判定邏輯、命中比對、工具列顯示與否全部是純 Dart 邏輯，跟裝置硬體觸控特性無關（與 Issue 5 的硬體彈跳時序問題性質不同），只用自動化 widget test 驗收即可——比照 `/diagnose` 階段確認根因時用的測試手法：`PdfReaderView.refreshAnnotations()` 疊一筆既有劃線，接著在其正中央模擬「按下→維持超過長按門檻→放開」、中途無額外移動的長按，驗證 `onSelectionRectComputed` 觸發且回傳的 `PdfSelectionInfo` 能讓 `resolvePdfExistingAnnotation()` 命中；並另外驗證「同樣手法但落點不在任何既有標記上」時，`onSelectionRectComputed` 雖然觸發，`ReaderScreen` 層級仍不應顯示工具列（沿用既有「未命中不觸發任何 UI」行為）。
+
+**單元測試要求：**
+- `pdf_reader_view` 層級：退化選取（長按無明顯拖曳）時，`onSelectionRectComputed` 仍會觸發，回傳的 `rect`/`widgetRect` 為長按落點的零面積矩形。
+- `pdf_reader_view` 層級：既有「有明顯拖曳但小於 `minFraction`」與「完全無拖曳」兩種退化情境，皆應一致觸發（不可只處理其中一種）。
+- `reader_screen` 層級：退化選取落點命中既有劃線/備註時，`AnnotationToolbar` 顯示且帶刪除鈕（比照既有「PDF：框選矩形命中既有標記時，工具列顯示刪除按鈕」測試手法，但改用真實長按手勢而非直接呼叫 `onSelectionRectComputed`）。
+- `reader_screen` 層級：退化選取落點未命中任何既有標記時，`AnnotationToolbar` 不顯示（`find.byType(AnnotationToolbar)` findsNothing），維持現狀零回歸。
+- 既有「非退化（有明顯拖曳）」的長按拖曳框選行為，含命中/未命中既有標記兩種情境，須維持不變，零回歸。
+
+**驗收標準：** 上述測試通過、`flutter analyze` 乾淨、`flutter test` 全數通過；不需要真機驗證即可視為完成（純 Dart 邏輯修法，理由見上方「驗收方式」）。

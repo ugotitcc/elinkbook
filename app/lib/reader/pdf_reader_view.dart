@@ -1191,12 +1191,18 @@ class _PdfReaderViewState extends State<PdfReaderView> {
     final drag = _selectionDrag;
     if (drag == null) return;
     setState(() => _selectionDrag = null);
+    // epic-25-annotation-interaction-qa Issue 6：退化選取（長按沒有明顯
+    // 拖曳位移）不再整個吞掉——改用長按落點本身（drag.start，固定不隨拖曳
+    // 終點飄移）換算出一個零面積的點矩形送出，讓 ReaderScreen 有機會判斷
+    // 這次操作是否命中既有劃線/備註（resolvePdfExistingAnnotation()）。
+    // 是否顯示工具列的決定權完全交給 ReaderScreen，這裡不判斷、也不需要
+    // 認識 Highlight/Note（見 plan-issue-6.md Global Constraints）。
     final pageRelativeRect = percentRectFromDrag(
-      start: drag.start,
-      end: drag.current,
-      areaSize: drag.areaSize,
-    );
-    if (pageRelativeRect == null) return; // 退化選取，等同取消。
+          start: drag.start,
+          end: drag.current,
+          areaSize: drag.areaSize,
+        ) ??
+        pointPercentRect(point: drag.start, areaSize: drag.areaSize);
     final originalRect = cropRelativeToOriginalPercent(
       rect: pageRelativeRect,
       cropRect: _cropEnabled ? widget.pdfCropRect : null,

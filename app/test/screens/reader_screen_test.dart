@@ -7343,6 +7343,106 @@ void main() {
     );
   });
 
+  group('PDF 原地長按既有標記（退化選取，epic-25-annotation-interaction-qa Issue 6）', () {
+    testWidgets(
+      'PDF：退化選取命中既有劃線時，顯示工具列且帶刪除鈕（epic-25 Issue 6）',
+      (tester) async {
+        final highlightsRepo = FakeHighlightsRepository();
+        final notesRepo = FakeNotesRepository();
+        await highlightsRepo.insert(
+          const Highlight(
+            id: 'h_issue6_hit',
+            bookId: 'b_pdf_issue6_hit',
+            style: HighlightStyle.highlighterYellow,
+            pdfPageIndex: 0,
+            // 覆蓋幾乎整頁，確保退化選取落點一定落在這筆劃線範圍內。
+            pdfRect: PercentRect(left: 0.05, top: 0.05, right: 0.95, bottom: 0.95),
+          ),
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: ReaderScreen(
+              filePath: 'test/fixtures/sample_multi_page.pdf',
+              bookId: 'b_pdf_issue6_hit',
+              prefsManager: prefsManager,
+              highlightsRepository: highlightsRepo,
+              notesRepository: notesRepo,
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.runAsync(() => Future.delayed(Duration.zero));
+        await tester.pump();
+        await pumpUntilPdfReady(tester);
+
+        // 透過真實長按手勢重現使用者操作（規劃階段審查 review-issue-6.md
+        // Important #2 修正——原本直接呼叫 onSelectionRectComputed，繞過真實
+        // 手勢偵測層，恰好落入本 Issue 自己診斷出「導致 bug 未被測出」的同一
+        // 種測試模式）。落點須用既有劃線疊圖實際渲染出來的座標（而非假設
+        // PdfReaderView 整個 widget 尺寸等於頁面內容範圍——PAGE_FIT 模式下
+        // 常有 letterbox 留白，兩者不相等），才能保證精準命中。
+        final decorationFinder = find.byKey(const Key('pdf_reader_decoration_0_0'));
+        expect(decorationFinder, findsOneWidget);
+        final pos = tester.getCenter(decorationFinder);
+
+        final gesture = await tester.startGesture(pos);
+        await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+        await gesture.up();
+        // _finishSelectionDrag() 的文字萃取是真實非同步 FFI 呼叫
+        // （page.loadStructuredText()），須用 pumpUntilPdfReady 讓真實
+        // event loop 有機會推進，固定時長的 tester.pump() 等不到它完成。
+        await pumpUntilPdfReady(
+          tester,
+          condition: () => find.byType(AnnotationToolbar).evaluate().isNotEmpty,
+        );
+
+        expect(find.byType(AnnotationToolbar), findsOneWidget,
+            reason: '退化選取命中既有劃線，應顯示工具列（Issue 6）');
+        expect(find.byKey(const Key('annotation_toolbar_delete')), findsOneWidget,
+            reason: '命中既有劃線，工具列應帶刪除鈕');
+      },
+    );
+
+    testWidgets(
+      'PDF：退化選取未命中任何既有標記時，不顯示工具列（epic-25 Issue 6）',
+      (tester) async {
+        final highlightsRepo = FakeHighlightsRepository();
+        final notesRepo = FakeNotesRepository();
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: ReaderScreen(
+              filePath: 'test/fixtures/sample_multi_page.pdf',
+              bookId: 'b_pdf_issue6_miss',
+              prefsManager: prefsManager,
+              highlightsRepository: highlightsRepo,
+              notesRepository: notesRepo,
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.runAsync(() => Future.delayed(Duration.zero));
+        await tester.pump();
+        await pumpUntilPdfReady(tester);
+
+        // 透過真實長按手勢重現（同上則測試的修正理由，review-issue-6.md
+        // Important #2）。沒有任何既有劃線/備註，落點用 PdfReaderView 的
+        // 畫面中心即可——PAGE_FIT 模式預設置中，落在頁面內容範圍內。
+        final pos = tester.getCenter(find.byType(PdfReaderView));
+
+        final gesture = await tester.startGesture(pos);
+        await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+        await gesture.up();
+        await pumpUntilPdfReady(tester);
+
+        expect(find.byType(AnnotationToolbar), findsNothing,
+            reason: '沒有命中任何既有標記的退化選取，須維持原本「什麼都不做」'
+                '的行為，不能彈出建立工具列');
+      },
+    );
+  });
+
   group('TTS 語音朗讀（epic-34-tts-readalong Issue 2）', () {
     testWidgets('未提供 ttsProvider 時，不顯示 TTS 播放按鈕', (tester) async {
       final highlightsRepo = FakeHighlightsRepository();

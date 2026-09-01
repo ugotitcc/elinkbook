@@ -53,6 +53,41 @@ void main() {
     });
   });
 
+  group('pointPercentRect', () {
+    test('換算出的矩形為零面積的點，left==right、top==bottom', () {
+      final rect = pointPercentRect(
+        point: const Offset(30, 60),
+        areaSize: const Size(100, 200),
+      );
+      expect(rect.left, 0.3);
+      expect(rect.right, 0.3);
+      expect(rect.top, 0.3);
+      expect(rect.bottom, 0.3);
+    });
+
+    test('落點超出區域邊界時夾限到 [0,1]', () {
+      final rect = pointPercentRect(
+        point: const Offset(-20, 300),
+        areaSize: const Size(100, 200),
+      );
+      expect(rect.left, 0);
+      expect(rect.right, 0);
+      expect(rect.top, 1);
+      expect(rect.bottom, 1);
+    });
+
+    test('left/right、top/bottom 是同一次計算指派的完全相同值（浮點數精確相等）', () {
+      // 用一個非整除的座標，確認不是「湊巧算出來相等」而是同一個值。
+      final rect = pointPercentRect(
+        point: const Offset(33.333, 66.667),
+        areaSize: const Size(100, 200),
+      );
+      expect(rect.left, rect.right);
+      expect(rect.top, rect.bottom);
+      expect(identical(rect.left, rect.right) || rect.left == rect.right, isTrue);
+    });
+  });
+
   group('cropRelativeToOriginalPercent', () {
     test('cropRect 為 null 時原樣回傳（單位轉換，不裁切）', () {
       const rect = PercentRect(left: 0.1, top: 0.2, right: 0.3, bottom: 0.4);

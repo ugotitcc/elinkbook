@@ -30,6 +30,24 @@ PercentRect? percentRectFromDrag({
   return PercentRect(left: left, top: top, right: right, bottom: bottom);
 }
 
+/// 把觸控落點 [point]（相對 [areaSize] 這塊區域左上角的局部座標，單位與
+/// [areaSize] 相同）換算為零面積（[left]==[right]、[top]==[bottom]）的
+/// [PercentRect]，供「長按沒有明顯拖曳位移」（退化選取，見
+/// [percentRectFromDrag] 的 [minFraction] 判定）時，仍要送出一個代表
+/// 「使用者按在哪裡」的矩形使用（epic-25-annotation-interaction-qa
+/// Issue 6）。[left]/[right] 與 [top]/[bottom] 皆指派同一個算好的值，
+/// 保證是精確相等（非浮點數運算巧合），呼叫端可用 `rect.left == rect.right`
+/// 可靠判斷「這是不是一個退化選取換算出來的點矩形」，不需要額外的旗標欄位。
+PercentRect pointPercentRect({
+  required Offset point,
+  required Size areaSize,
+}) {
+  double clamp01(double v) => v < 0 ? 0 : (v > 1 ? 1 : v);
+  final x = clamp01(point.dx / areaSize.width);
+  final y = clamp01(point.dy / areaSize.height);
+  return PercentRect(left: x, top: y, right: x, bottom: y);
+}
+
 /// 把「相對裁切後可視內容」的百分比矩形 [rect]，換算回「相對原始整頁」
 /// 的百分比矩形——持久化選取結果前使用，確保之後裁切矩形變更或關閉時
 /// 既有標記位置仍然正確（不會跟著上一次的裁切範圍跑位）。[cropRect] 為

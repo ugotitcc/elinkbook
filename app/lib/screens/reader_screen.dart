@@ -1615,6 +1615,25 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
 
   void _handlePdfSelectionRectComputed(PdfSelectionInfo info) {
     if (!mounted) return;
+    // epic-25-annotation-interaction-qa Issue 6：PdfReaderView 現在連退化
+    // 選取（長按沒有明顯拖曳位移）都會送出一個落點本身的零面積矩形（見
+    // pdf_reader_view.dart 的 _finishSelectionDrag()／pointPercentRect()），
+    // 不再由它自己判斷「這是不是有意義的操作」——這裡才是真正決定要不要
+    // 顯示工具列的地方。退化選取（rect.left == rect.right，見
+    // pointPercentRect() doc comment 保證的精確浮點數相等）只有在命中既有
+    // 劃線/備註時才顯示編輯工具列；沒命中維持原本「什麼都不做」的行為，
+    // 避免任何一次精準點擊（例如翻頁時手指多停留了一下）都意外彈出建立
+    // 工具列。非退化選取（有明顯拖曳）的既有行為完全不變。
+    final isDegenerate = info.rect.left == info.rect.right;
+    if (isDegenerate &&
+        resolvePdfExistingAnnotation(
+              selection: info,
+              highlights: _highlights,
+              notes: _notes,
+            ) ==
+            null) {
+      return;
+    }
     setState(() {
       _currentPdfSelection = info;
       _pendingPdfHighlightIdForSelection = null;
