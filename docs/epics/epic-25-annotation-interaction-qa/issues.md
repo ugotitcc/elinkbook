@@ -293,3 +293,27 @@ doc.addEventListener('click', e => {
 - 既有的正常長按拖曳框選（無雜訊情境）行為須維持不變，零回歸。
 
 **驗收標準：** 用 `device-2.txt` 真實彈跳資料重播的自動化測試通過，證明新邏輯能在該雜訊模式下正確判定為一次連續長按；既有正常長按拖曳框選行為零回歸；`flutter analyze` 乾淨、`flutter test` 全數通過。真機驗證（人類直接試用回報，非正式插樁診斷）待實作完成後進行。
+
+---
+
+## Issue 6：PDF 原地長按既有劃線不會跳出編輯工具列（AnnotationToolbar）
+
+**Status:** 🔍 已診斷（`/diagnose`），待 `/grill-with-docs` 敲定修法方向與撰寫實作計畫。
+
+**來源：** Issue 5 修復後，人類真機試用回報——「長壓正常，選取畫線正常。但在畫線的上面再次長壓不會跳出畫線工具」。
+
+**依賴：** 無（與 Issue 5 的 `BounceTolerantLongPressDetector` 狀態機邏輯本身無關，見下方「與 Issue 5 的界線」）。
+
+**背景／症狀：** 在既有劃線（或備註）正上方原地長按（不明顯拖曳），預期應跳出 `AnnotationToolbar` 供編輯/刪除，實際上完全沒有反應。
+
+**根因（已用真實 `PdfReaderView` widget 測試重現確認，非臆測）：**
+
+`_finishSelectionDrag()`（`app/lib/reader/pdf_reader_view.dart:1190` 一帶）在計算選取矩形後，會呼叫 `percentRectFromDrag()`（`app/lib/reader/pdf_selection_geometry.dart`）——只要拖曳的寬或高小於 `minFraction`（預設 1%，`epic-24-pdf-engine-rebuild` Issue 4 從已刪除的原生 `PdfReaderView.kt` 搬過來的既有防呆常數），就回傳 `null`，`_finishSelectionDrag()` 直接視為「退化選取，等同取消」提前 `return`，完全不會呼叫 `widget.onSelectionRectComputed`。
+
+而 PDF 判斷「這次選取是否命中既有劃線/備註」的 `resolvePdfExistingAnnotation()`（`app/lib/reader/annotation_resolution.dart`）**只能在 `onSelectionRectComputed` 真的觸發之後**、由 `ReaderScreen` 拿收到的 `PdfSelectionInfo.rect` 去跟既有 `_highlights`/`_notes` 做矩形重疊比對（見該檔案 doc comment：PDF 沒有像 EPUB 那樣在 JS 端先算好命中結果的 `existingAnnotationId`，純靠這個後端幾何比對）。
+
+診斷方式：在 `PdfReaderView` 上用 `refreshAnnotations()` 疊一筆既有劃線，接著在該劃線正中央模擬一次「按下→維持 550ms→放開」、中途完全無額外移動的長按（比照使用者「原地再長按」的真實意圖），結果 `onSelectionRectComputed` 從未觸發。也就是說：**使用者「精準按在既有劃線上、不特意拖曳」這個動作本身，正好會被 1% 退化選取防呆判定為誤觸而整個吞掉**，`resolvePdfExistingAnnotation` 根本沒有機會被呼叫，`AnnotationToolbar` 自然不會出現。
+
+**與 Issue 5 的界線：** 這段退化選取防呆邏輯（`percentRectFromDrag`／`_finishSelectionDrag` 的 null 檢查）在 Issue 5 的 Task 2 完全沒有被觸碰——Task 2 只替換了偵測長按手勢的底層元件（`GestureDetector` → `BounceTolerantLongPressDetector`），選取狀態管理與退化選取判斷邏輯原封不動（見 `plan-issue-5.md` Global Constraints 與 Self-Review）。這個問題很可能從 `epic-24` 這個防呆常數導入以來就一直存在，只是這台真機在 Issue 5 修復前，長按拖曳本身幾乎無法啟動（見 Issue 5 根因），使用者根本沒機會測到「原地再長按編輯」這個情境——Issue 5 讓長按終於能穩定啟動，才讓這個原本就存在的缺口第一次被真機試用發現，不是 Issue 5 的迴歸。既有測試套件裡涉及 `resolvePdfExistingAnnotation`／`AnnotationToolbar` 命中判斷的測試（`reader_screen_test.dart`）皆直接呼叫 `pdfView.onSelectionRectComputed?.call(...)` 灌入現成的 `PdfSelectionInfo`，完全繞過真實手勢→退化選取判斷這段路徑，因此從未測出這個缺口。
+
+**待決策（下一步 `/grill-with-docs` 處理）：** 至少三個可能修法方向，優劣未評估——(a) 退化選取時額外檢查落點是否命中既有劃線/備註，命中則仍照樣觸發 `onSelectionRectComputed`（沿用該劃線既有矩形或以落點為準）；(b) 調整/移除 `minFraction` 判定邏輯本身；(c) 另立一條與長按拖曳選取平行的「原地長按命中既有標記」偵測路徑。

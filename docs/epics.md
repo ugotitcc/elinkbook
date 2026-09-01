@@ -33,7 +33,7 @@
 | 23 | `epic-22-reader-theme-integration` 閱讀主題真正接上書本內容（深色/羊皮紙前景背景色） | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 24 | `epic-20-fxl-foliate-migration` FXL 渲染引擎遷移評估（foliate-js Phase 2） | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 25 | `epic-24-pdf-engine-rebuild` PDF 渲染引擎重建（遷移至 pdfrx/PDFium） | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
-| 26 | `epic-25-annotation-interaction-qa` 劃線/備註真機互動精修 | 🟡 開發中 (Active) | Issue 1-4 已完成（Issue 1 尚有極低機率真機殘留限制待驗證）；Issue 5 新立案（PDF 長按選取因觸控彈跳幾乎無法啟動） |
+| 26 | `epic-25-annotation-interaction-qa` 劃線/備註真機互動精修 | 🟡 開發中 (Active) | Issue 1-4 已完成（Issue 1 尚有極低機率真機殘留限制待驗證）；Issue 5 已實作並真機驗證通過；Issue 6 新立案（PDF 原地長按既有劃線不會跳出編輯工具列） |
 | 27 | `epic-26-architecture-hardening` 架構深化機會（測試套件效率／EPUB-PDF 底層架構） | 🟡 開發中 (Active) | Issue 3／11-13 已完成 |
 | 28 | `epic-27-reader-device-compat` 裝置相容性強化（開書逾時／載入中點擊防護／高對比視覺強化） | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 29 | `epic-28-reader-settings-enhancements` 閱讀器設定強化（字距／Console Log 開關／版面設定預設集） | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
