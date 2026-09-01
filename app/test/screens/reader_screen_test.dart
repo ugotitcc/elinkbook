@@ -7376,21 +7376,26 @@ void main() {
         await tester.pump();
         await pumpUntilPdfReady(tester);
 
-        // 直接透過 PdfReaderView 的 onSelectionRectComputed 回呼模擬退化選取
-        // （長按無明顯拖曳位移），比照既有 PDF 標註工具列測試的直接回呼模式
-        // （手勢觸發在 widget test 環境下無法可靠啟動 PdfReaderView 內部的手勢
-        // 偵測層）。
-        final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
-        pdfView.onSelectionRectComputed?.call(
-          // 退化選取：left == right, top == bottom（零面積點矩形）。
-          const PdfSelectionInfo(
-            pageIndex: 0,
-            rect: PercentRect(left: 0.3, top: 0.4, right: 0.3, bottom: 0.4),
-            widgetRect: PercentRect(left: 0.3, top: 0.4, right: 0.3, bottom: 0.4),
-            text: '',
-          ),
+        // 透過真實長按手勢重現使用者操作（規劃階段審查 review-issue-6.md
+        // Important #2 修正——原本直接呼叫 onSelectionRectComputed，繞過真實
+        // 手勢偵測層，恰好落入本 Issue 自己診斷出「導致 bug 未被測出」的同一
+        // 種測試模式）。落點須用既有劃線疊圖實際渲染出來的座標（而非假設
+        // PdfReaderView 整個 widget 尺寸等於頁面內容範圍——PAGE_FIT 模式下
+        // 常有 letterbox 留白，兩者不相等），才能保證精準命中。
+        final decorationFinder = find.byKey(const Key('pdf_reader_decoration_0_0'));
+        expect(decorationFinder, findsOneWidget);
+        final pos = tester.getCenter(decorationFinder);
+
+        final gesture = await tester.startGesture(pos);
+        await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+        await gesture.up();
+        // _finishSelectionDrag() 的文字萃取是真實非同步 FFI 呼叫
+        // （page.loadStructuredText()），須用 pumpUntilPdfReady 讓真實
+        // event loop 有機會推進，固定時長的 tester.pump() 等不到它完成。
+        await pumpUntilPdfReady(
+          tester,
+          condition: () => find.byType(AnnotationToolbar).evaluate().isNotEmpty,
         );
-        await tester.pump();
 
         expect(find.byType(AnnotationToolbar), findsOneWidget,
             reason: '退化選取命中既有劃線，應顯示工具列（Issue 6）');
@@ -7421,17 +7426,15 @@ void main() {
         await tester.pump();
         await pumpUntilPdfReady(tester);
 
-        // 直接模擬退化選取回呼（無任何劃線/備註資料）。
-        final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
-        pdfView.onSelectionRectComputed?.call(
-          const PdfSelectionInfo(
-            pageIndex: 0,
-            rect: PercentRect(left: 0.3, top: 0.4, right: 0.3, bottom: 0.4),
-            widgetRect: PercentRect(left: 0.3, top: 0.4, right: 0.3, bottom: 0.4),
-            text: '',
-          ),
-        );
-        await tester.pump();
+        // 透過真實長按手勢重現（同上則測試的修正理由，review-issue-6.md
+        // Important #2）。沒有任何既有劃線/備註，落點用 PdfReaderView 的
+        // 畫面中心即可——PAGE_FIT 模式預設置中，落在頁面內容範圍內。
+        final pos = tester.getCenter(find.byType(PdfReaderView));
+
+        final gesture = await tester.startGesture(pos);
+        await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+        await gesture.up();
+        await pumpUntilPdfReady(tester);
 
         expect(find.byType(AnnotationToolbar), findsNothing,
             reason: '沒有命中任何既有標記的退化選取，須維持原本「什麼都不做」'

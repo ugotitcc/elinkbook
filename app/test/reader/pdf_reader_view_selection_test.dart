@@ -302,6 +302,35 @@ void main() {
     // 位移只有頁面寬度的 0.3%，遠小於 minFraction（1%），仍應視為退化選取。
     final end = start + Offset(areaSize.width * 0.003, 0);
 
+    // 【review-issue-6.md Important #1 修正】原本用 100 / areaSize.width
+    // （areaSize 是 PdfReaderView 整個 widget 尺寸）計算「預期落點百分比」，
+    // 但 pointPercentRect() 換算用的 areaSize 其實是頁面內容範圍
+    // （drag.areaSize，PAGE_FIT 模式下常小於整個 widget，有 letterbox
+    // 留白），兩者不相等，直接算出來的預期值會錯（規劃階段查證疏漏，實測
+    // 才發現）。改為在同一個 widget 上先做一次「完全無位移」的長按取得
+    // 參考值，再跟「有些微位移」的長按結果比對是否精確相等——不需要知道
+    // 頁面內容範圍實際尺寸，只要證明兩者算出同一個值，就能證明落點確實
+    // 固定用起點、沒有用到 drag.current。
+    //
+    // 實測發現：pdfrx 第一次 onPageRendered 觸發時回報的頁面內容範圍
+    // （drag.areaSize）與稍後（例如完成過一次選取之後）會不一致——這是
+    // pdfrx 本身逐步精確化排版量測的既有行為，與本次修法無關。因此先做一次
+    // 「暖機」長按讓排版穩定下來，丟棄其結果，確保接下來要比對的兩次
+    // （reference／drift）量到的都是同一個已穩定的 areaSize，排除這個環境
+    // 雜訊，不是真的在測 pdfrx 排版穩定性本身。
+    final warmupGesture = await tester.startGesture(start);
+    await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+    await warmupGesture.up();
+    await pumpUntilPdfReady(tester, condition: () => computed != null);
+    computed = null;
+
+    final referenceGesture = await tester.startGesture(start);
+    await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+    await referenceGesture.up();
+    await pumpUntilPdfReady(tester, condition: () => computed != null);
+    final referenceLeft = computed!.rect.left;
+    computed = null;
+
     final gesture = await tester.startGesture(start);
     await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
     await gesture.moveTo(end);
@@ -314,9 +343,9 @@ void main() {
         reason: '仍在 minFraction 門檻內的微小移動，一樣視為退化選取的點');
     expect(computed!.rect.top, computed!.rect.bottom,
         reason: '退化選取換算出的矩形須是零面積的點（top==bottom）');
-    // 落點須在 [0,1] 百分比範圍內（退化選取的點矩形）。
-    expect(computed!.rect.left, inInclusiveRange(0.0, 1.0));
-    expect(computed!.rect.top, inInclusiveRange(0.0, 1.0));
+    expect(computed!.rect.left, referenceLeft,
+        reason: '落點須固定用長按起點，跟完全無位移那次的結果須精確相等，'
+            '不可因為拖曳終點飄移而算出不同的值');
   });
 
   testWidgets('長按拖曳過程中即時顯示選取矩形視覺回饋', (tester) async {
