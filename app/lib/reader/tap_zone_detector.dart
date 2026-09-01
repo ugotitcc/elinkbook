@@ -61,6 +61,13 @@ const int kTapZoneDebounceMs = 350;
 /// [tapDebounceMs] 防彈跳（Epic 27 Issue 12）：同一熱區判定為合格點擊後，
 /// 記錄該次放開時間。若在 [tapDebounceMs] 毫秒內再次判定為合格點擊，
 /// 則直接忽略（吸收觸控面板硬體彈跳雜訊）。
+///
+/// [onDebugEvent]（Epic 26 Issue 3 暫時性真機診斷插樁）：非 null 時，於每次
+/// `onPointerDown`/`onPointerMove`（位移超出容許範圍作廢）/`onPointerUp`
+/// （合格/不合格判定結果）/`onPointerCancel` 回報一則描述訊息，供 PDF 呼叫端
+/// 接上 `ReaderConsoleLog` 進行真機資料蒐集，驗證現行 700ms 是否合適。EPUB
+/// 呼叫端不接此參數（維持 null），行為完全不受影響。診斷結束後需整段移除
+/// （`grep -rn "onDebugEvent"` 確認清除乾淨）。
 class TapZoneDetector extends StatefulWidget {
   final VoidCallback onTap;
   final Widget child;
@@ -68,6 +75,7 @@ class TapZoneDetector extends StatefulWidget {
   final int tapMaxDurationMs;
   final double tapSlop;
   final int tapDebounceMs;
+  final void Function(String message)? onDebugEvent;
 
   const TapZoneDetector({
     super.key,
@@ -77,6 +85,7 @@ class TapZoneDetector extends StatefulWidget {
     required this.tapMaxDurationMs,
     this.tapSlop = kTapZoneSlop,
     this.tapDebounceMs = kTapZoneDebounceMs,
+    this.onDebugEvent,
   });
 
   @override
@@ -95,6 +104,8 @@ class _TapZoneDetectorState extends State<TapZoneDetector> {
       onPointerDown: (event) {
         _downPosition = event.position;
         _downTimeMs = widget.nowMs();
+        widget.onDebugEvent?.call(
+            '[DEBUG-e26i3] down t=$_downTimeMs pos=${event.position}');
       },
       onPointerMove: (event) {
         final downPosition = _downPosition;
@@ -106,23 +117,35 @@ class _TapZoneDetectorState extends State<TapZoneDetector> {
           // Issue 9）。
           _downPosition = null;
           _downTimeMs = null;
+          widget.onDebugEvent?.call(
+              '[DEBUG-e26i3] invalidated reason=slop distance=${distance.toStringAsFixed(1)} t=${widget.nowMs()}');
         }
       },
       onPointerUp: (event) {
         final downPosition = _downPosition;
         final downTimeMs = _downTimeMs;
-        if (downPosition == null || downTimeMs == null) return;
         final now = widget.nowMs();
+        if (downPosition == null || downTimeMs == null) {
+          widget.onDebugEvent
+              ?.call('[DEBUG-e26i3] up reason=no-active-press t=$now');
+          return;
+        }
         final elapsed = now - downTimeMs;
         final distance = (event.position - downPosition).distance;
         if (elapsed <= widget.tapMaxDurationMs &&
             distance <= widget.tapSlop) {
           final previousTapUpTimeMs = _lastQualifyingTapUpTimeMs;
           _lastQualifyingTapUpTimeMs = now;
-          if (previousTapUpTimeMs == null ||
-              now - previousTapUpTimeMs >= widget.tapDebounceMs) {
+          final debounced = previousTapUpTimeMs != null &&
+              now - previousTapUpTimeMs < widget.tapDebounceMs;
+          widget.onDebugEvent?.call(
+              '[DEBUG-e26i3] up qualified=true fired=${!debounced} elapsed=$elapsed distance=${distance.toStringAsFixed(1)} t=$now');
+          if (!debounced) {
             widget.onTap();
           }
+        } else {
+          widget.onDebugEvent?.call(
+              '[DEBUG-e26i3] up qualified=false reason=${elapsed > widget.tapMaxDurationMs ? "duration" : "distance"} elapsed=$elapsed distance=${distance.toStringAsFixed(1)} t=$now');
         }
       },
       // 系統層級手勢中斷（例如滑出螢幕邊緣觸發 OS 系統手勢）會送出
@@ -132,6 +155,8 @@ class _TapZoneDetectorState extends State<TapZoneDetector> {
       onPointerCancel: (_) {
         _downPosition = null;
         _downTimeMs = null;
+        widget.onDebugEvent
+            ?.call('[DEBUG-e26i3] cancel t=${widget.nowMs()}');
       },
       child: widget.child,
     );

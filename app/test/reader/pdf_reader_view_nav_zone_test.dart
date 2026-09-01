@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:pdfrx/pdfrx.dart';
 import 'package:elinkbook/reader/pdf_reader_view.dart';
 import 'package:elinkbook/reader/zone_action.dart';
+import 'package:elinkbook/reader/reader_console_log.dart';
 import '../support/pump_until_pdf_ready.dart';
 
 void main() {
@@ -178,6 +179,37 @@ void main() {
     await tester.tap(find.byKey(const Key('pdf_reader_nav_zone_4')));
     await tester.pump();
     expect(triggered, ZoneAction.menu);
+    await tester.pump(const Duration(milliseconds: 400));
+  });
+
+  testWidgets(
+      '合格快速點擊時，ReaderConsoleLog 收到帶 zone 索引的 [DEBUG-e26i3] 插樁訊息（Epic 26 Issue 3 暫時性真機診斷插樁）',
+      (tester) async {
+    ReaderConsoleLog.clear();
+    var renderedCount = 0;
+    final actions = List<ZoneAction>.filled(9, ZoneAction.menu);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PdfReaderView(
+          filePath: 'test/fixtures/sample_multi_page.pdf',
+          onPageRendered: () => renderedCount++,
+          onError: (_) {},
+          navZoneActions: actions,
+        ),
+      ),
+    );
+    await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
+
+    await tester.tap(find.byKey(const Key('pdf_reader_nav_zone_4')));
+    await tester.pump();
+
+    expect(
+      ReaderConsoleLog.entries.value.any((line) =>
+          line.startsWith('[DEBUG-e26i3] up qualified=true fired=true') &&
+          line.endsWith('zone=4')),
+      isTrue,
+    );
     await tester.pump(const Duration(milliseconds: 400));
   });
 }

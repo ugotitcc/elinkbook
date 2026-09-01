@@ -22,7 +22,9 @@ import 'pdf_selection_geometry.dart';
 import 'pdf_selection_info.dart';
 import 'pdf_search_match.dart';
 import 'pdf_search_geometry.dart';
+import 'bounce_tolerant_long_press_detector.dart';
 import 'percent_rect.dart';
+import 'reader_console_log.dart';
 import 'tap_zone_detector.dart';
 import 'zone_action.dart';
 
@@ -995,6 +997,12 @@ class _PdfReaderViewState extends State<PdfReaderView> {
                         // 常數收斂），不再各自宣告字面值。
                         nowMs: () => clock.now().millisecondsSinceEpoch,
                         tapMaxDurationMs: 700,
+                        // Epic 26 Issue 3 暫時性真機診斷插樁：僅 PDF 端接上
+                        // onDebugEvent，EPUB 端（foliate_reader_view.dart）
+                        // 不接、不受影響。診斷結束後需整段移除（grep
+                        // "DEBUG-e26i3" 確認清除乾淨）。
+                        onDebugEvent: (message) =>
+                            ReaderConsoleLog.add('$message zone=$index'),
                         onTap: () => widget.onZoneAction?.call(action),
                         child: Container(
                           decoration: widget.showNavZoneDebugOverlay
@@ -1128,9 +1136,8 @@ class _PdfReaderViewState extends State<PdfReaderView> {
 
   Widget _buildSelectionGestureLayer(int pageIndex, Rect pageRectInViewer) {
     return Positioned.fill(
-      child: GestureDetector(
-        behavior: HitTestBehavior.translucent,
-        onLongPressStart: (details) {
+      child: BounceTolerantLongPressDetector(
+        onLongPressStart: (position) {
           if (widget.cropEditModeActive) return;
           _selectionDragGenerationId++;
           setState(() {
@@ -1138,17 +1145,18 @@ class _PdfReaderViewState extends State<PdfReaderView> {
               pageIndex: pageIndex,
               areaSize: pageRectInViewer.size,
               pageOffsetInViewer: pageRectInViewer.topLeft,
-              start: details.localPosition,
+              start: position,
             );
           });
         },
-        onLongPressMoveUpdate: (details) {
+        onLongPressMoveUpdate: (position) {
           final drag = _selectionDrag;
           if (drag == null || drag.pageIndex != pageIndex) return;
-          setState(() => drag.current = details.localPosition);
+          setState(() => drag.current = position);
         },
-        onLongPressEnd: (details) => _finishSelectionDrag(),
+        onLongPressEnd: () => _finishSelectionDrag(),
         onLongPressCancel: () => _cancelSelectionDrag(),
+        child: const SizedBox.shrink(),
       ),
     );
   }

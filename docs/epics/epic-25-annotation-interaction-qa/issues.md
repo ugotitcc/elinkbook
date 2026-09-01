@@ -2,6 +2,8 @@
 
 依 `design.md`「第一輪真機使用回報」（2026-08-12，4 項回報）拆解為 Issue 1-4。全部工單彼此獨立、無依賴關係，可任意順序或平行開始。
 
+**2026-08-31 新增 Issue 5：** `epic-26-architecture-hardening` Issue 3（PDF 熱區快速點擊時長門檻真機診斷）蒐集真機資料過程中意外發現的獨立問題——PDF 長按拖曳建立劃線/備註在觸控雜訊較嚴重的裝置上幾乎無法啟動，與 Issue 3 本身的 `tapMaxDurationMs` 校準無關，拆為本 Epic 的 Issue 5，與 Issue 1-4 同樣彼此獨立。
+
 ---
 
 ## Issue 1：畫線選取已確立仍跳頁（裝置相關——Air Reader Pro C 會、TCL 14 吋不會）
@@ -236,3 +238,82 @@ doc.addEventListener('click', e => {
 - 情境 B 即為「正常點擊畫線（無換頁介入）仍正確觸發編輯/刪除對話框」的回歸測試。
 
 **驗收標準：** 已達成——headless 驗證確認修復後不再誤觸發、正常點擊畫線行為不受影響。**真機驗證換頁+畫線重疊情境不再誤跳出刪除確認尚待補齊**（已知殘留限制，見上方 Status：真機上長按原地放開是否仍合成 click 事件未經驗證）。
+
+---
+
+## Issue 5：PDF 長按拖曳建立標註在觸控雜訊（彈跳）較嚴重的裝置上幾乎無法啟動
+
+**Status:** ✅ 已實作、通過程式碼審查、通過自動化測試（比照 `plan-issue-5.md`）。新增 `BounceTolerantLongPressDetector`（`app/lib/reader/bounce_tolerant_long_press_detector.dart`）取代 `_buildSelectionGestureLayer()` 原本的 `GestureDetector`／`LongPressGestureRecognizer`，用真機校準過的既有常數（`kTapZoneDebounceMs`＝350ms、`kTapZoneSlop`＝18px）合併判定彈跳雜訊。用裝置 2 真實彈跳資料（`tmp/epic-25/log-issue5/device-2.txt`）重播的單元測試與端對端測試皆通過，證實修復前 0 次成功啟動的彈跳序列，修復後能正確判定為一次連續長按並完成選取。**待人類真機直接試用回報**（依 Issue 5 敲定的驗證方式，刻意不另排正式插樁診斷這一輪，見「Solution」段落）。
+
+**2026-08-31 程式碼審查（`reviews/review-issue-5.md`）：** 0 Critical、1 Important、2 Minor。Important——既有「長按但幾乎沒有拖曳位移（退化選取）時，不觸發 `onSelectionRectComputed`」測試在 `gesture.up()` 後只 `pump()` 一格畫面、未等滿 `mergeGapMs`（350ms），導致新元件的非同步 `onLongPressEnd` 根本還沒觸發、斷言淪為空判定；審查者實測植入 bug（移除 `_finishSelectionDrag()` 的退化選取防呆）證實該測試當時抓不到問題。已修正等待時間為 350ms，並用同一招植入 bug 實驗重新驗證：修好後的測試會正確失敗，還原實驗改動後確認乾淨。兩項 Minor（計畫程式碼片段遺漏 `child` 參數、既有雙層多指觸控防禦架構）皆確認非缺陷，不需改動。
+
+**來源：** `epic-26-architecture-hardening` Issue 3（PDF 熱區快速點擊時長門檻真機診斷）真機資料蒐集過程中的意外發現——插樁資料證實 700ms 門檻本身沒問題（見該 Issue「2026-08-31 真機驗證結果」段落），但同一批 log 意外暴露另一個更嚴重、範圍完全不同的問題：長按拖曳建立劃線/備註這個手勢，在觸控雜訊較嚴重的裝置上幾乎完全無法啟動。與 `tapMaxDurationMs` 無關，不影響 Issue 3 結案。
+
+**依賴：** 無
+
+**背景／症狀：** 人類於兩台真機各自進行一輪操作測試，回報「基本上都無法順利選取」。真機 log（已存於 `tmp/epic-25/log-issue5/device-1.txt`／`device-2.txt`，未進版控）逐行核對確認：
+
+| 指標 | 裝置 1 | 裝置 2 |
+|---|---|---|
+| `onPointerDown` 次數（`[DEBUG-e26i3] down`） | 45 | 48 |
+| `onLongPressStart` 次數（長按選取真正啟動） | 3 | **0** |
+| `onLongPressCancel` 次數（長按被取消） | 25 | 22 |
+| `onLongPressEnd` 次數（長按選取完整跑完） | 3 | **0** |
+| 快速點擊成功觸發翻頁（`qualified=true fired=true`） | 17 | 17 |
+| 快速點擊被防彈跳吸收（`qualified=true fired=false`） | 4 | **30** |
+
+裝置 2 整段 log 完全沒有一次 `onLongPressStart`——長按選取一次都沒有真正啟動過。裝置 1 雖然啟動過 3 次，但相對 45 次按壓，成功率同樣極低。
+
+**根因（已用 log 交叉比對確認，非臆測）：**
+
+裝置 2 的 log 中，同一秒內同一個位置（`zone=5`）連續出現十幾組 `down`／`up`，每組間隔僅幾毫秒到一百多毫秒（例如 `t=306429`／`306498`／`306612`／`306625`／`306682`／`306686`／`306742`…，見 `device-2.txt:2-31`），這不是人類手指的正常按壓節奏，是觸控/數位板硬體雜訊（俗稱「彈跳」）——同一根手指持續按住不放，硬體卻回報成一連串極短暫的獨立 down/up 事件。這個專案先前已確認過同一類現象存在（`tap_zone_detector_test.dart` 的「重現真機 adb getevent 側錄到的實際硬體彈跳間隔序列」測試，`epic-27` Issue 12 為此加上 `tapDebounceMs` 防彈跳機制）。
+
+`TapZoneDetector`（九宮格熱區）本身有 350ms 防彈跳保護，這批雜訊大多被正確吸收（裝置 2 高達 30 次 `qualified=true fired=false`，代表沒有連續誤翻頁）。但 `_buildSelectionGestureLayer()`（`app/lib/reader/pdf_reader_view.dart`）用的是 Flutter 內建 `GestureDetector` 的 `LongPressGestureRecognizer`，這個元件**沒有任何彈跳容忍度**——每一次新的 `down` 都會讓它的內部長按計時器（預設約 500ms）重新歸零。只要雜訊持續在計時器歸零前就送出下一組 `down`，計時器永遠無法累積到啟動長按判定所需的時間，`onLongPressStart` 便永遠不會觸發，使用者的手指明明持續按著不放，選取功能卻完全沒有反應。
+
+裝置 1 雜訊較輕（同一根手指偶爾在拖曳過程中冒出一次多餘的 `down`/`up`，例如 `device-1.txt` 中 `t=1788169151508`／`1788169151577` 兩個相隔僅 69ms 的 `down`），因此長按仍偶爾能啟動，但成功率同樣偏低。
+
+**與 Issue 3（`epic-26`）的界線：** `tapMaxDurationMs`／`TapZoneDetector` 本身在這兩份 log 中運作正常——快速點擊都在 700ms 門檻內迅速觸發翻頁（`elapsed` 皆為個位數到兩百多 ms），沒有證據顯示 700ms 造成誤翻頁或手感遲鈍。本 Issue 的根因在完全不同的元件（`_buildSelectionGestureLayer` 的 `LongPressGestureRecognizer`），修復不應該去動 `TapZoneDetector`／`tapMaxDurationMs`。
+
+**Solution（方向，2026-08-31 `/grill-with-docs` 敲定）：**
+
+完全放棄 `_buildSelectionGestureLayer()` 現行的 `GestureDetector`／`LongPressGestureRecognizer`，改用跟 `TapZoneDetector`（`app/lib/reader/tap_zone_detector.dart`，見 Epic 26 Issue 2）同一套架構——自製一個不參與手勢競技場的 `Listener` 狀態機，取代內建元件：
+
+- **彈跳合併判定**（兩個條件皆須滿足才視為「同一次按壓的延續」，不重置狀態）：時間——兩次 `down` 間隔 < 350ms（沿用既有真機校準值 `kTapZoneDebounceMs`）；位置——位移 < 18px（沿用既有 `tapSlop`）。兩者皆改為建構參數注入、有預設值，不寫死於邏輯內部。
+- **長按判定**：累積按壓時長從整串延續裡「最早那次 `down`」開始持續累加（雜訊造成的空隙時間也算在內，因為判定上就是同一次按壓沒放開），門檻維持 Flutter 預設的 `kLongPressTimeout`（500ms），同樣改為建構參數注入。
+- **選取起點**：固定使用「最早那次 `down`」的座標，不會因雜訊本身的位置飄移（真機資料中觀察到雜訊事件位置最大可飄移近 100px）讓選取起點跳動。
+- **拖曳中途保護**：長按正式啟動、進入拖曳階段後，同一套合併邏輯需持續適用（不只保護啟動前），中途發生的雜訊一樣要被吸收，矩形不閃爍、不跳回舊位置。
+- **`_selectionDragGenerationId`**：維持現行設計不變，只在真正一次全新的長按啟動時遞增（`pdf_reader_view.dart:1147`），雜訊延續不觸發遞增——這是「延續＝同一次長按」設計下的直接結果，不需要額外改動。
+
+**驗證方式（刻意不另排真機插樁診斷）**：已有裝置 2 真實彈跳間隔資料（`tmp/epic-25/log-issue5/device-2.txt`）可直接寫成自動化回歸測試，比照 `tap_zone_detector_test.dart` 既有「重現真機 adb getevent 側錄到的實際硬體彈跳間隔序列」測試的手法（用真實記錄的間隔值重播，而非憑空編造數字）。修復完成後由人類直接真機試用回報，若仍有殘留問題，再另開一輪比照 Issue 3 的真機插樁診斷模式處理。
+
+**單元測試要求：**
+- 用 `device-2.txt` 記錄的真實 `up→down` 間隔序列（2ms～122ms，見 Solution 段落）重播，驗證新邏輯能正確判定為一次連續長按、`onLongPressStart`／drag callback 只觸發一次（不因雜訊誤判為多次獨立手勢）。
+- 驗證位置飄移超過 18px 或時間間隔超過 350ms 時，正確視為兩次獨立按壓（不誤合併）。
+- 驗證拖曳階段中途發生雜訊時，選取矩形的目前位置不受影響（沿用拖曳前最後一筆真實移動位置）。
+- 既有的正常長按拖曳框選（無雜訊情境）行為須維持不變，零回歸。
+
+**驗收標準：** 用 `device-2.txt` 真實彈跳資料重播的自動化測試通過，證明新邏輯能在該雜訊模式下正確判定為一次連續長按；既有正常長按拖曳框選行為零回歸；`flutter analyze` 乾淨、`flutter test` 全數通過。真機驗證（人類直接試用回報，非正式插樁診斷）待實作完成後進行。
+
+---
+
+## Issue 6：PDF 原地長按既有劃線不會跳出編輯工具列（AnnotationToolbar）
+
+**Status:** 🔍 已診斷（`/diagnose`），待 `/grill-with-docs` 敲定修法方向與撰寫實作計畫。
+
+**來源：** Issue 5 修復後，人類真機試用回報——「長壓正常，選取畫線正常。但在畫線的上面再次長壓不會跳出畫線工具」。
+
+**依賴：** 無（與 Issue 5 的 `BounceTolerantLongPressDetector` 狀態機邏輯本身無關，見下方「與 Issue 5 的界線」）。
+
+**背景／症狀：** 在既有劃線（或備註）正上方原地長按（不明顯拖曳），預期應跳出 `AnnotationToolbar` 供編輯/刪除，實際上完全沒有反應。
+
+**根因（已用真實 `PdfReaderView` widget 測試重現確認，非臆測）：**
+
+`_finishSelectionDrag()`（`app/lib/reader/pdf_reader_view.dart:1190` 一帶）在計算選取矩形後，會呼叫 `percentRectFromDrag()`（`app/lib/reader/pdf_selection_geometry.dart`）——只要拖曳的寬或高小於 `minFraction`（預設 1%，`epic-24-pdf-engine-rebuild` Issue 4 從已刪除的原生 `PdfReaderView.kt` 搬過來的既有防呆常數），就回傳 `null`，`_finishSelectionDrag()` 直接視為「退化選取，等同取消」提前 `return`，完全不會呼叫 `widget.onSelectionRectComputed`。
+
+而 PDF 判斷「這次選取是否命中既有劃線/備註」的 `resolvePdfExistingAnnotation()`（`app/lib/reader/annotation_resolution.dart`）**只能在 `onSelectionRectComputed` 真的觸發之後**、由 `ReaderScreen` 拿收到的 `PdfSelectionInfo.rect` 去跟既有 `_highlights`/`_notes` 做矩形重疊比對（見該檔案 doc comment：PDF 沒有像 EPUB 那樣在 JS 端先算好命中結果的 `existingAnnotationId`，純靠這個後端幾何比對）。
+
+診斷方式：在 `PdfReaderView` 上用 `refreshAnnotations()` 疊一筆既有劃線，接著在該劃線正中央模擬一次「按下→維持 550ms→放開」、中途完全無額外移動的長按（比照使用者「原地再長按」的真實意圖），結果 `onSelectionRectComputed` 從未觸發。也就是說：**使用者「精準按在既有劃線上、不特意拖曳」這個動作本身，正好會被 1% 退化選取防呆判定為誤觸而整個吞掉**，`resolvePdfExistingAnnotation` 根本沒有機會被呼叫，`AnnotationToolbar` 自然不會出現。
+
+**與 Issue 5 的界線：** 這段退化選取防呆邏輯（`percentRectFromDrag`／`_finishSelectionDrag` 的 null 檢查）在 Issue 5 的 Task 2 完全沒有被觸碰——Task 2 只替換了偵測長按手勢的底層元件（`GestureDetector` → `BounceTolerantLongPressDetector`），選取狀態管理與退化選取判斷邏輯原封不動（見 `plan-issue-5.md` Global Constraints 與 Self-Review）。這個問題很可能從 `epic-24` 這個防呆常數導入以來就一直存在，只是這台真機在 Issue 5 修復前，長按拖曳本身幾乎無法啟動（見 Issue 5 根因），使用者根本沒機會測到「原地再長按編輯」這個情境——Issue 5 讓長按終於能穩定啟動，才讓這個原本就存在的缺口第一次被真機試用發現，不是 Issue 5 的迴歸。既有測試套件裡涉及 `resolvePdfExistingAnnotation`／`AnnotationToolbar` 命中判斷的測試（`reader_screen_test.dart`）皆直接呼叫 `pdfView.onSelectionRectComputed?.call(...)` 灌入現成的 `PdfSelectionInfo`，完全繞過真實手勢→退化選取判斷這段路徑，因此從未測出這個缺口。
+
+**待決策（下一步 `/grill-with-docs` 處理）：** 至少三個可能修法方向，優劣未評估——(a) 退化選取時額外檢查落點是否命中既有劃線/備註，命中則仍照樣觸發 `onSelectionRectComputed`（沿用該劃線既有矩形或以落點為準）；(b) 調整/移除 `minFraction` 判定邏輯本身；(c) 另立一條與長按拖曳選取平行的「原地長按命中既有標記」偵測路徑。

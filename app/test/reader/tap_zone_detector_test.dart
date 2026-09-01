@@ -9,6 +9,7 @@ void main() {
     int tapMaxDurationMs = 400,
     double tapSlop = 18.0,
     int tapDebounceMs = 350,
+    void Function(String message)? onDebugEvent,
   }) {
     return MaterialApp(
       home: TapZoneDetector(
@@ -17,6 +18,7 @@ void main() {
         tapMaxDurationMs: tapMaxDurationMs,
         tapSlop: tapSlop,
         tapDebounceMs: tapDebounceMs,
+        onDebugEvent: onDebugEvent,
         child: const SizedBox(width: 100, height: 100),
       ),
     );
@@ -250,6 +252,53 @@ void main() {
     expect(tapped, isFalse,
         reason: '若建構子預設值不是 kTapZoneSlop（例如意外退回舊的某個字面值），'
             '這個剛好超過 kTapZoneSlop 的位移可能不會被正確判定為超出範圍');
+  });
+
+  testWidgets(
+      'onDebugEvent（Epic 26 Issue 3 暫時性真機診斷插樁）在合格點擊時回報 up qualified=true fired=true',
+      (tester) async {
+    final messages = <String>[];
+    var fakeNowMs = 1000;
+    await tester.pumpWidget(wrap(
+      onTap: () {},
+      nowMs: () => fakeNowMs,
+      onDebugEvent: messages.add,
+    ));
+
+    final gesture = await tester.startGesture(const Offset(50, 50));
+    fakeNowMs += 100;
+    await gesture.up();
+    await tester.pump();
+
+    expect(
+      messages,
+      contains(
+          '[DEBUG-e26i3] up qualified=true fired=true elapsed=100 distance=0.0 t=1100'),
+    );
+  });
+
+  testWidgets(
+      'onDebugEvent（Epic 26 Issue 3 暫時性真機診斷插樁）在超過時長門檻時回報 qualified=false reason=duration',
+      (tester) async {
+    final messages = <String>[];
+    var fakeNowMs = 1000;
+    await tester.pumpWidget(wrap(
+      onTap: () {},
+      nowMs: () => fakeNowMs,
+      tapMaxDurationMs: 400,
+      onDebugEvent: messages.add,
+    ));
+
+    final gesture = await tester.startGesture(const Offset(50, 50));
+    fakeNowMs += 500;
+    await gesture.up();
+    await tester.pump();
+
+    expect(
+      messages,
+      contains(
+          '[DEBUG-e26i3] up qualified=false reason=duration elapsed=500 distance=0.0 t=1500'),
+    );
   });
 }
 
