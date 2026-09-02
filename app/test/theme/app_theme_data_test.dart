@@ -184,6 +184,24 @@ void main() {
       expect(theme.scaffoldBackgroundColor, const Color(0xFFFCFAF2));
     });
 
+    test('eink 主題 ColorScheme 全角色對齊 DESIGN.md §1.1（純黑白，不留'
+        ' secondary／onSecondary）', () {
+      final theme = buildEinkThemeData();
+      final scheme = theme.colorScheme;
+
+      expect(scheme.primary, const Color(0xFF000000));
+      expect(scheme.onPrimary, const Color(0xFFFFFFFF));
+      expect(scheme.primaryContainer, const Color(0xFFFFFFFF));
+      expect(scheme.onPrimaryContainer, const Color(0xFF000000));
+      expect(scheme.surface, const Color(0xFFFFFFFF));
+      expect(scheme.onSurface, const Color(0xFF000000));
+      expect(scheme.onSurfaceVariant, const Color(0xFF000000));
+      expect(scheme.outline, const Color(0xFF000000));
+      expect(scheme.surfaceContainerHighest, const Color(0xFFFFFFFF));
+      expect(scheme.error, const Color(0xFF000000));
+      expect(theme.scaffoldBackgroundColor, const Color(0xFFFFFFFF));
+    });
+
   });
 
   group('resolveThemeData 組裝的 ElinkTokens', () {
@@ -239,6 +257,25 @@ void main() {
       expect(tokens.isEink, false);
       expect(tokens.reducedMotion, false);
       expect(tokens.discretePaging, false);
+    });
+
+    test('E-Ink 模式（isEinkMode: true，不論 theme 為何）組裝出正確的'
+        ' ElinkTokens 值', () {
+      final theme = resolveThemeData(theme: AppTheme.dark, isEinkMode: true);
+      final tokens = theme.extension<ElinkTokens>();
+
+      expect(tokens, isNotNull);
+      expect(tokens!.highlightYellow, const Color(0xFF000000));
+      expect(tokens.highlightGreen, const Color(0xFF000000));
+      expect(tokens.highlightBlue, const Color(0xFF000000));
+      expect(tokens.underlineColor, const Color(0xFF000000));
+      expect(tokens.progressTrack, const Color(0xFF000000));
+      expect(tokens.coverPlaceholder, const Color(0xFFFFFFFF));
+      expect(tokens.badgeScrim, const Color(0xFF000000));
+      expect(tokens.ttsActiveHighlight, const Color(0xFF000000));
+      expect(tokens.isEink, true);
+      expect(tokens.reducedMotion, true);
+      expect(tokens.discretePaging, true);
     });
   });
 }

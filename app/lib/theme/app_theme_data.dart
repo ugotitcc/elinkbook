@@ -190,28 +190,57 @@ ThemeData _buildSepiaTheme() {
 }
 
 ThemeData _buildEinkTheme() {
+  const primary = Color(0xFF000000);
+  const primaryContainer = Color(0xFFFFFFFF);
+  const onPrimaryContainer = Color(0xFF000000);
+  const surface = Color(0xFFFFFFFF);
+  const onSurface = Color(0xFF000000);
+  const onSurfaceVariant = Color(0xFF000000);
+  const outline = Color(0xFF000000);
+  const surfaceContainerHighest = Color(0xFFFFFFFF);
+  const error = Color(0xFF000000);
+
   final colorScheme = ColorScheme.light(
-    primary: Colors.black,
+    primary: primary,
     onPrimary: Colors.white,
-    secondary: Colors.black,
-    onSecondary: Colors.white,
-    surface: Colors.white,
-    onSurface: Colors.black,
-    error: Colors.black,
+    primaryContainer: primaryContainer,
+    onPrimaryContainer: onPrimaryContainer,
+    surface: surface,
+    onSurface: onSurface,
+    onSurfaceVariant: onSurfaceVariant,
+    outline: outline,
+    surfaceContainerHighest: surfaceContainerHighest,
+    error: error,
     onError: Colors.white,
-    outline: Colors.black,
   );
 
   return ThemeData(
     brightness: Brightness.light,
     colorScheme: colorScheme,
     scaffoldBackgroundColor: Colors.white,
-    cardColor: Colors.white,
-    dividerColor: Colors.black,
     useMaterial3: true,
     // 停用點擊水波紋效果與高亮，以避免電子紙裝置上產生嚴重殘影與刷新閃爍
     splashFactory: NoSplash.splashFactory,
     hoverColor: Colors.transparent,
     highlightColor: Colors.transparent,
+    extensions: const [
+      ElinkTokens(
+        // highlightYellow／highlightGreen／highlightBlue／ttsActiveHighlight：
+        // DESIGN.md §1.2 標註「無背景（改用下劃線／外框／點虛線）」、未給
+        // 明確 hex 值——E-Ink 純黑白色盤下取黑色（描邊/底線用色），實際
+        // 「不畫底色改畫線條」的渲染邏輯屬其他 Issue 範圍，這裡只決定色票值。
+        highlightYellow: Color(0xFF000000),
+        highlightGreen: Color(0xFF000000),
+        highlightBlue: Color(0xFF000000),
+        underlineColor: Color(0xFF000000),
+        progressTrack: Color(0xFF000000),
+        coverPlaceholder: Color(0xFFFFFFFF),
+        badgeScrim: Color(0xFF000000),
+        ttsActiveHighlight: Color(0xFF000000),
+        isEink: true,
+        reducedMotion: true,
+        discretePaging: true,
+      ),
+    ],
   );
 }
