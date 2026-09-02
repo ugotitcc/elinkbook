@@ -229,7 +229,7 @@ class _NavZoneSettingsScreenState extends State<NavZoneSettingsScreen> {
           border: Border.all(
             color: selected
                 ? Theme.of(context).colorScheme.primary
-                : Theme.of(context).dividerColor,
+                : Theme.of(context).colorScheme.onSurface,
             width: selected ? 2 : 1,
           ),
         ),
@@ -315,7 +315,7 @@ class _NavZoneSettingsScreenState extends State<NavZoneSettingsScreen> {
           border: Border.all(
             color: selected
                 ? Theme.of(context).colorScheme.primary
-                : Theme.of(context).dividerColor,
+                : Theme.of(context).colorScheme.onSurface,
             width: selected ? 2 : 1,
           ),
         ),
@@ -346,7 +346,8 @@ class _NavZoneSettingsScreenState extends State<NavZoneSettingsScreen> {
                 child: Container(
                   margin: const EdgeInsets.all(2),
                   decoration: BoxDecoration(
-                    border: Border.all(color: Theme.of(context).dividerColor),
+                    border: Border.all(
+                        color: Theme.of(context).colorScheme.onSurface),
                   ),
                   alignment: Alignment.center,
                   child: Text(_actionLabel(_customActions[index])),
