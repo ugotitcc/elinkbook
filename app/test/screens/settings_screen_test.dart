@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/test/test_flutter_secure_storage_platform.dart';
 import 'package:flutter_secure_storage_platform_interface/flutter_secure_storage_platform_interface.dart';
@@ -11,6 +12,7 @@ import 'package:elinkbook/screens/settings_screen.dart';
 import 'package:elinkbook/sync/sync_account_repository.dart';
 import 'package:elinkbook/sync/sync_client.dart';
 import 'package:elinkbook/theme/app_theme.dart';
+import 'package:elinkbook/theme/app_theme_data.dart';
 import 'package:elinkbook/reader/global_reader_prefs.dart';
 import '../support/fake_cloud_account_repository.dart';
 import '../support/fake_reader_prefs_manager.dart';
@@ -300,5 +302,175 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(receivedEink, isTrue);
+  });
+  testWidgets(
+      'SettingsScreen 主題預覽圓點改讀 resolveThemeData() 的實際色值（不再維持寫死近似值）',
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: SettingsScreen(
+        prefsManager: FakeReaderPrefsManager(),
+        currentTheme: AppTheme.dark,
+      ),
+    ));
+
+    final lightPreview =
+        resolveThemeData(theme: AppTheme.light, isEinkMode: false);
+    final darkPreview =
+        resolveThemeData(theme: AppTheme.dark, isEinkMode: false);
+    final sepiaPreview =
+        resolveThemeData(theme: AppTheme.sepia, isEinkMode: false);
+
+    BoxDecoration decorationFor(String key) => tester
+        .widget<Container>(find.descendant(
+          of: find.byKey(Key(key)),
+          matching: find.byType(Container),
+        ))
+        .decoration as BoxDecoration;
+
+    final light = decorationFor('settings_theme_dot_light');
+    final dark = decorationFor('settings_theme_dot_dark');
+    final sepia = decorationFor('settings_theme_dot_sepia');
+
+    expect(light.color, lightPreview.scaffoldBackgroundColor);
+    expect(dark.color, darkPreview.scaffoldBackgroundColor);
+    expect(sepia.color, sepiaPreview.scaffoldBackgroundColor);
+
+    // currentTheme 為 dark：dark 圓點是選取狀態，邊框讀取 dark 主題自己的
+    // primary；light／sepia 未選取，邊框讀取各自主題自己的 outline
+    // （取代原本寫死的 Colors.grey）。
+    expect(
+        (dark.border as Border).top.color, darkPreview.colorScheme.primary);
+    expect(
+        (light.border as Border).top.color, lightPreview.colorScheme.outline);
+    expect(
+        (sepia.border as Border).top.color, sepiaPreview.colorScheme.outline);
+  });
+  testWidgets(
+      'SettingsScreen E-Ink 開啟時，主題預覽圓點呈現虛線邊框，不再降低透明度，'
+      '且依目前選擇的主題呈現粗細差異（DESIGN.md §17.2／§7.2）',
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: SettingsScreen(
+        prefsManager: FakeReaderPrefsManager(),
+        currentTheme: AppTheme.light,
+        isEinkMode: true,
+      ),
+    ));
+
+    // 不再有 Opacity 包裹圓點（原本的降低透明度手法已移除）。
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('settings_theme_dot_light')),
+        matching: find.byType(Opacity),
+      ),
+      findsNothing,
+    );
+
+    // 鎖定狀態下 Container 不再設定 border（虛線改由疊加的 CustomPaint
+    // 繪製）。
+    final decoration = tester
+        .widget<Container>(find.descendant(
+          of: find.byKey(const Key('settings_theme_dot_light')),
+          matching: find.byType(Container),
+        ))
+        .decoration as BoxDecoration;
+    expect(decoration.border, isNull);
+
+    CustomPaint customPaintFor(String key) => tester.widget<CustomPaint>(
+          find.descendant(
+            of: find.byKey(Key(key)),
+            matching: find.byType(CustomPaint),
+          ),
+        );
+
+    // currentTheme 為 light：light 圓點是「目前選擇」，虛線用粗線
+    // （3dp）；dark／sepia 未選擇，虛線用細線（1.5dp）——沿用 DESIGN.md
+    // §7.2 既有定義的「Border Width 1.5dp -> 3dp」數值，讓鎖定狀態下仍能
+    // 分辨原本選的是哪個主題。`_LockedDotBorderPainter` 是本檔案私有類
+    // 別，測試檔無法用型別直接存取，改以 dynamic 讀取其公開欄位
+    // strokeWidth。
+    // ignore: avoid_dynamic_calls
+    expect(
+        (customPaintFor('settings_theme_dot_light').painter as dynamic)
+            .strokeWidth,
+        3.0);
+    // ignore: avoid_dynamic_calls
+    expect(
+        (customPaintFor('settings_theme_dot_dark').painter as dynamic)
+            .strokeWidth,
+        1.5);
+
+    // 提示文字「這裡選的是關閉 E-Ink 後要恢復的主題」顯示。
+    expect(find.byKey(const Key('settings_theme_locked_hint')), findsOneWidget);
+  });
+
+  testWidgets(
+      'SettingsScreen 主題預覽圓點在 E-Ink 開啟時，Semantics 標籤讀出鎖定狀態與目前選擇的主題',
+      (tester) async {
+    final handle = tester.ensureSemantics();
+    await tester.pumpWidget(MaterialApp(
+      home: SettingsScreen(
+        prefsManager: FakeReaderPrefsManager(),
+        currentTheme: AppTheme.sepia,
+        isEinkMode: true,
+      ),
+    ));
+
+    final semantics = tester
+        .getSemantics(find.byKey(const Key('settings_theme_dot_light')));
+    expect(semantics.label, contains('已鎖定'));
+    expect(semantics.label, contains('羊皮紙'));
+
+    handle.dispose();
+  });
+
+  testWidgets(
+      'SettingsScreen 主題預覽圓點在「未鎖定」狀態下仍保有可啟動的 Semantics tap 動作'
+      '（回歸保護：Semantics 不得整包排除子樹語意，見 reviews/review-plan-issue-3.md Critical 1）',
+      (tester) async {
+    final handle = tester.ensureSemantics();
+    AppTheme? receivedTheme;
+    await tester.pumpWidget(MaterialApp(
+      home: SettingsScreen(
+        prefsManager: FakeReaderPrefsManager(),
+        currentTheme: AppTheme.light,
+        isEinkMode: false,
+        onThemeChanged: (theme) => receivedTheme = theme,
+      ),
+    ));
+
+    final semantics = tester
+        .getSemantics(find.byKey(const Key('settings_theme_dot_sepia')));
+    // SemanticsNode 本身沒有 hasAction()，要透過 getSemanticsData() 取得
+    // SemanticsData 才有這個方法（已核對 Flutter SDK
+    // src/semantics/semantics.dart 原始碼確認）。
+    expect(semantics.getSemanticsData().hasAction(SemanticsAction.tap),
+        isTrue);
+
+    await tester.tap(find.byKey(const Key('settings_theme_dot_sepia')));
+    await tester.pumpAndSettle();
+    expect(receivedTheme, AppTheme.sepia);
+
+    handle.dispose();
+  });
+
+  testWidgets('SettingsScreen E-Ink 關閉時，不顯示鎖定提示文字，圓點維持一般邊框', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: SettingsScreen(
+        prefsManager: FakeReaderPrefsManager(),
+        currentTheme: AppTheme.light,
+        isEinkMode: false,
+      ),
+    ));
+
+    expect(find.byKey(const Key('settings_theme_locked_hint')), findsNothing);
+
+    final decoration = tester
+        .widget<Container>(find.descendant(
+          of: find.byKey(const Key('settings_theme_dot_light')),
+          matching: find.byType(Container),
+        ))
+        .decoration as BoxDecoration;
+    expect(decoration.border, isNotNull);
   });
 }
