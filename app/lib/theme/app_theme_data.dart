@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'app_theme.dart';
+import 'elink_tokens.dart';
 
 /// 參考 prototype/index.html 的 CSS 變數定義，為每種主題建立對應的
 /// [ThemeData]。色彩值取自 prototype 的設計（見
@@ -35,26 +36,51 @@ ThemeData resolveThemeData({
 // ──────────────────────────────────────────────────────────
 
 ThemeData _buildLightTheme() {
-  const background = Color(0xFFF8F8FA);
+  const primary = Color(0xFF0284C7);
+  const onPrimary = Color(0xFFFFFFFF);
+  const primaryContainer = Color(0xFFE0F2FE);
+  const onPrimaryContainer = Color(0xFF0284C7);
   const surface = Color(0xFFFFFFFF);
-  const onSurface = Color(0xFF1A1A2E);
-  const border = Color(0xFFE0E0E5);
-  const primary = Color(0xFF8B5CF6);
+  const onSurface = Color(0xFF0F172A);
+  const onSurfaceVariant = Color(0xFF334155);
+  const outline = Color(0xFFCBDFE9);
+  const scaffoldBackground = Color(0xFFF0F6FC);
+  const surfaceContainerHighest = Color(0xFFE6F1FA);
+  const error = Color(0xFFEF4444);
 
   final colorScheme = ColorScheme.light(
     primary: primary,
+    onPrimary: onPrimary,
+    primaryContainer: primaryContainer,
+    onPrimaryContainer: onPrimaryContainer,
     surface: surface,
     onSurface: onSurface,
-    outline: border,
+    onSurfaceVariant: onSurfaceVariant,
+    outline: outline,
+    surfaceContainerHighest: surfaceContainerHighest,
+    error: error,
   );
 
   return ThemeData(
     brightness: Brightness.light,
     colorScheme: colorScheme,
-    scaffoldBackgroundColor: background,
-    cardColor: surface,
-    dividerColor: border,
+    scaffoldBackgroundColor: scaffoldBackground,
     useMaterial3: true,
+    extensions: const [
+      ElinkTokens(
+        highlightYellow: Color(0xFFFEF08A),
+        highlightGreen: Color(0xFFBBF7D0),
+        highlightBlue: Color(0xFFBFDBFE),
+        underlineColor: Color(0xFF0284C7),
+        progressTrack: Color(0xFFCBDFE9),
+        coverPlaceholder: Color(0xFFE6F1FA),
+        badgeScrim: Color(0xFF94A3B8),
+        ttsActiveHighlight: Color(0xFFE0F2FE),
+        isEink: false,
+        reducedMotion: false,
+        discretePaging: false,
+      ),
+    ],
   );
 }
 
