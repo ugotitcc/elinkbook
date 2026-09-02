@@ -33,6 +33,25 @@ void main() {
     await sqliteRepo.close();
   });
 
+  testWidgets(
+      'MaterialApp 設定 themeAnimationDuration 為 Duration.zero'
+      '（DESIGN.md §18 零動畫轉場：切換主題／E-Ink 不應有交叉淡出動畫，'
+      '避免電子紙殘影）', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+
+    await tester.pumpWidget(
+      ElinkBookApp(
+        repository: FakeLibraryRepository(),
+        importService: FakeBookImportService(),
+        prefsManager: prefsManager,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final materialApp = tester.widget<MaterialApp>(find.byType(MaterialApp));
+    expect(materialApp.themeAnimationDuration, Duration.zero);
+  });
+
   testWidgets('ElinkBookApp 依 AppThemePreferences 套用正確主題 (非 E-Ink 模式)',
       (tester) async {
     SharedPreferences.setMockInitialValues({

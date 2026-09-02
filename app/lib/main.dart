@@ -335,6 +335,7 @@ class _ElinkBookAppState extends State<ElinkBookApp> with WidgetsBindingObserver
       navigatorKey: widget.navigatorKey,
       title: 'elinkBook',
       theme: themeData,
+      themeAnimationDuration: Duration.zero,
       home: LibraryScreen(
         repository: widget.repository,
         importService: widget.importService,
