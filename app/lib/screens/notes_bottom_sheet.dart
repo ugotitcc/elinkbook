@@ -15,6 +15,7 @@ import '../reader/highlights_repository.dart';
 import '../reader/note.dart';
 import '../reader/notes_repository.dart';
 import '../reader/markdown_export.dart';
+import '../theme/elink_tokens.dart';
 import 'note_edit_dialog.dart';
 
 /// 統一的「筆記」入口 Bottom Sheet 外殼（epic-6-annotations Issue 1，
@@ -438,8 +439,8 @@ class _NotesBottomSheetState extends State<NotesBottomSheet>
       leading: Icon(
         Icons.circle,
         color: highlight != null
-            ? Color(highlightStyleTint(highlight.style,
-                primaryColor: Theme.of(context).colorScheme.primary))
+            ? highlightStyleColor(highlight.style,
+                tokens: Theme.of(context).extension<ElinkTokens>()!)
             : noteOnlyTint,
       ),
       title: Text(highlight != null ? _highlightStyleLabel(highlight.style) : '📌 備註'),
