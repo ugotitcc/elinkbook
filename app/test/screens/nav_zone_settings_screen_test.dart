@@ -443,16 +443,34 @@ void main() {
   });
 
   group('navZoneTemplateIconColor（epic-18-reader-device-qa Issue 44）', () {
+    final colorScheme = ColorScheme.light();
+
     test('chevron_left 恆為紅色', () {
-      expect(navZoneTemplateIconColor(Icons.chevron_left), Colors.red.shade100);
+      expect(navZoneTemplateIconColor(Icons.chevron_left, colorScheme),
+          Colors.red.shade100);
     });
 
     test('chevron_right 恆為藍色', () {
-      expect(navZoneTemplateIconColor(Icons.chevron_right), Colors.blue.shade100);
+      expect(navZoneTemplateIconColor(Icons.chevron_right, colorScheme),
+          Colors.blue.shade100);
     });
 
     test('menu 恆為綠色', () {
-      expect(navZoneTemplateIconColor(Icons.menu), Colors.green.shade100);
+      expect(navZoneTemplateIconColor(Icons.menu, colorScheme),
+          Colors.green.shade100);
+    });
+
+    test(
+        '未知圖示時退回 colorScheme.surfaceContainerHighest'
+        '（epic-35-design-system-tokens Issue 5，取代原本寫死的 Colors.grey.shade100；'
+        '刻意改用跟上面三則測試不同的 ColorScheme 實例，確保斷言的是「有沒有正確傳遞'
+        '參數」而不是巧合撞到同一個值）',
+        () {
+      final darkColorScheme = ColorScheme.dark();
+      expect(
+        navZoneTemplateIconColor(Icons.info, darkColorScheme),
+        darkColorScheme.surfaceContainerHighest,
+      );
     });
   });
 

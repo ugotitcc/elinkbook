@@ -12,11 +12,15 @@ import '../reader/zone_action.dart';
 /// 讓三張卡片的配色語意一致：綠＝選單、紅＝上一頁、藍＝下一頁，比照
 /// `_buildOneHandTemplateCard()` 既有的配色慣例。抽成頂層純函式方便獨立
 /// 測試與未來重用。
-Color navZoneTemplateIconColor(IconData icon) {
+///
+/// 紅／藍／綠三色是跟主題無關的固定裝飾編碼，維持寫死不變；其餘未知圖示
+/// 的回退色改讀 [colorScheme.surfaceContainerHighest]
+/// （epic-35-design-system-tokens Issue 5）。
+Color navZoneTemplateIconColor(IconData icon, ColorScheme colorScheme) {
   if (icon == Icons.chevron_left) return Colors.red.shade100;
   if (icon == Icons.chevron_right) return Colors.blue.shade100;
   if (icon == Icons.menu) return Colors.green.shade100;
-  return Colors.grey.shade100;
+  return colorScheme.surfaceContainerHighest;
 }
 
 /// 導航熱區設定畫面（FR-24）：四選一模板（左翻頁／右翻頁／單手／自訂）
@@ -237,7 +241,8 @@ class _NavZoneSettingsScreenState extends State<NavZoneSettingsScreen> {
           children: [
             Expanded(
               child: Container(
-                color: navZoneTemplateIconColor(leftIcon),
+                color: navZoneTemplateIconColor(
+                    leftIcon, Theme.of(context).colorScheme),
                 alignment: Alignment.center,
                 child: Icon(leftIcon, size: 16),
               ),
@@ -245,15 +250,17 @@ class _NavZoneSettingsScreenState extends State<NavZoneSettingsScreen> {
             Expanded(
               child: Container(
                 color: middleIcon == null
-                    ? Colors.grey.shade100
-                    : navZoneTemplateIconColor(middleIcon),
+                    ? Theme.of(context).colorScheme.surfaceContainerHighest
+                    : navZoneTemplateIconColor(
+                        middleIcon, Theme.of(context).colorScheme),
                 alignment: Alignment.center,
                 child: middleIcon == null ? null : Icon(middleIcon, size: 16),
               ),
             ),
             Expanded(
               child: Container(
-                color: navZoneTemplateIconColor(rightIcon),
+                color: navZoneTemplateIconColor(
+                    rightIcon, Theme.of(context).colorScheme),
                 alignment: Alignment.center,
                 child: Icon(rightIcon, size: 16),
               ),
