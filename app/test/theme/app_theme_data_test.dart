@@ -139,27 +139,24 @@ void main() {
       expect(theme.scaffoldBackgroundColor, isNot(Colors.white));
     });
 
-    test(
-        'dark 主題的 outline 色與 surface 色有足夠感知亮度差，Switch 等元件'
-        '關閉狀態外框在深色背景下清楚可辨識（epic-22-reader-theme-'
-        'integration Issue 4：原色值 #2A2A30 與 surface #1E1E22 幾乎無法'
-        '區分，對比嚴重不足；後續真機電子紙硬體實測發現一般顯示器上「足夠」'
-        '的對比在電子紙上仍不可辨識，outline 值進一步調亮為 #86868F，感知亮度差'
-        '約 0.41，留更多安全邊際）', () {
+    test('dark 主題 ColorScheme 全角色對齊 DESIGN.md §1.1（不留 M3 baseline，'
+        'outline／surfaceContainerHighest 採用 DESIGN.md 值，不維持真機實測'
+        '調校值——可辨識度風險改由 SwitchThemeData 承接，見 Issue 2 Task 5）',
+        () {
       final theme = buildThemeData(AppTheme.dark);
-      final outline = theme.colorScheme.outline;
-      final surface = theme.colorScheme.surface;
+      final scheme = theme.colorScheme;
 
-      double perceivedLuminance(Color c) =>
-          0.299 * c.r + 0.587 * c.g + 0.114 * c.b;
-
-      final luminanceDiff =
-          (perceivedLuminance(outline) - perceivedLuminance(surface)).abs();
-
-      // 舊色值（#2A2A30 對 #1E1E22）的亮度差約 0.048，明顯不足；新色值
-      // 須顯著超過這個數字，門檻取 0.15（新色值 #86868F 實測約 0.41，留有
-      // 餘裕）。
-      expect(luminanceDiff, greaterThan(0.15));
+      expect(scheme.primary, const Color(0xFF38BDF8));
+      expect(scheme.onPrimary, const Color(0xFF141416));
+      expect(scheme.primaryContainer, const Color(0xFF182836));
+      expect(scheme.onPrimaryContainer, const Color(0xFF38BDF8));
+      expect(scheme.surface, const Color(0xFF1D1D22));
+      expect(scheme.onSurface, const Color(0xFFF2EFE6));
+      expect(scheme.onSurfaceVariant, const Color(0xFFB5B2A8));
+      expect(scheme.outline, const Color(0xFF2C2C34));
+      expect(scheme.surfaceContainerHighest, const Color(0xFF19191D));
+      expect(scheme.error, const Color(0xFFF87171));
+      expect(theme.scaffoldBackgroundColor, const Color(0xFF141416));
     });
 
     test(
@@ -169,30 +166,6 @@ void main() {
       expect(theme.dividerColor, theme.colorScheme.outline);
     });
 
-    test(
-        'dark 主題的 surfaceContainerHighest 色與 surface 色有足夠感知亮度'
-        '差，Switch 等元件關閉狀態的軌道底色在深色背景下清楚可辨識'
-        '（epic-22-reader-theme-integration Issue 4 真機電子紙硬體對比'
-        '追加修正：原本未客製 surfaceContainerHighest，隱性等於 surface，'
-        '導致關閉狀態軌道與背景完全同色，僅靠一條細外框線撐可視度，這種'
-        '手法在電子紙抖動渲染下結構性地不可靠，真機拍照確認關閉狀態'
-        '完全消失）', () {
-      final theme = buildThemeData(AppTheme.dark);
-      final trackFill = theme.colorScheme.surfaceContainerHighest;
-      final surface = theme.colorScheme.surface;
-
-      double perceivedLuminance(Color c) =>
-          0.299 * c.r + 0.587 * c.g + 0.114 * c.b;
-
-      final luminanceDiff =
-          (perceivedLuminance(trackFill) - perceivedLuminance(surface)).abs();
-
-      // 未客製時 surfaceContainerHighest 隱性等於 surface，亮度差為 0，
-      // 完全不可辨識；新色值 #3C3C44 對 surface #1E1E22 實測約 0.119，
-      // 門檻取 0.10，讓關閉狀態的 Switch 本身就是一塊與背景明顯不同的
-      // 實心色塊，不必再完全依賴細外框線才能被看見。
-      expect(luminanceDiff, greaterThan(0.10));
-    });
   });
 
   group('resolveThemeData 組裝的 ElinkTokens', () {
@@ -209,6 +182,24 @@ void main() {
       expect(tokens.coverPlaceholder, const Color(0xFFE6F1FA));
       expect(tokens.badgeScrim, const Color(0xFF94A3B8));
       expect(tokens.ttsActiveHighlight, const Color(0xFFE0F2FE));
+      expect(tokens.isEink, false);
+      expect(tokens.reducedMotion, false);
+      expect(tokens.discretePaging, false);
+    });
+
+    test('dark 主題（isEinkMode: false）組裝出正確的 ElinkTokens 值', () {
+      final theme = resolveThemeData(theme: AppTheme.dark, isEinkMode: false);
+      final tokens = theme.extension<ElinkTokens>();
+
+      expect(tokens, isNotNull);
+      expect(tokens!.highlightYellow, const Color(0xFF854D0E));
+      expect(tokens.highlightGreen, const Color(0xFF166534));
+      expect(tokens.highlightBlue, const Color(0xFF1E40AF));
+      expect(tokens.underlineColor, const Color(0xFF38BDF8));
+      expect(tokens.progressTrack, const Color(0xFF2C2C34));
+      expect(tokens.coverPlaceholder, const Color(0xFF1D1D22));
+      expect(tokens.badgeScrim, const Color(0xFF7A7872));
+      expect(tokens.ttsActiveHighlight, const Color(0xFF182836));
       expect(tokens.isEink, false);
       expect(tokens.reducedMotion, false);
       expect(tokens.discretePaging, false);
