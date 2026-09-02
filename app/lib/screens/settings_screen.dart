@@ -8,6 +8,7 @@ import '../reader/reader_prefs_manager.dart';
 import '../sync/sync_account_repository.dart';
 import '../sync/sync_client.dart';
 import '../theme/app_theme.dart';
+import '../theme/app_theme_data.dart';
 import 'about_screen.dart';
 import 'cloud_account_settings_screen.dart';
 import 'font_management_screen.dart';
@@ -95,11 +96,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 _buildThemeDot(context, AppTheme.light,
-                    const Color(0xFFF5F5F5), 'settings_theme_dot_light'),
+                    'settings_theme_dot_light'),
                 _buildThemeDot(context, AppTheme.dark,
-                    const Color(0xFF121212), 'settings_theme_dot_dark'),
+                    'settings_theme_dot_dark'),
                 _buildThemeDot(context, AppTheme.sepia,
-                    const Color(0xFFF4ECD8), 'settings_theme_dot_sepia'),
+                    'settings_theme_dot_sepia'),
               ],
             ),
           ),
@@ -226,8 +227,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   /// 主題選擇圓點，比照 `epic-18` 之前放在 `LibraryScreen` AppBar 的既有互動
   /// 設計原樣搬移（E-Ink 模式下停用點擊並降低不透明度）。
-  Widget _buildThemeDot(
-      BuildContext context, AppTheme theme, Color color, String key) {
+  Widget _buildThemeDot(BuildContext context, AppTheme theme, String key) {
+    final previewTheme = resolveThemeData(theme: theme, isEinkMode: false);
     final isSelected = widget.currentTheme == theme && !widget.isEinkMode;
     return GestureDetector(
       key: Key(key),
@@ -240,12 +241,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
           height: 24,
           margin: const EdgeInsets.symmetric(horizontal: 4),
           decoration: BoxDecoration(
-            color: color,
+            color: previewTheme.scaffoldBackgroundColor,
             shape: BoxShape.circle,
             border: Border.all(
               color: isSelected
-                  ? Theme.of(context).colorScheme.primary
-                  : Colors.grey.withValues(alpha: 0.5),
+                  ? previewTheme.colorScheme.primary
+                  : previewTheme.colorScheme.outline,
               width: isSelected ? 2 : 1,
             ),
           ),

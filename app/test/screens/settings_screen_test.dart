@@ -11,6 +11,7 @@ import 'package:elinkbook/screens/settings_screen.dart';
 import 'package:elinkbook/sync/sync_account_repository.dart';
 import 'package:elinkbook/sync/sync_client.dart';
 import 'package:elinkbook/theme/app_theme.dart';
+import 'package:elinkbook/theme/app_theme_data.dart';
 import 'package:elinkbook/reader/global_reader_prefs.dart';
 import '../support/fake_cloud_account_repository.dart';
 import '../support/fake_reader_prefs_manager.dart';
@@ -300,5 +301,47 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(receivedEink, isTrue);
+  });
+  testWidgets(
+      'SettingsScreen 主題預覽圓點改讀 resolveThemeData() 的實際色值（不再維持寫死近似值）',
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: SettingsScreen(
+        prefsManager: FakeReaderPrefsManager(),
+        currentTheme: AppTheme.dark,
+      ),
+    ));
+
+    final lightPreview =
+        resolveThemeData(theme: AppTheme.light, isEinkMode: false);
+    final darkPreview =
+        resolveThemeData(theme: AppTheme.dark, isEinkMode: false);
+    final sepiaPreview =
+        resolveThemeData(theme: AppTheme.sepia, isEinkMode: false);
+
+    BoxDecoration decorationFor(String key) => tester
+        .widget<Container>(find.descendant(
+          of: find.byKey(Key(key)),
+          matching: find.byType(Container),
+        ))
+        .decoration as BoxDecoration;
+
+    final light = decorationFor('settings_theme_dot_light');
+    final dark = decorationFor('settings_theme_dot_dark');
+    final sepia = decorationFor('settings_theme_dot_sepia');
+
+    expect(light.color, lightPreview.scaffoldBackgroundColor);
+    expect(dark.color, darkPreview.scaffoldBackgroundColor);
+    expect(sepia.color, sepiaPreview.scaffoldBackgroundColor);
+
+    // currentTheme 為 dark：dark 圓點是選取狀態，邊框讀取 dark 主題自己的
+    // primary；light／sepia 未選取，邊框讀取各自主題自己的 outline
+    // （取代原本寫死的 Colors.grey）。
+    expect(
+        (dark.border as Border).top.color, darkPreview.colorScheme.primary);
+    expect(
+        (light.border as Border).top.color, lightPreview.colorScheme.outline);
+    expect(
+        (sepia.border as Border).top.color, sepiaPreview.colorScheme.outline);
   });
 }
