@@ -228,6 +228,25 @@ void main() {
             reason: '$theme trackColor 應來源於 onSurface');
         expect(_sameRgb(trackOutline!, onSurface), true,
             reason: '$theme trackOutlineColor 應來源於 onSurface');
+
+        const onState = <WidgetState>{WidgetState.selected};
+        final thumbOn = switchTheme.thumbColor?.resolve(onState);
+        final trackOn = switchTheme.trackColor?.resolve(onState);
+        final trackOutlineOn = switchTheme.trackOutlineColor?.resolve(onState);
+        expect(thumbOn, isNotNull, reason: '$theme thumbColor (selected) 未設定');
+        expect(trackOn, isNotNull, reason: '$theme trackColor (selected) 未設定');
+        expect(trackOutlineOn, isNotNull,
+            reason: '$theme trackOutlineColor (selected) 未設定');
+        expect(_sameRgb(thumbOn!, onSurface), true,
+            reason: '$theme thumbColor (selected) 應來源於 onSurface');
+        expect(_sameRgb(trackOn!, onSurface), true,
+            reason: '$theme trackColor (selected) 應來源於 onSurface');
+        expect(_sameRgb(trackOutlineOn!, onSurface), true,
+            reason: '$theme trackOutlineColor (selected) 應來源於 onSurface');
+        // ON/OFF 兩態的 track 必須有可辨識的透明度差異（本工單詮釋為
+        // alpha 0.5 vs 0.15，不硬編數值，色票微調不會弄壞這則測試）
+        expect(trackOn.a, isNot(track.a),
+            reason: '$theme trackColor 的 ON/OFF 狀態應可互相區分');
       }
     });
 
@@ -248,8 +267,20 @@ void main() {
       expect(_sameRgb(thumb!, onSurface), true);
       expect(_sameRgb(track!, onSurface), true);
       expect(_sameRgb(trackOutline!, onSurface), true);
-    });
 
+      const onState = <WidgetState>{WidgetState.selected};
+      final thumbOn = switchTheme.thumbColor?.resolve(onState);
+      final trackOn = switchTheme.trackColor?.resolve(onState);
+      final trackOutlineOn = switchTheme.trackOutlineColor?.resolve(onState);
+      expect(thumbOn, isNotNull);
+      expect(trackOn, isNotNull);
+      expect(trackOutlineOn, isNotNull);
+      expect(_sameRgb(thumbOn!, onSurface), true);
+      expect(_sameRgb(trackOn!, onSurface), true);
+      expect(_sameRgb(trackOutlineOn!, onSurface), true);
+      // ON/OFF 兩態的 track 必須有可辨識的透明度差異
+      expect(trackOn.a, isNot(track.a));
+    });
   });
 
   group('resolveThemeData 組裝的 ElinkTokens', () {

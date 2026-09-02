@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'app_theme.dart';
 import 'elink_tokens.dart';
 
-/// 參考 prototype/index.html 的 CSS 變數定義，為每種主題建立對應的
-/// [ThemeData]。色彩值取自 prototype 的設計（見
-/// docs/epics/epic-3-fonts-layout/issues.md Issue 5）。
+/// 四套主題（晴空藍天／夜讀水墨／宣紙古風／E-Ink）的 [ThemeData] 工廠。
+/// `ColorScheme` 各角色與 `ElinkTokens` 各欄位的色值，一律以 `DESIGN.md`
+/// §1.1／§1.2 為唯一事實來源（見 epic-35-design-system-tokens Issue 2）；
+/// 早期參考 prototype/index.html CSS 變數的版本已由本工單全面取代。
 
 /// 根據 [theme] 回傳對應的 [ThemeData]，不考慮 E-Ink 高對比模式。
 ThemeData buildThemeData(AppTheme theme) {
