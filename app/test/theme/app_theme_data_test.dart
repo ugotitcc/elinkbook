@@ -166,6 +166,24 @@ void main() {
       expect(theme.dividerColor, theme.colorScheme.outline);
     });
 
+    test('sepia 主題 ColorScheme 全角色對齊 DESIGN.md §1.1（不留 M3 baseline）',
+        () {
+      final theme = buildThemeData(AppTheme.sepia);
+      final scheme = theme.colorScheme;
+
+      expect(scheme.primary, const Color(0xFFB8362D));
+      expect(scheme.onPrimary, const Color(0xFFFFFFFF));
+      expect(scheme.primaryContainer, const Color(0xFFFAECEA));
+      expect(scheme.onPrimaryContainer, const Color(0xFFB8362D));
+      expect(scheme.surface, const Color(0xFFFAF3E3));
+      expect(scheme.onSurface, const Color(0xFF1F2022));
+      expect(scheme.onSurfaceVariant, const Color(0xFF535457));
+      expect(scheme.outline, const Color(0xFFE6DFCB));
+      expect(scheme.surfaceContainerHighest, const Color(0xFFF0EBD9));
+      expect(scheme.error, const Color(0xFFDC2626));
+      expect(theme.scaffoldBackgroundColor, const Color(0xFFFCFAF2));
+    });
+
   });
 
   group('resolveThemeData 組裝的 ElinkTokens', () {
@@ -200,6 +218,24 @@ void main() {
       expect(tokens.coverPlaceholder, const Color(0xFF1D1D22));
       expect(tokens.badgeScrim, const Color(0xFF7A7872));
       expect(tokens.ttsActiveHighlight, const Color(0xFF182836));
+      expect(tokens.isEink, false);
+      expect(tokens.reducedMotion, false);
+      expect(tokens.discretePaging, false);
+    });
+
+    test('sepia 主題（isEinkMode: false）組裝出正確的 ElinkTokens 值', () {
+      final theme = resolveThemeData(theme: AppTheme.sepia, isEinkMode: false);
+      final tokens = theme.extension<ElinkTokens>();
+
+      expect(tokens, isNotNull);
+      expect(tokens!.highlightYellow, const Color(0xFFFEF3C7));
+      expect(tokens.highlightGreen, const Color(0xFFEDF5F0));
+      expect(tokens.highlightBlue, const Color(0xFFEDF2F7));
+      expect(tokens.underlineColor, const Color(0xFFB8362D));
+      expect(tokens.progressTrack, const Color(0xFFE6DFCB));
+      expect(tokens.coverPlaceholder, const Color(0xFFF0EBD9));
+      expect(tokens.badgeScrim, const Color(0xFF848588));
+      expect(tokens.ttsActiveHighlight, const Color(0xFFFAECEA));
       expect(tokens.isEink, false);
       expect(tokens.reducedMotion, false);
       expect(tokens.discretePaging, false);

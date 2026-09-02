@@ -141,26 +141,51 @@ ThemeData _buildDarkTheme() {
 }
 
 ThemeData _buildSepiaTheme() {
-  const background = Color(0xFFF4ECD8);
+  const primary = Color(0xFFB8362D);
+  const onPrimary = Color(0xFFFFFFFF);
+  const primaryContainer = Color(0xFFFAECEA);
+  const onPrimaryContainer = Color(0xFFB8362D);
   const surface = Color(0xFFFAF3E3);
-  const onSurface = Color(0xFF5B4636);
-  const border = Color(0xFFE6DCBF);
-  const primary = Color(0xFFB45309);
+  const onSurface = Color(0xFF1F2022);
+  const onSurfaceVariant = Color(0xFF535457);
+  const outline = Color(0xFFE6DFCB);
+  const scaffoldBackground = Color(0xFFFCFAF2);
+  const surfaceContainerHighest = Color(0xFFF0EBD9);
+  const error = Color(0xFFDC2626);
 
   final colorScheme = ColorScheme.light(
     primary: primary,
+    onPrimary: onPrimary,
+    primaryContainer: primaryContainer,
+    onPrimaryContainer: onPrimaryContainer,
     surface: surface,
     onSurface: onSurface,
-    outline: border,
+    onSurfaceVariant: onSurfaceVariant,
+    outline: outline,
+    surfaceContainerHighest: surfaceContainerHighest,
+    error: error,
   );
 
   return ThemeData(
     brightness: Brightness.light,
     colorScheme: colorScheme,
-    scaffoldBackgroundColor: background,
-    cardColor: surface,
-    dividerColor: border,
+    scaffoldBackgroundColor: scaffoldBackground,
     useMaterial3: true,
+    extensions: const [
+      ElinkTokens(
+        highlightYellow: Color(0xFFFEF3C7),
+        highlightGreen: Color(0xFFEDF5F0),
+        highlightBlue: Color(0xFFEDF2F7),
+        underlineColor: Color(0xFFB8362D),
+        progressTrack: Color(0xFFE6DFCB),
+        coverPlaceholder: Color(0xFFF0EBD9),
+        badgeScrim: Color(0xFF848588),
+        ttsActiveHighlight: Color(0xFFFAECEA),
+        isEink: false,
+        reducedMotion: false,
+        discretePaging: false,
+      ),
+    ],
   );
 }
 
