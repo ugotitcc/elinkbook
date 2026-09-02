@@ -347,7 +347,8 @@ class _NotesBottomSheetState extends State<NotesBottomSheet>
           TextButton(
             key: const Key('notes_sheet_delete_all_bookmarks_confirm'),
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            style: TextButton.styleFrom(
+                foregroundColor: Theme.of(context).colorScheme.error),
             child: const Text('刪除'),
           ),
         ],
@@ -529,7 +530,8 @@ class _NotesBottomSheetState extends State<NotesBottomSheet>
           TextButton(
             key: confirmKey,
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            style: TextButton.styleFrom(
+                foregroundColor: Theme.of(context).colorScheme.error),
             child: const Text('刪除'),
           ),
         ],

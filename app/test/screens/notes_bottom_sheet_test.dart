@@ -687,6 +687,66 @@ void main() {
 
     expect(find.byType(NotesBottomSheet), findsNothing);
   });
+
+  testWidgets('批次刪除書籤確認對話框的「刪除」按鈕前景色為 colorScheme.error', (tester) async {
+    final repository = FakeBookmarksRepository();
+    await repository.insert(
+      const Bookmark(id: 'bm13', bookId: 'b1', name: 'A', progression: 0.1),
+    );
+    await _pumpSheet(tester, repository: repository);
+
+    await tester.tap(find.byKey(const Key('notes_sheet_delete_all_bookmarks')));
+    await tester.pumpAndSettle();
+
+    final button = tester.widget<TextButton>(
+      find.byKey(const Key('notes_sheet_delete_all_bookmarks_confirm')),
+    );
+    final context = tester.element(
+      find.byKey(const Key('notes_sheet_delete_all_bookmarks_confirm')),
+    );
+    expect(
+      button.style?.foregroundColor?.resolve({}),
+      Theme.of(context).colorScheme.error,
+    );
+  });
+
+  testWidgets('批次刪除劃線確認對話框的「刪除」按鈕前景色為 colorScheme.error', (tester) async {
+    final repository = FakeBookmarksRepository();
+    final highlightsRepository = FakeHighlightsRepository();
+    final notesRepository = FakeNotesRepository();
+    await highlightsRepository.insert(
+      const Highlight(
+        id: 'h8',
+        bookId: 'b1',
+        style: HighlightStyle.underline,
+        progression: 0.1,
+      ),
+    );
+    await _pumpSheet(
+      tester,
+      repository: repository,
+      highlightsRepository: highlightsRepository,
+      notesRepository: notesRepository,
+    );
+    await tester.tap(find.byKey(const Key('notes_sheet_tab_annotations')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.byKey(const Key('notes_sheet_delete_all_highlights')),
+    );
+    await tester.pumpAndSettle();
+
+    final button = tester.widget<TextButton>(
+      find.byKey(const Key('notes_sheet_delete_all_highlights_confirm')),
+    );
+    final context = tester.element(
+      find.byKey(const Key('notes_sheet_delete_all_highlights_confirm')),
+    );
+    expect(
+      button.style?.foregroundColor?.resolve({}),
+      Theme.of(context).colorScheme.error,
+    );
+  });
 }
 
 Future<void> _pumpModalSheet(
