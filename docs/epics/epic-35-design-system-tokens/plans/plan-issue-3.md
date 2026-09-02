@@ -45,7 +45,7 @@
 - Consumes: `resolveThemeData({required AppTheme theme, required bool isEinkMode}) -> ThemeData`（`app/lib/theme/app_theme_data.dart`，Issue 2 已完成，四套主題色值已對齊 `DESIGN.md` §1.1）。
 - Produces: `_buildThemeDot(BuildContext context, AppTheme theme, String key)` 新簽章（拿掉原本的 `Color color` 參數）——Task 2 沿用這個簽章，只改函式內部邏輯，不再變更參數列。
 
-- [ ] **Step 1: 寫失敗的測試——圓點色值來源改讀 `resolveThemeData()`**
+- [x] **Step 1: 寫失敗的測試——圓點色值來源改讀 `resolveThemeData()`**
 
 在 `app/test/screens/settings_screen_test.dart` 第 13 行 `import 'package:elinkbook/theme/app_theme.dart';` 之後新增一行：
 
@@ -100,12 +100,12 @@ import 'package:elinkbook/theme/app_theme_data.dart';
   });
 ```
 
-- [ ] **Step 2: 執行測試，確認失敗**
+- [x] **Step 2: 執行測試，確認失敗**
 
 Run（於 `app/` 目錄下）: `flutter test test/screens/settings_screen_test.dart`
 Expected: 新增的測試 FAIL（`light.color`／`dark.color`／`sepia.color` 目前是呼叫端寫死的 `Color(0xFFF5F5F5)`／`Color(0xFF121212)`／`Color(0xFFF4ECD8)`，跟 `resolveThemeData()` 的 `scaffoldBackgroundColor` 不同值）。
 
-- [ ] **Step 3: 實作——`_buildThemeDot()` 改讀 `resolveThemeData()`，移除 `Colors.grey` 殘留**
+- [x] **Step 3: 實作——`_buildThemeDot()` 改讀 `resolveThemeData()`，移除 `Colors.grey` 殘留**
 
 在 `app/lib/screens/settings_screen.dart` 頂部 `import '../theme/app_theme.dart';`（原第 10 行）之後新增：
 
@@ -201,17 +201,17 @@ import '../theme/app_theme_data.dart';
 
 （`Opacity(0.4)` 鎖定手法在這個 Task 刻意原樣保留，Task 2 才會把它換成虛線邊框——這個 Task 只處理色值來源。）
 
-- [ ] **Step 4: 執行測試，確認通過**
+- [x] **Step 4: 執行測試，確認通過**
 
 Run（於 `app/` 目錄下）: `flutter test test/screens/settings_screen_test.dart`
 Expected: PASS（本檔案全部測試皆過，含既有的主題圓點點擊測試，無回歸）。
 
-- [ ] **Step 5: 執行 `flutter analyze`，確認乾淨**
+- [x] **Step 5: 執行 `flutter analyze`，確認乾淨**
 
 Run（於 `app/` 目錄下）: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/screens/settings_screen.dart app/test/screens/settings_screen_test.dart
@@ -236,7 +236,7 @@ EOF
 - Consumes: Task 1 產出的 `_buildThemeDot(BuildContext context, AppTheme theme, String key)` 簽章（本 Task 不再變更參數列，只改函式內部實作）。
 - Produces: 新增私有 `String _themeLabel(AppTheme theme)`（回傳 `'淺色'`／`'深色'`／`'羊皮紙'`）與 `class _LockedDotBorderPainter extends CustomPainter`（建構參數 `{required Color color, required double strokeWidth}`），僅供本檔案內部使用，不對外暴露。
 
-- [ ] **Step 1: 寫失敗的測試——鎖定視覺、提示文字、Semantics 標籤**
+- [x] **Step 1: 寫失敗的測試——鎖定視覺、提示文字、Semantics 標籤**
 
 在 `app/test/screens/settings_screen_test.dart`、Task 1 新增的測試之後，追加：
 
@@ -375,9 +375,8 @@ import 'package:flutter/semantics.dart';
         .decoration as BoxDecoration;
     expect(decoration.border, isNotNull);
   });
-```
 
-- [ ] **Step 2: 執行測試，確認失敗**
+- [x] **Step 2: 執行測試，確認失敗**
 
 Run（於 `app/` 目錄下）: `flutter test test/screens/settings_screen_test.dart`
 Expected: 新增的 4 則測試裡，**2 則 FAIL**：
@@ -388,7 +387,7 @@ Expected: 新增的 4 則測試裡，**2 則 FAIL**：
   - 「未鎖定狀態下仍保有可啟動的 Semantics tap 動作」測試：`GestureDetector(onTap: ...)` 在沒有額外 `Semantics` 包裹的情況下本來就會貢獻 `SemanticsAction.tap`，這則測試現在就會通過——它存在的目的是防止 Step 3 實作時不小心把這個動作弄丟（見上方 Critical 1 的教訓）。
   - 「E-Ink 關閉時，不顯示鎖定提示文字，圓點維持一般邊框」測試：`ListTile` 目前沒有 `subtitle`（key 天經地義找不到）、`_buildThemeDot()` 在 `isEinkMode: false` 時本來就無條件設定 `border`（非 `null`），兩個條件都已成立。
 
-- [ ] **Step 3: 實作——虛線邊框畫家、鎖定提示文字、Semantics 標籤**
+- [x] **Step 3: 實作——虛線邊框畫家、鎖定提示文字、Semantics 標籤**
 
 在 `app/lib/screens/settings_screen.dart` 檔案最末尾（`class _SettingsScreenState` 的收尾 `}` 之後）新增：
 
@@ -584,17 +583,17 @@ class _LockedDotBorderPainter extends CustomPainter {
 
 （鎖定時 `Theme.of(context).colorScheme.onSurface` 讀的是 App 目前實際套用的主題——鎖定狀態下 App 一律套用 E-Ink 主題，`onSurface` 為純黑，這是刻意的：虛線邊框要呈現「目前 UI 實際處於什麼樣子」，跟圓點本身的 `previewTheme`〔該圓點所代表的主題〕是兩件不同的事，不能混用。）
 
-- [ ] **Step 4: 執行測試，確認通過**
+- [x] **Step 4: 執行測試，確認通過**
 
 Run（於 `app/` 目錄下）: `flutter test test/screens/settings_screen_test.dart`
 Expected: PASS（本檔案全部測試皆過，含既有的 E-Ink 模式下停用點擊測試，無回歸）。
 
-- [ ] **Step 5: 執行 `flutter analyze`，確認乾淨**
+- [x] **Step 5: 執行 `flutter analyze`，確認乾淨**
 
 Run（於 `app/` 目錄下）: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/screens/settings_screen.dart app/test/screens/settings_screen_test.dart
@@ -611,8 +610,8 @@ EOF
 
 ## 全部 Task 完成後
 
-- [ ] 執行完整 `flutter test`（於 `app/` 目錄下，不帶檔案路徑），確認全專案無回歸。
-- [ ] 執行 `flutter analyze`，確認「No issues found!」。
-- [ ] 把 `docs/epics/epic-35-design-system-tokens/issues.md` Issue 3 的 `Status` 從 `ready-for-agent` 更新為完成狀態（依當時 Epic 慣例用語），並在 `epic.md` 補一筆開發記錄。
-- [ ] 依 `sdd-workflow` 流程，發起 `/superpowers:requesting-code-review` 審查本次程式碼變更（`BASE_SHA`／`HEAD_SHA` 取本工單 2 個 commit 的起訖），審查報告存 `docs/epics/epic-35-design-system-tokens/reviews/review-issue-3.md`。
-- [ ] 提醒：鎖定狀態下圓點虛線的粗細（選取 3dp／未選取 1.5dp）沿用 `DESIGN.md` §7.2 既有定義的數值，不是本工單自訂；但虛線本身的 dash／gap 長度（3dp／3dp）是本工單自行決定的具體詮釋，`DESIGN.md` 沒有給精確數字。比照 Issue 2 `SwitchThemeData` 補強的既有慣例，整體手法尚未經過真機驗證，需要下一輪真機驗證（比照 `epic-18`／`epic-25` 慣例）確認在電子紙上確實可辨識，不在本工單驗收範圍內完成。
+- [x] 執行完整 `flutter test`（於 `app/` 目錄下，不帶檔案路徑），確認全專案無回歸。
+- [x] 執行 `flutter analyze`，確認「No issues found!」。
+- [x] 把 `docs/epics/epic-35-design-system-tokens/issues.md` Issue 3 的 `Status` 從 `ready-for-agent` 更新為完成狀態（依當時 Epic 慣例用語），並在 `epic.md` 補一筆開發記錄。
+- [x] 依 `sdd-workflow` 流程，發起 `/superpowers:requesting-code-review` 審查本次程式碼變更（`BASE_SHA`／`HEAD_SHA` 取本工單 2 個 commit 的起訖），審查報告存 `docs/epics/epic-35-design-system-tokens/reviews/review-issue-3.md`。
+- [x] 提醒：鎖定狀態下圓點虛線的粗細（選取 3dp／未選取 1.5dp）沿用 `DESIGN.md` §7.2 既有定義的數值，不是本工單自訂；但虛線本身的 dash／gap 長度（3dp／3dp）是本工單自行決定的具體詮釋，`DESIGN.md` 沒有給精確數字。比照 Issue 2 `SwitchThemeData` 補強的既有慣例，整體手法尚未經過真機驗證，需要下一輪真機驗證（比照 `epic-18`／`epic-25` 慣例）確認在電子紙上確實可辨識，不在本工單驗收範圍內完成。

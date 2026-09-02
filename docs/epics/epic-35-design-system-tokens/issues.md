@@ -67,7 +67,9 @@
 
 ## Issue 3：`settings_screen.dart` 全面遷移
 
-**Status:** ready-for-agent
+**Status:** ✅ 已完成。`SettingsScreen` 的「佈景」主題預覽圓點已改讀 `resolveThemeData()` 的實際色值（`scaffoldBackgroundColor` 與 `colorScheme.primary`／`outline`），移除 `Colors.grey` 殘留；E-Ink 鎖定視覺改為 `DESIGN.md` §17.2 指定的虛線邊框（`_LockedDotBorderPainter`，選取 3dp／未選取 1.5dp）＋鎖定提示文字＋`Semantics` 標籤（未鎖定狀態保留 tap 動作）。透過 `docs/epics/epic-35-design-system-tokens/plans/plan-issue-3.md` 2 個 Task 以 subagent-driven TDD 完成（新增 5 個測試，全專案 `flutter test` 1898/1898 全過、`flutter analyze` 乾淨）。逐 Task 審查與最終整分支審查皆核准通過（`reviews/review-issue-3.md`），無 Critical／Important 問題。commit 範圍 `d774b93..6d4c577f`。
+
+**已知殘留風險（非本工單驗收範圍）：** 鎖定狀態下圓點虛線 dash／gap 長度（3dp／3dp）為具體詮釋，需要下一輪真機驗證確認在電子紙螢幕上的可辨識度。
 
 **依賴：** Issue 2
 
