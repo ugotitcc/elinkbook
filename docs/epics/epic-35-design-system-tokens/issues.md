@@ -34,7 +34,11 @@
 
 ## Issue 2：四套 `ColorScheme` 對齊 `DESIGN.md` §1.1＋YAGNI 清理＋電子紙可辨識度補強（Switch）
 
-**Status:** ready-for-agent
+**Status:** ✅ 已完成。四套 `ColorScheme`（Light／Dark／Sepia／E-Ink）逐角色對齊 `DESIGN.md` §1.1、`ElinkTokens` 已掛上 `resolveThemeData()`、`secondary`／`onSecondary`／`cardColor`／`dividerColor` 已清除、`SwitchThemeData` 電子紙可辨識度補強已到位，透過 `docs/epics/epic-35-design-system-tokens/plans/plan-issue-2.md` 5 個 Task 以 subagent-driven TDD 完成（新增 20 個測試，最終 `flutter test` 1893/1893 全過、`flutter analyze` 乾淨）。逐 Task 審查（5 次）與最終整分支審查（opus）皆核准，最終審查抓到 1 項必修（`app_theme_data.dart` 檔頭註解仍指向已淘汰的 `prototype/index.html`，已改指向 `DESIGN.md`）與 1 項強烈建議修（`SwitchThemeData` 測試補齊 ON 狀態覆蓋，`spec.md`「Testing Decisions」原文要求「各狀態下」皆需驗證），皆已修正並通過複審。commit 範圍 `56641862..315b6477`（worktree `worktree-epic-35-issue-2`）。
+
+**已知殘留、非本 Issue 阻斷項（最終審查發現，記錄供後續追蹤）：**
+- `app/lib/screens/widgets/reader_option_tile.dart:51` 的 `theme.colorScheme.outline.withValues(alpha: 0.35)`（非 E-Ink 分支的選項邊框），Dark 主題 `outline` 改採 `DESIGN.md` 新值（`#2c2c34`，比原真機實測值 `#86868F` 暗很多）後，這條邊框跟背景的對比會大幅降低、電子紙上可能難以辨識。這個檔案不在 `spec.md` 盤點的 13 個寫死顏色遷移清單、也不在任何已排 Issue 的明確範圍內（跟 Issue 7 已排定要目視確認的同名用法是不同一件事——Issue 7 涵蓋的是同一檔案不同分支）。**建議 Issue 7 實作時一併目視確認 Dark 主題下這條外框是否仍可辨識**，若真機驗證證實不可辨識，改參照 `colorScheme.onSurface`（比照 Issue 2 `SwitchThemeData` 與 Issue 5 的同一手法）。
+- `SwitchThemeData` 補強無條件套用到全部四套主題（含 Light／Sepia 這兩個 `outline` 本來就對比夠、不需要補強的主題），代價是這兩個主題下 Switch 的 ON 狀態失去 M3 預設的品牌主色語彙，改成純灰階深淺區分。這是忠實反映 `spec.md` 第 88 行「三個插槽全部改參照 `colorScheme.onSurface`」明文決議的結果，不是實作偏離；下一輪真機驗證（比照 `epic-18`／`epic-25` 慣例）確認可辨識度後，若需要找回 ON 狀態品牌色語彙，需回頭跟 `spec.md` 討論（例如 ON 狀態 thumb 改用 `surface` 反轉），不在本 Issue 自行調整範圍內。
 
 **依賴：** Issue 1（需要 `ElinkTokens` 類別已存在，才能掛進 `ThemeData.extensions`）
 

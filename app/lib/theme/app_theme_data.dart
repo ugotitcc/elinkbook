@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'app_theme.dart';
+import 'elink_tokens.dart';
 
-/// 參考 prototype/index.html 的 CSS 變數定義，為每種主題建立對應的
-/// [ThemeData]。色彩值取自 prototype 的設計（見
-/// docs/epics/epic-3-fonts-layout/issues.md Issue 5）。
+/// 四套主題（晴空藍天／夜讀水墨／宣紙古風／E-Ink）的 [ThemeData] 工廠。
+/// `ColorScheme` 各角色與 `ElinkTokens` 各欄位的色值，一律以 `DESIGN.md`
+/// §1.1／§1.2 為唯一事實來源（見 epic-35-design-system-tokens Issue 2）；
+/// 早期參考 prototype/index.html CSS 變數的版本已由本工單全面取代。
 
 /// 根據 [theme] 回傳對應的 [ThemeData]，不考慮 E-Ink 高對比模式。
 ThemeData buildThemeData(AppTheme theme) {
@@ -34,119 +36,245 @@ ThemeData resolveThemeData({
 // 私有建構方法
 // ──────────────────────────────────────────────────────────
 
+/// 電子紙可辨識度補強（epic-35-design-system-tokens Issue 2）：M3 Switch
+/// OFF 狀態預設會吃 outline（thumbColor）／surfaceContainerHighest
+/// （trackColor）兩個角色，這兩個角色在 Dark 主題改採 DESIGN.md 色值後彼此
+/// 跟 surface 的亮度差大幅縮小，電子紙上不可靠（見 spec.md「Dark 主題色值
+/// 衝突決議」）。改為三個插槽全部參照 colorScheme.onSurface——onSurface 對
+/// surface 的對比由文字可讀性需求保證足夠，比原本設計給裝飾用的
+/// outline／surfaceContainerHighest 更適合扛「使用者必須看得見」的責任。
+/// thumb／trackOutline 用滿不透明，track 依 OFF/ON 狀態調整透明度，三者
+/// 之間仍可互相區分。【注意】0.5／0.15 這兩個透明度數值是本工單自行決定
+/// 的具體詮釋，spec.md 只給了「依狀態調整透明度以維持三者可區分」的定性
+/// 描述，沒有指定精確數字——下一輪真機驗證（比照 epic-18／epic-25 慣例）
+/// 若發現電子紙上不夠清楚，這兩個數字是可以直接調整的錨點，不需要重新
+/// 討論整體設計。
+SwitchThemeData _buildSwitchTheme(ColorScheme colorScheme) {
+  return SwitchThemeData(
+    thumbColor: WidgetStateProperty.resolveWith(
+      (states) => colorScheme.onSurface,
+    ),
+    trackColor: WidgetStateProperty.resolveWith(
+      (states) => colorScheme.onSurface.withValues(
+        alpha: states.contains(WidgetState.selected) ? 0.5 : 0.15,
+      ),
+    ),
+    trackOutlineColor: WidgetStateProperty.resolveWith(
+      (states) => colorScheme.onSurface,
+    ),
+  );
+}
+
 ThemeData _buildLightTheme() {
-  const background = Color(0xFFF8F8FA);
+  const primary = Color(0xFF0284C7);
+  const onPrimary = Color(0xFFFFFFFF);
+  const primaryContainer = Color(0xFFE0F2FE);
+  const onPrimaryContainer = Color(0xFF0284C7);
   const surface = Color(0xFFFFFFFF);
-  const onSurface = Color(0xFF1A1A2E);
-  const border = Color(0xFFE0E0E5);
-  const primary = Color(0xFF8B5CF6);
+  const onSurface = Color(0xFF0F172A);
+  const onSurfaceVariant = Color(0xFF334155);
+  const outline = Color(0xFFCBDFE9);
+  const scaffoldBackground = Color(0xFFF0F6FC);
+  const surfaceContainerHighest = Color(0xFFE6F1FA);
+  const error = Color(0xFFEF4444);
 
   final colorScheme = ColorScheme.light(
     primary: primary,
+    onPrimary: onPrimary,
+    primaryContainer: primaryContainer,
+    onPrimaryContainer: onPrimaryContainer,
     surface: surface,
     onSurface: onSurface,
-    outline: border,
+    onSurfaceVariant: onSurfaceVariant,
+    outline: outline,
+    surfaceContainerHighest: surfaceContainerHighest,
+    error: error,
   );
 
   return ThemeData(
     brightness: Brightness.light,
     colorScheme: colorScheme,
-    scaffoldBackgroundColor: background,
-    cardColor: surface,
-    dividerColor: border,
+    scaffoldBackgroundColor: scaffoldBackground,
     useMaterial3: true,
+    switchTheme: _buildSwitchTheme(colorScheme),
+    extensions: const [
+      ElinkTokens(
+        highlightYellow: Color(0xFFFEF08A),
+        highlightGreen: Color(0xFFBBF7D0),
+        highlightBlue: Color(0xFFBFDBFE),
+        underlineColor: Color(0xFF0284C7),
+        progressTrack: Color(0xFFCBDFE9),
+        coverPlaceholder: Color(0xFFE6F1FA),
+        badgeScrim: Color(0xFF94A3B8),
+        ttsActiveHighlight: Color(0xFFE0F2FE),
+        isEink: false,
+        reducedMotion: false,
+        discretePaging: false,
+      ),
+    ],
   );
 }
 
 ThemeData _buildDarkTheme() {
-  const background = Color(0xFF121214);
-  const surface = Color(0xFF1E1E22);
-  const onSurface = Color(0xFFE8E8EC);
-  // 【epic-22-reader-theme-integration Issue 4】原值 #2A2A30 與 surface
-  // #1E1E22 亮度幾乎無法區分（感知亮度差僅約 0.048），導致 Switch 等
-  // Material 元件關閉狀態外框（吃 colorScheme.outline）在深色主題下難以
-  // 辨識。第一版調整為 #5C5C66（亮度差約 0.246）在一般 LCD/OLED 顯示器上
-  // 已達標，但真機電子紙硬體肉眼實測發現這條外框線在電子紙上仍完全不可
-  // 辨識（電子紙灰階抖動渲染機制對細線條特別不利），故進一步調亮為
-  // #86868F（亮度差約 0.41），同時套用到 dividerColor（本檔案既有設計：
-  // 單一色票同時代表 outline 與分隔線語意，見下方 dividerColor 賦值處，
-  // 一併受惠）。
-  const border = Color(0xFF86868F);
-  const primary = Color(0xFFBB86FC);
-  // 【epic-22-reader-theme-integration Issue 4 電子紙硬體對比追加修正】
-  // Switch 關閉狀態的軌道底色（M3 Switch 吃 colorScheme.surfaceContainerHighest）
-  // 原本未客製，隱性等於 surface（#1E1E22），與背景完全同色，關閉狀態
-  // 只能靠上方那條外框線撐可視度——但細線條在電子紙上不可靠（見上方
-  // outline 註解），故新增這個色票，讓關閉狀態的 Switch 本身就是一塊與
-  // surface 有明顯亮度差（約 0.119）的實心色塊，即使外框線在電子紙上
-  // 打折扣，使用者仍能從色塊本身辨識出「這裡有個開關」。
-  const surfaceContainerHighest = Color(0xFF3C3C44);
+  const primary = Color(0xFF38BDF8);
+  const onPrimary = Color(0xFF141416);
+  const primaryContainer = Color(0xFF182836);
+  const onPrimaryContainer = Color(0xFF38BDF8);
+  const surface = Color(0xFF1D1D22);
+  const onSurface = Color(0xFFF2EFE6);
+  const onSurfaceVariant = Color(0xFFB5B2A8);
+  // 【epic-35-design-system-tokens Issue 2】改採 DESIGN.md §1.1 色表值，
+  // 不再維持先前真機電子紙實測調亮值（outline #86868F／
+  // surfaceContainerHighest #3C3C44，見 spec.md「Dark 主題色值衝突決議」）
+  // ——選擇配色系統一致性優先。這兩個角色跟 surface 的感知亮度差因此大幅
+  // 縮小，Switch 等元件不再靠這兩個角色的顏色對比撐可辨識度，改由
+  // _buildSwitchTheme() 的 onSurface 邊框補強機制承接（見下方 switchTheme
+  // 賦值處，Issue 2 Task 5 加上）。
+  const outline = Color(0xFF2C2C34);
+  const scaffoldBackground = Color(0xFF141416);
+  const surfaceContainerHighest = Color(0xFF19191D);
+  const error = Color(0xFFF87171);
 
   final colorScheme = ColorScheme.dark(
     primary: primary,
+    onPrimary: onPrimary,
+    primaryContainer: primaryContainer,
+    onPrimaryContainer: onPrimaryContainer,
     surface: surface,
     onSurface: onSurface,
-    outline: border,
+    onSurfaceVariant: onSurfaceVariant,
+    outline: outline,
     surfaceContainerHighest: surfaceContainerHighest,
+    error: error,
   );
 
   return ThemeData(
     brightness: Brightness.dark,
     colorScheme: colorScheme,
-    scaffoldBackgroundColor: background,
-    cardColor: surface,
-    dividerColor: border,
+    scaffoldBackgroundColor: scaffoldBackground,
     useMaterial3: true,
+    switchTheme: _buildSwitchTheme(colorScheme),
+    extensions: const [
+      ElinkTokens(
+        highlightYellow: Color(0xFF854D0E),
+        highlightGreen: Color(0xFF166534),
+        highlightBlue: Color(0xFF1E40AF),
+        underlineColor: Color(0xFF38BDF8),
+        progressTrack: Color(0xFF2C2C34),
+        coverPlaceholder: Color(0xFF1D1D22),
+        badgeScrim: Color(0xFF7A7872),
+        ttsActiveHighlight: Color(0xFF182836),
+        isEink: false,
+        reducedMotion: false,
+        discretePaging: false,
+      ),
+    ],
   );
 }
 
 ThemeData _buildSepiaTheme() {
-  const background = Color(0xFFF4ECD8);
+  const primary = Color(0xFFB8362D);
+  const onPrimary = Color(0xFFFFFFFF);
+  const primaryContainer = Color(0xFFFAECEA);
+  const onPrimaryContainer = Color(0xFFB8362D);
   const surface = Color(0xFFFAF3E3);
-  const onSurface = Color(0xFF5B4636);
-  const border = Color(0xFFE6DCBF);
-  const primary = Color(0xFFB45309);
+  const onSurface = Color(0xFF1F2022);
+  const onSurfaceVariant = Color(0xFF535457);
+  const outline = Color(0xFFE6DFCB);
+  const scaffoldBackground = Color(0xFFFCFAF2);
+  const surfaceContainerHighest = Color(0xFFF0EBD9);
+  const error = Color(0xFFDC2626);
 
   final colorScheme = ColorScheme.light(
     primary: primary,
+    onPrimary: onPrimary,
+    primaryContainer: primaryContainer,
+    onPrimaryContainer: onPrimaryContainer,
     surface: surface,
     onSurface: onSurface,
-    outline: border,
+    onSurfaceVariant: onSurfaceVariant,
+    outline: outline,
+    surfaceContainerHighest: surfaceContainerHighest,
+    error: error,
   );
 
   return ThemeData(
     brightness: Brightness.light,
     colorScheme: colorScheme,
-    scaffoldBackgroundColor: background,
-    cardColor: surface,
-    dividerColor: border,
+    scaffoldBackgroundColor: scaffoldBackground,
     useMaterial3: true,
+    switchTheme: _buildSwitchTheme(colorScheme),
+    extensions: const [
+      ElinkTokens(
+        highlightYellow: Color(0xFFFEF3C7),
+        highlightGreen: Color(0xFFEDF5F0),
+        highlightBlue: Color(0xFFEDF2F7),
+        underlineColor: Color(0xFFB8362D),
+        progressTrack: Color(0xFFE6DFCB),
+        coverPlaceholder: Color(0xFFF0EBD9),
+        badgeScrim: Color(0xFF848588),
+        ttsActiveHighlight: Color(0xFFFAECEA),
+        isEink: false,
+        reducedMotion: false,
+        discretePaging: false,
+      ),
+    ],
   );
 }
 
 ThemeData _buildEinkTheme() {
+  const primary = Color(0xFF000000);
+  const primaryContainer = Color(0xFFFFFFFF);
+  const onPrimaryContainer = Color(0xFF000000);
+  const surface = Color(0xFFFFFFFF);
+  const onSurface = Color(0xFF000000);
+  const onSurfaceVariant = Color(0xFF000000);
+  const outline = Color(0xFF000000);
+  const surfaceContainerHighest = Color(0xFFFFFFFF);
+  const error = Color(0xFF000000);
+
   final colorScheme = ColorScheme.light(
-    primary: Colors.black,
+    primary: primary,
     onPrimary: Colors.white,
-    secondary: Colors.black,
-    onSecondary: Colors.white,
-    surface: Colors.white,
-    onSurface: Colors.black,
-    error: Colors.black,
+    primaryContainer: primaryContainer,
+    onPrimaryContainer: onPrimaryContainer,
+    surface: surface,
+    onSurface: onSurface,
+    onSurfaceVariant: onSurfaceVariant,
+    outline: outline,
+    surfaceContainerHighest: surfaceContainerHighest,
+    error: error,
     onError: Colors.white,
-    outline: Colors.black,
   );
 
   return ThemeData(
     brightness: Brightness.light,
     colorScheme: colorScheme,
     scaffoldBackgroundColor: Colors.white,
-    cardColor: Colors.white,
-    dividerColor: Colors.black,
     useMaterial3: true,
+    switchTheme: _buildSwitchTheme(colorScheme),
     // 停用點擊水波紋效果與高亮，以避免電子紙裝置上產生嚴重殘影與刷新閃爍
     splashFactory: NoSplash.splashFactory,
     hoverColor: Colors.transparent,
     highlightColor: Colors.transparent,
+    extensions: const [
+      ElinkTokens(
+        // highlightYellow／highlightGreen／highlightBlue／ttsActiveHighlight：
+        // DESIGN.md §1.2 標註「無背景（改用下劃線／外框／點虛線）」、未給
+        // 明確 hex 值——E-Ink 純黑白色盤下取黑色（描邊/底線用色），實際
+        // 「不畫底色改畫線條」的渲染邏輯屬其他 Issue 範圍，這裡只決定色票值。
+        highlightYellow: Color(0xFF000000),
+        highlightGreen: Color(0xFF000000),
+        highlightBlue: Color(0xFF000000),
+        underlineColor: Color(0xFF000000),
+        progressTrack: Color(0xFF000000),
+        coverPlaceholder: Color(0xFFFFFFFF),
+        badgeScrim: Color(0xFF000000),
+        ttsActiveHighlight: Color(0xFF000000),
+        isEink: true,
+        reducedMotion: true,
+        discretePaging: true,
+      ),
+    ],
   );
 }

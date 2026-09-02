@@ -1,6 +1,6 @@
 # Epic 35 — Issue 2：四套 `ColorScheme` 對齊 `DESIGN.md` §1.1＋YAGNI 清理＋電子紙可辨識度補強（Switch）Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** 把 `_buildLightTheme()`／`_buildDarkTheme()`／`_buildSepiaTheme()`／`_buildEinkTheme()`（`app/lib/theme/app_theme_data.dart`）四個函式的 `ColorScheme` 逐角色對齊 `DESIGN.md` §1.1 色表，各自掛上對應的 `ElinkTokens`（`DESIGN.md` §1.2），移除 `secondary`／`cardColor`／`dividerColor` 等 YAGNI 殘留，並新增 `SwitchThemeData` 把 Dark 主題色值衝突（`outline`／`surfaceContainerHighest`）造成的可辨識度風險，轉嫁到 `colorScheme.onSurface` 邊框補強機制上。
 
@@ -22,7 +22,7 @@
 - 本工單只碰 `app/lib/theme/app_theme_data.dart` 與 `app/test/theme/app_theme_data_test.dart`，不碰任何畫面檔案（那是 Issue 3～8 的範圍）；不碰 OPDS／WebDAV／雲端來源實作／書籍儲存／閱讀進度持久化。
 - 所有 Dart 原始碼註解使用正體中文。
 - 每完成一個 Task 就跑一次該 Task 涉及的測試檔（`flutter test test/theme/app_theme_data_test.dart`），不需要整套 `flutter test`；整份計劃最後一個 Task 完成時才跑一次完整 `flutter test`（見 `CLAUDE.md`「測試執行範圍」）。
-- 每個 Task 的 Step 完成後，把本檔案對應的 `- [ ]` 改成 `- [x]`（`sdd-workflow` 規則，方便追蹤進度）。
+- 每個 Task 的 Step 完成後，把本檔案對應的 `- [x]` 改成 `- [x]`（`sdd-workflow` 規則，方便追蹤進度）。
 - 提交前 `flutter analyze` 須維持「No issues found!」。
 
 ## 動手改程式碼前的四點說明（`UI_DESIGN_RULES.md` 要求）
@@ -44,7 +44,7 @@
 - Consumes: Issue 1 已建好的 `ElinkTokens` 類別（`app/lib/theme/elink_tokens.dart`，`const` 建構子、全部欄位具名必填）。
 - Produces: `_buildLightTheme()` 回傳的 `ThemeData` 之 `colorScheme` 補齊 `primary`／`onPrimary`／`primaryContainer`／`onPrimaryContainer`／`surface`／`onSurface`／`onSurfaceVariant`／`outline`／`surfaceContainerHighest`／`error`，`scaffoldBackgroundColor` 對齊 `DESIGN.md`；`extensions` 掛上 `isEink: false` 的 `ElinkTokens`。後續 Task 2～5 沿用同一種函式結構。
 
-- [ ] **Step 1: 寫失敗的測試——Light 主題 `ColorScheme` 各角色值＋`ElinkTokens` 組裝＋`Card`／`Divider` M3 預設**
+- [x] **Step 1: 寫失敗的測試——Light 主題 `ColorScheme` 各角色值＋`ElinkTokens` 組裝＋`Card`／`Divider` M3 預設**
 
 在 `app/test/theme/app_theme_data_test.dart` 頂部加入 `ElinkTokens` import：
 
@@ -166,12 +166,12 @@ import 'package:elinkbook/theme/elink_tokens.dart';
 
 （`group('resolveThemeData 組裝的 ElinkTokens', ...)` 這個新 group 在 Task 2／3／4 會繼續往裡面加測試，本 Task 先建立它、放第一個 `test`。）
 
-- [ ] **Step 2: 執行測試，確認失敗**
+- [x] **Step 2: 執行測試，確認失敗**
 
 Run（於 `app/` 目錄下）: `flutter test test/theme/app_theme_data_test.dart`
 Expected: FAIL——「Light 主題 ColorScheme 全角色對齊」該則測試的第一個斷言 `expect(scheme.primary, ...)` 就會失敗（現行值 `#8B5CF6` 不等於預期 `#0284C7`），`expect()` 遇到失敗會立即中止該 `test()`，後續 `primaryContainer`／`onSurfaceVariant`／`surfaceContainerHighest` 等斷言不會被實際執行到（這些角色現行確實也未設定、真的執行到同樣會不相符，但不是本次紅燈實際觸發的斷言）；「ElinkTokens 值」該則因 `theme.extension<ElinkTokens>()` 回傳 `null`（尚未掛上）而在 `expect(tokens, isNotNull)` 失敗。「cardColor／dividerColor M3 預設解析值」與「Card()／Divider() widget 實際渲染顏色」這兩則測試在 Step 3 修改前後皆會通過——現行程式碼的 `cardColor`／`dividerColor` 本來就手動設成跟 `colorScheme.surface`／`outline` 相同的值，而 `Card`／`Divider` widget 的 M3 實際渲染色（`surfaceContainerLow`／`outlineVariant`）從頭到尾都不吃 `cardColor`／`dividerColor` 這兩個欄位，跟本 Task 是否移除它們無關；這兩則不是本步驟要驗證失敗的對象，屬於鎖定既有行為的迴歸保護測試，不影響本步驟整體 FAIL 判定（前兩則測試仍會讓 `flutter test` 回報 FAIL）。
 
-- [ ] **Step 3: 修改 `app_theme_data.dart`——加 import、改寫 `_buildLightTheme()`**
+- [x] **Step 3: 修改 `app_theme_data.dart`——加 import、改寫 `_buildLightTheme()`**
 
 在檔案頂部加入 import（`import 'app_theme.dart';` 之後）：
 
@@ -234,17 +234,17 @@ ThemeData _buildLightTheme() {
 
 （`switchTheme:` 留給 Task 5 統一補上，本 Task 先不加。）
 
-- [ ] **Step 4: 執行測試，確認通過**
+- [x] **Step 4: 執行測試，確認通過**
 
 Run（於 `app/` 目錄下）: `flutter test test/theme/app_theme_data_test.dart`
 Expected: PASS（含既有測試＋本 Task 新增的 3 個測試全過）
 
-- [ ] **Step 5: 執行 `flutter analyze`，確認乾淨**
+- [x] **Step 5: 執行 `flutter analyze`，確認乾淨**
 
 Run（於 `app/` 目錄下）: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/theme/app_theme_data.dart app/test/theme/app_theme_data_test.dart
@@ -269,7 +269,7 @@ EOF
 - Consumes: Task 1 建立的 `ElinkTokens` import 與 `group('resolveThemeData 組裝的 ElinkTokens', ...)` group。
 - Produces: `_buildDarkTheme()` 的 `ColorScheme`／`ElinkTokens` 對齊 `DESIGN.md`，`outline`／`surfaceContainerHighest` 改為 `#2c2c34`／`#19191d`（不再是真機實測調校值）。
 
-- [ ] **Step 1: 移除舊有感知亮度差測試＋寫失敗的新測試**
+- [x] **Step 1: 移除舊有感知亮度差測試＋寫失敗的新測試**
 
 在 `app/test/theme/app_theme_data_test.dart` 的 `group('buildThemeData', () { ... })` 區塊內，**刪除**以下兩則既有測試整段（原第 58-79 行「dark 主題的 outline 色與 surface 色有足夠感知亮度差…」、原第 88-111 行「dark 主題的 surfaceContainerHighest 色與 surface 色有足夠感知亮度差…」）——這兩則斷言的門檻（`> 0.15`／`> 0.10`）建立在真機實測調校值上，Dark 主題改採 `DESIGN.md` 值後兩個角色跟 `surface` 的亮度差會大幅縮小，門檻必然失敗，這是預期中的行為改變，可辨識度風險改由 Task 5 的 `SwitchThemeData` 承接。
 
@@ -322,12 +322,12 @@ EOF
     });
 ```
 
-- [ ] **Step 2: 執行測試，確認失敗**
+- [x] **Step 2: 執行測試，確認失敗**
 
 Run（於 `app/` 目錄下）: `flutter test test/theme/app_theme_data_test.dart`
 Expected: FAIL——「dark 主題 ColorScheme 全角色對齊」該則測試的第一個斷言 `expect(scheme.primary, ...)` 就會失敗（現行值 `#BB86FC` 不等於預期 `#38BDF8`），`expect()` 立即中止該 `test()`，後續 `outline`／`surfaceContainerHighest` 等斷言不會被實際執行到（這些角色現行值 `#86868F`／`#3C3C44` 同樣不等於 `DESIGN.md` 新值，真的執行到同樣會不相符，但不是本次紅燈實際觸發的斷言）；「dark ElinkTokens 值」該則因 `tokens` 為 `null` 而失敗。
 
-- [ ] **Step 3: 改寫 `_buildDarkTheme()`**
+- [x] **Step 3: 改寫 `_buildDarkTheme()`**
 
 把 `_buildDarkTheme()`（原第 61-101 行）整段換成：
 
@@ -389,17 +389,17 @@ ThemeData _buildDarkTheme() {
 }
 ```
 
-- [ ] **Step 4: 執行測試，確認通過**
+- [x] **Step 4: 執行測試，確認通過**
 
 Run（於 `app/` 目錄下）: `flutter test test/theme/app_theme_data_test.dart`
 Expected: PASS（含既有測試＋新增測試全過；已移除的兩則舊感知亮度測試不應再出現於測試輸出中）
 
-- [ ] **Step 5: 執行 `flutter analyze`，確認乾淨**
+- [x] **Step 5: 執行 `flutter analyze`，確認乾淨**
 
 Run（於 `app/` 目錄下）: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/theme/app_theme_data.dart app/test/theme/app_theme_data_test.dart
@@ -424,7 +424,7 @@ EOF
 - Consumes: Task 1 的 `ElinkTokens` import 與測試 group。
 - Produces: `_buildSepiaTheme()` 的 `ColorScheme`／`ElinkTokens` 對齊 `DESIGN.md`（`primary` 由現行橙棕色 `#B45309` 改為硃砂印泥紅 `#b8362d`）。
 
-- [ ] **Step 1: 寫失敗的測試**
+- [x] **Step 1: 寫失敗的測試**
 
 在 `group('buildThemeData', ...)` 內新增：
 
@@ -471,12 +471,12 @@ EOF
     });
 ```
 
-- [ ] **Step 2: 執行測試，確認失敗**
+- [x] **Step 2: 執行測試，確認失敗**
 
 Run（於 `app/` 目錄下）: `flutter test test/theme/app_theme_data_test.dart`
 Expected: FAIL——「sepia 主題 ColorScheme 全角色對齊」該則測試的第一個斷言 `expect(scheme.primary, ...)` 就會失敗（現行值 `#B45309` 不等於預期 `#B8362D`），`expect()` 立即中止該 `test()`，後續 `primaryContainer`／`onSurfaceVariant`／`surfaceContainerHighest` 等斷言不會被實際執行到（這些角色現行完全未設定，真的執行到同樣會不相符，但不是本次紅燈實際觸發的斷言）；「sepia ElinkTokens 值」該則因 `tokens` 為 `null` 而失敗。
 
-- [ ] **Step 3: 改寫 `_buildSepiaTheme()`**
+- [x] **Step 3: 改寫 `_buildSepiaTheme()`**
 
 把 `_buildSepiaTheme()`（原第 103-125 行）整段換成：
 
@@ -531,17 +531,17 @@ ThemeData _buildSepiaTheme() {
 }
 ```
 
-- [ ] **Step 4: 執行測試，確認通過**
+- [x] **Step 4: 執行測試，確認通過**
 
 Run（於 `app/` 目錄下）: `flutter test test/theme/app_theme_data_test.dart`
 Expected: PASS
 
-- [ ] **Step 5: 執行 `flutter analyze`，確認乾淨**
+- [x] **Step 5: 執行 `flutter analyze`，確認乾淨**
 
 Run（於 `app/` 目錄下）: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/theme/app_theme_data.dart app/test/theme/app_theme_data_test.dart
@@ -566,7 +566,7 @@ EOF
 - Consumes: Task 1 的 `ElinkTokens` import 與測試 group。
 - Produces: `_buildEinkTheme()` 的 `ColorScheme` 補齊 `primaryContainer`／`onPrimaryContainer`／`onSurfaceVariant`／`surfaceContainerHighest`，移除 `secondary`／`onSecondary`；`extensions` 掛上 `isEink: true`／`reducedMotion: true`／`discretePaging: true` 的 `ElinkTokens`。完成後四種 `theme × isEinkMode` 組合的 `ElinkTokens` 組裝測試全數到位。
 
-- [ ] **Step 1: 寫失敗的測試**
+- [x] **Step 1: 寫失敗的測試**
 
 在 `group('buildThemeData', ...)` 內新增：
 
@@ -616,12 +616,12 @@ EOF
 
 （刻意傳 `theme: AppTheme.dark` 而非 `AppTheme.light`，用來確認「`isEinkMode: true` 時不論 `theme` 為何都拿到同一組 E-Ink `ElinkTokens`」這件事，跟本檔案既有的 `resolveThemeData` group 測試精神一致。）
 
-- [ ] **Step 2: 執行測試，確認失敗**
+- [x] **Step 2: 執行測試，確認失敗**
 
 Run（於 `app/` 目錄下）: `flutter test test/theme/app_theme_data_test.dart`
 Expected: FAIL——「eink 主題 ColorScheme 全角色對齊」該則測試的前兩個斷言 `primary`／`onPrimary` 現行值恰好就是 `Colors.black`／`Colors.white`，跟預期值相同，會先通過；第三個斷言 `expect(scheme.primaryContainer, ...)` 才是真正觸發失敗的斷言——現行 `_buildEinkTheme()` 沒有設定 `primaryContainer`，`ColorScheme.light()` 對這個角色的預設 fallback 是 `primary` 本身（即 `Colors.black`），不等於預期的 `#FFFFFF`，`expect()` 在這裡中止，後續 `onPrimaryContainer`／`onSurfaceVariant`／`surfaceContainerHighest` 等斷言不會被實際執行到；「E-Ink ElinkTokens 值」該則因 `tokens` 為 `null` 而失敗。
 
-- [ ] **Step 3: 改寫 `_buildEinkTheme()`**
+- [x] **Step 3: 改寫 `_buildEinkTheme()`**
 
 把 `_buildEinkTheme()`（原第 127-152 行）整段換成：
 
@@ -685,17 +685,17 @@ ThemeData _buildEinkTheme() {
 
 （`secondary`／`onSecondary`／`cardColor`／`dividerColor` 皆已從原本的 `ColorScheme.light(...)`／`ThemeData(...)` 呼叫中拿掉，不再顯式設定。）
 
-- [ ] **Step 4: 執行測試，確認通過**
+- [x] **Step 4: 執行測試，確認通過**
 
 Run（於 `app/` 目錄下）: `flutter test test/theme/app_theme_data_test.dart`
 Expected: PASS（本檔案全部測試皆過，含既有的「E-Ink 高對比 ThemeData 使用純白背景與純黑文字」等測試）
 
-- [ ] **Step 5: 執行 `flutter analyze`，確認乾淨**
+- [x] **Step 5: 執行 `flutter analyze`，確認乾淨**
 
 Run（於 `app/` 目錄下）: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/theme/app_theme_data.dart app/test/theme/app_theme_data_test.dart
@@ -720,7 +720,7 @@ EOF
 - Consumes: Task 1～4 完成後四個 `_build*Theme()` 函式內已存在的區域變數 `colorScheme`。
 - Produces: `SwitchThemeData _buildSwitchTheme(ColorScheme colorScheme)`——`thumbColor`／`trackColor`／`trackOutlineColor` 三個插槽皆為 `WidgetStateProperty`，解析結果的 RGB 皆來自 `colorScheme.onSurface`（僅 alpha 依 OFF/ON 狀態不同）。本 Task 完成後 Issue 2 全部驗收標準到位。
 
-- [ ] **Step 1: 寫失敗的測試——四套主題 `switchTheme` 三插槽於 OFF 狀態皆解析自 `colorScheme.onSurface`**
+- [x] **Step 1: 寫失敗的測試——四套主題 `switchTheme` 三插槽於 OFF 狀態皆解析自 `colorScheme.onSurface`**
 
 在 `app/test/theme/app_theme_data_test.dart` 的 `import` 區塊與 `void main() {` 之間（檔案層級，`main()` 函式外）新增一個共用 helper：
 
@@ -778,12 +778,12 @@ bool _sameRgb(Color a, Color b) => a.r == b.r && a.g == b.g && a.b == b.b;
     });
 ```
 
-- [ ] **Step 2: 執行測試，確認失敗**
+- [x] **Step 2: 執行測試，確認失敗**
 
 Run（於 `app/` 目錄下）: `flutter test test/theme/app_theme_data_test.dart`
 Expected: FAIL——現行四個 `_build*Theme()` 都沒有設定 `switchTheme`，`ThemeData.switchTheme` 因此是 Flutter 預設值 `const SwitchThemeData()`，`thumbColor`／`trackColor`／`trackOutlineColor` 三個插槽皆為 `null`（`outline`／`surfaceContainerHighest` 的解析只發生在實際建構 `Switch` widget 當下，不影響 `ThemeData.switchTheme` 這個屬性本身的值）。每一組 `expect(thumb, isNotNull, ...)` 這類斷言會在第一步就失敗，`_sameRgb` 比對不會被執行到。
 
-- [ ] **Step 3: 新增 `_buildSwitchTheme()`，四個 `_build*Theme()` 各自掛上**
+- [x] **Step 3: 新增 `_buildSwitchTheme()`，四個 `_build*Theme()` 各自掛上**
 
 在 `app_theme_data.dart` 的 `_buildLightTheme()` 函式定義**之前**新增：
 
@@ -860,17 +860,17 @@ SwitchThemeData _buildSwitchTheme(ColorScheme colorScheme) {
     splashFactory: NoSplash.splashFactory,
 ```
 
-- [ ] **Step 4: 執行測試，確認通過**
+- [x] **Step 4: 執行測試，確認通過**
 
 Run（於 `app/` 目錄下）: `flutter test test/theme/app_theme_data_test.dart`
 Expected: PASS（本檔案全部測試皆過）
 
-- [ ] **Step 5: 執行 `flutter analyze`，確認乾淨**
+- [x] **Step 5: 執行 `flutter analyze`，確認乾淨**
 
 Run（於 `app/` 目錄下）: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/theme/app_theme_data.dart app/test/theme/app_theme_data_test.dart
@@ -887,8 +887,8 @@ EOF
 
 ## 全部 Task 完成後
 
-- [ ] 執行完整 `flutter test`（於 `app/` 目錄下，不帶檔案路徑），確認全專案無回歸。
-- [ ] 執行 `flutter analyze`，確認「No issues found!」。
-- [ ] 把 `docs/epics/epic-35-design-system-tokens/issues.md` Issue 2 的 `Status` 從 `ready-for-agent` 更新為完成狀態（依當時 Epic 慣例用語），並在 `epic.md` 補一筆開發記錄。
-- [ ] 依 `sdd-workflow` 流程，發起 `/superpowers:requesting-code-review` 審查本次程式碼變更（`BASE_SHA`／`HEAD_SHA` 取本工單 5 個 commit 的起訖），審查報告存 `docs/epics/epic-35-design-system-tokens/reviews/review-issue-2.md`。
-- [ ] 提醒：本 Issue 驗收標準明確排除「`SwitchThemeData` 補強手法的真機驗證」——需要下一輪真機驗證確認在電子紙上確實可辨識（比照 `epic-18`／`epic-25` 慣例），不在本工單範圍內完成。
+- [x] 執行完整 `flutter test`（於 `app/` 目錄下，不帶檔案路徑），確認全專案無回歸。
+- [x] 執行 `flutter analyze`，確認「No issues found!」。
+- [x] 把 `docs/epics/epic-35-design-system-tokens/issues.md` Issue 2 的 `Status` 從 `ready-for-agent` 更新為完成狀態（依當時 Epic 慣例用語），並在 `epic.md` 補一筆開發記錄。
+- [x] 依 `sdd-workflow` 流程，發起 `/superpowers:requesting-code-review` 審查本次程式碼變更（`BASE_SHA`／`HEAD_SHA` 取本工單 5 個 commit 的起訖），審查報告存 `docs/epics/epic-35-design-system-tokens/reviews/review-issue-2.md`。
+- [x] 提醒：本 Issue 驗收標準明確排除「`SwitchThemeData` 補強手法的真機驗證」——需要下一輪真機驗證確認在電子紙上確實可辨識（比照 `epic-18`／`epic-25` 慣例），不在本工單範圍內完成。
