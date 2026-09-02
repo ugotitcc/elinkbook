@@ -75,4 +75,43 @@ void main() {
       expect(copy.discretePaging, _base.discretePaging);
     });
   });
+
+  group('ElinkTokens.lerp', () {
+    final other = _base.copyWith(
+      highlightYellow: const Color(0xFFFFFFFF),
+      isEink: true,
+      reducedMotion: true,
+      discretePaging: true,
+    );
+
+    test('Color 欄位在 t=0.5 時走 Color.lerp 插值，不是直接回傳其中一邊', () {
+      // _base.highlightYellow = 0xFF111111（近黑），other = 0xFFFFFFFF（純白）
+      // t=0.5 插值結果應介於兩者之間，既不等於黑也不等於白。
+      final result = _base.lerp(other, 0.5);
+      expect(result.highlightYellow, isNot(_base.highlightYellow));
+      expect(result.highlightYellow, isNot(other.highlightYellow));
+      expect(
+        result.highlightYellow,
+        Color.lerp(_base.highlightYellow, other.highlightYellow, 0.5),
+      );
+    });
+
+    test('bool 欄位在 t < 0.5 時回傳 this（自己）的值', () {
+      final result = _base.lerp(other, 0.3);
+      expect(result.isEink, _base.isEink); // false
+      expect(result.reducedMotion, _base.reducedMotion); // false
+      expect(result.discretePaging, _base.discretePaging); // false
+    });
+
+    test('bool 欄位在 t >= 0.5 時回傳 other 的值', () {
+      final result = _base.lerp(other, 0.5);
+      expect(result.isEink, other.isEink); // true
+      expect(result.reducedMotion, other.reducedMotion); // true
+      expect(result.discretePaging, other.discretePaging); // true
+    });
+
+    test('other 不是 ElinkTokens 型別（含 null）時，回傳 this 本身', () {
+      expect(_base.lerp(null, 0.5), same(_base));
+    });
+  });
 }

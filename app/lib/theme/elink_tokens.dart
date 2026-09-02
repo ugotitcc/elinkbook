@@ -72,8 +72,22 @@ class ElinkTokens extends ThemeExtension<ElinkTokens> {
 
   @override
   ElinkTokens lerp(ThemeExtension<ElinkTokens>? other, double t) {
-    // Task 2 會實作真正的插值邏輯，這裡先給最小合法實作讓 Task 1 可以編譯
-    // 通過（ThemeExtension 要求 lerp 必須被 override）。
-    return this;
+    if (other is! ElinkTokens) return this;
+    return ElinkTokens(
+      highlightYellow: Color.lerp(highlightYellow, other.highlightYellow, t)!,
+      highlightGreen: Color.lerp(highlightGreen, other.highlightGreen, t)!,
+      highlightBlue: Color.lerp(highlightBlue, other.highlightBlue, t)!,
+      underlineColor: Color.lerp(underlineColor, other.underlineColor, t)!,
+      progressTrack: Color.lerp(progressTrack, other.progressTrack, t)!,
+      coverPlaceholder:
+          Color.lerp(coverPlaceholder, other.coverPlaceholder, t)!,
+      badgeScrim: Color.lerp(badgeScrim, other.badgeScrim, t)!,
+      ttsActiveHighlight:
+          Color.lerp(ttsActiveHighlight, other.ttsActiveHighlight, t)!,
+      // bool 欄位沒有漸變意義，t < 0.5 取自己、t >= 0.5 取對方（離散跳變）。
+      isEink: t < 0.5 ? isEink : other.isEink,
+      reducedMotion: t < 0.5 ? reducedMotion : other.reducedMotion,
+      discretePaging: t < 0.5 ? discretePaging : other.discretePaging,
+    );
   }
 }
