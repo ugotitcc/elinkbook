@@ -43,7 +43,7 @@
 **背景／目標：** 這是本 Epic 真正的核心工單——把 `_buildLightTheme()`／`_buildDarkTheme()`／`_buildSepiaTheme()`／`_buildEinkTheme()` 四個函式的 `ColorScheme` 逐角色對齊 `DESIGN.md` 色表，掛上對應的 `ElinkTokens`，並處理 Dark 主題色值衝突後的可辨識度補強。
 
 **Solution：**
-- 四個 `_build*Theme()` 的 `ColorScheme` 補齊 `primary`／`onPrimary`／`primaryContainer`／`onPrimaryContainer`／`surface`／`onSurface`／`onSurfaceVariant`／`outline`／`surfaceContainerHighest`／`error` 全部角色＋各自的 `scaffoldBackgroundColor`，逐一對照 `DESIGN.md` §1.1 表格值。**（審查補強）`surfaceContainerHighest` 四個主題皆須明確設定**——現行 Light／Sepia／E-Ink 三個函式完全沒設定這個角色，隱性等於 M3 baseline，正是本 Epic 要修的「淡紫外洩」同一種 bug；Dark 沿用既有值 `#3C3C44`（連同 `outline #2c2c34`，**採用 DESIGN.md 值，不維持現行實測值**），其餘三主題對照 `DESIGN.md` §1.1 表格填入對應值。
+- 四個 `_build*Theme()` 的 `ColorScheme` 補齊 `primary`／`onPrimary`／`primaryContainer`／`onPrimaryContainer`／`surface`／`onSurface`／`onSurfaceVariant`／`outline`／`surfaceContainerHighest`／`error` 全部角色＋各自的 `scaffoldBackgroundColor`，逐一對照 `DESIGN.md` §1.1 表格值。**（審查補強）`surfaceContainerHighest` 四個主題皆須明確設定**——現行 Light／Sepia／E-Ink 三個函式完全沒設定這個角色，隱性等於 M3 baseline，正是本 Epic 要修的「淡紫外洩」同一種 bug；Dark 主題的 `outline`（`#2c2c34`）與 `surfaceContainerHighest`（`#19191d`）**改採 DESIGN.md 值，不維持現行真機實測值（`#86868F`／`#3C3C44`）**，其餘三主題對照 `DESIGN.md` §1.1 表格填入對應值。
 - 各函式回傳的 `ThemeData` 加上 `extensions: [ElinkTokens(...)]`，三個一般主題 `isEink: false`，`_buildEinkTheme()` `isEink: true`（其餘 bool 欄位同步）。
 - 移除 `secondary`／`onSecondary`（`_buildEinkTheme()`）、移除四個函式的顯式 `cardColor`／`dividerColor` 設定。
 - 新增 `SwitchThemeData`：`thumbColor`／`trackColor`／`trackOutlineColor` 三個插槽皆改參照 `colorScheme.onSurface`（依 OFF/ON 狀態調整透明度維持三者可區分，見 `spec.md` 該段落的具體理由）。
