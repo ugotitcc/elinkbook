@@ -10,7 +10,7 @@
 
 ## Issue 1：`ElinkTokens` 類別本體＋`MaterialApp` 零時長主題轉場
 
-**Status:** ready-for-agent
+**Status:** ✅ 已完成。`ElinkTokens extends ThemeExtension<ElinkTokens>`（11 個欄位、`const` 建構子、`copyWith()`、`lerp()`）與 `main.dart` 的 `MaterialApp themeAnimationDuration: Duration.zero` 皆已實作，透過 `docs/epics/epic-35-design-system-tokens/plans/plan-issue-1.md` 3 個 Task 以 subagent-driven TDD 完成（9 個新測試，`flutter test` 全數通過共 1883 個，`flutter analyze` 乾淨），逐 Task 審查與最終整分支審查（`opus`／`sonnet`）皆核准合併，無 Critical／Important 未決問題。`ElinkTokens` 尚未掛進 `resolveThemeData()`，屬 Issue 2 範圍。
 
 **依賴：** 無
 
