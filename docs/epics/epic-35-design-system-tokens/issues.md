@@ -93,7 +93,7 @@
 
 ## Issue 4：`highlight_style.dart` 遷移＋呼叫端更新（`reader_screen.dart`／`notes_bottom_sheet.dart`）
 
-**Status:** ready-for-agent
+**Status:** ✅ 已完成。`HighlightStyle` 列舉移除 `fixedTint` 與三個頂層色票常數（保留 `noteOnlyTint` 不動），移除 `highlightStyleTint()`，改為純函式 `Color highlightStyleColor(HighlightStyle style, {required ElinkTokens tokens})`（`highlighterPink` 語意對應 `tokens.highlightGreen`，成員名稱維持不變以確保持久化反序列化相容性）。四處呼叫端（`reader_screen.dart` 2 處、`notes_bottom_sheet.dart` 1 處、`annotation_toolbar.dart` 1 處）同步遷移改讀 `Theme.of(context).extension<ElinkTokens>()!`；`notes_bottom_sheet.dart` 兩處批次刪除確認對話框前景色遷移至 `Theme.of(context).colorScheme.error`。測試環境補齊 `reader_screen_test.dart`（168 處）、`annotation_toolbar_test.dart`（12 處）、`notes_bottom_sheet_test.dart`（2 處 helper）的 `resolveThemeData`。透過 `docs/epics/epic-35-design-system-tokens/plans/plan-issue-4.md` 2 個 Task 以 subagent-driven TDD 完成（新增 4 個測試，測試全過、`flutter analyze` 乾淨）。逐 Task 規格合規與程式碼審查、以及最終全分支審查皆核准通過（`reviews/review-issue-4.md`），無 Critical／Important 問題。commit 範圍 `e7266fc5..9052e785`（branch `feature/epic-35-issue-4`）。
 
 **依賴：** Issue 1（需要 `ElinkTokens` 類別存在）、Issue 2（需要 `resolveThemeData()` 已能透過 `Theme.of(context).extension<ElinkTokens>()` 取值）
 

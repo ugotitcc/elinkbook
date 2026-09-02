@@ -59,7 +59,7 @@
 - Consumes: `ElinkTokens`（`app/lib/theme/elink_tokens.dart`，Issue 1 已建好，`highlightYellow`／`highlightGreen`／`highlightBlue`／`underlineColor` 四個欄位）；`resolveThemeData({required AppTheme theme, required bool isEinkMode}) -> ThemeData`（`app/lib/theme/app_theme_data.dart`，Issue 2 已完成）。
 - Produces: `Color highlightStyleColor(HighlightStyle style, {required ElinkTokens tokens})`——本 Task 內四處呼叫端與 Task 2 皆沿用這個簽章，不再變更。
 
-- [ ] **Step 1: 寫失敗的測試——`highlightStyleColor()` 全新單元測試（取代舊測試）**
+- [x] **Step 1: 寫失敗的測試——`highlightStyleColor()` 全新單元測試（取代舊測試）**
 
 把 `app/test/reader/highlight_style_test.dart` 整個檔案內容取代為：
 
@@ -113,12 +113,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: 執行測試，確認失敗**
+- [x] **Step 2: 執行測試，確認失敗**
 
 Run（於 `app/` 目錄下）: `flutter test test/reader/highlight_style_test.dart`
 Expected: FAIL（編譯錯誤：`highlightStyleColor` 未定義——`highlight_style.dart` 此時仍是舊版，只有 `highlightStyleTint()`）。
 
-- [ ] **Step 3: 實作——`highlight_style.dart` 全檔重寫**
+- [x] **Step 3: 實作——`highlight_style.dart` 全檔重寫**
 
 把 `app/lib/reader/highlight_style.dart` 整個檔案內容取代為：
 
@@ -177,12 +177,12 @@ Color highlightStyleColor(
 }
 ```
 
-- [ ] **Step 4: 執行測試，確認通過（僅此檔案，其餘檔案此時仍在編譯錯誤狀態，不影響本步驟）**
+- [x] **Step 4: 執行測試，確認通過（僅此檔案，其餘檔案此時仍在編譯錯誤狀態，不影響本步驟）**
 
 Run（於 `app/` 目錄下）: `flutter test test/reader/highlight_style_test.dart`
 Expected: PASS（這個測試檔只 import `highlight_style.dart` 與 `elink_tokens.dart`，不依賴 `reader_screen.dart`／`notes_bottom_sheet.dart`／`annotation_toolbar.dart`，`flutter test` 只編譯該測試檔的遞移依賴，其餘檔案此刻仍呼叫已刪除的 `highlightStyleTint()`／頂層常數也不影響這個獨立測試通過）。
 
-- [ ] **Step 5: 更新 `reader_screen.dart` 呼叫端**
+- [x] **Step 5: 更新 `reader_screen.dart` 呼叫端**
 
 在 `app/lib/screens/reader_screen.dart` 頂部 `import '../sync/sync_checkpoint_trigger.dart';`（原第 56 行）之後新增：
 
@@ -298,7 +298,7 @@ import '../theme/elink_tokens.dart';
   }
 ```
 
-- [ ] **Step 6: 更新 `notes_bottom_sheet.dart` 呼叫端**
+- [x] **Step 6: 更新 `notes_bottom_sheet.dart` 呼叫端**
 
 在 `app/lib/screens/notes_bottom_sheet.dart` 頂部 `import '../reader/markdown_export.dart';`（原第 17 行）之後新增：
 
@@ -342,7 +342,7 @@ import '../theme/elink_tokens.dart';
 
 （`highlightStyleColor()` 已回傳 `Color`，不再需要外層 `Color(...)` 包裝原生 `int` 值。）
 
-- [ ] **Step 7: 更新 `annotation_toolbar.dart` 呼叫端（審查新增，原計劃遺漏）**
+- [x] **Step 7: 更新 `annotation_toolbar.dart` 呼叫端（審查新增，原計劃遺漏）**
 
 在 `app/lib/screens/annotation_toolbar.dart` 頂部 `import '../reader/highlight_style.dart';`（原第 3 行）之後新增：
 
@@ -424,7 +424,7 @@ import '../theme/elink_tokens.dart';
 
 （`AnnotationToolbar` 是 `StatelessWidget`，`build(BuildContext context)` 本來就有 `context` 可用，不需要額外傳遞參數。）
 
-- [ ] **Step 8: 用腳本一次性補齊 `reader_screen_test.dart`／`annotation_toolbar_test.dart` 缺少 `ElinkTokens` 主題的 `MaterialApp`（審查新增，取代原本人工篩選 5 處的做法）**
+- [x] **Step 8: 用腳本一次性補齊 `reader_screen_test.dart`／`annotation_toolbar_test.dart` 缺少 `ElinkTokens` 主題的 `MaterialApp`（審查新增，取代原本人工篩選 5 處的做法）**
 
 原本計劃只精確列出 5 處需要修的 `MaterialApp`，但複審發現這個人工篩選方式有系統性漏洞（詳見上方「範圍決定」第 2 點）。改採以下已驗證過的腳本，對兩個測試檔案裡「每一處」建構 `ReaderScreen`／`AnnotationToolbar` 的 `MaterialApp` 做機械式全面補齊，不再依賴人工判斷。
 
@@ -517,7 +517,7 @@ dart format test/screens/reader_screen_test.dart test/screens/annotation_toolbar
 rm insert_theme.py
 ```
 
-- [ ] **Step 9: 修正 `notes_bottom_sheet_test.dart` 兩個共用 pump helper**
+- [x] **Step 9: 修正 `notes_bottom_sheet_test.dart` 兩個共用 pump helper**
 
 在 `app/test/screens/notes_bottom_sheet_test.dart` 頂部 `import 'package:elinkbook/screens/notes_bottom_sheet.dart';` 之後新增：
 
@@ -560,7 +560,7 @@ import 'package:elinkbook/theme/app_theme_data.dart';
       body: Builder(
 ```
 
-- [ ] **Step 10: 執行四支測試檔，確認全數通過**
+- [x] **Step 10: 執行四支測試檔，確認全數通過**
 
 Run（於 `app/` 目錄下）:
 ```bash
@@ -571,12 +571,12 @@ flutter test test/screens/annotation_toolbar_test.dart
 ```
 Expected: 四個指令皆 PASS，全數綠燈（`reader_screen_test.dart`／`annotation_toolbar_test.dart` 皆為既有測試檔，此步驟同時驗證 Step 8 的機械式補齊沒有引入任何回歸；若有紅燈，先確認是否是 Step 8 腳本漏補或補錯某處，而不是回頭改動 `highlight_style.dart`／呼叫端邏輯）。
 
-- [ ] **Step 11: 執行 `flutter analyze`，確認乾淨**
+- [x] **Step 11: 執行 `flutter analyze`，確認乾淨**
 
 Run（於 `app/` 目錄下）: `flutter analyze`
 Expected: `No issues found!`（此時四個原始碼檔案與四支測試檔的 API 用法已彼此一致，不再有任何地方引用已刪除的 `highlightStyleTint()`／`HighlightStyle.fixedTint`／三個頂層色票常數）。
 
-- [ ] **Step 12: Commit**
+- [x] **Step 12: Commit**
 
 ```bash
 git add app/lib/reader/highlight_style.dart app/lib/screens/reader_screen.dart app/lib/screens/notes_bottom_sheet.dart app/lib/screens/annotation_toolbar.dart app/test/reader/highlight_style_test.dart app/test/screens/reader_screen_test.dart app/test/screens/notes_bottom_sheet_test.dart app/test/screens/annotation_toolbar_test.dart
@@ -603,7 +603,7 @@ EOF
 - Consumes: 無新增依賴（`Theme.of(context).colorScheme.error` 為既有 `ColorScheme` 標準角色，四套主題皆已在 Issue 2 設定好，見 `app_theme_data.dart`）。
 - Produces: 無新增介面，本 Task 只改顏色來源，不改任何函式簽章。
 
-- [ ] **Step 1: 寫失敗的測試——刪除按鈕前景色改讀 `colorScheme.error`**
+- [x] **Step 1: 寫失敗的測試——刪除按鈕前景色改讀 `colorScheme.error`**
 
 在 `app/test/screens/notes_bottom_sheet_test.dart` 檔案最後一個 `testWidgets`（`'點擊右上角 X 取消按鈕後...'`）之後、`main()` 收尾 `}` 之前，新增：
 
@@ -664,12 +664,12 @@ EOF
 
 （`button.style?.foregroundColor?.resolve({})` 已核對 Flutter SDK 原始碼：`TextButton.styleFrom()` 內部呼叫 `ButtonStyleButton.defaultColor(foregroundColor, disabledForegroundColor)`，組成 `WidgetStateProperty<Color?>.fromMap({WidgetState.disabled: disabled, WidgetState.any: enabled})`；`resolve(const <WidgetState>{})`〔空集合，代表「未停用」〕會落入 `WidgetState.any` 分支、回傳 `enabled`〔即 `styleFrom()` 傳入的 `foregroundColor`〕——這是 Flutter 框架內部本身採用的標準手法，不是巧合湊出來的寫法。）
 
-- [ ] **Step 2: 執行測試，確認失敗**
+- [x] **Step 2: 執行測試，確認失敗**
 
 Run（於 `app/` 目錄下）: `flutter test test/screens/notes_bottom_sheet_test.dart`
 Expected: 兩則新測試皆 FAIL（目前 `foregroundColor` 解析出的是 `Colors.red`，不等於 `resolveThemeData(theme: AppTheme.light, isEinkMode: false).colorScheme.error`，兩者不同值——Light 主題 `error` 為 `Color(0xFFEF4444)`，並非 Material `Colors.red` 的 `Color(0xFFF44336)`）。
 
-- [ ] **Step 3: 實作——兩處 `Colors.red` 改為 `colorScheme.error`**
+- [x] **Step 3: 實作——兩處 `Colors.red` 改為 `colorScheme.error`**
 
 把 `_confirmDeleteAllBookmarks()` 內（原第 349 行，`builder: (dialogContext) => AlertDialog(...)` 區塊內）：
 
@@ -699,17 +699,17 @@ Expected: 兩則新測試皆 FAIL（目前 `foregroundColor` 解析出的是 `Co
 
 （兩處都用 `_NotesBottomSheetState` 本身的 `context`（`State.context` getter），不是 `builder` 回呼帶入的 `dialogContext`——`showDialog` 走 root `Navigator`，`Theme` 掛在外層 `MaterialApp`，兩個 `BuildContext` 在這裡會解析到同一個 `ThemeData`，用哪一個功能上皆可運作，本計劃統一採用外層 `context`，避免改動 `builder` 簽章。）
 
-- [ ] **Step 4: 執行測試，確認通過**
+- [x] **Step 4: 執行測試，確認通過**
 
 Run（於 `app/` 目錄下）: `flutter test test/screens/notes_bottom_sheet_test.dart`
 Expected: PASS（本檔案全部測試皆過，含 Task 1 新增的既有測試，無回歸）。
 
-- [ ] **Step 5: 執行 `flutter analyze`，確認乾淨**
+- [x] **Step 5: 執行 `flutter analyze`，確認乾淨**
 
 Run（於 `app/` 目錄下）: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/screens/notes_bottom_sheet.dart app/test/screens/notes_bottom_sheet_test.dart
@@ -726,8 +726,8 @@ EOF
 
 ## 全部 Task 完成後
 
-- [ ] 執行完整 `flutter test`（於 `app/` 目錄下，不帶檔案路徑），確認全專案無回歸。
-- [ ] 執行 `flutter analyze`，確認「No issues found!」。
-- [ ] 把 `docs/epics/epic-35-design-system-tokens/issues.md` Issue 4 的 `Status` 從 `ready-for-agent` 更新為完成狀態（依當時 Epic 慣例用語），並在 `epic.md` 補一筆開發記錄。
-- [ ] 依 `sdd-workflow` 流程，發起 `/superpowers:requesting-code-review` 審查本次程式碼變更（`BASE_SHA`／`HEAD_SHA` 取本工單 2 個 commit 的起訖），審查報告存 `docs/epics/epic-35-design-system-tokens/reviews/review-issue-4.md`。
-- [ ] 提醒：`reader_screen.dart` 剩餘 3 處寫死顏色（`_themedTtsDisabledIconColor`／`_themedTextColor` 的 `Colors.black` 候補值）已於本計劃「範圍決定」段落記錄為刻意排除，非本工單遺漏；若後續有人質疑，指向本檔案該段落即可。
+- [x] 執行完整 `flutter test`（於 `app/` 目錄下，不帶檔案路徑），確認全專案無回歸。
+- [x] 執行 `flutter analyze`，確認「No issues found!」。
+- [x] 把 `docs/epics/epic-35-design-system-tokens/issues.md` Issue 4 的 `Status` 從 `ready-for-agent` 更新為完成狀態（依當時 Epic 慣例用語），並在 `epic.md` 補一筆開發記錄。
+- [x] 依 `sdd-workflow` 流程，發起 `/superpowers:requesting-code-review` 審查本次程式碼變更（`BASE_SHA`／`HEAD_SHA` 取本工單 2 個 commit 的起訖），審查報告存 `docs/epics/epic-35-design-system-tokens/reviews/review-issue-4.md`。
+- [x] 提醒：`reader_screen.dart` 剩餘 3 處寫死顏色（`_themedTtsDisabledIconColor`／`_themedTextColor` 的 `Colors.black` 候補值）已於本計劃「範圍決定」段落記錄為刻意排除，非本工單遺漏；若後續有人質疑，指向本檔案該段落即可。
