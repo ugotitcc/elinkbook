@@ -54,6 +54,7 @@ import '../reader/screen_orientation_setting.dart';
 import '../reader/writing_mode.dart';
 import '../reader/zone_action.dart';
 import '../sync/sync_checkpoint_trigger.dart';
+import '../theme/elink_tokens.dart';
 import 'annotation_toolbar.dart';
 import 'note_edit_dialog.dart';
 import 'notes_bottom_sheet.dart';
@@ -1723,14 +1724,14 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 靜默失敗）。
   void _sendDecorationsToNative() {
     if (!mounted) return;
-    final primaryColor = Theme.of(context).colorScheme.primary;
+    final tokens = Theme.of(context).extension<ElinkTokens>()!;
     final decorations = <EpubDecoration>[
       for (final highlight in _highlights)
         if (highlight.epubLocatorJson != null)
           EpubDecoration.forHighlight(
             highlightId: highlight.id,
             locatorJson: highlight.epubLocatorJson!,
-            tint: highlightStyleTint(highlight.style, primaryColor: primaryColor),
+            tint: highlightStyleColor(highlight.style, tokens: tokens).toARGB32(),
             isUnderline: highlight.style == HighlightStyle.underline,
           ),
       for (final note in _notes)
@@ -1816,14 +1817,14 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
 
   void _sendPdfAnnotationsToNative() {
     if (!mounted) return;
-    final primaryColor = Theme.of(context).colorScheme.primary;
+    final tokens = Theme.of(context).extension<ElinkTokens>()!;
     final annotations = <PdfAnnotationDecoration>[
       for (final highlight in _highlights)
         if (highlight.pdfPageIndex != null && highlight.pdfRect != null)
           PdfAnnotationDecoration.forHighlight(
             pageIndex: highlight.pdfPageIndex!,
             rect: highlight.pdfRect!,
-            tint: highlightStyleTint(highlight.style, primaryColor: primaryColor),
+            tint: highlightStyleColor(highlight.style, tokens: tokens).toARGB32(),
             isUnderline: highlight.style == HighlightStyle.underline,
           ),
       for (final note in _notes)

@@ -11,6 +11,8 @@ import 'package:elinkbook/reader/highlight.dart';
 import 'package:elinkbook/reader/highlight_style.dart';
 import 'package:elinkbook/reader/note.dart';
 import 'package:elinkbook/screens/notes_bottom_sheet.dart';
+import 'package:elinkbook/theme/app_theme.dart';
+import 'package:elinkbook/theme/app_theme_data.dart';
 import '../support/fake_bookmarks_repository.dart';
 import '../support/fake_highlights_repository.dart';
 import '../support/fake_notes_repository.dart';
@@ -31,23 +33,26 @@ Future<void> _pumpSheet(
   ValueChanged<AnnotationListItem>? onAnnotationSelected,
   VoidCallback? onAnnotationsChanged,
 }) async {
-  await tester.pumpWidget(MaterialApp(
-    home: Scaffold(
-      body: NotesBottomSheet(
-        bookId: bookId,
-        bookTitle: bookTitle,
-        bookAuthor: bookAuthor,
-        bookProgress: bookProgress,
-        bookmarksRepository: repository,
-        currentPosition: currentPosition,
-        onBookmarkSelected: onBookmarkSelected ?? (_) {},
-        highlightsRepository: highlightsRepository,
-        notesRepository: notesRepository,
-        onAnnotationSelected: onAnnotationSelected,
-        onAnnotationsChanged: onAnnotationsChanged,
+  await tester.pumpWidget(
+    MaterialApp(
+      theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+      home: Scaffold(
+        body: NotesBottomSheet(
+          bookId: bookId,
+          bookTitle: bookTitle,
+          bookAuthor: bookAuthor,
+          bookProgress: bookProgress,
+          bookmarksRepository: repository,
+          currentPosition: currentPosition,
+          onBookmarkSelected: onBookmarkSelected ?? (_) {},
+          highlightsRepository: highlightsRepository,
+          notesRepository: notesRepository,
+          onAnnotationSelected: onAnnotationSelected,
+          onAnnotationsChanged: onAnnotationsChanged,
+        ),
       ),
     ),
-  ));
+  );
   await tester.pump(); // 讓 initState 觸發的 _loadBookmarks() 非同步結果套用
 }
 
@@ -57,7 +62,10 @@ void main() {
     await _pumpSheet(tester, repository: repository);
 
     expect(find.byKey(const Key('notes_sheet_tab_bookmarks')), findsOneWidget);
-    expect(find.byKey(const Key('notes_sheet_tab_annotations')), findsOneWidget);
+    expect(
+      find.byKey(const Key('notes_sheet_tab_annotations')),
+      findsOneWidget,
+    );
     expect(find.byKey(const Key('notes_sheet_bookmark_list')), findsOneWidget);
   });
 
@@ -76,10 +84,12 @@ void main() {
 
   testWidgets('書籤分頁正確依位置順序顯示清單', (tester) async {
     final repository = FakeBookmarksRepository();
-    await repository
-        .insert(const Bookmark(id: 'bm1', bookId: 'b1', name: 'C', progression: 0.8));
-    await repository
-        .insert(const Bookmark(id: 'bm2', bookId: 'b1', name: 'A', progression: 0.1));
+    await repository.insert(
+      const Bookmark(id: 'bm1', bookId: 'b1', name: 'C', progression: 0.8),
+    );
+    await repository.insert(
+      const Bookmark(id: 'bm2', bookId: 'b1', name: 'A', progression: 0.1),
+    );
     await _pumpSheet(tester, repository: repository);
 
     final listFinder = find.byKey(const Key('notes_sheet_bookmark_list'));
@@ -155,12 +165,14 @@ void main() {
 
   testWidgets('EPUB 情境下 toggle 依 epubLocatorJson 精確比對', (tester) async {
     final repository = FakeBookmarksRepository();
-    await repository.insert(const Bookmark(
-      id: 'bm5',
-      bookId: 'b1',
-      name: '別處',
-      epubLocatorJson: '{"href":"/other.xhtml"}',
-    ));
+    await repository.insert(
+      const Bookmark(
+        id: 'bm5',
+        bookId: 'b1',
+        name: '別處',
+        epubLocatorJson: '{"href":"/other.xhtml"}',
+      ),
+    );
     await _pumpSheet(
       tester,
       repository: repository,
@@ -224,14 +236,15 @@ void main() {
 
   testWidgets('批次刪除顯示確認對話框，取消不刪除', (tester) async {
     final repository = FakeBookmarksRepository();
-    await repository
-        .insert(const Bookmark(id: 'bm8', bookId: 'b1', name: 'A', progression: 0.1));
-    await repository
-        .insert(const Bookmark(id: 'bm9', bookId: 'b1', name: 'B', progression: 0.5));
+    await repository.insert(
+      const Bookmark(id: 'bm8', bookId: 'b1', name: 'A', progression: 0.1),
+    );
+    await repository.insert(
+      const Bookmark(id: 'bm9', bookId: 'b1', name: 'B', progression: 0.5),
+    );
     await _pumpSheet(tester, repository: repository);
 
-    await tester
-        .tap(find.byKey(const Key('notes_sheet_delete_all_bookmarks')));
+    await tester.tap(find.byKey(const Key('notes_sheet_delete_all_bookmarks')));
     await tester.pumpAndSettle();
     expect(find.textContaining('共 2 筆'), findsOneWidget);
 
@@ -244,14 +257,15 @@ void main() {
 
   testWidgets('批次刪除確認後清單清空', (tester) async {
     final repository = FakeBookmarksRepository();
-    await repository
-        .insert(const Bookmark(id: 'bm10', bookId: 'b1', name: 'A', progression: 0.1));
-    await repository
-        .insert(const Bookmark(id: 'bm11', bookId: 'b1', name: 'B', progression: 0.5));
+    await repository.insert(
+      const Bookmark(id: 'bm10', bookId: 'b1', name: 'A', progression: 0.1),
+    );
+    await repository.insert(
+      const Bookmark(id: 'bm11', bookId: 'b1', name: 'B', progression: 0.5),
+    );
     await _pumpSheet(tester, repository: repository);
 
-    await tester
-        .tap(find.byKey(const Key('notes_sheet_delete_all_bookmarks')));
+    await tester.tap(find.byKey(const Key('notes_sheet_delete_all_bookmarks')));
     await tester.pumpAndSettle();
     await tester.tap(
       find.byKey(const Key('notes_sheet_delete_all_bookmarks_confirm')),
@@ -262,33 +276,47 @@ void main() {
     expect(find.text('B'), findsNothing);
   });
 
-  testWidgets('未提供 highlightsRepository／notesRepository 時，維持 Issue 1 既有空狀態佔位符',
-      (tester) async {
-    final repository = FakeBookmarksRepository();
-    await _pumpSheet(tester, repository: repository);
+  testWidgets(
+    '未提供 highlightsRepository／notesRepository 時，維持 Issue 1 既有空狀態佔位符',
+    (tester) async {
+      final repository = FakeBookmarksRepository();
+      await _pumpSheet(tester, repository: repository);
 
-    await tester.tap(find.byKey(const Key('notes_sheet_tab_annotations')));
-    await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('notes_sheet_tab_annotations')));
+      await tester.pumpAndSettle();
 
-    expect(find.byKey(const Key('notes_sheet_annotations_placeholder')), findsOneWidget);
-  });
+      expect(
+        find.byKey(const Key('notes_sheet_annotations_placeholder')),
+        findsOneWidget,
+      );
+    },
+  );
 
-  testWidgets('提供兩個 repository 後，「劃線與備註」分頁依位置排序顯示合併清單',
-      (tester) async {
+  testWidgets('提供兩個 repository 後，「劃線與備註」分頁依位置排序顯示合併清單', (tester) async {
     final repository = FakeBookmarksRepository();
     final highlightsRepository = FakeHighlightsRepository();
     final notesRepository = FakeNotesRepository();
     const highlightId = 'h7';
-    await highlightsRepository.insert(const Highlight(
-      id: highlightId,
-      bookId: 'b1',
-      style: HighlightStyle.highlighterPink,
-      progression: 0.2,
-    ));
-    await notesRepository.insert(
-      Note(id: 'n2', bookId: 'b1', text: '依附備註', progression: 0.2, highlightId: highlightId),
+    await highlightsRepository.insert(
+      const Highlight(
+        id: highlightId,
+        bookId: 'b1',
+        style: HighlightStyle.highlighterPink,
+        progression: 0.2,
+      ),
     );
-    await notesRepository.insert(const Note(id: 'n3', bookId: 'b1', text: '純備註', progression: 0.5));
+    await notesRepository.insert(
+      Note(
+        id: 'n2',
+        bookId: 'b1',
+        text: '依附備註',
+        progression: 0.2,
+        highlightId: highlightId,
+      ),
+    );
+    await notesRepository.insert(
+      const Note(id: 'n3', bookId: 'b1', text: '純備註', progression: 0.5),
+    );
 
     await _pumpSheet(
       tester,
@@ -299,7 +327,10 @@ void main() {
     await tester.tap(find.byKey(const Key('notes_sheet_tab_annotations')));
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const Key('notes_sheet_annotation_list')), findsOneWidget);
+    expect(
+      find.byKey(const Key('notes_sheet_annotation_list')),
+      findsOneWidget,
+    );
     expect(find.text('螢光筆（粉）'), findsOneWidget);
     expect(find.text('依附備註'), findsOneWidget);
     expect(find.text('純備註'), findsOneWidget);
@@ -310,7 +341,12 @@ void main() {
     final highlightsRepository = FakeHighlightsRepository();
     final notesRepository = FakeNotesRepository();
     await highlightsRepository.insert(
-      const Highlight(id: 'h1', bookId: 'b1', style: HighlightStyle.underline, progression: 0.1),
+      const Highlight(
+        id: 'h1',
+        bookId: 'b1',
+        style: HighlightStyle.underline,
+        progression: 0.1,
+      ),
     );
     AnnotationListItem? selected;
 
@@ -333,7 +369,9 @@ void main() {
     final highlightsRepository = FakeHighlightsRepository();
     final notesRepository = FakeNotesRepository();
     const noteId = 'n4';
-    await notesRepository.insert(const Note(id: noteId, bookId: 'b1', text: '舊文字', progression: 0.1));
+    await notesRepository.insert(
+      const Note(id: noteId, bookId: 'b1', text: '舊文字', progression: 0.1),
+    );
     var changedCount = 0;
 
     await _pumpSheet(
@@ -348,7 +386,10 @@ void main() {
 
     await tester.tap(find.byKey(Key('notes_sheet_annotation_edit_$noteId')));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byKey(const Key('note_edit_dialog_field')), '新文字');
+    await tester.enterText(
+      find.byKey(const Key('note_edit_dialog_field')),
+      '新文字',
+    );
     await tester.tap(find.byKey(const Key('note_edit_dialog_confirm')));
     await tester.pumpAndSettle();
 
@@ -362,10 +403,21 @@ void main() {
     final notesRepository = FakeNotesRepository();
     const highlightId = 'h2';
     await highlightsRepository.insert(
-      const Highlight(id: highlightId, bookId: 'b1', style: HighlightStyle.underline, progression: 0.1),
+      const Highlight(
+        id: highlightId,
+        bookId: 'b1',
+        style: HighlightStyle.underline,
+        progression: 0.1,
+      ),
     );
     await notesRepository.insert(
-      Note(id: 'n6', bookId: 'b1', text: '依附備註', progression: 0.1, highlightId: highlightId),
+      Note(
+        id: 'n6',
+        bookId: 'b1',
+        text: '依附備註',
+        progression: 0.1,
+        highlightId: highlightId,
+      ),
     );
 
     await _pumpSheet(
@@ -383,19 +435,31 @@ void main() {
 
     expect(await highlightsRepository.listByBook('b1'), isEmpty);
     expect(await notesRepository.listByBook('b1'), isEmpty);
-    expect(find.byKey(const Key('notes_sheet_annotations_placeholder')), findsOneWidget);
+    expect(
+      find.byKey(const Key('notes_sheet_annotations_placeholder')),
+      findsOneWidget,
+    );
   });
 
-  testWidgets('批次刪除所有劃線：確認對話框顯示正確筆數，確認後劃線清單清空',
-      (tester) async {
+  testWidgets('批次刪除所有劃線：確認對話框顯示正確筆數，確認後劃線清單清空', (tester) async {
     final repository = FakeBookmarksRepository();
     final highlightsRepository = FakeHighlightsRepository();
     final notesRepository = FakeNotesRepository();
     await highlightsRepository.insert(
-      const Highlight(id: 'h3', bookId: 'b1', style: HighlightStyle.underline, progression: 0.1),
+      const Highlight(
+        id: 'h3',
+        bookId: 'b1',
+        style: HighlightStyle.underline,
+        progression: 0.1,
+      ),
     );
     await highlightsRepository.insert(
-      const Highlight(id: 'h4', bookId: 'b1', style: HighlightStyle.underline, progression: 0.2),
+      const Highlight(
+        id: 'h4',
+        bookId: 'b1',
+        style: HighlightStyle.underline,
+        progression: 0.2,
+      ),
     );
 
     await _pumpSheet(
@@ -407,19 +471,25 @@ void main() {
     await tester.tap(find.byKey(const Key('notes_sheet_tab_annotations')));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('notes_sheet_delete_all_highlights')));
+    await tester.tap(
+      find.byKey(const Key('notes_sheet_delete_all_highlights')),
+    );
     await tester.pumpAndSettle();
     expect(find.textContaining('2'), findsWidgets);
 
-    await tester.tap(find.byKey(const Key('notes_sheet_delete_all_highlights_confirm')));
+    await tester.tap(
+      find.byKey(const Key('notes_sheet_delete_all_highlights_confirm')),
+    );
     await tester.pumpAndSettle();
 
     expect(await highlightsRepository.listByBook('b1'), isEmpty);
-    expect(find.byKey(const Key('notes_sheet_annotations_placeholder')), findsOneWidget);
+    expect(
+      find.byKey(const Key('notes_sheet_annotations_placeholder')),
+      findsOneWidget,
+    );
   });
 
-  testWidgets(
-      '已退化的純備註（highlightId 已為 null，模擬真實資料庫 FK ON DELETE SET NULL '
+  testWidgets('已退化的純備註（highlightId 已為 null，模擬真實資料庫 FK ON DELETE SET NULL '
       'cascade 之後的狀態——真正的 cascade 行為本身由 Task 4 對真實 SQLite 的 '
       'notes_repository_test.dart 驗證，本測試不重複模擬那段邏輯，Fake 之間也刻意'
       '不互相協調）：批次刪除所有劃線後，這筆早已獨立存在的純備註不受影響，仍正確'
@@ -428,14 +498,25 @@ void main() {
     final highlightsRepository = FakeHighlightsRepository();
     final notesRepository = FakeNotesRepository();
     await highlightsRepository.insert(
-      const Highlight(id: 'h5', bookId: 'b1', style: HighlightStyle.underline, progression: 0.1),
+      const Highlight(
+        id: 'h5',
+        bookId: 'b1',
+        style: HighlightStyle.underline,
+        progression: 0.1,
+      ),
     );
     // 直接建構「已退化」狀態（highlightId: null），而非先建立一筆連結中的
     // 備註再期待 Fake 自動模擬 cascade——兩個 Fake 刻意保持互不協調（見
     // Global Constraints／FakeNotesRepository 既有 KDoc），避免在測試替身
     // 裡重新實作一份可能與真實資料庫語意逐漸失準的 FK cascade 邏輯。
     await notesRepository.insert(
-      const Note(id: 'n5', bookId: 'b1', text: '已退化的純備註', progression: 0.3, highlightId: null),
+      const Note(
+        id: 'n5',
+        bookId: 'b1',
+        text: '已退化的純備註',
+        progression: 0.3,
+        highlightId: null,
+      ),
     );
 
     await _pumpSheet(
@@ -447,14 +528,21 @@ void main() {
     await tester.tap(find.byKey(const Key('notes_sheet_tab_annotations')));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('notes_sheet_delete_all_highlights')));
+    await tester.tap(
+      find.byKey(const Key('notes_sheet_delete_all_highlights')),
+    );
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('notes_sheet_delete_all_highlights_confirm')));
+    await tester.tap(
+      find.byKey(const Key('notes_sheet_delete_all_highlights_confirm')),
+    );
     await tester.pumpAndSettle();
 
     expect(await highlightsRepository.listByBook('b1'), isEmpty);
     expect(find.text('已退化的純備註'), findsOneWidget);
-    expect(find.byKey(const Key('notes_sheet_annotations_placeholder')), findsNothing);
+    expect(
+      find.byKey(const Key('notes_sheet_annotations_placeholder')),
+      findsNothing,
+    );
   });
 
   testWidgets('批次刪除所有備註：取消不刪除，確認後備註消失、劃線不受影響', (tester) async {
@@ -462,9 +550,16 @@ void main() {
     final highlightsRepository = FakeHighlightsRepository();
     final notesRepository = FakeNotesRepository();
     await highlightsRepository.insert(
-      const Highlight(id: 'h6', bookId: 'b1', style: HighlightStyle.underline, progression: 0.1),
+      const Highlight(
+        id: 'h6',
+        bookId: 'b1',
+        style: HighlightStyle.underline,
+        progression: 0.1,
+      ),
     );
-    await notesRepository.insert(const Note(id: 'n1', bookId: 'b1', text: '純備註', progression: 0.5));
+    await notesRepository.insert(
+      const Note(id: 'n1', bookId: 'b1', text: '純備註', progression: 0.5),
+    );
 
     await _pumpSheet(
       tester,
@@ -483,7 +578,9 @@ void main() {
 
     await tester.tap(find.byKey(const Key('notes_sheet_delete_all_notes')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('notes_sheet_delete_all_notes_confirm')));
+    await tester.tap(
+      find.byKey(const Key('notes_sheet_delete_all_notes_confirm')),
+    );
     await tester.pumpAndSettle();
 
     expect(await notesRepository.listByBook('b1'), isEmpty);
@@ -494,12 +591,15 @@ void main() {
     final repository = FakeBookmarksRepository();
     await _pumpSheet(tester, repository: repository);
 
-    expect(find.byKey(const Key('notes_sheet_export_markdown')), findsOneWidget);
+    expect(
+      find.byKey(const Key('notes_sheet_export_markdown')),
+      findsOneWidget,
+    );
   });
 
-  testWidgets(
-      '點擊導出為 Markdown 按鈕後，正確寫入暫存檔案並呼叫 SharePlatform.share',
-      (tester) async {
+  testWidgets('點擊導出為 Markdown 按鈕後，正確寫入暫存檔案並呼叫 SharePlatform.share', (
+    tester,
+  ) async {
     // 【根因說明，取代原本被簡化掉的失敗版本，見 task-2-report.md「Known
     // Issues」】`flutter test` 使用的 `AutomatedTestWidgetsFlutterBinding` 以
     // `FakeAsync` 接管整個測試的 Timer／microtask 排程，僅由 `pump()` 手動
@@ -555,7 +655,8 @@ void main() {
     await tester.runAsync(() async {
       await tester.tap(find.byKey(const Key('notes_sheet_export_markdown')));
       final deadline = DateTime.now().add(const Duration(seconds: 5));
-      while (fakeShare.lastParams == null && DateTime.now().isBefore(deadline)) {
+      while (fakeShare.lastParams == null &&
+          DateTime.now().isBefore(deadline)) {
         await Future<void>.delayed(const Duration(milliseconds: 20));
       }
     });
@@ -574,8 +675,9 @@ void main() {
     expect(content, contains('*   第一章'));
   });
 
-  testWidgets('點擊右上角 X 取消按鈕後，Bottom Sheet 關閉（Navigator.pop 生效）',
-      (tester) async {
+  testWidgets('點擊右上角 X 取消按鈕後，Bottom Sheet 關閉（Navigator.pop 生效）', (
+    tester,
+  ) async {
     await _pumpModalSheet(tester, repository: FakeBookmarksRepository());
 
     expect(find.byType(NotesBottomSheet), findsOneWidget);
@@ -585,6 +687,66 @@ void main() {
 
     expect(find.byType(NotesBottomSheet), findsNothing);
   });
+
+  testWidgets('批次刪除書籤確認對話框的「刪除」按鈕前景色為 colorScheme.error', (tester) async {
+    final repository = FakeBookmarksRepository();
+    await repository.insert(
+      const Bookmark(id: 'bm13', bookId: 'b1', name: 'A', progression: 0.1),
+    );
+    await _pumpSheet(tester, repository: repository);
+
+    await tester.tap(find.byKey(const Key('notes_sheet_delete_all_bookmarks')));
+    await tester.pumpAndSettle();
+
+    final button = tester.widget<TextButton>(
+      find.byKey(const Key('notes_sheet_delete_all_bookmarks_confirm')),
+    );
+    final context = tester.element(
+      find.byKey(const Key('notes_sheet_delete_all_bookmarks_confirm')),
+    );
+    expect(
+      button.style?.foregroundColor?.resolve({}),
+      Theme.of(context).colorScheme.error,
+    );
+  });
+
+  testWidgets('批次刪除劃線確認對話框的「刪除」按鈕前景色為 colorScheme.error', (tester) async {
+    final repository = FakeBookmarksRepository();
+    final highlightsRepository = FakeHighlightsRepository();
+    final notesRepository = FakeNotesRepository();
+    await highlightsRepository.insert(
+      const Highlight(
+        id: 'h8',
+        bookId: 'b1',
+        style: HighlightStyle.underline,
+        progression: 0.1,
+      ),
+    );
+    await _pumpSheet(
+      tester,
+      repository: repository,
+      highlightsRepository: highlightsRepository,
+      notesRepository: notesRepository,
+    );
+    await tester.tap(find.byKey(const Key('notes_sheet_tab_annotations')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.byKey(const Key('notes_sheet_delete_all_highlights')),
+    );
+    await tester.pumpAndSettle();
+
+    final button = tester.widget<TextButton>(
+      find.byKey(const Key('notes_sheet_delete_all_highlights_confirm')),
+    );
+    final context = tester.element(
+      find.byKey(const Key('notes_sheet_delete_all_highlights_confirm')),
+    );
+    expect(
+      button.style?.foregroundColor?.resolve({}),
+      Theme.of(context).colorScheme.error,
+    );
+  });
 }
 
 Future<void> _pumpModalSheet(
@@ -593,28 +755,31 @@ Future<void> _pumpModalSheet(
   String bookId = 'b1',
   String bookTitle = '測試書籍',
 }) async {
-  await tester.pumpWidget(MaterialApp(
-    home: Scaffold(
-      body: Builder(
-        builder: (context) => ElevatedButton(
-          onPressed: () => showModalBottomSheet<void>(
-            context: context,
-            isScrollControlled: true,
-            builder: (_) => NotesBottomSheet(
-              bookId: bookId,
-              bookTitle: bookTitle,
-              bookAuthor: null,
-              bookProgress: 0.0,
-              bookmarksRepository: repository,
-              currentPosition: const BookmarkPositionContext(),
-              onBookmarkSelected: (_) {},
+  await tester.pumpWidget(
+    MaterialApp(
+      theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+      home: Scaffold(
+        body: Builder(
+          builder: (context) => ElevatedButton(
+            onPressed: () => showModalBottomSheet<void>(
+              context: context,
+              isScrollControlled: true,
+              builder: (_) => NotesBottomSheet(
+                bookId: bookId,
+                bookTitle: bookTitle,
+                bookAuthor: null,
+                bookProgress: 0.0,
+                bookmarksRepository: repository,
+                currentPosition: const BookmarkPositionContext(),
+                onBookmarkSelected: (_) {},
+              ),
             ),
+            child: const Text('open'),
           ),
-          child: const Text('open'),
         ),
       ),
     ),
-  ));
+  );
 
   await tester.tap(find.text('open'));
   await tester.pumpAndSettle();

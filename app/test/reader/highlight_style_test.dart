@@ -1,36 +1,47 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/reader/highlight_style.dart';
+import 'package:elinkbook/theme/elink_tokens.dart';
 
 void main() {
-  test('highlighterYellow/Pink/Blue 回傳各自固定色票，忽略 primaryColor', () {
-    const arbitraryPrimary = Color(0xFF000000);
+  const tokens = ElinkTokens(
+    highlightYellow: Color(0xFFFEF08A),
+    highlightGreen: Color(0xFFBBF7D0),
+    highlightBlue: Color(0xFFBFDBFE),
+    underlineColor: Color(0xFF0284C7),
+    progressTrack: Color(0xFFCBDFE9),
+    coverPlaceholder: Color(0xFFE6F1FA),
+    badgeScrim: Color(0xFF94A3B8),
+    ttsActiveHighlight: Color(0xFFE0F2FE),
+    isEink: false,
+    reducedMotion: false,
+    discretePaging: false,
+  );
+
+  test('highlightStyleColor()：四個樣式各自對應正確的 ElinkTokens 欄位', () {
     expect(
-      highlightStyleTint(HighlightStyle.highlighterYellow, primaryColor: arbitraryPrimary),
-      highlighterYellowTint.toARGB32(),
+      highlightStyleColor(HighlightStyle.highlighterYellow, tokens: tokens),
+      tokens.highlightYellow,
     );
     expect(
-      highlightStyleTint(HighlightStyle.highlighterPink, primaryColor: arbitraryPrimary),
-      highlighterPinkTint.toARGB32(),
+      highlightStyleColor(HighlightStyle.highlighterPink, tokens: tokens),
+      tokens.highlightGreen,
+      reason: 'highlighterPink 語意變更為綠色，DESIGN.md §1.2 既有決策',
     );
     expect(
-      highlightStyleTint(HighlightStyle.highlighterBlue, primaryColor: arbitraryPrimary),
-      highlighterBlueTint.toARGB32(),
+      highlightStyleColor(HighlightStyle.highlighterBlue, tokens: tokens),
+      tokens.highlightBlue,
+    );
+    expect(
+      highlightStyleColor(HighlightStyle.underline, tokens: tokens),
+      tokens.underlineColor,
     );
   });
 
-  test('underline 回傳呼叫端傳入的 primaryColor（design.md 決策 #5：不提供顏色選擇）', () {
-    const primary = Color(0xFF123456);
+  test('HighlightStyle 列舉成員名稱維持不變（Enum.values.byName() 持久化相容性）', () {
     expect(
-      highlightStyleTint(HighlightStyle.underline, primaryColor: primary),
-      primary.toARGB32(),
+      HighlightStyle.values.map((e) => e.name).toList(),
+      ['highlighterYellow', 'highlighterPink', 'highlighterBlue', 'underline'],
     );
-  });
-
-  test('HighlightStyle.fixedTint：螢光筆三色為對應色票，underline 為 null（審查修正）', () {
-    expect(HighlightStyle.highlighterYellow.fixedTint, highlighterYellowTint);
-    expect(HighlightStyle.highlighterPink.fixedTint, highlighterPinkTint);
-    expect(HighlightStyle.highlighterBlue.fixedTint, highlighterBlueTint);
-    expect(HighlightStyle.underline.fixedTint, isNull);
   });
 }

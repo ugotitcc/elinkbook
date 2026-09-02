@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../reader/highlight_style.dart';
+import '../theme/elink_tokens.dart';
 
 /// 選字/框選後浮現的浮動工具列（design.md「使用者流程」步驟 1-2；
 /// EPUB（本 Issue）與 PDF（issues.md Issue 3）共用同一組 Widget）。
@@ -44,6 +45,7 @@ class AnnotationToolbar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = Theme.of(context).extension<ElinkTokens>()!;
     return Material(
       elevation: 4,
       borderRadius: BorderRadius.circular(24),
@@ -58,17 +60,20 @@ class AnnotationToolbar extends StatelessWidget {
               children: [
                 _colorButton(
                   key: const Key('annotation_toolbar_highlighter_yellow'),
-                  color: highlighterYellowTint,
+                  color: highlightStyleColor(HighlightStyle.highlighterYellow,
+                      tokens: tokens),
                   onTap: () => onStyleSelected(HighlightStyle.highlighterYellow),
                 ),
                 _colorButton(
                   key: const Key('annotation_toolbar_highlighter_pink'),
-                  color: highlighterPinkTint,
+                  color: highlightStyleColor(HighlightStyle.highlighterPink,
+                      tokens: tokens),
                   onTap: () => onStyleSelected(HighlightStyle.highlighterPink),
                 ),
                 _colorButton(
                   key: const Key('annotation_toolbar_highlighter_blue'),
-                  color: highlighterBlueTint,
+                  color: highlightStyleColor(HighlightStyle.highlighterBlue,
+                      tokens: tokens),
                   onTap: () => onStyleSelected(HighlightStyle.highlighterBlue),
                 ),
                 IconButton(

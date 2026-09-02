@@ -1,56 +1,52 @@
 import 'package:flutter/material.dart';
 
-/// 螢光筆固定色票（design.md 決策 #5），色值換算自
-/// `prototype/index.html` 既有 `.highlight-yellow`/`-pink`/`-blue` 的
-/// CSS `rgba(..., 0.45)`（45% 透明度 ≈ 0x73/0xFF）。宣告在列舉之前，
-/// 供下方列舉建構子直接參照（Dart 頂層宣告不受檔案內文字順序限制）。
-const highlighterYellowTint = Color(0x73FDE047);
-const highlighterPinkTint = Color(0x73F472B6);
-const highlighterBlueTint = Color(0x7360A5FA);
+import '../theme/elink_tokens.dart';
 
 /// 純備註（無劃線）的固定畫面指示色（design.md 決策 #2「淡灰底」，見
-/// Global Constraints「純備註視覺簡化」）。
+/// Global Constraints「純備註視覺簡化」）。不在 epic-35-design-system-tokens
+/// 遷移範圍——`ElinkTokens` 未定義對應欄位，維持既有寫死值。
 const noteOnlyTint = Color(0x73D1D5DB);
 
 /// 劃線樣式（epic-6-annotations Issue 2，spec.md「劃線與備註模組」）：
-/// 螢光筆三色（背景底色填滿）與底線（波浪底線，固定主題 primary 色）為
-/// 4 個互斥值，非「樣式＋顏色」兩個獨立維度——避免「底線＋顏色」這種
-/// design.md 決策 #5 明確排除的無效狀態組合。持久化時使用 `.name`（比照
-/// 既有 `PdfCropMode`/`WritingMode` 等列舉的既有慣例，見
-/// book_reader_prefs.dart 的 `Enum.values.byName()` 既有寫法）。
+/// 螢光筆三色（背景底色填滿）與底線（波浪底線，跟隨主題色）為 4 個互斥值，
+/// 非「樣式＋顏色」兩個獨立維度——避免「底線＋顏色」這種 design.md 決策
+/// #5 明確排除的無效狀態組合。持久化時使用 `.name`（比照既有
+/// `PdfCropMode`/`WritingMode` 等列舉的既有慣例，見 book_reader_prefs.dart
+/// 的 `Enum.values.byName()` 既有寫法）。
 ///
-/// 【審查修正】[fixedTint] 由列舉本身攜帶固定色票（螢光筆三色），
-/// `underline` 為 `null`（其色值是執行期才知道的目前主題 primary
-/// 色，非編譯期常數，不可能收斂為列舉欄位）——取代原本 `highlightStyleTint`
-/// 對 4 個值各自 `switch` 一次的寫法，把「這個樣式對應哪個固定色票」這件
-/// 事收斂成列舉自身的資料，而非外部函式的重複分支邏輯。純 UI 顯示標籤
-/// （例如「螢光筆（黃）」）刻意不放在這個檔案——`reader/` 目錄下的其他
-/// 列舉（`BookFormat`／`WritingMode`／`PdfCropMode` 等）皆不含 UI 顯示
-/// 字串，是純格式無關的領域模型；標籤是唯一消費端 `NotesBottomSheet`
-/// 自己的呈現邏輯，收斂在該檔案內的私有函式（見 Task 7），避免領域模型
-/// 檔案摻雜 UI 層級的字串常數。
+/// 【epic-35-design-system-tokens Issue 4】列舉不再攜帶編譯期色票常數——
+/// 色值改由 [highlightStyleColor] 於執行期透過 `ElinkTokens` 解析，因為
+/// `ElinkTokens` 只有 `Theme.of(context)` 才能取得，不可能收斂為列舉的
+/// 編譯期欄位。**列舉成員名稱維持不變**（含 `highlighterPink` 即使視覺上
+/// 對應綠色）——改名會讓 `Enum.values.byName()` 持久化的既有使用者資料
+/// （劃線樣式）反序列化失敗；「這個樣式渲染出來是什麼顏色」跟「這個樣式的
+/// 識別字串是什麼」是兩件事，不需要同步改。純 UI 顯示標籤（例如「螢光筆
+/// （黃）」）不放在這個檔案——見 `notes_bottom_sheet.dart` 的
+/// `_highlightStyleLabel()`。
 enum HighlightStyle {
-  highlighterYellow(highlighterYellowTint),
-  highlighterPink(highlighterPinkTint),
-  highlighterBlue(highlighterBlueTint),
-  underline(null);
-
-  /// 固定色票；`null` 代表色值需由呼叫端於執行期決定（僅 `underline`
-  /// 如此，見 [highlightStyleTint]）。
-  final Color? fixedTint;
-
-  const HighlightStyle(this.fixedTint);
+  highlighterYellow,
+  highlighterPink,
+  highlighterBlue,
+  underline,
 }
 
-/// 依樣式＋目前主題 primary 色，換算成原生 Decoration API 所需的完整
-/// ARGB `int` 色值（Dart `Color.toARGB32()`〔審查修正：`Color.value` 已於
-/// Flutter SDK deprecated，`toARGB32()` 是行為完全相同的替代方法〕與 Android
-/// `Color` int 皆為 `0xAARRGGBB` 版面，可直接透傳給原生端，見 Global
-/// Constraints「色彩決策收斂在 Dart 端」）。純函式，不依賴 `BuildContext`
-/// ——呼叫端自行讀取 `Theme.of(context).colorScheme.primary` 後傳入，維持
-/// 本函式可獨立單元測試。實作本身不再需要 `switch`——[HighlightStyle.fixedTint]
-/// 非 null 時直接採用，僅 `underline`（`fixedTint == null`）才退回呼叫端
-/// 傳入的 [primaryColor]。
-int highlightStyleTint(HighlightStyle style, {required Color primaryColor}) {
-  return (style.fixedTint ?? primaryColor).toARGB32();
+/// 依樣式解析出對應的 [ElinkTokens] 顏色（`highlighterPink` 對應
+/// `tokens.highlightGreen`，語意變更，`DESIGN.md` §1.2 既有決策）。純函式，
+/// 呼叫端自行從 `Theme.of(context).extension<ElinkTokens>()!` 取得
+/// [tokens]。原生 Decoration API 需要的 `int` ARGB32 值由呼叫端自行呼叫
+/// `.toARGB32()`（見 Global Constraints「色彩決策收斂在 Dart 端」）。
+Color highlightStyleColor(
+  HighlightStyle style, {
+  required ElinkTokens tokens,
+}) {
+  switch (style) {
+    case HighlightStyle.highlighterYellow:
+      return tokens.highlightYellow;
+    case HighlightStyle.highlighterPink:
+      return tokens.highlightGreen;
+    case HighlightStyle.highlighterBlue:
+      return tokens.highlightBlue;
+    case HighlightStyle.underline:
+      return tokens.underlineColor;
+  }
 }
