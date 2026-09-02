@@ -35,6 +35,35 @@ ThemeData resolveThemeData({
 // 私有建構方法
 // ──────────────────────────────────────────────────────────
 
+/// 電子紙可辨識度補強（epic-35-design-system-tokens Issue 2）：M3 Switch
+/// OFF 狀態預設會吃 outline（thumbColor）／surfaceContainerHighest
+/// （trackColor）兩個角色，這兩個角色在 Dark 主題改採 DESIGN.md 色值後彼此
+/// 跟 surface 的亮度差大幅縮小，電子紙上不可靠（見 spec.md「Dark 主題色值
+/// 衝突決議」）。改為三個插槽全部參照 colorScheme.onSurface——onSurface 對
+/// surface 的對比由文字可讀性需求保證足夠，比原本設計給裝飾用的
+/// outline／surfaceContainerHighest 更適合扛「使用者必須看得見」的責任。
+/// thumb／trackOutline 用滿不透明，track 依 OFF/ON 狀態調整透明度，三者
+/// 之間仍可互相區分。【注意】0.5／0.15 這兩個透明度數值是本工單自行決定
+/// 的具體詮釋，spec.md 只給了「依狀態調整透明度以維持三者可區分」的定性
+/// 描述，沒有指定精確數字——下一輪真機驗證（比照 epic-18／epic-25 慣例）
+/// 若發現電子紙上不夠清楚，這兩個數字是可以直接調整的錨點，不需要重新
+/// 討論整體設計。
+SwitchThemeData _buildSwitchTheme(ColorScheme colorScheme) {
+  return SwitchThemeData(
+    thumbColor: WidgetStateProperty.resolveWith(
+      (states) => colorScheme.onSurface,
+    ),
+    trackColor: WidgetStateProperty.resolveWith(
+      (states) => colorScheme.onSurface.withValues(
+        alpha: states.contains(WidgetState.selected) ? 0.5 : 0.15,
+      ),
+    ),
+    trackOutlineColor: WidgetStateProperty.resolveWith(
+      (states) => colorScheme.onSurface,
+    ),
+  );
+}
+
 ThemeData _buildLightTheme() {
   const primary = Color(0xFF0284C7);
   const onPrimary = Color(0xFFFFFFFF);
@@ -66,6 +95,7 @@ ThemeData _buildLightTheme() {
     colorScheme: colorScheme,
     scaffoldBackgroundColor: scaffoldBackground,
     useMaterial3: true,
+    switchTheme: _buildSwitchTheme(colorScheme),
     extensions: const [
       ElinkTokens(
         highlightYellow: Color(0xFFFEF08A),
@@ -122,6 +152,7 @@ ThemeData _buildDarkTheme() {
     colorScheme: colorScheme,
     scaffoldBackgroundColor: scaffoldBackground,
     useMaterial3: true,
+    switchTheme: _buildSwitchTheme(colorScheme),
     extensions: const [
       ElinkTokens(
         highlightYellow: Color(0xFF854D0E),
@@ -171,6 +202,7 @@ ThemeData _buildSepiaTheme() {
     colorScheme: colorScheme,
     scaffoldBackgroundColor: scaffoldBackground,
     useMaterial3: true,
+    switchTheme: _buildSwitchTheme(colorScheme),
     extensions: const [
       ElinkTokens(
         highlightYellow: Color(0xFFFEF3C7),
@@ -219,6 +251,7 @@ ThemeData _buildEinkTheme() {
     colorScheme: colorScheme,
     scaffoldBackgroundColor: Colors.white,
     useMaterial3: true,
+    switchTheme: _buildSwitchTheme(colorScheme),
     // 停用點擊水波紋效果與高亮，以避免電子紙裝置上產生嚴重殘影與刷新閃爍
     splashFactory: NoSplash.splashFactory,
     hoverColor: Colors.transparent,

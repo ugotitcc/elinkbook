@@ -4,6 +4,10 @@ import 'package:elinkbook/theme/app_theme.dart';
 import 'package:elinkbook/theme/app_theme_data.dart';
 import 'package:elinkbook/theme/elink_tokens.dart';
 
+/// 比較兩個顏色的 RGB 分量是否相同，忽略 alpha（用於驗證某個顏色是否
+/// 「來源於」另一個顏色，即使中間套用了不同透明度）。
+bool _sameRgb(Color a, Color b) => a.r == b.r && a.g == b.g && a.b == b.b;
+
 void main() {
   group('resolveThemeData', () {
     test('isEinkMode 為 false 時，light/dark/sepia 回傳不同的 ThemeData', () {
@@ -200,6 +204,50 @@ void main() {
       expect(scheme.surfaceContainerHighest, const Color(0xFFFFFFFF));
       expect(scheme.error, const Color(0xFF000000));
       expect(theme.scaffoldBackgroundColor, const Color(0xFFFFFFFF));
+    });
+
+    test('四套主題的 switchTheme 三插槽於 OFF 狀態皆解析自 colorScheme.onSurface'
+        '（電子紙可辨識度補強，取代不再可靠的 outline／surfaceContainerHighest'
+        ' 對比手法，見 spec.md「電子紙可辨識度補強機制」）', () {
+      for (final theme in AppTheme.values) {
+        final themeData = buildThemeData(theme);
+        final onSurface = themeData.colorScheme.onSurface;
+        final switchTheme = themeData.switchTheme;
+
+        final thumb = switchTheme.thumbColor?.resolve(<WidgetState>{});
+        final track = switchTheme.trackColor?.resolve(<WidgetState>{});
+        final trackOutline =
+            switchTheme.trackOutlineColor?.resolve(<WidgetState>{});
+
+        expect(thumb, isNotNull, reason: '$theme thumbColor 未設定');
+        expect(track, isNotNull, reason: '$theme trackColor 未設定');
+        expect(trackOutline, isNotNull, reason: '$theme trackOutlineColor 未設定');
+        expect(_sameRgb(thumb!, onSurface), true,
+            reason: '$theme thumbColor 應來源於 onSurface');
+        expect(_sameRgb(track!, onSurface), true,
+            reason: '$theme trackColor 應來源於 onSurface');
+        expect(_sameRgb(trackOutline!, onSurface), true,
+            reason: '$theme trackOutlineColor 應來源於 onSurface');
+      }
+    });
+
+    test('E-Ink 主題的 switchTheme 三插槽於 OFF 狀態皆解析自 colorScheme.onSurface',
+        () {
+      final themeData = buildEinkThemeData();
+      final onSurface = themeData.colorScheme.onSurface;
+      final switchTheme = themeData.switchTheme;
+
+      final thumb = switchTheme.thumbColor?.resolve(<WidgetState>{});
+      final track = switchTheme.trackColor?.resolve(<WidgetState>{});
+      final trackOutline =
+          switchTheme.trackOutlineColor?.resolve(<WidgetState>{});
+
+      expect(thumb, isNotNull);
+      expect(track, isNotNull);
+      expect(trackOutline, isNotNull);
+      expect(_sameRgb(thumb!, onSurface), true);
+      expect(_sameRgb(track!, onSurface), true);
+      expect(_sameRgb(trackOutline!, onSurface), true);
     });
 
   });
