@@ -11,3 +11,5 @@
 拆為 3 個 Issue（見 `issues.md`）：Issue 1（`reader_screen_test.dart`）、Issue 2（`remote_catalog_screen_test.dart`）、Issue 3（`pdf_reader_view_test.dart`，唯一有完整例外堆疊可查的一筆）。三者目前皆為 `needs-info`——受限於發現當下的擷取方式（`epic-35-issue-5` 那次用 `tail -40` 只留下最後 40 行輸出，完整失敗清單已隨背景程序結束而遺失），尚未取得足夠資訊鎖定根因，見各 Issue 內「已知限制」段落。
 
 2026-09-03 Issue 1（`reader_screen_test.dart`）完成資訊補齊：未截斷重跑完整 `flutter test` 3 次＋單檔重跑 3 次，結果為「未重現」——3 次全套跑皆 1902 tests、0 失敗，跟 design.md 記錄的原始 29 個失敗完全不同，已更新 `issues.md` Issue 1 段落為 `ready-for-human`，交由人類決定是否需要更多次重跑或降低追蹤優先度。
+
+2026-09-03 Issue 2（`remote_catalog_screen_test.dart`）完成資訊補齊：未截斷重跑完整 `flutter test` 3 次＋單檔重跑 3 次，判定為未重現（跟 Issue 1 同款結果），已更新 `issues.md` Issue 2 段落與分流狀態為 `ready-for-human`。
