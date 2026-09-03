@@ -45,6 +45,7 @@
 | 35 | `epic-34-tts-readalong` 語音朗讀（TTS）與同步高亮（Read-along） | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 36 | `epic-35-design-system-tokens` 設計系統 Token 落地（ElinkTokens：三主題＋E-Ink 修飾子） | 🟡 開發中 (Active) | Issue 1-5 已完成（`ElinkTokens` 類別本體＋四套 `ColorScheme` 對齊＋`settings_screen.dart` 全面遷移＋`highlight_style.dart` 遷移＋`nav_zone_settings_screen.dart` 邊框及圖示佔位色遷移），Issue 6-8 待認領（彼此互相獨立，可平行進行） |
 | 37 | `epic-36-adaptive-shelf-navigation` 三目的地導覽／書架下鑽強化／設定四分區 | 🟡 開發中 (Active) | Discovery 完成；依賴 `epic-35` 的 `ElinkTokens` 先落地穩定才能動工，先行完成規劃 |
+| 38 | `epic-37-test-suite-flakiness` 全套測試套件既有不穩定性追蹤 | 🟡 開發中 (Active) | 從 `epic-35` Issue 5 收尾階段發現，拆為 Issue 1-3（`reader_screen_test.dart`／`remote_catalog_screen_test.dart`／`pdf_reader_view_test.dart`），皆為 `needs-info`，待補齊未截斷的完整失敗清單才能排查根因 |
 
 **狀態燈號定義**：
 - ⚪ **未開始 (Backlog)**：已被規劃但尚未啟動。無實際目錄。
