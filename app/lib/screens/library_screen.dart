@@ -22,6 +22,7 @@ import '../library/models/book.dart';
 import '../library/models/book_group.dart';
 import '../library/models/library_enums.dart';
 import '../library/widgets/book_cover.dart';
+import '../theme/elink_tokens.dart';
 
 import 'cloud_browser_screen.dart';
 import 'library_group_management_dialog.dart';
@@ -1141,9 +1142,9 @@ class _GroupGridTile extends StatelessWidget {
                 Expanded(
                   child: Row(
                     children: [
-                      Expanded(child: _groupTilePreviewCell(0)),
+                      Expanded(child: _groupTilePreviewCell(context, 0)),
                       const SizedBox(width: 2),
-                      Expanded(child: _groupTilePreviewCell(1)),
+                      Expanded(child: _groupTilePreviewCell(context, 1)),
                     ],
                   ),
                 ),
@@ -1151,9 +1152,9 @@ class _GroupGridTile extends StatelessWidget {
                 Expanded(
                   child: Row(
                     children: [
-                      Expanded(child: _groupTilePreviewCell(2)),
+                      Expanded(child: _groupTilePreviewCell(context, 2)),
                       const SizedBox(width: 2),
-                      Expanded(child: _groupTilePreviewCell(3)),
+                      Expanded(child: _groupTilePreviewCell(context, 3)),
                     ],
                   ),
                 ),
@@ -1176,10 +1177,12 @@ class _GroupGridTile extends StatelessWidget {
     );
   }
 
-  Widget _groupTilePreviewCell(int index) {
+  Widget _groupTilePreviewCell(BuildContext context, int index) {
     return index < tile.previewBooks.length
         ? BookCover(book: tile.previewBooks[index])
-        : ColoredBox(color: Colors.grey.shade200);
+        : ColoredBox(
+            color: Theme.of(context).extension<ElinkTokens>()!.coverPlaceholder,
+          );
   }
 }
 
@@ -1192,6 +1195,7 @@ class _GroupListTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = Theme.of(context).extension<ElinkTokens>()!;
     return ListTile(
       key: Key('group_tile_${tile.name}'),
       leading: SizedBox(
@@ -1205,7 +1209,7 @@ class _GroupListTile extends StatelessWidget {
               height: 48,
               child: i < tile.previewBooks.length
                   ? BookCover(book: tile.previewBooks[i])
-                  : ColoredBox(color: Colors.grey.shade200),
+                  : ColoredBox(color: tokens.coverPlaceholder),
             ),
           ),
         ),
@@ -1262,6 +1266,8 @@ class _BookGridTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final tokens = Theme.of(context).extension<ElinkTokens>()!;
     return InkWell(
       key: Key('book_item_${book.id}'),
       onTap: onTap,
@@ -1280,12 +1286,12 @@ class _BookGridTile extends StatelessWidget {
                     child: Padding(
                       padding: const EdgeInsets.all(4),
                       child: Container(
-                        // 半透明黑底圓圈確保勾選圖示在任何封面底色下都有
-                        // 足夠對比度（審查意見：白色圖示疊在淺色封面上會
-                        // 無法辨識）。
+                        // badgeScrim 確保勾選圖示在任何封面底色下都有足夠
+                        // 對比度（審查意見：白色圖示疊在淺色封面上會無法
+                        // 辨識），四套主題各自有對應色值。
                         padding: const EdgeInsets.all(2),
-                        decoration: const BoxDecoration(
-                          color: Colors.black45,
+                        decoration: BoxDecoration(
+                          color: tokens.badgeScrim,
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
@@ -1293,9 +1299,7 @@ class _BookGridTile extends StatelessWidget {
                               ? Icons.check_circle
                               : Icons.radio_button_unchecked,
                           key: Key('book_selection_indicator_${book.id}'),
-                          color: selected
-                              ? Theme.of(context).colorScheme.primary
-                              : Colors.white,
+                          color: selected ? colorScheme.primary : Colors.white,
                         ),
                       ),
                     ),
@@ -1319,7 +1323,10 @@ class _BookGridTile extends StatelessWidget {
                 Text(
                   _progressText(book),
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 10, color: Colors.grey),
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
