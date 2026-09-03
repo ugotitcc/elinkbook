@@ -59,7 +59,7 @@
 **已確認資訊：** 於 commit `73142d80`（分支 `worktree-epic-37-issue-3`，等同 `main` `cf670acd`）用未截斷方式（`> <log> 2>&1`，不接 `tail`）重跑 3 次：
 
 - 單檔單獨執行（`flutter test test/reader/pdf_reader_view_test.dart`）：3 次皆 9 個測試、0 失敗、100% 全過。
-- 完整 `flutter test`（不帶檔案路徑）：3 次總測試數為 1902／1900／1902，0 個 `[E]` 失敗標記歸屬 `pdf_reader_view_test.dart`（第 2 次重跑出現的 2 個失敗，經 Grep 逐字比對確認皆歸屬 `remote_catalog_screen_test.dart`——這是 Epic 37 Issue 2 的檔案，與本 Issue 無關，Issue 2 已結案為未重現，本次的新失敗證據值得留意但不在本 Issue 範圍內處理）。
+- 完整 `flutter test`（不帶檔案路徑）：3 次皆收集 1902 個測試；第 1、3 次全數通過，第 2 次 1900 個通過、2 個測試標記「did not complete」未完成，0 個 `[E]` 失敗標記歸屬 `pdf_reader_view_test.dart`（第 2 次重跑出現的 2 個失敗，經 Grep 逐字比對確認皆歸屬 `remote_catalog_screen_test.dart`——這是 Epic 37 Issue 2 的檔案，與本 Issue 無關，Issue 2 已結案為未重現，本次的新失敗證據值得留意但不在本 Issue 範圍內處理）。
 
 即本次調查（3 次全套重跑）**未重現**本 Issue 下方「原始觀察」段落記錄的現象。這不屬於「決定性失敗」或「計時類不穩定」任一分支——兩者都需要至少一次失敗可供比對，本次完全沒有失敗可比對。
 
