@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:elinkbook/screens/library_group_management_dialog.dart';
+import 'package:elinkbook/theme/app_theme.dart';
+import 'package:elinkbook/theme/app_theme_data.dart';
 
 import '../support/fake_library_repository.dart';
 
@@ -54,5 +56,50 @@ void main() {
     expect(tester.takeException(), isNull,
         reason: '分類數量多＋鍵盤開啟時，AlertDialog 內容（分類清單＋新增欄位）'
             '不應該讓 RenderFlex 溢位（真機回報：BOTTOM OVERFLOWED BY 21 PIXELS）');
+  });
+
+  testWidgets('重新命名為已存在的分類名稱時，錯誤訊息文字色為 colorScheme.error',
+      (tester) async {
+    final repository = FakeLibraryRepository();
+    await repository.upsertGroup('A');
+    await repository.upsertGroup('B');
+    final groups = await repository.listGroups();
+    final theme = resolveThemeData(theme: AppTheme.light, isEinkMode: false);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: theme,
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: Center(
+              child: ElevatedButton(
+                onPressed: () => showDialog<void>(
+                  context: context,
+                  builder: (_) => LibraryGroupManagementDialog(
+                    repository: repository,
+                    initialGroups: groups,
+                  ),
+                ),
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('library_group_rename_button_A')));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+        find.byKey(const Key('library_group_rename_field')), 'B');
+    await tester.tap(find.byKey(const Key('library_group_rename_confirm')));
+    await tester.pumpAndSettle();
+
+    final errorText = tester.widget<Text>(find.text('分類「B」已存在'));
+    expect(errorText.style?.color, theme.colorScheme.error);
   });
 }
