@@ -43,7 +43,7 @@
 | 33 | `epic-32-foliate-js-paginator-sync` foliate-js paginator.js 上游同步 | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 34 | `epic-33-foliate-js-vendor-sync` foliate-js vendored 檔案持續同步 | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 35 | `epic-34-tts-readalong` 語音朗讀（TTS）與同步高亮（Read-along） | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
-| 36 | `epic-35-design-system-tokens` 設計系統 Token 落地（ElinkTokens：三主題＋E-Ink 修飾子） | 🟡 開發中 (Active) | Issue 1-5 已完成，Issue 6 完成但有 2 項待人類確認事項（E-Ink 佔位符外框設計決策見新開 Issue 9、Dark 主題邊框可辨識度目視確認見 Issue 6 收尾備註），Issue 7-9 待認領 |
+| 36 | `epic-35-design-system-tokens` 設計系統 Token 落地（ElinkTokens：三主題＋E-Ink 修飾子） | 🟡 開發中 (Active) | Issue 1-6 已完成並合併（PR #209），Issue 6 有 3 項待人類確認事項（Dark 主題邊框／Light 主題徽章對比度目視確認、E-Ink 佔位符外框設計決策見新開 Issue 9），詳見 Issue 6 收尾備註；Issue 7-9 待認領 |
 | 37 | `epic-36-adaptive-shelf-navigation` 三目的地導覽／書架下鑽強化／設定四分區 | 🟡 開發中 (Active) | Discovery 完成；依賴 `epic-35` 的 `ElinkTokens` 先落地穩定才能動工，先行完成規劃 |
 | 38 | `epic-37-test-suite-flakiness` 全套測試套件既有不穩定性追蹤 | 🟡 開發中 (Active) | 從 `epic-35` Issue 5 收尾階段發現，拆為 Issue 1-3，三者皆已完成資訊補齊（皆為未重現），是否歸檔或針對個別 Issue 開後續工單待人類決定；調查中另發現 `remote_catalog_screen_test.dart`（Issue 2 檔案）重現不穩定，詳見 `epic.md` |
 
