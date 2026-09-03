@@ -147,7 +147,7 @@
 
 ## Issue 6：書架相關寫死顏色遷移（`book_cover.dart`／`layout_preset_book_picker_screen.dart`／`library_screen.dart`／`library_group_management_dialog.dart`）
 
-**Status:** ready-for-agent
+**Status:** ready-for-human
 
 **依賴：** Issue 2
 
@@ -165,6 +165,8 @@
 - `library_group_management_dialog_test.dart` 驗證刪除文字色為 `colorScheme.error`。
 
 **驗收標準：** 四個檔案內無寫死顏色殘留；`flutter analyze` 乾淨、`flutter test` 全數通過。
+
+**收尾備註（`epic-35` Issue 6 最終分支審查發現，2026-09-03）：** 上方 Solution 第 3 點交辦的「Dark 主題 `outline` 新值落地後，目視確認 `library_screen.dart:747` E-Ink 切換鈕邊框仍可辨識」這件事，六個 Task 執行完畢後從未實際執行——`plan-issue-6.md` 全程沒有任何 Task 涵蓋這個目視確認步驟。最終審查以數值估算指出風險：Dark `outline`（`#2C2C34`）以 50% alpha 疊在 AppBar `surface`（`#1D1D22`）之上，約略等效於 `#25252B`，跟底色對比度約僅 `1.05:1`，接近不可辨識。上方 Solution 第 3 點「用法本身正確、不需要改寫法」的判斷本身可能仍然成立，這裡不片面改寫法，僅記錄這是一項尚未執行、待人類在真實裝置／模擬器上目視確認的開放項目；確認結果（可辨識或需要調整）待補回本備註，屆時 Status 再視情況調回。
 
 ---
 
@@ -215,3 +217,23 @@
 - `BookImportServiceImpl` 新增建構子參數的呼叫端測試：驗證 TXT／MD 匯入時會依 `themePreferences.loadEinkMode()` 的回傳值正確傳遞給 `generateTxtCover()`。
 
 **驗收標準：** E-Ink 模式下新匯入 TXT 書封面為白底黑框黑字，可辨識；非 E-Ink 模式行為完全不變；`BookImportService` 抽象介面與既有呼叫點不受影響；`flutter analyze` 乾淨、`flutter test` 全數通過。**明確排除：** 已產生的舊封面 PNG 不會回頭重新產生，此為既有架構限制，不在本工單修復範圍。
+
+---
+
+## Issue 9：封面佔位符完整重新設計（DESIGN.md §8.2：圖示／書名縮略／E-Ink 外框）
+
+**Status:** needs-triage
+
+**依賴：** Issue 6
+
+**來源：** `DESIGN.md` §8.2；`epic-35` Issue 6 最終分支審查發現
+
+**背景／目標：** `DESIGN.md` §8.2 對封面佔位符的完整要求是 `Icons.book` 圖示（前景色 `onSurfaceVariant`）＋書名文字微型縮略＋E-Ink 模式下純白底加 1.5dp 純黑實線外框三件事。Issue 6 只落地了佔位符背景色遷移到 `tokens.coverPlaceholder`（涵蓋 `book_cover.dart`、`library_screen.dart` 的 `_groupTilePreviewCell`／`_GroupListTile`），圖示種類、書名縮略、E-Ink 外框這三個 §8.2 明講的視覺元素目前完全不存在，Issue 6 計劃書把它們歸類為「未來重新設計」而排除在範圍外。
+
+這造成一個實際的視覺退步：E-Ink 主題下 `coverPlaceholder` 為純白（`Color(0xFFFFFFFF)`），跟 E-Ink 的 `scaffoldBackgroundColor`（同樣是純白）幾乎無法區分，封面佔位符與分類拼貼格「不足 4 本」的空格佔位，在 E-Ink 模式下視覺上會消失不見（只剩中央圖示浮著）。本 Issue 由 `epic-35` Issue 6 最終分支審查發現並開立，避免 Issue 6 計劃書裡「留給未來 UI 補強 Issue」這句話沒有實際落點。
+
+**Solution：** 留白，交由後續 Discovery 規劃（`needs-triage` 階段不預先指定實作方式）。可提示：至少需處理 E-Ink 外框這個補償元件（`ElinkTokens.isEink` 為既有欄位，`BookCover`／`_groupTilePreviewCell`／`_GroupListTile` 三處佔位符皆需要）；圖示種類與書名縮略是否一併做，由後續 Discovery 決定。
+
+**單元測試要求：** 留待實際規劃時再定義。
+
+**驗收標準：** 留待實際規劃時再定義。
