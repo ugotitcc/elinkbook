@@ -23,6 +23,7 @@ import 'package:elinkbook/library/models/book_group.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/theme/app_theme.dart';
 import 'package:elinkbook/theme/app_theme_data.dart';
+import 'package:elinkbook/theme/elink_tokens.dart';
 
 import '../support/fake_book_import_service.dart';
 import '../support/fake_library_repository.dart';
@@ -2858,9 +2859,10 @@ void main() {
     );
     final repository = FakeLibraryRepository(initialBooks: books);
 
+    final theme = resolveThemeData(theme: AppTheme.light, isEinkMode: false);
     await tester.pumpWidget(
       MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        theme: theme,
         home: LibraryScreen(
           repository: repository,
           importService: FakeBookImportService(),
@@ -2885,10 +2887,11 @@ void main() {
     // 的邊界而非圖示）；取最下面那一列（第 3/4 格）佔位色塊的底部，應緊
     // 接分類名稱文字的頂部（僅隔明講的 SizedBox(height: 4) 一點點間距），
     // 而非留下大片空白。
+    final coverPlaceholder = theme.extension<ElinkTokens>()!.coverPlaceholder;
     final coverBoxFinder = find.descendant(
       of: tileFinder,
       matching: find.byWidgetPredicate(
-        (w) => w is ColoredBox && w.color == Colors.grey.shade300,
+        (w) => w is ColoredBox && w.color == coverPlaceholder,
       ),
     );
     final coverBoxCount = tester.widgetList(coverBoxFinder).length;
