@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:elinkbook/main.dart';
 import 'package:elinkbook/theme/app_theme.dart';
+import 'package:elinkbook/theme/app_theme_data.dart';
 import 'package:elinkbook/theme/app_theme_preferences.dart';
 import 'package:elinkbook/screens/library_screen.dart';
 import 'package:elinkbook/screens/library_screen_dependencies.dart';
@@ -140,6 +141,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: LibraryScreen(
           repository: FakeLibraryRepository(),
           importService: FakeBookImportService(),
