@@ -43,7 +43,7 @@
 - Consumes: 無新介面——`Theme.of(context).colorScheme.onSurface` 為既有 Flutter `ColorScheme` API，`resolveThemeData()` 產出的四套主題皆已提供這個角色（Issue 2 已完成）。
 - Produces: 無新介面——不新增／不變更任何函式簽章或公開建構參數。
 
-- [ ] **Step 1: 寫失敗的測試——更新既有斷言＋新增 2 則覆蓋範本卡片與自訂編輯器格線**
+- [x] **Step 1: 寫失敗的測試——更新既有斷言＋新增 2 則覆蓋範本卡片與自訂編輯器格線**
 
 在 `app/test/screens/nav_zone_settings_screen_test.dart` 中，把既有測試（原第 132-159 行）：
 
@@ -172,7 +172,7 @@
   });
 ```
 
-- [ ] **Step 2: 執行測試，確認失敗**
+- [x] **Step 2: 執行測試，確認失敗**
 
 Run（於 `app/` 目錄下）: `flutter test test/screens/nav_zone_settings_screen_test.dart`
 Expected: 3 則測試 FAIL：
@@ -180,7 +180,7 @@ Expected: 3 則測試 FAIL：
   - 新增的「單手」模板卡片測試：`oneHandBorder.top.color` 目前仍讀 `dividerColor`。
   - 新增的自訂編輯器格線測試：`cellBorder.top.color` 目前仍讀 `dividerColor`。
 
-- [ ] **Step 3: 實作——3 處 `dividerColor` 改為 `colorScheme.onSurface`**
+- [x] **Step 3: 實作——3 處 `dividerColor` 改為 `colorScheme.onSurface`**
 
 在 `app/lib/screens/nav_zone_settings_screen.dart` 的 `_buildTemplateCard()`（原 L227-235）：
 
@@ -255,17 +255,17 @@ Expected: 3 則測試 FAIL：
                   ),
 ```
 
-- [ ] **Step 4: 執行測試，確認通過**
+- [x] **Step 4: 執行測試，確認通過**
 
 Run（於 `app/` 目錄下）: `flutter test test/screens/nav_zone_settings_screen_test.dart`
 Expected: PASS（本檔案全部測試皆過，含既有的模式切換／自訂編輯器循環切換／驗證擋下等測試，無回歸）。
 
-- [ ] **Step 5: 執行 `flutter analyze`，確認乾淨**
+- [x] **Step 5: 執行 `flutter analyze`，確認乾淨**
 
 Run（於 `app/` 目錄下）: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/screens/nav_zone_settings_screen.dart app/test/screens/nav_zone_settings_screen_test.dart
@@ -290,7 +290,7 @@ EOF
 - Consumes: 既有 Flutter SDK `ColorScheme` 型別（不需要 `ElinkTokens`——這 2 處是「無圖示/未知圖示時的中性淺色背景塊」，語意上對應 `ColorScheme.surfaceContainerHighest` 這個既有角色，不是 `ElinkTokens` 定義的語意色）。
 - Produces: `navZoneTemplateIconColor(IconData icon, ColorScheme colorScheme)` 新簽章（原本只吃 `IconData icon` 一個參數）——本工單範圍內沒有其他檔案呼叫這個函式（已 grep 全專案確認，只有本檔案與其測試檔引用），不影響其他呼叫端。
 
-- [ ] **Step 1: 寫失敗的測試——`navZoneTemplateIconColor()` 新簽章與未知圖示回退值**
+- [x] **Step 1: 寫失敗的測試——`navZoneTemplateIconColor()` 新簽章與未知圖示回退值**
 
 在 `app/test/screens/nav_zone_settings_screen_test.dart` 中，把既有 `group`（原第 388-400 行）：
 
@@ -346,12 +346,12 @@ EOF
   });
 ```
 
-- [ ] **Step 2: 執行測試，確認失敗**
+- [x] **Step 2: 執行測試，確認失敗**
 
 Run（於 `app/` 目錄下）: `flutter test test/screens/nav_zone_settings_screen_test.dart`
 Expected: **編譯失敗**（不是執行期斷言失敗）——`navZoneTemplateIconColor()` 目前只接受 1 個參數，新測試呼叫時傳了 2 個參數，`flutter test` 會回報 `Too many positional arguments` 之類的編譯期錯誤。這是本 Task 唯一一個「紅燈」是編譯錯誤而非斷言失敗的 Step，符合預期（TDD 對簽章變更本來就會先看到編譯失敗）。
 
-- [ ] **Step 3: 實作——函式簽章加 `ColorScheme` 參數，未知圖示與中間欄佔位色改讀 `surfaceContainerHighest`**
+- [x] **Step 3: 實作——函式簽章加 `ColorScheme` 參數，未知圖示與中間欄佔位色改讀 `surfaceContainerHighest`**
 
 在 `app/lib/screens/nav_zone_settings_screen.dart`，把 `navZoneTemplateIconColor()`（原 L8-20）：
 
@@ -460,17 +460,17 @@ Color navZoneTemplateIconColor(IconData icon, ColorScheme colorScheme) {
 
 （`middleIcon == null` 這個分支目前無法被任何現有呼叫路徑觸發——`_buildTemplateCard()` 僅有的 2 個呼叫點都固定傳 `middleIcon: Icons.menu`，見檔案 L170-183——本工單仍把字面值換成 token 以徹底清除寫死顏色殘留，但因為外部無法實際觸發這個分支渲染，不強制新增對應的 widget test；`surfaceContainerHighest` 這個角色本身已由上面 Step 1 新增的 `navZoneTemplateIconColor()` 未知圖示單元測試驗證過。）
 
-- [ ] **Step 4: 執行測試，確認通過**
+- [x] **Step 4: 執行測試，確認通過**
 
 Run（於 `app/` 目錄下）: `flutter test test/screens/nav_zone_settings_screen_test.dart`
 Expected: PASS（本檔案全部測試皆過，含 `colorOfIcon` 那則比對 `leftFlip`／`rightFlip` 卡片 `chevron_left`／`chevron_right` 色塊顏色一致的既有測試——它讀的是渲染後的 `Container.color`，紅／藍分支值沒有變動，不受影響）。
 
-- [ ] **Step 5: 執行 `flutter analyze`，確認乾淨**
+- [x] **Step 5: 執行 `flutter analyze`，確認乾淨**
 
 Run（於 `app/` 目錄下）: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/screens/nav_zone_settings_screen.dart app/test/screens/nav_zone_settings_screen_test.dart
@@ -487,8 +487,8 @@ EOF
 
 ## 全部 Task 完成後
 
-- [ ] 執行完整 `flutter test`（於 `app/` 目錄下，不帶檔案路徑），確認全專案無回歸。
-- [ ] 執行 `flutter analyze`，確認「No issues found!」。
-- [ ] 把 `docs/epics/epic-35-design-system-tokens/issues.md` Issue 5 的 `Status` 從 `ready-for-agent` 更新為完成狀態（依當時 Epic 慣例用語），並在 `epics.md` 補一筆開發記錄。
-- [ ] 依 `sdd-workflow` 流程，發起 `/superpowers:requesting-code-review` 審查本次程式碼變更（`BASE_SHA`／`HEAD_SHA` 取本工單 2 個 commit 的起訖），審查報告存 `docs/epics/epic-35-design-system-tokens/reviews/review-issue-5.md`。
-- [ ] 提醒：`colorScheme.onSurface` 邊框補強手法比照 Issue 2 `SwitchThemeData`、Issue 3 鎖定虛線邊框的既有慣例，尚未經過真機驗證，需要下一輪真機驗證（比照 `epic-18`／`epic-25` 慣例）確認在電子紙上確實可辨識，不在本工單驗收範圍內完成。
+- [x] 執行完整 `flutter test`（於 `app/` 目錄下，不帶檔案路徑），確認全專案無回歸。
+- [x] 執行 `flutter analyze`，確認「No issues found!」。
+- [x] 把 `docs/epics/epic-35-design-system-tokens/issues.md` Issue 5 的 `Status` 從 `ready-for-agent` 更新為完成狀態（依當時 Epic 慣例用語），並在 `epics.md` 補一筆開發記錄。
+- [x] 依 `sdd-workflow` 流程，發起 `/superpowers:requesting-code-review` 審查本次程式碼變更（`BASE_SHA`／`HEAD_SHA` 取本工單 2 個 commit 的起訖），審查報告存 `docs/epics/epic-35-design-system-tokens/reviews/review-issue-5.md`。
+- [x] 提醒：`colorScheme.onSurface` 邊框補強手法比照 Issue 2 `SwitchThemeData`、Issue 3 鎖定虛線邊框的既有慣例，尚未經過真機驗證，需要下一輪真機驗證（比照 `epic-18`／`epic-25` 慣例）確認在電子紙上確實可辨識，不在本工單驗收範圍內完成。
