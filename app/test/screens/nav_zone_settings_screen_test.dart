@@ -129,7 +129,11 @@ void main() {
     );
   });
 
-  testWidgets('選中的模板卡片顯示 primary 色外框，未選中則為預設 dividerColor 外框', (tester) async {
+  testWidgets(
+      '選中的模板卡片顯示 primary 色外框，未選中則讀取 colorScheme.onSurface 外框'
+      '（epic-35-design-system-tokens Issue 5：不再透過 dividerColor 間接讀取，'
+      'Dark 主題下 dividerColor 會退回跟 outline 同值、電子紙可辨識度不足）',
+      (tester) async {
     final fakeManager = FakeReaderPrefsManager(
       globalPrefs:
           const GlobalReaderPrefs.initial().copyWith(navZoneMode: NavZoneMode.leftFlip),
@@ -141,7 +145,7 @@ void main() {
 
     final context = tester.element(find.byType(NavZoneSettingsScreen));
     final primaryColor = Theme.of(context).colorScheme.primary;
-    final dividerColor = Theme.of(context).dividerColor;
+    final onSurfaceColor = Theme.of(context).colorScheme.onSurface;
 
     final leftFlipCard = tester.widget<Container>(
       find.byKey(const Key('nav_zone_mode_leftFlip')),
@@ -155,7 +159,60 @@ void main() {
     );
     final rightFlipBorder =
         (rightFlipCard.decoration as BoxDecoration).border as Border;
-    expect(rightFlipBorder.top.color, dividerColor);
+    expect(rightFlipBorder.top.color, onSurfaceColor);
+  });
+
+  testWidgets(
+      '未選中的「單手」模板卡片外框讀取 colorScheme.onSurface'
+      '（epic-35-design-system-tokens Issue 5，比照左右翻頁模板卡片同一補強）',
+      (tester) async {
+    final fakeManager = FakeReaderPrefsManager(
+      globalPrefs: const GlobalReaderPrefs.initial()
+          .copyWith(navZoneMode: NavZoneMode.rightFlip),
+    );
+    await tester.pumpWidget(MaterialApp(
+      home: NavZoneSettingsScreen(prefsManager: fakeManager),
+    ));
+    await tester.pumpAndSettle();
+
+    final context = tester.element(find.byType(NavZoneSettingsScreen));
+    final onSurfaceColor = Theme.of(context).colorScheme.onSurface;
+
+    final oneHandCard = tester.widget<Container>(
+      find.byKey(const Key('nav_zone_mode_oneHand')),
+    );
+    final oneHandBorder =
+        (oneHandCard.decoration as BoxDecoration).border as Border;
+    expect(oneHandBorder.top.color, onSurfaceColor);
+  });
+
+  testWidgets(
+      '自訂模式 9 格編輯器格線外框讀取 colorScheme.onSurface'
+      '（epic-35-design-system-tokens Issue 5）',
+      (tester) async {
+    tester.view.physicalSize = const Size(800, 1200);
+    addTearDown(tester.view.resetPhysicalSize);
+
+    final fakeManager = FakeReaderPrefsManager(
+      globalPrefs:
+          const GlobalReaderPrefs.initial().copyWith(navZoneMode: NavZoneMode.custom),
+    );
+    await tester.pumpWidget(MaterialApp(
+      home: NavZoneSettingsScreen(prefsManager: fakeManager),
+    ));
+    await tester.pumpAndSettle();
+
+    final context = tester.element(find.byType(NavZoneSettingsScreen));
+    final onSurfaceColor = Theme.of(context).colorScheme.onSurface;
+
+    final cell0 = tester.widget<Container>(
+      find.descendant(
+        of: find.byKey(const Key('nav_zone_custom_cell_0')),
+        matching: find.byType(Container),
+      ),
+    );
+    final cellBorder = (cell0.decoration as BoxDecoration).border as Border;
+    expect(cellBorder.top.color, onSurfaceColor);
   });
 
   testWidgets('點擊「自訂」segment，切換為 custom 模式並顯示 9 格編輯器', (tester) async {
@@ -386,16 +443,34 @@ void main() {
   });
 
   group('navZoneTemplateIconColor（epic-18-reader-device-qa Issue 44）', () {
+    final colorScheme = ColorScheme.light();
+
     test('chevron_left 恆為紅色', () {
-      expect(navZoneTemplateIconColor(Icons.chevron_left), Colors.red.shade100);
+      expect(navZoneTemplateIconColor(Icons.chevron_left, colorScheme),
+          Colors.red.shade100);
     });
 
     test('chevron_right 恆為藍色', () {
-      expect(navZoneTemplateIconColor(Icons.chevron_right), Colors.blue.shade100);
+      expect(navZoneTemplateIconColor(Icons.chevron_right, colorScheme),
+          Colors.blue.shade100);
     });
 
     test('menu 恆為綠色', () {
-      expect(navZoneTemplateIconColor(Icons.menu), Colors.green.shade100);
+      expect(navZoneTemplateIconColor(Icons.menu, colorScheme),
+          Colors.green.shade100);
+    });
+
+    test(
+        '未知圖示時退回 colorScheme.surfaceContainerHighest'
+        '（epic-35-design-system-tokens Issue 5，取代原本寫死的 Colors.grey.shade100；'
+        '刻意改用跟上面三則測試不同的 ColorScheme 實例，確保斷言的是「有沒有正確傳遞'
+        '參數」而不是巧合撞到同一個值）',
+        () {
+      final darkColorScheme = ColorScheme.dark();
+      expect(
+        navZoneTemplateIconColor(Icons.info, darkColorScheme),
+        darkColorScheme.surfaceContainerHighest,
+      );
     });
   });
 
