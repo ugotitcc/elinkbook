@@ -14,7 +14,7 @@ import '../reader/zone_action.dart';
 /// 測試與未來重用。
 ///
 /// 紅／藍／綠三色是跟主題無關的固定裝飾編碼，維持寫死不變；其餘未知圖示
-/// 的回退色改讀 [colorScheme.surfaceContainerHighest]
+/// 的回退色改讀 [colorScheme] 的 `surfaceContainerHighest`
 /// （epic-35-design-system-tokens Issue 5）。
 Color navZoneTemplateIconColor(IconData icon, ColorScheme colorScheme) {
   if (icon == Icons.chevron_left) return Colors.red.shade100;
