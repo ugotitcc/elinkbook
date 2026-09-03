@@ -1,6 +1,6 @@
 # Epic 37 — 全套測試套件既有不穩定性追蹤：工單清單 (Issues)
 
-依 `design.md`「排除迴歸的驗證方法與結果」拆解為 Issue 1-3，一個檔案一個 Issue（三者程式碼領域互不相關，判斷是各自獨立的根因）。三者彼此獨立，可任意順序或平行開始；但依 `design.md`「下一步」，每個 Issue 開始排查前都必須先補做一次未截斷的完整重跑取得完整資訊。Issue 1、Issue 2 已完成這一步（結果皆為未重現，見下方），Issue 3 則仍卡在這一步之前，維持 `needs-info`。
+依 `design.md`「排除迴歸的驗證方法與結果」拆解為 Issue 1-3，一個檔案一個 Issue（三者程式碼領域互不相關，判斷是各自獨立的根因）。三者彼此獨立，可任意順序或平行開始；但依 `design.md`「下一步」，每個 Issue 開始排查前都必須先補做一次未截斷的完整重跑取得完整資訊。Issue 1、Issue 2、Issue 3 已完成這一步（結果皆為未重現，見下方）。
 
 ---
 
@@ -52,13 +52,20 @@
 
 ## Issue 3：`pdf_reader_view_test.dart` 全套規模下偶發失敗（平台通道位元組讀取次數斷言）
 
-**Status:** `needs-info`
+**Status:** `ready-for-human`
 
 **依賴：** 無
 
-**目前已知資訊（三者中唯一有完整例外堆疊的一筆，來自 `main` 分支未截斷的完整 `flutter test` 存檔輸出）：**
+**已確認資訊：** 於 commit `73142d80`（分支 `worktree-epic-37-issue-3`，等同 `main` `cf670acd`）用未截斷方式（`> <log> 2>&1`，不接 `tail`）重跑 3 次：
 
-測試：「content:// URI 開書透過平台通道一次性讀取全部位元組」（`app/test/reader/pdf_reader_view_test.dart:162`）
+- 單檔單獨執行（`flutter test test/reader/pdf_reader_view_test.dart`）：3 次皆 9 個測試、0 失敗、100% 全過。
+- 完整 `flutter test`（不帶檔案路徑）：3 次總測試數為 1902／1900／1902，0 個 `[E]` 失敗標記歸屬 `pdf_reader_view_test.dart`（第 2 次重跑出現的 2 個失敗，經 Grep 逐字比對確認皆歸屬 `remote_catalog_screen_test.dart`——這是 Epic 37 Issue 2 的檔案，與本 Issue 無關，Issue 2 已結案為未重現，本次的新失敗證據值得留意但不在本 Issue 範圍內處理）。
+
+即本次調查（3 次全套重跑）**未重現**本 Issue 下方「原始觀察」段落記錄的現象。這不屬於「決定性失敗」或「計時類不穩定」任一分支——兩者都需要至少一次失敗可供比對，本次完全沒有失敗可比對。
+
+可能原因（未證實，供後續判斷）：本次只跑 3 次，若真實重現率極低則 3 次全過不能排除既有問題仍存在；下方「原始觀察」段落提出的等待預算假設若成立，重現與否可能高度依賴當下機器負載/並行度，本次調查的機器負載可能剛好不足以觸發逾時；`main` 分支自原始觀察至今可能有其他改動間接改變了測試間資源競爭/計時行為——本次調查均未查證。完整調查記錄見 `reviews/issue-3/findings.md`（本機暫存記錄，未進版控，若需要可依上述指令重新產生）。
+
+**原始觀察（歷史記錄，本次未重現）：** 測試「content:// URI 開書透過平台通道一次性讀取全部位元組」（`app/test/reader/pdf_reader_view_test.dart:124-164`）曾在 `main` 分支未截斷的完整 `flutter test` 存檔輸出中重現：
 
 ```
 Expected: <1>
@@ -69,6 +76,6 @@ Expected: <1>
 #5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
 ```
 
-斷言「預期為 1、實際為 0」——形式上像是斷言某個 mock／平台通道方法被呼叫的次數，在全套規模下該次呼叫沒有發生（次數變成 0）。與 `CLAUDE.md`「`content://` URI 存取走原生端 `ReaderResourceChannel.kt` 串流複製到本機暫存檔後再開啟」這個既有機制的呼叫時機有關，但尚未查證是測試本身的等待時機不足（例如缺少對應的 `pumpAndSettle`／非同步等待），還是全套規模下真的有平台通道呼叫被跳過。
+此斷言為第 162 行的 `expect(renderedCount, 1)`（斷言 `onPageRendered` 回呼觸發次數，不是平台通道方法呼叫次數——那個斷言在下一行 `expect(readAllCalled, isTrue)`，例外堆疊未指向那一行），實際為 0。該測試透過共用工具 `pumpUntilPdfReady`（`app/test/support/pump_until_pdf_ready.dart`）等待渲染完成，預設等待預算為 30 輪、每輪 100ms fake pump ＋ 10ms 真實延遲，逾時不拋例外而是安靜結束迴圈——目前的假設是全套規模下系統資源競爭導致底層非同步鏈路（mock 平台通道 handler → 寫暫存檔 → `pdfrx` 開檔解碼 → 觸發 `onPageRendered`）沒能在此預算內完成，此假設未經證實。
 
-**下一步：** 讀取 `app/test/reader/pdf_reader_view_test.dart` L140-170 附近的測試內容與其 mock 設置，確認斷言對象的呼叫時機依賴；用不截斷方式重跑完整 `flutter test` 數次，確認這筆失敗是否每次都重現在同一位置（決定性）。
+**下一步：** 需要人類決定——是否要再多跑幾次（例如 10 次以上，或刻意製造較高系統負載的情況下重跑）驗證等待預算假設，還是接受本次「未重現」作為足夠證據、降低追蹤優先度、待未來又出現時再重啟調查。
