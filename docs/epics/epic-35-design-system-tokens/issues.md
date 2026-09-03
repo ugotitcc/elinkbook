@@ -147,7 +147,7 @@
 
 ## Issue 6：書架相關寫死顏色遷移（`book_cover.dart`／`layout_preset_book_picker_screen.dart`／`library_screen.dart`／`library_group_management_dialog.dart`）
 
-**Status:** ready-for-agent
+**Status:** ready-for-human
 
 **依賴：** Issue 2
 
@@ -164,7 +164,11 @@
 - 既有相關測試（`library_screen_test.dart`、`book_cover_test.dart` 等）全數通過，無回歸。
 - `library_group_management_dialog_test.dart` 驗證刪除文字色為 `colorScheme.error`。
 
-**驗收標準：** 四個檔案內無寫死顏色殘留；`flutter analyze` 乾淨、`flutter test` 全數通過。
+**驗收標準：** 四個檔案內無「可遷移」的寫死顏色殘留；`flutter analyze` 乾淨、`flutter test` 全數通過。**（2026-09-04 補充）** 實際結果保留 4 處 `Colors.white`（`book_cover.dart` 雲朵徽章圖示、`layout_preset_book_picker_screen.dart` 與 `library_screen.dart` 各一處選取指示圖示未選取狀態色、`library_screen.dart` 匯入中遮罩文字）與 2 處 `Colors.transparent`（`library_screen.dart` E-Ink 切換鈕邊框「不畫邊框」分支，非顏色）——皆經評估為刻意保留，理由詳見 `plans/plan-issue-6.md` §範圍決定，不算驗收標準未達成，也不是遺漏。
+
+**收尾備註（`epic-35` Issue 6 最終分支審查發現，2026-09-03）：** 上方 Solution 第 3 點交辦的「Dark 主題 `outline` 新值落地後，目視確認 `library_screen.dart:747` E-Ink 切換鈕邊框仍可辨識」這件事，六個 Task 執行完畢後從未實際執行——`plan-issue-6.md` 全程沒有任何 Task 涵蓋這個目視確認步驟。最終審查以數值估算指出風險：Dark `outline`（`#2C2C34`）以 50% alpha 疊在 AppBar `surface`（`#1D1D22`）之上，約略等效於 `#25252B`，跟底色對比度約僅 `1.05:1`，接近不可辨識。上方 Solution 第 3 點「用法本身正確、不需要改寫法」的判斷本身可能仍然成立，這裡不片面改寫法，僅記錄這是一項尚未執行、待人類在真實裝置／模擬器上目視確認的開放項目；確認結果（可辨識或需要調整）待補回本備註，屆時 Status 再視情況調回。
+
+**收尾備註二（本分支合併前的獨立程式審查發現，2026-09-04）：** `badgeScrim` 徽章底色（雲朵圖示／選取指示圈）遷移前是半透明黑（`Colors.black45`／`black54`），疊在任意封面上的合成色最亮情況（白底封面）仍有 3.4~4.6:1 對比度；遷移後四套主題改為不透明色值，經 WCAG 相對亮度公式核算，晴空藍天（Light）主題 `badgeScrim = #94A3B8` 疊白色圖示的對比度降為 **2.56:1**，低於 WCAG 1.4.11 圖形物件 3:1 門檻（Dark `#7A7872` 4.5:1／宣紙 `#848588` 3.7:1／E-Ink 純黑 21:1 皆無問題，只有 Light 主題掉到門檻以下）。`DESIGN.md` L50 對 `badgeScrim` 的定義是「半透明罩」，但四套色值實際皆為不透明 hex，此為 token 定義與用法間既有的落差，非本次改動新增，但本次改動讓 Light 主題的可辨識度實際劣化。不在本分支調整 `ElinkTokens` 色值（Issue 1／Issue 2 已定案凍結，逕改需另立工單比照 Issue 5 教訓走完整審查流程），記錄為待人類在真機上目視確認 Light 主題徽章圖示可辨識度的開放項目，與上方 Dark `outline` 目視確認合併處理。
 
 ---
 
@@ -215,3 +219,23 @@
 - `BookImportServiceImpl` 新增建構子參數的呼叫端測試：驗證 TXT／MD 匯入時會依 `themePreferences.loadEinkMode()` 的回傳值正確傳遞給 `generateTxtCover()`。
 
 **驗收標準：** E-Ink 模式下新匯入 TXT 書封面為白底黑框黑字，可辨識；非 E-Ink 模式行為完全不變；`BookImportService` 抽象介面與既有呼叫點不受影響；`flutter analyze` 乾淨、`flutter test` 全數通過。**明確排除：** 已產生的舊封面 PNG 不會回頭重新產生，此為既有架構限制，不在本工單修復範圍。
+
+---
+
+## Issue 9：封面佔位符完整重新設計（DESIGN.md §8.2：圖示／書名縮略／E-Ink 外框）
+
+**Status:** needs-triage
+
+**依賴：** Issue 6
+
+**來源：** `DESIGN.md` §8.2；`epic-35` Issue 6 最終分支審查發現
+
+**背景／目標：** `DESIGN.md` §8.2 對封面佔位符的完整要求是 `Icons.book` 圖示（前景色 `onSurfaceVariant`）＋書名文字微型縮略＋E-Ink 模式下純白底加 1.5dp 純黑實線外框三件事。Issue 6 只落地了佔位符背景色遷移到 `tokens.coverPlaceholder`（涵蓋 `book_cover.dart`、`library_screen.dart` 的 `_groupTilePreviewCell`／`_GroupListTile`），圖示種類、書名縮略、E-Ink 外框這三個 §8.2 明講的視覺元素目前完全不存在，Issue 6 計劃書把它們歸類為「未來重新設計」而排除在範圍外。
+
+這造成一個實際的視覺退步：E-Ink 主題下 `coverPlaceholder` 為純白（`Color(0xFFFFFFFF)`），跟 E-Ink 的 `scaffoldBackgroundColor`（同樣是純白）幾乎無法區分，封面佔位符與分類拼貼格「不足 4 本」的空格佔位，在 E-Ink 模式下視覺上會消失不見（只剩中央圖示浮著）。本 Issue 由 `epic-35` Issue 6 最終分支審查發現並開立，避免 Issue 6 計劃書裡「留給未來 UI 補強 Issue」這句話沒有實際落點。
+
+**Solution：** 留白，交由後續 Discovery 規劃（`needs-triage` 階段不預先指定實作方式）。可提示：至少需處理 E-Ink 外框這個補償元件（`ElinkTokens.isEink` 為既有欄位，`BookCover`／`_groupTilePreviewCell`／`_GroupListTile` 三處佔位符皆需要）；圖示種類與書名縮略是否一併做，由後續 Discovery 決定。
+
+**單元測試要求：** 留待實際規劃時再定義。
+
+**驗收標準：** 留待實際規劃時再定義。

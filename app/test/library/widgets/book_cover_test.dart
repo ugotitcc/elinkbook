@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/library/widgets/book_cover.dart';
+import 'package:elinkbook/theme/app_theme.dart';
+import 'package:elinkbook/theme/app_theme_data.dart';
 
 Book _book({required bool isDownloaded}) {
   return Book(
@@ -20,6 +22,7 @@ Book _book({required bool isDownloaded}) {
 void main() {
   testWidgets('isDownloaded 為 false 時疊加雲朵角標', (tester) async {
     await tester.pumpWidget(MaterialApp(
+      theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
       home: BookCover(book: _book(isDownloaded: false)),
     ));
 
@@ -28,6 +31,7 @@ void main() {
 
   testWidgets('isDownloaded 為 true 時不顯示雲朵角標', (tester) async {
     await tester.pumpWidget(MaterialApp(
+      theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
       home: BookCover(book: _book(isDownloaded: true)),
     ));
 

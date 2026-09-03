@@ -6,12 +6,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/screens/layout_preset_book_picker_screen.dart';
+import 'package:elinkbook/theme/app_theme.dart';
+import 'package:elinkbook/theme/app_theme_data.dart';
 
 void main() {
   testWidgets('單選模式：點擊項目後選取但不立即關閉，點擊「確定」才回傳該書 id',
       (tester) async {
     List<String>? result;
     await tester.pumpWidget(MaterialApp(
+      theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
       home: Builder(
         builder: (context) => ElevatedButton(
           onPressed: () async {
@@ -49,6 +52,7 @@ void main() {
   testWidgets('單選模式（Radio 語意）：選取書一後再選取書二，最終只有書二保持選取狀態',
       (tester) async {
     await tester.pumpWidget(MaterialApp(
+      theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
       home: LayoutPresetBookPickerScreen(
         books: [_book('b1', '書一'), _book('b2', '書二')],
         multiSelect: false,
@@ -90,6 +94,7 @@ void main() {
   testWidgets('單選模式：未點擊「確定」、直接返回時，回傳 null', (tester) async {
     List<String>? result = const ['sentinel'];
     await tester.pumpWidget(MaterialApp(
+      theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
       home: Builder(
         builder: (context) => ElevatedButton(
           onPressed: () async {
@@ -119,6 +124,7 @@ void main() {
   testWidgets('複選模式：點擊兩本書的格子後點擊確定，回傳兩個 id 的清單', (tester) async {
     List<String>? result;
     await tester.pumpWidget(MaterialApp(
+      theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
       home: Builder(
         builder: (context) => ElevatedButton(
           onPressed: () async {
@@ -157,6 +163,7 @@ void main() {
 
   testWidgets('複選模式：未勾選任何項目時，確定按鈕停用', (tester) async {
     await tester.pumpWidget(MaterialApp(
+      theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
       home: LayoutPresetBookPickerScreen(
         books: [_book('b1', '書一')],
         multiSelect: true,
@@ -172,6 +179,7 @@ void main() {
       (tester) async {
     List<String>? result = const ['sentinel'];
     await tester.pumpWidget(MaterialApp(
+      theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
       home: Builder(
         builder: (context) => ElevatedButton(
           onPressed: () async {
@@ -203,8 +211,9 @@ void main() {
   });
 
   testWidgets('書籍清單為空時顯示提示文字', (tester) async {
-    await tester.pumpWidget(const MaterialApp(
-      home: LayoutPresetBookPickerScreen(books: [], multiSelect: false),
+    await tester.pumpWidget(MaterialApp(
+      theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+      home: const LayoutPresetBookPickerScreen(books: [], multiSelect: false),
     ));
 
     expect(find.text('沒有可選擇的流式 EPUB 書籍'), findsOneWidget);
@@ -224,6 +233,7 @@ void main() {
         )));
 
     await tester.pumpWidget(MaterialApp(
+      theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
       home: LayoutPresetBookPickerScreen(
         books: [_book('b1', '有封面的書', coverPath: coverFile.path)],
         multiSelect: false,
@@ -237,6 +247,7 @@ void main() {
 
   testWidgets('格線對無 coverPath 的書籍以通用書本圖示佔位', (tester) async {
     await tester.pumpWidget(MaterialApp(
+      theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
       home: LayoutPresetBookPickerScreen(
         books: [_book('b1', '無封面的書')],
         multiSelect: false,
@@ -250,6 +261,7 @@ void main() {
 
   testWidgets('輸入書名子字串，格線即時篩選為符合的書籍', (tester) async {
     await tester.pumpWidget(MaterialApp(
+      theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
       home: LayoutPresetBookPickerScreen(
         books: [_book('b1', '射鵰英雄傳'), _book('b2', '神鵰俠侶')],
         multiSelect: false,
@@ -269,6 +281,7 @@ void main() {
 
   testWidgets('輸入作者子字串，格線即時篩選為符合的書籍', (tester) async {
     await tester.pumpWidget(MaterialApp(
+      theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
       home: LayoutPresetBookPickerScreen(
         books: [
           _book('b1', '書一', author: '金庸'),
@@ -291,6 +304,7 @@ void main() {
 
   testWidgets('搜尋查無符合結果時顯示提示文字，與「無可選書籍」提示不同', (tester) async {
     await tester.pumpWidget(MaterialApp(
+      theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
       home: LayoutPresetBookPickerScreen(
         books: [_book('b1', '書一')],
         multiSelect: false,
@@ -308,6 +322,7 @@ void main() {
 
   testWidgets('清空搜尋詞後，格線恢復顯示完整清單', (tester) async {
     await tester.pumpWidget(MaterialApp(
+      theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
       home: LayoutPresetBookPickerScreen(
         books: [_book('b1', '書一'), _book('b2', '書二')],
         multiSelect: false,
@@ -332,6 +347,7 @@ void main() {
   testWidgets('多選模式下，篩選隱藏已選取項目後清空搜尋詞，該項目選取狀態仍保留',
       (tester) async {
     await tester.pumpWidget(MaterialApp(
+      theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
       home: LayoutPresetBookPickerScreen(
         books: [_book('b1', '射鵰英雄傳'), _book('b2', '神鵰俠侶')],
         multiSelect: true,
@@ -373,6 +389,7 @@ void main() {
   testWidgets('GridView 由 Expanded 包裹（避免軟體鍵盤彈出時版面溢位）',
       (tester) async {
     await tester.pumpWidget(MaterialApp(
+      theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
       home: LayoutPresetBookPickerScreen(
         books: [_book('b1', '書一')],
         multiSelect: false,
@@ -393,6 +410,7 @@ void main() {
   testWidgets('單選模式：未選取任何項目時，確定按鈕停用；選取後啟用',
       (tester) async {
     await tester.pumpWidget(MaterialApp(
+      theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
       home: LayoutPresetBookPickerScreen(
         books: [_book('b1', '書一')],
         multiSelect: false,
@@ -412,6 +430,7 @@ void main() {
 
   testWidgets('搜尋輸入關鍵字時顯示清除按鈕，點擊後清空輸入框並恢復完整清單', (tester) async {
     await tester.pumpWidget(MaterialApp(
+      theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
       home: LayoutPresetBookPickerScreen(
         books: [_book('b1', '書一'), _book('b2', '書二')],
         multiSelect: false,

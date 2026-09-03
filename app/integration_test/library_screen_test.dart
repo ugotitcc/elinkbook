@@ -13,6 +13,8 @@ import 'package:elinkbook/reader/reader_prefs_manager_impl.dart';
 import 'package:elinkbook/reader/reading_position_repository.dart';
 import 'package:elinkbook/screens/library_screen.dart';
 import 'package:elinkbook/reader/foliate_reader_view.dart';
+import 'package:elinkbook/theme/app_theme.dart';
+import 'package:elinkbook/theme/app_theme_data.dart';
 
 const _metadataChannel = MethodChannel('elinkbook/book_metadata');
 
@@ -103,6 +105,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: LibraryScreen(
             repository: repository,
             importService: importService,
@@ -194,6 +197,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: LibraryScreen(
           repository: repository,
           importService: importService,
@@ -280,6 +284,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: LibraryScreen(
             repository: repository,
             importService: importService,

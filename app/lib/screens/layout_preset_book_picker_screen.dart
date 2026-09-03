@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../library/models/book.dart';
 import '../library/widgets/book_cover.dart';
+import '../theme/elink_tokens.dart';
 
 /// 版面設定預設集／書籍設定複製的書籍選擇器（epic-28-reader-settings-
 /// enhancements Issue 3「UI 元件責任劃分」`onRequestBookPicker`；格線化＋
@@ -166,6 +167,7 @@ class _BookGridItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = Theme.of(context).extension<ElinkTokens>()!;
     return InkWell(
       key: Key('layout_preset_book_picker_item_${book.id}'),
       onTap: onTap,
@@ -183,10 +185,12 @@ class _BookGridItem extends StatelessWidget {
                     padding: const EdgeInsets.all(4),
                     child: Container(
                       padding: const EdgeInsets.all(2),
-                      decoration: const BoxDecoration(
-                        color: Colors.black45,
+                      decoration: BoxDecoration(
+                        color: tokens.badgeScrim,
                         shape: BoxShape.circle,
                       ),
+                      // 未選取狀態圖示前景維持寫死白色，理由同
+                      // book_cover.dart 雲朵徽章（見本計劃「範圍決定」）。
                       child: Icon(
                         selected
                             ? Icons.check_circle

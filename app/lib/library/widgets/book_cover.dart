@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../models/book.dart';
 import '../models/library_enums.dart';
+import '../../theme/elink_tokens.dart';
 
 /// 依書籍格式取得對應佔位圖示。
 IconData bookFormatIcon(BookFileFormat format) {
@@ -35,11 +36,12 @@ class BookCover extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = Theme.of(context).extension<ElinkTokens>()!;
     final coverPath = book.coverPath;
     final cover = coverPath != null && File(coverPath).existsSync()
         ? Image.file(File(coverPath), fit: BoxFit.cover)
         : ColoredBox(
-            color: Colors.grey.shade300,
+            color: tokens.coverPlaceholder,
             child: Center(child: Icon(bookFormatIcon(book.format), size: 32)),
           );
     if (book.isDownloaded) return cover;
@@ -54,9 +56,12 @@ class BookCover extends StatelessWidget {
             key: const Key('book_cover_cloud_badge'),
             padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
-              color: Colors.black54,
+              color: tokens.badgeScrim,
               borderRadius: BorderRadius.circular(12),
             ),
+            // 雲朵圖示前景維持寫死白色：badgeScrim 四套主題色值深淺不一，
+            // 沒有對應的「badgeScrim 前景色」token（ElinkTokens 欄位已於
+            // Issue 1 定案凍結），白色是唯一在四種背景上都可辨識的選擇。
             child: const Icon(Icons.cloud_outlined, size: 16, color: Colors.white),
           ),
         ),

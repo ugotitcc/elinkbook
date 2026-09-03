@@ -171,7 +171,9 @@ class _LibraryGroupManagementDialogState
                   padding: const EdgeInsets.only(bottom: 8),
                   child: Text(
                     _errorMessage!,
-                    style: const TextStyle(color: Colors.red),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
                   ),
                 ),
               ConstrainedBox(

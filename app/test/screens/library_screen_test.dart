@@ -21,8 +21,10 @@ import 'package:elinkbook/library/book_import_service_impl.dart';
 import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/book_group.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
+import 'package:elinkbook/library/widgets/book_cover.dart';
 import 'package:elinkbook/theme/app_theme.dart';
 import 'package:elinkbook/theme/app_theme_data.dart';
+import 'package:elinkbook/theme/elink_tokens.dart';
 
 import '../support/fake_book_import_service.dart';
 import '../support/fake_library_repository.dart';
@@ -2858,9 +2860,10 @@ void main() {
     );
     final repository = FakeLibraryRepository(initialBooks: books);
 
+    final theme = resolveThemeData(theme: AppTheme.light, isEinkMode: false);
     await tester.pumpWidget(
       MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        theme: theme,
         home: LibraryScreen(
           repository: repository,
           importService: FakeBookImportService(),
@@ -2885,10 +2888,11 @@ void main() {
     // 的邊界而非圖示）；取最下面那一列（第 3/4 格）佔位色塊的底部，應緊
     // 接分類名稱文字的頂部（僅隔明講的 SizedBox(height: 4) 一點點間距），
     // 而非留下大片空白。
+    final coverPlaceholder = theme.extension<ElinkTokens>()!.coverPlaceholder;
     final coverBoxFinder = find.descendant(
       of: tileFinder,
       matching: find.byWidgetPredicate(
-        (w) => w is ColoredBox && w.color == Colors.grey.shade300,
+        (w) => w is ColoredBox && w.color == coverPlaceholder,
       ),
     );
     final coverBoxCount = tester.widgetList(coverBoxFinder).length;
@@ -2915,10 +2919,11 @@ void main() {
     final bookA = _testBook(id: '1', title: 'A書', groupName: '奇幻');
     final bookB = _testBook(id: '2', title: 'B書', groupName: '奇幻');
     final repository = FakeLibraryRepository(initialBooks: [bookA, bookB]);
+    final theme = resolveThemeData(theme: AppTheme.light, isEinkMode: false);
 
     await tester.pumpWidget(
       MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        theme: theme,
         home: LibraryScreen(
           repository: repository,
           importService: FakeBookImportService(),
@@ -2933,20 +2938,28 @@ void main() {
     expect(find.text('奇幻 (2)'), findsOneWidget);
 
     // 2 本書皆無 coverPath，_BookCover 各自退回格式圖示佔位（Icon），故拼
-    // 貼格內應有 2 個 Icon（書封佔位）＋ 2 個中性灰色塊（拼貼格本身「不
-    // 足 4 本」的空格佔位，色階 grey.shade200，與 _BookCover 內部佔位的
-    // shade300 不同，可用色階區分兩者，不需要存取 private widget 型別）。
+    // 貼格內應有 2 個 Icon（書封佔位）。拼貼格本身「不足 4 本」的 2 個空
+    // 格佔位（_groupTilePreviewCell 的 fallback 分支）遷移後與 _BookCover
+    // 佔位色統一為同一個 tokens.coverPlaceholder（本 Epic「同一語意在不同
+    // 畫面應該長一樣」的設計目標本身），不再能單靠色階區分兩者來源，改用
+    // 「總數（2 書封佔位＋2 空格佔位＝4）減去 BookCover 數量（2）＝空格
+    // 佔位數量（2）」的結構性驗證取代色階區分。
     expect(
       find.descendant(of: tileFinder, matching: find.byType(Icon)),
       findsNWidgets(2),
     );
+    final coverPlaceholder = theme.extension<ElinkTokens>()!.coverPlaceholder;
     expect(
       find.descendant(
         of: tileFinder,
         matching: find.byWidgetPredicate(
-          (w) => w is ColoredBox && w.color == Colors.grey.shade200,
+          (w) => w is ColoredBox && w.color == coverPlaceholder,
         ),
       ),
+      findsNWidgets(4),
+    );
+    expect(
+      find.descendant(of: tileFinder, matching: find.byType(BookCover)),
       findsNWidgets(2),
     );
   });
@@ -2954,10 +2967,11 @@ void main() {
   testWidgets('分類拼貼格（列表檢視）不足 4 本時以中性色塊佔位', (tester) async {
     final book = _testBook(id: '1', title: 'A書', groupName: '奇幻');
     final repository = FakeLibraryRepository(initialBooks: [book]);
+    final theme = resolveThemeData(theme: AppTheme.light, isEinkMode: false);
 
     await tester.pumpWidget(
       MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        theme: theme,
         home: LibraryScreen(
           repository: repository,
           importService: FakeBookImportService(),
@@ -2977,14 +2991,22 @@ void main() {
       find.descendant(of: tileFinder, matching: find.byType(Icon)),
       findsNWidgets(1),
     );
+    // 同上（格狀檢視版本）理由：1 本書封佔位 + 3 空格佔位，遷移後統一為
+    // 同一個 tokens.coverPlaceholder，改用總數減 BookCover 數量的結構性
+    // 驗證取代色階區分。
+    final coverPlaceholder = theme.extension<ElinkTokens>()!.coverPlaceholder;
     expect(
       find.descendant(
         of: tileFinder,
         matching: find.byWidgetPredicate(
-          (w) => w is ColoredBox && w.color == Colors.grey.shade200,
+          (w) => w is ColoredBox && w.color == coverPlaceholder,
         ),
       ),
-      findsNWidgets(3),
+      findsNWidgets(4),
+    );
+    expect(
+      find.descendant(of: tileFinder, matching: find.byType(BookCover)),
+      findsNWidgets(1),
     );
   });
 

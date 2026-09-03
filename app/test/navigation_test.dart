@@ -5,6 +5,8 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:elinkbook/library/sqlite_library_repository.dart';
 import 'package:elinkbook/reader/reader_prefs_manager.dart';
 import 'package:elinkbook/screens/library_screen.dart';
+import 'package:elinkbook/theme/app_theme.dart';
+import 'package:elinkbook/theme/app_theme_data.dart';
 
 import 'support/fake_book_import_service.dart';
 import 'support/fake_library_repository.dart';
@@ -33,6 +35,7 @@ void main() {
   testWidgets('點擊設定圖示導航至 SettingsScreen，返回後回到 LibraryScreen', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: LibraryScreen(
           repository: FakeLibraryRepository(),
           importService: FakeBookImportService(),

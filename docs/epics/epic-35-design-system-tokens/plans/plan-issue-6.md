@@ -60,7 +60,7 @@
 - Consumes：`ElinkTokens`（`app/lib/theme/elink_tokens.dart`，Issue 1）、`resolveThemeData()`（`app/lib/theme/app_theme_data.dart`，Issue 2）既有公開 API。
 - Produces：`BookCover` 公開建構參數（`book`）不變；無新公開介面。`book_cover.dart` 的 `ColoredBox` 背景改為 `tokens.coverPlaceholder` 這件事，Task 3 的兩則新測試（L2947／L2984 附近）會依賴它已經完成，見 Task 3 Interfaces。
 
-- [ ] **Step 1：修改 `book_cover.dart`，把兩處字面色改讀 `ElinkTokens`**
+- [x] **Step 1：修改 `book_cover.dart`，把兩處字面色改讀 `ElinkTokens`**
 
 把：
 
@@ -159,12 +159,12 @@ import '../../theme/elink_tokens.dart';
   }
 ```
 
-- [ ] **Step 2：執行既有測試，確認因 `ElinkTokens` 為 null 而失敗**
+- [x] **Step 2：執行既有測試，確認因 `ElinkTokens` 為 null 而失敗**
 
 Run: `flutter test test/library/widgets/book_cover_test.dart`
 Expected: 兩則測試皆 FAIL（`Null check operator used on a null value`），因為 `book_cover_test.dart` 目前用純 `MaterialApp()`（未帶 `theme:`），預設 `ThemeData` 沒有掛 `ElinkTokens`。
 
-- [ ] **Step 3：修正 `book_cover_test.dart`，補上 `theme: resolveThemeData(...)`**
+- [x] **Step 3：修正 `book_cover_test.dart`，補上 `theme: resolveThemeData(...)`**
 
 把：
 
@@ -230,12 +230,12 @@ import 'package:elinkbook/theme/app_theme_data.dart';
   });
 ```
 
-- [ ] **Step 4：重新執行測試確認通過**
+- [x] **Step 4：重新執行測試確認通過**
 
 Run: `flutter test test/library/widgets/book_cover_test.dart`
 Expected: 兩則測試皆 PASS。
 
-- [ ] **Step 5：修正 `library_screen_test.dart` 內斷言 `BookCover` 佔位色的既有測試（`/superpowers:requesting-code-review` 審查發現的 Critical 缺口）**
+- [x] **Step 5：修正 `library_screen_test.dart` 內斷言 `BookCover` 佔位色的既有測試（`/superpowers:requesting-code-review` 審查發現的 Critical 缺口）**
 
 先執行 `flutter test test/screens/library_screen_test.dart`，確認「分類拼貼格（格狀檢視）封面預覽區塊填滿可用高度，下方不留空白」這一則（原始行號約 L2850-2912）FAIL——因為 Step 1 已把 `book_cover.dart` 的 `Colors.grey.shade300` 改為 `tokens.coverPlaceholder`（晴空藍天主題實際值 `Color(0xFFE6F1FA)`），這則測試斷言的 `w.color == Colors.grey.shade300` 會 0 個相符，而不是預期的 4 個。
 
@@ -341,7 +341,7 @@ import 'package:elinkbook/theme/elink_tokens.dart';
 Run: `flutter test test/screens/library_screen_test.dart`
 Expected: 這一則轉為 PASS。其餘既有測試維持 PASS（尚未觸及 L2947／L2984 那兩則，那兩則要等 Task 3 才會被 Task 3 自己的 Step 修正——Task 3 執行前，這兩則測試在 Task 1 完成後仍會維持 PASS，因為它們斷言的 `Colors.grey.shade200` 屬於 `_groupTilePreviewCell` 的空格佔位色，Task 1 沒有動到那段程式碼）。
 
-- [ ] **Step 6：commit**
+- [x] **Step 6：commit**
 
 ```bash
 git add app/lib/library/widgets/book_cover.dart app/test/library/widgets/book_cover_test.dart app/test/screens/library_screen_test.dart
@@ -370,7 +370,7 @@ EOF
 - Consumes：`ElinkTokens`（Issue 1）、`resolveThemeData()`（Issue 2）；Task 1 已遷移完成的 `BookCover`（本 Task 的 `_BookGridItem` 會渲染它，兩者互不影響彼此的顏色來源，各自從 `Theme.of(context)` 獨立取值）。
 - Produces：`LayoutPresetBookPickerScreen` 公開建構參數（`books`／`multiSelect`）不變；無新公開介面。
 
-- [ ] **Step 1：修改 `layout_preset_book_picker_screen.dart`，把選取指示圈底色改讀 `ElinkTokens`**
+- [x] **Step 1：修改 `layout_preset_book_picker_screen.dart`，把選取指示圈底色改讀 `ElinkTokens`**
 
 把檔案開頭：
 
@@ -504,12 +504,12 @@ import '../theme/elink_tokens.dart';
   }
 ```
 
-- [ ] **Step 2：執行既有測試，確認因 `ElinkTokens` 為 null 而失敗**
+- [x] **Step 2：執行既有測試，確認因 `ElinkTokens` 為 null 而失敗**
 
 Run: `flutter test test/screens/layout_preset_book_picker_screen_test.dart`
 Expected: 涉及非空 `books` 清單的測試 FAIL（`Null check operator used on a null value`），因為 `layout_preset_book_picker_screen_test.dart` 目前 17 處 `MaterialApp()` 都未帶 `theme:`。
 
-- [ ] **Step 3：修正 `layout_preset_book_picker_screen_test.dart`，補上 `theme: resolveThemeData(...)`**
+- [x] **Step 3：修正 `layout_preset_book_picker_screen_test.dart`，補上 `theme: resolveThemeData(...)`**
 
 先在檔案開頭加入 import：
 
@@ -593,12 +593,12 @@ import 'package:elinkbook/theme/app_theme_data.dart';
 
 其餘 15 處（原始行號 51、92、121、159、174、226、239、252、271、293、310、334、375、395、414）比照同一種插入方式逐一處理，不做人工篩選、每一處都要插入，避免比照 Issue 4 收尾階段發現的同類疏漏（`library_screen_test.dart` 96 處遺漏事件）。
 
-- [ ] **Step 4：重新執行測試確認通過**
+- [x] **Step 4：重新執行測試確認通過**
 
 Run: `flutter test test/screens/layout_preset_book_picker_screen_test.dart`
 Expected: 全部 17 則測試皆 PASS。
 
-- [ ] **Step 5：commit**
+- [x] **Step 5：commit**
 
 ```bash
 git add app/lib/screens/layout_preset_book_picker_screen.dart app/test/screens/layout_preset_book_picker_screen_test.dart
@@ -626,12 +626,12 @@ EOF
 - Consumes：`ElinkTokens`（Issue 1）、`resolveThemeData()`（Issue 2）；`library_screen_test.dart` 已在 Issue 4 收尾修正時全面補齊 `theme: resolveThemeData(...)`（見 `issues.md` Issue 4「收尾階段修正」記錄），本 Task 不需要再修改 `MaterialApp` 建構方式本身。**本 Task 依賴 Task 1 已先完成**（`/superpowers:requesting-code-review` 審查發現）：Step 6／Step 7 要修正的兩則測試斷言依賴 `book_cover.dart` 的 `ColoredBox` 已改為 `tokens.coverPlaceholder`（Task 1 的改動）——若 Task 1 尚未完成就執行本 Task 的 Step 6／Step 7，`BookCover` 佔位色仍是 `Colors.grey.shade300`，斷言的「總數 4」會對不上（屆時只有 `_groupTilePreviewCell` 那幾個空格會是新色，`BookCover` 那幾個還是舊色，兩者不會相等），必須先完成 Task 1。
 - Produces：`_groupTilePreviewCell` 私有方法簽章由 `Widget _groupTilePreviewCell(int index)` 改為 `Widget _groupTilePreviewCell(BuildContext context, int index)`——純私有實作細節，不影響任何公開介面，Task 4／Task 5 不依賴它。
 
-- [ ] **Step 1：執行既有測試建立基準（綠燈）**
+- [x] **Step 1：執行既有測試建立基準（綠燈）**
 
 Run: `flutter test test/screens/library_screen_test.dart`
 Expected: 全數 PASS（尚未改動原始碼）。
 
-- [ ] **Step 2：修改 `library_screen.dart`，加入 `ElinkTokens` import**
+- [x] **Step 2：修改 `library_screen.dart`，加入 `ElinkTokens` import**
 
 把：
 
@@ -652,7 +652,7 @@ import '../library/widgets/book_cover.dart';
 import '../theme/elink_tokens.dart';
 ```
 
-- [ ] **Step 3：`_GroupGridTile` 改讀 `tokens.coverPlaceholder`**
+- [x] **Step 3：`_GroupGridTile` 改讀 `tokens.coverPlaceholder`**
 
 把 `_GroupGridTile.build()` 內三處呼叫 `_groupTilePreviewCell(0)`／`_groupTilePreviewCell(1)`／`_groupTilePreviewCell(2)`／`_groupTilePreviewCell(3)` 的區塊：
 
@@ -724,7 +724,7 @@ import '../theme/elink_tokens.dart';
   }
 ```
 
-- [ ] **Step 4：`_GroupListTile` 改讀 `tokens.coverPlaceholder`**
+- [x] **Step 4：`_GroupListTile` 改讀 `tokens.coverPlaceholder`**
 
 把：
 
@@ -787,7 +787,7 @@ import '../theme/elink_tokens.dart';
   }
 ```
 
-- [ ] **Step 5：`_BookGridTile` 選取指示圈改讀 `tokens.badgeScrim`、進度文字色改讀 `colorScheme.onSurfaceVariant`**
+- [x] **Step 5：`_BookGridTile` 選取指示圈改讀 `tokens.badgeScrim`、進度文字色改讀 `colorScheme.onSurfaceVariant`**
 
 把：
 
@@ -938,7 +938,7 @@ import '../theme/elink_tokens.dart';
   }
 ```
 
-- [ ] **Step 6：修正 L2914-2952「分類拼貼格（格狀檢視）不足 4 本時以中性色塊佔位」測試（`/superpowers:requesting-code-review` 審查發現的 Critical 缺口）**
+- [x] **Step 6：修正 L2914-2952「分類拼貼格（格狀檢視）不足 4 本時以中性色塊佔位」測試（`/superpowers:requesting-code-review` 審查發現的 Critical 缺口）**
 
 先執行 `flutter test test/screens/library_screen_test.dart`，確認這一則 FAIL——原本斷言的 `Colors.grey.shade200`（`_groupTilePreviewCell` 空格佔位色）已被 Step 3 改為 `tokens.coverPlaceholder`，找不到任何相符的 `ColoredBox`。
 
@@ -1063,7 +1063,7 @@ import 'package:elinkbook/theme/elink_tokens.dart';
 Run: `flutter test test/screens/library_screen_test.dart`
 Expected: 這一則轉為 PASS。
 
-- [ ] **Step 7：修正 L2954-2989「分類拼貼格（列表檢視）不足 4 本時以中性色塊佔位」測試**
+- [x] **Step 7：修正 L2954-2989「分類拼貼格（列表檢視）不足 4 本時以中性色塊佔位」測試**
 
 先執行 `flutter test test/screens/library_screen_test.dart`，確認這一則 FAIL（理由同 Step 6）。
 
@@ -1161,12 +1161,12 @@ Expected: 這一則轉為 PASS。
 Run: `flutter test test/screens/library_screen_test.dart`
 Expected: 這一則轉為 PASS。
 
-- [ ] **Step 8：重新執行測試確認全數通過**
+- [x] **Step 8：重新執行測試確認全數通過**
 
 Run: `flutter test test/screens/library_screen_test.dart`
 Expected: 全數 PASS（無回歸）。
 
-- [ ] **Step 9：commit**
+- [x] **Step 9：commit**
 
 ```bash
 git add app/lib/screens/library_screen.dart app/test/screens/library_screen_test.dart
@@ -1196,12 +1196,12 @@ EOF
 - Consumes：`ColorScheme.scrim`（Flutter M3 內建角色，四套主題與 E-Ink 主題皆未覆寫，預設不透明黑）；不消費 `ElinkTokens`（這幾處全部改讀 `ColorScheme`，不需要 `ElinkTokens`）。
 - Produces：無新公開介面，不變更任何方法簽章（`_buildImportingOverlay()`／`_buildNormalAppBar()` 皆為 `_LibraryScreenState` 的既有私有方法，`context` 透過 `State.context` getter 直接取得，不需要新增參數）。
 
-- [ ] **Step 1：執行既有測試建立基準（綠燈）**
+- [x] **Step 1：執行既有測試建立基準（綠燈）**
 
 Run: `flutter test test/screens/library_screen_test.dart`
 Expected: 全數 PASS（尚未改動這兩個方法）。
 
-- [ ] **Step 2：`_buildImportingOverlay()` 改讀 `colorScheme.scrim`**
+- [x] **Step 2：`_buildImportingOverlay()` 改讀 `colorScheme.scrim`**
 
 把：
 
@@ -1258,7 +1258,7 @@ Expected: 全數 PASS（尚未改動這兩個方法）。
   }
 ```
 
-- [ ] **Step 3：`_buildNormalAppBar()` 的 E-Ink 切換鈕改讀 `colorScheme.onSurface`／`colorScheme.surface`**
+- [x] **Step 3：`_buildNormalAppBar()` 的 E-Ink 切換鈕改讀 `colorScheme.onSurface`／`colorScheme.surface`**
 
 把：
 
@@ -1321,12 +1321,12 @@ Expected: 全數 PASS（尚未改動這兩個方法）。
             ),
 ```
 
-- [ ] **Step 4：重新執行測試確認通過**
+- [x] **Step 4：重新執行測試確認通過**
 
 Run: `flutter test test/screens/library_screen_test.dart`
 Expected: 全數 PASS（無回歸）。
 
-- [ ] **Step 5：commit**
+- [x] **Step 5：commit**
 
 ```bash
 git add app/lib/screens/library_screen.dart
@@ -1354,7 +1354,7 @@ EOF
 - Consumes：`resolveThemeData()`（Issue 2）；`FakeLibraryRepository.renameGroup()` 既有行為——重新命名為已存在的分類名稱時拋出 `LibraryRepositoryException('分類「$newName」已存在')`（`app/test/support/fake_library_repository.dart:117-118`，既有實作，本 Task 不修改）。
 - Produces：無新公開介面，`LibraryGroupManagementDialog` 公開建構參數（`repository`／`initialGroups`）不變。
 
-- [ ] **Step 1：寫失敗的測試**
+- [x] **Step 1：寫失敗的測試**
 
 在 `app/test/screens/library_group_management_dialog_test.dart` 檔案開頭加入 import：
 
@@ -1431,12 +1431,12 @@ import '../support/fake_library_repository.dart';
   });
 ```
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 Run: `flutter test test/screens/library_group_management_dialog_test.dart`
 Expected: 新測試 FAIL——`errorText.style?.color` 目前是 `Colors.red`（`Color(0xFFF44336)`），不等於 `theme.colorScheme.error`（晴空藍天主題 `Color(0xFFEF4444)`）。
 
-- [ ] **Step 3：修改 `library_group_management_dialog.dart`，把 `Colors.red` 改為 `colorScheme.error`**
+- [x] **Step 3：修改 `library_group_management_dialog.dart`，把 `Colors.red` 改為 `colorScheme.error`**
 
 把：
 
@@ -1466,12 +1466,12 @@ Expected: 新測試 FAIL——`errorText.style?.color` 目前是 `Colors.red`（
                 ),
 ```
 
-- [ ] **Step 4：重新執行測試確認通過**
+- [x] **Step 4：重新執行測試確認通過**
 
 Run: `flutter test test/screens/library_group_management_dialog_test.dart`
 Expected: 兩則測試（既有＋新增）皆 PASS。
 
-- [ ] **Step 5：commit**
+- [x] **Step 5：commit**
 
 ```bash
 git add app/lib/screens/library_group_management_dialog.dart app/test/screens/library_group_management_dialog_test.dart
@@ -1482,7 +1482,7 @@ refactor(epic-35): library_group_management_dialog.dart 刪除錯誤文字色遷
 寫死的 Colors.red，新增測試驗證色值來源。
 
 Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
-Claude-Session: https://claude.ai/code/session_01Ue4QKXFUDw4c8F8wzQJzGn
+Claude-Session: https://claude.ai/code/session_01YcNuz5feCAiJBxDAfryX2X
 EOF
 )"
 ```
@@ -1497,17 +1497,17 @@ EOF
 **Interfaces:**
 - 無
 
-- [ ] **Step 1：執行完整 `flutter test`**
+- [x] **Step 1：執行完整 `flutter test`**
 
 Run: `flutter test`
 Expected: 全專案測試（含 Task 1-5 新增/修改的測試）全數 PASS，無回歸。若有非本 Issue 範圍內的既存失敗，記錄下來但不在本 Issue 修復（比照 `issues.md` Issue 4 收尾階段的處理原則：若發現本計劃遺漏、屬本 Issue 範圍內的失敗，回頭補 Task 修正，不可略過）。
 
-- [ ] **Step 2：執行 `flutter analyze`**
+- [x] **Step 2：執行 `flutter analyze`**
 
 Run: `flutter analyze`
 Expected: 輸出 `No issues found!`。
 
-- [ ] **Step 3：確認四個檔案內無殘留字面顏色**
+- [x] **Step 3：確認四個檔案內無殘留字面顏色**
 
 Run（在 `app/` 目錄下）：
 

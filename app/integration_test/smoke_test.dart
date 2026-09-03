@@ -8,6 +8,8 @@ import 'package:elinkbook/reader/reader_prefs_manager.dart';
 import 'package:elinkbook/reader/reader_prefs_manager_impl.dart';
 import 'package:elinkbook/reader/reading_position_repository.dart';
 import 'package:elinkbook/screens/library_screen.dart';
+import 'package:elinkbook/theme/app_theme.dart';
+import 'package:elinkbook/theme/app_theme_data.dart';
 
 import '../test/support/fake_book_import_service.dart';
 import '../test/support/fake_library_repository.dart';
@@ -40,6 +42,7 @@ void main() {
       (tester) async {
     await tester.pumpWidget(
       MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: LibraryScreen(
           repository: FakeLibraryRepository(),
           importService: FakeBookImportService(),
