@@ -117,6 +117,49 @@ void main() {
   });
 
   testWidgets(
+      'showNavZoneDebugOverlay 為 true 時，格線與文字改讀 colorScheme.onSurface（'
+      'epic-35-design-system-tokens Issue 7：取代原本寫死的 Colors.white24／'
+      'white70——這兩個字面值跟主題無關，換主題／開啟 E-Ink 模式時不會跟著換）',
+      (tester) async {
+    var renderedCount = 0;
+    final actions = List<ZoneAction>.filled(9, ZoneAction.none);
+    actions[1] = ZoneAction.menu;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PdfReaderView(
+          filePath: 'test/fixtures/sample_multi_page.pdf',
+          onPageRendered: () => renderedCount++,
+          onError: (_) {},
+          navZoneActions: actions,
+          showNavZoneDebugOverlay: true,
+        ),
+      ),
+    );
+    await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
+    await tester.pump();
+
+    final context =
+        tester.element(find.byKey(const Key('pdf_reader_nav_zone_1')));
+    final onSurfaceColor = Theme.of(context).colorScheme.onSurface;
+
+    final cell = tester.widget<Container>(
+      find.descendant(
+        of: find.byKey(const Key('pdf_reader_nav_zone_1')),
+        matching: find.byType(Container),
+      ),
+    );
+    final border = (cell.decoration as BoxDecoration).border as Border;
+    expect(border.top.color, onSurfaceColor.withValues(alpha: 0.24));
+
+    final label = tester.widget<Text>(find.text('選單'));
+    expect(label.style?.color, onSurfaceColor.withValues(alpha: 0.7));
+    // 等待 PdfViewer 內部 DoubleTapGestureRecognizer 的定時器過期，避免測試
+    // 結束時拋出 "A Timer is still pending" 斷言（比照本檔案既有測試慣例）。
+    await tester.pump(const Duration(milliseconds: 400));
+  });
+
+  testWidgets(
       '按壓超過快速點擊時長判定門檻不觸發 onZoneAction，避免與長按選取手勢衝突',
       (tester) async {
     var renderedCount = 0;

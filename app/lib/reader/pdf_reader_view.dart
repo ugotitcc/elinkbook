@@ -27,6 +27,7 @@ import 'percent_rect.dart';
 import 'reader_console_log.dart';
 import 'tap_zone_detector.dart';
 import 'zone_action.dart';
+import '../theme/elink_tokens.dart';
 
 /// 以 pdfrx（PDFium + Dart FFI）為底層的 PDF 閱讀 widget
 /// （epic-24-pdf-engine-rebuild Issue 1），取代現行以
@@ -920,6 +921,12 @@ class _PdfReaderViewState extends State<PdfReaderView> {
     if (document == null) {
       return const SizedBox.shrink();
     }
+    // epic-35-design-system-tokens Issue 7：3×3 導覽熱區除錯疊層（見下方
+    // showNavZoneDebugOverlay 分支）原本寫死 Colors.white24／white70，
+    // 換主題／開啟 E-Ink 模式時不會跟著換；改讀 colorScheme.onSurface，
+    // 呼應 nav_zone_settings_screen.dart（epic-35 Issue 5）同一組熱區格線
+    // 已採用的同一個角色，維持同一功能兩處視覺語彙一致。
+    final onSurfaceColor = Theme.of(context).colorScheme.onSurface;
     final viewer = PdfViewer(
       PdfDocumentRefDirect(document, autoDispose: false),
       controller: _controller,
@@ -1007,14 +1014,18 @@ class _PdfReaderViewState extends State<PdfReaderView> {
                         child: Container(
                           decoration: widget.showNavZoneDebugOverlay
                               ? BoxDecoration(
-                                  border: Border.all(color: Colors.white24))
+                                  border: Border.all(
+                                      color: onSurfaceColor.withValues(
+                                          alpha: 0.24)))
                               : null,
                           alignment: Alignment.center,
                           child: widget.showNavZoneDebugOverlay
                               ? Text(
                                   _pdfZoneActionLabel(action),
-                                  style: const TextStyle(
-                                      color: Colors.white70, fontSize: 10),
+                                  style: TextStyle(
+                                      color: onSurfaceColor.withValues(
+                                          alpha: 0.7),
+                                      fontSize: 10),
                                 )
                               : null,
                         ),
@@ -1045,13 +1056,17 @@ class _PdfReaderViewState extends State<PdfReaderView> {
 
   Widget _buildDragIndicator(_PdfSelectionDragState drag) {
     final rect = Rect.fromPoints(drag.start, drag.current);
+    // epic-35-design-system-tokens Issue 7：框選進行中尚未決定標記顏色，
+    // 改用 primary（App 既有「操作中／選取中」語彙）取代原本寫死的
+    // Colors.yellow／orange，換主題／開啟 E-Ink 模式時能正確跟著換。
+    final primaryColor = Theme.of(context).colorScheme.primary;
     return Positioned.fromRect(
       key: const Key('pdf_reader_selection_drag_indicator'),
       rect: rect,
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.yellow.withValues(alpha: 0.3),
-          border: Border.all(color: Colors.orange, width: 1.5),
+          color: primaryColor.withValues(alpha: 0.3),
+          border: Border.all(color: primaryColor, width: 1.5),
         ),
       ),
     );
@@ -1087,10 +1102,11 @@ class _PdfReaderViewState extends State<PdfReaderView> {
           else
             Container(color: color),
           if (decoration.isNoteOnly)
-            const Positioned(
+            Positioned(
               right: -6,
               top: -6,
-              child: Icon(Icons.push_pin, size: 16, color: Colors.black87),
+              child: Icon(Icons.push_pin,
+                  size: 16, color: Theme.of(context).colorScheme.onSurface),
             ),
         ],
       ),
@@ -1100,9 +1116,12 @@ class _PdfReaderViewState extends State<PdfReaderView> {
   /// 搜尋符合結果的高亮 widget，畫法比照 [_buildDecorationWidget]
   /// （同樣的 `PercentRect`→像素換算），[isCurrent] 為 true（目前使用者
   /// 正在檢視的符合結果）時額外疊加外框（審查修正，
-  /// review-plan-issue-6.md Minor #3）：純粹用半透明橙色／黃色區分在
-  /// E-Ink 灰階顯示或高對比主題下辨識度不足，外框在灰階轉換後仍能維持
-  /// 明顯的邊界對比，不依賴色相差異。
+  /// review-plan-issue-6.md Minor #3）：純粹用半透明的
+  /// `ElinkTokens.highlightGreen`／`highlightYellow` 區分在 E-Ink 灰階顯示
+  /// 或高對比主題下辨識度不足，外框在灰階轉換後仍能維持明顯的邊界對比，
+  /// 不依賴色相差異（epic-35-design-system-tokens Issue 7：色彩角色來源
+  /// 已從寫死的 Colors.orange／Colors.yellow 改為上述 ElinkTokens 角色，
+  /// 這段設計原則本身不變）。
   Widget _buildSearchHighlightWidget(
     int pageIndex,
     int matchIndex,
@@ -1116,6 +1135,14 @@ class _PdfReaderViewState extends State<PdfReaderView> {
       visibleRect.right * areaSize.width,
       visibleRect.bottom * areaSize.height,
     );
+    // epic-35-design-system-tokens Issue 7：搜尋高亮概念上就是「標示出
+    // 文字位置」，沿用既有劃線語意色 ElinkTokens.highlightYellow／
+    // highlightGreen 取代原本寫死的 Colors.yellow／orange；isCurrent 外框
+    // 改讀 colorScheme.primary 取代 Colors.deepOrange——維持原設計「外框
+    // 存在與否（而非色相）才是可辨識度依據」的既有原則不變（見上方
+    // _buildSearchHighlightWidget 註解），只換掉色彩角色的來源。
+    final tokens = Theme.of(context).extension<ElinkTokens>()!;
+    final colorScheme = Theme.of(context).colorScheme;
     return Positioned.fromRect(
       // key 須同時包含 pageIndex 與 matchIndex（matchIndex 是在
       // _searchMatches 整份清單中的全域索引，非同頁內重新歸零的計數）——
@@ -1125,9 +1152,10 @@ class _PdfReaderViewState extends State<PdfReaderView> {
       rect: rect,
       child: Container(
         decoration: BoxDecoration(
-          color: (isCurrent ? Colors.orange : Colors.yellow).withValues(alpha: 0.4),
+          color: (isCurrent ? tokens.highlightGreen : tokens.highlightYellow)
+              .withValues(alpha: 0.4),
           border: isCurrent
-              ? Border.all(color: Colors.deepOrange, width: 1.5)
+              ? Border.all(color: colorScheme.primary, width: 1.5)
               : null,
         ),
       ),
