@@ -7,10 +7,13 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
+import 'package:elinkbook/library/widgets/book_cover.dart';
 import 'package:elinkbook/remote/remote_server_profile.dart';
 import 'package:elinkbook/remote/opds_types.dart';
 import 'package:elinkbook/screens/remote_catalog_screen.dart';
 import 'package:elinkbook/remote/remote_catalog_dependencies.dart';
+import 'package:elinkbook/theme/app_theme.dart';
+import 'package:elinkbook/theme/app_theme_data.dart';
 
 import '../support/fake_book_import_service.dart';
 import '../support/fake_fingerprint_computer.dart';
@@ -89,6 +92,7 @@ void main() {
     String? feedUrl,
   }) async {
     await tester.pumpWidget(MaterialApp(
+      theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
       home: RemoteCatalogScreen(
         server: server,
         repository: repository ?? FakeRemoteServerRepository(),
@@ -117,7 +121,11 @@ void main() {
 
     expect(find.text('作者分類'), findsOneWidget);
     expect(find.text('紅樓夢'), findsOneWidget);
-    expect(find.text('不支援格式的書'), findsOneWidget);
+    // entry2 沒有縮圖網址，書名會出現兩次：CoverPlaceholder 內部的書名
+    // 微縮＋_buildEntryTile() 格子下方既有的書名 caption——與
+    // library_screen.dart 的 _BookGridTile／BookCover 既有先例一致
+    // （Issue 6/9 已審查通過），非本 Task 造成的回歸。
+    expect(find.text('不支援格式的書'), findsNWidgets(2));
   });
 
   testWidgets('點擊分類導覽項目時 push 新的 RemoteCatalogScreen 並載入該分類 Feed', (tester) async {
@@ -158,6 +166,7 @@ void main() {
       createOpdsClient: () => opdsClient,
     );
     await tester.pumpWidget(MaterialApp(
+      theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
       home: RemoteCatalogScreen(
         server: server,
         repository: FakeRemoteServerRepository(),
@@ -195,7 +204,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('紅樓夢'), findsOneWidget);
-    expect(find.text('不支援格式的書'), findsOneWidget);
+    // entry2 沒有縮圖網址，書名重複顯示兩次（CoverPlaceholder 內部書名
+    // 微縮＋外層 caption），與 library_screen.dart 既有先例一致。
+    expect(find.text('不支援格式的書'), findsNWidgets(2));
     expect(find.byKey(const Key('remote_catalog_load_more_button')), findsNothing);
   });
 
@@ -227,7 +238,11 @@ void main() {
     final thumbnailCache = FakeRemoteThumbnailCache(error: StateError('模擬縮圖下載失敗'));
     await pumpScreen(tester, opdsClient: opdsClient, thumbnailCache: thumbnailCache);
 
-    expect(find.byKey(const Key('remote_catalog_thumbnail_error_book-1')), findsOneWidget);
+    final errorFinder = find.byKey(const Key('remote_catalog_thumbnail_error_book-1'));
+    expect(errorFinder, findsOneWidget);
+    final errorPlaceholder = tester.widget(errorFinder);
+    expect(errorPlaceholder, isA<CoverPlaceholder>());
+    expect((errorPlaceholder as CoverPlaceholder).title, entry1.title);
   });
 
   testWidgets('沒有縮圖的書目顯示預設圖示佔位符', (tester) async {
@@ -241,7 +256,12 @@ void main() {
     });
     await pumpScreen(tester, opdsClient: opdsClient);
 
-    expect(find.byKey(const Key('remote_catalog_thumbnail_placeholder_book-3')), findsOneWidget);
+    final placeholderFinder =
+        find.byKey(const Key('remote_catalog_thumbnail_placeholder_book-3'));
+    expect(placeholderFinder, findsOneWidget);
+    final placeholder = tester.widget(placeholderFinder);
+    expect(placeholder, isA<CoverPlaceholder>());
+    expect((placeholder as CoverPlaceholder).title, entryNoCover.title);
   });
 
   testWidgets('點擊書目可勾選/取消勾選，僅有支援格式的書目可勾選', (tester) async {
@@ -334,6 +354,7 @@ void main() {
         ),
       });
       await tester.pumpWidget(MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: RemoteCatalogScreen(
           server: server,
           repository: FakeRemoteServerRepository(),
@@ -372,6 +393,7 @@ void main() {
         ),
       });
       await tester.pumpWidget(MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: RemoteCatalogScreen(
           server: server,
           repository: FakeRemoteServerRepository(),
@@ -391,7 +413,9 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('紅樓夢'), findsNothing);
-      expect(find.text('不支援格式的書'), findsOneWidget);
+      // entry2 沒有縮圖網址，書名重複顯示兩次（CoverPlaceholder 內部書名
+      // 微縮＋外層 caption），與 library_screen.dart 既有先例一致。
+      expect(find.text('不支援格式的書'), findsNWidgets(2));
 
       final nextButton =
           tester.widget<OutlinedButton>(find.byKey(const Key('remote_catalog_eink_next_page_button')));
@@ -410,6 +434,7 @@ void main() {
         ),
       });
       await tester.pumpWidget(MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: RemoteCatalogScreen(
           server: server,
           repository: FakeRemoteServerRepository(),
@@ -453,6 +478,7 @@ void main() {
       });
       final importService = FakeBookImportService();
       await tester.pumpWidget(MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: RemoteCatalogScreen(
           server: server,
           repository: FakeRemoteServerRepository(),
@@ -503,6 +529,7 @@ void main() {
         server.baseUrl: const OpdsFeed(title: '根目錄', entries: [multiFormatEntry]),
       });
       await tester.pumpWidget(MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: RemoteCatalogScreen(
           server: server,
           repository: FakeRemoteServerRepository(),
@@ -551,6 +578,7 @@ void main() {
         server.baseUrl: const OpdsFeed(title: '根目錄', entries: [entryA, entryB]),
       });
       await tester.pumpWidget(MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: RemoteCatalogScreen(
           server: server,
           repository: FakeRemoteServerRepository(),
@@ -590,6 +618,7 @@ void main() {
         downloadError: StateError('模擬下載失敗'),
       );
       await tester.pumpWidget(MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: RemoteCatalogScreen(
           server: server,
           repository: FakeRemoteServerRepository(),
@@ -632,6 +661,7 @@ void main() {
       });
       opdsClient.downloadPendingCompleter = Completer<void>();
       await tester.pumpWidget(MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: RemoteCatalogScreen(
           server: server,
           repository: FakeRemoteServerRepository(),
@@ -674,6 +704,7 @@ void main() {
         server.baseUrl: const OpdsFeed(title: '根目錄', entries: [entry1]),
       });
       await tester.pumpWidget(MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: RemoteCatalogScreen(
           server: server,
           repository: FakeRemoteServerRepository(),
@@ -727,6 +758,7 @@ void main() {
         final fingerprintComputer = FakeFingerprintComputer()..nextFingerprint = 'dup-fingerprint';
         final importService = FakeBookImportService();
         await tester.pumpWidget(MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: RemoteCatalogScreen(
             server: server,
             repository: FakeRemoteServerRepository(),
@@ -780,6 +812,7 @@ void main() {
         final fingerprintComputer = FakeFingerprintComputer()..nextFingerprint = 'dup-fingerprint';
         final importService = FakeBookImportService();
         await tester.pumpWidget(MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: RemoteCatalogScreen(
             server: server,
             repository: FakeRemoteServerRepository(),
@@ -825,6 +858,7 @@ void main() {
         final importService = FakeBookImportService();
         final fingerprintComputer = FakeFingerprintComputer();
         await tester.pumpWidget(MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: RemoteCatalogScreen(
             server: server,
             repository: FakeRemoteServerRepository(),
