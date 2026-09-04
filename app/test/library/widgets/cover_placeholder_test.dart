@@ -8,7 +8,7 @@ void main() {
   Widget wrap(Widget child, {required bool isEinkMode}) {
     return MaterialApp(
       theme: resolveThemeData(theme: AppTheme.light, isEinkMode: isEinkMode),
-      home: child,
+      home: Center(child: child),
     );
   }
 
