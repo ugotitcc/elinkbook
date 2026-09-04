@@ -123,7 +123,7 @@ flutter build apk --release --dart-define-from-file=config/cloud_oauth.json
 - **Method Channel 契約**：對稱三段式（openBook → onPageRendered/onError）
 - **偏好設定**：null = 不覆寫，使用預設值；非 null = 覆寫
 - **`plans/plan-issue-<N>.md` 進度追蹤**：Task 底下的 Step 一旦完成，須把該 Step 前面的 `- [ ]` 改為 `- [x]`
-- **審查**：先產出報告，嚴禁直接修改被審查的文件或程式碼
+- **審查**：先產出報告，嚴禁直接修改被審查的文件或程式碼；TUI 彙整與審查報告摘要均須明確列出 Critical / Important / Minor 數量以利判斷決策
 
 ## Gotchas
 
