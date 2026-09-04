@@ -788,6 +788,47 @@ void main() {
     });
 
     testWidgets(
+        'showNavZoneDebugOverlay=true 時，格線與文字改讀 colorScheme.onSurface（'
+        'epic-35-design-system-tokens Issue 7：取代原本寫死的 Colors.white24／'
+        'white70——這兩個字面值跟主題無關，換主題／開啟 E-Ink 模式時不會跟著換）',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: FoliateReaderView(
+            filePath: '/tmp/sample.epub',
+            onPageRendered: _noop,
+            onError: _noopError,
+            navZoneActions: const [
+              ZoneAction.previousPage, ZoneAction.menu, ZoneAction.nextPage,
+              ZoneAction.none, ZoneAction.none, ZoneAction.none,
+              ZoneAction.none, ZoneAction.none, ZoneAction.none,
+            ],
+            showNavZoneDebugOverlay: true,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final context =
+          tester.element(find.byKey(const Key('nav_zone_1')));
+      final onSurfaceColor = Theme.of(context).colorScheme.onSurface;
+
+      final cell = tester.widget<Container>(
+        find.descendant(
+          of: find.byKey(const Key('nav_zone_1')),
+          matching: find.byType(Container),
+        ),
+      );
+      final border = (cell.decoration as BoxDecoration).border as Border;
+      expect(border.top.color, onSurfaceColor.withValues(alpha: 0.24));
+
+      final label = tester.widget<Text>(find.text('選單'));
+      expect(label.style?.color, onSurfaceColor.withValues(alpha: 0.7));
+    });
+
+    testWidgets(
         'EPUB nav-zone 熱區：onPointerCancel 不會拋出例外，取消手勢本身不觸發 onZoneAction，後續正常點擊仍正確判定',
         (tester) async {
       ZoneAction? triggered;
