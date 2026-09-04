@@ -13,6 +13,7 @@ import '../remote/opds_types.dart';
 import '../remote/remote_book_downloader.dart';
 import '../remote/remote_server_profile.dart';
 import '../remote/remote_server_repository.dart';
+import '../library/widgets/book_cover.dart';
 import 'format_selection_dialog.dart';
 
 /// OPDS 目錄瀏覽畫面（epic-30-calibre-remote-library Issue 2，
@@ -421,11 +422,10 @@ class _RemoteCatalogScreenState extends State<RemoteCatalogScreen> {
   Widget _buildThumbnail(OpdsEntry entry) {
     final thumbnailUrl = entry.thumbnailUrl;
     if (thumbnailUrl == null) {
-      return Center(
-        child: Icon(
-          Icons.book,
-          key: Key('remote_catalog_thumbnail_placeholder_${entry.remoteBookId}'),
-        ),
+      return CoverPlaceholder(
+        key: Key('remote_catalog_thumbnail_placeholder_${entry.remoteBookId}'),
+        icon: Icons.book,
+        title: entry.title,
       );
     }
     return FutureBuilder<Uint8List>(
@@ -453,14 +453,16 @@ class _RemoteCatalogScreenState extends State<RemoteCatalogScreen> {
           );
         }
         if (snapshot.connectionState != ConnectionState.done) {
-          return Center(
+          return CoverPlaceholder(
             key: Key('remote_catalog_thumbnail_loading_${entry.remoteBookId}'),
-            child: const Icon(Icons.book),
+            icon: Icons.book,
+            title: entry.title,
           );
         }
-        return Center(
+        return CoverPlaceholder(
           key: Key('remote_catalog_thumbnail_error_${entry.remoteBookId}'),
-          child: const Icon(Icons.broken_image),
+          icon: Icons.broken_image,
+          title: entry.title,
         );
       },
     );

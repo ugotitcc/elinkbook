@@ -7,7 +7,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:elinkbook/cloud_import/cloud_storage_client.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
+import 'package:elinkbook/library/widgets/book_cover.dart';
 import 'package:elinkbook/screens/cloud_browser_screen.dart';
+import 'package:elinkbook/theme/app_theme.dart';
+import 'package:elinkbook/theme/app_theme_data.dart';
 
 import 'package:elinkbook/library/models/book.dart';
 
@@ -86,6 +89,7 @@ void main() {
     String? folderId,
   }) async {
     await tester.pumpWidget(MaterialApp(
+      theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
       home: CloudBrowserScreen(
         client: client,
         libraryRepository: libraryRepository ?? FakeLibraryRepository(),
@@ -106,7 +110,10 @@ void main() {
     await pumpScreen(tester, client: client);
 
     expect(find.text('小說'), findsOneWidget);
-    expect(find.text('紅樓夢.epub'), findsOneWidget);
+    // fileEntryNoThumbnail 沒有縮圖網址，書名重複顯示兩次（CoverPlaceholder
+    // 內部書名微縮＋外層 caption），與 library_screen.dart 的
+    // _BookGridTile／BookCover 既有先例一致（Issue 6/9 已審查通過）。
+    expect(find.text('紅樓夢.epub'), findsNWidgets(2));
   });
 
   testWidgets('點擊資料夾項目 push 新畫面並帶入正確 folderId', (tester) async {
@@ -119,7 +126,9 @@ void main() {
     await tester.tap(find.byKey(const Key('google_drive_browser_entry_folder-1')));
     await tester.pumpAndSettle();
 
-    expect(find.text('紅樓夢.epub'), findsOneWidget);
+    // fileEntryNoThumbnail 沒有縮圖網址，書名重複顯示兩次（CoverPlaceholder
+    // 內部書名微縮＋外層 caption），與 library_screen.dart 既有先例一致。
+    expect(find.text('紅樓夢.epub'), findsNWidgets(2));
   });
 
   testWidgets('無縮圖網址的檔案顯示縮圖佔位符', (tester) async {
@@ -128,10 +137,13 @@ void main() {
     });
     await pumpScreen(tester, client: client);
 
-    expect(
-      find.byKey(const Key('google_drive_browser_thumbnail_placeholder_file-1')),
-      findsOneWidget,
+    final placeholderFinder = find.byKey(
+      const Key('google_drive_browser_thumbnail_placeholder_file-1'),
     );
+    expect(placeholderFinder, findsOneWidget);
+    final placeholder = tester.widget(placeholderFinder);
+    expect(placeholder, isA<CoverPlaceholder>());
+    expect((placeholder as CoverPlaceholder).title, fileEntryNoThumbnail.name);
   });
 
   testWidgets('有縮圖網址的檔案透過 client.fetchThumbnail 顯示縮圖', (tester) async {

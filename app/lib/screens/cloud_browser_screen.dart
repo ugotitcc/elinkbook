@@ -8,6 +8,7 @@ import '../library/book_import_service.dart';
 import '../library/library_repository.dart';
 import '../library/models/book_group.dart';
 import '../library/models/library_enums.dart';
+import '../library/widgets/book_cover.dart';
 import 'cloud_download_queue_dialog.dart';
 
 /// 【Epic 29 Issue 6，spec.md「Further Notes」建議值】單檔案大小門檻——
@@ -392,11 +393,10 @@ class _CloudBrowserScreenState extends State<CloudBrowserScreen> {
   Widget _buildThumbnail(CloudFileEntry entry) {
     final thumbnailUrl = entry.thumbnailUrl;
     if (thumbnailUrl == null) {
-      return Center(
-        child: Icon(
-          Icons.book,
-          key: Key('google_drive_browser_thumbnail_placeholder_${entry.id}'),
-        ),
+      return CoverPlaceholder(
+        key: Key('google_drive_browser_thumbnail_placeholder_${entry.id}'),
+        icon: Icons.book,
+        title: entry.name,
       );
     }
     final cached = _thumbnailCache[thumbnailUrl];
@@ -424,14 +424,16 @@ class _CloudBrowserScreenState extends State<CloudBrowserScreen> {
           );
         }
         if (snapshot.connectionState != ConnectionState.done) {
-          return Center(
+          return CoverPlaceholder(
             key: Key('google_drive_browser_thumbnail_loading_${entry.id}'),
-            child: const Icon(Icons.book),
+            icon: Icons.book,
+            title: entry.name,
           );
         }
-        return Center(
+        return CoverPlaceholder(
           key: Key('google_drive_browser_thumbnail_error_${entry.id}'),
-          child: const Icon(Icons.broken_image),
+          icon: Icons.broken_image,
+          title: entry.name,
         );
       },
     );

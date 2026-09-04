@@ -757,7 +757,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
             border: Border.all(
               color: widget.themeDependencies.isEinkMode
                   ? Colors.transparent
-                  : Theme.of(context).colorScheme.outline.withValues(alpha: 0.5),
+                  : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
               width: 1.5,
             ),
           ),
@@ -1155,6 +1155,7 @@ class _GroupGridTile extends StatelessWidget {
               children: [
                 Expanded(
                   child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Expanded(child: _groupTilePreviewCell(0)),
                       const SizedBox(width: 2),
@@ -1165,6 +1166,7 @@ class _GroupGridTile extends StatelessWidget {
                 const SizedBox(height: 2),
                 Expanded(
                   child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Expanded(child: _groupTilePreviewCell(2)),
                       const SizedBox(width: 2),
