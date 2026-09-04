@@ -60,7 +60,7 @@
 - Consumes: 既有 Flutter SDK `ThemeData`／`ColorScheme` API（`Theme.of(context).colorScheme.onSurface`），`resolveThemeData()` 產出的四套主題皆已提供這個角色（Issue 2 已完成）。
 - Produces: 無新介面——不新增／不變更任何函式簽章或公開建構參數。
 
-- [ ] **Step 1: 寫失敗的測試——新增一則斷言除錯疊層格線／文字改讀 `colorScheme.onSurface`**
+- [x] **Step 1: 寫失敗的測試——新增一則斷言除錯疊層格線／文字改讀 `colorScheme.onSurface`**
 
 在 `app/test/reader/foliate_reader_view_test.dart` 的 `group('3×3 導航熱區（InAppWebView）', () { ... })` 內，緊接在既有測試 `'showNavZoneDebugOverlay=true 時，格子顯示對應動作文字標籤'`（原 L763-788）之後，新增：
 
@@ -107,12 +107,12 @@
     });
 ```
 
-- [ ] **Step 2: 執行測試，確認失敗**
+- [x] **Step 2: 執行測試，確認失敗**
 
 Run（於 `app/` 目錄下）: `flutter test test/reader/foliate_reader_view_test.dart`
 Expected: 新增的測試 FAIL——`border.top.color` 目前仍是 `Colors.white24`（`Color(0x40ffffff)`），跟 `onSurfaceColor.withValues(alpha: 0.24)` 不相等；`label.style?.color` 目前仍是 `Colors.white70`（`Color(0xb3ffffff)`），跟 `onSurfaceColor.withValues(alpha: 0.7)` 不相等。其餘既有測試維持 PASS。
 
-- [ ] **Step 3: 實作——除錯疊層改讀 `colorScheme.onSurface`**
+- [x] **Step 3: 實作——除錯疊層改讀 `colorScheme.onSurface`**
 
 在 `app/lib/reader/foliate_reader_view.dart` 的 `build()` 方法開頭（原 L874-880）：
 
@@ -188,17 +188,17 @@ Expected: 新增的測試 FAIL——`border.top.color` 目前仍是 `Colors.whit
 
 （`TextStyle` 前的 `const` 一併移除——`onSurfaceColor` 是執行期才能取得的值，不再是編譯期常數。）
 
-- [ ] **Step 4: 執行測試，確認通過**
+- [x] **Step 4: 執行測試，確認通過**
 
 Run（於 `app/` 目錄下）: `flutter test test/reader/foliate_reader_view_test.dart`
 Expected: PASS（本檔案全部測試皆過，含既有的 3×3 熱區點擊／`showNavZoneDebugOverlay` 預設不顯示文字等測試，無回歸）。
 
-- [ ] **Step 5: 執行 `flutter analyze`，確認乾淨**
+- [x] **Step 5: 執行 `flutter analyze`，確認乾淨**
 
 Run（於 `app/` 目錄下）: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/reader/foliate_reader_view.dart app/test/reader/foliate_reader_view_test.dart
@@ -225,7 +225,7 @@ EOF
 
 **與 Task 1 的關係：** 完全獨立、修改不同檔案，可任意順序執行，不需要序列化。
 
-- [ ] **Step 1: 寫失敗的測試——新增一則斷言除錯疊層格線／文字改讀 `colorScheme.onSurface`**
+- [x] **Step 1: 寫失敗的測試——新增一則斷言除錯疊層格線／文字改讀 `colorScheme.onSurface`**
 
 在 `app/test/reader/pdf_reader_view_nav_zone_test.dart` 中，緊接在既有測試 `'showNavZoneDebugOverlay 為 true 時顯示動作文字標籤'`（原 L97-117）之後，新增：
 
@@ -274,12 +274,12 @@ EOF
   });
 ```
 
-- [ ] **Step 2: 執行測試，確認失敗**
+- [x] **Step 2: 執行測試，確認失敗**
 
 Run（於 `app/` 目錄下）: `flutter test test/reader/pdf_reader_view_nav_zone_test.dart`
 Expected: 新增的測試 FAIL——`border.top.color` 目前仍是 `Colors.white24`（`Color(0x40ffffff)`），跟 `onSurfaceColor.withValues(alpha: 0.24)` 不相等；`label.style?.color` 目前仍是 `Colors.white70`（`Color(0xb3ffffff)`），跟 `onSurfaceColor.withValues(alpha: 0.7)` 不相等。其餘既有測試維持 PASS。
 
-- [ ] **Step 3: 實作——除錯疊層改讀 `colorScheme.onSurface`**
+- [x] **Step 3: 實作——除錯疊層改讀 `colorScheme.onSurface`**
 
 在 `app/lib/reader/pdf_reader_view.dart` 的 `build()` 方法開頭（原 L914-923）：
 
@@ -361,17 +361,17 @@ Expected: 新增的測試 FAIL——`border.top.color` 目前仍是 `Colors.whit
 
 （`TextStyle` 前的 `const` 一併移除——`onSurfaceColor` 是執行期才能取得的值，不再是編譯期常數。）
 
-- [ ] **Step 4: 執行測試，確認通過**
+- [x] **Step 4: 執行測試，確認通過**
 
 Run（於 `app/` 目錄下）: `flutter test test/reader/pdf_reader_view_nav_zone_test.dart`
 Expected: PASS（本檔案全部測試皆過，含既有的熱區點擊／`showNavZoneDebugOverlay` 預設不顯示文字／長按逾時不觸發等測試，無回歸）。
 
-- [ ] **Step 5: 執行 `flutter analyze`，確認乾淨**
+- [x] **Step 5: 執行 `flutter analyze`，確認乾淨**
 
 Run（於 `app/` 目錄下）: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/reader/pdf_reader_view.dart app/test/reader/pdf_reader_view_nav_zone_test.dart
@@ -399,7 +399,7 @@ EOF
 
 **與 Task 1／Task 2 的關係：** 完全獨立、修改不同私有方法，可在 Task 1／2 之前、之後或同時執行，不需要序列化。
 
-- [ ] **Step 1: 寫失敗的測試——框選拖曳預覽框改讀 `colorScheme.primary`**
+- [x] **Step 1: 寫失敗的測試——框選拖曳預覽框改讀 `colorScheme.primary`**
 
 在 `app/test/reader/pdf_reader_view_selection_test.dart` 中，緊接在既有測試 `'長按拖曳過程中即時顯示選取矩形視覺回饋'`（原 L351-380）之後，新增：
 
@@ -448,12 +448,12 @@ EOF
   });
 ```
 
-- [ ] **Step 2: 執行測試，確認失敗**
+- [x] **Step 2: 執行測試，確認失敗**
 
 Run（於 `app/` 目錄下）: `flutter test test/reader/pdf_reader_view_selection_test.dart`
 Expected: 新增的測試 FAIL——`decoration.color` 目前仍是 `Colors.yellow.withValues(alpha: 0.3)`，跟 `primaryColor.withValues(alpha: 0.3)` 不相等；邊框顏色目前仍是 `Colors.orange`，跟 `primaryColor` 不相等。其餘既有測試維持 PASS。
 
-- [ ] **Step 3: 實作——框選拖曳預覽框改讀 `colorScheme.primary`**
+- [x] **Step 3: 實作——框選拖曳預覽框改讀 `colorScheme.primary`**
 
 把 `_buildDragIndicator()`（原 L1046-1058）：
 
@@ -495,12 +495,12 @@ Expected: 新增的測試 FAIL——`decoration.color` 目前仍是 `Colors.yell
   }
 ```
 
-- [ ] **Step 4: 執行測試，確認框選拖曳框那則測試通過**
+- [x] **Step 4: 執行測試，確認框選拖曳框那則測試通過**
 
 Run（於 `app/` 目錄下）: `flutter test test/reader/pdf_reader_view_selection_test.dart`
 Expected: PASS（本檔案全部測試皆過，含既有的框選拖曳／取消／裁切互斥／`refreshAnnotations` 等測試，無回歸；Step 5 要新增的備註徽章測試此時還沒寫，不影響這次執行）。
 
-- [ ] **Step 5: 寫失敗的測試——備註徽章圖釘改讀 `colorScheme.onSurface`**
+- [x] **Step 5: 寫失敗的測試——備註徽章圖釘改讀 `colorScheme.onSurface`**
 
 在同一份 `app/test/reader/pdf_reader_view_selection_test.dart` 中，緊接在既有測試 `'refreshAnnotations 呼叫後，對應頁面顯示標記疊圖'`（原 L495-524）之後，新增：
 
@@ -543,12 +543,12 @@ Expected: PASS（本檔案全部測試皆過，含既有的框選拖曳／取消
   });
 ```
 
-- [ ] **Step 6: 執行測試，確認失敗**
+- [x] **Step 6: 執行測試，確認失敗**
 
 Run（於 `app/` 目錄下）: `flutter test test/reader/pdf_reader_view_selection_test.dart`
 Expected: 新增的測試 FAIL——`pinIcon.color` 目前仍是 `Colors.black87`，跟 `onSurfaceColor` 不相等（`MaterialApp` 未指定 `theme:` 時使用 Flutter 預設 `ColorScheme`，其 `onSurface` 不等於 `Colors.black87`）。其餘既有測試（含 Step 3 已修好的框選拖曳框測試）維持 PASS。
 
-- [ ] **Step 7: 實作——備註徽章圖釘改讀 `colorScheme.onSurface`**
+- [x] **Step 7: 實作——備註徽章圖釘改讀 `colorScheme.onSurface`**
 
 在 `app/lib/reader/pdf_reader_view.dart` 的 `_buildDecorationWidget()`（原 L1089-1094 的備註徽章分支）：
 
@@ -575,12 +575,12 @@ Expected: 新增的測試 FAIL——`pinIcon.color` 目前仍是 `Colors.black87
 
 （`Positioned` 前的 `const` 一併移除——`Theme.of(context)` 是執行期取值，不再是編譯期常數運算式。E-Ink 主題下這個圖釘與純黑劃線 tint 疊在一起時可能不可辨識，這是改動前就存在的既有限制〔原本寫死的 `Colors.black87` 疊在同樣是純黑的 E-Ink 標記上同樣不可辨識〕，不是本工單造成的新回歸，不在本工單修復範圍，見上方「範圍決定」。）
 
-- [ ] **Step 8: 執行測試，確認備註徽章那則測試通過**
+- [x] **Step 8: 執行測試，確認備註徽章那則測試通過**
 
 Run（於 `app/` 目錄下）: `flutter test test/reader/pdf_reader_view_selection_test.dart`
 Expected: PASS（本檔案全部測試皆過，含框選拖曳框／備註徽章兩則新測試與既有測試，無回歸）。
 
-- [ ] **Step 9: 補齊主題腳手架＋寫失敗的測試——搜尋高亮改讀 `ElinkTokens`／`colorScheme.primary`**
+- [x] **Step 9: 補齊主題腳手架＋寫失敗的測試——搜尋高亮改讀 `ElinkTokens`／`colorScheme.primary`**
 
 **（`/superpowers:requesting-code-review` 第二輪審查發現 Critical C1）** Step 11 會讓 `_buildSearchHighlightWidget()` 呼叫 `Theme.of(context).extension<ElinkTokens>()!`；`pdf_reader_view_search_test.dart` 既有 2 則會觸發這個 widget 建構的測試（`'setSearchHighlights 後畫面渲染出對應的高亮 widget...'` 原 L105-129、`'目前符合結果（isCurrent）額外疊加外框...'` 原 L131-174）目前都用裸 `MaterialApp(home: PdfReaderView(...))`，未指定 `theme:`——裸 `MaterialApp` 的預設 `ThemeData` 不掛 `ElinkTokens` extension，`extension<ElinkTokens>()` 回傳 `null`，尾隨的 `!` 會立即拋出 `Null check operator used on a null value`，讓這兩則原本 PASS 的既有測試崩潰（與本 Epic `69f08017` commit「補齊 4 個測試檔案缺漏的 ElinkTokens 主題腳手架」修過的同一種問題）。這個檔案其餘 4 則測試（原 L10-37／L39-59／L61-81／L83-103／L176-184）從未呼叫 `setSearchHighlights`，不會觸發 `_buildSearchHighlightWidget()` 建構，不受影響、不需要補腳手架。
 
@@ -680,12 +680,12 @@ import 'package:elinkbook/theme/elink_tokens.dart';
   });
 ```
 
-- [ ] **Step 10: 執行測試，確認失敗**
+- [x] **Step 10: 執行測試，確認失敗**
 
 Run（於 `app/` 目錄下）: `flutter test test/reader/pdf_reader_view_search_test.dart`
 Expected: 新增的測試 FAIL——`currentDecoration.color` 目前仍是 `Colors.orange.withValues(alpha: 0.4)`，跟 `tokens.highlightGreen.withValues(alpha: 0.4)` 不相等；`otherDecoration.color` 目前仍是 `Colors.yellow.withValues(alpha: 0.4)`，跟 `tokens.highlightYellow.withValues(alpha: 0.4)` 不相等；邊框顏色目前仍是 `Colors.deepOrange`，跟 `primaryColor` 不相等。**這是一則單純的顏色斷言失敗，不是例外崩潰**——`_buildSearchHighlightWidget()` 尚未實作 Step 11 的改動，此時還沒有任何呼叫 `Theme.of(context).extension<ElinkTokens>()` 的程式碼路徑。原第 105、131 則既有測試（已在本 Step 補上 `theme:` 腳手架）與其餘 4 則既有測試皆維持 PASS。
 
-- [ ] **Step 11: 實作——搜尋高亮改讀 `ElinkTokens`／`colorScheme.primary`**
+- [x] **Step 11: 實作——搜尋高亮改讀 `ElinkTokens`／`colorScheme.primary`**
 
 在 `app/lib/reader/pdf_reader_view.dart` 頂部 import 區塊（原 L29 `import 'zone_action.dart';` 之後）新增：
 
@@ -772,17 +772,17 @@ import '../theme/elink_tokens.dart';
   }
 ```
 
-- [ ] **Step 12: 執行測試，確認全部通過**
+- [x] **Step 12: 執行測試，確認全部通過**
 
 Run（於 `app/` 目錄下）: `flutter test test/reader/pdf_reader_view_search_test.dart`
 Expected: PASS（本檔案全部 7 則測試皆過，特別確認原第 105、131 則已補上 `theme:` 腳手架的既有測試沒有因為 `_buildSearchHighlightWidget()` 新增的 `Theme.of(context).extension<ElinkTokens>()!` 呼叫而崩潰；其餘未觸發這個 widget 建構的既有測試不受影響）。
 
-- [ ] **Step 13: 執行 `flutter analyze`，確認乾淨**
+- [x] **Step 13: 執行 `flutter analyze`，確認乾淨**
 
 Run（於 `app/` 目錄下）: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 14: Commit**
+- [x] **Step 14: Commit**
 
 ```bash
 git add app/lib/reader/pdf_reader_view.dart app/test/reader/pdf_reader_view_selection_test.dart app/test/reader/pdf_reader_view_search_test.dart
@@ -799,10 +799,10 @@ EOF
 
 ## 全部 Task 完成後
 
-- [ ] 執行完整 `flutter test`（於 `app/` 目錄下，不帶檔案路徑），確認全專案無回歸。
-- [ ] 執行 `flutter analyze`，確認「No issues found!」。
-- [ ] 把 `docs/epics/epic-35-design-system-tokens/issues.md` Issue 7 的 `Status` 從 `ready-for-agent` 更新為完成狀態（依當時 Epic 慣例用語），並在 `epics.md` 補一筆開發記錄；同時記錄「原計劃草案曾主張排除 3 處顏色未經 `issues.md` 授權，經獨立審查與人類確認後改為一併遷移」這段過程（比照 `plan-issue-5.md` 在 `issues.md` 留下的記錄慣例）。
-- [ ] 依 `sdd-workflow` 流程，發起 `/superpowers:requesting-code-review` 審查本次程式碼變更（`BASE_SHA`／`HEAD_SHA` 取本工單 3 個 commit 的起訖），審查報告存 `docs/epics/epic-35-design-system-tokens/reviews/review-issue-7.md`。
-- [ ] 保留 1 項人工待辦（本工單不動手處理，記錄供下一輪真機驗證）：`reader_option_tile.dart:51` 非 E-Ink 分支的 `theme.colorScheme.outline.withValues(alpha: 0.35)` 選項邊框，在 Issue 2 的 Dark `outline` 新值（`#2c2c34`）落地後，於真機／模擬器上目視確認 Dark 主題下仍可辨識——`issues.md` Issue 2／Issue 6 已各自記錄過同一組風險（Issue 2 第 39-41 行、Issue 6 收尾備註），本工單只是第三次、也是 `issues.md` Issue 7 原文點名的正式落點，不重複展開分析。
-- [ ] 保留第 2 項人工待辦：`_buildDecorationWidget()` 備註徽章圖釘（`colorScheme.onSurface`）在 E-Ink 主題下與純黑劃線 tint 疊加時可能不可辨識——改動前就存在的既有限制，非本工單新增回歸，見 Task 3 Step 7 說明；E-Ink 模式「不畫底色改畫線條」的正確渲染邏輯屬其他 Issue 範圍。
-- [ ] 提醒：`colorScheme.onSurface.withValues(alpha: 0.24/0.7)`（Task 1／2 除錯疊層）、`colorScheme.primary.withValues(alpha: 0.3)`（Task 3 框選拖曳框填色）、`tokens.highlightYellow/highlightGreen.withValues(alpha: 0.4)`（Task 3 搜尋高亮填色）這些具體透明度數值是本工單自行決定的具體詮釋（比照 Issue 2 `SwitchThemeData`、Issue 5 `onSurface` 邊框的既有慣例），尚未經過真機驗證，需要下一輪真機驗證（比照 `epic-18`／`epic-25` 慣例）確認在電子紙上確實可辨識，不在本工單驗收範圍內完成。
+- [x] 執行完整 `flutter test`（於 `app/` 目錄下，不帶檔案路徑），確認全專案無回歸。
+- [x] 執行 `flutter analyze`，確認「No issues found!」。
+- [x] 把 `docs/epics/epic-35-design-system-tokens/issues.md` Issue 7 的 `Status` 從 `ready-for-agent` 更新為完成狀態（依當時 Epic 慣例用語），並在 `epics.md` 補一筆開發記錄；同時記錄「原計劃草案曾主張排除 3 處顏色未經 `issues.md` 授權，經獨立審查與人類確認後改為一併遷移」這段過程（比照 `plan-issue-5.md` 在 `issues.md` 留下的記錄慣例）。
+- [x] 依 `sdd-workflow` 流程，發起 `/superpowers:requesting-code-review` 審查本次程式碼變更（`BASE_SHA`／`HEAD_SHA` 取本工單 3 個 commit 的起訖），審查報告存 `docs/epics/epic-35-design-system-tokens/reviews/review-issue-7.md`。
+- [x] 保留 1 項人工待辦（本工單不動手處理，記錄供下一輪真機驗證）：`reader_option_tile.dart:51` 非 E-Ink 分支的 `theme.colorScheme.outline.withValues(alpha: 0.35)` 選項邊框，在 Issue 2 的 Dark `outline` 新值（`#2c2c34`）落地後，於真機／模擬器上目視確認 Dark 主題下仍可辨識——`issues.md` Issue 2／Issue 6 已各自記錄過同一組風險（Issue 2 第 39-41 行、Issue 6 收尾備註），本工單只是第三次、也是 `issues.md` Issue 7 原文點名的正式落點，不重複展開分析。
+- [x] 保留第 2 項人工待辦：`_buildDecorationWidget()` 備註徽章圖釘（`colorScheme.onSurface`）在 E-Ink 主題下與純黑劃線 tint 疊加時可能不可辨識——改動前就存在的既有限制，非本工單新增回歸，見 Task 3 Step 7 說明；E-Ink 模式「不畫底色改畫線條」的正確渲染邏輯屬其他 Issue 範圍。
+- [x] 提醒：`colorScheme.onSurface.withValues(alpha: 0.24/0.7)`（Task 1／2 除錯疊層）、`colorScheme.primary.withValues(alpha: 0.3)`（Task 3 框選拖曳框填色）、`tokens.highlightYellow/highlightGreen.withValues(alpha: 0.4)`（Task 3 搜尋高亮填色）這些具體透明度數值是本工單自行決定的具體詮釋（比照 Issue 2 `SwitchThemeData`、Issue 5 `onSurface` 邊框的既有慣例），尚未經過真機驗證，需要下一輪真機驗證（比照 `epic-18`／`epic-25` 慣例）確認在電子紙上確實可辨識，不在本工單驗收範圍內完成。
