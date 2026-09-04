@@ -40,10 +40,7 @@ class BookCover extends StatelessWidget {
     final coverPath = book.coverPath;
     final cover = coverPath != null && File(coverPath).existsSync()
         ? Image.file(File(coverPath), fit: BoxFit.cover)
-        : ColoredBox(
-            color: tokens.coverPlaceholder,
-            child: Center(child: Icon(bookFormatIcon(book.format), size: 32)),
-          );
+        : CoverPlaceholder(icon: bookFormatIcon(book.format), title: book.title);
     if (book.isDownloaded) return cover;
     return Stack(
       fit: StackFit.expand,
