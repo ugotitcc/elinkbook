@@ -4327,6 +4327,38 @@ void main() {
     expect(toggledValue, isFalse);
   });
 
+  testWidgets(
+    'LibraryScreen 在 Dark 主題、E-Ink 關閉時，切換鈕外框改參照 onSurface'
+    '（避免 outline 疊色在 Dark surface 上對比不足，2026-09-04 真機驗證確認'
+    '不可辨識，見 reviews/real-device-verification-checklist.md 項目 1）',
+    (tester) async {
+      final colorScheme =
+          resolveThemeData(theme: AppTheme.dark, isEinkMode: false).colorScheme;
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.dark, isEinkMode: false),
+          home: LibraryScreen(
+            repository: FakeLibraryRepository(),
+            importService: FakeBookImportService(),
+            prefsManager: prefsManager,
+          ),
+        ),
+      );
+
+      final container = tester.widget<Container>(
+        find
+            .ancestor(
+              of: find.byKey(const Key('library_eink_toggle')),
+              matching: find.byType(Container),
+            )
+            .first,
+      );
+      final decoration = container.decoration as BoxDecoration;
+      final border = decoration.border as Border;
+      expect(border.top.color, colorScheme.onSurface.withValues(alpha: 0.5));
+    },
+  );
+
   testWidgets('LibraryScreen 點擊排序按鈕，彈出選單中當前選中的排序項目顯示 Checkmark 圖示', (
     tester,
   ) async {

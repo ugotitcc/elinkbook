@@ -757,7 +757,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
             border: Border.all(
               color: widget.themeDependencies.isEinkMode
                   ? Colors.transparent
-                  : Theme.of(context).colorScheme.outline.withValues(alpha: 0.5),
+                  : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
               width: 1.5,
             ),
           ),
