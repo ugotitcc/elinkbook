@@ -74,7 +74,10 @@ Future<void> main() async {
 
   final dbPath = await defaultLibraryDatabasePath();
   final repository = await SqliteLibraryRepository.open(dbPath);
-  final importService = BookImportServiceImpl(repository: repository);
+  final importService = BookImportServiceImpl(
+    repository: repository,
+    themePreferences: themePreferences,
+  );
   // BookReaderPrefsRepository 必須與 repository 共用同一個 Database 連線
   // （book_reader_prefs 的外鍵約束要求，見 epic-3-fonts-layout Issue 1 spec.md）。
   // 在這裡（repository 尚未收窄為 LibraryRepository 介面前）取用

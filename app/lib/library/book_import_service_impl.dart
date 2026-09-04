@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import '../theme/app_theme_preferences.dart';
 import 'book_content_fingerprint.dart';
 import 'book_import_service.dart';
 import 'cbz_import.dart';
@@ -60,15 +61,18 @@ class BookImportServiceImpl implements BookImportService {
     required LibraryRepository repository,
     Directory? coversDirectory,
     Directory? importedBooksDirectory,
+    AppThemePreferences? themePreferences,
   })  : _repository = repository,
         _coversDirectory = coversDirectory,
-        _importedBooksDirectory = importedBooksDirectory;
+        _importedBooksDirectory = importedBooksDirectory,
+        _themePreferences = themePreferences ?? AppThemePreferences();
 
   // 使用 kBookMetadataChannel（library_repository.dart）作為共用通道名稱。
 
   final LibraryRepository _repository;
   final Directory? _coversDirectory;
   final Directory? _importedBooksDirectory;
+  final AppThemePreferences _themePreferences;
 
   @override
   Future<ImportResult> importFiles(
@@ -285,7 +289,9 @@ class BookImportServiceImpl implements BookImportService {
       }
       isFixedLayout = false;
       bookFilePath = await _landTxtEpub(synthesis.epubBytes, id);
-      final coverBytes = await generateTxtCover(fallbackTitle);
+      final isEinkMode = await _themePreferences.loadEinkMode();
+      final coverBytes =
+          await generateTxtCover(fallbackTitle, isEinkMode: isEinkMode);
       coverPath = await _landCover(coverBytes, id);
     } else if (format == BookFileFormat.azw3) {
       try {
@@ -345,7 +351,14 @@ class BookImportServiceImpl implements BookImportService {
       // Frontmatter 未指定封面（或指定值無法解析，見 md_frontmatter.dart
       // 文件註解）時，退回比照 TXT 既有的「依書名文字動態生成封面」機制
       // （spec.md「TXT／Markdown 合成書籍結構」對 MD 的既定要求）。
-      final coverBytes = synthesis.frontmatterCoverBytes ?? await generateTxtCover(title);
+      // 審查修正 M1：loadEinkMode() 刻意寫在 ?? 右側才 await，讓已有
+      // Frontmatter 封面（frontmatterCoverBytes != null）時完全不觸發這次
+      // Preferences 讀取（?? 是短路求值，左側非 null 時右側整段不會執行）。
+      final coverBytes = synthesis.frontmatterCoverBytes ??
+          await generateTxtCover(
+            title,
+            isEinkMode: await _themePreferences.loadEinkMode(),
+          );
       coverPath = await _landCover(coverBytes, id);
     } else {
       try {
