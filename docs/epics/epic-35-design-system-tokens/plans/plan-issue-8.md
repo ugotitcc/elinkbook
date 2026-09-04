@@ -45,7 +45,7 @@
 - Consumes：無（純 `dart:ui` API，函式本身已完整獨立）。
 - Produces：`Future<Uint8List> generateTxtCover(String title, {bool isEinkMode = false})`——`isEinkMode` 給預設值 `false`（見上方「審查修正」說明），既有呼叫端不傳這個參數時行為完全不變。`isEinkMode: true` 時背景改純白（`0xFFFFFFFF`）、新增 8px 黑色實線邊框（模組層級常數 `_einkBorderWidth`）、書名首字文字色改黑（`0xFF000000`，取代現行寫死白色）；`isEinkMode: false` 時完全維持現行 6 色輪替＋白字行為，不受影響。Task 2 依這個簽章串接 `AppThemePreferences.loadEinkMode()` 的回傳值。
 
-- [ ] **Step 1：寫失敗測試（覆寫整份測試檔）**
+- [x] **Step 1：寫失敗測試（覆寫整份測試檔）**
 
 `app/test/library/txt_cover_generator_test.dart` 既有 4 個測試**完全不需要修改**——`isEinkMode` 已於 Task 1 改採預設值 `false`（見上方「審查修正」），舊呼叫 `generateTxtCover(title)` 依然合法、行為不變。只需要：(1) 頂部新增 `dart:typed_data`／`dart:ui` 兩個 import；(2) 在既有 4 個測試之後、`main()` 的收尾 `}` 之前新增一個 `group` 涵蓋 E-Ink 分支；(3) 在檔案末尾新增一個私有像素採樣 helper。
 
@@ -152,12 +152,12 @@ Future<ui.Color> _pixelColor(Uint8List pngBytes, int x, int y) async {
 }
 ```
 
-- [ ] **Step 2：執行測試，確認失敗**
+- [x] **Step 2：執行測試，確認失敗**
 
 Run: `flutter test test/library/txt_cover_generator_test.dart`
 Expected: FAIL（編譯錯誤：實作補上前，`generateTxtCover` 完全沒有 `isEinkMode` 這個具名參數——`isEinkMode` 本身是 Step 3 才新增的參數，新 `group` 裡任何一處 `isEinkMode: true`／`isEinkMode: false` 呼叫都會編譯失敗，導致整個測試檔無法執行；既有 4 個測試呼叫未變，本身沒有問題，只是被同一個檔案裡的編譯錯誤連帶擋下）。
 
-- [ ] **Step 3：實作 `isEinkMode` 分支**
+- [x] **Step 3：實作 `isEinkMode` 分支**
 
 把 `app/lib/library/txt_cover_generator.dart` 整檔改為：
 
@@ -248,12 +248,12 @@ ui.Color _backgroundColorForTitle(String title) {
 }
 ```
 
-- [ ] **Step 4：執行測試，確認通過**
+- [x] **Step 4：執行測試，確認通過**
 
 Run: `flutter test test/library/txt_cover_generator_test.dart`
 Expected: PASS（9 個測試全過：既有 4 個＋新增 5 個）。
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 git add app/lib/library/txt_cover_generator.dart app/test/library/txt_cover_generator_test.dart
@@ -279,7 +279,7 @@ EOF
 - Consumes：Task 1 產出的 `Future<Uint8List> generateTxtCover(String title, {bool isEinkMode = false})`；既有 `AppThemePreferences.loadEinkMode()`（`app/lib/theme/app_theme_preferences.dart`，回傳 `Future<bool>`，未儲存過時預設 `false`，已存在、本工單不改動；類別非 `final`／`sealed`，可被子類別覆寫，見下方 1b 的 I1 修正測試）。
 - Produces：`BookImportServiceImpl` 建構子新增可選具名參數 `AppThemePreferences? themePreferences`（不傳時退回 `AppThemePreferences()`，行為與現行完全一致）；`BookImportService` 抽象介面（`importFiles()`／`importFolder()`）簽章不變，供後續 Issue／既有呼叫端沿用。
 
-- [ ] **Step 1：寫失敗測試**
+- [x] **Step 1：寫失敗測試**
 
 **1a. 頂部 import 與 `setUp()`** —— `app/test/library/book_import_service_test.dart` 目前不涉及 `shared_preferences`（TXT／MD 分支尚未讀取 E-Ink 設定），本工單讓這兩個分支在每次匯入時都會呼叫 `AppThemePreferences.loadEinkMode()`，因此**所有**既有 TXT／MD 匯入測試都需要一個已初始化的 `SharedPreferences` 模擬替身，否則會撞上 `MissingPluginException`（比照 `epic-35` Issue 4 收尾階段修正的同一種教訓：新依賴要在 `setUp()` 層級一次補齊，不要等全套測試才發現）。在檔案頂部 import 區塊（原第 1-16 行）新增一行：
 
@@ -442,12 +442,12 @@ import 'dart:ui' as ui;
 
 （放在 `import 'dart:typed_data';` 之後、`import 'package:archive/archive.dart';` 之前，維持 `dart:` 群組內字母序。）
 
-- [ ] **Step 2：執行測試，確認失敗**
+- [x] **Step 2：執行測試，確認失敗**
 
 Run: `flutter test test/library/book_import_service_test.dart`
 Expected: FAIL——`book_import_service_impl.dart` 尚未修改，`BookImportServiceImpl` 建構子還沒有 `themePreferences` 具名參數，新增的 I1 測試（`BookImportServiceImpl(..., themePreferences: _FixedEinkModePreferences(true))`）會編譯失敗，導致整個測試檔無法執行；即使先忽略這個編譯錯誤單看邏輯，其餘 3 個 E-Ink 測試也會是行為紅燈——TXT／MD 分支尚未讀取 `loadEinkMode()`，封面永遠是既有 6 色輪替樣式，斷言黑色邊框的地方會失敗。
 
-- [ ] **Step 3：實作串接**
+- [x] **Step 3：實作串接**
 
 在 `app/lib/library/book_import_service_impl.dart` 頂部 import 區塊（原第 1-17 行）新增一行相對匯入，放在既有相對匯入群組最前面（`'..'` 字串序在字母序中排在 `'book_content_fingerprint.dart'` 之前）：
 
@@ -528,12 +528,12 @@ MD 分支（原第 330-349 行內，`isFixedLayout = false;` 開始到 `coverPat
 
 （`themePreferences` 為 `main.dart` 第 71 行已建構好的既有實例，`AppThemePreferences` 已在檔案頂部 import，不需要新增 import。）
 
-- [ ] **Step 4：執行測試，確認通過**
+- [x] **Step 4：執行測試，確認通過**
 
 Run: `flutter test test/library/book_import_service_test.dart`
 Expected: PASS（全部既有測試＋新增 4 個測試通過：E-Ink 開啟 TXT／E-Ink 開啟 MD／E-Ink 關閉 TXT／自訂 `themePreferences` 注入）。
 
-- [ ] **Step 5：全專案完整驗證（本計劃最後一個 Task，比照 `CLAUDE.md`「測試執行範圍」）**
+- [x] **Step 5：全專案完整驗證（本計劃最後一個 Task，比照 `CLAUDE.md`「測試執行範圍」）**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
@@ -541,7 +541,7 @@ Expected: `No issues found!`
 Run: `flutter test`
 Expected: 全數通過，無回歸（`library_screen_test.dart` 兩處既有的 `BookImportServiceImpl(repository: repository)` 呼叫因新參數為可選，預期不受影響；`SharedPreferences.setMockInitialValues({})` 已在該檔案第 81 行的全域 `setUp()` 涵蓋，不需要額外修改）。
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/lib/library/book_import_service_impl.dart app/lib/main.dart app/test/library/book_import_service_test.dart
@@ -561,5 +561,7 @@ EOF
 
 ## 收尾備註（供 Issue 收尾時填寫，執行前留空）
 
-- 全部 Task 完成後，比照既有慣例（Issue 2／3／5／7）在 `issues.md` Issue 8 補記完成狀態、commit 範圍。
+- 全部 Task 完成後，比照既有慣例（Issue 2／3／5／7）在 `issues.md` Issue 8 補記完成狀態、commit 範圍。**已完成**：見 `issues.md` Issue 8 更新後的 Status 段落。
 - `_einkBorderWidth`（8px）為未經真機驗證的具體詮釋值，建議與 Issue 3／Issue 7 已記錄的其餘未驗證視覺細節一併排入下一輪真機驗證。
+- **執行紀錄（subagent-driven-development，2026-09-04）：** Task 1 commit `7b6ff672`（9/9 測試通過），Task 2 commit `ac74f37c`（全套 1917/1917 測試通過、`flutter analyze` 乾淨）。逐 Task 審查（spec + quality）與最終整分支審查（model=opus）皆核准，全程無 Critical／Important 未決問題、無需裁決的衝突或 Ruling。最終審查列出的 6 項 Minor 皆經三角驗證判定「可直接出貨」，不需另立修復工單；細節見 `.superpowers/sdd/plan-issue-8/progress.md`（work-in-progress ledger，將於本次收尾後移除，紀錄已轉入本檔案與 git 歷史）。
+- **明確排除的既有限制（審查已核實，非回歸，供 Issue 收尾說明參考）：** 使用者若在匯入之後才開啟 E-Ink 模式，既有封面不會回頭重繪；反之在 E-Ink 模式下匯入、之後切回一般主題，封面也會維持白底樣式——這是 `spec.md` 與本計劃 Global Constraints 已明文的既有架構限制（`generateTxtCover()` 僅在匯入當下呼叫一次），不是本工單遺漏。
