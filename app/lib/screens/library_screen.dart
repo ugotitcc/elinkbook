@@ -1156,9 +1156,9 @@ class _GroupGridTile extends StatelessWidget {
                 Expanded(
                   child: Row(
                     children: [
-                      Expanded(child: _groupTilePreviewCell(context, 0)),
+                      Expanded(child: _groupTilePreviewCell(0)),
                       const SizedBox(width: 2),
-                      Expanded(child: _groupTilePreviewCell(context, 1)),
+                      Expanded(child: _groupTilePreviewCell(1)),
                     ],
                   ),
                 ),
@@ -1166,9 +1166,9 @@ class _GroupGridTile extends StatelessWidget {
                 Expanded(
                   child: Row(
                     children: [
-                      Expanded(child: _groupTilePreviewCell(context, 2)),
+                      Expanded(child: _groupTilePreviewCell(2)),
                       const SizedBox(width: 2),
-                      Expanded(child: _groupTilePreviewCell(context, 3)),
+                      Expanded(child: _groupTilePreviewCell(3)),
                     ],
                   ),
                 ),
@@ -1191,12 +1191,10 @@ class _GroupGridTile extends StatelessWidget {
     );
   }
 
-  Widget _groupTilePreviewCell(BuildContext context, int index) {
+  Widget _groupTilePreviewCell(int index) {
     return index < tile.previewBooks.length
         ? BookCover(book: tile.previewBooks[index])
-        : ColoredBox(
-            color: Theme.of(context).extension<ElinkTokens>()!.coverPlaceholder,
-          );
+        : const CoverPlaceholder(icon: Icons.book);
   }
 }
 
@@ -1209,7 +1207,6 @@ class _GroupListTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tokens = Theme.of(context).extension<ElinkTokens>()!;
     return ListTile(
       key: Key('group_tile_${tile.name}'),
       leading: SizedBox(
@@ -1223,7 +1220,7 @@ class _GroupListTile extends StatelessWidget {
               height: 48,
               child: i < tile.previewBooks.length
                   ? BookCover(book: tile.previewBooks[i])
-                  : ColoredBox(color: tokens.coverPlaceholder),
+                  : const CoverPlaceholder(icon: Icons.book),
             ),
           ),
         ),

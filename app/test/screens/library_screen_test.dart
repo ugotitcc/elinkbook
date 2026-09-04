@@ -24,7 +24,6 @@ import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/library/widgets/book_cover.dart';
 import 'package:elinkbook/theme/app_theme.dart';
 import 'package:elinkbook/theme/app_theme_data.dart';
-import 'package:elinkbook/theme/elink_tokens.dart';
 
 import '../support/fake_book_import_service.dart';
 import '../support/fake_library_repository.dart';
@@ -158,7 +157,10 @@ void main() {
 
     expect(find.byKey(const Key('library_grid_view')), findsOneWidget);
     expect(find.byKey(const Key('book_item_1')), findsOneWidget);
-    expect(find.text('紅樓夢'), findsOneWidget);
+    // Issue 9：該書無 coverPath，BookCover 退回 CoverPlaceholder，其內建的
+    // 書名縮略文字跟 _BookGridTile 本身的標題 caption 各自顯示一次「紅樓
+    // 夢」，兩者皆是核准設計、非回歸，預期恰好 2 個匹配。
+    expect(find.text('紅樓夢'), findsNWidgets(2));
     expect(find.text('0%'), findsOneWidget);
   });
 
@@ -2883,17 +2885,14 @@ void main() {
       findsNothing,
     );
 
-    // 尺寸驗證：4 本書皆無 coverPath，_BookCover 各自以 ColoredBox 佔位
-    // （內含置中的小圖示，圖示本身不會撐滿儲存格，故量測 ColoredBox 本身
-    // 的邊界而非圖示）；取最下面那一列（第 3/4 格）佔位色塊的底部，應緊
-    // 接分類名稱文字的頂部（僅隔明講的 SizedBox(height: 4) 一點點間距），
-    // 而非留下大片空白。
-    final coverPlaceholder = theme.extension<ElinkTokens>()!.coverPlaceholder;
+    // 尺寸驗證：4 本書皆無 coverPath，BookCover 各自以 CoverPlaceholder 佔位
+    // （Issue 9：內含置中的圖示/書名縮略，圖示與文字本身不會撐滿儲存格，
+    // 故量測 CoverPlaceholder 本身的邊界而非圖示）；取最下面那一列（第 3/4
+    // 格）佔位元件的底部，應緊接分類名稱文字的頂部（僅隔明講的
+    // SizedBox(height: 4) 一點點間距），而非留下大片空白。
     final coverBoxFinder = find.descendant(
       of: tileFinder,
-      matching: find.byWidgetPredicate(
-        (w) => w is ColoredBox && w.color == coverPlaceholder,
-      ),
+      matching: find.byType(CoverPlaceholder),
     );
     final coverBoxCount = tester.widgetList(coverBoxFinder).length;
     expect(coverBoxCount, 4);
@@ -2937,25 +2936,22 @@ void main() {
     expect(tileFinder, findsOneWidget);
     expect(find.text('奇幻 (2)'), findsOneWidget);
 
-    // 2 本書皆無 coverPath，_BookCover 各自退回格式圖示佔位（Icon），故拼
-    // 貼格內應有 2 個 Icon（書封佔位）。拼貼格本身「不足 4 本」的 2 個空
-    // 格佔位（_groupTilePreviewCell 的 fallback 分支）遷移後與 _BookCover
-    // 佔位色統一為同一個 tokens.coverPlaceholder（本 Epic「同一語意在不同
-    // 畫面應該長一樣」的設計目標本身），不再能單靠色階區分兩者來源，改用
-    // 「總數（2 書封佔位＋2 空格佔位＝4）減去 BookCover 數量（2）＝空格
-    // 佔位數量（2）」的結構性驗證取代色階區分。
+    // Issue 9：2 本書皆無 coverPath，BookCover 各自退回 CoverPlaceholder
+    // （依格式圖示＋書名），拼貼格本身「不足 4 本」的 2 個空格佔位
+    // （_groupTilePreviewCell 的 fallback 分支）也改用 CoverPlaceholder
+    // （固定 Icons.book、不傳 title）——A/B 兩類共用同一顆元件、視覺統一，
+    // 改用「格式圖示（menu_book，2 個真書）＋固定圖示（Icons.book，2 個
+    // 空格）」精確區分來源，取代舊版靠 ColoredBox 色階區分的做法。
     expect(
-      find.descendant(of: tileFinder, matching: find.byType(Icon)),
+      find.descendant(of: tileFinder, matching: find.byIcon(Icons.menu_book)),
       findsNWidgets(2),
     );
-    final coverPlaceholder = theme.extension<ElinkTokens>()!.coverPlaceholder;
     expect(
-      find.descendant(
-        of: tileFinder,
-        matching: find.byWidgetPredicate(
-          (w) => w is ColoredBox && w.color == coverPlaceholder,
-        ),
-      ),
+      find.descendant(of: tileFinder, matching: find.byIcon(Icons.book)),
+      findsNWidgets(2),
+    );
+    expect(
+      find.descendant(of: tileFinder, matching: find.byType(CoverPlaceholder)),
       findsNWidgets(4),
     );
     expect(
@@ -2987,21 +2983,21 @@ void main() {
     expect(tileFinder, findsOneWidget);
     expect(find.text('奇幻'), findsOneWidget);
     expect(find.text('1 本'), findsOneWidget);
+    // Issue 9：同上（格狀檢視版本）理由：1 本書無 coverPath 退回
+    // CoverPlaceholder（依格式圖示＋書名），3 個「不足 4 本」空格也改用
+    // CoverPlaceholder（固定 Icons.book、不傳 title），改用「格式圖示
+    // （menu_book，1 個真書）＋固定圖示（Icons.book，3 個空格）」精確區分
+    // 來源，取代舊版靠 ColoredBox 色階區分的做法。
     expect(
-      find.descendant(of: tileFinder, matching: find.byType(Icon)),
+      find.descendant(of: tileFinder, matching: find.byIcon(Icons.menu_book)),
       findsNWidgets(1),
     );
-    // 同上（格狀檢視版本）理由：1 本書封佔位 + 3 空格佔位，遷移後統一為
-    // 同一個 tokens.coverPlaceholder，改用總數減 BookCover 數量的結構性
-    // 驗證取代色階區分。
-    final coverPlaceholder = theme.extension<ElinkTokens>()!.coverPlaceholder;
     expect(
-      find.descendant(
-        of: tileFinder,
-        matching: find.byWidgetPredicate(
-          (w) => w is ColoredBox && w.color == coverPlaceholder,
-        ),
-      ),
+      find.descendant(of: tileFinder, matching: find.byIcon(Icons.book)),
+      findsNWidgets(3),
+    );
+    expect(
+      find.descendant(of: tileFinder, matching: find.byType(CoverPlaceholder)),
       findsNWidgets(4),
     );
     expect(
@@ -3753,11 +3749,29 @@ void main() {
           find.descendant(of: groupTileFinder, matching: find.text('奇幻 (1)')),
         )
         .dy;
-    final bookTitleTop = tester
-        .getTopLeft(
-          find.descendant(of: bookTileFinder, matching: find.text('第一本個別書')),
-        )
-        .dy;
+    // Issue 9：BookCover 無封面圖時改用 CoverPlaceholder，其內建書名縮略
+    // 跟 _BookGridTile 本身的標題 caption 顯示同一段文字，find.descendant
+    // 對「第一本個別書」現在會命中 2 個 Text——這裡要量測的是書籍格「本身
+    // caption」的 Y 座標（用來跟分類拼貼格標籤對齊），CoverPlaceholder
+    // 內建迷你標題的 Y 座標不是量測對象，用 Element 的
+    // findAncestorWidgetOfExactType 排除掉屬於 CoverPlaceholder 子樹的那個。
+    final bookTitleCandidates = find
+        .descendant(of: bookTileFinder, matching: find.text('第一本個別書'))
+        .evaluate()
+        .where(
+          (element) =>
+              element.findAncestorWidgetOfExactType<CoverPlaceholder>() ==
+              null,
+        );
+    expect(
+      bookTitleCandidates.length,
+      1,
+      reason: '書籍格本身的標題 caption 應該只有一個（不含 CoverPlaceholder 內建的迷你標題）',
+    );
+    final bookTitleTop =
+        (bookTitleCandidates.single.renderObject as RenderBox)
+            .localToGlobal(Offset.zero)
+            .dy;
 
     expect(
       bookTitleTop,
@@ -3954,10 +3968,11 @@ void main() {
 
       expect(
         find.text('遠端下載的書'),
-        findsOneWidget,
+        findsNWidgets(2),
         reason:
             '返回書架後應重新載入書籍清單，顯示遠端下載期間新匯入的書籍，'
-            '而非停留在舊快照',
+            '而非停留在舊快照（Issue 9：該書無 coverPath，CoverPlaceholder '
+            '內建書名縮略跟書籍格本身的標題 caption 各自顯示一次，預期 2 個）',
       );
     });
   });
