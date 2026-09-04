@@ -1,17 +1,20 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:archive/archive.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:elinkbook/library/book_content_fingerprint.dart';
 import 'package:elinkbook/library/book_import_service_impl.dart';
 import 'package:elinkbook/library/models/book_group.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/library/sqlite_library_repository.dart';
+import 'package:elinkbook/theme/app_theme_preferences.dart';
 
 import '../support/fake_path_provider_platform.dart';
 
@@ -33,6 +36,7 @@ void main() {
   late BookImportServiceImpl service;
 
   setUp(() async {
+    SharedPreferences.setMockInitialValues({});
     repository = await SqliteLibraryRepository.open(inMemoryDatabasePath);
     coversDir = Directory.systemTemp.createTempSync('book_import_test_covers');
     importedBooksDir = Directory.systemTemp.createTempSync(
@@ -1124,6 +1128,92 @@ void main() {
     });
   });
 
+  group('E-Ink 模式封面（Issue 8）', () {
+    test('E-Ink 模式開啟時，TXT 匯入封面為白底黑框', () async {
+      SharedPreferences.setMockInitialValues({'app_eink_mode': true});
+      final txtFile =
+          File('${Directory.systemTemp.path}/import_test_eink_txt.txt');
+      await txtFile.writeAsBytes(utf8.encode('第一章 開始\n正文'));
+      addTearDown(() => txtFile.delete());
+
+      final result =
+          await service.importFiles([txtFile.path], displayNames: ['eink_novel.txt']);
+      final book = result.importedBooks.first;
+      final coverBytes = await File(book.coverPath!).readAsBytes();
+
+      expect(await _pixelColor(coverBytes, 2, 2), const ui.Color(0xFF000000),
+          reason: 'E-Ink 模式封面左上角應為黑色邊框');
+    });
+
+    test('E-Ink 模式開啟時，MD 匯入封面（無 Frontmatter 封面）同樣為白底黑框', () async {
+      SharedPreferences.setMockInitialValues({'app_eink_mode': true});
+      final mdFile =
+          File('${Directory.systemTemp.path}/import_test_eink_md.md');
+      await mdFile.writeAsBytes(utf8.encode('# 內容\n正文'));
+      addTearDown(() => mdFile.delete());
+
+      final result =
+          await service.importFiles([mdFile.path], displayNames: ['eink_notes.md']);
+      final book = result.importedBooks.first;
+      final coverBytes = await File(book.coverPath!).readAsBytes();
+
+      expect(await _pixelColor(coverBytes, 2, 2), const ui.Color(0xFF000000),
+          reason: 'E-Ink 模式封面左上角應為黑色邊框');
+    });
+
+    test('E-Ink 模式關閉（預設）時，TXT 匯入封面維持既有 6 色輪替＋白字行為', () async {
+      // 不設定 app_eink_mode，AppThemePreferences.loadEinkMode() 依既有邏輯
+      // 預設回傳 false。
+      final txtFile =
+          File('${Directory.systemTemp.path}/import_test_noeink_txt.txt');
+      await txtFile.writeAsBytes(utf8.encode('第一章 開始\n正文'));
+      addTearDown(() => txtFile.delete());
+
+      final result =
+          await service.importFiles([txtFile.path], displayNames: ['novel.txt']);
+      final book = result.importedBooks.first;
+      final coverBytes = await File(book.coverPath!).readAsBytes();
+
+      expect(
+        await _pixelColor(coverBytes, 2, 2),
+        isNot(const ui.Color(0xFF000000)),
+        reason: '非 E-Ink 模式不應出現 E-Ink 分支才有的黑色邊框',
+      );
+    });
+
+    test(
+        'BookImportServiceImpl 建構子接收自訂 themePreferences 時，'
+        '匯入確實使用該實例的 loadEinkMode()（而非忽略參數改建構預設實例）', () async {
+      // 審查修正 I1：不設定 app_eink_mode（全域 SharedPreferences 維持預設
+      // false），改用 _FixedEinkModePreferences（見下方 1c）固定回傳 true。
+      // 若 BookImportServiceImpl 建構子筆誤忽略傳入的 themePreferences、
+      // 改用預設 AppThemePreferences() 讀取全域設定，這裡會讀到 false，
+      // 封面就不會是 E-Ink 樣式——這則測試才會抓到那個回歸；純靠
+      // SharedPreferences.setMockInitialValues() 無法區分兩者（見
+      // reviews/review-plan-issue-8.md I1）。
+      final customService = BookImportServiceImpl(
+        repository: repository,
+        coversDirectory: coversDir,
+        importedBooksDirectory: importedBooksDir,
+        themePreferences: _FixedEinkModePreferences(true),
+      );
+      final txtFile =
+          File('${Directory.systemTemp.path}/import_test_custom_prefs.txt');
+      await txtFile.writeAsBytes(utf8.encode('第一章 開始\n正文'));
+      addTearDown(() => txtFile.delete());
+
+      final result = await customService.importFiles(
+        [txtFile.path],
+        displayNames: ['custom_prefs.txt'],
+      );
+      final book = result.importedBooks.first;
+      final coverBytes = await File(book.coverPath!).readAsBytes();
+
+      expect(await _pixelColor(coverBytes, 2, 2), const ui.Color(0xFF000000),
+          reason: '注入的 themePreferences 固定回傳 true，封面應為 E-Ink 黑框樣式');
+    });
+  });
+
   group('遠端書架參數擴充（epic-30）', () {
     test('傳入 source/remoteServerId/remoteBookIds/remoteDownloadUrls 時正確落地',
         () async {
@@ -1289,5 +1379,36 @@ void main() {
       expect(book.cloudFileId, isNull);
     });
   });
+}
+
+/// 解碼 PNG bytes 並取出 (x, y) 位置的像素顏色。用途與寫法比照
+/// txt_cover_generator_test.dart 的同名 private helper（各測試檔自成一體，
+/// 不跨檔案共用這個小型私有函式）。
+Future<ui.Color> _pixelColor(Uint8List pngBytes, int x, int y) async {
+  final codec = await ui.instantiateImageCodec(pngBytes);
+  final frame = await codec.getNextFrame();
+  final image = frame.image;
+  final byteData = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
+  final bytes = byteData!.buffer.asUint8List();
+  final offset = (y * image.width + x) * 4;
+  return ui.Color.fromARGB(
+    bytes[offset + 3],
+    bytes[offset],
+    bytes[offset + 1],
+    bytes[offset + 2],
+  );
+}
+
+/// 供上方 I1 修正測試使用：固定回傳 [_value] 的 `AppThemePreferences` 子類別，
+/// 用來證明 `BookImportServiceImpl` 真的把建構子收到的 `themePreferences`
+/// 存起來使用，而不是忽略參數、內部自行改建構一個預設實例（後者剛好也會
+/// 讀到同一份全域 `SharedPreferences` 模擬狀態，單純用
+/// `SharedPreferences.setMockInitialValues()` 測不出兩者差異）。
+class _FixedEinkModePreferences extends AppThemePreferences {
+  _FixedEinkModePreferences(this._value);
+  final bool _value;
+
+  @override
+  Future<bool> loadEinkMode() async => _value;
 }
 
