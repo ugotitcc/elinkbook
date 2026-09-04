@@ -605,6 +605,62 @@ void main() {
     expect(find.byKey(const Key('book_item_2')), findsOneWidget);
   });
 
+  testWidgets(
+    '分類拼貼格內，有封面圖片的書籍格與無封面佔位符格渲染高度一致'
+    '（根因見本計劃 Task 2「Discovery 發現」：_GroupGridTile 內部 Row'
+    ' 預設寬鬆 cross-axis 約束，已於規劃階段以 widget test 重現）',
+    (tester) async {
+      final tempDir = (await tester.runAsync(
+        () => Directory.systemTemp.createTemp('group_tile_height_test'),
+      ))!;
+      addTearDown(() => tester.runAsync(() => tempDir.delete(recursive: true)));
+      final coverFile = File('${tempDir.path}/cover.png');
+      await tester.runAsync(() => coverFile.writeAsBytes(
+            base64Decode(
+              'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY'
+              '42YAAAAASUVORK5CYII=',
+            ),
+          ));
+
+      final bookWithCover = _testBook(
+        id: '1',
+        title: '有封面的書',
+        groupName: '測試分類',
+        coverPath: coverFile.path,
+      );
+      final bookWithoutCover = _testBook(
+        id: '2',
+        title: '沒有封面的書',
+        groupName: '測試分類',
+      );
+      final repository = FakeLibraryRepository(
+        initialBooks: [bookWithCover, bookWithoutCover],
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: LibraryScreen(
+            repository: repository,
+            importService: FakeBookImportService(),
+            prefsManager: prefsManager,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final groupTileFinder = find.byKey(const Key('group_tile_測試分類'));
+      expect(groupTileFinder, findsOneWidget);
+
+      final cellsFinder =
+          find.descendant(of: groupTileFinder, matching: find.byType(BookCover));
+      expect(cellsFinder, findsNWidgets(2));
+      final firstSize = tester.getSize(cellsFinder.at(0));
+      final secondSize = tester.getSize(cellsFinder.at(1));
+      expect(firstSize.height, secondSize.height);
+    },
+  );
+
   testWidgets('管理分類對話框：新增分類後，因無書籍歸屬，書架不會顯示該分類的拼貼格', (tester) async {
     final repository = FakeLibraryRepository();
     await tester.pumpWidget(
