@@ -920,6 +920,12 @@ class _PdfReaderViewState extends State<PdfReaderView> {
     if (document == null) {
       return const SizedBox.shrink();
     }
+    // epic-35-design-system-tokens Issue 7：3×3 導覽熱區除錯疊層（見下方
+    // showNavZoneDebugOverlay 分支）原本寫死 Colors.white24／white70，
+    // 換主題／開啟 E-Ink 模式時不會跟著換；改讀 colorScheme.onSurface，
+    // 呼應 nav_zone_settings_screen.dart（epic-35 Issue 5）同一組熱區格線
+    // 已採用的同一個角色，維持同一功能兩處視覺語彙一致。
+    final onSurfaceColor = Theme.of(context).colorScheme.onSurface;
     final viewer = PdfViewer(
       PdfDocumentRefDirect(document, autoDispose: false),
       controller: _controller,
@@ -1007,14 +1013,18 @@ class _PdfReaderViewState extends State<PdfReaderView> {
                         child: Container(
                           decoration: widget.showNavZoneDebugOverlay
                               ? BoxDecoration(
-                                  border: Border.all(color: Colors.white24))
+                                  border: Border.all(
+                                      color: onSurfaceColor.withValues(
+                                          alpha: 0.24)))
                               : null,
                           alignment: Alignment.center,
                           child: widget.showNavZoneDebugOverlay
                               ? Text(
                                   _pdfZoneActionLabel(action),
-                                  style: const TextStyle(
-                                      color: Colors.white70, fontSize: 10),
+                                  style: TextStyle(
+                                      color: onSurfaceColor.withValues(
+                                          alpha: 0.7),
+                                      fontSize: 10),
                                 )
                               : null,
                         ),
