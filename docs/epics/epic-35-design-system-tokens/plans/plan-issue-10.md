@@ -1,6 +1,6 @@
 # Epic 35 — Issue 10：真機驗證後續追蹤（Dark outline 不可辨識／封面色塊高度不一致／雲端畫面缺口）Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** 修正 2026-09-04 真機驗證發現的 2 項真實缺陷（書架 E-Ink 切換鈕邊框在 Dark 主題下不可辨識；分類拼貼格內封面圖片格與佔位符格渲染高度不保證一致），並補齊 `remote_catalog_screen.dart`／`cloud_browser_screen.dart` 兩處雲端瀏覽畫面的封面佔位符缺口（改用 Issue 9 新增的 `CoverPlaceholder` 共用元件，取代目前純 `Icon` 佔位、無底色／無 E-Ink 外框／無書名縮略的做法，完整落實 `DESIGN.md` §8.2）。
 
@@ -18,7 +18,7 @@
 - **明確排除**：`cloud_browser_screen.dart` 的資料夾圖示分支（`Icons.folder, size: 48`，`_buildEntryTile()` 內，非 `_buildThumbnail()`）不屬於「封面佔位符」語意（資料夾本身不是書籍），不套用 `CoverPlaceholder`，維持原樣不動。
 - Task 2 的根因與修法已在規劃階段以真實 widget test 驗證（見 Task 2「Discovery 發現」段落），不是臆測；`CrossAxisAlignment.stretch` 修法已實測確認可讓封面圖片格與佔位符格渲染高度完全一致（修法前 `Size(94.0, 0.0)` vs `Size(94.0, 133.2)`，修法後兩者皆為 `Size(94.0, 133.2)`）。
 - 每個 Task 完成後只跑該 Task 涉及檔案的測試，不需要整套 `flutter test`；本計劃最後一個 Task（Task 3）完成時才跑一次完整 `flutter test`＋`flutter analyze`（見 `CLAUDE.md`「測試執行範圍」）。
-- 每個 Task 的 Step 完成後，把本檔案對應的 `- [ ]` 改成 `- [x]`。
+- 每個 Task 的 Step 完成後，把本檔案對應的 `- [x]` 改成 `- [x]`。
 - 提交前 `flutter analyze` 須維持「No issues found!」。
 - 計劃書內「改後」程式碼片段的換行/縮排以人工排版呈現，實際落地時以 `dart format` 自動排版結果為準，不需要逐字比對縮排。
 - 所有指令皆在 `app/` 目錄下執行。
@@ -65,7 +65,7 @@
             ...
 ```
 
-- [ ] **Step 1：寫失敗測試**
+- [x] **Step 1：寫失敗測試**
 
 在 `app/test/screens/library_screen_test.dart` 現有「LibraryScreen 在 E-Ink 模式開啟與關閉時，切換按鈕具備明確狀態容器與 tooltip」測試（約第 4299-4328 行）之後，新增：
 
@@ -103,12 +103,12 @@
   );
 ```
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 Run: `flutter test test/screens/library_screen_test.dart --plain-name "Dark 主題、E-Ink 關閉時"`
 Expected: FAIL — 斷言 `border.top.color` 等於 `colorScheme.onSurface.withValues(alpha: 0.5)`，但目前程式碼實際解析出的是 `colorScheme.outline.withValues(alpha: 0.5)`，Dark 主題下兩個角色數值不同，斷言不成立。
 
-- [ ] **Step 3：修正程式碼**
+- [x] **Step 3：修正程式碼**
 
 `library_screen.dart:760` 由：
 
@@ -122,12 +122,12 @@ Expected: FAIL — 斷言 `border.top.color` 等於 `colorScheme.onSurface.withV
                   : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
 ```
 
-- [ ] **Step 4：執行測試確認通過**
+- [x] **Step 4：執行測試確認通過**
 
 Run: `flutter test test/screens/library_screen_test.dart`
 Expected: 全數通過（含新增測試與既有「切換按鈕具備明確狀態容器與 tooltip」測試，後者不斷言邊框顏色，不受影響）。
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 git add app/lib/screens/library_screen.dart app/test/screens/library_screen_test.dart
@@ -194,7 +194,7 @@ EOF
           ),
 ```
 
-- [ ] **Step 1：寫失敗測試**
+- [x] **Step 1：寫失敗測試**
 
 在 `app/test/screens/library_screen_test.dart` 頂部既有 `_testBook()` helper 定義之後可使用的位置（例如緊接在第 550 行附近既有分類拼貼格測試之後），新增：
 
@@ -258,12 +258,12 @@ EOF
 
 需在檔案頂部 import 區塊加入（若尚未有）：`import 'dart:convert';`（`base64Decode`，檔案已於第 2 行 import `dart:convert`，本步驟免加）。
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 Run: `flutter test test/screens/library_screen_test.dart --plain-name "有封面圖片的書籍格與無封面佔位符格渲染高度一致"`
 Expected: FAIL —— `firstSize.height` 與 `secondSize.height` 不相等（規劃階段實測為 `0.0` vs `133.2` 這個量級的差異，實際數字依測試環境字型/裝置像素比例可能略有出入，但兩者不相等）。
 
-- [ ] **Step 3：修正程式碼**
+- [x] **Step 3：修正程式碼**
 
 `library_screen.dart:1156-1174` 兩個 `Row(` 皆加上 `crossAxisAlignment: CrossAxisAlignment.stretch`：
 
@@ -297,12 +297,12 @@ Expected: FAIL —— `firstSize.height` 與 `secondSize.height` 不相等（規
           ),
 ```
 
-- [ ] **Step 4：執行測試確認通過**
+- [x] **Step 4：執行測試確認通過**
 
 Run: `flutter test test/screens/library_screen_test.dart`
 Expected: 全數通過（含新增測試；既有分類拼貼格相關測試不斷言格子高度，不受影響——本修正純粹讓 cross-axis 從「寬鬆置中」改為「強制填滿」，不改變格子本身的寬度、間距、或既有測試斷言的 `Key`／文字／圖示存在性）。
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 git add app/lib/screens/library_screen.dart app/test/screens/library_screen_test.dart
@@ -390,7 +390,7 @@ EOF
 
 `cloud_browser_screen.dart:392-438` 的 `_buildThumbnail()` 結構完全對應（`Icons.book`/`Icons.broken_image` 用法相同，key 前綴改為 `google_drive_browser_thumbnail_...`，且沒有上述註解區塊）。
 
-- [ ] **Step 1：修改既有測試斷言（先確認測試存在、理解現況）**
+- [x] **Step 1：修改既有測試斷言（先確認測試存在、理解現況）**
 
 `app/test/screens/remote_catalog_screen_test.dart` 第 233-245 行「沒有縮圖的書目顯示預設圖示佔位符」測試，原本：
 
@@ -464,12 +464,12 @@ import 'package:elinkbook/library/widgets/book_cover.dart';
 import 'package:elinkbook/library/widgets/book_cover.dart';
 ```
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 Run: `flutter test test/screens/remote_catalog_screen_test.dart test/screens/cloud_browser_screen_test.dart`
 Expected: 3 則修改過的測試 FAIL（`isA<CoverPlaceholder>()` 不成立，目前實際 widget 是 `Icon`）；其餘既有測試維持通過。
 
-- [ ] **Step 3：修正程式碼**
+- [x] **Step 3：修正程式碼**
 
 `remote_catalog_screen.dart` 頂部 import 區塊加入：
 
@@ -591,12 +591,12 @@ import '../library/widgets/book_cover.dart';
   }
 ```
 
-- [ ] **Step 4：執行測試確認通過**
+- [x] **Step 4：執行測試確認通過**
 
 Run: `flutter test test/screens/remote_catalog_screen_test.dart test/screens/cloud_browser_screen_test.dart`
 Expected: 全數通過。
 
-- [ ] **Step 5：全套驗證（本計劃最後一個 Task）**
+- [x] **Step 5：全套驗證（本計劃最後一個 Task）**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
@@ -604,7 +604,7 @@ Expected: `No issues found!`
 Run: `flutter test`
 Expected: 全數通過，無回歸（跟 Task 1／Task 2 合併後的完整套件一起驗證）。
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/lib/screens/remote_catalog_screen.dart app/lib/screens/cloud_browser_screen.dart app/test/screens/remote_catalog_screen_test.dart app/test/screens/cloud_browser_screen_test.dart
