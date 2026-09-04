@@ -39,7 +39,7 @@
   - `Future<bool?> confirmAutoGroupByFolderName(BuildContext context)`
   - `void showImportResultSnackBar(BuildContext context, ImportResult result)`
 
-- [ ] **Step 1: 寫失敗測試——`pickAndImportFiles` 使用者取消選擇時回傳 null**
+- [x] **Step 1: 寫失敗測試——`pickAndImportFiles` 使用者取消選擇時回傳 null**
 
 建立 `app/test/screens/support/book_import_picker_helper_test.dart`：
 
@@ -80,12 +80,12 @@ void main() {
 
 （若 `FakeBookImportService` 尚未有 `importFilesCalls` 這種呼叫記錄欄位，改為斷言 `importService.lastImportedUris`/等既有欄位維持初始值——動手前先讀 `app/test/support/fake_book_import_service.dart` 確認實際欄位名稱，勿臆測。）
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/screens/support/book_import_picker_helper_test.dart`
 Expected: FAIL（`book_import_picker_helper.dart` 不存在，import 錯誤）
 
-- [ ] **Step 3: 實作 `pickAndImportFiles`／`pickAndImportFolder`／`confirmAutoGroupByFolderName`／`showImportResultSnackBar`**
+- [x] **Step 3: 實作 `pickAndImportFiles`／`pickAndImportFolder`／`confirmAutoGroupByFolderName`／`showImportResultSnackBar`**
 
 建立 `app/lib/screens/support/book_import_picker_helper.dart`（邏輯逐字取自 `library_screen.dart` 現行 `_pickAndImportFiles()`/`_pickAndImportFolder()`/`_confirmAutoGroupByFolderName()`/`_showImportResultSnackBar()`，拆成不依賴 `State` 的頂層函式；`mounted` 檢查移除——呼叫端自己的 `confirmAutoGroup` 閉包與 `BuildContext` 使用需自行注意 `context.mounted`）：
 
@@ -204,12 +204,12 @@ void showImportResultSnackBar(BuildContext context, ImportResult result) {
 }
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `flutter test test/screens/support/book_import_picker_helper_test.dart`
 Expected: PASS
 
-- [ ] **Step 5: 補齊 `pickAndImportFolder` 的成功路徑測試**
+- [x] **Step 5: 補齊 `pickAndImportFolder` 的成功路徑測試**
 
 在同一個測試檔新增：
 
@@ -277,17 +277,17 @@ Expected: PASS
   });
 ```
 
-- [ ] **Step 6: 執行測試確認通過**
+- [x] **Step 6: 執行測試確認通過**
 
 Run: `flutter test test/screens/support/book_import_picker_helper_test.dart`
 Expected: PASS（全部案例）
 
-- [ ] **Step 7: `flutter analyze` 確認乾淨**
+- [x] **Step 7: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add app/lib/screens/support/book_import_picker_helper.dart app/test/screens/support/book_import_picker_helper_test.dart
