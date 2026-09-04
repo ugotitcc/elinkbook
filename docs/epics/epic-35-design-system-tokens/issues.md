@@ -277,3 +277,31 @@
 - `library_screen_test.dart` 既有測試（`_groupTilePreviewCell`／`_GroupListTile` 相關）全數通過，無回歸——本次改動純視覺疊加，不改變既有 `Key`、互動邏輯、資料流。
 
 **驗收標準：** `BookCover` 無封面圖時顯示依格式圖示＋書名縮略＋（E-Ink 模式下）1.5dp 外框；`_groupTilePreviewCell`／`_GroupListTile`「不足 4 本」空格顯示 `Icons.book`＋（E-Ink 模式下）1.5dp 外框；圖示／文字大小隨容器尺寸縮放，小尺寸（高度 < 56）自動隱藏文字列避免擁擠；`flutter analyze` 乾淨、`flutter test` 全數通過，無回歸。
+
+---
+
+## Issue 10：Issue 9 真機驗證後續追蹤（Dark outline 不可辨識／封面色塊高度不一致／雲端畫面缺口）
+
+**Status:** ✅ 已完成（2026-09-04 透過 subagent-driven-development 執行完成，commit 範圍 `b1236ca2`..`2cd76fa8`，3 個 Task 彼此獨立、逐 Task 審查皆通過，最終整分支審查 Ready to merge: With fixes，唯一 Important 為計劃書 checkbox 未勾選，已修復）。**已合併：** PR #213，merge commit `a42838b7`（branch `worktree-epic-35-issue-10`）。
+
+**依賴：** Issue 9
+
+**來源：** `reviews/real-device-verification-checklist.md` 真機測試結果（項目 1）；規劃階段以 widget test 重現確認的分類拼貼格高度不一致；`plans/plan-issue-9.md` 收尾備註殘留事項 (2)。
+
+**背景／目標：** Issue 9 收尾時已知有 3 項需要真機驗證或另開工單的殘留事項，2026-09-04 實機測試逐項確認後，合併為本工單處理：
+
+1. **Dark 主題 `outline` 疊色 — 書架 E-Ink 切換鈕邊框不可辨識**（真機確認，`app/lib/screens/library_screen.dart:760`）。修法比照 Issue 2／Issue 5 已採用手法，改參照 `colorScheme.onSurface`。
+2. **無封面書籍佔位符色塊比有封面書籍矮一些**（真機發現）。根因為 `_GroupGridTile` 內 `Row` 預設寬鬆 cross-axis 約束，`Image.file` 依圖片長寬比例自行決定高度、`CoverPlaceholder` 則強制填滿可用高度，兩者因此不等高；規劃階段已用真實 widget test 重現並確認修法（`CrossAxisAlignment.stretch`）有效。
+3. **`remote_catalog_screen.dart`／`cloud_browser_screen.dart` 封面佔位符缺口**：這兩個畫面的無封面佔位符原本沒有 `tokens.coverPlaceholder` 底色、沒有 E-Ink 外框，`DESIGN.md` §8.2 規範範圍涵蓋這兩處，但 Issue 9 討論時排除在範圍外。
+
+**Solution：**（詳見 `plans/plan-issue-10.md`）
+- Task 1：`library_screen.dart:760` 邊框色值角色由 `colorScheme.outline` 改為 `colorScheme.onSurface`。
+- Task 2：`_GroupGridTile.build()` 內兩個 `Row` 加上 `crossAxisAlignment: CrossAxisAlignment.stretch`。
+- Task 3：`remote_catalog_screen.dart`／`cloud_browser_screen.dart` 的 `_buildThumbnail()` 三種佔位分支改接 `CoverPlaceholder`，並傳入 `title: entry.title`／`entry.name` 完整落實 `DESIGN.md` §8.2 書名縮略要求（規劃階段審查〔`reviews/review-plan-issue-10.md`〕發現初版計劃誤判「無現成書名可縮略」，修訂後補上）。
+
+**單元測試要求／驗收標準：** 見 `plans/plan-issue-10.md` 各 Task；全數落實，`flutter analyze` 乾淨、全套 `flutter test`（1930/1930）無回歸。
+
+**收尾備註：**
+- Task 3 執行期間發現計劃外的設計衝突：`CoverPlaceholder` 傳入書名後，跟 `_buildEntryTile()` 既有下方書名 caption 產生合法的文字重複。裁定比照 `library_screen.dart` `_BookGridTile`／`BookCover` 已上線的相同疊加先例（Issue 6/9 已審查通過）處理——維持 `title:` 傳入不變，5 則既有測試改為 `findsNWidgets(2)`，不修改 `_buildEntryTile()`／`book_cover.dart`。若日後認定疊加顯示是視覺缺陷，需另開工單調整 `_buildEntryTile()` 的 caption 顯示邏輯。
+- 最終整分支審查唯一發現：計劃書 16 個 Step checkbox 完成後未勾選（SDD 稽核紀錄缺口）。修復時因機械式全文取代誤傷兩處說明文字，已由 controller 直接還原，未再派工複審（流程明文排除二次 fix wave）。
+- 不擋合併的後續建議：(1) Task 1 的 `outline`→`onSurface` 色值替換同時影響 Light／Sepia 主題，推論正確但未經真機覆核，建議列入下一輪真機驗證清單；(2) `remote_catalog_screen.dart`／`cloud_browser_screen.dart` 的 `_buildThumbnail()` 仍有 3 個分支（remote loading／cloud loading／cloud error）未逐一斷言 `.title` 值，屬既有缺口非本次回歸。
