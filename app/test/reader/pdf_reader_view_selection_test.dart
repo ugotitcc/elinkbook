@@ -379,6 +379,49 @@ void main() {
         reason: '放開後即時回饋應消失（改由呼叫端決定是否顯示 AnnotationToolbar）');
   });
 
+  testWidgets(
+      '長按拖曳過程中，選取矩形視覺回饋改讀 colorScheme.primary（'
+      'epic-35-design-system-tokens Issue 7：取代原本寫死的 Colors.yellow／orange）',
+      (tester) async {
+    var renderedCount = 0;
+    final key = GlobalKey<State<PdfReaderView>>();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PdfReaderView(
+          key: key,
+          filePath: 'test/fixtures/sample_multi_page.pdf',
+          onPageRendered: () => renderedCount++,
+          onError: (_) {},
+        ),
+      ),
+    );
+    await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
+
+    final topLeft = tester.getTopLeft(find.byType(PdfReaderView));
+    final gesture = await tester.startGesture(topLeft + const Offset(40, 60));
+    await tester.pump(kLongPressTimeout + const Duration(milliseconds: 50));
+    await gesture.moveTo(topLeft + const Offset(160, 220));
+    await tester.pump();
+
+    final context = tester
+        .element(find.byKey(const Key('pdf_reader_selection_drag_indicator')));
+    final primaryColor = Theme.of(context).colorScheme.primary;
+
+    final indicator = tester.widget<Container>(
+      find.descendant(
+        of: find.byKey(const Key('pdf_reader_selection_drag_indicator')),
+        matching: find.byType(Container),
+      ),
+    );
+    final decoration = indicator.decoration as BoxDecoration;
+    expect(decoration.color, primaryColor.withValues(alpha: 0.3));
+    expect((decoration.border as Border).top.color, primaryColor);
+
+    await gesture.up();
+    await tester.pump(const Duration(milliseconds: 350));
+  });
+
   testWidgets('框選進行中第二指觸控介入時，取消選取並觸發 onSelectionCanceled',
       (tester) async {
     var renderedCount = 0;
@@ -521,6 +564,43 @@ void main() {
 
     expect(find.byKey(const Key('pdf_reader_decoration_0_0')), findsOneWidget,
         reason: 'refreshAnnotations 應觸發重繪並顯示對應頁面的標記');
+  });
+
+  testWidgets(
+      'isNoteOnly=true 時，備註徽章圖釘改讀 colorScheme.onSurface（'
+      'epic-35-design-system-tokens Issue 7：取代原本寫死的 Colors.black87）',
+      (tester) async {
+    var renderedCount = 0;
+    final key = GlobalKey<State<PdfReaderView>>();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PdfReaderView(
+          key: key,
+          filePath: 'test/fixtures/sample_multi_page.pdf',
+          onPageRendered: () => renderedCount++,
+          onError: (_) {},
+        ),
+      ),
+    );
+    await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
+
+    PdfReaderView.refreshAnnotations(key, const [
+      PdfAnnotationDecoration(
+        pageIndex: 0,
+        rect: PercentRect(left: 0.1, top: 0.1, right: 0.5, bottom: 0.2),
+        tint: 0x73FDE047,
+        isNoteOnly: true,
+      ),
+    ]);
+    await tester.pump();
+
+    final context =
+        tester.element(find.byKey(const Key('pdf_reader_decoration_0_0')));
+    final onSurfaceColor = Theme.of(context).colorScheme.onSurface;
+
+    final pinIcon = tester.widget<Icon>(find.byIcon(Icons.push_pin));
+    expect(pinIcon.color, onSurfaceColor);
   });
 
   testWidgets('同一頁有多筆標記時，逐筆使用不同 key 渲染，不觸發 Duplicate Key 例外',

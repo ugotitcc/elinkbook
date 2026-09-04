@@ -27,6 +27,7 @@ import 'percent_rect.dart';
 import 'reader_console_log.dart';
 import 'tap_zone_detector.dart';
 import 'zone_action.dart';
+import '../theme/elink_tokens.dart';
 
 /// 以 pdfrx（PDFium + Dart FFI）為底層的 PDF 閱讀 widget
 /// （epic-24-pdf-engine-rebuild Issue 1），取代現行以
@@ -1055,13 +1056,17 @@ class _PdfReaderViewState extends State<PdfReaderView> {
 
   Widget _buildDragIndicator(_PdfSelectionDragState drag) {
     final rect = Rect.fromPoints(drag.start, drag.current);
+    // epic-35-design-system-tokens Issue 7：框選進行中尚未決定標記顏色，
+    // 改用 primary（App 既有「操作中／選取中」語彙）取代原本寫死的
+    // Colors.yellow／orange，換主題／開啟 E-Ink 模式時能正確跟著換。
+    final primaryColor = Theme.of(context).colorScheme.primary;
     return Positioned.fromRect(
       key: const Key('pdf_reader_selection_drag_indicator'),
       rect: rect,
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.yellow.withValues(alpha: 0.3),
-          border: Border.all(color: Colors.orange, width: 1.5),
+          color: primaryColor.withValues(alpha: 0.3),
+          border: Border.all(color: primaryColor, width: 1.5),
         ),
       ),
     );
@@ -1097,10 +1102,11 @@ class _PdfReaderViewState extends State<PdfReaderView> {
           else
             Container(color: color),
           if (decoration.isNoteOnly)
-            const Positioned(
+            Positioned(
               right: -6,
               top: -6,
-              child: Icon(Icons.push_pin, size: 16, color: Colors.black87),
+              child: Icon(Icons.push_pin,
+                  size: 16, color: Theme.of(context).colorScheme.onSurface),
             ),
         ],
       ),
@@ -1126,6 +1132,14 @@ class _PdfReaderViewState extends State<PdfReaderView> {
       visibleRect.right * areaSize.width,
       visibleRect.bottom * areaSize.height,
     );
+    // epic-35-design-system-tokens Issue 7：搜尋高亮概念上就是「標示出
+    // 文字位置」，沿用既有劃線語意色 ElinkTokens.highlightYellow／
+    // highlightGreen 取代原本寫死的 Colors.yellow／orange；isCurrent 外框
+    // 改讀 colorScheme.primary 取代 Colors.deepOrange——維持原設計「外框
+    // 存在與否（而非色相）才是可辨識度依據」的既有原則不變（見上方
+    // _buildSearchHighlightWidget 註解），只換掉色彩角色的來源。
+    final tokens = Theme.of(context).extension<ElinkTokens>()!;
+    final colorScheme = Theme.of(context).colorScheme;
     return Positioned.fromRect(
       // key 須同時包含 pageIndex 與 matchIndex（matchIndex 是在
       // _searchMatches 整份清單中的全域索引，非同頁內重新歸零的計數）——
@@ -1135,9 +1149,10 @@ class _PdfReaderViewState extends State<PdfReaderView> {
       rect: rect,
       child: Container(
         decoration: BoxDecoration(
-          color: (isCurrent ? Colors.orange : Colors.yellow).withValues(alpha: 0.4),
+          color: (isCurrent ? tokens.highlightGreen : tokens.highlightYellow)
+              .withValues(alpha: 0.4),
           border: isCurrent
-              ? Border.all(color: Colors.deepOrange, width: 1.5)
+              ? Border.all(color: colorScheme.primary, width: 1.5)
               : null,
         ),
       ),
