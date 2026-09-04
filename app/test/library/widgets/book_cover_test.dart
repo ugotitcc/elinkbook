@@ -37,4 +37,29 @@ void main() {
 
     expect(find.byKey(const Key('book_cover_cloud_badge')), findsNothing);
   });
+
+  testWidgets('沒有封面圖時顯示依格式圖示與書名', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+      home: BookCover(book: _book(isDownloaded: true)),
+    ));
+
+    expect(find.byIcon(Icons.menu_book), findsOneWidget);
+    expect(find.text('測試書'), findsOneWidget);
+  });
+
+  testWidgets(
+      'E-Ink 模式開啟時，沒有封面圖的 BookCover 確實透傳 CoverPlaceholder 的外框'
+      '（審查修正 I3：Task 1 只單元測試過 CoverPlaceholder 本身的外框邏輯，'
+      'BookCover 作為對外生產元件的整合行為原本完全沒有測試保護，見'
+      'reviews/review-plan-issue-9.md）', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      theme: resolveThemeData(theme: AppTheme.light, isEinkMode: true),
+      home: BookCover(book: _book(isDownloaded: true)),
+    ));
+
+    final container = tester.widget<Container>(find.byType(Container));
+    final decoration = container.decoration as BoxDecoration;
+    expect(decoration.border, isNotNull);
+  });
 }

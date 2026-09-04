@@ -43,7 +43,7 @@
 - Consumes：既有 `ElinkTokens`（`app/lib/theme/elink_tokens.dart`，`isEink`／`coverPlaceholder` 兩個欄位，Issue 1 已定案）；既有 `ColorScheme.onSurfaceVariant`／`onSurface`（Issue 2 已對齊 `DESIGN.md`）。
 - Produces：`class CoverPlaceholder extends StatelessWidget`，建構子 `CoverPlaceholder({Key? key, required IconData icon, String? title})`（`title` 選填，`null` 代表 B 類——無對應書籍）。Task 2／Task 3 直接建構這個 widget。
 
-- [ ] **Step 1：寫失敗測試**
+- [x] **Step 1：寫失敗測試**
 
 建立 `app/test/library/widgets/cover_placeholder_test.dart`：
 
@@ -210,12 +210,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：執行測試，確認失敗**
+- [x] **Step 2：執行測試，確認失敗**
 
 Run: `flutter test test/library/widgets/cover_placeholder_test.dart`
 Expected: FAIL（編譯錯誤：`CoverPlaceholder` 這個類別尚不存在，`package:elinkbook/library/widgets/book_cover.dart` 沒有匯出這個名字）。
 
-- [ ] **Step 3：實作 `CoverPlaceholder`**
+- [x] **Step 3：實作 `CoverPlaceholder`**
 
 在 `app/lib/library/widgets/book_cover.dart` 檔案末尾（`class BookCover` 之後）新增：
 
@@ -304,12 +304,12 @@ class CoverPlaceholder extends StatelessWidget {
 
 （`(shortSide * 0.4).clamp(16.0, 40.0)` 回傳型別是 `num`，Dart 不會把 `num` 隱式轉成 `double`——`.toDouble()` 是必要的，不是多餘寫法，省略會讓 `Icon(size: iconSize)`／`TextStyle(fontSize: fontSize)` 編譯失敗。）
 
-- [ ] **Step 4：執行測試，確認通過**
+- [x] **Step 4：執行測試，確認通過**
 
 Run: `flutter test test/library/widgets/cover_placeholder_test.dart`
 Expected: PASS（9 個測試全過）。
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 git add app/lib/library/widgets/book_cover.dart app/test/library/widgets/cover_placeholder_test.dart
@@ -334,7 +334,7 @@ EOF
 - Consumes：Task 1 產出的 `CoverPlaceholder({required IconData icon, String? title})`；既有 `bookFormatIcon(BookFileFormat format)`（同檔既有函式，不動）。
 - Produces：無新介面，`BookCover` 對外建構參數（`Book book`）不變。
 
-- [ ] **Step 1：寫失敗測試**
+- [x] **Step 1：寫失敗測試**
 
 在 `app/test/library/widgets/book_cover_test.dart` 既有兩則測試之後新增：
 
@@ -368,12 +368,12 @@ EOF
 
 （`_book()` 既有 helper 建構的書本 `format: BookFileFormat.epub`、`title: '測試書'`、無 `coverPath`，`bookFormatIcon(BookFileFormat.epub)` 回傳 `Icons.menu_book`。）
 
-- [ ] **Step 2：執行測試，確認失敗**
+- [x] **Step 2：執行測試，確認失敗**
 
 Run: `flutter test test/library/widgets/book_cover_test.dart`
 Expected: FAIL（新增的 2 則測試皆紅燈：`find.text('測試書')` 找不到——`BookCover` 目前的佔位符分支只畫圖示，沒有書名文字；E-Ink 外框測試 `find.byType(Container)` 也找不到——目前是 `ColoredBox`，不是 `Container`）。
 
-- [ ] **Step 3：實作串接**
+- [x] **Step 3：實作串接**
 
 把 `app/lib/library/widgets/book_cover.dart` 的 `BookCover.build()`（原第 38-46 行）：
 
@@ -404,12 +404,12 @@ Expected: FAIL（新增的 2 則測試皆紅燈：`find.text('測試書')` 找�
 
 （`tokens` 變數繼續保留——下方雲朵下載角標的 `color: tokens.badgeScrim` 仍需要它，不是孤兒變數。）
 
-- [ ] **Step 4：執行測試，確認通過**
+- [x] **Step 4：執行測試，確認通過**
 
 Run: `flutter test test/library/widgets/book_cover_test.dart`
 Expected: PASS（4 個測試全過）。
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 git add app/lib/library/widgets/book_cover.dart app/test/library/widgets/book_cover_test.dart
@@ -436,12 +436,12 @@ EOF
 - Consumes：Task 1 產出的 `CoverPlaceholder({required IconData icon, String? title})`（B 類不傳 `title`）。`library_screen.dart`／`library_screen_test.dart` 皆已 `import '.../book_cover.dart';`，`CoverPlaceholder` 是同檔案的公開類別，不需要新增 import。
 - Produces：無新介面，兩個 private widget 對外行為（`_GroupGridTile`／`_GroupListTile` 的建構參數）不變。
 
-- [ ] **Step 1：確認基準線**
+- [x] **Step 1：確認基準線**
 
 Run: `flutter test test/screens/library_screen_test.dart`
 Expected: 1 個既有失敗、其餘皆 PASS。失敗的是 `分類拼貼格（格狀檢視）封面預覽區塊填滿可用高度，下方不留空白（...）`——這則測試只依賴 Task 2 已完成的改動（4 本書皆無 `coverPath`，全部經過 `BookCover` → `CoverPlaceholder`），在本 Task 開始之前就已經是紅燈，不是本 Task 造成的新回歸（Task 2 沒有跑 `library_screen_test.dart`，沒有立即發現，見上方「審查修正 C1」說明），但一併在本 Task 收尾修正。另外 2 則「不足 4 本」測試此時仍是綠燈（它們依賴的是本 Task 才要動的 `_groupTilePreviewCell`／`_GroupListTile`）——這是本 Task 動手前完整的基準線。
 
-- [ ] **Step 2：實作串接**
+- [x] **Step 2：實作串接**
 
 把 `app/lib/screens/library_screen.dart` 的 `_groupTilePreviewCell()`（原第 1194-1200 行）：
 
@@ -554,7 +554,7 @@ Expected: 1 個既有失敗、其餘皆 PASS。失敗的是 `分類拼貼格（�
   }
 ```
 
-- [ ] **Step 3：執行既有測試，確認 3 則測試如預期紅燈（審查修正 C1）**
+- [x] **Step 3：執行既有測試，確認 3 則測試如預期紅燈（審查修正 C1）**
 
 Run: `flutter test test/screens/library_screen_test.dart`
 Expected: FAIL——3 則測試紅燈，比 Step 1 的基準線多了 2 則新失敗：
@@ -562,7 +562,7 @@ Expected: FAIL——3 則測試紅燈，比 Step 1 的基準線多了 2 則新�
 - `分類拼貼格（格狀檢視）不足 4 本時以中性色塊佔位，名稱與本數正確顯示`：本步驟新增的失敗——`findsNWidgets(2)`（`Icon` 總數）失敗（實際 4，因為 2 個空格現在也各有一個 `Icons.book`）。
 - `分類拼貼格（列表檢視）不足 4 本時以中性色塊佔位`：本步驟新增的失敗——`findsNWidgets(1)`（`Icon` 總數）失敗（實際 4，因為 3 個空格現在也各有一個 `Icons.book`）。
 
-- [ ] **Step 4：更新這 3 則測試的斷言，反映 Issue 9 之後的新結構**
+- [x] **Step 4：更新這 3 則測試的斷言，反映 Issue 9 之後的新結構**
 
 第一則（`app/test/screens/library_screen_test.dart` 原第 2886-2903 行）：
 
@@ -724,7 +724,7 @@ Expected: FAIL——3 則測試紅燈，比 Step 1 的基準線多了 2 則新�
 
 **移除孤兒 import**：上面 3 處改動移除了這個檔案內全部 3 處（也是僅有的 3 處）`ElinkTokens` 使用，檔案頂部第 27 行 `import 'package:elinkbook/theme/elink_tokens.dart';` 因此變成孤兒 import，一併刪除（依 `CLAUDE.md`「移除 YOUR 改動造成的孤兒」規則）。
 
-- [ ] **Step 5：全專案完整驗證（本計劃最後一個 Task，比照 `CLAUDE.md`「測試執行範圍」）**
+- [x] **Step 5：全專案完整驗證（本計劃最後一個 Task，比照 `CLAUDE.md`「測試執行範圍」）**
 
 Run: `flutter test test/screens/library_screen_test.dart`
 Expected: PASS（3 則更新後的測試轉綠，其餘既有測試與 Step 1 基準線相同、無回歸——`_groupTilePreviewCell`／`_GroupListTile` 的 `Key`、資料流、互動邏輯完全不變，純視覺疊加）。
@@ -735,7 +735,7 @@ Expected: `No issues found!`
 Run: `flutter test`
 Expected: 全數通過，無回歸。
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/lib/screens/library_screen.dart app/test/screens/library_screen_test.dart
@@ -756,7 +756,13 @@ EOF
 
 ---
 
-## 收尾備註（供 Issue 收尾時填寫，執行前留空）
+## 收尾備註
 
-- 全部 Task 完成後，比照既有慣例在 `issues.md` Issue 9 補記完成狀態、commit 範圍。
-- 圖示/字級縮放比例（0.4／0.14）、標題文字列高度／寬度門檻（56dp／36dp）、文字左右內距（4dp，審查修正 I1 補上）為 Discovery／審查階段拍板的具體詮釋值，未經真機驗證，建議與本 Epic 其餘 Issue（3／7／8）已記錄的未驗證視覺細節一併排入下一輪真機驗證。
+- 全部 3 個 Task 已完成，透過 subagent-driven-development 執行，逐 Task 審查（spec + quality）與最終整分支審查（model=opus）皆通過，**Ready to merge: Yes**。commit 範圍：`ee7f50fd`..`520ce389`（含 Task 1 修復回合 `8e403de6`）。
+- **Task 3 執行期間發現並修正的計劃缺口**：計劃書原先只預期 `library_screen_test.dart` 有 3 則既有測試會因本 Issue 打壞，實際執行時發現另外 3 則也因為 Task 2（`BookCover` 顯示書名縮略）跟 `_BookGridTile`/`_BookListTile` 本身既有的書名 caption 產生合法的文字重複而失真。這 3 則已一併在 Task 3 修正（`findsOneWidget` → `findsNWidgets(2)`，其中一則用 `Element.findAncestorWidgetOfExactType<CoverPlaceholder>()` 精確排除封面佔位符的迷你標題），詳見 `.superpowers/sdd/plan-issue-9/progress.md`（SDD 執行帳本，未進版控）。
+- 圖示/字級縮放比例（0.4／0.14）、標題文字列高度／寬度門檻（56dp／36dp）、文字左右內距（4dp，審查修正 I1 補上）為 Discovery／審查階段拍板的具體詮釋值，未經真機驗證，建議與本 Epic 其餘 Issue（3／7／8）已記錄的未驗證視覺細節一併排入下一輪真機驗證。最終審查另外指出 `showTitle` 門檻未隨 `MediaQuery.textScalerOf` 縮放（約 3.5 倍字級以上才會在剛好 56dp 高的容器出問題，目前不可達），一併排入同一輪真機驗證。
+- **最終審查發現、明確排除於本工單範圍外的殘留事項**（建議記錄供後續參考，是否另開 Issue 由人類決定）：
+  1. `DESIGN.md §8.2` 文字寫「`Icons.book` 圖示」，但實際 A 類（真書無封面）用 `bookFormatIcon()` 依格式圖示（Discovery 已定案的更好行為）——文件用詞需要更新以符合實作。
+  2. `app/lib/screens/remote_catalog_screen.dart:421-464`（`_buildThumbnail`）與 `app/lib/screens/cloud_browser_screen.dart:397,429` 也是 `DESIGN.md §8.2` 管轄的封面佔位符情境，目前是裸 `Center(child: Icon(Icons.book))`，沒有底色也沒有 E-Ink 外框——正是本 Issue 想解決的「E-Ink 下佔位符會消失」問題，只是發生在另外兩個畫面。`CoverPlaceholder` 現成可以直接套用，建議另開 Issue。
+  3. 無封面書籍現在螢幕報讀器會把書名唸兩次（迷你標題 + 書籍格 caption），建議之後補一層 `ExcludeSemantics`。
+  4. `layout_preset_book_picker_screen.dart` 經最終審查實際查證（讀過該檔案與其測試檔），確認不受本 Issue 影響，非缺口。
