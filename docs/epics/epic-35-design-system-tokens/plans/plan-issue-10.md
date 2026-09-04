@@ -1,6 +1,6 @@
 # Epic 35 — Issue 10：真機驗證後續追蹤（Dark outline 不可辨識／封面色塊高度不一致／雲端畫面缺口）Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 修正 2026-09-04 真機驗證發現的 2 項真實缺陷（書架 E-Ink 切換鈕邊框在 Dark 主題下不可辨識；分類拼貼格內封面圖片格與佔位符格渲染高度不保證一致），並補齊 `remote_catalog_screen.dart`／`cloud_browser_screen.dart` 兩處雲端瀏覽畫面的封面佔位符缺口（改用 Issue 9 新增的 `CoverPlaceholder` 共用元件，取代目前純 `Icon` 佔位、無底色／無 E-Ink 外框／無書名縮略的做法，完整落實 `DESIGN.md` §8.2）。
 
@@ -18,7 +18,7 @@
 - **明確排除**：`cloud_browser_screen.dart` 的資料夾圖示分支（`Icons.folder, size: 48`，`_buildEntryTile()` 內，非 `_buildThumbnail()`）不屬於「封面佔位符」語意（資料夾本身不是書籍），不套用 `CoverPlaceholder`，維持原樣不動。
 - Task 2 的根因與修法已在規劃階段以真實 widget test 驗證（見 Task 2「Discovery 發現」段落），不是臆測；`CrossAxisAlignment.stretch` 修法已實測確認可讓封面圖片格與佔位符格渲染高度完全一致（修法前 `Size(94.0, 0.0)` vs `Size(94.0, 133.2)`，修法後兩者皆為 `Size(94.0, 133.2)`）。
 - 每個 Task 完成後只跑該 Task 涉及檔案的測試，不需要整套 `flutter test`；本計劃最後一個 Task（Task 3）完成時才跑一次完整 `flutter test`＋`flutter analyze`（見 `CLAUDE.md`「測試執行範圍」）。
-- 每個 Task 的 Step 完成後，把本檔案對應的 `- [x]` 改成 `- [x]`。
+- 每個 Task 的 Step 完成後，把本檔案對應的 `- [ ]` 改成 `- [x]`。
 - 提交前 `flutter analyze` 須維持「No issues found!」。
 - 計劃書內「改後」程式碼片段的換行/縮排以人工排版呈現，實際落地時以 `dart format` 自動排版結果為準，不需要逐字比對縮排。
 - 所有指令皆在 `app/` 目錄下執行。
