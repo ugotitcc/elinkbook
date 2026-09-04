@@ -237,7 +237,7 @@
 
 ## Issue 9：封面佔位符完整重新設計（DESIGN.md §8.2：圖示／書名縮略／E-Ink 外框）
 
-**Status:** ✅ 已完成（2026-09-04 完成快速 Discovery 並定案，透過 subagent-driven-development 執行完成，commit 範圍 `ee7f50fd`..`520ce389`，逐 Task 審查與最終整分支審查皆通過，Ready to merge: Yes）
+**Status:** ✅ 已完成（2026-09-04 完成快速 Discovery 並定案，透過 subagent-driven-development 執行完成，commit 範圍 `ee7f50fd`..`520ce389`，逐 Task 審查與最終整分支審查皆通過，Ready to merge: Yes）。**已合併：** PR #212，merge commit `ebccc841`（branch `worktree-epic-35-issue-9`）。
 
 **收尾備註：**
 - Task 3 執行期間發現計劃書原先只預期 `library_screen_test.dart` 有 3 則既有測試會被本 Issue 打壞，實際上另外還有 3 則也因為 `BookCover` 顯示書名縮略跟 `_BookGridTile`/`_BookListTile` 本身既有的書名 caption 產生合法的文字重複（核准設計的自然結果，非 bug）而失真，已一併修正，詳見 `plans/plan-issue-9.md` 收尾備註。
