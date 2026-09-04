@@ -1116,9 +1116,12 @@ class _PdfReaderViewState extends State<PdfReaderView> {
   /// 搜尋符合結果的高亮 widget，畫法比照 [_buildDecorationWidget]
   /// （同樣的 `PercentRect`→像素換算），[isCurrent] 為 true（目前使用者
   /// 正在檢視的符合結果）時額外疊加外框（審查修正，
-  /// review-plan-issue-6.md Minor #3）：純粹用半透明橙色／黃色區分在
-  /// E-Ink 灰階顯示或高對比主題下辨識度不足，外框在灰階轉換後仍能維持
-  /// 明顯的邊界對比，不依賴色相差異。
+  /// review-plan-issue-6.md Minor #3）：純粹用半透明的
+  /// `ElinkTokens.highlightGreen`／`highlightYellow` 區分在 E-Ink 灰階顯示
+  /// 或高對比主題下辨識度不足，外框在灰階轉換後仍能維持明顯的邊界對比，
+  /// 不依賴色相差異（epic-35-design-system-tokens Issue 7：色彩角色來源
+  /// 已從寫死的 Colors.orange／Colors.yellow 改為上述 ElinkTokens 角色，
+  /// 這段設計原則本身不變）。
   Widget _buildSearchHighlightWidget(
     int pageIndex,
     int matchIndex,

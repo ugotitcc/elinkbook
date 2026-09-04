@@ -174,7 +174,16 @@
 
 ## Issue 7：閱讀器相關寫死顏色遷移（`foliate_reader_view.dart`／`pdf_reader_view.dart`／`pdf_crop_frame_overlay.dart`／`reader_option_tile.dart` 及其呼叫端）
 
-**Status:** ready-for-agent
+**Status:** ✅ 已完成。`foliate_reader_view.dart`（3×3 導覽熱區除錯疊層）與 `pdf_reader_view.dart`（同一組除錯疊層＋框選拖曳預覽框／備註徽章圖釘／搜尋結果高亮）內的寫死顏色殘留（`Colors.white24`／`white70`／`yellow`／`orange`／`black87`／`deepOrange`）均已改讀 `colorScheme.onSurface`／`primary`／`ElinkTokens.highlightYellow`／`highlightGreen`。`pdf_crop_frame_overlay.dart` 全檔與 `reader_option_tile.dart` 及其三個呼叫端依上方 Solution 明確排除，維持寫死不變。透過 `docs/epics/epic-35-design-system-tokens/plans/plan-issue-7.md` 3 個 Task 以 subagent-driven TDD 完成（新增 8 個測試，全專案 `flutter test` 1908/1908 全數通過，`flutter analyze` 乾淨）。逐 Task 審查（3 次）與最終整分支審查皆核准通過（`reviews/review-issue-7.md`），無 Critical 問題；最終審查發現的 Important 項目（文件收尾未落地）與 1 項 Minor（`_buildSearchHighlightWidget()` dartdoc 過時）已在本次收尾一併修正。
+
+**收尾記錄（範圍決策沿革）：** 本計劃書第一版曾主張 `pdf_reader_view.dart` 的框選拖曳預覽框／備註徽章圖釘／搜尋結果高亮 3 處比照 `pdf_crop_frame_overlay.dart` 同一類理由（疊加在不可預期的 PDF 頁面內容之上）刻意排除、維持寫死不變。經 `/superpowers:requesting-code-review` 獨立審查指出，這個排除是計劃作者自行類比推論、並非本 Issue 上方 Solution 段落逐字授權的排除（與 `pdf_crop_frame_overlay.dart`／`reader_option_tile.dart` 這兩項規格文件本身逐字寫出的排除性質不同），且 `ElinkTokens` 已有 `highlightYellow`／`highlightGreen` 角色正是為此類情境設計，提請人類決策者確認後改為一併遷移（詳見 `plans/plan-issue-7.md` §範圍決定）。這與本 Epic Issue 5 曾被打回的失敗模式相同，記錄於此供後續 Issue 引以為戒：計劃書若要排除規格文件驗收標準涵蓋範圍內的項目，須有規格文件逐字授權，不能自行類比其他排除案例。
+
+**保留待人工確認事項（2026-09-04，`plan-issue-7.md`「全部 Task 完成後」交辦）：**
+1. `reader_option_tile.dart:51` 非 E-Ink 分支的 `theme.colorScheme.outline.withValues(alpha: 0.35)` 選項邊框，在 Issue 2 的 Dark `outline` 新值落地後，於真機／模擬器上目視確認 Dark 主題下仍可辨識——此為 Issue 2／Issue 6 已各自記錄過的同一組風險第三次記錄，`issues.md` Issue 7 原文點名的正式落點，不重複展開分析。
+2. `_buildDecorationWidget()` 備註徽章圖釘（`colorScheme.onSurface`）在 E-Ink 主題下與純黑劃線 tint 疊加時可能不可辨識——改動前就存在的既有限制，非本工單新增回歸；E-Ink 模式「不畫底色改畫線條」的正確渲染邏輯屬其他 Issue 範圍。
+3. （最終整分支審查 M3 補充）搜尋結果高亮（`_buildSearchHighlightWidget()`）在 E-Ink 主題下會呈現純黑 40% 灰罩（僅靠外框區分 current／非 current）；Sepia 主題下 `highlightGreen`（`#EDF5F0`，近白）比 `highlightYellow`（`#FEF08A`）更淡，可能出現「目前符合結果的底色比其他結果還不明顯」的顯著度反轉，全靠 `colorScheme.primary` 紅框撐辨識度。
+4. （最終整分支審查 M4 補充）PDF 端除錯疊層（`colorScheme.onSurface`）在 Dark 主題下對比仍偏低（PDF 頁面本身恆為白紙、不隨主題變色）——相對原本「四套主題下全都看不見」是嚴格改善、非回歸，且此除錯疊層預設關閉，需在「九宮格導覽」設定手動開啟，實務影響低。
+5. 本工單自行決定的具體透明度數值（`colorScheme.onSurface.withValues(alpha: 0.24/0.7)`、`colorScheme.primary.withValues(alpha: 0.3)`、`tokens.highlightYellow/highlightGreen.withValues(alpha: 0.4)`）尚未經過真機驗證，需要下一輪真機驗證確認在電子紙上確實可辨識。
 
 **依賴：** Issue 2
 
