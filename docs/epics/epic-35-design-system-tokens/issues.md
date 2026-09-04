@@ -237,7 +237,7 @@
 
 ## Issue 9：封面佔位符完整重新設計（DESIGN.md §8.2：圖示／書名縮略／E-Ink 外框）
 
-**Status:** needs-triage
+**Status:** ready-for-agent（2026-09-04 完成快速 Discovery，定案如下）
 
 **依賴：** Issue 6
 
@@ -247,8 +247,29 @@
 
 這造成一個實際的視覺退步：E-Ink 主題下 `coverPlaceholder` 為純白（`Color(0xFFFFFFFF)`），跟 E-Ink 的 `scaffoldBackgroundColor`（同樣是純白）幾乎無法區分，封面佔位符與分類拼貼格「不足 4 本」的空格佔位，在 E-Ink 模式下視覺上會消失不見（只剩中央圖示浮著）。本 Issue 由 `epic-35` Issue 6 最終分支審查發現並開立，避免 Issue 6 計劃書裡「留給未來 UI 補強 Issue」這句話沒有實際落點。
 
-**Solution：** 留白，交由後續 Discovery 規劃（`needs-triage` 階段不預先指定實作方式）。可提示：至少需處理 E-Ink 外框這個補償元件（`ElinkTokens.isEink` 為既有欄位，`BookCover`／`_groupTilePreviewCell`／`_GroupListTile` 三處佔位符皆需要）；圖示種類與書名縮略是否一併做，由後續 Discovery 決定。
+**Discovery 發現（動手規劃前先釐清的關鍵事實）：** 現有三處佔位符其實是兩種不同語意混在一起：
+- **A 類**（`book_cover.dart` 的 `BookCover`）：某一本書真的沒有封面圖時的佔位符，已經有依格式圖示（`bookFormatIcon()`：EPUB/AZW3=`menu_book`、PDF=`picture_as_pdf`、TXT/MD=`article`、CBZ=`auto_stories`），只是還沒有書名文字、也沒有 E-Ink 外框。
+- **B 類**（`library_screen.dart` 的 `_groupTilePreviewCell`／`_GroupListTile`「不足 4 本」空格）：純色塊，代表「這裡沒有第 N 本書」，不是某一本書，沒有書名可縮略。
 
-**單元測試要求：** 留待實際規劃時再定義。
+`BookCover` 這顆元件同時被共用在差異很大的尺寸上（書架格狀卡片較大、列表列 48×64、`_GroupListTile` 內小到 32×48），固定 32px 圖示＋一行文字在最小尺寸下會擠不下，經 Discovery 確認採 `LayoutBuilder` 依容器尺寸縮放圖示/文字，而非新增 `compact` 參數逐一呼叫端指定。
 
-**驗收標準：** 留待實際規劃時再定義。
+**Solution：**
+- 新增共用元件 `CoverPlaceholder({required IconData icon, String? title})`（放在 `app/lib/library/widgets/book_cover.dart`，與現有 `bookFormatIcon()`／`BookCover` 同檔——都是「封面渲染」職責）。`title == null` 代表 B 類（無書名），渲染空字串佔位、不代表「顯示中」。
+- 內部用 `LayoutBuilder` 取得可用寬高，`shortSide = min(寬, 高)`：
+  - 圖示大小 `= clamp(shortSide × 0.4, 16, 40)`，取代現行寫死 `size: 32`；前景色 `colorScheme.onSurfaceVariant`。
+  - 標題文字僅在「可用高 ≥ 56」時渲染：`Text(title ?? '', maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center)`，字級 `= clamp(shortSide × 0.14, 9, 12)`，顏色同樣 `colorScheme.onSurfaceVariant`；`title == null` 時渲染空字串（`''`），文字列高度/字級與 A 類完全一致，確保 A/B 視覺佈局對齊，不是省略整段。
+  - E-Ink 外框：`Theme.of(context).extension<ElinkTokens>()!.isEink == true` 時，外層加 `Border.all(color: colorScheme.onSurface, width: 1.5)`——E-Ink 主題的 `onSurface` 本身即為純黑（`0xFF000000`），用角色引用而非寫死 `Colors.black`，符合本 Epic 全程「不寫死顏色」規則；非 E-Ink 主題不畫外框。背景色沿用既有 `tokens.coverPlaceholder`（E-Ink 主題下已是純白，Issue 6 已到位，不需要在本元件內另外處理）。
+- `BookCover`（`book_cover.dart`）目前的「沒有封面圖」分支（`ColoredBox` + 置中 `Icon`）改為 `CoverPlaceholder(icon: bookFormatIcon(book.format), title: book.title)`。
+- `library_screen.dart` 的 `_groupTilePreviewCell`／`_GroupListTile` 兩處「不足 4 本」的 `ColoredBox(color: tokens.coverPlaceholder)` 分支改為 `CoverPlaceholder(icon: Icons.book)`（不傳 `title`，即 B 類）。
+- **明確排除：** 真的有封面圖片（`Image.file(...)`）的情況不套用外框／圖示／文字——`DESIGN.md` §8.2 只規範「佔位符」，不含已存在的封面圖片；`BookCover` 的雲朵下載角標（`badge`，非 E-Ink 分支既有邏輯）不受本工單影響。
+
+**單元測試要求：**
+- 新增 `app/test/library/widgets/cover_placeholder_test.dart`：
+  - 用不同 `SizedBox` 尺寸包住 `CoverPlaceholder`，斷言圖示大小隨容器縮放（例如寬高 200 時圖示大小應為 clamp 上限 40；寬高 20 時應為 clamp 下限 16）。
+  - 高度 < 56 時標題文字列不渲染（`find.text` 找不到，或渲染的 `Text` widget 不存在於 tree）；高度 ≥ 56 時渲染。
+  - `title: null`（B 類）時渲染空字串文字列，佔位高度與 `title` 非 null 時一致（斷言兩者 `Text` widget 的 render box 高度相等）。
+  - `ElinkTokens.isEink: true` 時外框（`Border`）存在且顏色來自 `colorScheme.onSurface`；`isEink: false` 時無外框。
+- `book_cover_test.dart` 新增一則測試：無封面圖時顯示書名文字（`find.text(book.title)` 命中）。
+- `library_screen_test.dart` 既有測試（`_groupTilePreviewCell`／`_GroupListTile` 相關）全數通過，無回歸——本次改動純視覺疊加，不改變既有 `Key`、互動邏輯、資料流。
+
+**驗收標準：** `BookCover` 無封面圖時顯示依格式圖示＋書名縮略＋（E-Ink 模式下）1.5dp 外框；`_groupTilePreviewCell`／`_GroupListTile`「不足 4 本」空格顯示 `Icons.book`＋（E-Ink 模式下）1.5dp 外框；圖示／文字大小隨容器尺寸縮放，小尺寸（高度 < 56）自動隱藏文字列避免擁擠；`flutter analyze` 乾淨、`flutter test` 全數通過，無回歸。
