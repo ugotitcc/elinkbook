@@ -1631,30 +1631,30 @@ git commit -m "feat(epic-36): 新增 AdaptiveShellScaffold 並接上 main.dart"
 
 **Files:** 無新增/修改，純驗證。
 
-- [ ] **Step 1: 執行全套 `flutter test`（不帶檔案路徑）**
+- [x] **Step 1: 執行全套 `flutter test`（不帶檔案路徑）**
 
 Run: `flutter test`
 Expected: 全數通過（比照 `CLAUDE.md`「測試執行範圍」，這是整份計劃收尾的唯一一次全套執行）。若有失敗，比對是否為本計劃改動觸及的檔案；非本計劃觸及範圍的既有不穩定測試（若有）記錄下來，不在本 Issue 修復範圍內。
 
-- [ ] **Step 2: 執行 `flutter analyze`**
+- [x] **Step 2: 執行 `flutter analyze`**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 3: 逐條核對 `issues.md` Issue 1 驗收標準**
+- [x] **Step 3: 逐條核對 `issues.md` Issue 1 驗收標準**
 
-- [ ] `main.dart:342`（原行號）的 `home:` 已改為 `AdaptiveShellScaffold(...)`
-- [ ] 三目的地圖示互相切換為零動畫轉場且狀態不遺失（`IndexedStack`，`MaterialApp.themeAnimationDuration` 已是既有的 `Duration.zero`，不需要在 `AdaptiveShellScaffold` 本身另外設定）
-- [ ] 「來源」分頁能完成本機/雲端/OPDS 匯入且與現行行為相同
-- [ ] 書架 AppBar 僅剩「排序/檢視、來源、設定」三圖示
-- [ ] `app/test/navigation_test.dart` 已改為驗證 callback／新導覽行為（`review-issues.md` I-1）
-- [ ] `_pickAndImportFiles`/`_pickAndImportFolder`/`_isImporting`/`_buildImportingOverlay` 等死碼已清理（`review-issues.md` M-3，含計劃範圍澄清第 2 點擴充的五項）
+- [x] `main.dart:342`（原行號）的 `home:` 已改為 `AdaptiveShellScaffold(...)`
+- [x] 三目的地圖示互相切換為零動畫轉場且狀態不遺失（`IndexedStack`，`MaterialApp.themeAnimationDuration` 已是既有的 `Duration.zero`，不需要在 `AdaptiveShellScaffold` 本身另外設定）
+- [x] 「來源」分頁能完成本機/雲端/OPDS 匯入且與現行行為相同
+- [x] 書架 AppBar 僅剩「排序/檢視、來源、設定」三圖示
+- [x] `app/test/navigation_test.dart` 已改為驗證 callback／新導覽行為（`review-issues.md` I-1）
+- [x] `_pickAndImportFiles`/`_pickAndImportFolder`/`_isImporting`/`_buildImportingOverlay` 等死碼已清理（`review-issues.md` M-3，含計劃範圍澄清第 2 點擴充的五項）
 
-- [ ] **Step 4: 更新 `docs/epics.md` 備註欄位**
+- [x] **Step 4: 更新 `docs/epics.md` 備註欄位**
 
 將 Epic 36 該列備註改為「Issue 1 已完成，待認領 Issue 2/5」。
 
-- [ ] **Step 5: 依 `superpowers:requesting-code-review` 發起本 Issue 的程式碼審查**
+- [x] **Step 5: 依 `superpowers:requesting-code-review` 發起本 Issue 的程式碼審查**
 
 審查者先產出報告至 `docs/epics/epic-36-adaptive-shelf-navigation/reviews/review-issue-1.md`，不得直接修改程式碼（比照專案 SDD 工作流程第 6 步）。
 
