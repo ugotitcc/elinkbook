@@ -145,11 +145,20 @@ void main() {
 
     expect(find.byKey(const Key('library_grid_view')), findsOneWidget);
     expect(find.byKey(const Key('book_item_1')), findsOneWidget);
+    final bookItemFinder = find.byKey(const Key('book_item_1'));
     // Issue 9：該書無 coverPath，BookCover 退回 CoverPlaceholder，其內建的
     // 書名縮略文字跟 _BookGridTile 本身的標題 caption 各自顯示一次「紅樓
-    // 夢」，兩者皆是核准設計、非回歸，預期恰好 2 個匹配。
-    expect(find.text('紅樓夢'), findsNWidgets(2));
-    expect(find.text('0%'), findsOneWidget);
+    // 夢」，兩者皆是核准設計、非回歸，預期恰好 2 個匹配；限定在
+    // book_item_1 範圍內查找，避免繼續閱讀列（Issue 3）額外渲染的同名
+    // 文字被誤計入（`review-plan-issue-3.md` I-1）。
+    expect(
+      find.descendant(of: bookItemFinder, matching: find.text('紅樓夢')),
+      findsNWidgets(2),
+    );
+    expect(
+      find.descendant(of: bookItemFinder, matching: find.text('0%')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('直立（高 > 寬）時，書架封面格數為 3 欄', (tester) async {
@@ -333,7 +342,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('0%'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('book_item_1')),
+        matching: find.text('0%'),
+      ),
+      findsOneWidget,
+    );
 
     await tester.tap(find.byKey(const Key('book_item_1')));
     await tester.pumpAndSettle();
@@ -363,7 +378,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.text('50%'),
+      find.descendant(
+        of: find.byKey(const Key('book_item_1')),
+        matching: find.text('50%'),
+      ),
       findsOneWidget,
       reason:
           '返回書架後應重新載入書籍清單，顯示閱讀器寫入的最新進度，'
@@ -3450,6 +3468,387 @@ void main() {
 
     expect(sourceTapped, 1);
   });
+
+  testWidgets('直向（3 項/頁）與橫向（4 項/頁）第一頁顯示的項目數正確', (tester) async {
+    final books = List.generate(5, (i) => _testBook(id: '$i', title: '書$i'));
+
+    tester.view.physicalSize = const Size(800, 1200); // portrait
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: books),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('book_item_0')), findsOneWidget);
+    expect(find.byKey(const Key('book_item_1')), findsOneWidget);
+    expect(find.byKey(const Key('book_item_2')), findsOneWidget);
+    expect(find.byKey(const Key('book_item_3')), findsNothing, reason: '直向每頁只顯示 3 項');
+    expect(find.text('1 / 2'), findsOneWidget);
+
+    tester.view.physicalSize = const Size(1200, 800); // landscape
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('book_item_3')),
+      findsOneWidget,
+      reason: '橫向每頁顯示 4 項，旋轉後第一頁應多出第 4 項',
+    );
+    expect(find.text('1 / 2'), findsOneWidget);
+  });
+
+  testWidgets('點擊 PagingBar 下一頁/上一頁切換書架顯示的書籍', (tester) async {
+    final books = List.generate(5, (i) => _testBook(id: '$i', title: '書$i'));
+
+    tester.view.physicalSize = const Size(800, 1200); // portrait，pageSize=3
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: books),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('book_item_0')), findsOneWidget);
+    expect(find.byKey(const Key('book_item_3')), findsNothing);
+    expect(find.text('1 / 2'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('paging_bar_next_button')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('book_item_0')), findsNothing);
+    expect(find.byKey(const Key('book_item_3')), findsOneWidget);
+    expect(find.byKey(const Key('book_item_4')), findsOneWidget);
+    expect(find.text('2 / 2'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('paging_bar_previous_button')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('book_item_0')), findsOneWidget);
+    expect(find.text('1 / 2'), findsOneWidget);
+  });
+
+  testWidgets('旋轉螢幕時目前頁碼依新每頁容量正確換算，不跳到看不懂的地方', (tester) async {
+    final books = List.generate(10, (i) => _testBook(id: '$i', title: '書$i'));
+
+    tester.view.physicalSize = const Size(800, 1200); // portrait，pageSize=3
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: books),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('paging_bar_next_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('paging_bar_next_button')));
+    await tester.pumpAndSettle();
+    // 10 本書，pageSize 3 → pageCount = 4；目前在第 3 頁（0-based page=2），
+    // 第一項全域 index = 6。
+    expect(find.text('3 / 4'), findsOneWidget);
+    expect(find.byKey(const Key('book_item_6')), findsOneWidget);
+
+    tester.view.physicalSize = const Size(1200, 800); // landscape，pageSize=4
+    await tester.pumpAndSettle();
+
+    // libraryRecalculatePage(oldPage: 2, oldPageSize: 3, newPageSize: 4)
+    // = floor(6/4) = 1 → 顯示「2 / 3」（pageCount = ceil(10/4) = 3）。
+    expect(find.text('2 / 3'), findsOneWidget);
+    expect(find.byKey(const Key('book_item_4')), findsOneWidget);
+  });
+
+  testWidgets('切換排序條件後頁碼重置為第一頁', (tester) async {
+    final books = List.generate(5, (i) => _testBook(id: '$i', title: '書$i'));
+
+    tester.view.physicalSize = const Size(800, 1200); // portrait，pageSize=3
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: books),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('paging_bar_next_button')));
+    await tester.pumpAndSettle();
+    expect(find.text('2 / 2'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('library_sort_view_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('library_sort_option_title')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('1 / 2'), findsOneWidget);
+  });
+
+  testWidgets('進入/離開分類下鑽時頁碼重置為第一頁', (tester) async {
+    final groupBooks = List.generate(
+      5,
+      (i) => _testBook(id: 'g$i', title: '分類書$i', groupName: '奇幻'),
+    );
+
+    tester.view.physicalSize = const Size(800, 1200); // portrait，pageSize=3
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: groupBooks),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('group_tile_奇幻')));
+    await tester.pumpAndSettle();
+    // 5 本書，pageSize 3 → pageCount = 2。
+    expect(find.text('1 / 2'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('paging_bar_next_button')));
+    await tester.pumpAndSettle();
+    expect(find.text('2 / 2'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('library_back_from_group_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('group_tile_奇幻')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('1 / 2'),
+      findsOneWidget,
+      reason: '再次下鑽同一分類時頁碼應已重置，不殘留上次離開時的頁碼',
+    );
+  });
+
+  testWidgets('書庫全空時不渲染繼續閱讀列', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('library_continue_reading_row')), findsNothing);
+  });
+
+  testWidgets('有書籍但全部 lastReadTime 為 epoch 0（從未閱讀）時不渲染繼續閱讀列', (
+    tester,
+  ) async {
+    final bookA = _testBook(
+      id: '1',
+      title: 'A書',
+      lastReadTime: DateTime.fromMillisecondsSinceEpoch(0),
+    );
+    final bookB = _testBook(
+      id: '2',
+      title: 'B書',
+      lastReadTime: DateTime.fromMillisecondsSinceEpoch(0),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: [bookA, bookB]),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('library_continue_reading_row')), findsNothing);
+  });
+
+  testWidgets('至少一本書 lastReadTime > 0 時渲染繼續閱讀列，顯示最近閱讀那本並可點擊繼續閱讀', (
+    tester,
+  ) async {
+    final older = _testBook(
+      id: 'older',
+      title: '較早閱讀的書',
+      lastReadTime: DateTime(2026, 1, 1),
+      filePath: 'content://example/older.txt',
+    );
+    final newer = _testBook(
+      id: 'newer',
+      title: '最近閱讀的書',
+      lastReadTime: DateTime(2026, 6, 1),
+      filePath: 'content://example/newer.txt',
+    );
+    final neverRead = _testBook(
+      id: 'never',
+      title: '沒讀過的書',
+      lastReadTime: DateTime.fromMillisecondsSinceEpoch(0),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: LibraryScreen(
+          repository:
+              FakeLibraryRepository(initialBooks: [older, newer, neverRead]),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('library_continue_reading_row')), findsOneWidget);
+    // Issue 9：無 coverPath 時 BookCover 退回 CoverPlaceholder 內建書名縮略
+    // 文字，與 _ContinueReadingRow 本身的標題文字各自顯示一次「最近閱讀的
+    // 書」，兩者皆是核准設計、非回歸，預期恰好 2 個匹配。
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('library_continue_reading_row')),
+        matching: find.text('最近閱讀的書'),
+      ),
+      findsNWidgets(2),
+      reason: '應顯示 lastReadTime 最新的那一本，而不是任何一本有讀過的書',
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('library_continue_reading_row')),
+        matching: find.text('較早閱讀的書'),
+      ),
+      findsNothing,
+    );
+
+    await tester.tap(find.byKey(const Key('library_continue_reading_row')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ReaderScreen), findsOneWidget);
+  });
+
+  testWidgets('下鑽檢視分類時不渲染繼續閱讀列', (tester) async {
+    final book = _testBook(
+      id: '1',
+      title: 'A書',
+      groupName: '奇幻',
+      lastReadTime: DateTime(2026, 1, 1),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: [book]),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('library_continue_reading_row')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('group_tile_奇幻')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('library_continue_reading_row')),
+      findsNothing,
+      reason: '繼續閱讀列是頂層書架的常駐列，下鑽檢視分類時不應出現',
+    );
+  });
+
+  testWidgets('多選模式進行中，繼續閱讀列不可點擊（review-plan-issue-3.md M-3：避免無勾選指示反饋卻誤觸切換選取狀態）', (
+    tester,
+  ) async {
+    final mostRecent = _testBook(
+      id: 'recent',
+      title: '最近閱讀的書',
+      lastReadTime: DateTime(2026, 6, 1),
+    );
+    final other = _testBook(
+      id: 'other',
+      title: '另一本書',
+      lastReadTime: DateTime(2026, 1, 1),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: [mostRecent, other]),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('library_continue_reading_row')), findsOneWidget);
+
+    await tester.longPress(find.byKey(const Key('book_item_other')));
+    await tester.pumpAndSettle();
+    expect(find.text('已選取 1 本'), findsOneWidget);
+
+    await tester.tap(
+      find.byKey(const Key('library_continue_reading_row')),
+      warnIfMissed: false,
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('已選取 1 本'),
+      findsOneWidget,
+      reason: '點擊繼續閱讀列不應該把 mostRecent 加進選取集合，選取數量應維持不變',
+    );
+    expect(find.byType(ReaderScreen), findsNothing);
+  });
 }
 
 /// 刻意「非線性」的測試用 TextScaler：對較大的輸入值套用較低的有效縮放
@@ -3491,7 +3890,19 @@ Book _testBook({
   BookFileFormat format = BookFileFormat.epub,
   DateTime? lastReadTime,
 }) {
-  final now = DateTime.now();
+  // 預設時間戳改為依 id 內數字反向換算的確定性公式（不再用
+  // `DateTime.now()`）：Issue 3 新增的分頁測試以
+  // `List.generate(N, (i) => _testBook(id: '$i', ...))` 依序快速建立多本
+  // 書籍，若沿用真實時鐘，同一迴圈中的呼叫可能落在同一毫秒或得到與
+  // 迴圈方向不一致的遞增順序，讓預設「最後閱讀」排序下 book_item 的頁面
+  // 分佈變得不穩定。id 內數字越大，此處换算出的預設 lastReadTime/
+  // createTime 越舊，確保 book_item_0 排序在前；id 不含數字（例如
+  // 'older'/'newer'）則退回同一個固定時間戳，測試需要區分先後時必須
+  // 明確傳入 lastReadTime（`review-issue-3.md` Important #1）。
+  final numericId = int.tryParse(id.replaceAll(RegExp(r'[^0-9]'), ''));
+  final defaultTime = numericId != null
+      ? DateTime.fromMillisecondsSinceEpoch(1700000000000 - numericId * 1000)
+      : DateTime.fromMillisecondsSinceEpoch(1700000000000);
   return Book(
     id: id,
     title: title,
@@ -3502,8 +3913,8 @@ Book _testBook({
     coverPath: coverPath,
     groupName: groupName,
     isFixedLayout: isFixedLayout,
-    createTime: now,
-    lastReadTime: lastReadTime ?? now,
+    createTime: defaultTime,
+    lastReadTime: lastReadTime ?? defaultTime,
   );
 }
 

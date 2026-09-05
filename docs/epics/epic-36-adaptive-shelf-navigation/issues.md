@@ -73,7 +73,7 @@
 
 **依賴：** Issue 2（分頁重置時機與繼續閱讀列顯示條件讀取 `_activeGroupFilter`）
 
-**Status:** ready-for-agent
+**Status:** completed
 
 **來源：** `spec.md` §功能③（對應原始 Issue 3，解決 I-4、I-5；`review-spec.md` I-1 不採納，維持 spec.md 現狀）
 
