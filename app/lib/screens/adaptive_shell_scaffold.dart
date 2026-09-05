@@ -142,4 +142,4 @@ class _AdaptiveShellScaffoldState extends State<AdaptiveShellScaffold> {
       ),
     );
   }
-}
+}

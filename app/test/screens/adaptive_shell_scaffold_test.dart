@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'package:elinkbook/library/sqlite_library_repository.dart';
 import 'package:elinkbook/reader/reader_prefs_manager.dart';
 import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
@@ -19,23 +17,11 @@ import '../support/fake_reader_prefs_manager.dart';
 import '../support/fake_custom_fonts_repository.dart';
 
 void main() {
-  late SqliteLibraryRepository libraryRepository;
   late ReaderPrefsManager prefsManager;
-
-  setUpAll(() {
-    sqfliteFfiInit();
-    databaseFactory = databaseFactoryFfi;
-  });
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
-    libraryRepository =
-        await SqliteLibraryRepository.open(inMemoryDatabasePath);
     prefsManager = FakeReaderPrefsManager();
-  });
-
-  tearDown(() async {
-    await libraryRepository.close();
   });
 
   Widget buildApp() {
@@ -114,7 +100,7 @@ void main() {
     await tester.tap(find.byKey(const Key('sources_library_button')));
     await tester.pumpAndSettle();
 
-    expect(find.text('後補書'), findsWidgets);
+    expect(find.byKey(const Key('book_item_new_book')), findsOneWidget);
   });
 
   testWidgets('非書架分頁時系統返回鍵優先切回書架', (tester) async {
