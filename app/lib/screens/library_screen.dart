@@ -52,7 +52,6 @@ class LibraryScreen extends StatefulWidget {
   /// 收斂原本 `currentTheme`／`isEinkMode`／`onThemeChanged`／`onEinkModeChanged`
   /// 四個獨立參數（epic-26-architecture-hardening Issue 7）。
   final LibraryThemeDependencies themeDependencies;
-  final String? groupFilter;
   final Listenable? refreshSignal;
   final VoidCallback? onNavigateToSource;
   final VoidCallback? onNavigateToSettings;
@@ -69,7 +68,6 @@ class LibraryScreen extends StatefulWidget {
     this.computeFingerprint,
     this.isMobileDataConnection,
     this.themeDependencies = const LibraryThemeDependencies(),
-    this.groupFilter,
     this.refreshSignal,
     this.onNavigateToSource,
     this.onNavigateToSettings,
@@ -84,6 +82,10 @@ class _LibraryScreenState extends State<LibraryScreen> {
   late final LibraryBookListController _bookListController;
   late final LibraryBatchActions _batchActions;
 
+  /// 三目的地導覽下 LibraryScreen 只建構一次、恆為頂層模式（epic-36
+  /// Issue 1），原本靠「另一個獨立 LibraryScreen 實例＋groupFilter 建構參數」
+  /// 模擬下鑽的做法在 Issue 2 改為這個可變狀態的原地切換，透過
+  /// _openGroupFilteredView()／_exitGroupFilteredView() 以 setState 變動。
   String? _activeGroupFilter;
   LibraryViewMode _viewMode = LibraryViewMode.grid;
   Set<String>? _selectedBookIds;
@@ -95,10 +97,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
   @override
   void initState() {
     super.initState();
-    _activeGroupFilter = widget.groupFilter;
     _bookListController = LibraryBookListController(
       repository: widget.repository,
-      groupFilter: widget.groupFilter,
     )..addListener(_onBookListChanged);
     _batchActions = LibraryBatchActions(repository: widget.repository);
     widget.refreshSignal?.addListener(_onExternalRefreshRequested);
@@ -142,13 +142,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 
   /// 啟動時開啟最後閱讀的那本書（epic-18-reader-device-qa Issue 29）：只在頂層
-  /// 書架（`widget.groupFilter == null`）啟動當下觸發一次——`initState()`
-  /// 對單一 State 物件只會執行一次，`_openGroupFilteredView()` 推入的分類
-  /// 篩選畫面是另一個獨立的 `LibraryScreen` 實例、`groupFilter` 非
-  /// null，此處的 guard 確保使用者點進分類篩選畫面時不會被誤判為「App
-  /// 剛啟動」而重複觸發。「最後閱讀的書籍」獨立以 `LibrarySortBy.lastRead`
-  /// 查詢，不依賴目前畫面選定的 `_sortBy`（使用者的檢視排序偏好與這裡的
-  /// 語意是兩件事，即使目前排序條件是「書名」也不該影響這裡判斷的對象）。
+  /// 書架啟動當下觸發一次。保留此 guard 是比照 spec.md 明文指示維持語意對稱與
+  /// 未來防禦性——原地下鑽後已無獨立實例，點擊拼貼格晚於此方法的執行時機，
+  /// 不會重複觸發開書。
   Future<void> _maybeOpenLastBookOnLaunch() async {
     if (_activeGroupFilter != null) return;
     final globalPrefs = await widget.prefsManager.loadGlobalPrefs();
