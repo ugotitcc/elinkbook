@@ -99,6 +99,11 @@ class _LibraryScreenState extends State<LibraryScreen> with WidgetsBindingObserv
   /// 真的需要重新換算頁碼；於每次 `_buildBookList()` 呼叫後更新為最新值。
   int? _lastPageSize;
 
+  /// 使用者最後閱讀的書籍（`lastReadTime` 最新且 > epoch 0 者），供頂層
+  /// 書架的常駐「繼續閱讀列」使用；`_onBookListChanged()` 每次書籍清單
+  /// 變動時重新計算。
+  Book? _mostRecentBook;
+
   @override
   void initState() {
     super.initState();
@@ -129,7 +134,21 @@ class _LibraryScreenState extends State<LibraryScreen> with WidgetsBindingObserv
   }
 
   void _onBookListChanged() {
-    if (mounted) setState(() {});
+    if (!mounted) return;
+    setState(() => _mostRecentBook = _computeMostRecentBook());
+  }
+
+  Book? _computeMostRecentBook() {
+    final books = _bookListController.books;
+    if (books == null) return null;
+    Book? mostRecent;
+    for (final book in books) {
+      if (book.lastReadTime.millisecondsSinceEpoch <= 0) continue;
+      if (mostRecent == null || book.lastReadTime.isAfter(mostRecent.lastReadTime)) {
+        mostRecent = book;
+      }
+    }
+    return mostRecent;
   }
 
   @override
@@ -824,6 +843,16 @@ class _LibraryScreenState extends State<LibraryScreen> with WidgetsBindingObserv
 
     return Column(
       children: [
+        if (_activeGroupFilter == null && _mostRecentBook != null)
+          _ContinueReadingRow(
+            book: _mostRecentBook!,
+            // 多選模式進行中時停用點擊（`review-plan-issue-3.md` M-3）：
+            // 本列沒有勾選指示器，若不停用，使用者在多選時點到它會在
+            // 毫無視覺反饋的情況下切換 _mostRecentBook 的選取狀態，比照
+            // `_GroupGridTile`／`_GroupListTile` 在 _inSelectionMode 時
+            // 一律把 onTap 傳 null 的既有慣例。
+            onTap: _inSelectionMode ? null : () => _onBookTap(_mostRecentBook!),
+          ),
         Expanded(child: Align(alignment: Alignment.topCenter, child: gridOrList)),
         PagingBar(
           key: const Key('library_paging_bar'),
@@ -1139,6 +1168,50 @@ class _BookListTile extends StatelessWidget {
       ),
       onTap: onTap,
       onLongPress: onLongPress,
+    );
+  }
+}
+
+/// 頂層書架常駐「繼續閱讀列」（`DESIGN.md#L297` §15.1）：顯示使用者最後
+/// 閱讀的那本書與進度，點擊直接跳轉繼續閱讀；不受下方分頁影響，
+/// `_activeGroupFilter != null`（下鑽檢視分類）時由呼叫端負責不渲染
+/// 本元件，本元件本身不做這個判斷。
+class _ContinueReadingRow extends StatelessWidget {
+  final Book book;
+  final VoidCallback? onTap; // null＝多選模式進行中，停用點擊（見呼叫端註解）
+
+  const _ContinueReadingRow({required this.book, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      key: const Key('library_continue_reading_row'),
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.all(8),
+        child: Row(
+          children: [
+            SizedBox(width: 40, height: 56, child: BookCover(book: book)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('繼續閱讀', style: TextStyle(fontSize: 12)),
+                  Text(
+                    book.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  Text(_progressText(book), style: const TextStyle(fontSize: 12)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
