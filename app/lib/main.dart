@@ -38,7 +38,7 @@ import 'remote/opds_http_client.dart';
 import 'remote/remote_server_repository.dart';
 import 'remote/remote_thumbnail_cache.dart';
 import 'remote/sqlite_remote_server_repository.dart';
-import 'screens/library_screen.dart';
+import 'screens/adaptive_shell_scaffold.dart';
 import 'screens/library_screen_dependencies.dart';
 import 'screens/reading_position_conflict_dialog.dart';
 import 'sync/sync_account_repository.dart';
@@ -339,7 +339,7 @@ class _ElinkBookAppState extends State<ElinkBookApp> with WidgetsBindingObserver
       title: 'elinkBook',
       theme: themeData,
       themeAnimationDuration: Duration.zero,
-      home: LibraryScreen(
+      home: AdaptiveShellScaffold(
         repository: widget.repository,
         importService: widget.importService,
         prefsManager: widget.prefsManager,
