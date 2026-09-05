@@ -709,7 +709,7 @@ git commit -m "feat(epic-36): 新增 SourcesHomeScreen 來源聚合頁"
 **Interfaces:**
 - Produces: `LibraryScreen` 新增建構參數 `final Listenable? refreshSignal; final VoidCallback? onNavigateToSource; final VoidCallback? onNavigateToSettings;`（皆 nullable，預設 null）。
 
-- [ ] **Step 1: 寫失敗測試——`onNavigateToSettings` callback 取代 `Navigator.push`**
+- [x] **Step 1: 寫失敗測試——`onNavigateToSettings` callback 取代 `Navigator.push`**
 
 改寫 `app/test/navigation_test.dart` 全檔為：
 
@@ -782,12 +782,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/navigation_test.dart`
 Expected: FAIL（`LibraryScreen` 尚無 `onNavigateToSettings` 具名參數，編譯錯誤）
 
-- [ ] **Step 3: `LibraryScreen` 新增三個建構參數並修改設定按鈕**
+- [x] **Step 3: `LibraryScreen` 新增三個建構參數並修改設定按鈕**
 
 編輯 `app/lib/screens/library_screen.dart`：
 
@@ -866,12 +866,12 @@ Expected: FAIL（`LibraryScreen` 尚無 `onNavigateToSettings` 具名參數，�
 
 檔案頂部移除 `import 'settings_screen.dart';`（不再直接參照 `SettingsScreen`）。
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `flutter test test/navigation_test.dart`
 Expected: PASS
 
-- [ ] **Step 5: 刪除已無法成立的 2 則既有測試（改由 Task 5 的 `adaptive_shell_scaffold_test.dart` 承接）**
+- [x] **Step 5: 刪除已無法成立的 2 則既有測試（改由 Task 5 的 `adaptive_shell_scaffold_test.dart` 承接）**
 
 編輯 `app/test/screens/library_screen_test.dart`：刪除以下兩則 `testWidgets`（原第 3137-3163 行、3169-3199 行，皆斷言「點擊 `library_settings_button` 後 `find.byType(SettingsScreen)` 收到轉送參數」——這個轉送責任已隨 `Navigator.push` 移除轉移給 `AdaptiveShellScaffold`，等價覆蓋在 Task 5 補上）：
 
@@ -880,17 +880,17 @@ Expected: PASS
 
 刪除後確認檔案仍可編譯（`SettingsScreen` 型別若因此在該測試檔完全無其他引用，一併移除 `import 'package:elinkbook/screens/settings_screen.dart';`——動手前先確認檔案內是否還有其他地方引用 `SettingsScreen`，若有則保留 import）。
 
-- [ ] **Step 6: 執行 `library_screen_test.dart` 確認無新增失敗（可能仍有 Task 4 才會處理的既有失敗，先確認本步驟改動沒有引入新的失敗）**
+- [x] **Step 6: 執行 `library_screen_test.dart` 確認無新增失敗（可能仍有 Task 4 才會處理的既有失敗，先確認本步驟改動沒有引入新的失敗）**
 
 Run: `flutter test test/screens/library_screen_test.dart`
 Expected: 除了 Task 4 範圍內尚未處理的既有測試（`library_import_button` 等）外，其餘測試 PASS；本 Step 只確認沒有新增與本 Step 改動直接相關的失敗。
 
-- [ ] **Step 7: `flutter analyze` 確認乾淨**
+- [x] **Step 7: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add app/lib/screens/library_screen.dart app/test/navigation_test.dart app/test/screens/library_screen_test.dart
