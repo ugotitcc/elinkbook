@@ -1181,7 +1181,7 @@ git commit -m "feat(epic-36): LibraryScreen AppBar 收斂為排序/檢視、來�
 - Consumes: Task 2 的 `SourcesHomeScreen`；Task 3/4 的 `LibraryScreen`（`refreshSignal`/`onNavigateToSource`/`onNavigateToSettings`）；既有 `SettingsScreen`（暫不更名，見 Global Constraints）。
 - Produces: `AdaptiveShellScaffold` widget，建構參數與 `ElinkBookApp` 現有直接餵給 `LibraryScreen` 的參數集合完全相同（`repository`／`importService`／`prefsManager`／`readerFeatureRepositories`／`syncDependencies`／`cloudAccountDependencies`／`remoteLibraryDependencies`／`computeFingerprint`／`isMobileDataConnection`／`themeDependencies`）。
 
-- [ ] **Step 1: 寫失敗測試——三個目的地圖示切換後 `IndexedStack.index` 正確、狀態不遺失**
+- [x] **Step 1: 寫失敗測試——三個目的地圖示切換後 `IndexedStack.index` 正確、狀態不遺失**
 
 建立 `app/test/screens/adaptive_shell_scaffold_test.dart`：
 
@@ -1398,12 +1398,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/screens/adaptive_shell_scaffold_test.dart`
 Expected: FAIL（`adaptive_shell_scaffold.dart` 不存在）
 
-- [ ] **Step 3: 實作 `AdaptiveShellScaffold`**
+- [x] **Step 3: 實作 `AdaptiveShellScaffold`**
 
 建立 `app/lib/screens/adaptive_shell_scaffold.dart`：
 
@@ -1550,7 +1550,7 @@ class _AdaptiveShellScaffoldState extends State<AdaptiveShellScaffold> {
 
 **注意：不得為上面三個子 widget 加上 `Key`（例如 `UniqueKey()`／依 `_currentIndex` 產生的動態 `Key`）**——那才是真正會打斷狀態保留的寫法（Flutter 遇到不同 `Key` 會判定為不同 widget，捨棄舊 `Element`／`State` 重新建構）。保持目前寫法（無 `key:` 參數，僅靠 `runtimeType` 與清單位置識別）即可。
 
-- [ ] **Step 4: `main.dart` 改用 `AdaptiveShellScaffold`**
+- [x] **Step 4: `main.dart` 改用 `AdaptiveShellScaffold`**
 
 編輯 `app/lib/main.dart`，`_ElinkBookAppState.build()` 的 `home:` 整段（原 `LibraryScreen(...)`）改為：
 
@@ -1600,7 +1600,7 @@ class _AdaptiveShellScaffoldState extends State<AdaptiveShellScaffold> {
 
 並在檔案頂部 import 區新增 `import 'screens/adaptive_shell_scaffold.dart';`（`import 'screens/library_screen.dart';` 是否仍需要保留，視 `ElinkBookApp` 其餘程式碼是否還直接引用 `LibraryScreen` 型別而定——目前只有 `home:` 這處引用，若移除後 `flutter analyze` 報告未使用，一併移除）。
 
-- [ ] **Step 5: 執行測試確認通過**
+- [x] **Step 5: 執行測試確認通過**
 
 Run: `flutter test test/screens/adaptive_shell_scaffold_test.dart`
 
@@ -1608,17 +1608,17 @@ Run: `flutter test test/screens/adaptive_shell_scaffold_test.dart`
 
 Expected: PASS
 
-- [ ] **Step 6: 執行完整 `library_screen_test.dart` 與 `navigation_test.dart` 確認無回歸**
+- [x] **Step 6: 執行完整 `library_screen_test.dart` 與 `navigation_test.dart` 確認無回歸**
 
 Run: `flutter test test/screens/library_screen_test.dart test/navigation_test.dart`
 Expected: PASS
 
-- [ ] **Step 7: `flutter analyze` 確認乾淨**
+- [x] **Step 7: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add app/lib/screens/adaptive_shell_scaffold.dart app/test/screens/adaptive_shell_scaffold_test.dart app/lib/main.dart
