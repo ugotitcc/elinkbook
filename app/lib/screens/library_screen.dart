@@ -1,17 +1,13 @@
 import 'dart:io';
 
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
-import '../cloud_import/cloud_storage_client.dart';
 import '../library/book_content_fingerprint.dart';
 import '../library/book_import_service.dart';
 import '../reader/reader_prefs_manager.dart';
 import '../remote/opds_types.dart';
 import '../remote/remote_book_downloader.dart';
 import '../remote/remote_server_profile.dart';
-import '../remote/remote_catalog_dependencies.dart';
 import '../library/library_preferences.dart';
 import '../library/library_repository.dart';
 import 'library_screen_dependencies.dart';
@@ -24,13 +20,9 @@ import '../library/models/library_enums.dart';
 import '../library/widgets/book_cover.dart';
 import '../theme/elink_tokens.dart';
 
-import 'cloud_browser_screen.dart';
 import 'library_group_management_dialog.dart';
 import 'library_move_to_group_dialog.dart';
 import 'reader_screen.dart';
-import 'remote_server_list_screen.dart';
-
-const _folderPickerChannel = MethodChannel('elinkbook/folder_picker');
 
 /// 圖書庫主畫面：讀取 [LibraryRepository] 的真實資料，取代
 /// epic-0-skeleton 遺留的固定範例書籍清單佔位版本（見
@@ -94,7 +86,6 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
   LibraryViewMode _viewMode = LibraryViewMode.grid;
   Set<String>? _selectedBookIds;
-  bool _isImporting = false;
   // 〔比照 epic-30 Issue 3 review-issue-3.md 既定的重入防護模式〕避免
   // 使用者在重新下載進行中又快速連點同一本「待下載」書籍，重複觸發兩次
   // 下載/確認流程。
@@ -173,154 +164,6 @@ class _LibraryScreenState extends State<LibraryScreen> {
     _openBook(books.first);
   }
 
-
-  Future<void> _pickAndImportFiles() async {
-    try {
-      final picked = await FilePicker.pickFiles(
-        allowMultiple: true,
-        type: FileType.custom,
-        allowedExtensions: ['epub', 'pdf', 'txt', 'cbz', 'azw3', 'md'],
-      );
-      if (picked == null || picked.files.isEmpty) return;
-      // uris／displayNames 必須用同一次過濾（f.identifier != null）建立，
-      // 保持逐一對應——分開各自 map 再各自過濾會在有檔案 identifier 為 null
-      // 時位移量不同，導致 displayNames[i] 對應到錯誤的 uris[i]。
-      final pickedWithUri =
-          picked.files.where((f) => f.identifier != null).toList();
-      final uris = pickedWithUri.map((f) => f.identifier!).toList();
-      if (uris.isEmpty) return;
-      final displayNames = pickedWithUri.map((f) => f.name).toList();
-      setState(() => _isImporting = true);
-      final result =
-          await widget.importService.importFiles(uris, displayNames: displayNames);
-      await _bookListController.loadBooks();
-      _showImportResultSnackBar(result);
-    } catch (_) {
-      // 匯入失敗時靜默吞掉，避免異常傳播破壞 widget 樹或留下不一致狀態
-    } finally {
-      if (mounted) setState(() => _isImporting = false);
-    }
-  }
-
-  Future<void> _pickAndImportFolder() async {
-    try {
-      final folderUri =
-          await _folderPickerChannel.invokeMethod<String>('pickFolder');
-      if (folderUri == null) return;
-      // pickFolder 對應真實系統資料夾選擇器，使用者操作時間可能很長；
-      // 確認畫面在這段等待期間沒有被 pop/dispose，才能安全使用 context。
-      if (!mounted) return;
-      final autoGroup = await _confirmAutoGroupByFolderName();
-      if (autoGroup == null) return;
-      setState(() => _isImporting = true);
-      final result = await widget.importService.importFolder(
-        folderUri,
-        autoGroupByFolderName: autoGroup,
-      );
-      await _bookListController.loadGroups();
-      await _bookListController.loadBooks();
-      _showImportResultSnackBar(result);
-    } catch (_) {
-      // 匯入失敗時靜默吞掉，避免異常傳播破壞 widget 樹或留下不一致狀態
-    } finally {
-      if (mounted) setState(() => _isImporting = false);
-    }
-  }
-
-  void _openGoogleDriveBrowser(CloudStorageClient client) {
-    Navigator.of(context)
-        .push(MaterialPageRoute(
-          builder: (context) => CloudBrowserScreen(
-            client: client,
-            libraryRepository: widget.repository,
-            importService: widget.importService,
-            source: BookSource.googleDrive,
-            computeFingerprint: widget.computeFingerprint!,
-            isMobileDataConnection: widget.isMobileDataConnection,
-          ),
-        ))
-        .then((_) {
-      // 【審查 review-plan-issue-3.md Minor #2 採納】比照
-      // `_openGroupFilteredView` 既有慣例，一併重新載入分類——
-      // `importFiles(folderName: ...)` 內部會 `upsertGroup()`，回到書架
-      // 時分類清單與書籍清單應保持同步一致。
-      if (mounted) {
-        _bookListController.loadGroups();
-        _bookListController.loadBooks();
-      }
-    });
-  }
-
-  void _openOneDriveBrowser(CloudStorageClient client) {
-    Navigator.of(context)
-        .push(MaterialPageRoute(
-          builder: (context) => CloudBrowserScreen(
-            client: client,
-            libraryRepository: widget.repository,
-            importService: widget.importService,
-            source: BookSource.oneDrive,
-            computeFingerprint: widget.computeFingerprint!,
-            isMobileDataConnection: widget.isMobileDataConnection,
-            title: 'OneDrive',
-          ),
-        ))
-        .then((_) {
-      if (mounted) {
-        _bookListController.loadGroups();
-        _bookListController.loadBooks();
-      }
-    });
-  }
-
-  /// 匯入完成後顯示單一合併提示：成功匯入本數與（若有）因來源 URI 與既有
-  /// 書籍重複而被跳過的本數（見 book_import_service_impl.dart 的重複偵測
-  /// 說明），避免使用者連續看到兩則獨立 SnackBar。兩者皆為 0（例如選檔後
-  /// 全數格式不支援）時不顯示任何提示，維持既有行為。
-  void _showImportResultSnackBar(ImportResult result) {
-    final importedCount = result.importedBooks.length;
-    final skippedCount = result.skippedDuplicateCount;
-    if (importedCount <= 0 && skippedCount <= 0) return;
-    if (!mounted) return;
-    final message = importedCount > 0
-        ? (skippedCount > 0
-            ? '已匯入 $importedCount 本，$skippedCount 本已存在，已跳過'
-            : '已匯入 $importedCount 本書')
-        : '$skippedCount 本已存在，已跳過';
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
-  }
-
-  Future<bool?> _confirmAutoGroupByFolderName() {
-    var autoGroup = true;
-    return showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text('匯入資料夾'),
-          content: CheckboxListTile(
-            key: const Key('library_import_folder_auto_group_checkbox'),
-            value: autoGroup,
-            onChanged: (value) =>
-                setDialogState(() => autoGroup = value ?? true),
-            title: const Text('依資料夾名稱自動建立分類'),
-            controlAffinity: ListTileControlAffinity.leading,
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('取消'),
-            ),
-            TextButton(
-              key: const Key('library_import_folder_confirm'),
-              onPressed: () => Navigator.of(dialogContext).pop(autoGroup),
-              child: const Text('匯入'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   void _toggleViewMode() {
     final newMode = _viewMode == LibraryViewMode.grid
@@ -718,48 +561,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
             : _buildNormalAppBar(books),
         body: books == null
             ? const Center(child: CircularProgressIndicator())
-            : Stack(
-                children: [
-                  Column(
-                    children: [
-                      Expanded(
-                        child: books.isEmpty
-                            ? _buildEmptyState()
-                            : _buildBookList(books),
-                      ),
-                    ],
-                  ),
-                  if (_isImporting) _buildImportingOverlay(),
-                ],
-              ),
-      ),
-    );
-  }
-
-  Widget _buildImportingOverlay() {
-    return Positioned.fill(
-      child: ColoredBox(
-        key: const Key('library_importing_overlay'),
-        // 四套主題與 E-Ink 主題皆未覆寫 ColorScheme.scrim，Flutter 預設值
-        // 即為不透明黑，這裡解析後的 8-bit 顯示色值與原本字面值
-        // Colors.black38 相同（視覺上不可分辨；scrim 目前為浮點內部表示、
-        // Colors.black38 為 8-bit 整數常數，兩者內部表示法不同，只是量化
-        // 後的顯示值剛好一致）。
-        color: Theme.of(context).colorScheme.scrim.withValues(alpha: 0.38),
-        child: const Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 12),
-              // 文字色維持寫死白色：scrim 在四套主題下恆為不透明黑，需要
-              // 一個「所有主題下都固定亮」的前景色，M3 onInverseSurface
-              // 會隨主題明暗翻轉、深色主題下反而是暗色，不適用（見本計劃
-              // 「範圍決定」）。
-              Text('匯入中...', style: TextStyle(color: Colors.white)),
-            ],
-          ),
-        ),
+            : (books.isEmpty ? _buildEmptyState() : _buildBookList(books)),
       ),
     );
   }
@@ -768,62 +570,24 @@ class _LibraryScreenState extends State<LibraryScreen> {
     return AppBar(
       title: Text(widget.groupFilter ?? '書架'),
       actions: [
-        Container(
-          margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-          decoration: BoxDecoration(
-            // E-Ink 開啟時全域主題一律為 _buildEinkTheme()（brightness 恆為
-            // Brightness.light），這裡的 onSurface 在該主題下即為純黑，跟
-            // 原本字面值 Colors.black 解析結果相同。
-            color: widget.themeDependencies.isEinkMode
-                ? Theme.of(context).colorScheme.onSurface
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: widget.themeDependencies.isEinkMode
-                  ? Colors.transparent
-                  : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-              width: 1.5,
-            ),
-          ),
-          child: IconButton(
-            key: const Key('library_eink_toggle'),
-            icon: Icon(
-              widget.themeDependencies.isEinkMode ? Icons.contrast : Icons.contrast_outlined,
-              // 同理，E-Ink 主題下 surface 即為純白，跟原本字面值
-              // Colors.white 解析結果相同。
-              color: widget.themeDependencies.isEinkMode
-                  ? Theme.of(context).colorScheme.surface
-                  : Theme.of(context).colorScheme.onSurface,
-              size: 20,
-            ),
-            tooltip: widget.themeDependencies.isEinkMode
-                ? 'E-Ink 模式：已開啟（點擊切換）'
-                : 'E-Ink 模式：已關閉（點擊切換）',
-            onPressed: () => widget.themeDependencies.onEinkModeChanged?.call(!widget.themeDependencies.isEinkMode),
-          ),
-        ),
-        const VerticalDivider(width: 1, indent: 12, endIndent: 12),
-        PopupMenuButton<LibrarySortBy>(
-          key: const Key('library_sort_button'),
+        PopupMenuButton<void>(
+          key: const Key('library_sort_view_button'),
           icon: const Icon(Icons.sort),
-          tooltip: '排序：${_sortLabel(_bookListController.sortBy)}',
+          tooltip: '排序與檢視',
           enabled: books != null,
-          onSelected: _bookListController.changeSortBy,
           itemBuilder: (context) {
             final currentSort = _bookListController.sortBy;
             final primaryColor = Theme.of(context).colorScheme.primary;
-
-            return LibrarySortBy.values.map(
-              (sortBy) {
-                final isSelected = currentSort == sortBy;
-                return PopupMenuItem<LibrarySortBy>(
+            return [
+              for (final sortBy in LibrarySortBy.values)
+                PopupMenuItem<void>(
                   key: Key('library_sort_option_${sortBy.name}'),
-                  value: sortBy,
+                  onTap: () => _bookListController.changeSortBy(sortBy),
                   child: Row(
                     children: [
                       SizedBox(
                         width: 24,
-                        child: isSelected
+                        child: currentSort == sortBy
                             ? Icon(Icons.check, size: 20, color: primaryColor)
                             : null,
                       ),
@@ -831,106 +595,38 @@ class _LibraryScreenState extends State<LibraryScreen> {
                       Text(
                         _sortLabel(sortBy),
                         style: TextStyle(
-                          fontWeight:
-                              isSelected ? FontWeight.bold : FontWeight.normal,
-                          color: isSelected ? primaryColor : null,
+                          fontWeight: currentSort == sortBy
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                          color: currentSort == sortBy ? primaryColor : null,
                         ),
                       ),
                     ],
                   ),
-                );
-              },
-            ).toList();
+                ),
+              const PopupMenuDivider(),
+              PopupMenuItem<void>(
+                key: const Key('library_sort_view_toggle_option'),
+                onTap: _toggleViewMode,
+                child: Text(
+                  _viewMode == LibraryViewMode.grid ? '切換為列表' : '切換為書架',
+                ),
+              ),
+              if (widget.groupFilter == null)
+                PopupMenuItem<void>(
+                  key: const Key('library_manage_groups_option'),
+                  onTap: _openManageGroupsDialog,
+                  child: const Text('管理分類...'),
+                ),
+            ];
           },
         ),
         IconButton(
-          key: const Key('library_view_mode_toggle'),
-          icon: Icon(
-            _viewMode == LibraryViewMode.grid
-                ? Icons.view_list
-                : Icons.grid_view,
-          ),
-          tooltip: _viewMode == LibraryViewMode.grid ? '切換為列表' : '切換為書架',
-          onPressed: books == null ? null : _toggleViewMode,
+          key: const Key('library_source_button'),
+          icon: const Icon(Icons.cloud_download),
+          tooltip: '來源',
+          onPressed: widget.onNavigateToSource,
         ),
-        PopupMenuButton<void>(
-          key: const Key('library_import_button'),
-          icon: const Icon(Icons.add),
-          tooltip: '匯入書籍',
-          enabled: !_isImporting,
-          itemBuilder: (context) => [
-            PopupMenuItem<void>(
-              key: const Key('library_import_files_option'),
-              onTap: _pickAndImportFiles,
-              child: const Text('選擇檔案（可多選）'),
-            ),
-            PopupMenuItem<void>(
-              key: const Key('library_import_folder_option'),
-              onTap: _pickAndImportFolder,
-              child: const Text('選擇資料夾'),
-            ),
-            PopupMenuItem<void>(
-              key: const Key('library_import_google_drive_option'),
-              enabled: widget.cloudAccountDependencies.googleDriveStorageClient != null &&
-                  widget.computeFingerprint != null,
-              onTap: (widget.cloudAccountDependencies.googleDriveStorageClient == null ||
-                      widget.computeFingerprint == null)
-                  ? null
-                  : () => _openGoogleDriveBrowser(
-                      widget.cloudAccountDependencies.googleDriveStorageClient!),
-              child: const Text('從 Google Drive 匯入'),
-            ),
-            PopupMenuItem<void>(
-              key: const Key('library_import_onedrive_option'),
-              enabled: widget.cloudAccountDependencies.oneDriveStorageClient != null &&
-                  widget.computeFingerprint != null,
-              onTap: (widget.cloudAccountDependencies.oneDriveStorageClient == null ||
-                      widget.computeFingerprint == null)
-                  ? null
-                  : () => _openOneDriveBrowser(
-                      widget.cloudAccountDependencies.oneDriveStorageClient!),
-              child: const Text('從 OneDrive 匯入'),
-            ),
-          ],
-        ),
-        if (widget.groupFilter == null)
-          IconButton(
-            key: const Key('library_manage_groups_button'),
-            icon: const Icon(Icons.category),
-            tooltip: '管理分類',
-            onPressed: _openManageGroupsDialog,
-          ),
-        if (widget.remoteLibraryDependencies.remoteServerRepository != null &&
-            widget.remoteLibraryDependencies.createOpdsClient != null &&
-            widget.computeFingerprint != null &&
-            widget.remoteLibraryDependencies.thumbnailCache != null)
-          IconButton(
-            key: const Key('library_remote_library_button'),
-            icon: const Icon(Icons.cloud_outlined),
-            tooltip: '遠端書庫',
-            onPressed: () {
-              Navigator.of(context)
-                  .push(
-                    MaterialPageRoute(
-                      builder: (context) => RemoteServerListScreen(
-                        repository: widget.remoteLibraryDependencies.remoteServerRepository!,
-                        libraryRepository: widget.repository,
-                        dependencies: RemoteCatalogDependencies(
-                          computeFingerprint: widget.computeFingerprint!,
-                          thumbnailCache: widget.remoteLibraryDependencies.thumbnailCache!,
-                          createOpdsClient: widget.remoteLibraryDependencies.createOpdsClient!,
-                        ),
-                        importService: widget.importService,
-                        isEinkMode: widget.themeDependencies.isEinkMode,
-                      ),
-                    ),
-                  )
-                  .then((_) {
-                // 從遠端書庫返回時重新載入書架，確保新下載的書籍出現。
-                if (mounted) _bookListController.loadBooks();
-              });
-            },
-          ),
         IconButton(
           key: const Key('library_settings_button'),
           icon: const Icon(Icons.settings),
@@ -996,7 +692,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
           const SizedBox(height: 12),
           ElevatedButton(
             key: const Key('library_empty_import_button'),
-            onPressed: _isImporting ? null : _pickAndImportFiles,
+            onPressed: widget.onNavigateToSource,
             child: const Text('匯入書籍'),
           ),
         ],
