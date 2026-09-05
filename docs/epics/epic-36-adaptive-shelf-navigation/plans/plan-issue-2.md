@@ -47,7 +47,7 @@
 - Consumes: 無新依賴，沿用既有 `_bookListController`／`_inSelectionMode`／`_exitSelectionMode()`。
 - Produces：`_LibraryScreenState` 新增可變欄位 `String? _activeGroupFilter`；新增 `Key('library_back_from_group_button')`（AppBar `leading` 的返回按鈕）。`LibraryScreen.groupFilter` 建構參數本 Task **暫時保留**（見「計劃範圍澄清」第 4 點，Task 2 才移除）。
 
-- [ ] **Step 1: 寫失敗測試——5 則新回歸測試**
+- [x] **Step 1: 寫失敗測試——5 則新回歸測試**
 
 在 `app/test/screens/library_screen_test.dart` 第 2481 行（`長按進入選取模式後，分類拼貼格的 onTap 停用，點擊不觸發導覽也不影響選取狀態` 測試的 `});` 結束之後）插入：
 
@@ -223,12 +223,12 @@
   });
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/screens/library_screen_test.dart`
 Expected: 上述 5 則新測試 FAIL（`library_back_from_group_button` 不存在、`PopScope` 尚未合併邏輯、`_openGroupFilteredView` 仍是 `Navigator.push`）；其餘既有測試維持原本的 PASS（本 Step 尚未修改任何 production code）。
 
-- [ ] **Step 3: 實作 `_activeGroupFilter` 原地下鑽**
+- [x] **Step 3: 實作 `_activeGroupFilter` 原地下鑽**
 
 編輯 `app/lib/screens/library_screen.dart`：
 
@@ -425,7 +425,7 @@ Expected: 上述 5 則新測試 FAIL（`library_back_from_group_button` 不存�
 
 （`itemBuilder`／`GridView`／`ListView` 其餘內容不變。）
 
-- [ ] **Step 4: 執行測試確認 5 則新測試通過（`review-plan-issue-2.md` M-3：用 `--name` 過濾取得乾淨訊號）**
+- [x] **Step 4: 執行測試確認 5 則新測試通過（`review-plan-issue-2.md` M-3：用 `--name` 過濾取得乾淨訊號）**
 
 Run:
 ```bash
@@ -439,7 +439,7 @@ flutter test test/screens/library_screen_test.dart
 ```
 Expected: 除了上述 5 則新測試外，會有一批**預期中**的新增失敗——凡是依賴「`_openGroupFilteredView` 會 `Navigator.push` 出一個獨立 `LibraryScreen` 實例」這個舊行為的既有測試（`_filteredLibraryScreenFinder` 的 10 個呼叫點所在的測試、`navigatorState.maybePop()` 相關斷言）都會失敗。**驗證方式**：確認失敗清單裡的每一則都能對應到「計劃範圍澄清」第 1／6 點列出的既有測試名稱／行號，不能有本 Step 改動範圍外的意外失敗。這批失敗會在 Step 5-13 內於**同一個 Task**收斂為 0（`review-plan-issue-2.md` I-1：不得帶著已知失敗跨到下一個 Task 才修，也不得作為本 Task 的 Commit 點）。
 
-- [ ] **Step 5：讀懂要刪除/遷移的既有測試分佈（唯讀，不改檔案）**
+- [x] **Step 5：讀懂要刪除/遷移的既有測試分佈（唯讀，不改檔案）**
 
 對照下方清單逐一確認（本計劃規劃階段已逐一讀取每則測試完整內容，以下為分類結果，執行時不需要重新 grep 尋找）：
 
@@ -471,7 +471,7 @@ Expected: 除了上述 5 則新測試外，會有一批**預期中**的新增失
 
 ### 測試遷移——(c) 類 6 處改寫
 
-- [ ] **Step 6**：改寫 `library_screen_test.dart:556-610`（測試名稱：`'點擊分類拼貼格後只顯示該分類書籍；返回書架後僅顯示未分類書籍與分類拼貼格（已分類書籍不重複列出）'`）。第 584 行起、原本用 `navigatorState.maybePop()` 返回的整段改為：
+- [x] **Step 6**：改寫 `library_screen_test.dart:556-610`（測試名稱：`'點擊分類拼貼格後只顯示該分類書籍；返回書架後僅顯示未分類書籍與分類拼貼格（已分類書籍不重複列出）'`）。第 584 行起、原本用 `navigatorState.maybePop()` 返回的整段改為：
 
 ```dart
     await tester.tap(find.byKey(const Key('group_tile_奇幻')));
@@ -491,7 +491,7 @@ Expected: 除了上述 5 則新測試外，會有一批**預期中**的新增失
 
 （測試名稱可視情況同步改為「...點擊返回按鈕後...」以符合新觸發方式，但非必要——`findsOneWidget`/`findsNothing` 這些斷言意圖本身不變。）
 
-- [ ] **Step 7**：改寫 `library_screen_test.dart:755-804`（測試名稱：`'管理分類對話框：刪除確認對話框按下取消，分類與所屬書籍皆不受影響'`）。第 792-804 行改為：
+- [x] **Step 7**：改寫 `library_screen_test.dart:755-804`（測試名稱：`'管理分類對話框：刪除確認對話框按下取消，分類與所屬書籍皆不受影響'`）。第 792-804 行改為：
 
 ```dart
     expect(find.byKey(const Key('group_tile_奇幻')), findsOneWidget);
@@ -502,7 +502,7 @@ Expected: 除了上述 5 則新測試外，會有一批**預期中**的新增失
   });
 ```
 
-- [ ] **Step 8**：改寫 `library_screen_test.dart:998-1057`（測試名稱：`'選取多本書後點擊「移動到分類」，選擇目的分類後所有已勾選書籍的分類皆更新'`）。第 1039-1056 行改為：
+- [x] **Step 8**：改寫 `library_screen_test.dart:998-1057`（測試名稱：`'選取多本書後點擊「移動到分類」，選擇目的分類後所有已勾選書籍的分類皆更新'`）。第 1039-1056 行改為：
 
 ```dart
     await tester.tap(find.byKey(const Key('group_tile_奇幻')));
@@ -513,7 +513,7 @@ Expected: 除了上述 5 則新測試外，會有一批**預期中**的新增失
   });
 ```
 
-- [ ] **Step 9**：改寫 `library_screen_test.dart:1284-1351`（測試名稱：`'書架（grid）與列表兩種檢視皆能觸發長按進入選取模式並完成批次移動'`）。第 1333-1350 行改為：
+- [x] **Step 9**：改寫 `library_screen_test.dart:1284-1351`（測試名稱：`'書架（grid）與列表兩種檢視皆能觸發長按進入選取模式並完成批次移動'`）。第 1333-1350 行改為：
 
 ```dart
     await tester.tap(find.byKey(const Key('group_tile_奇幻')));
@@ -524,7 +524,7 @@ Expected: 除了上述 5 則新測試外，會有一批**預期中**的新增失
   });
 ```
 
-- [ ] **Step 10**：改寫 `library_screen_test.dart:1353-1421`（測試名稱：`'點擊分類拼貼格會推入新的 LibraryScreen 並以該分類篩選；篩選畫面不顯示拼貼格區塊與管理分類按鈕'`，同時把名稱改為符合新行為）。整則改為：
+- [x] **Step 10**：改寫 `library_screen_test.dart:1353-1421`（測試名稱：`'點擊分類拼貼格會推入新的 LibraryScreen 並以該分類篩選；篩選畫面不顯示拼貼格區塊與管理分類按鈕'`，同時把名稱改為符合新行為）。整則改為：
 
 ```dart
   testWidgets('點擊分類拼貼格為原地狀態切換；下鑽後不顯示拼貼格區塊與管理分類選單項目', (
@@ -570,7 +570,7 @@ Expected: 除了上述 5 則新測試外，會有一批**預期中**的新增失
   });
 ```
 
-- [ ] **Step 11**：改寫 `library_screen_test.dart:1423-1469`（測試名稱：`'從分類篩選畫面把書移到其他分類後返回書架，頂層拼貼格與書籍清單即時反映最新狀態'`，同時把名稱改為符合新觸發方式）。整則改為：
+- [x] **Step 11**：改寫 `library_screen_test.dart:1423-1469`（測試名稱：`'從分類篩選畫面把書移到其他分類後返回書架，頂層拼貼格與書籍清單即時反映最新狀態'`，同時把名稱改為符合新觸發方式）。整則改為：
 
 ```dart
   testWidgets('在分類篩選畫面把書移到其他分類後點擊返回按鈕回到書架，頂層拼貼格即時反映最新狀態', (
@@ -617,14 +617,14 @@ Expected: 除了上述 5 則新測試外，會有一批**預期中**的新增失
 
 ### 整段刪除 5 則測試＋輔助函式定義
 
-- [ ] **Step 12**：刪除 `library_screen_test.dart` 內以下 5 個完整 `testWidgets(...)` 區塊（依「計劃範圍澄清」第 1、6 點與 Step 5 (a)(b) 分類，逐字比對測試名稱字串後刪除，不得誤刪相鄰測試）：
+- [x] **Step 12**：刪除 `library_screen_test.dart` 內以下 5 個完整 `testWidgets(...)` 區塊（依「計劃範圍澄清」第 1、6 點與 Step 5 (a)(b) 分類，逐字比對測試名稱字串後刪除，不得誤刪相鄰測試）：
   1. `'LibraryScreen 透過分類篩選路徑（_openGroupFilteredView）開書後，ReaderScreen 收到的 syncCheckpointTrigger 與外層一致（epic-8-sync Issue 10）'`
   2. `'LibraryScreen 透過分類篩選路徑（_openGroupFilteredView）開書後，ReaderScreen 收到的 ttsProvider 與外層一致（Issue 9 缺口修正）'`
   3. `'透過分類篩選路徑開書，ReaderScreen 收到的 ttsAudioHandler／ttsAudioFocusSource 應與外層一致（epic-34-tts-readalong Issue 7）；...'`
   4. `'LibraryScreen 透過分類篩選路徑（_openGroupFilteredView）進入後，googleDriveStorageClient／computeFingerprint／isMobileDataConnection 皆與外層一致（review-issue-3.md Important #1、review-issue-5.md Important #1、Epic 29 Issue 6 一併補上 採納）'`
   5. `'透過分類篩選路徑（groupFilter 非 null）進入的 LibraryScreen 不會自動開書，即使 openLastBookOnLaunch=true（epic-18-reader-device-qa Issue 29）'`
 
-- [ ] **Step 13**：刪除 `_filteredLibraryScreenFinder` 輔助函式定義（檔案末端，緊接在 `_testBook()` helper 之後的完整函式＋其 dartdoc 註解）：
+- [x] **Step 13**：刪除 `_filteredLibraryScreenFinder` 輔助函式定義（檔案末端，緊接在 `_testBook()` helper 之後的完整函式＋其 dartdoc 註解）：
 
 ```dart
 /// 找出目前 widget 樹中 `groupFilter` 等於 [groupName] 的那個 LibraryScreen
@@ -640,7 +640,7 @@ Finder _filteredLibraryScreenFinder(String groupName) => find.byWidgetPredicate(
 
 整段刪除（Step B 的 6 處改寫已移除所有呼叫點，Step C Step 8 的 5 處刪除也移除了其餘呼叫點，此時應已無任何呼叫點引用這個函式）。
 
-- [ ] **Step 14：執行全套 `library_screen_test.dart` 確認 100% PASS（`review-plan-issue-2.md` I-1：本 Task 收尾 Commit 前必須全綠）**
+- [x] **Step 14：執行全套 `library_screen_test.dart` 確認 100% PASS（`review-plan-issue-2.md` I-1：本 Task 收尾 Commit 前必須全綠）**
 
 Run: `flutter test test/screens/library_screen_test.dart`
 
@@ -648,12 +648,12 @@ Run: `flutter test test/screens/library_screen_test.dart`
 
 Expected: PASS（全部案例，0 失敗）
 
-- [ ] **Step 15：`flutter analyze` 確認乾淨**
+- [x] **Step 15：`flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`（`widget.groupFilter` 欄位本身尚未移除、仍在使用中，Task 2 才會移除）
 
-- [ ] **Step 16：Commit**
+- [x] **Step 16：Commit**
 
 ```bash
 git add app/lib/screens/library_screen.dart app/test/screens/library_screen_test.dart
@@ -672,7 +672,7 @@ git commit -m "feat(epic-36): LibraryScreen 書架分類改為原地下鑽，Pop
 **Interfaces:**
 - Produces: `LibraryScreen` 移除 `groupFilter` 建構參數／欄位（`Interfaces` 契約異動：任何仍呼叫 `LibraryScreen(groupFilter: ...)` 的呼叫端會編譯失敗——已確認全專案除 Task 1 已遷移完畢的測試檔外無其他呼叫端，見規劃階段查證）。
 
-- [ ] **Step 1**：編輯 `app/lib/screens/library_screen.dart`：
+- [x] **Step 1**：編輯 `app/lib/screens/library_screen.dart`：
 
 刪除 `LibraryScreen` 類別的欄位宣告：
 
@@ -712,15 +712,15 @@ git commit -m "feat(epic-36): LibraryScreen 書架分類改為原地下鑽，Pop
   String? _activeGroupFilter;
 ```
 
-- [ ] **Step 2**：Run `flutter analyze`，確認沒有殘留對已移除的 `groupFilter` 欄位的引用（`_maybeOpenLastBookOnLaunch()`／`_buildBookList()`／`_buildNormalAppBar()` 皆已在 Task 1 改讀 `_activeGroupFilter`，理論上不應該有殘留）。
+- [x] **Step 2**：Run `flutter analyze`，確認沒有殘留對已移除的 `groupFilter` 欄位的引用（`_maybeOpenLastBookOnLaunch()`／`_buildBookList()`／`_buildNormalAppBar()` 皆已在 Task 1 改讀 `_activeGroupFilter`，理論上不應該有殘留）。
 
 Expected: `No issues found!`
 
-- [ ] **Step 3**：Run `flutter test test/screens/library_screen_test.dart`，確認移除 `groupFilter` 沒有牽連任何未預期的呼叫點（規劃階段查證未發現除 Task 1 已處理的測試外還有其他呼叫端，此 Step 純粹是最終確認）。
+- [x] **Step 3**：Run `flutter test test/screens/library_screen_test.dart`，確認移除 `groupFilter` 沒有牽連任何未預期的呼叫點（規劃階段查證未發現除 Task 1 已處理的測試外還有其他呼叫端，此 Step 純粹是最終確認）。
 
 Expected: PASS（全部案例，維持 Task 1 結尾時的 100% 通過狀態）
 
-- [ ] **Step 4**：Commit
+- [x] **Step 4**：Commit
 
 ```bash
 git add app/lib/screens/library_screen.dart
@@ -733,28 +733,28 @@ git commit -m "refactor(epic-36): 移除 LibraryScreen.groupFilter 建構參數�
 
 **Files:** 無新增/修改，純驗證。
 
-- [ ] **Step 1: 執行全套 `flutter test`（不帶檔案路徑）**
+- [x] **Step 1: 執行全套 `flutter test`（不帶檔案路徑）**
 
 Run: `flutter test`
 Expected: 全數通過（比照 `CLAUDE.md`「測試執行範圍」，這是整份計劃收尾的唯一一次全套執行）。若有失敗，比對是否為本計劃改動觸及的檔案；非本計劃觸及範圍的既有不穩定測試（若有）記錄下來，不在本 Issue 修復範圍內。
 
-- [ ] **Step 2: 執行 `flutter analyze`**
+- [x] **Step 2: 執行 `flutter analyze`**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 3: 逐條核對 `issues.md` Issue 2 驗收標準**
+- [x] **Step 3: 逐條核對 `issues.md` Issue 2 驗收標準**
 
-- [ ] 點擊分類拼貼格為原地狀態切換，不推入新路由
-- [ ] 系統返回鍵在多選/下鑽兩種情境下行為皆正確、不會誤關閉畫面或狀態混亂
-- [ ] 「管理分類」功能不變、僅入口位置改變（Issue 1 已完成入口搬遷，本 Issue 只改判斷條件的變數來源）
-- [ ] `flutter analyze` 乾淨、`flutter test` 全數通過
+- [x] 點擊分類拼貼格為原地狀態切換，不推入新路由
+- [x] 系統返回鍵在多選/下鑽兩種情境下行為皆正確、不會誤關閉畫面或狀態混亂
+- [x] 「管理分類」功能不變、僅入口位置改變（Issue 1 已完成入口搬遷，本 Issue 只改判斷條件的變數來源）
+- [x] `flutter analyze` 乾淨、`flutter test` 全數通過
 
-- [ ] **Step 4: 更新 `docs/epics.md` 備註欄位**
+- [x] **Step 4: 更新 `docs/epics.md` 備註欄位**
 
 將 Epic 36 該列備註改為「Issue 2 已完成，待認領 Issue 3/4/5」（Issue 5 依賴僅為 Issue 1，可能已被認領/完成，執行時以 `issues.md` 實際狀態為準調整措辭）。
 
-- [ ] **Step 5: 依 `superpowers:requesting-code-review` 發起本 Issue 的程式碼審查**
+- [x] **Step 5: 依 `superpowers:requesting-code-review` 發起本 Issue 的程式碼審查**
 
 審查者先產出報告至 `docs/epics/epic-36-adaptive-shelf-navigation/reviews/review-issue-2.md`，不得直接修改程式碼（比照專案 SDD 工作流程第 6 步）。審查請求內容須包含以下決策備註（`review-plan-issue-2.md` M-2）：`app/test/screens/library_screen_test.dart:3031-3067`（`issues.md` 原描述應改寫為「點擊分類拼貼格下鑽後確認不會觸發 `_maybeOpenLastBookOnLaunch`」）在 Task 1 Step 12 實際處理方式是**整段刪除**而非改寫——原因是 `_maybeOpenLastBookOnLaunch()` 在 `_initialize()` 中早於任何分類拼貼格渲染完成前就已執行過一次，使用者不可能在它執行的當下就點擊拼貼格觸發下鑽，這個 guard 分支在目前的公開 widget API 下已無法透過真實互動觸發，勉強寫一則依賴 pump 時序競態的測試只會是脆弱的假測試，故選擇誠實刪除，保留 production code 裡的等效 guard 語句與其簡短說明註解（見「計劃範圍澄清」第 6 點、Task 1 Step 3b）。
 

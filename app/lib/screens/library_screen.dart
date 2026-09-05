@@ -52,7 +52,6 @@ class LibraryScreen extends StatefulWidget {
   /// 收斂原本 `currentTheme`／`isEinkMode`／`onThemeChanged`／`onEinkModeChanged`
   /// 四個獨立參數（epic-26-architecture-hardening Issue 7）。
   final LibraryThemeDependencies themeDependencies;
-  final String? groupFilter;
   final Listenable? refreshSignal;
   final VoidCallback? onNavigateToSource;
   final VoidCallback? onNavigateToSettings;
@@ -69,7 +68,6 @@ class LibraryScreen extends StatefulWidget {
     this.computeFingerprint,
     this.isMobileDataConnection,
     this.themeDependencies = const LibraryThemeDependencies(),
-    this.groupFilter,
     this.refreshSignal,
     this.onNavigateToSource,
     this.onNavigateToSettings,
@@ -84,6 +82,11 @@ class _LibraryScreenState extends State<LibraryScreen> {
   late final LibraryBookListController _bookListController;
   late final LibraryBatchActions _batchActions;
 
+  /// 三目的地導覽下 LibraryScreen 只建構一次、恆為頂層模式（epic-36
+  /// Issue 1），原本靠「另一個獨立 LibraryScreen 實例＋groupFilter 建構參數」
+  /// 模擬下鑽的做法在 Issue 2 改為這個可變狀態的原地切換，透過
+  /// _openGroupFilteredView()／_exitGroupFilteredView() 以 setState 變動。
+  String? _activeGroupFilter;
   LibraryViewMode _viewMode = LibraryViewMode.grid;
   Set<String>? _selectedBookIds;
   // 〔比照 epic-30 Issue 3 review-issue-3.md 既定的重入防護模式〕避免
@@ -96,7 +99,6 @@ class _LibraryScreenState extends State<LibraryScreen> {
     super.initState();
     _bookListController = LibraryBookListController(
       repository: widget.repository,
-      groupFilter: widget.groupFilter,
     )..addListener(_onBookListChanged);
     _batchActions = LibraryBatchActions(repository: widget.repository);
     widget.refreshSignal?.addListener(_onExternalRefreshRequested);
@@ -140,15 +142,11 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 
   /// 啟動時開啟最後閱讀的那本書（epic-18-reader-device-qa Issue 29）：只在頂層
-  /// 書架（`widget.groupFilter == null`）啟動當下觸發一次——`initState()`
-  /// 對單一 State 物件只會執行一次，`_openGroupFilteredView()` 推入的分類
-  /// 篩選畫面是另一個獨立的 `LibraryScreen` 實例、`groupFilter` 非
-  /// null，此處的 guard 確保使用者點進分類篩選畫面時不會被誤判為「App
-  /// 剛啟動」而重複觸發。「最後閱讀的書籍」獨立以 `LibrarySortBy.lastRead`
-  /// 查詢，不依賴目前畫面選定的 `_sortBy`（使用者的檢視排序偏好與這裡的
-  /// 語意是兩件事，即使目前排序條件是「書名」也不該影響這裡判斷的對象）。
+  /// 書架啟動當下觸發一次。保留此 guard 是比照 spec.md 明文指示維持語意對稱與
+  /// 未來防禦性——原地下鑽後已無獨立實例，點擊拼貼格晚於此方法的執行時機，
+  /// 不會重複觸發開書。
   Future<void> _maybeOpenLastBookOnLaunch() async {
-    if (widget.groupFilter != null) return;
+    if (_activeGroupFilter != null) return;
     final globalPrefs = await widget.prefsManager.loadGlobalPrefs();
     if (!globalPrefs.openLastBookOnLaunch) return;
     if (!mounted) return;
@@ -480,79 +478,24 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 
   void _openGroupFilteredView(String groupName) {
-    Navigator.of(context)
-        .push(
-          MaterialPageRoute(
-            builder: (_) => LibraryScreen(
-              repository: widget.repository,
-              importService: widget.importService,
-              prefsManager: widget.prefsManager,
-              readerFeatureRepositories: widget.readerFeatureRepositories,
-              // epic-8-sync Issue 10：先前遺漏這三個同步相關欄位，導致從這條
-              // 分類篩選路徑開書時 syncCheckpointTrigger 無法貫穿到
-              // ReaderScreen，「離開畫面」／「閱讀中 5 分鐘計時器」兩種
-              // checkpoint 觸發來源會靜默失效（見 plans/plan-issue-10.md）。
-              // 本次改為整包轉送 syncDependencies bundle，結構上不會再重演
-              // 「轉 A 忘轉 B」的部分欄位漏轉發（見 review-issue-7.md Minor #1）。
-              syncDependencies: widget.syncDependencies,
-              // 【審查修正 review-issue-3.md Important #1】先前遺漏
-              // googleDriveStorageClient／oneDriveStorageClient 兩個欄位，
-              // 導致從分類篩選路徑進入的 LibraryScreen 內「從 Google Drive
-              // 匯入」選單項目永遠停用。本次改為整包轉送
-              // cloudAccountDependencies bundle，結構上不會再重演「轉 A
-              // 忘轉 B」的部分欄位漏轉發（見 review-issue-7.md Minor #1）。
-              cloudAccountDependencies: widget.cloudAccountDependencies,
-              // 【審查修正 review-issue-5.md Important #1】Issue 5 新增的
-              // 「從 Google Drive／OneDrive 匯入」選單門檻改為同時檢查
-              // `widget.computeFingerprint != null`，這裡若不轉發，分類
-              // 篩選路徑內兩個雲端匯入選項會一起被誤停用（同一種錯誤模式
-              // 見上方 googleDriveStorageClient 的審查修正註解）。
-              computeFingerprint: widget.computeFingerprint,
-              // 【Epic 29 Issue 6】isMobileDataConnection 自 epic-30 Issue 4
-              // 加入以來，這個自我遞迴導航點便一直未轉發（當時沒有下游畫面
-              // 需要它）；Issue 6 讓 CloudBrowserScreen 開始依賴這個欄位後，
-              // 若不轉發，分類篩選路徑內的雲端下載流量警示會靜默失效——比照
-              // 上方 computeFingerprint／googleDriveStorageClient 兩次漏轉發
-              // 的既有修正慣例，這次主動補上，避免同一種錯誤模式第三次重演
-              // （見 review-issue-3.md Important #1、review-issue-5.md
-              // Important #1）。
-              isMobileDataConnection: widget.isMobileDataConnection,
-              themeDependencies: widget.themeDependencies,
-              groupFilter: groupName,
-            ),
-          ),
-        )
-        .then((_) {
-      // 【審查修正】推入的畫面是獨立的 LibraryScreen State 實例，在裡面
-      // 移動/刪除書籍只會更新該實例自己的 _books/_groups，不會 touch 這裡
-      // （背景頂層畫面）的狀態；返回時若不重新載入，頂層拼貼格與書籍清單
-      // 會停留在使用者離開當下的舊快照（比照既有 _openBook() 的 .then()
-      // 修正所防範的同類問題）。
-      //
-      // 【審查修正】原本只呼叫 _loadBooks()，理由是「管理分類」入口在
-      // groupFilter != null 的篩選畫面上不顯示，篩選畫面內無法變動分類
-      // 名稱集合——但這個假設不成立：篩選畫面的 AppBar 仍保留「匯入書籍」
-      // 按鈕（未比照「管理分類」用 groupFilter == null 隱藏），而「選擇
-      // 資料夾＋依資料夾名稱自動建立分類」會呼叫
-      // BookImportServiceImpl.importFolder() 內部的 repository.upsertGroup()，
-      // 確實可以在篩選畫面內建立新分類。若不一併呼叫 _loadGroups()，頂層
-      // 的 _groups 快照就不包含新分類，_buildGroupTiles() 的孤兒兜底桶會
-      // 把新分類排到「未分類」之後，違反「未分類固定排最後」的不變量，
-      // 故改為與 _loadBooks() 一起重新載入。
-      if (!mounted) return;
-        _bookListController.loadGroups();
-      _bookListController.loadBooks();
-    });
+    setState(() => _activeGroupFilter = groupName);
+  }
+
+  void _exitGroupFilteredView() {
+    setState(() => _activeGroupFilter = null);
   }
 
   @override
   Widget build(BuildContext context) {
     final books = _bookListController.books;
     return PopScope(
-      canPop: !_inSelectionMode,
+      canPop: !_inSelectionMode && _activeGroupFilter == null,
       onPopInvokedWithResult: (didPop, result) {
-        if (!didPop && _inSelectionMode) {
+        if (didPop) return;
+        if (_inSelectionMode) {
           _exitSelectionMode();
+        } else if (_activeGroupFilter != null) {
+          _exitGroupFilteredView();
         }
       },
       child: Scaffold(
@@ -568,7 +511,15 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
   AppBar _buildNormalAppBar(List<Book>? books) {
     return AppBar(
-      title: Text(widget.groupFilter ?? '書架'),
+      leading: _activeGroupFilter == null
+          ? null
+          : IconButton(
+              key: const Key('library_back_from_group_button'),
+              icon: const Icon(Icons.arrow_back),
+              tooltip: '返回上層',
+              onPressed: _exitGroupFilteredView,
+            ),
+      title: Text(_activeGroupFilter ?? '書架'),
       actions: [
         PopupMenuButton<void>(
           key: const Key('library_sort_view_button'),
@@ -612,7 +563,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   _viewMode == LibraryViewMode.grid ? '切換為列表' : '切換為書架',
                 ),
               ),
-              if (widget.groupFilter == null)
+              if (_activeGroupFilter == null)
                 PopupMenuItem<void>(
                   key: const Key('library_manage_groups_option'),
                   onTap: _openManageGroupsDialog,
@@ -740,18 +691,17 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
   Widget _buildBookList(List<Book> books) {
     final selectedIds = _selectedBookIds;
-    final groupTiles = widget.groupFilter == null
+    final groupTiles = _activeGroupFilter == null
         ? _buildGroupTiles(books)
         : const <_GroupTile>[];
-    // 【診斷修正——真機回報「已分類書籍在頂層重複顯示」】頂層書架
-    // （groupFilter == null）已經用拼貼格代表每個非空分類，若已歸類的書籍
-    // 同時還出現在下方書籍清單中，等於同一本書在畫面上顯示兩次。故頂層只
-    // 保留「未分類」書籍在書籍清單中；已歸類的書籍只透過所屬分類的拼貼格
-    // 顯示，要看到該書本身須點擊拼貼格進入該分類的篩選畫面（`groupFilter`
-    // 非 null 時不受影響，篩選畫面本來就不顯示拼貼格，books 維持原樣）。
-    final visibleBooks = widget.groupFilter == null
+    // 【epic-36 Issue 2】visibleBooks 現在一律對 controller 已載入的全部書籍
+    // 做用戶端過濾（見 plans/plan-issue-2.md「計劃範圍澄清」第 2 點）——
+    // LibraryBookListController 不再對 repository 做以 _activeGroupFilter
+    // 為條件的伺服器端篩選（該欄位只能在 initState 決定、之後不隨使用者
+    // 點擊拼貼格而變動），下鑽分類時改為直接篩出 groupName 相符的書籍。
+    final visibleBooks = _activeGroupFilter == null
         ? books.where((b) => b.groupName == BookGroup.uncategorized).toList()
-        : books;
+        : books.where((b) => b.groupName == _activeGroupFilter).toList();
     final itemCount = groupTiles.length + visibleBooks.length;
     Widget itemBuilder(BuildContext context, int index, {required bool isGrid}) {
       if (index < groupTiles.length) {

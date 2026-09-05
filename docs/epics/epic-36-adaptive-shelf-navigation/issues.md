@@ -43,7 +43,7 @@
 
 **依賴：** Issue 1（「管理分類」選單項目需掛進 Issue 1 建立的 `library_sort_view_button` 選單）
 
-**Status:** ready-for-agent
+**Status:** completed
 
 **來源：** `spec.md` §功能②（對應原始 Issue 2，解決 C-2、I-1；含 `reviews/review-spec.md` C-1 修訂）
 
