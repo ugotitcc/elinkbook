@@ -37,6 +37,10 @@ class FakeBookImportService implements BookImportService {
   /// 最近一次 [importFiles] 的呼叫參數；首次呼叫前為 `null`。
   ImportCallRecord? lastImportCall;
 
+  /// 最近一次 [importFolder] 的呼叫參數；首次呼叫前為 `null`。
+  String? lastImportFolderUri;
+  bool? lastAutoGroupByFolderName;
+
   @override
   Future<ImportResult> importFiles(
     List<String> uris, {
@@ -66,6 +70,8 @@ class FakeBookImportService implements BookImportService {
     String folderUri, {
     bool autoGroupByFolderName = true,
   }) {
+    lastImportFolderUri = folderUri;
+    lastAutoGroupByFolderName = autoGroupByFolderName;
     final completer = pendingCompleter;
     if (completer != null) return completer.future;
     return Future.value(const ImportResult(importedBooks: []));

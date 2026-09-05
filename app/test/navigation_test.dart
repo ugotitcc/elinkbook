@@ -32,31 +32,35 @@ void main() {
     await libraryRepository.close();
   });
 
-  testWidgets('點擊設定圖示導航至 SettingsScreen，返回後回到 LibraryScreen', (tester) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
-          repository: FakeLibraryRepository(),
-          importService: FakeBookImportService(),
-          prefsManager: prefsManager,
+  testWidgets(
+    '點擊設定圖示呼叫 onNavigateToSettings callback（epic-36 三目的地導覽取代 '
+    'Navigator.push，見 reviews/review-issues.md I-1）',
+    (tester) async {
+      var settingsRequested = 0;
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: LibraryScreen(
+            repository: FakeLibraryRepository(),
+            importService: FakeBookImportService(),
+            prefsManager: prefsManager,
+            onNavigateToSettings: () => settingsRequested++,
+          ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    expect(find.text('書架'), findsOneWidget);
+      expect(find.text('書架'), findsOneWidget);
 
-    // 使用 tooltip 來明確指定要點擊 AppBar 的設定按鈕（而非「管理分類」chip 的圖示）
-    await tester.tap(find.byTooltip('設定'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('library_settings_button')));
+      await tester.pumpAndSettle();
 
-    expect(find.text('設定'), findsOneWidget);
-
-    // 點擊 AppBar 的返回按鈕以代替 tester.pageBack()，增加測試強健度
-    await tester.tap(find.byType(BackButton));
-    await tester.pumpAndSettle();
-
-    expect(find.text('書架'), findsOneWidget);
-  });
+      expect(settingsRequested, 1);
+      // 三目的地導覽下設定畫面由 AdaptiveShellScaffold 的 IndexedStack
+      // 承接，不再是 Navigator.push 推入的新路由——這裡只驗證 LibraryScreen
+      // 端呼叫了 callback，跨分頁 IndexedStack 切換與參數轉送行為由
+      // adaptive_shell_scaffold_test.dart（Task 5）驗證。
+      expect(find.text('書架'), findsOneWidget);
+    },
+  );
 }

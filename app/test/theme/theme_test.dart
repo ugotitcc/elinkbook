@@ -4,10 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:elinkbook/main.dart';
 import 'package:elinkbook/theme/app_theme.dart';
-import 'package:elinkbook/theme/app_theme_data.dart';
 import 'package:elinkbook/theme/app_theme_preferences.dart';
-import 'package:elinkbook/screens/library_screen.dart';
-import 'package:elinkbook/screens/library_screen_dependencies.dart';
 import 'package:elinkbook/screens/settings_screen.dart';
 import 'package:elinkbook/library/sqlite_library_repository.dart';
 import 'package:elinkbook/reader/reader_prefs_manager.dart';
@@ -135,30 +132,26 @@ void main() {
     expect(receivedTheme, AppTheme.dark);
   });
 
-  testWidgets('LibraryScreen E-Ink 切換按鈕點擊更新 preferences', (tester) async {
+  testWidgets(
+      'SettingsScreen E-Ink 切換開關點擊更新 preferences（原位於 LibraryScreen AppBar，'
+      '因 epic-36 AppBar 收斂搬移至此）', (tester) async {
     SharedPreferences.setMockInitialValues({});
     bool? receivedEinkMode;
 
     await tester.pumpWidget(
       MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
-          repository: FakeLibraryRepository(),
-          importService: FakeBookImportService(),
+        home: SettingsScreen(
           prefsManager: prefsManager,
-          themeDependencies: LibraryThemeDependencies(
-            currentTheme: AppTheme.light,
-            isEinkMode: false,
-            onThemeChanged: (_) {},
-            onEinkModeChanged: (enabled) => receivedEinkMode = enabled,
-          ),
+          currentTheme: AppTheme.light,
+          isEinkMode: false,
+          onEinkModeChanged: (enabled) => receivedEinkMode = enabled,
         ),
       ),
     );
     await tester.pumpAndSettle();
 
     // 點擊 E-Ink 開關
-    await tester.tap(find.byKey(const Key('library_eink_toggle')));
+    await tester.tap(find.byKey(const Key('settings_eink_mode_switch')));
     await tester.pumpAndSettle();
 
     expect(receivedEinkMode, true);

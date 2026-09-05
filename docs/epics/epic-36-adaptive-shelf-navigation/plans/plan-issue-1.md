@@ -39,7 +39,7 @@
   - `Future<bool?> confirmAutoGroupByFolderName(BuildContext context)`
   - `void showImportResultSnackBar(BuildContext context, ImportResult result)`
 
-- [ ] **Step 1: 寫失敗測試——`pickAndImportFiles` 使用者取消選擇時回傳 null**
+- [x] **Step 1: 寫失敗測試——`pickAndImportFiles` 使用者取消選擇時回傳 null**
 
 建立 `app/test/screens/support/book_import_picker_helper_test.dart`：
 
@@ -80,12 +80,12 @@ void main() {
 
 （若 `FakeBookImportService` 尚未有 `importFilesCalls` 這種呼叫記錄欄位，改為斷言 `importService.lastImportedUris`/等既有欄位維持初始值——動手前先讀 `app/test/support/fake_book_import_service.dart` 確認實際欄位名稱，勿臆測。）
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/screens/support/book_import_picker_helper_test.dart`
 Expected: FAIL（`book_import_picker_helper.dart` 不存在，import 錯誤）
 
-- [ ] **Step 3: 實作 `pickAndImportFiles`／`pickAndImportFolder`／`confirmAutoGroupByFolderName`／`showImportResultSnackBar`**
+- [x] **Step 3: 實作 `pickAndImportFiles`／`pickAndImportFolder`／`confirmAutoGroupByFolderName`／`showImportResultSnackBar`**
 
 建立 `app/lib/screens/support/book_import_picker_helper.dart`（邏輯逐字取自 `library_screen.dart` 現行 `_pickAndImportFiles()`/`_pickAndImportFolder()`/`_confirmAutoGroupByFolderName()`/`_showImportResultSnackBar()`，拆成不依賴 `State` 的頂層函式；`mounted` 檢查移除——呼叫端自己的 `confirmAutoGroup` 閉包與 `BuildContext` 使用需自行注意 `context.mounted`）：
 
@@ -204,12 +204,12 @@ void showImportResultSnackBar(BuildContext context, ImportResult result) {
 }
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `flutter test test/screens/support/book_import_picker_helper_test.dart`
 Expected: PASS
 
-- [ ] **Step 5: 補齊 `pickAndImportFolder` 的成功路徑測試**
+- [x] **Step 5: 補齊 `pickAndImportFolder` 的成功路徑測試**
 
 在同一個測試檔新增：
 
@@ -277,17 +277,17 @@ Expected: PASS
   });
 ```
 
-- [ ] **Step 6: 執行測試確認通過**
+- [x] **Step 6: 執行測試確認通過**
 
 Run: `flutter test test/screens/support/book_import_picker_helper_test.dart`
 Expected: PASS（全部案例）
 
-- [ ] **Step 7: `flutter analyze` 確認乾淨**
+- [x] **Step 7: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add app/lib/screens/support/book_import_picker_helper.dart app/test/screens/support/book_import_picker_helper_test.dart
@@ -306,7 +306,7 @@ git commit -m "feat(epic-36): 抽出 pickAndImportFiles/pickAndImportFolder 為�
 - Consumes: Task 1 的 `pickAndImportFiles`／`pickAndImportFolder`／`confirmAutoGroupByFolderName`／`showImportResultSnackBar`；既有 `LibraryCloudAccountDependencies`／`LibraryRemoteLibraryDependencies`（`app/lib/screens/library_screen_dependencies.dart`）、`ComputeRemoteFingerprint`（`app/lib/library/book_content_fingerprint.dart`）、`CloudBrowserScreen`（`app/lib/screens/cloud_browser_screen.dart`）、`RemoteServerListScreen`（`app/lib/screens/remote_server_list_screen.dart`）、`RemoteCatalogDependencies`（`app/lib/remote/remote_catalog_dependencies.dart`）。
 - Produces: `SourcesHomeScreen` widget，建構參數 `repository`／`importService`／`cloudAccountDependencies`／`remoteLibraryDependencies`／`computeFingerprint`／`isMobileDataConnection`／`isEinkMode`／`onNavigateToLibrary`／`onNavigateToSettings`；Key 契約：`sources_pick_files_button`／`sources_pick_folder_button`／`sources_google_drive_tile`／`sources_onedrive_tile`／`sources_remote_library_tile`／`sources_library_button`／`sources_settings_button`。
 
-- [ ] **Step 1: 寫失敗測試——本機兩顆按鈕呼叫對應匯入函式**
+- [x] **Step 1: 寫失敗測試——本機兩顆按鈕呼叫對應匯入函式**
 
 建立 `app/test/screens/sources_home_screen_test.dart`：
 
@@ -470,12 +470,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/screens/sources_home_screen_test.dart`
 Expected: FAIL（`sources_home_screen.dart` 不存在）
 
-- [ ] **Step 3: 實作 `SourcesHomeScreen`**
+- [x] **Step 3: 實作 `SourcesHomeScreen`**
 
 建立 `app/lib/screens/sources_home_screen.dart`：
 
@@ -677,7 +677,7 @@ class SourcesHomeScreen extends StatelessWidget {
 }
 ```
 
-- [ ] **Step 4: 執行測試，逐一修正斷言直到全數通過**
+- [x] **Step 4: 執行測試，逐一修正斷言直到全數通過**
 
 Run: `flutter test test/screens/sources_home_screen_test.dart`
 
@@ -685,12 +685,12 @@ Run: `flutter test test/screens/sources_home_screen_test.dart`
 
 Expected: PASS（全部案例）
 
-- [ ] **Step 5: `flutter analyze` 確認乾淨**
+- [x] **Step 5: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/screens/sources_home_screen.dart app/test/screens/sources_home_screen_test.dart
@@ -709,7 +709,7 @@ git commit -m "feat(epic-36): 新增 SourcesHomeScreen 來源聚合頁"
 **Interfaces:**
 - Produces: `LibraryScreen` 新增建構參數 `final Listenable? refreshSignal; final VoidCallback? onNavigateToSource; final VoidCallback? onNavigateToSettings;`（皆 nullable，預設 null）。
 
-- [ ] **Step 1: 寫失敗測試——`onNavigateToSettings` callback 取代 `Navigator.push`**
+- [x] **Step 1: 寫失敗測試——`onNavigateToSettings` callback 取代 `Navigator.push`**
 
 改寫 `app/test/navigation_test.dart` 全檔為：
 
@@ -782,12 +782,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/navigation_test.dart`
 Expected: FAIL（`LibraryScreen` 尚無 `onNavigateToSettings` 具名參數，編譯錯誤）
 
-- [ ] **Step 3: `LibraryScreen` 新增三個建構參數並修改設定按鈕**
+- [x] **Step 3: `LibraryScreen` 新增三個建構參數並修改設定按鈕**
 
 編輯 `app/lib/screens/library_screen.dart`：
 
@@ -866,12 +866,12 @@ Expected: FAIL（`LibraryScreen` 尚無 `onNavigateToSettings` 具名參數，�
 
 檔案頂部移除 `import 'settings_screen.dart';`（不再直接參照 `SettingsScreen`）。
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `flutter test test/navigation_test.dart`
 Expected: PASS
 
-- [ ] **Step 5: 刪除已無法成立的 2 則既有測試（改由 Task 5 的 `adaptive_shell_scaffold_test.dart` 承接）**
+- [x] **Step 5: 刪除已無法成立的 2 則既有測試（改由 Task 5 的 `adaptive_shell_scaffold_test.dart` 承接）**
 
 編輯 `app/test/screens/library_screen_test.dart`：刪除以下兩則 `testWidgets`（原第 3137-3163 行、3169-3199 行，皆斷言「點擊 `library_settings_button` 後 `find.byType(SettingsScreen)` 收到轉送參數」——這個轉送責任已隨 `Navigator.push` 移除轉移給 `AdaptiveShellScaffold`，等價覆蓋在 Task 5 補上）：
 
@@ -880,17 +880,17 @@ Expected: PASS
 
 刪除後確認檔案仍可編譯（`SettingsScreen` 型別若因此在該測試檔完全無其他引用，一併移除 `import 'package:elinkbook/screens/settings_screen.dart';`——動手前先確認檔案內是否還有其他地方引用 `SettingsScreen`，若有則保留 import）。
 
-- [ ] **Step 6: 執行 `library_screen_test.dart` 確認無新增失敗（可能仍有 Task 4 才會處理的既有失敗，先確認本步驟改動沒有引入新的失敗）**
+- [x] **Step 6: 執行 `library_screen_test.dart` 確認無新增失敗（可能仍有 Task 4 才會處理的既有失敗，先確認本步驟改動沒有引入新的失敗）**
 
 Run: `flutter test test/screens/library_screen_test.dart`
 Expected: 除了 Task 4 範圍內尚未處理的既有測試（`library_import_button` 等）外，其餘測試 PASS；本 Step 只確認沒有新增與本 Step 改動直接相關的失敗。
 
-- [ ] **Step 7: `flutter analyze` 確認乾淨**
+- [x] **Step 7: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add app/lib/screens/library_screen.dart app/test/navigation_test.dart app/test/screens/library_screen_test.dart
@@ -911,7 +911,7 @@ git commit -m "feat(epic-36): LibraryScreen 新增 refreshSignal/onNavigateToSou
 
 ### Step A：先讀懂要刪除/遷移的既有測試分佈
 
-- [ ] **Step 1**：Run（唯讀，不改檔案）：
+- [x] **Step 1**：Run（唯讀，不改檔案）：
 
 ```bash
 grep -n "library_import_button\|library_import_files_option\|library_import_folder_option\|library_import_google_drive_option\|library_import_onedrive_option\|library_eink_toggle\|library_remote_library_button\|library_sort_button\|library_view_mode_toggle\|library_manage_groups_button\|library_importing_overlay" app/test/screens/library_screen_test.dart
@@ -925,7 +925,7 @@ grep -n "library_import_button\|library_import_files_option\|library_import_fold
 
 ### Step B：production code 異動
 
-- [ ] **Step 2**：編輯 `app/lib/screens/library_screen.dart`，`_buildNormalAppBar()` 內容整段改為：
+- [x] **Step 2**：編輯 `app/lib/screens/library_screen.dart`，`_buildNormalAppBar()` 內容整段改為：
 
 ```dart
   AppBar _buildNormalAppBar(List<Book>? books) {
@@ -1002,7 +1002,7 @@ grep -n "library_import_button\|library_import_files_option\|library_import_fold
 
 （這段取代原本從 `Container`〔`library_eink_toggle`〕開始，到 `library_settings_button` 結束的整段 `actions:` 內容——`library_manage_groups_button`／`library_remote_library_button`／`library_import_button` 三個區塊整段刪除，不保留任何殘餘 `if` 判斷式。）
 
-- [ ] **Step 3**：`_buildEmptyState()` 的匯入按鈕改為導向來源分頁：
+- [x] **Step 3**：`_buildEmptyState()` 的匯入按鈕改為導向來源分頁：
 
 ```dart
   Widget _buildEmptyState() {
@@ -1023,7 +1023,7 @@ grep -n "library_import_button\|library_import_files_option\|library_import_fold
   }
 ```
 
-- [ ] **Step 4**：`build()` 內移除 `_isImporting` 遮罩疊層：
+- [x] **Step 4**：`build()` 內移除 `_isImporting` 遮罩疊層：
 
 ```dart
   @override
@@ -1050,15 +1050,15 @@ grep -n "library_import_button\|library_import_files_option\|library_import_fold
 
 （原本外層 `Stack`＋`Column`＋`if (_isImporting) _buildImportingOverlay()` 整段收斂，因為 `_isImporting` 欄位本身即將移除。）
 
-- [ ] **Step 5**：刪除以下死碼（連同其 dartdoc 註解整段移除）：`_isImporting` 欄位、`_pickAndImportFiles()`、`_pickAndImportFolder()`、`_openGoogleDriveBrowser()`、`_openOneDriveBrowser()`、`_showImportResultSnackBar()`、`_confirmAutoGroupByFolderName()`、`_buildImportingOverlay()`，以及檔案頂部的 `const _folderPickerChannel = MethodChannel('elinkbook/folder_picker');`。
+- [x] **Step 5**：刪除以下死碼（連同其 dartdoc 註解整段移除）：`_isImporting` 欄位、`_pickAndImportFiles()`、`_pickAndImportFolder()`、`_openGoogleDriveBrowser()`、`_openOneDriveBrowser()`、`_showImportResultSnackBar()`、`_confirmAutoGroupByFolderName()`、`_buildImportingOverlay()`，以及檔案頂部的 `const _folderPickerChannel = MethodChannel('elinkbook/folder_picker');`。
 
-- [ ] **Step 6**：Run `flutter analyze`，依報告清掉檔案頂部殘留的未使用 import（預期至少包含 `package:file_picker/file_picker.dart`、`package:flutter/services.dart`、`../cloud_import/cloud_storage_client.dart`、`cloud_browser_screen.dart`、`remote_server_list_screen.dart`、`../remote/remote_catalog_dependencies.dart`——實際以 `flutter analyze` 報告為準，不要憑記憶刪多或刪少）。
+- [x] **Step 6**：Run `flutter analyze`，依報告清掉檔案頂部殘留的未使用 import（預期至少包含 `package:file_picker/file_picker.dart`、`package:flutter/services.dart`、`../cloud_import/cloud_storage_client.dart`、`cloud_browser_screen.dart`、`remote_server_list_screen.dart`、`../remote/remote_catalog_dependencies.dart`——實際以 `flutter analyze` 報告為準，不要憑記憶刪多或刪少）。
 
 Expected: `No issues found!`
 
 ### Step C：測試遷移（機械式規則，逐一套用在 Step 1 記下的每個行號）
 
-- [ ] **Step 7**：套用以下規則機械式修改 `app/test/screens/library_screen_test.dart`：
+- [x] **Step 7**：套用以下規則機械式修改 `app/test/screens/library_screen_test.dart`：
 
 **規則 1（`library_sort_button` → `library_sort_view_button`，純改名，5 處，含既有 `findsOneWidget` 存在性斷言與 `tester.tap` 呼叫）：**
 ```diff
@@ -1100,7 +1100,7 @@ Expected: `No issues found!`
 - 若只是某個測試裡順手用匯入選單準備測試資料（例如先匯入一本書才能繼續斷言其他行為），改為改用 `FakeLibraryRepository(initialBooks: [...])` 建構子直接塞入測試資料，不透過 UI 操作匯入（比照本檔案其餘多數測試已採用的既有模式）。
 - 第 105-125 行「圖書庫為空時顯示『尚未匯入書籍』提示與匯入按鈕」測試**保留**，只刪除第 124 行 `expect(find.byKey(const Key('library_import_button')), findsOneWidget);` 這一行斷言（該測試其餘部分——空狀態文字與 `library_empty_import_button` 存在性——依然成立）。
 
-- [ ] **Step 8**：新增 `issues.md` 明訂但先前遺漏的兩則 callback 測試（審查報告 I-1、M-3）
+- [x] **Step 8**：新增 `issues.md` 明訂但先前遺漏的兩則 callback 測試（審查報告 I-1、M-3）
 
 在 `app/test/screens/library_screen_test.dart` 新增：
 
@@ -1148,7 +1148,7 @@ Expected: `No issues found!`
   });
 ```
 
-- [ ] **Step 9**：執行測試，逐一修正殘餘失敗
+- [x] **Step 9**：執行測試，逐一修正殘餘失敗
 
 Run: `flutter test test/screens/library_screen_test.dart`
 
@@ -1156,12 +1156,12 @@ Run: `flutter test test/screens/library_screen_test.dart`
 
 Expected: PASS（本 Task 改動涉及的全部案例）
 
-- [ ] **Step 10**：`flutter analyze` 確認乾淨
+- [x] **Step 10**：`flutter analyze` 確認乾淨
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 11**：Commit
+- [x] **Step 11**：Commit
 
 ```bash
 git add app/lib/screens/library_screen.dart app/test/screens/library_screen_test.dart
@@ -1181,7 +1181,7 @@ git commit -m "feat(epic-36): LibraryScreen AppBar 收斂為排序/檢視、來�
 - Consumes: Task 2 的 `SourcesHomeScreen`；Task 3/4 的 `LibraryScreen`（`refreshSignal`/`onNavigateToSource`/`onNavigateToSettings`）；既有 `SettingsScreen`（暫不更名，見 Global Constraints）。
 - Produces: `AdaptiveShellScaffold` widget，建構參數與 `ElinkBookApp` 現有直接餵給 `LibraryScreen` 的參數集合完全相同（`repository`／`importService`／`prefsManager`／`readerFeatureRepositories`／`syncDependencies`／`cloudAccountDependencies`／`remoteLibraryDependencies`／`computeFingerprint`／`isMobileDataConnection`／`themeDependencies`）。
 
-- [ ] **Step 1: 寫失敗測試——三個目的地圖示切換後 `IndexedStack.index` 正確、狀態不遺失**
+- [x] **Step 1: 寫失敗測試——三個目的地圖示切換後 `IndexedStack.index` 正確、狀態不遺失**
 
 建立 `app/test/screens/adaptive_shell_scaffold_test.dart`：
 
@@ -1398,12 +1398,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/screens/adaptive_shell_scaffold_test.dart`
 Expected: FAIL（`adaptive_shell_scaffold.dart` 不存在）
 
-- [ ] **Step 3: 實作 `AdaptiveShellScaffold`**
+- [x] **Step 3: 實作 `AdaptiveShellScaffold`**
 
 建立 `app/lib/screens/adaptive_shell_scaffold.dart`：
 
@@ -1550,7 +1550,7 @@ class _AdaptiveShellScaffoldState extends State<AdaptiveShellScaffold> {
 
 **注意：不得為上面三個子 widget 加上 `Key`（例如 `UniqueKey()`／依 `_currentIndex` 產生的動態 `Key`）**——那才是真正會打斷狀態保留的寫法（Flutter 遇到不同 `Key` 會判定為不同 widget，捨棄舊 `Element`／`State` 重新建構）。保持目前寫法（無 `key:` 參數，僅靠 `runtimeType` 與清單位置識別）即可。
 
-- [ ] **Step 4: `main.dart` 改用 `AdaptiveShellScaffold`**
+- [x] **Step 4: `main.dart` 改用 `AdaptiveShellScaffold`**
 
 編輯 `app/lib/main.dart`，`_ElinkBookAppState.build()` 的 `home:` 整段（原 `LibraryScreen(...)`）改為：
 
@@ -1600,7 +1600,7 @@ class _AdaptiveShellScaffoldState extends State<AdaptiveShellScaffold> {
 
 並在檔案頂部 import 區新增 `import 'screens/adaptive_shell_scaffold.dart';`（`import 'screens/library_screen.dart';` 是否仍需要保留，視 `ElinkBookApp` 其餘程式碼是否還直接引用 `LibraryScreen` 型別而定——目前只有 `home:` 這處引用，若移除後 `flutter analyze` 報告未使用，一併移除）。
 
-- [ ] **Step 5: 執行測試確認通過**
+- [x] **Step 5: 執行測試確認通過**
 
 Run: `flutter test test/screens/adaptive_shell_scaffold_test.dart`
 
@@ -1608,17 +1608,17 @@ Run: `flutter test test/screens/adaptive_shell_scaffold_test.dart`
 
 Expected: PASS
 
-- [ ] **Step 6: 執行完整 `library_screen_test.dart` 與 `navigation_test.dart` 確認無回歸**
+- [x] **Step 6: 執行完整 `library_screen_test.dart` 與 `navigation_test.dart` 確認無回歸**
 
 Run: `flutter test test/screens/library_screen_test.dart test/navigation_test.dart`
 Expected: PASS
 
-- [ ] **Step 7: `flutter analyze` 確認乾淨**
+- [x] **Step 7: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add app/lib/screens/adaptive_shell_scaffold.dart app/test/screens/adaptive_shell_scaffold_test.dart app/lib/main.dart
@@ -1631,30 +1631,30 @@ git commit -m "feat(epic-36): 新增 AdaptiveShellScaffold 並接上 main.dart"
 
 **Files:** 無新增/修改，純驗證。
 
-- [ ] **Step 1: 執行全套 `flutter test`（不帶檔案路徑）**
+- [x] **Step 1: 執行全套 `flutter test`（不帶檔案路徑）**
 
 Run: `flutter test`
 Expected: 全數通過（比照 `CLAUDE.md`「測試執行範圍」，這是整份計劃收尾的唯一一次全套執行）。若有失敗，比對是否為本計劃改動觸及的檔案；非本計劃觸及範圍的既有不穩定測試（若有）記錄下來，不在本 Issue 修復範圍內。
 
-- [ ] **Step 2: 執行 `flutter analyze`**
+- [x] **Step 2: 執行 `flutter analyze`**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 3: 逐條核對 `issues.md` Issue 1 驗收標準**
+- [x] **Step 3: 逐條核對 `issues.md` Issue 1 驗收標準**
 
-- [ ] `main.dart:342`（原行號）的 `home:` 已改為 `AdaptiveShellScaffold(...)`
-- [ ] 三目的地圖示互相切換為零動畫轉場且狀態不遺失（`IndexedStack`，`MaterialApp.themeAnimationDuration` 已是既有的 `Duration.zero`，不需要在 `AdaptiveShellScaffold` 本身另外設定）
-- [ ] 「來源」分頁能完成本機/雲端/OPDS 匯入且與現行行為相同
-- [ ] 書架 AppBar 僅剩「排序/檢視、來源、設定」三圖示
-- [ ] `app/test/navigation_test.dart` 已改為驗證 callback／新導覽行為（`review-issues.md` I-1）
-- [ ] `_pickAndImportFiles`/`_pickAndImportFolder`/`_isImporting`/`_buildImportingOverlay` 等死碼已清理（`review-issues.md` M-3，含計劃範圍澄清第 2 點擴充的五項）
+- [x] `main.dart:342`（原行號）的 `home:` 已改為 `AdaptiveShellScaffold(...)`
+- [x] 三目的地圖示互相切換為零動畫轉場且狀態不遺失（`IndexedStack`，`MaterialApp.themeAnimationDuration` 已是既有的 `Duration.zero`，不需要在 `AdaptiveShellScaffold` 本身另外設定）
+- [x] 「來源」分頁能完成本機/雲端/OPDS 匯入且與現行行為相同
+- [x] 書架 AppBar 僅剩「排序/檢視、來源、設定」三圖示
+- [x] `app/test/navigation_test.dart` 已改為驗證 callback／新導覽行為（`review-issues.md` I-1）
+- [x] `_pickAndImportFiles`/`_pickAndImportFolder`/`_isImporting`/`_buildImportingOverlay` 等死碼已清理（`review-issues.md` M-3，含計劃範圍澄清第 2 點擴充的五項）
 
-- [ ] **Step 4: 更新 `docs/epics.md` 備註欄位**
+- [x] **Step 4: 更新 `docs/epics.md` 備註欄位**
 
 將 Epic 36 該列備註改為「Issue 1 已完成，待認領 Issue 2/5」。
 
-- [ ] **Step 5: 依 `superpowers:requesting-code-review` 發起本 Issue 的程式碼審查**
+- [x] **Step 5: 依 `superpowers:requesting-code-review` 發起本 Issue 的程式碼審查**
 
 審查者先產出報告至 `docs/epics/epic-36-adaptive-shelf-navigation/reviews/review-issue-1.md`，不得直接修改程式碼（比照專案 SDD 工作流程第 6 步）。
 

@@ -10,7 +10,7 @@
 
 ## Issue 1：三目的地導覽框架＋來源聚合頁
 
-**Status:** ready-for-agent
+**Status:** completed
 
 **依賴：** 無（可立即開始）
 

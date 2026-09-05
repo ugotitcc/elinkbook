@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math' show sqrt;
@@ -15,9 +14,6 @@ import 'package:elinkbook/reader/layout_preset_repository.dart';
 import 'package:elinkbook/reader/reader_prefs_manager.dart';
 import 'package:elinkbook/screens/library_screen.dart';
 import 'package:elinkbook/screens/library_screen_dependencies.dart';
-import 'package:elinkbook/screens/cloud_browser_screen.dart';
-import 'package:elinkbook/library/book_import_service.dart';
-import 'package:elinkbook/library/book_import_service_impl.dart';
 import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/book_group.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
@@ -32,9 +28,7 @@ import '../support/fake_opds_client.dart';
 import '../support/fake_remote_server_repository.dart';
 import '../support/fake_cloud_storage_client.dart';
 import '../support/fake_fingerprint_computer.dart';
-import '../support/fake_remote_thumbnail_cache.dart';
 import 'package:elinkbook/remote/remote_server_profile.dart';
-import 'package:elinkbook/screens/remote_server_list_screen.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
 import '../support/fake_highlights_repository.dart';
 import '../support/fake_notes_repository.dart';
@@ -51,7 +45,6 @@ import 'package:share_plus_platform_interface/share_plus_platform_interface.dart
 import '../support/fake_path_provider_platform.dart';
 import '../support/fake_share_platform.dart';
 import '../support/fake_custom_fonts_repository.dart';
-import 'package:elinkbook/screens/settings_screen.dart';
 import 'package:elinkbook/sync/sync_checkpoint_trigger.dart';
 import 'package:elinkbook/sync/sync_account_repository.dart';
 import 'package:elinkbook/sync/sync_client.dart';
@@ -121,7 +114,6 @@ void main() {
       find.byKey(const Key('library_empty_import_button')),
       findsOneWidget,
     );
-    expect(find.byKey(const Key('library_import_button')), findsOneWidget);
   });
 
   testWidgets('圖書庫載入資料失敗時，畫面降級顯示空清單狀態而非永遠卡在載入中', (tester) async {
@@ -400,7 +392,9 @@ void main() {
     expect(find.byKey(const Key('library_grid_view')), findsOneWidget);
     expect(find.byKey(const Key('library_list_view')), findsNothing);
 
-    await tester.tap(find.byKey(const Key('library_view_mode_toggle')));
+    await tester.tap(find.byKey(const Key('library_sort_view_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('library_sort_view_toggle_option')));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('library_grid_view')), findsNothing);
@@ -426,7 +420,9 @@ void main() {
 
     expect(find.byKey(const Key('library_grid_view')), findsOneWidget);
 
-    await tester.tap(find.byKey(const Key('library_view_mode_toggle')));
+    await tester.tap(find.byKey(const Key('library_sort_view_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('library_sort_view_toggle_option')));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('library_list_view')), findsOneWidget);
@@ -486,7 +482,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('library_view_mode_toggle')));
+    await tester.tap(find.byKey(const Key('library_sort_view_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('library_sort_view_toggle_option')));
     await tester.pumpAndSettle();
 
     // 兩本書皆為預設「未分類」——「未分類」不使用拼貼格顯示（見【診斷
@@ -497,7 +495,7 @@ void main() {
         .toList();
     expect(titles, ['B書', 'A書']);
 
-    await tester.tap(find.byKey(const Key('library_sort_button')));
+    await tester.tap(find.byKey(const Key('library_sort_view_button')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('library_sort_option_title')));
     await tester.pumpAndSettle();
@@ -525,12 +523,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('library_sort_button')));
+    await tester.tap(find.byKey(const Key('library_sort_view_button')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('library_sort_option_author')));
     await tester.pumpAndSettle();
-
-    expect(find.byTooltip('排序：作者'), findsOneWidget);
 
     // 模擬 App 重啟
     await tester.pumpWidget(
@@ -546,7 +542,15 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.byTooltip('排序：作者'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('library_sort_view_button')));
+    await tester.pumpAndSettle();
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('library_sort_option_author')),
+        matching: find.byIcon(Icons.check),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('點擊分類拼貼格後只顯示該分類書籍；返回書架後僅顯示未分類書籍與分類拼貼格（已分類書籍不重複列出）', (
@@ -675,7 +679,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('library_manage_groups_button')));
+    await tester.tap(find.byKey(const Key('library_sort_view_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('library_manage_groups_option')));
     await tester.pumpAndSettle();
 
     await tester.enterText(
@@ -719,7 +725,9 @@ void main() {
     // 刪除前書籍已歸類到「奇幻」，只透過拼貼格顯示，頂層書籍清單看不到它。
     expect(find.byKey(const Key('book_item_1')), findsNothing);
 
-    await tester.tap(find.byKey(const Key('library_manage_groups_button')));
+    await tester.tap(find.byKey(const Key('library_sort_view_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('library_manage_groups_option')));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const Key('library_group_delete_button_奇幻')));
@@ -760,7 +768,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('library_manage_groups_button')));
+    await tester.tap(find.byKey(const Key('library_sort_view_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('library_manage_groups_option')));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const Key('library_group_delete_button_奇幻')));
@@ -807,7 +817,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('library_manage_groups_button')));
+    await tester.tap(find.byKey(const Key('library_sort_view_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('library_manage_groups_option')));
     await tester.pumpAndSettle();
 
     expect(
@@ -836,7 +848,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('library_manage_groups_button')));
+    await tester.tap(find.byKey(const Key('library_sort_view_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('library_manage_groups_option')));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const Key('library_group_rename_button_奇幻')));
@@ -860,60 +874,6 @@ void main() {
 
     expect(find.byKey(const Key('group_tile_科幻')), findsOneWidget);
     expect(find.byKey(const Key('group_tile_奇幻')), findsNothing);
-  });
-
-  testWidgets('點擊「選擇資料夾」，確認自動分類開關後，匯入資料夾內書籍並依資料夾名稱建立分類', (tester) async {
-    const folderPickerChannel = MethodChannel('elinkbook/folder_picker');
-    const metadataChannel = MethodChannel('elinkbook/book_metadata');
-    addTearDown(() {
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(folderPickerChannel, null);
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(metadataChannel, null);
-    });
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(folderPickerChannel, (call) async {
-          if (call.method == 'pickFolder') {
-            return 'content://example/tree/folder';
-          }
-          return null;
-        });
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(metadataChannel, (call) async {
-          if (call.method == 'takePersistableUriPermission') return null;
-          if (call.method == 'listFolderContents') {
-            return {
-              'folderName': '歷史小說',
-              'fileUris': ['content://example/tree/folder/document/book1.epub'],
-            };
-          }
-          return {'title': null, 'author': null, 'coverBytes': null};
-        });
-
-    final repository = FakeLibraryRepository();
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
-          repository: repository,
-          importService: BookImportServiceImpl(repository: repository),
-          prefsManager: prefsManager,
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byKey(const Key('library_import_button')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('library_import_folder_option')));
-    await tester.pumpAndSettle();
-
-    expect(find.text('匯入資料夾'), findsOneWidget);
-
-    await tester.tap(find.byKey(const Key('library_import_folder_confirm')));
-    await tester.pumpAndSettle();
-
-    expect(find.byKey(const Key('group_tile_歷史小說')), findsOneWidget);
   });
 
   testWidgets('長按書籍卡片後進入選取模式，且該卡片顯示為已選取狀態', (tester) async {
@@ -996,7 +956,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('library_selection_app_bar')), findsNothing);
-    expect(find.byKey(const Key('library_sort_button')), findsOneWidget);
+    expect(find.byKey(const Key('library_sort_view_button')), findsOneWidget);
     expect(find.byKey(const Key('book_selection_indicator_1')), findsNothing);
 
     await tester.tap(find.byKey(const Key('book_item_1')));
@@ -1347,7 +1307,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('library_view_mode_toggle')));
+    await tester.tap(find.byKey(const Key('library_sort_view_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('library_sort_view_toggle_option')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('library_list_view')), findsOneWidget);
 
@@ -1432,13 +1394,16 @@ void main() {
       ),
       findsNothing,
     );
-    expect(
+    await tester.tap(
       find.descendant(
         of: filteredScreenFinder,
-        matching: find.byKey(const Key('library_manage_groups_button')),
+        matching: find.byKey(const Key('library_sort_view_button')),
       ),
-      findsNothing,
     );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('library_manage_groups_option')), findsNothing);
+    await tester.tapAt(const Offset(10, 10));
+    await tester.pumpAndSettle();
     expect(
       find.descendant(
         of: filteredScreenFinder,
@@ -1503,109 +1468,6 @@ void main() {
     expect(find.text('科幻 (2)'), findsOneWidget);
   });
 
-  testWidgets('【審查修正】從分類篩選畫面內用「選擇資料夾＋自動分類」建立新分類後返回書架，'
-      '新分類拼貼格正確出現且未消失', (tester) async {
-    const folderPickerChannel = MethodChannel('elinkbook/folder_picker');
-    const metadataChannel = MethodChannel('elinkbook/book_metadata');
-    addTearDown(() {
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(folderPickerChannel, null);
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(metadataChannel, null);
-    });
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(folderPickerChannel, (call) async {
-          if (call.method == 'pickFolder') {
-            return 'content://example/tree/folder';
-          }
-          return null;
-        });
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(metadataChannel, (call) async {
-          if (call.method == 'takePersistableUriPermission') return null;
-          if (call.method == 'listFolderContents') {
-            return {
-              // 分類名稱本身不影響拼貼格順序（epic-18-reader-device-qa
-              // Issue 31 修正後改依 _sortBy 排序）；這裡只是一個任意的新分類
-              // 名稱，用來驗證資料夾匯入建立的新分類拼貼格確實會出現、不會
-              // 消失。
-              'folderName': '一般叢書',
-              'fileUris': ['content://example/tree/folder/document/book1.epub'],
-            };
-          }
-          return {'title': null, 'author': null, 'coverBytes': null};
-        });
-
-    final book = _testBook(id: '1', title: '奇幻小說', groupName: '奇幻');
-    final repository = FakeLibraryRepository(initialBooks: [book]);
-
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
-          repository: repository,
-          importService: BookImportServiceImpl(repository: repository),
-          prefsManager: prefsManager,
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byKey(const Key('group_tile_奇幻')));
-    await tester.pumpAndSettle();
-
-    // 篩選畫面內的「匯入書籍」入口沒有比照「管理分類」用 groupFilter ==
-    // null 隱藏，故仍可在此觸發「選擇資料夾＋自動分類」，建立一個頂層
-    // _groups 快照原本不知道的新分類。
-    final filteredScreenFinder = _filteredLibraryScreenFinder('奇幻');
-    await tester.tap(
-      find.descendant(
-        of: filteredScreenFinder,
-        matching: find.byKey(const Key('library_import_button')),
-      ),
-    );
-    await tester.pumpAndSettle();
-    // PopupMenuButton 的選單項目透過 Overlay 路由渲染，不是觸發它的
-    // LibraryScreen 的 descendant，故這裡不能比照上面用 find.descendant
-    // 限定範圍——但這個選單同一時間只會有一份，不會有背景/前景重複的問
-    // 題，直接用未限定範圍的 find.byKey 即可（比照既有「點擊「選擇資料
-    // 夾」...」測試的既有寫法）。
-    await tester.tap(find.byKey(const Key('library_import_folder_option')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('library_import_folder_confirm')));
-    await tester.pumpAndSettle();
-
-    final navigatorState = tester.state<NavigatorState>(find.byType(Navigator));
-    await navigatorState.maybePop();
-    await tester.pumpAndSettle();
-
-    // Navigator.pop 會把被彈出的篩選畫面從 widget 樹移除（跟 push 不同，
-    // 不會留下背景重複實例），故此時切到列表檢視只會影響剩下的頂層畫面，
-    // library_view_mode_toggle 這個 key 在樹中唯一。切到列表檢視是為了用
-    // _GroupListTile 的 ListTile.title（純分類名稱，不含數量）方便比對順
-    // 序——格狀檢視的 _GroupGridTile 是 InkWell，不是 ListTile。
-    await tester.tap(find.byKey(const Key('library_view_mode_toggle')));
-    await tester.pumpAndSettle();
-
-    // epic-18-reader-device-qa Issue 31 修正後，_buildGroupTiles() 不再
-    // 區分「_groups 已註冊」與「孤兒」分類——所有分類統一來自同一份依
-    // _sortBy 排序的 books 走訪順序，故不需要 _loadGroups() 是否有被
-    // 呼叫也不會讓「一般叢書」的拼貼格消失或錯放；這裡改為單純驗證新
-    // 建立的分類拼貼格確實存在（未消失）。「奇幻」排在「一般叢書」之前
-    // 是因為前者的 lastReadTime 是既有 fixture 的真實值（`_testBook()`
-    // 預設值＝建立當下），後者是透過資料夾匯入剛建立、從未被打開過的
-    // 新書——依 Issue 29 修正後的語意，剛匯入未讀的書不該被誤判為
-    // 「最後閱讀」而排到已有真實閱讀紀錄的書之前（`lastReadTime` 為
-    // 「尚未讀過」的 epoch 0 哨兵值，排序模式「最後閱讀」下必然排在最
-    // 後），並非依名稱排序。
-    final tileTitles = tester
-        .widgetList<ListTile>(find.byType(ListTile))
-        .map((tile) => (tile.title as Text).data)
-        .where((title) => title == '奇幻' || title == '一般叢書')
-        .toList();
-    expect(tileTitles, ['奇幻', '一般叢書']);
-  });
-
   testWidgets('分類拼貼格彼此的相對順序跟隨目前選定的排序模式（最後閱讀），'
       '而非固定依分類名稱排序（epic-18-reader-device-qa Issue 31）', (tester) async {
     // 刻意讓「名稱字母序」與「最後閱讀時間序」互相矛盾：'一般叢書'
@@ -1649,7 +1511,9 @@ void main() {
     // 切到列表檢視，方便用 ListTile.title 比對拼貼格彼此的相對順序
     // （格狀檢視的 _GroupGridTile 是 InkWell，不是 ListTile，比照既有
     // 「新分類拼貼格排在「未分類」之前」測試的既有寫法）。
-    await tester.tap(find.byKey(const Key('library_view_mode_toggle')));
+    await tester.tap(find.byKey(const Key('library_sort_view_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('library_sort_view_toggle_option')));
     await tester.pumpAndSettle();
 
     final tileTitles = tester
@@ -1845,493 +1709,6 @@ void main() {
     expect(repository.deleteBookCalls, ['1']);
     expect(find.byKey(const Key('book_item_1')), findsNothing);
   });
-
-  testWidgets('觸發資料夾匯入後，匯入完成前畫面顯示處理中狀態，其他匯入觸發點停用', (tester) async {
-    const folderPickerChannel = MethodChannel('elinkbook/folder_picker');
-    addTearDown(() {
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(folderPickerChannel, null);
-    });
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(folderPickerChannel, (call) async {
-          if (call.method == 'pickFolder') {
-            return 'content://example/tree/folder';
-          }
-          return null;
-        });
-
-    final importService = FakeBookImportService();
-    final completer = Completer<ImportResult>();
-    importService.pendingCompleter = completer;
-
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
-          repository: FakeLibraryRepository(),
-          importService: importService,
-          prefsManager: prefsManager,
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byKey(const Key('library_import_button')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('library_import_folder_option')));
-    await tester.pumpAndSettle();
-
-    expect(find.text('匯入資料夾'), findsOneWidget);
-
-    await tester.tap(find.byKey(const Key('library_import_folder_confirm')));
-    // 此時 importFolder() 已開始執行但尚未完成（completer 尚未 complete）。
-    // 畫面上會出現持續動畫的 CircularProgressIndicator，不可用
-    // pumpAndSettle()（會因動畫持續排程新影格而逾時），改用固定次數的
-    // pump() 讓對話框關閉、_pickAndImportFolder 恢復執行到
-    // setState(_isImporting = true) 為止。
-    await tester.pump();
-    await tester.pump();
-
-    expect(find.byKey(const Key('library_importing_overlay')), findsOneWidget);
-    expect(find.text('匯入中...'), findsOneWidget);
-
-    final importButton = tester.widget<PopupMenuButton<void>>(
-      find.byKey(const Key('library_import_button')),
-    );
-    expect(importButton.enabled, isFalse);
-
-    completer.complete(const ImportResult(importedBooks: []));
-    await tester.pumpAndSettle();
-
-    expect(find.byKey(const Key('library_importing_overlay')), findsNothing);
-  });
-
-  testWidgets('觸發單檔/多檔匯入後，匯入完成前畫面顯示處理中狀態，完成後恢復正常', (tester) async {
-    const filePickerChannel = MethodChannel(
-      'miguelruivo.flutter.plugins.filepicker',
-    );
-    addTearDown(() {
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(filePickerChannel, null);
-    });
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(filePickerChannel, (call) async {
-          if (call.method == 'custom') {
-            return [
-              {
-                'name': 'book.epub',
-                'path': '/tmp/book.epub',
-                'size': 100,
-                'bytes': null,
-                'identifier': 'content://example/book.epub',
-              },
-            ];
-          }
-          return null;
-        });
-
-    final importService = FakeBookImportService();
-    final completer = Completer<ImportResult>();
-    importService.pendingCompleter = completer;
-
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
-          repository: FakeLibraryRepository(),
-          importService: importService,
-          prefsManager: prefsManager,
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    // 此時書架為空清單狀態，「library_empty_import_button」是可觸及的匯入
-    // 入口，用來一併驗證「其他匯入觸發點」在處理中也會被停用。
-    expect(
-      find.byKey(const Key('library_empty_import_button')),
-      findsOneWidget,
-    );
-
-    await tester.tap(find.byKey(const Key('library_import_button')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('library_import_files_option')));
-    // FilePicker.pickFiles() 透過模擬的原生 MethodChannel 立即回傳一筆結果，
-    // 接著 importFiles() 進入 pending 狀態（completer 尚未 complete）。同樣
-    // 不可用 pumpAndSettle()，改用固定時長的 pump()。
-    await tester.pump(const Duration(milliseconds: 300));
-    await tester.pump(const Duration(milliseconds: 300));
-
-    expect(find.byKey(const Key('library_importing_overlay')), findsOneWidget);
-    expect(find.text('匯入中...'), findsOneWidget);
-
-    final emptyImportButton = tester.widget<ElevatedButton>(
-      find.byKey(const Key('library_empty_import_button')),
-    );
-    expect(emptyImportButton.onPressed, isNull);
-
-    completer.complete(const ImportResult(importedBooks: []));
-    await tester.pumpAndSettle();
-
-    expect(find.byKey(const Key('library_importing_overlay')), findsNothing);
-  });
-
-  testWidgets('匯入過程拋出例外時，處理中狀態仍正確解除，畫面恢復正常', (tester) async {
-    const folderPickerChannel = MethodChannel('elinkbook/folder_picker');
-    addTearDown(() {
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(folderPickerChannel, null);
-    });
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(folderPickerChannel, (call) async {
-          if (call.method == 'pickFolder') {
-            return 'content://example/tree/folder';
-          }
-          return null;
-        });
-
-    final importService = FakeBookImportService();
-    final completer = Completer<ImportResult>();
-    importService.pendingCompleter = completer;
-
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
-          repository: FakeLibraryRepository(),
-          importService: importService,
-          prefsManager: prefsManager,
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byKey(const Key('library_import_button')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('library_import_folder_option')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('library_import_folder_confirm')));
-    await tester.pump();
-    await tester.pump();
-
-    expect(find.byKey(const Key('library_importing_overlay')), findsOneWidget);
-
-    completer.completeError(Exception('模擬匯入失敗'));
-    await tester.pumpAndSettle();
-
-    expect(find.byKey(const Key('library_importing_overlay')), findsNothing);
-  });
-
-  testWidgets('【診斷修正】匯入完成後有檔案因來源 URI 重複被跳過時，顯示提示告知使用者', (tester) async {
-    const filePickerChannel = MethodChannel(
-      'miguelruivo.flutter.plugins.filepicker',
-    );
-    addTearDown(() {
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(filePickerChannel, null);
-    });
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(filePickerChannel, (call) async {
-          if (call.method == 'custom') {
-            return [
-              {
-                'name': 'book.epub',
-                'path': '/tmp/book.epub',
-                'size': 100,
-                'bytes': null,
-                'identifier': 'content://example/book.epub',
-              },
-            ];
-          }
-          return null;
-        });
-
-    final importService = FakeBookImportService();
-    final completer = Completer<ImportResult>();
-    importService.pendingCompleter = completer;
-
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
-          repository: FakeLibraryRepository(),
-          importService: importService,
-          prefsManager: prefsManager,
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byKey(const Key('library_empty_import_button')));
-    await tester.pump(const Duration(milliseconds: 300));
-
-    completer.complete(
-      const ImportResult(importedBooks: [], skippedDuplicateCount: 2),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.text('2 本已存在，已跳過'), findsOneWidget);
-  });
-
-  testWidgets('匯入完成且無重複時，顯示已匯入本數的成功提示（Issue 2：匯入成功缺乏正面回饋）', (tester) async {
-    const filePickerChannel = MethodChannel(
-      'miguelruivo.flutter.plugins.filepicker',
-    );
-    addTearDown(() {
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(filePickerChannel, null);
-    });
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(filePickerChannel, (call) async {
-          if (call.method == 'custom') {
-            return [
-              {
-                'name': 'book.epub',
-                'path': '/tmp/book.epub',
-                'size': 100,
-                'bytes': null,
-                'identifier': 'content://example/book.epub',
-              },
-            ];
-          }
-          return null;
-        });
-
-    final importService = FakeBookImportService();
-    final completer = Completer<ImportResult>();
-    importService.pendingCompleter = completer;
-
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
-          repository: FakeLibraryRepository(),
-          importService: importService,
-          prefsManager: prefsManager,
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byKey(const Key('library_empty_import_button')));
-    await tester.pump(const Duration(milliseconds: 300));
-
-    completer.complete(
-      ImportResult(
-        importedBooks: [_testBook(id: '1', title: '書一')],
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.text('已匯入 1 本書'), findsOneWidget);
-  });
-
-  testWidgets('匯入完成且同時有重複被跳過時，合併成單一提示（Issue 2：匯入成功缺乏正面回饋）', (tester) async {
-    const filePickerChannel = MethodChannel(
-      'miguelruivo.flutter.plugins.filepicker',
-    );
-    addTearDown(() {
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(filePickerChannel, null);
-    });
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(filePickerChannel, (call) async {
-          if (call.method == 'custom') {
-            return [
-              {
-                'name': 'book.epub',
-                'path': '/tmp/book.epub',
-                'size': 100,
-                'bytes': null,
-                'identifier': 'content://example/book.epub',
-              },
-            ];
-          }
-          return null;
-        });
-
-    final importService = FakeBookImportService();
-    final completer = Completer<ImportResult>();
-    importService.pendingCompleter = completer;
-
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
-          repository: FakeLibraryRepository(),
-          importService: importService,
-          prefsManager: prefsManager,
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byKey(const Key('library_empty_import_button')));
-    await tester.pump(const Duration(milliseconds: 300));
-
-    completer.complete(
-      ImportResult(
-        importedBooks: [_testBook(id: '1', title: '書一')],
-        skippedDuplicateCount: 2,
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.text('已匯入 1 本，2 本已存在，已跳過'), findsOneWidget);
-    expect(find.text('2 本已存在，已跳過'), findsNothing);
-  });
-
-  // epic-29-cloud-import Issue 3：Google Drive 匯入選單測試
-  testWidgets('googleDriveStorageClient 為 null 時「從 Google Drive 匯入」選項停用', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
-          repository: FakeLibraryRepository(),
-          importService: FakeBookImportService(),
-          prefsManager: prefsManager,
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byKey(const Key('library_import_button')));
-    await tester.pumpAndSettle();
-
-    final option = tester.widget<PopupMenuItem<void>>(
-      find.byKey(const Key('library_import_google_drive_option')),
-    );
-    expect(option.enabled, false);
-  });
-
-  testWidgets(
-    '提供 googleDriveStorageClient 時點擊「從 Google Drive 匯入」導航至 GoogleDriveBrowserScreen',
-    (tester) async {
-      final client = FakeCloudStorageClient();
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: LibraryScreen(
-            repository: FakeLibraryRepository(),
-            importService: FakeBookImportService(),
-            prefsManager: prefsManager,
-            cloudAccountDependencies: LibraryCloudAccountDependencies(
-              googleDriveStorageClient: client,
-            ),
-            computeFingerprint: FakeFingerprintComputer().call,
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.byKey(const Key('library_import_button')));
-      await tester.pumpAndSettle();
-      await tester.tap(
-        find.byKey(const Key('library_import_google_drive_option')),
-      );
-      await tester.pumpAndSettle();
-
-      expect(find.text('Google Drive'), findsOneWidget);
-    },
-  );
-
-  testWidgets(
-    '點擊「從 Google Drive 匯入」push 出的 CloudBrowserScreen，isMobileDataConnection '
-    '與外層一致（Epic 29 Issue 6）',
-    (tester) async {
-      final googleDriveStorageClient = FakeCloudStorageClient();
-      final computeFingerprint = FakeFingerprintComputer().call;
-      Future<bool> isMobileDataConnection() async => false;
-
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: LibraryScreen(
-            repository: FakeLibraryRepository(),
-            importService: FakeBookImportService(),
-            prefsManager: prefsManager,
-            cloudAccountDependencies: LibraryCloudAccountDependencies(
-              googleDriveStorageClient: googleDriveStorageClient,
-            ),
-            computeFingerprint: computeFingerprint,
-            isMobileDataConnection: isMobileDataConnection,
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.byKey(const Key('library_import_button')));
-      await tester.pumpAndSettle();
-      await tester.tap(
-        find.byKey(const Key('library_import_google_drive_option')),
-      );
-      await tester.pumpAndSettle();
-
-      final browserScreen = tester.widget<CloudBrowserScreen>(
-        find.byType(CloudBrowserScreen),
-      );
-      expect(
-        browserScreen.isMobileDataConnection,
-        same(isMobileDataConnection),
-        reason:
-            '_openGoogleDriveBrowser() 未把 isMobileDataConnection 貫穿給 '
-            'CloudBrowserScreen，行動數據下載警示會靜默失效',
-      );
-    },
-  );
-
-  testWidgets('oneDriveStorageClient 為 null 時「從 OneDrive 匯入」選項停用', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
-          repository: FakeLibraryRepository(),
-          importService: FakeBookImportService(),
-          prefsManager: prefsManager,
-        ),
-      ),
-    );
-
-    await tester.tap(find.byKey(const Key('library_import_button')));
-    await tester.pumpAndSettle();
-
-    final option = tester.widget<PopupMenuItem<void>>(
-      find.byKey(const Key('library_import_onedrive_option')),
-    );
-    expect(option.enabled, false);
-  });
-
-  testWidgets(
-    '提供 oneDriveStorageClient 時點擊「從 OneDrive 匯入」導航至 CloudBrowserScreen',
-    (tester) async {
-      final client = FakeCloudStorageClient();
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: LibraryScreen(
-            repository: FakeLibraryRepository(),
-            importService: FakeBookImportService(),
-            prefsManager: prefsManager,
-            cloudAccountDependencies: LibraryCloudAccountDependencies(
-              oneDriveStorageClient: client,
-            ),
-            computeFingerprint: FakeFingerprintComputer().call,
-          ),
-        ),
-      );
-
-      await tester.tap(find.byKey(const Key('library_import_button')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const Key('library_import_onedrive_option')));
-      await tester.pumpAndSettle();
-
-      expect(find.text('OneDrive'), findsOneWidget);
-    },
-  );
 
   testWidgets(
     'LibraryScreen 點開一本書後，ReaderScreen 收到的 highlightsRepository／notesRepository 正確貫穿（Issue 6 缺口修正）',
@@ -2754,7 +2131,9 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('library_view_mode_toggle')));
+    await tester.tap(find.byKey(const Key('library_sort_view_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('library_sort_view_toggle_option')));
     await tester.pumpAndSettle();
 
     // 列表檢視下拼貼格是 ListTile（_GroupListTile.title 只顯示分類名稱，
@@ -2828,7 +2207,7 @@ void main() {
     await repository.updateBook(book.copyWith(groupName: '科幻'));
     // 觸發 _loadBooks()（不觸發 _loadGroups()）：_changeSortBy() 只重讀
     // _books，不重讀 _groups，正好模擬「_groups 落後」情境。
-    await tester.tap(find.byKey(const Key('library_sort_button')));
+    await tester.tap(find.byKey(const Key('library_sort_view_button')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('library_sort_option_title')));
     await tester.pumpAndSettle();
@@ -3032,7 +2411,9 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('library_view_mode_toggle')));
+    await tester.tap(find.byKey(const Key('library_sort_view_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('library_sort_view_toggle_option')));
     await tester.pumpAndSettle();
 
     final tileFinder = find.byKey(const Key('group_tile_奇幻'));
@@ -3119,7 +2500,9 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('library_view_mode_toggle')));
+    await tester.tap(find.byKey(const Key('library_sort_view_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('library_sort_view_toggle_option')));
     await tester.pumpAndSettle();
 
     // bookA 已歸類到「奇幻」→ 1 個拼貼格（ListTile），頂層書架不重複列出
@@ -3132,71 +2515,6 @@ void main() {
         .map((tile) => (tile.title as Text).data)
         .toList();
     expect(titles, ['奇幻', 'B書']);
-  });
-
-  testWidgets('LibraryScreen 貫穿 customFontsRepository 至 SettingsScreen', (
-    tester,
-  ) async {
-    final customFontsRepository = FakeCustomFontsRepository();
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
-          repository: FakeLibraryRepository(initialBooks: const []),
-          importService: FakeBookImportService(),
-          prefsManager: prefsManager,
-          readerFeatureRepositories: LibraryReaderFeatureRepositories(
-            customFontsRepository: customFontsRepository,
-          ),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byKey(const Key('library_settings_button')));
-    await tester.pumpAndSettle();
-
-    final settingsScreen = tester.widget<SettingsScreen>(
-      find.byType(SettingsScreen),
-    );
-    expect(settingsScreen.customFontsRepository, customFontsRepository);
-  });
-
-  // 【審查修正 Critical：見 reviews/review-issue-5-8.md 補件審查】
-  // library_screen.dart 呼叫 SettingsScreen(...) 時原本漏傳
-  // onEinkModeChanged，導致設定頁的 E-Ink 開關雖然畫面上存在，
-  // onChanged 收到 null 會被 Flutter 判定為停用、點擊完全沒反應。
-  testWidgets('LibraryScreen 貫穿 onEinkModeChanged 至 SettingsScreen', (
-    tester,
-  ) async {
-    bool? toggledValue;
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
-          repository: FakeLibraryRepository(initialBooks: const []),
-          importService: FakeBookImportService(),
-          prefsManager: prefsManager,
-          themeDependencies: LibraryThemeDependencies(
-            onEinkModeChanged: (val) => toggledValue = val,
-          ),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byKey(const Key('library_settings_button')));
-    await tester.pumpAndSettle();
-
-    final settingsScreen = tester.widget<SettingsScreen>(
-      find.byType(SettingsScreen),
-    );
-    expect(settingsScreen.onEinkModeChanged, isNotNull);
-
-    await tester.tap(find.byKey(const Key('settings_eink_mode_switch')));
-    await tester.pumpAndSettle();
-
-    expect(toggledValue, isTrue);
   });
 
   testWidgets(
@@ -3920,119 +3238,6 @@ void main() {
     expect(find.byKey(const Key('book_item_b0')), findsOneWidget);
   });
 
-  group('遠端書庫進入點', () {
-    testWidgets('未提供 remoteServerRepository/opdsClient 時，AppBar 不顯示遠端書庫按鈕', (
-      tester,
-    ) async {
-      final repository = FakeLibraryRepository();
-      final importService = FakeBookImportService();
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: LibraryScreen(
-            repository: repository,
-            importService: importService,
-            prefsManager: FakeReaderPrefsManager(),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      expect(
-        find.byKey(const Key('library_remote_library_button')),
-        findsNothing,
-      );
-    });
-
-    testWidgets(
-      '提供 remoteServerRepository/opdsClient 時，AppBar 顯示遠端書庫按鈕，點擊後導向 RemoteServerListScreen',
-      (tester) async {
-        final repository = FakeLibraryRepository();
-        final importService = FakeBookImportService();
-        await tester.pumpWidget(
-          MaterialApp(
-            theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-            home: LibraryScreen(
-              repository: repository,
-              importService: importService,
-              prefsManager: FakeReaderPrefsManager(),
-              remoteLibraryDependencies: LibraryRemoteLibraryDependencies(
-                remoteServerRepository: FakeRemoteServerRepository(),
-                createOpdsClient: () => FakeOpdsClient(),
-                thumbnailCache: FakeRemoteThumbnailCache(),
-              ),
-              computeFingerprint: (path, format) async => 'test-fingerprint',
-            ),
-          ),
-        );
-        await tester.pumpAndSettle();
-
-        expect(
-          find.byKey(const Key('library_remote_library_button')),
-          findsOneWidget,
-        );
-
-        await tester.tap(
-          find.byKey(const Key('library_remote_library_button')),
-        );
-        await tester.pumpAndSettle();
-
-        expect(find.byType(RemoteServerListScreen), findsOneWidget);
-      },
-    );
-
-    testWidgets('從遠端書庫返回書架時，重新載入書籍清單，顯示新下載的書籍'
-        '（review-issue-5-code.md Important #2）', (tester) async {
-      // 比照「從閱讀器返回書架時，重新載入書籍清單」既有測試的手法：
-      // widget test 無法真正走完整下載/匯入流程，改為在使用者停留於
-      // RemoteServerListScreen 期間，直接對 repository 寫入模擬「下載
-      // 完成後已匯入新書」的結果，驗證 Navigator.push().then() 的
-      // _loadBooks() 回呼確實有被觸發。
-      final repository = FakeLibraryRepository();
-      final importService = FakeBookImportService();
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: LibraryScreen(
-            repository: repository,
-            importService: importService,
-            prefsManager: FakeReaderPrefsManager(),
-            remoteLibraryDependencies: LibraryRemoteLibraryDependencies(
-              remoteServerRepository: FakeRemoteServerRepository(),
-              createOpdsClient: () => FakeOpdsClient(),
-              thumbnailCache: FakeRemoteThumbnailCache(),
-            ),
-            computeFingerprint: (path, format) async => 'test-fingerprint',
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      expect(find.text('遠端下載的書'), findsNothing);
-
-      await tester.tap(find.byKey(const Key('library_remote_library_button')));
-      await tester.pumpAndSettle();
-
-      expect(find.byType(RemoteServerListScreen), findsOneWidget);
-
-      await repository.insertBook(
-        _testBook(id: 'remote-1', title: '遠端下載的書', author: '某作者'),
-      );
-
-      await tester.pageBack();
-      await tester.pumpAndSettle();
-
-      expect(
-        find.text('遠端下載的書'),
-        findsNWidgets(2),
-        reason:
-            '返回書架後應重新載入書籍清單，顯示遠端下載期間新匯入的書籍，'
-            '而非停留在舊快照（Issue 9：該書無 coverPath，CoverPlaceholder '
-            '內建書名縮略跟書籍格本身的標題 caption 各自顯示一次，預期 2 個）',
-      );
-    });
-  });
-
   testWidgets(
     '選取 Calibre 來源已下載書籍後點擊「移除本機快取」，刪除實體檔案、isDownloaded 變 false，劃線/書籤/進度不受影響',
     (tester) async {
@@ -4352,69 +3557,6 @@ void main() {
     });
   });
 
-  testWidgets('LibraryScreen 在 E-Ink 模式開啟與關閉時，切換按鈕具備明確狀態容器與 tooltip', (
-    tester,
-  ) async {
-    bool? toggledValue;
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
-          repository: FakeLibraryRepository(),
-          importService: FakeBookImportService(),
-          prefsManager: prefsManager,
-          themeDependencies: LibraryThemeDependencies(
-            isEinkMode: true,
-            onEinkModeChanged: (val) => toggledValue = val,
-          ),
-        ),
-      ),
-    );
-
-    final toggleFinder = find.byKey(const Key('library_eink_toggle'));
-    expect(toggleFinder, findsOneWidget);
-
-    final iconButton = tester.widget<IconButton>(toggleFinder);
-    expect(iconButton.tooltip, contains('開啟'));
-
-    await tester.tap(toggleFinder);
-    await tester.pump();
-
-    expect(toggledValue, isFalse);
-  });
-
-  testWidgets(
-    'LibraryScreen 在 Dark 主題、E-Ink 關閉時，切換鈕外框改參照 onSurface'
-    '（避免 outline 疊色在 Dark surface 上對比不足，2026-09-04 真機驗證確認'
-    '不可辨識，見 reviews/real-device-verification-checklist.md 項目 1）',
-    (tester) async {
-      final colorScheme =
-          resolveThemeData(theme: AppTheme.dark, isEinkMode: false).colorScheme;
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: resolveThemeData(theme: AppTheme.dark, isEinkMode: false),
-          home: LibraryScreen(
-            repository: FakeLibraryRepository(),
-            importService: FakeBookImportService(),
-            prefsManager: prefsManager,
-          ),
-        ),
-      );
-
-      final container = tester.widget<Container>(
-        find
-            .ancestor(
-              of: find.byKey(const Key('library_eink_toggle')),
-              matching: find.byType(Container),
-            )
-            .first,
-      );
-      final decoration = container.decoration as BoxDecoration;
-      final border = decoration.border as Border;
-      expect(border.top.color, colorScheme.onSurface.withValues(alpha: 0.5));
-    },
-  );
-
   testWidgets('LibraryScreen 點擊排序按鈕，彈出選單中當前選中的排序項目顯示 Checkmark 圖示', (
     tester,
   ) async {
@@ -4430,7 +3572,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const Key('library_sort_button')));
+    await tester.tap(find.byKey(const Key('library_sort_view_button')));
     await tester.pumpAndSettle();
 
     // 預設排序為最近閱讀（lastRead）
@@ -4488,6 +3630,48 @@ void main() {
       );
     },
   );
+
+  testWidgets('空書架點擊「匯入書籍」呼叫 onNavigateToSource callback（issues.md Issue 1 明訂，審查報告 I-1）', (tester) async {
+    var sourceTapped = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+          onNavigateToSource: () => sourceTapped++,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('library_empty_import_button')));
+    await tester.pumpAndSettle();
+
+    expect(sourceTapped, 1);
+  });
+
+  testWidgets('點擊 AppBar「來源」圖示呼叫 onNavigateToSource callback（審查報告 M-3）', (tester) async {
+    var sourceTapped = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: const []),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+          onNavigateToSource: () => sourceTapped++,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('library_source_button')));
+    await tester.pumpAndSettle();
+
+    expect(sourceTapped, 1);
+  });
 }
 
 /// 刻意「非線性」的測試用 TextScaler：對較大的輸入值套用較低的有效縮放
