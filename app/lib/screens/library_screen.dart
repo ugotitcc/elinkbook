@@ -775,7 +775,7 @@ class _LibraryScreenState extends State<LibraryScreen> with WidgetsBindingObserv
     // 使用者又沒有手動點過 PagingBar 時，_currentPage 會一直停留在舊的
     // 越界值，之後旋轉螢幕時 didChangeMetrics() 會拿這個越界值當
     // oldPage 去換算，得出進一步錯誤的頁碼（`review-plan-issue-3.md`
-    // M-2）。比照下方 `_lastPageSize = pageSize;` 同樣的既有寫法。
+    // M-2）。比照上方 `_lastPageSize = pageSize;` 同樣的既有寫法。
     _currentPage = safePage;
     final pageStart = safePage * pageSize;
     final pageEnd = (pageStart + pageSize).clamp(0, itemCount);

@@ -1349,3 +1349,7 @@ Expected: `No issues found!`
 - **M-2（Minor，已採納）**：`_buildBookList()` 計算出 `safePage` 後補上 `_currentPage = safePage;`（純賦值、非 `setState`，比照既有 `_lastPageSize = pageSize;` 的寫法），避免 `itemCount` 因批次刪除等操作縮減後，`_currentPage` 欄位持續殘留越界值、影響之後 `didChangeMetrics()` 的換算基準。
 - **M-3（Minor，已採納）**：`_ContinueReadingRow` 的 `onTap` 在 `_inSelectionMode` 時傳 `null`（比照 `_GroupGridTile`／`_GroupListTile` 既有慣例），避免使用者在多選模式下點擊繼續閱讀列時，在毫無勾選指示反饋的情況下誤觸切換 `_mostRecentBook` 的選取狀態；`_ContinueReadingRow.onTap` 型別同步改為 `VoidCallback?`，Task 4 新增對應回歸測試。
 
+## 程式碼審查後修訂紀錄（`reviews/review-issue-3.md`，實作完成後）
+
+- **Important #1（已修正）**：Task 3/4 實作期間，`app/test/screens/library_screen_test.dart` 的共用測試輔助函式 `_testBook()` 預設 `lastReadTime`/`createTime` 由 `DateTime.now()` 改為依 `id` 內數字反向換算的確定性時間戳（`id` 數字越大、預設時間越舊），這項調整當時未在本計劃文件或程式碼註解中留下說明，與第 1106 行「`_testBook()` 預設 `lastReadTime: lastReadTime ?? now`」的敘述矛盾。原因：Issue 3 新增的分頁測試以 `List.generate(N, (i) => _testBook(id: '$i', ...))` 快速依序建立多本書籍，若沿用真實時鐘，同一迴圈中的呼叫可能得到不穩定的遞增順序，讓預設「最後閱讀」排序下 `book_item` 的分頁分佈不可預期；改為確定性公式後，`id` 數字遞增即對應「越早閱讀」，與分頁測試假設的順序一致。已在 `_testBook()` 函式本體補上對應說明註解，此處記錄以更新本計劃文字與實際程式碼的落差。
+

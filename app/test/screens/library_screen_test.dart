@@ -3890,6 +3890,15 @@ Book _testBook({
   BookFileFormat format = BookFileFormat.epub,
   DateTime? lastReadTime,
 }) {
+  // 預設時間戳改為依 id 內數字反向換算的確定性公式（不再用
+  // `DateTime.now()`）：Issue 3 新增的分頁測試以
+  // `List.generate(N, (i) => _testBook(id: '$i', ...))` 依序快速建立多本
+  // 書籍，若沿用真實時鐘，同一迴圈中的呼叫可能落在同一毫秒或得到與
+  // 迴圈方向不一致的遞增順序，讓預設「最後閱讀」排序下 book_item 的頁面
+  // 分佈變得不穩定。id 內數字越大，此處换算出的預設 lastReadTime/
+  // createTime 越舊，確保 book_item_0 排序在前；id 不含數字（例如
+  // 'older'/'newer'）則退回同一個固定時間戳，測試需要區分先後時必須
+  // 明確傳入 lastReadTime（`review-issue-3.md` Important #1）。
   final numericId = int.tryParse(id.replaceAll(RegExp(r'[^0-9]'), ''));
   final defaultTime = numericId != null
       ? DateTime.fromMillisecondsSinceEpoch(1700000000000 - numericId * 1000)

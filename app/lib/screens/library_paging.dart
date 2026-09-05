@@ -12,8 +12,10 @@ int libraryPageSizeForOrientation(Orientation orientation) =>
 
 /// [itemCount] 為 0 時仍回傳 1（避免 0 頁或除以零），呼叫端據此顯示
 /// 「1 / 1」而非崩潰或顯示「0 / 0」。
-int libraryPageCount(int itemCount, int pageSize) =>
-    itemCount == 0 ? 1 : (itemCount / pageSize).ceil();
+int libraryPageCount(int itemCount, int pageSize) {
+  assert(pageSize > 0, 'pageSize 必須為正整數，收到 $pageSize');
+  return itemCount == 0 ? 1 : (itemCount / pageSize).ceil();
+}
 
 /// 把可能越界的頁碼（例如刪除書籍/合併分類後 itemCount 減少）箝制回
 /// `0..pageCount-1` 的有效範圍。`pageCount <= 0` 為異常輸入（正常情況下
@@ -34,4 +36,7 @@ int libraryRecalculatePage({
   required int oldPage,
   required int oldPageSize,
   required int newPageSize,
-}) => (oldPage * oldPageSize) ~/ newPageSize;
+}) {
+  assert(newPageSize > 0, 'newPageSize 必須為正整數，收到 $newPageSize');
+  return (oldPage * oldPageSize) ~/ newPageSize;
+}

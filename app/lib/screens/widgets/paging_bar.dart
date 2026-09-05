@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 /// 書架換頁控制列（`DESIGN.md#L317` §15.1）：純呈現、無狀態，不知道
 /// 分頁邏輯本身——`currentPage`/`pageCount` 由呼叫端算好傳入，

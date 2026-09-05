@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/screens/widgets/paging_bar.dart';
 
@@ -117,6 +117,10 @@ void main() {
       tester.getSize(find.byKey(const Key('paging_bar_previous_button'))),
       const Size(48, 48),
     );
+    expect(
+      tester.getSize(find.byKey(const Key('paging_bar_next_button'))),
+      const Size(48, 48),
+    );
 
     await tester.pumpWidget(
       MaterialApp(
@@ -133,6 +137,10 @@ void main() {
     );
     expect(
       tester.getSize(find.byKey(const Key('paging_bar_previous_button'))),
+      const Size(56, 56),
+    );
+    expect(
+      tester.getSize(find.byKey(const Key('paging_bar_next_button'))),
       const Size(56, 56),
     );
   });
