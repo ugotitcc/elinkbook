@@ -26,8 +26,6 @@ import '../support/fake_library_repository.dart';
 import '../support/fake_reader_prefs_manager.dart';
 import '../support/fake_opds_client.dart';
 import '../support/fake_remote_server_repository.dart';
-import '../support/fake_cloud_storage_client.dart';
-import '../support/fake_fingerprint_computer.dart';
 import 'package:elinkbook/remote/remote_server_profile.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
 import '../support/fake_highlights_repository.dart';
@@ -46,8 +44,6 @@ import '../support/fake_path_provider_platform.dart';
 import '../support/fake_share_platform.dart';
 import '../support/fake_custom_fonts_repository.dart';
 import 'package:elinkbook/sync/sync_checkpoint_trigger.dart';
-import 'package:elinkbook/sync/sync_account_repository.dart';
-import 'package:elinkbook/sync/sync_client.dart';
 import 'package:elinkbook/reader/bookmark.dart';
 
 void main() {
@@ -584,24 +580,10 @@ void main() {
     await tester.tap(find.byKey(const Key('group_tile_奇幻')));
     await tester.pumpAndSettle();
 
-    final filteredScreenFinder = _filteredLibraryScreenFinder('奇幻');
-    expect(
-      find.descendant(
-        of: filteredScreenFinder,
-        matching: find.byKey(const Key('book_item_1')),
-      ),
-      findsOneWidget,
-    );
-    expect(
-      find.descendant(
-        of: filteredScreenFinder,
-        matching: find.byKey(const Key('book_item_2')),
-      ),
-      findsNothing,
-    );
+    expect(find.byKey(const Key('book_item_1')), findsOneWidget);
+    expect(find.byKey(const Key('book_item_2')), findsNothing);
 
-    final navigatorState = tester.state<NavigatorState>(find.byType(Navigator));
-    await navigatorState.maybePop();
+    await tester.tap(find.byKey(const Key('library_back_from_group_button')));
     await tester.pumpAndSettle();
 
     expect(find.text('書架'), findsOneWidget);
@@ -793,14 +775,7 @@ void main() {
     await tester.tap(find.byKey(const Key('group_tile_奇幻')));
     await tester.pumpAndSettle();
 
-    final filteredScreenFinder = _filteredLibraryScreenFinder('奇幻');
-    expect(
-      find.descendant(
-        of: filteredScreenFinder,
-        matching: find.byKey(const Key('book_item_1')),
-      ),
-      findsOneWidget,
-    );
+    expect(find.byKey(const Key('book_item_1')), findsOneWidget);
   });
 
   testWidgets('管理分類對話框：嘗試刪除「未分類」時操作被禁止（找不到刪除/重新命名按鈕）', (tester) async {
@@ -1039,21 +1014,8 @@ void main() {
     await tester.tap(find.byKey(const Key('group_tile_奇幻')));
     await tester.pumpAndSettle();
 
-    final filteredScreenFinder = _filteredLibraryScreenFinder('奇幻');
-    expect(
-      find.descendant(
-        of: filteredScreenFinder,
-        matching: find.byKey(const Key('book_item_1')),
-      ),
-      findsOneWidget,
-    );
-    expect(
-      find.descendant(
-        of: filteredScreenFinder,
-        matching: find.byKey(const Key('book_item_2')),
-      ),
-      findsOneWidget,
-    );
+    expect(find.byKey(const Key('book_item_1')), findsOneWidget);
+    expect(find.byKey(const Key('book_item_2')), findsOneWidget);
   });
 
   testWidgets('選取多本 EPUB 書籍後點擊「強制 FXL」，所有已選取書籍的 isFixedLayout 皆變為 true', (
@@ -1333,24 +1295,11 @@ void main() {
     await tester.tap(find.byKey(const Key('group_tile_奇幻')));
     await tester.pumpAndSettle();
 
-    final filteredScreenFinder = _filteredLibraryScreenFinder('奇幻');
-    expect(
-      find.descendant(
-        of: filteredScreenFinder,
-        matching: find.byKey(const Key('book_item_1')),
-      ),
-      findsOneWidget,
-    );
-    expect(
-      find.descendant(
-        of: filteredScreenFinder,
-        matching: find.byKey(const Key('book_item_2')),
-      ),
-      findsOneWidget,
-    );
+    expect(find.byKey(const Key('book_item_1')), findsOneWidget);
+    expect(find.byKey(const Key('book_item_2')), findsOneWidget);
   });
 
-  testWidgets('點擊分類拼貼格會推入新的 LibraryScreen 並以該分類篩選；篩選畫面不顯示拼貼格區塊與管理分類按鈕', (
+  testWidgets('點擊分類拼貼格為原地狀態切換；下鑽後不顯示拼貼格區塊與管理分類選單項目', (
     tester,
   ) async {
     final bookA = _testBook(id: '1', title: 'A書', groupName: '奇幻');
@@ -1376,51 +1325,25 @@ void main() {
     await tester.tap(find.byKey(const Key('group_tile_奇幻')));
     await tester.pumpAndSettle();
 
-    final filteredScreenFinder = _filteredLibraryScreenFinder('奇幻');
-    expect(filteredScreenFinder, findsOneWidget);
-
-    // AppBar 標題顯示分類名稱，不是「書架」（此文字在整棵樹中唯一——背景
-    // 畫面的拼貼格文字是「奇幻 (1)」而非單獨的「奇幻」，不會誤判）。
+    // AppBar 標題顯示分類名稱，不是「書架」。
     expect(find.text('奇幻'), findsOneWidget);
 
-    // 篩選畫面本身不顯示拼貼格區塊、不顯示「管理分類」按鈕（用 descendant
-    // 限定搜尋範圍在篩選畫面內，避免誤判到背景仍掛載的頂層畫面自己的拼貼
-    // 格／管理分類按鈕——MaterialPageRoute 預設 maintainState: true，背景
-    // 畫面推入新畫面後仍留在 widget 樹中）。
-    expect(
-      find.descendant(
-        of: filteredScreenFinder,
-        matching: find.byKey(const Key('group_tile_奇幻')),
-      ),
-      findsNothing,
-    );
-    await tester.tap(
-      find.descendant(
-        of: filteredScreenFinder,
-        matching: find.byKey(const Key('library_sort_view_button')),
-      ),
-    );
+    // 原地下鑽後畫面樹上只有一個 LibraryScreen——不再顯示拼貼格區塊。
+    expect(find.byKey(const Key('group_tile_奇幻')), findsNothing);
+
+    await tester.tap(find.byKey(const Key('library_sort_view_button')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('library_manage_groups_option')), findsNothing);
     await tester.tapAt(const Offset(10, 10));
     await tester.pumpAndSettle();
-    expect(
-      find.descendant(
-        of: filteredScreenFinder,
-        matching: find.byKey(const Key('book_item_1')),
-      ),
-      findsOneWidget,
-    );
-    expect(
-      find.descendant(
-        of: filteredScreenFinder,
-        matching: find.byKey(const Key('book_item_2')),
-      ),
-      findsNothing,
-    );
+
+    expect(find.byKey(const Key('book_item_1')), findsOneWidget);
+    expect(find.byKey(const Key('book_item_2')), findsNothing);
   });
 
-  testWidgets('從分類篩選畫面把書移到其他分類後返回書架，頂層拼貼格與書籍清單即時反映最新狀態', (tester) async {
+  testWidgets('在分類篩選畫面把書移到其他分類後點擊返回按鈕回到書架，頂層拼貼格即時反映最新狀態', (
+    tester,
+  ) async {
     final bookA = _testBook(id: '1', title: 'A書', groupName: '奇幻');
     final bookB = _testBook(id: '2', title: 'B書', groupName: '科幻');
     final repository = FakeLibraryRepository(initialBooks: [bookA, bookB]);
@@ -1443,27 +1366,18 @@ void main() {
     await tester.tap(find.byKey(const Key('group_tile_奇幻')));
     await tester.pumpAndSettle();
 
-    final filteredScreenFinder = _filteredLibraryScreenFinder('奇幻');
-    await tester.longPress(
-      find.descendant(
-        of: filteredScreenFinder,
-        matching: find.byKey(const Key('book_item_1')),
-      ),
-    );
+    await tester.longPress(find.byKey(const Key('book_item_1')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('library_move_to_group_button')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('library_move_to_group_option_科幻')));
     await tester.pumpAndSettle();
 
-    final navigatorState = tester.state<NavigatorState>(find.byType(Navigator));
-    await navigatorState.maybePop();
+    await tester.tap(find.byKey(const Key('library_back_from_group_button')));
     await tester.pumpAndSettle();
 
-    // bookA 已被移出「奇幻」——「奇幻」拼貼格應消失（剩 0 本，
-    // _buildGroupTiles 只保留非空分類），「科幻」拼貼格應顯示 2 本。若
-    // _openGroupFilteredView 沒有在返回時呼叫 _loadBooks()，這裡會錯誤地
-    // 仍顯示「奇幻 (1)」／「科幻 (1)」的舊快照。
+    // bookA 已被移出「奇幻」——「奇幻」拼貼格應消失（剩 0 本），「科幻」
+    // 拼貼格應顯示 2 本。
     expect(find.byKey(const Key('group_tile_奇幻')), findsNothing);
     expect(find.text('科幻 (2)'), findsOneWidget);
   });
@@ -2480,6 +2394,176 @@ void main() {
     expect(find.byKey(const Key('library_selection_app_bar')), findsOneWidget);
   });
 
+  testWidgets('點擊分類拼貼格為原地狀態切換，不產生新的 Navigator 路由（C-2 核心回歸測試）', (
+    tester,
+  ) async {
+    final book = _testBook(id: '1', title: 'A書', groupName: '奇幻');
+    final repository = FakeLibraryRepository(initialBooks: [book]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: LibraryScreen(
+          repository: repository,
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final navigatorState = tester.state<NavigatorState>(find.byType(Navigator));
+    expect(navigatorState.canPop(), isFalse);
+
+    await tester.tap(find.byKey(const Key('group_tile_奇幻')));
+    await tester.pumpAndSettle();
+
+    expect(
+      navigatorState.canPop(),
+      isFalse,
+      reason: '原地下鑽不應該推入新的 Navigator 路由（舊行為必須明確斷言「不會再發生」）',
+    );
+    expect(
+      find.byType(LibraryScreen),
+      findsOneWidget,
+      reason: '畫面樹上永遠只有一個 LibraryScreen 實例',
+    );
+  });
+
+  testWidgets('下鑽分類後 AppBar leading 顯示返回按鈕、title 顯示分類名稱；點擊返回按鈕回到頂層書架', (
+    tester,
+  ) async {
+    final book = _testBook(id: '1', title: 'A書', groupName: '奇幻');
+    final repository = FakeLibraryRepository(initialBooks: [book]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: LibraryScreen(
+          repository: repository,
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('library_back_from_group_button')), findsNothing);
+
+    await tester.tap(find.byKey(const Key('group_tile_奇幻')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('library_back_from_group_button')), findsOneWidget);
+    expect(find.text('奇幻'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('library_back_from_group_button')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('library_back_from_group_button')), findsNothing);
+    expect(find.text('書架'), findsOneWidget);
+  });
+
+  testWidgets('頂層書架多選模式下系統返回鍵先解除多選，不退出畫面（PopScope 合併邏輯）', (
+    tester,
+  ) async {
+    final book = _testBook(id: '1', title: 'A書');
+    final repository = FakeLibraryRepository(initialBooks: [book]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: LibraryScreen(
+          repository: repository,
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.longPress(find.byKey(const Key('book_item_1')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('library_selection_app_bar')), findsOneWidget);
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('library_selection_app_bar')), findsNothing,
+      reason: '系統返回鍵應優先解除多選模式，而非直接關閉畫面',
+    );
+    expect(find.byType(LibraryScreen), findsOneWidget);
+  });
+
+  testWidgets('下鑽分類內多選模式下系統返回鍵先解除多選，不誤切回頂層（PopScope 合併邏輯）', (
+    tester,
+  ) async {
+    final book = _testBook(id: '1', title: 'A書', groupName: '奇幻');
+    final repository = FakeLibraryRepository(initialBooks: [book]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: LibraryScreen(
+          repository: repository,
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('group_tile_奇幻')));
+    await tester.pumpAndSettle();
+    expect(find.text('奇幻'), findsOneWidget);
+
+    await tester.longPress(find.byKey(const Key('book_item_1')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('library_selection_app_bar')), findsOneWidget);
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('library_selection_app_bar')), findsNothing,
+      reason: '應先解除多選模式',
+    );
+    expect(
+      find.text('奇幻'), findsOneWidget,
+      reason: '解除多選後應仍停留在下鑽的分類畫面，不應該同一次系統返回鍵就直接跳回頂層書架',
+    );
+    expect(find.byKey(const Key('library_back_from_group_button')), findsOneWidget);
+  });
+
+  testWidgets('下鑽分類（非多選模式）下系統返回鍵切回頂層書架（PopScope 合併邏輯）', (
+    tester,
+  ) async {
+    final book = _testBook(id: '1', title: 'A書', groupName: '奇幻');
+    final repository = FakeLibraryRepository(initialBooks: [book]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: LibraryScreen(
+          repository: repository,
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('group_tile_奇幻')));
+    await tester.pumpAndSettle();
+    expect(find.text('奇幻'), findsOneWidget);
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+
+    expect(find.text('書架'), findsOneWidget);
+    expect(find.byKey(const Key('library_back_from_group_button')), findsNothing);
+  });
+
   testWidgets('_buildBookList 合併分類格與書籍的 index 空間，分類格恆排在書籍之前', (tester) async {
     final bookA = _testBook(id: '1', title: 'A書', groupName: '奇幻');
     final bookB = _testBook(
@@ -2665,274 +2749,6 @@ void main() {
     },
   );
 
-  testWidgets('LibraryScreen 透過分類篩選路徑（_openGroupFilteredView）開書後，'
-      'ReaderScreen 收到的 syncCheckpointTrigger 與外層一致'
-      '（epic-8-sync Issue 10）', (tester) async {
-    final book = _testBook(
-      id: '1',
-      title: '紅樓夢',
-      author: '曹雪芹',
-      groupName: '奇幻',
-      filePath: 'content://example/1.txt',
-    );
-    final syncAccountRepository = SyncAccountRepository();
-    final syncClient = SyncClient(accountRepository: syncAccountRepository);
-    final syncCheckpointTrigger = SyncCheckpointTrigger(
-      isLoggedIn: () async => false,
-      runCheckpoint: () async {},
-    );
-
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
-          repository: FakeLibraryRepository(initialBooks: [book]),
-          importService: FakeBookImportService(),
-          prefsManager: prefsManager,
-          syncDependencies: LibrarySyncDependencies(
-            syncAccountRepository: syncAccountRepository,
-            syncClient: syncClient,
-            syncCheckpointTrigger: syncCheckpointTrigger,
-          ),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byKey(const Key('group_tile_奇幻')));
-    await tester.pumpAndSettle();
-
-    final filteredScreenFinder = _filteredLibraryScreenFinder('奇幻');
-    final filteredScreen = tester.widget<LibraryScreen>(filteredScreenFinder);
-    expect(
-      filteredScreen.syncDependencies.syncAccountRepository,
-      same(syncAccountRepository),
-      reason:
-          '_openGroupFilteredView() 未把 syncDependencies 貫穿給下一層 '
-          'LibraryScreen',
-    );
-    expect(
-      filteredScreen.syncDependencies.syncClient,
-      same(syncClient),
-      reason:
-          '_openGroupFilteredView() 未把 syncDependencies 貫穿給下一層 LibraryScreen',
-    );
-    expect(
-      filteredScreen.syncDependencies.syncCheckpointTrigger,
-      same(syncCheckpointTrigger),
-      reason:
-          '_openGroupFilteredView() 未把 syncDependencies 貫穿給下一層 '
-          'LibraryScreen',
-    );
-
-    await tester.tap(
-      find.descendant(
-        of: filteredScreenFinder,
-        matching: find.byKey(const Key('book_item_1')),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    final readerScreen = tester.widget<ReaderScreen>(find.byType(ReaderScreen));
-    expect(
-      readerScreen.syncCheckpointTrigger,
-      same(syncCheckpointTrigger),
-      reason:
-          '透過分類篩選路徑開書，ReaderScreen 收到的 syncCheckpointTrigger 應與'
-          '外層一致，離開閱讀畫面／閱讀中 5 分鐘計時器兩種來源才會正確觸發 '
-          'checkpoint',
-    );
-  });
-
-  testWidgets('LibraryScreen 透過分類篩選路徑（_openGroupFilteredView）開書後，'
-      'ReaderScreen 收到的 ttsProvider 與外層一致（Issue 9 缺口修正）', (tester) async {
-    final book = _testBook(
-      id: '1',
-      title: '紅樓夢',
-      author: '曹雪芹',
-      groupName: '奇幻',
-      filePath: 'content://example/1.txt',
-    );
-    final ttsProvider = FakeTtsProvider();
-
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
-          repository: FakeLibraryRepository(initialBooks: [book]),
-          importService: FakeBookImportService(),
-          prefsManager: prefsManager,
-          readerFeatureRepositories: LibraryReaderFeatureRepositories(
-            ttsProvider: ttsProvider,
-          ),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byKey(const Key('group_tile_奇幻')));
-    await tester.pumpAndSettle();
-
-    final filteredScreenFinder = _filteredLibraryScreenFinder('奇幻');
-    final filteredScreen = tester.widget<LibraryScreen>(filteredScreenFinder);
-    expect(
-      filteredScreen.readerFeatureRepositories.ttsProvider,
-      same(ttsProvider),
-      reason:
-          '_openGroupFilteredView() 未把 ttsProvider 貫穿給下一層 '
-          'LibraryScreen',
-    );
-
-    await tester.tap(
-      find.descendant(
-        of: filteredScreenFinder,
-        matching: find.byKey(const Key('book_item_1')),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    final readerScreen = tester.widget<ReaderScreen>(find.byType(ReaderScreen));
-    expect(
-      readerScreen.ttsProvider,
-      same(ttsProvider),
-      reason:
-          '透過分類篩選路徑開書，ReaderScreen 收到的 ttsProvider 應與外層 '
-          '一致',
-    );
-  });
-
-  testWidgets('透過分類篩選路徑開書，ReaderScreen 收到的 ttsAudioHandler／'
-      'ttsAudioFocusSource 應與外層一致（epic-34-tts-readalong Issue 7）；'
-      '順帶驗證改為整包轉送後，先前遺漏的 layoutPresetRepository／'
-      'bookReaderPrefsRepository 也一併正確貫穿（審查 review-plan-issue-7.md '
-      '4.3 採納，修復既有缺口，非本 Issue 造成，見 Task 7 Step 3「理由」）', (tester) async {
-    final book = _testBook(
-      id: '1',
-      title: '紅樓夢',
-      author: '曹雪芹',
-      filePath: 'content://example/1.txt',
-      groupName: '奇幻',
-    );
-    final ttsAudioHandler = TtsAudioHandler();
-    final ttsAudioFocusSource = FakeTtsAudioFocusSource();
-    final layoutPresetRepository = LayoutPresetRepository(
-      libraryRepository.database,
-    );
-
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
-          repository: FakeLibraryRepository(initialBooks: [book]),
-          importService: FakeBookImportService(),
-          prefsManager: prefsManager,
-          readerFeatureRepositories: LibraryReaderFeatureRepositories(
-            ttsAudioHandler: ttsAudioHandler,
-            ttsAudioFocusSource: ttsAudioFocusSource,
-            layoutPresetRepository: layoutPresetRepository,
-          ),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byKey(const Key('group_tile_奇幻')));
-    await tester.pumpAndSettle();
-
-    final filteredScreenFinder = _filteredLibraryScreenFinder('奇幻');
-    final filteredScreen = tester.widget<LibraryScreen>(filteredScreenFinder);
-    expect(
-      filteredScreen.readerFeatureRepositories.ttsAudioHandler,
-      same(ttsAudioHandler),
-    );
-    expect(
-      filteredScreen.readerFeatureRepositories.ttsAudioFocusSource,
-      same(ttsAudioFocusSource),
-    );
-    expect(
-      filteredScreen.readerFeatureRepositories.layoutPresetRepository,
-      same(layoutPresetRepository),
-      reason:
-          '改為整包轉送（Step 3）前，_openGroupFilteredView() 手動列舉'
-          '欄位時遺漏了 layoutPresetRepository，此處鎖定該既有缺口已修復。',
-    );
-
-    await tester.tap(
-      find.descendant(
-        of: filteredScreenFinder,
-        matching: find.byKey(const Key('book_item_1')),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    final readerScreen = tester.widget<ReaderScreen>(find.byType(ReaderScreen));
-    expect(readerScreen.ttsAudioHandler, same(ttsAudioHandler));
-    expect(readerScreen.ttsAudioFocusSource, same(ttsAudioFocusSource));
-  });
-
-  testWidgets('LibraryScreen 透過分類篩選路徑（_openGroupFilteredView）進入後，'
-      'googleDriveStorageClient／computeFingerprint／isMobileDataConnection 皆與外層一致'
-      '（review-issue-3.md Important #1、review-issue-5.md Important #1、'
-      'Epic 29 Issue 6 一併補上 採納）', (tester) async {
-    final book = _testBook(
-      id: '1',
-      title: '紅樓夢',
-      author: '曹雪芹',
-      groupName: '奇幻',
-      filePath: 'content://example/1.txt',
-    );
-    final googleDriveStorageClient = FakeCloudStorageClient();
-    final computeFingerprint = FakeFingerprintComputer().call;
-    Future<bool> isMobileDataConnection() async => false;
-
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
-          repository: FakeLibraryRepository(initialBooks: [book]),
-          importService: FakeBookImportService(),
-          prefsManager: prefsManager,
-          cloudAccountDependencies: LibraryCloudAccountDependencies(
-            googleDriveStorageClient: googleDriveStorageClient,
-          ),
-          computeFingerprint: computeFingerprint,
-          isMobileDataConnection: isMobileDataConnection,
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byKey(const Key('group_tile_奇幻')));
-    await tester.pumpAndSettle();
-
-    final filteredScreenFinder = _filteredLibraryScreenFinder('奇幻');
-    final filteredScreen = tester.widget<LibraryScreen>(filteredScreenFinder);
-    expect(
-      filteredScreen.cloudAccountDependencies.googleDriveStorageClient,
-      same(googleDriveStorageClient),
-      reason:
-          '_openGroupFilteredView() 未把 cloudAccountDependencies 貫穿給下一層 '
-          'LibraryScreen，會導致分類篩選畫面內「從 Google Drive 匯入」選單項目 '
-          '永遠停用',
-    );
-    expect(
-      filteredScreen.computeFingerprint,
-      same(computeFingerprint),
-      reason:
-          '_openGroupFilteredView() 未把 computeFingerprint 貫穿給下一層 '
-          'LibraryScreen，會導致分類篩選畫面內「從 Google Drive／OneDrive 匯入」'
-          '選單項目一起被誤停用（Issue 5 新增的門檻條件同時檢查 '
-          'computeFingerprint != null）',
-    );
-    expect(
-      filteredScreen.isMobileDataConnection,
-      same(isMobileDataConnection),
-      reason:
-          '_openGroupFilteredView() 未把 isMobileDataConnection 貫穿給下一層 '
-          'LibraryScreen，會導致分類篩選畫面內雲端下載流量警示靜默失效（Issue 6）',
-    );
-  });
-
   testWidgets('openLastBookOnLaunch=true 且圖書庫有書籍時，App 啟動後自動導向最後閱讀的書籍'
       '（epic-18-reader-device-qa Issue 29）', (tester) async {
     final older = _testBook(
@@ -3026,44 +2842,6 @@ void main() {
 
     expect(find.byType(ReaderScreen), findsNothing);
     expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('透過分類篩選路徑（groupFilter 非 null）進入的 LibraryScreen 不會自動開書，'
-      '即使 openLastBookOnLaunch=true（epic-18-reader-device-qa Issue 29）', (
-    tester,
-  ) async {
-    final book = _testBook(
-      id: 'b1',
-      title: '奇幻書',
-      groupName: '奇幻',
-      filePath: 'content://example/b1.txt',
-    );
-    final fakeManager = FakeReaderPrefsManager(
-      globalPrefs: const GlobalReaderPrefs.initial().copyWith(
-        openLastBookOnLaunch: true,
-      ),
-    );
-
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
-          repository: FakeLibraryRepository(initialBooks: [book]),
-          importService: FakeBookImportService(),
-          prefsManager: fakeManager,
-          groupFilter: '奇幻',
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    expect(
-      find.byType(ReaderScreen),
-      findsNothing,
-      reason:
-          '只有頂層書架（groupFilter == null）啟動當下才應該觸發自動開書，'
-          '分類篩選路徑本身不應該重複觸發',
-    );
   });
 
   testWidgets('橫屏（4 欄）下 3 個分類拼貼格＋第 4 欄由第一本書籍格頂上時，兩者文字'
@@ -3729,12 +3507,3 @@ Book _testBook({
   );
 }
 
-/// 找出目前 widget 樹中 `groupFilter` 等於 [groupName] 的那個 LibraryScreen
-/// 實例（即 _openGroupFilteredView 推入的篩選畫面）。MaterialPageRoute
-/// 預設 `maintainState: true`，背景畫面（groupFilter == null 的頂層畫面）
-/// 推入新畫面後仍留在 widget 樹中，兩個 LibraryScreen 實例的書籍/拼貼格
-/// key 會同時存在——後續斷言一律搭配 find.descendant(of: 這個 finder, ...)
-/// 限定搜尋範圍在篩選畫面本身，避免誤判到背景畫面的同名 widget。
-Finder _filteredLibraryScreenFinder(String groupName) => find.byWidgetPredicate(
-  (widget) => widget is LibraryScreen && widget.groupFilter == groupName,
-);
