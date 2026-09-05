@@ -694,6 +694,11 @@ class _LibraryScreenState extends State<LibraryScreen> {
     final groupTiles = _activeGroupFilter == null
         ? _buildGroupTiles(books)
         : const <_GroupTile>[];
+    // 【epic-36 Issue 2】visibleBooks 現在一律對 controller 已載入的全部書籍
+    // 做用戶端過濾（見 plans/plan-issue-2.md「計劃範圍澄清」第 2 點）——
+    // LibraryBookListController 不再對 repository 做以 _activeGroupFilter
+    // 為條件的伺服器端篩選（該欄位只能在 initState 決定、之後不隨使用者
+    // 點擊拼貼格而變動），下鑽分類時改為直接篩出 groupName 相符的書籍。
     final visibleBooks = _activeGroupFilter == null
         ? books.where((b) => b.groupName == BookGroup.uncategorized).toList()
         : books.where((b) => b.groupName == _activeGroupFilter).toList();
