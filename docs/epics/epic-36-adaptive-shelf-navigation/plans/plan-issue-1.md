@@ -911,7 +911,7 @@ git commit -m "feat(epic-36): LibraryScreen 新增 refreshSignal/onNavigateToSou
 
 ### Step A：先讀懂要刪除/遷移的既有測試分佈
 
-- [ ] **Step 1**：Run（唯讀，不改檔案）：
+- [x] **Step 1**：Run（唯讀，不改檔案）：
 
 ```bash
 grep -n "library_import_button\|library_import_files_option\|library_import_folder_option\|library_import_google_drive_option\|library_import_onedrive_option\|library_eink_toggle\|library_remote_library_button\|library_sort_button\|library_view_mode_toggle\|library_manage_groups_button\|library_importing_overlay" app/test/screens/library_screen_test.dart
@@ -925,7 +925,7 @@ grep -n "library_import_button\|library_import_files_option\|library_import_fold
 
 ### Step B：production code 異動
 
-- [ ] **Step 2**：編輯 `app/lib/screens/library_screen.dart`，`_buildNormalAppBar()` 內容整段改為：
+- [x] **Step 2**：編輯 `app/lib/screens/library_screen.dart`，`_buildNormalAppBar()` 內容整段改為：
 
 ```dart
   AppBar _buildNormalAppBar(List<Book>? books) {
@@ -1002,7 +1002,7 @@ grep -n "library_import_button\|library_import_files_option\|library_import_fold
 
 （這段取代原本從 `Container`〔`library_eink_toggle`〕開始，到 `library_settings_button` 結束的整段 `actions:` 內容——`library_manage_groups_button`／`library_remote_library_button`／`library_import_button` 三個區塊整段刪除，不保留任何殘餘 `if` 判斷式。）
 
-- [ ] **Step 3**：`_buildEmptyState()` 的匯入按鈕改為導向來源分頁：
+- [x] **Step 3**：`_buildEmptyState()` 的匯入按鈕改為導向來源分頁：
 
 ```dart
   Widget _buildEmptyState() {
@@ -1023,7 +1023,7 @@ grep -n "library_import_button\|library_import_files_option\|library_import_fold
   }
 ```
 
-- [ ] **Step 4**：`build()` 內移除 `_isImporting` 遮罩疊層：
+- [x] **Step 4**：`build()` 內移除 `_isImporting` 遮罩疊層：
 
 ```dart
   @override
@@ -1050,15 +1050,15 @@ grep -n "library_import_button\|library_import_files_option\|library_import_fold
 
 （原本外層 `Stack`＋`Column`＋`if (_isImporting) _buildImportingOverlay()` 整段收斂，因為 `_isImporting` 欄位本身即將移除。）
 
-- [ ] **Step 5**：刪除以下死碼（連同其 dartdoc 註解整段移除）：`_isImporting` 欄位、`_pickAndImportFiles()`、`_pickAndImportFolder()`、`_openGoogleDriveBrowser()`、`_openOneDriveBrowser()`、`_showImportResultSnackBar()`、`_confirmAutoGroupByFolderName()`、`_buildImportingOverlay()`，以及檔案頂部的 `const _folderPickerChannel = MethodChannel('elinkbook/folder_picker');`。
+- [x] **Step 5**：刪除以下死碼（連同其 dartdoc 註解整段移除）：`_isImporting` 欄位、`_pickAndImportFiles()`、`_pickAndImportFolder()`、`_openGoogleDriveBrowser()`、`_openOneDriveBrowser()`、`_showImportResultSnackBar()`、`_confirmAutoGroupByFolderName()`、`_buildImportingOverlay()`，以及檔案頂部的 `const _folderPickerChannel = MethodChannel('elinkbook/folder_picker');`。
 
-- [ ] **Step 6**：Run `flutter analyze`，依報告清掉檔案頂部殘留的未使用 import（預期至少包含 `package:file_picker/file_picker.dart`、`package:flutter/services.dart`、`../cloud_import/cloud_storage_client.dart`、`cloud_browser_screen.dart`、`remote_server_list_screen.dart`、`../remote/remote_catalog_dependencies.dart`——實際以 `flutter analyze` 報告為準，不要憑記憶刪多或刪少）。
+- [x] **Step 6**：Run `flutter analyze`，依報告清掉檔案頂部殘留的未使用 import（預期至少包含 `package:file_picker/file_picker.dart`、`package:flutter/services.dart`、`../cloud_import/cloud_storage_client.dart`、`cloud_browser_screen.dart`、`remote_server_list_screen.dart`、`../remote/remote_catalog_dependencies.dart`——實際以 `flutter analyze` 報告為準，不要憑記憶刪多或刪少）。
 
 Expected: `No issues found!`
 
 ### Step C：測試遷移（機械式規則，逐一套用在 Step 1 記下的每個行號）
 
-- [ ] **Step 7**：套用以下規則機械式修改 `app/test/screens/library_screen_test.dart`：
+- [x] **Step 7**：套用以下規則機械式修改 `app/test/screens/library_screen_test.dart`：
 
 **規則 1（`library_sort_button` → `library_sort_view_button`，純改名，5 處，含既有 `findsOneWidget` 存在性斷言與 `tester.tap` 呼叫）：**
 ```diff
@@ -1100,7 +1100,7 @@ Expected: `No issues found!`
 - 若只是某個測試裡順手用匯入選單準備測試資料（例如先匯入一本書才能繼續斷言其他行為），改為改用 `FakeLibraryRepository(initialBooks: [...])` 建構子直接塞入測試資料，不透過 UI 操作匯入（比照本檔案其餘多數測試已採用的既有模式）。
 - 第 105-125 行「圖書庫為空時顯示『尚未匯入書籍』提示與匯入按鈕」測試**保留**，只刪除第 124 行 `expect(find.byKey(const Key('library_import_button')), findsOneWidget);` 這一行斷言（該測試其餘部分——空狀態文字與 `library_empty_import_button` 存在性——依然成立）。
 
-- [ ] **Step 8**：新增 `issues.md` 明訂但先前遺漏的兩則 callback 測試（審查報告 I-1、M-3）
+- [x] **Step 8**：新增 `issues.md` 明訂但先前遺漏的兩則 callback 測試（審查報告 I-1、M-3）
 
 在 `app/test/screens/library_screen_test.dart` 新增：
 
@@ -1148,7 +1148,7 @@ Expected: `No issues found!`
   });
 ```
 
-- [ ] **Step 9**：執行測試，逐一修正殘餘失敗
+- [x] **Step 9**：執行測試，逐一修正殘餘失敗
 
 Run: `flutter test test/screens/library_screen_test.dart`
 
@@ -1156,12 +1156,12 @@ Run: `flutter test test/screens/library_screen_test.dart`
 
 Expected: PASS（本 Task 改動涉及的全部案例）
 
-- [ ] **Step 10**：`flutter analyze` 確認乾淨
+- [x] **Step 10**：`flutter analyze` 確認乾淨
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 11**：Commit
+- [x] **Step 11**：Commit
 
 ```bash
 git add app/lib/screens/library_screen.dart app/test/screens/library_screen_test.dart
