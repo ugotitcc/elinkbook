@@ -29,7 +29,6 @@ import 'library_group_management_dialog.dart';
 import 'library_move_to_group_dialog.dart';
 import 'reader_screen.dart';
 import 'remote_server_list_screen.dart';
-import 'settings_screen.dart';
 
 const _folderPickerChannel = MethodChannel('elinkbook/folder_picker');
 
@@ -62,6 +61,9 @@ class LibraryScreen extends StatefulWidget {
   /// 四個獨立參數（epic-26-architecture-hardening Issue 7）。
   final LibraryThemeDependencies themeDependencies;
   final String? groupFilter;
+  final Listenable? refreshSignal;
+  final VoidCallback? onNavigateToSource;
+  final VoidCallback? onNavigateToSettings;
 
   const LibraryScreen({
     super.key,
@@ -76,6 +78,9 @@ class LibraryScreen extends StatefulWidget {
     this.isMobileDataConnection,
     this.themeDependencies = const LibraryThemeDependencies(),
     this.groupFilter,
+    this.refreshSignal,
+    this.onNavigateToSource,
+    this.onNavigateToSettings,
   });
 
   @override
@@ -103,7 +108,25 @@ class _LibraryScreenState extends State<LibraryScreen> {
       groupFilter: widget.groupFilter,
     )..addListener(_onBookListChanged);
     _batchActions = LibraryBatchActions(repository: widget.repository);
+    widget.refreshSignal?.addListener(_onExternalRefreshRequested);
     _initialize();
+  }
+
+  /// 「來源」畫面匯入新書後切回書架時觸發（見 AdaptiveShellScaffold，
+  /// Task 5）——IndexedStack 讓 LibraryScreen 全程保持掛載，切換可見子項不
+  /// 會重跑 build()，需要這個外部訊號主動重新整理。
+  void _onExternalRefreshRequested() {
+    _bookListController.loadBooks();
+    _bookListController.loadGroups();
+  }
+
+  @override
+  void didUpdateWidget(LibraryScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.refreshSignal != oldWidget.refreshSignal) {
+      oldWidget.refreshSignal?.removeListener(_onExternalRefreshRequested);
+      widget.refreshSignal?.addListener(_onExternalRefreshRequested);
+    }
   }
 
   void _onBookListChanged() {
@@ -112,6 +135,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
   @override
   void dispose() {
+    widget.refreshSignal?.removeListener(_onExternalRefreshRequested);
     _bookListController.dispose();
     super.dispose();
   }
@@ -911,29 +935,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
           key: const Key('library_settings_button'),
           icon: const Icon(Icons.settings),
           tooltip: '設定',
-          onPressed: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (context) => SettingsScreen(
-                  prefsManager: widget.prefsManager,
-                  currentTheme: widget.themeDependencies.currentTheme,
-                  isEinkMode: widget.themeDependencies.isEinkMode,
-                  onThemeChanged: widget.themeDependencies.onThemeChanged,
-                  // 【審查修正 Critical：見 reviews/review-issue-5-8.md
-                  // 補件審查】原本漏傳這個參數，SettingsScreen 的 E-Ink
-                  // 開關雖然畫面上存在，但 onChanged 收到 null 會被 Flutter
-                  // 判定為停用（灰階、無法點擊），點了完全沒反應。
-                  onEinkModeChanged: widget.themeDependencies.onEinkModeChanged,
-                  customFontsRepository: widget.readerFeatureRepositories.customFontsRepository,
-                  syncAccountRepository: widget.syncDependencies.syncAccountRepository,
-                  syncClient: widget.syncDependencies.syncClient,
-                  cloudAccountRepository: widget.cloudAccountDependencies.cloudAccountRepository,
-                  googleDriveOAuthClient: widget.cloudAccountDependencies.googleDriveOAuthClient,
-                  oneDriveOAuthClient: widget.cloudAccountDependencies.oneDriveOAuthClient,
-                ),
-              ),
-            );
-          },
+          onPressed: widget.onNavigateToSettings,
         ),
       ],
     );

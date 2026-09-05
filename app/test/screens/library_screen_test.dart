@@ -51,7 +51,6 @@ import 'package:share_plus_platform_interface/share_plus_platform_interface.dart
 import '../support/fake_path_provider_platform.dart';
 import '../support/fake_share_platform.dart';
 import '../support/fake_custom_fonts_repository.dart';
-import 'package:elinkbook/screens/settings_screen.dart';
 import 'package:elinkbook/sync/sync_checkpoint_trigger.dart';
 import 'package:elinkbook/sync/sync_account_repository.dart';
 import 'package:elinkbook/sync/sync_client.dart';
@@ -3132,71 +3131,6 @@ void main() {
         .map((tile) => (tile.title as Text).data)
         .toList();
     expect(titles, ['奇幻', 'B書']);
-  });
-
-  testWidgets('LibraryScreen 貫穿 customFontsRepository 至 SettingsScreen', (
-    tester,
-  ) async {
-    final customFontsRepository = FakeCustomFontsRepository();
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
-          repository: FakeLibraryRepository(initialBooks: const []),
-          importService: FakeBookImportService(),
-          prefsManager: prefsManager,
-          readerFeatureRepositories: LibraryReaderFeatureRepositories(
-            customFontsRepository: customFontsRepository,
-          ),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byKey(const Key('library_settings_button')));
-    await tester.pumpAndSettle();
-
-    final settingsScreen = tester.widget<SettingsScreen>(
-      find.byType(SettingsScreen),
-    );
-    expect(settingsScreen.customFontsRepository, customFontsRepository);
-  });
-
-  // 【審查修正 Critical：見 reviews/review-issue-5-8.md 補件審查】
-  // library_screen.dart 呼叫 SettingsScreen(...) 時原本漏傳
-  // onEinkModeChanged，導致設定頁的 E-Ink 開關雖然畫面上存在，
-  // onChanged 收到 null 會被 Flutter 判定為停用、點擊完全沒反應。
-  testWidgets('LibraryScreen 貫穿 onEinkModeChanged 至 SettingsScreen', (
-    tester,
-  ) async {
-    bool? toggledValue;
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: LibraryScreen(
-          repository: FakeLibraryRepository(initialBooks: const []),
-          importService: FakeBookImportService(),
-          prefsManager: prefsManager,
-          themeDependencies: LibraryThemeDependencies(
-            onEinkModeChanged: (val) => toggledValue = val,
-          ),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byKey(const Key('library_settings_button')));
-    await tester.pumpAndSettle();
-
-    final settingsScreen = tester.widget<SettingsScreen>(
-      find.byType(SettingsScreen),
-    );
-    expect(settingsScreen.onEinkModeChanged, isNotNull);
-
-    await tester.tap(find.byKey(const Key('settings_eink_mode_switch')));
-    await tester.pumpAndSettle();
-
-    expect(toggledValue, isTrue);
   });
 
   testWidgets(
