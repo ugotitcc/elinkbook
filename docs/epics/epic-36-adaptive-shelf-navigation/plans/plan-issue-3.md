@@ -44,7 +44,7 @@
   - `int libraryClampPage(int page, int pageCount)`
   - `int libraryRecalculatePage({required int oldPage, required int oldPageSize, required int newPageSize})`
 
-- [ ] **Step 1: 寫失敗測試**
+- [x] **Step 1: 寫失敗測試**
 
 建立 `app/test/screens/library_paging_test.dart`：
 
@@ -105,12 +105,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/screens/library_paging_test.dart`
 Expected: FAIL（`library_paging.dart` 不存在）
 
-- [ ] **Step 3: 實作**
+- [x] **Step 3: 實作**
 
 建立 `app/lib/screens/library_paging.dart`：
 
@@ -154,17 +154,17 @@ int libraryRecalculatePage({
 }) => (oldPage * oldPageSize) ~/ newPageSize;
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `flutter test test/screens/library_paging_test.dart`
 Expected: PASS（全部案例）
 
-- [ ] **Step 5: `flutter analyze` 確認乾淨**
+- [x] **Step 5: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/screens/library_paging.dart app/test/screens/library_paging_test.dart
@@ -183,7 +183,7 @@ git commit -m "feat(epic-36): 新增書架分頁純數學計算函式 library_pa
 - Consumes: 無（不依賴 Task 1，`PagingBar` 本身不知道分頁邏輯，純粹接收 `currentPage`/`pageCount` 顯示）。
 - Produces: `PagingBar` widget，建構參數 `currentPage`（0-based）／`pageCount`／`onPrevious`／`onNext`／`isEinkMode`（預設 `false`）；Key 契約：`paging_bar_previous_button`／`paging_bar_next_button`。
 
-- [ ] **Step 1: 寫失敗測試**
+- [x] **Step 1: 寫失敗測試**
 
 建立 `app/test/screens/widgets/paging_bar_test.dart`：
 
@@ -329,12 +329,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/screens/widgets/paging_bar_test.dart`
 Expected: FAIL（`paging_bar.dart` 不存在）
 
-- [ ] **Step 3: 實作**
+- [x] **Step 3: 實作**
 
 建立 `app/lib/screens/widgets/paging_bar.dart`：
 
@@ -408,17 +408,17 @@ class PagingBar extends StatelessWidget {
 }
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `flutter test test/screens/widgets/paging_bar_test.dart`
 Expected: PASS（全部案例）
 
-- [ ] **Step 5: `flutter analyze` 確認乾淨**
+- [x] **Step 5: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/screens/widgets/paging_bar.dart app/test/screens/widgets/paging_bar_test.dart
@@ -437,7 +437,7 @@ git commit -m "feat(epic-36): 新增 PagingBar 換頁控制列元件"
 - Consumes: Task 1 的 `libraryPageSizeForOrientation`／`libraryPageCount`／`libraryClampPage`／`libraryRecalculatePage`；Task 2 的 `PagingBar`。
 - Produces：`_LibraryScreenState` 新增欄位 `int _currentPage`／`int? _lastPageSize`，新增 `with WidgetsBindingObserver`；新增 `Key('library_paging_bar')`（`PagingBar` 實例）、`paging_bar_previous_button`／`paging_bar_next_button`（Task 2 已定義，這裡是實際掛載點）。
 
-- [ ] **Step 1: 寫失敗測試——新增分頁核心回歸測試**
+- [x] **Step 1: 寫失敗測試——新增分頁核心回歸測試**
 
 在 `app/test/screens/library_screen_test.dart` 的 `main()` 內、既有 `long按進入選取模式後...` 測試群組附近（任一位置皆可，本檔案既有測試彼此無順序依賴）新增：
 
@@ -643,12 +643,12 @@ git commit -m "feat(epic-36): 新增 PagingBar 換頁控制列元件"
   });
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/screens/library_screen_test.dart --name "第一頁顯示的項目數正確|切換書架顯示的書籍|不跳到看不懂的地方|頁碼重置為第一頁"`
 Expected: FAIL（`PagingBar`／分頁邏輯尚未接上，`paging_bar_next_button` 等 Key 不存在）
 
-- [ ] **Step 3: 實作**
+- [x] **Step 3: 實作**
 
 編輯 `app/lib/screens/library_screen.dart`：
 
@@ -889,12 +889,12 @@ class _LibraryScreenState extends State<LibraryScreen> with WidgetsBindingObserv
 
 （`crossAxisCount` 與 `pageSize` 在數值上恆相等——這是設計上的內部一致性：一頁固定顯示「一整排」，見「計劃範圍澄清」第 3 點；兩者刻意分開計算而非共用一個變數，因為前者是 `GridView` 排版參數、後者是分頁筆數，語意不同，只是巧合地同值。）
 
-- [ ] **Step 4: 執行新測試確認通過**
+- [x] **Step 4: 執行新測試確認通過**
 
 Run: `flutter test test/screens/library_screen_test.dart --name "第一頁顯示的項目數正確|切換書架顯示的書籍|不跳到看不懂的地方|頁碼重置為第一頁"`
 Expected: 上述新增測試 100% PASS。
 
-- [ ] **Step 5: 執行整個 `library_screen_test.dart`，依「計劃範圍澄清」第 6 點的判斷原則修正任何既有測試**
+- [x] **Step 5: 執行整個 `library_screen_test.dart`，依「計劃範圍澄清」第 6 點的判斷原則修正任何既有測試**
 
 Run: `flutter test test/screens/library_screen_test.dart`
 
@@ -902,12 +902,12 @@ Run: `flutter test test/screens/library_screen_test.dart`
 
 Expected: PASS（全部案例，0 失敗——本 Task 收尾 Commit 前必須全綠，`review-plan-issue-2.md` I-1 教訓）
 
-- [ ] **Step 6: `flutter analyze` 確認乾淨**
+- [x] **Step 6: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app/lib/screens/library_screen.dart app/test/screens/library_screen_test.dart
@@ -926,7 +926,7 @@ git commit -m "feat(epic-36): 書架瀏覽改為固定每頁一整排的 PagingB
 - Consumes: Task 3 的 `_buildBookList()` Column 結構（本 Task 在其最上方新增一個條件式 child）。
 - Produces：`_LibraryScreenState` 新增欄位 `Book? _mostRecentBook`；新增私有 widget `_ContinueReadingRow`，Key 契約：`library_continue_reading_row`。
 
-- [ ] **Step 1: 寫失敗測試——5 則情境測試**
+- [x] **Step 1: 寫失敗測試——5 則情境測試**
 
 在 `app/test/screens/library_screen_test.dart` 新增：
 
@@ -1105,12 +1105,12 @@ git commit -m "feat(epic-36): 書架瀏覽改為固定每頁一整排的 PagingB
 
 （`_testBook()` 預設 `lastReadTime: lastReadTime ?? now`，即預設視為「已讀過」；上述測試需要「從未閱讀」情境時皆已明確傳入 `DateTime.fromMillisecondsSinceEpoch(0)`，比照 `book_import_service_impl.dart:434` 既有的「從未閱讀」sentinel 值寫法。）
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/screens/library_screen_test.dart --name "繼續閱讀列|多選模式進行中，繼續閱讀列不可點擊"`
 Expected: FAIL（`library_continue_reading_row` 不存在）
 
-- [ ] **Step 3: 實作**
+- [x] **Step 3: 實作**
 
 編輯 `app/lib/screens/library_screen.dart`：
 
@@ -1226,12 +1226,12 @@ class _ContinueReadingRow extends StatelessWidget {
 }
 ```
 
-- [ ] **Step 4: 執行新測試確認通過**
+- [x] **Step 4: 執行新測試確認通過**
 
 Run: `flutter test test/screens/library_screen_test.dart --name "繼續閱讀列|多選模式進行中，繼續閱讀列不可點擊"`
 Expected: 5 則新測試 100% PASS。
 
-- [ ] **Step 5: 既有測試遷移——3 處未限定範圍的 `find.text` 斷言（`review-plan-issue-3.md` I-1）**
+- [x] **Step 5: 既有測試遷移——3 處未限定範圍的 `find.text` 斷言（`review-plan-issue-3.md` I-1）**
 
 `_ContinueReadingRow` 會在頂層書架渲染 `Text(book.title)`／`Text(_progressText(book))`，任何「只有 1 本書、該書 `lastReadTime` 使用 `_testBook()` 預設值（即視為已讀過）」的既有測試，會讓這本書同時成為 `_mostRecentBook`，導致下列既有斷言重複計數、必然失敗。逐一修正：
 
@@ -1283,17 +1283,17 @@ Expected: 5 則新測試 100% PASS。
 
 **驗證方式**：修正前先執行 `flutter test test/screens/library_screen_test.dart` 確認這兩則測試確實因 Step 3 的改動而失敗（重複計數），修正後再次執行確認轉為 PASS——不得跳過「先確認真的紅燈」這一步，避免誤判成本次改動無關的既有失敗。
 
-- [ ] **Step 6: 執行整個 `library_screen_test.dart` 確認無回歸**
+- [x] **Step 6: 執行整個 `library_screen_test.dart` 確認無回歸**
 
 Run: `flutter test test/screens/library_screen_test.dart`
 Expected: PASS（全部案例，0 失敗——本 Task 收尾 Commit 前必須全綠，`review-plan-issue-2.md` I-1 教訓）
 
-- [ ] **Step 7: `flutter analyze` 確認乾淨**
+- [x] **Step 7: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add app/lib/screens/library_screen.dart app/test/screens/library_screen_test.dart
@@ -1306,28 +1306,28 @@ git commit -m "feat(epic-36): 新增書架常駐繼續閱讀列 _ContinueReading
 
 **Files:** 無新增/修改，純驗證。
 
-- [ ] **Step 1: 執行全套 `flutter test`（不帶檔案路徑）**
+- [x] **Step 1: 執行全套 `flutter test`（不帶檔案路徑）**
 
 Run: `flutter test`
 Expected: 全數通過（比照 `CLAUDE.md`「測試執行範圍」，這是整份計劃收尾的唯一一次全套執行）。若有失敗，比對是否為本計劃改動觸及的檔案；非本計劃觸及範圍的既有不穩定測試（例如已追蹤的 `epic-37-test-suite-flakiness`）記錄下來，不在本 Issue 修復範圍內。
 
-- [ ] **Step 2: 執行 `flutter analyze`**
+- [x] **Step 2: 執行 `flutter analyze`**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 3: 逐條核對 `issues.md` Issue 3 驗收標準**
+- [x] **Step 3: 逐條核對 `issues.md` Issue 3 驗收標準**
 
-- [ ] 書架瀏覽改為固定每頁一整排的換頁控制列（直向 3／橫向 4），無限捲動行為移除
-- [ ] 旋轉螢幕時頁碼正確換算、不跳到看不懂的地方
-- [ ] 繼續閱讀列依三種邊界條件正確顯示/隱藏
-- [ ] `flutter analyze` 乾淨、`flutter test` 全數通過
+- [x] 書架瀏覽改為固定每頁一整排的換頁控制列（直向 3／橫向 4），無限捲動行為移除
+- [x] 旋轉螢幕時頁碼正確換算、不跳到看不懂的地方
+- [x] 繼續閱讀列依三種邊界條件正確顯示/隱藏
+- [x] `flutter analyze` 乾淨、`flutter test` 全數通過
 
-- [ ] **Step 4: 更新 `docs/epics.md` 備註欄位**
+- [x] **Step 4: 更新 `docs/epics.md` 備註欄位**
 
 將 Epic 36 該列備註改為「Issue 1-3 已完成，待認領 Issue 4/5」（執行時以 `issues.md` 實際狀態為準調整措辭，Issue 5 若已由其他人平行完成則一併反映）。
 
-- [ ] **Step 5: 依 `superpowers:requesting-code-review` 發起本 Issue 的程式碼審查**
+- [x] **Step 5: 依 `superpowers:requesting-code-review` 發起本 Issue 的程式碼審查**
 
 審查者先產出報告至 `docs/epics/epic-36-adaptive-shelf-navigation/reviews/review-issue-3.md`，不得直接修改程式碼（比照專案 SDD 工作流程第 6 步）。審查請求內容須包含「計劃範圍澄清」第 2 點的 `didChangeMetrics()`／`MediaQuery` 時序備註，供審查者重點覆核這處容易寫錯但不容易在一般測試環境下被發現的細節。
 
@@ -1348,3 +1348,4 @@ Expected: `No issues found!`
 - **M-1（Minor，已採納）**：`libraryRecalculatePage` 改用 Dart 原生整數截斷除法 `~/`（三個參數皆非負，功能等價於原本的 `/`+`.floor()`，更地道且免浮點數運算）；`libraryClampPage` 補上 `pageCount <= 0` 防禦，避免異常輸入時 `page.clamp(0, -1)` 拋出 `ArgumentError`，Task 1 新增對應單元測試。
 - **M-2（Minor，已採納）**：`_buildBookList()` 計算出 `safePage` 後補上 `_currentPage = safePage;`（純賦值、非 `setState`，比照既有 `_lastPageSize = pageSize;` 的寫法），避免 `itemCount` 因批次刪除等操作縮減後，`_currentPage` 欄位持續殘留越界值、影響之後 `didChangeMetrics()` 的換算基準。
 - **M-3（Minor，已採納）**：`_ContinueReadingRow` 的 `onTap` 在 `_inSelectionMode` 時傳 `null`（比照 `_GroupGridTile`／`_GroupListTile` 既有慣例），避免使用者在多選模式下點擊繼續閱讀列時，在毫無勾選指示反饋的情況下誤觸切換 `_mostRecentBook` 的選取狀態；`_ContinueReadingRow.onTap` 型別同步改為 `VoidCallback?`，Task 4 新增對應回歸測試。
+
