@@ -306,7 +306,7 @@ git commit -m "feat(epic-36): 抽出 pickAndImportFiles/pickAndImportFolder 為�
 - Consumes: Task 1 的 `pickAndImportFiles`／`pickAndImportFolder`／`confirmAutoGroupByFolderName`／`showImportResultSnackBar`；既有 `LibraryCloudAccountDependencies`／`LibraryRemoteLibraryDependencies`（`app/lib/screens/library_screen_dependencies.dart`）、`ComputeRemoteFingerprint`（`app/lib/library/book_content_fingerprint.dart`）、`CloudBrowserScreen`（`app/lib/screens/cloud_browser_screen.dart`）、`RemoteServerListScreen`（`app/lib/screens/remote_server_list_screen.dart`）、`RemoteCatalogDependencies`（`app/lib/remote/remote_catalog_dependencies.dart`）。
 - Produces: `SourcesHomeScreen` widget，建構參數 `repository`／`importService`／`cloudAccountDependencies`／`remoteLibraryDependencies`／`computeFingerprint`／`isMobileDataConnection`／`isEinkMode`／`onNavigateToLibrary`／`onNavigateToSettings`；Key 契約：`sources_pick_files_button`／`sources_pick_folder_button`／`sources_google_drive_tile`／`sources_onedrive_tile`／`sources_remote_library_tile`／`sources_library_button`／`sources_settings_button`。
 
-- [ ] **Step 1: 寫失敗測試——本機兩顆按鈕呼叫對應匯入函式**
+- [x] **Step 1: 寫失敗測試——本機兩顆按鈕呼叫對應匯入函式**
 
 建立 `app/test/screens/sources_home_screen_test.dart`：
 
@@ -470,12 +470,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/screens/sources_home_screen_test.dart`
 Expected: FAIL（`sources_home_screen.dart` 不存在）
 
-- [ ] **Step 3: 實作 `SourcesHomeScreen`**
+- [x] **Step 3: 實作 `SourcesHomeScreen`**
 
 建立 `app/lib/screens/sources_home_screen.dart`：
 
@@ -677,7 +677,7 @@ class SourcesHomeScreen extends StatelessWidget {
 }
 ```
 
-- [ ] **Step 4: 執行測試，逐一修正斷言直到全數通過**
+- [x] **Step 4: 執行測試，逐一修正斷言直到全數通過**
 
 Run: `flutter test test/screens/sources_home_screen_test.dart`
 
@@ -685,12 +685,12 @@ Run: `flutter test test/screens/sources_home_screen_test.dart`
 
 Expected: PASS（全部案例）
 
-- [ ] **Step 5: `flutter analyze` 確認乾淨**
+- [x] **Step 5: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/screens/sources_home_screen.dart app/test/screens/sources_home_screen_test.dart
