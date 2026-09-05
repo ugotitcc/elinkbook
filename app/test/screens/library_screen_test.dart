@@ -3450,6 +3450,207 @@ void main() {
 
     expect(sourceTapped, 1);
   });
+
+  testWidgets('直向（3 項/頁）與橫向（4 項/頁）第一頁顯示的項目數正確', (tester) async {
+    final books = List.generate(5, (i) => _testBook(id: '$i', title: '書$i'));
+
+    tester.view.physicalSize = const Size(800, 1200); // portrait
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: books),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('book_item_0')), findsOneWidget);
+    expect(find.byKey(const Key('book_item_1')), findsOneWidget);
+    expect(find.byKey(const Key('book_item_2')), findsOneWidget);
+    expect(find.byKey(const Key('book_item_3')), findsNothing, reason: '直向每頁只顯示 3 項');
+    expect(find.text('1 / 2'), findsOneWidget);
+
+    tester.view.physicalSize = const Size(1200, 800); // landscape
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('book_item_3')),
+      findsOneWidget,
+      reason: '橫向每頁顯示 4 項，旋轉後第一頁應多出第 4 項',
+    );
+    expect(find.text('1 / 2'), findsOneWidget);
+  });
+
+  testWidgets('點擊 PagingBar 下一頁/上一頁切換書架顯示的書籍', (tester) async {
+    final books = List.generate(5, (i) => _testBook(id: '$i', title: '書$i'));
+
+    tester.view.physicalSize = const Size(800, 1200); // portrait，pageSize=3
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: books),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('book_item_0')), findsOneWidget);
+    expect(find.byKey(const Key('book_item_3')), findsNothing);
+    expect(find.text('1 / 2'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('paging_bar_next_button')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('book_item_0')), findsNothing);
+    expect(find.byKey(const Key('book_item_3')), findsOneWidget);
+    expect(find.byKey(const Key('book_item_4')), findsOneWidget);
+    expect(find.text('2 / 2'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('paging_bar_previous_button')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('book_item_0')), findsOneWidget);
+    expect(find.text('1 / 2'), findsOneWidget);
+  });
+
+  testWidgets('旋轉螢幕時目前頁碼依新每頁容量正確換算，不跳到看不懂的地方', (tester) async {
+    final books = List.generate(10, (i) => _testBook(id: '$i', title: '書$i'));
+
+    tester.view.physicalSize = const Size(800, 1200); // portrait，pageSize=3
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: books),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('paging_bar_next_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('paging_bar_next_button')));
+    await tester.pumpAndSettle();
+    // 10 本書，pageSize 3 → pageCount = 4；目前在第 3 頁（0-based page=2），
+    // 第一項全域 index = 6。
+    expect(find.text('3 / 4'), findsOneWidget);
+    expect(find.byKey(const Key('book_item_6')), findsOneWidget);
+
+    tester.view.physicalSize = const Size(1200, 800); // landscape，pageSize=4
+    await tester.pumpAndSettle();
+
+    // libraryRecalculatePage(oldPage: 2, oldPageSize: 3, newPageSize: 4)
+    // = floor(6/4) = 1 → 顯示「2 / 3」（pageCount = ceil(10/4) = 3）。
+    expect(find.text('2 / 3'), findsOneWidget);
+    expect(find.byKey(const Key('book_item_4')), findsOneWidget);
+  });
+
+  testWidgets('切換排序條件後頁碼重置為第一頁', (tester) async {
+    final books = List.generate(5, (i) => _testBook(id: '$i', title: '書$i'));
+
+    tester.view.physicalSize = const Size(800, 1200); // portrait，pageSize=3
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: books),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('paging_bar_next_button')));
+    await tester.pumpAndSettle();
+    expect(find.text('2 / 2'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('library_sort_view_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('library_sort_option_title')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('1 / 2'), findsOneWidget);
+  });
+
+  testWidgets('進入/離開分類下鑽時頁碼重置為第一頁', (tester) async {
+    final groupBooks = List.generate(
+      5,
+      (i) => _testBook(id: 'g$i', title: '分類書$i', groupName: '奇幻'),
+    );
+
+    tester.view.physicalSize = const Size(800, 1200); // portrait，pageSize=3
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: groupBooks),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('group_tile_奇幻')));
+    await tester.pumpAndSettle();
+    // 5 本書，pageSize 3 → pageCount = 2。
+    expect(find.text('1 / 2'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('paging_bar_next_button')));
+    await tester.pumpAndSettle();
+    expect(find.text('2 / 2'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('library_back_from_group_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('group_tile_奇幻')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('1 / 2'),
+      findsOneWidget,
+      reason: '再次下鑽同一分類時頁碼應已重置，不殘留上次離開時的頁碼',
+    );
+  });
+
 }
 
 /// 刻意「非線性」的測試用 TextScaler：對較大的輸入值套用較低的有效縮放
@@ -3491,7 +3692,10 @@ Book _testBook({
   BookFileFormat format = BookFileFormat.epub,
   DateTime? lastReadTime,
 }) {
-  final now = DateTime.now();
+  final numericId = int.tryParse(id.replaceAll(RegExp(r'[^0-9]'), ''));
+  final defaultTime = numericId != null
+      ? DateTime.fromMillisecondsSinceEpoch(1700000000000 - numericId * 1000)
+      : DateTime.fromMillisecondsSinceEpoch(1700000000000);
   return Book(
     id: id,
     title: title,
@@ -3502,8 +3706,8 @@ Book _testBook({
     coverPath: coverPath,
     groupName: groupName,
     isFixedLayout: isFixedLayout,
-    createTime: now,
-    lastReadTime: lastReadTime ?? now,
+    createTime: defaultTime,
+    lastReadTime: lastReadTime ?? defaultTime,
   );
 }
 

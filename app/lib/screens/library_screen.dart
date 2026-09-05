@@ -22,7 +22,9 @@ import '../theme/elink_tokens.dart';
 
 import 'library_group_management_dialog.dart';
 import 'library_move_to_group_dialog.dart';
+import 'library_paging.dart';
 import 'reader_screen.dart';
+import 'widgets/paging_bar.dart';
 
 /// 圖書庫主畫面：讀取 [LibraryRepository] 的真實資料，取代
 /// epic-0-skeleton 遺留的固定範例書籍清單佔位版本（見
@@ -77,26 +79,30 @@ class LibraryScreen extends StatefulWidget {
   State<LibraryScreen> createState() => _LibraryScreenState();
 }
 
-class _LibraryScreenState extends State<LibraryScreen> {
+class _LibraryScreenState extends State<LibraryScreen> with WidgetsBindingObserver {
   final _preferences = LibraryPreferences();
   late final LibraryBookListController _bookListController;
   late final LibraryBatchActions _batchActions;
 
-  /// 三目的地導覽下 LibraryScreen 只建構一次、恆為頂層模式（epic-36
-  /// Issue 1），原本靠「另一個獨立 LibraryScreen 實例＋groupFilter 建構參數」
-  /// 模擬下鑽的做法在 Issue 2 改為這個可變狀態的原地切換，透過
-  /// _openGroupFilteredView()／_exitGroupFilteredView() 以 setState 變動。
   String? _activeGroupFilter;
   LibraryViewMode _viewMode = LibraryViewMode.grid;
   Set<String>? _selectedBookIds;
-  // 〔比照 epic-30 Issue 3 review-issue-3.md 既定的重入防護模式〕避免
-  // 使用者在重新下載進行中又快速連點同一本「待下載」書籍，重複觸發兩次
-  // 下載/確認流程。
   final Set<String> _redownloadingBookIds = {};
+
+  /// 目前頁碼（0-based）。分頁筆數固定依螢幕方向決定（見
+  /// `library_paging.dart`），排序/分類切換時重置為 0，旋轉螢幕時依
+  /// `libraryRecalculatePage()` 換算，其餘情況（管理分類、格狀/清單
+  /// 切換）維持不變，見 plans/plan-issue-3.md「計劃範圍澄清」第 4、5 點。
+  int _currentPage = 0;
+
+  /// `didChangeMetrics()` 用來跟「新方向換算出的每頁筆數」比較，判斷是否
+  /// 真的需要重新換算頁碼；於每次 `_buildBookList()` 呼叫後更新為最新值。
+  int? _lastPageSize;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _bookListController = LibraryBookListController(
       repository: widget.repository,
     )..addListener(_onBookListChanged);
@@ -128,9 +134,38 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     widget.refreshSignal?.removeListener(_onExternalRefreshRequested);
     _bookListController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeMetrics() {
+    if (!mounted) return;
+    final physicalSize = View.of(context).physicalSize;
+    // App 退到背景、螢幕休眠、多視窗模式調整分割大小、可折疊裝置展開
+    // 過渡瞬間，physicalSize 可能暫時回報為 0x0——此時 `0 > 0` 為
+    // false，會被誤判為 portrait，若裝置原本是 landscape
+    // （`_lastPageSize == 4`）就會觸發一次錯誤的頁碼換算。直接略過這種
+    // 暫態，等下一次真正有效的 metrics 變化再處理（`review-plan-issue-3.md`
+    // I-2）。
+    if (physicalSize.isEmpty) return;
+    final newOrientation = physicalSize.width > physicalSize.height
+        ? Orientation.landscape
+        : Orientation.portrait;
+    final newPageSize = libraryPageSizeForOrientation(newOrientation);
+    final oldPageSize = _lastPageSize;
+    if (oldPageSize != null && oldPageSize != newPageSize) {
+      setState(() {
+        _currentPage = libraryRecalculatePage(
+          oldPage: _currentPage,
+          oldPageSize: oldPageSize,
+          newPageSize: newPageSize,
+        );
+      });
+    }
+    _lastPageSize = newPageSize;
   }
 
   Future<void> _initialize() async {
@@ -478,11 +513,22 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 
   void _openGroupFilteredView(String groupName) {
-    setState(() => _activeGroupFilter = groupName);
+    setState(() {
+      _activeGroupFilter = groupName;
+      _currentPage = 0;
+    });
   }
 
   void _exitGroupFilteredView() {
-    setState(() => _activeGroupFilter = null);
+    setState(() {
+      _activeGroupFilter = null;
+      _currentPage = 0;
+    });
+  }
+
+  void _changeSortBy(LibrarySortBy sortBy) {
+    setState(() => _currentPage = 0);
+    _bookListController.changeSortBy(sortBy);
   }
 
   @override
@@ -533,7 +579,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
               for (final sortBy in LibrarySortBy.values)
                 PopupMenuItem<void>(
                   key: Key('library_sort_option_${sortBy.name}'),
-                  onTap: () => _bookListController.changeSortBy(sortBy),
+                  onTap: () => _changeSortBy(sortBy),
                   child: Row(
                     children: [
                       SizedBox(
@@ -694,30 +740,41 @@ class _LibraryScreenState extends State<LibraryScreen> {
     final groupTiles = _activeGroupFilter == null
         ? _buildGroupTiles(books)
         : const <_GroupTile>[];
-    // 【epic-36 Issue 2】visibleBooks 現在一律對 controller 已載入的全部書籍
-    // 做用戶端過濾（見 plans/plan-issue-2.md「計劃範圍澄清」第 2 點）——
-    // LibraryBookListController 不再對 repository 做以 _activeGroupFilter
-    // 為條件的伺服器端篩選（該欄位只能在 initState 決定、之後不隨使用者
-    // 點擊拼貼格而變動），下鑽分類時改為直接篩出 groupName 相符的書籍。
     final visibleBooks = _activeGroupFilter == null
         ? books.where((b) => b.groupName == BookGroup.uncategorized).toList()
         : books.where((b) => b.groupName == _activeGroupFilter).toList();
     final itemCount = groupTiles.length + visibleBooks.length;
-    Widget itemBuilder(BuildContext context, int index, {required bool isGrid}) {
-      if (index < groupTiles.length) {
-        final tile = groupTiles[index];
-        // 選取模式進行中時，分類格不可觸發導覽（onTap 傳 null），比照舊版
-        // _buildGroupTabs() 對 Chip 在 _inSelectionMode 時一律停用互動的
-        // 既有慣例——否則使用者長按多選書籍時誤觸分類格，會帶著選取狀態
-        // 被推入另一個 LibraryScreen 實例，選取列顯示與計數會與使用者預
-        // 期不符。
+
+    final orientation = MediaQuery.orientationOf(context);
+    final pageSize = libraryPageSizeForOrientation(orientation);
+    _lastPageSize = pageSize;
+    final pageCount = libraryPageCount(itemCount, pageSize);
+    final safePage = libraryClampPage(_currentPage, pageCount);
+    // 同步寫回欄位本身（純賦值，非 setState——目前這次 build 已經在用
+    // safePage 渲染，不需要立即再觸發一次重建；純粹是讓 _currentPage
+    // 欄位不殘留越界值）。若不同步，批次刪除書籍導致 itemCount 縮減、
+    // 使用者又沒有手動點過 PagingBar 時，_currentPage 會一直停留在舊的
+    // 越界值，之後旋轉螢幕時 didChangeMetrics() 會拿這個越界值當
+    // oldPage 去換算，得出進一步錯誤的頁碼（`review-plan-issue-3.md`
+    // M-2）。比照下方 `_lastPageSize = pageSize;` 同樣的既有寫法。
+    _currentPage = safePage;
+    final pageStart = safePage * pageSize;
+    final pageEnd = (pageStart + pageSize).clamp(0, itemCount);
+
+    Widget itemBuilder(
+      BuildContext context,
+      int globalIndex, {
+      required bool isGrid,
+    }) {
+      if (globalIndex < groupTiles.length) {
+        final tile = groupTiles[globalIndex];
         final onTap =
             _inSelectionMode ? null : () => _openGroupFilteredView(tile.name);
         return isGrid
             ? _GroupGridTile(tile: tile, onTap: onTap)
             : _GroupListTile(tile: tile, onTap: onTap);
       }
-      final book = visibleBooks[index - groupTiles.length];
+      final book = visibleBooks[globalIndex - groupTiles.length];
       return isGrid
           ? _BookGridTile(
               book: book,
@@ -734,27 +791,52 @@ class _LibraryScreenState extends State<LibraryScreen> {
               onLongPress: () => _onBookLongPress(book),
             );
     }
+
+    final pageItemCount = pageEnd - pageStart;
+    final Widget gridOrList;
     if (_viewMode == LibraryViewMode.grid) {
-      final orientation = MediaQuery.orientationOf(context);
       final crossAxisCount = orientation == Orientation.landscape ? 4 : 3;
-      return GridView.builder(
+      gridOrList = GridView.builder(
         key: const Key('library_grid_view'),
         padding: const EdgeInsets.all(8),
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: crossAxisCount,
           childAspectRatio: 0.62,
           crossAxisSpacing: 8,
           mainAxisSpacing: 12,
         ),
-        itemCount: itemCount,
+        itemCount: pageItemCount,
         itemBuilder: (context, index) =>
-            itemBuilder(context, index, isGrid: true),
+            itemBuilder(context, pageStart + index, isGrid: true),
+      );
+    } else {
+      gridOrList = ListView.builder(
+        key: const Key('library_list_view'),
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: pageItemCount,
+        itemBuilder: (context, index) =>
+            itemBuilder(context, pageStart + index, isGrid: false),
       );
     }
-    return ListView.builder(
-      key: const Key('library_list_view'),
-      itemCount: itemCount,
-      itemBuilder: (context, index) => itemBuilder(context, index, isGrid: false),
+
+    return Column(
+      children: [
+        Expanded(child: Align(alignment: Alignment.topCenter, child: gridOrList)),
+        PagingBar(
+          key: const Key('library_paging_bar'),
+          currentPage: safePage,
+          pageCount: pageCount,
+          onPrevious:
+              safePage > 0 ? () => setState(() => _currentPage = safePage - 1) : null,
+          onNext: safePage < pageCount - 1
+              ? () => setState(() => _currentPage = safePage + 1)
+              : null,
+          isEinkMode: widget.themeDependencies.isEinkMode,
+        ),
+      ],
     );
   }
 }
