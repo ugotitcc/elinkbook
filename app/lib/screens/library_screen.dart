@@ -1534,6 +1534,10 @@ class _LayoutOverrideDialogState extends State<_LayoutOverrideDialog> {
     _isSaving = true;
     final existing = _existingPrefs;
     if (existing == null) return;
+    // 【review-issue-4.md Important】此建構子逐一列出 BookReaderPrefs 目前
+    // 全部欄位，僅 writingModeOverride/pageTurnModeOverride 取本地狀態、其餘
+    // 原樣帶回既有值——若 BookReaderPrefs 未來新增欄位，此處必須同步補上，
+    // 否則新欄位會在「版面覆寫」儲存時被靜默清空成預設值。
     final updated = BookReaderPrefs(
       fontFamily: existing.fontFamily,
       fontSize: existing.fontSize,
