@@ -100,7 +100,7 @@
 
 **依賴：** Issue 3（`onRemoveCache`/`onDelete` 完成後需重新計算 Issue 3 引入的 `_mostRecentBook`）
 
-**Status:** ready-for-agent
+**Status:** completed
 
 **來源：** `spec.md` §功能④（對應原始 Issue 4，解決 I-2；含 `reviews/review-spec.md` I-2、I-3、I-4 修訂）
 

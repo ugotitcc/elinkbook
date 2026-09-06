@@ -44,7 +44,7 @@
 | 34 | `epic-33-foliate-js-vendor-sync` foliate-js vendored 檔案持續同步 | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 35 | `epic-34-tts-readalong` 語音朗讀（TTS）與同步高亮（Read-along） | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 36 | `epic-35-design-system-tokens` 設計系統 Token 落地（ElinkTokens：三主題＋E-Ink 修飾子） | 🟡 開發中 (Active) | Issue 1-10 已完成並合併（PR #209、#210、#211、#212、#213）；Issue 6 有 3 項待人類確認事項（Dark 主題邊框／Light 主題徽章對比度目視確認、E-Ink 佔位符外框設計決策已由 Issue 9 完成），詳見 Issue 6 收尾備註；Issue 7 有 5 項待人類真機確認事項，詳見 `issues.md` Issue 7；Issue 10 收尾另有 2 項不擋合併的後續建議（Light/Sepia 主題邊框色值變更未經真機覆核、`_buildThumbnail()` 3 個分支尚未逐一測試 `.title` 值），詳見 `issues.md` Issue 10 |
-| 37 | `epic-36-adaptive-shelf-navigation` 三目的地導覽／書架下鑽強化／設定四分區 | 🟡 開發中 (Active) | Issue 1-4 已完成並合併（PR #214、#215、#216，Issue 4 待 PR），待認領 Issue 5 |
+| 37 | `epic-36-adaptive-shelf-navigation` 三目的地導覽／書架下鑽強化／設定四分區 | 🟡 開發中 (Active) | Issue 1-4 已完成並合併（PR #214、#215、#216、#217），待認領 Issue 5 |
 | 38 | `epic-37-test-suite-flakiness` 全套測試套件既有不穩定性追蹤 | 🟡 開發中 (Active) | 從 `epic-35` Issue 5 收尾階段發現，拆為 Issue 1-3，三者皆已完成資訊補齊（皆為未重現），是否歸檔或針對個別 Issue 開後續工單待人類決定；調查中另發現 `remote_catalog_screen_test.dart`（Issue 2 檔案）重現不穩定，詳見 `epic.md` |
 
 **狀態燈號定義**：
