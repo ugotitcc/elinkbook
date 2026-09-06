@@ -50,6 +50,24 @@ class GlobalReaderPrefs {
   /// 的那一本，取代顯示書架。
   final bool openLastBookOnLaunch;
 
+  /// 「顯示頁首／頁尾」全域預設值（epic-36-adaptive-shelf-navigation
+  /// Issue 5，spec.md §功能⑤），預設 `false`——與目前 `reader_screen.dart`
+  /// 多處硬編碼的 `?? false` 回退值一致，升級後行為不變。與既有單書層
+  /// `BookReaderPrefs.showHeader`/`showFooter` 為雙層解析關係
+  /// （`book.showHeader ?? global.showHeader`，見
+  /// `ReaderPrefsManagerImpl.resolve()`）。
+  final bool showHeader;
+  final bool showFooter;
+
+  /// 朗讀（TTS）預設語音 id（epic-36-adaptive-shelf-navigation Issue 5）。
+  /// `null` 代表「使用系統預設語音」——語意上沒有一個放諸四海皆準的安全
+  /// 非空預設值，不比照本類別其餘欄位一律 non-nullable 的慣例。
+  final String? ttsVoiceId;
+
+  /// 朗讀（TTS）預設語速，範圍 0.75x~2.0x（`DESIGN.md#L307` §13.2），
+  /// 預設 `1.0`。
+  final double defaultTtsSpeed;
+
   const GlobalReaderPrefs({
     required this.pageTurnMode,
     required this.screenOrientation,
@@ -60,6 +78,10 @@ class GlobalReaderPrefs {
     this.fullscreen = false,
     this.consoleLogEnabled = false,
     this.openLastBookOnLaunch = true,
+    this.showHeader = false,
+    this.showFooter = false,
+    this.ttsVoiceId,
+    this.defaultTtsSpeed = 1.0,
   });
 
   /// 初始值，與現行 GlobalReaderDefaults 的既有硬編碼預設一致，
@@ -73,7 +95,11 @@ class GlobalReaderPrefs {
         volumeKeyEnabled = true,
         fullscreen = false,
         consoleLogEnabled = false,
-        openLastBookOnLaunch = true;
+        openLastBookOnLaunch = true,
+        showHeader = false,
+        showFooter = false,
+        ttsVoiceId = null,
+        defaultTtsSpeed = 1.0;
 
   GlobalReaderPrefs copyWith({
     PageTurnMode? pageTurnMode,
@@ -85,6 +111,10 @@ class GlobalReaderPrefs {
     bool? fullscreen,
     bool? consoleLogEnabled,
     bool? openLastBookOnLaunch,
+    bool? showHeader,
+    bool? showFooter,
+    String? ttsVoiceId,
+    double? defaultTtsSpeed,
   }) {
     return GlobalReaderPrefs(
       pageTurnMode: pageTurnMode ?? this.pageTurnMode,
@@ -97,6 +127,10 @@ class GlobalReaderPrefs {
       fullscreen: fullscreen ?? this.fullscreen,
       consoleLogEnabled: consoleLogEnabled ?? this.consoleLogEnabled,
       openLastBookOnLaunch: openLastBookOnLaunch ?? this.openLastBookOnLaunch,
+      showHeader: showHeader ?? this.showHeader,
+      showFooter: showFooter ?? this.showFooter,
+      ttsVoiceId: ttsVoiceId ?? this.ttsVoiceId,
+      defaultTtsSpeed: defaultTtsSpeed ?? this.defaultTtsSpeed,
     );
   }
 
@@ -111,7 +145,11 @@ class GlobalReaderPrefs {
       other.volumeKeyEnabled == volumeKeyEnabled &&
       other.fullscreen == fullscreen &&
       other.consoleLogEnabled == consoleLogEnabled &&
-      other.openLastBookOnLaunch == openLastBookOnLaunch;
+      other.openLastBookOnLaunch == openLastBookOnLaunch &&
+      other.showHeader == showHeader &&
+      other.showFooter == showFooter &&
+      other.ttsVoiceId == ttsVoiceId &&
+      other.defaultTtsSpeed == defaultTtsSpeed;
 
   @override
   int get hashCode => Object.hash(
@@ -124,5 +162,9 @@ class GlobalReaderPrefs {
         fullscreen,
         consoleLogEnabled,
         openLastBookOnLaunch,
+        showHeader,
+        showFooter,
+        ttsVoiceId,
+        defaultTtsSpeed,
       );
 }

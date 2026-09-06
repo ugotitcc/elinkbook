@@ -158,4 +158,59 @@ void main() {
     final b = a.copyWith(consoleLogEnabled: true);
     expect(a == b, isFalse);
   });
+
+  test('GlobalReaderPrefs.initial() 的 showHeader／showFooter 預設 false，ttsVoiceId 預設 null，defaultTtsSpeed 預設 1.0',
+      () {
+    const prefs = GlobalReaderPrefs.initial();
+    expect(prefs.showHeader, isFalse);
+    expect(prefs.showFooter, isFalse);
+    expect(prefs.ttsVoiceId, isNull);
+    expect(prefs.defaultTtsSpeed, 1.0);
+  });
+
+  test('copyWith 可個別更新 showHeader／showFooter，不影響其餘欄位', () {
+    const original = GlobalReaderPrefs.initial();
+    final updated =
+        original.copyWith(showHeader: true, showFooter: true);
+    expect(updated.showHeader, isTrue);
+    expect(updated.showFooter, isTrue);
+    expect(updated.pageTurnMode, original.pageTurnMode);
+    expect(updated.volumeKeyEnabled, original.volumeKeyEnabled);
+  });
+
+  test('copyWith 可更新 ttsVoiceId／defaultTtsSpeed，不影響其餘欄位', () {
+    const original = GlobalReaderPrefs.initial();
+    final updated = original.copyWith(
+      ttsVoiceId: 'voice-1',
+      defaultTtsSpeed: 1.5,
+    );
+    expect(updated.ttsVoiceId, 'voice-1');
+    expect(updated.defaultTtsSpeed, 1.5);
+    expect(updated.pageTurnMode, original.pageTurnMode);
+  });
+
+  test('showHeader／showFooter／ttsVoiceId／defaultTtsSpeed 不同時視為不相等', () {
+    const a = GlobalReaderPrefs.initial();
+    final b = a.copyWith(showHeader: true);
+    expect(a == b, isFalse);
+    final c = a.copyWith(showFooter: true);
+    expect(a == c, isFalse);
+    final d = a.copyWith(ttsVoiceId: 'voice-1');
+    expect(a == d, isFalse);
+    final e = a.copyWith(defaultTtsSpeed: 1.25);
+    expect(a == e, isFalse);
+  });
+
+  test('四個欄位值皆相同（含 ttsVoiceId 皆為 null）的 GlobalReaderPrefs 視為相等，hashCode 也相等',
+      () {
+    const a = GlobalReaderPrefs.initial();
+    const b = GlobalReaderPrefs.initial();
+    expect(a, b);
+    expect(a.hashCode, b.hashCode);
+
+    final c = a.copyWith(showHeader: true, defaultTtsSpeed: 1.75);
+    final d = a.copyWith(showHeader: true, defaultTtsSpeed: 1.75);
+    expect(c, d);
+    expect(c.hashCode, d.hashCode);
+  });
 }
