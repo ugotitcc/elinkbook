@@ -136,6 +136,8 @@ class _AdaptiveShellScaffoldState extends State<AdaptiveShellScaffold> {
                   widget.cloudAccountDependencies.googleDriveOAuthClient,
               oneDriveOAuthClient:
                   widget.cloudAccountDependencies.oneDriveOAuthClient,
+              onNavigateToLibrary: () => _navigateTo(0),
+              onNavigateToSource: () => _navigateTo(1),
             ),
           ],
         ),

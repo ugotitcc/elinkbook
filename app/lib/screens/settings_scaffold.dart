@@ -38,6 +38,8 @@ class SettingsScaffold extends StatefulWidget {
   final CloudAccountRepository? cloudAccountRepository;
   final GoogleDriveOAuthClient? googleDriveOAuthClient;
   final OneDriveOAuthClient? oneDriveOAuthClient;
+  final VoidCallback? onNavigateToLibrary;
+  final VoidCallback? onNavigateToSource;
 
   const SettingsScaffold({
     super.key,
@@ -52,6 +54,8 @@ class SettingsScaffold extends StatefulWidget {
     this.cloudAccountRepository,
     this.googleDriveOAuthClient,
     this.oneDriveOAuthClient,
+    this.onNavigateToLibrary,
+    this.onNavigateToSource,
   });
 
   @override
@@ -90,6 +94,20 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('設定'),
+        actions: [
+          IconButton(
+            key: const Key('settings_library_button'),
+            icon: const Icon(Icons.grid_view),
+            tooltip: '書架',
+            onPressed: widget.onNavigateToLibrary,
+          ),
+          IconButton(
+            key: const Key('settings_source_button'),
+            icon: const Icon(Icons.cloud_download),
+            tooltip: '來源',
+            onPressed: widget.onNavigateToSource,
+          ),
+        ],
       ),
       body: ListView(
         children: [

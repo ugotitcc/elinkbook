@@ -189,4 +189,30 @@ void main() {
           '因為快取的 SettingsScreen 建構當下的 isEinkMode 已經是舊值',
     );
   });
+
+  testWidgets('在設定分頁點擊「書架」圖示切回書架分頁', (tester) async {
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('library_settings_button')));
+    await tester.pumpAndSettle();
+    expect(tester.widget<IndexedStack>(find.byType(IndexedStack)).index, 2);
+
+    await tester.tap(find.byKey(const Key('settings_library_button')));
+    await tester.pumpAndSettle();
+    expect(tester.widget<IndexedStack>(find.byType(IndexedStack)).index, 0);
+  });
+
+  testWidgets('在設定分頁點擊「來源」圖示切到來源分頁', (tester) async {
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('library_settings_button')));
+    await tester.pumpAndSettle();
+    expect(tester.widget<IndexedStack>(find.byType(IndexedStack)).index, 2);
+
+    await tester.tap(find.byKey(const Key('settings_source_button')));
+    await tester.pumpAndSettle();
+    expect(tester.widget<IndexedStack>(find.byType(IndexedStack)).index, 1);
+  });
 }

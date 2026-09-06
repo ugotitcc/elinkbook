@@ -566,4 +566,41 @@ void main() {
           reason: '「${expected[i]}」應在「${expected[i - 1]}」之後出現');
     }
   });
+
+  testWidgets('AppBar 顯示「書架」「來源」圖示，點擊分別呼叫對應 callback', (tester) async {
+    var libraryTapped = 0;
+    var sourceTapped = 0;
+    await tester.pumpWidget(MaterialApp(
+      home: SettingsScaffold(
+        prefsManager: FakeReaderPrefsManager(),
+        onNavigateToLibrary: () => libraryTapped++,
+        onNavigateToSource: () => sourceTapped++,
+      ),
+    ));
+
+    expect(find.byKey(const Key('settings_library_button')), findsOneWidget);
+    expect(find.byKey(const Key('settings_source_button')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('settings_library_button')));
+    await tester.pumpAndSettle();
+    expect(libraryTapped, 1);
+    expect(sourceTapped, 0);
+
+    await tester.tap(find.byKey(const Key('settings_source_button')));
+    await tester.pumpAndSettle();
+    expect(sourceTapped, 1);
+  });
+
+  testWidgets('未接上 onNavigateToLibrary／onNavigateToSource 時，圖示仍存在但不崩潰', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: SettingsScaffold(prefsManager: FakeReaderPrefsManager()),
+    ));
+
+    expect(find.byKey(const Key('settings_library_button')), findsOneWidget);
+    expect(find.byKey(const Key('settings_source_button')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('settings_library_button')));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
 }
