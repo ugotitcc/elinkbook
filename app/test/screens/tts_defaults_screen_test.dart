@@ -144,6 +144,29 @@ void main() {
     expect(steps.roundToDouble(), closeTo(steps, 1e-6));
   });
 
+  testWidgets(
+      '非 E-Ink 模式下 Slider 拖曳到最底可以選到規格下限 0.75x（不會卡在 0.8x）'
+      '（review-issue-5.md Important 2 回歸測試：v 貼近下限時，(v*10).round()/10 '
+      '對 v=0.75 仍四捨五入成 0.8，導致拖曳永遠選不到 0.75x）', (tester) async {
+    final fakeManager = FakeReaderPrefsManager();
+    await tester.pumpWidget(MaterialApp(
+      home: TtsDefaultsScreen(prefsManager: fakeManager, isEinkMode: false),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.drag(
+      find.byKey(const Key('tts_defaults_speed_slider')),
+      const Offset(-2000, 0),
+    );
+    await tester.pumpAndSettle();
+
+    expect(fakeManager.savedGlobalPrefsCalls, isNotEmpty);
+    expect(
+      fakeManager.savedGlobalPrefsCalls.last.defaultTtsSpeed,
+      closeTo(0.75, 1e-9),
+    );
+  });
+
   testWidgets('E-Ink 模式隱藏 Slider，改用 +/- 按鈕以 0.1x 步進調整語速', (tester) async {
     final fakeManager = FakeReaderPrefsManager();
     await tester.pumpWidget(MaterialApp(
@@ -219,6 +242,10 @@ void main() {
     await tester.pumpAndSettle();
     expect(fakeManager.savedGlobalPrefsCalls.last.defaultTtsSpeed,
         closeTo(0.75, 1e-9));
+    // 0.75.toStringAsFixed(1) 會四捨五入誤顯示為 "0.8"，須特判
+    // （review-issue-5.md Important 1 回歸測試）。
+    expect(find.text('0.8x'), findsNothing);
+    expect(find.text('0.75x'), findsOneWidget);
 
     // 已達 0.75x 下限，減號按鈕停用。
     expect(tester.widget<IconButton>(decrementFinder).onPressed, isNull);

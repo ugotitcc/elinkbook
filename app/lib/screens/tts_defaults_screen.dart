@@ -123,7 +123,12 @@ class _TtsDefaultsScreenState extends State<TtsDefaultsScreen> {
                       Expanded(
                         child: widget.isEinkMode
                             ? Text(
-                                '${_prefs.defaultTtsSpeed.toStringAsFixed(1)}x',
+                                // 0.75（規格下限）不是 0.1 的整數倍，
+                                // toStringAsFixed(1) 對半整數採四捨五入，
+                                // 0.75.toStringAsFixed(1) 會誤顯示為
+                                // "0.8"，須特判（review-issue-5.md
+                                // Important 1）。
+                                '${_prefs.defaultTtsSpeed == _minSpeed ? '0.75' : _prefs.defaultTtsSpeed.toStringAsFixed(1)}x',
                                 key: const Key('tts_defaults_speed_value'),
                                 textAlign: TextAlign.center,
                               )
@@ -144,8 +149,17 @@ class _TtsDefaultsScreenState extends State<TtsDefaultsScreen> {
                                 label:
                                     '${_prefs.defaultTtsSpeed.toStringAsFixed(2)}x',
                                 onChanged: (v) {
-                                  final snapped =
-                                      (v * 10).round() / 10;
+                                  // 規格下限 0.75 不是 0.1 的整數倍：
+                                  // (v * 10).round() / 10 對 v 恰為
+                                  // _minSpeed 時仍四捨五入成 0.8（7.5
+                                  // 四捨五入進位），導致拖曳 Slider
+                                  // 永遠到不了 0.75x（review-issue-5.md
+                                  // Important 2）。v 貼近下限時直接吸附
+                                  // 至 _minSpeed，其餘沿用原本 0.1 步進
+                                  // 四捨五入。
+                                  final snapped = v <= _minSpeed + 0.025
+                                      ? _minSpeed
+                                      : (v * 10).round() / 10;
                                   _update(_prefs.copyWith(
                                       defaultTtsSpeed: snapped.clamp(
                                           _minSpeed, _maxSpeed)));

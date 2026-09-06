@@ -7,7 +7,8 @@ import 'zone_action.dart';
 
 /// 跨書生效的全域預設閱讀偏好。
 ///
-/// 七個欄位皆 non-nullable——與 [BookReaderPrefs] 的「全欄位 nullable、
+/// 除 [ttsVoiceId]（`null` 代表使用系統預設語音，見該欄位說明）外，其餘
+/// 欄位皆 non-nullable——與 [BookReaderPrefs] 的「全欄位 nullable、
 /// null=未覆寫」語意刻意不同：全域層本身沒有更上層的預設可回退，任何時候
 /// 都必須有一個明確生效值。
 class GlobalReaderPrefs {

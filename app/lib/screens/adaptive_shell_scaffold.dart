@@ -28,10 +28,6 @@ class _LibraryRefreshSignal extends ChangeNotifier {
 /// 使用者在「設定」切換主題／E-Ink 模式回呼到 `main.dart` 觸發
 /// `setState()`）永遠不會被子畫面收到（審查報告 review-plan-issue-1.md
 /// C-1，本計劃已依此修正為 `build()` 內直接建構）。
-///
-/// **過渡期型別標注**：`SettingsScreen`→`SettingsScaffold` 更名排在 Issue
-/// 5，本類別第三個子畫面暫時掛載既有 `SettingsScreen`（見
-/// `reviews/review-issues.md` M-1）。
 class AdaptiveShellScaffold extends StatefulWidget {
   final LibraryRepository repository;
   final BookImportService importService;
