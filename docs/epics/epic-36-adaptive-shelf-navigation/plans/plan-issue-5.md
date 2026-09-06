@@ -1428,7 +1428,12 @@ void main() {
     expect(result, lessThanOrEqualTo(2.0));
     // 結果須精確落在 0.1 的整數倍格點上（容許浮點誤差），驗證 onChanged
     // 內的吸附邏輯確實生效，而非任意連續值。
-    final steps = (result - 0.75) * 10;
+    // 【review-plan-issue-5.md C-3】原寫法 `(result - 0.75) * 10` 有誤：
+    // result 恆為 0.1 的整數倍（設 result = k * 0.1，k 為整數），代入後
+    // 得 (k*0.1 - 0.75) * 10 = k - 7.5，對任何整數 k 恆為 X.5 半整數，
+    // roundToDouble() 後與原值必定恰差 0.5，斷言 100% 失敗。直接驗證
+    // 「result 本身是否為 0.1 的倍數」不需要減去 0.75 這個偏移量。
+    final steps = result * 10;
     expect(steps.roundToDouble(), closeTo(steps, 1e-6));
   });
 
