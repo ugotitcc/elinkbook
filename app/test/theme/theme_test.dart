@@ -5,7 +5,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:elinkbook/main.dart';
 import 'package:elinkbook/theme/app_theme.dart';
 import 'package:elinkbook/theme/app_theme_preferences.dart';
-import 'package:elinkbook/screens/settings_screen.dart';
+import 'package:elinkbook/screens/settings_scaffold.dart';
 import 'package:elinkbook/library/sqlite_library_repository.dart';
 import 'package:elinkbook/reader/reader_prefs_manager.dart';
 
@@ -115,7 +115,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: SettingsScreen(
+        home: SettingsScaffold(
           prefsManager: prefsManager,
           currentTheme: AppTheme.light,
           isEinkMode: false,
@@ -140,7 +140,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: SettingsScreen(
+        home: SettingsScaffold(
           prefsManager: prefsManager,
           currentTheme: AppTheme.light,
           isEinkMode: false,

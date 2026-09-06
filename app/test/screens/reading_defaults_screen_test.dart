@@ -191,4 +191,61 @@ void main() {
       isFalse,
     );
   });
+
+  testWidgets('顯示頁首/頁尾開關反映既有 GlobalReaderPrefs 初始值', (tester) async {
+    final fakeManager = FakeReaderPrefsManager(
+      globalPrefs: const GlobalReaderPrefs.initial()
+          .copyWith(showHeader: true, showFooter: false),
+    );
+    await tester.pumpWidget(MaterialApp(
+      home: ReadingDefaultsScreen(prefsManager: fakeManager),
+    ));
+    await tester.pumpAndSettle();
+
+    final headerSwitchFinder =
+        find.byKey(const Key('reading_defaults_show_header_switch'));
+    await tester.scrollUntilVisible(headerSwitchFinder, 100);
+    await tester.pumpAndSettle();
+    expect(tester.widget<SwitchListTile>(headerSwitchFinder).value, isTrue);
+
+    final footerSwitchFinder =
+        find.byKey(const Key('reading_defaults_show_footer_switch'));
+    await tester.scrollUntilVisible(footerSwitchFinder, 100);
+    await tester.pumpAndSettle();
+    expect(tester.widget<SwitchListTile>(footerSwitchFinder).value, isFalse);
+  });
+
+  testWidgets('切換顯示頁首開關立即呼叫 saveGlobalPrefs 並反映新值', (tester) async {
+    final fakeManager = FakeReaderPrefsManager();
+    await tester.pumpWidget(MaterialApp(
+      home: ReadingDefaultsScreen(prefsManager: fakeManager),
+    ));
+    await tester.pumpAndSettle();
+
+    final switchFinder =
+        find.byKey(const Key('reading_defaults_show_header_switch'));
+    await tester.scrollUntilVisible(switchFinder, 100);
+    await tester.pumpAndSettle();
+    await tester.tap(switchFinder);
+    await tester.pumpAndSettle();
+
+    expect(fakeManager.savedGlobalPrefsCalls.last.showHeader, isTrue);
+  });
+
+  testWidgets('切換顯示頁尾開關立即呼叫 saveGlobalPrefs 並反映新值', (tester) async {
+    final fakeManager = FakeReaderPrefsManager();
+    await tester.pumpWidget(MaterialApp(
+      home: ReadingDefaultsScreen(prefsManager: fakeManager),
+    ));
+    await tester.pumpAndSettle();
+
+    final switchFinder =
+        find.byKey(const Key('reading_defaults_show_footer_switch'));
+    await tester.scrollUntilVisible(switchFinder, 100);
+    await tester.pumpAndSettle();
+    await tester.tap(switchFinder);
+    await tester.pumpAndSettle();
+
+    expect(fakeManager.savedGlobalPrefsCalls.last.showFooter, isTrue);
+  });
 }

@@ -131,7 +131,7 @@
 
 **依賴：** Issue 1（`SettingsScaffold` AppBar 新增的「書架」「來源」圖示需呼叫 `AdaptiveShellScaffold` 提供的 `onNavigateToLibrary`/`onNavigateToSource` callback）
 
-**Status:** ready-for-agent
+**Status:** completed
 
 **來源：** `spec.md` §功能⑤（對應原始 Issue 5，解決 I-3、M-1）
 

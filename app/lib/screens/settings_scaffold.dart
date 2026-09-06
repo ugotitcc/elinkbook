@@ -5,6 +5,7 @@ import '../cloud_import/google_drive_oauth_client.dart';
 import '../cloud_import/onedrive_oauth_client.dart';
 import '../reader/custom_fonts_repository.dart';
 import '../reader/reader_prefs_manager.dart';
+import '../reader/tts_provider.dart';
 import '../sync/sync_account_repository.dart';
 import '../sync/sync_client.dart';
 import '../theme/app_theme.dart';
@@ -16,13 +17,18 @@ import 'nav_zone_settings_screen.dart';
 import 'reader_console_log_screen.dart';
 import 'reading_defaults_screen.dart';
 import 'sync_settings_screen.dart';
+import 'tts_defaults_screen.dart';
+import 'widgets/eb_section_header.dart';
 
-/// 設定畫面：「佈景」（主題圓點，原位於 `LibraryScreen` AppBar，見
-/// `epic-18-reader-device-qa` 工具列溢位修復）、「字型管理」、「閱讀預設值」、
-/// 「導航熱區」、「同步」、「閱讀器 Console Log」（Issue 33 診斷用）、
-/// Console Log 攔截開關（epic-28-reader-settings-enhancements Issue 2）與
-/// 「關於」項目。
-class SettingsScreen extends StatefulWidget {
+/// 設定畫面：四分區（外觀／閱讀／同步與帳號／關於，`DESIGN.md` §17，
+/// epic-36-adaptive-shelf-navigation spec.md §功能⑤）。「佈景」（主題圓點，
+/// 原位於 `LibraryScreen` AppBar，見 `epic-18-reader-device-qa` 工具列溢位
+/// 修復）、「字型管理」、「閱讀預設值」、「導航熱區」、「同步」、「閱讀器
+/// Console Log」（Issue 33 診斷用）、Console Log 攔截開關
+/// （`epic-28-reader-settings-enhancements` Issue 2）與「關於」項目皆為既有
+/// 功能原樣搬移，本次（由 `SettingsScreen` 更名而來）只是重新分組，行為與
+/// 既有 Key 契約不變。
+class SettingsScaffold extends StatefulWidget {
   final ReaderPrefsManager prefsManager;
   final AppTheme currentTheme;
   final bool isEinkMode;
@@ -34,8 +40,11 @@ class SettingsScreen extends StatefulWidget {
   final CloudAccountRepository? cloudAccountRepository;
   final GoogleDriveOAuthClient? googleDriveOAuthClient;
   final OneDriveOAuthClient? oneDriveOAuthClient;
+  final VoidCallback? onNavigateToLibrary;
+  final VoidCallback? onNavigateToSource;
+  final TtsProvider? ttsProvider;
 
-  const SettingsScreen({
+  const SettingsScaffold({
     super.key,
     required this.prefsManager,
     this.currentTheme = AppTheme.light,
@@ -48,19 +57,21 @@ class SettingsScreen extends StatefulWidget {
     this.cloudAccountRepository,
     this.googleDriveOAuthClient,
     this.oneDriveOAuthClient,
+    this.onNavigateToLibrary,
+    this.onNavigateToSource,
+    this.ttsProvider,
   });
 
   @override
-  State<SettingsScreen> createState() => _SettingsScreenState();
+  State<SettingsScaffold> createState() => _SettingsScaffoldState();
 }
 
-class _SettingsScreenState extends State<SettingsScreen> {
+class _SettingsScaffoldState extends State<SettingsScaffold> {
   /// Console Log 攔截開關目前顯示值（epic-28-reader-settings-enhancements
-  /// Issue 2）。刻意不採用「整頁 loading gate」模式（比照
-  /// `ReadingDefaultsScreen` 的 `_loading` 布林 + `CircularProgressIndicator`
-  /// 擋住整頁）——本畫面其餘 `ListTile`（佈景／字型管理等）與這個開關無關，
-  /// 初始值先顯示預設 `false`，`initState()` 的非同步載入完成後才 `setState`
-  /// 更新為實際已儲存值，不阻塞其餘項目的同步顯示。
+  /// Issue 2）。刻意不採用「整頁 loading gate」模式——本畫面其餘 `ListTile`
+  /// （佈景／字型管理等）與這個開關無關，初始值先顯示預設 `false`，
+  /// `initState()` 的非同步載入完成後才 `setState` 更新為實際已儲存值，不
+  /// 阻塞其餘項目的同步顯示。
   bool _consoleLogEnabled = false;
 
   @override
@@ -87,9 +98,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('設定'),
+        actions: [
+          IconButton(
+            key: const Key('settings_library_button'),
+            icon: const Icon(Icons.grid_view),
+            tooltip: '書架',
+            onPressed: widget.onNavigateToLibrary,
+          ),
+          IconButton(
+            key: const Key('settings_source_button'),
+            icon: const Icon(Icons.cloud_download),
+            tooltip: '來源',
+            onPressed: widget.onNavigateToSource,
+          ),
+        ],
       ),
       body: ListView(
         children: [
+          const EBSectionHeader(title: '外觀'),
           ListTile(
             title: const Text('佈景'),
             subtitle: widget.isEinkMode
@@ -133,6 +159,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     );
                   },
           ),
+          const EBSectionHeader(title: '閱讀'),
           ListTile(
             key: const Key('settings_reading_defaults_button'),
             title: const Text('閱讀預設值'),
@@ -159,6 +186,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
               );
             },
           ),
+          ListTile(
+            key: const Key('settings_tts_defaults_button'),
+            title: const Text('朗讀語音與語速'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => TtsDefaultsScreen(
+                    prefsManager: widget.prefsManager,
+                    ttsProvider: widget.ttsProvider,
+                    isEinkMode: widget.isEinkMode,
+                  ),
+                ),
+              );
+            },
+          ),
+          const EBSectionHeader(title: '同步與帳號'),
           ListTile(
             key: const Key('settings_sync_button'),
             title: const Text('同步'),
@@ -197,6 +241,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     );
                   },
           ),
+          const EBSectionHeader(title: '關於'),
+          ListTile(
+            key: const Key('settings_about_button'),
+            title: const Text('關於'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (context) => const AboutScreen()),
+              );
+            },
+          ),
           ListTile(
             key: const Key('settings_reader_console_log_button'),
             title: const Text('閱讀器 Console Log'),
@@ -216,16 +271,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             value: _consoleLogEnabled,
             onChanged: (value) => _updateConsoleLogEnabled(value),
           ),
-          ListTile(
-            key: const Key('settings_about_button'),
-            title: const Text('關於'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (context) => const AboutScreen()),
-              );
-            },
-          ),
         ],
       ),
     );
@@ -234,10 +279,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _buildThemeDot(BuildContext context, AppTheme theme, String key) {
     final previewTheme = resolveThemeData(theme: theme, isEinkMode: false);
     final locked = widget.isEinkMode;
-    // isCurrentTheme 跟既有的 isSelected 是兩個不同概念：isSelected 只在
-    // 「未鎖定」時才有意義（鎖定時 onTap 已經是 null，不需要選取樣式）；
-    // isCurrentTheme 不受鎖定與否影響，鎖定時的虛線粗細差異要靠它才能
-    // 分辨「原本選的是哪個主題」。
     final isCurrentTheme = widget.currentTheme == theme;
     final isSelected = isCurrentTheme && !locked;
     return Semantics(
@@ -278,7 +319,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  /// 主題預覽圓點的中文名稱，供 E-Ink 鎖定狀態下的 Semantics 標籤朗讀。
   String _themeLabel(AppTheme theme) => switch (theme) {
         AppTheme.light => '淺色',
         AppTheme.dark => '深色',
@@ -287,12 +327,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 }
 
 /// E-Ink 鎖定狀態的圓形虛線邊框（`DESIGN.md` §17.2：邊框改為虛線，取代
-/// 原本的降低透明度手法）。`strokeWidth` 由呼叫端依「是否為目前選擇的
-/// 主題」傳入 `3`／`1.5`——沿用 §7.2 既有定義的「Border Width 1.5dp ->
-/// 3dp」離散狀態變更數值，不是本工單另外自訂，用意是讓鎖定狀態下仍能
-/// 分辨原本選的是哪個主題。虛線本身的 dash／gap 長度 `DESIGN.md` 未給
-/// 精確數字，本工單自行決定為 3dp／3dp；若下一輪真機驗證發現電子紙上
-/// 不夠清楚，這個數字是可直接調整的錨點。
+/// 原本的降低透明度手法）。
 class _LockedDotBorderPainter extends CustomPainter {
   const _LockedDotBorderPainter({
     required this.color,
@@ -333,4 +368,3 @@ class _LockedDotBorderPainter extends CustomPainter {
   bool shouldRepaint(covariant _LockedDotBorderPainter oldDelegate) =>
       oldDelegate.color != color || oldDelegate.strokeWidth != strokeWidth;
 }
-

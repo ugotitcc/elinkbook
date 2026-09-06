@@ -123,6 +123,29 @@ void main() {
       expect(resolved.fullscreen, isFalse);
     });
 
+    test('global.showHeader／showFooter 為 true 時，book 未覆寫則 resolve() 回傳 true（非硬編碼 false，證明雙層解析生效）',
+        () {
+      final loaded = LoadedPrefs(
+        bookPrefs: BookReaderPrefs.empty,
+        globalPrefs: const GlobalReaderPrefs.initial()
+            .copyWith(showHeader: true, showFooter: true),
+      );
+      final resolved = manager.resolve(loaded);
+      expect(resolved.showHeader, isTrue);
+      expect(resolved.showFooter, isTrue);
+    });
+
+    test('book.showHeader／showFooter 存在時優先於 global 對應欄位', () {
+      final loaded = LoadedPrefs(
+        bookPrefs: const BookReaderPrefs(showHeader: false, showFooter: false),
+        globalPrefs: const GlobalReaderPrefs.initial()
+            .copyWith(showHeader: true, showFooter: true),
+      );
+      final resolved = manager.resolve(loaded);
+      expect(resolved.showHeader, isFalse);
+      expect(resolved.showFooter, isFalse);
+    });
+
     test('volumeKeyEnabled 直接透傳 global 值，無單書覆寫層', () {
       final loadedEnabled = LoadedPrefs(
         bookPrefs: BookReaderPrefs.empty,
@@ -437,6 +460,66 @@ void main() {
     test('consoleLogEnabled 未儲存過（缺鍵）時，安全回退為預設值 false', () async {
       final loaded = await manager.load('b1');
       expect(loaded.globalPrefs.consoleLogEnabled, isFalse);
+    });
+
+    test('saveGlobalPrefs 寫入 showHeader／showFooter／ttsVoiceId／defaultTtsSpeed 至既有慣例命名的 SharedPreferences key',
+        () async {
+      const globalPrefs = GlobalReaderPrefs(
+        pageTurnMode: PageTurnMode.paginated,
+        screenOrientation: ScreenOrientationSetting.auto,
+        navZoneMode: NavZoneMode.rightFlip,
+        navZoneCustomActions: rightFlipZoneTemplate,
+        showNavZoneDebugOverlay: false,
+        showHeader: true,
+        showFooter: true,
+        ttsVoiceId: 'voice-42',
+        defaultTtsSpeed: 1.5,
+      );
+      await manager.saveGlobalPrefs(globalPrefs);
+
+      final sp = await SharedPreferences.getInstance();
+      expect(sp.getBool('global_reader_show_header'), isTrue);
+      expect(sp.getBool('global_reader_show_footer'), isTrue);
+      expect(sp.getString('global_reader_tts_voice_id'), 'voice-42');
+      expect(sp.getDouble('global_reader_default_tts_speed'), 1.5);
+
+      final loaded = await manager.load('b1');
+      expect(loaded.globalPrefs.showHeader, isTrue);
+      expect(loaded.globalPrefs.showFooter, isTrue);
+      expect(loaded.globalPrefs.ttsVoiceId, 'voice-42');
+      expect(loaded.globalPrefs.defaultTtsSpeed, 1.5);
+    });
+
+    test('showHeader／showFooter／defaultTtsSpeed 未儲存過（缺鍵）時，安全回退為預設值 false／false／1.0，ttsVoiceId 回退為 null',
+        () async {
+      final loaded = await manager.load('b1');
+      expect(loaded.globalPrefs.showHeader, isFalse);
+      expect(loaded.globalPrefs.showFooter, isFalse);
+      expect(loaded.globalPrefs.ttsVoiceId, isNull);
+      expect(loaded.globalPrefs.defaultTtsSpeed, 1.0);
+    });
+
+    test('ttsVoiceId 先儲存再清空後（saveGlobalPrefs 傳入 null），load 讀回 null', () async {
+      const withVoice = GlobalReaderPrefs(
+        pageTurnMode: PageTurnMode.paginated,
+        screenOrientation: ScreenOrientationSetting.auto,
+        navZoneMode: NavZoneMode.rightFlip,
+        navZoneCustomActions: rightFlipZoneTemplate,
+        showNavZoneDebugOverlay: false,
+        ttsVoiceId: 'voice-1',
+      );
+      await manager.saveGlobalPrefs(withVoice);
+      expect((await manager.loadGlobalPrefs()).ttsVoiceId, 'voice-1');
+
+      const withoutVoice = GlobalReaderPrefs(
+        pageTurnMode: PageTurnMode.paginated,
+        screenOrientation: ScreenOrientationSetting.auto,
+        navZoneMode: NavZoneMode.rightFlip,
+        navZoneCustomActions: rightFlipZoneTemplate,
+        showNavZoneDebugOverlay: false,
+      );
+      await manager.saveGlobalPrefs(withoutVoice);
+      expect((await manager.loadGlobalPrefs()).ttsVoiceId, isNull);
     });
 
     test('navZoneCustomActions 已儲存值為空字串時，安全回退為 rightFlip 模板',

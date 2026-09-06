@@ -6,7 +6,7 @@ import '../library/library_repository.dart';
 import '../reader/reader_prefs_manager.dart';
 import 'library_screen.dart';
 import 'library_screen_dependencies.dart';
-import 'settings_screen.dart';
+import 'settings_scaffold.dart';
 import 'sources_home_screen.dart';
 
 class _LibraryRefreshSignal extends ChangeNotifier {
@@ -28,10 +28,6 @@ class _LibraryRefreshSignal extends ChangeNotifier {
 /// 使用者在「設定」切換主題／E-Ink 模式回呼到 `main.dart` 觸發
 /// `setState()`）永遠不會被子畫面收到（審查報告 review-plan-issue-1.md
 /// C-1，本計劃已依此修正為 `build()` 內直接建構）。
-///
-/// **過渡期型別標注**：`SettingsScreen`→`SettingsScaffold` 更名排在 Issue
-/// 5，本類別第三個子畫面暫時掛載既有 `SettingsScreen`（見
-/// `reviews/review-issues.md` M-1）。
 class AdaptiveShellScaffold extends StatefulWidget {
   final LibraryRepository repository;
   final BookImportService importService;
@@ -84,7 +80,7 @@ class _AdaptiveShellScaffoldState extends State<AdaptiveShellScaffold> {
     // runtimeType/清單位置比對重用既有 Element/State，狀態不會遺失；
     // 反之若快取在 initState()，widget.themeDependencies 等參數之後的
     // 變更就永遠傳不到已快取的子畫面（例如使用者在「設定」切主題/E-Ink
-    // 後，SettingsScreen/SourcesHomeScreen 拿到的仍是最初舊值）。
+    // 後，SettingsScaffold/SourcesHomeScreen 拿到的仍是最初舊值）。
     return PopScope(
       canPop: _currentIndex == 0,
       onPopInvokedWithResult: (didPop, result) {
@@ -120,7 +116,7 @@ class _AdaptiveShellScaffoldState extends State<AdaptiveShellScaffold> {
               onNavigateToLibrary: () => _navigateTo(0),
               onNavigateToSettings: () => _navigateTo(2),
             ),
-            SettingsScreen(
+            SettingsScaffold(
               prefsManager: widget.prefsManager,
               currentTheme: widget.themeDependencies.currentTheme,
               isEinkMode: widget.themeDependencies.isEinkMode,
@@ -136,6 +132,9 @@ class _AdaptiveShellScaffoldState extends State<AdaptiveShellScaffold> {
                   widget.cloudAccountDependencies.googleDriveOAuthClient,
               oneDriveOAuthClient:
                   widget.cloudAccountDependencies.oneDriveOAuthClient,
+              onNavigateToLibrary: () => _navigateTo(0),
+              onNavigateToSource: () => _navigateTo(1),
+              ttsProvider: widget.readerFeatureRepositories.ttsProvider,
             ),
           ],
         ),
