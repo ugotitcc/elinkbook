@@ -45,8 +45,12 @@ import '../support/fake_share_platform.dart';
 import '../support/fake_custom_fonts_repository.dart';
 import 'package:elinkbook/sync/sync_checkpoint_trigger.dart';
 import 'package:elinkbook/reader/bookmark.dart';
+import 'package:elinkbook/reader/book_reader_prefs.dart';
+import 'package:elinkbook/reader/page_turn_mode.dart';
+import 'package:elinkbook/reader/writing_mode.dart';
 import 'package:elinkbook/screens/book_action_sheet.dart';
 import 'package:elinkbook/screens/widgets/eb_sheet_shell.dart';
+import '../support/fake_book_reader_prefs_repository.dart';
 
 void main() {
   late SqliteLibraryRepository libraryRepository;
@@ -4169,6 +4173,92 @@ void main() {
         findsNothing,
         reason: '被刪除的書恰為 _mostRecentBook，繼續閱讀列不應殘留無效書籍參照',
       );
+    },
+  );
+
+  // ─── Task 5：_LayoutOverrideDialog ─────────────────────────────
+
+  testWidgets('bookReaderPrefsRepository 未提供時，「版面覆寫」選項不顯示', (tester) async {
+    final book = _testBook(id: '1', title: '書A');
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: [book]),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('book_action_menu_1')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('book_action_layout_override')), findsNothing);
+  });
+
+  testWidgets(
+    '版面覆寫：儲存後只有 writingModeOverride/pageTurnModeOverride 改變，其他既有欄位'
+    '原樣保留，選「使用預設」能真的清成 null（plan-issue-4.md「計劃範圍澄清」'
+    '第 2 點核心回歸測試：不可誤用 copyWith()）',
+    (tester) async {
+      final book = _testBook(id: '1', title: '書A');
+      final repository = FakeLibraryRepository(initialBooks: [book]);
+      // 【review-plan-issue-4.md C-2】不可用 BookReaderPrefsRepository(
+      // libraryRepository.database)：`libraryRepository` 是本檔案 setUp()
+      // 另外開立的 SqliteLibraryRepository，其 SQLite books 表裡沒有 id
+      // == '1' 這筆書籍（book 只放進了上面的記憶體 FakeLibraryRepository），
+      // book_reader_prefs.book_id 是 REFERENCES books(id) 的外鍵，直接
+      // save() 會立即拋出 FOREIGN KEY constraint failed。改用純記憶體的
+      // FakeBookReaderPrefsRepository，徹底繞開這個約束、測試也更快更純粹。
+      final bookReaderPrefsRepository = FakeBookReaderPrefsRepository();
+      await bookReaderPrefsRepository.save(
+        '1',
+        const BookReaderPrefs(
+          fontSize: 1.5,
+          marginTop: 24,
+          writingModeOverride: WritingMode.horizontal,
+        ),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: LibraryScreen(
+            repository: repository,
+            importService: FakeBookImportService(),
+            prefsManager: prefsManager,
+            readerFeatureRepositories: LibraryReaderFeatureRepositories(
+              bookReaderPrefsRepository: bookReaderPrefsRepository,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('book_action_menu_1')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('book_action_layout_override')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('book_action_layout_override')));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('layout_override_writing_mode_default')));
+      await tester.tap(find.byKey(const Key('layout_override_page_turn_mode_scroll')));
+      await tester.tap(find.byKey(const Key('layout_override_save_button')));
+      await tester.pumpAndSettle();
+
+      final saved = await bookReaderPrefsRepository.load('1');
+      expect(saved.fontSize, 1.5, reason: '既有 fontSize 不應被清空');
+      expect(saved.marginTop, 24, reason: '既有 marginTop 不應被清空');
+      expect(
+        saved.writingModeOverride,
+        isNull,
+        reason:
+            '選「使用預設」須真的清成 null，若誤用 copyWith() 的 ?? 語意則仍會殘留'
+            '原本的 horizontal',
+      );
+      expect(saved.pageTurnModeOverride, PageTurnMode.scroll);
     },
   );
 }

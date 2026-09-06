@@ -4,7 +4,11 @@ import 'package:flutter/material.dart';
 
 import '../library/book_content_fingerprint.dart';
 import '../library/book_import_service.dart';
+import '../reader/book_reader_prefs.dart';
+import '../reader/book_reader_prefs_repository.dart';
+import '../reader/page_turn_mode.dart';
 import '../reader/reader_prefs_manager.dart';
+import '../reader/writing_mode.dart';
 import '../remote/opds_types.dart';
 import '../remote/remote_book_downloader.dart';
 import '../remote/remote_server_profile.dart';
@@ -27,6 +31,7 @@ import 'library_paging.dart';
 import 'reader_screen.dart';
 import 'widgets/eb_sheet_shell.dart';
 import 'widgets/paging_bar.dart';
+import 'widgets/reader_option_tile.dart';
 
 /// 圖書庫主畫面：讀取 [LibraryRepository] 的真實資料，取代
 /// epic-0-skeleton 遺留的固定範例書籍清單佔位版本（見
@@ -556,15 +561,18 @@ class _LibraryScreenState extends State<LibraryScreen> with WidgetsBindingObserv
   /// 才在下一幀執行 callback，避免在 Sheet 尚未完全移除時同幀 push
   /// 新 Dialog 導致 Navigator 衝突（`review-plan-issue-4.md M-4`）。
   Future<void> _openBookActionSheet(Book book) async {
+    final showRemoveCache =
+        book.source == BookSource.calibreOpds && book.isDownloaded;
+    final bookReaderPrefsRepository =
+        widget.readerFeatureRepositories.bookReaderPrefsRepository;
     final result = await EBSheetShell.show<BookAction>(
       context,
       title: book.title,
       isEinkMode: widget.themeDependencies.isEinkMode,
       builder: (context) => BookActionSheet(
         book: book,
-        showRemoveCache:
-            book.source == BookSource.calibreOpds && book.isDownloaded,
-        showLayoutOverride: false,
+        showRemoveCache: showRemoveCache,
+        showLayoutOverride: bookReaderPrefsRepository != null,
       ),
     );
     if (!mounted || result == null) return;
@@ -574,7 +582,7 @@ class _LibraryScreenState extends State<LibraryScreen> with WidgetsBindingObserv
       case BookAction.move:
         _moveBookToGroup(book);
       case BookAction.layoutOverride:
-        // TODO(Task 5): 實作版面覆寫邏輯
+        _showLayoutOverrideDialog(book, bookReaderPrefsRepository!);
       case BookAction.removeCache:
         _removeBookCache(book);
       case BookAction.delete:
@@ -593,6 +601,17 @@ class _LibraryScreenState extends State<LibraryScreen> with WidgetsBindingObserv
     showDialog<void>(
       context: context,
       builder: (context) => _BookDetailsDialog(book: book),
+    );
+  }
+
+  void _showLayoutOverrideDialog(
+    Book book,
+    BookReaderPrefsRepository repository,
+  ) {
+    showDialog<void>(
+      context: context,
+      builder: (context) =>
+          _LayoutOverrideDialog(bookId: book.id, repository: repository),
     );
   }
 
@@ -1458,6 +1477,204 @@ class _BookDetailsDialogState extends State<_BookDetailsDialog> {
           key: const Key('book_details_dialog_close_button'),
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('關閉'),
+        ),
+      ],
+    );
+  }
+}
+
+/// 單書版面覆寫對話框（`spec.md` 功能④「版面覆寫對話框」）。
+///
+/// **關鍵正確性要求**：`BookReaderPrefsRepository.save()` 是整列覆寫
+/// （`INSERT OR REPLACE`），不是只更新有變動的欄位。`_save()` 必須先
+/// `load()` 取得該書完整既有 `BookReaderPrefs`，只改
+/// `writingModeOverride`/`pageTurnModeOverride` 兩個欄位、其餘欄位原樣
+/// 帶回——**不可用 `copyWith()`**：`BookReaderPrefs.copyWith()` 是
+/// `newValue ?? this.value` 語意（見 `book_reader_prefs.dart` 文件註解），
+/// 選「使用預設」時本地狀態明確為 `null`，若用
+/// `copyWith(writingModeOverride: null)` 會被 `??` 吃掉、不會真的清空既有
+/// 覆寫值。比照 `reader_settings_sheet.dart` 既有 `_currentDraft` 的整列
+/// 重建寫法（`plans/plan-issue-4.md`「計劃範圍澄清」第 2 點）。
+class _LayoutOverrideDialog extends StatefulWidget {
+  final String bookId;
+  final BookReaderPrefsRepository repository;
+  const _LayoutOverrideDialog({required this.bookId, required this.repository});
+
+  @override
+  State<_LayoutOverrideDialog> createState() => _LayoutOverrideDialogState();
+}
+
+class _LayoutOverrideDialogState extends State<_LayoutOverrideDialog> {
+  BookReaderPrefs? _existingPrefs;
+  WritingMode? _writingMode;
+  PageTurnMode? _pageTurnMode;
+  bool _isSaving = false; // 【review-plan-issue-4.md M-1】連點防護
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final prefs = await widget.repository.load(widget.bookId);
+    if (!mounted) return;
+    setState(() {
+      _existingPrefs = prefs;
+      _writingMode = prefs.writingModeOverride;
+      _pageTurnMode = prefs.pageTurnModeOverride;
+    });
+  }
+
+  Future<void> _save() async {
+    // 【review-plan-issue-4.md M-1】連續快速敲擊「儲存」時，第一次 await
+    // 尚未返回前若觸發第二次 _save()，會導致連彈兩層路由（可能誤將呼叫端
+    // 的畫面一併 pop 掉）。
+    if (_isSaving) return;
+    _isSaving = true;
+    final existing = _existingPrefs;
+    if (existing == null) return;
+    final updated = BookReaderPrefs(
+      fontFamily: existing.fontFamily,
+      fontSize: existing.fontSize,
+      fontWeight: existing.fontWeight,
+      lineHeight: existing.lineHeight,
+      paragraphSpacing: existing.paragraphSpacing,
+      letterSpacing: existing.letterSpacing,
+      pageMargins: existing.pageMargins,
+      marginTop: existing.marginTop,
+      marginBottom: existing.marginBottom,
+      marginLeft: existing.marginLeft,
+      marginRight: existing.marginRight,
+      textAlign: existing.textAlign,
+      publisherStyles: existing.publisherStyles,
+      writingModeOverride: _writingMode,
+      pageTurnModeOverride: _pageTurnMode,
+      screenOrientationOverride: existing.screenOrientationOverride,
+      pdfFitMode: existing.pdfFitMode,
+      pdfContrast: existing.pdfContrast,
+      pdfBrightness: existing.pdfBrightness,
+      pdfBoldStrength: existing.pdfBoldStrength,
+      pdfCropMode: existing.pdfCropMode,
+      pdfCropRect: existing.pdfCropRect,
+      dualPageMode: existing.dualPageMode,
+      dualPageCoverAlone: existing.dualPageCoverAlone,
+      dualPageDirection: existing.dualPageDirection,
+      pdfPageTurnAnimation: existing.pdfPageTurnAnimation,
+      showHeader: existing.showHeader,
+      showFooter: existing.showFooter,
+      columnMode: existing.columnMode,
+      columnSize: existing.columnSize,
+      fullscreen: existing.fullscreen,
+    );
+    await widget.repository.save(widget.bookId, updated);
+    if (!mounted) return;
+    Navigator.of(context).pop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_existingPrefs == null) {
+      // 【review-plan-issue-4.md M-3】loading 狀態仍保留 title／取消按鈕，
+      // 避免儲存層載入慢時使用者無法從畫面上退出。
+      return AlertDialog(
+        key: const Key('layout_override_dialog'),
+        title: const Text('版面覆寫'),
+        content: const SizedBox(
+          height: 80,
+          child: Center(child: CircularProgressIndicator()),
+        ),
+        actions: [
+          TextButton(
+            key: const Key('layout_override_cancel_button'),
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('取消'),
+          ),
+        ],
+      );
+    }
+    return AlertDialog(
+      key: const Key('layout_override_dialog'),
+      title: const Text('版面覆寫'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('排版方向'),
+            Wrap(
+              spacing: 4,
+              children: [
+                ReaderOptionTile<WritingMode?>(
+                  itemKey: const Key('layout_override_writing_mode_default'),
+                  value: null,
+                  groupValue: _writingMode,
+                  icon: Icons.auto_awesome,
+                  tooltip: '使用書籍排版',
+                  onSelected: (v) => setState(() => _writingMode = v),
+                ),
+                ReaderOptionTile<WritingMode?>(
+                  itemKey: const Key('layout_override_writing_mode_horizontal'),
+                  value: WritingMode.horizontal,
+                  groupValue: _writingMode,
+                  icon: Icons.text_rotation_none,
+                  tooltip: '橫排',
+                  onSelected: (v) => setState(() => _writingMode = v),
+                ),
+                ReaderOptionTile<WritingMode?>(
+                  itemKey: const Key('layout_override_writing_mode_vertical'),
+                  value: WritingMode.vertical,
+                  groupValue: _writingMode,
+                  icon: Icons.text_rotate_vertical,
+                  tooltip: '直排',
+                  onSelected: (v) => setState(() => _writingMode = v),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            const Text('翻頁模式'),
+            Wrap(
+              spacing: 4,
+              children: [
+                ReaderOptionTile<PageTurnMode?>(
+                  itemKey: const Key('layout_override_page_turn_mode_default'),
+                  value: null,
+                  groupValue: _pageTurnMode,
+                  icon: Icons.tune,
+                  tooltip: '使用全域預設',
+                  onSelected: (v) => setState(() => _pageTurnMode = v),
+                ),
+                ReaderOptionTile<PageTurnMode?>(
+                  itemKey: const Key('layout_override_page_turn_mode_paginated'),
+                  value: PageTurnMode.paginated,
+                  groupValue: _pageTurnMode,
+                  icon: Icons.menu_book,
+                  tooltip: '分頁',
+                  onSelected: (v) => setState(() => _pageTurnMode = v),
+                ),
+                ReaderOptionTile<PageTurnMode?>(
+                  itemKey: const Key('layout_override_page_turn_mode_scroll'),
+                  value: PageTurnMode.scroll,
+                  groupValue: _pageTurnMode,
+                  icon: Icons.swap_vert,
+                  tooltip: '捲動',
+                  onSelected: (v) => setState(() => _pageTurnMode = v),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          key: const Key('layout_override_cancel_button'),
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('取消'),
+        ),
+        TextButton(
+          key: const Key('layout_override_save_button'),
+          onPressed: _save,
+          child: const Text('儲存'),
         ),
       ],
     );
