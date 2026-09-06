@@ -4,6 +4,7 @@ import '../library/book_content_fingerprint.dart';
 import '../library/book_import_service.dart';
 import '../library/library_repository.dart';
 import '../reader/reader_prefs_manager.dart';
+import '../reader/tts_provider.dart';
 import 'library_screen.dart';
 import 'library_screen_dependencies.dart';
 import 'settings_scaffold.dart';
@@ -43,6 +44,7 @@ class AdaptiveShellScaffold extends StatefulWidget {
   final ComputeRemoteFingerprint? computeFingerprint;
   final Future<bool> Function()? isMobileDataConnection;
   final LibraryThemeDependencies themeDependencies;
+  final TtsProvider? ttsProvider;
 
   const AdaptiveShellScaffold({
     super.key,
@@ -56,6 +58,7 @@ class AdaptiveShellScaffold extends StatefulWidget {
     this.computeFingerprint,
     this.isMobileDataConnection,
     this.themeDependencies = const LibraryThemeDependencies(),
+    this.ttsProvider,
   });
 
   @override
@@ -138,6 +141,7 @@ class _AdaptiveShellScaffoldState extends State<AdaptiveShellScaffold> {
                   widget.cloudAccountDependencies.oneDriveOAuthClient,
               onNavigateToLibrary: () => _navigateTo(0),
               onNavigateToSource: () => _navigateTo(1),
+              ttsProvider: widget.ttsProvider,
             ),
           ],
         ),

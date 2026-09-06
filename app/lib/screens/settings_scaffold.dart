@@ -5,6 +5,7 @@ import '../cloud_import/google_drive_oauth_client.dart';
 import '../cloud_import/onedrive_oauth_client.dart';
 import '../reader/custom_fonts_repository.dart';
 import '../reader/reader_prefs_manager.dart';
+import '../reader/tts_provider.dart';
 import '../sync/sync_account_repository.dart';
 import '../sync/sync_client.dart';
 import '../theme/app_theme.dart';
@@ -16,6 +17,7 @@ import 'nav_zone_settings_screen.dart';
 import 'reader_console_log_screen.dart';
 import 'reading_defaults_screen.dart';
 import 'sync_settings_screen.dart';
+import 'tts_defaults_screen.dart';
 import 'widgets/eb_section_header.dart';
 
 /// 設定畫面：四分區（外觀／閱讀／同步與帳號／關於，`DESIGN.md` §17，
@@ -40,6 +42,7 @@ class SettingsScaffold extends StatefulWidget {
   final OneDriveOAuthClient? oneDriveOAuthClient;
   final VoidCallback? onNavigateToLibrary;
   final VoidCallback? onNavigateToSource;
+  final TtsProvider? ttsProvider;
 
   const SettingsScaffold({
     super.key,
@@ -56,6 +59,7 @@ class SettingsScaffold extends StatefulWidget {
     this.oneDriveOAuthClient,
     this.onNavigateToLibrary,
     this.onNavigateToSource,
+    this.ttsProvider,
   });
 
   @override
@@ -178,6 +182,22 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
                 MaterialPageRoute(
                   builder: (context) =>
                       NavZoneSettingsScreen(prefsManager: widget.prefsManager),
+                ),
+              );
+            },
+          ),
+          ListTile(
+            key: const Key('settings_tts_defaults_button'),
+            title: const Text('朗讀預設值'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => TtsDefaultsScreen(
+                    prefsManager: widget.prefsManager,
+                    ttsProvider: widget.ttsProvider,
+                    isEinkMode: widget.isEinkMode,
+                  ),
                 ),
               );
             },

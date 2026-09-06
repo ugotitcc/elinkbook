@@ -603,4 +603,15 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('點擊「朗讀預設值」導航至 TtsDefaultsScreen', (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: SettingsScaffold(prefsManager: FakeReaderPrefsManager()),
+    ));
+
+    await tester.tap(find.byKey(const Key('settings_tts_defaults_button')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('朗讀語音與語速'), findsOneWidget);
+  });
 }
