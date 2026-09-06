@@ -4046,6 +4046,131 @@ void main() {
       expect(find.byType(BookActionSheet), findsOneWidget);
     },
   );
+
+  // ─── Task 4：onMove / onRemoveCache / onDelete 單書版本 ──────────
+
+  testWidgets('點擊「移動」選擇分類後，該書 groupName 更新，其他書籍不受影響', (tester) async {
+    final book = _testBook(id: '1', title: '書A');
+    final groupSeed = _testBook(id: '2', title: '書B', groupName: '奇幻');
+    final repository = FakeLibraryRepository(initialBooks: [book, groupSeed]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: LibraryScreen(
+          repository: repository,
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('book_action_menu_1')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('book_action_move')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('library_move_to_group_option_奇幻')));
+    await tester.pumpAndSettle();
+
+    final updated = await repository.listBooks();
+    expect(updated.firstWhere((b) => b.id == '1').groupName, '奇幻');
+    expect(
+      updated.firstWhere((b) => b.id == '2').groupName,
+      '奇幻',
+      reason: '既有書籍不應受影響',
+    );
+  });
+
+  testWidgets('點擊「移除快取」確認後，該書 isDownloaded 變 false，本機檔案被刪除', (tester) async {
+    final tempFile = File(
+      '${Directory.systemTemp.path}/remove_cache_test_'
+      '${DateTime.now().microsecondsSinceEpoch}.txt',
+    );
+    await tester.runAsync(() => tempFile.writeAsBytes([1, 2, 3]));
+    addTearDown(() async {
+      await tester.runAsync(() async {
+        if (await tempFile.exists()) await tempFile.delete();
+      });
+    });
+
+    final book = _testBook(
+      id: '1',
+      title: '書A',
+      filePath: tempFile.path,
+      source: BookSource.calibreOpds,
+      isDownloaded: true,
+    );
+    final repository = FakeLibraryRepository(initialBooks: [book]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: LibraryScreen(
+          repository: repository,
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('book_action_menu_1')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('book_action_remove_cache')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('book_action_remove_cache')));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const Key('book_action_remove_cache_confirm_button')),
+    );
+    await tester.pumpAndSettle();
+
+    final updated = await repository.listBooks();
+    expect(updated.firstWhere((b) => b.id == '1').isDownloaded, isFalse);
+    expect(
+      await tester.runAsync(() => tempFile.exists()),
+      isFalse,
+      reason: '本機快取檔案應被刪除',
+    );
+  });
+
+  testWidgets(
+    '點擊「刪除」確認後，該書從畫面上消失；若恰為 _mostRecentBook，繼續閱讀列同步消失'
+    '（plan-issue-4.md「計劃範圍澄清」第 3 點：驗證 loadBooks() 既有機制已自動'
+    '涵蓋重新計算，無需額外程式碼）',
+    (tester) async {
+      final book = _testBook(id: '1', title: '書A', lastReadTime: DateTime(2026, 6, 1));
+      final repository = FakeLibraryRepository(initialBooks: [book]);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: LibraryScreen(
+            repository: repository,
+            importService: FakeBookImportService(),
+            prefsManager: prefsManager,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('library_continue_reading_row')), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('book_action_menu_1')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('book_action_delete')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('library_delete_confirm_button')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('book_item_1')), findsNothing);
+      expect(
+        find.byKey(const Key('library_continue_reading_row')),
+        findsNothing,
+        reason: '被刪除的書恰為 _mostRecentBook，繼續閱讀列不應殘留無效書籍參照',
+      );
+    },
+  );
 }
 
 /// 刻意「非線性」的測試用 TextScaler：對較大的輸入值套用較低的有效縮放

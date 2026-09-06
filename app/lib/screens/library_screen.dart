@@ -572,13 +572,13 @@ class _LibraryScreenState extends State<LibraryScreen> with WidgetsBindingObserv
       case BookAction.showDetails:
         _showBookDetails(book);
       case BookAction.move:
-        // TODO(Task 4): 實作移動邏輯
+        _moveBookToGroup(book);
       case BookAction.layoutOverride:
         // TODO(Task 5): 實作版面覆寫邏輯
       case BookAction.removeCache:
-        // TODO(Task 4): 實作移除快取邏輯
+        _removeBookCache(book);
       case BookAction.delete:
-        // TODO(Task 4): 實作刪除邏輯
+        _deleteBook(book);
     }
   }
 
@@ -594,6 +594,68 @@ class _LibraryScreenState extends State<LibraryScreen> with WidgetsBindingObserv
       context: context,
       builder: (context) => _BookDetailsDialog(book: book),
     );
+  }
+
+  Future<void> _moveBookToGroup(Book book) async {
+    final destination = await showDialog<String>(
+      context: context,
+      builder: (context) =>
+          LibraryMoveToGroupDialog(groups: _bookListController.groups),
+    );
+    if (destination == null) return;
+    if (!mounted) return;
+    final books = _bookListController.books;
+    if (books == null) return;
+    await _batchActions.moveToGroup({book.id}, books, destination);
+    await _bookListController.loadBooks();
+  }
+
+  Future<bool?> _confirmRemoveBookCache(Book book) {
+    return showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('移除本機快取'),
+        content: Text(
+          '將移除「${book.title}」的本機檔案，書籍紀錄與閱讀進度會保留，之後可重新'
+          '下載。確定要移除嗎？',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            key: const Key('book_action_remove_cache_confirm_button'),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('移除'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _removeBookCache(Book book) async {
+    final confirmed = await _confirmRemoveBookCache(book);
+    if (confirmed != true) return;
+    if (!mounted) return;
+    final books = _bookListController.books;
+    if (books == null) return;
+    await _batchActions.removeLocalCache({book.id}, books);
+    await _bookListController.loadBooks();
+  }
+
+  /// 【計劃範圍澄清第 3 點】不需要額外手動重新計算 `_mostRecentBook`——
+  /// `_bookListController.loadBooks()` 成功後一律 `notifyListeners()`，
+  /// `initState()` 已註冊的 `_onBookListChanged()` 監聽器會自動重算，比照
+  /// 既有 `_deleteSelectedBooks()` 等批次方法的既有寫法。
+  Future<void> _deleteBook(Book book) async {
+    final confirmed = await _confirmDeleteBooks(1);
+    if (confirmed != true) return;
+    if (!mounted) return;
+    final books = _bookListController.books;
+    if (books == null) return;
+    await _batchActions.deleteBooks({book.id}, books);
+    await _bookListController.loadBooks();
   }
 
   void _changeSortBy(LibrarySortBy sortBy) {
