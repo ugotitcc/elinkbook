@@ -1841,29 +1841,29 @@ git commit -m "feat(epic-36): 新增 TtsDefaultsScreen 朗讀語音與語速設�
 
 **Files:** 無新增/修改，純驗證。
 
-- [ ] **Step 1: 執行全套 `flutter test`（不帶檔案路徑）**
+- [x] **Step 1: 執行全套 `flutter test`（不帶檔案路徑）**
 
 Run: `flutter test`
 Expected: 全數通過（比照 `CLAUDE.md`「測試執行範圍」，這是整份計劃收尾的唯一一次全套執行）。若有失敗，比對是否為本計劃改動觸及的檔案；非本計劃觸及範圍的既有不穩定測試（例如已追蹤的 `epic-37-test-suite-flakiness`）記錄下來，不在本 Issue 修復範圍內。
 
-- [ ] **Step 2: 執行 `flutter analyze`**
+- [x] **Step 2: 執行 `flutter analyze`**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 3: 逐條核對 `issues.md` Issue 5 驗收標準**
+- [x] **Step 3: 逐條核對 `issues.md` Issue 5 驗收標準**
 
-- [ ] 設定畫面分四區塊，既有功能與 Key 契約不變
-- [ ] 「顯示頁首/頁尾」全域預設可調整且單書覆寫優先
-- [ ] 「朗讀語音與語速」設定畫面可寫入 `GlobalReaderPrefs`（播放端串接留待後續 Epic）
-- [ ] 既有使用者升級後新欄位有安全預設值不崩潰
-- [ ] `flutter analyze` 乾淨、`flutter test` 全數通過
+- [x] 設定畫面分四區塊，既有功能與 Key 契約不變
+- [x] 「顯示頁首/頁尾」全域預設可調整且單書覆寫優先
+- [x] 「朗讀語音與語速」設定畫面可寫入 `GlobalReaderPrefs`（播放端串接留待後續 Epic）
+- [x] 既有使用者升級後新欄位有安全預設值不崩潰
+- [x] `flutter analyze` 乾淨、`flutter test` 全數通過
 
-- [ ] **Step 4: 更新 `docs/epics.md` 備註欄位**
+- [x] **Step 4: 更新 `docs/epics.md` 備註欄位**
 
 將 Epic 36 該列備註改為「Issue 1-5 已完成並合併，Epic 36 全數完成」（執行時以 `issues.md` 實際狀態為準調整措辭；若尚有其他未完成 Issue 則相應調整）。
 
-- [ ] **Step 5: 依 `superpowers:requesting-code-review` 發起本 Issue 的程式碼審查**
+- [x] **Step 5: 依 `superpowers:requesting-code-review` 發起本 Issue 的程式碼審查**
 
 審查者先產出報告至 `docs/epics/epic-36-adaptive-shelf-navigation/reviews/review-issue-5.md`，不得直接修改程式碼（比照專案 SDD 工作流程第 6 步）。審查請求內容須包含「計劃範圍澄清」第 1 點的 `adaptive_shell_scaffold_test.dart` 更名影響盤點（spec.md 遺漏、本計劃已補上），供審查者重點覆核 Task 4 是否確實同步更新了這個檔案。
 
