@@ -2,11 +2,22 @@ import 'package:flutter/material.dart';
 
 import '../library/models/book.dart';
 
+/// 單書「⋮」動作選單的動作類型（`spec.md` 功能④）。Sheet 關閉後
+/// 透過 `Navigator.pop(BookAction)` 回傳選項，由呼叫端決定實際行為
+/// （比照既有 Dialog／Sheet 選項慣例，避免在 Sheet 尚未完全移除時
+/// 同幀 push 新 Dialog 導致 Navigator 衝突）。
+enum BookAction {
+  showDetails,
+  move,
+  layoutOverride,
+  removeCache,
+  delete,
+}
+
 /// 單書「⋮」動作選單內容（`DESIGN.md` §11.3／`spec.md` 功能④）：純呈現，
-/// 不知道各選項實際邏輯，五個 callback 由呼叫端（`library_screen.dart`）
-/// 提供。每個選項點擊後先關閉外層 Sheet 再呼叫對應 callback（比照既有
-/// Dialog／Sheet 選項慣例，避免 callback 內再彈出的新 Dialog 跟尚未關閉的
-/// Sheet 疊在一起）。
+/// 點擊選項後透過 `Navigator.pop(BookAction)` 回傳動作類型，由呼叫端
+/// （`library_screen.dart`）負責實際邏輯。選項是否渲染由 `showRemoveCache`
+/// 與 `showLayoutOverride` 控制。
 class BookActionSheet extends StatelessWidget {
   final Book book;
 
@@ -22,27 +33,15 @@ class BookActionSheet extends StatelessWidget {
   /// spec.md 原始建構子片段遺漏這個欄位，此為補充）。
   final bool showLayoutOverride;
 
-  final VoidCallback onShowDetails;
-  final VoidCallback onMove;
-  final VoidCallback onLayoutOverride;
-  final VoidCallback? onRemoveCache; // showRemoveCache == false 時不會被觸發
-  final VoidCallback onDelete;
-
   const BookActionSheet({
     super.key,
     required this.book,
     required this.showRemoveCache,
     required this.showLayoutOverride,
-    required this.onShowDetails,
-    required this.onMove,
-    required this.onLayoutOverride,
-    required this.onRemoveCache,
-    required this.onDelete,
   });
 
-  void _handle(BuildContext context, VoidCallback? callback) {
-    Navigator.of(context).pop();
-    callback?.call();
+  void _handle(BuildContext context, BookAction action) {
+    Navigator.of(context).pop(action);
   }
 
   @override
@@ -60,33 +59,33 @@ class BookActionSheet extends StatelessWidget {
             key: const Key('book_action_details'),
             leading: const Icon(Icons.info_outline),
             title: const Text('詳細資料'),
-            onTap: () => _handle(context, onShowDetails),
+            onTap: () => _handle(context, BookAction.showDetails),
           ),
           ListTile(
             key: const Key('book_action_move'),
             leading: const Icon(Icons.drive_file_move),
             title: const Text('移動'),
-            onTap: () => _handle(context, onMove),
+            onTap: () => _handle(context, BookAction.move),
           ),
           if (showLayoutOverride)
             ListTile(
               key: const Key('book_action_layout_override'),
               leading: const Icon(Icons.view_column_outlined),
               title: const Text('版面覆寫'),
-              onTap: () => _handle(context, onLayoutOverride),
+              onTap: () => _handle(context, BookAction.layoutOverride),
             ),
           if (showRemoveCache)
             ListTile(
               key: const Key('book_action_remove_cache'),
               leading: const Icon(Icons.cloud_off_outlined),
               title: const Text('移除快取'),
-              onTap: () => _handle(context, onRemoveCache),
+              onTap: () => _handle(context, BookAction.removeCache),
             ),
           ListTile(
             key: const Key('book_action_delete'),
             leading: const Icon(Icons.delete),
             title: const Text('刪除'),
-            onTap: () => _handle(context, onDelete),
+            onTap: () => _handle(context, BookAction.delete),
           ),
         ],
       ),

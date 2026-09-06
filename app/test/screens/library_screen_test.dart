@@ -45,6 +45,8 @@ import '../support/fake_share_platform.dart';
 import '../support/fake_custom_fonts_repository.dart';
 import 'package:elinkbook/sync/sync_checkpoint_trigger.dart';
 import 'package:elinkbook/reader/bookmark.dart';
+import 'package:elinkbook/screens/book_action_sheet.dart';
+import 'package:elinkbook/screens/widgets/eb_sheet_shell.dart';
 
 void main() {
   late SqliteLibraryRepository libraryRepository;
@@ -3849,6 +3851,201 @@ void main() {
     );
     expect(find.byType(ReaderScreen), findsNothing);
   });
+
+  testWidgets('點擊 book_action_menu 後 BookActionSheet／EBSheetShell 出現在畫面上', (
+    tester,
+  ) async {
+    final book = _testBook(id: '1', title: '書A');
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: [book]),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('book_action_menu_1')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(EBSheetShell), findsOneWidget);
+    expect(find.byType(BookActionSheet), findsOneWidget);
+  });
+
+  testWidgets('多選模式進行中時 book_action_menu 不顯示（與長按多選互斥）', (tester) async {
+    final book = _testBook(id: '1', title: '書A');
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: [book]),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.longPress(find.byKey(const Key('book_item_1')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('book_action_menu_1')), findsNothing);
+  });
+
+  testWidgets('詳細資料：book.isDownloaded == false 時顯示「尚未下載」，不查詢檔案', (
+    tester,
+  ) async {
+    final book = _testBook(id: '1', title: '書A', isDownloaded: false);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: [book]),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('book_action_menu_1')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('book_action_details')));
+    await tester.pumpAndSettle();
+
+    // 【review-plan-issue-4.md I-4】`尚未下載` 嵌入在 `Text('檔案大小：尚未下載')`
+    // 中，用 `find.textContaining` 匹配子字串而非精确比对整个 Text data。
+    expect(find.textContaining('尚未下載'), findsOneWidget);
+  });
+
+  testWidgets('詳細資料：content:// URI 或讀取失敗時顯示「未知大小」，不崩潰', (tester) async {
+    final book = _testBook(id: '1', title: '書A', isDownloaded: true);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: [book]),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('book_action_menu_1')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('book_action_details')));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('未知大小'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('詳細資料：已下載且為本機真實檔案時顯示格式化後的檔案大小', (tester) async {
+    final tempFile = File(
+      '${Directory.systemTemp.path}/book_details_test_'
+      '${DateTime.now().microsecondsSinceEpoch}.txt',
+    );
+    // 【I-4】`writeAsBytes` 是原生 I/O，在 testWidgets 的 fake-async 環境下
+    // 若不包在 `runAsync` 裡，Future 永遠不會完成導致測試掛死。
+    await tester.runAsync(() => tempFile.writeAsBytes(List.filled(2048, 0)));
+    addTearDown(() async {
+      await tester.runAsync(() async {
+        if (await tempFile.exists()) await tempFile.delete();
+      });
+    });
+
+    final book = _testBook(
+      id: '1',
+      title: '書A',
+      filePath: tempFile.path,
+      isDownloaded: true,
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: [book]),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('book_action_menu_1')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('book_action_details')));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('2.0 KB'), findsOneWidget);
+  });
+
+  testWidgets('詳細資料：lastReadTime 為 epoch 0 時顯示「尚未閱讀」，而非誤導性的 1970 年日期', (
+    tester,
+  ) async {
+    final book = _testBook(
+      id: '1',
+      title: '書A',
+      lastReadTime: DateTime.fromMillisecondsSinceEpoch(0),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: [book]),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('book_action_menu_1')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('book_action_details')));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('尚未閱讀'), findsOneWidget);
+  });
+
+  testWidgets(
+    '清單檢視模式下 book_action_menu 圖示存在，點擊後 BookActionSheet 出現'
+    '（review-plan-issue-4.md I-3：Step 3c 修改 _BookListTile 的 trailing '
+    '結構為 Row，先前測試只覆蓋了格狀模式，補上清單模式的整合測試）',
+    (tester) async {
+      final book = _testBook(id: '1', title: '書A');
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: LibraryScreen(
+            repository: FakeLibraryRepository(initialBooks: [book]),
+            importService: FakeBookImportService(),
+            prefsManager: prefsManager,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // 切換為清單檢視（既有既有慣例：見本檔案「library_sort_view_button」
+      // /「library_sort_view_toggle_option」的既有測試）。
+      await tester.tap(find.byKey(const Key('library_sort_view_button')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('library_sort_view_toggle_option')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('library_list_view')), findsOneWidget);
+
+      expect(find.byKey(const Key('book_action_menu_1')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('book_action_menu_1')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(EBSheetShell), findsOneWidget);
+      expect(find.byType(BookActionSheet), findsOneWidget);
+    },
+  );
 }
 
 /// 刻意「非線性」的測試用 TextScaler：對較大的輸入值套用較低的有效縮放
@@ -3889,6 +4086,8 @@ Book _testBook({
   bool? isFixedLayout,
   BookFileFormat format = BookFileFormat.epub,
   DateTime? lastReadTime,
+  BookSource source = BookSource.local,
+  bool isDownloaded = true,
 }) {
   // 預設時間戳改為依 id 內數字反向換算的確定性公式（不再用
   // `DateTime.now()`）：Issue 3 新增的分頁測試以
@@ -3909,10 +4108,11 @@ Book _testBook({
     author: author,
     format: format,
     filePath: filePath ?? 'content://example/$id.epub',
-    source: BookSource.local,
+    source: source,
     coverPath: coverPath,
     groupName: groupName,
     isFixedLayout: isFixedLayout,
+    isDownloaded: isDownloaded,
     createTime: defaultTime,
     lastReadTime: lastReadTime ?? defaultTime,
   );

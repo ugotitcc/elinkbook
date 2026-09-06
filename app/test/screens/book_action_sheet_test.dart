@@ -16,57 +16,74 @@ Book _book() {
   );
 }
 
-Future<void> _openSheet(
-  WidgetTester tester, {
+/// 建立包含 BookActionSheet 的 MaterialApp widget。
+Widget _buildApp({
   bool showRemoveCache = true,
   bool showLayoutOverride = true,
-  VoidCallback? onShowDetails,
-  VoidCallback? onMove,
-  VoidCallback? onLayoutOverride,
-  VoidCallback? onRemoveCache,
-  VoidCallback? onDelete,
-}) async {
-  await tester.pumpWidget(
-    MaterialApp(
-      home: Builder(
-        builder: (context) => ElevatedButton(
-          onPressed: () => showModalBottomSheet<void>(
+}) {
+  return MaterialApp(
+    home: Builder(
+      builder: (context) => ElevatedButton(
+        onPressed: () => showModalBottomSheet<void>(
+          context: context,
+          builder: (context) => BookActionSheet(
+            book: _book(),
+            showRemoveCache: showRemoveCache,
+            showLayoutOverride: showLayoutOverride,
+          ),
+        ),
+        child: const Text('open'),
+      ),
+    ),
+  );
+}
+
+/// 建立會回傳 BookAction 結果的 MaterialApp widget。
+Widget _buildResultApp({
+  required ValueNotifier<BookAction?> resultNotifier,
+  bool showRemoveCache = true,
+  bool showLayoutOverride = true,
+}) {
+  return MaterialApp(
+    home: Builder(
+      builder: (context) => ElevatedButton(
+        onPressed: () async {
+          resultNotifier.value = await showModalBottomSheet<BookAction>(
             context: context,
             builder: (context) => BookActionSheet(
               book: _book(),
               showRemoveCache: showRemoveCache,
               showLayoutOverride: showLayoutOverride,
-              onShowDetails: onShowDetails ?? () {},
-              onMove: onMove ?? () {},
-              onLayoutOverride: onLayoutOverride ?? () {},
-              onRemoveCache: onRemoveCache,
-              onDelete: onDelete ?? () {},
             ),
-          ),
-          child: const Text('open'),
-        ),
+          );
+        },
+        child: const Text('open'),
       ),
     ),
   );
-  await tester.tap(find.text('open'));
-  await tester.pumpAndSettle();
 }
 
 void main() {
   testWidgets('showRemoveCache: false 時「移除快取」選項不存在', (tester) async {
-    await _openSheet(tester, showRemoveCache: false);
+    await tester.pumpWidget(_buildApp(showRemoveCache: false));
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
     expect(find.byKey(const Key('book_action_remove_cache')), findsNothing);
   });
 
   testWidgets('showLayoutOverride: false 時「版面覆寫」選項不存在', (tester) async {
-    await _openSheet(tester, showLayoutOverride: false);
+    await tester.pumpWidget(_buildApp(showLayoutOverride: false));
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
     expect(find.byKey(const Key('book_action_layout_override')), findsNothing);
   });
 
   testWidgets('showRemoveCache／showLayoutOverride 皆為 true 時五個選項全部存在', (
     tester,
   ) async {
-    await _openSheet(tester);
+    await tester.pumpWidget(_buildApp());
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
     expect(find.byKey(const Key('book_action_details')), findsOneWidget);
     expect(find.byKey(const Key('book_action_move')), findsOneWidget);
     expect(find.byKey(const Key('book_action_layout_override')), findsOneWidget);
@@ -74,44 +91,64 @@ void main() {
     expect(find.byKey(const Key('book_action_delete')), findsOneWidget);
   });
 
-  testWidgets('點擊「詳細資料」關閉 Sheet 並呼叫 onShowDetails', (tester) async {
-    var called = 0;
-    await _openSheet(tester, onShowDetails: () => called++);
+  // 以下「回傳值」測試：`showModalBottomSheet` 的 Future 只有在 Sheet 被
+  // 關閉後才會 resolve，因此不能用 `_buildApp` + 先 pump 再 tap 的分離
+  // 模式——`result` 會在 Sheet 關閉前就被 capture 為 null。改為在單一
+  // testWidgets 內用 ValueNotifier 跨時間捕獲結果。
+
+  testWidgets('點擊「詳細資料」回傳 BookAction.showDetails 並關閉 Sheet', (tester) async {
+    final resultNotifier = ValueNotifier<BookAction?>(null);
+    await tester.pumpWidget(_buildResultApp(resultNotifier: resultNotifier));
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
     await tester.tap(find.byKey(const Key('book_action_details')));
     await tester.pumpAndSettle();
-    expect(called, 1);
+    expect(resultNotifier.value, BookAction.showDetails);
     expect(find.byKey(const Key('book_action_details')), findsNothing);
   });
 
-  testWidgets('點擊「移動」關閉 Sheet 並呼叫 onMove', (tester) async {
-    var called = 0;
-    await _openSheet(tester, onMove: () => called++);
+  testWidgets('點擊「移動」回傳 BookAction.move 並關閉 Sheet', (tester) async {
+    final resultNotifier = ValueNotifier<BookAction?>(null);
+    await tester.pumpWidget(_buildResultApp(resultNotifier: resultNotifier));
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
     await tester.tap(find.byKey(const Key('book_action_move')));
     await tester.pumpAndSettle();
-    expect(called, 1);
+    expect(resultNotifier.value, BookAction.move);
   });
 
-  testWidgets('點擊「版面覆寫」關閉 Sheet 並呼叫 onLayoutOverride', (tester) async {
-    var called = 0;
-    await _openSheet(tester, onLayoutOverride: () => called++);
+  testWidgets('點擊「版面覆寫」回傳 BookAction.layoutOverride 並關閉 Sheet', (tester) async {
+    final resultNotifier = ValueNotifier<BookAction?>(null);
+    await tester.pumpWidget(_buildResultApp(resultNotifier: resultNotifier));
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
     await tester.tap(find.byKey(const Key('book_action_layout_override')));
     await tester.pumpAndSettle();
-    expect(called, 1);
+    expect(resultNotifier.value, BookAction.layoutOverride);
   });
 
-  testWidgets('點擊「移除快取」關閉 Sheet 並呼叫 onRemoveCache', (tester) async {
-    var called = 0;
-    await _openSheet(tester, onRemoveCache: () => called++);
+  testWidgets('點擊「移除快取」回傳 BookAction.removeCache 並關閉 Sheet', (tester) async {
+    final resultNotifier = ValueNotifier<BookAction?>(null);
+    await tester.pumpWidget(_buildResultApp(resultNotifier: resultNotifier));
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
     await tester.tap(find.byKey(const Key('book_action_remove_cache')));
     await tester.pumpAndSettle();
-    expect(called, 1);
+    expect(resultNotifier.value, BookAction.removeCache);
   });
 
-  testWidgets('點擊「刪除」關閉 Sheet 並呼叫 onDelete', (tester) async {
-    var called = 0;
-    await _openSheet(tester, onDelete: () => called++);
+  testWidgets('點擊「刪除」回傳 BookAction.delete 並關閉 Sheet', (tester) async {
+    final resultNotifier = ValueNotifier<BookAction?>(null);
+    await tester.pumpWidget(_buildResultApp(resultNotifier: resultNotifier));
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
     await tester.tap(find.byKey(const Key('book_action_delete')));
     await tester.pumpAndSettle();
-    expect(called, 1);
+    expect(resultNotifier.value, BookAction.delete);
   });
 }
