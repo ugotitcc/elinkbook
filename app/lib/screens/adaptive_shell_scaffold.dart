@@ -6,7 +6,7 @@ import '../library/library_repository.dart';
 import '../reader/reader_prefs_manager.dart';
 import 'library_screen.dart';
 import 'library_screen_dependencies.dart';
-import 'settings_screen.dart';
+import 'settings_scaffold.dart';
 import 'sources_home_screen.dart';
 
 class _LibraryRefreshSignal extends ChangeNotifier {
@@ -84,7 +84,7 @@ class _AdaptiveShellScaffoldState extends State<AdaptiveShellScaffold> {
     // runtimeType/清單位置比對重用既有 Element/State，狀態不會遺失；
     // 反之若快取在 initState()，widget.themeDependencies 等參數之後的
     // 變更就永遠傳不到已快取的子畫面（例如使用者在「設定」切主題/E-Ink
-    // 後，SettingsScreen/SourcesHomeScreen 拿到的仍是最初舊值）。
+    // 後，SettingsScaffold/SourcesHomeScreen 拿到的仍是最初舊值）。
     return PopScope(
       canPop: _currentIndex == 0,
       onPopInvokedWithResult: (didPop, result) {
@@ -120,7 +120,7 @@ class _AdaptiveShellScaffoldState extends State<AdaptiveShellScaffold> {
               onNavigateToLibrary: () => _navigateTo(0),
               onNavigateToSettings: () => _navigateTo(2),
             ),
-            SettingsScreen(
+            SettingsScaffold(
               prefsManager: widget.prefsManager,
               currentTheme: widget.themeDependencies.currentTheme,
               isEinkMode: widget.themeDependencies.isEinkMode,

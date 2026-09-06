@@ -7,7 +7,7 @@ import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/screens/adaptive_shell_scaffold.dart';
 import 'package:elinkbook/screens/library_screen.dart';
 import 'package:elinkbook/screens/library_screen_dependencies.dart';
-import 'package:elinkbook/screens/settings_screen.dart';
+import 'package:elinkbook/screens/settings_scaffold.dart';
 import 'package:elinkbook/theme/app_theme.dart';
 import 'package:elinkbook/theme/app_theme_data.dart';
 
@@ -142,7 +142,7 @@ void main() {
     await tester.pumpAndSettle();
 
     final settingsScreen =
-        tester.widget<SettingsScreen>(find.byType(SettingsScreen));
+        tester.widget<SettingsScaffold>(find.byType(SettingsScaffold));
     expect(settingsScreen.customFontsRepository, customFontsRepository);
     expect(settingsScreen.onEinkModeChanged, isNotNull);
 
@@ -171,7 +171,7 @@ void main() {
     await tester.pumpAndSettle();
 
     var settingsScreen =
-        tester.widget<SettingsScreen>(find.byType(SettingsScreen));
+        tester.widget<SettingsScaffold>(find.byType(SettingsScaffold));
     expect(settingsScreen.isEinkMode, isFalse);
 
     // 重新 pumpWidget 同一個 AdaptiveShellScaffold（同一個 widget tree
@@ -181,7 +181,7 @@ void main() {
     await tester.pumpWidget(buildWithEink(true));
     await tester.pumpAndSettle();
 
-    settingsScreen = tester.widget<SettingsScreen>(find.byType(SettingsScreen));
+    settingsScreen = tester.widget<SettingsScaffold>(find.byType(SettingsScaffold));
     expect(
       settingsScreen.isEinkMode,
       isTrue,

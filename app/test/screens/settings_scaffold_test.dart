@@ -8,7 +8,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:elinkbook/cloud_import/google_drive_oauth_client.dart';
 import 'package:elinkbook/cloud_import/onedrive_oauth_client.dart';
-import 'package:elinkbook/screens/settings_screen.dart';
+import 'package:elinkbook/screens/settings_scaffold.dart';
 import 'package:elinkbook/sync/sync_account_repository.dart';
 import 'package:elinkbook/sync/sync_client.dart';
 import 'package:elinkbook/theme/app_theme.dart';
@@ -46,8 +46,16 @@ void main() {
   });
 
   testWidgets('SettingsScreen 顯示設定標題與「佈景」「關於」「導航熱區」入口', (tester) async {
+    // 四分區重排後「關於」分區被推到較下方，需放大視窗
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
     await tester.pumpWidget(MaterialApp(
-      home: SettingsScreen(prefsManager: FakeReaderPrefsManager()),
+      home: SettingsScaffold(prefsManager: FakeReaderPrefsManager()),
     ));
 
     expect(find.text('設定'), findsOneWidget);
@@ -69,7 +77,7 @@ void main() {
       (tester) async {
     AppTheme? receivedTheme;
     await tester.pumpWidget(MaterialApp(
-      home: SettingsScreen(
+      home: SettingsScaffold(
         prefsManager: FakeReaderPrefsManager(),
         currentTheme: AppTheme.light,
         onThemeChanged: (theme) => receivedTheme = theme,
@@ -85,7 +93,7 @@ void main() {
   testWidgets('SettingsScreen E-Ink 模式下主題圓點停用點擊', (tester) async {
     AppTheme? receivedTheme;
     await tester.pumpWidget(MaterialApp(
-      home: SettingsScreen(
+      home: SettingsScaffold(
         prefsManager: FakeReaderPrefsManager(),
         currentTheme: AppTheme.light,
         isEinkMode: true,
@@ -113,7 +121,7 @@ void main() {
     });
 
     await tester.pumpWidget(MaterialApp(
-      home: SettingsScreen(prefsManager: FakeReaderPrefsManager()),
+      home: SettingsScaffold(prefsManager: FakeReaderPrefsManager()),
     ));
 
     await tester.tap(find.byKey(const Key('settings_about_button')));
@@ -129,7 +137,7 @@ void main() {
 
   testWidgets('點擊「導航熱區」導航至 NavZoneSettingsScreen', (tester) async {
     await tester.pumpWidget(MaterialApp(
-      home: SettingsScreen(prefsManager: FakeReaderPrefsManager()),
+      home: SettingsScaffold(prefsManager: FakeReaderPrefsManager()),
     ));
 
     await tester.tap(find.byKey(const Key('settings_nav_zone_button')));
@@ -140,7 +148,7 @@ void main() {
 
   testWidgets('點擊「字型管理」導航至 FontManagementScreen', (tester) async {
     await tester.pumpWidget(MaterialApp(
-      home: SettingsScreen(
+      home: SettingsScaffold(
         prefsManager: FakeReaderPrefsManager(),
         customFontsRepository: FakeCustomFontsRepository(),
       ),
@@ -154,7 +162,7 @@ void main() {
 
   testWidgets('點擊「閱讀預設值」導航至 ReadingDefaultsScreen', (tester) async {
     await tester.pumpWidget(MaterialApp(
-      home: SettingsScreen(prefsManager: FakeReaderPrefsManager()),
+      home: SettingsScaffold(prefsManager: FakeReaderPrefsManager()),
     ));
 
     await tester
@@ -166,9 +174,17 @@ void main() {
 
   testWidgets('SettingsScreen 顯示「同步」入口，點擊導航至 SyncSettingsScreen',
       (tester) async {
+    // 四分區重排後「同步與帳號」分區被推到較下方，需放大視窗
+    tester.view.physicalSize = const Size(800, 1200);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
     final accountRepository = SyncAccountRepository();
     await tester.pumpWidget(MaterialApp(
-      home: SettingsScreen(
+      home: SettingsScaffold(
         prefsManager: FakeReaderPrefsManager(),
         syncAccountRepository: accountRepository,
         syncClient: SyncClient(accountRepository: accountRepository),
@@ -185,9 +201,17 @@ void main() {
 
   testWidgets('SettingsScreen 顯示「已連結的雲端匯入帳戶」入口，點擊導航至 CloudAccountSettingsScreen',
       (tester) async {
+    // 四分區重排後「同步與帳號」分區被推到較下方，需放大視窗
+    tester.view.physicalSize = const Size(800, 1200);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
     final cloudAccountRepository = FakeCloudAccountRepository();
     await tester.pumpWidget(MaterialApp(
-      home: SettingsScreen(
+      home: SettingsScaffold(
         prefsManager: FakeReaderPrefsManager(),
         cloudAccountRepository: cloudAccountRepository,
         googleDriveOAuthClient:
@@ -211,8 +235,16 @@ void main() {
   testWidgets(
       '點擊「閱讀器 Console Log」導航至 ReaderConsoleLogScreen（epic-18-reader-device-qa '
       'Issue 33）', (tester) async {
+    // 四分區重排後「關於」分區被推到較下方，需放大視窗
+    tester.view.physicalSize = const Size(800, 1200);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
     await tester.pumpWidget(MaterialApp(
-      home: SettingsScreen(prefsManager: FakeReaderPrefsManager()),
+      home: SettingsScaffold(prefsManager: FakeReaderPrefsManager()),
     ));
 
     expect(
@@ -227,8 +259,16 @@ void main() {
 
   testWidgets('SettingsScreen 顯示 Console Log 開關，初始值反映已儲存的 consoleLogEnabled',
       (tester) async {
+    // 四分區重排後 Console Log 開關被推到較下方，需放大視窗
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
     await tester.pumpWidget(MaterialApp(
-      home: SettingsScreen(
+      home: SettingsScaffold(
         prefsManager: FakeReaderPrefsManager(
           globalPrefs:
               const GlobalReaderPrefs.initial().copyWith(consoleLogEnabled: true),
@@ -248,8 +288,16 @@ void main() {
   });
 
   testWidgets('Console Log 開關預設關閉（尚未儲存過設定時）', (tester) async {
+    // 四分區重排後 Console Log 開關被推到較下方，需放大視窗
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
     await tester.pumpWidget(MaterialApp(
-      home: SettingsScreen(prefsManager: FakeReaderPrefsManager()),
+      home: SettingsScaffold(prefsManager: FakeReaderPrefsManager()),
     ));
     await tester.pump();
 
@@ -264,9 +312,17 @@ void main() {
 
   testWidgets('切換 Console Log 開關後，onChanged 觸發 saveGlobalPrefs 持久化新值',
       (tester) async {
+    // 四分區重排後 Console Log 開關被推到較下方，需放大視窗
+    tester.view.physicalSize = const Size(800, 1200);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
     final prefsManager = FakeReaderPrefsManager();
     await tester.pumpWidget(MaterialApp(
-      home: SettingsScreen(prefsManager: prefsManager),
+      home: SettingsScaffold(prefsManager: prefsManager),
     ));
     await tester.pump();
 
@@ -287,7 +343,7 @@ void main() {
   testWidgets('SettingsScreen 顯示 E-Ink 模式開關，點擊切換觸發 onEinkModeChanged', (tester) async {
     bool? receivedEink;
     await tester.pumpWidget(MaterialApp(
-      home: SettingsScreen(
+      home: SettingsScaffold(
         prefsManager: FakeReaderPrefsManager(),
         currentTheme: AppTheme.light,
         isEinkMode: false,
@@ -307,7 +363,7 @@ void main() {
       'SettingsScreen 主題預覽圓點改讀 resolveThemeData() 的實際色值（不再維持寫死近似值）',
       (tester) async {
     await tester.pumpWidget(MaterialApp(
-      home: SettingsScreen(
+      home: SettingsScaffold(
         prefsManager: FakeReaderPrefsManager(),
         currentTheme: AppTheme.dark,
       ),
@@ -350,7 +406,7 @@ void main() {
       '且依目前選擇的主題呈現粗細差異（DESIGN.md §17.2／§7.2）',
       (tester) async {
     await tester.pumpWidget(MaterialApp(
-      home: SettingsScreen(
+      home: SettingsScaffold(
         prefsManager: FakeReaderPrefsManager(),
         currentTheme: AppTheme.light,
         isEinkMode: true,
@@ -409,7 +465,7 @@ void main() {
       (tester) async {
     final handle = tester.ensureSemantics();
     await tester.pumpWidget(MaterialApp(
-      home: SettingsScreen(
+      home: SettingsScaffold(
         prefsManager: FakeReaderPrefsManager(),
         currentTheme: AppTheme.sepia,
         isEinkMode: true,
@@ -431,7 +487,7 @@ void main() {
     final handle = tester.ensureSemantics();
     AppTheme? receivedTheme;
     await tester.pumpWidget(MaterialApp(
-      home: SettingsScreen(
+      home: SettingsScaffold(
         prefsManager: FakeReaderPrefsManager(),
         currentTheme: AppTheme.light,
         isEinkMode: false,
@@ -456,7 +512,7 @@ void main() {
 
   testWidgets('SettingsScreen E-Ink 關閉時，不顯示鎖定提示文字，圓點維持一般邊框', (tester) async {
     await tester.pumpWidget(MaterialApp(
-      home: SettingsScreen(
+      home: SettingsScaffold(
         prefsManager: FakeReaderPrefsManager(),
         currentTheme: AppTheme.light,
         isEinkMode: false,
@@ -472,5 +528,42 @@ void main() {
         ))
         .decoration as BoxDecoration;
     expect(decoration.border, isNotNull);
+  });
+
+  testWidgets('四個區塊標題依序為外觀／閱讀／同步與帳號／關於', (tester) async {
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    await tester.pumpWidget(MaterialApp(
+      home: SettingsScaffold(prefsManager: FakeReaderPrefsManager()),
+    ));
+    await tester.pumpAndSettle();
+
+    // 取所有 Text widget 的 data，只保留四個分區標題（各有至少一個
+    // EBSectionHeader 會產生對應文字），並檢查出現順序。
+    final allTexts = tester
+        .widgetList<Text>(find.byType(Text))
+        .map((t) => t.data)
+        .whereType<String>()
+        .toList();
+
+    // 找出四個分區標題在 allTexts 中首次出現的位置
+    final expected = ['外觀', '閱讀', '同步與帳號', '關於'];
+    final indices = expected.map((h) => allTexts.indexOf(h)).toList();
+
+    // 每個標題都必須存在
+    for (var i = 0; i < expected.length; i++) {
+      expect(indices[i], isNonNegative,
+          reason: '找不到分區標題「${expected[i]}」');
+    }
+    // 順序必須遞增
+    for (var i = 1; i < indices.length; i++) {
+      expect(indices[i], greaterThan(indices[i - 1]),
+          reason: '「${expected[i]}」應在「${expected[i - 1]}」之後出現');
+    }
   });
 }
