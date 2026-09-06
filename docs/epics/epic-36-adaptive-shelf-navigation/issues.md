@@ -2,7 +2,7 @@
 
 依 `spec.md`（Architecting 階段唯一事實來源，已經 `/superpowers:receiving-code-review` 依 `reviews/review-spec.md` 審查修訂）拆解為 5 個細粒度垂直切片工單，對應 `spec.md`「Implementation Decisions」的功能①~⑤分節（`spec.md` 原文已明訂此對應關係）。每個工單都附有單元測試要求；跟 `spec.md` 對應段落的引用一律用 `spec.md §功能N` 標示，實作者動手前應先讀那一段的完整說明，這裡只列摘要與驗收標準。
 
-**依賴順序：** Issue 1 → Issue 2 → Issue 3 → Issue 4 為一條鏈（狀態逐層疊加：Issue 2 的 `_activeGroupFilter`、Issue 3 的 `_mostRecentBook` 皆是後續工單的前置條件）；Issue 5 只依賴 Issue 1，可與 Issue 2～4 平行進行。
+**依賴順序：** Issue 1 → Issue 2 → Issue 3 → Issue 4 為一條鏈（狀態逐層疊加：Issue 2 的 `_activeGroupFilter`、Issue 3 的 `_mostRecentBook` 皆是後續工單的前置條件）；Issue 5 只依賴 Issue 1，可與 Issue 2～4 平行進行。**Issue 6** 是 Issue 1-5 全數完成合併後，透過 `/improve-codebase-architecture` 架構回顧新增的補強工單，只依賴 Issue 3，不屬於 `spec.md` 原始 5 功能分節。
 
 **共同規則（每個工單皆適用，來自 `UI_DESIGN_RULES.md`）：** 動手改程式碼前，先在該工單的 `plans/plan-issue-<N>.md` 說明 (1) 改哪個 UI 元件 (2) 為什麼要改 (3) 哪些畫面依賴它 (4) 是否影響 business logic（不影響則明確寫「不影響」）。本 Epic 全程只碰 Navigation／Library UI／Settings UI／Bottom sheets／Dialogs／Layout，不碰 OPDS／WebDAV／雲端來源實作、書籍儲存、閱讀進度持久化等核心架構清單項目。
 
@@ -152,6 +152,70 @@
 - `resolve()` 雙層解析單元測試：單書覆寫存在時優先、不存在時吃全域預設、兩者皆缺席時吃 `GlobalReaderPrefs.initial()` 的 `false`。
 
 **驗收標準：** 設定畫面分四區塊，既有功能與 Key 契約不變；「顯示頁首/頁尾」全域預設可調整且單書覆寫優先；「朗讀語音與語速」設定畫面可寫入 `GlobalReaderPrefs`（播放端串接留待後續 Epic）；既有使用者升級後新欄位有安全預設值不崩潰；`flutter analyze` 乾淨、`flutter test` 全數通過。
+
+---
+
+## Issue 6：收斂書架分頁狀態為 `LibraryPagingCursor`（架構回顧衍生）
+
+**Status:** ready-for-agent
+
+**依賴：** Issue 3（本工單重構的正是 Issue 3 引入的 `_currentPage`／`_lastPageSize`／`didChangeMetrics()` 分頁邏輯）
+
+**來源：** `/improve-codebase-architecture` 針對 Epic 35／36 的架構回顧（2026-09-07），候選 2「分頁矯正藏在 `build()` 的副作用裡」，經 `/grilling` Q1～Q10 十輪確認設計細節。非 `spec.md` 原始 5 個功能分節之一，是 Epic 完成後的架構深化補強。
+
+**背景／目標：** Issue 3 落地後，`_currentPage`／`_lastPageSize` 兩個欄位有 7 個各自獨立的寫入點散落在 `library_screen.dart` 全檔（`build()` 內的箝制寫回、`didChangeMetrics()` 的旋轉換算、`_openGroupFilteredView`／`_exitGroupFilteredView`／`_changeSortBy` 的重置為 0、`PagingBar.onPrevious`/`onNext` 的 ±1），沒有任何一個 module 對「分頁狀態何時該怎麼變」負完整責任——想確認「刪書後頁碼會不會跑掉」得同時讀懂 7 處程式碼。`review-plan-issue-3.md` M-2 曾點名的越界殘留風險已被 `build()` 內一行同步寫回（`_currentPage = safePage;`）修掉，但沒有測試鎖住這個情境，純屬巧合式正確，不是設計上的保證。
+
+**Solution：**
+- 新增 `LibraryPagingCursor`（純 Dart 類別，**不是** `ChangeNotifier`——分頁狀態只有 `_LibraryScreenState` 一個消費者，不需要監聽機制），放進既有 `app/lib/screens/library_paging.dart`，包著既有純函式 `libraryPageSizeForOrientation`／`libraryPageCount`／`libraryClampPage`／`libraryRecalculatePage`（皆保留不動）：
+  ```dart
+  class LibraryPagingCursor {
+    int _currentPage = 0;
+    int? _lastPageSize;
+
+    int get currentPage => _currentPage;
+
+    /// build() 每次呼叫：箝制頁碼＋回傳目前 pageCount。
+    /// 不做旋轉比例換算（那是 applyOrientationChange() 的職責）。
+    int clamp({required int itemCount, required Orientation orientation}) {
+      final pageSize = libraryPageSizeForOrientation(orientation);
+      final pageCount = libraryPageCount(itemCount, pageSize);
+      _currentPage = libraryClampPage(_currentPage, pageCount);
+      _lastPageSize = pageSize;
+      return pageCount;
+    }
+
+    /// didChangeMetrics() 呼叫：偵測到真正的方向改變時才按比例換算。
+    void applyOrientationChange(Orientation orientation) {
+      final newPageSize = libraryPageSizeForOrientation(orientation);
+      final oldPageSize = _lastPageSize;
+      if (oldPageSize != null && oldPageSize != newPageSize) {
+        _currentPage = libraryRecalculatePage(
+          oldPage: _currentPage, oldPageSize: oldPageSize, newPageSize: newPageSize,
+        );
+      }
+      _lastPageSize = newPageSize;
+    }
+
+    void goToNextPage() => _currentPage++;
+    void goToPreviousPage() => _currentPage--;
+    void resetToFirstPage() => _currentPage = 0;
+  }
+  ```
+  `goToNextPage()`／`goToPreviousPage()` **不加內部邊界防呆**——呼叫端（`PagingBar` 的 `onPrevious`/`onNext`）本來就只在合法範圍內才會把 callback 傳進去，比照 `CLAUDE.md`「不要為不可能發生的情境寫防禦」。
+- `_LibraryScreenState` 移除 `_currentPage`／`_lastPageSize` 兩個欄位，改為 `late final LibraryPagingCursor _paging = LibraryPagingCursor();`（比照既有 `late final LibraryBookListController _bookListController;` 寫法）。
+- 7 個呼叫點遷移：
+  - `_buildBookList()` 的箝制寫回（L899-911）→ `final pageCount = _paging.clamp(itemCount: itemCount, orientation: orientation);`，`PagingBar` 的 `currentPage` 改讀 `_paging.currentPage`。
+  - `didChangeMetrics()`（L183-194）→ `_paging.applyOrientationChange(newOrientation);`（`physicalSize.isEmpty` 暫態防護等既有邏輯不動）。
+  - `_openGroupFilteredView`／`_exitGroupFilteredView`（L544/551）→ `_paging.resetToFirstPage()`。
+  - `_changeSortBy`（L681）→ `_paging.resetToFirstPage()`。
+  - `PagingBar.onPrevious`／`onNext`（L996/998）→ `_paging.goToPreviousPage()`／`_paging.goToNextPage()`。
+- **`WidgetsBindingObserver`／`didChangeMetrics()` 整套機制維持不變**，不藉本工單拿掉——是否該讓 `build()` 單獨透過 `MediaQuery` 依賴自動處理旋轉是獨立問題，不在本工單範圍內（`didChangeMetrics()` 現有的「App 背景化／摺疊裝置展開過渡瞬間 `physicalSize` 暫時 0x0」防護註解代表這條路徑已有真機驗證過的理由，不貿然假設可以被 `build()` 重建取代）。
+
+**單元測試要求：**
+- 新增 `LibraryPagingCursor` 純 Dart 單元測試（`library_paging_test.dart`），**鎖住 `review-plan-issue-3.md` M-2 情境**：先 `clamp(itemCount: 縮小後的值, orientation: ...)` 讓頁碼被箝制到合法範圍，再呼叫 `applyOrientationChange(...)`，斷言換算基準用的是箝制後的頁碼而非過期值。不額外疊加端到端 widget test 覆蓋同一組合情境（箝制與旋轉換算個別的接線已由既有 widget test 覆蓋）。
+- 既有 `library_screen_test.dart` 涉及旋轉／換頁/排序重置的 widget test（例如「裝置旋轉後書架封面欄數即時變化」「點擊 PagingBar 下一頁/上一頁」「旋轉螢幕時目前頁碼依新每頁容量正確換算」「切換排序條件後頁碼重置為第一頁」）維持既有斷言不變，作為遷移的回歸驗證——只要求全數繼續通過，不需要新增這幾則測試本身的斷言內容。
+
+**驗收標準：** `_LibraryScreenState` 不再直接持有 `_currentPage`／`_lastPageSize` 欄位，改由 `LibraryPagingCursor` 唯一負責分頁狀態轉換；7 個原寫入點皆改為呼叫游標方法；`review-plan-issue-3.md` M-2 情境有專屬單元測試鎖住；`flutter analyze` 乾淨、`flutter test test/screens/library_paging_test.dart test/screens/library_screen_test.dart` 通過。
 
 ---
 
