@@ -4,7 +4,11 @@ import 'package:flutter/material.dart';
 
 import '../library/book_content_fingerprint.dart';
 import '../library/book_import_service.dart';
+import '../reader/book_reader_prefs.dart';
+import '../reader/book_reader_prefs_repository.dart';
+import '../reader/page_turn_mode.dart';
 import '../reader/reader_prefs_manager.dart';
+import '../reader/writing_mode.dart';
 import '../remote/opds_types.dart';
 import '../remote/remote_book_downloader.dart';
 import '../remote/remote_server_profile.dart';
@@ -20,11 +24,14 @@ import '../library/models/library_enums.dart';
 import '../library/widgets/book_cover.dart';
 import '../theme/elink_tokens.dart';
 
+import 'book_action_sheet.dart';
 import 'library_group_management_dialog.dart';
 import 'library_move_to_group_dialog.dart';
 import 'library_paging.dart';
 import 'reader_screen.dart';
+import 'widgets/eb_sheet_shell.dart';
 import 'widgets/paging_bar.dart';
+import 'widgets/reader_option_tile.dart';
 
 /// 圖書庫主畫面：讀取 [LibraryRepository] 的真實資料，取代
 /// epic-0-skeleton 遺留的固定範例書籍清單佔位版本（見
@@ -545,6 +552,131 @@ class _LibraryScreenState extends State<LibraryScreen> with WidgetsBindingObserv
     });
   }
 
+  /// `onMove`／`onRemoveCache`／`onDelete` 於 Task 4 實作；`onLayoutOverride`
+  /// 於 Task 5 實作（`showLayoutOverride` 暫時固定 false，Task 5 才依
+  /// `bookReaderPrefsRepository` 是否提供切換）。
+  ///
+  /// 【修正】改用 `BookAction` enum 回傳模式：`BookActionSheet` 透過
+  /// `Navigator.pop(BookAction)` 回傳使用者選擇，Sheet 的 future 完成後
+  /// 才在下一幀執行 callback，避免在 Sheet 尚未完全移除時同幀 push
+  /// 新 Dialog 導致 Navigator 衝突（`review-plan-issue-4.md M-4`）。
+  Future<void> _openBookActionSheet(Book book) async {
+    final showRemoveCache =
+        book.source == BookSource.calibreOpds && book.isDownloaded;
+    final bookReaderPrefsRepository =
+        widget.readerFeatureRepositories.bookReaderPrefsRepository;
+    final result = await EBSheetShell.show<BookAction>(
+      context,
+      title: book.title,
+      isEinkMode: widget.themeDependencies.isEinkMode,
+      builder: (context) => BookActionSheet(
+        book: book,
+        showRemoveCache: showRemoveCache,
+        showLayoutOverride: bookReaderPrefsRepository != null,
+      ),
+    );
+    if (!mounted || result == null) return;
+    switch (result) {
+      case BookAction.showDetails:
+        _showBookDetails(book);
+      case BookAction.move:
+        _moveBookToGroup(book);
+      case BookAction.layoutOverride:
+        _showLayoutOverrideDialog(book, bookReaderPrefsRepository!);
+      case BookAction.removeCache:
+        _removeBookCache(book);
+      case BookAction.delete:
+        _deleteBook(book);
+    }
+  }
+
+  void _showBookDetails(Book book) {
+    // 【review-plan-issue-4.md M-4】Sheet 透過 `Navigator.pop` 回傳結果時，
+    // Sheet Route 已被同步標記為待移除；`EBSheetShell.show` 的 Future 在
+    // 微任務佇列中完成，此時 Sheet Route 已離開 Navigator 的路由堆疊，
+    // 可安全地直接呼叫 `showDialog`，不需要額外的 `addPostFrameCallback`
+    // 延遲——前版的延遲反而導致 Dialog Route 被排到 Sheet 關閉動畫的
+    // 中途執行，造成 Sheet 尚未完全移除就 push 新 Route 的時序衝突。
+    if (!mounted) return;
+    showDialog<void>(
+      context: context,
+      builder: (context) => _BookDetailsDialog(book: book),
+    );
+  }
+
+  void _showLayoutOverrideDialog(
+    Book book,
+    BookReaderPrefsRepository repository,
+  ) {
+    showDialog<void>(
+      context: context,
+      builder: (context) =>
+          _LayoutOverrideDialog(bookId: book.id, repository: repository),
+    );
+  }
+
+  Future<void> _moveBookToGroup(Book book) async {
+    final destination = await showDialog<String>(
+      context: context,
+      builder: (context) =>
+          LibraryMoveToGroupDialog(groups: _bookListController.groups),
+    );
+    if (destination == null) return;
+    if (!mounted) return;
+    final books = _bookListController.books;
+    if (books == null) return;
+    await _batchActions.moveToGroup({book.id}, books, destination);
+    await _bookListController.loadBooks();
+  }
+
+  Future<bool?> _confirmRemoveBookCache(Book book) {
+    return showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('移除本機快取'),
+        content: Text(
+          '將移除「${book.title}」的本機檔案，書籍紀錄與閱讀進度會保留，之後可重新'
+          '下載。確定要移除嗎？',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            key: const Key('book_action_remove_cache_confirm_button'),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('移除'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _removeBookCache(Book book) async {
+    final confirmed = await _confirmRemoveBookCache(book);
+    if (confirmed != true) return;
+    if (!mounted) return;
+    final books = _bookListController.books;
+    if (books == null) return;
+    await _batchActions.removeLocalCache({book.id}, books);
+    await _bookListController.loadBooks();
+  }
+
+  /// 【計劃範圍澄清第 3 點】不需要額外手動重新計算 `_mostRecentBook`——
+  /// `_bookListController.loadBooks()` 成功後一律 `notifyListeners()`，
+  /// `initState()` 已註冊的 `_onBookListChanged()` 監聽器會自動重算，比照
+  /// 既有 `_deleteSelectedBooks()` 等批次方法的既有寫法。
+  Future<void> _deleteBook(Book book) async {
+    final confirmed = await _confirmDeleteBooks(1);
+    if (confirmed != true) return;
+    if (!mounted) return;
+    final books = _bookListController.books;
+    if (books == null) return;
+    await _batchActions.deleteBooks({book.id}, books);
+    await _bookListController.loadBooks();
+  }
+
   void _changeSortBy(LibrarySortBy sortBy) {
     setState(() => _currentPage = 0);
     _bookListController.changeSortBy(sortBy);
@@ -801,6 +933,7 @@ class _LibraryScreenState extends State<LibraryScreen> with WidgetsBindingObserv
               selected: selectedIds?.contains(book.id) ?? false,
               onTap: () => _onBookTap(book),
               onLongPress: () => _onBookLongPress(book),
+              onMenuTap: () => _openBookActionSheet(book),
             )
           : _BookListTile(
               book: book,
@@ -808,6 +941,7 @@ class _LibraryScreenState extends State<LibraryScreen> with WidgetsBindingObserv
               selected: selectedIds?.contains(book.id) ?? false,
               onTap: () => _onBookTap(book),
               onLongPress: () => _onBookLongPress(book),
+              onMenuTap: () => _openBookActionSheet(book),
             );
     }
 
@@ -1027,6 +1161,7 @@ class _BookGridTile extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
   final VoidCallback onLongPress;
+  final VoidCallback onMenuTap;
 
   const _BookGridTile({
     required this.book,
@@ -1034,6 +1169,7 @@ class _BookGridTile extends StatelessWidget {
     required this.selected,
     required this.onTap,
     required this.onLongPress,
+    required this.onMenuTap,
   });
 
   @override
@@ -1058,9 +1194,6 @@ class _BookGridTile extends StatelessWidget {
                     child: Padding(
                       padding: const EdgeInsets.all(4),
                       child: Container(
-                        // badgeScrim 確保勾選圖示在任何封面底色下都有足夠
-                        // 對比度（審查意見：白色圖示疊在淺色封面上會無法
-                        // 辨識），四套主題各自有對應色值。
                         padding: const EdgeInsets.all(2),
                         decoration: BoxDecoration(
                           color: tokens.badgeScrim,
@@ -1072,6 +1205,32 @@ class _BookGridTile extends StatelessWidget {
                               : Icons.radio_button_unchecked,
                           key: Key('book_selection_indicator_${book.id}'),
                           color: selected ? colorScheme.primary : Colors.white,
+                        ),
+                      ),
+                    ),
+                  )
+                else
+                  Align(
+                    alignment: Alignment.topRight,
+                    child: Padding(
+                      padding: const EdgeInsets.all(4),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: tokens.badgeScrim,
+                          shape: BoxShape.circle,
+                        ),
+                        child: IconButton(
+                          key: Key('book_action_menu_${book.id}'),
+                          icon: const Icon(
+                            Icons.more_vert,
+                            color: Colors.white,
+                          ),
+                          iconSize: 18,
+                          padding: EdgeInsets.zero,
+                          constraints:
+                              const BoxConstraints(minWidth: 32, minHeight: 32),
+                          tooltip: '更多',
+                          onPressed: onMenuTap,
                         ),
                       ),
                     ),
@@ -1115,6 +1274,7 @@ class _BookListTile extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
   final VoidCallback onLongPress;
+  final VoidCallback onMenuTap;
 
   const _BookListTile({
     required this.book,
@@ -1122,6 +1282,7 @@ class _BookListTile extends StatelessWidget {
     required this.selected,
     required this.onTap,
     required this.onLongPress,
+    required this.onMenuTap,
   });
 
   @override
@@ -1158,12 +1319,24 @@ class _BookListTile extends StatelessWidget {
       ),
       title: Text(book.title),
       subtitle: Text(book.author ?? ''),
-      trailing: Column(
+      trailing: Row(
         mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(_sourceIcon(book.source), size: 16),
-          Text(_progressText(book), style: const TextStyle(fontSize: 10)),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(_sourceIcon(book.source), size: 16),
+              Text(_progressText(book), style: const TextStyle(fontSize: 10)),
+            ],
+          ),
+          if (!selectionMode)
+            IconButton(
+              key: Key('book_action_menu_${book.id}'),
+              icon: const Icon(Icons.more_vert),
+              tooltip: '更多',
+              onPressed: onMenuTap,
+            ),
         ],
       ),
       onTap: onTap,
@@ -1212,6 +1385,302 @@ class _ContinueReadingRow extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// 單書「詳細資料」對話框（`spec.md` 功能④）：檔案大小查詢為非同步、
+/// 具防護——`!book.isDownloaded` 直接顯示「尚未下載」不查詢檔案；
+/// `content://` URI 或讀取失敗（`FileSystemException`）一律顯示
+/// 「未知大小」，不得讓例外未捕捉往外拋（`review-spec.md` I-4）。
+class _BookDetailsDialog extends StatefulWidget {
+  final Book book;
+  const _BookDetailsDialog({required this.book});
+
+  @override
+  State<_BookDetailsDialog> createState() => _BookDetailsDialogState();
+}
+
+class _BookDetailsDialogState extends State<_BookDetailsDialog> {
+  late final Future<String> _fileSizeFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _fileSizeFuture = _resolveFileSizeText(widget.book);
+  }
+
+  static Future<String> _resolveFileSizeText(Book book) async {
+    if (!book.isDownloaded) return '尚未下載';
+    try {
+      // 【review-plan-issue-4.md I-4】改用同步 I/O 取代 `await length()`：
+      // 後者依賴原生 I/O 事件佇列完成，在 Flutter test 的 fake-async 環境下
+      // 永遠不會完成（Future 永遠卡在 waiting），導致 `catch (_)` 無法觸發、
+      // FutureBuilder 永遠顯示「讀取中...」。
+      // 先用 `existsSync()` 確認檔案存在（content:// URI 在桌面端必定回傳
+      // false），再以 `statSync().size` 同步取得大小——兩者皆為同步系統呼叫，
+      // 立即回傳或拋出 `FileSystemException`，讓 `catch (_)` 正常攔截。
+      final file = File(book.filePath);
+      if (!file.existsSync()) return '未知大小';
+      final length = file.statSync().size;
+      return _formatFileSize(length);
+    } catch (_) {
+      return '未知大小';
+    }
+  }
+
+  static String _formatFileSize(int bytes) {
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+  }
+
+  static String _formatLastReadTime(DateTime time) {
+    if (time.millisecondsSinceEpoch <= 0) return '尚未閱讀';
+    final y = time.year;
+    final m = time.month.toString().padLeft(2, '0');
+    final d = time.day.toString().padLeft(2, '0');
+    return '$y/$m/$d';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final book = widget.book;
+    return AlertDialog(
+      key: const Key('book_details_dialog'),
+      title: Text(book.title),
+      content: FutureBuilder<String>(
+        future: _fileSizeFuture,
+        builder: (context, snapshot) {
+          // 【review-plan-issue-4.md M-2】`_resolveFileSizeText()` 內部已用
+          // try-catch 保證 Future 本身不會拋錯，但 FutureBuilder 遭遇未預期
+          // 的 error 狀態時，`snapshot.data` 為 null 會讓畫面永遠卡在
+          // 「讀取中...」，改為明確判斷 hasError。
+          final fileSizeText = snapshot.hasError
+              ? '未知大小'
+              : (snapshot.data ?? '讀取中...');
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('作者：${book.author ?? '未知'}'),
+              Text('格式：${book.format.name}'),
+              Text('檔案大小：$fileSizeText'),
+              Text('進度：${_progressText(book)}'),
+              Text('最後閱讀：${_formatLastReadTime(book.lastReadTime)}'),
+            ],
+          );
+        },
+      ),
+      actions: [
+        TextButton(
+          key: const Key('book_details_dialog_close_button'),
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('關閉'),
+        ),
+      ],
+    );
+  }
+}
+
+/// 單書版面覆寫對話框（`spec.md` 功能④「版面覆寫對話框」）。
+///
+/// **關鍵正確性要求**：`BookReaderPrefsRepository.save()` 是整列覆寫
+/// （`INSERT OR REPLACE`），不是只更新有變動的欄位。`_save()` 必須先
+/// `load()` 取得該書完整既有 `BookReaderPrefs`，只改
+/// `writingModeOverride`/`pageTurnModeOverride` 兩個欄位、其餘欄位原樣
+/// 帶回——**不可用 `copyWith()`**：`BookReaderPrefs.copyWith()` 是
+/// `newValue ?? this.value` 語意（見 `book_reader_prefs.dart` 文件註解），
+/// 選「使用預設」時本地狀態明確為 `null`，若用
+/// `copyWith(writingModeOverride: null)` 會被 `??` 吃掉、不會真的清空既有
+/// 覆寫值。比照 `reader_settings_sheet.dart` 既有 `_currentDraft` 的整列
+/// 重建寫法（`plans/plan-issue-4.md`「計劃範圍澄清」第 2 點）。
+class _LayoutOverrideDialog extends StatefulWidget {
+  final String bookId;
+  final BookReaderPrefsRepository repository;
+  const _LayoutOverrideDialog({required this.bookId, required this.repository});
+
+  @override
+  State<_LayoutOverrideDialog> createState() => _LayoutOverrideDialogState();
+}
+
+class _LayoutOverrideDialogState extends State<_LayoutOverrideDialog> {
+  BookReaderPrefs? _existingPrefs;
+  WritingMode? _writingMode;
+  PageTurnMode? _pageTurnMode;
+  bool _isSaving = false; // 【review-plan-issue-4.md M-1】連點防護
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final prefs = await widget.repository.load(widget.bookId);
+    if (!mounted) return;
+    setState(() {
+      _existingPrefs = prefs;
+      _writingMode = prefs.writingModeOverride;
+      _pageTurnMode = prefs.pageTurnModeOverride;
+    });
+  }
+
+  Future<void> _save() async {
+    // 【review-plan-issue-4.md M-1】連續快速敲擊「儲存」時，第一次 await
+    // 尚未返回前若觸發第二次 _save()，會導致連彈兩層路由（可能誤將呼叫端
+    // 的畫面一併 pop 掉）。
+    if (_isSaving) return;
+    _isSaving = true;
+    final existing = _existingPrefs;
+    if (existing == null) return;
+    // 【review-issue-4.md Important】此建構子逐一列出 BookReaderPrefs 目前
+    // 全部欄位，僅 writingModeOverride/pageTurnModeOverride 取本地狀態、其餘
+    // 原樣帶回既有值——若 BookReaderPrefs 未來新增欄位，此處必須同步補上，
+    // 否則新欄位會在「版面覆寫」儲存時被靜默清空成預設值。
+    final updated = BookReaderPrefs(
+      fontFamily: existing.fontFamily,
+      fontSize: existing.fontSize,
+      fontWeight: existing.fontWeight,
+      lineHeight: existing.lineHeight,
+      paragraphSpacing: existing.paragraphSpacing,
+      letterSpacing: existing.letterSpacing,
+      pageMargins: existing.pageMargins,
+      marginTop: existing.marginTop,
+      marginBottom: existing.marginBottom,
+      marginLeft: existing.marginLeft,
+      marginRight: existing.marginRight,
+      textAlign: existing.textAlign,
+      publisherStyles: existing.publisherStyles,
+      writingModeOverride: _writingMode,
+      pageTurnModeOverride: _pageTurnMode,
+      screenOrientationOverride: existing.screenOrientationOverride,
+      pdfFitMode: existing.pdfFitMode,
+      pdfContrast: existing.pdfContrast,
+      pdfBrightness: existing.pdfBrightness,
+      pdfBoldStrength: existing.pdfBoldStrength,
+      pdfCropMode: existing.pdfCropMode,
+      pdfCropRect: existing.pdfCropRect,
+      dualPageMode: existing.dualPageMode,
+      dualPageCoverAlone: existing.dualPageCoverAlone,
+      dualPageDirection: existing.dualPageDirection,
+      pdfPageTurnAnimation: existing.pdfPageTurnAnimation,
+      showHeader: existing.showHeader,
+      showFooter: existing.showFooter,
+      columnMode: existing.columnMode,
+      columnSize: existing.columnSize,
+      fullscreen: existing.fullscreen,
+    );
+    await widget.repository.save(widget.bookId, updated);
+    if (!mounted) return;
+    Navigator.of(context).pop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_existingPrefs == null) {
+      // 【review-plan-issue-4.md M-3】loading 狀態仍保留 title／取消按鈕，
+      // 避免儲存層載入慢時使用者無法從畫面上退出。
+      return AlertDialog(
+        key: const Key('layout_override_dialog'),
+        title: const Text('版面覆寫'),
+        content: const SizedBox(
+          height: 80,
+          child: Center(child: CircularProgressIndicator()),
+        ),
+        actions: [
+          TextButton(
+            key: const Key('layout_override_cancel_button'),
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('取消'),
+          ),
+        ],
+      );
+    }
+    return AlertDialog(
+      key: const Key('layout_override_dialog'),
+      title: const Text('版面覆寫'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('排版方向'),
+            Wrap(
+              spacing: 4,
+              children: [
+                ReaderOptionTile<WritingMode?>(
+                  itemKey: const Key('layout_override_writing_mode_default'),
+                  value: null,
+                  groupValue: _writingMode,
+                  icon: Icons.auto_awesome,
+                  tooltip: '使用書籍排版',
+                  onSelected: (v) => setState(() => _writingMode = v),
+                ),
+                ReaderOptionTile<WritingMode?>(
+                  itemKey: const Key('layout_override_writing_mode_horizontal'),
+                  value: WritingMode.horizontal,
+                  groupValue: _writingMode,
+                  icon: Icons.text_rotation_none,
+                  tooltip: '橫排',
+                  onSelected: (v) => setState(() => _writingMode = v),
+                ),
+                ReaderOptionTile<WritingMode?>(
+                  itemKey: const Key('layout_override_writing_mode_vertical'),
+                  value: WritingMode.vertical,
+                  groupValue: _writingMode,
+                  icon: Icons.text_rotate_vertical,
+                  tooltip: '直排',
+                  onSelected: (v) => setState(() => _writingMode = v),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            const Text('翻頁模式'),
+            Wrap(
+              spacing: 4,
+              children: [
+                ReaderOptionTile<PageTurnMode?>(
+                  itemKey: const Key('layout_override_page_turn_mode_default'),
+                  value: null,
+                  groupValue: _pageTurnMode,
+                  icon: Icons.tune,
+                  tooltip: '使用全域預設',
+                  onSelected: (v) => setState(() => _pageTurnMode = v),
+                ),
+                ReaderOptionTile<PageTurnMode?>(
+                  itemKey: const Key('layout_override_page_turn_mode_paginated'),
+                  value: PageTurnMode.paginated,
+                  groupValue: _pageTurnMode,
+                  icon: Icons.menu_book,
+                  tooltip: '分頁',
+                  onSelected: (v) => setState(() => _pageTurnMode = v),
+                ),
+                ReaderOptionTile<PageTurnMode?>(
+                  itemKey: const Key('layout_override_page_turn_mode_scroll'),
+                  value: PageTurnMode.scroll,
+                  groupValue: _pageTurnMode,
+                  icon: Icons.swap_vert,
+                  tooltip: '捲動',
+                  onSelected: (v) => setState(() => _pageTurnMode = v),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          key: const Key('layout_override_cancel_button'),
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('取消'),
+        ),
+        TextButton(
+          key: const Key('layout_override_save_button'),
+          onPressed: _save,
+          child: const Text('儲存'),
+        ),
+      ],
     );
   }
 }
