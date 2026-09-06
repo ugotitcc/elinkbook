@@ -151,6 +151,24 @@ class _ReadingDefaultsScreenState extends State<ReadingDefaultsScreen> {
                   onChanged: (value) =>
                       _update(_prefs.copyWith(openLastBookOnLaunch: value)),
                 ),
+                const Divider(height: 1),
+                SwitchListTile(
+                  key: const Key('reading_defaults_show_header_switch'),
+                  title: const Text('顯示頁首'),
+                  value: _prefs.showHeader,
+                  onChanged: (value) =>
+                      _update(_prefs.copyWith(showHeader: value)),
+                ),
+                // 【review-plan-issue-5.md M-2】比照本畫面其餘控制項之間的
+                // 既有節奏，兩個開關之間也補上分隔線。
+                const Divider(height: 1),
+                SwitchListTile(
+                  key: const Key('reading_defaults_show_footer_switch'),
+                  title: const Text('顯示頁尾'),
+                  value: _prefs.showFooter,
+                  onChanged: (value) =>
+                      _update(_prefs.copyWith(showFooter: value)),
+                ),
               ],
             ),
     );
