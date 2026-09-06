@@ -43,6 +43,10 @@ class ReaderPrefsManagerImpl implements ReaderPrefsManager {
   static const _fullscreenKey = 'global_reader_fullscreen';
   static const _openLastBookOnLaunchKey = 'global_reader_open_last_book_on_launch';
   static const _consoleLogEnabledKey = 'global_reader_console_log_enabled';
+  static const _showHeaderKey = 'global_reader_show_header';
+  static const _showFooterKey = 'global_reader_show_footer';
+  static const _ttsVoiceIdKey = 'global_reader_tts_voice_id';
+  static const _defaultTtsSpeedKey = 'global_reader_default_tts_speed';
 
   @override
   Future<LoadedPrefs> load(String bookId) async {
@@ -82,6 +86,10 @@ class ReaderPrefsManagerImpl implements ReaderPrefsManager {
       fullscreen: sp.getBool(_fullscreenKey) ?? false,
       openLastBookOnLaunch: sp.getBool(_openLastBookOnLaunchKey) ?? true,
       consoleLogEnabled: sp.getBool(_consoleLogEnabledKey) ?? false,
+      showHeader: sp.getBool(_showHeaderKey) ?? false,
+      showFooter: sp.getBool(_showFooterKey) ?? false,
+      ttsVoiceId: sp.getString(_ttsVoiceIdKey),
+      defaultTtsSpeed: sp.getDouble(_defaultTtsSpeedKey) ?? 1.0,
     );
   }
 
@@ -138,6 +146,16 @@ class ReaderPrefsManagerImpl implements ReaderPrefsManager {
     await sp.setBool(_fullscreenKey, prefs.fullscreen);
     await sp.setBool(_openLastBookOnLaunchKey, prefs.openLastBookOnLaunch);
     await sp.setBool(_consoleLogEnabledKey, prefs.consoleLogEnabled);
+    await sp.setBool(_showHeaderKey, prefs.showHeader);
+    await sp.setBool(_showFooterKey, prefs.showFooter);
+    // ttsVoiceId 為 nullable——setString 不接受 null，缺席時須明確 remove()
+    // 該鍵，否則舊值會殘留，導致「清空語音選擇」的意圖被忽略。
+    if (prefs.ttsVoiceId != null) {
+      await sp.setString(_ttsVoiceIdKey, prefs.ttsVoiceId!);
+    } else {
+      await sp.remove(_ttsVoiceIdKey);
+    }
+    await sp.setDouble(_defaultTtsSpeedKey, prefs.defaultTtsSpeed);
   }
 
   @override
@@ -182,8 +200,8 @@ class ReaderPrefsManagerImpl implements ReaderPrefsManager {
       dualPageDirection: book.dualPageDirection ?? DualPageDirection.rtl,
       pdfPageTurnAnimation:
           book.pdfPageTurnAnimation ?? PdfPageTurnAnimation.slide,
-      showHeader: book.showHeader ?? false,
-      showFooter: book.showFooter ?? false,
+      showHeader: book.showHeader ?? global.showHeader,
+      showFooter: book.showFooter ?? global.showFooter,
       navZoneActions:
           resolveZoneActions(global.navZoneMode, global.navZoneCustomActions),
       showNavZoneDebugOverlay: global.showNavZoneDebugOverlay,
