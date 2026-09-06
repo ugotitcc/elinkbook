@@ -15,6 +15,7 @@ import '../support/fake_book_import_service.dart';
 import '../support/fake_library_repository.dart';
 import '../support/fake_reader_prefs_manager.dart';
 import '../support/fake_custom_fonts_repository.dart';
+import '../support/fake_tts_provider.dart';
 
 void main() {
   late ReaderPrefsManager prefsManager;
@@ -214,5 +215,29 @@ void main() {
     await tester.tap(find.byKey(const Key('settings_source_button')));
     await tester.pumpAndSettle();
     expect(tester.widget<IndexedStack>(find.byType(IndexedStack)).index, 1);
+  });
+
+  testWidgets('SettingsScaffold 收到 readerFeatureRepositories.ttsProvider 轉送', (tester) async {
+    final ttsProvider = FakeTtsProvider();
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: AdaptiveShellScaffold(
+          repository: FakeLibraryRepository(),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+          readerFeatureRepositories:
+              LibraryReaderFeatureRepositories(ttsProvider: ttsProvider),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('library_settings_button')));
+    await tester.pumpAndSettle();
+
+    final settingsScaffold =
+        tester.widget<SettingsScaffold>(find.byType(SettingsScaffold));
+    expect(settingsScaffold.ttsProvider, ttsProvider);
   });
 }

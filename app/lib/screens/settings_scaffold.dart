@@ -188,7 +188,7 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
           ),
           ListTile(
             key: const Key('settings_tts_defaults_button'),
-            title: const Text('朗讀預設值'),
+            title: const Text('朗讀語音與語速'),
             trailing: const Icon(Icons.chevron_right),
             onTap: () {
               Navigator.of(context).push(

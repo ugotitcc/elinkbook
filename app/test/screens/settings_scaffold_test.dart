@@ -604,7 +604,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('點擊「朗讀預設值」導航至 TtsDefaultsScreen', (tester) async {
+  testWidgets('點擊「朗讀語音與語速」導航至 TtsDefaultsScreen', (tester) async {
     await tester.pumpWidget(MaterialApp(
       home: SettingsScaffold(prefsManager: FakeReaderPrefsManager()),
     ));
