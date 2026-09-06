@@ -42,7 +42,7 @@
   - `static Future<T?> EBSheetShell.show<T>(BuildContext context, {required String title, required WidgetBuilder builder, bool isEinkMode = false})`。
   - Key 契約：`eb_sheet_shell_drag_handle`／`eb_sheet_shell_close_button`。
 
-- [ ] **Step 1: 寫失敗測試**
+- [x] **Step 1: 寫失敗測試**
 
 建立 `app/test/screens/widgets/eb_sheet_shell_test.dart`：
 
@@ -136,12 +136,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/screens/widgets/eb_sheet_shell_test.dart`
 Expected: FAIL（`eb_sheet_shell.dart` 不存在）
 
-- [ ] **Step 3: 實作**
+- [x] **Step 3: 實作**
 
 建立 `app/lib/screens/widgets/eb_sheet_shell.dart`：
 
@@ -244,17 +244,17 @@ class EBSheetShell extends StatelessWidget {
 }
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `flutter test test/screens/widgets/eb_sheet_shell_test.dart`
 Expected: PASS（全部案例）
 
-- [ ] **Step 5: `flutter analyze` 確認乾淨**
+- [x] **Step 5: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/screens/widgets/eb_sheet_shell.dart app/test/screens/widgets/eb_sheet_shell_test.dart
@@ -273,7 +273,7 @@ git commit -m "feat(epic-36): 新增底部抽屜外殼基礎元件 EBSheetShell"
 - Consumes: 無（不依賴 Task 1，測試以 `showModalBottomSheet` 直接驅動，不需要真的透過 `EBSheetShell`）。
 - Produces：`class BookActionSheet extends StatelessWidget`，建構參數 `book`（`Book`）／`showRemoveCache`（`bool`）／`showLayoutOverride`（`bool`，見「計劃範圍澄清」第 1 點）／`onShowDetails`／`onMove`／`onLayoutOverride`（皆 `VoidCallback`）／`onRemoveCache`（`VoidCallback?`）／`onDelete`（`VoidCallback`）。Key 契約：`book_action_details`／`book_action_move`／`book_action_layout_override`／`book_action_remove_cache`／`book_action_delete`。
 
-- [ ] **Step 1: 寫失敗測試**
+- [x] **Step 1: 寫失敗測試**
 
 建立 `app/test/screens/book_action_sheet_test.dart`：
 
@@ -397,12 +397,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/screens/book_action_sheet_test.dart`
 Expected: FAIL（`book_action_sheet.dart` 不存在）
 
-- [ ] **Step 3: 實作**
+- [x] **Step 3: 實作**
 
 建立 `app/lib/screens/book_action_sheet.dart`：
 
@@ -504,17 +504,17 @@ class BookActionSheet extends StatelessWidget {
 }
 ```
 
-- [ ] **Step 4: 執行測試確認通過**
+- [x] **Step 4: 執行測試確認通過**
 
 Run: `flutter test test/screens/book_action_sheet_test.dart`
 Expected: PASS（全部案例）
 
-- [ ] **Step 5: `flutter analyze` 確認乾淨**
+- [x] **Step 5: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add app/lib/screens/book_action_sheet.dart app/test/screens/book_action_sheet_test.dart
@@ -533,7 +533,7 @@ git commit -m "feat(epic-36): 新增 BookActionSheet 單書動作選單內容"
 - Consumes: Task 1 的 `EBSheetShell.show()`；Task 2 的 `BookActionSheet`。
 - Produces：`_BookGridTile`／`_BookListTile` 新增 `final VoidCallback onMenuTap;` 建構參數；`_LibraryScreenState` 新增 `_openBookActionSheet(Book)`／`_showBookDetails(Book)`；新增 private widget `_BookDetailsDialog`。新增 Key：`book_action_menu_${book.id}`（本 Task 掛載點，Task 2 已定義 Sheet 內部五個選項 Key）、`book_details_dialog`。`_testBook()` 擴充 `source`／`isDownloaded` 兩個可選參數（見「計劃範圍澄清」第 4 點）。
 
-- [ ] **Step 1: 寫失敗測試**
+- [x] **Step 1: 寫失敗測試**
 
 **1a. 擴充 `_testBook()`**（`app/test/screens/library_screen_test.dart:3882` 附近）：
 
@@ -748,12 +748,12 @@ Book _testBook({
   );
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/screens/library_screen_test.dart --name "book_action_menu|詳細資料"`
 Expected: FAIL（`book_action_menu_1` 等 Key 不存在，`EBSheetShell`／`BookActionSheet` 尚未匯入使用）
 
-- [ ] **Step 3: 實作**
+- [x] **Step 3: 實作**
 
 編輯 `app/lib/screens/library_screen.dart`：
 
@@ -1032,22 +1032,22 @@ import 'package:elinkbook/screens/book_action_sheet.dart';
 import 'package:elinkbook/screens/widgets/eb_sheet_shell.dart';
 ```
 
-- [ ] **Step 4: 執行新測試確認通過**
+- [x] **Step 4: 執行新測試確認通過**
 
 Run: `flutter test test/screens/library_screen_test.dart --name "book_action_menu|詳細資料"`
 Expected: 上述新增測試 100% PASS。
 
-- [ ] **Step 5: 執行整個 `library_screen_test.dart`，確認無回歸**
+- [x] **Step 5: 執行整個 `library_screen_test.dart`，確認無回歸**
 
 Run: `flutter test test/screens/library_screen_test.dart`
 Expected: PASS（全部案例，0 失敗——本 Task 收尾 Commit 前必須全綠，`review-plan-issue-2.md` I-1 教訓）。若既有測試因為 `_BookGridTile`／`_BookListTile` 新增必填 `onMenuTap` 參數而編譯失敗，逐一補上（僅 `_buildBookList()` 內的兩處建構呼叫，見 Step 3d，不應該有其他呼叫點）。
 
-- [ ] **Step 6: `flutter analyze` 確認乾淨**
+- [x] **Step 6: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app/lib/screens/library_screen.dart app/test/screens/library_screen_test.dart
@@ -1066,7 +1066,7 @@ git commit -m "feat(epic-36): 書架書本卡片新增「⋮」動作選單與�
 - Consumes: Task 3 的 `_openBookActionSheet()`；既有 `LibraryBatchActions.moveToGroup`／`removeLocalCache`／`deleteBooks`；既有 `LibraryMoveToGroupDialog`／`_confirmDeleteBooks()`。
 - Produces：`_LibraryScreenState` 新增 `_moveBookToGroup(Book)`／`_removeBookCache(Book)`／`_deleteBook(Book)`。新增 Key：`book_action_remove_cache_confirm_button`。
 
-- [ ] **Step 1: 寫失敗測試**
+- [x] **Step 1: 寫失敗測試**
 
 ```dart
   testWidgets('點擊「移動」選擇分類後，該書 groupName 更新，其他書籍不受影響', (tester) async {
@@ -1187,12 +1187,12 @@ git commit -m "feat(epic-36): 書架書本卡片新增「⋮」動作選單與�
   );
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/screens/library_screen_test.dart --name "點擊「移動」|點擊「移除快取」|點擊「刪除」確認後"`
 Expected: FAIL（`_openBookActionSheet()` 目前把 `onMove`／`onRemoveCache`／`onDelete` 接成空操作／`null`，選單點了沒有反應）
 
-- [ ] **Step 3: 實作**
+- [x] **Step 3: 實作**
 
 編輯 `app/lib/screens/library_screen.dart`：
 
@@ -1286,22 +1286,22 @@ Expected: FAIL（`_openBookActionSheet()` 目前把 `onMove`／`onRemoveCache`�
   }
 ```
 
-- [ ] **Step 4: 執行新測試確認通過**
+- [x] **Step 4: 執行新測試確認通過**
 
 Run: `flutter test test/screens/library_screen_test.dart --name "點擊「移動」|點擊「移除快取」|點擊「刪除」確認後"`
 Expected: 上述新增測試 100% PASS。
 
-- [ ] **Step 5: 執行整個 `library_screen_test.dart`，確認無回歸**
+- [x] **Step 5: 執行整個 `library_screen_test.dart`，確認無回歸**
 
 Run: `flutter test test/screens/library_screen_test.dart`
 Expected: PASS（全部案例，0 失敗）。
 
-- [ ] **Step 6: `flutter analyze` 確認乾淨**
+- [x] **Step 6: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app/lib/screens/library_screen.dart app/test/screens/library_screen_test.dart
@@ -1320,7 +1320,7 @@ git commit -m "feat(epic-36): 單書動作選單串接移動/移除快取/刪除
 - Consumes: 既有 `BookReaderPrefsRepository`（`load`/`save`）；既有 `ReaderOptionTile<T>`（`app/lib/screens/widgets/reader_option_tile.dart`）；`WritingMode`／`PageTurnMode` 列舉。
 - Produces：`_LibraryScreenState` 新增 `_showLayoutOverrideDialog(Book)`；新增 private widget `_LayoutOverrideDialog`／`_LayoutOverrideDialogState`。新增 Key：`layout_override_dialog`／`layout_override_writing_mode_default`／`_horizontal`／`_vertical`／`layout_override_page_turn_mode_default`／`_paginated`／`_scroll`／`layout_override_save_button`／`layout_override_cancel_button`。
 
-- [ ] **Step 1: 寫失敗測試**
+- [x] **Step 1: 寫失敗測試**
 
 ```dart
   testWidgets('bookReaderPrefsRepository 未提供時，「版面覆寫」選項不顯示', (tester) async {
@@ -1417,12 +1417,12 @@ import 'package:elinkbook/reader/writing_mode.dart';
 import '../support/fake_book_reader_prefs_repository.dart';
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `flutter test test/screens/library_screen_test.dart --name "版面覆寫"`
 Expected: FAIL（`layout_override_dialog` 等 Key 不存在）
 
-- [ ] **Step 3: 實作**
+- [x] **Step 3: 實作**
 
 編輯 `app/lib/screens/library_screen.dart`：
 
@@ -1677,22 +1677,22 @@ class _LayoutOverrideDialogState extends State<_LayoutOverrideDialog> {
 }
 ```
 
-- [ ] **Step 4: 執行新測試確認通過**
+- [x] **Step 4: 執行新測試確認通過**
 
 Run: `flutter test test/screens/library_screen_test.dart --name "版面覆寫"`
 Expected: 上述新增測試 100% PASS。
 
-- [ ] **Step 5: 執行整個 `library_screen_test.dart`，確認無回歸**
+- [x] **Step 5: 執行整個 `library_screen_test.dart`，確認無回歸**
 
 Run: `flutter test test/screens/library_screen_test.dart`
 Expected: PASS（全部案例，0 失敗）。
 
-- [ ] **Step 6: `flutter analyze` 確認乾淨**
+- [x] **Step 6: `flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add app/lib/screens/library_screen.dart app/test/screens/library_screen_test.dart
@@ -1705,29 +1705,29 @@ git commit -m "feat(epic-36): 新增單書版面覆寫對話框，整列重建�
 
 **Files:** 無新增/修改，純驗證。
 
-- [ ] **Step 1: 執行全套 `flutter test`（不帶檔案路徑）**
+- [x] **Step 1: 執行全套 `flutter test`（不帶檔案路徑）**
 
 Run: `flutter test`
 Expected: 全數通過（比照 `CLAUDE.md`「測試執行範圍」，這是整份計劃收尾的唯一一次全套執行）。若有失敗，比對是否為本計劃改動觸及的檔案；非本計劃觸及範圍的既有不穩定測試（例如已追蹤的 `epic-37-test-suite-flakiness`）記錄下來，不在本 Issue 修復範圍內。
 
-- [ ] **Step 2: 執行 `flutter analyze`**
+- [x] **Step 2: 執行 `flutter analyze`**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 3: 逐條核對 `issues.md` Issue 4 驗收標準**
+- [x] **Step 3: 逐條核對 `issues.md` Issue 4 驗收標準**
 
-- [ ] 點擊「⋮」彈出單書動作選單，與長按多選互不干擾
-- [ ] 五個選項功能正確且與既有批次操作共用底層邏輯
-- [ ] 版面覆寫不清空既有其他個人化設定
-- [ ] 檔案大小查詢不因 `content://` URI 或未下載書籍而崩潰
-- [ ] `flutter analyze` 乾淨、`flutter test` 全數通過
+- [x] 點擊「⋮」彈出單書動作選單，與長按多選互不干擾
+- [x] 五個選項功能正確且與既有批次操作共用底層邏輯
+- [x] 版面覆寫不清空既有其他個人化設定
+- [x] 檔案大小查詢不因 `content://` URI 或未下載書籍而崩潰
+- [x] `flutter analyze` 乾淨、`flutter test` 全數通過
 
-- [ ] **Step 4: 更新 `docs/epics.md` 備註欄位**
+- [x] **Step 4: 更新 `docs/epics.md` 備註欄位**
 
 將 Epic 36 該列備註改為「Issue 1-4 已完成，待認領 Issue 5」（執行時以 `issues.md` 實際狀態為準調整措辭）。
 
-- [ ] **Step 5: 依 `superpowers:requesting-code-review` 發起本 Issue 的程式碼審查**
+- [x] **Step 5: 依 `superpowers:requesting-code-review` 發起本 Issue 的程式碼審查**
 
 審查者先產出報告至 `docs/epics/epic-36-adaptive-shelf-navigation/reviews/review-issue-4.md`，不得直接修改程式碼（比照專案 SDD 工作流程第 6 步）。審查請求內容須包含「計劃範圍澄清」第 2 點的 `_LayoutOverrideDialog` 整列重建（而非 `copyWith()`）正確性要求，供審查者重點覆核這處資料遺失等級的細節；以及第 1 點 `BookActionSheet.showLayoutOverride` 是本計劃對 spec.md 遺漏欄位的補充，非隨意增加的參數。
 
