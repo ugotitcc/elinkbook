@@ -41,6 +41,30 @@ int libraryRecalculatePage({
   return (oldPage * oldPageSize) ~/ newPageSize;
 }
 
+/// 依可用高度計算書架每頁可完整顯示的列數（epic-36 Issue 7，取代 Issue 3
+/// 寫死「1 行」的舊假設）。[availableHeight] 為扣除 AppBar／搜尋列／繼續
+/// 閱讀列／`PagingBar`／Grid 自身 padding 等 chrome 後的實際可用高度
+/// （呼叫端透過 `LayoutBuilder` 量測取得，見 `library_screen.dart`
+/// `_buildBookList()`；`review-plan-issue-7.md` C-1：呼叫端務必記得扣除
+/// `GridView` 自身上下 padding，不只是 `PagingBar` 高度）；[rowContentHeight]
+/// 為單列高度（含封面與文字說明區的整個 cell 高度）；[rowSpacing] 為列間
+/// 距。無條件捨去，且保底至少 1 行（即便完全放不下也顯示 1 行，不出現 0
+/// 行空白頁）。
+int libraryRowsForHeight({
+  required double availableHeight,
+  required double rowContentHeight,
+  required double rowSpacing,
+}) {
+  if (rowContentHeight <= 0) return 1;
+  // n 列總高度 = n*rowContentHeight + (n-1)*rowSpacing <= availableHeight。
+  // 除法前加極小容差 1e-5，避免理論上剛好整除的邊界值因浮點誤差算成
+  // 「N - 極小值」而被 floor() 多捨去 1 列（review-plan-issue-7.md M-2）。
+  final rows =
+      ((availableHeight + rowSpacing + 1e-5) / (rowContentHeight + rowSpacing))
+          .floor();
+  return rows < 1 ? 1 : rows;
+}
+
 /// 書架分頁狀態的唯一負責者（epic-36 Issue 6，架構回顧衍生）：取代原本
 /// 散落在 `LibraryScreen` 的 `build()`／`didChangeMetrics()`／排序/分類
 /// 切換/換頁按鈕共 7 處各自寫入的 `_currentPage`／`_lastPageSize` 欄位。

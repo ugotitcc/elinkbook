@@ -52,6 +52,79 @@ void main() {
     );
   });
 
+  group('libraryRowsForHeight', () {
+    test('一般情況：無條件捨去到能完整放下的列數', () {
+      // 3 列總高度 = 3*100 + 2*10 = 320；4 列總高度 = 4*100 + 3*10 = 430；
+      // availableHeight=350 能放下 3 列但放不下 4 列。
+      expect(
+        libraryRowsForHeight(
+          availableHeight: 350,
+          rowContentHeight: 100,
+          rowSpacing: 10,
+        ),
+        3,
+      );
+    });
+
+    test('邊界值：availableHeight 恰好等於 n 列總高度時回傳 n（不多算不少算）', () {
+      // 2 列總高度 = 2*100 + 1*10 = 210，恰好等於 availableHeight。
+      expect(
+        libraryRowsForHeight(
+          availableHeight: 210,
+          rowContentHeight: 100,
+          rowSpacing: 10,
+        ),
+        2,
+      );
+    });
+
+    test('availableHeight 小於一列高度時保底回傳 1（不回傳 0，避免空白頁）', () {
+      expect(
+        libraryRowsForHeight(
+          availableHeight: 50,
+          rowContentHeight: 100,
+          rowSpacing: 10,
+        ),
+        1,
+      );
+      expect(
+        libraryRowsForHeight(
+          availableHeight: 0,
+          rowContentHeight: 100,
+          rowSpacing: 10,
+        ),
+        1,
+      );
+      expect(
+        libraryRowsForHeight(
+          availableHeight: -20,
+          rowContentHeight: 100,
+          rowSpacing: 10,
+        ),
+        1,
+      );
+    });
+
+    test('rowContentHeight <= 0（異常輸入防禦）安全回傳 1，不除以零', () {
+      expect(
+        libraryRowsForHeight(
+          availableHeight: 500,
+          rowContentHeight: 0,
+          rowSpacing: 10,
+        ),
+        1,
+      );
+      expect(
+        libraryRowsForHeight(
+          availableHeight: 500,
+          rowContentHeight: -5,
+          rowSpacing: 10,
+        ),
+        1,
+      );
+    });
+  });
+
   group('LibraryPagingCursor', () {
     test('初始 currentPage 為 0', () {
       final cursor = LibraryPagingCursor();
