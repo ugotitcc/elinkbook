@@ -65,9 +65,10 @@ int libraryRowsForHeight({
   return rows < 1 ? 1 : rows;
 }
 
-/// 書架分頁狀態的唯一負責者（epic-36 Issue 6，架構回顧衍生）：取代原本
-/// 散落在 `LibraryScreen` 的 `build()`／`didChangeMetrics()`／排序/分類
-/// 切換/換頁按鈕共 7 處各自寫入的 `_currentPage`／`_lastPageSize` 欄位。
+/// 書架分頁狀態的唯一負責者（epic-36 Issue 6，架構回顧衍生；Issue 7 進一
+/// 步簡化）：取代原本散落在 `LibraryScreen` 的 `build()`／
+/// `didChangeMetrics()`／排序/分類切換/換頁按鈕共 7 處各自寫入的
+/// `_currentPage`／`_lastPageSize` 欄位。
 ///
 /// 純 Dart 類別，不是 `ChangeNotifier`——分頁狀態只有 `_LibraryScreenState`
 /// 一個消費者，不需要監聽機制；呼叫端在呼叫任一方法後自行 `setState(() {})`。
@@ -77,46 +78,29 @@ class LibraryPagingCursor {
 
   int get currentPage => _currentPage;
 
-  /// `build()` 每次呼叫一次：依目前 [itemCount]／[orientation] 箝制頁碼到
-  /// 合法範圍，回傳目前 `pageCount` 與 `pageSize`。不做旋轉的比例換算
-  /// （那是 [applyOrientationChange] 的職責）——單純箝制，用來吸收刪除
-  /// 書籍／合併分類等造成 `itemCount` 縮小時的越界殘留（原
-  /// `review-plan-issue-3.md` M-2）。回傳值一併帶出 `pageSize`，讓呼叫端
-  /// 不需要再另外呼叫一次 `libraryPageSizeForOrientation()`
-  /// （`review-plan-issue-6.md` I-2）。
-  ({int pageCount, int pageSize}) clamp({
-    required int itemCount,
-    required Orientation orientation,
-  }) {
-    final pageSize = libraryPageSizeForOrientation(orientation);
+  /// `build()` 每次呼叫一次：以本次量測到的 [pageSize] 箝制頁碼。若
+  /// [pageSize] 相較上次記錄的值改變（旋轉、視窗高度變化導致列數重
+  /// 算），先依「目前頁第一項全域 index ÷ 新 pageSize」做比例換算，才
+  /// 箝制到合法範圍（吸收 itemCount 縮小造成的越界殘留，原
+  /// `review-plan-issue-3.md` M-2）。
+  ///
+  /// 取代 Issue 6 的 `clamp()`／`applyOrientationChange()` 兩個方法——
+  /// pageSize 現在只有 `build()` 執行當下（`LayoutBuilder` 量測完成後）
+  /// 才知道正確值，`didChangeMetrics()` 無法再提前算好，兩個關注點收斂
+  /// 回同一次呼叫（見 `issues.md` Issue 7）。
+  int clamp({required int itemCount, required int pageSize}) {
     final pageCount = libraryPageCount(itemCount, pageSize);
-    _currentPage = libraryClampPage(_currentPage, pageCount);
-    _lastPageSize = pageSize;
-    return (pageCount: pageCount, pageSize: pageSize);
-  }
-
-  /// `didChangeMetrics()` 呼叫：偵測到真正的方向改變（跟上一次 [clamp]
-  /// 或本方法記錄的每頁筆數不同）時，才依「目前頁第一項的全域 index ÷
-  /// 新每頁容量」按比例換算頁碼，並回傳 `true`；方向沒變時
-  /// （`_lastPageSize` 相同，或尚未有任何記錄）不做任何事、回傳
-  /// `false`。**回傳值的用途**：`didChangeMetrics()` 不只在裝置旋轉時
-  /// 觸發，軟體鍵盤彈出/收起、分螢調整、系統狀態列顯隱等 metrics 變化
-  /// 都會觸發——呼叫端須依回傳值判斷是否真的需要 `setState()`，不能無
-  /// 條件重繪，否則會在這些無關情境下也觸發整頁 rebuild，在 E-Ink
-  /// 裝置上造成非必要刷新（`review-plan-issue-6.md` I-1）。
-  bool applyOrientationChange(Orientation orientation) {
-    final newPageSize = libraryPageSizeForOrientation(orientation);
     final oldPageSize = _lastPageSize;
-    _lastPageSize = newPageSize;
-    if (oldPageSize != null && oldPageSize != newPageSize) {
+    if (oldPageSize != null && oldPageSize != pageSize) {
       _currentPage = libraryRecalculatePage(
         oldPage: _currentPage,
         oldPageSize: oldPageSize,
-        newPageSize: newPageSize,
+        newPageSize: pageSize,
       );
-      return true;
     }
-    return false;
+    _currentPage = libraryClampPage(_currentPage, pageCount);
+    _lastPageSize = pageSize;
+    return pageCount;
   }
 
   /// 呼叫端（`PagingBar.onNext`）保證只在合法範圍內才會觸發，故不做內部
