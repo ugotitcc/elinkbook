@@ -33,6 +33,17 @@ import 'widgets/eb_sheet_shell.dart';
 import 'widgets/paging_bar.dart';
 import 'widgets/reader_option_tile.dart';
 
+/// 書架 GridView 每個 cell「整體」的寬高比（cell 寬度 / 高度，封面＋文字
+/// 說明區合計，非純封面寬高比——見 `_BookGridTile`：外層 Column 總高度受
+/// `childAspectRatio` 約束，封面只是 Expanded 取得的剩餘空間），沿用
+/// `SliverGridDelegateWithFixedCrossAxisCount.childAspectRatio` 既有字面
+/// 值——抽成具名常數避免 Grid 渲染與 Issue 7 動態列數計算
+/// （`_buildBookList()`）各自寫一份 `0.62`，日後改一處漏改另一處
+/// （epic-36 Issue 7；`review-plan-issue-7.md` C-2 已確認 `childAspectRatio`
+/// 涵蓋整個 cell，不是只有封面部分，命名從 `_kCoverAspectRatio` 正名為
+/// `_kCellAspectRatio`）。
+const _kCellAspectRatio = 0.62;
+
 /// 圖書庫主畫面：讀取 [LibraryRepository] 的真實資料，取代
 /// epic-0-skeleton 遺留的固定範例書籍清單佔位版本（見
 /// docs/epics/epic-1-library/spec.md）。
@@ -106,6 +117,12 @@ class _LibraryScreenState extends State<LibraryScreen> with WidgetsBindingObserv
   /// （`review-plan-issue-6.md` M-3）。
   final LibraryPagingCursor _paging = LibraryPagingCursor();
 
+  /// `didChangeMetrics()` 用來比對「是否真的尺寸改變」的暫存值——鍵盤彈出
+  /// /收起改變的是 `viewInsets`，不是 `physicalSize`，比對後可以繼續攔截
+  /// 這類無關 metrics 變化，延續 Issue 6（`review-plan-issue-6.md` I-1）
+  /// 建立的 E-Ink 防抖保護（`review-plan-issue-7.md` I-4）。
+  Size? _lastPhysicalSize;
+
   /// 使用者最後閱讀的書籍（`lastReadTime` 最新且 > epoch 0 者），供頂層
   /// 書架的常駐「繼續閱讀列」使用；`_onBookListChanged()` 每次書籍清單
   /// 變動時重新計算。
@@ -173,20 +190,20 @@ class _LibraryScreenState extends State<LibraryScreen> with WidgetsBindingObserv
     // App 退到背景、螢幕休眠、多視窗模式調整分割大小、可折疊裝置展開
     // 過渡瞬間，physicalSize 可能暫時回報為 0x0——此時 `0 > 0` 為
     // false，會被誤判為 portrait，若裝置原本是 landscape 就會觸發一次
-    // 錯誤的頁碼換算。直接略過這種暫態，等下一次真正有效的 metrics
-    // 變化再處理（`review-plan-issue-3.md` I-2）。
+    // 不必要的重建。直接略過這種暫態，等下一次真正有效的 metrics 變化
+    // 再處理（`review-plan-issue-3.md` I-2）。
     if (physicalSize.isEmpty) return;
-    final newOrientation = physicalSize.width > physicalSize.height
-        ? Orientation.landscape
-        : Orientation.portrait;
-    // didChangeMetrics() 不只在裝置旋轉時觸發，軟體鍵盤彈出/收起、分螢
-    // 調整、系統狀態列顯隱等都會觸發——只有 applyOrientationChange()
-    // 真的換算過頁碼（方向改變）才需要 setState()，避免 E-Ink 裝置在
-    // 無關的 metrics 變化時也跟著整頁重繪（`review-plan-issue-6.md` I-1）。
-    final hasChanged = _paging.applyOrientationChange(newOrientation);
-    if (hasChanged) {
-      setState(() {});
-    }
+    // pageSize 改為由 build() 內的 LayoutBuilder 依實際量測高度計算
+    // （epic-36 Issue 7）——didChangeMetrics() 不再自己算 pageSize、也
+    // 不再呼叫 LibraryPagingCursor 的任何方法，實際箝制／比例換算全部
+    // 延後到下一次 build() 呼叫 _paging.clamp() 時處理。但仍比對
+    // physicalSize 是否真的改變才 setState()：軟體鍵盤彈出/收起改變的是
+    // viewInsets，不是 physicalSize，這裡比對後可以繼續攔截這類無關變化
+    // 觸發整頁重建，延續 Issue 6 建立的 E-Ink 防抖保護
+    // （`review-plan-issue-6.md` I-1／`review-plan-issue-7.md` I-4）。
+    if (_lastPhysicalSize == physicalSize) return;
+    _lastPhysicalSize = physicalSize;
+    setState(() {});
   }
 
   Future<void> _initialize() async {
@@ -892,17 +909,7 @@ class _LibraryScreenState extends State<LibraryScreen> with WidgetsBindingObserv
     final itemCount = groupTiles.length + visibleBooks.length;
 
     final orientation = MediaQuery.orientationOf(context);
-    // 箝制頁碼＋取得目前 pageCount／pageSize 全交給 LibraryPagingCursor
-    // （epic-36 Issue 6）——刪書後 itemCount 縮減導致的越界殘留（原
-    // `review-plan-issue-3.md` M-2）由 clamp() 內部保證修正；pageSize
-    // 直接複用 clamp() 回傳值，不再另外呼叫一次
-    // libraryPageSizeForOrientation()（`review-plan-issue-6.md` I-2）。
-    final result = _paging.clamp(itemCount: itemCount, orientation: orientation);
-    final pageCount = result.pageCount;
-    final pageSize = result.pageSize;
-    final safePage = _paging.currentPage;
-    final pageStart = safePage * pageSize;
-    final pageEnd = (pageStart + pageSize).clamp(0, itemCount);
+    final crossAxisCount = libraryPageSizeForOrientation(orientation);
 
     Widget itemBuilder(
       BuildContext context,
@@ -937,36 +944,6 @@ class _LibraryScreenState extends State<LibraryScreen> with WidgetsBindingObserv
             );
     }
 
-    final pageItemCount = pageEnd - pageStart;
-    final Widget gridOrList;
-    if (_viewMode == LibraryViewMode.grid) {
-      final crossAxisCount = orientation == Orientation.landscape ? 4 : 3;
-      gridOrList = GridView.builder(
-        key: const Key('library_grid_view'),
-        padding: const EdgeInsets.all(8),
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: crossAxisCount,
-          childAspectRatio: 0.62,
-          crossAxisSpacing: 8,
-          mainAxisSpacing: 12,
-        ),
-        itemCount: pageItemCount,
-        itemBuilder: (context, index) =>
-            itemBuilder(context, pageStart + index, isGrid: true),
-      );
-    } else {
-      gridOrList = ListView.builder(
-        key: const Key('library_list_view'),
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: pageItemCount,
-        itemBuilder: (context, index) =>
-            itemBuilder(context, pageStart + index, isGrid: false),
-      );
-    }
-
     return Column(
       children: [
         if (_activeGroupFilter == null && _mostRecentBook != null)
@@ -979,17 +956,118 @@ class _LibraryScreenState extends State<LibraryScreen> with WidgetsBindingObserv
             // 一律把 onTap 傳 null 的既有慣例。
             onTap: _inSelectionMode ? null : () => _onBookTap(_mostRecentBook!),
           ),
-        Expanded(child: Align(alignment: Alignment.topCenter, child: gridOrList)),
-        PagingBar(
-          key: const Key('library_paging_bar'),
-          currentPage: safePage,
-          pageCount: pageCount,
-          onPrevious:
-              safePage > 0 ? () => setState(() => _paging.goToPreviousPage()) : null,
-          onNext: safePage < pageCount - 1
-              ? () => setState(() => _paging.goToNextPage())
-              : null,
-          isEinkMode: widget.themeDependencies.isEinkMode,
+        Expanded(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              // 依實際可用寬高動態計算每頁列數（epic-36 Issue 7），取代
+              // Issue 3 寫死「1 行」的舊假設。寬度換算封面格寬/高；高度
+              // 扣掉 PagingBar 自身固定高度、以及 GridView 自身上下
+              // padding（各 8dp，合計 16dp）後才是 Grid 內容真正可用高度
+              // ——這兩者是本區塊唯一需要手動參照的高度常數（PagingBar
+              // 因為它被移進了這個 LayoutBuilder 的回傳子樹，GridView
+              // padding 因為它是 GridView 自己的既有參數，不是外層
+              // Column 佈局能自動消化的東西），AppBar／搜尋列／繼續閱讀
+              // 列的高度則由外層 Column／Expanded 佈局自然算出剩餘空
+              // 間，不需要在這裡手動加總（`issues.md` Issue 7 Solution
+              // 段落；`review-plan-issue-7.md` C-1：原計劃書漏算了
+              // GridView 自身 padding，會在邊界高度裁切底列內容）。
+              const gridPadding = 8.0;
+              const gridSpacing = 8.0;
+              const rowSpacing = 12.0;
+              final cellWidth = (constraints.maxWidth -
+                      2 * gridPadding -
+                      (crossAxisCount - 1) * gridSpacing) /
+                  crossAxisCount;
+              // `_kCellAspectRatio` 是 GridView 每個 cell「整體」的寬高比
+              // （封面＋文字說明區合計，見 `_BookGridTile`：外層 Column
+              // 的總高度受 `childAspectRatio` 約束，封面只是 Expanded
+              // 取得的剩餘空間），不是純封面的寬高比——`cellWidth /
+              // _kCellAspectRatio` 本身就已經是含文字說明區的整個 cell
+              // 高度，不能再另外疊加 footerHeight（`review-plan-issue-7.md`
+              // C-2：疊加會造成單列高度虛增 30~50dp，動態列數因此算得比
+              // 實際能放下的還要少，違背 Issue 7「消除留白」的目的）。
+              final rowContentHeight = cellWidth / _kCellAspectRatio;
+              final pagingBarHeight =
+                  PagingBar.resolvedHeight(widget.themeDependencies.isEinkMode);
+              final availableGridHeight =
+                  constraints.maxHeight - pagingBarHeight - 2 * gridPadding;
+              // Grid／List 兩種檢視各自獨立算 pageSize（epic-36 Issue 7
+              // 追加修正——I-1：原本兩者共用同一組依 Grid cell 幾何算出的
+              // pageSize，但 ListTile 實際高度與 Grid cell 完全脫鉤，窄高
+              // 裝置下 List 這一頁可能因 NeverScrollableScrollPhysics 而
+              // 裁切掉部分項目——看得到頁碼卻看不到/點不到書籍）。List 是
+              // 單欄，pageSize 即為列數本身，不需要再乘欄數。
+              final gridRows = libraryRowsForHeight(
+                availableHeight: availableGridHeight,
+                rowContentHeight: rowContentHeight,
+                rowSpacing: rowSpacing,
+              );
+              final listRowHeight =
+                  libraryListRowHeight(MediaQuery.textScalerOf(context));
+              final listRows = libraryRowsForHeight(
+                availableHeight: availableGridHeight,
+                rowContentHeight: listRowHeight,
+                rowSpacing: 0,
+              );
+              final pageSize = _viewMode == LibraryViewMode.grid
+                  ? crossAxisCount * gridRows
+                  : listRows;
+
+              final pageCount = _paging.clamp(itemCount: itemCount, pageSize: pageSize);
+              final safePage = _paging.currentPage;
+              final pageStart = safePage * pageSize;
+              final pageEnd = (pageStart + pageSize).clamp(0, itemCount);
+              final pageItemCount = pageEnd - pageStart;
+
+              final Widget gridOrList;
+              if (_viewMode == LibraryViewMode.grid) {
+                gridOrList = GridView.builder(
+                  key: const Key('library_grid_view'),
+                  padding: const EdgeInsets.all(gridPadding),
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: crossAxisCount,
+                    childAspectRatio: _kCellAspectRatio,
+                    crossAxisSpacing: gridSpacing,
+                    mainAxisSpacing: rowSpacing,
+                  ),
+                  itemCount: pageItemCount,
+                  itemBuilder: (context, index) =>
+                      itemBuilder(context, pageStart + index, isGrid: true),
+                );
+              } else {
+                gridOrList = ListView.builder(
+                  key: const Key('library_list_view'),
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: pageItemCount,
+                  itemBuilder: (context, index) =>
+                      itemBuilder(context, pageStart + index, isGrid: false),
+                );
+              }
+
+              return Column(
+                children: [
+                  Expanded(
+                    child: Align(alignment: Alignment.topCenter, child: gridOrList),
+                  ),
+                  PagingBar(
+                    key: const Key('library_paging_bar'),
+                    currentPage: safePage,
+                    pageCount: pageCount,
+                    onPrevious: safePage > 0
+                        ? () => setState(() => _paging.goToPreviousPage())
+                        : null,
+                    onNext: safePage < pageCount - 1
+                        ? () => setState(() => _paging.goToNextPage())
+                        : null,
+                    isEinkMode: widget.themeDependencies.isEinkMode,
+                  ),
+                ],
+              );
+            },
+          ),
         ),
       ],
     );
@@ -1112,8 +1190,15 @@ class _GroupListTile extends StatelessWidget {
           ),
         ),
       ),
-      title: Text(tile.name),
-      subtitle: Text('${tile.totalCount} 本'),
+      // maxLines/overflow（epic-36 Issue 7 追加修正——I-1）：分類名稱過長
+      // 換行會撐高這一列，讓 libraryListRowHeight() 假設的固定列高失準，
+      // 進而讓依此估算出的 pageSize 偏多、造成本頁部分項目被裁切。
+      title: Text(tile.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+      subtitle: Text(
+        '${tile.totalCount} 本',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
       onTap: onTap,
     );
   }
@@ -1309,8 +1394,15 @@ class _BookListTile extends StatelessWidget {
           ],
         ),
       ),
-      title: Text(book.title),
-      subtitle: Text(book.author ?? ''),
+      // maxLines/overflow（epic-36 Issue 7 追加修正——I-1）：書名/作者過長
+      // 換行會撐高這一列，讓 libraryListRowHeight() 假設的固定列高失準，
+      // 進而讓依此估算出的 pageSize 偏多、造成本頁部分項目被裁切。
+      title: Text(book.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+      subtitle: Text(
+        book.author ?? '',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [

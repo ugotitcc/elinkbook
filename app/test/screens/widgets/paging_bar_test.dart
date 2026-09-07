@@ -144,4 +144,9 @@ void main() {
       const Size(56, 56),
     );
   });
+
+  test('PagingBar.resolvedHeight()：一般模式 52.0，E-Ink 模式 56.0（epic-36 Issue 7）', () {
+    expect(PagingBar.resolvedHeight(false), 52.0);
+    expect(PagingBar.resolvedHeight(true), 56.0);
+  });
 }

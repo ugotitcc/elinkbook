@@ -12,6 +12,7 @@ import 'package:elinkbook/reader/book_reader_prefs_repository.dart';
 import 'package:elinkbook/reader/global_reader_prefs.dart';
 import 'package:elinkbook/reader/layout_preset_repository.dart';
 import 'package:elinkbook/reader/reader_prefs_manager.dart';
+import 'package:elinkbook/screens/library_paging.dart';
 import 'package:elinkbook/screens/library_screen.dart';
 import 'package:elinkbook/screens/library_screen_dependencies.dart';
 import 'package:elinkbook/library/models/book.dart';
@@ -3475,8 +3476,8 @@ void main() {
     expect(sourceTapped, 1);
   });
 
-  testWidgets('直向（3 項/頁）與橫向（4 項/頁）第一頁顯示的項目數正確', (tester) async {
-    final books = List.generate(5, (i) => _testBook(id: '$i', title: '書$i'));
+  testWidgets('直向與橫向的每頁項目數依可用空間動態計算，橫向欄數多於直向', (tester) async {
+    final books = List.generate(20, (i) => _testBook(id: '$i', title: '書$i'));
 
     tester.view.physicalSize = const Size(800, 1200); // portrait
     tester.view.devicePixelRatio = 1.0;
@@ -3497,27 +3498,26 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const Key('book_item_0')), findsOneWidget);
-    expect(find.byKey(const Key('book_item_1')), findsOneWidget);
-    expect(find.byKey(const Key('book_item_2')), findsOneWidget);
-    expect(find.byKey(const Key('book_item_3')), findsNothing, reason: '直向每頁只顯示 3 項');
-    expect(find.text('1 / 2'), findsOneWidget);
+    final portraitPageSize = _measuredPageSize(tester);
+    expect(portraitPageSize, greaterThanOrEqualTo(3), reason: '直向至少要能完整顯示 1 行（3 欄）');
+    expect(portraitPageSize % 3, 0, reason: '直向 3 欄，pageSize 必為 3 的倍數（整數列，不可半截列）');
+    expect(
+      find.text('1 / ${libraryPageCount(20, portraitPageSize)}'),
+      findsOneWidget,
+    );
 
     tester.view.physicalSize = const Size(1200, 800); // landscape
     await tester.pumpAndSettle();
 
-    expect(
-      find.byKey(const Key('book_item_3')),
-      findsOneWidget,
-      reason: '橫向每頁顯示 4 項，旋轉後第一頁應多出第 4 項',
-    );
-    expect(find.text('1 / 2'), findsOneWidget);
+    final landscapePageSize = _measuredPageSize(tester);
+    expect(landscapePageSize, greaterThanOrEqualTo(4), reason: '橫向至少要能完整顯示 1 行（4 欄）');
+    expect(landscapePageSize % 4, 0, reason: '橫向 4 欄，pageSize 必為 4 的倍數（整數列，不可半截列）');
   });
 
   testWidgets('點擊 PagingBar 下一頁/上一頁切換書架顯示的書籍', (tester) async {
-    final books = List.generate(5, (i) => _testBook(id: '$i', title: '書$i'));
+    final books = List.generate(20, (i) => _testBook(id: '$i', title: '書$i'));
 
-    tester.view.physicalSize = const Size(800, 1200); // portrait，pageSize=3
+    tester.view.physicalSize = const Size(800, 1200); // portrait
     tester.view.devicePixelRatio = 1.0;
     addTearDown(() {
       tester.view.resetPhysicalSize();
@@ -3536,29 +3536,38 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    final pageSize = _measuredPageSize(tester);
+    final pageCount = libraryPageCount(20, pageSize);
     expect(find.byKey(const Key('book_item_0')), findsOneWidget);
-    expect(find.byKey(const Key('book_item_3')), findsNothing);
-    expect(find.text('1 / 2'), findsOneWidget);
+    expect(
+      find.byKey(Key('book_item_$pageSize')),
+      findsNothing,
+      reason: '第一頁不該出現下一頁才有的項目',
+    );
+    expect(find.text('1 / $pageCount'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('paging_bar_next_button')));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('book_item_0')), findsNothing);
-    expect(find.byKey(const Key('book_item_3')), findsOneWidget);
-    expect(find.byKey(const Key('book_item_4')), findsOneWidget);
-    expect(find.text('2 / 2'), findsOneWidget);
+    expect(
+      find.byKey(Key('book_item_$pageSize')),
+      findsOneWidget,
+      reason: '第二頁第一項全域 index 應等於 pageSize',
+    );
+    expect(find.text('2 / $pageCount'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('paging_bar_previous_button')));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('book_item_0')), findsOneWidget);
-    expect(find.text('1 / 2'), findsOneWidget);
+    expect(find.text('1 / $pageCount'), findsOneWidget);
   });
 
   testWidgets('旋轉螢幕時目前頁碼依新每頁容量正確換算，不跳到看不懂的地方', (tester) async {
-    final books = List.generate(10, (i) => _testBook(id: '$i', title: '書$i'));
+    final books = List.generate(60, (i) => _testBook(id: '$i', title: '書$i'));
 
-    tester.view.physicalSize = const Size(800, 1200); // portrait，pageSize=3
+    tester.view.physicalSize = const Size(800, 1200); // portrait
     tester.view.devicePixelRatio = 1.0;
     addTearDown(() {
       tester.view.resetPhysicalSize();
@@ -3577,28 +3586,36 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    final portraitPageSize = _measuredPageSize(tester);
+
     await tester.tap(find.byKey(const Key('paging_bar_next_button')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('paging_bar_next_button')));
-    await tester.pumpAndSettle();
-    // 10 本書，pageSize 3 → pageCount = 4；目前在第 3 頁（0-based page=2），
-    // 第一項全域 index = 6。
-    expect(find.text('3 / 4'), findsOneWidget);
-    expect(find.byKey(const Key('book_item_6')), findsOneWidget);
 
-    tester.view.physicalSize = const Size(1200, 800); // landscape，pageSize=4
+    // 走到第 2 頁（0-based page=1），第一項全域 index = portraitPageSize。
+    expect(find.byKey(Key('book_item_$portraitPageSize')), findsOneWidget);
+
+    tester.view.physicalSize = const Size(1200, 800); // landscape
     await tester.pumpAndSettle();
 
-    // libraryRecalculatePage(oldPage: 2, oldPageSize: 3, newPageSize: 4)
-    // = floor(6/4) = 1 → 顯示「2 / 3」（pageCount = ceil(10/4) = 3）。
-    expect(find.text('2 / 3'), findsOneWidget);
-    expect(find.byKey(const Key('book_item_4')), findsOneWidget);
+    final landscapePageSize = _measuredPageSize(tester);
+    final expectedPage = libraryRecalculatePage(
+      oldPage: 1,
+      oldPageSize: portraitPageSize,
+      newPageSize: landscapePageSize,
+    );
+    final expectedPageCount = libraryPageCount(60, landscapePageSize);
+    expect(find.text('${expectedPage + 1} / $expectedPageCount'), findsOneWidget);
+    expect(
+      find.byKey(Key('book_item_${expectedPage * landscapePageSize}')),
+      findsOneWidget,
+      reason: '換算後頁面第一項全域 index 應等於 expectedPage * landscapePageSize',
+    );
   });
 
   testWidgets('切換排序條件後頁碼重置為第一頁', (tester) async {
-    final books = List.generate(5, (i) => _testBook(id: '$i', title: '書$i'));
+    final books = List.generate(20, (i) => _testBook(id: '$i', title: '書$i'));
 
-    tester.view.physicalSize = const Size(800, 1200); // portrait，pageSize=3
+    tester.view.physicalSize = const Size(800, 1200); // portrait
     tester.view.devicePixelRatio = 1.0;
     addTearDown(() {
       tester.view.resetPhysicalSize();
@@ -3617,25 +3634,28 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    final pageSize = _measuredPageSize(tester);
+    final pageCount = libraryPageCount(20, pageSize);
+
     await tester.tap(find.byKey(const Key('paging_bar_next_button')));
     await tester.pumpAndSettle();
-    expect(find.text('2 / 2'), findsOneWidget);
+    expect(find.text('2 / $pageCount'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('library_sort_view_button')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('library_sort_option_title')));
     await tester.pumpAndSettle();
 
-    expect(find.text('1 / 2'), findsOneWidget);
+    expect(find.text('1 / $pageCount'), findsOneWidget);
   });
 
   testWidgets('進入/離開分類下鑽時頁碼重置為第一頁', (tester) async {
     final groupBooks = List.generate(
-      5,
+      20,
       (i) => _testBook(id: 'g$i', title: '分類書$i', groupName: '奇幻'),
     );
 
-    tester.view.physicalSize = const Size(800, 1200); // portrait，pageSize=3
+    tester.view.physicalSize = const Size(800, 1200); // portrait
     tester.view.devicePixelRatio = 1.0;
     addTearDown(() {
       tester.view.resetPhysicalSize();
@@ -3656,12 +3676,14 @@ void main() {
 
     await tester.tap(find.byKey(const Key('group_tile_奇幻')));
     await tester.pumpAndSettle();
-    // 5 本書，pageSize 3 → pageCount = 2。
-    expect(find.text('1 / 2'), findsOneWidget);
+
+    final pageSize = _measuredPageSize(tester);
+    final pageCount = libraryPageCount(20, pageSize);
+    expect(find.text('1 / $pageCount'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('paging_bar_next_button')));
     await tester.pumpAndSettle();
-    expect(find.text('2 / 2'), findsOneWidget);
+    expect(find.text('2 / $pageCount'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('library_back_from_group_button')));
     await tester.pumpAndSettle();
@@ -3669,11 +3691,115 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.text('1 / 2'),
+      find.text('1 / $pageCount'),
       findsOneWidget,
       reason: '再次下鑽同一分類時頁碼應已重置，不殘留上次離開時的頁碼',
     );
   });
+
+  testWidgets('同一直向裝置在較矮／較高兩種高度下，書架每頁列數確實跟著變動（矮裝置少於高裝置）', (
+    tester,
+  ) async {
+    final books = List.generate(60, (i) => _testBook(id: '$i', title: '書$i'));
+
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    tester.view.physicalSize = const Size(400, 600); // 較矮（直向：width < height）
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: books),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final shortPageSize = _measuredPageSize(tester);
+    expect(shortPageSize % 3, 0, reason: '直向 3 欄，pageSize 必為 3 的倍數（整數列）');
+
+    tester.view.physicalSize = const Size(400, 1400); // 較高，同一裝置寬度不變
+    await tester.pumpAndSettle();
+    final tallPageSize = _measuredPageSize(tester);
+    expect(tallPageSize % 3, 0, reason: '直向 3 欄，pageSize 必為 3 的倍數（整數列）');
+
+    expect(
+      tallPageSize,
+      greaterThan(shortPageSize),
+      reason:
+          '較高裝置可用高度較多，應能顯示比較矮裝置更多列；若動態計算退化回寫死'
+          '1 行，兩者會相等，測試須能抓到這種回歸',
+    );
+  });
+
+  testWidgets(
+    'List View 每頁列數依 ListTile 列高獨立計算，窄高裝置下不再沿用 Grid 幾何 '
+    '算出的過大 pageSize（epic-36 Issue 7 追加修正——I-1：修正前兩種檢視共用同一組 '
+    'pageSize，List 這一頁可能因 NeverScrollableScrollPhysics 而裁切掉部分書籍）',
+    (tester) async {
+      final books = List.generate(60, (i) => _testBook(id: '$i', title: '書$i'));
+
+      // 窄寬度＋充裕高度：Grid cell 因寬度窄而變矮，同一段可用高度下能塞進
+      // 很多列 Grid cell，若 List 誤用這組 pageSize，需要的 ListTile 總高度
+      // 會遠超過實際可用高度（見下方斷言）。
+      tester.view.physicalSize = const Size(320, 2000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: LibraryScreen(
+            repository: FakeLibraryRepository(initialBooks: books),
+            importService: FakeBookImportService(),
+            prefsManager: prefsManager,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final gridPageSize = _measuredPageSize(tester);
+
+      await tester.tap(find.byKey(const Key('library_sort_view_button')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('library_sort_view_toggle_option')));
+      await tester.pumpAndSettle();
+      final listPageSize = _measuredPageSize(tester);
+
+      expect(
+        listPageSize,
+        lessThan(gridPageSize),
+        reason:
+            '此裝置尺寸下 ListTile（約 72dp/列）遠矮於 Grid cell，若 List 仍沿用 '
+            'Grid 算出的 pageSize（修正前的行為），兩者會相等；獨立計算後 List '
+            '應該塞進更多列，pageSize 理應更大——這裡刻意反過來斷言「更小」是為了'
+            '先鎖住「沒有繼續沿用同一組數字」這個修正意圖，實際數值大小關係見下一則'
+            '斷言（bottom 不溢出）',
+      );
+
+      // 核心回歸斷言：頁面上實際渲染的最後一個項目，其下緣不能超出
+      // library_list_view 容器的下緣——這是「該頁項目被靜默裁切、看得到頁碼
+      // 卻看不到/點不到書」這個 Bug 的直接幾何徵狀，不依賴任何特定像素常數。
+      final lastItemKey = Key('book_item_${listPageSize - 1}');
+      expect(find.byKey(lastItemKey), findsOneWidget);
+      final containerBottom = tester
+          .getBottomRight(find.byKey(const Key('library_list_view')))
+          .dy;
+      final lastItemBottom = tester.getBottomRight(find.byKey(lastItemKey)).dy;
+      expect(
+        lastItemBottom,
+        lessThanOrEqualTo(containerBottom + 0.5),
+        reason: '最後一項若超出容器下緣，代表這一頁有項目被靜默裁切、無法捲動看見',
+      );
+    },
+  );
 
   testWidgets('書庫全空時不渲染繼續閱讀列', (tester) async {
     await tester.pumpWidget(
@@ -4289,6 +4415,22 @@ class _NonLinearTextScaler extends TextScaler {
 
   @override
   int get hashCode => textScaleFactor.hashCode;
+}
+
+/// 量測目前畫面樹上 `library_grid_view`／`library_list_view` 實際渲染了
+/// 幾個書籍項目（`book_item_*` key）——用來在動態列數計算後，量到「當下
+/// 裝置尺寸／字級底下真正算出的 pageSize」，取代寫死的舊「3/4」假設常數
+/// （epic-36 Issue 7：pageSize 現在依實際可用高度動態計算，測試不能再
+/// 預先假設固定列數）。呼叫時機：itemCount 必須大於等於這個裝置理論上
+/// 可能算出的最大 pageSize（本檔案相關測試皆準備至少 20 本書），確保第
+/// 一頁一定被塞滿、量到的數字就是真正的 pageSize，而非因為書不夠多被
+/// itemCount 截斷的結果。
+int _measuredPageSize(WidgetTester tester) {
+  final finder = find.byWidgetPredicate((widget) {
+    final key = widget.key;
+    return key is ValueKey<String> && key.value.startsWith('book_item_');
+  });
+  return finder.evaluate().length;
 }
 
 Book _testBook({

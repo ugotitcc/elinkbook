@@ -4,9 +4,14 @@ import 'package:flutter/widgets.dart';
 /// spec.md §功能③）：不依賴 widget 樹、不依賴 `LibraryScreen` 任何狀態，
 /// 獨立可單元測試。
 
-/// 每頁筆數固定依螢幕方向決定（`DESIGN.md#L267`／`#L335`：直排 1 行 3
-/// 欄、橫排 1 行 4 欄），格狀／清單兩種檢視一視同仁，不因檢視模式而異
-/// （見 plans/plan-issue-3.md「計劃範圍澄清」第 3 點）。
+/// 取得特定方向下的預設欄數（crossAxisCount：直排 3、橫排 4）。**Issue 7
+/// 起不再等於每頁筆數（pageSize）**——Issue 3／6 時每頁只有 1 行，欄數剛好
+/// 等於 pageSize；Issue 7 起 `pageSize = crossAxisCount * rows`，rows 依可
+/// 用高度動態計算（見 `libraryRowsForHeight()`），函式名稱沿用舊名只是為
+/// 了不做無謂的改名（呼叫端／測試都已改用新語意呼叫），語意以本段
+/// doc comment 為準（`review-plan-issue-7.md` I-3）。格狀／清單兩種檢視
+/// 一視同仁，不因檢視模式而異（見 plans/plan-issue-3.md「計劃範圍澄清」
+/// 第 3 點）。
 int libraryPageSizeForOrientation(Orientation orientation) =>
     orientation == Orientation.landscape ? 4 : 3;
 
@@ -41,9 +46,59 @@ int libraryRecalculatePage({
   return (oldPage * oldPageSize) ~/ newPageSize;
 }
 
-/// 書架分頁狀態的唯一負責者（epic-36 Issue 6，架構回顧衍生）：取代原本
-/// 散落在 `LibraryScreen` 的 `build()`／`didChangeMetrics()`／排序/分類
-/// 切換/換頁按鈕共 7 處各自寫入的 `_currentPage`／`_lastPageSize` 欄位。
+/// 依可用高度計算書架每頁可完整顯示的列數（epic-36 Issue 7，取代 Issue 3
+/// 寫死「1 行」的舊假設）。[availableHeight] 為扣除 AppBar／搜尋列／繼續
+/// 閱讀列／`PagingBar`／Grid 自身 padding 等 chrome 後的實際可用高度
+/// （呼叫端透過 `LayoutBuilder` 量測取得，見 `library_screen.dart`
+/// `_buildBookList()`；`review-plan-issue-7.md` C-1：呼叫端務必記得扣除
+/// `GridView` 自身上下 padding，不只是 `PagingBar` 高度）；[rowContentHeight]
+/// 為單列高度（含封面與文字說明區的整個 cell 高度）；[rowSpacing] 為列間
+/// 距。無條件捨去，且保底至少 1 行（即便完全放不下也顯示 1 行，不出現 0
+/// 行空白頁）。
+int libraryRowsForHeight({
+  required double availableHeight,
+  required double rowContentHeight,
+  required double rowSpacing,
+}) {
+  if (rowContentHeight <= 0) return 1;
+  // n 列總高度 = n*rowContentHeight + (n-1)*rowSpacing <= availableHeight。
+  // 除法前加極小容差 1e-5，避免理論上剛好整除的邊界值因浮點誤差算成
+  // 「N - 極小值」而被 floor() 多捨去 1 列（review-plan-issue-7.md M-2）。
+  final rows =
+      ((availableHeight + rowSpacing + 1e-5) / (rowContentHeight + rowSpacing))
+          .floor();
+  return rows < 1 ? 1 : rows;
+}
+
+/// List View 模式下單一 `ListTile` 書籍列在系統字級 1.0 倍時的估計高度
+/// （epic-36 Issue 7 追加修正——I-1：`_buildBookList()` 原本讓 Grid／List
+/// 兩種檢視共用同一組依 Grid cell 幾何算出的 `pageSize`，但 `ListTile`
+/// 實際高度遠小於 Grid cell，窄高裝置下 List 這一頁可能因
+/// `NeverScrollableScrollPhysics` 而裁切掉部分項目，看得到頁碼但看不到/
+/// 點不到書籍）。72.0 對應 Material 兩行式 `ListTile`（書名＋作者）在標準
+/// 密度下的自然高度基準（`_BookListTile`／`_GroupListTile` 的 leading 高度
+/// 64、搭配上下 padding）。
+const kListRowHeightAtScale1 = 72.0;
+
+/// 依 [textScaler] 換算 List 列高（呼叫端傳入 `MediaQuery.textScalerOf(context)`）。
+/// 刻意呼叫 `scale()` 而非直接乘上 `textScaleFactor`——`book_grid_tile_
+/// metrics.dart` 已有真機回報記錄同一類陷阱（Android 系統字級縮放曲線
+/// 非線性）。刻意用 `ceilToDouble()` 往上估：List 列高被低估才會讓算出的
+/// 列數偏多、實際裁切書籍；被高估只會讓列數偏保守、多留一點空白，兩者
+/// 風險不對稱，因此設計上刻意選擇偏安全的方向（呼應 `libraryRowsForHeight()`
+/// 保底至少 1 行、允許剩餘空白的既有原則）。**目前 72.0 這個基準值未經真
+/// 機校準**（不像 `kGridTileFooterHeightAtScale1` 已有多輪真機回報反覆調
+/// 校），若日後真機回報估計仍偏低導致裁切，比照 `book_grid_tile_metrics.dart`
+/// 的校準模式另外調整，不可逕自視為精確值。
+double libraryListRowHeight(TextScaler textScaler) {
+  return (kListRowHeightAtScale1 * textScaler.scale(16.0) / 16.0)
+      .ceilToDouble();
+}
+
+/// 書架分頁狀態的唯一負責者（epic-36 Issue 6，架構回顧衍生；Issue 7 進一
+/// 步簡化）：取代原本散落在 `LibraryScreen` 的 `build()`／
+/// `didChangeMetrics()`／排序/分類切換/換頁按鈕共 7 處各自寫入的
+/// `_currentPage`／`_lastPageSize` 欄位。
 ///
 /// 純 Dart 類別，不是 `ChangeNotifier`——分頁狀態只有 `_LibraryScreenState`
 /// 一個消費者，不需要監聽機制；呼叫端在呼叫任一方法後自行 `setState(() {})`。
@@ -53,46 +108,29 @@ class LibraryPagingCursor {
 
   int get currentPage => _currentPage;
 
-  /// `build()` 每次呼叫一次：依目前 [itemCount]／[orientation] 箝制頁碼到
-  /// 合法範圍，回傳目前 `pageCount` 與 `pageSize`。不做旋轉的比例換算
-  /// （那是 [applyOrientationChange] 的職責）——單純箝制，用來吸收刪除
-  /// 書籍／合併分類等造成 `itemCount` 縮小時的越界殘留（原
-  /// `review-plan-issue-3.md` M-2）。回傳值一併帶出 `pageSize`，讓呼叫端
-  /// 不需要再另外呼叫一次 `libraryPageSizeForOrientation()`
-  /// （`review-plan-issue-6.md` I-2）。
-  ({int pageCount, int pageSize}) clamp({
-    required int itemCount,
-    required Orientation orientation,
-  }) {
-    final pageSize = libraryPageSizeForOrientation(orientation);
+  /// `build()` 每次呼叫一次：以本次量測到的 [pageSize] 箝制頁碼。若
+  /// [pageSize] 相較上次記錄的值改變（旋轉、視窗高度變化導致列數重
+  /// 算），先依「目前頁第一項全域 index ÷ 新 pageSize」做比例換算，才
+  /// 箝制到合法範圍（吸收 itemCount 縮小造成的越界殘留，原
+  /// `review-plan-issue-3.md` M-2）。
+  ///
+  /// 取代 Issue 6 的 `clamp()`／`applyOrientationChange()` 兩個方法——
+  /// pageSize 現在只有 `build()` 執行當下（`LayoutBuilder` 量測完成後）
+  /// 才知道正確值，`didChangeMetrics()` 無法再提前算好，兩個關注點收斂
+  /// 回同一次呼叫（見 `issues.md` Issue 7）。
+  int clamp({required int itemCount, required int pageSize}) {
     final pageCount = libraryPageCount(itemCount, pageSize);
-    _currentPage = libraryClampPage(_currentPage, pageCount);
-    _lastPageSize = pageSize;
-    return (pageCount: pageCount, pageSize: pageSize);
-  }
-
-  /// `didChangeMetrics()` 呼叫：偵測到真正的方向改變（跟上一次 [clamp]
-  /// 或本方法記錄的每頁筆數不同）時，才依「目前頁第一項的全域 index ÷
-  /// 新每頁容量」按比例換算頁碼，並回傳 `true`；方向沒變時
-  /// （`_lastPageSize` 相同，或尚未有任何記錄）不做任何事、回傳
-  /// `false`。**回傳值的用途**：`didChangeMetrics()` 不只在裝置旋轉時
-  /// 觸發，軟體鍵盤彈出/收起、分螢調整、系統狀態列顯隱等 metrics 變化
-  /// 都會觸發——呼叫端須依回傳值判斷是否真的需要 `setState()`，不能無
-  /// 條件重繪，否則會在這些無關情境下也觸發整頁 rebuild，在 E-Ink
-  /// 裝置上造成非必要刷新（`review-plan-issue-6.md` I-1）。
-  bool applyOrientationChange(Orientation orientation) {
-    final newPageSize = libraryPageSizeForOrientation(orientation);
     final oldPageSize = _lastPageSize;
-    _lastPageSize = newPageSize;
-    if (oldPageSize != null && oldPageSize != newPageSize) {
+    if (oldPageSize != null && oldPageSize != pageSize) {
       _currentPage = libraryRecalculatePage(
         oldPage: _currentPage,
         oldPageSize: oldPageSize,
-        newPageSize: newPageSize,
+        newPageSize: pageSize,
       );
-      return true;
     }
-    return false;
+    _currentPage = libraryClampPage(_currentPage, pageCount);
+    _lastPageSize = pageSize;
+    return pageCount;
   }
 
   /// 呼叫端（`PagingBar.onNext`）保證只在合法範圍內才會觸發，故不做內部
