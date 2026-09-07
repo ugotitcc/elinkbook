@@ -1,3 +1,5 @@
+import 'dart:math' show sqrt;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/screens/library_paging.dart';
@@ -123,6 +125,34 @@ void main() {
         1,
       );
     });
+  });
+
+  group('libraryListRowHeight', () {
+    test('系統字級 1.0 倍（TextScaler.noScaling）時，回傳基準值 72.0', () {
+      expect(libraryListRowHeight(TextScaler.noScaling), 72.0);
+    });
+
+    test('線性縮放時，依比例放大並無條件進位', () {
+      expect(libraryListRowHeight(const TextScaler.linear(1.5)), 108.0);
+    });
+
+    test(
+      '非線性縮放曲線時，回傳依 scale(16.0) 換算的高度，而非直接乘上 '
+      'textScaleFactor（比照 book_grid_tile_metrics.dart 已知的真機陷阱）',
+      () {
+        const scaler = _NonLinearTextScaler(1.5);
+        final result = libraryListRowHeight(scaler);
+        final expected =
+            (kListRowHeightAtScale1 * scaler.scale(16.0) / 16.0)
+                .ceilToDouble();
+        expect(result, expected);
+        expect(
+          result,
+          isNot(closeTo(kListRowHeightAtScale1 * 1.5, 0.001)),
+          reason: '若誤用 textScaleFactor 直接相乘，非線性曲線下會得到不同的值',
+        );
+      },
+    );
   });
 
   group('LibraryPagingCursor', () {
@@ -251,4 +281,30 @@ void main() {
       },
     );
   });
+}
+
+/// 刻意「非線性」的測試用 TextScaler，比照
+/// `test/screens/book_grid_tile_metrics_test.dart`／
+/// `test/screens/library_screen_test.dart` 既有的 `_NonLinearTextScaler`
+/// 同一種設計（凹函式：`scale(A) + scale(B)` 恆大於 `scale(A + B)`），
+/// 獨立複製一份而非共用同一個類別——這是純函式的獨立單元測試，刻意不
+/// 依賴其他測試檔案內的測試替身。
+class _NonLinearTextScaler extends TextScaler {
+  const _NonLinearTextScaler(this.textScaleFactor);
+
+  @override
+  final double textScaleFactor;
+
+  @override
+  double scale(double fontSize) {
+    if (textScaleFactor == 1.0) return fontSize;
+    return fontSize + (textScaleFactor - 1.0) * 6.0 * sqrt(fontSize);
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is _NonLinearTextScaler && other.textScaleFactor == textScaleFactor;
+
+  @override
+  int get hashCode => textScaleFactor.hashCode;
 }

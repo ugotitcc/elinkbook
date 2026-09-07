@@ -70,6 +70,31 @@ int libraryRowsForHeight({
   return rows < 1 ? 1 : rows;
 }
 
+/// List View 模式下單一 `ListTile` 書籍列在系統字級 1.0 倍時的估計高度
+/// （epic-36 Issue 7 追加修正——I-1：`_buildBookList()` 原本讓 Grid／List
+/// 兩種檢視共用同一組依 Grid cell 幾何算出的 `pageSize`，但 `ListTile`
+/// 實際高度遠小於 Grid cell，窄高裝置下 List 這一頁可能因
+/// `NeverScrollableScrollPhysics` 而裁切掉部分項目，看得到頁碼但看不到/
+/// 點不到書籍）。72.0 對應 Material 兩行式 `ListTile`（書名＋作者）在標準
+/// 密度下的自然高度基準（`_BookListTile`／`_GroupListTile` 的 leading 高度
+/// 64、搭配上下 padding）。
+const kListRowHeightAtScale1 = 72.0;
+
+/// 依 [textScaler] 換算 List 列高（呼叫端傳入 `MediaQuery.textScalerOf(context)`）。
+/// 刻意呼叫 `scale()` 而非直接乘上 `textScaleFactor`——`book_grid_tile_
+/// metrics.dart` 已有真機回報記錄同一類陷阱（Android 系統字級縮放曲線
+/// 非線性）。刻意用 `ceilToDouble()` 往上估：List 列高被低估才會讓算出的
+/// 列數偏多、實際裁切書籍；被高估只會讓列數偏保守、多留一點空白，兩者
+/// 風險不對稱，因此設計上刻意選擇偏安全的方向（呼應 `libraryRowsForHeight()`
+/// 保底至少 1 行、允許剩餘空白的既有原則）。**目前 72.0 這個基準值未經真
+/// 機校準**（不像 `kGridTileFooterHeightAtScale1` 已有多輪真機回報反覆調
+/// 校），若日後真機回報估計仍偏低導致裁切，比照 `book_grid_tile_metrics.dart`
+/// 的校準模式另外調整，不可逕自視為精確值。
+double libraryListRowHeight(TextScaler textScaler) {
+  return (kListRowHeightAtScale1 * textScaler.scale(16.0) / 16.0)
+      .ceilToDouble();
+}
+
 /// 書架分頁狀態的唯一負責者（epic-36 Issue 6，架構回顧衍生；Issue 7 進一
 /// 步簡化）：取代原本散落在 `LibraryScreen` 的 `build()`／
 /// `didChangeMetrics()`／排序/分類切換/換頁按鈕共 7 處各自寫入的

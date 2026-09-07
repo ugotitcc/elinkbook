@@ -991,12 +991,27 @@ class _LibraryScreenState extends State<LibraryScreen> with WidgetsBindingObserv
                   PagingBar.resolvedHeight(widget.themeDependencies.isEinkMode);
               final availableGridHeight =
                   constraints.maxHeight - pagingBarHeight - 2 * gridPadding;
-              final rows = libraryRowsForHeight(
+              // Grid／List 兩種檢視各自獨立算 pageSize（epic-36 Issue 7
+              // 追加修正——I-1：原本兩者共用同一組依 Grid cell 幾何算出的
+              // pageSize，但 ListTile 實際高度與 Grid cell 完全脫鉤，窄高
+              // 裝置下 List 這一頁可能因 NeverScrollableScrollPhysics 而
+              // 裁切掉部分項目——看得到頁碼卻看不到/點不到書籍）。List 是
+              // 單欄，pageSize 即為列數本身，不需要再乘欄數。
+              final gridRows = libraryRowsForHeight(
                 availableHeight: availableGridHeight,
                 rowContentHeight: rowContentHeight,
                 rowSpacing: rowSpacing,
               );
-              final pageSize = crossAxisCount * rows;
+              final listRowHeight =
+                  libraryListRowHeight(MediaQuery.textScalerOf(context));
+              final listRows = libraryRowsForHeight(
+                availableHeight: availableGridHeight,
+                rowContentHeight: listRowHeight,
+                rowSpacing: 0,
+              );
+              final pageSize = _viewMode == LibraryViewMode.grid
+                  ? crossAxisCount * gridRows
+                  : listRows;
 
               final pageCount = _paging.clamp(itemCount: itemCount, pageSize: pageSize);
               final safePage = _paging.currentPage;
@@ -1175,8 +1190,15 @@ class _GroupListTile extends StatelessWidget {
           ),
         ),
       ),
-      title: Text(tile.name),
-      subtitle: Text('${tile.totalCount} 本'),
+      // maxLines/overflow（epic-36 Issue 7 追加修正——I-1）：分類名稱過長
+      // 換行會撐高這一列，讓 libraryListRowHeight() 假設的固定列高失準，
+      // 進而讓依此估算出的 pageSize 偏多、造成本頁部分項目被裁切。
+      title: Text(tile.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+      subtitle: Text(
+        '${tile.totalCount} 本',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
       onTap: onTap,
     );
   }
@@ -1372,8 +1394,15 @@ class _BookListTile extends StatelessWidget {
           ],
         ),
       ),
-      title: Text(book.title),
-      subtitle: Text(book.author ?? ''),
+      // maxLines/overflow（epic-36 Issue 7 追加修正——I-1）：書名/作者過長
+      // 換行會撐高這一列，讓 libraryListRowHeight() 假設的固定列高失準，
+      // 進而讓依此估算出的 pageSize 偏多、造成本頁部分項目被裁切。
+      title: Text(book.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+      subtitle: Text(
+        book.author ?? '',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [

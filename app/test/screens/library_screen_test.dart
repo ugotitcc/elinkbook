@@ -3737,6 +3737,70 @@ void main() {
     );
   });
 
+  testWidgets(
+    'List View 每頁列數依 ListTile 列高獨立計算，窄高裝置下不再沿用 Grid 幾何 '
+    '算出的過大 pageSize（epic-36 Issue 7 追加修正——I-1：修正前兩種檢視共用同一組 '
+    'pageSize，List 這一頁可能因 NeverScrollableScrollPhysics 而裁切掉部分書籍）',
+    (tester) async {
+      final books = List.generate(60, (i) => _testBook(id: '$i', title: '書$i'));
+
+      // 窄寬度＋充裕高度：Grid cell 因寬度窄而變矮，同一段可用高度下能塞進
+      // 很多列 Grid cell，若 List 誤用這組 pageSize，需要的 ListTile 總高度
+      // 會遠超過實際可用高度（見下方斷言）。
+      tester.view.physicalSize = const Size(320, 2000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: LibraryScreen(
+            repository: FakeLibraryRepository(initialBooks: books),
+            importService: FakeBookImportService(),
+            prefsManager: prefsManager,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final gridPageSize = _measuredPageSize(tester);
+
+      await tester.tap(find.byKey(const Key('library_sort_view_button')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('library_sort_view_toggle_option')));
+      await tester.pumpAndSettle();
+      final listPageSize = _measuredPageSize(tester);
+
+      expect(
+        listPageSize,
+        lessThan(gridPageSize),
+        reason:
+            '此裝置尺寸下 ListTile（約 72dp/列）遠矮於 Grid cell，若 List 仍沿用 '
+            'Grid 算出的 pageSize（修正前的行為），兩者會相等；獨立計算後 List '
+            '應該塞進更多列，pageSize 理應更大——這裡刻意反過來斷言「更小」是為了'
+            '先鎖住「沒有繼續沿用同一組數字」這個修正意圖，實際數值大小關係見下一則'
+            '斷言（bottom 不溢出）',
+      );
+
+      // 核心回歸斷言：頁面上實際渲染的最後一個項目，其下緣不能超出
+      // library_list_view 容器的下緣——這是「該頁項目被靜默裁切、看得到頁碼
+      // 卻看不到/點不到書」這個 Bug 的直接幾何徵狀，不依賴任何特定像素常數。
+      final lastItemKey = Key('book_item_${listPageSize - 1}');
+      expect(find.byKey(lastItemKey), findsOneWidget);
+      final containerBottom = tester
+          .getBottomRight(find.byKey(const Key('library_list_view')))
+          .dy;
+      final lastItemBottom = tester.getBottomRight(find.byKey(lastItemKey)).dy;
+      expect(
+        lastItemBottom,
+        lessThanOrEqualTo(containerBottom + 0.5),
+        reason: '最後一項若超出容器下緣，代表這一頁有項目被靜默裁切、無法捲動看見',
+      );
+    },
+  );
+
   testWidgets('書庫全空時不渲染繼續閱讀列', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
