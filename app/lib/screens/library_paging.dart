@@ -4,9 +4,14 @@ import 'package:flutter/widgets.dart';
 /// spec.md §功能③）：不依賴 widget 樹、不依賴 `LibraryScreen` 任何狀態，
 /// 獨立可單元測試。
 
-/// 每頁筆數固定依螢幕方向決定（`DESIGN.md#L267`／`#L335`：直排 1 行 3
-/// 欄、橫排 1 行 4 欄），格狀／清單兩種檢視一視同仁，不因檢視模式而異
-/// （見 plans/plan-issue-3.md「計劃範圍澄清」第 3 點）。
+/// 取得特定方向下的預設欄數（crossAxisCount：直排 3、橫排 4）。**Issue 7
+/// 起不再等於每頁筆數（pageSize）**——Issue 3／6 時每頁只有 1 行，欄數剛好
+/// 等於 pageSize；Issue 7 起 `pageSize = crossAxisCount * rows`，rows 依可
+/// 用高度動態計算（見 `libraryRowsForHeight()`），函式名稱沿用舊名只是為
+/// 了不做無謂的改名（呼叫端／測試都已改用新語意呼叫），語意以本段
+/// doc comment 為準（`review-plan-issue-7.md` I-3）。格狀／清單兩種檢視
+/// 一視同仁，不因檢視模式而異（見 plans/plan-issue-3.md「計劃範圍澄清」
+/// 第 3 點）。
 int libraryPageSizeForOrientation(Orientation orientation) =>
     orientation == Orientation.landscape ? 4 : 3;
 
