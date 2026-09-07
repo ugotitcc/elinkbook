@@ -23,3 +23,7 @@
 `CONTEXT.md` 已同步新增/更新詞條：沉浸模式（雙觸發方式）、Chrome Bar、TTS 常駐面板、收合成細列/停止朗讀、睡眠定時器。
 
 下一步：Architecting（`spec.md`），定義 `ReaderChromeBar`／`TtsPanel` 等核心元件介面，再進 Scrum Master 階段拆 `issues.md`。
+
+2026-09-08 Issue 1（ReaderChromeBar 統一＋沉浸模式雙觸發＋死碼清除）完成合併。三格式（流式 EPUB／FXL／PDF）共用同一份 `ReaderChromeTopBar`／`ReaderChromeBottomBar`，`Scaffold.appBar`／`_buildAppBarActions()` 死碼整段清除；舊 `reader_foliate_tts_toggle_button` FAB 已刪除，其開關動作由 `ReaderChromeBottomBar` 的「◗ 朗讀」承接，過渡期與舊 `TtsMiniPlayer` 互斥顯示（Issue 2 換成正式 `TtsPanel`）。Task 5 收尾時額外發現並修正一個真實產品行為回歸：`Scaffold.appBar` 改為恆為 `null` 後，`_buildBody()` 的「不支援格式」／「渲染錯誤」兩個早退分支完全跳過 `ReaderChromeTopBar`，導致使用者在這兩種狀態下沒有返回鍵、無法離開閱讀器——已抽出 `_buildChromeTopBar()` 共用方法修正。全套 `flutter test`（2026 案例）與 `flutter analyze` 皆通過。
+
+另記錄一項留待後續處理的技術債：Task 4 提交（`37bf6af4`）額外把約 24 個與其宣稱範圍（頂部返回/目錄按鈕遷移）無關的既有測試標記 `skip: true`（PDF 搜尋／縮圖／目錄／裁切框選、標註工具列、深色/淺色主題下的浮動按鈕顏色等），懷疑與本 Issue 把按鈕外層從 `Container` 改為 `Material` 的結構性變更同源，尚未逐一根因排查與修復。已與使用者確認不在本 Issue 範圍內處理，留待另立工單。
