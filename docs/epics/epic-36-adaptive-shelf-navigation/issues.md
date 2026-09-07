@@ -157,7 +157,7 @@
 
 ## Issue 6：收斂書架分頁狀態為 `LibraryPagingCursor`（架構回顧衍生）
 
-**Status:** ready-for-agent
+**Status:** completed
 
 **依賴：** Issue 3（本工單重構的正是 Issue 3 引入的 `_currentPage`／`_lastPageSize`／`didChangeMetrics()` 分頁邏輯）
 
