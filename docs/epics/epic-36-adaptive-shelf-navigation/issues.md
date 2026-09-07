@@ -229,7 +229,7 @@
 
 ## Issue 7：書架每頁列數改為動態計算（`/grill-with-docs` Discovery 衍生）
 
-**Status:** ready-for-agent
+**Status:** completed
 
 **依賴：** Issue 3（本工單調整的正是 Issue 3／Issue 6 建立的 `libraryPageSizeForOrientation()`／`LibraryPagingCursor`）
 
