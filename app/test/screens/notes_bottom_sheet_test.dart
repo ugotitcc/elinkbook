@@ -32,6 +32,7 @@ Future<void> _pumpSheet(
   FakeNotesRepository? notesRepository,
   ValueChanged<AnnotationListItem>? onAnnotationSelected,
   VoidCallback? onAnnotationsChanged,
+  int initialTabIndex = 0,
 }) async {
   await tester.pumpWidget(
     MaterialApp(
@@ -49,6 +50,7 @@ Future<void> _pumpSheet(
           notesRepository: notesRepository,
           onAnnotationSelected: onAnnotationSelected,
           onAnnotationsChanged: onAnnotationsChanged,
+          initialTabIndex: initialTabIndex,
         ),
       ),
     ),
@@ -80,6 +82,27 @@ void main() {
       find.byKey(const Key('notes_sheet_annotations_placeholder')),
       findsOneWidget,
     );
+  });
+
+  testWidgets('initialTabIndex: 1 時，開啟後預設停在「劃線與備註」分頁', (tester) async {
+    final repository = FakeBookmarksRepository();
+    await _pumpSheet(tester, repository: repository, initialTabIndex: 1);
+
+    expect(
+      find.byKey(const Key('notes_sheet_annotations_placeholder')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('不傳 initialTabIndex 時，維持既有預設分頁 0（書籤）', (tester) async {
+    final repository = FakeBookmarksRepository();
+    await _pumpSheet(tester, repository: repository);
+
+    expect(
+      find.byKey(const Key('notes_sheet_annotations_placeholder')),
+      findsNothing,
+    );
+    expect(find.byKey(const Key('notes_sheet_bookmark_list')), findsOneWidget);
   });
 
   testWidgets('書籤分頁正確依位置順序顯示清單', (tester) async {

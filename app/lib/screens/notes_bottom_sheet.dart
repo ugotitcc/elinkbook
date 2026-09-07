@@ -61,6 +61,11 @@ class NotesBottomSheet extends StatefulWidget {
   /// （見 Task 10）。
   final VoidCallback? onAnnotationsChanged;
 
+  /// 開啟後預設停在哪個分頁（0＝🔖書籤、1＝✏️劃線與備註）。
+  /// `epic-38-reader-chrome-tts-redesign` Issue 1：底部「✎ 劃線筆記」按鈕
+  /// 傳入 `1`，預設停在劃線分頁；既有呼叫端不傳則維持既有分頁 0。
+  final int initialTabIndex;
+
   const NotesBottomSheet({
     super.key,
     required this.bookId,
@@ -74,6 +79,7 @@ class NotesBottomSheet extends StatefulWidget {
     this.notesRepository,
     this.onAnnotationSelected,
     this.onAnnotationsChanged,
+    this.initialTabIndex = 0,
   });
 
   @override
@@ -99,7 +105,11 @@ class _NotesBottomSheetState extends State<NotesBottomSheet>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(
+      length: 2,
+      vsync: this,
+      initialIndex: widget.initialTabIndex,
+    );
     _loadBookmarks();
     _loadAnnotations();
   }
