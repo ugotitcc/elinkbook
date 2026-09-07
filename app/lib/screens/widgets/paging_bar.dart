@@ -4,6 +4,12 @@ import 'package:flutter/material.dart';
 /// 分頁邏輯本身——`currentPage`/`pageCount` 由呼叫端算好傳入，
 /// `onPrevious`/`onNext` 為 `null` 時代表已在邊界頁，按鈕自動停用。
 class PagingBar extends StatelessWidget {
+  /// `PagingBar` 自身固定高度（`DESIGN.md` §7.2：一般模式 48dp 觸控目標
+  /// ／E-Ink 模式 56dp），曝露給外部元件換算可用空間時參照，避免各處各自
+  /// 寫一份 `52.0`/`56.0` 字面值（epic-36 Issue 7，`library_screen.dart`
+  /// `_buildBookList()` 換算 Grid 可用高度時使用）。
+  static double resolvedHeight(bool isEinkMode) => isEinkMode ? 56.0 : 52.0;
+
   final int currentPage; // 0-based
   final int pageCount;
   final VoidCallback? onPrevious;
@@ -30,7 +36,7 @@ class PagingBar extends StatelessWidget {
     // 方向夾扁回 52（`SizedBox` 對子項的 tight constraints 會被父層更小
     // 的 maxHeight `enforce()` 蓋掉），E-Ink 觸控目標實際上根本沒有做到
     // 56dp（`review-plan-issue-3.md` C-1）。外層高度改為跟隨按鈕尺寸。
-    final barHeight = isEinkMode ? 56.0 : 52.0;
+    final barHeight = resolvedHeight(isEinkMode);
     return SizedBox(
       height: barHeight,
       child: Row(
