@@ -96,15 +96,15 @@ class _LibraryScreenState extends State<LibraryScreen> with WidgetsBindingObserv
   Set<String>? _selectedBookIds;
   final Set<String> _redownloadingBookIds = {};
 
-  /// 目前頁碼（0-based）。分頁筆數固定依螢幕方向決定（見
-  /// `library_paging.dart`），排序/分類切換時重置為 0，旋轉螢幕時依
-  /// `libraryRecalculatePage()` 換算，其餘情況（管理分類、格狀/清單
-  /// 切換）維持不變，見 plans/plan-issue-3.md「計劃範圍澄清」第 4、5 點。
-  int _currentPage = 0;
-
-  /// `didChangeMetrics()` 用來跟「新方向換算出的每頁筆數」比較，判斷是否
-  /// 真的需要重新換算頁碼；於每次 `_buildBookList()` 呼叫後更新為最新值。
-  int? _lastPageSize;
+  /// 書架分頁狀態的唯一負責者（epic-36 Issue 6，架構回顧衍生）：取代原本
+  /// 散落在 `build()`／`didChangeMetrics()`／排序/分類切換/換頁按鈕共 7
+  /// 處各自寫入的 `_currentPage`／`_lastPageSize` 欄位，見
+  /// `plans/plan-issue-6.md`。**與 `issues.md` Issue 6 原文寫的
+  /// `late final` 不同，這裡改用 eager 的 `final`**：`LibraryPagingCursor()`
+  /// 建構子不依賴 `widget`／`context`，不需要等到 `initState()` 才能
+  /// 具現化，用 `late` 只會多一層執行期延遲初始化檢查，沒有實質好處
+  /// （`review-plan-issue-6.md` M-3）。
+  final LibraryPagingCursor _paging = LibraryPagingCursor();
 
   /// 使用者最後閱讀的書籍（`lastReadTime` 最新且 > epoch 0 者），供頂層
   /// 書架的常駐「繼續閱讀列」使用；`_onBookListChanged()` 每次書籍清單
@@ -172,26 +172,21 @@ class _LibraryScreenState extends State<LibraryScreen> with WidgetsBindingObserv
     final physicalSize = View.of(context).physicalSize;
     // App 退到背景、螢幕休眠、多視窗模式調整分割大小、可折疊裝置展開
     // 過渡瞬間，physicalSize 可能暫時回報為 0x0——此時 `0 > 0` 為
-    // false，會被誤判為 portrait，若裝置原本是 landscape
-    // （`_lastPageSize == 4`）就會觸發一次錯誤的頁碼換算。直接略過這種
-    // 暫態，等下一次真正有效的 metrics 變化再處理（`review-plan-issue-3.md`
-    // I-2）。
+    // false，會被誤判為 portrait，若裝置原本是 landscape 就會觸發一次
+    // 錯誤的頁碼換算。直接略過這種暫態，等下一次真正有效的 metrics
+    // 變化再處理（`review-plan-issue-3.md` I-2）。
     if (physicalSize.isEmpty) return;
     final newOrientation = physicalSize.width > physicalSize.height
         ? Orientation.landscape
         : Orientation.portrait;
-    final newPageSize = libraryPageSizeForOrientation(newOrientation);
-    final oldPageSize = _lastPageSize;
-    if (oldPageSize != null && oldPageSize != newPageSize) {
-      setState(() {
-        _currentPage = libraryRecalculatePage(
-          oldPage: _currentPage,
-          oldPageSize: oldPageSize,
-          newPageSize: newPageSize,
-        );
-      });
+    // didChangeMetrics() 不只在裝置旋轉時觸發，軟體鍵盤彈出/收起、分螢
+    // 調整、系統狀態列顯隱等都會觸發——只有 applyOrientationChange()
+    // 真的換算過頁碼（方向改變）才需要 setState()，避免 E-Ink 裝置在
+    // 無關的 metrics 變化時也跟著整頁重繪（`review-plan-issue-6.md` I-1）。
+    final hasChanged = _paging.applyOrientationChange(newOrientation);
+    if (hasChanged) {
+      setState(() {});
     }
-    _lastPageSize = newPageSize;
   }
 
   Future<void> _initialize() async {
@@ -541,14 +536,14 @@ class _LibraryScreenState extends State<LibraryScreen> with WidgetsBindingObserv
   void _openGroupFilteredView(String groupName) {
     setState(() {
       _activeGroupFilter = groupName;
-      _currentPage = 0;
+      _paging.resetToFirstPage();
     });
   }
 
   void _exitGroupFilteredView() {
     setState(() {
       _activeGroupFilter = null;
-      _currentPage = 0;
+      _paging.resetToFirstPage();
     });
   }
 
@@ -678,7 +673,7 @@ class _LibraryScreenState extends State<LibraryScreen> with WidgetsBindingObserv
   }
 
   void _changeSortBy(LibrarySortBy sortBy) {
-    setState(() => _currentPage = 0);
+    setState(() => _paging.resetToFirstPage());
     _bookListController.changeSortBy(sortBy);
   }
 
@@ -897,18 +892,15 @@ class _LibraryScreenState extends State<LibraryScreen> with WidgetsBindingObserv
     final itemCount = groupTiles.length + visibleBooks.length;
 
     final orientation = MediaQuery.orientationOf(context);
-    final pageSize = libraryPageSizeForOrientation(orientation);
-    _lastPageSize = pageSize;
-    final pageCount = libraryPageCount(itemCount, pageSize);
-    final safePage = libraryClampPage(_currentPage, pageCount);
-    // 同步寫回欄位本身（純賦值，非 setState——目前這次 build 已經在用
-    // safePage 渲染，不需要立即再觸發一次重建；純粹是讓 _currentPage
-    // 欄位不殘留越界值）。若不同步，批次刪除書籍導致 itemCount 縮減、
-    // 使用者又沒有手動點過 PagingBar 時，_currentPage 會一直停留在舊的
-    // 越界值，之後旋轉螢幕時 didChangeMetrics() 會拿這個越界值當
-    // oldPage 去換算，得出進一步錯誤的頁碼（`review-plan-issue-3.md`
-    // M-2）。比照上方 `_lastPageSize = pageSize;` 同樣的既有寫法。
-    _currentPage = safePage;
+    // 箝制頁碼＋取得目前 pageCount／pageSize 全交給 LibraryPagingCursor
+    // （epic-36 Issue 6）——刪書後 itemCount 縮減導致的越界殘留（原
+    // `review-plan-issue-3.md` M-2）由 clamp() 內部保證修正；pageSize
+    // 直接複用 clamp() 回傳值，不再另外呼叫一次
+    // libraryPageSizeForOrientation()（`review-plan-issue-6.md` I-2）。
+    final result = _paging.clamp(itemCount: itemCount, orientation: orientation);
+    final pageCount = result.pageCount;
+    final pageSize = result.pageSize;
+    final safePage = _paging.currentPage;
     final pageStart = safePage * pageSize;
     final pageEnd = (pageStart + pageSize).clamp(0, itemCount);
 
@@ -993,9 +985,9 @@ class _LibraryScreenState extends State<LibraryScreen> with WidgetsBindingObserv
           currentPage: safePage,
           pageCount: pageCount,
           onPrevious:
-              safePage > 0 ? () => setState(() => _currentPage = safePage - 1) : null,
+              safePage > 0 ? () => setState(() => _paging.goToPreviousPage()) : null,
           onNext: safePage < pageCount - 1
-              ? () => setState(() => _currentPage = safePage + 1)
+              ? () => setState(() => _paging.goToNextPage())
               : null,
           isEinkMode: widget.themeDependencies.isEinkMode,
         ),
