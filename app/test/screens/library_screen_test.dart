@@ -379,9 +379,13 @@ void main() {
       ),
     );
 
-    // 返回書架（點擊 ReaderScreen AppBar 的預設返回鍵，等同
-    // Navigator.pop()）。
-    await tester.pageBack();
+    // 返回書架（點擊 ReaderChromeTopBar 的返回鍵）。改用明確的 Key 尋找，
+    // 不再用 tester.pageBack()——後者靠比對 Material 預設 BackButton 的
+    // 英文 tooltip「Back」／CupertinoNavigationBarBackButton 型別辨識，
+    // 我們的自訂按鈕 tooltip 是中文「返回」，比對不到
+    // （epic-38-reader-chrome-tts-redesign Issue 1，Scaffold.appBar 已
+    // 改為恆為 null，返回鍵完全由 ReaderChromeTopBar 承載）。
+    await tester.tap(find.byKey(const Key('reader_chrome_back_button')));
     await tester.pumpAndSettle();
 
     expect(
@@ -1871,7 +1875,7 @@ void main() {
     pdfView.onPageRendered();
     await tester.pump();
 
-    final notesButton = find.byKey(const Key('reader_pdf_notes_button'));
+    final notesButton = find.byKey(const Key('reader_chrome_annotations_button'));
     expect(tester.widget<IconButton>(notesButton).onPressed, isNotNull);
 
     // epic-24 Issue 8：PDF 不再使用 AppBar，筆記按鈕改為 FAB，與
@@ -2004,7 +2008,9 @@ void main() {
     // ——直接呼叫 onPressed callback 繞過此問題（比照
     // reader_screen_test.dart:633 既有先例）。
     tester
-        .widget<IconButton>(find.byKey(const Key('reader_pdf_notes_button')))
+        .widget<IconButton>(
+          find.byKey(const Key('reader_chrome_annotations_button')),
+        )
         .onPressed!();
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));

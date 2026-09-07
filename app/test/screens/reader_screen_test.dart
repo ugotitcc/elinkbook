@@ -26,6 +26,8 @@ import 'package:elinkbook/screens/toc_bottom_sheet.dart';
 
 import 'package:elinkbook/reader/epub_position_info.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
+import 'package:elinkbook/screens/reader_chrome_bottom_bar.dart';
+import 'package:elinkbook/screens/tts_mini_player.dart';
 import 'package:elinkbook/reader/foliate_reader_view.dart';
 import 'package:elinkbook/reader/foliate_native_bridge.dart';
 import 'package:elinkbook/theme/app_theme.dart';
@@ -135,7 +137,7 @@ void main() {
     expect(find.text('不支援的檔案格式'), findsOneWidget);
   });
 
-  testWidgets('EPUB 格式顯示「⚙️版面」按鈕，初始為停用狀態', skip: true, (tester) async {
+  testWidgets('EPUB 格式顯示「⚙️版面」按鈕，初始為停用狀態', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
@@ -147,7 +149,7 @@ void main() {
       ),
     );
 
-    final finder = find.byKey(const Key('reader_layout_settings_button'));
+    final finder = find.byKey(const Key('reader_chrome_layout_button'));
     expect(finder, findsOneWidget);
     expect(
       tester.widget<IconButton>(finder).onPressed,
@@ -169,7 +171,7 @@ void main() {
     );
 
     // epic-24 Issue 8：PDF 不再使用 AppBar，設定按鈕改為 FAB。
-    final finder = find.byKey(const Key('reader_pdf_settings_button'));
+    final finder = find.byKey(const Key('reader_chrome_layout_button'));
     expect(finder, findsOneWidget);
     expect(
       tester.widget<IconButton>(finder).onPressed,
@@ -417,7 +419,7 @@ void main() {
       await tester.runAsync(() => Future.delayed(Duration.zero));
       await tester.pump();
 
-      final finder = find.byKey(const Key('reader_foliate_settings_button'));
+      final finder = find.byKey(const Key('reader_chrome_layout_button'));
       expect(
         tester.widget<IconButton>(finder).onPressed,
         isNull,
@@ -483,7 +485,7 @@ void main() {
     );
     await tester.pump();
 
-    await tester.tap(find.byKey(const Key('reader_foliate_settings_button')));
+    await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
     await tester.pumpAndSettle();
 
     await switchToTab(tester, '版面呈現');
@@ -788,7 +790,7 @@ void main() {
     expect(
       tester
           .widget<IconButton>(
-            find.byKey(const Key('reader_layout_settings_button')),
+            find.byKey(const Key('reader_chrome_layout_button')),
           )
           .onPressed,
       isNull,
@@ -898,7 +900,7 @@ void main() {
     // epic-24 Issue 8：PDF 不再使用 AppBar，設定按鈕改為 FAB。
     // 直接呼叫 onPressed callback 繞過 PdfReaderView gesture arena 問題。
     tester
-        .widget<IconButton>(find.byKey(const Key('reader_pdf_settings_button')))
+        .widget<IconButton>(find.byKey(const Key('reader_chrome_layout_button')))
         .onPressed!();
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('pdf_settings_tab_crop')));
@@ -992,11 +994,11 @@ void main() {
     await tester.pump();
 
     expect(
-      find.byKey(const Key('reader_foliate_settings_button')),
+      find.byKey(const Key('reader_chrome_layout_button')),
       findsOneWidget,
     );
 
-    await tester.tap(find.byKey(const Key('reader_foliate_settings_button')));
+    await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
 
@@ -1004,7 +1006,7 @@ void main() {
   });
 
   // epic-20-fxl-foliate-migration Issue 4 Task 3 Step 3：合併按鈕群組後，
-  // reader_foliate_settings_button 是唯一仍需依 _isFixedLayout 分流的按鈕
+  // reader_chrome_layout_button 是唯一仍需依 _isFixedLayout 分流的按鈕
   // （FXL 開 FxlSettingsSheet、流式開 ReaderSettingsSheet）。以下兩個測試
   // 明確斷言「另一種 Sheet 不會被誤開」（`findsNothing` 交叉驗證），
   // 區別於既有兩個各自獨立驗證單一分支的測試（:890「開啟 FxlSettingsSheet」、
@@ -1012,7 +1014,7 @@ void main() {
   // 使用固定 `pump` 而非 `pumpAndSettle`（FXL 分支下 `pumpAndSettle` 曾
   // 逾時，見該處既有寫法）。
   testWidgets(
-    'reader_foliate_settings_button 分流：FXL 書籍開啟 FxlSettingsSheet、不誤開 ReaderSettingsSheet',
+    'reader_chrome_layout_button 分流：FXL 書籍開啟 FxlSettingsSheet、不誤開 ReaderSettingsSheet',
     (tester) async {
       await tester.pumpWidget(
         MaterialApp(
@@ -1039,7 +1041,7 @@ void main() {
         ),
       );
       await tester.pump();
-      await tester.tap(find.byKey(const Key('reader_foliate_settings_button')));
+      await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
       expect(find.byType(FxlSettingsSheet), findsOneWidget);
@@ -1048,7 +1050,7 @@ void main() {
   );
 
   testWidgets(
-    'reader_foliate_settings_button 分流：流式書籍開啟 ReaderSettingsSheet、不誤開 FxlSettingsSheet',
+    'reader_chrome_layout_button 分流：流式書籍開啟 ReaderSettingsSheet、不誤開 FxlSettingsSheet',
     (tester) async {
       await tester.pumpWidget(
         MaterialApp(
@@ -1075,7 +1077,7 @@ void main() {
         ),
       );
       await tester.pump();
-      await tester.tap(find.byKey(const Key('reader_foliate_settings_button')));
+      await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
       await tester.pumpAndSettle();
       expect(find.byType(ReaderSettingsSheet), findsOneWidget);
       expect(find.byType(FxlSettingsSheet), findsNothing);
@@ -1111,7 +1113,7 @@ void main() {
 
     expect(find.byKey(const Key('reader_chrome_back_button')), findsOneWidget);
     expect(
-      find.byKey(const Key('reader_foliate_settings_button')),
+      find.byKey(const Key('reader_chrome_layout_button')),
       findsOneWidget,
     );
 
@@ -1124,7 +1126,7 @@ void main() {
     // 沉浸模式後頂部列仍然存在。
     expect(find.byKey(const Key('reader_chrome_back_button')), findsOneWidget);
     expect(
-      find.byKey(const Key('reader_foliate_settings_button')),
+      find.byKey(const Key('reader_chrome_layout_button')),
       findsNothing,
     );
 
@@ -1134,7 +1136,7 @@ void main() {
 
     expect(find.byKey(const Key('reader_chrome_back_button')), findsOneWidget);
     expect(
-      find.byKey(const Key('reader_foliate_settings_button')),
+      find.byKey(const Key('reader_chrome_layout_button')),
       findsOneWidget,
     );
   });
@@ -1221,7 +1223,7 @@ void main() {
       // `_resolveEpubEngineDispatch()`／`_handleLayoutResolved()` 的
       // widget.isFixedLayout 保護邏輯）。
       expect(
-        find.byKey(const Key('reader_foliate_settings_button')),
+        find.byKey(const Key('reader_chrome_layout_button')),
         findsOneWidget,
         reason: '強制 FXL 後，native 異步回報 isFixedLayout=false 不應覆蓋 _isFixedLayout',
       );
@@ -1303,10 +1305,10 @@ void main() {
     );
     await tester.pump();
 
-    // epic-24 Issue 8：PDF 不再有 in-flow ReaderFooter，改由進度 FAB 觸發
-    // Bottom Sheet 顯示頁碼。驗證 FAB 存在且 in-flow footer 已移除。
-    expect(find.byKey(const Key('reader_pdf_progress_button')), findsOneWidget);
-    expect(find.byKey(const Key('reader_footer')), findsNothing);
+    // epic-38 Issue 1：PDF 使用 ReaderChromeBottomBar，頁碼文字與 ReaderFooter
+    // 皆嵌入 BottomBar 內（取代舊版獨立 FAB + Bottom Sheet 模式）。
+    expect(find.byKey(const Key('reader_chrome_page_info_text')), findsOneWidget);
+    expect(find.byKey(const Key('reader_footer')), findsOneWidget);
   });
 
   // --- 0↔1 頁碼轉換與 jumpToPage 原生呼叫 ---
@@ -1408,10 +1410,10 @@ void main() {
     );
     await tester.pump();
 
-    // epic-24 Issue 8：PDF 不再有 in-flow ReaderFooter，改由進度 FAB 觸發
-    // Bottom Sheet。驗證 FAB 存在且 in-flow footer 已移除。
-    expect(find.byKey(const Key('reader_pdf_progress_button')), findsOneWidget);
-    expect(find.byKey(const Key('reader_footer')), findsNothing);
+    // epic-38 Issue 1：PDF 使用 ReaderChromeBottomBar，頁碼文字與 ReaderFooter
+    // 皆嵌入 BottomBar 內（取代舊版獨立 FAB + Bottom Sheet 模式）。
+    expect(find.byKey(const Key('reader_chrome_page_info_text')), findsOneWidget);
+    expect(find.byKey(const Key('reader_footer')), findsOneWidget);
   });
 
   // --- Epic 5 Issue 4：EPUB 目錄（TOC）樹狀清單 ---
@@ -1621,7 +1623,7 @@ void main() {
       expect(find.byKey(const Key('reader_chrome_title')), findsNothing);
       // 「⚙️版面」按鈕仍在 actions 內，頁首開關不影響既有版面設定入口
       expect(
-        find.byKey(const Key('reader_layout_settings_button')),
+        find.byKey(const Key('reader_chrome_layout_button')),
         findsOneWidget,
       );
     },
@@ -1686,7 +1688,7 @@ void main() {
     expect(find.byType(AppBar), findsNothing);
     // 驗證 FAB 存在（以返回按鈕與設定按鈕為代表）。
     expect(find.byKey(const Key('reader_chrome_back_button')), findsOneWidget);
-    expect(find.byKey(const Key('reader_pdf_settings_button')), findsOneWidget);
+    expect(find.byKey(const Key('reader_chrome_layout_button')), findsOneWidget);
   });
 
   testWidgets('AppBar 顯示時，toolbarHeight 瘦身為 20（Issue 2）', skip: true, (tester) async {
@@ -1729,7 +1731,7 @@ void main() {
     // 「IconButton 尺寸收斂機制」），只檢查欄位值會造成「測試通過但實際
     // 尺寸沒變」的假陽性。
     final buttonRect = tester.getRect(
-      find.byKey(const Key('reader_layout_settings_button')),
+      find.byKey(const Key('reader_chrome_layout_button')),
     );
     expect(buttonRect.width, 32.0);
     expect(
@@ -1739,7 +1741,7 @@ void main() {
     );
 
     final button = tester.widget<IconButton>(
-      find.byKey(const Key('reader_layout_settings_button')),
+      find.byKey(const Key('reader_chrome_layout_button')),
     );
     expect((button.icon as Icon).size, 18.0);
   });
@@ -1851,7 +1853,9 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.byKey(const Key('reader_footer')), findsNothing);
+    // showFooter 現僅控制浮動進度文字，ReaderChromeBottomBar 跳頁列內嵌的
+    // ReaderFooter 不受其閘控（epic-38-reader-chrome-tts-redesign Issue 1）。
+    expect(find.byKey(const Key('reader_footer')), findsOneWidget);
   });
 
   testWidgets('showHeader=true 且 showFooter=false 組合：頁首顯示章節標題元件、頁尾不顯示', (
@@ -1977,7 +1981,7 @@ void main() {
         findsOneWidget,
       );
       expect(
-        find.byKey(const Key('reader_foliate_settings_button')),
+        find.byKey(const Key('reader_chrome_layout_button')),
         findsOneWidget,
       );
     },
@@ -1985,7 +1989,7 @@ void main() {
 
   // --- Epic 6 Issue 1：書籤管理 + 統一「筆記」入口 ---
 
-  testWidgets('未提供 bookmarksRepository 時，📚 筆記按鈕不存在（既有呼叫端不受影響）', (
+  testWidgets('未提供 bookmarksRepository 時，📚 筆記按鈕為停用狀態（既有呼叫端不受影響）', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -2000,12 +2004,17 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.byKey(const Key('reader_notes_button')), findsNothing);
+    // ReaderChromeBottomBar 選單列書籤/劃線筆記/版面 3 顆恆常渲染，
+    // bookmarksRepository 缺席時只是 onPressed 為 null 顯示停用狀態
+    // （epic-38-reader-chrome-tts-redesign Issue 1，plan.md「計劃範圍
+    // 澄清」第 4 點），不再整格不渲染。
+    final finder = find.byKey(const Key('reader_chrome_annotations_button'));
+    expect(finder, findsOneWidget);
+    expect(tester.widget<IconButton>(finder).onPressed, isNull);
   });
 
   testWidgets(
     'EPUB 提供 bookmarksRepository 後，📚 筆記按鈕存在，onLayoutResolved 前為停用狀態',
-    skip: true,
     (tester) async {
       final bookmarksRepository = FakeBookmarksRepository();
       await tester.pumpWidget(
@@ -2021,14 +2030,14 @@ void main() {
       );
       await tester.pump();
 
-      final finder = find.byKey(const Key('reader_notes_button'));
+      final finder = find.byKey(const Key('reader_chrome_annotations_button'));
       expect(finder, findsOneWidget);
       expect(tester.widget<IconButton>(finder).onPressed, isNull);
     },
   );
 
   testWidgets('EPUB 只收到 onLayoutResolved（尚未收到 onLocatorChanged）時，📚 按鈕仍為停用狀態'
-      '（審查修正：避免定位資料未就緒時寫入無定位資訊的壞書籤）', skip: true, (tester) async {
+      '（審查修正：避免定位資料未就緒時寫入無定位資訊的壞書籤）', (tester) async {
     final bookmarksRepository = FakeBookmarksRepository();
     await tester.pumpWidget(
       MaterialApp(
@@ -2056,13 +2065,12 @@ void main() {
     );
     await tester.pump();
 
-    final finder = find.byKey(const Key('reader_notes_button'));
+    final finder = find.byKey(const Key('reader_chrome_annotations_button'));
     expect(tester.widget<IconButton>(finder).onPressed, isNull);
   });
 
   testWidgets(
     'EPUB 收到 onLayoutResolved 與 onLocatorChanged 後，📚 按鈕可點擊，點擊後開啟 NotesBottomSheet',
-    skip: true,
     (tester) async {
       final bookmarksRepository = FakeBookmarksRepository();
       await tester.pumpWidget(
@@ -2098,7 +2106,7 @@ void main() {
       );
       await tester.pump();
 
-      final finder = find.byKey(const Key('reader_notes_button'));
+      final finder = find.byKey(const Key('reader_chrome_annotations_button'));
       expect(tester.widget<IconButton>(finder).onPressed, isNotNull);
 
       await tester.tap(finder);
@@ -2127,7 +2135,7 @@ void main() {
       await tester.pump();
 
       // epic-24 Issue 8：PDF 筆記按鈕改為 FAB。
-      final finder = find.byKey(const Key('reader_pdf_notes_button'));
+      final finder = find.byKey(const Key('reader_chrome_annotations_button'));
       expect(tester.widget<IconButton>(finder).onPressed, isNull);
 
       final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
@@ -2253,7 +2261,7 @@ void main() {
 
   // --- Epic 6 Issue 4：FXL 書籤支援 ---
 
-  testWidgets('FXL：未提供 bookmarksRepository 時，懸浮書籤/筆記按鈕皆不存在（既有呼叫端零回歸）', (
+  testWidgets('FXL：未提供 bookmarksRepository 時，懸浮書籤/筆記按鈕皆為停用狀態（既有呼叫端零回歸）', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -2281,10 +2289,17 @@ void main() {
     );
     await tester.pump();
 
-    expect(
-      find.byKey(const Key('reader_foliate_bookmark_toggle_button')),
-      findsNothing,
-    );
+    // ReaderChromeBottomBar 選單列書籤/劃線筆記/版面 3 顆恆常渲染，
+    // bookmarksRepository 缺席時只是 onPressed 為 null 顯示停用狀態
+    // （epic-38-reader-chrome-tts-redesign Issue 1），不再整格不渲染。
+    final bookmarkFinder =
+        find.byKey(const Key('reader_chrome_bookmark_button'));
+    final annotationsFinder =
+        find.byKey(const Key('reader_chrome_annotations_button'));
+    expect(bookmarkFinder, findsOneWidget);
+    expect(annotationsFinder, findsOneWidget);
+    expect(tester.widget<IconButton>(bookmarkFinder).onPressed, isNull);
+    expect(tester.widget<IconButton>(annotationsFinder).onPressed, isNull);
   });
 
   testWidgets('FXL：提供 bookmarksRepository 後，懸浮書籤按鈕存在，onLocatorChanged 前為停用狀態', (
@@ -2318,7 +2333,7 @@ void main() {
     await tester.pump();
 
     final finder = find.byKey(
-      const Key('reader_foliate_bookmark_toggle_button'),
+      const Key('reader_chrome_bookmark_button'),
     );
     expect(finder, findsOneWidget);
     expect(
@@ -2326,7 +2341,7 @@ void main() {
       isNull,
       reason:
           '尚未收到 onLocatorChanged，_epubPositionInfo 仍為 null，比照 '
-          'reader_notes_button 既有防呆邏輯',
+          'reader_chrome_annotations_button 既有防呆邏輯',
     );
   });
 
@@ -2374,7 +2389,7 @@ void main() {
     await tester.pump();
 
     final finder = find.byKey(
-      const Key('reader_foliate_bookmark_toggle_button'),
+      const Key('reader_chrome_bookmark_button'),
     );
     expect(tester.widget<IconButton>(finder).onPressed, isNotNull);
     expect(
@@ -2452,7 +2467,7 @@ void main() {
     await tester.pump();
 
     final notesButtonFinder = find.byKey(
-      const Key('reader_foliate_notes_button'),
+      const Key('reader_chrome_annotations_button'),
     );
     expect(notesButtonFinder, findsOneWidget);
     expect(tester.widget<IconButton>(notesButtonFinder).onPressed, isNull);
@@ -2470,17 +2485,14 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
 
+    // 底部選單列「✎ 劃線筆記」按鈕改傳 initialTabIndex: 1，開啟後預設停在
+    // 「✏️ 劃線與備註」分頁（epic-38-reader-chrome-tts-redesign Issue 1，
+    // 接上 NotesBottomSheet.initialTabIndex），不再是舊行為的「🔖 書籤」分頁。
     expect(find.byType(NotesBottomSheet), findsOneWidget);
-    expect(find.byKey(const Key('notes_sheet_tab_bookmarks')), findsOneWidget);
     expect(
-      find.byKey(const Key('notes_sheet_bookmark_toggle')),
-      findsOneWidget,
+      tester.widget<NotesBottomSheet>(find.byType(NotesBottomSheet)).initialTabIndex,
+      1,
     );
-
-    await tester.tap(find.byKey(const Key('notes_sheet_tab_annotations')));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
-
     expect(
       find.byKey(const Key('notes_sheet_annotations_placeholder')),
       findsOneWidget,
@@ -2490,6 +2502,15 @@ void main() {
       findsNothing,
     );
     expect(find.byKey(const Key('notes_sheet_delete_all_notes')), findsNothing);
+
+    await tester.tap(find.byKey(const Key('notes_sheet_tab_bookmarks')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(
+      find.byKey(const Key('notes_sheet_bookmark_toggle')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('FXL：於 Bottom Sheet 的書籤分頁新增書籤後關閉，懸浮書籤按鈕圖示同步更新', (tester) async {
@@ -2533,14 +2554,21 @@ void main() {
     await tester.pump();
 
     final bookmarkToggleFinder = find.byKey(
-      const Key('reader_foliate_bookmark_toggle_button'),
+      const Key('reader_chrome_bookmark_button'),
     );
     expect(
       (tester.widget<IconButton>(bookmarkToggleFinder).icon as Icon).icon,
       Icons.star_border,
     );
 
-    await tester.tap(find.byKey(const Key('reader_foliate_notes_button')));
+    await tester.tap(find.byKey(const Key('reader_chrome_annotations_button')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // 「✎ 劃線筆記」按鈕開啟後預設停在「✏️ 劃線與備註」分頁（initialTabIndex:
+    // 1），需先切到「🔖 書籤」分頁才看得到 notes_sheet_bookmark_toggle
+    // （epic-38-reader-chrome-tts-redesign Issue 1）。
+    await tester.tap(find.byKey(const Key('notes_sheet_tab_bookmarks')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
 
@@ -2600,7 +2628,7 @@ void main() {
     );
     await tester.pump();
 
-    await tester.tap(find.byKey(const Key('reader_foliate_notes_button')));
+    await tester.tap(find.byKey(const Key('reader_chrome_annotations_button')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
 
@@ -2618,9 +2646,9 @@ void main() {
       findsNothing,
       reason: '書籤跳轉比照既有換頁慣例，強制收合懸浮控制項',
     );
-    expect(find.byKey(const Key('reader_foliate_notes_button')), findsNothing);
+    expect(find.byKey(const Key('reader_chrome_annotations_button')), findsNothing);
     expect(
-      find.byKey(const Key('reader_foliate_bookmark_toggle_button')),
+      find.byKey(const Key('reader_chrome_bookmark_button')),
       findsNothing,
     );
   });
@@ -2629,7 +2657,6 @@ void main() {
 
   testWidgets(
     'EPUB：開啟「📚 筆記」時，傳給 NotesBottomSheet 的 bookProgress 反映目前即時進度，而非開書當下的舊 bookProgress',
-    skip: true,
     (tester) async {
       final bookmarksRepository = FakeBookmarksRepository();
       await tester.pumpWidget(
@@ -2666,7 +2693,7 @@ void main() {
       );
       await tester.pump();
 
-      await tester.tap(find.byKey(const Key('reader_notes_button')));
+      await tester.tap(find.byKey(const Key('reader_chrome_annotations_button')));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
 
@@ -2710,7 +2737,7 @@ void main() {
       await tester.pump();
 
       // epic-24 Issue 8：PDF 筆記按鈕改為 FAB。
-      final notesFinder = find.byKey(const Key('reader_pdf_notes_button'));
+      final notesFinder = find.byKey(const Key('reader_chrome_annotations_button'));
       expect(notesFinder, findsOneWidget);
       expect(tester.widget<IconButton>(notesFinder).onPressed, isNotNull);
 
@@ -3257,7 +3284,9 @@ void main() {
       find.byKey(const Key('reader_foliate_progress_text')),
       findsOneWidget,
     );
-    expect(find.text('10/100'), findsOneWidget);
+    // epic-38：頁碼文字同時出現在浮動進度文字與 BottomBar 內的
+    // ReaderFooter，共 2 份。
+    expect(find.text('10/100'), findsNWidgets(2));
   });
 
   testWidgets('流式 EPUB：橫排時頁首上邊界與頁尾下邊界皆為 0，頁首/頁尾字體大小皆為 16'
@@ -3991,10 +4020,9 @@ void main() {
     for (final key in [
       'reader_chrome_back_button',
       'reader_chrome_toc_button',
-      'reader_foliate_settings_button',
-      'reader_foliate_bookmark_toggle_button',
-      'reader_foliate_notes_button',
-      'reader_foliate_progress_button',
+      'reader_chrome_layout_button',
+      'reader_chrome_bookmark_button',
+      'reader_chrome_annotations_button',
     ]) {
       final finder = find.byKey(Key(key));
       expect(finder, findsOneWidget, reason: '$key 應存在');
@@ -4004,6 +4032,12 @@ void main() {
         reason: '$key 應為可點擊狀態',
       );
     }
+    // 頁碼文字（非 IconButton）獨立檢查——替代舊版 reader_foliate_progress_button
+    expect(
+      find.byKey(const Key('reader_chrome_page_info_text')),
+      findsOneWidget,
+      reason: '頁碼文字應存在於 ReaderChromeBottomBar 頁碼列',
+    );
   });
 
   testWidgets('流式 EPUB：點擊浮動版面設定按鈕開啟 ReaderSettingsSheet（Issue 7）', (
@@ -4036,7 +4070,7 @@ void main() {
     );
     await tester.pump();
 
-    await tester.tap(find.byKey(const Key('reader_foliate_settings_button')));
+    await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
     await tester.pumpAndSettle();
 
     expect(find.byType(ReaderSettingsSheet), findsOneWidget);
@@ -4077,7 +4111,7 @@ void main() {
       await tester.pump();
 
       final finder = find.byKey(
-        const Key('reader_foliate_bookmark_toggle_button'),
+        const Key('reader_chrome_bookmark_button'),
       );
       expect(
         (tester.widget<IconButton>(finder).icon as Icon).icon,
@@ -4146,7 +4180,7 @@ void main() {
       // 刻意不打開 NotesBottomSheet——重現「_fxlBookmarks 快取從未被
       // 預先載入」的狀態，開書後直接第一次點擊書籤按鈕。
       final finder = find.byKey(
-        const Key('reader_foliate_bookmark_toggle_button'),
+        const Key('reader_chrome_bookmark_button'),
       );
 
       await tester.tap(finder);
@@ -4201,11 +4235,18 @@ void main() {
     );
     await tester.pump();
 
-    await tester.tap(find.byKey(const Key('reader_foliate_notes_button')));
+    await tester.tap(find.byKey(const Key('reader_chrome_annotations_button')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
 
     expect(find.byType(NotesBottomSheet), findsOneWidget);
+    // Step 2 新增的 initialTabIndex 接線回歸測試（review-plan-issue-1.md C1）。
+    expect(
+      tester
+          .widget<NotesBottomSheet>(find.byType(NotesBottomSheet))
+          .initialTabIndex,
+      1,
+    );
   });
 
   testWidgets('流式 EPUB：頁眉純顯示章節名稱、不可點擊，showHeader=false 時不顯示（Issue 7）', (
@@ -4482,7 +4523,9 @@ void main() {
       const Key('reader_foliate_progress_text'),
     );
     expect(progressFinder, findsOneWidget);
-    expect(find.text('168/197'), findsOneWidget);
+    // epic-38：頁碼文字同時出現在浮動進度文字與 BottomBar 內的
+    // ReaderFooter，共 2 份。
+    expect(find.text('168/197'), findsNWidgets(2));
     expect(find.byType(RotatedBox), findsNothing);
     expect(
       find.ancestor(of: progressFinder, matching: find.byType(GestureDetector)),
@@ -4525,17 +4568,16 @@ void main() {
     await tester.tap(find.byKey(const Key('nav_zone_1')));
     await tester.pump();
 
+    // epic-38 Issue 1：沉浸模式收起後 ReaderChromeBottomBar 應隱藏
     expect(
-      find.byKey(const Key('reader_foliate_progress_button')),
+      find.byKey(const Key('reader_chrome_page_info_text')),
       findsNothing,
-      reason: '沉浸模式收起後，浮動功能按鈕應收合',
+      reason: '沉浸模式收起後，BottomBar（含頁碼文字）應收合',
     );
-    expect(
-      find.byKey(const Key('reader_foliate_progress_text')),
-      findsOneWidget,
-      reason: '進度文字（資訊顯示）不受沉浸模式影響，應常駐顯示',
+    // 但浮動進度文字不受 _chromeVisible 控制，仍應常駐顯示
+    expect(find.text('168/197'), findsOneWidget,
+      reason: '沉浸模式收起後浮動進度文字仍應常駐顯示（Issue 13）',
     );
-    expect(find.text('168/197'), findsOneWidget);
   });
 
   testWidgets('流式 EPUB：直排時進度以 RotatedBox 顯示於左下角（Issue 7）', (tester) async {
@@ -4633,34 +4675,21 @@ void main() {
     );
     await tester.pump();
 
+    // epic-38 Issue 1：showFooter=false 時浮動進度文字不顯示，
+    // 但 ReaderFooter 仍嵌入 ReaderChromeBottomBar（不受 showFooter 控制）。
     expect(
-      find.byKey(const Key('reader_foliate_progress_text')),
-      findsNothing,
-      reason: 'showFooter=false 時進度文字（資訊顯示）仍不應顯示',
-    );
-
-    final buttonFinder = find.byKey(
-      const Key('reader_foliate_progress_button'),
-    );
-    expect(
-      buttonFinder,
+      find.byKey(const Key('reader_chrome_page_info_text')),
       findsOneWidget,
-      reason: '進度/跳頁按鈕（功能操作）不應被 showFooter 額外限制',
+      reason: '頁碼文字不受 showFooter 控制，應常駐於 BottomBar',
     );
-
-    await tester.tap(buttonFinder);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
-
-    expect(
-      find.byKey(const Key('reader_footer_jump_slider')),
-      findsOneWidget,
-      reason: '點擊按鈕仍可正常開啟跳頁 Bottom Sheet',
+    // ReaderFooter 在 BottomBar 內直接嵌入，不受 showFooter 控制
+    expect(find.byKey(const Key('reader_footer')), findsOneWidget,
+      reason: 'ReaderFooter 嵌入 BottomBar，showFooter 僅控制浮動進度文字',
     );
   });
 
   testWidgets(
-    '流式 EPUB：點擊浮動進度/跳頁按鈕開啟內含 ReaderFooter 的 Bottom Sheet，舊 in-flow 頁尾不再存在（Issue 7）',
+    '流式 EPUB：ReaderFooter 直接嵌入 ReaderChromeBottomBar，頁碼列與跳頁列同時可見（Issue 7，epic-38 重寫）',
     (tester) async {
       await tester.pumpWidget(
         MaterialApp(
@@ -4691,22 +4720,15 @@ void main() {
       );
       await tester.pump();
 
-      // Bottom Sheet 開啟前，舊 in-flow ReaderFooter 應已不存在（見 Task 2
-      // 「移除舊路徑」），畫面上只有浮動進度文字顯示同樣的頁碼。
-      expect(find.byKey(const Key('reader_footer')), findsNothing);
-      expect(find.text('10/100'), findsOneWidget);
-
-      await tester.tap(find.byKey(const Key('reader_foliate_progress_button')));
-      await tester.pumpAndSettle();
-
+      // epic-38 重寫：ReaderFooter 不再透過 Bottom Sheet 顯示，而是直接
+      // 嵌入 ReaderChromeBottomBar 的 56dp 中間列。頁碼列（34dp）
+      // reader_chrome_page_info_text 與跳頁列 reader_footer 同時存在。
+      expect(find.byKey(const Key('reader_chrome_page_info_text')), findsOneWidget);
       expect(find.byKey(const Key('reader_footer')), findsOneWidget);
       expect(
         find.byKey(const Key('reader_footer_progress_text')),
         findsOneWidget,
       );
-      // 浮動疊加層（Bottom Sheet 開啟後仍在背景可見）與 Bottom Sheet 內的
-      // ReaderFooter 各自顯示一份相同頁碼文字。
-      expect(find.text('10/100'), findsNWidgets(2));
     },
   );
 
@@ -4747,10 +4769,8 @@ void main() {
       );
       await tester.pump();
 
-      await tester.tap(find.byKey(const Key('reader_foliate_progress_button')));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 500));
-
+      // epic-38 重寫：ReaderFooter 直接嵌入 BottomBar，不再需要 tap FAB
+      // 開啟 Bottom Sheet。跳頁滑桿直接存在於 widget 樹中。
       final sliderFinder = find.byKey(const Key('reader_footer_jump_slider'));
       expect(sliderFinder, findsOneWidget);
       expect(
@@ -4762,7 +4782,7 @@ void main() {
   );
 
   testWidgets(
-    '流式 EPUB：positionInfo 尚未就緒（null）時點擊進度/跳頁按鈕，SafeArea 仍正常包裹空白內容，不噴例外（Issue 11）',
+    '流式 EPUB：positionInfo 尚未就緒（null）時 ReaderFooter 為空，SafeArea 仍正常包裹，不噴例外（epic-38 重寫）',
     (tester) async {
       await tester.pumpWidget(
         MaterialApp(
@@ -4780,23 +4800,14 @@ void main() {
       await tester.pump();
 
       // 刻意不呼叫 onLocatorChanged，讓 _epubPositionInfo 維持 null，
-      // 藉此觸發 builder 的 SizedBox.shrink() 分支。此時畫面上只有
-      // `_buildBody()` 主體的那一層 SafeArea。
+      // 藉此觸發 ReaderChromeBottomBar 的 footer = SizedBox.shrink() 分支。
+      // 此時 reader_footer 不應存在，但 reader_chrome_page_info_text 仍應顯示。
       expect(find.byType(SafeArea), findsOneWidget);
 
-      await tester.tap(find.byKey(const Key('reader_foliate_progress_button')));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 500));
-
-      expect(tester.takeException(), isNull);
       expect(find.byKey(const Key('reader_footer')), findsNothing);
-      expect(
-        find.byType(SafeArea),
-        findsNWidgets(2),
-        reason:
-            'positionInfo 為 null 時 Bottom Sheet 仍應包一層 SafeArea（SizedBox.shrink 分支），'
-            '不因內容為空而被省略',
-      );
+      // 頁碼列不依賴 positionInfo，應常駐存在
+      expect(find.byKey(const Key('reader_chrome_page_info_text')), findsOneWidget);
+      expect(tester.takeException(), isNull);
     },
   );
 
@@ -5208,7 +5219,7 @@ void main() {
     },
   );
 
-  testWidgets('提供 customFontsRepository 時，開啟版面設定顯示自訂字型選項', skip: true, (tester) async {
+  testWidgets('提供 customFontsRepository 時，開啟版面設定顯示自訂字型選項', (tester) async {
     final customFontsRepository = FakeCustomFontsRepository();
     await customFontsRepository.insert(
       const CustomFont(
@@ -5244,7 +5255,7 @@ void main() {
     );
     await tester.pump();
 
-    await tester.tap(find.byKey(const Key('reader_layout_settings_button')));
+    await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
 
@@ -5742,10 +5753,11 @@ void main() {
     expect(footerText.style?.color, Colors.black);
   });
 
+  // skip: epic-38 Issue 1：進度 Bottom Sheet 已移除，ReaderFooter 直接嵌入 ReaderChromeBottomBar。
   testWidgets('深色主題下開啟進度/跳頁 Bottom Sheet，遮罩透明（epic-22-reader-'
       'theme-integration Issue 5：/diagnose 確認 showModalBottomSheet 預設'
       'barrierColor（Colors.black54）疊在 AppTheme.dark 已變深的書頁背景'
-      '上，合成結果逼近人眼無法辨識的全黑，改為深色主題下完全不用遮罩）', (tester) async {
+      '上，合成結果逼近人眼無法辨識的全黑，改為深色主題下完全不用遮罩）', skip: true, (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         theme: buildThemeData(AppTheme.dark),
@@ -5813,7 +5825,7 @@ void main() {
     );
     await tester.pump();
 
-    await tester.tap(find.byKey(const Key('reader_foliate_settings_button')));
+    await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
 
@@ -5824,8 +5836,9 @@ void main() {
     expect(dimmingBarrierFinder, findsNothing);
   });
 
+  // skip: epic-38 Issue 1：進度 Bottom Sheet 已移除，ReaderFooter 直接嵌入 ReaderChromeBottomBar。
   testWidgets('淺色主題下開啟進度/跳頁 Bottom Sheet，遮罩維持 Flutter 既有預設值'
-      '（不受本次修法影響，回歸保證）', (tester) async {
+      '（不受本次修法影響，回歸保證）', skip: true, (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         theme: buildThemeData(AppTheme.light),
@@ -5991,23 +6004,22 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    final settingsContainer = tester.widget<Container>(
-      find
-          .ancestor(
-            of: find.byKey(const Key('reader_foliate_settings_button')),
-            matching: find.byType(Container),
-          )
-          .first,
+    // ReaderChromeBottomBar 底色改由外層單一 Material（而非各按鈕獨立
+    // ClipOval+Container）承載（epic-38-reader-chrome-tts-redesign
+    // Issue 1），直接讀 widget 的 backgroundColor/iconColor 建構參數，
+    // 比對 Container.color 的舊寫法已不適用。
+    final bottomBar = tester.widget<ReaderChromeBottomBar>(
+      find.byType(ReaderChromeBottomBar),
     );
     final settingsIcon = tester.widget<Icon>(
       find.descendant(
-        of: find.byKey(const Key('reader_foliate_settings_button')),
+        of: find.byKey(const Key('reader_chrome_layout_button')),
         matching: find.byType(Icon),
       ),
     );
 
     final expectedTheme = buildThemeData(AppTheme.dark);
-    expect(settingsContainer.color, expectedTheme.colorScheme.onSurface);
+    expect(bottomBar.backgroundColor, expectedTheme.colorScheme.onSurface);
     expect(settingsIcon.color, expectedTheme.colorScheme.surface);
   });
 
@@ -6100,7 +6112,7 @@ void main() {
       // 直接呼叫 onPressed callback 繞過 PdfReaderView gesture arena 問題。
       tester
           .widget<IconButton>(
-            find.byKey(const Key('reader_pdf_settings_button')),
+            find.byKey(const Key('reader_chrome_layout_button')),
           )
           .onPressed!();
       await tester.pumpAndSettle();
@@ -6154,7 +6166,7 @@ void main() {
       // 直接呼叫 onPressed callback 繞過 PdfReaderView gesture arena 問題。
       tester
           .widget<IconButton>(
-            find.byKey(const Key('reader_pdf_settings_button')),
+            find.byKey(const Key('reader_chrome_layout_button')),
           )
           .onPressed!();
       await tester.pumpAndSettle();
@@ -6860,9 +6872,8 @@ void main() {
     await pumpUntilPdfReady(tester);
     await tester.pump();
 
-    // epic-24 Issue 8：PDF 不再有 in-flow 頁尾，改由進度 FAB 觸發
-    // Bottom Sheet。驗證 FAB 存在即可。
-    expect(find.byKey(const Key('reader_pdf_progress_button')), findsOneWidget);
+    // epic-38 Issue 1：PDF 使用 ReaderChromeBottomBar，頁碼文字嵌入 BottomBar。
+    expect(find.byKey(const Key('reader_chrome_page_info_text')), findsOneWidget);
 
     ReaderScreen.openPdfToc(key);
     await tester.pump();
@@ -7206,8 +7217,8 @@ void main() {
     // 的 onPressed 要到 `onLayoutResolved` 觸發、_autoDetectedWritingMode
     // 非 null 後才可用（純 flutter test 環境沒有真實 WebView，須手動呼叫
     // FoliateReaderView widget 上的 onPageRendered()/onLayoutResolved()
-    // 模擬原生端回報）。按鈕 key 用 `reader_foliate_settings_button`（現行
-    // FAB 化路徑，非舊版 `reader_layout_settings_button`）。
+    // 模擬原生端回報）。按鈕 key 用 `reader_chrome_layout_button`（現行
+    // FAB 化路徑，非舊版 `reader_chrome_layout_button`）。
     Future<void> pumpReaderScreen(
       WidgetTester tester, {
       // epic-27-reader-device-compat Issue 4：讓「另存為新預設集」的兩則
@@ -7266,7 +7277,7 @@ void main() {
       await pumpReaderScreen(tester);
 
       // 開啟版面設定 Sheet、捲動到「另存為新預設集」按鈕並點擊。
-      await tester.tap(find.byKey(const Key('reader_foliate_settings_button')));
+      await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
       await tester.pumpAndSettle();
       await switchToTab(tester, '設定喜好');
       await tester.ensureVisible(
@@ -7309,7 +7320,7 @@ void main() {
       }
 
       await pumpReaderScreen(tester);
-      await tester.tap(find.byKey(const Key('reader_foliate_settings_button')));
+      await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
       await tester.pumpAndSettle();
       await switchToTab(tester, '設定喜好');
       await tester.ensureVisible(
@@ -7353,7 +7364,7 @@ void main() {
     ) async {
       await pumpReaderScreen(tester, includeLayoutPresetRepository: false);
 
-      await tester.tap(find.byKey(const Key('reader_foliate_settings_button')));
+      await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
       await tester.pumpAndSettle();
       await switchToTab(tester, '設定喜好');
       await tester.ensureVisible(
@@ -7387,7 +7398,7 @@ void main() {
         layoutPresetRepositoryOverride: throwingRepository,
       );
 
-      await tester.tap(find.byKey(const Key('reader_foliate_settings_button')));
+      await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
       await tester.pumpAndSettle();
       await switchToTab(tester, '設定喜好');
       await tester.ensureVisible(
@@ -7429,7 +7440,7 @@ void main() {
       );
 
       await pumpReaderScreen(tester);
-      await tester.tap(find.byKey(const Key('reader_foliate_settings_button')));
+      await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
       await tester.pumpAndSettle();
       await switchToTab(tester, '設定喜好');
       await tester.ensureVisible(
@@ -7475,7 +7486,7 @@ void main() {
       );
 
       await pumpReaderScreen(tester);
-      await tester.tap(find.byKey(const Key('reader_foliate_settings_button')));
+      await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
       await tester.pumpAndSettle();
       await switchToTab(tester, '設定喜好');
       await tester.ensureVisible(
@@ -7533,7 +7544,7 @@ void main() {
       );
 
       await pumpReaderScreen(tester);
-      await tester.tap(find.byKey(const Key('reader_foliate_settings_button')));
+      await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
       await tester.pumpAndSettle();
       await switchToTab(tester, '設定喜好');
       await tester.ensureVisible(
@@ -7569,7 +7580,7 @@ void main() {
       );
 
       await pumpReaderScreen(tester);
-      await tester.tap(find.byKey(const Key('reader_foliate_settings_button')));
+      await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
       await tester.pumpAndSettle();
       await switchToTab(tester, '設定喜好');
       await tester.ensureVisible(
@@ -7601,7 +7612,7 @@ void main() {
       );
 
       await pumpReaderScreen(tester);
-      await tester.tap(find.byKey(const Key('reader_foliate_settings_button')));
+      await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
       await tester.pumpAndSettle();
       await switchToTab(tester, '設定喜好');
       await tester.ensureVisible(
@@ -7931,7 +7942,7 @@ void main() {
       // Mini Player 預設隱藏，須先按下朗讀 FAB 按鈕才會顯示
       // （epic-34-tts-readalong 追加需求）。
       await tester.tap(
-        find.byKey(const Key('reader_foliate_tts_toggle_button')),
+        find.byKey(const Key('reader_chrome_tts_button')),
       );
       await tester.pump();
 
@@ -7982,7 +7993,7 @@ void main() {
       await tester.pump();
 
       await tester.tap(
-        find.byKey(const Key('reader_foliate_tts_toggle_button')),
+        find.byKey(const Key('reader_chrome_tts_button')),
       );
       await tester.pump();
 
@@ -8029,7 +8040,7 @@ void main() {
       await tester.pump();
 
       await tester.tap(
-        find.byKey(const Key('reader_foliate_tts_toggle_button')),
+        find.byKey(const Key('reader_chrome_tts_button')),
       );
       await tester.pump();
 
@@ -8101,7 +8112,7 @@ void main() {
       await tester.pump();
 
       await tester.tap(
-        find.byKey(const Key('reader_foliate_tts_toggle_button')),
+        find.byKey(const Key('reader_chrome_tts_button')),
       );
       await tester.pump();
 
@@ -8154,7 +8165,7 @@ void main() {
       await tester.pump();
 
       await tester.tap(
-        find.byKey(const Key('reader_foliate_tts_toggle_button')),
+        find.byKey(const Key('reader_chrome_tts_button')),
       );
       await tester.pump();
 
@@ -8215,7 +8226,7 @@ void main() {
       await tester.pump();
 
       await tester.tap(
-        find.byKey(const Key('reader_foliate_tts_toggle_button')),
+        find.byKey(const Key('reader_chrome_tts_button')),
       );
       await tester.pump();
 
@@ -8321,7 +8332,7 @@ void main() {
       await tester.pump();
 
       await tester.tap(
-        find.byKey(const Key('reader_foliate_tts_toggle_button')),
+        find.byKey(const Key('reader_chrome_tts_button')),
       );
       await tester.pump();
 
@@ -8373,7 +8384,7 @@ void main() {
       await tester.pump();
 
       await tester.tap(
-        find.byKey(const Key('reader_foliate_tts_toggle_button')),
+        find.byKey(const Key('reader_chrome_tts_button')),
       );
       await tester.pump();
 
@@ -8434,7 +8445,7 @@ void main() {
       await tester.pump();
 
       await tester.tap(
-        find.byKey(const Key('reader_foliate_tts_toggle_button')),
+        find.byKey(const Key('reader_chrome_tts_button')),
       );
       await tester.pump();
 
@@ -8486,7 +8497,7 @@ void main() {
       await tester.pump();
 
       await tester.tap(
-        find.byKey(const Key('reader_foliate_tts_toggle_button')),
+        find.byKey(const Key('reader_chrome_tts_button')),
       );
       await tester.pump();
 
@@ -8562,7 +8573,7 @@ void main() {
         await tester.pump();
 
         await tester.tap(
-          find.byKey(const Key('reader_foliate_tts_toggle_button')),
+          find.byKey(const Key('reader_chrome_tts_button')),
         );
         await tester.pump();
 
@@ -8631,7 +8642,8 @@ void main() {
     });
 
     testWidgets('提供 ttsProvider 時，Mini Player 預設隱藏，須按下朗讀 FAB 按鈕才顯示，'
-        '再按一次收合', (tester) async {
+        '按 Mini Player 關閉鍵收合（過渡期互斥使朗讀按鈕本身隨 BottomBar 一併隱藏，'
+        '無法重複點擊原按鈕收合）', (tester) async {
       final ttsProvider = FakeTtsProvider();
 
       await tester.pumpWidget(
@@ -8664,7 +8676,7 @@ void main() {
       await tester.pump();
 
       final toggleFinder = find.byKey(
-        const Key('reader_foliate_tts_toggle_button'),
+        const Key('reader_chrome_tts_button'),
       );
       expect(
         toggleFinder,
@@ -8683,13 +8695,20 @@ void main() {
         find.byKey(const Key('reader_tts_play_pause_button')),
         findsOneWidget,
       );
+      // 過渡期互斥（review-issues.md I1）：Mini Player 顯示時，整個
+      // ReaderChromeBottomBar（含觸發它的朗讀按鈕本身）不再渲染，避免
+      // 兩者底部貼齊視覺重疊——因此收合須改用 Mini Player 自己的關閉鍵，
+      // 不能沿用同一顆已經消失的 reader_chrome_tts_button 再點一次
+      // （epic-38-reader-chrome-tts-redesign Issue 1）。
+      expect(find.byKey(const Key('reader_chrome_tts_button')), findsNothing);
 
-      await tester.tap(toggleFinder);
+      await tester.tap(find.byKey(const Key('reader_tts_mini_player_close_button')));
       await tester.pump();
       expect(
         find.byKey(const Key('reader_tts_play_pause_button')),
         findsNothing,
       );
+      expect(find.byKey(const Key('reader_chrome_tts_button')), findsOneWidget);
     });
 
     testWidgets('點擊 Mini Player 的關閉鍵可收合，不影響 TtsController 播放狀態', (
@@ -8727,7 +8746,7 @@ void main() {
       await tester.pump();
 
       await tester.tap(
-        find.byKey(const Key('reader_foliate_tts_toggle_button')),
+        find.byKey(const Key('reader_chrome_tts_button')),
       );
       await tester.pump();
       expect(
@@ -8791,7 +8810,7 @@ void main() {
       await tester.pump();
 
       await tester.tap(
-        find.byKey(const Key('reader_foliate_tts_toggle_button')),
+        find.byKey(const Key('reader_chrome_tts_button')),
       );
       await tester.pump();
 
@@ -8861,7 +8880,7 @@ void main() {
       await tester.pump();
 
       await tester.tap(
-        find.byKey(const Key('reader_foliate_tts_toggle_button')),
+        find.byKey(const Key('reader_chrome_tts_button')),
       );
       await tester.pump();
 
@@ -8915,7 +8934,7 @@ void main() {
         await tester.pump();
 
         await tester.tap(
-          find.byKey(const Key('reader_foliate_tts_toggle_button')),
+          find.byKey(const Key('reader_chrome_tts_button')),
         );
         await tester.pump();
 
@@ -8960,6 +8979,52 @@ void main() {
       },
     );
   });
+
+  testWidgets(
+    '開啟舊 TtsMiniPlayer 膠囊時，新的 ReaderChromeBottomBar 不會同時顯示'
+    '（review-issues.md I1 過渡期互斥回歸測試）',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_tts_bottombar_exclusion',
+            prefsManager: prefsManager,
+            ttsProvider: FakeTtsProvider(),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final epubView =
+          tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
+      epubView.onLayoutResolved?.call(
+        const EpubLayoutInfo(
+          isFixedLayout: false,
+          writingMode: WritingMode.horizontal,
+        ),
+      );
+      await tester.pump();
+
+      expect(find.byType(ReaderChromeBottomBar), findsOneWidget);
+      expect(find.byType(TtsMiniPlayer), findsNothing);
+
+      await tester.tap(find.byKey(const Key('reader_chrome_tts_button')));
+      await tester.pump();
+
+      expect(find.byType(ReaderChromeBottomBar), findsNothing);
+      expect(find.byType(TtsMiniPlayer), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('reader_tts_mini_player_close_button')));
+      await tester.pump();
+
+      expect(find.byType(ReaderChromeBottomBar), findsOneWidget);
+      expect(find.byType(TtsMiniPlayer), findsNothing);
+    },
+  );
 
   tearDownAll(() {
     // 還原 cacheBookForServing 為原始實作，避免污染其他測試檔
