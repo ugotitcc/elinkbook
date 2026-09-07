@@ -48,8 +48,17 @@ class ReaderChromeTopBar extends StatelessWidget {
   Widget build(BuildContext context) {
     // DESIGN.md §7.2：一般模式最小觸控目標 48dp、E-Ink 模式 56dp。
     final minSize = isEinkMode ? 56.0 : 48.0;
-    final buttonStyle =
-        IconButton.styleFrom(minimumSize: Size(minSize, minSize));
+    // 前景色／停用前景色交給 IconButton.styleFrom 統一管理（審查修正
+    // review-issue-1.md C-2）：底下每顆 IconButton 的 Icon 一律不再自帶
+    // `color:`，讓 Material 依 onPressed 是否為 null 自動套用
+    // foregroundColor／disabledForegroundColor——之前 Icon 自帶
+    // `color: iconColor` 會覆蓋掉 IconTheme 提供的停用色，導致停用按鈕
+    // 外觀與正常按鈕完全無異。
+    final buttonStyle = IconButton.styleFrom(
+      minimumSize: Size(minSize, minSize),
+      foregroundColor: iconColor,
+      disabledForegroundColor: iconColor.withValues(alpha: 0.38),
+    );
     return Material(
       color: backgroundColor,
       child: SizedBox(
@@ -58,7 +67,7 @@ class ReaderChromeTopBar extends StatelessWidget {
           children: [
             IconButton(
               key: const Key('reader_chrome_back_button'),
-              icon: Icon(Icons.arrow_back, color: iconColor),
+              icon: const Icon(Icons.arrow_back),
               tooltip: '返回',
               style: buttonStyle,
               onPressed: onBack,
@@ -84,7 +93,7 @@ class ReaderChromeTopBar extends StatelessWidget {
               ),
             IconButton(
               key: const Key('reader_chrome_search_button'),
-              icon: Icon(Icons.search, color: iconColor),
+              icon: const Icon(Icons.search),
               tooltip: '搜尋內文',
               style: buttonStyle,
               onPressed: onSearchTap,
@@ -95,7 +104,6 @@ class ReaderChromeTopBar extends StatelessWidget {
                 isBottomChromeVisible
                     ? Icons.visibility_off_outlined
                     : Icons.visibility_outlined,
-                color: iconColor,
               ),
               tooltip: isBottomChromeVisible ? '隱藏工具列' : '顯示工具列',
               style: buttonStyle,
@@ -103,7 +111,7 @@ class ReaderChromeTopBar extends StatelessWidget {
             ),
             IconButton(
               key: const Key('reader_chrome_toc_button'),
-              icon: Icon(Icons.menu_book, color: iconColor),
+              icon: const Icon(Icons.menu_book),
               tooltip: '目錄',
               style: buttonStyle,
               onPressed: onTocTap,

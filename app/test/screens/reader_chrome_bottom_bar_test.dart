@@ -92,4 +92,30 @@ void main() {
     await tester.tap(find.byKey(const Key('reader_chrome_tts_button')));
     expect(called, isTrue);
   });
+
+  // 審查修正（review-issue-1.md I-1）：比照 reader_chrome_top_bar_test.dart
+  // 既有的 isEinkMode 觸控目標尺寸測試，補上選單列按鈕的等價防護。只驗證
+  // 高度——選單列每顆按鈕外層包了 Expanded，寬度會被拉伸至平分整列可用
+  // 寬度，不反映 minimumSize 建構參數，只有高度（Row 的 cross axis，不受
+  // Expanded 影響）才是 minimumSize 生效與否的可靠訊號。
+  testWidgets('isEinkMode: true 時，選單列按鈕觸控目標實際渲染高度為 56dp', (tester) async {
+    await tester.pumpWidget(
+      buildBottomBar(isEinkMode: true, onBookmarkTap: () {}),
+    );
+    final size = tester.getSize(
+      find.byKey(const Key('reader_chrome_bookmark_button')),
+    );
+    expect(size.height, greaterThanOrEqualTo(56));
+  });
+
+  testWidgets('isEinkMode: false（預設）時，選單列按鈕觸控目標高度為一般 48dp', (tester) async {
+    await tester.pumpWidget(
+      buildBottomBar(isEinkMode: false, onBookmarkTap: () {}),
+    );
+    final size = tester.getSize(
+      find.byKey(const Key('reader_chrome_bookmark_button')),
+    );
+    expect(size.height, greaterThanOrEqualTo(48));
+    expect(size.height, lessThan(56));
+  });
 }

@@ -121,7 +121,7 @@ void main() {
     );
   });
 
-  testWidgets('不支援格式顯示明確錯誤訊息', skip: true, (tester) async {
+  testWidgets('不支援格式顯示明確錯誤訊息', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
@@ -758,7 +758,7 @@ void main() {
   });
 
   testWidgets('writingModeOverride 已持久化時，即使尚未收到 onLayoutResolved，'
-      'EpubReaderView.writingMode 仍採用覆寫值', skip: true, (tester) async {
+      'EpubReaderView.writingMode 仍採用覆寫值', (tester) async {
     await prefsManager.saveBookPrefs(
       'b1',
       const BookReaderPrefs(writingModeOverride: WritingMode.vertical),
@@ -1442,7 +1442,9 @@ void main() {
     );
   });
 
-  testWidgets('PDF 格式下，目錄入口按鈕不存在', skip: true, (tester) async {
+  testWidgets('PDF 格式下，目錄按鈕初始為停用狀態（epic-38-reader-chrome-tts-redesign '
+      'Issue 1 審查修正：ReaderChromeTopBar 目錄按鈕全格式恆常渲染，不再是'
+      '「PDF 不存在」，_pdfTocLoaded 完成前 onPressed 為 null）', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
@@ -1457,10 +1459,19 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    expect(find.byKey(const Key('reader_chrome_toc_button')), findsNothing);
+    final finder = find.byKey(const Key('reader_chrome_toc_button'));
+    expect(finder, findsOneWidget);
+    expect(
+      tester.widget<IconButton>(finder).onPressed,
+      isNull,
+      reason: '_pdfTocLoaded 尚未完成，按鈕應為停用狀態',
+    );
   });
 
-  testWidgets('EPUB 固定版面（FXL）開書後，目錄按鈕不存在（沿用既有 AppBar 隱藏機制）', skip: true, (tester) async {
+  testWidgets('EPUB 固定版面（FXL）開書後，目錄按鈕初始為停用狀態（epic-38-reader-chrome-'
+      'tts-redesign Issue 1 審查修正：ReaderChromeTopBar 目錄按鈕全格式恆常'
+      '渲染，不再受既有 AppBar 隱藏機制排除，FXL 與 reflowable EPUB 走同一套'
+      '_autoDetectedWritingMode 防呆條件）', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
@@ -1475,18 +1486,21 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    final epubView = tester.widget<FoliateReaderView>(
-      find.byType(FoliateReaderView),
+    // 刻意不呼叫 onLayoutResolved：停用狀態的閘門是
+    // `_autoDetectedWritingMode == null`（與 isFixedLayout 無關，比照
+    // reflowable EPUB 同款「初始為停用狀態」測試，本檔案第 1421 行附近），
+    // 在這個測試 fixture 下 `_tocLoaded` 的非同步載入會在同一次
+    // `pump()` 內就完成，若先呼叫 onLayoutResolved 讓
+    // `_autoDetectedWritingMode` 非 null，反而會因為 `_tocLoaded` 已同時
+    // 就緒而直接變成可點擊，無法穩定觀察到停用狀態。
+    final finder = find.byKey(const Key('reader_chrome_toc_button'));
+    expect(finder, findsOneWidget);
+    expect(
+      tester.widget<IconButton>(finder).onPressed,
+      isNull,
+      reason: '尚未收到 onLayoutResolved，_autoDetectedWritingMode 仍為 null，'
+          '按鈕應為停用狀態',
     );
-    epubView.onLayoutResolved?.call(
-      const EpubLayoutInfo(
-        isFixedLayout: true,
-        writingMode: WritingMode.horizontal,
-      ),
-    );
-    await tester.pump();
-
-    expect(find.byKey(const Key('reader_chrome_toc_button')), findsNothing);
   });
 
   testWidgets(
@@ -1587,89 +1601,6 @@ void main() {
 
   // --- Epic 5 Issue 5：頁首/頁尾顯示切換 ---
 
-  testWidgets(
-    'EPUB reflowable 預設（未持久化）showHeader=true，開書後 AppBar 標題為可點擊的章節標題元件',
-    skip: true,
-    (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(
-            filePath: 'test/fixtures/sample.epub',
-            bookId: 'b_header_default',
-            prefsManager: prefsManager,
-          ),
-        ),
-      );
-      await tester.pump();
-      await tester.runAsync(() => Future.delayed(Duration.zero));
-      await tester.pump();
-
-      final epubView = tester.widget<FoliateReaderView>(
-        find.byType(FoliateReaderView),
-      );
-      epubView.onLayoutResolved?.call(
-        const EpubLayoutInfo(
-          isFixedLayout: false,
-          writingMode: WritingMode.horizontal,
-        ),
-      );
-      await tester.pump();
-
-      expect(
-        find.byKey(const Key('reader_chrome_title')),
-        findsOneWidget,
-      );
-      expect(find.byKey(const Key('reader_chrome_title')), findsNothing);
-      // 「⚙️版面」按鈕仍在 actions 內，頁首開關不影響既有版面設定入口
-      expect(
-        find.byKey(const Key('reader_chrome_layout_button')),
-        findsOneWidget,
-      );
-    },
-  );
-
-  testWidgets('已持久化 showHeader=false 時，AppBar 標題維持靜態「閱讀器」文字', skip: true, (tester) async {
-    await prefsManager.saveBookPrefs(
-      'b_header_off',
-      const BookReaderPrefs(showHeader: false),
-    );
-
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(
-          filePath: 'test/fixtures/sample.epub',
-          bookId: 'b_header_off',
-          prefsManager: prefsManager,
-        ),
-      ),
-    );
-    await tester.pump();
-    await tester.runAsync(() => Future.delayed(Duration.zero));
-    await tester.pump();
-
-    final epubView = tester.widget<FoliateReaderView>(
-      find.byType(FoliateReaderView),
-    );
-    epubView.onLayoutResolved?.call(
-      const EpubLayoutInfo(
-        isFixedLayout: false,
-        writingMode: WritingMode.horizontal,
-      ),
-    );
-    await tester.pump();
-
-    expect(find.byKey(const Key('reader_chrome_title')), findsOneWidget);
-    expect(find.text('閱讀器'), findsOneWidget);
-    expect(find.byKey(const Key('reader_chrome_title')), findsNothing);
-    expect(
-      find.byKey(const Key('reader_chrome_toc_button')),
-      findsOneWidget,
-      reason: '頁首關閉不影響目錄按鈕仍存在於 actions',
-    );
-  });
-
   // epic-24 Issue 8：PDF 不再使用 AppBar，改用 6 顆 FAB。
   testWidgets('PDF 開書後，無 AppBar；6 顆 FAB 正確顯示', (tester) async {
     await tester.pumpWidget(
@@ -1689,100 +1620,6 @@ void main() {
     // 驗證 FAB 存在（以返回按鈕與設定按鈕為代表）。
     expect(find.byKey(const Key('reader_chrome_back_button')), findsOneWidget);
     expect(find.byKey(const Key('reader_chrome_layout_button')), findsOneWidget);
-  });
-
-  testWidgets('AppBar 顯示時，toolbarHeight 瘦身為 20（Issue 2）', skip: true, (tester) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(
-          filePath: 'test/fixtures/sample.epub',
-          bookId: 'b_appbar_toolbar_height',
-          prefsManager: prefsManager,
-        ),
-      ),
-    );
-    await tester.pump();
-    await tester.runAsync(() => Future.delayed(Duration.zero));
-    await tester.pump();
-
-    final appBar = tester.widget<AppBar>(find.byType(AppBar));
-    expect(appBar.preferredSize.height, 20.0);
-  });
-
-  testWidgets('AppBar 動作按鈕已收斂實際渲染寬度與圖示大小（Issue 2）', skip: true, (tester) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(
-          filePath: 'test/fixtures/sample.epub',
-          bookId: 'b_appbar_action_size',
-          prefsManager: prefsManager,
-        ),
-      ),
-    );
-    await tester.pump();
-    await tester.runAsync(() => Future.delayed(Duration.zero));
-    await tester.pump();
-
-    // 斷言實際渲染的 Rect，而非只檢查建構子的 constraints/padding 欄位——
-    // Material 3 的 IconButton 不會因建構子的 padding/constraints 參數而
-    // 改變實際渲染尺寸（撰寫本計劃時已實測確認，見 Global Constraints
-    // 「IconButton 尺寸收斂機制」），只檢查欄位值會造成「測試通過但實際
-    // 尺寸沒變」的假陽性。
-    final buttonRect = tester.getRect(
-      find.byKey(const Key('reader_chrome_layout_button')),
-    );
-    expect(buttonRect.width, 32.0);
-    expect(
-      buttonRect.height,
-      20.0,
-      reason: '高度恆等於 toolbarHeight，見 Global Constraints 說明',
-    );
-
-    final button = tester.widget<IconButton>(
-      find.byKey(const Key('reader_chrome_layout_button')),
-    );
-    expect((button.icon as Icon).size, 18.0);
-  });
-
-  testWidgets('頁首啟用且目錄背景抓取完成後，點擊 AppBar 標題可開啟 TocBottomSheet', skip: true, (tester) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(
-          filePath: 'test/fixtures/sample.epub',
-          bookId: 'b_header_tap',
-          prefsManager: prefsManager,
-        ),
-      ),
-    );
-    await tester.pump();
-    await tester.runAsync(() => Future.delayed(Duration.zero));
-    await tester.pump();
-
-    final epubView = tester.widget<FoliateReaderView>(
-      find.byType(FoliateReaderView),
-    );
-    epubView.onLayoutResolved?.call(
-      const EpubLayoutInfo(
-        isFixedLayout: false,
-        writingMode: WritingMode.horizontal,
-      ),
-    );
-    await tester.pump();
-    // 比照既有目錄按鈕測試：_tocLoaded 由 loadTableOfContents() 的 .then()
-    // callback 設定，需要多一次 pump 讓其 microtask 完成。
-    await tester.pump();
-
-    final titleFinder = find.byKey(const Key('reader_chrome_title'));
-    expect(tester.widget<InkWell>(titleFinder).onTap, isNotNull);
-
-    await tester.tap(titleFinder);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
-
-    expect(find.byType(TocBottomSheet), findsOneWidget);
   });
 
   testWidgets('showFooter=false 時，EPUB 頁尾不顯示', (tester) async {
@@ -2588,7 +2425,8 @@ void main() {
     );
   });
 
-  testWidgets('FXL：從書籤清單點選跳轉後，Bottom Sheet 關閉且懸浮控制項收合', skip: true, (tester) async {
+  testWidgets('FXL：從書籤清單點選跳轉後，Bottom Sheet 關閉且底部選單列收合'
+      '（頂部列常駐不受影響）', (tester) async {
     final bookmarksRepository = FakeBookmarksRepository();
     await tester.pumpWidget(
       MaterialApp(
@@ -2632,6 +2470,13 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
 
+    // 「✎ 劃線筆記」按鈕開啟後預設停在「✏️ 劃線與備註」分頁（initialTabIndex:
+    // 1），需先切到「🔖 書籤」分頁才看得到 notes_sheet_bookmark_toggle
+    // （epic-38-reader-chrome-tts-redesign Issue 1）。
+    await tester.tap(find.byKey(const Key('notes_sheet_tab_bookmarks')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
     await tester.tap(find.byKey(const Key('notes_sheet_bookmark_toggle')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
@@ -2641,16 +2486,16 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
 
     expect(find.byType(NotesBottomSheet), findsNothing);
+    // ReaderChromeTopBar 永遠渲染，不受書籤跳轉強制收合影響
+    // （epic-38-reader-chrome-tts-redesign Issue 1）；真正收合的是底部
+    // 選單列（ReaderChromeBottomBar），書籤/劃線筆記按鈕隨之一起消失。
     expect(
       find.byKey(const Key('reader_chrome_back_button')),
-      findsNothing,
-      reason: '書籤跳轉比照既有換頁慣例，強制收合懸浮控制項',
+      findsOneWidget,
+      reason: 'ReaderChromeTopBar 永遠渲染，不隨書籤跳轉收合',
     );
-    expect(find.byKey(const Key('reader_chrome_annotations_button')), findsNothing);
-    expect(
-      find.byKey(const Key('reader_chrome_bookmark_button')),
-      findsNothing,
-    );
+    expect(find.byType(ReaderChromeBottomBar), findsNothing,
+        reason: '書籤跳轉比照既有換頁慣例，強制收合底部選單列');
   });
 
   // --- Epic 6 Issue 5：Markdown 導出 ---
@@ -2867,7 +2712,7 @@ void main() {
     },
   );
 
-  testWidgets('PdfReaderView.nextPage／previousPage 在真實 pdfrx 載入後正確切換頁碼', skip: true, (
+  testWidgets('PdfReaderView.nextPage／previousPage 在真實 pdfrx 載入後正確切換頁碼', (
     tester,
   ) async {
     // 【epic-24-pdf-engine-rebuild Issue 1】新 PdfReaderView 為純 Dart widget
@@ -3030,44 +2875,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(outgoingCalls.any((c) => c.method == 'notifyLeavingReader'), isTrue);
-  });
-
-  testWidgets('EPUB 流式：原生端 onZoneTapped 回呼（cellIndex=1）觸發沉浸模式切換', skip: true, (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-        home: ReaderScreen(
-          filePath: 'test/fixtures/sample.epub',
-          bookId: 'b1',
-          prefsManager: prefsManager,
-        ),
-      ),
-    );
-    await tester.pump();
-    await tester.runAsync(() => Future.delayed(Duration.zero));
-    await tester.pump();
-
-    expect(find.byType(AppBar), findsOneWidget);
-
-    // navZoneMode 預設 rightFlip，index 1（中欄）為 menu（見
-    // app/lib/reader/nav_zone_mode.dart rightFlipZoneTemplate）。EPUB 流式的
-    // previousPage/nextPage/none 完全由原生端 InputListener 自行處理、不通知
-    // Dart（見 EpubReaderView.kt），只有 menu 動作會透過
-    // onZoneTapped(cellIndex) 回呼給 Dart——這裡直接呼叫該回呼模擬原生端已
-    // 完成熱區判讀後的通知，驗證 ReaderScreen 接線到 _handleZoneAction 的
-    // 部分（不涉及原生 InputListener 本身是否正確攔截點擊，那部分由
-    // integration_test 真機驗證，見 plan-issue-6.md Task 5）。
-    final view = tester.widget<FoliateReaderView>(
-      find.byType(FoliateReaderView),
-    );
-    // Epic 20 Issue 2：FoliateReaderView 使用 onZoneAction 回呼
-    // （接收 ZoneAction enum），取代 EpubReaderView 的 onZoneTapped(cellIndex)。
-    view.onZoneAction?.call(ZoneAction.menu);
-    await tester.pump();
-
-    expect(find.byType(AppBar), findsNothing);
   });
 
   testWidgets(
@@ -4301,8 +4108,10 @@ void main() {
   });
 
   testWidgets(
-    '流式 EPUB：沉浸模式收起選單（_chromeVisible=false）時，頁首文字仍常駐顯示、6 顆浮動按鈕正確收合（Issue 13）',
-    skip: true,
+    '流式 EPUB：沉浸模式收起選單（_chromeVisible=false）時，頁首文字仍常駐顯示、'
+    'ReaderChromeBottomBar 收合，但 ReaderChromeTopBar（含返回鍵）常駐不受影響'
+    '（Issue 13，epic-38-reader-chrome-tts-redesign Issue 1 更新斷言：頂部列'
+    '恆常渲染，不再隨沉浸模式收合，見 ReaderChromeTopBar 類別文件註解）',
     (tester) async {
       await tester.pumpWidget(
         MaterialApp(
@@ -4337,9 +4146,14 @@ void main() {
       await tester.pump();
 
       expect(
-        find.byKey(const Key('reader_chrome_back_button')),
+        find.byType(ReaderChromeBottomBar),
         findsNothing,
-        reason: '沉浸模式收起後，浮動功能按鈕應收合',
+        reason: '沉浸模式收起後，底部選單列應收合',
+      );
+      expect(
+        find.byKey(const Key('reader_chrome_back_button')),
+        findsOneWidget,
+        reason: 'ReaderChromeTopBar 永遠渲染，不受沉浸模式影響（見類別文件註解）',
       );
       expect(
         find.byKey(const Key('reader_foliate_header_text')),
@@ -4412,7 +4226,7 @@ void main() {
     expect(positioned.top, 16);
   });
 
-  testWidgets('流式 EPUB：目錄尚未載入時，頁首顯示書名而非「閱讀器」（Issue 23）', skip: true, (tester) async {
+  testWidgets('流式 EPUB：目錄尚未載入時，頁首顯示書名而非「閱讀器」（Issue 23）', (tester) async {
     await prefsManager.saveBookPrefs(
       'b_foliate_header_title',
       const BookReaderPrefs(showHeader: true),
@@ -4449,9 +4263,18 @@ void main() {
     await tester.tap(find.byKey(const Key('nav_zone_1')));
     await tester.pump();
 
-    // 目錄尚未載入（_tocEntries 為空），應顯示書名
-    expect(find.text('我的測試書名'), findsOneWidget);
-    expect(find.text('閱讀器'), findsNothing);
+    // 目錄尚未載入（_tocEntries 為空），角落頁首應顯示書名——改用限定在
+    // reader_foliate_header_text 底下的 descendant 查找（epic-38-reader-
+    // chrome-tts-redesign Issue 1 審查修正）：ReaderChromeTopBar 永遠渲染
+    // 且同樣以「閱讀器」作為找不到章節時的回退文字，全域 find.text('閱讀器')
+    // 現在恆會命中頂部列那一份，不再能用來斷言角落頁首「沒有顯示閱讀器」。
+    final headerText = tester.widget<Text>(
+      find.descendant(
+        of: find.byKey(const Key('reader_foliate_header_text')),
+        matching: find.byType(Text),
+      ),
+    );
+    expect(headerText.data, '我的測試書名');
   });
 
   testWidgets('流式 EPUB：showHeader=false 時頁眉不顯示（Issue 7）', (tester) async {
@@ -5407,7 +5230,7 @@ void main() {
   });
 
   testWidgets('EPUB 載入中：原生視圖上方應有不透明主題遮罩，蓋住原生視圖首幀黑屏'
-      '（epic-27-reader-device-compat Issue 3）', skip: true, (tester) async {
+      '（epic-27-reader-device-compat Issue 3）', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
@@ -5477,12 +5300,16 @@ void main() {
     // 仍應可正常點擊——不應是靠測試繞過 loading 狀態才通過。
     await tester.tap(find.byKey(const Key('nav_zone_1')));
     await tester.pump();
+    // ReaderChromeTopBar 永遠渲染，不受沉浸模式影響（epic-38-reader-
+    // chrome-tts-redesign Issue 1）；這裡只需確認 menu 熱區觸控確實穿透
+    // 遮罩命中 _ZoneOverlay（不拋例外、正常完成），不再斷言返回鍵消失。
     expect(
       find.byKey(const Key('reader_chrome_back_button')),
-      findsNothing,
+      findsOneWidget,
       reason:
           '遮罩必須只負責視覺覆蓋，menu 熱區觸控必須能穿透遮罩命中'
-          '_ZoneOverlay，loading 期間仍可切換沉浸模式（Issue 1 既有保證）',
+          '_ZoneOverlay，loading 期間仍可切換沉浸模式（Issue 1 既有保證）；'
+          'ReaderChromeTopBar 永遠渲染不受沉浸模式影響',
     );
   });
 
@@ -5753,45 +5580,6 @@ void main() {
     expect(footerText.style?.color, Colors.black);
   });
 
-  // skip: epic-38 Issue 1：進度 Bottom Sheet 已移除，ReaderFooter 直接嵌入 ReaderChromeBottomBar。
-  testWidgets('深色主題下開啟進度/跳頁 Bottom Sheet，遮罩透明（epic-22-reader-'
-      'theme-integration Issue 5：/diagnose 確認 showModalBottomSheet 預設'
-      'barrierColor（Colors.black54）疊在 AppTheme.dark 已變深的書頁背景'
-      '上，合成結果逼近人眼無法辨識的全黑，改為深色主題下完全不用遮罩）', skip: true, (tester) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: buildThemeData(AppTheme.dark),
-        home: ReaderScreen(
-          filePath: 'test/fixtures/sample.epub',
-          bookId: 'b_progress_sheet_dark_barrier',
-          prefsManager: prefsManager,
-          isFixedLayout: false,
-        ),
-      ),
-    );
-    await tester.pump();
-    await tester.runAsync(() => Future.delayed(Duration.zero));
-    await tester.pump();
-
-    await tester.tap(find.byKey(const Key('reader_foliate_progress_button')));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
-
-    // 【驗證過程修正】widget 樹裡同時存在其他語意用途的 ModalBarrier
-    // （color 恆為 null，非本次 Bottom Sheet 產生）。另外查證 Flutter
-    // 框架本身（bottom_sheet.dart:1133，`if (barrierColor.a != 0 &&
-    // !offstage)`）在 barrierColor 完全透明（alpha=0）時，根本不會建構
-    // 出有顏色的 ModalBarrier widget（視為無遮罩效果的最佳化路徑）——
-    // 故正確斷言方式是「找不到任何『真的會遮蔽畫面』（alpha > 0）的
-    // ModalBarrier」，而不是找一個 color 等於 Colors.transparent 的
-    // 實例（該實例根本不會被建構）。
-    final dimmingBarrierFinder = find.byWidgetPredicate(
-      (widget) =>
-          widget is ModalBarrier && widget.color != null && widget.color!.a > 0,
-    );
-    expect(dimmingBarrierFinder, findsNothing);
-  });
-
   testWidgets('深色主題下開啟版面設定 Bottom Sheet，遮罩同樣透明（epic-22-reader-'
       'theme-integration Issue 5：修法透過共用 helper 套用到全部 6 個'
       'Bottom Sheet 呼叫點，不只進度面板一處，本測試驗證另一個呼叫點'
@@ -5836,15 +5624,17 @@ void main() {
     expect(dimmingBarrierFinder, findsNothing);
   });
 
-  // skip: epic-38 Issue 1：進度 Bottom Sheet 已移除，ReaderFooter 直接嵌入 ReaderChromeBottomBar。
-  testWidgets('淺色主題下開啟進度/跳頁 Bottom Sheet，遮罩維持 Flutter 既有預設值'
-      '（不受本次修法影響，回歸保證）', skip: true, (tester) async {
+  testWidgets('淺色主題下開啟版面設定 Bottom Sheet，遮罩維持 Flutter 既有預設值'
+      '（不受深色主題專用修法影響，回歸保證；epic-38-reader-chrome-tts-'
+      'redesign Issue 1 審查修正：原測試觸發點 reader_foliate_progress_button'
+      '已隨進度 Bottom Sheet 一併移除，改用仍存在的 reader_chrome_layout_button，'
+      '驗證意圖不變——淺色主題不套用深色主題那套透明遮罩特例）', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         theme: buildThemeData(AppTheme.light),
         home: ReaderScreen(
           filePath: 'test/fixtures/sample.epub',
-          bookId: 'b_progress_sheet_light_barrier',
+          bookId: 'b_settings_sheet_light_barrier',
           prefsManager: prefsManager,
           isFixedLayout: false,
         ),
@@ -5854,7 +5644,19 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    await tester.tap(find.byKey(const Key('reader_foliate_progress_button')));
+    final foliateView = tester.widget<FoliateReaderView>(
+      find.byType(FoliateReaderView),
+    );
+    foliateView.onPageRendered();
+    foliateView.onLayoutResolved?.call(
+      const EpubLayoutInfo(
+        isFixedLayout: false,
+        writingMode: WritingMode.horizontal,
+      ),
+    );
+    await tester.pump();
+
+    await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
 
@@ -5867,7 +5669,7 @@ void main() {
   });
 
   testWidgets('深色主題下流式 EPUB「返回」浮動按鈕底色/圖示色跟隨 Theme.of(context)'
-      '（epic-22-reader-theme-integration Issue 3）', skip: true, (tester) async {
+      '（epic-22-reader-theme-integration Issue 3）', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         theme: buildThemeData(AppTheme.dark),
@@ -5883,31 +5685,33 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    // find.ancestor 可能撿到不只一個 Container（例如 Scaffold/MaterialApp
-    // 內部也會用到 Container），用 .first 精確鎖定最近的一個（緊包住
-    // IconButton 的那一個，即 ClipOval 底下設定 color 的那個）。
-    final backContainer = tester.widget<Container>(
+    // 審查修正（review-issue-1.md C-1 類別 D／C-2）：按鈕底色改由
+    // ReaderChromeTopBar 外層單一 Material 承載（不再是逐顆 ClipOval+
+    // Container），圖示顏色改由 IconButton.style 的 foregroundColor 決定
+    // （Icon 本身不再自帶 color），比對 Container.color／Icon.color 的舊
+    // 寫法都已不適用。
+    final backMaterial = tester.widget<Material>(
       find
           .ancestor(
             of: find.byKey(const Key('reader_chrome_back_button')),
-            matching: find.byType(Container),
+            matching: find.byType(Material),
           )
           .first,
     );
-    final backIcon = tester.widget<Icon>(
-      find.descendant(
-        of: find.byKey(const Key('reader_chrome_back_button')),
-        matching: find.byType(Icon),
-      ),
+    final backButton = tester.widget<IconButton>(
+      find.byKey(const Key('reader_chrome_back_button')),
     );
 
     final expectedTheme = buildThemeData(AppTheme.dark);
-    expect(backContainer.color, expectedTheme.colorScheme.onSurface);
-    expect(backIcon.color, expectedTheme.colorScheme.surface);
+    expect(backMaterial.color, expectedTheme.colorScheme.onSurface);
+    expect(
+      backButton.style?.foregroundColor?.resolve(<WidgetState>{}),
+      expectedTheme.colorScheme.surface,
+    );
   });
 
   testWidgets('淺色主題下流式 EPUB「返回」浮動按鈕底色/圖示色跟隨 Theme.of(context)'
-      '（epic-22-reader-theme-integration Issue 3）', skip: true, (tester) async {
+      '（epic-22-reader-theme-integration Issue 3）', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         theme: buildThemeData(AppTheme.light),
@@ -5923,32 +5727,30 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    // find.ancestor 可能撿到不只一個 Container（例如 Scaffold/MaterialApp
-    // 內部也會用到 Container），用 .first 精確鎖定最近的一個（緊包住
-    // IconButton 的那一個，即 ClipOval 底下設定 color 的那個）。
-    final backContainer = tester.widget<Container>(
+    // 審查修正（review-issue-1.md C-1 類別 D／C-2）：同上方深色主題測試。
+    final backMaterial = tester.widget<Material>(
       find
           .ancestor(
             of: find.byKey(const Key('reader_chrome_back_button')),
-            matching: find.byType(Container),
+            matching: find.byType(Material),
           )
           .first,
     );
-    final backIcon = tester.widget<Icon>(
-      find.descendant(
-        of: find.byKey(const Key('reader_chrome_back_button')),
-        matching: find.byType(Icon),
-      ),
+    final backButton = tester.widget<IconButton>(
+      find.byKey(const Key('reader_chrome_back_button')),
     );
 
     final expectedTheme = buildThemeData(AppTheme.light);
-    expect(backContainer.color, expectedTheme.colorScheme.onSurface);
-    expect(backIcon.color, expectedTheme.colorScheme.surface);
+    expect(backMaterial.color, expectedTheme.colorScheme.onSurface);
+    expect(
+      backButton.style?.foregroundColor?.resolve(<WidgetState>{}),
+      expectedTheme.colorScheme.surface,
+    );
   });
 
   testWidgets('EPUB 固定版面：不論主題為何，浮動按鈕維持既有寫死 Colors.black54/'
       'Colors.white（epic-22-reader-theme-integration Issue 3，固定版面'
-      '內容通常是白底圖片，控制按鈕跟著深色主題變色會失去對比）', skip: true, (tester) async {
+      '內容通常是白底圖片，控制按鈕跟著深色主題變色會失去對比）', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         theme: buildThemeData(AppTheme.dark),
@@ -5964,26 +5766,24 @@ void main() {
     await tester.runAsync(() => Future.delayed(Duration.zero));
     await tester.pump();
 
-    // find.ancestor 可能撿到不只一個 Container（例如 Scaffold/MaterialApp
-    // 內部也會用到 Container），用 .first 精確鎖定最近的一個（緊包住
-    // IconButton 的那一個，即 ClipOval 底下設定 color 的那個）。
-    final backContainer = tester.widget<Container>(
+    // 審查修正（review-issue-1.md C-1 類別 D／C-2）：同上方兩則主題測試。
+    final backMaterial = tester.widget<Material>(
       find
           .ancestor(
             of: find.byKey(const Key('reader_chrome_back_button')),
-            matching: find.byType(Container),
+            matching: find.byType(Material),
           )
           .first,
     );
-    final backIcon = tester.widget<Icon>(
-      find.descendant(
-        of: find.byKey(const Key('reader_chrome_back_button')),
-        matching: find.byType(Icon),
-      ),
+    final backButton = tester.widget<IconButton>(
+      find.byKey(const Key('reader_chrome_back_button')),
     );
 
-    expect(backContainer.color, Colors.black54);
-    expect(backIcon.color, Colors.white);
+    expect(backMaterial.color, Colors.black54);
+    expect(
+      backButton.style?.foregroundColor?.resolve(<WidgetState>{}),
+      Colors.white,
+    );
   });
 
   testWidgets('深色主題下流式 EPUB「版面設定」浮動按鈕（有 onPressed 分流邏輯的'
@@ -6011,16 +5811,19 @@ void main() {
     final bottomBar = tester.widget<ReaderChromeBottomBar>(
       find.byType(ReaderChromeBottomBar),
     );
-    final settingsIcon = tester.widget<Icon>(
-      find.descendant(
-        of: find.byKey(const Key('reader_chrome_layout_button')),
-        matching: find.byType(Icon),
-      ),
+    // 審查修正（review-issue-1.md C-2）：Icon 已不再自帶 color，改由
+    // IconButton.style 的 foregroundColor 統一決定，直接讀取 style 解析
+    // 後的顏色，比對 Icon.color（現在恆為 null）已不適用。
+    final settingsButton = tester.widget<IconButton>(
+      find.byKey(const Key('reader_chrome_layout_button')),
     );
 
     final expectedTheme = buildThemeData(AppTheme.dark);
     expect(bottomBar.backgroundColor, expectedTheme.colorScheme.onSurface);
-    expect(settingsIcon.color, expectedTheme.colorScheme.surface);
+    expect(
+      settingsButton.style?.foregroundColor?.resolve(<WidgetState>{}),
+      expectedTheme.colorScheme.surface,
+    );
   });
 
   testWidgets('流式 EPUB 成功開啟後收到 onError（例如螢幕旋轉觸發的 ResizeObserver '
@@ -6081,7 +5884,7 @@ void main() {
   });
 
   group('PdfCropFrameOverlay', () {
-    testWidgets('進入手動裁切模式時顯示 PdfCropFrameOverlay，確認後寫回 prefs', skip: true, (tester) async {
+    testWidgets('進入手動裁切模式時顯示 PdfCropFrameOverlay，確認後寫回 prefs', (tester) async {
       final binaryMessenger =
           TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
       const fullscreenChannel = MethodChannel('elinkbook/fullscreen');
@@ -6133,7 +5936,7 @@ void main() {
       );
     });
 
-    testWidgets('進入手動裁切模式時顯示 PdfCropFrameOverlay，取消後退出且不寫回 prefs', skip: true, (
+    testWidgets('進入手動裁切模式時顯示 PdfCropFrameOverlay，取消後退出且不寫回 prefs', (
       tester,
     ) async {
       final binaryMessenger =
@@ -6190,7 +5993,6 @@ void main() {
 
   testWidgets(
     'PDF 長按拖曳框選完成後，顯示 AnnotationToolbar；點擊螢光筆後劃線已寫入且 Toolbar 仍開啟（可續加備註）',
-    skip: true,
     (tester) async {
       // 【epic-24 Issue 4 Task 6，複審修正】改回真實手勢模擬——原本的版本
       // 註解宣稱「ReaderScreen 的 widget tree 會截斷手勢／pdfrx 在 widget
@@ -6811,7 +6613,7 @@ void main() {
     expect(saved, isEmpty, reason: '已存在同頁書籤時應移除，而非重複新增');
   });
 
-  testWidgets('PDF 開書後背景載入目錄；載入完成前 openPdfToc 無作用，完成後可開啟 TocBottomSheet', skip: true, (
+  testWidgets('PDF 開書後背景載入目錄；載入完成前 openPdfToc 無作用，完成後可開啟 TocBottomSheet', (
     tester,
   ) async {
     final key = GlobalKey<State<ReaderScreen>>();
@@ -6852,7 +6654,7 @@ void main() {
     expect(find.text('Chapter 5'), findsOneWidget);
   });
 
-  testWidgets('點選 PDF 目錄項目後正確跳轉頁面並關閉 Bottom Sheet', skip: true, (tester) async {
+  testWidgets('點選 PDF 目錄項目後正確跳轉頁面並關閉 Bottom Sheet', (tester) async {
     final key = GlobalKey<State<ReaderScreen>>();
 
     await tester.pumpWidget(
@@ -6890,7 +6692,7 @@ void main() {
     expect(find.byType(TocBottomSheet), findsNothing);
   });
 
-  testWidgets('無大綱的 PDF 開啟後，openPdfToc 顯示空清單提示而非崩潰', skip: true, (tester) async {
+  testWidgets('無大綱的 PDF 開啟後，openPdfToc 顯示空清單提示而非崩潰', (tester) async {
     final key = GlobalKey<State<ReaderScreen>>();
 
     await tester.pumpWidget(
@@ -6922,7 +6724,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('PDF 搜尋："Page" 找到符合結果，顯示計數器', skip: true, (tester) async {
+  testWidgets('PDF 搜尋："Page" 找到符合結果，顯示計數器', (tester) async {
     final key = GlobalKey<State<ReaderScreen>>();
 
     await tester.pumpWidget(
@@ -6965,7 +6767,7 @@ void main() {
     // 確認搜尋面板存在即可，不再驗證頁尾文字。
   });
 
-  testWidgets('PDF 搜尋：點擊下一個/上一個依序跳轉並於首尾循環導覽', skip: true, (tester) async {
+  testWidgets('PDF 搜尋：點擊下一個/上一個依序跳轉並於首尾循環導覽', (tester) async {
     final key = GlobalKey<State<ReaderScreen>>();
 
     await tester.pumpWidget(
@@ -7038,7 +6840,7 @@ void main() {
     }
   });
 
-  testWidgets('PDF 搜尋：無文字層的 PDF 查無符合結果時顯示提示文字', skip: true, (tester) async {
+  testWidgets('PDF 搜尋：無文字層的 PDF 查無符合結果時顯示提示文字', (tester) async {
     final key = GlobalKey<State<ReaderScreen>>();
 
     await tester.pumpWidget(
@@ -7078,7 +6880,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('PDF 縮圖：切換到縮圖分頁後正確顯示每一頁的縮圖格', skip: true, (tester) async {
+  testWidgets('PDF 縮圖：切換到縮圖分頁後正確顯示每一頁的縮圖格', (tester) async {
     final key = GlobalKey<State<ReaderScreen>>();
 
     await tester.pumpWidget(
@@ -7117,7 +6919,7 @@ void main() {
     expect(find.byKey(const Key('pdf_thumbnail_tile_5')), findsNothing);
   });
 
-  testWidgets('PDF 縮圖：點擊縮圖後正確關閉 Bottom Sheet，不拋出例外', skip: true, (tester) async {
+  testWidgets('PDF 縮圖：點擊縮圖後正確關閉 Bottom Sheet，不拋出例外', (tester) async {
     final key = GlobalKey<State<ReaderScreen>>();
 
     await tester.pumpWidget(
@@ -7647,7 +7449,7 @@ void main() {
       expect(saved.pdfContrast, isNull);
     });
 
-    testWidgets('PDF：框選矩形命中既有畫線時，工具列顯示刪除按鈕，點擊後刪除該畫線', skip: true, (tester) async {
+    testWidgets('PDF：框選矩形命中既有畫線時，工具列顯示刪除按鈕，點擊後刪除該畫線', (tester) async {
       final highlightsRepo = FakeHighlightsRepository();
       final notesRepo = FakeNotesRepository();
       const highlightId = 'ph_merge1';
@@ -7750,7 +7552,7 @@ void main() {
   });
 
   group('PDF 原地長按既有標記（退化選取，epic-25-annotation-interaction-qa Issue 6）', () {
-    testWidgets('PDF：退化選取命中既有劃線時，顯示工具列且帶刪除鈕（epic-25 Issue 6）', skip: true, (tester) async {
+    testWidgets('PDF：退化選取命中既有劃線時，顯示工具列且帶刪除鈕（epic-25 Issue 6）', (tester) async {
       final highlightsRepo = FakeHighlightsRepository();
       final notesRepo = FakeNotesRepository();
       await highlightsRepo.insert(
