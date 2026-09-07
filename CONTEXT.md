@@ -118,7 +118,7 @@ _Avoid_: 全螢幕模式（見下方獨立詞條，非同義詞，不可混用�
 _Avoid_: 沉浸模式（見上方獨立詞條，非同義詞）
 
 **Chrome Bar**：
-`epic-38-reader-chrome-tts-redesign` 引入，閱讀器頂部／底部控制列的統稱，EPUB 流式／FXL／PDF 三種格式共用同一份元件（僅按鈕列共用，`PdfReaderView`／`FoliateReaderView` 底層渲染內容維持完全獨立，不合併）。取代此前三格式各自的介面呈現：EPUB 流式原本的標準 `AppBar`＋動作圖示、FXL／PDF 原本的懸浮圓鈕塔。頂列固定內容：返回、書名/章節、搜尋、⬓（沉浸模式切換）、目錄；底列固定內容：書籤（一鍵切換當前位置）、劃線筆記（開啟 `NotesBottomSheet`）、版面、朗讀。
+`epic-38-reader-chrome-tts-redesign` 引入，閱讀器頂部／底部控制列的統稱，EPUB 流式／FXL／PDF 三種格式共用同一份元件（僅按鈕列共用，`PdfReaderView`／`FoliateReaderView` 底層渲染內容維持完全獨立，不合併）。取代此前**兩套**浮動圓鈕塔：`epic-18-reader-device-qa` Issue 7 起，EPUB 流式與 FXL 已共用同一組 7 顆浮動圓鈕（`_buildAppBarActions()` 對這些格式回傳的 `AppBar` 動作圖示是恆為 `null` 的死碼，並非實際顯示的介面）；PDF 則是獨立一組 6 顆浮動圓鈕。頂列固定內容：返回、書名/章節、搜尋、⬓（沉浸模式切換）、目錄；底列固定內容：書籤（一鍵切換當前位置）、劃線筆記（開啟 `NotesBottomSheet`）、版面、朗讀。
 _Avoid_: 工具列（過於籠統，未點出「統一後的單一元件」這個關鍵）、浮動按鈕塔／按鈕柱（`epic-38` 前 FXL／PDF 的舊設計，已淘汰）
 
 **欄數（Column Mode）**：
