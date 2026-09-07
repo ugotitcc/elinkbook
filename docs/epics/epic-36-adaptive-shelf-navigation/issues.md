@@ -174,26 +174,34 @@
 
     int get currentPage => _currentPage;
 
-    /// build() 每次呼叫：箝制頁碼＋回傳目前 pageCount。
+    /// build() 每次呼叫：箝制頁碼＋回傳目前 pageCount／pageSize（後者供
+    /// 呼叫端直接複用，避免重複呼叫 libraryPageSizeForOrientation()）。
     /// 不做旋轉比例換算（那是 applyOrientationChange() 的職責）。
-    int clamp({required int itemCount, required Orientation orientation}) {
+    ({int pageCount, int pageSize}) clamp({
+      required int itemCount,
+      required Orientation orientation,
+    }) {
       final pageSize = libraryPageSizeForOrientation(orientation);
       final pageCount = libraryPageCount(itemCount, pageSize);
       _currentPage = libraryClampPage(_currentPage, pageCount);
       _lastPageSize = pageSize;
-      return pageCount;
+      return (pageCount: pageCount, pageSize: pageSize);
     }
 
-    /// didChangeMetrics() 呼叫：偵測到真正的方向改變時才按比例換算。
-    void applyOrientationChange(Orientation orientation) {
+    /// didChangeMetrics() 呼叫：偵測到真正的方向改變時才按比例換算，
+    /// 回傳是否真的換算過，供呼叫端判斷要不要 setState()——避免鍵盤
+    /// 顯隱/分螢調整等非旋轉的 metrics 變化也觸發整頁重繪（E-Ink 防抖）。
+    bool applyOrientationChange(Orientation orientation) {
       final newPageSize = libraryPageSizeForOrientation(orientation);
       final oldPageSize = _lastPageSize;
+      _lastPageSize = newPageSize;
       if (oldPageSize != null && oldPageSize != newPageSize) {
         _currentPage = libraryRecalculatePage(
           oldPage: _currentPage, oldPageSize: oldPageSize, newPageSize: newPageSize,
         );
+        return true;
       }
-      _lastPageSize = newPageSize;
+      return false;
     }
 
     void goToNextPage() => _currentPage++;
@@ -201,11 +209,11 @@
     void resetToFirstPage() => _currentPage = 0;
   }
   ```
-  `goToNextPage()`／`goToPreviousPage()` **不加內部邊界防呆**——呼叫端（`PagingBar` 的 `onPrevious`/`onNext`）本來就只在合法範圍內才會把 callback 傳進去，比照 `CLAUDE.md`「不要為不可能發生的情境寫防禦」。
-- `_LibraryScreenState` 移除 `_currentPage`／`_lastPageSize` 兩個欄位，改為 `late final LibraryPagingCursor _paging = LibraryPagingCursor();`（比照既有 `late final LibraryBookListController _bookListController;` 寫法）。
+  `goToNextPage()`／`goToPreviousPage()` **不加內部邊界防呆**——呼叫端（`PagingBar` 的 `onPrevious`/`onNext`）本來就只在合法範圍內才會把 callback 傳進去，比照 `CLAUDE.md`「不要為不可能發生的情境寫防禦」。**（`review-plan-issue-6.md` 修訂：`clamp()` 回傳型別由 `int` 改為 record、`applyOrientationChange()` 回傳型別由 `void` 改為 `bool`，實際合併程式碼為此版本，詳見 `plans/plan-issue-6.md`。）**
+- `_LibraryScreenState` 移除 `_currentPage`／`_lastPageSize` 兩個欄位，改為 `final LibraryPagingCursor _paging = LibraryPagingCursor();`（**非 `late final`**——`LibraryPagingCursor()` 建構子不依賴 `widget`／`context`，不需要延遲初始化，見 `review-plan-issue-6.md` M-3）。
 - 7 個呼叫點遷移：
-  - `_buildBookList()` 的箝制寫回（L899-911）→ `final pageCount = _paging.clamp(itemCount: itemCount, orientation: orientation);`，`PagingBar` 的 `currentPage` 改讀 `_paging.currentPage`。
-  - `didChangeMetrics()`（L183-194）→ `_paging.applyOrientationChange(newOrientation);`（`physicalSize.isEmpty` 暫態防護等既有邏輯不動）。
+  - `_buildBookList()` 的箝制寫回（L899-911）→ `final result = _paging.clamp(itemCount: itemCount, orientation: orientation);`，`pageCount`／`pageSize` 皆從 `result` 解構取用，`PagingBar` 的 `currentPage` 改讀 `_paging.currentPage`。
+  - `didChangeMetrics()`（L183-194）→ `final hasChanged = _paging.applyOrientationChange(newOrientation); if (hasChanged) { setState(() {}); }`（`physicalSize.isEmpty` 暫態防護等既有邏輯不動）。
   - `_openGroupFilteredView`／`_exitGroupFilteredView`（L544/551）→ `_paging.resetToFirstPage()`。
   - `_changeSortBy`（L681）→ `_paging.resetToFirstPage()`。
   - `PagingBar.onPrevious`／`onNext`（L996/998）→ `_paging.goToPreviousPage()`／`_paging.goToNextPage()`。
