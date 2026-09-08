@@ -94,7 +94,9 @@ void main() {
     expect(find.text('選單'), findsNothing);
   });
 
-  testWidgets('showNavZoneDebugOverlay 為 true 時顯示動作文字標籤', (tester) async {
+  testWidgets(
+      'showNavZoneDebugOverlay 為 true 時，只顯示格線，不顯示動作文字標籤（使用者需求：'
+      '輔助線用途是校準熱區位置，文字標籤會遮擋畫面內容）', (tester) async {
     var renderedCount = 0;
     final actions = List<ZoneAction>.filled(9, ZoneAction.none);
     actions[1] = ZoneAction.menu;
@@ -113,13 +115,16 @@ void main() {
     await pumpUntilPdfReady(tester, condition: () => renderedCount != 0);
     await tester.pump();
 
-    expect(find.text('選單'), findsOneWidget);
+    expect(find.text('選單'), findsNothing);
+    // 等待 PdfViewer 內部 DoubleTapGestureRecognizer 的定時器過期，避免測試
+    // 結束時拋出 "A Timer is still pending" 斷言（比照本檔案既有測試慣例）。
+    await tester.pump(const Duration(milliseconds: 400));
   });
 
   testWidgets(
-      'showNavZoneDebugOverlay 為 true 時，格線與文字改讀 colorScheme.onSurface（'
+      'showNavZoneDebugOverlay 為 true 時，格線改讀 colorScheme.onSurface（'
       'epic-35-design-system-tokens Issue 7：取代原本寫死的 Colors.white24／'
-      'white70——這兩個字面值跟主題無關，換主題／開啟 E-Ink 模式時不會跟著換）',
+      'white70——這個字面值跟主題無關，換主題／開啟 E-Ink 模式時不會跟著換）',
       (tester) async {
     var renderedCount = 0;
     final actions = List<ZoneAction>.filled(9, ZoneAction.none);
@@ -151,9 +156,6 @@ void main() {
     );
     final border = (cell.decoration as BoxDecoration).border as Border;
     expect(border.top.color, onSurfaceColor.withValues(alpha: 0.24));
-
-    final label = tester.widget<Text>(find.text('選單'));
-    expect(label.style?.color, onSurfaceColor.withValues(alpha: 0.7));
     // 等待 PdfViewer 內部 DoubleTapGestureRecognizer 的定時器過期，避免測試
     // 結束時拋出 "A Timer is still pending" 斷言（比照本檔案既有測試慣例）。
     await tester.pump(const Duration(milliseconds: 400));

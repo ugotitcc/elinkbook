@@ -199,6 +199,8 @@ Future<void> main() async {
       syncAccountRepository: syncAccountRepository,
       syncClient: syncClient,
       syncCheckpointTrigger: syncCheckpointTrigger,
+      onManualSync: syncEngine.runCheckpoint,
+      loadLastSyncedAt: syncMetadataRepository.loadLastPushCompletedAt,
       cloudAccountRepository: cloudAccountRepository,
       googleDriveOAuthClient: googleDriveOAuthClient,
       oneDriveOAuthClient: oneDriveOAuthClient,
@@ -235,6 +237,11 @@ class ElinkBookApp extends StatefulWidget {
   final SyncAccountRepository? syncAccountRepository;
   final SyncClient? syncClient;
   final SyncCheckpointTrigger? syncCheckpointTrigger;
+  /// 「立即同步」按鈕與最後同步時間顯示（2026-09-08 `/grill-with-docs`
+  /// 使用者需求），見 `SyncSettingsScreen`／`LibrarySyncDependencies` 的
+  /// 欄位說明。
+  final Future<bool> Function()? onManualSync;
+  final Future<int?> Function()? loadLastSyncedAt;
   final CloudAccountRepository? cloudAccountRepository;
   final GoogleDriveOAuthClient? googleDriveOAuthClient;
   final OneDriveOAuthClient? oneDriveOAuthClient;
@@ -267,6 +274,8 @@ class ElinkBookApp extends StatefulWidget {
     this.syncAccountRepository,
     this.syncClient,
     this.syncCheckpointTrigger,
+    this.onManualSync,
+    this.loadLastSyncedAt,
     this.cloudAccountRepository,
     this.googleDriveOAuthClient,
     this.oneDriveOAuthClient,
@@ -358,6 +367,8 @@ class _ElinkBookAppState extends State<ElinkBookApp> with WidgetsBindingObserver
           syncAccountRepository: widget.syncAccountRepository,
           syncClient: widget.syncClient,
           syncCheckpointTrigger: widget.syncCheckpointTrigger,
+          onManualSync: widget.onManualSync,
+          loadLastSyncedAt: widget.loadLastSyncedAt,
         ),
         cloudAccountDependencies: LibraryCloudAccountDependencies(
           cloudAccountRepository: widget.cloudAccountRepository,

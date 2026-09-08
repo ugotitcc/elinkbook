@@ -5,6 +5,29 @@ import { resolveTtsSafeWindowDirection } from './tts-safe-window.js'
 
 const view = document.getElementById('view')
 
+// 直排底線位置（使用者需求，2026-09-08 /grill-with-docs）：overlayer.js 是
+// readest/foliate-js 釘定版本，CLAUDE.md 明文規定不可修改，其
+// Overlayer.underline() 對 vertical-rl／vertical-lr 固定把線畫在每個字元
+// 框的右側（x = right - strokeWidth / 2）。使用者要求直排底線改畫在左側，
+// 故在此另寫一個等效函式，僅把 x 基準從 right 換成 left，其餘邏輯
+// （顏色／筆畫寬度／padding）與 Overlayer.underline() 的 vertical 分支
+// 完全對稱；橫排底線不受影響，仍直接呼叫 Overlayer.underline()（見下方
+// draw-annotation 監聽器）。
+function drawVerticalUnderlineLeft(rects, options = {}) {
+  const { color = 'red', width: strokeWidth = 2, padding = 0 } = options
+  const g = document.createElementNS('http://www.w3.org/2000/svg', 'g')
+  g.setAttribute('fill', color)
+  for (const { left, top, height } of rects) {
+    const el = document.createElementNS('http://www.w3.org/2000/svg', 'rect')
+    el.setAttribute('x', left - strokeWidth / 2 - padding)
+    el.setAttribute('y', top)
+    el.setAttribute('height', height)
+    el.setAttribute('width', strokeWidth)
+    g.append(el)
+  }
+  return g
+}
+
 // JS→Dart 橋接透過 window.flutter_inappwebview.callHandler(...) 呼叫（見
 // 下方各處呼叫），對應的 handler 由 Dart 端 foliate_epub_reader_view.dart
 // 的 _onWebViewCreated() 用 InAppWebViewController.addJavaScriptHandler()
@@ -875,9 +898,12 @@ async function openBook() {
       // false（橫排）時會被誤判為「未設定」而錯誤退回 currentWritingMode。
       const isVertical = annotation.vertical ?? (currentWritingMode === 'vertical')
       if (annotation.isUnderline) {
-        draw(Overlayer.underline, {
+        // 直排改呼叫上方 drawVerticalUnderlineLeft()（畫在文字左側），
+        // 橫排維持呼叫 Overlayer.underline()（畫在文字下方，既有行為
+        // 不變）——見該函式上方的說明註解。
+        draw(isVertical ? drawVerticalUnderlineLeft : Overlayer.underline, {
           color: annotation.color,
-          writingMode: isVertical ? 'vertical-rl' : 'horizontal-tb',
+          writingMode: 'horizontal-tb',
         })
       } else {
         draw(Overlayer.highlight, {

@@ -126,6 +126,8 @@ class _AdaptiveShellScaffoldState extends State<AdaptiveShellScaffold> {
                   widget.readerFeatureRepositories.customFontsRepository,
               syncAccountRepository: widget.syncDependencies.syncAccountRepository,
               syncClient: widget.syncDependencies.syncClient,
+              onManualSync: widget.syncDependencies.onManualSync,
+              loadLastSyncedAt: widget.syncDependencies.loadLastSyncedAt,
               cloudAccountRepository:
                   widget.cloudAccountDependencies.cloudAccountRepository,
               googleDriveOAuthClient:

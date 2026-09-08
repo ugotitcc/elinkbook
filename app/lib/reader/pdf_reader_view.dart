@@ -1018,16 +1018,6 @@ class _PdfReaderViewState extends State<PdfReaderView> {
                                       color: onSurfaceColor.withValues(
                                           alpha: 0.24)))
                               : null,
-                          alignment: Alignment.center,
-                          child: widget.showNavZoneDebugOverlay
-                              ? Text(
-                                  _pdfZoneActionLabel(action),
-                                  style: TextStyle(
-                                      color: onSurfaceColor.withValues(
-                                          alpha: 0.7),
-                                      fontSize: 10),
-                                )
-                              : null,
                         ),
                       ),
                     );
@@ -1039,19 +1029,6 @@ class _PdfReaderViewState extends State<PdfReaderView> {
         ),
       ],
     );
-  }
-
-  String _pdfZoneActionLabel(ZoneAction action) {
-    switch (action) {
-      case ZoneAction.previousPage:
-        return '上一頁';
-      case ZoneAction.nextPage:
-        return '下一頁';
-      case ZoneAction.menu:
-        return '選單';
-      case ZoneAction.none:
-        return '無動作';
-    }
   }
 
   Widget _buildDragIndicator(_PdfSelectionDragState drag) {

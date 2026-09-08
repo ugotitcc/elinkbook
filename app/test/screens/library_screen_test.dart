@@ -228,6 +228,127 @@ void main() {
     expect(delegate.crossAxisCount, 4);
   });
 
+  group('書架搜尋（2026-09-08 /grill-with-docs 使用者需求，比照 '
+      'prototype/elinkbook_theme_prototype.html 常駐搜尋列設計）', () {
+    testWidgets('AppBar 下方顯示常駐搜尋列', (tester) async {
+      final book = _testBook(id: '1', title: '紅樓夢');
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: LibraryScreen(
+            repository: FakeLibraryRepository(initialBooks: [book]),
+            importService: FakeBookImportService(),
+            prefsManager: prefsManager,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('library_search_field')), findsOneWidget);
+    });
+
+    testWidgets('輸入搜尋字串後，僅顯示書名或作者符合的書籍（不分大小寫），且不再顯示分類拼貼格',
+        (tester) async {
+      final books = [
+        _testBook(id: '1', title: '紅樓夢', author: '曹雪芹', groupName: '古典文學'),
+        _testBook(id: '2', title: 'Dune', author: 'Frank Herbert', groupName: '科幻'),
+        _testBook(id: '3', title: '三國演義', author: '羅貫中', groupName: '古典文學'),
+      ];
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: LibraryScreen(
+            repository: FakeLibraryRepository(initialBooks: books),
+            importService: FakeBookImportService(),
+            prefsManager: prefsManager,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // 搜尋前：分類拼貼格存在。
+      expect(find.byKey(const Key('group_tile_古典文學')), findsOneWidget);
+      expect(find.byKey(const Key('group_tile_科幻')), findsOneWidget);
+
+      await tester.enterText(
+        find.byKey(const Key('library_search_field')),
+        'dune',
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('group_tile_古典文學')), findsNothing,
+          reason: '搜尋中應改為扁平清單，不再顯示分類拼貼格。');
+      expect(find.byKey(const Key('group_tile_科幻')), findsNothing);
+      expect(find.byKey(const Key('book_item_2')), findsOneWidget);
+      expect(find.byKey(const Key('book_item_1')), findsNothing);
+      expect(find.byKey(const Key('book_item_3')), findsNothing);
+    });
+
+    testWidgets('清空搜尋字串後，恢復原本的分類拼貼格與書籍清單瀏覽畫面', (tester) async {
+      final books = [
+        _testBook(id: '1', title: '紅樓夢', groupName: '古典文學'),
+        _testBook(id: '2', title: 'Dune', groupName: '科幻'),
+      ];
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: LibraryScreen(
+            repository: FakeLibraryRepository(initialBooks: books),
+            importService: FakeBookImportService(),
+            prefsManager: prefsManager,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('library_search_field')),
+        'dune',
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('group_tile_古典文學')), findsNothing);
+
+      await tester.enterText(find.byKey(const Key('library_search_field')), '');
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('group_tile_古典文學')), findsOneWidget);
+      expect(find.byKey(const Key('group_tile_科幻')), findsOneWidget);
+    });
+
+    testWidgets('已鑽入某分類時輸入搜尋字串，仍搜尋全書庫（忽略目前分類瀏覽狀態）',
+        (tester) async {
+      final books = [
+        _testBook(id: '1', title: '紅樓夢', groupName: '古典文學'),
+        _testBook(id: '2', title: 'Dune', groupName: '科幻'),
+      ];
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: LibraryScreen(
+            repository: FakeLibraryRepository(initialBooks: books),
+            importService: FakeBookImportService(),
+            prefsManager: prefsManager,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('group_tile_古典文學')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('book_item_2')), findsNothing,
+          reason: '尚未搜尋前，鑽入「古典文學」分類看不到「科幻」分類的書籍。');
+
+      await tester.enterText(
+        find.byKey(const Key('library_search_field')),
+        'dune',
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('book_item_2')), findsOneWidget,
+          reason: '搜尋範圍應忽略目前分類瀏覽狀態，仍能找到「科幻」分類的 Dune。');
+    });
+  });
+
   testWidgets(
     '窄邏輯寬度裝置（比照 AiPaper Reader C 等 E-Ink 裝置實測會觸發溢位的寬度區間）下，'
     '書架 AppBar 工具列不再 RenderFlex overflow（epic-18：3 顆主題圓點移至 SettingsScreen 後）',

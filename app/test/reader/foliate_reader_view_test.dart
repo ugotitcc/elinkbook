@@ -760,7 +760,9 @@ void main() {
       );
     });
 
-    testWidgets('showNavZoneDebugOverlay=true 時，格子顯示對應動作文字標籤',
+    testWidgets(
+        'showNavZoneDebugOverlay=true 時，只顯示格線，不顯示動作文字標籤（使用者需求：'
+        '輔助線用途是校準熱區位置，文字標籤會遮擋畫面內容）',
         (tester) async {
       await tester.pumpWidget(
         MaterialApp(
@@ -781,16 +783,16 @@ void main() {
       await tester.runAsync(() => Future.delayed(Duration.zero));
       await tester.pump();
 
-      expect(find.text('上一頁'), findsWidgets);
-      expect(find.text('選單'), findsWidgets);
-      expect(find.text('下一頁'), findsWidgets);
-      expect(find.text('無動作'), findsWidgets);
+      expect(find.text('上一頁'), findsNothing);
+      expect(find.text('選單'), findsNothing);
+      expect(find.text('下一頁'), findsNothing);
+      expect(find.text('無動作'), findsNothing);
     });
 
     testWidgets(
-        'showNavZoneDebugOverlay=true 時，格線與文字改讀 colorScheme.onSurface（'
+        'showNavZoneDebugOverlay=true 時，格線改讀 colorScheme.onSurface（'
         'epic-35-design-system-tokens Issue 7：取代原本寫死的 Colors.white24／'
-        'white70——這兩個字面值跟主題無關，換主題／開啟 E-Ink 模式時不會跟著換）',
+        'white70——這個字面值跟主題無關，換主題／開啟 E-Ink 模式時不會跟著換）',
         (tester) async {
       await tester.pumpWidget(
         MaterialApp(
@@ -823,9 +825,6 @@ void main() {
       );
       final border = (cell.decoration as BoxDecoration).border as Border;
       expect(border.top.color, onSurfaceColor.withValues(alpha: 0.24));
-
-      final label = tester.widget<Text>(find.text('選單'));
-      expect(label.style?.color, onSurfaceColor.withValues(alpha: 0.7));
     });
 
     testWidgets(
@@ -1768,6 +1767,52 @@ void main() {
       await tester.pump();
       expect(receivedError, contains('快取書籍失敗'));
       expect(receivedError, contains('模擬檔案系統錯誤'));
+    });
+  });
+
+  group(
+      'main.js 直排底線劃線位置 regression guard（使用者需求，2026-09-08 '
+      '/grill-with-docs：直排底線應畫在文字左側，overlayer.js 是釘定版本'
+      '不可修改，故另寫等效函式取代 Overlayer.underline() 的 vertical 分支）',
+      () {
+    late String mainJsSource;
+
+    setUpAll(() {
+      mainJsSource = File('android/app/src/main/assets/foliate/main.js')
+          .readAsStringSync();
+    });
+
+    test('main.js 定義 drawVerticalUnderlineLeft()，取代 Overlayer.underline() 的直排分支', () {
+      expect(
+        mainJsSource.contains('function drawVerticalUnderlineLeft('),
+        isTrue,
+        reason: 'main.js 內找不到 drawVerticalUnderlineLeft——直排底線需要'
+            '一個畫在文字左側的等效函式（overlayer.js 是釘定版本，'
+            'Overlayer.underline() 對 vertical-rl 固定畫在右側，不可直接'
+            '修改該檔案，見 CLAUDE.md「不可修改釘定版本」）。',
+      );
+    });
+
+    test('drawVerticalUnderlineLeft() 以 left（而非 right）計算矩形 x 座標', () {
+      expect(
+        mainJsSource.contains("el.setAttribute('x', left - strokeWidth / 2 - padding)"),
+        isTrue,
+        reason: 'drawVerticalUnderlineLeft() 必須以 rect.left 為基準畫線，'
+            '而非沿用 Overlayer.underline() 的 rect.right，否則直排底線仍會'
+            '出現在文字右側。',
+      );
+    });
+
+    test('draw-annotation 事件處理：直排底線改呼叫 drawVerticalUnderlineLeft，橫排維持呼叫 Overlayer.underline', () {
+      expect(
+        mainJsSource.contains(
+          'draw(isVertical ? drawVerticalUnderlineLeft : Overlayer.underline,',
+        ),
+        isTrue,
+        reason: 'draw-annotation 監聽器內的底線分支必須依 isVertical 切換'
+            '成 drawVerticalUnderlineLeft（直排／左側）或 Overlayer.underline'
+            '（橫排／下方，維持既有行為不變）。',
+      );
     });
   });
 

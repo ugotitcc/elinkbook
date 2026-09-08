@@ -34,6 +34,14 @@ void main() {
             PocketBase(baseUrl, httpClientFactory: () => mockClient),
       );
 
+  // 「立即同步」按鈕與最後同步時間不牽涉的既有測試共用這兩個假 closure
+  // （2026-09-08 /grill-with-docs 使用者需求引入 SyncSettingsScreen 新
+  // 建構參數後，既有測試補上這兩個必要參數）——onManualSync 直接拋出例外
+  // 代表這些測試不應該真的觸發同步。
+  Future<bool> Function() throwingManualSync() =>
+      () async => throw StateError('本測試不應該真的觸發同步');
+  Future<int?> Function() noLastSyncedAt() => () async => null;
+
   testWidgets('未登入時，載入完成後顯示三個輸入欄位與「連線／登入」按鈕，不顯示登出按鈕',
       (tester) async {
     final client = buildClient(MockClient((request) async {
@@ -44,6 +52,8 @@ void main() {
       home: SyncSettingsScreen(
         accountRepository: accountRepository,
         syncClient: client,
+        onManualSync: throwingManualSync(),
+        loadLastSyncedAt: noLastSyncedAt(),
       ),
     ));
     await tester.pumpAndSettle();
@@ -69,6 +79,8 @@ void main() {
       home: SyncSettingsScreen(
         accountRepository: accountRepository,
         syncClient: client,
+        onManualSync: throwingManualSync(),
+        loadLastSyncedAt: noLastSyncedAt(),
       ),
     ));
     await tester.pumpAndSettle();
@@ -101,6 +113,8 @@ void main() {
       home: SyncSettingsScreen(
         accountRepository: accountRepository,
         syncClient: client,
+        onManualSync: throwingManualSync(),
+        loadLastSyncedAt: noLastSyncedAt(),
       ),
     ));
     await tester.pumpAndSettle();
@@ -128,6 +142,8 @@ void main() {
       home: SyncSettingsScreen(
         accountRepository: accountRepository,
         syncClient: client,
+        onManualSync: throwingManualSync(),
+        loadLastSyncedAt: noLastSyncedAt(),
       ),
     ));
     await tester.pumpAndSettle();
@@ -165,6 +181,8 @@ void main() {
       home: SyncSettingsScreen(
         accountRepository: accountRepository,
         syncClient: client,
+        onManualSync: throwingManualSync(),
+        loadLastSyncedAt: noLastSyncedAt(),
       ),
     ));
     await tester.pumpAndSettle();
@@ -199,6 +217,8 @@ void main() {
       home: SyncSettingsScreen(
         accountRepository: accountRepository,
         syncClient: client,
+        onManualSync: throwingManualSync(),
+        loadLastSyncedAt: noLastSyncedAt(),
       ),
     ));
     await tester.pumpAndSettle();
@@ -210,5 +230,99 @@ void main() {
         find.byKey(const Key('sync_settings_email_field')), findsOneWidget);
     expect(
         find.byKey(const Key('sync_settings_logout_button')), findsNothing);
+  });
+
+  group('手動同步（2026-09-08 /grill-with-docs 使用者需求）', () {
+    setUp(() async {
+      await accountRepository.saveCredentials(
+        authToken: 'token-abc',
+        userId: 'user-123',
+        email: 'reader@example.com',
+      );
+    });
+
+    SyncClient neverCalledClient() => buildClient(MockClient((request) async {
+          throw StateError('本測試不應該真的發出網路請求');
+        }));
+
+    testWidgets('已登入且尚未同步過時，顯示「立即同步」按鈕與「尚未同步過」',
+        (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        home: SyncSettingsScreen(
+          accountRepository: accountRepository,
+          syncClient: neverCalledClient(),
+          onManualSync: throwingManualSync(),
+          loadLastSyncedAt: () async => null,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('sync_settings_manual_sync_button')),
+          findsOneWidget);
+      expect(find.text('尚未同步過'), findsOneWidget);
+    });
+
+    testWidgets('已同步過時，顯示絕對日期時間格式的最後同步時間', (tester) async {
+      final syncedAt = DateTime(2026, 9, 8, 14, 32);
+
+      await tester.pumpWidget(MaterialApp(
+        home: SyncSettingsScreen(
+          accountRepository: accountRepository,
+          syncClient: neverCalledClient(),
+          onManualSync: throwingManualSync(),
+          loadLastSyncedAt: () async => syncedAt.millisecondsSinceEpoch,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('2026-09-08 14:32'), findsOneWidget);
+    });
+
+    testWidgets('點擊「立即同步」按鈕，成功後重新載入並顯示更新後的最後同步時間',
+        (tester) async {
+      var callCount = 0;
+      final syncedAt = DateTime(2026, 9, 8, 15, 0);
+
+      await tester.pumpWidget(MaterialApp(
+        home: SyncSettingsScreen(
+          accountRepository: accountRepository,
+          syncClient: neverCalledClient(),
+          onManualSync: () async {
+            callCount++;
+            return true;
+          },
+          loadLastSyncedAt: () async =>
+              callCount == 0 ? null : syncedAt.millisecondsSinceEpoch,
+        ),
+      ));
+      await tester.pumpAndSettle();
+      expect(find.text('尚未同步過'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('sync_settings_manual_sync_button')));
+      await tester.pumpAndSettle();
+
+      expect(callCount, 1);
+      expect(find.textContaining('2026-09-08 15:00'), findsOneWidget);
+    });
+
+    testWidgets('點擊「立即同步」按鈕，失敗時顯示 SnackBar「同步失敗，請確認網路連線」，且不更新最後同步時間顯示',
+        (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        home: SyncSettingsScreen(
+          accountRepository: accountRepository,
+          syncClient: neverCalledClient(),
+          onManualSync: () async => false,
+          loadLastSyncedAt: () async => null,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('sync_settings_manual_sync_button')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('同步失敗，請確認網路連線'), findsOneWidget);
+      expect(find.text('尚未同步過'), findsOneWidget,
+          reason: '失敗時不應更新最後同步時間顯示。');
+    });
   });
 }

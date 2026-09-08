@@ -37,6 +37,11 @@ class SettingsScaffold extends StatefulWidget {
   final CustomFontsRepository? customFontsRepository;
   final SyncAccountRepository? syncAccountRepository;
   final SyncClient? syncClient;
+  /// 「立即同步」按鈕與最後同步時間顯示（2026-09-08 `/grill-with-docs`
+  /// 使用者需求），見 `SyncSettingsScreen`／`LibrarySyncDependencies` 的
+  /// 欄位說明。
+  final Future<bool> Function()? onManualSync;
+  final Future<int?> Function()? loadLastSyncedAt;
   final CloudAccountRepository? cloudAccountRepository;
   final GoogleDriveOAuthClient? googleDriveOAuthClient;
   final OneDriveOAuthClient? oneDriveOAuthClient;
@@ -54,6 +59,8 @@ class SettingsScaffold extends StatefulWidget {
     this.customFontsRepository,
     this.syncAccountRepository,
     this.syncClient,
+    this.onManualSync,
+    this.loadLastSyncedAt,
     this.cloudAccountRepository,
     this.googleDriveOAuthClient,
     this.oneDriveOAuthClient,
@@ -208,7 +215,9 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
             title: const Text('同步'),
             trailing: const Icon(Icons.chevron_right),
             onTap: widget.syncAccountRepository == null ||
-                    widget.syncClient == null
+                    widget.syncClient == null ||
+                    widget.onManualSync == null ||
+                    widget.loadLastSyncedAt == null
                 ? null
                 : () {
                     Navigator.of(context).push(
@@ -216,6 +225,8 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
                         builder: (context) => SyncSettingsScreen(
                           accountRepository: widget.syncAccountRepository!,
                           syncClient: widget.syncClient!,
+                          onManualSync: widget.onManualSync!,
+                          loadLastSyncedAt: widget.loadLastSyncedAt!,
                         ),
                       ),
                     );

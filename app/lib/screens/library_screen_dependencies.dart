@@ -59,11 +59,23 @@ class LibrarySyncDependencies {
   final SyncAccountRepository? syncAccountRepository;
   final SyncClient? syncClient;
   final SyncCheckpointTrigger? syncCheckpointTrigger;
+  /// 「立即同步」按鈕（2026-09-08 `/grill-with-docs` 使用者需求）——刻意
+  /// 收窄成單一 callback 而非直接轉送整個 `SyncEngine`，讓 `SyncSettingsScreen`
+  /// 的 widget test 可以注入輕量假 closure，不需要真正的 `sqflite`
+  /// `Database`（真實 `SyncEngine`/`SyncMetadataRepository` 依賴真正的
+  /// sqflite I/O，混入 `testWidgets`／`pumpAndSettle()` 的 fake-async 測試
+  /// 環境時曾實測遭遇 `pumpAndSettle timed out`——比照 `LibraryScreen`
+  /// 本身以抽象 `LibraryRepository`＋`FakeLibraryRepository` 讓 widget test
+  /// 脫離真實 sqflite 的既有慣例）。
+  final Future<bool> Function()? onManualSync;
+  final Future<int?> Function()? loadLastSyncedAt;
 
   const LibrarySyncDependencies({
     this.syncAccountRepository,
     this.syncClient,
     this.syncCheckpointTrigger,
+    this.onManualSync,
+    this.loadLastSyncedAt,
   });
 }
 

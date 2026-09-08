@@ -188,6 +188,8 @@ void main() {
         prefsManager: FakeReaderPrefsManager(),
         syncAccountRepository: accountRepository,
         syncClient: SyncClient(accountRepository: accountRepository),
+        onManualSync: () async => true,
+        loadLastSyncedAt: () async => null,
       ),
     ));
 

@@ -72,21 +72,26 @@ class SyncEngine {
   /// 呼叫所代表的本機異動，下一次任何 checkpoint 自然會涵蓋到。
   bool _isSyncing = false;
 
-  Future<void> runCheckpoint() async {
-    if (_isSyncing) return;
+  /// 回傳值供手動同步入口（`SyncSettingsScreen`「立即同步」按鈕，
+  /// 2026-09-08 `/grill-with-docs` 使用者需求）判斷這次呼叫是否真的完成
+  /// 一輪成功的 checkpoint，藉此決定要不要提示使用者同步失敗；三種既有
+  /// 自動觸發來源（`sync_checkpoint_trigger.dart`）不需要這個回傳值，
+  /// 沿用既有「失敗就靜默、下次觸發自然重試」精神，忽略即可。
+  Future<bool> runCheckpoint() async {
+    if (_isSyncing) return false;
     _isSyncing = true;
     try {
-      await _runCheckpointBody();
+      return await _runCheckpointBody();
     } finally {
       _isSyncing = false;
     }
   }
 
-  Future<void> _runCheckpointBody() async {
+  Future<bool> _runCheckpointBody() async {
     final baseUrl = await _accountRepository.loadBaseUrl();
     final authToken = await _accountRepository.loadAuthToken();
     final userId = await _accountRepository.loadUserId();
-    if (authToken == null || userId == null || baseUrl.isEmpty) return;
+    if (authToken == null || userId == null || baseUrl.isEmpty) return false;
 
     final pb = _clientFactory(baseUrl);
     final headers = {'Authorization': authToken};
@@ -130,7 +135,7 @@ class SyncEngine {
         await _sendPushBatch(pb, headers, batch);
       }
     } on ClientException {
-      return;
+      return false;
     }
 
     final notDirtyUpdatedAt = DateTime.now().millisecondsSinceEpoch;
@@ -158,7 +163,7 @@ class SyncEngine {
         excludeFingerprints: dirtyReadingPositionFingerprints,
       );
     } on ClientException {
-      return;
+      return false;
     }
 
     await _metadataRepository.saveLastPushCompletedAt(notDirtyUpdatedAt);
@@ -203,6 +208,7 @@ class SyncEngine {
     }
 
     await _purgeTombstones();
+    return true;
   }
 
   /// 記憶體風險註記（審查意見 Important #2，與 `_downloadAndMerge()` 的

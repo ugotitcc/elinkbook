@@ -978,16 +978,6 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
                                       color: onSurfaceColor.withValues(
                                           alpha: 0.24)))
                               : null,
-                          alignment: Alignment.center,
-                          child: widget.showNavZoneDebugOverlay
-                              ? Text(
-                                  _zoneActionLabel(action),
-                                  style: TextStyle(
-                                      color: onSurfaceColor.withValues(
-                                          alpha: 0.7),
-                                      fontSize: 10),
-                                )
-                              : null,
                         ),
                       ),
                     );
@@ -999,18 +989,5 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
         ),
       ],
     );
-  }
-
-  String _zoneActionLabel(ZoneAction action) {
-    switch (action) {
-      case ZoneAction.previousPage:
-        return '上一頁';
-      case ZoneAction.nextPage:
-        return '下一頁';
-      case ZoneAction.menu:
-        return '選單';
-      case ZoneAction.none:
-        return '無動作';
-    }
   }
 }

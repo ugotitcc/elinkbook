@@ -107,6 +107,15 @@ class _LibraryScreenState extends State<LibraryScreen> with WidgetsBindingObserv
   Set<String>? _selectedBookIds;
   final Set<String> _redownloadingBookIds = {};
 
+  /// 書架搜尋（2026-09-08 `/grill-with-docs` 使用者需求，比照
+  /// `prototype/elinkbook_theme_prototype.html` 常駐搜尋列設計）：純記憶體
+  /// 內過濾已載入的 `_bookListController.books`，比對書名／作者是否內含
+  /// 輸入字串（不分大小寫），不牽動 SQLite／FTS5——與 `epic-10-search`
+  /// （書內容全文檢索，`docs/epics.md` Backlog）是完全不同範圍的功能。
+  /// 非空時忽略目前分類瀏覽狀態（`_activeGroupFilter`），視為全庫搜尋。
+  final _searchController = TextEditingController();
+  String _searchQuery = '';
+
   /// 書架分頁狀態的唯一負責者（epic-36 Issue 6，架構回顧衍生）：取代原本
   /// 散落在 `build()`／`didChangeMetrics()`／排序/分類切換/換頁按鈕共 7
   /// 處各自寫入的 `_currentPage`／`_lastPageSize` 欄位，見
@@ -180,7 +189,15 @@ class _LibraryScreenState extends State<LibraryScreen> with WidgetsBindingObserv
     WidgetsBinding.instance.removeObserver(this);
     widget.refreshSignal?.removeListener(_onExternalRefreshRequested);
     _bookListController.dispose();
+    _searchController.dispose();
     super.dispose();
+  }
+
+  void _onSearchChanged(String value) {
+    setState(() {
+      _searchQuery = value;
+      _paging.resetToFirstPage();
+    });
   }
 
   @override
@@ -694,9 +711,38 @@ class _LibraryScreenState extends State<LibraryScreen> with WidgetsBindingObserv
     _bookListController.changeSortBy(sortBy);
   }
 
+  List<Book> _filterBooksBySearchQuery(List<Book> books, String query) {
+    final normalized = query.trim().toLowerCase();
+    return books
+        .where((book) =>
+            book.title.toLowerCase().contains(normalized) ||
+            (book.author?.toLowerCase().contains(normalized) ?? false))
+        .toList();
+  }
+
+  Widget _buildSearchField() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+      child: TextField(
+        key: const Key('library_search_field'),
+        controller: _searchController,
+        onChanged: _onSearchChanged,
+        decoration: const InputDecoration(
+          prefixIcon: Icon(Icons.search),
+          hintText: '搜尋書名或作者...',
+          isDense: true,
+          border: OutlineInputBorder(),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final books = _bookListController.books;
+    final trimmedQuery = _searchQuery.trim();
+    final searchResults =
+        trimmedQuery.isEmpty || books == null ? null : _filterBooksBySearchQuery(books, trimmedQuery);
     return PopScope(
       canPop: !_inSelectionMode && _activeGroupFilter == null,
       onPopInvokedWithResult: (didPop, result) {
@@ -713,7 +759,20 @@ class _LibraryScreenState extends State<LibraryScreen> with WidgetsBindingObserv
             : _buildNormalAppBar(books),
         body: books == null
             ? const Center(child: CircularProgressIndicator())
-            : (books.isEmpty ? _buildEmptyState() : _buildBookList(books)),
+            : Column(
+                children: [
+                  _buildSearchField(),
+                  Expanded(
+                    child: searchResults != null
+                        ? (searchResults.isEmpty
+                            ? const Center(child: Text('找不到符合的書籍'))
+                            : _buildBookList(books, searchResults: searchResults))
+                        : (books.isEmpty
+                            ? _buildEmptyState()
+                            : _buildBookList(books)),
+                  ),
+                ],
+              ),
       ),
     );
   }
@@ -898,14 +957,20 @@ class _LibraryScreenState extends State<LibraryScreen> with WidgetsBindingObserv
     ];
   }
 
-  Widget _buildBookList(List<Book> books) {
+  /// [searchResults] 非 null 時代表正在搜尋（[_searchQuery] 非空）：改為
+  /// 扁平清單顯示搜尋結果，不分類分組、忽略 [_activeGroupFilter]（Q7
+  /// 決策：搜尋範圍為全庫，不受目前分類瀏覽狀態影響）。
+  Widget _buildBookList(List<Book> books, {List<Book>? searchResults}) {
+    final isSearching = searchResults != null;
     final selectedIds = _selectedBookIds;
-    final groupTiles = _activeGroupFilter == null
+    final groupTiles = (!isSearching && _activeGroupFilter == null)
         ? _buildGroupTiles(books)
         : const <_GroupTile>[];
-    final visibleBooks = _activeGroupFilter == null
-        ? books.where((b) => b.groupName == BookGroup.uncategorized).toList()
-        : books.where((b) => b.groupName == _activeGroupFilter).toList();
+    final visibleBooks = isSearching
+        ? searchResults
+        : (_activeGroupFilter == null
+            ? books.where((b) => b.groupName == BookGroup.uncategorized).toList()
+            : books.where((b) => b.groupName == _activeGroupFilter).toList());
     final itemCount = groupTiles.length + visibleBooks.length;
 
     final orientation = MediaQuery.orientationOf(context);
@@ -946,7 +1011,7 @@ class _LibraryScreenState extends State<LibraryScreen> with WidgetsBindingObserv
 
     return Column(
       children: [
-        if (_activeGroupFilter == null && _mostRecentBook != null)
+        if (!isSearching && _activeGroupFilter == null && _mostRecentBook != null)
           _ContinueReadingRow(
             book: _mostRecentBook!,
             // 多選模式進行中時停用點擊（`review-plan-issue-3.md` M-3）：

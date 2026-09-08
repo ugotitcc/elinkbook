@@ -95,9 +95,13 @@ void main() {
       clientFactory: (baseUrl) => PocketBase(baseUrl, httpClientFactory: () => mockClient),
     );
 
-    await engine.runCheckpoint();
+    final result = await engine.runCheckpoint();
 
     expect(requestSent, isFalse);
+    expect(result, isFalse,
+        reason: 'runCheckpoint() 回傳值供手動同步按鈕判斷是否要提示失敗'
+            '（epic-8-sync 手動同步功能，2026-09-08 /grill-with-docs）——'
+            '未登入時沒有真的執行同步，應回傳 false。');
   });
 
   test('併發鎖：兩次幾乎同時呼叫 runCheckpoint()，第二次在第一次仍執行中時直接放棄，不會兩次都真的送出網路請求',
@@ -123,8 +127,14 @@ void main() {
     // 觸發 checkpoint 的情境（例如使用者切書同時把 App 丟到背景）。
     final first = engine.runCheckpoint();
     final second = engine.runCheckpoint();
-    await Future.wait([first, second]);
+    final results = await Future.wait([first, second]);
     final requestCountAfterConcurrentCalls = requestCount;
+
+    expect(results, [true, false],
+        reason: 'runCheckpoint() 回傳值供手動同步按鈕判斷是否要提示失敗'
+            '（epic-8-sync 手動同步功能，2026-09-08 /grill-with-docs）——'
+            '併發鎖生效時被放棄的那次呼叫應回傳 false，先取得鎖、真的執行'
+            '完成的那次回傳 true。');
 
     // 鎖應已釋放：接著單獨呼叫一次，取得「一次完整 checkpoint」實際會發出
     // 的請求數作為基準，用來跟上面併發呼叫的結果比較——若鎖沒生效，併發
@@ -182,7 +192,11 @@ void main() {
       clientFactory: (baseUrl) => PocketBase(baseUrl, httpClientFactory: () => mockClient),
     );
 
-    await engine.runCheckpoint();
+    final result = await engine.runCheckpoint();
+    expect(result, isTrue,
+        reason: 'runCheckpoint() 回傳值供手動同步按鈕判斷是否要提示失敗'
+            '（epic-8-sync 手動同步功能，2026-09-08 /grill-with-docs）——'
+            '整個 checkpoint（推送＋下載＋合併）成功完成時應回傳 true。');
 
     final pushBody =
         (capturedRequest!['requests'] as List).single['body'] as Map<String, dynamic>;
@@ -266,10 +280,14 @@ void main() {
       clientFactory: (baseUrl) => PocketBase(baseUrl, httpClientFactory: () => mockClient),
     );
 
-    await engine.runCheckpoint();
+    final result = await engine.runCheckpoint();
 
     expect(await metadataRepository.loadLastPushCompletedAt(), isNull);
     expect(await metadataRepository.loadRemoteIds(SyncCollection.bookmarks), isEmpty);
+    expect(result, isFalse,
+        reason: 'runCheckpoint() 回傳值供手動同步按鈕判斷是否要提示失敗'
+            '（epic-8-sync 手動同步功能，2026-09-08 /grill-with-docs）——'
+            '推送階段遇到 HTTP 錯誤時應回傳 false。');
   });
 
   test('下載端把遠端新增的書籤正確合併進本機（書籍已匯入、指紋對得上）', () async {
