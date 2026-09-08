@@ -22,7 +22,8 @@ import 'widgets/reader_option_tile.dart';
 /// 皆由呼叫端（`ReaderScreen`）負責——本 widget 只負責回報使用者選擇的覆寫
 /// 值，不負責解析「覆寫值 `??` 自動偵測結果／全域預設值」的最終生效值
 /// （見 `ReaderScreen._resolvedWritingMode`／`_resolvedPageTurnMode`／
-/// `_resolvedScreenOrientation`）。
+/// `_resolvedScreenOrientation`）。[isEinkMode] 決定 `_buildSliderRow`
+/// 數值列採用一般主題的 `Slider`＋±按鈕，或 E-Ink 模式的 `EBStepper`。
 class ReaderSettingsSheet extends StatefulWidget {
   final BookReaderPrefs prefs;
   final ValueChanged<BookReaderPrefs> onChanged;
@@ -642,14 +643,14 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     }
   }
 
-  Widget _buildOverrideBadge(BuildContext context, String text, {Key? key}) {
+  Widget _buildOverrideBadge(String text, {Key? key}) {
     final colorScheme = Theme.of(context).colorScheme;
     return Container(
       key: key,
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: colorScheme.outline
               .withValues(alpha: widget.isEinkMode ? 1.0 : 0.35),
@@ -696,7 +697,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                       Text(displayValue),
                       const SizedBox(width: 8),
                     ],
-                    _buildOverrideBadge(context, '此書已覆寫'),
+                    _buildOverrideBadge('此書已覆寫'),
                     IconButton(
                       key: Key('${keyPrefix}_reset'),
                       icon: const Icon(Icons.block),
@@ -711,7 +712,6 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                 Tooltip(
                   message: '跟隨本書原樣式，尚未調整',
                   child: _buildOverrideBadge(
-                    context,
                     '使用全域預設',
                     key: Key('${keyPrefix}_unset_indicator'),
                   ),
