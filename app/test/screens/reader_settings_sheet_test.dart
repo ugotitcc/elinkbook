@@ -1431,6 +1431,117 @@ void main() {
     expect(tileColor('vertical'), Colors.white, reason: '強制直排：非選中');
     expect(tileColor('horizontal'), Colors.white, reason: '強制橫排：非選中，過去的 bug 會誤判成選中');
   });
+
+  testWidgets(
+      'isOverridden 為 false（未覆寫）時，顯示文字徽章「使用全域預設」，'
+      '且維持掛載既有 _unset_indicator Key（epic-39-layout-settings-redesign Issue 2）',
+      (tester) async {
+    await _pumpSheet(tester, BookReaderPrefs.empty, _noopOnChanged);
+
+    expect(find.text('使用全域預設'), findsNWidgets(5),
+        reason: '文字分頁 5 個受影響欄位皆未覆寫，應各自顯示一個文字徽章');
+    expect(
+        find.byKey(const Key('reader_settings_font_size_unset_indicator')),
+        findsOneWidget,
+        reason: '既有測試依賴此 Key 判斷未覆寫狀態，Key 語意不變');
+  });
+
+  testWidgets(
+      'isOverridden 為 true 且一般主題（isEinkMode: false）時，顯示「此書已覆寫」文字徽章，'
+      '且仍保留原始數值文字與可運作的重置按鈕（審查修正 C1，review-plan-issue-2.md：'
+      '一般主題的 Slider 不具備數值回饋能力，不可把數值文字整個拿掉）',
+      (tester) async {
+    BookReaderPrefs? result;
+    await _pumpSheet(
+      tester,
+      const BookReaderPrefs(letterSpacing: 0.3),
+      (prefs) => result = prefs,
+    );
+
+    expect(find.text('此書已覆寫'), findsOneWidget);
+    expect(find.text('0.30em'), findsOneWidget,
+        reason: '一般主題下必須保留原始數值文字，供使用者確認目前數值');
+    expect(find.byKey(const Key('reader_settings_letter_spacing_reset')),
+        findsOneWidget);
+
+    await tester
+        .tap(find.byKey(const Key('reader_settings_letter_spacing_reset')));
+    await tester.pump();
+
+    expect(result, isNotNull);
+    expect(result!.letterSpacing, isNull, reason: '重置行為應零回歸');
+  });
+
+  testWidgets(
+      'isOverridden 為 true 且 isEinkMode: true 時，頂列只顯示「此書已覆寫」文字徽章與重置按鈕，'
+      '不重複顯示原始數值文字（審查修正 C1，review-plan-issue-2.md：僅 E-Ink 模式隱藏，'
+      '因為只有 EBStepper 本身會另外顯示一次數值）',
+      (tester) async {
+    await _pumpSheet(
+      tester,
+      const BookReaderPrefs(letterSpacing: 0.3),
+      _noopOnChanged,
+      isEinkMode: true,
+    );
+
+    expect(find.text('此書已覆寫'), findsOneWidget);
+    expect(find.text('0.30em'), findsNothing,
+        reason: 'E-Ink 模式下頂列不應顯示原始數值文字，避免與 Issue 2 後續（Task 3）'
+            '接上的 EBStepper 內部顯示重複');
+    expect(find.byKey(const Key('reader_settings_letter_spacing_reset')),
+        findsOneWidget);
+  });
+
+  testWidgets(
+      '覆寫徽章依 isEinkMode 套用不同邊框樣式（審查修正 I1，review-plan-issue-2.md：'
+      'E-Ink 主題的 surfaceContainerHighest 與 surface 皆為純白，徽章若無邊框會視覺隱形）',
+      (tester) async {
+    // E-Ink 主題：純黑 1.5dp 邊框。
+    await tester.pumpWidget(MaterialApp(
+      theme: buildEinkThemeData(),
+      home: Scaffold(
+        body: ReaderSettingsSheet(
+          bookId: 'test-book',
+          prefs: BookReaderPrefs.empty,
+          isEinkMode: true,
+          onChanged: (_) {},
+          onSaveAsPreset: (_) {},
+          onApplyPreset: (_, {required targetBookIds}) {},
+          onApplyFromBook: (_, {required targetBookIds}) {},
+          onRequestBookPicker: ({required multiSelect}) async => null,
+          onDeletePreset: (_) {},
+        ),
+      ),
+    ));
+
+    final einkContainer = tester.widget<Container>(
+      find.byKey(const Key('reader_settings_font_size_unset_indicator')),
+    );
+    final einkBorder =
+        (einkContainer.decoration as BoxDecoration).border as Border;
+    expect(einkBorder.top.color, Colors.black);
+    expect(einkBorder.top.width, 1.5);
+  });
+
+  testWidgets(
+      '一般主題下覆寫徽章邊框為 outline 35% 透明度、寬度 1.0dp'
+      '（審查修正 I1，review-plan-issue-2.md）',
+      (tester) async {
+    await _pumpSheet(tester, BookReaderPrefs.empty, _noopOnChanged);
+
+    final context = tester.element(
+      find.byKey(const Key('reader_settings_font_size_unset_indicator')),
+    );
+    final expectedColor =
+        Theme.of(context).colorScheme.outline.withValues(alpha: 0.35);
+    final container = tester.widget<Container>(
+      find.byKey(const Key('reader_settings_font_size_unset_indicator')),
+    );
+    final border = (container.decoration as BoxDecoration).border as Border;
+
+    expect(border.top.color, expectedColor);
+    expect(border.top.width, 1.0);
+  });
 }
 
 Future<void> _pumpSheet(

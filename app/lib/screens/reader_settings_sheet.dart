@@ -641,6 +641,27 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     }
   }
 
+  Widget _buildOverrideBadge(BuildContext context, String text, {Key? key}) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      key: key,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: colorScheme.outline
+              .withValues(alpha: widget.isEinkMode ? 1.0 : 0.35),
+          width: widget.isEinkMode ? 1.5 : 1.0,
+        ),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant),
+      ),
+    );
+  }
+
   Widget _buildSliderRow({
     required String keyPrefix,
     required String label,
@@ -670,7 +691,11 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(displayValue),
+                    if (!widget.isEinkMode) ...[
+                      Text(displayValue),
+                      const SizedBox(width: 8),
+                    ],
+                    _buildOverrideBadge(context, '此書已覆寫'),
                     IconButton(
                       key: Key('${keyPrefix}_reset'),
                       icon: const Icon(Icons.block),
@@ -681,14 +706,13 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                     ),
                   ],
                 )
-              else
+              else if (isOverridden == false)
                 Tooltip(
                   message: '跟隨本書原樣式，尚未調整',
-                  child: Icon(
-                    Icons.block,
+                  child: _buildOverrideBadge(
+                    context,
+                    '使用全域預設',
                     key: Key('${keyPrefix}_unset_indicator'),
-                    size: 18,
-                    color: Theme.of(context).disabledColor,
                   ),
                 ),
             ],
