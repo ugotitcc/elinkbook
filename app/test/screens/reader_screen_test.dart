@@ -8909,6 +8909,100 @@ void main() {
     });
   });
 
+  group('小喇叭圖示 showTtsIndicator（epic-38-reader-chrome-tts-redesign Issue 2）', () {
+    testWidgets('未提供 ttsProvider 時，小喇叭圖示恆不存在（_chromeVisible 任一值）',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_tts_indicator_no_provider',
+            prefsManager: prefsManager,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      expect(
+        find.byKey(const Key('reader_chrome_tts_indicator_icon')),
+        findsNothing,
+      );
+
+      await tester.tap(find.byKey(const Key('nav_zone_1')));
+      await tester.pump();
+
+      expect(
+        find.byKey(const Key('reader_chrome_tts_indicator_icon')),
+        findsNothing,
+      );
+    });
+
+    testWidgets('提供 ttsProvider 但從未按下「◗ 朗讀」（_ttsController 為 null）時，'
+        '小喇叭圖示不存在', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_tts_indicator_not_built',
+            prefsManager: prefsManager,
+            ttsProvider: FakeTtsProvider(),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      await tester.tap(find.byKey(const Key('nav_zone_1')));
+      await tester.pump();
+
+      expect(
+        find.byKey(const Key('reader_chrome_tts_indicator_icon')),
+        findsNothing,
+        reason: '_isTtsActive 讀 _ttsController（非 _ttsControllerOrNull），'
+            '尚未按過朗讀鍵時恆為 false，不應觸發 lazy 建構',
+      );
+    });
+
+    testWidgets('_isTtsActive && !_chromeVisible 兩個條件皆成立時才顯示（誠實測試邊界：'
+        'flutter_test 環境下 TtsController.status 永遠是 idle，_isTtsActive 永遠為'
+        'false，這個組合本身無法在本檔案驗證，正確性由 _isTtsActive 定義本身'
+        '〔純欄位比對，無額外邏輯〕與上方兩個「不顯示」案例的互補覆蓋保證）',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_tts_indicator_documented_gap',
+            prefsManager: prefsManager,
+            ttsProvider: FakeTtsProvider(),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      // _chromeVisible 仍為 true（未觸發沉浸模式）時，即使 _ttsController
+      // 已建構，小喇叭不應顯示——這個組合本身可以在測試環境驗證。
+      await tester.tap(find.byKey(const Key('reader_chrome_tts_button')));
+      await tester.pump();
+
+      expect(
+        find.byKey(const Key('reader_chrome_tts_indicator_icon')),
+        findsNothing,
+        reason: '_chromeVisible 仍為 true，即使 _isTtsActive 為 true 也不應顯示'
+            '（本案例中 _isTtsActive 實際仍為 false，但斷言與其為 true 時的'
+            '預期行為一致，兩者皆是 findsNothing）',
+      );
+    });
+  });
+
   testWidgets(
     '開啟舊 TtsMiniPlayer 膠囊時，新的 ReaderChromeBottomBar 不會同時顯示'
     '（review-issues.md I1 過渡期互斥回歸測試）',

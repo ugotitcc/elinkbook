@@ -2048,7 +2048,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                     ? null
                     : _openToc)
                 : null),
-        showTtsIndicator: false, // Issue 2 接上真實邏輯
+        showTtsIndicator: _isTtsActive && !_chromeVisible,
         backgroundColor: _themedFabBackgroundColor,
         iconColor: _themedFabIconColor,
         isEinkMode: widget.isEinkMode,
