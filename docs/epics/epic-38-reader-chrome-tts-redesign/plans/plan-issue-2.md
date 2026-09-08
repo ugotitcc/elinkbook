@@ -1,6 +1,6 @@
 # Epic 38 Issue 2：`TtsPanel` 重構＋`TtsController.stop()`＋睡眠定時器 實作計劃
 
-> **給實作代理人：** 依照 `sdd-workflow` skill 的生命週期，本計劃屬於「規劃與審查」階段產出，動手寫程式碼前應先發起審查（`requesting-code-review`/`receiving-code-review`），審查者先出報告、不得直接修改本檔案。實作階段建議使用 `superpowers:executing-plans`（逐 Task 執行、每個 Task 之間可停下確認）；每完成一個 Step 就把該行的 `- [ ]` 改成 `- [x]`。
+> **給實作代理人：** 依照 `sdd-workflow` skill 的生命週期，本計劃屬於「規劃與審查」階段產出，動手寫程式碼前應先發起審查（`requesting-code-review`/`receiving-code-review`），審查者先出報告、不得直接修改本檔案。實作階段建議使用 `superpowers:executing-plans`（逐 Task 執行、每個 Task 之間可停下確認）；每完成一個 Step 就把該行的 `- [x]` 改成 `- [x]`。
 
 **目標：** 新增 `TtsPanel` 取代既有 `TtsMiniPlayer`，與 `ReaderChromeBottomBar` 依 `TtsController.status` 衍生互斥切換（不設手動旗標）；新增 `TtsController.stop()` 真正停止播放並釋放音訊焦點；新增睡眠定時器（15/30/45/60 分＋不限時，到期為暫停不是停止）；`ReaderChromeTopBar` 的小喇叭圖示接上真實邏輯。
 
@@ -47,7 +47,7 @@
 **Interfaces:**
 - Produces：`TtsController.stop()`（`Future<void>`，公開方法）；`TtsAudioPlayer.stop()`（抽象方法，`JustAudioTtsPlayer` 實作）；`FakeTtsAudioPlayer.stop()`（記錄呼叫至既有 `callLog`）。
 
-- [ ] **Step 1：`TtsAudioPlayer` 新增 `stop()` 抽象方法＋`JustAudioTtsPlayer` 實作**
+- [x] **Step 1：`TtsAudioPlayer` 新增 `stop()` 抽象方法＋`JustAudioTtsPlayer` 實作**
 
 編輯 `app/lib/reader/tts_audio_player.dart`，在 `setSpeed` 之後、`completedStream` 之前新增抽象方法：
 
@@ -66,7 +66,7 @@
   Future<void> stop() => _player.stop();
 ```
 
-- [ ] **Step 2：`FakeTtsAudioPlayer` 新增 `stop()` 假實作**
+- [x] **Step 2：`FakeTtsAudioPlayer` 新增 `stop()` 假實作**
 
 編輯 `app/test/support/fake_tts_audio_player.dart`，在 `pause()` 實作之後新增：
 
@@ -77,12 +77,12 @@
   }
 ```
 
-- [ ] **Step 3：`flutter analyze` 確認尚未實作 `stop()` 的 `TtsController` 不影響編譯**
+- [x] **Step 3：`flutter analyze` 確認尚未實作 `stop()` 的 `TtsController` 不影響編譯**
 
 Run: `flutter analyze`
 Expected: `No issues found!`（`TtsAudioPlayer`／`FakeTtsAudioPlayer` 皆已補上 `stop()`，介面完整；`TtsController` 尚未呼叫，不影響現況）
 
-- [ ] **Step 4：撰寫 `TtsController.stop()` 的失敗測試**
+- [x] **Step 4：撰寫 `TtsController.stop()` 的失敗測試**
 
 編輯 `app/test/reader/tts_controller_test.dart`，在檔案最後、`main()` 收尾的 `}` 之前新增（緊接在既有最後一個 `group` 之後）：
 
@@ -192,12 +192,12 @@ Expected: `No issues found!`（`TtsAudioPlayer`／`FakeTtsAudioPlayer` 皆已補
 
 （最後一行 `}` 取代原本檔案結尾唯一的 `}`——即把新 `group` 插入原本 `main()` 的收尾大括號之前。）
 
-- [ ] **Step 5：執行測試確認全數失敗（`TtsController.stop` 尚未定義）**
+- [x] **Step 5：執行測試確認全數失敗（`TtsController.stop` 尚未定義）**
 
 Run: `flutter test test/reader/tts_controller_test.dart`
 Expected: 編譯錯誤（`The method 'stop' isn't defined for the type 'TtsController'`）
 
-- [ ] **Step 6：實作 `TtsController.stop()`**
+- [x] **Step 6：實作 `TtsController.stop()`**
 
 編輯 `app/lib/reader/tts_controller.dart`，在 `pause()` 方法之後新增：
 
@@ -226,12 +226,12 @@ Expected: 編譯錯誤（`The method 'stop' isn't defined for the type 'TtsContr
   }
 ```
 
-- [ ] **Step 7：執行測試確認通過**
+- [x] **Step 7：執行測試確認通過**
 
 Run: `flutter test test/reader/tts_controller_test.dart`
 Expected: PASS（全部案例，含既有案例零回歸）
 
-- [ ] **Step 8：修正 `TtsAudioHandler.stop()` 呼叫真正的 `stop()`（計劃範圍澄清第 6 點）**
+- [x] **Step 8：修正 `TtsAudioHandler.stop()` 呼叫真正的 `stop()`（計劃範圍澄清第 6 點）**
 
 編輯 `app/lib/reader/tts_audio_handler.dart`：
 
@@ -253,7 +253,7 @@ After：
   }
 ```
 
-- [ ] **Step 9：新增 `TtsAudioHandler.stop()` 回歸測試**
+- [x] **Step 9：新增 `TtsAudioHandler.stop()` 回歸測試**
 
 編輯 `app/test/reader/tts_audio_handler_test.dart`，在最後一個 `test(...)` 之後、檔案結尾 `}` 之前新增：
 
@@ -275,17 +275,17 @@ After：
 }
 ```
 
-- [ ] **Step 10：執行測試確認通過**
+- [x] **Step 10：執行測試確認通過**
 
 Run: `flutter test test/reader/tts_audio_handler_test.dart`
 Expected: PASS（全部案例）
 
-- [ ] **Step 11：`flutter analyze` 確認乾淨**
+- [x] **Step 11：`flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 12：Commit**
+- [x] **Step 12：Commit**
 
 ```bash
 git add app/lib/reader/tts_controller.dart app/lib/reader/tts_audio_player.dart app/lib/reader/tts_audio_handler.dart app/test/support/fake_tts_audio_player.dart app/test/reader/tts_controller_test.dart app/test/reader/tts_audio_handler_test.dart
@@ -305,7 +305,7 @@ git commit -m "feat(epic-38): Issue 2 Task 1 — TtsController.stop() 真正停�
 - Consumes：`TtsVoice`（`app/lib/reader/tts_provider.dart`，既有）。
 - Produces：`TtsController.voice`（getter，回傳 `TtsVoice`）；`TtsController.setVoice(TtsVoice)`（公開方法）。Task 6（`_openTtsVoicePicker`）依賴這兩個成員。
 
-- [ ] **Step 1：撰寫失敗測試**
+- [x] **Step 1：撰寫失敗測試**
 
 編輯 `app/test/reader/tts_controller_test.dart`，在 Task 1 新增的 `group('TtsController.stop()...')` 之後、檔案結尾 `}` 之前新增：
 
@@ -352,12 +352,12 @@ git commit -m "feat(epic-38): Issue 2 Task 1 — TtsController.stop() 真正停�
 }
 ```
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 Run: `flutter test test/reader/tts_controller_test.dart`
 Expected: 編譯錯誤（`The getter 'voice' isn't defined`）
 
-- [ ] **Step 3：`FakeTtsProvider` 新增 `synthesizeVoices` 記錄（審查修正 review-plan-issue-2.md I3）**
+- [x] **Step 3：`FakeTtsProvider` 新增 `synthesizeVoices` 記錄（審查修正 review-plan-issue-2.md I3）**
 
 `FakeTtsProvider.synthesize()` 簽章早已是 `{required TtsVoice voice, ...}`，但內部從未記錄收到的 `voice` 值——Step 1 新增的測試若不補上這個記錄，即使 `_playCurrentSegment()` 之後仍然寫死 `TtsVoice.systemDefault`、完全沒有讀 `_voice` 欄位，測試也會一樣通過，形同虛設。
 
@@ -406,7 +406,7 @@ After：
     synthesizeVoices.add(voice);
 ```
 
-- [ ] **Step 4：實作 `voice`／`setVoice()`，並修改 `_playCurrentSegment()` 套用**
+- [x] **Step 4：實作 `voice`／`setVoice()`，並修改 `_playCurrentSegment()` 套用**
 
 編輯 `app/lib/reader/tts_controller.dart`。
 
@@ -452,17 +452,17 @@ After：
         );
 ```
 
-- [ ] **Step 5：執行測試確認通過**
+- [x] **Step 5：執行測試確認通過**
 
 Run: `flutter test test/reader/tts_controller_test.dart`
 Expected: PASS（全部案例）
 
-- [ ] **Step 6：`flutter analyze` 確認乾淨**
+- [x] **Step 6：`flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 7：Commit**
+- [x] **Step 7：Commit**
 
 ```bash
 git add app/lib/reader/tts_controller.dart app/test/support/fake_tts_provider.dart app/test/reader/tts_controller_test.dart
@@ -481,7 +481,7 @@ git commit -m "feat(epic-38): Issue 2 Task 2 — TtsController 新增語音選�
 - Consumes：`TtsPlaybackStatus`（`app/lib/reader/tts_controller.dart`，既有 enum）。
 - Produces：`TtsPanel`（`StatelessWidget`），建構參數：`status`／`speed`／`isCbz`／`isCollapsed`／`sleepTimerRemaining`／`backgroundColor`／`iconColor`／`disabledIconColor`／`isEinkMode`（預設 `false`）／`onPlayPause`／`onPrevious`／`onNext`／`onSpeedTap`／`onVoiceTap`／`onSleepTimerTap`／`onToggleCollapse`／`onStop`。Key：`reader_tts_previous_button`／`reader_tts_play_pause_button`／`reader_tts_next_button`／`reader_tts_speed_button`／`reader_tts_voice_button`／`reader_tts_sleep_timer_button`／`reader_tts_panel_collapse_button`／`reader_tts_stop_button`。Task 4 消費本元件。
 
-- [ ] **Step 1：撰寫 `TtsPanel` 獨立 widget test（先寫測試，元件尚未存在）**
+- [x] **Step 1：撰寫 `TtsPanel` 獨立 widget test（先寫測試，元件尚未存在）**
 
 建立 `app/test/screens/tts_panel_test.dart`：
 
@@ -703,12 +703,12 @@ void main() {
 
 （比照 `reader_chrome_bottom_bar_test.dart` 既有審查修正：底層動作列每顆按鈕外層若有 `Expanded`，只驗證高度，不驗證寬度——見 Step 2 實作時的版面決定。）
 
-- [ ] **Step 2：執行測試確認失敗（`tts_panel.dart` 尚不存在）**
+- [x] **Step 2：執行測試確認失敗（`tts_panel.dart` 尚不存在）**
 
 Run: `flutter test test/screens/tts_panel_test.dart`
 Expected: 編譯錯誤（找不到 `package:elinkbook/screens/tts_panel.dart`）
 
-- [ ] **Step 3：實作 `TtsPanel`**
+- [x] **Step 3：實作 `TtsPanel`**
 
 建立 `app/lib/screens/tts_panel.dart`：
 
@@ -920,17 +920,17 @@ class TtsPanel extends StatelessWidget {
 }
 ```
 
-- [ ] **Step 4：執行測試確認通過**
+- [x] **Step 4：執行測試確認通過**
 
 Run: `flutter test test/screens/tts_panel_test.dart`
 Expected: PASS（全部案例）
 
-- [ ] **Step 5：`flutter analyze` 確認乾淨**
+- [x] **Step 5：`flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/lib/screens/tts_panel.dart app/test/screens/tts_panel_test.dart
@@ -948,7 +948,7 @@ git commit -m "feat(epic-38): Issue 2 Task 3 — 新增 TtsPanel 元件取代 Tt
 - Consumes：Task 3 的 `TtsPanel`；既有 `ReaderChromeBottomBar`（Issue 1）；既有 `_ttsControllerOrNull`／`_themedFabBackgroundColor`／`_themedFabIconColor`／`_themedTtsDisabledIconColor`／`_nextTtsSpeedPreset`／`_pageProgressText`／`_buildFoliateEpubFooter`。
 - Produces：`_ReaderScreenState._buildBottomChrome(BookFormat format)`（私有方法，回傳 `Widget`）；`_ReaderScreenState._buildFoliateChromeBottomBar(BookFormat format, {required VoidCallback? onTtsTap})`（私有 helper，避免 `ReaderChromeBottomBar(...)` 建構參數在三個分支重複三次）；新增私有欄位 `_cbzTtsPanelVisible`／`_ttsPanelCollapsed`。`_buildBottomChrome` 呼叫的 `_openSleepTimerPicker`／`_cancelTtsSleepTimer`／`_ttsSleepTimerDuration`／`_openTtsVoicePicker` 四個符號本 Task 先放**最小存根**（審查修正 C1，見 Step 3a），讓本 Task 能獨立通過 `flutter analyze` 與測試、獨立提交——Task 5（睡眠定時器）取代前三個存根為真正實作，Task 6（語音選擇）取代最後一個。
 
-- [ ] **Step 1：新增私有欄位，刪除 `_ttsMiniPlayerVisible`**
+- [x] **Step 1：新增私有欄位，刪除 `_ttsMiniPlayerVisible`**
 
 編輯 `app/lib/screens/reader_screen.dart`。
 
@@ -976,7 +976,7 @@ After：
   bool _ttsPanelCollapsed = false;
 ```
 
-- [ ] **Step 2：新增 `_buildFoliateChromeBottomBar` helper 與 `_buildBottomChrome`，取代既有的 Foliate BottomBar／TtsMiniPlayer 兩個 `Positioned` 區塊**
+- [x] **Step 2：新增 `_buildFoliateChromeBottomBar` helper 與 `_buildBottomChrome`，取代既有的 Foliate BottomBar／TtsMiniPlayer 兩個 `Positioned` 區塊**
 
 Before（`reader_screen.dart:2126-2222`，緊接在 `_buildChromeTopBar(format)` 呼叫之後、PDF FAB 區塊之前）：
 ```dart
@@ -1094,7 +1094,7 @@ After：
               ),
 ```
 
-- [ ] **Step 3：在 `_buildChromeTopBar()` 之後新增 `_buildFoliateChromeBottomBar`／`_buildBottomChrome` 兩個方法**
+- [x] **Step 3：在 `_buildChromeTopBar()` 之後新增 `_buildFoliateChromeBottomBar`／`_buildBottomChrome` 兩個方法**
 
 編輯 `app/lib/screens/reader_screen.dart`，在 `_buildChromeTopBar(BookFormat format)` 方法結尾（`reader_screen.dart:2031` 那個 `}`）之後、`Widget _buildBody(...)` 之前插入：
 
@@ -1240,7 +1240,7 @@ After：
   }
 ```
 
-- [ ] **Step 3a：新增暫時存根，讓本 Task 能獨立編譯與提交（審查修正 C1）**
+- [x] **Step 3a：新增暫時存根，讓本 Task 能獨立編譯與提交（審查修正 C1）**
 
 `_buildBottomChrome` 呼叫的 `_openSleepTimerPicker`／`_cancelTtsSleepTimer`／`_ttsSleepTimerDuration`／`_openTtsVoicePicker` 四個符號分別由 Task 5（前三個）／Task 6（最後一個）才會定義真正實作。若不先放存根，本 Task 完成後 `reader_screen.dart` 完全無法編譯，連帶讓 `reader_screen_test.dart`（引入 `reader_screen.dart`）的任何測試都無法執行，Task 5 Step 8 會在編譯階段直接失敗，而非測試斷言失敗——這會讓 Task 4/5/6 之間失去逐 Task 獨立驗證的能力。在 `_buildBottomChrome` 方法之後新增：
 
@@ -1257,12 +1257,12 @@ After：
   Future<void> _openTtsVoicePicker(TtsController controller) async {}
 ```
 
-- [ ] **Step 3b：`flutter analyze` 確認本 Task 已可獨立通過**
+- [x] **Step 3b：`flutter analyze` 確認本 Task 已可獨立通過**
 
 Run: `flutter analyze`
 Expected: `No issues found!`（四個存根讓 `_buildBottomChrome` 完整可編譯，不應再有任何符號未定義的錯誤）
 
-- [ ] **Step 4：刪除 `_ttsMiniPlayerBottomOffset`（不再被任何呼叫端使用）**
+- [x] **Step 4：刪除 `_ttsMiniPlayerBottomOffset`（不再被任何呼叫端使用）**
 
 Before（`reader_screen.dart:2597-2604`）：
 ```dart
@@ -1279,7 +1279,7 @@ Before（`reader_screen.dart:2597-2604`）：
 
 After：（整段刪除，不留任何內容）
 
-- [ ] **Step 5：更新 import**
+- [x] **Step 5：更新 import**
 
 編輯 `app/lib/screens/reader_screen.dart` 頂部 import：
 
@@ -1296,12 +1296,12 @@ import 'tts_panel.dart';
 Run: `flutter analyze`
 Expected: `No issues found!`（不應再出現 `TtsMiniPlayer`／`_ttsMiniPlayerVisible`／`_ttsMiniPlayerBottomOffset` 相關的殘留引用錯誤——若有，代表 Step 1-4 遺漏了某個呼叫點，須先排除再繼續）。
 
-- [ ] **Step 6：執行 `reader_screen_test.dart` 確認本 Task 未破壞既有非 TTS 測試**
+- [x] **Step 6：執行 `reader_screen_test.dart` 確認本 Task 未破壞既有非 TTS 測試**
 
 Run: `flutter test test/screens/reader_screen_test.dart`
 Expected: 大量既有 TTS 相關測試群組會失敗（`TtsMiniPlayer`／`reader_tts_mini_player_close_button` 等既有假設在新架構下不再成立，這是已知、留給 Task 8 集中處理的既知狀態，見計劃範圍澄清第 2 點）；**非** TTS 相關的測試（書籤／目錄／頁尾／版面設定等既有 group）應全數維持 PASS，不應因為本 Task 的改動而新增任何非 TTS 相關的回歸——若有，代表 `_buildFoliateChromeBottomBar`／`_buildBottomChrome` 的建構參數轉譯有遺漏或筆誤，須先排除再繼續。
 
-- [ ] **Step 7：Commit（審查修正 C1：本 Task 現在可獨立提交，不需要等 Task 5/6）**
+- [x] **Step 7：Commit（審查修正 C1：本 Task 現在可獨立提交，不需要等 Task 5/6）**
 
 ```bash
 git add app/lib/screens/reader_screen.dart
@@ -1319,7 +1319,7 @@ git commit -m "feat(epic-38): Issue 2 Task 4 — TtsPanel 衍生切換接線（C
 **Interfaces:**
 - Produces：`_ReaderScreenState._setTtsSleepTimer(Duration?)`／`_cancelTtsSleepTimer()`／`_openSleepTimerPicker()`／`_onTtsStatusChanged()`／`_isTtsActive`（getter）；`_TtsSleepTimerSheet`（私有 `StatelessWidget`）；`ReaderScreen.openSleepTimerPickerForTest(GlobalKey<State<ReaderScreen>>)`（公開 static test helper，比照既有 `openPdfToc`）。Task 4 的 `_buildBottomChrome` 已依賴 `_ttsSleepTimerDuration`／`_openSleepTimerPicker`／`_cancelTtsSleepTimer`；Task 7 的 `_buildChromeTopBar` 依賴 `_isTtsActive`。
 
-- [ ] **Step 1：以真正實作取代 Task 4 的暫時存根**
+- [x] **Step 1：以真正實作取代 Task 4 的暫時存根**
 
 編輯 `app/lib/screens/reader_screen.dart`，找到 Task 4 Step 3a 新增的三個存根：
 
@@ -1401,7 +1401,7 @@ After（`_ttsSleepTimerDuration` 欄位保留、補上文件註解；`_openSleep
   }
 ```
 
-- [ ] **Step 2：`_ttsControllerOrNull` getter 掛上 `_onTtsStatusChanged` listener**
+- [x] **Step 2：`_ttsControllerOrNull` getter 掛上 `_onTtsStatusChanged` listener**
 
 Before（`reader_screen.dart:2571-2572`）：
 ```dart
@@ -1416,7 +1416,7 @@ After：
     widget.ttsAudioHandler?.attachController(controller, bookTitle: widget.bookTitle);
 ```
 
-- [ ] **Step 3：`dispose()` 新增清理**
+- [x] **Step 3：`dispose()` 新增清理**
 
 Before（`reader_screen.dart:546-554`）：
 ```dart
@@ -1446,7 +1446,7 @@ After：
     _ttsController?.dispose();
 ```
 
-- [ ] **Step 4：新增 `_TtsSleepTimerSheet` 私有 widget**
+- [x] **Step 4：新增 `_TtsSleepTimerSheet` 私有 widget**
 
 在 `_ReaderScreenState` 類別結尾（檔案內最後一個 `}`，即整個 class 定義的收尾）之後新增：
 
@@ -1496,7 +1496,7 @@ class _TtsSleepTimerSheet extends StatelessWidget {
 
 （若檔案結尾已有其他頂層宣告，插入在最後一個既有頂層宣告之後即可，不需要固定在檔案最末端——只要在 `_ReaderScreenState` 類別定義**之外**即可。）
 
-- [ ] **Step 5：新增測試專用 static helper（計劃範圍澄清第 3 點）**
+- [x] **Step 5：新增測試專用 static helper（計劃範圍澄清第 3 點）**
 
 編輯 `app/lib/screens/reader_screen.dart` 的 `ReaderScreen` 類別（注意：不是 `_ReaderScreenState`），在既有 `static void openPdfToc(...)` 方法（`reader_screen.dart:242-247`）之後新增：
 
@@ -1521,12 +1521,12 @@ class _TtsSleepTimerSheet extends StatelessWidget {
   }
 ```
 
-- [ ] **Step 6：`flutter analyze` 確認乾淨**
+- [x] **Step 6：`flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`（審查修正 C1：`_openTtsVoicePicker` 在 Task 4 已放好存根，本身是合法可編譯的程式碼，不會報錯；Task 6 才會把它換成真正實作）。
 
-- [ ] **Step 7：撰寫睡眠定時器 widget test（`tester.pump(Duration)` 驅動真實 `Timer`，比照 Global Constraints 說明）**
+- [x] **Step 7：撰寫睡眠定時器 widget test（`tester.pump(Duration)` 驅動真實 `Timer`，比照 Global Constraints 說明）**
 
 編輯 `app/test/screens/reader_screen_test.dart`，在既有 `group('安全視窗跟隨翻頁（epic-34-tts-readalong Issue 8）', ...)` 之後（緊接在該 group 的收尾 `});` 之後）新增：
 
@@ -1660,17 +1660,17 @@ Expected: `No issues found!`（審查修正 C1：`_openTtsVoicePicker` 在 Task 
   });
 ```
 
-- [ ] **Step 8：執行測試確認通過（審查修正 C1：Task 4 已放好 `_openTtsVoicePicker` 存根，本步驟現在可以真正編譯執行，不再是預期中的編譯失敗）**
+- [x] **Step 8：執行測試確認通過（審查修正 C1：Task 4 已放好 `_openTtsVoicePicker` 存根，本步驟現在可以真正編譯執行，不再是預期中的編譯失敗）**
 
 Run: `flutter test test/screens/reader_screen_test.dart --plain-name "睡眠定時器"`
 Expected: PASS（3 個案例）
 
-- [ ] **Step 9：`flutter analyze` 確認乾淨**
+- [x] **Step 9：`flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 10：Commit（審查修正 C1：本 Task 現在可獨立提交，不需要等 Task 6）**
+- [x] **Step 10：Commit（審查修正 C1：本 Task 現在可獨立提交，不需要等 Task 6）**
 
 ```bash
 git add app/lib/screens/reader_screen.dart app/test/screens/reader_screen_test.dart
@@ -1689,7 +1689,7 @@ git commit -m "feat(epic-38): Issue 2 Task 5 — 睡眠定時器" -m "取代 Tas
 - Consumes：Task 2 的 `TtsController.voice`／`setVoice()`；既有 `TtsProvider.getAvailableVoices()`。
 - Produces：以真正實作取代 Task 4 Step 3a 的 `_openTtsVoicePicker` 存根（`_ReaderScreenState._openTtsVoicePicker(TtsController)`，Task 4 的 `_buildBottomChrome` 已呼叫）。
 
-- [ ] **Step 1：以真正實作取代 Task 4 的 `_openTtsVoicePicker` 存根**
+- [x] **Step 1：以真正實作取代 Task 4 的 `_openTtsVoicePicker` 存根**
 
 編輯 `app/lib/screens/reader_screen.dart`，找到 Task 4 Step 3a 新增的存根：
 
@@ -1762,23 +1762,23 @@ After：
   }
 ```
 
-- [ ] **Step 2：撰寫測試——直接呼叫 `_ttsController`（透過 `_buildBottomChrome`）不可行，改用 `_openTtsVoicePicker` 本身邏輯的可觀察子集**
+- [x] **Step 2：撰寫測試——直接呼叫 `_ttsController`（透過 `_buildBottomChrome`）不可行，改用 `_openTtsVoicePicker` 本身邏輯的可觀察子集**
 
 由於 `TtsPanel.onVoiceTap` 同樣只有在 `TtsPanel` 可見（`controller.status != idle`）時才存在（計劃範圍澄清第 2 點的同一環境限制），本 Task 不新增依賴 `TtsPanel` 顯示的整合測試。改為驗證 `_openTtsVoicePicker` 在 `ttsProvider` 為 `null` 時安全 no-op（已由 Task 4 的 `onTtsTap: null` 分支間接保證，不需要額外測試）；`FakeTtsProvider.getAvailableVoices()` 回傳單一系統語音、`voices.isEmpty` 分支的靜默略過行為，已由 `TtsProvider` 介面本身的既有契約與 `TtsDefaultsScreen` 既有測試涵蓋（`tts_defaults_screen_test.dart`，若存在，不在本計劃重複驗證）。本 Step 因此不新增 `reader_screen_test.dart` 案例，Task 2 的純 Dart 單元測試（`TtsController.setVoice()`）已完整涵蓋這條功能鏈唯一可獨立測試的部分。
 
-- [ ] **Step 3：`flutter analyze` 確認乾淨**
+- [x] **Step 3：`flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 4：執行 `reader_screen_test.dart` 確認本 Task 未破壞既有測試（既有大量 TTS 相關測試預期在此刻仍然失敗，屬 Task 8 處理範圍）**
+- [x] **Step 4：執行 `reader_screen_test.dart` 確認本 Task 未破壞既有測試（既有大量 TTS 相關測試預期在此刻仍然失敗，屬 Task 8 處理範圍）**
 
 Run: `flutter test test/screens/reader_screen_test.dart --plain-name "睡眠定時器"`
 Expected: PASS（Task 5 新增的 3 個案例，確認 Task 6 沒有意外破壞它們）
 
 （**不要**在本步驟執行完整 `flutter test test/screens/reader_screen_test.dart`——既有 TTS 相關測試群組會大量失敗，這是預期中、留給 Task 8 集中處理的既知狀態，比照 `plan-issue-1.md` Task 5 Step 1「先讓遷移意圖在版本歷史中可追蹤」的既有做法，不需要在這個中間點就去追每一個失敗。）
 
-- [ ] **Step 5：Commit（審查修正 C1：本 Task 獨立提交，不再與 Task 4/5 綁在一起）**
+- [x] **Step 5：Commit（審查修正 C1：本 Task 獨立提交，不再與 Task 4/5 綁在一起）**
 
 ```bash
 git add app/lib/screens/reader_screen.dart
@@ -1796,7 +1796,7 @@ git commit -m "feat(epic-38): Issue 2 Task 6 — 語音選擇 Bottom Sheet" -m "
 **Interfaces:**
 - Consumes：Task 5 的 `_isTtsActive`。
 
-- [ ] **Step 1：撰寫失敗測試**
+- [x] **Step 1：撰寫失敗測試**
 
 編輯 `app/test/screens/reader_screen_test.dart`，在 Task 5 新增的 `group('睡眠定時器...')` 之後新增：
 
@@ -1863,12 +1863,12 @@ git commit -m "feat(epic-38): Issue 2 Task 6 — 語音選擇 Bottom Sheet" -m "
   });
 ```
 
-- [ ] **Step 2：執行測試確認通過（本 Task 尚未修改程式碼，`showTtsIndicator` 目前固定為 `false`，兩個測試案例皆應已經通過——這一步是確認既有寫死值不會誤判為「功能已完成」）**
+- [x] **Step 2：執行測試確認通過（本 Task 尚未修改程式碼，`showTtsIndicator` 目前固定為 `false`，兩個測試案例皆應已經通過——這一步是確認既有寫死值不會誤判為「功能已完成」）**
 
 Run: `flutter test test/screens/reader_screen_test.dart --plain-name "小喇叭圖示"`
 Expected: PASS（因為 `showTtsIndicator` 目前恆為 `false`，這兩個「不存在」案例本來就會通過——本 Task 真正的行為驗證留給 Step 4 新增的「存在」案例）
 
-- [ ] **Step 3：實作真實邏輯**
+- [x] **Step 3：實作真實邏輯**
 
 編輯 `app/lib/screens/reader_screen.dart` 的 `_buildChromeTopBar` 方法（`reader_screen.dart:2025`）：
 
@@ -1882,7 +1882,7 @@ After：
         showTtsIndicator: _isTtsActive && !_chromeVisible,
 ```
 
-- [ ] **Step 4：新增「應該存在」的測試案例——透過點擊「◗ 朗讀」讓 `_ttsController` 非 null（即使 `status` 仍是 `idle`，`_isTtsActive` 仍為 `false`，故本案例改為驗證另一個組合：`_chromeVisible == true` 時即使 `_isTtsActive` 為 `true` 也不應顯示）**
+- [x] **Step 4：新增「應該存在」的測試案例——透過點擊「◗ 朗讀」讓 `_ttsController` 非 null（即使 `status` 仍是 `idle`，`_isTtsActive` 仍為 `false`，故本案例改為驗證另一個組合：`_chromeVisible == true` 時即使 `_isTtsActive` 為 `true` 也不應顯示）**
 
 由於 `flutter_test` 環境下 `_isTtsActive` 無法真正變為 `true`（計劃範圍澄清第 2 點——`_ttsController.status` 永遠是 `idle`），`showTtsIndicator: true` 這個組合本身在 `ReaderScreen` 整合層無法被觸發、也就無法測試。在 `group('小喇叭圖示...')` 內、Step 1 兩個案例之後補一個文件型測試，明確記錄這個已知限制，避免未來有人誤以為遺漏：
 
@@ -1923,17 +1923,17 @@ After：
     });
 ```
 
-- [ ] **Step 5：執行測試確認通過**
+- [x] **Step 5：執行測試確認通過**
 
 Run: `flutter test test/screens/reader_screen_test.dart --plain-name "小喇叭圖示"`
 Expected: PASS（3 個案例）
 
-- [ ] **Step 6：`flutter analyze` 確認乾淨**
+- [x] **Step 6：`flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 7：Commit**
+- [x] **Step 7：Commit**
 
 ```bash
 git add app/lib/screens/reader_screen.dart app/test/screens/reader_screen_test.dart
@@ -1953,7 +1953,7 @@ git commit -m "feat(epic-38): Issue 2 Task 7 — ReaderChromeTopBar 小喇叭圖
 - Modify: `docs/epics/epic-38-reader-chrome-tts-redesign/epic.md`
 - Modify: `docs/epics.md`
 
-- [ ] **Step 1：刪除 `TtsMiniPlayer` 與其測試檔**
+- [x] **Step 1：刪除 `TtsMiniPlayer` 與其測試檔**
 
 ```bash
 git rm app/lib/screens/tts_mini_player.dart app/test/screens/tts_mini_player_test.dart
@@ -1962,7 +1962,7 @@ git rm app/lib/screens/tts_mini_player.dart app/test/screens/tts_mini_player_tes
 Run: `flutter analyze`
 Expected: `reader_screen_test.dart` 開始出現大量「找不到 `TtsMiniPlayer`」的編譯錯誤——這是 Step 2 起要逐一修正的既知範圍。
 
-- [ ] **Step 2：刪除已完全失效的過渡期回歸測試**
+- [x] **Step 2：刪除已完全失效的過渡期回歸測試**
 
 `reader_screen_test.dart` 檔案結尾（`tearDownAll` 之前）有一則 Issue 1 專屬的過渡期回歸測試，整段驗證的行為（`_ttsMiniPlayerVisible` 手動互斥）已被本 Issue 的衍生切換取代，找到並整段刪除：
 
@@ -1974,7 +1974,7 @@ Expected: `reader_screen_test.dart` 開始出現大量「找不到 `TtsMiniPlaye
       // ...（整段刪除，含收尾的 },\n  );）
 ```
 
-- [ ] **Step 3：遷移 `group('TTS 語音朗讀（epic-34-tts-readalong Issue 2）', ...)`**
+- [x] **Step 3：遷移 `group('TTS 語音朗讀（epic-34-tts-readalong Issue 2）', ...)`**
 
 這個 group 內 4 則測試：第 1 則（「未提供 ttsProvider 時，不顯示 TTS 播放按鈕」）從未點擊「◗ 朗讀」，完全不受本 Issue 影響，不需要修改。其餘 2 則與 CBZ 相關。CBZ 分支本 Issue 改用獨立的 `_cbzTtsPanelVisible` 手動旗標（見計劃範圍澄清第 1 點），**不受**「`TtsController.status` 永遠是 `idle`」這個環境限制影響（CBZ 根本不建構 controller），點擊「◗ 朗讀」後 `TtsPanel`（取代 `TtsMiniPlayer`）確實會出現，`find.byKey`／`tester.widget<IconButton>(...).onPressed` 這類斷言不需要修改（Key／型別在 `TtsPanel` 與 `TtsMiniPlayer` 之間沿用既有字面值，見 Task 3）。
 
@@ -2071,12 +2071,12 @@ After：
 
 （同時把這則測試的標題從「初始為播放圖示」改為更準確地反映新斷言範圍，例如「提供 ttsProvider 時，流式 EPUB 顯示 TTS 播放按鈕，點擊後不崩潰且維持在 ReaderChromeBottomBar（誠實測試邊界，見計劃範圍澄清第 2 點）」。）
 
-- [ ] **Step 4：執行測試確認 Step 3 範圍轉綠**
+- [x] **Step 4：執行測試確認 Step 3 範圍轉綠**
 
 Run: `flutter test test/screens/reader_screen_test.dart --plain-name "TTS 語音朗讀"`
 Expected: PASS（4 個案例）
 
-- [ ] **Step 5：依同一套規則遷移其餘 5 個既有 TTS 相關 group**
+- [x] **Step 5：依同一套規則遷移其餘 5 個既有 TTS 相關 group**
 
 以下每個 group 內，凡是「點擊 `reader_chrome_tts_button` → 斷言 `reader_tts_play_pause_button`／`reader_tts_previous_button`／`reader_tts_next_button`／`reader_tts_speed_button` 存在或可繼續互動」的**非 CBZ**案例，一律套用 Step 3 呈現的同一種改法（斷言收斂為「點擊不崩潰＋維持在 `ReaderChromeBottomBar`＋`TtsPanel` 不存在」），CBZ 案例維持原樣（不受環境限制影響）：
 
@@ -2091,35 +2091,35 @@ Expected: PASS（4 個案例）
 
 逐一處理時，每完成一個 group 就跑一次 `flutter test test/screens/reader_screen_test.dart --plain-name "<group 關鍵字>"` 確認轉綠再處理下一個，不要一次改完全部才第一次執行測試（比照 `plan-issue-1.md` Task 5 Step 4 既有的漸進驗證慣例）。
 
-- [ ] **Step 6：執行 `reader_screen_test.dart` 全數確認 PASS**
+- [x] **Step 6：執行 `reader_screen_test.dart` 全數確認 PASS**
 
 Run: `flutter test test/screens/reader_screen_test.dart`
 Expected: PASS（全部案例，0 skip、0 fail——比照 Issue 1 收尾標準，不遺留任何 `skip: true`）
 
-- [ ] **Step 7：`flutter analyze` 確認乾淨**
+- [x] **Step 7：`flutter analyze` 確認乾淨**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 8：執行整份 Epic Issue 2 收尾要求的完整測試套件**
+- [x] **Step 8：執行整份 Epic Issue 2 收尾要求的完整測試套件**
 
 Run: `flutter test`
 Expected: PASS（全部案例，比照 `CLAUDE.md`「測試執行範圍」規範，本 Task 是本計劃最後一個 Task，跑一次完整套件確認無全域回歸）
 
-- [ ] **Step 9：`DESIGN.md` 文件同步**
+- [x] **Step 9：`DESIGN.md` 文件同步**
 
 編輯倉庫根目錄的 `DESIGN.md`（審查修正 M1：不是 `docs/DESIGN.md`）§12／§13 段落，依 `spec.md`「已解決的規格矛盾（新增）」與「Further Notes」訂正：
 - §12 開頭「閱讀器畫面重構為統一的 `ReaderScaffold`」改為「新增 `ReaderChromeTopBar`／`ReaderChromeBottomBar` 取代兩套按鈕塔」（Issue 1 遺留事項，一併於本 Issue 收尾處理）。
 - §12.1「⬓ 按鈕同時讀寫 §17.1 顯示頁首／頁尾設定」文字刪除或訂正為「⬓ 只切換 `_chromeVisible`，不讀寫 `showHeader`/`showFooter`」。
 - §13 對應段落更新為 `TtsPanel` 兩排結構＋睡眠定時器＋語音選擇，取代原本描述 `TtsMiniPlayer` 的文字。
 
-- [ ] **Step 10：更新 `issues.md`／`epic.md`／`docs/epics.md`**
+- [x] **Step 10：更新 `issues.md`／`epic.md`／`docs/epics.md`**
 
 - `docs/epics/epic-38-reader-chrome-tts-redesign/issues.md`：Issue 2 的 `**Status:**` 從 `ready-for-agent` 改為 `completed`。
 - `docs/epics/epic-38-reader-chrome-tts-redesign/epic.md`：比照 Issue 1 收尾時的既有記錄格式（本檔案內已有 2026-09-08 的 Issue 1 完成記錄可參照），追加一則 Issue 2 完成記錄，摘要本 Task 8 Step 1-9 的重點與計劃範圍澄清 1-6 點的處理結果。
 - `docs/epics.md`：找到本 Epic 對應列（`epic-38-reader-chrome-tts-redesign`），備註欄改為「Issue 1-2 已完成；Epic 38 全數完成，待歸檔」。
 
-- [ ] **Step 11：Commit**
+- [x] **Step 11：Commit**
 
 ```bash
 git add -A

@@ -42,7 +42,7 @@
 
 ## Issue 2：`TtsPanel` 重構＋`TtsController.stop()`＋睡眠定時器
 
-**Status:** ready-for-agent
+**Status:** completed
 
 **依賴：** Issue 1（沿用其 `ReaderChromeBottomBar` 的「朗讀」按鈕位置，並在其 `ReaderChromeTopBar` 補上小喇叭圖示的真實邏輯）
 

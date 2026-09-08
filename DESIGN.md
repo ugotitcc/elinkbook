@@ -275,7 +275,7 @@ AdaptiveScaffold (根據螢幕寬度自適應)
 
 ## 12. 閱讀器專屬元件與介面 (Reader-specific Components)
 
-閱讀器畫面 (`ReaderScreen`) 重構為統一的 `ReaderScaffold`，將 EPUB 與 PDF 兩套重複的 chrome 合併，並還原中文直排起讀點。
+閱讀器畫面 (`ReaderScreen`) 新增 `ReaderChromeTopBar`／`ReaderChromeBottomBar` 取代兩套按鈕塔，將 EPUB 與 PDF 兩套重複的 chrome 合併為格式無關的統一控制列，並還原中文直排起讀點。
 
 ### 12.1 淘汰右側「浮動按鈕塔」
 - **現狀問題**：右側 7 顆懸浮按鈕壓在內文上，破壞直排繁體中文的起讀邊界，且雙引擎各自寫死座標。
@@ -283,7 +283,7 @@ AdaptiveScaffold (根據螢幕寬度自適應)
   - 點擊螢幕中央熱區，觸發「沉浸模式」切換。
   - 喚醒介面時，僅在**頂部**與**底部**浮出兩條滿版 Chrome 控制列。
   - **頂部 Chrome Bar**：返回按鈕、書名與目前章節、內文搜尋按鈕、**顯示／隱藏工具列（⬓）按鈕**、書籤 Toggle 按鈕。
-    - **⬓ 顯示／隱藏工具列**：點擊收合下方所有底部 Chrome 控制列（章節進度條、跳頁指示、目錄/劃線/版面/朗讀選單列，朗讀中則收合 TTS 面板），只留頂部 Chrome Bar 與內文，供長時間閱讀減少電子紙常駐刷新區域；再次點擊恢復顯示。此按鈕同時讀寫 §17.1「顯示頁首／頁尾」設定，兩者共用同一份狀態。
+    - **⬓ 顯示／隱藏工具列**：點擊收合下方所有底部 Chrome 控制列（章節進度條、跳頁指示、目錄/劃線/版面/朗讀選單列，朗讀中則收合 TTS 面板），只留頂部 Chrome Bar 與內文，供長時間閱讀減少電子紙常駐刷新區域；再次點擊恢復顯示。此按鈕只切換 `_chromeVisible`，不讀寫 `showHeader`/`showFooter`（§17.1 顯示頁首／頁尾偏好僅控制邊角常駐文字，與此獨立）。
   - **底部 Chrome Bar**：
     - 第一列：直觀的章節進度條 (Slider/Stepper) 與跳頁指示。
     - 第二列：目錄按鈕、劃線筆記按鈕、版面設定按鈕、TTS 朗讀面板按鈕。
@@ -298,17 +298,22 @@ AdaptiveScaffold (根據螢幕寬度自適應)
 
 ## 13. 語音朗讀 (TTS) 元件 (TTS-specific Components)
 
-為防止使用者意外關閉控制面板後無法停止朗讀，將 TTS 播放控制設計為「常駐 mini 控制列」與「展開式設定面板」兩層結構。
+TTS 播放控制為常駐的 `TtsPanel`，與底部選單列 `ReaderChromeBottomBar` 依 `TtsController.status` 衍生互斥切換（不設手動旗標），確保章節播畢自動切回底部列，不需額外手動關閉。
 
-### 13.1 TTS Mini Player (常駐朗讀條)
-- **觸發與顯示**：開啟 TTS 後，底部浮現一條高為 `56dp` 的 `TTSMiniPlayer` 懸浮條。
-- **操作元素**：包含「播放/暫停」、「前段」、「後段」以及「✕ 關閉」按鈕。
-- **關閉邏輯**：點擊「✕ 關閉」必須**停止 TTS 播放並釋放音訊焦點**；若使用者希望背景播放，必須顯式提示「已在背景繼續播放，可從系統通知列停止」，且此時畫面頂部必須顯示微型喇叭圖示。
+### 13.1 TtsPanel (常駐朗讀面板)
 
-### 13.2 TTS Expanded Sheet (展開式面板)
-- 點擊 Mini Player 的進度區，浮現此 Bottom Sheet。
-- **語速控制**：淘汰盲目輪播的 `IconButton`，改用離散的**語速選擇清單（Dropdown/SegmentedButton）**（支援 0.75x, 1.0x, 1.25x, 1.5x, 2.0x）或滑桿，並在 E-Ink 模式下自動切換為 **Stepper 步進按鈕** (`-` 與 `+` 每次增減 0.1x)。
-- **音訊與跟讀資訊**：面板內顯示當前朗讀段的文字摘要、所選語音引擎（TTS Engine）名稱及睡眠定時器設定。
+`TtsPanel` 為 `StatelessWidget`，兩排固定結構：
+
+- **展開控制列**（`isCollapsed` 為 `false` 時顯示；`isCollapsed` 為 `true` 時整排隱藏）：上一句／播放暫停／下一句／語速（循環 0.5x~2.0x，顯示如 `1.00x`）／語音選擇（呼叫 `TtsProvider.getAvailableVoices()` 即時清單，`RadioGroup` 單選，選擇後僅影響下一段合成，不寫入 `GlobalReaderPrefs.ttsVoiceId`）。
+- **底層動作列**（恆常渲染，不受 `isCollapsed` 影響）：睡眠定時器（15/30/45/60 分＋不限時固定清單，到期為暫停非停止，不做逐秒倒數）／收合展開（`isCollapsed` 切換）／停止（呼叫 `TtsController.stop()` 真正停止並釋放音訊焦點）。
+
+CBZ 為純圖像格式，無文字可朗讀，`TtsPanel` 僅顯示停用狀態的播放鍵（`onPressed: null`，由 `disabledForegroundColor` 提供視覺回饋），其餘四顆按鈕不渲染；CBZ 因沒有真正的 `TtsController`，改用獨立的 `_cbzTtsPanelVisible` 手動旗標控制展開/收合，不受一般格式衍生切換影響。
+
+觸控目標依 §7.2：一般模式 52dp、E-Ink 模式 56dp；停止按鈕為強調色（`backgroundColor: iconColor` 反白樣式）。
+
+### 13.2 背景播放與系統整合
+
+系統通知欄／鎖定畫面／耳機線控透過 `TtsAudioHandler`（`audio_service` `BaseAudioHandler`）與 `TtsController` 橋接，`stop` 控制項呼叫真正的 `controller.stop()` 釋放音訊焦點，而非 `pause()`。
 
 ---
 
