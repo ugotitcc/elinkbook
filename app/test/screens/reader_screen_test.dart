@@ -8782,6 +8782,133 @@ void main() {
     );
   });
 
+  group('睡眠定時器（epic-38-reader-chrome-tts-redesign Issue 2）', () {
+    testWidgets('選擇「30 分鐘」後，再次開啟選單該選項顯示已勾選', (tester) async {
+      final key = GlobalKey<State<ReaderScreen>>();
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            key: key,
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_sleep_timer_select',
+            prefsManager: prefsManager,
+            ttsProvider: FakeTtsProvider(),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      // 審查修正（review-plan-issue-2.md M2）：先點一次「◗ 朗讀」讓
+      // _ttsControllerOrNull 真正建構出 TtsController（status 仍停在
+      // idle，flutter_test 環境下無法真正播放，見計劃範圍澄清第 2 點），
+      // 讓下面的 Timer 到期時 _ttsController?.pause() 呼叫在一個真實
+      // controller 而非 null 上，更貼近實際執行期路徑。
+      await tester.tap(find.byKey(const Key('reader_chrome_tts_button')));
+      await tester.pump();
+
+      ReaderScreen.openSleepTimerPickerForTest(key);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      await tester.tap(find.byKey(const Key('reader_tts_sleep_timer_option_30')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      ReaderScreen.openSleepTimerPickerForTest(key);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      final optionFinder =
+          find.byKey(const Key('reader_tts_sleep_timer_option_30'));
+      expect(
+        find.descendant(of: optionFinder, matching: find.byIcon(Icons.check)),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('選擇「30 分鐘」後經過 30 分鐘，再次開啟選單「不限時」變為已勾選'
+        '（計時器已自動到期歸零）', (tester) async {
+      final key = GlobalKey<State<ReaderScreen>>();
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            key: key,
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_sleep_timer_expire',
+            prefsManager: prefsManager,
+            ttsProvider: FakeTtsProvider(),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      // 審查修正（review-plan-issue-2.md M2）：見上一則測試的說明。
+      await tester.tap(find.byKey(const Key('reader_chrome_tts_button')));
+      await tester.pump();
+
+      ReaderScreen.openSleepTimerPickerForTest(key);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.tap(find.byKey(const Key('reader_tts_sleep_timer_option_30')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      await tester.pump(const Duration(minutes: 30));
+
+      ReaderScreen.openSleepTimerPickerForTest(key);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      final noneFinder =
+          find.byKey(const Key('reader_tts_sleep_timer_option_none'));
+      expect(
+        find.descendant(of: noneFinder, matching: find.byIcon(Icons.check)),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('選擇「不限時」後，計時器不會在任何延遲後觸發任何狀態變化', (tester) async {
+      final key = GlobalKey<State<ReaderScreen>>();
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            key: key,
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_sleep_timer_none',
+            prefsManager: prefsManager,
+            ttsProvider: FakeTtsProvider(),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      // 審查修正（review-plan-issue-2.md M2）：見第一則測試的說明。
+      await tester.tap(find.byKey(const Key('reader_chrome_tts_button')));
+      await tester.pump();
+
+      ReaderScreen.openSleepTimerPickerForTest(key);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.tap(find.byKey(const Key('reader_tts_sleep_timer_option_none')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      await tester.pump(const Duration(hours: 2));
+
+      expect(tester.takeException(), isNull);
+    });
+  });
+
   testWidgets(
     '開啟舊 TtsMiniPlayer 膠囊時，新的 ReaderChromeBottomBar 不會同時顯示'
     '（review-issues.md I1 過渡期互斥回歸測試）',

@@ -246,6 +246,24 @@ class ReaderScreen extends StatefulWidget {
     }
   }
 
+  /// 供測試直接呼叫 [_ReaderScreenState._openSleepTimerPicker]（epic-38-
+  /// reader-chrome-tts-redesign Issue 2，計劃範圍澄清第 3 點）：真正的
+  /// UI 觸發入口 `TtsPanel.onSleepTimerTap` 只有在 `TtsController.status`
+  /// 離開 `idle` 後才會出現在畫面上，但 `flutter_test` 環境下
+  /// `FoliateReaderView.loadTtsSegments()` 恆回傳空清單（見
+  /// `_ttsControllerOrNull` 文件註解既有的「誠實測試邊界」），`play()`
+  /// 永遠無法真正離開 `idle`，導致 `TtsPanel` 在 widget test 環境下結構性
+  /// 不可能出現。比照既有 [togglePdfBookmark]／[openPdfToc]「對應真實
+  /// 觸發入口在測試環境下不可達」的既有模式新增本 helper，讓睡眠定時器
+  /// 的 `Timer`／Bottom Sheet 選項邏輯本身仍可被完整測試。[key] 對應的
+  /// State 若尚未掛載，靜默忽略。
+  static void openSleepTimerPickerForTest(GlobalKey<State<ReaderScreen>> key) {
+    final state = key.currentState;
+    if (state is _ReaderScreenState) {
+      state._openSleepTimerPicker();
+    }
+  }
+
   /// 供真機整合測試讀取目前書籍目錄（epic-11-multi-format-reader
   /// Issue 4），比照既有 [triggerZoneAction] 強型別 static helper 模式。
   /// [key] 對應的 State 若尚未掛載，回傳空清單。
@@ -552,11 +570,13 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   void dispose() {
     _syncCheckpointTimer?.cancel();
     _openBookTimeoutTimer?.cancel();
+    _ttsSleepTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     _volumeKeyChannel.setMethodCallHandler(null);
     _pdfSearchStateNotifier.dispose();
     _ttsAudioFocusCoordinator?.dispose();
     widget.ttsAudioHandler?.detachController();
+    _ttsController?.removeListener(_onTtsStatusChanged);
     _ttsController?.dispose();
     // 離開閱讀畫面時觸發一次位置寫入（spec.md「本機閱讀位置記憶」寫入
     // 時機之一）。不 await——dispose() 是同步方法，且這是離開畫面前的
@@ -2175,14 +2195,72 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     );
   }
 
-  // ── 暫時存根（epic-38-reader-chrome-tts-redesign Issue 2 審查修正
-  // C1）──：讓本 Task 能獨立通過 flutter analyze／flutter test、獨立
-  // 提交，不需要等到 Task 6 完成才能驗證。Task 5 會把前三個換成真正的
-  // 睡眠定時器實作，Task 6 會把最後一個換成真正的語音選擇實作——見各自
-  // Task 的 Before/After。
+  /// 睡眠定時器目前設定的時長（epic-38-reader-chrome-tts-redesign
+  /// Issue 2）：`null` 代表「不限時」（未設定，或已到期/取消）。只顯示
+  /// 「已設定的時長」（如「睡眠 30 分」），不做逐秒刷新的倒數畫面——
+  /// E-Ink 裝置不利於高頻率畫面刷新，spec.md「Out of Scope」已排除。
   Duration? _ttsSleepTimerDuration;
-  Future<void> _openSleepTimerPicker() async {}
-  void _cancelTtsSleepTimer() {}
+  Timer? _ttsSleepTimer;
+
+  void _setTtsSleepTimer(Duration? duration) {
+    _ttsSleepTimer?.cancel();
+    setState(() => _ttsSleepTimerDuration = duration);
+    if (duration == null) return; // 「不限時」：取消計時器，不排新的。
+    _ttsSleepTimer = Timer(duration, () {
+      _ttsController?.pause();
+      if (mounted) setState(() => _ttsSleepTimerDuration = null);
+    });
+  }
+
+  void _cancelTtsSleepTimer() => _setTtsSleepTimer(null);
+
+  /// 供 `TtsPanel.onSleepTimerTap` 呼叫，開啟 15/30/45/60 分＋「不限時」
+  /// 固定清單（spec.md「睡眠定時器」User Story 15）。也透過
+  /// [ReaderScreen.openSleepTimerPickerForTest] 供測試直接呼叫——見
+  /// 計劃範圍澄清第 3 點。
+  Future<void> _openSleepTimerPicker() {
+    return _showThemedModalBottomSheet<void>(
+      builder: (_) => _TtsSleepTimerSheet(
+        options: const [
+          Duration(minutes: 15),
+          Duration(minutes: 30),
+          Duration(minutes: 45),
+          Duration(minutes: 60),
+        ],
+        selected: _ttsSleepTimerDuration,
+        onSelected: (duration) {
+          Navigator.of(context).pop();
+          _setTtsSleepTimer(duration);
+        },
+      ),
+    );
+  }
+
+  /// 是否正在朗讀（idle 以外的任何狀態），供 [ReaderChromeTopBar]
+  /// 小喇叭圖示（Task 7）與下方 [_onTtsStatusChanged] 邊緣偵測共用。讀
+  /// 私有欄位 `_ttsController`（非 `_ttsControllerOrNull`），不觸發 lazy
+  /// 建構。
+  bool get _isTtsActive =>
+      _ttsController != null && _ttsController!.status != TtsPlaybackStatus.idle;
+
+  bool _wasTtsActive = false;
+
+  /// 睡眠定時器自動取消機制（審查修正 `review-spec.md` C1 已於 spec.md
+  /// 落地）：不可在 `AnimatedBuilder.builder` 內呼叫 `setState`（`builder`
+  /// 在 build 階段執行，直接呼叫 `_cancelTtsSleepTimer()` 內部的
+  /// `setState()` 會立即拋出 `AssertionError`）。改為 `TtsController`
+  /// 的獨立 listener，在 build 週期之外偵測「原本正在朗讀、現在變成
+  /// idle」的邊緣，此時才安全呼叫 `_cancelTtsSleepTimer()`——涵蓋「章節
+  /// 自然播完」與「使用者按下停止」兩種轉為 idle 的途徑，避免朗讀已經
+  /// 停止/播完後，定時器仍在背景倒數的視覺落差。
+  void _onTtsStatusChanged() {
+    final isActive = _isTtsActive;
+    if (_wasTtsActive && !isActive) {
+      _cancelTtsSleepTimer();
+    }
+    _wasTtsActive = isActive;
+  }
+
   Future<void> _openTtsVoicePicker(TtsController controller) async {}
 
   Widget _buildBody(BookFormat format, bool isLandscape) {
@@ -2638,6 +2716,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       },
     );
     _ttsController = controller;
+    controller.addListener(_onTtsStatusChanged);
     widget.ttsAudioHandler?.attachController(controller, bookTitle: widget.bookTitle);
     final focusSource = widget.ttsAudioFocusSource;
     if (focusSource != null) {
@@ -2877,5 +2956,46 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       case ZoneAction.none:
         break;
     }
+  }
+}
+
+/// 睡眠定時器選單（epic-38-reader-chrome-tts-redesign Issue 2）：固定
+/// 15/30/45/60 分＋「不限時」清單，[selected] 對應項目打勾（比照既有
+/// `library_sort_option_${sortBy.name}` 勾選樣式慣例）。
+class _TtsSleepTimerSheet extends StatelessWidget {
+  final List<Duration> options;
+  final Duration? selected;
+  final ValueChanged<Duration?> onSelected;
+
+  const _TtsSleepTimerSheet({
+    required this.options,
+    required this.selected,
+    required this.onSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final primaryColor = Theme.of(context).colorScheme.primary;
+    return SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final option in options)
+            ListTile(
+              key: Key('reader_tts_sleep_timer_option_${option.inMinutes}'),
+              title: Text('${option.inMinutes} 分鐘'),
+              trailing:
+                  selected == option ? Icon(Icons.check, color: primaryColor) : null,
+              onTap: () => onSelected(option),
+            ),
+          ListTile(
+            key: const Key('reader_tts_sleep_timer_option_none'),
+            title: const Text('不限時'),
+            trailing: selected == null ? Icon(Icons.check, color: primaryColor) : null,
+            onTap: () => onSelected(null),
+          ),
+        ],
+      ),
+    );
   }
 }
