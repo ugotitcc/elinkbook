@@ -103,7 +103,9 @@ class _ReaderFooterState extends State<ReaderFooter> {
         widget.totalPages > 0 ? (widget.currentPage / widget.totalPages * 100).round() : 0;
     return Container(
       key: const Key('reader_footer'),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      // vertical: 0——ReaderFooter 現僅嵌入 ReaderChromeBottomBar 的 56dp
+      // 列（epic-38 Issue 1），移除上下內邊距避免 RenderFlex 溢位 8px。
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
         // 見上方類別文件註解「Slider 高度陷阱」完整原因說明——刻意保留，
         // 不是多餘的殘留寫法。

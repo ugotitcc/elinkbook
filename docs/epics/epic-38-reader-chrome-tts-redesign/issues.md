@@ -10,7 +10,7 @@
 
 ## Issue 1：ReaderChromeBar 統一＋沉浸模式雙觸發＋死碼清除
 
-**Status:** ready-for-agent
+**Status:** completed
 
 **依賴：** 無（可立即開始）
 
