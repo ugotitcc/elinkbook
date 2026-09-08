@@ -1151,7 +1151,7 @@ void main() {
       // 不是跳過整段長句子落到索引 4。
       expect(controller.segments.length, 5);
       expect(controller.currentIndex, 1);
-        expect(provider.synthesizedTexts, [longText.substring(0, 10)]);
+      expect(provider.synthesizedTexts, [longText.substring(0, 10)]);
     });
   });
 

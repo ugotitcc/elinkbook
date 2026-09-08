@@ -8287,7 +8287,7 @@ void main() {
 
   group('Mini Player 與既有底部元件顯示連動（epic-34-tts-readalong Issue 6）', () {
     testWidgets(
-      '頁尾預設顯示（showFooter 預設 null＝true）且提供 ttsProvider 時，頁尾進度文字與 Mini Player 播放鍵同時存在，互不排斥',
+      '頁尾預設顯示（showFooter 預設 null＝true）且提供 ttsProvider 時，頁尾進度文字與朗讀按鈕點擊不崩潰，兩者互不排斥',
       (tester) async {
         final highlightsRepo = FakeHighlightsRepository();
         final notesRepo = FakeNotesRepository();
@@ -8344,7 +8344,16 @@ void main() {
           find.byKey(const Key('reader_foliate_progress_text')),
           findsOneWidget,
         );
-        // epic-38 Issue2: ReaderChromeBottomBar 內頁碼文字與 footer 進度可能同時為 "5/20"，find.text 會命中多個
+        // epic-38 Issue 2（審查修正 review-issue-2.md Minor #3：原註解誤指
+        // ReaderChromeBottomBar 頁碼文字，實際上該文字格式是
+        // "5 / 20 · 25%"〔_pageProgressText()〕，跟這裡的 "5/20" 不同。
+        // 真正同時顯示 "5/20" 的是兩個獨立元件：ReaderChromeBottomBar 內嵌
+        // 的 ReaderFooter〔key: reader_footer_progress_text〕，以及
+        // _buildFoliateProgressText()〔key: reader_foliate_progress_text，
+        // 上面已在 8343-8346 行斷言其存在〕——兩者格式皆為
+        // "$currentPage/$totalPages"，同一份 EpubPositionInfo 換算出同樣的
+        // "5/20"，故 find.text 必然命中 2 個，findsOneWidget 會失敗
+        // （已實測驗證），findsWidgets 才是正確斷言。
         expect(find.text('5/20'), findsWidgets);
       },
     );
