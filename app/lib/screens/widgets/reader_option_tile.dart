@@ -10,6 +10,9 @@ class ReaderOptionTile<T> extends StatelessWidget {
   final String tooltip;
   final ValueChanged<T> onSelected;
   final VisualDensity visualDensity;
+  final double iconSize;
+  final double labelFontSize;
+  final bool forceUnselected;
 
   const ReaderOptionTile({
     super.key,
@@ -21,11 +24,14 @@ class ReaderOptionTile<T> extends StatelessWidget {
     required this.tooltip,
     required this.onSelected,
     this.visualDensity = VisualDensity.standard,
+    this.iconSize = 20,
+    this.labelFontSize = 13,
+    this.forceUnselected = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    final selected = value == groupValue;
+    final selected = !forceUnselected && value == groupValue;
     final theme = Theme.of(context);
     final isEink = theme.colorScheme.primary == Colors.black &&
         theme.scaffoldBackgroundColor == Colors.white;
@@ -56,13 +62,13 @@ class ReaderOptionTile<T> extends StatelessWidget {
     final content = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 20, color: foregroundColor),
+        Icon(icon, size: iconSize, color: foregroundColor),
         if (label != null) ...[
           const SizedBox(width: 6),
           Text(
             label!,
             style: TextStyle(
-              fontSize: 13,
+              fontSize: labelFontSize,
               fontWeight: selected ? FontWeight.bold : FontWeight.normal,
               color: foregroundColor,
             ),
