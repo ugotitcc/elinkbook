@@ -2261,7 +2261,65 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     _wasTtsActive = isActive;
   }
 
-  Future<void> _openTtsVoicePicker(TtsController controller) async {}
+  /// 語音選擇 Bottom Sheet（epic-38-reader-chrome-tts-redesign Issue 2，
+  /// spec.md §功能③）：本 Epic 只提供單次朗讀 session 內的臨時切換，不
+  /// 讀取也不寫入 `GlobalReaderPrefs.ttsVoiceId`（spec.md「Out of
+  /// Scope」）。比照既有 `TtsDefaultsScreen` 的 `RadioGroup`／`RadioListTile`
+  /// 既有呼叫模式（`tts_defaults_screen.dart`），只是資料來源改為即時
+  /// 呼叫 [TtsProvider.getAvailableVoices]、選擇結果直接呼叫
+  /// [TtsController.setVoice]。`getAvailableVoices()` 回傳空清單時
+  /// （裝置未安裝或不支援語音選擇，比照 `TtsDefaultsScreen` 既有處理）
+  /// 靜默不開啟選單，不留一個空白 Bottom Sheet。
+  ///
+  /// **`SingleChildScrollView` 防溢位（審查修正 review-plan-issue-2.md
+  /// I1）**：`_showThemedModalBottomSheet` 帶 `isScrollControlled: true`，
+  /// 但這只讓 Bottom Sheet 本身可以撐到接近全螢幕高度，不會讓內容自動
+  /// 變成可捲動——`TtsDefaultsScreen` 的既有參考實作是整個畫面包在
+  /// `ListView` 裡（見 `tts_defaults_screen.dart`），本 Bottom Sheet 若
+  /// 直接用 `Column` 承載，裝置若安裝了 Google/Samsung 等第三方 TTS
+  /// 引擎、`getAvailableVoices()` 回傳 10-30+ 個語音選項時，會在真機上
+  /// 觸發 `RenderFlex overflowed` 溢位。
+  Future<void> _openTtsVoicePicker(TtsController controller) async {
+    final provider = widget.ttsProvider;
+    if (provider == null) return;
+    final voices = await provider.getAvailableVoices();
+    if (!mounted || voices.isEmpty) return;
+    return _showThemedModalBottomSheet<void>(
+      builder: (_) => SafeArea(
+        child: SingleChildScrollView(
+          child: RadioGroup<String>(
+            groupValue: controller.voice.id,
+            onChanged: (voiceId) {
+              if (voiceId == null) return;
+              final selected = voices.firstWhere((v) => v.id == voiceId);
+              controller.setVoice(selected);
+              Navigator.of(context).pop();
+            },
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // 審查修正（review-plan-issue-2.md M3）：補上標題列，
+                // 讓使用者知道目前是在選語音，不是一份沒有上下文的清單。
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+                  child: Text(
+                    '朗讀語音',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                for (final voice in voices)
+                  RadioListTile<String>(
+                    key: Key('reader_tts_voice_option_${voice.id}'),
+                    title: Text(voice.displayName),
+                    value: voice.id,
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
   Widget _buildBody(BookFormat format, bool isLandscape) {
     if (format == BookFormat.unknown) {
