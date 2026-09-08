@@ -1,6 +1,6 @@
 # Epic 39 — Issue 3：`ReaderSettingsSheet` 分頁重組（文字對齊搬移＋單選群組改用 `EBOptionChipGroup`＋欄位大小步進器）實作計畫
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** `ReaderSettingsSheet` 四個 Tab 顯示文字改名（`Key` 不變）；`_buildTextAlignRow()` 從「邊界」分頁搬到「呈現」分頁；欄數／文字對齊／書寫方向／翻頁模式／螢幕方向共 5 組單選群組改用 Issue 1 新增的 `EBOptionChipGroup`（套用 spec.md「選項標籤對照表」的短標籤）；`_buildColumnModeRow()` 內獨立的 `reader_settings_column_size_slider` 依 `isEinkMode` 切換 `EBStepper`。
 
@@ -34,7 +34,7 @@
 - Consumes：無新依賴，`TabBar`／`Tab`／既有 `switchToTab(tester, tabLabel)` helper（兩個測試檔案各自獨立定義，簽章相同：`Future<void> switchToTab(WidgetTester tester, String tabLabel) async`，內部用 `find.widgetWithText(Tab, tabLabel)` 定位並點擊）不變。
 - Produces：4 個 Tab 的新顯示文字——`文字內容`→`文字`、`邊界首尾`→`邊界`、`版面呈現`→`呈現`、`設定喜好`→`預設集`；`Key` 常數（`reader_settings_tab_text_content`／`reader_settings_tab_boundary`／`reader_settings_tab_presentation`／`reader_settings_tab_preferences`）完全不變，供 Task 2-4 沿用。
 
-- [ ] **Step 1：修改 `reader_settings_sheet.dart`（刻意讓兩個測試檔案大量失敗，作為本 Task 的 RED）**
+- [x] **Step 1：修改 `reader_settings_sheet.dart`（刻意讓兩個測試檔案大量失敗，作為本 Task 的 RED）**
 
 修改 `app/lib/screens/reader_settings_sheet.dart` 第 246-264 行：
 
@@ -75,7 +75,7 @@
   /// 呈現／預設集）僅是本 State 的 `build()` 展示分支，一律不得抽成獨立
 ```
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 Run: `flutter test test/screens/reader_settings_sheet_test.dart`
 Expected: 大量 FAIL（`switchToTab` 內 `find.widgetWithText(Tab, '文字內容')` 等舊文字找不到對應 `Tab`，`tester.tap()` 對空 `Finder` 拋出例外，45 個呼叫點所在的測試全數失敗）。
@@ -83,7 +83,7 @@ Expected: 大量 FAIL（`switchToTab` 內 `find.widgetWithText(Tab, '文字內�
 Run: `flutter test test/screens/reader_screen_test.dart`
 Expected: 至少 11 個測試 FAIL（同樣原因，`switchToTab` 找不到舊分頁文字）。
 
-- [ ] **Step 3：批次修正兩個測試檔案的呼叫點與註解**
+- [x] **Step 3：批次修正兩個測試檔案的呼叫點與註解**
 
 `switchToTab` 呼叫點與提及分頁名稱的註解在兩個檔案裡都是單純的舊分頁文字字串，且 4 個舊名稱彼此不互為子字串、也不與檔案內其他無關文字重疊（已逐一比對確認：`reader_settings_sheet_test.dart` 內「文字內容」「邊界首尾」「版面呈現」「設定喜好」四組字串的所有出現位置皆為分頁名稱本身或提及分頁名稱的註解，無誤判疑慮），可直接用 `sed` 做全域字串取代。
 
@@ -103,7 +103,7 @@ sed -i "s/設定喜好/預設集/g" test/screens/reader_screen_test.dart
 
 （`reader_screen_test.dart` 不含「文字內容」字串，故不需要對它執行第一條取代。）
 
-- [ ] **Step 4：執行測試確認通過**
+- [x] **Step 4：執行測試確認通過**
 
 Run: `flutter test test/screens/reader_settings_sheet_test.dart`
 Expected: PASS（64 個測試全過，數量與 Issue 2 完成時相同——本 Task 純文字改名，未新增/刪除任何測試案例）。
@@ -111,12 +111,12 @@ Expected: PASS（64 個測試全過，數量與 Issue 2 完成時相同——本
 Run: `flutter test test/screens/reader_screen_test.dart`
 Expected: PASS（全數通過，零回歸）。
 
-- [ ] **Step 5：`flutter analyze` 確認零警告**
+- [x] **Step 5：`flutter analyze` 確認零警告**
 
 Run: `flutter analyze lib/screens/reader_settings_sheet.dart test/screens/reader_settings_sheet_test.dart test/screens/reader_screen_test.dart`
 Expected: `No issues found!`
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/lib/screens/reader_settings_sheet.dart app/test/screens/reader_settings_sheet_test.dart app/test/screens/reader_screen_test.dart
@@ -135,7 +135,7 @@ git commit -m "feat(epic-39): Issue 3 Task 1 — ReaderSettingsSheet 四個 Tab 
 - Consumes：Task 1 已完成的新分頁文字（`'邊界'`／`'呈現'`）；既有 `_buildTextAlignRow()` 方法簽章不變，只改變它被呼叫的位置與內部 `visualDensity`。
 - Produces：無新公開介面。`_buildTextAlignRow()` 內的 `ReaderOptionTile` 呼叫新增 `visualDensity: VisualDensity.compact`——這是為了讓既有測試「『呈現』頁籤內圖示列的 `ReaderOptionTile` 皆使用緊湊視覺密度」（`reader_settings_sheet_test.dart` 第 1329-1348 行）在文字對齊搬進來後依然成立，不需要修改該既有測試本身。
 
-- [ ] **Step 1：寫失敗測試——位置驗證＋修正 3 個受影響既有測試改切換到「呈現」分頁**
+- [x] **Step 1：寫失敗測試——位置驗證＋修正 3 個受影響既有測試改切換到「呈現」分頁**
 
 在 `app/test/screens/reader_settings_sheet_test.dart` 的 `void main()` 內追加新測試：
 
@@ -214,12 +214,12 @@ git commit -m "feat(epic-39): Issue 3 Task 1 — ReaderSettingsSheet 四個 Tab 
 
 （原本此處是註解「切換到「邊界」頁籤（文字對齊選項在此頁籤）」＋`await switchToTab(tester, '邊界');`，兩行一起改。）
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 Run: `flutter test test/screens/reader_settings_sheet_test.dart`
 Expected: 4 個測試 FAIL——新增的位置驗證測試（目前文字對齊仍在邊界分頁，`reader_settings_tab_boundary_list` 內找得到「文字對齊」文字，與預期的 `findsNothing` 不符）；另外 3 個被修正的既有測試（切到「呈現」分頁後，`reader_settings_text_align_*` 系列 Key 目前還掛在「邊界」分頁，`tester.tap()`／`find.byKey()` 皆找不到對應元件）。其餘既有測試維持 PASS。
 
-- [ ] **Step 3：實作搬移**
+- [x] **Step 3：實作搬移**
 
 修改 `app/lib/screens/reader_settings_sheet.dart` 的 `_buildBoundaryTab()`（第 425-505 行），刪除結尾的 `_buildTextAlignRow()` 呼叫：
 
@@ -289,17 +289,17 @@ Expected: 4 個測試 FAIL——新增的位置驗證測試（目前文字對齊
             );
 ```
 
-- [ ] **Step 4：執行測試確認通過**
+- [x] **Step 4：執行測試確認通過**
 
 Run: `flutter test test/screens/reader_settings_sheet_test.dart`
 Expected: PASS（65 個測試全過：既有 64 個＋本 Task 新增 1 個位置驗證測試；3 個修正過的既有測試與既有「緊湊視覺密度」測試皆零回歸）。
 
-- [ ] **Step 5：`flutter analyze` 確認零警告**
+- [x] **Step 5：`flutter analyze` 確認零警告**
 
 Run: `flutter analyze lib/screens/reader_settings_sheet.dart test/screens/reader_settings_sheet_test.dart`
 Expected: `No issues found!`
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/lib/screens/reader_settings_sheet.dart app/test/screens/reader_settings_sheet_test.dart
@@ -318,7 +318,7 @@ git commit -m "feat(epic-39): Issue 3 Task 2 — _buildTextAlignRow 從邊界分
 - Consumes：Issue 1 的 `EBOptionChipGroup<T>`／`EBOptionChipItem<T>`（`app/lib/screens/widgets/eb_option_chip_group.dart`，`items`／`groupValue`／`onSelected`／`visualDensity` 皆已存在，直接複用；本 Issue 5 組群組皆不需要 `EBOptionChipItem.onTap` 動作型項目，該欄位留給 Issue 5 的 PDF 手動選區使用）。
 - Produces：無新公開介面，5 個 `_buildXxxRow()` 方法簽章不變，內部改為建構 `EBOptionChipGroup` 而非手寫 `Wrap`。`app/lib/screens/reader_settings_sheet.dart` 不再直接參照 `ReaderOptionTile`（改由 `EBOptionChipGroup` 間接使用），故移除 `import 'widgets/reader_option_tile.dart';`，新增 `import 'widgets/eb_option_chip_group.dart';`。
 
-- [ ] **Step 1：寫失敗測試——5 組群組皆應顯示 spec.md 選項標籤對照表定義的短標籤**
+- [x] **Step 1：寫失敗測試——5 組群組皆應顯示 spec.md 選項標籤對照表定義的短標籤**
 
 在 `app/test/screens/reader_settings_sheet_test.dart` 的 `void main()` 內追加：
 
@@ -450,12 +450,12 @@ git commit -m "feat(epic-39): Issue 3 Task 2 — _buildTextAlignRow 從邊界分
   });
 ```
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 Run: `flutter test test/screens/reader_settings_sheet_test.dart`
 Expected: 新增的 5 個測試全數 FAIL——現況 5 個群組皆用裸 `ReaderOptionTile`（未傳 `label`），畫面上完全沒有任何選項文字標籤，`find.text(label)` 一律 `findsNothing`，與預期的 `findsOneWidget` 不符。其餘既有 65 個測試維持 PASS。
 
-- [ ] **Step 3：實作 5 組 `EBOptionChipGroup` 轉換**
+- [x] **Step 3：實作 5 組 `EBOptionChipGroup` 轉換**
 
 `app/lib/screens/reader_settings_sheet.dart` 頂端 import 區塊：移除 `import 'widgets/reader_option_tile.dart';`，新增：
 
@@ -677,17 +677,17 @@ import 'widgets/eb_option_chip_group.dart';
   }
 ```
 
-- [ ] **Step 4：執行測試確認通過**
+- [x] **Step 4：執行測試確認通過**
 
 Run: `flutter test test/screens/reader_settings_sheet_test.dart`
 Expected: PASS（70 個測試全過：既有 65 個＋本 Task 新增 5 個；既有「緊湊視覺密度」測試、E-Ink 高對比選中底色測試、`switchToTab`／`find.byKey` 系列既有測試皆零回歸——`EBOptionChipGroup` 內部仍然渲染帶相同 `itemKey` 的 `ReaderOptionTile`，既有依賴這些 Key 的測試不受影響）。
 
-- [ ] **Step 5：`flutter analyze` 確認零警告**
+- [x] **Step 5：`flutter analyze` 確認零警告**
 
 Run: `flutter analyze lib/screens/reader_settings_sheet.dart test/screens/reader_settings_sheet_test.dart`
 Expected: `No issues found!`（含確認移除 `reader_option_tile.dart` import 後沒有殘留的 unused import 警告）。
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/lib/screens/reader_settings_sheet.dart app/test/screens/reader_settings_sheet_test.dart
@@ -706,7 +706,7 @@ git commit -m "feat(epic-39): Issue 3 Task 3 — 5 組單選群組改用 EBOptio
 - Consumes：Task 1 的新分頁名稱；Issue 1 的 `EBStepper`（`keyPrefix`／`value`／`min`／`max`／`step`／`displayValue`／`onChanged`／`mainAxisSize`／`mainAxisAlignment`）；`widget.isEinkMode`。
 - Produces：無新公開介面。`isEinkMode: true` 時，`reader_settings_column_size_slider` 這個 Key 被 `reader_settings_column_size_decrement`／`_value`／`_increment` 三個 Key 取代（僅在此分支下，`isEinkMode: false` 時 `reader_settings_column_size_slider` Key 維持不變）；上方標題 `Text` 依 `isEinkMode` 決定是否帶數值（審查修正 M1，`review-plan-issue-3.md`：E-Ink 模式隱藏數值避免與 `EBStepper` 內部顯示重複，比照 Issue 2 C1 先例）。
 
-- [ ] **Step 1：寫失敗測試——E-Ink 模式改為 EBStepper＋一般主題零回歸**
+- [x] **Step 1：寫失敗測試——E-Ink 模式改為 EBStepper＋一般主題零回歸**
 
 在 `app/test/screens/reader_settings_sheet_test.dart` 的 `void main()` 內追加：
 
@@ -763,12 +763,12 @@ git commit -m "feat(epic-39): Issue 3 Task 3 — 5 組單選群組改用 EBOptio
   });
 ```
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 Run: `flutter test test/screens/reader_settings_sheet_test.dart`
 Expected: 第一個測試 FAIL——現況無條件渲染 `Slider`，`reader_settings_column_size_slider` 在 `isEinkMode: true` 時依然存在（與預期的 `findsNothing` 不符）；`reader_settings_column_size_value` 這個 Key 尚不存在於任何地方；標題現況固定是 `Text('欄位大小 ${_columnSize.round()}px')`，`find.text('欄位大小')`（不含數值）找不到、`find.text('欄位大小 720px')` 卻找得到，兩者皆與預期相反。第二個測試（`isEinkMode: false` 迴歸）在目前程式碼下**已經會通過**——現況本來就無條件渲染 `Slider` 且標題本來就帶數值；因為兩個測試寫在同一個 Step、一起執行，整體 `flutter test` 結果仍是 FAIL（第一個測試失敗），這是刻意避免「有測試從未真正 RED 過」的寫法（比照 `review-plan-issue-2.md` I2 的既有先例）——待 Step 3 實作完成後，兩個測試會在同一次 GREEN 內一起被驗證。
 
-- [ ] **Step 3：實作 `EBStepper` 分支**
+- [x] **Step 3：實作 `EBStepper` 分支**
 
 修改 `app/lib/screens/reader_settings_sheet.dart` 的 `_buildColumnModeRow()`（原第 573-588 行 `if (_columnMode == ColumnMode.auto)` 區塊）：
 
@@ -812,17 +812,17 @@ Expected: 第一個測試 FAIL——現況無條件渲染 `Slider`，`reader_set
           ],
 ```
 
-- [ ] **Step 4：執行測試確認通過**
+- [x] **Step 4：執行測試確認通過**
 
 Run: `flutter test test/screens/reader_settings_sheet_test.dart`
 Expected: PASS（72 個測試全過：既有 70 個＋本 Task 新增 2 個）。
 
-- [ ] **Step 5：`flutter analyze` 確認零警告**
+- [x] **Step 5：`flutter analyze` 確認零警告**
 
 Run: `flutter analyze lib/screens/reader_settings_sheet.dart test/screens/reader_settings_sheet_test.dart`
 Expected: `No issues found!`
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/lib/screens/reader_settings_sheet.dart app/test/screens/reader_settings_sheet_test.dart
@@ -836,21 +836,21 @@ git commit -m "feat(epic-39): Issue 3 Task 4 — reader_settings_column_size_sli
 **Files:**
 - 無新增/修改程式碼檔案（僅驗證與文件收尾）。
 
-- [ ] **Step 1：跑全套 `flutter test`**
+- [x] **Step 1：跑全套 `flutter test`**
 
 Run: `flutter test`
 Expected: 全數通過，零回歸（`reader_settings_sheet_test.dart` 72 個＋`reader_screen_test.dart` 與其餘全專案測試皆維持 PASS）。
 
-- [ ] **Step 2：跑全套 `flutter analyze`**
+- [x] **Step 2：跑全套 `flutter analyze`**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 3：將本檔案所有 Task 的 Step 勾選為完成**
+- [x] **Step 3：將本檔案所有 Task 的 Step 勾選為完成**
 
-把本檔案（`docs/epics/epic-39-layout-settings-redesign/plans/plan-issue-3.md`）Task 1-5 全部 `- [ ]` 改為 `- [x]`。
+把本檔案（`docs/epics/epic-39-layout-settings-redesign/plans/plan-issue-3.md`）Task 1-5 全部 `- [x]` 改為 `- [x]`。
 
-- [ ] **Step 4：Commit 計畫狀態更新**
+- [x] **Step 4：Commit 計畫狀態更新**
 
 ```bash
 git add docs/epics/epic-39-layout-settings-redesign/plans/plan-issue-3.md
