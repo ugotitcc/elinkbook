@@ -33,6 +33,7 @@ class EBStepper extends StatelessWidget {
 
 - 邊界行為（超出 min/max 時按鈕停用）與既有 `_buildSliderRow` 的 `_decrement`/`_increment` 按鈕完全一致（沿用相同的 `1e-9` 浮點容許誤差比較）。
 - 純 `StatelessWidget`，顏色一律讀 `Theme.of(context).colorScheme`（E-Ink 主題下 `ColorScheme` 本身已是純黑白，見 `app_theme_data.dart` `_buildEinkTheme()`），元件本身不寫死顏色、不判斷 `isEinkMode`——呼叫端已經知道自己在 E-Ink 模式才會建構這個 widget。
+- 另有兩個開放覆寫、預設值安全的版面參數（`plan-issue-1.md` 審查修正 I1 追加）：`mainAxisSize`（預設 `MainAxisSize.min`，避免預設 `MainAxisSize.max` 在父層無邊界寬度約束下拋出 `RenderFlex` 例外）、`mainAxisAlignment`（預設 `MainAxisAlignment.center`）；呼叫端要讓 `-`/`+` 撐滿整列可自行傳入 `MainAxisSize.max`/`MainAxisAlignment.spaceBetween`。
 
 ### 2. `EBOptionChipGroup<T>`（`app/lib/screens/widgets/eb_option_chip_group.dart`）
 
