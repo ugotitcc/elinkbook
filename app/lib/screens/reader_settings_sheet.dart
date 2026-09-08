@@ -11,6 +11,7 @@ import '../reader/layout_preset.dart';
 import '../reader/page_turn_mode.dart';
 import '../reader/screen_orientation_setting.dart';
 import '../reader/writing_mode.dart';
+import 'widgets/eb_stepper.dart';
 import 'widgets/reader_option_tile.dart';
 
 /// 版面設定 Bottom Sheet（FR-09／FR-10 字型、數值型控制項與三個持久化覆寫
@@ -685,7 +686,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(label),
-              if (isOverridden == null)
+              if (isOverridden == null && !widget.isEinkMode)
                 Text(displayValue)
               else if (isOverridden == true)
                 Row(
@@ -717,34 +718,46 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                 ),
             ],
           ),
-          Row(
-            children: [
-              IconButton(
-                key: Key('${keyPrefix}_decrement'),
-                icon: const Icon(Icons.remove),
-                onPressed: clampedValue - step < min - 1e-9
-                    ? null
-                    : () => onChanged((clampedValue - step).clamp(min, max)),
-              ),
-              Expanded(
-                child: Slider(
-                  key: Key('${keyPrefix}_slider'),
+          widget.isEinkMode
+              ? EBStepper(
+                  keyPrefix: keyPrefix,
                   value: clampedValue,
                   min: min,
                   max: max,
-                  divisions: divisions,
-                  onChanged: (v) => onChanged(v.clamp(min, max)),
+                  step: step,
+                  displayValue: displayValue,
+                  onChanged: onChanged,
+                  mainAxisSize: MainAxisSize.max,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                )
+              : Row(
+                  children: [
+                    IconButton(
+                      key: Key('${keyPrefix}_decrement'),
+                      icon: const Icon(Icons.remove),
+                      onPressed: clampedValue - step < min - 1e-9
+                          ? null
+                          : () => onChanged((clampedValue - step).clamp(min, max)),
+                    ),
+                    Expanded(
+                      child: Slider(
+                        key: Key('${keyPrefix}_slider'),
+                        value: clampedValue,
+                        min: min,
+                        max: max,
+                        divisions: divisions,
+                        onChanged: (v) => onChanged(v.clamp(min, max)),
+                      ),
+                    ),
+                    IconButton(
+                      key: Key('${keyPrefix}_increment'),
+                      icon: const Icon(Icons.add),
+                      onPressed: clampedValue + step > max + 1e-9
+                          ? null
+                          : () => onChanged((clampedValue + step).clamp(min, max)),
+                    ),
+                  ],
                 ),
-              ),
-              IconButton(
-                key: Key('${keyPrefix}_increment'),
-                icon: const Icon(Icons.add),
-                onPressed: clampedValue + step > max + 1e-9
-                    ? null
-                    : () => onChanged((clampedValue + step).clamp(min, max)),
-              ),
-            ],
-          ),
         ],
       ),
     );
