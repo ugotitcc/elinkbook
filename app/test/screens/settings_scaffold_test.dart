@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:elinkbook/cloud_import/google_drive_oauth_client.dart';
 import 'package:elinkbook/cloud_import/onedrive_oauth_client.dart';
 import 'package:elinkbook/screens/settings_scaffold.dart';
+import 'package:elinkbook/screens/widgets/eb_section_header.dart';
 import 'package:elinkbook/sync/sync_account_repository.dart';
 import 'package:elinkbook/sync/sync_client.dart';
 import 'package:elinkbook/theme/app_theme.dart';
@@ -566,6 +567,37 @@ void main() {
     for (var i = 1; i < indices.length; i++) {
       expect(indices[i], greaterThan(indices[i - 1]),
           reason: '「${expected[i]}」應在「${expected[i - 1]}」之後出現');
+    }
+  });
+
+  testWidgets('每個分區標題前方皆有分隔線，唯獨第一個「外觀」之前沒有（2026-09-08 '
+      '/grill-with-docs 使用者需求）', (tester) async {
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    await tester.pumpWidget(MaterialApp(
+      home: SettingsScaffold(prefsManager: FakeReaderPrefsManager()),
+    ));
+    await tester.pumpAndSettle();
+
+    final listView = tester.widget<ListView>(find.byType(ListView));
+    final children =
+        (listView.childrenDelegate as SliverChildListDelegate).children;
+
+    final headerIndices = <int>[
+      for (var i = 0; i < children.length; i++)
+        if (children[i] is EBSectionHeader) i,
+    ];
+    expect(headerIndices.length, 4, reason: '應有外觀／閱讀／同步與帳號／關於四個分區標題');
+
+    expect(headerIndices.first, 0, reason: '第一個分區標題「外觀」前不應有任何元素（含分隔線）');
+    for (var i = 1; i < headerIndices.length; i++) {
+      expect(children[headerIndices[i] - 1], isA<Divider>(),
+          reason: '第 ${i + 1} 個分區標題前應有分隔線');
     }
   });
 

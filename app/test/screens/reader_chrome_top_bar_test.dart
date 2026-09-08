@@ -61,6 +61,30 @@ void main() {
     expect(called, isTrue);
   });
 
+  testWidgets('isBottomChromeVisible: true 時，⬓ 按鈕顯示實心 dock 圖示'
+      '（2026-09-08 /grill-with-docs 使用者需求，取代眼睛圖示）', (tester) async {
+    await tester.pumpWidget(buildTopBar(isBottomChromeVisible: true));
+    final icon = tester.widget<Icon>(
+      find.descendant(
+        of: find.byKey(const Key('reader_chrome_immersive_toggle_button')),
+        matching: find.byType(Icon),
+      ),
+    );
+    expect(icon.icon, Icons.dock);
+  });
+
+  testWidgets('isBottomChromeVisible: false 時，⬓ 按鈕顯示外框 dock 圖示'
+      '（2026-09-08 /grill-with-docs 使用者需求，取代眼睛圖示）', (tester) async {
+    await tester.pumpWidget(buildTopBar(isBottomChromeVisible: false));
+    final icon = tester.widget<Icon>(
+      find.descendant(
+        of: find.byKey(const Key('reader_chrome_immersive_toggle_button')),
+        matching: find.byType(Icon),
+      ),
+    );
+    expect(icon.icon, Icons.dock_outlined);
+  });
+
   testWidgets('onTocTap 為 null 時，目錄按鈕為停用狀態', (tester) async {
     await tester.pumpWidget(buildTopBar(onTocTap: null));
     final button = tester.widget<IconButton>(

@@ -305,8 +305,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   // 手動旗標，一般格式改用 _buildBottomChrome() 依 controller.status
   // 衍生切換，不受本旗標影響。
   bool _cbzTtsPanelVisible = false;
-  // TtsPanel「收合成細列」子狀態（epic-38-reader-chrome-tts-redesign
-  // Issue 2）：只影響展開控制列是否顯示，不影響朗讀播放本身，格式無關
+  // TtsPanel「收合」子狀態（epic-38-reader-chrome-tts-redesign
+  // Issue 2）：只影響展開列是否顯示，不影響朗讀播放本身，格式無關
   // （CBZ 的裝飾面板與一般格式共用同一個旗標）。
   bool _ttsPanelCollapsed = false;
   // FXL 懸浮「🔖 書籤 toggle」按鈕圖示所需的最小狀態快取
@@ -1955,15 +1955,18 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// （`_buildFoliateHeaderText()`／`_buildFoliateProgressText()` 邏輯，
   /// 完全不受本次改動影響）。標題本身不可點擊（prototype 的頂部列標題是
   /// 純文字，開目錄一律透過獨立的 ☰ 按鈕，見 `ReaderChromeTopBar`）。
+  /// 找不到章節時回退為 [widget.bookTitle]（2026-09-08 `/grill-with-docs`
+  /// 使用者需求，取代字面 `'閱讀器'`）；截斷交給 `ReaderChromeTopBar` 既有的
+  /// `TextOverflow.ellipsis, maxLines: 1`，不需要額外邏輯。
   String _currentChapterTitle(BookFormat format) {
     if (format == BookFormat.pdf) {
       final currentPath =
           PdfTocNavigator.findCurrentPath(_pdfTocEntries, _pdfPageInfo?.pageIndex);
-      return currentPath.isEmpty ? '閱讀器' : currentPath.last.title;
+      return currentPath.isEmpty ? widget.bookTitle : currentPath.last.title;
     }
     final currentPath =
         TocNavigator.findCurrentPath(_tocEntries, _epubPositionInfo?.progression);
-    return currentPath.isEmpty ? '閱讀器' : currentPath.last.title;
+    return currentPath.isEmpty ? widget.bookTitle : currentPath.last.title;
   }
 
   /// 頁碼列（`ReaderChromeBottomBar` 頂端 34dp 那一列）顯示的「當前頁 /
@@ -2197,7 +2200,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
 
   /// 睡眠定時器目前設定的時長（epic-38-reader-chrome-tts-redesign
   /// Issue 2）：`null` 代表「不限時」（未設定，或已到期/取消）。只顯示
-  /// 「已設定的時長」（如「睡眠 30 分」），不做逐秒刷新的倒數畫面——
+  /// 「已設定的時長」（如「定時 30 分」），不做逐秒刷新的倒數畫面——
   /// E-Ink 裝置不利於高頻率畫面刷新，spec.md「Out of Scope」已排除。
   Duration? _ttsSleepTimerDuration;
   Timer? _ttsSleepTimer;
@@ -2411,9 +2414,15 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             // epic-38-reader-chrome-tts-redesign Issue 1：三格式共用同一份
             // ReaderChromeTopBar，取代原本 Foliate／PDF 各自獨立的返回/目錄
             // Positioned（下方 PDF FAB 區塊對應的返回/目錄兩顆已一併刪除，
-            // 見 plans/plan-issue-1.md Task 4 Step 2f）。永遠渲染、不受
-            // _chromeVisible 影響，只受 PDF 裁切編輯模式閘控。
-            if (!_cropEditModeActive) _buildChromeTopBar(format),
+            // 見 plans/plan-issue-1.md Task 4 Step 2f）。原本永遠渲染、不受
+            // _chromeVisible 影響，只受 PDF 裁切編輯模式閘控；2026-09-08
+            // `/grill-with-docs` 使用者需求起，「全螢幕模式」開啟時放大
+            // _chromeVisible 收合的作用範圍，連頂部列一併隱藏（見
+            // CONTEXT.md「沉浸模式」詞條的條件限定說明）——全螢幕模式關閉
+            // （預設）時維持原本「頂部列永遠顯示」的行為不變。
+            if (!_cropEditModeActive &&
+                (_chromeVisible || _resolved?.fullscreen != true))
+              _buildChromeTopBar(format),
             // epic-38-reader-chrome-tts-redesign Issue 2：ReaderChromeBottomBar
             // 與 TtsPanel 依 TtsController.status 衍生切換，取代 Issue 1
             // 過渡期的 !_ttsMiniPlayerVisible 手動旗標與 TtsMiniPlayer（見
@@ -2677,31 +2686,40 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       _isFixedLayout ? null : Theme.of(context).scaffoldBackgroundColor;
 
   /// 浮動控制按鈕（返回/目錄/版面設定/書籤/筆記/進度）的底色/圖示色，
-  /// 跟隨 Theme.of(context)（epic-22-reader-theme-integration Issue 3）。
-  /// 顯示流式 EPUB 時使用主題色——**底色刻意取 `colorScheme.onSurface`
-  /// （而非 `surface`）**：`surface` 在淺色/深色主題下分別接近純白/接近
-  /// 頁面背景本身（見 app_theme_data.dart），若拿來當按鈕底色，淺色主題
-  /// 下會讓按鈕在近白頁面上幾乎隱形（重蹈 Issue 5 才修過的「控制元件顏色
-  /// 跟頁面背景太接近而失去可視性」問題）。`onSurface` 在淺色主題下是
-  /// 近黑色、深色主題下是近白色，天生就與同一主題的頁面背景形成對比。
-  /// 圖示色相應取 `colorScheme.surface`（與底色反向搭配，維持圖示對底色
-  /// 的可視對比）。**底色不透明、不加透明度**（epic-22-reader-theme-
-  /// integration Issue 4 電子紙硬體對比追加修正）：原本沿用改動前
-  /// `Colors.black54` 的 54% 透明度，在一般 LCD/OLED 顯示器上運算出的
-  /// 混合中間灰看起來沒問題，但真機電子紙硬體肉眼實測發現，這個「即時
-  /// 運算出來的中間灰」正好落在電子紙灰階抖動渲染最弱的區間，圖示完全
-  /// 無法辨識形狀；改用不透明實色色塊後，即使被電子紙抖動處理，仍是
-  /// 「一塊清楚色塊 vs. 另一塊清楚色塊」的二元對比。顯示 EPUB 固定版面
-  /// （漫畫）時維持既有寫死 Colors.black54/Colors.white——理由同
-  /// _themedTextColor：固定版面頁面內容本身不受本 Epic 影響（通常是
-  /// 白底圖片），深色主題下若控制按鈕也跟著變色，容易在不可預期的圖片
-  /// 背景上失去可視對比（與 Issue 1/2 的 getter 不同，這裡沒有「不適用」
-  /// 的情境，故不用 Color? + ?? fallback 模式，兩個分支各自直接回傳明確
-  /// 的顏色）。
-  Color get _themedFabBackgroundColor =>
-      _isFixedLayout ? Colors.black54 : Theme.of(context).colorScheme.onSurface;
-  Color get _themedFabIconColor =>
-      _isFixedLayout ? Colors.white : Theme.of(context).colorScheme.surface;
+  /// 跟隨 Theme.of(context)（epic-22-reader-theme-integration Issue 3；
+  /// 2026-09-08 `/grill-with-docs` 使用者需求修正一般主題分支）。
+  /// **E-Ink 高對比模式維持原本「與頁面反差最大化」策略**：底色取
+  /// `colorScheme.onSurface`、圖示取 `colorScheme.surface`——E-Ink 主題
+  /// 本身 onSurface/surface 即為純黑/純白（見 app_theme_data.dart），這樣
+  /// 維持既有黑底白圖示的高對比視覺語言，使用者明確要求本次調整不影響
+  /// E-Ink 模式。**一般主題（淺色/深色/羊皮紙）改為底色取 `surface`、
+  /// 圖示取 `onSurface`**：原本刻意取 `onSurface` 當底色是為了「與頁面
+  /// 反差最大化」，但一般主題下 `onSurface` 是近黑色/近白色，導致淺色與
+  /// 羊皮紙主題的工具列視覺上都是同一種近黑色，看起來像沒有跟著主題走
+  /// （使用者原話：「已經使用佈景，為何工具列還是黑色」）。改用 `surface`
+  /// 當底色後，工具列會呈現該主題自己的色調（淺色呈白、羊皮紙呈米黃、
+  /// 深色呈深灰），`onSurface` 當圖示色則保證在同一主題下仍可讀。顯示
+  /// EPUB 固定版面（漫畫）時維持既有寫死 Colors.black54/Colors.white——
+  /// 理由同 _themedTextColor：固定版面頁面內容本身不受本 Epic 影響（通常
+  /// 是白底圖片），控制按鈕跟著主題變色容易在不可預期的圖片背景上失去
+  /// 可視對比，本次調整範圍不含這個分支。**底色不透明、不加透明度**
+  /// （epic-22-reader-theme-integration Issue 4 電子紙硬體對比追加修正）：
+  /// 原本沿用改動前 `Colors.black54` 的 54% 透明度，在一般 LCD/OLED
+  /// 顯示器上運算出的混合中間灰看起來沒問題，但真機電子紙硬體肉眼實測
+  /// 發現，這個「即時運算出來的中間灰」正好落在電子紙灰階抖動渲染最弱的
+  /// 區間，圖示完全無法辨識形狀；改用不透明實色色塊後，即使被電子紙抖動
+  /// 處理，仍是「一塊清楚色塊 vs. 另一塊清楚色塊」的二元對比。
+  Color get _themedFabBackgroundColor {
+    if (_isFixedLayout) return Colors.black54;
+    final colorScheme = Theme.of(context).colorScheme;
+    return widget.isEinkMode ? colorScheme.onSurface : colorScheme.surface;
+  }
+
+  Color get _themedFabIconColor {
+    if (_isFixedLayout) return Colors.white;
+    final colorScheme = Theme.of(context).colorScheme;
+    return widget.isEinkMode ? colorScheme.surface : colorScheme.onSurface;
+  }
 
   /// CBZ 朗讀停用播放鍵專用的圖示色（epic-34-tts-readalong Issue 10）——
   /// 與 [_themedFabIconColor] 明確區隔，讓「按了沒用」不需要依賴

@@ -166,6 +166,7 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
                     );
                   },
           ),
+          const Divider(height: 1),
           const EBSectionHeader(title: '閱讀'),
           ListTile(
             key: const Key('settings_reading_defaults_button'),
@@ -209,6 +210,7 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
               );
             },
           ),
+          const Divider(height: 1),
           const EBSectionHeader(title: '同步與帳號'),
           ListTile(
             key: const Key('settings_sync_button'),
@@ -252,6 +254,7 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
                     );
                   },
           ),
+          const Divider(height: 1),
           const EBSectionHeader(title: '關於'),
           ListTile(
             key: const Key('settings_about_button'),

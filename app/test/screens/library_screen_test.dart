@@ -1089,8 +1089,9 @@ void main() {
 
     // 用 .unknown 檔名讓 ReaderScreen 命中「不支援格式」分支（純 Dart 安全路徑，
     // 不觸發 AndroidView；見 reader_screen_test.dart 既有模式），只用來證明
-    // 「導覽確實發生」，不驗證實際閱讀渲染。
-    expect(find.text('閱讀器'), findsOneWidget);
+    // 「導覽確實發生」，不驗證實際閱讀渲染。頂部列標題找不到章節時回退為
+    // 書名（2026-09-08 /grill-with-docs 使用者需求），不再是字面「閱讀器」。
+    expect(find.text('紅樓夢'), findsOneWidget);
     expect(find.text('不支援的檔案格式'), findsOneWidget);
   });
 

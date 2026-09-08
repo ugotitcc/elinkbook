@@ -12,7 +12,7 @@ import '../reader/tts_controller.dart';
 /// 要求）。
 ///
 /// 兩排固定結構：
-/// - **展開控制列**（[isCollapsed] 為 `true` 時整排不渲染）：上一句／
+/// - **展開列**（[isCollapsed] 為 `true` 時整排不渲染）：上一句／
 ///   播放暫停／下一句／語速／語音，[isCbz] 為 `true` 時只渲染一顆停用
 ///   狀態的播放鍵（CBZ 為純圖像格式，無文字可朗讀，沿用既有
 ///   [TtsMiniPlayer] 降級語意）。
@@ -154,7 +154,7 @@ class TtsPanel extends StatelessWidget {
                     // height: minSize 只約束 Row 本身、不會讓子項自動
                     // 撐滿——TextButton 預設高度 48dp，isEinkMode: true
                     // 時若不明講 minimumSize，實際渲染高度仍是 48dp，
-                    // 收合成細列時畫面上只剩這 3 顆按鈕，觸控目標達不到
+                    // 收合時畫面上只剩這 3 顆按鈕，觸控目標達不到
                     // E-Ink 56dp 規範（`DESIGN.md` §7.2）。
                     style: TextButton.styleFrom(
                       foregroundColor: iconColor,
@@ -163,8 +163,8 @@ class TtsPanel extends StatelessWidget {
                     icon: const Icon(Icons.bedtime_outlined),
                     label: Text(
                       sleepTimerRemaining == null
-                          ? '睡眠定時器'
-                          : '睡眠 ${sleepTimerRemaining!.inMinutes} 分',
+                          ? '定時'
+                          : '定時 ${sleepTimerRemaining!.inMinutes} 分',
                     ),
                   ),
                 ),
@@ -179,7 +179,7 @@ class TtsPanel extends StatelessWidget {
                     icon: Icon(
                       isCollapsed ? Icons.expand_less : Icons.expand_more,
                     ),
-                    label: Text(isCollapsed ? '展開控制列' : '收合成細列'),
+                    label: Text(isCollapsed ? '展開' : '收合'),
                   ),
                 ),
                 Expanded(

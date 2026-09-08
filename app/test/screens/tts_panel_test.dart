@@ -131,16 +131,16 @@ void main() {
     expect(voiceTap, isTrue);
   });
 
-  testWidgets('sleepTimerRemaining 為 null 時按鈕文字為「睡眠定時器」', (tester) async {
+  testWidgets('sleepTimerRemaining 為 null 時按鈕文字為「定時」', (tester) async {
     await tester.pumpWidget(buildPanel(sleepTimerRemaining: null));
-    expect(find.text('睡眠定時器'), findsOneWidget);
+    expect(find.text('定時'), findsOneWidget);
   });
 
   testWidgets('sleepTimerRemaining 非 null 時按鈕文字反映剩餘分鐘數', (tester) async {
     await tester.pumpWidget(
       buildPanel(sleepTimerRemaining: const Duration(minutes: 30)),
     );
-    expect(find.text('睡眠 30 分'), findsOneWidget);
+    expect(find.text('定時 30 分'), findsOneWidget);
   });
 
   testWidgets('點擊睡眠定時器按鈕觸發 onSleepTimerTap', (tester) async {
@@ -150,20 +150,20 @@ void main() {
     expect(called, isTrue);
   });
 
-  testWidgets('isCollapsed: false 時收合按鈕文字為「收合成細列」，點擊觸發 onToggleCollapse',
+  testWidgets('isCollapsed: false 時收合按鈕文字為「收合」，點擊觸發 onToggleCollapse',
       (tester) async {
     var called = false;
     await tester.pumpWidget(
       buildPanel(isCollapsed: false, onToggleCollapse: () => called = true),
     );
-    expect(find.text('收合成細列'), findsOneWidget);
+    expect(find.text('收合'), findsOneWidget);
     await tester.tap(find.byKey(const Key('reader_tts_panel_collapse_button')));
     expect(called, isTrue);
   });
 
-  testWidgets('isCollapsed: true 時收合按鈕文字為「展開控制列」', (tester) async {
+  testWidgets('isCollapsed: true 時收合按鈕文字為「展開」', (tester) async {
     await tester.pumpWidget(buildPanel(isCollapsed: true));
-    expect(find.text('展開控制列'), findsOneWidget);
+    expect(find.text('展開'), findsOneWidget);
   });
 
   testWidgets('點擊停止按鈕觸發 onStop', (tester) async {

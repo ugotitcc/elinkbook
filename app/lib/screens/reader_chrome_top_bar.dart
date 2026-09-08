@@ -4,12 +4,16 @@ import 'package:flutter/material.dart';
 /// spec.md §功能①）：格式無關，取代流式 EPUB／FXL／PDF 三格式各自獨立的
 /// 頂部按鈕（返回／目錄）與已死亡的 `Scaffold.appBar`／`_buildAppBarActions()`。
 ///
-/// **在閱讀畫面內永遠渲染，只受 PDF 裁切編輯模式（`!_cropEditModeActive`，
+/// **在閱讀畫面內預設永遠渲染，只受 PDF 裁切編輯模式（`!_cropEditModeActive`，
 /// 呼叫端閘控，本 widget 不知道這個狀態）影響，不受 `_chromeVisible`
 /// 影響**（查證 `prototype/eink_redesign_prototype.html:909-926` 確認頂部
 /// 列從未被 `toggleReaderChrome()` 收合過，見 `spec.md`「已解決的規格矛盾
 /// （新增）」第 2 項）——這樣使用者收起底部工具列後，仍能透過 ⬓ 按鈕本身
-/// 把底部叫回來，不需要精確點中畫面正中央熱區。
+/// 把底部叫回來，不需要精確點中畫面正中央熱區。**例外**：「全螢幕模式」
+/// 開啟時，呼叫端（`ReaderScreen`）會放大 `_chromeVisible` 收合的作用
+/// 範圍，連本 widget 一併收合（2026-09-08 `/grill-with-docs` 使用者需求，
+/// 見 CONTEXT.md「沉浸模式」詞條）——此時使用者只能透過畫面中央的選單
+/// 熱區喚回，本 widget 本身消失後自然也拿不到 ⬓ 按鈕。
 ///
 /// [chapterTitle] 由呼叫端算好完整文字（含找不到章節時的「閱讀器」回退
 /// 值）；[onTocTap] 為 `null` 時目錄按鈕顯示為停用狀態（呼叫端既有的
@@ -101,9 +105,7 @@ class ReaderChromeTopBar extends StatelessWidget {
             IconButton(
               key: const Key('reader_chrome_immersive_toggle_button'),
               icon: Icon(
-                isBottomChromeVisible
-                    ? Icons.visibility_off_outlined
-                    : Icons.visibility_outlined,
+                isBottomChromeVisible ? Icons.dock : Icons.dock_outlined,
               ),
               tooltip: isBottomChromeVisible ? '隱藏工具列' : '顯示工具列',
               style: buttonStyle,

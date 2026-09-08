@@ -133,8 +133,53 @@ void main() {
       ),
     );
 
-    expect(find.text('閱讀器'), findsOneWidget);
+    // 頂部列標題找不到章節時的回退值改用書名（2026-09-08 /grill-with-docs
+    // 使用者需求），未提供 bookTitle 時退回其預設值「未知書籍」，不再是
+    // 字面「閱讀器」——見下方「頂部列標題找不到章節時回退為書名」測試群組。
+    expect(find.text('未知書籍'), findsOneWidget);
     expect(find.text('不支援的檔案格式'), findsOneWidget);
+  });
+
+  group('頂部列標題找不到章節時回退為書名（2026-09-08 /grill-with-docs 使用者需求）', () {
+    testWidgets('EPUB 尚未載入目錄時，頂部列標題顯示書名而非「閱讀器」', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_chapter_title_fallback_epub',
+            prefsManager: prefsManager,
+            bookTitle: '一本測試用書',
+          ),
+        ),
+      );
+      await tester.pump();
+
+      final titleText = tester.widget<Text>(
+        find.byKey(const Key('reader_chrome_title')),
+      );
+      expect(titleText.data, '一本測試用書');
+    });
+
+    testWidgets('PDF 尚未載入目錄時，頂部列標題顯示書名而非「閱讀器」', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.pdf',
+            bookId: 'b_chapter_title_fallback_pdf',
+            prefsManager: prefsManager,
+            bookTitle: '另一本測試用書',
+          ),
+        ),
+      );
+      await tester.pump();
+
+      final titleText = tester.widget<Text>(
+        find.byKey(const Key('reader_chrome_title')),
+      );
+      expect(titleText.data, '另一本測試用書');
+    });
   });
 
   testWidgets('EPUB 格式顯示「⚙️版面」按鈕，初始為停用狀態', (tester) async {
@@ -4265,9 +4310,10 @@ void main() {
 
     // 目錄尚未載入（_tocEntries 為空），角落頁首應顯示書名——改用限定在
     // reader_foliate_header_text 底下的 descendant 查找（epic-38-reader-
-    // chrome-tts-redesign Issue 1 審查修正）：ReaderChromeTopBar 永遠渲染
-    // 且同樣以「閱讀器」作為找不到章節時的回退文字，全域 find.text('閱讀器')
-    // 現在恆會命中頂部列那一份，不再能用來斷言角落頁首「沒有顯示閱讀器」。
+    // chrome-tts-redesign Issue 1 審查修正）：ReaderChromeTopBar 永遠渲染，
+    // 且找不到章節時同樣回退為書名（2026-09-08 /grill-with-docs 使用者需求
+    // 起，兩者回退值恆相同），全域 find.text(bookTitle) 會同時命中頂部列
+    // 與角落頁首兩份，不能用來單獨斷言角落頁首的內容。
     final headerText = tester.widget<Text>(
       find.descendant(
         of: find.byKey(const Key('reader_foliate_header_text')),
@@ -4850,6 +4896,138 @@ void main() {
       );
     },
   );
+
+  group('全螢幕模式聯動沉浸模式收合頂部列（2026-09-08 /grill-with-docs 使用者需求）', () {
+    testWidgets('PDF：全螢幕模式開啟時，觸發沉浸模式收合後頂部列一併隱藏', (tester) async {
+      final prefsManager = FakeReaderPrefsManager(
+        bookPrefsByBookId: {
+          'b_fullscreen_immersive_pdf': const BookReaderPrefs(fullscreen: true),
+        },
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.pdf',
+            bookId: 'b_fullscreen_immersive_pdf',
+            prefsManager: prefsManager,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+      await pumpUntilPdfReady(tester);
+
+      expect(
+        find.byKey(const Key('reader_chrome_back_button')),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.byKey(const Key('pdf_reader_nav_zone_1')));
+      await tester.pump();
+      // PdfViewer 內部 DoubleTapGestureRecognizer 的定時器過期後才算真正
+      // 結束，比照 pdf_reader_view_nav_zone_test.dart 既有慣例。
+      await tester.pump(const Duration(milliseconds: 400));
+
+      expect(find.byKey(const Key('reader_chrome_back_button')), findsNothing);
+    });
+
+    testWidgets('EPUB：全螢幕模式開啟時，觸發沉浸模式收合後頂部列一併隱藏', (tester) async {
+      final prefsManager = FakeReaderPrefsManager(
+        bookPrefsByBookId: {
+          'b_fullscreen_immersive_epub': const BookReaderPrefs(fullscreen: true),
+        },
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_fullscreen_immersive_epub',
+            prefsManager: prefsManager,
+            isFixedLayout: false,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      expect(
+        find.byKey(const Key('reader_chrome_back_button')),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.byKey(const Key('nav_zone_1')));
+      await tester.pump();
+
+      expect(find.byKey(const Key('reader_chrome_back_button')), findsNothing);
+    });
+
+    testWidgets('PDF：全螢幕模式關閉（預設）時，觸發沉浸模式收合後頂部列仍維持顯示', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.pdf',
+            bookId: 'b_fullscreen_off_pdf',
+            prefsManager: prefsManager,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+      await pumpUntilPdfReady(tester);
+
+      await tester.tap(find.byKey(const Key('pdf_reader_nav_zone_1')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+
+      expect(
+        find.byKey(const Key('reader_chrome_back_button')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('PDF：全螢幕模式開啟時，再次觸發沉浸模式（顯示）後頂部列恢復顯示', (tester) async {
+      final prefsManager = FakeReaderPrefsManager(
+        bookPrefsByBookId: {
+          'b_fullscreen_toggle_back_pdf': const BookReaderPrefs(fullscreen: true),
+        },
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.pdf',
+            bookId: 'b_fullscreen_toggle_back_pdf',
+            prefsManager: prefsManager,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+      await pumpUntilPdfReady(tester);
+
+      await tester.tap(find.byKey(const Key('pdf_reader_nav_zone_1')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.byKey(const Key('reader_chrome_back_button')), findsNothing);
+
+      // 頂部列本身已隨沉浸模式收合而消失，只能透過畫面中央的選單熱區
+      // 喚回（見 CONTEXT.md「沉浸模式」詞條的條件限定說明）。
+      await tester.tap(find.byKey(const Key('pdf_reader_nav_zone_1')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(
+        find.byKey(const Key('reader_chrome_back_button')),
+        findsOneWidget,
+      );
+    });
+  });
 
   testWidgets('離開 ReaderScreen（書籍切換）觸發一次 checkpoint', (tester) async {
     var triggerCallCount = 0;
@@ -5703,10 +5881,10 @@ void main() {
     );
 
     final expectedTheme = buildThemeData(AppTheme.dark);
-    expect(backMaterial.color, expectedTheme.colorScheme.onSurface);
+    expect(backMaterial.color, expectedTheme.colorScheme.surface);
     expect(
       backButton.style?.foregroundColor?.resolve(<WidgetState>{}),
-      expectedTheme.colorScheme.surface,
+      expectedTheme.colorScheme.onSurface,
     );
   });
 
@@ -5741,10 +5919,49 @@ void main() {
     );
 
     final expectedTheme = buildThemeData(AppTheme.light);
-    expect(backMaterial.color, expectedTheme.colorScheme.onSurface);
+    expect(backMaterial.color, expectedTheme.colorScheme.surface);
     expect(
       backButton.style?.foregroundColor?.resolve(<WidgetState>{}),
-      expectedTheme.colorScheme.surface,
+      expectedTheme.colorScheme.onSurface,
+    );
+  });
+
+  testWidgets('E-Ink 模式下流式 EPUB「返回」浮動按鈕維持黑底白圖示（2026-09-08 '
+      '/grill-with-docs 使用者需求：只有一般主題的底色/圖示色互換，E-Ink 高'
+      '對比模式的既有黑底白圖示不受影響）', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: true),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'b_fab_color_eink',
+          prefsManager: prefsManager,
+          isFixedLayout: false,
+          isEinkMode: true,
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.runAsync(() => Future.delayed(Duration.zero));
+    await tester.pump();
+
+    final backMaterial = tester.widget<Material>(
+      find
+          .ancestor(
+            of: find.byKey(const Key('reader_chrome_back_button')),
+            matching: find.byType(Material),
+          )
+          .first,
+    );
+    final backButton = tester.widget<IconButton>(
+      find.byKey(const Key('reader_chrome_back_button')),
+    );
+
+    final einkTheme = resolveThemeData(theme: AppTheme.light, isEinkMode: true);
+    expect(backMaterial.color, einkTheme.colorScheme.onSurface);
+    expect(
+      backButton.style?.foregroundColor?.resolve(<WidgetState>{}),
+      einkTheme.colorScheme.surface,
     );
   });
 
@@ -5819,10 +6036,10 @@ void main() {
     );
 
     final expectedTheme = buildThemeData(AppTheme.dark);
-    expect(bottomBar.backgroundColor, expectedTheme.colorScheme.onSurface);
+    expect(bottomBar.backgroundColor, expectedTheme.colorScheme.surface);
     expect(
       settingsButton.style?.foregroundColor?.resolve(<WidgetState>{}),
-      expectedTheme.colorScheme.surface,
+      expectedTheme.colorScheme.onSurface,
     );
   });
 
