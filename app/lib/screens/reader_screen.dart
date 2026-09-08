@@ -71,7 +71,7 @@ import 'reader_settings_sheet.dart';
 import 'toc_bottom_sheet.dart';
 import 'pdf_search_panel.dart';
 import 'pdf_thumbnail_panel.dart';
-import 'tts_mini_player.dart';
+import 'tts_panel.dart';
 import 'reader_chrome_top_bar.dart';
 
 /// 音量鍵事件頻道（epic-7-interaction Issue 7）：原生 `MainActivity.
@@ -280,11 +280,17 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   // Issue 9；epic-7 Issue 5 擴充為九宮格）與新的 PDF 熱區皆共用同一個
   // 狀態。預設顯示。
   bool _chromeVisible = true;
-  // TTS Mini Player 是否顯示（epic-34-tts-readalong 追加需求）：預設隱藏，
-  // 由新增的「朗讀」FAB 按鈕（麥克風圖示）切換，Mini Player 本身也有 X
-  // 關閉鍵可收合——純顯示/隱藏開關，不影響 TtsController 播放狀態本身
-  // （關閉 Mini Player 不會暫停朗讀）。
-  bool _ttsMiniPlayerVisible = false;
+  // CBZ 專屬的 TtsPanel 展開/收合手動旗標（epic-38-reader-chrome-tts-
+  // redesign Issue 2）：CBZ 為純圖像格式，_ttsControllerOrNull 刻意不對
+  // 它建構（避免白白配置用不到的播放器資源，見該 getter 文件註解），故
+  // 沒有真正的 TtsController.status 可供衍生顯示狀態——只有 CBZ 需要這個
+  // 手動旗標，一般格式改用 _buildBottomChrome() 依 controller.status
+  // 衍生切換，不受本旗標影響。
+  bool _cbzTtsPanelVisible = false;
+  // TtsPanel「收合成細列」子狀態（epic-38-reader-chrome-tts-redesign
+  // Issue 2）：只影響展開控制列是否顯示，不影響朗讀播放本身，格式無關
+  // （CBZ 的裝飾面板與一般格式共用同一個旗標）。
+  bool _ttsPanelCollapsed = false;
   // FXL 懸浮「🔖 書籤 toggle」按鈕圖示所需的最小狀態快取
   // （epic-6-annotations Issue 4）：與 NotesBottomSheet 內部「🔖 書籤」
   // 分頁各自獨立載入自己的清單（比照既有分頁按鈕 toggle 與 Bottom Sheet
@@ -2030,6 +2036,155 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     );
   }
 
+  /// `ReaderChromeBottomBar` 建構參數在 [_buildBottomChrome] 三個分支
+  /// （尚未建構 controller／controller 存在但 idle／CBZ 未展開面板）完全
+  /// 相同，只有 [onTtsTap] 不同——抽成獨立方法避免三份重複（epic-38-
+  /// reader-chrome-tts-redesign Issue 2）。
+  ReaderChromeBottomBar _buildFoliateChromeBottomBar(
+    BookFormat format, {
+    required VoidCallback? onTtsTap,
+  }) {
+    return ReaderChromeBottomBar(
+      bookTitle: widget.bookTitle,
+      pageProgressText: _pageProgressText(format),
+      footer: _epubPositionInfo == null
+          ? const SizedBox.shrink()
+          : _buildFoliateEpubFooter(_epubPositionInfo!),
+      isBookmarked: _bookmarkAtCurrentPosition != null,
+      onBookmarkTap: widget.bookmarksRepository == null ||
+              _epubPositionInfo == null
+          ? null
+          : _toggleBookmark,
+      onAnnotationsTap: widget.bookmarksRepository == null ||
+              _autoDetectedWritingMode == null ||
+              _epubPositionInfo == null
+          ? null
+          : () => _openNotesSheet(format, initialTabIndex: 1),
+      onLayoutTap: _isFixedLayout
+          ? _openFxlSettings
+          : (_autoDetectedWritingMode == null ? null : _openLayoutSettings),
+      onTtsTap: onTtsTap,
+      backgroundColor: _themedFabBackgroundColor,
+      iconColor: _themedFabIconColor,
+      isEinkMode: widget.isEinkMode,
+    );
+  }
+
+  /// 底部 Chrome 列的衍生切換（epic-38-reader-chrome-tts-redesign Issue 2，
+  /// spec.md §功能③）：`_ttsController` 為 `null`（使用者從未按過「◗
+  /// 朗讀」）時回傳 `ReaderChromeBottomBar`；非 `null` 時依
+  /// `controller.status` 衍生二擇一渲染，不設手動旗標——章節自然播完時
+  /// `AnimatedBuilder` 會自動偵測到 `status == idle` 並切回
+  /// `ReaderChromeBottomBar`，不需要額外程式碼。
+  ///
+  /// **CBZ 結構性例外（計劃範圍澄清第 1 點）**：CBZ 為純圖像格式，無文字
+  /// 可朗讀，[_ttsControllerOrNull] 刻意不對 CBZ 存取（避免白白建構用不到
+  /// 的 `TtsController`／原生 `AudioPlayer`，見該 getter 文件註解），故
+  /// CBZ 沒有真正的 `controller.status` 可供衍生。改用獨立的
+  /// [_cbzTtsPanelVisible] 手動旗標控制這個純裝飾、恆為停用狀態的
+  /// `TtsPanel` 是否展開——沿用 Issue 1 之前 `TtsMiniPlayer` 對 CBZ 的既有
+  /// 處理方式，不受一般格式「衍生而非手動旗標」設計原則影響（CBZ 根本
+  /// 沒有可衍生的真實狀態）。
+  Widget _buildBottomChrome(BookFormat format) {
+    if (format == BookFormat.cbz) {
+      if (widget.ttsProvider == null || !_cbzTtsPanelVisible) {
+        return _buildFoliateChromeBottomBar(
+          format,
+          onTtsTap: widget.ttsProvider == null
+              ? null
+              : () => setState(() => _cbzTtsPanelVisible = true),
+        );
+      }
+      return TtsPanel(
+        status: TtsPlaybackStatus.idle,
+        speed: 1.0,
+        isCbz: true,
+        isCollapsed: _ttsPanelCollapsed,
+        sleepTimerRemaining: null,
+        backgroundColor: _themedFabBackgroundColor,
+        iconColor: _themedTtsDisabledIconColor,
+        disabledIconColor: _themedTtsDisabledIconColor,
+        isEinkMode: widget.isEinkMode,
+        onPlayPause: () {},
+        onPrevious: () {},
+        onNext: () {},
+        onSpeedTap: () {},
+        onVoiceTap: () {},
+        onSleepTimerTap: _openSleepTimerPicker,
+        onToggleCollapse: () =>
+            setState(() => _ttsPanelCollapsed = !_ttsPanelCollapsed),
+        // 審查修正（review-plan-issue-2.md I4）：CBZ 底層動作列雖然沒有
+        // 真正的 TtsController、_onTtsStatusChanged 邊緣偵測也不會對 CBZ
+        // 觸發，但同一顆睡眠定時器按鈕（onSleepTimerTap 上面那行）與一般
+        // 格式共用同一組 _ttsSleepTimer／_ttsSleepTimerDuration 欄位——
+        // 若使用者在 CBZ 面板設定了定時器又按「停止」關閉面板，遺漏取消
+        // 會讓計時器在背景繼續倒數，到期後對已經關閉的面板毫無意義地
+        // 執行 _ttsController?.pause()（CBZ 恆為 null，no-op，但
+        // _ttsSleepTimerDuration 狀態本身的殘留仍是明確的邏輯不一致）。
+        onStop: () {
+          _cancelTtsSleepTimer();
+          setState(() => _cbzTtsPanelVisible = false);
+        },
+      );
+    }
+    final controller = _ttsController; // 不用 _ttsControllerOrNull，避免觸發 lazy 建構
+    if (controller == null) {
+      return _buildFoliateChromeBottomBar(
+        format,
+        onTtsTap: widget.ttsProvider == null
+            ? null
+            : () => _ttsControllerOrNull!.play(),
+      );
+    }
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, _) {
+        if (controller.status == TtsPlaybackStatus.idle) {
+          return _buildFoliateChromeBottomBar(
+            format,
+            onTtsTap: () => controller.play(),
+          );
+        }
+        return TtsPanel(
+          status: controller.status,
+          speed: controller.speed,
+          isCbz: false,
+          isCollapsed: _ttsPanelCollapsed,
+          sleepTimerRemaining: _ttsSleepTimerDuration,
+          backgroundColor: _themedFabBackgroundColor,
+          iconColor: _themedFabIconColor,
+          disabledIconColor: _themedTtsDisabledIconColor,
+          isEinkMode: widget.isEinkMode,
+          onPlayPause: controller.status == TtsPlaybackStatus.playing
+              ? controller.pause
+              : () => controller.play(),
+          onPrevious: () => controller.previousSegment(),
+          onNext: () => controller.nextSegment(),
+          onSpeedTap: () =>
+              controller.setSpeed(_nextTtsSpeedPreset(controller.speed)),
+          onVoiceTap: () => _openTtsVoicePicker(controller),
+          onSleepTimerTap: _openSleepTimerPicker,
+          onToggleCollapse: () =>
+              setState(() => _ttsPanelCollapsed = !_ttsPanelCollapsed),
+          onStop: () async {
+            _cancelTtsSleepTimer();
+            await controller.stop();
+          },
+        );
+      },
+    );
+  }
+
+  // ── 暫時存根（epic-38-reader-chrome-tts-redesign Issue 2 審查修正
+  // C1）──：讓本 Task 能獨立通過 flutter analyze／flutter test、獨立
+  // 提交，不需要等到 Task 6 完成才能驗證。Task 5 會把前三個換成真正的
+  // 睡眠定時器實作，Task 6 會把最後一個換成真正的語音選擇實作——見各自
+  // Task 的 Before/After。
+  Duration? _ttsSleepTimerDuration;
+  Future<void> _openSleepTimerPicker() async {}
+  void _cancelTtsSleepTimer() {}
+  Future<void> _openTtsVoicePicker(TtsController controller) async {}
+
   Widget _buildBody(BookFormat format, bool isLandscape) {
     if (format == BookFormat.unknown) {
       // 審查修正（epic-38-reader-chrome-tts-redesign Issue 1）：早退分支
@@ -2123,102 +2278,16 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             // 見 plans/plan-issue-1.md Task 4 Step 2f）。永遠渲染、不受
             // _chromeVisible 影響，只受 PDF 裁切編輯模式閘控。
             if (!_cropEditModeActive) _buildChromeTopBar(format),
-            // epic-38-reader-chrome-tts-redesign Issue 1：三格式共用同一份
-            // ReaderChromeBottomBar，取代原本 Foliate 5 顆／PDF 4 顆各自
-            // 獨立的 Positioned（見下方 PDF FAB 區塊對應段落，Step 3b 一併
-            // 刪除）。`!_ttsMiniPlayerVisible` 是本 Issue 過渡期的互斥條件
-            // ——舊 TtsMiniPlayer 膠囊固定貼底 12/40dp，新底部列三列合計
-            // 154dp 也貼底，兩者同時渲染會互相遮擋，Issue 2 接上 TtsPanel
-            // 後這個條件會被 AnimatedBuilder 依 TtsController.status 的
-            // 正式衍生切換取代（見 issues.md Issue 2）。
-            if (isFoliateFormat(format) && _chromeVisible && !_ttsMiniPlayerVisible)
+            // epic-38-reader-chrome-tts-redesign Issue 2：ReaderChromeBottomBar
+            // 與 TtsPanel 依 TtsController.status 衍生切換，取代 Issue 1
+            // 過渡期的 !_ttsMiniPlayerVisible 手動旗標與 TtsMiniPlayer（見
+            // _buildBottomChrome 文件註解）。
+            if (isFoliateFormat(format) && _chromeVisible)
               Positioned(
                 left: 0,
                 right: 0,
                 bottom: 0,
-                child: ReaderChromeBottomBar(
-                  bookTitle: widget.bookTitle,
-                  pageProgressText: _pageProgressText(format),
-                  footer: _epubPositionInfo == null
-                      ? const SizedBox.shrink()
-                      : _buildFoliateEpubFooter(_epubPositionInfo!),
-                  isBookmarked: _bookmarkAtCurrentPosition != null,
-                  onBookmarkTap: widget.bookmarksRepository == null ||
-                          _epubPositionInfo == null
-                      ? null
-                      : _toggleBookmark,
-                  onAnnotationsTap: widget.bookmarksRepository == null ||
-                          _autoDetectedWritingMode == null ||
-                          _epubPositionInfo == null
-                      ? null
-                      : () => _openNotesSheet(format, initialTabIndex: 1),
-                  onLayoutTap: _isFixedLayout
-                      ? _openFxlSettings
-                      : (_autoDetectedWritingMode == null
-                          ? null
-                          : _openLayoutSettings),
-                  onTtsTap: widget.ttsProvider == null
-                      ? null
-                      : () => setState(
-                          () => _ttsMiniPlayerVisible = !_ttsMiniPlayerVisible),
-                  backgroundColor: _themedFabBackgroundColor,
-                  iconColor: _themedFabIconColor,
-                  isEinkMode: widget.isEinkMode,
-                ),
-              ),
-            if (isFoliateFormat(format) &&
-                _chromeVisible &&
-                widget.ttsProvider != null &&
-                _ttsMiniPlayerVisible)
-              Positioned(
-                left: 16,
-                right: 16,
-                bottom: _ttsMiniPlayerBottomOffset,
-                child: Center(
-                  // CBZ 為純圖像格式，無文字可朗讀——刻意不存取
-                  // _ttsControllerOrNull（具副作用的 lazy getter，首次
-                  // 存取即會建構 TtsController／原生 AudioPlayer），避免
-                  // 每次開啟 CBZ 書籍都白白配置一顆用不到的播放器資源
-                  // （見 review-issues.md Important #1）。isCbz 分支不會
-                  // 讀取 status/speed，此處固定傳入預設值即可。
-                  child: format == BookFormat.cbz
-                      ? TtsMiniPlayer(
-                          status: TtsPlaybackStatus.idle,
-                          speed: 1.0,
-                          isCbz: true,
-                          backgroundColor: _themedFabBackgroundColor,
-                          iconColor: _themedTtsDisabledIconColor,
-                          onPlayPause: () {},
-                          onPrevious: () {},
-                          onNext: () {},
-                          onSpeedTap: () {},
-                          onClose: () =>
-                              setState(() => _ttsMiniPlayerVisible = false),
-                        )
-                      : AnimatedBuilder(
-                          animation: _ttsControllerOrNull!,
-                          builder: (context, _) {
-                            final controller = _ttsControllerOrNull!;
-                            return TtsMiniPlayer(
-                              status: controller.status,
-                              speed: controller.speed,
-                              isCbz: false,
-                              backgroundColor: _themedFabBackgroundColor,
-                              iconColor: _themedFabIconColor,
-                              onPlayPause:
-                                  controller.status == TtsPlaybackStatus.playing
-                                      ? controller.pause
-                                      : () => controller.play(),
-                              onPrevious: () => controller.previousSegment(),
-                              onNext: () => controller.nextSegment(),
-                              onSpeedTap: () => controller.setSpeed(
-                                  _nextTtsSpeedPreset(controller.speed)),
-                              onClose: () =>
-                                  setState(() => _ttsMiniPlayerVisible = false),
-                            );
-                          },
-                        ),
-                ),
+                child: _buildBottomChrome(format),
               ),
             // ── PDF FAB 區塊（epic-24-pdf-engine-rebuild Issue 8）─────
             // 返回／目錄兩顆已由上方 ReaderChromeTopBar 涵蓋，不再需要
@@ -2592,15 +2661,6 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         _ttsSpeedPresets.indexWhere((p) => (p - current).abs() < 0.001);
     if (index == -1) return 1.0;
     return _ttsSpeedPresets[(index + 1) % _ttsSpeedPresets.length];
-  }
-
-  /// Mini Player 底部邊距（epic-34-tts-readalong Issue 6）：當頁尾進度文字
-  /// 可見時（showFooter 開啟且總頁數 > 0），往上抬高 40dp 避開頁尾；頁尾未顯示
-  /// 則貼齊底邊 12dp。
-  double get _ttsMiniPlayerBottomOffset {
-    final footerVisible = (_resolved?.showFooter ?? false) &&
-        (_epubPositionInfo?.displayTotalPages ?? 0) > 0;
-    return footerVisible ? 40 : 12;
   }
 
   Widget _buildNativeView(BookFormat format, bool isLandscape) {
