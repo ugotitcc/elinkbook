@@ -32,3 +32,7 @@ Discovery（grilling）過程中發現兩個關鍵事實，改變了原始需求
 ## Discovery 決策記錄
 
 詳見同目錄 `design.md`（grilling 完整問答記錄）。
+
+## 開發記錄
+
+2026-09-08 Issue 1（新增共用元件 `EBStepper`／`EBOptionChipGroup`，擴充 `ReaderOptionTile` 支援 `iconSize`／`labelFontSize`／`forceUnselected`）完成並合併（PR #223）。本 Issue 僅新增元件本身，未觸碰任何既有呼叫端（`ReaderSettingsSheet`／`PdfSettingsSheet`／`FxlSettingsSheet` 改接留給 Issue 2-6）。程式碼審查（`reviews/review-issue-1-implementation.md`）：20 個新測試全數通過、`flutter analyze` 零警告、計畫審查意見 I1/I2/M1/M2 皆確認落實，無 Critical/Important 問題，Ready to merge = Yes。下一步：Issue 2（`ReaderSettingsSheet` 文字＋邊界分頁 Slider/EBStepper 切換與覆寫文字徽章）。
