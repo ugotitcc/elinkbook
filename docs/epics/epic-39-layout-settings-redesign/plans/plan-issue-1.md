@@ -54,7 +54,7 @@
   ```
   衍生三個 `Key`：`Key('${keyPrefix}_decrement')`（減少按鈕）、`Key('${keyPrefix}_value')`（數值文字）、`Key('${keyPrefix}_increment')`（增加按鈕）。供 Issue 2/3/5 的 `_buildSliderRow`／`reader_settings_column_size_slider` 在 `isEinkMode: true` 時建構使用。
 
-- [ ] **Step 1：建立測試檔並寫下第一個失敗測試——顯示 `displayValue`**
+- [x] **Step 1：建立測試檔並寫下第一個失敗測試——顯示 `displayValue`**
 
 建立 `app/test/screens/widgets/eb_stepper_test.dart`：
 
@@ -96,12 +96,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 Run: `flutter test test/screens/widgets/eb_stepper_test.dart`
 Expected: 編譯失敗（`Target of URI doesn't exist: 'package:elinkbook/screens/widgets/eb_stepper.dart'`）——`eb_stepper.dart` 尚未建立，這是本階段預期的失敗原因。
 
-- [ ] **Step 3：寫最小實作使測試通過（僅滿足 Step 1，不預先實作點擊/邊界邏輯）**
+- [x] **Step 3：寫最小實作使測試通過（僅滿足 Step 1，不預先實作點擊/邊界邏輯）**
 
 建立 `app/lib/screens/widgets/eb_stepper.dart`：
 
@@ -177,12 +177,12 @@ class EBStepper extends StatelessWidget {
 
 （`onPressed: null` 是刻意的中間狀態——只滿足 Step 1「顯示 displayValue」這一個測試，Step 5／Step 9 才會逐步補上點擊與邊界邏輯，避免審查修正 I2 指出的「一次寫完導致後續測試從未經歷 RED」問題。）
 
-- [ ] **Step 4：執行測試確認通過**
+- [x] **Step 4：執行測試確認通過**
 
 Run: `flutter test test/screens/widgets/eb_stepper_test.dart`
 Expected: PASS（1 個測試）
 
-- [ ] **Step 5：新增測試——點擊 `+`/`-` 觸發 `onChanged` 並帶正確值**
+- [x] **Step 5：新增測試——點擊 `+`/`-` 觸發 `onChanged` 並帶正確值**
 
 在 `eb_stepper_test.dart` 的 `void main()` 內追加：
 
@@ -210,12 +210,12 @@ Expected: PASS（1 個測試）
   });
 ```
 
-- [ ] **Step 6：執行測試確認失敗**
+- [x] **Step 6：執行測試確認失敗**
 
 Run: `flutter test test/screens/widgets/eb_stepper_test.dart`
 Expected: 新增的兩個測試 FAIL（`received` 維持 `null`，因為 Step 3 的兩顆按鈕 `onPressed` 皆寫死 `null`，點擊不會有任何反應）；第一個測試（顯示文字）維持 PASS。
 
-- [ ] **Step 7：實作點擊 callback（尚不含邊界 clamp）**
+- [x] **Step 7：實作點擊 callback（尚不含邊界 clamp）**
 
 修改 `eb_stepper.dart` 的 `build()`：
 
@@ -245,12 +245,12 @@ Expected: 新增的兩個測試 FAIL（`received` 維持 `null`，因為 Step 3 
   }
 ```
 
-- [ ] **Step 8：執行測試確認通過**
+- [x] **Step 8：執行測試確認通過**
 
 Run: `flutter test test/screens/widgets/eb_stepper_test.dart`
 Expected: PASS（3 個測試全過）。
 
-- [ ] **Step 9：新增測試——邊界值 clamp 與按鈕停用**
+- [x] **Step 9：新增測試——邊界值 clamp 與按鈕停用**
 
 追加：
 
@@ -293,12 +293,12 @@ Expected: PASS（3 個測試全過）。
   });
 ```
 
-- [ ] **Step 10：執行測試確認失敗**
+- [x] **Step 10：執行測試確認失敗**
 
 Run: `flutter test test/screens/widgets/eb_stepper_test.dart`
 Expected: 前兩個新測試 FAIL（Step 7 的實作沒有邊界判斷，`onPressed` 恆非 `null`）；後兩個新測試 PASS（未觸及邊界的可點擊狀態、無 `Slider` 這兩項 Step 7 的實作已經滿足）。
 
-- [ ] **Step 11：實作邊界 clamp 與按鈕停用（最終完整邏輯）**
+- [x] **Step 11：實作邊界 clamp 與按鈕停用（最終完整邏輯）**
 
 修改 `eb_stepper.dart` 的 `build()`：
 
@@ -333,17 +333,17 @@ Expected: 前兩個新測試 FAIL（Step 7 的實作沒有邊界判斷，`onPres
   }
 ```
 
-- [ ] **Step 12：執行測試確認全部通過**
+- [x] **Step 12：執行測試確認全部通過**
 
 Run: `flutter test test/screens/widgets/eb_stepper_test.dart`
 Expected: PASS（7 個測試全過）。
 
-- [ ] **Step 13：`flutter analyze` 確認零警告**
+- [x] **Step 13：`flutter analyze` 確認零警告**
 
 Run: `flutter analyze lib/screens/widgets/eb_stepper.dart test/screens/widgets/eb_stepper_test.dart`
 Expected: `No issues found!`
 
-- [ ] **Step 14：Commit**
+- [x] **Step 14：Commit**
 
 ```bash
 git add app/lib/screens/widgets/eb_stepper.dart app/test/screens/widgets/eb_stepper_test.dart
@@ -365,7 +365,7 @@ git commit -m "feat(epic-39): Issue 1 Task 1 — 新增 EBStepper 純步進器�
   - `bool forceUnselected = false`——為 `true` 時，不論 `value == groupValue` 為何，視覺恆為未選中樣式。供 Task 3 的 `EBOptionChipGroup` 承載「動作型」項目使用。
 - Consumes：無（本 Task 不依賴 Task 1）。
 
-- [ ] **Step 1：寫失敗測試——`iconSize` 覆寫圖示大小**
+- [x] **Step 1：寫失敗測試——`iconSize` 覆寫圖示大小**
 
 在 `app/test/screens/widgets/reader_option_tile_test.dart` 的 `void main()` 內追加：
 
@@ -414,12 +414,12 @@ git commit -m "feat(epic-39): Issue 1 Task 1 — 新增 EBStepper 純步進器�
   });
 ```
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 Run: `flutter test test/screens/widgets/reader_option_tile_test.dart`
 Expected: FAIL（`No named parameter with the name 'iconSize'`，編譯期錯誤）。
 
-- [ ] **Step 3：修改 `ReaderOptionTile` 新增 `iconSize` 參數**
+- [x] **Step 3：修改 `ReaderOptionTile` 新增 `iconSize` 參數**
 
 修改 `app/lib/screens/widgets/reader_option_tile.dart`：
 
@@ -455,12 +455,12 @@ class ReaderOptionTile<T> extends StatelessWidget {
         Icon(icon, size: iconSize, color: foregroundColor),
 ```
 
-- [ ] **Step 4：執行測試確認通過**
+- [x] **Step 4：執行測試確認通過**
 
 Run: `flutter test test/screens/widgets/reader_option_tile_test.dart`
 Expected: PASS（2 個測試，含既有的 E-Ink 高對比測試零回歸）。
 
-- [ ] **Step 5：寫失敗測試——`labelFontSize` 覆寫文字大小**
+- [x] **Step 5：寫失敗測試——`labelFontSize` 覆寫文字大小**
 
 追加：
 
@@ -501,12 +501,12 @@ Expected: PASS（2 個測試，含既有的 E-Ink 高對比測試零回歸）。
   });
 ```
 
-- [ ] **Step 6：執行測試確認失敗**
+- [x] **Step 6：執行測試確認失敗**
 
 Run: `flutter test test/screens/widgets/reader_option_tile_test.dart`
 Expected: FAIL（`No named parameter with the name 'labelFontSize'`）。
 
-- [ ] **Step 7：修改 `ReaderOptionTile` 新增 `labelFontSize` 參數**
+- [x] **Step 7：修改 `ReaderOptionTile` 新增 `labelFontSize` 參數**
 
 ```dart
 // class 欄位新增（緊接 iconSize 之後）：
@@ -528,12 +528,12 @@ Expected: FAIL（`No named parameter with the name 'labelFontSize'`）。
           ),
 ```
 
-- [ ] **Step 8：執行測試確認通過**
+- [x] **Step 8：執行測試確認通過**
 
 Run: `flutter test test/screens/widgets/reader_option_tile_test.dart`
 Expected: PASS（3 個測試）。
 
-- [ ] **Step 9：寫失敗測試——`forceUnselected` 恆為未選中樣式**
+- [x] **Step 9：寫失敗測試——`forceUnselected` 恆為未選中樣式**
 
 追加：
 
@@ -564,12 +564,12 @@ Expected: PASS（3 個測試）。
   });
 ```
 
-- [ ] **Step 10：執行測試確認失敗**
+- [x] **Step 10：執行測試確認失敗**
 
 Run: `flutter test test/screens/widgets/reader_option_tile_test.dart`
 Expected: FAIL（`No named parameter with the name 'forceUnselected'`）。
 
-- [ ] **Step 11：修改 `ReaderOptionTile` 新增 `forceUnselected` 參數**
+- [x] **Step 11：修改 `ReaderOptionTile` 新增 `forceUnselected` 參數**
 
 ```dart
 // class 欄位新增（緊接 labelFontSize 之後）：
@@ -586,17 +586,17 @@ Expected: FAIL（`No named parameter with the name 'forceUnselected'`）。
     final selected = !forceUnselected && value == groupValue;
 ```
 
-- [ ] **Step 12：執行測試確認通過**
+- [x] **Step 12：執行測試確認通過**
 
 Run: `flutter test test/screens/widgets/reader_option_tile_test.dart`
 Expected: PASS（4 個測試全過，含既有 1 個測試零回歸）。
 
-- [ ] **Step 13：`flutter analyze` 確認零警告**
+- [x] **Step 13：`flutter analyze` 確認零警告**
 
 Run: `flutter analyze lib/screens/widgets/reader_option_tile.dart test/screens/widgets/reader_option_tile_test.dart`
 Expected: `No issues found!`
 
-- [ ] **Step 14：Commit**
+- [x] **Step 14：Commit**
 
 ```bash
 git add app/lib/screens/widgets/reader_option_tile.dart app/test/screens/widgets/reader_option_tile_test.dart
@@ -650,7 +650,7 @@ git commit -m "feat(epic-39): Issue 1 Task 2 — ReaderOptionTile 新增 iconSiz
   ```
   供 Issue 3（`ReaderSettingsSheet` 5 組單選群組）、Issue 5（`PdfSettingsSheet` 5 組單選群組，含手動選區）、Issue 6（`FxlSettingsSheet` 2 組單選群組）改接使用。
 
-- [ ] **Step 1：寫失敗測試——寬度充足時圖示/文字為上限尺寸且點擊觸發 `onSelected`**
+- [x] **Step 1：寫失敗測試——寬度充足時圖示/文字為上限尺寸且點擊觸發 `onSelected`**
 
 建立 `app/test/screens/widgets/eb_option_chip_group_test.dart`：
 
@@ -742,12 +742,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 Run: `flutter test test/screens/widgets/eb_option_chip_group_test.dart`
 Expected: 編譯失敗（`eb_option_chip_group.dart` 不存在）。
 
-- [ ] **Step 3：寫最小實作使測試通過**
+- [x] **Step 3：寫最小實作使測試通過**
 
 建立 `app/lib/screens/widgets/eb_option_chip_group.dart`：
 
@@ -857,12 +857,12 @@ class EBOptionChipGroup<T> extends StatelessWidget {
 }
 ```
 
-- [ ] **Step 4：執行測試確認通過**
+- [x] **Step 4：執行測試確認通過**
 
 Run: `flutter test test/screens/widgets/eb_option_chip_group_test.dart`
 Expected: PASS（2 個測試）。
 
-- [ ] **Step 5：寫失敗測試——寬度下限、中間內插、隱藏標籤門檻**
+- [x] **Step 5：寫失敗測試——寬度下限、中間內插、隱藏標籤門檻**
 
 追加：
 
@@ -941,12 +941,12 @@ Expected: PASS（2 個測試）。
   });
 ```
 
-- [ ] **Step 6：執行測試確認通過**
+- [x] **Step 6：執行測試確認通過**
 
 Run: `flutter test test/screens/widgets/eb_option_chip_group_test.dart`
 Expected: PASS（6 個測試全過）——Step 3 的實作已涵蓋這些情境。
 
-- [ ] **Step 7：寫失敗測試——`onTap` 動作型項目**
+- [x] **Step 7：寫失敗測試——`onTap` 動作型項目**
 
 追加：
 
@@ -986,12 +986,12 @@ Expected: PASS（6 個測試全過）——Step 3 的實作已涵蓋這些情境
   });
 ```
 
-- [ ] **Step 8：執行測試確認通過**
+- [x] **Step 8：執行測試確認通過**
 
 Run: `flutter test test/screens/widgets/eb_option_chip_group_test.dart`
 Expected: PASS（8 個測試全過）——Step 3 的實作已涵蓋這些情境。
 
-- [ ] **Step 9：新增測試——nullable 泛型（`T = WritingMode?`）的選中比對迴歸保護**
+- [x] **Step 9：新增測試——nullable 泛型（`T = WritingMode?`）的選中比對迴歸保護**
 
 **審查修正 M2（review-plan-issue-1.md）**：後續 Issue 3 會有 `WritingMode?`／`PageTurnMode?`／`ScreenOrientationSetting?` 這類選項值本身包含真實 `null`（代表「採用書籍排版」／「使用全域預設」）的單選群組，先在本 Task 補一組含 `null` 的泛型測試，確保 `EBOptionChipGroup<T>`／`ReaderOptionTile<T>` 這層泛型轉發對 `null` 的相等比對沒有非預期行為。
 
@@ -1060,17 +1060,17 @@ Expected: PASS（8 個測試全過）——Step 3 的實作已涵蓋這些情境
   });
 ```
 
-- [ ] **Step 10：執行測試確認通過**
+- [x] **Step 10：執行測試確認通過**
 
 Run: `flutter test test/screens/widgets/eb_option_chip_group_test.dart`
 Expected: PASS（9 個測試全過）——`EBOptionChipGroup<T>`／`ReaderOptionTile<T>` 的泛型轉發本來就沒有對 `T` 做任何額外假設，這是一個純粹的迴歸保護測試，預期不需要修改 `eb_option_chip_group.dart` 就會直接通過；若竟然沒通過，代表 Step 3 的實作藏有未預期的泛型 bug，須另外排查修正。
 
-- [ ] **Step 11：`flutter analyze` 確認零警告**
+- [x] **Step 11：`flutter analyze` 確認零警告**
 
 Run: `flutter analyze lib/screens/widgets/eb_option_chip_group.dart test/screens/widgets/eb_option_chip_group_test.dart`
 Expected: `No issues found!`
 
-- [ ] **Step 12：Commit**
+- [x] **Step 12：Commit**
 
 ```bash
 git add app/lib/screens/widgets/eb_option_chip_group.dart app/test/screens/widgets/eb_option_chip_group_test.dart
@@ -1084,21 +1084,21 @@ git commit -m "feat(epic-39): Issue 1 Task 3 — 新增 EBOptionChipGroup 響應
 **Files:**
 - 無新增/修改程式碼檔案（僅驗證與文件收尾）。
 
-- [ ] **Step 1：跑全套 `flutter test`**
+- [x] **Step 1：跑全套 `flutter test`**
 
 Run: `flutter test`
 Expected: 全數通過（既有測試數量 + 本 Issue 新增的 19 個測試——`eb_stepper_test.dart` 7 個、`reader_option_tile_test.dart` 新增 3 個〔既有 1 個零回歸〕、`eb_option_chip_group_test.dart` 9 個），零回歸。
 
-- [ ] **Step 2：跑全套 `flutter analyze`**
+- [x] **Step 2：跑全套 `flutter analyze`**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 3：將本檔案所有 Task 的 Step 勾選為完成**
+- [x] **Step 3：將本檔案所有 Task 的 Step 勾選為完成**
 
 把本檔案（`docs/epics/epic-39-layout-settings-redesign/plans/plan-issue-1.md`）Task 1-4 全部 `- [ ]` 改為 `- [x]`。
 
-- [ ] **Step 4：Commit 計畫狀態更新**
+- [x] **Step 4：Commit 計畫狀態更新**
 
 ```bash
 git add docs/epics/epic-39-layout-settings-redesign/plans/plan-issue-1.md
