@@ -533,7 +533,7 @@ void main() {
     await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
     await tester.pumpAndSettle();
 
-    await switchToTab(tester, '版面呈現');
+    await switchToTab(tester, '呈現');
     await tester.tap(
       find.byKey(const Key('reader_settings_writing_mode_vertical')),
     );
@@ -544,7 +544,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await switchToTab(tester, '邊界首尾');
+    await switchToTab(tester, '邊界');
     await tester.tap(find.byKey(const Key('reader_settings_show_footer')));
     await tester.pumpAndSettle();
 
@@ -7298,7 +7298,7 @@ void main() {
       // 開啟版面設定 Sheet、捲動到「另存為新預設集」按鈕並點擊。
       await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
       await tester.pumpAndSettle();
-      await switchToTab(tester, '設定喜好');
+      await switchToTab(tester, '預設集');
       await tester.ensureVisible(
         find.byKey(const Key('reader_settings_save_as_preset')),
       );
@@ -7341,7 +7341,7 @@ void main() {
       await pumpReaderScreen(tester);
       await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
       await tester.pumpAndSettle();
-      await switchToTab(tester, '設定喜好');
+      await switchToTab(tester, '預設集');
       await tester.ensureVisible(
         find.byKey(const Key('reader_settings_save_as_preset')),
       );
@@ -7385,7 +7385,7 @@ void main() {
 
       await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
       await tester.pumpAndSettle();
-      await switchToTab(tester, '設定喜好');
+      await switchToTab(tester, '預設集');
       await tester.ensureVisible(
         find.byKey(const Key('reader_settings_save_as_preset')),
       );
@@ -7419,7 +7419,7 @@ void main() {
 
       await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
       await tester.pumpAndSettle();
-      await switchToTab(tester, '設定喜好');
+      await switchToTab(tester, '預設集');
       await tester.ensureVisible(
         find.byKey(const Key('reader_settings_save_as_preset')),
       );
@@ -7461,7 +7461,7 @@ void main() {
       await pumpReaderScreen(tester);
       await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
       await tester.pumpAndSettle();
-      await switchToTab(tester, '設定喜好');
+      await switchToTab(tester, '預設集');
       await tester.ensureVisible(
         find.byKey(const Key('reader_settings_preset_slot_0_apply_current')),
       );
@@ -7507,7 +7507,7 @@ void main() {
       await pumpReaderScreen(tester);
       await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
       await tester.pumpAndSettle();
-      await switchToTab(tester, '設定喜好');
+      await switchToTab(tester, '預設集');
       await tester.ensureVisible(
         find.byKey(const Key('reader_settings_preset_slot_0_apply_others')),
       );
@@ -7565,7 +7565,7 @@ void main() {
       await pumpReaderScreen(tester);
       await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
       await tester.pumpAndSettle();
-      await switchToTab(tester, '設定喜好');
+      await switchToTab(tester, '預設集');
       await tester.ensureVisible(
         find.byKey(const Key('reader_settings_preset_slot_0_delete')),
       );
@@ -7601,7 +7601,7 @@ void main() {
       await pumpReaderScreen(tester);
       await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
       await tester.pumpAndSettle();
-      await switchToTab(tester, '設定喜好');
+      await switchToTab(tester, '預設集');
       await tester.ensureVisible(
         find.byKey(const Key('reader_settings_preset_slot_0_delete')),
       );
@@ -7633,7 +7633,7 @@ void main() {
       await pumpReaderScreen(tester);
       await tester.tap(find.byKey(const Key('reader_chrome_layout_button')));
       await tester.pumpAndSettle();
-      await switchToTab(tester, '設定喜好');
+      await switchToTab(tester, '預設集');
       await tester.ensureVisible(
         find.byKey(const Key('reader_settings_copy_from_book_current')),
       );
