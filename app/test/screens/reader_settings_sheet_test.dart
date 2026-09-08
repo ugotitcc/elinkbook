@@ -1676,6 +1676,132 @@ void main() {
       reason: '文字對齊應出現在呈現分頁',
     );
   });
+
+  testWidgets(
+      '欄數群組改用 EBOptionChipGroup 後，3 個選項皆顯示 spec.md 選項標籤對照表'
+      '定義的短標籤（epic-39-layout-settings-redesign Issue 3）',
+      (tester) async {
+    await _pumpSheet(tester, BookReaderPrefs.empty, _noopOnChanged);
+    await switchToTab(tester, '呈現');
+
+    for (final item in [
+      ('auto', '自動'),
+      ('single', '單欄'),
+      ('double', '雙欄'),
+    ]) {
+      final (suffix, label) = item;
+      expect(
+        find.descendant(
+          of: find.byKey(Key('reader_settings_column_mode_$suffix')),
+          matching: find.text(label),
+        ),
+        findsOneWidget,
+        reason: 'reader_settings_column_mode_$suffix 應顯示標籤「$label」',
+      );
+    }
+  });
+
+  testWidgets(
+      '文字對齊群組改用 EBOptionChipGroup 後，6 個選項皆顯示短標籤且全部存在'
+      '（epic-39-layout-settings-redesign Issue 3）',
+      (tester) async {
+    await _pumpSheet(tester, BookReaderPrefs.empty, _noopOnChanged);
+    await switchToTab(tester, '呈現');
+
+    for (final item in [
+      ('center', '置中'),
+      ('justify', '齊行'),
+      ('start', '起始'),
+      ('end', '結尾'),
+      ('left', '靠左'),
+      ('right', '靠右'),
+    ]) {
+      final (suffix, label) = item;
+      expect(
+        find.descendant(
+          of: find.byKey(Key('reader_settings_text_align_$suffix')),
+          matching: find.text(label),
+        ),
+        findsOneWidget,
+        reason: 'reader_settings_text_align_$suffix 應顯示標籤「$label」',
+      );
+    }
+  });
+
+  testWidgets(
+      '書寫方向覆寫群組改用 EBOptionChipGroup 後，3 個選項皆顯示短標籤'
+      '（epic-39-layout-settings-redesign Issue 3）',
+      (tester) async {
+    await _pumpSheet(tester, BookReaderPrefs.empty, _noopOnChanged);
+    await switchToTab(tester, '呈現');
+
+    for (final item in [
+      ('book', '書籍'),
+      ('vertical', '直排'),
+      ('horizontal', '橫排'),
+    ]) {
+      final (suffix, label) = item;
+      expect(
+        find.descendant(
+          of: find.byKey(Key('reader_settings_writing_mode_$suffix')),
+          matching: find.text(label),
+        ),
+        findsOneWidget,
+        reason: 'reader_settings_writing_mode_$suffix 應顯示標籤「$label」',
+      );
+    }
+  });
+
+  testWidgets(
+      '翻頁模式覆寫群組改用 EBOptionChipGroup 後，3 個選項皆顯示短標籤'
+      '（epic-39-layout-settings-redesign Issue 3）',
+      (tester) async {
+    await _pumpSheet(tester, BookReaderPrefs.empty, _noopOnChanged);
+    await switchToTab(tester, '呈現');
+
+    for (final item in [
+      ('global', '全域'),
+      ('paginated', '點擊'),
+      ('scroll', '滾動'),
+    ]) {
+      final (suffix, label) = item;
+      expect(
+        find.descendant(
+          of: find.byKey(Key('reader_settings_page_turn_mode_$suffix')),
+          matching: find.text(label),
+        ),
+        findsOneWidget,
+        reason: 'reader_settings_page_turn_mode_$suffix 應顯示標籤「$label」',
+      );
+    }
+  });
+
+  testWidgets(
+      '螢幕方向覆寫群組改用 EBOptionChipGroup 後，6 個選項皆顯示短標籤'
+      '（epic-39-layout-settings-redesign Issue 3）',
+      (tester) async {
+    await _pumpSheet(tester, BookReaderPrefs.empty, _noopOnChanged);
+    await switchToTab(tester, '呈現');
+
+    for (final item in [
+      ('global', '全域'),
+      ('auto', '自動'),
+      ('lock0', '0°'),
+      ('lock90', '90°'),
+      ('lock180', '180°'),
+      ('lock270', '270°'),
+    ]) {
+      final (suffix, label) = item;
+      expect(
+        find.descendant(
+          of: find.byKey(Key('reader_settings_screen_orientation_$suffix')),
+          matching: find.text(label),
+        ),
+        findsOneWidget,
+        reason: 'reader_settings_screen_orientation_$suffix 應顯示標籤「$label」',
+      );
+    }
+  });
 }
 
 Future<void> _pumpSheet(
