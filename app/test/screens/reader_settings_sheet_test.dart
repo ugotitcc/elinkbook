@@ -1362,6 +1362,7 @@ void main() {
         body: ReaderSettingsSheet(
           bookId: 'test-book',
           prefs: const BookReaderPrefs(textAlign: EpubTextAlign.justify),
+          isEinkMode: true,
           onChanged: (_) {},
           onSaveAsPreset: (_) {},
           onApplyPreset: (_, {required targetBookIds}) {},
@@ -1407,6 +1408,7 @@ void main() {
         body: ReaderSettingsSheet(
           bookId: 'test-book',
           prefs: BookReaderPrefs.empty,
+          isEinkMode: true,
           onChanged: (_) {},
           onSaveAsPreset: (_) {},
           onApplyPreset: (_, {required targetBookIds}) {},
@@ -1443,6 +1445,7 @@ Future<void> _pumpSheet(
   void Function(String, {required List<String> targetBookIds})? onApplyFromBook,
   Future<List<String>?> Function({required bool multiSelect})? onRequestBookPicker,
   void Function(int)? onDeletePreset,
+  bool isEinkMode = false,
 }) async {
   // 設定較大的 Viewport，以防 ListView 元件超出預設的 800x600 範圍導致 tap 失敗
   // （Issue 14 邊距拆為 4 個獨立滑桿後內容變高，1200 已不足，調高至 1600；加入預設集區塊後調高至 2400）
@@ -1461,6 +1464,7 @@ Future<void> _pumpSheet(
         customFonts: customFonts,
         bookId: bookId,
         layoutPresets: layoutPresets,
+        isEinkMode: isEinkMode,
         onSaveAsPreset: onSaveAsPreset ?? _noopSaveAsPreset,
         onApplyPreset: onApplyPreset ?? _noopApplyPreset,
         onApplyFromBook: onApplyFromBook ?? _noopApplyFromBook,
@@ -1512,6 +1516,7 @@ class _TestSettingsSheetWrapperState extends State<_TestSettingsSheetWrapper> {
       prefs: _prefs,
       onChanged: (_) {},
       bookId: 'b1',
+      isEinkMode: false,
       onSaveAsPreset: _noopSaveAsPreset,
       onApplyPreset: _noopApplyPreset,
       onApplyFromBook: _noopApplyFromBook,
@@ -1524,8 +1529,9 @@ class _TestSettingsSheetWrapperState extends State<_TestSettingsSheetWrapper> {
 Future<void> _pumpModalSheet(
   WidgetTester tester,
   BookReaderPrefs prefs,
-  ValueChanged<BookReaderPrefs> onChanged,
-) async {
+  ValueChanged<BookReaderPrefs> onChanged, {
+  bool isEinkMode = false,
+}) async {
   await tester.pumpWidget(MaterialApp(
     home: Scaffold(
       body: Builder(
@@ -1538,6 +1544,7 @@ Future<void> _pumpModalSheet(
               prefs: prefs,
               onChanged: onChanged,
               bookId: 'b1',
+              isEinkMode: isEinkMode,
               onSaveAsPreset: _noopSaveAsPreset,
               onApplyPreset: _noopApplyPreset,
               onApplyFromBook: _noopApplyFromBook,

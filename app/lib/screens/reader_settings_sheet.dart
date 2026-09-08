@@ -36,6 +36,7 @@ class ReaderSettingsSheet extends StatefulWidget {
   final Future<List<String>?> Function({required bool multiSelect})
       onRequestBookPicker;
   final void Function(int id) onDeletePreset;
+  final bool isEinkMode;
 
   const ReaderSettingsSheet({
     super.key,
@@ -49,6 +50,7 @@ class ReaderSettingsSheet extends StatefulWidget {
     required this.onApplyFromBook,
     required this.onRequestBookPicker,
     required this.onDeletePreset,
+    required this.isEinkMode,
   });
 
   @override
