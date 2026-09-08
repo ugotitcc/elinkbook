@@ -1254,6 +1254,45 @@ void main() {
           reason: '過期呼叫不應該把（已經 stop 的）音訊寫入播放器');
     });
   });
+
+  group('TtsController 語音選擇（epic-38-reader-chrome-tts-redesign Issue 2）', () {
+    const alternateVoice = TtsVoice(id: 'alt', displayName: '替代語音');
+
+    test('初始語音為 TtsVoice.systemDefault', () {
+      final controller = buildController();
+      expect(controller.voice, TtsVoice.systemDefault);
+    });
+
+    test('setVoice() 更新 voice 並觸發 notifyListeners', () {
+      final controller = buildController();
+      var notified = false;
+      controller.addListener(() => notified = true);
+
+      controller.setVoice(alternateVoice);
+
+      expect(controller.voice, alternateVoice);
+      expect(notified, isTrue);
+    });
+
+    test('setVoice() 後下一段合成套用新語音，不影響已合成的段落', () async {
+      final controller = buildController();
+      await controller.play();
+      expect(provider.synthesizeCallCount, 1);
+      expect(provider.synthesizeVoices, [TtsVoice.systemDefault],
+          reason: '第一段尚未呼叫 setVoice()，應沿用初始值 TtsVoice.systemDefault');
+
+      controller.setVoice(alternateVoice);
+      player.simulateCompleted();
+      await Future<void>.delayed(Duration.zero);
+
+      expect(provider.synthesizeCallCount, 2);
+      // 審查修正（review-plan-issue-2.md I3）：原本只斷言呼叫次數，即使
+      // _playCurrentSegment() 仍寫死 TtsVoice.systemDefault、完全沒有讀
+      // _voice 欄位，這裡也會一樣通過，測試形同虛設。改為直接核對第二次
+      // synthesize() 實際收到的 voice 參數確實是剛剛 setVoice() 設定的值。
+      expect(provider.synthesizeVoices.last, alternateVoice);
+    });
+  });
 }
 
 

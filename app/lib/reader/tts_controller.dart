@@ -77,6 +77,24 @@ class TtsController extends ChangeNotifier {
   double _speed = 1.0;
   double get speed => _speed;
 
+  /// 目前選定的朗讀語音（epic-38-reader-chrome-tts-redesign Issue 2）。
+  /// 初始值為 [TtsVoice.systemDefault]，比照 Phase 1 `SystemTtsProvider`
+  /// 只有一種語音的既有事實。[TtsPanel.onVoiceTap] 呼叫 [setVoice] 後，
+  /// 只影響「下一段」合成——不重新合成目前已載入/正在播放的音訊，比照
+  /// 既有 [setSpeed] 對「目前段落執行期變速、下一段才套用新值」的區隔
+  /// 原則不同之處在於：語速有播放器執行期變速這條路徑，語音沒有等價
+  /// 機制（無法讓已合成完畢的音訊檔案「變成另一個人的聲音」），故
+  /// [setVoice] 不需要也不能對 [player] 做任何呼叫，純粹是下一次
+  /// [_playCurrentSegment] 呼叫 [TtsProvider.synthesize] 時讀取的欄位。
+  TtsVoice _voice = TtsVoice.systemDefault;
+  TtsVoice get voice => _voice;
+
+  void setVoice(TtsVoice newVoice) {
+    if (_disposed) return;
+    _voice = newVoice;
+    notifyListeners();
+  }
+
   StreamSubscription<void>? _completedSub;
   bool _disposed = false;
 
@@ -431,7 +449,7 @@ class TtsController extends ChangeNotifier {
         notifyListeners();
         final result = await provider.synthesize(
           segment.text,
-          voice: TtsVoice.systemDefault,
+          voice: _voice,
           speed: _speed,
         );
         if (_disposed || generation != _segmentGeneration) return;
