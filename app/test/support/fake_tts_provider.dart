@@ -32,6 +32,12 @@ class FakeTtsProvider implements TtsProvider {
   /// Issue 5），供測試驗證「下一段」合成確實套用了呼叫當下的最新語速。
   final List<double> synthesizeSpeeds = [];
 
+  /// 記錄每次 [synthesize] 呼叫實際收到的 `voice` 參數（epic-38-reader-
+  /// chrome-tts-redesign Issue 2），供測試驗證 `TtsController.setVoice()`
+  /// 後「下一段」合成確實套用了新語音，而不是依然寫死
+  /// `TtsVoice.systemDefault`。
+  final List<TtsVoice> synthesizeVoices = [];
+
   @override
   Future<TtsSynthesisResult> synthesize(
     String text, {
@@ -42,6 +48,7 @@ class FakeTtsProvider implements TtsProvider {
     synthesizeCallCount++;
     synthesizedTexts.add(text);
     synthesizeSpeeds.add(speed);
+    synthesizeVoices.add(voice);
     final completer = nextSynthesizeCompleter;
     if (completer != null) {
       nextSynthesizeCompleter = null;

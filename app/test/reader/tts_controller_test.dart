@@ -1154,6 +1154,145 @@ void main() {
       expect(provider.synthesizedTexts, [longText.substring(0, 10)]);
     });
   });
+
+  group('TtsController.stop()（epic-38-reader-chrome-tts-redesign Issue 2）', () {
+    test('playing 狀態下呼叫 stop() 後，狀態重設為 idle 且清空段落', () async {
+      final controller = buildController();
+      await controller.play();
+      expect(controller.status, TtsPlaybackStatus.playing);
+
+      await controller.stop();
+
+      expect(controller.status, TtsPlaybackStatus.idle);
+      expect(controller.segments, isEmpty);
+      expect(controller.currentIndex, -1);
+    });
+
+    test('stop() 呼叫 player.stop()，而非 player.pause()', () async {
+      final controller = buildController();
+      await controller.play();
+      player.callLog.clear();
+
+      await controller.stop();
+
+      expect(player.callLog, ['stop']);
+    });
+
+    test('stop() 通知 onHighlightSegment 收到 null，清除既有高亮', () async {
+      TtsSegmentCfi? lastSegment = const TtsSegmentCfi(
+        segmentId: 'sentinel',
+        cfi: 'epubcfi(/0)',
+        text: 'sentinel',
+      );
+      provider = FakeTtsProvider();
+      player = FakeTtsAudioPlayer();
+      final controller = TtsController(
+        provider: provider,
+        player: player,
+        loadSegments: () async => segments,
+        onHighlightSegment: (segment) => lastSegment = segment,
+      );
+      await controller.play();
+      expect(lastSegment, isNotNull);
+
+      await controller.stop();
+
+      expect(lastSegment, isNull);
+    });
+
+    test('paused 狀態下呼叫 stop() 同樣重設為 idle', () async {
+      final controller = buildController();
+      await controller.play();
+      controller.pause();
+      expect(controller.status, TtsPlaybackStatus.paused);
+
+      await controller.stop();
+
+      expect(controller.status, TtsPlaybackStatus.idle);
+    });
+
+    test('idle 狀態下呼叫 stop() 不拋例外，狀態維持 idle', () async {
+      final controller = buildController();
+      expect(controller.status, TtsPlaybackStatus.idle);
+
+      // stop() 內部邏輯無條件執行（不像 pause() 有 _status != playing 的
+      // 提前 return 守衛），idle 狀態下呼叫仍會走到 player.stop()——對已經
+      // 停止的播放器呼叫一次無害，這裡驗證的是「不拋例外、狀態不受影響」，
+      // 不是「no-op 不呼叫 player」。
+      await controller.stop();
+
+      expect(controller.status, TtsPlaybackStatus.idle);
+      expect(player.callLog, ['stop']);
+    });
+
+    test('stop() 呼叫期間若有進行中的 play()，世代編號機制正確中止該次呼叫', () async {
+      provider = FakeTtsProvider();
+      player = FakeTtsAudioPlayer();
+      final synthesizeCompleter = Completer<void>();
+      provider.nextSynthesizeCompleter = synthesizeCompleter;
+      final controller = TtsController(
+        provider: provider,
+        player: player,
+        loadSegments: () async => segments,
+      );
+
+      final playFuture = controller.play(); // 卡在 synthesize() 尚未回應
+      await Future<void>.delayed(Duration.zero);
+      expect(controller.status, TtsPlaybackStatus.playing,
+          reason: '_playCurrentSegment 已先把狀態設為 playing 才呼叫 synthesize');
+
+      await controller.stop();
+      expect(controller.status, TtsPlaybackStatus.idle);
+
+      synthesizeCompleter.complete(); // 讓過期的 play() 呼叫繼續往下走
+      await playFuture;
+
+      expect(controller.status, TtsPlaybackStatus.idle,
+          reason: '世代編號應讓過期呼叫在 synthesize() 完成後安全放棄，'
+              '不得把已經 stop() 的狀態又寫回 playing');
+      expect(player.loadedFiles, isEmpty,
+          reason: '過期呼叫不應該把（已經 stop 的）音訊寫入播放器');
+    });
+  });
+
+  group('TtsController 語音選擇（epic-38-reader-chrome-tts-redesign Issue 2）', () {
+    const alternateVoice = TtsVoice(id: 'alt', displayName: '替代語音');
+
+    test('初始語音為 TtsVoice.systemDefault', () {
+      final controller = buildController();
+      expect(controller.voice, TtsVoice.systemDefault);
+    });
+
+    test('setVoice() 更新 voice 並觸發 notifyListeners', () {
+      final controller = buildController();
+      var notified = false;
+      controller.addListener(() => notified = true);
+
+      controller.setVoice(alternateVoice);
+
+      expect(controller.voice, alternateVoice);
+      expect(notified, isTrue);
+    });
+
+    test('setVoice() 後下一段合成套用新語音，不影響已合成的段落', () async {
+      final controller = buildController();
+      await controller.play();
+      expect(provider.synthesizeCallCount, 1);
+      expect(provider.synthesizeVoices, [TtsVoice.systemDefault],
+          reason: '第一段尚未呼叫 setVoice()，應沿用初始值 TtsVoice.systemDefault');
+
+      controller.setVoice(alternateVoice);
+      player.simulateCompleted();
+      await Future<void>.delayed(Duration.zero);
+
+      expect(provider.synthesizeCallCount, 2);
+      // 審查修正（review-plan-issue-2.md I3）：原本只斷言呼叫次數，即使
+      // _playCurrentSegment() 仍寫死 TtsVoice.systemDefault、完全沒有讀
+      // _voice 欄位，這裡也會一樣通過，測試形同虛設。改為直接核對第二次
+      // synthesize() 實際收到的 voice 參數確實是剛剛 setVoice() 設定的值。
+      expect(provider.synthesizeVoices.last, alternateVoice);
+    });
+  });
 }
 
 

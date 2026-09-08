@@ -27,7 +27,7 @@ import 'package:elinkbook/screens/toc_bottom_sheet.dart';
 import 'package:elinkbook/reader/epub_position_info.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
 import 'package:elinkbook/screens/reader_chrome_bottom_bar.dart';
-import 'package:elinkbook/screens/tts_mini_player.dart';
+import 'package:elinkbook/screens/tts_panel.dart';
 import 'package:elinkbook/reader/foliate_reader_view.dart';
 import 'package:elinkbook/reader/foliate_native_bridge.dart';
 import 'package:elinkbook/theme/app_theme.dart';
@@ -7705,7 +7705,7 @@ void main() {
       );
     });
 
-    testWidgets('提供 ttsProvider 時，流式 EPUB 顯示 TTS 播放按鈕，初始為播放圖示', (tester) async {
+    testWidgets('提供 ttsProvider 時，流式 EPUB 顯示 TTS 播放按鈕，點擊後不崩潰且維持在 ReaderChromeBottomBar（誠實測試邊界，見計劃範圍澄清第 2 點）', (tester) async {
       final highlightsRepo = FakeHighlightsRepository();
       final notesRepo = FakeNotesRepository();
       final ttsProvider = FakeTtsProvider();
@@ -7741,25 +7741,20 @@ void main() {
       await tester.pump();
       await tester.pump();
 
-      // Mini Player 預設隱藏，須先按下朗讀 FAB 按鈕才會顯示
-      // （epic-34-tts-readalong 追加需求）。
-      await tester.tap(
-        find.byKey(const Key('reader_chrome_tts_button')),
-      );
+      // epic-38-reader-chrome-tts-redesign Issue 2 審查澄清：點擊後呼叫
+      // _ttsControllerOrNull!.play()，flutter_test 環境下
+      // FoliateReaderView.loadTtsSegments() 恆回傳空清單，status 永遠
+      // 停在 idle，TtsPanel 結構性不會出現（見 plan-issue-2.md 計劃範圍
+      // 澄清第 2 點）——這裡驗證的是「點擊不崩潰、維持在
+      // ReaderChromeBottomBar」這個環境限制下仍可觀察的結構性保證，深層
+      // 狀態機正確性由 tts_controller_test.dart 完整涵蓋。
+      final toggleFinder = find.byKey(const Key('reader_chrome_tts_button'));
+      await tester.tap(toggleFinder);
       await tester.pump();
 
-      final buttonFinder = find.byKey(
-        const Key('reader_tts_play_pause_button'),
-      );
-      expect(buttonFinder, findsOneWidget);
-      final icon = tester.widget<Icon>(
-        find.descendant(of: buttonFinder, matching: find.byType(Icon)),
-      );
-      expect(icon.icon, Icons.play_arrow);
-
-      await tester.tap(buttonFinder);
-      await tester.pump();
       expect(tester.takeException(), isNull);
+      expect(find.byType(ReaderChromeBottomBar), findsOneWidget);
+      expect(find.byType(TtsPanel), findsNothing);
     });
 
     testWidgets('CBZ 格式提供 ttsProvider 時，TTS 按鈕顯示但為停用狀態', (tester) async {
@@ -7849,16 +7844,19 @@ void main() {
       final buttonFinder = find.byKey(
         const Key('reader_tts_play_pause_button'),
       );
-      final icon = tester.widget<Icon>(
-        find.descendant(of: buttonFinder, matching: find.byType(Icon)),
+      // 審查修正（epic-38-reader-chrome-tts-redesign Issue 2）：TtsPanel
+      // 的 Icon 不再自帶 color，改由 IconButton.style 的
+      // disabledForegroundColor 決定，比對 Icon.color（現在恆為 null）
+      // 已不適用。CBZ 恆為固定版面，啟用狀態的既有圖示色固定為
+      // Colors.white（_themedFabIconColor）；停用狀態須與其明確不同，
+      // 且不得只是同一顏色套上透明度（見本計畫 Global Constraints
+      // 說明），故直接斷言為不透明的 Colors.grey（已隱含「不是
+      // Colors.white」，不需另外斷言 isNot）。
+      final button = tester.widget<IconButton>(buttonFinder);
+      expect(
+        button.style?.foregroundColor?.resolve(<WidgetState>{WidgetState.disabled}),
+        Colors.grey,
       );
-
-      // CBZ 恆為固定版面，啟用狀態的既有圖示色固定為 Colors.white
-      // （_themedFabIconColor，reader_screen.dart:2693-2694）；停用狀態
-      // 須與其明確不同，且不得只是同一顏色套上透明度（見本計畫 Global
-      // Constraints 說明），故直接斷言為不透明的 Colors.grey（已隱含
-      // 「不是 Colors.white」，不需另外斷言 isNot）。
-      expect(icon.color, Colors.grey);
     });
   });
 
@@ -7913,19 +7911,14 @@ void main() {
       await tester.pump();
       await tester.pump();
 
-      await tester.tap(
-        find.byKey(const Key('reader_chrome_tts_button')),
-      );
-      await tester.pump();
-
-      final buttonFinder = find.byKey(
-        const Key('reader_tts_play_pause_button'),
-      );
-      expect(buttonFinder, findsOneWidget);
-
-      await tester.tap(buttonFinder);
+      // epic-38-reader-chrome-tts-redesign Issue 2：flutter_test 環境下
+      // TtsController 永遠 idle，TtsPanel 結構性不出現，維持在 ReaderChromeBottomBar
+      final toggleFinder = find.byKey(const Key('reader_chrome_tts_button'));
+      await tester.tap(toggleFinder);
       await tester.pump();
       expect(tester.takeException(), isNull);
+      expect(find.byType(ReaderChromeBottomBar), findsOneWidget);
+      expect(find.byType(TtsPanel), findsNothing);
     });
 
     testWidgets('TTS 播放按鈕點擊後，highlightsRepository/notesRepository 內容不受影響'
@@ -7966,13 +7959,13 @@ void main() {
       await tester.pump();
       await tester.pump();
 
-      await tester.tap(
-        find.byKey(const Key('reader_chrome_tts_button')),
-      );
+      // epic-38 Issue 2：同上，點擊不崩潰、維持在 ReaderChromeBottomBar
+      final toggleFinder2 = find.byKey(const Key('reader_chrome_tts_button'));
+      await tester.tap(toggleFinder2);
       await tester.pump();
-
-      await tester.tap(find.byKey(const Key('reader_tts_play_pause_button')));
-      await tester.pump();
+      expect(tester.takeException(), isNull);
+      expect(find.byType(ReaderChromeBottomBar), findsOneWidget);
+      expect(find.byType(TtsPanel), findsNothing);
       await tester.runAsync(() => Future.delayed(Duration.zero));
       await tester.pump();
 
@@ -8027,17 +8020,13 @@ void main() {
       await tester.pump();
       await tester.pump();
 
-      await tester.tap(
-        find.byKey(const Key('reader_chrome_tts_button')),
-      );
-      await tester.pump();
-
-      final buttonFinder = find.byKey(
-        const Key('reader_tts_play_pause_button'),
-      );
-      await tester.tap(buttonFinder);
+      // epic-38 Issue 2：點擊不崩潰、維持在 ReaderChromeBottomBar
+      final toggleFinder3 = find.byKey(const Key('reader_chrome_tts_button'));
+      await tester.tap(toggleFinder3);
       await tester.pump();
       expect(tester.takeException(), isNull);
+      expect(find.byType(ReaderChromeBottomBar), findsOneWidget);
+      expect(find.byType(TtsPanel), findsNothing);
 
       // 模擬手動翻頁：main.js 端 onLocatorChanged 事件（比照既有
       // foliate_bridge_codec_test.dart／reader_screen_test.dart 對這個
@@ -8052,10 +8041,12 @@ void main() {
       await tester.pump();
       expect(tester.takeException(), isNull);
 
-      // 翻頁後按鈕仍可正常點擊（未卡在任何非預期狀態）。
-      await tester.tap(buttonFinder);
+      // 翻頁後再次點擊朗讀按鈕仍不崩潰、維持在 ReaderChromeBottomBar
+      await tester.tap(toggleFinder3);
       await tester.pump();
       expect(tester.takeException(), isNull);
+      expect(find.byType(ReaderChromeBottomBar), findsOneWidget);
+      expect(find.byType(TtsPanel), findsNothing);
     });
   });
 
@@ -8185,24 +8176,13 @@ void main() {
       await tester.pump();
       await tester.pump();
 
-      await tester.tap(
-        find.byKey(const Key('reader_chrome_tts_button')),
-      );
+      // epic-38 Issue 2：flutter_test 環境下 TtsPanel 不出現，維持在 ReaderChromeBottomBar
+      final toggleFinder4 = find.byKey(const Key('reader_chrome_tts_button'));
+      await tester.tap(toggleFinder4);
       await tester.pump();
-
-      expect(
-        find.byKey(const Key('reader_tts_previous_button')),
-        findsOneWidget,
-      );
-      expect(find.byKey(const Key('reader_tts_next_button')), findsOneWidget);
-      final speedButtonFinder = find.byKey(
-        const Key('reader_tts_speed_button'),
-      );
-      expect(speedButtonFinder, findsOneWidget);
-      expect(
-        find.descendant(of: speedButtonFinder, matching: find.text('1.00x')),
-        findsOneWidget,
-      );
+      expect(tester.takeException(), isNull);
+      expect(find.byType(ReaderChromeBottomBar), findsOneWidget);
+      expect(find.byType(TtsPanel), findsNothing);
     });
 
     testWidgets('提供 ttsProvider 時，點擊上一句/下一句按鈕不崩潰（誠實測試邊界：flutter_test 環境下'
@@ -8246,17 +8226,14 @@ void main() {
       await tester.pump();
       await tester.pump();
 
-      await tester.tap(
-        find.byKey(const Key('reader_chrome_tts_button')),
-      );
-      await tester.pump();
-
-      await tester.tap(find.byKey(const Key('reader_tts_previous_button')));
+      // epic-38 Issue 2：TtsPanel 不出現，點擊朗讀按鈕維持在 ReaderChromeBottomBar
+      final toggleFinder5 = find.byKey(const Key('reader_chrome_tts_button'));
+      await tester.tap(toggleFinder5);
       await tester.pump();
       expect(tester.takeException(), isNull);
-
-      await tester.tap(find.byKey(const Key('reader_tts_next_button')));
-      await tester.pump();
+      expect(find.byType(ReaderChromeBottomBar), findsOneWidget);
+      expect(find.byType(TtsPanel), findsNothing);
+      // 原本的上一句/下一句點擊在新架構下無法直接觸發，深層行為由 tts_controller_test 涵蓋
       expect(tester.takeException(), isNull);
     });
 
@@ -8298,38 +8275,19 @@ void main() {
       await tester.pump();
       await tester.pump();
 
-      await tester.tap(
-        find.byKey(const Key('reader_chrome_tts_button')),
-      );
+      // epic-38 Issue 2：TtsPanel 不出現，維持在 ReaderChromeBottomBar，語速循環深層行為由 tts_controller_test 涵蓋
+      final toggleFinder6 = find.byKey(const Key('reader_chrome_tts_button'));
+      await tester.tap(toggleFinder6);
       await tester.pump();
-
-      final speedButtonFinder = find.byKey(
-        const Key('reader_tts_speed_button'),
-      );
-      expect(
-        find.descendant(of: speedButtonFinder, matching: find.text('1.00x')),
-        findsOneWidget,
-      );
-
-      await tester.tap(speedButtonFinder);
-      await tester.pump();
-      expect(
-        find.descendant(of: speedButtonFinder, matching: find.text('1.25x')),
-        findsOneWidget,
-      );
-
-      await tester.tap(speedButtonFinder);
-      await tester.pump();
-      expect(
-        find.descendant(of: speedButtonFinder, matching: find.text('1.50x')),
-        findsOneWidget,
-      );
+      expect(tester.takeException(), isNull);
+      expect(find.byType(ReaderChromeBottomBar), findsOneWidget);
+      expect(find.byType(TtsPanel), findsNothing);
     });
   });
 
   group('Mini Player 與既有底部元件顯示連動（epic-34-tts-readalong Issue 6）', () {
     testWidgets(
-      '頁尾預設顯示（showFooter 預設 null＝true）且提供 ttsProvider 時，頁尾進度文字與 Mini Player 播放鍵同時存在，互不排斥',
+      '頁尾預設顯示（showFooter 預設 null＝true）且提供 ttsProvider 時，頁尾進度文字與朗讀按鈕點擊不崩潰，兩者互不排斥',
       (tester) async {
         final highlightsRepo = FakeHighlightsRepository();
         final notesRepo = FakeNotesRepository();
@@ -8374,29 +8332,29 @@ void main() {
         await tester.pump();
         await tester.pump();
 
-        await tester.tap(
-          find.byKey(const Key('reader_chrome_tts_button')),
-        );
+        // epic-38 Issue 2：點擊不崩潰、維持在 ReaderChromeBottomBar，TtsPanel 不出現
+        final toggleFinder7 = find.byKey(const Key('reader_chrome_tts_button'));
+        await tester.tap(toggleFinder7);
         await tester.pump();
-
+        expect(tester.takeException(), isNull);
+        expect(find.byType(ReaderChromeBottomBar), findsOneWidget);
+        expect(find.byType(TtsPanel), findsNothing);
+        // 頁尾資訊仍應存在（由 ReaderChromeBottomBar 承載）
         expect(
           find.byKey(const Key('reader_foliate_progress_text')),
           findsOneWidget,
         );
-        expect(find.text('5/20'), findsOneWidget);
-        expect(
-          find.byKey(const Key('reader_tts_play_pause_button')),
-          findsOneWidget,
-        );
-        expect(
-          find.byKey(const Key('reader_tts_previous_button')),
-          findsOneWidget,
-        );
-        expect(find.byKey(const Key('reader_tts_next_button')), findsOneWidget);
-        expect(
-          find.byKey(const Key('reader_tts_speed_button')),
-          findsOneWidget,
-        );
+        // epic-38 Issue 2（審查修正 review-issue-2.md Minor #3：原註解誤指
+        // ReaderChromeBottomBar 頁碼文字，實際上該文字格式是
+        // "5 / 20 · 25%"〔_pageProgressText()〕，跟這裡的 "5/20" 不同。
+        // 真正同時顯示 "5/20" 的是兩個獨立元件：ReaderChromeBottomBar 內嵌
+        // 的 ReaderFooter〔key: reader_footer_progress_text〕，以及
+        // _buildFoliateProgressText()〔key: reader_foliate_progress_text，
+        // 上面已在 8343-8346 行斷言其存在〕——兩者格式皆為
+        // "$currentPage/$totalPages"，同一份 EpubPositionInfo 換算出同樣的
+        // "5/20"，故 find.text 必然命中 2 個，findsOneWidget 會失敗
+        // （已實測驗證），findsWidgets 才是正確斷言。
+        expect(find.text('5/20'), findsWidgets);
       },
     );
 
@@ -8443,130 +8401,6 @@ void main() {
       expect(find.byKey(const Key('reader_tts_speed_button')), findsNothing);
     });
 
-    testWidgets('提供 ttsProvider 時，Mini Player 預設隱藏，須按下朗讀 FAB 按鈕才顯示，'
-        '按 Mini Player 關閉鍵收合（過渡期互斥使朗讀按鈕本身隨 BottomBar 一併隱藏，'
-        '無法重複點擊原按鈕收合）', (tester) async {
-      final ttsProvider = FakeTtsProvider();
-
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(
-            filePath: 'test/fixtures/sample.epub',
-            bookId: 'b_mini_player_toggle',
-            prefsManager: prefsManager,
-            isFixedLayout: false,
-            ttsProvider: ttsProvider,
-          ),
-        ),
-      );
-      await tester.pump();
-      await tester.runAsync(() => Future.delayed(Duration.zero));
-      await tester.pump();
-
-      final foliateView = tester.widget<FoliateReaderView>(
-        find.byType(FoliateReaderView),
-      );
-      foliateView.onPageRendered();
-      foliateView.onLayoutResolved?.call(
-        const EpubLayoutInfo(
-          isFixedLayout: false,
-          writingMode: WritingMode.horizontal,
-        ),
-      );
-      await tester.pump();
-      await tester.pump();
-
-      final toggleFinder = find.byKey(
-        const Key('reader_chrome_tts_button'),
-      );
-      expect(
-        toggleFinder,
-        findsOneWidget,
-        reason: '朗讀 FAB 按鈕本身在有 ttsProvider 時一律顯示',
-      );
-      expect(
-        find.byKey(const Key('reader_tts_play_pause_button')),
-        findsNothing,
-        reason: 'Mini Player 預設隱藏，比照跳頁進度條需先按 FAB 才出現',
-      );
-
-      await tester.tap(toggleFinder);
-      await tester.pump();
-      expect(
-        find.byKey(const Key('reader_tts_play_pause_button')),
-        findsOneWidget,
-      );
-      // 過渡期互斥（review-issues.md I1）：Mini Player 顯示時，整個
-      // ReaderChromeBottomBar（含觸發它的朗讀按鈕本身）不再渲染，避免
-      // 兩者底部貼齊視覺重疊——因此收合須改用 Mini Player 自己的關閉鍵，
-      // 不能沿用同一顆已經消失的 reader_chrome_tts_button 再點一次
-      // （epic-38-reader-chrome-tts-redesign Issue 1）。
-      expect(find.byKey(const Key('reader_chrome_tts_button')), findsNothing);
-
-      await tester.tap(find.byKey(const Key('reader_tts_mini_player_close_button')));
-      await tester.pump();
-      expect(
-        find.byKey(const Key('reader_tts_play_pause_button')),
-        findsNothing,
-      );
-      expect(find.byKey(const Key('reader_chrome_tts_button')), findsOneWidget);
-    });
-
-    testWidgets('點擊 Mini Player 的關閉鍵可收合，不影響 TtsController 播放狀態', (
-      tester,
-    ) async {
-      final ttsProvider = FakeTtsProvider();
-
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-          home: ReaderScreen(
-            filePath: 'test/fixtures/sample.epub',
-            bookId: 'b_mini_player_close',
-            prefsManager: prefsManager,
-            isFixedLayout: false,
-            ttsProvider: ttsProvider,
-          ),
-        ),
-      );
-      await tester.pump();
-      await tester.runAsync(() => Future.delayed(Duration.zero));
-      await tester.pump();
-
-      final foliateView = tester.widget<FoliateReaderView>(
-        find.byType(FoliateReaderView),
-      );
-      foliateView.onPageRendered();
-      foliateView.onLayoutResolved?.call(
-        const EpubLayoutInfo(
-          isFixedLayout: false,
-          writingMode: WritingMode.horizontal,
-        ),
-      );
-      await tester.pump();
-      await tester.pump();
-
-      await tester.tap(
-        find.byKey(const Key('reader_chrome_tts_button')),
-      );
-      await tester.pump();
-      expect(
-        find.byKey(const Key('reader_tts_play_pause_button')),
-        findsOneWidget,
-      );
-
-      await tester.tap(
-        find.byKey(const Key('reader_tts_mini_player_close_button')),
-      );
-      await tester.pump();
-      expect(
-        find.byKey(const Key('reader_tts_play_pause_button')),
-        findsNothing,
-        reason: '關閉鍵只收合控制列本身，不需要底層 TtsController 進入任何特定狀態即可驗證',
-      );
-      expect(tester.takeException(), isNull);
-    });
   });
 
   group('背景播放與系統整合（epic-34-tts-readalong Issue 7）', () {
@@ -8611,18 +8445,13 @@ void main() {
       await tester.pump();
       await tester.pump();
 
-      await tester.tap(
-        find.byKey(const Key('reader_chrome_tts_button')),
-      );
-      await tester.pump();
-
-      final buttonFinder = find.byKey(
-        const Key('reader_tts_play_pause_button'),
-      );
-      expect(buttonFinder, findsOneWidget);
-      await tester.tap(buttonFinder);
+      // epic-38 Issue 2：點擊不崩潰、維持在 ReaderChromeBottomBar
+      final toggleFinder9 = find.byKey(const Key('reader_chrome_tts_button'));
+      await tester.tap(toggleFinder9);
       await tester.pump();
       expect(tester.takeException(), isNull);
+      expect(find.byType(ReaderChromeBottomBar), findsOneWidget);
+      expect(find.byType(TtsPanel), findsNothing);
 
       // TtsAudioHandler 應已綁定書名（attachController 已被呼叫）。
       expect(ttsAudioHandler.mediaItem.value?.title, '未知書籍');
@@ -8681,17 +8510,13 @@ void main() {
       await tester.pump();
       await tester.pump();
 
-      await tester.tap(
-        find.byKey(const Key('reader_chrome_tts_button')),
-      );
-      await tester.pump();
-
-      final buttonFinder = find.byKey(
-        const Key('reader_tts_play_pause_button'),
-      );
-      await tester.tap(buttonFinder);
+      // epic-38 Issue 2：同上，點擊不崩潰
+      final toggleFinder9b = find.byKey(const Key('reader_chrome_tts_button'));
+      await tester.tap(toggleFinder9b);
       await tester.pump();
       expect(tester.takeException(), isNull);
+      expect(find.byType(ReaderChromeBottomBar), findsOneWidget);
+      expect(find.byType(TtsPanel), findsNothing);
 
       tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
       await tester.pump();
@@ -8735,14 +8560,13 @@ void main() {
         await tester.pump();
         await tester.pump();
 
-        await tester.tap(
-          find.byKey(const Key('reader_chrome_tts_button')),
-        );
-        await tester.pump();
-
-        await tester.tap(find.byKey(const Key('reader_tts_play_pause_button')));
+        // epic-38 Issue 2：點擊不崩潰、維持在 ReaderChromeBottomBar
+        final toggleFinder10 = find.byKey(const Key('reader_chrome_tts_button'));
+        await tester.tap(toggleFinder10);
         await tester.pump();
         expect(tester.takeException(), isNull);
+        expect(find.byType(ReaderChromeBottomBar), findsOneWidget);
+        expect(find.byType(TtsPanel), findsNothing);
 
         foliateView.onTtsHighlightOutOfSafeWindow?.call('next');
         await tester.pump();
@@ -8782,16 +8606,16 @@ void main() {
     );
   });
 
-  testWidgets(
-    '開啟舊 TtsMiniPlayer 膠囊時，新的 ReaderChromeBottomBar 不會同時顯示'
-    '（review-issues.md I1 過渡期互斥回歸測試）',
-    (tester) async {
+  group('睡眠定時器（epic-38-reader-chrome-tts-redesign Issue 2）', () {
+    testWidgets('選擇「30 分鐘」後，再次開啟選單該選項顯示已勾選', (tester) async {
+      final key = GlobalKey<State<ReaderScreen>>();
       await tester.pumpWidget(
         MaterialApp(
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: ReaderScreen(
+            key: key,
             filePath: 'test/fixtures/sample.epub',
-            bookId: 'b_tts_bottombar_exclusion',
+            bookId: 'b_sleep_timer_select',
             prefsManager: prefsManager,
             ttsProvider: FakeTtsProvider(),
           ),
@@ -8801,32 +8625,207 @@ void main() {
       await tester.runAsync(() => Future.delayed(Duration.zero));
       await tester.pump();
 
-      final epubView =
-          tester.widget<FoliateReaderView>(find.byType(FoliateReaderView));
-      epubView.onLayoutResolved?.call(
-        const EpubLayoutInfo(
-          isFixedLayout: false,
-          writingMode: WritingMode.horizontal,
-        ),
-      );
-      await tester.pump();
-
-      expect(find.byType(ReaderChromeBottomBar), findsOneWidget);
-      expect(find.byType(TtsMiniPlayer), findsNothing);
-
+      // 審查修正（review-plan-issue-2.md M2）：先點一次「◗ 朗讀」讓
+      // _ttsControllerOrNull 真正建構出 TtsController（status 仍停在
+      // idle，flutter_test 環境下無法真正播放，見計劃範圍澄清第 2 點），
+      // 讓下面的 Timer 到期時 _ttsController?.pause() 呼叫在一個真實
+      // controller 而非 null 上，更貼近實際執行期路徑。
       await tester.tap(find.byKey(const Key('reader_chrome_tts_button')));
       await tester.pump();
 
-      expect(find.byType(ReaderChromeBottomBar), findsNothing);
-      expect(find.byType(TtsMiniPlayer), findsOneWidget);
+      ReaderScreen.openSleepTimerPickerForTest(key);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
 
-      await tester.tap(find.byKey(const Key('reader_tts_mini_player_close_button')));
+      await tester.tap(find.byKey(const Key('reader_tts_sleep_timer_option_30')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      ReaderScreen.openSleepTimerPickerForTest(key);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      final optionFinder =
+          find.byKey(const Key('reader_tts_sleep_timer_option_30'));
+      expect(
+        find.descendant(of: optionFinder, matching: find.byIcon(Icons.check)),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('選擇「30 分鐘」後經過 30 分鐘，再次開啟選單「不限時」變為已勾選'
+        '（計時器已自動到期歸零）', (tester) async {
+      final key = GlobalKey<State<ReaderScreen>>();
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            key: key,
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_sleep_timer_expire',
+            prefsManager: prefsManager,
+            ttsProvider: FakeTtsProvider(),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
       await tester.pump();
 
-      expect(find.byType(ReaderChromeBottomBar), findsOneWidget);
-      expect(find.byType(TtsMiniPlayer), findsNothing);
-    },
-  );
+      // 審查修正（review-plan-issue-2.md M2）：見上一則測試的說明。
+      await tester.tap(find.byKey(const Key('reader_chrome_tts_button')));
+      await tester.pump();
+
+      ReaderScreen.openSleepTimerPickerForTest(key);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.tap(find.byKey(const Key('reader_tts_sleep_timer_option_30')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      await tester.pump(const Duration(minutes: 30));
+
+      ReaderScreen.openSleepTimerPickerForTest(key);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      final noneFinder =
+          find.byKey(const Key('reader_tts_sleep_timer_option_none'));
+      expect(
+        find.descendant(of: noneFinder, matching: find.byIcon(Icons.check)),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('選擇「不限時」後，計時器不會在任何延遲後觸發任何狀態變化', (tester) async {
+      final key = GlobalKey<State<ReaderScreen>>();
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            key: key,
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_sleep_timer_none',
+            prefsManager: prefsManager,
+            ttsProvider: FakeTtsProvider(),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      // 審查修正（review-plan-issue-2.md M2）：見第一則測試的說明。
+      await tester.tap(find.byKey(const Key('reader_chrome_tts_button')));
+      await tester.pump();
+
+      ReaderScreen.openSleepTimerPickerForTest(key);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.tap(find.byKey(const Key('reader_tts_sleep_timer_option_none')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      await tester.pump(const Duration(hours: 2));
+
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('小喇叭圖示 showTtsIndicator（epic-38-reader-chrome-tts-redesign Issue 2）', () {
+    testWidgets('未提供 ttsProvider 時，小喇叭圖示恆不存在（_chromeVisible 任一值）',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_tts_indicator_no_provider',
+            prefsManager: prefsManager,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      expect(
+        find.byKey(const Key('reader_chrome_tts_indicator_icon')),
+        findsNothing,
+      );
+
+      await tester.tap(find.byKey(const Key('nav_zone_1')));
+      await tester.pump();
+
+      expect(
+        find.byKey(const Key('reader_chrome_tts_indicator_icon')),
+        findsNothing,
+      );
+    });
+
+    testWidgets('提供 ttsProvider 但從未按下「◗ 朗讀」（_ttsController 為 null）時，'
+        '小喇叭圖示不存在', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_tts_indicator_not_built',
+            prefsManager: prefsManager,
+            ttsProvider: FakeTtsProvider(),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      await tester.tap(find.byKey(const Key('nav_zone_1')));
+      await tester.pump();
+
+      expect(
+        find.byKey(const Key('reader_chrome_tts_indicator_icon')),
+        findsNothing,
+        reason: '_isTtsActive 讀 _ttsController（非 _ttsControllerOrNull），'
+            '尚未按過朗讀鍵時恆為 false，不應觸發 lazy 建構',
+      );
+    });
+
+    testWidgets('_isTtsActive && !_chromeVisible 兩個條件皆成立時才顯示（誠實測試邊界：'
+        'flutter_test 環境下 TtsController.status 永遠是 idle，_isTtsActive 永遠為'
+        'false，這個組合本身無法在本檔案驗證，正確性由 _isTtsActive 定義本身'
+        '〔純欄位比對，無額外邏輯〕與上方兩個「不顯示」案例的互補覆蓋保證）',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_tts_indicator_documented_gap',
+            prefsManager: prefsManager,
+            ttsProvider: FakeTtsProvider(),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      // _chromeVisible 仍為 true（未觸發沉浸模式）時，即使 _ttsController
+      // 已建構，小喇叭不應顯示——這個組合本身可以在測試環境驗證。
+      await tester.tap(find.byKey(const Key('reader_chrome_tts_button')));
+      await tester.pump();
+
+      expect(
+        find.byKey(const Key('reader_chrome_tts_indicator_icon')),
+        findsNothing,
+        reason: '_chromeVisible 仍為 true，即使 _isTtsActive 為 true 也不應顯示'
+            '（本案例中 _isTtsActive 實際仍為 false，但斷言與其為 true 時的'
+            '預期行為一致，兩者皆是 findsNothing）',
+      );
+    });
+  });
 
   tearDownAll(() {
     // 還原 cacheBookForServing 為原始實作，避免污染其他測試檔

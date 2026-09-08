@@ -80,7 +80,7 @@ class TtsAudioHandler extends BaseAudioHandler {
 
   @override
   Future<void> stop() async {
-    _controller?.pause();
+    await _controller?.stop();
     await super.stop();
   }
 }

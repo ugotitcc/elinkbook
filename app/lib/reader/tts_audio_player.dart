@@ -23,6 +23,12 @@ abstract class TtsAudioPlayer {
   /// 測試後再校準。
   Future<void> setSpeed(double speed);
 
+  /// 真正停止播放並釋放底層音訊焦點（epic-38-reader-chrome-tts-redesign
+  /// Issue 2）。相對於 [pause]（保留音訊焦點以便快速恢復），`just_audio`
+  /// 的 `AudioPlayer.stop()` 會釋放平台音訊資源／音訊焦點——這正是「暫停」
+  /// 與「真正停止」在音訊焦點語意上的既有官方區別。
+  Future<void> stop();
+
   /// 目前載入的音訊播放完畢時發出一個事件（不攜帶資料）。
   Stream<void> get completedStream;
 
@@ -62,6 +68,9 @@ class JustAudioTtsPlayer implements TtsAudioPlayer {
 
   @override
   Future<void> setSpeed(double speed) => _player.setSpeed(speed);
+
+  @override
+  Future<void> stop() => _player.stop();
 
   @override
   Future<void> dispose() async {

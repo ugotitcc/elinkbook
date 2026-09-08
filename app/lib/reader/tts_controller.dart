@@ -77,6 +77,24 @@ class TtsController extends ChangeNotifier {
   double _speed = 1.0;
   double get speed => _speed;
 
+  /// 目前選定的朗讀語音（epic-38-reader-chrome-tts-redesign Issue 2）。
+  /// 初始值為 [TtsVoice.systemDefault]，比照 Phase 1 `SystemTtsProvider`
+  /// 只有一種語音的既有事實。[TtsPanel.onVoiceTap] 呼叫 [setVoice] 後，
+  /// 只影響「下一段」合成——不重新合成目前已載入/正在播放的音訊，比照
+  /// 既有 [setSpeed] 對「目前段落執行期變速、下一段才套用新值」的區隔
+  /// 原則不同之處在於：語速有播放器執行期變速這條路徑，語音沒有等價
+  /// 機制（無法讓已合成完畢的音訊檔案「變成另一個人的聲音」），故
+  /// [setVoice] 不需要也不能對 [player] 做任何呼叫，純粹是下一次
+  /// [_playCurrentSegment] 呼叫 [TtsProvider.synthesize] 時讀取的欄位。
+  TtsVoice _voice = TtsVoice.systemDefault;
+  TtsVoice get voice => _voice;
+
+  void setVoice(TtsVoice newVoice) {
+    if (_disposed) return;
+    _voice = newVoice;
+    notifyListeners();
+  }
+
   StreamSubscription<void>? _completedSub;
   bool _disposed = false;
 
@@ -173,6 +191,29 @@ class TtsController extends ChangeNotifier {
     try {
       player.pause().catchError((_) {});
     } catch (_) {}
+  }
+
+  /// 真正停止朗讀並釋放音訊焦點（epic-38-reader-chrome-tts-redesign
+  /// Issue 2，修正既有 `TtsMiniPlayer.onClose` 只隱藏面板、不停止播放的
+  /// 既有落差，`DESIGN.md` §13.1「點擊『✕ 關閉』必須停止 TTS 播放並釋放
+  /// 音訊焦點」）。`_playGeneration`／`_segmentGeneration` 無條件遞增，
+  /// 比照既有 [handleExternalPositionChange] 的既有防重入慣例——讓正在
+  /// 進行中的 [play]／[_playCurrentSegment] 呼叫在下一次 await 之後安全
+  /// 放棄，不會在 `stop()` 呼叫後又寫回過期狀態。
+  Future<void> stop() async {
+    if (_disposed) return;
+    _playGeneration++;
+    _segmentGeneration++;
+    _suppressExpiryTimer?.cancel();
+    _suppressNextPositionChange = false;
+    _status = TtsPlaybackStatus.idle;
+    _currentIndex = -1;
+    _segments = const [];
+    try {
+      await player.stop().catchError((_) {});
+    } catch (_) {}
+    onHighlightSegment?.call(null);
+    notifyListeners();
   }
 
   /// 調整語速（epic-34-tts-readalong Issue 5，spec.md「語速調整的生效
@@ -408,7 +449,7 @@ class TtsController extends ChangeNotifier {
         notifyListeners();
         final result = await provider.synthesize(
           segment.text,
-          voice: TtsVoice.systemDefault,
+          voice: _voice,
           speed: _speed,
         );
         if (_disposed || generation != _segmentGeneration) return;
