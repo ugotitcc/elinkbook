@@ -47,6 +47,11 @@ class FakeTtsAudioPlayer implements TtsAudioPlayer {
     }
   }
 
+  @override
+  Future<void> stop() async {
+    callLog.add('stop');
+  }
+
   /// 記錄每次 [setSpeed] 呼叫的實際數值（epic-34-tts-readalong Issue 5），
   /// 供測試驗證「目前段落」是否確實走執行期變速這條路徑，而非重新合成。
   final List<double> speedCalls = [];

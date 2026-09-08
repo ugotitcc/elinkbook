@@ -175,6 +175,29 @@ class TtsController extends ChangeNotifier {
     } catch (_) {}
   }
 
+  /// 真正停止朗讀並釋放音訊焦點（epic-38-reader-chrome-tts-redesign
+  /// Issue 2，修正既有 `TtsMiniPlayer.onClose` 只隱藏面板、不停止播放的
+  /// 既有落差，`DESIGN.md` §13.1「點擊『✕ 關閉』必須停止 TTS 播放並釋放
+  /// 音訊焦點」）。`_playGeneration`／`_segmentGeneration` 無條件遞增，
+  /// 比照既有 [handleExternalPositionChange] 的既有防重入慣例——讓正在
+  /// 進行中的 [play]／[_playCurrentSegment] 呼叫在下一次 await 之後安全
+  /// 放棄，不會在 `stop()` 呼叫後又寫回過期狀態。
+  Future<void> stop() async {
+    if (_disposed) return;
+    _playGeneration++;
+    _segmentGeneration++;
+    _suppressExpiryTimer?.cancel();
+    _suppressNextPositionChange = false;
+    _status = TtsPlaybackStatus.idle;
+    _currentIndex = -1;
+    _segments = const [];
+    try {
+      await player.stop().catchError((_) {});
+    } catch (_) {}
+    onHighlightSegment?.call(null);
+    notifyListeners();
+  }
+
   /// 調整語速（epic-34-tts-readalong Issue 5，spec.md「語速調整的生效
   /// 時機」契約／`review-spec.md` Minor #2）。無論目前狀態為何都先更新
   /// [_speed]——即使目前是 [TtsPlaybackStatus.idle]，之後第一次 [play]

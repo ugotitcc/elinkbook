@@ -110,4 +110,18 @@ void main() {
     expect(handler.mediaItem.value?.title, '第二本書');
     expect(handler.playbackState.value.playing, isFalse);
   });
+
+  test('handler.stop() 呼叫 controller.stop()（真正停止並釋放音訊焦點，而非 pause()）',
+      () async {
+    final handler = TtsAudioHandler();
+    controller = buildRealController();
+    handler.attachController(controller, bookTitle: '紅樓夢');
+    await controller.play();
+    player.callLog.clear();
+
+    await handler.stop();
+
+    expect(player.callLog, ['stop']);
+    expect(controller.status, TtsPlaybackStatus.idle);
+  });
 }
