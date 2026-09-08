@@ -809,6 +809,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             customFonts: _customFonts,
             bookId: widget.bookId,
             layoutPresets: _layoutPresets,
+            isEinkMode: widget.isEinkMode,
             onSaveAsPreset: (draft) async {
               await _handleSaveAsPreset(draft);
               if (mounted) setSheetState?.call(() {});

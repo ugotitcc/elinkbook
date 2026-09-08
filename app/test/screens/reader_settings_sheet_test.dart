@@ -1362,6 +1362,7 @@ void main() {
         body: ReaderSettingsSheet(
           bookId: 'test-book',
           prefs: const BookReaderPrefs(textAlign: EpubTextAlign.justify),
+          isEinkMode: true,
           onChanged: (_) {},
           onSaveAsPreset: (_) {},
           onApplyPreset: (_, {required targetBookIds}) {},
@@ -1407,6 +1408,7 @@ void main() {
         body: ReaderSettingsSheet(
           bookId: 'test-book',
           prefs: BookReaderPrefs.empty,
+          isEinkMode: true,
           onChanged: (_) {},
           onSaveAsPreset: (_) {},
           onApplyPreset: (_, {required targetBookIds}) {},
@@ -1429,6 +1431,222 @@ void main() {
     expect(tileColor('vertical'), Colors.white, reason: '強制直排：非選中');
     expect(tileColor('horizontal'), Colors.white, reason: '強制橫排：非選中，過去的 bug 會誤判成選中');
   });
+
+  testWidgets(
+      'isOverridden 為 false（未覆寫）時，顯示文字徽章「使用全域預設」，'
+      '且維持掛載既有 _unset_indicator Key（epic-39-layout-settings-redesign Issue 2）',
+      (tester) async {
+    await _pumpSheet(tester, BookReaderPrefs.empty, _noopOnChanged);
+
+    expect(find.text('使用全域預設'), findsNWidgets(5),
+        reason: '文字分頁 5 個受影響欄位皆未覆寫，應各自顯示一個文字徽章');
+    expect(
+        find.byKey(const Key('reader_settings_font_size_unset_indicator')),
+        findsOneWidget,
+        reason: '既有測試依賴此 Key 判斷未覆寫狀態，Key 語意不變');
+  });
+
+  testWidgets(
+      'isOverridden 為 true 且一般主題（isEinkMode: false）時，顯示「此書已覆寫」文字徽章，'
+      '且仍保留原始數值文字與可運作的重置按鈕（審查修正 C1，review-plan-issue-2.md：'
+      '一般主題的 Slider 不具備數值回饋能力，不可把數值文字整個拿掉）',
+      (tester) async {
+    BookReaderPrefs? result;
+    await _pumpSheet(
+      tester,
+      const BookReaderPrefs(letterSpacing: 0.3),
+      (prefs) => result = prefs,
+    );
+
+    expect(find.text('此書已覆寫'), findsOneWidget);
+    expect(find.text('0.30em'), findsOneWidget,
+        reason: '一般主題下必須保留原始數值文字，供使用者確認目前數值');
+    expect(find.byKey(const Key('reader_settings_letter_spacing_reset')),
+        findsOneWidget);
+
+    await tester
+        .tap(find.byKey(const Key('reader_settings_letter_spacing_reset')));
+    await tester.pump();
+
+    expect(result, isNotNull);
+    expect(result!.letterSpacing, isNull, reason: '重置行為應零回歸');
+  });
+
+  testWidgets(
+      'isOverridden 為 true 且 isEinkMode: true 時，頂列只顯示「此書已覆寫」文字徽章與重置按鈕，'
+      '不重複顯示原始數值文字（審查修正 C1，review-plan-issue-2.md：僅 E-Ink 模式隱藏，'
+      '因為只有 EBStepper 本身會另外顯示一次數值）',
+      (tester) async {
+    await _pumpSheet(
+      tester,
+      const BookReaderPrefs(letterSpacing: 0.3),
+      _noopOnChanged,
+      isEinkMode: true,
+    );
+
+    expect(find.text('此書已覆寫'), findsOneWidget);
+    // Task 3 後 EBStepper 會顯示一次數值，頂列不再顯示，因此全域恰好一次且位於 EBStepper 內
+    expect(find.text('0.30em'), findsOneWidget,
+        reason: 'E-Ink 模式下數值改由 EBStepper 顯示一次，頂列不應重複');
+    final letterSpacingValueWidget = tester.widget<Text>(
+      find.byKey(const Key('reader_settings_letter_spacing_value')),
+    );
+    expect(letterSpacingValueWidget.data, '0.30em',
+        reason: '唯一一次顯示應在 EBStepper 的 _value 文字上');
+    expect(find.byKey(const Key('reader_settings_letter_spacing_reset')),
+        findsOneWidget);
+  });
+
+  testWidgets(
+      '覆寫徽章依 isEinkMode 套用不同邊框樣式（審查修正 I1，review-plan-issue-2.md：'
+      'E-Ink 主題的 surfaceContainerHighest 與 surface 皆為純白，徽章若無邊框會視覺隱形）',
+      (tester) async {
+    // E-Ink 主題：純黑 1.5dp 邊框。
+    await tester.pumpWidget(MaterialApp(
+      theme: buildEinkThemeData(),
+      home: Scaffold(
+        body: ReaderSettingsSheet(
+          bookId: 'test-book',
+          prefs: BookReaderPrefs.empty,
+          isEinkMode: true,
+          onChanged: (_) {},
+          onSaveAsPreset: (_) {},
+          onApplyPreset: (_, {required targetBookIds}) {},
+          onApplyFromBook: (_, {required targetBookIds}) {},
+          onRequestBookPicker: ({required multiSelect}) async => null,
+          onDeletePreset: (_) {},
+        ),
+      ),
+    ));
+
+    final einkContainer = tester.widget<Container>(
+      find.byKey(const Key('reader_settings_font_size_unset_indicator')),
+    );
+    final einkBorder =
+        (einkContainer.decoration as BoxDecoration).border as Border;
+    expect(einkBorder.top.color, Colors.black);
+    expect(einkBorder.top.width, 1.5);
+  });
+
+  testWidgets(
+      '一般主題下覆寫徽章邊框為 outline 35% 透明度、寬度 1.0dp'
+      '（審查修正 I1，review-plan-issue-2.md）',
+      (tester) async {
+    await _pumpSheet(tester, BookReaderPrefs.empty, _noopOnChanged);
+
+    final context = tester.element(
+      find.byKey(const Key('reader_settings_font_size_unset_indicator')),
+    );
+    final expectedColor =
+        Theme.of(context).colorScheme.outline.withValues(alpha: 0.35);
+    final container = tester.widget<Container>(
+      find.byKey(const Key('reader_settings_font_size_unset_indicator')),
+    );
+    final border = (container.decoration as BoxDecoration).border as Border;
+
+    expect(border.top.color, expectedColor);
+    expect(border.top.width, 1.0);
+  });
+
+  testWidgets(
+      'isEinkMode: true 時，文字分頁與邊界分頁共 9 個數值列皆改為 EBStepper，'
+      '不存在任何 Slider（邊界分頁 4 欄不支援覆寫語意，EBStepper 版本同樣不顯示覆寫徽章，'
+      'epic-39-layout-settings-redesign Issue 2）',
+      (tester) async {
+    await _pumpSheet(tester, BookReaderPrefs.empty, _noopOnChanged,
+        isEinkMode: true);
+
+    for (final keyPrefix in [
+      'reader_settings_font_size',
+      'reader_settings_font_weight',
+      'reader_settings_line_height',
+      'reader_settings_paragraph_spacing',
+      'reader_settings_letter_spacing',
+    ]) {
+      expect(find.byKey(Key('${keyPrefix}_value')), findsOneWidget,
+          reason: '$keyPrefix 應改為 EBStepper（僅 EBStepper 具備 _value Key）');
+    }
+    expect(find.byType(Slider), findsNothing,
+        reason: '文字分頁在 E-Ink 模式下不應存在任何 Slider');
+
+    await switchToTab(tester, '邊界首尾');
+    for (final keyPrefix in [
+      'reader_settings_margin_top',
+      'reader_settings_margin_bottom',
+      'reader_settings_margin_left',
+      'reader_settings_margin_right',
+    ]) {
+      expect(find.byKey(Key('${keyPrefix}_value')), findsOneWidget,
+          reason: '$keyPrefix 應改為 EBStepper');
+      expect(find.byKey(Key('${keyPrefix}_unset_indicator')), findsNothing,
+          reason: '$keyPrefix 不支援覆寫語意（isOverridden == null），'
+              'EBStepper 版本同樣不應顯示覆寫徽章（issues.md Issue 2 單元測試要求）');
+      expect(find.byKey(Key('${keyPrefix}_reset')), findsNothing,
+          reason: '$keyPrefix 不支援覆寫語意，不應出現重置按鈕');
+    }
+    expect(find.byType(Slider), findsNothing,
+        reason: '邊界分頁在 E-Ink 模式下不應存在任何 Slider');
+  });
+
+  testWidgets(
+      'isEinkMode: true 時，點擊 EBStepper 的 + 觸發 onChanged，行為與 Slider 模式等價'
+      '（epic-39-layout-settings-redesign Issue 2）',
+      (tester) async {
+    BookReaderPrefs? result;
+    await _pumpSheet(
+      tester,
+      BookReaderPrefs.empty,
+      (prefs) => result = prefs,
+      isEinkMode: true,
+    );
+
+    await tester.tap(find.byKey(const Key('reader_settings_font_size_increment')));
+    await tester.pump();
+
+    expect(result, isNotNull);
+    expect(result!.fontSize, closeTo(17 / 16, 1e-9),
+        reason: '預設 16px + step 1 = 17px，換算倍率應為 17/16');
+  });
+
+  testWidgets(
+      'isEinkMode: true 時，邊界分頁數值列頂端不重複顯示數值文字'
+      '（審查修正 M1，spec.md／review-plan-issue-1.md：EBStepper 內部已顯示一次，'
+      '頂列不應再顯示第二次，epic-39-layout-settings-redesign Issue 2）',
+      (tester) async {
+    await _pumpSheet(tester, BookReaderPrefs.empty, _noopOnChanged,
+        isEinkMode: true);
+    await switchToTab(tester, '邊界首尾');
+
+    expect(find.text('32'), findsOneWidget,
+        reason: '上邊界預設值 32 只應出現一次（EBStepper 內部），頂列不應重複顯示');
+    final marginTopValueWidget = tester.widget<Text>(
+      find.byKey(const Key('reader_settings_margin_top_value')),
+    );
+    expect(marginTopValueWidget.data, '32',
+        reason: '唯一一次顯示應在 EBStepper 的 _value 文字上');
+  });
+
+  testWidgets(
+      'isEinkMode: true 且文字分頁欄位已覆寫時，數值只透過 EBStepper 顯示一次'
+      '（審查修正 M1／M1-補充，review-plan-issue-2.md：Task 2 已讓 isEinkMode 時頂列'
+      '不顯示原始數值，本測試驗證接上 EBStepper 後該數值改由 EBStepper 顯示，'
+      '總出現次數維持恰好一次，epic-39-layout-settings-redesign Issue 2）',
+      (tester) async {
+    await _pumpSheet(
+      tester,
+      const BookReaderPrefs(fontSize: 1.125), // UI 18px
+      _noopOnChanged,
+      isEinkMode: true,
+    );
+
+    expect(find.text('18'), findsOneWidget,
+        reason: '字型大小 18px 只應出現一次，來源是 EBStepper 的 _value 文字');
+    final fontSizeValueWidget = tester.widget<Text>(
+      find.byKey(const Key('reader_settings_font_size_value')),
+    );
+    expect(fontSizeValueWidget.data, '18',
+        reason: '唯一一次顯示應在 EBStepper 的 _value 文字上，而非頂列殘留的舊 Text(displayValue)');
+  });
 }
 
 Future<void> _pumpSheet(
@@ -1443,6 +1661,7 @@ Future<void> _pumpSheet(
   void Function(String, {required List<String> targetBookIds})? onApplyFromBook,
   Future<List<String>?> Function({required bool multiSelect})? onRequestBookPicker,
   void Function(int)? onDeletePreset,
+  bool isEinkMode = false,
 }) async {
   // 設定較大的 Viewport，以防 ListView 元件超出預設的 800x600 範圍導致 tap 失敗
   // （Issue 14 邊距拆為 4 個獨立滑桿後內容變高，1200 已不足，調高至 1600；加入預設集區塊後調高至 2400）
@@ -1461,6 +1680,7 @@ Future<void> _pumpSheet(
         customFonts: customFonts,
         bookId: bookId,
         layoutPresets: layoutPresets,
+        isEinkMode: isEinkMode,
         onSaveAsPreset: onSaveAsPreset ?? _noopSaveAsPreset,
         onApplyPreset: onApplyPreset ?? _noopApplyPreset,
         onApplyFromBook: onApplyFromBook ?? _noopApplyFromBook,
@@ -1512,6 +1732,7 @@ class _TestSettingsSheetWrapperState extends State<_TestSettingsSheetWrapper> {
       prefs: _prefs,
       onChanged: (_) {},
       bookId: 'b1',
+      isEinkMode: false,
       onSaveAsPreset: _noopSaveAsPreset,
       onApplyPreset: _noopApplyPreset,
       onApplyFromBook: _noopApplyFromBook,
@@ -1524,8 +1745,9 @@ class _TestSettingsSheetWrapperState extends State<_TestSettingsSheetWrapper> {
 Future<void> _pumpModalSheet(
   WidgetTester tester,
   BookReaderPrefs prefs,
-  ValueChanged<BookReaderPrefs> onChanged,
-) async {
+  ValueChanged<BookReaderPrefs> onChanged, {
+  bool isEinkMode = false,
+}) async {
   await tester.pumpWidget(MaterialApp(
     home: Scaffold(
       body: Builder(
@@ -1538,6 +1760,7 @@ Future<void> _pumpModalSheet(
               prefs: prefs,
               onChanged: onChanged,
               bookId: 'b1',
+              isEinkMode: isEinkMode,
               onSaveAsPreset: _noopSaveAsPreset,
               onApplyPreset: _noopApplyPreset,
               onApplyFromBook: _noopApplyFromBook,

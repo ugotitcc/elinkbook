@@ -36,7 +36,7 @@
 - Produces：`ReaderSettingsSheet` 新增必填欄位 `final bool isEinkMode;`。`_pumpSheet`／`_pumpModalSheet` 兩個測試 helper 皆新增可選具名參數 `bool isEinkMode = false`，供 Task 2/3 的新測試轉發使用。
 - Consumes：無新依賴。本 Task 不改變任何渲染邏輯，純粹讓 `widget.isEinkMode` 在 State 內可讀取，供 Task 2/3 使用。
 
-- [ ] **Step 1：新增必填參數（刻意讓既有測試檔案編譯失敗，作為本 Task 的 RED）**
+- [x] **Step 1：新增必填參數（刻意讓既有測試檔案編譯失敗，作為本 Task 的 RED）**
 
 修改 `app/lib/screens/reader_settings_sheet.dart` 第 25-56 行：
 
@@ -86,12 +86,12 @@ class ReaderSettingsSheet extends StatefulWidget {
             onSaveAsPreset: (draft) async {
 ```
 
-- [ ] **Step 2：執行測試確認編譯失敗**
+- [x] **Step 2：執行測試確認編譯失敗**
 
 Run: `flutter test test/screens/reader_settings_sheet_test.dart`
 Expected: 編譯失敗（`The named parameter 'isEinkMode' is required, but there's no corresponding argument.`——`reader_settings_sheet_test.dart` 內 5 處既有 `ReaderSettingsSheet(` 建構呼叫點皆未提供）。
 
-- [ ] **Step 3：修正測試檔既有 5 處建構呼叫點**
+- [x] **Step 3：修正測試檔既有 5 處建構呼叫點**
 
 (a) `_pumpSheet` helper（約第 1434-1472 行）新增可選參數並轉發：
 
@@ -210,17 +210,17 @@ Future<void> _pumpModalSheet(
 
 （既有 3 處呼叫點 `await _pumpModalSheet(tester, BookReaderPrefs.empty, (_) {});` 不需要修改——`isEinkMode` 有預設值 `false`，既有呼叫點維持零回歸。）
 
-- [ ] **Step 4：執行測試確認通過**
+- [x] **Step 4：執行測試確認通過**
 
 Run: `flutter test test/screens/reader_settings_sheet_test.dart`
 Expected: PASS（55 個測試全過，數量與異動前相同——本 Task 純介面新增，無行為變化，零回歸）。
 
-- [ ] **Step 5：`flutter analyze` 確認零警告**
+- [x] **Step 5：`flutter analyze` 確認零警告**
 
 Run: `flutter analyze lib/screens/reader_settings_sheet.dart lib/screens/reader_screen.dart test/screens/reader_settings_sheet_test.dart`
 Expected: `No issues found!`
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/lib/screens/reader_settings_sheet.dart app/lib/screens/reader_screen.dart app/test/screens/reader_settings_sheet_test.dart
@@ -239,7 +239,7 @@ git commit -m "feat(epic-39): Issue 2 Task 1 — ReaderSettingsSheet 新增 isEi
 - Produces：私有 helper `Widget _buildOverrideBadge(BuildContext context, String text, {Key? key})`——僅供 `_buildSliderRow` 內部使用，不對外暴露；讀取 `widget.isEinkMode` 決定邊框樣式。
 - Consumes：Task 1 的 `widget.isEinkMode`。
 
-- [ ] **Step 1：寫失敗測試——覆寫徽章文字、C1（一般主題保留數值／E-Ink 隱藏數值）、I1（徽章邊框）**
+- [x] **Step 1：寫失敗測試——覆寫徽章文字、C1（一般主題保留數值／E-Ink 隱藏數值）、I1（徽章邊框）**
 
 在 `app/test/screens/reader_settings_sheet_test.dart` 的 `void main()` 內追加：
 
@@ -356,12 +356,12 @@ git commit -m "feat(epic-39): Issue 2 Task 1 — ReaderSettingsSheet 新增 isEi
   });
 ```
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 Run: `flutter test test/screens/reader_settings_sheet_test.dart`
 Expected: 新增的 5 個測試全數 FAIL——前 3 個因為現況是 `Icon(Icons.block)` 而非文字（`find.text(...)` 找不到）；後 2 個因為現況的頂端 `Row` 完全沒有 `Container`/`BoxDecoration` 邊框可供斷言（`_unset_indicator` 目前掛在 `Icon` 上，`tester.widget<Container>(...)` 會找不到符合型別的 widget 而拋出例外）。其餘既有 55 個測試維持 PASS。
 
-- [ ] **Step 3：實作文字徽章（含邊框與 C1 條件式數值保留）**
+- [x] **Step 3：實作文字徽章（含邊框與 C1 條件式數值保留）**
 
 修改 `app/lib/screens/reader_settings_sheet.dart`，在 `_buildSliderRow` 之前新增 helper，並替換 `_buildSliderRow` 頂端 `Row` 的後兩個分支：
 
@@ -431,17 +431,17 @@ Expected: 新增的 5 個測試全數 FAIL——前 3 個因為現況是 `Icon(I
 
 （`isOverridden == null` 分支維持 `Text(displayValue)` 不變——`bool?` 只有 `null`/`true`/`false` 三種取值，把原本的 `else` 明確改寫為 `else if (isOverridden == false)` 是刻意的等價重寫，目的是讓 Task 3 之後只需要修改第一個 `if` 的條件式，不用再動這兩個已經改好的分支；`isOverridden == true` 分支依 `!widget.isEinkMode` 決定是否並存原始數值文字，滿足審查修正 C1。）
 
-- [ ] **Step 4：執行測試確認通過**
+- [x] **Step 4：執行測試確認通過**
 
 Run: `flutter test test/screens/reader_settings_sheet_test.dart`
 Expected: PASS（60 個測試全過，含既有 55 個零回歸）。
 
-- [ ] **Step 5：`flutter analyze` 確認零警告**
+- [x] **Step 5：`flutter analyze` 確認零警告**
 
 Run: `flutter analyze lib/screens/reader_settings_sheet.dart test/screens/reader_settings_sheet_test.dart`
 Expected: `No issues found!`
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/lib/screens/reader_settings_sheet.dart app/test/screens/reader_settings_sheet_test.dart
@@ -460,7 +460,7 @@ git commit -m "feat(epic-39): Issue 2 Task 2 — ReaderSettingsSheet 覆寫狀�
 - Consumes：Issue 1 的 `EBStepper`（`app/lib/screens/widgets/eb_stepper.dart`，`keyPrefix`／`value`／`min`／`max`／`step`／`displayValue`／`onChanged`／`mainAxisSize`／`mainAxisAlignment` 皆已存在，直接複用）；Task 1 的 `widget.isEinkMode`；Task 2 已改寫過的 `_buildSliderRow` 頂端 `Row`（本 Task 只再修改其中 `isOverridden == null` 這一個分支的條件式）。
 - Produces：無新公開介面，`_buildSliderRow` 依然是 `_ReaderSettingsSheetState` 私有方法，簽章不變。
 
-- [ ] **Step 1：寫失敗測試——結構（EBStepper 取代 Slider）與互動（點擊 +/- 觸發 onChanged）一併撰寫**
+- [x] **Step 1：寫失敗測試——結構（EBStepper 取代 Slider）與互動（點擊 +/- 觸發 onChanged）一併撰寫**
 
 **審查修正 I2（`review-plan-issue-2.md`）**：結構驗證與互動驗證會被同一次實作（Step 3）一起滿足，因此兩者必須寫在同一個 Step 內、一起經歷 RED，不得把互動驗證拆成後面一個「寫測試即通過」的假 Step。
 
@@ -528,12 +528,12 @@ git commit -m "feat(epic-39): Issue 2 Task 2 — ReaderSettingsSheet 覆寫狀�
   });
 ```
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 Run: `flutter test test/screens/reader_settings_sheet_test.dart`
 Expected: 第一個測試 FAIL（目前無條件渲染 `Slider`，`_value` 這個 Key 尚不存在於任何地方，`find.byType(Slider)` 也會 `findsWidgets` 而非 `findsNothing`）。第二個測試（點擊 `+`）在目前程式碼下**已經會通過**——`_increment` Key 目前無條件渲染於既有 Slider 模式的 `IconButton` 上，點擊行為與 `onChanged` 轉發邏輯本來就正確；因為兩個測試寫在同一個 Step、一起執行，整體 `flutter test` 結果仍是 FAIL（第一個測試失敗），這正是刻意避免「有測試從未真正 RED 過」的寫法——待 Step 3 實作完成後，兩個測試會在同一次 GREEN 內一起被驗證。
 
-- [ ] **Step 3：實作 `EBStepper` 分支**
+- [x] **Step 3：實作 `EBStepper` 分支**
 
 在 `app/lib/screens/reader_settings_sheet.dart` 檔案頂端 import 區塊新增：
 
@@ -588,12 +588,12 @@ import 'widgets/eb_stepper.dart';
 
 （`EBStepper` 衍生的 `${keyPrefix}_decrement`/`_increment` 與既有 `Slider` 模式的 ± `IconButton` Key 完全同名——兩個分支互斥渲染，不會有 Key 衝突，既有依賴這兩個 Key 的測試在兩種模式下都能找到對應按鈕。）
 
-- [ ] **Step 4：執行測試確認通過**
+- [x] **Step 4：執行測試確認通過**
 
 Run: `flutter test test/screens/reader_settings_sheet_test.dart`
 Expected: PASS（62 個測試全過）。
 
-- [ ] **Step 5：寫失敗測試——審查修正 M1：頂列不重複顯示數值文字（邊界分頁與文字分頁已覆寫欄位）**
+- [x] **Step 5：寫失敗測試——審查修正 M1：頂列不重複顯示數值文字（邊界分頁與文字分頁已覆寫欄位）**
 
 追加：
 
@@ -643,12 +643,12 @@ Expected: PASS（62 個測試全過）。
   });
 ```
 
-- [ ] **Step 6：執行測試確認失敗**
+- [x] **Step 6：執行測試確認失敗**
 
 Run: `flutter test test/screens/reader_settings_sheet_test.dart`
 Expected: 第一個測試（邊界分頁）FAIL——目前 `isOverridden == null` 分支無條件渲染 `Text(displayValue)`，'32' 會在頂列與 `EBStepper` 內部（Step 3 已實作）各出現一次，`find.text('32')` 實際 `findsNWidgets(2)`，與預期的 `findsOneWidget` 不符，這是驅動 Step 7 修改的真正 RED。第二個測試（文字分頁已覆寫）在此步驟**已經 PASS**——Task 2 的 C1 修正已讓 `isOverridden == true` 分支在 `isEinkMode: true` 時不顯示頂列原始數值，Step 3 的 `EBStepper` 又已經接上並顯示該數值一次，兩者疊加後總出現次數恰好是 1，這是 Task 2＋Task 3 Step 3 組合後自然成立的迴歸保護測試，不需要 Step 7 的修改；整體 `flutter test` 結果因第一個測試失敗仍是 FAIL。
 
-- [ ] **Step 7：實作隱藏邊界分頁頂列重複數值**
+- [x] **Step 7：實作隱藏邊界分頁頂列重複數值**
 
 修改 `_buildSliderRow` 頂端 `Row` 的第一個分支條件式（Task 2 產出的版本裡是 `if (isOverridden == null)`），改為：
 
@@ -659,17 +659,17 @@ Expected: 第一個測試（邊界分頁）FAIL——目前 `isOverridden == nul
 
 （只改這一行的條件式，其餘 `else if (isOverridden == true)`／`else if (isOverridden == false)` 兩個分支維持 Task 2 的版本不變——`isOverridden == null && widget.isEinkMode` 時三個條件式全部不成立，該欄位頂列不會渲染任何 Widget，只保留 `Text(label)`，符合 spec.md M1「頂端列 E-Ink 模式下只保留 Label 與覆寫徽章」。）
 
-- [ ] **Step 8：執行測試確認通過**
+- [x] **Step 8：執行測試確認通過**
 
 Run: `flutter test test/screens/reader_settings_sheet_test.dart`
 Expected: PASS（64 個測試全過，含既有 55 個零回歸）。
 
-- [ ] **Step 9：`flutter analyze` 確認零警告**
+- [x] **Step 9：`flutter analyze` 確認零警告**
 
 Run: `flutter analyze lib/screens/reader_settings_sheet.dart test/screens/reader_settings_sheet_test.dart`
 Expected: `No issues found!`
 
-- [ ] **Step 10：Commit**
+- [x] **Step 10：Commit**
 
 ```bash
 git add app/lib/screens/reader_settings_sheet.dart app/test/screens/reader_settings_sheet_test.dart
@@ -683,21 +683,21 @@ git commit -m "feat(epic-39): Issue 2 Task 3 — ReaderSettingsSheet 數值列�
 **Files:**
 - 無新增/修改程式碼檔案（僅驗證與文件收尾）。
 
-- [ ] **Step 1：跑全套 `flutter test`**
+- [x] **Step 1：跑全套 `flutter test`**
 
 Run: `flutter test`
 Expected: 全數通過，零回歸（`reader_settings_sheet_test.dart` 既有 55 個＋本 Issue 新增 9 個＝64 個）。
 
-- [ ] **Step 2：跑全套 `flutter analyze`**
+- [x] **Step 2：跑全套 `flutter analyze`**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 3：將本檔案所有 Task 的 Step 勾選為完成**
+- [x] **Step 3：將本檔案所有 Task 的 Step 勾選為完成**
 
-把本檔案（`docs/epics/epic-39-layout-settings-redesign/plans/plan-issue-2.md`）Task 1-4 全部 `- [ ]` 改為 `- [x]`。
+把本檔案（`docs/epics/epic-39-layout-settings-redesign/plans/plan-issue-2.md`）Task 1-4 全部 `- [x]` 改為 `- [x]`。
 
-- [ ] **Step 4：Commit 計畫狀態更新**
+- [x] **Step 4：Commit 計畫狀態更新**
 
 ```bash
 git add docs/epics/epic-39-layout-settings-redesign/plans/plan-issue-2.md
