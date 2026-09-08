@@ -498,8 +498,6 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
             _notifyChanged();
           }),
         ),
-        const SizedBox(height: 12),
-        _buildTextAlignRow(),
       ],
     );
   }
@@ -520,6 +518,8 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
         ),
         const SizedBox(height: 8),
         _buildColumnModeRow(),
+        const SizedBox(height: 8),
+        _buildTextAlignRow(),
         const SizedBox(height: 8),
         _buildWritingModeOverrideRow(),
         const SizedBox(height: 8),
@@ -786,6 +786,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
               groupValue: _textAlign ?? EpubTextAlign.justify,
               icon: icon,
               tooltip: tooltip,
+              visualDensity: VisualDensity.compact,
               onSelected: (v) => setState(() {
                 _textAlign = v;
                 _notifyChanged();

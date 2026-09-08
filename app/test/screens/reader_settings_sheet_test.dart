@@ -556,7 +556,7 @@ void main() {
       BookReaderPrefs.empty,
       (prefs) => result = prefs,
     );
-    await switchToTab(tester, '邊界');
+    await switchToTab(tester, '呈現');
 
     await tester
         .tap(find.byKey(const Key('reader_settings_text_align_center')));
@@ -595,7 +595,7 @@ void main() {
       ),
       (prefs) => result = prefs,
     );
-    await switchToTab(tester, '邊界');
+    await switchToTab(tester, '呈現');
 
     await tester
         .tap(find.byKey(const Key('reader_settings_text_align_justify')));
@@ -1373,8 +1373,8 @@ void main() {
       ),
     ));
 
-    // 切換到「邊界」頁籤（文字對齊選項在此頁籤）
-    await switchToTab(tester, '邊界');
+    // 切換到「呈現」頁籤（文字對齊選項已搬移至此）
+    await switchToTab(tester, '呈現');
 
     // 【審查修正 Important】key 直接掛在帶 BoxDecoration 的 Container 上
     // （見 Task 1 ReaderOptionTile 實作），不再用
@@ -1646,6 +1646,35 @@ void main() {
     );
     expect(fontSizeValueWidget.data, '18',
         reason: '唯一一次顯示應在 EBStepper 的 _value 文字上，而非頂列殘留的舊 Text(displayValue)');
+  });
+
+  testWidgets(
+      '「文字對齊」已從「邊界」分頁搬到「呈現」分頁'
+      '（epic-39-layout-settings-redesign Issue 3：spec.md「既有元件異動」'
+      'ReaderSettingsSheet 第 4 條）',
+      (tester) async {
+    await _pumpSheet(tester, BookReaderPrefs.empty, _noopOnChanged);
+    await switchToTab(tester, '邊界');
+
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('reader_settings_tab_boundary_list')),
+        matching: find.text('文字對齊'),
+      ),
+      findsNothing,
+      reason: '文字對齊已搬離邊界分頁',
+    );
+
+    await switchToTab(tester, '呈現');
+
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('reader_settings_tab_presentation_list')),
+        matching: find.text('文字對齊'),
+      ),
+      findsOneWidget,
+      reason: '文字對齊應出現在呈現分頁',
+    );
   });
 }
 
