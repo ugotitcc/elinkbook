@@ -572,19 +572,40 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
           ),
           if (_columnMode == ColumnMode.auto) ...[
             const SizedBox(height: 8),
-            Text('欄位大小 ${_columnSize.round()}px'),
-            Slider(
-              key: const Key('reader_settings_column_size_slider'),
-              value: _columnSize,
-              min: 360.0,
-              max: 1440.0,
-              divisions: 18, // (1440 - 360) / 60 = 18
-              label: '${_columnSize.round()}px',
-              onChanged: (v) => setState(() {
-                _columnSize = v;
-                _notifyChanged();
-              }),
-            ),
+            // 審查修正 M1（review-plan-issue-3.md）：isEinkMode 時標題不帶數值，
+            // 避免與下方 EBStepper 內部顯示的數值重複（比照 Issue 2 C1 對
+            // _buildSliderRow 已建立的先例——一般主題下 Slider 不具備數值回饋
+            // 能力，標題仍須保留數值）。
+            Text(widget.isEinkMode
+                ? '欄位大小'
+                : '欄位大小 ${_columnSize.round()}px'),
+            widget.isEinkMode
+                ? EBStepper(
+                    keyPrefix: 'reader_settings_column_size',
+                    value: _columnSize,
+                    min: 360.0,
+                    max: 1440.0,
+                    step: 60.0,
+                    displayValue: '${_columnSize.round()}px',
+                    onChanged: (v) => setState(() {
+                      _columnSize = v;
+                      _notifyChanged();
+                    }),
+                    mainAxisSize: MainAxisSize.max,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  )
+                : Slider(
+                    key: const Key('reader_settings_column_size_slider'),
+                    value: _columnSize,
+                    min: 360.0,
+                    max: 1440.0,
+                    divisions: 18, // (1440 - 360) / 60 = 18
+                    label: '${_columnSize.round()}px',
+                    onChanged: (v) => setState(() {
+                      _columnSize = v;
+                      _notifyChanged();
+                    }),
+                  ),
           ],
         ],
       ),

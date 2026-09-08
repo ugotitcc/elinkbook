@@ -1802,6 +1802,57 @@ void main() {
       );
     }
   });
+
+  testWidgets(
+      'isEinkMode: true 且 columnMode=auto 時，欄位大小改為 EBStepper，'
+      '點擊 + 觸發 onChanged 帶入 columnSize+60（審查修正 C3/I3，'
+      'review-spec.md／review-issues.md：reader_settings_column_size_slider '
+      '未經過 _buildSliderRow，需獨立處理，epic-39-layout-settings-redesign Issue 3）',
+      (tester) async {
+    BookReaderPrefs? result;
+    await _pumpSheet(
+      tester,
+      BookReaderPrefs.empty,
+      (prefs) => result = prefs,
+      isEinkMode: true,
+    );
+    await switchToTab(tester, '呈現');
+
+    expect(find.byKey(const Key('reader_settings_column_size_slider')),
+        findsNothing,
+        reason: 'E-Ink 模式不應存在 Slider');
+    expect(find.byKey(const Key('reader_settings_column_size_value')),
+        findsOneWidget);
+    expect(find.text('欄位大小'), findsOneWidget,
+        reason: '審查修正 M1（review-plan-issue-3.md）：E-Ink 模式下標題不應帶數值，'
+            '避免與 EBStepper 內部顯示的數值重複（比照 Issue 2 C1 對 _buildSliderRow '
+            '已建立的先例）');
+    expect(find.text('欄位大小 720px'), findsNothing,
+        reason: '標題與 EBStepper 顯示同一個數值視為重複顯示');
+
+    await tester
+        .tap(find.byKey(const Key('reader_settings_column_size_increment')));
+    await tester.pump();
+
+    expect(result, isNotNull);
+    expect(result!.columnSize, 780.0, reason: '預設 720 + step 60 = 780');
+  });
+
+  testWidgets(
+      'isEinkMode: false（預設）時，欄位大小維持既有 Slider 與帶數值標題（既有行為零回歸）'
+      '（epic-39-layout-settings-redesign Issue 3）',
+      (tester) async {
+    await _pumpSheet(tester, BookReaderPrefs.empty, _noopOnChanged);
+    await switchToTab(tester, '呈現');
+
+    expect(find.byKey(const Key('reader_settings_column_size_slider')),
+        findsOneWidget);
+    expect(find.byKey(const Key('reader_settings_column_size_value')),
+        findsNothing);
+    expect(find.text('欄位大小 720px'), findsOneWidget,
+        reason: '一般主題下 Slider 本身不具備數值回饋能力，標題必須保留數值'
+            '（比照 Issue 2 C1 對 _buildSliderRow 已建立的先例）');
+  });
 }
 
 Future<void> _pumpSheet(
