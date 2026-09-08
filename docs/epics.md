@@ -47,6 +47,7 @@
 | 37 | `epic-36-adaptive-shelf-navigation` 三目的地導覽／書架下鑽強化／設定四分區 | 🟡 開發中 (Active) | Issue 1-7 已完成並合併（PR #214、#215、#216、#217、#218、#219、#220）；Epic 36 全數完成，待歸檔 |
 | 38 | `epic-37-test-suite-flakiness` 全套測試套件既有不穩定性追蹤 | 🟡 開發中 (Active) | 從 `epic-35` Issue 5 收尾階段發現，拆為 Issue 1-3，三者皆已完成資訊補齊（皆為未重現），是否歸檔或針對個別 Issue 開後續工單待人類決定；調查中另發現 `remote_catalog_screen_test.dart`（Issue 2 檔案）重現不穩定，詳見 `epic.md` |
 | 39 | `epic-38-reader-chrome-tts-redesign` 閱讀器 Chrome／TTS 重構（`DESIGN.md` §19 階段二） | 🟡 開發中 (Active) | Issue 1-2 已完成並合併（PR #221、#222）；Epic 38 全數完成，待歸檔 |
+| 40 | `epic-39-layout-settings-redesign` 版面設定三畫面主題化＋E-Ink 步進器（`DESIGN.md` §18.3 補實作） | 🟡 開發中 (Active) | Discovery 完成，規劃中 |
 
 **狀態燈號定義**：
 - ⚪ **未開始 (Backlog)**：已被規劃但尚未啟動。無實際目錄。
