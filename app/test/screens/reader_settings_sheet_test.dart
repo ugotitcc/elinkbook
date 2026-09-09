@@ -1087,7 +1087,76 @@ void main() {
     expect(result?.fontFamily, 'MyCustomFamily');
   });
 
-  testWidgets('空 slot 顯示「（空）」，已存的 slot 顯示名稱與更新日期', (tester) async {
+  group('「系統預設」固定列（一鍵重置字級/字重/行距/段落間距/字距覆寫）', () {
+    testWidgets('沒有任何覆寫時，固定列顯示打勾指示器，不顯示套用按鈕', (tester) async {
+      await _pumpSheet(tester, BookReaderPrefs.empty, _noopOnChanged);
+      await switchToTab(tester, '預設集');
+
+      expect(
+          find.byKey(const Key('reader_settings_preset_reset_active_indicator')),
+          findsOneWidget);
+      expect(find.byKey(const Key('reader_settings_preset_reset_apply')),
+          findsNothing);
+    });
+
+    testWidgets('任一受影響欄位被覆寫時，固定列改顯示套用按鈕，點擊後 onChanged 帶出 5 個欄位皆為 null',
+        (tester) async {
+      BookReaderPrefs? notified;
+      await _pumpSheet(
+        tester,
+        const BookReaderPrefs(
+          fontSize: 18 / 16,
+          fontWeight: 1.5,
+          lineHeight: 2.0,
+          paragraphSpacing: 1.5,
+          letterSpacing: 0.05,
+        ),
+        (prefs) => notified = prefs,
+      );
+      await switchToTab(tester, '預設集');
+
+      expect(
+          find.byKey(const Key('reader_settings_preset_reset_active_indicator')),
+          findsNothing);
+      await tester.ensureVisible(
+          find.byKey(const Key('reader_settings_preset_reset_apply')));
+      await tester
+          .tap(find.byKey(const Key('reader_settings_preset_reset_apply')));
+      await tester.pump();
+
+      expect(notified, isNotNull);
+      expect(notified!.fontSize, isNull);
+      expect(notified!.fontWeight, isNull);
+      expect(notified!.lineHeight, isNull);
+      expect(notified!.paragraphSpacing, isNull);
+      expect(notified!.letterSpacing, isNull);
+
+      // 套用後固定列本身也應立即反映為已套用狀態。
+      expect(
+          find.byKey(const Key('reader_settings_preset_reset_active_indicator')),
+          findsOneWidget);
+    });
+
+    testWidgets('套用後不影響邊界（marginTop 等）欄位既有值', (tester) async {
+      BookReaderPrefs? notified;
+      await _pumpSheet(
+        tester,
+        const BookReaderPrefs(fontSize: 18 / 16, marginTop: 40.0),
+        (prefs) => notified = prefs,
+      );
+      await switchToTab(tester, '預設集');
+
+      await tester.ensureVisible(
+          find.byKey(const Key('reader_settings_preset_reset_apply')));
+      await tester
+          .tap(find.byKey(const Key('reader_settings_preset_reset_apply')));
+      await tester.pump();
+
+      expect(notified!.marginTop, 40.0);
+    });
+  });
+
+  testWidgets('空 slot 顯示「（空）」，已存的 slot 顯示名稱', (tester) async {
     final preset = LayoutPreset(
       id: 1,
       name: '臥室夜讀直排',
@@ -1868,8 +1937,8 @@ void main() {
   });
 
   testWidgets(
-      '目前草稿與某預設集 prefs 完全相等時，該列反白（底色 colorScheme.inverseSurface、'
-      '前景色 colorScheme.onInverseSurface）並顯示「已套用」指示器，「套用到本書」'
+      '目前草稿與某預設集 prefs 完全相等時，該列反白（底色 colorScheme.primary、'
+      '前景色 colorScheme.onPrimary）並顯示打勾指示器，「套用到本書」'
       '按鈕改為隱藏；其餘不相等的預設集列維持一般樣式（既有行為零回歸）'
       '（epic-39-layout-settings-redesign Issue 4）',
       (tester) async {
@@ -1900,12 +1969,12 @@ void main() {
       find.byKey(const Key('reader_settings_preset_slot_0_row')),
     );
     expect((activeContainer.decoration as BoxDecoration).color,
-        colorScheme.inverseSurface);
+        colorScheme.primary);
 
     final activeLabel = tester.widget<Text>(
       find.byKey(const Key('reader_settings_preset_slot_0_label')),
     );
-    expect(activeLabel.style?.color, colorScheme.onInverseSurface);
+    expect(activeLabel.style?.color, colorScheme.onPrimary);
 
     expect(
         find.byKey(const Key('reader_settings_preset_slot_0_active_indicator')),
@@ -1918,7 +1987,7 @@ void main() {
         findsOneWidget);
 
     // 審查修正 I1（review-plan-issue-4.md）：spec.md 明確要求反白列「所有」
-    // 文字與圖示前景色皆為 colorScheme.onInverseSurface，不能只驗證標籤
+    // 文字與圖示前景色皆為 colorScheme.onPrimary，不能只驗證標籤
     // 文字——若實作漏寫某顆 Icon 的 color 參數，只斷言文字顏色的測試不會
     // 抓到這個對比度缺陷，故逐一驗證 apply_others／delete／active_indicator
     // 內的 Check 圖示三者的前景色。
@@ -1926,19 +1995,19 @@ void main() {
       of: find.byKey(const Key('reader_settings_preset_slot_0_active_indicator')),
       matching: find.byType(Icon),
     ));
-    expect(activeIndicatorIcon.color, colorScheme.onInverseSurface);
+    expect(activeIndicatorIcon.color, colorScheme.onPrimary);
 
     final applyOthersIcon = tester.widget<Icon>(find.descendant(
       of: find.byKey(const Key('reader_settings_preset_slot_0_apply_others')),
       matching: find.byType(Icon),
     ));
-    expect(applyOthersIcon.color, colorScheme.onInverseSurface);
+    expect(applyOthersIcon.color, colorScheme.onPrimary);
 
     final deleteIcon = tester.widget<Icon>(find.descendant(
       of: find.byKey(const Key('reader_settings_preset_slot_0_delete')),
       matching: find.byType(Icon),
     ));
-    expect(deleteIcon.color, colorScheme.onInverseSurface);
+    expect(deleteIcon.color, colorScheme.onPrimary);
 
     // Slot 1（未套用，既有行為零回歸）
     final otherContainer = tester.widget<Container>(
@@ -1991,8 +2060,8 @@ void main() {
   });
 
   testWidgets(
-      'E-Ink 模式下反白列使用純黑底（colorScheme.inverseSurface）與純白前景'
-      '（colorScheme.onInverseSurface），驗證不會出現深底深字對比度不足的組合'
+      'E-Ink 模式下反白列使用純黑底（colorScheme.primary）與純白前景'
+      '（colorScheme.onPrimary），驗證不會出現深底深字對比度不足的組合'
       '（epic-39-layout-settings-redesign Issue 4）',
       (tester) async {
     tester.view.physicalSize = const Size(800, 2400);

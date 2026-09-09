@@ -317,7 +317,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
         _buildFontFamilyDropdown(),
         _buildSliderRow(
           keyPrefix: 'reader_settings_font_size',
-          label: '字型大小',
+          label: '字級',
           value: _fontSize,
           min: 12,
           max: 80,
@@ -337,7 +337,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
         ),
         _buildSliderRow(
           keyPrefix: 'reader_settings_font_weight',
-          label: '字型粗細',
+          label: '字重',
           value: _fontWeightMultiplier * 400,
           min: 300,
           max: 900,
@@ -357,7 +357,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
         ),
         _buildSliderRow(
           keyPrefix: 'reader_settings_line_height',
-          label: '行高',
+          label: '行距',
           value: _lineHeight,
           min: 0,
           max: 3,
@@ -419,7 +419,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
           padding: EdgeInsets.zero,
           child: SwitchListTile(
             key: const Key('reader_settings_disable_book_css'),
-            title: const Text('停用書本 CSS'),
+            title: const Text('停用書本 CSS', style: TextStyle(fontWeight: FontWeight.bold)),
             value: !_publisherStyles,
             onChanged: (v) => setState(() {
               _publisherStyles = !v;
@@ -492,7 +492,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
           padding: EdgeInsets.zero,
           child: SwitchListTile(
             key: const Key('reader_settings_show_header'),
-            title: const Text('顯示頁首'),
+            title: const Text('顯示頁首', style: TextStyle(fontWeight: FontWeight.bold)),
             value: _showHeader,
             onChanged: (v) => setState(() {
               _showHeader = v;
@@ -504,7 +504,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
           padding: EdgeInsets.zero,
           child: SwitchListTile(
             key: const Key('reader_settings_show_footer'),
-            title: const Text('顯示頁尾'),
+            title: const Text('顯示頁尾', style: TextStyle(fontWeight: FontWeight.bold)),
             value: _showFooter,
             onChanged: (v) => setState(() {
               _showFooter = v;
@@ -525,7 +525,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
           padding: EdgeInsets.zero,
           child: SwitchListTile(
             key: const Key('reader_settings_fullscreen'),
-            title: const Text('全螢幕模式'),
+            title: const Text('全螢幕模式', style: TextStyle(fontWeight: FontWeight.bold)),
             value: _fullscreen,
             onChanged: (v) => setState(() {
               _fullscreen = v;
@@ -561,7 +561,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('欄數'),
+          const Text('欄數', style: TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(height: 4),
           EBOptionChipGroup<ColumnMode>(
             items:
@@ -609,6 +609,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                     widget.isEinkMode
                         ? '欄位大小'
                         : '欄位大小 ${_columnSize.round()}px',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   widget.isEinkMode
                       ? EBStepper(
@@ -650,7 +651,9 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     return EBFieldCard(
       child: Row(
         children: [
-          const Expanded(child: Text('單書閱讀字型')),
+          const Expanded(
+            child: Text('字型', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
           DropdownButton<String?>(
             key: const Key('reader_settings_font_family'),
             value: _fontFamily,
@@ -740,7 +743,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(label),
+              Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
               if (isOverridden == null && !widget.isEinkMode)
                 Text(displayValue)
               else if (isOverridden == true)
@@ -833,7 +836,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('文字對齊'),
+        const Text('文字對齊', style: TextStyle(fontWeight: FontWeight.bold)),
         EBOptionChipGroup<EpubTextAlign>(
           items: options.map((option) {
             final (align, icon, tooltip, label) = option;
@@ -880,7 +883,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('排版方向模式'),
+        const Text('排版方向模式', style: TextStyle(fontWeight: FontWeight.bold)),
         EBOptionChipGroup<WritingMode?>(
           items: options.map((option) {
             final (mode, keySuffix, icon, tooltip, label) = option;
@@ -923,7 +926,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('翻頁模式覆寫'),
+        const Text('翻頁模式覆寫', style: TextStyle(fontWeight: FontWeight.bold)),
         EBOptionChipGroup<PageTurnMode?>(
           items: options.map((option) {
             final (mode, keySuffix, icon, tooltip, label) = option;
@@ -1002,7 +1005,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('螢幕方向鎖定覆寫'),
+        const Text('螢幕方向鎖定覆寫', style: TextStyle(fontWeight: FontWeight.bold)),
         EBOptionChipGroup<ScreenOrientationSetting?>(
           items: options.map((option) {
             final (setting, keySuffix, icon, tooltip, _, label) = option;
@@ -1029,24 +1032,38 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   }
 
   /// 版面設定預設集管理區塊（epic-28-reader-settings-enhancements
-  /// Issue 3）：3 個 slot 卡片（存在則顯示名稱＋更新日期＋套用/刪除
-  /// 按鈕，空則顯示「（空）」）、「另存為新預設集」按鈕、「從其他書籍
-  /// 複製」兩顆按鈕。本 widget 只負責觸發對應 callback，實際 I/O、
-  /// 「存量是否已滿 3 組」判斷、命名輸入、覆蓋選擇/確認對話框皆由呼叫端
-  /// （`ReaderScreen`）完成，見 spec.md「UI 元件責任劃分」。
+  /// Issue 3）：一顆「重設為本書原樣式」固定列＋3 個 slot 卡片（存在則
+  /// 顯示名稱＋摘要＋套用/刪除按鈕，空則顯示「（空）」）、「將目前設定
+  /// 存為新預設集」按鈕、「從其他書籍複製」兩顆按鈕。本 widget 只負責觸發
+  /// 對應 callback，實際 I/O、「存量是否已滿 3 組」判斷、命名輸入、覆蓋
+  /// 選擇/確認對話框皆由呼叫端（`ReaderScreen`）完成，見 spec.md「UI 元件
+  /// 責任劃分」。
+  ///
+  /// 視覺還原（Visual Accuracy Mode，`docs/research/uiux/reference/
+  /// 版面設定_預設集.png`）：「另存為新預設集」移到清單最上方、改為滿版
+  /// 實心按鈕；移除原本置頂的「版面設定預設集」標題（Bottom Sheet 分頁籤
+  /// 本身已標示「預設集」，重複標題與 Reference 不符）；卡片改用
+  /// `colorScheme.primary`/`onPrimary` 標示已套用列，對齊全 App 已統一的
+  /// 「選中態＝主色實心填滿」語彙（`ReaderOptionTile`／`Switch` 皆同），
+  /// 取代原本的 `inverseSurface`/`onInverseSurface`。
   Widget _buildLayoutPresetSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('版面設定預設集', style: TextStyle(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
-        ...List.generate(3, _buildPresetSlot),
-        const SizedBox(height: 8),
-        ElevatedButton(
-          key: const Key('reader_settings_save_as_preset'),
-          onPressed: () => widget.onSaveAsPreset(_currentDraft),
-          child: const Text('另存為新預設集'),
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton.icon(
+            key: const Key('reader_settings_save_as_preset'),
+            onPressed: () => widget.onSaveAsPreset(_currentDraft),
+            icon: const Icon(Icons.add),
+            label: const Text('將目前設定存為新預設集'),
+          ),
         ),
+        const SizedBox(height: 16),
+        const Text('已儲存的預設集', style: TextStyle(fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        _buildResetToBookDefaultRow(),
+        ...List.generate(3, _buildPresetSlot),
         const SizedBox(height: 16),
         const Text('從其他書籍複製', style: TextStyle(fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
@@ -1073,6 +1090,158 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     );
   }
 
+  /// 卡片列共用外殼：套用中（[isActive]）時整列改為 `primary` 實心填滿＋
+  /// `onPrimary` 前景色，否則維持 `outline` 邊框卡片，供固定的「重設為本書
+  /// 原樣式」列與 [_buildPresetSlot] 共用同一套視覺語彙。
+  Widget _buildPresetRow({
+    required Key rowKey,
+    required Key titleKey,
+    required String title,
+    required String subtitle,
+    required bool isActive,
+    required Widget trailing,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final foregroundColor = isActive ? colorScheme.onPrimary : null;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Container(
+        key: rowKey,
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isActive ? colorScheme.primary : null,
+          borderRadius: BorderRadius.circular(8),
+          border: isActive
+              ? null
+              : Border.all(color: colorScheme.outline, width: 1.5),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    title,
+                    key: titleKey,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: foregroundColor,
+                    ),
+                  ),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: foregroundColor ?? colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            trailing,
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 有邊框的方形圖示按鈕，比照 `EBStepper._StepperButton` 既有樣式
+  /// （8dp 圓角＋`outline` 邊框），供預設集卡片列的「套用到其他書籍」／
+  /// 「刪除」按鈕使用；[borderColor] 於套用中（primary 底色）列改傳
+  /// `onPrimary`，確保邊框在實心底色上仍清晰可見。
+  Widget _buildBorderedIconButton({
+    required Key key,
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback onPressed,
+    Color? color,
+    Color? borderColor,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: borderColor ?? colorScheme.outline, width: 1.5),
+      ),
+      child: IconButton(
+        key: key,
+        icon: Icon(icon, color: color),
+        tooltip: tooltip,
+        onPressed: onPressed,
+      ),
+    );
+  }
+
+  /// 固定列（非使用者建立的預設集，不佔用 3 個 slot 名額、不可刪除）：
+  /// 一鍵把「字級／字重／行距／段落間距／字距」5 個目前有覆寫的數值欄位
+  /// 全部清空，改回本書原始樣式（等同逐一按下每個欄位既有的「恢復本書
+  /// 原樣式」按鈕）。副標題刻意不顯示具體數值——這 5 個欄位在「未覆寫」
+  /// 狀態下實際套用的是書本自身的原生樣式，App 沒有一個對應的全域數值
+  /// 設定可供顯示（`GlobalReaderPrefs` 只涵蓋翻頁模式／螢幕方向／熱區等
+  /// 欄位，見 `global_reader_prefs.dart`），顯示假數字會誤導使用者。
+  Widget _buildResetToBookDefaultRow() {
+    final isActive = !_fontSizeOverridden &&
+        !_fontWeightOverridden &&
+        !_lineHeightOverridden &&
+        !_paragraphSpacingOverridden &&
+        !_letterSpacingOverridden;
+    final colorScheme = Theme.of(context).colorScheme;
+    final foregroundColor = isActive ? colorScheme.onPrimary : null;
+    return _buildPresetRow(
+      rowKey: const Key('reader_settings_preset_reset_row'),
+      titleKey: const Key('reader_settings_preset_reset_label'),
+      title: '系統預設',
+      subtitle: '移除本書所有字級/字重/行距/段落間距/字距覆寫，改用書本原始樣式',
+      isActive: isActive,
+      trailing: isActive
+          ? Row(
+              key: const Key('reader_settings_preset_reset_active_indicator'),
+              mainAxisSize: MainAxisSize.min,
+              children: [Icon(Icons.check, color: foregroundColor)],
+            )
+          : OutlinedButton(
+              key: const Key('reader_settings_preset_reset_apply'),
+              onPressed: _resetToBookDefault,
+              child: const Text('套用'),
+            ),
+    );
+  }
+
+  void _resetToBookDefault() {
+    setState(() {
+      _fontSizeOverridden = false;
+      _fontSize = _defaultFontSize;
+      _fontWeightOverridden = false;
+      _fontWeightMultiplier = _defaultFontWeightMultiplier;
+      _lineHeightOverridden = false;
+      _lineHeight = _defaultLineHeight;
+      _paragraphSpacingOverridden = false;
+      _paragraphSpacing = _defaultParagraphSpacing;
+      _letterSpacingOverridden = false;
+      _letterSpacing = _defaultLetterSpacing;
+      _notifyChanged();
+    });
+  }
+
+  /// 「字級X・行距Y・橫排/直排」摘要文字（Reference 卡片副標題）：
+  /// 對應欄位在 [prefs] 為 `null`（該 preset 未收錄這個欄位）時顯示
+  /// 「預設」，不捏造具體數字。
+  String _presetSummary(BookReaderPrefs prefs) {
+    final fontSize =
+        prefs.fontSize != null ? (prefs.fontSize! * 16).round().toString() : '預設';
+    final lineHeight =
+        prefs.lineHeight != null ? prefs.lineHeight!.toStringAsFixed(1) : '預設';
+    final writingMode = switch (prefs.writingModeOverride) {
+      WritingMode.vertical => '直排',
+      WritingMode.horizontal => '橫排',
+      null => '自動',
+    };
+    return '字級$fontSize・行距$lineHeight・$writingMode';
+  }
+
   Widget _buildPresetSlot(int index) {
     if (index >= widget.layoutPresets.length) {
       return Padding(
@@ -1086,65 +1255,52 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     final preset = widget.layoutPresets[index];
     final colorScheme = Theme.of(context).colorScheme;
     final isActive = preset.prefs == _currentDraft;
-    final foregroundColor = isActive ? colorScheme.onInverseSurface : null;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Container(
-        key: Key('reader_settings_preset_slot_${index}_row'),
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-        decoration: BoxDecoration(
-          color: isActive ? colorScheme.inverseSurface : null,
-          borderRadius: BorderRadius.circular(8),
-          border: isActive
-              ? null
-              : Border.all(color: colorScheme.outline, width: 1.5),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                '${preset.name}（${preset.updatedAt.year}/${preset.updatedAt.month}/${preset.updatedAt.day}）',
-                key: Key('reader_settings_preset_slot_${index}_label'),
-                style: TextStyle(color: foregroundColor),
+    final foregroundColor = isActive ? colorScheme.onPrimary : null;
+    return _buildPresetRow(
+      rowKey: Key('reader_settings_preset_slot_${index}_row'),
+      titleKey: Key('reader_settings_preset_slot_${index}_label'),
+      title: preset.name,
+      subtitle: _presetSummary(preset.prefs),
+      isActive: isActive,
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (isActive)
+            Row(
+              key: Key(
+                'reader_settings_preset_slot_${index}_active_indicator',
               ),
-            ),
-            if (isActive)
-              Row(
-                key: Key(
-                  'reader_settings_preset_slot_${index}_active_indicator',
-                ),
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.check, color: foregroundColor, size: 18),
-                  const SizedBox(width: 4),
-                  Text('已套用', style: TextStyle(color: foregroundColor)),
-                ],
-              )
-            else
-              IconButton(
-                key: Key('reader_settings_preset_slot_${index}_apply_current'),
-                icon: const Icon(Icons.check),
-                tooltip: '套用到本書',
-                onPressed: () => widget.onApplyPreset(
-                  preset,
-                  targetBookIds: [widget.bookId],
-                ),
+              mainAxisSize: MainAxisSize.min,
+              children: [Icon(Icons.check, color: foregroundColor)],
+            )
+          else
+            OutlinedButton(
+              key: Key('reader_settings_preset_slot_${index}_apply_current'),
+              onPressed: () => widget.onApplyPreset(
+                preset,
+                targetBookIds: [widget.bookId],
               ),
-            IconButton(
-              key: Key('reader_settings_preset_slot_${index}_apply_others'),
-              icon: Icon(Icons.library_books, color: foregroundColor),
-              tooltip: '套用到其他書籍',
-              onPressed: () => _handleApplyPresetToOthers(preset),
+              child: const Text('套用'),
             ),
-            IconButton(
-              key: Key('reader_settings_preset_slot_${index}_delete'),
-              icon: Icon(Icons.delete, color: foregroundColor),
-              tooltip: '刪除',
-              onPressed: () => widget.onDeletePreset(preset.id!),
-            ),
-          ],
-        ),
+          const SizedBox(width: 4),
+          _buildBorderedIconButton(
+            key: Key('reader_settings_preset_slot_${index}_apply_others'),
+            icon: Icons.library_books,
+            tooltip: '套用到其他書籍',
+            onPressed: () => _handleApplyPresetToOthers(preset),
+            color: foregroundColor,
+            borderColor: isActive ? foregroundColor : null,
+          ),
+          const SizedBox(width: 4),
+          _buildBorderedIconButton(
+            key: Key('reader_settings_preset_slot_${index}_delete'),
+            icon: Icons.delete,
+            tooltip: '刪除',
+            onPressed: () => widget.onDeletePreset(preset.id!),
+            color: foregroundColor,
+            borderColor: isActive ? foregroundColor : null,
+          ),
+        ],
       ),
     );
   }

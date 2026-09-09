@@ -301,6 +301,37 @@ PASS（有測試佐證）——
 
 ---
 
+## Screen
+
+LayoutSettings（版面設定）文字修正＋標題粗體＋「預設集」分頁重新設計
+
+## Reference
+
+`docs/research/uiux/reference/版面設定_文字_1.png`、`版面設定_邊界_1.png`、`版面設定_呈現_1.png`、`版面設定_預設集.png`
+
+## Result
+
+### Typography
+PASS（有測試佐證）——三個版面設定 Bottom Sheet（`reader_settings_sheet.dart`／`fxl_settings_sheet.dart`／`pdf_settings_sheet.dart`）內每一個「設定標題」（數值列標題、SwitchListTile 標題、選項晶片群組上方的區段標題）皆補上 `FontWeight.bold`，對齊 Reference 全部標題皆為粗體的排版語彙；選項晶片本身的短標籤（例如「整頁」「雙頁」）維持原樣不加粗，只有「標題」層級文字變動。
+
+### 名詞修正
+PASS——依 `版面設定_文字_1.png` 逐一核對並修正 `reader_settings_sheet.dart` 的四處字面值：「單書閱讀字型」→「字型」、「字型大小」→「字級」、「字型粗細」→「字重」、「行高」→「行距」。`fxl_settings_sheet.dart`／`pdf_settings_sheet.dart` 沒有對應欄位，未變動；`markdown_export.dart` 的匯出文件標題（`## 🔖 書籤清單`／`## ✏️ 劃線與個人備註`）與本次 UI 名詞修正無關，未觸碰。
+
+### Components
+PASS（有測試佐證）——「預設集」分頁依 `版面設定_預設集.png` 重新設計：
+- 「將目前設定存為新預設集」移到清單最上方，改為 `FilledButton.icon` 滿版實心按鈕（原本 `ElevatedButton` 是 M3 預設的淺色按鈕，與 Reference 的實心主色按鈕不符，兩者一併修正，非本輪新引入的差異）。
+- 新增「已儲存的預設集」區段標題；移除原本置頂、與分頁籤標題重複的「版面設定預設集」文字。
+- 3 個使用者自建 slot 卡片新增摘要副標題「字級X・行距Y・橫排/直排」（由 `preset.prefs` 即時算出，欄位為 `null` 時顯示「預設」，不捏造假數字）；套用中列的底色/前景色由 `colorScheme.inverseSurface`/`onInverseSurface` 改為 `colorScheme.primary`/`onPrimary`，對齊全 App 已統一的「選中態＝主色實心填滿」語彙（`ReaderOptionTile`／`Switch` 皆同）；「套用到本書」由純圖示按鈕改為文字「套用」的 `OutlinedButton`；「套用到其他書籍」／「刪除」改用有邊框的方形圖示按鈕（比照 `EBStepper._StepperButton` 既有樣式）。
+- **新增「系統預設」固定列**（不佔用 3 個 slot 名額、不可刪除）：一鍵把字級/字重/行距/段落間距/字距 5 個目前有覆寫的欄位全部清空、改回本書原始樣式，等同依序按下每個欄位既有的「恢復本書原樣式」按鈕。副標題刻意使用中性說明文字，不顯示 Reference 示範資料裡的具體數字（`字級16・行距1.6`）——這 5 個欄位在未覆寫狀態下沒有對應的全域數值設定可顯示（`GlobalReaderPrefs` 只涵蓋翻頁模式／螢幕方向／熱區等欄位，不含字級/行距等排版數值），顯示假數字會誤導使用者；這是與您確認過的修正後理解（Reference 的「系統預設」列被判定為範例資料裡一個普通已存預設集的名稱，但您希望仍保留一鍵重置這個真實功能）。
+
+驗證依據：`flutter test test/screens/reader_settings_sheet_test.dart test/screens/fxl_settings_sheet_test.dart test/screens/pdf_settings_sheet_test.dart`（219 項全過，含 3 則新增測試涵蓋「系統預設」列的顯示/套用/不影響邊界欄位）。
+
+### Remaining Differences（刻意不做，超出本次範圍）
+- 「從其他書籍複製」區塊（複製到本書／複製到其他書籍）Reference 截圖沒有示範，判斷是畫面被截斷未拍到而非要移除——保留在「已儲存的預設集」清單下方，未依 Reference 「看起來沒有」而移除既有功能。
+- `AnnotationToolbar` E-Ink 感知（另開一輪處理，您已明確指示）。
+
+---
+
 ## flutter analyze Result
 
 ```
@@ -310,7 +341,7 @@ No issues found! (ran in 11.3s)
 ## flutter test Result
 
 ```
-+2152: All tests passed!
++2155: All tests passed!
 ```
-（本輪〔筆記面板 Design System 對齊〕未新增/刪除測試案例數，總數與上一輪〔OPDS/Calibre 佇列泛化〕相同，僅更新既有斷言：`notes_bottom_sheet_test.dart` 關閉按鈕 Key 改為 `eb_sheet_shell_close_button`。）
+（本輪〔版面設定文字修正/標題粗體/預設集重新設計〕新增 3 則測試（`reader_settings_sheet_test.dart`「系統預設」固定列），總數從上一輪〔筆記面板 Design System 對齊〕的 2152 增至 2155。）
 （含本輪新增/更新的 8 則測試：`app_theme_data_test.dart` Switch ON/OFF 色值 4 則、`fxl_settings_sheet_test.dart`／`pdf_settings_sheet_test.dart` 選中態色值更新 3 則、`library_screen_test.dart` 既有分類拼貼格系列間接驗證 `_GroupGridTile` 改動未回歸）

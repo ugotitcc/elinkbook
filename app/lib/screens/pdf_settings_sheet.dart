@@ -213,7 +213,7 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Fit 模式'),
+            const Text('Fit 模式', style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             EBOptionChipGroup<PdfFitMode>(
               items: fitOptions.map((option) {
@@ -233,7 +233,7 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
               }),
             ),
             const SizedBox(height: 16),
-            const Text('雙頁模式'),
+            const Text('雙頁模式', style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             EBOptionChipGroup<DualPageMode>(
               items: dualPageOptions.map((option) {
@@ -257,7 +257,7 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
               padding: EdgeInsets.zero,
               child: SwitchListTile(
                 key: const Key('pdf_settings_dual_page_cover_alone'),
-                title: const Text('封面獨立顯示'),
+                title: const Text('封面獨立顯示', style: TextStyle(fontWeight: FontWeight.bold)),
                 value: _dualPageCoverAlone,
                 onChanged: (v) => setState(() {
                   _dualPageCoverAlone = v;
@@ -269,7 +269,7 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
               padding: EdgeInsets.zero,
               child: SwitchListTile(
                 key: const Key('pdf_settings_show_footer'),
-                title: const Text('顯示頁尾'),
+                title: const Text('顯示頁尾', style: TextStyle(fontWeight: FontWeight.bold)),
                 value: _showFooter,
                 onChanged: (v) => setState(() {
                   _showFooter = v;
@@ -281,7 +281,7 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
               padding: EdgeInsets.zero,
               child: SwitchListTile(
                 key: const Key('pdf_settings_fullscreen'),
-                title: const Text('全螢幕模式'),
+                title: const Text('全螢幕模式', style: TextStyle(fontWeight: FontWeight.bold)),
                 value: _fullscreen,
                 onChanged: (v) => setState(() {
                   _fullscreen = v;
@@ -290,7 +290,7 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
               ),
             ),
             const SizedBox(height: 16),
-            const Text('頁面方向'),
+            const Text('頁面方向', style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             EBOptionChipGroup<DualPageDirection>(
               items: directionOptions.map((option) {
@@ -310,7 +310,7 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
               }),
             ),
             const SizedBox(height: 16),
-            const Text('換頁動畫'),
+            const Text('換頁動畫', style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             EBOptionChipGroup<PdfPageTurnAnimation>(
               items: pageTurnAnimationOptions.map((option) {
@@ -399,7 +399,7 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('裁切模式'),
+          const Text('裁切模式', style: TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           EBOptionChipGroup<PdfCropMode>(
             items: [
@@ -463,7 +463,10 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [Text(label), if (!widget.isEinkMode) Text(displayValue)],
+            children: [
+              Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
+              if (!widget.isEinkMode) Text(displayValue),
+            ],
           ),
           widget.isEinkMode
               ? EBStepper(

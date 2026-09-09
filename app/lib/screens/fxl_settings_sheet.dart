@@ -106,7 +106,7 @@ class _FxlSettingsSheetState extends State<FxlSettingsSheet> {
               ],
             ),
             const SizedBox(height: 16),
-            const Text('雙頁模式'),
+            const Text('雙頁模式', style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             EBOptionChipGroup<DualPageMode>(
               items: dualPageOptions.map((option) {
@@ -127,7 +127,7 @@ class _FxlSettingsSheetState extends State<FxlSettingsSheet> {
               }),
             ),
             const SizedBox(height: 16),
-            const Text('翻頁方向'),
+            const Text('翻頁方向', style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             EBOptionChipGroup<DualPageDirection>(
               items: directionOptions.map((option) {
@@ -152,7 +152,7 @@ class _FxlSettingsSheetState extends State<FxlSettingsSheet> {
               padding: EdgeInsets.zero,
               child: SwitchListTile(
                 key: const Key('fxl_settings_fullscreen'),
-                title: const Text('全螢幕模式'),
+                title: const Text('全螢幕模式', style: TextStyle(fontWeight: FontWeight.bold)),
                 value: _fullscreen,
                 onChanged: (v) => setState(() {
                   _fullscreen = v;
@@ -164,7 +164,7 @@ class _FxlSettingsSheetState extends State<FxlSettingsSheet> {
               padding: EdgeInsets.zero,
               child: SwitchListTile(
                 key: const Key('fxl_settings_show_header'),
-                title: const Text('顯示頁首'),
+                title: const Text('顯示頁首', style: TextStyle(fontWeight: FontWeight.bold)),
                 value: _showHeader,
                 onChanged: (v) => setState(() {
                   _showHeader = v;
@@ -176,7 +176,7 @@ class _FxlSettingsSheetState extends State<FxlSettingsSheet> {
               padding: EdgeInsets.zero,
               child: SwitchListTile(
                 key: const Key('fxl_settings_show_footer'),
-                title: const Text('顯示頁尾'),
+                title: const Text('顯示頁尾', style: TextStyle(fontWeight: FontWeight.bold)),
                 value: _showFooter,
                 onChanged: (v) => setState(() {
                   _showFooter = v;
