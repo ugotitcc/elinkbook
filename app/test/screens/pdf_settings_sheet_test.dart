@@ -728,6 +728,189 @@ void main() {
     );
     expect((container.decoration as BoxDecoration).color, Colors.black);
   });
+
+  testWidgets(
+      'Fit 模式群組改用 EBOptionChipGroup 後，3 個選項皆顯示 spec.md 選項標籤'
+      '對照表定義的短標籤（epic-39-layout-settings-redesign Issue 5）',
+      (tester) async {
+    await _pumpSheet(tester, BookReaderPrefs.empty, (_) {});
+
+    for (final item in [
+      ('page_fit', '整頁'),
+      ('fit_width', '頁寬'),
+      ('actual_size', '原比'),
+    ]) {
+      final (suffix, label) = item;
+      expect(
+        find.descendant(
+          of: find.byKey(Key('pdf_settings_fit_mode_$suffix')),
+          matching: find.text(label),
+        ),
+        findsOneWidget,
+        reason: 'pdf_settings_fit_mode_$suffix 應顯示標籤「$label」',
+      );
+    }
+  });
+
+  testWidgets(
+      '雙頁模式群組改用 EBOptionChipGroup 後，3 個選項皆顯示短標籤'
+      '（epic-39-layout-settings-redesign Issue 5）',
+      (tester) async {
+    await _pumpSheet(tester, BookReaderPrefs.empty, (_) {});
+
+    for (final item in [
+      ('auto', '自動'),
+      ('always', '雙頁'),
+      ('never', '單頁'),
+    ]) {
+      final (suffix, label) = item;
+      expect(
+        find.descendant(
+          of: find.byKey(Key('pdf_settings_dual_page_mode_$suffix')),
+          matching: find.text(label),
+        ),
+        findsOneWidget,
+        reason: 'pdf_settings_dual_page_mode_$suffix 應顯示標籤「$label」',
+      );
+    }
+  });
+
+  testWidgets(
+      '頁面方向群組改用 EBOptionChipGroup 後，2 個選項皆顯示短標籤'
+      '（epic-39-layout-settings-redesign Issue 5）',
+      (tester) async {
+    await _pumpSheet(tester, BookReaderPrefs.empty, (_) {});
+
+    for (final item in [
+      ('ltr', '左翻'),
+      ('rtl', '右翻'),
+    ]) {
+      final (suffix, label) = item;
+      await tester.ensureVisible(
+          find.byKey(Key('pdf_settings_dual_page_direction_$suffix')));
+      expect(
+        find.descendant(
+          of: find.byKey(Key('pdf_settings_dual_page_direction_$suffix')),
+          matching: find.text(label),
+        ),
+        findsOneWidget,
+        reason: 'pdf_settings_dual_page_direction_$suffix 應顯示標籤「$label」',
+      );
+    }
+  });
+
+  testWidgets(
+      '換頁動畫群組改用 EBOptionChipGroup 後，2 個選項皆顯示短標籤'
+      '（epic-39-layout-settings-redesign Issue 5）',
+      (tester) async {
+    await _pumpSheet(tester, BookReaderPrefs.empty, (_) {});
+
+    for (final item in [
+      ('slide', '滑動'),
+      ('none', '無'),
+    ]) {
+      final (suffix, label) = item;
+      await tester.dragUntilVisible(
+        find.byKey(Key('pdf_settings_page_turn_animation_$suffix')),
+        find.byKey(const Key('pdf_settings_display_scroll')),
+        const Offset(0, -100),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.descendant(
+          of: find.byKey(Key('pdf_settings_page_turn_animation_$suffix')),
+          matching: find.text(label),
+        ),
+        findsOneWidget,
+        reason: 'pdf_settings_page_turn_animation_$suffix 應顯示標籤「$label」',
+      );
+    }
+  });
+
+  testWidgets(
+      '裁切模式群組改用 EBOptionChipGroup 後，「不裁」「智慧」「手動」三個選項'
+      '皆顯示短標籤（epic-39-layout-settings-redesign Issue 5）',
+      (tester) async {
+    await _pumpSheet(tester, BookReaderPrefs.empty, (_) {});
+    await tester.tap(find.byKey(const Key('pdf_settings_tab_crop')));
+    await tester.pumpAndSettle();
+
+    for (final item in [
+      ('none', '不裁'),
+      ('auto', '智慧'),
+      ('manual', '手動'),
+    ]) {
+      final (suffix, label) = item;
+      expect(
+        find.descendant(
+          of: find.byKey(Key('pdf_settings_crop_mode_$suffix')),
+          matching: find.text(label),
+        ),
+        findsOneWidget,
+        reason: 'pdf_settings_crop_mode_$suffix 應顯示標籤「$label」',
+      );
+    }
+  });
+
+  testWidgets(
+      '裁切模式群組選中態機制正確運作：一般選項相符時顯示選中樣式，'
+      '「手動選區」動作型項目無論 groupValue 為何皆恆為未選中樣式'
+      '（審查修正 I1，review-plan-issue-5.md：補上正反對照斷言，避免僅斷言'
+      '未選中態時，若選取機制整體失效〔例如 groupValue 傳遞錯誤導致全部'
+      '晶片皆渲染為未選中〕仍會誤判通過；審查修正 I4，review-issues.md／'
+      'I1，review-spec.md：EBOptionChipItem.onTap 項目由 forceUnselected '
+      '保證，取代舊 bool sentinel 寫法後行為零回歸）'
+      '（epic-39-layout-settings-redesign Issue 5）',
+      (tester) async {
+    // 情境一：groupValue 為一般選項（autoDetect），驗證選中態機制正常
+    // 運作，「手動選區」在此一般情境下也維持未選中（基準對照）。
+    await _pumpSheet(
+      tester,
+      const BookReaderPrefs(pdfCropMode: PdfCropMode.autoDetect),
+      (_) {},
+    );
+    await tester.tap(find.byKey(const Key('pdf_settings_tab_crop')));
+    await tester.pumpAndSettle();
+
+    final context = tester.element(
+      find.byKey(const Key('pdf_settings_crop_mode_auto')),
+    );
+    final colorScheme = Theme.of(context).colorScheme;
+
+    final autoContainer = tester.widget<Container>(
+      find.byKey(const Key('pdf_settings_crop_mode_auto')),
+    );
+    expect((autoContainer.decoration as BoxDecoration).color,
+        colorScheme.primaryContainer,
+        reason: '選中態項目背景色應為 primaryContainer，證明選取機制正常運作');
+
+    final manualContainerCase1 = tester.widget<Container>(
+      find.byKey(const Key('pdf_settings_crop_mode_manual')),
+    );
+    expect((manualContainerCase1.decoration as BoxDecoration).color,
+        colorScheme.surface,
+        reason: '手動選區項目在一般情境下應維持未選中樣式');
+
+    // 情境二（原本的邊界情境）：groupValue 剛好等於 PdfCropMode.manual
+    // （例如使用者先前已完成一次手動裁切、_cropMode 已持久化為 manual），
+    // 「手動選區」項目仍必須維持未選中——若實作誤用 value == groupValue
+    // 判斷選中（而非依賴 forceUnselected），這裡就會變成選中態。
+    await _pumpSheet(
+      tester,
+      const BookReaderPrefs(pdfCropMode: PdfCropMode.manual),
+      (_) {},
+    );
+    await tester.tap(find.byKey(const Key('pdf_settings_tab_crop')));
+    await tester.pumpAndSettle();
+
+    final manualContainerCase2 = tester.widget<Container>(
+      find.byKey(const Key('pdf_settings_crop_mode_manual')),
+    );
+    expect((manualContainerCase2.decoration as BoxDecoration).color,
+        colorScheme.surface,
+        reason: 'groupValue 剛好等於 PdfCropMode.manual 時，手動選區項目仍'
+            '應維持未選中樣式（forceUnselected 機制的關鍵驗證）');
+  });
 }
 
 Future<void> _pumpSheet(
