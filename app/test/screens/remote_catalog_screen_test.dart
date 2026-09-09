@@ -5,11 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
+import 'package:elinkbook/downloads/download_queue_controller.dart';
 import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/library/widgets/book_cover.dart';
 import 'package:elinkbook/remote/remote_server_profile.dart';
 import 'package:elinkbook/remote/opds_types.dart';
+import 'package:elinkbook/screens/cloud_duplicate_confirm_dialog.dart';
 import 'package:elinkbook/screens/remote_catalog_screen.dart';
 import 'package:elinkbook/remote/remote_catalog_dependencies.dart';
 import 'package:elinkbook/theme/app_theme.dart';
@@ -90,6 +92,7 @@ void main() {
     FakeFingerprintComputer? fingerprintComputer,
     FakeRemoteThumbnailCache? thumbnailCache,
     String? feedUrl,
+    DownloadQueueController? downloadQueueController,
   }) async {
     await tester.pumpWidget(MaterialApp(
       theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
@@ -104,6 +107,9 @@ void main() {
         ),
         importService: FakeBookImportService(),
         feedUrl: feedUrl,
+        downloadQueueController:
+            downloadQueueController ??
+            DownloadQueueController(onDuplicateConfirm: (_) async => false),
       ),
     ));
     await tester.pumpAndSettle();
@@ -173,6 +179,8 @@ void main() {
         libraryRepository: FakeLibraryRepository(),
         dependencies: dependencies,
         importService: FakeBookImportService(),
+        downloadQueueController:
+            DownloadQueueController(onDuplicateConfirm: (_) async => false),
       ),
     ));
     await tester.pumpAndSettle();
@@ -366,6 +374,8 @@ void main() {
           ),
           importService: FakeBookImportService(),
           isEinkMode: true,
+          downloadQueueController:
+              DownloadQueueController(onDuplicateConfirm: (_) async => false),
         ),
       ));
       await tester.pumpAndSettle();
@@ -405,6 +415,8 @@ void main() {
           ),
           importService: FakeBookImportService(),
           isEinkMode: true,
+          downloadQueueController:
+              DownloadQueueController(onDuplicateConfirm: (_) async => false),
         ),
       ));
       await tester.pumpAndSettle();
@@ -445,6 +457,8 @@ void main() {
             createOpdsClient: () => opdsClient,
           ),
           importService: FakeBookImportService(),
+          downloadQueueController:
+              DownloadQueueController(onDuplicateConfirm: (_) async => false),
         ),
       ));
       await tester.pumpAndSettle();
@@ -477,6 +491,8 @@ void main() {
         server.baseUrl: const OpdsFeed(title: '根目錄', entries: [entry1]),
       });
       final importService = FakeBookImportService();
+      final downloadQueueController =
+          DownloadQueueController(onDuplicateConfirm: (_) async => false);
       await tester.pumpWidget(MaterialApp(
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: RemoteCatalogScreen(
@@ -489,6 +505,7 @@ void main() {
             createOpdsClient: () => opdsClient,
           ),
           importService: importService,
+          downloadQueueController: downloadQueueController,
         ),
       ));
       await tester.pumpAndSettle();
@@ -498,21 +515,26 @@ void main() {
       await tester.tap(find.byKey(const Key('remote_catalog_download_button')));
       await tester.pump();
 
+      // 視覺還原（Visual Accuracy Mode）：下載改為加入常駐佇列後非模態，
+      // 畫面立即顯示提示 Snackbar，不再跳出阻擋畫面的下載對話框——常駐
+      // 佇列面板本身掛在 SourcesHomeScreen（見 sources_home_screen_test.dart），
+      // 這裡只驗證 RemoteCatalogScreen 端把工作正確交給共用的
+      // DownloadQueueController，狀態改用 controller.items 直接查驗。
+      expect(
+        find.byKey(const Key('remote_catalog_queued_snackbar')),
+        findsOneWidget,
+      );
+
       // 交錯 runAsync（提供真實事件迴圈讓 dart:io 完成）與 pump（處理微佇列），
-      // 驅動 _downloadOne 中的 getTemporaryDirectory → File.create → writeAsBytes
-      // → copy → delete → importFiles → setState 完整鏈。
+      // 驅動 DownloadQueueController._downloadOne 中的 getTemporaryDirectory
+      // → File.create → writeAsBytes → copy → delete → importFiles → notifyListeners 完整鏈。
       for (var i = 0; i < 30; i++) {
         await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
         await tester.pump();
       }
       await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('download_queue_item_book-1')), findsOneWidget);
-      expect(find.text('完成'), findsWidgets);
-
-      await tester.tap(find.byKey(const Key('download_queue_done_button')));
-      await tester.pumpAndSettle();
-
+      expect(downloadQueueController.items.single.status, DownloadItemStatus.done);
       expect(opdsClient.downloadBookCalls, ['http://192.168.1.100:8080/opds/download/1.epub']);
     });
 
@@ -540,6 +562,8 @@ void main() {
             createOpdsClient: () => opdsClient,
           ),
           importService: FakeBookImportService(),
+          downloadQueueController:
+              DownloadQueueController(onDuplicateConfirm: (_) async => false),
         ),
       ));
       await tester.pumpAndSettle();
@@ -589,6 +613,8 @@ void main() {
             createOpdsClient: () => opdsClient,
           ),
           importService: FakeBookImportService(),
+          downloadQueueController:
+              DownloadQueueController(onDuplicateConfirm: (_) async => false),
         ),
       ));
       await tester.pumpAndSettle();
@@ -617,6 +643,8 @@ void main() {
         },
         downloadError: StateError('模擬下載失敗'),
       );
+      final downloadQueueController =
+          DownloadQueueController(onDuplicateConfirm: (_) async => false);
       await tester.pumpWidget(MaterialApp(
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: RemoteCatalogScreen(
@@ -629,6 +657,7 @@ void main() {
             createOpdsClient: () => opdsClient,
           ),
           importService: FakeBookImportService(),
+          downloadQueueController: downloadQueueController,
         ),
       ));
       await tester.pumpAndSettle();
@@ -645,14 +674,15 @@ void main() {
       }
       await tester.pumpAndSettle();
 
-      expect(find.text('失敗'), findsOneWidget);
-      expect(find.byKey(const Key('download_queue_retry_book-1')), findsOneWidget);
+      expect(downloadQueueController.items.single.status, DownloadItemStatus.failed);
 
+      // 常駐佇列面板（重試按鈕）掛在 SourcesHomeScreen，這裡直接呼叫
+      // controller.retry() 驗證重試邏輯本身正確，不需要透過 UI 按鈕。
       opdsClient.downloadError = null;
-      await tester.tap(find.byKey(const Key('download_queue_retry_book-1')));
+      await tester.runAsync(() => downloadQueueController.retry(entry1.remoteBookId));
       await tester.pumpAndSettle();
 
-      expect(find.text('完成'), findsWidgets);
+      expect(downloadQueueController.items.single.status, DownloadItemStatus.done);
     });
 
     testWidgets('下載中點擊取消後顯示已取消狀態，暫存檔不殘留', (tester) async {
@@ -660,6 +690,8 @@ void main() {
         server.baseUrl: const OpdsFeed(title: '根目錄', entries: [entry1]),
       });
       opdsClient.downloadPendingCompleter = Completer<void>();
+      final downloadQueueController =
+          DownloadQueueController(onDuplicateConfirm: (_) async => false);
       await tester.pumpWidget(MaterialApp(
         theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
         home: RemoteCatalogScreen(
@@ -672,6 +704,7 @@ void main() {
             createOpdsClient: () => opdsClient,
           ),
           importService: FakeBookImportService(),
+          downloadQueueController: downloadQueueController,
         ),
       ));
       await tester.pumpAndSettle();
@@ -681,8 +714,9 @@ void main() {
       await tester.tap(find.byKey(const Key('remote_catalog_download_button')));
       await tester.pump();
 
-      expect(find.byKey(const Key('download_queue_cancel_book-1')), findsOneWidget);
-      await tester.tap(find.byKey(const Key('download_queue_cancel_book-1')));
+      // 常駐佇列面板（取消按鈕）掛在 SourcesHomeScreen，這裡直接呼叫
+      // controller.cancel() 驗證取消邏輯本身正確，不需要透過 UI 按鈕。
+      downloadQueueController.cancel(entry1.remoteBookId);
       opdsClient.downloadPendingCompleter!.complete();
 
       // 交錯 runAsync 與 pump 驅動 dart:io 微佇列（取消後仍需處理微佇列）。
@@ -692,7 +726,7 @@ void main() {
       }
       await tester.pumpAndSettle();
 
-      expect(find.text('已取消'), findsOneWidget);
+      expect(downloadQueueController.items.single.status, DownloadItemStatus.cancelled);
     });
 
     testWidgets(
@@ -715,6 +749,8 @@ void main() {
             createOpdsClient: () => opdsClient,
           ),
           importService: importService,
+          downloadQueueController:
+              DownloadQueueController(onDuplicateConfirm: (_) async => false),
         ),
       ));
       await tester.pumpAndSettle();
@@ -757,7 +793,22 @@ void main() {
         ]);
         final fingerprintComputer = FakeFingerprintComputer()..nextFingerprint = 'dup-fingerprint';
         final importService = FakeBookImportService();
+        // 視覺還原（Visual Accuracy Mode）：下載後重複（Layer 2）確認彈窗改由
+        // 共用的 DownloadQueueController.onDuplicateConfirm 觸發，比照
+        // main.dart 的 navigatorKey 橋接模式呼叫 showCloudDuplicateConfirmDialog
+        // ——與 RemoteCatalogScreen 自己原本的 Layer 1
+        // `_showDuplicateConfirmDialog`（key 為 remote_catalog_duplicate_dialog*）
+        // 是不同的兩層檢查、不同的彈窗 key（cloud_duplicate_dialog*）。
+        final navigatorKey = GlobalKey<NavigatorState>();
+        final downloadQueueController = DownloadQueueController(
+          onDuplicateConfirm: (message) async {
+            final context = navigatorKey.currentContext;
+            if (context == null) return false;
+            return showCloudDuplicateConfirmDialog(context, message);
+          },
+        );
         await tester.pumpWidget(MaterialApp(
+          navigatorKey: navigatorKey,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: RemoteCatalogScreen(
             server: server,
@@ -769,6 +820,7 @@ void main() {
               createOpdsClient: () => opdsClient,
             ),
             importService: importService,
+            downloadQueueController: downloadQueueController,
           ),
         ));
         await tester.pumpAndSettle();
@@ -781,11 +833,11 @@ void main() {
         for (var i = 0; i < 30; i++) {
           await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
           await tester.pump();
-          if (find.byKey(const Key('remote_catalog_duplicate_dialog')).evaluate().isNotEmpty) break;
+          if (find.byKey(const Key('cloud_duplicate_dialog')).evaluate().isNotEmpty) break;
         }
 
-        expect(find.byKey(const Key('remote_catalog_duplicate_dialog')), findsOneWidget);
-        await tester.tap(find.byKey(const Key('remote_catalog_duplicate_dialog_cancel')));
+        expect(find.byKey(const Key('cloud_duplicate_dialog')), findsOneWidget);
+        await tester.tap(find.byKey(const Key('cloud_duplicate_dialog_cancel')));
         await tester.pump();
 
         for (var i = 0; i < 30; i++) {
@@ -794,7 +846,10 @@ void main() {
         }
         await tester.pumpAndSettle();
 
-        expect(find.text('重複已略過（未匯入）'), findsOneWidget);
+        expect(
+          downloadQueueController.items.single.status,
+          DownloadItemStatus.duplicateSkipped,
+        );
         expect(importService.lastImportCall, isNull);
         expect(
           Directory(p.join(tempRoot.path, 'remote_download_temp')).listSync(),
@@ -811,7 +866,16 @@ void main() {
         ]);
         final fingerprintComputer = FakeFingerprintComputer()..nextFingerprint = 'dup-fingerprint';
         final importService = FakeBookImportService();
+        final navigatorKey = GlobalKey<NavigatorState>();
+        final downloadQueueController = DownloadQueueController(
+          onDuplicateConfirm: (message) async {
+            final context = navigatorKey.currentContext;
+            if (context == null) return false;
+            return showCloudDuplicateConfirmDialog(context, message);
+          },
+        );
         await tester.pumpWidget(MaterialApp(
+          navigatorKey: navigatorKey,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: RemoteCatalogScreen(
             server: server,
@@ -823,6 +887,7 @@ void main() {
               createOpdsClient: () => opdsClient,
             ),
             importService: importService,
+            downloadQueueController: downloadQueueController,
           ),
         ));
         await tester.pumpAndSettle();
@@ -835,10 +900,10 @@ void main() {
         for (var i = 0; i < 30; i++) {
           await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
           await tester.pump();
-          if (find.byKey(const Key('remote_catalog_duplicate_dialog')).evaluate().isNotEmpty) break;
+          if (find.byKey(const Key('cloud_duplicate_dialog')).evaluate().isNotEmpty) break;
         }
 
-        await tester.tap(find.byKey(const Key('remote_catalog_duplicate_dialog_confirm')));
+        await tester.tap(find.byKey(const Key('cloud_duplicate_dialog_confirm')));
         await tester.pump();
 
         for (var i = 0; i < 30; i++) {
@@ -847,7 +912,7 @@ void main() {
         }
         await tester.pumpAndSettle();
 
-        expect(find.text('完成'), findsWidgets);
+        expect(downloadQueueController.items.single.status, DownloadItemStatus.done);
         expect(importService.lastImportCall, isNotNull);
       });
 
@@ -857,7 +922,16 @@ void main() {
         });
         final importService = FakeBookImportService();
         final fingerprintComputer = FakeFingerprintComputer();
+        final navigatorKey = GlobalKey<NavigatorState>();
+        final downloadQueueController = DownloadQueueController(
+          onDuplicateConfirm: (message) async {
+            final context = navigatorKey.currentContext;
+            if (context == null) return false;
+            return showCloudDuplicateConfirmDialog(context, message);
+          },
+        );
         await tester.pumpWidget(MaterialApp(
+          navigatorKey: navigatorKey,
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
           home: RemoteCatalogScreen(
             server: server,
@@ -869,6 +943,7 @@ void main() {
               createOpdsClient: () => opdsClient,
             ),
             importService: importService,
+            downloadQueueController: downloadQueueController,
           ),
         ));
         await tester.pumpAndSettle();
@@ -884,8 +959,8 @@ void main() {
         }
         await tester.pumpAndSettle();
 
-        expect(find.byKey(const Key('remote_catalog_duplicate_dialog')), findsNothing);
-        expect(find.text('完成'), findsWidgets);
+        expect(find.byKey(const Key('cloud_duplicate_dialog')), findsNothing);
+        expect(downloadQueueController.items.single.status, DownloadItemStatus.done);
         expect(importService.lastImportCall, isNotNull);
         // 〔審查 review-issue-3.md Minor 採納〕驗證指紋計算確實在下載成功
         // 之後才被呼叫恰好一次，且傳入的是下載完成的暫存檔路徑。

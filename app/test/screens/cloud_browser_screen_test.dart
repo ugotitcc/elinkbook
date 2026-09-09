@@ -5,7 +5,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
-import 'package:elinkbook/cloud_import/cloud_download_queue_controller.dart';
+import 'package:elinkbook/downloads/download_queue_controller.dart';
 import 'package:elinkbook/cloud_import/cloud_storage_client.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/library/widgets/book_cover.dart';
@@ -96,7 +96,7 @@ void main() {
     FakeFingerprintComputer? fingerprintComputer,
     Future<bool> Function()? isMobileDataConnection,
     String? folderId,
-    CloudDownloadQueueController? downloadQueueController,
+    DownloadQueueController? downloadQueueController,
   }) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -111,7 +111,7 @@ void main() {
           isMobileDataConnection: isMobileDataConnection,
           downloadQueueController:
               downloadQueueController ??
-              CloudDownloadQueueController(
+              DownloadQueueController(
                 onDuplicateConfirm: (_) async => false,
               ),
           folderId: folderId,

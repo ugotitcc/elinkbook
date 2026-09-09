@@ -1,17 +1,18 @@
 import 'package:flutter/material.dart';
 
-import '../../cloud_import/cloud_download_queue_controller.dart';
+import '../../downloads/download_queue_controller.dart';
 import 'eb_field_card.dart';
 import 'eb_section_header.dart';
 
 /// 「來源」畫面常駐的下載佇列區塊（視覺還原，`docs/research/uiux/reference/
-/// 來源.png`）：訂閱 [CloudDownloadQueueController]，逐項顯示確定式進度條
-/// （`DESIGN.md` §16.2「確定式進度條取代連續旋轉的 ProgressIndicator」），
-/// 沒有任何項目時整個區塊（含分區標題）不渲染。
-class CloudDownloadQueuePanel extends StatelessWidget {
-  final CloudDownloadQueueController controller;
+/// 來源.png`）：訂閱 [DownloadQueueController]（不分下載來源，雲端硬碟／
+/// OPDS 遠端書庫共用同一份清單），逐項顯示確定式進度條（`DESIGN.md` §16.2
+/// 「確定式進度條取代連續旋轉的 ProgressIndicator」），沒有任何項目時
+/// 整個區塊（含分區標題）不渲染。
+class DownloadQueuePanel extends StatelessWidget {
+  final DownloadQueueController controller;
 
-  const CloudDownloadQueuePanel({super.key, required this.controller});
+  const DownloadQueuePanel({super.key, required this.controller});
 
   @override
   Widget build(BuildContext context) {
@@ -37,8 +38,8 @@ class CloudDownloadQueuePanel extends StatelessWidget {
 }
 
 class _QueueItemRow extends StatelessWidget {
-  final CloudDownloadQueueItem item;
-  final CloudDownloadQueueController controller;
+  final DownloadQueueItem item;
+  final DownloadQueueController controller;
 
   const _QueueItemRow({required this.item, required this.controller});
 
@@ -46,9 +47,9 @@ class _QueueItemRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final inProgress =
-        item.status == CloudDownloadItemStatus.pending ||
-        item.status == CloudDownloadItemStatus.downloading ||
-        item.status == CloudDownloadItemStatus.checkingDuplicate;
+        item.status == DownloadItemStatus.pending ||
+        item.status == DownloadItemStatus.downloading ||
+        item.status == DownloadItemStatus.checkingDuplicate;
 
     return Row(
       children: [
@@ -110,68 +111,68 @@ class _QueueItemRow extends StatelessWidget {
 
   Widget _trailingAction(BuildContext context) {
     switch (item.status) {
-      case CloudDownloadItemStatus.downloading:
+      case DownloadItemStatus.downloading:
         return IconButton(
           key: Key('sources_download_queue_cancel_${item.id}'),
           icon: const Icon(Icons.close),
           tooltip: '取消',
           onPressed: () => controller.cancel(item.id),
         );
-      case CloudDownloadItemStatus.failed:
-      case CloudDownloadItemStatus.cancelled:
+      case DownloadItemStatus.failed:
+      case DownloadItemStatus.cancelled:
         return IconButton(
           key: Key('sources_download_queue_retry_${item.id}'),
           icon: const Icon(Icons.refresh),
           tooltip: '重試',
           onPressed: () => controller.retry(item.id),
         );
-      case CloudDownloadItemStatus.done:
-      case CloudDownloadItemStatus.duplicateSkipped:
+      case DownloadItemStatus.done:
+      case DownloadItemStatus.duplicateSkipped:
         return IconButton(
           key: Key('sources_download_queue_dismiss_${item.id}'),
           icon: const Icon(Icons.close),
           tooltip: '從清單移除',
           onPressed: () => controller.dismiss(item.id),
         );
-      case CloudDownloadItemStatus.pending:
-      case CloudDownloadItemStatus.checkingDuplicate:
+      case DownloadItemStatus.pending:
+      case DownloadItemStatus.checkingDuplicate:
         return const SizedBox(width: 48);
     }
   }
 
-  IconData _statusIcon(CloudDownloadItemStatus status) {
+  IconData _statusIcon(DownloadItemStatus status) {
     switch (status) {
-      case CloudDownloadItemStatus.done:
+      case DownloadItemStatus.done:
         return Icons.check_circle;
-      case CloudDownloadItemStatus.duplicateSkipped:
+      case DownloadItemStatus.duplicateSkipped:
         return Icons.block;
-      case CloudDownloadItemStatus.failed:
+      case DownloadItemStatus.failed:
         return Icons.error_outline;
-      case CloudDownloadItemStatus.cancelled:
+      case DownloadItemStatus.cancelled:
         return Icons.cancel_outlined;
-      case CloudDownloadItemStatus.pending:
-      case CloudDownloadItemStatus.downloading:
-      case CloudDownloadItemStatus.checkingDuplicate:
+      case DownloadItemStatus.pending:
+      case DownloadItemStatus.downloading:
+      case DownloadItemStatus.checkingDuplicate:
         return Icons.hourglass_empty;
     }
   }
 
-  String _statusLabel(CloudDownloadQueueItem item) {
+  String _statusLabel(DownloadQueueItem item) {
     switch (item.status) {
-      case CloudDownloadItemStatus.pending:
+      case DownloadItemStatus.pending:
         return '待機';
-      case CloudDownloadItemStatus.downloading:
+      case DownloadItemStatus.downloading:
         final progress = item.progress;
         return progress == null ? '下載中' : '${(progress * 100).round()}%';
-      case CloudDownloadItemStatus.checkingDuplicate:
+      case DownloadItemStatus.checkingDuplicate:
         return '比對中';
-      case CloudDownloadItemStatus.done:
+      case DownloadItemStatus.done:
         return '完成';
-      case CloudDownloadItemStatus.duplicateSkipped:
+      case DownloadItemStatus.duplicateSkipped:
         return '重複已略過';
-      case CloudDownloadItemStatus.failed:
+      case DownloadItemStatus.failed:
         return '失敗';
-      case CloudDownloadItemStatus.cancelled:
+      case DownloadItemStatus.cancelled:
         return '已取消';
     }
   }

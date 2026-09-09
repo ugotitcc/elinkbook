@@ -2,8 +2,9 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
-import '../cloud_import/cloud_download_queue_controller.dart';
+import '../cloud_import/cloud_download_job.dart';
 import '../cloud_import/cloud_storage_client.dart';
+import '../downloads/download_queue_controller.dart';
 import '../library/book_content_fingerprint.dart';
 import '../library/book_import_service.dart';
 import '../library/library_repository.dart';
@@ -23,7 +24,7 @@ const _mobileDataWarningThresholdBytes = 20 * 1024 * 1024;
 /// 既有先例，用一個寫死 provider 名稱的類別瀏覽另一個 provider 是誤導性
 /// 命名，故重新命名）：逐層資料夾導覽（不做搜尋）、封面縮圖（含載入佔位符
 /// 與記憶體快取）、單選/多選勾選檔案、可選分類，確認匯入後交給
-/// [CloudDownloadQueueController] 加入常駐下載佇列（視覺還原 Visual
+/// [DownloadQueueController] 加入常駐下載佇列（視覺還原 Visual
 /// Accuracy Mode 改為背景下載＋「來源」畫面常駐顯示，取代原本
 /// `CloudDownloadQueueDialog` 的模態對話框設計）。畫面本身只依賴
 /// [CloudStorageClient] 介面，注入 `GoogleDriveStorageClient` 或
@@ -46,15 +47,16 @@ class CloudBrowserScreen extends StatefulWidget {
   /// 呼叫端必須明確傳入對應的 provider。
   final BookSource source;
 
-  /// 【Epic 29 Issue 5】貫穿轉發給 [CloudDownloadQueueController] 做
-  /// Layer 2 下載後指紋比對；本畫面自己的 Layer 1（選檔前置）只需要
+  /// 【Epic 29 Issue 5】貫穿轉發給每筆 [CloudDownloadJob] 做 Layer 2
+  /// 下載後指紋比對；本畫面自己的 Layer 1（選檔前置）只需要
   /// [libraryRepository]，不需要指紋計算，故不在這裡使用。
   final ComputeRemoteFingerprint computeFingerprint;
 
-  /// 視覺還原（Visual Accuracy Mode）：確認下載後改為呼叫
-  /// [CloudDownloadQueueController.enqueue] 加入常駐佇列（顯示於「來源」
-  /// 畫面），取代原本本畫面自己 `showDialog()` 跳出模態下載對話框的做法。
-  final CloudDownloadQueueController downloadQueueController;
+  /// 視覺還原（Visual Accuracy Mode）：確認下載後改為把每個檔案包成
+  /// [CloudDownloadJob] 呼叫 [DownloadQueueController.enqueueJobs] 加入
+  /// 常駐佇列（顯示於「來源」畫面），取代原本本畫面自己 `showDialog()`
+  /// 跳出模態下載對話框的做法。
+  final DownloadQueueController downloadQueueController;
 
   /// 【Epic 29 Issue 6】偵測目前是否為行動數據連線，與
   /// `library_screen.dart._handleRedownload()` 共用同一個 provider 無關的
@@ -230,15 +232,18 @@ class _CloudBrowserScreenState extends State<CloudBrowserScreen> {
     final folderName = _selectedGroupName == BookGroup.uncategorized
         ? null
         : _selectedGroupName;
-    widget.downloadQueueController.enqueue(
-      entries: selected,
-      client: widget.client,
-      importService: widget.importService,
-      libraryRepository: widget.libraryRepository,
-      computeFingerprint: widget.computeFingerprint,
-      source: widget.source,
-      folderName: folderName,
-    );
+    widget.downloadQueueController.enqueueJobs([
+      for (final entry in selected)
+        CloudDownloadJob(
+          entry: entry,
+          client: widget.client,
+          importService: widget.importService,
+          libraryRepository: widget.libraryRepository,
+          computeFingerprintFn: widget.computeFingerprint,
+          source: widget.source,
+          folderName: folderName,
+        ),
+    ]);
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(

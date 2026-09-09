@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../cloud_import/cloud_download_queue_controller.dart';
 import '../cloud_import/cloud_storage_client.dart';
+import '../downloads/download_queue_controller.dart';
 import '../library/book_content_fingerprint.dart';
 import '../library/book_import_service.dart';
 import '../library/library_repository.dart';
@@ -11,7 +11,7 @@ import 'cloud_browser_screen.dart';
 import 'library_screen_dependencies.dart';
 import 'remote_server_list_screen.dart';
 import 'support/book_import_picker_helper.dart';
-import 'widgets/cloud_download_queue_panel.dart';
+import 'widgets/download_queue_panel.dart';
 import 'widgets/eb_field_card.dart';
 import 'widgets/eb_section_header.dart';
 
@@ -29,15 +29,16 @@ class SourcesHomeScreen extends StatelessWidget {
   final VoidCallback? onNavigateToLibrary;
   final VoidCallback? onNavigateToSettings;
 
-  /// 視覺還原（Visual Accuracy Mode）：Google Drive／OneDrive 下載改為
-  /// 加入這個常駐佇列（見 `CloudDownloadQueuePanel`），取代原本
-  /// `CloudBrowserScreen` 用 `showDialog()` 跳出的模態下載對話框。`null`
-  /// 時（例如尚未組裝完整雲端匯入相依）本畫面不渲染下載佇列區塊，`_openXxxBrowser`
-  /// 也不會把控制器傳給 `CloudBrowserScreen`——`computeFingerprint` 為
-  /// `null` 時本來就已經停用 Google Drive／OneDrive 入口本身（見下方
-  /// `googleDriveEnabled`/`oneDriveEnabled`），這裡維持同一個「有齊全相依
-  /// 才啟用」的既有慣例。
-  final CloudDownloadQueueController? downloadQueueController;
+  /// 視覺還原（Visual Accuracy Mode）：Google Drive／OneDrive／OPDS 遠端
+  /// 書庫下載一律改為加入這個常駐佇列（見 `DownloadQueuePanel`），取代
+  /// 原本 `CloudBrowserScreen`／`RemoteCatalogScreen` 各自用
+  /// `showDialog()` 跳出的模態下載對話框——三種來源共用同一份清單。`null`
+  /// 時（例如尚未組裝完整匯入相依）本畫面不渲染下載佇列區塊，
+  /// `_openXxxBrowser`／`_openRemoteLibrary` 也不會把控制器往下傳
+  /// ——`computeFingerprint` 為 `null` 時本來就已經停用這三個入口本身
+  /// （見下方 `googleDriveEnabled`/`oneDriveEnabled`/`remoteEnabled`），
+  /// 這裡維持同一個「有齊全相依才啟用」的既有慣例。
+  final DownloadQueueController? downloadQueueController;
 
   const SourcesHomeScreen({
     super.key,
@@ -124,6 +125,7 @@ class SourcesHomeScreen extends StatelessWidget {
           ),
           importService: importService,
           isEinkMode: isEinkMode,
+          downloadQueueController: downloadQueueController!,
         ),
       ),
     );
@@ -145,7 +147,8 @@ class SourcesHomeScreen extends StatelessWidget {
         remoteLibraryDependencies.remoteServerRepository != null &&
         remoteLibraryDependencies.createOpdsClient != null &&
         remoteLibraryDependencies.thumbnailCache != null &&
-        computeFingerprint != null;
+        computeFingerprint != null &&
+        downloadQueueController != null;
     return Scaffold(
       appBar: AppBar(
         title: const Text('來源'),
@@ -231,7 +234,7 @@ class SourcesHomeScreen extends StatelessWidget {
             ),
           ),
           if (downloadQueueController != null)
-            CloudDownloadQueuePanel(controller: downloadQueueController!),
+            DownloadQueuePanel(controller: downloadQueueController!),
         ],
       ),
     );

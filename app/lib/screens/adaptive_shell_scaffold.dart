@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../cloud_import/cloud_download_queue_controller.dart';
+import '../downloads/download_queue_controller.dart';
 import '../library/book_content_fingerprint.dart';
 import '../library/book_import_service.dart';
 import '../library/library_repository.dart';
@@ -39,7 +39,7 @@ class AdaptiveShellScaffold extends StatefulWidget {
   final LibraryRemoteLibraryDependencies remoteLibraryDependencies;
   final ComputeRemoteFingerprint? computeFingerprint;
   final Future<bool> Function()? isMobileDataConnection;
-  final CloudDownloadQueueController? downloadQueueController;
+  final DownloadQueueController? downloadQueueController;
   final LibraryThemeDependencies themeDependencies;
 
   const AdaptiveShellScaffold({

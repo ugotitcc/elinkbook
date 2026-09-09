@@ -1,16 +1,14 @@
-import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
-import '../library/book_content_fingerprint.dart';
+import '../downloads/download_queue_controller.dart';
 import '../library/book_import_service.dart';
 import '../library/library_repository.dart';
-import '../library/models/library_enums.dart';
 import '../remote/remote_catalog_dependencies.dart';
 import '../remote/opds_client.dart';
 import '../remote/opds_types.dart';
-import '../remote/remote_book_downloader.dart';
+import '../remote/remote_download_job.dart';
 import '../remote/remote_server_profile.dart';
 import '../remote/remote_server_repository.dart';
 import '../library/widgets/book_cover.dart';
@@ -54,6 +52,12 @@ class RemoteCatalogScreen extends StatefulWidget {
   /// 既有 `LibraryScreen.isEinkMode` 的預設值與非空語意。
   final bool isEinkMode;
 
+  /// 視覺還原（Visual Accuracy Mode）：確認下載後改為把每個檔案包成
+  /// [RemoteDownloadJob] 加入這個常駐佇列（顯示於「來源」畫面），取代
+  /// 原本本畫面自己 `showDialog()` 跳出模態下載對話框的做法，與
+  /// `CloudBrowserScreen` 共用同一份佇列。
+  final DownloadQueueController downloadQueueController;
+
   const RemoteCatalogScreen({
     super.key,
     required this.server,
@@ -61,6 +65,7 @@ class RemoteCatalogScreen extends StatefulWidget {
     required this.libraryRepository,
     required this.dependencies,
     required this.importService,
+    required this.downloadQueueController,
     this.feedUrl,
     this.title,
     this.isEinkMode = false,
@@ -206,6 +211,7 @@ class _RemoteCatalogScreenState extends State<RemoteCatalogScreen> {
         libraryRepository: widget.libraryRepository,
         dependencies: widget.dependencies,
         importService: widget.importService,
+        downloadQueueController: widget.downloadQueueController,
         feedUrl: link.href,
         title: link.title,
         isEinkMode: widget.isEinkMode,
@@ -252,7 +258,7 @@ class _RemoteCatalogScreenState extends State<RemoteCatalogScreen> {
         _entries.where((e) => _selectedRemoteBookIds.contains(e.remoteBookId)).toList();
     if (selectedEntries.isEmpty) return;
 
-    final queue = <_DownloadQueueItem>[];
+    final jobs = <RemoteDownloadJob>[];
     for (final entry in selectedEntries) {
       final supported = entry.acquisitions.where((a) => a.format != null).toList();
       OpdsAcquisition? chosen;
@@ -263,25 +269,27 @@ class _RemoteCatalogScreenState extends State<RemoteCatalogScreen> {
         chosen = await FormatSelectionDialog.show(context, entry);
       }
       if (chosen == null) continue;
-      queue.add(_DownloadQueueItem(entry: entry, acquisition: chosen));
-    }
-    if (queue.isEmpty) return;
-
-    if (!mounted) return;
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => _DownloadQueueDialog(
-        queue: queue,
+      jobs.add(RemoteDownloadJob(
+        entry: entry,
+        acquisition: chosen,
         client: _client,
         server: widget.server,
         password: _password,
         importService: widget.importService,
         libraryRepository: widget.libraryRepository,
-        computeFingerprint: widget.dependencies.computeFingerprint,
+        computeFingerprintFn: widget.dependencies.computeFingerprint,
+      ));
+    }
+    if (jobs.isEmpty) return;
+
+    if (!mounted) return;
+    widget.downloadQueueController.enqueueJobs(jobs);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        key: const Key('remote_catalog_queued_snackbar'),
+        content: Text('已加入下載佇列（${jobs.length} 個檔案），可至「來源」畫面查看進度'),
       ),
     );
-    if (!mounted) return;
     setState(() => _selectedRemoteBookIds.clear());
   }
 
@@ -465,238 +473,6 @@ class _RemoteCatalogScreenState extends State<RemoteCatalogScreen> {
           title: entry.title,
         );
       },
-    );
-  }
-}
-
-class _DownloadQueueItem {
-  final OpdsEntry entry;
-  final OpdsAcquisition acquisition;
-
-  _DownloadQueueItem({required this.entry, required this.acquisition});
-}
-
-enum _DownloadItemStatus { pending, downloading, checkingDuplicate, done, duplicateSkipped, failed, cancelled }
-
-/// 序列下載佇列對話框（epic-30-calibre-remote-library Issue 2，
-/// spec.md「批次下載為序列執行，非平行」）：一本下完才下一本，逐項顯示
-/// 等待中/下載中/完成/失敗/已取消狀態；下載失敗可針對單一檔案手動重試
-/// （不自動重試）；全部處理完（無論成功/失敗）後，把所有成功下載的檔案
-/// 一次呼叫 [BookImportService.importFiles] 匯入圖書庫；之後對個別失敗
-/// 項目按重試、成功時額外呼叫一次 `importFiles()` 只匯入那一筆。
-class _DownloadQueueDialog extends StatefulWidget {
-  final List<_DownloadQueueItem> queue;
-  final OpdsClient client;
-  final RemoteServerProfile server;
-  final String? password;
-  final BookImportService importService;
-  final LibraryRepository libraryRepository;
-  final ComputeRemoteFingerprint computeFingerprint;
-
-  // 私有 widget、唯一呼叫端（_startDownload）不需要指定 key，故不接受
-  // `key` 參數（比照 `flutter analyze` 對未使用的可選參數的既有規範）。
-  const _DownloadQueueDialog({
-    required this.queue,
-    required this.client,
-    required this.server,
-    required this.password,
-    required this.importService,
-    required this.libraryRepository,
-    required this.computeFingerprint,
-  });
-
-  @override
-  State<_DownloadQueueDialog> createState() => _DownloadQueueDialogState();
-}
-
-class _DownloadQueueDialogState extends State<_DownloadQueueDialog> {
-  late List<_DownloadItemStatus> _statuses;
-  late List<String?> _permanentPaths;
-  late List<OpdsDownloadCancellationToken?> _tokens;
-  bool _allSettled = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _statuses = List.filled(widget.queue.length, _DownloadItemStatus.pending);
-    _permanentPaths = List.filled(widget.queue.length, null);
-    _tokens = List.filled(widget.queue.length, null);
-    _runQueue();
-  }
-
-  Future<void> _runQueue() async {
-    for (var i = 0; i < widget.queue.length; i++) {
-      await _downloadOne(i);
-    }
-    await _importSuccessful();
-    if (!mounted) return;
-    setState(() => _allSettled = true);
-  }
-
-  Future<void> _downloadOne(int index) async {
-    if (!mounted) return;
-    setState(() => _statuses[index] = _DownloadItemStatus.downloading);
-    final item = widget.queue[index];
-    final token = OpdsDownloadCancellationToken();
-    _tokens[index] = token;
-    // 〔審查 review-plan-issue-2.md Finding 3 採納，epic-30 Issue 6 沿用〕
-    // 宣告在 try 外，讓 catch 區塊也能存取——指紋比對／確認對話框這段窗口
-    // 發生例外時，`promoteToPermanent()` 根本還沒被呼叫，仍需要這裡自行
-    // 清理暫存檔（`promoteToPermanent()` 只保證它自己那一步的例外會清理）。
-    String? tempPath;
-    try {
-      tempPath = await downloadToTempFile(
-        client: widget.client,
-        server: widget.server,
-        acquisition: item.acquisition,
-        format: item.acquisition.format!,
-        password: widget.password,
-        cancellationToken: token,
-      );
-
-      if (!mounted) return;
-      setState(() => _statuses[index] = _DownloadItemStatus.checkingDuplicate);
-      final fingerprint = await widget.computeFingerprint(tempPath, item.acquisition.format!);
-      final existingByFingerprint =
-          await widget.libraryRepository.findByContentFingerprint(fingerprint);
-      if (existingByFingerprint != null) {
-        if (!mounted) return;
-        final proceed = await _showDuplicateConfirmDialog(
-          context,
-          '偵測到「${item.entry.title}」與本機已有的一本書內容相同，仍要建立新的一份嗎？',
-        );
-        if (!proceed) {
-          final leftover = File(tempPath);
-          if (await leftover.exists()) await leftover.delete();
-          if (!mounted) return;
-          setState(() => _statuses[index] = _DownloadItemStatus.duplicateSkipped);
-          return;
-        }
-      }
-
-      final permanentPath = await promoteToPermanent(tempPath);
-
-      if (!mounted) return;
-      setState(() {
-        _permanentPaths[index] = permanentPath;
-        _statuses[index] = _DownloadItemStatus.done;
-      });
-    } catch (_) {
-      if (tempPath != null) {
-        final leftover = File(tempPath);
-        if (await leftover.exists()) await leftover.delete();
-      }
-      if (!mounted) return;
-      setState(() {
-        _statuses[index] =
-            token.isCancelled ? _DownloadItemStatus.cancelled : _DownloadItemStatus.failed;
-      });
-    }
-  }
-
-  Future<void> _importSuccessful() async {
-    final paths = <String>[];
-    final remoteBookIds = <String, String>{};
-    final remoteDownloadUrls = <String, String>{};
-    for (var i = 0; i < widget.queue.length; i++) {
-      final path = _permanentPaths[i];
-      if (path == null) continue;
-      paths.add(path);
-      remoteBookIds[path] = widget.queue[i].entry.remoteBookId;
-      remoteDownloadUrls[path] = widget.queue[i].acquisition.href;
-    }
-    if (paths.isEmpty) return;
-    await widget.importService.importFiles(
-      paths,
-      source: BookSource.calibreOpds,
-      remoteServerId: widget.server.id,
-      remoteBookIds: remoteBookIds,
-      remoteDownloadUrls: remoteDownloadUrls,
-    );
-  }
-
-  Future<void> _retry(int index) async {
-    await _downloadOne(index);
-    if (_statuses[index] != _DownloadItemStatus.done) return;
-    final path = _permanentPaths[index]!;
-    final item = widget.queue[index];
-    await widget.importService.importFiles(
-      [path],
-      source: BookSource.calibreOpds,
-      remoteServerId: widget.server.id,
-      remoteBookIds: {path: item.entry.remoteBookId},
-      remoteDownloadUrls: {path: item.acquisition.href},
-    );
-  }
-
-  void _cancel(int index) {
-    _tokens[index]?.cancel();
-  }
-
-  String _statusLabel(_DownloadItemStatus status) {
-    switch (status) {
-      case _DownloadItemStatus.pending:
-        return '等待中';
-      case _DownloadItemStatus.downloading:
-        return '下載中';
-      case _DownloadItemStatus.checkingDuplicate:
-        return '比對重複中';
-      case _DownloadItemStatus.done:
-        return '完成';
-      case _DownloadItemStatus.duplicateSkipped:
-        return '重複已略過（未匯入）';
-      case _DownloadItemStatus.failed:
-        return '失敗';
-      case _DownloadItemStatus.cancelled:
-        return '已取消';
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      key: const Key('download_queue_dialog'),
-      title: const Text('下載進度'),
-      content: SizedBox(
-        width: double.maxFinite,
-        child: ListView.builder(
-          shrinkWrap: true,
-          itemCount: widget.queue.length,
-          itemBuilder: (context, index) {
-            final item = widget.queue[index];
-            final status = _statuses[index];
-            final canRetry =
-                status == _DownloadItemStatus.failed || status == _DownloadItemStatus.cancelled;
-            return ListTile(
-              key: Key('download_queue_item_${item.entry.remoteBookId}'),
-              title: Text(item.entry.title),
-              subtitle: Text(_statusLabel(status)),
-              trailing: status == _DownloadItemStatus.downloading
-                  ? IconButton(
-                      key: Key('download_queue_cancel_${item.entry.remoteBookId}'),
-                      icon: const Icon(Icons.close),
-                      tooltip: '取消',
-                      onPressed: () => _cancel(index),
-                    )
-                  : canRetry
-                      ? IconButton(
-                          key: Key('download_queue_retry_${item.entry.remoteBookId}'),
-                          icon: const Icon(Icons.refresh),
-                          tooltip: '重試',
-                          onPressed: () => _retry(index),
-                        )
-                      : null,
-            );
-          },
-        ),
-      ),
-      actions: [
-        TextButton(
-          key: const Key('download_queue_done_button'),
-          onPressed: _allSettled ? () => Navigator.of(context).pop() : null,
-          child: const Text('完成'),
-        ),
-      ],
     );
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:elinkbook/downloads/download_queue_controller.dart';
 import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/remote/remote_server_profile.dart';
@@ -54,6 +55,8 @@ void main() {
           createOpdsClient: () => FakeOpdsClient(),
         ),
         importService: FakeBookImportService(),
+        downloadQueueController:
+            DownloadQueueController(onDuplicateConfirm: (_) async => false),
       ),
     ));
     await tester.pumpAndSettle();

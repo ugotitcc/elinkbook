@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../downloads/download_queue_controller.dart';
 import '../library/book_import_service.dart';
 import '../library/library_repository.dart';
 import '../remote/remote_catalog_dependencies.dart';
@@ -22,12 +23,19 @@ class RemoteServerListScreen extends StatefulWidget {
   final BookImportService importService;
   final bool isEinkMode;
 
+  /// 視覺還原（Visual Accuracy Mode）：確認下載後改為加入這個常駐佇列
+  /// （顯示於「來源」畫面），取代原本 `RemoteCatalogScreen` 自己
+  /// `showDialog()` 跳出模態下載對話框的做法，與 `CloudBrowserScreen`
+  /// 共用同一份佇列。
+  final DownloadQueueController downloadQueueController;
+
   const RemoteServerListScreen({
     super.key,
     required this.repository,
     required this.libraryRepository,
     required this.dependencies,
     required this.importService,
+    required this.downloadQueueController,
     this.isEinkMode = false,
   });
 
@@ -89,6 +97,7 @@ class _RemoteServerListScreenState extends State<RemoteServerListScreen> {
         dependencies: widget.dependencies,
         importService: widget.importService,
         isEinkMode: widget.isEinkMode,
+        downloadQueueController: widget.downloadQueueController,
       ),
     ));
   }

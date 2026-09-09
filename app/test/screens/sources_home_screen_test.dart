@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:elinkbook/cloud_import/cloud_download_queue_controller.dart';
+import 'package:elinkbook/downloads/download_queue_controller.dart';
+import 'package:elinkbook/cloud_import/cloud_download_job.dart';
 import 'package:elinkbook/cloud_import/cloud_storage_client.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/screens/cloud_browser_screen.dart';
@@ -134,7 +135,7 @@ void main() {
             googleDriveStorageClient: FakeCloudStorageClient(),
           ),
           computeFingerprint: fingerprintComputer.call,
-          downloadQueueController: CloudDownloadQueueController(
+          downloadQueueController: DownloadQueueController(
             onDuplicateConfirm: (_) async => false,
           ),
         ),
@@ -159,7 +160,7 @@ void main() {
             oneDriveStorageClient: FakeCloudStorageClient(),
           ),
           computeFingerprint: fingerprintComputer.call,
-          downloadQueueController: CloudDownloadQueueController(
+          downloadQueueController: DownloadQueueController(
             onDuplicateConfirm: (_) async => false,
           ),
         ),
@@ -185,6 +186,9 @@ void main() {
             thumbnailCache: FakeRemoteThumbnailCache(),
           ),
           computeFingerprint: FakeFingerprintComputer().call,
+          downloadQueueController: DownloadQueueController(
+            onDuplicateConfirm: (_) async => false,
+          ),
         ),
       ),
     );
@@ -247,7 +251,7 @@ void main() {
     });
 
     testWidgets('downloadQueueController 沒有項目時不顯示下載佇列區塊', (tester) async {
-      final controller = CloudDownloadQueueController(
+      final controller = DownloadQueueController(
         onDuplicateConfirm: (_) async => false,
       );
       await tester.pumpWidget(
@@ -266,7 +270,7 @@ void main() {
 
     testWidgets('downloadQueueController 有項目時常駐顯示下載佇列區塊，'
         '狀態變化即時反映（不需要離開/重進畫面）', (tester) async {
-      final controller = CloudDownloadQueueController(
+      final controller = DownloadQueueController(
         onDuplicateConfirm: (_) async => false,
       );
       await tester.pumpWidget(
@@ -284,21 +288,21 @@ void main() {
       final client = FakeCloudStorageClient(
         downloadContents: {'file-1': const []},
       );
-      controller.enqueue(
-        entries: const [
-          CloudFileEntry(
+      controller.enqueueJobs([
+        CloudDownloadJob(
+          entry: const CloudFileEntry(
             id: 'file-1',
             name: '一弦定音.epub',
             isFolder: false,
             format: BookFileFormat.epub,
           ),
-        ],
-        client: client,
-        importService: FakeBookImportService(),
-        libraryRepository: FakeLibraryRepository(),
-        computeFingerprint: FakeFingerprintComputer().call,
-        source: BookSource.googleDrive,
-      );
+          client: client,
+          importService: FakeBookImportService(),
+          libraryRepository: FakeLibraryRepository(),
+          computeFingerprintFn: FakeFingerprintComputer().call,
+          source: BookSource.googleDrive,
+        ),
+      ]);
       await tester.pump();
 
       expect(find.text('下載佇列'), findsOneWidget);

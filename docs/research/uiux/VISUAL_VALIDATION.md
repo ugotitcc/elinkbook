@@ -186,15 +186,54 @@ Source（來源）常駐下載佇列（架構變更，非純視覺）
 ### 移除
 - `CloudDownloadQueueDialog`（`cloud_download_queue_dialog.dart`）與其測試——功能已被 `CloudDownloadQueueController` 取代，不留舊檔案。`showCloudDuplicateConfirmDialog` 移到獨立檔案 `cloud_duplicate_confirm_dialog.dart`（Layer 1／Layer 2 共用）。
 
-### Remaining Differences（刻意不做，超出本次範圍）
-- OPDS／Calibre 遠端書庫（`remote_catalog_screen.dart`）的下載佇列**仍是獨立的模態對話框**，未併入這個常駐佇列——兩者是否該合併成同一份清單，屬於後續決定，本輪只處理您明確點名的 Google Drive／OneDrive 路徑。
+### Remaining Differences（本輪已解決，見下一節「OPDS／Calibre 併入」）
+- ~~OPDS／Calibre 遠端書庫（`remote_catalog_screen.dart`）的下載佇列仍是獨立的模態對話框，未併入這個常駐佇列~~ → 已於下一節併入同一份共用佇列。
 - 佇列項目目前不會自動消失，`done`／`duplicateSkipped` 狀態的項目提供了個別的「×」按鈕手動移除（`dismiss()`），沒有做「清除全部」或自動淡出，Reference 截圖沒有示範這塊，避免自行發明。
 
 ### Components
-PASS（有測試佐證）——驗證依據：
+PASS（有測試佐證，注意：本節列出的 `CloudDownloadQueueController`／`CloudDownloadQueuePanel`／其測試檔已於下一節「OPDS／Calibre 併入」重構為泛化的 `DownloadQueueController`／`DownloadQueuePanel`，檔案已不存在，下方列表保留作為當時的驗證紀錄）：
 - `flutter test test/cloud_import/cloud_download_queue_controller_test.dart`（9 項全過：完成/失敗重試/取消/重複比對三種情境/序列處理/dismiss/notifyListeners）
 - `flutter test test/screens/cloud_browser_screen_test.dart`（24 項全過，改為驗證 Snackbar 而非模態對話框）
 - `flutter test test/screens/sources_home_screen_test.dart`（10 項全過，含 3 則新增：`downloadQueueController` 為 null 時停用雲端入口、佇列空/有項目時區塊顯示與否、項目即時反映狀態變化）
+
+---
+
+## Screen
+
+Source（來源）常駐下載佇列 — OPDS／Calibre 併入（架構泛化，非純視覺）
+
+## Reference
+
+`docs/research/uiux/reference/來源.png`
+
+## Result
+
+延續上一節，將 Cloud（Google Drive／OneDrive）專屬的 `CloudDownloadQueueController` 泛化為與 Provider 無關的共用佇列，讓 OPDS／Calibre 遠端書庫（`remote_catalog_screen.dart`）也改用同一份常駐佇列，不再各自維護一份模態對話框：
+
+### 新增
+- `DownloadQueueController`（`app/lib/downloads/download_queue_controller.dart`）：取代原本 Cloud 專屬的 `CloudDownloadQueueController`，內部改依賴新的抽象介面 `QueuedDownloadJob`（`id`／`name`／`download()`／`cancel()`／`isCancelled`／`computeFingerprint()`／`hasDuplicate()`／`promote()`／`import()`），控制器本身完全不認得 Cloud 或 OPDS 的具體型別，只負責排程（序列、非平行）／進度／重複確認橋接（`onDuplicateConfirm`，比照既有 `navigatorKey` 橋接原則）／失敗重試／取消。
+- `CloudDownloadJob`（`app/lib/cloud_import/cloud_download_job.dart`）與 `RemoteDownloadJob`（`app/lib/remote/remote_download_job.dart`）：`QueuedDownloadJob` 的兩個具體實作，分別包裝原本 `CloudDownloadQueueController`／`RemoteCatalogScreen` 私有 `_DownloadQueueDialog` 各自的下載/指紋/去重/搬移/匯入邏輯。
+- `DownloadQueuePanel`（`app/lib/screens/widgets/download_queue_panel.dart`，取代 `CloudDownloadQueuePanel`）：型別泛化，UI／Key 命名不變。
+
+### 修改
+- `RemoteServerListScreen`／`RemoteCatalogScreen`：新增必要參數 `downloadQueueController`，`_startDownload()` 改為組出 `RemoteDownloadJob` 清單後呼叫 `controller.enqueueJobs(...)`＋顯示提示 Snackbar（`remote_catalog_queued_snackbar`），不再 `showDialog()` 跳出模態視窗。
+- `sources_home_screen.dart`：`_openRemoteLibrary()` 把同一個 `downloadQueueController` 往下傳給 `RemoteServerListScreen`，三種來源（Google Drive／OneDrive／OPDS）共用同一份佇列面板。
+- 下載完成即匯入的時機統一為「逐項完成立即匯入」（比照 Cloud 原本行為）——OPDS 舊版是整批下載完才一次呼叫 `importFiles()`，泛化後佇列沒有固定的「這批結束」邊界，因此統一為逐項匯入，此為刻意的行為調整，非疏漏。
+
+### 移除
+- `CloudDownloadQueueController`（`app/lib/cloud_import/cloud_download_queue_controller.dart`）與其測試、`CloudDownloadQueuePanel`（`app/lib/screens/widgets/cloud_download_queue_panel.dart`）——功能已被泛化版取代。
+- `RemoteCatalogScreen` 私有的 `_DownloadQueueDialog`／`_DownloadQueueDialogState`（含 `download_queue_dialog`／`download_queue_item_*`／`download_queue_done_button` 等 Key）——Layer 1（選檔前置，`remote_catalog_duplicate_dialog*`）維持原樣不動；Layer 2（下載後指紋比對）改由共用 `DownloadQueueController.onDuplicateConfirm` 觸發，實際彈窗改為與 Cloud 共用的 `showCloudDuplicateConfirmDialog`（Key 變為 `cloud_duplicate_dialog*`）。
+
+### Components
+PASS（有測試佐證）——驗證依據：
+- `flutter test test/downloads/download_queue_controller_test.dart`（新增，9 項全過：完成/序列非平行/重複 id 略過/重複比對兩種選擇/失敗/取消/重試/dismiss，以最小假 `QueuedDownloadJob` 實作獨立驗證控制器本身的狀態機，不依賴任何具體 Provider）
+- `flutter test test/screens/remote_catalog_screen_test.dart`（61 項全過，下載/取消/重試/Layer 2 重複比對系列測試改為直接操作注入的 `DownloadQueueController` 實例＋驗證 `controller.items` 狀態，不再依賴已刪除的模態對話框 Key）
+- `flutter test test/screens/remote_server_list_screen_test.dart`（8 項全過）
+- `flutter test test/screens/cloud_browser_screen_test.dart`（24 項全過，型別改名後重跑確認無回歸）
+- `flutter test test/screens/sources_home_screen_test.dart`（16 項全過，含 `CloudDownloadJob` 型別改名後的常駐佇列即時反映測試）
+
+### Remaining Differences
+- 佇列項目仍不會自動消失（承襲上一節決策，`dismiss()` 手動移除，無「清除全部」）。
 
 ---
 

@@ -9,13 +9,13 @@ import 'package:audio_session/audio_session.dart';
 import 'package:pdfrx/pdfrx.dart';
 
 import 'cloud_import/cloud_account_repository.dart';
-import 'cloud_import/cloud_download_queue_controller.dart';
 import 'cloud_import/cloud_storage_client.dart';
 import 'cloud_import/google_drive_oauth_client.dart';
 import 'cloud_import/google_drive_storage_client.dart';
 import 'cloud_import/onedrive_oauth_client.dart';
 import 'cloud_import/onedrive_storage_client.dart';
 import 'cloud_import/secure_storage_cloud_account_repository.dart';
+import 'downloads/download_queue_controller.dart';
 import 'library/book_content_fingerprint.dart';
 import 'library/book_import_service.dart';
 import 'library/book_import_service_impl.dart';
@@ -193,7 +193,7 @@ Future<void> main() async {
   // 不依賴 Flutter widget 樹，需要彈出「重複匯入」確認對話框時透過
   // navigatorKey 取得目前可用的 BuildContext，不綁定觸發下載當下所在的
   // 那個畫面（使用者可能已經離開）。
-  final downloadQueueController = CloudDownloadQueueController(
+  final downloadQueueController = DownloadQueueController(
     onDuplicateConfirm: (message) async {
       final context = navigatorKey.currentContext;
       if (context == null) return false;
@@ -272,7 +272,7 @@ class ElinkBookApp extends StatefulWidget {
   final ComputeRemoteFingerprint? computeFingerprint;
   final RemoteThumbnailCache? thumbnailCache;
   final Future<bool> Function()? isMobileDataConnection;
-  final CloudDownloadQueueController? downloadQueueController;
+  final DownloadQueueController? downloadQueueController;
   final GlobalKey<NavigatorState>? navigatorKey;
   final AppThemePreferences themePreferences;
   final AppTheme initialTheme;
