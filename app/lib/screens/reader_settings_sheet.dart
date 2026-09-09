@@ -11,8 +11,8 @@ import '../reader/layout_preset.dart';
 import '../reader/page_turn_mode.dart';
 import '../reader/screen_orientation_setting.dart';
 import '../reader/writing_mode.dart';
+import 'widgets/eb_option_chip_group.dart';
 import 'widgets/eb_stepper.dart';
-import 'widgets/reader_option_tile.dart';
 
 /// 版面設定 Bottom Sheet（FR-09／FR-10 字型、數值型控制項與三個持久化覆寫
 /// 選擇器），比照 prototype/index.html 第 1379-1520 行設計。
@@ -248,26 +248,26 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                     tabs: [
                       Tab(
                         key: Key('reader_settings_tab_text_content'),
-                        text: '文字內容',
+                        text: '文字',
                       ),
                       Tab(
                         key: Key('reader_settings_tab_boundary'),
-                        text: '邊界首尾',
+                        text: '邊界',
                       ),
                       Tab(
                         key: Key('reader_settings_tab_presentation'),
-                        text: '版面呈現',
+                        text: '呈現',
                       ),
                       Tab(
                         key: Key('reader_settings_tab_preferences'),
-                        text: '設定喜好',
+                        text: '預設集',
                       ),
                     ],
                   ),
                   Expanded(
                     child: TabBarView(
                       // 【不可逆的技術決策】必須為 NeverScrollableScrollPhysics，
-                      // 只能點擊 TabBar 切換——「文字內容」／「邊界首尾」頁籤內
+                      // 只能點擊 TabBar 切換——「文字」／「邊界」頁籤內
                       // 各有數個橫向拖曳型 Slider，TabBarView 底層 PageView 的
                       // 預設水平滑動手勢會與這些 Slider 搶手勢競技場，導致調整
                       // 滑桿時意外切換頁籤。**注意**：這與被借鏡的既有先例
@@ -294,8 +294,8 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     );
   }
 
-  /// 【不可逆的技術決策】以下 4 個 `_buildXxxTab()` 方法（文字內容／邊界首尾／
-  /// 版面呈現／設定喜好）僅是本 State 的 `build()` 展示分支，一律不得抽成獨立
+  /// 【不可逆的技術決策】以下 4 個 `_buildXxxTab()` 方法（文字／邊界／
+  /// 呈現／預設集）僅是本 State 的 `build()` 展示分支，一律不得抽成獨立
   /// `StatefulWidget`。Issue 4 新增的 5 個「是否已覆寫」旗標（`_fontSizeOverridden`
   /// 等）與其餘全部草稿狀態皆留在 `_ReaderSettingsSheetState` 根層級，這些方法
   /// 只是直接讀寫同一組欄位——若日後為了重用或拆檔而把某個頁籤抽成獨立
@@ -498,8 +498,6 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
             _notifyChanged();
           }),
         ),
-        const SizedBox(height: 12),
-        _buildTextAlignRow(),
       ],
     );
   }
@@ -520,6 +518,8 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
         ),
         const SizedBox(height: 8),
         _buildColumnModeRow(),
+        const SizedBox(height: 8),
+        _buildTextAlignRow(),
         const SizedBox(height: 8),
         _buildWritingModeOverrideRow(),
         const SizedBox(height: 8),
@@ -548,43 +548,64 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
         children: [
           const Text('欄數'),
           const SizedBox(height: 4),
-          Wrap(
-            spacing: 4,
-            children: [
-              (ColumnMode.auto, 'auto', Icons.auto_awesome, '自動'),
-              (ColumnMode.single, 'single', Icons.crop_portrait, '單欄'),
-              (ColumnMode.double, 'double', Icons.book, '雙欄'),
+          EBOptionChipGroup<ColumnMode>(
+            items: [
+              (ColumnMode.auto, 'auto', Icons.auto_awesome, '自動', '自動'),
+              (ColumnMode.single, 'single', Icons.crop_portrait, '單欄', '單欄'),
+              (ColumnMode.double, 'double', Icons.book, '雙欄', '雙欄'),
             ].map((option) {
-              final (mode, keySuffix, icon, tooltip) = option;
-              return ReaderOptionTile<ColumnMode>(
+              final (mode, keySuffix, icon, tooltip, label) = option;
+              return EBOptionChipItem<ColumnMode>(
                 itemKey: Key('reader_settings_column_mode_$keySuffix'),
                 value: mode,
-                groupValue: _columnMode,
                 icon: icon,
+                label: label,
                 tooltip: tooltip,
-                visualDensity: VisualDensity.compact,
-                onSelected: (v) => setState(() {
-                  _columnMode = v;
-                  _notifyChanged();
-                }),
               );
             }).toList(),
+            groupValue: _columnMode,
+            visualDensity: VisualDensity.compact,
+            onSelected: (v) => setState(() {
+              _columnMode = v;
+              _notifyChanged();
+            }),
           ),
           if (_columnMode == ColumnMode.auto) ...[
             const SizedBox(height: 8),
-            Text('欄位大小 ${_columnSize.round()}px'),
-            Slider(
-              key: const Key('reader_settings_column_size_slider'),
-              value: _columnSize,
-              min: 360.0,
-              max: 1440.0,
-              divisions: 18, // (1440 - 360) / 60 = 18
-              label: '${_columnSize.round()}px',
-              onChanged: (v) => setState(() {
-                _columnSize = v;
-                _notifyChanged();
-              }),
-            ),
+            // 審查修正 M1（review-plan-issue-3.md）：isEinkMode 時標題不帶數值，
+            // 避免與下方 EBStepper 內部顯示的數值重複（比照 Issue 2 C1 對
+            // _buildSliderRow 已建立的先例——一般主題下 Slider 不具備數值回饋
+            // 能力，標題仍須保留數值）。
+            Text(widget.isEinkMode
+                ? '欄位大小'
+                : '欄位大小 ${_columnSize.round()}px'),
+            widget.isEinkMode
+                ? EBStepper(
+                    keyPrefix: 'reader_settings_column_size',
+                    value: _columnSize,
+                    min: 360.0,
+                    max: 1440.0,
+                    step: 60.0,
+                    displayValue: '${_columnSize.round()}px',
+                    onChanged: (v) => setState(() {
+                      _columnSize = v;
+                      _notifyChanged();
+                    }),
+                    mainAxisSize: MainAxisSize.max,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  )
+                : Slider(
+                    key: const Key('reader_settings_column_size_slider'),
+                    value: _columnSize,
+                    min: 360.0,
+                    max: 1440.0,
+                    divisions: 18, // (1440 - 360) / 60 = 18
+                    label: '${_columnSize.round()}px',
+                    onChanged: (v) => setState(() {
+                      _columnSize = v;
+                      _notifyChanged();
+                    }),
+                  ),
           ],
         ],
       ),
@@ -765,33 +786,34 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
 
   Widget _buildTextAlignRow() {
     const options = [
-      (EpubTextAlign.center, Icons.format_align_center, '置中'),
-      (EpubTextAlign.justify, Icons.format_align_justify, '左右對齊'),
-      (EpubTextAlign.start, Icons.first_page, '起始邊對齊'),
-      (EpubTextAlign.end, Icons.last_page, '結尾邊對齊'),
-      (EpubTextAlign.left, Icons.format_align_left, '靠左'),
-      (EpubTextAlign.right, Icons.format_align_right, '靠右'),
+      (EpubTextAlign.center, Icons.format_align_center, '置中', '置中'),
+      (EpubTextAlign.justify, Icons.format_align_justify, '左右對齊', '齊行'),
+      (EpubTextAlign.start, Icons.first_page, '起始邊對齊', '起始'),
+      (EpubTextAlign.end, Icons.last_page, '結尾邊對齊', '結尾'),
+      (EpubTextAlign.left, Icons.format_align_left, '靠左', '靠左'),
+      (EpubTextAlign.right, Icons.format_align_right, '靠右', '靠右'),
     ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text('文字對齊'),
-        Wrap(
-          spacing: 4,
-          children: options.map((option) {
-            final (align, icon, tooltip) = option;
-            return ReaderOptionTile<EpubTextAlign>(
+        EBOptionChipGroup<EpubTextAlign>(
+          items: options.map((option) {
+            final (align, icon, tooltip, label) = option;
+            return EBOptionChipItem<EpubTextAlign>(
               itemKey: Key('reader_settings_text_align_${align.name}'),
               value: align,
-              groupValue: _textAlign ?? EpubTextAlign.justify,
               icon: icon,
+              label: label,
               tooltip: tooltip,
-              onSelected: (v) => setState(() {
-                _textAlign = v;
-                _notifyChanged();
-              }),
             );
           }).toList(),
+          groupValue: _textAlign ?? EpubTextAlign.justify,
+          visualDensity: VisualDensity.compact,
+          onSelected: (v) => setState(() {
+            _textAlign = v;
+            _notifyChanged();
+          }),
         ),
       ],
     );
@@ -802,39 +824,39 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   /// `horizontal`＝強制橫排。
   Widget _buildWritingModeOverrideRow() {
     const options = [
-      (null, 'book', Icons.auto_stories, '採用書籍排版'),
-      (WritingMode.vertical, 'vertical', Icons.text_rotate_vertical, '強制直排'),
-      (WritingMode.horizontal, 'horizontal', Icons.text_rotation_none, '強制橫排'),
+      (null, 'book', Icons.auto_stories, '採用書籍排版', '書籍'),
+      (WritingMode.vertical, 'vertical', Icons.text_rotate_vertical, '強制直排', '直排'),
+      (WritingMode.horizontal, 'horizontal', Icons.text_rotation_none, '強制橫排', '橫排'),
     ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text('排版方向模式'),
-        Wrap(
-          spacing: 4,
-          children: options.map((option) {
-            final (mode, keySuffix, icon, tooltip) = option;
+        EBOptionChipGroup<WritingMode?>(
+          items: options.map((option) {
+            final (mode, keySuffix, icon, tooltip, label) = option;
             // 【審查修正 Important：見 reviews/review-issue-5-8.md Issue 6
             // Important #1】原本用「某個真實 enum 值當 sentinel 代表 null」
             // （例如 WritingMode.horizontal），但 options 清單裡剛好也有一個
             // 真實選項是 WritingMode.horizontal，兩者的 effectiveValue 會
             // 撞在一起，導致 _writingModeOverride == null 時「採用書籍排版」
             // 與「強制橫排」兩顆 tile 同時判定為選中。改用
-            // ReaderOptionTile<WritingMode?>，value／groupValue 直接傳原始
-            // nullable 值，不需要 fallback，null 只會跟 null 相等。
-            return ReaderOptionTile<WritingMode?>(
+            // EBOptionChipItem<WritingMode?>，value 直接傳原始 nullable 值，
+            // 不需要 fallback，null 只會跟 null 相等。
+            return EBOptionChipItem<WritingMode?>(
               itemKey: Key('reader_settings_writing_mode_$keySuffix'),
               value: mode,
-              groupValue: _writingModeOverride,
               icon: icon,
+              label: label,
               tooltip: tooltip,
-              visualDensity: VisualDensity.compact,
-              onSelected: (v) => setState(() {
-                _writingModeOverride = v;
-                _notifyChanged();
-              }),
             );
           }).toList(),
+          groupValue: _writingModeOverride,
+          visualDensity: VisualDensity.compact,
+          onSelected: (v) => setState(() {
+            _writingModeOverride = v;
+            _notifyChanged();
+          }),
         ),
       ],
     );
@@ -845,34 +867,34 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   /// 覆寫。
   Widget _buildPageTurnModeOverrideRow() {
     const options = [
-      (null, 'global', Icons.tune, '使用全域預設'),
-      (PageTurnMode.paginated, 'paginated', Icons.menu_book, '點擊翻頁'),
-      (PageTurnMode.scroll, 'scroll', Icons.swap_vert, '滾動翻頁'),
+      (null, 'global', Icons.tune, '使用全域預設', '全域'),
+      (PageTurnMode.paginated, 'paginated', Icons.menu_book, '點擊翻頁', '點擊'),
+      (PageTurnMode.scroll, 'scroll', Icons.swap_vert, '滾動翻頁', '滾動'),
     ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text('翻頁模式覆寫'),
-        Wrap(
-          spacing: 4,
-          children: options.map((option) {
-            final (mode, keySuffix, icon, tooltip) = option;
+        EBOptionChipGroup<PageTurnMode?>(
+          items: options.map((option) {
+            final (mode, keySuffix, icon, tooltip, label) = option;
             // 【審查修正 Important，同排版方向覆寫的修法】改用
-            // ReaderOptionTile<PageTurnMode?>，避免 sentinel 值與真實選項
+            // EBOptionChipItem<PageTurnMode?>，避免 sentinel 值與真實選項
             // （PageTurnMode.scroll）衝突。
-            return ReaderOptionTile<PageTurnMode?>(
+            return EBOptionChipItem<PageTurnMode?>(
               itemKey: Key('reader_settings_page_turn_mode_$keySuffix'),
               value: mode,
-              groupValue: _pageTurnModeOverride,
               icon: icon,
+              label: label,
               tooltip: tooltip,
-              visualDensity: VisualDensity.compact,
-              onSelected: (v) => setState(() {
-                _pageTurnModeOverride = v;
-                _notifyChanged();
-              }),
             );
           }).toList(),
+          groupValue: _pageTurnModeOverride,
+          visualDensity: VisualDensity.compact,
+          onSelected: (v) => setState(() {
+            _pageTurnModeOverride = v;
+            _notifyChanged();
+          }),
         ),
       ],
     );
@@ -883,45 +905,46 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   /// 單書覆寫。0°／180° 與 90°／270° 分別共用同一個 Material icon，以
   /// `Transform.rotate` 配合角度旋轉提升視覺辨識度，tooltip 文字消歧。
   Widget _buildScreenOrientationOverrideRow() {
-    // (setting, keySuffix, icon, tooltip, rotationAngle)
+    // (setting, keySuffix, icon, tooltip, rotationAngle, label)
     const options = <(
       ScreenOrientationSetting?,
       String,
       IconData,
       String,
       double,
+      String,
     )>[
-      (null, 'global', Icons.tune, '使用全域預設', 0.0),
-      (ScreenOrientationSetting.auto, 'auto', Icons.screen_rotation, '自動旋轉', 0.0),
-      (ScreenOrientationSetting.lock0, 'lock0', Icons.stay_current_portrait, '鎖定 0°', 0.0),
-      (ScreenOrientationSetting.lock90, 'lock90', Icons.stay_current_landscape, '鎖定 90°', 0.0),
-      (ScreenOrientationSetting.lock180, 'lock180', Icons.stay_current_portrait, '鎖定 180°', pi),
-      (ScreenOrientationSetting.lock270, 'lock270', Icons.stay_current_landscape, '鎖定 270°', pi * 1.5),
+      (null, 'global', Icons.tune, '使用全域預設', 0.0, '全域'),
+      (ScreenOrientationSetting.auto, 'auto', Icons.screen_rotation, '自動旋轉', 0.0, '自動'),
+      (ScreenOrientationSetting.lock0, 'lock0', Icons.stay_current_portrait, '鎖定 0°', 0.0, '0°'),
+      (ScreenOrientationSetting.lock90, 'lock90', Icons.stay_current_landscape, '鎖定 90°', 0.0, '90°'),
+      (ScreenOrientationSetting.lock180, 'lock180', Icons.stay_current_portrait, '鎖定 180°', pi, '180°'),
+      (ScreenOrientationSetting.lock270, 'lock270', Icons.stay_current_landscape, '鎖定 270°', pi * 1.5, '270°'),
     ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text('螢幕方向鎖定覆寫'),
-        Wrap(
-          spacing: 4,
-          children: options.map((option) {
-            final (setting, keySuffix, icon, tooltip, angle) = option;
+        EBOptionChipGroup<ScreenOrientationSetting?>(
+          items: options.map((option) {
+            final (setting, keySuffix, icon, tooltip, _, label) = option;
             // 【審查修正 Important，同排版方向覆寫的修法】改用
-            // ReaderOptionTile<ScreenOrientationSetting?>，避免 sentinel 值
+            // EBOptionChipItem<ScreenOrientationSetting?>，避免 sentinel 值
             // 與真實選項（ScreenOrientationSetting.auto）衝突。
-            return ReaderOptionTile<ScreenOrientationSetting?>(
+            return EBOptionChipItem<ScreenOrientationSetting?>(
               itemKey: Key('reader_settings_screen_orientation_$keySuffix'),
               value: setting,
-              groupValue: _screenOrientationOverride,
               icon: icon,
+              label: label,
               tooltip: tooltip,
-              visualDensity: VisualDensity.compact,
-              onSelected: (v) => setState(() {
-                _screenOrientationOverride = v;
-                _notifyChanged();
-              }),
             );
           }).toList(),
+          groupValue: _screenOrientationOverride,
+          visualDensity: VisualDensity.compact,
+          onSelected: (v) => setState(() {
+            _screenOrientationOverride = v;
+            _notifyChanged();
+          }),
         ),
       ],
     );
