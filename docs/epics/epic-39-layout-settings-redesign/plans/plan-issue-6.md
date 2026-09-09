@@ -129,7 +129,7 @@ git commit -m "feat(epic-39): Issue 6 Task 1 — FxlSettingsSheet 新增 isEinkM
 - Consumes: `EBOptionChipGroup<T>`／`EBOptionChipItem<T>`（`app/lib/screens/widgets/eb_option_chip_group.dart`）——建構參數 `items: List<EBOptionChipItem<T>>`、`groupValue: T`、`onSelected: ValueChanged<T>`、`visualDensity: VisualDensity`；`EBOptionChipItem<T>` 建構參數 `itemKey`／`value`／`icon`／`label`／`tooltip`。
 - Produces: 無（本 Task 為 Issue 6 最後一項介面異動；Task 3 不依賴本 Task 的產出型別）。
 
-- [ ] **Step 1：撰寫兩個失敗測試，鎖定新標籤文字**
+- [x] **Step 1：撰寫兩個失敗測試，鎖定新標籤文字**
 
 在 `app/test/screens/fxl_settings_sheet_test.dart` 檔案結尾（`_pumpModalSheet` 函式定義之前，即目前第 309 行之前）新增：
 
@@ -196,12 +196,12 @@ git commit -m "feat(epic-39): Issue 6 Task 1 — FxlSettingsSheet 新增 isEinkM
   });
 ```
 
-- [ ] **Step 2：執行測試，確認新測試失敗**
+- [x] **Step 2：執行測試，確認新測試失敗**
 
 Run: `flutter test test/screens/fxl_settings_sheet_test.dart`
 Expected: 新增的 2 個測試 FAIL（`find.text('自動')` 等找不到任何 widget——目前 `ReaderOptionTile` 呼叫皆未傳入 `label`，只有圖示無文字）；其餘 14 個既有測試維持 PASS。
 
-- [ ] **Step 3：`build()` 內兩組 `Wrap`＋`ReaderOptionTile` 改為 `EBOptionChipGroup`**
+- [x] **Step 3：`build()` 內兩組 `Wrap`＋`ReaderOptionTile` 改為 `EBOptionChipGroup`**
 
 > **【審查修正 I1，見 `reviews/review-plan-issue-6.md`】** 下方替換目標是**整個 `build()` 方法**（從 `@override` `Widget build(BuildContext context) {` 開頭，到方法本身的閉合右大括號 `}` 為止，含未變動的三顆 `SwitchListTile`），不是行號區間「56-125」這種局部片段——若用行號區間指定的自動化編輯（例如只指定 `StartLine/EndLine`）去套用下方程式碼，會讓原檔案尾端的三顆 `SwitchListTile` 殘留一份、造成重複 Key 與編譯錯誤。且 Task 1 已在檔案開頭新增約 6-7 行 docstring／欄位，`build()` 實際起始行號已順延，請直接搜尋 `Widget build(BuildContext context) {` 字串定位，不要依賴任何寫死的行號。
 
@@ -331,17 +331,17 @@ import 'widgets/eb_option_chip_group.dart';
 
 （三顆 `SwitchListTile` 原樣保留，不屬於本 Step 異動範圍，列出完整 `build()` 方法只是為了讓實作者能直接整段替換、避免手動拼接時漏改前後邊界。）
 
-- [ ] **Step 4：執行測試，確認全數通過**
+- [x] **Step 4：執行測試，確認全數通過**
 
 Run: `flutter test test/screens/fxl_settings_sheet_test.dart`
 Expected: PASS（14 個既有測試 + 2 個新測試，共 16 個全數通過）。既有的選中態／E-Ink 高對比背景色斷言測試（第 50-84、256-287、290-307 行）之所以零改動就能通過，是因為 `EBOptionChipGroup` 內部仍是 `ReaderOptionTile`，`key: itemKey` 一樣掛在帶 `BoxDecoration` 的 `Container` 上（`eb_option_chip_group.dart:79-97`）。
 
-- [ ] **Step 5：執行 `flutter analyze`**
+- [x] **Step 5：執行 `flutter analyze`**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6：勾選 Task 2 全部 Step 為完成，並 Commit**
+- [x] **Step 6：勾選 Task 2 全部 Step 為完成，並 Commit**
 
 將本檔案 Task 2 的 Step 1-6 全部 `- [ ]` 改為 `- [x]`（**審查修正 M2**：依 SDD 慣例逐 Task 漸進勾選）。
 

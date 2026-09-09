@@ -318,6 +318,67 @@ void main() {
     final container = tester.widget<Container>(autoTile);
     expect((container.decoration as BoxDecoration).color, Colors.black);
   });
+
+  testWidgets(
+      '雙頁模式群組改用 EBOptionChipGroup 後，3 個選項皆顯示 spec.md 選項標籤'
+      '對照表定義的短標籤（epic-39-layout-settings-redesign Issue 6）',
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: FxlSettingsSheet(
+          prefs: BookReaderPrefs.empty,
+          onChanged: (_) {},
+          isEinkMode: false,
+        ),
+      ),
+    ));
+
+    for (final item in [
+      ('auto', '自動'),
+      ('always', '雙頁'),
+      ('never', '單頁'),
+    ]) {
+      final (suffix, label) = item;
+      expect(
+        find.descendant(
+          of: find.byKey(Key('fxl_settings_dual_page_mode_$suffix')),
+          matching: find.text(label),
+        ),
+        findsOneWidget,
+        reason: 'fxl_settings_dual_page_mode_$suffix 應顯示標籤「$label」',
+      );
+    }
+  });
+
+  testWidgets(
+      '翻頁方向群組改用 EBOptionChipGroup 後，2 個選項皆顯示短標籤'
+      '（epic-39-layout-settings-redesign Issue 6）',
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: FxlSettingsSheet(
+          prefs: BookReaderPrefs.empty,
+          onChanged: (_) {},
+          isEinkMode: false,
+        ),
+      ),
+    ));
+
+    for (final item in [
+      ('ltr', '左翻'),
+      ('rtl', '右翻'),
+    ]) {
+      final (suffix, label) = item;
+      expect(
+        find.descendant(
+          of: find.byKey(Key('fxl_settings_direction_$suffix')),
+          matching: find.text(label),
+        ),
+        findsOneWidget,
+        reason: 'fxl_settings_direction_$suffix 應顯示標籤「$label」',
+      );
+    }
+  });
 }
 
 Future<void> _pumpModalSheet(
