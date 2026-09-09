@@ -347,6 +347,61 @@ void main() {
       expect(find.byKey(const Key('book_item_2')), findsOneWidget,
           reason: '搜尋範圍應忽略目前分類瀏覽狀態，仍能找到「科幻」分類的 Dune。');
     });
+
+    testWidgets('未輸入文字時不顯示清除按鈕，輸入文字後才顯示', (tester) async {
+      final book = _testBook(id: '1', title: '紅樓夢');
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: LibraryScreen(
+            repository: FakeLibraryRepository(initialBooks: [book]),
+            importService: FakeBookImportService(),
+            prefsManager: prefsManager,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('library_search_clear_button')), findsNothing);
+
+      await tester.enterText(find.byKey(const Key('library_search_field')), '紅');
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('library_search_clear_button')), findsOneWidget);
+    });
+
+    testWidgets('點擊清除按鈕後，清空搜尋框並恢復原本的分類拼貼格與書籍清單瀏覽畫面', (tester) async {
+      final books = [
+        _testBook(id: '1', title: '紅樓夢', groupName: '古典文學'),
+        _testBook(id: '2', title: 'Dune', groupName: '科幻'),
+      ];
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: LibraryScreen(
+            repository: FakeLibraryRepository(initialBooks: books),
+            importService: FakeBookImportService(),
+            prefsManager: prefsManager,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byKey(const Key('library_search_field')), 'dune');
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('group_tile_古典文學')), findsNothing);
+
+      await tester.tap(find.byKey(const Key('library_search_clear_button')));
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.widget<TextField>(find.byKey(const Key('library_search_field'))).controller!.text,
+        isEmpty,
+      );
+      expect(find.byKey(const Key('library_search_clear_button')), findsNothing);
+      expect(find.byKey(const Key('group_tile_古典文學')), findsOneWidget);
+      expect(find.byKey(const Key('group_tile_科幻')), findsOneWidget);
+    });
   });
 
   testWidgets(

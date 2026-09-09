@@ -727,14 +727,26 @@ class _LibraryScreenState extends State<LibraryScreen> with WidgetsBindingObserv
         key: const Key('library_search_field'),
         controller: _searchController,
         onChanged: _onSearchChanged,
-        decoration: const InputDecoration(
-          prefixIcon: Icon(Icons.search),
+        decoration: InputDecoration(
+          prefixIcon: const Icon(Icons.search),
           hintText: '搜尋書名或作者...',
           isDense: true,
-          border: OutlineInputBorder(),
+          border: const OutlineInputBorder(),
+          suffixIcon: _searchQuery.isEmpty
+              ? null
+              : IconButton(
+                  key: const Key('library_search_clear_button'),
+                  icon: const Icon(Icons.clear),
+                  onPressed: _onSearchCleared,
+                ),
         ),
       ),
     );
+  }
+
+  void _onSearchCleared() {
+    _searchController.clear();
+    _onSearchChanged('');
   }
 
   @override
