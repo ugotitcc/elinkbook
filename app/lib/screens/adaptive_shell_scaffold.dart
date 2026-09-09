@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../cloud_import/cloud_download_queue_controller.dart';
 import '../library/book_content_fingerprint.dart';
 import '../library/book_import_service.dart';
 import '../library/library_repository.dart';
@@ -38,6 +39,7 @@ class AdaptiveShellScaffold extends StatefulWidget {
   final LibraryRemoteLibraryDependencies remoteLibraryDependencies;
   final ComputeRemoteFingerprint? computeFingerprint;
   final Future<bool> Function()? isMobileDataConnection;
+  final CloudDownloadQueueController? downloadQueueController;
   final LibraryThemeDependencies themeDependencies;
 
   const AdaptiveShellScaffold({
@@ -51,6 +53,7 @@ class AdaptiveShellScaffold extends StatefulWidget {
     this.remoteLibraryDependencies = const LibraryRemoteLibraryDependencies(),
     this.computeFingerprint,
     this.isMobileDataConnection,
+    this.downloadQueueController,
     this.themeDependencies = const LibraryThemeDependencies(),
   });
 
@@ -112,6 +115,7 @@ class _AdaptiveShellScaffoldState extends State<AdaptiveShellScaffold> {
               remoteLibraryDependencies: widget.remoteLibraryDependencies,
               computeFingerprint: widget.computeFingerprint,
               isMobileDataConnection: widget.isMobileDataConnection,
+              downloadQueueController: widget.downloadQueueController,
               isEinkMode: widget.themeDependencies.isEinkMode,
               onNavigateToLibrary: () => _navigateTo(0),
               onNavigateToSettings: () => _navigateTo(2),
@@ -124,7 +128,8 @@ class _AdaptiveShellScaffoldState extends State<AdaptiveShellScaffold> {
               onEinkModeChanged: widget.themeDependencies.onEinkModeChanged,
               customFontsRepository:
                   widget.readerFeatureRepositories.customFontsRepository,
-              syncAccountRepository: widget.syncDependencies.syncAccountRepository,
+              syncAccountRepository:
+                  widget.syncDependencies.syncAccountRepository,
               syncClient: widget.syncDependencies.syncClient,
               onManualSync: widget.syncDependencies.onManualSync,
               loadLastSyncedAt: widget.syncDependencies.loadLastSyncedAt,
@@ -143,4 +148,4 @@ class _AdaptiveShellScaffoldState extends State<AdaptiveShellScaffold> {
       ),
     );
   }
-}
+}

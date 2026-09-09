@@ -160,7 +160,41 @@ PASS（有測試佐證）——`sources_home_screen.dart` 的「選擇檔案」�
 
 ### Remaining Differences
 - Reference「選擇檔案」／「選擇資料夾」是並排的兩個方形按鈕（icon 在上、文字在下），本輪維持原本 `ListTile`（icon 在左、文字在右）的橫列格式，只加邊框卡片，未重排版面——版面重排風險/工作量較高，且非「缺邊框」這個核心問題，本輪判斷為超出範圍，如需要請另外指示。
-- Reference 底部有一個常駐「下載佇列」清單（含確定式進度條），目前 Flutter 版本的下載佇列是另一個獨立 Dialog（`cloud_download_queue_dialog.dart`），不是本畫面內建的常駐區塊——這是功能完整度落差，不是純視覺樣式問題，本輪未處理，需要另外決定是否要把下載佇列狀態接進本畫面。
+
+---
+
+## Screen
+
+Source（來源）常駐下載佇列（架構變更，非純視覺）
+
+## Reference
+
+`docs/research/uiux/reference/來源.png`
+
+## Result
+
+依您明確指示（「建立共享狀態，改成常駐行列」），完成架構變更：
+
+### 新增
+- `CloudDownloadQueueController`（`app/lib/cloud_import/cloud_download_queue_controller.dart`）：純 Dart `ChangeNotifier`，比照 `main.dart` 既有 `SyncEngine.onReadingPositionConflict` 的橋接原則——不依賴 Flutter widget 樹，重複匯入確認對話框透過 `navigatorKey.currentContext` 橋接，使用者下載途中離開畫面也能正常彈出。下載迴圈（含 Layer 2 指紋比對、`onProgress` 進度回報、取消、重試）從原本 `CloudDownloadQueueDialog` 的 widget State 搬過來。
+- `CloudDownloadQueuePanel`（`app/lib/screens/widgets/cloud_download_queue_panel.dart`）：常駐於「來源」畫面底部，訂閱控制器即時重繪，沒有項目時整個區塊（含分區標題）不渲染；每個項目用確定式 `LinearProgressIndicator`（`DESIGN.md` §16.2 要求，不用連續旋轉指示器）。
+
+### 修改
+- `CloudBrowserScreen`：確認下載後改為 `controller.enqueue(...)`＋顯示提示 Snackbar，不再 `showDialog()` 跳出模態視窗，使用者可立即繼續瀏覽或離開畫面。
+- `main.dart`／`AdaptiveShellScaffold`／`SourcesHomeScreen`：貫穿新增的 `downloadQueueController`；`downloadQueueController == null` 時 Google Drive／OneDrive 入口一併停用（比照既有「相依不齊全就停用」慣例）。
+
+### 移除
+- `CloudDownloadQueueDialog`（`cloud_download_queue_dialog.dart`）與其測試——功能已被 `CloudDownloadQueueController` 取代，不留舊檔案。`showCloudDuplicateConfirmDialog` 移到獨立檔案 `cloud_duplicate_confirm_dialog.dart`（Layer 1／Layer 2 共用）。
+
+### Remaining Differences（刻意不做，超出本次範圍）
+- OPDS／Calibre 遠端書庫（`remote_catalog_screen.dart`）的下載佇列**仍是獨立的模態對話框**，未併入這個常駐佇列——兩者是否該合併成同一份清單，屬於後續決定，本輪只處理您明確點名的 Google Drive／OneDrive 路徑。
+- 佇列項目目前不會自動消失，`done`／`duplicateSkipped` 狀態的項目提供了個別的「×」按鈕手動移除（`dismiss()`），沒有做「清除全部」或自動淡出，Reference 截圖沒有示範這塊，避免自行發明。
+
+### Components
+PASS（有測試佐證）——驗證依據：
+- `flutter test test/cloud_import/cloud_download_queue_controller_test.dart`（9 項全過：完成/失敗重試/取消/重複比對三種情境/序列處理/dismiss/notifyListeners）
+- `flutter test test/screens/cloud_browser_screen_test.dart`（24 項全過，改為驗證 Snackbar 而非模態對話框）
+- `flutter test test/screens/sources_home_screen_test.dart`（10 項全過，含 3 則新增：`downloadQueueController` 為 null 時停用雲端入口、佇列空/有項目時區塊顯示與否、項目即時反映狀態變化）
 
 ---
 

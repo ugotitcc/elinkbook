@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
+import 'package:elinkbook/cloud_import/cloud_download_queue_controller.dart';
 import 'package:elinkbook/cloud_import/cloud_storage_client.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/library/widgets/book_cover.dart';
@@ -21,7 +22,11 @@ import '../support/fake_library_repository.dart';
 import '../support/fake_path_provider_platform.dart';
 
 void main() {
-  const folderEntry = CloudFileEntry(id: 'folder-1', name: '小說', isFolder: true);
+  const folderEntry = CloudFileEntry(
+    id: 'folder-1',
+    name: '小說',
+    isFolder: true,
+  );
   const fileEntryNoThumbnail = CloudFileEntry(
     id: 'file-1',
     name: '紅樓夢.epub',
@@ -66,7 +71,11 @@ void main() {
     0x44, 0xAE, 0x42, 0x60, 0x82,
   ]);
 
-  Book fakeBookWithCloudFileId(String id, BookSource source, String cloudFileId) {
+  Book fakeBookWithCloudFileId(
+    String id,
+    BookSource source,
+    String cloudFileId,
+  ) {
     return Book(
       id: id,
       title: '已匯入的書',
@@ -87,26 +96,39 @@ void main() {
     FakeFingerprintComputer? fingerprintComputer,
     Future<bool> Function()? isMobileDataConnection,
     String? folderId,
+    CloudDownloadQueueController? downloadQueueController,
   }) async {
-    await tester.pumpWidget(MaterialApp(
-      theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
-      home: CloudBrowserScreen(
-        client: client,
-        libraryRepository: libraryRepository ?? FakeLibraryRepository(),
-        importService: importService ?? FakeBookImportService(),
-        source: BookSource.googleDrive,
-        computeFingerprint: (fingerprintComputer ?? FakeFingerprintComputer()).call,
-        isMobileDataConnection: isMobileDataConnection,
-        folderId: folderId,
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: CloudBrowserScreen(
+          client: client,
+          libraryRepository: libraryRepository ?? FakeLibraryRepository(),
+          importService: importService ?? FakeBookImportService(),
+          source: BookSource.googleDrive,
+          computeFingerprint:
+              (fingerprintComputer ?? FakeFingerprintComputer()).call,
+          isMobileDataConnection: isMobileDataConnection,
+          downloadQueueController:
+              downloadQueueController ??
+              CloudDownloadQueueController(
+                onDuplicateConfirm: (_) async => false,
+              ),
+          folderId: folderId,
+        ),
       ),
-    ));
+    );
     await tester.pumpAndSettle();
   }
 
   testWidgets('載入根目錄後顯示資料夾與格式過濾後的檔案', (tester) async {
-    final client = FakeCloudStorageClient(folderContents: {
-      null: const CloudFolderListing(entries: [folderEntry, fileEntryNoThumbnail]),
-    });
+    final client = FakeCloudStorageClient(
+      folderContents: {
+        null: const CloudFolderListing(
+          entries: [folderEntry, fileEntryNoThumbnail],
+        ),
+      },
+    );
     await pumpScreen(tester, client: client);
 
     expect(find.text('小說'), findsOneWidget);
@@ -117,13 +139,17 @@ void main() {
   });
 
   testWidgets('點擊資料夾項目 push 新畫面並帶入正確 folderId', (tester) async {
-    final client = FakeCloudStorageClient(folderContents: {
-      null: const CloudFolderListing(entries: [folderEntry]),
-      'folder-1': const CloudFolderListing(entries: [fileEntryNoThumbnail]),
-    });
+    final client = FakeCloudStorageClient(
+      folderContents: {
+        null: const CloudFolderListing(entries: [folderEntry]),
+        'folder-1': const CloudFolderListing(entries: [fileEntryNoThumbnail]),
+      },
+    );
     await pumpScreen(tester, client: client);
 
-    await tester.tap(find.byKey(const Key('google_drive_browser_entry_folder-1')));
+    await tester.tap(
+      find.byKey(const Key('google_drive_browser_entry_folder-1')),
+    );
     await tester.pumpAndSettle();
 
     // fileEntryNoThumbnail 沒有縮圖網址，書名重複顯示兩次（CoverPlaceholder
@@ -132,9 +158,11 @@ void main() {
   });
 
   testWidgets('無縮圖網址的檔案顯示縮圖佔位符', (tester) async {
-    final client = FakeCloudStorageClient(folderContents: {
-      null: const CloudFolderListing(entries: [fileEntryNoThumbnail]),
-    });
+    final client = FakeCloudStorageClient(
+      folderContents: {
+        null: const CloudFolderListing(entries: [fileEntryNoThumbnail]),
+      },
+    );
     await pumpScreen(tester, client: client);
 
     final placeholderFinder = find.byKey(
@@ -147,9 +175,11 @@ void main() {
   });
 
   testWidgets('有縮圖網址的檔案透過 client.fetchThumbnail 顯示縮圖', (tester) async {
-    final client = FakeCloudStorageClient(folderContents: {
-      null: const CloudFolderListing(entries: [fileEntryWithThumbnail]),
-    })..thumbnailBytes = validPngBytes;
+    final client = FakeCloudStorageClient(
+      folderContents: {
+        null: const CloudFolderListing(entries: [fileEntryWithThumbnail]),
+      },
+    )..thumbnailBytes = validPngBytes;
     await pumpScreen(tester, client: client);
 
     // 等待 FutureBuilder 完成
@@ -161,19 +191,22 @@ void main() {
     );
   });
 
-  testWidgets(
-      '縮圖載入期間父層 setState（例如勾選另一個檔案）不會重複發起縮圖請求'
+  testWidgets('縮圖載入期間父層 setState（例如勾選另一個檔案）不會重複發起縮圖請求'
       '（review-issue-3.md Important #2 迴歸測試）', (tester) async {
-    final client = FakeCloudStorageClient(folderContents: {
-      null: const CloudFolderListing(
-        entries: [fileEntryWithThumbnail, fileEntryNoThumbnail],
-      ),
-    })..thumbnailBytes = validPngBytes;
+    final client = FakeCloudStorageClient(
+      folderContents: {
+        null: const CloudFolderListing(
+          entries: [fileEntryWithThumbnail, fileEntryNoThumbnail],
+        ),
+      },
+    )..thumbnailBytes = validPngBytes;
     client.pendingThumbnailCompleter = Completer<void>();
     await pumpScreen(tester, client: client);
     await tester.pump();
 
-    expect(client.fetchThumbnailCalls, ['https://drive.google.com/thumbnail/2']);
+    expect(client.fetchThumbnailCalls, [
+      'https://drive.google.com/thumbnail/2',
+    ]);
 
     // 縮圖仍在載入中（completer 尚未完成）時，勾選另一個檔案觸發父層
     // setState 重建整個 GridView，包含尚未載入完成的縮圖項目。
@@ -183,13 +216,17 @@ void main() {
     // 第一次啟動 async 查詢，第二次讓查詢完成並觸發 setState。
     // 不能用 pumpAndSettle()——等待中的縮圖 completer 尚未 complete，
     // pumpAndSettle() 會因 Future 未 settled 而超時。
-    await tester.tap(find.byKey(const Key('google_drive_browser_entry_file-1')));
+    await tester.tap(
+      find.byKey(const Key('google_drive_browser_entry_file-1')),
+    );
     await tester.pump();
     await tester.pump();
 
     // 修正前：_buildThumbnail() 每次 build() 都會呼叫一次 fetchThumbnail()，
     // 這裡會變成 2 筆呼叫紀錄；修正後應維持只有最初的 1 筆。
-    expect(client.fetchThumbnailCalls, ['https://drive.google.com/thumbnail/2']);
+    expect(client.fetchThumbnailCalls, [
+      'https://drive.google.com/thumbnail/2',
+    ]);
 
     client.pendingThumbnailCompleter!.complete();
     await tester.pump();
@@ -201,9 +238,11 @@ void main() {
   });
 
   testWidgets('點擊檔案項目切換勾選狀態', (tester) async {
-    final client = FakeCloudStorageClient(folderContents: {
-      null: const CloudFolderListing(entries: [fileEntryNoThumbnail]),
-    });
+    final client = FakeCloudStorageClient(
+      folderContents: {
+        null: const CloudFolderListing(entries: [fileEntryNoThumbnail]),
+      },
+    );
     await pumpScreen(tester, client: client);
 
     expect(
@@ -211,7 +250,9 @@ void main() {
       findsNothing,
     );
 
-    await tester.tap(find.byKey(const Key('google_drive_browser_entry_file-1')));
+    await tester.tap(
+      find.byKey(const Key('google_drive_browser_entry_file-1')),
+    );
     await tester.pumpAndSettle();
 
     expect(
@@ -219,7 +260,9 @@ void main() {
       findsOneWidget,
     );
 
-    await tester.tap(find.byKey(const Key('google_drive_browser_entry_file-1')));
+    await tester.tap(
+      find.byKey(const Key('google_drive_browser_entry_file-1')),
+    );
     await tester.pump();
 
     expect(
@@ -229,9 +272,14 @@ void main() {
   });
 
   testWidgets('資料夾檔案數超過 1000 筆時顯示提示文字', (tester) async {
-    final client = FakeCloudStorageClient(folderContents: {
-      null: const CloudFolderListing(entries: [fileEntryNoThumbnail], truncated: true),
-    });
+    final client = FakeCloudStorageClient(
+      folderContents: {
+        null: const CloudFolderListing(
+          entries: [fileEntryNoThumbnail],
+          truncated: true,
+        ),
+      },
+    );
     await pumpScreen(tester, client: client);
 
     expect(
@@ -244,7 +292,10 @@ void main() {
     final client = _ThrowingCloudStorageClient();
     await pumpScreen(tester, client: client);
 
-    expect(find.byKey(const Key('google_drive_browser_reauth_text')), findsOneWidget);
+    expect(
+      find.byKey(const Key('google_drive_browser_reauth_text')),
+      findsOneWidget,
+    );
   });
 
   group('選擇分類後下載＋匯入', () {
@@ -252,7 +303,9 @@ void main() {
     late PathProviderPlatform originalPathProvider;
 
     setUp(() {
-      tempRoot = Directory.systemTemp.createTempSync('google_drive_browser_test');
+      tempRoot = Directory.systemTemp.createTempSync(
+        'google_drive_browser_test',
+      );
       originalPathProvider = PathProviderPlatform.instance;
       PathProviderPlatform.instance = FakePathProviderPlatform(tempRoot.path);
     });
@@ -281,24 +334,35 @@ void main() {
         importService: importService,
       );
 
-      await tester.tap(find.byKey(const Key('google_drive_browser_entry_file-1')));
+      await tester.tap(
+        find.byKey(const Key('google_drive_browser_entry_file-1')),
+      );
       await tester.pump();
-      await tester
-          .tap(find.byKey(const Key('google_drive_browser_group_dropdown')));
+      await tester.tap(
+        find.byKey(const Key('google_drive_browser_group_dropdown')),
+      );
       await tester.pumpAndSettle();
       await tester.tap(find.text('小說').last);
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byKey(const Key('google_drive_browser_download_button')));
+      await tester.tap(
+        find.byKey(const Key('google_drive_browser_download_button')),
+      );
       await tester.pump();
 
+      // 視覺還原（Visual Accuracy Mode）：加入佇列後改為非模態，畫面立即
+      // 顯示提示 Snackbar 並可繼續操作，不再跳出阻擋畫面的下載對話框。
+      expect(
+        find.byKey(const Key('google_drive_browser_queued_snackbar')),
+        findsOneWidget,
+      );
+
       for (var i = 0; i < 30; i++) {
-        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 50)),
+        );
         await tester.pump();
       }
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.byKey(const Key('cloud_download_queue_done_button')));
       await tester.pumpAndSettle();
 
       expect(importService.lastImportCall?.source, BookSource.googleDrive);
@@ -307,15 +371,25 @@ void main() {
 
   group('選檔前置重複偵測（Layer 1）', () {
     testWidgets('勾選已存在 cloudFileId 的檔案時彈出重複提示，選擇取消則不勾選', (tester) async {
-      final client = FakeCloudStorageClient(folderContents: {
-        null: const CloudFolderListing(entries: [fileEntryNoThumbnail]),
-      });
-      final libraryRepository = FakeLibraryRepository(initialBooks: [
-        fakeBookWithCloudFileId('local-1', BookSource.googleDrive, 'file-1'),
-      ]);
-      await pumpScreen(tester, client: client, libraryRepository: libraryRepository);
+      final client = FakeCloudStorageClient(
+        folderContents: {
+          null: const CloudFolderListing(entries: [fileEntryNoThumbnail]),
+        },
+      );
+      final libraryRepository = FakeLibraryRepository(
+        initialBooks: [
+          fakeBookWithCloudFileId('local-1', BookSource.googleDrive, 'file-1'),
+        ],
+      );
+      await pumpScreen(
+        tester,
+        client: client,
+        libraryRepository: libraryRepository,
+      );
 
-      await tester.tap(find.byKey(const Key('google_drive_browser_entry_file-1')));
+      await tester.tap(
+        find.byKey(const Key('google_drive_browser_entry_file-1')),
+      );
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('cloud_duplicate_dialog')), findsOneWidget);
@@ -329,15 +403,25 @@ void main() {
     });
 
     testWidgets('勾選已存在 cloudFileId 的檔案時彈出重複提示，選擇仍要建立則正常勾選', (tester) async {
-      final client = FakeCloudStorageClient(folderContents: {
-        null: const CloudFolderListing(entries: [fileEntryNoThumbnail]),
-      });
-      final libraryRepository = FakeLibraryRepository(initialBooks: [
-        fakeBookWithCloudFileId('local-1', BookSource.googleDrive, 'file-1'),
-      ]);
-      await pumpScreen(tester, client: client, libraryRepository: libraryRepository);
+      final client = FakeCloudStorageClient(
+        folderContents: {
+          null: const CloudFolderListing(entries: [fileEntryNoThumbnail]),
+        },
+      );
+      final libraryRepository = FakeLibraryRepository(
+        initialBooks: [
+          fakeBookWithCloudFileId('local-1', BookSource.googleDrive, 'file-1'),
+        ],
+      );
+      await pumpScreen(
+        tester,
+        client: client,
+        libraryRepository: libraryRepository,
+      );
 
-      await tester.tap(find.byKey(const Key('google_drive_browser_entry_file-1')));
+      await tester.tap(
+        find.byKey(const Key('google_drive_browser_entry_file-1')),
+      );
       await tester.pumpAndSettle();
 
       await tester.tap(find.byKey(const Key('cloud_duplicate_dialog_confirm')));
@@ -350,12 +434,16 @@ void main() {
     });
 
     testWidgets('勾選沒有重複紀錄的檔案時不彈出提示，直接勾選', (tester) async {
-      final client = FakeCloudStorageClient(folderContents: {
-        null: const CloudFolderListing(entries: [fileEntryNoThumbnail]),
-      });
+      final client = FakeCloudStorageClient(
+        folderContents: {
+          null: const CloudFolderListing(entries: [fileEntryNoThumbnail]),
+        },
+      );
       await pumpScreen(tester, client: client);
 
-      await tester.tap(find.byKey(const Key('google_drive_browser_entry_file-1')));
+      await tester.tap(
+        find.byKey(const Key('google_drive_browser_entry_file-1')),
+      );
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('cloud_duplicate_dialog')), findsNothing);
@@ -366,13 +454,22 @@ void main() {
     });
 
     testWidgets('findByCloudFileId 拋出例外時，視同沒有偵測到重複，直接勾選不中斷', (tester) async {
-      final client = FakeCloudStorageClient(folderContents: {
-        null: const CloudFolderListing(entries: [fileEntryNoThumbnail]),
-      });
-      final libraryRepository = FakeLibraryRepository()..throwOnFindByCloudFileId = true;
-      await pumpScreen(tester, client: client, libraryRepository: libraryRepository);
+      final client = FakeCloudStorageClient(
+        folderContents: {
+          null: const CloudFolderListing(entries: [fileEntryNoThumbnail]),
+        },
+      );
+      final libraryRepository = FakeLibraryRepository()
+        ..throwOnFindByCloudFileId = true;
+      await pumpScreen(
+        tester,
+        client: client,
+        libraryRepository: libraryRepository,
+      );
 
-      await tester.tap(find.byKey(const Key('google_drive_browser_entry_file-1')));
+      await tester.tap(
+        find.byKey(const Key('google_drive_browser_entry_file-1')),
+      );
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('cloud_duplicate_dialog')), findsNothing);
@@ -388,7 +485,9 @@ void main() {
     late PathProviderPlatform originalPathProvider;
 
     setUp(() {
-      tempRoot = Directory.systemTemp.createTempSync('mobile_data_warning_test');
+      tempRoot = Directory.systemTemp.createTempSync(
+        'mobile_data_warning_test',
+      );
       originalPathProvider = PathProviderPlatform.instance;
       PathProviderPlatform.instance = FakePathProviderPlatform(tempRoot.path);
     });
@@ -398,14 +497,15 @@ void main() {
       if (tempRoot.existsSync()) tempRoot.deleteSync(recursive: true);
     });
 
-    testWidgets('行動數據連線且勾選檔案超過門檻時，下載前跳出確認對話框，確認後正常下載',
-        (tester) async {
+    testWidgets('行動數據連線且勾選檔案超過門檻時，下載前跳出確認對話框，確認後正常下載', (tester) async {
       final importService = FakeBookImportService();
       final client = FakeCloudStorageClient(
         folderContents: {
           null: const CloudFolderListing(entries: [largeFileEntry]),
         },
-        downloadContents: {'file-large': [1, 2, 3]},
+        downloadContents: {
+          'file-large': [1, 2, 3],
+        },
       );
       await pumpScreen(
         tester,
@@ -414,36 +514,46 @@ void main() {
         isMobileDataConnection: () async => true,
       );
 
-      await tester.tap(find.byKey(const Key('google_drive_browser_entry_file-large')));
+      await tester.tap(
+        find.byKey(const Key('google_drive_browser_entry_file-large')),
+      );
       await tester.pump();
-      await tester.tap(find.byKey(const Key('google_drive_browser_download_button')));
+      await tester.tap(
+        find.byKey(const Key('google_drive_browser_download_button')),
+      );
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('cloud_mobile_data_dialog')), findsOneWidget);
-      await tester.tap(find.byKey(const Key('cloud_mobile_data_dialog_confirm')));
+      await tester.tap(
+        find.byKey(const Key('cloud_mobile_data_dialog_confirm')),
+      );
       await tester.pump();
 
+      expect(
+        find.byKey(const Key('google_drive_browser_queued_snackbar')),
+        findsOneWidget,
+      );
+
       for (var i = 0; i < 30; i++) {
-        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 50)),
+        );
         await tester.pump();
       }
-      await tester.pumpAndSettle();
-
-      expect(find.byKey(const Key('cloud_download_queue_dialog')), findsOneWidget);
-      await tester.tap(find.byKey(const Key('cloud_download_queue_done_button')));
       await tester.pumpAndSettle();
 
       expect(importService.lastImportCall, isNotNull);
     });
 
-    testWidgets('Wi-Fi 連線時即使檔案超過門檻也不跳出確認對話框，直接開始下載',
-        (tester) async {
+    testWidgets('Wi-Fi 連線時即使檔案超過門檻也不跳出確認對話框，直接開始下載', (tester) async {
       final importService = FakeBookImportService();
       final client = FakeCloudStorageClient(
         folderContents: {
           null: const CloudFolderListing(entries: [largeFileEntry]),
         },
-        downloadContents: {'file-large': [1, 2, 3]},
+        downloadContents: {
+          'file-large': [1, 2, 3],
+        },
       );
       await pumpScreen(
         tester,
@@ -452,23 +562,31 @@ void main() {
         isMobileDataConnection: () async => false,
       );
 
-      await tester.tap(find.byKey(const Key('google_drive_browser_entry_file-large')));
+      await tester.tap(
+        find.byKey(const Key('google_drive_browser_entry_file-large')),
+      );
       await tester.pump();
-      await tester.tap(find.byKey(const Key('google_drive_browser_download_button')));
+      await tester.tap(
+        find.byKey(const Key('google_drive_browser_download_button')),
+      );
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('cloud_mobile_data_dialog')), findsNothing);
-      expect(find.byKey(const Key('cloud_download_queue_dialog')), findsOneWidget);
+      expect(
+        find.byKey(const Key('google_drive_browser_queued_snackbar')),
+        findsOneWidget,
+      );
     });
 
-    testWidgets('行動數據連線但勾選檔案未超過門檻時不跳出確認對話框，直接開始下載',
-        (tester) async {
+    testWidgets('行動數據連線但勾選檔案未超過門檻時不跳出確認對話框，直接開始下載', (tester) async {
       final importService = FakeBookImportService();
       final client = FakeCloudStorageClient(
         folderContents: {
           null: const CloudFolderListing(entries: [smallFileEntry]),
         },
-        downloadContents: {'file-small': [1, 2, 3]},
+        downloadContents: {
+          'file-small': [1, 2, 3],
+        },
       );
       await pumpScreen(
         tester,
@@ -477,13 +595,20 @@ void main() {
         isMobileDataConnection: () async => true,
       );
 
-      await tester.tap(find.byKey(const Key('google_drive_browser_entry_file-small')));
+      await tester.tap(
+        find.byKey(const Key('google_drive_browser_entry_file-small')),
+      );
       await tester.pump();
-      await tester.tap(find.byKey(const Key('google_drive_browser_download_button')));
+      await tester.tap(
+        find.byKey(const Key('google_drive_browser_download_button')),
+      );
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('cloud_mobile_data_dialog')), findsNothing);
-      expect(find.byKey(const Key('cloud_download_queue_dialog')), findsOneWidget);
+      expect(
+        find.byKey(const Key('google_drive_browser_queued_snackbar')),
+        findsOneWidget,
+      );
     });
 
     testWidgets('行動數據確認對話框選擇取消時不開始下載', (tester) async {
@@ -492,7 +617,9 @@ void main() {
         folderContents: {
           null: const CloudFolderListing(entries: [largeFileEntry]),
         },
-        downloadContents: {'file-large': [1, 2, 3]},
+        downloadContents: {
+          'file-large': [1, 2, 3],
+        },
       );
       await pumpScreen(
         tester,
@@ -501,15 +628,24 @@ void main() {
         isMobileDataConnection: () async => true,
       );
 
-      await tester.tap(find.byKey(const Key('google_drive_browser_entry_file-large')));
+      await tester.tap(
+        find.byKey(const Key('google_drive_browser_entry_file-large')),
+      );
       await tester.pump();
-      await tester.tap(find.byKey(const Key('google_drive_browser_download_button')));
+      await tester.tap(
+        find.byKey(const Key('google_drive_browser_download_button')),
+      );
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byKey(const Key('cloud_mobile_data_dialog_cancel')));
+      await tester.tap(
+        find.byKey(const Key('cloud_mobile_data_dialog_cancel')),
+      );
       await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('cloud_download_queue_dialog')), findsNothing);
+      expect(
+        find.byKey(const Key('google_drive_browser_queued_snackbar')),
+        findsNothing,
+      );
       expect(importService.lastImportCall, isNull);
     });
   });

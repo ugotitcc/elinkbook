@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../cloud_import/cloud_download_queue_controller.dart';
 import '../cloud_import/cloud_storage_client.dart';
 import '../library/book_content_fingerprint.dart';
 import '../library/book_import_service.dart';
@@ -10,6 +11,7 @@ import 'cloud_browser_screen.dart';
 import 'library_screen_dependencies.dart';
 import 'remote_server_list_screen.dart';
 import 'support/book_import_picker_helper.dart';
+import 'widgets/cloud_download_queue_panel.dart';
 import 'widgets/eb_field_card.dart';
 import 'widgets/eb_section_header.dart';
 
@@ -27,6 +29,16 @@ class SourcesHomeScreen extends StatelessWidget {
   final VoidCallback? onNavigateToLibrary;
   final VoidCallback? onNavigateToSettings;
 
+  /// 視覺還原（Visual Accuracy Mode）：Google Drive／OneDrive 下載改為
+  /// 加入這個常駐佇列（見 `CloudDownloadQueuePanel`），取代原本
+  /// `CloudBrowserScreen` 用 `showDialog()` 跳出的模態下載對話框。`null`
+  /// 時（例如尚未組裝完整雲端匯入相依）本畫面不渲染下載佇列區塊，`_openXxxBrowser`
+  /// 也不會把控制器傳給 `CloudBrowserScreen`——`computeFingerprint` 為
+  /// `null` 時本來就已經停用 Google Drive／OneDrive 入口本身（見下方
+  /// `googleDriveEnabled`/`oneDriveEnabled`），這裡維持同一個「有齊全相依
+  /// 才啟用」的既有慣例。
+  final CloudDownloadQueueController? downloadQueueController;
+
   const SourcesHomeScreen({
     super.key,
     required this.repository,
@@ -38,6 +50,7 @@ class SourcesHomeScreen extends StatelessWidget {
     this.isEinkMode = false,
     this.onNavigateToLibrary,
     this.onNavigateToSettings,
+    this.downloadQueueController,
   });
 
   Future<void> _handlePickFiles(BuildContext context) async {
@@ -75,6 +88,7 @@ class SourcesHomeScreen extends StatelessWidget {
           source: BookSource.googleDrive,
           computeFingerprint: computeFingerprint!,
           isMobileDataConnection: isMobileDataConnection,
+          downloadQueueController: downloadQueueController!,
         ),
       ),
     );
@@ -91,6 +105,7 @@ class SourcesHomeScreen extends StatelessWidget {
           computeFingerprint: computeFingerprint!,
           isMobileDataConnection: isMobileDataConnection,
           title: 'OneDrive',
+          downloadQueueController: downloadQueueController!,
         ),
       ),
     );
@@ -119,9 +134,13 @@ class SourcesHomeScreen extends StatelessWidget {
     final googleDriveClient = cloudAccountDependencies.googleDriveStorageClient;
     final oneDriveClient = cloudAccountDependencies.oneDriveStorageClient;
     final googleDriveEnabled =
-        googleDriveClient != null && computeFingerprint != null;
+        googleDriveClient != null &&
+        computeFingerprint != null &&
+        downloadQueueController != null;
     final oneDriveEnabled =
-        oneDriveClient != null && computeFingerprint != null;
+        oneDriveClient != null &&
+        computeFingerprint != null &&
+        downloadQueueController != null;
     final remoteEnabled =
         remoteLibraryDependencies.remoteServerRepository != null &&
         remoteLibraryDependencies.createOpdsClient != null &&
@@ -211,6 +230,8 @@ class SourcesHomeScreen extends StatelessWidget {
               onTap: remoteEnabled ? () => _openRemoteLibrary(context) : null,
             ),
           ),
+          if (downloadQueueController != null)
+            CloudDownloadQueuePanel(controller: downloadQueueController!),
         ],
       ),
     );

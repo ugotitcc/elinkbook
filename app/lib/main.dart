@@ -9,6 +9,7 @@ import 'package:audio_session/audio_session.dart';
 import 'package:pdfrx/pdfrx.dart';
 
 import 'cloud_import/cloud_account_repository.dart';
+import 'cloud_import/cloud_download_queue_controller.dart';
 import 'cloud_import/cloud_storage_client.dart';
 import 'cloud_import/google_drive_oauth_client.dart';
 import 'cloud_import/google_drive_storage_client.dart';
@@ -39,6 +40,7 @@ import 'remote/remote_server_repository.dart';
 import 'remote/remote_thumbnail_cache.dart';
 import 'remote/sqlite_remote_server_repository.dart';
 import 'screens/adaptive_shell_scaffold.dart';
+import 'screens/cloud_duplicate_confirm_dialog.dart';
 import 'screens/library_screen_dependencies.dart';
 import 'screens/reading_position_conflict_dialog.dart';
 import 'sync/sync_account_repository.dart';
@@ -103,14 +105,16 @@ Future<void> main() async {
   // （androidWillPauseWhenDucked: true）——降低音量的人聲朗讀無法辨識，
   // 與音樂/Podcast 那種可以被降低音量、繼續播放的內容性質不同。
   final ttsAudioSession = await AudioSession.instance;
-  await ttsAudioSession.configure(const AudioSessionConfiguration(
-    androidAudioAttributes: AndroidAudioAttributes(
-      contentType: AndroidAudioContentType.speech,
-      usage: AndroidAudioUsage.media,
+  await ttsAudioSession.configure(
+    const AudioSessionConfiguration(
+      androidAudioAttributes: AndroidAudioAttributes(
+        contentType: AndroidAudioContentType.speech,
+        usage: AndroidAudioUsage.media,
+      ),
+      androidAudioFocusGainType: AndroidAudioFocusGainType.gain,
+      androidWillPauseWhenDucked: true,
     ),
-    androidAudioFocusGainType: AndroidAudioFocusGainType.gain,
-    androidWillPauseWhenDucked: true,
-  ));
+  );
   final ttsAudioFocusSource = AudioSessionFocusSource(ttsAudioSession);
   // AudioService.init() 全程式生命週期只能呼叫一次（見
   // plans/plan-issue-7.md Global Constraints），建構出的單一 handler
@@ -178,10 +182,24 @@ Future<void> main() async {
   // 皆無內部可變的 session 狀態（不像 OpdsHttpClient 的
   // _visitedFeedUrls），單一共用實例即可，不需要比照 createOpdsClient
   // 那樣的工廠函式。
-  final CloudStorageClient googleDriveStorageClient =
-      GoogleDriveStorageClient(oauthClient: googleDriveOAuthClient);
-  final CloudStorageClient oneDriveStorageClient =
-      OneDriveStorageClient(oauthClient: oneDriveOAuthClient);
+  final CloudStorageClient googleDriveStorageClient = GoogleDriveStorageClient(
+    oauthClient: googleDriveOAuthClient,
+  );
+  final CloudStorageClient oneDriveStorageClient = OneDriveStorageClient(
+    oauthClient: oneDriveOAuthClient,
+  );
+  // 視覺還原（Visual Accuracy Mode）：常駐下載佇列控制器，比照上方
+  // SyncEngine.onReadingPositionConflict 的既有橋接原則——控制器本身
+  // 不依賴 Flutter widget 樹，需要彈出「重複匯入」確認對話框時透過
+  // navigatorKey 取得目前可用的 BuildContext，不綁定觸發下載當下所在的
+  // 那個畫面（使用者可能已經離開）。
+  final downloadQueueController = CloudDownloadQueueController(
+    onDuplicateConfirm: (message) async {
+      final context = navigatorKey.currentContext;
+      if (context == null) return false;
+      return showCloudDuplicateConfirmDialog(context, message);
+    },
+  );
   runApp(
     ElinkBookApp(
       repository: repository,
@@ -211,6 +229,7 @@ Future<void> main() async {
       computeFingerprint: computeBookContentFingerprint,
       thumbnailCache: thumbnailCache,
       isMobileDataConnection: _isMobileDataConnection,
+      downloadQueueController: downloadQueueController,
       navigatorKey: navigatorKey,
       initialTheme: initialTheme,
       initialEinkMode: initialEinkMode,
@@ -237,6 +256,7 @@ class ElinkBookApp extends StatefulWidget {
   final SyncAccountRepository? syncAccountRepository;
   final SyncClient? syncClient;
   final SyncCheckpointTrigger? syncCheckpointTrigger;
+
   /// 「立即同步」按鈕與最後同步時間顯示（2026-09-08 `/grill-with-docs`
   /// 使用者需求），見 `SyncSettingsScreen`／`LibrarySyncDependencies` 的
   /// 欄位說明。
@@ -252,6 +272,7 @@ class ElinkBookApp extends StatefulWidget {
   final ComputeRemoteFingerprint? computeFingerprint;
   final RemoteThumbnailCache? thumbnailCache;
   final Future<bool> Function()? isMobileDataConnection;
+  final CloudDownloadQueueController? downloadQueueController;
   final GlobalKey<NavigatorState>? navigatorKey;
   final AppThemePreferences themePreferences;
   final AppTheme initialTheme;
@@ -286,6 +307,7 @@ class ElinkBookApp extends StatefulWidget {
     this.computeFingerprint,
     this.thumbnailCache,
     this.isMobileDataConnection,
+    this.downloadQueueController,
     this.navigatorKey,
     this.initialTheme = AppTheme.light,
     this.initialEinkMode = false,
@@ -296,7 +318,8 @@ class ElinkBookApp extends StatefulWidget {
   State<ElinkBookApp> createState() => _ElinkBookAppState();
 }
 
-class _ElinkBookAppState extends State<ElinkBookApp> with WidgetsBindingObserver {
+class _ElinkBookAppState extends State<ElinkBookApp>
+    with WidgetsBindingObserver {
   late AppTheme _theme;
   late bool _isEinkMode;
 
@@ -339,10 +362,7 @@ class _ElinkBookAppState extends State<ElinkBookApp> with WidgetsBindingObserver
 
   @override
   Widget build(BuildContext context) {
-    final themeData = resolveThemeData(
-      theme: _theme,
-      isEinkMode: _isEinkMode,
-    );
+    final themeData = resolveThemeData(theme: _theme, isEinkMode: _isEinkMode);
     return MaterialApp(
       navigatorKey: widget.navigatorKey,
       title: 'elinkBook',
@@ -384,6 +404,7 @@ class _ElinkBookAppState extends State<ElinkBookApp> with WidgetsBindingObserver
         ),
         computeFingerprint: widget.computeFingerprint,
         isMobileDataConnection: widget.isMobileDataConnection,
+        downloadQueueController: widget.downloadQueueController,
         themeDependencies: LibraryThemeDependencies(
           currentTheme: _theme,
           isEinkMode: _isEinkMode,

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:elinkbook/cloud_import/cloud_download_queue_controller.dart';
+import 'package:elinkbook/cloud_import/cloud_storage_client.dart';
+import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/screens/cloud_browser_screen.dart';
 import 'package:elinkbook/screens/library_screen_dependencies.dart';
 import 'package:elinkbook/screens/remote_server_list_screen.dart';
@@ -131,6 +134,9 @@ void main() {
             googleDriveStorageClient: FakeCloudStorageClient(),
           ),
           computeFingerprint: fingerprintComputer.call,
+          downloadQueueController: CloudDownloadQueueController(
+            onDuplicateConfirm: (_) async => false,
+          ),
         ),
       ),
     );
@@ -153,6 +159,9 @@ void main() {
             oneDriveStorageClient: FakeCloudStorageClient(),
           ),
           computeFingerprint: fingerprintComputer.call,
+          downloadQueueController: CloudDownloadQueueController(
+            onDuplicateConfirm: (_) async => false,
+          ),
         ),
       ),
     );
@@ -207,5 +216,96 @@ void main() {
 
     expect(libraryTapped, 1);
     expect(settingsTapped, 1);
+  });
+
+  group('視覺還原（VISUAL_ANALYSIS.md）：常駐下載佇列', () {
+    testWidgets('downloadQueueController 為 null 時，即使其餘雲端相依齊全，'
+        'Google Drive／OneDrive 項目仍維持停用（下載已無法運作）', (tester) async {
+      final fingerprintComputer = FakeFingerprintComputer();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: SourcesHomeScreen(
+            repository: FakeLibraryRepository(),
+            importService: FakeBookImportService(),
+            cloudAccountDependencies: LibraryCloudAccountDependencies(
+              googleDriveStorageClient: FakeCloudStorageClient(),
+              oneDriveStorageClient: FakeCloudStorageClient(),
+            ),
+            computeFingerprint: fingerprintComputer.call,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('sources_google_drive_tile')));
+      await tester.pumpAndSettle();
+      expect(find.byType(CloudBrowserScreen), findsNothing);
+
+      await tester.tap(find.byKey(const Key('sources_onedrive_tile')));
+      await tester.pumpAndSettle();
+      expect(find.byType(CloudBrowserScreen), findsNothing);
+    });
+
+    testWidgets('downloadQueueController 沒有項目時不顯示下載佇列區塊', (tester) async {
+      final controller = CloudDownloadQueueController(
+        onDuplicateConfirm: (_) async => false,
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          home: SourcesHomeScreen(
+            repository: FakeLibraryRepository(),
+            importService: FakeBookImportService(),
+            downloadQueueController: controller,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('下載佇列'), findsNothing);
+    });
+
+    testWidgets('downloadQueueController 有項目時常駐顯示下載佇列區塊，'
+        '狀態變化即時反映（不需要離開/重進畫面）', (tester) async {
+      final controller = CloudDownloadQueueController(
+        onDuplicateConfirm: (_) async => false,
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          home: SourcesHomeScreen(
+            repository: FakeLibraryRepository(),
+            importService: FakeBookImportService(),
+            downloadQueueController: controller,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('下載佇列'), findsNothing);
+
+      final client = FakeCloudStorageClient(
+        downloadContents: {'file-1': const []},
+      );
+      controller.enqueue(
+        entries: const [
+          CloudFileEntry(
+            id: 'file-1',
+            name: '一弦定音.epub',
+            isFolder: false,
+            format: BookFileFormat.epub,
+          ),
+        ],
+        client: client,
+        importService: FakeBookImportService(),
+        libraryRepository: FakeLibraryRepository(),
+        computeFingerprint: FakeFingerprintComputer().call,
+        source: BookSource.googleDrive,
+      );
+      await tester.pump();
+
+      expect(find.text('下載佇列'), findsOneWidget);
+      expect(
+        find.byKey(const Key('sources_download_queue_item_file-1')),
+        findsOneWidget,
+      );
+    });
   });
 }

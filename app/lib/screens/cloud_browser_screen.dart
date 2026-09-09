@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
+import '../cloud_import/cloud_download_queue_controller.dart';
 import '../cloud_import/cloud_storage_client.dart';
 import '../library/book_content_fingerprint.dart';
 import '../library/book_import_service.dart';
@@ -9,7 +10,7 @@ import '../library/library_repository.dart';
 import '../library/models/book_group.dart';
 import '../library/models/library_enums.dart';
 import '../library/widgets/book_cover.dart';
-import 'cloud_download_queue_dialog.dart';
+import 'cloud_duplicate_confirm_dialog.dart';
 
 /// 【Epic 29 Issue 6，spec.md「Further Notes」建議值】單檔案大小門檻——
 /// 目前為行動數據連線且勾選的檔案中有任何一個超過此值時，下載前顯示流量
@@ -22,7 +23,9 @@ const _mobileDataWarningThresholdBytes = 20 * 1024 * 1024;
 /// 既有先例，用一個寫死 provider 名稱的類別瀏覽另一個 provider 是誤導性
 /// 命名，故重新命名）：逐層資料夾導覽（不做搜尋）、封面縮圖（含載入佔位符
 /// 與記憶體快取）、單選/多選勾選檔案、可選分類，確認匯入後交給
-/// [CloudDownloadQueueDialog] 序列下載＋匯入。畫面本身只依賴
+/// [CloudDownloadQueueController] 加入常駐下載佇列（視覺還原 Visual
+/// Accuracy Mode 改為背景下載＋「來源」畫面常駐顯示，取代原本
+/// `CloudDownloadQueueDialog` 的模態對話框設計）。畫面本身只依賴
 /// [CloudStorageClient] 介面，注入 `GoogleDriveStorageClient` 或
 /// `OneDriveStorageClient` 皆可直接沿用，不需要重新設計 UI（比照
 /// `RemoteCatalogScreen` 對 `OpdsClient` 的既有設計原則）。刻意不含重複
@@ -43,10 +46,15 @@ class CloudBrowserScreen extends StatefulWidget {
   /// 呼叫端必須明確傳入對應的 provider。
   final BookSource source;
 
-  /// 【Epic 29 Issue 5】貫穿轉發給 [CloudDownloadQueueDialog] 做 Layer 2
-  /// 下載後指紋比對；本畫面自己的 Layer 1（選檔前置）只需要
+  /// 【Epic 29 Issue 5】貫穿轉發給 [CloudDownloadQueueController] 做
+  /// Layer 2 下載後指紋比對；本畫面自己的 Layer 1（選檔前置）只需要
   /// [libraryRepository]，不需要指紋計算，故不在這裡使用。
   final ComputeRemoteFingerprint computeFingerprint;
+
+  /// 視覺還原（Visual Accuracy Mode）：確認下載後改為呼叫
+  /// [CloudDownloadQueueController.enqueue] 加入常駐佇列（顯示於「來源」
+  /// 畫面），取代原本本畫面自己 `showDialog()` 跳出模態下載對話框的做法。
+  final CloudDownloadQueueController downloadQueueController;
 
   /// 【Epic 29 Issue 6】偵測目前是否為行動數據連線，與
   /// `library_screen.dart._handleRedownload()` 共用同一個 provider 無關的
@@ -71,6 +79,7 @@ class CloudBrowserScreen extends StatefulWidget {
     required this.importService,
     required this.source,
     required this.computeFingerprint,
+    required this.downloadQueueController,
     this.isMobileDataConnection,
     this.folderId,
     this.title,
@@ -147,18 +156,21 @@ class _CloudBrowserScreenState extends State<CloudBrowserScreen> {
   }
 
   void _openSubfolder(CloudFileEntry entry) {
-    Navigator.of(context).push(MaterialPageRoute(
-      builder: (context) => CloudBrowserScreen(
-        client: widget.client,
-        libraryRepository: widget.libraryRepository,
-        importService: widget.importService,
-        source: widget.source,
-        computeFingerprint: widget.computeFingerprint,
-        isMobileDataConnection: widget.isMobileDataConnection,
-        folderId: entry.id,
-        title: entry.name,
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => CloudBrowserScreen(
+          client: widget.client,
+          libraryRepository: widget.libraryRepository,
+          importService: widget.importService,
+          source: widget.source,
+          computeFingerprint: widget.computeFingerprint,
+          downloadQueueController: widget.downloadQueueController,
+          isMobileDataConnection: widget.isMobileDataConnection,
+          folderId: entry.id,
+          title: entry.name,
+        ),
       ),
-    ));
+    );
   }
 
   Future<void> _toggleSelection(CloudFileEntry entry) async {
@@ -171,7 +183,11 @@ class _CloudBrowserScreenState extends State<CloudBrowserScreen> {
     var hasDuplicate = false;
     try {
       hasDuplicate =
-          await widget.libraryRepository.findByCloudFileId(widget.source, entry.id) != null;
+          await widget.libraryRepository.findByCloudFileId(
+            widget.source,
+            entry.id,
+          ) !=
+          null;
     } catch (_) {
       hasDuplicate = false;
     } finally {
@@ -190,11 +206,15 @@ class _CloudBrowserScreenState extends State<CloudBrowserScreen> {
   }
 
   Future<void> _startDownload() async {
-    final selected = _entries.where((e) => _selectedIds.contains(e.id)).toList();
+    final selected = _entries
+        .where((e) => _selectedIds.contains(e.id))
+        .toList();
     if (selected.isEmpty) return;
 
     final hasLargeFile = selected.any(
-      (e) => e.sizeBytes != null && e.sizeBytes! > _mobileDataWarningThresholdBytes,
+      (e) =>
+          e.sizeBytes != null &&
+          e.sizeBytes! > _mobileDataWarningThresholdBytes,
     );
     if (hasLargeFile) {
       final isMobileData =
@@ -207,22 +227,25 @@ class _CloudBrowserScreenState extends State<CloudBrowserScreen> {
       }
     }
 
-    final folderName =
-        _selectedGroupName == BookGroup.uncategorized ? null : _selectedGroupName;
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => CloudDownloadQueueDialog(
-        entries: selected,
-        client: widget.client,
-        importService: widget.importService,
-        libraryRepository: widget.libraryRepository,
-        computeFingerprint: widget.computeFingerprint,
-        source: widget.source,
-        folderName: folderName,
-      ),
+    final folderName = _selectedGroupName == BookGroup.uncategorized
+        ? null
+        : _selectedGroupName;
+    widget.downloadQueueController.enqueue(
+      entries: selected,
+      client: widget.client,
+      importService: widget.importService,
+      libraryRepository: widget.libraryRepository,
+      computeFingerprint: widget.computeFingerprint,
+      source: widget.source,
+      folderName: folderName,
     );
     if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        key: const Key('google_drive_browser_queued_snackbar'),
+        content: Text('已加入下載佇列（${selected.length} 個檔案），可至「來源」畫面查看進度'),
+      ),
+    );
     setState(() => _selectedIds.clear());
   }
 
@@ -277,24 +300,24 @@ class _CloudBrowserScreenState extends State<CloudBrowserScreen> {
               ),
             )
           : _needsReauth
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Text(
-                      '登入已過期，請至「設定」重新連結 ${widget.title ?? '雲端'} 帳號',
-                      key: const Key('google_drive_browser_reauth_text'),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                )
-              : _errorText != null
-                  ? Center(
-                      child: Text(
-                        _errorText!,
-                        key: const Key('google_drive_browser_error_text'),
-                      ),
-                    )
-                  : _buildContent(),
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  '登入已過期，請至「設定」重新連結 ${widget.title ?? '雲端'} 帳號',
+                  key: const Key('google_drive_browser_reauth_text'),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            )
+          : _errorText != null
+          ? Center(
+              child: Text(
+                _errorText!,
+                key: const Key('google_drive_browser_error_text'),
+              ),
+            )
+          : _buildContent(),
     );
   }
 
@@ -315,9 +338,13 @@ class _CloudBrowserScreenState extends State<CloudBrowserScreen> {
                     value: BookGroup.uncategorized,
                     child: Text(BookGroup.uncategorized),
                   ),
-                  for (final group
-                      in _groups.where((g) => g.name != BookGroup.uncategorized))
-                    DropdownMenuItem(value: group.name, child: Text(group.name)),
+                  for (final group in _groups.where(
+                    (g) => g.name != BookGroup.uncategorized,
+                  ))
+                    DropdownMenuItem(
+                      value: group.name,
+                      child: Text(group.name),
+                    ),
                 ],
                 onChanged: (value) {
                   if (value == null) return;
@@ -354,8 +381,9 @@ class _CloudBrowserScreenState extends State<CloudBrowserScreen> {
     final selected = _selectedIds.contains(entry.id);
     return InkWell(
       key: Key('google_drive_browser_entry_${entry.id}'),
-      onTap:
-          entry.isFolder ? () => _openSubfolder(entry) : () => _toggleSelection(entry),
+      onTap: entry.isFolder
+          ? () => _openSubfolder(entry)
+          : () => _toggleSelection(entry),
       child: Column(
         children: [
           Expanded(
@@ -372,7 +400,9 @@ class _CloudBrowserScreenState extends State<CloudBrowserScreen> {
                     top: 4,
                     child: Icon(
                       Icons.check_circle,
-                      key: Key('google_drive_browser_checkbox_checked_${entry.id}'),
+                      key: Key(
+                        'google_drive_browser_checkbox_checked_${entry.id}',
+                      ),
                       color: Theme.of(context).colorScheme.primary,
                     ),
                   ),
@@ -407,12 +437,13 @@ class _CloudBrowserScreenState extends State<CloudBrowserScreen> {
         fit: BoxFit.cover,
       );
     }
-    final pending = _pendingThumbnailFetches[thumbnailUrl] ??=
-        widget.client.fetchThumbnail(thumbnailUrl).then((bytes) {
-      _thumbnailCache[thumbnailUrl] = bytes;
-      _pendingThumbnailFetches.remove(thumbnailUrl);
-      return bytes;
-    });
+    final pending = _pendingThumbnailFetches[thumbnailUrl] ??= widget.client
+        .fetchThumbnail(thumbnailUrl)
+        .then((bytes) {
+          _thumbnailCache[thumbnailUrl] = bytes;
+          _pendingThumbnailFetches.remove(thumbnailUrl);
+          return bytes;
+        });
     return FutureBuilder<Uint8List>(
       future: pending,
       builder: (context, snapshot) {

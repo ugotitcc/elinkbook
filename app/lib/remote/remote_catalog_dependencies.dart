@@ -11,8 +11,10 @@ import 'remote_thumbnail_cache.dart';
 /// 各自宣告/轉送 3 個獨立具名參數的做法（epic-26-architecture-hardening
 /// Issue 6，docs/research/architecture-review-library-remote-screens.md
 /// 候選 3）。**範圍刻意侷限這兩個畫面**——`LibraryScreen`／`main.dart`／
-/// `CloudBrowserScreen`／`CloudDownloadQueueDialog` 對這三個依賴有各自
-/// 獨立、不完全重疊的使用組合，不適合套用同一個 bundle（詳見
+/// `CloudBrowserScreen`／`CloudDownloadQueueController`（原
+/// `CloudDownloadQueueDialog`，已由視覺還原 Visual Accuracy Mode 取代）
+/// 對這三個依賴有各自獨立、不完全重疊的使用組合，不適合套用同一個
+/// bundle（詳見
 /// `plans/plan-issue-6.md`「規劃階段查證」段落），故不動這些檔案。
 class RemoteCatalogDependencies {
   final ComputeRemoteFingerprint computeFingerprint;
