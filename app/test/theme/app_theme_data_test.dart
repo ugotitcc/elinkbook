@@ -16,23 +16,39 @@ void main() {
       final sepia = resolveThemeData(theme: AppTheme.sepia, isEinkMode: false);
 
       // 三組主題的 scaffoldBackgroundColor 皆不同
-      expect(light.scaffoldBackgroundColor, isNot(dark.scaffoldBackgroundColor));
-      expect(light.scaffoldBackgroundColor, isNot(sepia.scaffoldBackgroundColor));
-      expect(dark.scaffoldBackgroundColor, isNot(sepia.scaffoldBackgroundColor));
+      expect(
+        light.scaffoldBackgroundColor,
+        isNot(dark.scaffoldBackgroundColor),
+      );
+      expect(
+        light.scaffoldBackgroundColor,
+        isNot(sepia.scaffoldBackgroundColor),
+      );
+      expect(
+        dark.scaffoldBackgroundColor,
+        isNot(sepia.scaffoldBackgroundColor),
+      );
     });
 
     test('isEinkMode 為 true 時，不論 theme 為何皆回傳相同的高對比 ThemeData', () {
-      final einkLight =
-          resolveThemeData(theme: AppTheme.light, isEinkMode: true);
-      final einkDark =
-          resolveThemeData(theme: AppTheme.dark, isEinkMode: true);
-      final einkSepia =
-          resolveThemeData(theme: AppTheme.sepia, isEinkMode: true);
+      final einkLight = resolveThemeData(
+        theme: AppTheme.light,
+        isEinkMode: true,
+      );
+      final einkDark = resolveThemeData(theme: AppTheme.dark, isEinkMode: true);
+      final einkSepia = resolveThemeData(
+        theme: AppTheme.sepia,
+        isEinkMode: true,
+      );
 
-      expect(einkLight.scaffoldBackgroundColor,
-          einkDark.scaffoldBackgroundColor);
-      expect(einkLight.scaffoldBackgroundColor,
-          einkSepia.scaffoldBackgroundColor);
+      expect(
+        einkLight.scaffoldBackgroundColor,
+        einkDark.scaffoldBackgroundColor,
+      );
+      expect(
+        einkLight.scaffoldBackgroundColor,
+        einkSepia.scaffoldBackgroundColor,
+      );
     });
 
     test('E-Ink 高對比 ThemeData 使用純白背景與純黑文字', () {
@@ -48,8 +64,7 @@ void main() {
       expect(theme.brightness, Brightness.light);
     });
 
-    test('light 主題 ColorScheme 全角色對齊 DESIGN.md §1.1（不留 M3 baseline）',
-        () {
+    test('light 主題 ColorScheme 全角色對齊 DESIGN.md §1.1（不留 M3 baseline）', () {
       final theme = buildThemeData(AppTheme.light);
       final scheme = theme.colorScheme;
 
@@ -66,8 +81,7 @@ void main() {
       expect(theme.scaffoldBackgroundColor, const Color(0xFFF0F6FC));
     });
 
-    test(
-        '移除 cardColor／dividerColor 顯式設定後，ThemeData 這兩個 M2 遺留'
+    test('移除 cardColor／dividerColor 顯式設定後，ThemeData 這兩個 M2 遺留'
         '欄位本身的 M3 預設解析值仍符合預期（cardColor 退回'
         ' colorScheme.surface，dividerColor 退回 colorScheme.outline，皆與'
         '移除前手動設定的值相同）——**注意**：這兩個欄位只是 ThemeData 上的'
@@ -75,15 +89,13 @@ void main() {
         '下兩個 widget 各自直接吃 colorScheme 的其他角色，見下一則'
         ' testWidgets），這裡只保護「還有其他呼叫端直接讀'
         ' Theme.of(context).dividerColor」這種用法（例如'
-        ' nav_zone_settings_screen.dart，屬 Issue 5 範圍）不會被本工單影響。',
-        () {
+        ' nav_zone_settings_screen.dart，屬 Issue 5 範圍）不會被本工單影響。', () {
       final theme = buildThemeData(AppTheme.light);
       expect(theme.cardColor, theme.colorScheme.surface);
       expect(theme.dividerColor, theme.colorScheme.outline);
     });
 
-    testWidgets(
-        '移除 cardColor／dividerColor 顯式設定後，Card()／Divider() widget'
+    testWidgets('移除 cardColor／dividerColor 顯式設定後，Card()／Divider() widget'
         '實際渲染出的顏色符合 M3 預設角色（Card 走'
         ' colorScheme.surfaceContainerLow，Divider 走'
         ' colorScheme.outlineVariant——這兩個角色從頭到尾都不吃'
@@ -111,10 +123,7 @@ void main() {
       await tester.pumpAndSettle();
 
       final cardMaterial = tester.widget<Material>(
-        find.descendant(
-          of: find.byType(Card),
-          matching: find.byType(Material),
-        ),
+        find.descendant(of: find.byType(Card), matching: find.byType(Material)),
       );
       expect(cardMaterial.color, theme.colorScheme.surfaceContainerLow);
 
@@ -145,8 +154,7 @@ void main() {
 
     test('dark 主題 ColorScheme 全角色對齊 DESIGN.md §1.1（不留 M3 baseline，'
         'outline／surfaceContainerHighest 採用 DESIGN.md 值，不維持真機實測'
-        '調校值——可辨識度風險改由 SwitchThemeData 承接，見 Issue 2 Task 5）',
-        () {
+        '調校值——可辨識度風險改由 SwitchThemeData 承接，見 Issue 2 Task 5）', () {
       final theme = buildThemeData(AppTheme.dark);
       final scheme = theme.colorScheme;
 
@@ -163,15 +171,13 @@ void main() {
       expect(theme.scaffoldBackgroundColor, const Color(0xFF141416));
     });
 
-    test(
-        'dark 主題的 dividerColor 與 outline 保持同一色值（本檔案既有設計：'
+    test('dark 主題的 dividerColor 與 outline 保持同一色值（本檔案既有設計：'
         '單一色票同時代表 outline 與分隔線語意）', () {
       final theme = buildThemeData(AppTheme.dark);
       expect(theme.dividerColor, theme.colorScheme.outline);
     });
 
-    test('sepia 主題 ColorScheme 全角色對齊 DESIGN.md §1.1（不留 M3 baseline）',
-        () {
+    test('sepia 主題 ColorScheme 全角色對齊 DESIGN.md §1.1（不留 M3 baseline）', () {
       final theme = buildThemeData(AppTheme.sepia);
       final scheme = theme.colorScheme;
 
@@ -221,50 +227,88 @@ void main() {
 
         final thumb = switchTheme.thumbColor?.resolve(<WidgetState>{});
         final track = switchTheme.trackColor?.resolve(<WidgetState>{});
-        final trackOutline =
-            switchTheme.trackOutlineColor?.resolve(<WidgetState>{});
+        final trackOutline = switchTheme.trackOutlineColor?.resolve(
+          <WidgetState>{},
+        );
 
         expect(thumb, isNotNull, reason: '$theme thumbColor 未設定');
         expect(track, isNotNull, reason: '$theme trackColor 未設定');
         expect(trackOutline, isNotNull, reason: '$theme trackOutlineColor 未設定');
-        expect(_sameRgb(thumb!, onSurface), true,
-            reason: '$theme thumbColor 應來源於 onSurface');
-        expect(_sameRgb(track!, onSurface), true,
-            reason: '$theme trackColor 應來源於 onSurface');
-        expect(_sameRgb(trackOutline!, onSurface), true,
-            reason: '$theme trackOutlineColor 應來源於 onSurface');
+        expect(
+          _sameRgb(thumb!, onSurface),
+          true,
+          reason: '$theme thumbColor (OFF) 應來源於 onSurface',
+        );
+        expect(
+          _sameRgb(track!, onSurface),
+          true,
+          reason: '$theme trackColor (OFF) 應來源於 onSurface',
+        );
+        expect(
+          _sameRgb(trackOutline!, onSurface),
+          true,
+          reason: '$theme trackOutlineColor (OFF) 應來源於 onSurface',
+        );
+      }
+    });
 
+    test('四套主題的 switchTheme 三插槽於 ON 狀態皆解析自 colorScheme.primary／onPrimary'
+        '（視覺還原，對齊 Reference 截圖「開＝主色填滿」，見'
+        ' docs/research/uiux/VISUAL_ANALYSIS.md），且與 OFF 狀態可互相區分', () {
+      for (final theme in AppTheme.values) {
+        final themeData = buildThemeData(theme);
+        final colorScheme = themeData.colorScheme;
+        final switchTheme = themeData.switchTheme;
+
+        final track = switchTheme.trackColor?.resolve(<WidgetState>{});
         const onState = <WidgetState>{WidgetState.selected};
         final thumbOn = switchTheme.thumbColor?.resolve(onState);
         final trackOn = switchTheme.trackColor?.resolve(onState);
         final trackOutlineOn = switchTheme.trackOutlineColor?.resolve(onState);
+
         expect(thumbOn, isNotNull, reason: '$theme thumbColor (selected) 未設定');
         expect(trackOn, isNotNull, reason: '$theme trackColor (selected) 未設定');
-        expect(trackOutlineOn, isNotNull,
-            reason: '$theme trackOutlineColor (selected) 未設定');
-        expect(_sameRgb(thumbOn!, onSurface), true,
-            reason: '$theme thumbColor (selected) 應來源於 onSurface');
-        expect(_sameRgb(trackOn!, onSurface), true,
-            reason: '$theme trackColor (selected) 應來源於 onSurface');
-        expect(_sameRgb(trackOutlineOn!, onSurface), true,
-            reason: '$theme trackOutlineColor (selected) 應來源於 onSurface');
-        // ON/OFF 兩態的 track 必須有可辨識的透明度差異（本工單詮釋為
-        // alpha 0.5 vs 0.15，不硬編數值，色票微調不會弄壞這則測試）
-        expect(trackOn.a, isNot(track.a),
-            reason: '$theme trackColor 的 ON/OFF 狀態應可互相區分');
+        expect(
+          trackOutlineOn,
+          isNotNull,
+          reason: '$theme trackOutlineColor (selected) 未設定',
+        );
+        expect(
+          _sameRgb(thumbOn!, colorScheme.onPrimary),
+          true,
+          reason: '$theme thumbColor (selected) 應來源於 onPrimary',
+        );
+        expect(
+          _sameRgb(trackOn!, colorScheme.primary),
+          true,
+          reason: '$theme trackColor (selected) 應來源於 primary',
+        );
+        expect(
+          _sameRgb(trackOutlineOn!, colorScheme.primary),
+          true,
+          reason: '$theme trackOutlineColor (selected) 應來源於 primary',
+        );
+        // ON/OFF 兩態的 track 必須可互相區分——OFF 為低透明度、ON 為滿不
+        // 透明，即使 primary 與 onSurface 剛好同色（例如 E-Ink 皆為純黑）
+        // 也仍可靠由透明度區分，不依賴 RGB 是否不同。
+        expect(
+          trackOn.a,
+          isNot(track!.a),
+          reason: '$theme trackColor 的 ON/OFF 狀態應可互相區分',
+        );
       }
     });
 
-    test('E-Ink 主題的 switchTheme 三插槽於 OFF 狀態皆解析自 colorScheme.onSurface',
-        () {
+    test('E-Ink 主題的 switchTheme 三插槽於 OFF 狀態皆解析自 colorScheme.onSurface', () {
       final themeData = buildEinkThemeData();
       final onSurface = themeData.colorScheme.onSurface;
       final switchTheme = themeData.switchTheme;
 
       final thumb = switchTheme.thumbColor?.resolve(<WidgetState>{});
       final track = switchTheme.trackColor?.resolve(<WidgetState>{});
-      final trackOutline =
-          switchTheme.trackOutlineColor?.resolve(<WidgetState>{});
+      final trackOutline = switchTheme.trackOutlineColor?.resolve(
+        <WidgetState>{},
+      );
 
       expect(thumb, isNotNull);
       expect(track, isNotNull);
@@ -272,19 +316,32 @@ void main() {
       expect(_sameRgb(thumb!, onSurface), true);
       expect(_sameRgb(track!, onSurface), true);
       expect(_sameRgb(trackOutline!, onSurface), true);
+    });
 
+    test('E-Ink 主題的 switchTheme ON 狀態呈現「黑底白點」（primary＝純黑、'
+        'onPrimary＝純白，見 _buildEinkTheme()），對比度高於原本方案，'
+        '不削弱電子紙可辨識度', () {
+      final themeData = buildEinkThemeData();
+      final colorScheme = themeData.colorScheme;
+      final switchTheme = themeData.switchTheme;
+
+      final track = switchTheme.trackColor?.resolve(<WidgetState>{});
       const onState = <WidgetState>{WidgetState.selected};
       final thumbOn = switchTheme.thumbColor?.resolve(onState);
       final trackOn = switchTheme.trackColor?.resolve(onState);
       final trackOutlineOn = switchTheme.trackOutlineColor?.resolve(onState);
+
       expect(thumbOn, isNotNull);
       expect(trackOn, isNotNull);
       expect(trackOutlineOn, isNotNull);
-      expect(_sameRgb(thumbOn!, onSurface), true);
-      expect(_sameRgb(trackOn!, onSurface), true);
-      expect(_sameRgb(trackOutlineOn!, onSurface), true);
-      // ON/OFF 兩態的 track 必須有可辨識的透明度差異
-      expect(trackOn.a, isNot(track.a));
+      expect(_sameRgb(thumbOn!, colorScheme.onPrimary), true);
+      expect(_sameRgb(trackOn!, colorScheme.primary), true);
+      expect(_sameRgb(trackOutlineOn!, colorScheme.primary), true);
+      expect(colorScheme.primary, const Color(0xFF000000));
+      expect(colorScheme.onPrimary, const Color(0xFFFFFFFF));
+      // ON/OFF 兩態的 track 必須可互相區分——primary 與 onSurface 在 E-Ink
+      // 皆為純黑，RGB 相同，靠透明度（OFF 低透明度／ON 滿不透明）區分。
+      expect(trackOn.a, isNot(track!.a));
     });
   });
 

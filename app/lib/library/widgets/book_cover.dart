@@ -29,18 +29,31 @@ IconData bookFormatIcon(BookFileFormat format) {
 class BookCover extends StatelessWidget {
   final Book book;
 
-  const BookCover({
-    super.key,
-    required this.book,
-  });
+  const BookCover({super.key, required this.book});
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     final tokens = Theme.of(context).extension<ElinkTokens>()!;
     final coverPath = book.coverPath;
-    final cover = coverPath != null && File(coverPath).existsSync()
+    final coverContent = coverPath != null && File(coverPath).existsSync()
         ? Image.file(File(coverPath), fit: BoxFit.cover)
-        : CoverPlaceholder(icon: bookFormatIcon(book.format), title: book.title);
+        : CoverPlaceholder(
+            icon: bookFormatIcon(book.format),
+            title: book.title,
+          );
+    // 視覺還原（Visual Accuracy Mode，docs/research/uiux/VISUAL_ANALYSIS.md）：
+    // Reference 截圖不分主題，每張書封都有一圈細邊框；E-Ink 主題的邊框已由
+    // `CoverPlaceholder` 自己處理（見下方），這裡只補齊非 E-Ink 主題、以及
+    // 真實封面圖片（Image.file）原本完全沒有邊框的情形。
+    final cover = tokens.isEink
+        ? coverContent
+        : DecoratedBox(
+            decoration: BoxDecoration(
+              border: Border.all(color: colorScheme.outline, width: 1.5),
+            ),
+            child: coverContent,
+          );
     if (book.isDownloaded) return cover;
     return Stack(
       fit: StackFit.expand,
@@ -59,7 +72,11 @@ class BookCover extends StatelessWidget {
             // 雲朵圖示前景維持寫死白色：badgeScrim 四套主題色值深淺不一，
             // 沒有對應的「badgeScrim 前景色」token（ElinkTokens 欄位已於
             // Issue 1 定案凍結），白色是唯一在四種背景上都可辨識的選擇。
-            child: const Icon(Icons.cloud_outlined, size: 16, color: Colors.white),
+            child: const Icon(
+              Icons.cloud_outlined,
+              size: 16,
+              color: Colors.white,
+            ),
           ),
         ),
       ],
@@ -102,7 +119,8 @@ class CoverPlaceholder extends StatelessWidget {
             : constraints.maxHeight;
         final iconSize = (shortSide * 0.4).clamp(16.0, 40.0).toDouble();
         final fontSize = (shortSide * 0.14).clamp(9.0, 12.0).toDouble();
-        final showTitle = constraints.maxHeight >= _titleRowMinHeight &&
+        final showTitle =
+            constraints.maxHeight >= _titleRowMinHeight &&
             constraints.maxWidth >= _titleRowMinWidth;
 
         return Container(

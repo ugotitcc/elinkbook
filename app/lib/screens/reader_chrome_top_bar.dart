@@ -63,62 +63,74 @@ class ReaderChromeTopBar extends StatelessWidget {
       foregroundColor: iconColor,
       disabledForegroundColor: iconColor.withValues(alpha: 0.38),
     );
-    return Material(
-      color: backgroundColor,
-      child: SizedBox(
-        height: _height,
-        child: Row(
-          children: [
-            IconButton(
-              key: const Key('reader_chrome_back_button'),
-              icon: const Icon(Icons.arrow_back),
-              tooltip: '返回',
-              style: buttonStyle,
-              onPressed: onBack,
-            ),
-            Expanded(
-              child: Text(
-                key: const Key('reader_chrome_title'),
-                chapterTitle,
-                textAlign: TextAlign.center,
-                overflow: TextOverflow.ellipsis,
-                maxLines: 1,
-                style: TextStyle(color: iconColor, fontWeight: FontWeight.bold),
+    // 視覺還原（VISUAL_ANALYSIS.md）：Reference 截圖的頂部列下方有一條常駐
+    // 分隔線，本元件不吃全域 `AppBarTheme`（不是用 `Scaffold.appBar` 建構），
+    // 需自行從 `Theme.of(context)` 補上，維持與其他畫面 AppBar 一致的視覺。
+    final borderColor = Theme.of(context).colorScheme.outline;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: borderColor, width: 2)),
+      ),
+      child: Material(
+        color: backgroundColor,
+        child: SizedBox(
+          height: _height,
+          child: Row(
+            children: [
+              IconButton(
+                key: const Key('reader_chrome_back_button'),
+                icon: const Icon(Icons.arrow_back),
+                tooltip: '返回',
+                style: buttonStyle,
+                onPressed: onBack,
               ),
-            ),
-            if (showTtsIndicator)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                child: Icon(
-                  Icons.volume_up,
-                  key: const Key('reader_chrome_tts_indicator_icon'),
-                  color: iconColor,
+              Expanded(
+                child: Text(
+                  key: const Key('reader_chrome_title'),
+                  chapterTitle,
+                  textAlign: TextAlign.center,
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                  style: TextStyle(
+                    color: iconColor,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
-            IconButton(
-              key: const Key('reader_chrome_search_button'),
-              icon: const Icon(Icons.search),
-              tooltip: '搜尋內文',
-              style: buttonStyle,
-              onPressed: onSearchTap,
-            ),
-            IconButton(
-              key: const Key('reader_chrome_immersive_toggle_button'),
-              icon: Icon(
-                isBottomChromeVisible ? Icons.dock : Icons.dock_outlined,
+              if (showTtsIndicator)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Icon(
+                    Icons.volume_up,
+                    key: const Key('reader_chrome_tts_indicator_icon'),
+                    color: iconColor,
+                  ),
+                ),
+              IconButton(
+                key: const Key('reader_chrome_search_button'),
+                icon: const Icon(Icons.search),
+                tooltip: '搜尋內文',
+                style: buttonStyle,
+                onPressed: onSearchTap,
               ),
-              tooltip: isBottomChromeVisible ? '隱藏工具列' : '顯示工具列',
-              style: buttonStyle,
-              onPressed: onToggleBottomChrome,
-            ),
-            IconButton(
-              key: const Key('reader_chrome_toc_button'),
-              icon: const Icon(Icons.menu_book),
-              tooltip: '目錄',
-              style: buttonStyle,
-              onPressed: onTocTap,
-            ),
-          ],
+              IconButton(
+                key: const Key('reader_chrome_immersive_toggle_button'),
+                icon: Icon(
+                  isBottomChromeVisible ? Icons.dock : Icons.dock_outlined,
+                ),
+                tooltip: isBottomChromeVisible ? '隱藏工具列' : '顯示工具列',
+                style: buttonStyle,
+                onPressed: onToggleBottomChrome,
+              ),
+              IconButton(
+                key: const Key('reader_chrome_toc_button'),
+                icon: const Icon(Icons.menu_book),
+                tooltip: '目錄',
+                style: buttonStyle,
+                onPressed: onTocTap,
+              ),
+            ],
+          ),
         ),
       ),
     );

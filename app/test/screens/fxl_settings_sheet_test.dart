@@ -64,9 +64,11 @@ void main() {
 
     // 【審查修正 Minor：見 reviews/review-issue-5-8.md Issue 6 Minor #2】
     // 原本斷言 isNotNull——但 ReaderOptionTile 不論選中與否，
-    // BoxDecoration.color 恆為非 null（選中是 primaryContainer，未選中
+    // BoxDecoration.color 恆為非 null（選中是 primary，未選中
     // 是 surface），改造後這個斷言不論選中邏輯對不對都會通過，等同於
     // 失去鑑別力。改為精確比對選中/未選中應有的背景色，並確認兩者不同。
+    // 【視覺還原修正】選中態背景色由 primaryContainer 改為 primary（見
+    // reader_option_tile.dart、docs/research/uiux/VISUAL_ANALYSIS.md）。
     final theme = Theme.of(tester.element(find.byType(FxlSettingsSheet)));
     final selectedContainer = tester.widget<Container>(
       find.byKey(const Key('fxl_settings_dual_page_mode_never')),
@@ -76,8 +78,8 @@ void main() {
     );
     expect(
       (selectedContainer.decoration as BoxDecoration).color,
-      theme.colorScheme.primaryContainer,
-      reason: '目前選中的選項應以 primaryContainer 背景標示',
+      theme.colorScheme.primary,
+      reason: '目前選中的選項應以 primary 背景標示',
     );
     expect(
       (unselectedContainer.decoration as BoxDecoration).color,
@@ -288,8 +290,8 @@ void main() {
       );
       expect(
         (rtlContainer.decoration as BoxDecoration).color,
-        theme.colorScheme.primaryContainer,
-        reason: 'RTL 為全域預設值，應以 primaryContainer 背景標示選中',
+        theme.colorScheme.primary,
+        reason: 'RTL 為全域預設值，應以 primary 背景標示選中',
       );
       expect(
         (ltrContainer.decoration as BoxDecoration).color,

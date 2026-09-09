@@ -33,7 +33,8 @@ class ReaderOptionTile<T> extends StatelessWidget {
   Widget build(BuildContext context) {
     final selected = !forceUnselected && value == groupValue;
     final theme = Theme.of(context);
-    final isEink = theme.colorScheme.primary == Colors.black &&
+    final isEink =
+        theme.colorScheme.primary == Colors.black &&
         theme.scaffoldBackgroundColor == Colors.white;
 
     final Color backgroundColor;
@@ -45,11 +46,15 @@ class ReaderOptionTile<T> extends StatelessWidget {
       foregroundColor = selected ? Colors.white : Colors.black;
       border = Border.all(color: Colors.black, width: 1.5);
     } else {
+      // 視覺還原（VISUAL_ANALYSIS.md）：Reference 截圖的選中態是「主色實心
+      // 填滿＋onPrimary 白字」（比照原型 `bg-black`→`primary` 的映射），
+      // 不是 M3 慣用的淺色 Tonal Container 配色，故改用 primary／onPrimary
+      // 而非 primaryContainer／onPrimaryContainer。
       backgroundColor = selected
-          ? theme.colorScheme.primaryContainer
+          ? theme.colorScheme.primary
           : theme.colorScheme.surface;
       foregroundColor = selected
-          ? theme.colorScheme.onPrimaryContainer
+          ? theme.colorScheme.onPrimary
           : theme.colorScheme.onSurfaceVariant;
       border = Border.all(
         color: selected

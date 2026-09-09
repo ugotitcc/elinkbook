@@ -881,8 +881,9 @@ void main() {
       find.byKey(const Key('pdf_settings_crop_mode_auto')),
     );
     expect((autoContainer.decoration as BoxDecoration).color,
-        colorScheme.primaryContainer,
-        reason: '選中態項目背景色應為 primaryContainer，證明選取機制正常運作');
+        colorScheme.primary,
+        reason: '選中態項目背景色應為 primary（視覺還原，見'
+            ' docs/research/uiux/VISUAL_ANALYSIS.md），證明選取機制正常運作');
 
     final manualContainerCase1 = tester.widget<Container>(
       find.byKey(const Key('pdf_settings_crop_mode_manual')),

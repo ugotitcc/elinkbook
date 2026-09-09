@@ -36,32 +36,77 @@ ThemeData resolveThemeData({
 // 私有建構方法
 // ──────────────────────────────────────────────────────────
 
-/// 電子紙可辨識度補強（epic-35-design-system-tokens Issue 2）：M3 Switch
-/// OFF 狀態預設會吃 outline（thumbColor）／surfaceContainerHighest
-/// （trackColor）兩個角色，這兩個角色在 Dark 主題改採 DESIGN.md 色值後彼此
-/// 跟 surface 的亮度差大幅縮小，電子紙上不可靠（見 spec.md「Dark 主題色值
-/// 衝突決議」）。改為三個插槽全部參照 colorScheme.onSurface——onSurface 對
-/// surface 的對比由文字可讀性需求保證足夠，比原本設計給裝飾用的
-/// outline／surfaceContainerHighest 更適合扛「使用者必須看得見」的責任。
-/// thumb／trackOutline 用滿不透明，track 依 OFF/ON 狀態調整透明度，三者
-/// 之間仍可互相區分。【注意】0.5／0.15 這兩個透明度數值是本工單自行決定
-/// 的具體詮釋，spec.md 只給了「依狀態調整透明度以維持三者可區分」的定性
-/// 描述，沒有指定精確數字——下一輪真機驗證（比照 epic-18／epic-25 慣例）
-/// 若發現電子紙上不夠清楚，這兩個數字是可以直接調整的錨點，不需要重新
-/// 討論整體設計。
+/// 電子紙可辨識度補強（epic-35-design-system-tokens Issue 2）＋視覺還原
+/// （Visual Accuracy Mode，對照 `docs/research/uiux/reference/` 截圖／
+/// `prototype/elinkbook_theme_prototype.html` 的 `EBSwitchRow` 手刻實作：
+/// 開＝軌道 `primary`／圓點 `onPrimary`，關＝軌道近透明／圓點 `onSurface`）：
+/// - **OFF 狀態**維持 Issue 2 原有電子紙補強決策不變——M3 預設 OFF 狀態吃
+///   outline（thumbColor）／surfaceContainerHighest（trackColor），這兩個
+///   角色在 Dark 主題改採 DESIGN.md 色值後跟 surface 的亮度差大幅縮小，
+///   電子紙上不可靠（見 spec.md「Dark 主題色值衝突決議」），故 OFF 狀態三
+///   插槽全部參照 colorScheme.onSurface，thumb／trackOutline 滿不透明、
+///   track 用低透明度（0.15，具體數字為本工單自行詮釋的可調錨點）。
+/// - **ON 狀態**改參照 colorScheme.primary／onPrimary（原本同 OFF 態一併
+///   用 onSurface，導致非 E-Ink 主題下開關看起來一律是灰黑色，跟原型／
+///   Reference 截圖的「開＝主色填滿」視覺不符）。E-Ink 主題下
+///   `primary`＝純黑、`onPrimary`＝純白（見 `_buildEinkTheme()`），ON 態因
+///   此呈現「黑底白點」，對比度比原本「黑底、黑點疊在半透明黑軌道上」更
+///   高，不會削弱電子紙可辨識度，純視覺調整不影響 Issue 2 的補強效果。
 SwitchThemeData _buildSwitchTheme(ColorScheme colorScheme) {
   return SwitchThemeData(
     thumbColor: WidgetStateProperty.resolveWith(
-      (states) => colorScheme.onSurface,
+      (states) => states.contains(WidgetState.selected)
+          ? colorScheme.onPrimary
+          : colorScheme.onSurface,
     ),
     trackColor: WidgetStateProperty.resolveWith(
-      (states) => colorScheme.onSurface.withValues(
-        alpha: states.contains(WidgetState.selected) ? 0.5 : 0.15,
-      ),
+      (states) => states.contains(WidgetState.selected)
+          ? colorScheme.primary
+          : colorScheme.onSurface.withValues(alpha: 0.15),
     ),
     trackOutlineColor: WidgetStateProperty.resolveWith(
-      (states) => colorScheme.onSurface,
+      (states) => states.contains(WidgetState.selected)
+          ? colorScheme.primary
+          : colorScheme.onSurface,
     ),
+  );
+}
+
+/// 視覺還原（Visual Accuracy Mode，`docs/research/uiux/VISUAL_ANALYSIS.md`
+/// 全域根因）：`Card`／`AppBar` 先前完全沒有共用主題覆寫，落回 M3 預設的
+/// 圓角＋陰影，與 Reference 截圖（`prototype/elinkbook_theme_prototype.html`
+/// 渲染結果）「無陰影、統一邊框、方正到中等圓角」的視覺語彙不符。改為
+/// 全域一次補齊：無陰影＋`outline` 邊框＋8dp 圓角（沿用 `ReaderOptionTile`
+/// 既有的 8dp 圓角慣例，見 `reader_option_tile.dart`，避免同一份設計系統
+/// 出現兩種圓角數值）。
+CardThemeData _buildCardTheme(ColorScheme colorScheme) {
+  return CardThemeData(
+    elevation: 0,
+    color: colorScheme.surface,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(8),
+      side: BorderSide(color: colorScheme.outline, width: 1.5),
+    ),
+  );
+}
+
+/// 視覺還原：AppBar 先前無底部邊框、標題字重落回 M3 預設（約 w400），與
+/// Reference 截圖的「AppBar 下方常駐分隔線＋粗黑標題」不符。`shape` 用
+/// `Border(bottom:)`——`Border` 是 `BoxBorder`，`BoxBorder` 實作
+/// `ShapeBorder`，可直接指定給 `AppBarTheme.shape`，只畫底部一條邊，不會
+/// 連左右/頂部也畫出邊框。
+AppBarTheme _buildAppBarTheme(ColorScheme colorScheme) {
+  return AppBarTheme(
+    elevation: 0,
+    scrolledUnderElevation: 0,
+    backgroundColor: colorScheme.surface,
+    foregroundColor: colorScheme.onSurface,
+    titleTextStyle: TextStyle(
+      fontSize: 20,
+      fontWeight: FontWeight.w900,
+      color: colorScheme.onSurface,
+    ),
+    shape: Border(bottom: BorderSide(color: colorScheme.outline, width: 2)),
   );
 }
 
@@ -97,6 +142,8 @@ ThemeData _buildLightTheme() {
     scaffoldBackgroundColor: scaffoldBackground,
     useMaterial3: true,
     switchTheme: _buildSwitchTheme(colorScheme),
+    cardTheme: _buildCardTheme(colorScheme),
+    appBarTheme: _buildAppBarTheme(colorScheme),
     extensions: const [
       ElinkTokens(
         highlightYellow: Color(0xFFFEF08A),
@@ -154,6 +201,8 @@ ThemeData _buildDarkTheme() {
     scaffoldBackgroundColor: scaffoldBackground,
     useMaterial3: true,
     switchTheme: _buildSwitchTheme(colorScheme),
+    cardTheme: _buildCardTheme(colorScheme),
+    appBarTheme: _buildAppBarTheme(colorScheme),
     extensions: const [
       ElinkTokens(
         highlightYellow: Color(0xFF854D0E),
@@ -204,6 +253,8 @@ ThemeData _buildSepiaTheme() {
     scaffoldBackgroundColor: scaffoldBackground,
     useMaterial3: true,
     switchTheme: _buildSwitchTheme(colorScheme),
+    cardTheme: _buildCardTheme(colorScheme),
+    appBarTheme: _buildAppBarTheme(colorScheme),
     extensions: const [
       ElinkTokens(
         highlightYellow: Color(0xFFFEF3C7),
@@ -259,6 +310,8 @@ ThemeData _buildEinkTheme() {
     scaffoldBackgroundColor: Colors.white,
     useMaterial3: true,
     switchTheme: _buildSwitchTheme(colorScheme),
+    cardTheme: _buildCardTheme(colorScheme),
+    appBarTheme: _buildAppBarTheme(colorScheme),
     // 停用點擊水波紋效果與高亮，以避免電子紙裝置上產生嚴重殘影與刷新閃爍
     splashFactory: NoSplash.splashFactory,
     hoverColor: Colors.transparent,

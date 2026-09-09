@@ -51,24 +51,29 @@ class LibraryScreen extends StatefulWidget {
   final LibraryRepository repository;
   final BookImportService importService;
   final ReaderPrefsManager prefsManager;
+
   /// 收斂原本 `bookmarksRepository`／`highlightsRepository`／
   /// `notesRepository`／`customFontsRepository`／`layoutPresetRepository`／
   /// `bookReaderPrefsRepository` 六個獨立參數（epic-26-architecture-hardening
   /// Issue 7）。
   final LibraryReaderFeatureRepositories readerFeatureRepositories;
+
   /// 收斂原本 `syncAccountRepository`／`syncClient`／`syncCheckpointTrigger`
   /// 三個獨立參數（epic-26-architecture-hardening Issue 7）。
   final LibrarySyncDependencies syncDependencies;
+
   /// 收斂原本 `cloudAccountRepository`／`googleDriveOAuthClient`／
   /// `oneDriveOAuthClient`／`googleDriveStorageClient`／
   /// `oneDriveStorageClient` 五個獨立參數（epic-26-architecture-hardening
   /// Issue 7）。
   final LibraryCloudAccountDependencies cloudAccountDependencies;
+
   /// 收斂原本 `remoteServerRepository`／`createOpdsClient`／`thumbnailCache`
   /// 三個獨立參數（epic-26-architecture-hardening Issue 7）。
   final LibraryRemoteLibraryDependencies remoteLibraryDependencies;
   final ComputeRemoteFingerprint? computeFingerprint;
   final Future<bool> Function()? isMobileDataConnection;
+
   /// 收斂原本 `currentTheme`／`isEinkMode`／`onThemeChanged`／`onEinkModeChanged`
   /// 四個獨立參數（epic-26-architecture-hardening Issue 7）。
   final LibraryThemeDependencies themeDependencies;
@@ -97,7 +102,8 @@ class LibraryScreen extends StatefulWidget {
   State<LibraryScreen> createState() => _LibraryScreenState();
 }
 
-class _LibraryScreenState extends State<LibraryScreen> with WidgetsBindingObserver {
+class _LibraryScreenState extends State<LibraryScreen>
+    with WidgetsBindingObserver {
   final _preferences = LibraryPreferences();
   late final LibraryBookListController _bookListController;
   late final LibraryBatchActions _batchActions;
@@ -177,7 +183,8 @@ class _LibraryScreenState extends State<LibraryScreen> with WidgetsBindingObserv
     Book? mostRecent;
     for (final book in books) {
       if (book.lastReadTime.millisecondsSinceEpoch <= 0) continue;
-      if (mostRecent == null || book.lastReadTime.isAfter(mostRecent.lastReadTime)) {
+      if (mostRecent == null ||
+          book.lastReadTime.isAfter(mostRecent.lastReadTime)) {
         mostRecent = book;
       }
     }
@@ -240,8 +247,9 @@ class _LibraryScreenState extends State<LibraryScreen> with WidgetsBindingObserv
     final globalPrefs = await widget.prefsManager.loadGlobalPrefs();
     if (!globalPrefs.openLastBookOnLaunch) return;
     if (!mounted) return;
-    final books =
-        await widget.repository.listBooks(sortBy: LibrarySortBy.lastRead);
+    final books = await widget.repository.listBooks(
+      sortBy: LibrarySortBy.lastRead,
+    );
     if (!mounted) return;
     if (books.isEmpty) return;
     // 〔epic-30-calibre-remote-library Issue 4 補充發現〕最後閱讀的書籍
@@ -252,7 +260,6 @@ class _LibraryScreenState extends State<LibraryScreen> with WidgetsBindingObserv
     _openBook(books.first);
   }
 
-
   void _toggleViewMode() {
     final newMode = _viewMode == LibraryViewMode.grid
         ? LibraryViewMode.list
@@ -260,7 +267,6 @@ class _LibraryScreenState extends State<LibraryScreen> with WidgetsBindingObserv
     setState(() => _viewMode = newMode);
     _preferences.saveViewMode(newMode);
   }
-
 
   bool get _inSelectionMode => _selectedBookIds != null;
 
@@ -306,7 +312,8 @@ class _LibraryScreenState extends State<LibraryScreen> with WidgetsBindingObserv
     if (selectedIds == null || selectedIds.isEmpty || books == null) return;
     final destination = await showDialog<String>(
       context: context,
-      builder: (context) =>           LibraryMoveToGroupDialog(groups: _bookListController.groups),
+      builder: (context) =>
+          LibraryMoveToGroupDialog(groups: _bookListController.groups),
     );
     if (destination == null) return;
     // 立即退出選取模式，而非等到逐筆寫入資料庫的迴圈結束後才退出：這個迴圈
@@ -356,9 +363,7 @@ class _LibraryScreenState extends State<LibraryScreen> with WidgetsBindingObserv
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('刪除書籍'),
-        content: Text(
-          '將刪除已選取的 $count 本書籍，並一併刪除其書籤、劃線與備註，此操作無法復原。確定要刪除嗎？',
-        ),
+        content: Text('將刪除已選取的 $count 本書籍，並一併刪除其書籤、劃線與備註，此操作無法復原。確定要刪除嗎？'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
@@ -412,35 +417,42 @@ class _LibraryScreenState extends State<LibraryScreen> with WidgetsBindingObserv
               filePath: book.filePath,
               bookId: book.id,
               prefsManager: widget.prefsManager,
-              bookmarksRepository: widget.readerFeatureRepositories.bookmarksRepository,
-              highlightsRepository: widget.readerFeatureRepositories.highlightsRepository,
+              bookmarksRepository:
+                  widget.readerFeatureRepositories.bookmarksRepository,
+              highlightsRepository:
+                  widget.readerFeatureRepositories.highlightsRepository,
               notesRepository: widget.readerFeatureRepositories.notesRepository,
               bookTitle: book.title,
               bookAuthor: book.author,
               bookProgress: book.progress,
               isFixedLayout: book.isFixedLayout,
               libraryRepository: widget.repository,
-              customFontsRepository: widget.readerFeatureRepositories.customFontsRepository,
-              layoutPresetRepository: widget.readerFeatureRepositories.layoutPresetRepository,
-              bookReaderPrefsRepository: widget.readerFeatureRepositories.bookReaderPrefsRepository,
-              syncCheckpointTrigger: widget.syncDependencies.syncCheckpointTrigger,
+              customFontsRepository:
+                  widget.readerFeatureRepositories.customFontsRepository,
+              layoutPresetRepository:
+                  widget.readerFeatureRepositories.layoutPresetRepository,
+              bookReaderPrefsRepository:
+                  widget.readerFeatureRepositories.bookReaderPrefsRepository,
+              syncCheckpointTrigger:
+                  widget.syncDependencies.syncCheckpointTrigger,
               ttsProvider: widget.readerFeatureRepositories.ttsProvider,
               ttsAudioHandler: widget.readerFeatureRepositories.ttsAudioHandler,
-              ttsAudioFocusSource: widget.readerFeatureRepositories.ttsAudioFocusSource,
+              ttsAudioFocusSource:
+                  widget.readerFeatureRepositories.ttsAudioFocusSource,
               isEinkMode: widget.themeDependencies.isEinkMode,
             ),
           ),
         )
         .then((_) {
-      // 【審查修正】ReaderScreen 內離開/背景時會把最新閱讀進度與定位寫入
-      // 資料庫（見 Task 6），但 _books 這份記憶體快照不會自動跟著更新。
-      // 若不在此重新載入，_books 仍持有進入閱讀器前的舊 Book 物件；之後
-      // 任何以 _books 為來源的整列 updateBook()（例如
-      // _moveSelectedBooksToGroup()）會用舊值覆蓋掉剛剛寫入的最新進度，
-      // 造成資料遺失（`/superpowers:requesting-code-review` Critical 2）。
-      // 這裡不檢查 mounted——_loadBooks() 內部已有等效保護（見其既有實作）。
-      _bookListController.loadBooks();
-    });
+          // 【審查修正】ReaderScreen 內離開/背景時會把最新閱讀進度與定位寫入
+          // 資料庫（見 Task 6），但 _books 這份記憶體快照不會自動跟著更新。
+          // 若不在此重新載入，_books 仍持有進入閱讀器前的舊 Book 物件；之後
+          // 任何以 _books 為來源的整列 updateBook()（例如
+          // _moveSelectedBooksToGroup()）會用舊值覆蓋掉剛剛寫入的最新進度，
+          // 造成資料遺失（`/superpowers:requesting-code-review` Critical 2）。
+          // 這裡不檢查 mounted——_loadBooks() 內部已有等效保護（見其既有實作）。
+          _bookListController.loadBooks();
+        });
   }
 
   Future<bool?> _confirmRedownload(Book book, bool isMobileData) {
@@ -479,7 +491,8 @@ class _LibraryScreenState extends State<LibraryScreen> with WidgetsBindingObserv
   /// 到永久 `remote_books/` 目錄→刪除暫存），避免把永久 `filePath` 指向
   /// OS 可回收的暫存路徑。
   Future<void> _handleRedownload(Book book) async {
-    final remoteServerRepository = widget.remoteLibraryDependencies.remoteServerRepository;
+    final remoteServerRepository =
+        widget.remoteLibraryDependencies.remoteServerRepository;
     final createOpdsClient = widget.remoteLibraryDependencies.createOpdsClient;
     final remoteServerId = book.remoteServerId;
     final remoteDownloadUrl = book.remoteDownloadUrl;
@@ -487,13 +500,15 @@ class _LibraryScreenState extends State<LibraryScreen> with WidgetsBindingObserv
         createOpdsClient == null ||
         remoteServerId == null ||
         remoteDownloadUrl == null) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('遠端書庫功能未啟用，無法重新下載')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('遠端書庫功能未啟用，無法重新下載')));
       return;
     }
     if (_redownloadingBookIds.contains(book.id)) return;
 
-    final isMobileData = await (widget.isMobileDataConnection?.call() ?? Future.value(false));
+    final isMobileData =
+        await (widget.isMobileDataConnection?.call() ?? Future.value(false));
     if (!mounted) return;
     final confirmed = await _confirmRedownload(book, isMobileData);
     if (confirmed != true) return;
@@ -515,25 +530,32 @@ class _LibraryScreenState extends State<LibraryScreen> with WidgetsBindingObserv
       }
       if (server == null) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('找不到對應的遠端書庫站點')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('找不到對應的遠端書庫站點')));
         return;
       }
-      final password = await remoteServerRepository.loadPassword(remoteServerId);
+      final password = await remoteServerRepository.loadPassword(
+        remoteServerId,
+      );
       final client = createOpdsClient();
 
       tempPath = await downloadToTempFile(
         client: client,
         server: server,
-        acquisition: OpdsAcquisition(href: remoteDownloadUrl, format: book.format),
+        acquisition: OpdsAcquisition(
+          href: remoteDownloadUrl,
+          format: book.format,
+        ),
         format: book.format,
         password: password,
       );
 
       final permanentPath = await promoteToPermanent(tempPath);
 
-      await widget.repository
-          .updateBook(book.copyWith(filePath: permanentPath, isDownloaded: true));
+      await widget.repository.updateBook(
+        book.copyWith(filePath: permanentPath, isDownloaded: true),
+      );
       if (!mounted) return;
       await _bookListController.loadBooks();
     } catch (_) {
@@ -547,8 +569,9 @@ class _LibraryScreenState extends State<LibraryScreen> with WidgetsBindingObserv
         if (await leftover.exists()) await leftover.delete();
       }
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('重新下載失敗，請稍後再試')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('重新下載失敗，請稍後再試')));
     } finally {
       _redownloadingBookIds.remove(book.id);
     }
@@ -714,9 +737,11 @@ class _LibraryScreenState extends State<LibraryScreen> with WidgetsBindingObserv
   List<Book> _filterBooksBySearchQuery(List<Book> books, String query) {
     final normalized = query.trim().toLowerCase();
     return books
-        .where((book) =>
-            book.title.toLowerCase().contains(normalized) ||
-            (book.author?.toLowerCase().contains(normalized) ?? false))
+        .where(
+          (book) =>
+              book.title.toLowerCase().contains(normalized) ||
+              (book.author?.toLowerCase().contains(normalized) ?? false),
+        )
         .toList();
   }
 
@@ -753,8 +778,9 @@ class _LibraryScreenState extends State<LibraryScreen> with WidgetsBindingObserv
   Widget build(BuildContext context) {
     final books = _bookListController.books;
     final trimmedQuery = _searchQuery.trim();
-    final searchResults =
-        trimmedQuery.isEmpty || books == null ? null : _filterBooksBySearchQuery(books, trimmedQuery);
+    final searchResults = trimmedQuery.isEmpty || books == null
+        ? null
+        : _filterBooksBySearchQuery(books, trimmedQuery);
     return PopScope(
       canPop: !_inSelectionMode && _activeGroupFilter == null,
       onPopInvokedWithResult: (didPop, result) {
@@ -777,11 +803,14 @@ class _LibraryScreenState extends State<LibraryScreen> with WidgetsBindingObserv
                   Expanded(
                     child: searchResults != null
                         ? (searchResults.isEmpty
-                            ? const Center(child: Text('找不到符合的書籍'))
-                            : _buildBookList(books, searchResults: searchResults))
+                              ? const Center(child: Text('找不到符合的書籍'))
+                              : _buildBookList(
+                                  books,
+                                  searchResults: searchResults,
+                                ))
                         : (books.isEmpty
-                            ? _buildEmptyState()
-                            : _buildBookList(books)),
+                              ? _buildEmptyState()
+                              : _buildBookList(books)),
                   ),
                 ],
               ),
@@ -981,8 +1010,10 @@ class _LibraryScreenState extends State<LibraryScreen> with WidgetsBindingObserv
     final visibleBooks = isSearching
         ? searchResults
         : (_activeGroupFilter == null
-            ? books.where((b) => b.groupName == BookGroup.uncategorized).toList()
-            : books.where((b) => b.groupName == _activeGroupFilter).toList());
+              ? books
+                    .where((b) => b.groupName == BookGroup.uncategorized)
+                    .toList()
+              : books.where((b) => b.groupName == _activeGroupFilter).toList());
     final itemCount = groupTiles.length + visibleBooks.length;
 
     final orientation = MediaQuery.orientationOf(context);
@@ -995,8 +1026,9 @@ class _LibraryScreenState extends State<LibraryScreen> with WidgetsBindingObserv
     }) {
       if (globalIndex < groupTiles.length) {
         final tile = groupTiles[globalIndex];
-        final onTap =
-            _inSelectionMode ? null : () => _openGroupFilteredView(tile.name);
+        final onTap = _inSelectionMode
+            ? null
+            : () => _openGroupFilteredView(tile.name);
         return isGrid
             ? _GroupGridTile(tile: tile, onTap: onTap)
             : _GroupListTile(tile: tile, onTap: onTap);
@@ -1023,7 +1055,9 @@ class _LibraryScreenState extends State<LibraryScreen> with WidgetsBindingObserv
 
     return Column(
       children: [
-        if (!isSearching && _activeGroupFilter == null && _mostRecentBook != null)
+        if (!isSearching &&
+            _activeGroupFilter == null &&
+            _mostRecentBook != null)
           _ContinueReadingRow(
             book: _mostRecentBook!,
             // 多選模式進行中時停用點擊（`review-plan-issue-3.md` M-3）：
@@ -1051,7 +1085,8 @@ class _LibraryScreenState extends State<LibraryScreen> with WidgetsBindingObserv
               const gridPadding = 8.0;
               const gridSpacing = 8.0;
               const rowSpacing = 12.0;
-              final cellWidth = (constraints.maxWidth -
+              final cellWidth =
+                  (constraints.maxWidth -
                       2 * gridPadding -
                       (crossAxisCount - 1) * gridSpacing) /
                   crossAxisCount;
@@ -1064,8 +1099,9 @@ class _LibraryScreenState extends State<LibraryScreen> with WidgetsBindingObserv
               // C-2：疊加會造成單列高度虛增 30~50dp，動態列數因此算得比
               // 實際能放下的還要少，違背 Issue 7「消除留白」的目的）。
               final rowContentHeight = cellWidth / _kCellAspectRatio;
-              final pagingBarHeight =
-                  PagingBar.resolvedHeight(widget.themeDependencies.isEinkMode);
+              final pagingBarHeight = PagingBar.resolvedHeight(
+                widget.themeDependencies.isEinkMode,
+              );
               final availableGridHeight =
                   constraints.maxHeight - pagingBarHeight - 2 * gridPadding;
               // Grid／List 兩種檢視各自獨立算 pageSize（epic-36 Issue 7
@@ -1079,8 +1115,9 @@ class _LibraryScreenState extends State<LibraryScreen> with WidgetsBindingObserv
                 rowContentHeight: rowContentHeight,
                 rowSpacing: rowSpacing,
               );
-              final listRowHeight =
-                  libraryListRowHeight(MediaQuery.textScalerOf(context));
+              final listRowHeight = libraryListRowHeight(
+                MediaQuery.textScalerOf(context),
+              );
               final listRows = libraryRowsForHeight(
                 availableHeight: availableGridHeight,
                 rowContentHeight: listRowHeight,
@@ -1090,7 +1127,10 @@ class _LibraryScreenState extends State<LibraryScreen> with WidgetsBindingObserv
                   ? crossAxisCount * gridRows
                   : listRows;
 
-              final pageCount = _paging.clamp(itemCount: itemCount, pageSize: pageSize);
+              final pageCount = _paging.clamp(
+                itemCount: itemCount,
+                pageSize: pageSize,
+              );
               final safePage = _paging.currentPage;
               final pageStart = safePage * pageSize;
               final pageEnd = (pageStart + pageSize).clamp(0, itemCount);
@@ -1127,7 +1167,10 @@ class _LibraryScreenState extends State<LibraryScreen> with WidgetsBindingObserv
               return Column(
                 children: [
                   Expanded(
-                    child: Align(alignment: Alignment.topCenter, child: gridOrList),
+                    child: Align(
+                      alignment: Alignment.topCenter,
+                      child: gridOrList,
+                    ),
                   ),
                   PagingBar(
                     key: const Key('library_paging_bar'),
@@ -1174,6 +1217,7 @@ class _GroupGridTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return InkWell(
       key: Key('group_tile_${tile.name}'),
       onTap: onTap,
@@ -1191,30 +1235,61 @@ class _GroupGridTile extends StatelessWidget {
           // 皆用 Expanded 包裹，強制精確填滿可用寬高，不受任何比例換算
           // 影響。
           Expanded(
-            child: Column(
-              children: [
-                Expanded(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Expanded(child: _groupTilePreviewCell(0)),
-                      const SizedBox(width: 2),
-                      Expanded(child: _groupTilePreviewCell(1)),
-                    ],
+            child: DecoratedBox(
+              // 視覺還原（VISUAL_ANALYSIS.md）：Reference 截圖每個分類拼貼
+              // 格都有外框＋左上角「分類」角標，原本完全沒有實作。
+              decoration: BoxDecoration(
+                border: Border.all(color: colorScheme.outline, width: 1.5),
+              ),
+              child: Column(
+                children: [
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Container(
+                      color: colorScheme.primary,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      child: Text(
+                        '分類',
+                        style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                          color: colorScheme.onPrimary,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 2),
-                Expanded(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Expanded(child: _groupTilePreviewCell(2)),
-                      const SizedBox(width: 2),
-                      Expanded(child: _groupTilePreviewCell(3)),
-                    ],
+                  Expanded(
+                    child: Column(
+                      children: [
+                        Expanded(
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Expanded(child: _groupTilePreviewCell(0)),
+                              const SizedBox(width: 2),
+                              Expanded(child: _groupTilePreviewCell(1)),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Expanded(
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Expanded(child: _groupTilePreviewCell(2)),
+                              const SizedBox(width: 2),
+                              Expanded(child: _groupTilePreviewCell(3)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 4),
@@ -1381,8 +1456,10 @@ class _BookGridTile extends StatelessWidget {
                           ),
                           iconSize: 18,
                           padding: EdgeInsets.zero,
-                          constraints:
-                              const BoxConstraints(minWidth: 32, minHeight: 32),
+                          constraints: const BoxConstraints(
+                            minWidth: 32,
+                            minHeight: 32,
+                          ),
                           tooltip: '更多',
                           onPressed: onMenuTap,
                         ),
@@ -1463,11 +1540,7 @@ class _BookListTile extends StatelessWidget {
                 materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 onChanged: (_) => onTap(),
               ),
-            SizedBox(
-              width: 48,
-              height: 64,
-              child: BookCover(book: book),
-            ),
+            SizedBox(width: 48, height: 64, child: BookCover(book: book)),
           ],
         ),
       ),
@@ -1539,7 +1612,10 @@ class _ContinueReadingRow extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
-                  Text(_progressText(book), style: const TextStyle(fontSize: 12)),
+                  Text(
+                    _progressText(book),
+                    style: const TextStyle(fontSize: 12),
+                  ),
                 ],
               ),
             ),
@@ -1810,7 +1886,9 @@ class _LayoutOverrideDialogState extends State<_LayoutOverrideDialog> {
                   onSelected: (v) => setState(() => _pageTurnMode = v),
                 ),
                 ReaderOptionTile<PageTurnMode?>(
-                  itemKey: const Key('layout_override_page_turn_mode_paginated'),
+                  itemKey: const Key(
+                    'layout_override_page_turn_mode_paginated',
+                  ),
                   value: PageTurnMode.paginated,
                   groupValue: _pageTurnMode,
                   icon: Icons.menu_book,

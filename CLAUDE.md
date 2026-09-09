@@ -6,7 +6,7 @@
 
 大多數核心閱讀體驗功能已完成並歸檔（`docs/archive/`）。**Epic／Issue 進度與優先順序一律以 `docs/epics.md` 為準，本檔案不記錄逐一 Epic 或 Issue 的完成狀態、日期或 PR 編號**——本檔案只描述架構的目前最終樣貌，新 Issue 合併不需要回頭修改本檔案，除非它改變了下方描述的架構事實本身。
 
-`prototype/index.html` 是一份獨立、依需求文件製作的 HTML/CSS/JS UI/UX 原型（手機外殼模擬器），後續功能性 Epic 設計畫面時應先參考它，細節見下方「UI/UX 原型參考」。
+`prototype/elinkbook_theme_prototype.html` 是目前唯一權威的 HTML/CSS/JS UI/UX 原型（手機外殼模擬器＋開發工具側欄，依 `DESIGN.md` 三主題＋E-Ink 修飾子色彩 Token 系統製作），後續功能性 Epic 設計畫面時應先參考它，細節見下方「UI/UX 原型參考」。舊版 `prototype/index.html`（E-Ink 被當成第 4 個獨立主題，與 `DESIGN.md` 定案的「E-Ink 是修飾子」原則衝突）已停用，不應再作為畫面設計依據。
 
 ## 常用指令
 
@@ -131,7 +131,9 @@ elinkBook（全能跨平台電子書閱讀器）是一款跨平台電子書閱�
 
 ### UI/UX 原型參考
 
-`prototype/index.html` 是依需求文件製作的獨立 HTML 原型（手機外殼模擬器 + 控制面板，涵蓋書架視圖、直排/橫排排版切換、多主題、版面客製化、九宮格導航熱區等）。`epic-0-skeleton` 之後的所有功能性 Epic（`epic-1` 起）在設計畫面 UI/UX 時，須先參考此原型既有的視覺與互動設計，作為 Flutter 實作的依據起點，而非重新發明。
+`prototype/elinkbook_theme_prototype.html` 是依 `docs/research/uiux/eink-redesign-rebuild-plan.md` 定案結果製作的獨立 HTML 原型（手機外殼模擬器 + 開發工具側欄，涵蓋書架視圖〔含「繼續閱讀」列／長按動作 Sheet〕、來源畫面〔含麵包屑導覽〕、閱讀器〔直排/橫排切換〕、設定四分區、版面設定四分頁，並實作 Light/Dark/Sepia 三主題＋E-Ink 修飾子完整主題系統）。`epic-0-skeleton` 之後的所有功能性 Epic（`epic-1` 起）在設計畫面 UI/UX 時，須先參考此原型既有的視覺與互動設計，作為 Flutter 實作的依據起點，而非重新發明。
+
+舊版 `prototype/index.html`（曾為官方原型，畫面覆蓋含九宮格導航熱區設定等細節）已停用——其主題系統把 E-Ink 當作第 4 個獨立主題，與 `DESIGN.md` 定案的「E-Ink 是修飾子，不是第四個主題」原則衝突，不應再作為畫面設計依據；若某個細節畫面（例如九宮格熱區配置）在 `elinkbook_theme_prototype.html` 中只有選單入口、尚無完整互動示範，須另行與人類確認，不可逕自沿用 `index.html` 的舊版互動邏輯。`prototype/eink_redesign_prototype.html` 為更早期的純黑白 E-Ink 版本，依 `eink-redesign-rebuild-plan.md` 保留作對照，同樣不作為主要設計依據。
 
 ### 技術棧（已決策）
 

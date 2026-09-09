@@ -37,6 +37,7 @@ class SettingsScaffold extends StatefulWidget {
   final CustomFontsRepository? customFontsRepository;
   final SyncAccountRepository? syncAccountRepository;
   final SyncClient? syncClient;
+
   /// 「立即同步」按鈕與最後同步時間顯示（2026-09-08 `/grill-with-docs`
   /// 使用者需求），見 `SyncSettingsScreen`／`LibrarySyncDependencies` 的
   /// 欄位說明。
@@ -96,8 +97,9 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
   Future<void> _updateConsoleLogEnabled(bool value) async {
     setState(() => _consoleLogEnabled = value);
     final prefs = await widget.prefsManager.loadGlobalPrefs();
-    await widget.prefsManager
-        .saveGlobalPrefs(prefs.copyWith(consoleLogEnabled: value));
+    await widget.prefsManager.saveGlobalPrefs(
+      prefs.copyWith(consoleLogEnabled: value),
+    );
   }
 
   @override
@@ -123,167 +125,201 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
       body: ListView(
         children: [
           const EBSectionHeader(title: '外觀'),
-          ListTile(
-            title: const Text('佈景'),
-            subtitle: widget.isEinkMode
-                ? const Text(
-                    '這裡選的是關閉 E-Ink 後要恢復的主題',
-                    key: Key('settings_theme_locked_hint'),
-                  )
-                : null,
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _buildThemeDot(context, AppTheme.light,
-                    'settings_theme_dot_light'),
-                _buildThemeDot(context, AppTheme.dark,
-                    'settings_theme_dot_dark'),
-                _buildThemeDot(context, AppTheme.sepia,
-                    'settings_theme_dot_sepia'),
-              ],
+          _SettingsCard(
+            child: ListTile(
+              title: const Text('佈景'),
+              subtitle: widget.isEinkMode
+                  ? const Text(
+                      '這裡選的是關閉 E-Ink 後要恢復的主題',
+                      key: Key('settings_theme_locked_hint'),
+                    )
+                  : null,
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildThemeDot(
+                    context,
+                    AppTheme.light,
+                    'settings_theme_dot_light',
+                  ),
+                  _buildThemeDot(
+                    context,
+                    AppTheme.dark,
+                    'settings_theme_dot_dark',
+                  ),
+                  _buildThemeDot(
+                    context,
+                    AppTheme.sepia,
+                    'settings_theme_dot_sepia',
+                  ),
+                ],
+              ),
             ),
           ),
-          SwitchListTile(
-            key: const Key('settings_eink_mode_switch'),
-            title: const Text('E-Ink 高對比模式'),
-            subtitle: const Text('停用動畫與漸層，以純黑白高對比顯示，專為電子紙螢幕最佳化'),
-            value: widget.isEinkMode,
-            onChanged: widget.onEinkModeChanged,
+          _SettingsCard(
+            child: SwitchListTile(
+              key: const Key('settings_eink_mode_switch'),
+              title: const Text('E-Ink 高對比模式'),
+              subtitle: const Text('停用動畫與漸層，以純黑白高對比顯示，專為電子紙螢幕最佳化'),
+              value: widget.isEinkMode,
+              onChanged: widget.onEinkModeChanged,
+            ),
           ),
-          ListTile(
-            key: const Key('settings_font_management_button'),
-            title: const Text('字型管理'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: widget.customFontsRepository == null
-                ? null
-                : () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => FontManagementScreen(
-                          repository: widget.customFontsRepository!,
+          _SettingsCard(
+            child: ListTile(
+              key: const Key('settings_font_management_button'),
+              title: const Text('字型管理'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: widget.customFontsRepository == null
+                  ? null
+                  : () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => FontManagementScreen(
+                            repository: widget.customFontsRepository!,
+                          ),
                         ),
-                      ),
-                    );
-                  },
+                      );
+                    },
+            ),
           ),
-          const Divider(height: 1),
           const EBSectionHeader(title: '閱讀'),
-          ListTile(
-            key: const Key('settings_reading_defaults_button'),
-            title: const Text('閱讀預設值'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) =>
-                      ReadingDefaultsScreen(prefsManager: widget.prefsManager),
-                ),
-              );
-            },
-          ),
-          ListTile(
-            key: const Key('settings_nav_zone_button'),
-            title: const Text('導航熱區'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) =>
-                      NavZoneSettingsScreen(prefsManager: widget.prefsManager),
-                ),
-              );
-            },
-          ),
-          ListTile(
-            key: const Key('settings_tts_defaults_button'),
-            title: const Text('朗讀語音與語速'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => TtsDefaultsScreen(
-                    prefsManager: widget.prefsManager,
-                    ttsProvider: widget.ttsProvider,
-                    isEinkMode: widget.isEinkMode,
+          _SettingsCard(
+            child: ListTile(
+              key: const Key('settings_reading_defaults_button'),
+              title: const Text('閱讀預設值'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => ReadingDefaultsScreen(
+                      prefsManager: widget.prefsManager,
+                    ),
                   ),
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
-          const Divider(height: 1),
+          _SettingsCard(
+            child: ListTile(
+              key: const Key('settings_nav_zone_button'),
+              title: const Text('導航熱區'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => NavZoneSettingsScreen(
+                      prefsManager: widget.prefsManager,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          _SettingsCard(
+            child: ListTile(
+              key: const Key('settings_tts_defaults_button'),
+              title: const Text('朗讀語音與語速'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => TtsDefaultsScreen(
+                      prefsManager: widget.prefsManager,
+                      ttsProvider: widget.ttsProvider,
+                      isEinkMode: widget.isEinkMode,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
           const EBSectionHeader(title: '同步與帳號'),
-          ListTile(
-            key: const Key('settings_sync_button'),
-            title: const Text('同步'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: widget.syncAccountRepository == null ||
-                    widget.syncClient == null ||
-                    widget.onManualSync == null ||
-                    widget.loadLastSyncedAt == null
-                ? null
-                : () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => SyncSettingsScreen(
-                          accountRepository: widget.syncAccountRepository!,
-                          syncClient: widget.syncClient!,
-                          onManualSync: widget.onManualSync!,
-                          loadLastSyncedAt: widget.loadLastSyncedAt!,
+          _SettingsCard(
+            child: ListTile(
+              key: const Key('settings_sync_button'),
+              title: const Text('同步'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap:
+                  widget.syncAccountRepository == null ||
+                      widget.syncClient == null ||
+                      widget.onManualSync == null ||
+                      widget.loadLastSyncedAt == null
+                  ? null
+                  : () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => SyncSettingsScreen(
+                            accountRepository: widget.syncAccountRepository!,
+                            syncClient: widget.syncClient!,
+                            onManualSync: widget.onManualSync!,
+                            loadLastSyncedAt: widget.loadLastSyncedAt!,
+                          ),
                         ),
-                      ),
-                    );
-                  },
+                      );
+                    },
+            ),
           ),
-          ListTile(
-            key: const Key('settings_cloud_account_button'),
-            title: const Text('已連結的雲端匯入帳戶'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: widget.cloudAccountRepository == null ||
-                    widget.googleDriveOAuthClient == null ||
-                    widget.oneDriveOAuthClient == null
-                ? null
-                : () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => CloudAccountSettingsScreen(
-                          cloudAccountRepository: widget.cloudAccountRepository!,
-                          googleDriveOAuthClient: widget.googleDriveOAuthClient!,
-                          oneDriveOAuthClient: widget.oneDriveOAuthClient!,
+          _SettingsCard(
+            child: ListTile(
+              key: const Key('settings_cloud_account_button'),
+              title: const Text('已連結的雲端匯入帳戶'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap:
+                  widget.cloudAccountRepository == null ||
+                      widget.googleDriveOAuthClient == null ||
+                      widget.oneDriveOAuthClient == null
+                  ? null
+                  : () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => CloudAccountSettingsScreen(
+                            cloudAccountRepository:
+                                widget.cloudAccountRepository!,
+                            googleDriveOAuthClient:
+                                widget.googleDriveOAuthClient!,
+                            oneDriveOAuthClient: widget.oneDriveOAuthClient!,
+                          ),
                         ),
-                      ),
-                    );
-                  },
+                      );
+                    },
+            ),
           ),
-          const Divider(height: 1),
           const EBSectionHeader(title: '關於'),
-          ListTile(
-            key: const Key('settings_about_button'),
-            title: const Text('關於'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (context) => const AboutScreen()),
-              );
-            },
+          _SettingsCard(
+            child: ListTile(
+              key: const Key('settings_about_button'),
+              title: const Text('關於'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => const AboutScreen()),
+                );
+              },
+            ),
           ),
-          ListTile(
-            key: const Key('settings_reader_console_log_button'),
-            title: const Text('閱讀器 Console Log'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => const ReaderConsoleLogScreen(),
-                ),
-              );
-            },
+          _SettingsCard(
+            child: ListTile(
+              key: const Key('settings_reader_console_log_button'),
+              title: const Text('閱讀器 Console Log'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const ReaderConsoleLogScreen(),
+                  ),
+                );
+              },
+            ),
           ),
-          SwitchListTile(
-            key: const Key('settings_console_log_switch'),
-            title: const Text('Console Log 攔截'),
-            subtitle: const Text('關閉後僅保留錯誤訊息，用於問題回報時的診斷紀錄'),
-            value: _consoleLogEnabled,
-            onChanged: (value) => _updateConsoleLogEnabled(value),
+          _SettingsCard(
+            child: SwitchListTile(
+              key: const Key('settings_console_log_switch'),
+              title: const Text('Console Log 攔截'),
+              subtitle: const Text('關閉後僅保留錯誤訊息，用於問題回報時的診斷紀錄'),
+              value: _consoleLogEnabled,
+              onChanged: (value) => _updateConsoleLogEnabled(value),
+            ),
           ),
         ],
       ),
@@ -298,7 +334,7 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
     return Semantics(
       label: locked
           ? '${_themeLabel(theme)}佈景，已鎖定，這裡選的是關閉 E-Ink 後要恢復的主題，'
-              '目前選擇：${_themeLabel(widget.currentTheme)}'
+                '目前選擇：${_themeLabel(widget.currentTheme)}'
           : '${_themeLabel(theme)}佈景',
       button: !locked,
       child: GestureDetector(
@@ -334,10 +370,33 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
   }
 
   String _themeLabel(AppTheme theme) => switch (theme) {
-        AppTheme.light => '淺色',
-        AppTheme.dark => '深色',
-        AppTheme.sepia => '羊皮紙',
-      };
+    AppTheme.light => '淺色',
+    AppTheme.dark => '深色',
+    AppTheme.sepia => '羊皮紙',
+  };
+}
+
+/// 視覺還原（Visual Accuracy Mode，`docs/research/uiux/VISUAL_ANALYSIS.md`）：
+/// Reference 截圖的設定畫面每個項目都是獨立、有邊框、彼此間有間距的卡片，
+/// 不是原本連續 `ListTile`＋細分隔線的清單樣式。改用全域已定案的 `CardTheme`
+/// （見 `app_theme_data.dart`，無陰影＋`outline` 邊框＋8dp 圓角）逐一包裹
+/// 每個項目，取代原本插在各分區之間的 `Divider`——分區間距改由
+/// `EBSectionHeader` 既有的頂部留白（`fromLTRB(16, 24, 16, 8)`）承擔，
+/// 不需要額外的分隔線或間距元件。`clipBehavior: Clip.antiAlias` 讓
+/// `ListTile`/`SwitchListTile` 內建的按壓水波紋不會溢出卡片的圓角邊界。
+class _SettingsCard extends StatelessWidget {
+  final Widget child;
+
+  const _SettingsCard({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      child: child,
+    );
+  }
 }
 
 /// E-Ink 鎖定狀態的圓形虛線邊框（`DESIGN.md` §17.2：邊框改為虛線，取代
