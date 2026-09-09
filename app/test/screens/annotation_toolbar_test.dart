@@ -16,6 +16,7 @@ void main() {
             onNotePressed: () {},
             onClosePressed: () {},
             onCopyPressed: () {},
+            isEinkMode: false,
           ),
         ),
       ),
@@ -57,6 +58,7 @@ void main() {
             onNotePressed: () {},
             onClosePressed: () {},
             onCopyPressed: () {},
+            isEinkMode: false,
           ),
         ),
       ),
@@ -79,6 +81,7 @@ void main() {
             onNotePressed: () {},
             onClosePressed: () {},
             onCopyPressed: () {},
+            isEinkMode: false,
           ),
         ),
       ),
@@ -101,6 +104,7 @@ void main() {
             onNotePressed: () {},
             onClosePressed: () {},
             onCopyPressed: () {},
+            isEinkMode: false,
           ),
         ),
       ),
@@ -123,6 +127,7 @@ void main() {
             onNotePressed: () {},
             onClosePressed: () {},
             onCopyPressed: () {},
+            isEinkMode: false,
           ),
         ),
       ),
@@ -143,6 +148,7 @@ void main() {
             onNotePressed: () => pressed = true,
             onClosePressed: () {},
             onCopyPressed: () {},
+            isEinkMode: false,
           ),
         ),
       ),
@@ -163,6 +169,7 @@ void main() {
             onNotePressed: () {},
             onClosePressed: () => pressed = true,
             onCopyPressed: () {},
+            isEinkMode: false,
           ),
         ),
       ),
@@ -183,6 +190,7 @@ void main() {
             onNotePressed: () {},
             onClosePressed: () {},
             onCopyPressed: () => pressed = true,
+            isEinkMode: false,
           ),
         ),
       ),
@@ -202,6 +210,7 @@ void main() {
             onNotePressed: () {},
             onClosePressed: () {},
             onCopyPressed: () {},
+            isEinkMode: false,
           ),
         ),
       ),
@@ -223,6 +232,7 @@ void main() {
             onNotePressed: () {},
             onClosePressed: () {},
             onCopyPressed: () {},
+            isEinkMode: false,
             onDeletePressed: () => pressed = true,
             deleteButtonLabel: '刪除畫線',
           ),
@@ -250,6 +260,7 @@ void main() {
             onNotePressed: () {},
             onClosePressed: () {},
             onCopyPressed: () {},
+            isEinkMode: false,
             hasExistingNote: true,
           ),
         ),
@@ -269,6 +280,7 @@ void main() {
             onNotePressed: () {},
             onClosePressed: () {},
             onCopyPressed: () {},
+            isEinkMode: false,
           ),
         ),
       ),
@@ -277,5 +289,68 @@ void main() {
       find.byKey(const Key('annotation_toolbar_note')),
     );
     expect(button.tooltip, '新增備註');
+  });
+
+  group('E-Ink 感知（DESIGN.md §5：E-Ink 模式陰影強制為 none，改用邊框）', () {
+    testWidgets('isEinkMode: false 時維持陰影，不加邊框', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: Scaffold(
+            body: AnnotationToolbar(
+              onStyleSelected: (_) {},
+              onNotePressed: () {},
+              onClosePressed: () {},
+              onCopyPressed: () {},
+              isEinkMode: false,
+            ),
+          ),
+        ),
+      );
+
+      final material = tester.widget<Material>(
+        find
+            .descendant(
+              of: find.byType(AnnotationToolbar),
+              matching: find.byType(Material),
+            )
+            .first,
+      );
+      expect(material.elevation, 4);
+      final shape = material.shape as RoundedRectangleBorder;
+      expect(shape.side, BorderSide.none);
+    });
+
+    testWidgets('isEinkMode: true 時陰影歸零，改用 outline 邊框', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: buildEinkThemeData(),
+          home: Scaffold(
+            body: AnnotationToolbar(
+              onStyleSelected: (_) {},
+              onNotePressed: () {},
+              onClosePressed: () {},
+              onCopyPressed: () {},
+              isEinkMode: true,
+            ),
+          ),
+        ),
+      );
+
+      final context = tester.element(find.byType(AnnotationToolbar));
+      final colorScheme = Theme.of(context).colorScheme;
+      final material = tester.widget<Material>(
+        find
+            .descendant(
+              of: find.byType(AnnotationToolbar),
+              matching: find.byType(Material),
+            )
+            .first,
+      );
+      expect(material.elevation, 0);
+      final shape = material.shape as RoundedRectangleBorder;
+      expect(shape.side.color, colorScheme.outline);
+      expect(shape.side.width, 1.5);
+    });
   });
 }

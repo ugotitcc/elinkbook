@@ -32,12 +32,19 @@ class AnnotationToolbar extends StatelessWidget {
   final String? deleteButtonLabel;
   final bool hasExistingNote;
 
+  /// `DESIGN.md` §5「E-Ink 模式下所有元件強制為 none」：E-Ink 模式關閉
+  /// 陰影（電子紙半透明陰影會殘影），改用 `outline` 邊框標示浮動範圍，
+  /// 比照全 App 已統一的 Elevated Card → Outlined Card 降級語彙
+  /// （`app_theme_data.dart` `_buildCardTheme()`／`_buildAppBarTheme()`）。
+  final bool isEinkMode;
+
   const AnnotationToolbar({
     super.key,
     required this.onStyleSelected,
     required this.onNotePressed,
     required this.onClosePressed,
     required this.onCopyPressed,
+    required this.isEinkMode,
     this.onDeletePressed,
     this.deleteButtonLabel,
     this.hasExistingNote = false,
@@ -46,10 +53,16 @@ class AnnotationToolbar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = Theme.of(context).extension<ElinkTokens>()!;
+    final colorScheme = Theme.of(context).colorScheme;
     return Material(
-      elevation: 4,
-      borderRadius: BorderRadius.circular(24),
-      color: Theme.of(context).colorScheme.surface,
+      elevation: isEinkMode ? 0 : 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
+        side: isEinkMode
+            ? BorderSide(color: colorScheme.outline, width: 1.5)
+            : BorderSide.none,
+      ),
+      color: colorScheme.surface,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         child: Column(

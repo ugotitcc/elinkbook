@@ -2529,6 +2529,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                       ? null
                       : _annotationDeleteButtonLabel(existingItem),
                   hasExistingNote: existingItem?.note != null,
+                  isEinkMode: widget.isEinkMode,
                 ),
               ),
             if (pdfSelection != null)
@@ -2550,6 +2551,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                       ? null
                       : _annotationDeleteButtonLabel(pdfExistingItem),
                   hasExistingNote: pdfExistingItem?.note != null,
+                  isEinkMode: widget.isEinkMode,
                 ),
               ),
             if (_cropEditModeActive)

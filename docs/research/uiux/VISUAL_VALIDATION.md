@@ -328,7 +328,29 @@ PASS（有測試佐證）——「預設集」分頁依 `版面設定_預設集.
 
 ### Remaining Differences（刻意不做，超出本次範圍）
 - 「從其他書籍複製」區塊（複製到本書／複製到其他書籍）Reference 截圖沒有示範，判斷是畫面被截斷未拍到而非要移除——保留在「已儲存的預設集」清單下方，未依 Reference 「看起來沒有」而移除既有功能。
-- `AnnotationToolbar` E-Ink 感知（另開一輪處理，您已明確指示）。
+- ~~`AnnotationToolbar` E-Ink 感知~~ → 已於下一節補上。
+
+---
+
+## Screen
+
+`AnnotationToolbar`（選字後浮現的畫線浮動工具列）E-Ink 感知補完
+
+## Result
+
+補上先前輪次刻意延後的項目：新增必填的 `isEinkMode` 建構參數（`reader_screen.dart` 兩個呼叫點皆傳入 `widget.isEinkMode`），對齊 `DESIGN.md` §5「E-Ink 模式下所有元件強制為 none」——原本固定 `Material(elevation: 4)` 沒有 E-Ink 感知，現在：
+
+### Components
+PASS（有測試佐證）——
+- 一般主題：`elevation: 4`（維持原樣），`shape` 的 `BorderSide` 為 `BorderSide.none`（無邊框，零回歸）。
+- E-Ink 主題：`elevation: 0`，改用 `RoundedRectangleBorder(side: BorderSide(color: colorScheme.outline, width: 1.5))` 標示浮動範圍，比照全 App 已統一的 Elevated Card → Outlined Card 降級語彙（`app_theme_data.dart` `_buildCardTheme()`）。
+- 螢光筆三色圓點按鈕、複製/備註/刪除等圖示按鈕本身顏色皆已透過 `ElinkTokens`/`ColorScheme` 解析，E-Ink 主題下已正確顯示，本輪未變動（無寫死色值）。
+
+驗證依據：`flutter test test/screens/annotation_toolbar_test.dart`（13 項全過，含 2 則新增測試分別驗證一般主題/E-Ink 主題下的 `elevation`／`shape.side`）、`flutter test test/screens/reader_screen_test.dart`（200 項全過，確認閱讀器內兩個呼叫點接線正確、零回歸）。
+
+### Remaining Differences
+- 浮動定位幾何計算（`DESIGN.md` §14.1 提到的寬高動態計算/邊緣箝制公式）未在本輪檢視，範圍僅限本次要求的 E-Ink 陰影/邊框感知。
+- 按鈕觸控目標大小（56dp E-Ink／52dp 一般，`DESIGN.md` §7.2）本輪未調整，`IconButton` 沿用 Flutter 預設觸控目標，未特別加大。
 
 ---
 
@@ -341,7 +363,7 @@ No issues found! (ran in 11.3s)
 ## flutter test Result
 
 ```
-+2155: All tests passed!
++2157: All tests passed!
 ```
-（本輪〔版面設定文字修正/標題粗體/預設集重新設計〕新增 3 則測試（`reader_settings_sheet_test.dart`「系統預設」固定列），總數從上一輪〔筆記面板 Design System 對齊〕的 2152 增至 2155。）
+（本輪〔AnnotationToolbar E-Ink 感知〕新增 2 則測試（`annotation_toolbar_test.dart` 一般/E-Ink 主題各一），總數從上一輪〔版面設定文字修正/標題粗體/預設集重新設計〕的 2155 增至 2157。）
 （含本輪新增/更新的 8 則測試：`app_theme_data_test.dart` Switch ON/OFF 色值 4 則、`fxl_settings_sheet_test.dart`／`pdf_settings_sheet_test.dart` 選中態色值更新 3 則、`library_screen_test.dart` 既有分類拼貼格系列間接驗證 `_GroupGridTile` 改動未回歸）
