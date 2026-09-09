@@ -646,6 +646,66 @@ void main() {
     expect(notified?.pdfPageTurnAnimation, PdfPageTurnAnimation.none); // 關鍵斷言：未被清空
   });
 
+  testWidgets(
+      'isEinkMode: true 時，濾鏡分頁 3 個數值列皆改為 EBStepper，不存在任何 '
+      'Slider，且頂列不重複顯示數值文字（比照 review-plan-issue-2.md C1 對 '
+      'ReaderSettingsSheet._buildSliderRow 已建立的先例——EBStepper 內部已顯示'
+      '一次，頂列不應再顯示第二次），點擊 + 觸發 onChanged'
+      '（epic-39-layout-settings-redesign Issue 5）',
+      (tester) async {
+    BookReaderPrefs? notified;
+    await _pumpSheet(
+      tester,
+      const BookReaderPrefs(pdfContrast: 20),
+      (prefs) => notified = prefs,
+      isEinkMode: true,
+    );
+    await tester.tap(find.byKey(const Key('pdf_settings_tab_filters')));
+    await tester.pumpAndSettle();
+
+    for (final keyPrefix in [
+      'pdf_settings_contrast',
+      'pdf_settings_brightness',
+      'pdf_settings_bold_strength',
+    ]) {
+      expect(find.byKey(Key('${keyPrefix}_value')), findsOneWidget,
+          reason: '$keyPrefix 應改為 EBStepper（僅 EBStepper 具備 _value Key）');
+    }
+    expect(find.byType(Slider), findsNothing,
+        reason: '濾鏡分頁在 E-Ink 模式下不應存在任何 Slider');
+    expect(find.text('20'), findsOneWidget,
+        reason: '對比度數值只應在 EBStepper 內顯示一次，頂列不應重複顯示');
+    // 審查修正 M3（review-plan-issue-5.md）：一併確認 _decrement 按鈕存在，
+    // 不只驗證 +（EBStepper 本身的 +/- 邊界行為已在 Issue 1 完整測試，這裡
+    // 只需確認整合層兩顆按鈕都確實被渲染出來）。
+    expect(find.byKey(const Key('pdf_settings_contrast_decrement')),
+        findsOneWidget);
+
+    await tester
+        .tap(find.byKey(const Key('pdf_settings_contrast_increment')));
+    await tester.pump();
+
+    expect(notified, isNotNull);
+    expect(notified!.pdfContrast, greaterThan(20));
+  });
+
+  testWidgets(
+      'isEinkMode: false（預設）時，濾鏡分頁維持既有 Slider 且頂列保留數值文字'
+      '（一般主題 Slider 不具備數值回饋能力，比照 review-plan-issue-2.md C1 '
+      '先例，既有行為零回歸）（epic-39-layout-settings-redesign Issue 5）',
+      (tester) async {
+    await _pumpSheet(tester, const BookReaderPrefs(pdfContrast: 20), (_) {});
+    await tester.tap(find.byKey(const Key('pdf_settings_tab_filters')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('pdf_settings_contrast_slider')),
+        findsOneWidget);
+    expect(find.byKey(const Key('pdf_settings_contrast_value')),
+        findsNothing);
+    expect(find.text('20'), findsOneWidget,
+        reason: '一般主題下頂列應保留數值文字');
+  });
+
   testWidgets('PdfSettingsSheet 在 E-Ink 模式下選中項目呈現高對比底色', (tester) async {
     await tester.pumpWidget(MaterialApp(
       theme: buildEinkThemeData(),
