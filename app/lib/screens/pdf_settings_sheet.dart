@@ -6,7 +6,8 @@ import '../reader/dual_page_mode.dart';
 import '../reader/pdf_fit_mode.dart';
 import '../reader/pdf_crop_mode.dart';
 import '../reader/pdf_page_turn_animation.dart';
-import 'widgets/reader_option_tile.dart';
+import 'widgets/eb_option_chip_group.dart';
+import 'widgets/eb_stepper.dart';
 
 /// PDF 專屬版面設定 Bottom Sheet（FR-11），三分頁結構：顯示／濾鏡／裁切，
 /// 見 docs/epics/epic-4-pdf-enhance/design.md 決策 #10（不與 EPUB 用的
@@ -20,16 +21,20 @@ import 'widgets/reader_option_tile.dart';
 /// 「手動選區」選項點擊時透過 [onRequestManualCrop] 通知呼叫端
 /// （`PdfSettingsSheet` 本身不直接操作 `PdfReaderView`，維持既有單向資料
 /// 流，見 spec.md「模組」段落）；持久化由呼叫端（`ReaderScreen`）負責。
+/// [isEinkMode] 決定濾鏡分頁數值列採用一般主題的 `Slider`＋±按鈕，或
+/// E-Ink 模式的 `EBStepper`。
 class PdfSettingsSheet extends StatefulWidget {
   final BookReaderPrefs prefs;
   final ValueChanged<BookReaderPrefs> onChanged;
   final VoidCallback onRequestManualCrop;
+  final bool isEinkMode;
 
   const PdfSettingsSheet({
     super.key,
     required this.prefs,
     required this.onChanged,
     required this.onRequestManualCrop,
+    required this.isEinkMode,
   });
 
   @override
@@ -148,14 +153,14 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
 
   Widget _buildDisplayTab(BuildContext context) {
     const fitOptions = [
-      (PdfFitMode.pageFit, 'page_fit', Icons.fit_screen, 'Page-fit（整頁）'),
-      (PdfFitMode.fitWidth, 'fit_width', Icons.swap_horiz, 'Fit Width（頁寬）'),
-      (PdfFitMode.actualSize, 'actual_size', Icons.crop_original, '真實比例 1:1'),
+      (PdfFitMode.pageFit, 'page_fit', Icons.fit_screen, 'Page-fit（整頁）', '整頁'),
+      (PdfFitMode.fitWidth, 'fit_width', Icons.swap_horiz, 'Fit Width（頁寬）', '頁寬'),
+      (PdfFitMode.actualSize, 'actual_size', Icons.crop_original, '真實比例 1:1', '原比'),
     ];
     const dualPageOptions = [
-      (DualPageMode.auto, 'auto', Icons.stay_current_landscape, '自動（橫向雙頁）'),
-      (DualPageMode.always, 'always', Icons.view_column, '永遠雙頁'),
-      (DualPageMode.never, 'never', Icons.crop_portrait, '永遠單頁'),
+      (DualPageMode.auto, 'auto', Icons.stay_current_landscape, '自動（橫向雙頁）', '自動'),
+      (DualPageMode.always, 'always', Icons.view_column, '永遠雙頁', '雙頁'),
+      (DualPageMode.never, 'never', Icons.crop_portrait, '永遠單頁', '單頁'),
     ];
     const directionOptions = [
       (
@@ -163,24 +168,22 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
         'ltr',
         Icons.format_textdirection_l_to_r,
         '左到右',
+        '左翻',
       ),
       (
         DualPageDirection.rtl,
         'rtl',
         Icons.format_textdirection_r_to_l,
         '右到左（日漫慣例）',
+        '右翻',
       ),
     ];
     const pageTurnAnimationOptions = [
-      (PdfPageTurnAnimation.slide, 'slide', Icons.swipe, '滑動'),
-      (PdfPageTurnAnimation.none, 'none', Icons.flash_on, '無'),
+      (PdfPageTurnAnimation.slide, 'slide', Icons.swipe, '滑動', '滑動'),
+      (PdfPageTurnAnimation.none, 'none', Icons.flash_on, '無', '無'),
     ];
     return Padding(
       padding: const EdgeInsets.all(16),
-      // 外層 Bottom Sheet 是固定 height: 400（見 build() 的 SizedBox），
-      // 本分頁持續新增控制項會讓內容總高度有機會超出固定高度；改用
-      // SingleChildScrollView 包裹，避免觸發 RenderFlex overflow（審查
-      // 修正，見 tmp/epic-16/reviews/review-plan-issue-4.md）。
       child: SingleChildScrollView(
         key: const Key('pdf_settings_display_scroll'),
         child: Column(
@@ -188,42 +191,42 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
           children: [
             const Text('Fit 模式'),
             const SizedBox(height: 8),
-            Wrap(
-              spacing: 4,
-              children: fitOptions.map((option) {
-                final (mode, keySuffix, icon, tooltip) = option;
-                return ReaderOptionTile<PdfFitMode>(
+            EBOptionChipGroup<PdfFitMode>(
+              items: fitOptions.map((option) {
+                final (mode, keySuffix, icon, tooltip, label) = option;
+                return EBOptionChipItem<PdfFitMode>(
                   itemKey: Key('pdf_settings_fit_mode_$keySuffix'),
                   value: mode,
-                  groupValue: _fitMode,
                   icon: icon,
+                  label: label,
                   tooltip: tooltip,
-                  onSelected: (v) => setState(() {
-                    _fitMode = v;
-                    _notifyChanged();
-                  }),
                 );
               }).toList(),
+              groupValue: _fitMode,
+              onSelected: (v) => setState(() {
+                _fitMode = v;
+                _notifyChanged();
+              }),
             ),
             const SizedBox(height: 16),
             const Text('雙頁模式'),
             const SizedBox(height: 8),
-            Wrap(
-              spacing: 4,
-              children: dualPageOptions.map((option) {
-                final (mode, keySuffix, icon, tooltip) = option;
-                return ReaderOptionTile<DualPageMode>(
+            EBOptionChipGroup<DualPageMode>(
+              items: dualPageOptions.map((option) {
+                final (mode, keySuffix, icon, tooltip, label) = option;
+                return EBOptionChipItem<DualPageMode>(
                   itemKey: Key('pdf_settings_dual_page_mode_$keySuffix'),
                   value: mode,
-                  groupValue: _dualPageMode,
                   icon: icon,
+                  label: label,
                   tooltip: tooltip,
-                  onSelected: (v) => setState(() {
-                    _dualPageMode = v;
-                    _notifyChanged();
-                  }),
                 );
               }).toList(),
+              groupValue: _dualPageMode,
+              onSelected: (v) => setState(() {
+                _dualPageMode = v;
+                _notifyChanged();
+              }),
             ),
             const SizedBox(height: 16),
             SwitchListTile(
@@ -256,42 +259,42 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
             const SizedBox(height: 16),
             const Text('頁面方向'),
             const SizedBox(height: 8),
-            Wrap(
-              spacing: 4,
-              children: directionOptions.map((option) {
-                final (direction, keySuffix, icon, tooltip) = option;
-                return ReaderOptionTile<DualPageDirection>(
+            EBOptionChipGroup<DualPageDirection>(
+              items: directionOptions.map((option) {
+                final (direction, keySuffix, icon, tooltip, label) = option;
+                return EBOptionChipItem<DualPageDirection>(
                   itemKey: Key('pdf_settings_dual_page_direction_$keySuffix'),
                   value: direction,
-                  groupValue: _dualPageDirection,
                   icon: icon,
+                  label: label,
                   tooltip: tooltip,
-                  onSelected: (v) => setState(() {
-                    _dualPageDirection = v;
-                    _notifyChanged();
-                  }),
                 );
               }).toList(),
+              groupValue: _dualPageDirection,
+              onSelected: (v) => setState(() {
+                _dualPageDirection = v;
+                _notifyChanged();
+              }),
             ),
             const SizedBox(height: 16),
             const Text('換頁動畫'),
             const SizedBox(height: 8),
-            Wrap(
-              spacing: 4,
-              children: pageTurnAnimationOptions.map((option) {
-                final (animation, keySuffix, icon, tooltip) = option;
-                return ReaderOptionTile<PdfPageTurnAnimation>(
+            EBOptionChipGroup<PdfPageTurnAnimation>(
+              items: pageTurnAnimationOptions.map((option) {
+                final (animation, keySuffix, icon, tooltip, label) = option;
+                return EBOptionChipItem<PdfPageTurnAnimation>(
                   itemKey: Key('pdf_settings_page_turn_animation_$keySuffix'),
                   value: animation,
-                  groupValue: _pageTurnAnimation,
                   icon: icon,
+                  label: label,
                   tooltip: tooltip,
-                  onSelected: (v) => setState(() {
-                    _pageTurnAnimation = v;
-                    _notifyChanged();
-                  }),
                 );
               }).toList(),
+              groupValue: _pageTurnAnimation,
+              onSelected: (v) => setState(() {
+                _pageTurnAnimation = v;
+                _notifyChanged();
+              }),
             ),
           ],
         ),
@@ -348,8 +351,8 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
 
   Widget _buildCropTab(BuildContext context) {
     const options = [
-      (PdfCropMode.none, 'none', Icons.crop_free, '不裁切'),
-      (PdfCropMode.autoDetect, 'auto', Icons.auto_fix_high, '智慧自動'),
+      (PdfCropMode.none, 'none', Icons.crop_free, '不裁切', '不裁'),
+      (PdfCropMode.autoDetect, 'auto', Icons.auto_fix_high, '智慧自動', '智慧'),
     ];
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -358,40 +361,41 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
         children: [
           const Text('裁切模式'),
           const SizedBox(height: 8),
-          Wrap(
-            spacing: 4,
-            children: [
+          EBOptionChipGroup<PdfCropMode>(
+            items: [
               ...options.map((option) {
-                final (mode, keySuffix, icon, tooltip) = option;
-                return ReaderOptionTile<PdfCropMode>(
+                final (mode, keySuffix, icon, tooltip, label) = option;
+                return EBOptionChipItem<PdfCropMode>(
                   itemKey: Key('pdf_settings_crop_mode_$keySuffix'),
                   value: mode,
-                  groupValue: _cropMode,
                   icon: icon,
+                  label: label,
                   tooltip: tooltip,
-                  onSelected: (v) => setState(() {
-                    _cropMode = v;
-                    _notifyChanged();
-                  }),
                 );
               }),
               // 手動選區：點擊只通知呼叫端進入裁切互動模式（不直接改變
               // _cropMode／呼叫 _notifyChanged），實際的 pdfCropMode=manual
               // 與 pdfCropRect 由 ReaderScreen 在使用者完成框選確認後才
               // 一併寫入（見 spec.md「ReaderScreen 內部行為異動」）。
-              // 【審查修正 Minor】維持既有行為不變，本 Task 只需把它從
-              // IconButton 換成 ReaderOptionTile 的「未選中」樣式（value
-              // 與 groupValue 傳入兩個恆不相等的值，確保視覺上恆為未選中
-              // 狀態），不要自行擴充成會反映 _cropMode 的單選項目。
-              ReaderOptionTile<bool>(
+              // 審查修正 I4（review-issues.md）／I1（review-spec.md）：改用
+              // EBOptionChipItem.onTap 承載，value 直接填入真實的
+              // PdfCropMode.manual——EBOptionChipGroup 對 onTap != null 的
+              // 項目天生強制 forceUnselected: true，不需要再用 bool sentinel
+              // （value: true, groupValue: false）製造「恆不相等」的效果。
+              EBOptionChipItem<PdfCropMode>(
                 itemKey: const Key('pdf_settings_crop_mode_manual'),
-                value: true,
-                groupValue: false,
+                value: PdfCropMode.manual,
                 icon: Icons.crop,
+                label: '手動',
                 tooltip: '手動選區',
-                onSelected: (_) => widget.onRequestManualCrop(),
+                onTap: () => widget.onRequestManualCrop(),
               ),
             ],
+            groupValue: _cropMode,
+            onSelected: (v) => setState(() {
+              _cropMode = v;
+              _notifyChanged();
+            }),
           ),
         ],
       ),
@@ -412,6 +416,7 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
   }) {
     final divisions = ((max - min) / step).round();
     final clampedValue = value.clamp(min, max);
+    final displayValue = clampedValue.round().toString();
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Column(
@@ -419,36 +424,51 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [Text(label), Text(clampedValue.round().toString())],
-          ),
-          Row(
             children: [
-              IconButton(
-                key: Key('${keyPrefix}_decrement'),
-                icon: const Icon(Icons.remove),
-                onPressed: clampedValue - step < min - 1e-9
-                    ? null
-                    : () => onChanged((clampedValue - step).clamp(min, max)),
-              ),
-              Expanded(
-                child: Slider(
-                  key: Key('${keyPrefix}_slider'),
+              Text(label),
+              if (!widget.isEinkMode) Text(displayValue),
+            ],
+          ),
+          widget.isEinkMode
+              ? EBStepper(
+                  keyPrefix: keyPrefix,
                   value: clampedValue,
                   min: min,
                   max: max,
-                  divisions: divisions,
-                  onChanged: (v) => onChanged(v.clamp(min, max)),
+                  step: step,
+                  displayValue: displayValue,
+                  onChanged: onChanged,
+                  mainAxisSize: MainAxisSize.max,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                )
+              : Row(
+                  children: [
+                    IconButton(
+                      key: Key('${keyPrefix}_decrement'),
+                      icon: const Icon(Icons.remove),
+                      onPressed: clampedValue - step < min - 1e-9
+                          ? null
+                          : () => onChanged((clampedValue - step).clamp(min, max)),
+                    ),
+                    Expanded(
+                      child: Slider(
+                        key: Key('${keyPrefix}_slider'),
+                        value: clampedValue,
+                        min: min,
+                        max: max,
+                        divisions: divisions,
+                        onChanged: (v) => onChanged(v.clamp(min, max)),
+                      ),
+                    ),
+                    IconButton(
+                      key: Key('${keyPrefix}_increment'),
+                      icon: const Icon(Icons.add),
+                      onPressed: clampedValue + step > max + 1e-9
+                          ? null
+                          : () => onChanged((clampedValue + step).clamp(min, max)),
+                    ),
+                  ],
                 ),
-              ),
-              IconButton(
-                key: Key('${keyPrefix}_increment'),
-                icon: const Icon(Icons.add),
-                onPressed: clampedValue + step > max + 1e-9
-                    ? null
-                    : () => onChanged((clampedValue + step).clamp(min, max)),
-              ),
-            ],
-          ),
         ],
       ),
     );

@@ -840,6 +840,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         prefs: _prefs,
         onChanged: _handlePrefsChanged,
         onRequestManualCrop: _handleRequestManualCrop,
+        isEinkMode: widget.isEinkMode,
       ),
     );
   }
