@@ -245,6 +245,12 @@ ThemeData _buildEinkTheme() {
     surfaceContainerHighest: surfaceContainerHighest,
     error: error,
     onError: Colors.white,
+    // epic-39-layout-settings-redesign Issue 4：ReaderSettingsSheet 預設集
+    // 「目前套用中」反白列是全專案第一個實際讀取這兩個角色的功能，
+    // ColorScheme.light() 若不明確覆寫會落回 M3 預設的灰紫色/近白色，
+    // 與 E-Ink「全角色純黑白」的既定設計語言矛盾。
+    inverseSurface: primary,
+    onInverseSurface: Colors.white,
   );
 
   return ThemeData(

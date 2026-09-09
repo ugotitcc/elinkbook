@@ -189,7 +189,10 @@ void main() {
     });
 
     test('eink 主題 ColorScheme 全角色對齊 DESIGN.md §1.1（純黑白，不留'
-        ' secondary／onSecondary）', () {
+        ' secondary／onSecondary，且 inverseSurface／onInverseSurface 亦不留'
+        ' M3 baseline 預設值；後兩者為 epic-39-layout-settings-redesign Issue 4'
+        ' 新增斷言——Issue 4 是全專案第一個實際讀取這兩個角色的功能，此前未被'
+        ' 任何測試涵蓋）', () {
       final theme = buildEinkThemeData();
       final scheme = theme.colorScheme;
 
@@ -203,6 +206,8 @@ void main() {
       expect(scheme.outline, const Color(0xFF000000));
       expect(scheme.surfaceContainerHighest, const Color(0xFFFFFFFF));
       expect(scheme.error, const Color(0xFF000000));
+      expect(scheme.inverseSurface, const Color(0xFF000000));
+      expect(scheme.onInverseSurface, const Color(0xFFFFFFFF));
       expect(theme.scaffoldBackgroundColor, const Color(0xFFFFFFFF));
     });
 
