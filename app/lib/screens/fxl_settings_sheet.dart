@@ -3,21 +3,26 @@ import 'package:flutter/material.dart';
 import '../reader/book_reader_prefs.dart';
 import '../reader/dual_page_direction.dart';
 import '../reader/dual_page_mode.dart';
-import 'widgets/reader_option_tile.dart';
+import 'widgets/eb_option_chip_group.dart';
 
 /// EPUB 固定版面（FXL 漫畫）專屬的精簡版設定 Bottom Sheet（見
 /// docs/epics/epic-16-dual-page/spec.md「模組」段落）：提供「雙頁模式」
 /// 三態切換與「全螢幕模式」開關（epic-19-shelf-reading-enhance Issue 1），
 /// 不與 PdfSettingsSheet／ReaderSettingsSheet 共用元件（固定版面沒有
-/// 字型/裁切/濾鏡等其餘設定）。
+/// 字型/裁切/濾鏡等其餘設定）。[isEinkMode] 目前不影響任何渲染分支（本
+/// 畫面沒有數值型 Slider/EBStepper 需要二選一切換），僅為呼叫端三個
+/// 版面設定面板統一介面而保留（見 epic-39-layout-settings-redesign
+/// spec.md「FxlSettingsSheet」段落）。
 class FxlSettingsSheet extends StatefulWidget {
   final BookReaderPrefs prefs;
   final ValueChanged<BookReaderPrefs> onChanged;
+  final bool isEinkMode;
 
   const FxlSettingsSheet({
     super.key,
     required this.prefs,
     required this.onChanged,
+    required this.isEinkMode,
   });
 
   @override
@@ -54,9 +59,13 @@ class _FxlSettingsSheetState extends State<FxlSettingsSheet> {
   @override
   Widget build(BuildContext context) {
     const dualPageOptions = [
-      (DualPageMode.auto, 'auto', Icons.stay_current_landscape, '自動（橫向雙頁）'),
-      (DualPageMode.always, 'always', Icons.view_column, '永遠雙頁'),
-      (DualPageMode.never, 'never', Icons.crop_portrait, '永遠單頁'),
+      (DualPageMode.auto, 'auto', Icons.stay_current_landscape, '自動（橫向雙頁）', '自動'),
+      (DualPageMode.always, 'always', Icons.view_column, '永遠雙頁', '雙頁'),
+      (DualPageMode.never, 'never', Icons.crop_portrait, '永遠單頁', '單頁'),
+    ];
+    const directionOptions = [
+      (DualPageDirection.ltr, 'ltr', Icons.arrow_forward, '左到右（LTR，美漫慣例）', '左翻'),
+      (DualPageDirection.rtl, 'rtl', Icons.arrow_back, '右到左（RTL，日漫慣例）', '右翻'),
     ];
     return SafeArea(
       child: Padding(
@@ -81,47 +90,44 @@ class _FxlSettingsSheetState extends State<FxlSettingsSheet> {
             const SizedBox(height: 16),
             const Text('雙頁模式'),
             const SizedBox(height: 8),
-            Wrap(
-              spacing: 4,
-              children: dualPageOptions.map((option) {
-                final (mode, keySuffix, icon, tooltip) = option;
-                return ReaderOptionTile<DualPageMode>(
+            EBOptionChipGroup<DualPageMode>(
+              items: dualPageOptions.map((option) {
+                final (mode, keySuffix, icon, tooltip, label) = option;
+                return EBOptionChipItem<DualPageMode>(
                   itemKey: Key('fxl_settings_dual_page_mode_$keySuffix'),
                   value: mode,
-                  groupValue: _dualPageMode,
                   icon: icon,
+                  label: label,
                   tooltip: tooltip,
-                  visualDensity: VisualDensity.compact,
-                  onSelected: (v) => setState(() {
-                    _dualPageMode = v;
-                    _notifyChanged();
-                  }),
                 );
               }).toList(),
+              groupValue: _dualPageMode,
+              visualDensity: VisualDensity.compact,
+              onSelected: (v) => setState(() {
+                _dualPageMode = v;
+                _notifyChanged();
+              }),
             ),
             const SizedBox(height: 16),
             const Text('翻頁方向'),
             const SizedBox(height: 8),
-            Wrap(
-              spacing: 4,
-              children: [
-                (DualPageDirection.ltr, 'ltr', Icons.arrow_forward, '左到右（LTR，美漫慣例）'),
-                (DualPageDirection.rtl, 'rtl', Icons.arrow_back, '右到左（RTL，日漫慣例）'),
-              ].map((option) {
-                final (direction, keySuffix, icon, tooltip) = option;
-                return ReaderOptionTile<DualPageDirection>(
+            EBOptionChipGroup<DualPageDirection>(
+              items: directionOptions.map((option) {
+                final (direction, keySuffix, icon, tooltip, label) = option;
+                return EBOptionChipItem<DualPageDirection>(
                   itemKey: Key('fxl_settings_direction_$keySuffix'),
                   value: direction,
-                  groupValue: _dualPageDirection,
                   icon: icon,
+                  label: label,
                   tooltip: tooltip,
-                  visualDensity: VisualDensity.compact,
-                  onSelected: (v) => setState(() {
-                    _dualPageDirection = v;
-                    _notifyChanged();
-                  }),
                 );
               }).toList(),
+              groupValue: _dualPageDirection,
+              visualDensity: VisualDensity.compact,
+              onSelected: (v) => setState(() {
+                _dualPageDirection = v;
+                _notifyChanged();
+              }),
             ),
             const SizedBox(height: 16),
             SwitchListTile(

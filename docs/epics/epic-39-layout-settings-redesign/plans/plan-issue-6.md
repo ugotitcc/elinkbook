@@ -33,7 +33,7 @@
 - Consumes: 無（本 Task 不依賴其他 Task）
 - Produces: `FxlSettingsSheet` 建構子新增 `required bool isEinkMode` 欄位／`widget.isEinkMode`，供 Task 2 若需要時使用（目前 Task 2 的 `EBOptionChipGroup` 轉換不依賴這個欄位，兩者是獨立變更）。
 
-- [ ] **Step 1：修改 `FxlSettingsSheet` 建構子，新增必要參數 `isEinkMode`**
+- [x] **Step 1：修改 `FxlSettingsSheet` 建構子，新增必要參數 `isEinkMode`**
 
 修改 `app/lib/screens/fxl_settings_sheet.dart` 第 8-21 行：
 
@@ -61,12 +61,12 @@ class FxlSettingsSheet extends StatefulWidget {
 
 此時专案無法通過編譯（`reader_screen.dart` 與整個測試檔案都少了必要引數），這是預期中的「紅燈」狀態，下一步先確認錯誤訊息正確，再逐一修正呼叫點。
 
-- [ ] **Step 2：執行測試，確認因缺少必要引數而編譯失敗**
+- [x] **Step 2：執行測試，確認因缺少必要引數而編譯失敗**
 
 Run: `flutter test test/screens/fxl_settings_sheet_test.dart`
 Expected: FAIL（編譯錯誤，`analyzer` 回報多處 `The named parameter 'isEinkMode' is required, but there's no corresponding argument` ── 至少涵蓋 `fxl_settings_sheet_test.dart` 全部 14 處建構呼叫點與 `reader_screen.dart` 的 `_openFxlSettings()`）
 
-- [ ] **Step 3：修正 `ReaderScreen._openFxlSettings()` 呼叫點**
+- [x] **Step 3：修正 `ReaderScreen._openFxlSettings()` 呼叫點**
 
 修改 `app/lib/screens/reader_screen.dart` 第 848-855 行：
 
@@ -82,7 +82,7 @@ Expected: FAIL（編譯錯誤，`analyzer` 回報多處 `The named parameter 'is
   }
 ```
 
-- [ ] **Step 4：修正 `fxl_settings_sheet_test.dart` 全部 14 處建構呼叫點**
+- [x] **Step 4：修正 `fxl_settings_sheet_test.dart` 全部 14 處建構呼叫點**
 
 第 18、36、54、90、113、143、164、186、206、226、243、259、323 行（共 13 處，皆為一般情境測試）在既有 `onChanged:` 引數後補上一行：
 
@@ -98,17 +98,17 @@ Expected: FAIL（編譯錯誤，`analyzer` 回報多處 `The named parameter 'is
 
 （縮排依各處既有引數對齊；`isEinkMode` 目前雖不影響渲染分支，仍應與情境語意一致，避免將來有人依字面值誤判測試情境。）
 
-- [ ] **Step 5：執行測試，確認全數通過**
+- [x] **Step 5：執行測試，確認全數通過**
 
 Run: `flutter test test/screens/fxl_settings_sheet_test.dart`
 Expected: PASS（原有 14 個測試全數通過，無新增/刪除測試案例）
 
-- [ ] **Step 6：執行 `flutter analyze`**
+- [x] **Step 6：執行 `flutter analyze`**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 7：勾選 Task 1 全部 Step 為完成，並 Commit**
+- [x] **Step 7：勾選 Task 1 全部 Step 為完成，並 Commit**
 
 將本檔案 Task 1 的 Step 1-7 全部 `- [ ]` 改為 `- [x]`（**審查修正 M2**：依 SDD 慣例逐 Task 漸進勾選，不留到 Task 3 才一次補齊）。
 
@@ -129,7 +129,7 @@ git commit -m "feat(epic-39): Issue 6 Task 1 — FxlSettingsSheet 新增 isEinkM
 - Consumes: `EBOptionChipGroup<T>`／`EBOptionChipItem<T>`（`app/lib/screens/widgets/eb_option_chip_group.dart`）——建構參數 `items: List<EBOptionChipItem<T>>`、`groupValue: T`、`onSelected: ValueChanged<T>`、`visualDensity: VisualDensity`；`EBOptionChipItem<T>` 建構參數 `itemKey`／`value`／`icon`／`label`／`tooltip`。
 - Produces: 無（本 Task 為 Issue 6 最後一項介面異動；Task 3 不依賴本 Task 的產出型別）。
 
-- [ ] **Step 1：撰寫兩個失敗測試，鎖定新標籤文字**
+- [x] **Step 1：撰寫兩個失敗測試，鎖定新標籤文字**
 
 在 `app/test/screens/fxl_settings_sheet_test.dart` 檔案結尾（`_pumpModalSheet` 函式定義之前，即目前第 309 行之前）新增：
 
@@ -196,12 +196,12 @@ git commit -m "feat(epic-39): Issue 6 Task 1 — FxlSettingsSheet 新增 isEinkM
   });
 ```
 
-- [ ] **Step 2：執行測試，確認新測試失敗**
+- [x] **Step 2：執行測試，確認新測試失敗**
 
 Run: `flutter test test/screens/fxl_settings_sheet_test.dart`
 Expected: 新增的 2 個測試 FAIL（`find.text('自動')` 等找不到任何 widget——目前 `ReaderOptionTile` 呼叫皆未傳入 `label`，只有圖示無文字）；其餘 14 個既有測試維持 PASS。
 
-- [ ] **Step 3：`build()` 內兩組 `Wrap`＋`ReaderOptionTile` 改為 `EBOptionChipGroup`**
+- [x] **Step 3：`build()` 內兩組 `Wrap`＋`ReaderOptionTile` 改為 `EBOptionChipGroup`**
 
 > **【審查修正 I1，見 `reviews/review-plan-issue-6.md`】** 下方替換目標是**整個 `build()` 方法**（從 `@override` `Widget build(BuildContext context) {` 開頭，到方法本身的閉合右大括號 `}` 為止，含未變動的三顆 `SwitchListTile`），不是行號區間「56-125」這種局部片段——若用行號區間指定的自動化編輯（例如只指定 `StartLine/EndLine`）去套用下方程式碼，會讓原檔案尾端的三顆 `SwitchListTile` 殘留一份、造成重複 Key 與編譯錯誤。且 Task 1 已在檔案開頭新增約 6-7 行 docstring／欄位，`build()` 實際起始行號已順延，請直接搜尋 `Widget build(BuildContext context) {` 字串定位，不要依賴任何寫死的行號。
 
@@ -331,17 +331,17 @@ import 'widgets/eb_option_chip_group.dart';
 
 （三顆 `SwitchListTile` 原樣保留，不屬於本 Step 異動範圍，列出完整 `build()` 方法只是為了讓實作者能直接整段替換、避免手動拼接時漏改前後邊界。）
 
-- [ ] **Step 4：執行測試，確認全數通過**
+- [x] **Step 4：執行測試，確認全數通過**
 
 Run: `flutter test test/screens/fxl_settings_sheet_test.dart`
 Expected: PASS（14 個既有測試 + 2 個新測試，共 16 個全數通過）。既有的選中態／E-Ink 高對比背景色斷言測試（第 50-84、256-287、290-307 行）之所以零改動就能通過，是因為 `EBOptionChipGroup` 內部仍是 `ReaderOptionTile`，`key: itemKey` 一樣掛在帶 `BoxDecoration` 的 `Container` 上（`eb_option_chip_group.dart:79-97`）。
 
-- [ ] **Step 5：執行 `flutter analyze`**
+- [x] **Step 5：執行 `flutter analyze`**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6：勾選 Task 2 全部 Step 為完成，並 Commit**
+- [x] **Step 6：勾選 Task 2 全部 Step 為完成，並 Commit**
 
 將本檔案 Task 2 的 Step 1-6 全部 `- [ ]` 改為 `- [x]`（**審查修正 M2**：依 SDD 慣例逐 Task 漸進勾選）。
 
@@ -362,7 +362,7 @@ git commit -m "feat(epic-39): Issue 6 Task 2 — 雙頁模式／翻頁方向改�
 - Consumes: Task 1／Task 2 的最終程式碼狀態
 - Produces: 無（Issue 6 為 Epic 39 最後一個 Issue，無下游 Task 依賴本 Task 產出）
 
-- [ ] **Step 1：確認三顆 `SwitchListTile` 未設定任何顯式顏色**
+- [x] **Step 1：確認三顆 `SwitchListTile` 未設定任何顯式顏色**
 
 Run: `git grep -n -E "activeColor|inactiveThumbColor|inactiveTrackColor|activeTrackColor|thumbColor|trackColor" app/lib/screens/fxl_settings_sheet.dart`
 
@@ -371,21 +371,21 @@ Expected: 無任何輸出（`fxl_settings_fullscreen`／`fxl_settings_show_heade
 
 此結果確認 spec.md「`FxlSettingsSheet`」段落第三點「三顆 `SwitchListTile` 視覺風格調整（跟隨 `Theme.of(context)`，非新邏輯）」的要求已經滿足，不需要修改 `fxl_settings_sheet.dart` 本身；`app/test/screens/fxl_settings_sheet_test.dart` 現有的三個 `SwitchListTile` 相關測試（第 86-105、139-158、160-179 行，斷言 `.value` 反映持久化狀態）與四個 `onChanged` 行為測試（第 107-126、181-199、201-219 行）已涵蓋 issues.md 要求的「既有 `onChanged` 行為零回歸」，不需新增測試。
 
-- [ ] **Step 2：勾選 Task 3 本身的 Step 為完成，並確認全文已無遺漏**
+- [x] **Step 2：勾選 Task 3 本身的 Step 為完成，並確認全文已無遺漏**
 
 將本檔案 Task 3 的 Step 1-5 改為 `- [x]`（**審查修正 M2**：Task 1／Task 2 的 Step 已分別在各自 Step 7／Step 6 隨 commit 勾選完成，此處只需勾選 Task 3 本身，並巡覽全文確認沒有任何 Task 1-3 的 Step 遺漏勾選）。
 
-- [ ] **Step 3：執行完整測試套件**
+- [x] **Step 3：執行完整測試套件**
 
 Run: `flutter test`
 Expected: 全數通過（含本 Issue 新增的 2 個測試），無回歸。此為本計畫最後一個 Task，依 `CLAUDE.md`「測試執行範圍」政策於此執行一次完整套件。
 
-- [ ] **Step 4：執行 `flutter analyze`**
+- [x] **Step 4：執行 `flutter analyze`**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 git add docs/epics/epic-39-layout-settings-redesign/plans/plan-issue-6.md
