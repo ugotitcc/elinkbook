@@ -33,7 +33,7 @@
 - Consumes: 無（本 Task 不依賴其他 Task）
 - Produces: `FxlSettingsSheet` 建構子新增 `required bool isEinkMode` 欄位／`widget.isEinkMode`，供 Task 2 若需要時使用（目前 Task 2 的 `EBOptionChipGroup` 轉換不依賴這個欄位，兩者是獨立變更）。
 
-- [ ] **Step 1：修改 `FxlSettingsSheet` 建構子，新增必要參數 `isEinkMode`**
+- [x] **Step 1：修改 `FxlSettingsSheet` 建構子，新增必要參數 `isEinkMode`**
 
 修改 `app/lib/screens/fxl_settings_sheet.dart` 第 8-21 行：
 
@@ -61,12 +61,12 @@ class FxlSettingsSheet extends StatefulWidget {
 
 此時专案無法通過編譯（`reader_screen.dart` 與整個測試檔案都少了必要引數），這是預期中的「紅燈」狀態，下一步先確認錯誤訊息正確，再逐一修正呼叫點。
 
-- [ ] **Step 2：執行測試，確認因缺少必要引數而編譯失敗**
+- [x] **Step 2：執行測試，確認因缺少必要引數而編譯失敗**
 
 Run: `flutter test test/screens/fxl_settings_sheet_test.dart`
 Expected: FAIL（編譯錯誤，`analyzer` 回報多處 `The named parameter 'isEinkMode' is required, but there's no corresponding argument` ── 至少涵蓋 `fxl_settings_sheet_test.dart` 全部 14 處建構呼叫點與 `reader_screen.dart` 的 `_openFxlSettings()`）
 
-- [ ] **Step 3：修正 `ReaderScreen._openFxlSettings()` 呼叫點**
+- [x] **Step 3：修正 `ReaderScreen._openFxlSettings()` 呼叫點**
 
 修改 `app/lib/screens/reader_screen.dart` 第 848-855 行：
 
@@ -82,7 +82,7 @@ Expected: FAIL（編譯錯誤，`analyzer` 回報多處 `The named parameter 'is
   }
 ```
 
-- [ ] **Step 4：修正 `fxl_settings_sheet_test.dart` 全部 14 處建構呼叫點**
+- [x] **Step 4：修正 `fxl_settings_sheet_test.dart` 全部 14 處建構呼叫點**
 
 第 18、36、54、90、113、143、164、186、206、226、243、259、323 行（共 13 處，皆為一般情境測試）在既有 `onChanged:` 引數後補上一行：
 
@@ -98,17 +98,17 @@ Expected: FAIL（編譯錯誤，`analyzer` 回報多處 `The named parameter 'is
 
 （縮排依各處既有引數對齊；`isEinkMode` 目前雖不影響渲染分支，仍應與情境語意一致，避免將來有人依字面值誤判測試情境。）
 
-- [ ] **Step 5：執行測試，確認全數通過**
+- [x] **Step 5：執行測試，確認全數通過**
 
 Run: `flutter test test/screens/fxl_settings_sheet_test.dart`
 Expected: PASS（原有 14 個測試全數通過，無新增/刪除測試案例）
 
-- [ ] **Step 6：執行 `flutter analyze`**
+- [x] **Step 6：執行 `flutter analyze`**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 7：勾選 Task 1 全部 Step 為完成，並 Commit**
+- [x] **Step 7：勾選 Task 1 全部 Step 為完成，並 Commit**
 
 將本檔案 Task 1 的 Step 1-7 全部 `- [ ]` 改為 `- [x]`（**審查修正 M2**：依 SDD 慣例逐 Task 漸進勾選，不留到 Task 3 才一次補齊）。
 

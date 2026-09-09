@@ -9,15 +9,20 @@ import 'widgets/reader_option_tile.dart';
 /// docs/epics/epic-16-dual-page/spec.md「模組」段落）：提供「雙頁模式」
 /// 三態切換與「全螢幕模式」開關（epic-19-shelf-reading-enhance Issue 1），
 /// 不與 PdfSettingsSheet／ReaderSettingsSheet 共用元件（固定版面沒有
-/// 字型/裁切/濾鏡等其餘設定）。
+/// 字型/裁切/濾鏡等其餘設定）。[isEinkMode] 目前不影響任何渲染分支（本
+/// 畫面沒有數值型 Slider/EBStepper 需要二選一切換），僅為呼叫端三個
+/// 版面設定面板統一介面而保留（見 epic-39-layout-settings-redesign
+/// spec.md「FxlSettingsSheet」段落）。
 class FxlSettingsSheet extends StatefulWidget {
   final BookReaderPrefs prefs;
   final ValueChanged<BookReaderPrefs> onChanged;
+  final bool isEinkMode;
 
   const FxlSettingsSheet({
     super.key,
     required this.prefs,
     required this.onChanged,
+    required this.isEinkMode,
   });
 
   @override

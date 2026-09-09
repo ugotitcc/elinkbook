@@ -850,6 +850,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       builder: (_) => FxlSettingsSheet(
         prefs: _prefs,
         onChanged: _handlePrefsChanged,
+        isEinkMode: widget.isEinkMode,
       ),
     );
   }

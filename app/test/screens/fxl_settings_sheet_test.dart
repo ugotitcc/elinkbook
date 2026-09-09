@@ -18,6 +18,7 @@ void main() {
           body: FxlSettingsSheet(
             prefs: BookReaderPrefs.empty,
             onChanged: (_) {},
+            isEinkMode: false,
           ),
         ),
       ),
@@ -36,6 +37,7 @@ void main() {
           body: FxlSettingsSheet(
             prefs: BookReaderPrefs.empty,
             onChanged: (prefs) => changed = prefs,
+            isEinkMode: false,
           ),
         ),
       ),
@@ -54,6 +56,7 @@ void main() {
           body: FxlSettingsSheet(
             prefs: const BookReaderPrefs(dualPageMode: DualPageMode.never),
             onChanged: (_) {},
+            isEinkMode: false,
           ),
         ),
       ),
@@ -90,6 +93,7 @@ void main() {
           body: FxlSettingsSheet(
             prefs: const BookReaderPrefs(fullscreen: true),
             onChanged: (_) {},
+            isEinkMode: false,
           ),
         ),
       ),
@@ -113,6 +117,7 @@ void main() {
           body: FxlSettingsSheet(
             prefs: const BookReaderPrefs(dualPageMode: DualPageMode.always),
             onChanged: (prefs) => changed = prefs,
+            isEinkMode: false,
           ),
         ),
       ),
@@ -143,6 +148,7 @@ void main() {
           body: FxlSettingsSheet(
             prefs: const BookReaderPrefs(showHeader: true),
             onChanged: (_) {},
+            isEinkMode: false,
           ),
         ),
       ),
@@ -164,6 +170,7 @@ void main() {
           body: FxlSettingsSheet(
             prefs: const BookReaderPrefs(showFooter: true),
             onChanged: (_) {},
+            isEinkMode: false,
           ),
         ),
       ),
@@ -186,6 +193,7 @@ void main() {
           body: FxlSettingsSheet(
             prefs: const BookReaderPrefs(dualPageMode: DualPageMode.always),
             onChanged: (prefs) => changed = prefs,
+            isEinkMode: false,
           ),
         ),
       ),
@@ -206,6 +214,7 @@ void main() {
           body: FxlSettingsSheet(
             prefs: const BookReaderPrefs(fullscreen: true),
             onChanged: (prefs) => changed = prefs,
+            isEinkMode: false,
           ),
         ),
       ),
@@ -226,6 +235,7 @@ void main() {
           body: FxlSettingsSheet(
             prefs: const BookReaderPrefs(dualPageDirection: DualPageDirection.rtl),
             onChanged: (prefs) => changed = prefs,
+            isEinkMode: false,
           ),
         ),
       ));
@@ -243,6 +253,7 @@ void main() {
           body: FxlSettingsSheet(
             prefs: const BookReaderPrefs(dualPageDirection: DualPageDirection.ltr),
             onChanged: (prefs) => changed = prefs,
+            isEinkMode: false,
           ),
         ),
       ));
@@ -259,6 +270,7 @@ void main() {
           body: FxlSettingsSheet(
             prefs: BookReaderPrefs.empty,
             onChanged: (_) {},
+            isEinkMode: false,
           ),
         ),
       ));
@@ -294,6 +306,7 @@ void main() {
         body: FxlSettingsSheet(
           prefs: BookReaderPrefs.empty,
           onChanged: (_) {},
+          isEinkMode: true,
         ),
       ),
     ));
@@ -323,6 +336,7 @@ Future<void> _pumpModalSheet(
             builder: (_) => FxlSettingsSheet(
               prefs: prefs,
               onChanged: onChanged,
+              isEinkMode: false,
             ),
           ),
           child: const Text('open'),
