@@ -1,6 +1,6 @@
 # Epic 39 — Issue 5：`PdfSettingsSheet` 視覺風格對齊 實作計畫
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** `PdfSettingsSheet` 新增必填 `isEinkMode` 建構參數；濾鏡分頁 3 個數值列（對比度/亮度/加粗強度）依 `isEinkMode` 在 `Slider`＋±按鈕與 `EBStepper` 之間切換；顯示／裁切分頁共 5 組單選群組（Fit 模式／雙頁模式／頁面方向／換頁動畫／裁切模式）改用 `EBOptionChipGroup`，裁切模式的「手動選區」項目改用 `EBOptionChipItem.onTap` 承載，取代既有的 `ReaderOptionTile<bool>` sentinel 寫法。
 
@@ -35,7 +35,7 @@
 - Produces：`PdfSettingsSheet` 新增必填欄位 `final bool isEinkMode;`。`_pumpSheet`／`_pumpModalSheet` 兩個測試 helper 皆新增可選具名參數 `bool isEinkMode = false`，供 Task 2 的新測試轉發使用。
 - Consumes：無新依賴。本 Task 不改變任何渲染邏輯，純粹讓 `widget.isEinkMode` 在 State 內可讀取，供 Task 2/3 使用。
 
-- [ ] **Step 1：新增必填參數（刻意讓既有測試檔案編譯失敗，作為本 Task 的 RED）**
+- [x] **Step 1：新增必填參數（刻意讓既有測試檔案編譯失敗，作為本 Task 的 RED）**
 
 修改 `app/lib/screens/pdf_settings_sheet.dart` 第 23-37 行（審查修正 M1，`review-plan-issue-5.md`：順帶在類別頂端既有 doc comment 補上一句說明 `isEinkMode` 用途，比照 `ReaderSettingsSheet` 既有慣例）：
 
@@ -89,12 +89,12 @@ class PdfSettingsSheet extends StatefulWidget {
   }
 ```
 
-- [ ] **Step 2：執行測試確認編譯失敗**
+- [x] **Step 2：執行測試確認編譯失敗**
 
 Run: `flutter test test/screens/pdf_settings_sheet_test.dart`
 Expected: 編譯失敗（`The named parameter 'isEinkMode' is required, but there's no corresponding argument.`——`pdf_settings_sheet_test.dart` 內 3 處既有 `PdfSettingsSheet(` 建構呼叫點皆未提供）。
 
-- [ ] **Step 3：修正測試檔既有 3 處建構呼叫點**
+- [x] **Step 3：修正測試檔既有 3 處建構呼叫點**
 
 (a) `_pumpSheet` helper（第 672-687 行）新增可選參數並轉發：
 
@@ -174,17 +174,17 @@ Future<void> _pumpModalSheet(
     ));
 ```
 
-- [ ] **Step 4：執行測試確認通過**
+- [x] **Step 4：執行測試確認通過**
 
 Run: `flutter test test/screens/pdf_settings_sheet_test.dart`
 Expected: PASS（42 個測試全過，數量與異動前相同——本 Task 純介面新增，無行為變化，零回歸）。
 
-- [ ] **Step 5：`flutter analyze` 確認零警告**
+- [x] **Step 5：`flutter analyze` 確認零警告**
 
 Run: `flutter analyze lib/screens/pdf_settings_sheet.dart lib/screens/reader_screen.dart test/screens/pdf_settings_sheet_test.dart`
 Expected: `No issues found!`
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/lib/screens/pdf_settings_sheet.dart app/lib/screens/reader_screen.dart app/test/screens/pdf_settings_sheet_test.dart
@@ -203,7 +203,7 @@ git commit -m "feat(epic-39): Issue 5 Task 1 — PdfSettingsSheet 新增 isEinkM
 - Consumes：Issue 1 的 `EBStepper`（`keyPrefix`／`value`／`min`／`max`／`step`／`displayValue`／`onChanged`／`mainAxisSize`／`mainAxisAlignment` 皆已存在，直接複用）；Task 1 的 `widget.isEinkMode`。
 - Produces：無新公開介面，`_buildSliderRow` 依然是 `_PdfSettingsSheetState` 私有方法，簽章不變（不像 `ReaderSettingsSheet._buildSliderRow` 有 `isOverridden`／`onReset` 參數——spec.md 明訂「覆寫徽章不適用」，`PdfSettingsSheet` 沒有全域/單書雙態語意欄位，本方法不需要也不會新增這兩個參數）。
 
-- [ ] **Step 1：寫失敗測試——結構＋互動＋頂列數值文字條件顯示，一併撰寫**
+- [x] **Step 1：寫失敗測試——結構＋互動＋頂列數值文字條件顯示，一併撰寫**
 
 在 `app/test/screens/pdf_settings_sheet_test.dart` 的 `void main()` 內追加：
 
@@ -269,12 +269,12 @@ git commit -m "feat(epic-39): Issue 5 Task 1 — PdfSettingsSheet 新增 isEinkM
   });
 ```
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 Run: `flutter test test/screens/pdf_settings_sheet_test.dart`
 Expected: 第一個測試 FAIL——現況無條件渲染 `Slider`，`_value` 這個 Key 尚不存在於任何地方，`find.byType(Slider)` 也會 `findsWidgets` 而非 `findsNothing`。第二個測試（`isEinkMode: false` 迴歸）在目前程式碼下**已經會通過**——現況本來就無條件渲染 `Slider` 且頂列本來就顯示數值文字；因為兩個測試寫在同一個 Step、一起執行，整體 `flutter test` 結果仍是 FAIL（第一個測試失敗），這是刻意避免「有測試從未真正 RED 過」的寫法（比照 `review-plan-issue-2.md` I2 的既有先例）——待 Step 3 實作完成後，兩個測試會在同一次 GREEN 內一起被驗證。
 
-- [ ] **Step 3：實作**
+- [x] **Step 3：實作**
 
 `app/lib/screens/pdf_settings_sheet.dart` 頂端 import 區塊新增：
 
@@ -355,17 +355,17 @@ import 'widgets/eb_stepper.dart';
   }
 ```
 
-- [ ] **Step 4：執行測試確認通過**
+- [x] **Step 4：執行測試確認通過**
 
 Run: `flutter test test/screens/pdf_settings_sheet_test.dart`
 Expected: PASS（44 個測試全過：既有 42 個＋本 Task 新增 2 個）。
 
-- [ ] **Step 5：`flutter analyze` 確認零警告**
+- [x] **Step 5：`flutter analyze` 確認零警告**
 
 Run: `flutter analyze lib/screens/pdf_settings_sheet.dart test/screens/pdf_settings_sheet_test.dart`
 Expected: `No issues found!`
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/lib/screens/pdf_settings_sheet.dart app/test/screens/pdf_settings_sheet_test.dart
@@ -384,7 +384,7 @@ git commit -m "feat(epic-39): Issue 5 Task 2 — PdfSettingsSheet 濾鏡數值�
 - Consumes：Issue 1 的 `EBOptionChipGroup<T>`／`EBOptionChipItem<T>`（`items`／`groupValue`／`onSelected`／`EBOptionChipItem.onTap` 皆已存在，直接複用）。
 - Produces：無新公開介面，5 個群組所在的 `_buildDisplayTab()`／`_buildCropTab()` 方法簽章不變。`app/lib/screens/pdf_settings_sheet.dart` 不再直接參照 `ReaderOptionTile`，移除 `import 'widgets/reader_option_tile.dart';`，新增 `import 'widgets/eb_option_chip_group.dart';`。
 
-- [ ] **Step 1：寫失敗測試——5 組群組皆應顯示 spec.md 選項標籤對照表定義的短標籤＋手動選區恆未選中的回歸測試**
+- [x] **Step 1：寫失敗測試——5 組群組皆應顯示 spec.md 選項標籤對照表定義的短標籤＋手動選區恆未選中的回歸測試**
 
 在 `app/test/screens/pdf_settings_sheet_test.dart` 的 `void main()` 內追加：
 
@@ -573,12 +573,12 @@ git commit -m "feat(epic-39): Issue 5 Task 2 — PdfSettingsSheet 濾鏡數值�
   });
 ```
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 Run: `flutter test test/screens/pdf_settings_sheet_test.dart`
 Expected: 前 5 個測試全數 FAIL——現況 5 組群組皆用裸 `ReaderOptionTile`（未傳 `label`），畫面上完全沒有任何選項文字標籤，`find.text(label)` 一律 `findsNothing`，與預期的 `findsOneWidget` 不符。第 6 個測試（裁切模式選中態機制＋手動選區恆未選中）在目前程式碼下**已經會通過**——情境一（`autoDetect` 選中態）現況的 `ReaderOptionTile<PdfCropMode>(value: mode, groupValue: _cropMode, ...)` 本來就依真實值比較正確顯示選中樣式；情境二（`manual` 恆未選中）現況的 `ReaderOptionTile<bool>(value: true, groupValue: false, ...)` sentinel 寫法本來就恆為未選中，與 `_cropMode` 實際值無關；這則測試的價值是**迴歸防護**（Task 3 把底層元件換成 `EBOptionChipGroup`／`EBOptionChipItem.onTap` 後，這兩個既有正確行為都不能跑掉），而非本 Step 的 RED 來源。因為 6 個測試寫在同一個 Step、一起執行，整體 `flutter test` 結果仍是 FAIL（前 5 個測試失敗），這是刻意避免「有測試從未真正 RED 過」的寫法——待 Step 3 實作完成後，6 個測試會在同一次 GREEN 內一起被驗證。其餘既有 44 個測試維持 PASS。
 
-- [ ] **Step 3：實作**
+- [x] **Step 3：實作**
 
 `app/lib/screens/pdf_settings_sheet.dart` 頂端 import 區塊：移除 `import 'widgets/reader_option_tile.dart';`，新增：
 
@@ -800,17 +800,17 @@ import 'widgets/eb_option_chip_group.dart';
 
 （`_buildDisplayTab`／`_buildCropTab` 的 `BuildContext context` 參數維持宣告但本 Task 依然不使用——這是既有程式碼原本就有的情況，`EBStepper`／`EBOptionChipGroup` 內部自行透過各自的 `build(BuildContext context)` 讀取 `Theme.of(context)`，呼叫端不需要另外傳遞，不在本 Task 範圍內處理。）
 
-- [ ] **Step 4：執行測試確認通過**
+- [x] **Step 4：執行測試確認通過**
 
 Run: `flutter test test/screens/pdf_settings_sheet_test.dart`
 Expected: PASS（50 個測試全過：既有 44 個＋本 Task 新增 6 個；既有選取/點擊切換測試、手動選區觸發 `onRequestManualCrop` 且不改變 `_cropMode` 的既有測試、`pdfCropRect` 不被清空的既有回歸測試、E-Ink 高對比選中底色測試皆零回歸——`EBOptionChipGroup` 內部仍然渲染帶相同 `itemKey` 的 `ReaderOptionTile`，既有依賴這些 Key 的測試不受影響）。
 
-- [ ] **Step 5：`flutter analyze` 確認零警告**
+- [x] **Step 5：`flutter analyze` 確認零警告**
 
 Run: `flutter analyze lib/screens/pdf_settings_sheet.dart test/screens/pdf_settings_sheet_test.dart`
 Expected: `No issues found!`（含確認移除 `reader_option_tile.dart` import 後沒有殘留的 unused import 警告）。
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/lib/screens/pdf_settings_sheet.dart app/test/screens/pdf_settings_sheet_test.dart
@@ -824,21 +824,21 @@ git commit -m "feat(epic-39): Issue 5 Task 3 — 5 組單選群組改用 EBOptio
 **Files:**
 - 無新增/修改程式碼檔案（僅驗證與文件收尾）。
 
-- [ ] **Step 1：跑全套 `flutter test`**
+- [x] **Step 1：跑全套 `flutter test`**
 
 Run: `flutter test`
 Expected: 全數通過，零回歸（`pdf_settings_sheet_test.dart` 既有 42 個＋本 Issue 新增 8 個＝50 個）。
 
-- [ ] **Step 2：跑全套 `flutter analyze`**
+- [x] **Step 2：跑全套 `flutter analyze`**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 3：將本檔案所有 Task 的 Step 勾選為完成**
+- [x] **Step 3：將本檔案所有 Task 的 Step 勾選為完成**
 
-把本檔案（`docs/epics/epic-39-layout-settings-redesign/plans/plan-issue-5.md`）Task 1-4 全部 `- [ ]` 改為 `- [x]`。
+把本檔案（`docs/epics/epic-39-layout-settings-redesign/plans/plan-issue-5.md`）Task 1-4 全部 `- [x]` 改為 `- [x]`。
 
-- [ ] **Step 4：Commit 計畫狀態更新**
+- [x] **Step 4：Commit 計畫狀態更新**
 
 ```bash
 git add docs/epics/epic-39-layout-settings-redesign/plans/plan-issue-5.md
