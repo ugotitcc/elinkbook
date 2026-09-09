@@ -20,16 +20,20 @@ import 'widgets/reader_option_tile.dart';
 /// 「手動選區」選項點擊時透過 [onRequestManualCrop] 通知呼叫端
 /// （`PdfSettingsSheet` 本身不直接操作 `PdfReaderView`，維持既有單向資料
 /// 流，見 spec.md「模組」段落）；持久化由呼叫端（`ReaderScreen`）負責。
+/// [isEinkMode] 決定濾鏡分頁數值列採用一般主題的 `Slider`＋±按鈕，或
+/// E-Ink 模式的 `EBStepper`。
 class PdfSettingsSheet extends StatefulWidget {
   final BookReaderPrefs prefs;
   final ValueChanged<BookReaderPrefs> onChanged;
   final VoidCallback onRequestManualCrop;
+  final bool isEinkMode;
 
   const PdfSettingsSheet({
     super.key,
     required this.prefs,
     required this.onChanged,
     required this.onRequestManualCrop,
+    required this.isEinkMode,
   });
 
   @override

@@ -654,6 +654,7 @@ void main() {
           prefs: const BookReaderPrefs(pdfFitMode: PdfFitMode.fitWidth),
           onChanged: (_) {},
           onRequestManualCrop: () {},
+          isEinkMode: true,
         ),
       ),
     ));
@@ -674,6 +675,7 @@ Future<void> _pumpSheet(
   BookReaderPrefs prefs,
   ValueChanged<BookReaderPrefs> onChanged, {
   VoidCallback onRequestManualCrop = _noopVoid,
+  bool isEinkMode = false,
 }) async {
   await tester.pumpWidget(MaterialApp(
     home: Scaffold(
@@ -681,6 +683,7 @@ Future<void> _pumpSheet(
         prefs: prefs,
         onChanged: onChanged,
         onRequestManualCrop: onRequestManualCrop,
+        isEinkMode: isEinkMode,
       ),
     ),
   ));
@@ -693,6 +696,7 @@ Future<void> _pumpModalSheet(
   BookReaderPrefs prefs,
   ValueChanged<BookReaderPrefs> onChanged, {
   VoidCallback onRequestManualCrop = _noopVoid,
+  bool isEinkMode = false,
 }) async {
   await tester.pumpWidget(MaterialApp(
     home: Scaffold(
@@ -706,6 +710,7 @@ Future<void> _pumpModalSheet(
               prefs: prefs,
               onChanged: onChanged,
               onRequestManualCrop: onRequestManualCrop,
+              isEinkMode: isEinkMode,
             ),
           ),
           child: const Text('open'),
