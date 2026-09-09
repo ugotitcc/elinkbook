@@ -705,7 +705,7 @@ void main() {
 
     expect(find.byType(NotesBottomSheet), findsOneWidget);
 
-    await tester.tap(find.byKey(const Key('notes_sheet_close_button')));
+    await tester.tap(find.byKey(const Key('eb_sheet_shell_close_button')));
     await tester.pumpAndSettle();
 
     expect(find.byType(NotesBottomSheet), findsNothing);

@@ -264,6 +264,43 @@ PASS（有測試佐證）——
 
 ---
 
+## Screen
+
+筆記（`NotesBottomSheet`：書籤／劃線與備註兩分頁）
+
+## Reference
+
+`[UNKNOWN]` — 無使用者提供的 Reference 截圖，`prototype/elinkbook_theme_prototype.html` 也只有閱讀器底部「書籤」／「劃線備註」兩顆入口按鈕（點擊僅彈出 Toast 提示，未示範實際面板畫面），故本輪改以 `DESIGN.md` §10／§14.2 的明文規格（`NotesSheet` 由 `EBSheetShell` 包裹、雙分頁圖示＋文字標籤不用 Emoji）與本次會話已建立的共用元件（`EBSheetShell`／`EBFieldCard`）作為依據，優先序見下方 Components 說明。
+
+## Flutter Screenshot
+
+無（見文件開頭環境限制聲明）
+
+## Result
+
+### Layout
+PASS（有測試佐證）——`notes_bottom_sheet.dart` 改由 `EBSheetShell` 包裹（拖曳把手／標題／關閉按鈕／高度上限 85% 螢幕高度），取代原本自建的 `SafeArea`＋固定 `SizedBox(height:)`（0.6 螢幕高度、clamp 320–600）＋手刻標題列；「導出為 Markdown」透過新增的 `EBSheetShell.actions` 參數插入標題列（既有唯一呼叫端 `BookActionSheet` 不傳此參數，預設空陣列，零影響）。驗證依據：`flutter test test/screens/notes_bottom_sheet_test.dart test/screens/widgets/eb_sheet_shell_test.dart`（56 項全過）。
+
+### Typography
+PASS——標題「筆記」與分頁籤「書籤」／「劃線與備註」移除 Emoji（`📚`／`🔖`／`✏️`），改為圖示＋純文字，對齊 `DESIGN.md` §14.2「分頁標籤一律搭配文字標籤，不使用 Emoji（舊版曾用 🔖／✏️ 作為分頁圖示，已淘汰）」的明文規定；備註項目標題文字同樣移除 `📌` Emoji（該筆記列已有左側依劃線色彩/備註著色的圓點圖示區分類型，不需要重複的 Emoji）。
+
+### Color
+PASS — 無新增寫死色值；`EBFieldCard`／`EBSheetShell` 皆沿用既有 `ColorScheme`/`CardTheme`。
+
+### Components
+PASS（有測試佐證）——
+- 分頁籤圖示依 `DESIGN.md` §14.2 明文指定：`Icons.bookmark_outline`（書籤）／`Icons.edit_note`（劃線與備註）。
+- 書籤清單列、劃線/備註合併清單列，皆改用本次會話已在 Settings／Source／LayoutSettings 等畫面套用的 `EBFieldCard` 包裹 `ListTile`（邊框卡片，取代裸 `ListTile`），維持全 App 一致的清單列視覺語彙。
+- `EBSheetShell` 新增可選 `actions` 參數（標題列右側、關閉按鈕左側），供「導出為 Markdown」使用；`.show()` 靜態方法／既有呼叫端行為不變。
+
+驗證依據：`flutter test test/screens/notes_bottom_sheet_test.dart test/screens/widgets/eb_sheet_shell_test.dart test/screens/library_screen_test.dart test/screens/reader_screen_test.dart`（576 項全過，含既有的 Markdown 導出／批次刪除確認對話框等回歸測試，證明本輪視覺調整未影響任何業務邏輯）。
+
+### Remaining Differences（刻意不做，超出本次範圍）
+- `AnnotationToolbar`（畫線時浮現的選字工具列，`annotation_toolbar.dart`）未列入本輪——它是選取文字後浮現的情境操作工具列，不是「畫面」本身；且它目前用固定 `Material(elevation: 4)`（無 E-Ink 感知），與 `DESIGN.md` §5「E-Ink 模式下所有元件強制為 none」原則有落差，但這屬於元件層級的 Token 補完，且牽涉到 §14.1 提到的浮動定位幾何計算（現況問題／重構設計是同一段落，混在一起可能連動既有定位邏輯），建議另開一輪或另立工單處理，避免與這次「畫面」重新設計混在一起、擴大變更風險。
+- 使用者未提供 Reference 截圖，本輪視覺判斷完全依賴 `DESIGN.md` 文字規格與既有共用元件推導，若截圖後續補上，建議重新核對一次。
+
+---
+
 ## flutter analyze Result
 
 ```
@@ -273,6 +310,7 @@ No issues found! (ran in 11.3s)
 ## flutter test Result
 
 ```
-+2146: All tests passed!
++2152: All tests passed!
 ```
+（本輪〔筆記面板 Design System 對齊〕未新增/刪除測試案例數，總數與上一輪〔OPDS/Calibre 佇列泛化〕相同，僅更新既有斷言：`notes_bottom_sheet_test.dart` 關閉按鈕 Key 改為 `eb_sheet_shell_close_button`。）
 （含本輪新增/更新的 8 則測試：`app_theme_data_test.dart` Switch ON/OFF 色值 4 則、`fxl_settings_sheet_test.dart`／`pdf_settings_sheet_test.dart` 選中態色值更新 3 則、`library_screen_test.dart` 既有分類拼貼格系列間接驗證 `_GroupGridTile` 改動未回歸）

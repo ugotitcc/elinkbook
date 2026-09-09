@@ -17,6 +17,8 @@ import '../reader/notes_repository.dart';
 import '../reader/markdown_export.dart';
 import '../theme/elink_tokens.dart';
 import 'note_edit_dialog.dart';
+import 'widgets/eb_field_card.dart';
+import 'widgets/eb_sheet_shell.dart';
 
 /// 統一的「筆記」入口 Bottom Sheet 外殼（epic-6-annotations Issue 1，
 /// spec.md「統一入口與 Bottom Sheet」）：帶「🔖 書籤」／「✏️ 劃線與備註」
@@ -169,64 +171,49 @@ class _NotesBottomSheetState extends State<NotesBottomSheet>
 
   @override
   Widget build(BuildContext context) {
-    // TabBarView 無法在無邊界的父層自我量測高度，需要一個明確的高度值
-    // （比照 PdfSettingsSheet 既有做法），但改用螢幕高度比例（審查修正，
-    // 見 tmp/epic-6/reviews/plan_issue_1_review.md 2.1）而非寫死常數，
-    // 避免在較矮螢幕（例如部分 E-Ink 裝置）或系統字型放大時溢出；
-    // clamp 上下限避免極端螢幕尺寸下過小或過大。此為 NotesBottomSheet
-    // 這個全新元件的初始選擇，不回頭修改 PdfSettingsSheet 既有的固定
-    // 400，避免超出本工單範圍。
-    final sheetHeight =
-        (MediaQuery.of(context).size.height * 0.6).clamp(320.0, 600.0);
-    return SafeArea(
-      child: SizedBox(
-        height: sheetHeight,
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 8, 16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('📚 筆記',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      TextButton.icon(
-                        key: const Key('notes_sheet_export_markdown'),
-                        onPressed: _exportMarkdown,
-                        icon: const Icon(Icons.ios_share),
-                        label: const Text('導出為 Markdown'),
-                      ),
-                      IconButton(
-                        key: const Key('notes_sheet_close_button'),
-                        icon: const Icon(Icons.close),
-                        onPressed: () => Navigator.of(context).pop(),
-                      ),
-                    ],
-                  ),
-                ],
+    // `DESIGN.md` §10／§14.2：筆記面板由 `EBSheetShell` 統一包裹（拖曳
+    // 把手／標題／關閉按鈕／高度上限 85% 螢幕高度），取代原本自建的
+    // SafeArea+SizedBox(固定高度)+手刻標題列；「導出為 Markdown」透過
+    // `EBSheetShell.actions` 插入標題列。
+    return EBSheetShell(
+      title: '筆記',
+      actions: [
+        IconButton(
+          key: const Key('notes_sheet_export_markdown'),
+          onPressed: _exportMarkdown,
+          icon: const Icon(Icons.ios_share),
+          tooltip: '導出為 Markdown',
+        ),
+      ],
+      child: Column(
+        children: [
+          // `DESIGN.md` §14.2：分頁標籤一律搭配圖示＋文字，不使用 Emoji
+          // （舊版曾用 🔖／✏️ 作為分頁圖示，已淘汰）。
+          TabBar(
+            controller: _tabController,
+            tabs: const [
+              Tab(
+                key: Key('notes_sheet_tab_bookmarks'),
+                icon: Icon(Icons.bookmark_outline),
+                text: '書籤',
               ),
-            ),
-            TabBar(
+              Tab(
+                key: Key('notes_sheet_tab_annotations'),
+                icon: Icon(Icons.edit_note),
+                text: '劃線與備註',
+              ),
+            ],
+          ),
+          Expanded(
+            child: TabBarView(
               controller: _tabController,
-              tabs: const [
-                Tab(key: Key('notes_sheet_tab_bookmarks'), text: '🔖 書籤'),
-                Tab(key: Key('notes_sheet_tab_annotations'), text: '✏️ 劃線與備註'),
+              children: [
+                _buildBookmarksTab(),
+                _buildAnnotationsTab(),
               ],
             ),
-            Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  _buildBookmarksTab(),
-                  _buildAnnotationsTab(),
-                ],
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -370,26 +357,30 @@ class _NotesBottomSheetState extends State<NotesBottomSheet>
   }
 
   Widget _buildBookmarkRow(Bookmark bookmark) {
-    return ListTile(
-      key: Key('notes_sheet_bookmark_${bookmark.id}'),
-      title: Text(bookmark.name),
-      onTap: () => widget.onBookmarkSelected(bookmark),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          IconButton(
-            key: Key('notes_sheet_bookmark_rename_${bookmark.id}'),
-            icon: const Icon(Icons.edit),
-            tooltip: '重新命名',
-            onPressed: () => _renameBookmark(bookmark),
-          ),
-          IconButton(
-            key: Key('notes_sheet_bookmark_delete_${bookmark.id}'),
-            icon: const Icon(Icons.delete),
-            tooltip: '刪除',
-            onPressed: () => _deleteBookmark(bookmark),
-          ),
-        ],
+    return EBFieldCard(
+      padding: EdgeInsets.zero,
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      child: ListTile(
+        key: Key('notes_sheet_bookmark_${bookmark.id}'),
+        title: Text(bookmark.name),
+        onTap: () => widget.onBookmarkSelected(bookmark),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              key: Key('notes_sheet_bookmark_rename_${bookmark.id}'),
+              icon: const Icon(Icons.edit),
+              tooltip: '重新命名',
+              onPressed: () => _renameBookmark(bookmark),
+            ),
+            IconButton(
+              key: Key('notes_sheet_bookmark_delete_${bookmark.id}'),
+              icon: const Icon(Icons.delete),
+              tooltip: '刪除',
+              onPressed: () => _deleteBookmark(bookmark),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -445,37 +436,43 @@ class _NotesBottomSheetState extends State<NotesBottomSheet>
   Widget _buildAnnotationRow(AnnotationListItem item) {
     final highlight = item.highlight;
     final note = item.note;
-    return ListTile(
-      key: Key('notes_sheet_annotation_${item.key}'),
-      leading: Icon(
-        Icons.circle,
-        color: highlight != null
-            ? highlightStyleColor(highlight.style,
-                tokens: Theme.of(context).extension<ElinkTokens>()!)
-            : noteOnlyTint,
-      ),
-      title: Text(highlight != null ? _highlightStyleLabel(highlight.style) : '📌 備註'),
-      subtitle: note != null
-          ? Text(note.text, maxLines: 2, overflow: TextOverflow.ellipsis)
-          : null,
-      onTap: () => widget.onAnnotationSelected?.call(item),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (note != null)
+    return EBFieldCard(
+      padding: EdgeInsets.zero,
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      child: ListTile(
+        key: Key('notes_sheet_annotation_${item.key}'),
+        leading: Icon(
+          Icons.circle,
+          color: highlight != null
+              ? highlightStyleColor(highlight.style,
+                  tokens: Theme.of(context).extension<ElinkTokens>()!)
+              : noteOnlyTint,
+        ),
+        title: Text(highlight != null
+            ? _highlightStyleLabel(highlight.style)
+            : '備註'),
+        subtitle: note != null
+            ? Text(note.text, maxLines: 2, overflow: TextOverflow.ellipsis)
+            : null,
+        onTap: () => widget.onAnnotationSelected?.call(item),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (note != null)
+              IconButton(
+                key: Key('notes_sheet_annotation_edit_${note.id}'),
+                icon: const Icon(Icons.edit),
+                tooltip: '編輯備註',
+                onPressed: () => _editNoteText(note),
+              ),
             IconButton(
-              key: Key('notes_sheet_annotation_edit_${note.id}'),
-              icon: const Icon(Icons.edit),
-              tooltip: '編輯備註',
-              onPressed: () => _editNoteText(note),
+              key: Key('notes_sheet_annotation_delete_${item.key}'),
+              icon: const Icon(Icons.delete),
+              tooltip: '刪除',
+              onPressed: () => _deleteAnnotationItem(item),
             ),
-          IconButton(
-            key: Key('notes_sheet_annotation_delete_${item.key}'),
-            icon: const Icon(Icons.delete),
-            tooltip: '刪除',
-            onPressed: () => _deleteAnnotationItem(item),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -9,11 +9,17 @@ class EBSheetShell extends StatelessWidget {
   final Widget child;
   final bool isEinkMode;
 
+  /// 標題列右側、關閉按鈕左側的額外動作按鈕（例如「筆記」面板的「導出為
+  /// Markdown」）。預設空陣列，不影響既有呼叫端（`BookActionSheet`）的
+  /// 標題列版面。
+  final List<Widget> actions;
+
   const EBSheetShell({
     super.key,
     required this.title,
     required this.child,
     this.isEinkMode = false,
+    this.actions = const [],
   });
 
   /// `isEinkMode: true` 時用 `AnimationStyle.noAnimation`（`duration`／
@@ -78,6 +84,7 @@ class EBSheetShell extends StatelessWidget {
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                   ),
+                  ...actions,
                   IconButton(
                     key: const Key('eb_sheet_shell_close_button'),
                     icon: const Icon(Icons.close),
