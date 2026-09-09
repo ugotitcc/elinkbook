@@ -362,7 +362,7 @@ git commit -m "feat(epic-39): Issue 6 Task 2 — 雙頁模式／翻頁方向改�
 - Consumes: Task 1／Task 2 的最終程式碼狀態
 - Produces: 無（Issue 6 為 Epic 39 最後一個 Issue，無下游 Task 依賴本 Task 產出）
 
-- [ ] **Step 1：確認三顆 `SwitchListTile` 未設定任何顯式顏色**
+- [x] **Step 1：確認三顆 `SwitchListTile` 未設定任何顯式顏色**
 
 Run: `git grep -n -E "activeColor|inactiveThumbColor|inactiveTrackColor|activeTrackColor|thumbColor|trackColor" app/lib/screens/fxl_settings_sheet.dart`
 
@@ -371,21 +371,21 @@ Expected: 無任何輸出（`fxl_settings_fullscreen`／`fxl_settings_show_heade
 
 此結果確認 spec.md「`FxlSettingsSheet`」段落第三點「三顆 `SwitchListTile` 視覺風格調整（跟隨 `Theme.of(context)`，非新邏輯）」的要求已經滿足，不需要修改 `fxl_settings_sheet.dart` 本身；`app/test/screens/fxl_settings_sheet_test.dart` 現有的三個 `SwitchListTile` 相關測試（第 86-105、139-158、160-179 行，斷言 `.value` 反映持久化狀態）與四個 `onChanged` 行為測試（第 107-126、181-199、201-219 行）已涵蓋 issues.md 要求的「既有 `onChanged` 行為零回歸」，不需新增測試。
 
-- [ ] **Step 2：勾選 Task 3 本身的 Step 為完成，並確認全文已無遺漏**
+- [x] **Step 2：勾選 Task 3 本身的 Step 為完成，並確認全文已無遺漏**
 
 將本檔案 Task 3 的 Step 1-5 改為 `- [x]`（**審查修正 M2**：Task 1／Task 2 的 Step 已分別在各自 Step 7／Step 6 隨 commit 勾選完成，此處只需勾選 Task 3 本身，並巡覽全文確認沒有任何 Task 1-3 的 Step 遺漏勾選）。
 
-- [ ] **Step 3：執行完整測試套件**
+- [x] **Step 3：執行完整測試套件**
 
 Run: `flutter test`
 Expected: 全數通過（含本 Issue 新增的 2 個測試），無回歸。此為本計畫最後一個 Task，依 `CLAUDE.md`「測試執行範圍」政策於此執行一次完整套件。
 
-- [ ] **Step 4：執行 `flutter analyze`**
+- [x] **Step 4：執行 `flutter analyze`**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 git add docs/epics/epic-39-layout-settings-redesign/plans/plan-issue-6.md
