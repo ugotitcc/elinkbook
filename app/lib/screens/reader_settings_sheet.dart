@@ -11,6 +11,7 @@ import '../reader/layout_preset.dart';
 import '../reader/page_turn_mode.dart';
 import '../reader/screen_orientation_setting.dart';
 import '../reader/writing_mode.dart';
+import 'widgets/eb_field_card.dart';
 import 'widgets/eb_option_chip_group.dart';
 import 'widgets/eb_stepper.dart';
 
@@ -31,12 +32,18 @@ class ReaderSettingsSheet extends StatefulWidget {
   final String bookId;
   final List<LayoutPreset> layoutPresets;
   final void Function(BookReaderPrefs currentDraft) onSaveAsPreset;
-  final void Function(LayoutPreset preset, {required List<String> targetBookIds})
-      onApplyPreset;
-  final void Function(String sourceBookId, {required List<String> targetBookIds})
-      onApplyFromBook;
+  final void Function(
+    LayoutPreset preset, {
+    required List<String> targetBookIds,
+  })
+  onApplyPreset;
+  final void Function(
+    String sourceBookId, {
+    required List<String> targetBookIds,
+  })
+  onApplyFromBook;
   final Future<List<String>?> Function({required bool multiSelect})
-      onRequestBookPicker;
+  onRequestBookPicker;
   final void Function(int id) onDeletePreset;
   final bool isEinkMode;
 
@@ -107,7 +114,8 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
         ? (widget.prefs.fontSize! * 16.0).roundToDouble()
         : _defaultFontSize;
     _fontSizeOverridden = widget.prefs.fontSize != null;
-    _fontWeightMultiplier = widget.prefs.fontWeight ?? _defaultFontWeightMultiplier;
+    _fontWeightMultiplier =
+        widget.prefs.fontWeight ?? _defaultFontWeightMultiplier;
     _fontWeightOverridden = widget.prefs.fontWeight != null;
     _lineHeight = widget.prefs.lineHeight ?? _defaultLineHeight;
     _lineHeightOverridden = widget.prefs.lineHeight != null;
@@ -143,7 +151,8 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
             ? (widget.prefs.fontSize! * 16.0).roundToDouble()
             : _defaultFontSize;
         _fontSizeOverridden = widget.prefs.fontSize != null;
-        _fontWeightMultiplier = widget.prefs.fontWeight ?? _defaultFontWeightMultiplier;
+        _fontWeightMultiplier =
+            widget.prefs.fontWeight ?? _defaultFontWeightMultiplier;
         _fontWeightOverridden = widget.prefs.fontWeight != null;
         _lineHeight = widget.prefs.lineHeight ?? _defaultLineHeight;
         _lineHeightOverridden = widget.prefs.lineHeight != null;
@@ -188,28 +197,29 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   /// 比修復前「未觸碰欄位一律凍結成當時滑桿顯示的預設數字」更符合直覺，
   /// 但屬於容易被誤判為回歸的跨 Issue 行為，記錄於此供日後排查參考。
   BookReaderPrefs get _currentDraft => BookReaderPrefs(
-        fontFamily: _fontFamily,
-        fontSize: _fontSizeOverridden ? _toMultiplier(_fontSize, 16.0) : null,
-        fontWeight: _fontWeightOverridden ? _fontWeightMultiplier : null,
-        lineHeight: _lineHeightOverridden ? _lineHeight : null,
-        paragraphSpacing:
-            _paragraphSpacingOverridden ? _toMultiplier(_paragraphSpacing, 10.0) : null,
-        letterSpacing: _letterSpacingOverridden ? _letterSpacing : null,
-        marginTop: _marginTop,
-        marginBottom: _marginBottom,
-        marginLeft: _marginLeft,
-        marginRight: _marginRight,
-        textAlign: _textAlign,
-        publisherStyles: _publisherStyles,
-        writingModeOverride: _writingModeOverride,
-        pageTurnModeOverride: _pageTurnModeOverride,
-        screenOrientationOverride: _screenOrientationOverride,
-        showHeader: _showHeader,
-        showFooter: _showFooter,
-        fullscreen: _fullscreen,
-        columnMode: _columnMode,
-        columnSize: _columnSize,
-      );
+    fontFamily: _fontFamily,
+    fontSize: _fontSizeOverridden ? _toMultiplier(_fontSize, 16.0) : null,
+    fontWeight: _fontWeightOverridden ? _fontWeightMultiplier : null,
+    lineHeight: _lineHeightOverridden ? _lineHeight : null,
+    paragraphSpacing: _paragraphSpacingOverridden
+        ? _toMultiplier(_paragraphSpacing, 10.0)
+        : null,
+    letterSpacing: _letterSpacingOverridden ? _letterSpacing : null,
+    marginTop: _marginTop,
+    marginBottom: _marginBottom,
+    marginLeft: _marginLeft,
+    marginRight: _marginRight,
+    textAlign: _textAlign,
+    publisherStyles: _publisherStyles,
+    writingModeOverride: _writingModeOverride,
+    pageTurnModeOverride: _pageTurnModeOverride,
+    screenOrientationOverride: _screenOrientationOverride,
+    showHeader: _showHeader,
+    showFooter: _showFooter,
+    fullscreen: _fullscreen,
+    columnMode: _columnMode,
+    columnSize: _columnSize,
+  );
 
   void _notifyChanged() {
     widget.onChanged(_currentDraft);
@@ -250,10 +260,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                         key: Key('reader_settings_tab_text_content'),
                         text: '文字',
                       ),
-                      Tab(
-                        key: Key('reader_settings_tab_boundary'),
-                        text: '邊界',
-                      ),
+                      Tab(key: Key('reader_settings_tab_boundary'), text: '邊界'),
                       Tab(
                         key: Key('reader_settings_tab_presentation'),
                         text: '呈現',
@@ -408,15 +415,17 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
             _notifyChanged();
           }),
         ),
-        const SizedBox(height: 12),
-        SwitchListTile(
-          key: const Key('reader_settings_disable_book_css'),
-          title: const Text('停用書本 CSS'),
-          value: !_publisherStyles,
-          onChanged: (v) => setState(() {
-            _publisherStyles = !v;
-            _notifyChanged();
-          }),
+        EBFieldCard(
+          padding: EdgeInsets.zero,
+          child: SwitchListTile(
+            key: const Key('reader_settings_disable_book_css'),
+            title: const Text('停用書本 CSS'),
+            value: !_publisherStyles,
+            onChanged: (v) => setState(() {
+              _publisherStyles = !v;
+              _notifyChanged();
+            }),
+          ),
         ),
       ],
     );
@@ -479,24 +488,29 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
             _notifyChanged();
           }),
         ),
-        const SizedBox(height: 12),
-        SwitchListTile(
-          key: const Key('reader_settings_show_header'),
-          title: const Text('顯示頁首'),
-          value: _showHeader,
-          onChanged: (v) => setState(() {
-            _showHeader = v;
-            _notifyChanged();
-          }),
+        EBFieldCard(
+          padding: EdgeInsets.zero,
+          child: SwitchListTile(
+            key: const Key('reader_settings_show_header'),
+            title: const Text('顯示頁首'),
+            value: _showHeader,
+            onChanged: (v) => setState(() {
+              _showHeader = v;
+              _notifyChanged();
+            }),
+          ),
         ),
-        SwitchListTile(
-          key: const Key('reader_settings_show_footer'),
-          title: const Text('顯示頁尾'),
-          value: _showFooter,
-          onChanged: (v) => setState(() {
-            _showFooter = v;
-            _notifyChanged();
-          }),
+        EBFieldCard(
+          padding: EdgeInsets.zero,
+          child: SwitchListTile(
+            key: const Key('reader_settings_show_footer'),
+            title: const Text('顯示頁尾'),
+            value: _showFooter,
+            onChanged: (v) => setState(() {
+              _showFooter = v;
+              _notifyChanged();
+            }),
+          ),
         ),
       ],
     );
@@ -507,14 +521,17 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
       key: const Key('reader_settings_tab_presentation_list'),
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
       children: [
-        SwitchListTile(
-          key: const Key('reader_settings_fullscreen'),
-          title: const Text('全螢幕模式'),
-          value: _fullscreen,
-          onChanged: (v) => setState(() {
-            _fullscreen = v;
-            _notifyChanged();
-          }),
+        EBFieldCard(
+          padding: EdgeInsets.zero,
+          child: SwitchListTile(
+            key: const Key('reader_settings_fullscreen'),
+            title: const Text('全螢幕模式'),
+            value: _fullscreen,
+            onChanged: (v) => setState(() {
+              _fullscreen = v;
+              _notifyChanged();
+            }),
+          ),
         ),
         const SizedBox(height: 8),
         _buildColumnModeRow(),
@@ -534,9 +551,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     return ListView(
       key: const Key('reader_settings_tab_preferences_list'),
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-      children: [
-        _buildLayoutPresetSection(),
-      ],
+      children: [_buildLayoutPresetSection()],
     );
   }
 
@@ -549,20 +564,27 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
           const Text('欄數'),
           const SizedBox(height: 4),
           EBOptionChipGroup<ColumnMode>(
-            items: [
-              (ColumnMode.auto, 'auto', Icons.auto_awesome, '自動', '自動'),
-              (ColumnMode.single, 'single', Icons.crop_portrait, '單欄', '單欄'),
-              (ColumnMode.double, 'double', Icons.book, '雙欄', '雙欄'),
-            ].map((option) {
-              final (mode, keySuffix, icon, tooltip, label) = option;
-              return EBOptionChipItem<ColumnMode>(
-                itemKey: Key('reader_settings_column_mode_$keySuffix'),
-                value: mode,
-                icon: icon,
-                label: label,
-                tooltip: tooltip,
-              );
-            }).toList(),
+            items:
+                [
+                  (ColumnMode.auto, 'auto', Icons.auto_awesome, '自動', '自動'),
+                  (
+                    ColumnMode.single,
+                    'single',
+                    Icons.crop_portrait,
+                    '單欄',
+                    '單欄',
+                  ),
+                  (ColumnMode.double, 'double', Icons.book, '雙欄', '雙欄'),
+                ].map((option) {
+                  final (mode, keySuffix, icon, tooltip, label) = option;
+                  return EBOptionChipItem<ColumnMode>(
+                    itemKey: Key('reader_settings_column_mode_$keySuffix'),
+                    value: mode,
+                    icon: icon,
+                    label: label,
+                    tooltip: tooltip,
+                  );
+                }).toList(),
             groupValue: _columnMode,
             visualDensity: VisualDensity.compact,
             onSelected: (v) => setState(() {
@@ -572,40 +594,52 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
           ),
           if (_columnMode == ColumnMode.auto) ...[
             const SizedBox(height: 8),
-            // 審查修正 M1（review-plan-issue-3.md）：isEinkMode 時標題不帶數值，
-            // 避免與下方 EBStepper 內部顯示的數值重複（比照 Issue 2 C1 對
-            // _buildSliderRow 已建立的先例——一般主題下 Slider 不具備數值回饋
-            // 能力，標題仍須保留數值）。
-            Text(widget.isEinkMode
-                ? '欄位大小'
-                : '欄位大小 ${_columnSize.round()}px'),
-            widget.isEinkMode
-                ? EBStepper(
-                    keyPrefix: 'reader_settings_column_size',
-                    value: _columnSize,
-                    min: 360.0,
-                    max: 1440.0,
-                    step: 60.0,
-                    displayValue: '${_columnSize.round()}px',
-                    onChanged: (v) => setState(() {
-                      _columnSize = v;
-                      _notifyChanged();
-                    }),
-                    mainAxisSize: MainAxisSize.max,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  )
-                : Slider(
-                    key: const Key('reader_settings_column_size_slider'),
-                    value: _columnSize,
-                    min: 360.0,
-                    max: 1440.0,
-                    divisions: 18, // (1440 - 360) / 60 = 18
-                    label: '${_columnSize.round()}px',
-                    onChanged: (v) => setState(() {
-                      _columnSize = v;
-                      _notifyChanged();
-                    }),
+            // 視覺還原：Reference 截圖只有「欄位大小」這一列有邊框卡片，
+            // 「欄數」本身的三顆選項按鈕不用額外的外框包裹（各按鈕自身
+            // 已有邊框，見 ReaderOptionTile），故只包這一區塊。
+            EBFieldCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 審查修正 M1（review-plan-issue-3.md）：isEinkMode 時標題
+                  // 不帶數值，避免與下方 EBStepper 內部顯示的數值重複（比照
+                  // Issue 2 C1 對 _buildSliderRow 已建立的先例——一般主題下
+                  // Slider 不具備數值回饋能力，標題仍須保留數值）。
+                  Text(
+                    widget.isEinkMode
+                        ? '欄位大小'
+                        : '欄位大小 ${_columnSize.round()}px',
                   ),
+                  widget.isEinkMode
+                      ? EBStepper(
+                          keyPrefix: 'reader_settings_column_size',
+                          value: _columnSize,
+                          min: 360.0,
+                          max: 1440.0,
+                          step: 60.0,
+                          displayValue: '${_columnSize.round()}px',
+                          onChanged: (v) => setState(() {
+                            _columnSize = v;
+                            _notifyChanged();
+                          }),
+                          mainAxisSize: MainAxisSize.max,
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        )
+                      : Slider(
+                          key: const Key('reader_settings_column_size_slider'),
+                          value: _columnSize,
+                          min: 360.0,
+                          max: 1440.0,
+                          divisions: 18, // (1440 - 360) / 60 = 18
+                          label: '${_columnSize.round()}px',
+                          onChanged: (v) => setState(() {
+                            _columnSize = v;
+                            _notifyChanged();
+                          }),
+                        ),
+                ],
+              ),
+            ),
           ],
         ],
       ),
@@ -613,8 +647,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   }
 
   Widget _buildFontFamilyDropdown() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+    return EBFieldCard(
       child: Row(
         children: [
           const Expanded(child: Text('單書閱讀字型')),
@@ -673,8 +706,9 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
         color: colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: colorScheme.outline
-              .withValues(alpha: widget.isEinkMode ? 1.0 : 0.35),
+          color: colorScheme.outline.withValues(
+            alpha: widget.isEinkMode ? 1.0 : 0.35,
+          ),
           width: widget.isEinkMode ? 1.5 : 1.0,
         ),
       ),
@@ -699,8 +733,7 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   }) {
     final divisions = ((max - min) / step).round();
     final clampedValue = value.clamp(min, max);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+    return EBFieldCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -758,7 +791,9 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                       icon: const Icon(Icons.remove),
                       onPressed: clampedValue - step < min - 1e-9
                           ? null
-                          : () => onChanged((clampedValue - step).clamp(min, max)),
+                          : () => onChanged(
+                              (clampedValue - step).clamp(min, max),
+                            ),
                     ),
                     Expanded(
                       child: Slider(
@@ -775,7 +810,9 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                       icon: const Icon(Icons.add),
                       onPressed: clampedValue + step > max + 1e-9
                           ? null
-                          : () => onChanged((clampedValue + step).clamp(min, max)),
+                          : () => onChanged(
+                              (clampedValue + step).clamp(min, max),
+                            ),
                     ),
                   ],
                 ),
@@ -825,8 +862,20 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   Widget _buildWritingModeOverrideRow() {
     const options = [
       (null, 'book', Icons.auto_stories, '採用書籍排版', '書籍'),
-      (WritingMode.vertical, 'vertical', Icons.text_rotate_vertical, '強制直排', '直排'),
-      (WritingMode.horizontal, 'horizontal', Icons.text_rotation_none, '強制橫排', '橫排'),
+      (
+        WritingMode.vertical,
+        'vertical',
+        Icons.text_rotate_vertical,
+        '強制直排',
+        '直排',
+      ),
+      (
+        WritingMode.horizontal,
+        'horizontal',
+        Icons.text_rotation_none,
+        '強制橫排',
+        '橫排',
+      ),
     ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -906,21 +955,50 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
   /// `Transform.rotate` 配合角度旋轉提升視覺辨識度，tooltip 文字消歧。
   Widget _buildScreenOrientationOverrideRow() {
     // (setting, keySuffix, icon, tooltip, rotationAngle, label)
-    const options = <(
-      ScreenOrientationSetting?,
-      String,
-      IconData,
-      String,
-      double,
-      String,
-    )>[
-      (null, 'global', Icons.tune, '使用全域預設', 0.0, '全域'),
-      (ScreenOrientationSetting.auto, 'auto', Icons.screen_rotation, '自動旋轉', 0.0, '自動'),
-      (ScreenOrientationSetting.lock0, 'lock0', Icons.stay_current_portrait, '鎖定 0°', 0.0, '0°'),
-      (ScreenOrientationSetting.lock90, 'lock90', Icons.stay_current_landscape, '鎖定 90°', 0.0, '90°'),
-      (ScreenOrientationSetting.lock180, 'lock180', Icons.stay_current_portrait, '鎖定 180°', pi, '180°'),
-      (ScreenOrientationSetting.lock270, 'lock270', Icons.stay_current_landscape, '鎖定 270°', pi * 1.5, '270°'),
-    ];
+    const options =
+        <(ScreenOrientationSetting?, String, IconData, String, double, String)>[
+          (null, 'global', Icons.tune, '使用全域預設', 0.0, '全域'),
+          (
+            ScreenOrientationSetting.auto,
+            'auto',
+            Icons.screen_rotation,
+            '自動旋轉',
+            0.0,
+            '自動',
+          ),
+          (
+            ScreenOrientationSetting.lock0,
+            'lock0',
+            Icons.stay_current_portrait,
+            '鎖定 0°',
+            0.0,
+            '0°',
+          ),
+          (
+            ScreenOrientationSetting.lock90,
+            'lock90',
+            Icons.stay_current_landscape,
+            '鎖定 90°',
+            0.0,
+            '90°',
+          ),
+          (
+            ScreenOrientationSetting.lock180,
+            'lock180',
+            Icons.stay_current_portrait,
+            '鎖定 180°',
+            pi,
+            '180°',
+          ),
+          (
+            ScreenOrientationSetting.lock270,
+            'lock270',
+            Icons.stay_current_landscape,
+            '鎖定 270°',
+            pi * 1.5,
+            '270°',
+          ),
+        ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -999,7 +1077,10 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
     if (index >= widget.layoutPresets.length) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Text('（空）', key: Key('reader_settings_preset_slot_${index}_empty')),
+        child: Text(
+          '（空）',
+          key: Key('reader_settings_preset_slot_${index}_empty'),
+        ),
       );
     }
     final preset = widget.layoutPresets[index];
@@ -1015,6 +1096,9 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
         decoration: BoxDecoration(
           color: isActive ? colorScheme.inverseSurface : null,
           borderRadius: BorderRadius.circular(8),
+          border: isActive
+              ? null
+              : Border.all(color: colorScheme.outline, width: 1.5),
         ),
         child: Row(
           children: [
@@ -1027,7 +1111,9 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
             ),
             if (isActive)
               Row(
-                key: Key('reader_settings_preset_slot_${index}_active_indicator'),
+                key: Key(
+                  'reader_settings_preset_slot_${index}_active_indicator',
+                ),
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(Icons.check, color: foregroundColor, size: 18),
@@ -1040,8 +1126,10 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
                 key: Key('reader_settings_preset_slot_${index}_apply_current'),
                 icon: const Icon(Icons.check),
                 tooltip: '套用到本書',
-                onPressed: () =>
-                    widget.onApplyPreset(preset, targetBookIds: [widget.bookId]),
+                onPressed: () => widget.onApplyPreset(
+                  preset,
+                  targetBookIds: [widget.bookId],
+                ),
               ),
             IconButton(
               key: Key('reader_settings_preset_slot_${index}_apply_others'),

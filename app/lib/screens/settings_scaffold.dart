@@ -18,6 +18,7 @@ import 'reader_console_log_screen.dart';
 import 'reading_defaults_screen.dart';
 import 'sync_settings_screen.dart';
 import 'tts_defaults_screen.dart';
+import 'widgets/eb_field_card.dart';
 import 'widgets/eb_section_header.dart';
 
 /// 設定畫面：四分區（外觀／閱讀／同步與帳號／關於，`DESIGN.md` §17，
@@ -378,12 +379,14 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
 
 /// 視覺還原（Visual Accuracy Mode，`docs/research/uiux/VISUAL_ANALYSIS.md`）：
 /// Reference 截圖的設定畫面每個項目都是獨立、有邊框、彼此間有間距的卡片，
-/// 不是原本連續 `ListTile`＋細分隔線的清單樣式。改用全域已定案的 `CardTheme`
-/// （見 `app_theme_data.dart`，無陰影＋`outline` 邊框＋8dp 圓角）逐一包裹
-/// 每個項目，取代原本插在各分區之間的 `Divider`——分區間距改由
+/// 不是原本連續 `ListTile`＋細分隔線的清單樣式。改用共用的 [EBFieldCard]
+/// （套用全域已定案的 `CardTheme`，見 `app_theme_data.dart`）逐一包裹每個
+/// 項目，取代原本插在各分區之間的 `Divider`——分區間距改由
 /// `EBSectionHeader` 既有的頂部留白（`fromLTRB(16, 24, 16, 8)`）承擔，
-/// 不需要額外的分隔線或間距元件。`clipBehavior: Clip.antiAlias` 讓
-/// `ListTile`/`SwitchListTile` 內建的按壓水波紋不會溢出卡片的圓角邊界。
+/// 不需要額外的分隔線或間距元件。本類別只是針對本畫面情境（`ListTile`／
+/// `SwitchListTile` 已自帶內距、外層 `ListView` 無水平 padding）固定住
+/// [EBFieldCard] 的 `padding`／`margin` 參數，避免每個呼叫點都要重複填寫
+/// 同一組數值，不是重新實作一次卡片包裝邏輯。
 class _SettingsCard extends StatelessWidget {
   final Widget child;
 
@@ -391,8 +394,8 @@ class _SettingsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      clipBehavior: Clip.antiAlias,
+    return EBFieldCard(
+      padding: EdgeInsets.zero,
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       child: child,
     );

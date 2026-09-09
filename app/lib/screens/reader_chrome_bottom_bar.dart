@@ -55,77 +55,111 @@ class ReaderChromeBottomBar extends StatelessWidget {
       foregroundColor: iconColor,
       disabledForegroundColor: iconColor.withValues(alpha: 0.38),
     );
+    // 視覺還原（VISUAL_ANALYSIS.md）：Reference 截圖三列（頁碼列／跳頁列／
+    // 選單列）之間、以及選單列 4 顆按鈕之間都有分隔線，本元件先前完全沒有
+    // 邊框；本身不吃全域 AppBarTheme（不是用 Scaffold.appBar 建構），
+    // 需自行從 Theme.of(context) 補上。
+    final borderColor = Theme.of(context).colorScheme.outline;
+    Widget verticalDivider(Widget child) => DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border(left: BorderSide(color: borderColor, width: 1)),
+      ),
+      child: child,
+    );
     return Material(
       color: backgroundColor,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          SizedBox(
-            height: 34,
-            child: Row(
-              children: [
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Text(
-                    bookTitle,
-                    overflow: TextOverflow.ellipsis,
-                    maxLines: 1,
-                    style:
-                        TextStyle(color: iconColor, fontWeight: FontWeight.bold),
-                  ),
-                ),
-                Text(
-                  pageProgressText,
-                  key: const Key('reader_chrome_page_info_text'),
-                  style: TextStyle(color: iconColor),
-                ),
-                const SizedBox(width: 16),
-              ],
+          DecoratedBox(
+            decoration: BoxDecoration(
+              border: Border(top: BorderSide(color: borderColor, width: 2)),
             ),
-          ),
-          SizedBox(height: 56, child: footer),
-          SizedBox(
-            height: 64,
-            child: Row(
-              children: [
-                Expanded(
-                  child: IconButton(
-                    key: const Key('reader_chrome_bookmark_button'),
-                    icon: Icon(isBookmarked ? Icons.star : Icons.star_border),
-                    tooltip: isBookmarked ? '已加入此頁書籤' : '加入此頁書籤',
-                    style: buttonStyle,
-                    onPressed: onBookmarkTap,
-                  ),
-                ),
-                Expanded(
-                  child: IconButton(
-                    key: const Key('reader_chrome_annotations_button'),
-                    icon: const Icon(Icons.edit_note),
-                    tooltip: '劃線筆記',
-                    style: buttonStyle,
-                    onPressed: onAnnotationsTap,
-                  ),
-                ),
-                Expanded(
-                  child: IconButton(
-                    key: const Key('reader_chrome_layout_button'),
-                    icon: const Icon(Icons.format_size),
-                    tooltip: '版面',
-                    style: buttonStyle,
-                    onPressed: onLayoutTap,
-                  ),
-                ),
-                if (onTtsTap != null)
+            child: SizedBox(
+              height: 34,
+              child: Row(
+                children: [
+                  const SizedBox(width: 16),
                   Expanded(
-                    child: IconButton(
-                      key: const Key('reader_chrome_tts_button'),
-                      icon: const Icon(Icons.record_voice_over),
-                      tooltip: '朗讀',
-                      style: buttonStyle,
-                      onPressed: onTtsTap,
+                    child: Text(
+                      bookTitle,
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                      style: TextStyle(
+                        color: iconColor,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
-              ],
+                  Text(
+                    pageProgressText,
+                    key: const Key('reader_chrome_page_info_text'),
+                    style: TextStyle(color: iconColor),
+                  ),
+                  const SizedBox(width: 16),
+                ],
+              ),
+            ),
+          ),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              border: Border(top: BorderSide(color: borderColor, width: 1)),
+            ),
+            child: SizedBox(height: 56, child: footer),
+          ),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              border: Border(top: BorderSide(color: borderColor, width: 2)),
+            ),
+            child: SizedBox(
+              height: 64,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: IconButton(
+                      key: const Key('reader_chrome_bookmark_button'),
+                      icon: Icon(isBookmarked ? Icons.star : Icons.star_border),
+                      tooltip: isBookmarked ? '已加入此頁書籤' : '加入此頁書籤',
+                      style: buttonStyle,
+                      onPressed: onBookmarkTap,
+                    ),
+                  ),
+                  Expanded(
+                    child: verticalDivider(
+                      IconButton(
+                        key: const Key('reader_chrome_annotations_button'),
+                        icon: const Icon(Icons.edit_note),
+                        tooltip: '劃線筆記',
+                        style: buttonStyle,
+                        onPressed: onAnnotationsTap,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: verticalDivider(
+                      IconButton(
+                        key: const Key('reader_chrome_layout_button'),
+                        icon: const Icon(Icons.format_size),
+                        tooltip: '版面',
+                        style: buttonStyle,
+                        onPressed: onLayoutTap,
+                      ),
+                    ),
+                  ),
+                  if (onTtsTap != null)
+                    Expanded(
+                      child: verticalDivider(
+                        IconButton(
+                          key: const Key('reader_chrome_tts_button'),
+                          icon: const Icon(Icons.record_voice_over),
+                          tooltip: '朗讀',
+                          style: buttonStyle,
+                          onPressed: onTtsTap,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
         ],

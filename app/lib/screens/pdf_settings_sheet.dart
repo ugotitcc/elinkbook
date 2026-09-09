@@ -6,6 +6,7 @@ import '../reader/dual_page_mode.dart';
 import '../reader/pdf_fit_mode.dart';
 import '../reader/pdf_crop_mode.dart';
 import '../reader/pdf_page_turn_animation.dart';
+import 'widgets/eb_field_card.dart';
 import 'widgets/eb_option_chip_group.dart';
 import 'widgets/eb_stepper.dart';
 
@@ -67,7 +68,8 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
     _cropMode = widget.prefs.pdfCropMode ?? PdfCropMode.none;
     _dualPageMode = widget.prefs.dualPageMode ?? DualPageMode.auto;
     _dualPageCoverAlone = widget.prefs.dualPageCoverAlone ?? true;
-    _dualPageDirection = widget.prefs.dualPageDirection ?? DualPageDirection.rtl;
+    _dualPageDirection =
+        widget.prefs.dualPageDirection ?? DualPageDirection.rtl;
     _pageTurnAnimation =
         widget.prefs.pdfPageTurnAnimation ?? PdfPageTurnAnimation.slide;
     _showFooter = widget.prefs.showFooter ?? true;
@@ -81,24 +83,26 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
   }
 
   void _notifyChanged() {
-    widget.onChanged(BookReaderPrefs(
-      pdfFitMode: _fitMode,
-      pdfContrast: _contrast,
-      pdfBrightness: _brightness,
-      pdfBoldStrength: _boldStrength / 100,
-      pdfCropMode: _cropMode,
-      // pdfCropRect 由原生端計算、透過 ReaderScreen.onCropRectComputed
-      // 另一條路徑寫入，本分頁不直接控制，但必須原樣帶回（讀取目前的
-      // widget.prefs，不是本地狀態），否則使用者調整本分頁任何一個控制項
-      // 都會把已算好的裁切矩形靜默清空成 null。
-      pdfCropRect: widget.prefs.pdfCropRect,
-      dualPageMode: _dualPageMode,
-      dualPageCoverAlone: _dualPageCoverAlone,
-      dualPageDirection: _dualPageDirection,
-      pdfPageTurnAnimation: _pageTurnAnimation,
-      showFooter: _showFooter,
-      fullscreen: _fullscreen,
-    ));
+    widget.onChanged(
+      BookReaderPrefs(
+        pdfFitMode: _fitMode,
+        pdfContrast: _contrast,
+        pdfBrightness: _brightness,
+        pdfBoldStrength: _boldStrength / 100,
+        pdfCropMode: _cropMode,
+        // pdfCropRect 由原生端計算、透過 ReaderScreen.onCropRectComputed
+        // 另一條路徑寫入，本分頁不直接控制，但必須原樣帶回（讀取目前的
+        // widget.prefs，不是本地狀態），否則使用者調整本分頁任何一個控制項
+        // 都會把已算好的裁切矩形靜默清空成 null。
+        pdfCropRect: widget.prefs.pdfCropRect,
+        dualPageMode: _dualPageMode,
+        dualPageCoverAlone: _dualPageCoverAlone,
+        dualPageDirection: _dualPageDirection,
+        pdfPageTurnAnimation: _pageTurnAnimation,
+        showFooter: _showFooter,
+        fullscreen: _fullscreen,
+      ),
+    );
   }
 
   @override
@@ -116,8 +120,10 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
               child: Row(
                 children: [
                   const Expanded(
-                    child: Text('⚙️ PDF 版面設定',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    child: Text(
+                      '⚙️ PDF 版面設定',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
                   ),
                   IconButton(
                     key: const Key('pdf_settings_close_button'),
@@ -154,11 +160,29 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
   Widget _buildDisplayTab(BuildContext context) {
     const fitOptions = [
       (PdfFitMode.pageFit, 'page_fit', Icons.fit_screen, 'Page-fit（整頁）', '整頁'),
-      (PdfFitMode.fitWidth, 'fit_width', Icons.swap_horiz, 'Fit Width（頁寬）', '頁寬'),
-      (PdfFitMode.actualSize, 'actual_size', Icons.crop_original, '真實比例 1:1', '原比'),
+      (
+        PdfFitMode.fitWidth,
+        'fit_width',
+        Icons.swap_horiz,
+        'Fit Width（頁寬）',
+        '頁寬',
+      ),
+      (
+        PdfFitMode.actualSize,
+        'actual_size',
+        Icons.crop_original,
+        '真實比例 1:1',
+        '原比',
+      ),
     ];
     const dualPageOptions = [
-      (DualPageMode.auto, 'auto', Icons.stay_current_landscape, '自動（橫向雙頁）', '自動'),
+      (
+        DualPageMode.auto,
+        'auto',
+        Icons.stay_current_landscape,
+        '自動（橫向雙頁）',
+        '自動',
+      ),
       (DualPageMode.always, 'always', Icons.view_column, '永遠雙頁', '雙頁'),
       (DualPageMode.never, 'never', Icons.crop_portrait, '永遠單頁', '單頁'),
     ];
@@ -229,32 +253,41 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
               }),
             ),
             const SizedBox(height: 16),
-            SwitchListTile(
-              key: const Key('pdf_settings_dual_page_cover_alone'),
-              title: const Text('封面獨立顯示'),
-              value: _dualPageCoverAlone,
-              onChanged: (v) => setState(() {
-                _dualPageCoverAlone = v;
-                _notifyChanged();
-              }),
+            EBFieldCard(
+              padding: EdgeInsets.zero,
+              child: SwitchListTile(
+                key: const Key('pdf_settings_dual_page_cover_alone'),
+                title: const Text('封面獨立顯示'),
+                value: _dualPageCoverAlone,
+                onChanged: (v) => setState(() {
+                  _dualPageCoverAlone = v;
+                  _notifyChanged();
+                }),
+              ),
             ),
-            SwitchListTile(
-              key: const Key('pdf_settings_show_footer'),
-              title: const Text('顯示頁尾'),
-              value: _showFooter,
-              onChanged: (v) => setState(() {
-                _showFooter = v;
-                _notifyChanged();
-              }),
+            EBFieldCard(
+              padding: EdgeInsets.zero,
+              child: SwitchListTile(
+                key: const Key('pdf_settings_show_footer'),
+                title: const Text('顯示頁尾'),
+                value: _showFooter,
+                onChanged: (v) => setState(() {
+                  _showFooter = v;
+                  _notifyChanged();
+                }),
+              ),
             ),
-            SwitchListTile(
-              key: const Key('pdf_settings_fullscreen'),
-              title: const Text('全螢幕模式'),
-              value: _fullscreen,
-              onChanged: (v) => setState(() {
-                _fullscreen = v;
-                _notifyChanged();
-              }),
+            EBFieldCard(
+              padding: EdgeInsets.zero,
+              child: SwitchListTile(
+                key: const Key('pdf_settings_fullscreen'),
+                title: const Text('全螢幕模式'),
+                value: _fullscreen,
+                onChanged: (v) => setState(() {
+                  _fullscreen = v;
+                  _notifyChanged();
+                }),
+              ),
             ),
             const SizedBox(height: 16),
             const Text('頁面方向'),
@@ -303,48 +336,55 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
   }
 
   Widget _buildFiltersTab() {
+    // 視覺還原（VISUAL_ANALYSIS.md）：每個數值列改用 EBFieldCard 包裹後
+    // 整體高度增加，固定 400px 高的 Bottom Sheet（見 build() 註解）容不下
+    // 3 列，比照 _buildDisplayTab 既有的 SingleChildScrollView 做法補上
+    // 捲動，避免 RenderFlex 溢位。
     return Padding(
       padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildSliderRow(
-            keyPrefix: 'pdf_settings_contrast',
-            label: '對比度',
-            value: _contrast,
-            min: -100,
-            max: 100,
-            step: 5,
-            onChanged: (v) => setState(() {
-              _contrast = v;
-              _notifyChanged();
-            }),
-          ),
-          _buildSliderRow(
-            keyPrefix: 'pdf_settings_brightness',
-            label: '亮度',
-            value: _brightness,
-            min: -100,
-            max: 100,
-            step: 5,
-            onChanged: (v) => setState(() {
-              _brightness = v;
-              _notifyChanged();
-            }),
-          ),
-          _buildSliderRow(
-            keyPrefix: 'pdf_settings_bold_strength',
-            label: '加粗強度',
-            value: _boldStrength,
-            min: 0,
-            max: 100,
-            step: 10,
-            onChanged: (v) => setState(() {
-              _boldStrength = v;
-              _notifyChanged();
-            }),
-          ),
-        ],
+      child: SingleChildScrollView(
+        key: const Key('pdf_settings_filters_scroll'),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildSliderRow(
+              keyPrefix: 'pdf_settings_contrast',
+              label: '對比度',
+              value: _contrast,
+              min: -100,
+              max: 100,
+              step: 5,
+              onChanged: (v) => setState(() {
+                _contrast = v;
+                _notifyChanged();
+              }),
+            ),
+            _buildSliderRow(
+              keyPrefix: 'pdf_settings_brightness',
+              label: '亮度',
+              value: _brightness,
+              min: -100,
+              max: 100,
+              step: 5,
+              onChanged: (v) => setState(() {
+                _brightness = v;
+                _notifyChanged();
+              }),
+            ),
+            _buildSliderRow(
+              keyPrefix: 'pdf_settings_bold_strength',
+              label: '加粗強度',
+              value: _boldStrength,
+              min: 0,
+              max: 100,
+              step: 10,
+              onChanged: (v) => setState(() {
+                _boldStrength = v;
+                _notifyChanged();
+              }),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -417,17 +457,13 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
     final divisions = ((max - min) / step).round();
     final clampedValue = value.clamp(min, max);
     final displayValue = clampedValue.round().toString();
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+    return EBFieldCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(label),
-              if (!widget.isEinkMode) Text(displayValue),
-            ],
+            children: [Text(label), if (!widget.isEinkMode) Text(displayValue)],
           ),
           widget.isEinkMode
               ? EBStepper(
@@ -448,7 +484,9 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
                       icon: const Icon(Icons.remove),
                       onPressed: clampedValue - step < min - 1e-9
                           ? null
-                          : () => onChanged((clampedValue - step).clamp(min, max)),
+                          : () => onChanged(
+                              (clampedValue - step).clamp(min, max),
+                            ),
                     ),
                     Expanded(
                       child: Slider(
@@ -465,7 +503,9 @@ class _PdfSettingsSheetState extends State<PdfSettingsSheet>
                       icon: const Icon(Icons.add),
                       onPressed: clampedValue + step > max + 1e-9
                           ? null
-                          : () => onChanged((clampedValue + step).clamp(min, max)),
+                          : () => onChanged(
+                              (clampedValue + step).clamp(min, max),
+                            ),
                     ),
                   ],
                 ),

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../reader/book_reader_prefs.dart';
 import '../reader/dual_page_direction.dart';
 import '../reader/dual_page_mode.dart';
+import 'widgets/eb_field_card.dart';
 import 'widgets/eb_option_chip_group.dart';
 
 /// EPUB 固定版面（FXL 漫畫）專屬的精簡版設定 Bottom Sheet（見
@@ -40,31 +41,46 @@ class _FxlSettingsSheetState extends State<FxlSettingsSheet> {
   void initState() {
     super.initState();
     _dualPageMode = widget.prefs.dualPageMode ?? DualPageMode.auto;
-    _dualPageDirection = widget.prefs.dualPageDirection ?? DualPageDirection.rtl;
+    _dualPageDirection =
+        widget.prefs.dualPageDirection ?? DualPageDirection.rtl;
     _fullscreen = widget.prefs.fullscreen ?? false;
     _showHeader = widget.prefs.showHeader ?? false;
     _showFooter = widget.prefs.showFooter ?? false;
   }
 
   void _notifyChanged() {
-    widget.onChanged(widget.prefs.copyWith(
-      dualPageMode: _dualPageMode,
-      dualPageDirection: _dualPageDirection,
-      fullscreen: _fullscreen,
-      showHeader: _showHeader,
-      showFooter: _showFooter,
-    ));
+    widget.onChanged(
+      widget.prefs.copyWith(
+        dualPageMode: _dualPageMode,
+        dualPageDirection: _dualPageDirection,
+        fullscreen: _fullscreen,
+        showHeader: _showHeader,
+        showFooter: _showFooter,
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     const dualPageOptions = [
-      (DualPageMode.auto, 'auto', Icons.stay_current_landscape, '自動（橫向雙頁）', '自動'),
+      (
+        DualPageMode.auto,
+        'auto',
+        Icons.stay_current_landscape,
+        '自動（橫向雙頁）',
+        '自動',
+      ),
       (DualPageMode.always, 'always', Icons.view_column, '永遠雙頁', '雙頁'),
       (DualPageMode.never, 'never', Icons.crop_portrait, '永遠單頁', '單頁'),
     ];
     const directionOptions = [
-      (DualPageDirection.ltr, 'ltr', Icons.arrow_forward, '左到右（LTR，美漫慣例）', '左翻'),
+      (
+        DualPageDirection.ltr,
+        'ltr',
+        Icons.arrow_forward,
+        '左到右（LTR，美漫慣例）',
+        '左翻',
+      ),
       (DualPageDirection.rtl, 'rtl', Icons.arrow_back, '右到左（RTL，日漫慣例）', '右翻'),
     ];
     return SafeArea(
@@ -77,8 +93,10 @@ class _FxlSettingsSheetState extends State<FxlSettingsSheet> {
             Row(
               children: [
                 const Expanded(
-                  child: Text('⚙️ 漫畫版面設定',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  child: Text(
+                    '⚙️ 漫畫版面設定',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                 ),
                 IconButton(
                   key: const Key('fxl_settings_close_button'),
@@ -130,32 +148,41 @@ class _FxlSettingsSheetState extends State<FxlSettingsSheet> {
               }),
             ),
             const SizedBox(height: 16),
-            SwitchListTile(
-              key: const Key('fxl_settings_fullscreen'),
-              title: const Text('全螢幕模式'),
-              value: _fullscreen,
-              onChanged: (v) => setState(() {
-                _fullscreen = v;
-                _notifyChanged();
-              }),
+            EBFieldCard(
+              padding: EdgeInsets.zero,
+              child: SwitchListTile(
+                key: const Key('fxl_settings_fullscreen'),
+                title: const Text('全螢幕模式'),
+                value: _fullscreen,
+                onChanged: (v) => setState(() {
+                  _fullscreen = v;
+                  _notifyChanged();
+                }),
+              ),
             ),
-            SwitchListTile(
-              key: const Key('fxl_settings_show_header'),
-              title: const Text('顯示頁首'),
-              value: _showHeader,
-              onChanged: (v) => setState(() {
-                _showHeader = v;
-                _notifyChanged();
-              }),
+            EBFieldCard(
+              padding: EdgeInsets.zero,
+              child: SwitchListTile(
+                key: const Key('fxl_settings_show_header'),
+                title: const Text('顯示頁首'),
+                value: _showHeader,
+                onChanged: (v) => setState(() {
+                  _showHeader = v;
+                  _notifyChanged();
+                }),
+              ),
             ),
-            SwitchListTile(
-              key: const Key('fxl_settings_show_footer'),
-              title: const Text('顯示頁尾'),
-              value: _showFooter,
-              onChanged: (v) => setState(() {
-                _showFooter = v;
-                _notifyChanged();
-              }),
+            EBFieldCard(
+              padding: EdgeInsets.zero,
+              child: SwitchListTile(
+                key: const Key('fxl_settings_show_footer'),
+                title: const Text('顯示頁尾'),
+                value: _showFooter,
+                onChanged: (v) => setState(() {
+                  _showFooter = v;
+                  _notifyChanged();
+                }),
+              ),
             ),
           ],
         ),

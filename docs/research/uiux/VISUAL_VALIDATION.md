@@ -128,11 +128,66 @@ PASS（有測試佐證）——見上方 Layout。`clipBehavior: Clip.antiAlias`
 
 ## Screen
 
-Source（來源）／Reader 底部工具列＋TTS 面板
+LayoutSettings 補件：欄位列邊框（三個版面設定 Bottom Sheet）
 
 ## Result
 
-**未列入本輪修改範圍**——來源畫面（`sources_home_screen.dart`）與閱讀器底部列/TTS 面板本輪完全未讀取現有原始碼，`[UNKNOWN]`，需下一輪處理。
+上一輪只修了 `ReaderOptionTile`（三態選項按鈕選中色）與 `EBStepper`（`-`/`+` 按鈕本身的邊框），**遺漏了整列的邊框卡片**（Reference 每個「字級」「行距」「欄位大小」等欄位是一整個有邊框的卡片，不是只有 `-`/`+` 按鈕有框）——這是您這次回報「版面設定並沒有更新到」的根本原因，本輪已補上：
+
+### Components
+PASS（有測試佐證）——`reader_settings_sheet.dart`／`fxl_settings_sheet.dart`／`pdf_settings_sheet.dart` 的 `_buildSliderRow`／`_buildFontFamilyDropdown`／各 `SwitchListTile`／`_buildColumnModeRow` 內的「欄位大小」子區塊，皆已改用新共用元件 `EBFieldCard` 包裹。核對 Reference 後確認**只有「欄位大小」這類數值列有邊框卡片，「換頁模式／欄數／書寫方向／文字對齊／螢幕方向鎖定」這幾組三態選項按鈕群組本身沒有外層卡片**（各按鈕自己已有邊框），故未對它們加卡片，避免過度還原。`_buildPresetSlot`（預設集卡片）補上 `outline` 邊框。驗證依據：`flutter test test/screens/reader_settings_sheet_test.dart test/screens/fxl_settings_sheet_test.dart test/screens/pdf_settings_sheet_test.dart test/screens/settings_scaffold_test.dart`（334 項全過）。
+
+副作用修正：`pdf_settings_sheet.dart` 濾鏡分頁固定 400px 高度的 Bottom Sheet 在加了卡片後 3 個數值列會溢位（RenderFlex overflowed by 40 pixels），已比照顯示分頁既有的 `SingleChildScrollView` 做法補上捲動；對應測試補了 `ensureVisible()` 呼叫。
+
+---
+
+## Screen
+
+Source（來源）
+
+## Reference
+
+`docs/research/uiux/reference/來源.png`
+
+## Flutter Screenshot
+
+無（見上方環境限制聲明）
+
+## Result
+
+### Components
+PASS（有測試佐證）——`sources_home_screen.dart` 的「選擇檔案」「選擇資料夾」「Google Drive」「OneDrive」「遠端書庫（OPDS）」五個 `ListTile` 皆已用 `EBFieldCard` 包裹；分區標題改用既有 `EBSectionHeader`（原本是裸 `Padding`+粗體 `Text`，與設定畫面的分區標題樣式不一致，現已統一）。驗證依據：`flutter test test/screens/sources_home_screen_test.dart`（7 項全過）。
+
+### Remaining Differences
+- Reference「選擇檔案」／「選擇資料夾」是並排的兩個方形按鈕（icon 在上、文字在下），本輪維持原本 `ListTile`（icon 在左、文字在右）的橫列格式，只加邊框卡片，未重排版面——版面重排風險/工作量較高，且非「缺邊框」這個核心問題，本輪判斷為超出範圍，如需要請另外指示。
+- Reference 底部有一個常駐「下載佇列」清單（含確定式進度條），目前 Flutter 版本的下載佇列是另一個獨立 Dialog（`cloud_download_queue_dialog.dart`），不是本畫面內建的常駐區塊——這是功能完整度落差，不是純視覺樣式問題，本輪未處理，需要另外決定是否要把下載佇列狀態接進本畫面。
+
+---
+
+## Screen
+
+Reader 底部工具列（`ReaderChromeBottomBar`）＋ TTS 常駐面板（`TtsPanel`）
+
+## Reference
+
+`docs/research/uiux/reference/閱讀_一版.png`、`閱讀_朗讀.png`
+
+## Flutter Screenshot
+
+無（見上方環境限制聲明）
+
+## Result
+
+### Components
+PASS（有測試佐證）——
+
+- `reader_chrome_bottom_bar.dart`：頁碼列／跳頁列／選單列三列之間補上分隔線（頁碼列上方 2px、跳頁列上方 1px、選單列上方 2px，對應 Reference 的粗細差異），選單列 4 顆按鈕之間補上垂直分隔線。驗證依據：`flutter test test/screens/reader_chrome_bottom_bar_test.dart`。
+- `tts_panel.dart`：展開列 5 顆按鈕與底層動作列 3 顆按鈕，全部補上邊框圓角容器；播放/暫停鍵與停止鍵改為 `primary` 實心填滿＋`onPrimary` 前景色，對齊 Reference「主動作實心填滿、其餘按鈕僅描邊」的視覺語彙。驗證依據：`flutter test test/screens/tts_panel_test.dart`（含觸控目標高度回歸測試，過程中發現並修正一個約束衝突 bug——見下方）。
+
+**過程中修正的一個潛在 bug（非視覺，是本輪修改差點引入的 layout 問題）**：一開始把邊框容器多包了一層 `Padding(all: 2)`，導致外層 `SizedBox(height: minSize)` 的緊約束被 Padding deflate 後小於 `IconButton`/`TextButton` 內建的 `minimumSize`（56／52dp 觸控目標，`DESIGN.md` §7.2），約束衝突下觸控目標被迫縮水 4px（56→52、52→48），被既有的觸控目標回歸測試抓到，已移除該層 Padding 修正（`DecoratedBox`／`ClipRRect` 本身不影響約束，安全）。
+
+### Remaining Differences
+- 展開列按鈕彼此間距（`spaceEvenly`）與 Reference 實際間距未逐像素核對。
 
 ---
 

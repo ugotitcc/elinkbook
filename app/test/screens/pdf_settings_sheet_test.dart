@@ -19,9 +19,15 @@ void main() {
     expect(find.byKey(const Key('pdf_settings_tab_crop')), findsOneWidget);
   });
 
-  testWidgets('點擊 Fit Width 選項後，onChanged 帶入 pdfFitMode=fitWidth', (tester) async {
+  testWidgets('點擊 Fit Width 選項後，onChanged 帶入 pdfFitMode=fitWidth', (
+    tester,
+  ) async {
     BookReaderPrefs? notified;
-    await _pumpSheet(tester, BookReaderPrefs.empty, (prefs) => notified = prefs);
+    await _pumpSheet(
+      tester,
+      BookReaderPrefs.empty,
+      (prefs) => notified = prefs,
+    );
 
     await tester.tap(find.byKey(const Key('pdf_settings_fit_mode_fit_width')));
     await tester.pump();
@@ -29,18 +35,27 @@ void main() {
     expect(notified?.pdfFitMode, PdfFitMode.fitWidth);
   });
 
-  testWidgets('點擊真實比例 1:1 選項後，onChanged 帶入 pdfFitMode=actualSize',
-      (tester) async {
+  testWidgets('點擊真實比例 1:1 選項後，onChanged 帶入 pdfFitMode=actualSize', (
+    tester,
+  ) async {
     BookReaderPrefs? notified;
-    await _pumpSheet(tester, BookReaderPrefs.empty, (prefs) => notified = prefs);
+    await _pumpSheet(
+      tester,
+      BookReaderPrefs.empty,
+      (prefs) => notified = prefs,
+    );
 
-    await tester.tap(find.byKey(const Key('pdf_settings_fit_mode_actual_size')));
+    await tester.tap(
+      find.byKey(const Key('pdf_settings_fit_mode_actual_size')),
+    );
     await tester.pump();
 
     expect(notified?.pdfFitMode, PdfFitMode.actualSize);
   });
 
-  testWidgets('點擊 Page-fit 選項後，onChanged 帶入 pdfFitMode=pageFit', (tester) async {
+  testWidgets('點擊 Page-fit 選項後，onChanged 帶入 pdfFitMode=pageFit', (
+    tester,
+  ) async {
     BookReaderPrefs? notified;
     await _pumpSheet(
       tester,
@@ -54,8 +69,9 @@ void main() {
     expect(notified?.pdfFitMode, PdfFitMode.pageFit);
   });
 
-  testWidgets('prefs.pdfFitMode 為 null 時（未持久化過），不因為初始 build 就觸發 onChanged',
-      (tester) async {
+  testWidgets('prefs.pdfFitMode 為 null 時（未持久化過），不因為初始 build 就觸發 onChanged', (
+    tester,
+  ) async {
     var callCount = 0;
     await _pumpSheet(tester, BookReaderPrefs.empty, (_) => callCount++);
 
@@ -75,22 +91,23 @@ void main() {
 
     expect(
       tester
-          .widget<Slider>(
-              find.byKey(const Key('pdf_settings_contrast_slider')))
+          .widget<Slider>(find.byKey(const Key('pdf_settings_contrast_slider')))
           .value,
       30,
     );
     expect(
       tester
           .widget<Slider>(
-              find.byKey(const Key('pdf_settings_brightness_slider')))
+            find.byKey(const Key('pdf_settings_brightness_slider')),
+          )
           .value,
       -20,
     );
   });
 
-  testWidgets('prefs.pdfContrast／pdfBrightness 為 null 時，滑桿顯示預設值 0',
-      (tester) async {
+  testWidgets('prefs.pdfContrast／pdfBrightness 為 null 時，滑桿顯示預設值 0', (
+    tester,
+  ) async {
     await _pumpSheet(tester, BookReaderPrefs.empty, (_) {});
 
     await tester.tap(find.byKey(const Key('pdf_settings_tab_filters')));
@@ -98,22 +115,23 @@ void main() {
 
     expect(
       tester
-          .widget<Slider>(
-              find.byKey(const Key('pdf_settings_contrast_slider')))
+          .widget<Slider>(find.byKey(const Key('pdf_settings_contrast_slider')))
           .value,
       0,
     );
     expect(
       tester
           .widget<Slider>(
-              find.byKey(const Key('pdf_settings_brightness_slider')))
+            find.byKey(const Key('pdf_settings_brightness_slider')),
+          )
           .value,
       0,
     );
   });
 
-  testWidgets('拖動對比度滑桿後，onChanged 帶入新的 pdfContrast，其餘 PDF 欄位不變',
-      (tester) async {
+  testWidgets('拖動對比度滑桿後，onChanged 帶入新的 pdfContrast，其餘 PDF 欄位不變', (
+    tester,
+  ) async {
     BookReaderPrefs? notified;
     await _pumpSheet(
       tester,
@@ -124,8 +142,7 @@ void main() {
     await tester.tap(find.byKey(const Key('pdf_settings_tab_filters')));
     await tester.pumpAndSettle();
 
-    await tester
-        .tap(find.byKey(const Key('pdf_settings_contrast_increment')));
+    await tester.tap(find.byKey(const Key('pdf_settings_contrast_increment')));
     await tester.pump();
 
     expect(notified?.pdfContrast, greaterThan(0));
@@ -134,20 +151,24 @@ void main() {
 
   testWidgets('拖動亮度滑桿後，onChanged 帶入新的 pdfBrightness', (tester) async {
     BookReaderPrefs? notified;
-    await _pumpSheet(tester, BookReaderPrefs.empty, (prefs) => notified = prefs);
+    await _pumpSheet(
+      tester,
+      BookReaderPrefs.empty,
+      (prefs) => notified = prefs,
+    );
 
     await tester.tap(find.byKey(const Key('pdf_settings_tab_filters')));
     await tester.pumpAndSettle();
 
-    await tester
-        .tap(find.byKey(const Key('pdf_settings_brightness_decrement')));
+    await tester.tap(
+      find.byKey(const Key('pdf_settings_brightness_decrement')),
+    );
     await tester.pump();
 
     expect(notified?.pdfBrightness, lessThan(0));
   });
 
-  testWidgets('濾鏡分頁存在加粗強度滑桿，初始值反映 prefs（0..1 換算為 0..100 顯示）',
-      (tester) async {
+  testWidgets('濾鏡分頁存在加粗強度滑桿，初始值反映 prefs（0..1 換算為 0..100 顯示）', (tester) async {
     await _pumpSheet(
       tester,
       const BookReaderPrefs(pdfBoldStrength: 0.6),
@@ -160,7 +181,8 @@ void main() {
     expect(
       tester
           .widget<Slider>(
-              find.byKey(const Key('pdf_settings_bold_strength_slider')))
+            find.byKey(const Key('pdf_settings_bold_strength_slider')),
+          )
           .value,
       60,
     );
@@ -175,14 +197,16 @@ void main() {
     expect(
       tester
           .widget<Slider>(
-              find.byKey(const Key('pdf_settings_bold_strength_slider')))
+            find.byKey(const Key('pdf_settings_bold_strength_slider')),
+          )
           .value,
       0,
     );
   });
 
-  testWidgets('拖動加粗強度滑桿後，onChanged 帶入新的 pdfBoldStrength（0..1），其餘 PDF 欄位不變',
-      (tester) async {
+  testWidgets('拖動加粗強度滑桿後，onChanged 帶入新的 pdfBoldStrength（0..1），其餘 PDF 欄位不變', (
+    tester,
+  ) async {
     BookReaderPrefs? notified;
     await _pumpSheet(
       tester,
@@ -198,8 +222,15 @@ void main() {
     await tester.tap(find.byKey(const Key('pdf_settings_tab_filters')));
     await tester.pumpAndSettle();
 
-    await tester
-        .tap(find.byKey(const Key('pdf_settings_bold_strength_increment')));
+    // 視覺還原（VISUAL_ANALYSIS.md）後濾鏡分頁改為可捲動（見
+    // pdf_settings_sheet.dart _buildFiltersTab），「加粗強度」列可能落在
+    // 可視範圍外，先捲動確保可點擊。
+    await tester.ensureVisible(
+      find.byKey(const Key('pdf_settings_bold_strength_increment')),
+    );
+    await tester.tap(
+      find.byKey(const Key('pdf_settings_bold_strength_increment')),
+    );
     await tester.pump();
 
     expect(notified?.pdfBoldStrength, greaterThan(0));
@@ -215,15 +246,23 @@ void main() {
     await tester.tap(find.byKey(const Key('pdf_settings_tab_crop')));
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const Key('pdf_settings_crop_mode_none')), findsOneWidget);
     expect(
-        find.byKey(const Key('pdf_settings_crop_mode_auto')), findsOneWidget);
+      find.byKey(const Key('pdf_settings_crop_mode_none')),
+      findsOneWidget,
+    );
     expect(
-        find.byKey(const Key('pdf_settings_crop_mode_manual')), findsOneWidget);
+      find.byKey(const Key('pdf_settings_crop_mode_auto')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('pdf_settings_crop_mode_manual')),
+      findsOneWidget,
+    );
   });
 
-  testWidgets('點擊手動選區按鈕後，觸發 onRequestManualCrop（不直接改變 pdfCropMode）',
-      (tester) async {
+  testWidgets('點擊手動選區按鈕後，觸發 onRequestManualCrop（不直接改變 pdfCropMode）', (
+    tester,
+  ) async {
     var requestCount = 0;
     BookReaderPrefs? notified;
     await _pumpSheet(
@@ -247,7 +286,11 @@ void main() {
 
   testWidgets('點擊智慧自動選項後，onChanged 帶入 pdfCropMode=autoDetect', (tester) async {
     BookReaderPrefs? notified;
-    await _pumpSheet(tester, BookReaderPrefs.empty, (prefs) => notified = prefs);
+    await _pumpSheet(
+      tester,
+      BookReaderPrefs.empty,
+      (prefs) => notified = prefs,
+    );
 
     await tester.tap(find.byKey(const Key('pdf_settings_tab_crop')));
     await tester.pumpAndSettle();
@@ -257,12 +300,16 @@ void main() {
     expect(notified?.pdfCropMode, PdfCropMode.autoDetect);
   });
 
-  testWidgets(
-      '已持久化 pdfCropRect 時，調整其他分頁的滑桿不會清空 pdfCropRect（關鍵回歸檢查）',
-      (tester) async {
+  testWidgets('已持久化 pdfCropRect 時，調整其他分頁的滑桿不會清空 pdfCropRect（關鍵回歸檢查）', (
+    tester,
+  ) async {
     BookReaderPrefs? notified;
-    const existingCropRect =
-        PdfCropRect(left: 0.02, top: 0.03, right: 0.98, bottom: 0.97);
+    const existingCropRect = PdfCropRect(
+      left: 0.02,
+      top: 0.03,
+      right: 0.98,
+      bottom: 0.97,
+    );
     await _pumpSheet(
       tester,
       const BookReaderPrefs(
@@ -286,27 +333,37 @@ void main() {
   testWidgets('顯示分頁新增雙頁模式三個選項按鈕', (tester) async {
     await _pumpSheet(tester, BookReaderPrefs.empty, (_) {});
 
-    expect(find.byKey(const Key('pdf_settings_dual_page_mode_auto')),
-        findsOneWidget);
-    expect(find.byKey(const Key('pdf_settings_dual_page_mode_always')),
-        findsOneWidget);
-    expect(find.byKey(const Key('pdf_settings_dual_page_mode_never')),
-        findsOneWidget);
+    expect(
+      find.byKey(const Key('pdf_settings_dual_page_mode_auto')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('pdf_settings_dual_page_mode_always')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('pdf_settings_dual_page_mode_never')),
+      findsOneWidget,
+    );
   });
 
-  testWidgets('點擊永遠雙頁選項後，onChanged 帶入 dualPageMode=always',
-      (tester) async {
+  testWidgets('點擊永遠雙頁選項後，onChanged 帶入 dualPageMode=always', (tester) async {
     BookReaderPrefs? notified;
-    await _pumpSheet(tester, BookReaderPrefs.empty, (prefs) => notified = prefs);
+    await _pumpSheet(
+      tester,
+      BookReaderPrefs.empty,
+      (prefs) => notified = prefs,
+    );
 
-    await tester.tap(find.byKey(const Key('pdf_settings_dual_page_mode_always')));
+    await tester.tap(
+      find.byKey(const Key('pdf_settings_dual_page_mode_always')),
+    );
     await tester.pump();
 
     expect(notified?.dualPageMode, DualPageMode.always);
   });
 
-  testWidgets('點擊永遠單頁選項後，onChanged 帶入 dualPageMode=never',
-      (tester) async {
+  testWidgets('點擊永遠單頁選項後，onChanged 帶入 dualPageMode=never', (tester) async {
     BookReaderPrefs? notified;
     await _pumpSheet(
       tester,
@@ -314,30 +371,30 @@ void main() {
       (prefs) => notified = prefs,
     );
 
-    await tester.tap(find.byKey(const Key('pdf_settings_dual_page_mode_never')));
+    await tester.tap(
+      find.byKey(const Key('pdf_settings_dual_page_mode_never')),
+    );
     await tester.pump();
 
     expect(notified?.dualPageMode, DualPageMode.never);
   });
 
-  testWidgets('prefs.dualPageMode 為 null 時（未持久化過），不因為初始 build 就觸發 onChanged',
-      (tester) async {
+  testWidgets('prefs.dualPageMode 為 null 時（未持久化過），不因為初始 build 就觸發 onChanged', (
+    tester,
+  ) async {
     var callCount = 0;
     await _pumpSheet(tester, BookReaderPrefs.empty, (_) => callCount++);
 
     expect(callCount, 0);
   });
 
-  testWidgets(
-      '已持久化 dualPageMode 時，調整濾鏡分頁不會清空 dualPageMode（回歸檢查）',
-      (tester) async {
+  testWidgets('已持久化 dualPageMode 時，調整濾鏡分頁不會清空 dualPageMode（回歸檢查）', (
+    tester,
+  ) async {
     BookReaderPrefs? notified;
     await _pumpSheet(
       tester,
-      const BookReaderPrefs(
-        dualPageMode: DualPageMode.always,
-        pdfContrast: 0,
-      ),
+      const BookReaderPrefs(dualPageMode: DualPageMode.always, pdfContrast: 0),
       (prefs) => notified = prefs,
     );
 
@@ -353,8 +410,10 @@ void main() {
   testWidgets('顯示分頁新增封面獨立開關', (tester) async {
     await _pumpSheet(tester, BookReaderPrefs.empty, (_) {});
 
-    expect(find.byKey(const Key('pdf_settings_dual_page_cover_alone')),
-        findsOneWidget);
+    expect(
+      find.byKey(const Key('pdf_settings_dual_page_cover_alone')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('封面獨立開關初始值反映 prefs（未持久化時預設開啟）', (tester) async {
@@ -363,27 +422,34 @@ void main() {
     expect(
       tester
           .widget<SwitchListTile>(
-              find.byKey(const Key('pdf_settings_dual_page_cover_alone')))
+            find.byKey(const Key('pdf_settings_dual_page_cover_alone')),
+          )
           .value,
       isTrue,
     );
   });
 
-  testWidgets('關閉封面獨立開關後，onChanged 帶入 dualPageCoverAlone=false',
-      (tester) async {
+  testWidgets('關閉封面獨立開關後，onChanged 帶入 dualPageCoverAlone=false', (
+    tester,
+  ) async {
     BookReaderPrefs? notified;
-    await _pumpSheet(tester, BookReaderPrefs.empty, (prefs) => notified = prefs);
+    await _pumpSheet(
+      tester,
+      BookReaderPrefs.empty,
+      (prefs) => notified = prefs,
+    );
 
-    await tester
-        .tap(find.byKey(const Key('pdf_settings_dual_page_cover_alone')));
+    await tester.tap(
+      find.byKey(const Key('pdf_settings_dual_page_cover_alone')),
+    );
     await tester.pump();
 
     expect(notified?.dualPageCoverAlone, isFalse);
   });
 
-  testWidgets(
-      '已持久化 dualPageCoverAlone=false 時，調整雙頁模式不會清空該欄位（回歸檢查）',
-      (tester) async {
+  testWidgets('已持久化 dualPageCoverAlone=false 時，調整雙頁模式不會清空該欄位（回歸檢查）', (
+    tester,
+  ) async {
     BookReaderPrefs? notified;
     await _pumpSheet(
       tester,
@@ -391,17 +457,16 @@ void main() {
       (prefs) => notified = prefs,
     );
 
-    await tester
-        .tap(find.byKey(const Key('pdf_settings_dual_page_mode_always')));
+    await tester.tap(
+      find.byKey(const Key('pdf_settings_dual_page_mode_always')),
+    );
     await tester.pump();
 
     expect(notified?.dualPageMode, DualPageMode.always);
     expect(notified?.dualPageCoverAlone, isFalse); // 關鍵斷言：未被清空
   });
 
-  testWidgets(
-      '顯示分頁新增控制項後仍可正常渲染，不觸發 RenderFlex overflow（審查修正）',
-      (tester) async {
+  testWidgets('顯示分頁新增控制項後仍可正常渲染，不觸發 RenderFlex overflow（審查修正）', (tester) async {
     await _pumpSheet(tester, BookReaderPrefs.empty, (_) {});
     await tester.pump();
 
@@ -411,10 +476,14 @@ void main() {
   testWidgets('顯示分頁新增頁面方向兩個選項按鈕', (tester) async {
     await _pumpSheet(tester, BookReaderPrefs.empty, (_) {});
 
-    expect(find.byKey(const Key('pdf_settings_dual_page_direction_ltr')),
-        findsOneWidget);
-    expect(find.byKey(const Key('pdf_settings_dual_page_direction_rtl')),
-        findsOneWidget);
+    expect(
+      find.byKey(const Key('pdf_settings_dual_page_direction_ltr')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('pdf_settings_dual_page_direction_rtl')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('點擊左到右選項後，onChanged 帶入 dualPageDirection=ltr', (tester) async {
@@ -427,31 +496,41 @@ void main() {
 
     // 方向選項在顯示分頁底部，需先捲動才能點擊
     await tester.ensureVisible(
-        find.byKey(const Key('pdf_settings_dual_page_direction_ltr')));
-    await tester.tap(find.byKey(const Key('pdf_settings_dual_page_direction_ltr')));
+      find.byKey(const Key('pdf_settings_dual_page_direction_ltr')),
+    );
+    await tester.tap(
+      find.byKey(const Key('pdf_settings_dual_page_direction_ltr')),
+    );
     await tester.pump();
 
     expect(notified?.dualPageDirection, DualPageDirection.ltr);
   });
 
-  testWidgets(
-      '點擊右到左選項後，onChanged 帶入 dualPageDirection=rtl（未持久化時預設即為 rtl）',
-      (tester) async {
+  testWidgets('點擊右到左選項後，onChanged 帶入 dualPageDirection=rtl（未持久化時預設即為 rtl）', (
+    tester,
+  ) async {
     BookReaderPrefs? notified;
-    await _pumpSheet(tester, BookReaderPrefs.empty, (prefs) => notified = prefs);
+    await _pumpSheet(
+      tester,
+      BookReaderPrefs.empty,
+      (prefs) => notified = prefs,
+    );
 
     // 方向選項在顯示分頁底部，需先捲動才能點擊
     await tester.ensureVisible(
-        find.byKey(const Key('pdf_settings_dual_page_direction_rtl')));
-    await tester.tap(find.byKey(const Key('pdf_settings_dual_page_direction_rtl')));
+      find.byKey(const Key('pdf_settings_dual_page_direction_rtl')),
+    );
+    await tester.tap(
+      find.byKey(const Key('pdf_settings_dual_page_direction_rtl')),
+    );
     await tester.pump();
 
     expect(notified?.dualPageDirection, DualPageDirection.rtl);
   });
 
-  testWidgets(
-      '已持久化 dualPageDirection=ltr 時，調整封面獨立開關不會清空該欄位（回歸檢查）',
-      (tester) async {
+  testWidgets('已持久化 dualPageDirection=ltr 時，調整封面獨立開關不會清空該欄位（回歸檢查）', (
+    tester,
+  ) async {
     BookReaderPrefs? notified;
     await _pumpSheet(
       tester,
@@ -461,14 +540,15 @@ void main() {
 
     // 封面獨立開關在顯示分頁中間偏下，需先捲動才能點擊
     await tester.ensureVisible(
-        find.byKey(const Key('pdf_settings_dual_page_cover_alone')));
-    await tester
-        .tap(find.byKey(const Key('pdf_settings_dual_page_cover_alone')));
+      find.byKey(const Key('pdf_settings_dual_page_cover_alone')),
+    );
+    await tester.tap(
+      find.byKey(const Key('pdf_settings_dual_page_cover_alone')),
+    );
     await tester.pump();
 
     expect(notified?.dualPageCoverAlone, isFalse);
-    expect(notified?.dualPageDirection,
-        DualPageDirection.ltr); // 關鍵斷言：未被清空
+    expect(notified?.dualPageDirection, DualPageDirection.ltr); // 關鍵斷言：未被清空
   });
 
   testWidgets('頁尾開關初始值反映 prefs（未持久化時預設開啟）', (tester) async {
@@ -477,23 +557,21 @@ void main() {
     expect(
       tester
           .widget<SwitchListTile>(
-              find.byKey(const Key('pdf_settings_show_footer')))
+            find.byKey(const Key('pdf_settings_show_footer')),
+          )
           .value,
       isTrue,
     );
   });
 
   testWidgets('已持久化 showFooter=false 時，頁尾開關初始值反映為關閉', (tester) async {
-    await _pumpSheet(
-      tester,
-      const BookReaderPrefs(showFooter: false),
-      (_) {},
-    );
+    await _pumpSheet(tester, const BookReaderPrefs(showFooter: false), (_) {});
 
     expect(
       tester
           .widget<SwitchListTile>(
-              find.byKey(const Key('pdf_settings_show_footer')))
+            find.byKey(const Key('pdf_settings_show_footer')),
+          )
           .value,
       isFalse,
     );
@@ -501,10 +579,15 @@ void main() {
 
   testWidgets('關閉頁尾開關後，onChanged 帶入 showFooter=false', (tester) async {
     BookReaderPrefs? notified;
-    await _pumpSheet(tester, BookReaderPrefs.empty, (prefs) => notified = prefs);
+    await _pumpSheet(
+      tester,
+      BookReaderPrefs.empty,
+      (prefs) => notified = prefs,
+    );
 
     await tester.ensureVisible(
-        find.byKey(const Key('pdf_settings_show_footer')));
+      find.byKey(const Key('pdf_settings_show_footer')),
+    );
     await tester.tap(find.byKey(const Key('pdf_settings_show_footer')));
     await tester.pump();
 
@@ -512,16 +595,13 @@ void main() {
   });
 
   testWidgets('已持久化 fullscreen=true 時，全螢幕模式開關初始值反映為開啟', (tester) async {
-    await _pumpSheet(
-      tester,
-      const BookReaderPrefs(fullscreen: true),
-      (_) {},
-    );
+    await _pumpSheet(tester, const BookReaderPrefs(fullscreen: true), (_) {});
 
     expect(
       tester
           .widget<SwitchListTile>(
-              find.byKey(const Key('pdf_settings_fullscreen')))
+            find.byKey(const Key('pdf_settings_fullscreen')),
+          )
           .value,
       isTrue,
     );
@@ -529,17 +609,22 @@ void main() {
 
   testWidgets('開啟全螢幕模式開關後，onChanged 帶入 fullscreen=true', (tester) async {
     BookReaderPrefs? notified;
-    await _pumpSheet(tester, BookReaderPrefs.empty, (prefs) => notified = prefs);
+    await _pumpSheet(
+      tester,
+      BookReaderPrefs.empty,
+      (prefs) => notified = prefs,
+    );
 
-    await tester.ensureVisible(find.byKey(const Key('pdf_settings_fullscreen')));
+    await tester.ensureVisible(
+      find.byKey(const Key('pdf_settings_fullscreen')),
+    );
     await tester.tap(find.byKey(const Key('pdf_settings_fullscreen')));
     await tester.pump();
 
     expect(notified?.fullscreen, isTrue);
   });
 
-  testWidgets('已持久化 showFooter=false 時，調整雙頁模式不會清空該欄位（回歸檢查）',
-      (tester) async {
+  testWidgets('已持久化 showFooter=false 時，調整雙頁模式不會清空該欄位（回歸檢查）', (tester) async {
     BookReaderPrefs? notified;
     await _pumpSheet(
       tester,
@@ -547,7 +632,9 @@ void main() {
       (prefs) => notified = prefs,
     );
 
-    await tester.tap(find.byKey(const Key('pdf_settings_dual_page_mode_always')));
+    await tester.tap(
+      find.byKey(const Key('pdf_settings_dual_page_mode_always')),
+    );
     await tester.pump();
 
     expect(notified?.dualPageMode, DualPageMode.always);
@@ -586,9 +673,15 @@ void main() {
     );
   });
 
-  testWidgets('點擊「無」選項後，onChanged 帶入 pdfPageTurnAnimation=none', (tester) async {
+  testWidgets('點擊「無」選項後，onChanged 帶入 pdfPageTurnAnimation=none', (
+    tester,
+  ) async {
     BookReaderPrefs? notified;
-    await _pumpSheet(tester, BookReaderPrefs.empty, (prefs) => notified = prefs);
+    await _pumpSheet(
+      tester,
+      BookReaderPrefs.empty,
+      (prefs) => notified = prefs,
+    );
 
     // 捲動到換頁動畫選項可見
     await tester.dragUntilVisible(
@@ -598,14 +691,17 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester
-        .tap(find.byKey(const Key('pdf_settings_page_turn_animation_none')));
+    await tester.tap(
+      find.byKey(const Key('pdf_settings_page_turn_animation_none')),
+    );
     await tester.pump();
 
     expect(notified?.pdfPageTurnAnimation, PdfPageTurnAnimation.none);
   });
 
-  testWidgets('點擊「滑動」選項後，onChanged 帶入 pdfPageTurnAnimation=slide', (tester) async {
+  testWidgets('點擊「滑動」選項後，onChanged 帶入 pdfPageTurnAnimation=slide', (
+    tester,
+  ) async {
     BookReaderPrefs? notified;
     await _pumpSheet(
       tester,
@@ -621,38 +717,43 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester
-        .tap(find.byKey(const Key('pdf_settings_page_turn_animation_slide')));
+    await tester.tap(
+      find.byKey(const Key('pdf_settings_page_turn_animation_slide')),
+    );
     await tester.pump();
 
     expect(notified?.pdfPageTurnAnimation, PdfPageTurnAnimation.slide);
   });
 
   testWidgets(
-      '已持久化 pdfPageTurnAnimation 時，調整濾鏡分頁不會清空 pdfPageTurnAnimation（回歸檢查）',
-      (tester) async {
-    BookReaderPrefs? notified;
-    await _pumpSheet(
-      tester,
-      const BookReaderPrefs(pdfPageTurnAnimation: PdfPageTurnAnimation.none),
-      (prefs) => notified = prefs,
-    );
+    '已持久化 pdfPageTurnAnimation 時，調整濾鏡分頁不會清空 pdfPageTurnAnimation（回歸檢查）',
+    (tester) async {
+      BookReaderPrefs? notified;
+      await _pumpSheet(
+        tester,
+        const BookReaderPrefs(pdfPageTurnAnimation: PdfPageTurnAnimation.none),
+        (prefs) => notified = prefs,
+      );
 
-    await tester.tap(find.byKey(const Key('pdf_settings_tab_filters')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('pdf_settings_contrast_increment')));
-    await tester.pump();
+      await tester.tap(find.byKey(const Key('pdf_settings_tab_filters')));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const Key('pdf_settings_contrast_increment')),
+      );
+      await tester.pump();
 
-    expect(notified?.pdfPageTurnAnimation, PdfPageTurnAnimation.none); // 關鍵斷言：未被清空
-  });
+      expect(
+        notified?.pdfPageTurnAnimation,
+        PdfPageTurnAnimation.none,
+      ); // 關鍵斷言：未被清空
+    },
+  );
 
-  testWidgets(
-      'isEinkMode: true 時，濾鏡分頁 3 個數值列皆改為 EBStepper，不存在任何 '
+  testWidgets('isEinkMode: true 時，濾鏡分頁 3 個數值列皆改為 EBStepper，不存在任何 '
       'Slider，且頂列不重複顯示數值文字（比照 review-plan-issue-2.md C1 對 '
       'ReaderSettingsSheet._buildSliderRow 已建立的先例——EBStepper 內部已顯示'
       '一次，頂列不應再顯示第二次），點擊 + 觸發 onChanged'
-      '（epic-39-layout-settings-redesign Issue 5）',
-      (tester) async {
+      '（epic-39-layout-settings-redesign Issue 5）', (tester) async {
     BookReaderPrefs? notified;
     await _pumpSheet(
       tester,
@@ -668,71 +769,82 @@ void main() {
       'pdf_settings_brightness',
       'pdf_settings_bold_strength',
     ]) {
-      expect(find.byKey(Key('${keyPrefix}_value')), findsOneWidget,
-          reason: '$keyPrefix 應改為 EBStepper（僅 EBStepper 具備 _value Key）');
+      expect(
+        find.byKey(Key('${keyPrefix}_value')),
+        findsOneWidget,
+        reason: '$keyPrefix 應改為 EBStepper（僅 EBStepper 具備 _value Key）',
+      );
     }
-    expect(find.byType(Slider), findsNothing,
-        reason: '濾鏡分頁在 E-Ink 模式下不應存在任何 Slider');
-    expect(find.text('20'), findsOneWidget,
-        reason: '對比度數值只應在 EBStepper 內顯示一次，頂列不應重複顯示');
+    expect(
+      find.byType(Slider),
+      findsNothing,
+      reason: '濾鏡分頁在 E-Ink 模式下不應存在任何 Slider',
+    );
+    expect(
+      find.text('20'),
+      findsOneWidget,
+      reason: '對比度數值只應在 EBStepper 內顯示一次，頂列不應重複顯示',
+    );
     // 審查修正 M3（review-plan-issue-5.md）：一併確認 _decrement 按鈕存在，
     // 不只驗證 +（EBStepper 本身的 +/- 邊界行為已在 Issue 1 完整測試，這裡
     // 只需確認整合層兩顆按鈕都確實被渲染出來）。
-    expect(find.byKey(const Key('pdf_settings_contrast_decrement')),
-        findsOneWidget);
+    expect(
+      find.byKey(const Key('pdf_settings_contrast_decrement')),
+      findsOneWidget,
+    );
 
-    await tester
-        .tap(find.byKey(const Key('pdf_settings_contrast_increment')));
+    await tester.tap(find.byKey(const Key('pdf_settings_contrast_increment')));
     await tester.pump();
 
     expect(notified, isNotNull);
     expect(notified!.pdfContrast, greaterThan(20));
   });
 
-  testWidgets(
-      'isEinkMode: false（預設）時，濾鏡分頁維持既有 Slider 且頂列保留數值文字'
+  testWidgets('isEinkMode: false（預設）時，濾鏡分頁維持既有 Slider 且頂列保留數值文字'
       '（一般主題 Slider 不具備數值回饋能力，比照 review-plan-issue-2.md C1 '
-      '先例，既有行為零回歸）（epic-39-layout-settings-redesign Issue 5）',
-      (tester) async {
+      '先例，既有行為零回歸）（epic-39-layout-settings-redesign Issue 5）', (tester) async {
     await _pumpSheet(tester, const BookReaderPrefs(pdfContrast: 20), (_) {});
     await tester.tap(find.byKey(const Key('pdf_settings_tab_filters')));
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const Key('pdf_settings_contrast_slider')),
-        findsOneWidget);
-    expect(find.byKey(const Key('pdf_settings_contrast_value')),
-        findsNothing);
-    expect(find.text('20'), findsOneWidget,
-        reason: '一般主題下頂列應保留數值文字');
+    expect(
+      find.byKey(const Key('pdf_settings_contrast_slider')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('pdf_settings_contrast_value')), findsNothing);
+    expect(find.text('20'), findsOneWidget, reason: '一般主題下頂列應保留數值文字');
   });
 
   testWidgets('PdfSettingsSheet 在 E-Ink 模式下選中項目呈現高對比底色', (tester) async {
-    await tester.pumpWidget(MaterialApp(
-      theme: buildEinkThemeData(),
-      home: Scaffold(
-        body: PdfSettingsSheet(
-          prefs: const BookReaderPrefs(pdfFitMode: PdfFitMode.fitWidth),
-          onChanged: (_) {},
-          onRequestManualCrop: () {},
-          isEinkMode: true,
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildEinkThemeData(),
+        home: Scaffold(
+          body: PdfSettingsSheet(
+            prefs: const BookReaderPrefs(pdfFitMode: PdfFitMode.fitWidth),
+            onChanged: (_) {},
+            onRequestManualCrop: () {},
+            isEinkMode: true,
+          ),
         ),
       ),
-    ));
+    );
 
     // 【審查修正 Important】key 直接掛在帶 BoxDecoration 的 Container 上
     // （見 Task 1 ReaderOptionTile 實作），不再用
     // find.descendant(...).first 這種依賴子樹結構的脆弱寫法。
-    expect(find.byKey(const Key('pdf_settings_fit_mode_fit_width')), findsOneWidget);
+    expect(
+      find.byKey(const Key('pdf_settings_fit_mode_fit_width')),
+      findsOneWidget,
+    );
     final container = tester.widget<Container>(
       find.byKey(const Key('pdf_settings_fit_mode_fit_width')),
     );
     expect((container.decoration as BoxDecoration).color, Colors.black);
   });
 
-  testWidgets(
-      'Fit 模式群組改用 EBOptionChipGroup 後，3 個選項皆顯示 spec.md 選項標籤'
-      '對照表定義的短標籤（epic-39-layout-settings-redesign Issue 5）',
-      (tester) async {
+  testWidgets('Fit 模式群組改用 EBOptionChipGroup 後，3 個選項皆顯示 spec.md 選項標籤'
+      '對照表定義的短標籤（epic-39-layout-settings-redesign Issue 5）', (tester) async {
     await _pumpSheet(tester, BookReaderPrefs.empty, (_) {});
 
     for (final item in [
@@ -752,17 +864,11 @@ void main() {
     }
   });
 
-  testWidgets(
-      '雙頁模式群組改用 EBOptionChipGroup 後，3 個選項皆顯示短標籤'
-      '（epic-39-layout-settings-redesign Issue 5）',
-      (tester) async {
+  testWidgets('雙頁模式群組改用 EBOptionChipGroup 後，3 個選項皆顯示短標籤'
+      '（epic-39-layout-settings-redesign Issue 5）', (tester) async {
     await _pumpSheet(tester, BookReaderPrefs.empty, (_) {});
 
-    for (final item in [
-      ('auto', '自動'),
-      ('always', '雙頁'),
-      ('never', '單頁'),
-    ]) {
+    for (final item in [('auto', '自動'), ('always', '雙頁'), ('never', '單頁')]) {
       final (suffix, label) = item;
       expect(
         find.descendant(
@@ -775,19 +881,15 @@ void main() {
     }
   });
 
-  testWidgets(
-      '頁面方向群組改用 EBOptionChipGroup 後，2 個選項皆顯示短標籤'
-      '（epic-39-layout-settings-redesign Issue 5）',
-      (tester) async {
+  testWidgets('頁面方向群組改用 EBOptionChipGroup 後，2 個選項皆顯示短標籤'
+      '（epic-39-layout-settings-redesign Issue 5）', (tester) async {
     await _pumpSheet(tester, BookReaderPrefs.empty, (_) {});
 
-    for (final item in [
-      ('ltr', '左翻'),
-      ('rtl', '右翻'),
-    ]) {
+    for (final item in [('ltr', '左翻'), ('rtl', '右翻')]) {
       final (suffix, label) = item;
       await tester.ensureVisible(
-          find.byKey(Key('pdf_settings_dual_page_direction_$suffix')));
+        find.byKey(Key('pdf_settings_dual_page_direction_$suffix')),
+      );
       expect(
         find.descendant(
           of: find.byKey(Key('pdf_settings_dual_page_direction_$suffix')),
@@ -799,16 +901,11 @@ void main() {
     }
   });
 
-  testWidgets(
-      '換頁動畫群組改用 EBOptionChipGroup 後，2 個選項皆顯示短標籤'
-      '（epic-39-layout-settings-redesign Issue 5）',
-      (tester) async {
+  testWidgets('換頁動畫群組改用 EBOptionChipGroup 後，2 個選項皆顯示短標籤'
+      '（epic-39-layout-settings-redesign Issue 5）', (tester) async {
     await _pumpSheet(tester, BookReaderPrefs.empty, (_) {});
 
-    for (final item in [
-      ('slide', '滑動'),
-      ('none', '無'),
-    ]) {
+    for (final item in [('slide', '滑動'), ('none', '無')]) {
       final (suffix, label) = item;
       await tester.dragUntilVisible(
         find.byKey(Key('pdf_settings_page_turn_animation_$suffix')),
@@ -827,19 +924,13 @@ void main() {
     }
   });
 
-  testWidgets(
-      '裁切模式群組改用 EBOptionChipGroup 後，「不裁」「智慧」「手動」三個選項'
-      '皆顯示短標籤（epic-39-layout-settings-redesign Issue 5）',
-      (tester) async {
+  testWidgets('裁切模式群組改用 EBOptionChipGroup 後，「不裁」「智慧」「手動」三個選項'
+      '皆顯示短標籤（epic-39-layout-settings-redesign Issue 5）', (tester) async {
     await _pumpSheet(tester, BookReaderPrefs.empty, (_) {});
     await tester.tap(find.byKey(const Key('pdf_settings_tab_crop')));
     await tester.pumpAndSettle();
 
-    for (final item in [
-      ('none', '不裁'),
-      ('auto', '智慧'),
-      ('manual', '手動'),
-    ]) {
+    for (final item in [('none', '不裁'), ('auto', '智慧'), ('manual', '手動')]) {
       final (suffix, label) = item;
       expect(
         find.descendant(
@@ -852,16 +943,14 @@ void main() {
     }
   });
 
-  testWidgets(
-      '裁切模式群組選中態機制正確運作：一般選項相符時顯示選中樣式，'
+  testWidgets('裁切模式群組選中態機制正確運作：一般選項相符時顯示選中樣式，'
       '「手動選區」動作型項目無論 groupValue 為何皆恆為未選中樣式'
       '（審查修正 I1，review-plan-issue-5.md：補上正反對照斷言，避免僅斷言'
       '未選中態時，若選取機制整體失效〔例如 groupValue 傳遞錯誤導致全部'
       '晶片皆渲染為未選中〕仍會誤判通過；審查修正 I4，review-issues.md／'
       'I1，review-spec.md：EBOptionChipItem.onTap 項目由 forceUnselected '
       '保證，取代舊 bool sentinel 寫法後行為零回歸）'
-      '（epic-39-layout-settings-redesign Issue 5）',
-      (tester) async {
+      '（epic-39-layout-settings-redesign Issue 5）', (tester) async {
     // 情境一：groupValue 為一般選項（autoDetect），驗證選中態機制正常
     // 運作，「手動選區」在此一般情境下也維持未選中（基準對照）。
     await _pumpSheet(
@@ -880,17 +969,22 @@ void main() {
     final autoContainer = tester.widget<Container>(
       find.byKey(const Key('pdf_settings_crop_mode_auto')),
     );
-    expect((autoContainer.decoration as BoxDecoration).color,
-        colorScheme.primary,
-        reason: '選中態項目背景色應為 primary（視覺還原，見'
-            ' docs/research/uiux/VISUAL_ANALYSIS.md），證明選取機制正常運作');
+    expect(
+      (autoContainer.decoration as BoxDecoration).color,
+      colorScheme.primary,
+      reason:
+          '選中態項目背景色應為 primary（視覺還原，見'
+          ' docs/research/uiux/VISUAL_ANALYSIS.md），證明選取機制正常運作',
+    );
 
     final manualContainerCase1 = tester.widget<Container>(
       find.byKey(const Key('pdf_settings_crop_mode_manual')),
     );
-    expect((manualContainerCase1.decoration as BoxDecoration).color,
-        colorScheme.surface,
-        reason: '手動選區項目在一般情境下應維持未選中樣式');
+    expect(
+      (manualContainerCase1.decoration as BoxDecoration).color,
+      colorScheme.surface,
+      reason: '手動選區項目在一般情境下應維持未選中樣式',
+    );
 
     // 情境二（原本的邊界情境）：groupValue 剛好等於 PdfCropMode.manual
     // （例如使用者先前已完成一次手動裁切、_cropMode 已持久化為 manual），
@@ -907,10 +1001,13 @@ void main() {
     final manualContainerCase2 = tester.widget<Container>(
       find.byKey(const Key('pdf_settings_crop_mode_manual')),
     );
-    expect((manualContainerCase2.decoration as BoxDecoration).color,
-        colorScheme.surface,
-        reason: 'groupValue 剛好等於 PdfCropMode.manual 時，手動選區項目仍'
-            '應維持未選中樣式（forceUnselected 機制的關鍵驗證）');
+    expect(
+      (manualContainerCase2.decoration as BoxDecoration).color,
+      colorScheme.surface,
+      reason:
+          'groupValue 剛好等於 PdfCropMode.manual 時，手動選區項目仍'
+          '應維持未選中樣式（forceUnselected 機制的關鍵驗證）',
+    );
   });
 }
 
@@ -921,16 +1018,18 @@ Future<void> _pumpSheet(
   VoidCallback onRequestManualCrop = _noopVoid,
   bool isEinkMode = false,
 }) async {
-  await tester.pumpWidget(MaterialApp(
-    home: Scaffold(
-      body: PdfSettingsSheet(
-        prefs: prefs,
-        onChanged: onChanged,
-        onRequestManualCrop: onRequestManualCrop,
-        isEinkMode: isEinkMode,
+  await tester.pumpWidget(
+    MaterialApp(
+      home: Scaffold(
+        body: PdfSettingsSheet(
+          prefs: prefs,
+          onChanged: onChanged,
+          onRequestManualCrop: onRequestManualCrop,
+          isEinkMode: isEinkMode,
+        ),
       ),
     ),
-  ));
+  );
 }
 
 void _noopVoid() {}
@@ -942,26 +1041,28 @@ Future<void> _pumpModalSheet(
   VoidCallback onRequestManualCrop = _noopVoid,
   bool isEinkMode = false,
 }) async {
-  await tester.pumpWidget(MaterialApp(
-    home: Scaffold(
-      body: Builder(
-        builder: (context) => ElevatedButton(
-          onPressed: () => showModalBottomSheet<void>(
-            context: context,
-            isScrollControlled: true,
-            enableDrag: false,
-            builder: (_) => PdfSettingsSheet(
-              prefs: prefs,
-              onChanged: onChanged,
-              onRequestManualCrop: onRequestManualCrop,
-              isEinkMode: isEinkMode,
+  await tester.pumpWidget(
+    MaterialApp(
+      home: Scaffold(
+        body: Builder(
+          builder: (context) => ElevatedButton(
+            onPressed: () => showModalBottomSheet<void>(
+              context: context,
+              isScrollControlled: true,
+              enableDrag: false,
+              builder: (_) => PdfSettingsSheet(
+                prefs: prefs,
+                onChanged: onChanged,
+                onRequestManualCrop: onRequestManualCrop,
+                isEinkMode: isEinkMode,
+              ),
             ),
+            child: const Text('open'),
           ),
-          child: const Text('open'),
         ),
       ),
     ),
-  ));
+  );
 
   await tester.tap(find.text('open'));
   await tester.pumpAndSettle();
