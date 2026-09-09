@@ -1,6 +1,6 @@
 # Epic 39 — Issue 4：`ReaderSettingsSheet` 預設集分頁 —「目前套用中」標示 實作計畫
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** `_buildPresetSlot()` 新增「目前套用中」視覺標示：當某個已存預設集的 `prefs` 與目前草稿 `_currentDraft` 完全相等時，該列反白（底色 `colorScheme.inverseSurface`）並以獨立的「已套用」指示器取代既有的「套用到本書」按鈕，「套用到其他書籍」／「刪除」兩顆按鈕維持顯示；反白列內所有文字/圖示前景色統一改為 `colorScheme.onInverseSurface`。
 
@@ -33,7 +33,7 @@
 - Consumes：無新依賴，`ColorScheme.light()` 既有具名參數 `inverseSurface`／`onInverseSurface`。
 - Produces：`buildEinkThemeData().colorScheme.inverseSurface == Colors.black`、`.onInverseSurface == Colors.white`，供 Task 2 的 `_buildPresetSlot()` 直接讀取。
 
-- [ ] **Step 1：寫失敗測試——擴充既有 E-Ink ColorScheme 全角色測試**
+- [x] **Step 1：寫失敗測試——擴充既有 E-Ink ColorScheme 全角色測試**
 
 修改 `app/test/theme/app_theme_data_test.dart` 第 191-207 行既有測試：
 
@@ -64,12 +64,12 @@
 
 （只改了測試標題字串與新增兩行 `expect`，其餘既有斷言逐行不動。）
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 Run: `flutter test test/theme/app_theme_data_test.dart`
 Expected: 新增的兩個斷言 FAIL——`scheme.inverseSurface`／`scheme.onInverseSurface` 現況分別回傳 Flutter Material 3 `ColorScheme.light()` 的預設值（一個中性灰紫色與一個近白色），不等於 `Color(0xFF000000)`／`Color(0xFFFFFFFF)`。其餘既有斷言與其餘 18 個測試維持 PASS。
 
-- [ ] **Step 3：實作**
+- [x] **Step 3：實作**
 
 修改 `app/lib/theme/app_theme_data.dart` 第 236-248 行：
 
@@ -97,17 +97,17 @@ Expected: 新增的兩個斷言 FAIL——`scheme.inverseSurface`／`scheme.onIn
 
 （`primary` 是本函式頂端已宣告的區域常數 `const primary = Color(0xFF000000);`，沿用既有命名慣例——`onPrimary`/`onError` 兩處既有程式碼也是直接寫 `Colors.white` 字面值而非另外宣告常數，`onInverseSurface` 比照辦理。）
 
-- [ ] **Step 4：執行測試確認通過**
+- [x] **Step 4：執行測試確認通過**
 
 Run: `flutter test test/theme/app_theme_data_test.dart`
 Expected: PASS（19 個測試全過）。
 
-- [ ] **Step 5：`flutter analyze` 確認零警告**
+- [x] **Step 5：`flutter analyze` 確認零警告**
 
 Run: `flutter analyze lib/theme/app_theme_data.dart test/theme/app_theme_data_test.dart`
 Expected: `No issues found!`
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/lib/theme/app_theme_data.dart app/test/theme/app_theme_data_test.dart
@@ -126,7 +126,7 @@ git commit -m "fix(epic-39): Issue 4 Task 1 — E-Ink 主題補上 inverseSurfac
 - Consumes：Task 1 修好的 `colorScheme.inverseSurface`／`onInverseSurface`；既有 `BookReaderPrefs.operator ==`（`book_reader_prefs.dart:222-254`，已涵蓋全部欄位值相等比較，無需新增）；`_currentDraft` getter（`reader_settings_sheet.dart:190-212`，既有）。
 - Produces：`_buildPresetSlot()` 內新增區域變數 `isActive`（`bool`）與 `foregroundColor`（`Color?`），僅供本方法內部使用；新增外層 `Container`（`key: Key('reader_settings_preset_slot_${index}_row')`，非 spec.md/issues.md 明訂但為測試觀察背景色所需，供本 Issue 內部測試使用，不影響任何既有 Key）；新增「已套用」指示器 `Key('reader_settings_preset_slot_${index}_active_indicator')`（spec.md/issues.md 明訂）。
 
-- [ ] **Step 1：寫失敗測試——涵蓋 4 項單元測試要求（共 3 則 testWidgets，第 1／2 項合併在同一測試內驗證 slot 0／slot 1）**
+- [x] **Step 1：寫失敗測試——涵蓋 4 項單元測試要求（共 3 則 testWidgets，第 1／2 項合併在同一測試內驗證 slot 0／slot 1）**
 
 在 `app/test/screens/reader_settings_sheet_test.dart` 的 `void main()` 內追加（`_activeDraftPrefs` 這個 top-level `const` 建議加在檔案既有的 top-level helper 區塊，例如緊鄰 `_noopOnChanged` 等函式之前均可，只要在 `void main()` 之外、可被以下測試存取）：
 
@@ -344,12 +344,12 @@ const _activeDraftPrefs = BookReaderPrefs(
   });
 ```
 
-- [ ] **Step 2：執行測試確認失敗**
+- [x] **Step 2：執行測試確認失敗**
 
 Run: `flutter test test/screens/reader_settings_sheet_test.dart`
 Expected: 新增的 3 個測試全數 FAIL——現況 `_buildPresetSlot()` 完全沒有 `reader_settings_preset_slot_${index}_row` 這個 Key（`find.byKey` 找不到目標，`tester.widget<Container>(...)` 會拋出例外）、沒有 `_active_indicator`、`_apply_current` 一律無條件顯示。其餘既有 72 個測試維持 PASS。
 
-- [ ] **Step 3：實作**
+- [x] **Step 3：實作**
 
 修改 `app/lib/screens/reader_settings_sheet.dart` 第 998-1038 行 `_buildPresetSlot()`：
 
@@ -423,17 +423,17 @@ Expected: 新增的 3 個測試全數 FAIL——現況 `_buildPresetSlot()` 完�
 
 （`isActive == false` 時 `foregroundColor` 為 `null`，`TextStyle(color: null)`／`Icon(icon, color: null)` 與完全不傳 `color` 參數行為一致，既有非套用中列的視覺效果零回歸；`Container` 的 `width: double.infinity` 讓反白色塊填滿整列寬度而非只包住文字內容寬度——`_buildPreferencesTab()` 的父層是 `ListView`，提供有界寬度約束，`Container` 在 `Column` 內請求 `width: double.infinity` 是合法且常見的「填滿可用寬度」寫法，不會拋出 `RenderFlex`/無界寬度例外。）
 
-- [ ] **Step 4：執行測試確認通過**
+- [x] **Step 4：執行測試確認通過**
 
 Run: `flutter test test/screens/reader_settings_sheet_test.dart`
 Expected: PASS（75 個測試全過：既有 72 個＋本 Task 新增 3 個）。
 
-- [ ] **Step 5：`flutter analyze` 確認零警告**
+- [x] **Step 5：`flutter analyze` 確認零警告**
 
 Run: `flutter analyze lib/screens/reader_settings_sheet.dart test/screens/reader_settings_sheet_test.dart`
 Expected: `No issues found!`
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/lib/screens/reader_settings_sheet.dart app/test/screens/reader_settings_sheet_test.dart
@@ -447,21 +447,21 @@ git commit -m "feat(epic-39): Issue 4 Task 2 — _buildPresetSlot 新增目前�
 **Files:**
 - 無新增/修改程式碼檔案（僅驗證與文件收尾）。
 
-- [ ] **Step 1：跑全套 `flutter test`**
+- [x] **Step 1：跑全套 `flutter test`**
 
 Run: `flutter test`
 Expected: 全數通過，零回歸（`reader_settings_sheet_test.dart` 75 個＋`app_theme_data_test.dart` 19 個＋其餘全專案測試皆維持 PASS）。
 
-- [ ] **Step 2：跑全套 `flutter analyze`**
+- [x] **Step 2：跑全套 `flutter analyze`**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 3：將本檔案所有 Task 的 Step 勾選為完成**
+- [x] **Step 3：將本檔案所有 Task 的 Step 勾選為完成**
 
-把本檔案（`docs/epics/epic-39-layout-settings-redesign/plans/plan-issue-4.md`）Task 1-3 全部 `- [ ]` 改為 `- [x]`。
+把本檔案（`docs/epics/epic-39-layout-settings-redesign/plans/plan-issue-4.md`）Task 1-3 全部 `- [x]` 改為 `- [x]`。
 
-- [ ] **Step 4：Commit 計畫狀態更新**
+- [x] **Step 4：Commit 計畫狀態更新**
 
 ```bash
 git add docs/epics/epic-39-layout-settings-redesign/plans/plan-issue-4.md

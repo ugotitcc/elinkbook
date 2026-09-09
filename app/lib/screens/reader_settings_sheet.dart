@@ -1003,36 +1003,60 @@ class _ReaderSettingsSheetState extends State<ReaderSettingsSheet> {
       );
     }
     final preset = widget.layoutPresets[index];
+    final colorScheme = Theme.of(context).colorScheme;
+    final isActive = preset.prefs == _currentDraft;
+    final foregroundColor = isActive ? colorScheme.onInverseSurface : null;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              '${preset.name}（${preset.updatedAt.year}/${preset.updatedAt.month}/${preset.updatedAt.day}）',
-              key: Key('reader_settings_preset_slot_${index}_label'),
+      child: Container(
+        key: Key('reader_settings_preset_slot_${index}_row'),
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+        decoration: BoxDecoration(
+          color: isActive ? colorScheme.inverseSurface : null,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                '${preset.name}（${preset.updatedAt.year}/${preset.updatedAt.month}/${preset.updatedAt.day}）',
+                key: Key('reader_settings_preset_slot_${index}_label'),
+                style: TextStyle(color: foregroundColor),
+              ),
             ),
-          ),
-          IconButton(
-            key: Key('reader_settings_preset_slot_${index}_apply_current'),
-            icon: const Icon(Icons.check),
-            tooltip: '套用到本書',
-            onPressed: () =>
-                widget.onApplyPreset(preset, targetBookIds: [widget.bookId]),
-          ),
-          IconButton(
-            key: Key('reader_settings_preset_slot_${index}_apply_others'),
-            icon: const Icon(Icons.library_books),
-            tooltip: '套用到其他書籍',
-            onPressed: () => _handleApplyPresetToOthers(preset),
-          ),
-          IconButton(
-            key: Key('reader_settings_preset_slot_${index}_delete'),
-            icon: const Icon(Icons.delete),
-            tooltip: '刪除',
-            onPressed: () => widget.onDeletePreset(preset.id!),
-          ),
-        ],
+            if (isActive)
+              Row(
+                key: Key('reader_settings_preset_slot_${index}_active_indicator'),
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.check, color: foregroundColor, size: 18),
+                  const SizedBox(width: 4),
+                  Text('已套用', style: TextStyle(color: foregroundColor)),
+                ],
+              )
+            else
+              IconButton(
+                key: Key('reader_settings_preset_slot_${index}_apply_current'),
+                icon: const Icon(Icons.check),
+                tooltip: '套用到本書',
+                onPressed: () =>
+                    widget.onApplyPreset(preset, targetBookIds: [widget.bookId]),
+              ),
+            IconButton(
+              key: Key('reader_settings_preset_slot_${index}_apply_others'),
+              icon: Icon(Icons.library_books, color: foregroundColor),
+              tooltip: '套用到其他書籍',
+              onPressed: () => _handleApplyPresetToOthers(preset),
+            ),
+            IconButton(
+              key: Key('reader_settings_preset_slot_${index}_delete'),
+              icon: Icon(Icons.delete, color: foregroundColor),
+              tooltip: '刪除',
+              onPressed: () => widget.onDeletePreset(preset.id!),
+            ),
+          ],
+        ),
       ),
     );
   }

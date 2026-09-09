@@ -12,6 +12,19 @@ import 'package:elinkbook/reader/writing_mode.dart';
 import 'package:elinkbook/screens/reader_settings_sheet.dart';
 import 'package:elinkbook/theme/app_theme_data.dart';
 
+const _activeDraftPrefs = BookReaderPrefs(
+  marginTop: 32.0,
+  marginBottom: 16.0,
+  marginLeft: 24.0,
+  marginRight: 24.0,
+  publisherStyles: true,
+  showHeader: false,
+  showFooter: false,
+  fullscreen: false,
+  columnMode: ColumnMode.auto,
+  columnSize: 720.0,
+);
+
 void main() {
   testWidgets(
       '4 個頁籤皆可切換，切換後對應欄位的既有 Key 可見、其餘頁籤內容不可見'
@@ -1852,6 +1865,199 @@ void main() {
     expect(find.text('欄位大小 720px'), findsOneWidget,
         reason: '一般主題下 Slider 本身不具備數值回饋能力，標題必須保留數值'
             '（比照 Issue 2 C1 對 _buildSliderRow 已建立的先例）');
+  });
+
+  testWidgets(
+      '目前草稿與某預設集 prefs 完全相等時，該列反白（底色 colorScheme.inverseSurface、'
+      '前景色 colorScheme.onInverseSurface）並顯示「已套用」指示器，「套用到本書」'
+      '按鈕改為隱藏；其餘不相等的預設集列維持一般樣式（既有行為零回歸）'
+      '（epic-39-layout-settings-redesign Issue 4）',
+      (tester) async {
+    final activePreset = LayoutPreset(
+      id: 1,
+      name: '目前套用中預設集',
+      createdAt: DateTime(2026, 1, 1),
+      updatedAt: DateTime(2026, 1, 1),
+      prefs: _activeDraftPrefs,
+    );
+    final otherPreset = LayoutPreset(
+      id: 2,
+      name: '未套用預設集',
+      createdAt: DateTime(2026, 1, 1),
+      updatedAt: DateTime(2026, 1, 1),
+      prefs: BookReaderPrefs.empty,
+    );
+    await _pumpSheet(tester, BookReaderPrefs.empty, _noopOnChanged,
+        layoutPresets: [activePreset, otherPreset]);
+    await switchToTab(tester, '預設集');
+
+    final context = tester.element(
+      find.byKey(const Key('reader_settings_preset_slot_0_row')),
+    );
+    final colorScheme = Theme.of(context).colorScheme;
+
+    final activeContainer = tester.widget<Container>(
+      find.byKey(const Key('reader_settings_preset_slot_0_row')),
+    );
+    expect((activeContainer.decoration as BoxDecoration).color,
+        colorScheme.inverseSurface);
+
+    final activeLabel = tester.widget<Text>(
+      find.byKey(const Key('reader_settings_preset_slot_0_label')),
+    );
+    expect(activeLabel.style?.color, colorScheme.onInverseSurface);
+
+    expect(
+        find.byKey(const Key('reader_settings_preset_slot_0_active_indicator')),
+        findsOneWidget);
+    expect(find.byKey(const Key('reader_settings_preset_slot_0_apply_current')),
+        findsNothing);
+    expect(find.byKey(const Key('reader_settings_preset_slot_0_apply_others')),
+        findsOneWidget);
+    expect(find.byKey(const Key('reader_settings_preset_slot_0_delete')),
+        findsOneWidget);
+
+    // 審查修正 I1（review-plan-issue-4.md）：spec.md 明確要求反白列「所有」
+    // 文字與圖示前景色皆為 colorScheme.onInverseSurface，不能只驗證標籤
+    // 文字——若實作漏寫某顆 Icon 的 color 參數，只斷言文字顏色的測試不會
+    // 抓到這個對比度缺陷，故逐一驗證 apply_others／delete／active_indicator
+    // 內的 Check 圖示三者的前景色。
+    final activeIndicatorIcon = tester.widget<Icon>(find.descendant(
+      of: find.byKey(const Key('reader_settings_preset_slot_0_active_indicator')),
+      matching: find.byType(Icon),
+    ));
+    expect(activeIndicatorIcon.color, colorScheme.onInverseSurface);
+
+    final applyOthersIcon = tester.widget<Icon>(find.descendant(
+      of: find.byKey(const Key('reader_settings_preset_slot_0_apply_others')),
+      matching: find.byType(Icon),
+    ));
+    expect(applyOthersIcon.color, colorScheme.onInverseSurface);
+
+    final deleteIcon = tester.widget<Icon>(find.descendant(
+      of: find.byKey(const Key('reader_settings_preset_slot_0_delete')),
+      matching: find.byType(Icon),
+    ));
+    expect(deleteIcon.color, colorScheme.onInverseSurface);
+
+    // Slot 1（未套用，既有行為零回歸）
+    final otherContainer = tester.widget<Container>(
+      find.byKey(const Key('reader_settings_preset_slot_1_row')),
+    );
+    expect((otherContainer.decoration as BoxDecoration?)?.color, isNull,
+        reason: '未套用的列不應套用反白底色（審查修正 M1，review-plan-issue-4.md：'
+            '改用可空安全轉型，即使日後改成 decoration: null 也不會讓測試拋出 '
+            'TypeError 而是回報清楚的斷言失敗）');
+    expect(
+        find.byKey(const Key('reader_settings_preset_slot_1_active_indicator')),
+        findsNothing);
+    expect(find.byKey(const Key('reader_settings_preset_slot_1_apply_current')),
+        findsOneWidget);
+  });
+
+  testWidgets(
+      '使用者調整任一數值後，草稿不再與預設集相等，先前反白的列恢復一般樣式'
+      '（epic-39-layout-settings-redesign Issue 4）',
+      (tester) async {
+    final activePreset = LayoutPreset(
+      id: 1,
+      name: '目前套用中預設集',
+      createdAt: DateTime(2026, 1, 1),
+      updatedAt: DateTime(2026, 1, 1),
+      prefs: _activeDraftPrefs,
+    );
+    await _pumpSheet(tester, BookReaderPrefs.empty, _noopOnChanged,
+        layoutPresets: [activePreset]);
+    await switchToTab(tester, '預設集');
+
+    expect(
+        find.byKey(const Key('reader_settings_preset_slot_0_active_indicator')),
+        findsOneWidget,
+        reason: '互動前草稿與預設集相等，應顯示已套用');
+
+    await switchToTab(tester, '文字');
+    await tester
+        .tap(find.byKey(const Key('reader_settings_font_size_increment')));
+    await tester.pump();
+    await switchToTab(tester, '預設集');
+
+    expect(
+        find.byKey(const Key('reader_settings_preset_slot_0_active_indicator')),
+        findsNothing,
+        reason: '字級已調整，fontSize 不再是 null，草稿不再與預設集相等');
+    expect(find.byKey(const Key('reader_settings_preset_slot_0_apply_current')),
+        findsOneWidget,
+        reason: '恢復一般樣式後，套用到本書按鈕應重新出現');
+  });
+
+  testWidgets(
+      'E-Ink 模式下反白列使用純黑底（colorScheme.inverseSurface）與純白前景'
+      '（colorScheme.onInverseSurface），驗證不會出現深底深字對比度不足的組合'
+      '（epic-39-layout-settings-redesign Issue 4）',
+      (tester) async {
+    tester.view.physicalSize = const Size(800, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    final activePreset = LayoutPreset(
+      id: 1,
+      name: '目前套用中預設集',
+      createdAt: DateTime(2026, 1, 1),
+      updatedAt: DateTime(2026, 1, 1),
+      prefs: _activeDraftPrefs,
+    );
+
+    await tester.pumpWidget(MaterialApp(
+      theme: buildEinkThemeData(),
+      home: Scaffold(
+        body: ReaderSettingsSheet(
+          bookId: 'test-book',
+          prefs: BookReaderPrefs.empty,
+          isEinkMode: true,
+          layoutPresets: [activePreset],
+          onChanged: (_) {},
+          onSaveAsPreset: (_) {},
+          onApplyPreset: (_, {required targetBookIds}) {},
+          onApplyFromBook: (_, {required targetBookIds}) {},
+          onRequestBookPicker: ({required multiSelect}) async => null,
+          onDeletePreset: (_) {},
+        ),
+      ),
+    ));
+    await switchToTab(tester, '預設集');
+
+    final container = tester.widget<Container>(
+      find.byKey(const Key('reader_settings_preset_slot_0_row')),
+    );
+    expect((container.decoration as BoxDecoration).color, Colors.black);
+
+    final label = tester.widget<Text>(
+      find.byKey(const Key('reader_settings_preset_slot_0_label')),
+    );
+    expect(label.style?.color, Colors.white);
+
+    // 審查修正 I1（review-plan-issue-4.md）：E-Ink 模式同樣須驗證圖示前景色，
+    // 不能只驗證文字，理由同上方一般主題測試。
+    final einkActiveIndicatorIcon = tester.widget<Icon>(find.descendant(
+      of: find.byKey(const Key('reader_settings_preset_slot_0_active_indicator')),
+      matching: find.byType(Icon),
+    ));
+    expect(einkActiveIndicatorIcon.color, Colors.white);
+
+    final einkApplyOthersIcon = tester.widget<Icon>(find.descendant(
+      of: find.byKey(const Key('reader_settings_preset_slot_0_apply_others')),
+      matching: find.byType(Icon),
+    ));
+    expect(einkApplyOthersIcon.color, Colors.white);
+
+    final einkDeleteIcon = tester.widget<Icon>(find.descendant(
+      of: find.byKey(const Key('reader_settings_preset_slot_0_delete')),
+      matching: find.byType(Icon),
+    ));
+    expect(einkDeleteIcon.color, Colors.white);
   });
 }
 
