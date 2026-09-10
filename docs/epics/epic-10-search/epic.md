@@ -42,3 +42,5 @@
 
 2026-09-10 Issue 0 PR #229（`feat/epic-10-issue-0-db-schema-tokenizer` → `main`）已合併，`main` 已同步 pull（`81bd2410..eb147e18`）。Issue 0 結案。下一步：認領 Issue 1（背景索引排程器＋PDF／Foliate 內容擷取，端到端）。
 
+2026-09-11 Issue 6（FTS5 模組可用性偵測＋全文檢索優雅降級，真機相容性缺陷）依 `plans/plan-issue-6.md` 完成 Task 1：`SqliteLibraryRepository` 新增 `_createBookContentFtsTableIfSupported()`（偵測「no such module: fts5」訊息時靜默跳過建表，其餘例外原樣 `rethrow`）與可查詢的 `isFullTextSearchAvailable` 欄位（改用查詢 `sqlite_master` 判斷，涵蓋全新安裝／既有裝置升級／單純重新開啟三種情境）。生產審查（`reviews/review-issue-6.md`，Ready to merge: Yes，0 Critical／0 Important／2 Minor，兩項 Minor 皆非本次引入、不影響合併）通過。PR #231（`fix/epic-10-issue-6-fts5-fallback` → `main`）已合併，`main` 已同步 pull（`826ae099..eeca1f8e`）。Step 7（真機驗證，`9491G`／`Hera_Vis_WIFI`）仍待人工執行，不阻擋結案。下一步：認領 Issue 3（「啟用全文檢索」設定模型，可與 Issue 2 平行評估）。
+

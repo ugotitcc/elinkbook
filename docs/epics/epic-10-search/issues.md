@@ -168,7 +168,7 @@ Issue 6（獨立，無依賴，但修改 Issue 0 已交付的 schema，需一併
 
 ## Issue 6：FTS5 模組可用性偵測＋全文檢索優雅降級（真機相容性缺陷）
 
-**Status:** needs-triage
+**Status:** completed（`plans/plan-issue-6.md` Task 1 六個 Step 全數完成，`reviews/review-issue-6.md` 審查 Ready to merge: Yes，0 Critical／0 Important／2 Minor；PR #231 已合併；Step 7 真機驗證〔`9491G`／`Hera_Vis_WIFI`〕仍待人工執行，不阻擋本工單結案）
 
 **依賴：** 無，獨立於 Issue 0→1→3→2／4→5 依賴鏈，可立即開始；但直接修改 Issue 0 已交付並合併的 schema migration 程式碼，需與 Issue 0 產出物一併考量
 
