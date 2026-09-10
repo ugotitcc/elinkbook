@@ -147,7 +147,7 @@
 
 ## Issue 6：書架相關寫死顏色遷移（`book_cover.dart`／`layout_preset_book_picker_screen.dart`／`library_screen.dart`／`library_group_management_dialog.dart`）
 
-**Status:** ready-for-human
+**Status:** ✅ 已完成並合併回 `main`（PR #209，merge commit `34d73c5f`）。`book_cover.dart`／`library_group_management_dialog.dart` 寫死顏色遷移至 `ElinkTokens`／`colorScheme.error`。收尾記錄 3 項待人類確認事項（Dark 主題邊框／Light 主題徽章對比度目視確認、E-Ink 佔位符外框設計決策），其中 E-Ink 外框已由 Issue 9 完成定案，其餘見 `epic.md` 收尾備註。此行先前忘記從 `ready-for-human` 回填，歸檔前補正。
 
 **依賴：** Issue 2
 
