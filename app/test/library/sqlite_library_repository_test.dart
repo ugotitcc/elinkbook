@@ -3942,4 +3942,155 @@ void main() {
               '級聯刪除沒有觸發 AFTER DELETE trigger，留下孤兒索引（review-spec.md C-1）');
     });
   });
+
+  group('epic-10-search Issue 6：FTS5 模組可用性偵測與優雅降級', () {
+    test('FTS5 可用（一般情況，測試環境 sqflite_common_ffi 一律有 FTS5）：'
+        'isFullTextSearchAvailable 為 true', () async {
+      expect(repository.isFullTextSearchAvailable, isTrue);
+    });
+
+    test(
+        '全新安裝時 FTS5 不可用：open() 仍成功回傳，isFullTextSearchAvailable 為 false，'
+        'content_index_status／book_content_index 仍建立，book_content_fts 不存在',
+        () async {
+      final original = createBookContentFtsTable;
+      addTearDown(() => createBookContentFtsTable = original);
+      createBookContentFtsTable = (db) async {
+        throw Exception('no such module: fts5 (code 1 SQLITE_ERROR)');
+      };
+
+      final repo = await SqliteLibraryRepository.open(
+        inMemoryDatabasePath,
+        singleInstance: false,
+      );
+      addTearDown(() => repo.close());
+
+      expect(repo.isFullTextSearchAvailable, isFalse);
+
+      final tableNames = await repo.database.query(
+        'sqlite_master',
+        columns: ['name'],
+        where: "type = 'table' AND name IN (?, ?, ?)",
+        whereArgs: [
+          'content_index_status',
+          'book_content_index',
+          'book_content_fts',
+        ],
+      );
+      expect(
+        tableNames.map((row) => row['name']).toSet(),
+        {'content_index_status', 'book_content_index'},
+        reason: 'book_content_fts 不應存在，另兩張一般表不受 FTS5 缺陷影響',
+      );
+    });
+
+    test(
+        '既有 version 23 裝置升級時 FTS5 不可用：升級仍成功完成，'
+        'isFullTextSearchAvailable 為 false，book_content_fts 不存在；'
+        '關閉後單純重新開啟（不觸發 onCreate/onUpgrade）仍正確反映 false'
+        '（review-plan-issue-6.md I-2）', () async {
+      final tempDir = await Directory.systemTemp
+          .createTemp('elinkbook_migration_v23_to_v24_fts5_unavailable_test');
+      addTearDown(() => tempDir.delete(recursive: true));
+      final dbPath = p.join(tempDir.path, 'test.db');
+
+      final oldDb = await databaseFactory.openDatabase(
+        dbPath,
+        options: OpenDatabaseOptions(
+          version: 23,
+          onConfigure: (db) async {
+            await db.execute('PRAGMA foreign_keys = ON');
+          },
+          onCreate: (db, version) async {
+            await db.execute('CREATE TABLE groups (name TEXT PRIMARY KEY)');
+            await db.insert('groups', {'name': '未分類'});
+            await db.execute('''
+              CREATE TABLE books (
+                id TEXT PRIMARY KEY,
+                title TEXT NOT NULL,
+                author TEXT,
+                format TEXT NOT NULL,
+                filePath TEXT NOT NULL,
+                source TEXT NOT NULL,
+                coverPath TEXT,
+                progress REAL NOT NULL DEFAULT 0,
+                epubLocator TEXT,
+                pdfPageIndex INTEGER,
+                totalCharacterCount INTEGER,
+                is_fixed_layout INTEGER,
+                groupName TEXT NOT NULL DEFAULT '未分類',
+                createTime INTEGER NOT NULL,
+                lastReadTime INTEGER NOT NULL,
+                content_fingerprint TEXT,
+                position_updated_at INTEGER,
+                position_synced_server_updated_at TEXT,
+                remote_server_id TEXT,
+                remote_book_id TEXT,
+                remote_download_url TEXT,
+                is_downloaded INTEGER NOT NULL DEFAULT 1,
+                cloud_file_id TEXT
+              )
+            ''');
+          },
+        ),
+      );
+      await oldDb.close();
+
+      final original = createBookContentFtsTable;
+      addTearDown(() => createBookContentFtsTable = original);
+      createBookContentFtsTable = (db) async {
+        throw Exception('no such module: fts5 (code 1 SQLITE_ERROR)');
+      };
+
+      final upgraded = await SqliteLibraryRepository.open(dbPath);
+      addTearDown(() => upgraded.close());
+
+      expect(upgraded.isFullTextSearchAvailable, isFalse);
+
+      final tableNames = await upgraded.database.query(
+        'sqlite_master',
+        columns: ['name'],
+        where: "type = 'table' AND name IN (?, ?, ?)",
+        whereArgs: [
+          'content_index_status',
+          'book_content_index',
+          'book_content_fts',
+        ],
+      );
+      expect(
+        tableNames.map((row) => row['name']).toSet(),
+        {'content_index_status', 'book_content_index'},
+      );
+
+      // 【review-plan-issue-6.md I-2】關閉後單純重新開啟：此時 db 已是
+      // version 24，openDatabase() 不會呼叫 onCreate 也不會呼叫
+      // onUpgrade（oldVersion == newVersion == 24）。這是本計畫
+      // Architecture 段落宣稱「查 sqlite_master 對三種開啟路徑都適用」
+      // 的核心論點，若不驗證這條路徑，日後若有人把判斷邏輯改回
+      // onCreate/onUpgrade closure 內的區域變數，既有測試仍會全數
+      // 通過、卻悄悄破壞了重開情境（真正的迴歸來源）。
+      await upgraded.close();
+      final reopened = await SqliteLibraryRepository.open(dbPath);
+      addTearDown(() => reopened.close());
+      expect(reopened.isFullTextSearchAvailable, isFalse,
+          reason: '已遷移至 v24 但缺 FTS5 之資料庫重開時，'
+              'isFullTextSearchAvailable 仍須為 false');
+    });
+
+    test('非 FTS5 相關的其他例外原樣拋出，不可靜默吞掉（回歸防護）', () async {
+      final original = createBookContentFtsTable;
+      addTearDown(() => createBookContentFtsTable = original);
+      createBookContentFtsTable = (db) async {
+        throw Exception('near "GARBAGE": syntax error');
+      };
+
+      expect(
+        () => SqliteLibraryRepository.open(
+          inMemoryDatabasePath,
+          singleInstance: false,
+        ),
+        throwsA(isA<Exception>()),
+      );
+    });
+  });
 }
