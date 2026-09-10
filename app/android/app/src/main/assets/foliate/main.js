@@ -47,6 +47,13 @@ const fontFaceCss = params.get('fontFaceCss') || ''
 // 再自行判斷格式。
 const initialCfi = params.get('initialCfi') || ''
 
+// epic-10-search Issue 1：索引模式旗標（ADR 0027 決策 2）。true 時
+// window.getSectionCount()/window.buildSegmentsForSection() 可用，且下方
+// view.addEventListener('load', ...) 內的觸控/選取/劃線手勢初始化整段跳過
+// （headless webview 永遠不會有真實觸控事件，該段邏輯掛著純屬浪費，非
+// 錯誤來源，見 plan-issue-1.md Global Constraints）。
+const isIndexMode = params.get('mode') === 'index'
+
 // 判斷書本第一個 section 的 CSS 是否已宣告 writing-mode（epic-17
 // Issue 4，FR-06）。同時涵蓋標準屬性與 EPUB 專屬的 -epub- 前綴寫法；只
 // 檢查值是否為 vertical-rl/vertical-lr——horizontal-tb 或其他非直排值視為
@@ -626,93 +633,79 @@ window.getTableOfContents = async function () {
  * 回呼 Dart 端，理由同 window.getTableOfContents()（evaluateJavascript
  * 不會等待內部 Promise resolve）。
  */
+/**
+ * 建立指定章節（section）的「句子 → CFI」對照表核心邏輯（epic-34-tts-readalong
+ * Issue 2；epic-10-search Issue 1 抽出共用，供 window.buildTtsSegments()／
+ * window.buildSegmentsForSection() 共用，避免同一段複雜邏輯維護兩份）。
+ * 回傳純陣列（不呼叫 callHandler），呼叫端各自決定要回呼哪個 handler
+ * name。邏輯本身與抽出前完全相同、零行為變更。
+ */
+async function extractSegmentsForSection(sectionIndex) {
+  const doc = await view.book.sections[sectionIndex].createDocument()
+  const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT, {
+    acceptNode: (node) => {
+      const tag = node.parentElement
+        ? node.parentElement.tagName.toUpperCase()
+        : ''
+      return (tag === 'RT' || tag === 'SCRIPT')
+        ? NodeFilter.FILTER_REJECT
+        : NodeFilter.FILTER_ACCEPT
+    },
+  })
+
+  let fullText = ''
+  const offsetMap = []
+  let node = walker.nextNode()
+  while (node) {
+    const text = node.textContent || ''
+    for (let i = 0; i < text.length; i++) {
+      offsetMap.push({ node, offset: i })
+    }
+    fullText += text
+    node = walker.nextNode()
+  }
+
+  const terminators = /[。！？；.!?;]/
+  const TTS_SECONDARY_BOUNDARY_MIN_LENGTH = 200
+  const secondaryBoundary = /\s/
+  const segments = []
+  let start = 0
+  let segmentIndex = 0
+  for (let i = 0; i < fullText.length; i++) {
+    const isLast = i === fullText.length - 1
+    const isPrimaryBoundary = terminators.test(fullText[i])
+    const isSecondaryBoundary = !isPrimaryBoundary &&
+      (i - start) >= TTS_SECONDARY_BOUNDARY_MIN_LENGTH &&
+      secondaryBoundary.test(fullText[i])
+    if (isPrimaryBoundary || isSecondaryBoundary || isLast) {
+      let rangeStart = start
+      while (rangeStart < i && /\s/.test(fullText[rangeStart])) rangeStart++
+      const trimmed = fullText.slice(start, i + 1).trim()
+      if (trimmed.length > 0) {
+        const startMap = offsetMap[rangeStart]
+        const endMap = offsetMap[i]
+        const range = doc.createRange()
+        range.setStart(startMap.node, startMap.offset)
+        range.setEnd(endMap.node, endMap.offset + 1)
+        const cfi = view.getCFI(sectionIndex, range)
+        segments.push({ segmentId: String(segmentIndex), cfi, text: trimmed })
+        segmentIndex++
+      }
+      start = i + 1
+    }
+  }
+  return segments
+}
+
+/**
+ * 供 Dart 端 FoliateReaderView.loadTtsSegments()（透過
+ * InAppWebViewController.evaluateJavascript）呼叫；非同步計算完成後主動
+ * 透過 window.flutter_inappwebview.callHandler('onTtsSegmentsReady', ...)
+ * 回呼 Dart 端（evaluateJavascript 不會等待內部 Promise resolve）。
+ */
 window.buildTtsSegments = async function (sectionIndex) {
   try {
-    const doc = await view.book.sections[sectionIndex].createDocument()
-    const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT, {
-      acceptNode: (node) => {
-        // 不分大小寫比對（審查 review-plan-issue-2.md Minor #1）：EPUB
-        // 章節是 XHTML，走 XML 解析器而非 HTML 解析器，tagName 不會被
-        // 自動正規化為大寫，不能保證所有書都乖乖用小寫標籤。
-        const tag = node.parentElement
-          ? node.parentElement.tagName.toUpperCase()
-          : ''
-        return (tag === 'RT' || tag === 'SCRIPT')
-          ? NodeFilter.FILTER_REJECT
-          : NodeFilter.FILTER_ACCEPT
-      },
-    })
-
-    let fullText = ''
-    const offsetMap = []
-    let node = walker.nextNode()
-    while (node) {
-      const text = node.textContent || ''
-      for (let i = 0; i < text.length; i++) {
-        offsetMap.push({ node, offset: i })
-      }
-      fullText += text
-      node = walker.nextNode()
-    }
-
-    const terminators = /[。！？；.!?;]/
-    // 次要切分邊界（epic-34-tts-readalong Issue 11，issues.md「來源」
-    // 欄位真機重現紀錄：部分自製 EPUB 整段/整章以全形空格「　」分隔
-    // 語句、完全不使用「。！？」等標點，導致單一朗讀段長達近 2 萬字，
-    // 超出 Android TextToSpeech 單次合成輸入長度上限，回報
-    // ERROR_OUTPUT -8）。找不到主要標點、且目前累積片段長度已達
-    // TTS_SECONDARY_BOUNDARY_MIN_LENGTH 時，遇到空白字元（JS \s 已
-    // 涵蓋全形空格 U+3000／半形空白／換行，不需要另外處理）也視為可
-    // 切分點。門檻刻意設得比一般正常句子長（既有跨標籤句子測試樣本
-    // 遠低於此門檻），確保「優先用標點切句」這個既有行為不受影響——
-    // 只有真的很長、又缺乏標點時才會退而求其次觸發次要邊界。
-    //
-    // **刻意不處理的範圍**（審查 review-issue-11-code.md Important #1）：
-    // issues.md 設計要點原文亦提到「换行/段落邊界（對應 <br>／區塊層級
-    // 標籤邊界）」可作為次要邊界，但本實作只偵測 fullText 字面上已存在
-    // 的空白字元——上方 TreeWalker 組裝 fullText 時單純把各文字節點的
-    // textContent 直接串接，不同 <p> 等區塊層級標籤之間若彼此緊鄰、內部
-    // 文字又沒有空白字元（中文排版常見），不會產生任何可偵測的邊界訊號。
-    // 這是刻意的取捨：正確判斷「區塊層級」邊界需要在 TreeWalker 掃描時
-    // 額外比對父元素變化並插入合成邊界字元，同時得處理 offsetMap／CFI
-    // range 計算不能被這個合成字元污染，複雜度不小；而 TtsController 端
-    // 另有兩層防線兜底（硬性長度上限切分＋段落失敗跳過並接續，見
-    // tts_controller.dart），足以保證「不會整章念不出來」這個核心驗收
-    // 標準成立，即使某本書恰好完全落在本層偵測不到的情境。若之後真機
-    // 回報這條路徑仍有問題，再依實際案例評估是否要另立工單補齊。
-    const TTS_SECONDARY_BOUNDARY_MIN_LENGTH = 200
-    const secondaryBoundary = /\s/
-    const segments = []
-    let start = 0
-    let segmentIndex = 0
-    for (let i = 0; i < fullText.length; i++) {
-      const isLast = i === fullText.length - 1
-      const isPrimaryBoundary = terminators.test(fullText[i])
-      const isSecondaryBoundary = !isPrimaryBoundary &&
-        (i - start) >= TTS_SECONDARY_BOUNDARY_MIN_LENGTH &&
-        secondaryBoundary.test(fullText[i])
-      if (isPrimaryBoundary || isSecondaryBoundary || isLast) {
-        // Range 起點跳過開頭空白字元（審查 review-plan-issue-2.md
-        // Minor #2）：段落縮排空格若被含進 Range，Issue 3 高亮跟隨時
-        // 反白區塊會多一截空白；Issue 2 本身不影響朗讀，但現在順手對齊
-        // 比 Issue 3 再回頭補便宜。
-        let rangeStart = start
-        while (rangeStart < i && /\s/.test(fullText[rangeStart])) rangeStart++
-        const trimmed = fullText.slice(start, i + 1).trim()
-        if (trimmed.length > 0) {
-          const startMap = offsetMap[rangeStart]
-          const endMap = offsetMap[i]
-          const range = doc.createRange()
-          range.setStart(startMap.node, startMap.offset)
-          range.setEnd(endMap.node, endMap.offset + 1)
-          const cfi = view.getCFI(sectionIndex, range)
-          segments.push({ segmentId: String(segmentIndex), cfi, text: trimmed })
-          segmentIndex++
-        }
-        start = i + 1
-      }
-    }
-
+    const segments = await extractSegmentsForSection(sectionIndex)
     window.flutter_inappwebview.callHandler(
       'onTtsSegmentsReady', sectionIndex, JSON.stringify(segments),
     )
@@ -720,6 +713,42 @@ window.buildTtsSegments = async function (sectionIndex) {
     window.flutter_inappwebview.callHandler(
       'onTtsSegmentsReady', sectionIndex, JSON.stringify([]),
     )
+  }
+}
+
+/**
+ * epic-10-search Issue 1：背景批次索引專用——與 window.buildTtsSegments()
+ * 呼叫完全相同的核心邏輯（見 extractSegmentsForSection()），差異只在回呼
+ * 的 handler name，讓 Dart 端 FoliateContentIndexer 可以用獨立於 TTS 播放
+ * 路徑的 handler 註冊，避免兩條呼叫路徑共用同一個 handler 名稱造成混淆。
+ * 供 Dart 端 FoliateContentIndexer（透過 InAppWebViewController.evaluateJavascript）
+ * 依序對每個 section 呼叫。
+ */
+window.buildSegmentsForSection = async function (sectionIndex) {
+  try {
+    const segments = await extractSegmentsForSection(sectionIndex)
+    window.flutter_inappwebview.callHandler(
+      'onSegmentsForSectionReady', sectionIndex, JSON.stringify(segments),
+    )
+  } catch (e) {
+    window.flutter_inappwebview.callHandler(
+      'onSegmentsForSectionReady', sectionIndex, JSON.stringify([]),
+    )
+  }
+}
+
+/**
+ * epic-10-search Issue 1：回報書籍總章節（spine section）數，供 Dart 端
+ * FoliateContentIndexer 決定要呼叫幾次 window.buildSegmentsForSection()。
+ * 呼叫時機須在書籍載入完成之後（既有 onPageRendered 訊號，見
+ * foliate_content_indexer.dart 說明）。
+ */
+window.getSectionCount = function () {
+  try {
+    const count = view.book && view.book.sections ? view.book.sections.length : 0
+    window.flutter_inappwebview.callHandler('onSectionCountReady', count)
+  } catch (e) {
+    window.flutter_inappwebview.callHandler('onSectionCountReady', 0)
   }
 }
 
@@ -949,6 +978,10 @@ async function openBook() {
     // （非 selectNodeContents(element)），CFI round-trip 不會被壓扁，見
     // spike-overlayer-annotations.md 研究問題 #1 的既有限制說明。
     view.addEventListener('load', (e) => {
+      // epic-10-search Issue 1：索引模式下不需要任何觸控/選取/劃線手勢
+      // 初始化（headless webview 不會有真實觸控事件），提早 return 跳過
+      // 這整段（見上方 isIndexMode 宣告處的說明）。
+      if (isIndexMode) return
       const doc = e.detail.doc
       const index = e.detail.index
       const classifier = new TouchIntentClassifier()
