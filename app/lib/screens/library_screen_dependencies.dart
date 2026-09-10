@@ -13,6 +13,7 @@ import '../reader/notes_repository.dart';
 import '../reader/tts_provider.dart';
 import '../reader/tts_audio_focus_source.dart';
 import '../reader/tts_audio_handler.dart';
+import '../reader/reader_activity_tracker.dart';
 import '../remote/opds_client.dart';
 import '../remote/remote_server_repository.dart';
 import '../remote/remote_thumbnail_cache.dart';
@@ -39,6 +40,7 @@ class LibraryReaderFeatureRepositories {
   final TtsProvider? ttsProvider;
   final TtsAudioHandler? ttsAudioHandler;
   final TtsAudioFocusSource? ttsAudioFocusSource;
+  final ReaderActivityTracker? readerActivityTracker;
 
   const LibraryReaderFeatureRepositories({
     this.bookmarksRepository,
@@ -50,6 +52,7 @@ class LibraryReaderFeatureRepositories {
     this.ttsProvider,
     this.ttsAudioHandler,
     this.ttsAudioFocusSource,
+    this.readerActivityTracker,
   });
 }
 

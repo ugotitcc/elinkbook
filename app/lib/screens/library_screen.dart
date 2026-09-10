@@ -440,6 +440,8 @@ class _LibraryScreenState extends State<LibraryScreen>
               ttsAudioFocusSource:
                   widget.readerFeatureRepositories.ttsAudioFocusSource,
               isEinkMode: widget.themeDependencies.isEinkMode,
+              readerActivityTracker:
+                  widget.readerFeatureRepositories.readerActivityTracker,
             ),
           ),
         )
