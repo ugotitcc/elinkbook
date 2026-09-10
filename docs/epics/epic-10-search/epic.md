@@ -24,3 +24,14 @@
 2026-09-10 `/superpowers:writing-plans` 撰寫 `plans/plan-issue-0.md`（3 個 Task：Schema 遷移＋級聯刪除回歸測試、CJK Tokenizer、效能驗證 Benchmark）。審查（`reviews/review-plan-issue-0.md`，🟡 Changes Requested，2 Important／2 Minor）後修訂：(1) I-1 查證屬實——Benchmark 原本量測的簡化 `LIMIT 300` 查詢會因 FTS5 提早終止掃描而失真偏快，正式產品查詢用了 `ROW_NUMBER() OVER (PARTITION BY ... ORDER BY bm25(...))`，window function 依語意必須先完整算出每筆分數與分區排序才能算 `rn`，無法套用提早終止最佳化，兩者執行代價完全不同；已改為量測正式查詢本身（cold cache 為 PASS/FAIL 判定依據），並保留純 MATCH 對照組供除錯用。(2) I-2 查證屬實——逐一手動 trace 過審查建議的重寫版本對照 Task 2 已寫好的 5 個 `tokenizeForIndex` 測試案例，逐字元驗證行為完全一致，才採納：改用整數區間比較取代 `RegExp.hasMatch()`（避免逐字元呼叫 RegExp 的開銷）、用布林旗標取代迴圈內 `buffer.toString()`（原本每次都複製全部已累積內容，對長句子是 O(N²)）、避免結尾重複編譯 `RegExp(r' +')`。(3) 採納 M-1（合成資料寫入前加 `PRAGMA synchronous = OFF`，Timeout 15→30 分鐘）與 M-2（cold/warm 各自量測記錄，不只挑對結論有利的數字）。下一步：認領 Issue 0，依計畫執行 TDD 循環。
 
 2026-09-10 雙開關修訂後的 `spec.md` 再次審查（`reviews/review-spec.md`，🟡 Changes Requested，1 Important／1 Minor）：(1) I-1 用 WebFetch/WebSearch 查證多個獨立來源（`sqlite.org` 官方文件、Simon Willison TIL）確認屬實——`COUNT(*) FILTER (WHERE ...)` 是 SQLite 3.30.0 才加入的語法，Android 11 系統 SQLite 3.28.0 不支援，會拋語法錯誤；已改寫為所有版本通用的 `COUNT(CASE WHEN ... THEN 1 END)`，並註明這與第 1 節排除 `trigram` tokenizer 是同一種「系統 SQLite 版本落後」風險，本次沒一併套用是修訂前的疏漏。(2) M-1 部分反駁——審查建議新增「已確認過」持久化 SharedPreferences key，但重新檢查 `design.md`「一次性確認 Dialog」的原意是「每次開啟都問一次」而非「終身只問一次」（呼應既有「關閉時立即清除索引」決策，重開會重新產生索引成本），因此不需要額外的「已確認」旗標，只需要兩個分類各自的 `enabled` 布林值本身即可，比審查建議更簡單。下一步：實作者依 Issue 0 開始 TDD 循環。
+
+2026-09-10 完成 Issue 0 Task 3 全庫規模效能驗證 Benchmark（NFR-2 量化結論）：
+- **實測環境**：本機開發機 Windows 11（x64，sqflite_common_ffi / SQLite 3.50.0），非真實 Android 裝置（建議之後在真機/模擬器上覆核一次）。
+- **資料規模**：1,000 本書 × 8,000 句／本 ＝ 8,000,000 列合成內容索引，建置耗時 18 分 17 秒。
+- **實測數據**：
+  - 對照組（純 `book_content_fts MATCH`，不分組排序）：耗時 1,715ms，命中 2,000 筆。
+  - 正式查詢（含 `ROW_NUMBER() OVER (PARTITION BY book_id ORDER BY bm25(...))` 分組排序）：
+    - **Cold cache**：727ms，命中 2,000 筆。
+    - **Warm cache（4 次量測）**：[66, 68, 71, 89] ms，中位數 71ms。
+- **量化結論**：**未達標（FAIL）**。Cold cache 延遲 727ms 超過 NFR-2 明訂的 500ms 門檻（雖然 Warm cache 中位數 71ms 遠優於目標，但 NFR-2 以最貼近使用者實際體驗的 Cold cache 為準）。依 `spec.md` §8 與 `ADR 0027` 決策 4，此結果證明單層句級 FTS5 索引在千本書規模下的 Cold 查詢開銷確實偏高。依架構決策，維持測試斷言不放寬，建議 Scrum Master 另開一張 Issue 補建兩層式索引備案（書籍/章節級粗篩 FTS ＋ 命中後才查句級明細）。
+
