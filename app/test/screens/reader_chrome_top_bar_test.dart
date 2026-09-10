@@ -7,9 +7,10 @@ void main() {
     VoidCallback? onBack,
     String chapterTitle = '第七章',
     VoidCallback? onSearchTap,
+    bool isHeaderVisible = true,
+    bool isToolbarVisible = true,
     bool isBottomChromeVisible = true,
     VoidCallback? onToggleBottomChrome,
-    VoidCallback? onTocTap,
     bool showTtsIndicator = false,
     bool isEinkMode = false,
   }) {
@@ -19,9 +20,10 @@ void main() {
           onBack: onBack ?? () {},
           chapterTitle: chapterTitle,
           onSearchTap: onSearchTap ?? () {},
+          isHeaderVisible: isHeaderVisible,
+          isToolbarVisible: isToolbarVisible,
           isBottomChromeVisible: isBottomChromeVisible,
           onToggleBottomChrome: onToggleBottomChrome ?? () {},
-          onTocTap: onTocTap,
           showTtsIndicator: showTtsIndicator,
           backgroundColor: Colors.white,
           iconColor: Colors.black,
@@ -85,19 +87,62 @@ void main() {
     expect(icon.icon, Icons.dock_outlined);
   });
 
-  testWidgets('onTocTap 為 null 時，目錄按鈕為停用狀態', (tester) async {
-    await tester.pumpWidget(buildTopBar(onTocTap: null));
-    final button = tester.widget<IconButton>(
-      find.byKey(const Key('reader_chrome_toc_button')),
+  // 2026-09-10 修正：頁首（標題文字）／工具列（返回/搜尋/⬓）拆成兩組各自
+  // 獨立的顯示開關，理由與完整狀態表見 CONTEXT.md「Chrome Bar」詞條。
+  // 目錄按鈕已移到 ReaderChromeBottomBar，相關測試搬到
+  // reader_chrome_bottom_bar_test.dart。
+  testWidgets('isHeaderVisible: false 時，標題文字不存在，但工具列按鈕仍在', (tester) async {
+    await tester.pumpWidget(
+      buildTopBar(chapterTitle: '第七章', isHeaderVisible: false),
     );
-    expect(button.onPressed, isNull);
+    expect(find.text('第七章'), findsNothing);
+    expect(find.byKey(const Key('reader_chrome_back_button')), findsOneWidget);
+    expect(
+      find.byKey(const Key('reader_chrome_immersive_toggle_button')),
+      findsOneWidget,
+    );
   });
 
-  testWidgets('onTocTap 非 null 時，點擊目錄按鈕觸發它', (tester) async {
-    var called = false;
-    await tester.pumpWidget(buildTopBar(onTocTap: () => called = true));
-    await tester.tap(find.byKey(const Key('reader_chrome_toc_button')));
-    expect(called, isTrue);
+  testWidgets('isToolbarVisible: false 時，返回/搜尋/⬓ 按鈕不存在，但標題文字仍在', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      buildTopBar(chapterTitle: '第七章', isToolbarVisible: false),
+    );
+    expect(find.text('第七章'), findsOneWidget);
+    expect(find.byKey(const Key('reader_chrome_back_button')), findsNothing);
+    expect(find.byKey(const Key('reader_chrome_search_button')), findsNothing);
+    expect(
+      find.byKey(const Key('reader_chrome_immersive_toggle_button')),
+      findsNothing,
+    );
+  });
+
+  testWidgets(
+    'isHeaderVisible／isToolbarVisible／showTtsIndicator 皆為 false 時，整列不佔版面',
+    (tester) async {
+      await tester.pumpWidget(
+        buildTopBar(
+          isHeaderVisible: false,
+          isToolbarVisible: false,
+          showTtsIndicator: false,
+        ),
+      );
+      final size = tester.getSize(find.byType(ReaderChromeTopBar));
+      expect(size.height, 0);
+    },
+  );
+
+  testWidgets('isToolbarVisible: false 時，showTtsIndicator 仍能顯示小喇叭圖示', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      buildTopBar(isToolbarVisible: false, showTtsIndicator: true),
+    );
+    expect(
+      find.byKey(const Key('reader_chrome_tts_indicator_icon')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('showTtsIndicator: false 時，小喇叭圖示不存在', (tester) async {

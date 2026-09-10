@@ -1166,10 +1166,10 @@ void main() {
     view.onZoneAction?.call(ZoneAction.menu);
     await tester.pump();
 
-    // epic-38-reader-chrome-tts-redesign Issue 1：ReaderChromeTopBar 永遠渲染
-    // （只受 PDF 裁切編輯模式閘控），不受 _chromeVisible 影響，故切換
-    // 沉浸模式後頂部列仍然存在。
-    expect(find.byKey(const Key('reader_chrome_back_button')), findsOneWidget);
+    // 2026-09-10 修正：ReaderChromeTopBar 的工具列（含返回鍵）改回依
+    // _chromeVisible 收合，跟頁首（頁首開關預設 true 時仍顯示標題文字）各自
+    // 獨立，理由與完整狀態表見 CONTEXT.md「Chrome Bar」詞條。
+    expect(find.byKey(const Key('reader_chrome_back_button')), findsNothing);
     expect(
       find.byKey(const Key('reader_chrome_layout_button')),
       findsNothing,
@@ -1323,8 +1323,9 @@ void main() {
     await tester.tap(find.byKey(const Key('nav_zone_1')));
     await tester.pump();
 
-    // epic-38-reader-chrome-tts-redesign Issue 1：ReaderChromeTopBar 永遠渲染
-    expect(find.byKey(const Key('reader_chrome_back_button')), findsOneWidget);
+    // 2026-09-10 修正：工具列（含返回鍵）改依 _chromeVisible 收合，見
+    // CONTEXT.md「Chrome Bar」詞條。
+    expect(find.byKey(const Key('reader_chrome_back_button')), findsNothing);
   });
 
   testWidgets('PDF 開書後，收到原生端 onPageChanged 回報時，頁尾正確顯示', (tester) async {
@@ -1781,7 +1782,7 @@ void main() {
     expect(find.byKey(const Key('reader_footer')), findsNothing);
   });
 
-  testWidgets('showHeader=false 且 showFooter=true 組合：頁首為靜態文字、頁尾顯示', (
+  testWidgets('showHeader=false 且 showFooter=true 組合：頁首不顯示、頁尾顯示', (
     tester,
   ) async {
     await prefsManager.saveBookPrefs(
@@ -1815,7 +1816,10 @@ void main() {
     await tester.pump();
     await tester.pump();
 
-    expect(find.byKey(const Key('reader_chrome_title')), findsOneWidget);
+    // 2026-09-10 修正：頁首（reader_chrome_title）改依 showHeader 獨立控制
+    // 顯示/隱藏，不再是「TOPBAR 一律顯示、不受 showHeader 限制」，見
+    // CONTEXT.md「Chrome Bar」詞條。
+    expect(find.byKey(const Key('reader_chrome_title')), findsNothing);
     // 頁尾不出現。
     expect(find.byKey(const Key('reader_footer')), findsNothing);
   });
@@ -2471,7 +2475,7 @@ void main() {
   });
 
   testWidgets('FXL：從書籤清單點選跳轉後，Bottom Sheet 關閉且底部選單列收合'
-      '（頂部列常駐不受影響）', (tester) async {
+      '（頂部列工具列隨之收合、頁首仍顯示）', (tester) async {
     final bookmarksRepository = FakeBookmarksRepository();
     await tester.pumpWidget(
       MaterialApp(
@@ -2531,13 +2535,19 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
 
     expect(find.byType(NotesBottomSheet), findsNothing);
-    // ReaderChromeTopBar 永遠渲染，不受書籤跳轉強制收合影響
-    // （epic-38-reader-chrome-tts-redesign Issue 1）；真正收合的是底部
-    // 選單列（ReaderChromeBottomBar），書籤/劃線筆記按鈕隨之一起消失。
+    // 2026-09-10 修正：書籤跳轉會強制收合 _chromeVisible，連帶
+    // ReaderChromeTopBar 的工具列（含返回鍵）也一併收合，只有頁首（標題
+    // 文字，showHeader 預設 true）維持顯示，見 CONTEXT.md「Chrome Bar」
+    // 詞條。
     expect(
       find.byKey(const Key('reader_chrome_back_button')),
+      findsNothing,
+      reason: '工具列隨書籤跳轉造成的沉浸模式收合而隱藏',
+    );
+    expect(
+      find.byKey(const Key('reader_chrome_title')),
       findsOneWidget,
-      reason: 'ReaderChromeTopBar 永遠渲染，不隨書籤跳轉收合',
+      reason: '頁首（標題文字）不受沉浸模式收合影響',
     );
     expect(find.byType(ReaderChromeBottomBar), findsNothing,
         reason: '書籤跳轉比照既有換頁慣例，強制收合底部選單列');
@@ -2674,8 +2684,8 @@ void main() {
     ReaderScreen.triggerZoneAction(key, ZoneAction.menu);
     await tester.pump();
 
-    // epic-38-reader-chrome-tts-redesign Issue 1：ReaderChromeTopBar 永遠渲染
-    expect(find.byKey(const Key('reader_chrome_back_button')), findsOneWidget);
+    // 2026-09-10 修正：工具列（含返回鍵）改依 _chromeVisible 收合。
+    expect(find.byKey(const Key('reader_chrome_back_button')), findsNothing);
 
     ReaderScreen.triggerZoneAction(key, ZoneAction.menu);
     await tester.pump();
@@ -2955,8 +2965,8 @@ void main() {
       await tester.tap(find.byKey(const Key('nav_zone_1')));
       await tester.pump();
 
-      // epic-38-reader-chrome-tts-redesign Issue 1：ReaderChromeTopBar 永遠渲染
-      expect(find.byKey(const Key('reader_chrome_back_button')), findsOneWidget);
+      // 2026-09-10 修正：工具列（含返回鍵）改依 _chromeVisible 收合。
+      expect(find.byKey(const Key('reader_chrome_back_button')), findsNothing);
     },
   );
 
@@ -4154,9 +4164,9 @@ void main() {
 
   testWidgets(
     '流式 EPUB：沉浸模式收起選單（_chromeVisible=false）時，頁首文字仍常駐顯示、'
-    'ReaderChromeBottomBar 收合，但 ReaderChromeTopBar（含返回鍵）常駐不受影響'
-    '（Issue 13，epic-38-reader-chrome-tts-redesign Issue 1 更新斷言：頂部列'
-    '恆常渲染，不再隨沉浸模式收合，見 ReaderChromeTopBar 類別文件註解）',
+    'ReaderChromeBottomBar 與 ReaderChromeTopBar 工具列（含返回鍵）皆收合'
+    '（Issue 13；2026-09-10 修正：頁首／工具列拆成兩組獨立開關，見'
+    'ReaderChromeTopBar 類別文件註解／CONTEXT.md「Chrome Bar」詞條）',
     (tester) async {
       await tester.pumpWidget(
         MaterialApp(
@@ -4197,8 +4207,8 @@ void main() {
       );
       expect(
         find.byKey(const Key('reader_chrome_back_button')),
-        findsOneWidget,
-        reason: 'ReaderChromeTopBar 永遠渲染，不受沉浸模式影響（見類別文件註解）',
+        findsNothing,
+        reason: '工具列（含返回鍵）隨 _chromeVisible 收合',
       );
       expect(
         find.byKey(const Key('reader_foliate_header_text')),
@@ -4897,8 +4907,14 @@ void main() {
     },
   );
 
-  group('全螢幕模式聯動沉浸模式收合頂部列（2026-09-08 /grill-with-docs 使用者需求）', () {
-    testWidgets('PDF：全螢幕模式開啟時，觸發沉浸模式收合後頂部列一併隱藏', (tester) async {
+  // 2026-09-10 修正：推翻 2026-09-08 /grill-with-docs 舊決策「全螢幕模式
+  // 開啟時才讓頂部列跟沉浸模式一起收合」——全螢幕模式改回只管 Android
+  // 系統列，跟頂部列工具列（返回/搜尋/⬓）完全無關；工具列一律直接依
+  // _chromeVisible 收合，不論全螢幕開關為何，見 CONTEXT.md「全螢幕模式」
+  // 詞條與 ReaderChromeTopBar 類別文件註解。以下測試分別以 fullscreen
+  // true／false 驗證兩者行為相同，證明兩者已脫鉤。
+  group('沉浸模式收合頂部列工具列，與全螢幕模式無關（2026-09-10 修正）', () {
+    testWidgets('PDF：全螢幕模式開啟時，觸發沉浸模式收合後頂部列工具列一併隱藏', (tester) async {
       final prefsManager = FakeReaderPrefsManager(
         bookPrefsByBookId: {
           'b_fullscreen_immersive_pdf': const BookReaderPrefs(fullscreen: true),
@@ -4933,7 +4949,7 @@ void main() {
       expect(find.byKey(const Key('reader_chrome_back_button')), findsNothing);
     });
 
-    testWidgets('EPUB：全螢幕模式開啟時，觸發沉浸模式收合後頂部列一併隱藏', (tester) async {
+    testWidgets('EPUB：全螢幕模式開啟時，觸發沉浸模式收合後頂部列工具列一併隱藏', (tester) async {
       final prefsManager = FakeReaderPrefsManager(
         bookPrefsByBookId: {
           'b_fullscreen_immersive_epub': const BookReaderPrefs(fullscreen: true),
@@ -4965,7 +4981,7 @@ void main() {
       expect(find.byKey(const Key('reader_chrome_back_button')), findsNothing);
     });
 
-    testWidgets('PDF：全螢幕模式關閉（預設）時，觸發沉浸模式收合後頂部列仍維持顯示', (tester) async {
+    testWidgets('PDF：全螢幕模式關閉（預設）時，觸發沉浸模式收合後頂部列工具列同樣隱藏', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
@@ -4987,7 +5003,8 @@ void main() {
 
       expect(
         find.byKey(const Key('reader_chrome_back_button')),
-        findsOneWidget,
+        findsNothing,
+        reason: '全螢幕模式關閉也一樣收合，證明工具列不受全螢幕開關影響',
       );
     });
 
@@ -5478,16 +5495,16 @@ void main() {
     // 仍應可正常點擊——不應是靠測試繞過 loading 狀態才通過。
     await tester.tap(find.byKey(const Key('nav_zone_1')));
     await tester.pump();
-    // ReaderChromeTopBar 永遠渲染，不受沉浸模式影響（epic-38-reader-
-    // chrome-tts-redesign Issue 1）；這裡只需確認 menu 熱區觸控確實穿透
-    // 遮罩命中 _ZoneOverlay（不拋例外、正常完成），不再斷言返回鍵消失。
+    // 2026-09-10 修正：工具列（含返回鍵）改依 _chromeVisible 收合，這裡改
+    // 斷言返回鍵消失，證明 menu 熱區觸控確實穿透遮罩命中 _ZoneOverlay、
+    // loading 期間仍可切換沉浸模式（Issue 1 既有保證未變，只是驗證訊號
+    // 從「按鈕仍在」改為「按鈕跟著收合」）。
     expect(
       find.byKey(const Key('reader_chrome_back_button')),
-      findsOneWidget,
+      findsNothing,
       reason:
           '遮罩必須只負責視覺覆蓋，menu 熱區觸控必須能穿透遮罩命中'
-          '_ZoneOverlay，loading 期間仍可切換沉浸模式（Issue 1 既有保證）；'
-          'ReaderChromeTopBar 永遠渲染不受沉浸模式影響',
+          '_ZoneOverlay，loading 期間仍可切換沉浸模式（Issue 1 既有保證）',
     );
   });
 
