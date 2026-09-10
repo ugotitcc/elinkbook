@@ -158,6 +158,7 @@ flutter:
     - test/fixtures/sample.pdf
     - test/fixtures/sample_dual_page.pdf
     - test/fixtures/sample_pdf_toc.pdf
+    - test/fixtures/sample_multi_page.pdf
     - test/fixtures/sample.epub
     - test/fixtures/sample.azw3
     - test/fixtures/sample_no_identifier.epub

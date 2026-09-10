@@ -26,6 +26,7 @@ import 'package:elinkbook/screens/toc_bottom_sheet.dart';
 
 import 'package:elinkbook/reader/epub_position_info.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
+import 'package:elinkbook/reader/reader_activity_tracker.dart';
 import 'package:elinkbook/screens/reader_chrome_bottom_bar.dart';
 import 'package:elinkbook/screens/tts_panel.dart';
 import 'package:elinkbook/reader/foliate_reader_view.dart';
@@ -9059,6 +9060,33 @@ void main() {
             '預期行為一致，兩者皆是 findsNothing）',
       );
     });
+  });
+
+
+  testWidgets('readerActivityTracker 提供時，開啟/離開閱讀畫面會呼叫 markReaderOpened/markReaderClosed',
+      (tester) async {
+    final tracker = ReaderActivityTracker();
+    expect(tracker.isReaderOpen, isFalse);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: ReaderScreen(
+          filePath: 'test/fixtures/sample.epub',
+          bookId: 'reader-activity-tracker-test-book',
+          prefsManager: FakeReaderPrefsManager(),
+          readerActivityTracker: tracker,
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(tracker.isReaderOpen, isTrue, reason: '開啟閱讀畫面後應標記為已開啟');
+
+    // 換掉整棵 widget 樹讓 ReaderScreen dispose。
+    await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
+
+    expect(tracker.isReaderOpen, isFalse, reason: '離開閱讀畫面後應標記為已關閉');
   });
 
   tearDownAll(() {

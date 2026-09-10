@@ -50,6 +50,10 @@ import 'sync/sync_engine.dart';
 import 'sync/sync_metadata_repository.dart';
 import 'theme/app_theme.dart';
 import 'theme/app_theme_data.dart';
+import 'reader/reader_activity_tracker.dart';
+import 'search/content_indexing_scheduler.dart';
+import 'search/foliate_content_indexer.dart';
+import 'search/pdf_content_indexer.dart';
 import 'theme/app_theme_preferences.dart';
 
 /// [LibraryScreen.isMobileDataConnection] 生產環境實作
@@ -95,6 +99,18 @@ Future<void> main() async {
   final notesRepository = NotesRepository(repository.database);
   final customFontsRepository = CustomFontsRepository(repository.database);
   final layoutPresetRepository = LayoutPresetRepository(repository.database);
+  // epic-10-search Issue 1：背景全文檢索索引引擎。本工單只負責讓引擎
+  // 能運作，「啟用全文檢索」開關與批次回填既有書庫是 Issue 3 的範圍——
+  // 目前 content_index_status 裡不會有任何 pending 列，排程器啟動後
+  // 純粹閒置等待，直到 Issue 3 落地才會有實際工作可做。
+  final readerActivityTracker = ReaderActivityTracker();
+  final contentIndexingScheduler = ContentIndexingScheduler(
+    database: repository.database,
+    activityTracker: readerActivityTracker,
+    pdfIndexer: const PdfContentIndexer(),
+    foliateIndexer: const FoliateContentIndexer(),
+  );
+  contentIndexingScheduler.start();
   // epic-34-tts-readalong Issue 9：SystemTtsProvider 預設建構子內部會自行
   // 建立 FlutterTts()，App 層級不需要另外管理其生命週期或提供假物件。
   final ttsProvider = SystemTtsProvider();
@@ -214,6 +230,7 @@ Future<void> main() async {
       ttsProvider: ttsProvider,
       ttsAudioHandler: ttsAudioHandler,
       ttsAudioFocusSource: ttsAudioFocusSource,
+      readerActivityTracker: readerActivityTracker,
       syncAccountRepository: syncAccountRepository,
       syncClient: syncClient,
       syncCheckpointTrigger: syncCheckpointTrigger,
@@ -253,6 +270,7 @@ class ElinkBookApp extends StatefulWidget {
   final TtsProvider? ttsProvider;
   final TtsAudioHandler? ttsAudioHandler;
   final TtsAudioFocusSource? ttsAudioFocusSource;
+  final ReaderActivityTracker? readerActivityTracker;
   final SyncAccountRepository? syncAccountRepository;
   final SyncClient? syncClient;
   final SyncCheckpointTrigger? syncCheckpointTrigger;
@@ -292,6 +310,7 @@ class ElinkBookApp extends StatefulWidget {
     this.ttsProvider,
     this.ttsAudioHandler,
     this.ttsAudioFocusSource,
+    this.readerActivityTracker,
     this.syncAccountRepository,
     this.syncClient,
     this.syncCheckpointTrigger,
@@ -382,6 +401,7 @@ class _ElinkBookAppState extends State<ElinkBookApp>
           ttsProvider: widget.ttsProvider,
           ttsAudioHandler: widget.ttsAudioHandler,
           ttsAudioFocusSource: widget.ttsAudioFocusSource,
+          readerActivityTracker: widget.readerActivityTracker,
         ),
         syncDependencies: LibrarySyncDependencies(
           syncAccountRepository: widget.syncAccountRepository,

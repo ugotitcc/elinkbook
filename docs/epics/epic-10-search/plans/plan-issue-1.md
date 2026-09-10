@@ -63,7 +63,7 @@
 - Consumes：`app/lib/reader/pdf_search_geometry.dart` 既有 `pdfRectToPercentRect()`；`app/lib/library/models/book.dart` 的 `Book`。
 - Produces：`abstract class ContentIndexer { Stream<IndexedSegment> indexBook(Book book, {int? resumeFromChapter}); }`、`class IndexedSegment { final int chapterIndex; final String locator; final String rawText; }`、`class PdfContentIndexer implements ContentIndexer`、頂層可覆寫函式變數 `Future<String?> Function(String uri) readContentUriAll`（`content://` URI 解析，見 review-plan-issue-1.md C-1）——Task 3（`FoliateContentIndexer`）、Task 5（`ContentIndexingScheduler`）直接 import 使用，簽章與行為以本工單為準。
 
-- [ ] **Step 1：寫一個會失敗的測試——PDF 逐頁擷取為 `IndexedSegment`**
+- [x] **Step 1：寫一個會失敗的測試——PDF 逐頁擷取為 `IndexedSegment`**
 
 新增 `app/test/search/pdf_content_indexer_test.dart`：
 
@@ -201,12 +201,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：執行測試，確認失敗**
+- [x] **Step 2：執行測試，確認失敗**
 
 Run: `flutter test test/search/pdf_content_indexer_test.dart`
 Expected: FAIL（`package:elinkbook/search/content_indexer.dart`／`package:elinkbook/search/pdf_content_indexer.dart` 不存在，編譯錯誤）。
 
-- [ ] **Step 3：實作 `ContentIndexer`／`IndexedSegment`**
+- [x] **Step 3：實作 `ContentIndexer`／`IndexedSegment`**
 
 新增 `app/lib/search/content_indexer.dart`：
 
@@ -360,17 +360,17 @@ Future<String?> _defaultReadContentUriAll(String uri) {
 }
 ```
 
-- [ ] **Step 4：執行測試，確認通過**
+- [x] **Step 4：執行測試，確認通過**
 
 Run: `flutter test test/search/pdf_content_indexer_test.dart`
 Expected: PASS（5 個 test）
 
-- [ ] **Step 5：`flutter analyze`**
+- [x] **Step 5：`flutter analyze`**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/lib/search/content_indexer.dart app/lib/search/pdf_content_indexer.dart app/test/search/pdf_content_indexer_test.dart
@@ -390,7 +390,7 @@ git commit -m "feat(search): 新增 ContentIndexer 抽象介面與 PdfContentInd
 
 本 Task 沒有 Dart 測試可跑（純 JS 變更，且依賴 `view.book` 的真實 foliate-js 執行期狀態，無法脫離 WebView 單元測試）；正確性由 Task 3 的真機/模擬器 `integration_test` 驗證，本 Task 只要求語法正確。
 
-- [ ] **Step 1：新增 `isIndexMode` 旗標**
+- [x] **Step 1：新增 `isIndexMode` 旗標**
 
 在 `app/android/app/src/main/assets/foliate/main.js` 找到：
 
@@ -410,7 +410,7 @@ const initialCfi = params.get('initialCfi') || ''
 const isIndexMode = params.get('mode') === 'index'
 ```
 
-- [ ] **Step 2：抽出 `buildTtsSegments()` 共用核心，新增 `buildSegmentsForSection()`**
+- [x] **Step 2：抽出 `buildTtsSegments()` 共用核心，新增 `buildSegmentsForSection()`**
 
 找到現有的 `window.buildTtsSegments = async function (sectionIndex) { ... }`（第 629-724 行，完整內容如下，含開頭/結尾的 doc comment）：
 
@@ -608,7 +608,7 @@ window.getSectionCount = function () {
 }
 ```
 
-- [ ] **Step 3：`view.addEventListener('load', ...)` 加上 `isIndexMode` guard**
+- [x] **Step 3：`view.addEventListener('load', ...)` 加上 `isIndexMode` guard**
 
 找到：
 
@@ -632,12 +632,12 @@ window.getSectionCount = function () {
       const classifier = new TouchIntentClassifier()
 ```
 
-- [ ] **Step 4：語法檢查**
+- [x] **Step 4：語法檢查**
 
 Run: `node --check app/android/app/src/main/assets/foliate/main.js`
 Expected: 無輸出（exit code 0，代表語法合法）。
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 git add app/android/app/src/main/assets/foliate/main.js
@@ -658,7 +658,7 @@ git commit -m "feat(search): main.js 新增索引模式（mode=index/getSectionC
 - Consumes：Task 1 的 `ContentIndexer`／`IndexedSegment`；既有 `app/lib/reader/foliate_native_bridge.dart` 的 `cacheBookForServing`／`loadAndroidAsset`／`cacheFileExtension`（Step 0 起也含新搬移進來的 `esCompatPolyfillJs`／`globalErrorCaptureJs`）；既有 `app/lib/reader/js_bridge_gateway.dart` 的 `JsBridgeGateway`；既有 `app/lib/reader/tts_segment_cfi.dart`／`app/lib/reader/foliate_bridge_codec.dart` 的 `TtsSegmentCfi`／`parseTtsSegments()`；Task 2 的 `window.getSectionCount()`／`window.buildSegmentsForSection()`。
 - Produces：`class FoliateContentIndexer implements ContentIndexer`——Task 5（`ContentIndexingScheduler`）直接使用；`foliate_native_bridge.dart` 新增公開常數 `esCompatPolyfillJs`／`globalErrorCaptureJs`（`FoliateReaderView` 同步改為 import 使用，見 Step 0）。
 
-- [ ] **Step 0：抽出共用 ES 相容性 polyfill／全域錯誤捕捉腳本（`review-plan-issue-1.md` I-1）**
+- [x] **Step 0：抽出共用 ES 相容性 polyfill／全域錯誤捕捉腳本（`review-plan-issue-1.md` I-1）**
 
 `HeadlessInAppWebView` 載入的是與 `FoliateReaderView` 完全相同的 `assets/foliate/main.js`／`view.js`／`epub.js`（`readest/foliate-js` 釘定版本），在較舊 Android System WebView（例如 `AGENTS.md` 記錄的 iReader Ocean 4 Plus，Chromium 83）上會遇到完全相同的 ES2021+ API 缺席問題（`Object.groupBy`／`Array.prototype.at`／`WeakRef` 等）；`FoliateReaderView` 目前透過 `_esCompatPolyfillJs`（`foliate_reader_view.dart:70-152`）／`_globalErrorCaptureJs`（`foliate_reader_view.dart:185-198`）兩個檔案私有 `const` 字串，以 `initialUserScripts` 在 `AT_DOCUMENT_START` 注入解決，但 `FoliateContentIndexer` 目前完全沒有注入這兩段腳本——舊裝置上 headless webview 會直接卡死，且缺少 `globalErrorCaptureJs` 轉送 `window.onerror`/`onunhandledrejection` 到既有 `onError` handler，Dart 端只能乾等滿 30 秒逾時，不會提早得知真正原因。
 
@@ -671,7 +671,7 @@ git commit -m "feat(search): main.js 新增索引模式（mode=index/getSectionC
 Run: `flutter analyze`
 Expected: `No issues found!`（純搬移，`FoliateReaderView` 既有測試零回歸——不需要另外執行測試，Step 4 會與 Task 3 其餘變更一併驗證）。
 
-- [ ] **Step 1：實作 `FoliateContentIndexer`**
+- [x] **Step 1：實作 `FoliateContentIndexer`**
 
 新增 `app/lib/search/foliate_content_indexer.dart`：
 
@@ -923,7 +923,7 @@ class FoliateContentIndexer implements ContentIndexer {
 
 > **I-2 修法的測試覆蓋範圍說明**：`expectedSectionIndex`／`sectionCompleter` 是 `indexBook()` 內的區域變數，無法脫離真實 `HeadlessInAppWebView` 獨立單元測試；要用自動化測試**可靠重現**「某章逾時後下一章請求緊接發出、舊章節遲到回應」這個精確時序，需要能刻意讓 JS 端延遲回應的假 WebView 測試替身，目前專案的 `fake_inappwebview_platform.dart`（`foliate_reader_view_test.dart` 既有慣例）不支援模擬 JS handler 逾時時序，投入這類測試替身的成本與本工單其餘範圍不成比例。本修法的正確性由上方程式碼的邏輯推理與審查報告已重現的具體時序保證（見 `review-plan-issue-1.md` I-2），實作階段若發現有更低成本的驗證方式，可另外補上，非本計畫的阻斷項。
 
-- [ ] **Step 2：`flutter analyze`＋確認 Step 0 搬移零回歸（先確認編譯通過，本 Task 主要驗證留給 Step 3 的真機測試）**
+- [x] **Step 2：`flutter analyze`＋確認 Step 0 搬移零回歸（先確認編譯通過，本 Task 主要驗證留給 Step 3 的真機測試）**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
@@ -931,7 +931,7 @@ Expected: `No issues found!`
 Run: `flutter test test/reader/foliate_reader_view_test.dart`
 Expected: 全數通過（Step 0 純粹搬移 `_esCompatPolyfillJs`／`_globalErrorCaptureJs` 到 `foliate_native_bridge.dart` 並改名去底線，`FoliateReaderView` 的 `initialUserScripts` 清單內容不變，這個既有測試檔案應零回歸）。
 
-- [ ] **Step 3：寫真機/模擬器整合測試**
+- [x] **Step 3：寫真機/模擬器整合測試**
 
 新增 `app/integration_test/foliate_content_indexer_test.dart`：
 
@@ -1041,7 +1041,7 @@ void main() {
 Run: `flutter test integration_test/foliate_content_indexer_test.dart -d <device-id>`
 Expected: PASS（2 個 test；需要真實 Android 裝置/模擬器，一般 `flutter test` 無法執行這個檔案）。
 
-- [ ] **Step 4：Commit**
+- [x] **Step 4：Commit**
 
 ```bash
 git add app/lib/search/foliate_content_indexer.dart app/lib/reader/foliate_native_bridge.dart app/lib/reader/foliate_reader_view.dart app/integration_test/foliate_content_indexer_test.dart
@@ -1061,7 +1061,7 @@ git commit -m "feat(search): 新增 FoliateContentIndexer（HeadlessInAppWebView
 **Interfaces：**
 - Produces：`class ReaderActivityTracker extends ChangeNotifier { bool get isReaderOpen; void markReaderOpened(); void markReaderClosed(); }`——Task 5（`ContentIndexingScheduler`）與 Task 6（`main.dart`／`library_screen.dart` 貫穿）使用。`ReaderScreen` 新增可選具名參數 `readerActivityTracker`（比照 `bookmarksRepository` 等既有可選參數慣例，未提供時零回歸）。
 
-- [ ] **Step 1：寫一個會失敗的測試——`ReaderActivityTracker` 基本行為**
+- [x] **Step 1：寫一個會失敗的測試——`ReaderActivityTracker` 基本行為**
 
 新增 `app/test/reader/reader_activity_tracker_test.dart`：
 
@@ -1116,12 +1116,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：執行測試，確認失敗**
+- [x] **Step 2：執行測試，確認失敗**
 
 Run: `flutter test test/reader/reader_activity_tracker_test.dart`
 Expected: FAIL（`package:elinkbook/reader/reader_activity_tracker.dart` 不存在，編譯錯誤）。
 
-- [ ] **Step 3：實作 `ReaderActivityTracker`**
+- [x] **Step 3：實作 `ReaderActivityTracker`**
 
 新增 `app/lib/reader/reader_activity_tracker.dart`：
 
@@ -1157,12 +1157,12 @@ class ReaderActivityTracker extends ChangeNotifier {
 }
 ```
 
-- [ ] **Step 4：執行測試，確認通過**
+- [x] **Step 4：執行測試，確認通過**
 
 Run: `flutter test test/reader/reader_activity_tracker_test.dart`
 Expected: PASS（4 個 test）
 
-- [ ] **Step 5：`ReaderScreen` 新增可選參數並於 `initState()`/`dispose()` 呼叫**
+- [x] **Step 5：`ReaderScreen` 新增可選參數並於 `initState()`/`dispose()` 呼叫**
 
 在 `app/lib/screens/reader_screen.dart` 頂部 import 區塊新增：
 
@@ -1201,7 +1201,7 @@ import '../reader/reader_activity_tracker.dart';
     widget.readerActivityTracker?.markReaderClosed();
 ```
 
-- [ ] **Step 6：寫一個會失敗的測試——`ReaderScreen` 呼叫 tracker**
+- [x] **Step 6：寫一個會失敗的測試——`ReaderScreen` 呼叫 tracker**
 
 在 `app/test/screens/reader_screen_test.dart` 找一個既有的、建構 `ReaderScreen` 後立即 `pumpWidget` 並可觸發 dispose（例如既有測試裡「切換到另一個畫面」或「pumpWidget 一個空 widget 取代」的既有慣例）的測試附近，新增：
 
@@ -1234,22 +1234,22 @@ import '../reader/reader_activity_tracker.dart';
 
 （`FakeReaderPrefsManager` 沿用檔案內既有的假物件；若既有慣例是不同名稱的假 `ReaderPrefsManager`，比照該檔案既有其他測試的實際建構方式調整，不需要另建新的假物件類別。同時在檔案頂部 import 區塊新增 `import 'package:elinkbook/reader/reader_activity_tracker.dart';`。）
 
-- [ ] **Step 7：執行測試，確認失敗然後實作後通過**
+- [x] **Step 7：執行測試，確認失敗然後實作後通過**
 
 Run: `flutter test test/screens/reader_screen_test.dart --plain-name "readerActivityTracker"`
 Expected: Step 5 完成前 FAIL（找不到具名參數），Step 5 完成後 PASS。
 
-- [ ] **Step 8：執行整個 `reader_screen_test.dart`，確認沒有破壞既有測試**
+- [x] **Step 8：執行整個 `reader_screen_test.dart`，確認沒有破壞既有測試**
 
 Run: `flutter test test/screens/reader_screen_test.dart`
 Expected: 全數通過（這個檔案改動的是建構子與 `initState`/`dispose`，屬高影響範圍變更，務必跑一次全檔案）。
 
-- [ ] **Step 9：`flutter analyze`**
+- [x] **Step 9：`flutter analyze`**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 10：Commit**
+- [x] **Step 10：Commit**
 
 ```bash
 git add app/lib/reader/reader_activity_tracker.dart app/lib/screens/reader_screen.dart app/test/reader/reader_activity_tracker_test.dart app/test/screens/reader_screen_test.dart
@@ -1268,7 +1268,7 @@ git commit -m "feat(search): 新增 ReaderActivityTracker 並整合進 ReaderScr
 - Consumes：Task 1 的 `ContentIndexer`／`IndexedSegment`；Task 4 的 `ReaderActivityTracker`；Issue 0 的 `tokenizeForIndex()`（`app/lib/search/cjk_tokenizer.dart`）與三張資料表；`Book.fromMap()`（`app/lib/library/models/book.dart:158`）。
 - Produces：`class ContentIndexingScheduler with WidgetsBindingObserver`——`start()`／`stop()`／`dispose()`／`handleAppLifecycleStateChanged(AppLifecycleState)`（測試可直接呼叫，不需要真正的 `WidgetsBindingObserver` 註冊）／`requestProcessing()`（review-plan-issue-1.md I-4，供 Issue 2／3 新插入 `pending` 列後主動喚醒排程器）。Task 6（`main.dart`）呼叫 `start()`；Issue 2／3（本工單範圍外）預期呼叫 `requestProcessing()`。
 
-- [ ] **Step 1：寫一個會失敗的測試——三種狀態轉換＋續跑游標**
+- [x] **Step 1：寫一個會失敗的測試——三種狀態轉換＋續跑游標**
 
 新增 `app/test/search/content_indexing_scheduler_test.dart`：
 
@@ -1604,12 +1604,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：執行測試，確認失敗**
+- [x] **Step 2：執行測試，確認失敗**
 
 Run: `flutter test test/search/content_indexing_scheduler_test.dart`
 Expected: FAIL（`package:elinkbook/search/content_indexing_scheduler.dart` 不存在，編譯錯誤）。
 
-- [ ] **Step 3：實作 `ContentIndexingScheduler`**
+- [x] **Step 3：實作 `ContentIndexingScheduler`**
 
 新增 `app/lib/search/content_indexing_scheduler.dart`：
 
@@ -1856,17 +1856,17 @@ class ContentIndexingScheduler with WidgetsBindingObserver {
 }
 ```
 
-- [ ] **Step 4：執行測試，確認通過**
+- [x] **Step 4：執行測試，確認通過**
 
 Run: `flutter test test/search/content_indexing_scheduler_test.dart`
 Expected: PASS（8 個 test）
 
-- [ ] **Step 5：`flutter analyze`**
+- [x] **Step 5：`flutter analyze`**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/lib/search/content_indexing_scheduler.dart app/test/search/content_indexing_scheduler_test.dart
@@ -1886,7 +1886,7 @@ git commit -m "feat(search): 新增 ContentIndexingScheduler（背景索引排�
 - Consumes：Task 3 的 `FoliateContentIndexer`、Task 1 的 `PdfContentIndexer`、Task 4 的 `ReaderActivityTracker`、Task 5 的 `ContentIndexingScheduler`。
 - Produces：App 正式啟動時背景索引引擎已就緒運作中（尚無任何 UI 讓使用者觸發 `pending` 列——那是 Issue 2／Issue 3 的範圍，本工單只交付「引擎能跑」）。
 
-- [ ] **Step 1：`LibraryReaderFeatureRepositories` 新增欄位**
+- [x] **Step 1：`LibraryReaderFeatureRepositories` 新增欄位**
 
 在 `app/lib/screens/library_screen_dependencies.dart` 頂部 import 區塊新增：
 
@@ -1906,7 +1906,7 @@ import '../reader/reader_activity_tracker.dart';
     this.readerActivityTracker,
 ```
 
-- [ ] **Step 2：`library_screen.dart` 貫穿傳入**
+- [x] **Step 2：`library_screen.dart` 貫穿傳入**
 
 在 `app/lib/screens/library_screen.dart` 的 `_openBook()`（約第 416-443 行）`ReaderScreen(...)` 呼叫的具名參數列新增：
 
@@ -1917,7 +1917,7 @@ import '../reader/reader_activity_tracker.dart';
 
 （放在既有任一參數之後皆可，例如緊接在 `isEinkMode: widget.themeDependencies.isEinkMode,` 之後。）
 
-- [ ] **Step 3：`main.dart` 建構單例、啟動排程器，並貫穿 `ElinkBookApp`**
+- [x] **Step 3：`main.dart` 建構單例、啟動排程器，並貫穿 `ElinkBookApp`**
 
 `readerActivityTracker` 需要貫穿三處（比照 `bookmarksRepository` 等既有欄位已貫穿的相同三處寫法）：`main()` 建構 → `ElinkBookApp` 建構子接收 → `_ElinkBookAppState` 組裝 `LibraryReaderFeatureRepositories` 時傳入。
 
@@ -1984,17 +1984,17 @@ import 'search/pdf_content_indexer.dart';
 
 （即在既有 `ttsAudioFocusSource: widget.ttsAudioFocusSource,` 之後新增 `readerActivityTracker: widget.readerActivityTracker,` 一行，其餘既有欄位原樣不動。）
 
-- [ ] **Step 4：`flutter analyze`**
+- [x] **Step 4：`flutter analyze`**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 5：確認既有相關測試零回歸**
+- [x] **Step 5：確認既有相關測試零回歸**
 
 Run: `flutter test test/screens/library_screen_test.dart test/screens/reader_screen_test.dart`
 Expected: 全數通過（本 Task 只新增可選參數傳遞，不改變既有行為）。
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/lib/main.dart app/lib/screens/library_screen_dependencies.dart app/lib/screens/library_screen.dart
@@ -2013,7 +2013,7 @@ git commit -m "feat(search): main.dart 建構並啟動 ContentIndexingScheduler"
 - Consumes：Task 1（`PdfContentIndexer`）、Task 3（`FoliateContentIndexer`）、Task 5（`ContentIndexingScheduler`）、Task 4（`ReaderActivityTracker`）。
 - Produces：無新程式碼介面，純驗證性測試——證明「一本 PDF 與一本 EPUB fixture 各自從 `content_index_status='pending'` 到背景排程完成後轉為 `'done'`，且 `book_content_fts` 能查到已知內容並取回正確 `locator`」（`issues.md` Issue 1 驗收標準原文）。
 
-- [ ] **Step 0：`pubspec.yaml` 補上缺少的 asset 宣告（`review-plan-issue-1.md` M-1）**
+- [x] **Step 0：`pubspec.yaml` 補上缺少的 asset 宣告（`review-plan-issue-1.md` M-1）**
 
 Step 1 的測試透過 `rootBundle.load()`（`_stageAssetAsFile()`）在真機/模擬器上載入 `test/fixtures/sample_multi_page.pdf`——與 Task 1 的純 Dart 單元測試不同（後者直接讀本機檔案系統相對路徑，不經 `rootBundle`），真機/模擬器環境的 `rootBundle.load()` 只能載入 `pubspec.yaml` `assets:` 清單裡已宣告的檔案。查證 `app/pubspec.yaml:157-169` 已宣告 `sample.pdf`／`sample_dual_page.pdf`／`sample_pdf_toc.pdf`／`sample_multi_chapter.epub`，但**獨缺 `sample_multi_page.pdf`**（Task 3 使用的 `sample_multi_chapter.epub` 已宣告，不受影響）。
 
@@ -2030,7 +2030,7 @@ Step 1 的測試透過 `rootBundle.load()`（`_stageAssetAsFile()`）在真機/�
     - test/fixtures/sample_multi_page.pdf
 ```
 
-- [ ] **Step 1：寫端到端測試**
+- [x] **Step 1：寫端到端測試**
 
 新增 `app/integration_test/content_indexing_end_to_end_test.dart`：
 
@@ -2177,22 +2177,22 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：執行測試**
+- [x] **Step 2：執行測試**
 
 Run: `flutter test integration_test/content_indexing_end_to_end_test.dart -d <device-id>`
 Expected: PASS（需要真實 Android 裝置/模擬器）。
 
-- [ ] **Step 3：執行整個 `app/test/` 套件，確認沒有破壞既有測試（計畫最後一個 Task，比照專案慣例跑一次全套）**
+- [x] **Step 3：執行整個 `app/test/` 套件，確認沒有破壞既有測試（計畫最後一個 Task，比照專案慣例跑一次全套）**
 
 Run: `flutter test`
 Expected: 全數通過。
 
-- [ ] **Step 4：`flutter analyze`**
+- [x] **Step 4：`flutter analyze`**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 git add app/integration_test/content_indexing_end_to_end_test.dart app/pubspec.yaml

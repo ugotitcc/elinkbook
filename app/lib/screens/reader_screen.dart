@@ -52,6 +52,7 @@ import '../reader/toc_navigator.dart';
 import '../reader/resolved_preferences.dart';
 import '../reader/screen_orientation_setting.dart';
 import '../reader/writing_mode.dart';
+import '../reader/reader_activity_tracker.dart';
 import '../reader/zone_action.dart';
 import '../sync/sync_checkpoint_trigger.dart';
 import '../theme/elink_tokens.dart';
@@ -184,6 +185,12 @@ class ReaderScreen extends StatefulWidget {
   /// 非 nullable＋預設值模式）。
   final bool isEinkMode;
 
+  /// 供背景全文檢索排程器（epic-10-search Issue 1）得知「目前有閱讀畫面
+  /// 開啟」而暫停處理，避免與使用者正在閱讀互搶資源。刻意為可選參數——
+  /// 比照 [bookmarksRepository] 既有慣例，未提供時零回歸（單純不通知任何
+  /// tracker，行為等同本 Issue 之前）。
+  final ReaderActivityTracker? readerActivityTracker;
+
   const ReaderScreen({
     super.key,
     required this.filePath,
@@ -205,6 +212,7 @@ class ReaderScreen extends StatefulWidget {
     this.ttsAudioHandler,
     this.ttsAudioFocusSource,
     this.isEinkMode = false,
+    this.readerActivityTracker,
   });
 
   @override
@@ -448,6 +456,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   @override
   void initState() {
     super.initState();
+    widget.readerActivityTracker?.markReaderOpened();
     WidgetsBinding.instance.addObserver(this);
     _volumeKeyChannel.setMethodCallHandler(_handleVolumeKeyCall);
     _resolveEpubEngineDispatch();
@@ -568,6 +577,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
 
   @override
   void dispose() {
+    widget.readerActivityTracker?.markReaderClosed();
     _syncCheckpointTimer?.cancel();
     _openBookTimeoutTimer?.cancel();
     _ttsSleepTimer?.cancel();
