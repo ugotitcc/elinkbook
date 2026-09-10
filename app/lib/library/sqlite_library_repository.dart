@@ -20,7 +20,20 @@ Future<String> defaultLibraryDatabasePath() async {
 class SqliteLibraryRepository implements LibraryRepository {
   final Database _db;
 
-  SqliteLibraryRepository._(this._db);
+  /// 本機這份資料庫在 [open] 當下，底層 SQLite build 是否有 FTS5 模組
+  /// 可用（epic-10-search Issue 6）。部分裝置（例如客製化韌體的 Android
+  /// 系統內建 SQLite）完全沒有編譯 FTS5，`book_content_fts` 虛擬表因而
+  /// 無法建立；此欄位為 `false` 時，全文檢索功能不可用，但其餘既有功能
+  /// 不受影響——供 Issue 3／4 的搜尋設定／搜尋畫面查詢後顯示「本裝置
+  /// 不支援全文檢索」提示，本工單只負責讓 App 能正常開機並提供這個
+  /// 查詢點，不實作任何 UI（見 docs/epics/epic-10-search/issues.md
+  /// Issue 6）。
+  final bool isFullTextSearchAvailable;
+
+  SqliteLibraryRepository._(
+    this._db, {
+    required this.isFullTextSearchAvailable,
+  });
 
   /// 開啟（或建立）圖書庫資料庫。
   ///
@@ -124,7 +137,8 @@ class SqliteLibraryRepository implements LibraryRepository {
         await _createLayoutPresetTable(db);
         await _createContentIndexStatusTable(db);
         await _createBookContentIndexTable(db);
-        await _createBookContentFtsTable(db);
+        // 【epic-10-search Issue 6】同上，改用會優雅降級的版本。
+        await _createBookContentFtsTableIfSupported(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
@@ -380,7 +394,9 @@ class SqliteLibraryRepository implements LibraryRepository {
           // custom_fonts（oldVersion < 16）等既有原則，無條件建立即可。
           await _createContentIndexStatusTable(db);
           await _createBookContentIndexTable(db);
-          await _createBookContentFtsTable(db);
+          // 【epic-10-search Issue 6】book_content_fts 改用會優雅降級的
+          // 版本，見 _createBookContentFtsTableIfSupported 說明。
+          await _createBookContentFtsTableIfSupported(db);
         }
       },
       onOpen: (db) async {
@@ -395,7 +411,23 @@ class SqliteLibraryRepository implements LibraryRepository {
         await db.execute('PRAGMA foreign_keys = ON');
       },
     );
-    return SqliteLibraryRepository._(db);
+    // 【epic-10-search Issue 6】onCreate／onUpgrade 兩處都可能因為 FTS5
+    // 模組不存在而略過建立 book_content_fts（見
+    // _createBookContentFtsTableIfSupported 說明）；且一般開啟既有裝置
+    // （沒有觸發任何遷移，version 已經是 24）時，onCreate／onUpgrade
+    // 兩者皆不會被呼叫。查詢 sqlite_master 是唯一能對「這一次開啟」
+    // 正確反映目前實際狀態的作法，不論是全新安裝、既有裝置升級、還是
+    // 單純重新開啟都適用同一條判斷邏輯。
+    final ftsTableRows = await db.query(
+      'sqlite_master',
+      columns: ['name'],
+      where: "type = 'table' AND name = 'book_content_fts'",
+      limit: 1,
+    );
+    return SqliteLibraryRepository._(
+      db,
+      isFullTextSearchAvailable: ftsTableRows.isNotEmpty,
+    );
   }
 
   static Future<void> _createBookReaderPrefsTable(Database db) async {
@@ -893,6 +925,30 @@ class SqliteLibraryRepository implements LibraryRepository {
     ''');
   }
 
+  /// 呼叫 [createBookContentFtsTable]；若失敗訊息符合「FTS5 模組不存在」
+  /// 這個特定情境（比對訊息文字而非例外型別——正式環境丟出
+  /// `SqfliteDatabaseException`，測試假實作可能丟出任意型別的例外，
+  /// 兩者唯一保證共通的是訊息文字，見上方 [createBookContentFtsTable]
+  /// 說明），靜默跳過，不建立 book_content_fts 虛擬表與其三個同步
+  /// trigger；`content_index_status`／`book_content_index` 兩張一般表
+  /// 在呼叫這個方法之前就已建立完成，不受影響，讓 App 能正常開機
+  /// （epic-10-search Issue 6）。其餘未預期的例外原樣重新拋出，不可
+  /// 靜默吞掉真正的錯誤。
+  static Future<void> _createBookContentFtsTableIfSupported(
+    Database db,
+  ) async {
+    try {
+      await createBookContentFtsTable(db);
+    } catch (e) {
+      // 【review-plan-issue-6.md M-1】.toLowerCase() 防禦大小寫變異：
+      // 目前實測到的真機訊息固定小寫，但不同客製化 ROM／sqlite3 driver
+      // wrapper 無法百分之百保證不出現大小寫差異，這裡零成本加防禦。
+      if (!e.toString().toLowerCase().contains('no such module: fts5')) {
+        rethrow;
+      }
+    }
+  }
+
   static Future<void> _createRemoteServersTable(Database db) async {
     // Calibre／OPDS 遠端書架站點（epic-30-calibre-remote-library
     // Issue 0），見 spec.md「站點管理：RemoteServerRepository」。密碼
@@ -1193,3 +1249,18 @@ class SqliteLibraryRepository implements LibraryRepository {
     });
   }
 }
+
+/// [SqliteLibraryRepository] 建立 `book_content_fts` FTS5 虛擬表＋三個
+/// 同步 trigger 的實際實作，抽成頂層函式變數（非固定方法呼叫）比照
+/// `pdf_content_indexer.dart` 的 `readContentUriAll` 既有慣例（該函式
+/// 同樣是頂層變數、寫在其所屬類別 `PdfContentIndexer` 之外、置於檔案
+/// 尾端，不加任何額外標註），供測試覆寫成會丟出「no such module:
+/// fts5」字樣例外的假實作，驗證 `SqliteLibraryRepository.open()` 對
+/// 這個情境的降級處理邏輯（epic-10-search Issue 6，見
+/// docs/epics/epic-10-search/issues.md Issue 6 真機根因記錄）——不需要
+/// 真的找一顆缺 FTS5 模組的 SQLite build 才能測到「不可用」這條路徑
+/// （`sqflite_common_ffi` 測試環境的 SQLite build 一律有 FTS5，無法
+/// 自然重現）。正式執行路徑固定指向
+/// [SqliteLibraryRepository._createBookContentFtsTable]。
+Future<void> Function(Database db) createBookContentFtsTable =
+    SqliteLibraryRepository._createBookContentFtsTable;
