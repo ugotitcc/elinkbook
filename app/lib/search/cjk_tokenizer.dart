@@ -31,9 +31,10 @@ String tokenizeForIndex(String text) {
       buffer.writeCharCode(rune);
       buffer.write(' ');
       endsWithSpace = true;
-    } else if (rune == 0x20) {
-      // 一般空白字元：只在「目前不是緊接在空白之後、且已經有內容」時才
-      // 寫入，達成跟 CJK 逐字空白分隔相容的「連續空白收斂成一個」效果。
+    } else if (rune == 0x20 || rune == 0x3000 || rune == 0x09) {
+      // 一般空白、全形空白（\u3000）或 Tab（\t）字元：只在「目前不是緊接在
+      // 空白之後、且已經有內容」時才寫入半形空格，達成跟 CJK 逐字空白分隔
+      // 相容的「連續空白收斂成一個半形空白」效果。
       if (!endsWithSpace && buffer.isNotEmpty) {
         buffer.write(' ');
         endsWithSpace = true;

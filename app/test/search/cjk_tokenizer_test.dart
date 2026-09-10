@@ -22,6 +22,25 @@ void main() {
     test('連續中文與數字混合：數字視為非 CJK 維持原樣', () {
       expect(tokenizeForIndex('第123章節'), '第 123 章 節');
     });
+
+    test('前後與連續空白收斂為單一空白', () {
+      expect(tokenizeForIndex('  hello   world  '), 'hello world');
+      expect(tokenizeForIndex('  我  愛  貓  '), '我 愛 貓');
+    });
+
+    test('純空白字串回傳空字串', () {
+      expect(tokenizeForIndex('   '), '');
+      expect(tokenizeForQuery('   '), '');
+    });
+
+    test('英文在前中文在後維持邊界空格', () {
+      expect(tokenizeForIndex('Flutter我愛'), 'Flutter 我 愛');
+    });
+
+    test('全形空白與 Tab 收斂為單一半形空白', () {
+      expect(tokenizeForIndex('　我　愛　'), '我 愛');
+      expect(tokenizeForIndex('hello\tworld'), 'hello world');
+    });
   });
 
   group('tokenizeForQuery', () {
