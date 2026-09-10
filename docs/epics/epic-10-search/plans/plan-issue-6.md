@@ -47,7 +47,7 @@
 - Consumes：既有 `SqliteLibraryRepository.open(String path, {bool singleInstance = true})`（僅內部實作改動，對外公開簽章不變，不影響任何既有呼叫端如 `main.dart:82`）。
 - Produces：`SqliteLibraryRepository` 新增公開唯讀欄位 `final bool isFullTextSearchAvailable`；頂層可覆寫函式變數 `Future<void> Function(Database db) createBookContentFtsTable`（供 Issue 3／4 未來若需要模擬同等情境時可比照本工單測試方式覆寫，也供本工單測試使用；正式執行路徑不需任何人手動賦值，已預設指向真正實作）。
 
-- [ ] **Step 1：寫一組會失敗（編譯錯誤）的測試——FTS5 可用／不可用（全新安裝＋既有裝置升級）／非 FTS5 例外不可靜默吞掉**
+- [x] **Step 1：寫一組會失敗（編譯錯誤）的測試——FTS5 可用／不可用（全新安裝＋既有裝置升級）／非 FTS5 例外不可靜默吞掉**
 
 在 `app/test/library/sqlite_library_repository_test.dart`，找到既有的 `group('epic-10-search Issue 0：全文檢索資料表', () { ... });` 區塊**結束的大括號**（`});`）——這是全檔案目前最後一個 `group`，其後緊接的就是 `main()` 函式本身的收尾 `});`。在這兩個 `});` 之間插入新的測試群組（也就是整份檔案的新結尾，緊接在 Issue 0 群組之後、`main()` 收尾之前）：
 
@@ -206,12 +206,12 @@
 
 不需要新增 import——`dart:io`（`Directory`）、`package:path/path.dart as p`、`package:sqflite_common_ffi/sqflite_ffi.dart`（`databaseFactory`／`OpenDatabaseOptions`／`inMemoryDatabasePath`）、`package:elinkbook/library/sqlite_library_repository.dart`（將提供新的頂層變數 `createBookContentFtsTable` 與新欄位 `isFullTextSearchAvailable`）皆已是檔案既有 import。
 
-- [ ] **Step 2：執行測試，確認因為production API尚不存在而編譯失敗**
+- [x] **Step 2：執行測試，確認因為production API尚不存在而編譯失敗**
 
 Run: `flutter test test/library/sqlite_library_repository_test.dart`
 Expected: FAIL（編譯錯誤：`createBookContentFtsTable` 未定義、`SqliteLibraryRepository.isFullTextSearchAvailable` 未定義）。
 
-- [ ] **Step 3：實作 `isFullTextSearchAvailable`＋可覆寫的 `createBookContentFtsTable`＋降級 helper**
+- [x] **Step 3：實作 `isFullTextSearchAvailable`＋可覆寫的 `createBookContentFtsTable`＋降級 helper**
 
 在 `app/lib/library/sqlite_library_repository.dart`，找到：
 
@@ -378,17 +378,17 @@ Future<void> Function(Database db) createBookContentFtsTable =
     SqliteLibraryRepository._createBookContentFtsTable;
 ```
 
-- [ ] **Step 4：執行測試，確認通過**
+- [x] **Step 4：執行測試，確認通過**
 
 Run: `flutter test test/library/sqlite_library_repository_test.dart`
 Expected: PASS（新增的 4 個測試＋既有全部測試，因為這個檔案裡有數千行既有測試，這裡刻意整檔重跑，不只跑新測試群組，確保沒有破壞既有行為）。
 
-- [ ] **Step 5：`flutter analyze`**
+- [x] **Step 5：`flutter analyze`**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/lib/library/sqlite_library_repository.dart app/test/library/sqlite_library_repository_test.dart
