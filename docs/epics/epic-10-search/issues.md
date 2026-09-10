@@ -7,6 +7,8 @@
 ```
 Issue 0 → Issue 1 → Issue 3 → Issue 2
                             → Issue 4 → Issue 5
+
+Issue 6（獨立，無依賴，但修改 Issue 0 已交付的 schema，需一併考量；見下方）
 ```
 
 ---
@@ -38,7 +40,7 @@ Issue 0 → Issue 1 → Issue 3 → Issue 2
 
 ## Issue 1：背景索引排程器＋PDF／Foliate 內容擷取（端到端）
 
-**Status:** ready-for-agent
+**Status:** completed（`plans/plan-issue-1.md` 7 個 Task 全數完成，`reviews/review-issue-1.md` 審查 Ready to merge: Yes，0 Critical／0 Important／3 Minor；PR #230 已合併；真機驗證期間另發現 Issue 6 相容性缺陷，與本工單無關）
 
 **依賴：** Issue 0
 
@@ -161,3 +163,40 @@ Issue 0 → Issue 1 → Issue 3 → Issue 2
 - Foliate 端 `showSearchHighlight()`/`clearSearchHighlight()` 不影響 TTS 播放狀態（若同時有 TTS 在播放，搜尋高亮消失不應連帶清除 TTS 朗讀高亮，反之亦然）。
 
 **驗收標準：** 上述測試全數通過；`flutter analyze` 乾淨；`integration_test/` 或手動驗證：從全庫搜尋點擊一則內容匹配，真的跳到該精確位置並看到 3 秒暫態高亮，且原本的閱讀進度不受影響。
+
+---
+
+## Issue 6：FTS5 模組可用性偵測＋全文檢索優雅降級（真機相容性缺陷）
+
+**Status:** needs-triage
+
+**依賴：** 無，獨立於 Issue 0→1→3→2／4→5 依賴鏈，可立即開始；但直接修改 Issue 0 已交付並合併的 schema migration 程式碼，需與 Issue 0 產出物一併考量
+
+**來源：** 真機除錯發現（非 `design.md`／`spec.md` 既定切片，Epic 10 Issue 1 端到端驗證期間於真機上重現）；根因與 [ADR 0027](../../adr/0027-search-index-tokenization-and-headless-foliate-extraction.md)「技術限制」1 描述的風險同源但更嚴重
+
+**背景／目標：**
+
+在 `9491G`／`Hera_Vis_WIFI`（MediaTek 客製化 E-Ink ROM，Android 15）真機上，全新安裝任何包含 Epic 10 Issue 0 資料庫遷移（DB v23→v24）的版本後，App **完全無法啟動、卡在啟動畫面**。經 logcat 重現確認根因：
+
+```
+DatabaseException(no such module: fts5 (code 1 SQLITE_ERROR))
+sql 'CREATE VIRTUAL TABLE book_content_fts USING fts5(...)' during open, closing...
+#2 SqliteLibraryRepository._createBookContentFtsTable (sqlite_library_repository.dart:871)
+#3 SqliteLibraryRepository.open.<anonymous closure> (sqlite_library_repository.dart:383)
+```
+
+因果鏈：`main.dart:82` 的 `await SqliteLibraryRepository.open(dbPath)` 未包 try/catch／`runZonedGuarded`；`onUpgrade`（`oldVersion < 24`）無條件呼叫 `_createBookContentFtsTable()`；此裝置系統內建 SQLite **完全沒有編譯 FTS5 模組**（不只是版本過舊，是模組本身不存在）；例外一路往上炸穿 `main()`，`runApp()` 永遠不會被呼叫，Flutter 永遠不產出第一幀，原生啟動畫面永遠不消失——**這是完全阻斷 App 啟動的缺陷，影響範圍不只是搜尋功能無法使用**，任何缺少 FTS5 模組的裝置皆會遇到。
+
+ADR 0027「技術限制」1 已討論過相近風險（系統 SQLite 版本可能不支援 FTS5 `trigram` tokenizer，因此決策 1 改採 `unicode61`），但沒有涵蓋「FTS5 模組本身完全不存在」這個更底層的狀況——本工單是對該已知風險類別的延伸，需要重新檢視 ADR 0027 決策 1 是否要補充或修訂。
+
+**Solution（方向草案，待 Scrum Master／人類拍板後細化為可執行計畫，非最終定案）：**
+- 在 `SqliteLibraryRepository.open()` 執行 `_createBookContentFtsTable()` 前，先偵測 FTS5 模組是否可用（例如以 try/catch 包裹一次性探測、或查詢 `pragma_compile_options` 是否含 `ENABLE_FTS5`），不可用時**跳過**建立 `book_content_fts` 虛擬表與其三個同步 trigger，但仍正常建立 `content_index_status`／`book_content_index` 兩張一般表，讓 App 能正常開機。
+- 需要一個機制讓「本裝置全文檢索不可用」這個狀態能被後續 Issue（尤其 Issue 3 設定畫面、Issue 4 搜尋畫面）查詢到並優雅呈現（例如搜尋入口顯示「此裝置不支援全文檢索」而非讓使用者以為功能存在卻永遠沒有結果），避免這個裝置相容性缺口被靜默吞掉而使用者不明所以。
+- 影響範圍評估：這是否只影響這一台裝置（MediaTek 客製化韌體常見於白牌 E-Ink 閱讀器），或有更廣泛的裝置族群受影響，需要人類／Scrum Master 決定調查深度與修復優先序——包含是否要在 Issue 1 合併前搶修，或可先合併 Issue 1（其本身不是造成此缺陷的原因）再另排本工單。
+
+**單元測試要求：**
+- FTS5 不可用時的降級路徑：模擬／假造 FTS5 建表拋出 `no such module: fts5` 例外，驗證 `SqliteLibraryRepository.open()` 仍能成功回傳（不重新拋出例外），且 `content_index_status`／`book_content_index` 兩張表仍存在。
+- 回歸測試：FTS5 可用的一般情況（現有 CI 環境／大多數裝置）行為不變，`book_content_fts` 仍正常建立，既有 Issue 0 級聯刪除測試不受影響。
+- 需要新增一個查詢（例如 `LibraryRepository.isFullTextSearchAvailable`）供 Issue 3／4 判斷是否顯示「本裝置不支援」提示，並有對應測試。
+
+**驗收標準：** 在真實缺少 FTS5 模組的裝置（或以 mock 模擬同等情境的測試）上，App 能正常開機並使用除全文檢索以外的所有既有功能；`flutter analyze` 乾淨；不影響 Issue 0 既有測試套件。
