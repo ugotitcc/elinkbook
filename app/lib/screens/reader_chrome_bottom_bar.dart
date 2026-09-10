@@ -13,10 +13,16 @@ import 'package:flutter/material.dart';
 /// `const SizedBox.shrink()`）——本 widget 不重新實作頁碼換算與空狀態
 /// 判斷，避免與既有邏輯重複（見 `plans/plan-issue-1.md`「計劃範圍澄清」
 /// 第 3 點）。
+///
+/// [onTocTap]（2026-09-10 新增）：選單列最左側「目錄」按鈕，原本收在
+/// `ReaderChromeTopBar` 最右邊，因為跟書籤/劃線筆記/版面同屬「內容操作」
+/// 動作，改移到本列、書籤按鈕左側，理由與完整狀態表見 `CONTEXT.md`
+/// 「Chrome Bar」詞條。`null` 時顯示為停用狀態，比照既有 `onXxxTap` 慣例。
 class ReaderChromeBottomBar extends StatelessWidget {
   final String bookTitle;
   final String pageProgressText;
   final Widget footer;
+  final VoidCallback? onTocTap;
   final bool isBookmarked;
   final VoidCallback? onBookmarkTap;
   final VoidCallback? onAnnotationsTap;
@@ -31,6 +37,7 @@ class ReaderChromeBottomBar extends StatelessWidget {
     required this.bookTitle,
     required this.pageProgressText,
     required this.footer,
+    required this.onTocTap,
     required this.isBookmarked,
     required this.onBookmarkTap,
     required this.onAnnotationsTap,
@@ -117,11 +124,22 @@ class ReaderChromeBottomBar extends StatelessWidget {
                 children: [
                   Expanded(
                     child: IconButton(
-                      key: const Key('reader_chrome_bookmark_button'),
-                      icon: Icon(isBookmarked ? Icons.star : Icons.star_border),
-                      tooltip: isBookmarked ? '已加入此頁書籤' : '加入此頁書籤',
+                      key: const Key('reader_chrome_toc_button'),
+                      icon: const Icon(Icons.menu_book),
+                      tooltip: '目錄',
                       style: buttonStyle,
-                      onPressed: onBookmarkTap,
+                      onPressed: onTocTap,
+                    ),
+                  ),
+                  Expanded(
+                    child: verticalDivider(
+                      IconButton(
+                        key: const Key('reader_chrome_bookmark_button'),
+                        icon: Icon(isBookmarked ? Icons.star : Icons.star_border),
+                        tooltip: isBookmarked ? '已加入此頁書籤' : '加入此頁書籤',
+                        style: buttonStyle,
+                        onPressed: onBookmarkTap,
+                      ),
                     ),
                   ),
                   Expanded(

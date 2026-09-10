@@ -7,6 +7,7 @@ void main() {
     String bookTitle = '一弦定音',
     String pageProgressText = '184 / 468 · 39%',
     Widget? footer,
+    VoidCallback? onTocTap,
     bool isBookmarked = false,
     VoidCallback? onBookmarkTap,
     VoidCallback? onAnnotationsTap,
@@ -20,6 +21,7 @@ void main() {
           bookTitle: bookTitle,
           pageProgressText: pageProgressText,
           footer: footer ?? const SizedBox.shrink(),
+          onTocTap: onTocTap,
           isBookmarked: isBookmarked,
           onBookmarkTap: onBookmarkTap,
           onAnnotationsTap: onAnnotationsTap,
@@ -46,6 +48,35 @@ void main() {
       buildBottomBar(footer: const Text('假跳頁列內容')),
     );
     expect(find.text('假跳頁列內容'), findsOneWidget);
+  });
+
+  // 2026-09-10：目錄按鈕從 ReaderChromeTopBar 移到本選單列最左側（書籤
+  // 按鈕左邊），理由與完整狀態表見 CONTEXT.md「Chrome Bar」詞條。
+  testWidgets('onTocTap 為 null 時，目錄按鈕為停用狀態（仍渲染）', (tester) async {
+    await tester.pumpWidget(buildBottomBar(onTocTap: null));
+    expect(find.byKey(const Key('reader_chrome_toc_button')), findsOneWidget);
+    final button = tester.widget<IconButton>(
+      find.byKey(const Key('reader_chrome_toc_button')),
+    );
+    expect(button.onPressed, isNull);
+  });
+
+  testWidgets('點擊目錄按鈕觸發 onTocTap', (tester) async {
+    var called = false;
+    await tester.pumpWidget(buildBottomBar(onTocTap: () => called = true));
+    await tester.tap(find.byKey(const Key('reader_chrome_toc_button')));
+    expect(called, isTrue);
+  });
+
+  testWidgets('目錄按鈕排在書籤按鈕左側', (tester) async {
+    await tester.pumpWidget(buildBottomBar(onTocTap: () {}));
+    final tocX = tester
+        .getTopLeft(find.byKey(const Key('reader_chrome_toc_button')))
+        .dx;
+    final bookmarkX = tester
+        .getTopLeft(find.byKey(const Key('reader_chrome_bookmark_button')))
+        .dx;
+    expect(tocX, lessThan(bookmarkX));
   });
 
   testWidgets('onBookmarkTap 為 null 時，書籤按鈕為停用狀態（仍渲染）', (tester) async {

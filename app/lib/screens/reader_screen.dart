@@ -2029,10 +2029,13 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   }
 
   /// 頂部 Chrome 列的 `Positioned` 包裝（epic-38-reader-chrome-tts-redesign
-  /// Issue 1 審查修正）：抽成獨立方法，讓 `_buildBody()` 的「不支援格式」
-  /// ／「渲染錯誤」兩個早退分支也能顯示——這兩個分支原本完全跳過主要
-  /// `Stack`，`Scaffold.appBar` 又已改為恆為 `null`，導致使用者在這兩種
-  /// 狀態下沒有返回鍵、無法離開閱讀器。
+  /// Issue 1 審查修正；2026-09-10 修正：頁首／工具列拆成兩組各自獨立的
+  /// 顯示開關，理由與完整狀態表見 `CONTEXT.md`「Chrome Bar」詞條）：抽成
+  /// 獨立方法，讓 `_buildBody()` 的「不支援格式」／「渲染錯誤」兩個早退
+  /// 分支也能顯示——這兩個分支原本完全跳過主要 `Stack`，`Scaffold.appBar`
+  /// 又已改為恆為 `null`，導致使用者在這兩種狀態下沒有返回鍵、無法離開
+  /// 閱讀器（此早退分支下 `_chromeVisible` 恆為初始值 `true`，工具列仍會
+  /// 顯示，返回鍵可用）。目錄按鈕已移除，改移至 `ReaderChromeBottomBar`。
   Positioned _buildChromeTopBar(BookFormat format) {
     return Positioned(
       top: 0,
@@ -2044,22 +2047,35 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         onSearchTap: () => ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('功能開發中')),
         ),
+        // `_resolved` 為 null 代表偏好設定尚未載入完成（載入中／錯誤／不
+        // 支援格式等早退分支），此時預設顯示頁首，比照 `_chromeVisible`
+        // 初始值恆為 `true` 的既有慣例——不能解讀成「使用者關閉了顯示
+        // 頁首」，兩者語意不同。
+        isHeaderVisible: _resolved?.showHeader ?? true,
+        isToolbarVisible: _chromeVisible,
         isBottomChromeVisible: _chromeVisible,
         onToggleBottomChrome: () =>
             setState(() => _chromeVisible = !_chromeVisible),
-        onTocTap: format == BookFormat.pdf
-            ? (!_pdfTocLoaded ? null : _openPdfToc)
-            : (isFoliateFormat(format)
-                ? ((_autoDetectedWritingMode == null || !_tocLoaded)
-                    ? null
-                    : _openToc)
-                : null),
         showTtsIndicator: _isTtsActive && !_chromeVisible,
         backgroundColor: _themedFabBackgroundColor,
         iconColor: _themedFabIconColor,
         isEinkMode: widget.isEinkMode,
       ),
     );
+  }
+
+  /// 目錄按鈕的統一分派邏輯（2026-09-10 從 `ReaderChromeTopBar` 移至
+  /// `ReaderChromeBottomBar` 時抽出，`_buildChromeTopBar`／
+  /// `_buildFoliateChromeBottomBar`／PDF 選單列共用同一份防呆條件，避免
+  /// 三處重複）：PDF 用 `_pdfTocLoaded`，Foliate 格式用
+  /// `_autoDetectedWritingMode`／`_tocLoaded`，兩者皆未就緒時回傳 `null`
+  /// 顯示為停用狀態。
+  VoidCallback? _onTocTapFor(BookFormat format) {
+    if (format == BookFormat.pdf) {
+      return !_pdfTocLoaded ? null : _openPdfToc;
+    }
+    if (!isFoliateFormat(format)) return null;
+    return (_autoDetectedWritingMode == null || !_tocLoaded) ? null : _openToc;
   }
 
   /// `ReaderChromeBottomBar` 建構參數在 [_buildBottomChrome] 三個分支
@@ -2076,6 +2092,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       footer: _epubPositionInfo == null
           ? const SizedBox.shrink()
           : _buildFoliateEpubFooter(_epubPositionInfo!),
+      onTocTap: _onTocTapFor(format),
       isBookmarked: _bookmarkAtCurrentPosition != null,
       onBookmarkTap: widget.bookmarksRepository == null ||
               _epubPositionInfo == null
@@ -2417,15 +2434,17 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
             // epic-38-reader-chrome-tts-redesign Issue 1：三格式共用同一份
             // ReaderChromeTopBar，取代原本 Foliate／PDF 各自獨立的返回/目錄
             // Positioned（下方 PDF FAB 區塊對應的返回/目錄兩顆已一併刪除，
-            // 見 plans/plan-issue-1.md Task 4 Step 2f）。原本永遠渲染、不受
-            // _chromeVisible 影響，只受 PDF 裁切編輯模式閘控；2026-09-08
-            // `/grill-with-docs` 使用者需求起，「全螢幕模式」開啟時放大
-            // _chromeVisible 收合的作用範圍，連頂部列一併隱藏（見
-            // CONTEXT.md「沉浸模式」詞條的條件限定說明）——全螢幕模式關閉
-            // （預設）時維持原本「頂部列永遠顯示」的行為不變。
-            if (!_cropEditModeActive &&
-                (_chromeVisible || _resolved?.fullscreen != true))
-              _buildChromeTopBar(format),
+            // 見 plans/plan-issue-1.md Task 4 Step 2f）。
+            //
+            // 【2026-09-10 修正】拿掉這裡原本「全螢幕模式開啟時才讓頂部列
+            // 跟 _chromeVisible 一起收合」的特例判斷——全螢幕模式只該管
+            // Android 系統列，不該影響 App 自己的頂部列（詳見 CONTEXT.md
+            // 「全螢幕模式」詞條）。頂部列一律建構，內部頁首／工具列兩組
+            // 各自依 `showHeader`／`_chromeVisible` 獨立決定要不要顯示，
+            // 兩者都不需要顯示時 `ReaderChromeTopBar` 自己回傳零高度
+            // `SizedBox.shrink()`（見該檔案類別文件註解），不需要在呼叫端
+            // 額外判斷。
+            if (!_cropEditModeActive) _buildChromeTopBar(format),
             // epic-38-reader-chrome-tts-redesign Issue 2：ReaderChromeBottomBar
             // 與 TtsPanel 依 TtsController.status 衍生切換，取代 Issue 1
             // 過渡期的 !_ttsMiniPlayerVisible 手動旗標與 TtsMiniPlayer（見
@@ -2438,10 +2457,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                 child: _buildBottomChrome(format),
               ),
             // ── PDF FAB 區塊（epic-24-pdf-engine-rebuild Issue 8）─────
-            // 返回／目錄兩顆已由上方 ReaderChromeTopBar 涵蓋，不再需要
-            // 獨立的 Positioned（epic-38-reader-chrome-tts-redesign Issue 1）。
-            // 版面設定／書籤／筆記／進度四顆合併為 ReaderChromeBottomBar
-            // （epic-38-reader-chrome-tts-redesign Issue 1，Step 3b）。
+            // 返回已由上方 ReaderChromeTopBar 涵蓋，不再需要獨立的
+            // Positioned（epic-38-reader-chrome-tts-redesign Issue 1）。目錄
+            // 按鈕 2026-09-10 起改移到本列最左側（見 onTocTap）。版面設定／
+            // 書籤／筆記／進度合併為 ReaderChromeBottomBar（epic-38-reader-
+            // chrome-tts-redesign Issue 1，Step 3b）。
             if (format == BookFormat.pdf && _chromeVisible && !_cropEditModeActive)
               Positioned(
                 left: 0,
@@ -2458,6 +2478,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
                           onPageChanged: (page1Indexed) => PdfReaderView.jumpToPage(
                               _pdfReaderViewKey, page1Indexed - 1),
                         ),
+                  onTocTap: _onTocTapFor(format),
                   isBookmarked: _pdfBookmarkAtCurrentPosition != null,
                   onBookmarkTap: widget.bookmarksRepository == null ||
                           _pdfPageInfo == null
