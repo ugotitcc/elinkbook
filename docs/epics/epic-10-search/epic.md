@@ -40,3 +40,5 @@
 
 2026-09-10 `/superpowers:receiving-code-review` 依 `reviews/review-issue-0.md` 逐項處理：M-1 已修訂（`issues.md` Issue 0 狀態改為 `completed`，比照 `epic-38-reader-chrome-tts-redesign/issues.md` 既有先例）；M-2 已修訂（上方實測環境條目補上三個額外 PRAGMA 說明）。I-2 維持不動——查證審查報告本身的 Recommendations 已明確建議「之後開兩層式索引 Issue 時一併修正」，且 Assessment 明訂不阻擋本工單合併，修正它需要重新跑一次 20 分鐘 benchmark 才能產生新的 Cold 數字，不在本次審查回應範圍內處理。M-3 維持不動——審查報告本身寫明「不要求本工單補齊」。
 
+2026-09-10 Issue 0 PR #229（`feat/epic-10-issue-0-db-schema-tokenizer` → `main`）已合併，`main` 已同步 pull（`81bd2410..eb147e18`）。Issue 0 結案。下一步：認領 Issue 1（背景索引排程器＋PDF／Foliate 內容擷取，端到端）。
+
