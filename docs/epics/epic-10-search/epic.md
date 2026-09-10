@@ -34,4 +34,7 @@
     - **Cold cache**：727ms，命中 2,000 筆。
     - **Warm cache（4 次量測）**：[66, 68, 71, 89] ms，中位數 71ms。
 - **量化結論**：**未達標（FAIL）**。Cold cache 延遲 727ms 超過 NFR-2 明訂的 500ms 門檻（雖然 Warm cache 中位數 71ms 遠優於目標，但 NFR-2 以最貼近使用者實際體驗的 Cold cache 為準）。依 `spec.md` §8 與 `ADR 0027` 決策 4，此結果證明單層句級 FTS5 索引在千本書規模下的 Cold 查詢開銷確實偏高。依架構決策，維持測試斷言不放寬，建議 Scrum Master 另開一張 Issue 補建兩層式索引備案（書籍/章節級粗篩 FTS ＋ 命中後才查句級明細）。
+- **方法論註記**：對照組（純 MATCH，1,715ms）先於正式查詢（Cold，727ms）執行，兩者命中同一組 rowid，故正式查詢的「Cold cache」量測實際上已享受到對照組暖過的 FTS5 頁面快取，並非真正的 process 生命週期第一次觸碰；真正 cold 的數字大機率更差（見 `reviews/review-issue-0.md` I-2）。此瑕疵不影響 FAIL 的結論方向，之後若重新驗證兩層式索引效能，應先量測正式查詢本身或改用全新 `Database` 連線量 cold path。
+
+2026-09-10 生產審查（`reviews/review-issue-0.md`，Ready to merge: With fixes，0 Critical／2 Important／3 Minor）後，人類決議採納 I-1 的其中一種處理方式：把 `content_search_performance_benchmark_test.dart` 的 `expect(coldStopwatch.elapsed, lessThan(500ms))` 硬斷言改寫為觀測性測試——保留耗時 `print` 記錄，NFR-2 的 PASS/FAIL 判定完全交由本檔案上方條目（Cold 727ms，FAIL）與 `spec.md` §8 決策鏈記錄，程式碼內只留一個寬鬆的 10 秒存活檢查（攔截查詢卡死/嚴重退化，不代表 NFR-2 門檻）。`group` 層級的 `skip:` 維持不變——與斷言是否失敗無關，單純因為這支測試耗時約 20 分鐘，依計畫本身定位（Task 3 前言）就不屬於日常 `flutter test` 套件；日後重新執行需 `flutter test test/search/content_search_performance_benchmark_test.dart --run-skipped`。I-2（暖身快取汙染）與 M-1（`issues.md` 狀態同步）留待兩層式索引 Issue／PR 前處理，不阻擋本工單。
 
