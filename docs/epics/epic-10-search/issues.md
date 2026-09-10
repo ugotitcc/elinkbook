@@ -13,7 +13,7 @@ Issue 0 → Issue 1 → Issue 3 → Issue 2
 
 ## Issue 0：資料庫 Schema＋中文 Tokenizer＋效能驗證 Spike
 
-**Status:** ready-for-agent
+**Status:** completed（`plans/plan-issue-0.md` 3 個 Task 全數完成，`reviews/review-issue-0.md` 審查 Ready to merge: With fixes，I-1 已修訂；效能驗證結論見 `epic.md`）
 
 **依賴：** 無（可立即開始）
 

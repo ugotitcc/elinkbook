@@ -39,7 +39,7 @@ class SqliteLibraryRepository implements LibraryRepository {
   }) async {
     final db = await openDatabase(
       path,
-      version: 23,
+      version: 24,
       singleInstance: singleInstance,
       onConfigure: (db) async {
         // book_reader_prefs 的 ON DELETE CASCADE 需要外鍵約束真正生效，
@@ -65,6 +65,7 @@ class SqliteLibraryRepository implements LibraryRepository {
         await db.execute(
           'PRAGMA foreign_keys = ${upgradingPastAnnotationUuidMigration ? 'OFF' : 'ON'}',
         );
+        await db.execute('PRAGMA recursive_triggers = ON');
       },
       onCreate: (db, version) async {
         await db.execute('''
@@ -121,6 +122,9 @@ class SqliteLibraryRepository implements LibraryRepository {
         await _createSyncRemoteIdsTable(db);
         await _createSyncPendingRecordsTable(db);
         await _createLayoutPresetTable(db);
+        await _createContentIndexStatusTable(db);
+        await _createBookContentIndexTable(db);
+        await _createBookContentFtsTable(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
@@ -369,6 +373,14 @@ class SqliteLibraryRepository implements LibraryRepository {
               'CREATE INDEX idx_books_cloud_file_id ON books(cloud_file_id)');
           await db.execute(
               'CREATE INDEX idx_books_content_fingerprint ON books(content_fingerprint)');
+        }
+        if (oldVersion < 24) {
+          // epic-10-search Issue 0：全文檢索三張新表，皆為全新獨立表
+          // （非既有表新增欄位），比照 bookmarks（oldVersion < 8）／
+          // custom_fonts（oldVersion < 16）等既有原則，無條件建立即可。
+          await _createContentIndexStatusTable(db);
+          await _createBookContentIndexTable(db);
+          await _createBookContentFtsTable(db);
         }
       },
       onOpen: (db) async {
@@ -807,6 +819,77 @@ class SqliteLibraryRepository implements LibraryRepository {
         updated_at INTEGER NOT NULL,
         prefs_json TEXT NOT NULL
       )
+    ''');
+  }
+
+  /// 每本書的全文檢索索引進度狀態，含背景排程的續跑游標
+  /// （epic-10-search Issue 0，見 spec.md §1）。
+  static Future<void> _createContentIndexStatusTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE content_index_status (
+        book_id TEXT PRIMARY KEY REFERENCES books(id) ON DELETE CASCADE,
+        status TEXT NOT NULL DEFAULT 'pending',
+        last_chapter_index INTEGER,
+        updated_at INTEGER NOT NULL,
+        error_message TEXT
+      )
+    ''');
+  }
+
+  /// 內容索引明細——一列 = 一個可跳轉的精確定位片段（epic-10-search
+  /// Issue 0，見 spec.md §1）。[locator] 是 Foliate 的 CFI 字串或 PDF 的
+  /// JSON `{"page":int,"rect":PercentRect}`；[token_text] 是 [raw_text]
+  /// 逐字層級 token 化後的可搜尋文字（見 `cjk_tokenizer.dart`）。
+  static Future<void> _createBookContentIndexTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE book_content_index (
+        id TEXT PRIMARY KEY,
+        book_id TEXT NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+        chapter_index INTEGER NOT NULL,
+        locator TEXT NOT NULL,
+        raw_text TEXT NOT NULL,
+        token_text TEXT NOT NULL,
+        created_at INTEGER NOT NULL
+      )
+    ''');
+    await db.execute(
+        'CREATE INDEX idx_book_content_index_book_id ON book_content_index(book_id)');
+  }
+
+  /// FTS5 external-content 虛擬表＋同步 trigger（epic-10-search Issue 0，
+  /// 見 spec.md §1）。只索引 `token_text`，實際文字以 [book_content_index]
+  /// 為準。**務必**搭配 `onConfigure` 的 `PRAGMA recursive_triggers = ON`
+  /// ——書籍刪除時 [book_content_index] 的列會被外鍵 `ON DELETE CASCADE`
+  /// 級聯刪除，但依 SQLite 官方規範，級聯刪除預設「不會」觸發子表的
+  /// `AFTER DELETE` trigger（需 `recursive_triggers = ON` 才會），少了這個
+  /// PRAGMA，下面這三個 trigger 對級聯刪除完全不會執行，
+  /// `book_content_fts` 將殘留指向不存在 rowid 的孤兒索引
+  /// （review-spec.md C-1，本檔案 Task 1 Step 8-11 有專門的回歸測試鎖住
+  /// 這個行為）。不加 `tokenize=` 參數，使用 FTS5 預設的 `unicode61`
+  /// （ADR 0027：排除 `trigram`，Android 11 系統 SQLite 3.28.0 不支援）。
+  static Future<void> _createBookContentFtsTable(Database db) async {
+    await db.execute('''
+      CREATE VIRTUAL TABLE book_content_fts USING fts5(
+        token_text,
+        content='book_content_index',
+        content_rowid='rowid'
+      )
+    ''');
+    await db.execute('''
+      CREATE TRIGGER book_content_index_ai AFTER INSERT ON book_content_index BEGIN
+        INSERT INTO book_content_fts(rowid, token_text) VALUES (new.rowid, new.token_text);
+      END
+    ''');
+    await db.execute('''
+      CREATE TRIGGER book_content_index_ad AFTER DELETE ON book_content_index BEGIN
+        INSERT INTO book_content_fts(book_content_fts, rowid, token_text) VALUES('delete', old.rowid, old.token_text);
+      END
+    ''');
+    await db.execute('''
+      CREATE TRIGGER book_content_index_au AFTER UPDATE ON book_content_index BEGIN
+        INSERT INTO book_content_fts(book_content_fts, rowid, token_text) VALUES('delete', old.rowid, old.token_text);
+        INSERT INTO book_content_fts(rowid, token_text) VALUES (new.rowid, new.token_text);
+      END
     ''');
   }
 

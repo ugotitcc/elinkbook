@@ -3807,4 +3807,139 @@ void main() {
       expect(await repo.listUndownloadedBooksForRemoteServer('srv1'), isEmpty);
     });
   });
+
+  group('epic-10-search Issue 0：全文檢索資料表', () {
+    test('全新安裝的資料庫包含 content_index_status／book_content_index／book_content_fts 三張表',
+        () async {
+      final tableNames = await repository.database.query(
+        'sqlite_master',
+        columns: ['name'],
+        where: "type = 'table' AND name IN (?, ?, ?)",
+        whereArgs: [
+          'content_index_status',
+          'book_content_index',
+          'book_content_fts',
+        ],
+      );
+      expect(
+        tableNames.map((row) => row['name']).toSet(),
+        {'content_index_status', 'book_content_index', 'book_content_fts'},
+      );
+    });
+
+    test('既有 version 23 裝置升級到 version 24，新增三張全文檢索資料表', () async {
+      final tempDir = await Directory.systemTemp
+          .createTemp('elinkbook_migration_v23_to_v24_search_test');
+      addTearDown(() => tempDir.delete(recursive: true));
+      final dbPath = p.join(tempDir.path, 'test.db');
+
+      final oldDb = await databaseFactory.openDatabase(
+        dbPath,
+        options: OpenDatabaseOptions(
+          version: 23,
+          onConfigure: (db) async {
+            await db.execute('PRAGMA foreign_keys = ON');
+          },
+          onCreate: (db, version) async {
+            await db.execute('CREATE TABLE groups (name TEXT PRIMARY KEY)');
+            await db.insert('groups', {'name': '未分類'});
+            await db.execute('''
+              CREATE TABLE books (
+                id TEXT PRIMARY KEY,
+                title TEXT NOT NULL,
+                author TEXT,
+                format TEXT NOT NULL,
+                filePath TEXT NOT NULL,
+                source TEXT NOT NULL,
+                coverPath TEXT,
+                progress REAL NOT NULL DEFAULT 0,
+                epubLocator TEXT,
+                pdfPageIndex INTEGER,
+                totalCharacterCount INTEGER,
+                is_fixed_layout INTEGER,
+                groupName TEXT NOT NULL DEFAULT '未分類',
+                createTime INTEGER NOT NULL,
+                lastReadTime INTEGER NOT NULL,
+                content_fingerprint TEXT,
+                position_updated_at INTEGER,
+                position_synced_server_updated_at TEXT,
+                remote_server_id TEXT,
+                remote_book_id TEXT,
+                remote_download_url TEXT,
+                is_downloaded INTEGER NOT NULL DEFAULT 1,
+                cloud_file_id TEXT
+              )
+            ''');
+            await db.insert('books', {
+              'id': 'book1',
+              'title': '既有的書',
+              'format': 'epub',
+              'filePath': '/books/book1.epub',
+              'source': 'local',
+              'progress': 0,
+              'groupName': '未分類',
+              'createTime': 1000,
+              'lastReadTime': 1000,
+              'is_downloaded': 1,
+            });
+          },
+        ),
+      );
+      await oldDb.close();
+
+      final upgraded = await SqliteLibraryRepository.open(dbPath);
+      addTearDown(() => upgraded.close());
+
+      final tableNames = await upgraded.database.query(
+        'sqlite_master',
+        columns: ['name'],
+        where: "type = 'table' AND name IN (?, ?, ?)",
+        whereArgs: [
+          'content_index_status',
+          'book_content_index',
+          'book_content_fts',
+        ],
+      );
+      expect(
+        tableNames.map((row) => row['name']).toSet(),
+        {'content_index_status', 'book_content_index', 'book_content_fts'},
+      );
+
+      final books = await upgraded.database.query('books');
+      expect(books, hasLength(1));
+      expect(books.single['id'], 'book1');
+    });
+
+    test('刪除書籍時，book_content_index 與 book_content_fts 皆同步清空（驗證外鍵級聯+trigger，見 review-spec.md C-1）',
+        () async {
+      await repository.insertBook(_book('cascade-book'));
+      await repository.database.insert('book_content_index', {
+        'id': 'seg-1',
+        'book_id': 'cascade-book',
+        'chapter_index': 0,
+        'locator': 'epubcfi(/6/2!/4/2/1:0)',
+        'raw_text': '這是一句測試內容',
+        'token_text': '這 是 一 句 測 試 內 容',
+        'created_at': 1000,
+      });
+
+      final beforeDelete = await repository.database
+          .rawQuery("SELECT rowid FROM book_content_fts WHERE book_content_fts MATCH '測 試'");
+      expect(beforeDelete, hasLength(1));
+
+      await repository.deleteBook('cascade-book');
+
+      final indexRowsAfterDelete = await repository.database
+          .query('book_content_index', where: 'book_id = ?', whereArgs: ['cascade-book']);
+      expect(indexRowsAfterDelete, isEmpty,
+          reason: 'book_content_index 應被外鍵 ON DELETE CASCADE 清空');
+
+      final ftsRowsAfterDelete = await repository.database
+          .rawQuery("SELECT rowid FROM book_content_fts WHERE book_content_fts MATCH '測 試'");
+      expect(ftsRowsAfterDelete, isEmpty,
+          reason:
+              'book_content_fts 必須同步清空，若這裡不是空的代表 recursive_triggers 未開啟，'
+              '級聯刪除沒有觸發 AFTER DELETE trigger，留下孤兒索引（review-spec.md C-1）');
+    });
+  });
 }

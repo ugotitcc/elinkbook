@@ -44,7 +44,7 @@
 - Consumes：無（本工單是全新地基）。
 - Produces：三張資料表供 Task 3（效能驗證）與後續 Issue 1-5 直接使用——`content_index_status(book_id, status, last_chapter_index, updated_at, error_message)`、`book_content_index(id, book_id, chapter_index, locator, raw_text, token_text, created_at)`、`book_content_fts(token_text)`（FTS5 external-content，`content_rowid='rowid'` 對應 `book_content_index.rowid`）。`SqliteLibraryRepository.database`（既有 public getter）供後續工單直接下 raw SQL 查詢這三張表（本 Epic 不新建獨立的 `SearchRepository` 之前，都先用這個既有 getter）。
 
-- [ ] **Step 1：寫一個會失敗的測試——全新安裝的資料庫包含三張全文檢索資料表**
+- [x] **Step 1：寫一個會失敗的測試——全新安裝的資料庫包含三張全文檢索資料表**
 
 在 `app/test/library/sqlite_library_repository_test.dart` 檔案尾端（最後一個 `test(...)` 之後、`main()` 的結尾 `});` 之前）新增：
 
@@ -72,12 +72,12 @@
 
 （沿用檔案頂部既有的 `repository`／`setUp`／`tearDown`，不需要另外建構。）
 
-- [ ] **Step 2：執行測試，確認失敗**
+- [x] **Step 2：執行測試，確認失敗**
 
 Run: `flutter test app/test/library/sqlite_library_repository_test.dart --plain-name "全新安裝的資料庫包含"`
 Expected: FAIL（`tableNames` 為空集合，斷言不通過——三張表還不存在）。
 
-- [ ] **Step 3：實作三張表的 `_createXTable` 靜態方法**
+- [x] **Step 3：實作三張表的 `_createXTable` 靜態方法**
 
 在 `app/lib/library/sqlite_library_repository.dart` 找到 `_createLayoutPresetTable`（約第 798 行）附近，於其後新增：
 
@@ -167,12 +167,12 @@ Expected: FAIL（`tableNames` 為空集合，斷言不通過——三張表還�
 
 **這一步刻意先不加 `PRAGMA recursive_triggers = ON`**（留到 Step 10 才加），目的是讓 Step 8-9 的級聯刪除測試先真的紅一次，證明這個 bug 不是純理論、測試本身有偵測能力。
 
-- [ ] **Step 4：執行測試，確認通過**
+- [x] **Step 4：執行測試，確認通過**
 
 Run: `flutter test app/test/library/sqlite_library_repository_test.dart --plain-name "全新安裝的資料庫包含"`
 Expected: PASS
 
-- [ ] **Step 5：寫一個會失敗的測試——既有 version 23 裝置升級到 version 24**
+- [x] **Step 5：寫一個會失敗的測試——既有 version 23 裝置升級到 version 24**
 
 比照檔案裡既有的「既有 version 22 裝置升級到 version 23」測試（約第 3260 行），在同一個新 `group` 裡新增：
 
@@ -264,12 +264,12 @@ Expected: PASS
     });
 ```
 
-- [ ] **Step 6：執行測試，確認失敗**
+- [x] **Step 6：執行測試，確認失敗**
 
 Run: `flutter test app/test/library/sqlite_library_repository_test.dart --plain-name "既有 version 23 裝置升級"`
 Expected: FAIL（`onUpgrade` 還沒有 `oldVersion < 24` 分支，三張表不存在）。
 
-- [ ] **Step 7：實作 `onUpgrade` 的 `oldVersion < 24` 分支**
+- [x] **Step 7：實作 `onUpgrade` 的 `oldVersion < 24` 分支**
 
 在 `app/lib/library/sqlite_library_repository.dart` 的 `onUpgrade` 內，`if (oldVersion < 23) { ... }` 區塊（約第 358-372 行）之後新增：
 
@@ -284,12 +284,12 @@ Expected: FAIL（`onUpgrade` 還沒有 `oldVersion < 24` 分支，三張表不�
         }
 ```
 
-- [ ] **Step 8：執行測試，確認通過**
+- [x] **Step 8：執行測試，確認通過**
 
 Run: `flutter test app/test/library/sqlite_library_repository_test.dart --plain-name "既有 version 23 裝置升級"`
 Expected: PASS
 
-- [ ] **Step 9：寫一個會失敗的測試——級聯刪除書籍時，`book_content_fts` 必須同步清空（本工單最重要的回歸測試）**
+- [x] **Step 9：寫一個會失敗的測試——級聯刪除書籍時，`book_content_fts` 必須同步清空（本工單最重要的回歸測試）**
 
 在同一個 `group` 裡新增：
 
@@ -328,12 +328,12 @@ Expected: PASS
     });
 ```
 
-- [ ] **Step 10：執行測試，確認失敗（證明 bug 是真的）**
+- [x] **Step 10：執行測試，確認失敗（證明 bug 是真的）**
 
 Run: `flutter test app/test/library/sqlite_library_repository_test.dart --plain-name "刪除書籍時"`
 Expected: FAIL——`ftsRowsAfterDelete` 不是空的（`book_content_index` 那筆已經被級聯刪除，但 `book_content_fts` 因為 `recursive_triggers` 還沒開，AFTER DELETE trigger 沒有被觸發，孤兒索引留在原地）。這一步務必實際執行、親眼看到這個失敗，不要跳過——這是整個 Issue 0 最重要的一次驗證。
 
-- [ ] **Step 11：在 `onConfigure` 新增 `PRAGMA recursive_triggers = ON`**
+- [x] **Step 11：在 `onConfigure` 新增 `PRAGMA recursive_triggers = ON`**
 
 在 `app/lib/library/sqlite_library_repository.dart` 的 `onConfigure` 內（約第 65-67 行，既有 `PRAGMA foreign_keys` 那行之後）新增：
 
@@ -344,22 +344,22 @@ Expected: FAIL——`ftsRowsAfterDelete` 不是空的（`book_content_index` 那
         await db.execute('PRAGMA recursive_triggers = ON');
 ```
 
-- [ ] **Step 12：執行測試，確認通過**
+- [x] **Step 12：執行測試，確認通過**
 
 Run: `flutter test app/test/library/sqlite_library_repository_test.dart --plain-name "刪除書籍時"`
 Expected: PASS
 
-- [ ] **Step 13：執行整個測試檔，確認沒有破壞既有測試**
+- [x] **Step 13：執行整個測試檔，確認沒有破壞既有測試**
 
 Run: `flutter test app/test/library/sqlite_library_repository_test.dart`
 Expected: 全數通過（這個檔案已有 3800+ 行既有測試，本次改動 `onConfigure`／`onCreate`／`onUpgrade`／版本號是高影響範圍的變更，務必跑一次全檔案，不要只跑新增的測試）。
 
-- [ ] **Step 14：`flutter analyze`**
+- [x] **Step 14：`flutter analyze`**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 15：Commit**
+- [x] **Step 15：Commit**
 
 ```bash
 git add app/lib/library/sqlite_library_repository.dart app/test/library/sqlite_library_repository_test.dart
@@ -378,7 +378,7 @@ git commit -m "feat(search): 新增全文檢索資料表 schema（DB v23→v24�
 - Consumes：無。
 - Produces：`String tokenizeForIndex(String text)`、`String tokenizeForQuery(String query)`——Task 3（效能驗證）與後續 Issue 1（索引建置管線）、Issue 4（`SearchRepository.searchContent()`）直接呼叫這兩個函式，簽章與行為以本工單為準，不得更動。
 
-- [ ] **Step 1：寫失敗的測試——`tokenizeForIndex`**
+- [x] **Step 1：寫失敗的測試——`tokenizeForIndex`**
 
 新增 `app/test/search/cjk_tokenizer_test.dart`：
 
@@ -426,12 +426,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：執行測試，確認失敗**
+- [x] **Step 2：執行測試，確認失敗**
 
 Run: `flutter test app/test/search/cjk_tokenizer_test.dart`
 Expected: FAIL（`package:elinkbook/search/cjk_tokenizer.dart` 不存在，編譯錯誤）。
 
-- [ ] **Step 3：實作 `cjk_tokenizer.dart`**
+- [x] **Step 3：實作 `cjk_tokenizer.dart`**
 
 新增 `app/lib/search/cjk_tokenizer.dart`：
 
@@ -500,17 +500,17 @@ String tokenizeForQuery(String query) {
 }
 ```
 
-- [ ] **Step 4：執行測試，確認通過**
+- [x] **Step 4：執行測試，確認通過**
 
 Run: `flutter test app/test/search/cjk_tokenizer_test.dart`
 Expected: PASS（全部 8 個 test）
 
-- [ ] **Step 5：`flutter analyze`**
+- [x] **Step 5：`flutter analyze`**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/lib/search/cjk_tokenizer.dart app/test/search/cjk_tokenizer_test.dart
@@ -530,7 +530,7 @@ git commit -m "feat(search): 新增中文字元層級 tokenizer 純函式"
 
 > 這支測試**不是**routine `flutter test` 套件的一部分（`docs/epics/epic-10-search/issues.md` Issue 0 已明訂），單次執行時間可能長達數分鐘（合成資料量體是 1,000 本書 × 8,000 句 = 800 萬列），只在本工單驗收時與之後若修改 schema/tokenizer 時手動執行，不需要每次 `flutter test` 全套件都跑。
 
-- [ ] **Step 1：寫效能驗證測試**
+- [x] **Step 1：寫效能驗證測試**
 
 新增 `app/test/search/content_search_performance_benchmark_test.dart`：
 
@@ -742,13 +742,13 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：執行測試，記錄實際結果**
+- [x] **Step 2：執行測試，記錄實際結果**
 
 Run: `flutter test app/test/search/content_search_performance_benchmark_test.dart`
 
 這一步不是單純「Expected: PASS」——**無論通過或失敗，都要把 terminal 印出的全部 `[benchmark]` 行實際數字記下來**：合成資料建置耗時、對照組（純 MATCH）耗時與命中筆數、正式查詢（含 `ROW_NUMBER`/`bm25` 分組排序）的 Cold 耗時與命中筆數、Warm 4 次的個別耗時與中位數。下一步要把這些數字寫進 `epic.md`。
 
-- [ ] **Step 3：將結論寫入 `epic.md`**
+- [x] **Step 3：將結論寫入 `epic.md`**
 
 編輯 `docs/epics/epic-10-search/epic.md`，在開發記錄最後新增一則條目，格式比照既有條目（含日期），內容包含：
 - 實測環境（開發機或 CI，非真實 Android 裝置——若條件允許，備註「建議之後在真機/模擬器上覆核一次」）。
@@ -756,12 +756,12 @@ Run: `flutter test app/test/search/content_search_performance_benchmark_test.dar
 - 結論：符合 NFR-2 或不符合。
 - 若不符合：註明「已規劃另開 Issue 補建兩層式索引，見 spec.md §8」，並告知人類這個 Spike 的判斷結果，不要自行決定是否要接著開新 Issue（依 SDD 工作流程，這屬於 Scrum Master 職責，需要人類確認）。
 
-- [ ] **Step 4：`flutter analyze`**
+- [x] **Step 4：`flutter analyze`**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 5：Commit**
+- [x] **Step 5：Commit**
 
 ```bash
 git add app/test/search/content_search_performance_benchmark_test.dart docs/epics/epic-10-search/epic.md
