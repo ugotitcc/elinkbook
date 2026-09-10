@@ -26,131 +26,6 @@ import 'tts_segment_cfi.dart';
 import 'writing_mode.dart';
 import 'zone_action.dart';
 
-/// 【診斷修正——真機回報：Mobiscribe WAVE（Android 12，
-/// `com.android.webview` 版本 91.0.4472.114）開啟流式 EPUB 時畫面永遠停在
-/// 轉圈圈載入指示器，且沒有任何可觀察的例外/console 訊息（這台裝置的
-/// WebView 建置沒有開啟 `setWebContentsDebuggingEnabled`，無法遠端連接
-/// DevTools 檢視實際拋出的例外）】`epub.js`／`epubcfi.js`／`paginator.js`
-/// （`readest/foliate-js` 釘定版本）在開書必經路徑（`loadItem()`／
-/// `loadReplaced()` 讀取 spine 資源、`paginator.js` 分頁計算）無條件使用
-/// 三個較新的 ES 內建方法，較舊的 Android System WebView 統統沒有：
-///
-/// - `Object.groupBy`／`Map.groupBy`（ES2024，需 Chromium 117+）
-/// - `Array.prototype.at()`（ES2022，需 Chromium 92+）
-/// - `Array.prototype.findLastIndex()`（ES2023，需 Chromium 97+）
-///
-/// 這台裝置的 Chromium 91（已用 `dumpsys package com.android.webview` 與
-/// `adb logcat` 的 `cr_LibraryLoader` 訊息雙重確認版本號）三個都不支援；
-/// `Object.groupBy` 那部分已在前一輪診斷修正過，這次追加 `.at()`／
-/// `findLastIndex()` 的 polyfill——已用 `@xmldom/xmldom` + 未經修改的實際
-/// epub.js／epubcfi.js 驗證這兩個方法確實會在 Node.js 移除該內建方法後
-/// 拋出對應的 `TypeError`。僅在缺席時才定義（不覆蓋原生實作，等原生
-/// WebView 支援後行為與新版一致），透過 [UserScript] 在文件載入最早期
-/// 注入，不修改 `readest/foliate-js` 釘定版本本身（比照既有 ADR 0011
-/// 「不修改釘定版本」的既有限制）。
-///
-/// 【epic-18-reader-device-qa Issue 38，2026-08-05 追加發現】本腳本自身
-/// 曾在 `Object.groupBy` polyfill 內用了 `??=`（邏輯 nullish 賦值，ES2021，
-/// 需 Chromium 85+）——JS 引擎會在執行任何程式碼之前完整解析整份腳本，
-/// 任何一處語法錯誤都會讓整份腳本（含本檔案其餘 3 個 polyfill）完全不
-/// 執行。iReader Ocean 4 Plus 的系統 WebView 為 Chromium 83（早於 85），
-/// 代表上面 4 個 polyfill 在這台裝置上其實從未真正生效過。已改寫為
-/// ES5 相容語法（`if (!x) x = []` 取代 `x ??= []`）。**本腳本後續新增的
-/// 任何 polyfill 本體，禁止使用 ES2020 之後的語法糖**（包括 `??=`／`||=`／
-/// `&&=`／選用鏈結 `?.` 需 Chromium 80+、標籤模板等），因為這份腳本存在
-/// 的唯一目的就是在不支援新語法的舊版 WebView 上執行。
-///
-/// 【epic-18-reader-device-qa Issue 41】`epub.js` 的字型反混淆
-/// （`deobfuscators`）用了 `String.prototype.replaceAll`（ES2021，需
-/// Chromium 85+）；`view.js` 的 Media Overlays 用了 `WeakRef`（ES2021，需
-/// Chromium 84+）。iReader Ocean 4 Plus 的 Chromium 83 兩者皆不支援。兩者
-/// 皆只在特定書籍功能（含混淆內嵌字型／含 media overlay）才會執行到，非
-/// 通用開書路徑，故不像 Issue 38 的 `??=` 語法解析失敗那樣影響「每一本
-/// 書」，但仍是真實存在的崩潰風險，一併補上防護。
-const _esCompatPolyfillJs = '''
-if (!Object.groupBy) {
-  Object.groupBy = function (items, keyFn) {
-    const result = Object.create(null);
-    let index = 0;
-    for (const item of items) {
-      const key = keyFn(item, index++);
-      if (!result[key]) result[key] = [];
-      result[key].push(item);
-    }
-    return result;
-  };
-}
-if (!Map.groupBy) {
-  Map.groupBy = function (items, keyFn) {
-    const result = new Map();
-    let index = 0;
-    for (const item of items) {
-      const key = keyFn(item, index++);
-      if (!result.has(key)) result.set(key, []);
-      result.get(key).push(item);
-    }
-    return result;
-  };
-}
-if (!Array.prototype.at) {
-  Array.prototype.at = function (index) {
-    const len = this.length;
-    const relativeIndex = index < 0 ? len + index : index;
-    return (relativeIndex >= 0 && relativeIndex < len) ? this[relativeIndex] : undefined;
-  };
-}
-if (!Array.prototype.findLastIndex) {
-  Array.prototype.findLastIndex = function (predicate, thisArg) {
-    for (let i = this.length - 1; i >= 0; i--) {
-      if (predicate.call(thisArg, this[i], i, this)) return i;
-    }
-    return -1;
-  };
-}
-if (!String.prototype.replaceAll) {
-  String.prototype.replaceAll = function (search, replacement) {
-    if (search instanceof RegExp) {
-      if (!search.global) {
-        throw new TypeError('replaceAll must be called with a global RegExp');
-      }
-      return this.replace(search, replacement);
-    }
-    if (typeof replacement === 'function') {
-      // 目前 vendor 用法（epub.js 的字型反混淆）只會傳入字串
-      // replacement，故不實作函式型 replacement——若未來真的用到，寧可
-      // 在這裡明確拋出例外，也不要靜默產生錯誤結果（原本的寫法用
-      // Array.prototype.join(fn)，join() 對非字串參數只會呼叫
-      // fn.toString()，不會逐一呼叫該函式，等於把函式原始碼文字字面
-      // 插入結果字串，是難以排查的靜默錯誤）。
-      throw new TypeError(
-        'replaceAll polyfill 尚未實作函式型 replacement（目前 vendor 用法不需要）'
-      );
-    }
-    // 展開 \$\$（字面 \$ 符號）／\$&（比對到的子字串）兩種替換樣式，比照
-    // 原生 String.prototype.replaceAll 規格常見用法；不支援比對前/後文字
-    // 這兩種樣式——這兩者需要逐一追蹤每次匹配在原字串中的位置，split/join
-    // 這種一次切割做法無法簡單支援，目前 vendor 用法也用不到，暫不實作。
-    const expanded = String(replacement).replace(
-      /\\\$(\\\$|&)/g,
-      function (_, token) { return token === '\$' ? '\$' : String(search); }
-    );
-    return this.split(search).join(expanded);
-  };
-}
-if (typeof WeakRef === 'undefined') {
-  window.WeakRef = function (target) {
-    // 注意：僅用強參照模擬 deref()，不具備真正的弱參照／GC 語意，只用於
-    // 避免 ReferenceError；已知影響範圍：view.js 的 Media Overlays
-    // lastActive 單一插槽變數（見上方文件註解），該變數在下一次
-    // 'highlight' 事件觸發時會被覆寫，不會無限累積記憶體。
-    this._target = target;
-  };
-  window.WeakRef.prototype.deref = function () {
-    return this._target;
-  };
-}
-''';
-
 /// `window.applyPreferences` 過早呼叫佇列 shim（epic-18-reader-device-qa
 /// Issue 39，真機使用回報：ViWoods Air Reader C，`Uncaught TypeError:
 /// window.applyPreferences is not a function`）。`didUpdateWidget()`
@@ -166,34 +41,6 @@ const _applyPreferencesQueueShimJs = '''
 window.__pendingApplyPreferences = null;
 window.applyPreferences = function (prefs) {
   window.__pendingApplyPreferences = prefs;
-};
-''';
-
-/// 全局 JS 錯誤捕捉（epic-18-reader-device-qa Issue 33，真機使用回報：
-/// iReader Ocean 4 Plus 開啟書籍時畫面永遠停在載入指示器，5 個推測根因
-/// 皆無真機診斷資料佐證）。`main.js` 本身的 `openBook()` 已用 try/catch
-/// 涵蓋自身執行期間拋出的例外並回報 `onError`，但無法涵蓋：(1) 釘定的
-/// vendor 腳本（`view.js`／`epub.js`／`paginator.js`）在文件載入極早期、
-/// `main.js` 的 try/catch 尚未有機會執行前就拋出的例外（例如缺少 ES
-/// 內建方法時的 `TypeError`，見上方 `_esCompatPolyfillJs` 的既有診斷紀
-/// 錄——這正是舊版 WebView 最典型的失敗模式）；(2) 未被 await 的 Promise
-/// rejection。透過 `window.onerror`／`window.onunhandledrejection` 補上
-/// 這兩類涵蓋範圍，並在 `AT_DOCUMENT_START`（比任何 vendor 腳本都早）
-/// 注入，重用既有的 `onError` JS↔Dart bridge channel（見
-/// `_onWebViewCreated` 的 'onError' handler），不需要新增任何 Dart 端
-/// 接線或新的 channel。
-const _globalErrorCaptureJs = '''
-window.onerror = function (message, source, lineno, colno, error) {
-  if (window.flutter_inappwebview) {
-    window.flutter_inappwebview.callHandler('onError', 'JS Error: ' + message + ' (' + source + ':' + lineno + ')');
-  }
-};
-window.onunhandledrejection = function (event) {
-  if (window.flutter_inappwebview) {
-    var reason = event && event.reason;
-    var message = (reason && reason.message) || String(reason);
-    window.flutter_inappwebview.callHandler('onError', 'Unhandled Promise Rejection: ' + message);
-  }
 };
 ''';
 
@@ -897,14 +744,14 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
               ],
             ),
           ),
-          // 【診斷修正】見上方 _esCompatPolyfillJs 註解——在文件載入最早期
+          // 【診斷修正】見上方 esCompatPolyfillJs 註解——在文件載入最早期
           // 注入 Object.groupBy/Map.groupBy/Array.prototype.at/
           // Array.prototype.findLastIndex 的 polyfill，避免舊版 WebView 開
           // 啟 EPUB 時因 epub.js/epubcfi.js/paginator.js 呼叫這些較新的 ES
           // 內建方法而拋出例外、導致畫面卡在載入指示器。
           initialUserScripts: UnmodifiableListView<UserScript>([
             UserScript(
-              source: _esCompatPolyfillJs,
+              source: esCompatPolyfillJs,
               injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
             ),
             // epic-18-reader-device-qa Issue 39：見上方
@@ -913,11 +760,11 @@ class _FoliateReaderViewState extends State<FoliateReaderView> {
               source: _applyPreferencesQueueShimJs,
               injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
             ),
-            // epic-18-reader-device-qa Issue 33：見上方 _globalErrorCaptureJs
+            // epic-18-reader-device-qa Issue 33：見上方 globalErrorCaptureJs
             // 註解。順序在 polyfill 之後無妨——兩者皆於 AT_DOCUMENT_START
             // 注入，實際執行順序不影響彼此（各自只是定義全局函式/監聽器）。
             UserScript(
-              source: _globalErrorCaptureJs,
+              source: globalErrorCaptureJs,
               injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
             ),
             // epic-18-reader-device-qa Issue 33（程式碼審查建議）：見上方
