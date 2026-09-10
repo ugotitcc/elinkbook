@@ -103,3 +103,44 @@ node app/tool/test_tts_safe_window.mjs
 
 - 結束碼 `0`：13 項情境全數通過。
 - 非 `0`：斷言失敗或拋出例外，會印出對應的錯誤訊息與堆疊。
+
+## `filter_antigravity_log.py` / `filter_antigravity_log.ps1`
+
+過濾 Antigravity CLI 日誌噪音（`C:\Users\huthief\.gemini\antigravity-cli\log\cli-*.log`）。
+
+**背景**：Antigravity 1.1.27 在 Windows 上有兩類高頻噪音會蓋掉真正錯誤：
+1. `grep_handler.go:518` — Windows `C:/U:/` 路徑冒號被 `strings.Split(":")` 誤解析，
+   每個內容搜尋結果都噴 `strconv.Atoi: invalid syntax`（實測佔真 E 的 91%，單次 burst 可達 284 行）
+2. `ERROR: logging before google.Init: I...` — glog 在 `google.Init()` 前統一打 `ERROR:` 前綴，
+   實際等級是 `I`（INFO），被視覺誤判為錯誤（實測 495 行）
+
+此腳本僅做**顯示層過濾**，不修改原始 log 檔。上游修復前用於日常查 log 降噪。
+
+### 執行方式
+
+```bash
+# 過濾最新一份 log（預設行為），過濾後內容走 stdout，統計走 stderr
+python app/tool/filter_antigravity_log.py
+python app/tool/filter_antigravity_log.py --stats          # 只看統計
+python app/tool/filter_antigravity_log.py --aggressive     # 額外過濾 CORTEX/empty component 次要噪音
+python app/tool/filter_antigravity_log.py --follow         # 即時 tail（每 2 秒刷新）
+
+# 指定檔案 / 輸出到檔案
+python app/tool/filter_antigravity_log.py -f C:/Users/huthief/.gemini/antigravity-cli/log/cli-20260907_135357.log
+python app/tool/filter_antigravity_log.py -f cli-20260907_135357.log -o filtered.log
+
+# PowerShell 包裝器（同參數）
+powershell -ExecutionPolicy Bypass -File app/tool/filter_antigravity_log.ps1
+powershell -ExecutionPolicy Bypass -File app/tool/filter_antigravity_log.ps1 -Stats
+powershell -ExecutionPolicy Bypass -File app/tool/filter_antigravity_log.ps1 -Follow
+```
+
+### 過濾規則
+
+| 規則 | 匹配 | 預設 |
+|------|------|------|
+| `grep_handler.go:518` | `grep_handler.go:518.*Error parsing grep result` | 丟棄 |
+| Fake ERROR/INFO | `logging before google.Init: I\d{4}` | 丟棄 |
+| `CORTEX_MEMORY_TRIGGER_UNSPECIFIED` / `empty component` | 僅 `--aggressive` | 保留 |
+
+保留所有真 `E`/`W`（如 `token source`、`quota` 等需關注錯誤）。
