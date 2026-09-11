@@ -150,7 +150,11 @@ class _LibraryScreenState extends State<LibraryScreen>
     _bookListController = LibraryBookListController(
       repository: widget.repository,
     )..addListener(_onBookListChanged);
-    _batchActions = LibraryBatchActions(repository: widget.repository);
+    _batchActions = LibraryBatchActions(
+      repository: widget.repository,
+      fullTextSearchSettingsRepository:
+          widget.readerFeatureRepositories.fullTextSearchSettingsRepository,
+    );
     widget.refreshSignal?.addListener(_onExternalRefreshRequested);
     _initialize();
   }
@@ -169,6 +173,20 @@ class _LibraryScreenState extends State<LibraryScreen>
     if (widget.refreshSignal != oldWidget.refreshSignal) {
       oldWidget.refreshSignal?.removeListener(_onExternalRefreshRequested);
       widget.refreshSignal?.addListener(_onExternalRefreshRequested);
+    }
+    // 【review-plan-issue-2.md M-2】_batchActions 在 initState() 建構時
+    // 捕捉了當下的 repository/fullTextSearchSettingsRepository 參考；
+    // LibraryReaderFeatureRepositories 沒有覆寫 ==（預設參考相等），上層
+    // 每次 build() 重新建構這個 bundle 時這裡幾乎都會判定為「已變更」而
+    // 重新建構 _batchActions——成本極低（純資料持有物件），不需要額外
+    // 優化，重點是不遺漏真正的替換情境。
+    if (widget.readerFeatureRepositories != oldWidget.readerFeatureRepositories ||
+        widget.repository != oldWidget.repository) {
+      _batchActions = LibraryBatchActions(
+        repository: widget.repository,
+        fullTextSearchSettingsRepository:
+            widget.readerFeatureRepositories.fullTextSearchSettingsRepository,
+      );
     }
   }
 
