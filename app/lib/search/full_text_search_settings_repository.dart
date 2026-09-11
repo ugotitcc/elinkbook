@@ -86,9 +86,11 @@ class SqliteFullTextSearchSettingsRepository
   /// 把 `content_index_status` 中尚無資料列、且格式符合 [category]、且已
   /// 下載的既有書籍批次插入 `pending`（spec.md §4／§7：未下載的雲端書籍
   /// 不建立列）。已有資料列的書籍一律跳過，不重複插入也不覆蓋既有
-  /// status。**`foliate` 分類額外**把既有尚無資料列的 `cbz` 書籍批次標記
-  /// 為 `unsupported`（review-plan-issue-3.md I-2），不進入 `pending`
-  /// 佇列。
+  /// status。**`foliate` 分類額外**把既有尚無資料列、且已下載的 `cbz`
+  /// 書籍批次標記為 `unsupported`（review-plan-issue-3.md I-2，同樣套用
+  /// `is_downloaded = 1` 篩選以維持與 spec.md §7「未下載書籍不建立
+  /// content_index_status 列」規則一致，未下載的 CBZ 留給 Issue 2 下載
+  /// 完成事件處理），不進入 `pending` 佇列。
   Future<void> _backfillPending(ContentIndexCategory category) async {
     final formatFilter = _formatFilterFor(category);
     final now = DateTime.now().millisecondsSinceEpoch;
@@ -108,6 +110,7 @@ class SqliteFullTextSearchSettingsRepository
         FROM books b
         LEFT JOIN content_index_status cis ON cis.book_id = b.id
         WHERE cis.book_id IS NULL
+          AND b.is_downloaded = 1
           AND b.format = 'cbz'
       ''', [now]);
     }

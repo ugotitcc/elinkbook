@@ -715,7 +715,7 @@ class SqliteFullTextSearchSettingsRepository
 - [x] **Step 4：執行測試，確認通過**
 
 Run: `flutter test test/search/full_text_search_settings_repository_test.dart`
-Expected: PASS（12 項測試全過）。
+Expected: PASS（11 項測試全過）。
 
 - [x] **Step 5：`flutter analyze`**
 
