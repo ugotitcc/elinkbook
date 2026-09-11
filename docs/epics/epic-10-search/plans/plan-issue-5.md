@@ -1,6 +1,6 @@
 # Epic 10 Issue 5：搜尋跳轉 Seam（`ReaderScreen.initialJumpTarget`＋暫態高亮）Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** 讓使用者從全庫搜尋（Issue 4 的 `LibrarySearchScreen`）點擊一則內容匹配片段後，真正開書並精確跳轉到該片段所在位置（Foliate：CFI；PDF：頁碼＋頁內座標），抵達後顯示 3 秒暫態高亮提示，且完全不影響使用者原本既有的閱讀進度記錄機制。
 
@@ -68,7 +68,7 @@
   ```
   `ReaderScreen` 新增可選具名建構參數 `initialJumpTarget`（型別 `ReaderJumpTarget?`）。供 Task 4（暫態高亮觸發）與 Task 5（`LibrarySearchScreen` 呼叫端）使用。
 
-- [ ] **Step 1：寫一組會失敗的測試（`ReaderJumpTarget.fromContentLocator`）**
+- [x] **Step 1：寫一組會失敗的測試（`ReaderJumpTarget.fromContentLocator`）**
 
 建立 `app/test/reader/reader_jump_target_test.dart`：
 
@@ -164,12 +164,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：執行測試，確認因 `reader_jump_target.dart` 不存在而失敗**
+- [x] **Step 2：執行測試，確認因 `reader_jump_target.dart` 不存在而失敗**
 
 Run: `flutter test test/reader/reader_jump_target_test.dart`
 Expected: FAIL（`Target of URI doesn't exist: 'package:elinkbook/reader/reader_jump_target.dart'`）
 
-- [ ] **Step 3：實作 `reader_jump_target.dart`**
+- [x] **Step 3：實作 `reader_jump_target.dart`**
 
 ```dart
 // app/lib/reader/reader_jump_target.dart
@@ -249,17 +249,17 @@ class ReaderJumpTarget {
 }
 ```
 
-- [ ] **Step 4：執行測試，確認全數通過**
+- [x] **Step 4：執行測試，確認全數通過**
 
 Run: `flutter test test/reader/reader_jump_target_test.dart`
 Expected: PASS（全部 6 個測試）
 
-- [ ] **Step 5：`flutter analyze`**
+- [x] **Step 5：`flutter analyze`**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/lib/reader/reader_jump_target.dart app/test/reader/reader_jump_target_test.dart
@@ -272,7 +272,7 @@ EOF
 )"
 ```
 
-- [ ] **Step 7：寫一組會失敗的測試（`ReaderScreen.initialJumpTarget` 覆寫初始定位）**
+- [x] **Step 7：寫一組會失敗的測試（`ReaderScreen.initialJumpTarget` 覆寫初始定位）**
 
 在 `app/test/screens/reader_screen_test.dart`，於 import 區塊新增：
 
@@ -485,12 +485,12 @@ import 'package:elinkbook/reader/reading_position.dart';
   });
 ```
 
-- [ ] **Step 8：執行測試，確認因 `initialJumpTarget` 尚不存在而失敗**
+- [x] **Step 8：執行測試，確認因 `initialJumpTarget` 尚不存在而失敗**
 
 Run: `flutter test test/screens/reader_screen_test.dart`
 Expected: FAIL（`no parameter named 'initialJumpTarget'`）
 
-- [ ] **Step 9：`ReaderScreen` 新增 `initialJumpTarget` 建構參數**
+- [x] **Step 9：`ReaderScreen` 新增 `initialJumpTarget` 建構參數**
 
 在 `app/lib/screens/reader_screen.dart`，於 import 區塊新增（緊接在既有 `import '../reader/reader_console_log.dart';` 之後）：
 
@@ -704,17 +704,17 @@ import '../reader/reader_jump_target.dart';
     switch (format) {
 ```
 
-- [ ] **Step 10：執行測試，確認全數通過**
+- [x] **Step 10：執行測試，確認全數通過**
 
 Run: `flutter test test/screens/reader_screen_test.dart`
 Expected: PASS（全套既有測試＋本 Task 新增 5 個測試皆通過，無回歸）
 
-- [ ] **Step 11：`flutter analyze`**
+- [x] **Step 11：`flutter analyze`**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 12：Commit**
+- [x] **Step 12：Commit**
 
 ```bash
 git add app/lib/screens/reader_screen.dart app/test/screens/reader_screen_test.dart
@@ -748,7 +748,7 @@ EOF
   ```
   供 Task 4 的 `ReaderScreen` 呼叫；渲染出的 widget 帶 `Key('pdf_reader_jump_highlight_$pageIndex')`。
 
-- [ ] **Step 1：寫一組會失敗的測試**
+- [x] **Step 1：寫一組會失敗的測試**
 
 建立 `app/test/reader/pdf_reader_view_jump_highlight_test.dart`：
 
@@ -876,12 +876,12 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：執行測試，確認因靜態方法不存在而失敗**
+- [x] **Step 2：執行測試，確認因靜態方法不存在而失敗**
 
 Run: `flutter test test/reader/pdf_reader_view_jump_highlight_test.dart`
 Expected: FAIL（`showTemporaryHighlight isn't defined`）
 
-- [ ] **Step 3：`pdf_reader_view.dart` 新增暫態高亮狀態與靜態方法**
+- [x] **Step 3：`pdf_reader_view.dart` 新增暫態高亮狀態與靜態方法**
 
 找到（`setSearchHighlights` 靜態方法區塊，緊接在其後）：
 
@@ -978,7 +978,7 @@ Expected: FAIL（`showTemporaryHighlight isn't defined`）
   }
 ```
 
-- [ ] **Step 4：`_buildProcessedOverlay()` 新增暫態高亮的疊加渲染**
+- [x] **Step 4：`_buildProcessedOverlay()` 新增暫態高亮的疊加渲染**
 
 找到：
 
@@ -1041,7 +1041,7 @@ Expected: FAIL（`showTemporaryHighlight isn't defined`）
     widgets.add(_buildSelectionGestureLayer(pageIndex, pageRectInViewer));
 ```
 
-- [ ] **Step 5：新增 `_buildJumpHighlightWidget()`**
+- [x] **Step 5：新增 `_buildJumpHighlightWidget()`**
 
 找到 `_buildSearchHighlightWidget()` 方法本體結尾的 `}`（該方法定義區塊結束處），在其後新增：
 
@@ -1079,17 +1079,17 @@ Expected: FAIL（`showTemporaryHighlight isn't defined`）
   }
 ```
 
-- [ ] **Step 6：執行測試，確認全數通過**
+- [x] **Step 6：執行測試，確認全數通過**
 
 Run: `flutter test test/reader/pdf_reader_view_jump_highlight_test.dart`
 Expected: PASS（全部 4 個測試）
 
-- [ ] **Step 7：`flutter analyze`**
+- [x] **Step 7：`flutter analyze`**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 8：Commit**
+- [x] **Step 8：Commit**
 
 ```bash
 git add app/lib/reader/pdf_reader_view.dart app/test/reader/pdf_reader_view_jump_highlight_test.dart
@@ -1125,7 +1125,7 @@ EOF
 
 **本 Task 的 TDD 紅燈只涵蓋 Step 1-2（main.js regression guard，可在實作前先失敗）**——比照本計畫 Global Constraints「誠實測試邊界」說明，`FoliateReaderView` 的 JS 呼叫在 `flutter_test` 環境下無法被攔截斷言，既有 `showTtsHighlight`/`clearTtsHighlight` 兩個靜態方法本身也沒有對應的 Dart 級測試，故 Step 4 的 Dart 端靜態方法新增沒有對應的獨立紅燈步驟（改由 Step 5 與 Task 4 的 `ReaderScreen` widget test 一併涵蓋「wiring 不崩潰」）。
 
-- [ ] **Step 1：寫一組會失敗的測試（main.js regression guard）**
+- [x] **Step 1：寫一組會失敗的測試（main.js regression guard）**
 
 在 `app/test/reader/foliate_reader_view_test.dart`，於既有 `group('main.js 朗讀高亮 regression guard（epic-34-tts-readalong Issue 3，ADR 0026）', () { ... });` 區塊結束的 `});` 之後（緊接在其後，`group('main.js 朗讀段反向查找 regression guard...')` 之前）新增：
 
@@ -1230,12 +1230,12 @@ EOF
   });
 ```
 
-- [ ] **Step 2：執行測試，確認因 `main.js`／Dart 端靜態方法尚未新增而失敗**
+- [x] **Step 2：執行測試，確認因 `main.js`／Dart 端靜態方法尚未新增而失敗**
 
 Run: `flutter test test/reader/foliate_reader_view_test.dart`
 Expected: FAIL（`window.showSearchHighlight = function` 等字串在目前 `main.js` 內找不到）
 
-- [ ] **Step 3：`main.js` 新增 `window.showSearchHighlight`/`window.clearSearchHighlight`**
+- [x] **Step 3：`main.js` 新增 `window.showSearchHighlight`/`window.clearSearchHighlight`**
 
 找到：
 
@@ -1297,7 +1297,7 @@ window.clearSearchHighlight = function () {
 }
 ```
 
-- [ ] **Step 4：`foliate_reader_view.dart` 新增對應的 Dart 端靜態方法**
+- [x] **Step 4：`foliate_reader_view.dart` 新增對應的 Dart 端靜態方法**
 
 找到：
 
@@ -1355,17 +1355,17 @@ window.clearSearchHighlight = function () {
   }
 ```
 
-- [ ] **Step 5：執行測試，確認全數通過**
+- [x] **Step 5：執行測試，確認全數通過**
 
 Run: `flutter test test/reader/foliate_reader_view_test.dart`
 Expected: PASS（既有測試＋本 Task 新增 4 個測試皆通過）
 
-- [ ] **Step 6：`flutter analyze`**
+- [x] **Step 6：`flutter analyze`**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 7：Commit**
+- [x] **Step 7：Commit**
 
 ```bash
 git add app/android/app/src/main/assets/foliate/main.js app/lib/reader/foliate_reader_view.dart app/test/reader/foliate_reader_view_test.dart
@@ -1390,7 +1390,7 @@ EOF
 - Consumes：Task 1 的 `widget.initialJumpTarget`；Task 2 的 `PdfReaderView.showTemporaryHighlight`/`clearTemporaryHighlight`；Task 3 的 `FoliateReaderView.showSearchHighlight`/`clearSearchHighlight`。
 - Produces：`_ReaderScreenState` 私有方法 `_maybeShowSearchJumpHighlight()`（供 `_handlePageRendered()` 呼叫）／`_clearSearchJumpHighlight()`（供 `_handleZoneAction()`／`dispose()` 呼叫），無新公開 API。
 
-- [ ] **Step 1：寫一組會失敗的測試**
+- [x] **Step 1：寫一組會失敗的測試**
 
 在 `app/test/screens/reader_screen_test.dart`，於 Task 1 新增的 `group('epic-10-search Issue 5：initialJumpTarget 覆寫初始定位', ...)` 區塊之後（緊接在其 `});` 後）新增：
 
@@ -1590,12 +1590,12 @@ EOF
   });
 ```
 
-- [ ] **Step 2：執行測試，確認因暫態高亮觸發邏輯不存在而失敗**
+- [x] **Step 2：執行測試，確認因暫態高亮觸發邏輯不存在而失敗**
 
 Run: `flutter test test/screens/reader_screen_test.dart`
 Expected: FAIL（新增的暫態高亮測試找不到 `pdf_reader_jump_highlight_0`）
 
-- [ ] **Step 3：`ReaderScreen` 新增 Timer 欄位**
+- [x] **Step 3：`ReaderScreen` 新增 Timer 欄位**
 
 找到：
 
@@ -1628,7 +1628,7 @@ Expected: FAIL（新增的暫態高亮測試找不到 `pdf_reader_jump_highlight
   void initState() {
 ```
 
-- [ ] **Step 4：`dispose()` 新增計時器清理**
+- [x] **Step 4：`dispose()` 新增計時器清理**
 
 找到：
 
@@ -1651,7 +1651,7 @@ Expected: FAIL（新增的暫態高亮測試找不到 `pdf_reader_jump_highlight
     _ttsSleepTimer?.cancel();
 ```
 
-- [ ] **Step 5：`_handlePageRendered()` 觸發暫態高亮**
+- [x] **Step 5：`_handlePageRendered()` 觸發暫態高亮**
 
 找到（`_handlePageRendered()` 方法本體結尾）：
 
@@ -1748,7 +1748,7 @@ Expected: FAIL（新增的暫態高亮測試找不到 `pdf_reader_jump_highlight
   }
 ```
 
-- [ ] **Step 6：`_handleZoneAction()` 統一入口新增提前清除呼叫**
+- [x] **Step 6：`_handleZoneAction()` 統一入口新增提前清除呼叫**
 
 找到：
 
@@ -1772,17 +1772,17 @@ Expected: FAIL（新增的暫態高亮測試找不到 `pdf_reader_jump_highlight
     switch (action) {
 ```
 
-- [ ] **Step 7：執行測試，確認全數通過**
+- [x] **Step 7：執行測試，確認全數通過**
 
 Run: `flutter test test/screens/reader_screen_test.dart`
 Expected: PASS（全套既有測試＋本 Task 新增 5 個測試皆通過，無回歸）
 
-- [ ] **Step 8：`flutter analyze`**
+- [x] **Step 8：`flutter analyze`**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 9：Commit**
+- [x] **Step 9：Commit**
 
 ```bash
 git add app/lib/screens/reader_screen.dart app/test/screens/reader_screen_test.dart
@@ -1807,7 +1807,7 @@ EOF
 - Consumes：Task 1 的 `ReaderJumpTarget.fromContentLocator()`；Task 4 完成後的 `ReaderScreen.initialJumpTarget`。
 - Produces：無新公開 API，`_openBook()` 新增可選具名參數 `jumpTarget`。
 
-- [ ] **Step 1：寫一組會失敗的測試**
+- [x] **Step 1：寫一組會失敗的測試**
 
 在 `app/test/screens/library_search_screen_test.dart`，於 import 區塊新增：
 
@@ -1972,12 +1972,12 @@ Book _testBook({
   });
 ```
 
-- [ ] **Step 2：執行測試，確認因 `_openBook` 尚未支援 `jumpTarget` 而失敗**
+- [x] **Step 2：執行測試，確認因 `_openBook` 尚未支援 `jumpTarget` 而失敗**
 
 Run: `flutter test test/screens/library_search_screen_test.dart`
 Expected: FAIL（`initialJumpTarget` 恆為 `null`，前兩個新測試斷言失敗）
 
-- [ ] **Step 3：`library_search_screen.dart` 新增 `jumpTarget` 參數並帶入內容匹配片段**
+- [x] **Step 3：`library_search_screen.dart` 新增 `jumpTarget` 參數並帶入內容匹配片段**
 
 在 import 區塊新增：
 
@@ -2103,22 +2103,22 @@ import '../reader/reader_jump_target.dart';
             ),
 ```
 
-- [ ] **Step 4：執行測試，確認全數通過**
+- [x] **Step 4：執行測試，確認全數通過**
 
 Run: `flutter test test/screens/library_search_screen_test.dart`
 Expected: PASS（既有測試＋本 Task 新增 3 個測試皆通過）
 
-- [ ] **Step 5：`flutter analyze`**
+- [x] **Step 5：`flutter analyze`**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6：跑本次全部異動觸及的測試檔，確認整體沒有回歸**
+- [x] **Step 6：跑本次全部異動觸及的測試檔，確認整體沒有回歸**
 
 Run: `flutter test test/reader/reader_jump_target_test.dart test/reader/pdf_reader_view_jump_highlight_test.dart test/reader/foliate_reader_view_test.dart test/screens/reader_screen_test.dart test/screens/library_search_screen_test.dart`
 Expected: PASS（本計畫新增與修改的所有測試檔皆通過）
 
-- [ ] **Step 7：Commit**
+- [x] **Step 7：Commit**
 
 ```bash
 git add app/lib/screens/library_search_screen.dart app/test/screens/library_search_screen_test.dart
@@ -2131,14 +2131,14 @@ EOF
 )"
 ```
 
-- [ ] **Step 8：跑本工單所屬 Epic 收尾前的全套測試**
+- [x] **Step 8：跑本工單所屬 Epic 收尾前的全套測試**
 
 本工單是 Epic 10（全文檢索）依 `issues.md` 依賴圖規劃的最後一個 Issue（Issue 6 為獨立、已完成的相容性缺陷修復），依專案慣例「整張計畫的最後一個 Task 完成時」跑一次完整 `flutter test`：
 
 Run: `flutter test`
 Expected: `All tests passed!`（比照 `plan-issue-0.md`／`plan-issue-3.md` 既有收尾慣例；若有與本計畫無關的既有失敗，先確認是否為既有已知問題，非本計畫引入的回歸）
 
-- [ ] **Step 9：（人類／執行者手動）真機或模擬器驗證**
+- [x] **Step 9：（人類／執行者手動）真機或模擬器驗證**
 
 `flutter run` 啟動 App：
 1. 進入全庫搜尋畫面（需已啟用全文檢索並完成背景索引，見 Issue 3/4），搜尋一個已知存在於某本 EPUB 書內容中的詞彙。
