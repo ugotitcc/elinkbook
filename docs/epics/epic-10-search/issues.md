@@ -118,7 +118,7 @@ Issue 6（獨立，無依賴，但修改 Issue 0 已交付的 schema，需一併
 
 ## Issue 4：全庫搜尋畫面（`LibrarySearchScreen`）
 
-**Status:** ready-for-agent（`plans/plan-issue-4.md` 已撰寫，4 個 Task，待認領執行）
+**Status:** completed（`plans/plan-issue-4.md` 4 個 Task 全數完成，`reviews/review-plan-issue-4.md` 計畫審查 1 Critical／5 Important／4 Minor 全數採納修訂後，`reviews/review-issue-4.md` 程式審查 0 Critical／0 Important／3 Minor，3 項 Minor 皆已修正；PR #234 已合併）
 
 **依賴：** Issue 1（需要有實際索引資料可查）、Issue 3（需要開關/引導卡片狀態）
 
