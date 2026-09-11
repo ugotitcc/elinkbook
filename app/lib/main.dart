@@ -55,6 +55,7 @@ import 'search/content_indexing_scheduler.dart';
 import 'search/foliate_content_indexer.dart';
 import 'search/full_text_search_settings_repository.dart';
 import 'search/pdf_content_indexer.dart';
+import 'search/search_repository.dart';
 import 'theme/app_theme_preferences.dart';
 
 /// [LibraryScreen.isMobileDataConnection] 生產環境實作
@@ -115,6 +116,11 @@ Future<void> main() async {
       SqliteFullTextSearchSettingsRepository(
     database: repository.database,
     requestProcessing: contentIndexingScheduler.requestProcessing,
+  );
+  // epic-10-search Issue 4：全庫搜尋資料存取層，直接對同一個 Database
+  // 連線下 SQL（比照 fullTextSearchSettingsRepository 既有慣例）。
+  final searchRepository = SqliteSearchRepository(
+    database: repository.database,
   );
   // epic-10-search Issue 2：新書匯入（含 CBZ 標記 unsupported）需要
   // fullTextSearchSettingsRepository（見 plans/plan-issue-2.md），因此
@@ -267,6 +273,7 @@ Future<void> main() async {
       themePreferences: themePreferences,
       fullTextSearchSettingsRepository: fullTextSearchSettingsRepository,
       isFullTextSearchAvailable: repository.isFullTextSearchAvailable,
+      searchRepository: searchRepository,
     ),
   );
 }
@@ -313,6 +320,7 @@ class ElinkBookApp extends StatefulWidget {
   final bool initialEinkMode;
   final FullTextSearchSettingsRepository? fullTextSearchSettingsRepository;
   final bool isFullTextSearchAvailable;
+  final SearchRepository? searchRepository;
 
   ElinkBookApp({
     super.key,
@@ -350,6 +358,7 @@ class ElinkBookApp extends StatefulWidget {
     this.initialEinkMode = false,
     this.fullTextSearchSettingsRepository,
     this.isFullTextSearchAvailable = true,
+    this.searchRepository,
     AppThemePreferences? themePreferences,
   }) : themePreferences = themePreferences ?? AppThemePreferences();
 
@@ -425,6 +434,7 @@ class _ElinkBookAppState extends State<ElinkBookApp>
           fullTextSearchSettingsRepository:
               widget.fullTextSearchSettingsRepository,
           isFullTextSearchAvailable: widget.isFullTextSearchAvailable,
+          searchRepository: widget.searchRepository,
         ),
         syncDependencies: LibrarySyncDependencies(
           syncAccountRepository: widget.syncAccountRepository,
