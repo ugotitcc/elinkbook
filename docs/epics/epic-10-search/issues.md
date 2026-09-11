@@ -67,7 +67,7 @@ Issue 6（獨立，無依賴，但修改 Issue 0 已交付的 schema，需一併
 
 ## Issue 2：CBZ／DRM KF8／未下載與移除快取書籍的索引狀態處理
 
-**Status:** ready-for-agent
+**Status:** completed（`plans/plan-issue-2.md` 5 個 Task 全數完成，`reviews/review-plan-issue-2.md` 計畫審查 2 Critical／2 Important／2 Minor 全數採納修訂後，`reviews/review-issue-2.md` 程式審查 0 Critical／1 Important／3 Minor，Important〔計畫文件收尾 commit 編碼損毀〕與 Minor〔多餘 unused_import 抑制註解〕皆已修正；PR #233 已合併。DRM KF8 查證後確認現行匯入架構下無 `Book` 記錄可標記，不實作任何程式碼，詳見計畫 Global Constraints）
 
 **依賴：** Issue 1、**Issue 3**（下載完成事件需要查詢 `FullTextSearchSettingsRepository.isEnabled(category)` 判斷該格式當下是否啟用，才知道要不要插入 `pending`——這是「啟用全文檢索」拆成 PDF／其他格式兩個開關後新增的依賴，原提案 Issue 2 與 Issue 3 可平行，現在不行）
 
