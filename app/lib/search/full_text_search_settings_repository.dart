@@ -2,6 +2,9 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart';
 
+import '../library/models/book.dart';
+import '../library/models/library_enums.dart';
+
 /// 「啟用全文檢索」的兩個獨立分類（epic-10-search Issue 3，見 spec.md
 /// §4）：PDF 走純 Dart/FFI 但可能因掃描件缺乏文字層而索引無效；其餘格式
 /// （Foliate：epub/txt/azw3/md，**不含 cbz**——見下方 `_formatFilterFor`
@@ -18,6 +21,28 @@ abstract class FullTextSearchSettingsRepository {
   Future<bool> isEnabled(ContentIndexCategory category);
   Future<void> setEnabled(ContentIndexCategory category, bool value);
   Future<void> rebuildIndex(ContentIndexCategory category);
+
+  /// 把 [bookId] 標記為 `content_index_status.status = 'unsupported'`
+  /// （epic-10-search Issue 2，見 spec.md §7）：CBZ 匯入當下呼叫，天生被
+  /// 排程器的 pending 查詢排除（`status != 'pending'/'indexing'`）。已有
+  /// 資料列時不覆蓋。
+  Future<void> markUnsupported(String bookId);
+
+  /// [book] 剛變成本機可用（首次匯入完成，或既有書籍重新下載完成）時
+  /// 呼叫（epic-10-search Issue 2，見 spec.md §7）：CBZ 一律標記
+  /// `unsupported`；其餘格式依 `book.format` 對應的 [ContentIndexCategory]
+  /// 是否已啟用，已啟用才補插入一筆 `status='pending'` 並喚醒排程器，未
+  /// 啟用則不插入。`book.isDownloaded` 必須為 `true`——`false` 時直接不做
+  /// 任何事（spec.md §7：未下載書籍不建立 `content_index_status` 列），
+  /// 呼叫端不需要自行檢查（review-plan-issue-2.md I-1）。已有資料列時
+  /// 不覆蓋。
+  Future<void> handleBookAvailable(Book book);
+
+  /// 移除 [bookId] 本機快取（`is_downloaded` 轉回 0）時呼叫（epic-10-search
+  /// Issue 2，見 spec.md §7）：清除該書的 `book_content_index`／
+  /// `content_index_status` 資料列，比照「重建索引」同一段清除邏輯但只
+  /// 針對單一書籍。
+  Future<void> clearBookIndex(String bookId);
 }
 
 /// [FullTextSearchSettingsRepository] 正式實作：開關本身存 `SharedPreferences`
@@ -81,6 +106,61 @@ class SqliteFullTextSearchSettingsRepository
     await _clearIndexData(category);
     await _backfillPending(category);
     _requestProcessing();
+  }
+
+  @override
+  Future<void> markUnsupported(String bookId) async {
+    await _database.insert(
+      'content_index_status',
+      {
+        'book_id': bookId,
+        'status': 'unsupported',
+        'updated_at': DateTime.now().millisecondsSinceEpoch,
+      },
+      conflictAlgorithm: ConflictAlgorithm.ignore,
+    );
+  }
+
+  @override
+  Future<void> handleBookAvailable(Book book) async {
+    // 【review-plan-issue-2.md I-1】把 spec.md §7 的不變量收斂進方法本身，
+    // 不依賴每個呼叫端自行檢查。
+    if (!book.isDownloaded) return;
+    if (book.format == BookFileFormat.cbz) {
+      // 【規劃階段查證】一本 Calibre/OPDS 來源的 CBZ 書籍可能因移除快取
+      // 而先被 clearBookIndex() 清掉既有的 unsupported 列，重新下載完成
+      // 時必須重新標記回 unsupported，不可誤判成走一般 pending 流程。
+      await markUnsupported(book.id);
+      return;
+    }
+    final category = book.format == BookFileFormat.pdf
+        ? ContentIndexCategory.pdf
+        : ContentIndexCategory.foliate;
+    if (!await isEnabled(category)) return;
+    await _database.insert(
+      'content_index_status',
+      {
+        'book_id': book.id,
+        'status': 'pending',
+        'updated_at': DateTime.now().millisecondsSinceEpoch,
+      },
+      conflictAlgorithm: ConflictAlgorithm.ignore,
+    );
+    // 【review-plan-issue-2.md C-1】遺漏這行會讓新書卡死在 pending，直到
+    // 使用者恰好切換 App 前後台或開關閱讀畫面才會被動喚醒——比照既有
+    // setEnabled(true)/rebuildIndex() 既有慣例，插入 pending 後必須主動
+    // 喚醒排程器。
+    _requestProcessing();
+  }
+
+  @override
+  Future<void> clearBookIndex(String bookId) async {
+    await _database.transaction((txn) async {
+      await txn.delete('book_content_index',
+          where: 'book_id = ?', whereArgs: [bookId]);
+      await txn.delete('content_index_status',
+          where: 'book_id = ?', whereArgs: [bookId]);
+    });
   }
 
   /// 把 `content_index_status` 中尚無資料列、且格式符合 [category]、且已
