@@ -17,7 +17,6 @@ import 'package:elinkbook/search/search_repository.dart';
 import 'package:elinkbook/theme/app_theme.dart';
 import 'package:elinkbook/theme/app_theme_data.dart';
 import 'package:elinkbook/reader/percent_rect.dart';
-import 'package:elinkbook/reader/reader_jump_target.dart';
 
 import '../support/fake_full_text_search_settings_repository.dart';
 import '../support/fake_library_repository.dart';
