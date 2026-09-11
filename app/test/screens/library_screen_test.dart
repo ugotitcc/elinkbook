@@ -15,6 +15,10 @@ import 'package:elinkbook/reader/reader_prefs_manager.dart';
 import 'package:elinkbook/screens/library_paging.dart';
 import 'package:elinkbook/screens/library_screen.dart';
 import 'package:elinkbook/screens/library_screen_dependencies.dart';
+// ignore: unused_import
+import 'package:elinkbook/search/full_text_search_settings_repository.dart';
+
+import '../support/fake_full_text_search_settings_repository.dart';
 import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/book_group.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
@@ -3497,6 +3501,61 @@ void main() {
       expect(opdsClient.downloadBookCalls, [
         'http://192.168.1.100:8080/opds/download/1.epub',
       ]);
+    });
+
+    testWidgets(
+        '重新下載完成後呼叫 fullTextSearchSettingsRepository.handleBookAvailable'
+        '（epic-10-search Issue 2）', (tester) async {
+      final repository = FakeLibraryRepository(initialBooks: [pendingBook()]);
+      final opdsClient = FakeOpdsClient();
+      final fullTextSearchSettingsRepository =
+          FakeFullTextSearchSettingsRepository();
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: LibraryScreen(
+            repository: repository,
+            importService: FakeBookImportService(),
+            prefsManager: FakeReaderPrefsManager(),
+            remoteLibraryDependencies: LibraryRemoteLibraryDependencies(
+              remoteServerRepository: FakeRemoteServerRepository(
+                initialServers: [server],
+              ),
+              createOpdsClient: () => opdsClient,
+            ),
+            readerFeatureRepositories: LibraryReaderFeatureRepositories(
+              fullTextSearchSettingsRepository:
+                  fullTextSearchSettingsRepository,
+            ),
+            isMobileDataConnection: () async => false,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('book_item_b1')));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const Key('library_redownload_confirm_button')),
+      );
+      await tester.pump();
+
+      for (var i = 0; i < 30; i++) {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 50)),
+        );
+        await tester.pump();
+      }
+      await tester.pumpAndSettle();
+
+      expect(
+        fullTextSearchSettingsRepository.handleBookAvailableCalls,
+        hasLength(1),
+      );
+      final calledWith =
+          fullTextSearchSettingsRepository.handleBookAvailableCalls.single;
+      expect(calledWith.id, 'b1');
+      expect(calledWith.isDownloaded, isTrue);
     });
 
     testWidgets('下載失敗時顯示錯誤訊息，書籍狀態不變', (tester) async {

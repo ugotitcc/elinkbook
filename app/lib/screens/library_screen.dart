@@ -555,9 +555,25 @@ class _LibraryScreenState extends State<LibraryScreen>
 
       final permanentPath = await promoteToPermanent(tempPath);
 
-      await widget.repository.updateBook(
-        book.copyWith(filePath: permanentPath, isDownloaded: true),
+      final updatedBook = book.copyWith(
+        filePath: permanentPath,
+        isDownloaded: true,
       );
+      await widget.repository.updateBook(updatedBook);
+      // epic-10-search Issue 2（spec.md §7）：重新下載完成＝既有
+      // content_index_status 列已因先前的「移除本機快取」被清空（見本
+      // 計畫 Task 4），此處補上對應的 unsupported/pending 標記，讓這本
+      // 書重新回到正確的索引狀態。search-index 只是衍生資料，寫入失敗
+      // 不應讓使用者眼中「檔案已下載成功」被誤判為失敗
+      // （review-plan-issue-2.md M-1）。
+      try {
+        await widget
+            .readerFeatureRepositories.fullTextSearchSettingsRepository
+            ?.handleBookAvailable(updatedBook);
+      } catch (_) {
+        // 靜默略過——檔案下載與資料庫標記更新才是核心操作，索引狀態可
+        // 日後透過「重建索引」補上。
+      }
       if (!mounted) return;
       await _bookListController.loadBooks();
     } catch (_) {
