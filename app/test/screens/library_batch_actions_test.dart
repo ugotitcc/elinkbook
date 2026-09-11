@@ -3,8 +3,6 @@ import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/book_group.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/screens/library_batch_actions.dart';
-// ignore: unused_import
-import 'package:elinkbook/search/full_text_search_settings_repository.dart';
 
 import '../support/fake_full_text_search_settings_repository.dart';
 import '../support/fake_library_repository.dart';

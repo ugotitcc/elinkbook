@@ -15,8 +15,6 @@ import 'package:elinkbook/reader/reader_prefs_manager.dart';
 import 'package:elinkbook/screens/library_paging.dart';
 import 'package:elinkbook/screens/library_screen.dart';
 import 'package:elinkbook/screens/library_screen_dependencies.dart';
-// ignore: unused_import
-import 'package:elinkbook/search/full_text_search_settings_repository.dart';
 
 import '../support/fake_full_text_search_settings_repository.dart';
 import 'package:elinkbook/library/models/book.dart';
