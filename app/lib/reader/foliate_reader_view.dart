@@ -438,6 +438,32 @@ class FoliateReaderView extends StatefulWidget {
     }
   }
 
+  /// 顯示搜尋跳轉的暫態高亮（epic-10-search Issue 5，spec.md §6）：呼叫
+  /// main.js window.showSearchHighlight()，底層走 view.js 既有的
+  /// `foliate-search:` 前綴（固定紅色外框樣式，無法客製化顏色/直排橫排/
+  /// E-Ink 樣式，見 main.js 該函式上方的完整查證註解與本計畫 Global
+  /// Constraints），與 [showTtsHighlight] 使用的 `foliate-note:` 完全
+  /// 獨立的 key 空間——兩者的生命週期與觸發時機互不相干，混用會互相
+  /// 汙染。
+  static void showSearchHighlight(
+    GlobalKey<State<FoliateReaderView>> key,
+    String cfi,
+  ) {
+    final state = key.currentState;
+    if (state is _FoliateReaderViewState) {
+      state._evaluate('window.showSearchHighlight(${jsonEncode(cfi)})');
+    }
+  }
+
+  /// 清除目前的搜尋跳轉暫態高亮，由 [ReaderScreen] 的 Dart 端 Timer
+  /// （3 秒）或使用者提前翻頁/點擊畫面時呼叫。
+  static void clearSearchHighlight(GlobalKey<State<FoliateReaderView>> key) {
+    final state = key.currentState;
+    if (state is _FoliateReaderViewState) {
+      state._evaluate('window.clearSearchHighlight()');
+    }
+  }
+
   /// 主動清除 WebView 原生文字選取狀態（epic-25 Issue 3，見 main.js
   /// window.clearSelection 註解）。
   static void clearSelection(GlobalKey<State<FoliateReaderView>> key) {

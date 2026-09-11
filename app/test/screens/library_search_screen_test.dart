@@ -16,18 +16,24 @@ import 'package:elinkbook/search/full_text_search_settings_repository.dart';
 import 'package:elinkbook/search/search_repository.dart';
 import 'package:elinkbook/theme/app_theme.dart';
 import 'package:elinkbook/theme/app_theme_data.dart';
+import 'package:elinkbook/reader/percent_rect.dart';
 
 import '../support/fake_full_text_search_settings_repository.dart';
 import '../support/fake_library_repository.dart';
 import '../support/fake_reader_prefs_manager.dart';
 import '../support/fake_search_repository.dart';
 
-Book _testBook({required String id, String title = '測試書', String? author}) {
+Book _testBook({
+  required String id,
+  String title = '測試書',
+  String? author,
+  BookFileFormat format = BookFileFormat.epub,
+}) {
   return Book(
     id: id,
     title: title,
     author: author,
-    format: BookFileFormat.epub,
+    format: format,
     filePath: 'content://example/$id.epub',
     source: BookSource.local,
     groupName: BookGroup.uncategorized,
@@ -345,6 +351,117 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(ReaderScreen), findsOneWidget);
+  });
+
+  testWidgets(
+      '點擊內容匹配片段開書時，帶入依 locator 解析出的 ReaderJumpTarget（epic-10-search Issue 5）',
+      (tester) async {
+    final book = _testBook(id: 'b1', title: '書一');
+    await tester.pumpWidget(
+      wrap(LibrarySearchScreen(
+        initialQuery: '關鍵字',
+        searchRepository: FakeSearchRepository(
+          contentResults: [
+            BookContentMatches(
+              book: book,
+              matches: const [
+                ContentMatchSnippet(
+                  snippet: '含有關鍵字的句子',
+                  locator: 'epubcfi(/6/2)',
+                ),
+              ],
+            ),
+          ],
+        ),
+        prefsManager: FakeReaderPrefsManager(),
+        libraryRepository: FakeLibraryRepository(),
+        readerFeatureRepositories: LibraryReaderFeatureRepositories(
+          fullTextSearchSettingsRepository:
+              FakeFullTextSearchSettingsRepository(initialEnabled: {
+            ContentIndexCategory.pdf: true,
+            ContentIndexCategory.foliate: true,
+          }),
+        ),
+      )),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.byKey(const Key('library_search_content_snippet_b1_0')),
+    );
+    await tester.pumpAndSettle();
+
+    final readerScreen = tester.widget<ReaderScreen>(find.byType(ReaderScreen));
+    expect(readerScreen.initialJumpTarget?.cfi, 'epubcfi(/6/2)');
+  });
+
+  testWidgets(
+      '內容匹配為 PDF 書籍時，帶入依 JSON locator 解析出的頁碼與座標（epic-10-search Issue 5）',
+      (tester) async {
+    final book = _testBook(id: 'b1', title: 'PDF 書', format: BookFileFormat.pdf);
+    await tester.pumpWidget(
+      wrap(LibrarySearchScreen(
+        initialQuery: '關鍵字',
+        searchRepository: FakeSearchRepository(
+          contentResults: [
+            BookContentMatches(
+              book: book,
+              matches: const [
+                ContentMatchSnippet(
+                  snippet: '含有關鍵字的句子',
+                  locator:
+                      '{"page":2,"rect":{"left":0.1,"top":0.2,"right":0.5,"bottom":0.3}}',
+                ),
+              ],
+            ),
+          ],
+        ),
+        prefsManager: FakeReaderPrefsManager(),
+        libraryRepository: FakeLibraryRepository(),
+        readerFeatureRepositories: LibraryReaderFeatureRepositories(
+          fullTextSearchSettingsRepository:
+              FakeFullTextSearchSettingsRepository(initialEnabled: {
+            ContentIndexCategory.pdf: true,
+            ContentIndexCategory.foliate: true,
+          }),
+        ),
+      )),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.byKey(const Key('library_search_content_snippet_b1_0')),
+    );
+    await tester.pumpAndSettle();
+
+    final readerScreen = tester.widget<ReaderScreen>(find.byType(ReaderScreen));
+    expect(readerScreen.initialJumpTarget?.pdfPageIndex, 2);
+    expect(
+      readerScreen.initialJumpTarget?.pdfRect,
+      const PercentRect(left: 0.1, top: 0.2, right: 0.5, bottom: 0.3),
+    );
+  });
+
+  testWidgets('點擊書名/作者匹配結果開書時，不帶 initialJumpTarget（一般開書路徑，零回歸）',
+      (tester) async {
+    final book = _testBook(id: 'b1', title: '書一');
+    await tester.pumpWidget(
+      wrap(LibrarySearchScreen(
+        initialQuery: '書一',
+        searchRepository: FakeSearchRepository(titleAuthorResults: [book]),
+        prefsManager: FakeReaderPrefsManager(),
+        libraryRepository: FakeLibraryRepository(),
+      )),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.byKey(const Key('library_search_title_author_result_b1')),
+    );
+    await tester.pumpAndSettle();
+
+    final readerScreen = tester.widget<ReaderScreen>(find.byType(ReaderScreen));
+    expect(readerScreen.initialJumpTarget, isNull);
   });
 
   testWidgets(

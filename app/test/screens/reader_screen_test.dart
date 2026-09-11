@@ -62,6 +62,8 @@ import 'package:elinkbook/library/sqlite_library_repository.dart';
 import 'package:elinkbook/reader/book_reader_prefs_repository.dart';
 import 'package:elinkbook/reader/layout_preset.dart';
 import 'package:elinkbook/reader/layout_preset_repository.dart';
+import 'package:elinkbook/reader/reader_jump_target.dart';
+import 'package:elinkbook/reader/reading_position.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 // 依 spec.md「測試決策」：ReaderScreen 分派到 EpubReaderView/PdfReaderView
@@ -120,6 +122,400 @@ void main() {
       const MethodChannel('elinkbook/fullscreen'),
       (call) async => null,
     );
+  });
+
+  group('epic-10-search Issue 5：initialJumpTarget 覆寫初始定位', () {
+    testWidgets('PDF：initialJumpTarget.pdfPageIndex 優先於資料庫既有 lastPosition',
+        (tester) async {
+      final prefsManager = FakeReaderPrefsManager(
+        readingPositionByBookId: {
+          'b_jump_pdf_pos': const ReadingPosition(pdfPageIndex: 4),
+        },
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample_multi_page.pdf',
+            bookId: 'b_jump_pdf_pos',
+            prefsManager: prefsManager,
+            initialJumpTarget: const ReaderJumpTarget(pdfPageIndex: 2),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+      expect(pdfView.initialPageIndex, 2);
+    });
+
+    testWidgets('Foliate：initialJumpTarget.cfi 優先於資料庫既有 lastPosition',
+        (tester) async {
+      final prefsManager = FakeReaderPrefsManager(
+        readingPositionByBookId: {
+          'b_jump_epub_pos': const ReadingPosition(
+            epubLocatorJson: 'epubcfi(/stored)',
+          ),
+        },
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_jump_epub_pos',
+            prefsManager: prefsManager,
+            initialJumpTarget: const ReaderJumpTarget(cfi: 'epubcfi(/jump)'),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final foliateView = tester.widget<FoliateReaderView>(
+        find.byType(FoliateReaderView),
+      );
+      expect(foliateView.initialLocatorJson, 'epubcfi(/jump)');
+    });
+
+    testWidgets(
+        'initialJumpTarget 為 null（一般開書）時，沿用資料庫既有 lastPosition，零回歸',
+        (tester) async {
+      final prefsManager = FakeReaderPrefsManager(
+        readingPositionByBookId: {
+          'b_no_jump_pos': const ReadingPosition(
+            epubLocatorJson: 'epubcfi(/stored)',
+          ),
+        },
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_no_jump_pos',
+            prefsManager: prefsManager,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final foliateView = tester.widget<FoliateReaderView>(
+        find.byType(FoliateReaderView),
+      );
+      expect(foliateView.initialLocatorJson, 'epubcfi(/stored)');
+    });
+
+    testWidgets(
+        'PDF：跳轉後使用者繼續翻頁，dispose() 的 checkpoint 存檔行為與未帶入 initialJumpTarget 時完全一致'
+        '（issues.md Issue 5 單元測試要求，審查修正 I-3）', (tester) async {
+      final prefsManager = FakeReaderPrefsManager(
+        readingPositionByBookId: {
+          'b_jump_then_navigate': const ReadingPosition(pdfPageIndex: 4),
+        },
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample_multi_page.pdf',
+            bookId: 'b_jump_then_navigate',
+            prefsManager: prefsManager,
+            initialJumpTarget: const ReaderJumpTarget(pdfPageIndex: 2),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+      // 第一次回報：抵達 initialJumpTarget 指定的頁碼（開書當下的初始
+      // 定位回報，_hasRelocatedSinceOpen 仍應維持 false）。
+      pdfView.onPageChanged?.call(const PdfPageInfo(pageIndex: 2, totalPages: 5));
+      await tester.pump();
+      // 第二次回報：使用者從跳轉目標（頁碼 2）繼續往後翻到頁碼 3——這才
+      // 是「後續重定位事件」，_hasRelocatedSinceOpen 應轉為 true（比照
+      // 既有 PDF 測試直接呼叫 onPageChanged 的既有慣例，不需要真的等待
+      // pdfrx 完整載入）。
+      pdfView.onPageChanged?.call(const PdfPageInfo(pageIndex: 3, totalPages: 5));
+      await tester.pump();
+
+      // 移除畫面觸發 dispose()，比照既有「PDF 收到 onPageChanged 後離開
+      // 畫面（dispose），正確寫入 ReadingPosition」測試的既有慣例（見
+      // reader_screen_test.dart「Epic 5 Issue 2：閱讀位置記憶」區塊）。
+      await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
+      await tester.pump();
+
+      expect(
+        prefsManager.savedReadingPositionCalls.last.key,
+        'b_jump_then_navigate',
+      );
+      expect(
+        prefsManager.savedReadingPositionCalls.last.value.pdfPageIndex,
+        3,
+        reason: 'dispose() 應寫入使用者實際翻到的頁碼（3），而非跳轉目標'
+            '（2）或跳轉前資料庫既有的舊進度（4）——checkpoint 寫入行為與'
+            '一般開書完全同構，不因為曾經是搜尋跳轉而有任何殘留特殊狀態。',
+      );
+    });
+
+    testWidgets(
+        'PDF：跳轉後使用者未曾產生任何後續重定位事件即離開，dispose() 保留資料庫既有進度、不覆寫'
+        '（spec.md §6 2026-09-11 修訂，`review-plan-issue-5.md` I-2 修訂——'
+        '推翻本計畫原版「這是刻意接受的簡化」設計，改為實際修正這個行為）',
+        (tester) async {
+      final prefsManager = FakeReaderPrefsManager(
+        readingPositionByBookId: {
+          'b_jump_immediate_exit': const ReadingPosition(pdfPageIndex: 49),
+        },
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample_multi_page.pdf',
+            bookId: 'b_jump_immediate_exit',
+            prefsManager: prefsManager,
+            initialJumpTarget: const ReaderJumpTarget(pdfPageIndex: 2),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      // 只有「開書當下抵達跳轉目標」這一次回報，使用者完全沒有進一步
+      // 互動——onPageChanged 是原生端每次頁面確實顯示變更時都會回報，
+      // 這裡刻意只呼叫一次，模擬使用者查看一下就離開的情境。
+      final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+      pdfView.onPageChanged?.call(const PdfPageInfo(pageIndex: 2, totalPages: 5));
+      await tester.pump();
+
+      // 使用者未曾翻頁即離開閱讀畫面。
+      await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
+      await tester.pump();
+
+      expect(
+        prefsManager.savedReadingPositionCalls,
+        isEmpty,
+        reason: '使用者跳轉後沒有任何後續重定位事件，_writeCurrentPosition() '
+            '應在最前面就直接 return，完全不呼叫 saveReadingPosition——不能'
+            '把搜尋跳轉目標（頁碼 2）誤存成新進度，覆蓋掉跳轉前的舊進度'
+            '（頁碼 49）。',
+      );
+      expect(
+        prefsManager.readingPositionByBookId['b_jump_immediate_exit']
+            ?.pdfPageIndex,
+        49,
+        reason: '資料庫既有進度應維持原樣（頁碼 49），完全不受這次搜尋'
+            '跳轉瀏覽影響。',
+      );
+    });
+  });
+
+  group('epic-10-search Issue 5：搜尋跳轉暫態高亮生命週期', () {
+    testWidgets('PDF：抵達 initialJumpTarget 後顯示暫態高亮，3 秒後自動清除',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample_multi_page.pdf',
+            bookId: 'b_jump_highlight_auto_clear',
+            prefsManager: FakeReaderPrefsManager(),
+            initialJumpTarget: const ReaderJumpTarget(
+              pdfPageIndex: 0,
+              pdfRect: PercentRect(left: 0.1, top: 0.1, right: 0.5, bottom: 0.2),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+      // 【審查修正 C-1】不能用不帶 condition 的 pumpUntilPdfReady(tester)
+      // ——該 helper 沒有 condition 時會無條件跑滿 30 輪、每輪
+      // pump(100ms)，在 fake-async 環境下等同一次性推進 3,000ms 的假時鐘，
+      // 剛好等於本測試要驗證的 3 秒暫態高亮計時器時長，會讓計時器在下面
+      // 第一個 expect() 執行「之前」就已經到期並清除高亮，導致
+      // findsOneWidget 斷言必定失敗（誤判成通過的反而是巧合）。改為傳入
+      // condition，讓 pumpUntilPdfReady 一偵測到高亮 widget 出現就立刻
+      // 返回，把「等待 3 秒計時器到期」這件事完全交給下面明確的
+      // tester.pump(const Duration(seconds: 3))。
+      await pumpUntilPdfReady(
+        tester,
+        condition: () =>
+            find.byKey(const Key('pdf_reader_jump_highlight_0')).evaluate().isNotEmpty,
+      );
+
+      expect(
+        find.byKey(const Key('pdf_reader_jump_highlight_0')),
+        findsOneWidget,
+        reason: '開書抵達跳轉目標後應立即顯示暫態高亮',
+      );
+
+      await tester.pump(const Duration(seconds: 3));
+      expect(
+        find.byKey(const Key('pdf_reader_jump_highlight_0')),
+        findsNothing,
+        reason: '3 秒後應自動清除',
+      );
+    });
+
+    testWidgets('PDF：使用者提前點擊畫面（_handleZoneAction）時立即清除，不等待 3 秒',
+        (tester) async {
+      final key = GlobalKey<State<ReaderScreen>>();
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            key: key,
+            filePath: 'test/fixtures/sample_multi_page.pdf',
+            bookId: 'b_jump_highlight_early_clear',
+            prefsManager: FakeReaderPrefsManager(),
+            initialJumpTarget: const ReaderJumpTarget(
+              pdfPageIndex: 0,
+              pdfRect: PercentRect(left: 0.1, top: 0.1, right: 0.5, bottom: 0.2),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+      // 【審查修正 C-1】理由同上一個測試——必須帶 condition，否則
+      // pumpUntilPdfReady(tester) 累積推進的 3,000ms 假時鐘會讓 3 秒計時
+      // 器在下面斷言之前就先到期，讓這個測試即使 _handleZoneAction 的
+      // 提前清除邏輯根本沒有執行也會「意外看似通過」。
+      await pumpUntilPdfReady(
+        tester,
+        condition: () =>
+            find.byKey(const Key('pdf_reader_jump_highlight_0')).evaluate().isNotEmpty,
+      );
+
+      expect(
+        find.byKey(const Key('pdf_reader_jump_highlight_0')),
+        findsOneWidget,
+      );
+
+      // 用 ZoneAction.menu（單純點擊畫面，不換頁）驗證清除邏輯本身，
+      // 避免與「換頁導致頁面本身不再可見」的效果混淆（見本計畫 Global
+      // Constraints 對測試設計的說明）。
+      ReaderScreen.triggerZoneAction(key, ZoneAction.menu);
+      await tester.pump();
+
+      expect(
+        find.byKey(const Key('pdf_reader_jump_highlight_0')),
+        findsNothing,
+        reason: '使用者點擊畫面應立即清除，不需要等待 3 秒計時器到期',
+      );
+    });
+
+    testWidgets(
+        'PDF：initialJumpTarget 只有 pdfPageIndex、沒有 pdfRect 時，正常跳轉頁面但不顯示暫態高亮',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample_multi_page.pdf',
+            bookId: 'b_jump_no_rect',
+            prefsManager: FakeReaderPrefsManager(),
+            initialJumpTarget: const ReaderJumpTarget(pdfPageIndex: 0),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+      await pumpUntilPdfReady(tester);
+
+      final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+      expect(pdfView.initialPageIndex, 0);
+      expect(
+        find.byKey(const Key('pdf_reader_jump_highlight_0')),
+        findsNothing,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets(
+        'Foliate：initialJumpTarget 帶 cfi 時，開書流程與暫態高亮 wiring 皆不崩潰（誠實測試邊界，見本計畫 Global Constraints）',
+        (tester) async {
+      final key = GlobalKey<State<ReaderScreen>>();
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            key: key,
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_jump_epub_highlight',
+            prefsManager: FakeReaderPrefsManager(),
+            initialJumpTarget:
+                const ReaderJumpTarget(cfi: 'epubcfi(/6/2!/4/2)'),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final foliateView = tester.widget<FoliateReaderView>(
+        find.byType(FoliateReaderView),
+      );
+      foliateView.onPageRendered();
+      await tester.pump();
+
+      // 3 秒自動清除路徑。
+      await tester.pump(const Duration(seconds: 3));
+      expect(tester.takeException(), isNull);
+
+      // 提前點擊清除路徑（此時計時器已到期，_clearSearchJumpHighlight
+      // 內部的早退保護應能安全處理重複呼叫）。
+      ReaderScreen.triggerZoneAction(key, ZoneAction.menu);
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('initialJumpTarget 為 null 時，_handlePageRendered 不觸發任何暫態高亮',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample_multi_page.pdf',
+            bookId: 'b_no_jump_no_highlight',
+            prefsManager: FakeReaderPrefsManager(),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+      await pumpUntilPdfReady(tester);
+
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget.key is ValueKey<String> &&
+              (widget.key as ValueKey<String>)
+                  .value
+                  .startsWith('pdf_reader_jump_highlight_'),
+        ),
+        findsNothing,
+      );
+    });
   });
 
   testWidgets('不支援格式顯示明確錯誤訊息', (tester) async {

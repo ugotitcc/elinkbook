@@ -237,7 +237,7 @@ final ReaderJumpTarget? initialJumpTarget;
   - `_writeCurrentPosition()` 開頭新增一行防呆：`initialJumpTarget` 非 `null` 且 `_hasRelocatedSinceOpen` 仍是 `false` 時直接 `return`，保留資料庫既有的 `lastPosition`、不覆寫；其餘情況（`initialJumpTarget` 為 `null`，或已有後續重定位）維持原有邏輯不變。
   - 這個旗標只在整個 `ReaderScreen` 生命週期內設定一次（`false → true` 單向轉換，不會再變回 `false`），實作成本是兩個既有回呼各加一行判斷＋一個新欄位＋`_writeCurrentPosition()` 開頭一行防呆，不需要建立新的事件系統或修改任何既有導覽呼叫端。
 - 抵達目標位置後觸發暫態高亮：
-  - Foliate：`main.js` 新增 `window.showSearchHighlight(cfi)`／`window.clearSearchHighlight()`，使用獨立的 `currentSearchHighlightValue` 變數，**不重用**現有 `showTtsHighlight()` 的 `currentTtsAnnotationValue`（該變數與 TTS 播放狀態機耦合，混用會互相汙染）。
+  - Foliate：`main.js` 新增 `window.showSearchHighlight(cfi)`／`window.clearSearchHighlight()`，使用獨立的 `currentSearchHighlightValue` 變數，**不重用**現有 `showTtsHighlight()` 的 `currentTtsAnnotationValue`（該變數與 TTS 播放狀態機耦合，混用會互相汙染）。實作上重用 vendored `view.js` 既有、寫死走 `Overlayer.outline` 固定紅色外框樣式的 `foliate-search:` annotation 前綴（`SEARCH_PREFIX`）；**未來提醒（`reviews/review-issue-5.md` M-1）**：`view.js` 自身的 `search()` 方法（書內全文搜尋，目前 `main.js` 從未呼叫）也使用同一個 `foliate-search:` 前綴標記命中結果，若未來有工單要幫 Foliate 格式補上「本書內搜尋」且選擇直接沿用 `view.js` 內建的 `search()`，該功能與本節暫態跳轉高亮會共用完全相同的前綴 key 空間，需要先設計兩者共存或互斥的規則（例如比照 PDF 端另建一套獨立狀態），不能假設兩者不會同時出現。
   - PDF：複用既有 `pageOverlaysBuilder` 疊加機制（`pdf_reader_view.dart`），比照劃線/搜尋既有疊加繪製模式，畫一個對應 `pdfRect` 的暫態高亮矩形。
   - 生命週期由 **Dart 端 `Timer`** 控制（3 秒後呼叫清除，而非 JS `setTimeout`），比照專案既有「計時器一律由 Dart 端主導、`package:clock`／`FakeAsync` 可介入」的既有慣例（見 `CLAUDE.md`「不可逆的技術決策」小節）；使用者提前翻頁或點擊畫面時，既有的翻頁/點擊處理路徑一併呼叫清除，取兩者較早發生者。
 

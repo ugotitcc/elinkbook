@@ -46,6 +46,7 @@ import '../reader/pdf_toc_navigator.dart';
 import '../reader/pdf_selection_info.dart';
 import '../reader/reading_position.dart';
 import '../reader/reader_console_log.dart';
+import '../reader/reader_jump_target.dart';
 import '../reader/reader_prefs_manager.dart';
 import '../reader/toc_entry.dart';
 import '../reader/toc_navigator.dart';
@@ -191,6 +192,14 @@ class ReaderScreen extends StatefulWidget {
   /// tracker，行為等同本 Issue 之前）。
   final ReaderActivityTracker? readerActivityTracker;
 
+  /// 全庫搜尋跳轉目標（epic-10-search Issue 5，spec.md §6）：非 `null`
+  /// 時，開書當下傳給底層 View 的初始定位參數改用本欄位（優先權高於
+  /// 資料庫既有 `lastPosition`），除此之外不影響任何後續行為——後續翻頁
+  /// /checkpoint 寫入與一般開書完全同構，不新增任何「暫停進度儲存」旗標
+  /// （見 `_maybeShowSearchJumpHighlight()` 文件註解的完整理由）。刻意為
+  /// 可選參數——比照 `readerActivityTracker` 既有慣例，未提供時零回歸。
+  final ReaderJumpTarget? initialJumpTarget;
+
   const ReaderScreen({
     super.key,
     required this.filePath,
@@ -213,6 +222,7 @@ class ReaderScreen extends StatefulWidget {
     this.ttsAudioFocusSource,
     this.isEinkMode = false,
     this.readerActivityTracker,
+    this.initialJumpTarget,
   });
 
   @override
@@ -401,6 +411,18 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   // 不變——僅用於 _buildNativeView() 建構 EpubReaderView/PdfReaderView
   // 時傳入 initialLocatorJson/initialPageIndex 這兩個一次性開書起始值。
   ReadingPosition? _initialPosition;
+  /// 【spec.md §6 2026-09-11 修訂】只在 `widget.initialJumpTarget` 非
+  /// `null` 時才有意義：`_pdfPageInfo`/`_epubPositionInfo` 開書後第一次
+  /// 被 `onPageChanged`/`onLocatorChanged` 賦值時（賦值前仍是 `null`）
+  /// 代表 `initialJumpTarget` 套用後的初始定位回報，不算使用者主動
+  /// 導覽；這兩個回呼**第二次（或之後）**被呼叫時（賦值前已非 `null`）
+  /// ——不論觸發來源是翻頁熱區、音量鍵、目錄/書籤跳轉、或書內搜尋，皆會
+  /// 走同一組回呼報告新位置，這個判斷天然涵蓋所有導覽方式——才代表使用
+  /// 者確實已經離開了跳轉目標本身，設為 `true`。單向轉換
+  /// （`false → true`），一旦設定就不會再變回 `false`。
+  /// [_writeCurrentPosition] 用這個旗標決定是否要跳過寫入、保留資料庫
+  /// 既有進度。
+  bool _hasRelocatedSinceOpen = false;
   // 用於呼叫 PdfReaderView.jumpToPage(key, pageIndex) 這個強型別 static
   // helper（審查修正，見 Task 2 Step 4——不使用 as dynamic 跨 State 私有
   // 邊界呼叫，避免 release 混淆／tree-shaking 風險）。
@@ -453,9 +475,30 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 診斷見 docs/epics/epic-27-reader-device-compat/reviews/bugfix-repro.md）。
   Timer? _openBookTimeoutTimer;
 
+  /// 搜尋跳轉暫態高亮 3 秒生命週期計時器（epic-10-search Issue 5，
+  /// spec.md §6）。非 `null` 代表目前有顯示中的暫態高亮，
+  /// [_handleZoneAction] 於任何翻頁/點擊動作發生時會提前呼叫
+  /// [_clearSearchJumpHighlight]，取 3 秒與提前清除兩者較早發生者。刻意
+  /// 使用裸 `Timer`（不引入 `package:clock`）——理由見本計畫 Global
+  /// Constraints。
+  Timer? _searchJumpHighlightTimer;
+
+  /// 避免 [_handlePageRendered] 在極端情況下被呼叫超過一次時重複觸發
+  /// 暫態高亮、重新啟動 3 秒計時——`initialJumpTarget` 只在開書當下這一
+  /// 次性場景生效（spec.md §6）。
+  bool _searchJumpHighlightTriggered = false;
+
+  /// 捕捉建立時的 Zone，確保搜尋跳轉 Timer 恆在 fake-async Zone 內建立，
+  /// 即使 `_handlePageRendered` 本身是在 `tester.runAsync` 的真實 Zone
+  /// 內被觸發（`pumpUntilPdfReady` 為了等待 pdfrx 真實 I/O，會暫時離開
+  /// fake Zone），Timer 仍會是 fake Timer，才能被 `tester.pump(duration)`
+  /// 正確推進（見 Task 4 測試對 `pumpUntilPdfReady` 與 Timer 互動的註解）。
+  late Zone _creationZone;
+
   @override
   void initState() {
     super.initState();
+    _creationZone = Zone.current;
     widget.readerActivityTracker?.markReaderOpened();
     WidgetsBinding.instance.addObserver(this);
     _volumeKeyChannel.setMethodCallHandler(_handleVolumeKeyCall);
@@ -580,6 +623,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     widget.readerActivityTracker?.markReaderClosed();
     _syncCheckpointTimer?.cancel();
     _openBookTimeoutTimer?.cancel();
+    _searchJumpHighlightTimer?.cancel();
     _ttsSleepTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     _volumeKeyChannel.setMethodCallHandler(null);
@@ -638,6 +682,13 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 寫入。尚未收到任何位置回報（例如書籍尚未成功開啟）時靜默不寫入，
   /// 避免用「無資料」覆蓋掉資料庫中既有的正確記錄。
   void _writeCurrentPosition() {
+    // 【spec.md §6 2026-09-11 修訂，review-plan-issue-5.md I-2】使用者
+    // 跳轉後尚未產生任何後續重定位事件（見 _hasRelocatedSinceOpen 欄位
+    // 文件註解），保留資料庫既有的 lastPosition、不覆寫——避免使用者只是
+    // 查看一下搜尋結果、隨即離開，卻把原本讀到一半的進度覆蓋成搜尋跳轉
+    // 目標本身。initialJumpTarget 為 null（一般開書）時這個判斷恆為
+    // false，行為完全不變。
+    if (widget.initialJumpTarget != null && !_hasRelocatedSinceOpen) return;
     final format = detectBookFormat(widget.filePath);
     switch (format) {
       case BookFormat.pdf:
@@ -1483,6 +1534,62 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       // _loadFxlBookmarks() 內部已對 widget.bookmarksRepository == null
       // 做早退防呆，此處不需額外判斷。
       _loadFxlBookmarks();
+    }
+    // epic-10-search Issue 5：書籍成功渲染（含 PDF／Foliate，兩者皆走
+    // onPageRendered）即代表已抵達 initialJumpTarget 指定的目標位置
+    // （initialLocatorJson/initialPageIndex 已在建構時套用，見 Task 1），
+    // 此時觸發暫態高亮。
+    _maybeShowSearchJumpHighlight();
+  }
+
+  /// 抵達 `initialJumpTarget` 目標位置後觸發暫態高亮（epic-10-search
+  /// Issue 5，spec.md §6）：[widget.initialJumpTarget] 為 `null`（一般
+  /// 開書，非搜尋跳轉而來）時完全不動作，零回歸。PDF 需要
+  /// `pdfPageIndex`／`pdfRect` 皆存在才顯示（缺 `pdfRect` 時仍已透過
+  /// `initialPageIndex` 正常跳轉頁面，只是沒有精確座標可畫暫態高亮框，見
+  /// `ReaderJumpTarget` 文件註解）；Foliate 需要 `cfi` 存在。
+  void _maybeShowSearchJumpHighlight() {
+    if (_searchJumpHighlightTriggered) return;
+    final jumpTarget = widget.initialJumpTarget;
+    if (jumpTarget == null) return;
+    _searchJumpHighlightTriggered = true;
+    final format = detectBookFormat(widget.filePath);
+    if (format == BookFormat.pdf) {
+      final pageIndex = jumpTarget.pdfPageIndex;
+      final rect = jumpTarget.pdfRect;
+      if (pageIndex == null || rect == null) return;
+      PdfReaderView.showTemporaryHighlight(_pdfReaderViewKey, pageIndex, rect);
+    } else if (isFoliateFormat(format)) {
+      final cfi = jumpTarget.cfi;
+      if (cfi == null) return;
+      FoliateReaderView.showSearchHighlight(_foliateEpubReaderViewKey, cfi);
+    } else {
+      return;
+    }
+    _searchJumpHighlightTimer?.cancel();
+    // 使用捕捉到的 fake Zone 建立 Timer，避免在 runAsync 真實 Zone 內
+    // 建立導致 tester.pump 無法推進。
+    _searchJumpHighlightTimer =
+        _creationZone.run(() => Timer(
+              const Duration(seconds: 3),
+              _clearSearchJumpHighlight,
+            ));
+  }
+
+  /// 清除搜尋跳轉暫態高亮：3 秒計時到期，或 [_handleZoneAction] 偵測到
+  /// 使用者提前翻頁/點擊畫面時呼叫，取兩者較早發生者（spec.md §6）。
+  /// [_searchJumpHighlightTimer] 為 `null`（尚未顯示過或已清除過）時安全
+  /// 提前 return，可重複呼叫（[_handleZoneAction] 對每一次動作都無條件
+  /// 呼叫本方法，不會判斷目前是否真的有顯示中的高亮）。
+  void _clearSearchJumpHighlight() {
+    if (_searchJumpHighlightTimer == null) return;
+    _searchJumpHighlightTimer?.cancel();
+    _searchJumpHighlightTimer = null;
+    final format = detectBookFormat(widget.filePath);
+    if (format == BookFormat.pdf) {
+      PdfReaderView.clearTemporaryHighlight(_pdfReaderViewKey);
+    } else if (isFoliateFormat(format)) {
+      FoliateReaderView.clearSearchHighlight(_foliateEpubReaderViewKey);
     }
   }
 
@@ -2900,11 +3007,18 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           onZoneAction: _handleZoneAction,
           showNavZoneDebugOverlay: resolved.showNavZoneDebugOverlay,
           consoleLogEnabled: resolved.consoleLogEnabled,
-          initialLocatorJson: _initialPosition?.epubLocatorJson,
+          // epic-10-search Issue 5：initialJumpTarget 存在時優先權高於
+          // 資料庫既有 lastPosition（spec.md §6），僅此一處決策點，其餘
+          // 行為與一般開書完全同構。
+          initialLocatorJson:
+              widget.initialJumpTarget?.cfi ?? _initialPosition?.epubLocatorJson,
           isComicBookHint: format == BookFormat.cbz,
           dualPageDirection: resolved.dualPageDirection,
           onLocatorChanged: (info) {
             if (!mounted) return;
+            // 【spec.md §6 2026-09-11 修訂】見上方 _hasRelocatedSinceOpen
+            // 欄位文件註解：賦值前非 null，代表這不是開書後第一次回報。
+            if (_epubPositionInfo != null) _hasRelocatedSinceOpen = true;
             setState(() => _epubPositionInfo = info);
             // 手動導覽自動暫停並清除舊高亮（epic-34-tts-readalong
             // Issue 4）：直接用既有的 nullable _ttsController 欄位（不用
@@ -2949,7 +3063,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         return PdfReaderView(
           key: _pdfReaderViewKey,
           filePath: widget.filePath,
-          initialPageIndex: _initialPosition?.pdfPageIndex,
+          // epic-10-search Issue 5：理由同上方 FoliateReaderView 分支。
+          initialPageIndex: widget.initialJumpTarget?.pdfPageIndex ??
+              _initialPosition?.pdfPageIndex,
           onPageRendered: _handlePageRendered,
           onError: _handleError,
           dualPageMode: resolved.dualPageMode,
@@ -2973,6 +3089,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           showNavZoneDebugOverlay: resolved.showNavZoneDebugOverlay,
           onPageChanged: (info) {
             if (!mounted) return;
+            // 【spec.md §6 2026-09-11 修訂】理由同上方 onLocatorChanged
+            // 分支。
+            if (_pdfPageInfo != null) _hasRelocatedSinceOpen = true;
             setState(() => _pdfPageInfo = info);
           },
         );
@@ -3018,6 +3137,12 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   }
 
   void _handleZoneAction(ZoneAction action) {
+    // epic-10-search Issue 5：使用者翻頁或點擊畫面（本方法涵蓋 3×3 熱區
+    // 全部四種動作＋音量鍵翻頁，見 spec.md §6「既有的翻頁/點擊處理路徑
+    // 一併呼叫清除」）一律提前清除搜尋跳轉暫態高亮，取 3 秒計時與提前
+    // 清除兩者較早發生者。無條件呼叫——_clearSearchJumpHighlight()
+    // 內部已對「目前根本沒有顯示中的高亮」做早退保護，重複呼叫安全。
+    _clearSearchJumpHighlight();
     final format = detectBookFormat(widget.filePath);
     switch (action) {
       case ZoneAction.previousPage:

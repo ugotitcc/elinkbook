@@ -488,6 +488,46 @@ window.clearTtsHighlight = function () {
 }
 
 /**
+ * 搜尋跳轉暫態高亮（epic-10-search Issue 5，spec.md §6）。
+ *
+ * 【規劃階段查證，推翻原計畫「自訂顏色/直排橫排/E-Ink 樣式」設計】
+ * foliate-search: 不是本工單自訂、尚未使用的保留前綴，而是 view.js
+ * （釘定 vendored 檔案）自己既有的 SEARCH_PREFIX 常數：
+ * addAnnotation() 對這個前綴的處理是無條件呼叫
+ * overlayer.add(value, range, Overlayer.outline)，**不帶任何 options、
+ * 也不發送 draw-annotation 事件**，與 foliate-note:（TTS 朗讀高亮，會
+ * 發送 draw-annotation 事件把繪製決定權交還給下方監聽器）完全不同，
+ * 因此無法從這裡客製化顏色/直排橫排/E-Ink 樣式——Overlayer.outline()
+ * 在沒有收到 options 時的預設值固定是紅色、3px 外框（overlayer.js
+ * Overlayer.outline() 原始碼），這是 view.js 內建、無法客製化的樣式。
+ *
+ * 改用 foliate-note:（TTS 既有 key 空間）或裸 cfi（劃線/備註既有 key
+ * 空間）雖然可以透過 draw-annotation 事件客製化樣式，但會與 TTS 播放
+ * 狀態或使用者真實劃線/備註資料共用同一個 key，彼此的 show/clear 呼叫
+ * 會互相覆蓋（spec.md §6 明文要求要避免這種汙染）；修改 view.js 本身
+ * 讓 SEARCH_PREFIX 也發送 draw-annotation 事件則違反 ADR 0011「不修改
+ * 任何 vendored 檔案」。三者相比，直接沿用 foliate-search: 既有的固定
+ * 紅色外框樣式是風險最低的選擇——**已知且接受的代價**：Foliate 端暫態
+ * 高亮固定為紅色外框、不隨 E-Ink 模式或直排/橫排調整，與 PDF 端可自訂
+ * 的綠色填色樣式不一致，見本計畫 Global Constraints 完整說明。
+ */
+let currentSearchHighlightValue = null
+
+window.showSearchHighlight = function (cfi) {
+  if (currentSearchHighlightValue) {
+    view.deleteAnnotation({ value: currentSearchHighlightValue })
+  }
+  currentSearchHighlightValue = 'foliate-search:' + cfi
+  view.addAnnotation({ value: currentSearchHighlightValue })
+}
+
+window.clearSearchHighlight = function () {
+  if (!currentSearchHighlightValue) return
+  view.deleteAnnotation({ value: currentSearchHighlightValue })
+  currentSearchHighlightValue = null
+}
+
+/**
  * 依「畫面目前可視位置」cfi 反查對應或緊隨其後的第一個朗讀段索引
  * （epic-34-tts-readalong Issue 4，2026-08-27 Issue 3 真機驗收追加範圍：
  * 首次播放與手動導覽後恢復播放皆須從畫面目前位置開始，見 issues.md
