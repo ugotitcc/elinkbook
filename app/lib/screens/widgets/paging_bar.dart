@@ -16,6 +16,15 @@ class PagingBar extends StatelessWidget {
   final VoidCallback? onNext;
   final bool isEinkMode;
 
+  /// 【審查修正，見 reviews/review-issue-4.md Minor 2】內部「上一頁」／
+  /// 「下一頁」按鈕 Key 的前綴。預設 `null` 時沿用既有寫死字面 Key
+  /// （`paging_bar_previous_button`／`paging_bar_next_button`），維持
+  /// `library_screen.dart`（單一實例）與既有測試零回歸；當同一畫面需要
+  /// 同時建構多個 `PagingBar` 實例（例如 `library_search_screen.dart`
+  /// 「書名/作者匹配」與「內容匹配」兩區各自獨立分頁）時，呼叫端應傳入
+  /// 彼此不同的 [keyPrefix]，避免內部按鈕出現重複 Key。
+  final String? keyPrefix;
+
   const PagingBar({
     super.key,
     required this.currentPage,
@@ -23,7 +32,18 @@ class PagingBar extends StatelessWidget {
     required this.onPrevious,
     required this.onNext,
     this.isEinkMode = false,
+    this.keyPrefix,
   });
+
+  Key get _previousButtonKey => Key(
+        keyPrefix == null
+            ? 'paging_bar_previous_button'
+            : '${keyPrefix}_previous_button',
+      );
+
+  Key get _nextButtonKey => Key(
+        keyPrefix == null ? 'paging_bar_next_button' : '${keyPrefix}_next_button',
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -46,7 +66,7 @@ class PagingBar extends StatelessWidget {
             width: buttonSize,
             height: buttonSize,
             child: IconButton(
-              key: const Key('paging_bar_previous_button'),
+              key: _previousButtonKey,
               icon: const Icon(Icons.chevron_left),
               tooltip: '上一頁',
               onPressed: onPrevious,
@@ -60,7 +80,7 @@ class PagingBar extends StatelessWidget {
             width: buttonSize,
             height: buttonSize,
             child: IconButton(
-              key: const Key('paging_bar_next_button'),
+              key: _nextButtonKey,
               icon: const Icon(Icons.chevron_right),
               tooltip: '下一頁',
               onPressed: onNext,

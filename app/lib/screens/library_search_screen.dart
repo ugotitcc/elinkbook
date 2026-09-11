@@ -368,6 +368,11 @@ class _LibrarySearchScreenState extends State<LibrarySearchScreen> {
             ? () => setState(() => paging.goToNextPage())
             : null,
         isEinkMode: widget.isEinkMode,
+        // 【審查修正，見 reviews/review-issue-4.md Minor 2】「書名/作者
+        // 匹配」與「內容匹配」兩區各自獨立的 PagingBar 若同時掛載，內部
+        // 按鈕若沿用共用的寫死字面 Key 會重複；用各自的 pagingBarKey 當
+        // 前綴區分。
+        keyPrefix: pagingBarKey,
       ),
     ];
   }

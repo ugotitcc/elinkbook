@@ -384,7 +384,9 @@ void main() {
       reason: '第 6 筆 (b5) 應該在第 2 頁，第 1 頁不應顯示',
     );
 
-    await tester.tap(find.byKey(const Key('paging_bar_next_button')));
+    await tester.tap(find.byKey(
+      const Key('library_search_title_author_paging_bar_next_button'),
+    ));
     await tester.pumpAndSettle();
 
     final pagingBarAfterNext = tester.widget<PagingBar>(

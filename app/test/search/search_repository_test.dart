@@ -146,5 +146,36 @@ void main() {
 
       expect(results, isEmpty);
     });
+
+    test(
+        '長文本（超過 80 rune）時，顯示片段以關鍵字為中心截斷，前後皆有內容時兩端皆加上刪節號'
+        '（reviews/review-issue-4.md Minor 3，補齊 I-4 修正的測試覆蓋）', () async {
+      await repository.insertBook(_book('b1'));
+      const keyword = '關鍵詞彙';
+      // 前綴 40 字 + 關鍵字 4 字 + 後綴 66 字 = 110 字，確保視窗（寬度 80，
+      // 關鍵字前保留 20 字）前後都還有被截斷掉的內容，兩端都應出現刪節號
+      // （見 search_repository.dart _truncate() 的視窗計算）。
+      final prefix = List.filled(40, '填').join();
+      final suffix = List.filled(66, '填').join();
+      final rawText = '$prefix$keyword$suffix';
+      expect(rawText.length, 110);
+      await insertContentRow('b1', rawText);
+
+      final results = await searchRepository.searchContent(keyword);
+
+      final snippet = results.single.matches.single.snippet;
+      expect(
+        snippet,
+        contains(keyword),
+        reason: '截斷視窗必須包含使用者輸入的關鍵字，不可截斷到看不見搜尋詞（I-4 原始問題）',
+      );
+      expect(snippet, startsWith('…'), reason: '關鍵字前方仍有被截斷的內容，應加上刪節號');
+      expect(snippet, endsWith('…'), reason: '關鍵字後方仍有被截斷的內容，應加上刪節號');
+      expect(
+        snippet.length,
+        82,
+        reason: '視窗寬度固定 80 個字元，前後各加一個刪節號，總長 82',
+      );
+    });
   });
 }

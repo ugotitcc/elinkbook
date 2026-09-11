@@ -4626,7 +4626,7 @@ void main() {
             '選「使用預設」須真的清成 null，若誤用 copyWith() 的 ?? 語意則仍會殘留'
             '原本的 horizontal',
       );
-      expect(saved.        pageTurnModeOverride, PageTurnMode.scroll);
+      expect(saved.pageTurnModeOverride, PageTurnMode.scroll);
     },
   );
 
