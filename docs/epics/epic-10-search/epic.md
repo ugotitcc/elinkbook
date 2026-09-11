@@ -64,3 +64,6 @@
 
 2026-09-11 人類決議回頭修訂 `spec.md` §6，推翻 I-2 原本「不需要額外追蹤」的結論：使用者從全庫搜尋點進來查看搜尋結果、尚未翻頁即離開時，`dispose()` 不應再無條件覆寫掉跳轉前的真實閱讀進度，這與 issues.md Issue 5 驗收標準「原本的閱讀進度不受影響」字面衝突。`spec.md` §6 新增【2026-09-11 修訂】段落，改採原本被簡化掉的方案：新增 `_hasRelocatedSinceOpen` 布林旗標，利用 `_pdfPageInfo`/`_epubPositionInfo` 這兩個既有欄位「開書後第一次賦值＝初始定位回報、第二次以後賦值＝使用者確實產生後續重定位」的天然分界，判斷點落在 `onPageChanged`/`onLocatorChanged` 回呼本身，天然涵蓋翻頁熱區／音量鍵／目錄／書籤／書內搜尋等所有導覽方式，不需逐一插樁。`plans/plan-issue-5.md` 同步修訂：Global Constraints 該條由「已知且刻意接受」改為「已修訂」，Task 1 Step 9 新增四段 find/replace（欄位宣告＋`onLocatorChanged`／`onPageChanged`／`_writeCurrentPosition()` 三處修改），「跳轉後繼續翻頁」測試補上第一次 `onPageChanged`（跳轉落地回報）與第二次（實際翻頁）兩階段模擬，「跳轉後未翻頁即離開」測試由「鎖定舊覆寫行為」改寫為「驗證保留資料庫既有進度、不覆寫」，Self-Review 段落同步更新審查回應總結。下一步：認領 Issue 5，依修訂後計畫執行 TDD 循環。
 
+2026-09-11 `/superpowers:requesting-code-review` 執行 `plans/plan-issue-5.md` 複審（`reviews/review-plan-issue-5.md`）：初審 1 Critical／3 Important／4 Minor 共 8 項發現全數查驗通過（C-1、I-1、I-2、I-3、M-1、M-2、M-3 皆已完整實作並標記 ADDRESSED；M-4 commit attribution 符合全專案既有慣例核定為 REBUTTED & ACCEPTED），無任何殘留阻斷項或新引入缺陷。複審結論：🟢 Approved（核准開工）。下一步：透過 `/superpowers:subagent-driven-development` 或 `/superpowers:executing-plans` 依序推進 Task 1 至 Task 5 實作。
+
+
