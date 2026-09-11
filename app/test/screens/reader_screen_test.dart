@@ -324,6 +324,200 @@ void main() {
     });
   });
 
+  group('epic-10-search Issue 5：搜尋跳轉暫態高亮生命週期', () {
+    testWidgets('PDF：抵達 initialJumpTarget 後顯示暫態高亮，3 秒後自動清除',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample_multi_page.pdf',
+            bookId: 'b_jump_highlight_auto_clear',
+            prefsManager: FakeReaderPrefsManager(),
+            initialJumpTarget: const ReaderJumpTarget(
+              pdfPageIndex: 0,
+              pdfRect: PercentRect(left: 0.1, top: 0.1, right: 0.5, bottom: 0.2),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+      // 【審查修正 C-1】不能用不帶 condition 的 pumpUntilPdfReady(tester)
+      // ——該 helper 沒有 condition 時會無條件跑滿 30 輪、每輪
+      // pump(100ms)，在 fake-async 環境下等同一次性推進 3,000ms 的假時鐘，
+      // 剛好等於本測試要驗證的 3 秒暫態高亮計時器時長，會讓計時器在下面
+      // 第一個 expect() 執行「之前」就已經到期並清除高亮，導致
+      // findsOneWidget 斷言必定失敗（誤判成通過的反而是巧合）。改為傳入
+      // condition，讓 pumpUntilPdfReady 一偵測到高亮 widget 出現就立刻
+      // 返回，把「等待 3 秒計時器到期」這件事完全交給下面明確的
+      // tester.pump(const Duration(seconds: 3))。
+      await pumpUntilPdfReady(
+        tester,
+        condition: () =>
+            find.byKey(const Key('pdf_reader_jump_highlight_0')).evaluate().isNotEmpty,
+      );
+
+      expect(
+        find.byKey(const Key('pdf_reader_jump_highlight_0')),
+        findsOneWidget,
+        reason: '開書抵達跳轉目標後應立即顯示暫態高亮',
+      );
+
+      await tester.pump(const Duration(seconds: 3));
+      expect(
+        find.byKey(const Key('pdf_reader_jump_highlight_0')),
+        findsNothing,
+        reason: '3 秒後應自動清除',
+      );
+    });
+
+    testWidgets('PDF：使用者提前點擊畫面（_handleZoneAction）時立即清除，不等待 3 秒',
+        (tester) async {
+      final key = GlobalKey<State<ReaderScreen>>();
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            key: key,
+            filePath: 'test/fixtures/sample_multi_page.pdf',
+            bookId: 'b_jump_highlight_early_clear',
+            prefsManager: FakeReaderPrefsManager(),
+            initialJumpTarget: const ReaderJumpTarget(
+              pdfPageIndex: 0,
+              pdfRect: PercentRect(left: 0.1, top: 0.1, right: 0.5, bottom: 0.2),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+      // 【審查修正 C-1】理由同上一個測試——必須帶 condition，否則
+      // pumpUntilPdfReady(tester) 累積推進的 3,000ms 假時鐘會讓 3 秒計時
+      // 器在下面斷言之前就先到期，讓這個測試即使 _handleZoneAction 的
+      // 提前清除邏輯根本沒有執行也會「意外看似通過」。
+      await pumpUntilPdfReady(
+        tester,
+        condition: () =>
+            find.byKey(const Key('pdf_reader_jump_highlight_0')).evaluate().isNotEmpty,
+      );
+
+      expect(
+        find.byKey(const Key('pdf_reader_jump_highlight_0')),
+        findsOneWidget,
+      );
+
+      // 用 ZoneAction.menu（單純點擊畫面，不換頁）驗證清除邏輯本身，
+      // 避免與「換頁導致頁面本身不再可見」的效果混淆（見本計畫 Global
+      // Constraints 對測試設計的說明）。
+      ReaderScreen.triggerZoneAction(key, ZoneAction.menu);
+      await tester.pump();
+
+      expect(
+        find.byKey(const Key('pdf_reader_jump_highlight_0')),
+        findsNothing,
+        reason: '使用者點擊畫面應立即清除，不需要等待 3 秒計時器到期',
+      );
+    });
+
+    testWidgets(
+        'PDF：initialJumpTarget 只有 pdfPageIndex、沒有 pdfRect 時，正常跳轉頁面但不顯示暫態高亮',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample_multi_page.pdf',
+            bookId: 'b_jump_no_rect',
+            prefsManager: FakeReaderPrefsManager(),
+            initialJumpTarget: const ReaderJumpTarget(pdfPageIndex: 0),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+      await pumpUntilPdfReady(tester);
+
+      final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+      expect(pdfView.initialPageIndex, 0);
+      expect(
+        find.byKey(const Key('pdf_reader_jump_highlight_0')),
+        findsNothing,
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets(
+        'Foliate：initialJumpTarget 帶 cfi 時，開書流程與暫態高亮 wiring 皆不崩潰（誠實測試邊界，見本計畫 Global Constraints）',
+        (tester) async {
+      final key = GlobalKey<State<ReaderScreen>>();
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            key: key,
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_jump_epub_highlight',
+            prefsManager: FakeReaderPrefsManager(),
+            initialJumpTarget:
+                const ReaderJumpTarget(cfi: 'epubcfi(/6/2!/4/2)'),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final foliateView = tester.widget<FoliateReaderView>(
+        find.byType(FoliateReaderView),
+      );
+      foliateView.onPageRendered();
+      await tester.pump();
+
+      // 3 秒自動清除路徑。
+      await tester.pump(const Duration(seconds: 3));
+      expect(tester.takeException(), isNull);
+
+      // 提前點擊清除路徑（此時計時器已到期，_clearSearchJumpHighlight
+      // 內部的早退保護應能安全處理重複呼叫）。
+      ReaderScreen.triggerZoneAction(key, ZoneAction.menu);
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('initialJumpTarget 為 null 時，_handlePageRendered 不觸發任何暫態高亮',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample_multi_page.pdf',
+            bookId: 'b_no_jump_no_highlight',
+            prefsManager: FakeReaderPrefsManager(),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+      await pumpUntilPdfReady(tester);
+
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget.key is ValueKey<String> &&
+              (widget.key as ValueKey<String>)
+                  .value
+                  .startsWith('pdf_reader_jump_highlight_'),
+        ),
+        findsNothing,
+      );
+    });
+  });
+
   testWidgets('不支援格式顯示明確錯誤訊息', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
