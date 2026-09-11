@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../library/library_repository.dart';
 import '../library/models/book.dart';
 import '../library/widgets/book_cover.dart';
+import '../reader/reader_jump_target.dart';
 import '../reader/reader_prefs_manager.dart';
 import '../search/full_text_search_settings_repository.dart';
 import '../search/search_repository.dart';
@@ -139,7 +140,7 @@ class _LibrarySearchScreenState extends State<LibrarySearchScreen> {
     });
   }
 
-  void _openBook(Book book) {
+  void _openBook(Book book, {ReaderJumpTarget? jumpTarget}) {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => ReaderScreen(
@@ -170,6 +171,10 @@ class _LibrarySearchScreenState extends State<LibrarySearchScreen> {
           isEinkMode: widget.isEinkMode,
           readerActivityTracker:
               widget.readerFeatureRepositories.readerActivityTracker,
+          // epic-10-search Issue 5：只有內容匹配片段的點擊會帶入
+          // jumpTarget（見下方 _buildContentGroupCard 呼叫端），書名/作者
+          // 匹配結果維持一般開書路徑（jumpTarget 預設 null）。
+          initialJumpTarget: jumpTarget,
         ),
       ),
     );
@@ -326,7 +331,13 @@ class _LibrarySearchScreenState extends State<LibrarySearchScreen> {
               ),
               dense: true,
               title: Text(group.matches[i].snippet),
-              onTap: () => _openBook(group.book),
+              onTap: () => _openBook(
+                group.book,
+                jumpTarget: ReaderJumpTarget.fromContentLocator(
+                  format: group.book.format,
+                  locator: group.matches[i].locator,
+                ),
+              ),
             ),
         ],
       ),
