@@ -212,6 +212,33 @@ class PdfReaderView extends StatefulWidget {
     }
   }
 
+  /// 顯示搜尋跳轉的暫態高亮（epic-10-search Issue 5，spec.md §6）：
+  /// [pageIndex] 為 0-indexed 目標頁碼，[rect] 為頁內精確座標。全程只會有
+  /// 一個暫態高亮存在（與 [setSearchHighlights] 可能同時存在多筆符合
+  /// 結果的既有 PDF 內文搜尋是完全獨立的概念，見本計畫 Global
+  /// Constraints）。生命週期由呼叫端（[ReaderScreen]）的 Dart 端 Timer
+  /// 主導，本方法本身不會自動清除，需搭配 [clearTemporaryHighlight]
+  /// 呼叫。[key] 對應的 State 若尚未掛載，靜默忽略。
+  static void showTemporaryHighlight(
+    GlobalKey<State<PdfReaderView>> key,
+    int pageIndex,
+    PercentRect rect,
+  ) {
+    final state = key.currentState;
+    if (state is _PdfReaderViewState) {
+      state._setJumpHighlight(pageIndex, rect);
+    }
+  }
+
+  /// 清除目前顯示中的搜尋跳轉暫態高亮（若有）。[key] 對應的 State 若尚未
+  /// 掛載，靜默忽略。
+  static void clearTemporaryHighlight(GlobalKey<State<PdfReaderView>> key) {
+    final state = key.currentState;
+    if (state is _PdfReaderViewState) {
+      state._setJumpHighlight(null, null);
+    }
+  }
+
   /// 解析 PDF 內建大綱（Outline／Bookmark），一次性轉換為 [PdfTocItem]
   /// 樹狀結構（epic-24-pdf-engine-rebuild Issue 5）。文件尚未開啟完成
   /// （State 的 `_document` 為 null）或 [key] 尚未掛載時回傳空清單，比照
@@ -332,6 +359,22 @@ class _PdfReaderViewState extends State<PdfReaderView> {
     setState(() {
       _searchMatches = matches;
       _currentSearchMatchIndex = currentIndex;
+    });
+  }
+
+  // epic-10-search Issue 5：搜尋跳轉的暫態高亮，全程只會有一個存在。
+  int? _jumpHighlightPageIndex;
+  PercentRect? _jumpHighlightRect;
+
+  // 【審查修正 M-3】加上 mounted 防護——雖然既有 _setSearchHighlights()
+  // 沒有這道防護（呼叫鏈全程同步、key.currentState 非 null 已隱含當下
+  // 仍是 mounted，理論上不需要），但 _setAnnotations() 已有這個慣例，
+  // 補上不影響行為、多一層保險。
+  void _setJumpHighlight(int? pageIndex, PercentRect? rect) {
+    if (!mounted) return;
+    setState(() {
+      _jumpHighlightPageIndex = pageIndex;
+      _jumpHighlightRect = rect;
     });
   }
 
@@ -846,6 +889,21 @@ class _PdfReaderViewState extends State<PdfReaderView> {
       ));
     }
 
+    // 渲染搜尋跳轉暫態高亮（epic-10-search Issue 5）。
+    if (_jumpHighlightPageIndex == pageIndex && _jumpHighlightRect != null) {
+      final visibleRect = _cropEnabled
+          ? originalToCropRelativePercent(
+              rect: _jumpHighlightRect!, cropRect: widget.pdfCropRect)
+          : _jumpHighlightRect;
+      if (visibleRect != null) {
+        widgets.add(_buildJumpHighlightWidget(
+          pageIndex,
+          visibleRect,
+          pageRectInViewer.size,
+        ));
+      }
+    }
+
     widgets.add(_buildSelectionGestureLayer(pageIndex, pageRectInViewer));
 
     return widgets;
@@ -1134,6 +1192,38 @@ class _PdfReaderViewState extends State<PdfReaderView> {
           border: isCurrent
               ? Border.all(color: colorScheme.primary, width: 1.5)
               : null,
+        ),
+      ),
+    );
+  }
+
+  /// 搜尋跳轉暫態高亮的視覺樣式（epic-10-search Issue 5）：比照
+  /// [_buildSearchHighlightWidget] 的 `isCurrent` 樣式（半透明色塊＋外框）
+  /// ——兩者概念相同，都是「標示出目前應注意的文字位置」，差別只在生命
+  /// 週期（本高亮 3 秒後自動消失，PDF 內文搜尋符合結果由使用者手動關閉
+  /// 搜尋面板才消失）；刻意不共用程式碼，因為兩者的資料來源
+  /// （[_jumpHighlightRect] vs [_searchMatches]）完全獨立，由不同呼叫端
+  /// （[ReaderScreen] vs `PdfSearchPanel`）驅動。
+  Widget _buildJumpHighlightWidget(
+    int pageIndex,
+    PercentRect visibleRect,
+    Size areaSize,
+  ) {
+    final rect = Rect.fromLTRB(
+      visibleRect.left * areaSize.width,
+      visibleRect.top * areaSize.height,
+      visibleRect.right * areaSize.width,
+      visibleRect.bottom * areaSize.height,
+    );
+    final tokens = Theme.of(context).extension<ElinkTokens>()!;
+    final colorScheme = Theme.of(context).colorScheme;
+    return Positioned.fromRect(
+      key: Key('pdf_reader_jump_highlight_$pageIndex'),
+      rect: rect,
+      child: Container(
+        decoration: BoxDecoration(
+          color: tokens.highlightGreen.withValues(alpha: 0.4),
+          border: Border.all(color: colorScheme.primary, width: 1.5),
         ),
       ),
     );
