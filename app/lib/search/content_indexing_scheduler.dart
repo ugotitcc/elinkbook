@@ -170,6 +170,7 @@ class ContentIndexingScheduler with WidgetsBindingObserver {
     var pending = <Map<String, Object?>>[];
     int? pendingChapterIndex;
     var paused = false;
+    var cancelled = false;
 
     Future<void> flushPendingChapter(int chapterIndex) async {
       if (pending.isNotEmpty) {
@@ -196,6 +197,18 @@ class ContentIndexingScheduler with WidgetsBindingObserver {
           in indexer.indexBook(book, resumeFromChapter: resumeFromChapter)) {
         if (pendingChapterIndex != null &&
             segment.chapterIndex != pendingChapterIndex) {
+          // 【review-plan-issue-3.md C-1】在寫入下一個章節之前，先確認這本書
+          // 是否仍被追蹤——「啟用全文檢索」開關關閉時
+          // （SqliteFullTextSearchSettingsRepository.setEnabled(category,
+          // false)）會直接刪除該分類所有書籍的 content_index_status 列，
+          // 若本排程器當下正在處理該分類的某本書，必須在這裡偵測到並中止，
+          // 否則會在使用者已關閉該分類之後，繼續寫入之後查詢得到的孤兒
+          // 索引列（spec.md §5：搜尋完全信任索引存在與否，不重新檢查開關
+          // 狀態）。
+          if (!await _isStillTracked(book.id)) {
+            cancelled = true;
+            break;
+          }
           await flushPendingChapter(pendingChapterIndex);
           if (!_canProcess()) {
             paused = true;
@@ -213,10 +226,22 @@ class ContentIndexingScheduler with WidgetsBindingObserver {
           'created_at': DateTime.now().millisecondsSinceEpoch,
         });
       }
-      if (!paused) {
+      if (!paused && !cancelled) {
         if (pendingChapterIndex != null) {
-          await flushPendingChapter(pendingChapterIndex);
+          if (!await _isStillTracked(book.id)) {
+            cancelled = true;
+          } else {
+            await flushPendingChapter(pendingChapterIndex);
+          }
         }
+      }
+      if (cancelled) {
+        // 清除競態視窗內已經寫入的殘留列（例如上一個章節邊界已經
+        // flush 成功，但下一個邊界才偵測到分類已被關閉）——分類關閉時
+        // 這本書的索引資料本來就該完全清空，不留下部分章節的孤兒列。
+        await _database.delete('book_content_index',
+            where: 'book_id = ?', whereArgs: [book.id]);
+      } else if (!paused) {
         await _database.update(
           'content_index_status',
           {'status': 'done', 'updated_at': DateTime.now().millisecondsSinceEpoch},
@@ -236,5 +261,20 @@ class ContentIndexingScheduler with WidgetsBindingObserver {
         whereArgs: [book.id],
       );
     }
+  }
+
+  /// epic-10-search Issue 3（review-plan-issue-3.md C-1）：[bookId] 對應的
+  /// `content_index_status` 列是否仍然存在。用於 `_processOneBook()` 在每個
+  /// 章節邊界檢查該書是否仍被追蹤——一旦消失即代表已被外部關閉並捨棄進度
+  /// （見上方 `_processOneBook` 內的呼叫點說明）。
+  Future<bool> _isStillTracked(String bookId) async {
+    final rows = await _database.query(
+      'content_index_status',
+      columns: ['book_id'],
+      where: 'book_id = ?',
+      whereArgs: [bookId],
+      limit: 1,
+    );
+    return rows.isNotEmpty;
   }
 }

@@ -53,6 +53,7 @@ import 'theme/app_theme_data.dart';
 import 'reader/reader_activity_tracker.dart';
 import 'search/content_indexing_scheduler.dart';
 import 'search/foliate_content_indexer.dart';
+import 'search/full_text_search_settings_repository.dart';
 import 'search/pdf_content_indexer.dart';
 import 'theme/app_theme_preferences.dart';
 
@@ -111,6 +112,14 @@ Future<void> main() async {
     foliateIndexer: const FoliateContentIndexer(),
   );
   contentIndexingScheduler.start();
+  // epic-10-search Issue 3：「啟用全文檢索」設定模型。requestProcessing
+  // 以 callback 注入（而非直接持有整個 contentIndexingScheduler），見
+  // plans/plan-issue-3.md Global Constraints。
+  final fullTextSearchSettingsRepository =
+      SqliteFullTextSearchSettingsRepository(
+    database: repository.database,
+    requestProcessing: contentIndexingScheduler.requestProcessing,
+  );
   // epic-34-tts-readalong Issue 9：SystemTtsProvider 預設建構子內部會自行
   // 建立 FlutterTts()，App 層級不需要另外管理其生命週期或提供假物件。
   final ttsProvider = SystemTtsProvider();
@@ -251,6 +260,8 @@ Future<void> main() async {
       initialTheme: initialTheme,
       initialEinkMode: initialEinkMode,
       themePreferences: themePreferences,
+      fullTextSearchSettingsRepository: fullTextSearchSettingsRepository,
+      isFullTextSearchAvailable: repository.isFullTextSearchAvailable,
     ),
   );
 }
@@ -295,6 +306,8 @@ class ElinkBookApp extends StatefulWidget {
   final AppThemePreferences themePreferences;
   final AppTheme initialTheme;
   final bool initialEinkMode;
+  final FullTextSearchSettingsRepository? fullTextSearchSettingsRepository;
+  final bool isFullTextSearchAvailable;
 
   ElinkBookApp({
     super.key,
@@ -330,6 +343,8 @@ class ElinkBookApp extends StatefulWidget {
     this.navigatorKey,
     this.initialTheme = AppTheme.light,
     this.initialEinkMode = false,
+    this.fullTextSearchSettingsRepository,
+    this.isFullTextSearchAvailable = true,
     AppThemePreferences? themePreferences,
   }) : themePreferences = themePreferences ?? AppThemePreferences();
 
@@ -402,6 +417,9 @@ class _ElinkBookAppState extends State<ElinkBookApp>
           ttsAudioHandler: widget.ttsAudioHandler,
           ttsAudioFocusSource: widget.ttsAudioFocusSource,
           readerActivityTracker: widget.readerActivityTracker,
+          fullTextSearchSettingsRepository:
+              widget.fullTextSearchSettingsRepository,
+          isFullTextSearchAvailable: widget.isFullTextSearchAvailable,
         ),
         syncDependencies: LibrarySyncDependencies(
           syncAccountRepository: widget.syncAccountRepository,
