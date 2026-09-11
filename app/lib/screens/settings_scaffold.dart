@@ -6,7 +6,9 @@ import '../cloud_import/onedrive_oauth_client.dart';
 import '../reader/custom_fonts_repository.dart';
 import '../reader/reader_prefs_manager.dart';
 import '../reader/tts_provider.dart';
+import '../search/full_text_search_settings_repository.dart';
 import '../sync/sync_account_repository.dart';
+import 'full_text_search_confirm_dialog.dart';
 import '../sync/sync_client.dart';
 import '../theme/app_theme.dart';
 import '../theme/app_theme_data.dart';
@@ -50,6 +52,8 @@ class SettingsScaffold extends StatefulWidget {
   final VoidCallback? onNavigateToLibrary;
   final VoidCallback? onNavigateToSource;
   final TtsProvider? ttsProvider;
+  final FullTextSearchSettingsRepository? fullTextSearchSettingsRepository;
+  final bool isFullTextSearchAvailable;
 
   const SettingsScaffold({
     super.key,
@@ -69,6 +73,8 @@ class SettingsScaffold extends StatefulWidget {
     this.onNavigateToLibrary,
     this.onNavigateToSource,
     this.ttsProvider,
+    this.fullTextSearchSettingsRepository,
+    this.isFullTextSearchAvailable = true,
   });
 
   @override
@@ -83,10 +89,28 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
   /// 阻塞其餘項目的同步顯示。
   bool _consoleLogEnabled = false;
 
+  /// 「啟用全文檢索」兩個分類目前顯示值（epic-10-search Issue 3），比照
+  /// 上方 `_consoleLogEnabled` 同一套模式。
+  bool _fullTextSearchPdfEnabled = false;
+  bool _fullTextSearchFoliateEnabled = false;
+
   @override
   void initState() {
     super.initState();
     _loadConsoleLogEnabled();
+    _loadFullTextSearchSettings();
+  }
+
+  /// 【review-plan-issue-3.md M-1】`SettingsScaffold` 被 `AdaptiveShellScaffold`
+  /// 的 `IndexedStack` 長駐掛載，只有 `initState()` 會載入一次的話，Issue 4
+  /// 全庫搜尋畫面的第二個入口若改變了開關狀態，切回本畫面時會顯示過期的
+  /// 值。切分頁會觸發 `AdaptiveShellScaffold.build()` 重新建構
+  /// `SettingsScaffold(...)`，本 State 物件被重用、`didUpdateWidget` 因此
+  /// 會被呼叫，在這裡重新載入即可低成本解決雙入口同步問題。
+  @override
+  void didUpdateWidget(covariant SettingsScaffold oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _loadFullTextSearchSettings();
   }
 
   Future<void> _loadConsoleLogEnabled() async {
@@ -101,6 +125,47 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
     await widget.prefsManager.saveGlobalPrefs(
       prefs.copyWith(consoleLogEnabled: value),
     );
+  }
+
+  Future<void> _loadFullTextSearchSettings() async {
+    final repository = widget.fullTextSearchSettingsRepository;
+    if (repository == null) return;
+    final pdfEnabled = await repository.isEnabled(ContentIndexCategory.pdf);
+    final foliateEnabled =
+        await repository.isEnabled(ContentIndexCategory.foliate);
+    if (!mounted) return;
+    setState(() {
+      _fullTextSearchPdfEnabled = pdfEnabled;
+      _fullTextSearchFoliateEnabled = foliateEnabled;
+    });
+  }
+
+  /// 關閉開關（[value] 為 `false`）直接呼叫 `setEnabled`，不彈出確認對話框
+  /// ——只有「從關閉切成開啟」才需要確認。使用者取消對話框時提前 return，
+  /// 開關維持關閉、不呼叫 `setEnabled`。
+  Future<void> _handleFullTextSearchToggle(
+    ContentIndexCategory category,
+    bool value,
+  ) async {
+    final repository = widget.fullTextSearchSettingsRepository;
+    if (repository == null) return;
+    if (value) {
+      final confirmed = await showFullTextSearchEnableConfirmDialog(
+        context,
+        category: category,
+        isEinkMode: widget.isEinkMode,
+      );
+      if (!confirmed) return;
+    }
+    await repository.setEnabled(category, value);
+    if (!mounted) return;
+    setState(() {
+      if (category == ContentIndexCategory.pdf) {
+        _fullTextSearchPdfEnabled = value;
+      } else {
+        _fullTextSearchFoliateEnabled = value;
+      }
+    });
   }
 
   @override
@@ -235,6 +300,80 @@ class _SettingsScaffoldState extends State<SettingsScaffold> {
               },
             ),
           ),
+          if (!widget.isFullTextSearchAvailable)
+            _SettingsCard(
+              child: ListTile(
+                key: const Key('settings_full_text_search_unavailable_hint'),
+                leading: const Icon(Icons.info_outline),
+                title: const Text('全文檢索'),
+                subtitle: const Text('本裝置不支援全文檢索'),
+              ),
+            )
+          else ...[
+            _SettingsCard(
+              child: ListTile(
+                title: const Text('PDF 全文檢索'),
+                subtitle: const Text('部分掃描/圖片型 PDF 可能沒有可搜尋的文字內容'),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      key: const Key(
+                          'settings_full_text_search_pdf_rebuild_button'),
+                      icon: const Icon(Icons.refresh),
+                      tooltip: '重建索引',
+                      onPressed: !_fullTextSearchPdfEnabled ||
+                              widget.fullTextSearchSettingsRepository == null
+                          ? null
+                          : () => widget.fullTextSearchSettingsRepository!
+                              .rebuildIndex(ContentIndexCategory.pdf),
+                    ),
+                    Switch(
+                      key: const Key('settings_full_text_search_pdf_switch'),
+                      value: _fullTextSearchPdfEnabled,
+                      onChanged: widget.fullTextSearchSettingsRepository ==
+                              null
+                          ? null
+                          : (value) => _handleFullTextSearchToggle(
+                              ContentIndexCategory.pdf, value),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            _SettingsCard(
+              child: ListTile(
+                title: const Text('其他格式全文檢索'),
+                subtitle: const Text('EPUB／TXT／KF8 等格式的背景索引建置'),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      key: const Key(
+                          'settings_full_text_search_foliate_rebuild_button'),
+                      icon: const Icon(Icons.refresh),
+                      tooltip: '重建索引',
+                      onPressed: !_fullTextSearchFoliateEnabled ||
+                              widget.fullTextSearchSettingsRepository == null
+                          ? null
+                          : () => widget.fullTextSearchSettingsRepository!
+                              .rebuildIndex(ContentIndexCategory.foliate),
+                    ),
+                    Switch(
+                      key: const Key(
+                          'settings_full_text_search_foliate_switch'),
+                      value: _fullTextSearchFoliateEnabled,
+                      onChanged: widget.fullTextSearchSettingsRepository ==
+                              null
+                          ? null
+                          : (value) => _handleFullTextSearchToggle(
+                              ContentIndexCategory.foliate, value),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
           const EBSectionHeader(title: '同步與帳號'),
           _SettingsCard(
             child: ListTile(

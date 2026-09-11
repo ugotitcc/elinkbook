@@ -14,6 +14,7 @@ import '../reader/tts_provider.dart';
 import '../reader/tts_audio_focus_source.dart';
 import '../reader/tts_audio_handler.dart';
 import '../reader/reader_activity_tracker.dart';
+import '../search/full_text_search_settings_repository.dart';
 import '../remote/opds_client.dart';
 import '../remote/remote_server_repository.dart';
 import '../remote/remote_thumbnail_cache.dart';
@@ -42,6 +43,15 @@ class LibraryReaderFeatureRepositories {
   final TtsAudioFocusSource? ttsAudioFocusSource;
   final ReaderActivityTracker? readerActivityTracker;
 
+  /// epic-10-search Issue 3：「啟用全文檢索」設定模型。null 時
+  /// `SettingsScaffold` 不顯示可互動的開關。
+  final FullTextSearchSettingsRepository? fullTextSearchSettingsRepository;
+
+  /// epic-10-search Issue 6：本裝置系統 SQLite 是否有 FTS5 模組可用。
+  /// `false` 時 `SettingsScaffold`「閱讀」分區顯示「本裝置不支援全文檢索」
+  /// 提示取代兩個開關。預設 `true`，維持既有呼叫端的行為不變。
+  final bool isFullTextSearchAvailable;
+
   const LibraryReaderFeatureRepositories({
     this.bookmarksRepository,
     this.highlightsRepository,
@@ -53,6 +63,8 @@ class LibraryReaderFeatureRepositories {
     this.ttsAudioHandler,
     this.ttsAudioFocusSource,
     this.readerActivityTracker,
+    this.fullTextSearchSettingsRepository,
+    this.isFullTextSearchAvailable = true,
   });
 }
 

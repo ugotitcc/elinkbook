@@ -15,9 +15,11 @@ import 'package:elinkbook/sync/sync_client.dart';
 import 'package:elinkbook/theme/app_theme.dart';
 import 'package:elinkbook/theme/app_theme_data.dart';
 import 'package:elinkbook/reader/global_reader_prefs.dart';
+import 'package:elinkbook/search/full_text_search_settings_repository.dart';
 import '../support/fake_cloud_account_repository.dart';
 import '../support/fake_reader_prefs_manager.dart';
 import '../support/fake_custom_fonts_repository.dart';
+import '../support/fake_full_text_search_settings_repository.dart';
 
 const _appInfoChannel = MethodChannel('elinkbook/app_info');
 
@@ -764,5 +766,285 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('朗讀語音與語速'), findsOneWidget);
+  });
+
+  group('epic-10-search Issue 3：全文檢索設定開關', () {
+    testWidgets('開關初始值反映 repository.isEnabled()', (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      final repository = FakeFullTextSearchSettingsRepository(
+        initialEnabled: {ContentIndexCategory.pdf: true},
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          home: SettingsScaffold(
+            prefsManager: FakeReaderPrefsManager(),
+            fullTextSearchSettingsRepository: repository,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        tester
+            .widget<Switch>(
+                find.byKey(const Key('settings_full_text_search_pdf_switch')))
+            .value,
+        isTrue,
+      );
+      expect(
+        tester
+            .widget<Switch>(find.byKey(
+                const Key('settings_full_text_search_foliate_switch')))
+            .value,
+        isFalse,
+      );
+    });
+
+    testWidgets('開啟開關前彈出確認對話框，取消不呼叫 setEnabled', (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      final repository = FakeFullTextSearchSettingsRepository();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: SettingsScaffold(
+            prefsManager: FakeReaderPrefsManager(),
+            fullTextSearchSettingsRepository: repository,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester
+          .tap(find.byKey(const Key('settings_full_text_search_pdf_switch')));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('full_text_search_enable_confirm_dialog')),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.byKey(
+          const Key('full_text_search_enable_confirm_dialog_cancel')));
+      await tester.pumpAndSettle();
+
+      expect(repository.setEnabledCalls, isEmpty);
+      expect(
+        tester
+            .widget<Switch>(
+                find.byKey(const Key('settings_full_text_search_pdf_switch')))
+            .value,
+        isFalse,
+      );
+    });
+
+    testWidgets('開啟開關確認後呼叫 setEnabled(true) 並更新畫面狀態', (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      final repository = FakeFullTextSearchSettingsRepository();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: SettingsScaffold(
+            prefsManager: FakeReaderPrefsManager(),
+            fullTextSearchSettingsRepository: repository,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester
+          .tap(find.byKey(const Key('settings_full_text_search_pdf_switch')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(
+          const Key('full_text_search_enable_confirm_dialog_confirm')));
+      await tester.pumpAndSettle();
+
+      expect(repository.setEnabledCalls, [(ContentIndexCategory.pdf, true)]);
+      expect(
+        tester
+            .widget<Switch>(
+                find.byKey(const Key('settings_full_text_search_pdf_switch')))
+            .value,
+        isTrue,
+      );
+    });
+
+    testWidgets('關閉開關不彈出確認對話框，直接呼叫 setEnabled(false)', (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      final repository = FakeFullTextSearchSettingsRepository(
+        initialEnabled: {ContentIndexCategory.pdf: true},
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          home: SettingsScaffold(
+            prefsManager: FakeReaderPrefsManager(),
+            fullTextSearchSettingsRepository: repository,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester
+          .tap(find.byKey(const Key('settings_full_text_search_pdf_switch')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('full_text_search_enable_confirm_dialog')),
+        findsNothing,
+      );
+      expect(repository.setEnabledCalls, [(ContentIndexCategory.pdf, false)]);
+    });
+
+    testWidgets(
+        '重建索引按鈕：開關開啟時可用，點擊後呼叫 rebuildIndex（review-plan-issue-3.md I-1）',
+        (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      final repository = FakeFullTextSearchSettingsRepository(
+        initialEnabled: {ContentIndexCategory.pdf: true},
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          home: SettingsScaffold(
+            prefsManager: FakeReaderPrefsManager(),
+            fullTextSearchSettingsRepository: repository,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(
+          const Key('settings_full_text_search_pdf_rebuild_button')));
+      await tester.pumpAndSettle();
+
+      expect(repository.rebuildIndexCalls, [ContentIndexCategory.pdf]);
+    });
+
+    testWidgets('重建索引按鈕：開關關閉時停用', (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      await tester.pumpWidget(
+        MaterialApp(
+          home: SettingsScaffold(
+            prefsManager: FakeReaderPrefsManager(),
+            fullTextSearchSettingsRepository:
+                FakeFullTextSearchSettingsRepository(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final button = tester.widget<IconButton>(find.byKey(
+          const Key('settings_full_text_search_pdf_rebuild_button')));
+      expect(button.onPressed, isNull);
+    });
+
+    testWidgets('isFullTextSearchAvailable 為 false 時顯示不支援提示、不顯示開關',
+        (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      await tester.pumpWidget(
+        MaterialApp(
+          home: SettingsScaffold(
+            prefsManager: FakeReaderPrefsManager(),
+            fullTextSearchSettingsRepository:
+                FakeFullTextSearchSettingsRepository(),
+            isFullTextSearchAvailable: false,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('settings_full_text_search_unavailable_hint')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('settings_full_text_search_pdf_switch')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const Key('settings_full_text_search_foliate_switch')),
+        findsNothing,
+      );
+    });
+
+    testWidgets(
+        'didUpdateWidget 時重新載入全文檢索開關狀態（review-plan-issue-3.md M-1）',
+        (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+      final repository = FakeFullTextSearchSettingsRepository();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: SettingsScaffold(
+            prefsManager: FakeReaderPrefsManager(),
+            fullTextSearchSettingsRepository: repository,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<Switch>(
+                find.byKey(const Key('settings_full_text_search_pdf_switch')))
+            .value,
+        isFalse,
+      );
+
+      // 模擬另一個入口（Issue 4 的全庫搜尋畫面）呼叫 setEnabled 之後，本
+      // 畫面因為 IndexedStack 切換分頁而重新 build（同一個 State，重新
+      // 傳入等價的 widget 設定）。
+      await repository.setEnabled(ContentIndexCategory.pdf, true);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: SettingsScaffold(
+            prefsManager: FakeReaderPrefsManager(),
+            fullTextSearchSettingsRepository: repository,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        tester
+            .widget<Switch>(
+                find.byKey(const Key('settings_full_text_search_pdf_switch')))
+            .value,
+        isTrue,
+      );
+    });
   });
 }

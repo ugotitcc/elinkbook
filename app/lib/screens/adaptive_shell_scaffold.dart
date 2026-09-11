@@ -142,6 +142,10 @@ class _AdaptiveShellScaffoldState extends State<AdaptiveShellScaffold> {
               onNavigateToLibrary: () => _navigateTo(0),
               onNavigateToSource: () => _navigateTo(1),
               ttsProvider: widget.readerFeatureRepositories.ttsProvider,
+              fullTextSearchSettingsRepository: widget
+                  .readerFeatureRepositories.fullTextSearchSettingsRepository,
+              isFullTextSearchAvailable:
+                  widget.readerFeatureRepositories.isFullTextSearchAvailable,
             ),
           ],
         ),

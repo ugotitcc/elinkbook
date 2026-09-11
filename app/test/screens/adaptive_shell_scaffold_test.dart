@@ -16,6 +16,7 @@ import '../support/fake_library_repository.dart';
 import '../support/fake_reader_prefs_manager.dart';
 import '../support/fake_custom_fonts_repository.dart';
 import '../support/fake_tts_provider.dart';
+import '../support/fake_full_text_search_settings_repository.dart';
 
 void main() {
   late ReaderPrefsManager prefsManager;
@@ -239,5 +240,38 @@ void main() {
     final settingsScaffold =
         tester.widget<SettingsScaffold>(find.byType(SettingsScaffold));
     expect(settingsScaffold.ttsProvider, ttsProvider);
+  });
+
+  testWidgets(
+      'SettingsScreen 收到 fullTextSearchSettingsRepository/isFullTextSearchAvailable 轉送',
+      (tester) async {
+    final fullTextSearchSettingsRepository =
+        FakeFullTextSearchSettingsRepository();
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: AdaptiveShellScaffold(
+          repository: FakeLibraryRepository(),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+          readerFeatureRepositories: LibraryReaderFeatureRepositories(
+            fullTextSearchSettingsRepository: fullTextSearchSettingsRepository,
+            isFullTextSearchAvailable: false,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('library_settings_button')));
+    await tester.pumpAndSettle();
+
+    final settingsScreen =
+        tester.widget<SettingsScaffold>(find.byType(SettingsScaffold));
+    expect(
+      settingsScreen.fullTextSearchSettingsRepository,
+      fullTextSearchSettingsRepository,
+    );
+    expect(settingsScreen.isFullTextSearchAvailable, isFalse);
   });
 }
