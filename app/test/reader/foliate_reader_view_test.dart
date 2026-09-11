@@ -1492,6 +1492,105 @@ void main() {
     });
   });
 
+  group('main.js 搜尋跳轉高亮 regression guard（epic-10-search Issue 5，spec.md §6）',
+      () {
+    late String mainJsSource;
+    late String viewJsSource;
+
+    setUpAll(() {
+      mainJsSource = File('android/app/src/main/assets/foliate/main.js')
+          .readAsStringSync();
+      viewJsSource = File('android/app/src/main/assets/foliate/view.js')
+          .readAsStringSync();
+    });
+
+    test(
+        'main.js 的 foliate-search: 前綴字面值與 view.js 既有 SEARCH_PREFIX 常數一致'
+        '（規劃階段查證：此前綴是 view.js 這份釘定 vendored 檔案自己既有的保留字，'
+        '不是本工單自訂的名稱，見本計畫 Global Constraints）', () {
+      expect(
+        viewJsSource.contains("const SEARCH_PREFIX = 'foliate-search:'"),
+        isTrue,
+        reason: '若這行斷言失敗，代表 view.js 這份釘定版本升級後 '
+            'SEARCH_PREFIX 的字面值改變了，main.js 下面兩個函式寫死的 '
+            "'foliate-search:' 前綴必須同步更新，否則兩者不再是同一個 "
+            'key 空間，搜尋跳轉高亮會完全不顯示（view.js 會把它導向一般'
+            '劃線/備註的 key 空間，可能覆蓋使用者真實資料，見 Global '
+            'Constraints 對這個風險的完整說明）。',
+      );
+      expect(mainJsSource.contains("'foliate-search:' + cfi"), isTrue,
+          reason: 'main.js 內找不到 window.showSearchHighlight——搜尋跳轉'
+              '高亮橋接函式缺失。');
+    });
+
+    test('window.showSearchHighlight／window.clearSearchHighlight 皆存在，且各自呼叫 view.addAnnotation／view.deleteAnnotation',
+        () {
+      final showFnIndex =
+          mainJsSource.indexOf('window.showSearchHighlight = function');
+      final clearFnIndex =
+          mainJsSource.indexOf('window.clearSearchHighlight = function');
+      expect(showFnIndex, greaterThanOrEqualTo(0),
+          reason: 'main.js 內找不到 window.showSearchHighlight。');
+      expect(clearFnIndex, greaterThanOrEqualTo(0),
+          reason: 'main.js 內找不到 window.clearSearchHighlight——搜尋跳轉'
+              '高亮清除橋接函式缺失。');
+      final addCallIndex =
+          mainJsSource.indexOf('view.addAnnotation(', showFnIndex);
+      expect(addCallIndex, greaterThanOrEqualTo(0),
+          reason: 'window.showSearchHighlight 內找不到 view.addAnnotation '
+              '呼叫。');
+      final deleteCallIndex =
+          mainJsSource.indexOf('view.deleteAnnotation(', clearFnIndex);
+      expect(deleteCallIndex, greaterThanOrEqualTo(0),
+          reason: 'window.clearSearchHighlight 內找不到 view.deleteAnnotation '
+              '呼叫。');
+    });
+
+    test(
+        'showSearchHighlight／clearSearchHighlight 使用獨立的 currentSearchHighlightValue 變數，不觸及 currentTtsAnnotationValue（單向隔離）',
+        () {
+      final showFnStart =
+          mainJsSource.indexOf('window.showSearchHighlight = function');
+      final showFnEnd = mainJsSource.indexOf('\n}', showFnStart);
+      final showFnBody = mainJsSource.substring(showFnStart, showFnEnd);
+      expect(showFnBody.contains('currentSearchHighlightValue'), isTrue);
+      expect(showFnBody.contains('currentTtsAnnotationValue'), isFalse,
+          reason: 'showSearchHighlight 不應觸及 currentTtsAnnotationValue，'
+              '否則搜尋跳轉高亮與朗讀高亮的生命週期會互相汙染（spec.md '
+              '§6）。');
+
+      final clearFnStart =
+          mainJsSource.indexOf('window.clearSearchHighlight = function');
+      final clearFnEnd = mainJsSource.indexOf('\n}', clearFnStart);
+      final clearFnBody = mainJsSource.substring(clearFnStart, clearFnEnd);
+      expect(clearFnBody.contains('currentTtsAnnotationValue'), isFalse);
+    });
+
+    test(
+        'showTtsHighlight／clearTtsHighlight 不觸及 currentSearchHighlightValue（反向隔離，確保雙向皆獨立）',
+        () {
+      final showTtsStart =
+          mainJsSource.indexOf('window.showTtsHighlight = function');
+      final showTtsEnd = mainJsSource.indexOf('\n}', showTtsStart);
+      expect(
+        mainJsSource
+            .substring(showTtsStart, showTtsEnd)
+            .contains('currentSearchHighlightValue'),
+        isFalse,
+      );
+
+      final clearTtsStart =
+          mainJsSource.indexOf('window.clearTtsHighlight = function');
+      final clearTtsEnd = mainJsSource.indexOf('\n}', clearTtsStart);
+      expect(
+        mainJsSource
+            .substring(clearTtsStart, clearTtsEnd)
+            .contains('currentSearchHighlightValue'),
+        isFalse,
+      );
+    });
+  });
+
   group('main.js 朗讀段反向查找 regression guard（epic-34-tts-readalong Issue 4）', () {
     late String mainJsSource;
 
