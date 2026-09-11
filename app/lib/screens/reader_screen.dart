@@ -46,6 +46,7 @@ import '../reader/pdf_toc_navigator.dart';
 import '../reader/pdf_selection_info.dart';
 import '../reader/reading_position.dart';
 import '../reader/reader_console_log.dart';
+import '../reader/reader_jump_target.dart';
 import '../reader/reader_prefs_manager.dart';
 import '../reader/toc_entry.dart';
 import '../reader/toc_navigator.dart';
@@ -191,6 +192,14 @@ class ReaderScreen extends StatefulWidget {
   /// tracker，行為等同本 Issue 之前）。
   final ReaderActivityTracker? readerActivityTracker;
 
+  /// 全庫搜尋跳轉目標（epic-10-search Issue 5，spec.md §6）：非 `null`
+  /// 時，開書當下傳給底層 View 的初始定位參數改用本欄位（優先權高於
+  /// 資料庫既有 `lastPosition`），除此之外不影響任何後續行為——後續翻頁
+  /// /checkpoint 寫入與一般開書完全同構，不新增任何「暫停進度儲存」旗標
+  /// （見 `_maybeShowSearchJumpHighlight()` 文件註解的完整理由）。刻意為
+  /// 可選參數——比照 `readerActivityTracker` 既有慣例，未提供時零回歸。
+  final ReaderJumpTarget? initialJumpTarget;
+
   const ReaderScreen({
     super.key,
     required this.filePath,
@@ -213,6 +222,7 @@ class ReaderScreen extends StatefulWidget {
     this.ttsAudioFocusSource,
     this.isEinkMode = false,
     this.readerActivityTracker,
+    this.initialJumpTarget,
   });
 
   @override
@@ -401,6 +411,18 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   // 不變——僅用於 _buildNativeView() 建構 EpubReaderView/PdfReaderView
   // 時傳入 initialLocatorJson/initialPageIndex 這兩個一次性開書起始值。
   ReadingPosition? _initialPosition;
+  /// 【spec.md §6 2026-09-11 修訂】只在 `widget.initialJumpTarget` 非
+  /// `null` 時才有意義：`_pdfPageInfo`/`_epubPositionInfo` 開書後第一次
+  /// 被 `onPageChanged`/`onLocatorChanged` 賦值時（賦值前仍是 `null`）
+  /// 代表 `initialJumpTarget` 套用後的初始定位回報，不算使用者主動
+  /// 導覽；這兩個回呼**第二次（或之後）**被呼叫時（賦值前已非 `null`）
+  /// ——不論觸發來源是翻頁熱區、音量鍵、目錄/書籤跳轉、或書內搜尋，皆會
+  /// 走同一組回呼報告新位置，這個判斷天然涵蓋所有導覽方式——才代表使用
+  /// 者確實已經離開了跳轉目標本身，設為 `true`。單向轉換
+  /// （`false → true`），一旦設定就不會再變回 `false`。
+  /// [_writeCurrentPosition] 用這個旗標決定是否要跳過寫入、保留資料庫
+  /// 既有進度。
+  bool _hasRelocatedSinceOpen = false;
   // 用於呼叫 PdfReaderView.jumpToPage(key, pageIndex) 這個強型別 static
   // helper（審查修正，見 Task 2 Step 4——不使用 as dynamic 跨 State 私有
   // 邊界呼叫，避免 release 混淆／tree-shaking 風險）。
@@ -638,6 +660,13 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 寫入。尚未收到任何位置回報（例如書籍尚未成功開啟）時靜默不寫入，
   /// 避免用「無資料」覆蓋掉資料庫中既有的正確記錄。
   void _writeCurrentPosition() {
+    // 【spec.md §6 2026-09-11 修訂，review-plan-issue-5.md I-2】使用者
+    // 跳轉後尚未產生任何後續重定位事件（見 _hasRelocatedSinceOpen 欄位
+    // 文件註解），保留資料庫既有的 lastPosition、不覆寫——避免使用者只是
+    // 查看一下搜尋結果、隨即離開，卻把原本讀到一半的進度覆蓋成搜尋跳轉
+    // 目標本身。initialJumpTarget 為 null（一般開書）時這個判斷恆為
+    // false，行為完全不變。
+    if (widget.initialJumpTarget != null && !_hasRelocatedSinceOpen) return;
     final format = detectBookFormat(widget.filePath);
     switch (format) {
       case BookFormat.pdf:
@@ -2900,11 +2929,18 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           onZoneAction: _handleZoneAction,
           showNavZoneDebugOverlay: resolved.showNavZoneDebugOverlay,
           consoleLogEnabled: resolved.consoleLogEnabled,
-          initialLocatorJson: _initialPosition?.epubLocatorJson,
+          // epic-10-search Issue 5：initialJumpTarget 存在時優先權高於
+          // 資料庫既有 lastPosition（spec.md §6），僅此一處決策點，其餘
+          // 行為與一般開書完全同構。
+          initialLocatorJson:
+              widget.initialJumpTarget?.cfi ?? _initialPosition?.epubLocatorJson,
           isComicBookHint: format == BookFormat.cbz,
           dualPageDirection: resolved.dualPageDirection,
           onLocatorChanged: (info) {
             if (!mounted) return;
+            // 【spec.md §6 2026-09-11 修訂】見上方 _hasRelocatedSinceOpen
+            // 欄位文件註解：賦值前非 null，代表這不是開書後第一次回報。
+            if (_epubPositionInfo != null) _hasRelocatedSinceOpen = true;
             setState(() => _epubPositionInfo = info);
             // 手動導覽自動暫停並清除舊高亮（epic-34-tts-readalong
             // Issue 4）：直接用既有的 nullable _ttsController 欄位（不用
@@ -2949,7 +2985,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         return PdfReaderView(
           key: _pdfReaderViewKey,
           filePath: widget.filePath,
-          initialPageIndex: _initialPosition?.pdfPageIndex,
+          // epic-10-search Issue 5：理由同上方 FoliateReaderView 分支。
+          initialPageIndex: widget.initialJumpTarget?.pdfPageIndex ??
+              _initialPosition?.pdfPageIndex,
           onPageRendered: _handlePageRendered,
           onError: _handleError,
           dualPageMode: resolved.dualPageMode,
@@ -2973,6 +3011,9 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
           showNavZoneDebugOverlay: resolved.showNavZoneDebugOverlay,
           onPageChanged: (info) {
             if (!mounted) return;
+            // 【spec.md §6 2026-09-11 修訂】理由同上方 onLocatorChanged
+            // 分支。
+            if (_pdfPageInfo != null) _hasRelocatedSinceOpen = true;
             setState(() => _pdfPageInfo = info);
           },
         );

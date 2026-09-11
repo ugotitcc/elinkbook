@@ -62,6 +62,8 @@ import 'package:elinkbook/library/sqlite_library_repository.dart';
 import 'package:elinkbook/reader/book_reader_prefs_repository.dart';
 import 'package:elinkbook/reader/layout_preset.dart';
 import 'package:elinkbook/reader/layout_preset_repository.dart';
+import 'package:elinkbook/reader/reader_jump_target.dart';
+import 'package:elinkbook/reader/reading_position.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 // 依 spec.md「測試決策」：ReaderScreen 分派到 EpubReaderView/PdfReaderView
@@ -120,6 +122,206 @@ void main() {
       const MethodChannel('elinkbook/fullscreen'),
       (call) async => null,
     );
+  });
+
+  group('epic-10-search Issue 5：initialJumpTarget 覆寫初始定位', () {
+    testWidgets('PDF：initialJumpTarget.pdfPageIndex 優先於資料庫既有 lastPosition',
+        (tester) async {
+      final prefsManager = FakeReaderPrefsManager(
+        readingPositionByBookId: {
+          'b_jump_pdf_pos': const ReadingPosition(pdfPageIndex: 4),
+        },
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample_multi_page.pdf',
+            bookId: 'b_jump_pdf_pos',
+            prefsManager: prefsManager,
+            initialJumpTarget: const ReaderJumpTarget(pdfPageIndex: 2),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+      expect(pdfView.initialPageIndex, 2);
+    });
+
+    testWidgets('Foliate：initialJumpTarget.cfi 優先於資料庫既有 lastPosition',
+        (tester) async {
+      final prefsManager = FakeReaderPrefsManager(
+        readingPositionByBookId: {
+          'b_jump_epub_pos': const ReadingPosition(
+            epubLocatorJson: 'epubcfi(/stored)',
+          ),
+        },
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_jump_epub_pos',
+            prefsManager: prefsManager,
+            initialJumpTarget: const ReaderJumpTarget(cfi: 'epubcfi(/jump)'),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final foliateView = tester.widget<FoliateReaderView>(
+        find.byType(FoliateReaderView),
+      );
+      expect(foliateView.initialLocatorJson, 'epubcfi(/jump)');
+    });
+
+    testWidgets(
+        'initialJumpTarget 為 null（一般開書）時，沿用資料庫既有 lastPosition，零回歸',
+        (tester) async {
+      final prefsManager = FakeReaderPrefsManager(
+        readingPositionByBookId: {
+          'b_no_jump_pos': const ReadingPosition(
+            epubLocatorJson: 'epubcfi(/stored)',
+          ),
+        },
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_no_jump_pos',
+            prefsManager: prefsManager,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final foliateView = tester.widget<FoliateReaderView>(
+        find.byType(FoliateReaderView),
+      );
+      expect(foliateView.initialLocatorJson, 'epubcfi(/stored)');
+    });
+
+    testWidgets(
+        'PDF：跳轉後使用者繼續翻頁，dispose() 的 checkpoint 存檔行為與未帶入 initialJumpTarget 時完全一致'
+        '（issues.md Issue 5 單元測試要求，審查修正 I-3）', (tester) async {
+      final prefsManager = FakeReaderPrefsManager(
+        readingPositionByBookId: {
+          'b_jump_then_navigate': const ReadingPosition(pdfPageIndex: 4),
+        },
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample_multi_page.pdf',
+            bookId: 'b_jump_then_navigate',
+            prefsManager: prefsManager,
+            initialJumpTarget: const ReaderJumpTarget(pdfPageIndex: 2),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+      // 第一次回報：抵達 initialJumpTarget 指定的頁碼（開書當下的初始
+      // 定位回報，_hasRelocatedSinceOpen 仍應維持 false）。
+      pdfView.onPageChanged?.call(const PdfPageInfo(pageIndex: 2, totalPages: 5));
+      await tester.pump();
+      // 第二次回報：使用者從跳轉目標（頁碼 2）繼續往後翻到頁碼 3——這才
+      // 是「後續重定位事件」，_hasRelocatedSinceOpen 應轉為 true（比照
+      // 既有 PDF 測試直接呼叫 onPageChanged 的既有慣例，不需要真的等待
+      // pdfrx 完整載入）。
+      pdfView.onPageChanged?.call(const PdfPageInfo(pageIndex: 3, totalPages: 5));
+      await tester.pump();
+
+      // 移除畫面觸發 dispose()，比照既有「PDF 收到 onPageChanged 後離開
+      // 畫面（dispose），正確寫入 ReadingPosition」測試的既有慣例（見
+      // reader_screen_test.dart「Epic 5 Issue 2：閱讀位置記憶」區塊）。
+      await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
+      await tester.pump();
+
+      expect(
+        prefsManager.savedReadingPositionCalls.last.key,
+        'b_jump_then_navigate',
+      );
+      expect(
+        prefsManager.savedReadingPositionCalls.last.value.pdfPageIndex,
+        3,
+        reason: 'dispose() 應寫入使用者實際翻到的頁碼（3），而非跳轉目標'
+            '（2）或跳轉前資料庫既有的舊進度（4）——checkpoint 寫入行為與'
+            '一般開書完全同構，不因為曾經是搜尋跳轉而有任何殘留特殊狀態。',
+      );
+    });
+
+    testWidgets(
+        'PDF：跳轉後使用者未曾產生任何後續重定位事件即離開，dispose() 保留資料庫既有進度、不覆寫'
+        '（spec.md §6 2026-09-11 修訂，`review-plan-issue-5.md` I-2 修訂——'
+        '推翻本計畫原版「這是刻意接受的簡化」設計，改為實際修正這個行為）',
+        (tester) async {
+      final prefsManager = FakeReaderPrefsManager(
+        readingPositionByBookId: {
+          'b_jump_immediate_exit': const ReadingPosition(pdfPageIndex: 49),
+        },
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample_multi_page.pdf',
+            bookId: 'b_jump_immediate_exit',
+            prefsManager: prefsManager,
+            initialJumpTarget: const ReaderJumpTarget(pdfPageIndex: 2),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      // 只有「開書當下抵達跳轉目標」這一次回報，使用者完全沒有進一步
+      // 互動——onPageChanged 是原生端每次頁面確實顯示變更時都會回報，
+      // 這裡刻意只呼叫一次，模擬使用者查看一下就離開的情境。
+      final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+      pdfView.onPageChanged?.call(const PdfPageInfo(pageIndex: 2, totalPages: 5));
+      await tester.pump();
+
+      // 使用者未曾翻頁即離開閱讀畫面。
+      await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
+      await tester.pump();
+
+      expect(
+        prefsManager.savedReadingPositionCalls,
+        isEmpty,
+        reason: '使用者跳轉後沒有任何後續重定位事件，_writeCurrentPosition() '
+            '應在最前面就直接 return，完全不呼叫 saveReadingPosition——不能'
+            '把搜尋跳轉目標（頁碼 2）誤存成新進度，覆蓋掉跳轉前的舊進度'
+            '（頁碼 49）。',
+      );
+      expect(
+        prefsManager.readingPositionByBookId['b_jump_immediate_exit']
+            ?.pdfPageIndex,
+        49,
+        reason: '資料庫既有進度應維持原樣（頁碼 49），完全不受這次搜尋'
+            '跳轉瀏覽影響。',
+      );
+    });
   });
 
   testWidgets('不支援格式顯示明確錯誤訊息', (tester) async {
