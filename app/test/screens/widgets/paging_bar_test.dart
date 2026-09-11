@@ -72,6 +72,48 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets(
+      'keyPrefix 非 null 時，內部按鈕改用前綴 Key，避免同畫面多個 PagingBar 實例的內部按鈕 Key 重複'
+      '（reviews/review-issue-4.md Minor 2）', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Column(
+            children: [
+              PagingBar(
+                currentPage: 0,
+                pageCount: 2,
+                onPrevious: null,
+                onNext: () {},
+                keyPrefix: 'section_a',
+              ),
+              PagingBar(
+                currentPage: 0,
+                pageCount: 2,
+                onPrevious: null,
+                onNext: () {},
+                keyPrefix: 'section_b',
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byKey(const Key('paging_bar_previous_button')), findsNothing);
+    expect(find.byKey(const Key('paging_bar_next_button')), findsNothing);
+    expect(
+      find.byKey(const Key('section_a_previous_button')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('section_a_next_button')), findsOneWidget);
+    expect(
+      find.byKey(const Key('section_b_previous_button')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('section_b_next_button')), findsOneWidget);
+  });
+
   testWidgets('一般模式整體高度為 52dp，isEinkMode 時為 56dp（review-plan-issue-3.md C-1：高度需隨觸控目標自適應，不可寫死 52 夾傷 56dp 按鈕）', (
     tester,
   ) async {

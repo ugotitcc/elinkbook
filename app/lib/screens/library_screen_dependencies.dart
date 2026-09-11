@@ -15,6 +15,7 @@ import '../reader/tts_audio_focus_source.dart';
 import '../reader/tts_audio_handler.dart';
 import '../reader/reader_activity_tracker.dart';
 import '../search/full_text_search_settings_repository.dart';
+import '../search/search_repository.dart';
 import '../remote/opds_client.dart';
 import '../remote/remote_server_repository.dart';
 import '../remote/remote_thumbnail_cache.dart';
@@ -52,6 +53,11 @@ class LibraryReaderFeatureRepositories {
   /// 提示取代兩個開關。預設 `true`，維持既有呼叫端的行為不變。
   final bool isFullTextSearchAvailable;
 
+  /// epic-10-search Issue 4：全庫搜尋（書名/作者 LIKE 查詢＋書內內容 FTS5
+  /// 查詢）的資料存取層。`null` 時 `LibraryScreen`「搜尋書本內容」入口停用
+  /// （不導覽至 `LibrarySearchScreen`）。
+  final SearchRepository? searchRepository;
+
   const LibraryReaderFeatureRepositories({
     this.bookmarksRepository,
     this.highlightsRepository,
@@ -65,6 +71,7 @@ class LibraryReaderFeatureRepositories {
     this.readerActivityTracker,
     this.fullTextSearchSettingsRepository,
     this.isFullTextSearchAvailable = true,
+    this.searchRepository,
   });
 }
 

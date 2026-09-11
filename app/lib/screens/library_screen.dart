@@ -28,6 +28,7 @@ import 'book_action_sheet.dart';
 import 'library_group_management_dialog.dart';
 import 'library_move_to_group_dialog.dart';
 import 'library_paging.dart';
+import 'library_search_screen.dart';
 import 'reader_screen.dart';
 import 'widgets/eb_sheet_shell.dart';
 import 'widgets/paging_bar.dart';
@@ -810,6 +811,58 @@ class _LibraryScreenState extends State<LibraryScreen>
     _onSearchChanged('');
   }
 
+  /// 「搜尋書本內容」入口（epic-10-search Issue 4，spec.md §5）：帶入目前
+  /// 書架快速過濾欄位的關鍵字，導航至 `LibrarySearchScreen`。
+  /// `searchRepository` 為 `null` 時停用（`onTap: null`），比照
+  /// `SettingsScaffold` 既有「功能未啟用時 onTap 傳 null」慣例
+  /// （見 `settings_font_management_button`）。
+  void _openLibrarySearchScreen() {
+    final searchRepository = widget.readerFeatureRepositories.searchRepository;
+    if (searchRepository == null) return;
+    Navigator.of(context)
+        .push(
+          MaterialPageRoute(
+            builder: (_) => LibrarySearchScreen(
+              initialQuery: _searchQuery,
+              searchRepository: searchRepository,
+              prefsManager: widget.prefsManager,
+              libraryRepository: widget.repository,
+              readerFeatureRepositories: widget.readerFeatureRepositories,
+              syncDependencies: widget.syncDependencies,
+              isEinkMode: widget.themeDependencies.isEinkMode,
+            ),
+          ),
+        )
+        // 【審查修正 M-1】比照既有 _openBook() 慣例：使用者可能從全庫搜尋
+        // 畫面點進 ReaderScreen 閱讀後才返回書架，若不重新整理，
+        // _bookListController 持有的書籍清單快照會殘留舊的閱讀進度/排序。
+        .then((_) => _bookListController.loadBooks());
+  }
+
+  Widget _buildContentSearchEntryBanner() {
+    // 【審查修正 M-2】多選模式下停用入口——長按書籍進入批次選取後，點擊
+    // 入口若仍會跳轉畫面，會意外中斷選取操作，比照 _ContinueReadingRow／
+    // _GroupGridTile 等元件在選取模式下一律停用互動的既有慣例。
+    final hasSearchRepository =
+        widget.readerFeatureRepositories.searchRepository != null;
+    final available = hasSearchRepository && !_inSelectionMode;
+    return InkWell(
+      key: const Key('library_content_search_entry_button'),
+      onTap: available ? _openLibrarySearchScreen : null,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+        child: Row(
+          children: [
+            const Icon(Icons.travel_explore, size: 18),
+            const SizedBox(width: 8),
+            const Expanded(child: Text('搜尋書本內容')),
+            const Icon(Icons.chevron_right, size: 18),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final books = _bookListController.books;
@@ -836,6 +889,7 @@ class _LibraryScreenState extends State<LibraryScreen>
             : Column(
                 children: [
                   _buildSearchField(),
+                  _buildContentSearchEntryBanner(),
                   Expanded(
                     child: searchResults != null
                         ? (searchResults.isEmpty

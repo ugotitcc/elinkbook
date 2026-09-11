@@ -15,6 +15,7 @@ import 'package:elinkbook/reader/reader_prefs_manager.dart';
 import 'package:elinkbook/screens/library_paging.dart';
 import 'package:elinkbook/screens/library_screen.dart';
 import 'package:elinkbook/screens/library_screen_dependencies.dart';
+import 'package:elinkbook/screens/library_search_screen.dart';
 
 import '../support/fake_full_text_search_settings_repository.dart';
 import 'package:elinkbook/library/models/book.dart';
@@ -26,6 +27,7 @@ import 'package:elinkbook/theme/app_theme_data.dart';
 
 import '../support/fake_book_import_service.dart';
 import '../support/fake_library_repository.dart';
+import '../support/fake_search_repository.dart';
 import '../support/fake_reader_prefs_manager.dart';
 import '../support/fake_opds_client.dart';
 import '../support/fake_remote_server_repository.dart';
@@ -4627,6 +4629,98 @@ void main() {
       expect(saved.pageTurnModeOverride, PageTurnMode.scroll);
     },
   );
+
+  testWidgets(
+      '點擊「搜尋書本內容」入口，帶同一組關鍵字導航至 LibrarySearchScreen（epic-10-search Issue 4）',
+      (tester) async {
+    final book = _testBook(id: '1', title: '紅樓夢', author: '曹雪芹');
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: [book]),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+          readerFeatureRepositories: LibraryReaderFeatureRepositories(
+            searchRepository: FakeSearchRepository(),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const Key('library_search_field')),
+      '紅樓',
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.byKey(const Key('library_content_search_entry_button')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(LibrarySearchScreen), findsOneWidget);
+    expect(
+      tester
+          .widget<TextField>(
+              find.byKey(const Key('library_search_screen_field')))
+          .controller!
+          .text,
+      '紅樓',
+    );
+  });
+
+  testWidgets('searchRepository 為 null 時，「搜尋書本內容」入口停用（點擊無反應）',
+      (tester) async {
+    final book = _testBook(id: '1', title: '紅樓夢');
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: [book]),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.byKey(const Key('library_content_search_entry_button')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(LibrarySearchScreen), findsNothing);
+  });
+
+  testWidgets('多選模式下，「搜尋書本內容」入口停用（審查修正 M-2）', (tester) async {
+    final book = _testBook(id: '1', title: '紅樓夢');
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: [book]),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+          readerFeatureRepositories: LibraryReaderFeatureRepositories(
+            searchRepository: FakeSearchRepository(),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.longPress(find.byKey(const Key('book_item_1')));
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.byKey(const Key('library_content_search_entry_button')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(LibrarySearchScreen), findsNothing);
+  });
 }
 
 /// 刻意「非線性」的測試用 TextScaler：對較大的輸入值套用較低的有效縮放
