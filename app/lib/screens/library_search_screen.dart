@@ -9,11 +9,13 @@ import '../library/widgets/book_cover.dart';
 import '../reader/reader_prefs_manager.dart';
 import '../search/full_text_search_settings_repository.dart';
 import '../search/search_repository.dart';
+import 'full_text_search_confirm_dialog.dart';
 import 'library_paging.dart';
 import 'library_screen_dependencies.dart';
 import 'reader_screen.dart';
 import 'widgets/eb_field_card.dart';
 import 'widgets/eb_section_header.dart';
+import 'widgets/eb_sheet_shell.dart';
 import 'widgets/paging_bar.dart';
 
 /// 全庫搜尋畫面（epic-10-search Issue 4，spec.md §5）：從 `LibraryScreen`
@@ -173,12 +175,46 @@ class _LibrarySearchScreenState extends State<LibrarySearchScreen> {
     );
   }
 
+  Future<void> _openQuickSettingsSheet() async {
+    await EBSheetShell.show<void>(
+      context,
+      title: '全文檢索設定',
+      isEinkMode: widget.isEinkMode,
+      builder: (context) => _FullTextSearchQuickSettingsPanel(
+        repository:
+            widget.readerFeatureRepositories.fullTextSearchSettingsRepository,
+        isFullTextSearchAvailable:
+            widget.readerFeatureRepositories.isFullTextSearchAvailable,
+        isEinkMode: widget.isEinkMode,
+      ),
+    );
+    // 使用者可能在選單裡切換了開關（依 spec.md §4 立即清除/回填該分類
+    // 索引資料）或按下「重建索引」，回到搜尋畫面後不能只更新引導卡片
+    // 依據的兩個布林值（審查修正 I-3）——若目前輸入框已有查詢字串且正在
+    // 顯示結果，必須連帶重新查詢一次，避免畫面殘留切換前查到的過期內容
+    // 匹配結果（例如使用者剛關閉 PDF 全文檢索，畫面卻還顯示著幾秒前查到
+    // 的 PDF 內容片段）。
+    await _loadFullTextSearchSettings();
+    final trimmedQuery = _controller.text.trim();
+    if (trimmedQuery.isNotEmpty) {
+      await _runSearch(trimmedQuery);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final trimmedQuery = _controller.text.trim();
     return Scaffold(
       appBar: AppBar(
         title: const Text('搜尋書內內容'),
+        actions: [
+          IconButton(
+            key: const Key('library_search_screen_settings_button'),
+            icon: const Icon(Icons.settings),
+            tooltip: '全文檢索設定',
+            onPressed: _openQuickSettingsSheet,
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -364,5 +400,149 @@ class _LibrarySearchScreenState extends State<LibrarySearchScreen> {
       return '已啟用「PDF」全文檢索，其他格式尚未啟用';
     }
     return '已啟用「其他格式」全文檢索，PDF 內容尚未啟用';
+  }
+}
+
+/// AppBar「全文檢索設定」入口的面板內容（epic-10-search Issue 4，spec.md
+/// §4 雙入口之二）：與 `SettingsScaffold`「閱讀」分區的兩個開關語意完全
+/// 相同、共用同一個 [FullTextSearchSettingsRepository] 執行期實例，但獨立
+/// 實作一份精簡版 UI、獨立的 `Key` 前綴——`AdaptiveShellScaffold` 用
+/// `IndexedStack` 讓 `SettingsScaffold` 全程保持掛載，若共用 `Key`，本畫面
+/// 以 `Navigator.push` 疊加在最上層時會與仍掛載中的 `SettingsScaffold`
+/// 產生 `Key` 歧義（見本計畫 Global Constraints）。
+class _FullTextSearchQuickSettingsPanel extends StatefulWidget {
+  final FullTextSearchSettingsRepository? repository;
+  final bool isFullTextSearchAvailable;
+  final bool isEinkMode;
+
+  const _FullTextSearchQuickSettingsPanel({
+    required this.repository,
+    required this.isFullTextSearchAvailable,
+    required this.isEinkMode,
+  });
+
+  @override
+  State<_FullTextSearchQuickSettingsPanel> createState() =>
+      _FullTextSearchQuickSettingsPanelState();
+}
+
+class _FullTextSearchQuickSettingsPanelState
+    extends State<_FullTextSearchQuickSettingsPanel> {
+  bool _pdfEnabled = false;
+  bool _foliateEnabled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final repository = widget.repository;
+    if (repository == null) return;
+    final pdfEnabled = await repository.isEnabled(ContentIndexCategory.pdf);
+    final foliateEnabled =
+        await repository.isEnabled(ContentIndexCategory.foliate);
+    if (!mounted) return;
+    setState(() {
+      _pdfEnabled = pdfEnabled;
+      _foliateEnabled = foliateEnabled;
+    });
+  }
+
+  Future<void> _handleToggle(ContentIndexCategory category, bool value) async {
+    final repository = widget.repository;
+    if (repository == null) return;
+    if (value) {
+      final confirmed = await showFullTextSearchEnableConfirmDialog(
+        context,
+        category: category,
+        isEinkMode: widget.isEinkMode,
+      );
+      if (!confirmed) return;
+    }
+    await repository.setEnabled(category, value);
+    if (!mounted) return;
+    setState(() {
+      if (category == ContentIndexCategory.pdf) {
+        _pdfEnabled = value;
+      } else {
+        _foliateEnabled = value;
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!widget.isFullTextSearchAvailable) {
+      return const Padding(
+        key: Key('library_search_full_text_search_unavailable_hint'),
+        padding: EdgeInsets.all(16),
+        child: Text('本裝置不支援全文檢索'),
+      );
+    }
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            title: const Text('PDF 全文檢索'),
+            subtitle: const Text('部分掃描/圖片型 PDF 可能沒有可搜尋的文字內容'),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  key: const Key(
+                      'library_search_full_text_search_pdf_rebuild_button'),
+                  icon: const Icon(Icons.refresh),
+                  tooltip: '重建索引',
+                  onPressed: !_pdfEnabled || widget.repository == null
+                      ? null
+                      : () => widget.repository!
+                          .rebuildIndex(ContentIndexCategory.pdf),
+                ),
+                Switch(
+                  key: const Key('library_search_full_text_search_pdf_switch'),
+                  value: _pdfEnabled,
+                  onChanged: widget.repository == null
+                      ? null
+                      : (value) =>
+                          _handleToggle(ContentIndexCategory.pdf, value),
+                ),
+              ],
+            ),
+          ),
+          ListTile(
+            title: const Text('其他格式全文檢索'),
+            subtitle: const Text('EPUB／TXT／KF8 等格式的背景索引建置'),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  key: const Key(
+                      'library_search_full_text_search_foliate_rebuild_button'),
+                  icon: const Icon(Icons.refresh),
+                  tooltip: '重建索引',
+                  onPressed: !_foliateEnabled || widget.repository == null
+                      ? null
+                      : () => widget.repository!
+                          .rebuildIndex(ContentIndexCategory.foliate),
+                ),
+                Switch(
+                  key: const Key(
+                      'library_search_full_text_search_foliate_switch'),
+                  value: _foliateEnabled,
+                  onChanged: widget.repository == null
+                      ? null
+                      : (value) =>
+                          _handleToggle(ContentIndexCategory.foliate, value),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

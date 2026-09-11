@@ -5,9 +5,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/book_group.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
+// ignore: unused_import
+import 'package:elinkbook/screens/full_text_search_confirm_dialog.dart';
 import 'package:elinkbook/screens/library_screen_dependencies.dart';
 import 'package:elinkbook/screens/library_search_screen.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
+import 'package:elinkbook/screens/settings_scaffold.dart';
 import 'package:elinkbook/screens/widgets/paging_bar.dart';
 import 'package:elinkbook/search/full_text_search_settings_repository.dart';
 import 'package:elinkbook/search/search_repository.dart';
@@ -413,6 +416,205 @@ void main() {
     expect(
       find.byKey(const Key('library_search_title_author_paging_bar')),
       findsNothing,
+    );
+  });
+
+  testWidgets('AppBar 設定按鈕開啟全文檢索設定選單，顯示兩個開關與重建索引按鈕',
+      (tester) async {
+    await tester.pumpWidget(
+      wrap(LibrarySearchScreen(
+        searchRepository: FakeSearchRepository(),
+        prefsManager: FakeReaderPrefsManager(),
+        libraryRepository: FakeLibraryRepository(),
+        readerFeatureRepositories: LibraryReaderFeatureRepositories(
+          fullTextSearchSettingsRepository:
+              FakeFullTextSearchSettingsRepository(),
+        ),
+      )),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.byKey(const Key('library_search_screen_settings_button')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('library_search_full_text_search_pdf_switch')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(
+          const Key('library_search_full_text_search_foliate_switch')),
+      findsOneWidget,
+    );
+    expect(
+      tester
+          .widget<Switch>(find.byKey(
+              const Key('library_search_full_text_search_pdf_switch')))
+          .value,
+      isFalse,
+    );
+  });
+
+  testWidgets('設定選單內從關閉切成開啟，先跳出確認對話框，取消則不呼叫 setEnabled',
+      (tester) async {
+    final repository = FakeFullTextSearchSettingsRepository();
+    await tester.pumpWidget(
+      wrap(LibrarySearchScreen(
+        searchRepository: FakeSearchRepository(),
+        prefsManager: FakeReaderPrefsManager(),
+        libraryRepository: FakeLibraryRepository(),
+        readerFeatureRepositories: LibraryReaderFeatureRepositories(
+          fullTextSearchSettingsRepository: repository,
+        ),
+      )),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const Key('library_search_screen_settings_button')),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.byKey(const Key('library_search_full_text_search_pdf_switch')),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const Key('full_text_search_enable_confirm_dialog')),
+      findsOneWidget,
+    );
+
+    await tester.tap(
+      find.byKey(const Key('full_text_search_enable_confirm_dialog_cancel')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(repository.setEnabledCalls, isEmpty);
+    expect(
+      tester
+          .widget<Switch>(find.byKey(
+              const Key('library_search_full_text_search_pdf_switch')))
+          .value,
+      isFalse,
+    );
+  });
+
+  testWidgets('確認後呼叫 setEnabled(true)，重建索引按鈕由停用變為可用', (tester) async {
+    final repository = FakeFullTextSearchSettingsRepository();
+    await tester.pumpWidget(
+      wrap(LibrarySearchScreen(
+        searchRepository: FakeSearchRepository(),
+        prefsManager: FakeReaderPrefsManager(),
+        libraryRepository: FakeLibraryRepository(),
+        readerFeatureRepositories: LibraryReaderFeatureRepositories(
+          fullTextSearchSettingsRepository: repository,
+        ),
+      )),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const Key('library_search_screen_settings_button')),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.byKey(const Key('library_search_full_text_search_pdf_switch')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const Key('full_text_search_enable_confirm_dialog_confirm')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(repository.setEnabledCalls, [(ContentIndexCategory.pdf, true)]);
+    expect(
+      tester
+          .widget<IconButton>(find.byKey(const Key(
+              'library_search_full_text_search_pdf_rebuild_button')))
+          .onPressed,
+      isNotNull,
+    );
+  });
+
+  testWidgets('關閉設定選單時，若目前有查詢字串則重新查詢一次，避免殘留過期結果（審查修正 I-3）',
+      (tester) async {
+    final searchRepository = FakeSearchRepository();
+    await tester.pumpWidget(
+      wrap(LibrarySearchScreen(
+        initialQuery: '關鍵字',
+        searchRepository: searchRepository,
+        prefsManager: FakeReaderPrefsManager(),
+        libraryRepository: FakeLibraryRepository(),
+        readerFeatureRepositories: LibraryReaderFeatureRepositories(
+          fullTextSearchSettingsRepository:
+              FakeFullTextSearchSettingsRepository(),
+        ),
+      )),
+    );
+    await tester.pumpAndSettle();
+    expect(searchRepository.searchTitleAuthorCalls, ['關鍵字']);
+
+    await tester.tap(
+      find.byKey(const Key('library_search_screen_settings_button')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('eb_sheet_shell_close_button')));
+    await tester.pumpAndSettle();
+
+    expect(searchRepository.searchTitleAuthorCalls, ['關鍵字', '關鍵字']);
+  });
+
+  testWidgets(
+      '雙入口一致性：SettingsScaffold 切換開關後，LibrarySearchScreen 的設定選單重新開啟時反映最新狀態',
+      (tester) async {
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
+    final repository = FakeFullTextSearchSettingsRepository();
+
+    await tester.pumpWidget(MaterialApp(
+      home: SettingsScaffold(
+        prefsManager: FakeReaderPrefsManager(),
+        fullTextSearchSettingsRepository: repository,
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.byKey(const Key('settings_full_text_search_pdf_switch')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const Key('full_text_search_enable_confirm_dialog_confirm')),
+    );
+    await tester.pumpAndSettle();
+    expect(await repository.isEnabled(ContentIndexCategory.pdf), isTrue);
+
+    await tester.pumpWidget(wrap(LibrarySearchScreen(
+      searchRepository: FakeSearchRepository(),
+      prefsManager: FakeReaderPrefsManager(),
+      libraryRepository: FakeLibraryRepository(),
+      readerFeatureRepositories: LibraryReaderFeatureRepositories(
+        fullTextSearchSettingsRepository: repository,
+      ),
+    )));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const Key('library_search_screen_settings_button')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      tester
+          .widget<Switch>(find.byKey(
+              const Key('library_search_full_text_search_pdf_switch')))
+          .value,
+      isTrue,
     );
   });
 }
