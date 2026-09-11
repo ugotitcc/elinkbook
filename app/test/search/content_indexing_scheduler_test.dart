@@ -328,5 +328,55 @@ void main() {
       expect(status7['status'], 'pending',
           reason: 'dispose() 後不應開始處理 book-7');
     });
+
+    test(
+        '處理中若 content_index_status 列被外部刪除（模擬「啟用全文檢索」開關關閉），'
+        '中止處理並清除已寫入的殘留索引列（review-plan-issue-3.md C-1）', () async {
+      final tracker = ReaderActivityTracker();
+      final pdfIndexer = _FakeContentIndexer();
+      final foliateIndexer = _FakeContentIndexer();
+      final book = _book('book-1');
+      await insertPendingBook(book);
+
+      final scheduler = ContentIndexingScheduler(
+        database: db,
+        activityTracker: tracker,
+        pdfIndexer: pdfIndexer,
+        foliateIndexer: foliateIndexer,
+      );
+      scheduler.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+
+      // 章節 0 →章節 1 的邊界會觸發一次 flush，此時 content_index_status
+      // 列仍存在，章節 0 應正常寫入 book_content_index。
+      foliateIndexer.addSegment(const IndexedSegment(
+          chapterIndex: 0, locator: 'epubcfi(/6/2)', rawText: '第一章'));
+      foliateIndexer.addSegment(const IndexedSegment(
+          chapterIndex: 1, locator: 'epubcfi(/6/4)', rawText: '第二章'));
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+
+      final flushedRows = await db.query('book_content_index',
+          where: 'book_id = ?', whereArgs: ['book-1']);
+      expect(flushedRows, hasLength(1), reason: '章節 0 應已正常 flush');
+
+      // 模擬「啟用全文檢索」開關關閉：外部直接刪除該書的
+      // content_index_status 列（比照
+      // SqliteFullTextSearchSettingsRepository._clearIndexData() 的實際
+      // 行為，見 plans/plan-issue-3.md Task 2）。
+      await db.delete('content_index_status',
+          where: 'book_id = ?', whereArgs: ['book-1']);
+
+      // 章節 1 →章節 2 的邊界應偵測到列已消失，中止處理，不再 flush 章節 1，
+      // 且清除章節 0 先前已寫入的殘留列（不留下孤兒索引）。
+      foliateIndexer.addSegment(const IndexedSegment(
+          chapterIndex: 2, locator: 'epubcfi(/6/6)', rawText: '第三章'));
+      await foliateIndexer.finish();
+      await Future<void>.delayed(const Duration(milliseconds: 200));
+
+      final indexRowsAfter = await db.query('book_content_index',
+          where: 'book_id = ?', whereArgs: ['book-1']);
+      expect(indexRowsAfter, isEmpty,
+          reason: '分類關閉後應清除已寫入的殘留列，不留下孤兒索引');
+    });
   });
 }
