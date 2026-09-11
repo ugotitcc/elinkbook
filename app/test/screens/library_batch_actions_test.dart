@@ -4,6 +4,7 @@ import 'package:elinkbook/library/models/book_group.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/screens/library_batch_actions.dart';
 
+import '../support/fake_full_text_search_settings_repository.dart';
 import '../support/fake_library_repository.dart';
 
 void main() {
@@ -83,6 +84,28 @@ void main() {
     expect(updated.firstWhere((b) => b.id == '1').isDownloaded, isFalse);
     expect(updated.firstWhere((b) => b.id == '2').isDownloaded, isTrue);
     expect(updated.firstWhere((b) => b.id == '3').isDownloaded, isFalse);
+  });
+
+  test(
+      'removeLocalCache() 對被處理的書籍呼叫 clearBookIndex 清除搜尋索引'
+      '（epic-10-search Issue 2）', () async {
+    final repository = FakeLibraryRepository(initialBooks: [
+      _book(id: '1', source: BookSource.calibreOpds, isDownloaded: true),
+      _book(id: '2', source: BookSource.local, isDownloaded: true),
+    ]);
+    final fullTextSearchSettingsRepository =
+        FakeFullTextSearchSettingsRepository();
+    final actions = LibraryBatchActions(
+      repository: repository,
+      fullTextSearchSettingsRepository: fullTextSearchSettingsRepository,
+    );
+    final books = await repository.listBooks();
+
+    await actions.removeLocalCache({'1', '2'}, books);
+
+    // 書籍 2 是 local 來源，shouldInclude 過濾後不會被處理，只有書籍 1
+    // 應該觸發 clearBookIndex。
+    expect(fullTextSearchSettingsRepository.clearBookIndexCalls, ['1']);
   });
 }
 

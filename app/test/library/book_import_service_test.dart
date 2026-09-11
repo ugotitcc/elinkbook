@@ -14,6 +14,7 @@ import 'package:elinkbook/library/book_import_service_impl.dart';
 import 'package:elinkbook/library/models/book_group.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/library/sqlite_library_repository.dart';
+import 'package:elinkbook/search/full_text_search_settings_repository.dart';
 import 'package:elinkbook/theme/app_theme_preferences.dart';
 
 import '../support/fake_path_provider_platform.dart';
@@ -955,6 +956,156 @@ void main() {
       expect(takePermissionCalled, isFalse);
       expect(result.importedBooks, hasLength(1));
       expect(result.importedBooks.first.format, BookFileFormat.cbz);
+    });
+
+    test(
+        'CBZ 匯入成功後，content_index_status 標記為 unsupported'
+        '（epic-10-search Issue 2）', () async {
+      final fullTextSearchSettingsRepository =
+          SqliteFullTextSearchSettingsRepository(
+        database: repository.database,
+        requestProcessing: () {},
+      );
+      final serviceWithSearch = BookImportServiceImpl(
+        repository: repository,
+        coversDirectory: coversDir,
+        importedBooksDirectory: importedBooksDir,
+        fullTextSearchSettingsRepository: fullTextSearchSettingsRepository,
+      );
+      final cbzBytes = makeValidCbz();
+      mockChannel((call) async {
+        if (call.method == 'takePersistableUriPermission') return null;
+        if (call.method == 'copyContentUriToFile') {
+          final args = call.arguments as Map;
+          await File(args['destinationPath'] as String)
+              .writeAsBytes(cbzBytes);
+          return null;
+        }
+        return null;
+      });
+
+      final result = await serviceWithSearch.importFiles(
+        ['content://example/unsupported_comics.cbz'],
+        displayNames: ['unsupported_comics.cbz'],
+      );
+
+      expect(result.importedBooks, hasLength(1));
+      final rows = await repository.database.query(
+        'content_index_status',
+        where: 'book_id = ?',
+        whereArgs: [result.importedBooks.first.id],
+      );
+      expect(rows, hasLength(1));
+      expect(rows.single['status'], 'unsupported');
+    });
+
+    test(
+        '未提供 fullTextSearchSettingsRepository（null）時，CBZ 匯入結果不受影響，'
+        '也不寫入 content_index_status', () async {
+      final cbzBytes = makeValidCbz();
+      mockChannel((call) async {
+        if (call.method == 'takePersistableUriPermission') return null;
+        if (call.method == 'copyContentUriToFile') {
+          final args = call.arguments as Map;
+          await File(args['destinationPath'] as String)
+              .writeAsBytes(cbzBytes);
+          return null;
+        }
+        return null;
+      });
+
+      final result = await service.importFiles(
+        ['content://example/no_search_comics.cbz'],
+        displayNames: ['no_search_comics.cbz'],
+      );
+
+      expect(result.importedBooks, hasLength(1));
+      final rows = await repository.database.query(
+        'content_index_status',
+        where: 'book_id = ?',
+        whereArgs: [result.importedBooks.first.id],
+      );
+      expect(rows, isEmpty);
+    });
+  });
+
+  group('epic-10-search Issue 2：新匯入書籍全文檢索狀態連動（非 CBZ 格式）', () {
+    test('EPUB 匯入時若 foliate 分類已啟用，寫入 pending 並喚醒排程器',
+        () async {
+      var requestProcessingCallCount = 0;
+      final fullTextSearchSettingsRepository =
+          SqliteFullTextSearchSettingsRepository(
+        database: repository.database,
+        requestProcessing: () => requestProcessingCallCount++,
+      );
+      await fullTextSearchSettingsRepository.setEnabled(
+        ContentIndexCategory.foliate,
+        true,
+      );
+      // setEnabled(true) 本身的批次回填也會呼叫一次，重置計數只驗證匯入
+      // 這一步觸發的喚醒次數。
+      requestProcessingCallCount = 0;
+      final serviceWithSearch = BookImportServiceImpl(
+        repository: repository,
+        coversDirectory: coversDir,
+        importedBooksDirectory: importedBooksDir,
+        fullTextSearchSettingsRepository: fullTextSearchSettingsRepository,
+      );
+      mockChannel((call) async {
+        if (call.method == 'takePersistableUriPermission') return null;
+        if (call.method == 'extractMetadata') {
+          return {'title': '測試書'};
+        }
+        return null;
+      });
+
+      final result = await serviceWithSearch.importFiles(
+        ['content://example/new_book.epub'],
+      );
+
+      expect(result.importedBooks, hasLength(1));
+      final rows = await repository.database.query(
+        'content_index_status',
+        where: 'book_id = ?',
+        whereArgs: [result.importedBooks.first.id],
+      );
+      expect(rows, hasLength(1));
+      expect(rows.single['status'], 'pending');
+      expect(requestProcessingCallCount, 1);
+    });
+
+    test('EPUB 匯入時若 foliate 分類未啟用，不寫入 content_index_status',
+        () async {
+      final fullTextSearchSettingsRepository =
+          SqliteFullTextSearchSettingsRepository(
+        database: repository.database,
+        requestProcessing: () {},
+      );
+      final serviceWithSearch = BookImportServiceImpl(
+        repository: repository,
+        coversDirectory: coversDir,
+        importedBooksDirectory: importedBooksDir,
+        fullTextSearchSettingsRepository: fullTextSearchSettingsRepository,
+      );
+      mockChannel((call) async {
+        if (call.method == 'takePersistableUriPermission') return null;
+        if (call.method == 'extractMetadata') {
+          return {'title': '測試書'};
+        }
+        return null;
+      });
+
+      final result = await serviceWithSearch.importFiles(
+        ['content://example/new_book_disabled.epub'],
+      );
+
+      expect(result.importedBooks, hasLength(1));
+      final rows = await repository.database.query(
+        'content_index_status',
+        where: 'book_id = ?',
+        whereArgs: [result.importedBooks.first.id],
+      );
+      expect(rows, isEmpty);
     });
   });
 

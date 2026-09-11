@@ -1,6 +1,6 @@
 # Epic 10 Issue 2：CBZ／DRM KF8／未下載與移除快取書籍的索引狀態處理 Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** 讓 Issue 1 的排程器正確跳過本來就不該索引的書籍（CBZ），並讓「新書匯入」「重新下載完成」「移除本機快取」三個既有事件流程正確連動索引資料的建立/清除/喚醒，避免排程器浪費資源嘗試索引不存在或不支援的內容、也避免使用者已啟用全文檢索後新書/重新下載的書永遠不會被索引。
 
@@ -57,7 +57,7 @@
 - Consumes：既有 `SqliteFullTextSearchSettingsRepository` 的 `_database`／`isEnabled()`／`_requestProcessing` 等既有私有成員與方法。
 - Produces：`FullTextSearchSettingsRepository` 新增 `Future<void> markUnsupported(String bookId)`／`Future<void> handleBookAvailable(Book book)`／`Future<void> clearBookIndex(String bookId)` 三個方法——供 Task 2／3／4 呼叫。`FakeFullTextSearchSettingsRepository` 新增對應的 `markUnsupportedCalls`／`handleBookAvailableCalls`／`clearBookIndexCalls` 記錄清單——供 Task 3／4 的 widget/unit test 斷言使用。
 
-- [ ] **Step 1：寫一組會失敗（編譯錯誤）的測試**
+- [x] **Step 1：寫一組會失敗（編譯錯誤）的測試**
 
 在 `app/test/search/full_text_search_settings_repository_test.dart`，找到既有 `group('epic-10-search Issue 3：FullTextSearchSettingsRepository', () { ... });` 區塊內最後一個測試（`rebuildIndex(category)` 那則）之後、區塊收尾 `});` 之前，新增：
 
@@ -200,12 +200,12 @@
     });
 ```
 
-- [ ] **Step 2：執行測試，確認因為 production API 尚不存在而編譯失敗**
+- [x] **Step 2：執行測試，確認因為 production API 尚不存在而編譯失敗**
 
 Run: `flutter test test/search/full_text_search_settings_repository_test.dart`
 Expected: FAIL（編譯錯誤：`FullTextSearchSettingsRepository`／`SqliteFullTextSearchSettingsRepository` 沒有 `markUnsupported`/`handleBookAvailable`/`clearBookIndex` 方法）。
 
-- [ ] **Step 3：實作三個新方法**
+- [x] **Step 3：實作三個新方法**
 
 在 `app/lib/search/full_text_search_settings_repository.dart`，於檔案頂端 import 區塊新增：
 
@@ -409,17 +409,17 @@ import 'package:elinkbook/library/models/book.dart';
 }
 ```
 
-- [ ] **Step 4：執行測試，確認通過**
+- [x] **Step 4：執行測試，確認通過**
 
 Run: `flutter test test/search/full_text_search_settings_repository_test.dart`
 Expected: PASS（18 項測試全過：既有 11 項＋本次新增 7 項）。
 
-- [ ] **Step 5：`flutter analyze`**
+- [x] **Step 5：`flutter analyze`**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/lib/search/full_text_search_settings_repository.dart app/test/support/fake_full_text_search_settings_repository.dart app/test/search/full_text_search_settings_repository_test.dart
@@ -438,7 +438,7 @@ git commit -m "feat(search): FullTextSearchSettingsRepository 新增單書索引
 - Consumes：Task 1 的 `FullTextSearchSettingsRepository.handleBookAvailable(Book book)`。
 - Produces：`BookImportServiceImpl` 建構子新增可選具名參數 `FullTextSearchSettingsRepository? fullTextSearchSettingsRepository`（`null` 時行為與現行完全一致，不寫入任何 `content_index_status` 列）——供 Task 5（`main.dart`）注入正式實例。
 
-- [ ] **Step 1：寫一組會失敗的測試**
+- [x] **Step 1：寫一組會失敗的測試**
 
 在 `app/test/library/book_import_service_test.dart`，於 import 區塊新增：
 
@@ -604,12 +604,12 @@ import 'package:elinkbook/search/full_text_search_settings_repository.dart';
   });
 ```
 
-- [ ] **Step 2：執行測試，確認因為 production API 尚不存在而編譯失敗**
+- [x] **Step 2：執行測試，確認因為 production API 尚不存在而編譯失敗**
 
 Run: `flutter test test/library/book_import_service_test.dart`
 Expected: FAIL（編譯錯誤：`BookImportServiceImpl` 沒有 `fullTextSearchSettingsRepository` 具名參數）。
 
-- [ ] **Step 3：實作**
+- [x] **Step 3：實作**
 
 在 `app/lib/library/book_import_service_impl.dart`，於 import 區塊新增：
 
@@ -754,17 +754,17 @@ class BookImportServiceImpl implements BookImportService {
   }
 ```
 
-- [ ] **Step 4：執行測試，確認通過**
+- [x] **Step 4：執行測試，確認通過**
 
 Run: `flutter test test/library/book_import_service_test.dart`
 Expected: PASS（新增 4 項測試＋既有全部測試皆通過——這個檔案測試量大，整檔重跑確保沒有破壞既有匯入行為）。
 
-- [ ] **Step 5：`flutter analyze`**
+- [x] **Step 5：`flutter analyze`**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/lib/library/book_import_service_impl.dart app/test/library/book_import_service_test.dart
@@ -782,7 +782,7 @@ git commit -m "feat(search): 新匯入書籍統一連動全文檢索索引狀態
 **Interfaces：**
 - Consumes：Task 1 的 `FullTextSearchSettingsRepository.handleBookAvailable(Book book)`（透過既有 `widget.readerFeatureRepositories.fullTextSearchSettingsRepository` 依賴注入路徑，Issue 3 已建立，本工單不需要新增任何依賴注入 wiring）。
 
-- [ ] **Step 1：寫一組會失敗的測試**
+- [x] **Step 1：寫一組會失敗的測試**
 
 在 `app/test/screens/library_screen_test.dart`，於 import 區塊新增：
 
@@ -851,12 +851,12 @@ import '../support/fake_full_text_search_settings_repository.dart';
     });
 ```
 
-- [ ] **Step 2：執行測試，確認因為 production 行為尚未實作而失敗**
+- [x] **Step 2：執行測試，確認因為 production 行為尚未實作而失敗**
 
 Run: `flutter test test/screens/library_screen_test.dart`
 Expected: FAIL（`fullTextSearchSettingsRepository.handleBookAvailableCalls` 為空，斷言 `hasLength(1)` 失敗）。
 
-- [ ] **Step 3：實作**
+- [x] **Step 3：實作**
 
 在 `app/lib/screens/library_screen.dart`，找到：
 
@@ -898,17 +898,17 @@ Expected: FAIL（`fullTextSearchSettingsRepository.handleBookAvailableCalls` 為
       await _bookListController.loadBooks();
 ```
 
-- [ ] **Step 4：執行測試，確認通過**
+- [x] **Step 4：執行測試，確認通過**
 
 Run: `flutter test test/screens/library_screen_test.dart`
 Expected: PASS（新增測試＋既有全部測試皆通過——這是本專案最大的測試檔之一，整檔重跑確保沒有破壞既有重新下載/書架行為）。
 
-- [ ] **Step 5：`flutter analyze`**
+- [x] **Step 5：`flutter analyze`**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/lib/screens/library_screen.dart app/test/screens/library_screen_test.dart
@@ -927,7 +927,7 @@ git commit -m "feat(search): 重新下載完成後連動全文檢索索引狀態
 - Consumes：Task 1 的 `FullTextSearchSettingsRepository.clearBookIndex(String bookId)`。
 - Produces：`LibraryBatchActions` 建構子新增可選具名參數 `FullTextSearchSettingsRepository? fullTextSearchSettingsRepository`（`null` 時行為與現行完全一致）——供 Task 5 透過 `library_screen.dart` 既有 `_batchActions = LibraryBatchActions(...)` 建構點注入。
 
-- [ ] **Step 1：寫一組會失敗的測試**
+- [x] **Step 1：寫一組會失敗的測試**
 
 在 `app/test/screens/library_batch_actions_test.dart`，於 import 區塊新增：
 
@@ -963,12 +963,12 @@ import '../support/fake_full_text_search_settings_repository.dart';
   });
 ```
 
-- [ ] **Step 2：執行測試，確認因為 production API 尚不存在而編譯失敗**
+- [x] **Step 2：執行測試，確認因為 production API 尚不存在而編譯失敗**
 
 Run: `flutter test test/screens/library_batch_actions_test.dart`
 Expected: FAIL（編譯錯誤：`LibraryBatchActions` 沒有 `fullTextSearchSettingsRepository` 具名參數）。
 
-- [ ] **Step 3：實作**
+- [x] **Step 3：實作**
 
 在 `app/lib/screens/library_batch_actions.dart`，於 import 區塊新增：
 
@@ -1056,17 +1056,17 @@ class LibraryBatchActions {
   }
 ```
 
-- [ ] **Step 4：執行測試，確認通過**
+- [x] **Step 4：執行測試，確認通過**
 
 Run: `flutter test test/screens/library_batch_actions_test.dart`
 Expected: PASS（新增測試＋既有全部測試皆通過）。
 
-- [ ] **Step 5：`flutter analyze`**
+- [x] **Step 5：`flutter analyze`**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/lib/screens/library_batch_actions.dart app/test/screens/library_batch_actions_test.dart
@@ -1087,7 +1087,7 @@ git commit -m "feat(search): 移除本機快取時清除全文檢索索引資料
 
 本 Task 是純組裝程式碼，不採用「先寫失敗測試」的 TDD 步驟，直接修改＋驗證（`library_screen.dart` 這一處改動已被 Task 3／Task 4 的既有測試間接覆蓋——`LibraryBatchActions` 建構點若忘記傳入新參數，Task 4 新增的測試不會因此失敗，因為那則測試直接建構 `LibraryBatchActions` 而不經過 `LibraryScreen`；因此本 Task Step 3 會額外手動驗證這一處 wiring，見下方）。
 
-- [ ] **Step 1：`library_screen.dart` 把 `fullTextSearchSettingsRepository` 轉送給 `LibraryBatchActions`，並在 `didUpdateWidget()` 同步（review-plan-issue-2.md M-2）**
+- [x] **Step 1：`library_screen.dart` 把 `fullTextSearchSettingsRepository` 轉送給 `LibraryBatchActions`，並在 `didUpdateWidget()` 同步（review-plan-issue-2.md M-2）**
 
 在 `app/lib/screens/library_screen.dart`，找到：
 
@@ -1145,7 +1145,7 @@ git commit -m "feat(search): 移除本機快取時清除全文檢索索引資料
   }
 ```
 
-- [ ] **Step 2：`main.dart` 重新排序建構順序，並傳入 `BookImportServiceImpl`**
+- [x] **Step 2：`main.dart` 重新排序建構順序，並傳入 `BookImportServiceImpl`**
 
 在 `app/lib/main.dart`，找到：
 
@@ -1244,7 +1244,7 @@ git commit -m "feat(search): 移除本機快取時清除全文檢索索引資料
   );
 ```
 
-- [ ] **Step 3：手動驗證 `library_screen.dart` 的 wiring（Task 4 測試無法覆蓋這一處）**
+- [x] **Step 3：手動驗證 `library_screen.dart` 的 wiring（Task 4 測試無法覆蓋這一處）**
 
 Run: `flutter analyze`（先確認型別正確、沒有遺漏的具名參數）
 Expected: `No issues found!`
@@ -1254,24 +1254,24 @@ Expected: `No issues found!`
 Run: `flutter test test/screens/library_screen_test.dart`
 Expected: PASS（全數通過，含既有移除快取相關測試）。
 
-- [ ] **Step 4：跑本次全部異動觸及的測試檔，確認整體沒有回歸**
+- [x] **Step 4：跑本次全部異動觸及的測試檔，確認整體沒有回歸**
 
 Run: `flutter test test/search/full_text_search_settings_repository_test.dart test/library/book_import_service_test.dart test/screens/library_screen_test.dart test/screens/library_batch_actions_test.dart`
 Expected: PASS（本計畫新增與修改的所有測試檔皆通過；`main.dart` 本身無對應測試檔，正確性已由上述測試檔涵蓋的依賴注入路徑＋`flutter analyze` 型別檢查涵蓋）。
 
-- [ ] **Step 5：`flutter analyze`**
+- [x] **Step 5：`flutter analyze`**
 
 Run: `flutter analyze`
 Expected: `No issues found!`
 
-- [ ] **Step 6：Commit**
+- [x] **Step 6：Commit**
 
 ```bash
 git add app/lib/screens/library_screen.dart app/lib/main.dart
 git commit -m "feat(search): library_screen/main.dart 組裝 Issue 2 索引狀態連動（Issue 2）"
 ```
 
-- [ ] **Step 7：（人類／執行者手動）真機或模擬器驗證**
+- [x] **Step 7：（人類／執行者手動）真機或模擬器驗證**
 
 `flutter run` 啟動 App，確認：
 1. 在「設定→閱讀」開啟「其他格式全文檢索」開關後，匯入一本新的 EPUB，確認該書很快出現一筆 `content_index_status.status='pending'` 並被排程器處理完成（不需要手動關開開關或重建索引）——這是本輪審查（C-2）修正的核心情境，務必實測驗證。

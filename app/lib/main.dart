@@ -81,10 +81,6 @@ Future<void> main() async {
 
   final dbPath = await defaultLibraryDatabasePath();
   final repository = await SqliteLibraryRepository.open(dbPath);
-  final importService = BookImportServiceImpl(
-    repository: repository,
-    themePreferences: themePreferences,
-  );
   // BookReaderPrefsRepository 必須與 repository 共用同一個 Database 連線
   // （book_reader_prefs 的外鍵約束要求，見 epic-3-fonts-layout Issue 1 spec.md）。
   // 在這裡（repository 尚未收窄為 LibraryRepository 介面前）取用
@@ -119,6 +115,15 @@ Future<void> main() async {
       SqliteFullTextSearchSettingsRepository(
     database: repository.database,
     requestProcessing: contentIndexingScheduler.requestProcessing,
+  );
+  // epic-10-search Issue 2：新書匯入（含 CBZ 標記 unsupported）需要
+  // fullTextSearchSettingsRepository（見 plans/plan-issue-2.md），因此
+  // importService 的建構挪到這裡（在它之後），不再是 repository 開啟後
+  // 立刻建構。
+  final importService = BookImportServiceImpl(
+    repository: repository,
+    themePreferences: themePreferences,
+    fullTextSearchSettingsRepository: fullTextSearchSettingsRepository,
   );
   // epic-34-tts-readalong Issue 9：SystemTtsProvider 預設建構子內部會自行
   // 建立 FlutterTts()，App 層級不需要另外管理其生命週期或提供假物件。
