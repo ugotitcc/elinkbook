@@ -23,7 +23,7 @@
 ## 曾考慮的替代方案
 
 - **改用 FTS5 `trigram` tokenizer**：Android 11 系統 SQLite 3.28.0 不支援（需 3.34+），排除。
-- **改用第三方 bundling 較新 SQLite 的套件（如 `sqlite3_flutter_libs`）取代 `sqflite` 系統版本**：可解決 `trigram` 問題，但代表整個 App 現有全部資料表都要換一套 SQLite runtime，牽動既有 23 版 migration 歷史與全部既有測試，風險與範圍遠超本 Epic，排除。
+- **改用第三方 bundling 較新 SQLite 的套件（如 `sqlite3_flutter_libs`）取代 `sqflite` 系統版本**：可解決 `trigram` 問題，但代表整個 App 現有全部資料表都要換一套 SQLite runtime，牽動既有 23 版 migration 歷史與全部既有測試，風險與範圍遠超本 Epic，排除。**〔2026-09-11 後續更新〕** 此排除判斷已被推翻：`epic-10-search` Issue 6/Issue 5 真機驗證發現系統 SQLite 缺 FTS5 不只是版本過舊，部分裝置（尤其 E-Ink）是模組完全未編譯，導致全文檢索永久不可用，問題嚴重性遠超當初評估；`epic-40-bundled-sqlite` 已重新評估並採納此替代方案，見 [ADR 0028](0028-bundled-sqlite3-for-fts5.md)。
 - **中文分詞（jieba 等）取代逐字層級**：無成熟穩定的純 Dart 函式庫，維護與準確度風險高，且逐字層級行為對「翻書找一句話」場景更可預期（Discovery 階段已定案，見 `design.md`），排除。
 - **Foliate 端一律於使用者實際開書當下才即時建索引（比照現有 `buildTtsSegments()` 用法，不做背景批次）**：無法涵蓋「使用者根本沒開過的舊書」與「背景漸進回填」需求，不符 Discovery 已定案的「App 更新後自動背景漸進建立」，排除。
 - **兩層式索引（書籍/章節粗篩＋句級明細）直接列為必建架構**：在沒有實測數據前直接雙倍索引維護成本（兩套 schema、兩套同步 trigger、粗篩誤判的邊界情況），有過度工程風險；改為先用單層設計＋強制效能驗證，未達標才加開，排除直接內建為預設架構。
