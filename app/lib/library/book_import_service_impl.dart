@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import '../search/full_text_search_settings_repository.dart';
 import '../theme/app_theme_preferences.dart';
 import 'book_content_fingerprint.dart';
 import 'book_import_service.dart';
@@ -62,10 +63,12 @@ class BookImportServiceImpl implements BookImportService {
     Directory? coversDirectory,
     Directory? importedBooksDirectory,
     AppThemePreferences? themePreferences,
+    FullTextSearchSettingsRepository? fullTextSearchSettingsRepository,
   })  : _repository = repository,
         _coversDirectory = coversDirectory,
         _importedBooksDirectory = importedBooksDirectory,
-        _themePreferences = themePreferences ?? AppThemePreferences();
+        _themePreferences = themePreferences ?? AppThemePreferences(),
+        _fullTextSearchSettingsRepository = fullTextSearchSettingsRepository;
 
   // 使用 kBookMetadataChannel（library_repository.dart）作為共用通道名稱。
 
@@ -73,6 +76,12 @@ class BookImportServiceImpl implements BookImportService {
   final Directory? _coversDirectory;
   final Directory? _importedBooksDirectory;
   final AppThemePreferences _themePreferences;
+
+  /// epic-10-search Issue 2（spec.md §7）：新書匯入成功後連動全文檢索
+  /// 索引狀態（CBZ 標記 unsupported；其餘格式依開關狀態決定是否插入
+  /// pending）。`null` 時（例如既有測試未提供）完全略過，行為與本工單
+  /// 之前完全一致。
+  final FullTextSearchSettingsRepository? _fullTextSearchSettingsRepository;
 
   @override
   Future<ImportResult> importFiles(
@@ -434,7 +443,24 @@ class BookImportServiceImpl implements BookImportService {
       lastReadTime: DateTime.fromMillisecondsSinceEpoch(0),
     );
 
-    return _repository.insertBook(book);
+    final insertedBook = await _repository.insertBook(book);
+    // epic-10-search Issue 2（spec.md §7，review-plan-issue-2.md C-2）：
+    // _importSingleFile() 是全專案所有新書匯入與雲端/遠端首次下載的唯一
+    // 收斂點（本機檔案/資料夾選取、Google Drive、OneDrive、Calibre/OPDS
+    // 皆經由 BookImportService.importFiles() 呼叫到這裡）。統一呼叫
+    // handleBookAvailable()（不只 CBZ）讓所有格式都能在已啟用全文檢索的
+    // 情況下正確被排入 pending 佇列並喚醒排程器。search-index 只是衍生
+    // 資料，寫入失敗不應讓原本已成功的書籍匯入被判定失敗
+    // （review-plan-issue-2.md M-1）。
+    try {
+      await _fullTextSearchSettingsRepository?.handleBookAvailable(
+        insertedBook,
+      );
+    } catch (_) {
+      // 靜默略過——書籍記錄已成功建立，全文檢索索引狀態可日後透過
+      // 「重建索引」補上，不應讓整筆匯入被視為失敗。
+    }
+    return insertedBook;
   }
 
   /// [takePersistableUriPermission] 失敗時的退路：把 [uri] 的內容複製一份到
