@@ -14,7 +14,7 @@
 
 - **依賴已滿足**：Issue 4（`LibrarySearchScreen`／`SearchRepository`／`ContentMatchSnippet.locator`）已完成並合併（PR #234）。
 - **`initialJumpTarget` 的作用範圍精確限定，不新增任何「暫停進度儲存」旗標（spec.md §6 逐字規定）**：現行 `_writeCurrentPosition()` 只在 App 背景化／`dispose()` 這種 checkpoint 時機才讀取當下最新的 `_epubPositionInfo`/`_pdfPageInfo` 寫入資料庫，不是每次 `onLocatorChanged` 都寫入；`initialJumpTarget` 要做的事情跟現行「用資料庫存的 `lastPosition` 決定 `initialLocatorJson`/`initialPageIndex`」完全同構，只是多一個優先權更高的來源可選。除了「開書當下決定初始定位參數」這一個決策點，**不特殊處理後續的 `onLocatorChanged`／checkpoint 寫入**——使用者從跳轉位置開始往後翻頁閱讀，`_epubPositionInfo`/`_pdfPageInfo` 自然更新為使用者實際所在位置，下次 checkpoint 觸發時就會正確存下使用者真正閱讀到的地方。
-- **已知且刻意接受的邊界情況（`review-plan-issue-5.md` I-2）：使用者跳轉後未曾翻頁即離開，`dispose()` 會把跳轉位置存成新進度，覆蓋掉跳轉前的舊進度**——這不是本計畫的疏漏，而是上一條規則的直接推論，且 spec.md §6 已在文件層級明確權衡並記錄過**同一類**考量後拒絕過："`不需要額外的「使用者是否已產生主動互動」判斷（審查意見 I-2 提議追蹤『第一次重定位事件』，經查證現行 checkpoint-only 寫入機制後，這層追蹤是不必要的複雜度，予以簡化）`"（原文逐字引用，見 spec.md §6）。本計畫不在 Task 層級重新引入這層追蹤去覆蓋 spec.md 已經定案的簡化決策；改為在 Task 4 補一個測試明確鎖定並記錄「使用者跳轉後立即離開時，checkpoint 會把跳轉位置存成新進度」這個目前的實際行為（測試名稱與註解會清楚標註這是刻意接受的行為，不是回歸），讓這個權衡不再是「無測試覆蓋的隱性行為」。**若日後要修改這個行為（例如真的要加一層互動追蹤），需要回頭修訂 spec.md §6 本身，不是單獨修這張計畫**——這屬於產品層級的取捨，需要人類決定是否值得為此增加複雜度。
+- **【2026-09-11 修訂】跳轉後未產生後續重定位即離開時，保留資料庫既有進度、不覆寫（spec.md §6 同日修訂，`review-plan-issue-5.md` I-2，推翻本計畫原版「刻意接受此邊界情況」的判斷）**：本計畫第一版主張「使用者跳轉後未曾翻頁即離開，`dispose()` 會把跳轉位置存成新進度、覆蓋掉跳轉前的舊進度」是 spec.md §6 已權衡並接受的簡化，不在計畫層級重新引入追蹤機制。經人類決議此邊界情況值得修正後，spec.md §6 已同步修訂，正式推翻原本「不需要額外的『使用者是否已產生主動互動』判斷」的結論，改為採用當初被簡化掉的方案：新增 `_hasRelocatedSinceOpen` 布林旗標（見 Task 1 Step 9），利用 `_pdfPageInfo`/`_epubPositionInfo` 這兩個既有欄位「開書後第一次賦值＝初始定位回報、第二次以後賦值＝使用者確實產生後續重定位」的天然分界，`_writeCurrentPosition()` 開頭新增一行防呆：`initialJumpTarget` 非 `null` 且這個旗標仍是 `false` 時直接 `return`，保留資料庫既有進度。這個判斷點在 `onPageChanged`/`onLocatorChanged` 回呼本身，**不論使用者透過翻頁熱區、音量鍵、目錄/書籤跳轉、或書內搜尋產生後續重定位，都會走同一組回呼報告新位置**，天然涵蓋所有導覽方式，不需要在每個導覽入口個別插樁（比 Task 4 的 `_handleZoneAction()` 高亮清除機制涵蓋範圍更完整——後者只涵蓋熱區點擊/音量鍵翻頁，本機制額外涵蓋目錄/書籤/書內搜尋跳轉）。實作成本低（兩個既有回呼各加一行判斷＋一個新欄位＋`_writeCurrentPosition()` 開頭一行防呆），故人類決議採納。
 - **暫態高亮的生命週期由 Dart 端 `Timer` 主導，不用 JS `setTimeout`（spec.md §6 逐字規定）**：比照專案既有「計時器一律由 Dart 端主導」慣例。這裡刻意**不**引入 `package:clock`——`Timer` 本身是 Zone-aware 的，`flutter_test` 的 `TestWidgetsFlutterBinding` 已經把整個測試包在 fake-async zone 內，`tester.pump(Duration(...))` 天然能推進一般 `Timer(duration, callback)`（比照本檔案既有 `_openBookTimeoutTimer`/`_syncCheckpointTimer` 皆為裸 `Timer`、無需 `package:clock` 即可測試的既有先例）；`package:clock` 只在需要「量測兩個真實時間點之間經過了多久」（例如 `TapZoneDetector` 判斷兩次點擊間隔）時才需要，本工單的需求是「排定一個未來回呼」，兩者本質不同，不要混淆套用。
 - **Foliate 暫態高亮改用 `view.js`（釘定 vendored 檔案）既有的 `foliate-search:` 前綴＋原生 `Overlayer.outline` 樣式，放棄自訂顏色/直排橫排/E-Ink 客製化（`review-plan-issue-5.md` I-1，推翻原計畫「main.js 自行定義綠色高亮＋直排橫排＋E-Ink 樣式」設計）**：原計畫誤判 `main.js` 第 910 行註解「一般標記（非 `foliate-search:`/`foliate-note:` 前綴）……」是在說「`foliate-search:` 是保留但尚未使用的前綴名稱」，規劃階段查證 `view.js` 原始碼後推翻這個判斷——`SEARCH_PREFIX = 'foliate-search:'`是這份釘定 vendored 函式庫**自己既有、寫死的常數**，`#drawAnnotations()`/`addAnnotation()` 對它的處理是無條件呼叫 `overlayer.add(value, range, Overlayer.outline)`（**不帶任何 `options`、也不發送 `draw-annotation` 事件**），與 `foliate-note:`（TTS）／裸 CFI（劃線/備註）這兩種會透過 `draw-annotation` 事件把繪製決定權交還給 `main.js` 呼叫端的既有機制完全不同；`Overlayer.outline()` 未收到 `options` 時的預設值固定是 `color='red', strokeWidth=3`，無法從 `main.js` 客製化。三個可能的替代方案逐一評估：(1) 修改 `view.js` 讓 `SEARCH_PREFIX` 也發送 `draw-annotation` 事件——違反 ADR 0011「不修改任何 vendored 檔案」；(2) 重用 `foliate-note:`（TTS 既有 key 空間）——若搜尋跳轉目標剛好是目前正在朗讀的句子，兩者會共用完全相同的 annotation value 字串，`clearSearchHighlight()`／`clearTtsHighlight()` 任一方呼叫都會刪掉對方的高亮，正是 spec.md §6 明文要求要避免的「互相汙染」；(3) 使用裸 CFI（劃線/備註既有 key 空間）——若搜尋跳轉目標剛好是使用者已手動劃線的句子，會暫時覆蓋掉該劃線的視覺呈現，且 `clearSearchHighlight()` 會把使用者的真實劃線從畫面上一併移除，直到下次 `setDecorations()` 全量重送才會恢復，是比 (2) 更嚴重的資料層級風險。三者相比，直接沿用 `foliate-search:` 既有的固定紅色外框樣式是風險最低的選擇——它的 key 空間本來就與劃線/備註/TTS 三者完全獨立（這正是 `view.js` 把它與 `NOTE_PREFIX` 分開處理的原因），語意上也精確符合「暫態、非持久化的搜尋位置指示」。**代價（已知且接受的平台限制）**：Foliate 端的暫態高亮固定為紅色外框（無填色），無法依 E-Ink 模式切換高對比樣式、無法依直排/橫排調整外觀，與 PDF 端可自訂的綠色填色＋外框樣式不一致——這是 ADR 0011 與現有 vendored 函式庫行為交互下的必然結果，非實作疏漏，issues.md 若要追求兩端視覺一致，需要另立工單評估修改 `view.js` 的利弊（超出本工單範圍）。
 - **PDF 暫態高亮複用既有 `pageOverlaysBuilder` 疊加機制（`pdf_reader_view.dart`），比照劃線/既有 PDF 內文搜尋（Chrome Bar「搜尋」按鈕，`PdfSearchPanel`／`setSearchHighlights`）既有疊加繪製模式**，但**不共用**內部狀態（`_searchMatches`/`_currentSearchMatchIndex` 是 PDF 內文搜尋專屬的「可能多筆、由使用者手動關閉搜尋面板才消失」清單；本工單的暫態高亮是「全域最多一筆、3 秒後自動消失」的完全獨立概念，兩者資料來源、生命週期、觸發呼叫端皆不同，只有視覺樣式相似）。
@@ -398,10 +398,15 @@ import 'package:elinkbook/reader/reading_position.dart';
       await tester.runAsync(() => Future.delayed(Duration.zero));
       await tester.pump();
 
-      // 模擬使用者從跳轉目標（頁碼 2）繼續往後翻到頁碼 3（比照既有 PDF
-      // 測試直接呼叫 onPageChanged 的既有慣例，不需要真的等待 pdfrx
-      // 完整載入）。
       final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+      // 第一次回報：抵達 initialJumpTarget 指定的頁碼（開書當下的初始
+      // 定位回報，_hasRelocatedSinceOpen 仍應維持 false）。
+      pdfView.onPageChanged?.call(const PdfPageInfo(pageIndex: 2, totalPages: 5));
+      await tester.pump();
+      // 第二次回報：使用者從跳轉目標（頁碼 2）繼續往後翻到頁碼 3——這才
+      // 是「後續重定位事件」，_hasRelocatedSinceOpen 應轉為 true（比照
+      // 既有 PDF 測試直接呼叫 onPageChanged 的既有慣例，不需要真的等待
+      // pdfrx 完整載入）。
       pdfView.onPageChanged?.call(const PdfPageInfo(pageIndex: 3, totalPages: 5));
       await tester.pump();
 
@@ -425,10 +430,9 @@ import 'package:elinkbook/reader/reading_position.dart';
     });
 
     testWidgets(
-        'PDF：跳轉後使用者未曾翻頁即離開，dispose() 會把跳轉位置存為新進度'
-        '（審查意見 I-2：這是 spec.md §6 已明確權衡並接受的簡化，本測試'
-        '的目的是把這個已知行為鎖進測試，避免無測試覆蓋的隱性行為，'
-        '不代表本計畫判定它是理想行為——見本計畫 Global Constraints）',
+        'PDF：跳轉後使用者未曾產生任何後續重定位事件即離開，dispose() 保留資料庫既有進度、不覆寫'
+        '（spec.md §6 2026-09-11 修訂，`review-plan-issue-5.md` I-2 修訂——'
+        '推翻本計畫原版「這是刻意接受的簡化」設計，改為實際修正這個行為）',
         (tester) async {
       final prefsManager = FakeReaderPrefsManager(
         readingPositionByBookId: {
@@ -451,10 +455,9 @@ import 'package:elinkbook/reader/reading_position.dart';
       await tester.runAsync(() => Future.delayed(Duration.zero));
       await tester.pump();
 
-      // 模擬原生端回報「目前顯示跳轉目標頁碼」，這是開書當下的正常事件
-      // （不代表使用者主動翻頁）——onPageChanged 是原生端每次頁面確實
-      // 顯示變更時都會回報，不區分「開書自動定位」與「使用者手動翻頁」
-      // 兩種來源，這正是本測試要記錄的既有限制本身。
+      // 只有「開書當下抵達跳轉目標」這一次回報，使用者完全沒有進一步
+      // 互動——onPageChanged 是原生端每次頁面確實顯示變更時都會回報，
+      // 這裡刻意只呼叫一次，模擬使用者查看一下就離開的情境。
       final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
       pdfView.onPageChanged?.call(const PdfPageInfo(pageIndex: 2, totalPages: 5));
       await tester.pump();
@@ -464,14 +467,19 @@ import 'package:elinkbook/reader/reading_position.dart';
       await tester.pump();
 
       expect(
-        prefsManager.savedReadingPositionCalls.last.value.pdfPageIndex,
-        2,
-        reason: 'checkpoint 只反映「畫面目前顯示的位置」，不區分該位置是'
-            '使用者主動翻頁到的，還是搜尋跳轉開書當下就顯示的——這代表'
-            '使用者跳轉前的舊進度（49）會被覆蓋成跳轉目標（2）。spec.md '
-            '§6 已明確記錄「不需要額外的『使用者是否已產生主動互動』'
-            '判斷……予以簡化」，本計畫依此設計，不在這裡另外實作追蹤'
-            '邏輯；若要改變這個行為需要回頭修訂 spec.md §6 本身。',
+        prefsManager.savedReadingPositionCalls,
+        isEmpty,
+        reason: '使用者跳轉後沒有任何後續重定位事件，_writeCurrentPosition() '
+            '應在最前面就直接 return，完全不呼叫 saveReadingPosition——不能'
+            '把搜尋跳轉目標（頁碼 2）誤存成新進度，覆蓋掉跳轉前的舊進度'
+            '（頁碼 49）。',
+      );
+      expect(
+        prefsManager.readingPositionByBookId['b_jump_immediate_exit']
+            ?.pdfPageIndex,
+        49,
+        reason: '資料庫既有進度應維持原樣（頁碼 49），完全不受這次搜尋'
+            '跳轉瀏覽影響。',
       );
     });
   });
@@ -587,6 +595,113 @@ import '../reader/reader_jump_target.dart';
           // epic-10-search Issue 5：理由同上方 FoliateReaderView 分支。
           initialPageIndex: widget.initialJumpTarget?.pdfPageIndex ??
               _initialPosition?.pdfPageIndex,
+```
+
+**【2026-09-11 spec.md §6 修訂，`review-plan-issue-5.md` I-2】** 以下四段 find/replace 是這次修訂新增的內容：checkpoint 寫入（`_writeCurrentPosition()`）需要一個「使用者跳轉後是否已產生後續重定位」的保護，避免使用者只是查看一下搜尋結果、尚未翻頁就離開時，把跳轉目標覆寫成新進度、蓋掉原本真正的閱讀進度。完整理由見 spec.md §6 該修訂段落與本計畫 Global Constraints。
+
+找到（`_ReaderScreenState` 類別內既有的 `_initialPosition` 欄位宣告，緊接在其後補上新欄位——**注意**：這裡是 `_ReaderScreenState`，跟本 Step 前面新增的 `ReaderScreen.initialJumpTarget` 不是同一個類別，不要誤植進 widget 本身）：
+
+```dart
+  ReadingPosition? _initialPosition;
+```
+
+取代為：
+
+```dart
+  ReadingPosition? _initialPosition;
+  /// 【spec.md §6 2026-09-11 修訂】只在 `widget.initialJumpTarget` 非
+  /// `null` 時才有意義：`_pdfPageInfo`/`_epubPositionInfo` 開書後第一次
+  /// 被 `onPageChanged`/`onLocatorChanged` 賦值時（賦值前仍是 `null`）
+  /// 代表 `initialJumpTarget` 套用後的初始定位回報，不算使用者主動
+  /// 導覽；這兩個回呼**第二次（或之後）**被呼叫時（賦值前已非 `null`）
+  /// ——不論觸發來源是翻頁熱區、音量鍵、目錄/書籤跳轉、或書內搜尋，皆會
+  /// 走同一組回呼報告新位置，這個判斷天然涵蓋所有導覽方式——才代表使用
+  /// 者確實已經離開了跳轉目標本身，設為 `true`。單向轉換
+  /// （`false → true`），一旦設定就不會再變回 `false`。
+  /// [_writeCurrentPosition] 用這個旗標決定是否要跳過寫入、保留資料庫
+  /// 既有進度。
+  bool _hasRelocatedSinceOpen = false;
+```
+
+找到：
+
+```dart
+          onLocatorChanged: (info) {
+            if (!mounted) return;
+            setState(() => _epubPositionInfo = info);
+            // 手動導覽自動暫停並清除舊高亮（epic-34-tts-readalong
+            // Issue 4）：直接用既有的 nullable _ttsController 欄位（不用
+            // _ttsControllerOrNull getter）——尚未曾建構過 TtsController
+            // 時（TTS 從未被使用）保持 null，避免每次翻頁都意外觸發
+            // lazy 建構；一旦已建構過，無條件呼叫即可，TtsController 自己
+            // 在 idle 狀態下呼叫本方法是 no-op（見 handleExternalPositionChange
+            // 文件註解，本檔案不需要自行判斷目前是否正在播放）。
+            _ttsController?.handleExternalPositionChange();
+          },
+```
+
+取代為：
+
+```dart
+          onLocatorChanged: (info) {
+            if (!mounted) return;
+            // 【spec.md §6 2026-09-11 修訂】見上方 _hasRelocatedSinceOpen
+            // 欄位文件註解：賦值前非 null，代表這不是開書後第一次回報。
+            if (_epubPositionInfo != null) _hasRelocatedSinceOpen = true;
+            setState(() => _epubPositionInfo = info);
+            // 手動導覽自動暫停並清除舊高亮（epic-34-tts-readalong
+            // Issue 4）：直接用既有的 nullable _ttsController 欄位（不用
+            // _ttsControllerOrNull getter）——尚未曾建構過 TtsController
+            // 時（TTS 從未被使用）保持 null，避免每次翻頁都意外觸發
+            // lazy 建構；一旦已建構過，無條件呼叫即可，TtsController 自己
+            // 在 idle 狀態下呼叫本方法是 no-op（見 handleExternalPositionChange
+            // 文件註解，本檔案不需要自行判斷目前是否正在播放）。
+            _ttsController?.handleExternalPositionChange();
+          },
+```
+
+找到：
+
+```dart
+          onPageChanged: (info) {
+            if (!mounted) return;
+            setState(() => _pdfPageInfo = info);
+          },
+```
+
+取代為：
+
+```dart
+          onPageChanged: (info) {
+            if (!mounted) return;
+            // 【spec.md §6 2026-09-11 修訂】理由同上方 onLocatorChanged
+            // 分支。
+            if (_pdfPageInfo != null) _hasRelocatedSinceOpen = true;
+            setState(() => _pdfPageInfo = info);
+          },
+```
+
+找到（`_writeCurrentPosition()` 方法開頭）：
+
+```dart
+  void _writeCurrentPosition() {
+    final format = detectBookFormat(widget.filePath);
+    switch (format) {
+```
+
+取代為：
+
+```dart
+  void _writeCurrentPosition() {
+    // 【spec.md §6 2026-09-11 修訂，review-plan-issue-5.md I-2】使用者
+    // 跳轉後尚未產生任何後續重定位事件（見 _hasRelocatedSinceOpen 欄位
+    // 文件註解），保留資料庫既有的 lastPosition、不覆寫——避免使用者只是
+    // 查看一下搜尋結果、隨即離開，卻把原本讀到一半的進度覆蓋成搜尋跳轉
+    // 目標本身。initialJumpTarget 為 null（一般開書）時這個判斷恆為
+    // false，行為完全不變。
+    if (widget.initialJumpTarget != null && !_hasRelocatedSinceOpen) return;
+    final format = detectBookFormat(widget.filePath);
+    switch (format) {
 ```
 
 - [ ] **Step 10：執行測試，確認全數通過**
@@ -2039,10 +2154,12 @@ Expected: `All tests passed!`（比照 `plan-issue-0.md`／`plan-issue-3.md` 既
 
 ## 自我審查（Self-Review，計畫撰寫者執行，非另一輪審查）
 
-**Spec 覆蓋度：** spec.md §6 逐項對應——(1) `ReaderJumpTarget`（`cfi`／`pdfPageIndex`／`pdfRect`）＋`ReaderScreen.initialJumpTarget` 建構參數，型別與欄位名稱與 spec.md §6 程式碼範例逐字一致 → Task 1；(2) 「作用範圍精確限定為決定初始定位參數，不新增暫停進度儲存旗標」→ Task 1 Step 9（`initialLocatorJson`/`initialPageIndex` 的 `??` 覆寫，不觸碰 `_writeCurrentPosition()`/`onLocatorChanged` 既有邏輯）；(3) Foliate `window.showSearchHighlight`/`window.clearSearchHighlight`＋獨立 `currentSearchHighlightValue` → Task 3；(4) PDF 複用 `pageOverlaysBuilder` 畫暫態高亮矩形 → Task 2；(5) 生命週期由 Dart 端 `Timer` 主導（3 秒／提前翻頁或點擊清除，取兩者較早）→ Task 4；(6) `LibrarySearchScreen` 點擊內容匹配片段時帶 `ReaderJumpTarget` 開啟 `ReaderScreen` → Task 5。issues.md Issue 5 單元測試要求三項：「`initialJumpTarget` 定位來源正確、後續翻頁/checkpoint 行為與一般開書一致」→ Task 1 測試（含零回歸測試）；「暫態高亮 3 秒自動消失／提前翻頁點擊清除」→ Task 4 測試（PDF 端完整驗證，見 Global Constraints 對誠實測試邊界的說明）；「Foliate 端 showSearchHighlight/clearSearchHighlight 不影響 TTS 播放狀態」→ Task 3 main.js regression guard 雙向隔離測試。驗收標準「`integration_test/` 或手動驗證：從全庫搜尋點擊一則內容匹配，真的跳到該精確位置並看到 3 秒暫態高亮，且原本的閱讀進度不受影響」→ Task 5 Step 9 人工驗證項目 1-6。
+**Spec 覆蓋度：** spec.md §6 逐項對應——(1) `ReaderJumpTarget`（`cfi`／`pdfPageIndex`／`pdfRect`）＋`ReaderScreen.initialJumpTarget` 建構參數，型別與欄位名稱與 spec.md §6 程式碼範例逐字一致 → Task 1；(2) 「作用範圍精確限定為決定初始定位參數」→ Task 1 Step 9（`initialLocatorJson`/`initialPageIndex` 的 `??` 覆寫）；(2-1)【2026-09-11 修訂】「checkpoint 寫入需額外一層『使用者是否已產生後續重定位』保護」→ Task 1 Step 9 新增 `_hasRelocatedSinceOpen` 欄位＋`onPageChanged`/`onLocatorChanged`/`_writeCurrentPosition()` 三處修改；(3) Foliate `window.showSearchHighlight`/`window.clearSearchHighlight`＋獨立 `currentSearchHighlightValue` → Task 3；(4) PDF 複用 `pageOverlaysBuilder` 畫暫態高亮矩形 → Task 2；(5) 生命週期由 Dart 端 `Timer` 主導（3 秒／提前翻頁或點擊清除，取兩者較早）→ Task 4；(6) `LibrarySearchScreen` 點擊內容匹配片段時帶 `ReaderJumpTarget` 開啟 `ReaderScreen` → Task 5。issues.md Issue 5 單元測試要求三項：「`initialJumpTarget` 定位來源正確、後續翻頁/checkpoint 行為與一般開書一致」→ Task 1 測試（含零回歸測試）；「暫態高亮 3 秒自動消失／提前翻頁點擊清除」→ Task 4 測試（PDF 端完整驗證，見 Global Constraints 對誠實測試邊界的說明）；「Foliate 端 showSearchHighlight/clearSearchHighlight 不影響 TTS 播放狀態」→ Task 3 main.js regression guard 雙向隔離測試。驗收標準「`integration_test/` 或手動驗證：從全庫搜尋點擊一則內容匹配，真的跳到該精確位置並看到 3 秒暫態高亮，且原本的閱讀進度不受影響」→ Task 5 Step 9 人工驗證項目 1-6。
 
 **Placeholder 掃描：** 無「TBD」「稍後補上」「類似 Task N」等字樣，所有程式碼片段皆為完整可直接套用的內容（含 `reader_screen.dart`／`pdf_reader_view.dart`／`main.js` 的逐段 find/replace 皆為實際既有文字，已於規劃階段逐一讀取原始檔案確認）。
 
 **型別一致性：** `ReaderJumpTarget`（`cfi`／`pdfPageIndex`／`pdfRect`／`fromContentLocator()`）在 Task 1 定義，Task 4 的 `_maybeShowSearchJumpHighlight()` 與 Task 5 的 `LibrarySearchScreen._openBook()` 呼叫端欄位存取方式一致；`PdfReaderView.showTemporaryHighlight`/`clearTemporaryHighlight` 在 Task 2 定義（含 `pdf_reader_jump_highlight_$pageIndex` Key 命名），Task 4 呼叫端參數順序/型別一致；`FoliateReaderView.showSearchHighlight`/`clearSearchHighlight` 在 Task 3 定義（審查修正 I-1 後簽章簡化為只有 `cfi`，不再有 `vertical`/`einkMode`），Task 4 呼叫端已同步移除這兩個具名參數；`ReaderScreen.initialJumpTarget` 在 Task 1 定義，Task 4／Task 5 皆原樣引用，命名一致。
 
-**審查回應總結（`reviews/review-plan-issue-5.md`）：** 1 Critical／3 Important／4 Minor 共 8 項發現逐一查證後：C-1（Task 4 高亮生命週期測試的 `pumpUntilPdfReady(tester)` 不帶 `condition` 時會在 fake-async 環境累積推進 3,000ms，恰好等於 3 秒暫態高亮計時器時長，導致斷言在計時器到期前後順序錯亂）、I-1（規劃階段查證 `view.js` 原始碼後推翻原設計——`foliate-search:` 是 vendored 函式庫自己既有、寫死走 `Overlayer.outline` 固定紅色外框的常數，不是可自訂顏色的保留前綴，main.js／`FoliateReaderView` 的簽章與實作、Global Constraints 皆已改寫）、I-3（issues.md 明定的「後續翻頁 checkpoint 行為一致」測試原計畫遺漏，已補上）、M-1（`_buildBody()`／`_buildNativeView()` 方法名稱指稱錯誤）、M-2（PDF locator 缺 `rect` 時的優雅降級，推翻原「整筆回傳 null」設計）、M-3（`_setJumpHighlight` 補 `mounted` 防護）皆查證屬實並已修訂。I-2（`dispose()` 在使用者跳轉後未翻頁即離開時會覆寫舊進度）技術上屬實，但這是 spec.md §6 已明文記錄並拒絕過的同一類「主動互動追蹤」提案（"不需要額外的『使用者是否已產生主動互動』判斷……予以簡化"，原文逐字引用）——本計畫不在計畫層級片面推翻已定案的 spec 決策，改為在 Task 1 新增一個測試把這個行為明確鎖定並記錄為已知、刻意接受的簡化，同時在 Global Constraints 說明「若要改變此行為需回頭修訂 spec.md §6」，留給人類決定是否值得重新開這個決策。M-4（commit 訊息含舊版 attribution）經逐一核對本計畫全部 6 處 commit 區塊後確認不成立——皆已是 `Claude Sonnet 5 <noreply@anthropic.com>`，判斷為審查者誤判，維持原樣不修改。
+**審查回應總結（`reviews/review-plan-issue-5.md`）：** 1 Critical／3 Important／4 Minor 共 8 項發現逐一查證後：C-1（Task 4 高亮生命週期測試的 `pumpUntilPdfReady(tester)` 不帶 `condition` 時會在 fake-async 環境累積推進 3,000ms，恰好等於 3 秒暫態高亮計時器時長，導致斷言在計時器到期前後順序錯亂）、I-1（規劃階段查證 `view.js` 原始碼後推翻原設計——`foliate-search:` 是 vendored 函式庫自己既有、寫死走 `Overlayer.outline` 固定紅色外框的常數，不是可自訂顏色的保留前綴，main.js／`FoliateReaderView` 的簽章與實作、Global Constraints 皆已改寫）、I-3（issues.md 明定的「後續翻頁 checkpoint 行為一致」測試原計畫遺漏，已補上）、M-1（`_buildBody()`／`_buildNativeView()` 方法名稱指稱錯誤）、M-2（PDF locator 缺 `rect` 時的優雅降級，推翻原「整筆回傳 null」設計）、M-3（`_setJumpHighlight` 補 `mounted` 防護）皆查證屬實並已修訂。M-4（commit 訊息含舊版 attribution）經逐一核對本計畫全部 6 處 commit 區塊後確認不成立——皆已是 `Claude Sonnet 5 <noreply@anthropic.com>`，判斷為審查者誤判，維持原樣不修改。
+
+I-2（`dispose()` 在使用者跳轉後未翻頁即離開時會覆寫舊進度）第一輪回應時技術上確認屬實，但因為這與 spec.md §6 已明文記錄並拒絕過的同一類「主動互動追蹤」提案（"不需要額外的『使用者是否已產生主動互動』判斷……予以簡化"，原文逐字引用）衝突，當時判斷不應在計畫層級片面推翻已定案的 spec 決策，改為新增測試鎖定並記錄為已知、刻意接受的簡化，同時把是否要修改 spec.md §6 本身的決定權交還給人類。**人類決議後續採納修正此行為**，spec.md §6 已於同日（2026-09-11）修訂，正式推翻原本的簡化結論；本計畫已同步更新：Task 1 新增 `_hasRelocatedSinceOpen` 欄位＋`onPageChanged`/`onLocatorChanged`/`_writeCurrentPosition()` 三處修改（見 Step 9 追加的四段 find/replace），原本「鎖定舊行為」的測試已改寫為「驗證新的保護行為」，並調整了原本「跳轉後繼續翻頁」測試的模擬序列（先回報一次跳轉目標本身、再回報使用者實際翻到的頁碼，才能正確觸發 `_hasRelocatedSinceOpen`）。
