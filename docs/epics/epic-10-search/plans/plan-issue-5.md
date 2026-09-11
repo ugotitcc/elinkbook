@@ -14,13 +14,14 @@
 
 - **依賴已滿足**：Issue 4（`LibrarySearchScreen`／`SearchRepository`／`ContentMatchSnippet.locator`）已完成並合併（PR #234）。
 - **`initialJumpTarget` 的作用範圍精確限定，不新增任何「暫停進度儲存」旗標（spec.md §6 逐字規定）**：現行 `_writeCurrentPosition()` 只在 App 背景化／`dispose()` 這種 checkpoint 時機才讀取當下最新的 `_epubPositionInfo`/`_pdfPageInfo` 寫入資料庫，不是每次 `onLocatorChanged` 都寫入；`initialJumpTarget` 要做的事情跟現行「用資料庫存的 `lastPosition` 決定 `initialLocatorJson`/`initialPageIndex`」完全同構，只是多一個優先權更高的來源可選。除了「開書當下決定初始定位參數」這一個決策點，**不特殊處理後續的 `onLocatorChanged`／checkpoint 寫入**——使用者從跳轉位置開始往後翻頁閱讀，`_epubPositionInfo`/`_pdfPageInfo` 自然更新為使用者實際所在位置，下次 checkpoint 觸發時就會正確存下使用者真正閱讀到的地方。
+- **已知且刻意接受的邊界情況（`review-plan-issue-5.md` I-2）：使用者跳轉後未曾翻頁即離開，`dispose()` 會把跳轉位置存成新進度，覆蓋掉跳轉前的舊進度**——這不是本計畫的疏漏，而是上一條規則的直接推論，且 spec.md §6 已在文件層級明確權衡並記錄過**同一類**考量後拒絕過："`不需要額外的「使用者是否已產生主動互動」判斷（審查意見 I-2 提議追蹤『第一次重定位事件』，經查證現行 checkpoint-only 寫入機制後，這層追蹤是不必要的複雜度，予以簡化）`"（原文逐字引用，見 spec.md §6）。本計畫不在 Task 層級重新引入這層追蹤去覆蓋 spec.md 已經定案的簡化決策；改為在 Task 4 補一個測試明確鎖定並記錄「使用者跳轉後立即離開時，checkpoint 會把跳轉位置存成新進度」這個目前的實際行為（測試名稱與註解會清楚標註這是刻意接受的行為，不是回歸），讓這個權衡不再是「無測試覆蓋的隱性行為」。**若日後要修改這個行為（例如真的要加一層互動追蹤），需要回頭修訂 spec.md §6 本身，不是單獨修這張計畫**——這屬於產品層級的取捨，需要人類決定是否值得為此增加複雜度。
 - **暫態高亮的生命週期由 Dart 端 `Timer` 主導，不用 JS `setTimeout`（spec.md §6 逐字規定）**：比照專案既有「計時器一律由 Dart 端主導」慣例。這裡刻意**不**引入 `package:clock`——`Timer` 本身是 Zone-aware 的，`flutter_test` 的 `TestWidgetsFlutterBinding` 已經把整個測試包在 fake-async zone 內，`tester.pump(Duration(...))` 天然能推進一般 `Timer(duration, callback)`（比照本檔案既有 `_openBookTimeoutTimer`/`_syncCheckpointTimer` 皆為裸 `Timer`、無需 `package:clock` 即可測試的既有先例）；`package:clock` 只在需要「量測兩個真實時間點之間經過了多久」（例如 `TapZoneDetector` 判斷兩次點擊間隔）時才需要，本工單的需求是「排定一個未來回呼」，兩者本質不同，不要混淆套用。
-- **Foliate 暫態高亮使用獨立的 `currentSearchHighlightValue` 變數，不重用 `showTtsHighlight()` 的 `currentTtsAnnotationValue`（spec.md §6 逐字規定，ADR 0026 精神延伸）**：該變數與 TTS 播放狀態機耦合，混用會讓「使用者跳轉到某句同時該句正在被朗讀」這種情境互相汙染清除時機。`main.js` 沿用既有 `foliate-note:`（TTS）之外，新增 `foliate-search:` 前綴（`main.js` 既有註解第 910 行已提前預留這個前綴名稱，本工單是第一個真正實作它的工單）。
+- **Foliate 暫態高亮改用 `view.js`（釘定 vendored 檔案）既有的 `foliate-search:` 前綴＋原生 `Overlayer.outline` 樣式，放棄自訂顏色/直排橫排/E-Ink 客製化（`review-plan-issue-5.md` I-1，推翻原計畫「main.js 自行定義綠色高亮＋直排橫排＋E-Ink 樣式」設計）**：原計畫誤判 `main.js` 第 910 行註解「一般標記（非 `foliate-search:`/`foliate-note:` 前綴）……」是在說「`foliate-search:` 是保留但尚未使用的前綴名稱」，規劃階段查證 `view.js` 原始碼後推翻這個判斷——`SEARCH_PREFIX = 'foliate-search:'`是這份釘定 vendored 函式庫**自己既有、寫死的常數**，`#drawAnnotations()`/`addAnnotation()` 對它的處理是無條件呼叫 `overlayer.add(value, range, Overlayer.outline)`（**不帶任何 `options`、也不發送 `draw-annotation` 事件**），與 `foliate-note:`（TTS）／裸 CFI（劃線/備註）這兩種會透過 `draw-annotation` 事件把繪製決定權交還給 `main.js` 呼叫端的既有機制完全不同；`Overlayer.outline()` 未收到 `options` 時的預設值固定是 `color='red', strokeWidth=3`，無法從 `main.js` 客製化。三個可能的替代方案逐一評估：(1) 修改 `view.js` 讓 `SEARCH_PREFIX` 也發送 `draw-annotation` 事件——違反 ADR 0011「不修改任何 vendored 檔案」；(2) 重用 `foliate-note:`（TTS 既有 key 空間）——若搜尋跳轉目標剛好是目前正在朗讀的句子，兩者會共用完全相同的 annotation value 字串，`clearSearchHighlight()`／`clearTtsHighlight()` 任一方呼叫都會刪掉對方的高亮，正是 spec.md §6 明文要求要避免的「互相汙染」；(3) 使用裸 CFI（劃線/備註既有 key 空間）——若搜尋跳轉目標剛好是使用者已手動劃線的句子，會暫時覆蓋掉該劃線的視覺呈現，且 `clearSearchHighlight()` 會把使用者的真實劃線從畫面上一併移除，直到下次 `setDecorations()` 全量重送才會恢復，是比 (2) 更嚴重的資料層級風險。三者相比，直接沿用 `foliate-search:` 既有的固定紅色外框樣式是風險最低的選擇——它的 key 空間本來就與劃線/備註/TTS 三者完全獨立（這正是 `view.js` 把它與 `NOTE_PREFIX` 分開處理的原因），語意上也精確符合「暫態、非持久化的搜尋位置指示」。**代價（已知且接受的平台限制）**：Foliate 端的暫態高亮固定為紅色外框（無填色），無法依 E-Ink 模式切換高對比樣式、無法依直排/橫排調整外觀，與 PDF 端可自訂的綠色填色＋外框樣式不一致——這是 ADR 0011 與現有 vendored 函式庫行為交互下的必然結果，非實作疏漏，issues.md 若要追求兩端視覺一致，需要另立工單評估修改 `view.js` 的利弊（超出本工單範圍）。
 - **PDF 暫態高亮複用既有 `pageOverlaysBuilder` 疊加機制（`pdf_reader_view.dart`），比照劃線/既有 PDF 內文搜尋（Chrome Bar「搜尋」按鈕，`PdfSearchPanel`／`setSearchHighlights`）既有疊加繪製模式**，但**不共用**內部狀態（`_searchMatches`/`_currentSearchMatchIndex` 是 PDF 內文搜尋專屬的「可能多筆、由使用者手動關閉搜尋面板才消失」清單；本工單的暫態高亮是「全域最多一筆、3 秒後自動消失」的完全獨立概念，兩者資料來源、生命週期、觸發呼叫端皆不同，只有視覺樣式相似）。
 - **清除時機統一收斂在既有 `_handleZoneAction()` 入口最上方**（spec.md §6：「使用者提前翻頁或點擊畫面時，既有的翻頁/點擊處理路徑一併呼叫清除，取兩者較早發生者」）：`_handleZoneAction()` 是本專案 3×3 熱區點擊（`previousPage`/`nextPage`/`menu`/`none`）與音量鍵翻頁（`_handleVolumeKeyCall` 內部轉呼叫 `_handleZoneAction`）的唯一既有統一入口，涵蓋了「翻頁」與「點擊畫面」兩種情境，不需要另外攔截 `onLocatorChanged`（該回呼在「書籍剛開啟、顯示跳轉目標位置」當下本身就會觸發一次，若在那裡清除會在使用者看到高亮之前就把它清掉，見下方 Task 4 說明）。
 - **`SearchRepository.searchContent()` 命中的書籍已排除 CBZ（Issue 2/3 既有結論：CBZ 恆為 `unsupported`，不會出現在索引資料中）**，本計畫的 Foliate 分支雖然技術上涵蓋 `isFoliateFormat()` 的全部格式（含 CBZ），但實務上 CBZ 不會透過本 Seam 被跳轉，不需要為此另寫防呆（YAGNI）。
-- **誠實測試邊界（比照既有 TTS 朗讀高亮測試慣例，`reader_screen_test.dart`「同步高亮跟隨」測試群組既有註解）**：`flutter_test` 環境下 `FoliateReaderView` 的 `_controller` 恆為 `null`，`showSearchHighlight()`/`clearSearchHighlight()` 實際送出的 JS 呼叫參數無法在 `ReaderScreen`／`FoliateReaderView` 這層直接攔截斷言。本計畫的測試策略：(1) `main.js` 端的 key 空間隔離／函式存在性用**靜態原始碼掃描**驗證（比照既有「main.js 朗讀高亮 regression guard」）；(2) `ReaderScreen` 端只驗證「wiring 不崩潰」；(3) PDF 端因為 `pageOverlaysBuilder` 是純 Dart／真實可渲染的機制，可以完整驗證（顯示、3 秒自動清除、提前清除皆有真實 widget 可斷言），**PDF 測試因此是本工單「Dart 端 Timer 生命週期邏輯」（`_maybeShowSearchJumpHighlight`/`_clearSearchJumpHighlight`/`_searchJumpHighlightTimer`，格式無關的共用程式碼）唯一但足夠的完整驗證**——Foliate 分支呼叫的是不同的靜態方法，但共用同一段 Timer 生命週期程式碼，PDF 測試已完整覆蓋這段共用邏輯正確性；(4) 真實 JS 高亮渲染正確性（含跳轉是否精確、3 秒視覺效果、直排/橫排正確跟隨）須真機或 `integration_test/` 手動驗證，見 Task 5 收尾步驟。
-- **`ReaderJumpTarget.fromContentLocator()` 解析失敗時優雅退化**：格式異常（非法 JSON、缺欄位）時回傳 `null`，呼叫端（`LibrarySearchScreen`）當作「一般開書、無跳轉目標」處理，不拋例外、不崩潰——這是「無法窮舉但理論上不該發生」的防禦（`book_content_index.locator` 是系統自己寫入的資料，不是使用者輸入），比照 `SqliteSearchRepository.searchContent()` 對 `DatabaseException` 的既有防禦分級（見 `reviews/review-issue-4.md` M-4 的先例）。
+- **誠實測試邊界（比照既有 TTS 朗讀高亮測試慣例，`reader_screen_test.dart`「同步高亮跟隨」測試群組既有註解）**：`flutter_test` 環境下 `FoliateReaderView` 的 `_controller` 恆為 `null`，`showSearchHighlight()`/`clearSearchHighlight()` 實際送出的 JS 呼叫參數無法在 `ReaderScreen`／`FoliateReaderView` 這層直接攔截斷言。本計畫的測試策略：(1) `main.js` 端的 key 空間隔離／函式存在性用**靜態原始碼掃描**驗證（比照既有「main.js 朗讀高亮 regression guard」）；(2) `ReaderScreen` 端只驗證「wiring 不崩潰」；(3) PDF 端因為 `pageOverlaysBuilder` 是純 Dart／真實可渲染的機制，可以完整驗證（顯示、3 秒自動清除、提前清除皆有真實 widget 可斷言），**PDF 測試因此是本工單「Dart 端 Timer 生命週期邏輯」（`_maybeShowSearchJumpHighlight`/`_clearSearchJumpHighlight`/`_searchJumpHighlightTimer`，格式無關的共用程式碼）唯一但足夠的完整驗證**——Foliate 分支呼叫的是不同的靜態方法，但共用同一段 Timer 生命週期程式碼，PDF 測試已完整覆蓋這段共用邏輯正確性；(4) 真實 JS 高亮渲染正確性（含跳轉是否精確、3 秒視覺效果；Foliate 端因改用 `view.js` 既有的 `foliate-search:` 固定紅色外框樣式，**不**隨直排/橫排或 E-Ink 模式調整，見上方「Foliate 暫態高亮改用 view.js 既有前綴」說明）須真機或 `integration_test/` 手動驗證，見 Task 5 收尾步驟。
+- **`ReaderJumpTarget.fromContentLocator()` 解析失敗時分層優雅退化（審查修正 M-2，推翻原計畫「缺欄位一律回傳 null」設計）**：`page` 欄位缺失/型別錯誤時回傳 `null`（沒有頁碼就沒有任何可跳轉目標），呼叫端（`LibrarySearchScreen`）當作「一般開書、無跳轉目標」處理，不拋例外、不崩潰；`rect` 欄位缺失/型別錯誤時**不**整筆放棄，改為回傳只有 `pdfPageIndex`（無 `pdfRect`）的 `ReaderJumpTarget`——仍能正確跳轉到目標頁面，只是沒有精確座標可畫暫態高亮，比完全放棄跳轉、退回舊 `lastPosition` 更貼近使用者意圖。這是「無法窮舉但理論上不該發生」的防禦（`book_content_index.locator` 是系統自己寫入的資料，不是使用者輸入），比照 `SqliteSearchRepository.searchContent()` 對 `DatabaseException` 的既有防禦分級（見 `reviews/review-issue-4.md` M-4 的先例）。
 - **所有新增程式碼註解使用正體中文（zh-TW）**，比照全專案既有慣例。
 
 ---
@@ -131,16 +132,27 @@ void main() {
       expect(target, isNull);
     });
 
-    test('PDF 格式但 locator 缺少 rect 欄位時回傳 null', () {
-      final target = ReaderJumpTarget.fromContentLocator(
+    test(
+        'PDF 格式但 locator 缺少（或壞掉的）rect 欄位時，優雅降級為只有頁碼、沒有暫態高亮座標'
+        '（審查修正 M-2，推翻原計畫「整筆回傳 null」設計）', () {
+      final missingRect = ReaderJumpTarget.fromContentLocator(
         format: BookFileFormat.pdf,
         locator: '{"page":3}',
       );
+      expect(missingRect, isNotNull);
+      expect(missingRect!.pdfPageIndex, 3);
+      expect(missingRect.pdfRect, isNull);
 
-      expect(target, isNull);
+      final malformedRect = ReaderJumpTarget.fromContentLocator(
+        format: BookFileFormat.pdf,
+        locator: '{"page":3,"rect":"不是物件"}',
+      );
+      expect(malformedRect, isNotNull);
+      expect(malformedRect!.pdfPageIndex, 3);
+      expect(malformedRect.pdfRect, isNull);
     });
 
-    test('PDF 格式但 locator 缺少 page 欄位時回傳 null', () {
+    test('PDF 格式但 locator 缺少 page 欄位時回傳 null（沒有頁碼就沒有任何可跳轉的目標）', () {
       final target = ReaderJumpTarget.fromContentLocator(
         format: BookFileFormat.pdf,
         locator: '{"rect":{"left":0.1,"top":0.2,"right":0.5,"bottom":0.3}}',
@@ -189,10 +201,15 @@ class ReaderJumpTarget {
   /// Foliate 格式 locator 本身即為 CFI 字串；PDF 格式 locator 為
   /// `{"page":int,"rect":{"left":...,"top":...,"right":...,"bottom":...}}`
   /// 的 JSON 字串（見 `pdf_content_indexer.dart` 寫入格式，Issue 1）。
-  /// 格式異常（非法 JSON、缺欄位）時回傳 `null`，呼叫端應退回一般開書
-  /// 路徑而非崩潰——`locator` 是系統自己寫入的衍生資料，理論上不會異常，
-  /// 但不假設一定合法（比照 `SqliteSearchRepository.searchContent()` 對
-  /// `DatabaseException` 的既有防禦分級）。
+  /// `page` 欄位缺失/型別錯誤時回傳 `null`——沒有頁碼就沒有任何可跳轉的
+  /// 目標，呼叫端應退回一般開書路徑而非崩潰；`rect` 欄位缺失/型別錯誤時
+  /// **優雅降級**為只有 `pdfPageIndex`、`pdfRect` 為 `null`（審查修正
+  /// M-2，推翻原計畫「rect 有問題就整筆回傳 null」設計）——仍能正確跳轉
+  /// 到目標頁面，只是沒有精確座標可畫暫態高亮，比整個放棄跳轉、退回舊
+  /// `lastPosition` 更貼近使用者「點了搜尋結果」的意圖。這兩種欄位皆是
+  /// 系統自己寫入的衍生資料，理論上不會異常，但不假設一定合法（比照
+  /// `SqliteSearchRepository.searchContent()` 對 `DatabaseException` 的
+  /// 既有防禦分級）。
   static ReaderJumpTarget? fromContentLocator({
     required BookFileFormat format,
     required String locator,
@@ -203,15 +220,27 @@ class ReaderJumpTarget {
     try {
       final map = jsonDecode(locator) as Map<String, dynamic>;
       final pageIndex = map['page'] as int;
-      final rectMap = map['rect'] as Map<String, dynamic>;
       return ReaderJumpTarget(
         pdfPageIndex: pageIndex,
-        pdfRect: PercentRect(
-          left: (rectMap['left'] as num).toDouble(),
-          top: (rectMap['top'] as num).toDouble(),
-          right: (rectMap['right'] as num).toDouble(),
-          bottom: (rectMap['bottom'] as num).toDouble(),
-        ),
+        pdfRect: _parsePdfRect(map['rect']),
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// [rawRect] 是否為合法的 `{"left":...,"top":...,"right":...,"bottom":...}`
+  /// 結構，任何一步失敗（型別不符、缺欄位）皆回傳 `null`，不拋例外——
+  /// 呼叫端（[fromContentLocator]）遇到 `null` 會保留已解析出的
+  /// `pdfPageIndex`，只是不顯示暫態高亮（審查修正 M-2）。
+  static PercentRect? _parsePdfRect(dynamic rawRect) {
+    if (rawRect is! Map<String, dynamic>) return null;
+    try {
+      return PercentRect(
+        left: (rawRect['left'] as num).toDouble(),
+        top: (rawRect['top'] as num).toDouble(),
+        right: (rawRect['right'] as num).toDouble(),
+        bottom: (rawRect['bottom'] as num).toDouble(),
       );
     } catch (_) {
       return null;
@@ -344,6 +373,107 @@ import 'package:elinkbook/reader/reading_position.dart';
       );
       expect(foliateView.initialLocatorJson, 'epubcfi(/stored)');
     });
+
+    testWidgets(
+        'PDF：跳轉後使用者繼續翻頁，dispose() 的 checkpoint 存檔行為與未帶入 initialJumpTarget 時完全一致'
+        '（issues.md Issue 5 單元測試要求，審查修正 I-3）', (tester) async {
+      final prefsManager = FakeReaderPrefsManager(
+        readingPositionByBookId: {
+          'b_jump_then_navigate': const ReadingPosition(pdfPageIndex: 4),
+        },
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample_multi_page.pdf',
+            bookId: 'b_jump_then_navigate',
+            prefsManager: prefsManager,
+            initialJumpTarget: const ReaderJumpTarget(pdfPageIndex: 2),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      // 模擬使用者從跳轉目標（頁碼 2）繼續往後翻到頁碼 3（比照既有 PDF
+      // 測試直接呼叫 onPageChanged 的既有慣例，不需要真的等待 pdfrx
+      // 完整載入）。
+      final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+      pdfView.onPageChanged?.call(const PdfPageInfo(pageIndex: 3, totalPages: 5));
+      await tester.pump();
+
+      // 移除畫面觸發 dispose()，比照既有「PDF 收到 onPageChanged 後離開
+      // 畫面（dispose），正確寫入 ReadingPosition」測試的既有慣例（見
+      // reader_screen_test.dart「Epic 5 Issue 2：閱讀位置記憶」區塊）。
+      await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
+      await tester.pump();
+
+      expect(
+        prefsManager.savedReadingPositionCalls.last.key,
+        'b_jump_then_navigate',
+      );
+      expect(
+        prefsManager.savedReadingPositionCalls.last.value.pdfPageIndex,
+        3,
+        reason: 'dispose() 應寫入使用者實際翻到的頁碼（3），而非跳轉目標'
+            '（2）或跳轉前資料庫既有的舊進度（4）——checkpoint 寫入行為與'
+            '一般開書完全同構，不因為曾經是搜尋跳轉而有任何殘留特殊狀態。',
+      );
+    });
+
+    testWidgets(
+        'PDF：跳轉後使用者未曾翻頁即離開，dispose() 會把跳轉位置存為新進度'
+        '（審查意見 I-2：這是 spec.md §6 已明確權衡並接受的簡化，本測試'
+        '的目的是把這個已知行為鎖進測試，避免無測試覆蓋的隱性行為，'
+        '不代表本計畫判定它是理想行為——見本計畫 Global Constraints）',
+        (tester) async {
+      final prefsManager = FakeReaderPrefsManager(
+        readingPositionByBookId: {
+          'b_jump_immediate_exit': const ReadingPosition(pdfPageIndex: 49),
+        },
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample_multi_page.pdf',
+            bookId: 'b_jump_immediate_exit',
+            prefsManager: prefsManager,
+            initialJumpTarget: const ReaderJumpTarget(pdfPageIndex: 2),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      // 模擬原生端回報「目前顯示跳轉目標頁碼」，這是開書當下的正常事件
+      // （不代表使用者主動翻頁）——onPageChanged 是原生端每次頁面確實
+      // 顯示變更時都會回報，不區分「開書自動定位」與「使用者手動翻頁」
+      // 兩種來源，這正是本測試要記錄的既有限制本身。
+      final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+      pdfView.onPageChanged?.call(const PdfPageInfo(pageIndex: 2, totalPages: 5));
+      await tester.pump();
+
+      // 使用者未曾翻頁即離開閱讀畫面。
+      await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
+      await tester.pump();
+
+      expect(
+        prefsManager.savedReadingPositionCalls.last.value.pdfPageIndex,
+        2,
+        reason: 'checkpoint 只反映「畫面目前顯示的位置」，不區分該位置是'
+            '使用者主動翻頁到的，還是搜尋跳轉開書當下就顯示的——這代表'
+            '使用者跳轉前的舊進度（49）會被覆蓋成跳轉目標（2）。spec.md '
+            '§6 已明確記錄「不需要額外的『使用者是否已產生主動互動』'
+            '判斷……予以簡化」，本計畫依此設計，不在這裡另外實作追蹤'
+            '邏輯；若要改變這個行為需要回頭修訂 spec.md §6 本身。',
+      );
+    });
   });
 ```
 
@@ -429,7 +559,7 @@ import '../reader/reader_jump_target.dart';
   });
 ```
 
-找到（`_buildBody()` 的 `FoliateReaderView` 建構，`initialLocatorJson` 那一行）：
+找到（`_buildNativeView()` 的 `FoliateReaderView` 建構，`initialLocatorJson` 那一行——**審查修正 M-1**：原計畫誤寫成 `_buildBody()`，實際上 `_buildBody()`／`_buildNativeView()` 是兩個不同方法，`FoliateReaderView`/`PdfReaderView` 的實例化在後者）：
 
 ```dart
           initialLocatorJson: _initialPosition?.epubLocatorJson,
@@ -445,7 +575,7 @@ import '../reader/reader_jump_target.dart';
               widget.initialJumpTarget?.cfi ?? _initialPosition?.epubLocatorJson,
 ```
 
-找到（`_buildBody()` 的 `PdfReaderView` 建構，`initialPageIndex` 那一行）：
+找到（`_buildNativeView()` 的 `PdfReaderView` 建構，`initialPageIndex` 那一行）：
 
 ```dart
           initialPageIndex: _initialPosition?.pdfPageIndex,
@@ -462,7 +592,7 @@ import '../reader/reader_jump_target.dart';
 - [ ] **Step 10：執行測試，確認全數通過**
 
 Run: `flutter test test/screens/reader_screen_test.dart`
-Expected: PASS（全套既有測試＋本 Task 新增 3 個測試皆通過，無回歸）
+Expected: PASS（全套既有測試＋本 Task 新增 5 個測試皆通過，無回歸）
 
 - [ ] **Step 11：`flutter analyze`**
 
@@ -720,7 +850,12 @@ Expected: FAIL（`showTemporaryHighlight isn't defined`）
   int? _jumpHighlightPageIndex;
   PercentRect? _jumpHighlightRect;
 
+  // 【審查修正 M-3】加上 mounted 防護——雖然既有 _setSearchHighlights()
+  // 沒有這道防護（呼叫鏈全程同步、key.currentState 非 null 已隱含當下
+  // 仍是 mounted，理論上不需要），但 _setAnnotations() 已有這個慣例，
+  // 補上不影響行為、多一層保險。
   void _setJumpHighlight(int? pageIndex, PercentRect? rect) {
+    if (!mounted) return;
     setState(() {
       _jumpHighlightPageIndex = pageIndex;
       _jumpHighlightRect = rect;
@@ -862,18 +997,16 @@ EOF
 - Test: `app/test/reader/foliate_reader_view_test.dart`
 
 **Interfaces：**
-- Consumes：既有 `view.addAnnotation()`/`view.deleteAnnotation()`（`main.js` 既有 `showTtsHighlight`/`clearTtsHighlight` 已用過的同一組 API）。
+- Consumes：既有 `view.addAnnotation()`/`view.deleteAnnotation()`；`view.js`（釘定 vendored 檔案）既有的 `SEARCH_PREFIX = 'foliate-search:'` 常數與其固定的 `Overlayer.outline` 渲染路徑（見本計畫 Global Constraints「Foliate 暫態高亮改用 view.js 既有的 foliate-search: 前綴」的完整查證與理由——**這是本 Task 與原計畫第一版差異最大的地方**，不再自訂顏色/直排橫排/E-Ink 樣式）。
 - Produces：
   ```dart
   static void showSearchHighlight(
     GlobalKey<State<FoliateReaderView>> key,
-    String cfi, {
-    required bool vertical,
-    required bool einkMode,
-  });
+    String cfi,
+  );
   static void clearSearchHighlight(GlobalKey<State<FoliateReaderView>> key);
   ```
-  供 Task 4 的 `ReaderScreen` 呼叫。
+  供 Task 4 的 `ReaderScreen` 呼叫；**不再有** `vertical`/`einkMode` 參數（`view.js` 對 `foliate-search:` 前綴的處理不會發送 `draw-annotation` 事件，這兩個參數傳了也不會被使用，故不定義）。
 
 **本 Task 的 TDD 紅燈只涵蓋 Step 1-2（main.js regression guard，可在實作前先失敗）**——比照本計畫 Global Constraints「誠實測試邊界」說明，`FoliateReaderView` 的 JS 呼叫在 `flutter_test` 環境下無法被攔截斷言，既有 `showTtsHighlight`/`clearTtsHighlight` 兩個靜態方法本身也沒有對應的 Dart 級測試，故 Step 4 的 Dart 端靜態方法新增沒有對應的獨立紅燈步驟（改由 Step 5 與 Task 4 的 `ReaderScreen` widget test 一併涵蓋「wiring 不崩潰」）。
 
@@ -885,45 +1018,55 @@ EOF
   group('main.js 搜尋跳轉高亮 regression guard（epic-10-search Issue 5，spec.md §6）',
       () {
     late String mainJsSource;
+    late String viewJsSource;
 
     setUpAll(() {
       mainJsSource = File('android/app/src/main/assets/foliate/main.js')
           .readAsStringSync();
+      viewJsSource = File('android/app/src/main/assets/foliate/view.js')
+          .readAsStringSync();
     });
 
     test(
-        'window.showSearchHighlight 使用 foliate-search: 前綴，與朗讀高亮/劃線備註的既有 key 空間分開',
-        () {
+        'main.js 的 foliate-search: 前綴字面值與 view.js 既有 SEARCH_PREFIX 常數一致'
+        '（規劃階段查證：此前綴是 view.js 這份釘定 vendored 檔案自己既有的保留字，'
+        '不是本工單自訂的名稱，見本計畫 Global Constraints）', () {
       expect(
-        mainJsSource.contains('window.showSearchHighlight = function'),
+        viewJsSource.contains("const SEARCH_PREFIX = 'foliate-search:'"),
         isTrue,
-        reason: 'main.js 內找不到 window.showSearchHighlight——搜尋跳轉高亮'
-            '橋接函式缺失。',
+        reason: '若這行斷言失敗，代表 view.js 這份釘定版本升級後 '
+            'SEARCH_PREFIX 的字面值改變了，main.js 下面兩個函式寫死的 '
+            "'foliate-search:' 前綴必須同步更新，否則兩者不再是同一個 "
+            'key 空間，搜尋跳轉高亮會完全不顯示（view.js 會把它導向一般'
+            '劃線/備註的 key 空間，可能覆蓋使用者真實資料，見 Global '
+            'Constraints 對這個風險的完整說明）。',
       );
       expect(mainJsSource.contains("'foliate-search:' + cfi"), isTrue,
-          reason: '搜尋跳轉高亮必須使用 foliate-search: 前綴組成 annotation '
-              'value，與朗讀高亮（foliate-note: 前綴）及劃線/備註（裸 cfi）'
-              '的既有 key 空間分開，避免同一句子同時是搜尋跳轉目標又正在'
-              '朗讀時互相覆蓋（spec.md §6：「使用獨立的 '
-              'currentSearchHighlightValue 變數，不重用現有 '
-              'showTtsHighlight() 的 currentTtsAnnotationValue」）。');
-      expect(mainJsSource.contains('view.addAnnotation({'), isTrue);
+          reason: 'main.js 內找不到 window.showSearchHighlight——搜尋跳轉'
+              '高亮橋接函式缺失。');
     });
 
-    test('window.clearSearchHighlight 存在且呼叫 view.deleteAnnotation', () {
+    test('window.showSearchHighlight／window.clearSearchHighlight 皆存在，且各自呼叫 view.addAnnotation／view.deleteAnnotation',
+        () {
       final showFnIndex =
           mainJsSource.indexOf('window.showSearchHighlight = function');
       final clearFnIndex =
           mainJsSource.indexOf('window.clearSearchHighlight = function');
+      expect(showFnIndex, greaterThanOrEqualTo(0),
+          reason: 'main.js 內找不到 window.showSearchHighlight。');
       expect(clearFnIndex, greaterThanOrEqualTo(0),
           reason: 'main.js 內找不到 window.clearSearchHighlight——搜尋跳轉'
               '高亮清除橋接函式缺失。');
+      final addCallIndex =
+          mainJsSource.indexOf('view.addAnnotation(', showFnIndex);
+      expect(addCallIndex, greaterThanOrEqualTo(0),
+          reason: 'window.showSearchHighlight 內找不到 view.addAnnotation '
+              '呼叫。');
       final deleteCallIndex =
           mainJsSource.indexOf('view.deleteAnnotation(', clearFnIndex);
       expect(deleteCallIndex, greaterThanOrEqualTo(0),
           reason: 'window.clearSearchHighlight 內找不到 view.deleteAnnotation '
               '呼叫。');
-      expect(showFnIndex, greaterThanOrEqualTo(0));
     });
 
     test(
@@ -999,30 +1142,37 @@ window.clearTtsHighlight = function () {
 }
 
 /**
- * 搜尋跳轉暫態高亮（epic-10-search Issue 5，spec.md §6）：與上方朗讀
- * 高亮（currentTtsAnnotationValue）採用完全獨立的 annotation key 空間
- * （foliate-search: 前綴 vs foliate-note: 前綴），避免兩者生命週期互相
- * 汙染——朗讀高亮跟隨播放進度頻繁切換，搜尋跳轉高亮是使用者從全庫搜尋
- * 點進來的一次性效果，3 秒後由 Dart 端 Timer 呼叫 clear（不使用 JS
- * setTimeout，見 spec.md §6）。
+ * 搜尋跳轉暫態高亮（epic-10-search Issue 5，spec.md §6）。
+ *
+ * 【規劃階段查證，推翻原計畫「自訂顏色/直排橫排/E-Ink 樣式」設計】
+ * foliate-search: 不是本工單自訂、尚未使用的保留前綴，而是 view.js
+ * （釘定 vendored 檔案）自己既有的 SEARCH_PREFIX 常數：
+ * addAnnotation() 對這個前綴的處理是無條件呼叫
+ * overlayer.add(value, range, Overlayer.outline)，**不帶任何 options、
+ * 也不發送 draw-annotation 事件**，與 foliate-note:（TTS 朗讀高亮，會
+ * 發送 draw-annotation 事件把繪製決定權交還給下方監聽器）完全不同，
+ * 因此無法從這裡客製化顏色/直排橫排/E-Ink 樣式——Overlayer.outline()
+ * 在沒有收到 options 時的預設值固定是紅色、3px 外框（overlayer.js
+ * Overlayer.outline() 原始碼），這是 view.js 內建、無法客製化的樣式。
+ *
+ * 改用 foliate-note:（TTS 既有 key 空間）或裸 cfi（劃線/備註既有 key
+ * 空間）雖然可以透過 draw-annotation 事件客製化樣式，但會與 TTS 播放
+ * 狀態或使用者真實劃線/備註資料共用同一個 key，彼此的 show/clear 呼叫
+ * 會互相覆蓋（spec.md §6 明文要求要避免這種汙染）；修改 view.js 本身
+ * 讓 SEARCH_PREFIX 也發送 draw-annotation 事件則違反 ADR 0011「不修改
+ * 任何 vendored 檔案」。三者相比，直接沿用 foliate-search: 既有的固定
+ * 紅色外框樣式是風險最低的選擇——**已知且接受的代價**：Foliate 端暫態
+ * 高亮固定為紅色外框、不隨 E-Ink 模式或直排/橫排調整，與 PDF 端可自訂
+ * 的綠色填色樣式不一致，見本計畫 Global Constraints 完整說明。
  */
-const SEARCH_HIGHLIGHT_COLOR = 'rgba(34, 197, 94, 0.45)'
-// E-Ink 高對比模式改用靜態高對比色，理由同上方 TTS_HIGHLIGHT_COLOR_EINK
-// 註解——半透明色在低對比度 E-Ink 螢幕上容易被灰階轉換抹平。
-const SEARCH_HIGHLIGHT_COLOR_EINK = 'rgba(0, 0, 0, 0.75)'
 let currentSearchHighlightValue = null
 
-window.showSearchHighlight = function (cfi, vertical, einkMode) {
+window.showSearchHighlight = function (cfi) {
   if (currentSearchHighlightValue) {
     view.deleteAnnotation({ value: currentSearchHighlightValue })
   }
   currentSearchHighlightValue = 'foliate-search:' + cfi
-  view.addAnnotation({
-    value: currentSearchHighlightValue,
-    color: einkMode ? SEARCH_HIGHLIGHT_COLOR_EINK : SEARCH_HIGHLIGHT_COLOR,
-    isUnderline: false,
-    vertical,
-  })
+  view.addAnnotation({ value: currentSearchHighlightValue })
 }
 
 window.clearSearchHighlight = function () {
@@ -1064,22 +1214,19 @@ window.clearSearchHighlight = function () {
   }
 
   /// 顯示搜尋跳轉的暫態高亮（epic-10-search Issue 5，spec.md §6）：呼叫
-  /// main.js window.showSearchHighlight()，使用與 [showTtsHighlight] 完全
-  /// 獨立的 annotation key 空間（main.js 的 `currentSearchHighlightValue`
-  /// vs `currentTtsAnnotationValue`）——兩者的生命週期與觸發時機互不相干，
-  /// 混用會互相汙染。[vertical]／[einkMode] 語意與 [showTtsHighlight]
-  /// 相同。
+  /// main.js window.showSearchHighlight()，底層走 view.js 既有的
+  /// `foliate-search:` 前綴（固定紅色外框樣式，無法客製化顏色/直排橫排/
+  /// E-Ink 樣式，見 main.js 該函式上方的完整查證註解與本計畫 Global
+  /// Constraints），與 [showTtsHighlight] 使用的 `foliate-note:` 完全
+  /// 獨立的 key 空間——兩者的生命週期與觸發時機互不相干，混用會互相
+  /// 汙染。
   static void showSearchHighlight(
     GlobalKey<State<FoliateReaderView>> key,
-    String cfi, {
-    required bool vertical,
-    required bool einkMode,
-  }) {
+    String cfi,
+  ) {
     final state = key.currentState;
     if (state is _FoliateReaderViewState) {
-      state._evaluate(
-        'window.showSearchHighlight(${jsonEncode(cfi)}, $vertical, $einkMode)',
-      );
+      state._evaluate('window.showSearchHighlight(${jsonEncode(cfi)})');
     }
   }
 
@@ -1153,7 +1300,20 @@ EOF
       await tester.pump();
       await tester.runAsync(() => Future.delayed(Duration.zero));
       await tester.pump();
-      await pumpUntilPdfReady(tester);
+      // 【審查修正 C-1】不能用不帶 condition 的 pumpUntilPdfReady(tester)
+      // ——該 helper 沒有 condition 時會無條件跑滿 30 輪、每輪
+      // pump(100ms)，在 fake-async 環境下等同一次性推進 3,000ms 的假時鐘，
+      // 剛好等於本測試要驗證的 3 秒暫態高亮計時器時長，會讓計時器在下面
+      // 第一個 expect() 執行「之前」就已經到期並清除高亮，導致
+      // findsOneWidget 斷言必定失敗（誤判成通過的反而是巧合）。改為傳入
+      // condition，讓 pumpUntilPdfReady 一偵測到高亮 widget 出現就立刻
+      // 返回，把「等待 3 秒計時器到期」這件事完全交給下面明確的
+      // tester.pump(const Duration(seconds: 3))。
+      await pumpUntilPdfReady(
+        tester,
+        condition: () =>
+            find.byKey(const Key('pdf_reader_jump_highlight_0')).evaluate().isNotEmpty,
+      );
 
       expect(
         find.byKey(const Key('pdf_reader_jump_highlight_0')),
@@ -1190,7 +1350,15 @@ EOF
       await tester.pump();
       await tester.runAsync(() => Future.delayed(Duration.zero));
       await tester.pump();
-      await pumpUntilPdfReady(tester);
+      // 【審查修正 C-1】理由同上一個測試——必須帶 condition，否則
+      // pumpUntilPdfReady(tester) 累積推進的 3,000ms 假時鐘會讓 3 秒計時
+      // 器在下面斷言之前就先到期，讓這個測試即使 _handleZoneAction 的
+      // 提前清除邏輯根本沒有執行也會「意外看似通過」。
+      await pumpUntilPdfReady(
+        tester,
+        condition: () =>
+            find.byKey(const Key('pdf_reader_jump_highlight_0')).evaluate().isNotEmpty,
+      );
 
       expect(
         find.byKey(const Key('pdf_reader_jump_highlight_0')),
@@ -1436,12 +1604,7 @@ Expected: FAIL（新增的暫態高亮測試找不到 `pdf_reader_jump_highlight
     } else if (isFoliateFormat(format)) {
       final cfi = jumpTarget.cfi;
       if (cfi == null) return;
-      FoliateReaderView.showSearchHighlight(
-        _foliateEpubReaderViewKey,
-        cfi,
-        vertical: _resolved?.writingMode == WritingMode.vertical,
-        einkMode: widget.isEinkMode,
-      );
+      FoliateReaderView.showSearchHighlight(_foliateEpubReaderViewKey, cfi);
     } else {
       return;
     }
@@ -1880,4 +2043,6 @@ Expected: `All tests passed!`（比照 `plan-issue-0.md`／`plan-issue-3.md` 既
 
 **Placeholder 掃描：** 無「TBD」「稍後補上」「類似 Task N」等字樣，所有程式碼片段皆為完整可直接套用的內容（含 `reader_screen.dart`／`pdf_reader_view.dart`／`main.js` 的逐段 find/replace 皆為實際既有文字，已於規劃階段逐一讀取原始檔案確認）。
 
-**型別一致性：** `ReaderJumpTarget`（`cfi`／`pdfPageIndex`／`pdfRect`／`fromContentLocator()`）在 Task 1 定義，Task 4 的 `_maybeShowSearchJumpHighlight()` 與 Task 5 的 `LibrarySearchScreen._openBook()` 呼叫端欄位存取方式一致；`PdfReaderView.showTemporaryHighlight`/`clearTemporaryHighlight` 在 Task 2 定義（含 `pdf_reader_jump_highlight_$pageIndex` Key 命名），Task 4 呼叫端參數順序/型別一致；`FoliateReaderView.showSearchHighlight`/`clearSearchHighlight` 在 Task 3 定義（`vertical`/`einkMode` 具名參數），Task 4 呼叫端具名參數與既有 `showTtsHighlight` 呼叫端取值方式（`_resolved?.writingMode == WritingMode.vertical`／`widget.isEinkMode`）一致；`ReaderScreen.initialJumpTarget` 在 Task 1 定義，Task 4／Task 5 皆原樣引用，命名一致。
+**型別一致性：** `ReaderJumpTarget`（`cfi`／`pdfPageIndex`／`pdfRect`／`fromContentLocator()`）在 Task 1 定義，Task 4 的 `_maybeShowSearchJumpHighlight()` 與 Task 5 的 `LibrarySearchScreen._openBook()` 呼叫端欄位存取方式一致；`PdfReaderView.showTemporaryHighlight`/`clearTemporaryHighlight` 在 Task 2 定義（含 `pdf_reader_jump_highlight_$pageIndex` Key 命名），Task 4 呼叫端參數順序/型別一致；`FoliateReaderView.showSearchHighlight`/`clearSearchHighlight` 在 Task 3 定義（審查修正 I-1 後簽章簡化為只有 `cfi`，不再有 `vertical`/`einkMode`），Task 4 呼叫端已同步移除這兩個具名參數；`ReaderScreen.initialJumpTarget` 在 Task 1 定義，Task 4／Task 5 皆原樣引用，命名一致。
+
+**審查回應總結（`reviews/review-plan-issue-5.md`）：** 1 Critical／3 Important／4 Minor 共 8 項發現逐一查證後：C-1（Task 4 高亮生命週期測試的 `pumpUntilPdfReady(tester)` 不帶 `condition` 時會在 fake-async 環境累積推進 3,000ms，恰好等於 3 秒暫態高亮計時器時長，導致斷言在計時器到期前後順序錯亂）、I-1（規劃階段查證 `view.js` 原始碼後推翻原設計——`foliate-search:` 是 vendored 函式庫自己既有、寫死走 `Overlayer.outline` 固定紅色外框的常數，不是可自訂顏色的保留前綴，main.js／`FoliateReaderView` 的簽章與實作、Global Constraints 皆已改寫）、I-3（issues.md 明定的「後續翻頁 checkpoint 行為一致」測試原計畫遺漏，已補上）、M-1（`_buildBody()`／`_buildNativeView()` 方法名稱指稱錯誤）、M-2（PDF locator 缺 `rect` 時的優雅降級，推翻原「整筆回傳 null」設計）、M-3（`_setJumpHighlight` 補 `mounted` 防護）皆查證屬實並已修訂。I-2（`dispose()` 在使用者跳轉後未翻頁即離開時會覆寫舊進度）技術上屬實，但這是 spec.md §6 已明文記錄並拒絕過的同一類「主動互動追蹤」提案（"不需要額外的『使用者是否已產生主動互動』判斷……予以簡化"，原文逐字引用）——本計畫不在計畫層級片面推翻已定案的 spec 決策，改為在 Task 1 新增一個測試把這個行為明確鎖定並記錄為已知、刻意接受的簡化，同時在 Global Constraints 說明「若要改變此行為需回頭修訂 spec.md §6」，留給人類決定是否值得重新開這個決策。M-4（commit 訊息含舊版 attribution）經逐一核對本計畫全部 6 處 commit 區塊後確認不成立——皆已是 `Claude Sonnet 5 <noreply@anthropic.com>`，判斷為審查者誤判，維持原樣不修改。
