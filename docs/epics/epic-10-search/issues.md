@@ -91,7 +91,7 @@ Issue 6（獨立，無依賴，但修改 Issue 0 已交付的 schema，需一併
 
 ## Issue 3：「啟用全文檢索」設定模型＋雙入口＋確認 Dialog
 
-**Status:** ready-for-agent
+**Status:** completed（`plans/plan-issue-3.md` 5 個 Task 全數完成，`reviews/review-plan-issue-3.md` 計畫審查 1 Critical／4 Important／3 Minor 全數採納修訂後，`reviews/review-issue-3.md` 程式審查 Ready to merge: Yes，0 Critical／0 Important／2 Minor〔程式碼〕＋1 Minor〔文件筆誤〕皆已修正；PR #232 已合併。本工單只落地「系統設定閱讀分區」單一入口，「全庫搜尋畫面 AppBar 常駐設定選單」第二入口與雙入口一致性驗證留給 Issue 4）
 
 **依賴：** Issue 1（需要排程器 API 供開/關連動）
 
