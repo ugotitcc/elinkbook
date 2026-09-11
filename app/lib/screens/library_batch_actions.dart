@@ -3,6 +3,7 @@ import 'dart:io';
 import '../library/library_repository.dart';
 import '../library/models/book.dart';
 import '../library/models/library_enums.dart';
+import '../search/full_text_search_settings_repository.dart';
 
 /// 收斂 `LibraryScreen` 5 個批次操作（搬移分類／強制 FXL／恢復自動判斷／
 /// 刪除／移除本機快取）共用的執行骨架（epic-26-architecture-hardening
@@ -16,9 +17,17 @@ import '../library/models/library_enums.dart';
 /// 對話框）、完成後的重新載入——這些是 UI 生命週期與導覽相關的職責，留在
 /// `_LibraryScreenState`（見 `plans/plan-issue-8.md`「規劃階段查證」）。
 class LibraryBatchActions {
-  const LibraryBatchActions({required this.repository});
+  const LibraryBatchActions({
+    required this.repository,
+    this.fullTextSearchSettingsRepository,
+  });
 
   final LibraryRepository repository;
+
+  /// epic-10-search Issue 2（spec.md §7）：移除本機快取時一併清除搜尋
+  /// 索引資料。`null` 時（例如既有測試未提供）完全略過，行為與本工單
+  /// 之前完全一致。
+  final FullTextSearchSettingsRepository? fullTextSearchSettingsRepository;
 
   Future<void> _runEach(
     Set<String> selectedIds,
@@ -116,6 +125,14 @@ class LibraryBatchActions {
           // 檔案刪除失敗時靜默略過——資料庫標記更新才是核心操作。
         }
         await repository.updateBook(book.copyWith(isDownloaded: false));
+        try {
+          await fullTextSearchSettingsRepository?.clearBookIndex(book.id);
+        } catch (_) {
+          // 【review-plan-issue-2.md M-1】靜默略過——避免單一書籍的索引
+          // 清除異常中斷整個批次迴圈，導致後面幾本書的實體檔案快取無法
+          // 被刪除；索引資料為衍生性資料，維護失敗不應影響核心的快取
+          // 移除操作。
+        }
       },
       shouldInclude: (book) =>
           book.source == BookSource.calibreOpds && book.isDownloaded,
