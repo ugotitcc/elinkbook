@@ -66,4 +66,12 @@
 
 2026-09-11 `/superpowers:requesting-code-review` 執行 `plans/plan-issue-5.md` 複審（`reviews/review-plan-issue-5.md`）：初審 1 Critical／3 Important／4 Minor 共 8 項發現全數查驗通過（C-1、I-1、I-2、I-3、M-1、M-2、M-3 皆已完整實作並標記 ADDRESSED；M-4 commit attribution 符合全專案既有慣例核定為 REBUTTED & ACCEPTED），無任何殘留阻斷項或新引入缺陷。複審結論：🟢 Approved（核准開工）。下一步：透過 `/superpowers:subagent-driven-development` 或 `/superpowers:executing-plans` 依序推進 Task 1 至 Task 5 實作。
 
+2026-09-11 Issue 5 依修訂後 `plans/plan-issue-5.md` 完成 5 個 Task（`feat/epic-10-issue-5-search-jump` 分支，`.worktrees/epic-10-issue-5`）：`ReaderJumpTarget` 值物件、`ReaderScreen.initialJumpTarget` 初始定位覆寫＋`_hasRelocatedSinceOpen` 進度保護、PDF `pageOverlaysBuilder` 暫態高亮、`main.js`／`FoliateReaderView` 重用 vendored `foliate-search:` 前綴的暫態高亮、Dart 端 `Timer` 生命週期主導＋`LibrarySearchScreen` 帶入跳轉目標。`/superpowers:requesting-code-review` 派出實作程式審查（`reviews/review-issue-5.md`，0 Critical／2 Important／1 Minor）：I-1（`reader_screen.dart` 新增計畫外的 `_creationZone` 機制，未記錄在計畫/spec 內——審查者以實驗驗證〔還原成裸 `Timer(...)` 後連續 3 次測試 100% 確定性失敗〕證實這是修正 `pumpUntilPdfReady()` 的 `tester.runAsync()` 會讓 `Timer` 在真實 zone 建立、導致 `tester.pump()` 無法推進的必要修法，對生產行為無影響）查證屬實，已在 `plan-issue-5.md` 補上事後說明段落；I-2（`flutter analyze` 於 HEAD 有 `library_search_screen_test.dart` 一個 `unused_import` 警告，違反「提交前必須乾淨」規則——該 import 是計畫 Task 5 Step 1 原文自己要求新增但實際從未直接引用類別名稱）查證屬實已移除，重跑 `flutter analyze` 回到 `No issues found!`；M-1（`foliate-search:` 前綴與未來可能的 Foliate 內文搜尋功能存在潛在 key 空間衝突，目前不衝突但未留提醒）查證屬實，已於 `spec.md` §6 補上未來提醒，範圍外不改動程式碼。三項發現皆已於 commit `d52e5a73` 修訂並重新驗證通過。PR #235（`feat/epic-10-issue-5-search-jump` → `main`）已合併，`main` 已同步 pull（`b87f9554..dfd59d4a`）。Issue 5 結案，Epic 10 全部工單（Issue 0-6）皆已完成並合併。
+
+2026-09-11 人類實機測試回報：兩台 E-Ink 裝置皆顯示「本裝置不支援全文檢索」。連上其中一台已連結的實機（`3CEF42ECD491687`，`product:9491G_ZZ model:9491G device:Hera_Vis_WIFI`——與 Issue 6 當初發現相容性缺陷的同一型號）以 `adb shell pm clear cc.ugotit.elinkbook` 清除 App 資料（已取得人類同意，會清空該裝置圖書庫記錄/進度/設定）強制觸發 `onCreate` 重新建表，即時 `adb logcat` 實測捕捉到：
+```
+E SQLiteLog: (1) statement aborts at 29: [CREATE VIRTUAL TABLE book_content_fts USING fts5(...)] no such module: fts5
+```
+確認 Issue 6 的優雅降級機制在真機上如預期運作（例外被攔截、App 正常開機、`isFullTextSearchAvailable=false`），同時完成 Issue 6 原本待人工執行的 Step 7 真機驗證。**人類結論：一般 E-Ink 裝置的系統 SQLite 很可能普遍缺 FTS5 模組**（非單一裝置個案，`sqflite` 在 Android 上綁定的是系統內建 SQLite、非 App 自帶版本，是否編譯 FTS5 完全取決於各家 ROM／晶片廠商的客製化決定，與 Android 版本高低無必然關係）。人類決議下一步方向：評估 App 改自帶一份保證編譯進 FTS5 的 SQLite 動態函式庫（例如 `sqlite3_flutter_libs`＋`sqflite_common_ffi` 路線），取代目前依賴系統版本、在部分裝置上必然缺功能的做法——這是牽動整個資料層的架構級決策，尚待另立分析（可能是新 ADR 或後續 Epic，範圍超出本 Epic 既有 Issue 0-6）。
+
 

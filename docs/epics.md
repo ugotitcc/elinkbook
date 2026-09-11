@@ -21,7 +21,7 @@
 | 11 | `epic-8-sync` 雲端同步 | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 12 | `epic-14-system-settings` 系統設定 | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 13 | `epic-9-stats` 閱讀統計 | ⚪ 未開始 (Backlog) | 開發排期順延至 `epic-14-system-settings` 之後 |
-| 14 | `epic-10-search` 全文檢索 | 🟡 開發中 (Active) | Issue 0／Issue 1／Issue 2／Issue 3／Issue 6 已完成並合併 |
+| 14 | `epic-10-search` 全文檢索 | 🟡 開發中 (Active) | Issue 0-6 全數完成並合併；真機驗證發現 E-Ink 裝置系統 SQLite 普遍缺 FTS5 模組，正評估自帶 FTS5 函式庫的架構級後續方案 |
 | 15 | `epic-11-multi-format-reader` 多格式閱讀擴充（KF8/CBZ/TXT/MD） | 🟢 已歸檔 (Archived) | 已完成，已歸檔 |
 | 16 | `epic-12-social` 社群分享 | ⚪ 未開始 (Backlog) | P3，最低優先 |
 | 17 | `epic-13-ios` iOS 移植 | ⚪ 未開始 (Backlog) | 待 Android 版本（epic-0/2/3/4/5）穩定後啟動 |

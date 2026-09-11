@@ -142,7 +142,7 @@ Issue 6（獨立，無依賴，但修改 Issue 0 已交付的 schema，需一併
 
 ## Issue 5：搜尋跳轉 Seam（`ReaderScreen.initialJumpTarget`＋暫態高亮）
 
-**Status:** ready-for-agent（`plans/plan-issue-5.md` 已撰寫，5 個 Task，待認領執行）
+**Status:** completed（PR #235 已合併；真機驗證發現 E-Ink 裝置系統 SQLite 普遍缺 FTS5 模組，見 `epic.md` 對應日誌，已另立後續分析方向）
 
 **依賴：** Issue 4
 
@@ -168,7 +168,7 @@ Issue 6（獨立，無依賴，但修改 Issue 0 已交付的 schema，需一併
 
 ## Issue 6：FTS5 模組可用性偵測＋全文檢索優雅降級（真機相容性缺陷）
 
-**Status:** completed（`plans/plan-issue-6.md` Task 1 六個 Step 全數完成，`reviews/review-issue-6.md` 審查 Ready to merge: Yes，0 Critical／0 Important／2 Minor；PR #231 已合併；Step 7 真機驗證〔`9491G`／`Hera_Vis_WIFI`〕仍待人工執行，不阻擋本工單結案）
+**Status:** completed（`plans/plan-issue-6.md` Task 1 六個 Step 全數完成，`reviews/review-issue-6.md` 審查 Ready to merge: Yes，0 Critical／0 Important／2 Minor；PR #231 已合併；Step 7 真機驗證已於 2026-09-11 補做完成，見 `epic.md` 對應日誌——`9491G`／`Hera_Vis_WIFI` logcat 實測確認 `no such module: fts5`，優雅降級如預期運作、App 正常開機）
 
 **依賴：** 無，獨立於 Issue 0→1→3→2／4→5 依賴鏈，可立即開始；但直接修改 Issue 0 已交付並合併的 schema migration 程式碼，需與 Issue 0 產出物一併考量
 
