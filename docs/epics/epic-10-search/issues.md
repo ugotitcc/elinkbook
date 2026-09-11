@@ -142,7 +142,7 @@ Issue 6（獨立，無依賴，但修改 Issue 0 已交付的 schema，需一併
 
 ## Issue 5：搜尋跳轉 Seam（`ReaderScreen.initialJumpTarget`＋暫態高亮）
 
-**Status:** ready-for-agent
+**Status:** ready-for-agent（`plans/plan-issue-5.md` 已撰寫，5 個 Task，待認領執行）
 
 **依賴：** Issue 4
 
