@@ -177,5 +177,144 @@ void main() {
         reason: '視窗寬度固定 80 個字元，前後各加一個刪節號，總長 82',
       );
     });
+
+    test('searchContent 回傳的 totalMatches 正確反映每本書在資料庫的總命中數'
+        '（spec.md §9.1：單書插入 5 筆符合內容，matches.length == 3 但 totalMatches == 5）',
+        () async {
+      await repository.insertBook(_book('b1', title: '書一'));
+      await insertContentRow('b1', '第一段含關鍵詞目標');
+      await insertContentRow('b1', '第二段含關鍵詞目標');
+      await insertContentRow('b1', '第三段含關鍵詞目標');
+      await insertContentRow('b1', '第四段含關鍵詞目標');
+      await insertContentRow('b1', '第五段含關鍵詞目標');
+
+      final results = await searchRepository.searchContent(
+        '關鍵詞目標',
+        perBookLimit: 3,
+      );
+
+      expect(results, hasLength(1));
+      expect(results.single.matches, hasLength(3));
+      expect(results.single.totalMatches, 5);
+    });
+
+    test('searchContent 回傳的 ContentMatchSnippet 包含 chapterIndex', () async {
+      await repository.insertBook(_book('b1', title: '書一'));
+      await insertContentRow('b1', '第三章的內容含搜尋目標', chapterIndex: 3);
+
+      final results = await searchRepository.searchContent('搜尋目標');
+
+      expect(results.single.matches.single.chapterIndex, 3);
+    });
+  });
+
+  group('searchContentInBook', () {
+    test('只回傳指定 bookId 的命中結果，不含其他書籍', () async {
+      await repository.insertBook(_book('b1', title: '書一'));
+      await repository.insertBook(_book('b2', title: '書二'));
+      await insertContentRow('b1', '這裡有搜尋目標字');
+      await insertContentRow('b2', '這裡也有搜尋目標字');
+
+      final result = await searchRepository.searchContentInBook(
+        'b1',
+        '搜尋目標字',
+      );
+
+      expect(result, isNotNull);
+      expect(result!.book.id, 'b1');
+      expect(result.matches, hasLength(1));
+    });
+
+    test('sortByBookOrder: true 時依 chapter_index ASC 排序', () async {
+      await repository.insertBook(_book('b1', title: '書一'));
+      await insertContentRow('b1', '第三章的目標關鍵字', chapterIndex: 3);
+      await insertContentRow('b1', '第一章的目標關鍵字', chapterIndex: 1);
+      await insertContentRow('b1', '第二章的目標關鍵字', chapterIndex: 2);
+
+      final result = await searchRepository.searchContentInBook(
+        'b1',
+        '目標關鍵字',
+        sortByBookOrder: true,
+      );
+
+      expect(result, isNotNull);
+      expect(result!.matches.map((m) => m.chapterIndex).toList(), [1, 2, 3]);
+    });
+
+    test(
+        'sortByBookOrder: false 時依 BM25 相關度排序，關鍵字密度較高的短文本排在'
+        '被大量不相關文字稀釋的長文本之前（reviews/review-issue-7.md Minor 2，'
+        '取代原本只驗證筆數、未驗證排序方向的弱斷言）', () async {
+      await repository.insertBook(_book('b1', title: '書一'));
+      // chapterIndex 2（長文本）刻意先插入，若排序邏輯退化成插入順序或
+      // book_id/rowid 順序，會讓這筆先出現，測試才抓得到迴歸。
+      final filler = List.filled(200, '填').join();
+      await insertContentRow('b1', '搜尋字$filler', chapterIndex: 2);
+      await insertContentRow('b1', '搜尋字', chapterIndex: 1);
+
+      final result = await searchRepository.searchContentInBook(
+        'b1',
+        '搜尋字',
+        sortByBookOrder: false,
+      );
+
+      expect(result, isNotNull);
+      expect(result!.matches, hasLength(2));
+      expect(
+        result.matches.map((m) => m.chapterIndex).toList(),
+        [1, 2],
+        reason: 'BM25 依文件長度正規化，關鍵字幾乎佔滿全部內容的短文本'
+            '（chapterIndex 1）相關度應優於被 200 個不相關字元稀釋詞頻的長文本'
+            '（chapterIndex 2）；若 ORDER BY 方向被誤改成 DESC，這裡會斷言失敗。',
+      );
+    });
+
+    test('命中筆數超過 limit 時 isTruncated 為 true', () async {
+      await repository.insertBook(_book('b1', title: '書一'));
+      for (var i = 0; i < 5; i++) {
+        await insertContentRow('b1', '段落$i含截斷測試字', chapterIndex: i);
+      }
+
+      final result = await searchRepository.searchContentInBook(
+        'b1',
+        '截斷測試字',
+        limit: 3,
+      );
+
+      expect(result, isNotNull);
+      expect(result!.matches, hasLength(3));
+      expect(result.totalMatches, 5);
+      expect(result.isTruncated, isTrue);
+    });
+
+    test('命中筆數不超過 limit 時 isTruncated 為 false', () async {
+      await repository.insertBook(_book('b1', title: '書一'));
+      await insertContentRow('b1', '唯一的未截斷目標字');
+
+      final result = await searchRepository.searchContentInBook(
+        'b1',
+        '未截斷目標字',
+        limit: 200,
+      );
+
+      expect(result, isNotNull);
+      expect(result!.isTruncated, isFalse);
+    });
+
+    test('空查詢或 tokenizeForQuery 為空時回傳 null', () async {
+      await repository.insertBook(_book('b1', title: '書一'));
+      await insertContentRow('b1', '有內容但查詢為空');
+
+      final result = await searchRepository.searchContentInBook('b1', '   ');
+      expect(result, isNull);
+    });
+
+    test('指定 bookId 不存在時回傳 null', () async {
+      final result = await searchRepository.searchContentInBook(
+        'nonexistent',
+        '任意查詢',
+      );
+      expect(result, isNull);
+    });
   });
 }

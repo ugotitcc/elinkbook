@@ -10,6 +10,7 @@ import '../reader/reader_jump_target.dart';
 import '../reader/reader_prefs_manager.dart';
 import '../search/full_text_search_settings_repository.dart';
 import '../search/search_repository.dart';
+import 'book_search_screen.dart';
 import 'full_text_search_confirm_dialog.dart';
 import 'library_paging.dart';
 import 'library_screen_dependencies.dart';
@@ -369,7 +370,40 @@ class _LibrarySearchScreenState extends State<LibrarySearchScreen> {
                 ),
               ),
             ),
+          if (group.totalMatches > group.matches.length)
+            Padding(
+              padding: const EdgeInsets.only(top: 4, bottom: 8),
+              child: Center(
+                child: TextButton(
+                  key: Key('library_search_drill_down_${group.book.id}'),
+                  onPressed: () => _openBookSearch(group.book),
+                  child: Text(
+                    '查看全部 ${group.totalMatches} 筆結果'
+                    '（還有 ${group.totalMatches - group.matches.length} 筆）',
+                  ),
+                ),
+              ),
+            ),
         ],
+      ),
+    );
+  }
+
+  void _openBookSearch(Book book) {
+    _searchFocusNode.unfocus();
+    FocusScope.of(context).unfocus();
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => BookSearchScreen(
+          book: book,
+          initialQuery: _controller.text.trim(),
+          searchRepository: widget.searchRepository,
+          prefsManager: widget.prefsManager,
+          libraryRepository: widget.libraryRepository,
+          readerFeatureRepositories: widget.readerFeatureRepositories,
+          syncDependencies: widget.syncDependencies,
+          isEinkMode: widget.isEinkMode,
+        ),
       ),
     );
   }

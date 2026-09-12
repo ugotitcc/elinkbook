@@ -12,8 +12,13 @@ import 'cjk_tokenizer.dart';
 class ContentMatchSnippet {
   final String snippet;
   final String locator;
+  final int? chapterIndex;
 
-  const ContentMatchSnippet({required this.snippet, required this.locator});
+  const ContentMatchSnippet({
+    required this.snippet,
+    required this.locator,
+    this.chapterIndex,
+  });
 }
 
 /// 一本書底下的內容匹配結果（spec.md §5），[matches] 長度不超過查詢時傳入
@@ -21,8 +26,31 @@ class ContentMatchSnippet {
 class BookContentMatches {
   final Book book;
   final List<ContentMatchSnippet> matches;
+  final int totalMatches;
 
-  const BookContentMatches({required this.book, required this.matches});
+  const BookContentMatches({
+    required this.book,
+    required this.matches,
+    this.totalMatches = 0,
+  });
+}
+
+/// 單書全文檢索結果（epic-10-search Issue 7，spec.md §9.1）。
+class BookSearchDetailResult {
+  final Book book;
+  final List<ContentMatchSnippet> matches;
+  final int totalMatches;
+
+  /// 當 [totalMatches] > 查詢時傳入的 `limit` 時為 `true`，UI 據此顯示
+  /// 「僅顯示前 N 筆」提示。
+  final bool isTruncated;
+
+  const BookSearchDetailResult({
+    required this.book,
+    required this.matches,
+    required this.totalMatches,
+    required this.isTruncated,
+  });
 }
 
 /// 全庫搜尋的資料存取層（epic-10-search Issue 4，spec.md §5）：書名/作者
@@ -35,6 +63,15 @@ abstract class SearchRepository {
   Future<List<BookContentMatches>> searchContent(
     String query, {
     int perBookLimit = 3,
+  });
+
+  /// 針對指定書籍查詢全文檢索命中片段（epic-10-search Issue 7，spec.md
+  /// §9.1）。[bookId] 不存在或查詢為空時回傳 `null`。
+  Future<BookSearchDetailResult?> searchContentInBook(
+    String bookId,
+    String query, {
+    int limit = 200,
+    bool sortByBookOrder = true,
   });
 }
 
@@ -104,15 +141,18 @@ class SqliteSearchRepository implements SearchRepository {
       // 再以預先算好的 score 排序做 ROW_NUMBER 分組，效果與單層寫法等價
       // 但可正確執行（見 Task 1 實作階段除錯）。
       rows = await _database.rawQuery('''
-        SELECT b.*, sub.locator, sub.raw_text, sub.rn, sub.score
+        SELECT b.*, sub.locator, sub.raw_text, sub.chapter_index,
+               sub.rn, sub.score, sub.total_count
         FROM (
-          SELECT book_id, locator, raw_text, score,
+          SELECT book_id, locator, raw_text, chapter_index, score,
+                 COUNT(*) OVER (PARTITION BY book_id) AS total_count,
                  ROW_NUMBER() OVER (
                    PARTITION BY book_id
                    ORDER BY score
                  ) AS rn
           FROM (
             SELECT bci.book_id, bci.locator, bci.raw_text,
+                   bci.chapter_index,
                    bm25(book_content_fts) AS score
             FROM book_content_fts
             JOIN book_content_index bci ON bci.rowid = book_content_fts.rowid
@@ -137,21 +177,117 @@ class SqliteSearchRepository implements SearchRepository {
     // 忽略，不影響解析。
     final snippetsByBookId = <String, List<ContentMatchSnippet>>{};
     final booksById = <String, Book>{};
+    final totalMatchesByBookId = <String, int>{};
     for (final row in rows) {
       final bookId = row['id'] as String;
       booksById.putIfAbsent(bookId, () => Book.fromMap(row));
+      totalMatchesByBookId.putIfAbsent(
+        bookId,
+        () => row['total_count'] as int,
+      );
       snippetsByBookId.putIfAbsent(bookId, () => []).add(
             ContentMatchSnippet(
               snippet: _truncate(row['raw_text'] as String, trimmedQuery),
               locator: row['locator'] as String,
+              chapterIndex: row['chapter_index'] as int?,
             ),
           );
     }
 
     return [
       for (final entry in snippetsByBookId.entries)
-        BookContentMatches(book: booksById[entry.key]!, matches: entry.value),
+        BookContentMatches(
+          book: booksById[entry.key]!,
+          matches: entry.value,
+          totalMatches: totalMatchesByBookId[entry.key] ?? 0,
+        ),
     ];
+  }
+
+  @override
+  Future<BookSearchDetailResult?> searchContentInBook(
+    String bookId,
+    String query, {
+    int limit = 200,
+    bool sortByBookOrder = true,
+  }) async {
+    final trimmedQuery = query.trim();
+    final tokenized = tokenizeForQuery(trimmedQuery);
+    if (tokenized.isEmpty) return null;
+
+    // 先查詢該書是否存在，帶出 Book 物件（books 表與 book_content_fts
+    // 沒有共通鍵可一次 JOIN 帶出，維持獨立查詢）。
+    final bookRows = await _database.query(
+      'books',
+      where: 'id = ?',
+      whereArgs: [bookId],
+      limit: 1,
+    );
+    if (bookRows.isEmpty) return null;
+    final book = Book.fromMap(bookRows.first);
+
+    // 【審查修正 review-issue-7.md Minor 1，推翻 review-plan-issue-7.md M-4
+    // 「維持兩次查詢」的原始決定】改用 `COUNT(*) OVER ()`（無 PARTITION BY，
+    // 單書查詢不需要分組）在同一個 SQL 內與命中片段一併取得總筆數：
+    // 窗函數在 WHERE 過濾之後、LIMIT 截斷之前計算，因此 total_count 仍反映
+    // 全部命中筆數，不受 LIMIT 影響（與 searchContent() 的
+    // `COUNT(*) OVER (PARTITION BY book_id)` 同一原理）。原本「先 COUNT
+    // 再查片段」共兩次 FTS 查詢＋一次書籍存在性查詢，合併後降為一次。
+    // `bm25()` 必須先在內層子查詢算出 `score` 欄位，外層才能對它排序——
+    // 直接在外層 ORDER BY 呼叫 `bm25(book_content_fts)`、同時外層又有
+    // `COUNT(*) OVER ()` 窗函數時，SQLite 會拋出
+    // 「unable to use function bm25 in the requested context」（與
+    // searchContent() 內層先算 score、外層再用 ROW_NUMBER() 排序是同一個
+    // 已知限制，見該方法註解）。
+    final orderClause = sortByBookOrder
+        ? 'ORDER BY sub.chapter_index ASC, sub.content_rowid ASC'
+        : 'ORDER BY sub.score ASC';
+
+    List<Map<String, Object?>> rows;
+    try {
+      rows = await _database.rawQuery('''
+        SELECT sub.locator, sub.raw_text, sub.chapter_index,
+               COUNT(*) OVER () AS total_count
+        FROM (
+          SELECT bci.locator, bci.raw_text, bci.chapter_index,
+                 bci.rowid AS content_rowid,
+                 bm25(book_content_fts) AS score
+          FROM book_content_fts
+          JOIN book_content_index bci ON bci.rowid = book_content_fts.rowid
+          WHERE book_content_fts MATCH ?
+            AND bci.book_id = ?
+        ) sub
+        $orderClause
+        LIMIT ?
+      ''', [tokenized, bookId, limit]);
+    } on DatabaseException {
+      return null;
+    }
+
+    if (rows.isEmpty) {
+      return BookSearchDetailResult(
+        book: book,
+        matches: const [],
+        totalMatches: 0,
+        isTruncated: false,
+      );
+    }
+
+    final totalMatches = rows.first['total_count'] as int;
+    final matches = rows
+        .map((row) => ContentMatchSnippet(
+              snippet: _truncate(row['raw_text'] as String, trimmedQuery),
+              locator: row['locator'] as String,
+              chapterIndex: row['chapter_index'] as int?,
+            ))
+        .toList();
+
+    return BookSearchDetailResult(
+      book: book,
+      matches: matches,
+      totalMatches: totalMatches,
+      isTruncated: totalMatches > limit,
+    );
   }
 
   /// 【審查修正 I-4，推翻原計畫第一版「固定從頭截斷」設計】以 [query]

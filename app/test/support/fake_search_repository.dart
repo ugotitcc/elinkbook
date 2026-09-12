@@ -9,16 +9,20 @@ class FakeSearchRepository implements SearchRepository {
   FakeSearchRepository({
     List<Book> titleAuthorResults = const [],
     List<BookContentMatches> contentResults = const [],
+    this.bookSearchDetailResult,
   })  : _titleAuthorResults = titleAuthorResults,
         _contentResults = contentResults;
 
   final List<Book> _titleAuthorResults;
   final List<BookContentMatches> _contentResults;
+  BookSearchDetailResult? bookSearchDetailResult;
 
   /// 記錄每次呼叫的查詢字串，供測試驗證 debounce 行為（只在延遲後觸發
   /// 一次）。
   final List<String> searchTitleAuthorCalls = [];
   final List<String> searchContentCalls = [];
+  final List<String> searchContentInBookCalls = [];
+  final List<bool> searchContentInBookSortCalls = [];
 
   @override
   Future<List<Book>> searchTitleAuthor(String query) async {
@@ -33,5 +37,17 @@ class FakeSearchRepository implements SearchRepository {
   }) async {
     searchContentCalls.add(query);
     return _contentResults;
+  }
+
+  @override
+  Future<BookSearchDetailResult?> searchContentInBook(
+    String bookId,
+    String query, {
+    int limit = 200,
+    bool sortByBookOrder = true,
+  }) async {
+    searchContentInBookCalls.add(query);
+    searchContentInBookSortCalls.add(sortByBookOrder);
+    return bookSearchDetailResult;
   }
 }
