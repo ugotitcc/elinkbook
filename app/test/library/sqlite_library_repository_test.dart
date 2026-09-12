@@ -4336,5 +4336,11 @@ void main() {
           reason: '遷移至 v25 後常規重開（不觸發 onUpgrade），'
               'isFullTextSearchAvailable 仍須為 true');
     });
+
+    test('全新安裝（onCreate 直接建到 version 25）：isFullTextSearchAvailable 為 true，'
+        '行為與現行版本一致（零回歸）', () async {
+      expect(repository.isFullTextSearchAvailable, isTrue);
+      expect(await repository.database.getVersion(), 25);
+    });
   });
 }
