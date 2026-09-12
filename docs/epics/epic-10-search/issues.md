@@ -1,14 +1,14 @@
 # Epic 10 — 全文檢索：工單清單 (Issues)
 
-依 `spec.md`（Architecting 階段唯一事實來源，已經 `/superpowers:receiving-code-review` 依 `reviews/review-spec.md` 審查修訂）與 [ADR 0027](../../adr/0027-search-index-tokenization-and-headless-foliate-extraction.md) 拆解為 6 個細粒度垂直切片工單。跟 `spec.md` 對應段落的引用一律用 `spec.md §N` 標示，實作者動手前應先讀那一段的完整說明（含 SQL/型別定義），這裡只列摘要與驗收標準，不重複貼程式碼片段（避免與 `spec.md` 內容漂移）。
+依 `spec.md`（Architecting 階段唯一事實來源，已經 `/superpowers:receiving-code-review` 依 `reviews/review-spec.md` 審查修訂）與 [ADR 0027](../../adr/0027-search-index-tokenization-and-headless-foliate-extraction.md) 拆解為 8 個細粒度垂直切片工單（Issue 0-6 已完成，2026-09-12 依 spec.md §9 追加 Issue 7 與 Issue 8）。跟 `spec.md` 對應段落的引用一律用 `spec.md §N` 標示，實作者動手前應先讀那一段的完整說明（含 SQL/型別定義），這裡只列摘要與驗收標準，不重複貼程式碼片段（避免與 `spec.md` 內容漂移）。
 
-**依賴順序：** Issue 0 → Issue 1 為一條鏈（Issue 1 的排程器/索引器直接寫入 Issue 0 建立的 schema，並重用其 tokenizer）。**「啟用全文檢索」拆成 PDF／其他格式兩個獨立開關後**（人類需求，見 Issue 3 背景），Issue 2 的下載完成事件連動（`spec.md` §7：下載完成時是否補插入 `pending` 列）需要判斷該書格式對應的分類**當下是否已啟用**，因此改為依賴 Issue 3（`FullTextSearchSettingsRepository`/`ContentIndexCategory`），**不再與 Issue 3 平行**——這是本次新增拆分後唯一牽動既有依賴圖的地方。Issue 4 依賴 Issue 1（需要有實際索引資料可查）與 Issue 3（需要兩個開關/引導卡片的狀態），**不依賴 Issue 2**（CBZ/DRM/下載邊界情況不影響搜尋畫面本身能否運作）。Issue 5 依賴 Issue 4（需要有搜尋結果可點擊跳轉）。
+**依賴順序：** Issue 0 → Issue 1 為一條鏈（Issue 1 的排程器/索引器直接寫入 Issue 0 建立的 schema，並重用其 tokenizer）。**「啟用全文檢索」拆成 PDF／其他格式兩個獨立開關後**（人類需求，見 Issue 3 背景），Issue 2 的下載完成事件連動（`spec.md` §7：下載完成時是否補插入 `pending` 列）需要判斷該書格式對應的分類**當下是否已啟用**，因此改為依賴 Issue 3（`FullTextSearchSettingsRepository`/`ContentIndexCategory`），**不再與 Issue 3 平行**——這是本次新增拆分後唯一牽動既有依賴圖的地方。Issue 4 依賴 Issue 1（需要有實際索引資料可查）與 Issue 3（需要兩個開關/引導卡片的狀態），**不依賴 Issue 2**（CBZ/DRM/下載邊界情況不影響搜尋畫面本身能否運作）。Issue 5 依賴 Issue 4（需要有搜尋結果可點擊跳轉）。Issue 7 依賴 Issue 4 與 Issue 5（全庫搜尋卡片下鑽與單書全文檢索畫面）。Issue 8 依賴 Issue 7（閱讀器 TopBar 搜尋按鈕接上單書搜尋畫面）。
 
 ```
 Issue 0 → Issue 1 → Issue 3 → Issue 2
-                            → Issue 4 → Issue 5
+                            → Issue 4 → Issue 5 → Issue 7 → Issue 8
 
-Issue 6（獨立，無依賴，但修改 Issue 0 已交付的 schema，需一併考量；見下方）
+Issue 6（獨立，無依賴，真機相容性已修復並合併）
 ```
 
 ---
@@ -200,3 +200,68 @@ ADR 0027「技術限制」1 已討論過相近風險（系統 SQLite 版本可�
 - 需要新增一個查詢（例如 `LibraryRepository.isFullTextSearchAvailable`）供 Issue 3／4 判斷是否顯示「本裝置不支援」提示，並有對應測試。
 
 **驗收標準：** 在真實缺少 FTS5 模組的裝置（或以 mock 模擬同等情境的測試）上，App 能正常開機並使用除全文檢索以外的所有既有功能；`flutter analyze` 乾淨；不影響 Issue 0 既有測試套件。
+
+---
+
+## Issue 7：全庫搜尋書籍結果 Drill-Down 與單書全文檢索畫面（`BookSearchScreen`）
+
+**Status:** ready-for-agent
+
+**依賴：** Issue 4（全庫搜尋畫面）、Issue 5（搜尋跳轉 Seam）
+
+**來源：** `spec.md` §9.1、§9.2、§9.3
+
+**背景／目標：**
+全庫搜尋目前依 `perBookLimit = 3` 硬限制每本書最多只取出前 3 筆片段，且 SQL 與模型未帶出總命中筆數；使用者無法在一本書中檢視更多匹配結果。本工單提供單書全文檢索的資料存取層擴充、全庫搜尋卡片下鑽（Drill-down）提示按鈕，以及獨立的「單書全文檢索畫面（`BookSearchScreen`）」，支援在本書內即時重搜、切換書中順序/相關度排序、位置標籤顯示與關鍵字高亮強調。
+
+**Solution：**
+- **資料存取層擴充（`app/lib/search/search_repository.dart`）**：
+  - `ContentMatchSnippet` 新增 `final int? chapterIndex;` 欄位。
+  - `BookContentMatches` 新增 `final int totalMatches;` 欄位。
+  - `SqliteSearchRepository.searchContent()` 查詢改進：在子查詢中加入 `COUNT(*) OVER (PARTITION BY bci.book_id) AS total_count`，單一 SQL 一併取得總命中筆數，無額外 DB 開銷。
+  - 新增 `BookSearchDetailResult` 模型（含 `book`, `matches`, `totalMatches`, `isTruncated`）。
+  - 新增 `SearchRepository.searchContentInBook(String bookId, String query, {int limit = 200, bool sortByBookOrder = true})`：過濾指定 `bookId`，支援 `sortByBookOrder: true`（`bci.chapter_index ASC, bci.rowid ASC`，預設）與 `false`（BM25 `score ASC`），上限預設 200 筆。
+- **全庫搜尋畫面 Drill-Down 入口（`app/lib/screens/library_search_screen.dart`）**：
+  - 在 `_buildContentGroupCard` 底部，當 `group.totalMatches > group.matches.length`（即命中 > 3 筆）時顯示按鈕：`查看全部 ${group.totalMatches} 筆結果（還有 ${group.totalMatches - group.matches.length} 筆）`。
+  - 當 `totalMatches <= group.matches.length` 時不顯示額外按鈕。
+  - 點擊按鈕透過 `Navigator.push` 導航至 `BookSearchScreen`。
+- **單書全文檢索畫面（`app/lib/screens/book_search_screen.dart`）**：
+  - 頂部搜尋輸入框：帶入初始關鍵字，支援 300ms 防手震即時搜尋與清除按鈕。
+  - 統計摘要與排序切換：顯示書名、作者與命中統計摘要（若 `isTruncated` 為 true 提示「僅顯示前 200 筆，共 X 筆」），並提供按鈕切換「依書中順序」與「依相關度排序」。
+  - 片段清單渲染：
+    - 位置標籤：PDF 顯示「第 X 頁」，EPUB/其他格式顯示「第 X 章」（或章節編號）。
+    - 關鍵字高亮：非 E-Ink 粗體＋淡色背景；E-Ink 模式粗體＋底線（高對比）。
+  - 分頁策略：非 E-Ink 模式連續捲動；E-Ink 模式使用 `PagingBar` 離散分頁（每頁 10 筆）。
+  - 點擊片段：若 `fromReader == false`，呼叫 `Navigator.push` 開啟 `ReaderScreen`（帶 `initialJumpTarget: ReaderJumpTarget.fromContentLocator(...)`）。
+
+**單元測試要求：**
+- `SearchRepository.searchContent()`：驗證 `totalMatches` 正確反映每本書在資料庫的總命中數（例如單書插入 5 筆符合內容，`matches.length == 3` 但 `totalMatches == 5`）。
+- `SearchRepository.searchContentInBook()`：驗證指定 `bookId` 查詢、`sortByBookOrder: true`（書中順序）與 `false`（相關度排序）、上限 200 筆與 `isTruncated` 旗標、空查詢與邊界輸入處理。
+- `LibrarySearchScreen`：widget test 驗證當 `totalMatches > 3` 時卡片顯示「查看全部」按鈕，`<= 3` 時不顯示；點擊按鈕推入 `BookSearchScreen`。
+- `BookSearchScreen`：widget test 驗證初始查詢結果呈現、關鍵字重搜與 debounce、排序切換、E-Ink 模式離散分頁列、點選項目導航開書帶入 `initialJumpTarget`。
+
+**驗收標準：** `flutter analyze` 乾淨；上述單元與 widget 測試全數通過；在全庫搜尋畫面中，命中超過 3 筆的書籍卡片出現按鈕並能順利進入單書結果頁面檢視完整結果與跳轉。
+
+---
+
+## Issue 8：閱讀器 TopBar「搜尋內文」接線與就地跳轉
+
+**Status:** ready-for-agent
+
+**依賴：** Issue 7（需要 `BookSearchScreen`）
+
+**來源：** `spec.md` §9.4
+
+**背景／目標：**
+閱讀器頂部工具列已存在 `reader_chrome_search_button` 按鈕（`ReaderChromeTopBar`），但目前點擊僅彈出「功能開發中」SnackBar。本工單將其正式接上 Issue 7 的 `BookSearchScreen`，並讓從閱讀器進入的使用者在點選片段後直接 pop 回傳跳轉目標，於閱讀器就地跳轉與疊加暫態高亮，不銷毀重建閱讀器 session。
+
+**Solution：**
+- 在 `ReaderScreen._buildChromeTopBar` 中，將 `onSearchTap` 接上開啟 `BookSearchScreen(book: _currentBook, fromReader: true, ...)`。
+- `BookSearchScreen` 支援 `fromReader: true` 模式：點選片段直接 `Navigator.of(context).pop(jumpTarget)`。
+- `ReaderScreen` 接收到 `jumpTarget` 後，直接就地執行跳轉與暫態高亮（Foliate: `FoliateReaderView.showSearchHighlight`／`jumpToLocator`；PDF: `PdfReaderView.jumpToPage`／`showTemporaryHighlight`），並啟動 3 秒計時器清除高亮（重用 Issue 5 邏輯）。
+
+**單元測試要求：**
+- `ReaderScreen` widget test：點擊 `reader_chrome_search_button` 驗證推入 `BookSearchScreen`。
+- 跳轉與高亮測試：模擬 `BookSearchScreen` 回傳 `ReaderJumpTarget`，驗證 `ReaderScreen` 正確呼叫底層 view 執行跳轉與暫態高亮，且不重新初始化整個閱讀畫面。
+
+**驗收標準：** `flutter analyze` 乾淨；上述測試全數通過；閱讀器頂部搜尋按鈕不再顯示「功能開發中」，點擊能開啟本書搜尋並於選取後立即跳轉至目標文字處。

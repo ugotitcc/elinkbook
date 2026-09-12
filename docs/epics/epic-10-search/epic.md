@@ -74,4 +74,7 @@ E SQLiteLog: (1) statement aborts at 29: [CREATE VIRTUAL TABLE book_content_fts 
 ```
 確認 Issue 6 的優雅降級機制在真機上如預期運作（例外被攔截、App 正常開機、`isFullTextSearchAvailable=false`），同時完成 Issue 6 原本待人工執行的 Step 7 真機驗證。**人類結論：一般 E-Ink 裝置的系統 SQLite 很可能普遍缺 FTS5 模組**（非單一裝置個案，`sqflite` 在 Android 上綁定的是系統內建 SQLite、非 App 自帶版本，是否編譯 FTS5 完全取決於各家 ROM／晶片廠商的客製化決定，與 Android 版本高低無必然關係）。人類決議下一步方向：評估 App 改自帶一份保證編譯進 FTS5 的 SQLite 動態函式庫（例如 `sqlite3_flutter_libs`＋`sqflite_common_ffi` 路線），取代目前依賴系統版本、在部分裝置上必然缺功能的做法——這是牽動整個資料層的架構級決策，尚待另立分析（可能是新 ADR 或後續 Epic，範圍超出本 Epic 既有 Issue 0-6）。
 
+2026-09-12 人類提出需求：全庫搜尋書內內文目前僅顯示前三筆，希望可以下鑽（drill-down）指定書籍更多結果，並將閱讀器頂部工具列開發中的搜尋按鈕正式接上單書搜尋功能。透過 `/grill-me` 進行多輪互動訪談定案：(1) UX 呈現採用獨立的「單書搜尋結果頁面（`BookSearchScreen`）」，全庫搜尋卡片在命中超過 3 筆時顯示「查看全部 N 筆結果（還有 X 筆）」按鈕進入；(2) `BookSearchScreen` 提供可編輯搜尋框（帶入原關鍵字，支援 300ms 防手震即時重搜）；(3) 排序預設「依書中順序（閱讀進度）」，並提供切換按鈕可切換「依相關度（BM25 分數）」；(4) 片段標註章節/頁碼標籤（PDF 顯示「第 X 頁」，EPUB 等顯示「第 X 章」），關鍵字在非 E-Ink 模式以粗體＋淡背景強調、E-Ink 模式以粗體＋底線強調；(5) 查詢上限預設 200 筆，E-Ink 模式支援 `PagingBar` 離散分頁；(6) 閱讀器頂部 `ReaderChromeTopBar` 原「功能開發中」搜尋按鈕正式接上同一個 `BookSearchScreen`，選取後 pop 回傳定位目標並就地跳轉與暫態高亮。已連動更新 `spec.md` §9 與「明確排除」章節，並於 `issues.md` 追加 Issue 7（全庫搜尋單書結果 Drill-down 與單書全文檢索畫面）與 Issue 8（閱讀器 TopBar 搜尋按鈕接線與就地跳轉）。下一步：實作者認領 Issue 7，撰寫 `plans/plan-issue-7.md` 並發起審查。
+
+
 

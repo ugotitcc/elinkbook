@@ -256,13 +256,121 @@ final ReaderJumpTarget? initialJumpTarget;
 3. **若符合**：維持單層設計，Issue 0 結案，不再回頭處理。
 4. **若不符合**：在 Issue 0 的結論中另外提出兩層式索引（書籍/章節級粗篩 FTS ＋ 命中後才查句級明細）的 schema 修訂，作為本 Epic 內追加的一個 Issue（新增彙總層，不影響既有 `book_content_index`/`book_content_fts` 資料，非砍掉重練）。
 
+## 9. 單書全文檢索、搜尋結果下鑽（Drill-Down）與閱讀器 TopBar 搜尋接線（2026-09-12 修訂新增）
+
+### 9.1 資料存取層擴充
+
+新模型與方法簽章（`app/lib/search/search_repository.dart`）：
+
+```dart
+class ContentMatchSnippet {
+  final String snippet;
+  final String locator;
+  final int? chapterIndex; // 新增：供格式化顯示「第 X 頁」或「第 X 章」
+
+  const ContentMatchSnippet({
+    required this.snippet,
+    required this.locator,
+    this.chapterIndex,
+  });
+}
+
+class BookContentMatches {
+  final Book book;
+  final List<ContentMatchSnippet> matches;
+  final int totalMatches; // 新增：該書在資料庫中的總命中筆數
+
+  const BookContentMatches({
+    required this.book,
+    required this.matches,
+    this.totalMatches = 0,
+  });
+}
+
+/// 單書全文檢索結果
+class BookSearchDetailResult {
+  final Book book;
+  final List<ContentMatchSnippet> matches;
+  final int totalMatches;
+  final bool isTruncated; // 當 totalMatches > limit 時為 true
+
+  const BookSearchDetailResult({
+    required this.book,
+    required this.matches,
+    required this.totalMatches,
+    required this.isTruncated,
+  });
+}
+
+abstract class SearchRepository {
+  Future<List<Book>> searchTitleAuthor(String query);
+
+  Future<List<BookContentMatches>> searchContent(
+    String query, {
+    int perBookLimit = 3,
+  });
+
+  /// 針對指定書籍查詢全文檢索命中片段
+  Future<BookSearchDetailResult?> searchContentInBook(
+    String bookId,
+    String query, {
+    int limit = 200,
+    bool sortByBookOrder = true,
+  });
+}
+```
+
+- **全庫搜尋取得 `totalMatches`**：在 `SqliteSearchRepository.searchContent` 的子查詢中，加入視窗函數 `COUNT(*) OVER (PARTITION BY bci.book_id) AS total_count`，單一 SQL 即可同時取得前 `perBookLimit` 筆片段以及該書的命中總筆數，不需二次查詢。
+- **單書全文檢索 `searchContentInBook`**：
+  - 傳入指定 `bookId` 與 `query`。若 `tokenizeForQuery(query)` 為空則回傳空結果。
+  - 對 `book_content_fts` 進行 MATCH 查詢，JOIN `book_content_index` 並過濾 `bci.book_id = ?`。
+  - 排序支援：`sortByBookOrder: true`（預設）時使用 `ORDER BY bci.chapter_index ASC, bci.rowid ASC`（書中章節與閱讀進度順序）；`sortByBookOrder: false` 時使用 `ORDER BY score ASC`（BM25 相關度分數）。
+  - 上限限制：`LIMIT ?`（預設 200 筆）；若總數超過該限制，`isTruncated` 設為 `true`。
+
+### 9.2 全庫搜尋畫面 Drill-Down 互動
+
+- 在 `LibrarySearchScreen`（`app/lib/screens/library_search_screen.dart`）的書籍內容匹配卡片（`_buildContentGroupCard`）底部：
+  - 當 `group.totalMatches > group.matches.length`（即該書命中筆數超過卡片顯示的筆數）時，渲染文字按鈕：
+    `查看全部 ${group.totalMatches} 筆結果（還有 ${group.totalMatches - group.matches.length} 筆）`。
+  - 當 `group.totalMatches <= group.matches.length` 時，因所有結果已完整呈現在卡片中，不顯示多餘按鈕。
+  - 點擊按鈕時，透過 `Navigator.push` 導航至 `BookSearchScreen`，帶入書籍物件、當前搜尋關鍵字以及相依之 Repositories。
+
+### 9.3 單書全文檢索畫面（`BookSearchScreen`）
+
+新畫面 `app/lib/screens/book_search_screen.dart`：
+
+- **頂部搜尋框**：
+  - 帶入初始查詢關鍵字，提供 300ms debounce 輸入與清除按鈕（`Icons.close`），允許使用者直接在本書中修改關鍵字重新搜尋。
+- **工具列與排序切換**：
+  - 顯示書名、作者與命中統計摘要（例如「共 45 筆結果」；若 `isTruncated` 為 true 則顯示「僅顯示前 200 筆，共 X 筆」）。
+  - 提供排序切換按鈕：預設「依書中順序」，可點擊切換為「依相關度排序」。
+- **命中片段呈現**：
+  - **位置標籤**：PDF 格式依 `chapterIndex + 1` 顯示「第 X 頁」；EPUB/其他格式顯示「第 X 章」（或章節序號）。
+  - **關鍵字高亮強調**：
+    - 非 E-Ink 模式：關鍵字以粗體＋主題淡色背景強調。
+    - E-Ink 模式：關鍵字以粗體＋底線強調（高對比、避免殘影）。
+- **分頁機制**：
+  - 非 E-Ink 模式：連續捲動 `ListView`。
+  - E-Ink 模式：套用專案標準離散分頁，使用 `PagingBar`（每頁 10 筆），避免平滑滾動殘影。
+- **點擊跳轉行為**：
+  - 若畫面是由全庫搜尋推入（`fromReader = false`）：點擊片段推入 `ReaderScreen`（帶 `initialJumpTarget`）。
+  - 若畫面是由閱讀器開啟（`fromReader = true`）：點擊片段執行 `Navigator.pop(context, jumpTarget)` 回傳定位目標。
+
+### 9.4 閱讀器（`ReaderScreen`）頂部搜尋按鈕接線
+
+- 在 `ReaderScreen` 的 `ReaderChromeTopBar`（`app/lib/screens/reader_chrome_top_bar.dart`，`reader_chrome_search_button`）上，原先點擊顯示「功能開發中」SnackBar 的 `onSearchTap` 回呼改為：
+  - 開啟 `BookSearchScreen`（`fromReader: true`，綁定當前閱讀的書籍物件）。
+  - 使用者點選搜尋結果片段後，`BookSearchScreen` pop 回傳 `ReaderJumpTarget`。
+  - `ReaderScreen` 收到 `jumpTarget` 後，直接就地執行跳轉（Foliate: `FoliateReaderView.showSearchHighlight`／`jumpToLocator`；PDF: `PdfReaderView.jumpToPage`／`showTemporaryHighlight`）並觸發 3 秒暫態高亮計時器，維持閱讀器 session 不被銷毀重建。
+
 ## 明確排除（沿用 `design.md`，此處重申以免實作時誤觸）
 
-- 不處理「本書內搜尋」既有缺口（Foliate 格式 Chrome Bar「搜尋」按鈕 stub）。
+- 原「不處理『本書內搜尋』既有缺口（Foliate 格式 Chrome Bar「搜尋」按鈕 stub）」已於 2026-09-12 修訂並納入第 9 節規格（接上 `BookSearchScreen`）。
 - 不修改 `GlobalReaderPrefs` 既有欄位結構。
 - 索引資料（`content_index_status`／`book_content_index`／`book_content_fts`）不參與 `epic-8-sync` 跨裝置同步，純本地衍生資料。
 - 不在本 Epic 內建兩層式索引架構（僅在第 8 節效能驗證失敗時才追加）。
 
 ## 下一步
 
-Scrum Master：拆 `docs/epics/epic-10-search/issues.md`，Issue 0 為第 8 節效能驗證 Spike，其後依本文件章節切分（Schema／Tokenizer／Foliate Indexer／PDF Indexer／Scheduler／設定模型／全庫搜尋畫面／`ReaderScreen` Seam）為垂直切片，每個 Issue 附對應單元測試要求。
+Scrum Master：更新 `docs/epics/epic-10-search/issues.md`，追加 Issue 7（全庫搜尋單書結果下鑽與單書全文檢索畫面）與 Issue 8（閱讀器 TopBar 搜尋按鈕接線與就地跳轉）。
+
