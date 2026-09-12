@@ -52,7 +52,7 @@ class SqliteLibraryRepository implements LibraryRepository {
   }) async {
     final db = await openDatabase(
       path,
-      version: 24,
+      version: 25,
       singleInstance: singleInstance,
       onConfigure: (db) async {
         // book_reader_prefs 的 ON DELETE CASCADE 需要外鍵約束真正生效，
@@ -398,6 +398,25 @@ class SqliteLibraryRepository implements LibraryRepository {
           // 版本，見 _createBookContentFtsTableIfSupported 說明。
           await _createBookContentFtsTableIfSupported(db);
         }
+        if (oldVersion < 25) {
+          // epic-40-bundled-sqlite：資料庫引擎換成自帶編譯的 sqlite3
+          // （見 ADR 0028）後，原本因系統 SQLite 缺 FTS5 模組而被
+          // _createBookContentFtsTableIfSupported() 跳過建表的裝置，這次
+          // 應該能成功建表。但 CREATE VIRTUAL TABLE 沒有 IF NOT EXISTS
+          // 防護，對系統版本本來就有 FTS5、已成功建表的裝置（多數裝置，
+          // oldVersion 已經 >= 24 且當初建表成功）若無條件重跑會拋出
+          // 「table already exists」，因此必須先查 sqlite_master 確認表
+          // 尚不存在才嘗試建立。
+          final existing = await db.query(
+            'sqlite_master',
+            columns: ['name'],
+            where: "type = 'table' AND name = 'book_content_fts'",
+            limit: 1,
+          );
+          if (existing.isEmpty) {
+            await _createBookContentFtsTableIfSupported(db);
+          }
+        }
       },
       onOpen: (db) async {
         // epic-8-sync Issue 1（spec 審查修正 Critical 1）：onConfigure
@@ -414,7 +433,7 @@ class SqliteLibraryRepository implements LibraryRepository {
     // 【epic-10-search Issue 6】onCreate／onUpgrade 兩處都可能因為 FTS5
     // 模組不存在而略過建立 book_content_fts（見
     // _createBookContentFtsTableIfSupported 說明）；且一般開啟既有裝置
-    // （沒有觸發任何遷移，version 已經是 24）時，onCreate／onUpgrade
+    // （沒有觸發任何遷移，version 已經是 25）時，onCreate／onUpgrade
     // 兩者皆不會被呼叫。查詢 sqlite_master 是唯一能對「這一次開啟」
     // 正確反映目前實際狀態的作法，不論是全新安裝、既有裝置升級、還是
     // 單純重新開啟都適用同一條判斷邏輯。
