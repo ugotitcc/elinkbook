@@ -15,7 +15,7 @@ E SQLiteLog: (1) statement aborts at 29: [CREATE VIRTUAL TABLE book_content_fts 
 - **全專案只有一個資料庫開啟點。** `SqliteLibraryRepository.open()`（`sqlite_library_repository.dart:49-53`）是唯一呼叫 `openDatabase()` 的地方，回傳的 `Database` 物件由 `main.dart` 逐層透過建構子參數傳給其餘全部 12+ 個 repository（`HighlightsRepository`／`BookmarksRepository`／`NotesRepository`／`SyncMetadataRepository` 等）。這些 repository 一律只認 `package:sqflite/sqflite.dart` 匯出的 `Database`/`Batch`/`Transaction` 型別（定義於 `sqflite_common`），不各自開連線。
 - **`sqflite`（平台 channel）與 `sqflite_common_ffi`（FFI）是同一組 `sqflite_common` 介面的兩種底層實作**，型別完全相容，換底層引擎理論上不需要更動任何一個 repository 的程式碼，只需要換 `SqliteLibraryRepository.open()` 這一個呼叫點背後所用的 `DatabaseFactory`。
 - **原生 Kotlin 端沒有任何程式碼直接碰觸這個資料庫檔案**（已 grep `app/android/app/src/main` 確認），不受影響。
-- **`sqflite_common_ffi`／`sqlite3`（Dart 綁定）皆已是既有依賴**（`sqflite_common_ffi: ^2.4.0+3`，目前僅 dev_dependency，供桌面開發機測試環境使用；`sqlite3` 是其傳遞依賴，已在 pub cache）。**`sqlite3_flutter_libs`（實際攜帶編譯好的原生函式庫的套件）目前完全沒有被引入**，是本 Epic 唯一需要新增的正式相依套件。
+- **`sqflite_common_ffi`／`sqlite3`（Dart 綁定）皆已是既有依賴**（`sqflite_common_ffi: ^2.4.0+3`，目前僅 dev_dependency，供桌面開發機測試環境使用；遞移解析到的 `sqlite3` 為 3.5.0，已在 pub cache）。`sqlite3` 3.x 起原生函式庫改由 Dart Native Assets（建置掛鉤 `hook/build.dart`）在建置時自動下載/編譯含 FTS5 的 `libsqlite3.so`，**不需要（也不應該）額外引入 `sqlite3_flutter_libs`**——這個套件僅適用於 `sqlite3` 2.x 世代，最新版本 `0.6.0+eol` 已無任何實體檔案。本 Epic 唯一需要的相依變更，是把既有的 `sqflite_common_ffi` 從 dev_dependency 提升為正式 dependency。
 - **ADR 0027 決策 1（排除 FTS5 `trigram` tokenizer，改採 Dart 端 CJK 字元層級 token 化）當初的排除理由是「Android 11 系統 SQLite 3.28.0 不支援 trigram（需 3.34+）」**，這個理由在換成自帶版本後技術上不再成立，本次一併重新評估是否要改用 trigram tokenizer（見下方「重新評估 trigram tokenizer」）。
 - **ADR 0027「曾考慮的替代方案」段落已明確評估過本次要採用的方案**（`sqlite3_flutter_libs` 取代系統版本），當時判斷「牽動既有 23 版 migration 歷史與全部既有測試，風險與範圍遠超本 Epic」而排除——事後看來，該判斷低估了「系統版本缺 FTS5」這個問題本身的嚴重性與普遍性（不是只影響 trigram，而是完全沒有 FTS5 模組，導致全文檢索在部分裝置上永久無法使用）。
 - **`book_content_fts` 建表 SQL 沒有 `IF NOT EXISTS` 防護**（`sqlite_library_repository.dart:902-926`），對已成功建表的裝置無條件重跑會拋出「table already exists」——任何後續遷移邏輯都必須先查 `sqlite_master` 確認表不存在才嘗試建立。
@@ -23,9 +23,9 @@ E SQLiteLog: (1) statement aborts at 29: [CREATE VIRTUAL TABLE book_content_fts 
 
 ## 本次落地範圍
 
-### 1. 技術路線：`sqflite_common_ffi` + `sqlite3_flutter_libs`
+### 1. 技術路線：`sqflite_common_ffi`（`sqlite3` 3.x Native Assets 建置掛鉤自帶 FTS5 二進位）
 
-`main.dart` 在第一次 `openDatabase()` 之前呼叫一次 `sqfliteFfiInit(); databaseFactory = databaseFactoryFfi;`，讓 `SqliteLibraryRepository.open()` 內的 `openDatabase()` 呼叫改由 FFI 直連 `sqlite3_flutter_libs` 攜帶的原生 `libsqlite3.so`（該套件已為 Android 各 ABI 各自攜帶一份預編譯、確定含 FTS5 的函式庫），不再透過平台 channel 呼叫系統版本。**只處理 Android 正式建置路徑**——桌面測試環境（`sqflite_common_ffi` 依賴開發機系統既有 sqlite3，本來就沒有 FTS5 缺失問題）與 iOS（`epic-13-ios` 尚未啟動，屆時 iOS 系統 SQLite 是否含 FTS5 是完全獨立的另一個問題）皆維持現狀不動。
+`main.dart` 在第一次 `openDatabase()` 之前呼叫一次 `sqfliteFfiInit(); databaseFactory = databaseFactoryFfi;`，讓 `SqliteLibraryRepository.open()` 內的 `openDatabase()` 呼叫改由 FFI 直連 `sqlite3` 套件透過 Native Assets 建置掛鉤自動下載/編譯、打包進 APK 的 `libsqlite3.so`（各 Android ABI 各自一份，確定含 FTS5），不再透過平台 channel 呼叫系統版本。**只處理 Android 正式建置路徑**——桌面測試環境（`sqflite_common_ffi` 依賴開發機系統既有 sqlite3，本來就沒有 FTS5 缺失問題）與 iOS（`epic-13-ios` 尚未啟動，屆時 iOS 系統 SQLite 是否含 FTS5 是完全獨立的另一個問題）皆維持現狀不動。真機整合測試（`app/integration_test/`）在 Android 上執行時不經過 `lib/main.dart`，需在 `flutter_test_config.dart` 同步初始化，細節見 `spec.md` 第 2、7 節。
 
 ### 2. 既有裝置遷移：DB version 24 → 25
 

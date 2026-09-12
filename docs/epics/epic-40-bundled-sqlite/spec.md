@@ -6,8 +6,10 @@
 
 `app/pubspec.yaml`：
 
-- 新增正式相依 `sqlite3_flutter_libs`（版本以 `flutter pub add sqlite3_flutter_libs` 當下取得的最新穩定版為準，不預先寫死版本號，避免 Architecting 階段記錄的版本很快過期）。
 - `sqflite_common_ffi`（目前 `^2.4.0+3`，位於 `dev_dependencies`）**移動到 `dependencies`**——它現在同時服務正式 Android 建置（透過 `databaseFactoryFfi`）與既有桌面測試環境，不再只是測試專用。
+- **不新增 `sqlite3_flutter_libs`**：這個套件僅適用於 `package:sqlite3` 2.x 世代，本專案透過 `sqflite_common_ffi: ^2.4.0+3` 遞移解析到的是 `sqlite3: 3.5.0`（見 `app/pubspec.lock`）。`sqlite3` 3.x 起改用 Dart 官方 Native Assets（建置掛鉤，`hook/build.dart`）機制，會在 `flutter build apk`／`flutter run` 時自動下載（或視平台自行編譯）含 `SQLITE_ENABLE_FTS5` 的原生 `libsqlite3.so` 並打包進 APK，不需要也不應該引入已標記 `0.6.0+eol`、內容已清空的 `sqlite3_flutter_libs`。
+- （可選，作為明確防禦）可在 `dependencies` 明確宣告 `sqlite3: ^3.5.0`，鎖定 v3.x 以上、確定走 Native Assets 路線的版本。
+- **建置期網路需求**：`flutter build apk`／`flutter run` 首次為某個 ABI 建置時，`sqlite3` 的建置掛鉤需要透過 HTTPS 從 `github.com/simolus3/sqlite3.dart/releases` 下載對應的預編譯二進位檔案；離線建置環境需自行準備好這個快取或改用其他建置掛鉤設定。
 
 ## 2. `main.dart`：初始化 FFI factory
 
@@ -24,7 +26,7 @@ void main() async {
 }
 ```
 
-`sqlite3_flutter_libs` 不需要任何額外程式碼呼叫——它是一個純「攜帶原生函式庫」的套件，`sqflite_common_ffi` 底層透過 `package:sqlite3` 的 `open.open()` 尋找動態函式庫時，會自動找到這個套件在建置時放進 APK 的 `libsqlite3.so`。
+這一段只涵蓋正式 App 執行路徑（`flutter run`／`flutter build apk` 啟動後實際跑的 `lib/main.dart`）。**真機整合測試（`app/integration_test/`）在 Android 上執行時不會呼叫 `lib/main.dart` 的 `main()`**——`flutter test integration_test/<file>.dart -d <device-id>` 是把該測試檔自己的 `main()` 當作 Android 測試 APK 的入口，見下方第 7 節。
 
 ## 3. 資料庫遷移：version 24 → 25
 
@@ -71,12 +73,28 @@ if (oldVersion < 25) {
 
 ## 7. 測試要求
 
-- **既有測試套件零回歸**：`sqflite_common_ffi` 測試環境（Windows/Linux/macOS 開發機）本來就依賴系統既有 sqlite3（一律含 FTS5），`main.dart` 的 `databaseFactory` 初始化只影響**正式 Android 執行路徑**，測試檔案透過 `sqflite_common_ffi` 直接呼叫 `databaseFactoryFfi`/`inMemoryDatabasePath` 開資料庫，不經過 `main()`，不受影響。
+- **既有純 Dart／widget 測試套件零回歸**：`sqflite_common_ffi` 測試環境（Windows/Linux/macOS 開發機）本來就依賴系統既有 sqlite3（一律含 FTS5），`main.dart` 的 `databaseFactory` 初始化只影響**正式 Android 執行路徑**，`app/test/` 下的測試檔案透過 `sqflite_common_ffi` 直接呼叫 `databaseFactoryFfi`/`inMemoryDatabasePath` 開資料庫，不經過 `main()`，不受影響。
+- **真機整合測試環境須同步初始化**：`app/integration_test/` 在 Android 真機上執行時不經過 `lib/main.dart` 的 `main()`（見上方第 2 節），需在全域整合測試入口 [`app/integration_test/flutter_test_config.dart`](../../../app/integration_test/flutter_test_config.dart) 的 `testExecutable` 函式內、`testMain()` 執行之前，補上：
+  ```dart
+  import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+
+  Future<void> testExecutable(FutureOr<void> Function() testMain) async {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+    final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+    binding.framePolicy = LiveTestWidgetsFlutterBindingFramePolicy.fullyLive;
+    await testMain();
+  }
+  ```
+  確保所有 `integration_test/` 測試檔（含目前未各自補寫 `sqfliteFfiInit()` 的 `library_screen_test.dart`／`manual_import_acceptance_test.dart` 等）與正式 App 一致使用自帶 SQLite 引擎，而非回退到系統平台 channel。
 - 新增遷移測試（比照既有 `onUpgrade` 遷移測試慣例，`sqlite_library_repository_test.dart`）：
   1. 模擬一個 version 24 的既有資料庫、`book_content_fts` 表已存在（模擬系統版本本來就有 FTS5 的裝置）——升級到 version 25 後，`open()` 不拋出例外，`isFullTextSearchAvailable` 仍為 `true`。
-  2. 模擬一個 version 24 的既有資料庫、`book_content_fts` 表**不存在**（模擬 Issue 6 場景，系統版本當初缺 FTS5 而跳過建表）——升級到 version 25 後（測試環境的 `sqflite_common_ffi` 一律有 FTS5，模擬「換引擎後這次建表會成功」），`open()` 不拋出例外，`isFullTextSearchAvailable` 變為 `true`，且 `book_content_fts` 表與三個同步 trigger皆已建立（可用一筆 `book_content_index` INSERT 驗證觸發同步）。
+  2. 模擬一個 version 24 的既有資料庫、`book_content_fts` 表**不存在**（模擬 Issue 6 場景，系統版本當初缺 FTS5 而跳過建表；可重用既有頂層變數 `createBookContentFtsTable` 覆寫機制模擬，與 `sqlite_library_repository_test.dart` 既有 Issue 6 測試同構）——升級到 version 25 後（測試環境的 `sqflite_common_ffi` 一律有 FTS5，模擬「換引擎後這次建表會成功」），`open()` 不拋出例外，`isFullTextSearchAvailable` 變為 `true`，且 `book_content_fts` 表與三個同步 trigger（`book_content_index_ai`/`book_content_index_ad`/`book_content_index_au`）皆已建立——分別對 `book_content_index` 執行一筆 INSERT、UPDATE、DELETE，驗證三個 trigger 都能正確同步變更到 `book_content_fts`，不只驗證 INSERT。
   3. 全新安裝（`onCreate` 直接建到 version 25）：`isFullTextSearchAvailable` 為 `true`，行為與現行版本一致（零回歸）。
-- **真機重新驗證**（收尾步驟，不寫自動化測試）：在 `9491G`／`Hera_Vis_WIFI` 這台已知原本缺 FTS5 的實機上，(a) 全新安裝驗證 `isFullTextSearchAvailable=true`；(b) 用換引擎前的舊版 APK 先安裝一次（重現 Issue 6 場景），再升級安裝新版 APK，驗證既有裝置升級路徑也能正確變為 `true` 且不崩潰。
+- **真機重新驗證**（收尾步驟，不寫自動化測試）：在 `9491G`／`Hera_Vis_WIFI` 這台已知原本缺 FTS5 的實機上：
+  1. 全新安裝新版 APK（`adb install <new_app.apk>`），驗證 `isFullTextSearchAvailable=true`。
+  2. 安裝換引擎前的舊版 APK（重現 Issue 6 場景），開機確認為 version 24 且無 `book_content_fts`（或全文檢索畫面顯示「本裝置不支援」）。
+  3. 以 `adb install -r <new_app.apk>`（`-r` 為覆蓋安裝、保留既有 App 資料，切勿用 `flutter run` 或未帶 `-r` 的安裝方式，否則可能觸發解除安裝重裝、清空本機資料庫，導致測不到 version 24→25 的 `onUpgrade` 遷移路徑）升級安裝新版 APK，驗證既有裝置升級路徑同樣變為 `isFullTextSearchAvailable=true` 且不崩潰。
 
 ## 明確排除（沿用 `design.md`，此處重申以免實作時誤觸）
 

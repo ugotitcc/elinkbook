@@ -1,4 +1,4 @@
-# ADR 0028：改用自帶編譯的 SQLite（`sqlite3_flutter_libs`）取代 Android 系統內建版本，解決 FTS5 模組缺失
+# ADR 0028：改用自帶編譯的 SQLite（`sqflite_common_ffi` + `sqlite3` Native Assets）取代 Android 系統內建版本，解決 FTS5 模組缺失
 
 ## 狀態
 
@@ -22,7 +22,7 @@ ADR 0027「曾考慮的替代方案」當時已評估過本次要採用的方案
 
 ## 決策
 
-1. **改用 `sqflite_common_ffi` + `sqlite3_flutter_libs`，取代 Android 上依賴系統內建 SQLite 的做法**：`sqlite3_flutter_libs` 為 Android 各 ABI 各自攜帶一份預先編譯（確定含 FTS5）的原生 `libsqlite3.so`；App 啟動時（`main()`，第一次 `openDatabase()` 之前）呼叫 `sqfliteFfiInit(); databaseFactory = databaseFactoryFfi;`，讓 `SqliteLibraryRepository.open()` 這一個唯一的資料庫開啟點改由 FFI 直連這份自帶函式庫。全專案其餘 12+ 個 repository 皆只依賴 `sqflite_common` 定義的 `Database`/`Batch`/`Transaction` 型別、不各自開連線，因此這是一個集中在單一開啟點的改動，不需要更動任何 repository 的程式碼。**只處理 Android 正式建置路徑**——桌面測試環境本來就沒有 FTS5 缺失問題，iOS 留待 `epic-13-ios` 啟動時獨立評估。
+1. **改用 `sqflite_common_ffi`，取代 Android 上依賴系統內建 SQLite 的做法**：`sqflite_common_ffi` 遞移解析的 `sqlite3` 套件（現行版本 3.5.0）自 3.x 起改採 Dart 官方 Native Assets（建置掛鉤 `hook/build.dart`）機制，會在 `flutter build apk`／`flutter run` 建置時，為 Android 各 ABI 自動下載（或視平台自行編譯）一份含 `SQLITE_ENABLE_FTS5` 的原生 `libsqlite3.so` 並打包進 APK，不需要（也不應該）額外引入僅適用於 `sqlite3` 2.x 世代、已標記 `0.6.0+eol` 且無任何實體檔案的 `sqlite3_flutter_libs`。App 啟動時（`main()`，第一次 `openDatabase()` 之前）呼叫 `sqfliteFfiInit(); databaseFactory = databaseFactoryFfi;`，讓 `SqliteLibraryRepository.open()` 這一個唯一的資料庫開啟點改由 FFI 直連這份自帶函式庫；真機整合測試（`app/integration_test/`）在 Android 上執行時不經過 `lib/main.dart`，需同步在 `flutter_test_config.dart` 的 `testExecutable` 內初始化。全專案其餘 12+ 個 repository 皆只依賴 `sqflite_common` 定義的 `Database`/`Batch`/`Transaction` 型別、不各自開連線，因此這是一個集中在單一開啟點的改動，不需要更動任何 repository 的程式碼。**只處理 Android 正式建置路徑**——桌面測試環境本來就沒有 FTS5 缺失問題，iOS 留待 `epic-13-ios` 啟動時獨立評估。
 2. **既有裝置遷移採 DB version 24→25，且必須先查 `sqlite_master` 確認 `book_content_fts` 表尚不存在才嘗試建立**：現行 `CREATE VIRTUAL TABLE book_content_fts USING fts5(...)` 沒有 `IF NOT EXISTS` 防護，對系統版本本來就有 FTS5、已成功建表的裝置（多數裝置）若無條件重跑會拋出「table already exists」，是這個遷移步驟唯一需要小心處理的技術細節。
 3. **既有裝置的索引資料不做自動回補，沿用 `epic-10-search` Issue 3 既有的「重建索引」按鈕**：`rebuildIndex()` 本來就是「清空索引 → 重新批次插入 pending → 喚醒排程器」的完整實作，只要新的 FTS5 表與同步 trigger 存在即可正確運作，不需要新機制；也避免在使用者未察覺的情況下觸發背景索引重建。
 4. **保留 Issue 6 既有的優雅降級機制**（偵測「no such module: fts5」時跳過建表）：作為零成本的縱深防禦，即使理論上換成自帶版本後不會再觸發，也沒有理由移除已運作正常、有測試覆蓋的既有程式碼。
@@ -36,8 +36,9 @@ ADR 0027「曾考慮的替代方案」當時已評估過本次要採用的方案
 
 ## 後果
 
-- 新增正式相依套件 `sqlite3_flutter_libs`；`sqflite_common_ffi` 從 dev_dependency 提升為同時服務正式 Android 建置與既有桌面測試環境的相依套件。
-- APK 體積增加：`sqlite3_flutter_libs` 為每個 ABI 各攜帶一份原生函式庫；Google Play App Bundle 依裝置 ABI 拆分後，單一裝置實際下載增量預期在 1-2MB 量級。
+- `sqflite_common_ffi` 從 dev_dependency 提升為同時服務正式 Android 建置與既有桌面測試環境的相依套件；**不新增 `sqlite3_flutter_libs`**（該套件僅適用於已淘汰的 `sqlite3` 2.x 世代）。
+- **建置期新增網路依賴**：`flutter build apk`／`flutter run` 首次為某個 ABI 建置時，`sqlite3` 的 Native Assets 建置掛鉤需透過 HTTPS 從 `github.com/simolus3/sqlite3.dart/releases` 下載對應的預編譯原生函式庫，離線建置環境需另行準備快取。
+- APK 體積增加：自帶原生函式庫為每個 ABI 各一份；Google Play App Bundle 依裝置 ABI 拆分後，單一裝置實際下載增量預期在 1-2MB 量級。
 - `sqlite_library_repository.dart` DB `version` 由 24 升至 25，新增一個帶存在性防護的遷移步驟（見決策 2）。
 - App 現在自己釘選 SQLite 版本，不再受各裝置系統版本差異影響——這也代表未來若要重新評估任何依賴 SQLite 版本/擴充模組的功能（例如決策 5 提及的 trigram、或其他 FTS5 進階選項），評估基準是「App 自選的版本是否支援」，不再是「系統版本是否支援」。
 - 部分 ADR 0027「曾考慮的替代方案」段落記載的排除判斷已被本 ADR 推翻，該段落尾端加註指向本 ADR 的指標性註記，不重寫原文。
