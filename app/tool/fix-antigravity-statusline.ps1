@@ -10,7 +10,7 @@ Write-Host "1. 修復外掛源 configure-statusline.mjs 為正斜線無引號...
 $cfg=Get-Content "$plugin/configure-statusline.mjs" -Raw
 if($cfg -notmatch "statuslineQuotaPosix"){
   $cfg=$cfg.Replace("  settings.statusLine = {`r`n    enabled: true,`r`n    type: 'command',`r`n    command: ``node `${statuslineQuotaMjsPath}```r`n  };", "  // 使用正斜線無引號：同時相容 Go 直接 exec 與 sh -c`r`n  const statuslineQuotaPosix = statuslineQuotaMjsPath.replace(/\/g, '/');`r`n  settings.statusLine = {`r`n    enabled: true,`r`n    type: 'command',`r`n    command: ``node `${statuslineQuotaPosix}```r`n  };")
-  Set-Content "$plugin/configure-statusline.mjs" $cfg -Encoding UTF8NoBOM
+  [IO.File]::WriteAllText("$plugin/configure-statusline.mjs", $cfg, (New-Object System.Text.UTF8Encoding($false)))
   Write-Host "  已修復 configure-statusline.mjs" -ForegroundColor Green
 } else { Write-Host "  已是正斜線版，跳過" -ForegroundColor Yellow }
 
@@ -25,7 +25,8 @@ foreach($p in @("$homeDir/.gemini/settings.json","$homeDir/.gemini/antigravity-c
   $j=Get-Content $p -Raw | ConvertFrom-Json
   $j.statusLine.command="node C:/Users/fycdc/.gemini/antigravity-cli/hooks/wrapper.mjs"
   $j.statusLine.enabled=$true; $j.statusLine.type="command"
-  $j | ConvertTo-Json -Depth 10 | Set-Content $p -Encoding UTF8NoBOM
+  $json=$j | ConvertTo-Json -Depth 10
+  [IO.File]::WriteAllText($p, $json, (New-Object System.Text.UTF8Encoding($false)))
   # 驗證無 BOM
   $b=[IO.File]::ReadAllBytes($p); if($b[0]-eq 0xEF){ [IO.File]::WriteAllBytes($p,$b[3..($b.Length-1)]); Write-Host "  已剝除 BOM: $p" -ForegroundColor Yellow }
 }
