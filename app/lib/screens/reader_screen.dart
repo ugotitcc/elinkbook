@@ -2078,6 +2078,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
   /// 找不到章節時回退為 [widget.bookTitle]（2026-09-08 `/grill-with-docs`
   /// 使用者需求，取代字面 `'閱讀器'`）；截斷交給 `ReaderChromeTopBar` 既有的
   /// `TextOverflow.ellipsis, maxLines: 1`，不需要額外邏輯。
+  ///
+  /// 2026-09-12 使用者需求：TopBar 目前不再顯示這個值（頁首已有另一處
+  /// 顯示，見上方 `_buildChromeTopBar()` 呼叫端），暫時保留這個方法本身
+  /// 供後續決定要放什麼內容時使用，故目前無呼叫端。
+  // ignore: unused_element
   String _currentChapterTitle(BookFormat format) {
     if (format == BookFormat.pdf) {
       final currentPath =
@@ -2160,7 +2165,11 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       right: 0,
       child: ReaderChromeTopBar(
         onBack: () => Navigator.of(context).pop(),
-        chapterTitle: _currentChapterTitle(format),
+        // 2026-09-12 使用者需求：頁首（_buildFoliateHeaderText()／
+        // PDF 頁碼列）已經顯示書籍/章節資訊，TopBar 這裡不需要再重複顯示，
+        // 先改為空字串；_currentChapterTitle() 邏輯保留供後續決定要放什麼
+        // 內容時使用，故未刪除（見下方 unused_element 抑制）。
+        chapterTitle: '',
         onSearchTap: () => ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('功能開發中')),
         ),

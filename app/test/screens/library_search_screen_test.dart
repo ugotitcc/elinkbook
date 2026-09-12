@@ -125,6 +125,73 @@ void main() {
     );
   });
 
+  testWidgets('輸入框有文字時右側顯示清除按鈕，無文字時不顯示', (tester) async {
+    await tester.pumpWidget(
+      wrap(LibrarySearchScreen(
+        searchRepository: FakeSearchRepository(),
+        prefsManager: FakeReaderPrefsManager(),
+        libraryRepository: FakeLibraryRepository(),
+      )),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('library_search_screen_clear_button')),
+      findsNothing,
+      reason: '輸入框尚未輸入任何文字時，不應顯示清除按鈕',
+    );
+
+    await tester.enterText(
+      find.byKey(const Key('library_search_screen_field')),
+      'a',
+    );
+    await tester.pump();
+
+    expect(
+      find.byKey(const Key('library_search_screen_clear_button')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('點擊清除按鈕清空輸入框文字與搜尋結果', (tester) async {
+    final searchRepository = FakeSearchRepository(
+      titleAuthorResults: [_testBook(id: 'b1', title: '書一')],
+    );
+    await tester.pumpWidget(
+      wrap(LibrarySearchScreen(
+        initialQuery: '書一',
+        searchRepository: searchRepository,
+        prefsManager: FakeReaderPrefsManager(),
+        libraryRepository: FakeLibraryRepository(),
+      )),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const Key('library_search_title_author_result_b1')),
+      findsOneWidget,
+    );
+
+    await tester.tap(
+      find.byKey(const Key('library_search_screen_clear_button')),
+    );
+    await tester.pump();
+
+    final controllerText = tester
+        .widget<TextField>(find.byKey(const Key('library_search_screen_field')))
+        .controller!
+        .text;
+    expect(controllerText, isEmpty);
+    expect(
+      find.byKey(const Key('library_search_title_author_result_b1')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const Key('library_search_screen_clear_button')),
+      findsNothing,
+      reason: '清空後應立即隱藏清除按鈕本身',
+    );
+  });
+
   testWidgets('結果分「書名/作者匹配」與「內容匹配」兩區呈現', (tester) async {
     final matchedBook = _testBook(id: 'b1', title: '書一');
     final searchRepository = FakeSearchRepository(

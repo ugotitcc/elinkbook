@@ -537,8 +537,8 @@ void main() {
     expect(find.text('不支援的檔案格式'), findsOneWidget);
   });
 
-  group('頂部列標題找不到章節時回退為書名（2026-09-08 /grill-with-docs 使用者需求）', () {
-    testWidgets('EPUB 尚未載入目錄時，頂部列標題顯示書名而非「閱讀器」', (tester) async {
+  group('頂部列標題暫時一律為空字串（2026-09-12 使用者需求：頁首已有另一處顯示書籍/章節資訊，避免重複）', () {
+    testWidgets('EPUB：頂部列標題為空字串，不顯示書名', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
@@ -555,10 +555,10 @@ void main() {
       final titleText = tester.widget<Text>(
         find.byKey(const Key('reader_chrome_title')),
       );
-      expect(titleText.data, '一本測試用書');
+      expect(titleText.data, '');
     });
 
-    testWidgets('PDF 尚未載入目錄時，頂部列標題顯示書名而非「閱讀器」', (tester) async {
+    testWidgets('PDF：頂部列標題為空字串，不顯示書名', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
           theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
@@ -575,7 +575,7 @@ void main() {
       final titleText = tester.widget<Text>(
         find.byKey(const Key('reader_chrome_title')),
       );
-      expect(titleText.data, '另一本測試用書');
+      expect(titleText.data, '');
     });
   });
 

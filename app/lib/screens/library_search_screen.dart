@@ -225,17 +225,39 @@ class _LibrarySearchScreenState extends State<LibrarySearchScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.all(12),
-            child: TextField(
-              key: const Key('library_search_screen_field'),
-              controller: _controller,
-              autofocus: true,
-              onChanged: _handleQueryChanged,
-              decoration: const InputDecoration(
-                prefixIcon: Icon(Icons.search),
-                hintText: '搜尋書名、作者或書本內容...',
-                isDense: true,
-                border: OutlineInputBorder(),
-              ),
+            // 清除按鈕的顯示與否需要跟著每一次按鍵輸入即時反應，不能依賴
+            // _handleQueryChanged 的 300ms 防手震 setState（見該方法：非空
+            // 字串時只排程 Timer，不會立即 setState），故另外監聽
+            // _controller 本身觸發重建。
+            child: ListenableBuilder(
+              listenable: _controller,
+              builder: (context, _) {
+                final hasText = _controller.text.isNotEmpty;
+                return TextField(
+                  key: const Key('library_search_screen_field'),
+                  controller: _controller,
+                  autofocus: true,
+                  onChanged: _handleQueryChanged,
+                  decoration: InputDecoration(
+                    prefixIcon: const Icon(Icons.search),
+                    hintText: '搜尋書名、作者或書本內容...',
+                    isDense: true,
+                    border: const OutlineInputBorder(),
+                    suffixIcon: hasText
+                        ? IconButton(
+                            key: const Key(
+                                'library_search_screen_clear_button'),
+                            icon: const Icon(Icons.close),
+                            tooltip: '清除',
+                            onPressed: () {
+                              _controller.clear();
+                              _handleQueryChanged('');
+                            },
+                          )
+                        : null,
+                  ),
+                );
+              },
             ),
           ),
           Expanded(child: _buildResults(trimmedQuery)),
