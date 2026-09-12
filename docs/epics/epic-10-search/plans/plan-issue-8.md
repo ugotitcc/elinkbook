@@ -1,6 +1,6 @@
 # Issue 8：閱讀器 TopBar「搜尋內文」接線與就地跳轉 Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 > **【`reviews/review-plan-issue-8.md` 複審修訂】** 初版計畫「只修改 `reader_screen.dart` 一個檔案」的假設經審查（C-1／I-1／I-2）證實錯誤：漏接三個既有「開啟 `ReaderScreen`」呼叫端，會導致搜尋入口在真機上恆定顯示「暫時無法使用」；PDF 就地跳轉在缺 `pdfRect` 時會整段放棄跳轉，而非依既有優雅降級契約只是不畫高亮。本版已依審查意見修訂 Global Constraints 與 Task 1／Task 2 內容，並在 I-2 的具體修法上提出替代方案（見 Global Constraints 說明），其餘 5 項意見照原建議採納。
 
@@ -76,7 +76,7 @@ sequenceDiagram
 - Consumes: 既有 `BookSearchScreen`（`book`／`searchRepository`／`prefsManager`／`libraryRepository`／`readerFeatureRepositories`／`syncDependencies`／`isEinkMode`／`fromReader`，見 `app/lib/screens/book_search_screen.dart`）、`LibraryReaderFeatureRepositories`／`LibrarySyncDependencies`（`app/lib/screens/library_screen_dependencies.dart`，前者已有 `searchRepository`／`isFullTextSearchAvailable` 兩個既有欄位）、`ReaderJumpTarget`（`app/lib/reader/reader_jump_target.dart`）、`Book`／`BookSource`／`BookGroup`（`app/lib/library/models/`）、`detectBookFormat()`／`BookFormat`（`app/lib/reader/book_format.dart`）
 - Produces: `ReaderScreen.searchRepository`（新欄位，`SearchRepository?`）、`ReaderScreen.isFullTextSearchAvailable`（新欄位，`bool`，預設 `true`）、`_ReaderScreenState._toBookFileFormat(BookFormat)`（`BookFileFormat?`）、`_ReaderScreenState._buildSearchableBook()`（`Book?`）、`_ReaderScreenState._openBookSearch()`（`Future<void>`）——供 Task 2 在收到 pop 回傳值後接續處理；三個既有開書呼叫端皆補上 `searchRepository:`／`isFullTextSearchAvailable:` 兩個具名參數轉發
 
-- [ ] **Step 1: 寫「搜尋按鈕接線」的 widget test**
+- [x] **Step 1: 寫「搜尋按鈕接線」的 widget test**
 
 在 [`app/test/screens/reader_screen_test.dart`](../../../../app/test/screens/reader_screen_test.dart) 頂部新增 import（與既有 import 群組並列即可，不需要嚴格排序）：
 
@@ -218,12 +218,12 @@ sequenceDiagram
 
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `cd app && flutter test test/screens/reader_screen_test.dart -v`
 Expected: 編譯失敗——`ReaderScreen` 尚無 `searchRepository`／`isFullTextSearchAvailable` 具名參數。
 
-- [ ] **Step 3: 新增 import**
+- [x] **Step 3: 新增 import**
 
 在 [`app/lib/screens/reader_screen.dart`](../../../../app/lib/screens/reader_screen.dart) 頂部新增（放在既有 `import '../library/library_repository.dart';` 附近與既有 `screens/`-相對 import 群組附近，不需要嚴格排序）：
 
@@ -247,7 +247,7 @@ Expected: 編譯失敗——`ReaderScreen` 尚無 `searchRepository`／`isFullTe
  import 'layout_preset_book_picker_screen.dart';
 ```
 
-- [ ] **Step 4: 新增 `searchRepository`／`isFullTextSearchAvailable` 欄位與建構子參數**
+- [x] **Step 4: 新增 `searchRepository`／`isFullTextSearchAvailable` 欄位與建構子參數**
 
 在 [`app/lib/screens/reader_screen.dart`](../../../../app/lib/screens/reader_screen.dart) 修改 `ReaderScreen` 類別（緊接在既有 `initialJumpTarget` 欄位之後）：
 
@@ -300,7 +300,7 @@ Expected: 編譯失敗——`ReaderScreen` 尚無 `searchRepository`／`isFullTe
    });
 ```
 
-- [ ] **Step 5: 新增 `_toBookFileFormat()`／`_buildSearchableBook()`／`_openBookSearch()` 方法**
+- [x] **Step 5: 新增 `_toBookFileFormat()`／`_buildSearchableBook()`／`_openBookSearch()` 方法**
 
 在 [`app/lib/screens/reader_screen.dart`](../../../../app/lib/screens/reader_screen.dart) 的 `_ReaderScreenState` 類別內，緊接在 `_maybeShowSearchJumpHighlight()`／`_clearSearchJumpHighlight()` 方法之後（Issue 5 既有程式碼）新增：
 
@@ -418,7 +418,7 @@ Expected: 編譯失敗——`ReaderScreen` 尚無 `searchRepository`／`isFullTe
 > 並接上跳轉處理，這裡先確保「按鈕能正確開啟 `BookSearchScreen`」這一段
 > 獨立可測試、可提交。
 
-- [ ] **Step 6: 接上 `onSearchTap`**
+- [x] **Step 6: 接上 `onSearchTap`**
 
 在 [`app/lib/screens/reader_screen.dart`](../../../../app/lib/screens/reader_screen.dart) 的 `_buildChromeTopBar()` 方法修改：
 
@@ -430,12 +430,12 @@ Expected: 編譯失敗——`ReaderScreen` 尚無 `searchRepository`／`isFullTe
 +        onSearchTap: () => unawaited(_openBookSearch()),
 ```
 
-- [ ] **Step 7: 執行測試確認通過**
+- [x] **Step 7: 執行測試確認通過**
 
 Run: `cd app && flutter test test/screens/reader_screen_test.dart -v`
 Expected: 全數 PASS（含 4 個新增測試；本檔案測試數量龐大，執行需要一些時間，屬正常現象）。
 
-- [ ] **Step 8: 寫三個既有開書呼叫端的轉發測試**
+- [x] **Step 8: 寫三個既有開書呼叫端的轉發測試**
 
 在 [`app/test/screens/library_screen_test.dart`](../../../../app/test/screens/library_screen_test.dart)，緊接在既有測試「`LibraryScreen 點開一本書後，ReaderScreen 收到的 ttsAudioHandler／ttsAudioFocusSource 正確貫穿`」之後新增：
 
@@ -564,12 +564,12 @@ Expected: 全數 PASS（含 4 個新增測試；本檔案測試數量龐大，�
   });
 ```
 
-- [ ] **Step 9: 執行測試確認失敗**
+- [x] **Step 9: 執行測試確認失敗**
 
 Run: `cd app && flutter test test/screens/library_screen_test.dart test/screens/library_search_screen_test.dart test/screens/book_search_screen_test.dart -v`
 Expected: Step 8 新增的 3 個測試 FAIL（`ReaderScreen.searchRepository`／`isFullTextSearchAvailable` 目前恆為預設值，斷言 `same(...)`／`isFalse` 不成立）。
 
-- [ ] **Step 10: 接上三個既有開書呼叫端**
+- [x] **Step 10: 接上三個既有開書呼叫端**
 
 在 [`app/lib/screens/library_screen.dart`](../../../../app/lib/screens/library_screen.dart) 修改 `_openBook()`：
 
@@ -608,17 +608,17 @@ Expected: Step 8 新增的 3 個測試 FAIL（`ReaderScreen.searchRepository`／
            initialJumpTarget: jumpTarget,
 ```
 
-- [ ] **Step 11: 執行測試確認通過**
+- [x] **Step 11: 執行測試確認通過**
 
 Run: `cd app && flutter test test/screens/reader_screen_test.dart test/screens/library_screen_test.dart test/screens/library_search_screen_test.dart test/screens/book_search_screen_test.dart -v`
 Expected: 全數 PASS（含全部新增測試）。
 
-- [ ] **Step 12: 執行靜態分析**
+- [x] **Step 12: 執行靜態分析**
 
 Run: `cd app && flutter analyze`
 Expected: No issues found。
 
-- [ ] **Step 13: Commit**
+- [x] **Step 13: Commit**
 
 ```bash
 cd app && git add lib/screens/reader_screen.dart lib/screens/library_screen.dart lib/screens/library_search_screen.dart lib/screens/book_search_screen.dart test/screens/reader_screen_test.dart test/screens/library_screen_test.dart test/screens/library_search_screen_test.dart test/screens/book_search_screen_test.dart
@@ -637,7 +637,7 @@ git commit -m "feat(reader): ReaderScreen 新增 searchRepository/isFullTextSear
 - Consumes: Task 1 的 `_openBookSearch()`；既有 `PdfReaderView.jumpToPage()`／`PdfReaderView.showTemporaryHighlight()`／`FoliateReaderView.jumpToLocator()`／`FoliateReaderView.showSearchHighlight()`（皆為既有 `GlobalKey<State<T>>` 靜態方法）；既有 `_searchJumpHighlightTimer`／`_clearSearchJumpHighlight()`（Issue 5）
 - Produces: `_ReaderScreenState._startSearchJumpHighlightAutoClearTimer()`（從既有 `_maybeShowSearchJumpHighlight()` 抽出的共用方法）、`_ReaderScreenState._handleReaderSearchJumpTarget(ReaderJumpTarget)`
 
-- [ ] **Step 1: 寫「就地跳轉＋暫態高亮」的 widget test**
+- [x] **Step 1: 寫「就地跳轉＋暫態高亮」的 widget test**
 
 在 [`app/test/screens/reader_screen_test.dart`](../../../../app/test/screens/reader_screen_test.dart) 頂部新增一個測試用的佔位 `Book` helper 函式（放在檔案既有的 `_ThrowingLayoutPresetRepository` class 定義之後、`void main()` 之前）：
 
@@ -979,12 +979,12 @@ Book _searchResultPlaceholderBook({BookFileFormat format = BookFileFormat.pdf}) 
     });
 ```
 
-- [ ] **Step 2: 執行測試確認失敗**
+- [x] **Step 2: 執行測試確認失敗**
 
 Run: `cd app && flutter test test/screens/reader_screen_test.dart -v`
 Expected: 新增的測試中，「就地跳轉並顯示暫態高亮」「缺少 rect 仍正常跳頁」「提前點擊立即清除」3 個 FAIL（目前 `_openBookSearch()` 還沒處理 pop 回傳值）；「pop null」與 Foliate 測試因為本來就不觸發任何跳轉／例外，可能已經是 PASS（這是正常的，不是誤判——它們是回歸防護，不是本步驟要修的紅燈）。
 
-- [ ] **Step 3: 抽出共用的暫態高亮計時器啟動方法**
+- [x] **Step 3: 抽出共用的暫態高亮計時器啟動方法**
 
 在 [`app/lib/screens/reader_screen.dart`](../../../../app/lib/screens/reader_screen.dart) 修改既有 `_maybeShowSearchJumpHighlight()`（Issue 5）：
 
@@ -1023,7 +1023,7 @@ Expected: 新增的測試中，「就地跳轉並顯示暫態高亮」「缺少 
 > **內部**（`if (format == BookFormat.pdf) {...} else if (isFoliateFormat(format)) {...} else { return; }` 判斷式之後），第二段（`_startSearchJumpHighlightAutoClearTimer` 方法本體）新增在
 > 該方法收尾 `}` 之後、`_clearSearchJumpHighlight()` 方法之前。
 
-- [ ] **Step 4: 新增 `_handleReaderSearchJumpTarget()` 方法（跳頁與疊加高亮獨立判斷）**
+- [x] **Step 4: 新增 `_handleReaderSearchJumpTarget()` 方法（跳頁與疊加高亮獨立判斷）**
 
 在 [`app/lib/screens/reader_screen.dart`](../../../../app/lib/screens/reader_screen.dart) 的 `_clearSearchJumpHighlight()` 方法之後新增：
 
@@ -1067,7 +1067,7 @@ Expected: 新增的測試中，「就地跳轉並顯示暫態高亮」「缺少 
 > 才會提早 return，非 null 時一定「跳轉＋疊加高亮＋啟動計時器」一次做完，
 > 不需要像 PDF 拆成兩段 `return`。
 
-- [ ] **Step 5: `_openBookSearch()` 接上 pop 回傳值**
+- [x] **Step 5: `_openBookSearch()` 接上 pop 回傳值**
 
 在 [`app/lib/screens/reader_screen.dart`](../../../../app/lib/screens/reader_screen.dart) 修改 Task 1 新增的 `_openBookSearch()`：
 
@@ -1107,22 +1107,22 @@ Expected: 新增的測試中，「就地跳轉並顯示暫態高亮」「缺少 
    }
 ```
 
-- [ ] **Step 6: 執行測試確認通過**
+- [x] **Step 6: 執行測試確認通過**
 
 Run: `cd app && flutter test test/screens/reader_screen_test.dart -v`
 Expected: 全數 PASS（含 Task 1／Task 2 全部新增測試）。
 
-- [ ] **Step 7: 執行相關測試確認無回歸**
+- [x] **Step 7: 執行相關測試確認無回歸**
 
 Run: `cd app && flutter test test/screens/reader_screen_test.dart test/screens/book_search_screen_test.dart test/screens/reader_chrome_top_bar_test.dart test/screens/library_screen_test.dart test/screens/library_search_screen_test.dart -v`
 Expected: 全數 PASS。
 
-- [ ] **Step 8: 執行靜態分析**
+- [x] **Step 8: 執行靜態分析**
 
 Run: `cd app && flutter analyze`
 Expected: No issues found。
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 cd app && git add lib/screens/reader_screen.dart test/screens/reader_screen_test.dart
@@ -1140,17 +1140,17 @@ git commit -m "fix(reader): 搜尋跳轉就地跳頁與疊加高亮解耦，pop 
 - Consumes: Task 1–2 全部產出
 - Produces: 通過 `flutter analyze` + 全專案 `flutter test`；`issues.md` Issue 8 狀態更新為 completed
 
-- [ ] **Step 1: 執行全專案靜態分析**
+- [x] **Step 1: 執行全專案靜態分析**
 
 Run: `cd app && flutter analyze`
 Expected: No issues found。
 
-- [ ] **Step 2: 執行全專案測試**
+- [x] **Step 2: 執行全專案測試**
 
 Run: `cd app && flutter test`
 Expected: 全數 PASS，無失敗。
 
-- [ ] **Step 3: 更新 `issues.md` Issue 8 狀態**
+- [x] **Step 3: 更新 `issues.md` Issue 8 狀態**
 
 在 [`docs/epics/epic-10-search/issues.md`](../../issues.md) 將 Issue 8 的 `Status` 從 `ready-for-agent` 改為 `completed`：
 
@@ -1159,7 +1159,7 @@ Expected: 全數 PASS，無失敗。
 +**Status:** completed（`plans/plan-issue-8.md` 2 個實作 Task（＋1 個驗證收尾 Task）全數完成）
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add docs/epics/epic-10-search/issues.md

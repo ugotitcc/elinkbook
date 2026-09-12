@@ -246,7 +246,7 @@ ADR 0027「技術限制」1 已討論過相近風險（系統 SQLite 版本可�
 
 ## Issue 8：閱讀器 TopBar「搜尋內文」接線與就地跳轉
 
-**Status:** ready-for-agent
+**Status:** completed（`plans/plan-issue-8.md` 2 個實作 Task（＋1 個驗證收尾 Task）全數完成）
 
 **依賴：** Issue 7（需要 `BookSearchScreen`）
 
