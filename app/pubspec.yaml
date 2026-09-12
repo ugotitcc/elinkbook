@@ -48,6 +48,14 @@ dependencies:
   # share_plus，須同時處理這條 win32 相依鏈。
   share_plus: ^11.1.0
   sqflite: ^2.4.2+1
+  # epic-40-bundled-sqlite（ADR 0028）：從 dev_dependencies 移至此，
+  # 同時服務正式 Android 建置（透過 databaseFactoryFfi，見 main.dart）與
+  # 既有桌面測試環境。其遞移解析的 sqlite3（3.5.0）自 3.x 起改用 Dart
+  # 官方 Native Assets 建置掛鉤，建置時自動下載/編譯含 FTS5 的原生函式
+  # 庫，取代依賴 Android 系統內建 SQLite（部分裝置系統版本缺 FTS5
+  # 模組，見 epic-10-search Issue 6）。不新增 sqlite3_flutter_libs——
+  # 該套件僅適用於已淘汰的 sqlite3 2.x 世代。
+  sqflite_common_ffi: ^2.4.0+3
   path: ^1.9.1
   file_picker: ^11.0.2
   shared_preferences: ^2.5.5
@@ -125,7 +133,6 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
-  sqflite_common_ffi: ^2.4.0+3
   path_provider_platform_interface: ^2.1.0
   share_plus_platform_interface: ^6.1.0
   flutter_inappwebview_platform_interface: ^1.3.0
