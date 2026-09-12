@@ -4,7 +4,7 @@
 
 ## Issue 0：改用自帶編譯的 sqlite3（含 FTS5）取代系統內建版本
 
-**Status:** ready-for-agent（`design.md`／`spec.md`／[ADR 0028](../../adr/0028-bundled-sqlite3-for-fts5.md) 已完成，待撰寫 `plans/plan-issue-0.md`）
+**Status:** completed（`plans/plan-issue-0.md` Task 1-5 全數完成，`reviews/review-issue-0.md` 程式審查 Ready to merge: Yes，0 Critical／0 Important／1 Minor；PR #236 已合併回 `main`；真機重新驗證〔驗收標準第 3 點，`9491G`／`Hera_Vis_WIFI`〕留待人類收尾執行，不影響程式碼合併狀態）
 
 **依賴：** 無
 
