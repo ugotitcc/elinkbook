@@ -531,6 +531,31 @@ void main() {
     expect(readerScreen.initialJumpTarget, isNull);
   });
 
+  testWidgets('點擊搜尋結果開書時，收起搜尋輸入框焦點以避免 IME 與開書旋轉交互影響', (tester) async {
+    final book = _testBook(id: 'b1', title: '書名');
+    await tester.pumpWidget(
+      wrap(LibrarySearchScreen(
+        initialQuery: '書名',
+        searchRepository: FakeSearchRepository(titleAuthorResults: [book]),
+        prefsManager: FakeReaderPrefsManager(),
+        libraryRepository: FakeLibraryRepository(),
+      )),
+    );
+    await tester.pumpAndSettle();
+
+    final searchField = tester.widget<TextField>(
+      find.byKey(const Key('library_search_screen_field')),
+    );
+    expect(searchField.focusNode?.hasFocus, isTrue);
+
+    await tester.tap(
+      find.byKey(const Key('library_search_title_author_result_b1')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(searchField.focusNode?.hasFocus, isFalse);
+  });
+
   testWidgets(
       'E-Ink 模式下，結果超過每頁固定筆數時顯示離散分頁 PagingBar（審查修正 I-5）',
       (tester) async {

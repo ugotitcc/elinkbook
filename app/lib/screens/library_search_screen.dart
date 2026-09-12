@@ -51,6 +51,7 @@ class LibrarySearchScreen extends StatefulWidget {
 class _LibrarySearchScreenState extends State<LibrarySearchScreen> {
   late final TextEditingController _controller =
       TextEditingController(text: widget.initialQuery);
+  final FocusNode _searchFocusNode = FocusNode();
   Timer? _debounce;
   int _searchRequestId = 0;
 
@@ -83,6 +84,7 @@ class _LibrarySearchScreenState extends State<LibrarySearchScreen> {
   void dispose() {
     _debounce?.cancel();
     _controller.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
   }
 
@@ -141,6 +143,11 @@ class _LibrarySearchScreenState extends State<LibrarySearchScreen> {
   }
 
   void _openBook(Book book, {ReaderJumpTarget? jumpTarget}) {
+    // 進入閱讀畫面（ReaderScreen）前收起搜尋輸入框焦點與軟鍵盤（IME），
+    // 避免部分 Android E-Ink 裝置在未收起鍵盤下 push 新頁面時，因 IME 異步
+    // 退場重算 Window Insets 與 setPreferredOrientations([]) 交互誤觸發螢幕旋轉。
+    _searchFocusNode.unfocus();
+    FocusScope.of(context).unfocus();
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => ReaderScreen(
@@ -236,6 +243,7 @@ class _LibrarySearchScreenState extends State<LibrarySearchScreen> {
                 return TextField(
                   key: const Key('library_search_screen_field'),
                   controller: _controller,
+                  focusNode: _searchFocusNode,
                   autofocus: true,
                   onChanged: _handleQueryChanged,
                   decoration: InputDecoration(

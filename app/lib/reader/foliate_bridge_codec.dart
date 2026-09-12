@@ -35,12 +35,18 @@ List<TtsSegmentCfi> parseTtsSegments(String segmentsJson) {
 /// （`{"cfi":"epubcfi(...)","index":N,"fraction":F}`），取代原本
 /// `FoliateLocatorCodec.kt`（純函式，不觸碰 `InAppWebView`，見
 /// epic-18-reader-device-qa plans/plan-issue-10.md ADR 0013 後續遷移）。
-/// [locatorJson] 為 `null`、JSON 格式錯誤、或既有流式書籍留下的舊格式
+/// 同時支援直接傳入 raw CFI 字串（如 `epubcfi(...)`，epic-10-search Issue 5
+/// 搜尋跳轉傳入之格式）。
+/// [locatorJson] 為 `null`、非 CFI 之 JSON 格式錯誤、或既有流式書籍留下的舊格式
 /// Readium Locator JSON（無 `cfi` 鍵）皆回傳 `null`，供呼叫端優雅退回。
 String? extractCfi(String? locatorJson) {
   if (locatorJson == null) return null;
+  final trimmed = locatorJson.trim();
+  if (trimmed.startsWith('epubcfi(') && trimmed.endsWith(')')) {
+    return trimmed;
+  }
   try {
-    final obj = jsonDecode(locatorJson);
+    final obj = jsonDecode(trimmed);
     if (obj is Map && obj['cfi'] is String) return obj['cfi'] as String;
     return null;
   } catch (_) {

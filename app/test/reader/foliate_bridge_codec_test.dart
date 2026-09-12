@@ -34,6 +34,19 @@ void main() {
     test('cfi 欄位為非字串型別時回傳 null', () {
       expect(extractCfi('{"cfi":12345,"index":0,"fraction":0}'), isNull);
     });
+
+    test('輸入本身即為 raw CFI 字串（epubcfi(...)）時直接回傳', () {
+      const rawCfi = 'epubcfi(/6/8!/4[story-2-2],/60/3:32,/70/1:32)';
+      expect(extractCfi(rawCfi), rawCfi);
+    });
+
+    test('輸入帶前後空白的 raw CFI 字串時正確去除空白並回傳', () {
+      expect(extractCfi('  epubcfi(/6/2)  '), 'epubcfi(/6/2)');
+    });
+
+    test('未以 ) 結尾的畸形 epubcfi 字串回傳 null', () {
+      expect(extractCfi('epubcfi(/6/2'), isNull);
+    });
   });
 
   group('parseTableOfContents', () {

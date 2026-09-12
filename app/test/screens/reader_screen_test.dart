@@ -31,6 +31,7 @@ import 'package:elinkbook/screens/reader_chrome_bottom_bar.dart';
 import 'package:elinkbook/screens/tts_panel.dart';
 import 'package:elinkbook/reader/foliate_reader_view.dart';
 import 'package:elinkbook/reader/foliate_native_bridge.dart';
+import 'package:elinkbook/reader/foliate_bridge_codec.dart';
 import 'package:elinkbook/theme/app_theme.dart';
 import 'package:elinkbook/theme/app_theme_data.dart';
 import '../support/fake_inappwebview_platform.dart';
@@ -181,6 +182,8 @@ void main() {
         find.byType(FoliateReaderView),
       );
       expect(foliateView.initialLocatorJson, 'epubcfi(/jump)');
+      // 驗證 FoliateReaderView._buildInitialUri 依賴的 extractCfi 能成功解析純 CFI 字串
+      expect(extractCfi(foliateView.initialLocatorJson), 'epubcfi(/jump)');
     });
 
     testWidgets(
@@ -530,10 +533,7 @@ void main() {
       ),
     );
 
-    // 頂部列標題找不到章節時的回退值改用書名（2026-09-08 /grill-with-docs
-    // 使用者需求），未提供 bookTitle 時退回其預設值「未知書籍」，不再是
-    // 字面「閱讀器」——見下方「頂部列標題找不到章節時回退為書名」測試群組。
-    expect(find.text('未知書籍'), findsOneWidget);
+    // 2026-09-12 使用者需求：頂部列標題暫時一律為空字串，TopBar 不再顯示書名。
     expect(find.text('不支援的檔案格式'), findsOneWidget);
   });
 
