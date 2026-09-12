@@ -97,6 +97,22 @@ class _ThrowingLayoutPresetRepository extends LayoutPresetRepository {
   }
 }
 
+/// `BookSearchDetailResult.book` 只是型別要求的欄位，`BookSearchScreen`
+/// 實際渲染／跳轉行為只讀取 `widget.book`（也就是 `ReaderScreen` 合成的
+/// 那一個），不讀取 `result.book`，故這裡用什麼內容皆不影響測試行為，純粹
+/// 滿足建構子（epic-10-search Issue 8 規劃階段查證）。
+Book _searchResultPlaceholderBook({BookFileFormat format = BookFileFormat.pdf}) {
+  return Book(
+    id: 'placeholder',
+    title: 'placeholder',
+    format: format,
+    filePath: 'content://placeholder',
+    source: BookSource.local,
+    createTime: DateTime.fromMillisecondsSinceEpoch(0),
+    lastReadTime: DateTime.fromMillisecondsSinceEpoch(0),
+  );
+}
+
 void main() {
   late FakeReaderPrefsManager prefsManager;
   // 保存原始實作， tearDownAll 時還原
@@ -9610,6 +9626,324 @@ void main() {
         findsOneWidget,
       );
       expect(find.byType(BookSearchScreen), findsNothing);
+    });
+
+    testWidgets(
+        'PDF：從搜尋按鈕開啟 BookSearchScreen，選取片段後就地跳轉並顯示暫態高亮，3 秒後自動清除',
+        (tester) async {
+      final searchRepository = FakeSearchRepository(
+        bookSearchDetailResult: BookSearchDetailResult(
+          book: _searchResultPlaceholderBook(format: BookFileFormat.pdf),
+          matches: const [
+            ContentMatchSnippet(
+              snippet: '第 3 頁含有搜尋目標文字',
+              locator:
+                  '{"page":2,"rect":{"left":0.1,"top":0.1,"right":0.5,"bottom":0.2}}',
+              chapterIndex: 2,
+            ),
+          ],
+          totalMatches: 1,
+          isTruncated: false,
+        ),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample_multi_page.pdf',
+            bookId: 'b_search_midsession_pdf',
+            prefsManager: FakeReaderPrefsManager(),
+            searchRepository: searchRepository,
+            libraryRepository: FakeLibraryRepository(),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+      await pumpUntilPdfReady(tester);
+
+      await tester.tap(find.byKey(const Key('reader_chrome_search_button')));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('book_search_screen_field')),
+        '搜尋目標',
+      );
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pump();
+
+      await tester.tap(find.byKey(const Key('book_search_snippet_0')));
+      await tester.pumpAndSettle();
+
+      // BookSearchScreen 已 pop，閱讀器 session 沒有被銷毀重建（同一個
+      // ReaderScreen widget tree，只是疊了一層新的暫態高亮）。
+      expect(find.byType(BookSearchScreen), findsNothing);
+      await pumpUntilPdfReady(
+        tester,
+        condition: () => find
+            .byKey(const Key('pdf_reader_jump_highlight_2'))
+            .evaluate()
+            .isNotEmpty,
+      );
+      expect(
+        find.byKey(const Key('pdf_reader_jump_highlight_2')),
+        findsOneWidget,
+      );
+
+      await tester.pump(const Duration(seconds: 3));
+      expect(
+        find.byKey(const Key('pdf_reader_jump_highlight_2')),
+        findsNothing,
+      );
+    });
+
+    testWidgets(
+        'PDF：命中片段缺少 rect（優雅降級情境）時仍正常跳頁，只是不顯示暫態高亮'
+        '（review-plan-issue-8.md C-1 回歸測試）', (tester) async {
+      final searchRepository = FakeSearchRepository(
+        bookSearchDetailResult: BookSearchDetailResult(
+          book: _searchResultPlaceholderBook(format: BookFileFormat.pdf),
+          matches: const [
+            ContentMatchSnippet(
+              // 沒有 "rect" 鍵：ReaderJumpTarget.fromContentLocator() 依既有
+              // 優雅降級設計，會回傳 pdfPageIndex 非 null、pdfRect 為 null。
+              snippet: '第 3 頁含有搜尋目標文字（無精確座標）',
+              locator: '{"page":2}',
+              chapterIndex: 2,
+            ),
+          ],
+          totalMatches: 1,
+          isTruncated: false,
+        ),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample_multi_page.pdf',
+            bookId: 'b_search_midsession_pdf_no_rect',
+            prefsManager: FakeReaderPrefsManager(),
+            searchRepository: searchRepository,
+            libraryRepository: FakeLibraryRepository(),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+      await pumpUntilPdfReady(tester);
+
+      await tester.tap(find.byKey(const Key('reader_chrome_search_button')));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('book_search_screen_field')),
+        '搜尋目標',
+      );
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('book_search_snippet_0')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(BookSearchScreen), findsNothing);
+      expect(tester.takeException(), isNull);
+
+      final pdfView = tester.widget<PdfReaderView>(find.byType(PdfReaderView));
+      expect(pdfView.initialPageIndex, isNot(2),
+          reason: '本測試斷言的是「跳轉方法確實被呼叫」而非重新斷言 initialPageIndex'
+              '（那是開書當下的建構參數，跟就地跳轉無關，此行只是排除誤用）');
+      // 沒有 rect，就不應該有任何高亮疊加層——但仍應正常跳到第 3 頁（不斷言
+      // 底層 pdfrx 是否真的翻頁，那需要 integration_test；此處鎖住的是
+      // 「不會因為 rect 缺席就整段提早 return、完全不呼叫 jumpToPage」。
+      expect(find.textContaining('pdf_reader_jump_highlight_'), findsNothing);
+      await tester.pump(const Duration(seconds: 3));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets(
+        'PDF：就地跳轉後使用者提前點擊畫面（_handleZoneAction）立即清除暫態高亮，不等待 3 秒',
+        (tester) async {
+      final searchRepository = FakeSearchRepository(
+        bookSearchDetailResult: BookSearchDetailResult(
+          book: _searchResultPlaceholderBook(format: BookFileFormat.pdf),
+          matches: const [
+            ContentMatchSnippet(
+              snippet: '第 3 頁含有搜尋目標文字',
+              locator:
+                  '{"page":2,"rect":{"left":0.1,"top":0.1,"right":0.5,"bottom":0.2}}',
+              chapterIndex: 2,
+            ),
+          ],
+          totalMatches: 1,
+          isTruncated: false,
+        ),
+      );
+      final key = GlobalKey<State<ReaderScreen>>();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            key: key,
+            filePath: 'test/fixtures/sample_multi_page.pdf',
+            bookId: 'b_search_midsession_pdf_early_clear',
+            prefsManager: FakeReaderPrefsManager(),
+            searchRepository: searchRepository,
+            libraryRepository: FakeLibraryRepository(),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+      await pumpUntilPdfReady(tester);
+
+      await tester.tap(find.byKey(const Key('reader_chrome_search_button')));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('book_search_screen_field')),
+        '搜尋目標',
+      );
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('book_search_snippet_0')));
+      await tester.pumpAndSettle();
+
+      await pumpUntilPdfReady(
+        tester,
+        condition: () => find
+            .byKey(const Key('pdf_reader_jump_highlight_2'))
+            .evaluate()
+            .isNotEmpty,
+      );
+      expect(
+        find.byKey(const Key('pdf_reader_jump_highlight_2')),
+        findsOneWidget,
+      );
+
+      ReaderScreen.triggerZoneAction(key, ZoneAction.menu);
+      await tester.pump();
+
+      expect(
+        find.byKey(const Key('pdf_reader_jump_highlight_2')),
+        findsNothing,
+        reason: '重用 Issue 5 既有的 _handleZoneAction 早清除邏輯，不需要另外接線',
+      );
+    });
+
+    testWidgets(
+        'Foliate：從搜尋按鈕開啟 BookSearchScreen，選取片段後就地跳轉不拋出例外'
+        '（WebView 真實渲染效果留給 integration_test 驗證）', (tester) async {
+      final searchRepository = FakeSearchRepository(
+        bookSearchDetailResult: BookSearchDetailResult(
+          book: _searchResultPlaceholderBook(format: BookFileFormat.epub),
+          matches: const [
+            ContentMatchSnippet(
+              snippet: '第一章含有搜尋目標文字',
+              locator: 'epubcfi(/6/4)',
+              chapterIndex: 1,
+            ),
+          ],
+          totalMatches: 1,
+          isTruncated: false,
+        ),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_search_midsession_epub',
+            prefsManager: FakeReaderPrefsManager(),
+            searchRepository: searchRepository,
+            libraryRepository: FakeLibraryRepository(),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      await tester.tap(find.byKey(const Key('reader_chrome_search_button')));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('book_search_screen_field')),
+        '搜尋目標',
+      );
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pump();
+
+      await tester.tap(find.byKey(const Key('book_search_snippet_0')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(BookSearchScreen), findsNothing);
+      expect(tester.takeException(), isNull);
+
+      await tester.pump(const Duration(seconds: 3));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets(
+        '使用者未選取任何片段、直接從 BookSearchScreen 返回（pop null）時，'
+        '閱讀器不受影響、不拋出例外（review-plan-issue-8.md M-1）', (tester) async {
+      final searchRepository = FakeSearchRepository(
+        bookSearchDetailResult: BookSearchDetailResult(
+          book: _searchResultPlaceholderBook(format: BookFileFormat.pdf),
+          matches: const [
+            ContentMatchSnippet(
+              snippet: '第 3 頁含有搜尋目標文字',
+              locator:
+                  '{"page":2,"rect":{"left":0.1,"top":0.1,"right":0.5,"bottom":0.2}}',
+              chapterIndex: 2,
+            ),
+          ],
+          totalMatches: 1,
+          isTruncated: false,
+        ),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample_multi_page.pdf',
+            bookId: 'b_search_midsession_pop_null',
+            prefsManager: FakeReaderPrefsManager(),
+            searchRepository: searchRepository,
+            libraryRepository: FakeLibraryRepository(),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+      await pumpUntilPdfReady(tester);
+
+      await tester.tap(find.byKey(const Key('reader_chrome_search_button')));
+      await tester.pumpAndSettle();
+      expect(find.byType(BookSearchScreen), findsOneWidget);
+
+      // 直接按系統返回鍵離開 BookSearchScreen，不點選任何片段
+      // （Navigator.pop() 不帶值，等同 pop(null)）。
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+
+      expect(find.byType(BookSearchScreen), findsNothing);
+      expect(find.byType(ReaderScreen), findsOneWidget);
+      expect(
+        find.byWidgetPredicate((widget) =>
+            widget.key is ValueKey<String> &&
+            (widget.key as ValueKey<String>)
+                .value
+                .startsWith('pdf_reader_jump_highlight_')),
+        findsNothing,
+        reason: 'pop(null) 不應觸發任何跳轉／高亮',
+      );
+      expect(tester.takeException(), isNull);
     });
   });
 

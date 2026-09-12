@@ -1592,6 +1592,13 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     } else {
       return;
     }
+    _startSearchJumpHighlightAutoClearTimer();
+  }
+
+  /// 啟動（或重新啟動）搜尋跳轉暫態高亮的 3 秒自動清除計時器（epic-10-search
+  /// Issue 5 開書當下高亮／Issue 8 就地跳轉高亮共用同一段邏輯，見
+  /// [_maybeShowSearchJumpHighlight]／[_handleReaderSearchJumpTarget]）。
+  void _startSearchJumpHighlightAutoClearTimer() {
     _searchJumpHighlightTimer?.cancel();
     // 使用捕捉到的 fake Zone 建立 Timer，避免在 runAsync 真實 Zone 內
     // 建立導致 tester.pump 無法推進。
@@ -1617,6 +1624,39 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     } else if (isFoliateFormat(format)) {
       FoliateReaderView.clearSearchHighlight(_foliateEpubReaderViewKey);
     }
+  }
+
+  /// 閱讀器搜尋就地跳轉（epic-10-search Issue 8，spec.md §9.4）：使用者在
+  /// [BookSearchScreen]（`fromReader: true`）選取片段、pop 回傳
+  /// [jumpTarget] 後，於目前已開啟的閱讀器 session 就地跳轉並疊加暫態
+  /// 高亮，不銷毀重建閱讀器。與 Issue 5 的 [_maybeShowSearchJumpHighlight]
+  /// 差異有二：(1) Issue 5 開書當下已經是目標位置，只需要疊加高亮；本
+  /// 方法使用者當下正讀在別處，需要先真的導覽過去（`jumpToPage`／
+  /// `jumpToLocator`）。(2) **跳頁與疊加高亮是兩個獨立判斷**
+  /// （`review-plan-issue-8.md` C-1）：`ReaderJumpTarget.fromContentLocator()`
+  /// 對 PDF 命中片段的 `rect` 解析失敗時會優雅降級成「只有 `pdfPageIndex`、
+  /// `pdfRect` 為 `null`」，這是刻意設計的正常狀態；若跳頁與高亮共用同一個
+  /// `pageIndex == null || rect == null` 判斷提早 return，會導致使用者點了
+  /// 搜尋結果卻完全沒有任何跳轉反應——只要有 `pageIndex` 就必須跳頁，`rect`
+  /// 只決定要不要額外疊加高亮／啟動自動清除計時器。
+  void _handleReaderSearchJumpTarget(ReaderJumpTarget jumpTarget) {
+    final format = detectBookFormat(widget.filePath);
+    if (format == BookFormat.pdf) {
+      final pageIndex = jumpTarget.pdfPageIndex;
+      if (pageIndex == null) return;
+      PdfReaderView.jumpToPage(_pdfReaderViewKey, pageIndex);
+      final rect = jumpTarget.pdfRect;
+      if (rect == null) return;
+      PdfReaderView.showTemporaryHighlight(_pdfReaderViewKey, pageIndex, rect);
+    } else if (isFoliateFormat(format)) {
+      final cfi = jumpTarget.cfi;
+      if (cfi == null) return;
+      FoliateReaderView.jumpToLocator(_foliateEpubReaderViewKey, cfi);
+      FoliateReaderView.showSearchHighlight(_foliateEpubReaderViewKey, cfi);
+    } else {
+      return;
+    }
+    _startSearchJumpHighlightAutoClearTimer();
   }
 
   /// [BookFormat]（`reader/book_format.dart`，依副檔名判斷）→
@@ -1693,7 +1733,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
       );
       return;
     }
-    await Navigator.of(context).push<ReaderJumpTarget>(
+    final jumpTarget = await Navigator.of(context).push<ReaderJumpTarget>(
       MaterialPageRoute(
         builder: (_) => BookSearchScreen(
           book: book,
@@ -1722,6 +1762,8 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         ),
       ),
     );
+    if (!mounted || jumpTarget == null) return;
+    _handleReaderSearchJumpTarget(jumpTarget);
   }
 
   /// 【/diagnose：真機回報旋轉螢幕後畫面被錯誤文字取代，無法繼續閱讀】
