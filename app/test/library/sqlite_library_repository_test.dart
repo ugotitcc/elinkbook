@@ -4093,4 +4093,254 @@ void main() {
       );
     });
   });
+
+  group('epic-40-bundled-sqlite Issue 0：DB version 24→25 遷移（改用自帶 SQLite）', () {
+    test(
+        '既有 version 24 裝置，book_content_fts 不存在（Issue 6 場景，系統版本當初缺 FTS5）'
+        '升級到 version 25：不拋例外，isFullTextSearchAvailable 變為 true，'
+        'book_content_fts 表與三個同步 trigger（AI/AD/AU）皆已建立，'
+        '對 book_content_index 執行 INSERT/UPDATE/DELETE 皆正確同步', () async {
+      final tempDir = await Directory.systemTemp
+          .createTemp('elinkbook_migration_v24_to_v25_fts_missing_test');
+      addTearDown(() => tempDir.delete(recursive: true));
+      final dbPath = p.join(tempDir.path, 'test.db');
+
+      final oldDb = await databaseFactory.openDatabase(
+        dbPath,
+        options: OpenDatabaseOptions(
+          version: 24,
+          onConfigure: (db) async {
+            await db.execute('PRAGMA foreign_keys = ON');
+            await db.execute('PRAGMA recursive_triggers = ON');
+          },
+          onCreate: (db, version) async {
+            await db.execute('CREATE TABLE groups (name TEXT PRIMARY KEY)');
+            await db.insert('groups', {'name': '未分類'});
+            await db.execute('CREATE TABLE books (id TEXT PRIMARY KEY)');
+            await db.insert('books', {'id': 'book1'});
+            await db.execute('''
+              CREATE TABLE content_index_status (
+                book_id TEXT PRIMARY KEY REFERENCES books(id) ON DELETE CASCADE,
+                status TEXT NOT NULL DEFAULT 'pending',
+                last_chapter_index INTEGER,
+                updated_at INTEGER NOT NULL,
+                error_message TEXT
+              )
+            ''');
+            await db.execute('''
+              CREATE TABLE book_content_index (
+                id TEXT PRIMARY KEY,
+                book_id TEXT NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+                chapter_index INTEGER NOT NULL,
+                locator TEXT NOT NULL,
+                raw_text TEXT NOT NULL,
+                token_text TEXT NOT NULL,
+                created_at INTEGER NOT NULL
+              )
+            ''');
+            // 刻意不建立 book_content_fts 與其三個同步 trigger——模擬
+            // Issue 6 場景：系統版本當初缺 FTS5，
+            // _createBookContentFtsTableIfSupported() 靜默跳過建表。
+          },
+        ),
+      );
+      await oldDb.close();
+
+      final upgraded = await SqliteLibraryRepository.open(dbPath);
+      addTearDown(() => upgraded.close());
+
+      expect(upgraded.isFullTextSearchAvailable, isTrue);
+
+      final ftsTable = await upgraded.database.query(
+        'sqlite_master',
+        columns: ['name'],
+        where: "type = 'table' AND name = 'book_content_fts'",
+      );
+      expect(ftsTable, hasLength(1));
+
+      final triggerNames = await upgraded.database.query(
+        'sqlite_master',
+        columns: ['name'],
+        where: "type = 'trigger' AND name IN (?, ?, ?)",
+        whereArgs: [
+          'book_content_index_ai',
+          'book_content_index_ad',
+          'book_content_index_au',
+        ],
+      );
+      expect(
+        triggerNames.map((row) => row['name']).toSet(),
+        {
+          'book_content_index_ai',
+          'book_content_index_ad',
+          'book_content_index_au',
+        },
+      );
+
+      // AFTER INSERT
+      await upgraded.database.insert('book_content_index', {
+        'id': 'seg-1',
+        'book_id': 'book1',
+        'chapter_index': 0,
+        'locator': 'epubcfi(/6/2!/4/2/1:0)',
+        'raw_text': '這是一句測試內容',
+        'token_text': '這 是 一 句 測 試 內 容',
+        'created_at': 1000,
+      });
+      final afterInsert = await upgraded.database.rawQuery(
+          "SELECT rowid FROM book_content_fts WHERE book_content_fts MATCH '測 試'");
+      expect(afterInsert, hasLength(1),
+          reason: 'AFTER INSERT trigger 應同步寫入 book_content_fts');
+
+      // AFTER UPDATE：舊 token 應被移除，新 token 應可查到
+      await upgraded.database.update(
+        'book_content_index',
+        {'token_text': '改 過 的 內 容'},
+        where: 'id = ?',
+        whereArgs: ['seg-1'],
+      );
+      final afterUpdateOldToken = await upgraded.database.rawQuery(
+          "SELECT rowid FROM book_content_fts WHERE book_content_fts MATCH '測 試'");
+      expect(afterUpdateOldToken, isEmpty,
+          reason: 'AFTER UPDATE trigger 應先移除舊 token_text 的索引');
+      final afterUpdateNewToken = await upgraded.database.rawQuery(
+          "SELECT rowid FROM book_content_fts WHERE book_content_fts MATCH '改 過'");
+      expect(afterUpdateNewToken, hasLength(1),
+          reason: 'AFTER UPDATE trigger 應寫入新 token_text 的索引');
+
+      // AFTER DELETE
+      await upgraded.database.delete(
+        'book_content_index',
+        where: 'id = ?',
+        whereArgs: ['seg-1'],
+      );
+      final afterDelete = await upgraded.database.rawQuery(
+          "SELECT rowid FROM book_content_fts WHERE book_content_fts MATCH '改 過'");
+      expect(afterDelete, isEmpty,
+          reason: 'AFTER DELETE trigger 應同步清空 book_content_fts');
+
+      // 【審查採納 M-1】isFullTextSearchAvailable 是每次 open() 當下查詢
+      // sqlite_master 得出的結果，不是遷移過程暫存的旗標；關閉並重新開啟
+      // （version 已經是 25，不會再觸發 onUpgrade）驗證這個判斷邏輯本身
+      // 對「已遷移完成」的資料庫依然正確。
+      await upgraded.close();
+      final reopened = await SqliteLibraryRepository.open(dbPath);
+      addTearDown(() => reopened.close());
+      expect(reopened.isFullTextSearchAvailable, isTrue,
+          reason: '遷移至 v25 後常規重開（不觸發 onUpgrade），'
+              'isFullTextSearchAvailable 仍須為 true');
+    });
+
+    test(
+        '既有 version 24 裝置，book_content_fts 已存在（系統版本本來就有 FTS5，'
+        '已成功建表，且已有歷史索引資料）升級到 version 25：不拋例外，'
+        'isFullTextSearchAvailable 仍為 true，且既有索引資料未被清空',
+        () async {
+      final tempDir = await Directory.systemTemp
+          .createTemp('elinkbook_migration_v24_to_v25_fts_exists_test');
+      addTearDown(() => tempDir.delete(recursive: true));
+      final dbPath = p.join(tempDir.path, 'test.db');
+
+      final oldDb = await databaseFactory.openDatabase(
+        dbPath,
+        options: OpenDatabaseOptions(
+          version: 24,
+          onConfigure: (db) async {
+            await db.execute('PRAGMA foreign_keys = ON');
+            await db.execute('PRAGMA recursive_triggers = ON');
+          },
+          onCreate: (db, version) async {
+            await db.execute('CREATE TABLE groups (name TEXT PRIMARY KEY)');
+            await db.insert('groups', {'name': '未分類'});
+            await db.execute('CREATE TABLE books (id TEXT PRIMARY KEY)');
+            await db.execute('''
+              CREATE TABLE content_index_status (
+                book_id TEXT PRIMARY KEY REFERENCES books(id) ON DELETE CASCADE,
+                status TEXT NOT NULL DEFAULT 'pending',
+                last_chapter_index INTEGER,
+                updated_at INTEGER NOT NULL,
+                error_message TEXT
+              )
+            ''');
+            await db.execute('''
+              CREATE TABLE book_content_index (
+                id TEXT PRIMARY KEY,
+                book_id TEXT NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+                chapter_index INTEGER NOT NULL,
+                locator TEXT NOT NULL,
+                raw_text TEXT NOT NULL,
+                token_text TEXT NOT NULL,
+                created_at INTEGER NOT NULL
+              )
+            ''');
+            await db.execute('''
+              CREATE VIRTUAL TABLE book_content_fts USING fts5(
+                token_text,
+                content='book_content_index',
+                content_rowid='rowid'
+              )
+            ''');
+            await db.execute('''
+              CREATE TRIGGER book_content_index_ai AFTER INSERT ON book_content_index BEGIN
+                INSERT INTO book_content_fts(rowid, token_text) VALUES (new.rowid, new.token_text);
+              END
+            ''');
+            await db.execute('''
+              CREATE TRIGGER book_content_index_ad AFTER DELETE ON book_content_index BEGIN
+                INSERT INTO book_content_fts(book_content_fts, rowid, token_text) VALUES('delete', old.rowid, old.token_text);
+              END
+            ''');
+            await db.execute('''
+              CREATE TRIGGER book_content_index_au AFTER UPDATE ON book_content_index BEGIN
+                INSERT INTO book_content_fts(book_content_fts, rowid, token_text) VALUES('delete', old.rowid, old.token_text);
+                INSERT INTO book_content_fts(rowid, token_text) VALUES (new.rowid, new.token_text);
+              END
+            ''');
+            // 【審查採納 M-2】升級前先植入一筆歷史索引資料，確保之後的
+            // 存在性檢查邏輯只是「跳過重複建表」，不會意外連帶清空既有
+            // 索引（例如未來有人誤寫成 DROP TABLE IF EXISTS 重建）。
+            await db.insert('books', {'id': 'book1'});
+            await db.insert('book_content_index', {
+              'id': 'legacy-seg-1',
+              'book_id': 'book1',
+              'chapter_index': 0,
+              'locator': 'epubcfi(/6/2!/4/2/1:0)',
+              'raw_text': '既有裝置升級前就存在的歷史內容',
+              'token_text': '既 有 裝 置 升 級 前 就 存 在 的 歷 史 內 容',
+              'created_at': 1000,
+            });
+          },
+        ),
+      );
+      await oldDb.close();
+
+      final upgraded = await SqliteLibraryRepository.open(dbPath);
+      addTearDown(() => upgraded.close());
+
+      expect(upgraded.isFullTextSearchAvailable, isTrue);
+
+      // 【審查採納 M-2】升級後歷史索引資料應完整保留、可被 MATCH 查到。
+      final legacyMatch = await upgraded.database.rawQuery(
+          "SELECT rowid FROM book_content_fts WHERE book_content_fts MATCH '歷 史'");
+      expect(legacyMatch, hasLength(1),
+          reason: '升級前既有的歷史全文檢索索引資料，升級後必須完整保留，'
+              '不可被存在性檢查邏輯意外清空');
+
+      // 【審查採納 M-1】關閉並重新開啟（不觸發 onUpgrade），驗證
+      // isFullTextSearchAvailable 的判斷邏輯對「本來就有表」的裝置同樣
+      // 正確。
+      await upgraded.close();
+      final reopened = await SqliteLibraryRepository.open(dbPath);
+      addTearDown(() => reopened.close());
+      expect(reopened.isFullTextSearchAvailable, isTrue,
+          reason: '遷移至 v25 後常規重開（不觸發 onUpgrade），'
+              'isFullTextSearchAvailable 仍須為 true');
+    });
+
+    test('全新安裝（onCreate 直接建到 version 25）：isFullTextSearchAvailable 為 true，'
+        '行為與現行版本一致（零回歸）', () async {
+      expect(repository.isFullTextSearchAvailable, isTrue);
+      expect(await repository.database.getVersion(), 25);
+    });
+  });
 }

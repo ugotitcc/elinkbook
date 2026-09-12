@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
@@ -71,6 +72,13 @@ Future<bool> _isMobileDataConnection() async {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // epic-40-bundled-sqlite（ADR 0028）：改用 sqlite3 Native Assets 建置
+  // 掛鉤自帶編譯、保證含 FTS5 的 sqlite3，取代依賴 Android 系統內建
+  // SQLite（部分裝置系統版本缺 FTS5 模組，見 epic-10-search Issue 6）。
+  // 必須在任何 openDatabase() 呼叫（下方 SqliteLibraryRepository.open()）
+  // 之前完成。
+  sqfliteFfiInit();
+  databaseFactory = databaseFactoryFfi;
   // pdfrx（PDFium FFI）初始化，epic-24-pdf-engine-rebuild：Flutter App
   // 執行期一律呼叫 pdfrxFlutterInitialize()（而非 pdfrxInitialize()，後者
   // 用於純 Dart、無 Flutter 環境），須在任何 PDF 開書呼叫之前完成。
