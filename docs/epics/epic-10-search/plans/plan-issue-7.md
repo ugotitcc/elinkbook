@@ -2,6 +2,16 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **【文件同步修訂】** 本檔案原始版本（初審時期）在 `reviews/review-plan-issue-7.md`
+> 複審核准 8 項修正（C-1／I-1／I-2／I-3／M-1～M-4）後，未實際回寫這些修訂內容
+> 就直接進入實作——實作程式碼本身已正確落地全部 8 項核准修正（複審報告的敘述
+> 屬實），只是計畫檔案文字本身沒同步更新，導致複審報告與計畫原文一度互相矛盾。
+> `reviews/review-issue-7.md`（工單完成後的程式碼審查）Important 項目指出此落差，
+> 本次依該審查意見全面回寫：Task 1／Task 3 下方程式碼與測試片段已更新為複審
+> 核准後的最終版本，並額外納入 `review-issue-7.md` Minor 1（`searchContentInBook`
+> 查詢合併，推翻 M-4 原始決定）與 Minor 2（BM25 排序方向測試強化）兩項事後修訂，
+> 每處異動皆以區塊引言標註來源。
+
 **Goal:** 讓使用者從全庫搜尋畫面下鑽至單書全文檢索畫面，檢視一本書的完整命中結果、切換排序、跳轉閱讀。
 
 **Architecture:** 本工單分三層交付：(1) 資料存取層擴充——`ContentMatchSnippet` 新增 `chapterIndex`、`BookContentMatches` 新增 `totalMatches`、`searchContent()` 的 SQL 以視窗函數一併取得總命中筆數；新增 `BookSearchDetailResult` 模型與 `searchContentInBook()` 方法。(2) 全庫搜尋畫面（`LibrarySearchScreen`）修改——書籍卡片底部在命中超過 3 筆時顯示「查看全部」按鈕，導航至新畫面。(3) 新畫面 `BookSearchScreen`——頂部搜尋框 + 排序切換 + 命中片段清單（含位置標籤與關鍵字高亮）+ E-Ink 離散分頁 + 點擊跳轉。
@@ -26,13 +36,13 @@ graph TD
 
 **Tech Stack:** Flutter、sqflite（FTS5 `bm25()` + `ROW_NUMBER() OVER`）、`package:clock`（測試）
 
-**Spec:** [`docs/epics/epic-10-search/spec.md`](file:///U:/MyDeveloper/AI/elinkBook/docs/epics/epic-10-search/spec.md) §9.1–§9.3
+**Spec:** [`docs/epics/epic-10-search/spec.md`](../spec.md) §9.1–§9.3
 
 ## Global Constraints
 
 - `flutter analyze` 必須乾淨才能提交。
 - Android minSdk 24。
-- 不引入新的外部 `pubspec.yaml` 依賴；關鍵字高亮使用 `RichText`/`TextSpan` 原生實作。
+- 不引入新的外部 `pubspec.yaml` 依賴；關鍵字高亮使用 `Text.rich`/`TextSpan` 原生實作（複審修訂 M-2：改用 `Text.rich` 而非底層 `RichText`，以支援 `MediaQuery.textScalerOf` 系統文字縮放，見 `reviews/review-plan-issue-7.md`）。
 - SQL 不使用 `COUNT(*) FILTER (WHERE ...)` 語法（Android 11 系統 SQLite 3.28 不支援），一律用 `COUNT(CASE WHEN ... THEN 1 END)`。
 - `BookSearchScreen` 的 `fromReader` 參數預設 `false`——本工單只實作 `fromReader = false` 路徑（從全庫搜尋進入，點擊推入 `ReaderScreen`）；`fromReader = true`（從閱讀器進入，pop 回傳 `ReaderJumpTarget`）的完整接線屬 Issue 8 範圍，但本工單已預埋分支，Issue 8 只需接線不需改 `BookSearchScreen` 本身。
 - 繁體中文用於程式碼註解與使用者可見文字。
@@ -46,9 +56,9 @@ graph TD
 ### Task 1: 資料存取層擴充——模型與 `searchContent()` 改進
 
 **Files:**
-- Modify: [`app/lib/search/search_repository.dart`](file:///U:/MyDeveloper/AI/elinkBook/app/lib/search/search_repository.dart)
-- Modify: [`app/test/search/search_repository_test.dart`](file:///U:/MyDeveloper/AI/elinkBook/app/test/search/search_repository_test.dart)
-- Modify: [`app/test/support/fake_search_repository.dart`](file:///U:/MyDeveloper/AI/elinkBook/app/test/support/fake_search_repository.dart)
+- Modify: [`app/lib/search/search_repository.dart`](../../../../app/lib/search/search_repository.dart)
+- Modify: [`app/test/search/search_repository_test.dart`](../../../../app/test/search/search_repository_test.dart)
+- Modify: [`app/test/support/fake_search_repository.dart`](../../../../app/test/support/fake_search_repository.dart)
 
 **Interfaces:**
 - Consumes: 既有 `ContentMatchSnippet`、`BookContentMatches`、`SearchRepository`、`SqliteSearchRepository`
@@ -59,7 +69,7 @@ graph TD
 
 - [ ] **Step 1: 寫 `ContentMatchSnippet.chapterIndex` 與 `BookContentMatches.totalMatches` 的測試**
 
-在 [`app/test/search/search_repository_test.dart`](file:///U:/MyDeveloper/AI/elinkBook/app/test/search/search_repository_test.dart) 的 `group('searchContent', ...)` 底下新增測試：
+在 [`app/test/search/search_repository_test.dart`](../../../../app/test/search/search_repository_test.dart) 的 `group('searchContent', ...)` 底下新增測試：
 
 ```dart
     test('searchContent 回傳的 totalMatches 正確反映每本書在資料庫的總命中數'
@@ -99,7 +109,7 @@ Expected: 編譯失敗——`ContentMatchSnippet` 尚無 `chapterIndex`、`BookC
 
 - [ ] **Step 3: 擴充 `ContentMatchSnippet` 與 `BookContentMatches` 模型**
 
-在 [`app/lib/search/search_repository.dart`](file:///U:/MyDeveloper/AI/elinkBook/app/lib/search/search_repository.dart) 修改：
+在 [`app/lib/search/search_repository.dart`](../../../../app/lib/search/search_repository.dart) 修改：
 
 ```diff
  class ContentMatchSnippet {
@@ -131,7 +141,7 @@ Expected: 編譯失敗——`ContentMatchSnippet` 尚無 `chapterIndex`、`BookC
 
 - [ ] **Step 4: 修改 `SqliteSearchRepository.searchContent()` SQL 加入 `total_count` 與 `chapter_index`**
 
-在 [`app/lib/search/search_repository.dart`](file:///U:/MyDeveloper/AI/elinkBook/app/lib/search/search_repository.dart) 的 `searchContent()` 方法修改 SQL 與結果解析：
+在 [`app/lib/search/search_repository.dart`](../../../../app/lib/search/search_repository.dart) 的 `searchContent()` 方法修改 SQL 與結果解析：
 
 ```diff
        rows = await _database.rawQuery('''
@@ -203,7 +213,7 @@ Expected: 全數 PASS（含兩個新增的測試）。
 
 - [ ] **Step 6: 寫 `searchContentInBook()` 的測試**
 
-在 [`app/test/search/search_repository_test.dart`](file:///U:/MyDeveloper/AI/elinkBook/app/test/search/search_repository_test.dart) 新增：
+在 [`app/test/search/search_repository_test.dart`](../../../../app/test/search/search_repository_test.dart) 新增：
 
 ```dart
   group('searchContentInBook', () {
@@ -239,10 +249,20 @@ Expected: 全數 PASS（含兩個新增的測試）。
       expect(result!.matches.map((m) => m.chapterIndex).toList(), [1, 2, 3]);
     });
 
-    test('sortByBookOrder: false 時依 BM25 相關度排序', () async {
+    // 【review-issue-7.md Minor 2 事後修訂】初版只驗證回傳筆數，未驗證排序
+    // 方向本身；下方改用「短文本、關鍵字密度高」對比「長文本、關鍵字被大量
+    // 不相關字元稀釋」的資料組合，讓 BM25 依文件長度正規化後的分數差異足夠
+    // 明顯，真正鎖住排序方向。
+    test(
+        'sortByBookOrder: false 時依 BM25 相關度排序，關鍵字密度較高的短文本排在'
+        '被大量不相關文字稀釋的長文本之前（reviews/review-issue-7.md Minor 2，'
+        '取代原本只驗證筆數、未驗證排序方向的弱斷言）', () async {
       await repository.insertBook(_book('b1', title: '書一'));
-      await insertContentRow('b1', '第一章包含搜尋字', chapterIndex: 1);
-      await insertContentRow('b1', '第二章包含搜尋字', chapterIndex: 2);
+      // chapterIndex 2（長文本）刻意先插入，若排序邏輯退化成插入順序或
+      // book_id/rowid 順序，會讓這筆先出現，測試才抓得到迴歸。
+      final filler = List.filled(200, '填').join();
+      await insertContentRow('b1', '搜尋字$filler', chapterIndex: 2);
+      await insertContentRow('b1', '搜尋字', chapterIndex: 1);
 
       final result = await searchRepository.searchContentInBook(
         'b1',
@@ -250,10 +270,15 @@ Expected: 全數 PASS（含兩個新增的測試）。
         sortByBookOrder: false,
       );
 
-      // BM25 排序結果本身不做精確斷言（兩筆文字長度相近，分數差異可能不大），
-      // 只驗證確實回傳了全部命中且 matches 非空。
       expect(result, isNotNull);
       expect(result!.matches, hasLength(2));
+      expect(
+        result.matches.map((m) => m.chapterIndex).toList(),
+        [1, 2],
+        reason: 'BM25 依文件長度正規化，關鍵字幾乎佔滿全部內容的短文本'
+            '（chapterIndex 1）相關度應優於被 200 個不相關字元稀釋詞頻的長文本'
+            '（chapterIndex 2）；若 ORDER BY 方向被誤改成 DESC，這裡會斷言失敗。',
+      );
     });
 
     test('命中筆數超過 limit 時 isTruncated 為 true', () async {
@@ -313,7 +338,7 @@ Expected: 編譯失敗——`SearchRepository` 尚無 `searchContentInBook` 方�
 
 - [ ] **Step 8: 實作 `BookSearchDetailResult` 模型與 `searchContentInBook()` 方法**
 
-在 [`app/lib/search/search_repository.dart`](file:///U:/MyDeveloper/AI/elinkBook/app/lib/search/search_repository.dart) 新增模型（放在 `BookContentMatches` class 之後）：
+在 [`app/lib/search/search_repository.dart`](../../../../app/lib/search/search_repository.dart) 新增模型（放在 `BookContentMatches` class 之後）：
 
 ```dart
 /// 單書全文檢索結果（epic-10-search Issue 7，spec.md §9.1）。
@@ -358,6 +383,20 @@ class BookSearchDetailResult {
 
 在 `SqliteSearchRepository` 實作：
 
+> **【review-issue-7.md Minor 1 事後修訂，推翻 review-plan-issue-7.md M-4 原始
+> 決定】** 初版（複審核准當時）維持「書籍存在性查詢 → 總筆數 COUNT 查詢 →
+> 命中片段查詢」三次資料庫往返，M-4 評估後核准維持現狀。工單完成、進入
+> `reviews/review-issue-7.md` 程式碼審查後，該報告的 Minor 1 建議比照
+> `searchContent()` 的手法用 `COUNT(*) OVER ()` 窗函數把「總筆數」與「片段
+> 清單」合併成一次查詢，共識為順手處理，遂追加此修訂：降為「書籍存在性
+> 查詢 → 合併後的單一 FTS 查詢」兩次往返。下方為修訂後的最終版本。
+> `bm25()` 必須先在內層子查詢算出 `score` 欄位，外層才能對它排序——直接
+> 在外層 `ORDER BY` 呼叫 `bm25(book_content_fts)`、同時外層又有
+> `COUNT(*) OVER ()` 窗函數時，SQLite 會拋出
+> 「unable to use function bm25 in the requested context」（與
+> `searchContent()` 內層先算 `score`、外層再用 `ROW_NUMBER()` 排序是同一個
+> 已知限制）。
+
 ```dart
   @override
   Future<BookSearchDetailResult?> searchContentInBook(
@@ -370,7 +409,8 @@ class BookSearchDetailResult {
     final tokenized = tokenizeForQuery(trimmedQuery);
     if (tokenized.isEmpty) return null;
 
-    // 先查詢該書是否存在，帶出 Book 物件。
+    // 先查詢該書是否存在，帶出 Book 物件（books 表與 book_content_fts
+    // 沒有共通鍵可一次 JOIN 帶出，維持獨立查詢）。
     final bookRows = await _database.query(
       'books',
       where: 'id = ?',
@@ -380,22 +420,32 @@ class BookSearchDetailResult {
     if (bookRows.isEmpty) return null;
     final book = Book.fromMap(bookRows.first);
 
-    // 先取得該書的總命中筆數（不受 limit 限制）。
-    int totalMatches;
+    final orderClause = sortByBookOrder
+        ? 'ORDER BY sub.chapter_index ASC, sub.content_rowid ASC'
+        : 'ORDER BY sub.score ASC';
+
+    List<Map<String, Object?>> rows;
     try {
-      final countRows = await _database.rawQuery('''
-        SELECT COUNT(*) AS cnt
-        FROM book_content_fts
-        JOIN book_content_index bci ON bci.rowid = book_content_fts.rowid
-        WHERE book_content_fts MATCH ?
-          AND bci.book_id = ?
-      ''', [tokenized, bookId]);
-      totalMatches = countRows.first['cnt'] as int;
+      rows = await _database.rawQuery('''
+        SELECT sub.locator, sub.raw_text, sub.chapter_index,
+               COUNT(*) OVER () AS total_count
+        FROM (
+          SELECT bci.locator, bci.raw_text, bci.chapter_index,
+                 bci.rowid AS content_rowid,
+                 bm25(book_content_fts) AS score
+          FROM book_content_fts
+          JOIN book_content_index bci ON bci.rowid = book_content_fts.rowid
+          WHERE book_content_fts MATCH ?
+            AND bci.book_id = ?
+        ) sub
+        $orderClause
+        LIMIT ?
+      ''', [tokenized, bookId, limit]);
     } on DatabaseException {
       return null;
     }
 
-    if (totalMatches == 0) {
+    if (rows.isEmpty) {
       return BookSearchDetailResult(
         book: book,
         matches: const [],
@@ -404,26 +454,7 @@ class BookSearchDetailResult {
       );
     }
 
-    // 查詢命中片段，依排序模式決定 ORDER BY。
-    final orderClause = sortByBookOrder
-        ? 'ORDER BY bci.chapter_index ASC, bci.rowid ASC'
-        : 'ORDER BY bm25(book_content_fts) ASC';
-
-    List<Map<String, Object?>> rows;
-    try {
-      rows = await _database.rawQuery('''
-        SELECT bci.locator, bci.raw_text, bci.chapter_index
-        FROM book_content_fts
-        JOIN book_content_index bci ON bci.rowid = book_content_fts.rowid
-        WHERE book_content_fts MATCH ?
-          AND bci.book_id = ?
-        $orderClause
-        LIMIT ?
-      ''', [tokenized, bookId, limit]);
-    } on DatabaseException {
-      return null;
-    }
-
+    final totalMatches = rows.first['total_count'] as int;
     final matches = rows
         .map((row) => ContentMatchSnippet(
               snippet: _truncate(row['raw_text'] as String, trimmedQuery),
@@ -443,7 +474,7 @@ class BookSearchDetailResult {
 
 - [ ] **Step 9: 更新 `FakeSearchRepository`**
 
-在 [`app/test/support/fake_search_repository.dart`](file:///U:/MyDeveloper/AI/elinkBook/app/test/support/fake_search_repository.dart) 新增：
+在 [`app/test/support/fake_search_repository.dart`](../../../../app/test/support/fake_search_repository.dart) 新增：
 
 ```diff
  class FakeSearchRepository implements SearchRepository {
@@ -461,6 +492,7 @@ class BookSearchDetailResult {
    final List<String> searchTitleAuthorCalls = [];
    final List<String> searchContentCalls = [];
 +  final List<String> searchContentInBookCalls = [];
++  final List<bool> searchContentInBookSortCalls = [];
 
    @override
    Future<List<Book>> searchTitleAuthor(String query) async {
@@ -485,6 +517,9 @@ class BookSearchDetailResult {
 +    bool sortByBookOrder = true,
 +  }) async {
 +    searchContentInBookCalls.add(query);
++    // 【review-plan-issue-7.md I-2】記錄 sortByBookOrder 傳入值，供
++    // BookSearchScreen 排序切換測試斷言確實傳遞了 false。
++    searchContentInBookSortCalls.add(sortByBookOrder);
 +    return bookSearchDetailResult;
 +  }
  }
@@ -512,9 +547,9 @@ git commit -m "feat(search): 擴充 SearchRepository 支援 totalMatches 與 sea
 ### Task 2: 全庫搜尋畫面 Drill-Down 入口
 
 **Files:**
-- Modify: [`app/lib/screens/library_search_screen.dart`](file:///U:/MyDeveloper/AI/elinkBook/app/lib/screens/library_search_screen.dart)
-- Create: [`app/lib/screens/book_search_screen.dart`](file:///U:/MyDeveloper/AI/elinkBook/app/lib/screens/book_search_screen.dart) (stub，Task 3 完整實作)
-- Modify: [`app/test/screens/library_search_screen_test.dart`](file:///U:/MyDeveloper/AI/elinkBook/app/test/screens/library_search_screen_test.dart)
+- Modify: [`app/lib/screens/library_search_screen.dart`](../../../../app/lib/screens/library_search_screen.dart)
+- Create: [`app/lib/screens/book_search_screen.dart`](../../../../app/lib/screens/book_search_screen.dart) (stub，Task 3 完整實作)
+- Modify: [`app/test/screens/library_search_screen_test.dart`](../../../../app/test/screens/library_search_screen_test.dart)
 
 **Interfaces:**
 - Consumes: Task 1 的 `BookContentMatches.totalMatches`、`SearchRepository`（含 `searchContentInBook`）
@@ -522,7 +557,7 @@ git commit -m "feat(search): 擴充 SearchRepository 支援 totalMatches 與 sea
 
 - [ ] **Step 1: 寫「查看全部」按鈕的 widget test**
 
-在 [`app/test/screens/library_search_screen_test.dart`](file:///U:/MyDeveloper/AI/elinkBook/app/test/screens/library_search_screen_test.dart) 新增：
+在 [`app/test/screens/library_search_screen_test.dart`](../../../../app/test/screens/library_search_screen_test.dart) 新增：
 
 ```dart
   testWidgets('內容匹配卡片：totalMatches > 3 時顯示「查看全部」按鈕，<= 3 時不顯示',
@@ -629,7 +664,7 @@ Expected: 編譯失敗——`BookSearchScreen` 不存在、Key `library_search_d
 
 - [ ] **Step 3: 建立 `BookSearchScreen` 最小 stub**
 
-建立 [`app/lib/screens/book_search_screen.dart`](file:///U:/MyDeveloper/AI/elinkBook/app/lib/screens/book_search_screen.dart)：
+建立 [`app/lib/screens/book_search_screen.dart`](../../../../app/lib/screens/book_search_screen.dart)：
 
 ```dart
 // app/lib/screens/book_search_screen.dart
@@ -689,7 +724,7 @@ class _BookSearchScreenState extends State<BookSearchScreen> {
 
 - [ ] **Step 4: 在 `LibrarySearchScreen._buildContentGroupCard()` 底部加入「查看全部」按鈕**
 
-修改 [`app/lib/screens/library_search_screen.dart`](file:///U:/MyDeveloper/AI/elinkBook/app/lib/screens/library_search_screen.dart)，在檔案頂部新增 import：
+修改 [`app/lib/screens/library_search_screen.dart`](../../../../app/lib/screens/library_search_screen.dart)，在檔案頂部新增 import：
 
 ```diff
 +import 'book_search_screen.dart';
@@ -783,7 +818,7 @@ class _BookSearchScreenState extends State<BookSearchScreen> {
 
 - [ ] **Step 5: 更新 test import**
 
-在 [`app/test/screens/library_search_screen_test.dart`](file:///U:/MyDeveloper/AI/elinkBook/app/test/screens/library_search_screen_test.dart) 頂部新增：
+在 [`app/test/screens/library_search_screen_test.dart`](../../../../app/test/screens/library_search_screen_test.dart) 頂部新增：
 
 ```diff
 +import 'package:elinkbook/screens/book_search_screen.dart';
@@ -811,8 +846,8 @@ git commit -m "feat(search): 全庫搜尋卡片 Drill-Down 按鈕與 BookSearchS
 ### Task 3: `BookSearchScreen` 完整實作
 
 **Files:**
-- Modify: [`app/lib/screens/book_search_screen.dart`](file:///U:/MyDeveloper/AI/elinkBook/app/lib/screens/book_search_screen.dart) (從 stub 替換為完整實作)
-- Create: [`app/test/screens/book_search_screen_test.dart`](file:///U:/MyDeveloper/AI/elinkBook/app/test/screens/book_search_screen_test.dart)
+- Modify: [`app/lib/screens/book_search_screen.dart`](../../../../app/lib/screens/book_search_screen.dart) (從 stub 替換為完整實作)
+- Create: [`app/test/screens/book_search_screen_test.dart`](../../../../app/test/screens/book_search_screen_test.dart)
 
 **Interfaces:**
 - Consumes: Task 1 的 `SearchRepository.searchContentInBook()`、`BookSearchDetailResult`、`ContentMatchSnippet.chapterIndex`；Issue 5 既有 `ReaderJumpTarget.fromContentLocator()`；既有 `PagingBar`、`LibraryPagingCursor`
@@ -823,7 +858,11 @@ git commit -m "feat(search): 全庫搜尋卡片 Drill-Down 按鈕與 BookSearchS
 
 - [ ] **Step 1: 寫 `BookSearchScreen` 完整 widget test**
 
-建立 [`app/test/screens/book_search_screen_test.dart`](file:///U:/MyDeveloper/AI/elinkBook/app/test/screens/book_search_screen_test.dart)：
+建立 [`app/test/screens/book_search_screen_test.dart`](../../../../app/test/screens/book_search_screen_test.dart)：
+
+> **【review-plan-issue-7.md 複審修訂】** 下方測試已包含複審核准的 I-1／I-2／I-3
+> 測試補強（清空輸入框防禦、排序參數斷言、`fromReader:true` pop、E-Ink 換頁、
+> FTS5 不可用降級提示），並非初審原始版本。
 
 ```dart
 // app/test/screens/book_search_screen_test.dart
@@ -833,6 +872,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/book_group.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
+import 'package:elinkbook/reader/reader_jump_target.dart';
 import 'package:elinkbook/screens/book_search_screen.dart';
 import 'package:elinkbook/screens/library_screen_dependencies.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
@@ -868,6 +908,31 @@ Widget _wrap(Widget child) => MaterialApp(
       home: child,
     );
 
+BookSearchDetailResult _makeResult({
+  Book? book,
+  int matchCount = 5,
+  int totalMatches = 5,
+  bool isTruncated = false,
+  int startChapter = 1,
+}) {
+  final b = book ?? _testBook();
+  return BookSearchDetailResult(
+    book: b,
+    matches: [
+      for (var i = 0; i < matchCount; i++)
+        ContentMatchSnippet(
+          snippet: '第${startChapter + i}章含有搜尋關鍵字的文本片段',
+          locator: b.format == BookFileFormat.pdf
+              ? '{"page":${startChapter + i},"rect":{"left":0.1,"top":0.2,"right":0.3,"bottom":0.4}}'
+              : 'epubcfi(/6/${(startChapter + i) * 2})',
+          chapterIndex: startChapter + i,
+        ),
+    ],
+    totalMatches: totalMatches,
+    isTruncated: isTruncated,
+  );
+}
+
 void main() {
   setUpAll(() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
@@ -876,31 +941,6 @@ void main() {
       (_) async => null,
     );
   });
-
-  BookSearchDetailResult _makeResult({
-    Book? book,
-    int matchCount = 5,
-    int totalMatches = 5,
-    bool isTruncated = false,
-    int startChapter = 1,
-  }) {
-    final b = book ?? _testBook();
-    return BookSearchDetailResult(
-      book: b,
-      matches: [
-        for (var i = 0; i < matchCount; i++)
-          ContentMatchSnippet(
-            snippet: '第${startChapter + i}章含有搜尋關鍵字的文本片段',
-            locator: b.format == BookFileFormat.pdf
-                ? '{"page":${startChapter + i},"rect":{"left":0.1,"top":0.2,"right":0.3,"bottom":0.4}}'
-                : 'epubcfi(/6/${(startChapter + i) * 2})',
-            chapterIndex: startChapter + i,
-          ),
-      ],
-      totalMatches: totalMatches,
-      isTruncated: isTruncated,
-    );
-  }
 
   testWidgets('初始查詢帶入後自動觸發搜尋並顯示結果', (tester) async {
     final searchRepo = FakeSearchRepository(
@@ -955,7 +995,38 @@ void main() {
     expect(searchRepo.searchContentInBookCalls, ['新關鍵字']);
   });
 
-  testWidgets('排序切換按鈕在「依書中順序」與「依相關度排序」間切換',
+  testWidgets('清空輸入框時立即註銷在途請求，避免非同步查詢回傳覆蓋清空狀態（review-plan-issue-7.md I-1）',
+      (tester) async {
+    final searchRepo = FakeSearchRepository(
+      bookSearchDetailResult: _makeResult(),
+    );
+
+    await tester.pumpWidget(_wrap(BookSearchScreen(
+      book: _testBook(),
+      initialQuery: '初始詞',
+      searchRepository: searchRepo,
+      prefsManager: FakeReaderPrefsManager(),
+      libraryRepository: FakeLibraryRepository(),
+    )));
+    await tester.pumpAndSettle();
+
+    // 輸入新關鍵字後在 debounce 期間清空
+    await tester.enterText(
+      find.byKey(const Key('book_search_screen_field')),
+      '即將被清空',
+    );
+    await tester.pump(const Duration(milliseconds: 100));
+
+    await tester.enterText(
+      find.byKey(const Key('book_search_screen_field')),
+      '',
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('book_search_snippet_0')), findsNothing);
+  });
+
+  testWidgets('排序切換按鈕在「依書中順序」與「依相關度排序」間切換並傳遞 sortByBookOrder（review-plan-issue-7.md I-2）',
       (tester) async {
     final searchRepo = FakeSearchRepository(
       bookSearchDetailResult: _makeResult(),
@@ -978,6 +1049,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('依相關度排序'), findsOneWidget);
+    expect(searchRepo.searchContentInBookSortCalls.last, isFalse,
+        reason: '切換為依相關度排序時 sortByBookOrder 應為 false');
   });
 
   testWidgets('EPUB 格式片段顯示「第 X 章」位置標籤', (tester) async {
@@ -1064,7 +1137,50 @@ void main() {
     expect(find.byType(ReaderScreen), findsOneWidget);
   });
 
-  testWidgets('E-Ink 模式顯示 PagingBar 離散分頁', (tester) async {
+  testWidgets('fromReader=true 時點擊片段透過 Navigator.pop 回傳 ReaderJumpTarget（review-plan-issue-7.md I-2）',
+      (tester) async {
+    final searchRepo = FakeSearchRepository(
+      bookSearchDetailResult: _makeResult(matchCount: 1, totalMatches: 1),
+    );
+
+    ReaderJumpTarget? poppedTarget;
+    await tester.pumpWidget(_wrap(Builder(
+      builder: (context) => ElevatedButton(
+        key: const Key('open_search'),
+        onPressed: () async {
+          poppedTarget = await Navigator.of(context).push<ReaderJumpTarget>(
+            MaterialPageRoute(
+              builder: (_) => BookSearchScreen(
+                book: _testBook(),
+                initialQuery: '關鍵字',
+                searchRepository: searchRepo,
+                prefsManager: FakeReaderPrefsManager(),
+                libraryRepository: FakeLibraryRepository(),
+                fromReader: true,
+              ),
+            ),
+          );
+        },
+        child: const Text('Open'),
+      ),
+    )));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('open_search')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(BookSearchScreen), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('book_search_snippet_0')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(BookSearchScreen), findsNothing);
+    expect(poppedTarget, isNotNull);
+    expect(poppedTarget?.cfi, 'epubcfi(/6/2)');
+  });
+
+  testWidgets('E-Ink 模式顯示 PagingBar 離散分頁，點擊換頁更新內容（review-plan-issue-7.md I-2）',
+      (tester) async {
     final searchRepo = FakeSearchRepository(
       bookSearchDetailResult: _makeResult(matchCount: 15, totalMatches: 15),
     );
@@ -1085,6 +1201,36 @@ void main() {
     );
     // 15 筆 / 每頁 10 筆 = 2 頁
     expect(find.text('1 / 2'), findsOneWidget);
+    expect(find.byKey(const Key('book_search_snippet_0')), findsOneWidget);
+    expect(find.byKey(const Key('book_search_snippet_10')), findsNothing);
+
+    // 點擊下一頁
+    await tester.tap(find.byKey(const Key('book_search_paging_bar_next_button')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('2 / 2'), findsOneWidget);
+    expect(find.byKey(const Key('book_search_snippet_0')), findsNothing);
+    expect(find.byKey(const Key('book_search_snippet_10')), findsOneWidget);
+  });
+
+  testWidgets('isFullTextSearchAvailable 為 false 時顯示「本裝置不支援全文檢索」提示（review-plan-issue-7.md I-3）',
+      (tester) async {
+    final searchRepo = FakeSearchRepository();
+
+    await tester.pumpWidget(_wrap(BookSearchScreen(
+      book: _testBook(),
+      initialQuery: '關鍵字',
+      searchRepository: searchRepo,
+      prefsManager: FakeReaderPrefsManager(),
+      libraryRepository: FakeLibraryRepository(),
+      readerFeatureRepositories: const LibraryReaderFeatureRepositories(
+        isFullTextSearchAvailable: false,
+      ),
+    )));
+    await tester.pumpAndSettle();
+
+    expect(find.text('本裝置不支援全文檢索'), findsOneWidget);
+    expect(searchRepo.searchContentInBookCalls, isEmpty);
   });
 }
 ```
@@ -1096,7 +1242,12 @@ Expected: 多數測試失敗（stub 未實作完整功能）。
 
 - [ ] **Step 3: 完整實作 `BookSearchScreen`**
 
-以完整實作替換 [`app/lib/screens/book_search_screen.dart`](file:///U:/MyDeveloper/AI/elinkBook/app/lib/screens/book_search_screen.dart) 的 stub 內容：
+以完整實作替換 [`app/lib/screens/book_search_screen.dart`](../../../../app/lib/screens/book_search_screen.dart) 的 stub 內容：
+
+> **【review-plan-issue-7.md 複審修訂】** 下方程式碼已包含複審核准的全部 8 項修正
+> （C-1／I-1／I-2／I-3／M-1～M-4，見 `reviews/review-plan-issue-7.md`），並非初審
+> 原始版本；`searchContentInBook()` 呼叫端的查詢合併優化另見 Task 1 Step 8 附註
+> （`reviews/review-issue-7.md` Minor 1，複審後另一輪程式碼審查追加的修訂）。
 
 ```dart
 // app/lib/screens/book_search_screen.dart
@@ -1107,11 +1258,9 @@ import 'package:flutter/material.dart';
 import '../library/models/book.dart';
 import '../library/models/library_enums.dart';
 import '../library/library_repository.dart';
-import '../library/widgets/book_cover.dart';
 import '../reader/reader_jump_target.dart';
 import '../reader/reader_prefs_manager.dart';
 import '../search/search_repository.dart';
-import '../theme/elink_tokens.dart';
 import 'library_paging.dart';
 import 'library_screen_dependencies.dart';
 import 'reader_screen.dart';
@@ -1171,6 +1320,11 @@ class _BookSearchScreenState extends State<BookSearchScreen> {
   @override
   void initState() {
     super.initState();
+    // 裝置不支援全文檢索時跳過初始查詢，由 UI 呈現降級提示
+    // （review-plan-issue-7.md I-3）。
+    if (!widget.readerFeatureRepositories.isFullTextSearchAvailable) {
+      return;
+    }
     final initial = widget.initialQuery.trim();
     if (initial.isNotEmpty) {
       _runSearch(initial);
@@ -1189,7 +1343,13 @@ class _BookSearchScreenState extends State<BookSearchScreen> {
     _debounce?.cancel();
     final trimmed = value.trim();
     if (trimmed.isEmpty) {
+      // 遞增 requestId 註銷在途中的非同步請求，避免過期結果覆蓋清空狀態
+      // （review-plan-issue-7.md I-1）。
+      _searchRequestId++;
       setState(() => _result = null);
+      return;
+    }
+    if (!widget.readerFeatureRepositories.isFullTextSearchAvailable) {
       return;
     }
     _debounce = Timer(
@@ -1199,6 +1359,7 @@ class _BookSearchScreenState extends State<BookSearchScreen> {
   }
 
   Future<void> _runSearch(String trimmedQuery) async {
+    if (!widget.readerFeatureRepositories.isFullTextSearchAvailable) return;
     final requestId = ++_searchRequestId;
     final result = await widget.searchRepository.searchContentInBook(
       widget.book.id,
@@ -1320,10 +1481,17 @@ class _BookSearchScreenState extends State<BookSearchScreen> {
               },
             ),
           ),
-          // 統計摘要與排序切換
-          _buildToolbar(),
-          // 結果清單
-          Expanded(child: _buildResults()),
+          // 不支援提示或工具列（review-plan-issue-7.md I-3）
+          if (!widget.readerFeatureRepositories.isFullTextSearchAvailable)
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text('本裝置不支援全文檢索'),
+            )
+          else ...[
+            _buildToolbar(),
+            // 結果清單
+            Expanded(child: _buildResults()),
+          ],
         ],
       ),
     );
@@ -1454,7 +1622,9 @@ class _BookSearchScreenState extends State<BookSearchScreen> {
 
   /// 關鍵字高亮：在 [text] 中找到 [query] 出現的所有位置（case-insensitive），
   /// 命中段加粗；非 E-Ink 模式搭配淡色背景，E-Ink 模式搭配底線（高對比、
-  /// 避免電子紙殘影）。spec.md §9.3。
+  /// 避免電子紙殘影）。spec.md §9.3。使用 Text.rich 支援系統文字縮放
+  /// （review-plan-issue-7.md M-2），切割索引加 `.clamp()` 邊界防禦
+  /// （review-plan-issue-7.md M-3）。
   Widget _buildHighlightedText(String text, String query) {
     if (query.isEmpty) return Text(text);
 
@@ -1470,11 +1640,14 @@ class _BookSearchScreenState extends State<BookSearchScreen> {
         break;
       }
       if (matchIndex > start) {
-        spans.add(TextSpan(text: text.substring(start, matchIndex)));
+        final safeStart = start.clamp(0, text.length);
+        final safeMatch = matchIndex.clamp(0, text.length);
+        spans.add(TextSpan(text: text.substring(safeStart, safeMatch)));
       }
-      final matchEnd = matchIndex + query.length;
+      final matchEnd = (matchIndex + query.length).clamp(0, text.length);
+      final safeMatchIndex = matchIndex.clamp(0, text.length);
       spans.add(TextSpan(
-        text: text.substring(matchIndex, matchEnd),
+        text: text.substring(safeMatchIndex, matchEnd),
         style: TextStyle(
           fontWeight: FontWeight.bold,
           backgroundColor:
@@ -1486,8 +1659,8 @@ class _BookSearchScreenState extends State<BookSearchScreen> {
     }
 
     if (spans.isEmpty) return Text(text);
-    return RichText(
-      text: TextSpan(
+    return Text.rich(
+      TextSpan(
         style: DefaultTextStyle.of(context).style,
         children: spans,
       ),
@@ -1541,7 +1714,7 @@ Expected: 全數 PASS，無失敗。
 
 - [ ] **Step 3: 更新 `issues.md` Issue 7 狀態**
 
-在 [`docs/epics/epic-10-search/issues.md`](file:///U:/MyDeveloper/AI/elinkBook/docs/epics/epic-10-search/issues.md) 將 Issue 7 的 `Status` 從 `ready-for-agent` 改為 `completed`，並補上計畫參照與 PR 資訊（格式比照 Issue 0–6 既有慣例）。
+在 [`docs/epics/epic-10-search/issues.md`](../issues.md) 將 Issue 7 的 `Status` 從 `ready-for-agent` 改為 `completed`，並補上計畫參照與 PR 資訊（格式比照 Issue 0–6 既有慣例）。
 
 ```diff
 -**Status:** ready-for-agent

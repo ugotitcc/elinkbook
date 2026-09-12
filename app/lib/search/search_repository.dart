@@ -215,7 +215,8 @@ class SqliteSearchRepository implements SearchRepository {
     final tokenized = tokenizeForQuery(trimmedQuery);
     if (tokenized.isEmpty) return null;
 
-    // 先查詢該書是否存在，帶出 Book 物件。
+    // 先查詢該書是否存在，帶出 Book 物件（books 表與 book_content_fts
+    // 沒有共通鍵可一次 JOIN 帶出，維持獨立查詢）。
     final bookRows = await _database.query(
       'books',
       where: 'id = ?',
@@ -225,22 +226,45 @@ class SqliteSearchRepository implements SearchRepository {
     if (bookRows.isEmpty) return null;
     final book = Book.fromMap(bookRows.first);
 
-    // 先取得該書的總命中筆數（不受 limit 限制）。
-    int totalMatches;
+    // 【審查修正 review-issue-7.md Minor 1，推翻 review-plan-issue-7.md M-4
+    // 「維持兩次查詢」的原始決定】改用 `COUNT(*) OVER ()`（無 PARTITION BY，
+    // 單書查詢不需要分組）在同一個 SQL 內與命中片段一併取得總筆數：
+    // 窗函數在 WHERE 過濾之後、LIMIT 截斷之前計算，因此 total_count 仍反映
+    // 全部命中筆數，不受 LIMIT 影響（與 searchContent() 的
+    // `COUNT(*) OVER (PARTITION BY book_id)` 同一原理）。原本「先 COUNT
+    // 再查片段」共兩次 FTS 查詢＋一次書籍存在性查詢，合併後降為一次。
+    // `bm25()` 必須先在內層子查詢算出 `score` 欄位，外層才能對它排序——
+    // 直接在外層 ORDER BY 呼叫 `bm25(book_content_fts)`、同時外層又有
+    // `COUNT(*) OVER ()` 窗函數時，SQLite 會拋出
+    // 「unable to use function bm25 in the requested context」（與
+    // searchContent() 內層先算 score、外層再用 ROW_NUMBER() 排序是同一個
+    // 已知限制，見該方法註解）。
+    final orderClause = sortByBookOrder
+        ? 'ORDER BY sub.chapter_index ASC, sub.content_rowid ASC'
+        : 'ORDER BY sub.score ASC';
+
+    List<Map<String, Object?>> rows;
     try {
-      final countRows = await _database.rawQuery('''
-        SELECT COUNT(*) AS cnt
-        FROM book_content_fts
-        JOIN book_content_index bci ON bci.rowid = book_content_fts.rowid
-        WHERE book_content_fts MATCH ?
-          AND bci.book_id = ?
-      ''', [tokenized, bookId]);
-      totalMatches = countRows.first['cnt'] as int;
+      rows = await _database.rawQuery('''
+        SELECT sub.locator, sub.raw_text, sub.chapter_index,
+               COUNT(*) OVER () AS total_count
+        FROM (
+          SELECT bci.locator, bci.raw_text, bci.chapter_index,
+                 bci.rowid AS content_rowid,
+                 bm25(book_content_fts) AS score
+          FROM book_content_fts
+          JOIN book_content_index bci ON bci.rowid = book_content_fts.rowid
+          WHERE book_content_fts MATCH ?
+            AND bci.book_id = ?
+        ) sub
+        $orderClause
+        LIMIT ?
+      ''', [tokenized, bookId, limit]);
     } on DatabaseException {
       return null;
     }
 
-    if (totalMatches == 0) {
+    if (rows.isEmpty) {
       return BookSearchDetailResult(
         book: book,
         matches: const [],
@@ -249,26 +273,7 @@ class SqliteSearchRepository implements SearchRepository {
       );
     }
 
-    // 查詢命中片段，依排序模式決定 ORDER BY。
-    final orderClause = sortByBookOrder
-        ? 'ORDER BY bci.chapter_index ASC, bci.rowid ASC'
-        : 'ORDER BY bm25(book_content_fts) ASC';
-
-    List<Map<String, Object?>> rows;
-    try {
-      rows = await _database.rawQuery('''
-        SELECT bci.locator, bci.raw_text, bci.chapter_index
-        FROM book_content_fts
-        JOIN book_content_index bci ON bci.rowid = book_content_fts.rowid
-        WHERE book_content_fts MATCH ?
-          AND bci.book_id = ?
-        $orderClause
-        LIMIT ?
-      ''', [tokenized, bookId, limit]);
-    } on DatabaseException {
-      return null;
-    }
-
+    final totalMatches = rows.first['total_count'] as int;
     final matches = rows
         .map((row) => ContentMatchSnippet(
               snippet: _truncate(row['raw_text'] as String, trimmedQuery),

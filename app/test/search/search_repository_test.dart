@@ -241,10 +241,16 @@ void main() {
       expect(result!.matches.map((m) => m.chapterIndex).toList(), [1, 2, 3]);
     });
 
-    test('sortByBookOrder: false 時依 BM25 相關度排序', () async {
+    test(
+        'sortByBookOrder: false 時依 BM25 相關度排序，關鍵字密度較高的短文本排在'
+        '被大量不相關文字稀釋的長文本之前（reviews/review-issue-7.md Minor 2，'
+        '取代原本只驗證筆數、未驗證排序方向的弱斷言）', () async {
       await repository.insertBook(_book('b1', title: '書一'));
-      await insertContentRow('b1', '第一章包含搜尋字', chapterIndex: 1);
-      await insertContentRow('b1', '第二章包含搜尋字', chapterIndex: 2);
+      // chapterIndex 2（長文本）刻意先插入，若排序邏輯退化成插入順序或
+      // book_id/rowid 順序，會讓這筆先出現，測試才抓得到迴歸。
+      final filler = List.filled(200, '填').join();
+      await insertContentRow('b1', '搜尋字$filler', chapterIndex: 2);
+      await insertContentRow('b1', '搜尋字', chapterIndex: 1);
 
       final result = await searchRepository.searchContentInBook(
         'b1',
@@ -252,10 +258,15 @@ void main() {
         sortByBookOrder: false,
       );
 
-      // BM25 排序結果本身不做精確斷言（兩筆文字長度相近，分數差異可能不大），
-      // 只驗證確實回傳了全部命中且 matches 非空。
       expect(result, isNotNull);
       expect(result!.matches, hasLength(2));
+      expect(
+        result.matches.map((m) => m.chapterIndex).toList(),
+        [1, 2],
+        reason: 'BM25 依文件長度正規化，關鍵字幾乎佔滿全部內容的短文本'
+            '（chapterIndex 1）相關度應優於被 200 個不相關字元稀釋詞頻的長文本'
+            '（chapterIndex 2）；若 ORDER BY 方向被誤改成 DESC，這裡會斷言失敗。',
+      );
     });
 
     test('命中筆數超過 limit 時 isTruncated 為 true', () async {
