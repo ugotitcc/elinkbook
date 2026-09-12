@@ -7,6 +7,7 @@ import 'package:elinkbook/library/models/book_group.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 // ignore: unused_import
 import 'package:elinkbook/screens/full_text_search_confirm_dialog.dart';
+import 'package:elinkbook/screens/book_search_screen.dart';
 import 'package:elinkbook/screens/library_screen_dependencies.dart';
 import 'package:elinkbook/screens/library_search_screen.dart';
 import 'package:elinkbook/screens/reader_screen.dart';
@@ -827,5 +828,101 @@ void main() {
           .value,
       isTrue,
     );
+  });
+
+  testWidgets('內容匹配卡片：totalMatches > 3 時顯示「查看全部」按鈕，<= 3 時不顯示',
+      (tester) async {
+    final book5Hits = _testBook(id: 'b1', title: '五筆命中');
+    final book2Hits = _testBook(id: 'b2', title: '兩筆命中');
+    final searchRepository = FakeSearchRepository(
+      titleAuthorResults: const [],
+      contentResults: [
+        BookContentMatches(
+          book: book5Hits,
+          matches: [
+            for (var i = 0; i < 3; i++)
+              ContentMatchSnippet(
+                snippet: '片段$i',
+                locator: 'epubcfi(/6/$i)',
+              ),
+          ],
+          totalMatches: 5,
+        ),
+        BookContentMatches(
+          book: book2Hits,
+          matches: [
+            for (var i = 0; i < 2; i++)
+              ContentMatchSnippet(
+                snippet: '片段$i',
+                locator: 'epubcfi(/6/$i)',
+              ),
+          ],
+          totalMatches: 2,
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      wrap(LibrarySearchScreen(
+        initialQuery: '測試',
+        searchRepository: searchRepository,
+        prefsManager: FakeReaderPrefsManager(),
+        libraryRepository: FakeLibraryRepository(),
+        readerFeatureRepositories: const LibraryReaderFeatureRepositories(
+          isFullTextSearchAvailable: true,
+        ),
+      )),
+    );
+    await tester.pumpAndSettle();
+
+    // b1 有 5 筆命中但只顯示 3 筆，應顯示「查看全部」按鈕
+    expect(
+      find.byKey(const Key('library_search_drill_down_b1')),
+      findsOneWidget,
+    );
+    // b2 只有 2 筆命中，全數顯示，不需要「查看全部」按鈕
+    expect(
+      find.byKey(const Key('library_search_drill_down_b2')),
+      findsNothing,
+    );
+  });
+
+  testWidgets('點擊「查看全部」按鈕推入 BookSearchScreen', (tester) async {
+    final book = _testBook(id: 'b1', title: '測試書');
+    final searchRepository = FakeSearchRepository(
+      titleAuthorResults: const [],
+      contentResults: [
+        BookContentMatches(
+          book: book,
+          matches: [
+            for (var i = 0; i < 3; i++)
+              ContentMatchSnippet(
+                snippet: '片段$i',
+                locator: 'epubcfi(/6/$i)',
+              ),
+          ],
+          totalMatches: 10,
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      wrap(LibrarySearchScreen(
+        initialQuery: '測試',
+        searchRepository: searchRepository,
+        prefsManager: FakeReaderPrefsManager(),
+        libraryRepository: FakeLibraryRepository(),
+        readerFeatureRepositories: const LibraryReaderFeatureRepositories(
+          isFullTextSearchAvailable: true,
+        ),
+      )),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('library_search_drill_down_b1')));
+    await tester.pumpAndSettle();
+
+    // BookSearchScreen 被推入導覽堆疊
+    expect(find.byType(BookSearchScreen), findsOneWidget);
   });
 }
