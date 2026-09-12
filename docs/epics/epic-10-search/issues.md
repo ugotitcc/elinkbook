@@ -205,7 +205,7 @@ ADR 0027「技術限制」1 已討論過相近風險（系統 SQLite 版本可�
 
 ## Issue 7：全庫搜尋書籍結果 Drill-Down 與單書全文檢索畫面（`BookSearchScreen`）
 
-**Status:** ready-for-agent
+**Status:** completed（`plans/plan-issue-7.md` 4 個 Task 全數完成）
 
 **依賴：** Issue 4（全庫搜尋畫面）、Issue 5（搜尋跳轉 Seam）
 
