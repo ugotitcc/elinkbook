@@ -464,6 +464,51 @@ void main() {
   });
 
   testWidgets(
+      '點擊搜尋結果開書時，ReaderScreen 收到的 searchRepository／isFullTextSearchAvailable '
+      '正確貫穿（epic-10-search Issue 8）', (tester) async {
+    final book = _testBook(id: 'b1', title: '書一');
+    final readerSearchRepository = FakeSearchRepository();
+
+    await tester.pumpWidget(
+      wrap(LibrarySearchScreen(
+        initialQuery: '關鍵字',
+        searchRepository: FakeSearchRepository(
+          titleAuthorResults: [book],
+          contentResults: [
+            BookContentMatches(
+              book: book,
+              matches: const [
+                ContentMatchSnippet(
+                  snippet: '含有關鍵字的句子',
+                  locator: 'epubcfi(/6/2)',
+                ),
+              ],
+            ),
+          ],
+        ),
+        prefsManager: FakeReaderPrefsManager(),
+        libraryRepository: FakeLibraryRepository(),
+        readerFeatureRepositories: LibraryReaderFeatureRepositories(
+          searchRepository: readerSearchRepository,
+          isFullTextSearchAvailable: false,
+        ),
+      )),
+    );
+    await tester.pumpAndSettle();
+
+    // isFullTextSearchAvailable: false 時 contentResults 會被清空為空清單，
+    // 內容匹配片段不存在，改為點擊書名/作者匹配結果（永遠可用）驗證貫穿
+    await tester.tap(
+      find.byKey(const Key('library_search_title_author_result_b1')),
+    );
+    await tester.pumpAndSettle();
+
+    final readerScreen = tester.widget<ReaderScreen>(find.byType(ReaderScreen));
+    expect(readerScreen.searchRepository, same(readerSearchRepository));
+    expect(readerScreen.isFullTextSearchAvailable, isFalse);
+  });
+
+  testWidgets(
       '內容匹配為 PDF 書籍時，帶入依 JSON locator 解析出的頁碼與座標（epic-10-search Issue 5）',
       (tester) async {
     final book = _testBook(id: 'b1', title: 'PDF 書', format: BookFileFormat.pdf);

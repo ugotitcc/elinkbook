@@ -60,6 +60,10 @@ import 'package:elinkbook/reader/bookmark.dart';
 import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/library/sqlite_library_repository.dart';
+import 'package:elinkbook/screens/book_search_screen.dart';
+// ignore: unused_import
+import 'package:elinkbook/search/search_repository.dart';
+import '../support/fake_search_repository.dart';
 import 'package:elinkbook/reader/book_reader_prefs_repository.dart';
 import 'package:elinkbook/reader/layout_preset.dart';
 import 'package:elinkbook/reader/layout_preset_repository.dart';
@@ -9483,6 +9487,130 @@ void main() {
     await tester.pumpWidget(const MaterialApp(home: SizedBox.shrink()));
 
     expect(tracker.isReaderOpen, isFalse, reason: '離開閱讀畫面後應標記為已關閉');
+  });
+
+  group('epic-10-search Issue 8：閱讀器 TopBar 搜尋接線', () {
+    testWidgets(
+        'searchRepository／libraryRepository 皆存在時，點擊搜尋按鈕推入 BookSearchScreen（fromReader: true，帶入合成的 Book）',
+        (tester) async {
+      final searchRepository = FakeSearchRepository();
+      final libraryRepository = FakeLibraryRepository();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_search_entry',
+            bookTitle: '搜尋接線測試書',
+            prefsManager: FakeReaderPrefsManager(),
+            searchRepository: searchRepository,
+            libraryRepository: libraryRepository,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      await tester.tap(find.byKey(const Key('reader_chrome_search_button')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(BookSearchScreen), findsOneWidget);
+      final pushed =
+          tester.widget<BookSearchScreen>(find.byType(BookSearchScreen));
+      expect(pushed.fromReader, isTrue,
+          reason: '從閱讀器進入須為 fromReader:true，點選片段才會 pop 而非 push ReaderScreen');
+      expect(pushed.book.id, 'b_search_entry');
+      expect(pushed.book.title, '搜尋接線測試書');
+      expect(pushed.book.format, BookFileFormat.epub);
+      expect(pushed.searchRepository, same(searchRepository));
+      expect(pushed.libraryRepository, same(libraryRepository));
+      expect(pushed.readerFeatureRepositories.isFullTextSearchAvailable, isTrue,
+          reason: 'ReaderScreen.isFullTextSearchAvailable 預設 true，未提供時應維持預設值');
+    });
+
+    testWidgets(
+        'isFullTextSearchAvailable: false 時，推入的 BookSearchScreen 正確帶入 false（不落回預設值 true）',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_search_fts_unavailable',
+            prefsManager: FakeReaderPrefsManager(),
+            searchRepository: FakeSearchRepository(),
+            libraryRepository: FakeLibraryRepository(),
+            isFullTextSearchAvailable: false,
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      await tester.tap(find.byKey(const Key('reader_chrome_search_button')));
+      await tester.pumpAndSettle();
+
+      final pushed =
+          tester.widget<BookSearchScreen>(find.byType(BookSearchScreen));
+      expect(pushed.readerFeatureRepositories.isFullTextSearchAvailable, isFalse);
+    });
+
+    testWidgets('searchRepository 為 null 時，點擊搜尋按鈕顯示不可用提示，不導覽',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_search_unavailable_no_search_repo',
+            prefsManager: FakeReaderPrefsManager(),
+            libraryRepository: FakeLibraryRepository(),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      await tester.tap(find.byKey(const Key('reader_chrome_search_button')));
+      await tester.pump();
+
+      expect(
+        find.byKey(const Key('reader_chrome_search_unavailable_snackbar')),
+        findsOneWidget,
+      );
+      expect(find.byType(BookSearchScreen), findsNothing);
+    });
+
+    testWidgets('libraryRepository 為 null 時，點擊搜尋按鈕顯示不可用提示，不導覽',
+        (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+          home: ReaderScreen(
+            filePath: 'test/fixtures/sample.epub',
+            bookId: 'b_search_unavailable_no_library_repo',
+            prefsManager: FakeReaderPrefsManager(),
+            searchRepository: FakeSearchRepository(),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.runAsync(() => Future.delayed(Duration.zero));
+      await tester.pump();
+
+      await tester.tap(find.byKey(const Key('reader_chrome_search_button')));
+      await tester.pump();
+
+      expect(
+        find.byKey(const Key('reader_chrome_search_unavailable_snackbar')),
+        findsOneWidget,
+      );
+      expect(find.byType(BookSearchScreen), findsNothing);
+    });
   });
 
   tearDownAll(() {

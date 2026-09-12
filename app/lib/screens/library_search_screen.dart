@@ -179,6 +179,9 @@ class _LibrarySearchScreenState extends State<LibrarySearchScreen> {
           isEinkMode: widget.isEinkMode,
           readerActivityTracker:
               widget.readerFeatureRepositories.readerActivityTracker,
+          searchRepository: widget.readerFeatureRepositories.searchRepository,
+          isFullTextSearchAvailable:
+              widget.readerFeatureRepositories.isFullTextSearchAvailable,
           // epic-10-search Issue 5：只有內容匹配片段的點擊會帶入
           // jumpTarget（見下方 _buildContentGroupCard 呼叫端），書名/作者
           // 匹配結果維持一般開書路徑（jumpTarget 預設 null）。

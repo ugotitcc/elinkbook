@@ -26,6 +26,9 @@ import '../reader/tts_audio_handler.dart';
 import '../reader/tts_audio_player.dart';
 import '../reader/tts_controller.dart';
 import '../reader/tts_provider.dart';
+import '../library/models/book.dart';
+import '../library/models/book_group.dart';
+import '../library/models/library_enums.dart';
 import '../library/library_repository.dart';
 import '../reader/highlight.dart';
 import '../reader/highlight_style.dart';
@@ -55,12 +58,15 @@ import '../reader/screen_orientation_setting.dart';
 import '../reader/writing_mode.dart';
 import '../reader/reader_activity_tracker.dart';
 import '../reader/zone_action.dart';
+import '../search/search_repository.dart';
 import '../sync/sync_checkpoint_trigger.dart';
 import '../theme/elink_tokens.dart';
 import 'annotation_toolbar.dart';
 import 'note_edit_dialog.dart';
 import 'notes_bottom_sheet.dart';
+import 'book_search_screen.dart';
 import 'fxl_settings_sheet.dart';
+import 'library_screen_dependencies.dart';
 import 'layout_preset_book_picker_screen.dart';
 import 'layout_preset_name_dialog.dart';
 import 'pdf_settings_sheet.dart';
@@ -200,6 +206,24 @@ class ReaderScreen extends StatefulWidget {
   /// 可選參數——比照 `readerActivityTracker` 既有慣例，未提供時零回歸。
   final ReaderJumpTarget? initialJumpTarget;
 
+  /// 全庫搜尋的資料存取層（epic-10-search Issue 8，spec.md §9.4）：供
+  /// TopBar「搜尋內文」按鈕開啟 [BookSearchScreen] 使用。刻意為可選
+  /// 參數——比照 [readerActivityTracker] 既有慣例，未提供時點擊搜尋按鈕
+  /// 顯示「搜尋功能暫時無法使用」提示、不導覽，行為等同本 Issue 之前，
+  /// 零回歸。
+  final SearchRepository? searchRepository;
+
+  /// 本裝置系統 SQLite 是否有 FTS5 模組可用（epic-10-search Issue 6／
+  /// Issue 8，spec.md §9.4）：由呼叫端從
+  /// `LibraryReaderFeatureRepositories.isFullTextSearchAvailable` 往下
+  /// 傳遞，供 [_openBookSearch] 建構 [BookSearchScreen] 的
+  /// `readerFeatureRepositories` 時一併帶入，讓無 FTS5 裝置從閱讀器進入
+  /// 單書搜尋時也能正確顯示「本裝置不支援全文檢索」優雅降級提示，而非
+  /// 靜默落回預設值 `true` 誤發無效 FTS 查詢。非 nullable，預設 `true`
+  /// ——比照 [LibraryReaderFeatureRepositories.isFullTextSearchAvailable]
+  /// 既有預設值，維持既有測試呼叫端零回歸。
+  final bool isFullTextSearchAvailable;
+
   const ReaderScreen({
     super.key,
     required this.filePath,
@@ -223,6 +247,8 @@ class ReaderScreen extends StatefulWidget {
     this.isEinkMode = false,
     this.readerActivityTracker,
     this.initialJumpTarget,
+    this.searchRepository,
+    this.isFullTextSearchAvailable = true,
   });
 
   @override
@@ -1593,6 +1619,111 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
     }
   }
 
+  /// [BookFormat]（`reader/book_format.dart`，依副檔名判斷）→
+  /// [BookFileFormat]（`library/models/library_enums.dart`，`Book.format`
+  /// 型別）的純轉換（epic-10-search Issue 8）——兩者列舉成員名稱刻意
+  /// 一一對應，僅 [BookFormat.unknown] 沒有對應值，回傳 `null`，呼叫端
+  /// 據此停用搜尋入口。目前 codebase 中沒有其他現成的轉換函式（規劃階段
+  /// 查證，見 `plans/plan-issue-8.md`），這裡是唯一一處。
+  BookFileFormat? _toBookFileFormat(BookFormat format) {
+    switch (format) {
+      case BookFormat.epub:
+        return BookFileFormat.epub;
+      case BookFormat.pdf:
+        return BookFileFormat.pdf;
+      case BookFormat.azw3:
+        return BookFileFormat.azw3;
+      case BookFormat.cbz:
+        return BookFileFormat.cbz;
+      case BookFormat.txt:
+        return BookFileFormat.txt;
+      case BookFormat.md:
+        return BookFileFormat.md;
+      case BookFormat.unknown:
+        return null;
+    }
+  }
+
+  /// 供搜尋接線使用的 [Book] 物件（epic-10-search Issue 8）：`ReaderScreen`
+  /// 本身不持有完整 [Book] 記錄，只有零散的個別欄位，這裡就地合成一份——
+  /// [BookSearchScreen] 實際只讀取 `id`／`title`／`author`／`format`／
+  /// `filePath`／`progress`（及透過 `format` 間接使用的
+  /// `ReaderJumpTarget.fromContentLocator`），其餘 [Book] 必填欄位
+  /// （`source`／`createTime`／`lastReadTime`）填入無意義佔位值即可，不
+  /// 影響任何實際行為。`isFixedLayout` 讀取 State 內部已解析的
+  /// [_isFixedLayout]（而非可能為 `null`、可能過期的 `widget.isFixedLayout`
+  /// ——`review-plan-issue-8.md` M-2），對「使用者當下正在讀哪一種版面」
+  /// 是更即時準確的來源。格式無法辨識（[BookFormat.unknown]）時回傳
+  /// `null`，呼叫端據此停用搜尋入口，語意對齊既有「不支援的檔案格式」
+  /// 畫面分支。
+  Book? _buildSearchableBook() {
+    final fileFormat = _toBookFileFormat(detectBookFormat(widget.filePath));
+    if (fileFormat == null) return null;
+    return Book(
+      id: widget.bookId,
+      title: widget.bookTitle,
+      author: widget.bookAuthor,
+      format: fileFormat,
+      filePath: widget.filePath,
+      source: BookSource.local,
+      progress: widget.bookProgress,
+      isFixedLayout: _isFixedLayout,
+      groupName: BookGroup.uncategorized,
+      createTime: DateTime.fromMillisecondsSinceEpoch(0),
+      lastReadTime: DateTime.fromMillisecondsSinceEpoch(0),
+    );
+  }
+
+  /// TopBar「搜尋內文」按鈕（`reader_chrome_search_button`）點擊處理
+  /// （epic-10-search Issue 8，spec.md §9.4）：`searchRepository`／
+  /// `libraryRepository`（`BookSearchScreen.libraryRepository` 為必填，
+  /// 但 [ReaderScreen.libraryRepository] 為可選）任一缺席，或本書格式無法
+  /// 辨識時，顯示不可用提示、不導覽；否則以 `fromReader: true` 推入
+  /// [BookSearchScreen]，等待其 pop 回傳的 [ReaderJumpTarget]。
+  Future<void> _openBookSearch() async {
+    final searchRepository = widget.searchRepository;
+    final libraryRepository = widget.libraryRepository;
+    final book = _buildSearchableBook();
+    if (searchRepository == null || libraryRepository == null || book == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          key: Key('reader_chrome_search_unavailable_snackbar'),
+          content: Text('搜尋功能暫時無法使用'),
+        ),
+      );
+      return;
+    }
+    await Navigator.of(context).push<ReaderJumpTarget>(
+      MaterialPageRoute(
+        builder: (_) => BookSearchScreen(
+          book: book,
+          searchRepository: searchRepository,
+          prefsManager: widget.prefsManager,
+          libraryRepository: libraryRepository,
+          readerFeatureRepositories: LibraryReaderFeatureRepositories(
+            bookmarksRepository: widget.bookmarksRepository,
+            highlightsRepository: widget.highlightsRepository,
+            notesRepository: widget.notesRepository,
+            customFontsRepository: widget.customFontsRepository,
+            layoutPresetRepository: widget.layoutPresetRepository,
+            bookReaderPrefsRepository: widget.bookReaderPrefsRepository,
+            ttsProvider: widget.ttsProvider,
+            ttsAudioHandler: widget.ttsAudioHandler,
+            ttsAudioFocusSource: widget.ttsAudioFocusSource,
+            readerActivityTracker: widget.readerActivityTracker,
+            searchRepository: searchRepository,
+            isFullTextSearchAvailable: widget.isFullTextSearchAvailable,
+          ),
+          syncDependencies: LibrarySyncDependencies(
+            syncCheckpointTrigger: widget.syncCheckpointTrigger,
+          ),
+          isEinkMode: widget.isEinkMode,
+          fromReader: true,
+        ),
+      ),
+    );
+  }
+
   /// 【/diagnose：真機回報旋轉螢幕後畫面被錯誤文字取代，無法繼續閱讀】
   /// 只在 `_state == loading` 時才轉為錯誤畫面——書籍已成功渲染
   /// （`_state == rendered`）後才發生的 `onError` 不應覆蓋掉已顯示的
@@ -2170,9 +2301,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
         // 先改為空字串；_currentChapterTitle() 邏輯保留供後續決定要放什麼
         // 內容時使用，故未刪除（見下方 unused_element 抑制）。
         chapterTitle: '',
-        onSearchTap: () => ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('功能開發中')),
-        ),
+        onSearchTap: () => unawaited(_openBookSearch()),
         // `_resolved` 為 null 代表偏好設定尚未載入完成（載入中／錯誤／不
         // 支援格式等早退分支），此時預設顯示頁首，比照 `_chromeVisible`
         // 初始值恆為 `true` 的既有慣例——不能解讀成「使用者關閉了顯示

@@ -270,6 +270,39 @@ void main() {
     expect(find.byType(ReaderScreen), findsOneWidget);
   });
 
+  testWidgets(
+      'fromReader=false 時，推入的 ReaderScreen 收到的 searchRepository／'
+      'isFullTextSearchAvailable 正確貫穿（epic-10-search Issue 8）', (tester) async {
+    final readerSearchRepository = FakeSearchRepository();
+    final searchRepo = FakeSearchRepository(
+      bookSearchDetailResult: _makeResult(matchCount: 1, totalMatches: 1),
+    );
+
+    // isFullTextSearchAvailable: false 時 BookSearchScreen 本身不顯示片段清單
+    //（顯示「不支援」提示），無法透過點擊片段驗證貫穿；此處改以 true 驗證
+    //「貫穿邏輯本身正確」（searchRepository 同實例、flag 正確帶入），false
+    // 情境的貫穿已由 LibraryScreen／LibrarySearchScreen 的同構測試覆蓋
+    await tester.pumpWidget(_wrap(BookSearchScreen(
+      book: _testBook(),
+      initialQuery: '關鍵字',
+      searchRepository: searchRepo,
+      prefsManager: FakeReaderPrefsManager(),
+      libraryRepository: FakeLibraryRepository(),
+      readerFeatureRepositories: LibraryReaderFeatureRepositories(
+        searchRepository: readerSearchRepository,
+        isFullTextSearchAvailable: true,
+      ),
+    )));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('book_search_snippet_0')));
+    await tester.pumpAndSettle();
+
+    final readerScreen = tester.widget<ReaderScreen>(find.byType(ReaderScreen));
+    expect(readerScreen.searchRepository, same(readerSearchRepository));
+    expect(readerScreen.isFullTextSearchAvailable, isTrue);
+  });
+
   testWidgets('fromReader=true 時點擊片段透過 Navigator.pop 回傳 ReaderJumpTarget（review-plan-issue-7.md I-2）',
       (tester) async {
     final searchRepo = FakeSearchRepository(

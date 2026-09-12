@@ -1148,9 +1148,9 @@ void main() {
 
     // 用 .unknown 檔名讓 ReaderScreen 命中「不支援格式」分支（純 Dart 安全路徑，
     // 不觸發 AndroidView；見 reader_screen_test.dart 既有模式），只用來證明
-    // 「導覽確實發生」，不驗證實際閱讀渲染。頂部列標題找不到章節時回退為
-    // 書名（2026-09-08 /grill-with-docs 使用者需求），不再是字面「閱讀器」。
-    expect(find.text('紅樓夢'), findsOneWidget);
+    // 「導覽確實發生」，不驗證實際閱讀渲染。2026-09-12 起 TopBar 標題一律為空
+    // 字串，不再顯示書名，故僅驗證 ReaderScreen 已推入且顯示不支援提示。
+    expect(find.byType(ReaderScreen), findsOneWidget);
     expect(find.text('不支援的檔案格式'), findsOneWidget);
   });
 
@@ -1962,6 +1962,43 @@ void main() {
     final readerScreen = tester.widget<ReaderScreen>(find.byType(ReaderScreen));
     expect(readerScreen.ttsAudioHandler, same(ttsAudioHandler));
     expect(readerScreen.ttsAudioFocusSource, same(ttsAudioFocusSource));
+  });
+
+  testWidgets(
+      'LibraryScreen 點開一本書後，ReaderScreen 收到的 searchRepository／'
+      'isFullTextSearchAvailable 正確貫穿（epic-10-search Issue 8）', (
+    tester,
+  ) async {
+    final book = _testBook(
+      id: '1',
+      title: '紅樓夢',
+      author: '曹雪芹',
+      filePath: 'content://example/1.txt',
+    );
+    final searchRepository = FakeSearchRepository();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: resolveThemeData(theme: AppTheme.light, isEinkMode: false),
+        home: LibraryScreen(
+          repository: FakeLibraryRepository(initialBooks: [book]),
+          importService: FakeBookImportService(),
+          prefsManager: prefsManager,
+          readerFeatureRepositories: LibraryReaderFeatureRepositories(
+            searchRepository: searchRepository,
+            isFullTextSearchAvailable: false,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('book_item_1')));
+    await tester.pumpAndSettle();
+
+    final readerScreen = tester.widget<ReaderScreen>(find.byType(ReaderScreen));
+    expect(readerScreen.searchRepository, same(searchRepository));
+    expect(readerScreen.isFullTextSearchAvailable, isFalse);
   });
 
   testWidgets(
