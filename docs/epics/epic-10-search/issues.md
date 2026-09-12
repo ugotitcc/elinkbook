@@ -205,7 +205,7 @@ ADR 0027「技術限制」1 已討論過相近風險（系統 SQLite 版本可�
 
 ## Issue 7：全庫搜尋書籍結果 Drill-Down 與單書全文檢索畫面（`BookSearchScreen`）
 
-**Status:** completed（`plans/plan-issue-7.md` 4 個 Task 全數完成）
+**Status:** completed（`plans/plan-issue-7.md` 4 個 Task 全數完成，`reviews/review-issue-7.md` 程式審查 Ready to merge: Yes，0 Critical／1 Important／2 Minor；Important〔`plan-issue-7.md` 未同步複審核准修訂〕與 2 項 Minor〔`searchContentInBook` 查詢合併、BM25 排序測試強化〕皆已修正；PR #237 已合併）
 
 **依賴：** Issue 4（全庫搜尋畫面）、Issue 5（搜尋跳轉 Seam）
 
