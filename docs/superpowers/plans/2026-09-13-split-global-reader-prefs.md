@@ -1442,6 +1442,9 @@ flutter test
 
 Expected：全數 PASS，無失敗。這是本計畫唯一一次要求跑全套（不分檔案）測試——比照專案既有慣例，整份計畫的最後一個 Task 完成時執行一次。
 
+> [!NOTE]
+> **實際執行紀錄（`docs/superpowers/reviews/2026-09-13-code-review-split-global-reader-prefs.md` Important 1）**：本步驟實際執行時，全專案 `flutter test` 出現 2 個失敗（`app/test/screens/adaptive_shell_scaffold_test.dart` 的「上層 themeDependencies 更新後，已切換過去的 SettingsScreen 收到最新 isEinkMode」與「在設定分頁點擊「書架」圖示切回書架分頁」兩案例），字面上未達成「全數 PASS」。程式碼審查已另外在 main 分支（未套用本次重構）重現同一份測試檔，得到完全相同的兩個失敗與錯誤堆疊，確認為 main 分支既有、與本次 `GlobalReaderPrefs` 拆分無關的既存問題（該測試檔本身也不在本計畫變更清單內），非本次重構引入的回歸，故仍照計畫於 Step 9 提交。
+
 - [ ] **Step 9：Commit（Task 2-4 整合為一次提交，審查意見 C-2）**
 
 本計畫的**唯一**一個涵蓋 Task 2／Task 3／Task 4 全部異動的整合 commit——Task 2、Task 3 結尾刻意不提交（見兩處 Task 收尾的 `[!IMPORTANT]` 說明），只有在這裡、`flutter analyze` 與全專案 `flutter test` 都確認乾淨之後，才第一次提交：

@@ -67,16 +67,22 @@ class _ReadingDefaultsScreenState extends State<ReadingDefaultsScreen> {
                 SwitchListTile(
                   key: const Key('reading_defaults_volume_key_switch'),
                   title: const Text('音量鍵翻頁'),
-                  value: _prefs.volumeKeyEnabled,
-                  onChanged: (value) =>
-                      _update(_prefs.copyWith(volumeKeyEnabled: value)),
+                  value: _prefs.reading.volumeKeyEnabled,
+                  onChanged: (value) => _update(
+                    _prefs.copyWith(
+                      reading: _prefs.reading.copyWith(volumeKeyEnabled: value),
+                    ),
+                  ),
                 ),
                 const Divider(height: 1),
                 _buildSectionHeader(context, '翻頁模式'),
                 RadioGroup<PageTurnMode>(
-                  groupValue: _prefs.pageTurnMode,
-                  onChanged: (mode) =>
-                      _update(_prefs.copyWith(pageTurnMode: mode)),
+                  groupValue: _prefs.reading.pageTurnMode,
+                  onChanged: (mode) => _update(
+                    _prefs.copyWith(
+                      reading: _prefs.reading.copyWith(pageTurnMode: mode),
+                    ),
+                  ),
                   child: Column(
                     children: [
                       RadioListTile<PageTurnMode>(
@@ -97,9 +103,14 @@ class _ReadingDefaultsScreenState extends State<ReadingDefaultsScreen> {
                 const Divider(height: 1),
                 _buildSectionHeader(context, '螢幕方向'),
                 RadioGroup<ScreenOrientationSetting>(
-                  groupValue: _prefs.screenOrientation,
-                  onChanged: (setting) =>
-                      _update(_prefs.copyWith(screenOrientation: setting)),
+                  groupValue: _prefs.reading.screenOrientation,
+                  onChanged: (setting) => _update(
+                    _prefs.copyWith(
+                      reading: _prefs.reading.copyWith(
+                        screenOrientation: setting,
+                      ),
+                    ),
+                  ),
                   child: Column(
                     children: [
                       RadioListTile<ScreenOrientationSetting>(
@@ -139,25 +150,36 @@ class _ReadingDefaultsScreenState extends State<ReadingDefaultsScreen> {
                 SwitchListTile(
                   key: const Key('reading_defaults_fullscreen_switch'),
                   title: const Text('全螢幕模式'),
-                  value: _prefs.fullscreen,
-                  onChanged: (value) =>
-                      _update(_prefs.copyWith(fullscreen: value)),
+                  value: _prefs.reading.fullscreen,
+                  onChanged: (value) => _update(
+                    _prefs.copyWith(
+                      reading: _prefs.reading.copyWith(fullscreen: value),
+                    ),
+                  ),
                 ),
                 const Divider(height: 1),
                 SwitchListTile(
                   key: const Key('reading_defaults_open_last_book_switch'),
                   title: const Text('啟動時開啟最後閱讀的那本書'),
-                  value: _prefs.openLastBookOnLaunch,
-                  onChanged: (value) =>
-                      _update(_prefs.copyWith(openLastBookOnLaunch: value)),
+                  value: _prefs.reading.openLastBookOnLaunch,
+                  onChanged: (value) => _update(
+                    _prefs.copyWith(
+                      reading: _prefs.reading.copyWith(
+                        openLastBookOnLaunch: value,
+                      ),
+                    ),
+                  ),
                 ),
                 const Divider(height: 1),
                 SwitchListTile(
                   key: const Key('reading_defaults_show_header_switch'),
                   title: const Text('顯示頁首'),
-                  value: _prefs.showHeader,
-                  onChanged: (value) =>
-                      _update(_prefs.copyWith(showHeader: value)),
+                  value: _prefs.reading.showHeader,
+                  onChanged: (value) => _update(
+                    _prefs.copyWith(
+                      reading: _prefs.reading.copyWith(showHeader: value),
+                    ),
+                  ),
                 ),
                 // 【review-plan-issue-5.md M-2】比照本畫面其餘控制項之間的
                 // 既有節奏，兩個開關之間也補上分隔線。
@@ -165,9 +187,12 @@ class _ReadingDefaultsScreenState extends State<ReadingDefaultsScreen> {
                 SwitchListTile(
                   key: const Key('reading_defaults_show_footer_switch'),
                   title: const Text('顯示頁尾'),
-                  value: _prefs.showFooter,
-                  onChanged: (value) =>
-                      _update(_prefs.copyWith(showFooter: value)),
+                  value: _prefs.reading.showFooter,
+                  onChanged: (value) => _update(
+                    _prefs.copyWith(
+                      reading: _prefs.reading.copyWith(showFooter: value),
+                    ),
+                  ),
                 ),
               ],
             ),

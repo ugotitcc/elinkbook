@@ -93,7 +93,7 @@ void main() {
     // 明確開啟，不受這裡影響。
     prefsManager = FakeReaderPrefsManager(
       globalPrefs: const GlobalReaderPrefs.initial().copyWith(
-        openLastBookOnLaunch: false,
+        reading: const ReadingDefaults(openLastBookOnLaunch: false),
       ),
     );
   });
@@ -3014,7 +3014,7 @@ void main() {
     );
     final fakeManager = FakeReaderPrefsManager(
       globalPrefs: const GlobalReaderPrefs.initial().copyWith(
-        openLastBookOnLaunch: true,
+        reading: const ReadingDefaults(openLastBookOnLaunch: true),
       ),
     );
 
@@ -3049,7 +3049,7 @@ void main() {
     );
     final fakeManager = FakeReaderPrefsManager(
       globalPrefs: const GlobalReaderPrefs.initial().copyWith(
-        openLastBookOnLaunch: false,
+        reading: const ReadingDefaults(openLastBookOnLaunch: false),
       ),
     );
 
@@ -3073,7 +3073,7 @@ void main() {
       '（epic-18-reader-device-qa Issue 29）', (tester) async {
     final fakeManager = FakeReaderPrefsManager(
       globalPrefs: const GlobalReaderPrefs.initial().copyWith(
-        openLastBookOnLaunch: true,
+        reading: const ReadingDefaults(openLastBookOnLaunch: true),
       ),
     );
 
@@ -3307,7 +3307,7 @@ void main() {
             importService: FakeBookImportService(),
             prefsManager: FakeReaderPrefsManager(
               globalPrefs: const GlobalReaderPrefs.initial().copyWith(
-                openLastBookOnLaunch: false,
+                reading: const ReadingDefaults(openLastBookOnLaunch: false),
               ),
             ),
             readerFeatureRepositories: LibraryReaderFeatureRepositories(
@@ -3367,7 +3367,7 @@ void main() {
           importService: FakeBookImportService(),
           prefsManager: FakeReaderPrefsManager(
             globalPrefs: const GlobalReaderPrefs.initial().copyWith(
-              openLastBookOnLaunch: false,
+              reading: const ReadingDefaults(openLastBookOnLaunch: false),
             ),
           ),
         ),

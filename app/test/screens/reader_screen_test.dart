@@ -1283,7 +1283,9 @@ void main() {
 
   testWidgets('全域預設值已改為 scroll 時，未覆寫的書籍採用該全域值', (tester) async {
     prefsManager.globalPrefs = prefsManager.globalPrefs.copyWith(
-      pageTurnMode: PageTurnMode.scroll,
+      reading: prefsManager.globalPrefs.reading.copyWith(
+        pageTurnMode: PageTurnMode.scroll,
+      ),
     );
 
     await tester.pumpWidget(
@@ -3248,7 +3250,7 @@ void main() {
 
     final disabledPrefsManager = FakeReaderPrefsManager(
       globalPrefs: const GlobalReaderPrefs.initial().copyWith(
-        volumeKeyEnabled: false,
+        reading: const ReadingDefaults(volumeKeyEnabled: false),
       ),
     );
 

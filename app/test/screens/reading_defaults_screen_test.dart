@@ -11,10 +11,12 @@ void main() {
       (tester) async {
     final fakeManager = FakeReaderPrefsManager(
       globalPrefs: const GlobalReaderPrefs.initial().copyWith(
-        volumeKeyEnabled: false,
-        pageTurnMode: PageTurnMode.scroll,
-        screenOrientation: ScreenOrientationSetting.lock90,
-        fullscreen: true,
+        reading: const ReadingDefaults(
+          volumeKeyEnabled: false,
+          pageTurnMode: PageTurnMode.scroll,
+          screenOrientation: ScreenOrientationSetting.lock90,
+          fullscreen: true,
+        ),
       ),
     );
     await tester.pumpWidget(MaterialApp(
@@ -66,7 +68,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(fakeManager.savedGlobalPrefsCalls, isNotEmpty);
-    expect(fakeManager.savedGlobalPrefsCalls.last.volumeKeyEnabled, isFalse);
+    expect(fakeManager.savedGlobalPrefsCalls.last.reading.volumeKeyEnabled, isFalse);
   });
 
   testWidgets('切換全螢幕模式開關立即呼叫 saveGlobalPrefs 並反映新值', (tester) async {
@@ -83,7 +85,7 @@ void main() {
     await tester.tap(fullscreenFinder);
     await tester.pumpAndSettle();
 
-    expect(fakeManager.savedGlobalPrefsCalls.last.fullscreen, isTrue);
+    expect(fakeManager.savedGlobalPrefsCalls.last.reading.fullscreen, isTrue);
   });
 
   testWidgets('點選翻頁模式選項立即呼叫 saveGlobalPrefs 更新為對應模式', (tester) async {
@@ -99,7 +101,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      fakeManager.savedGlobalPrefsCalls.last.pageTurnMode,
+      fakeManager.savedGlobalPrefsCalls.last.reading.pageTurnMode,
       PageTurnMode.scroll,
     );
   });
@@ -117,7 +119,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      fakeManager.savedGlobalPrefsCalls.last.screenOrientation,
+      fakeManager.savedGlobalPrefsCalls.last.reading.screenOrientation,
       ScreenOrientationSetting.lock180,
     );
   });
@@ -137,7 +139,7 @@ void main() {
       (tester) async {
     final fakeManager = FakeReaderPrefsManager(
       globalPrefs: const GlobalReaderPrefs.initial()
-          .copyWith(openLastBookOnLaunch: false),
+          .copyWith(reading: const ReadingDefaults(openLastBookOnLaunch: false)),
     );
     await tester.pumpWidget(MaterialApp(
       home: ReadingDefaultsScreen(prefsManager: fakeManager),
@@ -187,15 +189,15 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      fakeManager.savedGlobalPrefsCalls.last.openLastBookOnLaunch,
+      fakeManager.savedGlobalPrefsCalls.last.reading.openLastBookOnLaunch,
       isFalse,
     );
   });
 
   testWidgets('顯示頁首/頁尾開關反映既有 GlobalReaderPrefs 初始值', (tester) async {
     final fakeManager = FakeReaderPrefsManager(
-      globalPrefs: const GlobalReaderPrefs.initial()
-          .copyWith(showHeader: true, showFooter: false),
+      globalPrefs: const GlobalReaderPrefs.initial().copyWith(
+          reading: const ReadingDefaults(showHeader: true, showFooter: false)),
     );
     await tester.pumpWidget(MaterialApp(
       home: ReadingDefaultsScreen(prefsManager: fakeManager),
@@ -229,7 +231,7 @@ void main() {
     await tester.tap(switchFinder);
     await tester.pumpAndSettle();
 
-    expect(fakeManager.savedGlobalPrefsCalls.last.showHeader, isTrue);
+    expect(fakeManager.savedGlobalPrefsCalls.last.reading.showHeader, isTrue);
   });
 
   testWidgets('切換顯示頁尾開關立即呼叫 saveGlobalPrefs 並反映新值', (tester) async {
@@ -246,6 +248,6 @@ void main() {
     await tester.tap(switchFinder);
     await tester.pumpAndSettle();
 
-    expect(fakeManager.savedGlobalPrefsCalls.last.showFooter, isTrue);
+    expect(fakeManager.savedGlobalPrefsCalls.last.reading.showFooter, isTrue);
   });
 }

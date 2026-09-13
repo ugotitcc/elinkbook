@@ -2583,7 +2583,7 @@ class _ReaderScreenState extends State<ReaderScreen> with WidgetsBindingObserver
 
   /// 語音選擇 Bottom Sheet（epic-38-reader-chrome-tts-redesign Issue 2，
   /// spec.md §功能③）：本 Epic 只提供單次朗讀 session 內的臨時切換，不
-  /// 讀取也不寫入 `GlobalReaderPrefs.ttsVoiceId`（spec.md「Out of
+  /// 讀取也不寫入 `TtsDefaults.ttsVoiceId`（spec.md「Out of
   /// Scope」）。比照既有 `TtsDefaultsScreen` 的 `RadioGroup`／`RadioListTile`
   /// 既有呼叫模式（`tts_defaults_screen.dart`），只是資料來源改為即時
   /// 呼叫 [TtsProvider.getAvailableVoices]、選擇結果直接呼叫
