@@ -495,8 +495,7 @@ void main() {
       await manager.saveGlobalPrefs(withVoice);
       expect((await manager.loadGlobalPrefs()).tts.ttsVoiceId, 'voice-1');
 
-      const withoutVoice = GlobalReaderPrefs(
-      );
+      const withoutVoice = GlobalReaderPrefs();
       await manager.saveGlobalPrefs(withoutVoice);
       expect((await manager.loadGlobalPrefs()).tts.ttsVoiceId, isNull);
     });

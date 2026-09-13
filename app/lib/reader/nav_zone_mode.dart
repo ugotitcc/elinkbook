@@ -13,7 +13,7 @@ const List<ZoneAction> leftFlipZoneTemplate = [
 ];
 
 /// `rightFlip`：左欄＝上一頁、中欄＝選單、右欄＝下一頁（design.md 決策 #5）。
-/// 也是 [NavZoneMode] 與 `GlobalReaderPrefs.navZoneCustomActions` 的預設/
+/// 也是 [NavZoneMode] 與 `NavZonePrefs.navZoneCustomActions` 的預設/
 /// 回退值來源（spec.md「資料模型」）。
 const List<ZoneAction> rightFlipZoneTemplate = [
   ZoneAction.previousPage, ZoneAction.menu, ZoneAction.nextPage,

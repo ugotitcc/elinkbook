@@ -3307,7 +3307,7 @@ void main() {
             importService: FakeBookImportService(),
             prefsManager: FakeReaderPrefsManager(
               globalPrefs: const GlobalReaderPrefs.initial().copyWith(
-        reading: const ReadingDefaults(openLastBookOnLaunch: false),
+                reading: const ReadingDefaults(openLastBookOnLaunch: false),
               ),
             ),
             readerFeatureRepositories: LibraryReaderFeatureRepositories(
@@ -3367,7 +3367,7 @@ void main() {
           importService: FakeBookImportService(),
           prefsManager: FakeReaderPrefsManager(
             globalPrefs: const GlobalReaderPrefs.initial().copyWith(
-        reading: const ReadingDefaults(openLastBookOnLaunch: false),
+              reading: const ReadingDefaults(openLastBookOnLaunch: false),
             ),
           ),
         ),

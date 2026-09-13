@@ -82,10 +82,15 @@ class _TtsDefaultsScreenState extends State<TtsDefaultsScreen> {
                   )
                 else
                   RadioGroup<String>(
-                    groupValue: _prefs.tts.ttsVoiceId ?? TtsVoice.systemDefault.id,
+                    groupValue:
+                        _prefs.tts.ttsVoiceId ?? TtsVoice.systemDefault.id,
                     onChanged: (voiceId) {
                       if (voiceId == null) return;
-                      _update(_prefs.copyWith(tts: _prefs.tts.copyWith(ttsVoiceId: voiceId)));
+                      _update(
+                        _prefs.copyWith(
+                          tts: _prefs.tts.copyWith(ttsVoiceId: voiceId),
+                        ),
+                      );
                     },
                     child: Column(
                       children: [
@@ -113,13 +118,19 @@ class _TtsDefaultsScreenState extends State<TtsDefaultsScreen> {
                         // （1.0 - 0.75 = 0.25），若用後者，0.8x 時
                         // 0.8 - 0.1 = 0.7 < 0.75 已成立，按鈕會在到達 0.75x
                         // 之前就被錯誤停用，使用者永遠调不到規格下限。
-                        onPressed: _prefs.tts.defaultTtsSpeed <= _minSpeed + 1e-9
+                        onPressed:
+                            _prefs.tts.defaultTtsSpeed <= _minSpeed + 1e-9
                             ? null
-                            : () => _update(_prefs.copyWith(
-                                tts: _prefs.tts.copyWith(
+                            : () => _update(
+                                _prefs.copyWith(
+                                  tts: _prefs.tts.copyWith(
                                     defaultTtsSpeed:
-                                        (_prefs.tts.defaultTtsSpeed - _speedStep)
-                                            .clamp(_minSpeed, _maxSpeed)))),
+                                        (_prefs.tts.defaultTtsSpeed -
+                                                _speedStep)
+                                            .clamp(_minSpeed, _maxSpeed),
+                                  ),
+                                ),
+                              ),
                       ),
                       Expanded(
                         child: widget.isEinkMode
@@ -161,10 +172,16 @@ class _TtsDefaultsScreenState extends State<TtsDefaultsScreen> {
                                   final snapped = v <= _minSpeed + 0.025
                                       ? _minSpeed
                                       : (v * 10).round() / 10;
-                                  _update(_prefs.copyWith(
+                                  _update(
+                                    _prefs.copyWith(
                                       tts: _prefs.tts.copyWith(
-                                          defaultTtsSpeed: snapped.clamp(
-                                              _minSpeed, _maxSpeed))));
+                                        defaultTtsSpeed: snapped.clamp(
+                                          _minSpeed,
+                                          _maxSpeed,
+                                        ),
+                                      ),
+                                    ),
+                                  );
                                 },
                               ),
                       ),
@@ -178,13 +195,19 @@ class _TtsDefaultsScreenState extends State<TtsDefaultsScreen> {
                         // 否則 Slider 端四捨五入吸附（見下方 I-1 修正）
                         // 得出的浮點值一旦有極小誤差飄出格線，預判式會比
                         // 目前值式更早停用，行為不一致、也更脆弱。
-                        onPressed: _prefs.tts.defaultTtsSpeed >= _maxSpeed - 1e-9
+                        onPressed:
+                            _prefs.tts.defaultTtsSpeed >= _maxSpeed - 1e-9
                             ? null
-                            : () => _update(_prefs.copyWith(
-                                tts: _prefs.tts.copyWith(
+                            : () => _update(
+                                _prefs.copyWith(
+                                  tts: _prefs.tts.copyWith(
                                     defaultTtsSpeed:
-                                        (_prefs.tts.defaultTtsSpeed + _speedStep)
-                                            .clamp(_minSpeed, _maxSpeed)))),
+                                        (_prefs.tts.defaultTtsSpeed +
+                                                _speedStep)
+                                            .clamp(_minSpeed, _maxSpeed),
+                                  ),
+                                ),
+                              ),
                       ),
                     ],
                   ),

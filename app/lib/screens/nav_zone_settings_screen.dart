@@ -70,8 +70,9 @@ class _NavZoneSettingsScreenState extends State<NavZoneSettingsScreen> {
   }
 
   void _selectMode(NavZoneMode mode) {
-    final updated =
-        _prefs.copyWith(navZone: _prefs.navZone.copyWith(navZoneMode: mode));
+    final updated = _prefs.copyWith(
+      navZone: _prefs.navZone.copyWith(navZoneMode: mode),
+    );
     widget.prefsManager.saveGlobalPrefs(updated);
     setState(() {
       _prefs = updated;
@@ -106,8 +107,9 @@ class _NavZoneSettingsScreenState extends State<NavZoneSettingsScreen> {
       return;
     }
     final updated = _prefs.copyWith(
-      navZone: _prefs.navZone
-          .copyWith(navZoneCustomActions: List.of(_customActions)),
+      navZone: _prefs.navZone.copyWith(
+        navZoneCustomActions: List.of(_customActions),
+      ),
     );
     widget.prefsManager.saveGlobalPrefs(updated);
     setState(() {
@@ -153,15 +155,19 @@ class _NavZoneSettingsScreenState extends State<NavZoneSettingsScreen> {
                           ButtonSegment(value: false, label: Text('簡單')),
                           ButtonSegment(value: true, label: Text('自訂')),
                         ],
-                        selected: {_prefs.navZone.navZoneMode == NavZoneMode.custom},
+                        selected: {
+                          _prefs.navZone.navZoneMode == NavZoneMode.custom,
+                        },
                         onSelectionChanged: (selection) {
                           final showCustom = selection.first;
                           if (showCustom) {
-                            if (_prefs.navZone.navZoneMode != NavZoneMode.custom) {
+                            if (_prefs.navZone.navZoneMode !=
+                                NavZoneMode.custom) {
                               _selectMode(NavZoneMode.custom);
                             }
                           } else {
-                            if (_prefs.navZone.navZoneMode == NavZoneMode.custom) {
+                            if (_prefs.navZone.navZoneMode ==
+                                NavZoneMode.custom) {
                               _selectMode(NavZoneMode.rightFlip);
                             }
                           }
