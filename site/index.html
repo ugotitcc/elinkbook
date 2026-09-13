@@ -137,7 +137,7 @@
             </div>
           </div>
 
-          <!-- 右側：擬真電子墨水屏閱讀器互動模擬器 (依據 prototype/eink_redesign_prototype.html 重構) -->
+          <!-- 右側：擬真電子墨水屏閱讀器互動模擬器 (依據 prototype/elinkbook_theme_prototype.html 主題系統重構) -->
           <div class="reader-mockup-wrapper">
             <!-- 外層快速體驗與切換工具列 -->
             <div class="mockup-external-toolbar">
@@ -147,10 +147,11 @@
                 <button type="button" class="demo-chip-btn" id="btn-mode-horizontal" title="橫排閱讀 (Horizontal LTR)">橫排 (LTR)</button>
               </div>
               <div class="mockup-chip-group">
-                <span class="mockup-toolbar-label">模式：</span>
-                <button type="button" class="demo-chip-btn active" id="theme-eink-btn" title="E-Ink 純黑白高對比">E-Ink</button>
-                <button type="button" class="demo-chip-btn" id="theme-parchment-btn" title="古典紙質">紙質</button>
-                <button type="button" class="demo-chip-btn" id="theme-dark-btn" title="墨夜深色">夜間</button>
+                <span class="mockup-toolbar-label">主題：</span>
+                <button type="button" class="demo-chip-btn active" id="theme-btn-light" title="晴空藍天 (Light)">晴空</button>
+                <button type="button" class="demo-chip-btn" id="theme-btn-dark" title="夜讀水墨 (Dark)">夜讀</button>
+                <button type="button" class="demo-chip-btn" id="theme-btn-sepia" title="宣紙古風 (Sepia)">宣紙</button>
+                <button type="button" class="demo-chip-btn" id="sidebar-eink-toggle" title="E-Ink 純黑白高對比模式">E-Ink</button>
               </div>
             </div>
 
@@ -159,13 +160,13 @@
               <!-- 頂部聽筒造型裝飾 -->
               <div class="emulator-speaker-earpiece"></div>
 
-              <!-- 閱讀器主畫面容器 (預設純黑白高對比 E-Ink) -->
-              <div class="reader-device-screen theme-eink" id="demo-reader-container">
+              <!-- 閱讀器主畫面容器 (套用 data-theme 與 data-eink Token 系統) -->
+              <div class="reader-device-screen" id="demo-reader-container" data-theme="light" data-eink="off">
 
                 <!-- 頂部 Chrome Bar (56dp) -->
                 <div class="reader-top-chrome" id="reader-top-chrome">
                   <button type="button" class="chrome-icon-btn" id="btn-reader-back" title="返回書架">‹</button>
-                  <div class="chrome-chapter-title" id="reader-chapter-title">第七章 · 弦外之音</div>
+                  <div class="chrome-chapter-title" id="reader-chapter-title">《桃花源記》節選</div>
                   <div class="chrome-actions">
                     <button type="button" class="chrome-icon-btn" id="btn-reader-search" title="搜尋內文">⌕</button>
                     <button type="button" class="chrome-icon-btn" id="btn-reader-fullscreen" title="全螢幕 / 切換工具列">⬓</button>
@@ -176,7 +177,7 @@
                 <!-- 直排繁體中文內文閱讀區 (點擊可切換全螢幕沉浸閱讀) -->
                 <div class="reader-content-body mode-vertical" id="demo-reader-view" title="點擊內文可切換全螢幕沉浸閱讀">
                   <div class="reader-text-container font-serif" id="demo-text-flow">
-                    琴聲停了。她把手指從弦上收回來，指腹還留著壓弦的凹痕，<span id="demo-tts-sentence" class="tts-sentence">像是某種只有自己讀得懂的記號。</span>窗外的雨已經下了整個下午，屋簷的水線連成一片，把對面那排老屋的輪廓洗得模糊。<br>「再一次。」老師沒有抬頭，只是把譜翻過一頁。她深吸一口氣，重新按上第七弦——這一次，音準了。
+                    晉太元中，武陵人捕魚為業。緣溪行，忘路之遠近。忽逢桃花林，夾岸數百步，中無雜樹，芳草鮮美，落英繽紛。<span id="demo-tts-sentence" class="tts-sentence">漁人甚異之，復前行，欲窮其林。</span>林盡水源，便得一山，山有小口，彷彿若有光。便捨船，從口入。初極狹，纔通人。復行數十步，豁然開朗。<br>土地平曠，屋舍儼然，有良田、美池、桑竹之屬。阡陌交通，雞犬相聞。其中往來種作，男女衣著，悉如外人。黃髮垂髫，並怡然自樂。
                   </div>
                 </div>
 
@@ -184,15 +185,15 @@
                 <div class="reader-chrome-group" id="reader-normal-chrome">
                   <!-- 視覺頁碼列 (34dp) -->
                   <div class="reader-status-bar">
-                    <span class="status-book-title">一弦定音</span>
-                    <span class="status-page-info" id="demo-page-indicator">184 / 468 · 39%</span>
+                    <span class="status-book-title">《桃花源記》</span>
+                    <span class="status-page-info" id="demo-page-indicator">第 1 / 12 頁 · 8%</span>
                   </div>
 
                   <!-- 離散跳頁列 (56dp) -->
                   <div class="reader-jump-bar">
-                    <span class="jump-current-page" id="demo-jump-page">184</span>
+                    <span class="jump-current-page" id="demo-jump-page">1</span>
                     <div class="jump-progress-track">
-                      <div class="jump-progress-fill" id="demo-progress-bar" style="width: 39%;"></div>
+                      <div class="jump-progress-fill" id="demo-progress-bar" style="width: 8%;"></div>
                     </div>
                     <button type="button" class="jump-action-btn" id="btn-reader-jump">跳</button>
                   </div>
@@ -329,11 +330,22 @@
                       <div class="layout-option-row">
                         <div class="option-label-group">
                           <span class="option-title">純黑白 E-Ink 模式</span>
-                          <span class="option-desc">高對比過濾灰階與陰影</span>
+                          <span class="option-desc">強制高對比純黑白，鎖定色彩</span>
                         </div>
-                        <button type="button" class="switch-toggle-btn active" id="switch-eink-toggle">
+                        <button type="button" class="switch-toggle-btn" id="switch-eink-toggle">
                           <div class="switch-dot"></div>
                         </button>
+                      </div>
+                      <div class="layout-option-row">
+                        <div class="option-label-group">
+                          <span class="option-title">主題佈景</span>
+                          <span class="option-desc">晴空藍天 / 夜讀水墨 / 宣紙古風</span>
+                        </div>
+                        <div class="segmented-btn-group">
+                          <button type="button" class="segment-btn active" id="layout-theme-light">晴空</button>
+                          <button type="button" class="segment-btn" id="layout-theme-dark">夜讀</button>
+                          <button type="button" class="segment-btn" id="layout-theme-sepia">宣紙</button>
+                        </div>
                       </div>
                     </div>
 

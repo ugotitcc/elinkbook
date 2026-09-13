@@ -571,6 +571,10 @@ img {
 }
 
 /* 閱讀器螢幕本體 (動態切換色彩主題) */
+/* ============================================================
+   主題系統：Light（晴空藍天）／Dark（夜讀水墨）／Sepia（宣紙古風）
+   ＋ E-Ink 修飾子。色值取自 DESIGN.md 第 1 節色彩 Token。
+   ============================================================ */
 .reader-device-screen {
   flex: 1;
   display: flex;
@@ -578,49 +582,56 @@ img {
   overflow: hidden;
   position: relative;
   user-select: none;
-  background: #ffffff;
-  color: #000000;
   border-radius: 20px 20px 0 0;
   transition: background-color var(--transition-fast), color var(--transition-fast);
+
+  /* 預設 Light（晴空藍天） */
+  --color-surface: #ffffff;
+  --color-on-surface: #0f172a;
+  --color-outline: #cbdfe9;
+  --color-primary: #0284c7;
+  --color-on-primary: #ffffff;
+
+  background-color: var(--color-surface);
+  color: var(--color-on-surface);
 }
 
-/* 主題 1：E-Ink 純黑白高對比 */
-.reader-device-screen.theme-eink {
-  background: #ffffff;
-  color: #000000;
-  --reader-border: #000000;
-  --reader-active-bg: #000000;
-  --reader-active-text: #ffffff;
+.reader-device-screen[data-theme="dark"] {
+  --color-surface: #1d1d22;
+  --color-on-surface: #f2efe6;
+  --color-outline: #2c2c34;
+  --color-primary: #38bdf8;
+  --color-on-primary: #141416;
 }
 
-/* 主題 2：古典竹韻紙質 */
-.reader-device-screen.theme-parchment {
-  background: #f7f1e5;
-  color: #2b261f;
-  --reader-border: #42362b;
-  --reader-active-bg: #42362b;
-  --reader-active-text: #f7f1e5;
+.reader-device-screen[data-theme="sepia"] {
+  --color-surface: #faf3e3;
+  --color-on-surface: #1f2022;
+  --color-outline: #e6dfcb;
+  --color-primary: #b8362d;
+  --color-on-primary: #ffffff;
 }
 
-/* 主題 3：墨夜深色模式 */
-.reader-device-screen.theme-dark {
-  background: #141715;
-  color: #d1dcd4;
-  --reader-border: #3b443e;
-  --reader-active-bg: #3b443e;
-  --reader-active-text: #ffffff;
+/* E-Ink 開啟：無條件強制純黑白高對比（優先蓋過上面三組） */
+.reader-device-screen[data-eink="on"] {
+  --color-surface: #ffffff !important;
+  --color-on-surface: #000000 !important;
+  --color-outline: #000000 !important;
+  --color-primary: #000000 !important;
+  --color-on-primary: #ffffff !important;
 }
 
 /* 頂部 Chrome Bar (56dp) */
 .reader-top-chrome {
   height: 52px;
-  border-bottom: 1.5px solid var(--reader-border, #000);
+  border-bottom: 1.5px solid var(--color-outline);
   display: flex;
   align-items: center;
   padding: 0 6px;
   gap: 4px;
   flex-shrink: 0;
-  background: inherit;
+  background: var(--color-surface);
+  color: var(--color-on-surface);
   transition: transform 0.2s ease, opacity 0.2s ease;
   z-index: 5;
 }
@@ -642,8 +653,8 @@ img {
 }
 
 .chrome-icon-btn:active {
-  background: var(--reader-active-bg, #000);
-  color: var(--reader-active-text, #fff);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
 }
 
 .chrome-chapter-title {
@@ -672,7 +683,8 @@ img {
   justify-content: flex-end;
   overflow: hidden;
   cursor: pointer;
-  background: inherit;
+  background: var(--color-surface);
+  color: var(--color-on-surface);
   position: relative;
 }
 
@@ -711,15 +723,15 @@ img {
 }
 
 .tts-sentence.active-sentence {
-  background: var(--reader-active-bg, #000);
-  color: var(--reader-active-text, #fff);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
   padding: 2px 0;
   box-decoration-break: clone;
   -webkit-box-decoration-break: clone;
 }
 
 .tts-sentence.paused-sentence {
-  border-bottom: 2px dashed var(--reader-border, #000);
+  border-bottom: 2px dashed var(--color-primary);
   color: inherit;
   background: transparent;
 }
@@ -729,7 +741,8 @@ img {
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
-  background: inherit;
+  background: var(--color-surface);
+  color: var(--color-on-surface);
   transition: transform 0.2s ease, opacity 0.2s ease;
   z-index: 5;
 }
@@ -737,7 +750,7 @@ img {
 /* 視覺頁碼列 (34dp) */
 .reader-status-bar {
   height: 32px;
-  border-top: 1.5px solid var(--reader-border, #000);
+  border-top: 1.5px solid var(--color-outline);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -745,17 +758,19 @@ img {
   font-size: 0.74rem;
   font-weight: 700;
   background: inherit;
+  color: inherit;
 }
 
 /* 離散跳頁列 (56dp) */
 .reader-jump-bar {
   height: 48px;
-  border-top: 1.5px solid var(--reader-border, #000);
+  border-top: 1.5px solid var(--color-outline);
   display: flex;
   align-items: center;
   padding: 0 12px;
   gap: 8px;
   background: inherit;
+  color: inherit;
 }
 
 .jump-current-page {
@@ -767,20 +782,21 @@ img {
 .jump-progress-track {
   flex: 1;
   height: 9px;
-  border: 1.5px solid var(--reader-border, #000);
+  border: 1.5px solid var(--color-outline);
   display: flex;
   overflow: hidden;
+  background: transparent;
 }
 
 .jump-progress-fill {
   height: 100%;
-  background: var(--reader-border, #000);
+  background: var(--color-primary);
 }
 
 .jump-action-btn {
   height: 32px;
   padding: 0 10px;
-  border: 1.5px solid var(--reader-border, #000);
+  border: 1.5px solid var(--color-outline);
   border-radius: 5px;
   background: transparent;
   color: inherit;
@@ -790,22 +806,23 @@ img {
 }
 
 .jump-action-btn:active {
-  background: var(--reader-active-bg, #000);
-  color: var(--reader-active-text, #fff);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
 }
 
 /* 閱讀器底部選單列 (64dp) */
 .reader-bottom-nav {
   height: 56px;
-  border-top: 1.5px solid var(--reader-border, #000);
+  border-top: 1.5px solid var(--color-outline);
   display: flex;
   background: inherit;
+  color: inherit;
 }
 
 .nav-tile-btn {
   flex: 1;
   border: none;
-  border-left: 1.5px solid var(--reader-border, #000);
+  border-left: 1.5px solid var(--color-outline);
   background: transparent;
   color: inherit;
   display: flex;
@@ -822,8 +839,8 @@ img {
 }
 
 .nav-tile-btn:active {
-  background: var(--reader-active-bg, #000);
-  color: var(--reader-active-text, #fff);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
 }
 
 .nav-tile-icon {
@@ -838,9 +855,10 @@ img {
 
 /* 2c. TTS 朗讀工具列 */
 .reader-tts-group {
-  border-top: 1.5px solid var(--reader-border, #000);
+  border-top: 1.5px solid var(--color-outline);
   padding: 8px 10px;
-  background: inherit;
+  background: var(--color-surface);
+  color: var(--color-on-surface);
   flex-shrink: 0;
   z-index: 5;
 }
@@ -860,7 +878,7 @@ img {
 .tts-step-btn {
   flex: 1;
   height: 38px;
-  border: 1.5px solid var(--reader-border, #000);
+  border: 1.5px solid var(--color-outline);
   border-radius: 5px;
   background: transparent;
   color: inherit;
@@ -872,16 +890,16 @@ img {
 }
 
 .tts-step-btn:active {
-  background: var(--reader-active-bg, #000);
-  color: var(--reader-active-text, #fff);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
 }
 
 .tts-play-btn {
   flex: 1.35;
   height: 38px;
-  background: var(--reader-active-bg, #000);
-  color: var(--reader-active-text, #fff);
-  border: 1.5px solid var(--reader-border, #000);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  border: 1.5px solid var(--color-outline);
   border-radius: 5px;
   font-size: 0.78rem;
   font-weight: 800;
@@ -894,7 +912,7 @@ img {
 .tts-chip-btn {
   flex: 1;
   height: 38px;
-  border: 1.5px solid var(--reader-border, #000);
+  border: 1.5px solid var(--color-outline);
   border-radius: 5px;
   background: transparent;
   color: inherit;
@@ -907,8 +925,8 @@ img {
 }
 
 .tts-chip-btn:active {
-  background: var(--reader-active-bg, #000);
-  color: var(--reader-active-text, #fff);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
 }
 
 .tts-actions-row {
@@ -920,7 +938,7 @@ img {
 .tts-sub-btn {
   flex: 1;
   height: 34px;
-  border: 1.5px solid var(--reader-border, #000);
+  border: 1.5px solid var(--color-outline);
   border-radius: 5px;
   background: transparent;
   color: inherit;
@@ -933,16 +951,16 @@ img {
 }
 
 .tts-sub-btn:active {
-  background: var(--reader-active-bg, #000);
-  color: var(--reader-active-text, #fff);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
 }
 
 .tts-stop-btn {
   flex: 1;
   height: 34px;
-  background: var(--reader-active-bg, #000);
-  color: var(--reader-active-text, #fff);
-  border: 1.5px solid var(--reader-border, #000);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  border: 1.5px solid var(--color-outline);
   border-radius: 5px;
   font-size: 0.72rem;
   font-weight: 800;
@@ -959,8 +977,8 @@ img {
   bottom: 0;
   left: 0;
   right: 0;
-  background: inherit;
-  color: inherit;
+  background: var(--color-surface);
+  color: var(--color-on-surface);
   display: flex;
   flex-direction: column;
   z-index: 20;
@@ -968,7 +986,7 @@ img {
 
 .layout-sheet-header {
   height: 50px;
-  border-bottom: 1.5px solid var(--reader-border, #000);
+  border-bottom: 1.5px solid var(--color-outline);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -984,7 +1002,7 @@ img {
 .layout-close-btn {
   width: 36px;
   height: 36px;
-  border: 1.5px solid var(--reader-border, #000);
+  border: 1.5px solid var(--color-outline);
   border-radius: 6px;
   background: transparent;
   color: inherit;
@@ -997,13 +1015,13 @@ img {
 }
 
 .layout-close-btn:active {
-  background: var(--reader-active-bg, #000);
-  color: var(--reader-active-text, #fff);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
 }
 
 .layout-sheet-tabs {
   height: 38px;
-  border-bottom: 1.5px solid var(--reader-border, #000);
+  border-bottom: 1.5px solid var(--color-outline);
   display: flex;
   flex-shrink: 0;
 }
@@ -1011,7 +1029,7 @@ img {
 .layout-tab-btn {
   flex: 1;
   border: none;
-  border-left: 1.5px solid var(--reader-border, #000);
+  border-left: 1.5px solid var(--color-outline);
   background: transparent;
   color: inherit;
   font-size: 0.74rem;
@@ -1024,8 +1042,8 @@ img {
 }
 
 .layout-tab-btn.active {
-  background: var(--reader-active-bg, #000);
-  color: var(--reader-active-text, #fff);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
   font-weight: 900;
 }
 
@@ -1039,7 +1057,7 @@ img {
 }
 
 .layout-option-row {
-  border: 1.5px solid var(--reader-border, #000);
+  border: 1.5px solid var(--color-outline);
   border-radius: 6px;
   padding: 8px 10px;
   display: flex;
@@ -1074,7 +1092,7 @@ img {
 .option-cycle-btn {
   height: 34px;
   padding: 0 10px;
-  border: 1.5px solid var(--reader-border, #000);
+  border: 1.5px solid var(--color-outline);
   border-radius: 5px;
   background: transparent;
   color: inherit;
@@ -1087,8 +1105,8 @@ img {
 }
 
 .option-cycle-btn:active {
-  background: var(--reader-active-bg, #000);
-  color: var(--reader-active-text, #fff);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
 }
 
 .stepper-wrap {
@@ -1100,7 +1118,7 @@ img {
 .stepper-btn {
   width: 34px;
   height: 34px;
-  border: 1.5px solid var(--reader-border, #000);
+  border: 1.5px solid var(--color-outline);
   border-radius: 5px;
   background: transparent;
   color: inherit;
@@ -1113,8 +1131,8 @@ img {
 }
 
 .stepper-btn:active {
-  background: var(--reader-active-bg, #000);
-  color: var(--reader-active-text, #fff);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
 }
 
 .stepper-val {
@@ -1131,7 +1149,7 @@ img {
 
 .segment-btn {
   padding: 5px 10px;
-  border: 1.5px solid var(--reader-border, #000);
+  border: 1.5px solid var(--color-outline);
   border-radius: 5px;
   background: transparent;
   color: inherit;
@@ -1141,14 +1159,15 @@ img {
 }
 
 .segment-btn.active {
-  background: var(--reader-active-bg, #000);
-  color: var(--reader-active-text, #fff);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  border-color: var(--color-primary);
 }
 
 .switch-toggle-btn {
   width: 44px;
   height: 26px;
-  border: 1.5px solid var(--reader-border, #000);
+  border: 1.5px solid var(--color-outline);
   border-radius: 999px;
   background: transparent;
   display: flex;
@@ -1158,19 +1177,20 @@ img {
 }
 
 .switch-toggle-btn.active {
-  background: var(--reader-active-bg, #000);
+  background: var(--color-primary);
+  border-color: var(--color-primary);
 }
 
 .switch-dot {
   width: 18px;
   height: 18px;
-  background: currentColor;
+  background: var(--color-outline);
   border-radius: 50%;
   transition: transform 0.15s ease;
 }
 
 .switch-toggle-btn.active .switch-dot {
-  background: var(--reader-active-text, #fff);
+  background: var(--color-on-primary);
   transform: translateX(18px);
 }
 
@@ -1181,7 +1201,7 @@ img {
 }
 
 .preset-item {
-  border: 1.5px solid var(--reader-border, #000);
+  border: 1.5px solid var(--color-outline);
   border-radius: 6px;
   padding: 10px 12px;
   display: flex;
@@ -1193,8 +1213,8 @@ img {
 }
 
 .preset-item.active {
-  background: var(--reader-active-bg, #000);
-  color: var(--reader-active-text, #fff);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
 }
 
 .preset-badge {
@@ -1210,9 +1230,9 @@ img {
   bottom: 85px;
   left: 50%;
   transform: translateX(-50%);
-  background: #000000;
-  color: #ffffff;
-  border: 1.5px solid #ffffff;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  border: 1.5px solid var(--color-outline);
   border-radius: 6px;
   padding: 6px 12px;
   font-size: 0.74rem;

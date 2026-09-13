@@ -114,6 +114,9 @@
   /**
    * 初始化閱讀器互動模擬器 (依據 prototype/eink_redesign_prototype.html 規範)
    */
+  /**
+   * 初始化閱讀器互動模擬器 (依據 prototype/elinkbook_theme_prototype.html 規範)
+   */
   function initReaderDemo() {
     const readerContainer = document.getElementById('demo-reader-container');
     const pageView = document.getElementById('demo-reader-view');
@@ -178,36 +181,97 @@
     if (layoutDirHorizontal) layoutDirHorizontal.addEventListener('click', () => setDirection('horizontal'));
 
     // ==========================================
-    // 2. 主題切換 (E-Ink / 紙質 / 夜間)
+    // 2. 主題系統 (晴空 Light / 夜讀 Dark / 宣紙 Sepia + E-Ink 修飾子)
+    // 依據 prototype/elinkbook_theme_prototype.html 規範
     // ==========================================
-    const themeEinkBtn = document.getElementById('theme-eink-btn');
-    const themeParchmentBtn = document.getElementById('theme-parchment-btn');
-    const themeDarkBtn = document.getElementById('theme-dark-btn');
-    const themeChips = [themeEinkBtn, themeParchmentBtn, themeDarkBtn].filter(Boolean);
+    let currentTheme = 'light';
+    let isEinkMode = false;
 
-    function setTheme(themeName, activeBtn, toastMsg) {
-      readerContainer.className = readerContainer.className.replace(/theme-\w+/g, '').trim() + ' ' + themeName;
-      themeChips.forEach(chip => chip.classList.remove('active'));
-      if (activeBtn) activeBtn.classList.add('active');
-      showToast(toastMsg);
+    const themeLabels = {
+      light: '晴空藍天（Light）',
+      dark: '夜讀水墨（Dark）',
+      sepia: '宣紙古風（Sepia）'
+    };
+
+    function applyThemeState() {
+      readerContainer.setAttribute('data-theme', currentTheme);
+      readerContainer.setAttribute('data-eink', isEinkMode ? 'on' : 'off');
+
+      // 更新外部工具列按鈕高亮
+      ['light', 'dark', 'sepia'].forEach(t => {
+        const extBtn = document.getElementById(`theme-btn-${t}`);
+        const active = (t === currentTheme);
+        if (extBtn) {
+          extBtn.classList.toggle('active', active && !isEinkMode);
+          extBtn.disabled = isEinkMode;
+          extBtn.style.opacity = isEinkMode ? '0.4' : '1';
+          extBtn.style.cursor = isEinkMode ? 'not-allowed' : 'pointer';
+        }
+
+        const layoutBtn = document.getElementById(`layout-theme-${t}`);
+        if (layoutBtn) {
+          layoutBtn.classList.toggle('active', active);
+          layoutBtn.disabled = isEinkMode;
+          layoutBtn.style.opacity = isEinkMode ? '0.4' : '1';
+        }
+      });
+
+      // 外部 E-Ink 開關
+      const extEinkBtn = document.getElementById('sidebar-eink-toggle');
+      if (extEinkBtn) {
+        extEinkBtn.classList.toggle('active', isEinkMode);
+        extEinkBtn.textContent = isEinkMode ? 'E-Ink (開啟)' : 'E-Ink';
+      }
+
+      // 版面面板內 E-Ink 開關
+      const switchEink = document.getElementById('switch-eink-toggle');
+      if (switchEink) {
+        switchEink.classList.toggle('active', isEinkMode);
+      }
+    }
+
+    function setTheme(theme) {
+      if (isEinkMode) {
+        showToast('E-Ink 高對比模式開啟中（強制純黑白），請先關閉 E-Ink 模式以自訂色彩');
+        return;
+      }
+      currentTheme = theme;
+      applyThemeState();
+      showToast(`已套用主題：${themeLabels[theme] || theme}`);
       triggerEinkFlash();
     }
 
-    if (themeEinkBtn) {
-      themeEinkBtn.addEventListener('click', () => {
-        setTheme('theme-eink', themeEinkBtn, '已套用 E-Ink 純黑白高對比模式');
-      });
+    function setEinkMode(on) {
+      isEinkMode = on;
+      applyThemeState();
+      showToast(isEinkMode ? 'E-Ink 高對比模式已開啟（畫面強制純黑白）' : '已關閉 E-Ink 模式，恢復色彩主題');
+      triggerEinkFlash();
     }
-    if (themeParchmentBtn) {
-      themeParchmentBtn.addEventListener('click', () => {
-        setTheme('theme-parchment', themeParchmentBtn, '已套用古典竹韻紙質模式');
-      });
-    }
-    if (themeDarkBtn) {
-      themeDarkBtn.addEventListener('click', () => {
-        setTheme('theme-dark', themeDarkBtn, '已套用墨夜深色模式');
-      });
-    }
+
+    // 外部主題按鈕點擊
+    const themeBtnLight = document.getElementById('theme-btn-light');
+    const themeBtnDark = document.getElementById('theme-btn-dark');
+    const themeBtnSepia = document.getElementById('theme-btn-sepia');
+    const sidebarEinkToggle = document.getElementById('sidebar-eink-toggle');
+
+    if (themeBtnLight) themeBtnLight.addEventListener('click', () => setTheme('light'));
+    if (themeBtnDark) themeBtnDark.addEventListener('click', () => setTheme('dark'));
+    if (themeBtnSepia) themeBtnSepia.addEventListener('click', () => setTheme('sepia'));
+    if (sidebarEinkToggle) sidebarEinkToggle.addEventListener('click', () => setEinkMode(!isEinkMode));
+
+    // 版面面板內的主題切換
+    const layoutThemeLight = document.getElementById('layout-theme-light');
+    const layoutThemeDark = document.getElementById('layout-theme-dark');
+    const layoutThemeSepia = document.getElementById('layout-theme-sepia');
+    const switchEinkToggle = document.getElementById('switch-eink-toggle');
+
+    if (layoutThemeLight) layoutThemeLight.addEventListener('click', () => setTheme('light'));
+    if (layoutThemeDark) layoutThemeDark.addEventListener('click', () => setTheme('dark'));
+    if (layoutThemeSepia) layoutThemeSepia.addEventListener('click', () => setTheme('sepia'));
+    if (switchEinkToggle) switchEinkToggle.addEventListener('click', () => setEinkMode(!isEinkMode));
+
+    // 初始化主題
+    applyThemeState();
 
     // ==========================================
     // 3. 全螢幕沉浸閱讀切換 (⬓ 或點擊閱讀區)
@@ -267,7 +331,7 @@
       triggerEinkFlash();
     });
     if (btnJump) btnJump.addEventListener('click', () => {
-      showToast('跳轉至第 184 頁 / 共 468 頁 (39%)');
+      showToast('跳轉至《桃花源記》第 1 頁 / 共 12 頁 (8%)');
       triggerEinkFlash();
     });
     if (btnBookmark) btnBookmark.addEventListener('click', () => {
@@ -280,7 +344,7 @@
     });
 
     // ==========================================
-    // 5. TTS 朗讀工具列互動 (2c)
+    // 5. TTS 朗讀工具列互動 (2c) —《桃花源記》
     // ==========================================
     const btnNavTts = document.getElementById('btn-nav-tts');
     const ttsSentence = document.getElementById('demo-tts-sentence');
@@ -299,10 +363,10 @@
     let isTtsCollapsed = false;
 
     const demoSentences = [
-      '像是某種只有自己讀得懂的記號。',
-      '窗外的雨已經下了整個下午，屋簷的水線連成一片，',
-      '把對面那排老屋的輪廓洗得模糊。',
-      '「再一次。」老師沒有抬頭，只是把譜翻過一頁。'
+      '漁人甚異之，復前行，欲窮其林。',
+      '忽逢桃花林，夾岸數百步，中無雜樹，芳草鮮美，落英繽紛。',
+      '便捨船，從口入。初極狹，纔通人。復行數十步，豁然開朗。',
+      '土地平曠，屋舍儼然，有良田、美池、桑竹之屬。'
     ];
     let sentenceIndex = 0;
 
@@ -362,7 +426,7 @@
           showToast(`朗讀前一句：${demoSentences[sentenceIndex]}`);
           triggerEinkFlash();
         } else {
-          showToast('已是本章開頭第一句');
+          showToast('已是本篇開頭第一句');
         }
       });
     }
@@ -375,7 +439,7 @@
           showToast(`朗讀下一句：${demoSentences[sentenceIndex]}`);
           triggerEinkFlash();
         } else {
-          showToast('已到達示範章節尾端');
+          showToast('已到達示範文章尾端');
         }
       });
     }
@@ -567,19 +631,6 @@
       });
     }
 
-    // 呈現開關 (純黑白 E-Ink 模式)
-    const switchEink = document.getElementById('switch-eink-toggle');
-    if (switchEink) {
-      switchEink.addEventListener('click', () => {
-        const isActive = switchEink.classList.toggle('active');
-        if (isActive) {
-          setTheme('theme-eink', themeEinkBtn, '已開啟純黑白 E-Ink 高對比渲染');
-        } else {
-          setTheme('theme-parchment', themeParchmentBtn, '已關閉純黑白，切回古典紙質');
-        }
-      });
-    }
-
     // 預設集套用
     const presetClassic = document.getElementById('preset-classic');
     const presetModern = document.getElementById('preset-modern');
@@ -590,7 +641,8 @@
         setDirection('vertical');
         if (textFlow) textFlow.style.fontFamily = 'var(--font-serif)';
         if (valFontFamily) valFontFamily.textContent = '思源宋體';
-        showToast('已套用預設集：經典古籍直排');
+        setTheme('sepia');
+        showToast('已套用預設集：經典古籍直排（宣紙古風）');
       });
       presetModern.addEventListener('click', () => {
         presetModern.classList.add('active');
@@ -598,7 +650,8 @@
         setDirection('horizontal');
         if (textFlow) textFlow.style.fontFamily = 'var(--font-sans)';
         if (valFontFamily) valFontFamily.textContent = '思源黑體';
-        showToast('已套用預設集：現代小說橫排');
+        setTheme('light');
+        showToast('已套用預設集：現代小說橫排（晴空藍天）');
       });
     }
   }
