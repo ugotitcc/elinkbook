@@ -1,5 +1,7 @@
 # 拆分 GlobalReaderPrefs 的 13 個攤平欄位 Implementation Plan
 
+> **狀態：已完成並合併**——PR [#239](https://git.jigong.org/huthief/elinkBook/pulls/239)（`refactor/split-global-reader-prefs` → `main`），已於 2026-09-13 合併（合併後 main 為 `4a2e6129`）。程式碼審查報告：`docs/superpowers/reviews/2026-09-13-code-review-split-global-reader-prefs.md`（Critical 0／Important 1／Minor 4，皆已於 commit `6455d24a` 修正）。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 > **【`docs/superpowers/reviews/2026-09-13-review-split-global-reader-prefs.md` 審查修訂】** 初版計畫兩個 Critical 問題已修正：(1) 遺漏 `app/lib/screens/library_screen.dart:267`（`globalPrefs.openLastBookOnLaunch`，Issue 29 自動開書功能，生產程式碼）——已補進 Task 4。(2) Task 2／Task 3 結尾在 `flutter analyze` 尚未乾淨時就執行 `git commit`，違反 `AGENTS.md`「`flutter analyze` 必須乾淨才能提交」與本計畫自身 Global Constraints——已改為 Task 2／Task 3 結尾只跑單元測試、不 commit，Task 2-4 視為一個不可分割的重構閉環，只在 Task 4 全專案 `flutter analyze`／`flutter test` 皆乾淨後執行一次整合 commit。三項 Important（`library_screen_test.dart`／`reader_screen_test.dart` 8 處遺漏、`reader_prefs_manager_test.dart` 前段 5 處 `.copyWith`、三個設定畫面測試的 `savedGlobalPrefsCalls` 斷言遺漏）與三項 Minor（`export` 子值物件、`ZoneAction` 來源描述筆誤、Task 4 反饋週期）皆已採納修訂。
@@ -43,7 +45,7 @@
 - Consumes：`NavZoneMode`／`rightFlipZoneTemplate`（`app/lib/reader/nav_zone_mode.dart`）、`ZoneAction`（`app/lib/reader/zone_action.dart`——`nav_zone_mode.dart` 只 `import` 未 `export` 這個型別，需要另外直接匯入）、`PageTurnMode`（`app/lib/reader/page_turn_mode.dart`）、`ScreenOrientationSetting`（`app/lib/reader/screen_orientation_setting.dart`）——皆為既有型別，不修改
 - Produces：`NavZonePrefs`／`TtsDefaults`／`ReadingDefaults` 三個獨立值物件（各自 `const` 建構子＋`.initial()`＋`copyWith`／`==`／`hashCode`），供 Task 2 的 `GlobalReaderPrefs` 聚合根消費
 
-- [ ] **Step 1：撰寫 `NavZonePrefs` 的失敗測試**
+- [x] **Step 1：撰寫 `NavZonePrefs` 的失敗測試**
 
 建立 `app/test/reader/nav_zone_prefs_test.dart`：
 
@@ -125,7 +127,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：執行測試，確認失敗**
+- [x] **Step 2：執行測試，確認失敗**
 
 ```bash
 cd app
@@ -134,7 +136,7 @@ flutter test test/reader/nav_zone_prefs_test.dart
 
 Expected：FAIL——`nav_zone_prefs.dart` 不存在。
 
-- [ ] **Step 3：建立 `NavZonePrefs`**
+- [x] **Step 3：建立 `NavZonePrefs`**
 
 ```dart
 import 'package:flutter/foundation.dart';
@@ -197,7 +199,7 @@ class NavZonePrefs {
 
 （`rightFlipZoneTemplate` 定義於 `app/lib/reader/nav_zone_mode.dart` 第 18 行，本身已是 `const List<ZoneAction>`，可直接作為建構子預設參數值。）
 
-- [ ] **Step 4：執行測試，確認通過**
+- [x] **Step 4：執行測試，確認通過**
 
 ```bash
 flutter test test/reader/nav_zone_prefs_test.dart
@@ -205,7 +207,7 @@ flutter test test/reader/nav_zone_prefs_test.dart
 
 Expected：全數 PASS。
 
-- [ ] **Step 5：撰寫 `TtsDefaults` 的失敗測試**
+- [x] **Step 5：撰寫 `TtsDefaults` 的失敗測試**
 
 建立 `app/test/reader/tts_defaults_test.dart`：
 
@@ -249,7 +251,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 6：執行測試，確認失敗**
+- [x] **Step 6：執行測試，確認失敗**
 
 ```bash
 flutter test test/reader/tts_defaults_test.dart
@@ -257,7 +259,7 @@ flutter test test/reader/tts_defaults_test.dart
 
 Expected：FAIL——`tts_defaults.dart` 不存在。
 
-- [ ] **Step 7：建立 `TtsDefaults`**
+- [x] **Step 7：建立 `TtsDefaults`**
 
 ```dart
 /// 朗讀（TTS）預設值（epic-36-adaptive-shelf-navigation Issue 5），從
@@ -305,7 +307,7 @@ class TtsDefaults {
 > `null`」這個操作（`tts_defaults_screen.dart` 只會傳入實際選中的 voice id，
 > 不會傳 `null`），維持原有限制，不在本次重構擴大 `copyWith` 的能力範圍。
 
-- [ ] **Step 8：執行測試，確認通過**
+- [x] **Step 8：執行測試，確認通過**
 
 ```bash
 flutter test test/reader/tts_defaults_test.dart
@@ -313,7 +315,7 @@ flutter test test/reader/tts_defaults_test.dart
 
 Expected：全數 PASS。
 
-- [ ] **Step 9：撰寫 `ReadingDefaults` 的失敗測試**
+- [x] **Step 9：撰寫 `ReadingDefaults` 的失敗測試**
 
 建立 `app/test/reader/reading_defaults_test.dart`：
 
@@ -408,7 +410,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 10：執行測試，確認失敗**
+- [x] **Step 10：執行測試，確認失敗**
 
 ```bash
 flutter test test/reader/reading_defaults_test.dart
@@ -416,7 +418,7 @@ flutter test test/reader/reading_defaults_test.dart
 
 Expected：FAIL——`reading_defaults.dart` 不存在。
 
-- [ ] **Step 11：建立 `ReadingDefaults`**
+- [x] **Step 11：建立 `ReadingDefaults`**
 
 ```dart
 import 'page_turn_mode.dart';
@@ -504,7 +506,7 @@ class ReadingDefaults {
 }
 ```
 
-- [ ] **Step 12：執行測試，確認通過**
+- [x] **Step 12：執行測試，確認通過**
 
 ```bash
 flutter test test/reader/reading_defaults_test.dart
@@ -512,7 +514,7 @@ flutter test test/reader/reading_defaults_test.dart
 
 Expected：全數 PASS。
 
-- [ ] **Step 13：`flutter analyze`**
+- [x] **Step 13：`flutter analyze`**
 
 ```bash
 flutter analyze
@@ -520,7 +522,7 @@ flutter analyze
 
 Expected："No issues found!"
 
-- [ ] **Step 14：Commit**
+- [x] **Step 14：Commit**
 
 ```bash
 git add lib/reader/nav_zone_prefs.dart lib/reader/tts_defaults.dart lib/reader/reading_defaults.dart test/reader/nav_zone_prefs_test.dart test/reader/tts_defaults_test.dart test/reader/reading_defaults_test.dart
@@ -545,7 +547,7 @@ EOF
 - Consumes：Task 1 的 `NavZonePrefs`／`TtsDefaults`／`ReadingDefaults`
 - Produces：`GlobalReaderPrefs`（`consoleLogEnabled: bool` 攤平 + `navZone: NavZonePrefs` + `tts: TtsDefaults` + `reading: ReadingDefaults`，`copyWith`／`==`／`hashCode` 皆改為只處理這 4 個欄位）——供 Task 3 的 `ReaderPrefsManagerImpl` 消費
 
-- [ ] **Step 1：改寫 `global_reader_prefs_test.dart`（失敗測試）**
+- [x] **Step 1：改寫 `global_reader_prefs_test.dart`（失敗測試）**
 
 整檔取代 `app/test/reader/global_reader_prefs_test.dart`：
 
@@ -635,7 +637,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 2：執行測試，確認失敗**
+- [x] **Step 2：執行測試，確認失敗**
 
 ```bash
 flutter test test/reader/global_reader_prefs_test.dart
@@ -643,7 +645,7 @@ flutter test test/reader/global_reader_prefs_test.dart
 
 Expected：FAIL（編譯錯誤）——`GlobalReaderPrefs` 尚無 `navZone`/`tts`/`reading` 具名參數。
 
-- [ ] **Step 3：改寫 `global_reader_prefs.dart`**
+- [x] **Step 3：改寫 `global_reader_prefs.dart`**
 
 整檔取代 `app/lib/reader/global_reader_prefs.dart`：
 
@@ -732,7 +734,7 @@ class GlobalReaderPrefs {
 > `global_reader_prefs.dart` 時不需要保留這些欄位層級註解在本檔案，因為
 > 欄位本身已經不在這裡。
 
-- [ ] **Step 4：執行測試，確認通過**
+- [x] **Step 4：執行測試，確認通過**
 
 ```bash
 flutter test test/reader/global_reader_prefs_test.dart
@@ -740,7 +742,7 @@ flutter test test/reader/global_reader_prefs_test.dart
 
 Expected：全數 PASS。
 
-- [ ] **Step 5：`flutter analyze`（記錄現況，不代表本 Task 失敗）**
+- [x] **Step 5：`flutter analyze`（記錄現況，不代表本 Task 失敗）**
 
 ```bash
 flutter analyze
@@ -773,7 +775,7 @@ Expected：**尚未乾淨**——`library_screen.dart`／`reader_prefs_manager_i
 - Consumes：Task 2 的 `GlobalReaderPrefs`（`navZone`／`tts`／`reading`／`consoleLogEnabled`）
 - Produces：`ReaderPrefsManagerImpl.loadGlobalPrefs()`／`saveGlobalPrefs()`／`resolve()` 內部改用巢狀讀寫——SharedPreferences key 名稱、`resolve()` 對外回傳的 `ResolvedPreferences` 型別/欄位皆不變
 
-- [ ] **Step 1：修改 `reader_prefs_manager_test.dart` 中所有直接建構 `GlobalReaderPrefs(...)` 的地方**
+- [x] **Step 1：修改 `reader_prefs_manager_test.dart` 中所有直接建構 `GlobalReaderPrefs(...)` 的地方**
 
 找出 `app/test/reader/reader_prefs_manager_test.dart` 中全部 `const GlobalReaderPrefs(...)`／`GlobalReaderPrefs(...)` 呼叫（規劃階段查證共 8 處，第 183、208、355、372、390、419、443、467、503、514 行——實際行號在前面 Task 2 提交後可能因無關改動略有偏移，以 `grep -n "GlobalReaderPrefs("` 實際結果為準），把攤平具名參數改成巢狀路徑。例如第 183 行附近：
 
@@ -950,7 +952,7 @@ Expected：**尚未乾淨**——`library_screen.dart`／`reader_prefs_manager_i
 > 漏掉 5 處的原因），依照上述模式（頂層攤平欄位改巢狀路徑、巢狀建構參數改
 > 用對應子物件包一層）逐一修正，不要遺漏任何一處斷言路徑。
 
-- [ ] **Step 2：執行測試，確認失敗**
+- [x] **Step 2：執行測試，確認失敗**
 
 ```bash
 flutter test test/reader/reader_prefs_manager_test.dart
@@ -958,7 +960,7 @@ flutter test test/reader/reader_prefs_manager_test.dart
 
 Expected：FAIL（編譯錯誤）——`ReaderPrefsManagerImpl.loadGlobalPrefs()`/`saveGlobalPrefs()`/`resolve()` 尚未改用巢狀讀寫。
 
-- [ ] **Step 3：修改 `reader_prefs_manager_impl.dart` 的 `loadGlobalPrefs()`**
+- [x] **Step 3：修改 `reader_prefs_manager_impl.dart` 的 `loadGlobalPrefs()`**
 
 ```diff
    @override
@@ -1026,7 +1028,7 @@ Expected：FAIL（編譯錯誤）——`ReaderPrefsManagerImpl.loadGlobalPrefs()
 
 （SharedPreferences key 常數第 35-49 行**完全不動**——這是本次重構「持久化零風險」的核心，鍵名一個字都不能改。）
 
-- [ ] **Step 4：修改 `saveGlobalPrefs()`**
+- [x] **Step 4：修改 `saveGlobalPrefs()`**
 
 ```diff
    @override
@@ -1079,7 +1081,7 @@ Expected：FAIL（編譯錯誤）——`ReaderPrefsManagerImpl.loadGlobalPrefs()
    }
 ```
 
-- [ ] **Step 5：修改 `resolve()`**
+- [x] **Step 5：修改 `resolve()`**
 
 ```diff
    ResolvedPreferences resolve(
@@ -1119,7 +1121,7 @@ Expected：FAIL（編譯錯誤）——`ReaderPrefsManagerImpl.loadGlobalPrefs()
 
 （`ResolvedPreferences` 本身的型別／欄位完全不變，`resolve()` 的方法簽章與回傳型別也不變——這一步只是把讀取 `global.xxx` 的路徑換成 `global.reading.xxx`／`global.navZone.xxx`／`global.tts.xxx`，`consoleLogEnabled` 因為留在頂層攤平不動。）
 
-- [ ] **Step 6：執行測試，確認通過**
+- [x] **Step 6：執行測試，確認通過**
 
 ```bash
 flutter test test/reader/reader_prefs_manager_test.dart
@@ -1127,7 +1129,7 @@ flutter test test/reader/reader_prefs_manager_test.dart
 
 Expected：全數 PASS。
 
-- [ ] **Step 7：`flutter analyze`（記錄現況，不代表本 Task 失敗）**
+- [x] **Step 7：`flutter analyze`（記錄現況，不代表本 Task 失敗）**
 
 ```bash
 flutter analyze
@@ -1165,7 +1167,7 @@ Expected：仍**未必**乾淨——`library_screen.dart`／三個消費端畫�
 - Consumes：Task 2／Task 3 的 `GlobalReaderPrefs`（巢狀）
 - Produces：全專案 `flutter analyze` 乾淨、全專案 `flutter test` 全數通過——本 Task 是整個計畫唯一「完成」的判定點，也是 Task 2-4 整合 commit 的執行點
 
-- [ ] **Step 1：修改 `nav_zone_settings_screen.dart`**
+- [x] **Step 1：修改 `nav_zone_settings_screen.dart`**
 
 把 `_prefs.navZoneMode`／`_prefs.navZoneCustomActions`／`_prefs.showNavZoneDebugOverlay` 三處讀取改為 `_prefs.navZone.navZoneMode` 等；`_prefs.copyWith(navZoneMode: mode)` 改為 `_prefs.copyWith(navZone: _prefs.navZone.copyWith(navZoneMode: mode))`：
 
@@ -1221,7 +1223,7 @@ Expected：仍**未必**乾淨——`library_screen.dart`／三個消費端畫�
 +import '../reader/nav_zone_prefs.dart';
 ```
 
-- [ ] **Step 2：修改 `tts_defaults_screen.dart`**
+- [x] **Step 2：修改 `tts_defaults_screen.dart`**
 
 ```diff
                    RadioGroup<String>(
@@ -1244,7 +1246,7 @@ Expected：仍**未必**乾淨——`library_screen.dart`／三個消費端畫�
 +import '../reader/tts_defaults.dart';
 ```
 
-- [ ] **Step 3：修改 `reading_defaults_screen.dart`**
+- [x] **Step 3：修改 `reading_defaults_screen.dart`**
 
 7 個 `SwitchListTile`/`RadioGroup` 的 `value:`／`groupValue:`／`onChanged:` 全部改為讀寫 `_prefs.reading.xxx`／`_prefs.copyWith(reading: _prefs.reading.copyWith(xxx: value))`：
 
@@ -1279,7 +1281,7 @@ Expected：仍**未必**乾淨——`library_screen.dart`／三個消費端畫�
 +import '../reader/reading_defaults.dart';
 ```
 
-- [ ] **Step 4：更新三個畫面對應的測試檔＋逐一跑該畫面測試（審查意見 M-3：不集中到最後才拿到第一次回饋）**
+- [x] **Step 4：更新三個畫面對應的測試檔＋逐一跑該畫面測試（審查意見 M-3：不集中到最後才拿到第一次回饋）**
 
 `app/test/screens/nav_zone_settings_screen_test.dart`／`tts_defaults_screen_test.dart`／`reading_defaults_screen_test.dart` 中所有 `FakeReaderPrefsManager(globalPrefs: const GlobalReaderPrefs.initial().copyWith(xxx: value))` 這類建構，把 `xxx: value` 改成對應的巢狀 `copyWith`，例如 `reading_defaults_screen_test.dart` 第 13 行附近：
 
@@ -1353,7 +1355,7 @@ flutter test test/screens/reading_defaults_screen_test.dart
 
 Expected：三個檔案各自全數 PASS。
 
-- [ ] **Step 5：修改 `library_screen.dart`（審查意見 C-1，規劃階段第一輪查證遺漏的生產程式碼）**
+- [x] **Step 5：修改 `library_screen.dart`（審查意見 C-1，規劃階段第一輪查證遺漏的生產程式碼）**
 
 `_maybeOpenLastBookOnLaunch()`（`app/lib/screens/library_screen.dart:267` 附近，Issue 29「啟動時開啟最後閱讀的書籍」功能）直接讀取舊的攤平欄位：
 
@@ -1367,7 +1369,7 @@ Expected：三個檔案各自全數 PASS。
 
 不需要新增 import——`Book`／`GlobalReaderPrefs` 型別本來就已經在這個檔案的作用範圍內，`reading` 只是多一層欄位存取。
 
-- [ ] **Step 6：修改 `library_screen_test.dart`／`reader_screen_test.dart` 兩個核心測試套件（審查意見 I-1，規劃階段第一輪查證遺漏）**
+- [x] **Step 6：修改 `library_screen_test.dart`／`reader_screen_test.dart` 兩個核心測試套件（審查意見 I-1，規劃階段第一輪查證遺漏）**
 
 `app/test/screens/library_screen_test.dart` 6 處 `const GlobalReaderPrefs.initial().copyWith(openLastBookOnLaunch: true/false)`（第 96、3017、3052、3076、3310、3370 行），一律改為：
 
@@ -1421,7 +1423,7 @@ flutter test test/screens/library_screen_test.dart test/screens/reader_screen_te
 
 Expected：全數 PASS（`library_screen_test.dart`／`reader_screen_test.dart` 皆是本專案規模數一數二大的測試檔，執行需要一些時間，屬正常現象）。
 
-- [ ] **Step 7：`flutter analyze` 全專案掃描，逐一修正直到乾淨**
+- [x] **Step 7：`flutter analyze` 全專案掃描，逐一修正直到乾淨**
 
 ```bash
 flutter analyze
@@ -1434,7 +1436,7 @@ Analyzing app...
 No issues found!
 ```
 
-- [ ] **Step 8：全專案 `flutter test` 回歸驗證**
+- [x] **Step 8：全專案 `flutter test` 回歸驗證**
 
 ```bash
 flutter test
@@ -1445,7 +1447,7 @@ Expected：全數 PASS，無失敗。這是本計畫唯一一次要求跑全套�
 > [!NOTE]
 > **實際執行紀錄（`docs/superpowers/reviews/2026-09-13-code-review-split-global-reader-prefs.md` Important 1）**：本步驟實際執行時，全專案 `flutter test` 出現 2 個失敗（`app/test/screens/adaptive_shell_scaffold_test.dart` 的「上層 themeDependencies 更新後，已切換過去的 SettingsScreen 收到最新 isEinkMode」與「在設定分頁點擊「書架」圖示切回書架分頁」兩案例），字面上未達成「全數 PASS」。程式碼審查已另外在 main 分支（未套用本次重構）重現同一份測試檔，得到完全相同的兩個失敗與錯誤堆疊，確認為 main 分支既有、與本次 `GlobalReaderPrefs` 拆分無關的既存問題（該測試檔本身也不在本計畫變更清單內），非本次重構引入的回歸，故仍照計畫於 Step 9 提交。
 
-- [ ] **Step 9：Commit（Task 2-4 整合為一次提交，審查意見 C-2）**
+- [x] **Step 9：Commit（Task 2-4 整合為一次提交，審查意見 C-2）**
 
 本計畫的**唯一**一個涵蓋 Task 2／Task 3／Task 4 全部異動的整合 commit——Task 2、Task 3 結尾刻意不提交（見兩處 Task 收尾的 `[!IMPORTANT]` 說明），只有在這裡、`flutter analyze` 與全專案 `flutter test` 都確認乾淨之後，才第一次提交：
 
