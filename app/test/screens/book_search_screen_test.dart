@@ -398,4 +398,49 @@ void main() {
     expect(find.text('本裝置不支援全文檢索'), findsOneWidget);
     expect(searchRepo.searchContentInBookCalls, isEmpty);
   });
+
+  testWidgets('片段清單關鍵字高亮文字大小應與一般清單項目一致，不因誤用 context 繼承到 '
+      'MaterialApp 的 48px 錯誤警示字級（/diagnose：全書搜尋結果符合文字部分變得特別大）',
+      (tester) async {
+    final searchRepo = FakeSearchRepository(
+      bookSearchDetailResult: _makeResult(matchCount: 1, totalMatches: 1),
+    );
+
+    await tester.pumpWidget(_wrap(BookSearchScreen(
+      book: _testBook(),
+      initialQuery: '關鍵字',
+      searchRepository: searchRepo,
+      prefsManager: FakeReaderPrefsManager(),
+      libraryRepository: FakeLibraryRepository(),
+    )));
+    await tester.pumpAndSettle();
+
+    final snippetHeight =
+        tester.getSize(find.byKey(const Key('book_search_snippet_0'))).height;
+
+    // 對照組：與 book_search_screen 相同主題、相同 title+subtitle 兩行
+    // 結構（比照 _buildSnippetTile 的 locationText 副標題）下，一般
+    // dense ListTile（無關鍵字高亮）應有的高度——library_search_screen.dart
+    // 的內容匹配預覽清單走的正是這條無高亮路徑，字級不受影響。
+    await tester.pumpWidget(_wrap(
+      Scaffold(
+        body: ListTile(
+          key: const Key('book_search_control_tile'),
+          dense: true,
+          title: const Text('對照組：第1章含有搜尋關鍵字的文本片段'),
+          subtitle: const Text('第 2 章'),
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+    final controlHeight = tester
+        .getSize(find.byKey(const Key('book_search_control_tile')))
+        .height;
+
+    expect(
+      snippetHeight,
+      lessThan(controlHeight * 1.3),
+      reason: '片段標題不應因高亮 TextSpan 誤用 DefaultTextStyle.of(context) 而暴增字級',
+    );
+  });
 }

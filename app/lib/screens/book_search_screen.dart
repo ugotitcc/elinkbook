@@ -406,11 +406,15 @@ class _BookSearchScreenState extends State<BookSearchScreen> {
     }
 
     if (spans.isEmpty) return Text(text);
-    return Text.rich(
-      TextSpan(
-        style: DefaultTextStyle.of(context).style,
-        children: spans,
-      ),
-    );
+    // 【/diagnose：全書搜尋結果符合文字部分變得特別大】不可在此手動指定
+    // style: DefaultTextStyle.of(context).style——這裡的 context 是
+    // _BookSearchScreenState 自己的 build context，位於本畫面 Scaffold/
+    // Material 之上、尚未進入 ListTile 標題實際掛載位置，解析出來的並非
+    // ListTile 的正常字級，而是 MaterialApp 特意設計、用來提醒開發者
+    // 「文字未包在 Material 內」的 48px 紅色錯誤警示字級（見
+    // flutter/material/app.dart `_errorTextStyle`）。留空讓 Text.rich
+    // 用它自己實際掛載時的 context 走正常 DefaultTextStyle 繼承，字級才會
+    // 與同一份清單裡的一般 Text（無高亮）一致。
+    return Text.rich(TextSpan(children: spans));
   }
 }
