@@ -468,54 +468,65 @@ img {
 /* ==========================================================================
    Hero 右側：互動式電子墨水 / 直排閱讀展示模擬器
    ========================================================================== */
-.reader-mockup-card {
-  background: var(--bg-card);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border-color);
-  box-shadow: var(--shadow-lg), var(--shadow-glow);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  transition: all var(--transition-normal);
-  position: relative;
+/* ==========================================================================
+   Hero 右側：擬真 E-Ink 電子墨水屏閱讀器互動模擬器
+   依據 prototype/eink_redesign_prototype.html 重新設計規範
+   ========================================================================== */
+
+/* 模擬 E-Ink 刷屏瞬翻閃爍 (高對比黑白反轉) */
+@keyframes eink-flash {
+  0% { filter: invert(0); }
+  50% { filter: invert(1); }
+  100% { filter: invert(0); }
 }
 
-.reader-mockup-header {
-  padding: 12px 18px;
-  background: var(--bg-card-alt);
-  border-bottom: 1px solid var(--border-color);
+.eink-refresh {
+  animation: eink-flash 0.25s ease-in-out;
+}
+
+/* 模擬器最外層容器 */
+.reader-mockup-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+}
+
+/* 模擬器外層快速體驗切換工具列 */
+.mockup-external-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-}
-
-.mockup-controls {
-  display: flex;
-  align-items: center;
+  width: 100%;
+  max-width: 380px;
+  padding: 8px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  flex-wrap: wrap;
   gap: 8px;
 }
 
-.mockup-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--border-color);
-}
-.mockup-dot.dot-active {
-  background: var(--color-gold);
-}
-
-.mockup-toolbar {
+.mockup-chip-group {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
+}
+
+.mockup-toolbar-label {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--text-muted);
 }
 
 .demo-chip-btn {
-  font-size: 0.76rem;
-  padding: 4px 10px;
-  border-radius: 6px;
-  border: 1px solid var(--border-color);
+  font-size: 0.74rem;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 5px;
+  border: 1.5px solid var(--border-color);
   background: var(--bg-card);
   color: var(--text-secondary);
   cursor: pointer;
@@ -528,88 +539,693 @@ img {
   border-color: var(--color-primary);
 }
 
-/* 模擬書頁畫面 */
-.reader-page-view {
-  padding: 2rem 1.75rem;
-  min-height: 420px;
-  max-height: 460px;
-  overflow-y: auto;
+/* 手機 / 電子紙閱讀器硬體外框 */
+.emulator-device-frame {
+  width: 100%;
+  max-width: 380px;
+  height: 600px;
+  background: #181a19;
+  border: 10px solid #232724;
+  border-radius: 32px;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.25), 0 2px 10px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   position: relative;
-  background-color: #faf6ee;
-  color: #2b2b2b;
+  transition: transform var(--transition-normal);
+}
+
+[data-theme="dark"] .emulator-device-frame {
+  border-color: #2e3330;
+  background: #0d0f0e;
+}
+
+/* 頂部極簡聽筒飾條 */
+.emulator-speaker-earpiece {
+  width: 48px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
+  margin: 6px auto 4px;
+  flex-shrink: 0;
+}
+
+/* 閱讀器螢幕本體 (動態切換色彩主題) */
+.reader-device-screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  user-select: none;
+  background: #ffffff;
+  color: #000000;
+  border-radius: 20px 20px 0 0;
   transition: background-color var(--transition-fast), color var(--transition-fast);
 }
 
-/* 紙質風格主題 */
-.reader-page-view.theme-parchment {
-  background-color: #f7f1e5;
-  color: #2b261f;
-}
-.reader-page-view.theme-eink {
-  background-color: #ffffff;
+/* 主題 1：E-Ink 純黑白高對比 */
+.reader-device-screen.theme-eink {
+  background: #ffffff;
   color: #000000;
-  filter: contrast(110%);
-}
-.reader-page-view.theme-dark {
-  background-color: #1a1e1b;
-  color: #d1dcd4;
+  --reader-border: #000000;
+  --reader-active-bg: #000000;
+  --reader-active-text: #ffffff;
 }
 
-/* 直排排版核心 (Vertical Writing Mode) */
-.reader-page-view.mode-vertical {
+/* 主題 2：古典竹韻紙質 */
+.reader-device-screen.theme-parchment {
+  background: #f7f1e5;
+  color: #2b261f;
+  --reader-border: #42362b;
+  --reader-active-bg: #42362b;
+  --reader-active-text: #f7f1e5;
+}
+
+/* 主題 3：墨夜深色模式 */
+.reader-device-screen.theme-dark {
+  background: #141715;
+  color: #d1dcd4;
+  --reader-border: #3b443e;
+  --reader-active-bg: #3b443e;
+  --reader-active-text: #ffffff;
+}
+
+/* 頂部 Chrome Bar (56dp) */
+.reader-top-chrome {
+  height: 52px;
+  border-bottom: 1.5px solid var(--reader-border, #000);
+  display: flex;
+  align-items: center;
+  padding: 0 6px;
+  gap: 4px;
+  flex-shrink: 0;
+  background: inherit;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+  z-index: 5;
+}
+
+.chrome-icon-btn {
+  width: 40px;
+  height: 40px;
+  border: 1.5px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font-size: 1.15rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+.chrome-icon-btn:active {
+  background: var(--reader-active-bg, #000);
+  color: var(--reader-active-text, #fff);
+}
+
+.chrome-chapter-title {
+  flex: 1;
+  text-align: center;
+  font-size: 0.86rem;
+  font-weight: 800;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  padding: 0 4px;
+}
+
+.chrome-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* 直排 / 橫排內文閱讀主區塊 */
+.reader-content-body {
+  flex: 1;
+  min-height: 0;
+  padding: 16px 20px;
+  display: flex;
+  justify-content: flex-end;
+  overflow: hidden;
+  cursor: pointer;
+  background: inherit;
+  position: relative;
+}
+
+.reader-content-body.mode-vertical {
   writing-mode: vertical-rl;
   -webkit-writing-mode: vertical-rl;
   text-orientation: mixed;
-  line-height: 2.1;
-  letter-spacing: 2px;
-  font-family: var(--font-kai);
-  overflow-x: auto;
-  overflow-y: hidden;
-  height: 420px;
 }
 
-.reader-page-view.mode-horizontal {
+.reader-content-body.mode-horizontal {
   writing-mode: horizontal-tb;
   -webkit-writing-mode: horizontal-tb;
-  line-height: 1.9;
-  letter-spacing: 0.5px;
-  font-family: var(--font-serif);
+  justify-content: flex-start;
+  text-align: justify;
 }
 
-.reader-sample-title {
-  font-family: var(--font-serif);
-  font-size: 1.35rem;
-  font-weight: 700;
-  margin-bottom: 1rem;
-  color: var(--color-primary-dark);
-}
-.reader-page-view.theme-dark .reader-sample-title {
-  color: var(--color-gold-light);
-}
-
-.reader-sample-text {
+.reader-text-container {
+  height: 100%;
   font-size: 1.05rem;
+  line-height: 1.95;
+  letter-spacing: 1.5px;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
-.reader-sample-text p {
-  margin-bottom: 1.2rem;
-  text-indent: 2em;
+.reader-content-body.mode-horizontal .reader-text-container {
+  overflow-x: hidden;
+  overflow-y: auto;
+  line-height: 1.85;
+  letter-spacing: 0.5px;
 }
 
-.reader-page-view.mode-vertical .reader-sample-text p {
-  margin-bottom: 0;
-  margin-left: 1.6rem;
+/* 朗讀語音高亮句 */
+.tts-sentence {
+  transition: none;
 }
 
-.reader-mockup-footer {
-  padding: 10px 18px;
-  background: var(--bg-card-alt);
-  border-top: 1px solid var(--border-color);
+.tts-sentence.active-sentence {
+  background: var(--reader-active-bg, #000);
+  color: var(--reader-active-text, #fff);
+  padding: 2px 0;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+.tts-sentence.paused-sentence {
+  border-bottom: 2px dashed var(--reader-border, #000);
+  color: inherit;
+  background: transparent;
+}
+
+/* 2b. 一般閱讀工具列組 */
+.reader-chrome-group {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  background: inherit;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+  z-index: 5;
+}
+
+/* 視覺頁碼列 (34dp) */
+.reader-status-bar {
+  height: 32px;
+  border-top: 1.5px solid var(--reader-border, #000);
   display: flex;
   align-items: center;
   justify-content: space-between;
+  padding: 0 14px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  background: inherit;
+}
+
+/* 離散跳頁列 (56dp) */
+.reader-jump-bar {
+  height: 48px;
+  border-top: 1.5px solid var(--reader-border, #000);
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  gap: 8px;
+  background: inherit;
+}
+
+.jump-current-page {
+  font-size: 0.8rem;
+  font-weight: 800;
+  min-width: 28px;
+}
+
+.jump-progress-track {
+  flex: 1;
+  height: 9px;
+  border: 1.5px solid var(--reader-border, #000);
+  display: flex;
+  overflow: hidden;
+}
+
+.jump-progress-fill {
+  height: 100%;
+  background: var(--reader-border, #000);
+}
+
+.jump-action-btn {
+  height: 32px;
+  padding: 0 10px;
+  border: 1.5px solid var(--reader-border, #000);
+  border-radius: 5px;
+  background: transparent;
+  color: inherit;
+  font-size: 0.74rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.jump-action-btn:active {
+  background: var(--reader-active-bg, #000);
+  color: var(--reader-active-text, #fff);
+}
+
+/* 閱讀器底部選單列 (64dp) */
+.reader-bottom-nav {
+  height: 56px;
+  border-top: 1.5px solid var(--reader-border, #000);
+  display: flex;
+  background: inherit;
+}
+
+.nav-tile-btn {
+  flex: 1;
+  border: none;
+  border-left: 1.5px solid var(--reader-border, #000);
+  background: transparent;
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.nav-tile-btn:first-child {
+  border-left: none;
+}
+
+.nav-tile-btn:active {
+  background: var(--reader-active-bg, #000);
+  color: var(--reader-active-text, #fff);
+}
+
+.nav-tile-icon {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.nav-tile-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+/* 2c. TTS 朗讀工具列 */
+.reader-tts-group {
+  border-top: 1.5px solid var(--reader-border, #000);
+  padding: 8px 10px;
+  background: inherit;
+  flex-shrink: 0;
+  z-index: 5;
+}
+
+.tts-panel-box {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tts-controls-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.tts-step-btn {
+  flex: 1;
+  height: 38px;
+  border: 1.5px solid var(--reader-border, #000);
+  border-radius: 5px;
+  background: transparent;
+  color: inherit;
+  font-size: 0.95rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tts-step-btn:active {
+  background: var(--reader-active-bg, #000);
+  color: var(--reader-active-text, #fff);
+}
+
+.tts-play-btn {
+  flex: 1.35;
+  height: 38px;
+  background: var(--reader-active-bg, #000);
+  color: var(--reader-active-text, #fff);
+  border: 1.5px solid var(--reader-border, #000);
+  border-radius: 5px;
   font-size: 0.78rem;
-  color: var(--text-muted);
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tts-chip-btn {
+  flex: 1;
+  height: 38px;
+  border: 1.5px solid var(--reader-border, #000);
+  border-radius: 5px;
+  background: transparent;
+  color: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tts-chip-btn:active {
+  background: var(--reader-active-bg, #000);
+  color: var(--reader-active-text, #fff);
+}
+
+.tts-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.tts-sub-btn {
+  flex: 1;
+  height: 34px;
+  border: 1.5px solid var(--reader-border, #000);
+  border-radius: 5px;
+  background: transparent;
+  color: inherit;
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tts-sub-btn:active {
+  background: var(--reader-active-bg, #000);
+  color: var(--reader-active-text, #fff);
+}
+
+.tts-stop-btn {
+  flex: 1;
+  height: 34px;
+  background: var(--reader-active-bg, #000);
+  color: var(--reader-active-text, #fff);
+  border: 1.5px solid var(--reader-border, #000);
+  border-radius: 5px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 2d. 版面設定面板 (BottomSheet) */
+.reader-layout-sheet {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: inherit;
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+  z-index: 20;
+}
+
+.layout-sheet-header {
+  height: 50px;
+  border-bottom: 1.5px solid var(--reader-border, #000);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  flex-shrink: 0;
+}
+
+.layout-sheet-title {
+  font-size: 0.95rem;
+  font-weight: 900;
+}
+
+.layout-close-btn {
+  width: 36px;
+  height: 36px;
+  border: 1.5px solid var(--reader-border, #000);
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font-size: 0.85rem;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.layout-close-btn:active {
+  background: var(--reader-active-bg, #000);
+  color: var(--reader-active-text, #fff);
+}
+
+.layout-sheet-tabs {
+  height: 38px;
+  border-bottom: 1.5px solid var(--reader-border, #000);
+  display: flex;
+  flex-shrink: 0;
+}
+
+.layout-tab-btn {
+  flex: 1;
+  border: none;
+  border-left: 1.5px solid var(--reader-border, #000);
+  background: transparent;
+  color: inherit;
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.layout-tab-btn:first-child {
+  border-left: none;
+}
+
+.layout-tab-btn.active {
+  background: var(--reader-active-bg, #000);
+  color: var(--reader-active-text, #fff);
+  font-weight: 900;
+}
+
+.layout-sheet-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.layout-option-row {
+  border: 1.5px solid var(--reader-border, #000);
+  border-radius: 6px;
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.option-label-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.option-title {
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.option-desc {
+  font-size: 0.68rem;
+  opacity: 0.7;
+}
+
+.badge-custom {
+  border: 1px solid currentColor;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 0.64rem;
+  font-weight: 700;
+}
+
+.option-cycle-btn {
+  height: 34px;
+  padding: 0 10px;
+  border: 1.5px solid var(--reader-border, #000);
+  border-radius: 5px;
+  background: transparent;
+  color: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.option-cycle-btn:active {
+  background: var(--reader-active-bg, #000);
+  color: var(--reader-active-text, #fff);
+}
+
+.stepper-wrap {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.stepper-btn {
+  width: 34px;
+  height: 34px;
+  border: 1.5px solid var(--reader-border, #000);
+  border-radius: 5px;
+  background: transparent;
+  color: inherit;
+  font-size: 1rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.stepper-btn:active {
+  background: var(--reader-active-bg, #000);
+  color: var(--reader-active-text, #fff);
+}
+
+.stepper-val {
+  min-width: 32px;
+  text-align: center;
+  font-size: 0.88rem;
+  font-weight: 800;
+}
+
+.segmented-btn-group {
+  display: flex;
+  gap: 4px;
+}
+
+.segment-btn {
+  padding: 5px 10px;
+  border: 1.5px solid var(--reader-border, #000);
+  border-radius: 5px;
+  background: transparent;
+  color: inherit;
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.segment-btn.active {
+  background: var(--reader-active-bg, #000);
+  color: var(--reader-active-text, #fff);
+}
+
+.switch-toggle-btn {
+  width: 44px;
+  height: 26px;
+  border: 1.5px solid var(--reader-border, #000);
+  border-radius: 999px;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  padding: 2px;
+  cursor: pointer;
+}
+
+.switch-toggle-btn.active {
+  background: var(--reader-active-bg, #000);
+}
+
+.switch-dot {
+  width: 18px;
+  height: 18px;
+  background: currentColor;
+  border-radius: 50%;
+  transition: transform 0.15s ease;
+}
+
+.switch-toggle-btn.active .switch-dot {
+  background: var(--reader-active-text, #fff);
+  transform: translateX(18px);
+}
+
+.preset-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.preset-item {
+  border: 1.5px solid var(--reader-border, #000);
+  border-radius: 6px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.preset-item.active {
+  background: var(--reader-active-bg, #000);
+  color: var(--reader-active-text, #fff);
+}
+
+.preset-badge {
+  font-size: 0.68rem;
+  border: 1px solid currentColor;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+/* 模擬器內建 Toast 提示 */
+.demo-screen-toast {
+  position: absolute;
+  bottom: 85px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #000000;
+  color: #ffffff;
+  border: 1.5px solid #ffffff;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 0.74rem;
+  font-weight: 800;
+  z-index: 40;
+  pointer-events: none;
+  white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+}
+
+/* 隱藏輔助樣式 */
+.reader-device-screen .hidden {
+  display: none !important;
 }
 
 /* ==========================================================================

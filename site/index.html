@@ -137,42 +137,230 @@
             </div>
           </div>
 
-          <!-- 右側：互動式閱讀模擬器 -->
-          <div class="reader-mockup-card">
-            <!-- 模擬器頂部操作列 -->
-            <div class="reader-mockup-header">
-              <div class="mockup-controls">
-                <span class="mockup-dot dot-active"></span>
-                <span class="mockup-dot"></span>
-                <span class="mockup-dot"></span>
+          <!-- 右側：擬真電子墨水屏閱讀器互動模擬器 (依據 prototype/eink_redesign_prototype.html 重構) -->
+          <div class="reader-mockup-wrapper">
+            <!-- 外層快速體驗與切換工具列 -->
+            <div class="mockup-external-toolbar">
+              <div class="mockup-chip-group">
+                <span class="mockup-toolbar-label">排版：</span>
+                <button type="button" class="demo-chip-btn active" id="btn-mode-vertical" title="直排閱讀 (Vertical RTL)">直排 (RTL)</button>
+                <button type="button" class="demo-chip-btn" id="btn-mode-horizontal" title="橫排閱讀 (Horizontal LTR)">橫排 (LTR)</button>
               </div>
-
-              <!-- 排版切換控制鈕 -->
-              <div class="mockup-toolbar">
-                <button type="button" class="demo-chip-btn active" id="btn-mode-vertical">直排 (RTL)</button>
-                <button type="button" class="demo-chip-btn" id="btn-mode-horizontal">橫排 (LTR)</button>
-                <button type="button" class="demo-chip-btn active" id="theme-parchment-btn" title="竹韻紙質">紙質</button>
-                <button type="button" class="demo-chip-btn" id="theme-eink-btn" title="E-Ink 墨水屏">E-Ink</button>
+              <div class="mockup-chip-group">
+                <span class="mockup-toolbar-label">模式：</span>
+                <button type="button" class="demo-chip-btn active" id="theme-eink-btn" title="E-Ink 純黑白高對比">E-Ink</button>
+                <button type="button" class="demo-chip-btn" id="theme-parchment-btn" title="古典紙質">紙質</button>
                 <button type="button" class="demo-chip-btn" id="theme-dark-btn" title="墨夜深色">夜間</button>
               </div>
             </div>
 
-            <!-- 模擬器書頁內容 (直排 / 橫排動態呈現) -->
-            <div class="reader-page-view mode-vertical theme-parchment" id="demo-reader-view">
-              <h2 class="reader-sample-title">《桃花源記》節選</h2>
-              <div class="reader-sample-text">
-                <p>晉太元中，武陵人捕魚為業。緣溪行，忘路之遠近。忽逢桃花林，夾岸數百步，中無雜樹，芳草鮮美，落英繽紛。</p>
-                <p>漁人甚異之，復前行，欲窮其林。林盡水源，便得一山，山有小口，彷彿若有光。便捨船，從口入。初極狹，纔通人。復行數十步，豁然開朗。</p>
-                <p>土地平曠，屋舍儼然，有良田、美池、桑竹之屬。阡陌交通，雞犬相聞。其中往來種作，男女衣著，悉如外人。黃髮垂髫，並怡然自樂。</p>
-              </div>
-            </div>
+            <!-- 手機/電子墨水屏硬體外框 -->
+            <div class="emulator-device-frame" id="emulator-screen">
+              <!-- 頂部聽筒造型裝飾 -->
+              <div class="emulator-speaker-earpiece"></div>
 
-            <!-- 模擬器頁尾資訊 -->
-            <div class="reader-mockup-footer">
-              <span id="demo-mode-indicator">直排模式 (Vertical RTL)</span>
-              <span>字型：思源楷體 · 頁碼：1 / 12</span>
+              <!-- 閱讀器主畫面容器 (預設純黑白高對比 E-Ink) -->
+              <div class="reader-device-screen theme-eink" id="demo-reader-container">
+
+                <!-- 頂部 Chrome Bar (56dp) -->
+                <div class="reader-top-chrome" id="reader-top-chrome">
+                  <button type="button" class="chrome-icon-btn" id="btn-reader-back" title="返回書架">‹</button>
+                  <div class="chrome-chapter-title" id="reader-chapter-title">第七章 · 弦外之音</div>
+                  <div class="chrome-actions">
+                    <button type="button" class="chrome-icon-btn" id="btn-reader-search" title="搜尋內文">⌕</button>
+                    <button type="button" class="chrome-icon-btn" id="btn-reader-fullscreen" title="全螢幕 / 切換工具列">⬓</button>
+                    <button type="button" class="chrome-icon-btn" id="btn-reader-toc" title="目錄">☰</button>
+                  </div>
+                </div>
+
+                <!-- 直排繁體中文內文閱讀區 (點擊可切換全螢幕沉浸閱讀) -->
+                <div class="reader-content-body mode-vertical" id="demo-reader-view" title="點擊內文可切換全螢幕沉浸閱讀">
+                  <div class="reader-text-container font-serif" id="demo-text-flow">
+                    琴聲停了。她把手指從弦上收回來，指腹還留著壓弦的凹痕，<span id="demo-tts-sentence" class="tts-sentence">像是某種只有自己讀得懂的記號。</span>窗外的雨已經下了整個下午，屋簷的水線連成一片，把對面那排老屋的輪廓洗得模糊。<br>「再一次。」老師沒有抬頭，只是把譜翻過一頁。她深吸一口氣，重新按上第七弦——這一次，音準了。
+                  </div>
+                </div>
+
+                <!-- 2b. 一般閱讀工具列 (頁碼列 + 跳頁列 + 底部四功能選單) -->
+                <div class="reader-chrome-group" id="reader-normal-chrome">
+                  <!-- 視覺頁碼列 (34dp) -->
+                  <div class="reader-status-bar">
+                    <span class="status-book-title">一弦定音</span>
+                    <span class="status-page-info" id="demo-page-indicator">184 / 468 · 39%</span>
+                  </div>
+
+                  <!-- 離散跳頁列 (56dp) -->
+                  <div class="reader-jump-bar">
+                    <span class="jump-current-page" id="demo-jump-page">184</span>
+                    <div class="jump-progress-track">
+                      <div class="jump-progress-fill" id="demo-progress-bar" style="width: 39%;"></div>
+                    </div>
+                    <button type="button" class="jump-action-btn" id="btn-reader-jump">跳</button>
+                  </div>
+
+                  <!-- 閱讀器底部選單列 (64dp) -->
+                  <div class="reader-bottom-nav">
+                    <button type="button" class="nav-tile-btn" id="btn-nav-bookmark">
+                      <span class="nav-tile-icon">⚑</span>
+                      <span class="nav-tile-label">書籤</span>
+                    </button>
+                    <button type="button" class="nav-tile-btn" id="btn-nav-notes">
+                      <span class="nav-tile-icon">✎</span>
+                      <span class="nav-tile-label">劃線備註</span>
+                    </button>
+                    <button type="button" class="nav-tile-btn" id="btn-nav-layout">
+                      <span class="nav-tile-icon">Aa</span>
+                      <span class="nav-tile-label">版面</span>
+                    </button>
+                    <button type="button" class="nav-tile-btn" id="btn-nav-tts">
+                      <span class="nav-tile-icon">◗</span>
+                      <span class="nav-tile-label">朗讀</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- 2c. TTS 朗讀工具列 (常駐控制面板，與 2b 互斥切換) -->
+                <div class="reader-tts-group hidden" id="reader-tts-chrome">
+                  <div class="tts-panel-box">
+                    <!-- 控制列 -->
+                    <div class="tts-controls-row" id="tts-expanded-controls">
+                      <button type="button" class="tts-step-btn" id="tts-prev-btn" title="上一句">⏮</button>
+                      <button type="button" class="tts-play-btn" id="tts-play-btn">⏸ 暫停</button>
+                      <button type="button" class="tts-step-btn" id="tts-next-btn" title="下一句">⏭</button>
+                      <button type="button" class="tts-chip-btn" id="tts-speed-btn">1.0x</button>
+                      <button type="button" class="tts-chip-btn" id="tts-voice-btn">語音</button>
+                    </div>
+                    <!-- 底層動作列 -->
+                    <div class="tts-actions-row">
+                      <button type="button" class="tts-sub-btn" id="tts-timer-btn">睡眠 30 分</button>
+                      <button type="button" class="tts-sub-btn" id="tts-collapse-btn">收合成細列</button>
+                      <button type="button" class="tts-stop-btn" id="tts-stop-btn">停止朗讀</button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 2d. 版面設定面板 (BottomSheet 抽屜式彈出) -->
+                <div class="reader-layout-sheet hidden" id="reader-layout-sheet">
+                  <!-- Sheet 標題與關閉按鈕 -->
+                  <div class="layout-sheet-header">
+                    <span class="layout-sheet-title">版面設定</span>
+                    <button type="button" class="layout-close-btn" id="btn-close-layout" title="關閉版面設定">✕</button>
+                  </div>
+
+                  <!-- 頁籤切換 (文字 / 邊界 / 呈現 / 預設集) -->
+                  <div class="layout-sheet-tabs">
+                    <button type="button" class="layout-tab-btn active" id="tab-btn-text" data-tab="text">文字</button>
+                    <button type="button" class="layout-tab-btn" id="tab-btn-margin" data-tab="margin">邊界</button>
+                    <button type="button" class="layout-tab-btn" id="tab-btn-display" data-tab="display">呈現</button>
+                    <button type="button" class="layout-tab-btn" id="tab-btn-presets" data-tab="presets">預設集</button>
+                  </div>
+
+                  <!-- 頁籤內容捲動區 -->
+                  <div class="layout-sheet-body">
+                    <!-- 文字頁籤 -->
+                    <div class="layout-tab-content active" id="tab-content-text">
+                      <!-- 字型切換 -->
+                      <div class="layout-option-row">
+                        <div class="option-label-group">
+                          <span class="option-title">字型</span>
+                          <span class="option-desc">此書覆寫，不影響其他書</span>
+                        </div>
+                        <button type="button" class="option-cycle-btn" id="btn-cycle-font">
+                          <span id="val-font-family">思源宋體</span>
+                          <span class="cycle-arrow">▾</span>
+                        </button>
+                      </div>
+
+                      <!-- 字級步進器 -->
+                      <div class="layout-option-row">
+                        <div class="option-label-group">
+                          <span class="option-title">字級大小</span>
+                          <span class="option-desc"><span class="badge-custom">覆寫</span> 全域為 16</span>
+                        </div>
+                        <div class="stepper-wrap">
+                          <button type="button" class="stepper-btn" id="btn-font-dec">−</button>
+                          <span class="stepper-val" id="val-font-size">19</span>
+                          <button type="button" class="stepper-btn" id="btn-font-inc">＋</button>
+                        </div>
+                      </div>
+
+                      <!-- 行距步進器 -->
+                      <div class="layout-option-row">
+                        <div class="option-label-group">
+                          <span class="option-title">行距</span>
+                          <span class="option-desc">直排標準 1.8 ~ 2.1</span>
+                        </div>
+                        <div class="stepper-wrap">
+                          <button type="button" class="stepper-btn" id="btn-line-dec">−</button>
+                          <span class="stepper-val" id="val-line-height">1.9</span>
+                          <button type="button" class="stepper-btn" id="btn-line-inc">＋</button>
+                        </div>
+                      </div>
+
+                      <!-- 排版書寫方向 -->
+                      <div class="layout-option-row">
+                        <div class="option-label-group">
+                          <span class="option-title">書寫方向</span>
+                          <span class="option-desc">繁體直排 / 橫排即時切換</span>
+                        </div>
+                        <div class="segmented-btn-group">
+                          <button type="button" class="segment-btn active" id="layout-dir-vertical">直排</button>
+                          <button type="button" class="segment-btn" id="layout-dir-horizontal">橫排</button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- 邊界頁籤 -->
+                    <div class="layout-tab-content hidden" id="tab-content-margin">
+                      <div class="layout-option-row">
+                        <div class="option-label-group">
+                          <span class="option-title">左右邊界</span>
+                          <span class="option-desc">適配電子書邊框握持 (dp)</span>
+                        </div>
+                        <div class="stepper-wrap">
+                          <button type="button" class="stepper-btn" id="btn-margin-dec">−</button>
+                          <span class="stepper-val" id="val-margin-horizontal">20</span>
+                          <button type="button" class="stepper-btn" id="btn-margin-inc">＋</button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- 呈現頁籤 -->
+                    <div class="layout-tab-content hidden" id="tab-content-display">
+                      <div class="layout-option-row">
+                        <div class="option-label-group">
+                          <span class="option-title">純黑白 E-Ink 模式</span>
+                          <span class="option-desc">高對比過濾灰階與陰影</span>
+                        </div>
+                        <button type="button" class="switch-toggle-btn active" id="switch-eink-toggle">
+                          <div class="switch-dot"></div>
+                        </button>
+                      </div>
+                    </div>
+
+                    <!-- 預設集頁籤 -->
+                    <div class="layout-tab-content hidden" id="tab-content-presets">
+                      <div class="preset-card-list">
+                        <div class="preset-item active" id="preset-classic">
+                          <span class="preset-name">經典古籍直排</span>
+                          <span class="preset-badge">目前套用</span>
+                        </div>
+                        <div class="preset-item" id="preset-modern">
+                          <span class="preset-name">現代小說橫排</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 模擬器內建 Toast 提示 -->
+                <div class="demo-screen-toast hidden" id="demo-toast"></div>
+
+              </div>
+              <!-- /reader-device-screen -->
             </div>
+            <!-- /emulator-device-frame -->
           </div>
+          <!-- /reader-mockup-wrapper -->
 
         </div>
       </div>
