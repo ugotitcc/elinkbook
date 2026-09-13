@@ -31,6 +31,7 @@ agent/skills/
 skills-lock.json
 skills-lock.json
 .claude/settings.local.json
-.opencode/
+.opencode
 nul
 docs/research/uiux/reference/
+docs/superpowers/reviews/

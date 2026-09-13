@@ -17,7 +17,7 @@ _Avoid_: E-Ink 主題
 _Avoid_: 單書設定、閱讀器設定
 
 **全域預設值（Global Default）**：
-跨書籍生效的系統層級預設值（例如螢幕方向、翻頁模式、音量鍵翻頁開關、全螢幕顯示開關），對應 PRD FR-36/FR-37/FR-38/FR-42；單書版面偏好設定可覆寫，未覆寫時回退至此值。以 `shared_preferences` 存放。**目前僅螢幕方向與翻頁模式已接上設定畫面 UI**（`epic-14-system-settings` Discovery 已完成，`design.md` 決策 1 規劃於新增的「閱讀預設值」子畫面統一呈現，含音量鍵/全螢幕兩個新欄位，尚未實作）。
+跨書籍生效的系統層級預設值（例如螢幕方向、翻頁模式、音量鍵翻頁開關、全螢幕顯示開關），對應 PRD FR-36/FR-37/FR-38/FR-42；單書版面偏好設定可覆寫，未覆寫時回退至此值。以 `shared_preferences` 存放。已全數接上設定畫面 UI：`NavZoneSettingsScreen`（熱區三欄位）、`TtsDefaultsScreen`（朗讀語音/語速）、`ReadingDefaultsScreen`（見下方「閱讀預設值」詞條）、`SettingsScaffold`（Console Log 攔截開關）。
 _Avoid_: 系統設定、全域設定（兩者在 PRD 中另指 `epic-14` 的獨立系統設定畫面本身，容易與「全域預設值」這個資料層概念混淆）
 
 **開書初始偏好（Initial Preferences）**：
@@ -191,7 +191,7 @@ _Avoid_: sync_id（已否決的雙 id 設計，本機 id 現在就是同步用�
 _Avoid_: 上傳字型（動詞誤用成獨立概念）、外部字型（未點出「不複製、直接引用」這個關鍵特性）
 
 **閱讀預設值（Reading Defaults）**：
-`epic-14-system-settings` 新增的 `SettingsScreen` 子畫面，集中呈現四項全域預設值（見「全域預設值」詞條）：音量鍵翻頁開關（FR-36）、螢幕方向 5 選一（FR-37）、翻頁模式 2 選一（FR-38）、全螢幕顯示開關（FR-42）。純粹是 UI 呈現層的分組容器，四項底層資料各自獨立存於 `GlobalReaderPrefs`，不是新的資料模型。
+`epic-14-system-settings` 新增的 `ReadingDefaultsScreen` 子畫面，集中呈現七項全域預設值（見「全域預設值」詞條）：音量鍵翻頁開關（FR-36）、翻頁模式 2 選一（FR-38）、螢幕方向 5 選一（FR-37）、全螢幕顯示開關（FR-42）、啟動時開啟最後閱讀的書、顯示頁首、顯示頁尾。**UI 分組與資料模型現在是同一件事**（2026-09-13 拆分 `GlobalReaderPrefs` 定案）：這七個欄位對應 `GlobalReaderPrefs.reading`（`ReadingDefaults` 值物件），不再是「純 UI 分組、底層資料各自獨立」。
 _Avoid_: 系統偏好、全域設定畫面（後者容易與「設定」App 本身混淆）
 
 **Foliate 格式（Foliate-Rendered Formats）**：
