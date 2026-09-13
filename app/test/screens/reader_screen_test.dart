@@ -61,7 +61,6 @@ import 'package:elinkbook/library/models/book.dart';
 import 'package:elinkbook/library/models/library_enums.dart';
 import 'package:elinkbook/library/sqlite_library_repository.dart';
 import 'package:elinkbook/screens/book_search_screen.dart';
-// ignore: unused_import
 import 'package:elinkbook/search/search_repository.dart';
 import '../support/fake_search_repository.dart';
 import 'package:elinkbook/reader/book_reader_prefs_repository.dart';
