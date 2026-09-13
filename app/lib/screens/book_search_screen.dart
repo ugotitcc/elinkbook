@@ -175,6 +175,9 @@ class _BookSearchScreenState extends State<BookSearchScreen> {
           isEinkMode: widget.isEinkMode,
           readerActivityTracker:
               widget.readerFeatureRepositories.readerActivityTracker,
+          searchRepository: widget.readerFeatureRepositories.searchRepository,
+          isFullTextSearchAvailable:
+              widget.readerFeatureRepositories.isFullTextSearchAvailable,
           initialJumpTarget: jumpTarget,
         ),
       ),

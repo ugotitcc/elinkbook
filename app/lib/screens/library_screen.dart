@@ -461,6 +461,10 @@ class _LibraryScreenState extends State<LibraryScreen>
               isEinkMode: widget.themeDependencies.isEinkMode,
               readerActivityTracker:
                   widget.readerFeatureRepositories.readerActivityTracker,
+              searchRepository:
+                  widget.readerFeatureRepositories.searchRepository,
+              isFullTextSearchAvailable:
+                  widget.readerFeatureRepositories.isFullTextSearchAvailable,
             ),
           ),
         )
