@@ -264,7 +264,7 @@ class _LibraryScreenState extends State<LibraryScreen>
   Future<void> _maybeOpenLastBookOnLaunch() async {
     if (_activeGroupFilter != null) return;
     final globalPrefs = await widget.prefsManager.loadGlobalPrefs();
-    if (!globalPrefs.openLastBookOnLaunch) return;
+    if (!globalPrefs.reading.openLastBookOnLaunch) return;
     if (!mounted) return;
     final books = await widget.repository.listBooks(
       sortBy: LibrarySortBy.lastRead,

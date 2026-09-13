@@ -62,7 +62,7 @@ void main() {
       (tester) async {
     final fakeManager = FakeReaderPrefsManager(
       globalPrefs:
-          const GlobalReaderPrefs.initial().copyWith(navZoneMode: NavZoneMode.oneHand),
+          const GlobalReaderPrefs.initial().copyWith(navZone: const NavZonePrefs(navZoneMode: NavZoneMode.oneHand)),
     );
     await tester.pumpWidget(MaterialApp(
       home: NavZoneSettingsScreen(prefsManager: fakeManager),
@@ -81,7 +81,7 @@ void main() {
       (tester) async {
     final fakeManager = FakeReaderPrefsManager(
       globalPrefs:
-          const GlobalReaderPrefs.initial().copyWith(navZoneMode: NavZoneMode.custom),
+          const GlobalReaderPrefs.initial().copyWith(navZone: const NavZonePrefs(navZoneMode: NavZoneMode.custom)),
     );
     await tester.pumpWidget(MaterialApp(
       home: NavZoneSettingsScreen(prefsManager: fakeManager),
@@ -108,7 +108,7 @@ void main() {
 
     expect(fakeManager.savedGlobalPrefsCalls, isNotEmpty);
     expect(
-      fakeManager.savedGlobalPrefsCalls.last.navZoneMode,
+      fakeManager.savedGlobalPrefsCalls.last.navZone.navZoneMode,
       NavZoneMode.leftFlip,
     );
   });
@@ -124,7 +124,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      fakeManager.savedGlobalPrefsCalls.last.navZoneMode,
+      fakeManager.savedGlobalPrefsCalls.last.navZone.navZoneMode,
       NavZoneMode.oneHand,
     );
   });
@@ -136,7 +136,7 @@ void main() {
       (tester) async {
     final fakeManager = FakeReaderPrefsManager(
       globalPrefs:
-          const GlobalReaderPrefs.initial().copyWith(navZoneMode: NavZoneMode.leftFlip),
+          const GlobalReaderPrefs.initial().copyWith(navZone: const NavZonePrefs(navZoneMode: NavZoneMode.leftFlip)),
     );
     await tester.pumpWidget(MaterialApp(
       home: NavZoneSettingsScreen(prefsManager: fakeManager),
@@ -168,7 +168,7 @@ void main() {
       (tester) async {
     final fakeManager = FakeReaderPrefsManager(
       globalPrefs: const GlobalReaderPrefs.initial()
-          .copyWith(navZoneMode: NavZoneMode.rightFlip),
+          .copyWith(navZone: const NavZonePrefs(navZoneMode: NavZoneMode.rightFlip)),
     );
     await tester.pumpWidget(MaterialApp(
       home: NavZoneSettingsScreen(prefsManager: fakeManager),
@@ -195,7 +195,7 @@ void main() {
 
     final fakeManager = FakeReaderPrefsManager(
       globalPrefs:
-          const GlobalReaderPrefs.initial().copyWith(navZoneMode: NavZoneMode.custom),
+          const GlobalReaderPrefs.initial().copyWith(navZone: const NavZonePrefs(navZoneMode: NavZoneMode.custom)),
     );
     await tester.pumpWidget(MaterialApp(
       home: NavZoneSettingsScreen(prefsManager: fakeManager),
@@ -226,7 +226,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      fakeManager.savedGlobalPrefsCalls.last.navZoneMode,
+      fakeManager.savedGlobalPrefsCalls.last.navZone.navZoneMode,
       NavZoneMode.custom,
     );
     expect(find.byKey(const Key('nav_zone_custom_cell_0')), findsOneWidget);
@@ -236,7 +236,7 @@ void main() {
       (tester) async {
     final fakeManager = FakeReaderPrefsManager(
       globalPrefs:
-          const GlobalReaderPrefs.initial().copyWith(navZoneMode: NavZoneMode.custom),
+          const GlobalReaderPrefs.initial().copyWith(navZone: const NavZonePrefs(navZoneMode: NavZoneMode.custom)),
     );
     await tester.pumpWidget(MaterialApp(
       home: NavZoneSettingsScreen(prefsManager: fakeManager),
@@ -247,7 +247,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      fakeManager.savedGlobalPrefsCalls.last.navZoneMode,
+      fakeManager.savedGlobalPrefsCalls.last.navZone.navZoneMode,
       NavZoneMode.rightFlip,
     );
     expect(find.byKey(const Key('nav_zone_custom_cell_0')), findsNothing);
@@ -262,8 +262,9 @@ void main() {
     ];
     final fakeManager = FakeReaderPrefsManager(
       globalPrefs: const GlobalReaderPrefs.initial().copyWith(
-        navZoneMode: NavZoneMode.custom,
-        navZoneCustomActions: customActions,
+        navZone: const NavZonePrefs(
+            navZoneMode: NavZoneMode.custom,
+            navZoneCustomActions: customActions),
       ),
     );
     await tester.pumpWidget(MaterialApp(
@@ -316,7 +317,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      fakeManager.savedGlobalPrefsCalls.last.showNavZoneDebugOverlay,
+      fakeManager.savedGlobalPrefsCalls.last.navZone.showNavZoneDebugOverlay,
       isTrue,
     );
   });
@@ -437,7 +438,7 @@ void main() {
       findsNothing,
     );
     expect(
-      fakeManager.savedGlobalPrefsCalls.last.navZoneCustomActions[0],
+      fakeManager.savedGlobalPrefsCalls.last.navZone.navZoneCustomActions[0],
       ZoneAction.nextPage,
     );
   });

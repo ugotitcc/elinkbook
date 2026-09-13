@@ -64,24 +64,27 @@ class _NavZoneSettingsScreenState extends State<NavZoneSettingsScreen> {
     if (!mounted) return;
     setState(() {
       _prefs = prefs;
-      _customActions = List.of(prefs.navZoneCustomActions);
+      _customActions = List.of(prefs.navZone.navZoneCustomActions);
       _loading = false;
     });
   }
 
   void _selectMode(NavZoneMode mode) {
-    final updated = _prefs.copyWith(navZoneMode: mode);
+    final updated =
+        _prefs.copyWith(navZone: _prefs.navZone.copyWith(navZoneMode: mode));
     widget.prefsManager.saveGlobalPrefs(updated);
     setState(() {
       _prefs = updated;
       // 切換模板時捨棄尚未儲存的自訂編輯，回到上次已儲存的自訂陣列。
-      _customActions = List.of(updated.navZoneCustomActions);
+      _customActions = List.of(updated.navZone.navZoneCustomActions);
       _validationError = null;
     });
   }
 
   void _toggleDebugOverlay(bool value) {
-    final updated = _prefs.copyWith(showNavZoneDebugOverlay: value);
+    final updated = _prefs.copyWith(
+      navZone: _prefs.navZone.copyWith(showNavZoneDebugOverlay: value),
+    );
     widget.prefsManager.saveGlobalPrefs(updated);
     setState(() => _prefs = updated);
   }
@@ -102,8 +105,10 @@ class _NavZoneSettingsScreenState extends State<NavZoneSettingsScreen> {
       });
       return;
     }
-    final updated =
-        _prefs.copyWith(navZoneCustomActions: List.of(_customActions));
+    final updated = _prefs.copyWith(
+      navZone: _prefs.navZone
+          .copyWith(navZoneCustomActions: List.of(_customActions)),
+    );
     widget.prefsManager.saveGlobalPrefs(updated);
     setState(() {
       _prefs = updated;
@@ -148,15 +153,15 @@ class _NavZoneSettingsScreenState extends State<NavZoneSettingsScreen> {
                           ButtonSegment(value: false, label: Text('簡單')),
                           ButtonSegment(value: true, label: Text('自訂')),
                         ],
-                        selected: {_prefs.navZoneMode == NavZoneMode.custom},
+                        selected: {_prefs.navZone.navZoneMode == NavZoneMode.custom},
                         onSelectionChanged: (selection) {
                           final showCustom = selection.first;
                           if (showCustom) {
-                            if (_prefs.navZoneMode != NavZoneMode.custom) {
+                            if (_prefs.navZone.navZoneMode != NavZoneMode.custom) {
                               _selectMode(NavZoneMode.custom);
                             }
                           } else {
-                            if (_prefs.navZoneMode == NavZoneMode.custom) {
+                            if (_prefs.navZone.navZoneMode == NavZoneMode.custom) {
                               _selectMode(NavZoneMode.rightFlip);
                             }
                           }
@@ -165,7 +170,7 @@ class _NavZoneSettingsScreenState extends State<NavZoneSettingsScreen> {
                     ],
                   ),
                 ),
-                if (_prefs.navZoneMode != NavZoneMode.custom)
+                if (_prefs.navZone.navZoneMode != NavZoneMode.custom)
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Row(
@@ -189,13 +194,13 @@ class _NavZoneSettingsScreenState extends State<NavZoneSettingsScreen> {
                       ],
                     ),
                   ),
-                if (_prefs.navZoneMode == NavZoneMode.custom)
+                if (_prefs.navZone.navZoneMode == NavZoneMode.custom)
                   _buildCustomEditor(),
                 const Divider(),
                 SwitchListTile(
                   key: const Key('nav_zone_debug_overlay_switch'),
                   title: const Text('顯示熱區輔助線'),
-                  value: _prefs.showNavZoneDebugOverlay,
+                  value: _prefs.navZone.showNavZoneDebugOverlay,
                   onChanged: _toggleDebugOverlay,
                 ),
               ],
@@ -205,7 +210,7 @@ class _NavZoneSettingsScreenState extends State<NavZoneSettingsScreen> {
 
   /// 模板圖示卡片（Issue 5，取代原本的文字 `RadioListTile`）：縮小版三欄
   /// 示意圖（左/中/右三色區塊＋圖示），點選呼叫既有 [_selectMode]；與目前
-  /// [GlobalReaderPrefs.navZoneMode] 相同的卡片顯示 primary 色選中外框
+  /// [NavZonePrefs.navZoneMode] 相同的卡片顯示 primary 色選中外框
   /// （design.md 決策 #7，參考 `tmp/images/導航熱區建議.jpg`）。三欄圖示
   /// 對應該模板實際指派的 [ZoneAction]（`leftFlip`/`rightFlip` 左右欄分別
   /// 對應 `nextPage`/`previousPage`，非固定裝飾符號）——這兩個模板剛好是
@@ -219,7 +224,7 @@ class _NavZoneSettingsScreenState extends State<NavZoneSettingsScreen> {
     IconData? middleIcon,
     required IconData rightIcon,
   }) {
-    final selected = _prefs.navZoneMode == mode;
+    final selected = _prefs.navZone.navZoneMode == mode;
     return InkWell(
       borderRadius: BorderRadius.circular(8),
       onTap: () => _selectMode(mode),
@@ -283,7 +288,7 @@ class _NavZoneSettingsScreenState extends State<NavZoneSettingsScreen> {
   /// previousPage／nextPage），比照使用者提供的參考圖。
   Widget _buildOneHandTemplateCard() {
     const mode = NavZoneMode.oneHand;
-    final selected = _prefs.navZoneMode == mode;
+    final selected = _prefs.navZone.navZoneMode == mode;
 
     Widget buildRow(IconData icon, Color color) {
       return Expanded(

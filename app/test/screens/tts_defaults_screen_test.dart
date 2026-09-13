@@ -84,7 +84,7 @@ void main() {
     // 點擊不會觸發 onChanged。
     final fakeManager = FakeReaderPrefsManager(
       globalPrefs: const GlobalReaderPrefs.initial()
-          .copyWith(ttsVoiceId: 'other-voice'),
+          .copyWith(tts: const TtsDefaults(ttsVoiceId: 'other-voice')),
     );
     await tester.pumpWidget(MaterialApp(
       home: TtsDefaultsScreen(
@@ -100,7 +100,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      fakeManager.savedGlobalPrefsCalls.last.ttsVoiceId,
+      fakeManager.savedGlobalPrefsCalls.last.tts.ttsVoiceId,
       TtsVoice.systemDefault.id,
     );
   });
@@ -130,7 +130,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(fakeManager.savedGlobalPrefsCalls, isNotEmpty);
-    final result = fakeManager.savedGlobalPrefsCalls.last.defaultTtsSpeed;
+    final result = fakeManager.savedGlobalPrefsCalls.last.tts.defaultTtsSpeed;
     expect(result, greaterThan(1.0));
     expect(result, lessThanOrEqualTo(2.0));
     // 結果須精確落在 0.1 的整數倍格點上（容許浮點誤差），驗證 onChanged
@@ -162,7 +162,7 @@ void main() {
 
     expect(fakeManager.savedGlobalPrefsCalls, isNotEmpty);
     expect(
-      fakeManager.savedGlobalPrefsCalls.last.defaultTtsSpeed,
+      fakeManager.savedGlobalPrefsCalls.last.tts.defaultTtsSpeed,
       closeTo(0.75, 1e-9),
     );
   });
@@ -181,19 +181,19 @@ void main() {
     await tester.tap(find.byKey(const Key('tts_defaults_speed_increment')));
     await tester.pumpAndSettle();
 
-    expect(fakeManager.savedGlobalPrefsCalls.last.defaultTtsSpeed, 1.1);
+    expect(fakeManager.savedGlobalPrefsCalls.last.tts.defaultTtsSpeed, 1.1);
     expect(find.text('1.1x'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('tts_defaults_speed_decrement')));
     await tester.pumpAndSettle();
 
-    expect(fakeManager.savedGlobalPrefsCalls.last.defaultTtsSpeed, 1.0);
+    expect(fakeManager.savedGlobalPrefsCalls.last.tts.defaultTtsSpeed, 1.0);
   });
 
   testWidgets('語速已達上限 2.0x 時，+按鈕停用；已達下限 0.75x 時，-按鈕停用', (tester) async {
     final fakeManager = FakeReaderPrefsManager(
       globalPrefs: const GlobalReaderPrefs.initial()
-          .copyWith(defaultTtsSpeed: 2.0),
+          .copyWith(tts: const TtsDefaults(defaultTtsSpeed: 2.0)),
     );
     await tester.pumpWidget(MaterialApp(
       home: TtsDefaultsScreen(prefsManager: fakeManager, isEinkMode: true),
@@ -232,7 +232,7 @@ void main() {
       expect(tester.widget<IconButton>(decrementFinder).onPressed, isNotNull);
       await tester.tap(decrementFinder);
       await tester.pumpAndSettle();
-      expect(fakeManager.savedGlobalPrefsCalls.last.defaultTtsSpeed,
+      expect(fakeManager.savedGlobalPrefsCalls.last.tts.defaultTtsSpeed,
           closeTo(expected, 1e-9));
     }
 
@@ -240,7 +240,7 @@ void main() {
     expect(tester.widget<IconButton>(decrementFinder).onPressed, isNotNull);
     await tester.tap(decrementFinder);
     await tester.pumpAndSettle();
-    expect(fakeManager.savedGlobalPrefsCalls.last.defaultTtsSpeed,
+    expect(fakeManager.savedGlobalPrefsCalls.last.tts.defaultTtsSpeed,
         closeTo(0.75, 1e-9));
     // 0.75.toStringAsFixed(1) 會四捨五入誤顯示為 "0.8"，須特判
     // （review-issue-5.md Important 1 回歸測試）。

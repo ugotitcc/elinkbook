@@ -69,27 +69,33 @@ class ReaderPrefsManagerImpl implements ReaderPrefsManager {
   Future<GlobalReaderPrefs> loadGlobalPrefs() async {
     final sp = await SharedPreferences.getInstance();
     return GlobalReaderPrefs(
-      pageTurnMode: _readEnum(sp, _pageTurnModeKey, PageTurnMode.values) ??
-          PageTurnMode.paginated,
-      screenOrientation: _readEnum(
-            sp,
-            _screenOrientationKey,
-            ScreenOrientationSetting.values,
-          ) ??
-          ScreenOrientationSetting.auto,
-      navZoneMode: _readEnum(sp, _navZoneModeKey, NavZoneMode.values) ??
-          NavZoneMode.rightFlip,
-      navZoneCustomActions:
-          _decodeZoneActions(sp.getString(_navZoneCustomActionsKey)),
-      showNavZoneDebugOverlay: sp.getBool(_navZoneDebugOverlayKey) ?? false,
-      volumeKeyEnabled: sp.getBool(_volumeKeyEnabledKey) ?? true,
-      fullscreen: sp.getBool(_fullscreenKey) ?? false,
-      openLastBookOnLaunch: sp.getBool(_openLastBookOnLaunchKey) ?? true,
       consoleLogEnabled: sp.getBool(_consoleLogEnabledKey) ?? false,
-      showHeader: sp.getBool(_showHeaderKey) ?? false,
-      showFooter: sp.getBool(_showFooterKey) ?? false,
-      ttsVoiceId: sp.getString(_ttsVoiceIdKey),
-      defaultTtsSpeed: sp.getDouble(_defaultTtsSpeedKey) ?? 1.0,
+      navZone: NavZonePrefs(
+        navZoneMode: _readEnum(sp, _navZoneModeKey, NavZoneMode.values) ??
+            NavZoneMode.rightFlip,
+        navZoneCustomActions:
+            _decodeZoneActions(sp.getString(_navZoneCustomActionsKey)),
+        showNavZoneDebugOverlay: sp.getBool(_navZoneDebugOverlayKey) ?? false,
+      ),
+      tts: TtsDefaults(
+        ttsVoiceId: sp.getString(_ttsVoiceIdKey),
+        defaultTtsSpeed: sp.getDouble(_defaultTtsSpeedKey) ?? 1.0,
+      ),
+      reading: ReadingDefaults(
+        pageTurnMode: _readEnum(sp, _pageTurnModeKey, PageTurnMode.values) ??
+            PageTurnMode.paginated,
+        screenOrientation: _readEnum(
+              sp,
+              _screenOrientationKey,
+              ScreenOrientationSetting.values,
+            ) ??
+            ScreenOrientationSetting.auto,
+        volumeKeyEnabled: sp.getBool(_volumeKeyEnabledKey) ?? true,
+        fullscreen: sp.getBool(_fullscreenKey) ?? false,
+        openLastBookOnLaunch: sp.getBool(_openLastBookOnLaunchKey) ?? true,
+        showHeader: sp.getBool(_showHeaderKey) ?? false,
+        showFooter: sp.getBool(_showFooterKey) ?? false,
+      ),
     );
   }
 
@@ -134,28 +140,37 @@ class ReaderPrefsManagerImpl implements ReaderPrefsManager {
   @override
   Future<void> saveGlobalPrefs(GlobalReaderPrefs prefs) async {
     final sp = await SharedPreferences.getInstance();
-    await sp.setString(_pageTurnModeKey, prefs.pageTurnMode.name);
-    await sp.setString(_screenOrientationKey, prefs.screenOrientation.name);
-    await sp.setString(_navZoneModeKey, prefs.navZoneMode.name);
+    await sp.setString(_pageTurnModeKey, prefs.reading.pageTurnMode.name);
+    await sp.setString(
+      _screenOrientationKey,
+      prefs.reading.screenOrientation.name,
+    );
+    await sp.setString(_navZoneModeKey, prefs.navZone.navZoneMode.name);
     await sp.setString(
       _navZoneCustomActionsKey,
-      _encodeZoneActions(prefs.navZoneCustomActions),
+      _encodeZoneActions(prefs.navZone.navZoneCustomActions),
     );
-    await sp.setBool(_navZoneDebugOverlayKey, prefs.showNavZoneDebugOverlay);
-    await sp.setBool(_volumeKeyEnabledKey, prefs.volumeKeyEnabled);
-    await sp.setBool(_fullscreenKey, prefs.fullscreen);
-    await sp.setBool(_openLastBookOnLaunchKey, prefs.openLastBookOnLaunch);
+    await sp.setBool(
+      _navZoneDebugOverlayKey,
+      prefs.navZone.showNavZoneDebugOverlay,
+    );
+    await sp.setBool(_volumeKeyEnabledKey, prefs.reading.volumeKeyEnabled);
+    await sp.setBool(_fullscreenKey, prefs.reading.fullscreen);
+    await sp.setBool(
+      _openLastBookOnLaunchKey,
+      prefs.reading.openLastBookOnLaunch,
+    );
     await sp.setBool(_consoleLogEnabledKey, prefs.consoleLogEnabled);
-    await sp.setBool(_showHeaderKey, prefs.showHeader);
-    await sp.setBool(_showFooterKey, prefs.showFooter);
+    await sp.setBool(_showHeaderKey, prefs.reading.showHeader);
+    await sp.setBool(_showFooterKey, prefs.reading.showFooter);
     // ttsVoiceId 為 nullable——setString 不接受 null，缺席時須明確 remove()
     // 該鍵，否則舊值會殘留，導致「清空語音選擇」的意圖被忽略。
-    if (prefs.ttsVoiceId != null) {
-      await sp.setString(_ttsVoiceIdKey, prefs.ttsVoiceId!);
+    if (prefs.tts.ttsVoiceId != null) {
+      await sp.setString(_ttsVoiceIdKey, prefs.tts.ttsVoiceId!);
     } else {
       await sp.remove(_ttsVoiceIdKey);
     }
-    await sp.setDouble(_defaultTtsSpeedKey, prefs.defaultTtsSpeed);
+    await sp.setDouble(_defaultTtsSpeedKey, prefs.tts.defaultTtsSpeed);
   }
 
   @override
@@ -186,9 +201,9 @@ class ReaderPrefsManagerImpl implements ReaderPrefsManager {
       publisherStyles: book.publisherStyles,
       columnMode: book.columnMode ?? ColumnMode.auto,
       columnSize: book.columnSize ?? 720.0,
-      pageTurnMode: book.pageTurnModeOverride ?? global.pageTurnMode,
+      pageTurnMode: book.pageTurnModeOverride ?? global.reading.pageTurnMode,
       screenOrientation:
-          book.screenOrientationOverride ?? global.screenOrientation,
+          book.screenOrientationOverride ?? global.reading.screenOrientation,
       pdfFitMode: book.pdfFitMode ?? PdfFitMode.pageFit,
       pdfContrast: book.pdfContrast ?? 0,
       pdfBrightness: book.pdfBrightness ?? 0,
@@ -200,13 +215,15 @@ class ReaderPrefsManagerImpl implements ReaderPrefsManager {
       dualPageDirection: book.dualPageDirection ?? DualPageDirection.rtl,
       pdfPageTurnAnimation:
           book.pdfPageTurnAnimation ?? PdfPageTurnAnimation.slide,
-      showHeader: book.showHeader ?? global.showHeader,
-      showFooter: book.showFooter ?? global.showFooter,
-      navZoneActions:
-          resolveZoneActions(global.navZoneMode, global.navZoneCustomActions),
-      showNavZoneDebugOverlay: global.showNavZoneDebugOverlay,
-      fullscreen: book.fullscreen ?? global.fullscreen,
-      volumeKeyEnabled: global.volumeKeyEnabled,
+      showHeader: book.showHeader ?? global.reading.showHeader,
+      showFooter: book.showFooter ?? global.reading.showFooter,
+      navZoneActions: resolveZoneActions(
+        global.navZone.navZoneMode,
+        global.navZone.navZoneCustomActions,
+      ),
+      showNavZoneDebugOverlay: global.navZone.showNavZoneDebugOverlay,
+      fullscreen: book.fullscreen ?? global.reading.fullscreen,
+      volumeKeyEnabled: global.reading.volumeKeyEnabled,
       consoleLogEnabled: global.consoleLogEnabled,
     );
   }

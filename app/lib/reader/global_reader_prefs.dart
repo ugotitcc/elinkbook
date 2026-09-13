@@ -1,43 +1,19 @@
-import 'package:flutter/foundation.dart';
+import 'nav_zone_prefs.dart';
+import 'reading_defaults.dart';
+import 'tts_defaults.dart';
 
-import 'nav_zone_mode.dart';
-import 'page_turn_mode.dart';
-import 'screen_orientation_setting.dart';
-import 'zone_action.dart';
+export 'nav_zone_prefs.dart';
+export 'reading_defaults.dart';
+export 'tts_defaults.dart';
 
-/// 跨書生效的全域預設閱讀偏好。
+/// 跨書生效的全域預設閱讀偏好聚合根（2026-09-13 由原本的 13 個攤平欄位拆分
+/// 為 3 個巢狀值物件＋1 個攤平欄位，見
+/// `docs/superpowers/plans/2026-09-13-split-global-reader-prefs.md`）。
 ///
-/// 除 [ttsVoiceId]（`null` 代表使用系統預設語音，見該欄位說明）外，其餘
-/// 欄位皆 non-nullable——與 [BookReaderPrefs] 的「全欄位 nullable、
-/// null=未覆寫」語意刻意不同：全域層本身沒有更上層的預設可回退，任何時候
-/// 都必須有一個明確生效值。
+/// [consoleLogEnabled] 是唯一維持攤平的欄位——`app/lib/screens/
+/// settings_scaffold.dart` 是它唯一的讀寫端，語意上跟導覽熱區／TTS／閱讀
+/// 預設值三組都無關，沒有可歸類的分組。
 class GlobalReaderPrefs {
-  final PageTurnMode pageTurnMode;
-  final ScreenOrientationSetting screenOrientation;
-
-  /// 熱區映射模式，預設 [NavZoneMode.rightFlip]（design.md「新增的
-  /// GlobalReaderPrefs 欄位」）。
-  final NavZoneMode navZoneMode;
-
-  /// 長度固定 9。僅 [navZoneMode] 為 [NavZoneMode.custom] 時內容才生效
-  /// （其餘模式由 [resolveZoneActions] 查表算出，忽略本欄位）；仍持續
-  /// 保留是為了使用者切回自訂模式時能還原上次編輯結果。
-  final List<ZoneAction> navZoneCustomActions;
-
-  /// 是否顯示熱區輔助線，預設 `false`。
-  final bool showNavZoneDebugOverlay;
-
-  /// 音量鍵翻頁總開關（FR-36，epic-14-system-settings Issue 4），預設
-  /// `true`（沿用既有行為，不影響升級前的使用者體驗）。無單書覆寫層——
-  /// `ReaderPrefsManagerImpl.resolve()` 直接透傳本欄位。
-  final bool volumeKeyEnabled;
-
-  /// 全螢幕模式全域預設值（FR-42，epic-14-system-settings Issue 4），
-  /// 預設 `false`。與既有單書層 `BookReaderPrefs.fullscreen` 為雙層解析
-  /// 關係（`book.fullscreen ?? global.fullscreen`），涵蓋 EPUB 流式／
-  /// FXL／PDF 三種格式（design.md 決策 6）。
-  final bool fullscreen;
-
   /// Console Log 攔截總開關（epic-28-reader-settings-enhancements
   /// Issue 2），預設 `false`（不攔截一般等級訊息）。只影響 `[LOG]`/
   /// `[WARNING]`/`[DEBUG]`/`[TIP]` 等級——`[ERROR]` 等級（含未捕捉例外的
@@ -45,127 +21,48 @@ class GlobalReaderPrefs {
   /// `handleFoliateConsoleMessage()`。
   final bool consoleLogEnabled;
 
-  /// 啟動時開啟最後閱讀的那本書（epic-18-reader-device-qa Issue 29，
-  /// 顯示文字經 Issue 35 修正），預設 `true`。開啟時，App 啟動當下若
-  /// 圖書庫內有任何書籍，直接導向最後閱讀（`Book.lastReadTime` 最新）
-  /// 的那一本，取代顯示書架。
-  final bool openLastBookOnLaunch;
+  /// 導航熱區偏好（FR-24），見 [NavZonePrefs]。
+  final NavZonePrefs navZone;
 
-  /// 「顯示頁首／頁尾」全域預設值（epic-36-adaptive-shelf-navigation
-  /// Issue 5，spec.md §功能⑤），預設 `false`——與目前 `reader_screen.dart`
-  /// 多處硬編碼的 `?? false` 回退值一致，升級後行為不變。與既有單書層
-  /// `BookReaderPrefs.showHeader`/`showFooter` 為雙層解析關係
-  /// （`book.showHeader ?? global.showHeader`，見
-  /// `ReaderPrefsManagerImpl.resolve()`）。
-  final bool showHeader;
-  final bool showFooter;
+  /// 朗讀（TTS）預設值，見 [TtsDefaults]。
+  final TtsDefaults tts;
 
-  /// 朗讀（TTS）預設語音 id（epic-36-adaptive-shelf-navigation Issue 5）。
-  /// `null` 代表「使用系統預設語音」——語意上沒有一個放諸四海皆準的安全
-  /// 非空預設值，不比照本類別其餘欄位一律 non-nullable 的慣例。
-  final String? ttsVoiceId;
-
-  /// 朗讀（TTS）預設語速，範圍 0.75x~2.0x（`DESIGN.md#L307` §13.2），
-  /// 預設 `1.0`。
-  final double defaultTtsSpeed;
+  /// 「閱讀預設值」畫面對應的 7 個欄位，見 [ReadingDefaults]。
+  final ReadingDefaults reading;
 
   const GlobalReaderPrefs({
-    required this.pageTurnMode,
-    required this.screenOrientation,
-    required this.navZoneMode,
-    required this.navZoneCustomActions,
-    required this.showNavZoneDebugOverlay,
-    this.volumeKeyEnabled = true,
-    this.fullscreen = false,
     this.consoleLogEnabled = false,
-    this.openLastBookOnLaunch = true,
-    this.showHeader = false,
-    this.showFooter = false,
-    this.ttsVoiceId,
-    this.defaultTtsSpeed = 1.0,
+    this.navZone = const NavZonePrefs.initial(),
+    this.tts = const TtsDefaults.initial(),
+    this.reading = const ReadingDefaults.initial(),
   });
 
-  /// 初始值，與現行 GlobalReaderDefaults 的既有硬編碼預設一致，
-  /// 不改變任何現有使用者體驗。
-  const GlobalReaderPrefs.initial()
-      : pageTurnMode = PageTurnMode.paginated,
-        screenOrientation = ScreenOrientationSetting.auto,
-        navZoneMode = NavZoneMode.rightFlip,
-        navZoneCustomActions = rightFlipZoneTemplate,
-        showNavZoneDebugOverlay = false,
-        volumeKeyEnabled = true,
-        fullscreen = false,
-        consoleLogEnabled = false,
-        openLastBookOnLaunch = true,
-        showHeader = false,
-        showFooter = false,
-        ttsVoiceId = null,
-        defaultTtsSpeed = 1.0;
+  /// 初始值，與現行硬編碼預設一致，不改變任何現有使用者體驗。
+  const GlobalReaderPrefs.initial() : this();
 
   GlobalReaderPrefs copyWith({
-    PageTurnMode? pageTurnMode,
-    ScreenOrientationSetting? screenOrientation,
-    NavZoneMode? navZoneMode,
-    List<ZoneAction>? navZoneCustomActions,
-    bool? showNavZoneDebugOverlay,
-    bool? volumeKeyEnabled,
-    bool? fullscreen,
     bool? consoleLogEnabled,
-    bool? openLastBookOnLaunch,
-    bool? showHeader,
-    bool? showFooter,
-    String? ttsVoiceId,
-    double? defaultTtsSpeed,
+    NavZonePrefs? navZone,
+    TtsDefaults? tts,
+    ReadingDefaults? reading,
   }) {
     return GlobalReaderPrefs(
-      pageTurnMode: pageTurnMode ?? this.pageTurnMode,
-      screenOrientation: screenOrientation ?? this.screenOrientation,
-      navZoneMode: navZoneMode ?? this.navZoneMode,
-      navZoneCustomActions: navZoneCustomActions ?? this.navZoneCustomActions,
-      showNavZoneDebugOverlay:
-          showNavZoneDebugOverlay ?? this.showNavZoneDebugOverlay,
-      volumeKeyEnabled: volumeKeyEnabled ?? this.volumeKeyEnabled,
-      fullscreen: fullscreen ?? this.fullscreen,
       consoleLogEnabled: consoleLogEnabled ?? this.consoleLogEnabled,
-      openLastBookOnLaunch: openLastBookOnLaunch ?? this.openLastBookOnLaunch,
-      showHeader: showHeader ?? this.showHeader,
-      showFooter: showFooter ?? this.showFooter,
-      ttsVoiceId: ttsVoiceId ?? this.ttsVoiceId,
-      defaultTtsSpeed: defaultTtsSpeed ?? this.defaultTtsSpeed,
+      navZone: navZone ?? this.navZone,
+      tts: tts ?? this.tts,
+      reading: reading ?? this.reading,
     );
   }
 
   @override
   bool operator ==(Object other) =>
       other is GlobalReaderPrefs &&
-      other.pageTurnMode == pageTurnMode &&
-      other.screenOrientation == screenOrientation &&
-      other.navZoneMode == navZoneMode &&
-      listEquals(other.navZoneCustomActions, navZoneCustomActions) &&
-      other.showNavZoneDebugOverlay == showNavZoneDebugOverlay &&
-      other.volumeKeyEnabled == volumeKeyEnabled &&
-      other.fullscreen == fullscreen &&
       other.consoleLogEnabled == consoleLogEnabled &&
-      other.openLastBookOnLaunch == openLastBookOnLaunch &&
-      other.showHeader == showHeader &&
-      other.showFooter == showFooter &&
-      other.ttsVoiceId == ttsVoiceId &&
-      other.defaultTtsSpeed == defaultTtsSpeed;
+      other.navZone == navZone &&
+      other.tts == tts &&
+      other.reading == reading;
 
   @override
-  int get hashCode => Object.hash(
-        pageTurnMode,
-        screenOrientation,
-        navZoneMode,
-        Object.hashAll(navZoneCustomActions),
-        showNavZoneDebugOverlay,
-        volumeKeyEnabled,
-        fullscreen,
-        consoleLogEnabled,
-        openLastBookOnLaunch,
-        showHeader,
-        showFooter,
-        ttsVoiceId,
-        defaultTtsSpeed,
-      );
+  int get hashCode =>
+      Object.hash(consoleLogEnabled, navZone, tts, reading);
 }

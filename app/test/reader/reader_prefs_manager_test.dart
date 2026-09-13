@@ -107,7 +107,7 @@ void main() {
       final loaded = LoadedPrefs(
         bookPrefs: BookReaderPrefs.empty,
         globalPrefs:
-            const GlobalReaderPrefs.initial().copyWith(fullscreen: true),
+            const GlobalReaderPrefs.initial().copyWith(reading: const ReadingDefaults(fullscreen: true)),
       );
       final resolved = manager.resolve(loaded);
       expect(resolved.fullscreen, isTrue);
@@ -117,7 +117,7 @@ void main() {
       final loaded = LoadedPrefs(
         bookPrefs: const BookReaderPrefs(fullscreen: false),
         globalPrefs:
-            const GlobalReaderPrefs.initial().copyWith(fullscreen: true),
+            const GlobalReaderPrefs.initial().copyWith(reading: const ReadingDefaults(fullscreen: true)),
       );
       final resolved = manager.resolve(loaded);
       expect(resolved.fullscreen, isFalse);
@@ -127,8 +127,7 @@ void main() {
         () {
       final loaded = LoadedPrefs(
         bookPrefs: BookReaderPrefs.empty,
-        globalPrefs: const GlobalReaderPrefs.initial()
-            .copyWith(showHeader: true, showFooter: true),
+        globalPrefs: const GlobalReaderPrefs.initial().copyWith(reading: const ReadingDefaults(showHeader: true, showFooter: true)),
       );
       final resolved = manager.resolve(loaded);
       expect(resolved.showHeader, isTrue);
@@ -138,8 +137,7 @@ void main() {
     test('book.showHeader／showFooter 存在時優先於 global 對應欄位', () {
       final loaded = LoadedPrefs(
         bookPrefs: const BookReaderPrefs(showHeader: false, showFooter: false),
-        globalPrefs: const GlobalReaderPrefs.initial()
-            .copyWith(showHeader: true, showFooter: true),
+        globalPrefs: const GlobalReaderPrefs.initial().copyWith(reading: const ReadingDefaults(showHeader: true, showFooter: true)),
       );
       final resolved = manager.resolve(loaded);
       expect(resolved.showHeader, isFalse);
@@ -155,8 +153,7 @@ void main() {
 
       final loadedDisabled = LoadedPrefs(
         bookPrefs: BookReaderPrefs.empty,
-        globalPrefs: const GlobalReaderPrefs.initial()
-            .copyWith(volumeKeyEnabled: false),
+        globalPrefs: const GlobalReaderPrefs.initial().copyWith(reading: const ReadingDefaults(volumeKeyEnabled: false)),
       );
       expect(manager.resolve(loadedDisabled).volumeKeyEnabled, isFalse);
     });
@@ -181,11 +178,15 @@ void main() {
       final loaded = LoadedPrefs(
         bookPrefs: BookReaderPrefs.empty,
         globalPrefs: const GlobalReaderPrefs(
-          pageTurnMode: PageTurnMode.scroll,
-          screenOrientation: ScreenOrientationSetting.lock270,
-          navZoneMode: NavZoneMode.oneHand,
-          navZoneCustomActions: rightFlipZoneTemplate,
-          showNavZoneDebugOverlay: true,
+          reading: ReadingDefaults(
+            pageTurnMode: PageTurnMode.scroll,
+            screenOrientation: ScreenOrientationSetting.lock270,
+          ),
+          navZone: NavZonePrefs(
+            navZoneMode: NavZoneMode.oneHand,
+            navZoneCustomActions: rightFlipZoneTemplate,
+            showNavZoneDebugOverlay: true,
+          ),
         ),
       );
       final resolved = manager.resolve(loaded);
@@ -206,11 +207,11 @@ void main() {
       final loaded = LoadedPrefs(
         bookPrefs: BookReaderPrefs.empty,
         globalPrefs: const GlobalReaderPrefs(
-          pageTurnMode: PageTurnMode.paginated,
-          screenOrientation: ScreenOrientationSetting.auto,
-          navZoneMode: NavZoneMode.custom,
-          navZoneCustomActions: customActions,
-          showNavZoneDebugOverlay: false,
+          navZone: NavZonePrefs(
+            navZoneMode: NavZoneMode.custom,
+            navZoneCustomActions: customActions,
+            showNavZoneDebugOverlay: false,
+          ),
         ),
       );
       final resolved = manager.resolve(loaded);
@@ -353,15 +354,19 @@ void main() {
     test('saveGlobalPrefs 寫入後，load 讀回相同的全域預設值（含熱區三欄位）',
         () async {
       const globalPrefs = GlobalReaderPrefs(
-        pageTurnMode: PageTurnMode.scroll,
-        screenOrientation: ScreenOrientationSetting.lock90,
-        navZoneMode: NavZoneMode.custom,
-        navZoneCustomActions: [
-          ZoneAction.menu, ZoneAction.none, ZoneAction.none,
-          ZoneAction.previousPage, ZoneAction.none, ZoneAction.nextPage,
-          ZoneAction.none, ZoneAction.none, ZoneAction.none,
-        ],
-        showNavZoneDebugOverlay: true,
+        reading: ReadingDefaults(
+          pageTurnMode: PageTurnMode.scroll,
+          screenOrientation: ScreenOrientationSetting.lock90,
+        ),
+        navZone: NavZonePrefs(
+          navZoneMode: NavZoneMode.custom,
+          navZoneCustomActions: [
+            ZoneAction.menu, ZoneAction.none, ZoneAction.none,
+            ZoneAction.previousPage, ZoneAction.none, ZoneAction.nextPage,
+            ZoneAction.none, ZoneAction.none, ZoneAction.none,
+          ],
+          showNavZoneDebugOverlay: true,
+        ),
       );
       await manager.saveGlobalPrefs(globalPrefs);
       final loaded = await manager.load('b1');
@@ -370,11 +375,15 @@ void main() {
 
     test('loadGlobalPrefs() 回傳與 load(bookId).globalPrefs 一致的值', () async {
       const globalPrefs = GlobalReaderPrefs(
-        pageTurnMode: PageTurnMode.scroll,
-        screenOrientation: ScreenOrientationSetting.lock90,
-        navZoneMode: NavZoneMode.oneHand,
-        navZoneCustomActions: rightFlipZoneTemplate,
-        showNavZoneDebugOverlay: true,
+        reading: ReadingDefaults(
+          pageTurnMode: PageTurnMode.scroll,
+          screenOrientation: ScreenOrientationSetting.lock90,
+        ),
+        navZone: NavZonePrefs(
+          navZoneMode: NavZoneMode.oneHand,
+          navZoneCustomActions: rightFlipZoneTemplate,
+          showNavZoneDebugOverlay: true,
+        ),
       );
       await manager.saveGlobalPrefs(globalPrefs);
 
@@ -388,13 +397,10 @@ void main() {
     test('saveGlobalPrefs 寫入 volumeKeyEnabled／fullscreen 至既有慣例命名的 SharedPreferences key',
         () async {
       const globalPrefs = GlobalReaderPrefs(
-        pageTurnMode: PageTurnMode.paginated,
-        screenOrientation: ScreenOrientationSetting.auto,
-        navZoneMode: NavZoneMode.rightFlip,
-        navZoneCustomActions: rightFlipZoneTemplate,
-        showNavZoneDebugOverlay: false,
-        volumeKeyEnabled: false,
-        fullscreen: true,
+        reading: ReadingDefaults(
+          volumeKeyEnabled: false,
+          fullscreen: true,
+        ),
       );
       await manager.saveGlobalPrefs(globalPrefs);
 
@@ -403,26 +409,21 @@ void main() {
       expect(sp.getBool('global_reader_fullscreen'), isTrue);
 
       final loaded = await manager.load('b1');
-      expect(loaded.globalPrefs.volumeKeyEnabled, isFalse);
-      expect(loaded.globalPrefs.fullscreen, isTrue);
+      expect(loaded.globalPrefs.reading.volumeKeyEnabled, isFalse);
+      expect(loaded.globalPrefs.reading.fullscreen, isTrue);
     });
 
     test('volumeKeyEnabled／fullscreen 未儲存過（缺鍵）時，安全回退為預設值 true／false',
         () async {
       final loaded = await manager.load('b1');
-      expect(loaded.globalPrefs.volumeKeyEnabled, isTrue);
-      expect(loaded.globalPrefs.fullscreen, isFalse);
+      expect(loaded.globalPrefs.reading.volumeKeyEnabled, isTrue);
+      expect(loaded.globalPrefs.reading.fullscreen, isFalse);
     });
 
     test('saveGlobalPrefs 寫入 openLastBookOnLaunch 至既有慣例命名的 SharedPreferences key',
         () async {
       const globalPrefs = GlobalReaderPrefs(
-        pageTurnMode: PageTurnMode.paginated,
-        screenOrientation: ScreenOrientationSetting.auto,
-        navZoneMode: NavZoneMode.rightFlip,
-        navZoneCustomActions: rightFlipZoneTemplate,
-        showNavZoneDebugOverlay: false,
-        openLastBookOnLaunch: false,
+        reading: ReadingDefaults(openLastBookOnLaunch: false),
       );
       await manager.saveGlobalPrefs(globalPrefs);
 
@@ -430,22 +431,17 @@ void main() {
       expect(sp.getBool('global_reader_open_last_book_on_launch'), isFalse);
 
       final loaded = await manager.load('b1');
-      expect(loaded.globalPrefs.openLastBookOnLaunch, isFalse);
+      expect(loaded.globalPrefs.reading.openLastBookOnLaunch, isFalse);
     });
 
     test('openLastBookOnLaunch 未儲存過（缺鍵）時，安全回退為預設值 true', () async {
       final loaded = await manager.load('b1');
-      expect(loaded.globalPrefs.openLastBookOnLaunch, isTrue);
+      expect(loaded.globalPrefs.reading.openLastBookOnLaunch, isTrue);
     });
 
     test('saveGlobalPrefs 寫入 consoleLogEnabled 至既有慣例命名的 SharedPreferences key',
         () async {
       const globalPrefs = GlobalReaderPrefs(
-        pageTurnMode: PageTurnMode.paginated,
-        screenOrientation: ScreenOrientationSetting.auto,
-        navZoneMode: NavZoneMode.rightFlip,
-        navZoneCustomActions: rightFlipZoneTemplate,
-        showNavZoneDebugOverlay: false,
         consoleLogEnabled: true,
       );
       await manager.saveGlobalPrefs(globalPrefs);
@@ -465,15 +461,8 @@ void main() {
     test('saveGlobalPrefs 寫入 showHeader／showFooter／ttsVoiceId／defaultTtsSpeed 至既有慣例命名的 SharedPreferences key',
         () async {
       const globalPrefs = GlobalReaderPrefs(
-        pageTurnMode: PageTurnMode.paginated,
-        screenOrientation: ScreenOrientationSetting.auto,
-        navZoneMode: NavZoneMode.rightFlip,
-        navZoneCustomActions: rightFlipZoneTemplate,
-        showNavZoneDebugOverlay: false,
-        showHeader: true,
-        showFooter: true,
-        ttsVoiceId: 'voice-42',
-        defaultTtsSpeed: 1.5,
+        reading: ReadingDefaults(showHeader: true, showFooter: true),
+        tts: TtsDefaults(ttsVoiceId: 'voice-42', defaultTtsSpeed: 1.5),
       );
       await manager.saveGlobalPrefs(globalPrefs);
 
@@ -484,42 +473,32 @@ void main() {
       expect(sp.getDouble('global_reader_default_tts_speed'), 1.5);
 
       final loaded = await manager.load('b1');
-      expect(loaded.globalPrefs.showHeader, isTrue);
-      expect(loaded.globalPrefs.showFooter, isTrue);
-      expect(loaded.globalPrefs.ttsVoiceId, 'voice-42');
-      expect(loaded.globalPrefs.defaultTtsSpeed, 1.5);
+      expect(loaded.globalPrefs.reading.showHeader, isTrue);
+      expect(loaded.globalPrefs.reading.showFooter, isTrue);
+      expect(loaded.globalPrefs.tts.ttsVoiceId, 'voice-42');
+      expect(loaded.globalPrefs.tts.defaultTtsSpeed, 1.5);
     });
 
     test('showHeader／showFooter／defaultTtsSpeed 未儲存過（缺鍵）時，安全回退為預設值 false／false／1.0，ttsVoiceId 回退為 null',
         () async {
       final loaded = await manager.load('b1');
-      expect(loaded.globalPrefs.showHeader, isFalse);
-      expect(loaded.globalPrefs.showFooter, isFalse);
-      expect(loaded.globalPrefs.ttsVoiceId, isNull);
-      expect(loaded.globalPrefs.defaultTtsSpeed, 1.0);
+      expect(loaded.globalPrefs.reading.showHeader, isFalse);
+      expect(loaded.globalPrefs.reading.showFooter, isFalse);
+      expect(loaded.globalPrefs.tts.ttsVoiceId, isNull);
+      expect(loaded.globalPrefs.tts.defaultTtsSpeed, 1.0);
     });
 
     test('ttsVoiceId 先儲存再清空後（saveGlobalPrefs 傳入 null），load 讀回 null', () async {
       const withVoice = GlobalReaderPrefs(
-        pageTurnMode: PageTurnMode.paginated,
-        screenOrientation: ScreenOrientationSetting.auto,
-        navZoneMode: NavZoneMode.rightFlip,
-        navZoneCustomActions: rightFlipZoneTemplate,
-        showNavZoneDebugOverlay: false,
-        ttsVoiceId: 'voice-1',
+        tts: TtsDefaults(ttsVoiceId: 'voice-1'),
       );
       await manager.saveGlobalPrefs(withVoice);
-      expect((await manager.loadGlobalPrefs()).ttsVoiceId, 'voice-1');
+      expect((await manager.loadGlobalPrefs()).tts.ttsVoiceId, 'voice-1');
 
       const withoutVoice = GlobalReaderPrefs(
-        pageTurnMode: PageTurnMode.paginated,
-        screenOrientation: ScreenOrientationSetting.auto,
-        navZoneMode: NavZoneMode.rightFlip,
-        navZoneCustomActions: rightFlipZoneTemplate,
-        showNavZoneDebugOverlay: false,
       );
       await manager.saveGlobalPrefs(withoutVoice);
-      expect((await manager.loadGlobalPrefs()).ttsVoiceId, isNull);
+      expect((await manager.loadGlobalPrefs()).tts.ttsVoiceId, isNull);
     });
 
     test('navZoneCustomActions 已儲存值為空字串時，安全回退為 rightFlip 模板',
@@ -528,13 +507,13 @@ void main() {
         'global_reader_nav_zone_custom_actions': '',
       });
       final loaded = await manager.load('b1');
-      expect(loaded.globalPrefs.navZoneCustomActions, rightFlipZoneTemplate);
+      expect(loaded.globalPrefs.navZone.navZoneCustomActions, rightFlipZoneTemplate);
     });
 
     test('navZoneCustomActions 未儲存過（缺鍵）時，安全回退為 rightFlip 模板',
         () async {
       final loaded = await manager.load('b1');
-      expect(loaded.globalPrefs.navZoneCustomActions, rightFlipZoneTemplate);
+      expect(loaded.globalPrefs.navZone.navZoneCustomActions, rightFlipZoneTemplate);
     });
 
     test('已儲存的全域預設字串無法對應到任何列舉值時，安全回退為初始值', () async {
