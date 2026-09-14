@@ -6,7 +6,7 @@
 
 ## Issue 1：收斂 ReaderScreen 組裝為一個工廠函式（`buildReaderScreen()`）
 
-**Status:** ready-for-agent
+**Status:** completed（`plans/plan-issue-1.md` 4 個 Task 全數完成，新增 `buildReaderScreen()`，三個呼叫點〔`library_screen.dart`／`library_search_screen.dart`／`book_search_screen.dart`〕皆已改用，`flutter analyze`/`flutter test` 全數通過零回歸）
 
 **依賴：** 無
 
