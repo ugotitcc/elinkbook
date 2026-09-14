@@ -16,7 +16,9 @@
 
 **2026-09-14 Issue 2 已完成並合併回 `main`（PR [#241](https://git.jigong.org/huthief/elinkBook/pulls/241)，分支 `epic/41-issue-2-content-index-status-store`，合併後 main 為 `3e8dbdeb`）**：新增 `ContentIndexStatusStore` 收斂 `content_index_status`／`book_content_index` 狀態存取，`ContentIndexCategory` 搬遷並以 `export` 維持既有匯入者零改動，`ContentIndexingScheduler`／`SqliteFullTextSearchSettingsRepository` 皆已改用手寫 SQL 收斂，`flutter analyze`／`flutter test` 全數通過零回歸（僅 `adaptive_shell_scaffold_test.dart` 2 個既有失敗案例）。獨立程式審查（`reviews/review-issue-2.md`，本機保存、未進版控）確認 0 Critical／0 Important／1 Minor，結論 Ready to merge: Yes。**M-1（技術債，暫緩不修）**：本次異動的 3 個 `lib/search/*.dart` 檔案過不了本機 `dart format --set-exit-if-changed`，但交叉驗證同資料夾內完全未異動的既有檔案（`foliate_content_indexer.dart`／`pdf_content_indexer.dart`／`search_repository.dart`）同樣過不了，證實是全庫既有的 Dart SDK 格式化基準線落差，非本次實作引入；依審查建議與人類決策，不夾帶進本 Issue 修正，待之後另開一個獨立、範圍明確的格式化 Issue 統一處理。
 
-**2026-09-14 Issue 3 已完成（`plans/plan-issue-3.md` 2 個 Task 全數完成，`ReaderJumpTarget` 新增 `applyTo()`，`ReaderScreen` 兩處格式分派皆已改用，`flutter analyze`/`flutter test` 全數通過零回歸）**
+**2026-09-14 Issue 3 已完成並合併回 `main`（PR [#242](https://git.jigong.org/huthief/elinkBook/pulls/242)，分支 `epic/41-issue-3-reader-jump-target-applyTo`，合併後 main 為 `1df43876`）**：`plans/plan-issue-3.md` 2 個 Task 全數完成，`ReaderJumpTarget` 新增 `applyTo()` 收斂 `ReaderScreen` 兩處重複的格式分派 if-else，`applyTo()` 為同步方法、回傳 `bool`，計時器生命週期維持留在 `ReaderScreen`；新增測試皆追加於既有 `reader_jump_target_test.dart`（保留原本 6 個 `fromContentLocator` 測試），`flutter analyze`／`flutter test` 全數通過零回歸（僅 `adaptive_shell_scaffold_test.dart` 2 個既有失敗案例）。計畫審查（`reviews/review-plan-issue-3.md`，1 Critical／2 Important／2 Minor，皆已修正——Critical 為「計畫誤將既有測試檔當新檔案、整檔覆蓋」）與獨立實作審查（`reviews/review-issue-3.md`，0 Critical／0 Important／2 Minor，皆為既有技術債非本次引入）確認結論 Ready to merge: Yes。
+
+**2026-09-14 Issue 4 已完成（`plans/plan-issue-4.md` 2 個 Task 全數完成，新增 `splitHighlightSegments()` 純函式，`BookSearchScreen` 已改用，`LibrarySearchScreen` 未變動，`flutter analyze`/`flutter test` 全數通過零回歸，分支 `epic/41-issue-4-highlight-segments`）**：Issue 4 高亮切分演算法已抽為獨立純函式可被 `flutter_test` 直接單元測試覆蓋，`BookSearchScreen._buildHighlightedText()` 僅保留樣式轉換，字級回歸測試驗證渲染行為零回歸。
 
 **依賴順序：**
 
@@ -30,4 +32,4 @@ Issue 6（記錄用，暫不動手）
 
 ## 下一步
 
-依 `issues.md` 逐一實作，建議順序：Issue 1 → Issue 3（一條鏈，且風險最低，優先做）；Issue 2、Issue 4、Issue 5 皆可任意順序或平行處理；Issue 6 暫緩，等待「出現第二個需要同樣按序配對模式的呼叫端」再重新評估是否拆案。
+Issue 1 → Issue 3 這條鏈已全數完成並合併；Issue 2 亦已完成並合併。剩餘 Issue 4、Issue 5 皆獨立、可任意順序處理；Issue 6 暫緩，等待「出現第二個需要同樣按序配對模式的呼叫端」再重新評估是否拆案。

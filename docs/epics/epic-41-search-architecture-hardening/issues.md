@@ -165,7 +165,7 @@
 
 ## Issue 4：抽出 splitHighlightSegments 純函式，BookSearchScreen 高亮邏輯脫離 BuildContext
 
-**Status:** ready-for-agent
+**Status:** completed（`plans/plan-issue-4.md` 2 個 Task 全數完成，新增 `splitHighlightSegments()` 純函式，`BookSearchScreen` 已改用，`LibrarySearchScreen` 未變動，`flutter analyze`/`flutter test` 全數通過零回歸）
 
 **依賴：** 無
 

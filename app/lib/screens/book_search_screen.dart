@@ -8,6 +8,7 @@ import '../library/models/library_enums.dart';
 import '../library/library_repository.dart';
 import '../reader/reader_jump_target.dart';
 import '../reader/reader_prefs_manager.dart';
+import '../search/highlight_segments.dart';
 import '../search/search_repository.dart';
 import 'library_paging.dart';
 import 'library_screen_dependencies.dart';
@@ -347,40 +348,38 @@ class _BookSearchScreenState extends State<BookSearchScreen> {
   /// 關鍵字高亮：在 [text] 中找到 [query] 出現的所有位置（case-insensitive），
   /// 命中段加粗；非 E-Ink 模式搭配淡色背景，E-Ink 模式搭配底線（高對比、
   /// 避免電子紙殘影）。spec.md §9.3。使用 Text.rich 支援系統文字縮放。
+  /// 命中位置切分邏輯已抽至 [splitHighlightSegments]（epic-41 Issue 4），
+  /// 本方法只負責把切分結果轉成有樣式的 TextSpan。
   Widget _buildHighlightedText(String text, String query) {
-    if (query.isEmpty) return Text(text);
-
-    final lowerText = text.toLowerCase();
-    final lowerQuery = query.toLowerCase();
-    final spans = <TextSpan>[];
-    var start = 0;
-
-    while (start < text.length) {
-      final matchIndex = lowerText.indexOf(lowerQuery, start);
-      if (matchIndex < 0) {
-        spans.add(TextSpan(text: text.substring(start)));
-        break;
-      }
-      if (matchIndex > start) {
-        final safeStart = start.clamp(0, text.length);
-        final safeMatch = matchIndex.clamp(0, text.length);
-        spans.add(TextSpan(text: text.substring(safeStart, safeMatch)));
-      }
-      final matchEnd = (matchIndex + query.length).clamp(0, text.length);
-      final safeMatchIndex = matchIndex.clamp(0, text.length);
-      spans.add(TextSpan(
-        text: text.substring(safeMatchIndex, matchEnd),
-        style: TextStyle(
-          fontWeight: FontWeight.bold,
-          backgroundColor:
-              widget.isEinkMode ? null : Theme.of(context).colorScheme.primaryContainer,
-          decoration: widget.isEinkMode ? TextDecoration.underline : null,
-        ),
-      ));
-      start = matchEnd;
+    final segments = splitHighlightSegments(text, query);
+    final hasMatch = segments.any((segment) => segment.isMatch);
+    if (!hasMatch) {
+      // 完全沒有命中（含 query 為空字串）：直接回傳純 Text，不得改用
+      // Text.rich(TextSpan(text: text))——【/diagnose：全書搜尋結果符合
+      // 文字部分變得特別大】的字級 bug 修復只保護「有命中片段」這條路徑
+      // （見下方 spans 分支的說明），這條無高亮路徑本來就沒有手動指定過
+      // style，維持現狀即可。用 any(isMatch) 判斷而非假設 segments 長度，
+      // 不耦合 splitHighlightSegments 內部「無命中時剛好回傳單一片段」的
+      // 實作細節。
+      return Text(text);
     }
 
-    if (spans.isEmpty) return Text(text);
+    final spans = [
+      for (final segment in segments)
+        TextSpan(
+          text: segment.text,
+          style: segment.isMatch
+              ? TextStyle(
+                  fontWeight: FontWeight.bold,
+                  backgroundColor: widget.isEinkMode
+                      ? null
+                      : Theme.of(context).colorScheme.primaryContainer,
+                  decoration: widget.isEinkMode ? TextDecoration.underline : null,
+                )
+              : null,
+        ),
+    ];
+
     // 【/diagnose：全書搜尋結果符合文字部分變得特別大】不可在此手動指定
     // style: DefaultTextStyle.of(context).style——這裡的 context 是
     // _BookSearchScreenState 自己的 build context，位於本畫面 Scaffold/
